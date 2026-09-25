@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gentleman-programming/gentle-ai/v3/internal/sddstatus"
+	"github.com/IGutierrezZ/axiom/v3/internal/sddstatus"
 )
 
 func TestSDDAttemptRefusesRecreatedMarker(t *testing.T) {

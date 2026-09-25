@@ -6,7 +6,7 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/gentleman-programming/gentle-ai/v3/internal/agents/pi"
+	"github.com/IGutierrezZ/axiom/v3/internal/agents/pi"
 )
 
 func TestRetirePiSystemPromptBlocksStripsManagedSectionsAndPreservesUserContent(t *testing.T) {

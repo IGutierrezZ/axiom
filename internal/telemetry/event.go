@@ -7,7 +7,7 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/gentleman-programming/gentle-ai/v3/internal/model"
+	"github.com/IGutierrezZ/axiom/v3/internal/model"
 )
 
 // versionPattern mirrors event.schema.json's `version` pattern: a numeric

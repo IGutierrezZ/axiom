@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gentleman-programming/gentle-ai/v3/internal/kickoff"
+	"github.com/IGutierrezZ/axiom/v3/internal/kickoff"
 )
 
 func TestProjectStatusV2RejectsUnsupportedValues(t *testing.T) {

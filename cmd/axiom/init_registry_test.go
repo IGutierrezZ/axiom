@@ -3,7 +3,7 @@ package main
 import (
 	"testing"
 
-	"github.com/gentleman-programming/gentle-ai/v3/internal/update"
+	"github.com/IGutierrezZ/axiom/v3/internal/update"
 )
 
 // TestInitMutatesSelfToolEntryFieldByField pins the D-01 invariant: init() must
@@ -42,9 +42,9 @@ func TestInitMutatesSelfToolEntryFieldByField(t *testing.T) {
 
 	// Key assertion: GoModulePath must survive the rename. Full-struct
 	// replacement would zero this field (D-01).
-	if selfTool.GoModulePath != "github.com/gentleman-programming/gentle-ai/v3" {
+	if selfTool.GoModulePath != "github.com/IGutierrezZ/axiom/v3" {
 		t.Errorf("GoModulePath = %q, want %q (must be preserved by field-by-field mutation)",
-			selfTool.GoModulePath, "github.com/gentleman-programming/gentle-ai/v3")
+			selfTool.GoModulePath, "github.com/IGutierrezZ/axiom/v3")
 	}
 }
 

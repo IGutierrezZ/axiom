@@ -13,10 +13,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gentleman-programming/gentle-ai/v3/internal/components/engram"
-	"github.com/gentleman-programming/gentle-ai/v3/internal/doctor"
-	"github.com/gentleman-programming/gentle-ai/v3/internal/state"
-	"github.com/gentleman-programming/gentle-ai/v3/internal/storage"
+	"github.com/IGutierrezZ/axiom/v3/internal/components/engram"
+	"github.com/IGutierrezZ/axiom/v3/internal/doctor"
+	"github.com/IGutierrezZ/axiom/v3/internal/state"
+	"github.com/IGutierrezZ/axiom/v3/internal/storage"
 )
 
 type CheckStatus = doctor.Status

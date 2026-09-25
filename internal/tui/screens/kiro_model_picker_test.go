@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gentleman-programming/gentle-ai/v3/internal/model"
+	"github.com/IGutierrezZ/axiom/v3/internal/model"
 )
 
 func TestRenderKiroModelPicker_ShowsRequestedCopy(t *testing.T) {

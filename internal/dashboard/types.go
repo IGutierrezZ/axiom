@@ -1,8 +1,8 @@
 package dashboard
 
 import (
-	"github.com/gentleman-programming/gentle-ai/v3/internal/hub"
-	"github.com/gentleman-programming/gentle-ai/v3/internal/multirole"
+	"github.com/IGutierrezZ/axiom/v3/internal/hub"
+	"github.com/IGutierrezZ/axiom/v3/internal/multirole"
 )
 
 // WorkspaceDTO representa el estado global y configuración del espacio de trabajo.

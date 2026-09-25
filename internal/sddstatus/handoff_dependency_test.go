@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gentleman-programming/gentle-ai/v3/internal/handoff"
-	"github.com/gentleman-programming/gentle-ai/v3/internal/kickoff"
+	"github.com/IGutierrezZ/axiom/v3/internal/handoff"
+	"github.com/IGutierrezZ/axiom/v3/internal/kickoff"
 )
 
 // sealPerCheckpointFullstackKickoff mirrors sealFullstackKickoff

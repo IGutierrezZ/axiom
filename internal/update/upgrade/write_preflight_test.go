@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gentleman-programming/gentle-ai/v3/internal/system"
-	"github.com/gentleman-programming/gentle-ai/v3/internal/update"
+	"github.com/IGutierrezZ/axiom/v3/internal/system"
+	"github.com/IGutierrezZ/axiom/v3/internal/update"
 )
 
 // mockGoEnv returns an execCommand stub that answers `go env KEY` from the
@@ -44,7 +44,7 @@ func TestPreflightWindowsSelfBinaryWrite(t *testing.T) {
 		Owner:        "IGutierrezZ",
 		Repo:         "axiom",
 		GoImportPath: "github.com/IGutierrezZ/axiom/cmd/axiom",
-		GoModulePath: "github.com/gentleman-programming/gentle-ai/v3",
+		GoModulePath: "github.com/IGutierrezZ/axiom/v3",
 	}
 
 	t.Run("destination and active both resolvable and distinct returns ManualFallbackError naming both paths", func(t *testing.T) {

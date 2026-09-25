@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gentleman-programming/gentle-ai/v3/internal/components/filemerge"
+	"github.com/IGutierrezZ/axiom/v3/internal/components/filemerge"
 )
 
 // replaceThenFail mimics the one window WriteFileAtomic documents: the rename

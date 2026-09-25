@@ -1,6 +1,6 @@
 package planner
 
-import "github.com/gentleman-programming/gentle-ai/v3/internal/model"
+import "github.com/IGutierrezZ/axiom/v3/internal/model"
 
 type Graph struct {
 	dependencies map[model.ComponentID][]model.ComponentID

@@ -8,10 +8,10 @@ import (
 	"io"
 	"path/filepath"
 
-	"github.com/gentleman-programming/gentle-ai/v3/internal/cli"
-	"github.com/gentleman-programming/gentle-ai/v3/internal/components/engram"
-	"github.com/gentleman-programming/gentle-ai/v3/internal/skillregistry"
-	"github.com/gentleman-programming/gentle-ai/v3/internal/state"
+	"github.com/IGutierrezZ/axiom/v3/internal/cli"
+	"github.com/IGutierrezZ/axiom/v3/internal/components/engram"
+	"github.com/IGutierrezZ/axiom/v3/internal/skillregistry"
+	"github.com/IGutierrezZ/axiom/v3/internal/state"
 )
 
 func init() {

@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gentleman-programming/gentle-ai/v3/internal/system"
+	"github.com/IGutierrezZ/axiom/v3/internal/system"
 )
 
 // TestSelfHintDerivedFromToolInfo scans the real output of updateHint and
@@ -15,7 +15,7 @@ func TestSelfHintDerivedFromToolInfo(t *testing.T) {
 	t.Cleanup(func() { homebrewPackageInstalled = origHomebrewPackageInstalled })
 
 	forkCloneBuild := "git clone https://github.com/IGutierrezZ/axiom && cd axiom && go build -o axiom ./cmd/axiom"
-	upstreamGoInstall := "go install github.com/gentleman-programming/gentle-ai/v3/cmd/gentle-ai@latest"
+	upstreamGoInstall := "go install github.com/IGutierrezZ/axiom/v3/cmd/gentle-ai@latest"
 
 	tests := []struct {
 		name          string

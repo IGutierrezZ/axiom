@@ -3,8 +3,8 @@ package upgrade
 import (
 	"testing"
 
-	"github.com/gentleman-programming/gentle-ai/v3/internal/system"
-	"github.com/gentleman-programming/gentle-ai/v3/internal/update"
+	"github.com/IGutierrezZ/axiom/v3/internal/system"
+	"github.com/IGutierrezZ/axiom/v3/internal/update"
 )
 
 // TestEffectiveMethodSelfToolRouting pins the D-02 routing table for the
@@ -19,15 +19,15 @@ func TestEffectiveMethodSelfToolRouting(t *testing.T) {
 		Owner:        "IGutierrezZ",
 		Repo:         "axiom",
 		GoImportPath: "github.com/IGutierrezZ/axiom/cmd/axiom",
-		GoModulePath: "github.com/gentleman-programming/gentle-ai/v3",
+		GoModulePath: "github.com/IGutierrezZ/axiom/v3",
 	}
 
 	upstreamTool := update.ToolInfo{
 		Name:         "gentle-ai",
 		Owner:        "Gentleman-Programming",
 		Repo:         "gentle-ai",
-		GoImportPath: "github.com/gentleman-programming/gentle-ai/v3/cmd/gentle-ai",
-		GoModulePath: "github.com/gentleman-programming/gentle-ai/v3",
+		GoImportPath: "github.com/IGutierrezZ/axiom/v3/cmd/gentle-ai",
+		GoModulePath: "github.com/IGutierrezZ/axiom/v3",
 	}
 
 	tests := []struct {

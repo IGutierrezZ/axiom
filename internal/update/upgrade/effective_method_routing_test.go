@@ -8,9 +8,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gentleman-programming/gentle-ai/v3/internal/backup"
-	"github.com/gentleman-programming/gentle-ai/v3/internal/system"
-	"github.com/gentleman-programming/gentle-ai/v3/internal/update"
+	"github.com/IGutierrezZ/axiom/v3/internal/backup"
+	"github.com/IGutierrezZ/axiom/v3/internal/system"
+	"github.com/IGutierrezZ/axiom/v3/internal/update"
 )
 
 // TestEffectiveMethodWindowsPrecedenceIsUnchanged pins the rules that run before
@@ -36,14 +36,14 @@ func TestEffectiveMethodWindowsPrecedenceIsUnchanged(t *testing.T) {
 		},
 		{
 			name:          "brew-owned package wins over go-install on Windows",
-			tool:          update.ToolInfo{Name: "gentle-ai", InstallMethod: update.InstallBinary, GoImportPath: "github.com/gentleman-programming/gentle-ai/v3/cmd/gentle-ai"},
+			tool:          update.ToolInfo{Name: "gentle-ai", InstallMethod: update.InstallBinary, GoImportPath: "github.com/IGutierrezZ/axiom/v3/cmd/gentle-ai"},
 			profile:       system.PlatformProfile{OS: "windows", PackageManager: "brew", GoAvailable: true},
 			brewInstalled: true,
 			want:          update.InstallBrew,
 		},
 		{
 			name:    "no Go on Windows routes to source build",
-			tool:    update.ToolInfo{Name: "gentle-ai", InstallMethod: update.InstallBinary, GoImportPath: "github.com/gentleman-programming/gentle-ai/v3/cmd/gentle-ai"},
+			tool:    update.ToolInfo{Name: "gentle-ai", InstallMethod: update.InstallBinary, GoImportPath: "github.com/IGutierrezZ/axiom/v3/cmd/gentle-ai"},
 			profile: system.PlatformProfile{OS: "windows", PackageManager: "winget", GoAvailable: false},
 			want:    update.InstallSourceBuild,
 		},
@@ -68,7 +68,7 @@ func TestEffectiveMethodWindowsPrecedenceIsUnchanged(t *testing.T) {
 // gentleAIImportPath is the module path gentle-ai publishes its command under.
 // It is asserted against the registry below so the tests and the shipped
 // declaration cannot drift apart.
-const gentleAIImportPath = "github.com/gentleman-programming/gentle-ai/v3/cmd/gentle-ai"
+const gentleAIImportPath = "github.com/IGutierrezZ/axiom/v3/cmd/gentle-ai"
 
 // registryGentleAI returns the shipped gentle-ai registry entry. Routing tests
 // use the real declaration rather than a hand-built ToolInfo so a regression in
@@ -158,7 +158,7 @@ func TestGentleAILegacyScriptDeclarationNeverReachesScriptUpgradeOnWindows(t *te
 		goModulePath string
 		want         update.InstallMethod
 	}{
-		{name: "with Go available and resolvable module routes to go install", goAvailable: true, goImportPath: gentleAIImportPath, goModulePath: "github.com/gentleman-programming/gentle-ai/v3", want: update.InstallGoInstall},
+		{name: "with Go available and resolvable module routes to go install", goAvailable: true, goImportPath: gentleAIImportPath, goModulePath: "github.com/IGutierrezZ/axiom/v3", want: update.InstallGoInstall},
 		{name: "without Go available routes to source build", goAvailable: false, goImportPath: gentleAIImportPath, want: update.InstallSourceBuild},
 		{name: "without an import path routes to source build", goAvailable: true, want: update.InstallSourceBuild},
 	}
@@ -445,8 +445,8 @@ func TestGentleAIWindowsWithoutGoNamesRunnableSourceInstall(t *testing.T) {
 			Owner:         "Gentleman-Programming",
 			Repo:          "gentle-ai",
 			InstallMethod: update.InstallBinary,
-			GoImportPath:  "github.com/gentleman-programming/gentle-ai/v3/cmd/gentle-ai",
-			GoModulePath:  "github.com/gentleman-programming/gentle-ai/v3",
+			GoImportPath:  "github.com/IGutierrezZ/axiom/v3/cmd/gentle-ai",
+			GoModulePath:  "github.com/IGutierrezZ/axiom/v3",
 		},
 		LatestVersion: "2.2.0",
 		Status:        update.UpdateAvailable,
@@ -462,7 +462,7 @@ func TestGentleAIWindowsWithoutGoNamesRunnableSourceInstall(t *testing.T) {
 		t.Fatalf("executeOne = %#v, want a non-error skip", result)
 	}
 	for _, required := range []string{
-		"go install github.com/gentleman-programming/gentle-ai/v3/cmd/gentle-ai@latest",
+		"go install github.com/IGutierrezZ/axiom/v3/cmd/gentle-ai@latest",
 	} {
 		if !strings.Contains(result.ManualHint, required) {
 			t.Errorf("manual hint is missing %q: %s", required, result.ManualHint)

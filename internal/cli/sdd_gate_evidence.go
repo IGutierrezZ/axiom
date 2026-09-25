@@ -3,8 +3,8 @@ package cli
 import (
 	"context"
 
-	"github.com/gentleman-programming/gentle-ai/v3/internal/kickoff"
-	"github.com/gentleman-programming/gentle-ai/v3/internal/reviewtransaction"
+	"github.com/IGutierrezZ/axiom/v3/internal/kickoff"
+	"github.com/IGutierrezZ/axiom/v3/internal/reviewtransaction"
 )
 
 // gateAncestryChecker adapts

@@ -3,7 +3,7 @@ package kickoff
 import (
 	"testing"
 
-	"github.com/gentleman-programming/gentle-ai/v3/internal/multirole"
+	"github.com/IGutierrezZ/axiom/v3/internal/multirole"
 )
 
 // TestEvaluateGatesContinuousModeIgnoresEverythingElse locks down D-05: in

@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gentleman-programming/gentle-ai/v3/internal/assets"
+	"github.com/IGutierrezZ/axiom/v3/internal/assets"
 )
 
 // #3818: Go owns the phase result contract, and the OpenCode plugin still

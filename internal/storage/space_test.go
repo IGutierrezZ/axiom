@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gentleman-programming/gentle-ai/v3/internal/storage"
+	"github.com/IGutierrezZ/axiom/v3/internal/storage"
 )
 
 func TestAvailableBytes_TempDir(t *testing.T) {

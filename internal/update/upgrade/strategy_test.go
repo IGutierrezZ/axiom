@@ -13,9 +13,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gentleman-programming/gentle-ai/v3/internal/opencode"
-	"github.com/gentleman-programming/gentle-ai/v3/internal/system"
-	"github.com/gentleman-programming/gentle-ai/v3/internal/update"
+	"github.com/IGutierrezZ/axiom/v3/internal/opencode"
+	"github.com/IGutierrezZ/axiom/v3/internal/system"
+	"github.com/IGutierrezZ/axiom/v3/internal/update"
 )
 
 func TestMain(m *testing.M) {
@@ -126,8 +126,8 @@ func TestRunStrategy_BetaGentleAISelfUpgradeUsesGoInstallMain(t *testing.T) {
 			Owner:         "Gentleman-Programming",
 			Repo:          "gentle-ai",
 			InstallMethod: update.InstallBinary,
-			GoImportPath:  "github.com/gentleman-programming/gentle-ai/v3/cmd/gentle-ai",
-			GoModulePath:  "github.com/gentleman-programming/gentle-ai/v3",
+			GoImportPath:  "github.com/IGutierrezZ/axiom/v3/cmd/gentle-ai",
+			GoModulePath:  "github.com/IGutierrezZ/axiom/v3",
 		},
 		LatestVersion: "main@972997650b51",
 		Status:        update.UpdateAvailable,
@@ -142,14 +142,14 @@ func TestRunStrategy_BetaGentleAISelfUpgradeUsesGoInstallMain(t *testing.T) {
 	if gotName != "go" {
 		t.Fatalf("exec name = %q, want %q", gotName, "go")
 	}
-	wantArgs := []string{"install", "github.com/gentleman-programming/gentle-ai/v3/cmd/gentle-ai@main"}
+	wantArgs := []string{"install", "github.com/IGutierrezZ/axiom/v3/cmd/gentle-ai@main"}
 	if len(gotArgs) != len(wantArgs) || gotArgs[0] != wantArgs[0] || gotArgs[1] != wantArgs[1] {
 		t.Fatalf("exec args = %v, want %v", gotArgs, wantArgs)
 	}
 	for _, want := range []string{
-		"GONOSUMDB=github.com/gentleman-programming/gentle-ai/v3",
-		"GOPRIVATE=github.com/gentleman-programming/gentle-ai/v3",
-		"GONOPROXY=github.com/gentleman-programming/gentle-ai/v3",
+		"GONOSUMDB=github.com/IGutierrezZ/axiom/v3",
+		"GOPRIVATE=github.com/IGutierrezZ/axiom/v3",
+		"GONOPROXY=github.com/IGutierrezZ/axiom/v3",
 	} {
 		if !envContains(gotCmd.Env, want) {
 			t.Fatalf("go install env missing %q in %v", want, gotCmd.Env)
@@ -167,19 +167,19 @@ func envContains(env []string, want string) bool {
 }
 
 func TestGoProxyBypassEnvPreservesExistingPatterns(t *testing.T) {
-	module := "github.com/gentleman-programming/gentle-ai/v3"
+	module := "github.com/IGutierrezZ/axiom/v3"
 	env := goProxyBypassEnv([]string{
 		"PATH=/usr/bin",
 		"GONOSUMDB=example.com/private",
 		"GOPRIVATE=github.com/acme/*",
-		"GONOPROXY=github.com/gentleman-programming/gentle-ai/v3",
+		"GONOPROXY=github.com/IGutierrezZ/axiom/v3",
 	}, module)
 
 	for _, want := range []string{
 		"PATH=/usr/bin",
-		"GONOSUMDB=github.com/gentleman-programming/gentle-ai/v3,example.com/private",
-		"GOPRIVATE=github.com/gentleman-programming/gentle-ai/v3,github.com/acme/*",
-		"GONOPROXY=github.com/gentleman-programming/gentle-ai/v3",
+		"GONOSUMDB=github.com/IGutierrezZ/axiom/v3,example.com/private",
+		"GOPRIVATE=github.com/IGutierrezZ/axiom/v3,github.com/acme/*",
+		"GONOPROXY=github.com/IGutierrezZ/axiom/v3",
 	} {
 		if !envContains(env, want) {
 			t.Fatalf("env missing %q in %v", want, env)
@@ -314,7 +314,7 @@ func TestEffectiveMethodGentleAIOnWindowsUsesFailClosedBinaryPolicy(t *testing.T
 	// against the Go checksum database, since goInstallUpgrade does not touch
 	// cmd.Env — is the only automatic upgrade path Windows has.
 	t.Run("Go availability upgrades through a pinned go install", func(t *testing.T) {
-		tool := update.ToolInfo{Name: "gentle-ai", InstallMethod: update.InstallBinary, GoImportPath: "github.com/gentleman-programming/gentle-ai/v3/cmd/gentle-ai", GoModulePath: "github.com/gentleman-programming/gentle-ai/v3"}
+		tool := update.ToolInfo{Name: "gentle-ai", InstallMethod: update.InstallBinary, GoImportPath: "github.com/IGutierrezZ/axiom/v3/cmd/gentle-ai", GoModulePath: "github.com/IGutierrezZ/axiom/v3"}
 		profile := system.PlatformProfile{OS: "windows", PackageManager: "winget", GoAvailable: true}
 		method := effectiveMethod(tool, profile)
 		if method != update.InstallGoInstall {

@@ -18,7 +18,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gentleman-programming/gentle-ai/v3/internal/pathidentity"
+	"github.com/IGutierrezZ/axiom/v3/internal/pathidentity"
 )
 
 type TargetKind string

@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gentleman-programming/gentle-ai/v3/internal/kickoff"
+	"github.com/IGutierrezZ/axiom/v3/internal/kickoff"
 )
 
 func TestResolvePreservesNormalizedWorkspace(t *testing.T) {

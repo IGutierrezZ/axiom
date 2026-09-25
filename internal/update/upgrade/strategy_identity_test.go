@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gentleman-programming/gentle-ai/v3/internal/system"
-	"github.com/gentleman-programming/gentle-ai/v3/internal/update"
+	"github.com/IGutierrezZ/axiom/v3/internal/system"
+	"github.com/IGutierrezZ/axiom/v3/internal/update"
 )
 
 // TestStrategyMessagesNeverNameUpstream scans the real output of the strategy
@@ -34,7 +34,7 @@ func TestStrategyMessagesNeverNameUpstream(t *testing.T) {
 		Owner:        "IGutierrezZ",
 		Repo:         "axiom",
 		GoImportPath: "github.com/IGutierrezZ/axiom/cmd/axiom",
-		GoModulePath: "github.com/gentleman-programming/gentle-ai/v3",
+		GoModulePath: "github.com/IGutierrezZ/axiom/v3",
 	}
 
 	forbidden := []string{"Gentleman-Programming/gentle-ai", "cmd/gentle-ai"}
@@ -86,7 +86,7 @@ func TestGoInstallMainUpgradeOnlyWhenResolvable(t *testing.T) {
 			Owner:        "IGutierrezZ",
 			Repo:         "axiom",
 			GoImportPath: "github.com/IGutierrezZ/axiom/cmd/axiom",
-			GoModulePath: "github.com/gentleman-programming/gentle-ai/v3",
+			GoModulePath: "github.com/IGutierrezZ/axiom/v3",
 		}
 		err := goInstallMainUpgrade(tool)
 		if err == nil {

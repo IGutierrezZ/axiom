@@ -5,7 +5,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/gentleman-programming/gentle-ai/v3/internal/workspace"
+	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
 // RosterSource identifies which layer produced a resolved roster (D-06):

@@ -37,7 +37,7 @@ Las compuertas de release (`scripts/verify-release-assets.sh`, `scripts/release-
 
 ### Requirement: Ruta de módulo Go migrada a /v3 (REQ-20.9)
 
-La ruta de módulo Go DEBE migrar de `github.com/gentleman-programming/gentle-ai/v2` al destino que sigue a upstream, `github.com/gentleman-programming/gentle-ai/v3`. La migración DEBE ser una única reescritura mecánica aplicada a todos los ficheros que citan la ruta anterior.
+La ruta de módulo Go DEBE migrar de `github.com/gentleman-programming/gentle-ai/v2` al destino que sigue a upstream, `github.com/IGutierrezZ/axiom/v3`. La migración DEBE ser una única reescritura mecánica aplicada a todos los ficheros que citan la ruta anterior.
 
 #### Scenario: Migración mecánica completa de la ruta de módulo
 - **DADO** el módulo declarado como `github.com/gentleman-programming/gentle-ai/v2` en `go.mod`

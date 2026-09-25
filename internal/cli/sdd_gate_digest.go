@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"sort"
 
-	"github.com/gentleman-programming/gentle-ai/v3/internal/kickoff"
+	"github.com/IGutierrezZ/axiom/v3/internal/kickoff"
 )
 
 // gateArtifactDigest resolves the digest a recorded GateRecord must carry

@@ -5,7 +5,7 @@ import (
 	"errors"
 	"os"
 
-	"github.com/gentleman-programming/gentle-ai/v3/internal/catalog"
+	"github.com/IGutierrezZ/axiom/v3/internal/catalog"
 )
 
 // builtinSkills returns the current set of built-in skill names derived from
