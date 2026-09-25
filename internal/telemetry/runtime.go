@@ -11,7 +11,11 @@ import (
 	"strings"
 )
 
-const RuntimeSchema = "gentle-ai.telemetry-runtime-aggregate/v1"
+const (
+	AxiomRuntimeSchema  = "axiom.telemetry-runtime-aggregate/v1"
+	LegacyRuntimeSchema = "gentle-ai.telemetry-runtime-aggregate/v1"
+	RuntimeSchema       = AxiomRuntimeSchema
+)
 const RuntimeMaxBytes = 16384
 
 // Public package categories, not proof of runtime authority or agent-name identity.
@@ -327,7 +331,8 @@ func decodeRuntime(data []byte) (RuntimeBatch, error) {
 	if err := d.Decode(&b); err != nil {
 		return b, errRuntimeInput
 	}
-	if b.Schema != RuntimeSchema || runtimeNumber(b.Registry) != "1" || !runtimeMember(b.Host, "claude-code|opencode|codex|pi") || len(b.Rows) < 1 || len(b.Rows) > 32 {
+	validSchema := b.Schema == RuntimeSchema || b.Schema == LegacyRuntimeSchema
+	if !validSchema || runtimeNumber(b.Registry) != "1" || !runtimeMember(b.Host, "claude-code|opencode|codex|pi") || len(b.Rows) < 1 || len(b.Rows) > 32 {
 		return b, errRuntimeInput
 	}
 	b.Registry = json.RawMessage("1")

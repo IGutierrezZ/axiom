@@ -111,7 +111,7 @@ func runtimeAcknowledgement(data []byte) string {
 		return "discarded"
 	}
 	var schema, decision string
-	if json.Unmarshal(obj["schema"], &schema) != nil || schema != RuntimeDeliverySchema || json.Unmarshal(obj["decision"], &decision) != nil || !runtimeMember(decision, "stored|duplicate") {
+	if json.Unmarshal(obj["schema"], &schema) != nil || (schema != RuntimeDeliverySchema && schema != LegacyRuntimeDeliverySchema) || json.Unmarshal(obj["decision"], &decision) != nil || !runtimeMember(decision, "stored|duplicate") {
 		return "discarded"
 	}
 	return decision

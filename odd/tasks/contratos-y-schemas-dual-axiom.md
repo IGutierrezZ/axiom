@@ -46,7 +46,7 @@ Introducir los identificadores de esquema y contrato de protocolo canónicos de 
   - Actualizar los schemas JSON de validación (`contracts/review-integration/v2/schemas/`) para admitir tanto `axiom.*` como `gentle-ai.*` en las propiedades `"enum"` de identificación de schema.
   - Asegurar que los validadores de esquema de tests pasen sin infracciones de política de release.
 
-- [ ] **T4 · Contratos de telemetría y eventos de colector**
+- [x] **T4 · Contratos de telemetría y eventos de colector**
   - Soportar `axiom.telemetry-event/v1` y `axiom.telemetry-runtime-event/v1` en `internal/telemetrycollector/`.
   - Actualizar el emisor de telemetría en `internal/telemetry/` para usar la cabecera canónica de Axiom.
 
