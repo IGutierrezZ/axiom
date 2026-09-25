@@ -5,7 +5,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/gentleman-programming/gentle-ai/v3/internal/components/filemerge"
+	"github.com/IGutierrezZ/axiom/v3/internal/components/filemerge"
 )
 
 // AGENTS.md managed-section contract (spec §3.2). The canonical pair is what

@@ -10,13 +10,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gentleman-programming/gentle-ai/v3/internal/agents"
-	"github.com/gentleman-programming/gentle-ai/v3/internal/backup"
-	"github.com/gentleman-programming/gentle-ai/v3/internal/components/sdd"
-	"github.com/gentleman-programming/gentle-ai/v3/internal/model"
-	opencodeactivation "github.com/gentleman-programming/gentle-ai/v3/internal/opencode"
-	"github.com/gentleman-programming/gentle-ai/v3/internal/state"
-	"github.com/gentleman-programming/gentle-ai/v3/internal/system"
+	"github.com/IGutierrezZ/axiom/v3/internal/agents"
+	"github.com/IGutierrezZ/axiom/v3/internal/backup"
+	"github.com/IGutierrezZ/axiom/v3/internal/components/sdd"
+	"github.com/IGutierrezZ/axiom/v3/internal/model"
+	opencodeactivation "github.com/IGutierrezZ/axiom/v3/internal/opencode"
+	"github.com/IGutierrezZ/axiom/v3/internal/state"
+	"github.com/IGutierrezZ/axiom/v3/internal/system"
 )
 
 func TestOpenCodeBackgroundIntentValidation(t *testing.T) {

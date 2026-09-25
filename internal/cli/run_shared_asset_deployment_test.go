@@ -6,8 +6,8 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/gentleman-programming/gentle-ai/v3/internal/assets"
-	"github.com/gentleman-programming/gentle-ai/v3/internal/model"
+	"github.com/IGutierrezZ/axiom/v3/internal/assets"
+	"github.com/IGutierrezZ/axiom/v3/internal/model"
 )
 
 // embeddedSharedFileNames returns the names of every file embedded under

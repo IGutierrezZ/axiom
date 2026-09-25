@@ -3,7 +3,7 @@ package multirole
 import (
 	"testing"
 
-	"github.com/gentleman-programming/gentle-ai/v3/internal/workspace"
+	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
 // noFullstackWorkspaceConfig declares roles but never "fullstack" — the

@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/gentleman-programming/gentle-ai/v3/internal/workspace"
+	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
 func rosterWorkspaceConfig() *workspace.WorkspaceConfig {

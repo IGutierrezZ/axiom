@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/gentleman-programming/gentle-ai/v3/internal/model"
-	"github.com/gentleman-programming/gentle-ai/v3/internal/system"
+	"github.com/IGutierrezZ/axiom/v3/internal/model"
+	"github.com/IGutierrezZ/axiom/v3/internal/system"
 )
 
 // makeStatFn returns a statPath function that reports the given paths as existing

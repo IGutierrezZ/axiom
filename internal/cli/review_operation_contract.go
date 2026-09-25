@@ -16,7 +16,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/gentleman-programming/gentle-ai/v3/internal/reviewtransaction"
+	"github.com/IGutierrezZ/axiom/v3/internal/reviewtransaction"
 )
 
 const ReviewIntegrationOperationSchema = "gentle-ai.review-integration.operation/v1"

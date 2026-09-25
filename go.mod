@@ -1,4 +1,4 @@
-module github.com/gentleman-programming/gentle-ai/v3
+module github.com/IGutierrezZ/axiom/v3
 
 go 1.25.10
 

@@ -7,8 +7,8 @@ import "testing"
 // from Owner/Repo (REQ-22.2).
 func TestGoInstallResolvable(t *testing.T) {
 	const (
-		upstreamModule = "github.com/gentleman-programming/gentle-ai/v3"
-		upstreamImport = "github.com/gentleman-programming/gentle-ai/v3/cmd/gentle-ai"
+		upstreamModule = "github.com/IGutierrezZ/axiom/v3"
+		upstreamImport = "github.com/IGutierrezZ/axiom/v3/cmd/gentle-ai"
 		forkImport     = "github.com/IGutierrezZ/axiom/cmd/axiom"
 		// partialModule is the upstream module path WITHOUT the /v3 major
 		// version suffix: a partial prefix that must not make the /v3 import

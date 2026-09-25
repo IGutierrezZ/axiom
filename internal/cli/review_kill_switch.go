@@ -3,7 +3,7 @@ package cli
 import (
 	"context"
 
-	"github.com/gentleman-programming/gentle-ai/v3/internal/reviewtransaction"
+	"github.com/IGutierrezZ/axiom/v3/internal/reviewtransaction"
 )
 
 // The kill switch freezes authority against review progress. Every operation

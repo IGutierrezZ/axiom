@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gentleman-programming/gentle-ai/v3/internal/reviewtransaction"
+	"github.com/IGutierrezZ/axiom/v3/internal/reviewtransaction"
 )
 
 // Coming back after switching reviews off, the operator sees "scope-changed"

@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gentleman-programming/gentle-ai/v3/internal/multirole"
+	"github.com/IGutierrezZ/axiom/v3/internal/multirole"
 )
 
 // TestParseSealArgsKnownAndUnknownFlags is the base RED case for 8.1: a

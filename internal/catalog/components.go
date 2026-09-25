@@ -1,6 +1,6 @@
 package catalog
 
-import "github.com/gentleman-programming/gentle-ai/v3/internal/model"
+import "github.com/IGutierrezZ/axiom/v3/internal/model"
 
 type Component struct {
 	ID          model.ComponentID

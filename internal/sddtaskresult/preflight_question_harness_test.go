@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gentleman-programming/gentle-ai/v3/internal/assets"
+	"github.com/IGutierrezZ/axiom/v3/internal/assets"
 )
 
 // preflightQuestionHarnessSource drives the actual embedded OpenCode plugin

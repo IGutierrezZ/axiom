@@ -75,7 +75,7 @@ type GateDecision string
 			name: "clean source touching unrelated reviewtransaction symbols",
 			src: `package kickoff
 
-import "github.com/gentleman-programming/gentle-ai/v3/internal/reviewtransaction"
+import "github.com/IGutierrezZ/axiom/v3/internal/reviewtransaction"
 
 func example() error { return reviewtransaction.PublishFileNoReplace("", "") }
 `,
@@ -88,7 +88,7 @@ func example() error { return reviewtransaction.PublishFileNoReplace("", "") }
 import (
 	"context"
 
-	"github.com/gentleman-programming/gentle-ai/v3/internal/reviewtransaction"
+	"github.com/IGutierrezZ/axiom/v3/internal/reviewtransaction"
 )
 
 func example(ctx context.Context) {
@@ -101,7 +101,7 @@ func example(ctx context.Context) {
 			name: "references the forbidden ReviewCore type",
 			src: `package kickoff
 
-import "github.com/gentleman-programming/gentle-ai/v3/internal/reviewtransaction"
+import "github.com/IGutierrezZ/axiom/v3/internal/reviewtransaction"
 
 func example() reviewtransaction.ReviewCore { return reviewtransaction.ReviewCore{} }
 `,
@@ -171,12 +171,12 @@ func TestKickoffImportAllowlistTable(t *testing.T) {
 		{name: "stdlib top-level package", path: "fmt", want: true},
 		{name: "stdlib nested package", path: "path/filepath", want: true},
 		{name: "stdlib crypto package", path: "crypto/sha256", want: true},
-		{name: "allowed multirole", path: "github.com/gentleman-programming/gentle-ai/v3/internal/multirole", want: true},
-		{name: "allowed reviewtransaction", path: "github.com/gentleman-programming/gentle-ai/v3/internal/reviewtransaction", want: true},
-		{name: "allowed workspace", path: "github.com/gentleman-programming/gentle-ai/v3/internal/workspace", want: true},
-		{name: "allowed handoff", path: "github.com/gentleman-programming/gentle-ai/v3/internal/handoff", want: true},
+		{name: "allowed multirole", path: "github.com/IGutierrezZ/axiom/v3/internal/multirole", want: true},
+		{name: "allowed reviewtransaction", path: "github.com/IGutierrezZ/axiom/v3/internal/reviewtransaction", want: true},
+		{name: "allowed workspace", path: "github.com/IGutierrezZ/axiom/v3/internal/workspace", want: true},
+		{name: "allowed handoff", path: "github.com/IGutierrezZ/axiom/v3/internal/handoff", want: true},
 		{name: "allowed yaml", path: "gopkg.in/yaml.v3", want: true},
-		{name: "disallowed sibling internal package", path: "github.com/gentleman-programming/gentle-ai/v3/internal/sddstatus", want: false},
+		{name: "disallowed sibling internal package", path: "github.com/IGutierrezZ/axiom/v3/internal/sddstatus", want: false},
 		{name: "disallowed third-party package", path: "github.com/spf13/cobra", want: false},
 	}
 	for _, tt := range tests {
@@ -242,10 +242,10 @@ func TestKickoffPackageImportsStayInsideAllowlist(t *testing.T) {
 // path back to review authority, so this edge stays inside the same safe
 // leaf-package graph the rest of this allowlist already describes.
 var kickoffAllowedImportPrefixes = []string{
-	"github.com/gentleman-programming/gentle-ai/v3/internal/multirole",
-	"github.com/gentleman-programming/gentle-ai/v3/internal/reviewtransaction",
-	"github.com/gentleman-programming/gentle-ai/v3/internal/workspace",
-	"github.com/gentleman-programming/gentle-ai/v3/internal/handoff",
+	"github.com/IGutierrezZ/axiom/v3/internal/multirole",
+	"github.com/IGutierrezZ/axiom/v3/internal/reviewtransaction",
+	"github.com/IGutierrezZ/axiom/v3/internal/workspace",
+	"github.com/IGutierrezZ/axiom/v3/internal/handoff",
 	"gopkg.in/yaml.v3",
 }
 

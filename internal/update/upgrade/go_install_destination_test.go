@@ -10,8 +10,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gentleman-programming/gentle-ai/v3/internal/system"
-	"github.com/gentleman-programming/gentle-ai/v3/internal/update"
+	"github.com/IGutierrezZ/axiom/v3/internal/system"
+	"github.com/IGutierrezZ/axiom/v3/internal/update"
 )
 
 // captureStderr runs fn with os.Stderr redirected to a pipe and returns what fn wrote.
@@ -312,8 +312,8 @@ func TestBetaGoInstallMainUpgradeWarnsWhenDestinationDiffers(t *testing.T) {
 			Owner:         "Gentleman-Programming",
 			Repo:          "gentle-ai",
 			InstallMethod: update.InstallBinary,
-			GoImportPath:  "github.com/gentleman-programming/gentle-ai/v3/cmd/gentle-ai",
-			GoModulePath:  "github.com/gentleman-programming/gentle-ai/v3",
+			GoImportPath:  "github.com/IGutierrezZ/axiom/v3/cmd/gentle-ai",
+			GoModulePath:  "github.com/IGutierrezZ/axiom/v3",
 		},
 		LatestVersion: "main@abc1234",
 		Status:        update.UpdateAvailable,

@@ -37,8 +37,8 @@ var inc22ProductionFiles = []string{
 }
 
 const (
-	filemergeImportPath = "github.com/gentleman-programming/gentle-ai/v3/internal/components/filemerge"
-	engramImportPath    = "github.com/gentleman-programming/gentle-ai/v3/internal/components/engram"
+	filemergeImportPath = "github.com/IGutierrezZ/axiom/v3/internal/components/filemerge"
+	engramImportPath    = "github.com/IGutierrezZ/axiom/v3/internal/components/engram"
 	skillregistryPrefix = "internal/skillregistry/"
 )
 
@@ -56,7 +56,7 @@ func TestImportBoundaryGuardCatchesKnownShapes(t *testing.T) {
 			path: "internal/skillregistry/agents.go",
 			src: `package skillregistry
 
-import "github.com/gentleman-programming/gentle-ai/v3/internal/components/filemerge"
+import "github.com/IGutierrezZ/axiom/v3/internal/components/filemerge"
 
 func example() { _ = filemerge.WriteFileAtomic }
 `,
@@ -67,7 +67,7 @@ func example() { _ = filemerge.WriteFileAtomic }
 			path: "internal/components/engram/save.go",
 			src: `package engram
 
-import "github.com/gentleman-programming/gentle-ai/v3/internal/components/filemerge"
+import "github.com/IGutierrezZ/axiom/v3/internal/components/filemerge"
 
 func example() { _ = filemerge.WriteFileAtomic }
 `,
@@ -78,7 +78,7 @@ func example() { _ = filemerge.WriteFileAtomic }
 			path: "internal/skillregistry/mirror.go",
 			src: `package skillregistry
 
-import "github.com/gentleman-programming/gentle-ai/v3/internal/components/engram"
+import "github.com/IGutierrezZ/axiom/v3/internal/components/engram"
 
 func example() { _ = engram.SaveTopic }
 `,

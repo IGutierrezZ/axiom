@@ -5,9 +5,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gentleman-programming/gentle-ai/v3/internal/handoff"
-	"github.com/gentleman-programming/gentle-ai/v3/internal/multirole"
-	"github.com/gentleman-programming/gentle-ai/v3/internal/workspace"
+	"github.com/IGutierrezZ/axiom/v3/internal/handoff"
+	"github.com/IGutierrezZ/axiom/v3/internal/multirole"
+	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
 func approvedRoleApplyRecord(role string, at time.Time) GateRecord {

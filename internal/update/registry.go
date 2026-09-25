@@ -29,11 +29,11 @@ var Tools = []ToolInfo{
 		// deliberately NOT a general opt-in to go-install: effectiveMethod routes
 		// gentle-ai on Linux/macOS to InstallBinary regardless of this field, so
 		// those platforms keep the minisign-verified release download.
-		GoImportPath: "github.com/gentleman-programming/gentle-ai/v3/cmd/gentle-ai",
+		GoImportPath: "github.com/IGutierrezZ/axiom/v3/cmd/gentle-ai",
 		// GoModulePath is the `module` directive go.mod actually declares
 		// (go.mod:1). It is deliberately NOT derived from Owner/Repo: only the
 		// declared module decides whether `go install` is resolvable (REQ-22.2).
-		GoModulePath: "github.com/gentleman-programming/gentle-ai/v3",
+		GoModulePath: "github.com/IGutierrezZ/axiom/v3",
 	},
 	{
 		Name:              "engram",

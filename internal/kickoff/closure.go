@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gentleman-programming/gentle-ai/v3/internal/handoff"
-	"github.com/gentleman-programming/gentle-ai/v3/internal/multirole"
+	"github.com/IGutierrezZ/axiom/v3/internal/handoff"
+	"github.com/IGutierrezZ/axiom/v3/internal/multirole"
 )
 
 // ArtifactInventory carries the artifact file paths IntegrationHandoff

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/gentleman-programming/gentle-ai/v3/internal/tui/styles"
+	"github.com/IGutierrezZ/axiom/v3/internal/tui/styles"
 )
 
 // SDDIncrementInfo modela la información de un incremento para la TUI.

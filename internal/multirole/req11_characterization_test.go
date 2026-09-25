@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gentleman-programming/gentle-ai/v3/internal/workspace"
+	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
 // req11ControlWorkspaceConfig mirrors this repository's own axiom.yaml

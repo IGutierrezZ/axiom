@@ -5,7 +5,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/gentleman-programming/gentle-ai/v3/internal/versions"
+	"github.com/IGutierrezZ/axiom/v3/internal/versions"
 )
 
 // UpsertYAMLMCPServerBlock removes any existing <serverID>: block nested under

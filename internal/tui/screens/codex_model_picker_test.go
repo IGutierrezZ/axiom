@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gentleman-programming/gentle-ai/v3/internal/model"
-	"github.com/gentleman-programming/gentle-ai/v3/internal/tui/screens"
+	"github.com/IGutierrezZ/axiom/v3/internal/model"
+	"github.com/IGutierrezZ/axiom/v3/internal/tui/screens"
 )
 
 func TestNewCodexModelPickerState(t *testing.T) {

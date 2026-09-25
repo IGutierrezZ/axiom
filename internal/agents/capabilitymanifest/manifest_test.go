@@ -6,8 +6,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/gentleman-programming/gentle-ai/v3/internal/catalog"
-	"github.com/gentleman-programming/gentle-ai/v3/internal/model"
+	"github.com/IGutierrezZ/axiom/v3/internal/catalog"
+	"github.com/IGutierrezZ/axiom/v3/internal/model"
 )
 
 func TestCanonicalImplementationRoutingBoundaries(t *testing.T) {

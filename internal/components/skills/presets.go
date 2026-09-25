@@ -1,6 +1,6 @@
 package skills
 
-import "github.com/gentleman-programming/gentle-ai/v3/internal/model"
+import "github.com/IGutierrezZ/axiom/v3/internal/model"
 
 // sddSkills are the SDD orchestrator skills — always included.
 var sddSkills = []model.SkillID{

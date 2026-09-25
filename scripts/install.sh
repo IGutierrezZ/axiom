@@ -6,17 +6,17 @@ set -euo pipefail
 # Ecosystem, Frameworks, Workflows for AI coding agents.
 #
 # Usage:
-#   curl -sL https://raw.githubusercontent.com/Gentleman-Programming/gentle-ai/main/scripts/install.sh | bash
+#   curl -sL https://raw.githubusercontent.com/IGutierrezZ/axiom/main/scripts/install.sh | bash
 #
 # Or download and run:
-#   curl -sLO https://raw.githubusercontent.com/Gentleman-Programming/gentle-ai/main/scripts/install.sh
+#   curl -sLO https://raw.githubusercontent.com/IGutierrezZ/axiom/main/scripts/install.sh
 #   chmod +x install.sh
 #   ./install.sh
 # ============================================================================
 
-GITHUB_OWNER="Gentleman-Programming"
-GITHUB_REPO="gentle-ai"
-BINARY_NAME="gentle-ai"
+GITHUB_OWNER="IGutierrezZ"
+GITHUB_REPO="axiom"
+BINARY_NAME="axiom"
 BREW_TAP="Gentleman-Programming/homebrew-tap"
 BREW_FORMULA_REF="gentleman-programming/tap/${BINARY_NAME}"
 
@@ -284,9 +284,9 @@ install_go() {
 
     info "Running: go install ${go_package}"
     if [ "${CHANNEL}" = "beta" ]; then
-        prepend_go_env_pattern GONOSUMDB github.com/gentleman-programming/gentle-ai/v3
-        prepend_go_env_pattern GOPRIVATE github.com/gentleman-programming/gentle-ai/v3
-        prepend_go_env_pattern GONOPROXY github.com/gentleman-programming/gentle-ai/v3
+        prepend_go_env_pattern GONOSUMDB github.com/IGutierrezZ/axiom/v3
+        prepend_go_env_pattern GOPRIVATE github.com/IGutierrezZ/axiom/v3
+        prepend_go_env_pattern GONOPROXY github.com/IGutierrezZ/axiom/v3
         export GONOSUMDB GOPRIVATE GONOPROXY
 
         if ! go install "$go_package"; then

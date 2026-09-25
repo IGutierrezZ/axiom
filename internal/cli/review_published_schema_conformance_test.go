@@ -9,7 +9,7 @@ import (
 
 	jsonschema "github.com/santhosh-tekuri/jsonschema/v6"
 
-	"github.com/gentleman-programming/gentle-ai/v3/internal/reviewtransaction"
+	"github.com/IGutierrezZ/axiom/v3/internal/reviewtransaction"
 )
 
 func compileWholePublishedReviewSchema(t *testing.T, version, name string) *jsonschema.Schema {

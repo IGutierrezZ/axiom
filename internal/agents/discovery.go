@@ -4,8 +4,8 @@ import (
 	"context"
 	"os"
 
-	"github.com/gentleman-programming/gentle-ai/v3/internal/model"
-	"github.com/gentleman-programming/gentle-ai/v3/internal/state"
+	"github.com/IGutierrezZ/axiom/v3/internal/model"
+	"github.com/IGutierrezZ/axiom/v3/internal/state"
 )
 
 // InstalledAgent pairs an agent ID with its resolved config root directory.

@@ -1,7 +1,7 @@
 package screens
 
 import (
-	"github.com/gentleman-programming/gentle-ai/v3/internal/tui/styles"
+	"github.com/IGutierrezZ/axiom/v3/internal/tui/styles"
 )
 
 func renderOptions(options []string, cursor int) string {

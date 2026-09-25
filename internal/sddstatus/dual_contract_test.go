@@ -3,7 +3,7 @@ package sddstatus
 import (
 	"testing"
 
-	"github.com/gentleman-programming/gentle-ai/v3/internal/consentenvelope"
+	"github.com/IGutierrezZ/axiom/v3/internal/consentenvelope"
 )
 
 func TestValidateStatusContractDualSupport(t *testing.T) {

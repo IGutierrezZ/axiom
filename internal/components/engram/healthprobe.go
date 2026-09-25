@@ -17,10 +17,10 @@ import (
 	"time"
 
 	"github.com/BurntSushi/toml"
-	"github.com/gentleman-programming/gentle-ai/v3/internal/agents"
-	"github.com/gentleman-programming/gentle-ai/v3/internal/agents/claude"
-	"github.com/gentleman-programming/gentle-ai/v3/internal/components/filemerge"
-	"github.com/gentleman-programming/gentle-ai/v3/internal/model"
+	"github.com/IGutierrezZ/axiom/v3/internal/agents"
+	"github.com/IGutierrezZ/axiom/v3/internal/agents/claude"
+	"github.com/IGutierrezZ/axiom/v3/internal/components/filemerge"
+	"github.com/IGutierrezZ/axiom/v3/internal/model"
 	"gopkg.in/yaml.v3"
 )
 

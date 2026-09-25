@@ -4,7 +4,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/gentleman-programming/gentle-ai/v3/internal/multirole"
+	"github.com/IGutierrezZ/axiom/v3/internal/multirole"
 )
 
 // Inputs is the complete input to the gate state machine. EvaluateGates is

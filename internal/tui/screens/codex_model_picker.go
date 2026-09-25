@@ -6,8 +6,8 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/gentleman-programming/gentle-ai/v3/internal/model"
-	"github.com/gentleman-programming/gentle-ai/v3/internal/tui/styles"
+	"github.com/IGutierrezZ/axiom/v3/internal/model"
+	"github.com/IGutierrezZ/axiom/v3/internal/tui/styles"
 )
 
 // CodexModelPreset represents a named effort-tier preset for Codex per-phase

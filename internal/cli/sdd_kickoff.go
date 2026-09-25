@@ -7,8 +7,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/gentleman-programming/gentle-ai/v3/internal/kickoff"
-	"github.com/gentleman-programming/gentle-ai/v3/internal/workspace"
+	"github.com/IGutierrezZ/axiom/v3/internal/kickoff"
+	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
 // RunSDDKickoff is the CLI entry point for `axiom sdd kickoff <seal|show>`

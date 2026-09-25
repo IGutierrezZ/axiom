@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	componentuninstall "github.com/gentleman-programming/gentle-ai/v3/internal/components/uninstall"
-	"github.com/gentleman-programming/gentle-ai/v3/internal/model"
+	componentuninstall "github.com/IGutierrezZ/axiom/v3/internal/components/uninstall"
+	"github.com/IGutierrezZ/axiom/v3/internal/model"
 )
 
 // A batch that failed for one agent must not open with "complete". The user

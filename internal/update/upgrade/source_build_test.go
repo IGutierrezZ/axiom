@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gentleman-programming/gentle-ai/v3/internal/system"
-	"github.com/gentleman-programming/gentle-ai/v3/internal/update"
+	"github.com/IGutierrezZ/axiom/v3/internal/system"
+	"github.com/IGutierrezZ/axiom/v3/internal/update"
 )
 
 // TestSourceBuildUpgradeFailuresReturnManualFallback verifies that every
@@ -31,7 +31,7 @@ func TestSourceBuildUpgradeFailuresReturnManualFallback(t *testing.T) {
 		Owner:        "IGutierrezZ",
 		Repo:         "axiom",
 		GoImportPath: "github.com/IGutierrezZ/axiom/cmd/axiom",
-		GoModulePath: "github.com/gentleman-programming/gentle-ai/v3",
+		GoModulePath: "github.com/IGutierrezZ/axiom/v3",
 	}
 	r := update.UpdateResult{Tool: tool, LatestVersion: "9.9.9", Status: update.UpdateAvailable}
 	profile := system.PlatformProfile{OS: "windows", GoAvailable: true}

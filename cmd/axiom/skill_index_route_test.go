@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gentleman-programming/gentle-ai/v3/internal/app"
+	"github.com/IGutierrezZ/axiom/v3/internal/app"
 )
 
 // countCollisionLines counts the lines that clarify the `skill list` vs

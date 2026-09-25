@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gentleman-programming/gentle-ai/v3/internal/handoff"
-	"github.com/gentleman-programming/gentle-ai/v3/internal/kickoff"
+	"github.com/IGutierrezZ/axiom/v3/internal/handoff"
+	"github.com/IGutierrezZ/axiom/v3/internal/kickoff"
 )
 
 // sealForGateTest seals a change with the given extra seal flags (beyond

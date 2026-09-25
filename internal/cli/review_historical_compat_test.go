@@ -13,7 +13,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gentleman-programming/gentle-ai/v3/internal/reviewtransaction"
+	"github.com/IGutierrezZ/axiom/v3/internal/reviewtransaction"
 )
 
 func injectCLIRetiredCompactStateField(t *testing.T, statePath, field string, value any) {

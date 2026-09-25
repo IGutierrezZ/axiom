@@ -6,8 +6,8 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/gentleman-programming/gentle-ai/v3/internal/reviewtransaction"
-	"github.com/gentleman-programming/gentle-ai/v3/internal/sddstatus"
+	"github.com/IGutierrezZ/axiom/v3/internal/reviewtransaction"
+	"github.com/IGutierrezZ/axiom/v3/internal/sddstatus"
 )
 
 func TestDualContract_ReviewCapabilitiesNegotiation(t *testing.T) {

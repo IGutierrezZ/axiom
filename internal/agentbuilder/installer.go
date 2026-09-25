@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/gentleman-programming/gentle-ai/v3/internal/model"
+	"github.com/IGutierrezZ/axiom/v3/internal/model"
 )
 
 // AdapterInfo pairs an AgentID with the path to its skills directory.

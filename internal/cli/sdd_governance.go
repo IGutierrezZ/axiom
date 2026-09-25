@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/gentleman-programming/gentle-ai/v3/internal/kickoff"
-	"github.com/gentleman-programming/gentle-ai/v3/internal/pathquote"
+	"github.com/IGutierrezZ/axiom/v3/internal/kickoff"
+	"github.com/IGutierrezZ/axiom/v3/internal/pathquote"
 )
 
 // resolveGovernanceChangeRoot resolves the workspace root from cwd

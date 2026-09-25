@@ -46,20 +46,20 @@ Naming convention: `gentle-ai-*` skills are repo-specific workflow skills. Unpre
 | --- | --- | --- | --- |
 | `axiom-go-table-tests` | — | project | `skills/axiom-go-table-tests/SKILL.md` |
 | `axiom-idiomatic-error-wrapping` | — | project | `skills/axiom-idiomatic-error-wrapping/SKILL.md` |
-| `chained-pr` | Trigger: PRs over 400 lines, stacked PRs, review slices. Split oversized changes into chained PRs that protect review focus. | project | `.claude/skills/chained-pr/SKILL.md` |
+| `chained-pr` | Trigger: PRs over 400 lines, stacked PRs, review slices. Split oversized changes into chained PRs that protect review focus. | project | `.gemini/skills/chained-pr/SKILL.md` |
 | `cognitive-doc-design` | Design docs that reduce cognitive load. Trigger: writing guides, READMEs, RFCs, onboarding, architecture, or review-facing docs. | project | `skills/cognitive-doc-design/SKILL.md` |
 | `comment-writer` | Write warm, direct collaboration comments. Trigger: PR feedback, issue replies, reviews, Slack messages, or GitHub comments. | project | `skills/comment-writer/SKILL.md` |
 | `gentle-ai-bench` | Trigger: bench, journey, journeys, driven mode, gentle-ai-bench, journey corpus, j-numbers, bench axis. Author and verify gentle-ai bench journeys; go test ./bench never proves driven execution. | project | `skills/gentle-ai-bench/SKILL.md` |
 | `gentle-ai-branch-pr` | Create Gentle AI pull requests. Trigger: creating, opening, or preparing PRs for review. | project | `skills/branch-pr/SKILL.md` |
 | `gentle-ai-chained-pr` | Trigger: PRs over 400 lines, stacked PRs, review slices. Split oversized changes into chained PRs that protect review focus. | project | `skills/chained-pr/SKILL.md` |
 | `gentle-ai-collab-perfect` | Trigger: contributing to Gentleman-Programming/gentle-ai as an external collaborator. Honest PR bodies, contributor-vs-maintainer scope, chained-PR strategy, verification protocol, docstring coverage. Load whenever the active repo is Gentleman-Programming/gentle-ai and any part of the contribution flow is in scope: opening an issue, drafting or editing a PR body, splitting a change into chained/stacked PRs, or auditing a PR before requesting review. | project | `skills/gentle-ai-collab-perfect/SKILL.md` |
-| `go-testing` | Trigger: Go tests, go test coverage, Bubbletea teatest, golden files. Apply focused Go testing patterns. | project | `.claude/skills/go-testing/SKILL.md` |
+| `go-testing` | Trigger: Go tests, go test coverage, Bubbletea teatest, golden files. Apply focused Go testing patterns. | project | `.gemini/skills/go-testing/SKILL.md` |
 | `issue-root-resolution` | Trigger: root audit, atacar la raíz, issue roots, backlog roots, mechanism map, deletion-driven fix, resolver issues de raíz, close outdated issues. Audit and resolve issue clusters by verified root cause. | project | `skills/issue-root-resolution/SKILL.md` |
-| `judgment-day` | Trigger: judgment day, dual review, adversarial review, juzgar. Run explicit blind dual review with at most two scoped fix/re-judgment rounds. | project | `.claude/skills/judgment-day/SKILL.md` |
+| `judgment-day` | Trigger: judgment day, dual review, adversarial review, juzgar. Run explicit blind dual review with at most two scoped fix/re-judgment rounds. | project | `.gemini/skills/judgment-day/SKILL.md` |
 | `rdd-advisory-transport` | Trigger: reviewer transport, advisory transport, review adapter, lens prompt/schema, OpenCode reviewer plugin, Codex reviewer, ReviewProviderContract. Enforce the shared Go advisory reviewer transport contract. | project | `skills/rdd-advisory-transport/SKILL.md` |
 | `rdd-defect-workflow` | Trigger: RDD, receipt-driven development, review authority, receipt/lineage, correction/recovery, delivery gate/kill switch, bounded review defects. Guide work. | project | `skills/rdd-defect-workflow/SKILL.md` |
-| `skill-creator` | Trigger: new skills, agent instructions, documenting AI usage patterns. Create LLM-first skills with valid frontmatter. | project | `.claude/skills/skill-creator/SKILL.md` |
-| `skill-improver` | Trigger: improve skills, audit skills, refactor skills, skill quality. Audit and upgrade existing LLM-first skills. | project | `.claude/skills/skill-improver/SKILL.md` |
+| `skill-creator` | Trigger: new skills, agent instructions, documenting AI usage patterns. Create LLM-first skills with valid frontmatter. | project | `.gemini/skills/skill-creator/SKILL.md` |
+| `skill-improver` | Trigger: improve skills, audit skills, refactor skills, skill quality. Audit and upgrade existing LLM-first skills. | project | `.gemini/skills/skill-improver/SKILL.md` |
 | `systemic-issue-triage` | Trigger: new issue, bug report, triage, backlog, issue flood, community report, root cause, dead-end, blocked user. Attack issues by root class, never one-by-one; fixes must shrink the system, not grow it. | project | `skills/systemic-issue-triage/SKILL.md` |
 | `work-unit-commits` | Plan commits as reviewable work units. Trigger: implementation, commit splitting, chained PRs, or keeping tests and docs with code. | project | `skills/work-unit-commits/SKILL.md` |
 <!-- /axiom:skills-index -->

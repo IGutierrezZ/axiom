@@ -6,7 +6,7 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/gentleman-programming/gentle-ai/v3/internal/telemetry"
+	"github.com/IGutierrezZ/axiom/v3/internal/telemetry"
 )
 
 // Runtime-store modes for Server.RuntimeStore. See its doc comment.

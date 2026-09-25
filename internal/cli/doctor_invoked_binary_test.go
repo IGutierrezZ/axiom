@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gentleman-programming/gentle-ai/v3/internal/doctor"
+	"github.com/IGutierrezZ/axiom/v3/internal/doctor"
 )
 
 // TestCheckOneTool_GentleAINamesTheInvokedExecutable closes fisidj finding 5

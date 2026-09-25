@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/gentleman-programming/gentle-ai/v3/internal/multirole"
+	"github.com/IGutierrezZ/axiom/v3/internal/multirole"
 	"gopkg.in/yaml.v3"
 )
 

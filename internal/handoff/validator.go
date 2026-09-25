@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/gentleman-programming/gentle-ai/v3/internal/multirole"
-	"github.com/gentleman-programming/gentle-ai/v3/internal/workspace"
+	"github.com/IGutierrezZ/axiom/v3/internal/multirole"
+	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
 var validPhases = map[Phase]bool{

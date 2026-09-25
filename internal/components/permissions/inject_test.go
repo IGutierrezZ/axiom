@@ -9,16 +9,16 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gentleman-programming/gentle-ai/v3/internal/agents"
-	"github.com/gentleman-programming/gentle-ai/v3/internal/agents/antigravity"
-	"github.com/gentleman-programming/gentle-ai/v3/internal/agents/claude"
-	"github.com/gentleman-programming/gentle-ai/v3/internal/agents/codex"
-	"github.com/gentleman-programming/gentle-ai/v3/internal/agents/cursor"
-	"github.com/gentleman-programming/gentle-ai/v3/internal/agents/gemini"
-	"github.com/gentleman-programming/gentle-ai/v3/internal/agents/hermes"
-	"github.com/gentleman-programming/gentle-ai/v3/internal/agents/opencode"
-	"github.com/gentleman-programming/gentle-ai/v3/internal/agents/vscode"
-	"github.com/gentleman-programming/gentle-ai/v3/internal/model"
+	"github.com/IGutierrezZ/axiom/v3/internal/agents"
+	"github.com/IGutierrezZ/axiom/v3/internal/agents/antigravity"
+	"github.com/IGutierrezZ/axiom/v3/internal/agents/claude"
+	"github.com/IGutierrezZ/axiom/v3/internal/agents/codex"
+	"github.com/IGutierrezZ/axiom/v3/internal/agents/cursor"
+	"github.com/IGutierrezZ/axiom/v3/internal/agents/gemini"
+	"github.com/IGutierrezZ/axiom/v3/internal/agents/hermes"
+	"github.com/IGutierrezZ/axiom/v3/internal/agents/opencode"
+	"github.com/IGutierrezZ/axiom/v3/internal/agents/vscode"
+	"github.com/IGutierrezZ/axiom/v3/internal/model"
 )
 
 // Fixture port of OpenCode v1.2.27 util/wildcard.ts and permission/service.ts:

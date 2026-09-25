@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gentleman-programming/gentle-ai/v3/internal/catalog"
-	"github.com/gentleman-programming/gentle-ai/v3/internal/model"
+	"github.com/IGutierrezZ/axiom/v3/internal/catalog"
+	"github.com/IGutierrezZ/axiom/v3/internal/model"
 )
 
 // Provenance rule (#2524, root 4 of #2440): a runtime's rendered surface must

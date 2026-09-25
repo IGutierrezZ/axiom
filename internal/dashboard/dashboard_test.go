@@ -12,7 +12,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gentleman-programming/gentle-ai/v3/internal/hub"
+	"github.com/IGutierrezZ/axiom/v3/internal/hub"
 )
 
 func TestServiceWorkspace(t *testing.T) {

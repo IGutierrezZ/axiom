@@ -8,10 +8,10 @@ import (
 	"os"
 	"strings"
 
-	"github.com/gentleman-programming/gentle-ai/v3/internal/cli"
-	"github.com/gentleman-programming/gentle-ai/v3/internal/system"
-	"github.com/gentleman-programming/gentle-ai/v3/internal/update"
-	"github.com/gentleman-programming/gentle-ai/v3/internal/update/upgrade"
+	"github.com/IGutierrezZ/axiom/v3/internal/cli"
+	"github.com/IGutierrezZ/axiom/v3/internal/system"
+	"github.com/IGutierrezZ/axiom/v3/internal/update"
+	"github.com/IGutierrezZ/axiom/v3/internal/update/upgrade"
 )
 
 // Upgrade status literals for UpgradeRunReport.Status and
