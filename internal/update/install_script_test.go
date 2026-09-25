@@ -103,7 +103,11 @@ func TestInstallScriptBetaGoInstallBypassesPublicGoProxy(t *testing.T) {
 	}
 	function := script[start : start+end+3]
 
-	cmd := exec.Command("bash", "-c", function+`
+	bash, err := workingBash()
+	if err != nil {
+		t.Skipf("working bash shell required: %v", err)
+	}
+	cmd := exec.Command(bash, "-c", function+`
 GONOSUMDB=example.com/private
 GOPRIVATE=github.com/acme/*
 GONOPROXY=github.com/IGutierrezZ/axiom/v3

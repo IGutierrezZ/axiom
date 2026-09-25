@@ -195,7 +195,7 @@ func TestOpportunisticDisabledByEachKillSwitch(t *testing.T) {
 		state State
 	}{
 		{"DO_NOT_TRACK", map[string]string{"DO_NOT_TRACK": "1"}, State{Enabled: true, NoticeShown: true}},
-		{"GENTLE_AI_TELEMETRY", map[string]string{"GENTLE_AI_TELEMETRY": "0"}, State{Enabled: true, NoticeShown: true}},
+		{"AXIOM_TELEMETRY", map[string]string{"AXIOM_TELEMETRY": "0"}, State{Enabled: true, NoticeShown: true}},
 		{"CI", map[string]string{"CI": "true"}, State{Enabled: true, NoticeShown: true}},
 		{"state disabled", map[string]string{}, State{Enabled: false, NoticeShown: true}},
 	}

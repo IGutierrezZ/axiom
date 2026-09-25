@@ -13,15 +13,14 @@ const (
 	ChannelStable InstallChannel = "stable"
 	ChannelBeta   InstallChannel = "beta"
 
-	ChannelAxiomEnvVar  = "AXIOM_CHANNEL"
-	ChannelGentleEnvVar = "GENTLE_AI_CHANNEL"
-	channelEnvVar       = ChannelGentleEnvVar
+	ChannelAxiomEnvVar = "AXIOM_CHANNEL"
+	channelEnvVar      = ChannelAxiomEnvVar
 )
 
 func ResolveInstallChannel(flagValue string) (InstallChannel, error) {
 	raw := strings.TrimSpace(flagValue)
 	if raw == "" {
-		raw = strings.TrimSpace(system.Getenv(ChannelAxiomEnvVar, ChannelGentleEnvVar))
+		raw = strings.TrimSpace(system.Getenv(ChannelAxiomEnvVar))
 	}
 	if raw == "" {
 		return ChannelStable, nil

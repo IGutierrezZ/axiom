@@ -193,37 +193,15 @@ func Path(homeDir string) string {
 	return system.StatePath(homeDir)
 }
 
-// LegacyPath returns the absolute path to the legacy Gentle AI state file for the given home directory.
-func LegacyPath(homeDir string) string {
-	return system.LegacyStatePath(homeDir)
-}
-
-// Bootstrap checks if canonical state (~/.axiom/state.json or $AXIOM_STATE_DIR/state.json) exists.
-// If it does not exist but legacy state exists (~/.gentle-ai/state.json), it defensively copies
-// the legacy state to the canonical path while preserving the legacy file intact as backup.
+// Bootstrap ensures that the canonical state directory exists.
 func Bootstrap(homeDir string) error {
 	canonicalPath := Path(homeDir)
-	if _, err := os.Stat(canonicalPath); err == nil {
-		return nil
-	}
-	legacyPath := LegacyPath(homeDir)
-	legacyData, err := os.ReadFile(legacyPath)
-	if err != nil {
-		return nil // No legacy state to migrate from
-	}
-	if mkErr := os.MkdirAll(filepath.Dir(canonicalPath), 0o755); mkErr != nil {
-		return mkErr
-	}
-	_, err = filemerge.WriteFileAtomic(canonicalPath, legacyData, 0o644)
-	return err
+	return os.MkdirAll(filepath.Dir(canonicalPath), 0o755)
 }
 
 // Read reads and unmarshals the state file from the given home directory.
-// It invokes Bootstrap to ensure non-destructive automatic migration from ~/.gentle-ai/state.json
-// when ~/.axiom/state.json is missing.
 // Returns an error if the file does not exist or cannot be decoded.
 func Read(homeDir string) (InstallState, error) {
-	_ = Bootstrap(homeDir)
 	canonicalPath := Path(homeDir)
 	data, err := os.ReadFile(canonicalPath)
 	if err != nil {

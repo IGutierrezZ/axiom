@@ -215,13 +215,12 @@ func containsString(values []string, target string) bool {
 type TickMsg time.Time
 
 const (
-	noAnimationAxiomEnv  = "AXIOM_NO_ANIMATION"
-	noAnimationGentleEnv = "GENTLE_AI_NO_ANIMATION"
-	noAnimationEnv       = noAnimationAxiomEnv
+	noAnimationAxiomEnv = "AXIOM_NO_ANIMATION"
+	noAnimationEnv      = noAnimationAxiomEnv
 )
 
 func tuiAnimationsDisabled() bool {
-	return system.Getenv(noAnimationAxiomEnv, noAnimationGentleEnv) == "1"
+	return system.Getenv(noAnimationAxiomEnv) == "1"
 }
 
 // CodexModelsDiscoveredMsg delivers one Custom picker catalog discovery result.

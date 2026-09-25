@@ -729,7 +729,7 @@ func gentleAIWindowsSourceInstallHint(r update.UpdateResult) string {
 }
 
 // engramBinaryUpgrade downloads or installs the latest engram binary.
-// It honors GENTLE_AI_CHANNEL: when the channel is beta, engram is installed
+// It honors AXIOM_CHANNEL: when the channel is beta, engram is installed
 // from source via `go install @main`. For stable (the default when the env var
 // is unset or unknown), the pre-built release binary is downloaded via
 // engramDownloadFn. On Windows, PATH changes are persisted to the user registry
@@ -741,7 +741,7 @@ func engramBinaryUpgrade(profile system.PlatformProfile) error {
 	// misrouted).
 	channel, err := cli.ResolveInstallChannel("")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "WARNING: unrecognized GENTLE_AI_CHANNEL value (%v); defaulting to stable\n", err)
+		fmt.Fprintf(os.Stderr, "WARNING: unrecognized AXIOM_CHANNEL value (%v); defaulting to stable\n", err)
 		channel = cli.ChannelStable
 	}
 

@@ -23,7 +23,7 @@ func TestIncrementSyncsWhenEnabledPersistsTheCounter(t *testing.T) {
 	// Pin every kill switch: the gate reads the ambient environment, and a
 	// developer shell or CI runner may carry any of them.
 	t.Setenv("DO_NOT_TRACK", "")
-	t.Setenv("GENTLE_AI_TELEMETRY", "")
+	t.Setenv("AXIOM_TELEMETRY", "")
 	t.Setenv("CI", "")
 	t.Setenv("GITHUB_ACTIONS", "")
 
@@ -45,7 +45,7 @@ func TestIncrementSyncsWhenEnabledPersistsTheCounter(t *testing.T) {
 func TestIncrementSyncsConcurrentDoesNotLoseUpdates(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("DO_NOT_TRACK", "")
-	t.Setenv("GENTLE_AI_TELEMETRY", "")
+	t.Setenv("AXIOM_TELEMETRY", "")
 	t.Setenv("CI", "")
 	t.Setenv("GITHUB_ACTIONS", "")
 

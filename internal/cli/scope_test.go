@@ -70,7 +70,6 @@ func TestResolveInstallScope(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			os.Unsetenv(ScopeAxiomEnvVar)
-			os.Unsetenv(ScopeGentleEnvVar)
 			if tt.envValue != "" {
 				t.Setenv(scopeEnvVar, tt.envValue)
 			}
@@ -88,19 +87,9 @@ func TestResolveInstallScope(t *testing.T) {
 
 func TestResolveInstallScope_Precedence(t *testing.T) {
 	os.Unsetenv(ScopeAxiomEnvVar)
-	os.Unsetenv(ScopeGentleEnvVar)
 
-	// Fallback to legacy
-	t.Setenv(ScopeGentleEnvVar, "workspace")
-	got, err := ResolveInstallScope("")
-	if err != nil || got != ScopeWorkspace {
-		t.Fatalf("fallback to legacy failed: got %q, %v, want %q", got, err, ScopeWorkspace)
-	}
-
-	// Axiom takes precedence over legacy
 	t.Setenv(ScopeAxiomEnvVar, "global")
-	t.Setenv(ScopeGentleEnvVar, "workspace")
-	got, err = ResolveInstallScope("")
+	got, err := ResolveInstallScope("")
 	if err != nil || got != ScopeGlobal {
 		t.Fatalf("axiom precedence failed: got %q, %v, want %q", got, err, ScopeGlobal)
 	}

@@ -503,7 +503,11 @@ func TestReleaseSecurityScriptsAreSyntacticallyValidAndFailClosed(t *testing.T) 
 					t.Errorf("%s is missing %q", tc.path, required)
 				}
 			}
-			cmd := exec.Command("bash", "-n", path)
+			bash, err := workingBash()
+			if err != nil {
+				t.Skipf("working bash shell required: %v", err)
+			}
+			cmd := exec.Command(bash, "-n", path)
 			if output, err := cmd.CombinedOutput(); err != nil {
 				t.Fatalf("bash -n %s: %v\n%s", tc.path, err, output)
 			}
@@ -512,6 +516,10 @@ func TestReleaseSecurityScriptsAreSyntacticallyValidAndFailClosed(t *testing.T) 
 }
 
 func TestRequireCISuccessSelectsNewestExactCommitRun(t *testing.T) {
+	bash, err := workingBash()
+	if err != nil {
+		t.Skipf("working bash shell required: %v", err)
+	}
 	const sha = "0123456789abcdef0123456789abcdef01234567"
 	tests := []struct {
 		name        string
@@ -592,7 +600,7 @@ cat "$FAKE_GH_RESPONSE"
 				t.Fatal(err)
 			}
 
-			command := exec.Command("bash", "scripts/require-ci-success.sh")
+			command := exec.Command(bash, "scripts/require-ci-success.sh")
 			command.Dir = filepath.Clean(filepath.Join("..", ".."))
 			environment := make([]string, 0, len(os.Environ())+7)
 			for _, value := range os.Environ() {
@@ -637,11 +645,15 @@ func TestCanonicalReleasePublicKeysControlRealLinkerBuild(t *testing.T) {
 
 	build := func(t *testing.T, raw string) (string, []byte, error) {
 		t.Helper()
-		outPath := filepath.Join(t.TempDir(), "gentle-ai")
-		cmd := exec.Command("bash", "-c", `
+		bash, err := workingBash()
+		if err != nil {
+			t.Skipf("working bash shell required: %v", err)
+		}
+		outPath := filepath.Join(t.TempDir(), "axiom")
+		cmd := exec.Command(bash, "-c", `
 set -euo pipefail
 canonical=$(./scripts/canonicalize-release-public-keys.sh)
-go build -trimpath -o "$OUT" -ldflags "-X $LINKER_TARGET=$canonical" ./cmd/gentle-ai
+go build -trimpath -o "$OUT" -ldflags "-X $LINKER_TARGET=$canonical" ./cmd/axiom
 `)
 		cmd.Dir = repoRoot
 		cmd.Env = append(os.Environ(),

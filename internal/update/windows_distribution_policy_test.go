@@ -2,6 +2,7 @@ package update
 
 import (
 	"encoding/json"
+	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -70,7 +71,7 @@ func TestWindowsInstallAndUpgradeContainNoRemoteBinaryOrScriptPath(t *testing.T)
 	}
 	for _, required := range []string{
 		"Windows binary distribution and Scoop are temporarily unavailable",
-		"go install github.com/IGutierrezZ/axiom/v3/cmd/gentle-ai@latest",
+		"go install github.com/IGutierrezZ/axiom/v3/cmd/axiom@latest",
 	} {
 		if !strings.Contains(installer, required) {
 			t.Errorf("Windows installer is missing safe source guidance %q", required)
@@ -445,8 +446,34 @@ func newReleasePolicyFixture(t *testing.T) string {
 	return root
 }
 
+func workingBash() (string, error) {
+	var candidates []string
+	if gitPath, err := exec.LookPath("git"); err == nil {
+		candidates = append(candidates,
+			filepath.Join(filepath.Dir(gitPath), "..", "bin", "bash.exe"),
+			filepath.Join(filepath.Dir(gitPath), "..", "usr", "bin", "bash.exe"),
+		)
+	}
+	if bashPath, err := exec.LookPath("bash"); err == nil {
+		candidates = append(candidates, bashPath)
+	}
+	for _, shell := range candidates {
+		if _, err := os.Stat(shell); err != nil {
+			continue
+		}
+		if err := exec.Command(shell, "-c", "exit 0").Run(); err == nil {
+			return shell, nil
+		}
+	}
+	return "", errors.New("no working POSIX bash shell found")
+}
+
 func runReleasePolicy(root string) ([]byte, error) {
-	command := exec.Command("bash", filepath.Join("scripts", "verify-release-distribution-policy.sh"))
+	bash, err := workingBash()
+	if err != nil {
+		return nil, err
+	}
+	command := exec.Command(bash, filepath.Join("scripts", "verify-release-distribution-policy.sh"))
 	command.Dir = root
 	command.Env = append(os.Environ(),
 		"RELEASE_POLICY_SNAPSHOT_MARKER="+releasePolicyMarkerPath(root),

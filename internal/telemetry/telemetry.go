@@ -31,22 +31,21 @@ const (
 	EventHeartbeat = "heartbeat"
 )
 
-// DefaultEndpoint is the collector URL used when GENTLE_AI_TELEMETRY_ENDPOINT
+// DefaultEndpoint is the collector URL used when AXIOM_TELEMETRY_ENDPOINT
 // is not set.
 const DefaultEndpoint = "https://telemetry.gentlemanprogramming.com/v1/events"
 
 // EndpointEnvVar overrides DefaultEndpoint.
 const (
-	EndpointAxiomEnvVar  = "AXIOM_TELEMETRY_ENDPOINT"
-	EndpointGentleEnvVar = "GENTLE_AI_TELEMETRY_ENDPOINT"
-	EndpointEnvVar       = EndpointAxiomEnvVar
+	EndpointAxiomEnvVar = "AXIOM_TELEMETRY_ENDPOINT"
+	EndpointEnvVar      = EndpointAxiomEnvVar
 )
 
 // NoticeLine is printed to stderr exactly once: by Opportunistic's
 // enrollment step, before any event is ever built or sent. That one
 // enrollment run sends nothing at all; the first real send only happens on
 // a later trigger. It is never printed by the sender itself.
-const NoticeLine = "Gentle AI sends anonymous usage metrics (version, OS, agents, counters) and may send anonymous runtime usage from supported Pi/OpenCode/Codex integrations (public model, effort, agent class, available token usage, timing, error categories); runtime usage is never stored locally; run gentle-ai telemetry disable to opt out."
+const NoticeLine = "Axiom sends anonymous usage metrics (version, OS, agents, counters) and may send anonymous runtime usage from supported Pi/OpenCode/Codex integrations (public model, effort, agent class, available token usage, timing, error categories); runtime usage is never stored locally; run axiom telemetry disable to opt out."
 
 // MaxPayloadBytes bounds the JSON POST body per the issue's contract.
 const MaxPayloadBytes = 4096

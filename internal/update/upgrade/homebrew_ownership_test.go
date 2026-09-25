@@ -48,7 +48,7 @@ func TestRunStrategyUsesCaskOwnershipAndMigrationGuidance(t *testing.T) {
 				return mockCmd("echo", "ok")
 			}
 			if name == "engram" {
-				return mockCmd("printf", tt.version)
+				return mockCmd("echo", tt.version)
 			}
 			return mockCmd("false")
 		}

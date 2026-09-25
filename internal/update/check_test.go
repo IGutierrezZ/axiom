@@ -18,7 +18,7 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	if err := os.Unsetenv("GENTLE_AI_CHANNEL"); err != nil {
+	if err := os.Unsetenv("AXIOM_CHANNEL"); err != nil {
 		panic(err)
 	}
 
@@ -323,7 +323,7 @@ func TestCheckSingleToolOpenCodePluginRegisteredNotMaterialized(t *testing.T) {
 }
 
 func TestCheckSingleToolGentleAIBetaComparesMainHead(t *testing.T) {
-	t.Setenv("GENTLE_AI_CHANNEL", "beta")
+	t.Setenv("AXIOM_CHANNEL", "beta")
 
 	origClient := httpClient
 	t.Cleanup(func() { httpClient = origClient })
@@ -446,7 +446,7 @@ func TestUsesBetaMainHeadCheck(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if tt.channelSet {
-				t.Setenv("GENTLE_AI_CHANNEL", tt.channel)
+				t.Setenv("AXIOM_CHANNEL", tt.channel)
 			} else {
 				unsetUpdateChannelEnv(t)
 			}
@@ -505,7 +505,7 @@ func TestCheckSingleToolGentleAIStableVersionWithoutChannelComparesLatestRelease
 }
 
 func TestCheckSingleToolGentleAIBetaAcceptsLocalCommitPrefix(t *testing.T) {
-	t.Setenv("GENTLE_AI_CHANNEL", "beta")
+	t.Setenv("AXIOM_CHANNEL", "beta")
 
 	origClient := httpClient
 	t.Cleanup(func() { httpClient = origClient })
@@ -1083,9 +1083,9 @@ func TestCheckSingleTool_EngramUsesBinaryReleaseChannel(t *testing.T) {
 	}
 	execCommand = func(name string, args ...string) *exec.Cmd {
 		if name == "engram" {
-			return exec.Command("echo", "engram 1.15.13")
+			return mockCmd("echo", "engram 1.15.13")
 		}
-		return exec.Command("false")
+		return mockCmd("false")
 	}
 
 	result := checkSingleTool(context.Background(), Tools[1], "dev", system.PlatformProfile{OS: "darwin", PackageManager: "brew", Supported: true})
@@ -1798,12 +1798,17 @@ func TestNoUpdatesPath(t *testing.T) {
 	origLookPath := lookPath
 	origExecCommand := execCommand
 	origTools := Tools
+	origOsStat := osStat
 	t.Cleanup(func() {
 		httpClient = origClient
 		lookPath = origLookPath
 		execCommand = origExecCommand
 		Tools = origTools
+		osStat = origOsStat
 	})
+	osStat = func(name string) (os.FileInfo, error) {
+		return nil, os.ErrNotExist
+	}
 
 	httpClient = server.Client()
 	httpClient.Transport = &testTransport{server: server}
@@ -2029,19 +2034,19 @@ func TestDetectInstalledVersionPs1FallbackInvokesViaPowershell(t *testing.T) {
 func unsetUpdateChannelEnv(t *testing.T) {
 	t.Helper()
 
-	oldValue, hadValue := os.LookupEnv("GENTLE_AI_CHANNEL")
-	if err := os.Unsetenv("GENTLE_AI_CHANNEL"); err != nil {
-		t.Fatalf("unset GENTLE_AI_CHANNEL: %v", err)
+	oldValue, hadValue := os.LookupEnv("AXIOM_CHANNEL")
+	if err := os.Unsetenv("AXIOM_CHANNEL"); err != nil {
+		t.Fatalf("unset AXIOM_CHANNEL: %v", err)
 	}
 	t.Cleanup(func() {
 		if hadValue {
-			if err := os.Setenv("GENTLE_AI_CHANNEL", oldValue); err != nil {
-				t.Fatalf("restore GENTLE_AI_CHANNEL: %v", err)
+			if err := os.Setenv("AXIOM_CHANNEL", oldValue); err != nil {
+				t.Fatalf("restore AXIOM_CHANNEL: %v", err)
 			}
 			return
 		}
-		if err := os.Unsetenv("GENTLE_AI_CHANNEL"); err != nil {
-			t.Fatalf("restore unset GENTLE_AI_CHANNEL: %v", err)
+		if err := os.Unsetenv("AXIOM_CHANNEL"); err != nil {
+			t.Fatalf("restore unset AXIOM_CHANNEL: %v", err)
 		}
 	})
 }

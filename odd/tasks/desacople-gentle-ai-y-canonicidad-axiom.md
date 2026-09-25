@@ -44,11 +44,11 @@ Desacoplar de forma exhaustiva y canónica el ecosistema de Axiom respecto a Gen
   - [x] Actualizar en `internal/sddtaskresult/handoff.go` la síntesis del comando de continuación para emitir `axiom sdd status ...`.
   - [x] Corregir en `internal/tui/model.go` y pantallas los mensajes de error de RDD (`Retry with axiom review mode enable...`) e instrucciones de Homebrew (`brew uninstall axiom`).
 
-- [ ] **T2 · Supresión total de capas de fallback (Punto 2)**
-  - [ ] Limpiar `internal/system/env.go` eliminando la resolución en cascada hacia variables `GENTLE_AI_*` (`Getenv` responderá únicamente a las claves `AXIOM_*` solicitadas).
-  - [ ] Eliminar en `internal/system/user_paths.go` los métodos `LegacyDir`, `LegacyStatePath`, `LegacyCacheDir` y `LegacyBinDir`.
-  - [ ] Limpiar en `internal/state/state.go` y `cmd/axiom/main.go` cualquier lectura o advertencia sobre `~/.gentle-ai/backups/`.
-  - [ ] Retirar o convertir en fallo inmediato sin redirección el paquete `cmd/gentle-ai`.
+- [x] **T2 · Supresión total de capas de fallback (Punto 2)**
+  - [x] Limpiar `internal/system/env.go` eliminando la resolución en cascada hacia variables `GENTLE_AI_*` (`Getenv` responderá únicamente a las claves `AXIOM_*` solicitadas).
+  - [x] Eliminar en `internal/system/user_paths.go` los métodos `LegacyDir`, `LegacyStatePath`, `LegacyCacheDir` y `LegacyBinDir`.
+  - [x] Limpiar en `internal/state/state.go` y `cmd/axiom/main.go` cualquier lectura o advertencia sobre `~/.gentle-ai/backups/`.
+  - [x] Retirar o convertir en fallo inmediato sin redirección el paquete `cmd/gentle-ai`.
 
 - [ ] **T3 · Migración formal de contratos, schemas y marcadores de plantilla (Punto 3)**
   - [ ] Actualizar en `internal/sddstatus/` los contratos de estado a `axiom.sdd-status/v1` (o `v2`) y `axiom.sdd-integration.consent/v1`.

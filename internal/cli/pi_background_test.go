@@ -483,26 +483,13 @@ func TestSyncPiBackgroundPrecedenceAndDryRunReporting(t *testing.T) {
 
 func TestResolvePiBackgroundCLI_Precedence(t *testing.T) {
 	os.Unsetenv(PiBackgroundSubagentsAxiomEnv)
-	os.Unsetenv(PiBackgroundSubagentsGentleEnv)
 
-	// Fallback to legacy
-	t.Setenv(PiBackgroundSubagentsGentleEnv, "on")
+	t.Setenv(PiBackgroundSubagentsAxiomEnv, "off")
 	res, err := resolvePiBackgroundCLI(false, "", state.InstallState{})
 	if err != nil {
 		t.Fatalf("resolvePiBackgroundCLI error = %v", err)
 	}
-	if res.Effective != model.PiBackgroundOn {
-		t.Fatalf("fallback to legacy failed: got %q, want %q", res.Effective, model.PiBackgroundOn)
-	}
-
-	// Axiom takes precedence over legacy
-	t.Setenv(PiBackgroundSubagentsAxiomEnv, "off")
-	t.Setenv(PiBackgroundSubagentsGentleEnv, "on")
-	res, err = resolvePiBackgroundCLI(false, "", state.InstallState{})
-	if err != nil {
-		t.Fatalf("resolvePiBackgroundCLI error = %v", err)
-	}
 	if res.Effective != model.PiBackgroundOff {
-		t.Fatalf("axiom precedence failed: got %q, want %q", res.Effective, model.PiBackgroundOff)
+		t.Fatalf("axiom env failed: got %q, want %q", res.Effective, model.PiBackgroundOff)
 	}
 }

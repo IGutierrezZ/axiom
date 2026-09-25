@@ -180,9 +180,6 @@ func isGentleAIRepo(tool ToolInfo) bool {
 
 func isBetaUpdateChannel() bool {
 	channel := strings.TrimSpace(updateChannelEnv("AXIOM_CHANNEL"))
-	if channel == "" {
-		channel = strings.TrimSpace(updateChannelEnv("GENTLE_AI_CHANNEL"))
-	}
 	switch strings.ToLower(channel) {
 	case "beta", "nightly", "main":
 		return true
