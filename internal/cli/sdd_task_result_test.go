@@ -34,7 +34,7 @@ func TestSDDTaskResultRefusesAnEmptyResultWithTheTypedHandoff(t *testing.T) {
 	if err == nil {
 		t.Fatal("empty result was admitted")
 	}
-	if !strings.HasPrefix(err.Error(), "GENTLE_AI_SDD_FAILURE ") {
+	if !strings.HasPrefix(err.Error(), "AXIOM_SDD_FAILURE ") {
 		t.Errorf("error is not the typed handoff: %q", err.Error())
 	}
 	if !strings.Contains(err.Error(), `"code":"sdd_task_result_empty"`) {
@@ -83,11 +83,11 @@ func TestSDDTaskResultContinuationPreservesIdentity(t *testing.T) {
 				t.Fatal("terminal failure was admitted")
 			}
 			var payload struct{ Continuation string }
-			if err := json.Unmarshal([]byte(strings.TrimPrefix(err.Error(), "GENTLE_AI_SDD_FAILURE ")), &payload); err != nil {
+			if err := json.Unmarshal([]byte(strings.TrimPrefix(err.Error(), "AXIOM_SDD_FAILURE ")), &payload); err != nil {
 				t.Fatal(err)
 			}
 			if tc.name == "explicit change" {
-				if payload.Continuation != `gentle-ai sdd-status 'feat'\''x' --cwd '/re'\''po' --json` {
+				if payload.Continuation != `axiom sdd status 'feat'\''x' --cwd '/re'\''po' --json` {
 					t.Fatalf("explicit-change compatibility lost: %q", payload.Continuation)
 				}
 				return

@@ -649,7 +649,7 @@ func TestRenderMarkdownIncludesFencedJSON(t *testing.T) {
 		"## SDD Status: add-auth",
 		"next: apply",
 		"```json",
-		`"schemaName": "gentle-ai.sdd-status"`,
+		`"schemaName": "axiom.sdd-status"`,
 		"```",
 	} {
 		if !strings.Contains(markdown, want) {
@@ -675,7 +675,7 @@ func TestRenderDispatcherMarkdownIncludesRoutingContext(t *testing.T) {
 		"### Next Phase Instructions: apply",
 		"Read proposal, specs, design, and tasks before editing.",
 		"```json",
-		`"schemaName": "gentle-ai.sdd-status"`,
+		`"schemaName": "axiom.sdd-status"`,
 		"```",
 	} {
 		if !strings.Contains(markdown, want) {
@@ -726,7 +726,7 @@ func TestRenderNativePhasePromptIncludesAuthorityInstructionsJSONAndBlockedGuida
 		"dependency_state: blocked",
 		"Read proposal, specs, design, and tasks before editing.",
 		"```json",
-		`"schemaName": "gentle-ai.sdd-status"`,
+		`"schemaName": "axiom.sdd-status"`,
 		"```",
 	} {
 		if !strings.Contains(prompt, want) {
@@ -772,7 +772,7 @@ func TestParseCommandArgs(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ParseCommandArgs() error = %v", err)
 	}
-	want := CommandArgs{ChangeName: "add-auth", CWD: "/tmp/repo", JSON: true, IncludeInstructions: true, Contract: "gentle-ai.sdd-status/v2"}
+	want := CommandArgs{ChangeName: "add-auth", CWD: "/tmp/repo", JSON: true, IncludeInstructions: true, Contract: "axiom.sdd-status/v2"}
 	if got != want {
 		t.Fatalf("ParseCommandArgs() = %#v, want %#v", got, want)
 	}

@@ -12,7 +12,10 @@ import (
 	"strings"
 )
 
-const TransactionSchema = "gentle-ai.review-transaction/v1"
+const (
+	TransactionSchema       = AxiomReviewTransactionV1Contract
+	LegacyTransactionSchema = LegacyReviewTransactionV1Contract
+)
 
 type Mode string
 
@@ -974,7 +977,7 @@ func (transaction *Transaction) validate() error {
 	if transaction.LedgerHash != "" && transaction.LedgerFindingsHash == "" && len(transaction.Findings) > 0 || transaction.LedgerHash != "" && transaction.LedgerFindingsHash == "" && transaction.Findings != nil {
 		transaction.LedgerFindingsHash = findingsHash(transaction.Findings)
 	}
-	if transaction.Schema != TransactionSchema {
+	if transaction.Schema != TransactionSchema && transaction.Schema != LegacyTransactionSchema {
 		return errors.New("unsupported review transaction schema")
 	}
 	if err := validateLineageID(transaction.LineageID); err != nil {

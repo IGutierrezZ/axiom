@@ -90,7 +90,7 @@ func scrubKickoffAbsenceWorkspaceRoot(jsonText, root string) string {
 // status_v2.go were touched (tasks.md 11.1). It is frozen pre-INC-21 truth:
 // no line of it may change while this control gate is in force.
 const kickoffAbsenceRegressionGolden = `{
-  "schemaName": "gentle-ai.sdd-status",
+  "schemaName": "axiom.sdd-status",
   "schemaVersion": 2,
   "changeName": "regression-no-kickoff",
   "artifactStore": "openspec",

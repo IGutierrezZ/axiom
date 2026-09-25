@@ -11,9 +11,10 @@ import (
 
 // SDDIntegrationConsentSchema identifies the SDD edit-authority consent
 // question (#2540 S4a), in the same envelope family as
-// gentle-ai.review-integration.consent/v2.
-const SDDIntegrationConsentSchema = "gentle-ai.sdd-integration.consent/v1"
+// axiom.review-integration.consent/v2.
+const SDDIntegrationConsentSchema = "axiom.sdd-integration.consent/v1"
 const AxiomSDDIntegrationConsentSchema = "axiom.sdd-integration.consent/v1"
+const LegacySDDIntegrationConsentSchema = "gentle-ai.sdd-integration.consent/v1"
 
 // SDDIntegrationConsentSchemaID is the published JSON-schema identity for the
 // envelope, mirroring the review-integration contract layout.
@@ -22,8 +23,9 @@ const AxiomSDDIntegrationConsentSchemaID = "https://gentle-ai.dev/contracts/sdd-
 
 // SDDIntegrationContractV1 names the sdd-integration contract the envelope
 // belongs to.
-const SDDIntegrationContractV1 = "gentle-ai.sdd-integration/v1"
+const SDDIntegrationContractV1 = "axiom.sdd-integration/v1"
 const AxiomSDDIntegrationContractV1 = "axiom.sdd-integration/v1"
+const LegacySDDIntegrationContractV1 = "gentle-ai.sdd-integration/v1"
 
 const (
 	sddConsentOperation      = "sdd-attempt.grant"
@@ -43,14 +45,16 @@ const (
 	// provisional pin lacked --request-id (found by S3) and
 	// --change-instance (added by S5); #2563 reconciled the fixture, the
 	// schema regex, and the test pin together to this flag set.
-	sddConsentGrantInvocationPrefix   = "gentle-ai sdd-attempt grant "
-	axiomConsentGrantInvocationPrefix = "axiom sdd-attempt grant "
+	sddConsentGrantInvocationPrefix      = "axiom sdd-attempt grant "
+	axiomConsentGrantInvocationPrefix    = "axiom sdd-attempt grant "
+	legacyConsentGrantInvocationPrefix   = "gentle-ai sdd-attempt grant "
 
 	// sddConsentStatusInvocationPrefix is the decline and off-path re-entry:
 	// declining persists nothing, so the runnable follow-up is native SDD
 	// status for the same change.
-	sddConsentStatusInvocationPrefix   = "gentle-ai sdd-status "
-	axiomConsentStatusInvocationPrefix = "axiom sdd-status "
+	sddConsentStatusInvocationPrefix     = "axiom sdd-status "
+	axiomConsentStatusInvocationPrefix   = "axiom sdd-status "
+	legacyConsentStatusInvocationPrefix  = "gentle-ai sdd-status "
 )
 
 // SDDIntegrationConsentResult is the typed blocking consent question an SDD
@@ -91,8 +95,8 @@ type SDDIntegrationConsentResult struct {
 // Validate enforces the envelope's SDD identity and delegates the generic
 // completeness half to the shared consent-envelope core (#2554).
 func (result SDDIntegrationConsentResult) Validate() error {
-	validSchema := result.Schema == SDDIntegrationConsentSchema || result.Schema == AxiomSDDIntegrationConsentSchema
-	validContract := result.Contract == SDDIntegrationContractV1 || result.Contract == AxiomSDDIntegrationContractV1
+	validSchema := result.Schema == SDDIntegrationConsentSchema || result.Schema == AxiomSDDIntegrationConsentSchema || result.Schema == LegacySDDIntegrationConsentSchema
+	validContract := result.Contract == SDDIntegrationContractV1 || result.Contract == AxiomSDDIntegrationContractV1 || result.Contract == LegacySDDIntegrationContractV1
 	if !validSchema || !validContract ||
 		result.Operation != sddConsentOperation || result.Action != sddConsentActionRequired || !result.Blocking {
 		return errors.New("invalid SDD consent question identity") // refusal:by-design world-action: this envelope is built and validated by the same package; the exit is a code fix, not a command
@@ -123,7 +127,9 @@ func (result SDDIntegrationConsentResult) Validate() error {
 		}
 	}
 	granted := result.Choices[0]
-	hasGrantPrefix := strings.HasPrefix(granted.Invocation, sddConsentGrantInvocationPrefix) || strings.HasPrefix(granted.Invocation, axiomConsentGrantInvocationPrefix)
+	hasGrantPrefix := strings.HasPrefix(granted.Invocation, sddConsentGrantInvocationPrefix) ||
+		strings.HasPrefix(granted.Invocation, axiomConsentGrantInvocationPrefix) ||
+		strings.HasPrefix(granted.Invocation, legacyConsentGrantInvocationPrefix)
 	if !hasGrantPrefix ||
 		!strings.Contains(granted.Invocation, " --cwd ") ||
 		!strings.Contains(granted.Invocation, " --change "+result.Change) ||
@@ -139,13 +145,17 @@ func (result SDDIntegrationConsentResult) Validate() error {
 		}
 	}
 	declined := result.Choices[1]
-	hasDeclinePrefix := strings.HasPrefix(declined.Invocation, sddConsentStatusInvocationPrefix) || strings.HasPrefix(declined.Invocation, axiomConsentStatusInvocationPrefix)
+	hasDeclinePrefix := strings.HasPrefix(declined.Invocation, sddConsentStatusInvocationPrefix) ||
+		strings.HasPrefix(declined.Invocation, axiomConsentStatusInvocationPrefix) ||
+		strings.HasPrefix(declined.Invocation, legacyConsentStatusInvocationPrefix)
 	if !hasDeclinePrefix ||
 		!strings.Contains(declined.Invocation, result.Change) ||
 		!strings.Contains(declined.Invocation, " --cwd ") {
 		return errors.New("SDD consent decline choice does not name the status re-entry for the blocked change") // refusal:by-design world-action: this envelope is built and validated by the same package; the exit is a code fix, not a command
 	}
-	if !strings.HasPrefix(result.OffPath.Command, sddConsentStatusInvocationPrefix) && !strings.HasPrefix(result.OffPath.Command, axiomConsentStatusInvocationPrefix) {
+	if !strings.HasPrefix(result.OffPath.Command, sddConsentStatusInvocationPrefix) &&
+		!strings.HasPrefix(result.OffPath.Command, axiomConsentStatusInvocationPrefix) &&
+		!strings.HasPrefix(result.OffPath.Command, legacyConsentStatusInvocationPrefix) {
 		return errors.New("SDD consent off path must re-enter through native status") // refusal:by-design world-action: this envelope is built and validated by the same package; the exit is a code fix, not a command
 	}
 	return nil

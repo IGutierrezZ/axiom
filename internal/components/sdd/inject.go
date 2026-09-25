@@ -3368,11 +3368,21 @@ func injectClaudeModelAssignments(content string, assignments map[string]model.C
 }
 
 func injectClaudePhaseAssignments(content string, legacyAssignments map[string]model.ClaudeModelAlias, phaseAssignments map[string]model.ClaudePhaseAssignment) (string, error) {
-	const openMarker = "<!-- gentle-ai:sdd-model-assignments -->"
-	const closeMarker = "<!-- /gentle-ai:sdd-model-assignments -->"
+	const axiomOpenMarker = "<!-- axiom:sdd-model-assignments -->"
+	const axiomCloseMarker = "<!-- /axiom:sdd-model-assignments -->"
+	const legacyOpenMarker = "<!-- gentle-ai:sdd-model-assignments -->"
+	const legacyCloseMarker = "<!-- /gentle-ai:sdd-model-assignments -->"
 
+	openMarker := axiomOpenMarker
+	closeMarker := axiomCloseMarker
 	start := strings.Index(content, openMarker)
 	end := strings.Index(content, closeMarker)
+	if start == -1 || end == -1 || end < start {
+		openMarker = legacyOpenMarker
+		closeMarker = legacyCloseMarker
+		start = strings.Index(content, openMarker)
+		end = strings.Index(content, closeMarker)
+	}
 	if start == -1 || end == -1 || end < start {
 		return "", fmt.Errorf("sdd orchestrator asset missing model assignment markers")
 	}

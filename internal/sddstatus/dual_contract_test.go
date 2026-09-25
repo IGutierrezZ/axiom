@@ -78,8 +78,8 @@ func TestProjectStatusV2SchemaDualSupport(t *testing.T) {
 	}{
 		{
 			name:           "schema legado gentle-ai aceptado",
-			schemaName:     SchemaName,
-			wantSchemaName: SchemaName,
+			schemaName:     LegacySchemaName,
+			wantSchemaName: LegacySchemaName,
 			wantErr:        false,
 		},
 		{

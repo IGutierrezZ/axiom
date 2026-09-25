@@ -50,12 +50,12 @@ Desacoplar de forma exhaustiva y canónica el ecosistema de Axiom respecto a Gen
   - [x] Limpiar en `internal/state/state.go` y `cmd/axiom/main.go` cualquier lectura o advertencia sobre `~/.gentle-ai/backups/`.
   - [x] Retirar o convertir en fallo inmediato sin redirección el paquete `cmd/gentle-ai`.
 
-- [ ] **T3 · Migración formal de contratos, schemas y marcadores de plantilla (Punto 3)**
-  - [ ] Actualizar en `internal/sddstatus/` los contratos de estado a `axiom.sdd-status/v1` (o `v2`) y `axiom.sdd-integration.consent/v1`.
-  - [ ] Actualizar en `internal/sddtaskresult/` el prefijo `HandoffPrefix = "AXIOM_SDD_FAILURE "` y el schema `axiom.sdd-task-result-failure/v1`.
-  - [ ] Migrar en `internal/reviewtransaction/` las constantes de schema a `axiom.review-transaction/v1`, `axiom.review-targeted-validation-request/v1` y los hashes criptográficos asociados.
-  - [ ] Renombrar los marcadores en plantillas e instrucciones de `<!-- gentle-ai:sdd-... -->` a `<!-- axiom:sdd-... -->`.
-  - [ ] Actualizar las definiciones JSON de schemas en `contracts/` y sus fixtures para validar los nuevos contratos.
+- [x] **T3 · Migración formal de contratos, schemas y marcadores de plantilla (Punto 3)**
+  - [x] Actualizar en `internal/sddstatus/` los contratos de estado a `axiom.sdd-status/v1` (o `v2`) y `axiom.sdd-integration.consent/v1`.
+  - [x] Actualizar en `internal/sddtaskresult/` el prefijo `HandoffPrefix = "AXIOM_SDD_FAILURE "` y el schema `axiom.sdd-task-result-failure/v1`.
+  - [x] Migrar en `internal/reviewtransaction/` las constantes de schema a `axiom.review-transaction/v1`, `axiom.review-targeted-validation-request/v1` y los hashes criptográficos asociados.
+  - [x] Renombrar los marcadores en plantillas e instrucciones de `<!-- gentle-ai:sdd-... -->` a `<!-- axiom:sdd-... -->`.
+  - [x] Actualizar las definiciones JSON de schemas en `contracts/` y sus fixtures para validar los nuevos contratos.
 
 - [ ] **T4 · Renombrado de skills y actualización de referencias (Punto 4)**
   - [ ] Renombrar carpetas de skills en `skills/`:

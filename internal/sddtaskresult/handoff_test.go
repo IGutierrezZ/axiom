@@ -38,15 +38,15 @@ func TestHandoffWithoutChangeRetainsCoordinatorIdentity(t *testing.T) {
 
 func TestHandoffCarriesThePrefixAndSchema(t *testing.T) {
 	handoff := Handoff(ClassEmpty, "sdd-apply", "/repo", "", "")
-	if !strings.HasPrefix(handoff, "GENTLE_AI_SDD_FAILURE ") {
+	if !strings.HasPrefix(handoff, "AXIOM_SDD_FAILURE ") {
 		t.Fatalf("handoff lost its literal prefix: %q", handoff)
 	}
 	var decoded map[string]any
-	if err := json.Unmarshal([]byte(strings.TrimPrefix(handoff, "GENTLE_AI_SDD_FAILURE ")), &decoded); err != nil {
+	if err := json.Unmarshal([]byte(strings.TrimPrefix(handoff, "AXIOM_SDD_FAILURE ")), &decoded); err != nil {
 		t.Fatalf("handoff payload is not JSON: %v", err)
 	}
 	for field, want := range map[string]any{
-		"schemaName":   "gentle-ai.sdd-task-result-failure/v1",
+		"schemaName":   "axiom.sdd-task-result-failure/v1",
 		"status":       "blocked",
 		"code":         "sdd_task_result_empty",
 		"phase":        "sdd-apply",
@@ -67,7 +67,7 @@ func TestHandoffQuotesACwdContainingASingleQuote(t *testing.T) {
 	// actually runs.
 	var decoded map[string]any
 	handoff := Handoff(ClassMalformed, "sdd-verify", "/re'po", "feat'x", "")
-	if err := json.Unmarshal([]byte(strings.TrimPrefix(handoff, "GENTLE_AI_SDD_FAILURE ")), &decoded); err != nil {
+	if err := json.Unmarshal([]byte(strings.TrimPrefix(handoff, "AXIOM_SDD_FAILURE ")), &decoded); err != nil {
 		t.Fatalf("handoff payload is not JSON: %v", err)
 	}
 	const want = `axiom sdd status 'feat'\''x' --cwd '/re'\''po' --json`
@@ -89,7 +89,7 @@ func TestHandoffCarriesAValidatedTaskModel(t *testing.T) {
 func TestDispatchLatchedNamesBothPhases(t *testing.T) {
 	handoff := DispatchLatched("sdd-verify", "sdd-apply", "sdd_task_result_empty", "/repo", "")
 	var decoded map[string]any
-	if err := json.Unmarshal([]byte(strings.TrimPrefix(handoff, "GENTLE_AI_SDD_FAILURE ")), &decoded); err != nil {
+	if err := json.Unmarshal([]byte(strings.TrimPrefix(handoff, "AXIOM_SDD_FAILURE ")), &decoded); err != nil {
 		t.Fatalf("latched payload is not JSON: %v", err)
 	}
 	for field, want := range map[string]any{
