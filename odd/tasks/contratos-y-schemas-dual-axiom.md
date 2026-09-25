@@ -50,7 +50,7 @@ Introducir los identificadores de esquema y contrato de protocolo canónicos de 
   - Soportar `axiom.telemetry-event/v1` y `axiom.telemetry-runtime-event/v1` en `internal/telemetrycollector/`.
   - Actualizar el emisor de telemetría en `internal/telemetry/` para usar la cabecera canónica de Axiom.
 
-- [ ] **T5 · Batería de pruebas de negociación de contratos**
+- [x] **T5 · Batería de pruebas de negociación de contratos**
   - Tests unitarios y de tabla que comprueben:
     1. Negociación canónica directa con `axiom.review-integration/v2`.
     2. Negociación retrocompatible con `gentle-ai.review-integration/v2`.
