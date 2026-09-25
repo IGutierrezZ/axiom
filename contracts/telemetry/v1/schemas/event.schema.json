@@ -19,7 +19,7 @@
   ],
   "properties": {
     "schema": {
-      "const": "gentle-ai.telemetry-event/v1"
+      "enum": ["axiom.telemetry-event/v1", "gentle-ai.telemetry-event/v1"]
     },
     "event": {
       "type": "string",

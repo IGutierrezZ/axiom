@@ -7,7 +7,7 @@
   "additionalProperties": false,
   "required": ["schema", "result", "allowed", "action", "reason", "context"],
   "properties": {
-    "schema": {"const": "gentle-ai.review-gate-result/v1"},
+    "schema": {"enum": ["axiom.review-gate-result/v1", "gentle-ai.review-gate-result/v1"]},
     "result": {"enum": ["allow", "scope-changed", "invalidated", "escalated"]},
     "allowed": {"type": "boolean"},
     "action": {"enum": ["continue", "explicit-maintainer-action", "review.status", "repository-policy"]},

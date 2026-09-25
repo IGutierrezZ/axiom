@@ -92,13 +92,13 @@ func TestGetenv(t *testing.T) {
 
 	t.Run("canonical variables resolution", func(t *testing.T) {
 		testCases := []struct {
-			name        string
-			axiomKey    string
-			gentleKey   string
-			axiomVal    string
-			gentleVal   string
-			wantBoth    string
-			wantGentle  string
+			name       string
+			axiomKey   string
+			gentleKey  string
+			axiomVal   string
+			gentleVal  string
+			wantBoth   string
+			wantGentle string
 		}{
 			{
 				name:       "channel",
@@ -151,4 +151,3 @@ func TestGetenv(t *testing.T) {
 		}
 	})
 }
-

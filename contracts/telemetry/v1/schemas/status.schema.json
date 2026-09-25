@@ -17,7 +17,7 @@
   ],
   "properties": {
     "schema": {
-      "const": "gentle-ai.telemetry-status/v1"
+      "enum": ["axiom.telemetry-status/v1", "gentle-ai.telemetry-status/v1"]
     },
     "operation": {
       "type": "string",

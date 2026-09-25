@@ -1039,5 +1039,3 @@ func TestSpecsSyncStatusEndpoint(t *testing.T) {
 		t.Errorf("se esperaba nombre de rama")
 	}
 }
-
-

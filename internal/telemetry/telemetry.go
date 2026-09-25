@@ -12,11 +12,17 @@ package telemetry
 
 import "time"
 
-// EventSchema identifies the JSON POST body sent to the collector.
-const EventSchema = "gentle-ai.telemetry-event/v1"
+// AxiomEventSchema and LegacyEventSchema identify the canonical and backward-compatible
+// JSON POST bodies sent to the collector.
+const (
+	AxiomEventSchema  = "axiom.telemetry-event/v1"
+	LegacyEventSchema = "gentle-ai.telemetry-event/v1"
+	EventSchema       = AxiomEventSchema
 
-// StatusSchema identifies the `gentle-ai telemetry status` projection.
-const StatusSchema = "gentle-ai.telemetry-status/v1"
+	AxiomStatusSchema  = "axiom.telemetry-status/v1"
+	LegacyStatusSchema = "gentle-ai.telemetry-status/v1"
+	StatusSchema       = AxiomStatusSchema
+)
 
 // EventInstall and EventHeartbeat are the two event kinds the contract
 // defines. No other value is ever sent.

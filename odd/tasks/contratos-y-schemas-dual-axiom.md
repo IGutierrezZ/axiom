@@ -33,24 +33,24 @@ Introducir los identificadores de esquema y contrato de protocolo canónicos de 
 
 ## Tareas
 
-- [ ] **T1 · Mapeo canónico de contratos y alias de compatibilidad en RDD**
+- [x] **T1 · Mapeo canónico de contratos y alias de compatibilidad en RDD**
   - Definir identificadores canónicos: `axiom.review-integration/v2`, `axiom.review-integration.consent/v3`, `axiom.review-assessment/v1`, `axiom.review-acknowledged/v1`.
   - Crear resolver centralizado de contratos (`ResolveReviewContract(requested string) (canonical string, isLegacy bool, err error)`).
   - Permitir que el despachador responda con el formato solicitado preservando los campos semánticos.
 
-- [ ] **T2 · Soporte dual en compuertas y estado SDD**
+- [x] **T2 · Soporte dual en compuertas y estado SDD**
   - Implementar soporte para `axiom.sdd-status/v1` y `axiom.sdd-integration.consent/v1` en `internal/sddstatus/`.
   - Validar que `axiom sdd-status --json` y las comprobaciones de transición acepten ambos contratos sin rechazo.
 
-- [ ] **T3 · Actualización y ampliación de Schemas JSON**
+- [x] **T3 · Actualización y ampliación de Schemas JSON**
   - Actualizar los schemas JSON de validación (`contracts/review-integration/v2/schemas/`) para admitir tanto `axiom.*` como `gentle-ai.*` en las propiedades `"enum"` de identificación de schema.
   - Asegurar que los validadores de esquema de tests pasen sin infracciones de política de release.
 
-- [ ] **T4 · Contratos de telemetría y eventos de colector**
+- [x] **T4 · Contratos de telemetría y eventos de colector**
   - Soportar `axiom.telemetry-event/v1` y `axiom.telemetry-runtime-event/v1` en `internal/telemetrycollector/`.
   - Actualizar el emisor de telemetría en `internal/telemetry/` para usar la cabecera canónica de Axiom.
 
-- [ ] **T5 · Batería de pruebas de negociación de contratos**
+- [x] **T5 · Batería de pruebas de negociación de contratos**
   - Tests unitarios y de tabla que comprueben:
     1. Negociación canónica directa con `axiom.review-integration/v2`.
     2. Negociación retrocompatible con `gentle-ai.review-integration/v2`.

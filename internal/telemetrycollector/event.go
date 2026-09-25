@@ -24,7 +24,11 @@ import (
 )
 
 // SchemaID is the "schema" discriminator every event must carry.
-const SchemaID = "gentle-ai.telemetry-event/v1"
+const (
+	AxiomSchemaID  = "axiom.telemetry-event/v1"
+	LegacySchemaID = "gentle-ai.telemetry-event/v1"
+	SchemaID       = AxiomSchemaID
+)
 
 // EventInstall and EventHeartbeat are the two event kinds the contract
 // allows.

@@ -8,7 +8,7 @@
     "target_identity", "projection", "repair", "candidates"
   ],
   "properties": {
-    "schema": {"const": "gentle-ai.review-integration.status/v7"},
+    "schema": {"enum": ["axiom.review-integration.status/v7", "gentle-ai.review-integration.status/v7"]},
     "contract": {"$ref": "status-v5.schema.json#/properties/contract"}, "operation": {"$ref": "status-v5.schema.json#/properties/operation"},
     "applicability": {"$ref": "status-v5.schema.json#/properties/applicability"}, "authority": {"$ref": "status-v5.schema.json#/properties/authority"},
     "action": {"enum": ["start", "validate", "recover", "maintainer_action", "select_lineage", "repair_authority", "stop", "collect", "execute"]}, "action_disposition": {"$ref": "status-v5.schema.json#/properties/action_disposition"},
@@ -80,7 +80,7 @@
                 "type": "object", "additionalProperties": false, "required": ["operation", "command", "arguments", "binding"],
                 "properties": {
                   "operation": {"const": "review.capture-unachievable"},
-                  "command": {"type": "string", "minLength": 1, "pattern": "^gentle-ai review capture-unachievable "},
+                  "command": {"type": "string", "minLength": 1, "pattern": "^(axiom|gentle-ai) review capture-unachievable "},
                   "arguments": {"type": "array", "items": {"$ref": "transition-execution.schema.json#/$defs/executable_transition_argument"}},
                   "binding": {"$ref": "transition-binding.schema.json"}
                 }

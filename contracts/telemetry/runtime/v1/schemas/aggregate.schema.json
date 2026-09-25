@@ -5,7 +5,7 @@
   "type": "object", "additionalProperties": false,
   "required": ["schema", "registry", "host", "rows"],
   "properties": {
-    "schema": {"const": "gentle-ai.telemetry-runtime-aggregate/v1"},
+    "schema": {"enum": ["axiom.telemetry-runtime-aggregate/v1", "gentle-ai.telemetry-runtime-aggregate/v1"]},
     "registry": {"const": 1},
     "host": {"enum": ["claude-code", "opencode", "codex", "pi"]},
     "rows": {"type": "array", "minItems": 1, "maxItems": 32, "items": {"$ref": "#/$defs/row"}}

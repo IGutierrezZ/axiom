@@ -7,8 +7,15 @@ import (
 	"io"
 )
 
-const RuntimeEventSchema = "gentle-ai.telemetry-runtime-event/v1"
-const RuntimeDeliverySchema = "gentle-ai.telemetry-runtime-delivery/v1"
+const (
+	AxiomRuntimeEventSchema  = "axiom.telemetry-runtime-event/v1"
+	LegacyRuntimeEventSchema = "gentle-ai.telemetry-runtime-event/v1"
+	RuntimeEventSchema       = AxiomRuntimeEventSchema
+
+	AxiomRuntimeDeliverySchema  = "axiom.telemetry-runtime-delivery/v1"
+	LegacyRuntimeDeliverySchema = "gentle-ai.telemetry-runtime-delivery/v1"
+	RuntimeDeliverySchema       = AxiomRuntimeDeliverySchema
+)
 
 // RuntimeEvent is anonymous transport. DeliveryID is fresh for each observation
 // submission, OR a one-way hash of a host message id whose only purpose is
@@ -45,7 +52,7 @@ func ParseRuntimeEvent(data []byte) (RuntimeEvent, error) {
 	if !ok || !runtimeExactRows(object["rows"]) {
 		return event, ErrRuntimeEvent
 	}
-	if json.Unmarshal(data, &event) != nil || event.Schema != RuntimeEventSchema || runtimeNumber(event.Registry) != "1" || !runtimeID.MatchString(event.DeliveryID) || !runtimeMember(event.Host, "claude-code|opencode|codex|pi") || len(event.Rows) < 1 || len(event.Rows) > 32 {
+	if json.Unmarshal(data, &event) != nil || (event.Schema != RuntimeEventSchema && event.Schema != LegacyRuntimeEventSchema) || runtimeNumber(event.Registry) != "1" || !runtimeID.MatchString(event.DeliveryID) || !runtimeMember(event.Host, "claude-code|opencode|codex|pi") || len(event.Rows) < 1 || len(event.Rows) > 32 {
 		return RuntimeEvent{}, ErrRuntimeEvent
 	}
 	if normalizeRuntimeRows(event.Rows) != nil {

@@ -870,4 +870,3 @@ roles:
 		t.Errorf("rel1 = %q, want repo-specs/skills/spec-rule/SKILL.md", rel1)
 	}
 }
-

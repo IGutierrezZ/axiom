@@ -9,8 +9,8 @@
     "authority_applicability", "retry_safe", "replayability", "required_inputs", "next_action"
   ],
   "properties": {
-    "schema": {"const": "gentle-ai.review-integration.failure/v2"},
-    "contract": {"const": "gentle-ai.review-integration/v2"},
+    "schema": {"enum": ["axiom.review-integration.failure/v2", "gentle-ai.review-integration.failure/v2"]},
+    "contract": {"enum": ["axiom.review-integration/v2", "gentle-ai.review-integration/v2"]},
     "operation": {"enum": [
       "review.capabilities", "review.start", "review.status", "review.repair", "review.validate",
       "review.capture-correction-plan", "review.capture-result", "review.capture-refuter", "review.capture-validation"

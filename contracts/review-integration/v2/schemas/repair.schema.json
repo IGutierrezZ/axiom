@@ -6,8 +6,8 @@
   "additionalProperties": false,
   "required": ["schema", "contract", "operation", "mode", "assessment", "required_inputs"],
   "properties": {
-    "schema": {"const": "gentle-ai.review-integration.repair/v2"},
-    "contract": {"const": "gentle-ai.review-integration/v2"},
+    "schema": {"enum": ["axiom.review-integration.repair/v2", "gentle-ai.review-integration.repair/v2"]},
+    "contract": {"enum": ["axiom.review-integration/v2", "gentle-ai.review-integration/v2"]},
     "operation": {"$ref": "../../v1/schemas/repair.schema.json#/properties/operation"},
     "mode": {"$ref": "../../v1/schemas/repair.schema.json#/properties/mode"},
     "assessment": {"$ref": "../../v1/schemas/repair.schema.json#/properties/assessment"},

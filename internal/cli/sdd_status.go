@@ -25,6 +25,9 @@ func RunSDDStatus(args []string, stdout io.Writer) error {
 	}
 
 	if parsed.JSON {
+		if parsed.Contract == sddstatus.AxiomStatusContractV1 || parsed.Contract == sddstatus.AxiomStatusContractV2 {
+			status.SchemaName = sddstatus.AxiomSchemaName
+		}
 		projected, projectionErr := sddstatus.ProjectStatusV2(status)
 		if projectionErr != nil {
 			return fmt.Errorf("project SDD status v2: %w", projectionErr)
@@ -66,6 +69,9 @@ func RunSDDContinue(args []string, stdout io.Writer) error {
 	}
 
 	if parsed.JSON {
+		if parsed.Contract == sddstatus.AxiomStatusContractV1 || parsed.Contract == sddstatus.AxiomStatusContractV2 {
+			status.SchemaName = sddstatus.AxiomSchemaName
+		}
 		projected, projectionErr := sddstatus.ProjectStatusV2(status)
 		if projectionErr != nil {
 			return fmt.Errorf("project SDD status v2: %w", projectionErr)

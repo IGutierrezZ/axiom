@@ -78,6 +78,16 @@ func newReviewIntegrationStartResult(legacy ReviewFacadeStartResult, assessment 
 	schema, contract := ReviewIntegrationStartSchema, ReviewIntegrationContractV2
 	if legacyTransport {
 		schema, contract = ReviewIntegrationStartSchemaV2, ReviewIntegrationContractV1
+	} else if len(contracts) > 0 {
+		c := contracts[0]
+		canonical, isLegacy, err := reviewtransaction.ResolveReviewContract(c)
+		if err == nil && canonical == reviewtransaction.AxiomReviewIntegrationV2Contract {
+			if isLegacy {
+				schema, contract = ReviewIntegrationStartSchema, ReviewIntegrationContractV2
+			} else {
+				schema, contract = ReviewIntegrationStartSchema, AxiomReviewIntegrationContractV2
+			}
+		}
 	}
 	result := ReviewIntegrationStartResult{
 		Schema: schema, Contract: contract, Operation: "review.start",
@@ -179,7 +189,7 @@ func (result ReviewIntegrationStartResult) Validate() error {
 	// Frozen start/v3 payloads (the pinned contract fixture and historical
 	// captures) remain decodable; only the live start/v4 identity carries the
 	// provider-issued status continuation.
-	nativeGitTransport := (result.Schema == ReviewIntegrationStartSchemaV4 || result.Schema == ReviewIntegrationStartSchemaV3) && result.Contract == ReviewIntegrationContractV2
+	nativeGitTransport := (result.Schema == ReviewIntegrationStartSchemaV4 || result.Schema == ReviewIntegrationStartSchemaV3) && (result.Contract == ReviewIntegrationContractV2 || result.Contract == AxiomReviewIntegrationContractV2)
 	if (!legacyTransport && !nativeGitTransport) || result.Operation != "review.start" {
 		return errors.New("invalid negotiated START identity")
 	}

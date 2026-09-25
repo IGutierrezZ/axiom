@@ -6,8 +6,8 @@
   "additionalProperties": false,
   "required": ["schema", "contract", "operation", "result"],
   "properties": {
-    "schema": {"const": "gentle-ai.review-integration.operation/v2"},
-    "contract": {"const": "gentle-ai.review-integration/v2"},
+    "schema": {"enum": ["axiom.review-integration.operation/v2", "gentle-ai.review-integration.operation/v2"]},
+    "contract": {"enum": ["axiom.review-integration/v2", "gentle-ai.review-integration/v2"]},
     "operation": {"$ref": "../../v1/schemas/operation.schema.json#/properties/operation"},
     "result": {"$ref": "gate-result.schema.json"}
   }

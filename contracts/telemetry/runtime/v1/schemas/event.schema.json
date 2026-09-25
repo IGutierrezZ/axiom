@@ -6,7 +6,7 @@
   "additionalProperties": false,
   "required": ["schema", "registry", "delivery_id", "host", "rows"],
   "properties": {
-    "schema": {"const": "gentle-ai.telemetry-runtime-event/v1"},
+    "schema": {"enum": ["axiom.telemetry-runtime-event/v1", "gentle-ai.telemetry-runtime-event/v1"]},
     "registry": {"const": 1},
     "delivery_id": {"type": "string", "pattern": "^[0-9a-f]{32}$"},
     "host": {"$ref": "aggregate.schema.json#/properties/host"},
@@ -18,7 +18,7 @@
       "additionalProperties": false,
       "required": ["schema", "decision"],
       "properties": {
-        "schema": {"const": "gentle-ai.telemetry-runtime-delivery/v1"},
+        "schema": {"enum": ["axiom.telemetry-runtime-delivery/v1", "gentle-ai.telemetry-runtime-delivery/v1"]},
         "decision": {"enum": ["stored", "duplicate"]}
       }
     }

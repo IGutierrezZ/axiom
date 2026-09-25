@@ -315,7 +315,6 @@ func (s *Server) handleSpecsPull(w http.ResponseWriter, r *http.Request) {
 	s.respondJSON(w, http.StatusOK, dto)
 }
 
-
 func (s *Server) handleIncrements(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:

@@ -316,4 +316,3 @@ func TestResolveConfigFile_NotFound(t *testing.T) {
 		t.Fatalf("se esperaba error de archivo no encontrado")
 	}
 }
-

@@ -1657,4 +1657,3 @@ func (s *Service) PullSpecsRepository(ctx context.Context) (*SpecsPullResultDTO,
 		Output:  outputStr,
 	}, nil
 }
-

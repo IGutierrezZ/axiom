@@ -85,10 +85,14 @@ func (s *Server) handleRuntimeEvents(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	// No success before the storage transaction commits, including duplicates.
+	ackSchema := telemetry.RuntimeDeliverySchema
+	if event.Schema == telemetry.LegacyRuntimeEventSchema {
+		ackSchema = telemetry.LegacyRuntimeDeliverySchema
+	}
 	_ = json.NewEncoder(w).Encode(struct {
 		Schema   string `json:"schema"`
 		Decision string `json:"decision"`
-	}{telemetry.RuntimeDeliverySchema, decision})
+	}{ackSchema, decision})
 }
 
 // handleMetrics serves the runtime counters registry as Prometheus text

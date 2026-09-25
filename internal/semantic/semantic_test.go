@@ -323,4 +323,3 @@ func TestDetectorProjectWorkspaceConfigsAndDiagnostics(t *testing.T) {
 		t.Errorf("se esperaba CodeGraph configurado en workspace")
 	}
 }
-
