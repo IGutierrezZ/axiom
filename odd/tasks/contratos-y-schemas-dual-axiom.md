@@ -38,7 +38,7 @@ Introducir los identificadores de esquema y contrato de protocolo canónicos de 
   - Crear resolver centralizado de contratos (`ResolveReviewContract(requested string) (canonical string, isLegacy bool, err error)`).
   - Permitir que el despachador responda con el formato solicitado preservando los campos semánticos.
 
-- [ ] **T2 · Soporte dual en compuertas y estado SDD**
+- [x] **T2 · Soporte dual en compuertas y estado SDD**
   - Implementar soporte para `axiom.sdd-status/v1` y `axiom.sdd-integration.consent/v1` en `internal/sddstatus/`.
   - Validar que `axiom sdd-status --json` y las comprobaciones de transición acepten ambos contratos sin rechazo.
 

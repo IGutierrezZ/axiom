@@ -16,8 +16,11 @@ import (
 	"github.com/gentleman-programming/gentle-ai/v3/internal/pathquote"
 )
 
-const SchemaName = "gentle-ai.sdd-status"
-const SchemaVersion = 2
+const (
+	SchemaName      = "gentle-ai.sdd-status"
+	AxiomSchemaName = "axiom.sdd-status"
+	SchemaVersion   = 2
+)
 
 type ArtifactStore string
 
@@ -284,7 +287,7 @@ func ParseCommandArgs(args []string) (CommandArgs, error) {
 }
 
 func validateStatusContract(contract string) error {
-	if contract == StatusContractV2 {
+	if contract == StatusContractV2 || contract == AxiomStatusContractV2 || contract == AxiomStatusContractV1 {
 		return nil
 	}
 	return fmt.Errorf("unsupported sdd-status contract %q. Start a fresh implementation state and rerun `gentle-ai sdd-status --contract gentle-ai.sdd-status/v2`.", contract)
