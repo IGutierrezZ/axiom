@@ -110,8 +110,8 @@ func TestTelemetryPolicyFlagsAndHelp(t *testing.T) {
 func TestTelemetryContractsArePinned(t *testing.T) {
 	root := filepath.Join("..", "..", "contracts", "telemetry", "v1", "schemas")
 	want := map[string]string{
-		"event.schema.json":   "4246d49c1806bf967b1f1ce5ba38bf287f8d1d74c5b20149c787c7153d5baa0f",
-		"status.schema.json":  "1ae7ee2f80b1cc51e66093e2a3ab6f10a85a940966c1e84451b44e9456dca822",
+		"event.schema.json":   "0caf2a399d81ba5703ae1431c95c58fd6265f12fb25ada94a18ae3f43dea3ed3",
+		"status.schema.json":  "1e11ca00efb93bb16cbbf0798be5f5c00548322032a38c4d351c03a482f864b8",
 		"trigger.schema.json": "0e810811c5a673bc21f06a9fb0c5ce03841d46e3b35fc436b25860c2f0fded58",
 	}
 	for name, expected := range want {

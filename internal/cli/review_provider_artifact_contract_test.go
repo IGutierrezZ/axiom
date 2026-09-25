@@ -64,9 +64,9 @@ func TestReviewProviderArtifactV20ContractsArePinned(t *testing.T) {
 		// -- so this fixture legitimately dropped that array. Deliberate, not
 		// drift.
 		"fixtures/status.fixture.json":     "3fc2539d5bcaa8dc3ed650ba7f5e8915856a3d9f8caf1cfcb1b0354ecacbe0f8",
-		"schemas/capabilities.schema.json": "df1d1d36bfb8b7816d3eb1c44c1350b4a36e27ac321922963add9dd25ed5a1a2",
-		"schemas/consent.schema.json":      "b2b4465338497f11927de91cb2e5da12b6cb4a1039afe05aebe1abbf53b21858",
-		"schemas/status.schema.json":       "3b257b417270744061dc943a97537e253e36e34de4591b0400e3c38ea3efde80",
+		"schemas/capabilities.schema.json": "d6e7e593aa86853161a4434f7c9ac89eb34560a5e718ab5853ee6a85cdd33554",
+		"schemas/consent.schema.json":      "a45c858d43af3b570bc2d128f636e647141b63c5957fb6b1eed0b44062e30d1e",
+		"schemas/status.schema.json":       "a4a7a565e2831ae69849408ab4b9cea61156f5e24c3363270d26a0d7d588cfc9",
 	}
 	for name, expected := range want {
 		payload, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(name)))
@@ -88,7 +88,7 @@ func TestReviewProviderArtifactV21ContractsArePinned(t *testing.T) {
 		// the purified identity domain legitimately changed that hash.
 		// Deliberate, not drift.
 		"fixtures/consent-v3.fixture.json":      "9b2f173bc35ac985ab07e3d97cba1d5a9f2cb6e25162addc03a78858b7deb081",
-		"schemas/capabilities-v2.1.schema.json": "95d2b8b46e9be6e6fbc874fc763029cb7994951336c8974dc1694834d64bf06e",
+		"schemas/capabilities-v2.1.schema.json": "1118109155fd320cfc05d8c3c48de05f12b38c664c30552a16cfbac2744d988b",
 		// Cross-lane battery conformance fix: the schema pinned the choice
 		// invocations to `--agent claude-code`, but the live emitter omits the
 		// agent token when the caller declared no runtime (the pinned fixture
@@ -98,8 +98,8 @@ func TestReviewProviderArtifactV21ContractsArePinned(t *testing.T) {
 		// relay drives consent with its own declared runtime identity, which
 		// the emitter legitimately publishes once the relay handshake is
 		// declared. Deliberate, not drift.
-		"schemas/consent-v3.schema.json": "f56b1809c1bff21713795ef37a095c6ecfdbbb3cf928bcf604b8d5f33be3dea5",
-		"schemas/status.schema.json":     "3b257b417270744061dc943a97537e253e36e34de4591b0400e3c38ea3efde80",
+		"schemas/consent-v3.schema.json": "337206edc96f5cb8059389ee98d1053bc21911c38cae86cdbf52c33bd7ead270",
+		"schemas/status.schema.json":     "a4a7a565e2831ae69849408ab4b9cea61156f5e24c3363270d26a0d7d588cfc9",
 	}
 	for name, expected := range want {
 		payload, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(name)))
@@ -136,8 +136,8 @@ func TestReviewProviderArtifactV25StatusContractsArePinned(t *testing.T) {
 		// allowed property, but the native-git transport no longer needs to
 		// inline it since artifact_subject.changed_path_manifest_sha256 already
 		// commits to it. Deliberate, not drift.
-		"schemas/start.schema.json":     "27954ad34319719a68f90768c90f39254d94c62cf7f8ea90525ec4e2dbafd182",
-		"schemas/status-v5.schema.json": "8f6d05bd4ed64abc765bd7ce9ae8bed0470448cd260fc0a94dc5929b88f42a18",
+		"schemas/start.schema.json":     "0c459bd01a8f2814cba76d8f791e096c31f35ddc1ceaf1f8f781b1f5b85a463c",
+		"schemas/status-v5.schema.json": "acaf6317b109a956bb1b53a21a3f4e92159d3fa20bc7db2123a29b7d1155932a",
 	}
 	for name, expected := range want {
 		payload, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(name)))
@@ -160,8 +160,8 @@ func TestReviewProviderArtifactV23StartContractsArePinned(t *testing.T) {
 	want := map[string]string{
 		"fixtures/capabilities-v2.3.fixture.json": "ed5fb324791eec28287c621f19dffd69323120f61ce537e7b329fc018a29fe42",
 		"fixtures/start-v4.fixture.json":          "639a6e78b40cb5e000ec15265fd444c243e28594035c7d376c378142162bfb02",
-		"schemas/capabilities-v2.3.schema.json":   "606efa4b691605b0e7b668c616d48712a2a925c819244ebe2bc63d9885658bb3",
-		"schemas/start-v4.schema.json":            "770c6a7e40a62a945d1134cba933cfd811f4c5e6ab407a36a26ba56508bc00e4",
+		"schemas/capabilities-v2.3.schema.json":   "cb10bb237c535ec0ec22c24ffa65e0c77e0028e2ce7eb8c113423987343a310b",
+		"schemas/start-v4.schema.json":            "b1950091cd0503afba085f88e6ab36ffd63192c44f324aed846a536cc9e6ff39",
 	}
 	for name, expected := range want {
 		payload, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(name)))
@@ -178,9 +178,9 @@ func TestReviewProviderArtifactV23StartContractsArePinned(t *testing.T) {
 func TestReviewProviderArtifactV24IntendedUntrackedContractsArePinned(t *testing.T) {
 	root := filepath.Join("..", "..", "contracts", "review-integration", "v2")
 	want := map[string]string{
-		"schemas/capabilities-v2.4.schema.json":            "fc4d55dbad6b19cc4c289e8ed94bd1839800ca2892e449640459b668e0c7b0b5",
+		"schemas/capabilities-v2.4.schema.json":            "8bddc1561778817877d60f4f286dc8634fcc9de2bc26cfd04fed5202651c2700",
 		"schemas/intended-untracked-selection.schema.json": "6f300c4cc10ab669fa3ef8cc608829df623a453cd5e6629958786e0724430259",
-		"schemas/status-v6.schema.json":                    "0aa731e4d3961d678b4e51a6be0af93f2de82a4a326c3366e2fbe6a3e687236c",
+		"schemas/status-v6.schema.json":                    "af638e9ebb0238a2e2ae030b44295a8fafe7a416ea8afeaf83ec5b644d543f38",
 	}
 	for name, expected := range want {
 		payload, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(name)))
@@ -202,7 +202,7 @@ func TestReviewProviderArtifactV24IntendedUntrackedContractsArePinned(t *testing
 func TestReviewProviderArtifactConformanceSchemasArePinned(t *testing.T) {
 	root := filepath.Join("..", "..", "contracts", "review-integration", "v2")
 	want := map[string]string{
-		"schemas/gate-result.schema.json": "afe5e2a030fae9949305811bcac0a6dbc8b4f28802fa61d1e31e58e895f9fcae",
+		"schemas/gate-result.schema.json": "9d8ac2ade92d8b1b2630a7a6952324e8bdd44eb522466d8c8056e11a7dd6375e",
 		// issues #4226/#4453: last-event-closure documents terminal escalation
 		// and exposes complete admitted reviewer results before acknowledgement.
 		// Deliberate, not drift.
@@ -212,7 +212,7 @@ func TestReviewProviderArtifactConformanceSchemasArePinned(t *testing.T) {
 		// references. Deliberate, not drift.
 		// issue #3932: start_status_execution carries the opaque
 		// repository-context row, so a foreign process cwd fails closed.
-		"schemas/transition-execution.schema.json":   "3743a16d915f5d95be047af1f0454f342aa4c3eb7bcb0d8991f81ae3b89873c1",
+		"schemas/transition-execution.schema.json":   "945fe0038ae37ef1fff2f798e837bd266e0ba63de3b99971e27980731934966a",
 		"schemas/opencode-provider-role.schema.json": "c6b9f216f89c044f8e844b55e7200114850cfbc16642bca0677f30a399d8aa9b",
 	}
 	for name, expected := range want {
@@ -253,8 +253,8 @@ func TestReviewProviderArtifactStatusV7ContractsArePinned(t *testing.T) {
 		//
 		// issue #4226: status/v7 documents the CompactEscalationEvidence contract
 		// on terminal escalation. Deliberate, not drift.
-		"schemas/status-v7.schema.json":         "277abd6aed05ff7358fc32374bf524c9c3d10d3760d42c68c4e8a235e2f86968",
-		"schemas/capabilities-v2.5.schema.json": "9fcdb1717a54bcd4f73d4dee1283d9ec2f27cccbb5d54804ee8b40a6ed2db553",
+		"schemas/status-v7.schema.json":         "2412fdf75790ad681790cf9b29b854a11f6d6a453f2988a03a8f53e263d669dc",
+		"schemas/capabilities-v2.5.schema.json": "ae6d9addeb9722290bbb408f35512a3b0d29e40abc8f5d20d0677ff05cf8c8c9",
 	}
 	for name, expected := range want {
 		payload, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(name)))

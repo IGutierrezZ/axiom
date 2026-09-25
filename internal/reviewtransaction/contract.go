@@ -41,8 +41,8 @@ const (
 
 // Sentinel errors para resolución de contratos.
 var (
-	ErrEmptyContract       = errors.New("the review integration contract cannot be empty")
-	ErrUnsupportedContract = errors.New("unsupported review integration contract")
+	ErrEmptyContract       = errors.New("the review integration contract cannot be empty") // refusal:by-design world-action: caller must provide a valid non-empty contract identifier
+	ErrUnsupportedContract = errors.New("unsupported review integration contract")         // refusal:by-design world-action: caller must negotiate a supported review integration contract
 )
 
 // ResolveReviewContract resuelve cualquier identificador de contrato de revisión

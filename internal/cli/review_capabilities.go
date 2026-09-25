@@ -180,7 +180,7 @@ func validateReviewIntegrationContract(contract string) error {
 		return fmt.Errorf("unsupported review integration contract %q; retry with gentle-ai review capabilities --contract %s or gentle-ai review capabilities --contract %s", contract, ReviewIntegrationContractV1, ReviewIntegrationContractV2)
 	}
 	if canonical != reviewtransaction.AxiomReviewIntegrationV2Contract && canonical != ReviewIntegrationContractV1 {
-		return fmt.Errorf("unsupported review integration contract %q", contract)
+		return fmt.Errorf("unsupported review integration contract %q; retry with gentle-ai review capabilities --contract %s or gentle-ai review capabilities --contract %s", contract, ReviewIntegrationContractV1, ReviewIntegrationContractV2)
 	}
 	return nil
 }

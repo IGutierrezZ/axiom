@@ -1827,7 +1827,7 @@ var organicRoutingGuidanceRequiredFragments = []string{
 	"Optional SDD",
 	"never selects SDD",
 	"never create SDD artifacts",
-	"gentle-ai review mode enable|disable|status",
+	"review mode enable|disable|status",
 	"disabled/unmanaged",
 }
 
