@@ -155,7 +155,7 @@ func TestAmbiguousChangeSelectionNamesARunnableCommandPerChange(t *testing.T) {
 	for _, change := range []string{"first", "second"} {
 		// The selector is positional: ParseCommandArgs has no --change flag
 		// (#3278, #2790), so this is the only runnable spelling.
-		want := "gentle-ai sdd-status " + change + " --cwd " + root
+		want := "axiom sdd status " + change + " --cwd " + root
 		if !strings.Contains(reasons, want) {
 			t.Fatalf("blocked reasons named no runnable command for %q; a refusal that lists options and no command is the shape this project does not ship.\ngot:\n%s", change, reasons)
 		}
@@ -180,7 +180,7 @@ func TestDispatcherMarkdownRendersSelectChangeInstructions(t *testing.T) {
 	// continuation, the blocked reason ("Change selection is ambiguous: ...")
 	// is the entire guidance and names no way out.
 	dispatcher := RenderDispatcherMarkdown(status)
-	for _, want := range []string{"### Next Selection Operation", "gentle-ai sdd-status --cwd", "gentle-ai sdd-continue --cwd", "<change-name>"} {
+	for _, want := range []string{"### Next Selection Operation", "axiom sdd status --cwd", "axiom sdd continue --cwd", "<change-name>"} {
 		if !strings.Contains(dispatcher, want) {
 			t.Fatalf("dispatcher missing %q for select-change:\n%s", want, dispatcher)
 		}

@@ -1200,7 +1200,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.Err != nil {
 			m.Progress.AppendLog("FAILED: save global RDD mode — %s", msg.Err)
 			m.Execution.ManualActions = append(m.Execution.ManualActions,
-				"RDD mode was not saved. Retry with `gentle-ai review mode enable --scope global` or `gentle-ai review mode disable --scope global`.")
+				"RDD mode was not saved. Retry with `axiom review mode enable --scope global` or `axiom review mode disable --scope global`.")
 		}
 		return m, nil
 	case ReviewStoreResetDoneMsg:
@@ -3760,7 +3760,7 @@ func (m Model) startUninstall() tea.Cmd {
 			}
 			if isHomebrewManagedBinary(execPath) {
 				result.ManualActions = append(result.ManualActions,
-					"Homebrew-managed install detected. Run 'brew uninstall gentle-ai' to remove the executable cleanly.")
+					"Homebrew-managed install detected. Run 'brew uninstall axiom' to remove the executable cleanly.")
 			} else if removeErr := osRemoveFn(execPath); removeErr != nil {
 				return UninstallDoneMsg{Result: result, Err: fmt.Errorf("uninstall succeeded but failed to remove binary at %q: %w", execPath, removeErr)}
 			}

@@ -31,7 +31,7 @@ func TestRuntimeLedgerGrantCommitsAndProjectsGrantedRoots(t *testing.T) {
 	}
 	link := filepath.Join(t.TempDir(), "sibling-link")
 	if err := os.Symlink(sibling, link); err != nil {
-		t.Fatal(err)
+		t.Skipf("skipping symlink test when privileges are missing on Windows: %v", err)
 	}
 
 	// The caller passes the SYMLINK path; the recorded and projected root must

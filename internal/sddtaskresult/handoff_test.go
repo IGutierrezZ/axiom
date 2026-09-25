@@ -70,7 +70,7 @@ func TestHandoffQuotesACwdContainingASingleQuote(t *testing.T) {
 	if err := json.Unmarshal([]byte(strings.TrimPrefix(handoff, "GENTLE_AI_SDD_FAILURE ")), &decoded); err != nil {
 		t.Fatalf("handoff payload is not JSON: %v", err)
 	}
-	const want = `gentle-ai sdd-status 'feat'\''x' --cwd '/re'\''po' --json`
+	const want = `axiom sdd status 'feat'\''x' --cwd '/re'\''po' --json`
 	if decoded["continuation"] != want {
 		t.Errorf("continuation = %#v, want %q", decoded["continuation"], want)
 	}
@@ -118,7 +118,7 @@ func TestHandoffIsEmptyForAnAdmittedResult(t *testing.T) {
 func TestHandoffContinuationNamesTheChangeWhenKnown(t *testing.T) {
 	for _, tt := range []struct{ change, want string }{
 		{change: "", want: wantUnscopedContinuation},
-		{change: "feat-x", want: "gentle-ai sdd-status 'feat-x' --cwd '/repo' --json"},
+		{change: "feat-x", want: "axiom sdd status 'feat-x' --cwd '/repo' --json"},
 	} {
 		var decoded map[string]any
 		handoff := Handoff(ClassEmpty, "sdd-apply", "/repo", tt.change, "")

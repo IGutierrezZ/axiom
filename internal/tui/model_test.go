@@ -2850,7 +2850,7 @@ func TestStartUninstall_FullRemoveHomebrewManagedBinaryAddsManualAction(t *testi
 	if len(msg.Result.ManualActions) == 0 {
 		t.Fatal("ManualActions should include Homebrew uninstall guidance")
 	}
-	if !strings.Contains(msg.Result.ManualActions[0], "brew uninstall gentle-ai") {
+	if !strings.Contains(msg.Result.ManualActions[0], "brew uninstall axiom") {
 		t.Fatalf("manual action = %q, want brew uninstall guidance", msg.Result.ManualActions[0])
 	}
 }

@@ -98,9 +98,9 @@ func TestRenderUpgradeSync_CombinedResult(t *testing.T) {
 }
 
 func TestRenderUpgradeSync_LongManualHintUsesWidth(t *testing.T) {
-	longHint := "Windows binary distribution is temporarily unavailable. Install/update from source with Go 1.25.10+:\n  go install github.com/IGutierrezZ/axiom/v3/cmd/gentle-ai@v1.1.0"
+	longHint := "Windows binary distribution is temporarily unavailable. Install/update from source with Go 1.25.10+:\n  go install github.com/IGutierrezZ/axiom/v3/cmd/axiom@v1.1.0"
 	report := &upgrade.UpgradeReport{Results: []upgrade.ToolUpgradeResult{
-		{ToolName: "gentle-ai", Status: upgrade.UpgradeSkipped, ManualHint: longHint},
+		{ToolName: "axiom", Status: upgrade.UpgradeSkipped, ManualHint: longHint},
 	}}
 
 	out := stripANSI(RenderUpgradeSyncWithWidth(nil, report, nil, nil, nil, false, true, 0, 0, 80))
@@ -109,7 +109,7 @@ func TestRenderUpgradeSync_LongManualHintUsesWidth(t *testing.T) {
 		if !strings.Contains(line, "Go 1.25.10+:") {
 			continue
 		}
-		if !strings.Contains(out, "go install") || !strings.Contains(out, "gentle-ai/v3/cmd/gentle-ai@v1.1.0") {
+		if !strings.Contains(out, "go install") || !strings.Contains(out, "axiom/v3/cmd/axiom@v1.1.0") {
 			t.Fatalf("full manual command should remain visible; got:\n%s", out)
 		}
 		for _, wrapped := range lines[i+1:] {

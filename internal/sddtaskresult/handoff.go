@@ -54,7 +54,7 @@ func continuationFor(cwd, change string) string {
 	if change == "" {
 		return unscopedContinuation
 	}
-	return "gentle-ai sdd-status " + shellQuote(change) + " --cwd " + shellQuote(cwd) + " --json"
+	return "axiom sdd status " + shellQuote(change) + " --cwd " + shellQuote(cwd) + " --json"
 }
 
 func encode(payload handoffPayload) string {
