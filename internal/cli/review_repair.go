@@ -112,7 +112,8 @@ type ReviewRepairResult struct {
 func (result ReviewRepairResult) Validate() error {
 	legacyContract := result.Schema == ReviewIntegrationRepairSchema && result.Contract == ReviewIntegrationContractV1
 	nativeGitContract := result.Schema == ReviewIntegrationRepairSchemaV2 && result.Contract == ReviewIntegrationContractV2
-	if (!legacyContract && !nativeGitContract) ||
+	axiomContract := result.Schema == ReviewIntegrationRepairSchemaV2 && result.Contract == AxiomReviewIntegrationContractV2
+	if (!legacyContract && !nativeGitContract && !axiomContract) ||
 		result.Operation != "review.repair" {
 		return errors.New("review repair result identity is invalid")
 	}
@@ -432,8 +433,8 @@ func runReviewRepair(ctx context.Context, args []string, stdout io.Writer) error
 		Schema: ReviewIntegrationRepairSchema, Contract: ReviewIntegrationContractV1, Operation: "review.repair",
 		Mode: ReviewRepairModeExecute, Assessment: assessment, RequiredInputs: []string{}, Execution: &execution,
 	}
-	if *contract == ReviewIntegrationContractV2 {
-		result.Schema, result.Contract = ReviewIntegrationRepairSchemaV2, ReviewIntegrationContractV2
+	if *contract == ReviewIntegrationContractV2 || *contract == AxiomReviewIntegrationContractV2 {
+		result.Schema, result.Contract = ReviewIntegrationRepairSchemaV2, *contract
 	}
 	if err := result.Validate(); err != nil {
 		return fmt.Errorf("validate review repair execution: %w", err)
@@ -460,8 +461,8 @@ func newReviewRepairDispositionExecutionResult(assessment reviewtransaction.Auth
 			AnomalyClass: proof.AnomalyClass, AuthorizationSHA256: proof.AuthorizationSHA256,
 		},
 	}
-	if len(contracts) > 0 && contracts[0] == ReviewIntegrationContractV2 {
-		result.Schema, result.Contract = ReviewIntegrationRepairSchemaV2, ReviewIntegrationContractV2
+	if len(contracts) > 0 && (contracts[0] == ReviewIntegrationContractV2 || contracts[0] == AxiomReviewIntegrationContractV2) {
+		result.Schema, result.Contract = ReviewIntegrationRepairSchemaV2, contracts[0]
 	}
 	return result, nil
 }
@@ -480,8 +481,8 @@ func newReviewRepairPreflightResult(assessment reviewtransaction.AuthorityRepair
 		Schema: ReviewIntegrationRepairSchema, Contract: ReviewIntegrationContractV1, Operation: "review.repair",
 		Mode: ReviewRepairModePreflight, Assessment: assessment, RequiredInputs: []string{},
 	}
-	if len(contracts) > 0 && contracts[0] == ReviewIntegrationContractV2 {
-		result.Schema, result.Contract = ReviewIntegrationRepairSchemaV2, ReviewIntegrationContractV2
+	if len(contracts) > 0 && (contracts[0] == ReviewIntegrationContractV2 || contracts[0] == AxiomReviewIntegrationContractV2) {
+		result.Schema, result.Contract = ReviewIntegrationRepairSchemaV2, contracts[0]
 	}
 	// issue #3409: a truncated assessment classified nothing, so it must not
 	// be the end of the road. It names the unbounded per-entry diagnosis

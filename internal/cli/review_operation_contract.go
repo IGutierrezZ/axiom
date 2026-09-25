@@ -610,7 +610,8 @@ func reviewIntegrationFailureRoute(args []string) (string, bool, *ReviewIntegrat
 		failure.LineageID = safeReviewIntegrationLineage(operation, args[1:])
 		return operation, true, &failure
 	}
-	if contract != ReviewIntegrationContractV1 && contract != ReviewIntegrationContractV2 {
+	canonical, _, err := reviewtransaction.ResolveReviewContract(contract)
+	if err != nil || (canonical != reviewtransaction.AxiomReviewIntegrationV2Contract && canonical != ReviewIntegrationContractV1) {
 		failure := newReviewIntegrationPreflightFailure(operation, "unsupported_contract", "The requested review integration contract is not supported.")
 		failure.LineageID = safeReviewIntegrationLineage(operation, args[1:])
 		return operation, true, &failure
@@ -655,8 +656,15 @@ func newReviewIntegrationFailure(operation string, args []string, runErr error) 
 		MutationOutcome: ReviewMutationUnknown, AuthorityApplicability: "not_evaluated", RetrySafe: false,
 		Replayability: reviewtransaction.ReplayabilityStatusRequired, RequiredInputs: []string{}, NextAction: "review.status",
 	}
-	if provided, contract, _ := reviewIntegrationContractArgument(args); provided && contract == ReviewIntegrationContractV2 {
-		failure.Schema, failure.Contract = ReviewIntegrationFailureSchemaV2, ReviewIntegrationContractV2
+	if provided, contract, _ := reviewIntegrationContractArgument(args); provided {
+		canonical, isLegacy, err := reviewtransaction.ResolveReviewContract(contract)
+		if err == nil && canonical == reviewtransaction.AxiomReviewIntegrationV2Contract {
+			if isLegacy {
+				failure.Schema, failure.Contract = ReviewIntegrationFailureSchemaV2, ReviewIntegrationContractV2
+			} else {
+				failure.Schema, failure.Contract = reviewtransaction.AxiomReviewFailureV2Contract, AxiomReviewIntegrationContractV2
+			}
+		}
 	}
 	failure.LineageID = safeReviewIntegrationLineage(operation, args)
 	// Root 8 (#2471): the typed cause is projected ONCE, here, for every
@@ -1392,14 +1400,15 @@ func validReviewIntegrationLineage(value string) bool {
 func (failure ReviewIntegrationFailure) Validate() error {
 	legacyContract := failure.Schema == ReviewIntegrationFailureSchema && failure.Contract == ReviewIntegrationContractV1
 	nativeGitContract := failure.Schema == ReviewIntegrationFailureSchemaV2 && failure.Contract == ReviewIntegrationContractV2
-	if (!legacyContract && !nativeGitContract) ||
+	axiomContract := (failure.Schema == reviewtransaction.AxiomReviewFailureV2Contract || failure.Schema == ReviewIntegrationFailureSchemaV2) && failure.Contract == AxiomReviewIntegrationContractV2
+	if (!legacyContract && !nativeGitContract && !axiomContract) ||
 		!validReviewIntegrationFailureOperation(failure.Operation) {
 		return errors.New("invalid negotiated review failure identity")
 	}
 	// The published v1 failure schema pins the original eight-operation enum;
 	// only the v2 schema admits the collect-satisfying capture operations, so
 	// a capture refusal must never publish under the legacy identity.
-	if metadata, ok := reviewIntegrationOperationByName(failure.Operation); ok && metadata.CollectCapture && !nativeGitContract {
+	if metadata, ok := reviewIntegrationOperationByName(failure.Operation); ok && metadata.CollectCapture && !nativeGitContract && !axiomContract {
 		return errors.New("collect capture failures publish only the v2 failure schema") // refusal:by-design world-action: a capture envelope under the legacy identity is a construction bug and requires a code fix, not an operator command
 	}
 	if !validReviewIntegrationFailureCode(failure.Code) || strings.TrimSpace(failure.Message) != failure.Message ||
@@ -1661,8 +1670,16 @@ func encodeReviewIntegrationOperation(stdout io.Writer, negotiated bool, operati
 		return fmt.Errorf("encode negotiated %s result: %w", operation, err)
 	}
 	schema, contract := ReviewIntegrationOperationSchema, ReviewIntegrationContractV1
-	if len(contracts) > 0 && contracts[0] == ReviewIntegrationContractV2 {
-		schema, contract = ReviewIntegrationOperationSchemaV2, ReviewIntegrationContractV2
+	if len(contracts) > 0 {
+		c := contracts[0]
+		canonical, isLegacy, err := reviewtransaction.ResolveReviewContract(c)
+		if err == nil && canonical == reviewtransaction.AxiomReviewIntegrationV2Contract {
+			if isLegacy {
+				schema, contract = ReviewIntegrationOperationSchemaV2, ReviewIntegrationContractV2
+			} else {
+				schema, contract = reviewtransaction.AxiomReviewOperationV2Contract, AxiomReviewIntegrationContractV2
+			}
+		}
 	}
 	envelope := ReviewIntegrationOperationResult{
 		Schema: schema, Contract: contract,
@@ -1677,7 +1694,8 @@ func encodeReviewIntegrationOperation(stdout io.Writer, negotiated bool, operati
 func (result ReviewIntegrationOperationResult) Validate() error {
 	legacyContract := result.Schema == ReviewIntegrationOperationSchema && result.Contract == ReviewIntegrationContractV1
 	nativeGitContract := result.Schema == ReviewIntegrationOperationSchemaV2 && result.Contract == ReviewIntegrationContractV2
-	if (!legacyContract && !nativeGitContract) || len(result.Result) == 0 {
+	axiomContract := (result.Schema == reviewtransaction.AxiomReviewOperationV2Contract || result.Schema == ReviewIntegrationOperationSchemaV2) && result.Contract == AxiomReviewIntegrationContractV2
+	if (!legacyContract && !nativeGitContract && !axiomContract) || len(result.Result) == 0 {
 		return errors.New("invalid negotiated review operation identity")
 	}
 	var document any

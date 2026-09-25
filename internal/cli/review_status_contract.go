@@ -331,7 +331,7 @@ func (result ReviewTargetStatusResult) Validate() error {
 
 func (result ReviewTargetStatusResult) validateWithCompactAuthority(authority *reviewStatusCompactAuthority) error {
 	legacyTransport := result.Schema == ReviewIntegrationStatusSchemaV2 && result.Contract == ReviewIntegrationContractV1
-	nativeGitTransport := (result.Schema == ReviewIntegrationStatusSchemaV3 || result.Schema == ReviewIntegrationStatusSchemaV4 || result.Schema == ReviewIntegrationStatusSchemaV5 || result.Schema == ReviewIntegrationStatusSchemaV6 || result.Schema == ReviewIntegrationStatusSchemaV7 || result.Schema == ReviewIntegrationStatusSchemaV8 || result.Schema == ReviewIntegrationStatusSchemaV9) && result.Contract == ReviewIntegrationContractV2
+	nativeGitTransport := (result.Schema == ReviewIntegrationStatusSchemaV3 || result.Schema == ReviewIntegrationStatusSchemaV4 || result.Schema == ReviewIntegrationStatusSchemaV5 || result.Schema == ReviewIntegrationStatusSchemaV6 || result.Schema == ReviewIntegrationStatusSchemaV7 || result.Schema == ReviewIntegrationStatusSchemaV8 || result.Schema == ReviewIntegrationStatusSchemaV9) && (result.Contract == ReviewIntegrationContractV2 || result.Contract == AxiomReviewIntegrationContractV2)
 	if (!legacyTransport && !nativeGitTransport) || result.Operation != "review.status" {
 		return errors.New("invalid negotiated review status identity")
 	}
@@ -413,7 +413,7 @@ func (result ReviewTargetStatusResult) validateWithCompactAuthority(authority *r
 		}
 	}
 	if result.Forecast != nil {
-		if result.Contract != ReviewIntegrationContractV2 {
+		if result.Contract != ReviewIntegrationContractV2 && result.Contract != AxiomReviewIntegrationContractV2 {
 			return errors.New("forecast requires the v2 review integration contract") // refusal:by-design world-action: frozen v1 status cannot accept additive routing data
 		}
 		if result.NextTransition == nil {
@@ -550,11 +550,11 @@ func (result ReviewTargetStatusResult) validateSubmissionDescriptors() error {
 		return nil
 	}
 	for _, input := range transition.Collect.Inputs {
-		if input.Submission != nil && result.Contract != ReviewIntegrationContractV2 {
+		if input.Submission != nil && result.Contract != ReviewIntegrationContractV2 && result.Contract != AxiomReviewIntegrationContractV2 {
 			return errors.New("legacy negotiated status contains a submission descriptor") // refusal:by-design world-action: only a provider code fix can remove a descriptor from a legacy response
 		}
 	}
-	if result.Contract != ReviewIntegrationContractV2 {
+	if result.Contract != ReviewIntegrationContractV2 && result.Contract != AxiomReviewIntegrationContractV2 {
 		return nil
 	}
 	if result.Schema == ReviewIntegrationStatusSchemaV3 {
@@ -918,7 +918,7 @@ func (result ReviewTargetStatusResult) validateNextTransitionTargets() error {
 			return errors.New("negotiated status capture target differs from the frozen target identity")
 		}
 		if result.Contract == ReviewIntegrationContractV1 && (input.CandidateDiff == nil || input.BaseTree != "" || input.CandidateTree != "" || input.ChangedPathManifest == nil) ||
-			result.Contract == ReviewIntegrationContractV2 && (input.CandidateDiff != nil || input.BaseTree != result.Projection.BaseTree || input.CandidateTree != result.Projection.InitialReviewTree) {
+			(result.Contract == ReviewIntegrationContractV2 || result.Contract == AxiomReviewIntegrationContractV2) && (input.CandidateDiff != nil || input.BaseTree != result.Projection.BaseTree || input.CandidateTree != result.Projection.InitialReviewTree) {
 			return errors.New("negotiated status capture transport differs from its contract") // refusal:by-design world-action: provider-built STATUS mixed negotiated transports and requires a code fix
 		}
 	}
@@ -1491,7 +1491,7 @@ func (submission ReviewTransitionSubmission) validateIntendedUntrackedSelection(
 		agent, hasAgent = strings.CutPrefix(tokens[2], "--agent=")
 	}
 	if value == nil || len(submission.Values) != 0 || value.Slot != "intended_untracked_selection" || value.Domain != "schema_bound_json" || value.Schema != reviewIntendedUntrackedSelectionSchema || value.SubstitutionLocation != 4 || len(value.AllowedValues) != 0 || value.Minimum != 0 || value.Maximum != 0 ||
-		len(tokens) != 5 || tokens[0] != "--contract="+ReviewIntegrationContractV2 || tokens[1] != "--next-transition=true" || !hasAgent || tokens[3] != "--projection=workspace" || tokens[4] != "--intended-untracked-selection="+reviewSubmissionValuePlaceholder {
+		len(tokens) != 5 || (tokens[0] != "--contract="+ReviewIntegrationContractV2 && tokens[0] != "--contract="+AxiomReviewIntegrationContractV2) || tokens[1] != "--next-transition=true" || !hasAgent || tokens[3] != "--projection=workspace" || tokens[4] != "--intended-untracked-selection="+reviewSubmissionValuePlaceholder {
 		// refusal:by-design world-action: the provider-generated intended-untracked submission descriptor requires a provider code fix.
 		return errors.New("intended-untracked submission descriptor is invalid")
 	}
@@ -1695,7 +1695,7 @@ func validateReviewTransitionExecution(execution ReviewTransitionExecution, argu
 			(!hasProjection || projection == string(reviewtransaction.ProjectionStaged))
 		currentScope := !hasBase && !hasCommitted && !hasOverlay && hasProjection && validProjection
 		if !exact(required, wantSelectors) || !committedScope && !overlayScope && !currentScope ||
-			arguments["contract"] != ReviewIntegrationContractV2 || arguments["next-transition"] != "true" ||
+			(arguments["contract"] != ReviewIntegrationContractV2 && arguments["contract"] != AxiomReviewIntegrationContractV2) || arguments["next-transition"] != "true" ||
 			arguments["lineage"] != execution.Binding.LineageID || hasBase && !validReviewGitTree(base) ||
 			reviewtransaction.ValidateReviewRepositoryContextHandle(arguments["repository-context"]) != nil ||
 			len(execution.Preconditions) != 1 || execution.Preconditions[0] != (ReviewTransitionArgument{Name: "state", Value: string(reviewtransaction.StateReviewing)}) {

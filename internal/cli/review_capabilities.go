@@ -18,6 +18,7 @@ import (
 
 const ReviewIntegrationContractV1 = "gentle-ai.review-integration/v1"
 const ReviewIntegrationContractV2 = "gentle-ai.review-integration/v2"
+const AxiomReviewIntegrationContractV2 = reviewtransaction.AxiomReviewIntegrationV2Contract
 const ReviewIntegrationCapabilitiesSchemaV1 = "gentle-ai.review-integration.capabilities/v1"
 const ReviewIntegrationCapabilitiesSchemaIDV1 = "https://gentle-ai.dev/contracts/review-integration/v1/schemas/capabilities.schema.json"
 const ReviewIntegrationCapabilitiesSchemaV11 = "gentle-ai.review-integration.capabilities/v1.1"
@@ -174,8 +175,12 @@ func RunReviewCapabilities(args []string, stdout io.Writer) error {
 }
 
 func validateReviewIntegrationContract(contract string) error {
-	if contract != ReviewIntegrationContractV1 && contract != ReviewIntegrationContractV2 {
+	canonical, _, err := reviewtransaction.ResolveReviewContract(contract)
+	if err != nil {
 		return fmt.Errorf("unsupported review integration contract %q; retry with gentle-ai review capabilities --contract %s or gentle-ai review capabilities --contract %s", contract, ReviewIntegrationContractV1, ReviewIntegrationContractV2)
+	}
+	if canonical != reviewtransaction.AxiomReviewIntegrationV2Contract && canonical != ReviewIntegrationContractV1 {
+		return fmt.Errorf("unsupported review integration contract %q", contract)
 	}
 	return nil
 }
@@ -290,8 +295,8 @@ func reviewCapabilitiesStaticSurface(contracts ...string) ReviewCapabilitiesResu
 			},
 		},
 	}
-	if contract == ReviewIntegrationContractV2 {
-		result.Schema, result.Contract = ReviewIntegrationCapabilitiesSchemaV26, ReviewIntegrationContractV2
+	if contract == ReviewIntegrationContractV2 || contract == AxiomReviewIntegrationContractV2 {
+		result.Schema, result.Contract = ReviewIntegrationCapabilitiesSchemaV26, contract
 		result.Protocol = ReviewCapabilitiesProtocol{Major: 2, Minor: 6}
 		for index, schema := range result.Schemas {
 			switch schema {
@@ -423,7 +428,7 @@ func (result ReviewCapabilitiesResult) Validate() error {
 	if result.Bootstrap != nil && !reflect.DeepEqual(result.Bootstrap, static.Bootstrap) {
 		return errors.New("capability bootstrap does not match the negotiated contract") // refusal:by-design world-action: provider-generated bootstrap requires a code fix, not an operator command
 	}
-	if result.Package.Name != "gentle-ai" || strings.TrimSpace(result.Package.Version) == "" || result.Package.ReleaseChannel != reviewReleaseChannel(result.Package.Version) {
+	if (result.Package.Name != "gentle-ai" && result.Package.Name != "axiom") || strings.TrimSpace(result.Package.Version) == "" || result.Package.ReleaseChannel != reviewReleaseChannel(result.Package.Version) {
 		return errors.New("capability package identity is invalid")
 	}
 	if strings.TrimSpace(result.Build.GoVersion) == "" || (result.Build.VCSModified != "true" && result.Build.VCSModified != "false" && result.Build.VCSModified != "unknown") ||

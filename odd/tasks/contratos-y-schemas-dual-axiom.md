@@ -33,7 +33,7 @@ Introducir los identificadores de esquema y contrato de protocolo canónicos de 
 
 ## Tareas
 
-- [ ] **T1 · Mapeo canónico de contratos y alias de compatibilidad en RDD**
+- [x] **T1 · Mapeo canónico de contratos y alias de compatibilidad en RDD**
   - Definir identificadores canónicos: `axiom.review-integration/v2`, `axiom.review-integration.consent/v3`, `axiom.review-assessment/v1`, `axiom.review-acknowledged/v1`.
   - Crear resolver centralizado de contratos (`ResolveReviewContract(requested string) (canonical string, isLegacy bool, err error)`).
   - Permitir que el despachador responda con el formato solicitado preservando los campos semánticos.
