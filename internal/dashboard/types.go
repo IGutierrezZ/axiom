@@ -303,4 +303,3 @@ type SpecsPullResultDTO struct {
 	Message string `json:"message"`
 	Output  string `json:"output,omitempty"`
 }
-

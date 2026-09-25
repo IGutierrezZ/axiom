@@ -185,4 +185,3 @@ func LoadConfig(filePath string) (*WorkspaceConfig, error) {
 
 	return ParseConfig(data)
 }
-

@@ -99,4 +99,3 @@ func TestRunSDDArchiveComposeSupersedeFlag(t *testing.T) {
 		t.Errorf("se esperaba Active Feature marcado como SUPERSEDED:\n%s", composed)
 	}
 }
-

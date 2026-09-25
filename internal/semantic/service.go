@@ -300,4 +300,3 @@ func (s *Service) ReindexCodeGraph(ctx context.Context) (*ReindexResult, error) 
 		Duration:  duration,
 	}, nil
 }
-

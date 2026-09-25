@@ -320,4 +320,3 @@ func TestComposeOpenSpecCanonicalSpecSupersedePruning(t *testing.T) {
 		t.Errorf("se esperaba que Widget Expiration estuviera marcado como SUPERSEDED / DEPRECADO:\n%s", composed)
 	}
 }
-

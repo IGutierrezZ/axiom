@@ -8,11 +8,11 @@ import (
 
 // Identificadores canónicos de Axiom para contratos de revisión RDD.
 const (
-	AxiomReviewIntegrationV2Contract       = "axiom.review-integration/v2"
+	AxiomReviewIntegrationV2Contract        = "axiom.review-integration/v2"
 	AxiomReviewIntegrationConsentV3Contract = "axiom.review-integration.consent/v3"
-	AxiomReviewAssessmentV1Contract        = "axiom.review-assessment/v1"
-	AxiomReviewAcknowledgedV1Contract      = "axiom.review-acknowledged/v1"
-	AxiomReviewAuthorityStatusV1Contract   = "axiom.review-authority-status/v1"
+	AxiomReviewAssessmentV1Contract         = "axiom.review-assessment/v1"
+	AxiomReviewAcknowledgedV1Contract       = "axiom.review-acknowledged/v1"
+	AxiomReviewAuthorityStatusV1Contract    = "axiom.review-authority-status/v1"
 
 	AxiomReviewOperationV2Contract = "axiom.review-integration.operation/v2"
 	AxiomReviewFailureV2Contract   = "axiom.review-integration.failure/v2"
@@ -24,12 +24,12 @@ const (
 
 // Identificadores legados para retrocompatibilidad.
 const (
-	LegacyReviewIntegrationV2Contract       = "gentle-ai.review-integration/v2"
-	LegacyReviewIntegrationV1Contract       = "gentle-ai.review-integration/v1"
+	LegacyReviewIntegrationV2Contract        = "gentle-ai.review-integration/v2"
+	LegacyReviewIntegrationV1Contract        = "gentle-ai.review-integration/v1"
 	LegacyReviewIntegrationConsentV3Contract = "gentle-ai.review-integration.consent/v3"
-	LegacyReviewAssessmentV1Contract        = "gentle-ai.review-assessment/v1"
-	LegacyReviewAcknowledgedV1Contract      = "gentle-ai.review-acknowledged/v1"
-	LegacyReviewAuthorityStatusV1Contract   = "gentle-ai.review-authority-status/v1"
+	LegacyReviewAssessmentV1Contract         = "gentle-ai.review-assessment/v1"
+	LegacyReviewAcknowledgedV1Contract       = "gentle-ai.review-acknowledged/v1"
+	LegacyReviewAuthorityStatusV1Contract    = "gentle-ai.review-authority-status/v1"
 
 	LegacyReviewOperationV2Contract = "gentle-ai.review-integration.operation/v2"
 	LegacyReviewFailureV2Contract   = "gentle-ai.review-integration.failure/v2"

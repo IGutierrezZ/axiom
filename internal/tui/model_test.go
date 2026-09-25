@@ -5239,7 +5239,7 @@ func TestModelAssignmentsIsolatedBetweenProfilesAndDefaultConfig(t *testing.T) {
 			},
 			wantAssign: map[string]model.ModelAssignment{
 				screens.SDDOrchestratorPhase: profileOrchestrator,
-				"sdd-apply":                   profilePhase,
+				"sdd-apply":                  profilePhase,
 			},
 		},
 		{
@@ -5260,7 +5260,7 @@ func TestModelAssignmentsIsolatedBetweenProfilesAndDefaultConfig(t *testing.T) {
 			},
 			wantAssign: map[string]model.ModelAssignment{
 				screens.SDDOrchestratorPhase: profileOrchestrator,
-				"sdd-apply":                   profilePhase,
+				"sdd-apply":                  profilePhase,
 			},
 		},
 		{
@@ -5310,7 +5310,7 @@ func TestModelAssignmentsIsolatedBetweenProfilesAndDefaultConfig(t *testing.T) {
 			},
 			wantAssign: map[string]model.ModelAssignment{
 				screens.SDDOrchestratorPhase: profileOrchestrator,
-				"sdd-apply":                   profilePhase,
+				"sdd-apply":                  profilePhase,
 			},
 			checkStash: true,
 			wantStash:  map[string]model.ModelAssignment{screens.SDDOrchestratorPhase: defaultAssignment},
@@ -5328,7 +5328,7 @@ func TestModelAssignmentsIsolatedBetweenProfilesAndDefaultConfig(t *testing.T) {
 			},
 			wantAssign: map[string]model.ModelAssignment{
 				screens.SDDOrchestratorPhase: defaultAssignment,
-				"sdd-onboard":                 {ProviderID: "anthropic", ModelID: "claude-haiku-4-5"},
+				"sdd-onboard":                {ProviderID: "anthropic", ModelID: "claude-haiku-4-5"},
 			},
 			wantMissing: []string{"sdd-apply"},
 			checkStash:  true,
