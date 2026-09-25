@@ -9,8 +9,8 @@
     "target_identity", "projection", "repair", "candidates"
   ],
   "properties": {
-    "schema": {"const": "gentle-ai.review-integration.status/v3"},
-    "contract": {"const": "gentle-ai.review-integration/v2"},
+    "schema": {"enum": ["axiom.review-integration.status/v3", "gentle-ai.review-integration.status/v3"]},
+    "contract": {"enum": ["axiom.review-integration/v2", "gentle-ai.review-integration/v2"]},
     "operation": {"const": "review.status"},
     "applicability": {"$ref": "../../v1/schemas/status-v2.schema.json#/properties/applicability"},
     "authority": {"$ref": "../../v1/schemas/status-v2.schema.json#/properties/authority"},

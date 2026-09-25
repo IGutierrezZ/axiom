@@ -42,7 +42,7 @@ Introducir los identificadores de esquema y contrato de protocolo canónicos de 
   - Implementar soporte para `axiom.sdd-status/v1` y `axiom.sdd-integration.consent/v1` en `internal/sddstatus/`.
   - Validar que `axiom sdd-status --json` y las comprobaciones de transición acepten ambos contratos sin rechazo.
 
-- [ ] **T3 · Actualización y ampliación de Schemas JSON**
+- [x] **T3 · Actualización y ampliación de Schemas JSON**
   - Actualizar los schemas JSON de validación (`contracts/review-integration/v2/schemas/`) para admitir tanto `axiom.*` como `gentle-ai.*` en las propiedades `"enum"` de identificación de schema.
   - Asegurar que los validadores de esquema de tests pasen sin infracciones de política de release.
 

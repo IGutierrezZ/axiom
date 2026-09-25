@@ -11,8 +11,8 @@
     "choices", "off_path"
   ],
   "properties": {
-    "schema": {"const": "gentle-ai.review-integration.consent/v3"},
-    "contract": {"const": "gentle-ai.review-integration/v2"},
+    "schema": {"enum": ["axiom.review-integration.consent/v3", "gentle-ai.review-integration.consent/v3"]},
+    "contract": {"enum": ["axiom.review-integration/v2", "gentle-ai.review-integration/v2"]},
     "operation": {"const": "review.start"},
     "action": {"const": "consent_required"},
     "agent": {"enum": ["claude-code", "opencode", "codex", "pi"]},

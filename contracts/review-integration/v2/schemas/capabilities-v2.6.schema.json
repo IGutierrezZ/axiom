@@ -20,7 +20,7 @@
   ],
   "properties": {
     "schema": {
-      "const": "gentle-ai.review-integration.capabilities/v2.6"
+      "enum": ["axiom.review-integration.capabilities/v2.6", "gentle-ai.review-integration.capabilities/v2.6"]
     },
     "contract": {
       "$ref": "capabilities-v2.3.schema.json#/properties/contract"

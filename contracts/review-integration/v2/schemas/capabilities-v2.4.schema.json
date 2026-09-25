@@ -8,7 +8,7 @@
     "projections", "schemas", "features", "compatibility"
   ],
   "properties": {
-    "schema": {"const": "gentle-ai.review-integration.capabilities/v2.4"},
+    "schema": {"enum": ["axiom.review-integration.capabilities/v2.4", "gentle-ai.review-integration.capabilities/v2.4"]},
     "contract": {"$ref": "capabilities-v2.3.schema.json#/properties/contract"},
     "protocol": {
       "type": "object", "additionalProperties": false, "required": ["major", "minor"],

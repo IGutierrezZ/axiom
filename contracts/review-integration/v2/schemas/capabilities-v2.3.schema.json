@@ -9,8 +9,8 @@
     "projections", "schemas", "features", "compatibility"
   ],
   "properties": {
-    "schema": {"const": "gentle-ai.review-integration.capabilities/v2.3"},
-    "contract": {"const": "gentle-ai.review-integration/v2"},
+    "schema": {"enum": ["axiom.review-integration.capabilities/v2.3", "gentle-ai.review-integration.capabilities/v2.3"]},
+    "contract": {"enum": ["axiom.review-integration/v2", "gentle-ai.review-integration/v2"]},
     "protocol": {
       "type": "object", "additionalProperties": false, "required": ["major", "minor"],
       "properties": {"major": {"const": 2}, "minor": {"const": 3}}
