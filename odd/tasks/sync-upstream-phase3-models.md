@@ -25,7 +25,7 @@ Portar selectivamente desde upstream Gentle AI (v3.4.0..v3.7.0+, PR #4912) las c
   - Extender `internal/tui/screens/claude_model_picker.go` con las seis filas RDD y viewport con cursor-following en terminales cortos.
   - Actualizar `internal/reviewerprovider/claude_adapter.go` para transmitir `--model <modelo>` al subproceso de Claude.
   - Ejecutar y verificar tests en `internal/tui/screens/claude_model_picker_test.go`, `internal/reviewerprovider/claude_adapter_test.go`, `internal/cli/review_provider_runtime_model_test.go` e `internal/components/sdd/inject_test.go`.
-- [ ] **T2 · Roles Nativos General y Explore en OpenCode Model Picker**
+- [x] **T2 · Roles Nativos General y Explore en OpenCode Model Picker**
   - Extender `internal/tui/screens/model_picker.go` e `internal/components/sdd/inject.go` para descubrir y editar los agentes nativos `general` y `explore`.
   - Ejecutar y verificar tests en `internal/tui/screens/model_picker_test.go` e `internal/components/sdd/inject_test.go`.
 - [ ] **T3 · Roles ODD/RDD en Codex Model Picker, Presets GPT-6 y Adaptador**
@@ -46,3 +46,7 @@ Portar selectivamente desde upstream Gentle AI (v3.4.0..v3.7.0+, PR #4912) las c
   - `go test -v ./internal/reviewerprovider -run "TestClaude"`: PASS (`TestClaudeAdapterReturnsNoBytesWhenUnavailable`, `TestClaudeAdapterHelperProcess`).
   - `go test -v ./internal/cli -run "TestClaudeReviewAdapter"`: PASS (`TestClaudeReviewAdapterUsesSavedModelForEachNativeRole`, `TestClaudeReviewAdapterMissingAndInvalidAssignmentsUseNativeDefault`).
   - `go test -v ./internal/components/sdd -run "TestInjectClaude.*Review"`: PASS (`TestInjectClaudeNativeReviewAgentsUseSavedRoleModels`, `TestInjectClaudeReviewAgentFallsBackForInvalidRole`).
+
+- **T2 OpenCode Native Agents Model Picker & Injection Tests:**
+  - `go test -v ./internal/tui/screens -run "TestModelPicker"`: PASS (`TestModelPickerRows_Count`, `TestModelPickerRows_ReviewAgentsFollowJudgmentDay`, `TestModelPickerNativeRowsAndBulkIsolation`, etc.).
+  - `go test -v ./internal/components/sdd -run "TestInjectOpenCodeNativeModelsAbsentAndPresent"`: PASS (subtests `present=false` y `present=true`).
