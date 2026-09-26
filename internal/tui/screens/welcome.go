@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/charmbracelet/lipgloss"
 	"github.com/IGutierrezZ/axiom/v3/internal/tui/styles"
 	"github.com/IGutierrezZ/axiom/v3/internal/update"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/rivo/uniseg"
 )
 

@@ -16,8 +16,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/charmbracelet/bubbles/textarea"
-	tea "github.com/charmbracelet/bubbletea"
 	"github.com/IGutierrezZ/axiom/v3/internal/agentbuilder"
 	"github.com/IGutierrezZ/axiom/v3/internal/agents"
 	"github.com/IGutierrezZ/axiom/v3/internal/backup"
@@ -42,6 +40,8 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/update"
 	"github.com/IGutierrezZ/axiom/v3/internal/update/upgrade"
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
+	"github.com/charmbracelet/bubbles/textarea"
+	tea "github.com/charmbracelet/bubbletea"
 )
 
 // tuiNowFn returns the current time for the update-check cooldown gate.

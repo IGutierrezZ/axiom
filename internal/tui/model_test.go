@@ -12,8 +12,6 @@ import (
 	"testing"
 	"time"
 
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
 	"github.com/IGutierrezZ/axiom/v3/internal/backup"
 	"github.com/IGutierrezZ/axiom/v3/internal/cli"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/communitytool"
@@ -30,6 +28,8 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/tui/styles"
 	"github.com/IGutierrezZ/axiom/v3/internal/update"
 	"github.com/IGutierrezZ/axiom/v3/internal/update/upgrade"
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/muesli/termenv"
 )
 

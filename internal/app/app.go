@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	tea "github.com/charmbracelet/bubbletea"
 	"github.com/IGutierrezZ/axiom/v3/internal/backup"
 	"github.com/IGutierrezZ/axiom/v3/internal/cli"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/opencodeplugin"
@@ -25,6 +24,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/update"
 	"github.com/IGutierrezZ/axiom/v3/internal/update/upgrade"
 	"github.com/IGutierrezZ/axiom/v3/internal/verify"
+	tea "github.com/charmbracelet/bubbletea"
 )
 
 // Version is set from main via ldflags at build time.

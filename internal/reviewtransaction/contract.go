@@ -14,13 +14,13 @@ const (
 	AxiomReviewAcknowledgedV1Contract       = "axiom.review-acknowledged/v1"
 	AxiomReviewAuthorityStatusV1Contract    = "axiom.review-authority-status/v1"
 
-	AxiomReviewOperationV2Contract = "axiom.review-integration.operation/v2"
-	AxiomReviewFailureV2Contract   = "axiom.review-integration.failure/v2"
-	AxiomReviewStartV3Contract     = "axiom.review-integration.start/v3"
-	AxiomReviewStartV4Contract     = "axiom.review-integration.start/v4"
-	AxiomReviewStatusV9Contract    = "axiom.review-integration.status/v9"
-	AxiomReviewRepairV2Contract    = "axiom.review-integration.repair/v2"
-	AxiomReviewTransactionV1Contract = "axiom.review-transaction/v1"
+	AxiomReviewOperationV2Contract                 = "axiom.review-integration.operation/v2"
+	AxiomReviewFailureV2Contract                   = "axiom.review-integration.failure/v2"
+	AxiomReviewStartV3Contract                     = "axiom.review-integration.start/v3"
+	AxiomReviewStartV4Contract                     = "axiom.review-integration.start/v4"
+	AxiomReviewStatusV9Contract                    = "axiom.review-integration.status/v9"
+	AxiomReviewRepairV2Contract                    = "axiom.review-integration.repair/v2"
+	AxiomReviewTransactionV1Contract               = "axiom.review-transaction/v1"
 	AxiomReviewTargetedValidationRequestV1Contract = "axiom.review-targeted-validation-request/v1"
 )
 
@@ -33,13 +33,13 @@ const (
 	LegacyReviewAcknowledgedV1Contract       = "gentle-ai.review-acknowledged/v1"
 	LegacyReviewAuthorityStatusV1Contract    = "gentle-ai.review-authority-status/v1"
 
-	LegacyReviewOperationV2Contract = "gentle-ai.review-integration.operation/v2"
-	LegacyReviewFailureV2Contract   = "gentle-ai.review-integration.failure/v2"
-	LegacyReviewStartV3Contract     = "gentle-ai.review-integration.start/v3"
-	LegacyReviewStartV4Contract     = "gentle-ai.review-integration.start/v4"
-	LegacyReviewStatusV9Contract    = "gentle-ai.review-integration.status/v9"
-	LegacyReviewRepairV2Contract    = "gentle-ai.review-integration.repair/v2"
-	LegacyReviewTransactionV1Contract = "gentle-ai.review-transaction/v1"
+	LegacyReviewOperationV2Contract                 = "gentle-ai.review-integration.operation/v2"
+	LegacyReviewFailureV2Contract                   = "gentle-ai.review-integration.failure/v2"
+	LegacyReviewStartV3Contract                     = "gentle-ai.review-integration.start/v3"
+	LegacyReviewStartV4Contract                     = "gentle-ai.review-integration.start/v4"
+	LegacyReviewStatusV9Contract                    = "gentle-ai.review-integration.status/v9"
+	LegacyReviewRepairV2Contract                    = "gentle-ai.review-integration.repair/v2"
+	LegacyReviewTransactionV1Contract               = "gentle-ai.review-transaction/v1"
 	LegacyReviewTargetedValidationRequestV1Contract = "gentle-ai.review-targeted-validation-request/v1"
 )
 

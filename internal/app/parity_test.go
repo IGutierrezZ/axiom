@@ -7,11 +7,11 @@ import (
 	"strings"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
 	"github.com/IGutierrezZ/axiom/v3/internal/cli"
 	"github.com/IGutierrezZ/axiom/v3/internal/planner"
 	"github.com/IGutierrezZ/axiom/v3/internal/system"
 	"github.com/IGutierrezZ/axiom/v3/internal/tui"
+	tea "github.com/charmbracelet/bubbletea"
 )
 
 func TestInstallDefaultsMatchTUIModelDefaults(t *testing.T) {

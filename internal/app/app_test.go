@@ -18,7 +18,6 @@ import (
 	"testing"
 	"time"
 
-	tea "github.com/charmbracelet/bubbletea"
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/codex"
 	"github.com/IGutierrezZ/axiom/v3/internal/backup"
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
@@ -30,6 +29,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/tui"
 	"github.com/IGutierrezZ/axiom/v3/internal/update"
 	"github.com/IGutierrezZ/axiom/v3/internal/update/upgrade"
+	tea "github.com/charmbracelet/bubbletea"
 )
 
 // TestListBackupsNewestFirst verifies that ListBackups returns manifests sorted

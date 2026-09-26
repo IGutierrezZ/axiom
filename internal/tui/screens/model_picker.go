@@ -9,11 +9,11 @@ import (
 	"strings"
 	"unicode"
 
-	tea "github.com/charmbracelet/bubbletea"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/sdd"
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
 	"github.com/IGutierrezZ/axiom/v3/internal/opencode"
 	"github.com/IGutierrezZ/axiom/v3/internal/tui/styles"
+	tea "github.com/charmbracelet/bubbletea"
 )
 
 // ModelPickerMode represents the current sub-mode of the model picker screen.
