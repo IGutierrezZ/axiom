@@ -183,6 +183,12 @@ func sanitizeKnownModelEffort(assignment model.ModelAssignment, sddModels map[st
 	return assignment
 }
 
+func (m *Model) restoreCodexCustomAssignments() {
+	for role, modelID := range m.Selection.CodexPhaseModelAssignments {
+		m.CodexModelPicker.CustomAssignments[role] = screens.CodexCustomAssignment{ModelID: modelID, Effort: m.Selection.CodexModelAssignments[role]}
+	}
+}
+
 // codexPhaseModelsFromCustomAssignments converts the TUI's CustomAssignments map
 // (phase → CodexCustomAssignment) to the state-layer map (phase → model id string)
 // used by Selection.CodexPhaseModelAssignments and state.InstallState.
@@ -1561,7 +1567,7 @@ func (m Model) View() string {
 	case ScreenKiroModelPicker:
 		return screens.RenderKiroModelPicker(m.KiroModelPicker, m.Cursor)
 	case ScreenCodexModelPicker:
-		return screens.RenderCodexModelPicker(m.CodexModelPicker, m.Cursor)
+		return screens.RenderCodexModelPicker(m.CodexModelPicker, m.Cursor, m.Height)
 	case ScreenSDDMode:
 		return screens.RenderSDDMode(m.Selection.SDDMode, m.Cursor)
 	case ScreenStrictTDD:
@@ -2501,6 +2507,7 @@ func (m Model) confirmSelection() (tea.Model, tea.Cmd) {
 		case 3: // Configure Codex models
 			m.ModelConfigMode = true
 			m.CodexModelPicker = screens.NewCodexModelPickerStateFromAssignments(m.Selection.CodexModelAssignments)
+			m.restoreCodexCustomAssignments()
 			m.setScreen(ScreenCodexModelPicker)
 		case 4: // Back
 			m.setScreen(ScreenWelcome)
@@ -5333,6 +5340,7 @@ func (m *Model) applyPickerEntry(next Screen) tea.Cmd {
 		m.KiroModelPicker = screens.NewKiroModelPickerStateFromAssignments(m.Selection.KiroModelAssignments)
 	case ScreenCodexModelPicker:
 		m.CodexModelPicker = screens.NewCodexModelPickerStateFromAssignments(m.Selection.CodexModelAssignments)
+		m.restoreCodexCustomAssignments()
 	case ScreenModelPicker:
 		discoveryCmd = m.initializeModelPicker()
 	}

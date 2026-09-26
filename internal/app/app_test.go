@@ -2076,11 +2076,11 @@ func TestApplyOverrides_CodexCarrilModelAssignments(t *testing.T) {
 	if len(sel.CodexCarrilModelAssignments) != len(carrilModels) {
 		t.Fatalf("CodexCarrilModelAssignments len = %d, want %d", len(sel.CodexCarrilModelAssignments), len(carrilModels))
 	}
-	if sel.CodexCarrilModelAssignments["sdd-cheap"] != "gpt-5.6-luna" {
-		t.Errorf("CodexCarrilModelAssignments[sdd-cheap] = %q, want gpt-5.6-luna", sel.CodexCarrilModelAssignments["sdd-cheap"])
+	if sel.CodexCarrilModelAssignments["sdd-cheap"] != "gpt-6-luna" {
+		t.Errorf("CodexCarrilModelAssignments[sdd-cheap] = %q, want gpt-6-luna", sel.CodexCarrilModelAssignments["sdd-cheap"])
 	}
-	if sel.CodexCarrilModelAssignments["sdd-strong"] != "gpt-5.6-sol" {
-		t.Errorf("CodexCarrilModelAssignments[sdd-strong] = %q, want gpt-5.6-sol", sel.CodexCarrilModelAssignments["sdd-strong"])
+	if sel.CodexCarrilModelAssignments["sdd-strong"] != "gpt-6-sol" {
+		t.Errorf("CodexCarrilModelAssignments[sdd-strong] = %q, want gpt-6-sol", sel.CodexCarrilModelAssignments["sdd-strong"])
 	}
 }
 
@@ -2111,6 +2111,7 @@ func TestLoadPersistedAssignments_CodexCarrilModels(t *testing.T) {
 }
 
 func TestTuiSyncMigratesLegacyCodexCarrilDefaults(t *testing.T) {
+	t.Setenv("AXIOM_INSTALL_SCOPE", "global")
 	t.Cleanup(codex.SetRuntimeVersionCommandForTest("codex-cli 0.144.0", nil))
 	home := t.TempDir()
 	if err := state.Write(home, state.InstallState{
@@ -2131,9 +2132,9 @@ func TestTuiSyncMigratesLegacyCodexCarrilDefaults(t *testing.T) {
 	}
 
 	wantProfiles := map[string][]string{
-		"sdd-strong.config.toml": {`model = "gpt-5.6-sol"`, `model_reasoning_effort = "medium"`},
-		"sdd-mid.config.toml":    {`model = "gpt-5.6-terra"`, `model_reasoning_effort = "medium"`},
-		"sdd-cheap.config.toml":  {`model = "gpt-5.6-luna"`, `model_reasoning_effort = "high"`},
+		"sdd-strong.config.toml": {`model = "gpt-6-sol"`, `model_reasoning_effort = "medium"`},
+		"sdd-mid.config.toml":    {`model = "gpt-6-luna"`, `model_reasoning_effort = "medium"`},
+		"sdd-cheap.config.toml":  {`model = "gpt-6-luna"`, `model_reasoning_effort = "high"`},
 	}
 	for name, wantContent := range wantProfiles {
 		path := filepath.Join(home, ".codex", name)

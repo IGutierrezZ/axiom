@@ -28,10 +28,10 @@ Portar selectivamente desde upstream Gentle AI (v3.4.0..v3.7.0+, PR #4912) las c
 - [x] **T2 · Roles Nativos General y Explore en OpenCode Model Picker**
   - Extender `internal/tui/screens/model_picker.go` e `internal/components/sdd/inject.go` para descubrir y editar los agentes nativos `general` y `explore`.
   - Ejecutar y verificar tests en `internal/tui/screens/model_picker_test.go` e `internal/components/sdd/inject_test.go`.
-- [ ] **T3 · Roles ODD/RDD en Codex Model Picker, Presets GPT-6 y Adaptador**
+- [x] **T3 · Roles ODD/RDD en Codex Model Picker, Presets GPT-6 y Adaptador**
   - Actualizar `internal/model/codex_model.go` y `internal/tui/screens/codex_model_picker.go` con roles ODD, 6 roles RDD y defaults GPT-6.
   - Conectar los modelos configurados en `internal/reviewerprovider/codex_adapter.go` y `internal/cli/review_provider_runtime.go`.
-  - Ejecutar y verificar tests en `internal/model/codex_model_test.go`, `internal/tui/screens/codex_model_picker_test.go` y `internal/reviewerprovider/codex_adapter_test.go`.
+  - Ejecutar y verificar tests en `internal/model/codex_model_test.go`, `internal/tui/screens/codex_model_picker_test.go`, `internal/agents/codex/profiles_test.go`, `internal/cli/sync_test.go`, `internal/components/engram/inject_test.go`, `internal/components/sdd/inject_test.go`, `internal/app/app_test.go` y `internal/cli/codex_review_provider_model_test.go`.
 - [ ] **T4 · Verificación de Calidad y Pruebas Globales**
   - Ejecutar tests de todos los paquetes modificados.
   - Ejecutar `go vet` sobre los paquetes afectados.
@@ -50,3 +50,15 @@ Portar selectivamente desde upstream Gentle AI (v3.4.0..v3.7.0+, PR #4912) las c
 - **T2 OpenCode Native Agents Model Picker & Injection Tests:**
   - `go test -v ./internal/tui/screens -run "TestModelPicker"`: PASS (`TestModelPickerRows_Count`, `TestModelPickerRows_ReviewAgentsFollowJudgmentDay`, `TestModelPickerNativeRowsAndBulkIsolation`, etc.).
   - `go test -v ./internal/components/sdd -run "TestInjectOpenCodeNativeModelsAbsentAndPresent"`: PASS (subtests `present=false` y `present=true`).
+
+- **T3 Codex Model Picker, ODD/RDD Roles, GPT-6 Presets & Review Adapter Tests:**
+  - `go test -v ./internal/model -run "TestCodex"`: PASS (matriz de presets, ODD roles, carril models GPT-6, AvailableModels).
+  - `go test -v ./internal/tui/screens -run "TestCodex"`: PASS (24 opciones, viewport scroll en terminales cortos, round-trip ODD/RDD).
+  - `go test -v ./internal/reviewerprovider -run "TestCodex"`: PASS (flag `--model` y resolución de endpoint loopback).
+  - `go test -v ./internal/cli -run "TestCodexReviewAdapter"`: PASS (despacho de roles guardados y fallback seguro).
+  - `go test -v ./internal/agents/codex -run "TestWriteCodexProfiles"`: PASS (defaults GPT-6 en toml).
+  - `go test -v ./internal/cli -run "TestComponentSyncStepCodexRuntimeGate"`: PASS (escritura de perfiles GPT-6).
+  - `go test -v ./internal/components/engram -run "TestInjectCodexOrchestratorAssignment"`: PASS (orquestador GPT-6).
+  - `go test -v ./internal/components/sdd -run "TestInjectCodex"`: PASS (idempotencia y goldens lowcost, powerful, recommended, custom).
+  - `go test -v ./internal/app -run "Codex"`: PASS (migración legacy de carriles a GPT-6 y persistencia).
+  - `go test -v ./internal/tui -run "Codex"`: PASS (restauración custom y ciclos de pantalla).
