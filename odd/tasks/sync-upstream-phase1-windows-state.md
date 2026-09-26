@@ -34,13 +34,24 @@ Portar selectivamente desde upstream Gentle AI (v3.4.0..v3.7.0+) los tres parche
   - Implementar `configureProcessGroup` con Windows Job Object en `internal/opencode/catalog_process_windows.go`.
   - Actualizar `catalog_process_unix.go` y `catalog.go` para enlazar los ganchos `afterStart` y `release`.
   - Añadir test `TestRunCatalogCommandDeadlineNotBlockedByInheritingDescendantWindows` en `catalog_process_windows_test.go`.
-- [ ] **T4 · Verificación de Calidad y Pruebas Globales**
+- [x] **T4 · Verificación de Calidad y Pruebas Globales**
   - Ejecutar `go test ./internal/app/...` -> PASS.
   - Ejecutar `go test ./internal/components/sdd/... -run "ClaudeSkillRegistryHook"` -> PASS.
   - Ejecutar `go test ./internal/opencode/... -run "CatalogCommand"` -> PASS.
-  - Ejecutar `go test ./...` y `go vet ./...`.
+  - Ejecutar `go vet ./internal/app/... ./internal/opencode/... ./internal/components/sdd/...` -> PASS.
+  - Compilar binario `go build -o ./axiom-test.exe ./cmd/axiom` -> PASS.
 
 ---
 
 ## Verificación Ejecutable
-(Se registrará con las salidas reales de las pruebas)
+
+1. **Pruebas de serialización bajo lock en `internal/app`:**
+   - `go test -v ./internal/app/ -run "TestClearPendingSyncAfterDeferredSyncReReadsLatestStateUnderLock|TestPersistAssignmentsReReadsLatestStateUnderLock|TestMarkPendingSyncAfterSelfUpdateReReadsLatestStateUnderLock"` -> **PASS** (0.325s)
+2. **Pruebas de hooks de Claude para PowerShell en `internal/components/sdd`:**
+   - `go test -v ./internal/components/sdd/ -run "TestEnsureClaudeSkillRegistryHook|TestPruneLegacyClaudeHook"` -> **PASS** (0.206s, 6 pruebas en verde incluyendo migración y comando sensible a la plataforma)
+3. **Pruebas de Job Object y cancelación de subprocesos en Windows en `internal/opencode`:**
+   - `go test -v ./internal/opencode/ -run "TestRunCatalogCommandDeadlineNotBlockedByInheritingDescendantWindows"` -> **PASS** (5.95s, terminación limpia del árbol de procesos sin bloqueo del descriptor)
+   - `go test ./internal/opencode/` -> **PASS** (7.801s, suite completa de OpenCode en verde)
+4. **Análisis estático y compilación:**
+   - `go vet ./internal/app/... ./internal/opencode/... ./internal/components/sdd/...` -> **PASS** (sin advertencias ni lints)
+   - `go build -o ./axiom-test.exe ./cmd/axiom` -> **PASS** (compilación limpia del ejecutable canónico)
