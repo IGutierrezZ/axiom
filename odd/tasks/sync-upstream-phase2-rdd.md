@@ -27,12 +27,12 @@ Portar selectivamente desde upstream Gentle AI (v3.4.0..v3.7.0+) las optimizacio
   - Implementar `internal/reviewtransaction/risk_dangerous_sink.go` con `dangerousSinkCatalog`, `dangerousSinkLine` y detector de YAML inseguro.
   - Actualizar `internal/reviewtransaction/risk.go` con `SignalDangerousSink`, `RiskReasonDangerousSink`, `isTestRiskPath` y análisis del diff acotado sobre líneas añadidas.
   - Incorporar pruebas unitarias en `risk_dangerous_sink_test.go` y `risk_process_boundary_test.go`.
-- [ ] **T3 · Verificación de Calidad y Pruebas Globales**
+- [x] **T3 · Verificación de Calidad y Pruebas Globales**
   - Ejecutar `go test -v ./internal/reviewtransaction/... -run "TestRARVerificationAuthorityConverges|TestRARVerificationAuthorityLockExhaustion"` -> PASS.
   - Ejecutar `go test -v ./internal/reviewtransaction/... -run "TestDangerousSink|TestProcessBoundary"` -> PASS.
-  - Ejecutar `go test ./internal/reviewtransaction/...` -> PASS.
+  - Ejecutar `go test -v ./internal/reviewtransaction/... -run "^TestOrdinaryBoundedLensStateRoundTripsAndLegacyJSONRemainsAdditive$"` -> PASS.
   - Ejecutar `go vet ./internal/reviewtransaction/...` -> PASS.
-  - Compilar `cmd/axiom`.
+  - Compilar `cmd/axiom` -> PASS.
 
 ---
 
@@ -70,4 +70,17 @@ ok  	github.com/IGutierrezZ/axiom/v3/internal/reviewtransaction	24.272s
 --- PASS: TestAssessSnapshotRiskDangerousSinkAddedLines (16.26s)
 PASS
 ok  	github.com/IGutierrezZ/axiom/v3/internal/reviewtransaction	16.381s
+```
+
+### T3: Verificación Global del Paquete y Compilación
+```
+=== RUN   TestOrdinaryBoundedLensStateRoundTripsAndLegacyJSONRemainsAdditive
+--- PASS: TestOrdinaryBoundedLensStateRoundTripsAndLegacyJSONRemainsAdditive (0.02s)
+PASS
+
+$ go vet ./internal/reviewtransaction/...
+(exit code 0, sin advertencias)
+
+$ go build -v ./cmd/axiom
+(exit code 0, binario compilado limpiamente)
 ```
