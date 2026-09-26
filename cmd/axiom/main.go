@@ -93,6 +93,7 @@ COMANDOS DE GOBERNANZA Y WORKSPACE:
   project switch       Conmuta el proyecto activo por defecto
   project add          Registra un proyecto existente en el Hub
   project remove       Desvincula un proyecto del catálogo global
+  project prune        Purga rutas inexistentes o worktrees huérfanos del Hub
   workspace validate   Valida la configuración de axiom.yaml y la topología de repositorios
   handoff show         Muestra el relevo activo de un cambio
   handoff create       Genera una plantilla canónica de relevo (handoff.md)
@@ -239,7 +240,7 @@ func main() {
 
 	case "project":
 		if len(os.Args) < 3 {
-			fmt.Println("Error: subcomando de 'project' requerido. Opciones: list, switch, add, remove")
+			fmt.Println("Error: subcomando de 'project' requerido. Opciones: list, switch, add, remove, prune")
 			os.Exit(1)
 		}
 
@@ -253,8 +254,10 @@ func main() {
 			runProjectAdd(os.Args[3:])
 		case "remove":
 			runProjectRemove(os.Args[3:])
+		case "prune":
+			runProjectPrune(os.Args[3:])
 		default:
-			fmt.Printf("Error: subcomando '%s' no reconocido para project. Usa 'axiom project [list|switch|add|remove]'.\n", subCmd)
+			fmt.Printf("Error: subcomando '%s' no reconocido para project. Usa 'axiom project [list|switch|add|remove|prune]'.\n", subCmd)
 			os.Exit(1)
 		}
 
@@ -1858,6 +1861,30 @@ func runProjectRemove(args []string) {
 	}
 
 	fmt.Printf("[OK] Proyecto '%s' desvinculado del Hub global (los archivos en disco no fueron alterados).\n", target)
+}
+
+func runProjectPrune(args []string) {
+	hubMgr, err := hub.NewManager("")
+	if err != nil {
+		fmt.Printf("[ERROR] No se pudo cargar el gestor de Hub: %v\n", err)
+		os.Exit(1)
+	}
+
+	pruned, err := hubMgr.Prune()
+	if err != nil {
+		fmt.Printf("[ERROR] Error purgando proyectos del Hub: %v\n", err)
+		os.Exit(1)
+	}
+
+	if len(pruned) == 0 {
+		fmt.Println("[OK] El catálogo global del Hub está limpio; no hay rutas huérfanas ni worktrees registrados.")
+		return
+	}
+
+	fmt.Printf("[OK] Se purgaron %d proyecto(s) inválidos o correspondientes a worktrees del Hub global:\n", len(pruned))
+	for _, id := range pruned {
+		fmt.Printf("  - %s\n", id)
+	}
 }
 
 func runSDD(args []string, stdout, stderr io.Writer) int {

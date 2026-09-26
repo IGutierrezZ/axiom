@@ -1039,3 +1039,43 @@ func TestSpecsSyncStatusEndpoint(t *testing.T) {
 		t.Errorf("se esperaba nombre de rama")
 	}
 }
+
+func TestDashboardWorktreeExclusion(t *testing.T) {
+	tempDir := t.TempDir()
+	hubConfigPath := filepath.Join(tempDir, ".axiom", "workspaces.json")
+	hubMgr, err := hub.NewManager(hubConfigPath)
+	if err != nil {
+		t.Fatalf("error creando Hub Manager: %v", err)
+	}
+
+	// 1. Crear un worktree simulado con axiom.yaml y .git
+	wtDir := filepath.Join(tempDir, "axiom-wt", "my-feature")
+	_ = os.MkdirAll(wtDir, 0755)
+	_ = os.WriteFile(filepath.Join(wtDir, "axiom.yaml"), []byte("workspace:\n  name: Feature\n"), 0644)
+	_ = os.WriteFile(filepath.Join(wtDir, ".git"), []byte("gitdir: /fake/main/.git/worktrees/my-feature\n"), 0644)
+
+	// Iniciar servicio con NewServiceWithHub sobre el worktree
+	svc := NewServiceWithHub(wtDir, hubMgr)
+
+	// Intentar registrar explícitamente vía AddProject debe fallar
+	_, err = svc.AddProject(ProjectAddRequest{
+		Path:     wtDir,
+		Name:     "Feature",
+		Topology: "monorepo-embedded",
+	})
+	if err == nil {
+		t.Fatalf("esperado error al intentar registrar un worktree vía AddProject")
+	}
+	if !strings.Contains(err.Error(), "worktree git") {
+		t.Errorf("error inesperado: %v", err)
+	}
+
+	// El catálogo del hub debe seguir completamente vacío
+	list, err := hubMgr.List()
+	if err != nil {
+		t.Fatalf("error listando hub: %v", err)
+	}
+	if len(list) != 0 {
+		t.Errorf("el catálogo del Hub no debe contener worktrees, contiene %d", len(list))
+	}
+}

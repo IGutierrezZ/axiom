@@ -65,8 +65,8 @@ func NewService(rootPath string) *Service {
 		livingdocService: livingdoc.NewService(rootPath, nil, nil),
 	}
 
-	// Si el directorio tiene axiom.yaml y tenemos hubManager, auto-registrarlo
-	if hubMgr != nil && fileExists(filepath.Join(rootPath, "axiom.yaml")) {
+	// Si el directorio tiene axiom.yaml y tenemos hubManager, auto-registrarlo (solo si no es un worktree)
+	if hubMgr != nil && !hub.IsGitWorktree(rootPath) && fileExists(filepath.Join(rootPath, "axiom.yaml")) {
 		_, _ = hubMgr.Register(rootPath, filepath.Base(rootPath), "monorepo-embedded")
 	}
 
@@ -781,6 +781,10 @@ func (s *Service) AddProject(req ProjectAddRequest) (*hub.WorkspaceRecord, error
 
 	if req.Path == "" {
 		return nil, errors.New("debes especificar la ruta del proyecto ('path')")
+	}
+
+	if hub.IsGitWorktree(req.Path) {
+		return nil, fmt.Errorf("la ruta '%s' corresponde a un worktree git; los worktrees no deben registrarse como proyectos en el Hub", req.Path)
 	}
 
 	return s.hubManager.Register(req.Path, req.Name, req.Topology)

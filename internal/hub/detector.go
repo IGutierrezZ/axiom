@@ -400,3 +400,50 @@ func dirExists(path string) bool {
 	info, err := os.Stat(path)
 	return err == nil && info.IsDir()
 }
+
+// IsGitWorktree determina si la ruta especificada corresponde a un worktree secundario de git
+// (donde .git es un archivo con la directiva gitdir) o a la ruta de worktrees de Axiom (axiom-wt).
+func IsGitWorktree(path string) bool {
+	if path == "" {
+		return false
+	}
+	cleanPath := filepath.Clean(path)
+	absPath, err := filepath.Abs(cleanPath)
+	if err == nil {
+		cleanPath = absPath
+	}
+
+	// 1. Detección por convención estructural de Axiom (carpeta axiom-wt)
+	normalized := filepath.ToSlash(cleanPath)
+	for _, segment := range strings.Split(normalized, "/") {
+		if strings.EqualFold(segment, "axiom-wt") {
+			return true
+		}
+	}
+
+	// 2. Detección Git estándar: en un worktree vinculado, .git es un archivo regular
+	// que contiene un puntero "gitdir: <ruta>/worktrees/<nombre>"
+	gitEntry := filepath.Join(cleanPath, ".git")
+	info, err := os.Stat(gitEntry)
+	if err == nil && !info.IsDir() {
+		data, err := os.ReadFile(gitEntry)
+		if err == nil {
+			content := strings.TrimSpace(string(data))
+			if strings.HasPrefix(content, "gitdir:") {
+				targetDir := strings.TrimSpace(strings.TrimPrefix(content, "gitdir:"))
+				if strings.Contains(targetDir, "/worktrees/") || strings.Contains(targetDir, "\\worktrees\\") {
+					return true
+				}
+				if !filepath.IsAbs(targetDir) {
+					targetDir = filepath.Join(cleanPath, targetDir)
+				}
+				if fileExists(filepath.Join(targetDir, "commondir")) {
+					return true
+				}
+				return true
+			}
+		}
+	}
+
+	return false
+}
