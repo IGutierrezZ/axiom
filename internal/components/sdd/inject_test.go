@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"strconv"
 	"strings"
 	"testing"
@@ -7905,6 +7906,135 @@ func TestEnsureClaudeSkillRegistryHookRejectsUnexpectedHookSchema(t *testing.T) 
 	}
 	if string(after) != string(original) {
 		t.Fatalf("settings were modified: %q", after)
+	}
+}
+
+func TestEnsureClaudeSkillRegistryHookWritesPlatformAwareCommand(t *testing.T) {
+	home := t.TempDir()
+	settingsPath := filepath.Join(home, ".claude", "settings.json")
+	if err := os.MkdirAll(filepath.Dir(settingsPath), 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	changed, err := ensureClaudeSkillRegistryHook(settingsPath)
+	if err != nil {
+		t.Fatalf("ensureClaudeSkillRegistryHook() error = %v", err)
+	}
+	if !changed {
+		t.Fatal("first call changed = false, want true")
+	}
+
+	data, err := os.ReadFile(settingsPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var gotRoot map[string]any
+	if err := json.Unmarshal(data, &gotRoot); err != nil {
+		t.Fatalf("settings.json is not valid JSON: %v", err)
+	}
+
+	var wantCmd string
+	if runtime.GOOS == "windows" {
+		wantCmd = `powershell -NoProfile -Command 'if (Test-Path env:CLAUDE_PROJECT_DIR) { $dir = $env:CLAUDE_PROJECT_DIR } else { $dir = $PWD }; axiom skill-registry refresh --quiet --no-gitignore --cwd "$dir"; exit 0'`
+	} else {
+		wantCmd = `axiom skill-registry refresh --quiet --no-gitignore --cwd "${CLAUDE_PROJECT_DIR:-$PWD}" || true`
+	}
+
+	hooks, ok := gotRoot["hooks"].(map[string]any)
+	if !ok {
+		t.Fatalf("hooks key missing or wrong shape: %v", gotRoot["hooks"])
+	}
+	ups, ok := hooks["UserPromptSubmit"].([]any)
+	if !ok || len(ups) == 0 {
+		t.Fatalf("UserPromptSubmit missing or empty: %v", hooks["UserPromptSubmit"])
+	}
+	entry, ok := ups[0].(map[string]any)
+	if !ok {
+		t.Fatalf("UserPromptSubmit[0] wrong shape: %T", ups[0])
+	}
+	inner, ok := entry["hooks"].([]any)
+	if !ok || len(inner) == 0 {
+		t.Fatalf("entry.hooks missing or empty")
+	}
+	cmd, _ := inner[0].(map[string]any)["command"].(string)
+	if cmd != wantCmd {
+		t.Errorf("command mismatch for GOOS=%s:\n  want: %s\n  got:  %s", runtime.GOOS, wantCmd, cmd)
+	}
+}
+
+func TestEnsureClaudeSkillRegistryHookReplacesLegacyPOSIXCommand(t *testing.T) {
+	if runtime.GOOS != "windows" {
+		t.Skip("Windows-only test; non-Windows has no legacy-vs-canonical drift")
+	}
+	home := t.TempDir()
+	settingsPath := filepath.Join(home, ".claude", "settings.json")
+	if err := os.MkdirAll(filepath.Dir(settingsPath), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	legacyCmd := `axiom skill-registry refresh --quiet --no-gitignore --cwd "${CLAUDE_PROJECT_DIR:-$PWD}" || true`
+	initial := fmt.Sprintf(`{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "matcher": "",
+        "hooks": [
+          {"type": "command", "command": %q}
+        ]
+      }
+    ]
+  }
+}`, legacyCmd)
+	if err := os.WriteFile(settingsPath, []byte(initial), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	changed, err := ensureClaudeSkillRegistryHook(settingsPath)
+	if err != nil {
+		t.Fatalf("ensureClaudeSkillRegistryHook() with legacy entry error = %v", err)
+	}
+	if !changed {
+		t.Fatal("changed = false, want true (legacy POSIX replaced with canonical PowerShell)")
+	}
+
+	data, err := os.ReadFile(settingsPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(data)
+	if strings.Contains(text, `"${CLAUDE_PROJECT_DIR:-$PWD}" || true`) {
+		t.Errorf("legacy POSIX literal still present after migration:\n%s", text)
+	}
+	if !strings.Contains(text, "powershell") {
+		t.Errorf("canonical PowerShell literal missing after migration:\n%s", text)
+	}
+	if strings.Count(text, "axiom skill-registry refresh") != 1 {
+		t.Errorf("hook command count != 1 after migration:\n%s", text)
+	}
+}
+
+func TestPruneLegacyClaudeHookDeletesUserPromptSubmitWhenAllEntriesPruned(t *testing.T) {
+	legacy := `axiom skill-registry refresh --quiet --no-gitignore --cwd "${CLAUDE_PROJECT_DIR:-$PWD}" || true`
+	root := map[string]any{
+		"hooks": map[string]any{
+			"UserPromptSubmit": []any{
+				map[string]any{
+					"matcher": "",
+					"hooks": []any{
+						map[string]any{"type": "command", "command": legacy},
+					},
+				},
+			},
+		},
+	}
+
+	pruneLegacyClaudeHook(root, legacy)
+
+	hooks, ok := root["hooks"].(map[string]any)
+	if !ok {
+		t.Fatalf("hooks key missing after prune: %v", root["hooks"])
+	}
+	if _, present := hooks["UserPromptSubmit"]; present {
+		t.Errorf("UserPromptSubmit key still present after pruning its only entry; want deleted: %v", hooks["UserPromptSubmit"])
 	}
 }
 

@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/agents"
@@ -1985,6 +1986,33 @@ func hookCommandExists(hooksMap map[string]any, event, command string) bool {
 }
 
 func ensureClaudeSkillRegistryHook(settingsPath string) (bool, error) {
+	// command is platform-aware so the legacy POSIX `|| true` form does not
+	// reach Windows PowerShell 5.1, which fails to parse it.
+	if runtime.GOOS == "windows" {
+		legacyCommands := []string{
+			`gentle-ai skill-registry refresh --quiet --no-gitignore --cwd "${CLAUDE_PROJECT_DIR:-$PWD}" || true`,
+			`axiom skill-registry refresh --quiet --no-gitignore --cwd "${CLAUDE_PROJECT_DIR:-$PWD}" || true`,
+			`powershell -NoProfile -Command 'if (Test-Path env:CLAUDE_PROJECT_DIR) { $dir = $env:CLAUDE_PROJECT_DIR } else { $dir = $PWD }; gentle-ai skill-registry refresh --quiet --no-gitignore --cwd "$dir"; exit 0'`,
+			`powershell -NoProfile -Command 'if (Test-Path env:CLAUDE_PROJECT_DIR) { $dir = $env:CLAUDE_PROJECT_DIR } else { $dir = $PWD }; gentle-ai skill-registry refresh --quiet --no-gitignore --cwd $dir; exit 0'`,
+			`powershell -NoProfile -Command 'if (Test-Path env:CLAUDE_PROJECT_DIR) { $dir = $env:CLAUDE_PROJECT_DIR } else { $dir = $PWD }; axiom skill-registry refresh --quiet --no-gitignore --cwd $dir; exit 0'`,
+		}
+		return ensureClaudeSkillRegistryHookWithLegacies(settingsPath, legacyCommands,
+			`powershell -NoProfile -Command 'if (Test-Path env:CLAUDE_PROJECT_DIR) { $dir = $env:CLAUDE_PROJECT_DIR } else { $dir = $PWD }; axiom skill-registry refresh --quiet --no-gitignore --cwd "$dir"; exit 0'`)
+	}
+	legacyCommands := []string{
+		`gentle-ai skill-registry refresh --quiet --no-gitignore --cwd "${CLAUDE_PROJECT_DIR:-$PWD}" || true`,
+	}
+	return ensureClaudeSkillRegistryHookWithLegacies(settingsPath, legacyCommands,
+		`axiom skill-registry refresh --quiet --no-gitignore --cwd "${CLAUDE_PROJECT_DIR:-$PWD}" || true`)
+}
+
+// ensureClaudeSkillRegistryHookWithLegacies is the platform-independent core of
+// ensureClaudeSkillRegistryHook: it prunes the pre-fix `legacies` hook literals
+// and then ensures the canonical `command` is present exactly once. Canonical
+// existence is computed AFTER the prune so a settings file that already carries
+// both the legacy and the canonical literals is migrated (prune persisted to disk,
+// changed reported truthfully) instead of gaining a second canonical entry.
+func ensureClaudeSkillRegistryHookWithLegacies(settingsPath string, legacies []string, command string) (bool, error) {
 	root := map[string]any{}
 	if data, err := os.ReadFile(settingsPath); err == nil && len(strings.TrimSpace(string(data))) > 0 {
 		if err := json.Unmarshal(data, &root); err != nil {
@@ -1994,22 +2022,30 @@ func ensureClaudeSkillRegistryHook(settingsPath string) (bool, error) {
 		return false, err
 	}
 
-	const command = `axiom skill-registry refresh --quiet --no-gitignore --cwd "${CLAUDE_PROJECT_DIR:-$PWD}" || true`
-	const legacyCommand = `gentle-ai skill-registry refresh --quiet --no-gitignore --cwd "${CLAUDE_PROJECT_DIR:-$PWD}" || true`
-
-	hooksRaw, hasHooks := root["hooks"]
-	hooksMap, _ := hooksRaw.(map[string]any)
-	if hasHooks && hooksMap == nil {
-		return false, fmt.Errorf("Claude settings %q has unsupported hooks shape: want object", settingsPath)
-	}
-	if hooksMap == nil {
-		hooksMap = map[string]any{}
+	pruned := false
+	for _, legacy := range legacies {
+		if legacy != "" && pruneLegacyClaudeHook(root, legacy) {
+			pruned = true
+		}
 	}
 
-	changed := false
-	if replaceHookCommand(hooksMap, "UserPromptSubmit", legacyCommand, command) {
-		changed = true
-	} else if !claudeHookExists(root, command) {
+	// Canonical existence is scoped to UserPromptSubmit so a canonical command
+	// registered under a different event (SessionStart, Stop, SubagentStop)
+	// never suppresses the required UserPromptSubmit entry.
+	hooksMap, _ := root["hooks"].(map[string]any)
+	exists := hookCommandExists(hooksMap, "UserPromptSubmit", command)
+	if !pruned && exists {
+		return false, nil
+	}
+
+	if !exists {
+		if _, hasHooks := root["hooks"]; hasHooks && hooksMap == nil {
+			return false, fmt.Errorf("Claude settings %q has unsupported hooks shape: want object", settingsPath)
+		}
+		if hooksMap == nil {
+			hooksMap = map[string]any{}
+		}
+
 		promptRaw, hasUserPromptSubmit := hooksMap["UserPromptSubmit"]
 		userPromptSubmit, _ := promptRaw.([]any)
 		if hasUserPromptSubmit && userPromptSubmit == nil {
@@ -2025,14 +2061,8 @@ func ensureClaudeSkillRegistryHook(settingsPath string) (bool, error) {
 			},
 		})
 		hooksMap["UserPromptSubmit"] = userPromptSubmit
-		changed = true
+		root["hooks"] = hooksMap
 	}
-
-	if !changed {
-		return false, nil
-	}
-
-	root["hooks"] = hooksMap
 
 	out, err := json.MarshalIndent(root, "", "  ")
 	if err != nil {
@@ -2044,6 +2074,70 @@ func ensureClaudeSkillRegistryHook(settingsPath string) (bool, error) {
 		return false, err
 	}
 	return wr.Changed, nil
+}
+
+// pruneLegacyClaudeHook removes any inner-hook entry whose `command` matches
+// `legacy` from the UserPromptSubmit hook in root, mutating the structure
+// in place. Returns true when at least one entry was dropped so the caller
+// can decide whether to persist the change.
+func pruneLegacyClaudeHook(root map[string]any, legacy string) (changed bool) {
+	hooksRaw, ok := root["hooks"].(map[string]any)
+	if !ok {
+		return false
+	}
+	const userPromptSubmit = "UserPromptSubmit"
+	upsRaw, ok := hooksRaw[userPromptSubmit]
+	if !ok {
+		return false
+	}
+	ups, ok := upsRaw.([]any)
+	if !ok {
+		return false
+	}
+	var pruned []any
+	for _, item := range ups {
+		itemMap, ok := item.(map[string]any)
+		if !ok {
+			pruned = append(pruned, item)
+			continue
+		}
+		innerHooks, ok := itemMap["hooks"].([]any)
+		if !ok {
+			pruned = append(pruned, item)
+			continue
+		}
+		var kept []any
+		for _, h := range innerHooks {
+			hMap, ok := h.(map[string]any)
+			if ok && hMap["command"] == legacy {
+				continue
+			}
+			kept = append(kept, h)
+		}
+		if len(kept) == len(innerHooks) {
+			pruned = append(pruned, item)
+			continue
+		}
+		changed = true
+		if len(kept) == 0 {
+			// Drop the whole item. Falling through (not `return`) is what
+			// lets the post-loop `len(pruned) == 0` check delete the
+			// UserPromptSubmit key entirely when no outer entries survive.
+			continue
+		}
+		copyMap := make(map[string]any, len(itemMap))
+		for k, v := range itemMap {
+			copyMap[k] = v
+		}
+		copyMap["hooks"] = kept
+		pruned = append(pruned, copyMap)
+	}
+	if len(pruned) == 0 {
+		delete(hooksRaw, userPromptSubmit)
+	} else {
+		hooksRaw[userPromptSubmit] = pruned
+	}
+	return changed
 }
 
 // ensureClaudeSDDPreflightHook binds one successful parent AskUserQuestion
