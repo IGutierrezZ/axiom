@@ -3566,8 +3566,7 @@ func injectModelAssignments(overlayBytes []byte, assignments map[string]model.Mo
 	// Explicit assignments for native general/explore need a minimal overlay
 	// entry even when absent from settings. Other non-managed agents are eligible
 	// only when already present in user settings. Deep merge updates their model
-	// while preserving other settings; omitting variant for empty Effort preserves
-	// the user's variant. Managed definitions instead clear it (case 1 above).
+	// and clears/updates variant while preserving other settings.
 	for agent, assignment := range assignments {
 		if (!existingAgentKeys[agent] && agent != "general" && agent != "explore") || assignment.ProviderID == "" || assignment.ModelID == "" {
 			continue
@@ -3575,13 +3574,10 @@ func injectModelAssignments(overlayBytes []byte, assignments map[string]model.Mo
 		if _, managed := agents[agent]; managed {
 			continue
 		}
-		definition := map[string]any{
-			"model": assignment.FullID(),
+		agents[agent] = map[string]any{
+			"model":   assignment.FullID(),
+			"variant": assignment.Effort,
 		}
-		if assignment.Effort != "" {
-			definition["variant"] = assignment.Effort
-		}
-		agents[agent] = definition
 	}
 
 	result, err := json.MarshalIndent(overlay, "", "  ")

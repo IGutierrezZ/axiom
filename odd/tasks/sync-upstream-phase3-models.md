@@ -32,8 +32,8 @@ Portar selectivamente desde upstream Gentle AI (v3.4.0..v3.7.0+, PR #4912) las c
   - Actualizar `internal/model/codex_model.go` y `internal/tui/screens/codex_model_picker.go` con roles ODD, 6 roles RDD y defaults GPT-6.
   - Conectar los modelos configurados en `internal/reviewerprovider/codex_adapter.go` y `internal/cli/review_provider_runtime.go`.
   - Ejecutar y verificar tests en `internal/model/codex_model_test.go`, `internal/tui/screens/codex_model_picker_test.go`, `internal/agents/codex/profiles_test.go`, `internal/cli/sync_test.go`, `internal/components/engram/inject_test.go`, `internal/components/sdd/inject_test.go`, `internal/app/app_test.go` y `internal/cli/codex_review_provider_model_test.go`.
-- [ ] **T4 · Verificación de Calidad y Pruebas Globales**
-  - Ejecutar tests de todos los paquetes modificados.
+- [x] **T4 · Verificación de Calidad y Pruebas Globales**
+  - Ejecutar tests de todos los paquetes modificados (`screens`, `reviewerprovider`, `model`, `sdd`, `codex`, `engram`, `tui`, `app`, `cli`).
   - Ejecutar `go vet` sobre los paquetes afectados.
   - Compilar binario `cmd/axiom`.
 
@@ -62,3 +62,10 @@ Portar selectivamente desde upstream Gentle AI (v3.4.0..v3.7.0+, PR #4912) las c
   - `go test -v ./internal/components/sdd -run "TestInjectCodex"`: PASS (idempotencia y goldens lowcost, powerful, recommended, custom).
   - `go test -v ./internal/app -run "Codex"`: PASS (migración legacy de carriles a GPT-6 y persistencia).
   - `go test -v ./internal/tui -run "Codex"`: PASS (restauración custom y ciclos de pantalla).
+
+- **T4 Pruebas Globales, Static Analysis y Compilación:**
+  - `go test ./internal/tui/screens/... ./internal/reviewerprovider/... ./internal/model/... ./internal/components/sdd/... ./internal/agents/codex/... ./internal/components/engram/... ./internal/tui/...`: PASS en todos los paquetes.
+  - `go test -v ./internal/cli -run "TestClaudeReviewAdapter|TestCodexReviewAdapter|TestComponentSyncStepCodexRuntimeGate"`: PASS.
+  - `go test -v ./internal/app -run "Codex"`: PASS.
+  - `go vet ./internal/tui/screens/... ./internal/reviewerprovider/... ./internal/model/... ./internal/components/sdd/... ./internal/agents/codex/... ./internal/components/engram/... ./internal/tui/... ./internal/app/... ./internal/cli/...`: PASS (código de salida 0 sin advertencias).
+  - `go build ./cmd/axiom`: PASS (compilación exitosa).
