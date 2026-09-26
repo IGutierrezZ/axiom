@@ -210,17 +210,17 @@ func awaitSignal(t *testing.T, ctx context.Context, signal <-chan struct{}, mess
 
 func buildCandidateBinary(t *testing.T) string {
 	t.Helper()
-	binaryName := "gentle-ai"
+	binaryName := "axiom"
 	if runtime.GOOS == "windows" {
 		binaryName += ".exe"
 	}
 	binary := filepath.Join(t.TempDir(), binaryName)
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	command := exec.CommandContext(ctx, "go", "build", "-o", binary, "./cmd/gentle-ai")
+	command := exec.CommandContext(ctx, "go", "build", "-o", binary, "./cmd/axiom")
 	command.Dir = repositoryRoot(t)
 	if output, err := command.CombinedOutput(); err != nil {
-		t.Fatalf("build candidate gentle-ai binary: %v\n%s", err, output)
+		t.Fatalf("build candidate axiom binary: %v\n%s", err, output)
 	}
 	return binary
 }

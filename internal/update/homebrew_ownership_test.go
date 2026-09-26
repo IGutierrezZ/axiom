@@ -44,7 +44,9 @@ func TestDetectHomebrewOwnershipWith(t *testing.T) {
 		must(os.WriteFile(path, []byte("binary"), 0o755))
 	}
 	formulaLink, caskLink := filepath.Join(root, "formula-link"), filepath.Join(root, "cask-link")
-	must(os.Symlink(filepath.Join(formula, "bin/engram"), formulaLink))
+	if err := os.Symlink(filepath.Join(formula, "bin/engram"), formulaLink); err != nil {
+		t.Skipf("symlink creation unavailable on this environment: %v", err)
+	}
 	must(os.Symlink(filepath.Join(cask, "bin/engram"), caskLink))
 	tests := []struct {
 		name, formulaList, caskList, formulaRoot, caskPrefix, fail, active string

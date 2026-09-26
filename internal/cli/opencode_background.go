@@ -14,14 +14,13 @@ import (
 )
 
 const (
-	OpenCodeBackgroundSubagentsAxiomEnv  = "AXIOM_OPENCODE_BACKGROUND_SUBAGENTS"
-	OpenCodeBackgroundSubagentsGentleEnv = "GENTLE_AI_OPENCODE_BACKGROUND_SUBAGENTS"
+	OpenCodeBackgroundSubagentsAxiomEnv = "AXIOM_OPENCODE_BACKGROUND_SUBAGENTS"
 
 	OpenCodeBackgroundSubagentsEnv = OpenCodeBackgroundSubagentsAxiomEnv
 )
 
 func lookupOpenCodeBackgroundEnv() (string, bool) {
-	return system.LookupEnv(OpenCodeBackgroundSubagentsAxiomEnv, OpenCodeBackgroundSubagentsGentleEnv)
+	return system.LookupEnv(OpenCodeBackgroundSubagentsAxiomEnv)
 }
 
 // OpenCodeBackgroundResolveInput contains already-discovered sources. The

@@ -132,11 +132,11 @@ func TestRenderUpgrade_ErrorState(t *testing.T) {
 // containing ": " is split so the command appears on its own line and is not clipped
 // by BubbleTea at the terminal width.
 func TestRenderUpgrade_LongManualHintSplitsAcrossLines(t *testing.T) {
-	longHint := "Windows binary distribution is temporarily unavailable. Install/update from source with Go 1.25.10+:\n  go install github.com/IGutierrezZ/axiom/v3/cmd/gentle-ai@v1.1.0"
+	longHint := "Windows binary distribution is temporarily unavailable. Install/update from source with Go 1.25.10+:\n  go install github.com/IGutierrezZ/axiom/v3/cmd/axiom@v1.1.0"
 	report := &upgrade.UpgradeReport{
 		Results: []upgrade.ToolUpgradeResult{
 			{
-				ToolName:   "gentle-ai",
+				ToolName:   "axiom",
 				OldVersion: "v1.0.0",
 				NewVersion: "v1.1.0",
 				Status:     upgrade.UpgradeSkipped,
@@ -158,7 +158,7 @@ func TestRenderUpgrade_LongManualHintSplitsAcrossLines(t *testing.T) {
 	if preambleIndex == -1 {
 		t.Fatalf("hint preamble should appear in output; got:\n%s", out)
 	}
-	if !strings.Contains(out, "go install") || !strings.Contains(out, "gentle-ai/v3/cmd/gentle-ai@v1.1.0") {
+	if !strings.Contains(out, "go install") || !strings.Contains(out, "axiom/v3/cmd/axiom@v1.1.0") {
 		t.Fatalf("full manual command should remain visible; got:\n%s", out)
 	}
 	for _, line := range lines[preambleIndex+1:] {

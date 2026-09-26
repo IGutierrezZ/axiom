@@ -20,6 +20,8 @@ const (
 	AxiomReviewStartV4Contract     = "axiom.review-integration.start/v4"
 	AxiomReviewStatusV9Contract    = "axiom.review-integration.status/v9"
 	AxiomReviewRepairV2Contract    = "axiom.review-integration.repair/v2"
+	AxiomReviewTransactionV1Contract = "axiom.review-transaction/v1"
+	AxiomReviewTargetedValidationRequestV1Contract = "axiom.review-targeted-validation-request/v1"
 )
 
 // Identificadores legados para retrocompatibilidad.
@@ -37,6 +39,8 @@ const (
 	LegacyReviewStartV4Contract     = "gentle-ai.review-integration.start/v4"
 	LegacyReviewStatusV9Contract    = "gentle-ai.review-integration.status/v9"
 	LegacyReviewRepairV2Contract    = "gentle-ai.review-integration.repair/v2"
+	LegacyReviewTransactionV1Contract = "gentle-ai.review-transaction/v1"
+	LegacyReviewTargetedValidationRequestV1Contract = "gentle-ai.review-targeted-validation-request/v1"
 )
 
 // Sentinel errors para resolución de contratos.

@@ -80,7 +80,7 @@ func TestEmptyWorkspaceStatusProjectsV2(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Marshal() error = %v", err)
 			}
-			if !strings.Contains(string(payload), `"schemaName":"gentle-ai.sdd-status"`) {
+			if !strings.Contains(string(payload), `"schemaName":"`+SchemaName+`"`) {
 				t.Fatalf("projected JSON lost its identity: %s", payload)
 			}
 
@@ -88,7 +88,7 @@ func TestEmptyWorkspaceStatusProjectsV2(t *testing.T) {
 			if strings.Contains(markdown, "\n{}\n") {
 				t.Fatalf("markdown fell back to the empty projection:\n%s", markdown)
 			}
-			if !strings.Contains(markdown, `"schemaName": "gentle-ai.sdd-status"`) {
+			if !strings.Contains(markdown, `"schemaName": "`+SchemaName+`"`) {
 				t.Fatalf("markdown omitted the projected status:\n%s", markdown)
 			}
 

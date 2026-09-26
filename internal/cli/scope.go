@@ -18,9 +18,8 @@ const (
 	// ScopeWorkspace writes to the current workspace config root for each selected agent (default).
 	ScopeWorkspace InstallScope = "workspace"
 
-	ScopeAxiomEnvVar  = "AXIOM_INSTALL_SCOPE"
-	ScopeGentleEnvVar = "GENTLE_AI_INSTALL_SCOPE"
-	scopeEnvVar       = ScopeAxiomEnvVar
+	ScopeAxiomEnvVar = "AXIOM_INSTALL_SCOPE"
+	scopeEnvVar      = ScopeAxiomEnvVar
 )
 
 // ResolveInstallScope resolves the install scope from the flag value and env var.
@@ -29,7 +28,7 @@ const (
 func ResolveInstallScope(flagValue string) (InstallScope, error) {
 	raw := strings.TrimSpace(flagValue)
 	if raw == "" {
-		raw = strings.TrimSpace(system.Getenv(ScopeAxiomEnvVar, ScopeGentleEnvVar))
+		raw = strings.TrimSpace(system.Getenv(ScopeAxiomEnvVar))
 	}
 	if raw == "" {
 		return ScopeWorkspace, nil

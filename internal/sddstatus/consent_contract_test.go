@@ -20,19 +20,19 @@ import (
 //
 //	gentle-ai sdd-attempt grant --cwd <repo> --change <name> [--expected-revision <rev>] --root <path>... --actor <actor> --reason <reason> --request-id <id> --change-instance <token>
 var sddConsentGrantInvocationShape = regexp.MustCompile(
-	`^gentle-ai sdd-attempt grant --cwd \S+ --change \S+( --expected-revision \S+)?( --root \S+)+ --actor \S+ --reason \S+ --request-id \S+ --change-instance \S+$`)
+	`^axiom sdd-attempt grant --cwd \S+ --change \S+( --expected-revision \S+)?( --root \S+)+ --actor \S+ --reason \S+ --request-id \S+ --change-instance \S+$`)
 
 // sddConsentDeclineInvocationShape pins the decline re-entry: declining
 // persists nothing, so the runnable follow-up is native SDD status for the
 // same change.
 var sddConsentDeclineInvocationShape = regexp.MustCompile(
-	`^gentle-ai sdd-status \S+ --cwd \S+$`)
+	`^axiom sdd-status \S+ --cwd \S+$`)
 
 func TestSDDIntegrationConsentContractsArePinned(t *testing.T) {
 	root := filepath.Join("..", "..", "contracts", "sdd-integration", "v1")
 	want := map[string]string{
-		"fixtures/consent.fixture.json": "ee09d2b7405ae4a04874d41c5d0fde145ba6db70c92d0c3231cd85fbfa07f4ce",
-		"schemas/consent.schema.json":   "0d52b532d4e8813aa647ed0fff346e032da8783deaa9a59d73cefbbb1f44862c",
+		"fixtures/consent.fixture.json": "829e763673af2e084f572000803a6f749d33de8c0fa98d28e5b751f7fc719368",
+		"schemas/consent.schema.json":   "19581e533f582e51b6da780db4c8a87553d2fe31b7b8894ed1086f9a91386c1e",
 	}
 	for name, expected := range want {
 		payload, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(name)))
@@ -142,19 +142,19 @@ func TestSDDIntegrationConsentValidateRejectsIncompleteEnvelopes(t *testing.T) {
 			result.Choices[0].Answer, result.Choices[1].Answer = result.Choices[1].Answer, result.Choices[0].Answer
 		}},
 		{name: "grant invocation missing a root", mutate: func(result *SDDIntegrationConsentResult) {
-			result.Choices[0].Invocation = "gentle-ai sdd-attempt grant --cwd /workspace/planning --change multi-repo-rollout --root /workspace/service-a --actor maintainer --reason rollout --request-id grant-1 --change-instance sdd-1"
+			result.Choices[0].Invocation = "axiom sdd-attempt grant --cwd /workspace/planning --change multi-repo-rollout --root /workspace/service-a --actor maintainer --reason rollout --request-id grant-1 --change-instance sdd-1"
 		}},
 		{name: "grant invocation missing actor", mutate: func(result *SDDIntegrationConsentResult) {
-			result.Choices[0].Invocation = "gentle-ai sdd-attempt grant --cwd /workspace/planning --change multi-repo-rollout --root /workspace/service-a --root /workspace/service-b --reason rollout --request-id grant-1 --change-instance sdd-1"
+			result.Choices[0].Invocation = "axiom sdd-attempt grant --cwd /workspace/planning --change multi-repo-rollout --root /workspace/service-a --root /workspace/service-b --reason rollout --request-id grant-1 --change-instance sdd-1"
 		}},
 		{name: "grant invocation missing request-id", mutate: func(result *SDDIntegrationConsentResult) {
-			result.Choices[0].Invocation = "gentle-ai sdd-attempt grant --cwd /workspace/planning --change multi-repo-rollout --root /workspace/service-a --root /workspace/service-b --actor maintainer --reason rollout --change-instance sdd-1"
+			result.Choices[0].Invocation = "axiom sdd-attempt grant --cwd /workspace/planning --change multi-repo-rollout --root /workspace/service-a --root /workspace/service-b --actor maintainer --reason rollout --change-instance sdd-1"
 		}},
 		{name: "grant invocation missing change-instance", mutate: func(result *SDDIntegrationConsentResult) {
-			result.Choices[0].Invocation = "gentle-ai sdd-attempt grant --cwd /workspace/planning --change multi-repo-rollout --root /workspace/service-a --root /workspace/service-b --actor maintainer --reason rollout --request-id grant-1"
+			result.Choices[0].Invocation = "axiom sdd-attempt grant --cwd /workspace/planning --change multi-repo-rollout --root /workspace/service-a --root /workspace/service-b --actor maintainer --reason rollout --request-id grant-1"
 		}},
 		{name: "decline invocation is not status re-entry", mutate: func(result *SDDIntegrationConsentResult) {
-			result.Choices[1].Invocation = "gentle-ai review status"
+			result.Choices[1].Invocation = "axiom review status"
 		}},
 		{name: "empty choice effect", mutate: func(result *SDDIntegrationConsentResult) { result.Choices[1].Effect = "" }},
 		{name: "off path outside status", mutate: func(result *SDDIntegrationConsentResult) { result.OffPath.Command = "rm -rf tasks.md" }},

@@ -1,5 +1,5 @@
 ---
-name: gentle-ai-collab-perfect
+name: axiom-collab-perfect
 description: "Trigger: contributing to Gentleman-Programming/gentle-ai as an external collaborator. Honest PR bodies, contributor-vs-maintainer scope, chained-PR strategy, verification protocol, docstring coverage. Load whenever the active repo is Gentleman-Programming/gentle-ai and any part of the contribution flow is in scope: opening an issue, drafting or editing a PR body, splitting a change into chained/stacked PRs, or auditing a PR before requesting review."
 license: Apache-2.0
 metadata:

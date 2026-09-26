@@ -23,7 +23,7 @@ func TestMain(m *testing.M) {
 	opencode.VersionRunnerOverride = func(context.Context, opencode.Command) (opencode.CommandOutput, error) {
 		return opencode.CommandOutput{Stdout: []byte("1.18.30")}, nil
 	}
-	if err := os.Unsetenv("GENTLE_AI_CHANNEL"); err != nil {
+	if err := os.Unsetenv("AXIOM_CHANNEL"); err != nil {
 		panic(err)
 	}
 
@@ -1846,7 +1846,7 @@ func TestRunStrategy_ScriptUpgradeExecFailure(t *testing.T) {
 // --- TestEngramBinaryUpgrade_ChannelRouting (Slice 3) ---
 
 // TestEngramBinaryUpgrade_StableChannelCallsDownloadFn verifies that when
-// GENTLE_AI_CHANNEL is unset or "stable", engramBinaryUpgrade delegates to
+// AXIOM_CHANNEL is unset or "stable", engramBinaryUpgrade delegates to
 // engramDownloadFn (the release-download path) and NOT go install @main.
 func TestEngramBinaryUpgrade_StableChannelCallsDownloadFn(t *testing.T) {
 	tests := []struct {
@@ -1859,7 +1859,7 @@ func TestEngramBinaryUpgrade_StableChannelCallsDownloadFn(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Setenv("GENTLE_AI_CHANNEL", tt.envVal)
+			t.Setenv("AXIOM_CHANNEL", tt.envVal)
 
 			origDownloadFn := engramDownloadFn
 			origExecCommand := execCommand
@@ -1893,12 +1893,12 @@ func TestEngramBinaryUpgrade_StableChannelCallsDownloadFn(t *testing.T) {
 }
 
 // TestEngramBinaryUpgrade_BetaChannelUsesGoInstallMain verifies that when
-// GENTLE_AI_CHANNEL=beta, engramBinaryUpgrade delegates to
+// AXIOM_CHANNEL=beta, engramBinaryUpgrade delegates to
 // engramBetaInstallFn (the consolidated beta path, backed by
 // engram.DownloadLatestBinary(profile, true) in production). The stable
 // engramDownloadFn must NOT be called.
 func TestEngramBinaryUpgrade_BetaChannelUsesGoInstallMain(t *testing.T) {
-	t.Setenv("GENTLE_AI_CHANNEL", "beta")
+	t.Setenv("AXIOM_CHANNEL", "beta")
 
 	origDownloadFn := engramDownloadFn
 	origBetaFn := engramBetaInstallFn

@@ -2,7 +2,7 @@
 import { Plugin } from "@opencode/plugin"
 
 const SDD_PHASES = ["sdd-init", "sdd-explore", "sdd-research", "sdd-propose", "sdd-spec", "sdd-design", "sdd-tasks", "sdd-apply", "sdd-verify", "sdd-archive", "sdd-onboard"]
-const SDD_TASK_FAILURE_PREFIX = "GENTLE_AI_SDD_FAILURE "
+const SDD_TASK_FAILURE_PREFIX = "AXIOM_SDD_FAILURE "
 const SDD_PREFLIGHT_QUESTION_PREFIX = "Gentle AI SDD preflight "
 const SDD_PREFLIGHT_HEADING = "## SDD Session Preflight"
 // #2855: host cwd does not identify the coordinator's selected change/store.
@@ -180,7 +180,7 @@ function sddTaskFailure(phase: string, cause: unknown): SDDTaskFailureError {
     phase,
     code,
     handoff: SDD_TASK_FAILURE_PREFIX + JSON.stringify({
-      schemaName: "gentle-ai.sdd-task-result-failure/v1",
+      schemaName: "axiom.sdd-task-result-failure/v1",
       status: "blocked",
       code,
       phase,
@@ -193,7 +193,7 @@ function sddTaskFailure(phase: string, cause: unknown): SDDTaskFailureError {
 
 function sddDispatchLatched(requested: string, failure: SDDTaskFailure): Error {
   return new Error(SDD_TASK_FAILURE_PREFIX + JSON.stringify({
-    schemaName: "gentle-ai.sdd-task-result-failure/v1",
+    schemaName: "axiom.sdd-task-result-failure/v1",
     status: "blocked",
     code: "sdd_task_dispatch_latched",
     phase: requested,

@@ -17,9 +17,10 @@ import (
 )
 
 const (
-	SchemaName      = "gentle-ai.sdd-status"
-	AxiomSchemaName = "axiom.sdd-status"
-	SchemaVersion   = 2
+	SchemaName       = "axiom.sdd-status"
+	LegacySchemaName = "gentle-ai.sdd-status"
+	AxiomSchemaName  = "axiom.sdd-status"
+	SchemaVersion    = 2
 )
 
 type ArtifactStore string
@@ -287,10 +288,10 @@ func ParseCommandArgs(args []string) (CommandArgs, error) {
 }
 
 func validateStatusContract(contract string) error {
-	if contract == StatusContractV2 || contract == AxiomStatusContractV2 || contract == AxiomStatusContractV1 {
+	if contract == StatusContractV2 || contract == LegacyStatusContractV2 || contract == AxiomStatusContractV2 || contract == AxiomStatusContractV1 {
 		return nil
 	}
-	return fmt.Errorf("unsupported sdd-status contract %q. Start a fresh implementation state and rerun `gentle-ai sdd-status --contract gentle-ai.sdd-status/v2`.", contract)
+	return fmt.Errorf("unsupported sdd-status contract %q. Start a fresh implementation state and rerun `axiom sdd status --contract axiom.sdd-status/v2`.", contract)
 }
 
 func listActiveOpenSpecChanges(workspaceRoot string) ([]string, error) {
@@ -524,7 +525,7 @@ func resolveByPreferenceOrder(options ResolveOptions) (Status, error) {
 				return blockedStatus(ArtifactStoreOpenSpec, workspaceRoot, nil, nil, "sdd-new", []string{
 					"No active OpenSpec changes found under openspec/changes.",
 					fmt.Sprintf(
-						"Exploration-only directories are not active changes: %s. Run `gentle-ai sdd-status <change-name> --cwd %s` to inspect one explicitly.",
+						"Exploration-only directories are not active changes: %s. Run `axiom sdd status <change-name> --cwd %s` to inspect one explicitly.",
 						strings.Join(activeChanges, ", "), workspaceRoot,
 					),
 				}, options.IncludeInstructions), nil
@@ -608,7 +609,7 @@ func resolveByPreferenceOrder(options ResolveOptions) (Status, error) {
 	if len(unauthorizedRoots) != 0 {
 		if instance == "" {
 			blockedReasons.genuine = append(blockedReasons.genuine, fmt.Sprintf(
-				"Run `gentle-ai sdd-continue %s --cwd %s` with authorized change-directory writes to prepare the required marker; this grants no edit roots.",
+				"Run `axiom sdd continue %s --cwd %s` with authorized change-directory writes to prepare the required marker; this grants no edit roots.",
 				pathquote.Quote(changeName), pathquote.Quote(workspaceRoot),
 			))
 		} else {
@@ -1189,7 +1190,7 @@ func resolveWorkspaceRoot(options ResolveOptions) (string, error) {
 	// Nothing legitimate is rejected: no project lives at `/` or at `C:\`, so
 	// there is no false positive to weigh against the confusion this prevents.
 	if filepath.Dir(root) == root {
-		return "", fmt.Errorf("workspace root %q is a filesystem root, which never holds an SDD project: whatever produced this call passed the wrong --cwd. Rerun it against the project: `gentle-ai sdd-status --cwd \"<project-directory>\" --json`. If the change is Engram-backed, this dispatcher is blind to it and should not be called at all", root)
+		return "", fmt.Errorf("workspace root %q is a filesystem root, which never holds an SDD project: whatever produced this call passed the wrong --cwd. Rerun it against the project: `axiom sdd status --cwd \"<project-directory>\" --json`. If the change is Engram-backed, this dispatcher is blind to it and should not be called at all", root)
 	}
 	return root, nil
 }
@@ -1225,7 +1226,7 @@ func ambiguousChangeSelectionReasons(subject, workspaceRoot string, changes []st
 	reasons = append(reasons, fmt.Sprintf("%s selection is ambiguous: %s.", subject, strings.Join(changes, ", ")))
 	for _, change := range changes {
 		reasons = append(reasons, fmt.Sprintf(
-			"Run `gentle-ai sdd-status %s --cwd %s` to continue with %s.",
+			"Run `axiom sdd status %s --cwd %s` to continue with %s.",
 			change, workspaceRoot, change,
 		))
 	}
@@ -1706,7 +1707,7 @@ func nonPhaseRoutingInstructions(status Status) ([]string, bool) {
 		return []string{
 			"",
 			"### Next Selection Operation",
-			fmt.Sprintf("- Rerun with an explicit change name from Blocked Reasons above: `gentle-ai sdd-status --cwd %s <change-name>` or `gentle-ai sdd-continue --cwd %s <change-name>`.", pathquote.Quote(status.ActionContext.WorkspaceRoot), pathquote.Quote(status.ActionContext.WorkspaceRoot)),
+			fmt.Sprintf("- Rerun with an explicit change name from Blocked Reasons above: `axiom sdd status --cwd %s <change-name>` or `axiom sdd continue --cwd %s <change-name>`.", pathquote.Quote(status.ActionContext.WorkspaceRoot), pathquote.Quote(status.ActionContext.WorkspaceRoot)),
 		}, true
 	case "archived":
 		location := ""
@@ -1717,7 +1718,7 @@ func nonPhaseRoutingInstructions(status Status) ([]string, bool) {
 			"",
 			"### Archived Change",
 			fmt.Sprintf("- This change is already archived%s; no phase remains and nothing is blocked.", location),
-			fmt.Sprintf("- Start new work with a fresh change: `gentle-ai sdd-status --cwd %s` lists what is active.", pathquote.Quote(status.ActionContext.WorkspaceRoot)),
+			fmt.Sprintf("- Start new work with a fresh change: `axiom sdd status --cwd %s` lists what is active.", pathquote.Quote(status.ActionContext.WorkspaceRoot)),
 		}, true
 	case "await-gate":
 		return awaitGateRoutingInstructions(status), true

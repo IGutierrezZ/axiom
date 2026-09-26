@@ -20,7 +20,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/assets"
 )
 
-const freshV2RerunInstruction = "Start a fresh implementation state and rerun `gentle-ai sdd-status --contract gentle-ai.sdd-status/v2`."
+const freshV2RerunInstruction = "Start a fresh implementation state and rerun `axiom sdd status --contract axiom.sdd-status/v2`."
 
 func TestSDDStatusV2CleanBreak(t *testing.T) {
 	t.Run("v2 is the sole default and v1 is refused read-only", func(t *testing.T) {
@@ -32,16 +32,16 @@ func TestSDDStatusV2CleanBreak(t *testing.T) {
 		if err != nil {
 			t.Fatalf("ParseCommandArgs(default) error = %v", err)
 		}
-		if defaultArgs.Contract != "gentle-ai.sdd-status/v2" {
-			t.Fatalf("default contract = %q, want gentle-ai.sdd-status/v2", defaultArgs.Contract)
+		if defaultArgs.Contract != "axiom.sdd-status/v2" {
+			t.Fatalf("default contract = %q, want axiom.sdd-status/v2", defaultArgs.Contract)
 		}
 
-		v2Args, err := ParseCommandArgs([]string{"thin", "--contract", "gentle-ai.sdd-status/v2"})
+		v2Args, err := ParseCommandArgs([]string{"thin", "--contract", "axiom.sdd-status/v2"})
 		if err != nil {
 			t.Fatalf("ParseCommandArgs(v2) error = %v", err)
 		}
-		if v2Args.Contract != "gentle-ai.sdd-status/v2" {
-			t.Fatalf("v2 contract = %q, want gentle-ai.sdd-status/v2", v2Args.Contract)
+		if v2Args.Contract != "axiom.sdd-status/v2" {
+			t.Fatalf("v2 contract = %q, want axiom.sdd-status/v2", v2Args.Contract)
 		}
 
 		_, err = ParseCommandArgs([]string{"thin", "--contract", "gentle-ai.sdd-status/v1"})

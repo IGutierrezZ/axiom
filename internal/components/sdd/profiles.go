@@ -614,11 +614,22 @@ func buildProfileOrchestratorPrompt(profile model.Profile, options ...Orchestrat
 	}
 
 	// Inject model assignments table.
-	const openMarker = "<!-- gentle-ai:sdd-model-assignments -->"
-	const closeMarker = "<!-- /gentle-ai:sdd-model-assignments -->"
+	const axiomOpenMarker = "<!-- axiom:sdd-model-assignments -->"
+	const axiomCloseMarker = "<!-- /axiom:sdd-model-assignments -->"
+	const legacyOpenMarker = "<!-- gentle-ai:sdd-model-assignments -->"
+	const legacyCloseMarker = "<!-- /gentle-ai:sdd-model-assignments -->"
 
+	openMarker := axiomOpenMarker
+	closeMarker := axiomCloseMarker
 	start := strings.Index(base, openMarker)
 	end := strings.Index(base, closeMarker)
+	if start == -1 || end == -1 || end <= start {
+		openMarker = legacyOpenMarker
+		closeMarker = legacyCloseMarker
+		start = strings.Index(base, openMarker)
+		end = strings.Index(base, closeMarker)
+	}
+
 	if start != -1 && end != -1 && end > start {
 		table := renderProfileModelAssignmentsSection(profile)
 		afterOpen := start + len(openMarker)

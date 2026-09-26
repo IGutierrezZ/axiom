@@ -19,7 +19,7 @@ import (
 // BlockedReasons must parse through ParseCommandArgs, and ambiguity
 // continuations must carry the change selector through to the parsed result.
 
-var sddStatusContinuationRe = regexp.MustCompile("`gentle-ai sdd-status ([^`]+)`")
+var sddStatusContinuationRe = regexp.MustCompile("`axiom sdd status ([^`]+)`")
 
 // parseEmittedContinuations extracts every backticked sdd-status invocation
 // from the blocked reasons and feeds its arguments to ParseCommandArgs,
@@ -35,7 +35,7 @@ func parseEmittedContinuations(t *testing.T, reasons []string) []string {
 			args := strings.Fields(match[1])
 			parsed, err := ParseCommandArgs(args)
 			if err != nil {
-				t.Fatalf("emitted continuation does not parse through ParseCommandArgs: %q\nerror: %v", "gentle-ai sdd-status "+match[1], err)
+				t.Fatalf("emitted continuation does not parse through ParseCommandArgs: %q\nerror: %v", "axiom sdd status "+match[1], err)
 			}
 			selectors = append(selectors, parsed.ChangeName)
 		}

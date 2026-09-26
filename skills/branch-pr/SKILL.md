@@ -1,13 +1,13 @@
 ---
-name: gentle-ai-branch-pr
-description: "Create Gentle AI pull requests. Trigger: creating, opening, or preparing PRs for review."
+name: axiom-branch-pr
+description: "Create Axiom pull requests. Trigger: creating, opening, or preparing PRs for review."
 license: Apache-2.0
 metadata:
   author: gentleman-programming
   version: "2.0"
 ---
 
-# Gentle AI — Branch & PR Skill
+# Axiom — Branch & PR Skill
 
 ## When to Use
 

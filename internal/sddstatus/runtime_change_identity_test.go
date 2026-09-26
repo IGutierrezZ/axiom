@@ -119,7 +119,7 @@ func TestOpenRuntimeStoreRejectionNamesValueAndShape(t *testing.T) {
 	if !strings.Contains(message, "non-empty identity") {
 		t.Fatalf("error %q does not state the expected shape", message)
 	}
-	if !strings.Contains(message, "gentle-ai sdd-status") {
+	if !strings.Contains(message, "axiom sdd-status") {
 		t.Fatalf("error %q does not name the command that reveals the resolved identity", message)
 	}
 }

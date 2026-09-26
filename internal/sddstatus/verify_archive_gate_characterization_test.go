@@ -156,7 +156,7 @@ func TestCharacterization_EditAuthorityMissingBlocksApplyAndArchive(t *testing.T
 	// dirs -- never a substring check.
 	exactBlockedReasons(t, "edit authority missing", status.BlockedReasons, []string{
 		fmt.Sprintf("blocked(edit_authority_missing): tasks.md targets edit paths outside the authorized edit roots: \"%s\"; edit tasks.md so every work unit stays inside the authorized edit roots, or grant this change edit authority for the named paths, or mark a read-only input with (read-only) right after its backticked path", outside),
-		fmt.Sprintf("Run `gentle-ai sdd-continue \"%s\" --cwd \"%s\"` with authorized change-directory writes to prepare the required marker; this grants no edit roots.", change, root),
+		fmt.Sprintf("Run `axiom sdd continue \"%s\" --cwd \"%s\"` with authorized change-directory writes to prepare the required marker; this grants no edit roots.", change, root),
 	})
 }
 

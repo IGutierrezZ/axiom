@@ -1,10 +1,10 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-    Gentle-AI source installer for Windows.
+    Axiom source installer for Windows.
 
 .DESCRIPTION
-    Installs Gentle AI from source with Go. Official Windows binary distribution
+    Installs Axiom from source with Go. Official Windows binary distribution
     and Scoop are temporarily unavailable until public-trust Authenticode signing
     is enforced. Accepted channels: stable (default), beta, nightly.
 
@@ -45,13 +45,13 @@ function Stop-WithError {
 
 function Show-Banner {
     Write-Host ""
-    Write-Host "   ____            _   _              _    ___ " -ForegroundColor Cyan
-    Write-Host "  / ___| ___ _ __ | |_| | ___        / \  |_ _|" -ForegroundColor Cyan
-    Write-Host " | |  _ / _ \ '_ \| __| |/ _ \_____ / _ \  | | " -ForegroundColor Cyan
-    Write-Host " | |_| |  __/ | | | |_| |  __/_____/ ___ \ | | " -ForegroundColor Cyan
-    Write-Host "  \____|\___|_| |_|\__|_|\___|    /_/   \_\___|" -ForegroundColor Cyan
+    Write-Host "     _             _                     " -ForegroundColor Cyan
+    Write-Host "    / \   __  __ (_)  ___   _ __ ___     " -ForegroundColor Cyan
+    Write-Host "   / _ \  \ \/ / | | / _ \ | '_ ` _ \    " -ForegroundColor Cyan
+    Write-Host "  / ___ \  >  <  | || (_) || | | | | |   " -ForegroundColor Cyan
+    Write-Host " /_/   \_\/_/\_\ |_| \___/ |_| |_| |_|   " -ForegroundColor Cyan
     Write-Host ""
-    Write-Host "  Gentle-AI - Ecosystem, Frameworks, Workflows" -ForegroundColor DarkGray
+    Write-Host "  Axiom - Ecosystem, Frameworks, Workflows" -ForegroundColor DarkGray
     Write-Host ""
 }
 
@@ -150,9 +150,9 @@ function Test-Installation {
         return
     }
 
-    $env:GENTLE_AI_NO_SELF_UPDATE = "1"
+    $env:AXIOM_NO_SELF_UPDATE = "1"
     $versionOutput = & $binaryPath --version 2>&1
-    Remove-Item Env:GENTLE_AI_NO_SELF_UPDATE -ErrorAction SilentlyContinue
+    Remove-Item Env:AXIOM_NO_SELF_UPDATE -ErrorAction SilentlyContinue
     Write-Success "$BINARY_NAME installed at $binaryPath`: $versionOutput"
 }
 
@@ -163,7 +163,7 @@ function Show-NextSteps {
     Write-Host "Installation complete!" -ForegroundColor Green
     Write-Host ""
     if ($Channel -eq "beta") {
-        Write-Host ('  Run ''$env:GENTLE_AI_CHANNEL = "beta"; {0} install'' to keep using the beta channel' -f $BINARY_NAME) -ForegroundColor Cyan
+        Write-Host ('  Run ''$env:AXIOM_CHANNEL = "beta"; {0} install'' to keep using the beta channel' -f $BINARY_NAME) -ForegroundColor Cyan
     } else {
         Write-Host "  Run '$BINARY_NAME' to start the TUI installer" -ForegroundColor Cyan
     }
@@ -178,7 +178,7 @@ function Main {
         [string]$Method = "auto",
 
         [ValidateSet("stable", "beta", "nightly")]
-        [string]$Channel = $(if ($env:GENTLE_AI_CHANNEL) { $env:GENTLE_AI_CHANNEL } else { "stable" }),
+        [string]$Channel = $(if ($env:AXIOM_CHANNEL) { $env:AXIOM_CHANNEL } else { "stable" }),
 
         [string]$InstallDir = "",
 

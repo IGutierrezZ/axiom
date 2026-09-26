@@ -382,7 +382,7 @@ func runSDDTaskResultGrammarCase(r *journeyRun, root, work string, tc sddTaskRes
 // #2855: a workspace path is not a selected change/store identity. Pin the
 // provider's non-command continuation on both the original failure and latch.
 func validateSDDTaskResultGuidance(handoff string) error {
-	const prefix = "GENTLE_AI_SDD_FAILURE "
+	const prefix = "AXIOM_SDD_FAILURE "
 	const want = "Return to the active SDD coordinator and inspect only its retained structured status for the selected change and artifact store. If that status is unavailable, report this terminal failure and ask the user to select the change and artifact store. Do not infer either, run unscoped status discovery, retry, or launch another phase."
 	var payload struct{ SchemaName, Status, Continuation string }
 	if !strings.HasPrefix(handoff, prefix) {
@@ -391,7 +391,7 @@ func validateSDDTaskResultGuidance(handoff string) error {
 	if err := json.Unmarshal([]byte(strings.TrimPrefix(handoff, prefix)), &payload); err != nil {
 		return fmt.Errorf("decode task-result failure: %w", err)
 	}
-	if payload.SchemaName != "gentle-ai.sdd-task-result-failure/v1" || payload.Status != "blocked" || payload.Continuation != want {
+	if payload.SchemaName != "axiom.sdd-task-result-failure/v1" || payload.Status != "blocked" || payload.Continuation != want {
 		return fmt.Errorf("task-result failure lost terminal v1 coordinator guidance: %q", handoff)
 	}
 	return nil

@@ -222,7 +222,7 @@ func ValidateCurrentChangeInstance(cwd, change, instance string) error {
 // revision) derives a fresh id.
 func sddConsentGrantRequestID(change, instance, expectedRevision string, roots []string) string {
 	hash := sha256.New()
-	for _, part := range append([]string{"gentle-ai.sdd-consent-grant-request/v1", change, instance, expectedRevision}, roots...) {
+	for _, part := range append([]string{"axiom.sdd-consent-grant-request/v1", change, instance, expectedRevision}, roots...) {
 		hash.Write([]byte(part))
 		hash.Write([]byte{0})
 	}
@@ -237,7 +237,7 @@ func sddConsentGrantRequestID(change, instance, expectedRevision string, roots [
 // declined choice re-enters through native status. The envelope satisfies
 // SDDIntegrationConsentResult.Validate by construction.
 func newEditAuthorityConsent(change, workspaceRoot string, missingRoots []string, instance, expectedRevision string) SDDIntegrationConsentResult {
-	statusInvocation := fmt.Sprintf("gentle-ai sdd-status %s --cwd %s", change, pathquote.Quote(workspaceRoot))
+	statusInvocation := fmt.Sprintf("axiom sdd-status %s --cwd %s", change, pathquote.Quote(workspaceRoot))
 	evidence := make([]string, 0, len(missingRoots))
 	for _, root := range missingRoots {
 		evidence = append(evidence, fmt.Sprintf("%s is outside the authorized edit roots", root))

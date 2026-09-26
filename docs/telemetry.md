@@ -499,7 +499,7 @@ installation, gentle-ai does exactly one thing: it prints this line to
 stderr, synchronously, in that same command —
 
 ```text
-Gentle AI sends anonymous usage metrics (version, OS, agents, counters) and may send anonymous runtime usage from supported Pi/OpenCode/Codex integrations (public model, effort, agent class, available token usage, timing, error categories); runtime usage is never stored locally; run gentle-ai telemetry disable to opt out.
+Axiom sends anonymous usage metrics (version, OS, agents, counters) and may send anonymous runtime usage from supported Pi/OpenCode/Codex integrations (public model, effort, agent class, available token usage, timing, error categories); runtime usage is never stored locally; run axiom telemetry disable to opt out.
 ```
 
 — and stores a locally generated `install_id`. **Nothing is sent on that

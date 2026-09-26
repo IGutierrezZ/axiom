@@ -23,7 +23,7 @@ func TestRuntimeSendPolicyNoDisk(t *testing.T) {
 	var requests atomic.Int32
 	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { requests.Add(1) }))
 	defer server.Close()
-	for _, scenario := range []string{"missing", "disabled", "unenrolled", "corrupt", "DO_NOT_TRACK", "GENTLE_AI_TELEMETRY", "CI", "GITHUB_ACTIONS"} {
+	for _, scenario := range []string{"missing", "disabled", "unenrolled", "corrupt", "DO_NOT_TRACK", "AXIOM_TELEMETRY", "CI", "GITHUB_ACTIONS"} {
 		t.Run(scenario, func(t *testing.T) {
 			home := t.TempDir()
 			t.Setenv("HOME", home)
@@ -45,7 +45,7 @@ func TestRuntimeSendPolicyNoDisk(t *testing.T) {
 					return server.URL
 				}
 				if key == scenario {
-					if key == "GENTLE_AI_TELEMETRY" {
+					if key == "AXIOM_TELEMETRY" {
 						return "0"
 					}
 					return "1"

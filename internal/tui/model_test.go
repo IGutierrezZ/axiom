@@ -2850,7 +2850,7 @@ func TestStartUninstall_FullRemoveHomebrewManagedBinaryAddsManualAction(t *testi
 	if len(msg.Result.ManualActions) == 0 {
 		t.Fatal("ManualActions should include Homebrew uninstall guidance")
 	}
-	if !strings.Contains(msg.Result.ManualActions[0], "brew uninstall gentle-ai") {
+	if !strings.Contains(msg.Result.ManualActions[0], "brew uninstall axiom") {
 		t.Fatalf("manual action = %q, want brew uninstall guidance", msg.Result.ManualActions[0])
 	}
 }
@@ -8784,21 +8784,13 @@ func TestOpenCodePluginUninstallSpinnerAdvancesFrame(t *testing.T) {
 func setNoAnimationEnv(t *testing.T, value *string) {
 	t.Helper()
 	prevAxiom, axiomSet := os.LookupEnv("AXIOM_NO_ANIMATION")
-	prevGentle, gentleSet := os.LookupEnv("GENTLE_AI_NO_ANIMATION")
 	t.Cleanup(func() {
 		if axiomSet {
 			_ = os.Setenv("AXIOM_NO_ANIMATION", prevAxiom)
 		} else {
 			_ = os.Unsetenv("AXIOM_NO_ANIMATION")
 		}
-		if gentleSet {
-			_ = os.Setenv("GENTLE_AI_NO_ANIMATION", prevGentle)
-		} else {
-			_ = os.Unsetenv("GENTLE_AI_NO_ANIMATION")
-		}
 	})
-
-	_ = os.Unsetenv("GENTLE_AI_NO_ANIMATION")
 	var err error
 	if value == nil {
 		err = os.Unsetenv("AXIOM_NO_ANIMATION")
@@ -8869,34 +8861,24 @@ func TestTickMsg_NoAnimationRequiresExactOne(t *testing.T) {
 
 func TestTickMsg_NoAnimationPrecedence(t *testing.T) {
 	prevAxiom, axiomSet := os.LookupEnv("AXIOM_NO_ANIMATION")
-	prevGentle, gentleSet := os.LookupEnv("GENTLE_AI_NO_ANIMATION")
 	t.Cleanup(func() {
 		if axiomSet {
 			_ = os.Setenv("AXIOM_NO_ANIMATION", prevAxiom)
 		} else {
 			_ = os.Unsetenv("AXIOM_NO_ANIMATION")
 		}
-		if gentleSet {
-			_ = os.Setenv("GENTLE_AI_NO_ANIMATION", prevGentle)
-		} else {
-			_ = os.Unsetenv("GENTLE_AI_NO_ANIMATION")
-		}
 	})
 
 	os.Unsetenv("AXIOM_NO_ANIMATION")
-	os.Unsetenv("GENTLE_AI_NO_ANIMATION")
 
-	// Fallback to legacy
-	_ = os.Setenv("GENTLE_AI_NO_ANIMATION", "1")
+	_ = os.Setenv("AXIOM_NO_ANIMATION", "1")
 	if !tuiAnimationsDisabled() {
-		t.Fatal("fallback to GENTLE_AI_NO_ANIMATION failed")
+		t.Fatal("AXIOM_NO_ANIMATION=1 failed to disable animation")
 	}
 
-	// Axiom takes precedence (disabling fallback)
 	_ = os.Setenv("AXIOM_NO_ANIMATION", "0")
-	_ = os.Setenv("GENTLE_AI_NO_ANIMATION", "1")
 	if tuiAnimationsDisabled() {
-		t.Fatal("AXIOM_NO_ANIMATION=0 did not override GENTLE_AI_NO_ANIMATION=1")
+		t.Fatal("AXIOM_NO_ANIMATION=0 did not enable animation")
 	}
 }
 

@@ -548,8 +548,9 @@ func TestKilocodeReviewSettingsMatchCurrentMainBaseline(t *testing.T) {
 	// enumerates, so nothing recomputed its baseline at the time; the closing
 	// check ran `go test ./internal/components/` without `/...`, which never
 	// reaches this subpackage. Kilocode gains no native governance capability
-	// from this: it inherits the shared prose only. Deliberate, not drift.
-	const want = "f3397aa3383e9c80ee8167f39fe7c0812a116b3d46e818295bc53756ab9d49e9"
+	// ODD desacople de Gentle AI: rederiva este baseline por la actualización de marcadores canónicos
+	// (<!-- axiom:sdd-... -->) y comandos sugeridos a axiom review mode status. Deliberate, not drift.
+	const want = "7fb1a4f5035a5ed1347df66dd02dd2d90d40fb36ee7553805db3705bcd86c95e"
 	if got != want {
 		t.Fatalf("Kilocode settings SHA-256 = %s, want current-main baseline %s", got, want)
 	}

@@ -31,7 +31,7 @@ const (
 	runtimeLockAcquireAttempts      = 3
 	encodedRuntimeChangeNamespace   = "_encoded"
 	encodedRuntimeChangeDigestWidth = 32
-	runtimeLedgerStatusPointer      = "preserve the historical records and ask a maintainer to inspect edit authority; re-enter with `gentle-ai sdd-status --cwd <repo> --json`"
+	runtimeLedgerStatusPointer      = "preserve the historical records and ask a maintainer to inspect edit authority; re-enter with `axiom sdd-status --cwd <repo> --json`"
 )
 
 var (
@@ -172,7 +172,7 @@ func (err *RuntimePublicationError) Error() string {
 func (err *RuntimePublicationError) Unwrap() error { return err.Cause }
 
 func (err *RuntimeRepositoryRequiredError) Error() string {
-	return fmt.Sprintf("SDD edit authority needs a Git repository because its authority lives in the Git common directory, and %s is not inside one; run `git init` in that workspace (or run from the repository that contains it), then rerun the same `gentle-ai sdd-attempt` command", err.Workspace)
+	return fmt.Sprintf("SDD edit authority needs a Git repository because its authority lives in the Git common directory, and %s is not inside one; run `git init` in that workspace (or run from the repository that contains it), then rerun the same `axiom sdd-attempt` command", err.Workspace)
 }
 
 func (err *RuntimeRepositoryRequiredError) Unwrap() error { return err.Cause }
@@ -191,7 +191,7 @@ func (err *RuntimeRecordRejectedError) Error() string {
 }
 
 func (err *RuntimeRecordSchemaUnsupportedError) Error() string {
-	return fmt.Sprintf("SDD runtime revision %s declares \"schema\" %s, newer than this binary supports (%s); run `gentle-ai update` to install a build that reads it, then rerun the same `gentle-ai sdd-attempt` command", err.Revision, err.Schema, runtimeRecordSchema)
+	return fmt.Sprintf("SDD runtime revision %s declares \"schema\" %s, newer than this binary supports (%s); run `axiom upgrade` to install a build that reads it, then rerun the same `axiom sdd-attempt` command", err.Revision, err.Schema, runtimeRecordSchema)
 }
 
 func (store RuntimeStore) ForInstance(instance string) (RuntimeStore, error) {
@@ -207,7 +207,7 @@ func (store RuntimeStore) ForInstance(instance string) (RuntimeStore, error) {
 
 func OpenRuntimeStore(ctx context.Context, repo, change string) (RuntimeStore, error) {
 	if !validRuntimeChange(change) {
-		return RuntimeStore{}, fmt.Errorf("invalid SDD change name %q; want a non-empty identity of at most 96 characters with no control characters, backslash, colon, or \".\"/\"..\" path segment; run `gentle-ai sdd-status --cwd <repo> --json` to read the resolved changeName", change)
+		return RuntimeStore{}, fmt.Errorf("invalid SDD change name %q; want a non-empty identity of at most 96 characters with no control characters, backslash, colon, or \".\"/\"..\" path segment; run `axiom sdd-status --cwd <repo> --json` to read the resolved changeName", change)
 	}
 	root, err := (reviewtransaction.SnapshotBuilder{Repo: repo}).ResolveRepositoryRoot(ctx)
 	if err != nil {

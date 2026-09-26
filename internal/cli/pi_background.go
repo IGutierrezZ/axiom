@@ -19,14 +19,13 @@ import (
 // no launcher or activation plumbing behind it because the primitive is the
 // already-installed pi-subagents extension reading a projected policy file.
 const (
-	PiBackgroundSubagentsAxiomEnv  = "AXIOM_PI_BACKGROUND_SUBAGENTS"
-	PiBackgroundSubagentsGentleEnv = "GENTLE_AI_PI_BACKGROUND_SUBAGENTS"
+	PiBackgroundSubagentsAxiomEnv = "AXIOM_PI_BACKGROUND_SUBAGENTS"
 
 	PiBackgroundSubagentsEnv = PiBackgroundSubagentsAxiomEnv
 )
 
 func lookupPiBackgroundEnv() (string, bool) {
-	return system.LookupEnv(PiBackgroundSubagentsAxiomEnv, PiBackgroundSubagentsGentleEnv)
+	return system.LookupEnv(PiBackgroundSubagentsAxiomEnv)
 }
 
 // PiConfigHomeEnv overrides gentle-pi's config base directory (default
