@@ -23,7 +23,7 @@ Portar selectivamente desde upstream Gentle AI (v3.4.0..v3.7.0+) las optimizacio
   - Implementar predicado unificado `converge` en `Publish`.
   - Asegurar liberación previa `releaseOnce` del lock de recibo nativo antes de evaluar convergencia bajo contención de `LOCK`.
   - Portar y ejecutar suite de pruebas de convergencia en `rar_authority_repository_test.go`.
-- [ ] **T2 · Catálogo de Sumideros Peligrosos y Escaneo en Líneas Añadidas (`internal/reviewtransaction/`)**
+- [x] **T2 · Catálogo de Sumideros Peligrosos y Escaneo en Líneas Añadidas (`internal/reviewtransaction/`)**
   - Implementar `internal/reviewtransaction/risk_dangerous_sink.go` con `dangerousSinkCatalog`, `dangerousSinkLine` y detector de YAML inseguro.
   - Actualizar `internal/reviewtransaction/risk.go` con `SignalDangerousSink`, `RiskReasonDangerousSink`, `isTestRiskPath` y análisis del diff acotado sobre líneas añadidas.
   - Incorporar pruebas unitarias en `risk_dangerous_sink_test.go` y `risk_process_boundary_test.go`.
@@ -54,4 +54,20 @@ Portar selectivamente desde upstream Gentle AI (v3.4.0..v3.7.0+) las optimizacio
     --- PASS: TestRARVerificationAuthorityLockExhaustionWithoutConvergentPairStaysTyped/stale_live_receipt_refuses_convergence_at_the_exact_pair (2.56s)
 PASS
 ok  	github.com/IGutierrezZ/axiom/v3/internal/reviewtransaction	24.272s
+```
+
+### T2: Sumideros Peligrosos y Límites de Procesos en Líneas Añadidas
+```
+=== RUN   TestDangerousSinkLine (49 casos de prueba por CWE y lenguajes)
+--- PASS: TestDangerousSinkLine (0.00s)
+=== RUN   TestProcessBoundaryChangedLines (8 casos)
+--- PASS: TestProcessBoundaryChangedLines (11.54s)
+=== RUN   TestProcessBoundaryDiffScanIgnoresUserDiffPresentation (6 casos de atributos y prefijos git)
+--- PASS: TestProcessBoundaryDiffScanIgnoresUserDiffPresentation (10.33s)
+=== RUN   TestProcessBoundaryDiffScanFailsClosedOnOutputLimit
+--- PASS: TestProcessBoundaryDiffScanFailsClosedOnOutputLimit (1.44s)
+=== RUN   TestAssessSnapshotRiskDangerousSinkAddedLines (11 casos de integración en snapshot)
+--- PASS: TestAssessSnapshotRiskDangerousSinkAddedLines (16.26s)
+PASS
+ok  	github.com/IGutierrezZ/axiom/v3/internal/reviewtransaction	16.381s
 ```
