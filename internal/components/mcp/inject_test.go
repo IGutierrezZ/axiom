@@ -863,15 +863,22 @@ func TestInjectClaudeWorkspaceIsDiscoveredByNativeClaudeMCPList(t *testing.T) {
 	cmd.Dir = workspace
 	env := os.Environ()
 	homeReplaced := false
+	userProfileReplaced := false
 	for index, value := range env {
 		if strings.HasPrefix(value, "HOME=") {
 			env[index] = "HOME=" + home
 			homeReplaced = true
-			break
+		}
+		if strings.HasPrefix(value, "USERPROFILE=") {
+			env[index] = "USERPROFILE=" + home
+			userProfileReplaced = true
 		}
 	}
 	if !homeReplaced {
 		env = append(env, "HOME="+home)
+	}
+	if !userProfileReplaced {
+		env = append(env, "USERPROFILE="+home)
 	}
 	cmd.Env = env
 

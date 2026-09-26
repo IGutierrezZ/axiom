@@ -66,7 +66,7 @@ Desacoplar de forma exhaustiva y canónica el ecosistema de Axiom respecto a Gen
   - [x] En los ficheros `SKILL.md`, actualizar el valor `name:` y los textos descriptivos donde se mencione la invocación de la skill, asegurando que `metadata.author: gentleman-programming` quede intacto.
   - [x] Actualizar el índice de skills en `AGENTS.md` reflejando las nuevas rutas y nombres canónicos.
 
-- [ ] **T5 · Actualización de pruebas unitarias, golden files y verificación**
-  - [ ] Actualizar los tests unitarios afectados por la eliminación de fallbacks en `internal/system/env_test.go` y `user_paths_test.go`.
-  - [ ] Actualizar las aserciones de tests y golden files en `internal/sddstatus/`, `internal/sddtaskresult/`, `internal/reviewtransaction/` y `testdata/golden/`.
-  - [ ] Ejecutar `go test ./...` y `go vet ./...` para certificar que el repositorio compila limpiamente y todas las suites pasan en verde.
+- [x] **T5 · Actualización de pruebas unitarias, golden files y verificación**
+  - [x] Actualizar los tests unitarios afectados por la eliminación de fallbacks en `internal/system/env_test.go` y `user_paths_test.go`.
+  - [x] Actualizar las aserciones de tests y golden files en `internal/sddstatus/`, `internal/sddtaskresult/`, `internal/reviewtransaction/` y `testdata/golden/`.
+  - [x] Ejecutar `go test ./...` y `go vet ./...` para certificar que el repositorio compila limpiamente y todas las suites pasan en verde.
