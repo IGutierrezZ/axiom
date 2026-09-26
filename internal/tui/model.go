@@ -16,8 +16,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/charmbracelet/bubbles/textarea"
-	tea "github.com/charmbracelet/bubbletea"
 	"github.com/IGutierrezZ/axiom/v3/internal/agentbuilder"
 	"github.com/IGutierrezZ/axiom/v3/internal/agents"
 	"github.com/IGutierrezZ/axiom/v3/internal/backup"
@@ -42,6 +40,8 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/update"
 	"github.com/IGutierrezZ/axiom/v3/internal/update/upgrade"
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
+	"github.com/charmbracelet/bubbles/textarea"
+	tea "github.com/charmbracelet/bubbletea"
 )
 
 // tuiNowFn returns the current time for the update-check cooldown gate.
@@ -181,6 +181,12 @@ func sanitizeKnownModelEffort(assignment model.ModelAssignment, sddModels map[st
 	}
 
 	return assignment
+}
+
+func (m *Model) restoreCodexCustomAssignments() {
+	for role, modelID := range m.Selection.CodexPhaseModelAssignments {
+		m.CodexModelPicker.CustomAssignments[role] = screens.CodexCustomAssignment{ModelID: modelID, Effort: m.Selection.CodexModelAssignments[role]}
+	}
 }
 
 // codexPhaseModelsFromCustomAssignments converts the TUI's CustomAssignments map
@@ -1557,11 +1563,11 @@ func (m Model) View() string {
 	case ScreenPreset:
 		return screens.RenderPreset(m.Selection.Preset, m.Cursor)
 	case ScreenClaudeModelPicker:
-		return screens.RenderClaudeModelPicker(m.ClaudeModelPicker, m.Cursor)
+		return screens.RenderClaudeModelPicker(m.ClaudeModelPicker, m.Cursor, m.Height)
 	case ScreenKiroModelPicker:
 		return screens.RenderKiroModelPicker(m.KiroModelPicker, m.Cursor)
 	case ScreenCodexModelPicker:
-		return screens.RenderCodexModelPicker(m.CodexModelPicker, m.Cursor)
+		return screens.RenderCodexModelPicker(m.CodexModelPicker, m.Cursor, m.Height)
 	case ScreenSDDMode:
 		return screens.RenderSDDMode(m.Selection.SDDMode, m.Cursor)
 	case ScreenStrictTDD:
@@ -2501,6 +2507,7 @@ func (m Model) confirmSelection() (tea.Model, tea.Cmd) {
 		case 3: // Configure Codex models
 			m.ModelConfigMode = true
 			m.CodexModelPicker = screens.NewCodexModelPickerStateFromAssignments(m.Selection.CodexModelAssignments)
+			m.restoreCodexCustomAssignments()
 			m.setScreen(ScreenCodexModelPicker)
 		case 4: // Back
 			m.setScreen(ScreenWelcome)
@@ -5333,6 +5340,7 @@ func (m *Model) applyPickerEntry(next Screen) tea.Cmd {
 		m.KiroModelPicker = screens.NewKiroModelPickerStateFromAssignments(m.Selection.KiroModelAssignments)
 	case ScreenCodexModelPicker:
 		m.CodexModelPicker = screens.NewCodexModelPickerStateFromAssignments(m.Selection.CodexModelAssignments)
+		m.restoreCodexCustomAssignments()
 	case ScreenModelPicker:
 		discoveryCmd = m.initializeModelPicker()
 	}

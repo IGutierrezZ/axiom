@@ -842,6 +842,12 @@ func Inject(homeDir string, adapter agents.Adapter, sddMode model.SDDModeID, opt
 			// Non-Claude adapters don't implement claudeModelResolver and are unaffected.
 			if cmr, ok := adapter.(claudeModelResolver); ok {
 				phase := strings.TrimSuffix(entry.Name(), ".md")
+				// Native review roles are stored without the installed agent's
+				// review- prefix. Leave SDD and JD phase keys unchanged.
+				switch phase {
+				case "review-risk", "review-readability", "review-reliability", "review-resilience", "review-refuter":
+					phase = strings.TrimPrefix(phase, "review-")
+				}
 				assignment := resolveClaudePhaseAssignment(opts.ClaudeModelAssignments, opts.ClaudePhaseAssignments, phase)
 				contentStr = strings.ReplaceAll(contentStr, "{{CLAUDE_MODEL}}", cmr.ClaudeModelID(assignment.Model))
 				contentStr = injectClaudeEffortFrontmatter(contentStr, assignment)
@@ -3006,6 +3012,7 @@ func renderSessionPreflightPrompt(adapter agents.Adapter, opts InjectOptions) (s
 			rendered = cmr.RenderCodexPhaseEfforts(opts.CodexModelAssignments, opts.CodexCarrilModelAssignments)
 		}
 		content = strings.ReplaceAll(content, "{{CODEX_PHASE_EFFORTS}}", rendered)
+		content = strings.ReplaceAll(content, "{{CODEX_ODD_ASSIGNMENTS}}", model.RenderCodexODDAssignments(opts.CodexPhaseModelAssignments, opts.CodexModelAssignments, opts.CodexCarrilModelAssignments))
 		// Post-check: fail loudly if any placeholder token remains unresolved.
 		if strings.Contains(content, "{{") {
 			return "", fmt.Errorf("inject(codex): unresolved placeholder token '{{' remains in AGENTS.md content after substitution")
@@ -3556,11 +3563,12 @@ func injectModelAssignments(overlayBytes []byte, assignments map[string]model.Mo
 		}
 	}
 
-	// Explicit assignments for existing custom agents are not present in the
-	// managed overlay. Add a minimal overlay definition so the deep merge updates
-	// only the model fields while preserving the user's custom agent settings.
+	// Explicit assignments for native general/explore need a minimal overlay
+	// entry even when absent from settings. Other non-managed agents are eligible
+	// only when already present in user settings. Deep merge updates their model
+	// and clears/updates variant while preserving other settings.
 	for agent, assignment := range assignments {
-		if !existingAgentKeys[agent] || assignment.ProviderID == "" || assignment.ModelID == "" {
+		if (!existingAgentKeys[agent] && agent != "general" && agent != "explore") || assignment.ProviderID == "" || assignment.ModelID == "" {
 			continue
 		}
 		if _, managed := agents[agent]; managed {

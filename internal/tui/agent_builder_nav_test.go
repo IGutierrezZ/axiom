@@ -4,11 +4,11 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/charmbracelet/bubbles/textarea"
-	tea "github.com/charmbracelet/bubbletea"
 	"github.com/IGutierrezZ/axiom/v3/internal/agentbuilder"
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
 	"github.com/IGutierrezZ/axiom/v3/internal/system"
+	"github.com/charmbracelet/bubbles/textarea"
+	tea "github.com/charmbracelet/bubbletea"
 )
 
 // ─── Helper: set up a model on the agent builder engine screen ───────────────

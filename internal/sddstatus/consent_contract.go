@@ -45,16 +45,16 @@ const (
 	// provisional pin lacked --request-id (found by S3) and
 	// --change-instance (added by S5); #2563 reconciled the fixture, the
 	// schema regex, and the test pin together to this flag set.
-	sddConsentGrantInvocationPrefix      = "axiom sdd-attempt grant "
-	axiomConsentGrantInvocationPrefix    = "axiom sdd-attempt grant "
-	legacyConsentGrantInvocationPrefix   = "gentle-ai sdd-attempt grant "
+	sddConsentGrantInvocationPrefix    = "axiom sdd-attempt grant "
+	axiomConsentGrantInvocationPrefix  = "axiom sdd-attempt grant "
+	legacyConsentGrantInvocationPrefix = "gentle-ai sdd-attempt grant "
 
 	// sddConsentStatusInvocationPrefix is the decline and off-path re-entry:
 	// declining persists nothing, so the runnable follow-up is native SDD
 	// status for the same change.
-	sddConsentStatusInvocationPrefix     = "axiom sdd-status "
-	axiomConsentStatusInvocationPrefix   = "axiom sdd-status "
-	legacyConsentStatusInvocationPrefix  = "gentle-ai sdd-status "
+	sddConsentStatusInvocationPrefix    = "axiom sdd-status "
+	axiomConsentStatusInvocationPrefix  = "axiom sdd-status "
+	legacyConsentStatusInvocationPrefix = "gentle-ai sdd-status "
 )
 
 // SDDIntegrationConsentResult is the typed blocking consent question an SDD

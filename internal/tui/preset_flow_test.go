@@ -7,11 +7,11 @@ import (
 	"path/filepath"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
 	"github.com/IGutierrezZ/axiom/v3/internal/reviewtransaction"
 	"github.com/IGutierrezZ/axiom/v3/internal/system"
 	"github.com/IGutierrezZ/axiom/v3/internal/tui/screens"
+	tea "github.com/charmbracelet/bubbletea"
 )
 
 var updateTUIGoldens = flag.Bool("update", false, "update TUI golden files")
