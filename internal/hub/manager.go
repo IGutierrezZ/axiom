@@ -120,6 +120,10 @@ func (m *Manager) Register(path, name, topology string) (*WorkspaceRecord, error
 		return nil, fmt.Errorf("ruta de workspace inválida: %w", err)
 	}
 
+	if IsGitWorktree(absPath) {
+		return nil, fmt.Errorf("la ruta '%s' corresponde a un worktree git; los worktrees no deben registrarse como proyectos en el Hub", absPath)
+	}
+
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -238,6 +242,58 @@ func (m *Manager) Unregister(idOrPath string) error {
 	}
 
 	return m.saveUnlocked(cfg)
+}
+
+// Prune elimina del catálogo global aquellos workspaces cuya ruta física ya no existe
+// o corresponde a un worktree de git. Retorna los IDs de los workspaces purgados.
+func (m *Manager) Prune() ([]string, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	cfg, err := m.loadUnlocked()
+	if err != nil {
+		return nil, err
+	}
+
+	var pruned []string
+	valid := make([]WorkspaceRecord, 0, len(cfg.Workspaces))
+
+	for _, w := range cfg.Workspaces {
+		cleanPath := filepath.Clean(w.Path)
+		if !dirExists(cleanPath) || IsGitWorktree(cleanPath) {
+			pruned = append(pruned, w.ID)
+			continue
+		}
+		valid = append(valid, w)
+	}
+
+	if len(pruned) == 0 {
+		return nil, nil
+	}
+
+	cfg.Workspaces = valid
+
+	// Si el workspace activo fue purgado, reasignar al primero disponible o limpiar
+	activeRemoved := true
+	for _, w := range cfg.Workspaces {
+		if w.ID == cfg.ActiveWorkspace {
+			activeRemoved = false
+			break
+		}
+	}
+	if activeRemoved {
+		if len(cfg.Workspaces) > 0 {
+			cfg.ActiveWorkspace = cfg.Workspaces[0].ID
+		} else {
+			cfg.ActiveWorkspace = ""
+		}
+	}
+
+	if err := m.saveUnlocked(cfg); err != nil {
+		return nil, err
+	}
+
+	return pruned, nil
 }
 
 // List retorna todos los proyectos registrados con su estado de configuración actualizado.

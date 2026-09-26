@@ -154,6 +154,15 @@ case "$VERB" in
             git -C "$REPO_ROOT" branch -d "$BRANCH" 2>/dev/null || echo "[AVISO] No se pudo borrar $BRANCH con -d. Usa --force si ya está integrada."
         fi
 
+        # Desvincular del Hub global de Axiom si hubiera quedado registrado
+        if command -v axiom >/dev/null 2>&1; then
+            axiom project remove "$SLUG" >/dev/null 2>&1 || true
+            axiom project remove "$WT_PATH" >/dev/null 2>&1 || true
+        elif command -v go >/dev/null 2>&1 && [ -f "$REPO_ROOT/cmd/axiom/main.go" ]; then
+            go run "$REPO_ROOT/cmd/axiom/main.go" project remove "$SLUG" >/dev/null 2>&1 || true
+            go run "$REPO_ROOT/cmd/axiom/main.go" project remove "$WT_PATH" >/dev/null 2>&1 || true
+        fi
+
         git -C "$REPO_ROOT" worktree prune
         echo "[OK] Ciclo de trabajo '$SLUG' desmantelado y entorno limpio."
         ;;

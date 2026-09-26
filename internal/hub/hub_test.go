@@ -383,3 +383,89 @@ func TestInteractiveRolesAndNonBlocking(t *testing.T) {
 		t.Errorf("esperado rol 'docs' con gate_policy advisory: %s", content)
 	}
 }
+
+func TestIsGitWorktree(t *testing.T) {
+	tempDir := t.TempDir()
+
+	// 1. Directorio normal sin git
+	if IsGitWorktree(tempDir) {
+		t.Errorf("un directorio ordinario no debe ser detectado como worktree")
+	}
+
+	// 2. Repositorio git normal (directorio .git)
+	normalRepo := filepath.Join(tempDir, "normal-repo")
+	_ = os.MkdirAll(filepath.Join(normalRepo, ".git"), 0755)
+	if IsGitWorktree(normalRepo) {
+		t.Errorf("un repositorio ordinario con directorio .git no debe ser detectado como worktree")
+	}
+
+	// 3. Worktree vinculado con archivo .git apuntando a worktrees
+	wtRepo := filepath.Join(tempDir, "linked-wt")
+	_ = os.MkdirAll(wtRepo, 0755)
+	_ = os.WriteFile(filepath.Join(wtRepo, ".git"), []byte("gitdir: /fake/main/.git/worktrees/linked-wt\n"), 0644)
+	if !IsGitWorktree(wtRepo) {
+		t.Errorf("un worktree con archivo .git hacia worktrees debe ser detectado como worktree")
+	}
+
+	// 4. Ruta dentro de convención axiom-wt
+	axiomWtRepo := filepath.Join(tempDir, "axiom-wt", "feature-x")
+	if !IsGitWorktree(axiomWtRepo) {
+		t.Errorf("una ruta bajo 'axiom-wt' debe ser detectada como worktree por convención")
+	}
+}
+
+func TestManagerWorktreeIsolationAndPrune(t *testing.T) {
+	tempDir := t.TempDir()
+	configPath := filepath.Join(tempDir, "workspaces.json")
+	mgr, err := NewManager(configPath)
+	if err != nil {
+		t.Fatalf("error creando manager: %v", err)
+	}
+
+	// Proyecto normal válido
+	validProj := filepath.Join(tempDir, "valid-proj")
+	_ = os.MkdirAll(validProj, 0755)
+	recValid, err := mgr.Register(validProj, "Valid Proj", "monorepo-embedded")
+	if err != nil {
+		t.Fatalf("error registrando proyecto válido: %v", err)
+	}
+
+	// Intentar registrar un worktree debe fallar
+	wtProj := filepath.Join(tempDir, "fake-wt")
+	_ = os.MkdirAll(wtProj, 0755)
+	_ = os.WriteFile(filepath.Join(wtProj, ".git"), []byte("gitdir: /fake/main/.git/worktrees/fake-wt\n"), 0644)
+
+	_, err = mgr.Register(wtProj, "Worktree Proj", "monorepo-embedded")
+	if err == nil {
+		t.Fatalf("esperado error al registrar un worktree, pero tuvo éxito")
+	}
+	if !strings.Contains(err.Error(), "worktree git") {
+		t.Errorf("mensaje de error inesperado: %v", err)
+	}
+
+	// Probar Prune con una entrada huérfana inyectada manualmente
+	cfg, _ := mgr.Load()
+	cfg.Workspaces = append(cfg.Workspaces, WorkspaceRecord{
+		ID:   "deleted-proj",
+		Name: "Deleted Proj",
+		Path: filepath.Join(tempDir, "non-existent-dir"),
+	}, WorkspaceRecord{
+		ID:   "stranded-wt",
+		Name: "Stranded Worktree",
+		Path: filepath.Join(tempDir, "axiom-wt", "stranded"),
+	})
+	_ = mgr.Save(cfg)
+
+	pruned, err := mgr.Prune()
+	if err != nil {
+		t.Fatalf("error en Prune(): %v", err)
+	}
+	if len(pruned) != 2 {
+		t.Errorf("esperado 2 proyectos purgados, obtenidos %d: %v", len(pruned), pruned)
+	}
+
+	list, _ := mgr.List()
+	if len(list) != 1 || list[0].ID != recValid.ID {
+		t.Errorf("esperado solo 1 proyecto válido restante, obtenidos: %v", list)
+	}
+}

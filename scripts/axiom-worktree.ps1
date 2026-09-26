@@ -204,6 +204,16 @@ switch ($Verb) {
             Ok "Rama local $branch eliminada."
         }
 
+        # Desvincular del Hub global de Axiom si hubiera quedado registrado
+        $axiomCmd = Get-Command axiom -ErrorAction SilentlyContinue
+        if ($axiomCmd) {
+            & axiom project remove $Slug 2>$null | Out-Null
+            & axiom project remove $wtPath 2>$null | Out-Null
+        } elseif ((Get-Command go -ErrorAction SilentlyContinue) -and (Test-Path (Join-Path $repoRoot 'cmd\axiom\main.go'))) {
+            & go run (Join-Path $repoRoot 'cmd\axiom\main.go') project remove $Slug 2>$null | Out-Null
+            & go run (Join-Path $repoRoot 'cmd\axiom\main.go') project remove $wtPath 2>$null | Out-Null
+        }
+
         git -C $repoRoot worktree prune
         Ok "Ciclo de trabajo '$Slug' desmantelado y entorno limpio."
     }
