@@ -26,7 +26,7 @@ Portar selectivamente desde upstream Gentle AI (v3.4.0..v3.7.0+) los tres parche
   - Envolver la lectura y mutación de `persistAssignments` dentro de `statecoord.WithLock` en `internal/app/app.go`.
   - Implementar `markPendingSyncAfterSelfUpdate` bajo lock en `internal/app/selfupdate.go`.
   - Añadir suite de pruebas de contención y preservación en `internal/app/state_lock_test.go`.
-- [ ] **T2 · Hook de Claude `UserPromptSubmit` seguro para PowerShell en Windows (`internal/components/sdd/`)**
+- [x] **T2 · Hook de Claude `UserPromptSubmit` seguro para PowerShell en Windows (`internal/components/sdd/`)**
   - Adaptar `ensureClaudeSkillRegistryHook` en `internal/components/sdd/inject.go` para generar el comando PowerShell en Windows y POSIX en Unix.
   - Implementar migración y purga de hooks POSIX preexistentes en Windows.
   - Añadir tests unitarios de generación y migración en `internal/components/sdd/inject_test.go`.
