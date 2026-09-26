@@ -228,9 +228,19 @@ func runCatalogCommand(ctx context.Context, command Command) (CommandOutput, err
 	defer cancel()
 	cmd := exec.CommandContext(ctx, command.Path, command.Args...)
 	cmd.Dir = command.Dir
+	afterStart, release := configureProcessGroup(cmd)
+	if release != nil {
+		defer release()
+	}
 	stdout, stderr := &limitedBuffer{limit: command.OutputLimit, cancel: cancel}, &limitedBuffer{limit: command.OutputLimit, cancel: cancel}
 	cmd.Stdout, cmd.Stderr = stdout, stderr
-	err := cmd.Run()
+	if err := cmd.Start(); err != nil {
+		return CommandOutput{Stdout: stdout.Bytes(), Stderr: stderr.Bytes()}, err
+	}
+	if afterStart != nil {
+		afterStart()
+	}
+	err := cmd.Wait()
 	if stdout.overflow || stderr.overflow {
 		return CommandOutput{Stdout: stdout.Bytes(), Stderr: stderr.Bytes()}, &CatalogError{Kind: CatalogErrorOutputTooLarge}
 	}
