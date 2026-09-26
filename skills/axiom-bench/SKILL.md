@@ -1,6 +1,6 @@
 ---
-name: gentle-ai-bench
-description: "Trigger: bench, journey, journeys, driven mode, gentle-ai-bench, journey corpus, j-numbers, bench axis. Author and verify gentle-ai bench journeys; go test ./bench never proves driven execution."
+name: axiom-bench
+description: "Trigger: bench, journey, journeys, driven mode, axiom-bench, journey corpus, j-numbers, bench axis. Author and verify axiom bench journeys; go test ./bench never proves driven execution."
 license: Apache-2.0
 metadata:
   author: "Gentleman-Programming"
@@ -9,12 +9,12 @@ metadata:
 
 ## Activation Contract
 
-Load when touching `bench/` in gentle-ai, adding or changing a journey, changing a product semantic a journey might pin, or diagnosing a bench failure in CI's Unit Tests job.
+Load when touching `bench/` in axiom, adding or changing a journey, changing a product semantic a journey might pin, or diagnosing a bench failure in CI's Unit Tests job.
 
 ## Hard Rules
 
 - `go test ./bench` validates corpus declarations only. It does NOT execute journeys. The only driven proof is building the harness and the product binary and running the harness against it; a green `go test ./bench` claims nothing about execution.
-- Reproduce CI, do not guess invocations: read the Unit Tests step in `.github/workflows/ci.yml` and copy its exact build and `gentle-ai-bench run --binary ...` commands. Use `--only <journey-id>` to drive one journey.
+- Reproduce CI, do not guess invocations: read the Unit Tests step in `.github/workflows/ci.yml` and copy its exact build and `axiom-bench run --binary ...` commands. Use `--only <journey-id>` to drive one journey.
 - Journey IDs are unique across every `journeys_*.go` file. The collision guard fails loudly naming both files; pick an unused ID by reading the corpus, never reuse a retired one.
 - Every journey declares `Review:` — `reviewOptedIn` (the runner enables receipt-driven development globally before the first step, uncounted, and fails the journey if the switch does not come on) or `reviewUntouched` (its subject IS the switch, or it has nothing to do with reviews). The declaration is mandatory; `validateCorpus` fails the run without it. Never let a journey inherit the product's default: reviews are opt-in, and a journey that assumed otherwise measures a review-refused flow while still reporting `completed`.
 - Every `execute` transition must carry a runnable command; the dead-execute guard fails the run otherwise.

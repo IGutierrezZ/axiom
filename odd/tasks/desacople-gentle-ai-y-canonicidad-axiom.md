@@ -57,14 +57,14 @@ Desacoplar de forma exhaustiva y canónica el ecosistema de Axiom respecto a Gen
   - [x] Renombrar los marcadores en plantillas e instrucciones de `<!-- gentle-ai:sdd-... -->` a `<!-- axiom:sdd-... -->`.
   - [x] Actualizar las definiciones JSON de schemas en `contracts/` y sus fixtures para validar los nuevos contratos.
 
-- [ ] **T4 · Renombrado de skills y actualización de referencias (Punto 4)**
-  - [ ] Renombrar carpetas de skills en `skills/`:
+- [x] **T4 · Renombrado de skills y actualización de referencias (Punto 4)**
+  - [x] Renombrar carpetas de skills en `skills/`:
     - `skills/gentle-ai-bench/` → `skills/axiom-bench/`
     - `skills/gentle-ai-collab-perfect/` → `skills/axiom-collab-perfect/`
     - Actualizar `name: axiom-branch-pr` en `skills/branch-pr/SKILL.md`
     - Actualizar `name: axiom-chained-pr` en `skills/chained-pr/SKILL.md`
-  - [ ] En los ficheros `SKILL.md`, actualizar el valor `name:` y los textos descriptivos donde se mencione la invocación de la skill, asegurando que `metadata.author: gentleman-programming` quede intacto.
-  - [ ] Actualizar el índice de skills en `AGENTS.md` reflejando las nuevas rutas y nombres canónicos.
+  - [x] En los ficheros `SKILL.md`, actualizar el valor `name:` y los textos descriptivos donde se mencione la invocación de la skill, asegurando que `metadata.author: gentleman-programming` quede intacto.
+  - [x] Actualizar el índice de skills en `AGENTS.md` reflejando las nuevas rutas y nombres canónicos.
 
 - [ ] **T5 · Actualización de pruebas unitarias, golden files y verificación**
   - [ ] Actualizar los tests unitarios afectados por la eliminación de fallbacks en `internal/system/env_test.go` y `user_paths_test.go`.
