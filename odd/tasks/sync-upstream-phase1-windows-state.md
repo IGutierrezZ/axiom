@@ -30,7 +30,7 @@ Portar selectivamente desde upstream Gentle AI (v3.4.0..v3.7.0+) los tres parche
   - Adaptar `ensureClaudeSkillRegistryHook` en `internal/components/sdd/inject.go` para generar el comando PowerShell en Windows y POSIX en Unix.
   - Implementar migración y purga de hooks POSIX preexistentes en Windows.
   - Añadir tests unitarios de generación y migración en `internal/components/sdd/inject_test.go`.
-- [ ] **T3 · Terminación de Árbol de Procesos en Windows con Job Objects (`internal/opencode/`)**
+- [x] **T3 · Terminación de Árbol de Procesos en Windows con Job Objects (`internal/opencode/`)**
   - Implementar `configureProcessGroup` con Windows Job Object en `internal/opencode/catalog_process_windows.go`.
   - Actualizar `catalog_process_unix.go` y `catalog.go` para enlazar los ganchos `afterStart` y `release`.
   - Añadir test `TestRunCatalogCommandDeadlineNotBlockedByInheritingDescendantWindows` en `catalog_process_windows_test.go`.
