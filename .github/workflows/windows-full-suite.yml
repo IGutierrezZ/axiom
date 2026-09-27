@@ -18,13 +18,9 @@ name: Windows Full Suite
 # Everything below is otherwise identical to the ci.yml job it replaces.
 
 on:
-  push:
-    branches:
-      - main
-  schedule:
-    # 03:20 UTC daily, offset from ci.yml's 03:00 so the two do not contend
-    # for the same Windows runner pool.
-    - cron: "20 3 * * *"
+  # Desactivada la ejecución automática (push y cron diario de 03:20 UTC)
+  # para evitar el sobreconsumo masivo de minutos de runners Windows (10 shards * ~30 min * 2x).
+  # Solo ejecutable manualmente bajo demanda por los mantenedores.
   workflow_dispatch:
 
 permissions:

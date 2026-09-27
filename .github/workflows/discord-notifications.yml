@@ -1,11 +1,10 @@
 name: Discord Notifications
 
+# Desactivado: workflow heredado de Gentle-AI dependiente de webhooks externos
+# de Discord (DISCORD_GENTLE_AI_*). Se restringe a workflow_dispatch para evitar fallos
+# o notificaciones no deseadas tras el desacople canónico de Axiom.
 on:
-  release:
-    types: [published]
-  issues:
-    # Keep issue notifications focused on lifecycle changes.
-    types: [opened, closed, reopened]
+  workflow_dispatch:
 
 permissions: {}
 

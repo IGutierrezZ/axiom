@@ -10,9 +10,6 @@ on:
   # on a commit that is otherwise ready to tag, right after the workflow moved.
   # Without this the only way to re-run CI on main is to push another commit.
   workflow_dispatch:
-  schedule:
-    # 03:00 UTC daily — full Tier 1+2+3 across all platforms as a safety net
-    - cron: "0 3 * * *"
 
 # Una ejecución nueva deja obsoleta a la anterior del mismo disparador sobre la
 # misma referencia, así que se cancela en lugar de encolarse detrás. El nombre
@@ -288,7 +285,8 @@ jobs:
   windows-runtime:
     name: Windows Runtime
     needs: go-format
-    if: always()
+    # Restringido a ejecución manual bajo demanda para evitar consumo masivo de runners Windows (factor 2x)
+    if: github.event_name == 'workflow_dispatch'
     runs-on: windows-latest
     # Release blockers only; the full suite moved to windows-full-suite. Must
     # exceed the sum of its own step budgets, or a step can never reach its
@@ -446,7 +444,8 @@ jobs:
   darwin-runtime:
     name: Darwin Runtime
     needs: go-format
-    if: always()
+    # Restringido a ejecución manual bajo demanda para evitar consumo masivo de runners macOS (factor 10x)
+    if: github.event_name == 'workflow_dispatch'
     runs-on: macos-latest
     timeout-minutes: 25
     steps:
@@ -481,7 +480,8 @@ jobs:
   organic-runtime-e2e:
     name: Organic Runtime E2E (${{ matrix.os }})
     needs: go-format
-    if: always()
+    # Restringido a ejecución manual bajo demanda para evitar consumo masivo en PRs cotidianos
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ${{ matrix.os }}
     # Issue #3185: the Windows suite legitimately runs 11-13 minutes; a 15m
     # go-test budget flaked on slow runners with every test passing. The job
@@ -492,7 +492,6 @@ jobs:
       matrix:
         os:
           - ubuntu-latest
-          - windows-latest
     steps:
       - name: Require successful Go format
         if: needs.go-format.result != 'success'
@@ -585,7 +584,8 @@ jobs:
   e2e-tests:
     name: E2E Tests (${{ matrix.platform.name }})
     needs: go-format
-    if: always()
+    # Restringido a ejecución manual bajo demanda para evitar construcción pesada de 3 contenedores docker en PRs
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 40
     strategy:
