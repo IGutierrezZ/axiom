@@ -69,6 +69,7 @@ type InitOptions struct {
 	Topology string // monorepo-embedded, multirepo
 	Force    bool
 	Roles    []RoleInput
+	Profile  string // "knowledge", "spec-only", "full"
 }
 
 // InitResult detalla los resultados de la operación de inicialización.

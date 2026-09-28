@@ -1,0 +1,17 @@
+schema: axiom.sdd-kickoff/v1
+change: inc-23-knowledge-profile
+sealed_at: 2026-09-28T22:54:36.554152Z
+sealed_by: cli
+kickoff:
+    flow_mode: sdd
+    execution_style: continuous
+    execution_style_source: explicit
+    handoff_policy: none
+    roles:
+        - role: fullstack
+          gate_policy: blocking
+          tasks_file: tasks.md
+          verify_file: verify-report.md
+lifecycle:
+    deployment_target: local
+    post_archive_policy: bug_only
