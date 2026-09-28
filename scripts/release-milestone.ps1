@@ -85,7 +85,7 @@ git push origin main
 
 # 6. Crear tag
 if ([string]::IsNullOrWhiteSpace($Message)) {
-    $Message = "Release $Version: Hito acumulativo de Axiom"
+    $Message = "Release $($Version): Hito acumulativo de Axiom"
 }
 
 Write-Host "[4/5] Creando tag anotado $Version..." -ForegroundColor Yellow
