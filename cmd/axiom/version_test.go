@@ -10,8 +10,8 @@ import (
 // TestVersionDefault verifies that a compilation without ldflags
 // injection reports a valid semver release tag (REQ-22.8, O-1).
 func TestVersionDefault(t *testing.T) {
-	if version != "v3.5.0" {
-		t.Errorf("version = %q, want %q", version, "v3.5.0")
+	if version != "v3.5.1" {
+		t.Errorf("version = %q, want %q", version, "v3.5.1")
 	}
 	if Version != version {
 		t.Errorf("Version = %q, want %q (must alias version)", Version, version)

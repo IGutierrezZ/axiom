@@ -12,6 +12,7 @@ import (
 	"runtime"
 	"strings"
 	"syscall"
+	"encoding/json"
 	"time"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/app"
@@ -21,6 +22,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/handoff"
 	"github.com/IGutierrezZ/axiom/v3/internal/hub"
 	"github.com/IGutierrezZ/axiom/v3/internal/kickoff"
+	"github.com/IGutierrezZ/axiom/v3/internal/knowledge"
 	"github.com/IGutierrezZ/axiom/v3/internal/livingdoc"
 	"github.com/IGutierrezZ/axiom/v3/internal/multirole"
 	"github.com/IGutierrezZ/axiom/v3/internal/semantic"
@@ -54,8 +56,8 @@ func init() {
 
 // version is the build-time version symbol, injectable via
 // -X main.version=<value> (same symbol name as cmd/gentle-ai/main.go).
-// A compilation without injection reports "v3.5.0" (O-1, D-05).
-var version = "v3.5.0"
+// A compilation without injection reports "v3.5.1" (O-1, D-05).
+var version = "v3.5.1"
 
 // Version is the exported alias used by cli.AppVersion, app.Version, and tests.
 var Version = version
@@ -107,6 +109,8 @@ COMANDOS DE GOBERNANZA Y WORKSPACE:
   skill approve        Aprueba e instala formalmente una skill desde el buzón transitorio a skills/
   skill reject         Descarta y purga una propuesta del buzón transitorio
 ` + skillCollisionNote + `
+  knowledge sweep      Barrido rápido técnico y funcional del proyecto (soporta --json, --headless)
+  knowledge query      Consulta spec-first fundamentada con evidencias de código y auto-enriquecimiento
   semantic status      Diagnostica los conectores semánticos (Serena, CodeGraph, AST) y salud del workspace
   semantic symbols     Consulta y filtra símbolos de código (struct, interface, func, method)
   semantic inspect     Inspecciona el grafo de dependencias entre paquetes del workspace
@@ -237,6 +241,9 @@ func main() {
 
 	case "init":
 		runInit(os.Args[2:])
+
+	case "knowledge":
+		runKnowledge(os.Args[2:])
 
 	case "project":
 		if len(os.Args) < 3 {
@@ -1700,7 +1707,14 @@ func runInit(args []string) {
 	pathFlag := fs.String("path", ".", "Ruta del directorio a inicializar")
 	topologyFlag := fs.String("topology", "monorepo-embedded", "Topología del workspace (monorepo-embedded, multirepo)")
 	forceFlag := fs.Bool("force", false, "Sobreescribir axiom.yaml si ya existe")
+	profileFlag := fs.String("profile", "full", "Perfil de inicialización (full, knowledge, spec-only)")
+	specOnlyFlag := fs.Bool("spec-only", false, "Alias para --profile=knowledge")
 	_ = fs.Parse(args)
+
+	effectiveProfile := *profileFlag
+	if *specOnlyFlag || effectiveProfile == "spec-only" {
+		effectiveProfile = "knowledge"
+	}
 
 	absPath, err := filepath.Abs(*pathFlag)
 	if err != nil {
@@ -1721,6 +1735,7 @@ func runInit(args []string) {
 		Name:     *nameFlag,
 		Topology: *topologyFlag,
 		Force:    *forceFlag,
+		Profile:  effectiveProfile,
 	})
 	if err != nil {
 		fmt.Printf("[ERROR] Fallo al inicializar el proyecto: %v\n", err)
@@ -1740,6 +1755,9 @@ func runInit(args []string) {
 	fmt.Printf("  - Archivo Config:      %s\n", res.ConfigPath)
 	if res.AlreadyExisted {
 		fmt.Println("  - Estado:              Ya contenía axiom.yaml (registrado y marcado como activo)")
+	} else if effectiveProfile == "knowledge" {
+		fmt.Println("  - Estructura creada:   openspec/specs/, openspec/changes/, openspec/INDEX.md, .mcp.json")
+		fmt.Println("  - Perfil activo:       knowledge (multirepo, documentación viva, sin arneses de testeo)")
 	} else {
 		fmt.Println("  - Estructura creada:   openspec/specs/, openspec/changes/, .axiom/inbox/skills/")
 	}
@@ -2024,4 +2042,127 @@ func runReview(args []string, stdout, stderr io.Writer, flatAlias bool) int {
 		return 1
 	}
 	return 0
+}
+
+func runKnowledge(args []string) {
+	if len(args) == 0 {
+		fmt.Println("Error: subcomando de 'knowledge' requerido. Opciones: sweep, query")
+		os.Exit(1)
+	}
+
+	subCmd := args[0]
+	switch subCmd {
+	case "sweep":
+		runKnowledgeSweep(args[1:])
+	case "query", "ask":
+		runKnowledgeQuery(args[1:])
+	default:
+		fmt.Printf("Error: subcomando '%s' no reconocido para knowledge. Usa 'axiom knowledge [sweep|query]'.\n", subCmd)
+		os.Exit(1)
+	}
+}
+
+func runKnowledgeSweep(args []string) {
+	fs := flag.NewFlagSet("knowledge sweep", flag.ExitOnError)
+	cwdFlag := fs.String("cwd", ".", "Directorio raíz del proyecto a escanear")
+	jsonFlag := fs.Bool("json", false, "Emitir resultado en formato JSON estructurado")
+	headlessFlag := fs.Bool("headless", false, "Modo autónomo/no interactivo")
+	_ = fs.Parse(args)
+
+	res, err := knowledge.RunSweep(context.Background(), knowledge.SweepOptions{
+		WorkspaceRoot: *cwdFlag,
+		Headless:      *headlessFlag,
+		Format:        "text",
+	})
+	if err != nil {
+		fmt.Printf("[ERROR] Fallo durante el barrido: %v\n", err)
+		os.Exit(1)
+	}
+
+	if *jsonFlag {
+		data, _ := json.MarshalIndent(res, "", "  ")
+		fmt.Println(string(data))
+		return
+	}
+
+	fmt.Println("================================================================================")
+	fmt.Println("             Axiom — Barrido Inicial Rápido de Conocimiento (Sweep)")
+	fmt.Println("================================================================================")
+	fmt.Printf("  - Lenguaje Principal:  %s\n", res.PrimaryLanguage)
+	if len(res.Frameworks) > 0 {
+		fmt.Printf("  - Frameworks / Tech:   %s\n", strings.Join(res.Frameworks, ", "))
+	}
+	if len(res.Entrypoints) > 0 {
+		fmt.Printf("  - Puntos de Entrada:   %s\n", strings.Join(res.Entrypoints, ", "))
+	}
+	fmt.Printf("  - Módulos Detectados:  %d\n", len(res.Modules))
+	for _, m := range res.Modules {
+		fmt.Printf("    * [%s] en %s (%d componentes)\n", m.Name, m.Path, len(m.Components))
+	}
+	if len(res.CreatedSpecs) > 0 {
+		fmt.Printf("  - Specs Sembradas:     %d en openspec/specs/\n", len(res.CreatedSpecs))
+	}
+	if len(res.Ambiguities) > 0 {
+		fmt.Println("\n--- SOBRE DE AMBIGÜEDADES / INCERTIDUMBRES (DIFERIDO) ---")
+		for i, amb := range res.Ambiguities {
+			fmt.Printf("  [%d] [%s] [%s] %s\n      Ruta: %s\n      Acción: %s\n",
+				i+1, strings.ToUpper(amb.Severity), amb.Category, amb.Description, amb.Path, amb.Remediation)
+		}
+	} else {
+		fmt.Println("\n  - Ambigüedades:        Ninguna detectada.")
+	}
+	fmt.Println("================================================================================")
+	fmt.Printf("Barrido completado en %v. Catálogo maestro actualizado en openspec/INDEX.md.\n", res.Duration.Round(time.Millisecond))
+}
+
+func runKnowledgeQuery(args []string) {
+	fs := flag.NewFlagSet("knowledge query", flag.ExitOnError)
+	cwdFlag := fs.String("cwd", ".", "Directorio raíz del proyecto")
+	typeFlag := fs.String("type", "auto", "Lente de análisis: auto, technical, functional")
+	deepFlag := fs.Bool("deep", false, "Forzar inspección profunda de código ignorando la spec viva")
+	_ = fs.Parse(args)
+
+	posArgs := fs.Args()
+	if len(posArgs) == 0 {
+		fmt.Println("Error: pregunta requerida. Uso: axiom knowledge query \"<pregunta>\" [--type technical|functional]")
+		os.Exit(1)
+	}
+
+	question := strings.Join(posArgs, " ")
+	res, err := knowledge.RunQuery(context.Background(), knowledge.QueryOptions{
+		WorkspaceRoot: *cwdFlag,
+		Question:      question,
+		Type:          knowledge.QueryType(*typeFlag),
+		ForceDeep:     *deepFlag,
+	})
+	if err != nil {
+		fmt.Printf("[ERROR] Fallo al procesar la consulta: %v\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Println("================================================================================")
+	fmt.Println("             Axiom — Consulta Fundamentada de Conocimiento")
+	fmt.Println("================================================================================")
+	fmt.Printf("Consulta: %q\n\n", question)
+
+	fmt.Println("### RESPUESTA DIRECTA ###")
+	fmt.Println(res.DirectAnswer)
+
+	if len(res.Evidences) > 0 {
+		fmt.Println("\n### EVIDENCIAS CONCRETAS ###")
+		for _, ev := range res.Evidences {
+			if ev.Lines != "" {
+				fmt.Printf("  - [%s] %s (línea %s): %s\n", ev.Source, ev.File, ev.Lines, ev.Context)
+			} else {
+				fmt.Printf("  - [%s] %s: %s\n", ev.Source, ev.File, ev.Context)
+			}
+		}
+	}
+
+	fmt.Println("\n================================================================================")
+	if res.ResolvedFromSpec {
+		fmt.Println("Origen: Resuelto directamente desde la Spec Viva (Spec-First).")
+	} else if res.SpecUpdated {
+		fmt.Printf("Auto-enriquecimiento: Nueva regla documentada en %s y catálogo openspec/INDEX.md actualizado.\n", res.TargetSpecPath)
+	}
 }

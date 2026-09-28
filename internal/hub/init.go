@@ -61,9 +61,20 @@ func (ini *Initializer) Init(opts InitOptions) (*InitResult, error) {
 			}
 		}
 
-		// Determinar roles efectivos:
+		// Determinar roles efectivos y topología según perfil
 		var effectiveRoles []RoleInput
-		if len(opts.Roles) > 0 {
+		if opts.Profile == "knowledge" || opts.Profile == "spec-only" {
+			opts.Topology = "multirepo"
+			effectiveRoles = []RoleInput{
+				{
+					Key:          "knowledge",
+					Name:         "Knowledge Explorer",
+					Repositories: []string{"."},
+					NonBlocking:  true,
+					Tech:         []string{"markdown", "openspec"},
+				},
+			}
+		} else if len(opts.Roles) > 0 {
 			effectiveRoles = opts.Roles
 		} else if len(tech.ConfiguredRoles) > 0 {
 			effectiveRoles = tech.ConfiguredRoles
@@ -98,16 +109,41 @@ func (ini *Initializer) Init(opts InitOptions) (*InitResult, error) {
 	}
 
 	// 2. Crear carpetas canónicas del arnés SDD
-	standardDirs := []string{
-		filepath.Join(absPath, ".axiom", "inbox", "skills"),
-		filepath.Join(absPath, "openspec", "specs"),
-		filepath.Join(absPath, "openspec", "changes"),
+	var standardDirs []string
+	if opts.Profile == "knowledge" || opts.Profile == "spec-only" {
+		standardDirs = []string{
+			filepath.Join(absPath, "openspec", "specs"),
+			filepath.Join(absPath, "openspec", "changes"),
+		}
+	} else {
+		standardDirs = []string{
+			filepath.Join(absPath, ".axiom", "inbox", "skills"),
+			filepath.Join(absPath, "openspec", "specs"),
+			filepath.Join(absPath, "openspec", "changes"),
+		}
 	}
 
 	for _, d := range standardDirs {
 		if err := os.MkdirAll(d, 0755); err != nil {
 			return nil, fmt.Errorf("error creando directorio estándar %s: %w", d, err)
 		}
+	}
+
+	// 2.1 En perfil knowledge, asegurar openspec/INDEX.md e inyectar .mcp.json
+	if opts.Profile == "knowledge" || opts.Profile == "spec-only" {
+		indexPath := filepath.Join(absPath, "openspec", "INDEX.md")
+		if !fileExists(indexPath) {
+			initialIndex := fmt.Sprintf("# Catálogo Maestro de Especificaciones Vivas — %s\n\n> **Proyecto:** %s (Spec-Driven Knowledge Base)\n> **Perfil:** Knowledge\n\n---\n\n## Resumen de Especificaciones Vivas\n\n| Dominio | Título de la Especificación | Reqs | Escenarios | Enlace |\n| :--- | :--- | :---: | :---: | :--- |\n", opts.Name, opts.Name)
+			if err := os.WriteFile(indexPath, []byte(initialIndex), 0644); err != nil {
+				return nil, fmt.Errorf("fallo al escribir %s: %w", indexPath, err)
+			}
+			createdFiles = append(createdFiles, indexPath)
+		}
+
+		if err := InjectKnowledgeMCPServers(absPath); err != nil {
+			return nil, fmt.Errorf("inyectar servidores MCP en .mcp.json: %w", err)
+		}
+		createdFiles = append(createdFiles, filepath.Join(absPath, ".mcp.json"))
 	}
 
 	// 3. Registrar en el catálogo global si el gestor está provisto
@@ -224,6 +260,7 @@ func buildAxiomYamlWithRoles(name, topology, specsRepo, domainContext string, ro
 	sb.WriteString("governance:\n")
 	sb.WriteString("  language: \"es\"\n")
 	sb.WriteString("  shared_memory: \"engram\"\n")
+	sb.WriteString("  semantic_analysis: \"auto\"\n")
 	if strings.TrimSpace(domainContext) != "" {
 		sb.WriteString("  context: |\n")
 		for _, line := range strings.Split(domainContext, "\n") {
