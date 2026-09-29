@@ -2123,11 +2123,12 @@ func runKnowledgeQuery(args []string) {
 	cwdFlag := fs.String("cwd", ".", "Directorio raíz del proyecto")
 	typeFlag := fs.String("type", "auto", "Lente de análisis: auto, technical, functional")
 	deepFlag := fs.Bool("deep", false, "Forzar inspección profunda de código ignorando la spec viva")
+	jsonFlag := fs.Bool("json", false, "Emitir resultado en formato JSON estructurado")
 	_ = fs.Parse(args)
 
 	posArgs := fs.Args()
 	if len(posArgs) == 0 {
-		fmt.Println("Error: pregunta requerida. Uso: axiom knowledge query \"<pregunta>\" [--type technical|functional]")
+		fmt.Println("Error: pregunta requerida. Uso: axiom knowledge query \"<pregunta>\" [--type technical|functional] [--json]")
 		os.Exit(1)
 	}
 
@@ -2141,6 +2142,12 @@ func runKnowledgeQuery(args []string) {
 	if err != nil {
 		fmt.Printf("[ERROR] Fallo al procesar la consulta: %v\n", err)
 		os.Exit(1)
+	}
+
+	if *jsonFlag {
+		data, _ := json.MarshalIndent(res, "", "  ")
+		fmt.Println(string(data))
+		return
 	}
 
 	fmt.Println("================================================================================")
