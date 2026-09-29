@@ -21,7 +21,7 @@ Implementar en Axiom el motor de generación exhaustiva de especificaciones viva
 - [x] **T2 · Motor de particionamiento determinista (`--plan`)**
   - Extender `internal/knowledge` para descomponer el repositorio a nivel de módulos y submódulos a partir de AST e importaciones.
   - Generación de contexto acotado por unidad (ficheros, firmas públicas, interfaces expuestas).
-- [ ] **T3 · Inyección y validación de unidades (`--record-unit`)**
+- [x] **T3 · Inyección y validación de unidades (`--record-unit`)**
   - Validador de formato canónico OpenSpec para el contenido entregado por el agente.
   - Escritura atómica en `openspec/specs/<dominio>/spec.md` y actualización del estado de la unidad en el manifiesto.
 - [ ] **T4 · Consulta de estado y progreso (`--status`)**
