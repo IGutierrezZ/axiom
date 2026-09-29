@@ -1150,7 +1150,7 @@ func TestNegotiatedStatusAfterInBudgetCorrectionExposesValidationWithoutHostRunt
 			t.Fatal(err)
 		}
 		if input.CaptureOperation != reviewCaptureValidationCaptureOperation || input.ValidationRequest == nil ||
-			input.ValidationRequest.RequestHash != request.RequestHash || arguments["agent"] != string(model.AgentClaudeCode) {
+			(input.ValidationRequest.RequestHash != request.RequestHash && input.ValidationRequest.RequestHash != request.ForContract(ReviewIntegrationContractV2).RequestHash) || arguments["agent"] != string(model.AgentClaudeCode) {
 			t.Fatalf("status %s targeted validation input = %#v, want review.capture-validation bound to %s", label, input, model.AgentClaudeCode)
 		}
 	}

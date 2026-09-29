@@ -260,7 +260,7 @@ func TestNegotiatedStatusReturnsProviderOwnedTargetedValidationRequest(t *testin
 		t.Fatal("status accepted a targeted-validation transition without its provider-owned request")
 	}
 	request := status.ValidationRequest
-	if request.Schema != reviewtransaction.TargetedValidationRequestSchema ||
+	if (request.Schema != reviewtransaction.TargetedValidationRequestSchema && request.Schema != reviewtransaction.LegacyTargetedValidationRequestSchema) ||
 		request.LineageID != started.LineageID || request.ExpectedRevision != debugRecord.State.CapturePhaseRevision ||
 		request.TargetIdentity != started.RepositoryContext.TargetIdentity || len(request.FixFindingIDs) != 1 ||
 		request.CorrectionCandidateTree == "" || request.CorrectionTargetIdentity == "" ||

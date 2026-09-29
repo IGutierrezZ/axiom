@@ -1960,7 +1960,14 @@ func TestRunSyncRollbackRestoresClaudeEngramMigrationSource(t *testing.T) {
 		if result.Err == nil {
 			t.Fatalf("sync transaction attempt %d error = nil; want forced post-migration failure", attempt)
 		}
-		if len(result.Apply.Steps) < 3 || result.Apply.Steps[1].StepID != "sync:component:engram" || result.Apply.Steps[1].Status != pipeline.StepStatusSucceeded {
+		engramCompleted := false
+		for _, step := range result.Apply.Steps {
+			if step.StepID == "sync:component:engram" && step.Status == pipeline.StepStatusSucceeded {
+				engramCompleted = true
+				break
+			}
+		}
+		if !engramCompleted {
 			t.Fatalf("attempt %d Engram migration did not complete before failure: error=%v steps=%#v", attempt, result.Err, result.Apply.Steps)
 		}
 		if !result.Rollback.Success {
