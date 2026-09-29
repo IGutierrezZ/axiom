@@ -375,10 +375,16 @@ func TestIntendedUntrackedRefusalsNameARunnableStatusInvocation(t *testing.T) {
 	stale := RunReviewFacadeStart(append([]string{"--cwd", repo, "--lineage", "runnable-inventory-stale"}, intendedUntrackedSelectArgs(digest, "candidate.txt")...), &bytes.Buffer{})
 	recoveredDigests := map[string]string{}
 	for name, err := range map[string]error{"undeclared selection": undeclared, "stale inventory": stale} {
-		if err == nil || !strings.Contains(err.Error(), "--contract "+ReviewIntegrationContractV2) {
+		if err == nil || (!strings.Contains(err.Error(), "--contract "+ReviewIntegrationContractV2) && !strings.Contains(err.Error(), "--contract "+AxiomReviewIntegrationContractV2)) {
 			t.Fatalf("%s START = %v, want a refusal naming the negotiated STATUS form", name, err)
 		}
 		start := strings.Index(err.Error(), "`gentle-ai review status")
+		if start < 0 {
+			start = strings.Index(err.Error(), "`axiom review status")
+		}
+		if start < 0 {
+			t.Fatalf("%s refusal does not name review status: %v", name, err)
+		}
 		rest := err.Error()[start+1:]
 		tokens := strings.Fields(rest[:strings.IndexByte(rest, '`')])[2:]
 		for index, token := range tokens {

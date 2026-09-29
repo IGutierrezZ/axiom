@@ -200,14 +200,10 @@ func main() {
 	cli.AppVersion = Version
 	app.Version = Version
 	if len(os.Args) < 2 {
-		if isattyFn(os.Stdin.Fd()) && isattyFn(os.Stdout.Fd()) {
-			if err := app.RunArgs([]string{}, os.Stdout); err != nil {
-				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-				os.Exit(1)
-			}
-			os.Exit(0)
+		if err := app.RunArgs([]string{}, os.Stdout); err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
 		}
-		printHelp()
 		os.Exit(0)
 	}
 
