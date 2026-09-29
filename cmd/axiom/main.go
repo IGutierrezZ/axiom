@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
@@ -12,7 +13,6 @@ import (
 	"runtime"
 	"strings"
 	"syscall"
-	"encoding/json"
 	"time"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/app"

@@ -209,4 +209,3 @@ func TestCLIKnowledgeCrawlLifecycle(t *testing.T) {
 		t.Errorf("INDEX.md no incluye el dominio auth finalizado:\n%s", string(indexBytes))
 	}
 }
-
