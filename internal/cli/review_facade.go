@@ -1256,7 +1256,8 @@ func runReviewStatus(ctx context.Context, args []string, stdout io.Writer) error
 							if requestErr != nil {
 								artifactErr = requestErr
 							} else {
-								validationRequest = &request
+								adapted := request.ForContract(*contract)
+								validationRequest = &adapted
 								result.ValidationRequest = validationRequest
 								// The correction-stage sibling of the lens probe
 								// below (:1287): the validator request STATUS just

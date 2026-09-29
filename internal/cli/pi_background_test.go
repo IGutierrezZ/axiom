@@ -127,10 +127,10 @@ func TestPiBackgroundStateIsOptionalAndLossless(t *testing.T) {
 	}
 
 	legacy := t.TempDir()
-	if err := os.MkdirAll(filepath.Join(legacy, ".gentle-ai"), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Join(legacy, ".axiom"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(legacy, ".gentle-ai", "state.json"), []byte(`{"installed_agents":["pi"]}`), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(legacy, ".axiom", "state.json"), []byte(`{"installed_agents":["pi"]}`), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	got, err = state.Read(legacy)

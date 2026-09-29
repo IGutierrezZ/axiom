@@ -71,6 +71,9 @@ func TestRunCodeGraphInitRejectsUnsafeOrUnrecognizedRoots(t *testing.T) {
 	}
 	symlink := filepath.Join(workspace, "escape")
 	if err := os.Symlink(outside, symlink); err != nil {
+		if errors.Is(err, os.ErrPermission) || strings.Contains(strings.ToLower(err.Error()), "privilegio") || strings.Contains(strings.ToLower(err.Error()), "privilege") {
+			t.Skip("skipping test: symlinks require elevated privileges on Windows")
+		}
 		t.Fatal(err)
 	}
 

@@ -3949,11 +3949,12 @@ func TestRunSyncWithSelection_WritesExpectedFiles(t *testing.T) {
 	}
 	orchestrator := orchestratorEntry.Prompt
 	postApply := string(applyPayload)
-	canonicalStatus := "gentle-ai review status --cwd <repo> --contract gentle-ai.review-integration/v2 --agent " + string(model.AgentOpenCode) + " --next-transition"
+	canonicalStatusAxiom := "axiom review status --cwd <repo> --contract gentle-ai.review-integration/v2 --agent " + string(model.AgentOpenCode) + " --next-transition"
+	canonicalStatusGentle := "gentle-ai review status --cwd <repo> --contract gentle-ai.review-integration/v2 --agent " + string(model.AgentOpenCode) + " --next-transition"
 
 	// Only the parent orchestrator owns canonical STATUS negotiation. It must
 	// declare OpenCode's own identity, never Claude Code's.
-	if !strings.Contains(orchestrator, canonicalStatus) {
+	if !strings.Contains(orchestrator, canonicalStatusAxiom) && !strings.Contains(orchestrator, canonicalStatusGentle) {
 		t.Error("synced OpenCode orchestrator does not use canonical STATUS routing under its own runtime identity")
 	}
 	for name, content := range map[string]string{
@@ -3984,7 +3985,7 @@ func TestRunSyncWithSelection_WritesExpectedFiles(t *testing.T) {
 			t.Errorf("synced OpenCode post-apply controller is missing parent-owned routing clause %q", required)
 		}
 	}
-	if strings.Contains(postApply, canonicalStatus) {
+	if strings.Contains(postApply, canonicalStatusAxiom) || strings.Contains(postApply, canonicalStatusGentle) {
 		t.Error("synced OpenCode post-apply controller repeats canonical STATUS instead of consuming parent routing")
 	}
 }
