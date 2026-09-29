@@ -77,16 +77,26 @@ func ProcessRefund(id string) error {
 		t.Fatalf("sweep no creó %s", paymentSpec)
 	}
 
-	// 4. Ejecutar runKnowledgeQuery sobre la regla no documentada en spec pero presente en código
+	// 4. Ejecutar runKnowledgeQuery en modo solo lectura por defecto (no debe mutar spec)
 	runKnowledgeQuery([]string{"-cwd", tempDir, "stripe_gateway_refund"})
+	specDataBefore, err := os.ReadFile(paymentSpec)
+	if err != nil {
+		t.Fatalf("error leyendo spec: %v", err)
+	}
+	if strings.Contains(string(specDataBefore), "stripe_gateway_refund") {
+		t.Errorf("la consulta de solo lectura no debió enriquecer la spec")
+	}
 
-	// Verificar que tras query la spec de payments fue enriquecida
+	// 5. Ejecutar runKnowledgeQuery con bandera explícita -enrich
+	runKnowledgeQuery([]string{"-cwd", tempDir, "-enrich", "stripe_gateway_refund"})
+
+	// Verificar que tras query con -enrich la spec de payments fue enriquecida
 	specData, err := os.ReadFile(paymentSpec)
 	if err != nil {
-		t.Fatalf("error leyendo spec tras query: %v", err)
+		t.Fatalf("error leyendo spec tras query con enrich: %v", err)
 	}
 	if !strings.Contains(string(specData), "stripe_gateway_refund") {
-		t.Errorf("la spec viva no fue enriquecida con la regla encontrada en código:\n%s", string(specData))
+		t.Errorf("la spec viva no fue enriquecida al pasar bandera -enrich:\n%s", string(specData))
 	}
 }
 

@@ -63,6 +63,7 @@ type QueryOptions struct {
 	Question      string
 	Type          QueryType
 	ForceDeep     bool
+	Enrich        bool
 }
 
 // QueryResult detalla la respuesta estructurada y los efectos secundarios de auto-enriquecimiento.

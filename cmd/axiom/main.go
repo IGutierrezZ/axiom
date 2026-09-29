@@ -111,7 +111,7 @@ COMANDOS DE GOBERNANZA Y WORKSPACE:
 ` + skillCollisionNote + `
   knowledge sweep      Barrido rápido técnico y funcional del proyecto (soporta --json, --headless)
   knowledge crawl      Crawling exhaustivo desacoplado por unidades de trabajo (soporta --plan, --record-unit, --status, --finalize)
-  knowledge query      Consulta spec-first fundamentada con evidencias de código y auto-enriquecimiento
+  knowledge query      Consulta spec-first fundamentada con evidencias de código (solo lectura por defecto)
   semantic status      Diagnostica los conectores semánticos (Serena, CodeGraph, AST) y salud del workspace
   semantic symbols     Consulta y filtra símbolos de código (struct, interface, func, method)
   semantic inspect     Inspecciona el grafo de dependencias entre paquetes del workspace
@@ -2124,6 +2124,7 @@ func runKnowledgeQuery(args []string) {
 	typeFlag := fs.String("type", "auto", "Lente de análisis: auto, technical, functional")
 	deepFlag := fs.Bool("deep", false, "Forzar inspección profunda de código ignorando la spec viva")
 	jsonFlag := fs.Bool("json", false, "Emitir resultado en formato JSON estructurado")
+	enrichFlag := fs.Bool("enrich", false, "Habilitar auto-enriquecimiento de la spec viva si hay evidencias relevantes (solo lectura por defecto)")
 	var flagArgs []string
 	var posArgs []string
 	for i := 0; i < len(args); i++ {
@@ -2142,7 +2143,7 @@ func runKnowledgeQuery(args []string) {
 	_ = fs.Parse(flagArgs)
 
 	if len(posArgs) == 0 {
-		fmt.Println("Error: pregunta requerida. Uso: axiom knowledge query \"<pregunta>\" [--type technical|functional] [--json]")
+		fmt.Println("Error: pregunta requerida. Uso: axiom knowledge query \"<pregunta>\" [--type technical|functional] [--json] [--enrich]")
 		os.Exit(1)
 	}
 
@@ -2152,6 +2153,7 @@ func runKnowledgeQuery(args []string) {
 		Question:      question,
 		Type:          knowledge.QueryType(*typeFlag),
 		ForceDeep:     *deepFlag,
+		Enrich:        *enrichFlag,
 	})
 	if err != nil {
 		fmt.Printf("[ERROR] Fallo al procesar la consulta: %v\n", err)
@@ -2188,6 +2190,8 @@ func runKnowledgeQuery(args []string) {
 		fmt.Println("Origen: Resuelto directamente desde la Spec Viva (Spec-First).")
 	} else if res.SpecUpdated {
 		fmt.Printf("Auto-enriquecimiento: Nueva regla documentada en %s y catálogo openspec/INDEX.md actualizado.\n", res.TargetSpecPath)
+	} else {
+		fmt.Println("Modo: Consulta de solo lectura (especificaciones vivas intactas).")
 	}
 }
 
