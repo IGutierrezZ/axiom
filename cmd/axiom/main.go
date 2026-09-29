@@ -110,6 +110,7 @@ COMANDOS DE GOBERNANZA Y WORKSPACE:
   skill reject         Descarta y purga una propuesta del buzón transitorio
 ` + skillCollisionNote + `
   knowledge sweep      Barrido rápido técnico y funcional del proyecto (soporta --json, --headless)
+  knowledge crawl      Crawling exhaustivo desacoplado por unidades de trabajo (soporta --plan, --record-unit, --status, --finalize)
   knowledge query      Consulta spec-first fundamentada con evidencias de código y auto-enriquecimiento
   semantic status      Diagnostica los conectores semánticos (Serena, CodeGraph, AST) y salud del workspace
   semantic symbols     Consulta y filtra símbolos de código (struct, interface, func, method)
@@ -2046,7 +2047,7 @@ func runReview(args []string, stdout, stderr io.Writer, flatAlias bool) int {
 
 func runKnowledge(args []string) {
 	if len(args) == 0 {
-		fmt.Println("Error: subcomando de 'knowledge' requerido. Opciones: sweep, query")
+		fmt.Println("Error: subcomando de 'knowledge' requerido. Opciones: sweep, crawl, query")
 		os.Exit(1)
 	}
 
@@ -2054,10 +2055,12 @@ func runKnowledge(args []string) {
 	switch subCmd {
 	case "sweep":
 		runKnowledgeSweep(args[1:])
+	case "crawl":
+		runKnowledgeCrawl(args[1:])
 	case "query", "ask":
 		runKnowledgeQuery(args[1:])
 	default:
-		fmt.Printf("Error: subcomando '%s' no reconocido para knowledge. Usa 'axiom knowledge [sweep|query]'.\n", subCmd)
+		fmt.Printf("Error: subcomando '%s' no reconocido para knowledge. Usa 'axiom knowledge [sweep|crawl|query]'.\n", subCmd)
 		os.Exit(1)
 	}
 }
@@ -2165,4 +2168,170 @@ func runKnowledgeQuery(args []string) {
 	} else if res.SpecUpdated {
 		fmt.Printf("Auto-enriquecimiento: Nueva regla documentada en %s y catálogo openspec/INDEX.md actualizado.\n", res.TargetSpecPath)
 	}
+}
+
+func runKnowledgeCrawl(args []string) {
+	fs := flag.NewFlagSet("knowledge crawl", flag.ExitOnError)
+	cwdFlag := fs.String("cwd", ".", "Directorio raíz del proyecto")
+	jobFlag := fs.String("job", "", "Ruta personalizada al fichero de estado crawl-job.json")
+	planFlag := fs.Bool("plan", false, "Generar el plan determinista de unidades de trabajo")
+	forceFlag := fs.Bool("force", false, "Forzar regeneración del plan descartando el anterior")
+	statusFlag := fs.Bool("status", false, "Consultar el estado y progreso actual del crawl")
+	recordUnitFlag := fs.Bool("record-unit", false, "Registrar el análisis semántico de una unidad")
+	recordFailFlag := fs.Bool("record-failure", false, "Registrar el fallo de una unidad")
+	finalizeFlag := fs.Bool("finalize", false, "Finalizar el crawl, validar y reconciliar INDEX.md")
+	unitFlag := fs.String("unit", "", "Identificador de la unidad (ej. auth/tokens)")
+	inputFlag := fs.String("input", "", "Fichero con el análisis en JSON o Markdown (o '-' para stdin)")
+	reasonFlag := fs.String("reason", "", "Motivo del fallo para --record-failure")
+	jsonFlag := fs.Bool("json", false, "Emitir la salida en formato JSON estructurado")
+	_ = fs.Parse(args)
+
+	jobPath := *jobFlag
+	if jobPath == "" {
+		absCwd, _ := filepath.Abs(*cwdFlag)
+		jobPath = knowledge.DefaultJobPath(absCwd)
+	}
+
+	if *planFlag {
+		job, err := knowledge.GenerateCrawlPlan(context.Background(), knowledge.CrawlPlanOptions{
+			WorkspaceRoot: *cwdFlag,
+			JobPath:       jobPath,
+			Force:         *forceFlag,
+		})
+		if err != nil {
+			fmt.Printf("[ERROR] Fallo generando plan de crawl: %v\n", err)
+			os.Exit(1)
+		}
+		if *jsonFlag {
+			data, _ := json.MarshalIndent(job, "", "  ")
+			fmt.Println(string(data))
+			return
+		}
+		fmt.Println("================================================================================")
+		fmt.Println("             Axiom — Plan Determinista de Crawling Exhaustivo")
+		fmt.Println("================================================================================")
+		fmt.Printf("Job ID:         %s\n", job.ID)
+		fmt.Printf("Total Unidades: %d unidades de trabajo identificadas\n", job.TotalUnits)
+		fmt.Printf("Manifiesto:     %s\n\n", jobPath)
+		fmt.Println("Unidades Descompuestas:")
+		for i, u := range job.Units {
+			fmt.Printf("  [%2d] %-30s (%s) -> %d archivos\n", i+1, u.ID, u.Domain, len(u.Files))
+		}
+		fmt.Println("\nSiguiente paso: el aplicativo puede despachar subagentes por unidad y registrar")
+		fmt.Println("los resultados mediante 'axiom knowledge crawl --record-unit --unit <id> --input <file>'.")
+		return
+	}
+
+	if *statusFlag {
+		st, err := knowledge.GetCrawlStatus(jobPath)
+		if err != nil {
+			fmt.Printf("[ERROR] Fallo consultando estado del crawl: %v\n", err)
+			os.Exit(1)
+		}
+		if *jsonFlag {
+			data, _ := json.MarshalIndent(st, "", "  ")
+			fmt.Println(string(data))
+			return
+		}
+		fmt.Print(knowledge.FormatStatusReport(st))
+		return
+	}
+
+	if *recordUnitFlag {
+		if *unitFlag == "" {
+			fmt.Println("Error: flag --unit requerido para registrar una unidad.")
+			os.Exit(1)
+		}
+		var payload []byte
+		var err error
+		if *inputFlag == "" || *inputFlag == "-" {
+			payload, err = io.ReadAll(os.Stdin)
+		} else {
+			payload, err = os.ReadFile(*inputFlag)
+		}
+		if err != nil {
+			fmt.Printf("[ERROR] No se pudo leer la entrada de análisis: %v\n", err)
+			os.Exit(1)
+		}
+
+		var input knowledge.UnitAnalysisInput
+		if err := json.Unmarshal(payload, &input); err != nil || (input.Summary == "" && len(input.Requirements) == 0 && input.RawMarkdown == "") {
+			input = knowledge.UnitAnalysisInput{
+				UnitID:      *unitFlag,
+				RawMarkdown: string(payload),
+			}
+		}
+		input.UnitID = *unitFlag
+
+		job, err := knowledge.RecordUnit(context.Background(), jobPath, input)
+		if err != nil {
+			fmt.Printf("[ERROR] Fallo registrando unidad: %v\n", err)
+			os.Exit(1)
+		}
+
+		if *jsonFlag {
+			data, _ := json.MarshalIndent(job, "", "  ")
+			fmt.Println(string(data))
+			return
+		}
+		fmt.Printf("✓ Unidad '%s' registrada con éxito en spec viva. Progreso: %.1f%% (%d/%d completadas).\n",
+			*unitFlag, job.ProgressPercentage(), job.CompletedUnits, job.TotalUnits)
+		return
+	}
+
+	if *recordFailFlag {
+		if *unitFlag == "" {
+			fmt.Println("Error: flag --unit requerido para registrar fallo.")
+			os.Exit(1)
+		}
+		reason := *reasonFlag
+		if reason == "" {
+			reason = "Fallo no especificado durante el análisis semántico"
+		}
+		job, err := knowledge.RecordUnitFailure(context.Background(), jobPath, *unitFlag, reason)
+		if err != nil {
+			fmt.Printf("[ERROR] Fallo registrando error de unidad: %v\n", err)
+			os.Exit(1)
+		}
+		if *jsonFlag {
+			data, _ := json.MarshalIndent(job, "", "  ")
+			fmt.Println(string(data))
+			return
+		}
+		fmt.Printf("✗ Unidad '%s' marcada como fallida en job '%s'.\n", *unitFlag, job.ID)
+		return
+	}
+
+	if *finalizeFlag {
+		res, err := knowledge.FinalizeCrawl(context.Background(), jobPath)
+		if err != nil {
+			fmt.Printf("[ERROR] Fallo finalizando crawl: %v\n", err)
+			os.Exit(1)
+		}
+		if *jsonFlag {
+			data, _ := json.MarshalIndent(res, "", "  ")
+			fmt.Println(string(data))
+			return
+		}
+		fmt.Println("================================================================================")
+		fmt.Println("             Axiom — Consolidación de Crawling Exhaustivo")
+		fmt.Println("================================================================================")
+		fmt.Printf("Job ID:               %s\n", res.JobID)
+		fmt.Printf("Total Specs Válidas:  %d dominios consolidados\n", res.TotalSpecs)
+		fmt.Printf("Catálogo Actualizado: openspec/INDEX.md sincronizado\n")
+		fmt.Println("Dominios Catalogados:")
+		for _, d := range res.Domains {
+			fmt.Printf("  * %s\n", d)
+		}
+		fmt.Println("================================================================================")
+		return
+	}
+
+	fmt.Println("Uso de axiom knowledge crawl:")
+	fmt.Println("  axiom knowledge crawl --plan [--cwd <dir>] [--json] [--force]")
+	fmt.Println("  axiom knowledge crawl --status [--job <file>] [--json]")
+	fmt.Println("  axiom knowledge crawl --record-unit --unit <id> [--input <file>]")
+	fmt.Println("  axiom knowledge crawl --record-failure --unit <id> [--reason <str>]")
+	fmt.Println("  axiom knowledge crawl --finalize [--job <file>] [--json]")
+	os.Exit(1)
 }

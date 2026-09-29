@@ -28,7 +28,7 @@ Implementar en Axiom el motor de generación exhaustiva de especificaciones viva
   - Salida legible y formato JSON con porcentaje de completitud, unidades pendientes y fallidas.
 - [x] **T5 · Consolidación final (`--finalize`)**
   - Reconciliación del catálogo maestro `openspec/INDEX.md` y persistencia de resumen en Engram.
-- [ ] **T6 · Integración en CLI (`cmd/axiom/main.go`) y suite de pruebas**
+- [x] **T6 · Integración en CLI (`cmd/axiom/main.go`) y suite de pruebas**
   - Añadir flags y subcomandos bajo `axiom knowledge crawl`.
   - Pruebas unitarias e integración con repositorios sintéticos.
 
