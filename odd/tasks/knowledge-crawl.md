@@ -24,9 +24,9 @@ Implementar en Axiom el motor de generación exhaustiva de especificaciones viva
 - [x] **T3 · Inyección y validación de unidades (`--record-unit`)**
   - Validador de formato canónico OpenSpec para el contenido entregado por el agente.
   - Escritura atómica en `openspec/specs/<dominio>/spec.md` y actualización del estado de la unidad en el manifiesto.
-- [ ] **T4 · Consulta de estado y progreso (`--status`)**
+- [x] **T4 · Consulta de estado y progreso (`--status`)**
   - Salida legible y formato JSON con porcentaje de completitud, unidades pendientes y fallidas.
-- [ ] **T5 · Consolidación final (`--finalize`)**
+- [x] **T5 · Consolidación final (`--finalize`)**
   - Reconciliación del catálogo maestro `openspec/INDEX.md` y persistencia de resumen en Engram.
 - [ ] **T6 · Integración en CLI (`cmd/axiom/main.go`) y suite de pruebas**
   - Añadir flags y subcomandos bajo `axiom knowledge crawl`.
