@@ -310,7 +310,7 @@ func TestCheckStateJSON_Missing(t *testing.T) {
 
 func TestCheckStateJSON_Malformed(t *testing.T) {
 	homeDir := t.TempDir()
-	stateDir := filepath.Join(homeDir, ".gentle-ai")
+	stateDir := filepath.Join(homeDir, ".axiom")
 	if err := os.MkdirAll(stateDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -330,7 +330,7 @@ func TestCheckStateJSON_Malformed(t *testing.T) {
 
 func TestCheckStateJSON_AgentConfigDirMissing(t *testing.T) {
 	homeDir := t.TempDir()
-	stateDir := filepath.Join(homeDir, ".gentle-ai")
+	stateDir := filepath.Join(homeDir, ".axiom")
 	if err := os.MkdirAll(stateDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -354,7 +354,7 @@ func TestCheckStateJSON_AgentConfigDirMissing(t *testing.T) {
 
 func TestCheckStateJSON_ManagedConfigPathUnreadable(t *testing.T) {
 	homeDir := t.TempDir()
-	stateDir := filepath.Join(homeDir, ".gentle-ai")
+	stateDir := filepath.Join(homeDir, ".axiom")
 	if err := os.MkdirAll(stateDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -376,7 +376,7 @@ func TestCheckStateJSON_ManagedConfigPathUnreadable(t *testing.T) {
 	if got.Status != CheckStatusWarn {
 		t.Fatalf("expected warn for unreadable managed config path, got %s: %s", got.Status, got.Detail)
 	}
-	wants := []string{configPath, "inspect or repair", "gentle-ai doctor"}
+	wants := []string{configPath, "inspect or repair", "axiom doctor"}
 	if runtime.GOOS == "windows" {
 		// Windows reports a file-blocked path as not-exist, so the warn is
 		// produced by the ancestor walk naming the blocking file rather than
@@ -402,7 +402,7 @@ func setupDanglingOpenCodeFixture(t *testing.T, statePayload, symlinkTarget stri
 	if err := os.MkdirAll(filepath.Dir(configDir), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.MkdirAll(filepath.Join(homeDir, ".gentle-ai"), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Join(homeDir, ".axiom"), 0o755); err != nil {
 		t.Fatal(err)
 	}
 	if symlinkTarget == "" {
@@ -412,7 +412,7 @@ func setupDanglingOpenCodeFixture(t *testing.T, statePayload, symlinkTarget stri
 	if err := os.Symlink(targetPath, configDir); err != nil {
 		t.Skipf("symlink creation unavailable: %v", err)
 	}
-	if err := os.WriteFile(filepath.Join(homeDir, ".gentle-ai", "state.json"), []byte(statePayload), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(homeDir, ".axiom", "state.json"), []byte(statePayload), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	return homeDir, configDir, targetPath
@@ -432,10 +432,10 @@ func TestCheckStateJSON_AgentConfigDirDanglingSymlink(t *testing.T) {
 	if !strings.Contains(got.Detail, configDir) {
 		t.Fatalf("detail must identify dangling managed path %q, got %q", configDir, got.Detail)
 	}
-	if !strings.Contains(got.Detail, "inspect") || !strings.Contains(got.Detail, "gentle-ai doctor") {
+	if !strings.Contains(got.Detail, "inspect") || !strings.Contains(got.Detail, "axiom doctor") {
 		t.Fatalf("detail must provide manual inspection and doctor rerun guidance, got %q", got.Detail)
 	}
-	if strings.Contains(got.Detail, "gentle-ai sync") {
+	if strings.Contains(got.Detail, "axiom sync") {
 		t.Fatalf("dangling config symlink must not recommend sync, got %q", got.Detail)
 	}
 	info, err := os.Lstat(configDir)
@@ -465,19 +465,19 @@ func TestCheckStateJSON_DanglingAndAbsentConfigDirsSuppressSync(t *testing.T) {
 	if got.Remedy != nil {
 		t.Fatalf("mixed dangling/absent config dirs must suppress sync, got %+v", got.Remedy)
 	}
-	for _, want := range []string{configDir, "genuinely absent config dirs: claude-code", "inspect or repair", "gentle-ai doctor"} {
+	for _, want := range []string{configDir, "genuinely absent config dirs: claude-code", "inspect or repair", "axiom doctor"} {
 		if !strings.Contains(got.Detail, want) {
 			t.Fatalf("mixed result missing %q: %s", want, got.Detail)
 		}
 	}
-	if strings.Contains(got.Detail, "gentle-ai sync") {
+	if strings.Contains(got.Detail, "axiom sync") {
 		t.Fatalf("mixed dangling/absent result must not recommend sync: %s", got.Detail)
 	}
 }
 
 func TestCheckStateJSON_DanglingAncestorSymlinkSuppressesSync(t *testing.T) {
 	homeDir := t.TempDir()
-	if err := os.MkdirAll(filepath.Join(homeDir, ".gentle-ai"), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Join(homeDir, ".axiom"), 0o755); err != nil {
 		t.Fatal(err)
 	}
 	ancestor := filepath.Join(homeDir, ".config")
@@ -485,7 +485,7 @@ func TestCheckStateJSON_DanglingAncestorSymlinkSuppressesSync(t *testing.T) {
 	if err := os.Symlink(missingTarget, ancestor); err != nil {
 		t.Skipf("symlink creation unavailable: %v", err)
 	}
-	if err := os.WriteFile(filepath.Join(homeDir, ".gentle-ai", "state.json"), []byte(`{"installed_agents":["opencode"]}`), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(homeDir, ".axiom", "state.json"), []byte(`{"installed_agents":["opencode"]}`), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	configDir := filepath.Join(ancestor, "opencode")
@@ -501,12 +501,12 @@ func TestCheckStateJSON_DanglingAncestorSymlinkSuppressesSync(t *testing.T) {
 	if got.Remedy != nil && got.Remedy.ID == doctor.RemedySync {
 		t.Fatalf("dangling ancestor symlink must not recommend sync: %+v", got.Remedy)
 	}
-	for _, want := range []string{configDir, "dangling ancestor symlink " + ancestor, "inspect", "gentle-ai doctor"} {
+	for _, want := range []string{configDir, "dangling ancestor symlink " + ancestor, "inspect", "axiom doctor"} {
 		if !strings.Contains(got.Detail, want) {
 			t.Fatalf("dangling ancestor result missing %q: %s", want, got.Detail)
 		}
 	}
-	if strings.Contains(got.Detail, "gentle-ai sync") || strings.Contains(got.Detail, "config dirs are missing") {
+	if strings.Contains(got.Detail, "axiom sync") || strings.Contains(got.Detail, "config dirs are missing") {
 		t.Fatalf("dangling ancestor must not be classified as missing: %s", got.Detail)
 	}
 	info, err := os.Lstat(ancestor)
@@ -523,12 +523,12 @@ func TestCheckStateJSON_DanglingAncestorSymlinkSuppressesSync(t *testing.T) {
 
 func TestCheckStateJSON_AbsentAncestorChainKeepsSyncRemedy(t *testing.T) {
 	homeDir := t.TempDir()
-	if err := os.MkdirAll(filepath.Join(homeDir, ".gentle-ai"), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Join(homeDir, ".axiom"), 0o755); err != nil {
 		t.Fatal(err)
 	}
 	// windsurf lives two levels below home (~/.codeium/windsurf); neither
 	// level exists, so the path is genuinely missing and sync must stay.
-	if err := os.WriteFile(filepath.Join(homeDir, ".gentle-ai", "state.json"), []byte(`{"installed_agents":["windsurf"]}`), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(homeDir, ".axiom", "state.json"), []byte(`{"installed_agents":["windsurf"]}`), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -547,7 +547,7 @@ func TestCheckStateJSON_AbsentAncestorChainKeepsSyncRemedy(t *testing.T) {
 
 func TestCheckStateJSON_HealthySymlinkAncestorKeepsSyncRemedy(t *testing.T) {
 	homeDir := t.TempDir()
-	if err := os.MkdirAll(filepath.Join(homeDir, ".gentle-ai"), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Join(homeDir, ".axiom"), 0o755); err != nil {
 		t.Fatal(err)
 	}
 	realConfigRoot := filepath.Join(t.TempDir(), "real-config-root")
@@ -558,7 +558,7 @@ func TestCheckStateJSON_HealthySymlinkAncestorKeepsSyncRemedy(t *testing.T) {
 		t.Skipf("symlink creation unavailable: %v", err)
 	}
 	// ~/.config resolves fine; only the opencode dir underneath is absent.
-	if err := os.WriteFile(filepath.Join(homeDir, ".gentle-ai", "state.json"), []byte(`{"installed_agents":["opencode"]}`), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(homeDir, ".axiom", "state.json"), []byte(`{"installed_agents":["opencode"]}`), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -577,7 +577,7 @@ func TestCheckStateJSON_HealthySymlinkAncestorKeepsSyncRemedy(t *testing.T) {
 
 func TestCheckStateJSON_OK(t *testing.T) {
 	homeDir := t.TempDir()
-	stateDir := filepath.Join(homeDir, ".gentle-ai")
+	stateDir := filepath.Join(homeDir, ".axiom")
 	if err := os.MkdirAll(stateDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -603,7 +603,7 @@ func TestCheckStateJSON_OK(t *testing.T) {
 
 func TestCheckInstalledAssetVersion_MatchingPass(t *testing.T) {
 	homeDir := t.TempDir()
-	stateDir := filepath.Join(homeDir, ".gentle-ai")
+	stateDir := filepath.Join(homeDir, ".axiom")
 	if err := os.MkdirAll(stateDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -620,7 +620,7 @@ func TestCheckInstalledAssetVersion_MatchingPass(t *testing.T) {
 
 func TestCheckInstalledAssetVersion_SkewWarning(t *testing.T) {
 	homeDir := t.TempDir()
-	stateDir := filepath.Join(homeDir, ".gentle-ai")
+	stateDir := filepath.Join(homeDir, ".axiom")
 	if err := os.MkdirAll(stateDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -633,7 +633,7 @@ func TestCheckInstalledAssetVersion_SkewWarning(t *testing.T) {
 	if got.Status != CheckStatusWarn {
 		t.Errorf("expected warn for version skew, got %s: %s", got.Status, got.Detail)
 	}
-	if !strings.Contains(got.Detail, "v0.9.0") || !strings.Contains(got.Detail, "gentle-ai sync") {
+	if !strings.Contains(got.Detail, "v0.9.0") || !strings.Contains(got.Detail, "axiom sync") {
 		t.Errorf("unexpected detail: %s", got.Detail)
 	}
 }
@@ -1001,7 +1001,7 @@ func TestRunDoctor_IntegrationAllMocked(t *testing.T) {
 	}()
 
 	homeDir := t.TempDir()
-	stateDir := filepath.Join(homeDir, ".gentle-ai")
+	stateDir := filepath.Join(homeDir, ".axiom")
 	if err := os.MkdirAll(stateDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -1026,22 +1026,22 @@ func TestRunDoctor_IntegrationAllMocked(t *testing.T) {
 	pathDirsFn = func() []string { pathSnapshots++; return []string{"/usr/local/bin"} }
 	osUserHomeDirDoctor = func() (string, error) { return homeDir, nil }
 	// organic-dx Phase 3f task 3f.5 added an invoked-executable clause to the
-	// gentle-ai tool check; this integration test is about RunDoctor's overall
+	// axiom tool check; this integration test is about RunDoctor's overall
 	// rendering shape, not that feature, so it mocks the invoked executable to
 	// match the PATH-resolved copy exactly (the common case) to keep the
 	// expected output byte-identical to before that feature landed. The new
 	// feature has its own dedicated tests in doctor_invoked_binary_test.go.
-	osExecutableDoctor = func() (string, error) { return "/usr/local/bin/gentle-ai", nil }
+	osExecutableDoctor = func() (string, error) { return "/usr/local/bin/axiom", nil }
 
 	var buf bytes.Buffer
 	if err := RunDoctor(context.Background(), &buf); err != nil {
 		t.Fatalf("RunDoctor returned error: %v", err)
 	}
 
-	want := fmt.Sprintf(`gentle-ai doctor — system health check
+	want := fmt.Sprintf(`axiom doctor — system health check
 =======================================
 
-  [ok]  tool:gentle-ai                 gentle-ai found at /usr/local/bin/gentle-ai; invoked executable: /usr/local/bin/gentle-ai (version dev)
+  [ok]  tool:axiom                     axiom found at /usr/local/bin/axiom; invoked executable: /usr/local/bin/axiom (version dev)
   [ok]  tool:gga                       gga found at /usr/local/bin/gga
   [ok]  tool:engram                    engram found at /usr/local/bin/engram
   [ok]  tool:claude                    claude found at /usr/local/bin/claude
@@ -1080,7 +1080,7 @@ func TestRunDoctor_DanglingConfigSymlinkIsReadOnly(t *testing.T) {
 	}()
 
 	homeDir, configDir, missingTarget := setupDanglingOpenCodeFixture(t, `{"installed_agents":["opencode"]}`, "")
-	statePath := filepath.Join(homeDir, ".gentle-ai", "state.json")
+	statePath := filepath.Join(homeDir, ".axiom", "state.json")
 	stateDir := filepath.Dir(statePath)
 	stateBefore, err := os.ReadFile(statePath)
 	if err != nil {
@@ -1096,17 +1096,17 @@ func TestRunDoctor_DanglingConfigSymlinkIsReadOnly(t *testing.T) {
 	httpGetFn = func(string, time.Duration) (int, error) { return 200, nil }
 	pathDirsFn = func() []string { return []string{"/usr/local/bin"} }
 	osUserHomeDirDoctor = func() (string, error) { return homeDir, nil }
-	osExecutableDoctor = func() (string, error) { return "/usr/local/bin/gentle-ai", nil }
+	osExecutableDoctor = func() (string, error) { return "/usr/local/bin/axiom", nil }
 	t.Setenv(engramHealthEnvVar, "https://engram.example.test")
 
 	var output bytes.Buffer
 	if err := RunDoctor(context.Background(), &output); err != nil {
 		t.Fatalf("RunDoctor returned error: %v", err)
 	}
-	if strings.Contains(output.String(), "gentle-ai sync") {
+	if strings.Contains(output.String(), "axiom sync") {
 		t.Fatalf("Doctor must not recommend sync for a dangling config symlink, got:\n%s", output.String())
 	}
-	for _, want := range []string{configDir, "inspect", "gentle-ai doctor"} {
+	for _, want := range []string{configDir, "inspect", "axiom doctor"} {
 		if !strings.Contains(output.String(), want) {
 			t.Fatalf("Doctor output missing %q:\n%s", want, output.String())
 		}
@@ -1136,7 +1136,7 @@ func TestRunDoctor_DanglingConfigSymlinkIsReadOnly(t *testing.T) {
 
 func TestDoctorSyncDisagreement_RealCLIBoundary(t *testing.T) {
 	homeDir, configDir, missingTarget := setupDanglingOpenCodeFixture(t, `{"installed_agents":["opencode"]}`, "")
-	statePath := filepath.Join(homeDir, ".gentle-ai", "state.json")
+	statePath := filepath.Join(homeDir, ".axiom", "state.json")
 	stateBefore, err := os.ReadFile(statePath)
 	if err != nil {
 		t.Fatal(err)
@@ -1262,19 +1262,19 @@ func TestCheckToolBinaries_AgentNotInState_NotReported(t *testing.T) {
 	}
 
 	// Core tools must still be required.
-	var sawGentleAI, sawEngram, sawPi bool
+	var sawAxiom, sawEngram, sawPi bool
 	for _, r := range results {
 		switch r.Name {
-		case "tool:gentle-ai":
-			sawGentleAI = true
+		case "tool:axiom":
+			sawAxiom = true
 		case "tool:engram":
 			sawEngram = true
 		case "tool:pi":
 			sawPi = true
 		}
 	}
-	if !sawGentleAI || !sawEngram || !sawPi {
-		t.Errorf("expected core+pi checks present; got sawGentleAI=%v sawEngram=%v sawPi=%v", sawGentleAI, sawEngram, sawPi)
+	if !sawAxiom || !sawEngram || !sawPi {
+		t.Errorf("expected core+pi checks present; got sawAxiom=%v sawEngram=%v sawPi=%v", sawAxiom, sawEngram, sawPi)
 	}
 }
 
@@ -1294,7 +1294,7 @@ func TestCheckToolBinaries_StateMissing_ChecksCoreOnly(t *testing.T) {
 	for _, r := range results {
 		required[string(r.Name)] = struct{}{}
 	}
-	for _, core := range []string{"tool:gentle-ai", "tool:gga", "tool:engram"} {
+	for _, core := range []string{"tool:axiom", "tool:gga", "tool:engram"} {
 		if _, ok := required[core]; !ok {
 			t.Errorf("expected %s in core-only output, got %+v", core, required)
 		}
@@ -1414,7 +1414,7 @@ func TestRunDoctor_OnlySelectedAgentsAreRequired(t *testing.T) {
 	executableExtsFn = func() []string { return []string{""} }
 
 	homeDir := t.TempDir()
-	stateDir := filepath.Join(homeDir, ".gentle-ai")
+	stateDir := filepath.Join(homeDir, ".axiom")
 	if err := os.MkdirAll(stateDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -1472,7 +1472,7 @@ func TestRunDoctor_OnlySelectedAgentsAreRequired(t *testing.T) {
 func TestRenderDoctorReportDoesNotRenderRemedyMetadata(t *testing.T) {
 	var buf bytes.Buffer
 	renderDoctorReport(&buf, DoctorReport{Checks: []CheckResult{{Name: doctor.CheckDiskSpace, Status: CheckStatusFail, Detail: "cleanup needed", Remedy: doctor.NewRemedy(doctor.RemedyFreeDiskSpace, "Free disk space")}}})
-	want := "gentle-ai doctor — system health check\n=======================================\n\n  [xx]  disk:space                     cleanup needed\n       Remedy: Free disk space\n\nSummary: 0 passed, 1 failed, 0 warnings\nStatus:  unhealthy\n"
+	want := "axiom doctor — system health check\n=======================================\n\n  [xx]  disk:space                     cleanup needed\n       Remedy: Free disk space\n\nSummary: 0 passed, 1 failed, 0 warnings\nStatus:  unhealthy\n"
 	if got := buf.String(); got != want {
 		t.Fatalf("rendered report mismatch\ngot:\n%s\nwant:\n%s", got, want)
 	}

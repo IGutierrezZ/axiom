@@ -2654,7 +2654,7 @@ func adapterSupportsWorkspace(adapter agents.Adapter) bool {
 		return false
 	}
 	switch adapter.Agent() {
-	case model.AgentVSCodeCopilot, model.AgentTrae, model.AgentWindsurf, model.AgentAntigravity:
+	case model.AgentVSCodeCopilot, model.AgentTrae, model.AgentWindsurf, model.AgentAntigravity, model.AgentCodex:
 		return false
 	default:
 		return true
