@@ -19,8 +19,8 @@ func TestWithFailedSyncVerificationNoteNamesSyncCommand(t *testing.T) {
 	if strings.Contains(updated.FinalNote, "repair") {
 		t.Fatalf("FinalNote still names the nonexistent repair command: %q", updated.FinalNote)
 	}
-	if !strings.Contains(updated.FinalNote, "gentle-ai sync") {
-		t.Fatalf("FinalNote = %q, want it to name `gentle-ai sync`", updated.FinalNote)
+	if !strings.Contains(updated.FinalNote, "axiom sync") && !strings.Contains(updated.FinalNote, "gentle-ai sync") {
+		t.Fatalf("FinalNote = %q, want it to name `axiom sync`", updated.FinalNote)
 	}
 }
 
