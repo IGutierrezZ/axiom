@@ -59,8 +59,8 @@ func SyncIndex(projectName, specsRoot string) error {
 	return os.WriteFile(indexPath, []byte(sb.String()), 0644)
 }
 
-var reqRegex = regexp.MustCompile(`(?i)###\s+Requirement:`)
-var scenarioRegex = regexp.MustCompile(`(?i)####\s+Scenario:`)
+var reqRegex = regexp.MustCompile(`(?i)#{2,4}\s+Requirement:`)
+var scenarioRegex = regexp.MustCompile(`(?i)#{3,5}\s+Scenario:`)
 
 func parseSpecMetadata(domain, content string) SpecEntry {
 	entry := SpecEntry{
