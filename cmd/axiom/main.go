@@ -2124,9 +2124,23 @@ func runKnowledgeQuery(args []string) {
 	typeFlag := fs.String("type", "auto", "Lente de análisis: auto, technical, functional")
 	deepFlag := fs.Bool("deep", false, "Forzar inspección profunda de código ignorando la spec viva")
 	jsonFlag := fs.Bool("json", false, "Emitir resultado en formato JSON estructurado")
-	_ = fs.Parse(args)
+	var flagArgs []string
+	var posArgs []string
+	for i := 0; i < len(args); i++ {
+		arg := args[i]
+		if strings.HasPrefix(arg, "-") {
+			flagArgs = append(flagArgs, arg)
+			flagName := strings.TrimLeft(arg, "-")
+			if !strings.Contains(arg, "=") && (flagName == "cwd" || flagName == "type") && i+1 < len(args) && !strings.HasPrefix(args[i+1], "-") {
+				i++
+				flagArgs = append(flagArgs, args[i])
+			}
+		} else {
+			posArgs = append(posArgs, arg)
+		}
+	}
+	_ = fs.Parse(flagArgs)
 
-	posArgs := fs.Args()
 	if len(posArgs) == 0 {
 		fmt.Println("Error: pregunta requerida. Uso: axiom knowledge query \"<pregunta>\" [--type technical|functional] [--json]")
 		os.Exit(1)
