@@ -4672,21 +4672,7 @@ func TestRunSyncPlainSyncHonoursPersistedComponentsWithoutProfile(t *testing.T) 
 // "balanced" preset defaults.
 func TestRunSyncLoadsPersistedModelAssignments(t *testing.T) {
 	home := t.TempDir()
-	restoreHome := osUserHomeDir
-	restoreBackupHome := backup.UserHomeDirFn
-	restoreCommand := runCommand
-	restoreLookPath := cmdLookPath
-	t.Cleanup(func() {
-		osUserHomeDir = restoreHome
-		backup.UserHomeDirFn = restoreBackupHome
-		runCommand = restoreCommand
-		cmdLookPath = restoreLookPath
-	})
-
-	osUserHomeDir = func() (string, error) { return home, nil }
-	backup.UserHomeDirFn = func() (string, error) { return home, nil }
-	runCommand = func(string, ...string) error { return nil }
-	cmdLookPath = func(name string) (string, error) { return "/usr/local/bin/" + name, nil }
+	setSyncTestHome(t, home)
 
 	// Pre-seed state.json with model assignments from a previous install.
 	if err := os.MkdirAll(filepath.Join(home, ".config", "opencode"), 0o755); err != nil {
@@ -4782,21 +4768,7 @@ func TestRunSyncLoadsPersistedModelAssignmentsPreservesEffort(t *testing.T) {
 // This is the core promise of the fix.
 func TestRunSyncDoesNotOverridePersistedAssignmentsOnSecondSync(t *testing.T) {
 	home := t.TempDir()
-	restoreHome := osUserHomeDir
-	restoreBackupHome := backup.UserHomeDirFn
-	restoreCommand := runCommand
-	restoreLookPath := cmdLookPath
-	t.Cleanup(func() {
-		osUserHomeDir = restoreHome
-		backup.UserHomeDirFn = restoreBackupHome
-		runCommand = restoreCommand
-		cmdLookPath = restoreLookPath
-	})
-
-	osUserHomeDir = func() (string, error) { return home, nil }
-	backup.UserHomeDirFn = func() (string, error) { return home, nil }
-	runCommand = func(string, ...string) error { return nil }
-	cmdLookPath = func(name string) (string, error) { return "/usr/local/bin/" + name, nil }
+	setSyncTestHome(t, home)
 
 	// Seed state with assignments.
 	if err := os.MkdirAll(filepath.Join(home, ".config", "opencode"), 0o755); err != nil {
@@ -4853,21 +4825,7 @@ func TestRunSyncDoesNotOverridePersistedAssignmentsOnSecondSync(t *testing.T) {
 // when state.json has no model assignments (backward compat with old state).
 func TestRunSyncWithNoPersistedAssignmentsDoesNotPanic(t *testing.T) {
 	home := t.TempDir()
-	restoreHome := osUserHomeDir
-	restoreBackupHome := backup.UserHomeDirFn
-	restoreCommand := runCommand
-	restoreLookPath := cmdLookPath
-	t.Cleanup(func() {
-		osUserHomeDir = restoreHome
-		backup.UserHomeDirFn = restoreBackupHome
-		runCommand = restoreCommand
-		cmdLookPath = restoreLookPath
-	})
-
-	osUserHomeDir = func() (string, error) { return home, nil }
-	backup.UserHomeDirFn = func() (string, error) { return home, nil }
-	runCommand = func(string, ...string) error { return nil }
-	cmdLookPath = func(name string) (string, error) { return "/usr/local/bin/" + name, nil }
+	setSyncTestHome(t, home)
 
 	// State with agents but NO model assignments (pre-feature state files).
 	if err := os.MkdirAll(filepath.Join(home, ".config", "opencode"), 0o755); err != nil {
@@ -4895,6 +4853,7 @@ func TestRunSyncWithNoPersistedAssignmentsDoesNotPanic(t *testing.T) {
 
 func setSyncTestHome(t *testing.T, home string) {
 	t.Helper()
+	t.Setenv(ScopeAxiomEnvVar, string(ScopeGlobal))
 	rOSHome := osUserHomeDir
 	rBackup := backup.UserHomeDirFn
 	rRun := runCommand
@@ -6286,17 +6245,7 @@ func TestRunSyncPreservesCompletePersistedState(t *testing.T) {
 		t.Fatalf("state.Write: %v", err)
 	}
 
-	restoreHome := osUserHomeDir
-	restoreCommand := runCommand
-	restoreLookPath := cmdLookPath
-	t.Cleanup(func() {
-		osUserHomeDir = restoreHome
-		runCommand = restoreCommand
-		cmdLookPath = restoreLookPath
-	})
-	osUserHomeDir = func() (string, error) { return home, nil }
-	runCommand = func(string, ...string) error { return nil }
-	cmdLookPath = func(name string) (string, error) { return "/usr/local/bin/" + name, nil }
+	setSyncTestHome(t, home)
 
 	if _, err := RunSync([]string{"--agents", "codex"}); err != nil {
 		t.Fatalf("RunSync() error = %v", err)
