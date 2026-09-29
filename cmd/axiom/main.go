@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
@@ -12,7 +13,6 @@ import (
 	"runtime"
 	"strings"
 	"syscall"
-	"encoding/json"
 	"time"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/app"
@@ -111,7 +111,7 @@ COMANDOS DE GOBERNANZA Y WORKSPACE:
 ` + skillCollisionNote + `
   knowledge sweep      Barrido rápido técnico y funcional del proyecto (soporta --json, --headless)
   knowledge crawl      Crawling exhaustivo desacoplado por unidades de trabajo (soporta --plan, --record-unit, --status, --finalize)
-  knowledge query      Consulta spec-first fundamentada con evidencias de código y auto-enriquecimiento
+  knowledge query      Consulta spec-first fundamentada con evidencias de código (solo lectura por defecto)
   semantic status      Diagnostica los conectores semánticos (Serena, CodeGraph, AST) y salud del workspace
   semantic symbols     Consulta y filtra símbolos de código (struct, interface, func, method)
   semantic inspect     Inspecciona el grafo de dependencias entre paquetes del workspace
@@ -2123,11 +2123,27 @@ func runKnowledgeQuery(args []string) {
 	cwdFlag := fs.String("cwd", ".", "Directorio raíz del proyecto")
 	typeFlag := fs.String("type", "auto", "Lente de análisis: auto, technical, functional")
 	deepFlag := fs.Bool("deep", false, "Forzar inspección profunda de código ignorando la spec viva")
-	_ = fs.Parse(args)
+	jsonFlag := fs.Bool("json", false, "Emitir resultado en formato JSON estructurado")
+	enrichFlag := fs.Bool("enrich", false, "Habilitar auto-enriquecimiento de la spec viva si hay evidencias relevantes (solo lectura por defecto)")
+	var flagArgs []string
+	var posArgs []string
+	for i := 0; i < len(args); i++ {
+		arg := args[i]
+		if strings.HasPrefix(arg, "-") {
+			flagArgs = append(flagArgs, arg)
+			flagName := strings.TrimLeft(arg, "-")
+			if !strings.Contains(arg, "=") && (flagName == "cwd" || flagName == "type") && i+1 < len(args) && !strings.HasPrefix(args[i+1], "-") {
+				i++
+				flagArgs = append(flagArgs, args[i])
+			}
+		} else {
+			posArgs = append(posArgs, arg)
+		}
+	}
+	_ = fs.Parse(flagArgs)
 
-	posArgs := fs.Args()
 	if len(posArgs) == 0 {
-		fmt.Println("Error: pregunta requerida. Uso: axiom knowledge query \"<pregunta>\" [--type technical|functional]")
+		fmt.Println("Error: pregunta requerida. Uso: axiom knowledge query \"<pregunta>\" [--type technical|functional] [--json] [--enrich]")
 		os.Exit(1)
 	}
 
@@ -2137,10 +2153,17 @@ func runKnowledgeQuery(args []string) {
 		Question:      question,
 		Type:          knowledge.QueryType(*typeFlag),
 		ForceDeep:     *deepFlag,
+		Enrich:        *enrichFlag,
 	})
 	if err != nil {
 		fmt.Printf("[ERROR] Fallo al procesar la consulta: %v\n", err)
 		os.Exit(1)
+	}
+
+	if *jsonFlag {
+		data, _ := json.MarshalIndent(res, "", "  ")
+		fmt.Println(string(data))
+		return
 	}
 
 	fmt.Println("================================================================================")
@@ -2167,6 +2190,8 @@ func runKnowledgeQuery(args []string) {
 		fmt.Println("Origen: Resuelto directamente desde la Spec Viva (Spec-First).")
 	} else if res.SpecUpdated {
 		fmt.Printf("Auto-enriquecimiento: Nueva regla documentada en %s y catálogo openspec/INDEX.md actualizado.\n", res.TargetSpecPath)
+	} else {
+		fmt.Println("Modo: Consulta de solo lectura (especificaciones vivas intactas).")
 	}
 }
 

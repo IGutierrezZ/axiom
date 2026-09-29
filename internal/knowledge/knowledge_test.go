@@ -147,6 +147,7 @@ func CalculateRate(weight float64) float64 {
 		WorkspaceRoot: tempWs,
 		SpecsRoot:     specsRoot,
 		Question:      "¿Qué es la tarifa_plana_envio?",
+		Enrich:        true,
 	})
 	if err != nil {
 		t.Fatalf("RunQuery falló: %v", err)

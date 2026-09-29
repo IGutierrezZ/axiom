@@ -4,8 +4,8 @@ import "time"
 
 // AmbiguityItem representa una duda, inconsistencia o laguna técnica detectada durante el barrido.
 type AmbiguityItem struct {
-	Category    string `json:"category"`    // "architecture", "dependency", "module", "orphan"
-	Severity    string `json:"severity"`    // "low", "medium", "high"
+	Category    string `json:"category"` // "architecture", "dependency", "module", "orphan"
+	Severity    string `json:"severity"` // "low", "medium", "high"
 	Path        string `json:"path"`
 	Description string `json:"description"`
 	Remediation string `json:"remediation,omitempty"`
@@ -63,6 +63,7 @@ type QueryOptions struct {
 	Question      string
 	Type          QueryType
 	ForceDeep     bool
+	Enrich        bool
 }
 
 // QueryResult detalla la respuesta estructurada y los efectos secundarios de auto-enriquecimiento.
