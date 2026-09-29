@@ -18,7 +18,7 @@ Implementar en Axiom el motor de generación exhaustiva de especificaciones viva
 - [x] **T1 · Modelo de datos y manifiesto de trabajo (`job.json`)**
   - Definir estructuras Go para `CrawlJob`, `CrawlUnit`, dependencias, interfaces y estados (`pending`, `in_progress`, `completed`, `failed`).
   - Serialización y deserialización atómica en `.axiom/knowledge/crawl-job.json`.
-- [ ] **T2 · Motor de particionamiento determinista (`--plan`)**
+- [x] **T2 · Motor de particionamiento determinista (`--plan`)**
   - Extender `internal/knowledge` para descomponer el repositorio a nivel de módulos y submódulos a partir de AST e importaciones.
   - Generación de contexto acotado por unidad (ficheros, firmas públicas, interfaces expuestas).
 - [ ] **T3 · Inyección y validación de unidades (`--record-unit`)**
