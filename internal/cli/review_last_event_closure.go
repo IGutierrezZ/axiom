@@ -96,7 +96,8 @@ func closeCorrectionOnCapturedValidator(
 ) (*reviewLastEventClosureResult, error) {
 	state := record.State
 	if err := reviewtransaction.ValidateTargetedValidationRequest(request); err != nil ||
-		validation.TargetedValidationRequestHash != request.RequestHash ||
+		(validation.TargetedValidationRequestHash != request.RequestHash &&
+			validation.TargetedValidationRequestHash != request.ForContract(ReviewIntegrationContractV2).RequestHash) ||
 		validation.CorrectionTargetIdentity != request.CorrectionTargetIdentity {
 		return nil, fmt.Errorf("targeted validator result does not bind the correction request") // refusal:by-design operator-knowledge: only the exact provider-issued request can close its bound correction
 	}

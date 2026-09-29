@@ -278,7 +278,8 @@ func RunReviewCaptureValidation(args []string, stdout io.Writer) error {
 	if request.ValidationRequest.CorrectionTargetIdentity != binding.target {
 		return reviewPreflightRefusal(reviewPreflightCaptureBindingMismatchReason, errors.New("review capture-validation target does not match the frozen correction target identity; refresh the binding with gentle-ai review status --cwd <repo> --contract gentle-ai.review-integration/v2 --next-transition"))
 	}
-	if request.ValidationRequest.RequestHash != binding.requestHash {
+	if request.ValidationRequest.RequestHash != binding.requestHash &&
+		request.ValidationRequest.ForContract(ReviewIntegrationContractV2).RequestHash != binding.requestHash {
 		return reviewPreflightRefusal(reviewPreflightCaptureBindingMismatchReason, errors.New("review capture-validation request hash does not match the frozen targeted validation request; refresh the binding with gentle-ai review status --cwd <repo> --contract gentle-ai.review-integration/v2 --next-transition"))
 	}
 	if binding.materialize {

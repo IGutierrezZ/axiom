@@ -200,7 +200,9 @@ func compactTargetedValidatorEvidenceHashForDomain(domain string, check CompactT
 }
 
 func (evidence CompactTargetedValidatorEvidence) Validate(request TargetedValidationRequest, validation ScopedValidationResult) error {
-	if evidence.TargetedValidationRequestHash != request.RequestHash || evidence.CorrectionTargetIdentity != request.CorrectionTargetIdentity ||
+	if (evidence.TargetedValidationRequestHash != request.RequestHash &&
+		evidence.TargetedValidationRequestHash != request.ForContract("gentle-ai.review-integration/v2").RequestHash) ||
+		evidence.CorrectionTargetIdentity != request.CorrectionTargetIdentity ||
 		evidence.OriginalCriteria.Passed != validation.OriginalCriteria.Passed || evidence.CorrectionRegression.Passed != validation.CorrectionRegression.Passed ||
 		evidence.FollowUps == nil || !reflect.DeepEqual(evidence.FollowUps, validation.FollowUps) ||
 		compactTargetedValidatorEvidenceHashForDomain("original-criteria", evidence.OriginalCriteria) != validation.OriginalCriteria.EvidenceHash ||

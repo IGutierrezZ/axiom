@@ -677,6 +677,7 @@ func TestReviewCaptureValidationMaterializesSubmitsAndCloses(t *testing.T) {
 	reviewEnabledHome(t)
 	t.Setenv(reviewPiHostRelayContractEnvironment, reviewPiHostRelayContract)
 	repo, lineage, request := providerCorrectionReadyWithoutVerificationEvidence(t)
+	request = request.ForContract(ReviewIntegrationContractV2)
 	store, err := reviewtransaction.CompactAuthoritativeStore(t.Context(), repo, lineage)
 	if err != nil {
 		t.Fatal(err)

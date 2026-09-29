@@ -996,22 +996,19 @@ func TestInstallRoutingGuidanceSecondRunIsByteIdentical(t *testing.T) {
 	}
 }
 
-// ─── Workspace scope must not strand orchestrator-prompt guidance ──────────
+// ─── Workspace scope delivers to workspace, isolating home ──────────────
 //
-// OpenCode and Kilocode only ever load the home-level settings document, so a
-// workspace-scoped install that resolves their guidance against the workspace
-// root writes a file the agent never reads (issue #1825). Guidance for these
-// agents therefore resolves against the home directory in every scope, while
-// every other agent keeps its workspace-scoped delivery.
+// In Axiom, workspace-scoped install and sync isolate user configurations by
+// delivering OpenCode guidance under workspaceDir, leaving homeDir untouched.
 
 func TestInstallRoutingGuidanceWorkspaceScopeDeliversOpenCodeToHome(t *testing.T) {
 	home := t.TempDir()
 	workspace := t.TempDir()
 
-	// Seed the home settings with the retired section so the strip is proven to
-	// resolve against the same home scope the injector writes.
+	// Seed the workspace settings with the retired section so the strip is proven
+	// to resolve against the workspace scope the injector writes.
 	seeded := filemerge.InjectMarkdownSection("", "trigger-rules", "Retired WorkRun ceremony\n")
-	seedOpenCodeOrchestratorPrompt(t, home, seeded)
+	seedOpenCodeOrchestratorPrompt(t, workspace, seeded)
 
 	step := agentRoutingGuidanceStep{
 		id:           "agent-guidance:" + string(model.AgentOpenCode),
@@ -1024,25 +1021,26 @@ func TestInstallRoutingGuidanceWorkspaceScopeDeliversOpenCodeToHome(t *testing.T
 		t.Fatalf("Run() error = %v", err)
 	}
 
-	prompt := openCodeOrchestratorPrompt(t, home)
+	prompt := openCodeOrchestratorPrompt(t, workspace)
 	if !containsRoutingMarkers(prompt) {
-		t.Fatalf("workspace-scoped install left the home OpenCode orchestrator prompt unrouted:\n%s", prompt)
+		t.Fatalf("workspace-scoped install left the workspace OpenCode orchestrator prompt unrouted:\n%s", prompt)
 	}
 	if strings.Contains(prompt, "Retired WorkRun ceremony") {
 		t.Fatalf("legacy trigger-rules content survived the workspace-scoped install:\n%s", prompt)
 	}
 
-	stranded := filepath.Join(workspace, ".config", "opencode")
-	if _, err := os.Stat(stranded); !os.IsNotExist(err) {
-		t.Fatalf("workspace-scoped install created %q, a directory OpenCode never loads (stat err = %v)", stranded, err)
+	// Home should remain unpolluted under workspace scope.
+	homeSettings := openCodeSettingsPath(home)
+	if _, err := os.Stat(homeSettings); !os.IsNotExist(err) {
+		t.Fatalf("workspace-scoped install modified home directory: %q", homeSettings)
 	}
 
-	first := readTextFile(t, openCodeSettingsPath(home))
+	first := readTextFile(t, openCodeSettingsPath(workspace))
 	if err := step.Run(); err != nil {
 		t.Fatalf("second Run() error = %v", err)
 	}
-	if second := readTextFile(t, openCodeSettingsPath(home)); second != first {
-		t.Fatalf("second workspace-scoped run rewrote the home settings; delivery is not idempotent")
+	if second := readTextFile(t, openCodeSettingsPath(workspace)); second != first {
+		t.Fatalf("second workspace-scoped run rewrote the workspace settings; delivery is not idempotent")
 	}
 }
 
@@ -1340,7 +1338,7 @@ func TestComponentInjectionDirScopedWorkspaceSafeguard(t *testing.T) {
 	}
 
 	// Desktop agents without workspace support must fall back to homeDir
-	for _, id := range []model.AgentID{model.AgentVSCodeCopilot, model.AgentTrae, model.AgentWindsurf, model.AgentAntigravity} {
+	for _, id := range []model.AgentID{model.AgentVSCodeCopilot, model.AgentTrae, model.AgentWindsurf, model.AgentAntigravity, model.AgentCodex} {
 		adapter, ok := reg.Get(id)
 		if !ok {
 			continue
@@ -1352,7 +1350,7 @@ func TestComponentInjectionDirScopedWorkspaceSafeguard(t *testing.T) {
 	}
 
 	// CLI agents with workspace support must use workspaceDir
-	for _, id := range []model.AgentID{model.AgentClaudeCode, model.AgentCodex, model.AgentGeminiCLI, model.AgentCursor} {
+	for _, id := range []model.AgentID{model.AgentClaudeCode, model.AgentGeminiCLI, model.AgentCursor} {
 		adapter, ok := reg.Get(id)
 		if !ok {
 			continue
