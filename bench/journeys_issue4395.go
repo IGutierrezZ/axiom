@@ -43,7 +43,7 @@ func issue4395DisableSandboxTelemetry(sandbox *Sandbox) error {
 	if err := json.Unmarshal([]byte(strings.TrimSpace(observation.Stdout)), &result); err != nil {
 		return fmt.Errorf("parse telemetry disable JSON: %w", err)
 	}
-	if result.Schema != "gentle-ai.telemetry-status/v1" || result.Operation != "disable" || result.Enabled || result.Source != "state" {
+	if (result.Schema != "gentle-ai.telemetry-status/v1" && result.Schema != "axiom.telemetry-status/v1") || result.Operation != "disable" || result.Enabled || result.Source != "state" {
 		return fmt.Errorf("telemetry disable = schema=%q operation=%q enabled=%t source=%q, want telemetry-status/v1/disable/false/state", result.Schema, result.Operation, result.Enabled, result.Source)
 	}
 	return nil
@@ -61,7 +61,7 @@ func issue4395TriggerDisabledAfterSandboxOptOut(_ *Sandbox, observation Observat
 	if err := json.Unmarshal([]byte(strings.TrimSpace(observation.Stdout)), &result); err != nil {
 		return fmt.Errorf("parse telemetry trigger JSON: %w", err)
 	}
-	if result.Schema != "gentle-ai.telemetry-trigger/v1" || result.Decision != "disabled" || result.Source != "state" {
+	if (result.Schema != "gentle-ai.telemetry-trigger/v1" && result.Schema != "axiom.telemetry-trigger/v1") || result.Decision != "disabled" || result.Source != "state" {
 		return fmt.Errorf("telemetry trigger = schema=%q decision=%q source=%q, want telemetry-trigger/v1/disabled/state after the sandbox opt-out", result.Schema, result.Decision, result.Source)
 	}
 	return nil
@@ -78,7 +78,7 @@ func issue4395PreviewReportsRDDEnabled(_ *Sandbox, observation Observation) erro
 	if err := json.Unmarshal([]byte(strings.TrimSpace(observation.Stdout)), &event); err != nil {
 		return fmt.Errorf("parse telemetry preview JSON: %w", err)
 	}
-	if event.Schema != "gentle-ai.telemetry-event/v1" || !event.RDDEnabled {
+	if (event.Schema != "gentle-ai.telemetry-event/v1" && event.Schema != "axiom.telemetry-event/v1") || !event.RDDEnabled {
 		return fmt.Errorf("telemetry preview = schema=%q rdd_enabled=%t, want telemetry-event/v1 and true", event.Schema, event.RDDEnabled)
 	}
 	return nil

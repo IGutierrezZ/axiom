@@ -34,13 +34,13 @@ func TestTelemetryPolicyReadOnly(t *testing.T) {
 		{"missing notice", `{"install_id":"existing","enabled":true}`, "", "", "state", "state_unavailable", false},
 		{"null enabled", `{"install_id":"existing","enabled":null,"notice_shown":true}`, "", "", "state", "state_unavailable", false},
 		{"dnt", complete, "DO_NOT_TRACK", "yes", "DO_NOT_TRACK", "disabled", false},
-		{"optout", complete, "GENTLE_AI_TELEMETRY", "0", "GENTLE_AI_TELEMETRY", "disabled", false},
+		{"optout", complete, "AXIOM_TELEMETRY", "0", "AXIOM_TELEMETRY", "disabled", false},
 		{"ci", complete, "CI", "1", "CI", "disabled", false},
 		{"actions", complete, "GITHUB_ACTIONS", "true", "CI", "disabled", false},
 		{"false dnt", complete, "DO_NOT_TRACK", " FALSE ", "default", "enabled", true},
 		{"false ci", complete, "CI", "0", "default", "enabled", true},
 		{"false actions", complete, "GITHUB_ACTIONS", "false", "default", "enabled", true},
-		{"nonzero optout", complete, "GENTLE_AI_TELEMETRY", "false", "default", "enabled", true},
+		{"nonzero optout", complete, "AXIOM_TELEMETRY", "false", "default", "enabled", true},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			home := telemetryTestHome(t)
@@ -220,6 +220,7 @@ func validateTelemetrySchema(t *testing.T, schema *jsonschema.Schema, payload []
 func enableTelemetryForTest(t *testing.T) {
 	t.Helper()
 	t.Setenv("DO_NOT_TRACK", "")
+	t.Setenv("AXIOM_TELEMETRY", "")
 	t.Setenv("GENTLE_AI_TELEMETRY", "")
 	t.Setenv("CI", "")
 	t.Setenv("GITHUB_ACTIONS", "")
@@ -241,6 +242,7 @@ func telemetryTestHome(t *testing.T) string {
 	t.Setenv("DO_NOT_TRACK", "1")
 	// Pin the other kill switches too, so a test that re-enables telemetry
 	// with DO_NOT_TRACK="" is hermetic on a CI runner or an opted-out shell.
+	t.Setenv("AXIOM_TELEMETRY", "")
 	t.Setenv("GENTLE_AI_TELEMETRY", "")
 	t.Setenv("CI", "")
 	return home

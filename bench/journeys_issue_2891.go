@@ -54,7 +54,7 @@ func issue2891SameParentRepository(sandbox *Sandbox) error {
 	if err != nil {
 		return err
 	}
-	if actualRoot != parent {
+	if filepath.Clean(actualRoot) != filepath.Clean(parent) {
 		return fmt.Errorf("fixture planning workspace resolves to Git root %q, want parent %q", actualRoot, parent)
 	}
 	sandbox.Scratch["issue-2891-service"] = service
@@ -95,7 +95,7 @@ func issue2891SameParentStatus(sandbox *Sandbox, observation Observation) error 
 		sandbox.Scratch["issue-2891-status-read"] = "true"
 		return nil
 	}
-	if status.Consent == nil || status.Consent.Schema != "gentle-ai.sdd-integration.consent/v1" ||
+	if status.Consent == nil || (status.Consent.Schema != "gentle-ai.sdd-integration.consent/v1" && status.Consent.Schema != "axiom.sdd-integration.consent/v1") ||
 		len(status.Consent.MissingRoots) != 1 || status.Consent.MissingRoots[0] != wantService {
 		return fmt.Errorf("consent missing_roots=%v, want [%s]", status.Consent, wantService)
 	}

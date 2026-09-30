@@ -33,7 +33,8 @@ func TestSDDStatusDoesNotPrepareConsentMarker(t *testing.T) {
 	if status.Consent != nil {
 		t.Fatalf("read-only status emitted usable consent: %#v", status.Consent)
 	}
-	if !strings.Contains(strings.Join(status.BlockedReasons, "\n"), `sdd-continue "marker-status"`) {
+	blocked := strings.Join(status.BlockedReasons, "\n")
+	if !strings.Contains(blocked, `sdd-continue "marker-status"`) && !strings.Contains(blocked, `axiom sdd continue "marker-status"`) {
 		t.Fatalf("status did not name explicit preparation: %v", status.BlockedReasons)
 	}
 }

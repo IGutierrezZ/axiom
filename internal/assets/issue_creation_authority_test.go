@@ -23,7 +23,9 @@ func TestIssueCreationAuthorityBoundary(t *testing.T) {
 		t.Fatalf("read AGENTS.md: %v", err)
 	}
 	const canonicalRegistryRow = "| `issue-creation` | When creating a GitHub issue, reporting a bug, or requesting a feature. | [`internal/assets/skills/issue-creation/SKILL.md`](internal/assets/skills/issue-creation/SKILL.md) |"
-	if !strings.Contains(string(agents), canonicalRegistryRow) {
+	const axiomRegistryRow = "| `issue-creation` | When creating a GitHub issue, reporting a bug, or requesting a feature. | project | `internal/assets/skills/issue-creation/SKILL.md` |"
+	const axiomRegistryLinkRow = "| `issue-creation` | When creating a GitHub issue, reporting a bug, or requesting a feature. | project | [`internal/assets/skills/issue-creation/SKILL.md`](internal/assets/skills/issue-creation/SKILL.md) |"
+	if !strings.Contains(string(agents), canonicalRegistryRow) && !strings.Contains(string(agents), axiomRegistryRow) && !strings.Contains(string(agents), axiomRegistryLinkRow) {
 		t.Fatalf("AGENTS.md must route the canonical issue-creation identity directly to the embedded authority; missing row %q", canonicalRegistryRow)
 	}
 	for _, stale := range []string{"gentle-ai-issue-creation", "[`skills/issue-creation/SKILL.md`](skills/issue-creation/SKILL.md)"} {
@@ -37,7 +39,10 @@ func TestIssueCreationAuthorityBoundary(t *testing.T) {
 		t.Fatal("embedded issue-creation authority must retain canonical frontmatter identity name: issue-creation")
 	}
 
-	collaborationPath := filepath.Join(repositoryRoot, "skills", "gentle-ai-collab-perfect", "SKILL.md")
+	collaborationPath := filepath.Join(repositoryRoot, "skills", "axiom-collab-perfect", "SKILL.md")
+	if _, err := os.Stat(collaborationPath); os.IsNotExist(err) {
+		collaborationPath = filepath.Join(repositoryRoot, "skills", "gentle-ai-collab-perfect", "SKILL.md")
+	}
 	collaboration, err := os.ReadFile(collaborationPath)
 	if err != nil {
 		t.Fatalf("read collaboration skill: %v", err)
@@ -71,8 +76,12 @@ func TestIssueCreationAuthorityBoundary(t *testing.T) {
 
 func TestPRLabelMutationsUseCanonicalIssueCreationAuthority(t *testing.T) {
 	repositoryRoot := filepath.Join("..", "..")
+	collabPath := filepath.Join(repositoryRoot, "skills", "axiom-collab-perfect", "SKILL.md")
+	if _, err := os.Stat(collabPath); os.IsNotExist(err) {
+		collabPath = filepath.Join(repositoryRoot, "skills", "gentle-ai-collab-perfect", "SKILL.md")
+	}
 	for _, path := range []string{
-		filepath.Join(repositoryRoot, "skills", "gentle-ai-collab-perfect", "SKILL.md"),
+		collabPath,
 		filepath.Join(repositoryRoot, "skills", "branch-pr", "SKILL.md"),
 	} {
 		content, err := os.ReadFile(path)

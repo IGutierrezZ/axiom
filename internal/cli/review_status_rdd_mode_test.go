@@ -94,11 +94,13 @@ func TestNegotiatedStatusMatchesReviewStartRDDMode(t *testing.T) {
 func TestNegotiatedStatusFailsWhenEffectiveModeCannotResolve(t *testing.T) {
 	home := reviewModeHome(t)
 	repo := initReviewCLIRepo(t)
-	if err := os.MkdirAll(filepath.Join(home, ".gentle-ai"), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(home, ".gentle-ai", "state.json"), []byte("{\n"), 0o600); err != nil {
-		t.Fatal(err)
+	for _, dir := range []string{".axiom", ".gentle-ai"} {
+		if err := os.MkdirAll(filepath.Join(home, dir), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(home, dir, "state.json"), []byte("{\n"), 0o600); err != nil {
+			t.Fatal(err)
+		}
 	}
 
 	var output bytes.Buffer

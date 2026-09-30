@@ -1413,7 +1413,8 @@ func (transition ReviewNextTransition) Validate() error {
 			}
 			if input.ValidationRequest != nil {
 				request := input.ValidationRequest
-				externalForm := input.CaptureOperation == "external.run_targeted_validation" && input.Schema == reviewtransaction.TargetedValidationRequestSchema
+				externalForm := input.CaptureOperation == "external.run_targeted_validation" &&
+					(input.Schema == reviewtransaction.TargetedValidationRequestSchema || input.Schema == reviewtransaction.LegacyTargetedValidationRequestSchema)
 				hostRelayForm := input.CaptureOperation == reviewCaptureValidationCaptureOperation
 				if !externalForm && !hostRelayForm ||
 					arguments["lineage"] != request.LineageID || arguments["expected-revision"] != request.ExpectedRevision ||

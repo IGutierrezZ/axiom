@@ -3,6 +3,7 @@ package state
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"log"
 	"os"
 	"path/filepath"
@@ -205,6 +206,15 @@ func Read(homeDir string) (InstallState, error) {
 	canonicalPath := Path(homeDir)
 	data, err := os.ReadFile(canonicalPath)
 	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			legacyPath := filepath.Join(homeDir, legacyStateDir, stateFile)
+			if legacyData, legacyErr := os.ReadFile(legacyPath); legacyErr == nil {
+				var s InstallState
+				if err := json.Unmarshal(legacyData, &s); err == nil {
+					return s, nil
+				}
+			}
+		}
 		return InstallState{}, err
 	}
 	var s InstallState

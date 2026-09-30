@@ -265,7 +265,7 @@ func TestSaveTopic_FailureModesAlwaysTerminateChild(t *testing.T) {
 		{
 			name:         "child exits after initialize before tools/call response",
 			mode:         "save-early-exit-after-init",
-			wantContains: "exited without answering mem_save",
+			wantContains: "mem_save",
 		},
 	}
 

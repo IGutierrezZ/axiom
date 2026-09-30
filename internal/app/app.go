@@ -60,7 +60,7 @@ func Run() error {
 	return RunArgs(os.Args[1:], os.Stdout)
 }
 
-const nonInteractiveTUIError = "gentle-ai requires both stdin and stdout to be terminals (TTYs); use --version, gentle-ai update, or --help for non-interactive use"
+const nonInteractiveTUIError = "axiom requires both stdin and stdout to be terminals (TTYs); use --version, axiom update, or --help for non-interactive use"
 
 func RunArgs(args []string, stdout io.Writer) error {
 	if len(args) == 0 && (!isattyFn(os.Stdin.Fd()) || !isattyFn(os.Stdout.Fd())) {
@@ -593,8 +593,10 @@ func tuiSync(homeDir string) tui.SyncFunc {
 
 		workspaceDir, _ := os.Getwd()
 		scope, _ := cli.ResolveInstallScope("")
-		if _, statErr := os.Stat(filepath.Join(workspaceDir, "axiom.yaml")); statErr == nil || scope == cli.ScopeWorkspace {
-			scope = cli.ScopeWorkspace
+		if scope != cli.ScopeGlobal {
+			if _, statErr := os.Stat(filepath.Join(workspaceDir, "axiom.yaml")); statErr == nil || scope == cli.ScopeWorkspace {
+				scope = cli.ScopeWorkspace
+			}
 		}
 
 		result, err := cli.RunSyncWithSelectionScoped(homeDir, workspaceDir, scope, selection)

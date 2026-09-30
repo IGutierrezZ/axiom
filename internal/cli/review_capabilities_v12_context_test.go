@@ -29,7 +29,7 @@ func TestReviewCapabilitiesV13AdvertisesProviderAdmissionAndRecovery(t *testing.
 	for _, schema := range []string{
 		reviewtransaction.ArtifactSubjectSchemaV1,
 		reviewtransaction.AdmittedReviewerResultSchemaV1,
-		reviewtransaction.TargetedValidationRequestSchema,
+		reviewtransaction.LegacyTargetedValidationRequestSchema,
 	} {
 		if !slices.Contains(surface.Schemas, schema) {
 			t.Fatalf("v1.3 schemas do not advertise %q: %v", schema, surface.Schemas)

@@ -1256,7 +1256,8 @@ func runReviewStatus(ctx context.Context, args []string, stdout io.Writer) error
 							if requestErr != nil {
 								artifactErr = requestErr
 							} else {
-								validationRequest = &request
+								adapted := request.ForContract(*contract)
+								validationRequest = &adapted
 								result.ValidationRequest = validationRequest
 								// The correction-stage sibling of the lens probe
 								// below (:1287): the validator request STATUS just
@@ -2663,7 +2664,9 @@ func (result facadeValidationResult) compact(fixDeltaHash string, findingIDs []s
 			return reviewtransaction.ScopedValidationResult{}, err
 		}
 	}
-	if result.TargetedValidationRequestHash != request.RequestHash || result.CorrectionTargetIdentity != request.CorrectionTargetIdentity {
+	if (result.TargetedValidationRequestHash != request.RequestHash &&
+		result.TargetedValidationRequestHash != request.ForContract(ReviewIntegrationContractV2).RequestHash) ||
+		result.CorrectionTargetIdentity != request.CorrectionTargetIdentity {
 		return reviewtransaction.ScopedValidationResult{}, errors.New("targeted validation result does not bind the provider-owned correction request") // refusal:by-design operator-knowledge: the external validator must echo both bindings from the provider-owned request
 	}
 	if result.FollowUps == nil {
@@ -2671,7 +2674,7 @@ func (result facadeValidationResult) compact(fixDeltaHash string, findingIDs []s
 	}
 	return reviewtransaction.ScopedValidationResult{
 		LedgerIDs: append([]string(nil), findingIDs...), FixCausedFindings: []reviewtransaction.Finding{}, FollowUps: result.FollowUps,
-		TargetedValidationRequestHash: request.RequestHash, CorrectionTargetIdentity: request.CorrectionTargetIdentity,
+		TargetedValidationRequestHash: result.TargetedValidationRequestHash, CorrectionTargetIdentity: request.CorrectionTargetIdentity,
 		OriginalCriteria: reviewtransaction.ValidationCheck{
 			EvidenceHash: facadeValueHash("original-criteria", result.OriginalCriteria), FixDeltaHash: fixDeltaHash, Passed: result.OriginalCriteria.Passed,
 		},

@@ -4,8 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -131,9 +133,26 @@ func consentInstanceToken(t *testing.T, invocation string) string {
 func consentShellEnvironment(t *testing.T, home string) []string {
 	t.Helper()
 	binDir := t.TempDir()
-	if err := os.Symlink(organicBinary, filepath.Join(binDir, "gentle-ai")); err != nil {
-		t.Fatal(err)
+	createShim := func(targetName string) {
+		names := []string{targetName}
+		if runtime.GOOS == "windows" {
+			names = append(names, targetName+".exe")
+		}
+		for _, name := range names {
+			dst := filepath.Join(binDir, name)
+			if err := os.Symlink(organicBinary, dst); err != nil {
+				input, readErr := os.ReadFile(organicBinary)
+				if readErr != nil {
+					t.Fatalf("read binary for shim: %v", readErr)
+				}
+				if writeErr := os.WriteFile(dst, input, 0o755); writeErr != nil {
+					t.Fatalf("write binary shim: %v", writeErr)
+				}
+			}
+		}
 	}
+	createShim("gentle-ai")
+	createShim("axiom")
 	environment := organicEnvironment(home)
 	for index, entry := range environment {
 		if strings.HasPrefix(entry, "PATH=") {
@@ -145,10 +164,25 @@ func consentShellEnvironment(t *testing.T, home string) []string {
 
 func runConsentInvocation(t *testing.T, environment []string, dir, invocation string) {
 	t.Helper()
-	if !strings.HasPrefix(invocation, "gentle-ai ") {
-		t.Fatalf("invocation is not a gentle-ai command: %q", invocation)
+	if !strings.HasPrefix(invocation, "gentle-ai ") && !strings.HasPrefix(invocation, "axiom ") {
+		t.Fatalf("invocation is not a gentle-ai or axiom command: %q", invocation)
 	}
-	if stdout, stderr, err := runOrganicCommand(t, "sh", dir, environment, "-c", invocation); err != nil {
+	sh := "sh"
+	if _, err := exec.LookPath("sh"); err != nil {
+		for _, candidate := range []string{
+			`C:\Program Files\Git\bin\sh.exe`,
+			`C:\Program Files\Git\usr\bin\sh.exe`,
+		} {
+			if _, statErr := os.Stat(candidate); statErr == nil {
+				sh = candidate
+				break
+			}
+		}
+		if sh == "sh" {
+			t.Skip("sh not found in PATH")
+		}
+	}
+	if stdout, stderr, err := runOrganicCommand(t, sh, dir, environment, "-c", invocation); err != nil {
 		t.Fatalf("invocation %q failed: %v\nstdout:\n%s\nstderr:\n%s", invocation, err, stdout, stderr)
 	}
 }
@@ -192,7 +226,7 @@ func TestSDDEditAuthorityConsentGrantLoop(t *testing.T) {
 	if blocked.Consent == nil {
 		t.Fatalf("blocked(edit_authority_missing) status carries no consent envelope: %s", blockedPayload)
 	}
-	if blocked.Consent.Schema != "gentle-ai.sdd-integration.consent/v1" || blocked.Consent.Change != change ||
+	if (blocked.Consent.Schema != "gentle-ai.sdd-integration.consent/v1" && blocked.Consent.Schema != "axiom.sdd-integration.consent/v1") || blocked.Consent.Change != change ||
 		len(blocked.Consent.Choices) != 2 || blocked.Consent.Choices[0].Answer != "granted" ||
 		blocked.Consent.Choices[1].Answer != "declined" {
 		t.Fatalf("consent envelope identity is wrong: %s", blockedPayload)
@@ -279,7 +313,7 @@ func TestSDDSameParentRepositoryConsentGrantLoop(t *testing.T) {
 		!strings.Contains(strings.Join(blocked.BlockedReasons, "\n"), "blocked(edit_authority_missing)") {
 		t.Fatalf("same-parent fixture is not blocked on edit authority: %s", blockedPayload)
 	}
-	if blocked.Consent == nil || blocked.Consent.Schema != "gentle-ai.sdd-integration.consent/v1" ||
+	if blocked.Consent == nil || (blocked.Consent.Schema != "gentle-ai.sdd-integration.consent/v1" && blocked.Consent.Schema != "axiom.sdd-integration.consent/v1") ||
 		blocked.Consent.Change != change || len(blocked.Consent.MissingRoots) != 1 ||
 		blocked.Consent.MissingRoots[0] != service {
 		t.Fatalf("same-parent consent envelope = %#v, want one missing root %s: %s", blocked.Consent, service, blockedPayload)
@@ -337,12 +371,18 @@ func TestSDDPreparationInvocationRoundTripsSpacedChange(t *testing.T) {
 			initConsentGitRepo(t, filepath.Join(workspace, "service"), false)
 			seedConsentChange(t, planning, change, "- [ ] Update `../service/main.go`\n")
 			initial, payload := consentStatus(t, environment, planning, change)
-			_, tail, found := strings.Cut(strings.Join(initial.BlockedReasons, "\n"), "`gentle-ai sdd-continue ")
+			prefix := "`axiom sdd continue "
+			_, tail, found := strings.Cut(strings.Join(initial.BlockedReasons, "\n"), prefix)
+			if !found {
+				prefix = "`gentle-ai sdd-continue "
+				_, tail, found = strings.Cut(strings.Join(initial.BlockedReasons, "\n"), prefix)
+			}
 			arguments, _, closed := strings.Cut(tail, "`")
 			if !found || !closed || initial.Consent != nil {
 				t.Fatalf("missing preparation-only invocation: %s", payload)
 			}
-			runConsentInvocation(t, environment, planning, "gentle-ai sdd-continue "+arguments)
+			cmdPrefix := strings.TrimPrefix(prefix, "`")
+			runConsentInvocation(t, environment, planning, cmdPrefix+arguments)
 			prepared, payload := consentStatus(t, environment, planning, change)
 			if prepared.Consent == nil || prepared.Consent.Change != change || prepared.ApplyState != "blocked" || len(prepared.ActionContext.AllowedEditRoots) != 1 {
 				t.Fatalf("emitted invocation lost selection or granted source authority: %s", payload)

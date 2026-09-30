@@ -123,19 +123,21 @@ func TestEveryReviewStopReasonCodeHasAShippedContinuation(t *testing.T) {
 	// once as D, then every grouped entry may name that exact alias. This keeps
 	// the rendered contract compact without letting an alias conceal a changed
 	// command or a dead-end terminal code.
-	const disableCommand = "`D` means `gentle-ai review mode disable --scope clone --cwd <B>`"
+	const disableCommandGentleAI = "`D` means `gentle-ai review mode disable --scope clone --cwd <B>`"
+	const disableCommandAxiom = "`D` means `axiom review mode disable --scope clone --cwd <B>`"
 	const statusCommand = "`S` means re-query the exact captured target-root STATUS command with lineage and target."
-	for alias, definition := range map[string]string{"D": disableCommand, "S": statusCommand} {
-		if !strings.Contains(section, definition) {
-			t.Fatalf("shipped %s does not define grouped %s as its exact continuation", reviewLedgerContractAsset, alias)
-		}
+	if !strings.Contains(section, disableCommandGentleAI) && !strings.Contains(section, disableCommandAxiom) {
+		t.Fatalf("shipped %s does not define grouped D as its exact continuation", reviewLedgerContractAsset)
 	}
-	namesOtherContinuation := regexp.MustCompile("`gentle-ai [a-z][a-z-]*|`--[a-z][a-z-]*")
+	if !strings.Contains(section, statusCommand) {
+		t.Fatalf("shipped %s does not define grouped S as its exact continuation", reviewLedgerContractAsset)
+	}
+	namesOtherContinuation := regexp.MustCompile("`(?:gentle-ai|axiom) [a-z][a-z-]*|`--[a-z][a-z-]*")
 	for code, continuation := range assetCodes {
 		if strings.Contains(continuation, "`D`") || strings.Contains(continuation, "`S`") || namesOtherContinuation.MatchString(continuation) {
 			continue
 		}
-		t.Errorf("shipped %s entry for %q names no runnable `gentle-ai` command, no `--flag` to pass on the same invocation, and no D/S continuation alias, so this stop reads as a dead end", reviewLedgerContractAsset, code)
+		t.Errorf("shipped %s entry for %q names no runnable command, no `--flag` to pass on the same invocation, and no D/S continuation alias, so this stop reads as a dead end", reviewLedgerContractAsset, code)
 	}
 
 	// Issue #3972: the clone-local override can only disable, so
@@ -144,8 +146,9 @@ func TestEveryReviewStopReasonCodeHasAShippedContinuation(t *testing.T) {
 	// enables is the global form, and the rdd_disabled continuation must name
 	// it, or the documented loop is rdd_disabled -> clone enable (no-op) ->
 	// rdd_disabled.
-	if continuation := assetCodes["rdd_disabled"]; !strings.Contains(continuation, "`gentle-ai review mode enable --scope global`") {
-		t.Errorf("shipped %s entry for rdd_disabled does not name the command that enables (`gentle-ai review mode enable --scope global`): %q", reviewLedgerContractAsset, continuation)
+	if continuation := assetCodes["rdd_disabled"]; !strings.Contains(continuation, "`gentle-ai review mode enable --scope global`") &&
+		!strings.Contains(continuation, "`axiom review mode enable --scope global`") {
+		t.Errorf("shipped %s entry for rdd_disabled does not name the command that enables: %q", reviewLedgerContractAsset, continuation)
 	}
 }
 
@@ -261,9 +264,9 @@ func TestNamedReviewReopenResultsIsAlwaysComplete(t *testing.T) {
 	}
 }
 
-// reviewModeDisableInvocationRegexp matches any backtick-quoted `gentle-ai
-// review mode disable ...` invocation.
-var reviewModeDisableInvocationRegexp = regexp.MustCompile("`gentle-ai review mode disable[^`]*`")
+// reviewModeDisableInvocationRegexp matches any backtick-quoted
+// review mode disable ... invocation.
+var reviewModeDisableInvocationRegexp = regexp.MustCompile("`(?:gentle-ai|axiom) review mode disable[^`]*`")
 
 // TestNamedReviewModeDisableIsAlwaysCloneScoped is the execution-based
 // RED-first proof for adversarial finding F6: `--scope` defaults to

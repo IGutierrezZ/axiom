@@ -46,7 +46,7 @@ type documentedInvocation struct {
 
 // --- extraction -----------------------------------------------------------
 
-var inlineInvocationRegexp = regexp.MustCompile("`(gentle-ai [^`\n]+)`")
+var inlineInvocationRegexp = regexp.MustCompile("`((?:gentle-ai|axiom) [^`\n]+)`")
 
 func extractInvocations(source, content string) []documentedInvocation {
 	var out []documentedInvocation
@@ -65,7 +65,7 @@ func extractInvocations(source, content string) []documentedInvocation {
 				index++
 				command = strings.TrimSuffix(command, "\\") + " " + strings.TrimSpace(lines[index])
 			}
-			if strings.HasPrefix(command, "gentle-ai ") {
+			if strings.HasPrefix(command, "gentle-ai ") || strings.HasPrefix(command, "axiom ") {
 				out = append(out, documentedInvocation{source: at, command: command})
 			}
 			continue
@@ -202,6 +202,9 @@ func classifyWords(words []string, safeVerbs map[string]bool, repo string) ([]st
 	placeholders := false
 	for index := 0; index < len(words); index++ {
 		word := words[index]
+		if word == "..." {
+			return nil, tierPresence
+		}
 		if optionalWordRegexp.MatchString(word) {
 			continue
 		}

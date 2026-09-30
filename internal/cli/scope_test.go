@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"os"
 	"testing"
 )
 
@@ -69,7 +68,7 @@ func TestResolveInstallScope(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			os.Unsetenv(ScopeAxiomEnvVar)
+			t.Setenv(ScopeAxiomEnvVar, "")
 			if tt.envValue != "" {
 				t.Setenv(scopeEnvVar, tt.envValue)
 			}
@@ -86,8 +85,6 @@ func TestResolveInstallScope(t *testing.T) {
 }
 
 func TestResolveInstallScope_Precedence(t *testing.T) {
-	os.Unsetenv(ScopeAxiomEnvVar)
-
 	t.Setenv(ScopeAxiomEnvVar, "global")
 	got, err := ResolveInstallScope("")
 	if err != nil || got != ScopeGlobal {

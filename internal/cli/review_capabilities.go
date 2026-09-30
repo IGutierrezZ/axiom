@@ -244,7 +244,7 @@ func reviewCapabilitiesStaticSurface(contracts ...string) ReviewCapabilitiesResu
 			ReviewIntegrationStatusSchemaV2,
 			reviewtransaction.ReceiptSchema,
 			reviewResultArtifactSchema,
-			reviewtransaction.TargetedValidationRequestSchema,
+			reviewtransaction.LegacyTargetedValidationRequestSchema,
 			reviewRefuterSchemaID,
 			reviewReviewerSchemaID,
 			reviewValidatorSchemaID,

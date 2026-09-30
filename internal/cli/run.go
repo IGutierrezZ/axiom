@@ -2363,12 +2363,15 @@ func componentPathsWithWorkspaceScoped(homeDir, workspaceDir string, scope Insta
 					paths = append(paths, adapter.MCPConfigPath(targetDir, "engram"))
 				}
 			case model.StrategyMergeIntoSettings:
-				// MCP settings are always merged into the global config file, not the
-				// workspace-scoped directory. For OpenClaw, SettingsPath(targetDir)
-				// would yield <workspace>/.openclaw/openclaw.json, but engram injection
-				// writes to the canonical ~/.openclaw/openclaw.json (homeDir). Use
-				// homeDir here so the verification path matches the actual write target.
-				if p := adapter.SettingsPath(homeDir); p != "" {
+				// For OpenClaw, SettingsPath(targetDir) would yield <workspace>/.openclaw/openclaw.json,
+				// but engram injection writes to the canonical ~/.openclaw/openclaw.json (homeDir).
+				// For other merge-into-settings agents (like OpenCode in workspace scope), injection
+				// writes to targetDir.
+				if adapter.Agent() == model.AgentOpenClaw {
+					if p := adapter.SettingsPath(homeDir); p != "" {
+						paths = append(paths, p)
+					}
+				} else if p := adapter.SettingsPath(targetDir); p != "" {
 					paths = append(paths, p)
 				}
 			case model.StrategyMCPConfigFile:
@@ -2491,7 +2494,11 @@ func componentPathsWithWorkspaceScoped(homeDir, workspaceDir string, scope Insta
 				}
 				paths = append(paths, adapter.MCPConfigPath(targetDir, "context7"))
 			case model.StrategyMergeIntoSettings:
-				if p := adapter.SettingsPath(targetDir); p != "" {
+				if adapter.Agent() == model.AgentOpenCode {
+					if p := effectiveOpenCodeSettingsPath(homeDir, workspaceDir, scope, adapter); p != "" {
+						paths = append(paths, p)
+					}
+				} else if p := adapter.SettingsPath(targetDir); p != "" {
 					paths = append(paths, p)
 				}
 			case model.StrategyMCPConfigFile:
@@ -2654,7 +2661,7 @@ func adapterSupportsWorkspace(adapter agents.Adapter) bool {
 		return false
 	}
 	switch adapter.Agent() {
-	case model.AgentVSCodeCopilot, model.AgentTrae, model.AgentWindsurf, model.AgentAntigravity:
+	case model.AgentVSCodeCopilot, model.AgentTrae, model.AgentWindsurf, model.AgentAntigravity, model.AgentCodex:
 		return false
 	default:
 		return true

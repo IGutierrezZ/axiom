@@ -180,7 +180,7 @@ func targetedValidationFixFromSnapshot(ctx context.Context, repo string, state C
 // ValidateTargetedValidationRequest verifies canonical fields and the
 // provider-owned request hash without reading repository authority.
 func ValidateTargetedValidationRequest(request TargetedValidationRequest) error {
-	if request.Schema != TargetedValidationRequestSchema || validateLineageID(request.LineageID) != nil {
+	if (request.Schema != TargetedValidationRequestSchema && request.Schema != LegacyTargetedValidationRequestSchema) || validateLineageID(request.LineageID) != nil {
 		return errors.New("targeted validation request identity is incomplete")
 	}
 	if !validSHA256(request.RequestHash) || !validSHA256(request.ExpectedRevision) ||
@@ -300,4 +300,21 @@ func targetedValidationRequestHash(request TargetedValidationRequest) string {
 	}
 	sum := sha256.Sum256(append([]byte(prefix), payload...))
 	return "sha256:" + hex.EncodeToString(sum[:])
+}
+
+// ForContract returns a TargetedValidationRequest whose Schema and RequestHash
+// match the negotiated review integration contract.
+func (r TargetedValidationRequest) ForContract(contract string) TargetedValidationRequest {
+	if contract == AxiomReviewIntegrationV2Contract {
+		r.Schema = TargetedValidationRequestSchema
+	} else {
+		r.Schema = LegacyTargetedValidationRequestSchema
+	}
+	r.RequestHash = targetedValidationRequestHash(r)
+	return r
+}
+
+// TargetedValidationRequestHash calculates the canonical hash for the request.
+func TargetedValidationRequestHash(request TargetedValidationRequest) string {
+	return targetedValidationRequestHash(request)
 }

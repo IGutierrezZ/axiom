@@ -20,6 +20,7 @@ import (
 
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/codex"
 	"github.com/IGutierrezZ/axiom/v3/internal/backup"
+	"github.com/IGutierrezZ/axiom/v3/internal/cli"
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
 	opencodeactivation "github.com/IGutierrezZ/axiom/v3/internal/opencode"
 	"github.com/IGutierrezZ/axiom/v3/internal/pipeline"
@@ -717,6 +718,7 @@ func TestTuiSyncSelectionPreservesCustomPermissionExclusion(t *testing.T) {
 // Components from state before applyOverrides sets Profiles, so without the
 // fix ComponentSDD is dropped and the profile write silently never runs.
 func TestTuiSyncProfilePersistsWhenSDDComponentMissingFromState(t *testing.T) {
+	t.Setenv(cli.ScopeAxiomEnvVar, string(cli.ScopeGlobal))
 	oldVersionRunner := opencodeactivation.VersionRunnerOverride
 	t.Cleanup(func() { opencodeactivation.VersionRunnerOverride = oldVersionRunner })
 	opencodeactivation.VersionRunnerOverride = func(context.Context, opencodeactivation.Command) (opencodeactivation.CommandOutput, error) {
@@ -898,7 +900,7 @@ func TestTUIExecuteWithBackgroundPreservesConcurrentCLIStateMutation(t *testing.
 
 func buildAppCandidateBinary(t *testing.T) string {
 	t.Helper()
-	binary := filepath.Join(t.TempDir(), "gentle-ai")
+	binary := filepath.Join(t.TempDir(), "axiom")
 	if runtime.GOOS == "windows" {
 		binary += ".exe"
 	}
@@ -906,7 +908,7 @@ func buildAppCandidateBinary(t *testing.T) string {
 	// 30s; the cap only guards against a hung toolchain, not build speed.
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
 	defer cancel()
-	command := exec.CommandContext(ctx, "go", "build", "-o", binary, "../../cmd/gentle-ai")
+	command := exec.CommandContext(ctx, "go", "build", "-o", binary, "../../cmd/axiom")
 	if output, err := command.CombinedOutput(); err != nil {
 		t.Fatalf("build candidate binary: %v\n%s", err, output)
 	}
@@ -914,6 +916,7 @@ func buildAppCandidateBinary(t *testing.T) string {
 }
 
 func TestTuiInstallOnThenSyncPreservesAndRefreshesOpenCodeActivation(t *testing.T) {
+	t.Setenv(cli.ScopeAxiomEnvVar, string(cli.ScopeGlobal))
 	home := t.TempDir()
 	previousUserHomeDir := appUserHomeDir
 	appUserHomeDir = func() (string, error) { return home, nil }
@@ -988,6 +991,7 @@ func TestDeferredSyncIncludesCodexPermissionsArgs(t *testing.T) {
 }
 
 func TestTuiSyncClaudeModelConfigWritesSelectedAssignments(t *testing.T) {
+	t.Setenv(cli.ScopeAxiomEnvVar, string(cli.ScopeGlobal))
 	home := t.TempDir()
 	if err := state.Write(home, state.InstallState{InstalledAgents: []string{string(model.AgentPi)}}); err != nil {
 		t.Fatalf("state.Write: %v", err)
@@ -1061,6 +1065,7 @@ func TestTuiSyncClaudeModelConfigWritesSelectedAssignments(t *testing.T) {
 }
 
 func TestTuiSyncModelConfigPropagatesAssignmentWriteFailure(t *testing.T) {
+	t.Setenv(cli.ScopeAxiomEnvVar, string(cli.ScopeGlobal))
 	home := t.TempDir()
 	original := state.InstallState{
 		InstalledAgents:          []string{string(model.AgentClaudeCode)},
@@ -1100,6 +1105,7 @@ func TestTuiSyncModelConfigPropagatesAssignmentWriteFailure(t *testing.T) {
 }
 
 func TestTuiSyncClaudePhaseAssignmentsPersistAndGenerateEffort(t *testing.T) {
+	t.Setenv(cli.ScopeAxiomEnvVar, string(cli.ScopeGlobal))
 	home := t.TempDir()
 	if err := state.Write(home, state.InstallState{InstalledAgents: []string{string(model.AgentPi)}}); err != nil {
 		t.Fatalf("state.Write: %v", err)
@@ -1886,6 +1892,7 @@ func TestIsExplicitUpdateFlow(t *testing.T) {
 
 func setupMockHome(t *testing.T, home string) {
 	t.Helper()
+	t.Setenv(cli.ScopeAxiomEnvVar, string(cli.ScopeGlobal))
 	origHome := os.Getenv("HOME")
 	origUserProfile := os.Getenv("USERPROFILE")
 	t.Cleanup(func() {

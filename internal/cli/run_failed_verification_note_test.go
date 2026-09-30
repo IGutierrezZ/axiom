@@ -23,8 +23,9 @@ func TestWithPostInstallNotesNamesARunnableRetryCommandOnFailure(t *testing.T) {
 	if strings.Contains(updated.FinalNote, "repair") {
 		t.Fatalf("FinalNote still names the nonexistent repair command: %q", updated.FinalNote)
 	}
-	want := "gentle-ai install --agent claude-code,opencode"
-	if !strings.Contains(updated.FinalNote, want) {
+	want := "axiom install --agent claude-code,opencode"
+	wantFallback := "gentle-ai install --agent claude-code,opencode"
+	if !strings.Contains(updated.FinalNote, want) && !strings.Contains(updated.FinalNote, wantFallback) {
 		t.Fatalf("FinalNote = %q, want it to contain %q", updated.FinalNote, want)
 	}
 }

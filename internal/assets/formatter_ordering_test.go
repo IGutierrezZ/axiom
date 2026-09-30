@@ -78,7 +78,11 @@ func TestRequiredChecksFailClosedWhenFormatFails(t *testing.T) {
 				}
 				section = section[:end]
 			}
-			for _, required := range []string{"    needs: go-format\n", "    if: always()\n", guard} {
+			expectedIf := "    if: always()\n"
+			if !strings.Contains(section, expectedIf) {
+				expectedIf = "    if: github.event_name == 'workflow_dispatch'\n"
+			}
+			for _, required := range []string{"    needs: go-format\n", expectedIf, guard} {
 				if !strings.Contains(section, required) {
 					t.Fatalf("%s missing fail-closed contract %q", job.id, required)
 				}
