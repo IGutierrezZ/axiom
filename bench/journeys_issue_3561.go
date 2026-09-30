@@ -72,10 +72,13 @@ func issue3561VerifyDoctor(sandbox *Sandbox, observation Observation) error {
 		return fmt.Errorf("doctor recommended the unrunnable sync recovery: %s", observation.Stdout)
 	}
 	ancestorPath := sandbox.Scratch["issue-3561-ancestor"]
-	for _, want := range []string{sandbox.Scratch["issue-3561-config"], "dangling ancestor symlink " + ancestorPath, "inspect", "gentle-ai doctor"} {
+	for _, want := range []string{sandbox.Scratch["issue-3561-config"], "dangling ancestor symlink " + ancestorPath, "inspect"} {
 		if !strings.Contains(observation.Stdout, want) {
 			return fmt.Errorf("doctor output missing %q: %s", want, observation.Stdout)
 		}
+	}
+	if !strings.Contains(observation.Stdout, "gentle-ai doctor") && !strings.Contains(observation.Stdout, "axiom doctor") {
+		return fmt.Errorf("doctor output missing doctor command: %s", observation.Stdout)
 	}
 
 	info, err := os.Lstat(ancestorPath)

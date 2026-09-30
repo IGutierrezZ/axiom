@@ -63,10 +63,13 @@ func issue3557VerifyDoctor(sandbox *Sandbox, observation Observation) error {
 	if strings.Contains(observation.Stdout, "gentle-ai sync") {
 		return fmt.Errorf("doctor recommended the unrunnable sync recovery: %s", observation.Stdout)
 	}
-	for _, want := range []string{sandbox.Scratch["issue-3557-config"], "inspect", "gentle-ai doctor"} {
+	for _, want := range []string{sandbox.Scratch["issue-3557-config"], "inspect"} {
 		if !strings.Contains(observation.Stdout, want) {
 			return fmt.Errorf("doctor output missing %q: %s", want, observation.Stdout)
 		}
+	}
+	if !strings.Contains(observation.Stdout, "gentle-ai doctor") && !strings.Contains(observation.Stdout, "axiom doctor") {
+		return fmt.Errorf("doctor output missing doctor command: %s", observation.Stdout)
 	}
 
 	configPath := sandbox.Scratch["issue-3557-config"]

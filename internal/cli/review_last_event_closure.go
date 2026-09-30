@@ -161,10 +161,15 @@ func newCorrectionCapturedValidatorClosure(repo string, state reviewtransaction.
 		return nil, errors.New("targeted validator closure does not bind an escalated correction") // refusal:by-design human-authority: a terminal validator closure without its bound correction requires authority inspection
 	}
 	attempt := state.CorrectionAttempts[len(state.CorrectionAttempts)-1]
-	if request.RequestHash != attempt.TargetedValidationRequestHash || request.CorrectionTargetIdentity != attempt.CorrectionTargetIdentity {
+	if (request.RequestHash != attempt.TargetedValidationRequestHash &&
+		request.ForContract(ReviewIntegrationContractV2).RequestHash != attempt.TargetedValidationRequestHash) ||
+		request.CorrectionTargetIdentity != attempt.CorrectionTargetIdentity {
 		return nil, errors.New("targeted validator closure request does not bind the terminal correction") // refusal:by-design human-authority: an unbound terminal validator closure requires authority inspection
 	}
 	evidence, found, err := state.AdmittedTargetedValidatorEvidence(request.ExpectedRevision, request.CorrectionTargetIdentity, request.RequestHash)
+	if !found && err == nil {
+		evidence, found, err = state.AdmittedTargetedValidatorEvidence(request.ExpectedRevision, request.CorrectionTargetIdentity, request.ForContract(ReviewIntegrationContractV2).RequestHash)
+	}
 	if err != nil || !found {
 		return nil, errors.New("targeted validator closure has no canonical rejection evidence") // refusal:by-design human-authority: missing terminal evidence requires authority inspection
 	}
