@@ -48,6 +48,7 @@ cd "${repo_root}"
 # spurious failure, and a guard that cries wolf gets disabled.
 current="$(go run "${tool}" "${target}" 2>/dev/null \
   | sed -E 's/^(.+):[0-9]+:[0-9]+: unreachable func: (.+)$/\1\t\2/' \
+  | tr '\\' '/' \
   | sort -u)"
 
 if [[ "${1:-}" == "--update" ]]; then
