@@ -4,6 +4,24 @@ document.addEventListener('DOMContentLoaded', () => {
   let incrementsData = [];
   let currentFilter = 'all';
 
+  // Sistema de Iconografía Vectorial SVG (Modern Light Theme)
+  const ICONS = {
+    check: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
+    x: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>',
+    folder: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/></svg>',
+    bug: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m8 2 1.88 1.88"/><path d="M14.12 3.88 16 2"/><path d="M9 7.13v-1a3.003 3.003 0 1 1 6 0v1"/><path d="M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6"/><path d="M12 20v-9"/><path d="M6.53 9C4.6 8.8 3 7.1 3 5"/><path d="M6 13H2"/><path d="M3 21c0-2.1 1.7-3.9 3.8-4"/><path d="M20.97 5c0 2.1-1.6 3.8-3.5 4"/><path d="M22 13h-4"/><path d="M17.2 17c2.1.1 3.8 1.9 3.8 4"/></svg>',
+    sparkles: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>',
+    edit: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>',
+    arrowRight: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>',
+    arrowUp: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg>',
+    refresh: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>',
+    search: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>',
+    globe: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>',
+    shieldCheck: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>',
+    alertTriangle: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+    bolt: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>'
+  };
+
   // Elementos DOM
   const projectSelect = document.getElementById('project-select');
   const btnAddProject = document.getElementById('btn-add-project');
@@ -199,7 +217,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (modalConsoleOutput) modalConsoleOutput.textContent = `[ERROR DE CONEXIÓN]\n\n${err.message}`;
       } finally {
         btnIncVerify.disabled = false;
-        btnIncVerify.textContent = '✓ Validar Verificación';
+        btnIncVerify.innerHTML = `${ICONS.shieldCheck} Validar Verificación`;
       }
     });
   }
@@ -410,7 +428,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function hidePathInput() {
     if (fpPathInput) fpPathInput.classList.add('hidden');
     if (fpBreadcrumbs) fpBreadcrumbs.classList.remove('hidden');
-    if (fpBtnToggleInput) fpBtnToggleInput.textContent = '✏️';
+    if (fpBtnToggleInput) fpBtnToggleInput.innerHTML = ICONS.edit;
   }
 
   function showPathInput() {
@@ -421,7 +439,7 @@ document.addEventListener('DOMContentLoaded', () => {
       fpPathInput.select();
     }
     if (fpBreadcrumbs) fpBreadcrumbs.classList.add('hidden');
-    if (fpBtnToggleInput) fpBtnToggleInput.textContent = '🏷️';
+    if (fpBtnToggleInput) fpBtnToggleInput.innerHTML = ICONS.check;
   }
 
   async function navigateToDirectory(targetPath) {
@@ -569,10 +587,10 @@ document.addEventListener('DOMContentLoaded', () => {
       upItem.className = 'fp-item';
       upItem.innerHTML = `
         <div class="fp-item-name">
-          <span class="fp-item-icon">📁</span>
+          <span class="fp-item-icon">${ICONS.folder}</span>
           <span><strong>..</strong> (Directorio superior)</span>
         </div>
-        <span class="fp-item-action">Subir ⬆</span>
+        <span class="fp-item-action">Subir ${ICONS.arrowUp}</span>
       `;
       upItem.onclick = () => {
         folderPickerState.selectedPath = folderPickerState.parentPath;
@@ -597,10 +615,10 @@ document.addEventListener('DOMContentLoaded', () => {
       item.className = 'fp-item' + (dir.hidden ? ' hidden-dir' : '') + (isSelected ? ' selected' : '');
       item.innerHTML = `
         <div class="fp-item-name" title="${escapeHtml(dir.path)}">
-          <span class="fp-item-icon">📁</span>
+          <span class="fp-item-icon">${ICONS.folder}</span>
           <span>${escapeHtml(dir.name)}</span>
         </div>
-        <span class="fp-item-action">Abrir ➔</span>
+        <span class="fp-item-action">Abrir ${ICONS.arrowRight}</span>
       `;
 
       item.addEventListener('click', () => {
@@ -763,27 +781,27 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!rolesBuilderContainer) return;
     const card = document.createElement('div');
     card.className = 'role-builder-card';
-    card.style.cssText = 'background: rgba(15, 23, 42, 0.7); border: 1px solid #334155; border-radius: 6px; padding: 0.75rem; position: relative;';
+    card.style.cssText = 'background: var(--color-surface-subtle); border: 1px solid var(--color-border-subtle); border-radius: var(--radius-md); padding: 0.85rem; position: relative;';
     card.innerHTML = `
-      <button type="button" class="btn-remove-role" style="position: absolute; right: 0.5rem; top: 0.5rem; background: none; border: none; color: #ef4444; cursor: pointer; font-size: 1.1rem; line-height: 1;">✕</button>
+      <button type="button" class="btn-remove-role" style="position: absolute; right: 0.5rem; top: 0.5rem; background: none; border: none; color: var(--color-danger); cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0.25rem;">${ICONS.x}</button>
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 0.5rem; padding-right: 1.5rem;">
         <div>
-          <label style="font-size: 0.75rem; color: #94a3b8; display: block; margin-bottom: 0.2rem;">Identificador (ej. web, core):</label>
+          <label style="font-size: 0.75rem; color: var(--color-text-muted); display: block; margin-bottom: 0.2rem;">Identificador (ej. web, core):</label>
           <input type="text" class="role-key-input form-select" value="${escapeHtml(key)}" placeholder="web" style="font-size: 0.85rem; padding: 0.25rem 0.5rem; width: 100%; box-sizing: border-box;">
         </div>
         <div>
-          <label style="font-size: 0.75rem; color: #94a3b8; display: block; margin-bottom: 0.2rem;">Nombre legible:</label>
+          <label style="font-size: 0.75rem; color: var(--color-text-muted); display: block; margin-bottom: 0.2rem;">Nombre legible:</label>
           <input type="text" class="role-name-input form-select" value="${escapeHtml(name)}" placeholder="Frontend Web UI" style="font-size: 0.85rem; padding: 0.25rem 0.5rem; width: 100%; box-sizing: border-box;">
         </div>
       </div>
       <div style="margin-bottom: 0.5rem;">
-        <label style="font-size: 0.75rem; color: #94a3b8; display: block; margin-bottom: 0.2rem;">Rutas / Repositorios (separadas por coma):</label>
+        <label style="font-size: 0.75rem; color: var(--color-text-muted); display: block; margin-bottom: 0.2rem;">Rutas / Repositorios (separadas por coma):</label>
         <div style="display: flex; gap: 0.5rem; align-items: center;">
           <input type="text" class="role-repos-input form-select" value="${escapeHtml(repos)}" placeholder="src/Ludeka.Web, ." style="font-size: 0.85rem; padding: 0.25rem 0.5rem; flex: 1; box-sizing: border-box;">
-          <button type="button" class="btn-browse-role-repo btn btn-sm btn-secondary" title="Examinar carpeta en local" style="display: flex; align-items: center; justify-content: center; padding: 0.25rem 0.6rem;">📁</button>
+          <button type="button" class="btn-browse-role-repo btn btn-sm btn-secondary" title="Examinar carpeta en local" style="display: flex; align-items: center; justify-content: center; padding: 0.25rem 0.6rem;">${ICONS.folder}</button>
         </div>
       </div>
-      <label style="font-size: 0.8rem; display: flex; align-items: center; gap: 0.4rem; cursor: pointer; color: #cbd5e1; user-select: none;">
+      <label style="font-size: 0.8rem; display: flex; align-items: center; gap: 0.4rem; cursor: pointer; color: var(--color-text-main); user-select: none;">
         <input type="checkbox" class="role-nonblocking-input" ${nonBlocking ? 'checked' : ''}>
         <span>No bloqueante al archivar (Advisory / Deuda diferida acumulativa)</span>
       </label>
@@ -974,7 +992,7 @@ document.addEventListener('DOMContentLoaded', () => {
         alert('Error al inicializar proyecto: ' + e.message);
       } finally {
         btnInitProject.disabled = false;
-        btnInitProject.textContent = '⚡ Inicializar Proyecto con Axiom (1 Clic)';
+        btnInitProject.innerHTML = `${ICONS.bolt} Inicializar Proyecto con Axiom (1 Clic)`;
       }
     });
   }
@@ -1151,7 +1169,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (status.behind > 0) {
         banner.classList.remove('hidden');
         if (textEl) {
-          textEl.textContent = `⚠️ El repositorio de especificaciones está ${status.behind} commit(s) por detrás del remoto (${escapeHtml(status.branch)} @ ${escapeHtml(status.remote)}). Haz pull antes de operar.`;
+          textEl.textContent = `El repositorio de especificaciones está ${status.behind} commit(s) por detrás del remoto (${status.branch} @ ${status.remote}). Haz pull antes de operar.`;
         }
       } else {
         banner.classList.add('hidden');
@@ -1165,14 +1183,14 @@ document.addEventListener('DOMContentLoaded', () => {
   if (btnSpecsPull) {
     btnSpecsPull.addEventListener('click', async () => {
       btnSpecsPull.disabled = true;
-      btnSpecsPull.textContent = '⏳ Sincronizando...';
+      btnSpecsPull.innerHTML = `${ICONS.refresh} Sincronizando...`;
       try {
         const res = await fetch('/api/workspace/specs/pull', { method: 'POST' });
         const data = await res.json();
         if (!res.ok) {
           alert('Error haciendo pull: ' + (data.message || 'Fallo desconocido'));
         } else {
-          alert('✓ Repositorio de especificaciones sincronizado con éxito.');
+          alert('Repositorio de especificaciones sincronizado con éxito.');
           await checkSpecsSync();
           await loadWorkspace();
         }
@@ -1180,7 +1198,7 @@ document.addEventListener('DOMContentLoaded', () => {
         alert('Error conectando con el servidor: ' + e.message);
       } finally {
         btnSpecsPull.disabled = false;
-        btnSpecsPull.textContent = '⬇ Hacer Pull (Sincronizar Specs)';
+        btnSpecsPull.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17V3"/><path d="m6 11 6 6 6-6"/><path d="M19 21H5"/></svg> Hacer Pull (Sincronizar Specs)`;
       }
     });
   }
@@ -1289,20 +1307,20 @@ document.addEventListener('DOMContentLoaded', () => {
       const isArchived = inc.type === 'archived';
       const isFix = inc.is_bug || inc.change_type === 'fix' || inc.name.toLowerCase().includes('fix') || inc.name.toLowerCase().includes('bug') || inc.name.toLowerCase().includes('hotfix');
       const kindBadge = isFix
-        ? `<span class="badge" style="background:#dc2626;color:#fff;font-weight:600;" title="Corrección de defecto o bug">🐛 BUG / FIX</span>`
-        : `<span class="badge" style="background:#0284c7;color:#fff;font-weight:600;" title="Nueva capacidad o funcionalidad">🚀 FEATURE</span>`;
+        ? `<span class="badge badge-bug" title="Corrección de defecto o bug">${ICONS.bug} BUG / FIX</span>`
+        : `<span class="badge badge-feature" title="Nueva capacidad o funcionalidad">${ICONS.sparkles} FEATURE</span>`;
 
       let operationalBadge = '';
       if (inc.ready_for_design) {
-        operationalBadge = `<span class="badge" style="background:#2563eb;color:#fff;" title="Especificación completa, listo para diseño de arquitectura">Listo Design</span>`;
+        operationalBadge = `<span class="badge badge-ready-design" title="Especificación completa, listo para diseño de arquitectura">Listo Design</span>`;
       } else if (inc.pending_spec) {
-        operationalBadge = `<span class="badge" style="background:#0284c7;color:#fff;" title="Fase funcional: pendiente cerrar especificación">Pendiente Spec</span>`;
+        operationalBadge = `<span class="badge badge-pending-spec" title="Fase funcional: pendiente cerrar especificación">Pendiente Spec</span>`;
       } else if (inc.waiting_roles && inc.pending_roles && inc.pending_roles.length > 0) {
-        operationalBadge = `<span class="badge" style="background:#d97706;color:#fff;" title="Roles técnicos con tareas pendientes">Pendiente: ${inc.pending_roles.join(', ')}</span>`;
+        operationalBadge = `<span class="badge badge-pending-roles" title="Roles técnicos con tareas pendientes">Pendiente: ${inc.pending_roles.join(', ')}</span>`;
       } else if (inc.ready_for_global_verify) {
-        operationalBadge = `<span class="badge" style="background:#7c3aed;color:#fff;" title="Todos los roles terminados, pendiente verificación global">Verif. Global</span>`;
+        operationalBadge = `<span class="badge badge-global-verify" title="Todos los roles terminados, pendiente verificación global">Verif. Global</span>`;
       } else if (inc.ready_for_archive) {
-        operationalBadge = `<span class="badge" style="background:#059669;color:#fff;" title="Verificación superada, listo para archivar">Listo Archivar</span>`;
+        operationalBadge = `<span class="badge badge-ready-archive" title="Verificación superada, listo para archivar">Listo Archivar</span>`;
       }
 
       card.innerHTML = `
@@ -1366,13 +1384,13 @@ document.addEventListener('DOMContentLoaded', () => {
           <span class="badge badge-pass">Tareas: ${data.summary.tasks_completed}/${data.summary.tasks_total} (${data.summary.progress_pct}%)</span>
         </div>
         <h4>Artefactos Detectados:</h4>
-        <ul style="margin-left: 1.5rem; margin-bottom: 1.25rem;">
-          <li>Propuesta (proposal.md): <strong>${data.has_proposal ? '✓ Presente' : '✗ Ausente'}</strong></li>
-          <li>Especificación (spec.md): <strong>${data.has_spec ? '✓ Presente' : '✗ Ausente'}</strong></li>
-          <li>Diseño Técnico (design.md): <strong>${data.has_design ? '✓ Presente' : '✗ Ausente'}</strong></li>
-          <li>Plan de Tareas (tasks.md): <strong>${data.has_tasks ? '✓ Presente' : '✗ Ausente'}</strong></li>
-          <li>Informe Verificación (verify-report.md): <strong>${data.has_verify ? '✓ Presente' : '✗ Ausente'}</strong></li>
-          <li>Informe Archivado (archive-report.md): <strong>${data.has_archive ? '✓ Presente' : '✗ Ausente'}</strong></li>
+        <ul style="margin-left: 1.5rem; margin-bottom: 1.25rem; display: flex; flex-direction: column; gap: 0.35rem;">
+          <li>Propuesta (proposal.md): <span class="badge ${data.has_proposal ? 'badge-pass' : 'badge-fail'}">${data.has_proposal ? ICONS.check + ' Presente' : ICONS.x + ' Ausente'}</span></li>
+          <li>Especificación (spec.md): <span class="badge ${data.has_spec ? 'badge-pass' : 'badge-fail'}">${data.has_spec ? ICONS.check + ' Presente' : ICONS.x + ' Ausente'}</span></li>
+          <li>Diseño Técnico (design.md): <span class="badge ${data.has_design ? 'badge-pass' : 'badge-fail'}">${data.has_design ? ICONS.check + ' Presente' : ICONS.x + ' Ausente'}</span></li>
+          <li>Plan de Tareas (tasks.md): <span class="badge ${data.has_tasks ? 'badge-pass' : 'badge-fail'}">${data.has_tasks ? ICONS.check + ' Presente' : ICONS.x + ' Ausente'}</span></li>
+          <li>Informe Verificación (verify-report.md): <span class="badge ${data.has_verify ? 'badge-pass' : 'badge-fail'}">${data.has_verify ? ICONS.check + ' Presente' : ICONS.x + ' Ausente'}</span></li>
+          <li>Informe Archivado (archive-report.md): <span class="badge ${data.has_archive ? 'badge-pass' : 'badge-fail'}">${data.has_archive ? ICONS.check + ' Presente' : ICONS.x + ' Ausente'}</span></li>
         </ul>
       `;
 
@@ -1400,17 +1418,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (isSingleRole) {
         barrierBanner.className = 'barrier-banner satisfied';
-        barrierIcon.textContent = '🚀';
+        barrierIcon.innerHTML = ICONS.sparkles;
         barrierTitle.textContent = 'ROL UNIFICADO (FULLSTACK) — FLUJO CONTINUO';
         barrierDesc.textContent = 'Axiom opera bajo el rol canónico unificado "fullstack". No requiere barreras fan-in concurrentes ni esperas entre agentes; el ciclo avanza de forma ágil y continua.';
       } else if (barrier.satisfied) {
         barrierBanner.className = 'barrier-banner satisfied';
-        barrierIcon.textContent = '✓';
+        barrierIcon.innerHTML = ICONS.check;
         barrierTitle.textContent = 'BARRIER SATISFIED (Compuerta Superada)';
         barrierDesc.textContent = 'Todos los roles obligatorios (blocking) han verificado exitosamente sus tareas.';
       } else {
         barrierBanner.className = 'barrier-banner blocked';
-        barrierIcon.textContent = '✕';
+        barrierIcon.innerHTML = ICONS.x;
         barrierTitle.textContent = 'BARRIER BLOCKED (Compuerta Bloqueada)';
         barrierDesc.textContent = (barrier.blockers && barrier.blockers.length > 0)
           ? barrier.blockers.join(' • ')
@@ -1480,7 +1498,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       hoFromPhase.textContent = ho.metadata.from_phase || 'origen';
       hoToPhase.textContent = ho.metadata.to_phase || 'destino';
-      hoRoles.textContent = `${ho.metadata.from_role} ➔ ${ho.metadata.to_role}`;
+      hoRoles.innerHTML = `${escapeHtml(ho.metadata.from_role)} <span style="display:inline-flex;align-items:center;margin:0 0.35rem;color:var(--color-accent);">${ICONS.arrowRight}</span> ${escapeHtml(ho.metadata.to_role)}`;
       hoStatus.textContent = ho.metadata.status || 'ready';
       hoStatus.className = `badge ${ho.metadata.status === 'ready' ? 'badge-pass' : 'badge-fail'}`;
       hoTime.textContent = ho.metadata.timestamp ? new Date(ho.metadata.timestamp).toLocaleString() : '--';
@@ -1574,7 +1592,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       inboxContainer.innerHTML = '';
       if (proposals.length === 0) {
-        inboxContainer.innerHTML = '<p class="empty-state">No hay propuestas pendientes en el buzón transitorio. Pulsa "⚡ Escanear Tecnologías & Minar" para detectar directrices.</p>';
+        inboxContainer.innerHTML = '<p class="empty-state">No hay propuestas pendientes en el buzón transitorio. Pulsa "Escanear Tecnologías & Minar" para detectar directrices.</p>';
         return;
       }
 
@@ -1584,7 +1602,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const originClass = p.origin === 'midudev' ? 'badge-origin-midudev' : 'badge-origin-mined';
         const originLabel = p.origin === 'midudev' ? 'midudev (auditado)' : 'minería local';
-        const verifiedBadge = p.verified ? '<span class="badge-verified" title="Hash criptográfico verificado contra registro oficial">✓ SHA-256 Verificado</span>' : '';
+        const verifiedBadge = p.verified ? `<span class="badge badge-pass" title="Hash criptográfico verificado contra registro oficial">${ICONS.shieldCheck} SHA-256 Verificado</span>` : '';
 
         card.innerHTML = `
           <div>
@@ -1596,19 +1614,19 @@ document.addEventListener('DOMContentLoaded', () => {
               ${verifiedBadge}
               ${p.role ? `<span class="badge badge-tech">Rol: ${escapeHtml(p.role)}</span>` : ''}
             </div>
-            <p style="font-size: 0.85rem; color: var(--text-secondary); margin: 0.5rem 0;">
+            <p style="font-size: 0.85rem; color: var(--color-text-muted); margin: 0.5rem 0;">
               ${escapeHtml(p.justification || 'Directriz recomendada')}
             </p>
           </div>
           <div>
             <div style="margin-bottom: 0.75rem;">
-              <button class="btn btn-secondary btn-preview-skill" style="width: 100%; font-size: 0.75rem;">
-                👁️ Ver contenido SKILL.md
+              <button class="btn btn-secondary btn-preview-skill" style="width: 100%; font-size: 0.75rem; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;">
+                ${ICONS.search} Ver contenido SKILL.md
               </button>
             </div>
             <div class="inbox-actions">
-              <button class="btn-approve" data-name="${escapeHtml(p.name)}">✓ Aprobar & Instalar</button>
-              <button class="btn-reject" data-name="${escapeHtml(p.name)}">✕ Descartar</button>
+              <button class="btn-approve btn btn-sm btn-primary" data-name="${escapeHtml(p.name)}">${ICONS.check} Aprobar & Instalar</button>
+              <button class="btn-reject btn btn-sm btn-danger" data-name="${escapeHtml(p.name)}">${ICONS.x} Descartar</button>
             </div>
           </div>
         `;
@@ -1638,10 +1656,10 @@ document.addEventListener('DOMContentLoaded', () => {
   async function triggerScanSkills() {
     if (!btnScanSkills) return;
     btnScanSkills.disabled = true;
-    btnScanSkills.textContent = '⏳ Escaneando & Minando...';
+    btnScanSkills.innerHTML = `${ICONS.refresh} Escaneando & Minando...`;
     if (scanFeedback) {
       scanFeedback.classList.remove('hidden');
-      scanFeedback.innerHTML = '🔍 Analizando stack tecnológico, dependencias y patrones idiomáticos del repositorio...';
+      scanFeedback.innerHTML = `<span style="display:inline-flex;align-items:center;gap:0.4rem;">${ICONS.search} Analizando stack tecnológico, dependencias y patrones idiomáticos del repositorio...</span>`;
     }
 
     try {
@@ -1655,7 +1673,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const report = await res.json();
 
       if (scanFeedback) {
-        scanFeedback.innerHTML = `<strong>✓ Escaneo completado:</strong> Detectadas ${report.detected_technologies ? report.detected_technologies.join(', ') : 'tecnologías'}. ${report.skills_proposed ? report.skills_proposed.length : 0} nuevas propuestas añadidas al buzón (Total pendientes: ${report.total_in_inbox || 0}).`;
+        scanFeedback.innerHTML = `<span style="display:inline-flex;align-items:center;gap:0.4rem;color:var(--color-success);">${ICONS.check} <strong>Escaneo completado:</strong></span> Detectadas ${report.detected_technologies ? report.detected_technologies.join(', ') : 'tecnologías'}. ${report.skills_proposed ? report.skills_proposed.length : 0} nuevas propuestas añadidas al buzón (Total pendientes: ${report.total_in_inbox || 0}).`;
       }
 
       await Promise.all([loadSkillsInbox(), loadSkills()]);
@@ -1666,7 +1684,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     } finally {
       btnScanSkills.disabled = false;
-      btnScanSkills.textContent = '⚡ Escanear Tecnologías & Minar';
+      btnScanSkills.innerHTML = `${ICONS.bolt} Escanear Tecnologías & Minar`;
     }
   }
 
@@ -1767,18 +1785,18 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       const cgStatusBadge = data.codegraph_installed
-        ? '<span class="badge-verified" style="background: rgba(34,197,94,0.15); color: #4ade80; border-color: rgba(34,197,94,0.3); font-size: 0.72rem;">✓ CLI en PATH</span>'
-        : '<span class="badge-verified" style="background: rgba(107,114,128,0.15); color: #9ca3af; border-color: rgba(107,114,128,0.3); font-size: 0.72rem;">✗ No en PATH</span>';
+        ? `<span class="badge badge-pass">${ICONS.check} CLI en PATH</span>`
+        : `<span class="badge badge-fail">${ICONS.x} No en PATH</span>`;
       const cgConfigBadge = data.codegraph_configured
-        ? '<span class="badge-verified" style="background: rgba(34,197,94,0.15); color: #4ade80; border-color: rgba(34,197,94,0.3); font-size: 0.72rem;">✓ En Workspace</span>'
-        : '<span class="badge-verified" style="background: rgba(107,114,128,0.15); color: #9ca3af; border-color: rgba(107,114,128,0.3); font-size: 0.72rem;">No en Workspace</span>';
+        ? `<span class="badge badge-pass">${ICONS.check} En Workspace</span>`
+        : `<span class="badge badge-phase">No en Workspace</span>`;
 
       const serenaStatusBadge = data.serena_installed
-        ? '<span class="badge-verified" style="background: rgba(34,197,94,0.15); color: #4ade80; border-color: rgba(34,197,94,0.3); font-size: 0.72rem;">✓ CLI en PATH</span>'
-        : '<span class="badge-verified" style="background: rgba(107,114,128,0.15); color: #9ca3af; border-color: rgba(107,114,128,0.3); font-size: 0.72rem;">✗ No en PATH</span>';
+        ? `<span class="badge badge-pass">${ICONS.check} CLI en PATH</span>`
+        : `<span class="badge badge-fail">${ICONS.x} No en PATH</span>`;
       const serenaConfigBadge = data.serena_configured
-        ? '<span class="badge-verified" style="background: rgba(34,197,94,0.15); color: #4ade80; border-color: rgba(34,197,94,0.3); font-size: 0.72rem;">✓ En Workspace</span>'
-        : '<span class="badge-verified" style="background: rgba(107,114,128,0.15); color: #9ca3af; border-color: rgba(107,114,128,0.3); font-size: 0.72rem;">No en Workspace</span>';
+        ? `<span class="badge badge-pass">${ICONS.check} En Workspace</span>`
+        : `<span class="badge badge-phase">No en Workspace</span>`;
 
       container.innerHTML = `
         <div class="stat-card">
@@ -1834,11 +1852,11 @@ document.addEventListener('DOMContentLoaded', () => {
               <h4>
                 <span style="display: inline-flex; align-items: center; gap: 0.5rem;">
                   <span>${escapeHtml(ag.agent_name)}</span>
-                  <span class="badge" style="font-size: 0.7rem; font-weight: normal; background: var(--bg-tertiary); color: var(--text-muted); border: 1px solid var(--border-color);">
-                    ${ag.scope === 'workspace' ? '📁 Workspace' : '👤 Global / Usuario'}
+                  <span class="badge" style="font-size: 0.7rem; font-weight: 500; background: var(--color-surface-subtle); color: var(--color-text-muted); border: 1px solid var(--color-border-subtle);">
+                    ${ag.scope === 'workspace' ? `${ICONS.folder} Workspace` : `${ICONS.globe} Global / Usuario`}
                   </span>
                 </span>
-                <span class="badge-verified" style="background: ${ag.configured ? 'rgba(34,197,94,0.15)' : 'rgba(107,114,128,0.15)'}; color: ${ag.configured ? '#4ade80' : '#9ca3af'}; border-color: ${ag.configured ? 'rgba(34,197,94,0.3)' : 'rgba(107,114,128,0.3)'};">
+                <span class="badge ${ag.configured ? 'badge-pass' : 'badge-phase'}">
                   ${ag.configured ? 'CONFIGURADO' : 'NO DETECTADO'}
                 </span>
               </h4>
@@ -1912,7 +1930,7 @@ document.addEventListener('DOMContentLoaded', () => {
       container.innerHTML = deps.map(dep => `
         <div class="dep-chip ${dep.is_internal ? 'internal' : ''}">
           <strong><code>${escapeHtml(dep.source_package)}</code></strong>
-          <span style="color: var(--primary);">➔</span>
+          <span style="color: var(--color-accent); display: inline-flex; align-items: center;">${ICONS.arrowRight}</span>
           <code>${escapeHtml(dep.target_package)}</code>
           ${dep.is_internal ? '<span class="badge-verified" style="font-size: 0.65rem;">INTERNO</span>' : ''}
         </div>
@@ -1933,10 +1951,10 @@ document.addEventListener('DOMContentLoaded', () => {
   if (btnReindexCodegraph) {
     btnReindexCodegraph.addEventListener('click', async () => {
       btnReindexCodegraph.disabled = true;
-      btnReindexCodegraph.textContent = '⏳ Reindexando...';
+      btnReindexCodegraph.innerHTML = `${ICONS.refresh} Reindexando...`;
       if (reindexFeedback) {
         reindexFeedback.classList.remove('hidden');
-        reindexFeedback.innerHTML = '⚡ Ejecutando reindexación semántica de CodeGraph en el workspace...';
+        reindexFeedback.innerHTML = `<span style="display:inline-flex;align-items:center;gap:0.4rem;">${ICONS.sparkles} Ejecutando reindexación semántica de CodeGraph en el workspace...</span>`;
       }
       try {
         const res = await fetch('/api/semantic/reindex', { method: 'POST' });
@@ -1945,7 +1963,7 @@ document.addEventListener('DOMContentLoaded', () => {
           throw new Error(data.message || 'Error en la reindexación de CodeGraph');
         }
         if (reindexFeedback) {
-          reindexFeedback.innerHTML = `<strong>✓ ${escapeHtml(data.message || 'Reindexación completada')}</strong> (${escapeHtml(data.duration || '')})`;
+          reindexFeedback.innerHTML = `<span style="display:inline-flex;align-items:center;gap:0.4rem;color:var(--color-success);">${ICONS.check} <strong>${escapeHtml(data.message || 'Reindexación completada')}</strong></span> (${escapeHtml(data.duration || '')})`;
         }
         await loadSemanticData();
       } catch (err) {
@@ -1955,7 +1973,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       } finally {
         btnReindexCodegraph.disabled = false;
-        btnReindexCodegraph.textContent = '⚡ Reindexar CodeGraph';
+        btnReindexCodegraph.innerHTML = `${ICONS.bolt} Reindexar CodeGraph`;
       }
     });
   }
@@ -2073,20 +2091,20 @@ document.addEventListener('DOMContentLoaded', () => {
   if (btnSyncLivingDoc) {
     btnSyncLivingDoc.addEventListener('click', async () => {
       btnSyncLivingDoc.disabled = true;
-      btnSyncLivingDoc.textContent = '⏳ Sincronizando...';
+      btnSyncLivingDoc.innerHTML = `${ICONS.refresh} Sincronizando...`;
       try {
         const res = await fetch('/api/archive/sync', { method: 'POST' });
         if (!res.ok) throw new Error('Error en sincronización');
         await loadLivingDocs();
-        btnSyncLivingDoc.textContent = '✓ ¡Sincronizado!';
+        btnSyncLivingDoc.innerHTML = `${ICONS.check} ¡Sincronizado!`;
         setTimeout(() => {
           btnSyncLivingDoc.disabled = false;
-          btnSyncLivingDoc.textContent = '↻ Sincronizar Catálogo';
+          btnSyncLivingDoc.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg> Sincronizar Catálogo`;
         }, 2000);
       } catch (err) {
         alert('Fallo al sincronizar: ' + err.message);
         btnSyncLivingDoc.disabled = false;
-        btnSyncLivingDoc.textContent = '↻ Sincronizar Catálogo';
+        btnSyncLivingDoc.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg> Sincronizar Catálogo`;
       }
     });
   }
@@ -2125,7 +2143,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (btnEcoSync) {
     btnEcoSync.addEventListener('click', async () => {
       btnEcoSync.disabled = true;
-      btnEcoSync.textContent = '⏳ Sincronizando...';
+      btnEcoSync.innerHTML = `${ICONS.refresh} Sincronizando...`;
       showConsoleOutput('Sincronizando Workspace', 'Ejecutando axiom sync --scope=workspace...');
       try {
         const res = await fetch('/api/ecosystem/sync', {
@@ -2135,15 +2153,15 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         const data = await res.json();
         showConsoleOutput('Resultado de Sincronización', (data.output || []).join('\n') || data.message);
-        btnEcoSync.textContent = data.success ? '✓ Sincronizado' : '✕ Error';
+        btnEcoSync.innerHTML = `${data.success ? ICONS.check + ' Sincronizado' : ICONS.x + ' Error'}`;
         setTimeout(() => {
           btnEcoSync.disabled = false;
-          btnEcoSync.textContent = '🔄 Sincronizar Workspace';
+          btnEcoSync.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg> Sincronizar Workspace`;
         }, 2500);
       } catch (err) {
         showConsoleOutput('Error en Sincronización', err.message);
         btnEcoSync.disabled = false;
-        btnEcoSync.textContent = '🔄 Sincronizar Workspace';
+        btnEcoSync.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg> Sincronizar Workspace`;
       }
     });
   }
@@ -2152,7 +2170,7 @@ document.addEventListener('DOMContentLoaded', () => {
     btnEcoUpgrade.addEventListener('click', async () => {
       const channel = selectEcoChannel ? selectEcoChannel.value : 'stable';
       btnEcoUpgrade.disabled = true;
-      btnEcoUpgrade.textContent = '⏳ Actualizando...';
+      btnEcoUpgrade.innerHTML = `${ICONS.refresh} Actualizando...`;
       showConsoleOutput('Actualizando Herramientas (' + channel + ')', 'Ejecutando comprobación y actualización en canal ' + channel + '...');
       try {
         const res = await fetch('/api/ecosystem/upgrade', {
@@ -2162,15 +2180,15 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         const data = await res.json();
         showConsoleOutput('Resultado de Actualización', formatEcosystemUpgradeSequence(data));
-        btnEcoUpgrade.textContent = data.success ? '✓ Actualizado' : '✕ Error';
+        btnEcoUpgrade.innerHTML = `${data.success ? ICONS.check + ' Actualizado' : ICONS.x + ' Error'}`;
         setTimeout(() => {
           btnEcoUpgrade.disabled = false;
-          btnEcoUpgrade.textContent = '★ Actualizar Herramientas';
+          btnEcoUpgrade.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> Actualizar Herramientas`;
         }, 2500);
       } catch (err) {
         showConsoleOutput('Error en Actualización', err.message);
         btnEcoUpgrade.disabled = false;
-        btnEcoUpgrade.textContent = '★ Actualizar Herramientas';
+        btnEcoUpgrade.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> Actualizar Herramientas`;
       }
     });
   }
@@ -2180,7 +2198,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const desc = prompt('Descripción para el nuevo respaldo (opcional):', 'Respaldo manual desde Web UI');
       if (desc === null) return;
       btnEcoCreateBackup.disabled = true;
-      btnEcoCreateBackup.textContent = '⏳ Creando...';
+      btnEcoCreateBackup.innerHTML = `${ICONS.refresh} Creando...`;
       try {
         const res = await fetch('/api/ecosystem/backups/create', {
           method: 'POST',
@@ -2195,7 +2213,7 @@ document.addEventListener('DOMContentLoaded', () => {
         alert('Error al crear respaldo: ' + err.message);
       } finally {
         btnEcoCreateBackup.disabled = false;
-        btnEcoCreateBackup.textContent = '+ Crear Respaldo Ahora';
+        btnEcoCreateBackup.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Crear Respaldo Ahora`;
       }
     });
   }
@@ -2266,28 +2284,30 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!res.ok) throw new Error('Fallo al obtener diagnósticos');
       const data = await res.json();
       if (ecoDoctorBadge) {
-        ecoDoctorBadge.textContent = data.healthy ? '✓ Sistema Saludable' : '⚠ Advertencias Detectadas';
-        ecoDoctorBadge.className = data.healthy ? 'badge text-success' : 'badge text-warning';
+        ecoDoctorBadge.innerHTML = data.healthy
+          ? `${ICONS.check} Sistema Saludable`
+          : `${ICONS.alertTriangle} Advertencias Detectadas`;
+        ecoDoctorBadge.className = `badge ${data.healthy ? 'badge-pass' : 'badge-deferred'}`;
       }
       if (!data.checks || data.checks.length === 0) {
         ecoDoctorTbody.innerHTML = '<tr><td colspan="5" class="empty-state">No se recibieron diagnósticos.</td></tr>';
         return;
       }
       ecoDoctorTbody.innerHTML = data.checks.map(c => {
-        let badgeClass = 'text-success';
+        let badgeClass = 'badge-pass';
         let statusText = 'Saludable';
         if (c.status === 'warning') {
-          badgeClass = 'text-warning';
+          badgeClass = 'badge-deferred';
           statusText = 'Advertencia';
         } else if (c.status === 'error') {
-          badgeClass = 'text-danger';
+          badgeClass = 'badge-fail';
           statusText = 'Error';
         }
         return `
           <tr>
             <td><strong>${escapeHtml(c.name)}</strong></td>
-            <td><span class="badge">${escapeHtml(c.category)}</span></td>
-            <td><span class="${badgeClass}">● ${statusText}</span></td>
+            <td><span class="badge badge-phase">${escapeHtml(c.category)}</span></td>
+            <td><span class="badge ${badgeClass}">${statusText}</span></td>
             <td>${escapeHtml(c.details)}</td>
             <td>${c.recommendation ? escapeHtml(c.recommendation) : '<span class="subtext">—</span>'}</td>
           </tr>

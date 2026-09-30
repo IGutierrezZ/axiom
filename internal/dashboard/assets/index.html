@@ -6,24 +6,35 @@
   <title>Axiom Enterprise — Dashboard de Ingeniería SDD</title>
   <link rel="stylesheet" href="/style.css">
 </head>
-<body class="dark-theme">
+<body class="modern-light-theme">
   <div class="app-layout">
     <!-- Header -->
     <header class="app-header">
       <div class="brand">
-        <div class="brand-logo">▲</div>
+        <div class="brand-logo" title="Axiom Engineering Platform">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 10 18H2L12 3z"/></svg>
+        </div>
         <div class="brand-info">
           <h1>Axiom Enterprise</h1>
           <span class="subtext">Spec-Driven Development Platform</span>
         </div>
       </div>
       <div class="project-selector-wrapper">
-        <label for="project-select" class="project-select-label">📁 Proyecto:</label>
+        <label for="project-select" class="project-select-label">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>
+          Proyecto:
+        </label>
         <select id="project-select" class="project-select-dropdown">
           <option value="">Cargando proyectos...</option>
         </select>
-        <button id="btn-browse-header-project" class="btn btn-sm btn-secondary" title="Buscar y abrir carpeta de proyecto en local">📁 Explorar...</button>
-        <button id="btn-add-project" class="btn btn-sm btn-outline" title="Vincular otro proyecto al Hub">+ Añadir</button>
+        <button id="btn-browse-header-project" class="btn btn-sm btn-secondary" title="Buscar y abrir carpeta de proyecto en local">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2"/></svg>
+          Explorar...
+        </button>
+        <button id="btn-add-project" class="btn btn-sm btn-outline" title="Vincular otro proyecto al Hub">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+          Añadir
+        </button>
       </div>
       <div class="workspace-pill" id="workspace-pill">
         <span class="pill-dot"></span>
@@ -31,43 +42,72 @@
         <span class="pill-badge" id="ws-topology">--</span>
       </div>
       <div class="header-actions">
-        <button id="btn-refresh" class="btn btn-secondary" title="Actualizar datos">↻ Actualizar</button>
+        <button id="btn-refresh" class="btn btn-secondary" title="Actualizar datos">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
+          Actualizar
+        </button>
       </div>
     </header>
 
     <!-- Alerta de Sincronización Remota de Especificaciones (ODD-5.4) -->
     <div id="specs-sync-banner" class="specs-sync-banner hidden">
       <div class="sync-banner-content">
-        <span class="sync-banner-icon">⚠️</span>
+        <span class="sync-banner-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        </span>
         <span id="specs-sync-text">Hay cambios remotos pendientes en el repositorio de especificaciones.</span>
       </div>
       <div class="sync-banner-actions">
-        <button id="btn-specs-pull" class="btn btn-sm btn-primary">⬇ Hacer Pull (Sincronizar Specs)</button>
+        <button id="btn-specs-pull" class="btn btn-sm btn-primary">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17V3"/><path d="m6 11 6 6 6-6"/><path d="M19 21H5"/></svg>
+          Hacer Pull (Sincronizar Specs)
+        </button>
       </div>
     </div>
 
     <!-- Main Navigation Tabs -->
     <nav class="main-nav">
       <button class="nav-tab active" data-tab="tab-increments">
-        <span class="tab-icon">📋</span> Tablero de Incrementos
+        <span class="tab-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M9 12h6"/><path d="M9 16h6"/></svg>
+        </span>
+        Tablero de Incrementos
       </button>
       <button class="nav-tab" data-tab="tab-roles">
-        <span class="tab-icon">👥</span> Monitor Multi-Rol & Barrera
+        <span class="tab-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </span>
+        Monitor Multi-Rol & Barrera
       </button>
       <button class="nav-tab" data-tab="tab-handoffs">
-        <span class="tab-icon">🤝</span> Visor de Handoffs
+        <span class="tab-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m11 17 2 2a1 1 0 0 0 1.42 0l4.24-4.24a1 1 0 0 0 0-1.42l-2-2"/><path d="m7 7 2-2a1 1 0 0 1 1.42 0l4.24 4.24a1 1 0 0 1 0 1.42l-2 2"/><path d="M12 12h.01"/></svg>
+        </span>
+        Visor de Handoffs
       </button>
       <button class="nav-tab" data-tab="tab-skills">
-        <span class="tab-icon">⚡</span> Catálogo de Skills
+        <span class="tab-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        </span>
+        Catálogo de Skills
       </button>
       <button class="nav-tab" data-tab="tab-semantic">
-        <span class="tab-icon">🧠</span> Semántica & Grafo
+        <span class="tab-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z"/><path d="M12 5a3 3 0 1 1 5.997.125 4 4 0 0 1 2.526 5.77 4 4 0 0 1-.556 6.588A4 4 0 1 1 12 18Z"/><path d="M15 13a4.5 4.5 0 0 1-3-4 4.5 4.5 0 0 1-3 4"/><path d="M12 18v4"/></svg>
+        </span>
+        Semántica & Grafo
       </button>
       <button class="nav-tab" data-tab="tab-livingdoc">
-        <span class="tab-icon">📚</span> Especificaciones Vivas
+        <span class="tab-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+        </span>
+        Especificaciones Vivas
       </button>
       <button class="nav-tab" data-tab="tab-ecosystem">
-        <span class="tab-icon">⚙️</span> Ecosistema & Herramientas
+        <span class="tab-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+        </span>
+        Ecosistema & Herramientas
       </button>
     </nav>
 
@@ -75,7 +115,9 @@
     <main class="content-area">
       <!-- Zero-Config Welcome Banner (oculto si el proyecto está configurado) -->
       <section id="zero-config-hero" class="zero-config-card" style="display: none;">
-        <div class="zero-config-icon">🚀</div>
+        <div class="zero-config-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg>
+        </div>
         <div class="zero-config-content">
           <h3>Este repositorio aún no está gobernado con Axiom</h3>
           <p id="zero-config-msg">No se encontró un archivo <code>axiom.yaml</code> en este proyecto. Puedes inicializarlo en un instante:</p>
@@ -83,14 +125,16 @@
             <span class="tech-badge">Detectando tecnología...</span>
           </div>
           <div class="zero-config-actions">
-            <button id="btn-init-project" class="btn btn-primary">⚡ Inicializar Proyecto con Axiom (1 Clic)</button>
+            <button id="btn-init-project" class="btn btn-primary">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+              Inicializar Proyecto con Axiom (1 Clic)
+            </button>
           </div>
         </div>
       </section>
 
       <!-- TAB 1: INCREMENTOS -->
       <section id="tab-increments" class="tab-panel active">
-
         <div class="section-header">
           <div>
             <h2>Ciclo de Vida de Incrementos SDD</h2>
@@ -98,14 +142,20 @@
           </div>
           <div class="filter-group" id="increments-filter-group">
             <button class="filter-btn active" data-filter="all">Todos (Activos)</button>
-            <button class="filter-btn" data-filter="type:fix">🐛 Bugs / Fixes</button>
+            <button class="filter-btn" data-filter="type:fix">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m8 2 1.88 1.88"/><path d="M14.12 3.88 16 2"/><path d="M9 7.13v-1a3.003 3.003 0 1 1 6 0v1"/><path d="M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6"/><path d="M12 20v-9"/><path d="M6.53 9C4.6 8.8 3 7.1 3 5"/><path d="M6 13H2"/><path d="M3 21c0-2.1 1.7-3.9 3.8-4"/><path d="M20.97 5c0 2.1-1.6 3.8-3.5 4"/><path d="M22 13h-4"/><path d="M17.2 17c2.1.1 3.8 1.9 3.8 4"/></svg>
+              Bugs / Fixes
+            </button>
             <button class="filter-btn" data-filter="spec_pending">Pendiente Spec</button>
             <button class="filter-btn" data-filter="ready_for_design">Listo para Design</button>
             <span id="role-filters-container" style="display: inline-flex; gap: 0.25rem;"></span>
             <button class="filter-btn" data-filter="ready_for_global_verify">Pendiente Verif. Global</button>
             <button class="filter-btn" data-filter="ready_for_archive">Listo para Archivar</button>
             <button class="filter-btn" data-filter="archived">Archivados</button>
-            <button id="btn-new-increment" class="btn btn-primary" style="margin-left: 0.75rem;" title="Crear un nuevo incremento SDD">+ Nuevo Incremento</button>
+            <button id="btn-new-increment" class="btn btn-primary" style="margin-left: 0.75rem;" title="Crear un nuevo incremento SDD">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+              Nuevo Incremento
+            </button>
           </div>
         </div>
 
@@ -130,7 +180,9 @@
         </div>
 
         <div id="barrier-result-card" class="barrier-banner hidden">
-          <div class="barrier-status-icon" id="barrier-icon">✓</div>
+          <div class="barrier-status-icon" id="barrier-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
           <div class="barrier-details">
             <h3 id="barrier-title">Estado de la Barrera</h3>
             <p id="barrier-desc">Diagnóstico</p>
@@ -154,7 +206,10 @@
             <select id="handoff-change-select" class="form-select">
               <option value="">Seleccionar cambio...</option>
             </select>
-            <button id="btn-open-create-handoff" class="btn btn-primary" title="Redactar nuevo relevo formal">+ Crear Handoff</button>
+            <button id="btn-open-create-handoff" class="btn btn-primary" title="Redactar nuevo relevo formal">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+              Crear Handoff
+            </button>
           </div>
         </div>
 
@@ -162,7 +217,9 @@
           <div class="handoff-header">
             <div class="handoff-flow">
               <span class="phase-chip" id="ho-from-phase">--</span>
-              <span class="flow-arrow">➔</span>
+              <span class="flow-arrow">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+              </span>
               <span class="phase-chip target" id="ho-to-phase">--</span>
             </div>
             <div class="handoff-meta-chips">
@@ -180,8 +237,7 @@
         </div>
       </section>
 
-
-      <!-- TAB 5: SKILLS -->
+      <!-- TAB 4: SKILLS -->
       <section id="tab-skills" class="tab-panel">
         <div class="section-header">
           <div>
@@ -190,7 +246,8 @@
           </div>
           <div>
             <button id="btn-scan-skills" class="btn btn-primary" title="Detectar tecnologías del stack y minar patrones locales">
-              ⚡ Escanear Tecnologías & Minar
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+              Escanear Tecnologías & Minar
             </button>
           </div>
         </div>
@@ -198,7 +255,10 @@
         <!-- Buzón de Propuestas (Human-in-the-Loop) -->
         <div class="inbox-section">
           <div class="inbox-header">
-            <h3>📥 Buzón de Propuestas Pendientes de Aprobación</h3>
+            <h3>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="inline-icon"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>
+              Buzón de Propuestas Pendientes de Aprobación
+            </h3>
             <span class="inbox-count-badge" id="inbox-count">0 pendientes</span>
           </div>
           <div id="scan-feedback" class="scan-feedback hidden"></div>
@@ -207,13 +267,16 @@
           </div>
         </div>
 
-        <h3 class="subsection-title" style="margin-top: 2rem;">⚡ Skills Activas en Producción (skills/)</h3>
+        <h3 class="subsection-title" style="margin-top: 2rem;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="inline-icon"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          Skills Activas en Producción (skills/)
+        </h3>
         <div class="skills-grid" id="skills-container">
           <div class="loading-state">Escaneando catálogo de skills activas...</div>
         </div>
       </section>
 
-      <!-- TAB 6: SEMÁNTICA & GRAFO DE CÓDIGO -->
+      <!-- TAB 5: SEMÁNTICA & GRAFO DE CÓDIGO -->
       <section id="tab-semantic" class="tab-panel">
         <div class="section-header">
           <div>
@@ -221,8 +284,14 @@
             <p class="description">Diagnóstico de conectores Serena MCP / CodeGraph y catálogo estructurado de símbolos, tipos y dependencias del workspace.</p>
           </div>
           <div class="filter-group">
-            <button class="btn btn-primary" id="btn-reindex-codegraph" title="Ejecutar reindexación de CodeGraph bajo demanda">⚡ Reindexar CodeGraph</button>
-            <button class="btn btn-secondary" id="btn-refresh-semantic">↻ Recargar Semántica</button>
+            <button class="btn btn-primary" id="btn-reindex-codegraph" title="Ejecutar reindexación de CodeGraph bajo demanda">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+              Reindexar CodeGraph
+            </button>
+            <button class="btn btn-secondary" id="btn-refresh-semantic">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
+              Recargar Semántica
+            </button>
           </div>
         </div>
 
@@ -235,7 +304,10 @@
 
         <!-- Agentes Compatibles -->
         <div class="card" style="margin-top: 1.5rem;">
-          <h3 class="subsection-title">🤖 Estado de Agentes de Desarrollo y MCPs</h3>
+          <h3 class="subsection-title">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="inline-icon"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><circle cx="15.5" cy="8.5" r="1.5"/><path d="M9 15h6"/></svg>
+            Estado de Agentes de Desarrollo y MCPs
+          </h3>
           <div id="semantic-agents-list" class="agents-list">
             <div class="loading-state">Detectando configuraciones de agentes...</div>
           </div>
@@ -276,14 +348,17 @@
 
         <!-- Dependencias entre Paquetes -->
         <div class="card" style="margin-top: 1.5rem;">
-          <h3 class="subsection-title">📦 Grafo de Dependencias entre Paquetes</h3>
+          <h3 class="subsection-title">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="inline-icon"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
+            Grafo de Dependencias entre Paquetes
+          </h3>
           <div id="semantic-dependencies-container" class="dependencies-container">
             <div class="loading-state">Calculando relaciones de importación...</div>
           </div>
         </div>
       </section>
 
-      <!-- TAB 7: ESPECIFICACIONES VIVAS (LIVING DOCS) -->
+      <!-- TAB 6: ESPECIFICACIONES VIVAS (LIVING DOCS) -->
       <section id="tab-livingdoc" class="tab-panel">
         <div class="section-header">
           <div>
@@ -291,28 +366,34 @@
             <p class="description">Especificaciones consolidadas en openspec/specs/ y regeneradas continuamente tras cada archivado.</p>
           </div>
           <div class="header-actions">
-            <button id="btn-sync-livingdoc" class="btn btn-primary">↻ Sincronizar Catálogo</button>
+            <button id="btn-sync-livingdoc" class="btn btn-primary">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
+              Sincronizar Catálogo
+            </button>
           </div>
         </div>
 
         <div class="livingdoc-stats-grid" id="livingdoc-metrics">
-          <div class="metric-card">
-            <span class="metric-label">Dominios Activos</span>
-            <span class="metric-value" id="metric-living-domains">0</span>
+          <div class="stat-card">
+            <span class="stat-label">Dominios Activos</span>
+            <span class="stat-value" id="metric-living-domains">0</span>
           </div>
-          <div class="metric-card">
-            <span class="metric-label">Total Requisitos</span>
-            <span class="metric-value" id="metric-living-reqs">0</span>
+          <div class="stat-card">
+            <span class="stat-label">Total Requisitos</span>
+            <span class="stat-value" id="metric-living-reqs">0</span>
           </div>
-          <div class="metric-card">
-            <span class="metric-label">Última Sincronización</span>
-            <span class="metric-value" id="metric-living-sync" style="font-size: 1rem;">--</span>
+          <div class="stat-card">
+            <span class="stat-label">Última Sincronización</span>
+            <span class="stat-value" id="metric-living-sync" style="font-size: 1.05rem;">--</span>
           </div>
         </div>
 
         <div class="livingdoc-layout" style="margin-top: 1.5rem; display: grid; grid-template-columns: 320px 1fr; gap: 1.5rem;">
           <div class="card">
-            <h3 class="subsection-title">📖 Dominios de Especificación</h3>
+            <h3 class="subsection-title">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="inline-icon"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+              Dominios de Especificación
+            </h3>
             <div id="livingdoc-domains-list" class="livingdoc-list" style="margin-top: 1rem;">
               <div class="loading-state">Cargando catálogo...</div>
             </div>
@@ -329,7 +410,7 @@
         </div>
       </section>
 
-      <!-- TAB 8: ECOSISTEMA & HERRAMIENTAS -->
+      <!-- TAB 7: ECOSISTEMA & HERRAMIENTAS -->
       <section id="tab-ecosystem" class="tab-panel">
         <div class="section-header">
           <div>
@@ -337,30 +418,45 @@
             <p class="description">Diagnóstico integral (Axiom Doctor), sincronización de agentes, actualización de herramientas y snapshots de respaldos.</p>
           </div>
           <div class="filter-group">
-            <button class="btn btn-secondary" id="btn-refresh-ecosystem">↻ Actualizar Ecosistema</button>
+            <button class="btn btn-secondary" id="btn-refresh-ecosystem">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
+              Actualizar Ecosistema
+            </button>
           </div>
         </div>
 
         <!-- Acciones Rápidas de Mantenimiento -->
         <div class="card" style="margin-top: 1rem;">
-          <h3 class="subsection-title">⚡ Operaciones del Ecosistema</h3>
-          <div style="display: flex; gap: 1rem; align-items: center; margin-top: 0.75rem; flex-wrap: wrap;">
-            <button id="btn-eco-sync" class="btn btn-primary" title="Sincronizar configuraciones y reglas de agentes en el workspace">🔄 Sincronizar Workspace</button>
-            <div style="display: inline-flex; align-items: center; gap: 0.5rem; background: var(--bg-secondary); padding: 0.35rem 0.75rem; border-radius: 4px; border: 1px solid var(--border-color);">
-              <label for="select-eco-channel" style="font-size: 0.85rem; font-weight: 500; color: var(--text-muted);">Canal:</label>
-              <select id="select-eco-channel" style="background: transparent; border: none; color: var(--text-color); font-size: 0.85rem; outline: none; cursor: pointer;">
+          <h3 class="subsection-title">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="inline-icon"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            Operaciones del Ecosistema
+          </h3>
+          <div style="display: flex; gap: 0.75rem; align-items: center; margin-top: 0.75rem; flex-wrap: wrap;">
+            <button id="btn-eco-sync" class="btn btn-primary" title="Sincronizar configuraciones y reglas de agentes en el workspace">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>
+              Sincronizar Workspace
+            </button>
+            <div style="display: inline-flex; align-items: center; gap: 0.5rem; background: var(--color-surface-subtle); padding: 0.35rem 0.75rem; border-radius: var(--radius-md); border: 1px solid var(--color-border-subtle);">
+              <label for="select-eco-channel" style="font-size: 0.825rem; font-weight: 500; color: var(--color-text-muted);">Canal:</label>
+              <select id="select-eco-channel" style="background: transparent; border: none; color: var(--color-text-main); font-size: 0.825rem; outline: none; cursor: pointer; font-weight: 600;">
                 <option value="stable">Estable (Releases)</option>
                 <option value="main">Main (Desarrollo Continuo)</option>
               </select>
             </div>
-            <button id="btn-eco-upgrade" class="btn btn-secondary" title="Comprobar y actualizar herramientas">★ Actualizar Herramientas</button>
-            <button id="btn-eco-create-backup" class="btn btn-outline" title="Crear un nuevo snapshot de respaldo">+ Crear Respaldo Ahora</button>
-            <span class="badge" style="background: var(--bg-tertiary); color: var(--text-muted); font-size: 0.75rem; border: 1px solid var(--border-color);" title="Sincronización acotada al proyecto activo">Ámbito: Workspace</span>
+            <button id="btn-eco-upgrade" class="btn btn-secondary" title="Comprobar y actualizar herramientas">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20"/><path d="m17 7-5-5-5 5"/></svg>
+              Actualizar Herramientas
+            </button>
+            <button id="btn-eco-create-backup" class="btn btn-outline" title="Crear un nuevo snapshot de respaldo">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+              Crear Respaldo Ahora
+            </button>
+            <span class="badge" style="background: var(--color-surface-subtle); color: var(--color-text-muted); font-size: 0.72rem; border: 1px solid var(--color-border-subtle);" title="Sincronización acotada al proyecto activo">Ámbito: Workspace</span>
           </div>
           <div id="eco-action-output" class="console-box hidden" style="margin-top: 1rem;">
             <div class="console-header">
               <span id="eco-action-title">Consola de Operaciones</span>
-              <button class="btn-sm btn-outline" id="btn-clear-console">Limpiar</button>
+              <button class="btn-xs btn-outline" id="btn-clear-console">Limpiar</button>
             </div>
             <pre id="eco-console-content"></pre>
           </div>
@@ -369,7 +465,10 @@
         <!-- Diagnóstico del Sistema (Axiom Doctor) -->
         <div class="card" style="margin-top: 1.5rem;">
           <div style="display: flex; justify-content: space-between; align-items: center;">
-            <h3 class="subsection-title">🩺 Diagnóstico de Salud (Axiom Doctor)</h3>
+            <h3 class="subsection-title">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="inline-icon"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
+              Diagnóstico de Salud (Axiom Doctor)
+            </h3>
             <span id="eco-doctor-badge" class="badge">Verificando...</span>
           </div>
           <div class="table-container" style="margin-top: 1rem;">
@@ -393,8 +492,11 @@
         <!-- Topología y Salud de Repositorios -->
         <div class="card" style="margin-top: 1.5rem;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-            <h3 class="subsection-title" style="margin-bottom: 0;">🗺️ Topología y Configuración de Repositorios</h3>
-            <span class="badge" style="background: var(--bg-tertiary); color: var(--text-color);">axiom.yaml</span>
+            <h3 class="subsection-title" style="margin-bottom: 0;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="inline-icon"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+              Topología y Configuración de Repositorios
+            </h3>
+            <span class="badge" style="background: var(--color-surface-subtle); color: var(--color-text-main); border: 1px solid var(--color-border-subtle);">axiom.yaml</span>
           </div>
           <div class="topology-dashboard">
             <div class="stat-cards-row">
@@ -439,7 +541,10 @@
         <!-- Gestión de Respaldos (Backups) -->
         <div class="card" style="margin-top: 1.5rem;">
           <div style="display: flex; justify-content: space-between; align-items: center;">
-            <h3 class="subsection-title">💾 Historial de Respaldos (~/.axiom/backups/)</h3>
+            <h3 class="subsection-title">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="inline-icon"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+              Historial de Respaldos (~/.axiom/backups/)
+            </h3>
             <span id="eco-backups-count" class="badge">0 respaldos</span>
           </div>
           <div class="table-container" style="margin-top: 1rem;">
@@ -463,7 +568,10 @@
         <!-- Modelos de IA Asignados -->
         <div class="card" style="margin-top: 1.5rem;">
           <div style="display: flex; justify-content: space-between; align-items: center;">
-            <h3 class="subsection-title">🤖 Modelos de IA y Persona Activa</h3>
+            <h3 class="subsection-title">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="inline-icon"><path d="M12 2a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2 2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"/><rect width="16" height="12" x="4" y="8" rx="2"/><circle cx="9" cy="14" r="1"/><circle cx="15" cy="14" r="1"/></svg>
+              Modelos de IA y Persona Activa
+            </h3>
             <span id="eco-persona-badge" class="badge">Persona: Axiom</span>
           </div>
           <div class="table-container" style="margin-top: 1rem;">
@@ -490,19 +598,33 @@
       <div class="modal-dialog" style="max-width: 750px;">
         <div class="modal-header">
           <h3 id="modal-title">Detalle del Incremento</h3>
-          <button class="btn-close" id="btn-modal-close">✕</button>
+          <button class="btn-close" id="btn-modal-close">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
         </div>
         <div class="modal-sdd-toolbar" id="modal-sdd-toolbar">
-          <button id="btn-inc-continue" class="btn btn-sm btn-primary" title="Ejecutar siguiente transición SDD">▶ Continuar SDD</button>
-          <button id="btn-inc-verify" class="btn btn-sm btn-secondary" title="Validar formalmente reporte de verificación">✓ Validar Verificación</button>
-          <button id="btn-inc-create-handoff" class="btn btn-sm btn-outline" title="Redactar documento de relevo formal">🤝 Redactar Handoff</button>
+          <button id="btn-inc-continue" class="btn btn-sm btn-primary" title="Ejecutar siguiente transición SDD">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            Continuar SDD
+          </button>
+          <button id="btn-inc-verify" class="btn btn-sm btn-secondary" title="Validar formalmente reporte de verificación">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></svg>
+            Validar Verificación
+          </button>
+          <button id="btn-inc-create-handoff" class="btn btn-sm btn-outline" title="Redactar documento de relevo formal">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m11 17 2 2a1 1 0 0 0 1.42 0l4.24-4.24a1 1 0 0 0 0-1.42l-2-2"/><path d="m7 7 2-2a1 1 0 0 1 1.42 0l4.24 4.24a1 1 0 0 1 0 1.42l-2 2"/><path d="M12 12h.01"/></svg>
+            Redactar Handoff
+          </button>
         </div>
         <div class="modal-body" id="modal-content">
           Cargando...
         </div>
         <div id="modal-console-container" class="modal-console hidden">
           <div class="modal-console-header">
-            <span class="modal-console-title">🖥️ Salida de Ejecución:</span>
+            <span class="modal-console-title">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="inline-icon"><rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+              Salida de Ejecución
+            </span>
             <button id="btn-clear-console" class="btn btn-xs btn-outline">Limpiar</button>
           </div>
           <pre id="modal-console-output" class="modal-console-output"></pre>
@@ -515,7 +637,9 @@
       <div class="modal-dialog" style="max-width: 620px;">
         <div class="modal-header">
           <h3>Vincular o Inicializar Proyecto en Axiom</h3>
-          <button class="btn-close" id="btn-close-add-project">✕</button>
+          <button class="btn-close" id="btn-close-add-project">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
         </div>
         <div class="modal-body" style="padding: 1.5rem; max-height: 80vh; overflow-y: auto;">
           <div style="margin-bottom: 1rem;">
@@ -523,7 +647,8 @@
             <div style="display: flex; gap: 0.5rem; align-items: center;">
               <input type="text" id="input-project-path" class="form-select" style="flex: 1; box-sizing: border-box;" placeholder="C:\repos\mi-proyecto o /home/usuario/proyectos/...">
               <button type="button" id="btn-browse-project-path" class="btn btn-secondary" title="Examinar y buscar carpeta en disco local" style="white-space: nowrap; display: flex; align-items: center; gap: 0.35rem;">
-                <span>📁</span> Examinar...
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2"/></svg>
+                Examinar...
               </button>
             </div>
           </div>
@@ -542,12 +667,15 @@
           </div>
 
           <!-- Constructor Dinámico de Roles -->
-          <div style="border-top: 1px solid var(--border-color, #334155); padding-top: 1rem; margin-bottom: 1.5rem;">
+          <div style="border-top: 1px solid var(--color-border-subtle); padding-top: 1rem; margin-bottom: 1.5rem;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
               <label style="font-weight: 600; font-size: 0.95rem;">Roles del Proyecto (Opcional):</label>
-              <button type="button" id="btn-add-role-row" class="btn btn-secondary" style="font-size: 0.8rem; padding: 0.3rem 0.6rem;">+ Agregar Rol</button>
+              <button type="button" id="btn-add-role-row" class="btn btn-secondary" style="font-size: 0.8rem; padding: 0.3rem 0.6rem;">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                Agregar Rol
+              </button>
             </div>
-            <p style="font-size: 0.8rem; color: #94a3b8; margin-top: 0; margin-bottom: 0.75rem;">
+            <p style="font-size: 0.8rem; color: var(--color-text-muted); margin-top: 0; margin-bottom: 0.75rem;">
               Si no configuras roles específicos, Axiom creará automáticamente un único rol <strong>fullstack</strong> que gobernará todo el repositorio.
             </p>
             <div id="roles-builder-container" style="display: flex; flex-direction: column; gap: 0.75rem;">
@@ -568,38 +696,56 @@
       <div class="modal-dialog folder-picker-dialog">
         <div class="modal-header">
           <div style="display: flex; align-items: center; gap: 0.6rem;">
-            <span style="font-size: 1.25rem;">📁</span>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--color-accent);"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>
             <div>
-              <h3 style="margin: 0; font-size: 1.1rem;">Explorador de Carpetas Locales</h3>
-              <span class="subtext" style="font-size: 0.75rem; color: var(--text-muted);">Navega y selecciona una carpeta de tu sistema de archivos</span>
+              <h3 style="margin: 0; font-size: 1.05rem;">Explorador de Carpetas Locales</h3>
+              <span class="subtext" style="font-size: 0.75rem; color: var(--color-text-muted);">Navega y selecciona una carpeta de tu sistema de archivos</span>
             </div>
           </div>
-          <button class="btn-close" id="btn-close-folder-picker">✕</button>
+          <button class="btn-close" id="btn-close-folder-picker">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
         </div>
         <div class="modal-body folder-picker-body">
           <!-- Accesos Rápidos (Drives, Home, Workspace, Botón SO) -->
           <div class="folder-picker-shortcuts">
             <span class="shortcut-label">Accesos rápidos:</span>
             <div id="fp-drives-container" class="fp-chips-group"></div>
-            <button type="button" id="fp-btn-home" class="fp-chip" title="Directorio de Usuario">🏠 Inicio</button>
-            <button type="button" id="fp-btn-workspace" class="fp-chip" title="Directorio del Workspace">💻 Workspace</button>
-            <button type="button" id="fp-btn-native-so" class="fp-chip fp-chip-native" title="Abrir ventana nativa del explorador de carpetas del sistema operativo">🪟 Explorador del SO</button>
+            <button type="button" id="fp-btn-home" class="fp-chip" title="Directorio de Usuario">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+              Inicio
+            </button>
+            <button type="button" id="fp-btn-workspace" class="fp-chip" title="Directorio del Workspace">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="7" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+              Workspace
+            </button>
+            <button type="button" id="fp-btn-native-so" class="fp-chip fp-chip-native" title="Abrir ventana nativa del explorador de carpetas del sistema operativo">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+              Explorador del SO
+            </button>
           </div>
 
           <!-- Barra de Dirección / Breadcrumbs y Navegación -->
           <div class="folder-picker-nav-bar">
-            <button type="button" id="fp-btn-up" class="btn btn-secondary btn-sm" title="Subir al directorio superior (..)">⬆ Subir</button>
+            <button type="button" id="fp-btn-up" class="btn btn-secondary btn-sm" title="Subir al directorio superior (..)">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg>
+              Subir
+            </button>
             <div class="fp-path-container">
               <div id="fp-breadcrumbs" class="fp-breadcrumbs"></div>
               <input type="text" id="fp-path-input" class="fp-path-input hidden" placeholder="Ruta del directorio...">
-              <button type="button" id="fp-btn-toggle-input" class="fp-btn-icon" title="Editar ruta manualmente">✏️</button>
+              <button type="button" id="fp-btn-toggle-input" class="fp-btn-icon" title="Editar ruta manualmente">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+              </button>
             </div>
-            <button type="button" id="fp-btn-refresh" class="btn btn-secondary btn-sm" title="Recargar">↻</button>
+            <button type="button" id="fp-btn-refresh" class="btn btn-secondary btn-sm" title="Recargar">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
+            </button>
           </div>
 
           <!-- Filtro en tiempo real -->
           <div class="folder-picker-filter-bar">
-            <input type="text" id="fp-filter-input" class="form-select" placeholder="🔍 Filtrar carpetas en este directorio..." style="width: 100%; box-sizing: border-box; font-size: 0.85rem; padding: 0.4rem 0.75rem;">
+            <input type="text" id="fp-filter-input" class="form-select" placeholder="Filtrar carpetas en este directorio..." style="width: 100%; box-sizing: border-box; font-size: 0.85rem; padding: 0.4rem 0.75rem;">
           </div>
 
           <!-- Contenedor desplazable de carpetas -->
@@ -615,11 +761,14 @@
             <span id="fp-selected-path-display" class="fp-selected-path">—</span>
           </div>
         </div>
-        <div class="modal-footer" style="padding: 1rem 1.5rem; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; background: var(--bg-card);">
-          <span id="fp-count-info" style="font-size: 0.78rem; color: var(--text-muted);">0 carpetas encontradas</span>
+        <div class="modal-footer" style="padding: 1rem 1.5rem; border-top: 1px solid var(--color-border-subtle); display: flex; justify-content: space-between; align-items: center; background: var(--color-surface-card);">
+          <span id="fp-count-info" style="font-size: 0.78rem; color: var(--color-text-muted);">0 carpetas encontradas</span>
           <div style="display: flex; gap: 0.75rem;">
             <button type="button" id="fp-btn-cancel" class="btn btn-secondary">Cancelar</button>
-            <button type="button" id="fp-btn-confirm" class="btn btn-primary">✓ Seleccionar esta Carpeta</button>
+            <button type="button" id="fp-btn-confirm" class="btn btn-primary">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              Seleccionar esta Carpeta
+            </button>
           </div>
         </div>
       </div>
@@ -630,7 +779,9 @@
       <div class="modal-dialog" style="max-width: 580px;">
         <div class="modal-header">
           <h3>Crear Nuevo Incremento SDD</h3>
-          <button class="btn-close" id="btn-close-new-increment">✕</button>
+          <button class="btn-close" id="btn-close-new-increment">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
         </div>
         <div class="modal-body" style="padding: 1.5rem;">
           <div style="margin-bottom: 1rem;">
@@ -638,7 +789,7 @@
               Nombre del Incremento (kebab-case):
             </label>
             <input type="text" id="input-inc-name" class="form-select" style="width: 100%; box-sizing: border-box;" placeholder="ej. inc-16-metricas-rendimiento">
-            <span style="font-size: 0.75rem; color: var(--text-muted); display: block; margin-top: 0.25rem;">Solo letras minúsculas, números y guiones.</span>
+            <span style="font-size: 0.75rem; color: var(--color-text-muted); display: block; margin-top: 0.25rem;">Solo letras minúsculas, números y guiones.</span>
           </div>
           <div style="margin-bottom: 1rem;">
             <label for="select-inc-type" style="display: block; font-weight: 600; margin-bottom: 0.35rem; font-size: 0.85rem;">
@@ -670,7 +821,9 @@
       <div class="modal-dialog" style="max-width: 680px;">
         <div class="modal-header">
           <h3>Redactar Handoff Estructurado</h3>
-          <button class="btn-close" id="btn-close-create-handoff">✕</button>
+          <button class="btn-close" id="btn-close-create-handoff">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
         </div>
         <div class="modal-body" style="padding: 1.5rem; max-height: 80vh; overflow-y: auto;">
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
@@ -756,7 +909,7 @@
     <!-- Footer -->
     <footer class="app-footer">
       <span>Axiom Enterprise SDD Runtime v0.4.0 • Idioma Oficial: Castellano</span>
-      <span class="footer-status">● Servidor HTTP Local Activo</span>
+      <span class="footer-status"><span class="pill-dot"></span> Servidor HTTP Local Activo</span>
     </footer>
   </div>
 
