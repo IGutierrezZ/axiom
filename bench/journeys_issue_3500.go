@@ -80,8 +80,8 @@ func issue3500Journeys() []Journey {
 	}}
 }
 
-var issue3500SyncCapability = &Capability{Verb: []string{"sync"}, Flags: []string{"--agents", "--sdd-mode", "--sdd-profile-strategy"}}
+var issue3500SyncCapability = &Capability{Verb: []string{"sync"}, Flags: []string{"--agents", "--sdd-mode", "--sdd-profile-strategy", "--scope"}}
 
 func issue3500SyncArgs(*Sandbox) ([]string, error) {
-	return []string{"sync", "--agents", "opencode", "--sdd-mode", "multi", "--sdd-profile-strategy", "external-single-active"}, nil
+	return []string{"sync", "--agents", "opencode", "--sdd-mode", "multi", "--sdd-profile-strategy", "external-single-active", "--scope", "global"}, nil
 }

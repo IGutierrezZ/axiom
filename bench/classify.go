@@ -206,7 +206,7 @@ const productName = "gentle-ai"
 // commandStart matches the product name where a command could begin: at the
 // start of a line, or after whitespace or an opening quote/bracket, and
 // followed by a delimiter rather than more word characters.
-var commandStart = regexp.MustCompile("(?:^|[\\s'\"`(\\[])gentle-ai(?:[\\s'\"`)\\]]|$)")
+var commandStart = regexp.MustCompile("(?:^|[\\s'\"`(\\[])(?:gentle-ai|axiom)(?:[\\s'\"`)\\]]|$)")
 
 // placeholderRun matches an unfilled template argument such as <gate>.
 // A command the user still has to fill in is not runnable, so it does not
@@ -232,7 +232,7 @@ var nonContinuationValues = map[string]bool{
 }
 
 // HasRunnableCommand reports whether the emitted text names a literal,
-// immediately runnable gentle-ai command: the product name, at least one
+// immediately runnable gentle-ai or axiom command: the product name, at least one
 // argument after it, and no unfilled <placeholder>.
 //
 // Each occurrence of the product name opens a candidate command that ends at
@@ -250,8 +250,13 @@ func HasRunnableCommand(text string) bool {
 			}
 			// The match includes the surrounding delimiters; the argument
 			// list starts immediately after the product name itself.
-			offset := strings.Index(line[position[0]:position[1]], productName)
-			tailStart := position[0] + offset + len(productName)
+			sub := line[position[0]:position[1]]
+			matchedName := productName
+			if strings.Contains(sub, "axiom") {
+				matchedName = "axiom"
+			}
+			offset := strings.Index(sub, matchedName)
+			tailStart := position[0] + offset + len(matchedName)
 			if commandTailIsRunnable(line[tailStart:end]) {
 				return true
 			}

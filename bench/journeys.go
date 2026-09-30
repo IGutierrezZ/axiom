@@ -535,7 +535,7 @@ func printedCommandArguments(command string) ([]string, error) {
 	if len(words) == 0 {
 		return nil, errors.New("carried no command to run")
 	}
-	if words[0] != productName {
+	if words[0] != productName && words[0] != "axiom" {
 		return nil, fmt.Errorf("printed a command that starts with %q, not %q", words[0], productName)
 	}
 	if len(words) == 1 {

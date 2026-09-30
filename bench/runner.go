@@ -109,6 +109,8 @@ func (s *Sandbox) env() []string {
 		"NO_COLOR=1",
 		"TERM=dumb",
 		"LANG=C",
+		"AXIOM_INSTALL_SCOPE=global",
+		"GENTLE_AI_INSTALL_SCOPE=global",
 	}
 	if s.BenchCrashAtPhase != "" {
 		env = append(env, "GENTLE_AI_BENCH_CRASH_AT_PHASE="+s.BenchCrashAtPhase)
