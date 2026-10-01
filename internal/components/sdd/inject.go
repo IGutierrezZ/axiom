@@ -2373,23 +2373,6 @@ func ensureClaudeTelemetryHooks(settingsPath string) (bool, error) {
 	return wr.Changed, nil
 }
 
-func claudeHookExists(root map[string]any, command string) bool {
-	hooksMap, ok := root["hooks"].(map[string]any)
-	if !ok {
-		return false
-	}
-	for _, key := range []string{"UserPromptSubmit", "SessionStart", "Stop", "SubagentStop"} {
-		hookEntries, ok := hooksMap[key].([]any)
-		if !ok {
-			continue
-		}
-		if claudeHookListContains(hookEntries, command) {
-			return true
-		}
-	}
-	return false
-}
-
 func claudeHookListContains(hookEntries []any, command string) bool {
 	for _, item := range hookEntries {
 		itemMap, ok := item.(map[string]any)
