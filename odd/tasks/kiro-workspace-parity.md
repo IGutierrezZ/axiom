@@ -69,6 +69,7 @@ Tras el merge, `scripts/axiom-worktree.ps1 done kiro-workspace-parity` desmonta 
 - [x] **T3 · G4 + `.gitignore`** (`85ac7180`)
   - Bloque Kiro en `.gitignore` (`.kiro/agents/`, `.kiro/skills/`, `.kiro/settings/`).
   - Sección `## Ámbito proyecto (workspace)` en `docs/kiro.md`.
+  - Corrección (`643edea4`): los bloques de comandos muestran solo las variantes `--dry-run`. `TestDocumentedInvocationsRunAsDocumented` ejecuta en proceso cada orden `axiom ...` de `docs/`, y `axiom setup --agent kiro-ide ...` sin `--dry-run` lanzaba una instalación real que descargaba Engram y reordenaba el PATH del usuario en Windows. Tras el cambio, el subtest `executed/setup_--agent` tarda 1,3 s y no emite el aviso de Engram.
 
 - [x] **T4 · G5: TUI** (`4d1ada3d`)
   - Kiro en `detectedAgentIDs` y `agentBuilderSkillsDir` de `internal/tui/model.go`, con tests.
