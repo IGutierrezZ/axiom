@@ -37,20 +37,22 @@ Que `axiom setup --agent kiro-ide` y `axiom sync --agent kiro-ide --scope worksp
 
 ## Tareas
 
-- [ ] **T1 · G3: tests del ámbito workspace para Kiro**
+- [x] **T1 · G3: tests del ámbito workspace para Kiro** (`bcec8be5`)
   - `TestComponentInjectionDirScopedWorkspaceSafeguard` incluye `model.AgentKiroIDE` entre los agentes que resuelven a `workspaceDir`.
   - Nuevo `TestComponentPathsWorkspaceScopedKiroStaysInWorkspace` (sdd, skills, engram, context7, persona).
   - Nuevo `TestSyncBackupTargetsScopedWorkspaceKiroStaysInWorkspace`.
+  - Sin fugas: con `APPDATA` y `XDG_CONFIG_HOME` bajo home, ninguna ruta de Kiro cae bajo home.
 
-- [ ] **T2 · G6: comentario obsoleto del steering de Kiro**
+- [x] **T2 · G6: comentario obsoleto del steering de Kiro** (`58e5a8ba`)
   - `internal/components/golden_test.go`: `~/.kiro/steering/gentle-ai.md` → `~/.kiro/steering/axiom.md`.
 
-- [ ] **T3 · G4 + `.gitignore`**
+- [x] **T3 · G4 + `.gitignore`** (`85ac7180`)
   - Bloque Kiro en `.gitignore` (`.kiro/agents/`, `.kiro/skills/`, `.kiro/settings/`).
   - Sección `## Ámbito proyecto (workspace)` en `docs/kiro.md`.
 
-- [ ] **T4 · G5: TUI**
+- [x] **T4 · G5: TUI** (`4d1ada3d`)
   - Kiro en `detectedAgentIDs` y `agentBuilderSkillsDir` de `internal/tui/model.go`, con tests.
+  - El helper de test `makeDetectionWithAgents` no emitía `kiro-ide`; se añadió a su lista de agentes conocidos.
 
 - [ ] **T5 · G1: hook de skill-registry (PR2)**
   - `.kiro/hooks/axiom-skill-registry.json` con trigger `SessionStart` y `axiom skill-registry refresh --quiet --no-gitignore --cwd .`.
@@ -60,4 +62,11 @@ Que `axiom setup --agent kiro-ide` y `axiom sync --agent kiro-ide --scope worksp
 
 ## Verificación ejecutable
 
-Pendiente; se completa al marcar cada tarea.
+Todos los tests con el HOME aislado (`$env:HOME` y `$env:USERPROFILE` en `%TEMP%\axiom-kiro-parity-home`).
+
+1. **T1:** `go test ./internal/cli/ -run "Kiro|WorkspaceSafeguard|ScopedWorkspace" -count=1` → `ok (11.0s)`; los 5 subtests de cada test nuevo en verde.
+2. **T2:** `go test ./internal/components/ -run TestGoldenSDD_Kiro -count=1` → `ok`.
+3. **T3:** `git check-ignore .kiro/agents/x.md .kiro/skills/x .kiro/settings/mcp.json` → lista las tres; `git check-ignore .kiro/steering/axiom.md .kiro/hooks/x.json` → código 1.
+4. **T4:** `go test ./internal/tui/ -run "PreselectedAgents|AgentBuilderSkillsDir" -count=1` → `ok`; `go test ./internal/tui/ -count=1` → `ok`.
+5. **Global:** `go build ./...`, `go vet ./internal/cli/ ./internal/tui/ ./internal/components/`, `go run ./internal/gofmtcheck` y `git diff --check origin/main...HEAD` sin errores. `go test ./internal/components/ ./internal/tui/ -count=1` → `ok`.
+6. **`go test ./internal/cli/` completo:** no termina en local (timeout a 10m, 25m y 1h20m) por los tests de review, que fallan de forma intermitente por el presupuesto de tiempo (`operation_timeout`) de sus subprocesos git. Ejecutado aparte, `TestNegotiatedBoundStatusResumesSameCaptureAfterManagedAssetsConverge/reviewer` pasa 2/2 en la rama y 2/2 en `origin/main`. Los 753 tests de `internal/cli` que no son de review: 720 en verde y 3 en rojo (`TestCodeGraphGuidanceSyncStepRestoresSymlinkAfterInstallerFailure`, `TestCodeGraphGuidanceSyncStepPreservesBrokenSymlinkChain`, `TestRunSyncMigratesLegacyManagedPiCodeGraphSelection`), que fallan igual en `origin/main` (Windows sin privilegio de symlink; wiring de CodeGraph). Preexistentes, no se tocan.
