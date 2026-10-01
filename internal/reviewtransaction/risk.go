@@ -42,12 +42,12 @@ const (
 type RiskSignal string
 
 const (
-	SignalAuth         RiskSignal = "auth"
-	SignalUpdate       RiskSignal = "update"
-	SignalSecurity     RiskSignal = "security"
-	SignalPayments     RiskSignal = "payments"
-	SignalDataExposure RiskSignal = "data_exposure"
-	SignalDataLoss     RiskSignal = "data_loss"
+	SignalAuth          RiskSignal = "auth"
+	SignalUpdate        RiskSignal = "update"
+	SignalSecurity      RiskSignal = "security"
+	SignalPayments      RiskSignal = "payments"
+	SignalDataExposure  RiskSignal = "data_exposure"
+	SignalDataLoss      RiskSignal = "data_loss"
 	SignalPermissions   RiskSignal = "permissions"
 	SignalShellProcess  RiskSignal = "shell_process"
 	SignalDangerousSink RiskSignal = "dangerous_sink"
