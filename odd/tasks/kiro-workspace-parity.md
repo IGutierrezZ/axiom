@@ -19,7 +19,20 @@ Que `axiom setup --agent kiro-ide` y `axiom sync --agent kiro-ide --scope worksp
 ## Alcance autorizado
 
 - PR1 (`feat/kiro-workspace-parity`): tests en `internal/cli`, comentario de `internal/components/golden_test.go`, `.gitignore`, `docs/kiro.md`, `internal/tui/model.go` y sus tests.
-- PR2 (`feat/kiro-skill-registry-hook`, apilado sobre PR1): hook de skill-registry en el adapter de Kiro, el inyector SDD, rutas de backup/verificación y desinstalación.
+- PR2 (`feat/kiro-skill-registry-hook`, apilado sobre PR1): hook de skill-registry en el adapter de Kiro y el inyector SDD.
+- PR3 (`feat/kiro-skill-registry-hook-cli`, apilado sobre PR2): rutas de backup/verificación, desinstalación y documentación del hook.
+
+## Entrega (Stacked PRs)
+
+PR2 y PR3 salieron de partir el PR2 original (469 líneas, por encima del límite de 400 de `pr-check.yml`) por sus unidades de trabajo, sin recortar tests:
+
+| PR | Rama | Base | Commits | Líneas |
+|----|------|------|---------|--------|
+| PR1 | `feat/kiro-workspace-parity` | `main` | `bcec8be5`, `58e5a8ba`, `85ac7180`, `4d1ada3d`, `b0c1cc86` | 270 |
+| PR2 | `feat/kiro-skill-registry-hook` | PR1 | `a61a0621` | 324 |
+| PR3 | `feat/kiro-skill-registry-hook-cli` | PR2 | `6c672422` y el commit de este registro | 145 + este registro |
+
+Con solo PR2 fusionado, el hook se instala pero aún no entra en backup/verificación ni se borra al desinstalar; PR3 cierra ese hueco.
 
 ## Restricciones
 
