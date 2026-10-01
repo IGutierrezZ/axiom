@@ -18,28 +18,35 @@ Que `axiom setup --agent kiro-ide` y `axiom sync --agent kiro-ide --scope worksp
 
 ## Alcance autorizado
 
-- PR1 (`feat/kiro-workspace-parity`): tests en `internal/cli`, comentario de `internal/components/golden_test.go`, `.gitignore`, `docs/kiro.md`, `internal/tui/model.go` y sus tests.
-- PR2 (`feat/kiro-skill-registry-hook`, apilado sobre PR1): hook de skill-registry en el adapter de Kiro y el inyector SDD.
-- PR3 (`feat/kiro-skill-registry-hook-cli`, apilado sobre PR2): rutas de backup/verificación, desinstalación y documentación del hook.
+- FEAT-001: tests en `internal/cli`, comentario de `internal/components/golden_test.go`, `.gitignore`, `docs/kiro.md`, `internal/tui/model.go` y sus tests.
+- FEAT-002: hook de skill-registry en el adapter de Kiro y el inyector SDD, rutas de backup/verificación, desinstalación y documentación del hook.
 
-## Entrega (Stacked PRs)
+## Entrega (PR único con `size:exception`)
 
-PR2 y PR3 salieron de partir el PR2 original (469 líneas, por encima del límite de 400 de `pr-check.yml`) por sus unidades de trabajo, sin recortar tests:
+**Decisión del usuario (maintainer): un único PR contra `main`** desde la rama `feat/kiro-skill-registry-hook-cli`, con las etiquetas `size:exception` (autorizada expresamente por el usuario) y `type:feature`. Sustituye al plan de PRs apilados. Motivo: el usuario prefiere un único PR revisable; el hook, su golden, el backup/verificación y la desinstalación forman una unidad coherente, y los tests no se recortan para caber en las 400 líneas de `pr-check.yml`.
 
-| PR | Rama | Base | Commits | Líneas |
-|----|------|------|---------|--------|
-| PR1 | `feat/kiro-workspace-parity` | `main` | `bcec8be5`, `58e5a8ba`, `85ac7180`, `4d1ada3d`, `b0c1cc86` | 270 |
-| PR2 | `feat/kiro-skill-registry-hook` | PR1 | `a61a0621` | 324 |
-| PR3 | `feat/kiro-skill-registry-hook-cli` | PR2 | `6c672422` y el commit de este registro | 145 + este registro |
+| Rama | Base | Contenido | Líneas (additions + deletions) |
+|------|------|-----------|--------------------------------|
+| `feat/kiro-skill-registry-hook-cli` | `main` | todos los commits de FEAT-001 y FEAT-002 | ≈755 |
 
-Con solo PR2 fusionado, el hook se instala pero aún no entra en backup/verificación ni se borra al desinstalar; PR3 cierra ese hueco.
+Las ramas `feat/kiro-workspace-parity` y `feat/kiro-skill-registry-hook` quedan como referencia de los cortes intermedios: no se abren como PR y no se borran.
+
+Apertura del PR: `scripts/axiom-worktree.ps1 pr kiro-workspace-parity` no sirve aquí, porque resuelve la rama `feat/<slug>` (subiría `feat/kiro-workspace-parity`) y crea el PR desde la rama activa con `--fill`. Desde `C:\repos\axiom-wt\kiro-workspace-parity`, con el worktree limpio:
+
+```powershell
+git log --oneline origin/main..feat/kiro-skill-registry-hook-cli
+git push -u origin feat/kiro-skill-registry-hook-cli
+gh pr create --base main --head feat/kiro-skill-registry-hook-cli --title "<título>" --body-file <cuerpo.md> --label size:exception --label type:feature
+```
+
+Tras el merge, `scripts/axiom-worktree.ps1 done kiro-workspace-parity` desmonta el worktree.
 
 ## Restricciones
 
 - Todo en español (docs, ODD, commits y PRs).
 - Prohibido ejecutar `axiom setup|install|sync` reales; los tests se ejecutan con el HOME aislado.
 - No se commitea nada bajo `.kiro/` en estos PRs.
-- Cada PR ≤400 líneas cambiadas.
+- El PR supera 400 líneas cambiadas y lleva `size:exception` con autorización expresa del usuario.
 
 ## Decisiones
 
@@ -67,7 +74,7 @@ Con solo PR2 fusionado, el hook se instala pero aún no entra en backup/verifica
   - Kiro en `detectedAgentIDs` y `agentBuilderSkillsDir` de `internal/tui/model.go`, con tests.
   - El helper de test `makeDetectionWithAgents` no emitía `kiro-ide`; se añadió a su lista de agentes conocidos.
 
-- [x] **T5 · G1: hook de skill-registry (PR2)** (`a61a0621` y el commit `feat(cli): respaldar, verificar y desinstalar el hook de Kiro`)
+- [x] **T5 · G1: hook de skill-registry** (`a61a0621` y el commit `feat(cli): respaldar, verificar y desinstalar el hook de Kiro`)
   - `.kiro/hooks/axiom-skill-registry.json` con trigger `SessionStart` y `axiom skill-registry refresh --quiet --no-gitignore --cwd .`, escrito por `sdd.Inject` vía la interfaz opcional `hookInjector` del adapter; idempotente (`filemerge.WriteFileAtomic`). Golden nuevo `sdd-kiro-hook-skill-registry.golden`.
   - `resolveSkillRegistryDirs` normaliza un `--cwd` relativo con `filepath.Abs`: sin ello `RefreshSkip` veía `filepath.Dir(".") == "."` y saltaba el refresco como raíz del sistema de ficheros (`TestSkillRegistryRefreshProceedsWithRelativeCwdDot` fallaba antes del arreglo).
   - Declarado en `componentPathsWithWorkspaceScoped` (backup/verificación), eliminado al desinstalar (conserva los hooks ajenos de `.kiro/hooks/`) y documentado en `docs/kiro.md`.
