@@ -40,14 +40,14 @@ When configured, axiom installs:
 Comandos, siempre desde la raíz del repositorio:
 
 ```bash
-# Previsualizar y aplicar la instalación en el proyecto
+# Previsualizar la instalación en el proyecto
 axiom setup --agent kiro-ide --component sdd,skills,engram,context7,persona --dry-run
-axiom setup --agent kiro-ide --component sdd,skills,engram,context7,persona
 
-# Re-sincronizar tras actualizar Axiom
+# Previsualizar la re-sincronización tras actualizar Axiom
 axiom sync --agent kiro-ide --scope workspace --dry-run
-axiom sync --agent kiro-ide --scope workspace
 ```
+
+Para aplicar cada paso, repite el mismo comando sin `--dry-run`.
 
 Advertencias:
 
