@@ -18,6 +18,7 @@ When configured, axiom installs:
 | Native SDD agents | `~/.kiro/agents/sdd-{phase}.md` *(10 files)* |
 | Skills directory | `~/.kiro/skills/` |
 | MCP config | `~/.kiro/settings/mcp.json` *(separate root — see note below)* |
+| Skill-registry hook | `~/.kiro/hooks/axiom-skill-registry.json` |
 
 > **Auto-install not supported.** Kiro must be installed manually before running axiom.
 > Download from: [kiro.dev/downloads](https://kiro.dev/downloads)
@@ -34,6 +35,7 @@ When configured, axiom installs:
 | Agentes nativos | `.kiro/agents/{sdd-*,review-*,jd-*}.md` | Ignorado |
 | Skills | `.kiro/skills/` | Ignorado |
 | Configuración MCP | `.kiro/settings/mcp.json` | Ignorado |
+| Hook de skill-registry | `.kiro/hooks/axiom-skill-registry.json` | Versionado |
 
 `.gitignore` excluye `.kiro/agents/`, `.kiro/skills/` y `.kiro/settings/` porque son regenerables y `settings/` contiene rutas absolutas de la máquina. `.kiro/steering/` no depende de la máquina y se versiona para que Kiro cargue el orquestador nada más clonar. El `settings.json` del IDE no se mueve al repositorio: sigue en la ruta del SO (ver [Config Paths by Platform](#config-paths-by-platform)).
 
@@ -56,6 +58,19 @@ Advertencias:
 - `sync` usa el directorio actual como raíz del workspace: ejecútalo desde la raíz del repositorio.
 - `sync` no admite `--component`. Siempre refresca GGA en el HOME y, con `--include-permissions`, también los permisos en el HOME.
 - Las skills propias del repositorio (`skills/*`) no se copian a `.kiro/skills/`: Kiro las ve a través de `AGENTS.md`, que carga como steering y cuyo índice lista cada skill con su ruta.
+
+### Hook de skill-registry
+
+El componente `sdd` instala `.kiro/hooks/axiom-skill-registry.json` (o `~/.kiro/hooks/` en ámbito global), que mantiene fresco `.atl/skill-registry.md` sin que el orquestador vuelva a escanear las skills en cada sesión:
+
+```json
+{"version":"v1","hooks":[{"name":"axiom-skill-registry","trigger":"SessionStart","action":{"type":"command","command":"axiom skill-registry refresh --quiet --no-gitignore --cwd ."}}]}
+```
+
+- Se dispara en `SessionStart` y necesita `axiom` en el `PATH`. Si el comando falla, Kiro solo muestra un aviso; la sesión no se bloquea.
+- `--cwd .` funciona igual en cmd, PowerShell y sh. El refresco usa una caché por huella, así que el arranque normal es barato.
+- El fichero lo gestiona Axiom: `setup` y `sync` lo reescriben y `uninstall` lo borra. Pon tus propios hooks en otro `*.json` de `.kiro/hooks/`.
+- No está verificado que el IDE cargue los hooks de nivel usuario de `~/.kiro/hooks` en ámbito global.
 
 ---
 

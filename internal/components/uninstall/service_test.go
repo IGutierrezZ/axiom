@@ -2067,6 +2067,71 @@ func TestComponentOperationsSDD_CodexRemovesSkillRegistryHook(t *testing.T) {
 	}
 }
 
+func TestComponentOperationsSDD_KiroRemovesSkillRegistryHook(t *testing.T) {
+	tests := []struct {
+		name        string
+		userHook    bool
+		wantDirKept bool
+	}{
+		{name: "un hook ajeno conserva el directorio", userHook: true, wantDirKept: true},
+		{name: "sin hooks ajenos el directorio vacío se elimina", userHook: false, wantDirKept: false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			homeDir := t.TempDir()
+			svc, err := NewService(homeDir, t.TempDir(), "dev")
+			if err != nil {
+				t.Fatalf("NewService() error = %v", err)
+			}
+			adapter, ok := svc.registry.Get(model.AgentKiroIDE)
+			if !ok {
+				t.Fatal("kiro-ide adapter not found in registry")
+			}
+			hooksDir := filepath.Join(homeDir, ".kiro", "hooks")
+			hookPath := filepath.Join(hooksDir, "axiom-skill-registry.json")
+			userPath := filepath.Join(hooksDir, "usuario.json")
+			if err := os.MkdirAll(hooksDir, 0o755); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(hookPath, []byte(`{"version":"v1","hooks":[]}`+"\n"), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			if tt.userHook {
+				if err := os.WriteFile(userPath, []byte(`{"version":"v1","hooks":[]}`), 0o644); err != nil {
+					t.Fatal(err)
+				}
+			}
+
+			ops, targets, err := svc.componentOperations(adapter, model.ComponentSDD)
+			if err != nil {
+				t.Fatalf("componentOperations() error = %v", err)
+			}
+			if !slices.Contains(targets, hookPath) {
+				t.Fatalf("targets missing %q: %v", hookPath, targets)
+			}
+			for _, op := range ops {
+				if op.path == hookPath || op.path == hooksDir {
+					if _, _, err := op.apply(op.path); err != nil {
+						t.Fatalf("op.apply(%q) error = %v", op.path, err)
+					}
+				}
+			}
+
+			if _, err := os.Stat(hookPath); !os.IsNotExist(err) {
+				t.Fatalf("managed Kiro hook should be removed, stat err = %v", err)
+			}
+			if _, err := os.Stat(hooksDir); (err == nil) != tt.wantDirKept {
+				t.Fatalf("hooks dir kept = %v, want %v (stat err = %v)", err == nil, tt.wantDirKept, err)
+			}
+			if tt.userHook {
+				if _, err := os.Stat(userPath); err != nil {
+					t.Fatalf("user hook must survive uninstall: %v", err)
+				}
+			}
+		})
+	}
+}
+
 // TestComponentOperationsSDD_OpenCodeRemovesManagedPluginsUnderXDGConfigHome
 // pins #3219 for uninstall: the plugin writer resolves the OpenCode config
 // directory through the adapter, so uninstall must look in the same place.

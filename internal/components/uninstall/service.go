@@ -972,6 +972,11 @@ func (s *Service) componentOperations(adapter agents.Adapter, componentID model.
 			targets = append(targets, path)
 			ops = append(ops, rewriteSkillRegistryHook(path))
 		}
+		if path := sdd.SkillRegistryHookPath(adapter, homeDir); path != "" {
+			// Axiom owns the whole file; user hooks beside it are left alone.
+			targets = append(targets, path)
+			ops = append(ops, removeFile(path), removeDirIfEmpty(filepath.Dir(path)))
+		}
 		if adapter.Agent() == model.AgentOpenCode {
 			for _, path := range settingsTargets(homeDir, adapter) {
 				defaultPlan, err := opencodedefault.PrepareUninstall(path)

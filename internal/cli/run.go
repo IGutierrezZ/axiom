@@ -2464,6 +2464,12 @@ func componentPathsWithWorkspaceScoped(homeDir, workspaceDir string, scope Insta
 				// directory, so it must share the component's backup contract.
 				paths = append(paths, filepath.Join(adapter.GlobalConfigDir(homeDir), "hooks.json"))
 			}
+			// SDD also writes the standalone Kiro skill-registry hook outside
+			// the skills directory; it shares the component's backup and
+			// verification contract. targetDir: Kiro supports workspace scope.
+			if p := sdd.SkillRegistryHookPath(adapter, targetDir); p != "" {
+				paths = append(paths, p)
+			}
 		case model.ComponentSkills:
 			for _, skillID := range selectedSkillIDs(selection) {
 				if skills.IsSDDSkill(skillID) {
