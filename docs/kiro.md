@@ -24,6 +24,41 @@ When configured, axiom installs:
 
 ---
 
+## Ámbito proyecto (workspace)
+
+`axiom setup` equivale a `axiom install --scope workspace`: reutiliza las mismas rutas del adapter de Kiro, pero toma la raíz del repositorio como raíz en lugar del HOME. Así Kiro encuentra el orquestador, los agentes, las skills y el MCP dentro del propio proyecto.
+
+| Artefacto | Ruta en el repositorio | Git |
+|-----------|------------------------|-----|
+| Steering (orquestador y persona) | `.kiro/steering/axiom.md` | Versionado |
+| Agentes nativos | `.kiro/agents/{sdd-*,review-*,jd-*}.md` | Ignorado |
+| Skills | `.kiro/skills/` | Ignorado |
+| Configuración MCP | `.kiro/settings/mcp.json` | Ignorado |
+
+`.gitignore` excluye `.kiro/agents/`, `.kiro/skills/` y `.kiro/settings/` porque son regenerables y `settings/` contiene rutas absolutas de la máquina. `.kiro/steering/` no depende de la máquina y se versiona para que Kiro cargue el orquestador nada más clonar. El `settings.json` del IDE no se mueve al repositorio: sigue en la ruta del SO (ver [Config Paths by Platform](#config-paths-by-platform)).
+
+Comandos, siempre desde la raíz del repositorio:
+
+```bash
+# Previsualizar y aplicar la instalación en el proyecto
+axiom setup --agent kiro-ide --component sdd,skills,engram,context7,persona --dry-run
+axiom setup --agent kiro-ide --component sdd,skills,engram,context7,persona
+
+# Re-sincronizar tras actualizar Axiom
+axiom sync --agent kiro-ide --scope workspace --dry-run
+axiom sync --agent kiro-ide --scope workspace
+```
+
+Advertencias:
+
+- El estado y los backups de Axiom se guardan en el HOME (`~/.axiom`), no en el repositorio.
+- Sin `--scope`, el ámbito sale de `AXIOM_INSTALL_SCOPE` y, si no está definida, es `workspace`. Con `--scope global` o `AXIOM_INSTALL_SCOPE=global`, `sync` escribe en `~/.kiro`. Pasa siempre `--scope workspace` explícitamente.
+- `sync` usa el directorio actual como raíz del workspace: ejecútalo desde la raíz del repositorio.
+- `sync` no admite `--component`. Siempre refresca GGA en el HOME y, con `--include-permissions`, también los permisos en el HOME.
+- Las skills propias del repositorio (`skills/*`) no se copian a `.kiro/skills/`: Kiro las ve a través de `AGENTS.md`, que carga como steering y cuyo índice lista cada skill con su ruta.
+
+---
+
 ## Detection
 
 axiom uses **two signals** to detect Kiro:
