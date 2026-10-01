@@ -235,6 +235,25 @@ func TestAdapter_SubAgentsDir(t *testing.T) {
 	}
 }
 
+func TestAdapter_HooksDir(t *testing.T) {
+	adapter := NewAdapter()
+	tests := []struct {
+		name    string
+		rootDir string
+	}{
+		{name: "global scope roots hooks under home", rootDir: "/home/user"},
+		{name: "workspace scope roots hooks under the repository", rootDir: "/repos/project"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			want := filepath.Join(tt.rootDir, ".kiro", "hooks")
+			if got := adapter.HooksDir(tt.rootDir); got != want {
+				t.Errorf("HooksDir(%q) = %q, want %q", tt.rootDir, got, want)
+			}
+		})
+	}
+}
+
 func TestAdapter_EmbeddedSubAgentsDir(t *testing.T) {
 	adapter := NewAdapter()
 	if got := adapter.EmbeddedSubAgentsDir(); got != "kiro/agents" {

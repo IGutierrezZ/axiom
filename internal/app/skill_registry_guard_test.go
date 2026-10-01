@@ -130,6 +130,27 @@ func TestSkillRegistryRefreshProceedsInGitProject(t *testing.T) {
 	}
 }
 
+// TestSkillRegistryRefreshProceedsWithRelativeCwdDot covers the Kiro
+// SessionStart hook, which runs `--cwd .` from the workspace root.
+func TestSkillRegistryRefreshProceedsWithRelativeCwdDot(t *testing.T) {
+	home := t.TempDir()
+	setFakeHome(t, home)
+	project := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(project, ".git"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Chdir(project)
+
+	var buf bytes.Buffer
+	err := runSkillRegistryRefresh([]string{"--quiet", "--no-gitignore", "--cwd", "."}, &buf)
+	if err != nil {
+		t.Fatalf("refresh --cwd . in a git project must proceed, got error: %v", err)
+	}
+	if _, statErr := os.Stat(filepath.Join(project, ".atl", "skill-registry.md")); statErr != nil {
+		t.Fatalf("refresh --cwd . in a git project must write the registry: %v", statErr)
+	}
+}
+
 func TestSkillRegistryRefreshProceedsWithGitWorktreeFile(t *testing.T) {
 	home := t.TempDir()
 	setFakeHome(t, home)

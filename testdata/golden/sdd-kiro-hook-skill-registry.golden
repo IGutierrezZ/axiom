@@ -1,0 +1,13 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "axiom-skill-registry",
+      "trigger": "SessionStart",
+      "action": {
+        "type": "command",
+        "command": "axiom skill-registry refresh --quiet --no-gitignore --cwd ."
+      }
+    }
+  ]
+}

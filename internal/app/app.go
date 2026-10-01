@@ -401,7 +401,9 @@ func runSkillRegistry(args []string, stdout io.Writer) error {
 
 // resolveSkillRegistryDirs resolves the working directory (defaulting to the
 // process cwd) and the user home directory used to locate skills. An empty
-// home resolves the process user home directory.
+// home resolves the process user home directory. A relative cwd (the Kiro
+// hook passes "--cwd .") is made absolute: otherwise the root guard sees
+// filepath.Dir(".") == "." and skips the refresh as a filesystem root.
 func resolveSkillRegistryDirs(cwd, home string) (string, string, error) {
 	if cwd == "" {
 		var err error
@@ -409,6 +411,12 @@ func resolveSkillRegistryDirs(cwd, home string) (string, string, error) {
 		if err != nil {
 			return "", "", fmt.Errorf("resolve cwd: %w", err)
 		}
+	} else if !filepath.IsAbs(cwd) {
+		abs, err := filepath.Abs(cwd)
+		if err != nil {
+			return "", "", fmt.Errorf("resolve cwd %q: %w", cwd, err)
+		}
+		cwd = abs
 	}
 	if home == "" {
 		var err error
