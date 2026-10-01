@@ -85,8 +85,8 @@ func ResolveConfigFile(target string) (string, error) {
 	cleanTarget := filepath.Clean(target)
 	info, err := os.Stat(cleanTarget)
 
-	// Si target es un fichero existente:
-	if err == nil && !info.IsDir() {
+	// Si target es un fichero regular existente:
+	if err == nil && info.Mode().IsRegular() {
 		if filepath.Base(cleanTarget) == WorkspacePointerFilename {
 			return resolveFromPointerFile(cleanTarget)
 		}
@@ -164,15 +164,14 @@ func resolveFromPointerFile(pointerPath string) (string, error) {
 
 func fileExists(path string) bool {
 	info, err := os.Stat(path)
-	return err == nil && !info.IsDir()
+	return err == nil && info.Mode().IsRegular()
 }
 
 // LoadConfig carga el archivo axiom.yaml resolviendo punteros (.axiom-workspace) o rutas directas.
 func LoadConfig(filePath string) (*WorkspaceConfig, error) {
 	resolvedPath, err := ResolveConfigFile(filePath)
 	if err != nil {
-		// Si la resolución falla, intentar lectura directa para mantener mensajes de error heredados si aplica
-		resolvedPath = filePath
+		return nil, fmt.Errorf("archivo de configuración no encontrado en '%s'", filePath)
 	}
 
 	data, err := os.ReadFile(resolvedPath)
