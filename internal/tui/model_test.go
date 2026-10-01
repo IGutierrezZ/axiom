@@ -3342,7 +3342,7 @@ func TestModelConfig_OpenCodePickerBackReturnsToModelConfig(t *testing.T) {
 // makeDetectionWithAgents builds a DetectionResult with the specified agents
 // marked as Exists=true. All other agents are absent.
 func makeDetectionWithAgents(present ...string) system.DetectionResult {
-	known := []string{"claude-code", "opencode", "gemini-cli", "cursor", "vscode-copilot", "codex", "antigravity", "windsurf", "qwen-code", "hermes"}
+	known := []string{"claude-code", "opencode", "gemini-cli", "cursor", "vscode-copilot", "codex", "antigravity", "windsurf", "qwen-code", "hermes", "kiro-ide"}
 	presentSet := make(map[string]bool, len(present))
 	for _, p := range present {
 		presentSet[p] = true
@@ -4127,6 +4127,7 @@ func TestPreselectedAgents_AllKnownAgentsMappedCorrectly(t *testing.T) {
 		{"vscode-copilot", model.AgentVSCodeCopilot},
 		{"codex", model.AgentCodex},
 		{"hermes", model.AgentHermes},
+		{"kiro-ide", model.AgentKiroIDE},
 	}
 
 	for _, tt := range tests {
@@ -4149,6 +4150,40 @@ func TestPreselectedAgents_AllKnownAgentsMappedCorrectly(t *testing.T) {
 			if len(selected) != 1 {
 				t.Errorf("preselectedAgents() returned %d agents, want 1 (only %q detected); got %v",
 					len(selected), tt.configAgent, selected)
+			}
+		})
+	}
+}
+
+// TestAgentBuilderSkillsDir_KnownAgents fija el directorio de skills que Agent
+// Builder usa para cada agente con mapeo y el rechazo de los que no lo tienen.
+func TestAgentBuilderSkillsDir_KnownAgents(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
+
+	tests := []struct {
+		name    string
+		agent   model.AgentID
+		wantDir string
+		wantOK  bool
+	}{
+		{name: "claude-code", agent: model.AgentClaudeCode, wantDir: filepath.Join(home, ".claude", "skills"), wantOK: true},
+		{name: "opencode", agent: model.AgentOpenCode, wantDir: filepath.Join(home, ".config", "opencode", "skills"), wantOK: true},
+		{name: "gemini-cli", agent: model.AgentGeminiCLI, wantDir: filepath.Join(home, ".gemini", "skills"), wantOK: true},
+		{name: "codex", agent: model.AgentCodex, wantDir: filepath.Join(home, ".codex", "skills"), wantOK: true},
+		{name: "kiro-ide", agent: model.AgentKiroIDE, wantDir: filepath.Join(home, ".kiro", "skills"), wantOK: true},
+		{name: "agente sin mapeo", agent: model.AgentTrae, wantDir: "", wantOK: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotDir, gotOK := agentBuilderSkillsDir(tt.agent)
+			if gotOK != tt.wantOK {
+				t.Fatalf("agentBuilderSkillsDir(%q) ok = %v, esperado %v", tt.agent, gotOK, tt.wantOK)
+			}
+			if gotDir != tt.wantDir {
+				t.Errorf("agentBuilderSkillsDir(%q) = %q, esperado %q", tt.agent, gotDir, tt.wantDir)
 			}
 		})
 	}
