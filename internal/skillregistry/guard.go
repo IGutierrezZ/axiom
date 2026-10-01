@@ -43,6 +43,9 @@ func RefreshSkip(cwd, home string) SkipReason {
 	if cwd == home {
 		return SkipHomeDirectory
 	}
+	if !dirExists(cwd) {
+		return SkipNoProjectMarker
+	}
 	if hasProjectMarker(cwd) {
 		return SkipNone
 	}
