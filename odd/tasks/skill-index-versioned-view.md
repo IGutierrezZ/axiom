@@ -188,7 +188,7 @@ Que el bloque `axiom:skills-index` de `AGENTS.md`, que está versionado, sea det
 | PR 1 (T1) | 973 | Incluye este documento, unas 120 líneas. `size:exception` aceptado. |
 | PR 2 (T2a) | 297 | |
 | PR 3 (T2b) | 260 | |
-| PR 4 (T3) | 224 | Incluye 19 líneas generadas de `AGENTS.md`. |
+| PR 4 (T3) | 274 | Incluye 19 líneas generadas de `AGENTS.md` y unas 50 de este documento. |
 
 ### Pendiente fuera de alcance
 
@@ -198,4 +198,4 @@ Que el bloque `axiom:skills-index` de `AGENTS.md`, que está versionado, sea det
 
 ## Siguiente paso
 
-Hacer push y abrir los 4 PRs apilados (decisión del usuario), con `size:exception` en PR 1. Conviene fusionar #62 antes que PR 4.
+PRs abiertos: #64 (T1, `size:exception`), #65 (T2a), #66 (T2b) y #67 (T3). Fusionar en orden y antes de #67, fusionar #62. Tras cada merge, rebasar o reapuntar el siguiente PR a `main`.
