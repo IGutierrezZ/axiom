@@ -20,6 +20,11 @@ type WorkspaceSection struct {
 	Topology        TopologyType `yaml:"topology"`
 	SpecsRepository string       `yaml:"specs_repository"`
 	Root            string       `yaml:"root,omitempty"`
+
+	// SkillRoots declara directorios versionados con skills canónicas fuera de
+	// "skills/" (p. ej. "internal/assets/skills"). Las rutas son relativas al
+	// proyecto; CleanSkillRoot define cuáles son válidas.
+	SkillRoots []string `yaml:"skill_roots,omitempty"`
 }
 
 // RepositoryEntry define una ruta a un repositorio o componente local.

@@ -270,6 +270,62 @@ func TestValidateTopology(t *testing.T) {
 	})
 }
 
+func TestValidateSkillRoots(t *testing.T) {
+	baseDir := filepath.Clean("/workspace")
+
+	newConfig := func(roots ...string) *WorkspaceConfig {
+		return &WorkspaceConfig{
+			Workspace: WorkspaceSection{
+				Name:            "SingleApp",
+				Topology:        TopologyMonorepoEmbedded,
+				SpecsRepository: ".",
+				SkillRoots:      roots,
+			},
+			Roles: map[string]RoleConfig{
+				"fullstack": {Name: "Fullstack", Repositories: []RepositoryEntry{{Path: "."}}},
+			},
+		}
+	}
+
+	t.Run("raices relativas validas no generan errores aunque no existan en disco", func(t *testing.T) {
+		fs := newMockFS()
+		fs.addDir(baseDir)
+
+		report, err := Validate(fs, newConfig("internal/assets/skills", "docs/skills"), baseDir)
+		if err != nil {
+			t.Fatalf("error inesperado: %v", err)
+		}
+		if !report.Valid || len(report.Errors) != 0 {
+			t.Errorf("se esperaba valido sin errores, errores: %v", report.Errors)
+		}
+	})
+
+	t.Run("cada raiz invalida se reporta como error", func(t *testing.T) {
+		fs := newMockFS()
+		fs.addDir(baseDir)
+
+		report, err := Validate(fs, newConfig("internal/assets/skills", "/opt/skills", "../fuera", ".", ""), baseDir)
+		if err != nil {
+			t.Fatalf("error inesperado: %v", err)
+		}
+		if report.Valid {
+			t.Fatalf("se esperaba invalido por raices de skills no validas")
+		}
+		if len(report.Errors) != 4 {
+			t.Fatalf("se esperaban 4 errores (uno por raiz invalida), obtenidos %d: %v", len(report.Errors), report.Errors)
+		}
+		assertContains(t, report.Errors, "la raíz de skills '/opt/skills' declarada en 'workspace.skill_roots' no es válida")
+		assertContains(t, report.Errors, "la raíz de skills '../fuera'")
+		assertContains(t, report.Errors, "la raíz de skills '.'")
+		assertContains(t, report.Errors, "la raíz de skills ''")
+		for _, e := range report.Errors {
+			if strings.Contains(e, "internal/assets/skills") {
+				t.Errorf("la raiz valida no debe reportarse: %s", e)
+			}
+		}
+	})
+}
+
 func assertContains(t *testing.T, list []string, substr string) {
 	t.Helper()
 	for _, item := range list {

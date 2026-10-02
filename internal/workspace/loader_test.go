@@ -3,6 +3,7 @@ package workspace
 import (
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -46,6 +47,50 @@ governance:
 				}
 				if len(cfg.Roles) != 2 {
 					t.Errorf("roles esperados 2, obtenidos %d", len(cfg.Roles))
+				}
+			},
+		},
+		{
+			name: "raices de skills declaradas",
+			yamlData: `
+workspace:
+  name: "ConSkillRoots"
+  topology: "monorepo-embedded"
+  specs_repository: "."
+  skill_roots:
+    - "internal/assets/skills"
+    - "docs/skills"
+roles:
+  main:
+    name: "Main"
+    repositories:
+      - path: "."
+`,
+			wantErr: false,
+			check: func(t *testing.T, cfg *WorkspaceConfig) {
+				want := []string{"internal/assets/skills", "docs/skills"}
+				if !reflect.DeepEqual(cfg.Workspace.SkillRoots, want) {
+					t.Errorf("skill_roots esperado %v, obtenido %v", want, cfg.Workspace.SkillRoots)
+				}
+			},
+		},
+		{
+			name: "sin raices de skills declaradas",
+			yamlData: `
+workspace:
+  name: "SinSkillRoots"
+  topology: "monorepo-embedded"
+  specs_repository: "."
+roles:
+  main:
+    name: "Main"
+    repositories:
+      - path: "."
+`,
+			wantErr: false,
+			check: func(t *testing.T, cfg *WorkspaceConfig) {
+				if len(cfg.Workspace.SkillRoots) != 0 {
+					t.Errorf("se esperaba ninguna raíz de skills, obtenido %v", cfg.Workspace.SkillRoots)
 				}
 			},
 		},
