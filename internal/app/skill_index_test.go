@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -352,28 +353,63 @@ func TestSkillIndexCwdVectorsContainEffects(t *testing.T) {
 	})
 
 	t.Run("resolvable shapes stay inside the sandbox", func(t *testing.T) {
-		project := makeProject(t)
-		// makeProject uses its own temp dir; move the vector shapes under the
-		// sandbox instead so containment is observable.
-		if err := os.Rename(project, filepath.Join(sandbox, "ws")); err != nil {
-			t.Fatal(err)
+		// Every vector refreshes its own project: a shared one would let a vector
+		// pass on the registry written by whichever vector ran before it.
+		vectors := []struct {
+			name  string
+			shape func(ws string) string
+		}{
+			{"absolute", func(ws string) string { return ws }},
+			{"forward slashes", func(ws string) string { return strings.ReplaceAll(ws, "\\", "/") }},
+			{"back slashes", func(ws string) string { return strings.ReplaceAll(ws, "/", "\\") }},
 		}
-		ws := filepath.Join(sandbox, "ws")
-		vectors := map[string]string{
-			"absolute":        ws,
-			"forward slashes": strings.ReplaceAll(ws, "\\", "/"),
-			"back slashes":    strings.ReplaceAll(ws, "/", "\\"),
+		dirExists := func(dir string) bool {
+			info, err := os.Stat(dir)
+			return err == nil && info.IsDir()
 		}
-		for name, target := range vectors {
-			t.Run(name, func(t *testing.T) {
-				var stdout, stderr bytes.Buffer
-				code := RunSkillIndex([]string{"refresh", "--quiet", "--no-gitignore", "--cwd", target}, &stdout, &stderr)
-				if code != 0 {
-					t.Fatalf("exit = %d, want 0 (stderr=%q)", code, stderr.String())
+		listing := func(dir string) string {
+			entries, err := os.ReadDir(dir)
+			if err != nil {
+				return err.Error()
+			}
+			names := make([]string, 0, len(entries))
+			for _, entry := range entries {
+				names = append(names, entry.Name())
+			}
+			return strings.Join(names, ", ")
+		}
+		for i, vec := range vectors {
+			t.Run(vec.name, func(t *testing.T) {
+				// makeProject uses its own temp dir; move it under the sandbox
+				// instead so containment is observable.
+				ws := filepath.Join(sandbox, fmt.Sprintf("ws-%d", i))
+				if err := os.Rename(makeProject(t), ws); err != nil {
+					t.Fatal(err)
 				}
-				registry := filepath.Join(ws, ".atl", "skill-registry.md")
-				if _, err := os.Stat(registry); err != nil {
-					t.Fatalf("registry not written under the sandbox: %v", err)
+				target := vec.shape(ws)
+				registry := filepath.Join(ws, skillregistry.RegistryRelPath)
+				if _, err := os.Stat(registry); !os.IsNotExist(err) {
+					t.Fatalf("registry exists before refresh (stat err = %v)", err)
+				}
+
+				var stdout, stderr bytes.Buffer
+				code := RunSkillIndex([]string{"refresh", "--no-gitignore", "--cwd", target}, &stdout, &stderr)
+				diagnostics := func() string {
+					msg := fmt.Sprintf("target=%q stdout=%q stderr=%q ws=[%s]", target, stdout.String(), stderr.String(), listing(ws))
+					if atl := filepath.Dir(registry); dirExists(atl) {
+						msg += fmt.Sprintf(" .atl=[%s]", listing(atl))
+					}
+					return msg
+				}
+				if code != 0 {
+					t.Fatalf("exit = %d, want 0 (%s)", code, diagnostics())
+				}
+				info, err := os.Stat(registry)
+				if err != nil {
+					t.Fatalf("registry not written under the sandbox: %v (%s)", err, diagnostics())
+				}
+				if !info.Mode().IsRegular() {
+					t.Fatalf("registry is not a regular file: %v (%s)", info.Mode(), diagnostics())
 				}
 			})
 		}
