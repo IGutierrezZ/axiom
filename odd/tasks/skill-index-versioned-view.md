@@ -56,6 +56,9 @@ Que el bloque `axiom:skills-index` de `AGENTS.md`, que está versionado, sea det
   | 4 | T3 | `fix/skill-index-apply-repo` | PR 3 |
 
   T2 se ha partido en dos PRs porque sumaba 521 líneas y admitía un corte cohesivo: T2a tiene 297 líneas y T2b, 224.
+- **`size:exception` aceptado para PR 1 (T1)** por el usuario y mantenedor el 2026-10-02.
+  - Motivo: unas 860 líneas de autor (código y tests de la vista versionada, más la corrección D1-D3). Tras un intento honesto, no admite un corte cohesivo: el núcleo con sus tests también supera las 400 líneas, y separar los tests de su comportamiento no forma una unidad de trabajo.
+  - La etiqueta `size:exception` se aplicará al abrir PR 1.
 - **RDD:** desactivado (`rdd_mode: off`). Se evalúa el riesgo por commit con `axiom review assess`, sin revisión.
 
 ## Tareas
@@ -75,7 +78,7 @@ Que el bloque `axiom:skills-index` de `AGENTS.md`, que está versionado, sea det
   - Campo en `internal/workspace`, carga en `ProjectSkillDirs(cwd)` inmediatamente después de `skills/` y validación de rutas relativas contenidas.
   - Tests en `internal/workspace` e `internal/skillregistry`.
   - Ruta: delegada (writer). Disparador: 2 o más ficheros no triviales.
-- [ ] **T3 · Aplicar en el repositorio**
+- [x] **T3 · Aplicar en el repositorio**: `f223c594`, `19f4d79c` y `b1af7c09`
   - Declarar `internal/assets/skills` en `axiom.yaml`.
   - Regenerar `AGENTS.md` y adaptar `TestIssueCreationAuthorityBoundary`.
   - Actualizar REQ-22.11 y los escenarios en la spec viva, y la documentación afectada.
@@ -147,6 +150,52 @@ Que el bloque `axiom:skills-index` de `AGENTS.md`, que está versionado, sea det
     - `ProjectSkillDirs("")` lee `axiom.yaml` del cwd del proceso, y eso ya ocurría antes de este cambio.
     - El plugin de OpenCode (`PROJECT_MARKERS`) no ve las raíces declaradas, la misma limitación que con specs y roles.
 
+- **T3: completada.** Ruta delegada.
+  - **`f223c594` `fix(agents)`** (77 líneas de autor, más 19 generadas en `AGENTS.md`):
+    - `axiom.yaml` declara `workspace.skill_roots: [internal/assets/skills]`.
+    - `AGENTS.md` se ha regenerado con `Regenerate` sin mirror, usando un programa temporal ya eliminado, para no escribir en el Engram del usuario.
+    - `TestIssueCreationAuthorityBoundary` comprueba la fila por su nombre y su ruta, a través del helper `skillsIndexRowPaths`, y se añade `TestSkillsIndexRowPathsAcceptsEveryPathFormat`.
+  - **`19f4d79c` `docs(skillregistry)`** (108 líneas):
+    - La spec viva pasa a la versión 1.1.0. REQ-22.11 se reescribe con dos vistas y seis escenarios nuevos, y se añade REQ-22.15 sobre `workspace.skill_roots`, con dos escenarios.
+    - `docs/skill-registry.md` incorpora la sección «Versioned View».
+  - **`b1af7c09` `docs(openspec)`:** `INDEX.md` regenerado con `axiom archive sync`. Solo cambian este dominio y los totales de cabecera.
+  - **Bloque de `AGENTS.md`:**
+    - Ya no contiene rutas `.gemini/`, `.claude/` ni absolutas.
+    - `chained-pr`, `go-testing`, `judgment-day`, `skill-creator` y `skill-improver` pasan a apuntar a `internal/assets/skills/…`.
+    - `issue-creation` apunta a su ruta canónica.
+    - Filas nuevas: `branch-pr`, `gentle-ai-bench` y `hermes-ephemeral-delegation`.
+  - Comprobaciones del writer:
+    - `workspace validate` da COMPLIANT. Un proyecto de prueba con raíces inválidas da NON-COMPLIANT, con un error por entrada.
+    - Regenerar dos veces da `cache-hit` con el mismo sha256 `fd9989fd…`.
+    - Una copia ignorada en `.claude/skills/go-testing` con otra descripción deja `AGENTS.md` sin cambios.
+    - Pasan `go test ./internal/assets/` (también solo con el commit A), `skillregistry`, `workspace`, los tests filtrados de `app` y `cli`, y `TestDocumentedInvocationsRunAsDocumented`. `gofmtcheck` limpio.
+  - Comprobaciones del orquestador:
+    - Todas las rutas del bloque son canónicas, los tests de `issue-creation` pasan y el worktree queda limpio.
+  - **Riesgo evaluado:** `medium`, con autoverificación del writer más la comprobación del orquestador.
+
+### Criterios de aceptación
+
+- ✅ El bloque no varía con copias locales ignoradas (`.claude/skills`). Con `.gemini/` sin ignorar habría filas extra: depende de #62.
+- ✅ El bloque no contiene rutas fuera del repositorio ni ignoradas.
+- ✅ `issue-creation` apunta a la ruta canónica y su test pasa.
+- ✅ `.atl` mantiene la vista completa.
+- ✅ Pasan los tests de `skillregistry`, `workspace`, `assets`, `cli` y `app` filtrados, y `gofmtcheck`. El `go test ./...` completo queda para el CI de cada PR.
+
+### Tamaño por slice (adiciones + borrados, contra el slice anterior)
+
+| PR | Líneas | Notas |
+|---|---|---|
+| PR 1 (T1) | 973 | Incluye este documento, unas 120 líneas. `size:exception` aceptado. |
+| PR 2 (T2a) | 297 | |
+| PR 3 (T2b) | 260 | |
+| PR 4 (T3) | 274 | Incluye 19 líneas generadas de `AGENTS.md` y unas 50 de este documento. |
+
+### Pendiente fuera de alcance
+
+- D4: `ScopeForPath` distingue mayúsculas en Windows.
+- Los tests de `internal/dashboard` escriben en el repositorio (tarea propuesta aparte).
+- Valorar si `branch-pr` y `gentle-ai-bench`, skills heredadas de upstream, deben listarse junto a `axiom-branch-pr` y `axiom-bench`.
+
 ## Siguiente paso
 
-T3: declarar `internal/assets/skills` en `axiom.yaml` y asegurar que `.gemini/`, `.kiro/` y `.agents/` estén ignorados. Después, regenerar `AGENTS.md`, adaptar `TestIssueCreationAuthorityBoundary`, actualizar REQ-22.11 y documentar la vista versionada.
+PRs abiertos: #64 (T1, `size:exception`), #65 (T2a), #66 (T2b) y #67 (T3). Fusionar en orden y antes de #67, fusionar #62. Tras cada merge, rebasar o reapuntar el siguiente PR a `main`.

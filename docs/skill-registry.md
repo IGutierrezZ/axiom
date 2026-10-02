@@ -61,6 +61,28 @@ workspace:
 
 Each entry must be a relative path that stays inside the project. Absolute paths, paths that leave the project (`../x`) and `.` are ignored by the scan, and `axiom workspace validate` reports them. Declared roots are scanned right after `skills/` and before the per-agent directories (`.claude/skills`, `.gemini/skills`, ...), so the declared copy wins when a skill name appears in both.
 
+## Versioned View
+
+One scan feeds two views, because the destinations have different audiences:
+
+| Destination | View | Contains |
+| --- | --- | --- |
+| `.atl/skill-registry.md` (gitignored, per machine) | Full | Every scanned skill: project skills, per-agent copies such as `.claude/skills`, and user-scope skills from `$HOME`, with the paths this machine resolves. |
+| `## Skills` section of `AGENTS.md` and the Engram `skill-registry` topic | Versioned | Only the skills every clone can resolve, with paths relative to the project. |
+
+`AGENTS.md` is committed and read by every collaborator, so it must not change with the machine that regenerated it. A skill is versioned when both conditions hold:
+
+- Its `SKILL.md` is inside the project. User-scope skills and roots outside the project (`~/.claude/skills`, `../shared`) never appear in `AGENTS.md`.
+- Git does not ignore it. The check is `git check-ignore` without `--no-index`, so a file that is tracked but sits under an ignored directory still counts as versioned.
+
+Entries that are not versioned are dropped before the name deduplication. When a skill exists both as a committed copy and as an ignored copy, `AGENTS.md` lists the committed one.
+
+The classification costs one `git` call per refresh. If git is not installed, the directory is not a repository or git does not answer in time, nothing is filtered by git and every skill inside the project counts as versioned. A git failure never fails the refresh.
+
+The cache fingerprint includes which entries are versioned, so editing `.gitignore` regenerates the files on the next refresh without `--force`.
+
+> **Generated agent copies.** `axiom setup` writes copies of the skills into per-agent directories such as `.claude/skills` or `.gemini/skills`. They only stay out of `AGENTS.md` when git ignores them. If your project does not ignore one of those directories, its copies are listed as versioned and the index changes with whoever ran setup last. Add the directory to `.gitignore`, or keep the canonical skills in `skills/` or in a declared root so that they win the deduplication.
+
 ## Registry Contract
 
 The registry is an **index**, not a generated summary.
@@ -140,9 +162,10 @@ without a warning.
 
 ## Inspecting Without Writing
 
-`skill-registry list` resolves the same deduplicated skill set as `refresh`, but
-prints it instead of writing `.atl/skill-registry.md`, the cache, or
-`.gitignore`. Handy for debugging what a delegator would see.
+`skill-registry list` resolves the same deduplicated skill set as `refresh` (the
+full view of `.atl/skill-registry.md`), but prints it instead of writing
+`.atl/skill-registry.md`, the cache, or `.gitignore`. Handy for debugging what a
+delegator would see.
 
 ```bash
 axiom skill-registry list          # name<TAB>scope<TAB>path

@@ -2,6 +2,8 @@ workspace:
   name: "Axiom"
   topology: "monorepo-embedded"
   specs_repository: "openspec"
+  skill_roots:
+    - "internal/assets/skills"
   root: "."
 
 roles:
