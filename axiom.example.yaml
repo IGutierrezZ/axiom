@@ -19,6 +19,14 @@ workspace:
   # Para 'monorepo-decoupled' y 'multirepo': debe ser el nombre de la carpeta del repo de specs.
   specs_repository: "especificacion"
 
+  # Directorios versionados con skills canónicas fuera de "skills/" (opcional).
+  # Rutas relativas a la carpeta maestra; se rechazan las absolutas, las que salen de ella y ".".
+  # Se escanean justo después de "skills/" y antes de los directorios de cada agente (.claude, .gemini...),
+  # así que una skill declarada aquí figura en AGENTS.md con su ruta versionada y no con una copia local.
+  # skill_roots:
+  #   - "internal/assets/skills"
+  #   - "docs/skills"
+
   # Ruta raíz del workspace (por defecto: "." que corresponde a la carpeta maestra)
   root: "."
 

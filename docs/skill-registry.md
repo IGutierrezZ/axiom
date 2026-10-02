@@ -35,7 +35,7 @@ Subagent executes with original skill intent preserved
 axiom skill-registry refresh
    │
    ├─ Scan project skill roots first
-   │     skills/, .opencode/skills/, .claude/skills/, ...
+   │     skills/, workspace.skill_roots from axiom.yaml, .opencode/skills/, .claude/skills/, ...
    │
    ├─ Scan global agent skill roots second
    │     ~/.config/opencode/skills/, ~/.claude/skills/, ...
@@ -48,6 +48,18 @@ axiom skill-registry refresh
    │
    └─ Write .atl/skill-registry.md + cache
 ```
+
+## Declared Skill Roots
+
+A project that keeps its canonical skills outside `skills/` declares those directories in `axiom.yaml`:
+
+```yaml
+workspace:
+  skill_roots:
+    - "internal/assets/skills"
+```
+
+Each entry must be a relative path that stays inside the project. Absolute paths, paths that leave the project (`../x`) and `.` are ignored by the scan, and `axiom workspace validate` reports them. Declared roots are scanned right after `skills/` and before the per-agent directories (`.claude/skills`, `.gemini/skills`, ...), so the declared copy wins when a skill name appears in both.
 
 ## Registry Contract
 
