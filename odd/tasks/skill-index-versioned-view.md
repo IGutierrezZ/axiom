@@ -51,8 +51,11 @@ Que el bloque `axiom:skills-index` de `AGENTS.md`, que está versionado, sea det
   | PR | Contenido | Rama | Base |
   |---|---|---|---|
   | 1 | T1 | `fix/skill-index-versioned-view` | `main` |
-  | 2 | T2 | `fix/skill-index-declared-roots` | PR 1 |
-  | 3 | T3 | `fix/skill-index-apply-repo` | PR 2 |
+  | 2 | T2a: declarar y validar `workspace.skill_roots` | `fix/skill-index-skill-roots-config` | PR 1 |
+  | 3 | T2b: escanear las raíces declaradas, con docs | `fix/skill-index-declared-roots` | PR 2 |
+  | 4 | T3 | `fix/skill-index-apply-repo` | PR 3 |
+
+  T2 se ha partido en dos PRs porque sumaba 521 líneas y admitía un corte cohesivo: T2a tiene 297 líneas y T2b, 224.
 - **RDD:** desactivado (`rdd_mode: off`). Se evalúa el riesgo por commit con `axiom review assess`, sin revisión.
 
 ## Tareas
@@ -68,7 +71,7 @@ Que el bloque `axiom:skills-index` de `AGENTS.md`, que está versionado, sea det
     - un cambio de `.gitignore` que invalida la caché;
     - idempotencia.
   - Ruta: delegada (writer). Disparadores: preparación de escritura y 2 o más ficheros no triviales (`registry.go`, `agents.go`, tests).
-- [ ] **T2 · Raíces versionadas declaradas en `axiom.yaml` (`workspace.skill_roots`)**
+- [x] **T2 · Raíces versionadas declaradas en `axiom.yaml` (`workspace.skill_roots`)**: T2a `8affb459` y T2b `0454b7dd`
   - Campo en `internal/workspace`, carga en `ProjectSkillDirs(cwd)` inmediatamente después de `skills/` y validación de rutas relativas contenidas.
   - Tests en `internal/workspace` e `internal/skillregistry`.
   - Ruta: delegada (writer). Disparador: 2 o más ficheros no triviales.
@@ -119,8 +122,31 @@ Que el bloque `axiom:skills-index` de `AGENTS.md`, que está versionado, sea det
   - `go test ./internal/dashboard/` reescribe `AGENTS.md` y `openspec/INDEX.md` y crea `.gemini/` y `.kiro/` en la raíz. No hay que ejecutarlo antes de regenerar, o hay que limpiar después.
   - Cambio de comportamiento: las raíces multirrepo fuera de `cwd` (`../specs` o rutas absolutas) dejan de aparecer en `AGENTS.md` y Engram, aunque se mantienen en `.atl`.
 
-- **T2: en curso.** Ruta delegada en un writer, en la rama `fix/skill-index-declared-roots` apilada sobre `37bdb403`.
+- **T2: completada.** Ruta delegada. El writer lo entregó en un único commit de 521 líneas, que el orquestador ha dividido en dos sin cambiar el contenido (mismo árbol, `8efd71ce`):
+  - **T2a `8affb459`** (297 líneas): `workspace.SkillRoots` (`yaml:"skill_roots,omitempty"`) y `CleanSkillRoot`.
+    - `CleanSkillRoot` aplica la misma regla en todos los sistemas operativos: rechaza `/x`, `\x`, `C:\x`, `C:x`, UNC, la cadena vacía, `.`, `..` y `../x`.
+    - Añade `ValidSkillRoots`, y `workspace.Validate` (detrás de `axiom workspace validate`) reporta cada raíz inválida como error.
+    - Tests en `skillroots_test.go`, `loader_test.go` y `validator_test.go`.
+  - **T2b `0454b7dd`** (224 líneas):
+    - `ProjectSkillDirs(cwd)` carga la configuración una sola vez y escanea las raíces declaradas justo después de `skills/` y antes de los directorios de agentes. Las inválidas se ignoran.
+    - `ProjectSkillDirs("")` no cambia, y el test de guarda sigue en verde.
+    - Tests en `declared_roots_test.go`, incluido el caso en que la raíz declarada gana a copias en `.claude` (ignorada) y en `.gemini` (sin trackear).
+    - Docs en `axiom.example.yaml`, `docs/manual-de-inicio.md` y `docs/skill-registry.md`.
+  - Comprobaciones del writer:
+    - `gofmt` y `vet` limpios.
+    - Pasan `go test ./internal/skillregistry/... ./internal/workspace/...`, el test de guarda de `assets` y los tests filtrados de `app` y `cli`.
+    - `gofmtcheck` limpio; en WSL pasan `skillregistry` y `workspace`.
+  - Comprobaciones del orquestador:
+    - Rebase limpio sobre `1d4f8fe5`.
+    - Pasan `go test ./internal/skillregistry/... ./internal/workspace/...` y el test de guarda.
+    - T2a compila y sus tests pasan por sí solo en un worktree temporal.
+    - Revisión del diff.
+  - **Riesgo evaluado:** `medium`. Con RDD desactivado basta la autoverificación del writer más la comprobación del orquestador.
+  - **Notas para T3:**
+    - `docs/skill-registry.md` no describe todavía la vista versionada de T1; hay que añadirla junto a «Declared Skill Roots».
+    - `ProjectSkillDirs("")` lee `axiom.yaml` del cwd del proceso, y eso ya ocurría antes de este cambio.
+    - El plugin de OpenCode (`PROJECT_MARKERS`) no ve las raíces declaradas, la misma limitación que con specs y roles.
 
 ## Siguiente paso
 
-Revisar y verificar T2. Después, rebasar T2 sobre la rama de T1, que lleva el commit de este documento.
+T3: declarar `internal/assets/skills` en `axiom.yaml` y asegurar que `.gemini/`, `.kiro/` y `.agents/` estén ignorados. Después, regenerar `AGENTS.md`, adaptar `TestIssueCreationAuthorityBoundary`, actualizar REQ-22.11 y documentar la vista versionada.
