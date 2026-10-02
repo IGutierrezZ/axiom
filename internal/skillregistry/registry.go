@@ -136,6 +136,10 @@ func ProjectSkillDirs(cwd string) []string {
 //  4. the Engram `skill-registry` topic through opts.Mirror (never fatal:
 //     `mirror failed` with exit 0 for the caller — REQ-22.11)
 //
+// Destinations 1 and 2 see the full view (every scanned skill); destinations 3
+// and 4 see the versioned view: only skills inside cwd that git does not ignore
+// (see versionableFiles), so the shared files stay identical across clones.
+//
 // The exclusion filter is applied once, inside the scan (LoadSkill), upstream
 // of every destination. When the fingerprint matches and Force is false, no
 // destination is written and all three stay byte-identical (Reason ==
@@ -168,7 +172,10 @@ func Regenerate(cwd, home string, opts RegenerateOptions) (Result, error) {
 	registryPath := filepath.Join(cwd, RegistryRelPath)
 	cachePath := filepath.Join(cwd, CacheRelPath)
 	agentsPath := filepath.Join(cwd, AgentsRelPath)
-	fp := Fingerprint(files)
+	// Versionability depends on git state, not only on the SKILL.md bytes, so it
+	// is classified before the cache check and folded into the fingerprint.
+	versionable := versionableFiles(cwd, files)
+	fp := versionedFingerprint(Fingerprint(files), versionable)
 	cached := readCachedFingerprint(cachePath)
 	if !opts.Force && cached == fp && fileExists(registryPath) {
 		return Result{
@@ -188,6 +195,11 @@ func Regenerate(cwd, home string, opts RegenerateOptions) (Result, error) {
 			entries = append(entries, entry)
 		}
 	}
+	// Two views from one scan. The full view (every loaded skill) feeds the local
+	// .atl/skill-registry.md. The versioned view feeds the shared destinations
+	// (AGENTS.md, Engram): non-versionable entries are dropped BEFORE the name
+	// dedupe so the versioned copy of a duplicated name is the one listed.
+	versionedEntries := dedupeBySkillName(filterVersionable(entries, versionable), cwd)
 	entries = dedupeBySkillName(entries, cwd)
 
 	sources := make([]string, 0, len(existingDirs))
@@ -218,7 +230,9 @@ func Regenerate(cwd, home string, opts RegenerateOptions) (Result, error) {
 		return Result{}, fmt.Errorf("write registry cache: %w", err)
 	}
 
-	agentsOutcome, agentsErr := writeAgentsIndex(agentsPath, cwd, entries)
+	agentsOutcome, agentsErr := writeAgentsIndex(agentsPath, cwd, versionedEntries)
+	// SkillCount counts the full view: the CLI prints it next to the
+	// .atl/skill-registry.md path, which lists every scanned skill.
 	result := Result{
 		Regenerated: true,
 		SkillCount:  len(entries),
@@ -235,7 +249,7 @@ func Regenerate(cwd, home string, opts RegenerateOptions) (Result, error) {
 		// already emitted"); the error names the destination (spec §1.1).
 		return result, agentsErr
 	}
-	result.Mirror = runMirror(opts.Mirror, cwd, entries)
+	result.Mirror = runMirror(opts.Mirror, cwd, versionedEntries)
 	return result, nil
 }
 
