@@ -1,8 +1,8 @@
 # Catálogo Maestro de Especificaciones Vivas — Axiom
 
 > **Proyecto:** Axiom (Spec-Driven Development Platform)
-> **Última Sincronización:** 2026-09-24 13:18:15 UTC
-> **Total Dominios:** 59 | **Total Requerimientos:** 370 | **Total Escenarios BDD:** 565
+> **Última Sincronización:** 2026-10-02 15:03:17 UTC
+> **Total Dominios:** 59 | **Total Requerimientos:** 371 | **Total Escenarios BDD:** 573
 
 ---
 
@@ -15,7 +15,7 @@
 | `axiom-binary-ci-coverage` | Especificación Viva: Cobertura de Integración Continua sobre el Binario Canónico | 2 | 2 | [Ver Spec](specs/axiom-binary-ci-coverage/spec.md) |
 | `axiom-distribution-identity` | Especificación Viva: Identidad de Distribución de Axiom | 8 | 8 | [Ver Spec](specs/axiom-distribution-identity/spec.md) |
 | `axiom-sdd-cli-integration` | Especificación de Requerimientos: Integración de Comandos SDD en la CLI axiom (INC-13) | 4 | 6 | [Ver Spec](specs/axiom-sdd-cli-integration/spec.md) |
-| `axiom-skills-index-governance` | Especificación Viva: Gobernanza del Índice Unificado de Skills | 5 | 5 | [Ver Spec](specs/axiom-skills-index-governance/spec.md) |
+| `axiom-skills-index-governance` | Especificación Viva: Gobernanza del Índice Unificado de Skills | 6 | 13 | [Ver Spec](specs/axiom-skills-index-governance/spec.md) |
 | `axiom-tui-branding` | Especificación de Requerimientos: Unificación de TUI Bubbletea, Comandos de Ecosistema en CLI axiom y Pasarela de gentle-ai (INC-14) | 4 | 9 | [Ver Spec](specs/axiom-tui-branding/spec.md) |
 | `axiom-updater-resilience` | Especificación Viva: Resiliencia y Gobernanza del Actualizador Autónomo de Axiom | 9 | 9 | [Ver Spec](specs/axiom-updater-resilience/spec.md) |
 | `axiom-user-state-and-env` | Especificación de Requerimientos: Unificación de Estado en ~/.axiom y Variables AXIOM_* (INC-12) | 3 | 5 | [Ver Spec](specs/axiom-user-state-and-env/spec.md) |
@@ -179,7 +179,7 @@ Contrato de nombre publicado por clase de superficie: instalador y tap, compuert
 
 ### Dominio: `axiom-skills-index-governance` — Especificación Viva: Gobernanza del Índice Unificado de Skills
 
-Gobernanza del catálogo de habilidades (skills) de agentes en tres destinos sincronizados desde un único escaneo (`.atl/skill-registry.md`, sección gestionada `## Skills` en `AGENTS.md` y tópico persistente en Engram MCP), con soporte de adopción atómica mediante marcadores canónicos y gancho no transaccional tras promociones en `autoskill`.
+Gobernanza del catálogo de habilidades (skills) de agentes en tres destinos sincronizados desde un único escaneo (`.atl/skill-registry.md`, sección gestionada `## Skills` en `AGENTS.md` y tópico persistente en Engram MCP), con una vista completa para el registro local y una vista versionada para los destinos compartidos, soporte de adopción atómica mediante marcadores canónicos y gancho no transaccional tras promociones en `autoskill`.
 
 **Archivo:** [`specs/axiom-skills-index-governance/spec.md`](specs/axiom-skills-index-governance/spec.md)
 
@@ -187,12 +187,21 @@ Gobernanza del catálogo de habilidades (skills) de agentes en tres destinos sin
   - *Escenario BDD:* Consulta del índice desde CLI
 - **[REQ-22.11]** Regeneración unificada en tres destinos desde un único escaneo
   - *Escenario BDD:* Regeneración exitosa en los tres destinos
+  - *Escenario BDD:* Copia local ignorada excluida de AGENTS.md y conservada en el registro local
+  - *Escenario BDD:* La copia versionada prevalece sobre la copia ignorada
+  - *Escenario BDD:* Skill de ámbito usuario solo en el registro local
+  - *Escenario BDD:* Fichero ignorado pero rastreado cuenta como versionado
+  - *Escenario BDD:* Directorio sin git o sin respuesta de git
+  - *Escenario BDD:* Editar .gitignore invalida la caché
 - **[REQ-22.12]** Reemplazo atómico y marcado de ## Skills en AGENTS.md
   - *Escenario BDD:* Idempotencia en la sustitución de marcadores
 - **[REQ-22.13]** Disparo automático del índice desde autoskill
   - *Escenario BDD:* Aprobación de skill promueve e indexa
 - **[REQ-22.14]** Compatibilidad del verbo skill-registry
   - *Escenario BDD:* Invocación por scripts externos
+- **[REQ-22.15]** Raíces de skills declaradas en axiom.yaml
+  - *Escenario BDD:* La raíz declarada prevalece sobre la copia de un agente
+  - *Escenario BDD:* Raíz declarada inválida
 
 ### Dominio: `axiom-tui-branding` — Especificación de Requerimientos: Unificación de TUI Bubbletea, Comandos de Ecosistema en CLI axiom y Pasarela de gentle-ai (INC-14)
 
