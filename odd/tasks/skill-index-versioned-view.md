@@ -56,6 +56,9 @@ Que el bloque `axiom:skills-index` de `AGENTS.md`, que está versionado, sea det
   | 4 | T3 | `fix/skill-index-apply-repo` | PR 3 |
 
   T2 se ha partido en dos PRs porque sumaba 521 líneas y admitía un corte cohesivo: T2a tiene 297 líneas y T2b, 224.
+- **`size:exception` aceptado para PR 1 (T1)** por el usuario y mantenedor el 2026-10-02.
+  - Motivo: unas 860 líneas de autor (código y tests de la vista versionada, más la corrección D1-D3). Tras un intento honesto, no admite un corte cohesivo: el núcleo con sus tests también supera las 400 líneas, y separar los tests de su comportamiento no forma una unidad de trabajo.
+  - La etiqueta `size:exception` se aplicará al abrir PR 1.
 - **RDD:** desactivado (`rdd_mode: off`). Se evalúa el riesgo por commit con `axiom review assess`, sin revisión.
 
 ## Tareas
