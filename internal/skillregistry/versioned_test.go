@@ -1,6 +1,7 @@
 package skillregistry
 
 import (
+	"context"
 	"errors"
 	"os"
 	"os/exec"
@@ -435,5 +436,154 @@ func TestVersionedFingerprintDependsOnTheVersionableSet(t *testing.T) {
 	}
 	if versionedFingerprint(scan, nil) == scan {
 		t.Fatal("the persisted fingerprint must differ from the bare scan fingerprint")
+	}
+}
+
+// TestGitVisiblePathCutsAtNestedRepositories: git exits 128 for a path inside a
+// submodule or nested repository, which would turn the filter off for every
+// entry. The directory that owns a `.git` entry (a file for a submodule gitlink,
+// a directory for a nested repo) is classified instead, like a symlink.
+func TestGitVisiblePathCutsAtNestedRepositories(t *testing.T) {
+	cwd := t.TempDir()
+	sep := string(os.PathSeparator)
+	writeSkill(t, filepath.Join(cwd, "skills", ".git"), "gitdir: ../.git/modules/skills\n")
+	writeSkill(t, filepath.Join(cwd, ".github", "skills", ".git", "HEAD"), "ref: refs/heads/main\n")
+	writeSkill(t, filepath.Join(cwd, "plain", "skills", "a", "SKILL.md"), minimalSkill("a"))
+
+	for rel, want := range map[string]string{
+		"skills" + sep + "x" + sep + "SKILL.md":                   "skills",
+		".github" + sep + "skills" + sep + "x" + sep + "SKILL.md": ".github/skills",
+		"plain" + sep + "skills" + sep + "a" + sep + "SKILL.md":   "plain/skills/a/SKILL.md",
+	} {
+		if got := gitVisiblePath(cwd, rel); got != want {
+			t.Errorf("gitVisiblePath(%q) = %q, want %q", rel, got, want)
+		}
+	}
+}
+
+// TestRegenerateVersionedViewSurvivesNestedRepositories: a submodule or nested
+// repository holding skills must not disable git filtering for the rest.
+func TestRegenerateVersionedViewSurvivesNestedRepositories(t *testing.T) {
+	cases := map[string]struct {
+		dir   string
+		setup func(t *testing.T, cwd string)
+	}{
+		"submodule": {dir: "skills", setup: func(t *testing.T, cwd string) {
+			source := t.TempDir()
+			gitRun(t, source, "init", "-q")
+			writeSkill(t, filepath.Join(source, "nested-skill", "SKILL.md"), minimalSkill("nested-skill"))
+			gitRun(t, source, "add", ".")
+			gitRun(t, source, "-c", "user.name=test", "-c", "user.email=test@example.com", "commit", "-q", "-m", "init")
+			gitRun(t, cwd, "-c", "protocol.file.allow=always", "submodule", "add", "-q", filepath.ToSlash(source), "skills")
+		}},
+		"nested repository": {dir: filepath.Join(".github", "skills"), setup: func(t *testing.T, cwd string) {
+			nested := filepath.Join(cwd, ".github", "skills")
+			writeSkill(t, filepath.Join(nested, "nested-skill", "SKILL.md"), minimalSkill("nested-skill"))
+			gitRun(t, nested, "init", "-q")
+		}},
+	}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			cwd := newGitRepo(t)
+			home := t.TempDir()
+			writeSkill(t, filepath.Join(cwd, ".gitignore"), ".claude/\n")
+			tc.setup(t, cwd)
+			writeSkill(t, filepath.Join(cwd, ".claude", "skills", "y", "SKILL.md"), minimalSkill("y"))
+			writeSkill(t, filepath.Join(cwd, AgentsRelPath), agentsFixture)
+
+			mirror, mirrored := captureMirror()
+			if _, err := Regenerate(cwd, home, RegenerateOptions{Mirror: mirror}); err != nil {
+				t.Fatalf("Regenerate() error = %v", err)
+			}
+
+			wantPath := "`" + filepath.ToSlash(filepath.Join(tc.dir, "nested-skill", "SKILL.md")) + "`"
+			agents := readFile(t, filepath.Join(cwd, AgentsRelPath))
+			for label, content := range map[string]string{"AGENTS.md": agents, "mirror": mirrored.Content} {
+				if !hasRow(content, "nested-skill") || !strings.Contains(content, wantPath) {
+					t.Fatalf("%s must list the skill held by the nested repository at %s:\n%s", label, wantPath, content)
+				}
+				if hasRow(content, "y") {
+					t.Fatalf("%s leaked the gitignored copy: a nested repository must not disable git filtering:\n%s", label, content)
+				}
+			}
+			if !hasRow(readFile(t, filepath.Join(cwd, RegistryRelPath)), "y") {
+				t.Fatal(".atl keeps the full view")
+			}
+		})
+	}
+}
+
+// TestRegenerateIgnoresInheritedGitRepositoryVariables: GIT_DIR and friends are
+// inherited from whatever launched axiom (a git hook, a wrapper). They must not
+// decide which repository answers; an invalid one would otherwise fail the call
+// and leak every ignored copy.
+func TestRegenerateIgnoresInheritedGitRepositoryVariables(t *testing.T) {
+	cwd := newGitRepo(t)
+	home := t.TempDir()
+	writeSkill(t, filepath.Join(cwd, ".gitignore"), ".claude/\n")
+	writeSkill(t, filepath.Join(cwd, "skills", "x", "SKILL.md"), minimalSkill("x"))
+	writeSkill(t, filepath.Join(cwd, ".claude", "skills", "y", "SKILL.md"), minimalSkill("y"))
+	writeSkill(t, filepath.Join(cwd, AgentsRelPath), agentsFixture)
+
+	bogus := filepath.Join(t.TempDir(), "not-a-repository")
+	t.Setenv("GIT_DIR", bogus)
+	t.Setenv("GIT_WORK_TREE", bogus)
+	t.Setenv("GIT_INDEX_FILE", filepath.Join(bogus, "index"))
+
+	if _, err := Regenerate(cwd, home, RegenerateOptions{}); err != nil {
+		t.Fatalf("Regenerate() error = %v", err)
+	}
+
+	agents := readFile(t, filepath.Join(cwd, AgentsRelPath))
+	if !hasRow(agents, "x") || hasRow(agents, "y") {
+		t.Fatalf("inherited GIT_* variables must not disable the filter:\n%s", agents)
+	}
+}
+
+func TestGitCheckIgnoreEnvironmentDropsRepositoryLocationOnly(t *testing.T) {
+	in := []string{
+		"PATH=/usr/bin",
+		"GIT_DIR=/elsewhere/.git",
+		"git_work_tree=/elsewhere",
+		"Git_Index_File=/elsewhere/index",
+		"GIT_COMMON_DIR=/elsewhere/common",
+		"GIT_CONFIG_GLOBAL=/cfg",
+		"GIT_CONFIG_NOSYSTEM=1",
+		"HOME=/home/dev",
+		"=C:=C:/work",
+	}
+	want := []string{"PATH=/usr/bin", "GIT_CONFIG_GLOBAL=/cfg", "GIT_CONFIG_NOSYSTEM=1", "HOME=/home/dev", "=C:=C:/work"}
+
+	got := gitCheckIgnoreEnvironment(in)
+	if strings.Join(got, "\n") != strings.Join(want, "\n") {
+		t.Fatalf("gitCheckIgnoreEnvironment() = %q, want %q", got, want)
+	}
+}
+
+// TestGitCheckIgnoreCommandIsBoundedAndIsolated pins the invocation without
+// running git. WaitDelay is what keeps the timeout effective when the killed
+// process is a launcher whose child keeps stdout open (Windows git.exe); a real
+// hang cannot be reproduced deterministically in a unit test, so the setting is
+// guarded here instead.
+func TestGitCheckIgnoreCommandIsBoundedAndIsolated(t *testing.T) {
+	t.Setenv("GIT_DIR", filepath.Join(t.TempDir(), "elsewhere"))
+	cwd := t.TempDir()
+
+	cmd := gitCheckIgnoreCommand(context.Background(), cwd, nil)
+
+	wantArgs := []string{"git", "-C", cwd, "check-ignore", "-z", "--stdin"}
+	if strings.Join(cmd.Args, "\x00") != strings.Join(wantArgs, "\x00") {
+		t.Fatalf("Args = %q, want %q", cmd.Args, wantArgs)
+	}
+	if cmd.WaitDelay <= 0 || cmd.WaitDelay >= gitCheckIgnoreTimeout {
+		t.Fatalf("WaitDelay = %v, want a positive bound shorter than the %v timeout", cmd.WaitDelay, gitCheckIgnoreTimeout)
+	}
+	if cmd.Env == nil {
+		t.Fatal("Env must be set explicitly so inherited GIT_* variables are filtered")
+	}
+	for _, entry := range cmd.Env {
+		if strings.HasPrefix(strings.ToUpper(entry), "GIT_DIR=") {
+			t.Fatalf("GIT_DIR leaked into the git environment: %q", entry)
+		}
 	}
 }

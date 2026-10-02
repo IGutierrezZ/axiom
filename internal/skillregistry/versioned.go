@@ -25,6 +25,63 @@ import (
 // hook. Hitting it is a plain git failure and falls back to "no git filtering".
 const gitCheckIgnoreTimeout = 5 * time.Second
 
+// gitCheckIgnoreWaitDelay is how long Output may keep waiting for git's pipes
+// after the timeout fired. The context only kills the process it started; on
+// Windows `git.exe` in `cmd\` is a launcher that spawns `mingw64\bin\git.exe`,
+// so killing the launcher leaves the real git holding stdout open and Output
+// would block until that child ends, defeating the timeout.
+const gitCheckIgnoreWaitDelay = time.Second
+
+// gitRepositoryLocationVars are the variables that make git ignore the -C
+// directory and answer for some other repository, index or work tree. They are
+// inherited from whatever launched axiom (a git hook, a wrapper, an IDE) and
+// must not decide where the ignore rules come from. GIT_CONFIG_* is kept on
+// purpose: user and system ignore configuration is legitimate input.
+var gitRepositoryLocationVars = map[string]bool{
+	"GIT_ALTERNATE_OBJECT_DIRECTORIES": true,
+	"GIT_CEILING_DIRECTORIES":          true,
+	"GIT_COMMON_DIR":                   true,
+	"GIT_DIR":                          true,
+	"GIT_DISCOVERY_ACROSS_FILESYSTEM":  true,
+	"GIT_GLOB_PATHSPECS":               true,
+	"GIT_ICASE_PATHSPECS":              true,
+	"GIT_IMPLICIT_WORK_TREE":           true,
+	"GIT_INDEX_FILE":                   true,
+	"GIT_INTERNAL_SUPER_PREFIX":        true,
+	"GIT_LITERAL_PATHSPECS":            true,
+	"GIT_NAMESPACE":                    true,
+	"GIT_NOGLOB_PATHSPECS":             true,
+	"GIT_OBJECT_DIRECTORY":             true,
+	"GIT_PREFIX":                       true,
+	"GIT_QUARANTINE_PATH":              true,
+	"GIT_WORK_TREE":                    true,
+}
+
+// gitCheckIgnoreEnvironment returns environment (os.Environ form) without the
+// repository-location variables. Names compare case-insensitively because
+// Windows environment names are.
+func gitCheckIgnoreEnvironment(environment []string) []string {
+	out := make([]string, 0, len(environment))
+	for _, entry := range environment {
+		name, _, _ := strings.Cut(entry, "=")
+		if gitRepositoryLocationVars[strings.ToUpper(name)] {
+			continue
+		}
+		out = append(out, entry)
+	}
+	return out
+}
+
+// gitCheckIgnoreCommand builds the git invocation: bounded by ctx plus
+// WaitDelay, and isolated from inherited repository-location variables.
+func gitCheckIgnoreCommand(ctx context.Context, cwd string, stdin []byte) *exec.Cmd {
+	cmd := exec.CommandContext(ctx, "git", "-C", cwd, "check-ignore", "-z", "--stdin")
+	cmd.Stdin = bytes.NewReader(stdin)
+	cmd.Env = gitCheckIgnoreEnvironment(os.Environ())
+	cmd.WaitDelay = gitCheckIgnoreWaitDelay
+	return cmd
+}
+
 // runGitCheckIgnore is the seam over the git binary. It runs
 // `git -C cwd check-ignore -z --stdin` with stdin and returns git's stdout and
 // exit code. A non-nil error means git could not be run to completion (missing
@@ -35,9 +92,7 @@ var runGitCheckIgnore = execGitCheckIgnore
 func execGitCheckIgnore(cwd string, stdin []byte) (stdout []byte, exitCode int, err error) {
 	ctx, cancel := context.WithTimeout(context.Background(), gitCheckIgnoreTimeout)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, "git", "-C", cwd, "check-ignore", "-z", "--stdin")
-	cmd.Stdin = bytes.NewReader(stdin)
-	out, runErr := cmd.Output()
+	out, runErr := gitCheckIgnoreCommand(ctx, cwd, stdin).Output()
 	if ctx.Err() != nil {
 		// A killed git reports an arbitrary exit code (1 on Windows), which must
 		// never be read as "nothing is ignored".
@@ -98,19 +153,32 @@ func versionableFiles(cwd string, files []string) map[string]bool {
 
 // gitVisiblePath returns the cwd-relative, slash-separated path that git can
 // classify for a skill file. Git refuses to check anything below a symbolic link
-// ("beyond a symbolic link") and fails the whole invocation, so a symlinked
-// skill directory (dotfiles/nix setups, which findAllSkillFiles deliberately
-// follows) is classified by the symlink entry itself, which is what git versions.
+// ("beyond a symbolic link") or inside a submodule ("is in submodule") and fails
+// the whole invocation, which would turn the filter off for every entry. So the
+// path is cut at the first ancestor below cwd that is a symlink (dotfiles/nix
+// setups, which findAllSkillFiles deliberately follows) or that owns a `.git`
+// entry (a file for a submodule gitlink, a directory for a nested repository);
+// that entry is what the parent repository versions or ignores.
 func gitVisiblePath(cwd, rel string) string {
 	parts := strings.Split(rel, string(os.PathSeparator))
 	current := cwd
 	for i, part := range parts {
 		current = filepath.Join(current, part)
-		if info, err := os.Lstat(current); err == nil && info.Mode()&os.ModeSymlink != 0 {
+		info, err := os.Lstat(current)
+		if err != nil {
+			continue
+		}
+		if info.Mode()&os.ModeSymlink != 0 || (info.IsDir() && ownsGitEntry(current)) {
 			return strings.Join(parts[:i+1], "/")
 		}
 	}
 	return filepath.ToSlash(rel)
+}
+
+// ownsGitEntry reports whether dir contains a `.git` file or directory.
+func ownsGitEntry(dir string) bool {
+	_, err := os.Lstat(filepath.Join(dir, ".git"))
+	return err == nil
 }
 
 // gitIgnoredPaths runs the single git invocation for paths (cwd-relative,
