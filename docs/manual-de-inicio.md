@@ -217,6 +217,8 @@ workspace:
   name: "MiProyecto"
   topology: "monorepo-embedded"   # Opciones: monorepo-embedded | monorepo-decoupled | multirepo
   specs_repository: "openspec"    # Carpeta local o subrepositorio Git de especificaciones
+  skill_roots:                    # Opcional: directorios versionados con skills fuera de "skills/"
+    - "internal/assets/skills"
   root: "."
 
 roles:
@@ -244,10 +246,14 @@ governance:
   semantic_analysis: "enabled"    # Serena y CodeGraph
 ```
 
+`workspace.skill_roots` es opcional. Sirve para proyectos que guardan sus skills canónicas fuera de `skills/`: cada ruta debe ser relativa a la carpeta maestra y quedar dentro de ella (no se admiten rutas absolutas, `..` ni `.`). Esas raíces se escanean justo después de `skills/` y antes de los directorios de cada agente (`.claude/skills`, `.gemini/skills`, etc.), de modo que el índice de skills de `AGENTS.md` apunta a la copia versionada y no a una copia local.
+
 Para validar en cualquier momento que la estructura de repositorios y roles cumple con las reglas:
 ```bash
 axiom workspace validate
 ```
+
+El comando también informa de cualquier entrada inválida de `workspace.skill_roots`; el escaneo de skills las ignora en silencio.
 
 ---
 
