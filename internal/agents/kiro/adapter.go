@@ -124,6 +124,13 @@ func (a *Adapter) EmbeddedSubAgentsDir() string {
 	return "kiro/agents"
 }
 
+// HooksDir implements the optional sdd hookInjector capability. Kiro loads
+// standalone hook files from <root>/.kiro/hooks/*.json, so Axiom owns one
+// dedicated file there and never edits hooks authored by the user.
+func (a *Adapter) HooksDir(rootDir string) string {
+	return filepath.Join(rootDir, ".kiro", "hooks")
+}
+
 // KiroModelID resolves a KiroModelAlias to a Kiro-native model identifier.
 // Used by the SDD injector to stamp the `model:` field in agent frontmatter.
 func (a *Adapter) KiroModelID(alias model.KiroModelAlias) string {

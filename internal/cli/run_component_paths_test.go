@@ -392,6 +392,115 @@ func TestComponentPathsWorkspaceScopedSkillsUsesWorkspaceDir(t *testing.T) {
 	}
 }
 
+// TestComponentPathsWorkspaceScopedKiroStaysInWorkspace comprueba que, en
+// ámbito workspace, todas las rutas de Kiro cuelgan del workspace. APPDATA y
+// XDG_CONFIG_HOME apuntan bajo home para que una fuga de SettingsPath se detecte.
+func TestComponentPathsWorkspaceScopedKiroStaysInWorkspace(t *testing.T) {
+	home := t.TempDir()
+	workspace := t.TempDir()
+	t.Setenv("APPDATA", filepath.Join(home, "AppData", "Roaming"))
+	t.Setenv("XDG_CONFIG_HOME", filepath.Join(home, ".config"))
+	adapters := resolveAdapters([]model.AgentID{model.AgentKiroIDE})
+	selection := model.Selection{Skills: []model.SkillID{model.SkillGoTesting}, Persona: model.PersonaNeutral}
+	kiro := filepath.Join(workspace, ".kiro")
+
+	tests := []struct {
+		name      string
+		component model.ComponentID
+		want      []string
+	}{
+		{
+			name:      "sdd",
+			component: model.ComponentSDD,
+			want: []string{
+				filepath.Join(kiro, "steering", "axiom.md"),
+				filepath.Join(kiro, "skills", "sdd-init", "SKILL.md"),
+				filepath.Join(kiro, "skills", "_shared", "sdd-phase-common.md"),
+				filepath.Join(kiro, "agents", "sdd-init.md"),
+				filepath.Join(kiro, "hooks", "axiom-skill-registry.json"),
+			},
+		},
+		{
+			name:      "skills",
+			component: model.ComponentSkills,
+			want:      []string{filepath.Join(kiro, "skills", "go-testing", "SKILL.md")},
+		},
+		{
+			name:      "engram",
+			component: model.ComponentEngram,
+			want:      []string{filepath.Join(kiro, "settings", "mcp.json")},
+		},
+		{
+			name:      "context7",
+			component: model.ComponentContext7,
+			want:      []string{filepath.Join(kiro, "settings", "mcp.json")},
+		},
+		{
+			name:      "persona",
+			component: model.ComponentPersona,
+			want:      []string{filepath.Join(kiro, "steering", "axiom.md")},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			paths := componentPathsWithWorkspaceScoped(home, workspace, ScopeWorkspace, selection, adapters, tt.component)
+
+			for _, want := range tt.want {
+				if !containsPath(paths, want) {
+					t.Errorf("componentPathsWithWorkspaceScoped(%s,kiro-ide,workspace) falta la ruta %q\npaths=%v", tt.component, want, paths)
+				}
+			}
+			for _, p := range paths {
+				if strings.HasPrefix(p, home+string(filepath.Separator)) {
+					t.Errorf("componentPathsWithWorkspaceScoped(%s,kiro-ide,workspace) devuelve una ruta bajo home %q\npaths=%v", tt.component, p, paths)
+				}
+			}
+		})
+	}
+}
+
+// TestComponentPathsSDDKiroIncludesSkillRegistryHook comprueba que el hook de
+// skill-registry de Kiro entra en las rutas de backup y verificación de sdd
+// bajo la raíz de su ámbito, y que otros agentes no lo declaran.
+func TestComponentPathsSDDKiroIncludesSkillRegistryHook(t *testing.T) {
+	home := t.TempDir()
+	workspace := t.TempDir()
+	t.Setenv("APPDATA", filepath.Join(home, "AppData", "Roaming"))
+	t.Setenv("XDG_CONFIG_HOME", filepath.Join(home, ".config"))
+	hookRel := filepath.Join(".kiro", "hooks", "axiom-skill-registry.json")
+
+	tests := []struct {
+		name  string
+		agent model.AgentID
+		scope InstallScope
+		want  string
+	}{
+		{name: "kiro global cuelga de home", agent: model.AgentKiroIDE, scope: ScopeGlobal, want: filepath.Join(home, hookRel)},
+		{name: "kiro workspace cuelga del workspace", agent: model.AgentKiroIDE, scope: ScopeWorkspace, want: filepath.Join(workspace, hookRel)},
+		{name: "claude no declara hook de Kiro", agent: model.AgentClaudeCode, scope: ScopeWorkspace, want: ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			adapters := resolveAdapters([]model.AgentID{tt.agent})
+			paths := componentPathsWithWorkspaceScoped(home, workspace, tt.scope, model.Selection{}, adapters, model.ComponentSDD)
+
+			var hooks []string
+			for _, p := range paths {
+				if strings.Contains(p, filepath.Join(".kiro", "hooks")) {
+					hooks = append(hooks, p)
+				}
+			}
+			switch {
+			case tt.want == "" && len(hooks) != 0:
+				t.Fatalf("%s no debe declarar rutas .kiro/hooks, got %v", tt.agent, hooks)
+			case tt.want != "" && (len(hooks) != 1 || hooks[0] != tt.want):
+				t.Fatalf("rutas .kiro/hooks = %v, want [%s]", hooks, tt.want)
+			}
+		})
+	}
+}
+
 // TestInstallWorkspaceScopeVerificationWithNoGlobalSkills verifies that
 // post-apply verification succeeds when --scope=workspace is used and no
 // global skill files exist. This is a regression test for issue #785:
@@ -1350,7 +1459,7 @@ func TestComponentInjectionDirScopedWorkspaceSafeguard(t *testing.T) {
 	}
 
 	// CLI agents with workspace support must use workspaceDir
-	for _, id := range []model.AgentID{model.AgentClaudeCode, model.AgentGeminiCLI, model.AgentCursor} {
+	for _, id := range []model.AgentID{model.AgentClaudeCode, model.AgentGeminiCLI, model.AgentCursor, model.AgentKiroIDE} {
 		adapter, ok := reg.Get(id)
 		if !ok {
 			continue

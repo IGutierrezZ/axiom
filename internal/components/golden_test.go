@@ -438,7 +438,7 @@ func TestGoldenSDD_Kiro(t *testing.T) {
 		t.Fatalf("sdd.Inject(kiro) changed = false")
 	}
 
-	// Kiro writes SDD orchestrator to ~/.kiro/steering/gentle-ai.md
+	// Kiro writes SDD orchestrator to ~/.kiro/steering/axiom.md
 	// (StrategySteeringFile). Use the adapter to resolve the platform-specific path.
 	promptPath := adapter.SystemPromptFile(home)
 	instructionsFile := readTestFile(t, promptPath)
@@ -484,6 +484,11 @@ func TestGoldenSDD_Kiro(t *testing.T) {
 		agentContent := readTestFile(t, filepath.Join(agentsDir, name+".md"))
 		assertGolden(t, "sdd-kiro-agent-"+name+".golden", agentContent)
 	}
+
+	// Kiro loads standalone hooks from ~/.kiro/hooks/*.json; Axiom owns one
+	// file there that refreshes the skill registry at session start.
+	hookContent := readTestFile(t, filepath.Join(home, ".kiro", "hooks", "axiom-skill-registry.json"))
+	assertGolden(t, "sdd-kiro-hook-skill-registry.golden", hookContent)
 }
 
 // ---------------------------------------------------------------------------

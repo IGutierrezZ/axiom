@@ -37,7 +37,14 @@ dist/
 .claude/
 .config/
 .opencode/
+.gemini/
 .mcp.json
+# Kiro: artefactos generados por `axiom setup --agent kiro-ide` (rutas absolutas por máquina en settings)
+.kiro/agents/
+.kiro/skills/
+.kiro/settings/
+# Artefactos de trabajo de orquestadores externos (planes, revisiones y metadatos de PR con rutas locales)
+.agents/tasks/
 
 # Engram local runtime state (project sync chunks are intentionally versioned)
 .engram/engram.db

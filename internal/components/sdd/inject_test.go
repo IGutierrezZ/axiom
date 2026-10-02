@@ -8308,6 +8308,169 @@ func TestInject_ClaudeCodeInstallsReviewStopHook(t *testing.T) {
 	}
 }
 
+func TestEnsureKiroSkillRegistryHook(t *testing.T) {
+	tests := []struct {
+		name        string
+		setup       func(t *testing.T, path string) []byte
+		wantChanged bool
+	}{
+		{
+			name:        "missing file is created",
+			setup:       func(*testing.T, string) []byte { return nil },
+			wantChanged: true,
+		},
+		{
+			name: "second call is a byte-identical no-op",
+			setup: func(t *testing.T, path string) []byte {
+				if _, err := ensureKiroSkillRegistryHook(path); err != nil {
+					t.Fatalf("first ensureKiroSkillRegistryHook() error = %v", err)
+				}
+				data, err := os.ReadFile(path)
+				if err != nil {
+					t.Fatal(err)
+				}
+				return data
+			},
+			wantChanged: false,
+		},
+		{
+			name: "manual or stale content is overwritten",
+			setup: func(t *testing.T, path string) []byte {
+				if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+					t.Fatal(err)
+				}
+				stale := `{"version":"v1","hooks":[{"name":"axiom-skill-registry","trigger":"SessionStart","matcher":"x","action":{"type":"command","command":"echo stale"}}]}`
+				if err := os.WriteFile(path, []byte(stale), 0o644); err != nil {
+					t.Fatal(err)
+				}
+				return nil
+			},
+			wantChanged: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), ".kiro", "hooks", skillRegistryHookFileName)
+			before := tt.setup(t, path)
+
+			changed, err := ensureKiroSkillRegistryHook(path)
+			if err != nil {
+				t.Fatalf("ensureKiroSkillRegistryHook() error = %v", err)
+			}
+			if changed != tt.wantChanged {
+				t.Fatalf("ensureKiroSkillRegistryHook() changed = %v, want %v", changed, tt.wantChanged)
+			}
+			data, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatalf("ReadFile(%q) error = %v", path, err)
+			}
+			if before != nil && !bytes.Equal(before, data) {
+				t.Fatalf("hook bytes changed on no-op call:\nbefore: %s\nafter:  %s", before, data)
+			}
+			if !bytes.HasSuffix(data, []byte("}\n")) {
+				t.Fatalf("hook file must end with a single trailing newline:\n%q", data)
+			}
+
+			var parsed struct {
+				Version string           `json:"version"`
+				Hooks   []map[string]any `json:"hooks"`
+			}
+			if err := json.Unmarshal(data, &parsed); err != nil {
+				t.Fatalf("hook file is not valid JSON: %v\n%s", err, data)
+			}
+			if parsed.Version != "v1" {
+				t.Fatalf("version = %q, want v1", parsed.Version)
+			}
+			if len(parsed.Hooks) != 1 {
+				t.Fatalf("hooks = %d entries, want 1:\n%s", len(parsed.Hooks), data)
+			}
+			hook := parsed.Hooks[0]
+			if _, hasMatcher := hook["matcher"]; hasMatcher {
+				t.Fatalf("hook must not declare a matcher:\n%s", data)
+			}
+			if hook["name"] != "axiom-skill-registry" || hook["trigger"] != "SessionStart" {
+				t.Fatalf("hook name/trigger = %v/%v, want axiom-skill-registry/SessionStart", hook["name"], hook["trigger"])
+			}
+			action, _ := hook["action"].(map[string]any)
+			if action["type"] != "command" {
+				t.Fatalf("action.type = %v, want command", action["type"])
+			}
+			if action["command"] != "axiom skill-registry refresh --quiet --no-gitignore --cwd ." {
+				t.Fatalf("action.command = %v", action["command"])
+			}
+		})
+	}
+}
+
+func TestSkillRegistryHookPath(t *testing.T) {
+	root := t.TempDir()
+	tests := []struct {
+		name  string
+		agent model.AgentID
+		want  string
+	}{
+		{name: "kiro owns a standalone hook file", agent: model.AgentKiroIDE, want: filepath.Join(root, ".kiro", "hooks", "axiom-skill-registry.json")},
+		{name: "claude has no standalone hook dir", agent: model.AgentClaudeCode, want: ""},
+		{name: "codex has no standalone hook dir", agent: model.AgentCodex, want: ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			adapter, err := agents.NewAdapter(tt.agent)
+			if err != nil {
+				t.Fatalf("NewAdapter(%s) error = %v", tt.agent, err)
+			}
+			if got := SkillRegistryHookPath(adapter, root); got != tt.want {
+				t.Fatalf("SkillRegistryHookPath(%s) = %q, want %q", tt.agent, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestInject_KiroInstallsSkillRegistryHook(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", filepath.Join(home, ".config"))
+	t.Setenv("APPDATA", filepath.Join(home, "AppData", "Roaming"))
+
+	adapter, err := agents.NewAdapter(model.AgentKiroIDE)
+	if err != nil {
+		t.Fatalf("NewAdapter(kiro-ide) error = %v", err)
+	}
+	hookPath := filepath.Join(home, ".kiro", "hooks", "axiom-skill-registry.json")
+
+	result, err := Inject(home, adapter, "")
+	if err != nil {
+		t.Fatalf("Inject(kiro) error = %v", err)
+	}
+	found := false
+	for _, f := range result.Files {
+		if f == hookPath {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("Inject(kiro) files missing %q: %v", hookPath, result.Files)
+	}
+	first, err := os.ReadFile(hookPath)
+	if err != nil {
+		t.Fatalf("ReadFile(%q) error = %v", hookPath, err)
+	}
+	if got := strings.Count(string(first), "axiom skill-registry refresh"); got != 1 {
+		t.Fatalf("hook file has %d skill-registry commands, want 1:\n%s", got, first)
+	}
+
+	if _, err := Inject(home, adapter, ""); err != nil {
+		t.Fatalf("second Inject(kiro) error = %v", err)
+	}
+	second, err := os.ReadFile(hookPath)
+	if err != nil {
+		t.Fatalf("ReadFile(%q) after second Inject error = %v", hookPath, err)
+	}
+	if !bytes.Equal(first, second) {
+		t.Fatalf("second Inject(kiro) rewrote the hook:\nfirst:  %s\nsecond: %s", first, second)
+	}
+}
+
 func TestEnsureCodexSkillRegistryHookWritesSessionStartHookIdempotently(t *testing.T) {
 	home := t.TempDir()
 	hooksPath := filepath.Join(home, ".codex", "hooks.json")
