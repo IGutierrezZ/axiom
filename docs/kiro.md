@@ -31,13 +31,21 @@ When configured, axiom installs:
 
 | Artefacto | Ruta en el repositorio | Git |
 |-----------|------------------------|-----|
-| Steering (orquestador y persona) | `.kiro/steering/axiom.md` | Versionado |
+| Steering (orquestador y persona) | `.kiro/steering/axiom.md` | Ignorado |
 | Agentes nativos | `.kiro/agents/{sdd-*,review-*,jd-*}.md` | Ignorado |
 | Skills | `.kiro/skills/` | Ignorado |
 | Configuración MCP | `.kiro/settings/mcp.json` | Ignorado |
 | Hook de skill-registry | `.kiro/hooks/axiom-skill-registry.json` | Versionado |
 
-`.gitignore` excluye `.kiro/agents/`, `.kiro/skills/` y `.kiro/settings/` porque son regenerables y `settings/` contiene rutas absolutas de la máquina. `.kiro/steering/` no depende de la máquina y se versiona para que Kiro cargue el orquestador nada más clonar. El `settings.json` del IDE no se mueve al repositorio: sigue en la ruta del SO (ver [Config Paths by Platform](#config-paths-by-platform)).
+Solo se versiona el hook (`.kiro/hooks/`). `.gitignore` excluye `.kiro/agents/`, `.kiro/skills/`, `.kiro/settings/` y el steering generado `.kiro/steering/axiom.md`, que Axiom regenera. Otros ficheros de steering propios del equipo en `.kiro/steering/` sí se pueden versionar. Los motivos:
+
+- `settings/` contiene rutas absolutas de la máquina.
+- El steering se genera desde `internal/assets/kiro`, que cambia con mucha frecuencia: una copia commiteada se quedaría obsoleta sin que nada avise.
+- El steering por sí solo no deja Kiro operativo tras clonar, porque delega en los agentes nativos de `.kiro/agents/`, que ya estaban ignorados. Hay que ejecutar `setup --agent kiro-ide` de todos modos.
+- Es el mismo criterio que `.claude/`, `.opencode/` y `.gemini/`, que también están ignorados.
+- El hook es pequeño, estable y no lleva rutas de la máquina (usa `--cwd .`), así que sí merece versionarse.
+
+Tras clonar, ejecuta `setup --agent kiro-ide` (sin `--dry-run`, ver los comandos de abajo) para regenerar el steering, los agentes, las skills y la configuración MCP. El `settings.json` del IDE no se mueve al repositorio: sigue en la ruta del SO (ver [Config Paths by Platform](#config-paths-by-platform)).
 
 Comandos, siempre desde la raíz del repositorio:
 
@@ -70,6 +78,7 @@ El componente `sdd` instala `.kiro/hooks/axiom-skill-registry.json` (o `~/.kiro/
 - Se dispara en `SessionStart` y necesita `axiom` en el `PATH`. Si el comando falla, Kiro solo muestra un aviso; la sesión no se bloquea.
 - `--cwd .` funciona igual en cmd, PowerShell y sh. El refresco usa una caché por huella, así que el arranque normal es barato.
 - El fichero lo gestiona Axiom: `setup` y `sync` lo reescriben y `uninstall` lo borra. Pon tus propios hooks en otro `*.json` de `.kiro/hooks/`.
+- En este repositorio está versionado y un test (`TestCommittedKiroSkillRegistryHookMatchesGenerator`) comprueba que la copia commiteada coincide byte a byte con la que genera Axiom.
 - No está verificado que el IDE cargue los hooks de nivel usuario de `~/.kiro/hooks` en ámbito global.
 
 ---

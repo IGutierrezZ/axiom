@@ -39,10 +39,12 @@ dist/
 .opencode/
 .gemini/
 .mcp.json
-# Kiro: artefactos generados por `axiom setup --agent kiro-ide` (rutas absolutas por máquina en settings)
+# Kiro: artefactos regenerados por `axiom setup --agent kiro-ide` (settings lleva rutas absolutas por máquina
+# y el steering axiom.md se regenera desde internal/assets/kiro). Se versionan .kiro/hooks/ y el steering propio del equipo.
 .kiro/agents/
 .kiro/skills/
 .kiro/settings/
+.kiro/steering/axiom.md
 # Artefactos de trabajo de orquestadores externos (planes, revisiones y metadatos de PR con rutas locales)
 .agents/tasks/
 
