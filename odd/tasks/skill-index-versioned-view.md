@@ -175,7 +175,7 @@ Que el bloque `axiom:skills-index` de `AGENTS.md`, que está versionado, sea det
 
 ### Criterios de aceptación
 
-- ✅ El bloque no varía con copias locales ignoradas (`.claude/skills`). Con `.gemini/` sin ignorar habría filas extra: depende de #62.
+- ✅ El bloque no varía con copias locales ignoradas (`.claude/skills`). `.gemini/` ya está ignorado en `main` desde #62 (`05843479`).
 - ✅ El bloque no contiene rutas fuera del repositorio ni ignoradas.
 - ✅ `issue-creation` apunta a la ruta canónica y su test pasa.
 - ✅ `.atl` mantiene la vista completa.
@@ -196,6 +196,26 @@ Que el bloque `axiom:skills-index` de `AGENTS.md`, que está versionado, sea det
 - Los tests de `internal/dashboard` escriben en el repositorio (tarea propuesta aparte).
 - Valorar si `branch-pr` y `gentle-ai-bench`, skills heredadas de upstream, deben listarse junto a `axiom-branch-pr` y `axiom-bench`.
 
+### Entrega
+
+- **Método:** squash más rebase, por decisión del usuario y siguiendo la convención del repositorio. Tras cada merge, el siguiente PR se reapunta a `main`, se rebasa con `git rebase --onto origin/main <head anterior del padre>`, se sube con force-push protegido y se espera a que su CI esté en verde.
+- **Merges:**
+
+  | PR | Contenido | Commit en `main` |
+  |---|---|---|
+  | #62 | Paridad Kiro | `05843479` |
+  | #63 | Aislamiento del test de vectores | `42871008` |
+  | #64 | T1 | `f22dc2c9` |
+  | #68 | Hotfix | `1e3c4a93` |
+  | #65 | T2a | `20f3a001` |
+  | #66 | T2b | `39f82f11` |
+  | #67 | T3 | Este PR, rebasado sobre `39f82f11` |
+
+- **Incidencia: `main` en rojo entre `42871008` y `1e3c4a93`.**
+  - **Causa:** #62 añadió `filepath.Abs(cwd)` en `resolveSkillRegistryDirs` antes de normalizar los separadores. En Linux, `\tmp\…\ws` se unía al directorio del proceso y el refresh se omitía. El aislamiento de #63 hizo el fallo determinista y aportó el diagnóstico.
+  - **Corrección:** hotfix #68 (`skillregistry.CleanPathArg` antes de `IsAbs`/`Abs`). Verificado en Linux (WSL) con 10 de 10 ejecuciones correctas, y el CI de `main` volvió a verde.
+  - **Lección:** el primer fallo de CI de #62 se diagnosticó como un test intermitente preexistente y se relanzó. Se comparó el fichero de test, pero no el código de producción que el PR cambiaba y que el test ejercita.
+
 ## Siguiente paso
 
-PRs abiertos: #64 (T1, `size:exception`), #65 (T2a), #66 (T2b) y #67 (T3). Fusionar en orden y antes de #67, fusionar #62. Tras cada merge, rebasar o reapuntar el siguiente PR a `main`.
+Fusionar #67 cuando su CI esté en verde y eliminar los worktrees y ramas locales que quedan de la cadena.
