@@ -121,6 +121,15 @@ func Validate(fs FS, cfg *WorkspaceConfig, baseDir string) (*ValidationReport, e
 		}
 	}
 
+	// 4. Validación de las raíces de skills versionadas. El escaneo del índice ignora
+	// en silencio las inválidas, así que este es el único punto donde se avisa.
+	for _, root := range cfg.Workspace.SkillRoots {
+		if _, ok := CleanSkillRoot(root); !ok {
+			report.Valid = false
+			report.Errors = append(report.Errors, fmt.Sprintf("la raíz de skills '%s' declarada en 'workspace.skill_roots' no es válida: debe ser una ruta relativa dentro del proyecto y distinta de '.'", root))
+		}
+	}
+
 	if len(report.Errors) > 0 {
 		report.Valid = false
 	}
