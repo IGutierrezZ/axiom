@@ -76,10 +76,29 @@ func UserSkillDirs(home string) []string {
 }
 
 func ProjectSkillDirs(cwd string) []string {
+	// axiom.yaml o .axiom-workspace se consulta una sola vez: declara raíces de
+	// skills propias y, en multirrepo, los repositorios de specs y de roles.
+	cfg, err := workspace.LoadConfig(cwd)
+	if err != nil {
+		cfg = nil
+	}
+
 	dirs := []string{
 		// Generic project skills first: repo-local intent beats user/global skills.
 		filepath.Join(cwd, "skills"),
+	}
 
+	// Raíces versionadas declaradas en `workspace.skill_roots` (p. ej.
+	// internal/assets/skills). Van antes que los directorios de cada agente: la
+	// copia canónica gana a una copia local con el mismo nombre. Las raíces
+	// inválidas se ignoran; `workspace validate` es quien las reporta.
+	if cfg != nil {
+		for _, root := range cfg.Workspace.ValidSkillRoots() {
+			dirs = append(dirs, filepath.Join(cwd, root))
+		}
+	}
+
+	dirs = append(dirs,
 		// Agent-native workspace skill locations.
 		filepath.Join(cwd, ".opencode", "skills"),
 		filepath.Join(cwd, ".claude", "skills"),
@@ -97,10 +116,10 @@ func ProjectSkillDirs(cwd string) []string {
 		filepath.Join(cwd, ".agents", "skills"),
 		filepath.Join(cwd, ".atl", "skills"),
 		filepath.Join(cwd, ".hermes", "skills"),
-	}
+	)
 
-	// Multirrepo / Monorrepo desacoplado: consultar axiom.yaml o .axiom-workspace
-	if cfg, err := workspace.LoadConfig(cwd); err == nil && cfg != nil {
+	// Multirrepo / Monorrepo desacoplado.
+	if cfg != nil {
 		specsRepo := strings.TrimSpace(cfg.Workspace.SpecsRepository)
 		if specsRepo != "" && specsRepo != "." {
 			if filepath.IsAbs(specsRepo) {
