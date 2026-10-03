@@ -17,6 +17,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/pipeline"
 	"github.com/IGutierrezZ/axiom/v3/internal/planner"
 	"github.com/IGutierrezZ/axiom/v3/internal/reviewtransaction"
+	"github.com/IGutierrezZ/axiom/v3/internal/skillregistry"
 	"github.com/IGutierrezZ/axiom/v3/internal/state"
 	"github.com/IGutierrezZ/axiom/v3/internal/statecoord"
 	"github.com/IGutierrezZ/axiom/v3/internal/system"
@@ -411,12 +412,18 @@ func resolveSkillRegistryDirs(cwd, home string) (string, string, error) {
 		if err != nil {
 			return "", "", fmt.Errorf("resolve cwd: %w", err)
 		}
-	} else if !filepath.IsAbs(cwd) {
-		abs, err := filepath.Abs(cwd)
-		if err != nil {
-			return "", "", fmt.Errorf("resolve cwd %q: %w", cwd, err)
+	} else {
+		// Fold the separators before deciding whether --cwd is absolute: on a
+		// non-Windows host `\tmp\ws` is not absolute, and filepath.Abs would join
+		// it to the process cwd instead of resolving it to /tmp/ws.
+		cwd = skillregistry.CleanPathArg(cwd)
+		if !filepath.IsAbs(cwd) {
+			abs, err := filepath.Abs(cwd)
+			if err != nil {
+				return "", "", fmt.Errorf("resolve cwd %q: %w", cwd, err)
+			}
+			cwd = abs
 		}
-		cwd = abs
 	}
 	if home == "" {
 		var err error

@@ -31,6 +31,16 @@ const (
 	SkipNoProjectMarker SkipReason = "no-project-marker"
 )
 
+// CleanPathArg exposes the --cwd normalization used by RefreshSkip and
+// Regenerate. Callers that resolve a user-supplied --cwd against the process
+// working directory (filepath.Abs) must normalize it first: on a non-Windows
+// host a backslash-separated argument is not absolute, so resolving it before
+// folding the separators joins it to the process cwd as a single relative
+// filename and the refresh silently skips a real project.
+func CleanPathArg(path string) string {
+	return cleanPathArg(path)
+}
+
 // RefreshSkip reports whether a refresh at cwd must be skipped and why.
 // It never writes to the filesystem.
 func RefreshSkip(cwd, home string) SkipReason {
