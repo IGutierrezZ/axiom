@@ -2129,7 +2129,11 @@ func executeCommand(name string, args ...string) error {
 // has explicit skills, those are used; otherwise skills are derived from the preset.
 func selectedSkillIDs(selection model.Selection) []model.SkillID {
 	if len(selection.Skills) > 0 {
-		return selection.Skills
+		// Retired skills (#70) have no embedded asset, so injection never
+		// writes them and verification must not require them. Filtering after
+		// the length check keeps an explicit list made only of retired IDs
+		// empty instead of falling back to the preset.
+		return skills.WithoutRetired(selection.Skills)
 	}
 
 	return skills.SkillsForPreset(selection.Preset)
