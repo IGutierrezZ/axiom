@@ -78,7 +78,7 @@ Retirar de Axiom las skills específicas de Gentle AI y cerrar tres seguimientos
   - `TestSemanticEndpoints` se salta cuando CodeGraph no está disponible o inicializado.
   - Verificación: ejecutar el paquete en un worktree limpio y comprobar que `git status --porcelain --ignored` sigue vacío.
   - Ruta: delegada (writer). Disparadores: exploración de 4 o más ficheros y preparación de escritura.
-- [x] **T4 · `doctor` reconoce el lanzador gestionado de `opencode`** (`3fd5aca5` + `86844846`; PRs pendientes de la verificación independiente)
+- [x] **T4 · `doctor` reconoce el lanzador gestionado de `opencode`** (`13a623ed` PR #73 + `d86f5c83`/`ea558625` en `fix/doctor-lanzador-opencode`, PR pendiente de `size:exception`)
   - Si una de las copias del PATH es el lanzador gestionado por Axiom (marca `gentle-ai:managed-opencode-launcher/v1`) y envuelve a la otra, no se informa de duplicado. Puede quedar, como mucho, una nota informativa.
   - Tests.
   - Ruta: delegada (writer).
@@ -187,9 +187,24 @@ Retirar de Axiom las skills específicas de Gentle AI y cerrar tres seguimientos
   - **Tamaño y división:** 590 líneas en total (unas 392 de tests). Se dividió en dos PRs encadenados: el parser en `internal/opencode` (`3fd5aca5`, 267 líneas) y su uso en `doctor` (`86844846`, 323 líneas). El árbol es idéntico al del commit original, y el commit del parser compila y pasa sus tests por sí solo.
   - **Comprobaciones del writer:** pasan los tests de cli de `doctor`, `CheckOneTool` y los nuevos, y los de `opencode`. En WSL pasa también el test del lanzador POSIX. Con `doctor.go` revertido, fallan los 4 tests de «lanzador excluido».
   - **Riesgo evaluado:** `high`, por la señal `shell_process` en `launcher_target.go`, que analiza scripts sin ejecutarlos. Verificación independiente en curso.
+  - **Verificación independiente: PASS.**
+    - El parser no ejecuta nada y lee como mucho 4096 bytes.
+    - 900.000 destinos aleatorios hacen el round-trip sin ningún fallo.
+    - `doctor` sigue avisando en todos los casos de duplicado real.
+    - La prueba de extremo a extremo con PATH aislado pasa de `[!!]` a `[ok]` en el caso del bug.
+    - La heurística de riesgo saltó por la palabra `exec` dentro del texto del formato POSIX; es un falso positivo.
+  - **Corrección acotada `ea558625`** (+104/−8), a raíz de una observación del verificador:
+    - Si el lanzador está en el PATH pero queda tapado por una copia anterior, `doctor` vuelve a avisar, porque la variable de background-subagents no se aplica. Antes del arreglo, ese caso habría salido en verde.
+    - Remedio nuevo, `RemedyReorderPath` (`reorder-path`), para no reutilizar `remove-duplicate-tools`.
+    - Casos de round-trip con `%`, `&`, `'`, unicode y `.PS1`.
+  - **Reparto final:**
+    - PR #73, el parser con sus casos de round-trip: `13a623ed`, 277 líneas.
+    - Rama `fix/doctor-lanzador-opencode`, la exclusión y el aviso de lanzador tapado: `d86f5c83` y `ea558625`, 409 líneas.
+    - El árbol es idéntico al ya verificado.
+    - **El PR de `doctor` supera el presupuesto en 9 líneas.** No admite un corte cohesivo: separar el aviso de lanzador tapado publicaría temporalmente una regresión, y no se separan tests de su comportamiento. Pendiente de que el usuario acepte `size:exception`.
   - **Preexistente, sin relación con este cambio:** `internal/opencode` `TestRunCatalogCommandCancelsOverflowingChild` falla por tiempos en esta máquina, también sin el cambio.
   - **CI de los PRs ya abiertos:** #69, #70, #71 y #72 están en verde. #72 pasa con `go test ./...` ejecutando los paquetes en paralelo, así que la guarda no da falsos positivos.
 
 ## Siguiente paso
 
-Pendiente de decisiones del usuario: fusionar los PRs en verde (#69, #70, #71 y luego #72) y aceptar `size:exception` para T2. T4: abrir sus dos PRs cuando pase la verificación independiente. Al final, el PR de cierre con este documento.
+Pendiente de decisiones del usuario: fusionar los PRs en verde (#69, #70, #71, #72 y #73) y aceptar `size:exception` para T2 (605 líneas, rama `fix/scope-for-path-windows` ya subida) y para el PR de `doctor` (409 líneas, rama `fix/doctor-lanzador-opencode` ya subida). Al final, el PR de cierre con este documento.
