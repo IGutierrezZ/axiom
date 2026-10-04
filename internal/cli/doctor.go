@@ -189,12 +189,18 @@ func checkOneTool(tool string, pathDirs []string) CheckResult {
 		}
 	}
 
-	copies := doctorToolCopies(tool, pathDirs)
+	// An Axiom-managed OpenCode launcher wraps the real copy by design; it is
+	// reported as a note, never as a duplicate.
+	copies, launchers := doctorExcludeManagedLaunchers(tool, doctorToolCopies(tool, pathDirs))
+	launcherNote := doctorManagedLauncherNote(launchers)
 	if len(copies) > 1 {
 		// The duplicate branch is exactly where ambiguity about which build
 		// is running is guaranteed, so this is the branch that most needs
 		// the invoked-executable clause -- it must not be dropped here.
 		detail := fmt.Sprintf("%s resolved to %s but %d copies found in PATH: %s", tool, resolved, len(copies), strings.Join(copies, ", "))
+		if launcherNote != "" {
+			detail += " (" + launcherNote + ", not counted)"
+		}
 		if tool == "axiom" || tool == "gentle-ai" {
 			detail += doctorInvokedGentleAIClause(resolved)
 		}
@@ -209,6 +215,9 @@ func checkOneTool(tool string, pathDirs []string) CheckResult {
 	detail := tool + " found at " + resolved
 	if shim != "" {
 		detail += " (" + shim + ")"
+	}
+	if launcherNote != "" {
+		detail += " (" + launcherNote + ")"
 	}
 	if tool == "axiom" || tool == "gentle-ai" {
 		detail += doctorInvokedGentleAIClause(resolved)
