@@ -118,7 +118,7 @@ Que Axiom **deje de enviar datos al upstream Gentle AI y de dirigir acciones con
 
 > Estado: `[ ]` pendiente · `[~]` en curso o con PR abierto · `[x]` fusionado.
 
-### [~] T1 · 🔴 La skill `branch-pr` no debe apuntar al upstream: **PR #77**, `9454f652`
+### [x] T1 · 🔴 La skill `branch-pr` no debe apuntar al upstream: **PR #77**, fusionado como `1bed2bc1`
 
 - **Problema:** `skills/branch-pr/SKILL.md` líneas 16, 249, 288 y 289 usaban `--repo Gentleman-Programming/gentle-ai` en `gh pr create`, `gh pr checks` y `gh pr view`.
 - **Arreglo:** ahora apuntan a `IGutierrezZ/axiom` y exigen `--repo` explícito, porque GitHub marca este repositorio como fork (`isFork=true`, sin padre visible).
@@ -126,9 +126,18 @@ Que Axiom **deje de enviar datos al upstream Gentle AI y de dirigir acciones con
   - `internal/assets/skills/issue-creation` obtiene `TARGET` de un objetivo explícito o del remoto autenticado (`SKILL.md:45`), así que está bien.
   - `skills/axiom-collab-perfect` también menciona el upstream, pero es una skill de contribución al upstream; se decide en T7.
 - **Verificación:** `go test ./internal/assets/ -run 'IssueCreation|Bundled|Skill'` pasa. Riesgo `medium`. 4 líneas cambiadas.
-- **Siguiente:** fusionar #77 cuando esté en verde y eliminar el worktree `C:\repos\axiom-wt\odd-up-t1` y la rama `fix/branch-pr-sin-upstream` (local y remota).
+- **Cerrada (2026-10-04):** fusionado con squash con autorización del usuario. Eliminados el worktree `odd-up-t1` y la rama `fix/branch-pr-sin-upstream`, local y remota.
 
-### [ ] T2 · Aislar los tests de `cmd/axiom` del hub real y limpiar el hub local
+### [~] T2 · Aislar los tests de `cmd/axiom` del hub real y limpiar el hub local: **PR #78**, `43935d61`
+
+- **Hecho (2026-10-04, sesión de relevo):**
+  - **Código** (ruta delegada, un writer Sonnet; disparador: preparación de escritura): nuevo `cmd/axiom/testmain_test.go` con `TestMain` (`HOME`, `USERPROFILE` y `DO_NOT_TRACK=1` en un directorio temporal) y dos tests de contrato, `TestSandboxHomeIsInForce` y `TestRunInitRegistersInSandboxHub`. 109 líneas, sin código de producción. `hub.NewManager` no lee ninguna otra variable, así que no se fijan más.
+  - **Verificación:** `go test ./cmd/axiom/ -count=1` pasa en el writer y en la comprobación del orquestador; el sha256 del hub real es idéntico antes y después (`dd7758af…`) en ambas ejecuciones; `gofmt` y `go vet` limpios. Riesgo `medium` (`executable_change`); RDD desactivado.
+  - **Auditoría:** solo `cmd/axiom`, `dashboard`, `knowledge` y `tui` importan `internal/hub`. `internal/tui` **lee** el hub real en `TestGovernanceScreensNavigationAndActions` (`model_test.go:9265-9275`), pero ningún test dispara su escritura (`model.go:3155-3157`). Se deja así.
+  - **Limpieza local hecha:** copia en `~/.axiom/workspaces.json.bak-2026-10-04`; `project prune` (37 eliminadas), `project remove` de `testaxiomapp-8`, `-9` y `-17`, y `project switch axiom`, con un binario compilado desde `origin/main`. Resultado: 4 proyectos (`app-knowledge-agent`, `kvp25`, `kvp25-2`, `axiom`) y `axiom` activo.
+  - **Seguimiento posible, fuera de alcance:** `AXIOM_STATE_DIR` (`internal/system/user_paths.go:11`) no lo fija ningún `TestMain`; si un desarrollador lo tiene definido, los tests de copia de seguridad y estado de `cmd/axiom` leerían su directorio real.
+  - `scripts/deadcode-ratchet.sh` en local (Windows) señala `processVerifiedDead` y `secureLockRoot` de `internal/reviewtransaction`, ajenos a este PR; probablemente la línea base se genera en Linux. Lo decide el CI.
+- **Siguiente:** fusionar #78 cuando esté en verde y eliminar el worktree `odd-up-t2` y la rama `test/aislar-hub-cmd-axiom`.
 
 - **Causa:**
   - `cmd/axiom/knowledge_cli_test.go:11,48,119` (TestCLIInitKnowledgeProfile, TestCLIKnowledgeSweepAndQuery y el de Crawl) llama a `runInit` dentro del proceso (líneas 15, 52 y 123).
@@ -309,16 +318,19 @@ Cada PR lleva riesgo `high` probable (borrado masivo y hooks), así que necesita
     - `C:\repos\axiom-wt\odd-up-t1`, rama `fix/branch-pr-sin-upstream`, del PR #77.
   - **Ramas remotas:** `main`, `feat/cli-json-query` (del usuario, no se toca), `fix/branch-pr-sin-upstream` y `docs/odd-retirada-telemetria-y-restos-upstream`.
   - **Checkout principal:** sigue siendo de la otra sesión (inc-24) y no se toca.
+- **2026-10-04, sesión de relevo:**
+  - Contexto recuperado de Engram (#457, #458) y de este documento; conciliado con `origin`.
+  - #77 en verde: fusionado (`1bed2bc1`) con autorización del usuario y limpiado. **T1 cerrada.**
+  - T2: código en **PR #78** (`43935d61`, 109 líneas, riesgo `medium`) y limpieza local del hub hecha. Pendiente del CI de #78.
 
 ## 8. Siguiente paso
 
-1. Mirar el CI de #77. Si está en verde, fusionarlo con squash y eliminar su worktree y su rama.
-2. T2, delegada en un writer para el código. Después, la limpieza local del hub, con copia de seguridad.
-3. T3 y T4, delegadas.
-4. T5, delegada: decidir el corte y, si hace falta, pedir `size:exception`.
-5. T6: plan de PRs con un agente Plan, plantear al usuario la decisión del stub de `axiom telemetry runtime` y después ejecutar T6a a T6d.
-6. T7: plantear al usuario las decisiones de `axiom-collab-perfect` y `chained-pr` y diseñar la lectura dual de los contratos.
-7. PR de cierre con este documento.
+1. Mirar el CI de #78. Si está en verde, fusionarlo con squash y eliminar su worktree y su rama.
+2. T3 y T4, delegadas. La limpieza local del PATH de T3 toca el registro del usuario: confirmarla con él antes de ejecutarla.
+3. T5, delegada: decidir el corte y, si hace falta, pedir `size:exception`.
+4. T6: plan de PRs con un agente Plan, plantear al usuario la decisión del stub de `axiom telemetry runtime` y después ejecutar T6a a T6d.
+5. T7: plantear al usuario las decisiones de `axiom-collab-perfect` y `chained-pr` y diseñar la lectura dual de los contratos.
+6. PR de cierre con este documento.
 
 ## 9. Historia relacionada (ODDs anteriores de la misma sesión)
 
