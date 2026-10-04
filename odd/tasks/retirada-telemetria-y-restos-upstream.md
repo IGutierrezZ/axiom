@@ -128,7 +128,7 @@ Que Axiom **deje de enviar datos al upstream Gentle AI y de dirigir acciones con
 - **Verificación:** `go test ./internal/assets/ -run 'IssueCreation|Bundled|Skill'` pasa. Riesgo `medium`. 4 líneas cambiadas.
 - **Cerrada (2026-10-04):** fusionado con squash con autorización del usuario. Eliminados el worktree `odd-up-t1` y la rama `fix/branch-pr-sin-upstream`, local y remota.
 
-### [~] T2 · Aislar los tests de `cmd/axiom` del hub real y limpiar el hub local: **PR #78**, `43935d61`
+### [x] T2 · Aislar los tests de `cmd/axiom` del hub real y limpiar el hub local: **PR #78**, fusionado como `1feda4b1`
 
 - **Hecho (2026-10-04, sesión de relevo):**
   - **Código** (ruta delegada, un writer Sonnet; disparador: preparación de escritura): nuevo `cmd/axiom/testmain_test.go` con `TestMain` (`HOME`, `USERPROFILE` y `DO_NOT_TRACK=1` en un directorio temporal) y dos tests de contrato, `TestSandboxHomeIsInForce` y `TestRunInitRegistersInSandboxHub`. 109 líneas, sin código de producción. `hub.NewManager` no lee ninguna otra variable, así que no se fijan más.
@@ -137,7 +137,7 @@ Que Axiom **deje de enviar datos al upstream Gentle AI y de dirigir acciones con
   - **Limpieza local hecha:** copia en `~/.axiom/workspaces.json.bak-2026-10-04`; `project prune` (37 eliminadas), `project remove` de `testaxiomapp-8`, `-9` y `-17`, y `project switch axiom`, con un binario compilado desde `origin/main`. Resultado: 4 proyectos (`app-knowledge-agent`, `kvp25`, `kvp25-2`, `axiom`) y `axiom` activo.
   - **Seguimiento posible, fuera de alcance:** `AXIOM_STATE_DIR` (`internal/system/user_paths.go:11`) no lo fija ningún `TestMain`; si un desarrollador lo tiene definido, los tests de copia de seguridad y estado de `cmd/axiom` leerían su directorio real.
   - `scripts/deadcode-ratchet.sh` en local (Windows) señala `processVerifiedDead` y `secureLockRoot` de `internal/reviewtransaction`, ajenos a este PR; probablemente la línea base se genera en Linux. Lo decide el CI.
-- **Siguiente:** fusionar #78 cuando esté en verde y eliminar el worktree `odd-up-t2` y la rama `test/aislar-hub-cmd-axiom`.
+- **Cerrada (2026-10-04):** CI en verde, fusionado con squash y eliminados el worktree `odd-up-t2` y la rama `test/aislar-hub-cmd-axiom`, local y remota.
 
 - **Causa:**
   - `cmd/axiom/knowledge_cli_test.go:11,48,119` (TestCLIInitKnowledgeProfile, TestCLIKnowledgeSweepAndQuery y el de Crawl) llama a `runInit` dentro del proceso (líneas 15, 52 y 123).
@@ -163,7 +163,7 @@ Que Axiom **deje de enviar datos al upstream Gentle AI y de dirigir acciones con
   - El CI.
 - **Tamaño:** S. Ruta: un writer para el código y el orquestador para la limpieza local.
 
-### [ ] T3 · PATH: quitar las entradas muertas y añadir una salvaguarda preventiva
+### [~] T3 · PATH: quitar las entradas muertas y añadir una salvaguarda preventiva: **PR #79**, `ad1f5095`
 
 - **Entradas muertas en el PATH de usuario** (`HKCU\Environment` `Path`):
   - `C:\Users\igutierrezz\AppData\Local\Temp\codegraph-install-test-kvp10\current\bin`
@@ -183,6 +183,13 @@ Que Axiom **deje de enviar datos al upstream Gentle AI y de dirigir acciones con
 
   No se toca nada más del PATH. Ojo: la entrada `C:\Users\igutierrezz\AppData\Local\gentle-ai\bin` **se queda**, porque decidirlo corresponde a T7 y al usuario.
 - **Tamaño:** S.
+- **Hecho (2026-10-04, sesión de relevo):**
+  - **Limpieza local hecha**, confirmada de nuevo por el usuario en esta sesión: el valor era `REG_SZ` sin variables `%…%`. Copia literal en `~/.axiom/path-user-backup-2026-10-04.txt`; quitadas solo las dos entradas (26 → 24), sigue siendo `REG_SZ`, la relectura coincide y el orden se conserva. Se observa `.dotnet\tools` duplicado (posiciones 13 y 21); no se toca.
+  - **Código** (ruta delegada, writer Sonnet): el primer writer dejó `path.go` y `path_test.go` sin commit y terminó con un aviso de la organización sobre credenciales en lugar de su informe; el diff revisado por el orquestador no contiene credenciales. Diseño: constante `NoPersistentPathEnvVar` y helper `skipPersistentUserPathWrite(operation)`, que agrupa la guarda de `go test` y la variable, con `log.Printf` como diagnóstico; las lecturas (`UserPathEntries`) no cambian. Un segundo writer terminó los `TestMain` (`cmd/axiom`, `internal/app`, `internal/cli`, `internal/dashboard`), la fila de `docs/non-interactive.md` y el commit.
+  - **Añadido por el orquestador:** `e2e/organicruntime` (sin etiqueta de build, entra en `go test ./...` y ejecuta `install` con el binario real).
+  - **Verificación:** registro `Path` idéntico antes y después de los tests; `internal/system`, `cmd/axiom`, `internal/app`, `internal/dashboard` y un subconjunto de `internal/cli` en verde; `gofmt` y `go vet` limpios; ratchet solo con los dos avisos ajenos conocidos. Riesgo **`high`** (`process_boundary`), así que hubo **verificador independiente** (Sonnet, solo lectura): mutación confirmada (los tests fallan sin la guarda) y **un defecto bloqueante**, ya corregido: `organicEnvironment` es una lista blanca cerrada y no heredaba la variable; ahora la fija explícitamente, con el test `TestOrganicEnvironmentDisablesPersistentPathWrites`. 8 ficheros, 296 líneas.
+  - **Seguimiento posible:** `bench/runner.go` (`Sandbox.env()`) es otro entorno cerrado sin la variable; la journey `bench/journeys_issue_3043.go` ejecuta `install` con subagentes en segundo plano, pero usa un stub `#!/bin/sh`.
+- **Siguiente:** fusionar #79 cuando esté en verde y eliminar el worktree `odd-up-t3` y la rama `fix/path-persistente-salvaguarda`.
 
 ### [ ] T4 · `RefreshSkip` compara por identidad, no de forma léxica
 
@@ -321,12 +328,14 @@ Cada PR lleva riesgo `high` probable (borrado masivo y hooks), así que necesita
 - **2026-10-04, sesión de relevo:**
   - Contexto recuperado de Engram (#457, #458) y de este documento; conciliado con `origin`.
   - #77 en verde: fusionado (`1bed2bc1`) con autorización del usuario y limpiado. **T1 cerrada.**
-  - T2: código en **PR #78** (`43935d61`, 109 líneas, riesgo `medium`) y limpieza local del hub hecha. Pendiente del CI de #78.
+  - T2: código en **PR #78** (`43935d61`, 109 líneas, riesgo `medium`) y limpieza local del hub hecha.
+  - #78 en verde: fusionado (`1feda4b1`) y limpiado. **T2 cerrada.**
+  - T3: limpieza local del PATH hecha y código en **PR #79** (`ad1f5095`, riesgo `high` con verificador independiente). Pendiente del CI de #79.
 
 ## 8. Siguiente paso
 
-1. Mirar el CI de #78. Si está en verde, fusionarlo con squash y eliminar su worktree y su rama.
-2. T3 y T4, delegadas. La limpieza local del PATH de T3 toca el registro del usuario: confirmarla con él antes de ejecutarla.
+1. Mirar el CI de #79. Si está en verde, fusionarlo con squash y eliminar su worktree y su rama.
+2. T4, delegada.
 3. T5, delegada: decidir el corte y, si hace falta, pedir `size:exception`.
 4. T6: plan de PRs con un agente Plan, plantear al usuario la decisión del stub de `axiom telemetry runtime` y después ejecutar T6a a T6d.
 5. T7: plantear al usuario las decisiones de `axiom-collab-perfect` y `chained-pr` y diseñar la lectura dual de los contratos.
