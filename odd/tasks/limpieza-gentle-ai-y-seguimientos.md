@@ -60,7 +60,7 @@ Retirar de Axiom las skills específicas de Gentle AI y cerrar tres seguimientos
 
 ## Tareas
 
-- [ ] **T1 · Retirar `branch-pr` y `gentle-ai-bench`**
+- [x] **T1 · Retirar `branch-pr` y `gentle-ai-bench`** (`2d79cbf7`)
   - Borrar `internal/assets/skills/branch-pr/` y `internal/assets/skills/gentle-ai-bench/`.
   - Quitar sus IDs de `internal/model/types.go`, `internal/catalog/skills.go`, `internal/components/skills/presets.go` y `internal/tui/screens/skill_picker.go`.
   - Documentación: `docs/components.md`. En `docs/usage.md`, el ejemplo de `--skill` pasa a usar `work-unit-commits`.
@@ -118,7 +118,30 @@ Retirar de Axiom las skills específicas de Gentle AI y cerrar tres seguimientos
 ## Progreso
 
 - 2026-10-04: ODD abierto. Decisiones del usuario: carril ODD, las cuatro tareas, la retirada no negociable de las skills de Gentle AI y PRs independientes.
+- **T1: completada (`2d79cbf7`).** Ruta delegada en un writer.
+  - Tamaño: 222 líneas borradas de assets, más +37/−59 en 24 ficheros de código, tests, docs, registro de absorción, `AGENTS.md` y goldens.
+  - Cambios adicionales que no estaban en el inventario: `TestEmbeddedAssetCount` pasa de 27 a 25, y se regeneran dos goldens de la TUI.
+  - Sustituciones en tests y docs: `work-unit-commits` en los tests de cli y en `docs/usage.md`, `rdd-defect-workflow` en `install_test.go`, e `issue-creation` en el e2e.
+  - **Registro de absorción:** es un registro cerrado, con una fila por sha, y su validador rechaza filas ajenas. Por eso el descarte se anota en una sección en prosa al final, «Descartes de contenido fuera del universo congelado», sin cambiar `## Recuento`.
+  - **`AGENTS.md`:** solo desaparecen las dos filas. La línea manual 33, sobre la convención `gentle-ai-*`, queda obsoleta; solo se señala.
+  - **Comprobaciones del writer:**
+    - Pasan `go build`, `gofmt`, `vet`, `gofmtcheck` y `bash -n` del e2e.
+    - Pasan los paquetes assets, catalog, `components/skills`, `tui/screens`, model y `absorptionledger`, y `internal/app -run Documented|SkillIndex`.
+    - De `internal/cli` se ejecutaron los 373 tests de skills: 362 pasan, 8 se saltan y 3 fallan, los tres preexistentes en `3a35fc66` por symlinks y CodeGraph en Windows. El paquete completo no termina en local (más de 40 minutos) y queda para el CI.
+  - **Riesgo evaluado:** `high`, por un único motivo: `e2e/e2e_test.sh` lanza procesos de shell.
+  - **Verificación independiente: PASS.**
+    - El e2e se probó con el binario real: los recuentos asertados (2, 8 y 8) coinciden, e `issue-creation` es una sustitución válida.
+    - Ningún test se debilita.
+    - El grep de completitud no deja restos.
+    - El registro de absorción cumple sus reglas.
+  - **Seguimientos detectados, fuera de alcance:**
+    - Axiom no tiene mecanismo para retirar skills gestionadas que ya no distribuye. Quien las instaló conserva sus copias, `uninstall` deja de limpiarlas (`uninstall/service.go:925-936`) y la verificación de `sync` (`run.go:2473-2481`) podría exigir el fichero de un ID que siga guardado en `state.json`.
+    - La telemetría de Axiom está activada por defecto y envía a `telemetry.gentlemanprogramming.com`, el servidor del upstream.
+    - El PATH de usuario contiene entradas `AppData\Local\Temp\codegraph-install-test-*`, restos de tests de instalación de CodeGraph.
+  - **Incidentes con efectos fuera del worktree:**
+    - El writer ejecutó `taskkill /IM go.exe`, que puede haber cortado procesos Go de otra sesión. Lección registrada: no matar procesos por nombre.
+    - El verificador ejecutó `install` en el worktree. Creó `.claude/`, que luego borró, y reinstaló `engram.exe` 3.0.0 en `AppData`. El PATH final es correcto: `engram\bin` va primero.
 
 ## Siguiente paso
 
-T1, delegada en un writer.
+PR de T1; T2 en curso (writer).
