@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/hub"
+	"github.com/IGutierrezZ/axiom/v3/internal/livingdoc"
 )
 
 func TestServiceWorkspace(t *testing.T) {
@@ -341,8 +342,16 @@ func TestSkillsInboxEndpoints(t *testing.T) {
 	}
 }
 
+// TestSemanticEndpoints runs against a throwaway Go project and a stand-in
+// `codegraph`, never against the repository checkout: the reindex endpoint
+// shells out to `codegraph index` in the project root, which writes its index
+// there and fails when that root has no CodeGraph database.
 func TestSemanticEndpoints(t *testing.T) {
-	svc := NewService("../..")
+	root := t.TempDir()
+	writeFixtureFile(t, root, "sample/sample.go", "package sample\n\n// Service is the symbol the symbols endpoint is queried for.\ntype Service struct{}\n")
+	recordPath := installFakeCodeGraph(t, 0)
+
+	svc := NewService(root)
 	server := NewServer(svc)
 	router := server.Router()
 
@@ -376,6 +385,9 @@ func TestSemanticEndpoints(t *testing.T) {
 	if err := json.Unmarshal(rrSymbols.Body.Bytes(), &symbols); err != nil {
 		t.Fatalf("JSON inválido en /api/semantic/symbols: %v", err)
 	}
+	if len(symbols) != 1 || symbols[0]["name"] != "Service" {
+		t.Errorf("se esperaba el símbolo 'Service' del proyecto de prueba, obtenidos: %v", symbols)
+	}
 
 	// 3. GET /api/semantic/dependencies
 	reqDeps := httptest.NewRequest(http.MethodGet, "/api/semantic/dependencies", nil)
@@ -407,10 +419,80 @@ func TestSemanticEndpoints(t *testing.T) {
 	if success, ok := reindexRes["success"].(bool); !ok || !success {
 		t.Errorf("se esperaba success=true en respuesta de reindexación")
 	}
+	if connector := reindexRes["connector"]; connector != "codegraph" {
+		t.Errorf("connector = %v, se esperaba codegraph", connector)
+	}
+
+	// The reindex must have run `codegraph index` in the project, not elsewhere.
+	dir, args := recordedCodeGraph(t, recordPath)
+	if !sameDirectory(t, dir, root) {
+		t.Errorf("codegraph se ejecutó en %s, se esperaba el proyecto %s", dir, root)
+	}
+	if args != "index" {
+		t.Errorf("argumentos de codegraph = %q, se esperaba \"index\"", args)
+	}
 }
 
+// TestSemanticReindexWithoutCodeGraph covers the machines that have no
+// `codegraph` binary: the reindex succeeds on the native engine instead of
+// failing.
+func TestSemanticReindexWithoutCodeGraph(t *testing.T) {
+	withoutCodeGraph(t)
+
+	router := NewServer(NewService(t.TempDir())).Router()
+	rr := httptest.NewRecorder()
+	router.ServeHTTP(rr, httptest.NewRequest(http.MethodPost, "/api/semantic/reindex", nil))
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("POST /api/semantic/reindex retornó %d: %s", rr.Code, rr.Body.String())
+	}
+	var res map[string]interface{}
+	if err := json.Unmarshal(rr.Body.Bytes(), &res); err != nil {
+		t.Fatalf("JSON inválido en /api/semantic/reindex: %v", err)
+	}
+	if success, _ := res["success"].(bool); !success {
+		t.Errorf("se esperaba success=true sin CodeGraph: %v", res)
+	}
+	if res["connector"] != "native-ast" {
+		t.Errorf("connector = %v, se esperaba native-ast", res["connector"])
+	}
+}
+
+// TestSemanticReindexSurfacesCodeGraphFailure pins that a failing
+// `codegraph index` (for example "CodeGraph not initialized" in a project that
+// was never initialized) is reported as a 500 with success=false, not hidden.
+func TestSemanticReindexSurfacesCodeGraphFailure(t *testing.T) {
+	installFakeCodeGraph(t, 1)
+
+	router := NewServer(NewService(t.TempDir())).Router()
+	rr := httptest.NewRecorder()
+	router.ServeHTTP(rr, httptest.NewRequest(http.MethodPost, "/api/semantic/reindex", nil))
+
+	if rr.Code != http.StatusInternalServerError {
+		t.Fatalf("POST /api/semantic/reindex retornó %d, se esperaba 500: %s", rr.Code, rr.Body.String())
+	}
+	var res map[string]interface{}
+	if err := json.Unmarshal(rr.Body.Bytes(), &res); err != nil {
+		t.Fatalf("JSON inválido en /api/semantic/reindex: %v", err)
+	}
+	if success, ok := res["success"].(bool); !ok || success {
+		t.Errorf("se esperaba success=false cuando codegraph falla: %v", res)
+	}
+	if res["connector"] != "codegraph" {
+		t.Errorf("connector = %v, se esperaba codegraph", res["connector"])
+	}
+}
+
+// TestArchiveEndpoints runs against a throwaway project: POST /api/archive/sync
+// regenerates openspec/INDEX.md, which on the repository checkout rewrites the
+// tracked catalog.
 func TestArchiveEndpoints(t *testing.T) {
-	svc := NewService("../..")
+	root := t.TempDir()
+	writeFixtureFile(t, root, "openspec/specs/sample-domain/spec.md",
+		"# Sample Domain\n\nCapability used by the archive endpoint tests.\n\n"+
+			"### Requirement: Sample is indexed (REQ-SAMPLE-1)\n\n#### Scenario: Index lists the domain\n")
+
+	svc := NewService(root)
 	server := NewServer(svc)
 	router := server.Router()
 
@@ -423,9 +505,12 @@ func TestArchiveEndpoints(t *testing.T) {
 		t.Fatalf("GET /api/archive/specs retornó %d: %s", rrSpecs.Code, rrSpecs.Body.String())
 	}
 
-	var catalog map[string]interface{}
+	var catalog livingdoc.LivingCatalog
 	if err := json.Unmarshal(rrSpecs.Body.Bytes(), &catalog); err != nil {
 		t.Fatalf("JSON inválido en /api/archive/specs: %v", err)
+	}
+	if len(catalog.Specs) != 1 || catalog.Specs[0].Domain != "sample-domain" {
+		t.Errorf("se esperaba el dominio 'sample-domain' en el catálogo, obtenido: %+v", catalog.Specs)
 	}
 
 	// 2. POST /api/archive/sync
@@ -435,6 +520,15 @@ func TestArchiveEndpoints(t *testing.T) {
 
 	if rrSync.Code != http.StatusOK {
 		t.Fatalf("POST /api/archive/sync retornó %d: %s", rrSync.Code, rrSync.Body.String())
+	}
+
+	// The regenerated index lands in the project, not in the checkout.
+	index, err := os.ReadFile(filepath.Join(root, "openspec", "INDEX.md"))
+	if err != nil {
+		t.Fatalf("el sync no escribió openspec/INDEX.md en el proyecto: %v", err)
+	}
+	if !strings.Contains(string(index), "sample-domain") {
+		t.Errorf("INDEX.md no lista el dominio 'sample-domain': %s", index)
 	}
 
 	// 3. GET /api/archive/specs/non-existent-domain (debe retornar 404)
@@ -768,8 +862,18 @@ func TestInteractiveSDDOrchestrationEndpoints(t *testing.T) {
 	}
 }
 
+// TestEcosystemEndpoints runs against a throwaway project under the sandbox
+// home (see TestMain). The sync and upgrade endpoints would otherwise run a
+// real `axiom sync` (writing agent configuration, .atl and MCP files into the
+// project) and a real binary upgrade, and backups/create would snapshot the
+// developer's own ~/.axiom; the runner seams stand in for them and record what
+// was asked.
 func TestEcosystemEndpoints(t *testing.T) {
-	svc := NewService("../..")
+	root := t.TempDir()
+	writeFixtureFile(t, root, "axiom.yaml", "workspace:\n  name: Ecosystem\n  topology: monorepo-embedded\n")
+	rec := stubAppRun(t)
+
+	svc := NewService(root)
 	srv := NewServer(svc)
 	router := srv.Router()
 
@@ -847,6 +951,9 @@ func TestEcosystemEndpoints(t *testing.T) {
 	if rr6.Code != http.StatusOK && rr6.Code != http.StatusInternalServerError {
 		t.Errorf("código inesperado para sync: %d", rr6.Code)
 	}
+	if len(rec.args) != 1 || strings.Join(rec.args[0], " ") != "sync --scope workspace" {
+		t.Errorf("el endpoint de sync debía ejecutar una vez 'sync --scope workspace', registrado: %v", rec.args)
+	}
 
 	// 7. POST /api/ecosystem/upgrade
 	req7 := httptest.NewRequest(http.MethodPost, "/api/ecosystem/upgrade", nil)
@@ -854,6 +961,17 @@ func TestEcosystemEndpoints(t *testing.T) {
 	router.ServeHTTP(rr7, req7)
 	if rr7.Code != http.StatusOK && rr7.Code != http.StatusInternalServerError {
 		t.Errorf("código inesperado para upgrade: %d", rr7.Code)
+	}
+
+	// The sync phase of upgrade->sync adds one more invocation. Every one of them
+	// must have run with the project as working directory, never the checkout.
+	if len(rec.args) != 2 {
+		t.Errorf("tras upgrade se esperaban 2 ejecuciones de sync, registradas: %v", rec.args)
+	}
+	for i, dir := range rec.dirs {
+		if !sameDirectory(t, dir, root) {
+			t.Errorf("sync #%d se ejecutó en %s, se esperaba el proyecto %s", i+1, dir, root)
+		}
 	}
 }
 
@@ -1014,8 +1132,14 @@ func TestIncrementSummaryOperationalFlagsAndRoleFiltering(t *testing.T) {
 	}
 }
 
+// TestSpecsSyncStatusEndpoint runs against a throwaway git repository without a
+// remote: on a checkout that has one, the endpoint runs `git fetch`, which
+// contacts the network and rewrites refs in the shared .git directory.
 func TestSpecsSyncStatusEndpoint(t *testing.T) {
-	svc := NewService("../..")
+	root := t.TempDir()
+	initGitFixture(t, root)
+
+	svc := NewService(root)
 	server := NewServer(svc)
 	router := server.Router()
 
@@ -1035,8 +1159,11 @@ func TestSpecsSyncStatusEndpoint(t *testing.T) {
 	if !status.IsGitRepo {
 		t.Errorf("se esperaba que el repositorio fuera un repo git")
 	}
-	if status.Branch == "" {
-		t.Errorf("se esperaba nombre de rama")
+	if status.Branch != "main" {
+		t.Errorf("rama = %q, se esperaba main", status.Branch)
+	}
+	if status.Remote != "" {
+		t.Errorf("el repositorio de prueba no debe tener remoto, obtenido %q", status.Remote)
 	}
 }
 

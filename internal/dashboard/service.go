@@ -1253,6 +1253,12 @@ func (s *Service) GetDoctorDiagnostics() (*DoctorReport, error) {
 	return report, nil
 }
 
+// runAppArgsFn executes an `axiom` command line in process. It is a
+// package-level seam, like upgradeSequenceReportFn, so tests can observe the
+// `sync` invocation (arguments and working directory) without a real sync
+// writing agent configuration into the project and the user's home.
+var runAppArgsFn = app.RunArgs
+
 // RunSync ejecuta la sincronización de configuraciones y reglas de agentes.
 // Por defecto aplica el ámbito 'workspace' para aislar las configuraciones al repositorio activo.
 func (s *Service) RunSync(scopeOpt ...string) (*EcosystemActionResponse, error) {
@@ -1270,7 +1276,7 @@ func (s *Service) RunSync(scopeOpt ...string) (*EcosystemActionResponse, error) 
 	}
 
 	var buf bytes.Buffer
-	err := app.RunArgs([]string{"sync", "--scope", scope}, &buf)
+	err := runAppArgsFn([]string{"sync", "--scope", scope}, &buf)
 	rawOut := strings.TrimSpace(buf.String())
 	var lines []string
 	if rawOut != "" {
