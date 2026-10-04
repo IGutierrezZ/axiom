@@ -4,11 +4,20 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
 )
+
+// NoPersistentPathEnvVar opts a process out of every persistent user PATH write
+// when it is set to "1". Go test binaries are already protected by
+// userPathRunningInGoTest, but a test that runs the real built binary as a
+// subprocess is not a test binary, so it would write the developer's real
+// HKCU\Environment PATH. Test harnesses export this variable so subprocesses
+// inherit it. Process-scoped PATH updates are unaffected.
+const NoPersistentPathEnvVar = "AXIOM_NO_PERSISTENT_PATH"
 
 type userPathPowerShellRunner interface {
 	Run(context.Context, ...string) ([]byte, error)
@@ -47,10 +56,11 @@ func AddToUserPathWithResult(dir string) (UserPathAddition, error) {
 		// Still add to the current process PATH on non-Windows (harmless for callers).
 		return addition, addToProcessPath(dir)
 	}
-	if userPathRunningInGoTest() {
-		// Go tests must not mutate the real Windows user PATH registry. Keep the
-		// test process behavior identical for callers that need the new directory
-		// available later in the same run.
+	if skipPersistentUserPathWrite("add") {
+		// Go tests and NoPersistentPathEnvVar must not mutate the real Windows
+		// user PATH registry. Keep the process behavior identical for callers
+		// that need the new directory available later in the same run;
+		// PersistentAdded stays false because nothing was persisted.
 		return addition, addToProcessPath(dir)
 	}
 
@@ -95,7 +105,7 @@ func AddToUserPathWithResult(dir string) (UserPathAddition, error) {
 // and the current process PATH. Matching trims whitespace and quotes and is
 // case-insensitive, while all unrelated entries retain their original order.
 func RemoveFromUserPath(dir string) error {
-	if userPathGOOS == "windows" && !userPathRunningInGoTest() {
+	if userPathGOOS == "windows" && !skipPersistentUserPathWrite("remove") {
 		if err := removeFromPersistentUserPath(dir); err != nil {
 			return err
 		}
@@ -107,7 +117,7 @@ func RemoveFromUserPath(dir string) error {
 // RollbackUserPathAddition restores only PATH entries created by
 // AddToUserPathWithResult.
 func RollbackUserPathAddition(dir string, addition UserPathAddition) error {
-	if addition.PersistentAdded && userPathGOOS == "windows" && !userPathRunningInGoTest() {
+	if addition.PersistentAdded && userPathGOOS == "windows" && !skipPersistentUserPathWrite("rollback") {
 		if err := removeFromPersistentUserPath(dir); err != nil {
 			return err
 		}
@@ -144,7 +154,7 @@ func PrioritizeUserPath(dir string) error {
 	if err := prioritizeProcessPath(dir); err != nil {
 		return err
 	}
-	if userPathGOOS != "windows" || userPathRunningInGoTest() {
+	if userPathGOOS != "windows" || skipPersistentUserPathWrite("prioritize") {
 		return nil
 	}
 
@@ -185,6 +195,22 @@ func splitWindowsPath(value string) []string {
 
 func runningInGoTest() bool {
 	return flag.Lookup("test.v") != nil
+}
+
+// skipPersistentUserPathWrite reports whether a persistent user PATH write must
+// be skipped. A Go test binary skips silently, as it always has; any other
+// process skips, with a diagnostic naming the operation, when
+// NoPersistentPathEnvVar is exactly "1". Only writes consult it: reading the
+// user PATH (UserPathEntries) never mutates anything.
+func skipPersistentUserPathWrite(operation string) bool {
+	if userPathRunningInGoTest() {
+		return true
+	}
+	if os.Getenv(NoPersistentPathEnvVar) != "1" {
+		return false
+	}
+	log.Printf("system: skipping persistent user PATH %s: %s=1", operation, NoPersistentPathEnvVar)
+	return true
 }
 
 // escapePowerShellString escapes a string for safe use inside a PowerShell

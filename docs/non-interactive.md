@@ -24,6 +24,7 @@ go run ./cmd/axiom install [flags]
 | Variable | Values | Description |
 |----------|--------|-------------|
 | `AXIOM_INSTALL_SCOPE` | `workspace` \| `global` | Sets the install scope without a flag. Useful in CI. Equivalent to `--scope`. Default: `workspace`. (Legacy `GENTLE_AI_INSTALL_SCOPE` is also supported). |
+| `AXIOM_NO_PERSISTENT_PATH` | `1` | On Windows, skips every write to the persistent user `PATH` (`HKCU\Environment`) and logs a short diagnostic instead; the current process `PATH` is still updated. Meant for test harnesses and CI that run the real binary. Only the exact value `1` enables it. |
 
 `workspace` scope applies to the selected agents' agent-scoped files such as system prompts, skills, SDD agents, and persona files. Global-only integrations, like package installs or agent settings that must live in the tool's global config, remain global.
 

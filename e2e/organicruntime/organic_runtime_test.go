@@ -37,6 +37,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/components/sdd"
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
 	"github.com/IGutierrezZ/axiom/v3/internal/reviewerprovider"
+	"github.com/IGutierrezZ/axiom/v3/internal/system"
 	"github.com/IGutierrezZ/axiom/v3/internal/versions"
 )
 
@@ -107,6 +108,14 @@ const (
 var organicBinary string
 
 func TestMain(m *testing.M) {
+	// The journeys run the real built binary (install, sync), which is not a test
+	// binary and would otherwise write the developer's persistent Windows PATH.
+	// Spawns built from os.Environ() inherit this opt-out; the closed
+	// organicEnvironment whitelist sets it explicitly.
+	if err := os.Setenv(system.NoPersistentPathEnvVar, "1"); err != nil {
+		fmt.Fprintf(os.Stderr, "set %s: %v\n", system.NoPersistentPathEnvVar, err)
+		os.Exit(1)
+	}
 	if agent := strings.TrimSpace(os.Getenv(organicProviderCaptureFakeAgentEnvironment)); agent != "" {
 		os.Exit(runOrganicProviderCaptureFake(agent))
 	}
@@ -2990,6 +2999,10 @@ func organicEnvironment(home string) []string {
 		// CI makes the one-time consent question deterministically unanswerable,
 		// which is exactly the non-interactive path this suite asserts on.
 		"CI=1",
+		// This whitelist does not inherit the TestMain opt-out, so it is set
+		// explicitly: the real binary must never write the developer's
+		// persistent Windows PATH.
+		system.NoPersistentPathEnvVar + "=1",
 	}
 	if value := os.Getenv("SYSTEMROOT"); value != "" {
 		environment = append(environment, "SYSTEMROOT="+value)
@@ -3003,6 +3016,16 @@ func organicEnvironment(home string) []string {
 		}
 	}
 	return environment
+}
+
+func TestOrganicEnvironmentDisablesPersistentPathWrites(t *testing.T) {
+	want := system.NoPersistentPathEnvVar + "=1"
+	for _, entry := range organicEnvironment(t.TempDir()) {
+		if entry == want {
+			return
+		}
+	}
+	t.Fatalf("organicEnvironment() does not contain %q; journeys could write the real persistent PATH", want)
 }
 
 func (harness *organicHarness) gentle(arguments ...string) []byte {

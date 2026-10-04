@@ -14,6 +14,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/opencode"
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/qwen"
 	runtimeopencode "github.com/IGutierrezZ/axiom/v3/internal/opencode"
+	"github.com/IGutierrezZ/axiom/v3/internal/system"
 	"github.com/IGutierrezZ/axiom/v3/internal/telemetry"
 )
 
@@ -106,6 +107,13 @@ func TestMain(m *testing.M) {
 		panic(err)
 	}
 	if err := os.Setenv(ScopeAxiomEnvVar, string(ScopeGlobal)); err != nil {
+		panic(err)
+	}
+	// This binary is a Go test binary, so system.userPathRunningInGoTest already
+	// blocks persistent user PATH writes in-process; the variable is exported so
+	// any real axiom binary a test runs as a subprocess inherits the opt-out
+	// instead of writing the developer's real HKCU\Environment PATH.
+	if err := os.Setenv(system.NoPersistentPathEnvVar, "1"); err != nil {
 		panic(err)
 	}
 

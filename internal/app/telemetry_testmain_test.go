@@ -4,6 +4,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/IGutierrezZ/axiom/v3/internal/system"
 	"github.com/IGutierrezZ/axiom/v3/internal/telemetry"
 )
 
@@ -33,6 +34,12 @@ func TestMain(m *testing.M) {
 		panic(err)
 	}
 	if err := os.Setenv("DO_NOT_TRACK", "1"); err != nil {
+		panic(err)
+	}
+	// Opt out of persistent user PATH writes for every subprocess this binary
+	// starts: a real axiom binary is not a Go test binary, so it would not hit
+	// the in-process guard and would write the real HKCU\Environment PATH.
+	if err := os.Setenv(system.NoPersistentPathEnvVar, "1"); err != nil {
 		panic(err)
 	}
 	telemetry.DefaultSpawn = telemetry.NewRecordingSpawner().Spawn

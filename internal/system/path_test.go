@@ -1,8 +1,10 @@
 package system
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"log"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -345,5 +347,191 @@ func TestRemoveFromUserPathWindowsPersistsBeforeRemovingProcessEntry(t *testing.
 	}
 	if got, want := filepath.SplitList(os.Getenv("PATH")), []string{firstDir, lastDir}; !slices.Equal(got, want) {
 		t.Fatalf("process PATH entries = %v, want %v after persistent removal", got, want)
+	}
+}
+
+// persistentPathOperation is one entry point that can write the persistent user
+// PATH. Its process-scoped effect must be identical whether or not the
+// persistent write is skipped, which is the contract NoPersistentPathEnvVar
+// relies on.
+type persistentPathOperation struct {
+	name string
+	// run exercises the operation against a PATH that setup prepared and returns
+	// the error the caller would see.
+	run func(target string) error
+	// setup prepares the process PATH for the operation.
+	setup func(t *testing.T, target, other string)
+	// assertProcessPath checks the process-scoped effect of the operation.
+	assertProcessPath func(t *testing.T, target, other string)
+}
+
+func persistentPathOperations() []persistentPathOperation {
+	return []persistentPathOperation{
+		{
+			name:  "add",
+			setup: func(t *testing.T, _, other string) { t.Setenv("PATH", other) },
+			run: func(target string) error {
+				addition, err := AddToUserPathWithResult(target)
+				if err != nil {
+					return err
+				}
+				if !addition.ProcessAdded {
+					return errors.New("addition.ProcessAdded = false, want the process PATH entry reported")
+				}
+				return nil
+			},
+			assertProcessPath: func(t *testing.T, target, other string) {
+				t.Helper()
+				if got, want := filepath.SplitList(os.Getenv("PATH")), []string{target, other}; !slices.Equal(got, want) {
+					t.Fatalf("process PATH after add = %v, want %v", got, want)
+				}
+			},
+		},
+		{
+			name: "remove",
+			setup: func(t *testing.T, target, other string) {
+				t.Setenv("PATH", strings.Join([]string{target, other}, string(os.PathListSeparator)))
+			},
+			run: RemoveFromUserPath,
+			assertProcessPath: func(t *testing.T, _, other string) {
+				t.Helper()
+				if got, want := filepath.SplitList(os.Getenv("PATH")), []string{other}; !slices.Equal(got, want) {
+					t.Fatalf("process PATH after remove = %v, want %v", got, want)
+				}
+			},
+		},
+		{
+			name: "rollback",
+			setup: func(t *testing.T, target, other string) {
+				t.Setenv("PATH", strings.Join([]string{target, other}, string(os.PathListSeparator)))
+			},
+			run: func(target string) error {
+				return RollbackUserPathAddition(target, UserPathAddition{ProcessAdded: true, PersistentAdded: true})
+			},
+			assertProcessPath: func(t *testing.T, _, other string) {
+				t.Helper()
+				if got, want := filepath.SplitList(os.Getenv("PATH")), []string{other}; !slices.Equal(got, want) {
+					t.Fatalf("process PATH after rollback = %v, want %v", got, want)
+				}
+			},
+		},
+		{
+			name: "prioritize",
+			setup: func(t *testing.T, target, other string) {
+				t.Setenv("PATH", strings.Join([]string{other, target}, string(os.PathListSeparator)))
+			},
+			run: PrioritizeUserPath,
+			assertProcessPath: func(t *testing.T, target, other string) {
+				t.Helper()
+				if got, want := filepath.SplitList(os.Getenv("PATH")), []string{target, other}; !slices.Equal(got, want) {
+					t.Fatalf("process PATH after prioritize = %v, want %v", got, want)
+				}
+			},
+		},
+	}
+}
+
+// captureLog redirects the standard logger for the duration of the test.
+func captureLog(t *testing.T) *bytes.Buffer {
+	t.Helper()
+	var buf bytes.Buffer
+	original := log.Writer()
+	log.SetOutput(&buf)
+	t.Cleanup(func() { log.SetOutput(original) })
+	return &buf
+}
+
+func TestNoPersistentPathEnvSkipsEveryPersistentWrite(t *testing.T) {
+	target := filepath.Join(t.TempDir(), "bin")
+	other := filepath.Join(t.TempDir(), "tools")
+
+	for _, op := range persistentPathOperations() {
+		t.Run(op.name, func(t *testing.T) {
+			t.Setenv(NoPersistentPathEnvVar, "1")
+			op.setup(t, target, other)
+			calls := 0
+			useWindowsUserPathSeam(t, userPathRunnerFunc(func(context.Context, ...string) ([]byte, error) {
+				calls++
+				return nil, errors.New("PowerShell must not run when persistent PATH writes are disabled")
+			}))
+			logs := captureLog(t)
+
+			if err := op.run(target); err != nil {
+				t.Fatalf("%s error = %v, want nil when the persistent write is skipped", op.name, err)
+			}
+			if calls != 0 {
+				t.Fatalf("%s invoked PowerShell %d times, want 0", op.name, calls)
+			}
+			op.assertProcessPath(t, target, other)
+			if got := logs.String(); !strings.Contains(got, NoPersistentPathEnvVar) || !strings.Contains(got, op.name) {
+				t.Fatalf("%s diagnostic = %q, want it to name %s and the operation", op.name, got, NoPersistentPathEnvVar)
+			}
+		})
+	}
+}
+
+func TestNoPersistentPathEnvKeepsAdditionResultTruthful(t *testing.T) {
+	target := filepath.Join(t.TempDir(), "bin")
+	t.Setenv(NoPersistentPathEnvVar, "1")
+	t.Setenv("PATH", filepath.Join(t.TempDir(), "tools"))
+	useWindowsUserPathSeam(t, userPathRunnerFunc(func(context.Context, ...string) ([]byte, error) {
+		t.Fatal("PowerShell must not run when persistent PATH writes are disabled")
+		return nil, nil
+	}))
+	captureLog(t)
+
+	addition, err := AddToUserPathWithResult(target)
+	if err != nil {
+		t.Fatalf("AddToUserPathWithResult() error = %v", err)
+	}
+	if want := (UserPathAddition{ProcessAdded: true}); addition != want {
+		t.Fatalf("addition = %+v, want %+v: nothing was persisted", addition, want)
+	}
+}
+
+func TestPersistentPathWritesRunUnlessOptOutIsOne(t *testing.T) {
+	target := filepath.Join(t.TempDir(), "bin")
+	other := filepath.Join(t.TempDir(), "tools")
+
+	for _, value := range []struct {
+		name  string
+		set   bool
+		value string
+	}{
+		{name: "unset"},
+		{name: "empty", set: true, value: ""},
+		{name: "zero", set: true, value: "0"},
+		{name: "true", set: true, value: "true"},
+	} {
+		t.Run(value.name, func(t *testing.T) {
+			for _, op := range persistentPathOperations() {
+				t.Run(op.name, func(t *testing.T) {
+					t.Setenv(NoPersistentPathEnvVar, value.value)
+					if !value.set {
+						if err := os.Unsetenv(NoPersistentPathEnvVar); err != nil {
+							t.Fatalf("Unsetenv(%s) error = %v", NoPersistentPathEnvVar, err)
+						}
+					}
+					op.setup(t, target, other)
+					calls := 0
+					useWindowsUserPathSeam(t, userPathRunnerFunc(func(context.Context, ...string) ([]byte, error) {
+						calls++
+						return []byte("changed"), nil
+					}))
+					logs := captureLog(t)
+
+					if err := op.run(target); err != nil {
+						t.Fatalf("%s error = %v", op.name, err)
+					}
+					if calls != 1 {
+						t.Fatalf("%s invoked PowerShell %d times, want 1 persistent write", op.name, calls)
+					}
+					op.assertProcessPath(t, target, other)
+					if got := logs.String(); got != "" {
+						t.Fatalf("%s logged %q, want no diagnostic when persistent writes are enabled", op.name, got)
+					}
+				})
+			}
+		})
 	}
 }
