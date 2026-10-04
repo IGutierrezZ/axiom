@@ -31,6 +31,7 @@ type RemedyID string
 const (
 	RemedyInstallTool      RemedyID = "install-tool"
 	RemedyRemoveDuplicates RemedyID = "remove-duplicate-tools"
+	RemedyReorderPath      RemedyID = "reorder-path"
 	RemedyInstall          RemedyID = "install"
 	RemedyRepairState      RemedyID = "repair-state"
 	RemedySync             RemedyID = "sync"
@@ -88,6 +89,8 @@ func NewRemedy(id RemedyID, description string) *Remedy {
 		r.Category, r.EligibilityReason = RemedyCategoryInstall, "no bounded managed install was identified"
 	case RemedyRemoveDuplicates:
 		r.Category, r.EligibilityReason = RemedyCategoryEnvironment, "binary ownership is unknown"
+	case RemedyReorderPath:
+		r.Category, r.EligibilityReason = RemedyCategoryEnvironment, "PATH order is user-owned"
 	case RemedyRepairState:
 		r.Category, r.EligibilityReason = RemedyCategoryConfiguration, "no safe recovery source was identified"
 	case RemedySync:

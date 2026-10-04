@@ -53,6 +53,7 @@ func TestNewRemedyClassifiesCurrentRemedies(t *testing.T) {
 	}{
 		{RemedyInstallTool, RemedyCategoryInstall, ActionManualOnly, false},
 		{RemedyRemoveDuplicates, RemedyCategoryEnvironment, ActionManualOnly, false},
+		{RemedyReorderPath, RemedyCategoryEnvironment, ActionManualOnly, false},
 		{RemedyInstall, RemedyCategoryInstall, ActionManualOnly, false},
 		{RemedyRepairState, RemedyCategoryConfiguration, ActionManualOnly, false},
 		{RemedySync, RemedyCategoryConfiguration, ActionConfirmation, true},

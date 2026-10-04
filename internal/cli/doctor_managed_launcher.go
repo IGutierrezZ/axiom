@@ -55,6 +55,22 @@ func doctorWrapsPlainCopy(targets, copies []string, index int) bool {
 	return false
 }
 
+// doctorManagedLauncherShadowed reports whether launchers were found but none of
+// them is the copy PATH resolves to. The launcher only injects the
+// background-subagents environment when it is the one that runs, so a real copy
+// earlier in PATH defeats it.
+func doctorManagedLauncherShadowed(resolved string, launchers []doctorManagedLauncher) bool {
+	if len(launchers) == 0 {
+		return false
+	}
+	for _, launcher := range launchers {
+		if doctorSameExecutable(resolved, launcher.path) {
+			return false
+		}
+	}
+	return true
+}
+
 // doctorManagedLauncherNote describes the launchers that were not counted, or
 // returns "" when there are none.
 func doctorManagedLauncherNote(launchers []doctorManagedLauncher) string {

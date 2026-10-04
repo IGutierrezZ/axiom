@@ -190,9 +190,11 @@ func checkOneTool(tool string, pathDirs []string) CheckResult {
 	}
 
 	// An Axiom-managed OpenCode launcher wraps the real copy by design; it is
-	// reported as a note, never as a duplicate.
+	// reported as a note, never as a duplicate. It only does its job when PATH
+	// resolves to it, so a real copy ahead of it is a warning of its own.
 	copies, launchers := doctorExcludeManagedLaunchers(tool, doctorToolCopies(tool, pathDirs))
 	launcherNote := doctorManagedLauncherNote(launchers)
+	shadowed := doctorManagedLauncherShadowed(resolved, launchers)
 	if len(copies) > 1 {
 		// The duplicate branch is exactly where ambiguity about which build
 		// is running is guaranteed, so this is the branch that most needs
@@ -200,6 +202,9 @@ func checkOneTool(tool string, pathDirs []string) CheckResult {
 		detail := fmt.Sprintf("%s resolved to %s but %d copies found in PATH: %s", tool, resolved, len(copies), strings.Join(copies, ", "))
 		if launcherNote != "" {
 			detail += " (" + launcherNote + ", not counted)"
+		}
+		if shadowed {
+			detail += "; the launcher is shadowed by the resolved copy, so background subagents will not apply"
 		}
 		if tool == "axiom" || tool == "gentle-ai" {
 			detail += doctorInvokedGentleAIClause(resolved)
@@ -209,6 +214,16 @@ func checkOneTool(tool string, pathDirs []string) CheckResult {
 			Status: CheckStatusWarn,
 			Detail: detail,
 			Remedy: doctor.NewRemedy(doctor.RemedyRemoveDuplicates, "Remove duplicate binaries; keep only one copy of "+tool+" in PATH"),
+		}
+	}
+
+	if shadowed {
+		launcher := launchers[0]
+		return CheckResult{
+			Name:   doctor.ToolCheckID(tool),
+			Status: CheckStatusWarn,
+			Detail: fmt.Sprintf("%s resolved to %s; Axiom-managed launcher %s (wraps %s) is shadowed by it; background subagents will not apply", tool, resolved, launcher.path, launcher.target),
+			Remedy: doctor.NewRemedy(doctor.RemedyReorderPath, "Put "+filepath.Dir(launcher.path)+" before "+filepath.Dir(resolved)+" in PATH so the managed "+tool+" launcher runs first"),
 		}
 	}
 

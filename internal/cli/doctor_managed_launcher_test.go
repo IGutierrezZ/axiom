@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/IGutierrezZ/axiom/v3/internal/doctor"
 	opencodeactivation "github.com/IGutierrezZ/axiom/v3/internal/opencode"
 )
 
@@ -64,8 +65,8 @@ func TestCheckOneTool_ManagedOpenCodeLauncherWrappingACopyIsNotADuplicate(t *tes
 	if got.Remedy != nil {
 		t.Errorf("expected no remedy, got %+v", got.Remedy)
 	}
-	if strings.Contains(got.Detail, "copies found") {
-		t.Errorf("did not expect a duplicate warning, got %s", got.Detail)
+	if strings.Contains(got.Detail, "copies found") || strings.Contains(got.Detail, "shadowed") {
+		t.Errorf("did not expect a duplicate or shadowing warning, got %s", got.Detail)
 	}
 	for _, want := range []string{"opencode found at " + launcher, "Axiom-managed launcher " + launcher + " wraps " + npmCopy} {
 		if !strings.Contains(got.Detail, want) {
@@ -74,7 +75,11 @@ func TestCheckOneTool_ManagedOpenCodeLauncherWrappingACopyIsNotADuplicate(t *tes
 	}
 }
 
-func TestCheckOneTool_ManagedOpenCodeLauncherLaterInPathIsNotADuplicate(t *testing.T) {
+// TestCheckOneTool_ShadowedManagedOpenCodeLauncherWarns pins that the launcher
+// only counts when PATH resolves to it: with the real copy ahead of it, the
+// background-subagents environment is never injected, so doctor must not report
+// OK and must say how to fix the order.
+func TestCheckOneTool_ShadowedManagedOpenCodeLauncherWarns(t *testing.T) {
 	npmBin, axiomBin := t.TempDir(), t.TempDir()
 	npmCopy := writeDoctorFile(t, npmBin, "opencode.cmd", "@echo off\r\n")
 	launcher := writeDoctorFile(t, axiomBin, "opencode.cmd", cmdManagedLauncher(npmCopy))
@@ -82,11 +87,54 @@ func TestCheckOneTool_ManagedOpenCodeLauncherLaterInPathIsNotADuplicate(t *testi
 
 	got := checkOneTool("opencode", []string{npmBin, axiomBin})
 
-	if got.Status != CheckStatusPass {
-		t.Fatalf("expected pass regardless of PATH order, got %s: %s", got.Status, got.Detail)
+	if got.Status != CheckStatusWarn {
+		t.Fatalf("expected warn for a shadowed managed launcher, got %s: %s", got.Status, got.Detail)
 	}
-	if !strings.Contains(got.Detail, "opencode found at "+npmCopy) || !strings.Contains(got.Detail, launcher) {
-		t.Errorf("unexpected detail: %s", got.Detail)
+	for _, want := range []string{
+		"opencode resolved to " + npmCopy,
+		"Axiom-managed launcher " + launcher + " (wraps " + npmCopy + ") is shadowed by it",
+		"background subagents will not apply",
+	} {
+		if !strings.Contains(got.Detail, want) {
+			t.Errorf("detail %q does not contain %q", got.Detail, want)
+		}
+	}
+	if strings.Contains(got.Detail, "copies found") {
+		t.Errorf("the launcher must not be counted as a duplicate, got %s", got.Detail)
+	}
+	if got.Remedy == nil || got.Remedy.ID != doctor.RemedyReorderPath {
+		t.Fatalf("expected the reorder-path remedy, got %+v", got.Remedy)
+	}
+	for _, want := range []string{filepath.Dir(launcher), filepath.Dir(npmCopy), "before"} {
+		if !strings.Contains(got.Remedy.Description, want) {
+			t.Errorf("remedy %q does not contain %q", got.Remedy.Description, want)
+		}
+	}
+}
+
+func TestCheckOneTool_ShadowedManagedOpenCodeLauncherAmongRealDuplicatesStillWarns(t *testing.T) {
+	otherBin, axiomBin, npmBin := t.TempDir(), t.TempDir(), t.TempDir()
+	otherCopy := writeDoctorFile(t, otherBin, "opencode.cmd", "@echo off\r\nrem other\r\n")
+	npmCopy := writeDoctorFile(t, npmBin, "opencode.cmd", "@echo off\r\nrem npm\r\n")
+	launcher := writeDoctorFile(t, axiomBin, "opencode.cmd", cmdManagedLauncher(npmCopy))
+	stubDoctorToolEnv(t, "windows", []string{".cmd"}, otherCopy)
+
+	got := checkOneTool("opencode", []string{otherBin, axiomBin, npmBin})
+
+	if got.Status != CheckStatusWarn {
+		t.Fatalf("expected warn, got %s: %s", got.Status, got.Detail)
+	}
+	for _, want := range []string{
+		"2 copies found in PATH: " + otherCopy + ", " + npmCopy,
+		"Axiom-managed launcher " + launcher + " wraps " + npmCopy,
+		"the launcher is shadowed by the resolved copy",
+	} {
+		if !strings.Contains(got.Detail, want) {
+			t.Errorf("detail %q does not contain %q", got.Detail, want)
+		}
+	}
+	if got.Remedy == nil || got.Remedy.ID != doctor.RemedyRemoveDuplicates {
+		t.Fatalf("expected the duplicates remedy while real duplicates remain, got %+v", got.Remedy)
 	}
 }
 
@@ -126,6 +174,9 @@ func TestCheckOneTool_ManagedOpenCodeLauncherAndTwoRealCopiesStillWarn(t *testin
 	}
 	if !strings.Contains(got.Detail, "Axiom-managed launcher "+launcher+" wraps "+npmCopy) {
 		t.Errorf("expected the launcher to be named as not counted, got %s", got.Detail)
+	}
+	if strings.Contains(got.Detail, "shadowed") {
+		t.Errorf("the launcher is the resolved copy and must not be reported as shadowed, got %s", got.Detail)
 	}
 	if got.Remedy == nil {
 		t.Error("expected non-empty remedy")
