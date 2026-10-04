@@ -122,11 +122,11 @@ func versionableFiles(cwd string, files []string) map[string]bool {
 	seen := map[string]bool{}
 	var visiblePaths []string
 	for _, file := range files {
-		if ScopeForPath(cwd, file) != "project" {
-			continue
-		}
-		rel, err := filepath.Rel(cwd, file)
-		if err != nil {
+		// One rule decides both membership and the relative path handed to git, so
+		// a spelling of cwd that differs from the discovered path (Windows case or
+		// 8.3 short names) can never produce a `..`-prefixed lookup.
+		rel, inside := projectRelativePath(cwd, file)
+		if !inside {
 			continue
 		}
 		visible := gitVisiblePath(cwd, rel)
