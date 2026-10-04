@@ -45,22 +45,22 @@ Retirar de Axiom las skills específicas de Gentle AI y cerrar tres seguimientos
 
 - **TDD:** desactivado. Fuente: `openspec/config.yaml:16` (`strict_tdd: false`). Runner: `go test`.
 - **Entrega:** `ask-on-risk`. Previsión: unas 800 líneas de autor (T1 unas 370, de las que 222 son de borrado de assets; T2 unas 120; T3 entre 200 y 300; T4 unas 80).
-- **Estrategia elegida por el usuario: PRs independientes contra `main`**, uno por tarea y sin dependencias entre ellos. Este documento viaja en el PR de T1; los demás PRs no lo tocan. Al final se cierra con un PR pequeño de docs.
+- **Estrategia elegida por el usuario: PRs independientes contra `main`**, uno por tarea y sin dependencias entre ellos. **Ajuste del 2026-10-04:** este documento viaja solo en el PR de cierre (`docs/odd-limpieza-gentle-ai-cierre`), no en el de T1. Con el documento, T1 sumaba 465 líneas y superaba el presupuesto; sin él se queda en 318, sin necesidad de `size:exception`.
 
   | PR | Tarea | Rama | Worktree |
   |---|---|---|---|
-  | — | T1 | `chore/retirar-skills-gentle-ai` | `axiom-wt/odd-gentle-t1` |
+  | #70 | T1 | `chore/retirar-skills-gentle-ai` | `axiom-wt/odd-gentle-t1` |
   | — | T2 | `fix/scope-for-path-windows` | `axiom-wt/odd-gentle-t2` |
   | — | T3 | `test/dashboard-aislado-del-repo` | `axiom-wt/odd-gentle-t3` |
   | — | T4 | `fix/doctor-lanzador-opencode` | `axiom-wt/odd-gentle-t4` |
-  | — | Cierre | `docs/odd-limpieza-gentle-ai-cierre` | — |
+  | — | Cierre (con este documento) | `docs/odd-limpieza-gentle-ai-cierre` | `axiom-wt/odd-gentle-docs` |
 
 - **Ejecución:** un writer cada vez, de forma secuencial.
 - **RDD:** desactivado. Se evalúa el riesgo por commit con `axiom review assess`.
 
 ## Tareas
 
-- [x] **T1 · Retirar `branch-pr` y `gentle-ai-bench`** (`2d79cbf7`)
+- [x] **T1 · Retirar `branch-pr` y `gentle-ai-bench`** (`c8ce5937`, PR #70)
   - Borrar `internal/assets/skills/branch-pr/` y `internal/assets/skills/gentle-ai-bench/`.
   - Quitar sus IDs de `internal/model/types.go`, `internal/catalog/skills.go`, `internal/components/skills/presets.go` y `internal/tui/screens/skill_picker.go`.
   - Documentación: `docs/components.md`. En `docs/usage.md`, el ejemplo de `--skill` pasa a usar `work-unit-commits`.
@@ -118,7 +118,7 @@ Retirar de Axiom las skills específicas de Gentle AI y cerrar tres seguimientos
 ## Progreso
 
 - 2026-10-04: ODD abierto. Decisiones del usuario: carril ODD, las cuatro tareas, la retirada no negociable de las skills de Gentle AI y PRs independientes.
-- **T1: completada (`2d79cbf7`).** Ruta delegada en un writer.
+- **T1: completada (`c8ce5937`, PR #70).** Ruta delegada en un writer.
   - Tamaño: 222 líneas borradas de assets, más +37/−59 en 24 ficheros de código, tests, docs, registro de absorción, `AGENTS.md` y goldens.
   - Cambios adicionales que no estaban en el inventario: `TestEmbeddedAssetCount` pasa de 27 a 25, y se regeneran dos goldens de la TUI.
   - Sustituciones en tests y docs: `work-unit-commits` en los tests de cli y en `docs/usage.md`, `rdd-defect-workflow` en `install_test.go`, e `issue-creation` en el e2e.
@@ -144,4 +144,4 @@ Retirar de Axiom las skills específicas de Gentle AI y cerrar tres seguimientos
 
 ## Siguiente paso
 
-PR de T1; T2 en curso (writer).
+T1 en revisión (PR #70, 318 líneas). T2 en curso (writer).
