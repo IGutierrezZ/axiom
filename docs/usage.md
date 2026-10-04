@@ -76,7 +76,7 @@ axiom install \
 axiom install \
   --agent claude-code \
   --component engram,sdd,skills,context7,persona,permissions \
-  --skill go-testing,skill-creator,branch-pr,issue-creation \
+  --skill go-testing,skill-creator,work-unit-commits,issue-creation \
   --persona gentleman
 
 # Previsualiza primero el plan sin aplicar cambios

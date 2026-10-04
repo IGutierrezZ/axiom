@@ -247,3 +247,13 @@ Las Fases 11 a 15 no absorben ningún commit de upstream: retiran la capa Go de 
 | `internal/cli/review_assess_test.go` | Sí | Hunk de `82a6de96` dependiente de `71a47477`, descartado por D6. |
 | `internal/tui/model.go` (hunk de `95867aa4`) | Sí | La función que borra sigue teniendo llamador vivo en el fork. |
 | `internal/components/skills/presets.go`, `presets_test.go`, `skills-presets.json`, `e2e/e2e_test.sh`, `docs/components.md` | Sí | Exclusivos de `11f6c000`, ya absorbido por INC-18; reaplicarlos duplicaría. |
+
+## Descartes de contenido fuera del universo congelado
+
+> **Esta sección no es una tanda ni suma filas al recuento.** El universo de 91 commits sigue congelado en `v3.4.0` (decisión D4) y cada fila de F0–F7 sigue siendo un commit de upstream; por eso estos descartes no entran en las tablas de arriba ni en `## Recuento`. Recogen disposiciones sobre **contenido** de upstream que Axiom ya tenía en su árbol y ha retirado de forma deliberada, para que la integración de versiones posteriores a `v3.4.0` no lo reintroduzca. Usan el estado `descartado-deliberadamente` de este registro y, como el resto, no se borran nunca (regla 7).
+
+- **`branch-pr` y `gentle-ai-bench` (skills embebidas de upstream)** · estado `descartado-deliberadamente` · 2026-10-04.
+  - **Qué es.** Las skills `internal/assets/skills/branch-pr/` («Create Gentle AI pull requests») e `internal/assets/skills/gentle-ai-bench/`, que Axiom heredó de upstream y distribuía como skills instalables y embebidas.
+  - **Evidencia.** Decisión del usuario del 2026-10-04, ejecutada en la rama `chore/retirar-skills-gentle-ai`: retirada de los assets, del catálogo (`internal/catalog/skills.go`), de los presets (`internal/components/skills/presets.go`), del selector de la TUI, de la documentación, de los tests, del e2e y del índice de `AGENTS.md`.
+  - **Motivo.** Axiom tiene sus propios equivalentes: `axiom-branch-pr` (`skills/branch-pr/`) y `axiom-bench` (`skills/axiom-bench/`). Mantener las de upstream duplicaba el índice de skills y mezclaba flujos de Gentle AI con los de Axiom.
+  - **Consecuencia para una absorción futura.** Si un commit posterior de upstream modifica o vuelve a añadir cualquiera de las dos, el veredicto es `descartado-deliberadamente`: no se absorben ni se re-derivan. Esto no afecta a `gentle-ai-bench` como **nombre del binario y del esquema** de `bench/` y del CI, que se mantiene.

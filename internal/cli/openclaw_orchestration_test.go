@@ -322,7 +322,7 @@ func TestRunSyncOpenClawSkillsUseGlobalRoot(t *testing.T) {
 
 	skillIDs := []model.SkillID{
 		model.SkillGoTesting,
-		model.SkillBranchPR,
+		model.SkillIssueCreation,
 		model.SkillWorkUnitCommits,
 	}
 	selection := model.Selection{

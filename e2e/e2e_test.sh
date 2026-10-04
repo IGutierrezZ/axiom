@@ -692,7 +692,6 @@ test_cc_skills_full() {
         # Verify foundation skills exist
         assert_file_exists "$skills_dir/go-testing/SKILL.md" "go-testing SKILL.md"
         assert_file_exists "$skills_dir/skill-creator/SKILL.md" "skill-creator SKILL.md"
-        assert_file_not_exists "$skills_dir/branch-pr/SKILL.md" "branch-pr NOT installed by default"
         assert_file_not_exists "$skills_dir/issue-creation/SKILL.md" "issue-creation NOT installed by default"
         assert_file_exists "$skills_dir/skill-registry/SKILL.md" "skill-registry SKILL.md"
 
@@ -721,7 +720,6 @@ test_cc_skills_ecosystem() {
         # Foundation skills present
         assert_file_exists "$skills_dir/go-testing/SKILL.md" "Foundation skills present"
         assert_file_exists "$skills_dir/skill-creator/SKILL.md" "skill-creator present"
-        assert_file_not_exists "$skills_dir/branch-pr/SKILL.md" "branch-pr NOT in ecosystem default"
         assert_file_not_exists "$skills_dir/issue-creation/SKILL.md" "issue-creation NOT in ecosystem default"
         # Stack-specific skills NOT present
         if [ -f "$skills_dir/react-19/SKILL.md" ]; then
@@ -738,15 +736,15 @@ test_cc_custom_skills_with_flag() {
     log_test "Claude Code: custom preset + explicit --skills flag installs specified skills"
     cleanup_test_env
 
-    if $BINARY install --agent claude-code --preset custom --component skills --skills go-testing,branch-pr --persona neutral 2>&1; then
+    if $BINARY install --agent claude-code --preset custom --component skills --skills go-testing,issue-creation --persona neutral 2>&1; then
         local skills_dir="$HOME/.claude/skills"
         assert_dir_exists "$skills_dir" "Claude skills directory"
 
-        # The explicitly requested skills must be present. branch-pr is a
+        # The explicitly requested skills must be present. issue-creation is a
         # contributor skill that no preset installs, but `--skills` resolution
         # is exactly the escape hatch that still installs it.
         assert_file_exists "$skills_dir/go-testing/SKILL.md" "go-testing SKILL.md"
-        assert_file_exists "$skills_dir/branch-pr/SKILL.md" "branch-pr SKILL.md"
+        assert_file_exists "$skills_dir/issue-creation/SKILL.md" "issue-creation SKILL.md"
 
         # #3554: skills has no hard dependency on sdd anymore. Total = just
         # the 2 explicitly requested skills.
@@ -782,7 +780,7 @@ test_cc_custom_sdd_plus_skills() {
     log_test "Claude Code: custom preset + SDD + skills with explicit --skills flag"
     cleanup_test_env
 
-    if $BINARY install --agent claude-code --preset custom --component engram --component sdd --component skills --skills go-testing,branch-pr --persona neutral 2>&1; then
+    if $BINARY install --agent claude-code --preset custom --component engram --component sdd --component skills --skills go-testing,issue-creation --persona neutral 2>&1; then
         local skills_dir="$HOME/.claude/skills"
         assert_dir_exists "$skills_dir" "Claude skills directory"
 
@@ -795,7 +793,7 @@ test_cc_custom_sdd_plus_skills() {
 
         # Skills component installs only the explicitly requested ones
         assert_file_exists "$skills_dir/go-testing/SKILL.md" "go-testing SKILL.md (from --skills flag)"
-        assert_file_exists "$skills_dir/branch-pr/SKILL.md" "branch-pr SKILL.md (from --skills flag)"
+        assert_file_exists "$skills_dir/issue-creation/SKILL.md" "issue-creation SKILL.md (from --skills flag)"
 
         # Total: 12 SDD/orchestration skills + 2 explicit skills = 14, written once each.
         assert_file_count "$skills_dir" "SKILL.md" 14 "SDD + explicit skills: 14 skill files total, no duplicates"
@@ -970,7 +968,6 @@ test_oc_skills_full() {
         assert_file_not_exists "$skill_dir/sdd-init/SKILL.md" "sdd-init NOT installed by skills alone"
         assert_file_exists "$skill_dir/go-testing/SKILL.md" "go-testing skill"
         assert_file_exists "$skill_dir/skill-creator/SKILL.md" "skill-creator skill"
-        assert_file_not_exists "$skill_dir/branch-pr/SKILL.md" "branch-pr NOT installed by default"
         assert_file_not_exists "$skill_dir/issue-creation/SKILL.md" "issue-creation NOT installed by default"
         assert_file_size_min "$skill_dir/go-testing/SKILL.md" 200 "go-testing skill has real content"
     else
