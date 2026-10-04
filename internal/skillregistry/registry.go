@@ -495,7 +495,6 @@ func parseFrontmatter(source string) (name, description string) {
 }
 
 func dedupeBySkillName(entries []SkillEntry, cwd string) []SkillEntry {
-	projectPrefix := filepath.Clean(cwd) + string(os.PathSeparator)
 	buckets := map[string][]SkillEntry{}
 	for _, entry := range entries {
 		buckets[entry.Name] = append(buckets[entry.Name], entry)
@@ -504,7 +503,7 @@ func dedupeBySkillName(entries []SkillEntry, cwd string) []SkillEntry {
 	for _, list := range buckets {
 		chosen := list[0]
 		for _, entry := range list {
-			if strings.HasPrefix(filepath.Clean(entry.Path), projectPrefix) {
+			if _, inside := projectRelativePath(cwd, entry.Path); inside {
 				chosen = entry
 				break
 			}
@@ -516,10 +515,11 @@ func dedupeBySkillName(entries []SkillEntry, cwd string) []SkillEntry {
 }
 
 // ScopeForPath reports whether a skill path is project-local or user-global,
-// relative to cwd.
+// relative to cwd. "project" means strictly inside cwd; on Windows that holds
+// across case and 8.3 short-name spellings of the same directory (see
+// projectRelativePath). Everywhere else the check is the exact lexical prefix.
 func ScopeForPath(cwd, path string) string {
-	projectPrefix := filepath.Clean(cwd) + string(os.PathSeparator)
-	if strings.HasPrefix(filepath.Clean(path), projectPrefix) {
+	if _, inside := projectRelativePath(cwd, path); inside {
 		return "project"
 	}
 	return "user"

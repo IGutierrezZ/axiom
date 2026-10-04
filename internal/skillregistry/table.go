@@ -55,13 +55,15 @@ func renderSkillsTable(cwd string, entries []SkillEntry, format PathFormat) stri
 // renderSkillPath applies decision O-2 to one Path cell. Under PathRepoRelative
 // a project skill is rendered relative to the repository root with forward
 // slashes (navigable from GitHub on every platform); anything else keeps the
-// discovered path.
+// discovered path. The relative path comes from projectRelativePath, the same
+// rule that produced scope: filepath.Rel alone would yield a `..\..\` path for
+// a Windows 8.3 short-name spelling that ScopeForPath already called "project".
 func renderSkillPath(cwd, path, scope string, format PathFormat) string {
 	if format != PathRepoRelative || scope != "project" {
 		return path
 	}
-	rel, err := filepath.Rel(cwd, path)
-	if err != nil {
+	rel, inside := projectRelativePath(cwd, path)
+	if !inside {
 		return path
 	}
 	return filepath.ToSlash(rel)
