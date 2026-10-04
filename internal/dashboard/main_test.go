@@ -23,7 +23,8 @@ var sandboxHome string
 // Tests that run a side-effecting flow (sync, upgrade, reindex, archive sync)
 // must also use a t.TempDir() project and, where the production code shells out,
 // the package seams (runAppArgsFn, upgradeSequenceReportFn) or a stand-in binary
-// on PATH, so nothing is written to the repository checkout either.
+// on PATH, so nothing is written to the repository checkout either. The
+// repository guard (repo_guard_test.go) fails the run if any of them still does.
 func TestMain(m *testing.M) {
 	os.Exit(runTests(m))
 }
@@ -48,7 +49,15 @@ func runTests(m *testing.M) int {
 	}
 	sandboxHome = home
 
-	return m.Run()
+	guard := newRepoGuard()
+	code := m.Run()
+	if report := guard.changes(); report != "" {
+		fmt.Fprintln(os.Stderr, report)
+		if code == 0 {
+			code = 1
+		}
+	}
+	return code
 }
 
 // TestSandboxHomeIsInForce pins the TestMain contract: if the sandbox is ever
