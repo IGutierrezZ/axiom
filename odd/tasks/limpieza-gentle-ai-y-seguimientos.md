@@ -78,7 +78,7 @@ Retirar de Axiom las skills específicas de Gentle AI y cerrar tres seguimientos
   - `TestSemanticEndpoints` se salta cuando CodeGraph no está disponible o inicializado.
   - Verificación: ejecutar el paquete en un worktree limpio y comprobar que `git status --porcelain --ignored` sigue vacío.
   - Ruta: delegada (writer). Disparadores: exploración de 4 o más ficheros y preparación de escritura.
-- [ ] **T4 · `doctor` reconoce el lanzador gestionado de `opencode`**
+- [x] **T4 · `doctor` reconoce el lanzador gestionado de `opencode`** (`3fd5aca5` + `86844846`; PRs pendientes de la verificación independiente)
   - Si una de las copias del PATH es el lanzador gestionado por Axiom (marca `gentle-ai:managed-opencode-launcher/v1`) y envuelve a la otra, no se informa de duplicado. Puede quedar, como mucho, una nota informativa.
   - Tests.
   - Ruta: delegada (writer).
@@ -180,6 +180,16 @@ Retirar de Axiom las skills específicas de Gentle AI y cerrar tres seguimientos
   - **Incidente:** la ejecución de estos tests que hizo el orquestador antes de T3, para confirmar que escribían en el repo, pudo lanzar un `upgrade` real de herramientas de la máquina y registrar el worktree temporal en el hub.
   - **Seguimiento:** los tests de knowledge de `internal/cli` (`TestCLIInitKnowledgeProfile`, `TestCLIKnowledgeSweepAndQuery`, ...) registran directorios temporales en el hub real. Hay 37 de 44 entradas con rutas que ya no existen.
 
+- **T4: completada.** Ruta delegada en un writer.
+  - **Dónde se genera el lanzador:** `internal/opencode/background.go`, con la constante `OwnershipMarker` y los generadores para cmd, sh y ps1.
+  - **Lectura del destino:** `ManagedLauncherTarget` lee como mucho 4096 bytes de un fichero regular, sin ejecutarlo, y devuelve el destino que envuelve. Exige que la marca esté en la cabecera y que la invocación coincida con el entrecomillado del generador.
+  - **En `doctor`:** solo para `opencode`, si el lanzador envuelve otra de las copias, deja de contarlo como duplicado. Si envuelve una ruta ajena o quedan más copias reales, el aviso se mantiene.
+  - **Tamaño y división:** 590 líneas en total (unas 392 de tests). Se dividió en dos PRs encadenados: el parser en `internal/opencode` (`3fd5aca5`, 267 líneas) y su uso en `doctor` (`86844846`, 323 líneas). El árbol es idéntico al del commit original, y el commit del parser compila y pasa sus tests por sí solo.
+  - **Comprobaciones del writer:** pasan los tests de cli de `doctor`, `CheckOneTool` y los nuevos, y los de `opencode`. En WSL pasa también el test del lanzador POSIX. Con `doctor.go` revertido, fallan los 4 tests de «lanzador excluido».
+  - **Riesgo evaluado:** `high`, por la señal `shell_process` en `launcher_target.go`, que analiza scripts sin ejecutarlos. Verificación independiente en curso.
+  - **Preexistente, sin relación con este cambio:** `internal/opencode` `TestRunCatalogCommandCancelsOverflowingChild` falla por tiempos en esta máquina, también sin el cambio.
+  - **CI de los PRs ya abiertos:** #69, #70, #71 y #72 están en verde. #72 pasa con `go test ./...` ejecutando los paquetes en paralelo, así que la guarda no da falsos positivos.
+
 ## Siguiente paso
 
-T2 a la espera de la decisión sobre `size:exception` y de abrir su PR. T4 en curso (writer).
+Pendiente de decisiones del usuario: fusionar los PRs en verde (#69, #70, #71 y luego #72) y aceptar `size:exception` para T2. T4: abrir sus dos PRs cuando pase la verificación independiente. Al final, el PR de cierre con este documento.
