@@ -13,7 +13,7 @@ metadata:
 
 Load this skill whenever you need to:
 - Create a branch for a new fix or feature
-- Open a pull request on [Gentleman-Programming/gentle-ai](https://github.com/Gentleman-Programming/gentle-ai)
+- Open a pull request on [IGutierrezZ/axiom](https://github.com/IGutierrezZ/axiom). Always pass `--repo IGutierrezZ/axiom`: GitHub marks this repository as a fork, so `gh` must never fall back to an upstream repository.
 - Prepare changes for review
 
 ## Critical Rules
@@ -246,7 +246,7 @@ cd e2e && ./docker-test.sh
 
 ```bash
 gh pr create \
-  --repo Gentleman-Programming/gentle-ai \
+  --repo IGutierrezZ/axiom \
   --title "fix(agent): correct Claude Code detection on Linux" \
   --body "$(cat <<'EOF'
 ## 🏷️ PR Type
@@ -285,6 +285,6 @@ EOF
 ### Check PR Status
 
 ```bash
-gh pr checks --repo Gentleman-Programming/gentle-ai <PR-number>
-gh pr view --repo Gentleman-Programming/gentle-ai <PR-number>
+gh pr checks --repo IGutierrezZ/axiom <PR-number>
+gh pr view --repo IGutierrezZ/axiom <PR-number>
 ```
