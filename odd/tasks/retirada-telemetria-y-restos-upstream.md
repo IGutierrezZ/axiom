@@ -109,7 +109,8 @@ Que Axiom **deje de enviar datos al upstream Gentle AI y de dirigir acciones con
    - `internal/tui` `TestRuntimeCatalogDiscoveryIgnoresStaleProjectResults`, porque un proveedor `litellm` llega desde el `~/.config/opencode/opencode.json` real;
    - `internal/cli` `TestCodeGraphGuidanceSyncStep*` y `TestRunSyncMigratesLegacyManagedPiCodeGraphSelection`, por symlinks y CodeGraph;
    - `internal/opencode` `TestRunCatalogCommandCancelsOverflowingChild`, por tiempos;
-   - `internal/components/filemerge` `TestWriteFileAtomicFollowsDirectoryJunction`.
+   - `internal/components/filemerge` `TestWriteFileAtomicFollowsDirectoryJunction`;
+   - `internal/pathidentity` `TestSameDirectoryAcceptsTwoSpellingsOfOneDirectory` y tres `TestContainsAccepts*`, porque la cuenta no tiene el privilegio para crear symlinks (comprobado en la base el 2026-10-04).
 9. **Identidad git del usuario:** `~/.gitconfig` tiene `user.name = igutierrezz@hiberus.com` y `user.email = Inigo.GUTIERREZZUFIA@berger-levrault.com`. Ya se le ha avisado y no se cambia.
 
 ---
@@ -163,7 +164,7 @@ Que Axiom **deje de enviar datos al upstream Gentle AI y de dirigir acciones con
   - El CI.
 - **Tamaño:** S. Ruta: un writer para el código y el orquestador para la limpieza local.
 
-### [~] T3 · PATH: quitar las entradas muertas y añadir una salvaguarda preventiva: **PR #79**, `ad1f5095`
+### [x] T3 · PATH: quitar las entradas muertas y añadir una salvaguarda preventiva: **PR #79**, fusionado como `a7350417`
 
 - **Entradas muertas en el PATH de usuario** (`HKCU\Environment` `Path`):
   - `C:\Users\igutierrezz\AppData\Local\Temp\codegraph-install-test-kvp10\current\bin`
@@ -189,9 +190,9 @@ Que Axiom **deje de enviar datos al upstream Gentle AI y de dirigir acciones con
   - **Añadido por el orquestador:** `e2e/organicruntime` (sin etiqueta de build, entra en `go test ./...` y ejecuta `install` con el binario real).
   - **Verificación:** registro `Path` idéntico antes y después de los tests; `internal/system`, `cmd/axiom`, `internal/app`, `internal/dashboard` y un subconjunto de `internal/cli` en verde; `gofmt` y `go vet` limpios; ratchet solo con los dos avisos ajenos conocidos. Riesgo **`high`** (`process_boundary`), así que hubo **verificador independiente** (Sonnet, solo lectura): mutación confirmada (los tests fallan sin la guarda) y **un defecto bloqueante**, ya corregido: `organicEnvironment` es una lista blanca cerrada y no heredaba la variable; ahora la fija explícitamente, con el test `TestOrganicEnvironmentDisablesPersistentPathWrites`. 8 ficheros, 296 líneas.
   - **Seguimiento posible:** `bench/runner.go` (`Sandbox.env()`) es otro entorno cerrado sin la variable; la journey `bench/journeys_issue_3043.go` ejecuta `install` con subagentes en segundo plano, pero usa un stub `#!/bin/sh`.
-- **Siguiente:** fusionar #79 cuando esté en verde y eliminar el worktree `odd-up-t3` y la rama `fix/path-persistente-salvaguarda`.
+- **Cerrada (2026-10-04):** CI en verde, fusionado con squash y eliminados el worktree `odd-up-t3` y la rama `fix/path-persistente-salvaguarda`, local y remota.
 
-### [ ] T4 · `RefreshSkip` compara por identidad, no de forma léxica
+### [~] T4 · `RefreshSkip` compara por identidad, no de forma léxica: **PR #80**, `dcb077da`
 
 - **Causa:**
   - `internal/skillregistry/guard.go:36-53` compara `cwd == filepath.Dir(cwd)` (raíz del sistema de ficheros) y `cwd == home` tras `cleanPathArg` (`registry.go:174`), que solo normaliza separadores. El home sale de `%USERPROFILE%`.
@@ -204,6 +205,13 @@ Que Axiom **deje de enviar datos al upstream Gentle AI y de dirigir acciones con
   - Aplicarlo en todos los sistemas operativos (APFS tampoco distingue mayúsculas) y añadir una guarda defensiva en `Regenerate`, que se niegue a escribir en el HOME.
   - Tests: mayúsculas, nombres 8.3 (Windows, con `GetShortPathName`), `\\?\` y la raíz.
 - **Tamaño:** S (2-3 h).
+- **Hecho (2026-10-04, sesión de relevo):**
+  - **Código** (ruta delegada, writer Sonnet): `guard.go` con `protectedDirectory`, `isFilesystemRoot` e `isHomeDirectory` (léxico primero y después `pathidentity.SameDirectory`; un HOME vacío o relativo no se compara por identidad). `Regenerate` aplica la misma regla tras `cleanPathArg` y `filepath.Abs`, en ese orden (lección de #68). Ningún llamante regenera legítimamente en el HOME.
+  - **Tests:** tabla en `guard_test.go`, `guard_windows_test.go` nuevo (letra de unidad, 8.3, `\\?\`, uniones al HOME y a la raíz) y un test de extremo a extremo en `internal/app` y otro en `internal/cli`. Sin el arreglo fallan: se crea `.atl` en el HOME falso y se reescribe `AGENTS.md`. Sin cubrir: la raíz `\\?\UNC\server\share`.
+  - **Verificación:** `internal/skillregistry` en verde (writer y orquestador), subconjuntos de `internal/app` e `internal/cli` y `internal/autoskill` en verde; `go vet` también para `linux/amd64` y `darwin/arm64`; ratchet solo con los dos avisos conocidos; el HOME real sin cambios. Riesgo `medium`.
+  - **Tamaño:** 457 líneas (unas 87 de código y unas 370 de tests). **`size:exception` aprobado explícitamente por el usuario**, porque los tests comprueban las dos capas a la vez.
+  - **Pendiente de decidir con el usuario:** `~/.atl` en el HOME real (del 2026-06-29, `skill-registry.md` y `.skill-registry.cache.json`), restos de este mismo fallo. No se ha borrado.
+- **Siguiente:** fusionar #80 cuando esté en verde y eliminar el worktree `odd-up-t4` y la rama `fix/refreshskip-identidad`.
 
 ### [ ] T5 · Retirar las skills descatalogadas de las instalaciones existentes
 
@@ -330,12 +338,14 @@ Cada PR lleva riesgo `high` probable (borrado masivo y hooks), así que necesita
   - #77 en verde: fusionado (`1bed2bc1`) con autorización del usuario y limpiado. **T1 cerrada.**
   - T2: código en **PR #78** (`43935d61`, 109 líneas, riesgo `medium`) y limpieza local del hub hecha.
   - #78 en verde: fusionado (`1feda4b1`) y limpiado. **T2 cerrada.**
-  - T3: limpieza local del PATH hecha y código en **PR #79** (`ad1f5095`, riesgo `high` con verificador independiente). Pendiente del CI de #79.
+  - T3: limpieza local del PATH hecha y código en **PR #79** (`ad1f5095`, riesgo `high` con verificador independiente).
+  - #79 en verde: fusionado (`a7350417`) y limpiado. **T3 cerrada.**
+  - T4: **PR #80** (`dcb077da`, 457 líneas con `size:exception` aprobado, riesgo `medium`). Pendiente del CI de #80.
 
 ## 8. Siguiente paso
 
-1. Mirar el CI de #79. Si está en verde, fusionarlo con squash y eliminar su worktree y su rama.
-2. T4, delegada.
+1. Mirar el CI de #80. Si está en verde, fusionarlo con squash y eliminar su worktree y su rama.
+2. Preguntar al usuario si se borra el `~/.atl` que quedó en su HOME.
 3. T5, delegada: decidir el corte y, si hace falta, pedir `size:exception`.
 4. T6: plan de PRs con un agente Plan, plantear al usuario la decisión del stub de `axiom telemetry runtime` y después ejecutar T6a a T6d.
 5. T7: plantear al usuario las decisiones de `axiom-collab-perfect` y `chained-pr` y diseñar la lectura dual de los contratos.
