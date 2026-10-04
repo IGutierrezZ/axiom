@@ -69,7 +69,7 @@ Retirar de Axiom las skills específicas de Gentle AI y cerrar tres seguimientos
   - Regenerar `AGENTS.md` sin el espejo Engram.
   - Añadir una fila de descarte deliberado en `docs/upstream-absorption-ledger.md`, respetando su formato y sus reglas.
   - Ruta: delegada (writer). Disparadores: preparación de escritura y 2 o más ficheros no triviales.
-- [ ] **T2 · `ScopeForPath` correcto en Windows**
+- [x] **T2 · `ScopeForPath` correcto en Windows** (`a1a2ceff`; PR pendiente de la decisión sobre `size:exception`)
   - En Windows, comparar prefijos sin distinguir mayúsculas y normalizar los nombres cortos 8.3 cuando la ruta exista. Sin cambios en otros sistemas.
   - Tests: diferencias de mayúsculas en la unidad y en los directorios, y nombre corto 8.3 si se puede obtener en el test.
   - Ruta: delegada (writer).
@@ -142,6 +142,22 @@ Retirar de Axiom las skills específicas de Gentle AI y cerrar tres seguimientos
     - El writer ejecutó `taskkill /IM go.exe`, que puede haber cortado procesos Go de otra sesión. Lección registrada: no matar procesos por nombre.
     - El verificador ejecutó `install` en el worktree. Creó `.claude/`, que luego borró, y reinstaló `engram.exe` 3.0.0 en `AppData`. El PATH final es correcto: `engram\bin` va primero.
 
+- **T2: completada (`a1a2ceff`).** Ruta delegada en un writer.
+  - Diseño: una sola regla, `projectRelativePath` (`internal/skillregistry/scope.go`), usada por `ScopeForPath`, la ruta de la tabla de `AGENTS.md`, `versionableFiles` y `dedupeBySkillName`.
+    - Fuera de Windows se mantiene la comprobación léxica exacta, sin cambios.
+    - En Windows, solo si la comprobación exacta falla, se prueba `filepath.Rel` (que no distingue mayúsculas) y después la identidad con `os.SameFile` del ancestro que está a la profundidad de `cwd`, para cubrir los nombres 8.3.
+    - No se usa `EvalSymlinks`, para no sacar del proyecto las skills enlazadas mediante junctions.
+  - Tamaño: 6 ficheros, +592/−13. Los tests suman 458 líneas (el 76 %).
+  - Comprobaciones del writer:
+    - Los tests de Windows se ejecutaron sin saltarse ninguno: mayúsculas, nombres 8.3 (activos en este volumen), junctions, identidad y `Regenerate` con el cwd escrito de otra forma.
+    - Con la rama de Windows desactivada fallan 6 tests.
+    - En WSL, PASS. `gofmtcheck` y `vet` limpios (incluido `GOOS=linux/darwin`).
+  - Comprobaciones del orquestador: los tests pasan. Riesgo `medium`.
+  - **Presupuesto:** no admite un corte cohesivo. El mecanismo es uno solo y los tests del comportamiento en Windows superan las 400 líneas por sí solos. Se recomienda `size:exception`, pendiente de que el mantenedor lo acepte.
+  - Fuera de alcance:
+    - `RefreshSkip` compara `cwd == home` de forma léxica, así que tiene el mismo hueco con mayúsculas y nombres 8.3.
+    - «Sources scanned» de `.atl` usa `filepath.Rel` sin normalizar, lo que solo afecta a cómo se muestra.
+
 ## Siguiente paso
 
-T1 en revisión (PR #70, 318 líneas). T2 en curso (writer).
+T2 a la espera de la decisión sobre `size:exception` y de abrir su PR. T3 en curso (writer). Después, T4.
