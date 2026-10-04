@@ -210,7 +210,7 @@ Que Axiom **deje de enviar datos al upstream Gentle AI y de dirigir acciones con
   - **Tests:** tabla en `guard_test.go`, `guard_windows_test.go` nuevo (letra de unidad, 8.3, `\\?\`, uniones al HOME y a la raíz) y un test de extremo a extremo en `internal/app` y otro en `internal/cli`. Sin el arreglo fallan: se crea `.atl` en el HOME falso y se reescribe `AGENTS.md`. Sin cubrir: la raíz `\\?\UNC\server\share`.
   - **Verificación:** `internal/skillregistry` en verde (writer y orquestador), subconjuntos de `internal/app` e `internal/cli` y `internal/autoskill` en verde; `go vet` también para `linux/amd64` y `darwin/arm64`; ratchet solo con los dos avisos conocidos; el HOME real sin cambios. Riesgo `medium`.
   - **Tamaño:** 457 líneas (unas 87 de código y unas 370 de tests). **`size:exception` aprobado explícitamente por el usuario**, porque los tests comprueban las dos capas a la vez.
-  - **Pendiente de decidir con el usuario:** `~/.atl` en el HOME real (del 2026-06-29, `skill-registry.md` y `.skill-registry.cache.json`), restos de este mismo fallo. No se ha borrado.
+  - **Limpieza local:** el `~/.atl` del HOME real (del 2026-06-29, `skill-registry.md` y `.skill-registry.cache.json`), restos de este mismo fallo, se ha movido a `~/.atl.bak-2026-10-04` por decisión del usuario.
 - **Siguiente:** fusionar #80 cuando esté en verde y eliminar el worktree `odd-up-t4` y la rama `fix/refreshskip-identidad`.
 
 ### [ ] T5 · Retirar las skills descatalogadas de las instalaciones existentes
@@ -345,11 +345,10 @@ Cada PR lleva riesgo `high` probable (borrado masivo y hooks), así que necesita
 ## 8. Siguiente paso
 
 1. Mirar el CI de #80. Si está en verde, fusionarlo con squash y eliminar su worktree y su rama.
-2. Preguntar al usuario si se borra el `~/.atl` que quedó en su HOME.
-3. T5, delegada: decidir el corte y, si hace falta, pedir `size:exception`.
-4. T6: plan de PRs con un agente Plan, plantear al usuario la decisión del stub de `axiom telemetry runtime` y después ejecutar T6a a T6d.
-5. T7: plantear al usuario las decisiones de `axiom-collab-perfect` y `chained-pr` y diseñar la lectura dual de los contratos.
-6. PR de cierre con este documento.
+2. T5, delegada: decidir el corte y, si hace falta, pedir `size:exception`.
+3. T6: plan de PRs con un agente Plan, plantear al usuario la decisión del stub de `axiom telemetry runtime` y después ejecutar T6a a T6d.
+4. T7: plantear al usuario las decisiones de `axiom-collab-perfect` y `chained-pr` y diseñar la lectura dual de los contratos.
+5. PR de cierre con este documento.
 
 ## 9. Historia relacionada (ODDs anteriores de la misma sesión)
 
