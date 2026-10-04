@@ -69,16 +69,16 @@ Retirar de Axiom las skills específicas de Gentle AI y cerrar tres seguimientos
   - Regenerar `AGENTS.md` sin el espejo Engram.
   - Añadir una fila de descarte deliberado en `docs/upstream-absorption-ledger.md`, respetando su formato y sus reglas.
   - Ruta: delegada (writer). Disparadores: preparación de escritura y 2 o más ficheros no triviales.
-- [x] **T2 · `ScopeForPath` correcto en Windows** (`a1a2ceff`, PR #75 con `size:exception`)
+- [x] **T2 · `ScopeForPath` correcto en Windows** (PR #75 con `size:exception`, fusionado como `c504f2e6`)
   - En Windows, comparar prefijos sin distinguir mayúsculas y normalizar los nombres cortos 8.3 cuando la ruta exista. Sin cambios en otros sistemas.
   - Tests: diferencias de mayúsculas en la unidad y en los directorios, y nombre corto 8.3 si se puede obtener en el test.
   - Ruta: delegada (writer).
-- [x] **T3 · Tests de `dashboard` aislados del repositorio** (PR #71, fusionado como `ccff924c`; PR #72 rebasado sobre `main` como `f43d3ec8`)
+- [x] **T3 · Tests de `dashboard` aislados del repositorio** (PR #71, fusionado como `ccff924c`; PR #72 fusionado como `7aa6e9bc`)
   - Localizar los tests que resuelven la raíz del repo o el cwd y escriben en él, y pasarlos a fixtures en `t.TempDir()` o a stubs.
   - `TestSemanticEndpoints` se salta cuando CodeGraph no está disponible o inicializado.
   - Verificación: ejecutar el paquete en un worktree limpio y comprobar que `git status --porcelain --ignored` sigue vacío.
   - Ruta: delegada (writer). Disparadores: exploración de 4 o más ficheros y preparación de escritura.
-- [x] **T4 · `doctor` reconoce el lanzador gestionado de `opencode`** (PR #74 con `size:exception`; sustituye a #73)
+- [x] **T4 · `doctor` reconoce el lanzador gestionado de `opencode`** (PR #74 con `size:exception`, fusionado como `7b6b7abd`; sustituye a #73)
   - Si una de las copias del PATH es el lanzador gestionado por Axiom (marca `gentle-ai:managed-opencode-launcher/v1`) y envuelve a la otra, no se informa de duplicado. Puede quedar, como mucho, una nota informativa.
   - Tests.
   - Ruta: delegada (writer).
@@ -205,8 +205,6 @@ Retirar de Axiom las skills específicas de Gentle AI y cerrar tres seguimientos
   - **Preexistente, sin relación con este cambio:** `internal/opencode` `TestRunCatalogCommandCancelsOverflowingChild` falla por tiempos en esta máquina, también sin el cambio.
   - **CI de los PRs ya abiertos:** #69, #70, #71 y #72 están en verde. #72 pasa con `go test ./...` ejecutando los paquetes en paralelo, así que la guarda no da falsos positivos.
 
-## Siguiente paso
-
 ### Entrega (2026-10-04)
 
 - **Decisión del usuario:** fusionar en orden los PRs en verde y abrir T2 y `doctor` con `size:exception`.
@@ -220,6 +218,29 @@ Retirar de Axiom las skills específicas de Gentle AI y cerrar tres seguimientos
 - **T2 → #75**, 605 líneas, con `size:exception`.
 - **Limpieza:** eliminados los worktrees y las ramas de #69, #70, #71 y #73.
 
-## Pendiente
+- **Fusionados después, con el CI en verde y sin ficheros compartidos:**
+  - #72 (guarda de T3) → `7aa6e9bc`
+  - #74 (T4) → `7b6b7abd`
+  - #75 (T2) → `c504f2e6`
+- **Limpieza final:** eliminados los worktrees y las ramas de T2, T3 y T4. Solo queda este PR de cierre.
 
-Fusionar #72, #74 y #75 cuando estén en verde. Después, el PR de cierre con este documento y la eliminación de los worktrees restantes.
+### Criterios de aceptación: resultado
+
+- ✅ `branch-pr` y `gentle-ai-bench` no aparecen como skills instalables ni en `AGENTS.md`, la documentación activa, los assets, el catálogo, los presets ni la TUI (#70).
+- ✅ `ScopeForPath` clasifica como proyecto las rutas que difieren en mayúsculas o usan nombres 8.3 en Windows (#75, con tests ejecutados en Windows sin saltos).
+- ✅ `go test ./internal/dashboard/` deja el checkout sin cambios (#71), y la guarda #72 lo impone. Ha pasado en el CI con los paquetes en paralelo.
+- ✅ `doctor` no avisa de duplicado por el lanzador gestionado de `opencode`, y avisa si queda tapado en el PATH (#74).
+- ✅ El CI está en verde en todos los PRs fusionados.
+
+### Seguimientos que quedan abiertos (fuera de alcance)
+
+- **Skills retiradas en instalaciones existentes:** no hay mecanismo para retirar skills gestionadas que Axiom ya no distribuye. Quien instaló `branch-pr` o `gentle-ai-bench` conserva sus copias, y `uninstall` deja de limpiarlas.
+- **Telemetría:** está activada por defecto y envía a `telemetry.gentlemanprogramming.com`, el servidor del upstream.
+- **Hub contaminado por tests:** los tests de knowledge de `internal/cli` registran directorios temporales en el hub real (`~/.axiom/workspaces.json`).
+- **PATH del usuario:** quedan entradas `AppData\Local\Temp\codegraph-install-test-*`, restos de tests de CodeGraph.
+- **`RefreshSkip`:** compara `cwd == home` de forma léxica, así que tiene el mismo hueco con mayúsculas y nombres 8.3 que T2.
+- **`AGENTS.md`:** la línea manual sobre la convención `gentle-ai-*` ha quedado obsoleta, y la cabecera sigue diciendo «Gentle AI™».
+
+## Cierre
+
+Fusionar este PR de cierre cuando su CI esté en verde y eliminar su worktree. El ODD queda cerrado.
