@@ -51,7 +51,7 @@ Retirar de Axiom las skills específicas de Gentle AI y cerrar tres seguimientos
   |---|---|---|---|
   | #70 | T1 | `chore/retirar-skills-gentle-ai` | `axiom-wt/odd-gentle-t1` |
   | — | T2 | `fix/scope-for-path-windows` | `axiom-wt/odd-gentle-t2` |
-  | — | T3 | `test/dashboard-aislado-del-repo` | `axiom-wt/odd-gentle-t3` |
+  | #71 + #72 | T3 (aislamiento + guarda encima) | `test/dashboard-aislado-del-repo` + `test/dashboard-guarda-del-checkout` | `axiom-wt/odd-gentle-t3` |
   | — | T4 | `fix/doctor-lanzador-opencode` | `axiom-wt/odd-gentle-t4` |
   | — | Cierre (con este documento) | `docs/odd-limpieza-gentle-ai-cierre` | `axiom-wt/odd-gentle-docs` |
 
@@ -73,7 +73,7 @@ Retirar de Axiom las skills específicas de Gentle AI y cerrar tres seguimientos
   - En Windows, comparar prefijos sin distinguir mayúsculas y normalizar los nombres cortos 8.3 cuando la ruta exista. Sin cambios en otros sistemas.
   - Tests: diferencias de mayúsculas en la unidad y en los directorios, y nombre corto 8.3 si se puede obtener en el test.
   - Ruta: delegada (writer).
-- [ ] **T3 · Tests de `dashboard` aislados del repositorio**
+- [x] **T3 · Tests de `dashboard` aislados del repositorio** (`1e13896c` PR #71 + `d2372155` PR #72)
   - Localizar los tests que resuelven la raíz del repo o el cwd y escriben en él, y pasarlos a fixtures en `t.TempDir()` o a stubs.
   - `TestSemanticEndpoints` se salta cuando CodeGraph no está disponible o inicializado.
   - Verificación: ejecutar el paquete en un worktree limpio y comprobar que `git status --porcelain --ignored` sigue vacío.
@@ -158,6 +158,28 @@ Retirar de Axiom las skills específicas de Gentle AI y cerrar tres seguimientos
     - `RefreshSkip` compara `cwd == home` de forma léxica, así que tiene el mismo hueco con mayúsculas y nombres 8.3.
     - «Sources scanned» de `.atl` usa `filepath.Rel` sin normalizar, lo que solo afecta a cómo se muestra.
 
+- **T3: completada.** Ruta delegada en un writer. Se dividió en dos PRs para no pasar del presupuesto: el aislamiento (`1e13896c`, PR #71, 393 líneas) y la guarda encima (`d2372155`, PR #72, 127 líneas).
+  - **Causa raíz:** once tests usaban `NewService("../..")`, la raíz real del repositorio, con el HOME real:
+    - `TestEcosystemEndpoints` lanzaba un `sync --scope workspace` real (de ahí `.claude/*`, `.atl`, `.kiro`, `.gemini`, `.config` y `.mcp.json`), un **`upgrade` real contra la red** y una copia de seguridad del `~/.axiom` real;
+    - `TestArchiveEndpoints` reescribía `openspec/INDEX.md`;
+    - `TestSemanticEndpoints` ejecutaba `codegraph index` en la raíz;
+    - `TestSpecsSyncStatusEndpoint` hacía un `git fetch` real;
+    - dos tests de `service_sequence_test.go` ejecutaban un `upgrade` y un `sync` reales.
+  - **Arreglo:**
+    - `TestMain` aísla el HOME y fija `DO_NOT_TRACK=1`.
+    - Fixtures en `t.TempDir()`, un `codegraph` falso en el PATH y stubs para `sync` y `upgrade`.
+    - Una costura de producción, `runAppArgsFn`, sin efecto en el comportamiento.
+    - La guarda (#72) hace fallar el paquete si `git status --porcelain --ignored` cambia. Puede dar falsos positivos si otro proceso escribe en el checkout durante la ejecución.
+  - **Comprobaciones:**
+    - El paquete pasa en varias ejecuciones, entre 4 y 12 s (antes, unos 80 s).
+    - El diff del estado del checkout está vacío en cada ejecución.
+    - La guarda se probó con un fichero desechable, que la hizo fallar.
+    - WSL: PASS.
+    - El orquestador repitió la prueba principal sobre el commit del aislamiento.
+  - **Riesgo evaluado:** `medium`.
+  - **Incidente:** la ejecución de estos tests que hizo el orquestador antes de T3, para confirmar que escribían en el repo, pudo lanzar un `upgrade` real de herramientas de la máquina y registrar el worktree temporal en el hub.
+  - **Seguimiento:** los tests de knowledge de `internal/cli` (`TestCLIInitKnowledgeProfile`, `TestCLIKnowledgeSweepAndQuery`, ...) registran directorios temporales en el hub real. Hay 37 de 44 entradas con rutas que ya no existen.
+
 ## Siguiente paso
 
-T2 a la espera de la decisión sobre `size:exception` y de abrir su PR. T3 en curso (writer). Después, T4.
+T2 a la espera de la decisión sobre `size:exception` y de abrir su PR. T4 en curso (writer).
