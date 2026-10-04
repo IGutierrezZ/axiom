@@ -45,13 +45,15 @@ Tras el merge, `scripts/axiom-worktree.ps1 done kiro-workspace-parity` desmonta 
 
 - Todo en español (docs, ODD, commits y PRs).
 - Prohibido ejecutar `axiom setup|install|sync` reales; los tests se ejecutan con el HOME aislado.
-- No se commitea nada bajo `.kiro/` en estos PRs.
+- No se commitea nada bajo `.kiro/` en estos PRs (el hook se versiona después, en el seguimiento T6).
 - El PR supera 400 líneas cambiadas y lleva `size:exception` con autorización expresa del usuario.
 
 ## Decisiones
 
 - **G2 no se implementa (opción a).** Las skills propias de `skills/*` no se espejan en `.kiro/skills/`: Kiro ya carga `AGENTS.md` como steering y su índice `axiom:skills-index` lista cada skill con su ruta. Un espejo duplicaría ~15 skills en un directorio ignorado, generaría deriva y exigiría un paso post-sync nuevo. Claude tampoco las espeja.
-- **`.kiro/steering/` y `.kiro/hooks/` se versionan.** Su contenido no depende de la máquina (sin rutas absolutas; el hook usa `--cwd .`), así Kiro carga el orquestador al clonar sin ejecutar setup. Solo se ignoran `.kiro/agents/`, `.kiro/skills/` y `.kiro/settings/`. Tras el merge, el usuario genera los ficheros con `axiom sync --agent kiro-ide --scope workspace` y los commitea en un PR aparte.
+- **Solo `.kiro/hooks/` se versiona; el steering generado `.kiro/steering/axiom.md` se ignora.** El hook no depende de la máquina (sin rutas absolutas; usa `--cwd .`) y es pequeño y estable. Se ignoran `.kiro/agents/`, `.kiro/skills/`, `.kiro/settings/` y `.kiro/steering/axiom.md`, que `axiom setup --agent kiro-ide` regenera; el steering propio del equipo en `.kiro/steering/` sigue siendo versionable.
+  - **Decisión revisada el 2026-10-04: solo se versiona `.kiro/hooks/`; se ignora el steering generado `.kiro/steering/axiom.md`.** Sustituye a la decisión original, que versionaba también el steering para que Kiro lo cargara al clonar sin ejecutar setup. Motivos del cambio: (1) `.kiro/steering/axiom.md` (~840 líneas) se genera desde `internal/assets/kiro`, que cambia mucho (65 commits en 90 días), así que una copia commiteada se queda obsoleta sin avisar; (2) el steering solo no deja Kiro usable tras clonar, porque delega en los agentes nativos de `.kiro/agents/`, que ya estaban ignorados, y hace falta `axiom setup --agent kiro-ide` igualmente; (3) es coherente con `.claude/`, `.opencode/` y `.gemini/`, ignorados. El hook sí se versiona. Un test del paquete `sdd` comprueba que la copia commiteada coincide byte a byte con la que genera `ensureKiroSkillRegistryHook`.
+  - Seguimiento «commitear los ficheros generados en un PR aparte tras el merge»: **cumplido por este cambio** (rama `chore/kiro-version-hook-only`) solo para el hook. El steering ya no se commitea.
 
 ---
 
@@ -80,6 +82,12 @@ Tras el merge, `scripts/axiom-worktree.ps1 done kiro-workspace-parity` desmonta 
   - `resolveSkillRegistryDirs` normaliza un `--cwd` relativo con `filepath.Abs`: sin ello `RefreshSkip` veía `filepath.Dir(".") == "."` y saltaba el refresco como raíz del sistema de ficheros (`TestSkillRegistryRefreshProceedsWithRelativeCwdDot` fallaba antes del arreglo).
   - Declarado en `componentPathsWithWorkspaceScoped` (backup/verificación), eliminado al desinstalar (conserva los hooks ajenos de `.kiro/hooks/`) y documentado en `docs/kiro.md`.
 
+- [x] **T6 · Seguimiento: versionar solo el hook de Kiro** (rama `chore/kiro-version-hook-only`, 2026-10-04)
+  - `.kiro/hooks/axiom-skill-registry.json` commiteado, con los mismos bytes que escribe `ensureKiroSkillRegistryHook` (JSON con sangría de 2 espacios y salto de línea final; `.gitattributes` fuerza LF).
+  - `.gitignore` añade `.kiro/steering/axiom.md` al bloque de Kiro; `docs/kiro.md` marca el steering como `Ignorado` y explica los motivos.
+  - Test anti-deriva en `internal/components/sdd/kiro_hook_drift_test.go`: falla si el fichero commiteado deja de coincidir con el generador e indica cómo regenerarlo.
+  - Ruta: delegada (un único escritor acotado en el worktree `kiro-hook-only`).
+
 ---
 
 ## Verificación ejecutable
@@ -88,8 +96,9 @@ Todos los tests con el HOME aislado (`$env:HOME` y `$env:USERPROFILE` en `%TEMP%
 
 1. **T1:** `go test ./internal/cli/ -run "Kiro|WorkspaceSafeguard|ScopedWorkspace" -count=1` → `ok (11.0s)`; los 5 subtests de cada test nuevo en verde.
 2. **T2:** `go test ./internal/components/ -run TestGoldenSDD_Kiro -count=1` → `ok`.
-3. **T3:** `git check-ignore .kiro/agents/x.md .kiro/skills/x .kiro/settings/mcp.json` → lista las tres; `git check-ignore .kiro/steering/axiom.md .kiro/hooks/x.json` → código 1.
+3. **T3:** `git check-ignore .kiro/agents/x.md .kiro/skills/x .kiro/settings/mcp.json` → lista las tres; `git check-ignore .kiro/steering/axiom.md .kiro/hooks/x.json` → código 1. *(Histórico: tras la revisión del 2026-10-04, `.kiro/steering/axiom.md` sí aparece ignorado; ver T6.)*
 4. **T4:** `go test ./internal/tui/ -run "PreselectedAgents|AgentBuilderSkillsDir" -count=1` → `ok`; `go test ./internal/tui/ -count=1` → `ok`.
 5. **T5:** `go test ./internal/agents/kiro/ ./internal/components/sdd/ ./internal/app/ ./internal/components/uninstall/ -count=1` → `ok`; `go test ./internal/cli/ -run "Kiro|WorkspaceSafeguard|ScopedWorkspace|ComponentPaths" -count=1` → `ok`; `go test ./internal/components/ -run TestGolden -count=1` (sin `-update`) → `ok`, sin goldens existentes modificados.
 6. **Global:** `go build ./...`, `go vet ./internal/cli/ ./internal/tui/ ./internal/components/`, `go run ./internal/gofmtcheck` y `git diff --check origin/main...HEAD` sin errores. `go test ./internal/components/ ./internal/tui/ -count=1` → `ok`.
 7. **`go test ./internal/cli/` completo:** no termina en local (timeout a 10m, 25m y 1h20m) por los tests de review, que fallan de forma intermitente por el presupuesto de tiempo (`operation_timeout`) de sus subprocesos git. Ejecutado aparte, `TestNegotiatedBoundStatusResumesSameCaptureAfterManagedAssetsConverge/reviewer` pasa 2/2 en la rama y 2/2 en `origin/main`. Los 753 tests de `internal/cli` que no son de review: 720 en verde y 3 en rojo (`TestCodeGraphGuidanceSyncStepRestoresSymlinkAfterInstallerFailure`, `TestCodeGraphGuidanceSyncStepPreservesBrokenSymlinkChain`, `TestRunSyncMigratesLegacyManagedPiCodeGraphSelection`), que fallan igual en `origin/main` (Windows sin privilegio de symlink; wiring de CodeGraph). Preexistentes, no se tocan.
+8. **T6 (2026-10-04):** `git check-ignore -v .kiro/steering/axiom.md` → ignorado por `.gitignore:47`; `git check-ignore .kiro/hooks/axiom-skill-registry.json` → código 1. `go test ./internal/components/sdd/ -count=1` → `ok`; `go test ./internal/agents/kiro/... ./internal/assets/ -count=1` → `ok`; `go test ./internal/app/ -run 'Documented|Kiro' -count=1` → `ok`; `gofmt -l internal/components/sdd`, `go vet ./internal/components/sdd/` y `go run ./internal/gofmtcheck` sin salida. Comprobado a mano que el test anti-deriva falla si se altera el hook (`--quiet` → `--verbose`) y vuelve a pasar al restaurarlo.
