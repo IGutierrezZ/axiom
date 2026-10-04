@@ -133,7 +133,6 @@ const (
 	SkillCreator             SkillID = "skill-creator"
 	SkillImprover            SkillID = "skill-improver"
 	SkillJudgmentDay         SkillID = "judgment-day"
-	SkillBranchPR            SkillID = "branch-pr"
 	SkillIssueCreation       SkillID = "issue-creation"
 	SkillSkillRegistry       SkillID = "skill-registry"
 	SkillChainedPR           SkillID = "chained-pr"
@@ -142,7 +141,6 @@ const (
 	SkillWorkUnitCommits     SkillID = "work-unit-commits"
 	SkillRDDDefectWorkflow   SkillID = "rdd-defect-workflow"
 	SkillSystemicIssueTriage SkillID = "systemic-issue-triage"
-	SkillGentleAIBench       SkillID = "gentle-ai-bench"
 )
 
 type PersonaID string

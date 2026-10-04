@@ -22,8 +22,6 @@ var sddSkills = []model.SkillID{
 // selectable through the TUI skill picker and explicit `--skills` resolution,
 // but no default preset installs them.
 var contributorSkills = []model.SkillID{
-	model.SkillGentleAIBench,
-	model.SkillBranchPR,
 	model.SkillIssueCreation,
 	model.SkillCommentWriter,
 	model.SkillRDDDefectWorkflow,
@@ -36,10 +34,8 @@ var contributorSkills = []model.SkillID{
 // membership changes.
 var selectableFoundationSkills = []model.SkillID{
 	model.SkillGoTesting,
-	model.SkillGentleAIBench,
 	model.SkillCreator,
 	model.SkillImprover,
-	model.SkillBranchPR,
 	model.SkillIssueCreation,
 	model.SkillSkillRegistry,
 	model.SkillChainedPR,

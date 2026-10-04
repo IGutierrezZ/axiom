@@ -8,7 +8,7 @@ import (
 )
 
 func TestPublicBundledSkillsMatchEmbeddedAssets(t *testing.T) {
-	for _, skill := range []string{"systemic-issue-triage", "gentle-ai-bench"} {
+	for _, skill := range []string{"systemic-issue-triage"} {
 		t.Run(skill, func(t *testing.T) {
 			sourcePath := filepath.Join("..", "..", "skills", skill, "SKILL.md")
 			if _, err := os.Stat(sourcePath); os.IsNotExist(err) {

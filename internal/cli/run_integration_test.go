@@ -2133,7 +2133,7 @@ func TestRunInstallCustomPresetExplicitSkillsFlagPopulatesSelection(t *testing.T
 			"--agent", "claude-code",
 			"--preset", "custom",
 			"--component", "skills",
-			"--skills", "go-testing,branch-pr",
+			"--skills", "go-testing,work-unit-commits",
 		},
 		system.DetectionResult{},
 	)
@@ -2147,12 +2147,12 @@ func TestRunInstallCustomPresetExplicitSkillsFlagPopulatesSelection(t *testing.T
 
 	// Verify the explicitly requested skills were installed.
 	goTestingPath := filepath.Join(home, ".claude", "skills", "go-testing", "SKILL.md")
-	branchPRPath := filepath.Join(home, ".claude", "skills", "branch-pr", "SKILL.md")
+	workUnitCommitsPath := filepath.Join(home, ".claude", "skills", "work-unit-commits", "SKILL.md")
 	if _, err := os.Stat(goTestingPath); err != nil {
 		t.Fatalf("expected go-testing skill file %q: %v", goTestingPath, err)
 	}
-	if _, err := os.Stat(branchPRPath); err != nil {
-		t.Fatalf("expected branch-pr skill file %q: %v", branchPRPath, err)
+	if _, err := os.Stat(workUnitCommitsPath); err != nil {
+		t.Fatalf("expected work-unit-commits skill file %q: %v", workUnitCommitsPath, err)
 	}
 
 	// Regression guard for #3554: `skills` no longer has a hard dependency on
@@ -2182,7 +2182,7 @@ func TestRunInstallCustomPresetExplicitSkillsFlagPopulatesSelection(t *testing.T
 		}
 	}
 	if skillCount != 2 {
-		t.Fatalf("expected 2 skill files (go-testing + branch-pr only, no SDD), got %d", skillCount)
+		t.Fatalf("expected 2 skill files (go-testing + work-unit-commits only, no SDD), got %d", skillCount)
 	}
 }
 
@@ -2593,7 +2593,7 @@ func TestRunInstallWorkspaceScopeVerification(t *testing.T) {
 		"--agent", "claude-code",
 		"--component", "skills",
 		"--preset", "custom",
-		"--skill", "go-testing,branch-pr",
+		"--skill", "go-testing,work-unit-commits",
 	}
 
 	result, err := RunInstall(args, system.DetectionResult{})

@@ -78,11 +78,9 @@ Las skills de base se incluyen en los presets no mínimos. Los identificadores d
 
 | Skill de contribución | ID | Descripción |
 |-----------------------|----|-------------|
-| Branch & PR | `branch-pr` | Flujo de creación de PR y convenciones de ramas y commits. |
 | Issue Creation | `issue-creation` | Plantillas para incidencias e historias. |
 | Comment Writer | `comment-writer` | Borradores de comentarios de colaboración y respuesta a revisiones. |
 | RDD Defect Workflow | `rdd-defect-workflow` | Tratamiento de defectos RDD con evidencia y límites de autoridad explícitos. |
-| Gentle AI Bench | `gentle-ai-bench` | Identificador histórico del banco de pruebas de este repositorio. |
 | Systemic Issue Triage | `systemic-issue-triage` | Agrupa incidencias por causa sistémica. |
 
 ### Skills de programación de la comunidad

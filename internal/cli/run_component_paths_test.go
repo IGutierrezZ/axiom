@@ -367,7 +367,7 @@ func TestComponentPathsWorkspaceScopedSkillsUsesWorkspaceDir(t *testing.T) {
 	selection := model.Selection{
 		Skills: []model.SkillID{
 			model.SkillGoTesting,
-			model.SkillBranchPR,
+			model.SkillWorkUnitCommits,
 		},
 	}
 
@@ -375,7 +375,7 @@ func TestComponentPathsWorkspaceScopedSkillsUsesWorkspaceDir(t *testing.T) {
 
 	for _, want := range []string{
 		filepath.Join(workspace, ".claude", "skills", "go-testing", "SKILL.md"),
-		filepath.Join(workspace, ".claude", "skills", "branch-pr", "SKILL.md"),
+		filepath.Join(workspace, ".claude", "skills", "work-unit-commits", "SKILL.md"),
 	} {
 		if !containsPath(paths, want) {
 			t.Fatalf("componentPathsWithWorkspaceScoped(skills,claude-code,workspace) missing workspace-scoped path %q\npaths=%v", want, paths)
@@ -384,7 +384,7 @@ func TestComponentPathsWorkspaceScopedSkillsUsesWorkspaceDir(t *testing.T) {
 
 	for _, unwanted := range []string{
 		filepath.Join(home, ".claude", "skills", "go-testing", "SKILL.md"),
-		filepath.Join(home, ".claude", "skills", "branch-pr", "SKILL.md"),
+		filepath.Join(home, ".claude", "skills", "work-unit-commits", "SKILL.md"),
 	} {
 		if containsPath(paths, unwanted) {
 			t.Fatalf("componentPathsWithWorkspaceScoped(skills,claude-code,workspace) must not include home-scoped path %q\npaths=%v", unwanted, paths)
@@ -513,7 +513,7 @@ func TestInstallWorkspaceScopeVerificationWithNoGlobalSkills(t *testing.T) {
 	selection := model.Selection{
 		Skills: []model.SkillID{
 			model.SkillGoTesting,
-			model.SkillBranchPR,
+			model.SkillWorkUnitCommits,
 		},
 	}
 
@@ -524,7 +524,7 @@ func TestInstallWorkspaceScopeVerificationWithNoGlobalSkills(t *testing.T) {
 	// Verify that workspace paths are included (these should exist after install).
 	for _, want := range []string{
 		filepath.Join(workspace, ".claude", "skills", "go-testing", "SKILL.md"),
-		filepath.Join(workspace, ".claude", "skills", "branch-pr", "SKILL.md"),
+		filepath.Join(workspace, ".claude", "skills", "work-unit-commits", "SKILL.md"),
 	} {
 		if !containsPath(paths, want) {
 			t.Fatalf("workspace-scoped verification missing workspace path %q\npaths=%v", want, paths)
@@ -535,7 +535,7 @@ func TestInstallWorkspaceScopeVerificationWithNoGlobalSkills(t *testing.T) {
 	// if checked when only workspace skills exist).
 	for _, unwanted := range []string{
 		filepath.Join(home, ".claude", "skills", "go-testing", "SKILL.md"),
-		filepath.Join(home, ".claude", "skills", "branch-pr", "SKILL.md"),
+		filepath.Join(home, ".claude", "skills", "work-unit-commits", "SKILL.md"),
 	} {
 		if containsPath(paths, unwanted) {
 			t.Fatalf("workspace-scoped verification must not check home path %q when scope=workspace\npaths=%v", unwanted, paths)
