@@ -60,7 +60,7 @@ Retirar de Axiom las skills específicas de Gentle AI y cerrar tres seguimientos
 
 ## Tareas
 
-- [x] **T1 · Retirar `branch-pr` y `gentle-ai-bench`** (`c8ce5937`, PR #70)
+- [x] **T1 · Retirar `branch-pr` y `gentle-ai-bench`** (`c8ce5937`, PR #70, fusionado como `c990e57d`)
   - Borrar `internal/assets/skills/branch-pr/` y `internal/assets/skills/gentle-ai-bench/`.
   - Quitar sus IDs de `internal/model/types.go`, `internal/catalog/skills.go`, `internal/components/skills/presets.go` y `internal/tui/screens/skill_picker.go`.
   - Documentación: `docs/components.md`. En `docs/usage.md`, el ejemplo de `--skill` pasa a usar `work-unit-commits`.
@@ -69,16 +69,16 @@ Retirar de Axiom las skills específicas de Gentle AI y cerrar tres seguimientos
   - Regenerar `AGENTS.md` sin el espejo Engram.
   - Añadir una fila de descarte deliberado en `docs/upstream-absorption-ledger.md`, respetando su formato y sus reglas.
   - Ruta: delegada (writer). Disparadores: preparación de escritura y 2 o más ficheros no triviales.
-- [x] **T2 · `ScopeForPath` correcto en Windows** (`a1a2ceff`; PR pendiente de la decisión sobre `size:exception`)
+- [x] **T2 · `ScopeForPath` correcto en Windows** (`a1a2ceff`, PR #75 con `size:exception`)
   - En Windows, comparar prefijos sin distinguir mayúsculas y normalizar los nombres cortos 8.3 cuando la ruta exista. Sin cambios en otros sistemas.
   - Tests: diferencias de mayúsculas en la unidad y en los directorios, y nombre corto 8.3 si se puede obtener en el test.
   - Ruta: delegada (writer).
-- [x] **T3 · Tests de `dashboard` aislados del repositorio** (`1e13896c` PR #71 + `d2372155` PR #72)
+- [x] **T3 · Tests de `dashboard` aislados del repositorio** (PR #71, fusionado como `ccff924c`; PR #72 rebasado sobre `main` como `f43d3ec8`)
   - Localizar los tests que resuelven la raíz del repo o el cwd y escriben en él, y pasarlos a fixtures en `t.TempDir()` o a stubs.
   - `TestSemanticEndpoints` se salta cuando CodeGraph no está disponible o inicializado.
   - Verificación: ejecutar el paquete en un worktree limpio y comprobar que `git status --porcelain --ignored` sigue vacío.
   - Ruta: delegada (writer). Disparadores: exploración de 4 o más ficheros y preparación de escritura.
-- [x] **T4 · `doctor` reconoce el lanzador gestionado de `opencode`** (`13a623ed` PR #73 + `d86f5c83`/`ea558625` en `fix/doctor-lanzador-opencode`, PR pendiente de `size:exception`)
+- [x] **T4 · `doctor` reconoce el lanzador gestionado de `opencode`** (PR #74 con `size:exception`; sustituye a #73)
   - Si una de las copias del PATH es el lanzador gestionado por Axiom (marca `gentle-ai:managed-opencode-launcher/v1`) y envuelve a la otra, no se informa de duplicado. Puede quedar, como mucho, una nota informativa.
   - Tests.
   - Ruta: delegada (writer).
@@ -207,4 +207,19 @@ Retirar de Axiom las skills específicas de Gentle AI y cerrar tres seguimientos
 
 ## Siguiente paso
 
-Pendiente de decisiones del usuario: fusionar los PRs en verde (#69, #70, #71, #72 y #73) y aceptar `size:exception` para T2 (605 líneas, rama `fix/scope-for-path-windows` ya subida) y para el PR de `doctor` (409 líneas, rama `fix/doctor-lanzador-opencode` ya subida). Al final, el PR de cierre con este documento.
+### Entrega (2026-10-04)
+
+- **Decisión del usuario:** fusionar en orden los PRs en verde y abrir T2 y `doctor` con `size:exception`.
+- **Fusionados con squash:**
+  - #69 (hook de Kiro) → `9cf5cfff`
+  - #70 (T1) → `c990e57d`
+  - #71 (T3, aislamiento) → `ccff924c`
+- **#72 (guarda de T3):** se reapuntó a `main` y se rebasó como `f43d3ec8` (127 líneas). CI en curso.
+- **#73 cerrado.** Su CI falló en `scripts/deadcode-ratchet.sh`: con el parser separado de su uso, `ManagedLauncherTarget` y sus funciones quedaban sin llamadores. Fue un error del corte del orquestador. T4 se entrega entero en **#74**: parser y `doctor`, 686 líneas, con `size:exception`.
+  - **Lección:** este repo rechaza funciones inalcanzables, así que no se puede publicar un PR con código nuevo sin su consumidor.
+- **T2 → #75**, 605 líneas, con `size:exception`.
+- **Limpieza:** eliminados los worktrees y las ramas de #69, #70, #71 y #73.
+
+## Pendiente
+
+Fusionar #72, #74 y #75 cuando estén en verde. Después, el PR de cierre con este documento y la eliminación de los worktrees restantes.
