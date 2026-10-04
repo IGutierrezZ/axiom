@@ -279,6 +279,7 @@ func TestEcosystemUpgradeSequenceDTOKeepsRequiredFields(t *testing.T) {
 }
 
 func TestEcosystemSyncEndpointContractUnchanged(t *testing.T) {
+	stubAppRun(t)
 	svc := NewService(t.TempDir())
 	router := NewServer(svc).Router()
 
@@ -330,6 +331,7 @@ func TestRunUpgradeSequence_PropagatesChannel(t *testing.T) {
 }
 
 func TestEcosystemEndpointsAcceptOptionalPayloads(t *testing.T) {
+	rec := stubAppRun(t)
 	svc := NewService(t.TempDir())
 	router := NewServer(svc).Router()
 
@@ -341,6 +343,9 @@ func TestEcosystemEndpointsAcceptOptionalPayloads(t *testing.T) {
 	if rr.Code != http.StatusOK && rr.Code != http.StatusInternalServerError {
 		t.Fatalf("POST /api/ecosystem/upgrade with channel = %d, want 200 or 500", rr.Code)
 	}
+	if len(rec.channels) != 1 || rec.channels[0] != "main" {
+		t.Errorf("el canal del payload debía llegar al upgrade, registrado: %q", rec.channels)
+	}
 
 	// Test POST /api/ecosystem/sync with scope payload
 	body = strings.NewReader(`{"scope":"workspace"}`)
@@ -349,5 +354,9 @@ func TestEcosystemEndpointsAcceptOptionalPayloads(t *testing.T) {
 	router.ServeHTTP(rr, req)
 	if rr.Code != http.StatusOK && rr.Code != http.StatusInternalServerError {
 		t.Fatalf("POST /api/ecosystem/sync with scope = %d, want 200 or 500", rr.Code)
+	}
+	// One sync from the upgrade->sync chain, one from the explicit sync call.
+	if len(rec.args) != 2 || strings.Join(rec.args[1], " ") != "sync --scope workspace" {
+		t.Errorf("sync registrado = %v, se esperaban 2 ejecuciones y la última 'sync --scope workspace'", rec.args)
 	}
 }
