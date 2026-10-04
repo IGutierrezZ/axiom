@@ -7,6 +7,8 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+
+	"github.com/IGutierrezZ/axiom/v3/internal/pathidentity"
 )
 
 // setFakeHome points os.UserHomeDir at dir for the duration of the test.
@@ -203,5 +205,33 @@ func TestSkillRegistryRefreshProceedsWithProjectSkillDir(t *testing.T) {
 	}
 	if _, statErr := os.Stat(filepath.Join(project, ".atl", "skill-registry.md")); statErr != nil {
 		t.Fatalf("refresh in a skills workspace must write the registry: %v", statErr)
+	}
+}
+
+// TestSkillRegistryRefreshSkipsDifferentlySpelledHomeDirectory is the incident
+// end to end: a hook passes --cwd in another case than %USERPROFILE%. The
+// directory is the home directory, so the refresh must skip it instead of
+// creating ~/.atl, even though ~/.claude/skills makes it look like a project.
+func TestSkillRegistryRefreshSkipsDifferentlySpelledHomeDirectory(t *testing.T) {
+	home := filepath.Join(t.TempDir(), "AHomeWithALongName")
+	if err := os.MkdirAll(filepath.Join(home, ".claude", "skills"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	setFakeHome(t, home)
+	cwd := strings.ToUpper(home)
+	if cwd == home || !pathidentity.SameDirectory(cwd, home) {
+		t.Skipf("the volume is case-sensitive: %q is not an alias of %q", cwd, home)
+	}
+
+	var buf bytes.Buffer
+	err := runSkillRegistryRefresh([]string{"--quiet", "--no-gitignore", "--cwd", cwd}, &buf)
+	if err != nil {
+		t.Fatalf("refresh --cwd <home spelled in another case> must skip, got error: %v", err)
+	}
+	if buf.Len() != 0 {
+		t.Fatalf("refresh --quiet at home must print nothing, got %q", buf.String())
+	}
+	if _, statErr := os.Stat(filepath.Join(home, ".atl")); !os.IsNotExist(statErr) {
+		t.Fatalf("refresh at home must not create %s: stat err = %v", filepath.Join(home, ".atl"), statErr)
 	}
 }

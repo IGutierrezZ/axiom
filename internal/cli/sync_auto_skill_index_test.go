@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
+	"github.com/IGutierrezZ/axiom/v3/internal/pathidentity"
 )
 
 func TestRunSyncAutoRegeneratesSkillIndexInMultirepo(t *testing.T) {
@@ -95,5 +96,45 @@ roles:
 	report := RenderSyncReport(result)
 	if !strings.Contains(report, "Skills indexed:") {
 		t.Errorf("RenderSyncReport() no incluye 'Skills indexed:'; reporte:\n%s", report)
+	}
+}
+
+// TestDefaultPostSyncSkillRegeneratorSkipsDifferentlySpelledHome covers the sync
+// hook behind the home guard: a workspace that names the home directory in
+// another case (default NTFS and APFS volumes) is still the home directory, so
+// the post-sync refresh must neither create ~/.atl nor touch ~/AGENTS.md, even
+// though ~/.claude/skills makes it look like a project.
+func TestDefaultPostSyncSkillRegeneratorSkipsDifferentlySpelledHome(t *testing.T) {
+	home := filepath.Join(t.TempDir(), "AHomeWithALongName")
+	skillDir := filepath.Join(home, ".claude", "skills", "demo")
+	if err := os.MkdirAll(skillDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(skillDir, "SKILL.md"), []byte("---\nname: demo\ndescription: Demo\n---\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	agentsPath := filepath.Join(home, "AGENTS.md")
+	const agents = "# Notes that belong to the user\n"
+	if err := os.WriteFile(agentsPath, []byte(agents), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	workspace := strings.ToUpper(home)
+	if workspace == home || !pathidentity.SameDirectory(workspace, home) {
+		t.Skipf("the volume is case-sensitive: %q is not an alias of %q", workspace, home)
+	}
+
+	count, err := defaultPostSyncSkillRegenerator(workspace, home)
+	if err != nil {
+		t.Fatalf("defaultPostSyncSkillRegenerator() error = %v", err)
+	}
+	if count != 0 {
+		t.Errorf("skills indexed = %d, want 0: the home directory must be skipped", count)
+	}
+	if _, statErr := os.Stat(filepath.Join(home, ".atl")); !os.IsNotExist(statErr) {
+		t.Errorf("the refresh must not create .atl in the home directory: stat err = %v", statErr)
+	}
+	if got, readErr := os.ReadFile(agentsPath); readErr != nil || string(got) != agents {
+		t.Errorf("the refresh must not touch the home AGENTS.md: %q, %v", got, readErr)
 	}
 }

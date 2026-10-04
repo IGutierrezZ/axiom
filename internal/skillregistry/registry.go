@@ -163,7 +163,9 @@ func ProjectSkillDirs(cwd string) []string {
 // of every destination. When the fingerprint matches and Force is false, no
 // destination is written and all three stay byte-identical (Reason ==
 // "cache-hit"). A cwd that does not resolve to an existing directory fails
-// before any write (T-1 path containment).
+// before any write (T-1 path containment); so does a cwd that is the user's
+// home directory or the filesystem root, compared by identity rather than by
+// spelling (see protectedDirectory).
 // cleanPathArg normalizes a user-supplied path argument (--cwd and the home
 // root) before any filesystem work. Windows accepts both separators in one
 // path while filepath.Clean only applies the *host* separator rules, so on a
@@ -180,6 +182,19 @@ func Regenerate(cwd, home string, opts RegenerateOptions) (Result, error) {
 	home = filepath.Clean(home)
 	if !dirExists(cwd) {
 		return Result{}, fmt.Errorf("workspace root does not exist: %s", cwd)
+	}
+	// Defence in depth behind RefreshSkip: every writer below creates .atl and
+	// may rewrite AGENTS.md in cwd, so a caller that skipped the guard (or that
+	// spelled the home directory in a way the guard missed) must still never
+	// initialize a registry in the user's home or the filesystem root. The
+	// working directory is made absolute first so a relative cwd is judged by
+	// the directory it names, not by the lexical shape of "." or "ws".
+	target := cwd
+	if abs, err := filepath.Abs(cwd); err == nil {
+		target = abs
+	}
+	if reason := protectedDirectory(target, home); reason != SkipNone {
+		return Result{}, fmt.Errorf("refusing to initialize the skill registry in %s (%s): run it from a project directory", cwd, reason)
 	}
 
 	existingDirs := uniqueExistingDirs(append(ProjectSkillDirs(cwd), UserSkillDirs(home)...))
