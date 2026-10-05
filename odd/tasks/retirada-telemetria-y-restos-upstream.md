@@ -411,7 +411,14 @@ Cada PR lleva riesgo `high` probable (borrado masivo y hooks), así que necesita
   - Mantener `DO_NOT_TRACK` en los `TestMain` hasta T6e.
   - El código de retirada debe reconocer los ID legacy (`gentle-ai.telemetry-*` y las marcas `// gentle-ai:managed telemetry-runtime/v1|v2`).
 
-### [ ] T7 · Marca Gentle AI (tamaño M-L, varios PRs)
+### [~] T7 · Marca Gentle AI (tamaño M-L, varios PRs)
+
+**Decisiones del usuario (2026-10-06):**
+
+1. **Retirar `skills/axiom-collab-perfect`**, que dirigía PRs e issues contra el upstream.
+2. **La copia canónica de `chained-pr` es la embebida.** Se borra `skills/chained-pr` (`axiom-chained-pr`) del repositorio.
+
+El resto (lectura dual de contratos, marca del lanzador, plugin `skill-registry.ts`, mensajes `gentle-ai <verbo>`) se planifica con un agente Plan de solo lectura, lanzado el 2026-10-06.
 
 | Elemento | Clase | Acción | Tamaño |
 |---|---|---|---|
