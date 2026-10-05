@@ -420,6 +420,41 @@ Cada PR lleva riesgo `high` probable (borrado masivo y hooks), así que necesita
 
 El resto (lectura dual de contratos, marca del lanzador, plugin `skill-registry.ts`, mensajes `gentle-ai <verbo>`) se planifica con un agente Plan de solo lectura, lanzado el 2026-10-06.
 
+**Plan validado (2026-10-06, agente Plan sobre `304877de`).** Hallazgos clave:
+
+- **`cmd/gentle-ai` siempre falla**, así que cada consejo `gentle-ai <verbo>` que imprime Axiom es inejecutable. Hay 173 líneas de consejo en 57 ficheros de producción.
+  - 9 líneas son *wire*: comandos emitidos en el contrato de revisión y fijados por JSON-schema publicados (`consent-v3.schema.json:59`, `capabilities-*`). No se tocan; quedan en T7m.
+  - 13 líneas son legado de migración de hooks y se conservan.
+- **OpenCode v2:** `validateOpenCodePluginReplacement` (`sdd/opencode_runtime.go:27-56`) solo acepta una copia instalada byte a byte igual al asset actual. Cambiar un plugin gestionado haría fallar `sync` con una copia antigua, así que hace falta una tabla de digests históricos.
+- `opencode-review-transport.ts` (v1 y v2) **también ejecuta `gentle-ai`**.
+- **La ayuda promete un fallback que no existe.** Anuncia «fallback: `GENTLE_AI_INSTALL_SCOPE|_CHANNEL|_OPENCODE_BACKGROUND_SUBAGENTS|_PI_BACKGROUND_SUBAGENTS`», pero el código solo lee `AXIOM_*`.
+- **Prompts de los orquestadores:**
+  - Los 12 `sdd-orchestrator.md` citan la skill `gentle-ai-chained-pr`, que no existe.
+  - Citan `gentle-ai.sdd-integration.consent/v1`, pero Go emite `axiom.sdd-integration.consent/v1`.
+- **Guardas de test acopladas a la cadena `gentle-ai`** (`review_named_continuation_test.go:46,80`, `review_narration_test.go`, `bundle.go:217-221`, …): hay que ensancharlas **antes** de migrar los mensajes.
+- **Bench:** valida salida del producto con `gentle-ai`, así que se toca en el mismo PR que cada mensaje.
+- **IDs de protocolo:** hay unos 162 `gentle-ai.*/vN`, de los que solo unos 16 tienen lectura dual. Los persistidos o con hash **no se cambian**: store, ledger, recibos, *snapshots*, *bundle* de release y los `$id` de los schemas.
+- `axiom-collab-perfect` solo aparece en `AGENTS.md:50` y en `internal/assets/issue_creation_authority_test.go`, que hay que adaptar.
+
+**Cadena propuesta**, sin `size:exception`:
+
+| PR | Contenido | Líneas aprox. |
+|---|---|---|
+| T7a | Borrar `skills/chained-pr` y regenerar `AGENTS.md` | ~180 |
+| T7b | Retirar `axiom-collab-perfect`; `AGENTS.md:29,33`; test de `issue_creation_authority` | ~330 |
+| T7c | Plugins `skill-registry.ts` y `opencode-review-transport.ts` a `axiom`, con tabla de digests históricos | ~200 |
+| T7d | Marcador del lanzador dual: se escribe `axiom:managed-opencode-launcher/v1` y se aceptan los dos | ~150 |
+| T7e | Fallback real de las 4 `GENTLE_AI_*` con `system.Getenv` | ~100 |
+| T7f | Ensanchar las guardas a `(?:gentle-ai\|axiom)` | ~70 |
+| T7g, T7h, T7i | Consejo `gentle-ai` a `axiom` por bloques de paquetes, con el bench acoplado | ~300-390 cada uno |
+| T7j | Prompts y assets: `gentle-ai-chained-pr`, IDs de *consent*, *overlays* y *goldens* | ~330 |
+| T7k | Docs y marca: `CONTRIBUTING.md` mínimo, `bench/README`, `docs/*`, banners de `install.sh`, `docs/agents.md` desfasado | ~300 |
+| T7m | **Aplazado:** dialecto `axiom` en los comandos del contrato, con schemas publicados | 400+, riesgo alto |
+
+**Orden:** T7a → T7b (los dos tocan `AGENTS.md`); T7f antes de T7g, T7h y T7i; T7j en paralelo.
+
+**Se descartan o aplazan:** migrar IDs persistidos o con hash; renombrar el store `gentle-ai`; las `GENTLE_AI_*` del protocolo interno; los *placeholders*; `.gentle-ai-*.tmp`; `.gentle-ai-default-agent.json`; `gentle-ai.mdc`.
+
 | Elemento | Clase | Acción | Tamaño |
 |---|---|---|---|
 | `AGENTS.md:29` («# Gentle AI™ — Agent Skills Index») y `:33` (convención `gentle-ai-*`, ya obsoleta) | Marca pura, fuera del bloque generado (línea 42) | Cambiarlas a Axiom | S |
