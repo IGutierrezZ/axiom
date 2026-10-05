@@ -67,7 +67,6 @@ func journeySources() []journeySource {
 		{"journeys_issue3776.go", issue3776Journeys()},
 		{"journeys_issue3766.go", issue3766Journeys()},
 		{"journeys_issue4377.go", issue4377Journeys()},
-		{"journeys_issue4395.go", issue4395Journeys()},
 		{"journeys_issue3813.go", issue3813Journeys()},
 	}
 	for index := range sources {

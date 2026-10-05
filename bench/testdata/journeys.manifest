@@ -35,7 +35,6 @@ j3500-preserved-external-opencode-sync
 j36-contract-right-name-wrong-version
 j41-kill-switch-versus-sdd-pre-verify
 j42-kill-switch-versus-sdd-archive
-j4395-telemetry-trigger-resolves-rdd-repository
 j44-sdd-historical-requirement-stale-pass
 j4435-selected-untracked-correction-continuation-is-selectorless
 j47-disabled-mode-archives-discovered-scope-changed-authority

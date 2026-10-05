@@ -457,6 +457,16 @@ func TestProbeCapabilityRejectsAMissingFlag(t *testing.T) {
 	}
 }
 
+// The review mode switch is shared across clone and global scope, so its
+// capability must be detected from the usage line alone, without --scope.
+func TestSharedModeCapabilityDoesNotRequireScope(t *testing.T) {
+	sandbox := fakeBinary(t, `echo "Usage: gentle-ai review mode [--cwd <repo>] [--json]"`)
+	supported, reason := newCapabilityProbe(sandbox).supported(modeCapability)
+	if !supported {
+		t.Fatalf("supported = false (%s), want true without --scope", reason)
+	}
+}
+
 func TestHelpProbeRejectsALegacySurface(t *testing.T) {
 	sandbox := fakeBinary(t, `echo "Error: flag provided but not defined: -help" >&2; exit 1`)
 	supported, _ := newCapabilityProbe(sandbox).supported(&Capability{Verb: []string{"legacy", "finish"}})
