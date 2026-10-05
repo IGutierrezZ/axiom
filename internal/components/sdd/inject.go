@@ -1897,9 +1897,9 @@ func installSkillRegistryAutomation(homeDir string, adapter agents.Adapter) (Inj
 	if err != nil {
 		return InjectionResult{}, fmt.Errorf("install Claude SDD preflight hook: %w", err)
 	}
-	telemetryHookChanged, err := ensureClaudeTelemetryHooks(settingsPath)
+	telemetryHookChanged, err := retireClaudeTelemetryHooks(settingsPath)
 	if err != nil {
-		return InjectionResult{}, fmt.Errorf("install Claude runtime telemetry hooks: %w", err)
+		return InjectionResult{}, fmt.Errorf("retire Claude runtime telemetry hooks: %w", err)
 	}
 	return InjectionResult{Changed: changed || stopHookChanged || preflightHookChanged || telemetryHookChanged, Files: []string{settingsPath}}, nil
 }
@@ -1949,32 +1949,8 @@ func ensureCodexSkillRegistryHook(hooksPath string) (bool, error) {
 		changed = true
 	}
 
-	const telemetryCommand = `axiom telemetry runtime codex --json`
-	const legacyTelemetryCommand = `gentle-ai telemetry runtime codex --json`
-	for _, event := range []string{"SubagentStop", "Stop"} {
-		if replaceHookCommand(hooksMap, event, legacyTelemetryCommand, telemetryCommand) {
-			changed = true
-			continue
-		}
-		if hookCommandExists(hooksMap, event, telemetryCommand) {
-			continue
-		}
-		raw, exists := hooksMap[event]
-		entries, _ := raw.([]any)
-		if exists && entries == nil {
-			return false, fmt.Errorf("Codex hooks %q has unsupported hooks.%s shape: want array", hooksPath, event)
-		}
-		entries = append(entries, map[string]any{
-			"hooks": []any{
-				map[string]any{
-					"type":    "command",
-					"command": telemetryCommand,
-					"async":   true,
-					"timeout": 4,
-				},
-			},
-		})
-		hooksMap[event] = entries
+	// Runtime telemetry was retired: drop the hooks earlier versions installed.
+	if retireRuntimeTelemetryHooks(hooksMap, "codex") {
 		changed = true
 	}
 	if !changed {
@@ -2403,60 +2379,6 @@ func appendClaudeReviewStopHookEntry(hooksMap map[string]any, hookKey, settingsP
 	entries = append(entries, entry)
 	hooksMap[hookKey] = entries
 	return true, nil
-}
-
-// ensureClaudeTelemetryHooks installs one asynchronous, one-shot command for
-// both main-agent and subagent completions. Native policy checks run before the
-// hook payload or any transcript is read, so installation itself never enrolls
-// telemetry and disabled installations remain inert.
-func ensureClaudeTelemetryHooks(settingsPath string) (bool, error) {
-	root := map[string]any{}
-	if data, err := os.ReadFile(settingsPath); err == nil && len(strings.TrimSpace(string(data))) > 0 {
-		if err := json.Unmarshal(data, &root); err != nil {
-			return false, fmt.Errorf("parse Claude settings %q: %w", settingsPath, err)
-		}
-	} else if err != nil && !os.IsNotExist(err) {
-		return false, err
-	}
-	hooksRaw, hasHooks := root["hooks"]
-	hooksMap, _ := hooksRaw.(map[string]any)
-	if hasHooks && hooksMap == nil {
-		return false, fmt.Errorf("Claude settings %q has unsupported hooks shape: want object", settingsPath)
-	}
-	if hooksMap == nil {
-		hooksMap = map[string]any{}
-	}
-	const command = "axiom telemetry runtime claude --json"
-	const legacyCommand = "gentle-ai telemetry runtime claude --json"
-	changed := false
-	for _, hookKey := range []string{"SubagentStop", "Stop"} {
-		if replaceHookCommand(hooksMap, hookKey, legacyCommand, command) {
-			changed = true
-			continue
-		}
-		added, err := appendClaudeReviewStopHookEntry(hooksMap, hookKey, settingsPath, command, map[string]any{
-			"matcher": "",
-			"hooks":   []any{map[string]any{"type": "command", "command": command, "async": true, "timeout": 5}},
-		})
-		if err != nil {
-			return false, err
-		}
-		changed = changed || added
-	}
-	if !changed {
-		return false, nil
-	}
-	root["hooks"] = hooksMap
-	out, err := json.MarshalIndent(root, "", "  ")
-	if err != nil {
-		return false, err
-	}
-	out = append(out, '\n')
-	wr, err := filemerge.WriteFileAtomic(settingsPath, out, 0o644)
-	if err != nil {
-		return false, err
-	}
-	return wr.Changed, nil
 }
 
 func claudeHookListContains(hookEntries []any, command string) bool {
