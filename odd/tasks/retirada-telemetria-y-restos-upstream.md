@@ -323,6 +323,36 @@ Que Axiom **deje de enviar datos al upstream Gentle AI y de dirigir acciones con
 
 Cada PR lleva riesgo `high` probable (borrado masivo y hooks), así que necesita verificador independiente. Probablemente haga falta `size:exception` en T6b y T6c, que son borrados masivos, con aprobación del usuario.
 
+**Plan validado (2026-10-05, agente Plan de solo lectura sobre `6c97589a`).** Sustituye al plan propuesto de arriba.
+
+- **Correcciones al inventario:**
+  - **El plugin de OpenCode es una fuga real.** Ejecuta `gentle-ai telemetry runtime opencode --json`. Si el `gentle-ai` real del upstream está en el PATH, **se siguen enviando datos a través de nuestro plugin**.
+  - **El `sync` diferido no cubre la migración.** Solo se consume al arrancar la TUI sin argumentos (`app.go:239-263`). Ni `axiom upgrade`, ni los scripts de instalación, ni el uso sin interfaz lo ejecutan, y los hooks se invocan por `cmd/axiom/main.go:410`, que no pasa por la autoactualización. **Hace falta un stub.**
+  - `managed.go` (`inspect`, `:129-192`) demuestra la propiedad comparando con los assets embebidos. Al borrarlos hay que sustituirlo por una lista fija con los 4 digests distribuidos.
+  - El colector no está en ningún workflow, ni en `.goreleaser.yaml`, ni en un Makefile, ni en la línea base de código muerto. Borrar un paquete huérfano entero nunca dispara el ratchet; solo lo hacen las funciones que se quedan sin llamadores dentro de paquetes que siguen importados.
+  - `modernc.org/sqlite` y sus dependencias indirectas solo los usa el colector: `go mod tidy` los quita.
+  - No hay ratchet ni golden test que enumere símbolos de telemetría. `.guard-population-baseline.txt` fija el hash de una guarda de `sync.go`: no tocar esa sentencia.
+  - Otros puntos afectados: `scripts/test-opencode-v2-host.py:19` (`PLUGIN_IDS`), `assets_test.go:649-656` (5 plugins), `docs/opencode-compatibility.md:10` y el requisito REQ-20.12 (`openspec/specs/axiom-distribution-identity/spec.md:74-79`), que queda sin objeto.
+- **Forma de los hooks instalados:**
+  - Claude: `axiom telemetry runtime claude --json` (async, timeout 5), en `Stop` y `SubagentStop`.
+  - Codex: `axiom telemetry runtime codex --json` (async, timeout 4), y debe callar en stdout.
+  - Instalaciones antiguas: `gentle-ai …`, que ya fallan por el shim.
+  - **Stub mínimo:** `axiom telemetry <lo que sea>` sale con 0. `runtime …` no imprime nada, no valida argumentos y no lee stdin. El resto de subcomandos imprime una línea en stderr («telemetry removed»). Se conecta en `cmd/axiom/main.go:410` y `internal/app/app.go:134`, en un fichero pequeño de `internal/cli` que no importa nada de telemetría. El plugin de OpenCode no necesita stub: basta con borrarlo.
+- **Cadena de PRs** (tres `size:exception`, en T6b, T6d y T6e):
+  - **T6a** — dejar de enviar los eventos legacy automáticos: quitar `TelemetryTrigger` de `app.go:470`, `run.go:306` y `sync.go:2038-2039` y las seis llamadas a `telemetryRecordReviewOutcome`; borrar los helpers que quedan sin llamadores y `counters.go`. ~380 líneas.
+  - **T6b** — el corte: el stub y el borrado de `internal/cli/telemetry*.go`, de `telemetryruntime/{claude,codex,opencode}.go` y de la journey `j4395` del bench. Al terminar, `internal/telemetry` sale del grafo de imports. ~3,3 k líneas borradas, `size:exception`.
+  - **T6c** — retirar los hooks de Claude y Codex: dejar de escribirlos y, en `sync` o `install`, quitar los existentes (coincidencia exacta con los prefijos `axiom` y `gentle-ai`, sin tocar entradas del usuario). `uninstall` ya los quita. ~350 líneas.
+  - **T6d** — retirar el plugin de OpenCode: lista fija de 4 digests en `managed.go`; un paso de retirada no fatal en `install` y en `sync`; borrar los assets `.ts` y `Reconcile*`, con sus tests. ~1-1,3 k líneas, `size:exception`.
+  - **T6e** — borrado final de `cmd/gentle-telemetry`, `internal/telemetrycollector`, `internal/telemetry`, `deploy/telemetry`, `contracts/telemetry` y `docs/telemetry-collector.md`, más `go mod tidy`. También quita la telemetría de los `TestMain`, manteniendo su aislamiento del HOME y del PATH, y añade un test de guarda contra la reaparición del endpoint. ~20 k líneas, `size:exception`.
+  - **T6f** — `README.md:177`; `docs/telemetry.md`, reducido a una declaración de ~15 líneas de que Axiom no envía telemetría; ledger con 20 filas de `absorbido` a `revertido` (19 en F2 más `80c927ae`), con motivo no vacío, y el recuento a 60/11/20; nota de retirada de REQ-20.12. ~100 líneas.
+  - **Orden:** T6a → T6b (con el stub) → T6c y T6d (independientes) → T6e → T6f.
+- **Riesgos:**
+  - Las sesiones de OpenCode abiertas mantienen el plugin hasta que se reinician.
+  - Los hooks editados por el usuario sobreviven y dependen del stub.
+  - `state.json` no tiene campos de telemetría.
+  - Mantener `DO_NOT_TRACK` en los `TestMain` hasta T6e.
+  - El código de retirada debe reconocer los ID legacy (`gentle-ai.telemetry-*` y las marcas `// gentle-ai:managed telemetry-runtime/v1|v2`).
+
 ### [ ] T7 · Marca Gentle AI (tamaño M-L, varios PRs)
 
 | Elemento | Clase | Acción | Tamaño |
