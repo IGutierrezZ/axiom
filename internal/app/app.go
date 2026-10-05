@@ -466,9 +466,6 @@ func runUpdate(ctx context.Context, currentVersion string, profile system.Platfo
 	if err := updateCheckError(results); err != nil {
 		return err
 	}
-	if homeDir, homeErr := os.UserHomeDir(); homeErr == nil {
-		cli.TelemetryTrigger(homeDir)
-	}
 	return nil
 }
 

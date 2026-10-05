@@ -327,73 +327,11 @@ func telemetryRDDEnabled(cwd string) bool {
 	return status.Enabled()
 }
 
-// telemetryEnabledHomeDir resolves the home directory only if telemetry is
-// currently allowed to touch disk at all, checking cheapest-first:
-//
-// It calls telemetry.Decide before touching disk: when any kill switch is
-// already off, given a state of {Enabled: true} (i.e. "nothing yet known
-// about local state"), Decide can only have been tripped by an environment
-// switch, so this returns false without ever resolving a home directory or
-// reading/writing anything. Only when the environment allows it does this
-// resolve home and re-run Decide against the real persisted state (which a
-// prior `gentle-ai telemetry disable` may have turned off).
-func telemetryEnabledHomeDir() (string, bool) {
-	if envDecision := telemetry.Decide(os.Getenv, telemetry.State{Enabled: true}); !envDecision.Enabled {
-		return "", false
-	}
-	homeDir, err := osUserHomeDir()
-	if err != nil {
-		return "", false
-	}
-	persisted, err := telemetry.Load(homeDir)
-	switch {
-	case err == nil:
-		if !telemetry.Decide(os.Getenv, persisted).Enabled {
-			return "", false
-		}
-	case os.IsNotExist(err):
-		// No state file yet: nothing has ever opted out locally, so the
-		// environment-only decision above already settled it as enabled.
-	default:
-		// Unreadable state: fail safe rather than guess.
-		return "", false
-	}
-	return homeDir, true
-}
-
-// telemetryRecordReviewOutcome increments the one matching counter when a
-// review reaches a terminal outcome (approved, correction-required, or
-// escalated), then opportunistically triggers a send: hosts such as Gentle
-// Pi that drive gentle-ai only through `review ...` (never install/sync/
-// update) would otherwise accumulate counters forever without ever sending a
-// heartbeat. TelemetryTrigger already enforces enrollment-first, the 24h
-// heartbeat limit, the failure backoff, and every kill switch, so this adds
-// at most one detached send per day. Best-effort throughout: recording
-// telemetry must never fail or slow down the review command that triggered
-// it.
-func telemetryRecordReviewOutcome(kind string) {
-	defer func() { _ = recover() }()
-	homeDir, ok := telemetryEnabledHomeDir()
-	if !ok {
-		return
-	}
-	switch kind {
-	case "approved":
-		_ = telemetry.IncrementReviewsApproved(homeDir)
-	case "correction":
-		_ = telemetry.IncrementReviewsCorrection(homeDir)
-	case "escalated":
-		_ = telemetry.IncrementReviewsEscalated(homeDir)
-	}
-	telemetryTriggerQuiet(homeDir)
-}
-
-// runTelemetryTriggerCommand runs exactly the opportunistic path a
-// successful install/update/sync runs internally, for hosts (e.g. Gentle Pi)
-// that otherwise never call gentle-ai through any of those three. It always
-// exits 0: TelemetryTrigger is best-effort by construction, and the detached
-// child (if one was spawned) does the actual network call, so this never
-// blocks.
+// runTelemetryTriggerCommand runs the opportunistic send path on explicit
+// request. Install, update, sync and review closures no longer trigger it
+// automatically. It always exits 0: the opportunistic path is best-effort by
+// construction, and the detached child (if one was spawned) does the actual
+// network call, so this never blocks.
 func runTelemetryTriggerCommand(args []string, stdout io.Writer) error {
 	flags := flag.NewFlagSet("telemetry trigger", flag.ContinueOnError)
 	flags.SetOutput(ioDiscard{})
@@ -428,36 +366,4 @@ func runTelemetryTriggerCommand(args []string, stdout io.Writer) error {
 	}
 	_, _ = fmt.Fprintf(stdout, "telemetry trigger: %s (source: %s)\n", result.Decision, result.Source)
 	return nil
-}
-
-// TelemetryTrigger is what install, update, and sync call at the end of a
-// successful run. It reads the just-persisted install selection back from
-// state (so the reported agents/components always match what is actually on
-// disk, regardless of which in-memory selection the caller built along the
-// way) and hands it to telemetry.Opportunistic. It never returns an error
-// and never panics: telemetry is best-effort and must never affect the
-// caller's own exit code or output.
-func TelemetryTrigger(homeDir string) { telemetryTrigger(homeDir, os.Stderr) }
-
-// telemetryTriggerQuiet is the closure-hook variant: review and SDD phase
-// closures are machine-driven JSON verbs whose stderr belongs to the host
-// agent, so the one-time notice is never printed there. Until an
-// interactive command has shown it, these triggers record nothing and send
-// nothing.
-func telemetryTriggerQuiet(homeDir string) { telemetryTrigger(homeDir, nil) }
-
-func telemetryTrigger(homeDir string, stderr io.Writer) {
-	defer func() { _ = recover() }()
-	homeDir = strings.TrimSpace(homeDir)
-	if homeDir == "" {
-		return
-	}
-	agents, components, err := telemetryInstalledSelection(homeDir)
-	if err != nil {
-		return
-	}
-	telemetry.Opportunistic(telemetry.Deps{
-		HomeDir: homeDir, Getenv: os.Getenv, Stderr: stderr, Version: strings.TrimSpace(AppVersion),
-		Agents: agents, Components: components, RDDEnabled: telemetryRDDEnabled("."),
-	})
 }

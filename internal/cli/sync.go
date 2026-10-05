@@ -38,7 +38,6 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/skillregistry"
 	"github.com/IGutierrezZ/axiom/v3/internal/state"
 	"github.com/IGutierrezZ/axiom/v3/internal/system"
-	"github.com/IGutierrezZ/axiom/v3/internal/telemetry"
 	"github.com/IGutierrezZ/axiom/v3/internal/verify"
 )
 
@@ -2034,10 +2033,6 @@ func RunSync(args []string) (SyncResult, error) {
 		return result, err
 	}
 	result.DryRun = false
-	if scope != ScopeWorkspace {
-		_ = telemetry.IncrementSyncs(homeDir)
-		TelemetryTrigger(homeDir)
-	}
 	return result, nil
 }
 
