@@ -231,3 +231,22 @@ func TestRetireInstalledKeepsLinkedSkillDirectory(t *testing.T) {
 		t.Fatalf("result = %+v, want the link kept", got)
 	}
 }
+
+func TestStillNamedRetired(t *testing.T) {
+	root := t.TempDir()
+	writeSkill(t, root, "branch-pr", "---\nname: branch-pr\ndescription: x\n---\nbody\n")
+	writeSkill(t, root, "gentle-ai-bench", "---\r\nname: \"gentle-ai-bench\"\r\n---\r\n")
+	if got := StillNamedRetired(root); !slices.Equal(got, []string{filepath.Join(root, "branch-pr"), filepath.Join(root, "gentle-ai-bench")}) {
+		t.Fatalf("still-named copies = %v", got)
+	}
+
+	renamed := t.TempDir()
+	writeSkill(t, renamed, "branch-pr", "---\nname: axiom-branch-pr\n---\n")
+	writeSkill(t, renamed, "gentle-ai-bench", "no frontmatter\nname: gentle-ai-bench\n")
+	if got := StillNamedRetired(renamed); len(got) != 0 {
+		t.Fatalf("renamed or unframed copies reported: %v", got)
+	}
+	if got := StillNamedRetired(filepath.Join(renamed, "absent")); len(got) != 0 {
+		t.Fatalf("missing root reported: %v", got)
+	}
+}

@@ -2,6 +2,8 @@ package cli
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"os"
@@ -26,6 +28,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/components/filemerge"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/persona"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/sdd"
+	"github.com/IGutierrezZ/axiom/v3/internal/components/skills"
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
 	opencodeconfig "github.com/IGutierrezZ/axiom/v3/internal/opencode"
 	"github.com/IGutierrezZ/axiom/v3/internal/pipeline"
@@ -6771,4 +6774,184 @@ func TestRunSyncRetiredSkillInPersistedSelectionDoesNotFailVerification(t *testi
 			}
 		})
 	}
+}
+
+// seedRetiredSkillFingerprints makes a synthetic SKILL.md count as an
+// unmodified retired copy, so the tests need no historical asset.
+func seedRetiredSkillFingerprints(t *testing.T, pristine string) {
+	t.Helper()
+	sum := sha256.Sum256([]byte(pristine))
+	known := map[model.SkillID][]string{
+		"branch-pr":       {hex.EncodeToString(sum[:])},
+		"gentle-ai-bench": {hex.EncodeToString(sum[:])},
+	}
+	restoreInspect, restoreRetire := inspectRetiredSkills, retireInstalledSkills
+	inspectRetiredSkills = func(root string) skills.RetiredCopies { return skills.InspectRetiredAgainst(root, known) }
+	retireInstalledSkills = func(root string) skills.RetiredCopies { return skills.RetireInstalledAgainst(root, known) }
+	t.Cleanup(func() { inspectRetiredSkills, retireInstalledSkills = restoreInspect, restoreRetire })
+}
+
+func writeRetiredSkillCopy(t *testing.T, root, id, content string) string {
+	t.Helper()
+	dir := filepath.Join(root, id)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(dir, "SKILL.md")
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	return path
+}
+
+// TestRunSyncRetiresInstalledCopiesOfRetiredSkills covers both scopes: an
+// unmodified copy is removed (a workspace sync also clears the home directory,
+// where a global install left it), a modified one is kept, and a second sync
+// has nothing left to do.
+func TestRunSyncRetiresInstalledCopiesOfRetiredSkills(t *testing.T) {
+	const pristine = "pristine retired skill\n"
+	seedRetiredSkillFingerprints(t, pristine)
+	for _, tc := range []struct {
+		name      string
+		scope     string
+		inWorkdir bool
+	}{
+		{name: "global", scope: "global"},
+		{name: "workspace", scope: "workspace", inWorkdir: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			workspace := t.TempDir()
+			t.Chdir(workspace)
+			home := t.TempDir()
+			if err := state.Write(home, state.InstallState{
+				InstalledAgents:     []string{"claude-code"},
+				SelectionConfigured: true,
+				Components:          []model.ComponentID{model.ComponentSkills},
+				Skills:              []model.SkillID{model.SkillGoTesting},
+				Persona:             "custom",
+			}); err != nil {
+				t.Fatal(err)
+			}
+			restoreHome := osUserHomeDir
+			restoreBackupHome := backup.UserHomeDirFn
+			osUserHomeDir = func() (string, error) { return home, nil }
+			backup.UserHomeDirFn = func() (string, error) { return home, nil }
+			t.Cleanup(func() { osUserHomeDir = restoreHome; backup.UserHomeDirFn = restoreBackupHome })
+
+			homeSkills := filepath.Join(home, ".claude", "skills")
+			owned := []string{writeRetiredSkillCopy(t, homeSkills, "branch-pr", pristine)}
+			modified := writeRetiredSkillCopy(t, homeSkills, "gentle-ai-bench", pristine+"user edit\n")
+			if tc.inWorkdir {
+				owned = append(owned, writeRetiredSkillCopy(t, filepath.Join(workspace, ".claude", "skills"), "branch-pr", pristine))
+			}
+
+			args := []string{"--agents", "claude-code", "--scope", tc.scope}
+			result, err := RunSync(args)
+			if err != nil {
+				t.Fatalf("RunSync() error = %v", err)
+			}
+			for _, path := range owned {
+				if _, err := os.Stat(path); !os.IsNotExist(err) {
+					t.Errorf("unmodified retired copy %s remains: %v", path, err)
+				}
+				if !slices.Contains(result.ChangedFiles, path) {
+					t.Errorf("removed copy %s missing from ChangedFiles: %v", path, result.ChangedFiles)
+				}
+			}
+			if got, err := os.ReadFile(modified); err != nil || string(got) != pristine+"user edit\n" {
+				t.Fatalf("modified copy changed: %q, %v", got, err)
+			}
+
+			again, err := RunSync(args)
+			if err != nil {
+				t.Fatalf("second RunSync() error = %v", err)
+			}
+			for _, path := range owned {
+				if slices.Contains(again.ChangedFiles, path) {
+					t.Errorf("second sync reported %s again", path)
+				}
+			}
+		})
+	}
+}
+
+func TestSyncBackupTargetsIncludeOnlyOwnedRetiredSkills(t *testing.T) {
+	const pristine = "pristine retired skill\n"
+	seedRetiredSkillFingerprints(t, pristine)
+	home := t.TempDir()
+	workspace := t.TempDir()
+	owned := writeRetiredSkillCopy(t, filepath.Join(home, ".claude", "skills"), "branch-pr", pristine)
+	modified := writeRetiredSkillCopy(t, filepath.Join(workspace, ".claude", "skills"), "gentle-ai-bench", pristine+"edit")
+
+	targets, err := syncBackupTargetsScoped(home, workspace, ScopeWorkspace, model.Selection{
+		Agents: []model.AgentID{model.AgentClaudeCode},
+	}, resolveAdapters([]model.AgentID{model.AgentClaudeCode}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !containsPath(targets, owned) {
+		t.Errorf("owned copy %s missing from backup targets: %v", owned, targets)
+	}
+	if containsPath(targets, modified) {
+		t.Errorf("modified copy %s must not be a backup target", modified)
+	}
+	if _, err := os.Stat(owned); err != nil {
+		t.Fatalf("building targets must not remove files: %v", err)
+	}
+}
+
+// TestRunSyncWarnsOnlyAboutKeptCopiesStillNamedAfterTheRetiredSkill covers the
+// copies sync cannot prove are Axiom's: an edited copy that still declares the
+// retired name warns once and never fails the sync, while one renamed to Axiom's
+// own skill stays silent.
+func TestRunSyncWarnsOnlyAboutKeptCopiesStillNamedAfterTheRetiredSkill(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		skill    string
+		wantWarn bool
+	}{
+		{name: "edited copy still named branch-pr", skill: "---\nname: branch-pr\n---\nmy edits\n", wantWarn: true},
+		{name: "edited copy renamed to axiom-branch-pr", skill: "---\nname: axiom-branch-pr\n---\nmy edits\n"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Chdir(t.TempDir())
+			home := t.TempDir()
+			if err := state.Write(home, state.InstallState{
+				InstalledAgents:     []string{"claude-code"},
+				SelectionConfigured: true,
+				Components:          []model.ComponentID{model.ComponentSkills},
+				Skills:              []model.SkillID{model.SkillGoTesting},
+				Persona:             "custom",
+			}); err != nil {
+				t.Fatal(err)
+			}
+			restoreHome := osUserHomeDir
+			restoreBackupHome := backup.UserHomeDirFn
+			osUserHomeDir = func() (string, error) { return home, nil }
+			backup.UserHomeDirFn = func() (string, error) { return home, nil }
+			t.Cleanup(func() { osUserHomeDir = restoreHome; backup.UserHomeDirFn = restoreBackupHome })
+			kept := writeRetiredSkillCopy(t, filepath.Join(home, ".claude", "skills"), "branch-pr", tc.skill)
+
+			// Workspace scope reaches the home directory through two roots; the
+			// warning must still fire once per copy.
+			result, err := RunSync([]string{"--agents", "claude-code", "--scope", "workspace"})
+			if err != nil {
+				t.Fatalf("RunSync() error = %v", err)
+			}
+			if _, err := os.Stat(kept); err != nil {
+				t.Fatalf("edited copy was removed: %v", err)
+			}
+			warning := "WARNING: " + filepath.Dir(kept) + ": " + skills.ErrRetiredSkillKept.Error()
+			if got := strings.Count(RenderSyncReport(result), warning); got != btoi(tc.wantWarn) {
+				t.Fatalf("warning count = %d, want %d in:\n%s", got, btoi(tc.wantWarn), RenderSyncReport(result))
+			}
+		})
+	}
+}
+
+func btoi(b bool) int {
+	if b {
+		return 1
+	}
+	return 0
 }
