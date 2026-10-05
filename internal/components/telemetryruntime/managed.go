@@ -6,33 +6,36 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/IGutierrezZ/axiom/v3/internal/opencode"
 	"io"
 	"os"
 	"path/filepath"
 	"runtime"
-	"strings"
 
-	"github.com/IGutierrezZ/axiom/v3/internal/assets"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/mutationjournal"
 )
 
 const ownershipSchema = "gentle-ai.telemetry-runtime-ownership/v1"
-const ownershipMarker = "// gentle-ai:managed telemetry-runtime/v1\n"
 
-// approvedPriorPluginDigests is an append-only provenance allowlist. Each
-// managed plugin change must add the immediately previous embedded asset digest.
-// Commit a9cab7dd embedded telemetry-runtime.ts with SHA-256
-// 902fe09299c0bb04590f12ba993a196b838e1fbbd8a94e96100ea3d5f30182b7.
-const priorPluginDigestA9cab7dd = "902fe09299c0bb04590f12ba993a196b838e1fbbd8a94e96100ea3d5f30182b7"
+// Axiom no longer ships or installs the OpenCode telemetry plugin. This package
+// only retires an installed copy, so ownership is proven against a fixed,
+// append-never allowlist of every plugin digest ever shipped, not against an
+// embedded asset.
+const (
+	// Commit a9cab7dd embedded telemetry-runtime.ts (v1) with this digest.
+	shippedPluginDigestA9cab7dd = "902fe09299c0bb04590f12ba993a196b838e1fbbd8a94e96100ea3d5f30182b7"
+	// Upstream Gentle-AI v3.0.2 embedded telemetry-runtime.ts with this digest.
+	shippedPluginDigestGentleAIV3 = "54150f7d76d684c39d2567312d22bd5a188390be5d98da16eb1e8833f9665bd4"
+	// The last Axiom v1 plugin (OpenCode 1.x).
+	shippedPluginDigestAxiomV1 = "ff05ed23208eb57264b2bcb74ca9c386a2ceedc399362df8b2199cfedc612479"
+	// The last Axiom v2 plugin (OpenCode 2.x).
+	shippedPluginDigestAxiomV2 = "8053fc82e69ee7a338e10797ebec00395f1cc3ae9d0b478422fccefaf520f803"
+)
 
-// Upstream Gentle-AI v3.0.2 embedded telemetry-runtime.ts with SHA-256
-// 54150f7d76d684c39d2567312d22bd5a188390be5d98da16eb1e8833f9665bd4.
-const priorPluginDigestGentleAIV3 = "54150f7d76d684c39d2567312d22bd5a188390be5d98da16eb1e8833f9665bd4"
-
-var approvedPriorPluginDigests = map[string]struct{}{
-	priorPluginDigestA9cab7dd:   {},
-	priorPluginDigestGentleAIV3: {},
+var shippedPluginDigests = map[string]struct{}{
+	shippedPluginDigestA9cab7dd:   {},
+	shippedPluginDigestGentleAIV3: {},
+	shippedPluginDigestAxiomV1:    {},
+	shippedPluginDigestAxiomV2:    {},
 }
 
 // Windows exposes writable regular files as 0666 regardless of the requested
@@ -160,16 +163,7 @@ func inspect(configDir string) ([][]byte, error) {
 		(!managedModeMatches(0600, os.FileMode(manifest.File.Mode)) && !managedModeMatches(0644, os.FileMode(manifest.File.Mode))) || manifest.File.AfterHash != fmt.Sprintf("%x", sha256.Sum256([]byte(manifest.File.After))) {
 		return nil, conflict
 	}
-	assetDir := "opencode/plugins/"
-	_, approvedPrior := approvedPriorPluginDigests[manifest.File.AfterHash]
-	if strings.HasPrefix(manifest.File.After, "// gentle-ai:managed telemetry-runtime/v2\n") {
-		assetDir = "opencode/plugins-v2/"
-		// V2 has no released prior asset digest yet. V1 provenance never admits V2.
-		approvedPrior = false
-	}
-	embedded, err := assets.Read(assetDir + "telemetry-runtime.ts")
-	embeddedDigest := fmt.Sprintf("%x", sha256.Sum256([]byte(embedded)))
-	if err != nil || (manifest.File.AfterHash != embeddedDigest && !approvedPrior) {
+	if _, shipped := shippedPluginDigests[manifest.File.AfterHash]; !shipped {
 		return nil, conflict
 	}
 	for i, path := range paths {
@@ -226,132 +220,10 @@ func manifestObject(raw []byte, keys ...string) (map[string]json.RawMessage, err
 }
 
 // CheckManaged refuses unsafe/conflicting targets before a lifecycle snapshot.
-// Reconcile and removal also recheck at execution time.
+// Removal also rechecks at execution time.
 func CheckManaged(configDir string) error {
 	_, err := inspect(configDir)
 	return err
-}
-
-// Reconcile installs or refreshes only this managed asset. Permission is checked
-// by the plugin at runtime, never by installation: disabled installs stay inert.
-func Reconcile(configDir string) ([]string, error) {
-	changed, _, err := ReconcileForMajorWithRollback(configDir, opencode.RuntimeV1)
-	return changed, err
-}
-
-type guardedFile struct {
-	configDir string
-	path      string
-	journal   *mutationjournal.Journal
-	expected  []byte
-	mode      os.FileMode
-}
-
-func (f *guardedFile) restore() error {
-	if f.expected == nil {
-		return nil
-	}
-	// Do not infer permission from the editable on-disk ownership manifest.
-	// Each file must match its independently retained in-memory post-image.
-	if err := checkManagedPath(f.configDir, f.path); err != nil {
-		return fmt.Errorf("telemetry runtime rollback conflict: %w", err)
-	}
-	if err := f.journal.Validate(f.path); err != nil {
-		return fmt.Errorf("telemetry runtime rollback conflict: %w", err)
-	}
-	current, err := readManaged(f.path)
-	info, statErr := os.Lstat(f.path)
-	if err != nil || statErr != nil || !managedModeMatches(f.mode, info.Mode()) || !bytes.Equal(current, f.expected) {
-		return fmt.Errorf("telemetry runtime rollback conflict: %s; edited file preserved", f.path)
-	}
-	if err := f.journal.Restore(); err != nil {
-		return err
-	}
-	f.expected = nil
-	return nil
-}
-
-// ReconcileForMajorWithRollback retains per-file journals for the selected runtime.
-// The caller must exclude this pair from unconditional snapshot restoration, even
-// if reconcile fails or never runs. Safe members restore despite other conflicts.
-func ReconcileForMajorWithRollback(configDir string, major opencode.RuntimeMajor) (changed []string, rollback func() error, err error) {
-	assetDir, err := major.PluginAssetDirectory()
-	if err != nil {
-		return nil, nil, err
-	}
-	current, err := inspect(configDir)
-	if err != nil {
-		return nil, nil, err
-	}
-	content, err := assets.Read(assetDir + "telemetry-runtime.ts")
-	if err != nil {
-		return nil, nil, err
-	}
-	paths := ManagedPaths(configDir)
-	files := make([]guardedFile, 2)
-	for i, path := range paths {
-		files[i] = guardedFile{configDir: configDir, path: path, journal: mutationjournal.New(configDir), mode: 0600}
-		if i == 0 {
-			files[i].mode = 0644
-		}
-		if current[i] != nil {
-			info, statErr := os.Lstat(path)
-			if statErr != nil {
-				return nil, nil, statErr
-			}
-			files[i].mode = info.Mode()
-		}
-		if err = files[i].journal.Capture(path); err != nil {
-			return nil, nil, err
-		}
-	}
-	rollback = func() error {
-		var conflicts []error
-		for i := range files {
-			conflicts = append(conflicts, files[i].restore())
-		}
-		return errors.Join(conflicts...)
-	}
-	defer func() {
-		if err != nil {
-			err = errors.Join(err, rollback())
-		}
-	}()
-	if _, err = inspect(configDir); err != nil {
-		return nil, rollback, err
-	}
-	files[0].expected = []byte(content)
-	owned, err := files[0].journal.WriteWithMode(paths[0], []byte(content), files[0].mode)
-	if err != nil {
-		return nil, rollback, err
-	}
-	info, err := os.Lstat(paths[0])
-	if err != nil {
-		return nil, rollback, err
-	}
-	if !managedModeMatches(files[0].mode, info.Mode()) {
-		return nil, rollback, fmt.Errorf("telemetry runtime mode conflict: %s", paths[0])
-	}
-	owned.Before = nil
-	owned.Mode = uint32(info.Mode().Perm()) // The writer preserves existing modes.
-	metadata, err := json.MarshalIndent(managedManifest{ownershipSchema, owned}, "", "  ")
-	if err != nil {
-		return nil, rollback, err
-	}
-	metadata = append(metadata, '\n')
-	files[1].expected = metadata
-	if _, err = files[1].journal.WriteWithMode(paths[1], metadata, files[1].mode); err != nil {
-		return nil, rollback, err
-	}
-	if _, err = inspect(configDir); err != nil {
-		return nil, rollback, err
-	}
-	for i, data := range [][]byte{[]byte(content), metadata} {
-		if !bytes.Equal(current[i], data) {
-			changed = append(changed, paths[i])
-		}
-	}
-	return changed, rollback, nil
 }
 
 // RemoveManaged validates the pair immediately before transactional removal.

@@ -7,7 +7,7 @@ version evidence refuses incompatible writes rather than assuming V2.
 | Surface | V1 | V2 (tested release: 2.0.4) |
 | --- | --- | --- |
 | Config, model references and permissions | Existing behavior retained | Native config/profile/MCP handling and permission-preserving merges tested |
-| Managed plugins | Existing assets retained | Separate telemetry, model catalog, skill registry, SDD and staged review assets |
+| Managed plugins | Existing assets retained | Separate model catalog, skill registry, SDD and staged review assets (no telemetry plugin: an installed Axiom-owned copy is removed on install and sync) |
 | Gentle logo | Existing placement unchanged | Explicitly skipped; no equivalent `home_logo` slot, no relocation or config writes |
 | Community TUI plugins | Existing integration retained | Compatibility unproven; installation/update refuses, not silently omitted |
 | Native review | Existing V1 capability path retained | Unavailable; no positive review admission advertised |

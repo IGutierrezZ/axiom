@@ -25,6 +25,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/components/communitytool"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/engram"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/gga"
+	"github.com/IGutierrezZ/axiom/v3/internal/components/mutationjournal"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/sdd"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/skills"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/telemetryruntime"
@@ -33,6 +34,36 @@ import (
 	opencodeactivation "github.com/IGutierrezZ/axiom/v3/internal/opencode"
 	"github.com/IGutierrezZ/axiom/v3/internal/state"
 )
+
+// writeLegacyTelemetryPair reproduces the plugin and ownership manifest that
+// releases before the telemetry retirement installed. The plugin is no longer
+// shipped, so the vendored copy of its last version stands in for it.
+func writeLegacyTelemetryPair(t *testing.T, configDir string) {
+	t.Helper()
+	content, err := os.ReadFile(filepath.Join("..", "telemetryruntime", "testdata", "telemetry-runtime-axiom-v1.ts"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	paths := telemetryruntime.ManagedPaths(configDir)
+	if err := os.MkdirAll(filepath.Dir(paths[0]), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(paths[0], content, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	manifest, err := json.MarshalIndent(map[string]any{
+		"schema": "gentle-ai.telemetry-runtime-ownership/v1",
+		"file": mutationjournal.OwnedFile{
+			After: string(content), AfterHash: fmt.Sprintf("%x", sha256.Sum256(content)), Mode: 0o644,
+		},
+	}, "", "  ")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(paths[1], append(manifest, '\n'), 0o600); err != nil {
+		t.Fatal(err)
+	}
+}
 
 func TestUninstallOpenCodeTelemetryOwnershipAndScope(t *testing.T) {
 	for _, kind := range []string{"owned", "modified", "modified-after-plan", "unowned", "other-agent", "component-only"} {
@@ -43,9 +74,7 @@ func TestUninstallOpenCodeTelemetryOwnershipAndScope(t *testing.T) {
 			config := opencode.NewAdapter().GlobalConfigDir(home)
 			paths := telemetryruntime.ManagedPaths(config)
 			if kind != "unowned" {
-				if _, err := telemetryruntime.Reconcile(config); err != nil {
-					t.Fatal(err)
-				}
+				writeLegacyTelemetryPair(t, config)
 			}
 			if kind == "modified" || kind == "unowned" {
 				if err := os.MkdirAll(filepath.Dir(paths[0]), 0700); err != nil {

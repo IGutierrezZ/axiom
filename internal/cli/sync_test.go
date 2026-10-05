@@ -34,50 +34,6 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/verify"
 )
 
-func TestSyncOpenCodeTelemetryReconcilesMissingWithoutSDD(t *testing.T) {
-	home := t.TempDir()
-	setOpenCodeTestHome(t, home)
-	t.Setenv("XDG_CONFIG_HOME", filepath.Join(home, "xdg"))
-	t.Setenv("DO_NOT_TRACK", "1")
-	selection := model.Selection{Agents: []model.AgentID{model.AgentOpenCode}}
-	path := filepath.Join(home, "xdg", "opencode", "plugins", "telemetry-runtime.ts")
-	runSyncInjectionSteps(t, home, selection)
-	data, err := os.ReadFile(path)
-	if err != nil || string(data) != assets.MustRead("opencode/plugins/telemetry-runtime.ts") {
-		t.Fatal("ordinary sync did not reconcile missing runtime", err)
-	}
-	changed := runSyncInjectionSteps(t, home, selection)
-	for _, p := range changed {
-		if p == path {
-			t.Fatal("unchanged runtime reported as changed")
-		}
-	}
-	rt, err := newSyncRuntime(home, selection)
-	if err != nil {
-		t.Fatal(err)
-	}
-	rt.stagePlan()
-	if !containsString(rt.managedPaths, path) {
-		t.Fatal("runtime missing from sync snapshot")
-	}
-	// A user edit to an owned asset is a conflict, never an overwrite.
-	if err := os.WriteFile(path, []byte("user plugin"), 0600); err != nil {
-		t.Fatal(err)
-	}
-	var conflict error
-	for _, step := range rt.stagePlan().Apply {
-		if step.ID() == "sync:opencode:telemetry-runtime" {
-			conflict = step.Run()
-		}
-	}
-	if conflict == nil {
-		t.Fatal("user-modified runtime not reported as conflict")
-	}
-	if data, _ := os.ReadFile(path); string(data) != "user plugin" {
-		t.Fatal("user plugin overwritten")
-	}
-}
-
 // ─── Phase 1: ParseSyncFlags ───────────────────────────────────────────────
 
 func TestParseSyncFlagsDefaults(t *testing.T) {
@@ -1561,12 +1517,10 @@ func TestRunSyncDoesNotRefreshPersistedVisualThemes(t *testing.T) {
 		backup.UserHomeDirFn = restoreBackupHome
 	})
 
-	// Runtime telemetry files are reconciled; persisted visual themes are ignored.
+	// Persisted visual themes are ignored and no telemetry plugin is written.
 	// The last two entries are the routing guidance targets. Guidance is written
 	// for every configured agent regardless of which components are persisted.
 	wantFiles := []string{
-		filepath.Join(home, ".config", "opencode", "plugins", "telemetry-runtime.ts"),
-		filepath.Join(home, ".config", "opencode", ".gentle-ai-telemetry-runtime.json"),
 		filepath.Join(home, ".config", "opencode", "tui-plugins", "gentle-logo.tsx"),
 		filepath.Join(home, ".config", "opencode", "tui.json"),
 		filepath.Join(home, ".claude", "CLAUDE.md"),

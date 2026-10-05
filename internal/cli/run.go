@@ -229,6 +229,7 @@ func RunInstall(args []string, detection system.DetectionResult) (InstallResult,
 		return result, fmt.Errorf("execute install pipeline: %w", result.Execution.Err)
 	}
 	result.PiCodeGraph = runtime.state.piCodeGraph
+	result.Execution.ManualActions = append(result.Execution.ManualActions, runtime.state.retirementNotes...)
 	result.Verify = runPostApplyVerification(postApplyVerificationInput{
 		HomeDir:      homeDir,
 		WorkspaceDir: runtime.workspaceDir,
@@ -658,7 +659,11 @@ type installRuntime struct {
 }
 
 type runtimeState struct {
-	telemetryRollback        func() error
+	// retiredFiles and retirementNotes carry the outcome of the OpenCode
+	// telemetry plugin retirement: files removed, and non-fatal warnings for
+	// copies kept because ownership could not be proven.
+	retiredFiles             []string
+	retirementNotes          []string
 	manifest                 backup.Manifest
 	rollbackSnapshotDir      string
 	piCodeGraph              *communitytool.PiCodeGraphResult
@@ -749,14 +754,8 @@ func (r *installRuntime) stagePlan() pipeline.StagePlan {
 	}
 
 	apply := make([]pipeline.Step, 0, len(r.resolved.Agents)+len(r.selection.CommunityTools)+len(r.resolved.OrderedComponents)+1)
-	telemetryDir := openCodeTelemetryConfigDir(r.homeDir, r.workspaceDir, r.scope, r.resolved.Agents)
-	if telemetryDir != "" {
-		prepare = append([]pipeline.Step{openCodeTelemetryStep{id: "prepare:opencode-telemetry", configDir: telemetryDir, checkOnly: true}}, prepare...)
-	}
-	apply = append(apply, rollbackRestoreStep{id: "apply:rollback-restore", state: r.state, homeDir: r.homeDir, workspaceDir: r.workspaceDir, telemetryConfigDir: telemetryDir})
-	if telemetryDir != "" {
-		apply = append(apply, openCodeTelemetryStep{id: "opencode:telemetry-runtime", configDir: telemetryDir, state: r.state})
-	}
+	openCodeDir := openCodeGlobalConfigDir(r.homeDir, r.workspaceDir, r.scope, r.resolved.Agents)
+	apply = append(apply, rollbackRestoreStep{id: "apply:rollback-restore", state: r.state, homeDir: r.homeDir, workspaceDir: r.workspaceDir, openCodeConfigDir: openCodeDir})
 	if r.backgroundActivation != nil {
 		apply = append(apply, openCodeBackgroundActivationStep{id: "opencode:background-activation", plan: r.backgroundActivation, state: r.state, ready: &r.runtimeReady})
 	}
@@ -840,6 +839,10 @@ func (r *installRuntime) stagePlan() pipeline.StagePlan {
 			stepID = "community-tool:pi-codegraph-deselect"
 		}
 		apply = append(apply, piCodeGraphReconcileStep{id: stepID, homeDir: r.homeDir, workspaceDir: r.workspaceDir, selected: selected, state: r.state})
+	}
+	// Retire last so a failing earlier step never leaves the plugin half-removed.
+	if telemetryDir := openCodeGlobalConfigDir(r.homeDir, r.workspaceDir, r.scope, r.resolved.Agents); telemetryDir != "" {
+		apply = append(apply, openCodeTelemetryRetirementStep{id: "opencode:retire-telemetry-plugin", configDir: telemetryDir, state: r.state})
 	}
 
 	return pipeline.StagePlan{Prepare: prepare, Apply: apply}
@@ -1187,11 +1190,15 @@ func (s prepareBackupStep) Run() error {
 }
 
 type rollbackRestoreStep struct {
-	id                 string
-	state              *runtimeState
-	homeDir            string
-	workspaceDir       string
-	telemetryConfigDir string // Selected adapter authority, potentially outside HOME via XDG.
+	id           string
+	state        *runtimeState
+	homeDir      string
+	workspaceDir string
+	// openCodeConfigDir is the selected OpenCode global config directory. It is a
+	// restore root of its own because XDG_CONFIG_HOME can place it outside HOME,
+	// while the snapshot still covers managed files under it. Empty when OpenCode
+	// is not selected.
+	openCodeConfigDir string
 }
 
 type openCodeBackgroundActivationStep struct {
@@ -1226,28 +1233,14 @@ func (s rollbackRestoreStep) Run() error {
 func (s rollbackRestoreStep) Rollback() error {
 	defer s.state.cleanupRollbackSnapshot()
 	manifest := s.state.manifest
-	var telemetryErr error
-	roots := rollbackRoots(s.homeDir, s.workspaceDir)
-	if s.telemetryConfigDir != "" {
-		roots = append(roots, s.telemetryConfigDir)
-		// The retained journals, never the generic backup, own this pair's rollback.
-		// Exclude even when its apply step failed or never ran: restoring an absent
-		// snapshot entry would otherwise delete a concurrent user's new file.
-		protected := telemetryruntime.ManagedPaths(s.telemetryConfigDir)
-		manifest.Entries = nil
-		for _, entry := range s.state.manifest.Entries {
-			if filepath.Clean(entry.OriginalPath) != protected[0] && filepath.Clean(entry.OriginalPath) != protected[1] {
-				manifest.Entries = append(manifest.Entries, entry)
-			}
-		}
-		if s.state.telemetryRollback != nil {
-			telemetryErr = s.state.telemetryRollback()
-		}
-	}
 	if len(manifest.Entries) == 0 {
-		return telemetryErr
+		return nil
 	}
-	return errors.Join(telemetryErr, (backup.RestoreService{Roots: roots}).Restore(manifest))
+	roots := rollbackRoots(s.homeDir, s.workspaceDir)
+	if s.openCodeConfigDir != "" {
+		roots = append(roots, s.openCodeConfigDir)
+	}
+	return (backup.RestoreService{Roots: roots}).Restore(manifest)
 }
 
 // rollbackRoots returns the directories this install/sync run could
@@ -1278,7 +1271,10 @@ type agentInstallStep struct {
 	progress pipeline.ProgressFunc
 }
 
-func openCodeTelemetryConfigDir(home, workspace string, scope InstallScope, agentIDs []model.AgentID) string {
+// openCodeGlobalConfigDir resolves the selected OpenCode global config
+// directory, or "" when OpenCode is not selected. XDG_CONFIG_HOME can place it
+// outside HOME, so rollback must treat it as a restore root of its own.
+func openCodeGlobalConfigDir(home, workspace string, scope InstallScope, agentIDs []model.AgentID) string {
 	if !containsAgent(agentIDs, model.AgentOpenCode) {
 		return ""
 	}
@@ -1286,31 +1282,33 @@ func openCodeTelemetryConfigDir(home, workspace string, scope InstallScope, agen
 	return adapter.GlobalConfigDir(componentInjectionDirScoped(home, workspace, scope, adapter))
 }
 
-type openCodeTelemetryStep struct {
-	state        *runtimeState
-	id           string
-	configDir    string
-	changedFiles *[]string
-	checkOnly    bool
+// openCodeTelemetryRetirementStep removes the OpenCode telemetry plugin that
+// earlier releases installed. Axiom no longer installs it: it shelled out to a
+// `gentle-ai` binary, so an upstream `gentle-ai` on PATH would have received
+// runtime telemetry through it. Retirement is best effort and never fails the
+// run, and it has no rollback because restoring the plugin would reinstall the
+// unwanted behaviour. A copy that is edited or whose ownership cannot be proven
+// is kept and reported as a warning for the user to act on.
+type openCodeTelemetryRetirementStep struct {
+	state     *runtimeState
+	id        string
+	configDir string
 }
 
-func (s openCodeTelemetryStep) ID() string { return s.id }
-func (s openCodeTelemetryStep) Run() error {
-	if s.checkOnly {
-		return telemetryruntime.CheckManaged(s.configDir)
+func (s openCodeTelemetryRetirementStep) ID() string { return s.id }
+
+func (s openCodeTelemetryRetirementStep) Run() error {
+	removed, err := telemetryruntime.RemoveManaged(s.configDir)
+	if s.state == nil {
+		return nil
 	}
-	major, err := opencodeactivation.DetectRuntimeMajor(context.Background())
+	s.state.retiredFiles = append(s.state.retiredFiles, removed...)
 	if err != nil {
-		return err
+		s.state.retirementNotes = append(s.state.retirementNotes, fmt.Sprintf(
+			"The retired OpenCode telemetry plugin was kept (%v). It may still call a 'gentle-ai' binary; review or delete %s manually.",
+			err, filepath.Join(s.configDir, "plugins", "telemetry-runtime.ts")))
 	}
-	changed, rollback, err := telemetryruntime.ReconcileForMajorWithRollback(s.configDir, major)
-	if s.state != nil {
-		s.state.telemetryRollback = rollback
-	}
-	if s.changedFiles != nil {
-		*s.changedFiles = append(*s.changedFiles, changed...)
-	}
-	return err
+	return nil
 }
 
 type openCodePluginInstallStep struct {
@@ -1925,16 +1923,22 @@ func executeTUIInstallWithBackground(homeDir string, selection model.Selection, 
 	if runtime.state.piCodeGraph != nil {
 		result.ManualActions = append(result.ManualActions, runtime.state.piCodeGraph.ManualActions...)
 	}
+	result.ManualActions = append(result.ManualActions, runtime.state.retirementNotes...)
 	return result, orchestrator
 }
 
 // RenderInstallManualActions renders non-fatal completion actions after the
 // normal verification report so CLI users receive the same drift guidance.
 func RenderInstallManualActions(result InstallResult) string {
-	if result.PiCodeGraph == nil || len(result.PiCodeGraph.ManualActions) == 0 {
+	var actions []string
+	if result.PiCodeGraph != nil {
+		actions = append(actions, result.PiCodeGraph.ManualActions...)
+	}
+	actions = append(actions, result.Execution.ManualActions...)
+	if len(actions) == 0 {
 		return ""
 	}
-	return "\nManual actions required:\n- " + strings.Join(result.PiCodeGraph.ManualActions, "\n- ") + "\n"
+	return "\nManual actions required:\n- " + strings.Join(actions, "\n- ") + "\n"
 }
 
 // ResolveInstallProfile returns the platform profile from detection, defaulting to darwin/brew.
@@ -2142,12 +2146,6 @@ func backupTargets(homeDir, workspaceDir string, scope InstallScope, selection m
 	paths := map[string]struct{}{}
 	adapters := resolveAdapters(resolved.Agents)
 	managesSDDPlugins := false
-	if configDir := openCodeTelemetryConfigDir(homeDir, workspaceDir, scope, resolved.Agents); configDir != "" {
-		for _, path := range telemetryruntime.ManagedPaths(configDir) {
-			paths[path] = struct{}{}
-		}
-	}
-
 	for _, component := range resolved.OrderedComponents {
 		managesSDDPlugins = managesSDDPlugins || component == model.ComponentSDD
 		for _, path := range componentPathsWithWorkspaceScoped(homeDir, workspaceDir, scope, selection, adapters, component) {
