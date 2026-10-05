@@ -6759,3 +6759,62 @@ func TestRunSyncWithSelectionScopedWorkspaceDoesNotTouchHomeState(t *testing.T) 
 		t.Errorf("legacy global state file %q was created during workspace-scoped sync", legacyStatePath)
 	}
 }
+
+// TestRunSyncRetiredSkillInPersistedSelectionDoesNotFailVerification pins the
+// regression introduced when branch-pr and gentle-ai-bench were removed: a
+// persisted selection still naming them used to demand a SKILL.md that
+// injection never writes, so post-sync verification failed and the whole sync
+// rolled back, in global and workspace scope alike.
+func TestRunSyncRetiredSkillInPersistedSelectionDoesNotFailVerification(t *testing.T) {
+	for _, tc := range []struct {
+		name      string
+		scopeArgs []string
+		skillRoot func(home, workspace string) string
+	}{
+		{
+			name:      "global",
+			scopeArgs: []string{"--scope", "global"},
+			skillRoot: func(home, _ string) string { return filepath.Join(home, ".claude", "skills") },
+		},
+		{
+			name:      "workspace",
+			scopeArgs: []string{"--scope", "workspace"},
+			skillRoot: func(_, workspace string) string { return filepath.Join(workspace, ".claude", "skills") },
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			workspace := t.TempDir()
+			t.Chdir(workspace)
+			home := t.TempDir()
+			if err := state.Write(home, state.InstallState{
+				InstalledAgents:     []string{"claude-code"},
+				SelectionConfigured: true,
+				Components:          []model.ComponentID{model.ComponentSkills},
+				Skills:              []model.SkillID{"branch-pr", "gentle-ai-bench", model.SkillGoTesting},
+				Persona:             "custom",
+			}); err != nil {
+				t.Fatal(err)
+			}
+			restoreHome := osUserHomeDir
+			restoreBackupHome := backup.UserHomeDirFn
+			osUserHomeDir = func() (string, error) { return home, nil }
+			backup.UserHomeDirFn = func() (string, error) { return home, nil }
+			t.Cleanup(func() { osUserHomeDir = restoreHome; backup.UserHomeDirFn = restoreBackupHome })
+
+			args := append([]string{"--agents", "claude-code"}, tc.scopeArgs...)
+			if _, err := RunSync(args); err != nil {
+				t.Fatalf("RunSync() with retired skills in the persisted selection error = %v", err)
+			}
+
+			root := tc.skillRoot(home, workspace)
+			if _, err := os.Stat(filepath.Join(root, "go-testing", "SKILL.md")); err != nil {
+				t.Fatalf("non-retired skill was not installed: %v", err)
+			}
+			for _, retired := range []string{"branch-pr", "gentle-ai-bench"} {
+				if _, err := os.Stat(filepath.Join(root, retired)); !os.IsNotExist(err) {
+					t.Fatalf("retired skill %q must not be installed: %v", retired, err)
+				}
+			}
+		})
+	}
+}
