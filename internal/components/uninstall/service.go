@@ -24,6 +24,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/components/gga"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/opencodedefault"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/sdd"
+	"github.com/IGutierrezZ/axiom/v3/internal/components/skills"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/telemetryruntime"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/theme"
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
@@ -922,6 +923,11 @@ func (s *Service) componentOperations(adapter agents.Adapter, componentID model.
 		if skillDir == "" {
 			break
 		}
+		// Copies of skills that no longer ship are Axiom's leftovers too. They
+		// go first so the final removeDirIfEmpty can clear the skills root.
+		retiredTargets, retiredOps := retireInstalledSkillOps(skillDir)
+		targets = append(targets, retiredTargets...)
+		ops = append(ops, retiredOps...)
 		entries, err := fs.ReadDir(assets.FS, "skills")
 		if err != nil {
 			return nil, nil, fmt.Errorf("read embedded skills: %w", err)
@@ -1660,6 +1666,41 @@ func removeManagedVisualTheme(path string, adapter agents.Adapter) operation {
 			return true, true, nil
 		},
 	}
+}
+
+// Seams so tests can prove ownership against synthetic content.
+var (
+	inspectRetiredSkills  = skills.InspectRetired
+	retireInstalledSkills = skills.RetireInstalled
+)
+
+// retireInstalledSkillOps plans the removal of unmodified copies of retired
+// skills under skillDir, one operation per copy so each is reported. The
+// copies found at plan time are only candidates: the first operation to run
+// retires them through the library, which proves ownership again, so a copy
+// edited between planning and applying is kept. Modified copies get no
+// operation at all.
+func retireInstalledSkillOps(skillDir string) ([]string, []operation) {
+	owned := inspectRetiredSkills(skillDir).Owned
+	var (
+		retired skills.RetiredCopies
+		applied bool
+		ops     []operation
+	)
+	for _, path := range owned {
+		ops = append(ops, operation{
+			typeID: opRemoveFile,
+			path:   path,
+			apply: func(path string) (bool, bool, error) {
+				if !applied {
+					retired, applied = retireInstalledSkills(skillDir), true
+				}
+				removed := slices.Contains(retired.Owned, path)
+				return removed, removed, nil
+			},
+		})
+	}
+	return owned, ops
 }
 
 func removeTree(path string) operation {
