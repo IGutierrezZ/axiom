@@ -259,6 +259,7 @@ Que Axiom **deje de enviar datos al upstream Gentle AI y de dirigir acciones con
   - **Verificación:** huellas recalculadas desde el historial (las 6 coinciden); tests de `skills`, `uninstall`, `absorptionledger` y un subconjunto de `cli` en verde (writer y orquestador); ratchet limpio en cada commit; riesgo `medium` en los dos commits. El orquestador revisó la lógica de borrado: propiedad por huella, comprobación justo antes de borrar, sin seguir enlaces, sin `RemoveAll` y, ante un fallo, la copia se conserva.
 - **Orden de merge:** #81, después #82 (retarget a `main` y `rebase --onto`) y después #83.
 - **2026-10-05:** #81 fusionado (`6c97589a`); worktree `odd-up-t5a` y rama de S1 eliminados. #82 retargeteado a `main` y rebasado (`661abb22`); #83 rebasado encima (`bb315b5a`); los dos con `--force-with-lease` y pendientes de su CI.
+- **2026-10-05:** #82 en verde y fusionado (`0ea9aec6`); rama de S2 eliminada. #83 retargeteado a `main` y rebasado (`71c3466c`), pendiente de su CI.
 
 ### [ ] T6 · Retirar la telemetría por completo (tamaño L, varios PRs)
 
@@ -410,7 +411,7 @@ Cada PR lleva riesgo `high` probable (borrado masivo y hooks), así que necesita
 
 ## 8. Siguiente paso
 
-1. T5: fusionar #82 cuando esté en verde; después retarget y `rebase --onto` de #83, esperar su CI y fusionarlo. Después, eliminar el worktree `odd-up-t5b` y sus ramas.
+1. T5: fusionar #83 cuando su CI esté en verde (ya apunta a `main`). Después, eliminar el worktree `odd-up-t5b` y sus ramas.
 2. T6: plan de PRs con un agente Plan (lanzado el 2026-10-05), plantear al usuario la decisión del stub de `axiom telemetry runtime` y después ejecutar T6a a T6d.
 3. T7: plantear al usuario las decisiones de `axiom-collab-perfect` y `chained-pr` y diseñar la lectura dual de los contratos.
 4. PR de cierre con este documento.
