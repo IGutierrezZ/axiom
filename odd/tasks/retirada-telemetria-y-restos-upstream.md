@@ -357,7 +357,7 @@ Cada PR lleva riesgo `high` probable (borrado masivo y hooks), así que necesita
     - **Cambio:** deja de instalar los hooks de Claude y Codex y los retira en cada `install` o `sync` que inyecta SDD.
     - **Coincidencia exacta** con 4 comandos: `axiom` y `gentle-ai`, para `claude` y `codex`. Solo en `Stop` y `SubagentStop`. Conserva los hooks del usuario, borra los contenedores que quedan vacíos, es idempotente y nunca crea `settings.json`.
     - **Verificación:** paquete `sdd` completo y subconjuntos de `uninstall` y `cli` en verde. El orquestador revisó el helper.
-  - **T6d:** commit `1670fecf` (worktree `odd-up-t6d`, rama `fix/telemetria-retirar-plugin-opencode`). Pendiente del verificador independiente.
+  - **T6d: PR #86** (`7dc41fd4`, worktree `odd-up-t6d`, rama `fix/telemetria-retirar-plugin-opencode`). El verificador independiente encontró un **defecto bloqueante, ya corregido**: el directorio de configuración de OpenCode había dejado de ser raíz de restauración del *rollback*, que solo llegaba ahí por el código de telemetría. Con `XDG_CONFIG_HOME` fuera del HOME, un `install` o `sync` fallido no restauraba `skill-registry.ts`. Ahora `rollbackRestoreStep.openCodeConfigDir`, con el test de regresión `TestOpenCodeRollbackRestoresConfigOutsideHomeViaXDG` en `install` y `sync`. También se añadió el test de `AfterHash == sha256(After)`, cuya mutación sobrevivía. Tamaño final: 1658 líneas (+670 / −988), con `size:exception` aprobado. **Seguimiento:** el `sync` de la TUI pierde el aviso, porque `tui.SyncFunc` solo devuelve los ficheros cambiados.
     - **Tamaño:** 1518 líneas (+531 / −987). **`size:exception` aprobado por el usuario.**
     - **Cambios:**
       - `openCodeTelemetryRetirementStep` en `install` y `sync`, al final y no fatal;
