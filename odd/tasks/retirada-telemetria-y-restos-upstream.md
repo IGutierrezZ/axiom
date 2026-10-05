@@ -213,7 +213,7 @@ Que Axiom **deje de enviar datos al upstream Gentle AI y de dirigir acciones con
   - **Limpieza local:** el `~/.atl` del HOME real (del 2026-06-29, `skill-registry.md` y `.skill-registry.cache.json`), restos de este mismo fallo, se ha movido a `~/.atl.bak-2026-10-04` por decisión del usuario.
 - **Cerrada (2026-10-04):** CI en verde, fusionado con squash y eliminados el worktree `odd-up-t4` y la rama `fix/refreshskip-identidad`, local y remota.
 
-### [~] T5 · Retirar las skills descatalogadas de las instalaciones existentes
+### [x] T5 · Retirar las skills descatalogadas de las instalaciones existentes: **#81, #82 y #83 fusionados** (`6c97589a`, `0ea9aec6`, `304877de`)
 
 - **Problema:**
   - Las copias instaladas de `branch-pr` y `gentle-ai-bench` (retiradas en #70) siguen cargándose y compiten con `axiom-branch-pr` por el mismo trigger.
@@ -361,6 +361,13 @@ Cada PR lleva riesgo `high` probable (borrado masivo y hooks), así que necesita
     - #84 (T6a) fusionado como `b08fffe2` y #86 (T6d) como `482ecee0`. #86 se fusionó tal cual tras comprobar en local el rebase limpio sobre #84: build, vet y subconjunto de `cli` en verde. Worktrees `odd-up-t6a` y `odd-up-t6d` y sus ramas, eliminados.
     - #83 y #85 fallaron en CI por `TestOpenCodeV2CatalogAndRegistry` (`internal/assets`), que ninguno de los dos toca: el harness de Node lee `.gentle-ai/cache/opencode-v2` antes de que exista. Pasa en #84 y #86 sobre la misma base y 3 veces en local, así que es **intermitente**; queda propuesto como tarea aparte.
     - Los dos se rebasaron sobre `482ecee0`. #85 entró sin conflicto (`ca86c56e`). #83 tuvo un conflicto en `sync.go` con #86: se mantuvo `retiredSkillsCleanupStep` y se quitó el bloque `openCodeTelemetryStep`, ya borrado (`8009b96a`). Las dos ramas se validaron en local antes de subirlas con `--force-with-lease`; falta su CI.
+  - **2026-10-05, segunda tanda de merges:** #85 (T6c) fusionado como `d2a4099d` y #83 (T5 S3) como `304877de`. Worktrees `odd-up-t5b` y `odd-up-t6c` y sus ramas, eliminados. **T5 cerrada.**
+  - **`sync` en la máquina del usuario** (autorizado por el usuario en el chat):
+    - Copia previa en `~/.axiom/pre-sync-backup-2026-10-05/` (`claude-settings.json`, `telemetry-runtime.ts`, `state.json`).
+    - Binario compilado desde `origin/main` `304877de`; primero `--dry-run` y después `axiom sync --scope global` con `AXIOM_NO_PERSISTENT_PATH=1`, desde un directorio neutro. Salida 0.
+    - Resultado: 0 hooks de telemetría en `~/.claude/settings.json` (siguen `PreToolUse`, `SessionStart`, `Stop` y `UserPromptSubmit`); 0 en Codex; borrados `plugins/telemetry-runtime.ts` y `.gentle-ai-telemetry-runtime.json` de OpenCode; ninguna copia de `branch-pr` ni de `gentle-ai-bench`. `~/.gentle-ai/telemetry.json` queda intacto.
+    - `C:\repos\axiom\.claude\settings.json` (de ámbito workspace, sin versionar y del checkout de la otra sesión): por decisión del usuario, se quitaron solo esos 2 hooks con un script de coincidencia exacta, con copia en `settings.json.bak-2026-10-05`. Los demás hooks se conservan.
+  - **T6b:** en curso (worktree `odd-up-t6b`, rama `refactor/telemetria-borrar-comando`). Necesitará `size:exception`.
   - **T6d: PR #86** (`7dc41fd4`, worktree `odd-up-t6d`, rama `fix/telemetria-retirar-plugin-opencode`). El verificador independiente encontró un **defecto bloqueante, ya corregido**: el directorio de configuración de OpenCode había dejado de ser raíz de restauración del *rollback*, que solo llegaba ahí por el código de telemetría. Con `XDG_CONFIG_HOME` fuera del HOME, un `install` o `sync` fallido no restauraba `skill-registry.ts`. Ahora `rollbackRestoreStep.openCodeConfigDir`, con el test de regresión `TestOpenCodeRollbackRestoresConfigOutsideHomeViaXDG` en `install` y `sync`. También se añadió el test de `AfterHash == sha256(After)`, cuya mutación sobrevivía. Tamaño final: 1658 líneas (+670 / −988), con `size:exception` aprobado. **Seguimiento:** el `sync` de la TUI pierde el aviso, porque `tui.SyncFunc` solo devuelve los ficheros cambiados.
     - **Tamaño:** 1518 líneas (+531 / −987). **`size:exception` aprobado por el usuario.**
     - **Cambios:**
@@ -431,7 +438,7 @@ Cada PR lleva riesgo `high` probable (borrado masivo y hooks), así que necesita
 
 ## 8. Siguiente paso
 
-1. T5: fusionar #83 cuando su CI esté en verde (ya apunta a `main`). Después, eliminar el worktree `odd-up-t5b` y sus ramas.
+1. T6b (en curso), después T6e y T6f. Pedir `size:exception` para T6b y para T6e.
 2. T6: plan de PRs con un agente Plan (lanzado el 2026-10-05), plantear al usuario la decisión del stub de `axiom telemetry runtime` y después ejecutar T6a a T6d.
 3. T7: plantear al usuario las decisiones de `axiom-collab-perfect` y `chained-pr` y diseñar la lectura dual de los contratos.
 4. PR de cierre con este documento.
