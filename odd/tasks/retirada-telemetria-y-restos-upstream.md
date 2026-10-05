@@ -353,7 +353,11 @@ Cada PR lleva riesgo `high` probable (borrado masivo y hooks), así que necesita
   - **Instalación real (lectura del 2026-10-05):** 2 hooks en `~/.claude/settings.json`; el plugin `~/.config/opencode/plugins/telemetry-runtime.ts`; `~/.gentle-ai/telemetry.json` (no se borra, es compartido con el upstream); y `C:\repos\axiom\.claude\settings.json`, que no está versionado y pertenece al checkout de la otra sesión. Ningún fichero versionado del repositorio lleva hooks de telemetría.
 - **Progreso:**
   - **T6a: PR #84** (`600350b3`, rama `fix/telemetria-dejar-de-enviar`, worktree `odd-up-t6a`). Quita los disparadores automáticos de `app`, `run` y `sync` y las seis llamadas del cierre de revisiones, y borra lo que queda sin llamadores (`counters.go` incluido). +5 y −383 líneas, riesgo `medium`. Verificado: build y vet limpios; `internal/telemetry`, `internal/app` y subconjuntos de `internal/cli` en verde; ratchet sin funciones nuevas inalcanzables. Se mantienen `runTelemetryTriggerCommand` y sus helpers, que siguen siendo alcanzables desde `axiom telemetry trigger` hasta T6b.
-  - **T6c:** en curso (worktree `odd-up-t6c`, rama `fix/telemetria-retirar-hooks`).
+  - **T6c: PR #85** (`ed9fff1d`, rama `fix/telemetria-retirar-hooks`, worktree `odd-up-t6c`), con 359 líneas y riesgo `medium`.
+    - **Cambio:** deja de instalar los hooks de Claude y Codex y los retira en cada `install` o `sync` que inyecta SDD.
+    - **Coincidencia exacta** con 4 comandos: `axiom` y `gentle-ai`, para `claude` y `codex`. Solo en `Stop` y `SubagentStop`. Conserva los hooks del usuario, borra los contenedores que quedan vacíos, es idempotente y nunca crea `settings.json`.
+    - **Verificación:** paquete `sdd` completo y subconjuntos de `uninstall` y `cli` en verde. El orquestador revisó el helper.
+  - **T6d:** en curso (worktree `odd-up-t6d`, rama `fix/telemetria-retirar-plugin-opencode`). Se espera que necesite `size:exception`, que se pedirá al usuario.
 - **Riesgos:**
   - Las sesiones de OpenCode abiertas mantienen el plugin hasta que se reinician.
   - Los hooks editados por el usuario sobreviven y dependen del stub.
