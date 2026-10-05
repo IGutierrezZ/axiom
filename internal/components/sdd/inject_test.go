@@ -8219,30 +8219,100 @@ func TestEnsureClaudeReviewStopHookAppendsIdempotently(t *testing.T) {
 	}
 }
 
-func TestEnsureClaudeTelemetryHooksAppendsIdempotently(t *testing.T) {
+func TestRetireClaudeTelemetryHooksRemovesOnlyRetiredCommands(t *testing.T) {
 	home := t.TempDir()
 	settingsPath := filepath.Join(home, ".claude", "settings.json")
 	if err := os.MkdirAll(filepath.Dir(settingsPath), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(settingsPath, []byte(`{"hooks":{"Stop":[{"matcher":"","hooks":[{"type":"command","command":"echo keep"}]}]}}`), 0o644); err != nil {
+	seed := `{"hooks":{
+  "Stop":[
+    {"matcher":"","hooks":[{"type":"command","command":"echo keep"},{"type":"command","command":"axiom telemetry runtime claude --json","async":true,"timeout":5}]},
+    {"matcher":"","hooks":[{"type":"command","command":"gentle-ai telemetry runtime claude --json","async":true,"timeout":5}]},
+    {"matcher":"","hooks":[{"type":"command","command":"axiom telemetry runtime codex --json"}]}
+  ],
+  "SubagentStop":[{"matcher":"","hooks":[{"type":"command","command":"axiom telemetry runtime claude --json","async":true,"timeout":5}]}],
+  "PreToolUse":[{"matcher":"Bash","hooks":[{"type":"command","command":"axiom telemetry runtime claude --json"}]}]
+}}`
+	if err := os.WriteFile(settingsPath, []byte(seed), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	changed, err := ensureClaudeTelemetryHooks(settingsPath)
+	changed, err := retireClaudeTelemetryHooks(settingsPath)
 	if err != nil || !changed {
 		t.Fatal(changed, err)
 	}
-	changed, err = ensureClaudeTelemetryHooks(settingsPath)
+	first, err := os.ReadFile(settingsPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var root struct {
+		Hooks map[string][]struct {
+			Hooks []struct {
+				Command string `json:"command"`
+			} `json:"hooks"`
+		} `json:"hooks"`
+	}
+	if err := json.Unmarshal(first, &root); err != nil {
+		t.Fatalf("settings no longer valid JSON: %v\n%s", err, first)
+	}
+	if _, ok := root.Hooks["SubagentStop"]; ok {
+		t.Fatalf("emptied SubagentStop event must be dropped:\n%s", first)
+	}
+	stop := root.Hooks["Stop"]
+	if len(stop) != 2 || len(stop[0].Hooks) != 1 || stop[0].Hooks[0].Command != "echo keep" || stop[1].Hooks[0].Command != "axiom telemetry runtime codex --json" {
+		t.Fatalf("Stop must keep the user hook and entries for other agents only:\n%s", first)
+	}
+	if got := root.Hooks["PreToolUse"]; len(got) != 1 || len(got[0].Hooks) != 1 {
+		t.Fatalf("events other than Stop/SubagentStop must be untouched:\n%s", first)
+	}
+	if strings.Contains(string(first), "gentle-ai") || strings.Count(string(first), "telemetry runtime claude") != 1 {
+		t.Fatalf("retired commands still present:\n%s", first)
+	}
+
+	changed, err = retireClaudeTelemetryHooks(settingsPath)
 	if err != nil || changed {
-		t.Fatal(changed, err)
+		t.Fatalf("second run must be a no-op: changed=%v err=%v", changed, err)
+	}
+	second, err := os.ReadFile(settingsPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(first) != string(second) {
+		t.Fatalf("second run rewrote the file:\nfirst:  %s\nsecond: %s", first, second)
+	}
+}
+
+func TestRetireClaudeTelemetryHooksNeverCreatesSettings(t *testing.T) {
+	settingsPath := filepath.Join(t.TempDir(), ".claude", "settings.json")
+	changed, err := retireClaudeTelemetryHooks(settingsPath)
+	if err != nil || changed {
+		t.Fatalf("missing settings: changed=%v err=%v", changed, err)
+	}
+	if _, err := os.Stat(settingsPath); !os.IsNotExist(err) {
+		t.Fatalf("settings.json must not be created, stat err = %v", err)
+	}
+}
+
+func TestInstallSkillRegistryAutomationClaudeWritesNoTelemetryHook(t *testing.T) {
+	home := t.TempDir()
+	settingsPath := filepath.Join(home, ".claude", "settings.json")
+	if _, err := installSkillRegistryAutomation(home, claudeAdapter()); err != nil {
+		t.Fatalf("installSkillRegistryAutomation(claude) error = %v", err)
 	}
 	data, err := os.ReadFile(settingsPath)
 	if err != nil {
 		t.Fatal(err)
 	}
 	text := string(data)
-	if strings.Count(text, "axiom telemetry runtime claude --json") != 2 || strings.Count(text, `"async": true`) != 2 || !strings.Contains(text, "echo keep") {
-		t.Fatalf("hooks not merged idempotently:\n%s", text)
+	if strings.Contains(text, "telemetry") {
+		t.Fatalf("fresh install must not write telemetry hooks:\n%s", text)
+	}
+	if strings.Count(text, "axiom skill-registry refresh") != 1 || strings.Count(text, "axiom review stop-hook --agent claude-code") != 2 || strings.Count(text, "axiom sdd-preflight-hook --agent claude-code") != 1 {
+		t.Fatalf("other Axiom hooks missing:\n%s", text)
+	}
+	result, err := installSkillRegistryAutomation(home, claudeAdapter())
+	if err != nil || result.Changed {
+		t.Fatalf("second install must be a no-op: changed=%v err=%v", result.Changed, err)
 	}
 }
 
@@ -8516,14 +8586,8 @@ func TestEnsureCodexSkillRegistryHookWritesSessionStartHookIdempotently(t *testi
 	if strings.Count(text, "axiom skill-registry refresh") != 1 {
 		t.Fatalf("hook command count mismatch:\n%s", text)
 	}
-	if strings.Count(text, "axiom telemetry runtime codex --json") != 2 {
-		t.Fatalf("Codex telemetry hook must cover SubagentStop and Stop exactly once:\n%s", text)
-	}
-	if strings.Count(text, `"async": true`) != 2 {
-		t.Fatalf("Codex telemetry hooks must be asynchronous:\n%s", text)
-	}
-	if !strings.Contains(text, `"SubagentStop"`) || !strings.Contains(text, `"Stop"`) {
-		t.Fatalf("Codex telemetry hook events missing:\n%s", text)
+	if strings.Contains(text, "telemetry") || strings.Contains(text, `"Stop"`) || strings.Contains(text, `"SubagentStop"`) {
+		t.Fatalf("fresh Codex install must not write telemetry hooks:\n%s", text)
 	}
 	if !strings.Contains(text, `"SessionStart"`) {
 		t.Fatalf("Codex hook should use SessionStart, got:\n%s", text)
@@ -8593,8 +8657,54 @@ func TestEnsureCodexSkillRegistryHookMigratesLegacyCommands(t *testing.T) {
 	if strings.Count(text, "axiom skill-registry refresh") != 1 {
 		t.Fatalf("expected 1 axiom skill-registry refresh, got:\n%s", text)
 	}
-	if strings.Count(text, "axiom telemetry runtime codex --json") != 2 {
-		t.Fatalf("expected 2 axiom telemetry runtime codex hooks, got:\n%s", text)
+	if strings.Contains(text, "telemetry") || strings.Contains(text, `"Stop"`) || strings.Contains(text, `"SubagentStop"`) {
+		t.Fatalf("retired Codex telemetry hooks and their emptied events must be removed, got:\n%s", text)
+	}
+}
+
+func TestEnsureCodexSkillRegistryHookRetiresTelemetryKeepingUserHooks(t *testing.T) {
+	hooksPath := filepath.Join(t.TempDir(), ".codex", "hooks.json")
+	if err := os.MkdirAll(filepath.Dir(hooksPath), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	seed := `{"hooks":{
+  "Stop":[
+    {"hooks":[{"type":"command","command":"echo keep"},{"type":"command","command":"axiom telemetry runtime codex --json","async":true,"timeout":4}]},
+    {"hooks":[{"type":"command","command":"gentle-ai telemetry runtime codex --json","async":true,"timeout":4}]}
+  ],
+  "SubagentStop":[{"hooks":[{"type":"command","command":"axiom telemetry runtime codex --json","async":true,"timeout":4}]}]
+}}`
+	if err := os.WriteFile(hooksPath, []byte(seed), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	changed, err := ensureCodexSkillRegistryHook(hooksPath)
+	if err != nil || !changed {
+		t.Fatal(changed, err)
+	}
+	first, err := os.ReadFile(hooksPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(first)
+	if strings.Contains(text, "telemetry") || strings.Contains(text, `"SubagentStop"`) {
+		t.Fatalf("telemetry hooks must be retired and the emptied event dropped:\n%s", text)
+	}
+	if strings.Count(text, "echo keep") != 1 || !strings.Contains(text, `"Stop"`) {
+		t.Fatalf("user hook in the same event must survive:\n%s", text)
+	}
+	if strings.Count(text, "axiom skill-registry refresh") != 1 {
+		t.Fatalf("skill-registry hook missing:\n%s", text)
+	}
+	changed, err = ensureCodexSkillRegistryHook(hooksPath)
+	if err != nil || changed {
+		t.Fatalf("second run must be a no-op: changed=%v err=%v", changed, err)
+	}
+	second, err := os.ReadFile(hooksPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(first) != string(second) {
+		t.Fatalf("second run rewrote the file:\n%s\n%s", first, second)
 	}
 }
 
@@ -8680,8 +8790,8 @@ func TestEnsureClaudeHooksMigrateLegacyCommands(t *testing.T) {
 	if strings.Count(text, "axiom review stop-hook --agent claude-code") != 2 {
 		t.Fatalf("expected 2 axiom review stop-hook entries, got:\n%s", text)
 	}
-	if strings.Count(text, "axiom telemetry runtime claude --json") != 2 {
-		t.Fatalf("expected 2 axiom telemetry runtime entries, got:\n%s", text)
+	if strings.Contains(text, "telemetry") || strings.Contains(text, `"SubagentStop"`) {
+		t.Fatalf("retired Claude telemetry hooks and their emptied event must be removed, got:\n%s", text)
 	}
 }
 
@@ -8847,8 +8957,8 @@ func TestInject_CodexInstallsSkillRegistryHook(t *testing.T) {
 	if !strings.Contains(string(data), "axiom skill-registry refresh") {
 		t.Fatalf("Codex hooks.json missing skill-registry refresh:\n%s", data)
 	}
-	if strings.Count(string(data), "axiom telemetry runtime codex --json") != 2 {
-		t.Fatalf("Codex hooks.json missing telemetry Stop hooks:\n%s", data)
+	if strings.Contains(string(data), "telemetry") {
+		t.Fatalf("Codex hooks.json must not carry telemetry hooks:\n%s", data)
 	}
 }
 
