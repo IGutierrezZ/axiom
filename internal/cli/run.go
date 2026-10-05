@@ -303,7 +303,6 @@ func RunInstall(args []string, detection system.DetectionResult) (InstallResult,
 		return result, persistErr
 	}
 
-	TelemetryTrigger(homeDir)
 	return result, nil
 }
 
