@@ -357,7 +357,18 @@ Cada PR lleva riesgo `high` probable (borrado masivo y hooks), así que necesita
     - **Cambio:** deja de instalar los hooks de Claude y Codex y los retira en cada `install` o `sync` que inyecta SDD.
     - **Coincidencia exacta** con 4 comandos: `axiom` y `gentle-ai`, para `claude` y `codex`. Solo en `Stop` y `SubagentStop`. Conserva los hooks del usuario, borra los contenedores que quedan vacíos, es idempotente y nunca crea `settings.json`.
     - **Verificación:** paquete `sdd` completo y subconjuntos de `uninstall` y `cli` en verde. El orquestador revisó el helper.
-  - **T6d:** en curso (worktree `odd-up-t6d`, rama `fix/telemetria-retirar-plugin-opencode`). Se espera que necesite `size:exception`, que se pedirá al usuario.
+  - **T6d:** commit `1670fecf` (worktree `odd-up-t6d`, rama `fix/telemetria-retirar-plugin-opencode`). Pendiente del verificador independiente.
+    - **Tamaño:** 1518 líneas (+531 / −987). **`size:exception` aprobado por el usuario.**
+    - **Cambios:**
+      - `openCodeTelemetryRetirementStep` en `install` y `sync`, al final y no fatal;
+      - lista fija con 4 digests (`ff05ed23…`, `8053fc82…`, `902fe092…`, `54150f7d…`, recalculados);
+      - borrados `Reconcile*`, `guardedFile` y el *rollback*;
+      - assets movidos a `testdata`;
+      - avisos a través de `retirementNotes`, que llegan a `ManualActions` en `install` y a `WARNING:` en `sync`.
+    - **Riesgo `high`** (`process_boundary`).
+    - **Hallazgos del writer:**
+      - `docs/telemetry.md:255-256` queda obsoleto; se corrige en T6f.
+      - El plugin `skill-registry.ts` (v1 y v2) también ejecuta `gentle-ai skill-registry refresh`; pasa a T7.
 - **Riesgos:**
   - Las sesiones de OpenCode abiertas mantienen el plugin hasta que se reinician.
   - Los hooks editados por el usuario sobreviven y dependen del stub.
@@ -375,6 +386,7 @@ Cada PR lleva riesgo `high` probable (borrado masivo y hooks), así que necesita
 | `skills/axiom-collab-perfect` (skill para contribuir a `Gentleman-Programming/gentle-ai`) | Funcional, apunta al upstream | **Decisión del usuario**: conservarla o retirarla. Se mantiene `author: ardelperal` | S |
 | IDs de protocolo `gentle-ai.*/vN` | Contrato. Los de revisión y telemetría ya tienen lectura dual (`reviewtransaction/contract.go:10-47`, `telemetry.go:18-19`); quedan unos 40 sin migrar (`verification-*`, `provider-transport`, …). Los persistidos o con hash son contrato duro: `compact.go:16`, `compact_store.go:1888`, `artifact_subject.go:11-12,160,183` | Diseñar la lectura dual: escribir `axiom.*` y aceptar los dos | M-L, y L con migración de los persistidos |
 | Marca `gentle-ai:managed-opencode-launcher/v1` (`opencode/background.go:27,754`, `launcher_target.go:53`, `uninstall/service.go:1870`) | Contrato con instalaciones | Aceptar las dos marcas y escribir la nueva | S-M |
+| Plugin de OpenCode `skill-registry.ts` (v1 y v2), que ejecuta `gentle-ai skill-registry refresh` (hallazgo de T6d) | Funcional: con el `gentle-ai` real del upstream en el PATH ejecuta su binario; con el shim de Axiom falla | Pasar a `axiom`, con migración de las copias instaladas | S-M |
 | Hooks legacy (`sdd/inject.go:1918,2085-2087`) y `.gentle-ai/bin` (`background.go:334`) | Migración existente | Se mantienen | — |
 | `metadata.author: gentleman-programming` en las skills | Atribución de licencia | Se mantiene | — |
 
