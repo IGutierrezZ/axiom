@@ -253,7 +253,11 @@ Que Axiom **deje de enviar datos al upstream Gentle AI y de dirigir acciones con
   - 1: **sí**, decisión explícita del usuario. Un `sync` en `workspace` también retira, por huella, las copias del HOME de los agentes seleccionados.
   - 2-5: se aplican las recomendaciones del plan, comunicadas al usuario: `~/.agents/skills` queda para un seguimiento; el aviso es sin estado, en cada `sync`, y solo si el `name` del frontmatter sigue siendo el ID retirado; `uninstall` conserva las copias editadas; la retirada solo se hace en `sync`.
 - **S1 hecho: PR #81** (`e550e21c`, 199 líneas, riesgo `medium`). El test de `sync` falla sin el arreglo en los dos ámbitos (`post-sync verification failed: … branch-pr\SKILL.md`) y pasa con él. Revisado y reejecutado por el orquestador. Worktree `odd-up-t5a`, rama `fix/podar-skills-retiradas-seleccion`.
-- **S2:** encadenado sobre la rama de S1 (worktree `odd-up-t5b`).
+- **S2 y S3 hechos, encadenados** (worktree `odd-up-t5b`). El primer intento de S2 con el paso de `sync` ocupaba 521 líneas, así que se aplicó el corte de reserva del plan:
+  - **S2: PR #82** (`ba35cf31`, rama `feat/retirar-skills-instaladas-uninstall`, base S1). Biblioteca (`InspectRetired`, `RetireInstalled` y variantes `*Against` con huellas inyectables) más `uninstall` como primer llamador: un borrado planificado por copia propia, propiedad comprobada de nuevo al aplicar y rutas en la copia de seguridad. 438 líneas: **`size:exception` aprobado por el usuario**, porque mover tests a S3 lo pasaría de 400 y recortarlos restaría cobertura.
+  - **S3: PR #83** (`cae8f4ee`, rama `feat/retirar-skills-instaladas-sync`, base S2). Paso `sync:retire-installed-skills` en los dos ámbitos, con las raíces del ámbito actual más el HOME de cada agente; copia de seguridad para el *rollback*; aviso *Soft* (`WARNING:`), sin estado, solo si el `name` sigue siendo el ID retirado; viñeta en el registro de absorción. 332 líneas.
+  - **Verificación:** huellas recalculadas desde el historial (las 6 coinciden); tests de `skills`, `uninstall`, `absorptionledger` y un subconjunto de `cli` en verde (writer y orquestador); ratchet limpio en cada commit; riesgo `medium` en los dos commits. El orquestador revisó la lógica de borrado: propiedad por huella, comprobación justo antes de borrar, sin seguir enlaces, sin `RemoveAll` y, ante un fallo, la copia se conserva.
+- **Orden de merge:** #81, después #82 (retarget a `main` y `rebase --onto`) y después #83.
 
 ### [ ] T6 · Retirar la telemetría por completo (tamaño L, varios PRs)
 
@@ -368,11 +372,10 @@ Cada PR lleva riesgo `high` probable (borrado masivo y hooks), así que necesita
 
 ## 8. Siguiente paso
 
-1. Mirar el CI de #80. Si está en verde, fusionarlo con squash y eliminar su worktree y su rama.
-2. T5, delegada: decidir el corte y, si hace falta, pedir `size:exception`.
-3. T6: plan de PRs con un agente Plan, plantear al usuario la decisión del stub de `axiom telemetry runtime` y después ejecutar T6a a T6d.
-4. T7: plantear al usuario las decisiones de `axiom-collab-perfect` y `chained-pr` y diseñar la lectura dual de los contratos.
-5. PR de cierre con este documento.
+1. T5: fusionar #81, #82 y #83 en ese orden, cada uno con su CI en verde, con retarget y `rebase --onto` entre medias. Después, eliminar los worktrees `odd-up-t5a` y `odd-up-t5b` y sus ramas.
+2. T6: plan de PRs con un agente Plan, plantear al usuario la decisión del stub de `axiom telemetry runtime` y después ejecutar T6a a T6d.
+3. T7: plantear al usuario las decisiones de `axiom-collab-perfect` y `chained-pr` y diseñar la lectura dual de los contratos.
+4. PR de cierre con este documento.
 
 ## 9. Historia relacionada (ODDs anteriores de la misma sesión)
 
