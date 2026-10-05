@@ -8,47 +8,11 @@ import (
 	"testing"
 )
 
-func TestOpenCodeV2TelemetryLifecycle(t *testing.T) {
-	runV2Plugin(t, "telemetry-runtime", `
-const emitted=[], children=[]; let now=1000; Date.now=()=>now;
-let sweep;const originalInterval=globalThis.setInterval;globalThis.setInterval=(fn,ms)=>{sweep=fn;return originalInterval(fn,ms)};
-globalThis.__exec=(cmd,args,opts,cb)=>{ const child={stdin:{on(){},end(body){emitted.push(JSON.parse(body))}},kill(){this.killed=true}}; children.push(child); return child };
-let deliver, signal; const queue=[]; let wake;
-const ctx={location:{directory:"/project",workspaceID:"ws"},event:{subscribe(opts){signal=opts.signal; signal.addEventListener("abort",()=>wake?.()); return {[Symbol.asyncIterator]:async function*(){while(!signal.aborted){if(!queue.length) await new Promise(r=>wake=r); while(queue.length) yield queue.shift()}}}}}};
-const cleanup=await plugin.setup(ctx);
-const tick=()=>new Promise(r=>setImmediate(r));
-const event=async(type,id,extra={},location=ctx.location)=>{queue.push({type,created:now,location,data:{sessionID:"SECRET-SESSION",assistantMessageID:id,...extra}});wake?.(); await tick()};
-const start=(id,location)=>event("session.step.started",id,{agent:"sdd-apply",model:{providerID:"openai",id:"gpt-5.6-sol",variant:"high"}},location);
-const end=(id,location)=>event("session.step.ended",id,{tokens:{input:10,output:2,reasoning:1,cache:{read:3,write:0}}},location);
-await start("SECRET-MESSAGE"); now+=5; await end("SECRET-MESSAGE"); await end("SECRET-MESSAGE");
-if(emitted.length!==1||emitted[0].info.selectedEffort!=="high")throw Error("completion/duplicate");
-if(JSON.stringify(emitted).includes("SECRET")||JSON.stringify(emitted).includes("/project"))throw Error("identity escaped");
-await start("workspace"); await end("workspace",{directory:"/project",workspaceID:"other"}); if(emitted.length!==1)throw Error("workspace leak");
-await start("mismatch"); await end("mismatch",{directory:"/other",workspaceID:"ws"}); if(emitted.length!==1)throw Error("location leak");
-await end("unknown"); await start("expired"); now+=600001; sweep(); await end("expired"); if(emitted.length!==1)throw Error("expiry/unmatched");
-await start("veto");process.env.DO_NOT_TRACK="1";await end("veto");process.env.DO_NOT_TRACK="0";await end("veto");if(emitted.length!==1)throw Error("veto state retained");
-await start("failed"); await event("session.step.failed","failed",{error:{type:"APIError",message:"SECRET-ERROR",status:429},tokens:{input:7}}); if(emitted.length!==2||emitted[1].info.error.data.statusCode!==429)throw Error("failure");
-if(JSON.stringify(emitted).includes("SECRET"))throw Error("error identity escaped");
-await start("malformed");await event("session.step.ended","malformed",{tokens:{input:{sessionID:"SECRET-NESTED"},output:2}});if(JSON.stringify(emitted).includes("SECRET"))throw Error("nested token privacy");
-for(let i=0;i<257;i++)await start("bounded"+i); await end("bounded256"); if(emitted.length!==3)throw Error("capacity");
-for(let i=0;i<40;i++)await end("bounded"+i); if(emitted.length!==32)throw Error("in flight bound");
-await cleanup(); if(!signal.aborted||children.some(x=>!x.killed))throw Error("cleanup");
-await end("bounded100"); if(emitted.length!==32)throw Error("disposed");
-`)
-}
-
 func runV2Plugin(t *testing.T, name, harness string) {
 	t.Helper()
 	source, err := Read("opencode/plugins-v2/" + name + ".ts")
 	if err != nil {
 		t.Fatal(err)
-	}
-	if name == "telemetry-runtime" {
-		for _, forbidden := range []string{"node:fs", "console.", "ctx.session.", "fetch(", "process.cwd("} {
-			if strings.Contains(source, forbidden) {
-				t.Fatalf("telemetry adapter contains forbidden IO: %s", forbidden)
-			}
-		}
 	}
 	source = strings.Replace(source, `import { spawn } from "node:child_process"`, `const spawn = (...args: any[]) => (globalThis as any).__spawn(...args)`, 1)
 	source = strings.Replace(source, `import { Plugin } from "@opencode/plugin"`, `const Plugin = { define: (value: any) => value }`, 1)

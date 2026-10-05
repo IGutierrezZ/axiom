@@ -16,7 +16,7 @@ import urllib.parse
 import urllib.request
 
 PLUGIN_IDS = {"gentle-ai." + name for name in (
-    "model-variants", "skill-registry", "telemetry-runtime",
+    "model-variants", "skill-registry",
     "opencode-review-transport", "sdd-task-result-artifacts",
 )}
 DECLARATION = "gentle-ai.opencode-relay/v2-staged"

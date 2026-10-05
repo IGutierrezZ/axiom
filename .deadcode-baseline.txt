@@ -85,7 +85,6 @@ internal/components/sdd/boundedreview.go	ReviewExecutionContractFor
 internal/components/sdd/inject.go	injectClaudeModelAssignments
 internal/components/sdd/inject.go	resolveClaudeModelAlias
 internal/components/sdd/read_assignments.go	ReadCurrentProfiles
-internal/components/telemetryruntime/managed.go	Reconcile
 internal/components/theme/inject.go	Inject
 internal/components/theme/inject.go	InjectVisualThemes
 internal/dashboard/server.go	Server.Port

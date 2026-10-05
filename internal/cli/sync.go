@@ -30,7 +30,6 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/components/persona"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/sdd"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/skills"
-	"github.com/IGutierrezZ/axiom/v3/internal/components/telemetryruntime"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/theme"
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
 	opencodeactivation "github.com/IGutierrezZ/axiom/v3/internal/opencode"
@@ -562,18 +561,11 @@ func (r *syncRuntime) stagePlan() pipeline.StagePlan {
 		},
 	}
 
-	telemetryDir := openCodeTelemetryConfigDir(r.homeDir, r.workspaceDir, r.scope, r.agentIDs)
-	if telemetryDir != "" {
-		prepare = append([]pipeline.Step{openCodeTelemetryStep{id: "prepare:opencode-telemetry", configDir: telemetryDir, checkOnly: true}}, prepare...)
-	}
 	apply := []pipeline.Step{
-		rollbackRestoreStep{id: "apply:rollback-restore", state: r.state, homeDir: r.homeDir, workspaceDir: r.workspaceDir, telemetryConfigDir: telemetryDir},
+		rollbackRestoreStep{id: "apply:rollback-restore", state: r.state, homeDir: r.homeDir, workspaceDir: r.workspaceDir, openCodeConfigDir: openCodeGlobalConfigDir(r.homeDir, r.workspaceDir, r.scope, r.agentIDs)},
 	}
 	if r.scope != ScopeWorkspace {
 		apply = append(apply, managedVisualThemeCleanupStep{id: "sync:retire-managed-visual-themes", homeDir: r.homeDir, adapters: adapters, changedFiles: &r.changedFiles})
-	}
-	if telemetryDir != "" {
-		apply = append(apply, openCodeTelemetryStep{id: "sync:opencode:telemetry-runtime", configDir: telemetryDir, changedFiles: &r.changedFiles, state: r.state})
 	}
 	if r.backgroundActivation != nil {
 		apply = append(apply, openCodeBackgroundActivationStep{id: "sync:opencode:background-activation", plan: r.backgroundActivation, state: r.state, ready: &r.runtimeReady})
@@ -647,6 +639,11 @@ func (r *syncRuntime) stagePlan() pipeline.StagePlan {
 			changedFiles: &r.changedFiles,
 		})
 		apply = append(apply, piCodeGraphSyncStep{id: "sync:community-tool:pi-codegraph", homeDir: r.homeDir, workspaceDir: r.workspaceDir, changedFiles: &r.changedFiles})
+	}
+
+	// Retire last so a failing earlier step never leaves the plugin half-removed.
+	if telemetryDir := openCodeGlobalConfigDir(r.homeDir, r.workspaceDir, r.scope, r.agentIDs); telemetryDir != "" {
+		apply = append(apply, openCodeTelemetryRetirementStep{id: "sync:opencode:retire-telemetry-plugin", configDir: telemetryDir, state: r.state})
 	}
 
 	return pipeline.StagePlan{Prepare: prepare, Apply: apply}
@@ -729,11 +726,6 @@ func syncBackupTargetsScoped(homeDir, workspaceDir string, scope InstallScope, s
 			for _, rootDir := range piPersonaConfigRoots(homeDir, workspaceDir, scope) {
 				paths[adapter.SystemPromptFile(rootDir)] = struct{}{}
 			}
-		}
-	}
-	if configDir := openCodeTelemetryConfigDir(homeDir, workspaceDir, scope, selection.Agents); configDir != "" {
-		for _, path := range telemetryruntime.ManagedPaths(configDir) {
-			paths[path] = struct{}{}
 		}
 	}
 	// Managed OpenCode-compatible plugin paths are part of sync's
@@ -1731,6 +1723,8 @@ func runSyncWithSelectionScoped(homeDir, workspaceDir string, scope InstallScope
 		return result, err
 	}
 	result.ChangedFiles = dedupPaths(append(result.ChangedFiles, compatibilityChanged...))
+	result.ChangedFiles = dedupPaths(append(result.ChangedFiles, rt.state.retiredFiles...))
+	result.Execution.ManualActions = append(result.Execution.ManualActions, rt.state.retirementNotes...)
 	if background.activationPlan != nil {
 		result.ChangedFiles = dedupPaths(append(result.ChangedFiles, background.activationPlan.ChangedPaths()...))
 	}
@@ -2143,6 +2137,9 @@ func hasManagedPiCodeGraphManifest(homeDir string) bool {
 func RenderSyncReport(result SyncResult) string {
 	var b strings.Builder
 	backgroundReport := func() {
+		for _, note := range result.Execution.ManualActions {
+			fmt.Fprintf(&b, "WARNING: %s\n", note)
+		}
 		for _, check := range result.Verify.Checks {
 			if check.Status == verify.CheckStatusWarning {
 				fmt.Fprintf(&b, "WARNING: %s\n", check.Error)
