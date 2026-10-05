@@ -258,6 +258,7 @@ Que Axiom **deje de enviar datos al upstream Gentle AI y de dirigir acciones con
   - **S3: PR #83** (`cae8f4ee`, rama `feat/retirar-skills-instaladas-sync`, base S2). Paso `sync:retire-installed-skills` en los dos ámbitos, con las raíces del ámbito actual más el HOME de cada agente; copia de seguridad para el *rollback*; aviso *Soft* (`WARNING:`), sin estado, solo si el `name` sigue siendo el ID retirado; viñeta en el registro de absorción. 332 líneas.
   - **Verificación:** huellas recalculadas desde el historial (las 6 coinciden); tests de `skills`, `uninstall`, `absorptionledger` y un subconjunto de `cli` en verde (writer y orquestador); ratchet limpio en cada commit; riesgo `medium` en los dos commits. El orquestador revisó la lógica de borrado: propiedad por huella, comprobación justo antes de borrar, sin seguir enlaces, sin `RemoveAll` y, ante un fallo, la copia se conserva.
 - **Orden de merge:** #81, después #82 (retarget a `main` y `rebase --onto`) y después #83.
+- **2026-10-05:** #81 fusionado (`6c97589a`); worktree `odd-up-t5a` y rama de S1 eliminados. #82 retargeteado a `main` y rebasado (`661abb22`); #83 rebasado encima (`bb315b5a`); los dos con `--force-with-lease` y pendientes de su CI.
 
 ### [ ] T6 · Retirar la telemetría por completo (tamaño L, varios PRs)
 
@@ -372,8 +373,8 @@ Cada PR lleva riesgo `high` probable (borrado masivo y hooks), así que necesita
 
 ## 8. Siguiente paso
 
-1. T5: fusionar #81, #82 y #83 en ese orden, cada uno con su CI en verde, con retarget y `rebase --onto` entre medias. Después, eliminar los worktrees `odd-up-t5a` y `odd-up-t5b` y sus ramas.
-2. T6: plan de PRs con un agente Plan, plantear al usuario la decisión del stub de `axiom telemetry runtime` y después ejecutar T6a a T6d.
+1. T5: fusionar #82 cuando esté en verde; después retarget y `rebase --onto` de #83, esperar su CI y fusionarlo. Después, eliminar el worktree `odd-up-t5b` y sus ramas.
+2. T6: plan de PRs con un agente Plan (lanzado el 2026-10-05), plantear al usuario la decisión del stub de `axiom telemetry runtime` y después ejecutar T6a a T6d.
 3. T7: plantear al usuario las decisiones de `axiom-collab-perfect` y `chained-pr` y diseñar la lectura dual de los contratos.
 4. PR de cierre con este documento.
 
