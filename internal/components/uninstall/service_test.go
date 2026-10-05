@@ -1,6 +1,8 @@
 package uninstall
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -24,6 +26,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/components/engram"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/gga"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/sdd"
+	"github.com/IGutierrezZ/axiom/v3/internal/components/skills"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/telemetryruntime"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/theme"
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
@@ -2173,5 +2176,83 @@ func TestComponentOperationsSDD_OpenCodeRemovesManagedPluginsUnderXDGConfigHome(
 	}
 	if _, err := os.Stat(filepath.Join(homeDir, ".config", "opencode")); !os.IsNotExist(err) {
 		t.Fatalf("uninstall touched ~/.config/opencode although XDG_CONFIG_HOME is set (stat err = %v)", err)
+	}
+}
+
+// TestUninstallSkillsRetiresOnlyUnmodifiedRetiredCopies pins that removing the
+// skills component also clears leftovers of skills that no longer ship, but
+// only when the copy is still byte-for-byte Axiom's.
+func TestUninstallSkillsRetiresOnlyUnmodifiedRetiredCopies(t *testing.T) {
+	const pristine = "pristine retired skill\n"
+	sum := sha256.Sum256([]byte(pristine))
+	known := map[model.SkillID][]string{
+		"branch-pr":       {hex.EncodeToString(sum[:])},
+		"gentle-ai-bench": {hex.EncodeToString(sum[:])},
+	}
+	restoreInspect, restoreRetire := inspectRetiredSkills, retireInstalledSkills
+	inspectRetiredSkills = func(root string) skills.RetiredCopies { return skills.InspectRetiredAgainst(root, known) }
+	retireInstalledSkills = func(root string) skills.RetiredCopies { return skills.RetireInstalledAgainst(root, known) }
+	t.Cleanup(func() { inspectRetiredSkills, retireInstalledSkills = restoreInspect, restoreRetire })
+
+	for _, kind := range []string{"owned", "modified", "modified-after-plan", "missing"} {
+		t.Run(kind, func(t *testing.T) {
+			home := t.TempDir()
+			svc, err := NewService(home, t.TempDir(), "dev")
+			if err != nil {
+				t.Fatal(err)
+			}
+			svc.snapshotter = stubSnapshotter{}
+			adapter, _ := svc.registry.Get(model.AgentClaudeCode)
+			skillDir := adapter.SkillsDir(home)
+			path := filepath.Join(skillDir, "branch-pr", "SKILL.md")
+			if kind != "missing" {
+				content := pristine
+				if kind == "modified" {
+					content += "user edit\n"
+				}
+				if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+					t.Fatal(err)
+				}
+			}
+
+			plan, err := svc.buildPlan([]model.AgentID{model.AgentClaudeCode}, []model.ComponentID{model.ComponentSkills})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if kind == "modified-after-plan" {
+				if err := os.WriteFile(path, []byte(pristine+"user edit\n"), 0o644); err != nil {
+					t.Fatal(err)
+				}
+			}
+			result, err := svc.executePlan(plan, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			_, statErr := os.Stat(path)
+			switch kind {
+			case "owned":
+				if !os.IsNotExist(statErr) {
+					t.Fatalf("unmodified retired copy remains: %v", statErr)
+				}
+				if !slices.Contains(result.RemovedFiles, path) {
+					t.Fatalf("removal not reported: %v", result.RemovedFiles)
+				}
+			case "missing":
+				if !os.IsNotExist(statErr) || len(result.RemovedFiles) != 0 {
+					t.Fatalf("nothing to retire, got stat=%v removed=%v", statErr, result.RemovedFiles)
+				}
+			default:
+				if statErr != nil {
+					t.Fatalf("modified retired copy was removed: %v", statErr)
+				}
+				if slices.Contains(result.RemovedFiles, path) {
+					t.Fatalf("kept copy reported as removed: %v", result.RemovedFiles)
+				}
+			}
+		})
 	}
 }
