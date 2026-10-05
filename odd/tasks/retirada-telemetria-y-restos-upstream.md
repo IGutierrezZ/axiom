@@ -350,6 +350,9 @@ Cada PR lleva riesgo `high` probable (borrado masivo y hooks), así que necesita
   - **Nuevo orden: T6a → T6c → T6d → T6b → T6e → T6f.** Primero se deja de enviar y se retiran los hooks y el plugin mediante `sync`. El comando se borra solo cuando el usuario ya ha ejecutado `sync`, para que ningún hook llame a un comando inexistente. T6b deja de llevar stub.
   - Se aplican las demás recomendaciones del plan: retirar el plugin en `install` y en `sync`; ante un conflicto de propiedad, avisar y saltar; mantener un `docs/telemetry.md` mínimo; no fusionar T6b con T6e; sin hotfix del endpoint; el ledger, después de T6e; retirar REQ-20.12 en T6f. Los `size:exception` se piden PR a PR.
   - **Instalación real (lectura del 2026-10-05):** 2 hooks en `~/.claude/settings.json`; el plugin `~/.config/opencode/plugins/telemetry-runtime.ts`; `~/.gentle-ai/telemetry.json` (no se borra, es compartido con el upstream); y `C:\repos\axiom\.claude\settings.json`, que no está versionado y pertenece al checkout de la otra sesión. Ningún fichero versionado del repositorio lleva hooks de telemetría.
+- **Progreso:**
+  - **T6a: PR #84** (`600350b3`, rama `fix/telemetria-dejar-de-enviar`, worktree `odd-up-t6a`). Quita los disparadores automáticos de `app`, `run` y `sync` y las seis llamadas del cierre de revisiones, y borra lo que queda sin llamadores (`counters.go` incluido). +5 y −383 líneas, riesgo `medium`. Verificado: build y vet limpios; `internal/telemetry`, `internal/app` y subconjuntos de `internal/cli` en verde; ratchet sin funciones nuevas inalcanzables. Se mantienen `runTelemetryTriggerCommand` y sus helpers, que siguen siendo alcanzables desde `axiom telemetry trigger` hasta T6b.
+  - **T6c:** en curso (worktree `odd-up-t6c`, rama `fix/telemetria-retirar-hooks`).
 - **Riesgos:**
   - Las sesiones de OpenCode abiertas mantienen el plugin hasta que se reinician.
   - Los hooks editados por el usuario sobreviven y dependen del stub.
