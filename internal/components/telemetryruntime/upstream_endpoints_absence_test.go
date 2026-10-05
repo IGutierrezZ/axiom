@@ -28,7 +28,6 @@ var upstreamEndpointAllowlist = []string{
 	"odd/tasks/",
 	"openspec/changes/archive/",
 	"docs/upstream-absorption-ledger.md",
-	"docs/telemetry.md",
 }
 
 const upstreamEndpointMaxFileBytes = 4 << 20
@@ -62,7 +61,7 @@ func TestUpstreamTelemetryEndpointScannerDetectsAndSkips(t *testing.T) {
 	write("internal/prod/client_test.go", `const u = "telemetry.gentlemanprogramming.com"`)
 	write("odd/tasks/old.md", "telemetry.gentlemanprogramming.com")
 	write("docs/audits/a.md", "telemetry.gentlemanprogramming.com")
-	write("docs/telemetry.md", "gentlemanprogramming.com/v1/events")
+	write("docs/upstream-absorption-ledger.md", "gentlemanprogramming.com/v1/events")
 	write("openspec/changes/archive/x/spec.md", "/v1/runtime-events")
 	write(".git/config", "telemetry.gentlemanprogramming.com")
 	write("node_modules/p/index.js", "telemetry.gentlemanprogramming.com")
