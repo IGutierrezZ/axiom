@@ -192,7 +192,7 @@ Que Axiom **deje de enviar datos al upstream Gentle AI y de dirigir acciones con
   - **Seguimiento posible:** `bench/runner.go` (`Sandbox.env()`) es otro entorno cerrado sin la variable; la journey `bench/journeys_issue_3043.go` ejecuta `install` con subagentes en segundo plano, pero usa un stub `#!/bin/sh`.
 - **Cerrada (2026-10-04):** CI en verde, fusionado con squash y eliminados el worktree `odd-up-t3` y la rama `fix/path-persistente-salvaguarda`, local y remota.
 
-### [~] T4 · `RefreshSkip` compara por identidad, no de forma léxica: **PR #80**, `dcb077da`
+### [x] T4 · `RefreshSkip` compara por identidad, no de forma léxica: **PR #80**, fusionado como `83b438cf`
 
 - **Causa:**
   - `internal/skillregistry/guard.go:36-53` compara `cwd == filepath.Dir(cwd)` (raíz del sistema de ficheros) y `cwd == home` tras `cleanPathArg` (`registry.go:174`), que solo normaliza separadores. El home sale de `%USERPROFILE%`.
@@ -211,9 +211,9 @@ Que Axiom **deje de enviar datos al upstream Gentle AI y de dirigir acciones con
   - **Verificación:** `internal/skillregistry` en verde (writer y orquestador), subconjuntos de `internal/app` e `internal/cli` y `internal/autoskill` en verde; `go vet` también para `linux/amd64` y `darwin/arm64`; ratchet solo con los dos avisos conocidos; el HOME real sin cambios. Riesgo `medium`.
   - **Tamaño:** 457 líneas (unas 87 de código y unas 370 de tests). **`size:exception` aprobado explícitamente por el usuario**, porque los tests comprueban las dos capas a la vez.
   - **Limpieza local:** el `~/.atl` del HOME real (del 2026-06-29, `skill-registry.md` y `.skill-registry.cache.json`), restos de este mismo fallo, se ha movido a `~/.atl.bak-2026-10-04` por decisión del usuario.
-- **Siguiente:** fusionar #80 cuando esté en verde y eliminar el worktree `odd-up-t4` y la rama `fix/refreshskip-identidad`.
+- **Cerrada (2026-10-04):** CI en verde, fusionado con squash y eliminados el worktree `odd-up-t4` y la rama `fix/refreshskip-identidad`, local y remota.
 
-### [ ] T5 · Retirar las skills descatalogadas de las instalaciones existentes
+### [~] T5 · Retirar las skills descatalogadas de las instalaciones existentes
 
 - **Problema:**
   - Las copias instaladas de `branch-pr` y `gentle-ai-bench` (retiradas en #70) siguen cargándose y compiten con `axiom-branch-pr` por el mismo trigger.
@@ -230,6 +230,30 @@ Que Axiom **deje de enviar datos al upstream Gentle AI y de dirigir acciones con
   - **Verificación:** la de ausencia reutiliza `isRetiredManagedPath` (`run.go:2863`).
 - **Alternativas descartadas:** borrar por nombre sin huella, que podría eliminar copias editadas o un `branch-pr` ajeno; o solo podar el estado, que deja la copia en disco.
 - **Tamaño:** M (1-2 días). Probablemente necesita `size:exception` o dos PRs (registro y `sync` en uno, `uninstall` y estado en otro). No puede quedar código muerto.
+- **Plan validado (2026-10-04, agente Plan de solo lectura sobre `83b438cf`).** Correcciones al diseño:
+  - **Huellas: 4 versiones de `branch-pr` y 2 de `gentle-ai-bench`**, no 5 y 3. Solo tuvieron `SKILL.md`. `sha256` de los blobs LF: `branch-pr` `e6c67d06…`, `90ab6ec4…`, `8553fdde…`, `61924090…`; `gentle-ai-bench` `a7c9576c…`, `49ac6728…`. Se comparan con el contenido normalizado a LF, porque una compilación local en Windows anterior al 2026-06-11 pudo instalar copias CRLF.
+  - La instalación copia `SKILL.md` byte a byte para estas skills (sin transformación).
+  - **No reutilizar `isRetiredManagedPath`:** es una comprobación dura de ausencia; una copia editada que se conserva haría fallar la verificación y revertiría todo el `sync`. En su lugar: filtrar en `selectedSkillIDs` y una comprobación *Soft* (aviso) para las copias editadas.
+  - **Podar en `selectedSkillIDs` (`run.go:2130`)**, el punto común de sus 9 llamadores, después de la comprobación de longitud, para que una lista explícita formada solo por IDs retirados no caiga al preset.
+  - **El ámbito por defecto de `sync` es `workspace`**: si se copia la guarda del precedente de temas (`scope != ScopeWorkspace`), las copias heredadas del HOME no se tocarían nunca.
+  - Borrado seguro: solo si `<id>` es un directorio real (sin enlaces), `SKILL.md` es un fichero regular de 64 KiB o menos y su huella coincide; se vuelve a comprobar justo antes de borrar, se borra `SKILL.md` y luego el directorio solo si queda vacío (nunca `RemoveAll`). La skill propia `skills/branch-pr` (`axiom-branch-pr`) no coincide con ninguna huella y ningún adaptador apunta a `<ws>/skills`.
+  - **Fallo activo en `main` (regresión de #70):** si `state.json` tiene `Skills` explícitos con `branch-pr`, `componentPaths` exige un `SKILL.md` que ya nunca se escribe y la verificación de `sync` falla siempre en ámbito `workspace`. Por eso S1 va primero.
+  - En esta máquina no hay copias instaladas de ninguna de las dos skills y `state.json` no tiene `Skills` explícitos.
+- **Corte en PRs (sin `size:exception`):**
+  - **S1** — podar los IDs retirados de la selección (`skills/retired.go` con `IsRetired` y `WithoutRetired`, y `selectedSkillIDs`). ~100 líneas. Corrige el fallo activo.
+  - **S2** — huellas, biblioteca (`InspectRetired`, `RetireInstalled`) y paso de `sync` con copia de seguridad para el *rollback*. ~380-430 líneas; si pasa de 400, se cambia el corte: biblioteca más `uninstall`, y después `sync` con el aviso.
+  - **S3** — `uninstall` (borra las copias propias y conserva las editadas), aviso *Soft* en la verificación de `sync` y nota en el registro de absorción. ~200-260 líneas.
+- **Decisiones de producto** (recomendaciones del plan):
+  1. Que un `sync` en ámbito `workspace` limpie también las copias de los directorios de usuario del HOME de los agentes seleccionados: recomendado sí.
+  2. El directorio de compatibilidad `~/.agents/skills`: recomendado dejarlo para un seguimiento.
+  3. Avisar de una copia editada en cada `sync` (sin estado) o una sola vez.
+  4. `uninstall`: conservar las copias editadas (recomendado) o borrar por nombre.
+  5. Retirar solo en `sync`, no en `install` (recomendado).
+- **Decisiones tomadas (2026-10-05):**
+  - 1: **sí**, decisión explícita del usuario. Un `sync` en `workspace` también retira, por huella, las copias del HOME de los agentes seleccionados.
+  - 2-5: se aplican las recomendaciones del plan, comunicadas al usuario: `~/.agents/skills` queda para un seguimiento; el aviso es sin estado, en cada `sync`, y solo si el `name` del frontmatter sigue siendo el ID retirado; `uninstall` conserva las copias editadas; la retirada solo se hace en `sync`.
+- **S1 hecho: PR #81** (`e550e21c`, 199 líneas, riesgo `medium`). El test de `sync` falla sin el arreglo en los dos ámbitos (`post-sync verification failed: … branch-pr\SKILL.md`) y pasa con él. Revisado y reejecutado por el orquestador. Worktree `odd-up-t5a`, rama `fix/podar-skills-retiradas-seleccion`.
+- **S2:** encadenado sobre la rama de S1 (worktree `odd-up-t5b`).
 
 ### [ ] T6 · Retirar la telemetría por completo (tamaño L, varios PRs)
 
