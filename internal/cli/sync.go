@@ -566,6 +566,11 @@ func (r *syncRuntime) stagePlan() pipeline.StagePlan {
 	if r.scope != ScopeWorkspace {
 		apply = append(apply, managedVisualThemeCleanupStep{id: "sync:retire-managed-visual-themes", homeDir: r.homeDir, adapters: adapters, changedFiles: &r.changedFiles})
 	}
+	apply = append(apply, retiredSkillsCleanupStep{
+		id:           "sync:retire-installed-skills",
+		roots:        retiredSkillRoots(r.homeDir, r.workspaceDir, r.scope, adapters),
+		changedFiles: &r.changedFiles,
+	})
 	if r.backgroundActivation != nil {
 		apply = append(apply, openCodeBackgroundActivationStep{id: "sync:opencode:background-activation", plan: r.backgroundActivation, state: r.state, ready: &r.runtimeReady})
 	}
@@ -661,6 +666,11 @@ func syncBackupTargets(homeDir, workspaceDir string, selection model.Selection, 
 
 func syncBackupTargetsScoped(homeDir, workspaceDir string, scope InstallScope, selection model.Selection, adapters []agents.Adapter) ([]string, error) {
 	paths := map[string]struct{}{}
+	for _, root := range retiredSkillRoots(homeDir, workspaceDir, scope, adapters) {
+		for _, path := range inspectRetiredSkills(root).Owned {
+			paths[path] = struct{}{}
+		}
+	}
 	if scope != ScopeWorkspace {
 		for _, adapter := range adapters {
 			owned, err := theme.ManagedVisualThemePaths(homeDir, adapter)
@@ -937,6 +947,65 @@ func (s managedVisualThemeCleanupStep) Run() error {
 		}
 	}
 	return nil
+}
+
+// Seams over the retired-skill cleanup so tests can prove ownership against
+// synthetic content instead of historical SKILL.md files.
+var (
+	inspectRetiredSkills  = skills.InspectRetired
+	retireInstalledSkills = skills.RetireInstalled
+)
+
+// retiredSkillsCleanupStep removes unmodified installed copies of skills that
+// no longer ship (#70), so they stop competing with their replacements.
+type retiredSkillsCleanupStep struct {
+	id           string
+	roots        []string
+	changedFiles *[]string
+}
+
+func (s retiredSkillsCleanupStep) ID() string { return s.id }
+
+// Run never fails: a copy that is modified, linked or cannot be removed is
+// left alone, because a stale duplicate is not worth rolling back the whole
+// sync. Post-sync verification warns about the ones that remain.
+func (s retiredSkillsCleanupStep) Run() error {
+	for _, root := range s.roots {
+		result := retireInstalledSkills(root)
+		if s.changedFiles != nil {
+			*s.changedFiles = append(*s.changedFiles, result.Owned...)
+		}
+	}
+	return nil
+}
+
+// retiredSkillRoots returns the skill directories to clean for the selected
+// agents: the one the current scope writes to plus the user-level one, since a
+// workspace sync must also clear copies an earlier global install left in the
+// home directory. Agents without a skills directory are skipped.
+func retiredSkillRoots(homeDir, workspaceDir string, scope InstallScope, adapters []agents.Adapter) []string {
+	var roots []string
+	seen := map[string]struct{}{}
+	add := func(base string, adapter agents.Adapter) {
+		if base == "" {
+			return // SkillsDir of an empty base would be a cwd-relative path.
+		}
+		root := adapter.SkillsDir(base)
+		if root == "" {
+			return
+		}
+		root = filepath.Clean(root)
+		if _, ok := seen[root]; ok {
+			return
+		}
+		seen[root] = struct{}{}
+		roots = append(roots, root)
+	}
+	for _, adapter := range adapters {
+		add(componentInjectionDirScoped(homeDir, workspaceDir, scope, adapter), adapter)
+		add(homeDir, adapter)
+	}
+	return roots
 }
 
 type codeGraphGuidanceSyncStep struct {
@@ -2302,6 +2371,21 @@ func runPostSyncVerificationScoped(homeDir, workspaceDir string, scope InstallSc
 						return err
 					}
 					return nil
+				},
+			})
+		}
+	}
+
+	// Retired copies that sync kept (edited, so not provably Axiom's) still
+	// compete with their replacement. Warn once per copy; never fail the sync.
+	for _, root := range retiredSkillRoots(homeDir, workspaceDir, scope, adapters) {
+		for _, dir := range skills.StillNamedRetired(root) {
+			checks = append(checks, verify.Check{
+				ID:          "verify:sync:retired-skill:" + dir,
+				Description: "retired skill not left installed",
+				Soft:        true,
+				Run: func(context.Context) error {
+					return fmt.Errorf("%s: %w", dir, skills.ErrRetiredSkillKept)
 				},
 			})
 		}

@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
 )
@@ -172,4 +174,47 @@ func inspectRetiredCopy(dir string, fingerprints []string) retiredState {
 		}
 	}
 	return retiredKept
+}
+
+// ErrRetiredSkillKept explains why a retired skill is still installed: sync
+// only removes copies it can prove unmodified.
+var ErrRetiredSkillKept = errors.New("retired skill still installed with local edits, so sync kept it; delete its directory if you no longer need it")
+
+// StillNamedRetired returns the skill directories under skillsDir whose
+// SKILL.md frontmatter name is still the retired ID. Only those compete with
+// the Axiom replacement: a user who rewrote the skill and renamed it (for
+// example to axiom-branch-pr) is not reported. It is read-only and needs no
+// fingerprints, so it also covers copies kept because they were edited.
+func StillNamedRetired(skillsDir string) []string {
+	var dirs []string
+	for _, id := range retiredSkills {
+		dir := filepath.Join(skillsDir, string(id))
+		path := filepath.Join(dir, retiredSkillFile)
+		info, err := os.Lstat(path)
+		if err != nil || !info.Mode().IsRegular() || info.Size() > maxRetiredSkillBytes {
+			continue
+		}
+		content, err := os.ReadFile(path)
+		if err == nil && frontmatterName(string(content)) == string(id) {
+			dirs = append(dirs, dir)
+		}
+	}
+	return dirs
+}
+
+// frontmatterName reads the top-level name key of a leading YAML block.
+func frontmatterName(content string) string {
+	lines := strings.Split(strings.ReplaceAll(content, "\r\n", "\n"), "\n")
+	if len(lines) == 0 || strings.TrimSpace(lines[0]) != "---" {
+		return ""
+	}
+	for _, line := range lines[1:] {
+		if strings.TrimSpace(line) == "---" {
+			break
+		}
+		if value, ok := strings.CutPrefix(line, "name:"); ok {
+			return strings.Trim(strings.TrimSpace(value), `"'`)
+		}
+	}
+	return ""
 }
