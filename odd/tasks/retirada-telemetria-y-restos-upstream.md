@@ -381,7 +381,16 @@ Cada PR lleva riesgo `high` probable (borrado masivo y hooks), así que necesita
       - **Riesgo `high`** (`executable_mode`, `process_boundary` y `shell_source`, por el borrado de scripts de despliegue).
       - **Verificador independiente: PASS WITH NOTES, sin bloqueos.** No quedan referencias vivas; el aislamiento de los arneses se conserva línea a línea; el test de guarda recorre el repositorio entero desde `go.mod` (mutación en una copia: un fichero de producción lo hace fallar y uno `_test.go` no); `go mod tidy -diff` limpio; los ejecutables borrados están todos en `deploy/telemetry/`.
     - **PR #88**, encadenado sobre #87.
-  - **T6f:** en curso, encadenado sobre T6e (worktree `odd-up-t6f`, rama `docs/telemetria-retirada`). Incluye `docs/telemetry.md` mínimo, `README.md`, 20 filas del ledger a `revertido`, REQ-20.12 retirado y quitar `docs/telemetry.md` de la lista blanca del test de guarda.
+  - **T6f: PR #89** (`67d6da3c`, encadenado sobre #88; worktree `odd-up-t6f`, rama `docs/telemetria-retirada`).
+    - **Cambios:**
+      - `docs/telemetry.md`: de 585 a 25 líneas.
+      - `README.md`.
+      - Ledger: 20 filas a `revertido`, con motivo; si la fila ya tenía uno, se conserva como «Nota de absorción original». Recuento 60/11/20, total 91.
+      - REQ-20.12 marcado como RETIRADO en la spec y en `INDEX.md`.
+      - `docs/telemetry.md` fuera de la lista blanca del test de guarda; el *fixture* del autotest pasa al ledger.
+    - **Tamaño:** +47 / −606, con **`size:exception` aprobado por el usuario**. Riesgo `medium`.
+    - **Menciones restantes a «telemetry», todas inocuas:** la lógica de retirada, comentarios, `PRD-AGENT-BUILDER.md` (futura) y `internal/update/upgrade/executor.go:102` (datos de usuario que conserva la actualización).
+  - **Orden de merge de T6:** #87 → #88 → #89, con retarget y `rebase --onto` entre medias.
     - **Seguimiento posible:** el sandbox del `TestMain` de `internal/app` no fija `LOCALAPPDATA`, así que PowerShell, lanzado desde los tests, crea esa caché dentro del paquete.
   - **T6d: PR #86** (`7dc41fd4`, worktree `odd-up-t6d`, rama `fix/telemetria-retirar-plugin-opencode`). El verificador independiente encontró un **defecto bloqueante, ya corregido**: el directorio de configuración de OpenCode había dejado de ser raíz de restauración del *rollback*, que solo llegaba ahí por el código de telemetría. Con `XDG_CONFIG_HOME` fuera del HOME, un `install` o `sync` fallido no restauraba `skill-registry.ts`. Ahora `rollbackRestoreStep.openCodeConfigDir`, con el test de regresión `TestOpenCodeRollbackRestoresConfigOutsideHomeViaXDG` en `install` y `sync`. También se añadió el test de `AfterHash == sha256(After)`, cuya mutación sobrevivía. Tamaño final: 1658 líneas (+670 / −988), con `size:exception` aprobado. **Seguimiento:** el `sync` de la TUI pierde el aviso, porque `tui.SyncFunc` solo devuelve los ficheros cambiados.
     - **Tamaño:** 1518 líneas (+531 / −987). **`size:exception` aprobado por el usuario.**
