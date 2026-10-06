@@ -31,7 +31,7 @@ const reviewerContextMarker = reviewtransaction.ReviewerContextMarker
 const nativeReviewerResultSchema = `{"findings":[{"location":"path:line or path:start-end","severity":"CRITICAL","claim":"observable incorrect behavior","evidence_class":"deterministic","causal_disposition":"introduced","proof_refs":["concrete proof"]}],"evidence":["what was inspected"]}`
 const providerReviewerResultSchema = `{"subject_hash":"<artifact_subject.subject_hash>","inspection":{"status":"completed","paths":["<complete unique unordered set>"]},"findings":[{"location":"path:line or path:start-end","severity":"CRITICAL","claim":"observable incorrect behavior","evidence_class":"deterministic","causal_disposition":"introduced","proof_refs":["concrete proof"]}],"evidence":["what was inspected"]}`
 
-const reviewerInspectionCommandPrefix = `gentle-ai review inspect-candidate --repository-context <repository_context> --expected-revision <revision> --lineage <lineage> --target <target> --lens <lens> --order <order> --operation `
+const reviewerInspectionCommandPrefix = `axiom review inspect-candidate --repository-context <repository_context> --expected-revision <revision> --lineage <lineage> --target <target> --lens <lens> --order <order> --operation `
 
 func reviewerInspectionCommands() []string {
 	return []string{
@@ -442,7 +442,7 @@ Return one JSON object and no prose. Use exactly this native result shape:
 
 %s
 
-This is a judgment-day judge result, not a `+"`gentle-ai review capture-result`"+` lens artifact. Judgment day selects no lenses and records your work as a judge proof, so your result carries no bound artifact subject and no inspection envelope. The only allowed top-level fields are findings and evidence, and the only allowed finding fields are location, severity, claim, evidence_class, causal_disposition, and proof_refs. Never emit summary, skill_resolution, or any other unknown field. Keep orchestration metadata outside the native result JSON; evidence contains only genuine inspection evidence.
+This is a judgment-day judge result, not a `+"`axiom review capture-result`"+` lens artifact. Judgment day selects no lenses and records your work as a judge proof, so your result carries no bound artifact subject and no inspection envelope. The only allowed top-level fields are findings and evidence, and the only allowed finding fields are location, severity, claim, evidence_class, causal_disposition, and proof_refs. Never emit summary, skill_resolution, or any other unknown field. Keep orchestration metadata outside the native result JSON; evidence contains only genuine inspection evidence.
 
 Return {"findings":[],"evidence":["what was inspected"]} when clean.`, nativeReviewerResultSchema)
 }

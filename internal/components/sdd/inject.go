@@ -1487,6 +1487,8 @@ func renderPreservedOpenCodeOrchestratorPrompt(
 	migrated := migratePreservedOpenCodeOrchestratorPrompt(prompt)
 	if agent == model.AgentOpenCode {
 		migrated = strings.ReplaceAll(migrated, legacyOpenCodeConsentV3QuestionRoute, openCodeConsentV3QuestionRoute)
+		migrated = strings.ReplaceAll(migrated, previousOpenCodeConsentV3QuestionRoute, openCodeConsentV3QuestionRoute)
+		migrated = strings.ReplaceAll(migrated, previousOpenCodeConsentV3FallbackClause, openCodeConsentV3FallbackClause)
 		migrated = strings.ReplaceAll(migrated, openCodeFallbackSourceClause, openCodeConsentV3FallbackClause)
 	}
 	if strings.Contains(migrated, openCodeNativeQuestionSourceRoute) {
@@ -1590,7 +1592,7 @@ func removeLegacyOpenCodePlainChatPreflightLines(prompt string) string {
 // replaces a rule that pointed at retired work-routing contracts. The current
 // lifecycle starts only from current-worktree preflight, retains the explicit
 // transaction binding, and leaves delivery to the user rather than a gate.
-const nativeReviewAuthorityRule = "7. **Authority rule**: use selectorless `gentle-ai review status` only to preflight the current worktree" +
+const nativeReviewAuthorityRule = "7. **Authority rule**: use selectorless `axiom review status` only to preflight the current worktree" +
 	" and execute its exact START; retain that transaction's lineage, revision, and target for every later lifecycle call." +
 	" Gates are informational only. Never select lenses, synthesize transitions, infer PASS, or authorize delivery from prose."
 
