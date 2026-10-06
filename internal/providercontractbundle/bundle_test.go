@@ -599,6 +599,12 @@ func TestPiFacadeLifecycleValidation(t *testing.T) {
 		{name: "raw capture", content: valid + "\ngentle-ai review capture-result\n"},
 		{name: "raw acknowledgement", content: valid + "\ngentle-ai review acknowledge-approved\n"},
 		{name: "raw recover", content: valid + "\ngentle-ai review recover --lineage x\n"},
+		{name: "axiom user-owned mode switch is allowed", content: valid + "\naxiom review mode enable --scope global\n", valid: true},
+		{name: "axiom raw status", content: valid + "\naxiom review status\n"},
+		{name: "axiom raw capture", content: valid + "\naxiom review capture-result\n"},
+		{name: "axiom raw acknowledgement", content: valid + "\naxiom review acknowledge-approved\n"},
+		{name: "axiom raw recover", content: valid + "\naxiom review recover --lineage x\n"},
+		{name: "axiom mode switch does not excuse a raw gentle-ai route", content: valid + "\naxiom review mode enable\ngentle-ai review status\n"},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			if got := validPiFacadeLifecycle(test.content); got != test.valid {

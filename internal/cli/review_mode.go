@@ -297,7 +297,7 @@ func reviewModeRepositoryRequiredRefusal(err error) error {
 func reviewModeCommandsByVerb(commands []string, verb string) []string {
 	selected := make([]string, 0, len(commands))
 	for _, command := range commands {
-		if strings.HasPrefix(command, "`gentle-ai review mode "+verb+" ") {
+		if strings.HasPrefix(command, "`gentle-ai review mode "+verb+" ") || strings.HasPrefix(command, "`axiom review mode "+verb+" ") {
 			selected = append(selected, command)
 		}
 	}

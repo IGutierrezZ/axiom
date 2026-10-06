@@ -1042,3 +1042,30 @@ func TestReviewModeCloneScopeEnableNamesTheGlobalExitWhileGlobalUnset(t *testing
 		t.Fatalf("clone enable while global is on must report on without a note:\n%s", got)
 	}
 }
+
+// reviewModeCommandsByVerb must pick a kill-switch command out of the list
+// whichever binary name prefixes it, so the guidance keeps working while the
+// advice moves from `gentle-ai` to `axiom`.
+func TestReviewModeCommandsByVerbAcceptsBothBinaryNames(t *testing.T) {
+	commands := []string{
+		"`gentle-ai review mode enable --scope=global`",
+		"`gentle-ai review mode disable --scope=global`",
+		"`axiom review mode enable --scope=clone --cwd /repo`",
+		"`axiom review mode disable --scope=clone --cwd /repo`",
+		"`axiom review mode status --scope=clone`",
+		"`other review mode enable --scope=global`",
+	}
+	for _, test := range []struct {
+		verb string
+		want []string
+	}{
+		{verb: "enable", want: []string{commands[0], commands[2]}},
+		{verb: "disable", want: []string{commands[1], commands[3]}},
+		{verb: "status", want: []string{commands[4]}},
+	} {
+		got := reviewModeCommandsByVerb(commands, test.verb)
+		if strings.Join(got, "\n") != strings.Join(test.want, "\n") {
+			t.Errorf("reviewModeCommandsByVerb(%q) = %q, want %q", test.verb, got, test.want)
+		}
+	}
+}

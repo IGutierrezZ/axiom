@@ -87,7 +87,7 @@ func TestReviewNarrationNeverClaimsNothingMoreToDo(t *testing.T) {
 // naming neither is a dead end on the one human-facing surface stop reason
 // codes render to.
 func TestReviewNarrationNamesAUniversalOrBetterExit(t *testing.T) {
-	namesOtherContinuation := regexp.MustCompile("`gentle-ai [a-z][a-z-]*|`--[a-z][a-z-]*")
+	namesOtherContinuation := regexp.MustCompile("`(?:gentle-ai|axiom) [a-z][a-z-]*|`--[a-z][a-z-]*")
 	for code, statement := range reviewStopReasonNarration {
 		if strings.Contains(statement, reviewConsentOffPathCommand) {
 			continue
@@ -108,7 +108,7 @@ func TestReviewNarrationNamesAUniversalOrBetterExit(t *testing.T) {
 // `--scope clone --cwd <repo>` writes only under that repository's own
 // .git/gentle-ai directory.
 func TestReviewNarrationReviewModeDisableIsAlwaysCloneScoped(t *testing.T) {
-	re := regexp.MustCompile("`gentle-ai review mode disable[^`]*`")
+	re := regexp.MustCompile("`(?:gentle-ai|axiom) review mode disable[^`]*`")
 	found := 0
 	for code, statement := range reviewStopReasonNarration {
 		for _, invocation := range re.FindAllString(statement, -1) {
@@ -131,8 +131,8 @@ func TestReviewNarrationReviewModeDisableIsAlwaysCloneScoped(t *testing.T) {
 // without --cwd/--lineage/--expected-revision/--target/--reason/--actor
 // (both verified by execution against a fresh binary).
 func TestReviewNarrationNamedCommandsAreAlwaysComplete(t *testing.T) {
-	statusRe := regexp.MustCompile("`gentle-ai review status[^`]*--next-transition`")
-	reopenRe := regexp.MustCompile("`gentle-ai review reopen-results[^`]*`")
+	statusRe := regexp.MustCompile("`(?:gentle-ai|axiom) review status[^`]*--next-transition`")
+	reopenRe := regexp.MustCompile("`(?:gentle-ai|axiom) review reopen-results[^`]*`")
 	for code, statement := range reviewStopReasonNarration {
 		for _, invocation := range statusRe.FindAllString(statement, -1) {
 			// --agent must be BOUND, not fixed. Narration is read by every
