@@ -511,7 +511,7 @@ En las preguntas abiertas se aplican las recomendaciones del plan:
     - build y vet limpios;
     - `uninstall`, `assets`, `providercontractbundle` y `cmd/axiom` en verde;
     - `opencode` solo falla en el fallo de entorno conocido;
-    - `sdd` superó el timeout de 10 minutos al ejecutarse en paralelo con otros paquetes, así que se repite en solitario.
+    - `sdd` superó el timeout de 10 minutos al ejecutarse en paralelo con otros paquetes; **repetido en solitario, pasa en verde (456 s)**. El `main` combinado queda verificado.
   - **Cadenas pendientes:**
     - #88, #91 y #96 retargeteados a `main` y rebasados sin conflictos: #88 → `f96b2ec5`, #91 → `2352ab13`, #96 → `2d196327`.
     - #89 rebasado sobre el nuevo #88 (`4a205e4e`).
