@@ -50,7 +50,7 @@ func parseManagedLauncher(content string) (string, bool) {
 	}
 	header := -1
 	for i := 0; i < len(lines) && i < 2; i++ {
-		if lines[i] == "# "+OwnershipMarker || lines[i] == "rem "+OwnershipMarker {
+		if isOwnershipMarkerLine(lines[i]) {
 			header = i
 			break
 		}
@@ -64,6 +64,18 @@ func parseManagedLauncher(content string) (string, bool) {
 		}
 	}
 	return "", false
+}
+
+// isOwnershipMarkerLine reports whether line is exactly a marker comment of a
+// generated launcher, for either the current or the legacy marker. Suffixed or
+// versioned variants do not match.
+func isOwnershipMarkerLine(line string) bool {
+	for _, marker := range [...]string{OwnershipMarker, LegacyOwnershipMarker} {
+		if line == "# "+marker || line == "rem "+marker {
+			return true
+		}
+	}
+	return false
 }
 
 // parseLauncherInvocation recognizes the invocation line of each generated

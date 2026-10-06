@@ -22,9 +22,15 @@ const (
 	// launcher only supplies the value when this variable is absent.
 	BackgroundSubagentsEnv = "OPENCODE_EXPERIMENTAL_BACKGROUND_SUBAGENTS"
 
-	// OwnershipMarker is embedded in every launcher written by Gentle AI.
+	// OwnershipMarker is embedded in every launcher written by Axiom.
 	// It is intentionally stable so deactivation can refuse to remove user files.
-	OwnershipMarker = "gentle-ai:managed-opencode-launcher/v1"
+	OwnershipMarker = "axiom:managed-opencode-launcher/v1"
+
+	// LegacyOwnershipMarker is the marker that launchers written before the
+	// rebrand carry. It is accepted on read so existing installations stay
+	// owned (and are rewritten with OwnershipMarker on the next activation),
+	// but it is never written again.
+	LegacyOwnershipMarker = "gentle-ai:managed-opencode-launcher/v1"
 
 	minimumMajor = 1
 	minimumMinor = 15
@@ -751,7 +757,13 @@ func readLauncherSnapshot(path string) (launcherSnapshot, error) {
 	if err != nil {
 		return launcherSnapshot{}, fmt.Errorf("read managed OpenCode launcher %q: %w", path, err)
 	}
-	return launcherSnapshot{exists: true, data: data, mode: info.Mode().Perm(), owned: bytes.Contains(data, []byte(OwnershipMarker))}, nil
+	return launcherSnapshot{exists: true, data: data, mode: info.Mode().Perm(), owned: HasOwnershipMarker(data)}, nil
+}
+
+// HasOwnershipMarker reports whether data carries the current or the legacy
+// launcher ownership marker.
+func HasOwnershipMarker(data []byte) bool {
+	return bytes.Contains(data, []byte(OwnershipMarker)) || bytes.Contains(data, []byte(LegacyOwnershipMarker))
 }
 
 func launcherContent(goos, target string) map[string]string {

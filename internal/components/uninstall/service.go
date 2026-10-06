@@ -1,7 +1,6 @@
 package uninstall
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -1908,7 +1907,7 @@ func removeOwnedOpenCodeLauncher(path string) operation {
 			if err != nil {
 				return false, false, err
 			}
-			if !bytes.Contains(data, []byte(opencodeactivation.OwnershipMarker)) {
+			if !opencodeactivation.HasOwnershipMarker(data) {
 				return false, false, nil
 			}
 			if err := os.Remove(path); err != nil {
