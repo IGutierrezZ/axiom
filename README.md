@@ -182,11 +182,8 @@ Después, usa el agente con normalidad. Axiom crea respaldos antes de modificar 
 
 ## Community
 
-Las incidencias de Axiom etiquetadas como [`up-for-grabs`](https://github.com/IGutierrezZ/axiom/issues?q=is%3Aissue+is%3Aopen+label%3Aup-for-grabs) están disponibles para colaborar.
-
 <div align="center">
 
-<a href="docs/community-roadmap.md"><img src="https://img.shields.io/badge/Community%20Roadmap-F095C8?style=for-the-badge&labelColor=1A1218&logo=readthedocs&logoColor=F095C8" alt="Community Roadmap"></a>
 <a href="CONTRIBUTORS.md"><img src="https://img.shields.io/badge/Contributors-D7A0B8?style=for-the-badge&labelColor=1A1218&logo=github&logoColor=D7A0B8" alt="Contributors"></a>
 
 <br/><br/>
