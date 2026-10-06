@@ -407,8 +407,6 @@ func main() {
 	// are unexported there.
 	case "codegraph":
 		os.Exit(runSimpleCommand(cli.RunCodeGraph, os.Args[2:], os.Stdout, os.Stderr))
-	case "telemetry":
-		os.Exit(runSimpleCommand(cli.RunTelemetry, os.Args[2:], os.Stdout, os.Stderr))
 	case "skill-registry":
 		os.Exit(runSimpleCommand(
 			func(args []string, stdout io.Writer) error {
