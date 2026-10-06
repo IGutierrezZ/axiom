@@ -56,7 +56,7 @@ var currentOpenCodeOrchestratorSections = []orchestratorContractSection{
 		name:   "edit-authority consent relay",
 		marker: "#### SDD Edit-Authority Consent Relay (MANDATORY)",
 		sentinels: []string{
-			"gentle-ai.sdd-integration.consent/v1",
+			"axiom.sdd-integration.consent/v1",
 			"never run the grant unprompted",
 			"re-enter through native status",
 		},

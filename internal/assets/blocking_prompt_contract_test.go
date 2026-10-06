@@ -257,7 +257,7 @@ func TestCoordinatorOrchestratorsCarryGentleAIProviderDefectHandoff(t *testing.T
 		{name: "decline preserves ordinary delivery", text: "The result carries no lineage or receipt; ordinary delivery is unmanaged by the candidate choice, and the next candidate asks again."},
 		{name: "native negotiated status re-entry", text: "re-enter through native negotiated STATUS, then resume the already-held consumer continuation"},
 		{name: "continue paths reuse exact decline", text: "Both continue choices execute that exact captured decline invocation exactly once"},
-		{name: "review mode disable prohibition", text: "Do not invoke `gentle-ai review mode disable` at clone or global scope within this handoff."},
+		{name: "review mode disable prohibition", text: "Do not invoke `axiom review mode disable` at clone or global scope within this handoff."},
 		{name: "rdd mode preservation", text: "Do not turn RDD off or on within this handoff."},
 		{name: "stop choice", text: "**Stop here**: Perform no GitHub operation and no decline invocation; preserve all consumer state and STOP."},
 		{name: "observed evidence", text: "Report observed evidence, not an unconfirmed root cause"},
@@ -332,7 +332,7 @@ func TestCoordinatorOrchestratorsCarryGentleAIProviderDefectHandoff(t *testing.T
 					t.Errorf("provider-defect handoff must not make published fixes the only resumption route: %q", prohibited)
 				}
 			}
-			if count := strings.Count(contract, "gentle-ai review mode disable"); count != 1 {
+			if count := strings.Count(contract, "axiom review mode disable"); count != 1 {
 				t.Errorf("provider-defect handoff mentions review mode disable %d times; want exactly its prohibition", count)
 			}
 			for _, invariant := range []struct {
@@ -428,7 +428,7 @@ func providerDefectHandoffLine(t *testing.T, contract, prefix string) string {
 func TestCoordinatorOrchestratorsCarrySDDEditAuthorityConsentRelay(t *testing.T) {
 	requirements := []string{
 		"When native SDD status reports `blocked(edit_authority_missing)`",
-		"typed `gentle-ai.sdd-integration.consent/v1` envelope",
+		"typed `axiom.sdd-integration.consent/v1` envelope",
 		"optional `consent` block",
 		"Treat that envelope as a Lossless Blocking Prompt under this contract",
 		"same discipline as the review consent relay",

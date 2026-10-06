@@ -560,14 +560,14 @@ func TestRenderedReviewersAreReadOnlyAndSingleResult(t *testing.T) {
 							t.Errorf("%s missing Claude transport clause %q", path, want)
 						}
 					}
-					for _, forbidden := range []string{"OpenCode tasks begin", "gentle-ai review inspect-candidate"} {
+					for _, forbidden := range []string{"OpenCode tasks begin", "axiom review inspect-candidate", "gentle-ai review inspect-candidate"} {
 						if strings.Contains(content, forbidden) {
 							t.Errorf("%s retains provider-only instruction %q", path, forbidden)
 						}
 					}
 					return
 				}
-				for _, want := range []string{"GENTLE_AI_REVIEW_CONTEXT", "sole source of artifact_subject", "gentle-ai review inspect-candidate", "--operation name-status", "--operation numstat", "--operation stat --path-index", "--operation patch --path-index", "--operation object --path-index", "--side base", "--side candidate", "provider binding", "zero-based changed_path_manifest index", "never pass --binary"} {
+				for _, want := range []string{"GENTLE_AI_REVIEW_CONTEXT", "sole source of artifact_subject", "axiom review inspect-candidate", "--operation name-status", "--operation numstat", "--operation stat --path-index", "--operation patch --path-index", "--operation object --path-index", "--side base", "--side candidate", "provider binding", "zero-based changed_path_manifest index", "never pass --binary"} {
 					if !strings.Contains(content, want) {
 						t.Errorf("%s missing provider transport clause %q", path, want)
 					}

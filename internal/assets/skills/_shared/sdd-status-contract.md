@@ -83,7 +83,7 @@ relationships:
   amends: []
   conflictsWith: []
   sameDomainActiveChanges: []
-consent: <optional exact gentle-ai.sdd-integration.consent/v1 envelope>
+consent: <optional exact axiom.sdd-integration.consent/v1 envelope>
 phaseInstructions:
   apply: [<instruction strings>]
   verify: [<instruction strings>]
@@ -135,7 +135,7 @@ persisted marker and refuse absent/stale identity without initializing a marker 
 A change whose tasks.md work units target paths outside `allowedEditRoots` never reports apply ready. Native status reports `applyState: blocked` and `blockedReasons` carries a `blocked(edit_authority_missing)` reason naming each unauthorized edit root and the three exits: edit tasks.md so every work unit stays inside the authorized edit roots, grant this change edit authority for the named edit roots, or mark a read-only input with `(read-only)` on its line.
 
 - Detection is conservative prose inspection: backticked path-like tokens inside markdown checkbox lines that resolve to a path outside the authorized roots. A different repository is named by its Git root; a same-repository target is narrowed to its containing edit root; a directory in no Git repository is named as itself. A backticked path immediately followed by `(read-only)` (case-insensitive) is a read-only input and not an edit target; the marker annotates only the path it follows, so an unmarked path on the same line still counts.
-- Read-only status never prepares consent; after explicit authorized `sdd-continue` preparation, an OpenSpec-backed status reporting `blocked(edit_authority_missing)` carries the typed `gentle-ai.sdd-integration.consent/v1` envelope as the optional `consent` block: headline, reason, `value`, the missing roots as evidence, exactly two choices with answer tokens `granted` and `declined` (each with label, effect, and an exact invocation), and an off-path note.
+- Read-only status never prepares consent; after explicit authorized `sdd-continue` preparation, an OpenSpec-backed status reporting `blocked(edit_authority_missing)` carries the typed `axiom.sdd-integration.consent/v1` envelope as the optional `consent` block: headline, reason, `value`, the missing roots as evidence, exactly two choices with answer tokens `granted` and `declined` (each with label, effect, and an exact invocation), and an off-path note.
 - A later work unit's own unauthorized root does NOT block the current work unit. It is reported as a `note(future_edit_roots)` entry in `notes` naming that future root, so the current unit's `applyState` stays `ready` and `blockedReasons` stays empty until that work unit is reached.
 - Answer flow: the orchestrator relays the COMPLETE envelope losslessly as a blocking prompt. Only on the human's explicit `granted` answer does the agent execute the envelope's named grant invocation, verbatim and exactly once, then re-enter through native status. The agent NEVER runs the grant unprompted and NEVER answers on the human's behalf.
 - Decline stays blocked: the agent runs the envelope's decline invocation, nothing is persisted, the change stays `blocked(edit_authority_missing)`, and the reason names all three exits.

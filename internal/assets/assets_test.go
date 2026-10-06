@@ -1274,7 +1274,7 @@ func TestClaudeSDDOrchestratorChainStrategy(t *testing.T) {
 		"When launching `sdd-apply`, always include the resolved `delivery_strategy`, `chain_strategy`, and any chosen PR boundary/exception in the prompt.",
 		"Claude Code's native Agent/Task mechanism",
 		"results are not persisted by OpenCode's background-agent plugin",
-		"treat `chained-pr` (registry skill `gentle-ai-chained-pr`) as a required skill match",
+		"treat `chained-pr` (registry skill `chained-pr`) as a required skill match",
 	} {
 		if !strings.Contains(content, required) {
 			t.Fatalf("claude/sdd-orchestrator.md missing required SDD chain/delegation wording %q", required)
@@ -1323,7 +1323,7 @@ func TestNonClaudeSDDOrchestratorChainStrategyParity(t *testing.T) {
 				"sdd-tasks",
 				"sdd-apply",
 				tc.propagationScope,
-				"treat `chained-pr` (registry skill `gentle-ai-chained-pr`) as a required skill match",
+				"treat `chained-pr` (registry skill `chained-pr`) as a required skill match",
 			} {
 				if !strings.Contains(content, required) {
 					t.Fatalf("%s missing required chain strategy wording %q", tc.path, required)

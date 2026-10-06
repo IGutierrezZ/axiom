@@ -346,7 +346,7 @@ func TestReviewerBashPromptIsNativeAndWindowsPortable(t *testing.T) {
 		}
 	}
 	for _, operation := range []string{"name-status", "numstat", "stat", "patch", "object"} {
-		if !strings.Contains(prompt, "gentle-ai review inspect-candidate") || !strings.Contains(prompt, "--operation "+operation) {
+		if !strings.Contains(prompt, "axiom review inspect-candidate") || !strings.Contains(prompt, "--operation "+operation) {
 			t.Errorf("review prompt omits native %s inspection recipe", operation)
 		}
 	}
@@ -397,7 +397,7 @@ func TestKilocodeReviewSettingsMatchCurrentMainBaseline(t *testing.T) {
 	// SDD edit-authority consent relay (#2570, S6 of #2540): the orchestrator
 	// contract gained the byte-identical "SDD Edit-Authority Consent Relay
 	// (MANDATORY)" clause teaching the lossless relay of the typed
-	// gentle-ai.sdd-integration.consent/v1 envelope. Kilocode embeds the same
+	// axiom.sdd-integration.consent/v1 envelope. Kilocode embeds the same
 	// orchestrator contract in `agent.gentle-orchestrator.prompt`, so the
 	// hash moved a fifth time. Deliberate, not drift.
 	//
@@ -550,7 +550,11 @@ func TestKilocodeReviewSettingsMatchCurrentMainBaseline(t *testing.T) {
 	// reaches this subpackage. Kilocode gains no native governance capability
 	// ODD desacople de Gentle AI: rederiva este baseline por la actualización de marcadores canónicos
 	// (<!-- axiom:sdd-... -->) y comandos sugeridos a axiom review mode status. Deliberate, not drift.
-	const want = "7fb1a4f5035a5ed1347df66dd02dd2d90d40fb36ee7553805db3705bcd86c95e"
+	// ODD T7j: the shared orchestrator and review-ledger assets Kilocode embeds now
+	// name `axiom review ...` instead of the always-failing `gentle-ai review ...`,
+	// the skill `chained-pr` instead of the nonexistent `gentle-ai-chained-pr`, and the
+	// `axiom.sdd-integration.consent/v1` ID Go actually emits. Deliberate, not drift.
+	const want = "8ca2ef55b937fea44bf5866e77cf83686be4d0c62f523f21be92e36ce1747772"
 	if got != want {
 		t.Fatalf("Kilocode settings SHA-256 = %s, want current-main baseline %s", got, want)
 	}

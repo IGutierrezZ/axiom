@@ -354,7 +354,7 @@ func (b *battery) checkValidatorInspectionRecipe(repo, childPrompt string) {
 		b.fail(openCodeLane, name, "child prompt Input is not decodable JSON: "+err.Error())
 		return
 	}
-	if !strings.Contains(childPrompt, "gentle-ai review inspect-candidate") {
+	if !strings.Contains(childPrompt, "axiom review inspect-candidate") && !strings.Contains(childPrompt, "gentle-ai review inspect-candidate") {
 		b.fail(openCodeLane, name, "child prompt never names the immutable inspection command")
 		return
 	}

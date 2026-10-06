@@ -178,8 +178,8 @@ func assertOpenCodeConsentQuestionContract(t *testing.T, prompt string) {
 		"Never use chat text as consent, auto-select, or synthesize a continuation",
 		"retain the exact captured target binding and invoke only its exact provider-owned choice invocation once",
 		"If `question` is unavailable or the complete envelope cannot be represented, report that compatibility limitation and STOP without invoking any provider continuation",
-		"For envelopes other than `gentle-ai.review-integration.consent/v3` (including `gentle-ai.sdd-integration.consent/v1`)",
-		"- Fallback: For envelopes other than `gentle-ai.review-integration.consent/v3` (including `gentle-ai.sdd-integration.consent/v1`), if a native UI is unavailable",
+		"For envelopes other than `gentle-ai.review-integration.consent/v3` (including `axiom.sdd-integration.consent/v1`)",
+		"- Fallback: For envelopes other than `gentle-ai.review-integration.consent/v3` (including `axiom.sdd-integration.consent/v1`), if a native UI is unavailable",
 	} {
 		if !strings.Contains(prompt, want) {
 			t.Errorf("OpenCode consent/v3 contract missing %q", want)
@@ -200,7 +200,7 @@ func assertOpenCodeConsentQuestionContract(t *testing.T, prompt string) {
 
 func TestOpenCodeConsentV3ExceptionPreservesSDDEditAuthorityFallback(t *testing.T) {
 	source := assets.MustRead("opencode/sdd-orchestrator.md")
-	const scope = "For envelopes other than `gentle-ai.review-integration.consent/v3` (including `gentle-ai.sdd-integration.consent/v1`), "
+	const scope = "For envelopes other than `gentle-ai.review-integration.consent/v3` (including `axiom.sdd-integration.consent/v1`), "
 	wantFallback := strings.Replace(testOpenCodeFallbackClause, "- Fallback: If ", "- Fallback: "+scope+"if ", 1)
 	wantNative := strings.Replace(openCodeNativeQuestionSourceRoute, "- Native route: The ", scope+"the ", 1)
 	var editAuthorityRelay string
@@ -209,7 +209,7 @@ func TestOpenCodeConsentV3ExceptionPreservesSDDEditAuthorityFallback(t *testing.
 			editAuthorityRelay = line
 		}
 	}
-	if !strings.Contains(editAuthorityRelay, "gentle-ai.sdd-integration.consent/v1") {
+	if !strings.Contains(editAuthorityRelay, "axiom.sdd-integration.consent/v1") {
 		t.Fatal("source omitted the SDD edit-authority consent contract")
 	}
 	for name, prompt := range map[string]string{
@@ -268,6 +268,30 @@ func TestOpenCodePreservedPromptReplacesManagedConsentQuestionRoute(t *testing.T
 				}
 			}
 		})
+	}
+}
+
+func TestOpenCodePreservedPromptMigratesPreviousConsentRouteAndFallback(t *testing.T) {
+	home := t.TempDir()
+	adapter := opencodeAdapter()
+	settingsPath := adapter.SettingsPath(home)
+	if err := os.MkdirAll(filepath.Dir(settingsPath), 0o755); err != nil {
+		t.Fatalf("MkdirAll(settings) error = %v", err)
+	}
+	const userPolicy = "User-owned policy: preserve my project instructions."
+	seed := `{"agent":{"gentle-orchestrator":{"prompt":` + strconv.Quote(userPolicy+"\n"+openCodeConsentV3QuestionRoute+"\n"+previousOpenCodeConsentV3FallbackClause) + `}}}`
+	if err := os.WriteFile(settingsPath, []byte(seed), 0o644); err != nil {
+		t.Fatalf("WriteFile(settings) error = %v", err)
+	}
+	if _, err := Inject(home, adapter, model.SDDModeSingle, InjectOptions{PreserveOpenCodeOrchestratorPrompt: true}); err != nil {
+		t.Fatalf("Inject() error = %v", err)
+	}
+	prompt := agentPrompt(t, readOpenCodeAgents(t, settingsPath), "gentle-orchestrator")
+	if strings.Contains(prompt, previousOpenCodeConsentV3QuestionRoute) || strings.Contains(prompt, previousOpenCodeConsentV3FallbackClause) || strings.Contains(prompt, "gentle-ai.sdd-integration.consent/v1") {
+		t.Fatal("preserved OpenCode prompt retained a previous clause naming the legacy SDD consent ID")
+	}
+	if strings.Count(prompt, openCodeConsentV3QuestionRoute) != 1 || strings.Count(prompt, openCodeConsentV3FallbackClause) != 1 || !strings.Contains(prompt, userPolicy) {
+		t.Fatal("preserved OpenCode prompt lost user policy or the unique current fallback clause")
 	}
 }
 

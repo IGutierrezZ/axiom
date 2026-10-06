@@ -102,9 +102,10 @@ func TestOpenCodeV2ShippedPermissionPreservation(t *testing.T) {
 		{"existing question deny", "axiom-orchestrator", "question", "any", []any{map[string]any{"action": "question", "resource": "*", "effect": "deny"}}, "deny"},
 		{"managed allowed scope", "axiom-orchestrator", "subagent", "explore", []any{map[string]any{"action": "subagent", "resource": "untrusted-agent", "effect": "allow"}}, "allow"},
 		{"universal user task deny", "axiom-orchestrator", "subagent", "explore", []any{map[string]any{"action": "subagent", "resource": "*", "effect": "deny"}}, "deny"},
-		{"validator allowed command", "review-validator", "shell", "gentle-ai review inspect-candidate --purpose targeted-validation public", []any{map[string]any{"action": "shell", "resource": "gentle-ai review inspect-candidate --purpose targeted-validation restricted*", "effect": "deny"}}, "allow"},
+		{"validator allowed command", "review-validator", "shell", "axiom review inspect-candidate --purpose targeted-validation public", []any{map[string]any{"action": "shell", "resource": "axiom review inspect-candidate --purpose targeted-validation restricted*", "effect": "deny"}}, "allow"},
+		{"validator legacy command still allowed", "review-validator", "shell", "gentle-ai review inspect-candidate --purpose targeted-validation public", []any{map[string]any{"action": "shell", "resource": "gentle-ai review inspect-candidate --purpose targeted-validation restricted*", "effect": "deny"}}, "allow"},
 		{"managed task replacement", "axiom-orchestrator", "subagent", "untrusted-agent", []any{map[string]any{"action": "subagent", "resource": "untrusted-agent", "effect": "allow"}}, "deny"},
-		{"validator restrictive exception", "review-validator", "shell", "gentle-ai review inspect-candidate --purpose targeted-validation restricted", []any{map[string]any{"action": "shell", "resource": "gentle-ai review inspect-candidate --purpose targeted-validation restricted*", "effect": "deny"}}, "deny"},
+		{"validator restrictive exception", "review-validator", "shell", "axiom review inspect-candidate --purpose targeted-validation restricted", []any{map[string]any{"action": "shell", "resource": "axiom review inspect-candidate --purpose targeted-validation restricted*", "effect": "deny"}}, "deny"},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			path := filepath.Join(t.TempDir(), "opencode.json")
