@@ -198,7 +198,7 @@ func reviewStopReasonDocsCompleteDocuments(t *testing.T) map[string]string {
 
 // reviewStatusNextTransitionInvocationRegexp matches any backtick-quoted
 // `gentle-ai review status ... --next-transition` invocation.
-var reviewStatusNextTransitionInvocationRegexp = regexp.MustCompile("`gentle-ai review status[^`]*--next-transition`")
+var reviewStatusNextTransitionInvocationRegexp = regexp.MustCompile("`(?:gentle-ai|axiom) review status[^`]*--next-transition`")
 
 // TestNamedReviewStatusNextTransitionIsAlwaysComplete is the execution-based
 // RED-first proof for adversarial finding F1: `gentle-ai review status
@@ -233,7 +233,7 @@ var reviewAgentBindingRegexp = regexp.MustCompile("--agent [^ `]+")
 
 // reviewReopenResultsInvocationRegexp matches any backtick-quoted
 // `gentle-ai review reopen-results ...` invocation.
-var reviewReopenResultsInvocationRegexp = regexp.MustCompile("`gentle-ai review reopen-results[^`]*`")
+var reviewReopenResultsInvocationRegexp = regexp.MustCompile("`(?:gentle-ai|axiom) review reopen-results[^`]*`")
 
 // TestNamedReviewReopenResultsIsAlwaysComplete is the execution-based
 // RED-first proof for adversarial finding F7: `gentle-ai review
@@ -244,7 +244,10 @@ var reviewReopenResultsInvocationRegexp = regexp.MustCompile("`gentle-ai review 
 // (verified by execution). Every backtick-quoted invocation must name all
 // six required flags.
 func TestNamedReviewReopenResultsIsAlwaysComplete(t *testing.T) {
-	const bareNominalReference = "`gentle-ai review reopen-results`"
+	bareNominalReferences := map[string]bool{
+		"`gentle-ai review reopen-results`": true,
+		"`axiom review reopen-results`":     true,
+	}
 	requiredFlags := []string{"--cwd", "--lineage", "--expected-revision", "--target", "--reason", "--actor"}
 	for label, content := range reviewStopReasonDocsCompleteDocuments(t) {
 		for _, invocation := range reviewReopenResultsInvocationRegexp.FindAllString(content, -1) {
@@ -252,7 +255,7 @@ func TestNamedReviewReopenResultsIsAlwaysComplete(t *testing.T) {
 			// ("`gentle-ai review reopen-results` is a bounded maintenance
 			// operation..."), not an attempted invocation -- only a span that
 			// already carries at least one flag is claiming to be runnable.
-			if invocation == bareNominalReference {
+			if bareNominalReferences[invocation] {
 				continue
 			}
 			for _, flag := range requiredFlags {

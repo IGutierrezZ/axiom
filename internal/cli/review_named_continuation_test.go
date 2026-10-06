@@ -42,8 +42,9 @@ import (
 // -- the only form that unambiguously names a command rather than merely
 // mentioning the word "review". Requiring a lowercase letter directly after
 // "review " excludes the usage banner's `gentle-ai review <capabilities|...>`
-// placeholder, which names no single verb.
-var reviewNamedContinuationInvocationRegexp = regexp.MustCompile(`gentle-ai review ([a-z][a-z-]*)`)
+// placeholder, which names no single verb. Both binary names are accepted so
+// the guard keeps holding while advice moves from `gentle-ai` to `axiom`.
+var reviewNamedContinuationInvocationRegexp = regexp.MustCompile(`(?:gentle-ai|axiom) review ([a-z][a-z-]*)`)
 
 // reviewNamedContinuationSelfReferenceRegexp matches the self-referential
 // refusal form: a message that opens by naming the verb it is refusing ("review

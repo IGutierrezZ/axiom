@@ -48,7 +48,7 @@ var reviewIntegrationDocSchemaIDRegexp = regexp.MustCompile("`(gentle-ai\\.[a-z0
 // reviewIntegrationDocCommandVerbRegexp extracts every `gentle-ai review
 // <verb>` command name the doc names, from both fenced code blocks and
 // inline code spans (both use the same literal token sequence).
-var reviewIntegrationDocCommandVerbRegexp = regexp.MustCompile(`gentle-ai review ([a-z][a-z-]*)`)
+var reviewIntegrationDocCommandVerbRegexp = regexp.MustCompile(`(?:gentle-ai|axiom) review ([a-z][a-z-]*)`)
 
 func readReviewIntegrationDoc(t *testing.T) string {
 	t.Helper()
