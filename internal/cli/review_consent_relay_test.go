@@ -461,7 +461,7 @@ func TestConsentDeclineOnLowRiskCandidateIsRefused(t *testing.T) {
 		"--lineage", "review-consent-low-decline", "--consent", "declined",
 	}), &output)
 	if err == nil || !strings.Contains(output.String(), "nothing to decline") ||
-		!strings.Contains(output.String(), "rerun gentle-ai review start without --consent") {
+		!strings.Contains(output.String(), "rerun axiom review start without --consent") {
 		t.Fatalf("low-risk decline must be refused with the reason and rerun: %v\n%s", err, output.String())
 	}
 }

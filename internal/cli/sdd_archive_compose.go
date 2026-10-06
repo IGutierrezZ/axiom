@@ -35,13 +35,13 @@ func runSDDArchiveCompose(args []string, stdout io.Writer) error {
 		return err
 	}
 	if flags.NArg() != 0 {
-		return fmt.Errorf("unexpected sdd-archive-compose argument %q; rerun `gentle-ai sdd-archive-compose --canonical <path> --delta <path> [--output <path|->]` with no positional arguments", flags.Arg(0))
+		return fmt.Errorf("unexpected sdd-archive-compose argument %q; rerun `axiom sdd-archive-compose --canonical <path> --delta <path> [--output <path|->]` with no positional arguments", flags.Arg(0))
 	}
 	if strings.TrimSpace(*canonicalPath) == "" {
-		return errors.New("sdd-archive-compose requires --canonical; rerun `gentle-ai sdd-archive-compose --canonical openspec/specs/<domain>/spec.md --delta openspec/changes/<change>/specs/<domain>/spec.md`")
+		return errors.New("sdd-archive-compose requires --canonical; rerun `axiom sdd-archive-compose --canonical openspec/specs/<domain>/spec.md --delta openspec/changes/<change>/specs/<domain>/spec.md`")
 	}
 	if strings.TrimSpace(*deltaPath) == "" {
-		return errors.New("sdd-archive-compose requires --delta; rerun `gentle-ai sdd-archive-compose --canonical openspec/specs/<domain>/spec.md --delta openspec/changes/<change>/specs/<domain>/spec.md`")
+		return errors.New("sdd-archive-compose requires --delta; rerun `axiom sdd-archive-compose --canonical openspec/specs/<domain>/spec.md --delta openspec/changes/<change>/specs/<domain>/spec.md`")
 	}
 
 	canonicalBytes, err := os.ReadFile(*canonicalPath)
@@ -91,7 +91,7 @@ func hasSDDArchiveComposeHelp(args []string) bool {
 }
 
 func renderSDDArchiveComposeHelp(stdout io.Writer) error {
-	_, _ = fmt.Fprintln(stdout, "Usage: gentle-ai sdd-archive-compose --canonical <path> --delta <path> [--output <path|->] [--supersede] [--superseded-requirements <req1,req2>]")
+	_, _ = fmt.Fprintln(stdout, "Usage: axiom sdd-archive-compose --canonical <path> --delta <path> [--output <path|->] [--supersede] [--superseded-requirements <req1,req2>]")
 	_, _ = fmt.Fprintln(stdout, "Merges an OpenSpec delta spec into a canonical spec ("+sddstatus.OpenSpecComposeSchema+").")
 	_, _ = fmt.Fprintln(stdout, "Opciones de Poda Progresiva (ODD-4.1):")
 	_, _ = fmt.Fprintln(stdout, "  --supersede                 Marca los requisitos de REMOVED con [SUPERSEDED / DEPRECADO] en vez de eliminarlos.")

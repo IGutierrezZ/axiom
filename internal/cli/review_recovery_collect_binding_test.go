@@ -122,7 +122,7 @@ func TestRecoveryCollectBindingRefusalNamesARunnableRecover(t *testing.T) {
 	}
 	message := err.Error()
 	_, continuation, named := strings.Cut(message, "re-run: ")
-	if !named || !strings.HasPrefix(continuation, "gentle-ai review recover ") || !strings.Contains(message, "key=value") {
+	if !named || !strings.HasPrefix(continuation, "axiom review recover ") || !strings.Contains(message, "key=value") {
 		t.Fatalf("refusal names no runnable recover: %s", message)
 	}
 	if strings.Contains(message, repo) {

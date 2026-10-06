@@ -351,7 +351,7 @@ func reviewRunnableCommand(operation string) string {
 	if !dotted {
 		return trimmed
 	}
-	return "gentle-ai review " + strings.ReplaceAll(verb, "_", "-")
+	return "axiom review " + strings.ReplaceAll(verb, "_", "-")
 }
 
 func (err ReviewGateDeniedError) Unwrap() error { return err.Cause }
@@ -390,7 +390,7 @@ func reviewDiscoveryDenialContinuation(denial *reviewtransaction.GateDenial) str
 	}
 	switch ReviewReceiptDiscoveryKind(denial.Code) {
 	case ReviewReceiptMissing, ReviewReceiptUnrelated:
-		return "no terminal review receipt governs this candidate; review it with gentle-ai review start"
+		return "no terminal review receipt governs this candidate; review it with axiom review start"
 	}
 	return ""
 }
@@ -427,7 +427,7 @@ func (values *repeatedString) Set(value string) error {
 }
 
 func RunReviewStart(args []string, stdout io.Writer) error {
-	flags := newReviewFlagSet("review-start", stdout, "Read-only legacy v1 compatibility command. New authority is created with gentle-ai review start.")
+	flags := newReviewFlagSet("review-start", stdout, "Read-only legacy v1 compatibility command. New authority is created with axiom review start.")
 	cwd := flags.String("cwd", "", "repository root")
 	_ = flags.String("kind", string(reviewtransaction.TargetCurrentChanges), "legacy target kind")
 	_ = flags.String("base-ref", "", "legacy base revision")
@@ -454,7 +454,7 @@ func RunReviewStart(args []string, stdout io.Writer) error {
 	if strings.TrimSpace(*cwd) == "" || strings.TrimSpace(*lineage) == "" || strings.TrimSpace(*policyFile) == "" {
 		return errors.New("review-start requires --cwd, --lineage, and --policy-file")
 	}
-	return fmt.Errorf("%w: review-start cannot create v1 authority; use gentle-ai review start", reviewtransaction.NewLegacyReadOnlyError("review/start", *lineage))
+	return fmt.Errorf("%w: review-start cannot create v1 authority; use axiom review start", reviewtransaction.NewLegacyReadOnlyError("review/start", *lineage))
 }
 
 func RunReviewResume(args []string, stdout io.Writer) error {

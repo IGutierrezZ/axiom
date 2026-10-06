@@ -55,7 +55,7 @@ func ParseUninstallOpenCodePluginFlags(args []string) (UninstallOpenCodePluginFl
 		return UninstallOpenCodePluginFlags{}, err
 	}
 	if fs.NArg() != 1 {
-		return UninstallOpenCodePluginFlags{}, fmt.Errorf("usage: gentle-ai uninstall opencode-plugin <id> [--yes]")
+		return UninstallOpenCodePluginFlags{}, fmt.Errorf("usage: axiom uninstall opencode-plugin <id> [--yes]")
 	}
 
 	id := model.OpenCodeCommunityPluginID(strings.TrimSpace(fs.Arg(0)))

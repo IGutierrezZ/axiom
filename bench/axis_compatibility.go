@@ -136,15 +136,15 @@ func compatHyphenatedStartArgs(sandbox *Sandbox) ([]string, error) {
 
 // compatAssertHyphenatedStartRefuses checks the one property that makes cw02
 // worth pinning: the refusal explicitly redirects to the real verb, `review
-// start` (with a space), not just to "gentle-ai" generically -- a caller who
+// start` (with a space), not just to "axiom" generically -- a caller who
 // typed the retired hyphenated form needs to land on the live one.
 func compatAssertHyphenatedStartRefuses(_ *Sandbox, observation Observation) error {
 	if err := compatAssertNamedRefusal(observation, "hyphenated `review-start` v1-compatibility verb"); err != nil {
 		return err
 	}
 	combined := observation.Stdout + "\n" + observation.Stderr
-	if !strings.Contains(combined, "gentle-ai review start") {
-		return fmt.Errorf("review-start refusal did not name `gentle-ai review start` (with a space): %q", combined)
+	if !strings.Contains(combined, "axiom review start") {
+		return fmt.Errorf("review-start refusal did not name `axiom review start` (with a space): %q", combined)
 	}
 	return nil
 }
@@ -230,8 +230,8 @@ func compatibilityJourneys() []Journey {
 		{
 			ID:     "cw02-hyphenated-review-start-always-refuses",
 			Review: reviewOptedIn,
-			Title:  "The hyphenated `review-start` v1-compatibility verb refuses unconditionally and names `gentle-ai review start`",
-			Source: "internal/cli/review.go RunReviewStart: \"Read-only legacy v1 compatibility command. New authority is created with gentle-ai review start.\"",
+			Title:  "The hyphenated `review-start` v1-compatibility verb refuses unconditionally and names `axiom review start`",
+			Source: "internal/cli/review.go RunReviewStart: \"Read-only legacy v1 compatibility command. New authority is created with axiom review start.\"",
 			Steps: []Step{
 				{Name: "fixture: base repo", Fixture: baseRepo},
 				{Name: "hyphenated review-start always refuses", Requires: compatHyphenatedStartCapability,

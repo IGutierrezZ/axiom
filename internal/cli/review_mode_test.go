@@ -991,7 +991,7 @@ func TestReviewModeCloneScopeEnableNamesTheGlobalExitWhileGlobalUnset(t *testing
 	for _, want := range []string{
 		"receipt-driven development: off (decided by default)",
 		"can only disable",
-		"gentle-ai review mode enable --scope global",
+		"axiom review mode enable --scope global",
 	} {
 		if !strings.Contains(human, want) {
 			t.Fatalf("clone enable on an unset global does not say the global switch decides (%q missing):\n%s", want, human)
