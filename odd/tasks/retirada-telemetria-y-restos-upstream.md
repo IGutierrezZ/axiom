@@ -517,6 +517,15 @@ En las preguntas abiertas se aplican las recomendaciones del plan:
     - #89 rebasado sobre el nuevo #88 (`4a205e4e`).
     - Las cuatro ramas compilan y pasan vet en local y se subieron con `--force-with-lease`. Falta su CI.
   - **Limpieza:** eliminados los worktrees `odd-up-t6b`, `t7c`, `t7d` y `t7e` y las ramas fusionadas.
+- **T7h: PR #97** (`65501dc5`, encadenado sobre #96; worktree `odd-up-t7h`, rama `fix/consejos-axiom-review-g2`).
+  - **Cambio:** bloque G2, es decir, 23 ficheros `review_*` cuyos consejos pasan a `axiom`. +75 / −75, riesgo `medium`.
+  - **Tiempo:** el writer, acotado, terminó en unos 10 minutos.
+  - **Comandos del contrato que se mantienen**, todos documentados en el PR: `review_capabilities.go:61-62`, `review_consent_contract.go:338`, `review_facade.go:203,2161,2498`, `review_mode.go:589` y `review_next_transition.go:1289`.
+  - **Pendiente para T7i:**
+    - `reviewerprovider/contract.go` y otros paquetes que emiten `gentle-ai review capture-result`, `status` e `inspect-candidate`;
+    - `review.go:57` (`Usage: gentle-ai %s`), que fija el bench en `journeys.go:811`;
+    - `review_incident.go:182` (`which -a gentle-ai`).
+- **T7i:** en curso, encadenado sobre #97.
 
 **Se descartan o aplazan:** migrar IDs persistidos o con hash; renombrar el store `gentle-ai`; las `GENTLE_AI_*` del protocolo interno; los *placeholders*; `.gentle-ai-*.tmp`; `.gentle-ai-default-agent.json`; `gentle-ai.mdc`.
 
