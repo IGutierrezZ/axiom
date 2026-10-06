@@ -15,8 +15,8 @@ func TestRDDDisabledErrorNamesTheCommandThatTurnsItBackOn(t *testing.T) {
 		source RDDModeSource
 		want   string
 	}{
-		{name: "global", source: RDDModeSourceGlobal, want: "gentle-ai review mode enable --scope=global"},
-		{name: "clone local", source: RDDModeSourceCloneLocal, want: "gentle-ai review mode enable --scope=global then gentle-ai review mode enable --scope=clone"},
+		{name: "global", source: RDDModeSourceGlobal, want: "axiom review mode enable --scope=global"},
+		{name: "clone local", source: RDDModeSourceCloneLocal, want: "axiom review mode enable --scope=global then axiom review mode enable --scope=clone"},
 	} {
 		t.Run(testCase.name, func(t *testing.T) {
 			err := &RDDDisabledError{Operation: RDDOperationStart, Source: testCase.source}
@@ -40,7 +40,7 @@ func TestRDDDisabledErrorSendsTheDefaultSourceToTheGlobalEnable(t *testing.T) {
 	for _, operation := range []RDDOperation{RDDOperationStart, RDDOperationMutate} {
 		t.Run(string(operation), func(t *testing.T) {
 			got := (&RDDDisabledError{Operation: operation, Source: RDDModeSourceDefault}).Error()
-			if !strings.Contains(got, "gentle-ai review mode enable --scope=global") {
+			if !strings.Contains(got, "axiom review mode enable --scope=global") {
 				t.Fatalf("an opt-in default left the operator with no runnable way in: %s", got)
 			}
 			if strings.Contains(got, "--scope=clone") {
@@ -61,8 +61,8 @@ func TestRDDDisabledMutationSaysTheReviewIsFrozenAndWhatReEnablingResumes(t *tes
 		source RDDModeSource
 		want   string
 	}{
-		{name: "global", source: RDDModeSourceGlobal, want: "gentle-ai review mode enable --scope=global"},
-		{name: "clone local", source: RDDModeSourceCloneLocal, want: "gentle-ai review mode enable --scope=global then gentle-ai review mode enable --scope=clone"},
+		{name: "global", source: RDDModeSourceGlobal, want: "axiom review mode enable --scope=global"},
+		{name: "clone local", source: RDDModeSourceCloneLocal, want: "axiom review mode enable --scope=global then axiom review mode enable --scope=clone"},
 	} {
 		t.Run(testCase.name, func(t *testing.T) {
 			got := (&RDDDisabledError{Operation: RDDOperationMutate, Source: testCase.source}).Error()

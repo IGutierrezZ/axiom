@@ -45,7 +45,7 @@ func TestTargetedValidatorPromptCarriesTheInspectionRecipe(t *testing.T) {
 	prompt := string(targetedValidatorProviderPrompt(t, repo, state, revision))
 
 	for _, want := range []string{
-		"gentle-ai review inspect-candidate",
+		"axiom review inspect-candidate",
 		reviewTargetedValidationPurpose,
 	} {
 		if !strings.Contains(prompt, want) {

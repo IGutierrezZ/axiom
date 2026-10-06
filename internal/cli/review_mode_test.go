@@ -390,7 +390,7 @@ func TestReviewModeCloneScopeEnableRejectsGlobalOffWithoutLocalOverride(t *testi
 		disabled.Source != reviewtransaction.RDDModeSourceGlobal {
 		t.Fatalf("clone enable error = %v, want global typed disabled error", err)
 	}
-	if !strings.Contains(err.Error(), "gentle-ai review mode enable --scope=global") {
+	if !strings.Contains(err.Error(), "axiom review mode enable --scope=global") {
 		t.Fatalf("clone enable error does not name the global continuation: %v", err)
 	}
 	if result := decodeReviewModeResult(t, output.Bytes()); result.Status.Effective != reviewtransaction.RDDModeOff ||
@@ -476,7 +476,7 @@ func TestReviewModeCloneScopeEnableRejectsExplicitOffWhileGlobalOff(t *testing.T
 		blocked.Source != reviewtransaction.RDDModeSourceGlobal {
 		t.Fatalf("explicit-off clone enable error = %v, want global typed disabled error", err)
 	}
-	if !strings.Contains(err.Error(), "gentle-ai review mode enable --scope=global") {
+	if !strings.Contains(err.Error(), "axiom review mode enable --scope=global") {
 		t.Fatalf("explicit-off clone enable error does not name the global continuation: %v", err)
 	}
 	result := decodeReviewModeResult(t, output.Bytes())

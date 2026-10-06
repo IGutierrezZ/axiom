@@ -386,7 +386,7 @@ func gentleAIUpgradeVersionFromTUI(finalModel tea.Model) (string, bool) {
 
 func runSkillRegistry(args []string, stdout io.Writer) error {
 	if len(args) == 0 {
-		return fmt.Errorf("usage: gentle-ai skill-registry <refresh|list> [flags]")
+		return fmt.Errorf("usage: axiom skill-registry <refresh|list> [flags]")
 	}
 	switch args[0] {
 	case "refresh":

@@ -808,8 +808,11 @@ func assertReviewParseRefusalsPreflight(run *journeyRun, operation, booleanFlag 
 				if got := strings.TrimSpace(observation.Stderr); got != "Error: "+test.cause {
 					return fmt.Errorf("%s %s plain diagnostic = %q, want %q", operation, test.name, got, "Error: "+test.cause)
 				}
-				usage := "Usage: gentle-ai review " + operation + " [flags]"
-				if got := strings.Contains(observation.Stdout, usage); got != test.usage {
+				// The retired shim spelling is still accepted so frozen
+				// observations recorded before the rename keep replaying.
+				got := strings.Contains(observation.Stdout, "Usage: axiom review "+operation+" [flags]") ||
+					strings.Contains(observation.Stdout, "Usage: gentle-ai review "+operation+" [flags]")
+				if got != test.usage {
 					return fmt.Errorf("%s %s plain usage %t, want %t", operation, test.name, got, test.usage)
 				}
 			}

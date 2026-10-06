@@ -251,7 +251,7 @@ func rddOperationSubject(operation RDDOperation) string {
 // it only lands on the global source, which an opt-in install has no reason to
 // have turned on -- so naming that scope alone was a dead end.
 func reviewModeEnableForSource(source RDDModeSource) string {
-	const enable = "gentle-ai review mode enable --scope="
+	const enable = "axiom review mode enable --scope="
 	if source == RDDModeSourceCloneLocal {
 		return enable + "global then " + enable + "clone"
 	}
@@ -281,7 +281,7 @@ func (err *RDDModePartialApplyError) Error() string {
 		decision, verb = "disables", "disable"
 	}
 	return fmt.Sprintf(
-		"%v: this clone %s receipt-driven development for this gentle-ai, but publishing the same decision under gentle-ai/%s/%s/%s/%s failed, so a gentle-ai installed before the switch moved still reads the value it already has there and keeps enforcing it: %v; rerun `gentle-ai review mode %s --scope clone` to publish it in both places",
+		"%v: this clone %s receipt-driven development for this gentle-ai, but publishing the same decision under gentle-ai/%s/%s/%s/%s failed, so a gentle-ai installed before the switch moved still reads the value it already has there and keeps enforcing it: %v; rerun `axiom review mode %s --scope clone` to publish it in both places",
 		ErrRDDModePartiallyApplied,
 		decision,
 		rddModeLegacySwitchDirectory,

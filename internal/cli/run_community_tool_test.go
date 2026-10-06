@@ -493,7 +493,7 @@ func TestCodeGraphGuidanceMarkdownForSDDOnlyWhenSelected(t *testing.T) {
 				}
 				return
 			}
-			if !strings.Contains(got, "gentle-ai codegraph init --cwd <project-root>") {
+			if !strings.Contains(got, "axiom codegraph init --cwd <project-root>") {
 				t.Fatalf("CodeGraph guidance missing search-order rule:\n%s", got)
 			}
 		})
@@ -781,7 +781,7 @@ func assertOpenCodeSharedPromptCodeGraphGuidance(t *testing.T, home string, want
 	}
 	text := string(content)
 	hasMarker := strings.Contains(text, "<!-- axiom:codegraph-guidance -->") || strings.Contains(text, "<!-- gentle-ai:codegraph-guidance -->")
-	hasGuidance := hasMarker && strings.Contains(text, "gentle-ai codegraph init --cwd <project-root>")
+	hasGuidance := hasMarker && (strings.Contains(text, "axiom codegraph init --cwd <project-root>") || strings.Contains(text, "gentle-ai codegraph init --cwd <project-root>"))
 	if hasGuidance != want {
 		t.Fatalf("CodeGraph guidance present = %v, want %v in %s", hasGuidance, want, promptPath)
 	}

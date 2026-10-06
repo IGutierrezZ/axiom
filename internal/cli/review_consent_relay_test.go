@@ -507,7 +507,7 @@ func TestHeadlessSkipNoticeFollowsAnExplicitOptIn(t *testing.T) {
 	if err == nil {
 		t.Fatalf("an unconfigured clone started a review nobody asked for:\n%s", output.String())
 	}
-	if !strings.Contains(err.Error(), "gentle-ai review mode enable --scope=global") {
+	if !strings.Contains(err.Error(), "axiom review mode enable --scope=global") {
 		t.Fatalf("the opt-in refusal names no way in: %v", err)
 	}
 	if console.String() != "" {
