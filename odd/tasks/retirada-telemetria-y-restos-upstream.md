@@ -534,7 +534,18 @@ En las preguntas abiertas se aplican las recomendaciones del plan:
     - Un script recorre todos los tests de `internal/` y `cmd/` en busca de cadenas `gentle-ai` que ya no existan en producción. Solo dio 5 candidatos, todos falsos positivos: comentarios, aserciones negativas o que ya aceptan los dos nombres, y `Withdraw.Command`, que se arma con la herramienta `gentle-ai` del *wire*.
     - El schema `status-v7` ya admite `^(axiom|gentle-ai) review capture-unachievable`, un dato útil para T7m.
     - `reviewerprovider`, `system` y `communitytool` pasan en verde.
-  - **Riesgo `high`** (`hot_path`). Verificador independiente en curso, centrado en los permisos del validador para la forma `axiom review inspect-candidate`.
+  - **Riesgo `high`** (`hot_path`).
+  - **Verificador independiente: PASS WITH NOTES.**
+    - **Permisos del validador:** todos admiten `axiom`. OpenCode recibe un permiso dual en la instalación (`inject.go:1427-1428`, fijado en el *golden*); Claude no tiene herramientas; Codex es `read-only` sin lista; Kilocode tiene `bash` sin patrón.
+    - **Cadenas protegidas:** ninguna línea *wire* ni persistida cambia.
+    - **Tests en verde:** los afectados de `reviewtransaction`, ejecutados en serie, y los paquetes completos `update`, `app`, `sdd`, `components`, `communitytool`, `reviewerprovider`, `system` y `cmd/...`.
+    - **Bench:** sus 18 fallos de entorno son idénticos sobre la base.
+  - **PR #98**, encadenado sobre #97.
+  - **Pendiente para T7j:**
+    - el *prompt* de sistema del validador en `sdd-overlay-*.json:216`, que aún dice `gentle-ai review inspect-candidate`, y su *golden* y aserción;
+    - `boundedreview.go:34` (`reviewerInspectionCommandPrefix`, fijado en `review_ledger_contract_test.go:349` y `bounded_review_contract_test.go:563-570`);
+    - `inject.go:1593`;
+    - los *pins* del permiso del *overlay* en `commands_test.go:53` y `opencode_v2_test.go:105-107`.
 
 **Se descartan o aplazan:** migrar IDs persistidos o con hash; renombrar el store `gentle-ai`; las `GENTLE_AI_*` del protocolo interno; los *placeholders*; `.gentle-ai-*.tmp`; `.gentle-ai-default-agent.json`; `gentle-ai.mdc`.
 
