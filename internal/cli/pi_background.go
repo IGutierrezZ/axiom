@@ -11,7 +11,6 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/components/filemerge"
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
 	"github.com/IGutierrezZ/axiom/v3/internal/state"
-	"github.com/IGutierrezZ/axiom/v3/internal/system"
 )
 
 // PiBackgroundSubagentsEnv is the environment source for the managed Pi
@@ -20,12 +19,14 @@ import (
 // already-installed pi-subagents extension reading a projected policy file.
 const (
 	PiBackgroundSubagentsAxiomEnv = "AXIOM_PI_BACKGROUND_SUBAGENTS"
+	// PiBackgroundSubagentsGentleAIEnv is the documented fallback read when the AXIOM_ variable is unset or empty.
+	PiBackgroundSubagentsGentleAIEnv = "GENTLE_AI_PI_BACKGROUND_SUBAGENTS"
 
 	PiBackgroundSubagentsEnv = PiBackgroundSubagentsAxiomEnv
 )
 
 func lookupPiBackgroundEnv() (string, bool) {
-	return system.LookupEnv(PiBackgroundSubagentsAxiomEnv)
+	return lookupEnvWithGentleAIFallback(PiBackgroundSubagentsAxiomEnv, PiBackgroundSubagentsGentleAIEnv)
 }
 
 // PiConfigHomeEnv overrides gentle-pi's config base directory (default
