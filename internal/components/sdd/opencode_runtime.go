@@ -49,7 +49,7 @@ func validateOpenCodePluginReplacement(dir, assetDir string) error {
 		}
 		old, oldErr := assets.Read("opencode/plugins/" + name)
 		next, nextErr := assets.Read("opencode/plugins-v2/" + name)
-		if (oldErr != nil || string(data) != old) && (nextErr != nil || string(data) != next) {
+		if (oldErr != nil || string(data) != old) && (nextErr != nil || string(data) != next) && !isHistoricalOpenCodePlugin(name, data) {
 			return fmt.Errorf("OpenCode plugin %s has unverified ownership; custom bytes preserved", name)
 		}
 	}

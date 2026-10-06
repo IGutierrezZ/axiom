@@ -131,7 +131,7 @@ export default Plugin.define({id:"fixture.observer", async setup(ctx) {
 
 def prove_dispatch(request, observation_log, requests, failures):
     # Exercise the real native gate independently of hook-error projection.
-    shell = request("/api/shell", {"command": "gentle-ai review opencode-transport </dev/null", "timeout": 5000})["data"]
+    shell = request("/api/shell", {"command": "axiom review opencode-transport </dev/null", "timeout": 5000})["data"]
     deadline = time.monotonic() + 10
     while shell["status"] == "running" and time.monotonic() < deadline:
         time.sleep(0.1)

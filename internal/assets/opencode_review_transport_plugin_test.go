@@ -530,8 +530,13 @@ func runOpenCodeTransportPluginHarness(t *testing.T, modules map[string]string, 
 	if err := os.WriteFile(filepath.Join(root, "harness.mts"), []byte(harness), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(bin, "gentle-ai"), []byte(relay), 0o700); err != nil {
-		t.Fatal(err)
+	// Current plugins spawn "axiom"; the legacy pre-registry fixture models an
+	// older managed copy that still spawns "gentle-ai", so both names resolve
+	// to the same fake relay.
+	for _, name := range []string{"axiom", "gentle-ai"} {
+		if err := os.WriteFile(filepath.Join(bin, name), []byte(relay), 0o700); err != nil {
+			t.Fatal(err)
+		}
 	}
 	logPath := filepath.Join(root, "relay.log")
 	command := exec.Command(node, "harness.mts")

@@ -20,7 +20,7 @@ export default Plugin.define({
     if (!project) return
     try {
       let child: ReturnType<typeof execFile> | undefined
-      child = execFile("gentle-ai", ["skill-registry", "refresh", "--quiet", "--no-gitignore", "--cwd", cwd],
+      child = execFile("axiom", ["skill-registry", "refresh", "--quiet", "--no-gitignore", "--cwd", cwd],
         { cwd, timeout: 30_000, maxBuffer: 1024, windowsHide: true }, () => { child = undefined })
       return () => { child?.kill("SIGKILL"); child = undefined }
     } catch { /* Missing executable is not a startup failure. */ }

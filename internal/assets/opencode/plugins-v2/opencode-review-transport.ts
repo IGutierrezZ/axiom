@@ -6,7 +6,7 @@ const RELAY_CONTRACT = "gentle-ai.opencode-relay/v2-staged"
 const RELAY_CONTRACT_ENV = "GENTLE_AI_OPENCODE_RELAY_CONTRACT"
 const REVIEW_AGENTS = new Set(["review-risk", "review-resilience", "review-readability", "review-reliability", "review-refuter", "review-validator"])
 const TRANSPORT = {
-  Command: "gentle-ai",
+  Command: "axiom",
   Schema: "gentle-ai.provider-transport/v1",
   Start: "start",
   Prompt: "prompt",

@@ -13,7 +13,7 @@ import (
 )
 
 // TestSkillRegistryPluginSkipsNonProjectDirectories runs the real plugin
-// under node with a fake `gentle-ai` on PATH that records its argv. OpenCode
+// under node with a fake `axiom` on PATH that records its argv. OpenCode
 // resolves a brand-new non-project directory to "/" (or another markerless
 // location); the plugin must skip those without spawning, and spawn exactly
 // once for a real project root.
