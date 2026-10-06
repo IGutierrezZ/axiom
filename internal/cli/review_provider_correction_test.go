@@ -205,7 +205,7 @@ func TestProviderCaptureRefusesAfterTwoRejectedResultsAndPreservesBoth(t *testin
 			t.Fatalf("unexpected preserved attempt %#v", envelope)
 		}
 	}
-	for _, want := range []string{`unknown field "lens"`, "no complete JSON object", "gentle-ai review status"} {
+	for _, want := range []string{`unknown field "lens"`, "no complete JSON object", "axiom review status"} {
 		if !strings.Contains(err.Error(), want) {
 			t.Fatalf("refusal lacks %q: %v", want, err)
 		}

@@ -141,8 +141,8 @@ func TestReviewAssessUnbuildableCandidateNamesResolution(t *testing.T) {
 	if err == nil {
 		t.Fatalf("review assess with an unresolvable --base-ref unexpectedly succeeded: %s", output.String())
 	}
-	if !strings.Contains(err.Error(), "gentle-ai review assess") {
-		t.Fatalf("unbuildable review assess error does not name a gentle-ai review assess resolution: %v", err)
+	if !strings.Contains(err.Error(), "axiom review assess") {
+		t.Fatalf("unbuildable review assess error does not name a axiom review assess resolution: %v", err)
 	}
 }
 

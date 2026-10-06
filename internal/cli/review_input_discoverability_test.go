@@ -12,7 +12,7 @@ import (
 // to be invented -- but a command nobody can find is a command that does not
 // exist for the person who needs it.
 func TestReviewCaptureResultPointsAtTheSchemaThatProducesItsInput(t *testing.T) {
-	const pointer = "gentle-ai review schema reviewer"
+	const pointer = "axiom review schema reviewer"
 
 	t.Run("the refusal names it", func(t *testing.T) {
 		err := RunReviewCaptureResult([]string{"--lineage", "x"}, nil)

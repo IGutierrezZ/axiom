@@ -772,9 +772,9 @@ func boundedOpenCodeTaskPayload(payload []byte) ([]byte, error) {
 }
 
 func openCodeTransportFailure(code string) error {
-	return fmt.Errorf("%s: OpenCode Task transport did not produce a capturable reviewer result; run `gentle-ai review status --cwd <repo> --contract gentle-ai.review-integration/v2 --next-transition` before retrying", code)
+	return fmt.Errorf("%s: OpenCode Task transport did not produce a capturable reviewer result; run `axiom review status --cwd <repo> --contract gentle-ai.review-integration/v2 --next-transition` before retrying", code)
 }
 
 func openCodeTransportAuthorityUnavailable(cause error) error {
-	return fmt.Errorf("opencode_review_transport_authority_unavailable: OpenCode Task transport did not produce a capturable reviewer result; run `gentle-ai review status --cwd <repo> --contract gentle-ai.review-integration/v2 --next-transition` before retrying: %w", cause)
+	return fmt.Errorf("opencode_review_transport_authority_unavailable: OpenCode Task transport did not produce a capturable reviewer result; run `axiom review status --cwd <repo> --contract gentle-ai.review-integration/v2 --next-transition` before retrying: %w", cause)
 }

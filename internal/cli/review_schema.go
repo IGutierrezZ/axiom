@@ -44,7 +44,7 @@ func RunReviewSchema(args []string, stdout io.Writer) error {
 		return fmt.Errorf("review schema requires exactly one of: %s", reviewSchemaNames())
 	}
 	if args[0] == "--help" || args[0] == "-h" {
-		_, err := fmt.Fprintf(stdout, "Usage: gentle-ai review schema <name>\n\nEmit one input schema, with a working example where the schema carries one.\n\nAccepted names: %s\n", reviewSchemaNames())
+		_, err := fmt.Fprintf(stdout, "Usage: axiom review schema <name>\n\nEmit one input schema, with a working example where the schema carries one.\n\nAccepted names: %s\n", reviewSchemaNames())
 		return err
 	}
 	document, ok := reviewInputSchemas[args[0]]

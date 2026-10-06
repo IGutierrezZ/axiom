@@ -210,7 +210,7 @@ func TestImmutableReviewTransportRefusalNamesWorkingExits(t *testing.T) {
 			if err == nil {
 				t.Fatal("want a refusal")
 			}
-			const exit = "gentle-ai review mode disable --scope clone --cwd <repo>"
+			const exit = "axiom review mode disable --scope clone --cwd <repo>"
 			if !strings.Contains(err.Error(), exit) {
 				t.Fatalf("refusal does not name the clone-scoped kill switch: %v", err)
 			}

@@ -8,7 +8,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/state"
 )
 
-const managedAssetProvenanceRefusal = "managed reviewer assets are outdated; run `gentle-ai sync`"
+const managedAssetProvenanceRefusal = "managed reviewer assets are outdated; run `axiom sync`"
 
 // managedAssetDigest returns a content digest of the managed assets this
 // binary embeds. It deliberately does NOT use the review capabilities build
