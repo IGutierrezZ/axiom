@@ -637,6 +637,36 @@ En las preguntas abiertas se aplican las recomendaciones del plan:
    - `docs/skill-style-guide.md:59`.
 4. **PR de cierre** con este documento (rama `docs/odd-retirada-telemetria-y-restos-upstream`, worktree `odd-upstream-docs`).
 
+**2026-10-06, tercera sesión (relevo retomado):**
+- Contexto recuperado (Engram #457 y este documento) y conciliado con `origin`: cabezas y bases idénticas a la tabla anterior; CI en verde en los seis PRs.
+- Fusionados con squash: #88 (T6e) `eb381896`, #91 (T7b) `dfde2f22`, #96 (T7g) `b18fd476`.
+- #89 retargeteado a `main` y rebasado (`4ad54782`); #97 retargeteado a `main` y rebasado (`1aec4c7b`). Ambos subidos con `--force-with-lease`; falta su CI.
+- Eliminados los worktrees `odd-up-t6e`, `odd-up-t7a` y `odd-up-t7g` y sus ramas local y remota.
+- `main` combinado `b18fd476` verificado en local (worktree `odd-check-main`, ya eliminado): build y vet limpios; en verde `assets`, `providercontractbundle`, `cmd/...`, `app`, `components`, `components/uninstall` y `sdd` en solitario (75 s).
+- **T7j: PR #99** (`686b54fa`, worktree `odd-up-t7j`, rama `fix/prompts-assets-axiom`, desde `main`; no comparte ficheros con #97 ni #98).
+  - **Cambio:** `chained-pr` en lugar de `gentle-ai-chained-pr`; `axiom.sdd-integration.consent/v1` en los prompts, que es el ID que emite Go; `axiom review mode|status|inspect-candidate` en los orquestadores, en el overlay del validador y en `reviewerInspectionCommandPrefix`. El permiso del validador sigue siendo dual.
+  - **Migración:** los prompts de OpenCode preservados reescriben las cláusulas anteriores (`previousOpenCodeConsentV3*`), con un test nuevo.
+  - **Hash de Kilocode** actualizado: el cambio es intencionado porque Kilocode embebe los assets compartidos.
+  - **Hooks de Claude:** ya emitían `axiom skill-registry refresh`; `gentle-ai` solo aparece como legado. No se tocan.
+  - **Tamaño y riesgo:** 47 ficheros, +159 / −117; riesgo `medium`. Autoverificación del writer más comprobación del orquestador (`components` y tests nuevos por nombre exacto): en verde.
+  - **Fallos de entorno** que también fallan en la base: `deadcode-ratchet.sh` en local y `sddstatus` `TestCharacterization_EditAuthorityMissingBlocksApplyAndArchive`.
+- **T7k: PR #100** (`44f15e81` + `bcf4f642`, worktree `odd-up-t7k`, rama `docs/marca-axiom-docs`). 31 ficheros, +153 / −192.
+  - **Cambio:** consejos `gentle-ai <verbo>` → `axiom <verbo>` y marca Axiom en `docs/`, `bench/` y los textos de `install.sh`; `docs/agents.md` desfasado, corregido según el código.
+  - **Riesgo `high`**, por `install.sh`. Verificador independiente: **PASS WITH NOTES**, sin hallazgos bloqueantes.
+  - **Prueba sin veredicto local:** `TestDocumentedInvocationsRunAsDocumented` no termina en Windows. El proceso colgado del verificador se cortó por su PID, y la prueba la cubre el CI.
+- **Decisión del usuario (2026-10-06):** Axiom no tiene guía de contribución ni recibe issues (Issues y Discussions están desactivados en el repositorio).
+  - Se **borra `docs/architecture/rdd-shadow-evaluation.md`**, que pedía abrir issues en el upstream. Hecho en #100.
+  - Se **borra `CONTRIBUTING.md`**: los retoques que T7k le había hecho se revirtieron y la retirada pasa a T7l.
+- **T7l (pendiente):** retirar `CONTRIBUTING.md` en dos cortes, sin `size:exception`.
+  - **T7l-a**, después de fusionar #89, que también toca `README.md`: quitar los enlaces de `README.md:176,190` y la lectura de `CONTRIBUTING.md` en `internal/assets/issue_creation_authority_test.go:146-166`. Unas 25 líneas.
+  - **T7l-b:** borrar `CONTRIBUTING.md` (394 líneas).
+- **Seguimientos nuevos:**
+  - `docs/intended-usage.md` y `docs/prd-opencode-profiles.md` siguen con `gentle-orchestrator` y `gentle-sdd-*`;
+  - el banner ASCII de `install.sh`;
+  - `install.sh` no lee `AXIOM_CHANNEL`;
+  - `internal/update/registry.go:32`, los Dockerfiles de `e2e/` y `bench/record.go:93` usan `cmd/gentle-ai`.
+- **Incidente:** `git -C C:\repos\axiom worktree add axiom-wt/odd-check-main` resolvió la ruta relativa dentro del checkout principal. Se retiró al instante sin cambios en él. **Lección:** rutas absolutas en `git worktree add`.
+
 **Aplazado o seguimiento (no en este ODD):**
 - T7m: el dialecto `axiom` en los comandos del contrato. El schema `status-v7` ya admite `(axiom|gentle-ai)`.
 - Tablas de digests para `model-variants.ts` y `sdd-task-result-artifacts.ts`.
