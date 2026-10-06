@@ -156,8 +156,11 @@ func TestBuildPlanRemovesOnlyOwnedOpenCodeLaunchers(t *testing.T) {
 			t.Fatal(err)
 		}
 		content := []byte("user launcher")
-		if index < 2 {
+		switch index {
+		case 0:
 			content = []byte("#!/bin/sh\n# " + opencodeactivation.OwnershipMarker + "\n")
+		case 1:
+			content = []byte("#!/bin/sh\n# " + opencodeactivation.LegacyOwnershipMarker + "\n")
 		}
 		if err := os.WriteFile(path, content, 0o755); err != nil {
 			t.Fatal(err)
@@ -186,6 +189,38 @@ func TestBuildPlanRemovesOnlyOwnedOpenCodeLaunchers(t *testing.T) {
 	}
 	if !slices.Contains(result.RemovedFiles, legacyOwnedPath) {
 		t.Fatalf("removed files = %v, want %q", result.RemovedFiles, legacyOwnedPath)
+	}
+}
+
+// TestBuildPlanRemovesLauncherCarryingTheLegacyMarker covers installs made
+// before the rebrand: their launcher in the Axiom bin directory still carries
+// the legacy marker and must be treated as owned.
+func TestBuildPlanRemovesLauncherCarryingTheLegacyMarker(t *testing.T) {
+	homeDir := t.TempDir()
+	svc, err := NewService(homeDir, t.TempDir(), "dev")
+	if err != nil {
+		t.Fatal(err)
+	}
+	path := opencodeactivation.LauncherPaths(homeDir, runtime.GOOS)[0]
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, []byte("#!/bin/sh\n# "+opencodeactivation.LegacyOwnershipMarker+"\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	plan, err := svc.buildPlan([]model.AgentID{model.AgentOpenCode}, allManagedComponents)
+	if err != nil {
+		t.Fatal(err)
+	}
+	result, err := svc.executePlan(plan, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(path); !os.IsNotExist(err) {
+		t.Fatalf("legacy-marked launcher stat error = %v, want absent", err)
+	}
+	if !slices.Contains(result.RemovedFiles, path) {
+		t.Fatalf("removed files = %v, want %q", result.RemovedFiles, path)
 	}
 }
 

@@ -45,9 +45,11 @@ func issue3043VerifyInstall(sandbox *Sandbox, observation Observation) error {
 	// (internal/opencode.BinDir), while upstream still writes `.gentle-ai`.
 	// bench is a separate Go module and cannot import that constant, so it
 	// probes both and reports both paths when neither exists. The launcher's
-	// own marker was NOT renamed, so it stays a single literal.
+	// own marker is "axiom:..." now; the legacy "gentle-ai:..." one is still
+	// accepted so the journey also passes against an upstream binary.
 	launcher, data, err := readManagedLauncher(sandbox.Home)
-	if err != nil || !strings.Contains(string(data), "gentle-ai:managed-opencode-launcher/v1") {
+	if err != nil || !(strings.Contains(string(data), "axiom:managed-opencode-launcher/v1") ||
+		strings.Contains(string(data), "gentle-ai:managed-opencode-launcher/v1")) {
 		return fmt.Errorf("managed launcher missing or unowned: %q, %v", data, err)
 	}
 	cmd := exec.Command(launcher)

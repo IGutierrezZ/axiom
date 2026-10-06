@@ -51,6 +51,56 @@ func TestParseManagedLauncherRecognizesInstalledFixtures(t *testing.T) {
 
 // TestParseManagedLauncherRoundTripsGeneratedLaunchers keeps the parser aligned
 // with the generators, including targets that need quoting.
+// TestOwnershipMarkerRecognitionIsExactForBothMarkers pins the dual-read
+// contract: the current and the legacy marker are recognized as an exact
+// header line, and nothing else (suffix, newer version, prose) is.
+func TestOwnershipMarkerRecognitionIsExactForBothMarkers(t *testing.T) {
+	const legacy = "gentle-ai:managed-opencode-launcher/v1"
+	if LegacyOwnershipMarker != legacy || OwnershipMarker == legacy {
+		t.Fatalf("markers = %q / %q, want a distinct current marker and the literal legacy one", OwnershipMarker, LegacyOwnershipMarker)
+	}
+	for _, marker := range []string{OwnershipMarker, legacy} {
+		for _, line := range []string{"# " + marker, "rem " + marker} {
+			if !isOwnershipMarkerLine(line) {
+				t.Errorf("isOwnershipMarkerLine(%q) = false, want true", line)
+			}
+		}
+		for _, line := range []string{marker, "# " + marker + "0", "# " + marker + " ", "#" + marker, "echo " + marker, " # " + marker} {
+			if isOwnershipMarkerLine(line) {
+				t.Errorf("isOwnershipMarkerLine(%q) = true, want false", line)
+			}
+		}
+	}
+	for _, line := range []string{"# axiom:managed-opencode-launcher/v2", "rem gentle-ai:managed-opencode-launcher/v2"} {
+		if isOwnershipMarkerLine(line) {
+			t.Errorf("isOwnershipMarkerLine(%q) = true, want false", line)
+		}
+	}
+}
+
+func TestParseManagedLauncherRecognizesTheCurrentMarker(t *testing.T) {
+	content := "#!/bin/sh\n# " + OwnershipMarker + "\nset -eu\nexec '/home/dev/opencode' \"$@\"\n"
+	if got, ok := parseManagedLauncher(content); !ok || got != "/home/dev/opencode" {
+		t.Fatalf("parseManagedLauncher() = %q, %t, want the target", got, ok)
+	}
+}
+
+func TestHasOwnershipMarkerAcceptsBothAndRejectsUserFiles(t *testing.T) {
+	for name, tt := range map[string]struct {
+		data string
+		want bool
+	}{
+		"current marker": {"#!/bin/sh\n# " + OwnershipMarker + "\n", true},
+		"legacy marker":  {"#!/bin/sh\n# " + LegacyOwnershipMarker + "\n", true},
+		"user launcher":  {"#!/bin/sh\nexec opencode\n", false},
+		"empty":          {"", false},
+	} {
+		if got := HasOwnershipMarker([]byte(tt.data)); got != tt.want {
+			t.Errorf("%s: HasOwnershipMarker() = %t, want %t", name, got, tt.want)
+		}
+	}
+}
+
 func TestParseManagedLauncherRoundTripsGeneratedLaunchers(t *testing.T) {
 	targets := []string{
 		`/usr/local/bin/opencode`,
@@ -94,6 +144,8 @@ func TestParseManagedLauncherRejectsWhatIsNotAGeneratedLauncher(t *testing.T) {
 		{name: "marker quoted in prose", content: "@echo off\r\necho see " + OwnershipMarker + "\r\n" + invoke},
 		{name: "marker with a trailing suffix", content: "@echo off\r\nrem " + OwnershipMarker + "0\r\n" + invoke},
 		{name: "newer launcher version", content: "@echo off\r\nrem gentle-ai:managed-opencode-launcher/v2\r\n" + invoke},
+		{name: "newer current launcher version", content: "@echo off\r\nrem axiom:managed-opencode-launcher/v2\r\n" + invoke},
+		{name: "legacy marker with a trailing suffix", content: "@echo off\r\nrem " + LegacyOwnershipMarker + "0\r\n" + invoke},
 		{name: "invocation before the marker", content: invoke + "rem " + OwnershipMarker + "\r\n"},
 		{name: "unrelated user script", content: "@echo off\r\n" + invoke},
 		{name: "posix invocation without a target", content: "#!/bin/sh\n# " + OwnershipMarker + "\nexec \"$@\"\n"},

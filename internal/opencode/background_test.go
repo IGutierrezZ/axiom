@@ -374,6 +374,75 @@ func TestActivationCleansLegacyManagedLaunchersAndDeactivationRemovesBoth(t *tes
 	}
 }
 
+// TestActivationRewritesLegacyMarkedLauncherWithTheCurrentMarker covers the
+// dual-read contract: a launcher written before the rebrand is recognized as
+// owned and replaced, on the next activation, by one with the current marker.
+func TestActivationRewritesLegacyMarkedLauncherWithTheCurrentMarker(t *testing.T) {
+	home := t.TempDir()
+	target := filepath.Join(t.TempDir(), "opencode")
+	if err := os.WriteFile(target, []byte("real"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	path := POSIXLauncherPath(home)
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, []byte("#!/bin/sh\n# "+LegacyOwnershipMarker+"\nset -eu\nexec '/old/opencode' \"$@\"\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	options := ActivationOptions{
+		OS:            "linux",
+		RunVersion:    func(string) (string, error) { return "1.18.18", nil },
+		AddToUserPath: func(string) error { return nil },
+		ResolveTarget: func(string, string, string) (string, error) { return target, nil },
+	}
+
+	plan, err := Activate(home, options)
+	if err != nil {
+		t.Fatalf("Activate() = %v, want the legacy-marked launcher to count as owned", err)
+	}
+	if len(plan.ChangedPaths()) == 0 {
+		t.Fatal("legacy-marked launcher was not rewritten")
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	content := string(data)
+	if !strings.Contains(content, OwnershipMarker) || strings.Contains(content, LegacyOwnershipMarker) || !strings.Contains(content, target) {
+		t.Fatalf("rewritten launcher = %q, want the current marker, no legacy marker and the new target", content)
+	}
+}
+
+func TestDeactivationRemovesLaunchersWithEitherMarkerAndKeepsUserFiles(t *testing.T) {
+	for name, marker := range map[string]string{"current": OwnershipMarker, "legacy": LegacyOwnershipMarker, "none": ""} {
+		t.Run(name, func(t *testing.T) {
+			home := t.TempDir()
+			path := POSIXLauncherPath(home)
+			if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+				t.Fatal(err)
+			}
+			content := "#!/bin/sh\necho user launcher\n"
+			if marker != "" {
+				content = "#!/bin/sh\n# " + marker + "\nexec '/real/opencode' \"$@\"\n"
+			}
+			if err := os.WriteFile(path, []byte(content), 0o755); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := Deactivate(home, ActivationOptions{OS: "linux"}); err != nil {
+				t.Fatal(err)
+			}
+			_, statErr := os.Stat(path)
+			if marker != "" && !os.IsNotExist(statErr) {
+				t.Fatalf("launcher with the %s marker stat error = %v, want removed", name, statErr)
+			}
+			if marker == "" && statErr != nil {
+				t.Fatalf("user launcher stat error = %v, want preserved", statErr)
+			}
+		})
+	}
+}
+
 func TestActivationRefusesUserOwnedCollision(t *testing.T) {
 	home := t.TempDir()
 	path := POSIXLauncherPath(home)
