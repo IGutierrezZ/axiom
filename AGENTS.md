@@ -46,7 +46,6 @@ Naming convention: `gentle-ai-*` skills are repo-specific workflow skills. Unpre
 | --- | --- | --- | --- |
 | `axiom-bench` | Trigger: bench, journey, journeys, driven mode, axiom-bench, journey corpus, j-numbers, bench axis. Author and verify axiom bench journeys; go test ./bench never proves driven execution. | project | `skills/axiom-bench/SKILL.md` |
 | `axiom-branch-pr` | Create Axiom pull requests. Trigger: creating, opening, or preparing PRs for review. | project | `skills/branch-pr/SKILL.md` |
-| `axiom-chained-pr` | Trigger: PRs over 400 lines, stacked PRs, review slices. Split oversized changes into chained PRs that protect review focus. | project | `skills/chained-pr/SKILL.md` |
 | `axiom-collab-perfect` | Trigger: contributing to Gentleman-Programming/gentle-ai as an external collaborator. Honest PR bodies, contributor-vs-maintainer scope, chained-PR strategy, verification protocol, docstring coverage. Load whenever the active repo is Gentleman-Programming/gentle-ai and any part of the contribution flow is in scope: opening an issue, drafting or editing a PR body, splitting a change into chained/stacked PRs, or auditing a PR before requesting review. | project | `skills/axiom-collab-perfect/SKILL.md` |
 | `axiom-go-table-tests` | — | project | `skills/axiom-go-table-tests/SKILL.md` |
 | `axiom-idiomatic-error-wrapping` | — | project | `skills/axiom-idiomatic-error-wrapping/SKILL.md` |
