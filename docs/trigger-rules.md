@@ -2,7 +2,7 @@
 
 <- [Back to README](../README.md)
 
-Ask for the outcome. Gentle AI™ keeps already-understood work inline, delegates only
+Ask for the outcome. Axiom keeps already-understood work inline, delegates only
 the actions that benefit from fresh context, and offers SDD only when durable
 planning would materially reduce uncertainty. Native providers own verification,
 review mechanics, and lifecycle authority; ordinary repository policy owns delivery.
@@ -10,7 +10,7 @@ review mechanics, and lifecycle authority; ordinary repository policy owns deliv
 ## Quick path
 
 1. Describe the outcome in natural language.
-2. Gentle AI uses the smallest useful implementation route: direct inline,
+2. Axiom uses the smallest useful implementation route: direct inline,
    delegated direct, or an optional SDD proposal.
 3. The normal interaction reports only **Working**, **Checking**, **Ready**, or
    **Needs your decision**.
@@ -37,7 +37,7 @@ actors may use fresh workers without changing the implementation route or
 creating an SDD run. Direct and delegated work create no SDD artifacts, phase
 attempts, or synthetic SDD lifecycle.
 
-If apparently simple work reveals substantial ambiguity, Gentle AI may offer SDD
+If apparently simple work reveals substantial ambiguity, Axiom may offer SDD
 at the next safe boundary. Declining it leads to a safely reduced scope, a
 justified direct or delegated route, or **Needs your decision**—never silent SDD
 enrollment.
@@ -47,9 +47,9 @@ enrollment.
 | Public state | Meaning |
 |---|---|
 | **Working** | The implementation can still change. |
-| **Checking** | Gentle AI is performing the applicable functional proof and bounded review. |
+| **Checking** | Axiom is performing the applicable functional proof and bounded review. |
 | **Ready** | The exact candidate has sufficient evidence for the selected delivery route. |
-| **Needs your decision** | Safe automatic convergence is impossible; Gentle AI presents the cause, impact, and concrete choices. |
+| **Needs your decision** | Safe automatic convergence is impossible; Axiom presents the cause, impact, and concrete choices. |
 
 The user still asks only for the outcome. Repository identity, route, policy,
 candidate, delivery mechanism, and authority references remain owner-derived.
@@ -165,7 +165,7 @@ selected:
 - Standard adapters receive the managed `agent-routing` marker in their
   adapter-owned system-prompt file.
 - OpenCode and Kilocode receive it inside
-  `agent.gentle-orchestrator.prompt` in their adapter-owned `opencode.json`.
+  `agent.axiom-orchestrator.prompt` in their adapter-owned `opencode.json`.
 - Jinja-backed adapters receive an `agent-routing.md` module included by their
   managed router template.
 

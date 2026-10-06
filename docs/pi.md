@@ -19,11 +19,11 @@ axiom install --agent pi
 pi
 ```
 
-Gentle AI detects the `pi` binary first. If Pi is the only selected agent, the installer still provisions the real Engram™ component, but skips persona, ecosystem component selection, and Strict TDD prompts because `gentle-pi` owns those choices inside Pi. Gentle AI writes nothing into the Pi system prompt because `gentle-pi` owns it, so the review execution contract ships as `orchestration/pi.md` in the published provider contract bundle, which `gentle-pi` mirrors and injects at session start. Because `gentle-pi` owns that file, `install` and `sync` also remove any gentle-ai managed blocks an older build left in `~/.pi/agent/APPEND_SYSTEM.md`, including the routing guidance block; routing guidance is delivered to every other agent's system prompt, but Pi is skipped for that step too.
+Axiom detects the `pi` binary first. If Pi is the only selected agent, the installer still provisions the real Engram™ component, but skips persona, ecosystem component selection, and Strict TDD prompts because `gentle-pi` owns those choices inside Pi. Axiom writes nothing into the Pi system prompt because `gentle-pi` owns it, so the review execution contract ships as `orchestration/pi.md` in the published provider contract bundle, which `gentle-pi` mirrors and injects at session start. Because `gentle-pi` owns that file, `install` and `sync` also remove any gentle-ai managed blocks an older build left in `~/.pi/agent/APPEND_SYSTEM.md`, including the routing guidance block; routing guidance is delivered to every other agent's system prompt, but Pi is skipped for that step too.
 
 ## Installed Packages
 
-Gentle AI runs exactly these Pi setup steps:
+Axiom runs exactly these Pi setup steps:
 
 ```bash
 pi install npm:gentle-pi
@@ -45,42 +45,42 @@ pi install npm:pi-btw
 | `pi-web-access`                                          | Adds web access tools for Pi.                                                                                             |
 | `pi-btw`                                                 | Adds BTW companion workflow support for Pi.                                                                               |
 
-Discovering and running SDD agents from `.pi/agents/` is provided by `gentle-pi`'s Gentle Agents, which ships the same `subagent_*` tools that the retired `npm:pi-subagents-j0k3r` package used to provide. Gentle AI no longer installs `pi-subagents-j0k3r`, and an existing entry is dropped from `settings.json` on the next install or update so Pi uninstalls it on its next package sync.
+Discovering and running SDD agents from `.pi/agents/` is provided by `gentle-pi`'s Gentle Agents, which ships the same `subagent_*` tools that the retired `npm:pi-subagents-j0k3r` package used to provide. Axiom no longer installs `pi-subagents-j0k3r`, and an existing entry is dropped from `settings.json` on the next install or update so Pi uninstalls it on its next package sync.
 
 `gentle-pi` owns Pi's runtime behavior. Its current harness enforces parent-only delegation triggers: delegate exploration after 4+ files, use one writer for multi-file changes, require fresh review before PRs, run fresh audits after incidents, and pause long monolithic sessions before they drift.
 
-The real Engram component is provisioned separately by Gentle AI so `gentle-engram` has an Engram runtime to talk to.
-During that Engram provisioning step, Gentle AI declares `npm:pi-mcp-adapter` in Pi's agent settings and adds the npm dependency. Existing unrelated Pi settings, package entries, and npm dependencies are preserved.
+The real Engram component is provisioned separately by Axiom so `gentle-engram` has an Engram runtime to talk to.
+During that Engram provisioning step, Axiom declares `npm:pi-mcp-adapter` in Pi's agent settings and adds the npm dependency. Existing unrelated Pi settings, package entries, and npm dependencies are preserved.
 
-Files updated by Gentle AI's Engram provisioning:
+Files updated by Axiom's Engram provisioning:
 
 ```text
 .pi/agent/settings.json    # packages includes npm:pi-mcp-adapter
 .pi/npm/package.json       # dependencies.pi-mcp-adapter = ^2.6.0
 ```
 
-`gentle-engram` owns the MCP schema itself. The installer runs `pi-engram init`, which initializes Pi's Engram MCP config under the Pi agent config directory instead of having Gentle AI hand-write that file.
+`gentle-engram` owns the MCP schema itself. The installer runs `pi-engram init`, which initializes Pi's Engram MCP config under the Pi agent config directory instead of having Axiom hand-write that file.
 
 ## SDD Research Ownership
 
-Gentle AI no longer provides the unused internal research-capability admission schema. Its shared SDD guidance treats research as optional and uses actual tool availability and authorization rather than a capability certificate.
+Axiom no longer provides the unused internal research-capability admission schema. Its shared SDD guidance treats research as optional and uses actual tool availability and authorization rather than a capability certificate.
 
 Downstream [`gentle-pi`](https://github.com/Gentleman-Programming/gentle-pi) owns runtime tool observation, child tool projection and research execution. Gentle Pi's SDD policy alignment is a separate companion delivery; this upstream change neither updates that runtime nor installs or grants new tools. Live research evidence still requires an actually available, authorized tool and an observed source-backed result.
 
 ## Optional CodeGraph
 
-Select CodeGraph during Gentle AI installation to add its read-only MCP server to Pi. This integration is optional and owned entirely by Gentle AI; `gentle-pi` is not modified.
+Select CodeGraph during Axiom installation to add its read-only MCP server to Pi. This integration is optional and owned entirely by Axiom; `gentle-pi` is not modified.
 
-| Area | Gentle AI behavior |
+| Area | Axiom behavior |
 | --- | --- |
 | MCP | Merges `mcpServers.codegraph` with `codegraph serve --mcp`; a conflicting user entry is reported, never overwritten. |
 | Children | Discovers effective user and project Pi child definitions. Compatible children (`bash` plus explicit tools) receive `mcp`; every readable child receives lazy-init guidance. |
-| Intelligence | Prefers `codegraph_explore`; when MCP is unavailable, guidance uses the upstream CLI's read-only intelligence commands directly rather than routing them through Gentle AI. |
+| Intelligence | Prefers `codegraph_explore`; when MCP is unavailable, guidance uses the upstream CLI's read-only intelligence commands directly rather than routing them through Axiom. |
 | Indexes | Guidance resolves a safe project root, initializes a missing `.codegraph/` once, relies on watcher auto-sync after edits, and uses `codegraph sync` only for stale/disabled-watcher recovery. Full rebuild and destructive/admin commands are excluded from routine agent use. |
 | Sync | `axiom sync` reconciles the owned manifest after Pi assets refresh, restoring missing overlays without duplicates. This configuration sync is separate from upstream index freshness. |
 | Removal | Uninstall removes only manifest-owned MCP and child blocks. Drifted child files are preserved and reported for manual review. |
 
-Package-owned child files are never edited. Gentle AI creates a same-name overlay in Pi's agent directory when needed. A parent `APPEND_SYSTEM.md` CodeGraph marker is not considered proof that any child has CodeGraph tools or guidance.
+Package-owned child files are never edited. Axiom creates a same-name overlay in Pi's agent directory when needed. A parent `APPEND_SYSTEM.md` CodeGraph marker is not considered proof that any child has CodeGraph tools or guidance.
 
 ## Pi Commands
 
@@ -97,7 +97,7 @@ Run these inside Pi after installing the package stack.
 
 ## Persona Selection
 
-Pi persona selection belongs to `gentle-pi`, not the Gentle AI installer.
+Pi persona selection belongs to `gentle-pi`, not the Axiom installer.
 
 ```text
 /gentle:persona
@@ -118,7 +118,7 @@ Run `/reload` or start a new Pi session after switching if the current session a
 
 ## Model Assignments
 
-Pi model assignment belongs to `gentle-pi`, not the Gentle AI installer.
+Pi model assignment belongs to `gentle-pi`, not the Axiom installer.
 
 ```text
 /gentle:models
@@ -168,7 +168,7 @@ If you start Pi with `pi -ns`, Pi skips startup skill loading/hooks. That mode i
 
 | Symptom                                                | Fix                                                                                                                                                               |
 | ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Gentle AI says Pi is missing                           | Install Pi first and make sure `pi` is on `PATH`.                                                                                                                 |
+| Axiom says Pi is missing                           | Install Pi first and make sure `pi` is on `PATH`.                                                                                                                 |
 | SDD agents are missing in Pi                           | Start Pi normally in the project so `gentle-pi` can run `session_start`, or run `/gentle:install-sdd`. If you used `pi -ns`, startup hooks were skipped.          |
 | Persona did not change immediately                     | Run `/reload` or start a new Pi session.                                                                                                                          |
 | Model override should be removed                       | Open `/gentle:models` and choose `Inherit active/default model`.                                                                                                  |
@@ -179,6 +179,6 @@ If you start Pi with `pi -ns`, Pi skips startup skill loading/hooks. That mode i
 
 - Read [Supported Agents](agents.md) for the full agent matrix.
 - Read [Engram Commands](engram.md) if you want to inspect or sync persistent memory.
-- Read [Usage](usage.md) for the general Gentle AI CLI and TUI flow.
+- Read [Usage](usage.md) for the general Axiom CLI and TUI flow.
 
 ← [Back to README](../README.md)

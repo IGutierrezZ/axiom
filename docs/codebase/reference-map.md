@@ -57,7 +57,7 @@ This appendix maps main docs and source files to responsibilities. Use it to mak
 |---|---|
 | Dashboard | No dashboard, HTMX, or HTTP server package was found in this repository. |
 | Cloud sync | No cloud server/cloud store implementation was found in this repository. |
-| Engram store schema | Sessions, observations, prompts, relations, and sync mutations are external Engram runtime concepts, not Gentle-AI source files. |
+| Engram store schema | Sessions, observations, prompts, relations, and sync mutations are external Engram runtime concepts, not Axiom source files. |
 | Full API reference | No `DOCS.md` exists in this repository; use existing focused docs and external Engram docs when needed. |
 
 ## Review checklist

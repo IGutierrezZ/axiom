@@ -1,6 +1,6 @@
 # Testing Agents Deterministically
 
-How Gentle AI™ proves that an agent did what it was asked — in CI, on every push, with no API keys and no token cost.
+How Axiom proves that an agent did what it was asked — in CI, on every push, with no API keys and no token cost.
 
 ← [Back to README](../README.md)
 
@@ -8,7 +8,7 @@ How Gentle AI™ proves that an agent did what it was asked — in CI, on every 
 
 ## The problem this solves
 
-Gentle AI is deterministic code that validates agent work. The ceremony that used to live in system prompts — freeze this candidate, hash it, verify the obligation, emit the receipt, revalidate the gate — moved into the CLI, because an agent performs that ceremony slowly and cannot be trusted to perform it honestly. A model asserting *"I verified it, it passes"* is prose, not proof.
+Axiom is deterministic code that validates agent work. The ceremony that used to live in system prompts — freeze this candidate, hash it, verify the obligation, emit the receipt, revalidate the gate — moved into the CLI, because an agent performs that ceremony slowly and cannot be trusted to perform it honestly. A model asserting *"I verified it, it passes"* is prose, not proof.
 
 That design creates a testing problem. Unit tests prove the code is internally consistent. They cannot prove the product invariant:
 

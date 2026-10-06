@@ -1,6 +1,6 @@
 # Release signing and key rotation
 
-Gentle AI™ releases only when the protected `release` environment provides a real Minisign credential whose public key matches the trust anchors embedded in the binary. An unset, malformed, placeholder, or isolated test key stops both the updater and release workflow.
+Axiom releases only when the protected `release` environment provides a real Minisign credential whose public key matches the trust anchors embedded in the binary. An unset, malformed, placeholder, or isolated test key stops both the updater and release workflow.
 
 ## User verification
 
@@ -75,7 +75,7 @@ If a key may be compromised, stop releases. Do not silently replace a trust anch
 Every release note that tells users to replace or upgrade the binary must include this step:
 
 ```bash
-gentle-ai sync
+axiom sync
 ```
 
 Never publish binary-only upgrade guidance. Managed reviewer and runtime assets are version-bound to the binary, and review lifecycle operations fail closed until sync repairs missing or mismatched writer provenance.

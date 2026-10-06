@@ -7,7 +7,7 @@
 ## Architecture
 
 ```
-cmd/gentle-ai/             CLI entrypoint
+cmd/axiom/                 CLI entrypoint
 internal/
   app/                     Command dispatch + runtime wiring
   model/                   Domain types (agents, components, skills, presets, personas)

@@ -91,5 +91,5 @@
   <text x="620" y="637" font-size="15" font-weight="700" text-anchor="middle" fill="#F095C8">Delivery stays yours</text>
   <text x="620" y="657" font-size="12" text-anchor="middle" fill="#A88E9B">A review is informational. It never commits, pushes, or opens a pull request.</text>
 
-  <text x="620" y="702" font-size="12" text-anchor="middle" fill="#8A6E7C" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">gentle-ai review mode enable --scope global</text>
+  <text x="620" y="702" font-size="12" text-anchor="middle" fill="#8A6E7C" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">axiom review mode enable --scope global</text>
 </svg>

@@ -5,7 +5,7 @@ Shadow evaluation runs the target seven-value relation model (`internal/reviewtr
 ## Quick path
 
 1. Leave `GENTLE_AI_RDD_SHADOW` unset. This is the default and the only supported setting for normal use — shadow evaluation is off, and zero shadow code runs.
-2. To opt in for local investigation, set `GENTLE_AI_RDD_SHADOW=1` before running a review-context hook (`post-apply`, `pre-commit`, `pre-push`, `pre-pr`, `release`) or `gentle-ai review start`/`status`.
+2. To opt in for local investigation, set `GENTLE_AI_RDD_SHADOW=1` before running a review-context hook (`post-apply`, `pre-commit`, `pre-push`, `pre-pr`, `release`) or `axiom review start`/`status`.
 3. Watch **stderr** (never stdout) for one `gentle-ai.rdd-shadow/v1` line per observed call.
 4. If a line shows a divergence you did not expect, file it — see **Reporting a divergence** below.
 

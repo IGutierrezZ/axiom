@@ -15,7 +15,7 @@ When configured, axiom installs:
 | Artifact | Path |
 |----------|------|
 | Steering file | `~/.kiro/steering/axiom.md` |
-| Native SDD agents | `~/.kiro/agents/sdd-{phase}.md` *(10 files)* |
+| Native SDD agents | `~/.kiro/agents/sdd-{phase}.md` *(11 files)* |
 | Skills directory | `~/.kiro/skills/` |
 | MCP config | `~/.kiro/settings/mcp.json` *(separate root — see note below)* |
 | Skill-registry hook | `~/.kiro/hooks/axiom-skill-registry.json` |

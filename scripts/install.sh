@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # ============================================================================
-# Gentle-AI — Install Script
+# Axiom — Install Script
 # Ecosystem, Frameworks, Workflows for AI coding agents.
 #
 # Usage:
@@ -64,7 +64,7 @@ print_homebrew_failure_help() {
 
     if [[ "$lower" == *"untrusted tap"* || "$lower" == *"tap trust is required"* || "$lower" == *"homebrew_require_tap_trust"* ]]; then
         warn "Homebrew requires explicit trust for external taps."
-        echo "Trust only the Gentle AI formula, then retry:" >&2
+        echo "Trust only the Axiom formula, then retry:" >&2
         echo "  brew trust --formula ${BREW_FORMULA_REF}" >&2
         echo "  brew upgrade ${BINARY_NAME}" >&2
     fi
@@ -88,13 +88,13 @@ print_homebrew_failure_help() {
 
 show_help() {
     cat <<EOF
-${BOLD}Gentle-AI installer${NC}
+${BOLD}Axiom installer${NC}
 
 Usage: install.sh [OPTIONS]
 
 Options:
   --method METHOD   Force install method: brew, go, binary (default: auto-detect)
-  --channel CHANNEL Gentle AI channel: stable (default), beta, or nightly (env: GENTLE_AI_CHANNEL)
+  --channel CHANNEL Axiom channel: stable (default), beta, or nightly (env: GENTLE_AI_CHANNEL)
   --dir DIR         Custom install directory for binary method
   --insecure        Skip checksum verification (not recommended)
   -h, --help        Show this help
@@ -148,8 +148,8 @@ detect_platform() {
 # GoReleaser v2 {{ .Os }} produces GOOS values (lowercase: darwin, linux)
 # GoReleaser {{ .Arch }} produces GOARCH values (amd64, arm64)
 # Examples:
-#   gentle-ai_1.0.0_darwin_arm64.tar.gz
-#   gentle-ai_1.0.0_linux_amd64.tar.gz
+#   axiom_1.0.0_darwin_arm64.tar.gz
+#   axiom_1.0.0_linux_amd64.tar.gz
 # ============================================================================
 
 get_archive_name() {
@@ -188,7 +188,7 @@ check_prerequisites() {
 detect_install_method() {
     if [ "${CHANNEL}" = "beta" ]; then
         if [ -n "${FORCE_METHOD:-}" ] && [ "${FORCE_METHOD}" != "go" ]; then
-            fatal "--channel beta installs Gentle AI from main and only supports --method go"
+            fatal "--channel beta installs Axiom from main and only supports --method go"
         fi
         INSTALL_METHOD="go"
         info "Using beta channel — will install ${BINARY_NAME} from main via go install"
@@ -531,7 +531,7 @@ print_banner() {
     echo " | |_| |  __/ | | | |_| |  __/_____/ ___ \ | | "
     echo "  \____|\___|_| |_|\__|_|\___|    /_/   \_\___|"
     echo -e "${NC}"
-    echo -e "  ${DIM}Gentle-AI — Ecosystem, Frameworks, Workflows${NC}"
+    echo -e "  ${DIM}Axiom — Ecosystem, Frameworks, Workflows${NC}"
     echo ""
 }
 
