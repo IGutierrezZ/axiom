@@ -483,7 +483,10 @@ En las preguntas abiertas se aplican las recomendaciones del plan:
     - Otros plugins gestionados (`model-variants.ts`, `sdd-task-result-artifacts.ts`) no tienen tabla de digests: una copia de dos o más versiones atrás bloquea `sync` en v2. Es un problema previo.
     - Los hooks de Claude de `sdd/inject.go:1918,2061-2071` aún llevan `gentle-ai skill-registry refresh`; hay que revisarlo en T7j.
     - `reviewerprovider/contract.go:76` indica al validador `gentle-ai review inspect-candidate`; se trata en T7i.
-- **T7d:** en curso.
+- **T7d: PR #93** (`7b0803aa`, worktree `odd-up-t7d`, rama `fix/marcador-lanzador-axiom`).
+  - **Cambio:** se escribe `axiom:managed-opencode-launcher/v1` y se acepta también la marca antigua, con `HasOwnershipMarker` e `isOwnershipMarkerLine`, que sigue siendo de línea exacta. Un lanzador con la marca antigua se reescribe en la siguiente activación sin tocar el flujo. `bench` acepta las dos marcas.
+  - **Tamaño:** +190 / −9 líneas. Riesgo `medium`.
+- **T7e y T7f:** en curso, con un mismo writer y dos ramas independientes desde `main`: `fix/fallback-variables-gentle-ai` y `test/guardas-gentle-ai-y-axiom` (worktree `odd-up-t7e`).
 
 **Se descartan o aplazan:** migrar IDs persistidos o con hash; renombrar el store `gentle-ai`; las `GENTLE_AI_*` del protocolo interno; los *placeholders*; `.gentle-ai-*.tmp`; `.gentle-ai-default-agent.json`; `gentle-ai.mdc`.
 
