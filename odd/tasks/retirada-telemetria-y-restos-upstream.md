@@ -499,6 +499,24 @@ En las preguntas abiertas se aplican las recomendaciones del plan:
   - **Telemetría:** se revirtieron los cambios en `telemetry*.go`, que #87 borra.
   - **Coste:** el writer tardó unas 2 h 13 min, casi todo en tests de `internal/cli`. Una tanda con 8 procesos en paralelo provocó *timeouts* por carga. Al usuario le preocupó la duración y se le pidió al writer que acotara el trabajo. **Lección para T7h y siguientes:** acotar por tiempo, ejecutar los tests por nombre exacto y con 2 procesos como máximo, y dejar el paquete completo al CI.
   - **Pendiente para T7h (G2):** `review_correction_context.go:141-142` todavía dice `gentle-ai review abandon`, así que ese mensaje mezcla los dos nombres.
+- **2026-10-06, tanda de merges** (todos en verde):
+  - **Fusionados, uno a uno y comprobando antes que cada uno era fusionable:**
+    - #87 (T6b): `40ca98dc`
+    - #90 (T7a): `292dfe34`
+    - #92 (T7c): `a37c759b`
+    - #93 (T7d): `4773b89d`
+    - #94 (T7e): `cc006584`
+    - #95 (T7f): `8828d4de`
+  - **Comprobación del `main` combinado** (worktree `odd-check-main`), porque se fusionaron sin un CI conjunto:
+    - build y vet limpios;
+    - `uninstall`, `assets`, `providercontractbundle` y `cmd/axiom` en verde;
+    - `opencode` solo falla en el fallo de entorno conocido;
+    - `sdd` superó el timeout de 10 minutos al ejecutarse en paralelo con otros paquetes, así que se repite en solitario.
+  - **Cadenas pendientes:**
+    - #88, #91 y #96 retargeteados a `main` y rebasados sin conflictos: #88 → `f96b2ec5`, #91 → `2352ab13`, #96 → `2d196327`.
+    - #89 rebasado sobre el nuevo #88 (`4a205e4e`).
+    - Las cuatro ramas compilan y pasan vet en local y se subieron con `--force-with-lease`. Falta su CI.
+  - **Limpieza:** eliminados los worktrees `odd-up-t6b`, `t7c`, `t7d` y `t7e` y las ramas fusionadas.
 
 **Se descartan o aplazan:** migrar IDs persistidos o con hash; renombrar el store `gentle-ai`; las `GENTLE_AI_*` del protocolo interno; los *placeholders*; `.gentle-ai-*.tmp`; `.gentle-ai-default-agent.json`; `gentle-ai.mdc`.
 
