@@ -50,14 +50,14 @@ export const SkillRegistryPlugin: Plugin = async (input) => {
     if (!(await isProjectRoot(cwd))) {
       // Startup hooks must not scream: a non-project directory is a normal
       // situation, not an error. Log to stderr — stdout belongs to commands
-      // like `opencode models --verbose`, whose output gentle-ai parses.
+      // like `opencode models --verbose`, whose output axiom parses.
       console.error("[skill-registry] skipping refresh: not a project root:", cwd)
       return
     }
 
     try {
       await execFileAsync(
-        "gentle-ai",
+        "axiom",
         ["skill-registry", "refresh", "--quiet", "--no-gitignore", "--cwd", cwd],
         { timeout: 30_000 },
       )

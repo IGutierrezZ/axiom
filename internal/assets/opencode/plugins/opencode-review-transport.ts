@@ -28,7 +28,7 @@ function decodeReviewSessionID(info: unknown): string | undefined {
 }
 
 const TRANSPORT = {
-  Command: "gentle-ai",
+  Command: "axiom",
   Schema: "gentle-ai.provider-transport/v1",
   Start: "start",
   Prompt: "prompt",

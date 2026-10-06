@@ -81,7 +81,7 @@ def main():
                 provider, provider_requests, provider_failures = stack.enter_context(local_provider())
                 observation_log = prepare_fixture(root, config / "plugins", provider)
                 (root / "bin").mkdir()
-                shutil.copy2(Path(sys.argv[4]).resolve(strict=True), root / "bin/gentle-ai")
+                shutil.copy2(Path(sys.argv[4]).resolve(strict=True), root / "bin/axiom")
             env = {
                 "HOME": str(root / "home"), "XDG_CONFIG_HOME": str(root / "config"),
                 "XDG_DATA_HOME": str(root / "data"), "XDG_STATE_HOME": str(root / "state"),
