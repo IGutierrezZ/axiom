@@ -174,7 +174,7 @@ Después, usa el agente con normalidad. Axiom crea respaldos antes de modificar 
 | **[Review](docs/review-integration.md)** · **[Architecture](docs/architecture/organic-rdd.md)** | The RDD contract, lifecycle and threat model |
 | **[Engram](docs/engram.md)** · **[Components](docs/components.md)** | Memory commands, skills, presets and personas |
 | **[Contributing](CONTRIBUTING.md)** · **[Codebase Guide](docs/CODEBASE-GUIDE.md)** | Extend or contribute |
-| **[Telemetry](docs/telemetry.md)** | What we count, and how to turn it off |
+| **[Telemetry](docs/telemetry.md)** | Axiom sends no telemetry; what was removed and how old installs are cleaned up |
 
 <div align="right"><a href="#top">Back to top</a></div>
 

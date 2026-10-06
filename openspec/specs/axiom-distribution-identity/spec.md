@@ -9,7 +9,7 @@
 
 ## 1. Capacidad: `axiom-distribution-identity`
 
-Contrato de nombre publicado por clase de superficie: instalador y tap, compuertas de release, workflows de CI, shim de `crosslane`, namespace de protocolo en `contracts/**`, ruta de módulo Go y nombres de servicio de telemetría de despliegue. Distingue interoperabilidad (lo que lee una máquina, no renombrable sin romper consumidores) de identidad (lo que lee un humano, renombrable).
+Contrato de nombre publicado por clase de superficie: instalador y tap, compuertas de release, workflows de CI, shim de `crosslane`, namespace de protocolo en `contracts/**`, ruta de módulo Go y nombres de servicio de telemetría de despliegue (este último retirado: REQ-20.12). Distingue interoperabilidad (lo que lee una máquina, no renombrable sin romper consumidores) de identidad (lo que lee un humano, renombrable).
 
 ### Requirement: Taxonomía de interoperabilidad vs. identidad (REQ-20.7)
 
@@ -71,7 +71,9 @@ El sistema DEBE conservar `cmd/gentle-ai` como pasarela de deprecación hacia `a
 
 ---
 
-### Requirement: Nombres de servicio de telemetría de despliegue (REQ-20.12)
+### Requirement: Nombres de servicio de telemetría de despliegue (REQ-20.12) — RETIRADO
+
+> **Retirado:** la telemetría y su despliegue se eliminaron por decisión de producto (ODD `retirada-telemetria-y-restos-upstream`). `deploy/telemetry/` ya no existe y Axiom no envía telemetría. Se conserva el identificador REQ-20.12 y el texto original solo por trazabilidad; el requisito no vincula.
 
 Los nombres de servicio de despliegue de telemetría (`deploy/telemetry/axiom-telemetry.service`, `deploy/telemetry/axiom-telemetry-backup.service` y paneles de Grafana asociados) DEBEN resolverse hacia la identidad de distribución de Axiom.
 

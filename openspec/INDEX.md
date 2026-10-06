@@ -139,7 +139,7 @@ El pipeline de CI DEBE construir y ejercitar el binario canónico `cmd/axiom`, i
 
 ### Dominio: `axiom-distribution-identity` — Especificación Viva: Identidad de Distribución de Axiom
 
-Contrato de nombre publicado por clase de superficie: instalador y tap, compuertas de release, workflows de CI, shim de `crosslane`, namespace de protocolo en `contracts/**`, ruta de módulo Go y nombres de servicio de telemetría de despliegue. Distingue interoperabilidad (lo que lee una máquina, no renombrable sin romper consumidores) de identidad (lo que lee un humano, renombrable).
+Contrato de nombre publicado por clase de superficie: instalador y tap, compuertas de release, workflows de CI, shim de `crosslane`, namespace de protocolo en `contracts/**`, ruta de módulo Go y nombres de servicio de telemetría de despliegue (este último retirado: REQ-20.12). Distingue interoperabilidad (lo que lee una máquina, no renombrable sin romper consumidores) de identidad (lo que lee un humano, renombrable).
 
 **Archivo:** [`specs/axiom-distribution-identity/spec.md`](specs/axiom-distribution-identity/spec.md)
 
@@ -153,7 +153,7 @@ Contrato de nombre publicado por clase de superficie: instalador y tap, compuert
   - *Escenario BDD:* contracts/** permanece sin cambios
 - **[REQ-20.11]** Pasarela gentle-ai y shim de crosslane conservados
   - *Escenario BDD:* cmd/gentle-ai emite su aviso de deprecación
-- **[REQ-20.12]** Nombres de servicio de telemetría de despliegue
+- **[REQ-20.12]** Nombres de servicio de telemetría de despliegue — **RETIRADO**: la telemetría y su despliegue se eliminaron por decisión de producto
   - *Escenario BDD:* Los nombres de servicio de telemetría se renombran
 - **[REQ-20.13]** Raíz de respaldos resuelta exclusivamente a través de internal/backup
   - *Escenario BDD:* Un escritor de producción resuelve la raíz a través del paquete
