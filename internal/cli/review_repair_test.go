@@ -1106,7 +1106,7 @@ func TestReviewRepairPreflightNamesAWayForwardWhenTheStoreExceedsTheBound(t *tes
 	if !preflight.Assessment.Truncated || preflight.Assessment.TruncationCap != 256 || preflight.Assessment.TruncationScanned != 257 {
 		t.Fatalf("oversized-store preflight truncation bound = %#v", preflight.Assessment)
 	}
-	if !strings.Contains(output.String(), "gentle-ai review inspect-authority") {
+	if !strings.Contains(output.String(), "axiom review inspect-authority") {
 		t.Fatalf("truncated preflight named no runnable continuation:\n%s", output.String())
 	}
 

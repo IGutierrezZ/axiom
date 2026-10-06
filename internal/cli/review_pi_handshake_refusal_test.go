@@ -112,7 +112,7 @@ func TestPiHandshakeGuidanceStaysScopedToPi(t *testing.T) {
 			if strings.Contains(err.Error(), reviewPiHostRelayContractEnvironment) {
 				t.Fatalf("refusal for %q leaks the pi relay handshake: %v", runtime, err)
 			}
-			if !strings.Contains(err.Error(), "gentle-ai review mode disable --scope clone --cwd <repo>") {
+			if !strings.Contains(err.Error(), "axiom review mode disable --scope clone --cwd <repo>") {
 				t.Fatalf("refusal for %q lost the generic exit guidance: %v", runtime, err)
 			}
 		})

@@ -1087,7 +1087,7 @@ func newReviewIntegrationFailure(operation string, args []string, runErr error) 
 			// that re-derives this discovery and returns the exact
 			// transition, which for a candidate nothing governs is the
 			// review.start the message names.
-			failure.Message = "No approved review receipt covers this candidate; review it with gentle-ai review start."
+			failure.Message = "No approved review receipt covers this candidate; review it with axiom review start."
 			failure.NextAction = "review.status"
 		case ReviewReceiptScopeChanged:
 			if discovery.Context != nil {

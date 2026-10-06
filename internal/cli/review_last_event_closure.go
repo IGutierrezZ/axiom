@@ -234,7 +234,7 @@ func closeReviewOnLastCapturedLens(
 			if _, captured, err := reviewProviderCaptureRefuter(ctx, repo, store, state, state.CapturePhaseRevision, runtime); err != nil {
 				return nil, err
 			} else if !captured {
-				return nil, errors.New("compiled provider refuter was required but no result was captured; rerun `gentle-ai review status --cwd <repo> --contract gentle-ai.review-integration/v2 --next-transition` and follow its capture route")
+				return nil, errors.New("compiled provider refuter was required but no result was captured; rerun `axiom review status --cwd <repo> --contract gentle-ai.review-integration/v2 --next-transition` and follow its capture route")
 			}
 			current, err := store.LoadContext(ctx)
 			if err != nil {

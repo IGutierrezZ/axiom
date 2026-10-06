@@ -100,7 +100,7 @@ func parseReviewProviderRoleCapture(command string, args []string, stdout io.Wri
 	}
 	if flags.NArg() != 0 || binding.lineage == "" || binding.target == "" || binding.revision == "" ||
 		(!binding.materialize && !binding.execute && binding.input == "") {
-		return nil, reviewPreflightError(fmt.Errorf("review %s requires --lineage, --target, --expected-revision, --agent, and either --materialize, --execute, or --input; `gentle-ai review status --contract %s --next-transition` prints the exact bindings", command, ReviewIntegrationContractV2))
+		return nil, reviewPreflightError(fmt.Errorf("review %s requires --lineage, --target, --expected-revision, --agent, and either --materialize, --execute, or --input; `axiom review status --contract %s --next-transition` prints the exact bindings", command, ReviewIntegrationContractV2))
 	}
 	if binding.runtime == "" {
 		// Every mode requires the identified host-relay runtime: a raw
@@ -127,10 +127,10 @@ func parseReviewProviderRoleCapture(command string, args []string, stdout io.Wri
 		return nil, reviewPreflightError(err)
 	}
 	if reviewProviderCaptureRuntime(binding.runtime) && binding.materialize {
-		return nil, reviewPreflightError(fmt.Errorf("review %s --materialize is unavailable for %q: its compiled Go adapter executes the provider contract directly; rerun `gentle-ai review %s` with the same binding and --execute", command, binding.runtime, command))
+		return nil, reviewPreflightError(fmt.Errorf("review %s --materialize is unavailable for %q: its compiled Go adapter executes the provider contract directly; rerun `axiom review %s` with the same binding and --execute", command, binding.runtime, command))
 	}
 	if reviewProviderCaptureRuntime(binding.runtime) && binding.input != "" {
-		return nil, reviewPreflightError(fmt.Errorf("review %s --input is unavailable for %q: its compiled Go adapter executes the provider contract directly; rerun `gentle-ai review %s` with the same binding and --execute", command, binding.runtime, command))
+		return nil, reviewPreflightError(fmt.Errorf("review %s --input is unavailable for %q: its compiled Go adapter executes the provider contract directly; rerun `axiom review %s` with the same binding and --execute", command, binding.runtime, command))
 	}
 	if reviewProviderHostRelayMaterializeRuntime(binding.runtime) && binding.execute {
 		return nil, reviewPreflightError(fmt.Errorf("review %s --execute is unavailable for %q: it is host-mediated; run the STATUS-issued `--materialize` operation and submit the host result through `--input`", command, binding.runtime)) // refusal:by-design world-action: Go never spawns a process for a host-relay runtime; the host materializes, runs its own reviewer, and submits the raw result
@@ -172,7 +172,7 @@ func (binding *reviewProviderRoleCaptureBinding) discover(ctx context.Context) (
 		return store, record, reviewPreflightError(fmt.Errorf("resolve review authority for lineage %q under repository %q: %w", binding.lineage, binding.root, err))
 	}
 	if record.State.LineageID != binding.lineage || record.State.CapturePhaseRevision != binding.revision {
-		return store, record, reviewPreflightRefusal(reviewPreflightCaptureBindingMismatchReason, fmt.Errorf("review %s binding does not match the current compact authority; refresh the binding with gentle-ai review status --cwd <repo> --contract %s --next-transition", binding.command, ReviewIntegrationContractV2))
+		return store, record, reviewPreflightRefusal(reviewPreflightCaptureBindingMismatchReason, fmt.Errorf("review %s binding does not match the current compact authority; refresh the binding with axiom review status --cwd <repo> --contract %s --next-transition", binding.command, ReviewIntegrationContractV2))
 	}
 	return store, record, nil
 }
@@ -195,7 +195,7 @@ func RunReviewCaptureRefuter(args []string, stdout io.Writer) error {
 	}
 	state := record.State
 	if state.State != reviewtransaction.StateReviewing || state.InitialSnapshot.Identity != binding.target {
-		return reviewPreflightRefusal(reviewPreflightCaptureBindingMismatchReason, errors.New("review capture-refuter requires the exact reviewing authority target; refresh the binding with gentle-ai review status --cwd <repo> --contract gentle-ai.review-integration/v2 --next-transition"))
+		return reviewPreflightRefusal(reviewPreflightCaptureBindingMismatchReason, errors.New("review capture-refuter requires the exact reviewing authority target; refresh the binding with axiom review status --cwd <repo> --contract gentle-ai.review-integration/v2 --next-transition"))
 	}
 	request, err := reviewProviderNewRefuterRequest(ctx, binding.root, store.Dir, state, state.CapturePhaseRevision)
 	if err != nil {
@@ -276,11 +276,11 @@ func RunReviewCaptureValidation(args []string, stdout io.Writer) error {
 		return reviewCorrectionContextBudgetRefusal(ctx, binding.root, state.LineageID, err)
 	}
 	if request.ValidationRequest.CorrectionTargetIdentity != binding.target {
-		return reviewPreflightRefusal(reviewPreflightCaptureBindingMismatchReason, errors.New("review capture-validation target does not match the frozen correction target identity; refresh the binding with gentle-ai review status --cwd <repo> --contract gentle-ai.review-integration/v2 --next-transition"))
+		return reviewPreflightRefusal(reviewPreflightCaptureBindingMismatchReason, errors.New("review capture-validation target does not match the frozen correction target identity; refresh the binding with axiom review status --cwd <repo> --contract gentle-ai.review-integration/v2 --next-transition"))
 	}
 	if request.ValidationRequest.RequestHash != binding.requestHash &&
 		request.ValidationRequest.ForContract(ReviewIntegrationContractV2).RequestHash != binding.requestHash {
-		return reviewPreflightRefusal(reviewPreflightCaptureBindingMismatchReason, errors.New("review capture-validation request hash does not match the frozen targeted validation request; refresh the binding with gentle-ai review status --cwd <repo> --contract gentle-ai.review-integration/v2 --next-transition"))
+		return reviewPreflightRefusal(reviewPreflightCaptureBindingMismatchReason, errors.New("review capture-validation request hash does not match the frozen targeted validation request; refresh the binding with axiom review status --cwd <repo> --contract gentle-ai.review-integration/v2 --next-transition"))
 	}
 	if binding.materialize {
 		// Raw prompt bytes, exactly as for the refuter above.
