@@ -493,7 +493,12 @@ En las preguntas abiertas se aplican las recomendaciones del plan:
 - **T7f: PR #95** (`2690b6ef`, rama `test/guardas-gentle-ai-y-axiom`, desde `main`).
   - **Cambio:** las guardas de test aceptan `(?:gentle-ai|axiom)`; `bundle.go` (`validPiFacadeLifecycle`) y `review_mode.go` (`reviewModeCommandsByVerb`) aceptan los dos nombres, con tests nuevos. No migra ningún mensaje.
   - **Tamaño:** +66 / −19, riesgo `medium`.
-- **T7g:** en curso, encadenado sobre #95 (worktree `odd-up-t7g`, rama `fix/consejos-axiom-review-cli`). Cubre los bloques G1 y G3 y el bench acoplado.
+- **T7g: PR #96** (`e6b5dee2`, encadenado sobre #95; worktree `odd-up-t7g`, rama `fix/consejos-axiom-review-cli`).
+  - **Contenido:** consejos de los bloques G1 (`review_facade`, `review_mode`, `review_narration`, `review`) y G3 (el resto de la CLI) pasan de `gentle-ai` a `axiom`, más el bench acoplado. 29 ficheros, +107 / −107, riesgo `medium`.
+  - **Wire sin tocar:** el orquestador comprobó que no cambian `reviewNegotiatedStartCommand`, `reviewConsentFollowUpBase` ni `reviewConsentOffPathCommand`, y que el diff no toca los ficheros de capacidades, siguiente transición y contrato de consentimiento.
+  - **Telemetría:** se revirtieron los cambios en `telemetry*.go`, que #87 borra.
+  - **Coste:** el writer tardó unas 2 h 13 min, casi todo en tests de `internal/cli`. Una tanda con 8 procesos en paralelo provocó *timeouts* por carga. Al usuario le preocupó la duración y se le pidió al writer que acotara el trabajo. **Lección para T7h y siguientes:** acotar por tiempo, ejecutar los tests por nombre exacto y con 2 procesos como máximo, y dejar el paquete completo al CI.
+  - **Pendiente para T7h (G2):** `review_correction_context.go:141-142` todavía dice `gentle-ai review abandon`, así que ese mensaje mezcla los dos nombres.
 
 **Se descartan o aplazan:** migrar IDs persistidos o con hash; renombrar el store `gentle-ai`; las `GENTLE_AI_*` del protocolo interno; los *placeholders*; `.gentle-ai-*.tmp`; `.gentle-ai-default-agent.json`; `gentle-ai.mdc`.
 
