@@ -486,7 +486,14 @@ En las preguntas abiertas se aplican las recomendaciones del plan:
 - **T7d: PR #93** (`7b0803aa`, worktree `odd-up-t7d`, rama `fix/marcador-lanzador-axiom`).
   - **Cambio:** se escribe `axiom:managed-opencode-launcher/v1` y se acepta también la marca antigua, con `HasOwnershipMarker` e `isOwnershipMarkerLine`, que sigue siendo de línea exacta. Un lanzador con la marca antigua se reescribe en la siguiente activación sin tocar el flujo. `bench` acepta las dos marcas.
   - **Tamaño:** +190 / −9 líneas. Riesgo `medium`.
-- **T7e y T7f:** en curso, con un mismo writer y dos ramas independientes desde `main`: `fix/fallback-variables-gentle-ai` y `test/guardas-gentle-ai-y-axiom` (worktree `odd-up-t7e`).
+- **T7e: PR #94** (`60521f2b`, rama `fix/fallback-variables-gentle-ai`, worktree `odd-up-t7e`).
+  - **Cambio:** fallback real de `AXIOM_INSTALL_SCOPE`, `_CHANNEL`, `_OPENCODE_BACKGROUND_SUBAGENTS` y `_PI_BACKGROUND_SUBAGENTS` a su equivalente `GENTLE_AI_*`, usando el getter de varias claves; `env.go` no se toca.
+  - **Tests y tamaño:** 20 subtests; +123 / −8, riesgo `medium`.
+  - **Seguimiento:** `internal/update/check.go:182` y `upgrade/strategy.go` leen `AXIOM_CHANNEL` sin fallback.
+- **T7f: PR #95** (`2690b6ef`, rama `test/guardas-gentle-ai-y-axiom`, desde `main`).
+  - **Cambio:** las guardas de test aceptan `(?:gentle-ai|axiom)`; `bundle.go` (`validPiFacadeLifecycle`) y `review_mode.go` (`reviewModeCommandsByVerb`) aceptan los dos nombres, con tests nuevos. No migra ningún mensaje.
+  - **Tamaño:** +66 / −19, riesgo `medium`.
+- **T7g:** en curso, encadenado sobre #95 (worktree `odd-up-t7g`, rama `fix/consejos-axiom-review-cli`). Cubre los bloques G1 y G3 y el bench acoplado.
 
 **Se descartan o aplazan:** migrar IDs persistidos o con hash; renombrar el store `gentle-ai`; las `GENTLE_AI_*` del protocolo interno; los *placeholders*; `.gentle-ai-*.tmp`; `.gentle-ai-default-agent.json`; `gentle-ai.mdc`.
 
