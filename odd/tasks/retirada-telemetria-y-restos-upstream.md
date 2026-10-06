@@ -466,6 +466,17 @@ En las preguntas abiertas se aplican las recomendaciones del plan:
 - La tabla de digests incluye todo el historial.
 - `.codex/AGENTS.md` se regenera en T7j.
 
+**Progreso de T7:**
+- **T7a: PR #90** (`11c47676`, rama `chore/retirar-chained-pr-del-repo`, worktree `odd-up-t7a`).
+  - Borra `skills/chained-pr` y regenera el bloque de `AGENTS.md` con `axiom skill index refresh`, usando un HOME temporal; el generador es idempotente.
+  - −150 líneas, riesgo `medium`.
+- **T7b: PR #91** (`ffa3f54f`, rama `chore/retirar-axiom-collab-perfect`, encadenado sobre #90).
+  - Retira `axiom-collab-perfect`.
+  - En `AGENTS.md`, el título pasa a «Axiom — Agent Skills Index» y la convención a `axiom-*`.
+  - Ajusta `issue_creation_authority_test.go`.
+  - +2 / −312 líneas, riesgo `medium`.
+- **T7c:** en curso (worktree `odd-up-t7c`, rama `fix/plugins-opencode-axiom`).
+
 **Se descartan o aplazan:** migrar IDs persistidos o con hash; renombrar el store `gentle-ai`; las `GENTLE_AI_*` del protocolo interno; los *placeholders*; `.gentle-ai-*.tmp`; `.gentle-ai-default-agent.json`; `gentle-ai.mdc`.
 
 | Elemento | Clase | Acción | Tamaño |
