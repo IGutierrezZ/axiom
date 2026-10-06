@@ -525,7 +525,16 @@ En las preguntas abiertas se aplican las recomendaciones del plan:
     - `reviewerprovider/contract.go` y otros paquetes que emiten `gentle-ai review capture-result`, `status` e `inspect-candidate`;
     - `review.go:57` (`Usage: gentle-ai %s`), que fija el bench en `journeys.go:811`;
     - `review_incident.go:182` (`which -a gentle-ai`).
-- **T7i:** en curso, encadenado sobre #97.
+- **T7i:** commit `0e9f2f43` (worktree `odd-up-t7i`, rama `fix/consejos-axiom-paquetes`, encadenado sobre #97). 44 ficheros, +108 / −103.
+  - **Paquetes migrados:** `reviewtransaction`, `reviewerprovider` (la instrucción al validador), `app`, `update`, `system/guard.go`, `communitytool`, `review.go:57` y `review_incident.go:182`. `bench/journeys.go:811` acepta las dos formas.
+  - **Se mantienen:** el *wire*, las rutas del store, los reconocedores *legacy* y la telemetría.
+  - **Quedan para T7j:** `boundedreview.go:34,445`, que rompen el hash fijado de Kilocode; `inject.go:1593`; y los *overlays* JSON.
+  - **Estado:** el writer lo deja parcial, porque el paquete `reviewtransaction` completo supera el timeout.
+  - **Comprobación del orquestador:**
+    - Un script recorre todos los tests de `internal/` y `cmd/` en busca de cadenas `gentle-ai` que ya no existan en producción. Solo dio 5 candidatos, todos falsos positivos: comentarios, aserciones negativas o que ya aceptan los dos nombres, y `Withdraw.Command`, que se arma con la herramienta `gentle-ai` del *wire*.
+    - El schema `status-v7` ya admite `^(axiom|gentle-ai) review capture-unachievable`, un dato útil para T7m.
+    - `reviewerprovider`, `system` y `communitytool` pasan en verde.
+  - **Riesgo `high`** (`hot_path`). Verificador independiente en curso, centrado en los permisos del validador para la forma `axiom review inspect-candidate`.
 
 **Se descartan o aplazan:** migrar IDs persistidos o con hash; renombrar el store `gentle-ai`; las `GENTLE_AI_*` del protocolo interno; los *placeholders*; `.gentle-ai-*.tmp`; `.gentle-ai-default-agent.json`; `gentle-ai.mdc`.
 
