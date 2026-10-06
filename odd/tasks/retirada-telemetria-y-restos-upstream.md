@@ -475,7 +475,15 @@ En las preguntas abiertas se aplican las recomendaciones del plan:
   - En `AGENTS.md`, el título pasa a «Axiom — Agent Skills Index» y la convención a `axiom-*`.
   - Ajusta `issue_creation_authority_test.go`.
   - +2 / −312 líneas, riesgo `medium`.
-- **T7c:** en curso (worktree `odd-up-t7c`, rama `fix/plugins-opencode-axiom`).
+- **T7c: PR #92** (`48185e22`, worktree `odd-up-t7c`, rama `fix/plugins-opencode-axiom`).
+  - **Cambio:** los plugins `skill-registry.ts` y `opencode-review-transport.ts` (v1 y v2) lanzan `axiom`. Se añade una tabla con los 14 digests históricos, recalculados, y `validateOpenCodePluginReplacement` acepta una copia antigua sin modificar del mismo plugin. +177 / −12 líneas, riesgo `high`.
+  - **Verificador independiente:** confirmó que `axiom` despacha exactamente esos argv, con el mismo esquema, y lo probó con un binario y un HOME temporal. También confirmó los digests y que las dos mutaciones se detectan.
+  - **Defecto bloqueante, corregido:** el *fixture* del plugin antiguo lanzaba `gentle-ai` y el arnés de Node solo ofrecía `axiom`. Ahora el arnés ofrece los dos nombres. Los tests de Node se saltan en Windows y WSL no tiene Node, así que la comprobación en Linux la hace el CI.
+  - **Seguimientos:**
+    - Otros plugins gestionados (`model-variants.ts`, `sdd-task-result-artifacts.ts`) no tienen tabla de digests: una copia de dos o más versiones atrás bloquea `sync` en v2. Es un problema previo.
+    - Los hooks de Claude de `sdd/inject.go:1918,2061-2071` aún llevan `gentle-ai skill-registry refresh`; hay que revisarlo en T7j.
+    - `reviewerprovider/contract.go:76` indica al validador `gentle-ai review inspect-candidate`; se trata en T7i.
+- **T7d:** en curso.
 
 **Se descartan o aplazan:** migrar IDs persistidos o con hash; renombrar el store `gentle-ai`; las `GENTLE_AI_*` del protocolo interno; los *placeholders*; `.gentle-ai-*.tmp`; `.gentle-ai-default-agent.json`; `gentle-ai.mdc`.
 
