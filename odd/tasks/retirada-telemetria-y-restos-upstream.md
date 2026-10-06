@@ -453,6 +453,19 @@ El resto (lectura dual de contratos, marca del lanzador, plugin `skill-registry.
 
 **Orden:** T7a → T7b (los dos tocan `AGENTS.md`); T7f antes de T7g, T7h y T7i; T7j en paralelo.
 
+**Alcance decidido por el usuario (2026-10-06): todo, de T7a a T7k**, con T7m aplazado como tarea aparte.
+
+En las preguntas abiertas se aplican las recomendaciones del plan:
+
+- `opencode-review-transport.ts` entra en T7c.
+- T7e implementa el fallback (en lugar de quitar la promesa de la ayuda).
+- `AXIOM_ENGRAM_*` y `AXIOM_SDD_STATUS_ENGRAM` se aplazan.
+- `__managed_by: gentle-ai/sdd` se aplaza.
+- `CONTRIBUTING.md` recibe solo un retoque mínimo en T7k.
+- `gentle-ai.mdc` y los `gentle-ai.md` / `.instructions.md` antiguos quedan como seguimiento.
+- La tabla de digests incluye todo el historial.
+- `.codex/AGENTS.md` se regenera en T7j.
+
 **Se descartan o aplazan:** migrar IDs persistidos o con hash; renombrar el store `gentle-ai`; las `GENTLE_AI_*` del protocolo interno; los *placeholders*; `.gentle-ai-*.tmp`; `.gentle-ai-default-agent.json`; `gentle-ai.mdc`.
 
 | Elemento | Clase | Acción | Tamaño |
