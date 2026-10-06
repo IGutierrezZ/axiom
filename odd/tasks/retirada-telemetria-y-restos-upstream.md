@@ -670,8 +670,11 @@ En las preguntas abiertas se aplican las recomendaciones del plan:
   - **T7l-a: PR #101** (`f4fdf5f8`, rama `chore/contributing-sin-referencias`, worktree `odd-up-t7l`). Quita los enlaces de `README.md` y deja de leer el fichero en `TestDelegatedWorkflowMutationContract`. +7 / −18.
   - **T7l-b: PR #102** (`cf57f02b`, rama `chore/retirar-contributing`, encadenado sobre #101). Borra el fichero (−394).
   - `assets` pasa en verde con el fichero ya borrado.
+- **Decisión del usuario (2026-10-07):** también se retiran del `README.md` («Community») el enlace a las incidencias `up-for-grabs` y la insignia «Community Roadmap». Se borra `docs/community-roadmap.md`, que solo redirigía a la consulta `up-for-grabs` del upstream. Se conservan los contribuidores.
+  - Todo va en #101 (`759e78d6`), que queda en +7 / −105.
+  - #102 se rebasó encima (`541c13cf`).
+  - `assets` pasa en verde.
 - **Seguimientos nuevos:**
-  - `README.md`, sección «Community»: enlaza los issues `up-for-grabs` de `IGutierrezZ/axiom`, que están desactivados (pendiente de la decisión del usuario).
   - `docs/intended-usage.md` y `docs/prd-opencode-profiles.md` siguen con `gentle-orchestrator` y `gentle-sdd-*`;
   - el banner ASCII de `install.sh`;
   - `install.sh` no lee `AXIOM_CHANNEL`;
