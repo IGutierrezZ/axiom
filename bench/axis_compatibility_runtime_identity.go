@@ -12,7 +12,7 @@ func compatExecuteUnboundRecovery(r *journeyRun) error {
 	}
 
 	combined := refused.Stdout + "\n" + refused.Stderr
-	const marker = "`gentle-ai review start "
+	const marker = "`axiom review start "
 	start := strings.Index(combined, marker)
 	if start < 0 {
 		return fmt.Errorf("direct refusal named no backtick-delimited review start command: %q", combined)

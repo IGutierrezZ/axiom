@@ -26,7 +26,7 @@ var (
 // by generated agent guidance. It intentionally accepts no raw CodeGraph args.
 func RunCodeGraph(args []string, stdout io.Writer) error {
 	if len(args) != 3 || args[0] != "init" || args[1] != "--cwd" || strings.TrimSpace(args[2]) == "" {
-		return fmt.Errorf("usage: gentle-ai codegraph init --cwd <project-root>")
+		return fmt.Errorf("usage: axiom codegraph init --cwd <project-root>")
 	}
 	root, err := canonicalCodeGraphProjectRoot(args[2])
 	if err != nil {

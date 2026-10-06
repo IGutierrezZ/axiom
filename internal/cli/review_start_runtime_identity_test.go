@@ -76,7 +76,7 @@ func TestDirectReviewStartRefusalInventsNoRuntimeIdentity(t *testing.T) {
 		t.Fatalf("did not reach the direct-route refusal that names a continuation: %s", message)
 	}
 
-	opening := strings.Index(message, "`gentle-ai review start ")
+	opening := strings.Index(message, "`axiom review start ")
 	if opening < 0 {
 		t.Fatalf("refusal has no negotiated start command: %s", message)
 	}
@@ -89,8 +89,8 @@ func TestDirectReviewStartRefusalInventsNoRuntimeIdentity(t *testing.T) {
 	if strings.Contains(command, "--agent") || strings.Contains(command, reviewUndeclaredRuntimeIdentitySlot) {
 		t.Fatalf("unbound recovery command guesses a runtime identity: %s", command)
 	}
-	if len(words) < 3 || words[0] != "gentle-ai" || words[1] != "review" || words[2] != "start" {
-		t.Fatalf("recovery command = %#v, want gentle-ai review start", words)
+	if len(words) < 3 || words[0] != "axiom" || words[1] != "review" || words[2] != "start" {
+		t.Fatalf("recovery command = %#v, want axiom review start", words)
 	}
 	t.Chdir(repo)
 	var recovered bytes.Buffer

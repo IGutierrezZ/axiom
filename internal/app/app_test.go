@@ -434,7 +434,7 @@ func TestRunArgsSDDAttemptHelpBypassesPlatformAndRepositoryValidation(t *testing
 	if err != nil {
 		t.Fatalf("RunArgs(sdd-attempt grant --help): %v", err)
 	}
-	for _, want := range []string{"Usage: gentle-ai sdd-attempt grant [flags]", "-root value", "repeatable"} {
+	for _, want := range []string{"Usage: axiom sdd-attempt grant [flags]", "-root value", "repeatable"} {
 		if !strings.Contains(output.String(), want) {
 			t.Fatalf("sdd-attempt grant help missing %q:\n%s", want, output.String())
 		}
@@ -451,7 +451,7 @@ func TestRunArgsSDDAttemptParentHelpDoesNotSelectChangeValueAsOperation(t *testi
 	if err != nil {
 		t.Fatalf("RunArgs(sdd-attempt --help --cwd /definitely/not/a/repository --change begin): %v", err)
 	}
-	if !strings.Contains(output.String(), "Usage: gentle-ai sdd-attempt grant [flags]") || strings.Contains(output.String(), "Usage: gentle-ai sdd-attempt begin [flags]") {
+	if !strings.Contains(output.String(), "Usage: axiom sdd-attempt grant [flags]") || strings.Contains(output.String(), "Usage: axiom sdd-attempt begin [flags]") {
 		t.Fatalf("sdd-attempt parent help =\n%s", output.String())
 	}
 }
@@ -550,7 +550,7 @@ func TestRunArgsDispatchesReviewModeBeforePlatformValidation(t *testing.T) {
 	if err := RunArgs([]string{"review", "mode", "--help"}, &output); err != nil {
 		t.Fatalf("RunArgs(review mode --help) error = %v", err)
 	}
-	if !strings.Contains(output.String(), "gentle-ai review mode <enable|disable|status>") {
+	if !strings.Contains(output.String(), "axiom review mode <enable|disable|status>") {
 		t.Fatalf("review mode help missing:\n%s", output.String())
 	}
 

@@ -730,7 +730,7 @@ func TestRunInstallSDDCompletesWhenAutoAddedEngramCannotBeInstalled(t *testing.T
 	if raw, err := os.ReadFile(filepath.Join(home, ".claude.json")); err == nil && strings.Contains(string(raw), "\"engram\"") {
 		t.Fatalf("engram MCP configuration was written for a binary that does not exist:\n%s", raw)
 	}
-	const wantCommand = "gentle-ai install --agent claude-code --components engram"
+	const wantCommand = "axiom install --agent claude-code --components engram"
 	for _, check := range result.Verify.Checks {
 		if check.Status == verify.CheckStatusWarning && strings.Contains(check.Error, wantCommand) {
 			return

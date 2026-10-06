@@ -101,7 +101,7 @@ const reviewtransactionEscalationCauseSample = "budget_exceeded"
 // machine instead of just the one they meant. Verified by execution: the
 // bare form writes ~/.gentle-ai/state.json; this scoped form writes only
 // under the named repository's own .git/gentle-ai directory.
-const reviewModeDisableCloneCommand = "gentle-ai review mode disable --scope clone --cwd <repo>"
+const reviewModeDisableCloneCommand = "axiom review mode disable --scope clone --cwd <repo>"
 
 // reviewModeDisableCloneCaveat is appended everywhere
 // reviewModeDisableCloneCommand is named, so a reader of just one narration
@@ -118,15 +118,15 @@ var reviewStopReasonNarration = map[string]string{
 		"This is a product defect, not something to retry. If you just want your work delivered, run `" + reviewModeDisableCloneCommand + "` " +
 		reviewModeDisableCloneCaveat + " so ordinary repository policy (hooks, tests, CI) decides instead; nothing is silently approved. To get this review itself fixed, report the defect with this run's details.",
 	"corrected_candidate_unavailable": "Change the candidate content so it differs from the frozen original, then re-run " +
-		"`gentle-ai review status --cwd <repo> --contract gentle-ai.review-integration/v2 --agent " + reviewUndeclaredRuntimeIdentitySlot + " --next-transition`. " +
+		"`axiom review status --cwd <repo> --contract gentle-ai.review-integration/v2 --agent " + reviewUndeclaredRuntimeIdentitySlot + " --next-transition`. " +
 		"That is the right path when the review found real defects. If instead the reviewers were given the wrong input " +
 		"and their findings describe content that was never the candidate, a maintainer can quarantine those results and " +
-		"reopen their lenses over the same frozen content: run `gentle-ai review reopen-results --prepare --cwd <repo> --lineage <id> " +
+		"reopen their lenses over the same frozen content: run `axiom review reopen-results --prepare --cwd <repo> --lineage <id> " +
 		"--expected-revision <revision> --target <target> --reason <reason> --actor <actor> --quarantine-lens <lens>` " +
 		"(repeat `--quarantine-lens` per affected lens) and follow its output.",
 	"empty_base_diff_bootstrap_required": "This selected committed base has no changes to review. " +
 		"If you are following the authorized first-publication bootstrap, a maintainer must first insert an empty root below the content commit. " +
-		"Then run `gentle-ai review status --cwd <repo> --contract gentle-ai.review-integration/v2 --agent " + reviewUndeclaredRuntimeIdentitySlot + " --next-transition --base-ref <empty-root> --committed-only`.",
+		"Then run `axiom review status --cwd <repo> --contract gentle-ai.review-integration/v2 --agent " + reviewUndeclaredRuntimeIdentitySlot + " --next-transition --base-ref <empty-root> --committed-only`.",
 	// The correction-stage sibling is rendered, not literal:
 	// reviewCorrectionContextBudgetAction fills the concrete release with the
 	// values InspectCompactPristineAbandonment publishes for the real
@@ -138,10 +138,10 @@ var reviewStopReasonNarration = map[string]string{
 		reviewtransaction.CompactAbandonEligibility{Eligible: true, Revision: "<revision>", SnapshotIdentity: "<target>"},
 		"<repo>", "<id>"),
 	"lens_context_budget_exceeded": "This frozen candidate cannot fit complete reviewer evidence without truncation, so this review stops before an inspection result. " +
-		"Reduce the candidate scope or target identity, then run `gentle-ai review start` for that new candidate; or run `" + reviewModeDisableCloneCommand + "` " + reviewModeDisableCloneCaveat + " to deliver under ordinary repository policy instead.",
+		"Reduce the candidate scope or target identity, then run `axiom review start` for that new candidate; or run `" + reviewModeDisableCloneCommand + "` " + reviewModeDisableCloneCaveat + " to deliver under ordinary repository policy instead.",
 	"managed_assets_outdated": "This installation's reviewer assets no longer match this version of Gentle AI, so this review stops before it starts. " +
-		"Run `gentle-ai sync --agent " + reviewUndeclaredRuntimeIdentitySlot + "` to bring them back in sync, then re-run " +
-		"`gentle-ai review status --cwd <repo> --contract gentle-ai.review-integration/v2 --agent " + reviewUndeclaredRuntimeIdentitySlot + " --next-transition`.",
+		"Run `axiom sync --agent " + reviewUndeclaredRuntimeIdentitySlot + "` to bring them back in sync, then re-run " +
+		"`axiom review status --cwd <repo> --contract gentle-ai.review-integration/v2 --agent " + reviewUndeclaredRuntimeIdentitySlot + " --next-transition`.",
 	"corrupted_or_unverifiable_authority": "This review's stored record cannot be trusted as-is, and it cannot be repaired automatically. " +
 		"Ask a maintainer to inspect it directly, or run `" + reviewModeDisableCloneCommand + "` " +
 		reviewModeDisableCloneCaveat + " to deliver under ordinary repository policy instead.",
@@ -158,13 +158,13 @@ var reviewStopReasonNarration = map[string]string{
 		"or run `" + reviewModeDisableCloneCommand + "` " + reviewModeDisableCloneCaveat + " to deliver under ordinary repository policy instead.",
 	"target_already_acknowledged": "This exact target was already acknowledged and its review authority was burned. " +
 		"No further review action is required; delivery follows ordinary repository policy. Changed targets remain eligible for review. " +
-		"Only when deliberately requesting a new independent review, use `gentle-ai review start`; do not automatically restart this consumed target.",
-	"rdd_disabled": "Review mode is disabled. Run `gentle-ai review mode status --cwd <repo> --json` to inspect the deciding scope; STATUS renders the exact scoped enable command for this request.",
+		"Only when deliberately requesting a new independent review, use `axiom review start`; do not automatically restart this consumed target.",
+	"rdd_disabled": "Review mode is disabled. Run `axiom review mode status --cwd <repo> --json` to inspect the deciding scope; STATUS renders the exact scoped enable command for this request.",
 	"staged_workspace_overlay_recovery_unavailable": "Pass `--lineage <id>` to continue the review you already started, " +
-		"or drop `--workspace-overlay` and run `gentle-ai review start --projection staged` to start fresh.",
+		"or drop `--workspace-overlay` and run `axiom review start --projection staged` to start fresh.",
 	"unachievable_lens_slot": "A reviewer could not be completed for this candidate under current conditions, and every selected reviewer is required, so this review cannot finish as scoped. " +
-		"If that failure was transient, run `gentle-ai review capture-unachievable` again with the same binding and `--withdraw=true` so this review re-offers the same reviewer. " +
-		"If it is not transient, reduce the candidate scope and start a new review with `gentle-ai review start`, or run `" + reviewModeDisableCloneCommand + "` " +
+		"If that failure was transient, run `axiom review capture-unachievable` again with the same binding and `--withdraw=true` so this review re-offers the same reviewer. " +
+		"If it is not transient, reduce the candidate scope and start a new review with `axiom review start`, or run `" + reviewModeDisableCloneCommand + "` " +
 		reviewModeDisableCloneCaveat + " to deliver under ordinary repository policy instead.",
 }
 

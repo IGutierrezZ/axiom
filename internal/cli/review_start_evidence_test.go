@@ -422,7 +422,7 @@ func TestReviewFacadeStartBaseDiffRefusalReplaysFrozenSelector(t *testing.T) {
 		t.Fatalf("refusal has no executable command: %v", err)
 	}
 	command := strings.Fields(err.Error()[opening+1 : opening+1+closing])
-	if len(command) < 3 || !reflect.DeepEqual(command[:3], []string{"gentle-ai", "review", "start"}) {
+	if len(command) < 3 || !reflect.DeepEqual(command[:3], []string{"axiom", "review", "start"}) {
 		t.Fatalf("refusal command = %v", command)
 	}
 	args := append([]string{"start", "--cwd", repo}, withoutReplayRuntimeIdentity(t, command[3:])...)

@@ -68,7 +68,7 @@ func TestCompatibilityAxisDeclaresItselfAndItsJourneys(t *testing.T) {
 // exiting 0 (no refusal at all), and refusing with nothing runnable in the
 // message (a dead end).
 func TestCompatAssertNamedRefusalFiresOnSuccessAndOnDeadEnd(t *testing.T) {
-	if err := compatAssertNamedRefusal(Observation{ExitCode: 1, Stdout: "Error: cannot proceed; rerun with `gentle-ai review start --contract x`"}, "test"); err != nil {
+	if err := compatAssertNamedRefusal(Observation{ExitCode: 1, Stdout: "Error: cannot proceed; rerun with `axiom review start --contract x`"}, "test"); err != nil {
 		t.Fatalf("the detector rejected a genuine named refusal: %v", err)
 	}
 	if err := compatAssertNamedRefusal(Observation{ExitCode: 0, Stdout: `{"action":"created"}`}, "test"); err == nil {
@@ -80,16 +80,16 @@ func TestCompatAssertNamedRefusalFiresOnSuccessAndOnDeadEnd(t *testing.T) {
 }
 
 // compatAssertHyphenatedStartRefuses adds one more requirement on top of
-// compatAssertNamedRefusal: the refusal must specifically name `gentle-ai
+// compatAssertNamedRefusal: the refusal must specifically name `axiom
 // review start` (with a space), not just any command.
 func TestCompatAssertHyphenatedStartRefusesRequiresTheSpacedVerb(t *testing.T) {
-	ok := Observation{ExitCode: 1, Stderr: "legacy v1 review lineage is read-only: use gentle-ai review start"}
+	ok := Observation{ExitCode: 1, Stderr: "legacy v1 review lineage is read-only: use axiom review start"}
 	if err := compatAssertHyphenatedStartRefuses(nil, ok); err != nil {
-		t.Fatalf("rejected a refusal that names gentle-ai review start: %v", err)
+		t.Fatalf("rejected a refusal that names axiom review start: %v", err)
 	}
-	wrongVerb := Observation{ExitCode: 1, Stderr: "refused; rerun `gentle-ai review status --next-transition`"}
+	wrongVerb := Observation{ExitCode: 1, Stderr: "refused; rerun `axiom review status --next-transition`"}
 	if err := compatAssertHyphenatedStartRefuses(nil, wrongVerb); err == nil {
-		t.Fatal("accepted a refusal that names a DIFFERENT gentle-ai command, not `review start`; cw02 would pass without proving the redirect it claims")
+		t.Fatal("accepted a refusal that names a DIFFERENT axiom command, not `review start`; cw02 would pass without proving the redirect it claims")
 	}
 }
 

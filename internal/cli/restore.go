@@ -92,7 +92,7 @@ func runRestoreWithHomeDir(args []string, restorer RestoreFunc, stdout io.Writer
 
 	// If no subcommand argument, show usage.
 	if len(positional) == 0 {
-		return fmt.Errorf("usage: gentle-ai restore [--list | latest | <id>] [--yes]")
+		return fmt.Errorf("usage: axiom restore [--list | latest | <id>] [--yes]")
 	}
 
 	target := positional[0]
@@ -164,7 +164,7 @@ func resolveRestoreTarget(target string, backups []backup.Manifest) (backup.Mani
 		}
 	}
 
-	return backup.Manifest{}, fmt.Errorf("backup %q not found — use `gentle-ai restore --list` to see available backups", target)
+	return backup.Manifest{}, fmt.Errorf("backup %q not found — use `axiom restore --list` to see available backups", target)
 }
 
 // promptRestoreConfirm asks the user to confirm a restore operation.

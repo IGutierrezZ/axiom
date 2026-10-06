@@ -20,18 +20,18 @@ func RunSDDAttempt(args []string, stdout io.Writer) error {
 
 func runSDDAttempt(ctx context.Context, args []string, stdout io.Writer) error {
 	if len(args) == 0 {
-		return errors.New("sdd-attempt requires grant; run `gentle-ai sdd-attempt grant --help` for edit-authority inputs")
+		return errors.New("sdd-attempt requires grant; run `axiom sdd-attempt grant --help` for edit-authority inputs")
 	}
 	if args[0] == "--help" || args[0] == "-h" {
-		_, err := fmt.Fprintln(stdout, "Usage: gentle-ai sdd-attempt grant [flags]\nRecord explicit per-change edit authority. Runtime attempt operations are retired.")
+		_, err := fmt.Fprintln(stdout, "Usage: axiom sdd-attempt grant [flags]\nRecord explicit per-change edit authority. Runtime attempt operations are retired.")
 		return err
 	}
 	if args[0] != "grant" {
-		return fmt.Errorf("unknown sdd-attempt operation %q; only grant remains; use `gentle-ai sdd-status --cwd <repo> --json` for SDD progress", args[0])
+		return fmt.Errorf("unknown sdd-attempt operation %q; only grant remains; use `axiom sdd-status --cwd <repo> --json` for SDD progress", args[0])
 	}
 	flags := flag.NewFlagSet("sdd-attempt grant", flag.ContinueOnError)
 	flags.SetOutput(stdout)
-	flags.Usage = func() { fmt.Fprintln(stdout, "Usage: gentle-ai sdd-attempt grant [flags]"); flags.PrintDefaults() }
+	flags.Usage = func() { fmt.Fprintln(stdout, "Usage: axiom sdd-attempt grant [flags]"); flags.PrintDefaults() }
 	cwd := flags.String("cwd", "", "required; repository working directory")
 	change := flags.String("change", "", "required; SDD change identifier")
 	expected := flags.String("expected-revision", "", "empty initially, otherwise exact current grant-chain revision")
@@ -48,7 +48,7 @@ func runSDDAttempt(ctx context.Context, args []string, stdout io.Writer) error {
 		return err
 	}
 	if flags.NArg() != 0 {
-		return fmt.Errorf("unexpected sdd-attempt argument %q; use `gentle-ai sdd-attempt grant --help`", flags.Arg(0))
+		return fmt.Errorf("unexpected sdd-attempt argument %q; use `axiom sdd-attempt grant --help`", flags.Arg(0))
 	}
 	missing := []string{}
 	for _, field := range []struct{ name, value string }{{"cwd", *cwd}, {"change", *change}, {"change-instance", *instance}, {"request-id", *requestID}, {"actor", *actor}, {"reason", *reason}} {
@@ -60,7 +60,7 @@ func runSDDAttempt(ctx context.Context, args []string, stdout io.Writer) error {
 		missing = append(missing, "--root")
 	}
 	if len(missing) > 0 {
-		return fmt.Errorf("sdd-attempt grant requires %s; rerun `gentle-ai sdd-attempt grant` with those missing flags", strings.Join(missing, ", "))
+		return fmt.Errorf("sdd-attempt grant requires %s; rerun `axiom sdd-attempt grant` with those missing flags", strings.Join(missing, ", "))
 	}
 	store, err := sddstatus.OpenRuntimeStore(ctx, *cwd, *change)
 	if err != nil {

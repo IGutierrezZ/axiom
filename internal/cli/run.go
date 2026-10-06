@@ -2814,7 +2814,7 @@ func runPostApplyVerification(input postApplyVerificationInput) verify.Report {
 						}
 						return err
 					}
-					return fmt.Errorf("retired managed file still exists; rerun `gentle-ai sync` to finish retiring it")
+					return fmt.Errorf("retired managed file still exists; rerun `axiom sync` to finish retiring it")
 				},
 			})
 			continue
@@ -2942,7 +2942,7 @@ func engramHealthChecks(state *runtimeState, agentIDs []model.AgentID) []verify.
 // engramInstallCommand names the install continuation for a missing engram
 // binary so the warning that reports it is actionable on its own.
 func engramInstallCommand(agentIDs []model.AgentID) string {
-	return fmt.Sprintf("gentle-ai install --agent %s --components engram", joinAgentIDs(agentIDs))
+	return fmt.Sprintf("axiom install --agent %s --components engram", joinAgentIDs(agentIDs))
 }
 
 // antigravityCollisionCheck returns a soft verify check that warns the user

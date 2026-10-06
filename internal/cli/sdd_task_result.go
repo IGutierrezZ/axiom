@@ -17,7 +17,7 @@ const maxSDDTaskResultBytes = 4 << 20
 
 // sddTaskResultUsage is the runnable form every usage refusal names, so a
 // caller is never told what is missing without being told how to supply it.
-const sddTaskResultUsage = "`gentle-ai sdd-task-result --phase <phase> --cwd <repo> --input <path|->`"
+const sddTaskResultUsage = "`axiom sdd-task-result --phase <phase> --cwd <repo> --input <path|->`"
 
 // RunSDDTaskResult classifies one delegated SDD phase result and renders the
 // typed terminal failure when it is not usable.
