@@ -20,7 +20,6 @@ var sandboxHome string
 // HOME/USERPROFILE at a throwaway directory for the whole binary — the same
 // pattern as internal/app, internal/cli and internal/reviewtransaction — makes
 // those paths hermetic even for a test that forgets to isolate itself.
-// DO_NOT_TRACK keeps telemetry offline for the same reason, and
 // AXIOM_NO_PERSISTENT_PATH keeps any real axiom binary a test starts as a
 // subprocess (not a Go test binary, so it bypasses the in-process guard) from
 // writing the developer's real user PATH.
@@ -45,7 +44,6 @@ func runTests(m *testing.M) int {
 	for key, value := range map[string]string{
 		"HOME":                        home,
 		"USERPROFILE":                 home,
-		"DO_NOT_TRACK":                "1",
 		system.NoPersistentPathEnvVar: "1",
 	} {
 		if err := os.Setenv(key, value); err != nil {

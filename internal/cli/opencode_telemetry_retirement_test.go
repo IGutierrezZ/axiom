@@ -18,7 +18,6 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/pipeline"
 	"github.com/IGutierrezZ/axiom/v3/internal/planner"
 	"github.com/IGutierrezZ/axiom/v3/internal/state"
-	"github.com/IGutierrezZ/axiom/v3/internal/telemetry"
 )
 
 // The plugin is no longer shipped, so the legacy pair is reproduced from the
@@ -62,7 +61,6 @@ func openCodeTestConfig(t *testing.T) (home, config string) {
 	home = t.TempDir()
 	setOpenCodeTestHome(t, home)
 	t.Setenv("XDG_CONFIG_HOME", filepath.Join(home, "xdg"))
-	t.Setenv("DO_NOT_TRACK", "1")
 	return home, opencode.NewAdapter().GlobalConfigDir(home)
 }
 
@@ -158,10 +156,14 @@ func TestOpenCodeInstallRetiresTelemetryPluginWithoutInstallingOne(t *testing.T)
 	for _, selected := range []bool{true, false} {
 		t.Run(map[bool]string{true: "selected", false: "absent"}[selected], func(t *testing.T) {
 			home, config := openCodeTestConfig(t)
-			if err := telemetry.Save(home, telemetry.State{InstallID: "existing", Enabled: false, NoticeShown: true}); err != nil {
+			optOutPath := filepath.Join(home, ".gentle-ai", "telemetry.json")
+			if err := os.MkdirAll(filepath.Dir(optOutPath), 0o755); err != nil {
 				t.Fatal(err)
 			}
-			before, _ := os.ReadFile(telemetry.Path(home))
+			if err := os.WriteFile(optOutPath, []byte(`{"install_id":"existing","enabled":false,"notice_shown":true}`+"\n"), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			before, _ := os.ReadFile(optOutPath)
 			agents := []model.AgentID{model.AgentClaudeCode}
 			if selected {
 				agents = []model.AgentID{model.AgentOpenCode}
@@ -215,7 +217,7 @@ func TestOpenCodeInstallRetiresTelemetryPluginWithoutInstallingOne(t *testing.T)
 					t.Fatalf("install backs up the retired plugin path %s", path)
 				}
 			}
-			if after, _ := os.ReadFile(telemetry.Path(home)); string(before) != string(after) {
+			if after, _ := os.ReadFile(optOutPath); string(before) != string(after) {
 				t.Fatal("installation changed telemetry opt-out")
 			}
 		})
@@ -339,7 +341,6 @@ func TestOpenCodeRollbackRestoresConfigOutsideHomeViaXDG(t *testing.T) {
 			setOpenCodeTestHome(t, home)
 			xdg := t.TempDir()
 			t.Setenv("XDG_CONFIG_HOME", xdg)
-			t.Setenv("DO_NOT_TRACK", "1")
 			config := opencode.NewAdapter().GlobalConfigDir(home)
 			if !strings.HasPrefix(config, xdg) {
 				t.Fatalf("OpenCode config %q is not under XDG_CONFIG_HOME %q", config, xdg)

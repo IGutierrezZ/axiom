@@ -25,10 +25,9 @@ var sandboxHome string
 // hub. Pointing HOME/USERPROFILE at a throwaway directory for the whole binary
 // (the same pattern as internal/dashboard, internal/app and internal/cli) makes
 // every home-relative path hermetic, including the subprocess tests, which
-// inherit this process environment. DO_NOT_TRACK keeps telemetry offline for the
-// same reason, and AXIOM_NO_PERSISTENT_PATH keeps the real binary those
-// subprocess tests run (which is not a Go test binary, so it bypasses the
-// in-process guard) from writing the developer's real user PATH.
+// inherit this process environment. AXIOM_NO_PERSISTENT_PATH keeps the real
+// binary those subprocess tests run (which is not a Go test binary, so it
+// bypasses the in-process guard) from writing the developer's real user PATH.
 func TestMain(m *testing.M) {
 	os.Exit(runTests(m))
 }
@@ -44,7 +43,6 @@ func runTests(m *testing.M) int {
 	for key, value := range map[string]string{
 		"HOME":                        home,
 		"USERPROFILE":                 home,
-		"DO_NOT_TRACK":                "1",
 		system.NoPersistentPathEnvVar: "1",
 	} {
 		if err := os.Setenv(key, value); err != nil {
@@ -69,9 +67,6 @@ func TestSandboxHomeIsInForce(t *testing.T) {
 	}
 	if home != sandboxHome {
 		t.Errorf("os.UserHomeDir() = %s, want the sandbox home %s", home, sandboxHome)
-	}
-	if got := os.Getenv("DO_NOT_TRACK"); got != "1" {
-		t.Errorf("DO_NOT_TRACK = %q, want %q", got, "1")
 	}
 	if got := os.Getenv(system.NoPersistentPathEnvVar); got != "1" {
 		t.Errorf("%s = %q, want %q", system.NoPersistentPathEnvVar, got, "1")
