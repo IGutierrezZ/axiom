@@ -596,6 +596,63 @@ En las preguntas abiertas se aplican las recomendaciones del plan:
   - #79 en verde: fusionado (`a7350417`) y limpiado. **T3 cerrada.**
   - T4: **PR #80** (`dcb077da`, 457 líneas con `size:exception` aprobado, riesgo `medium`). Pendiente del CI de #80.
 
+## 7 bis. Relevo del 2026-10-06 (segunda sesión)
+
+**Estado al relevo:** CI en verde en todos los PRs abiertos, y todos son fusionables. **No se han fusionado:** el usuario solo pidió revisar.
+
+**Hecho y fusionado en `main`:** T1 a T5, T6a a T6d y T6b, y T7a, T7c, T7d, T7e y T7f.
+
+**PRs abiertos, en verde, y orden de merge** (squash; después de cada merge, retarget del hijo a `main` y `git rebase --onto origin/main <cabeza antigua del padre> <rama hija>`, push `--force-with-lease`, esperar el CI y fusionar):
+
+| PR | Tarea | Rama | Base actual | Worktree | Cabeza actual |
+|---|---|---|---|---|---|
+| #88 | T6e borrado final telemetría | `refactor/telemetria-borrado-final` | `main` | `odd-up-t6e` | `f96b2ec5` |
+| #89 | T6f docs telemetría | `docs/telemetria-retirada` | #88 | `odd-up-t6f` | `4a205e4e` |
+| #91 | T7b collab-perfect + AGENTS.md | `chore/retirar-axiom-collab-perfect` | `main` | `odd-up-t7a` | `2352ab13` |
+| #96 | T7g consejos G1+G3 | `fix/consejos-axiom-review-cli` | `main` | `odd-up-t7g` | `2d196327` |
+| #97 | T7h consejos G2 | `fix/consejos-axiom-review-g2` | #96 | `odd-up-t7h` | `65501dc5` |
+| #98 | T7i consejos resto de paquetes | `fix/consejos-axiom-paquetes` | #97 | `odd-up-t7i` | `0e9f2f43` |
+
+#88, #89 y #91 llevan `size:exception` aprobado.
+
+**Pendiente:**
+1. Fusionar la tabla anterior en orden: #88 → #89, #91, y #96 → #97 → #98.
+   - Antes de cada merge, comprobar `mergeable`.
+   - Al fusionar sin CI combinado, compilar el `main` resultante en local: `go build ./... && go vet ./internal/... ./cmd/...`, más tests clave. `sdd` debe ir en solitario porque supera los 10 minutos en paralelo.
+2. **T7j**, prompts y assets embebidos:
+   - `gentle-ai-chained-pr` en los 12 `sdd-orchestrator.md` y en `claude/sdd-orchestrator-workflow.md`;
+   - `gentle-ai.sdd-integration.consent/v1` en los prompts, cuando Go emite `axiom.…`;
+   - `gentle-ai review mode`, `inspect-candidate` y `status` en los orquestadores;
+   - el *prompt* del validador en `sdd-overlay-{single,multi}.json:216`;
+   - `boundedreview.go:34` y `:445`, fijados en `review_ledger_contract_test.go:349`, `bounded_review_contract_test.go:563-570` y el hash de `TestKilocodeReviewSettingsMatchCurrentMainBaseline`;
+   - `inject.go:1593`;
+   - los *pins* del *overlay* en `commands_test.go:53` y `opencode_v2_test.go:105-107`;
+   - los hooks de Claude con `gentle-ai skill-registry refresh` (`inject.go:1918,2061-2071`): revisar si se emiten o solo se reconocen;
+   - regenerar los *goldens* con `go test ./internal/components/ -run TestGolden -update` y `.codex/AGENTS.md`.
+3. **T7k**, docs y marca:
+   - `CONTRIBUTING.md`, con un retoque mínimo;
+   - `bench/README.md` y `bench/AGENT-PROMPT.md`;
+   - `docs/*`, incluidos `docs/agents.md` (nombres desfasados) y `docs/architecture/rdd-freeze-expansion-policy.md:12`;
+   - los banners de `scripts/install.sh`;
+   - `docs/skill-style-guide.md:59`.
+4. **PR de cierre** con este documento (rama `docs/odd-retirada-telemetria-y-restos-upstream`, worktree `odd-upstream-docs`).
+
+**Aplazado o seguimiento (no en este ODD):**
+- T7m: el dialecto `axiom` en los comandos del contrato. El schema `status-v7` ya admite `(axiom|gentle-ai)`.
+- Tablas de digests para `model-variants.ts` y `sdd-task-result-artifacts.ts`.
+- `AXIOM_CHANNEL` sin fallback en `update/check.go` y `upgrade/strategy.go`.
+- `LOCALAPPDATA` en el sandbox de `internal/app`.
+- `AXIOM_STATE_DIR` en los `TestMain`.
+- El arnés de `bench` sin `AXIOM_NO_PERSISTENT_PATH`.
+- El aviso de la TUI de `sync` que se pierde.
+- `gentle-ai.mdc` y los ficheros antiguos de kiro y vscode.
+- El test intermitente `TestOpenCodeV2CatalogAndRegistry`.
+
+**Lecciones operativas:**
+- Los writers que tocan `internal/cli` se acotan a unos 60 minutos, ejecutan los tests por nombre exacto y como máximo con 2 procesos, y dejan el paquete completo al CI.
+- Riesgo `high` → verificador independiente de solo lectura.
+- Los mensajes de commit se escriben a un fichero y se usan con `git commit -F`.
+
 ## 8. Siguiente paso
 
 1. T6b (en curso), después T6e y T6f. Pedir `size:exception` para T6b y para T6e.
