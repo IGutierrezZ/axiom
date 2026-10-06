@@ -660,7 +660,18 @@ En las preguntas abiertas se aplican las recomendaciones del plan:
 - **T7l (pendiente):** retirar `CONTRIBUTING.md` en dos cortes, sin `size:exception`.
   - **T7l-a**, después de fusionar #89, que también toca `README.md`: quitar los enlaces de `README.md:176,190` y la lectura de `CONTRIBUTING.md` en `internal/assets/issue_creation_authority_test.go:146-166`. Unas 25 líneas.
   - **T7l-b:** borrar `CONTRIBUTING.md` (394 líneas).
+- **2026-10-07, merges** (CI en verde y `MERGEABLE CLEAN` comprobado antes de cada uno): #89 (T6f) `24a08e47`, #97 (T7h) `0086773d`, #99 (T7j) `1599367c`, #100 (T7k) `ee2d5f81`.
+  - **Limpieza:** eliminados los worktrees `odd-up-t6f`, `t7h`, `t7j` y `t7k` y sus ramas local y remota.
+  - **#98 reencadenado:** retargeteado a `main` y rebasado con `--onto origin/main 65501dc5`. `65501dc5` era la cabeza de #97 antes de su rebase: la rama de #98 colgaba de ella, no de `1aec4c7b`. Queda en `e40a63fe`, con el mismo diff.
+  - **Verificación local de #98** sobre el `main` nuevo, que ya incluye #99: build y vet limpios; en verde `system`, `reviewerprovider`, `components`, `components/communitytool`, `cmd/...` y `sdd` en solitario (84 s).
+  - **Fallo intermitente:** `update` `TestCheckAllWithCooldown_ConcurrentReviewModeDisablePreservesMode` pasa 3 de 3 en #98 y falla igual en `main` bajo carga. No es de #98; queda como seguimiento.
+  - #98 subido con `--force-with-lease`; falta su CI.
+- **T7l, retirada de `CONTRIBUTING.md`:**
+  - **T7l-a: PR #101** (`f4fdf5f8`, rama `chore/contributing-sin-referencias`, worktree `odd-up-t7l`). Quita los enlaces de `README.md` y deja de leer el fichero en `TestDelegatedWorkflowMutationContract`. +7 / −18.
+  - **T7l-b: PR #102** (`cf57f02b`, rama `chore/retirar-contributing`, encadenado sobre #101). Borra el fichero (−394).
+  - `assets` pasa en verde con el fichero ya borrado.
 - **Seguimientos nuevos:**
+  - `README.md`, sección «Community»: enlaza los issues `up-for-grabs` de `IGutierrezZ/axiom`, que están desactivados (pendiente de la decisión del usuario).
   - `docs/intended-usage.md` y `docs/prd-opencode-profiles.md` siguen con `gentle-orchestrator` y `gentle-sdd-*`;
   - el banner ASCII de `install.sh`;
   - `install.sh` no lee `AXIOM_CHANNEL`;
