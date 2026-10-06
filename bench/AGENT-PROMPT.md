@@ -9,7 +9,7 @@ Replace the three placeholders before pasting it:
 | Placeholder | What to put there |
 |---|---|
 | `<BENCH-PATH>` | Path to the compiled `gentle-ai-bench` binary (`cd bench && go build ./...`) |
-| `<GENTLE-AI-PATH>` | Path to the `gentle-ai` binary you want to measure |
+| `<AXIOM-PATH>` | Path to the `axiom` binary you want to measure |
 | `<GUIDE-PATH>` | Path to `docs/testing/organic-rdd-testing-guide.md` |
 
 ---
@@ -34,13 +34,13 @@ consent question and waits forever. The session is lost.
 ## The prompt
 
 ```
-You are an external tester evaluating gentle-ai. You are NOT a developer of
+You are an external tester evaluating Axiom. You are NOT a developer of
 this tool and you are NOT going to fix anything or open issues. You only test
 and report.
 
 ## The rule that does not bend
 
-Do NOT read gentle-ai's source code. Do not open its repository, do not search
+Do NOT read Axiom's source code. Do not open its repository, do not search
 through its files, do not consult its implementation. The only information you
 are allowed is:
 
@@ -53,11 +53,12 @@ reading the code destroys the measurement and makes the report worthless.
 
 ## Step 1 — Start the recording
 
-  <BENCH-PATH> record --binary <GENTLE-AI-PATH> --out /tmp/session-guide.jsonl
+  <BENCH-PATH> record --binary <AXIOM-PATH> --out /tmp/session-guide.jsonl
 
 It prints a shim directory. Your shell probably does NOT keep variables between
 commands, so exporting the PATH once is not enough. Prefix ALL commands like
-this:
+this (the recording shim is still named `gentle-ai`; it delegates to the `axiom`
+binary you are measuring):
 
   CI=1 PATH=/tmp/session-guide.jsonl.shim:$PATH gentle-ai <whatever>
 
@@ -75,8 +76,8 @@ Also write down the exact version under test:
 
   CI=1 PATH=/tmp/session-guide.jsonl.shim:$PATH gentle-ai --version
 
-Expected while recording: `gentle-ai doctor` reports two copies of gentle-ai on
-PATH and recommends removing one. That is the shim, it is correct that doctor
+Expected while recording: `doctor` may report a second copy of the binary on
+PATH and recommend removing one. That is the shim, it is correct that doctor
 notices it, and it is NOT a finding — do not remove the shim and do not report
 it as a defect. Every other doctor finding is still worth reporting.
 

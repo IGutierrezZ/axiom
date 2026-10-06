@@ -8,7 +8,7 @@
 
 | Agent           | ID               | Skills       | MCP | Delegation                       | Output Styles | Slash Commands | Config Path                         |
 | --------------- | ---------------- | ------------ | --- | -------------------------------- | ------------- | -------------- | ----------------------------------- |
-| Claude Code     | `claude-code`    | Yes          | Yes | Full (Task tool)                 | Yes           | No             | `~/.claude`                         |
+| Claude Code     | `claude-code`    | Yes          | Yes | Full (Task tool)                 | Yes           | Yes            | `~/.claude`                         |
 | OpenCode        | `opencode`       | Yes          | Yes | Full (multi-mode overlay)        | No            | Yes            | `~/.config/opencode`                |
 | Kilo Code       | `kilocode`       | Yes          | Yes | Full (multi-mode overlay)        | No            | Yes            | `~/.config/kilo`                    |
 | Gemini CLI      | `gemini-cli`     | Yes          | Yes | Full (experimental)              | No            | No             | `~/.gemini`                         |
@@ -69,7 +69,7 @@ Kiro usa agentes personalizados en `~/.kiro/agents/`. Axiom escribe los agentes 
 
 - Frontmatter includes `includeMcpJson: true` for all phase agents
 - Phase-specific tools are preserved (`sdd-explore` and `sdd-verify` use read/shell/context7 as required)
-- El orquestador permanece en el fichero de steering `~/.kiro/steering/gentle-ai.md`; el nombre conserva la ruta heredada y el contenido delega en los agentes nativos.
+- El orquestador permanece en el fichero de steering `~/.kiro/steering/axiom.md`; su contenido delega en los agentes nativos.
 
 ---
 
@@ -94,7 +94,7 @@ Kiro usa agentes personalizados en `~/.kiro/agents/`. Axiom escribe los agentes 
 ### Claude Code
 
 - Sub-agents via the native Task tool with isolated context windows
-- Slash commands for SDD phases are namespaced `/gentle-sdd-*` (`/gentle-sdd-init`, `/gentle-sdd-new`, `/gentle-sdd-continue`, etc.) so no command shares a name with a delegate-only SDD skill
+- Slash commands for SDD phases are installed as `/sdd-*` (`/sdd-init`, `/sdd-new`, `/sdd-continue`, etc.) in `~/.claude/commands/`; install and sync remove the retired `gentle-sdd-*` command files left by older installations
 - MCP servers configured as plugins in `~/.claude/mcp/`
 - Output styles in `~/.claude/output-styles/`
 - System prompt via markdown sections in `~/.claude/CLAUDE.md`
@@ -102,7 +102,7 @@ Kiro usa agentes personalizados en `~/.kiro/agents/`. Axiom escribe los agentes 
 
 ### OpenCode
 
-- Full multi-agent overlay with 11 named agents in `opencode.json` (`gentle-orchestrator` plus 10 SDD phase agents)
+- Full multi-agent overlay with 23 named agents in `opencode.json`: `axiom-orchestrator`, the `general` and `explore` agents, the 11 SDD phase agents (`sdd-init` to `sdd-onboard`), the Judgment Day agents (`jd-*`) and the review agents (`review-*`)
 - Slash commands for SDD phases (`/sdd-new`, `/sdd-explore`, etc.)
 - Native OpenCode `task` subagents; the managed task-result plugin records grouped `question` answers only for root sessions, injects the canonical SDD preflight block into every packaged SDD phase, and refuses missing, forged, child-session, malformed, or expired authority; it also canonicalizes the grouped `question` options before they are shown and accepts picked answers tolerantly, so the preflight never falls back to typed chat answers
 - La ejecución en segundo plano se configura con `axiom install` / `axiom sync`, usando `--opencode-background-subagents=auto|on|off` o la variable heredada `GENTLE_AI_OPENCODE_BACKGROUND_SUBAGENTS`.
@@ -135,14 +135,14 @@ Kiro usa agentes personalizados en `~/.kiro/agents/`. Axiom escribe los agentes 
 
 - Subagentes nativos en `~/.cursor/agents/sdd-{phase}.md` (ficheros instalados por Axiom)
 - Skills at `~/.cursor/skills/`
-- System prompt in `~/.cursor/rules/gentle-ai.mdc`
+- System prompt in `~/.cursor/rules/gentle-ai.mdc` (legacy file name kept for compatibility)
 - MCP config in `~/.cursor/mcp.json`
 
 ### VS Code Copilot
 
 - Uses the `runSubagent` tool with support for parallel execution
 - Skills at `~/.copilot/skills/`
-- System prompt at `Code/User/prompts/gentle-ai.instructions.md`
+- System prompt at `Code/User/prompts/axiom.instructions.md`
 - MCP config at `Code/User/mcp.json`
 
 ### Codex
@@ -196,8 +196,8 @@ Kiro usa agentes personalizados en `~/.kiro/agents/`. Axiom escribe los agentes 
 ### Kiro IDE
 
 - **Detección**: Axiom detecta Kiro mediante el ejecutable `kiro` en `PATH`; también informa de si existe `~/.kiro`. Tener solo el directorio de configuración no basta para marcar Kiro como instalado.
-- **Steering file** (all platforms): `~/.kiro/steering/gentle-ai.md` with frontmatter `inclusion: always`
-- Native subagents at `~/.kiro/agents/sdd-{phase}.md` (10 files)
+- **Steering file** (all platforms): `~/.kiro/steering/axiom.md` with frontmatter `inclusion: always`
+- Native subagents at `~/.kiro/agents/sdd-{phase}.md` (11 phase files, plus the Judgment Day and review agents)
 - Skills (all platforms) at `~/.kiro/skills/`
 - **MCP config at a separate root** — always `~/.kiro/settings/mcp.json` (macOS/Linux) or `%USERPROFILE%\.kiro\settings\mcp.json` (Windows), regardless of GlobalConfigDir
 - Native Kiro specs workflow: `.kiro/specs/<feature>/requirements.md`, `design.md`, `tasks.md` — with approval gates before apply and archive phases
@@ -301,4 +301,4 @@ La tabla completa de decisión de delegación está en `~/.hermes/skills/hermes-
 - **Permisos**: Hermes utiliza un formato de permisos no documentado. Axiom no inyecta permisos en Hermes.
 - **Profiles**: Hermes does not support multi-mode SDD (no per-phase model routing). Single-mode only.
 - **Memory**: Hermes has a native memory and skill-learning loop. Engram complements it — Engram provides cross-agent, cross-session memory protocol so knowledge is portable across all agents, not just Hermes.
-- **Marcadores de persona e identidad**: Los marcadores `<!-- gentle-ai:persona -->` / `<!-- /gentle-ai:persona -->` en `SOUL.md` delimitan la sección que Axiom gestiona y actualiza durante la sincronización; sus identificadores se conservan por compatibilidad. La plantilla actual de persona de Hermes incluye literalmente `## Identity` con la instrucción de identificarse como **Gentle AI running on Hermes Agent** en cualquier idioma. Esa identidad pertenece a la plantilla heredada y no cambia el nombre de producto Axiom. Cualquier sección `## Identity` escrita fuera de los marcadores se conserva y puede contradecir la sección gestionada.
+- **Marcadores de persona e identidad**: Los marcadores `<!-- gentle-ai:persona -->` / `<!-- /gentle-ai:persona -->` en `SOUL.md` delimitan la sección que Axiom gestiona y actualiza durante la sincronización; sus identificadores se conservan por compatibilidad. La persona Axiom de Hermes incluye literalmente `## Identity` con la instrucción de identificarse como **Axiom running on Hermes Agent** en cualquier idioma; las variantes `neutral` y `gentleman` conservan la identidad heredada **Gentle AI running on Hermes Agent**, que no cambia el nombre de producto Axiom. Cualquier sección `## Identity` escrita fuera de los marcadores se conserva y puede contradecir la sección gestionada.

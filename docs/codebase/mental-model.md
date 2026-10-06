@@ -2,7 +2,7 @@
 
 [Back to Codebase Guide](../CODEBASE-GUIDE.md)
 
-Gentle-AI is an ecosystem configurator for AI coding agents. It owns the installer, sync flows, adapters, and managed asset injection; it does not own the runtime behavior of external agents or Engram internals.
+Axiom is an ecosystem configurator for AI coding agents. It owns the installer, sync flows, adapters, and managed asset injection; it does not own the runtime behavior of external agents or Engram internals.
 
 ## What this project is
 
@@ -19,7 +19,7 @@ Gentle-AI is an ecosystem configurator for AI coding agents. It owns the install
 |---|---|
 | Engram's memory database implementation | This repo installs and configures Engram, then documents commands in `docs/engram.md`. |
 | A local dashboard server | No dashboard or HTMX server files are present in the repository. |
-| A generic package manager | Dependency hints and installs support Gentle-AI components only. |
+| A generic package manager | Dependency hints and installs support Axiom components only. |
 | The AI agent runtime | Claude Code, OpenCode, Cursor, and other agents consume generated config outside this repo. |
 
 ## 90-second architecture model

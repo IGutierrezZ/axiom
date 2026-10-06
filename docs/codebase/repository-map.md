@@ -8,7 +8,7 @@ Use this page when you know what you need to change but not where it belongs.
 
 | Path | Owns | Do not put here |
 |---|---|---|
-| `cmd/gentle-ai/` | Binary entrypoint and version handoff. | Business rules or file mutation logic. |
+| `cmd/axiom/` | Binary entrypoint and version handoff. | Business rules or file mutation logic. |
 | `internal/app/` | Top-level command dispatch, help, version routing. | Component-specific install behavior. |
 | `internal/cli/` | Non-interactive install, sync, uninstall, restore, and flag normalization. | Agent path constants. |
 | `internal/tui/` | Bubbletea model, screen routing, async messages, interactive flows. | CLI-only flag parsing or component internals. |
