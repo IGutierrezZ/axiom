@@ -151,8 +151,8 @@ Contrato de nombre publicado por clase de superficie: instalador y tap, compuert
   - *Escenario BDD:* Migración mecánica completa de la ruta de módulo
 - **[REQ-20.10]** Namespace de protocolo en contracts/** sin cambios
   - *Escenario BDD:* contracts/** permanece sin cambios
-- **[REQ-20.11]** Pasarela gentle-ai y shim de crosslane conservados
-  - *Escenario BDD:* cmd/gentle-ai emite su aviso de deprecación
+- **[REQ-20.11]** Binario gentle-ai retirado y shim de crosslane conservado
+  - *Escenario BDD:* El release publica solo el binario canónico
 - **[REQ-20.12]** Nombres de servicio de telemetría de despliegue — **RETIRADO**: la telemetría y su despliegue se eliminaron por decisión de producto
   - *Escenario BDD:* Los nombres de servicio de telemetría se renombran
 - **[REQ-20.13]** Raíz de respaldos resuelta exclusivamente a través de internal/backup
@@ -220,7 +220,7 @@ Gobernanza del catálogo de habilidades (skills) de agentes en tres destinos sin
   - *Escenario BDD:* Ayuda de install desde axiom
   - *Escenario BDD:* Sincronización de agentes mediante axiom sync
   - *Escenario BDD:* Diagnóstico del ecosistema mediante axiom doctor
-- **[REQ-14.4]** Pasarela de compatibilidad y deprecación de gentle-ai
+- **[REQ-14.4]** Pasarela de compatibilidad y deprecación de gentle-ai — **RETIRADO**: el binario `gentle-ai` ya no se compila ni se publica
   - *Escenario BDD:* Advertencia informativa de deprecación al invocar gentle-ai
 
 ### Dominio: `axiom-updater-resilience` — Especificación Viva: Resiliencia y Gobernanza del Actualizador Autónomo de Axiom

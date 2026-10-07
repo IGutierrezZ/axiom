@@ -8,7 +8,7 @@ Axiom is an ecosystem configurator for AI coding agents. It owns the installer, 
 
 | It is | Evidence in this repo |
 |---|---|
-| Go CLI and Bubbletea TUI | `cmd/gentle-ai/main.go`, `internal/app/`, `internal/tui/` |
+| Go CLI and Bubbletea TUI | `cmd/axiom/main.go`, `internal/app/`, `internal/tui/` |
 | Agent configuration orchestrator | `internal/agents/`, `internal/components/`, `internal/planner/`, `internal/pipeline/` |
 | Asset distributor | `internal/assets/`, `internal/components/sdd/`, `internal/components/skills/` |
 | External tool integrator | `internal/components/engram/`, `internal/components/gga/`, `internal/components/mcp/` |
@@ -25,7 +25,7 @@ Axiom is an ecosystem configurator for AI coding agents. It owns the installer, 
 ## 90-second architecture model
 
 ```text
-cmd/gentle-ai/main.go
+cmd/axiom/main.go
   -> internal/app          command dispatch, version wiring, help
   -> internal/cli          non-interactive install/sync/uninstall/restore flows
   -> internal/tui          interactive Bubbletea screens and async messages
