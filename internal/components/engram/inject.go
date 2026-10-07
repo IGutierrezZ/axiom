@@ -526,7 +526,7 @@ func injectWithOptions(configHomeDir, promptDir string, adapter agents.Adapter, 
 				return InjectionResult{}, err
 			}
 
-			updated := filemerge.InjectMarkdownSection(existing, "engram-protocol", protocolContent)
+			updated := filemerge.InjectMarkdownSection(existing, filemerge.EngramProtocolSectionID, protocolContent)
 
 			mdWrite, err := filemerge.WriteFileAtomic(promptPath, []byte(updated), 0o644)
 			if err != nil {
@@ -564,7 +564,7 @@ func injectWithOptions(configHomeDir, promptDir string, adapter agents.Adapter, 
 				return InjectionResult{}, err
 			}
 
-			updated := filemerge.InjectMarkdownSection(existing, "engram-protocol", protocolContent)
+			updated := filemerge.InjectMarkdownSection(existing, filemerge.EngramProtocolSectionID, protocolContent)
 
 			mdWrite, err := filemerge.WriteFileAtomic(promptPath, []byte(updated), 0o644)
 			if err != nil {

@@ -176,3 +176,112 @@ func TestRetireLegacyPromptFilesIgnoresAdaptersWithoutLegacyNames(t *testing.T) 
 
 // nonLegacyAdapter hides the optional LegacyPromptFileProvider capability.
 type nonLegacyAdapter struct{ agents.Adapter }
+
+func TestRetireLegacyPromptFilesKeepsUnknownSections(t *testing.T) {
+	home := t.TempDir()
+	for _, c := range legacyPromptCases(t, home) {
+		for _, block := range []string{
+			"<!-- axiom:my-team-rules -->\nALWAYS ANSWER IN HAIKU\n<!-- /axiom:my-team-rules -->\n",
+			"<!-- gentle-ai:foo -->\nkeep me\n<!-- /gentle-ai:foo -->\n",
+			// Syntax of a managed section around a name Axiom never writes.
+			"<!-- axiom:persona-extra -->\nuser text\n<!-- /axiom:persona-extra -->\n",
+		} {
+			t.Run(c.name+"/"+strings.SplitN(block, " ", 3)[1], func(t *testing.T) {
+				_, legacy := writeManagedLegacyPrompt(t, home, c)
+				body, err := os.ReadFile(legacy)
+				if err != nil {
+					t.Fatal(err)
+				}
+				edited := string(body) + "\n" + block
+				if err := os.WriteFile(legacy, []byte(edited), 0o644); err != nil {
+					t.Fatal(err)
+				}
+
+				result := RetireLegacyPromptFiles(home, c.adapter)
+				if len(result.Removed) != 0 || len(result.Notes) != 1 || !strings.Contains(result.Notes[0], "does not manage") {
+					t.Fatalf("result = %+v, want the file kept with a warning about the unknown section", result)
+				}
+				if got, _ := os.ReadFile(legacy); string(got) != edited {
+					t.Fatal("legacy prompt with a user section was modified")
+				}
+			})
+		}
+	}
+}
+
+func TestRetireLegacyPromptFilesKeepsUnclosedManagedSection(t *testing.T) {
+	home := t.TempDir()
+	c := legacyPromptCases(t, home)[0]
+	_, legacy := writeManagedLegacyPrompt(t, home, c)
+	if err := os.WriteFile(legacy, []byte("<!-- axiom:sdd-orchestrator -->\nno closing marker\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if result := RetireLegacyPromptFiles(home, c.adapter); len(result.Removed) != 0 || len(result.Notes) != 1 {
+		t.Fatalf("result = %+v, want the file kept with a warning", result)
+	}
+}
+
+func TestRetireLegacyPromptFilesRequiresAUsableCurrentPrompt(t *testing.T) {
+	home := t.TempDir()
+	for _, c := range legacyPromptCases(t, home) {
+		t.Run(c.name+"/directory", func(t *testing.T) {
+			current, legacy := writeManagedLegacyPrompt(t, home, c)
+			if err := os.Remove(current); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.Mkdir(current, 0o755); err != nil {
+				t.Fatal(err)
+			}
+			t.Cleanup(func() { _ = os.Remove(current) })
+
+			result := RetireLegacyPromptFiles(home, c.adapter)
+			if len(result.Removed) != 0 || len(result.Notes) != 1 {
+				t.Fatalf("result = %+v, want the legacy file kept with a warning", result)
+			}
+			if _, err := os.Stat(legacy); err != nil {
+				t.Fatalf("legacy prompt was removed: %v", err)
+			}
+		})
+		t.Run(c.name+"/no managed section", func(t *testing.T) {
+			current, legacy := writeManagedLegacyPrompt(t, home, c)
+			if err := os.WriteFile(current, []byte("# only my own rules\n"), 0o644); err != nil {
+				t.Fatal(err)
+			}
+
+			result := RetireLegacyPromptFiles(home, c.adapter)
+			if len(result.Removed) != 0 || len(result.Notes) != 1 {
+				t.Fatalf("result = %+v, want the legacy file kept with a warning", result)
+			}
+			if _, err := os.Stat(legacy); err != nil {
+				t.Fatalf("legacy prompt was removed: %v", err)
+			}
+		})
+	}
+}
+
+func TestRetireLegacyPromptFilesAcceptsCRLFAndByteOrderMark(t *testing.T) {
+	home := t.TempDir()
+	for _, c := range legacyPromptCases(t, home) {
+		for name, transform := range map[string]func(string) string{
+			"crlf":     func(s string) string { return strings.ReplaceAll(s, "\n", "\r\n") },
+			"bom":      func(s string) string { return "\ufeff" + s },
+			"bom+crlf": func(s string) string { return "\ufeff" + strings.ReplaceAll(s, "\n", "\r\n") },
+		} {
+			t.Run(c.name+"/"+name, func(t *testing.T) {
+				_, legacy := writeManagedLegacyPrompt(t, home, c)
+				body, err := os.ReadFile(legacy)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if err := os.WriteFile(legacy, []byte(transform(string(body))), 0o644); err != nil {
+					t.Fatal(err)
+				}
+
+				result := RetireLegacyPromptFiles(home, c.adapter)
+				if len(result.Removed) != 1 || len(result.Notes) != 0 {
+					t.Fatalf("result = %+v, want the managed legacy file removed", result)
+				}
+			})
+		}
+	}
+}

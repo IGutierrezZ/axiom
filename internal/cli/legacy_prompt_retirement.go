@@ -33,6 +33,17 @@ func (s legacyPromptRetirementStep) Run() error {
 	return nil
 }
 
+// legacyPromptBackupPaths lists the legacy prompt files the retirement step may
+// delete, so the pre-apply snapshot holds them and a rollback restores them.
+func legacyPromptBackupPaths(homeDir, workspaceDir string, scope InstallScope, adapters []agents.Adapter) []string {
+	var paths []string
+	for _, adapter := range legacyPromptAdapters(adapters) {
+		provider := adapter.(agents.LegacyPromptFileProvider)
+		paths = append(paths, provider.LegacySystemPromptFiles(componentInjectionDirScoped(homeDir, workspaceDir, scope, adapter))...)
+	}
+	return paths
+}
+
 // legacyPromptAdapters returns the selected adapters that declare legacy prompt
 // file names.
 func legacyPromptAdapters(adapters []agents.Adapter) []agents.Adapter {

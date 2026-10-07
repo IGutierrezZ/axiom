@@ -740,6 +740,10 @@ func syncBackupTargetsScoped(homeDir, workspaceDir string, scope InstallScope, s
 	for _, path := range routingGuidancePaths(homeDir, workspaceDir, scope, adapters) {
 		paths[path] = struct{}{}
 	}
+	// The legacy prompt retirement deletes files, so they need a snapshot too.
+	for _, path := range legacyPromptBackupPaths(homeDir, workspaceDir, scope, adapters) {
+		paths[path] = struct{}{}
+	}
 	for _, adapter := range adapters {
 		if adapter.Agent() == model.AgentPi {
 			for _, rootDir := range piPersonaConfigRoots(homeDir, workspaceDir, scope) {

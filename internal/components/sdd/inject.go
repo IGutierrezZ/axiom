@@ -566,7 +566,7 @@ func Inject(homeDir string, adapter agents.Adapter, sddMode model.SDDModeID, opt
 			if readErr != nil {
 				return InjectionResult{}, readErr
 			}
-			updated := filemerge.InjectMarkdownSection(existing, "strict-tdd-mode", strictTDDContent)
+			updated := filemerge.InjectMarkdownSection(existing, filemerge.StrictTDDSectionID, strictTDDContent)
 			writeResult, writeErr := filemerge.WriteFileAtomic(promptPath, []byte(updated), 0o644)
 			if writeErr != nil {
 				return InjectionResult{}, writeErr
@@ -3071,7 +3071,7 @@ func injectFileAppend(homeDir string, adapter agents.Adapter, content string) (I
 		existing = stripBareOrchestratorForFilePrompt(existing)
 	}
 
-	updated := filemerge.InjectMarkdownSection(existing, "sdd-orchestrator", content)
+	updated := filemerge.InjectMarkdownSection(existing, filemerge.SDDOrchestratorSectionID, content)
 	writeResult, err := filemerge.WriteFileAtomic(promptPath, []byte(updated), 0o644)
 	if err != nil {
 		return InjectionResult{}, err
@@ -3384,7 +3384,7 @@ func injectMarkdownSections(homeDir string, adapter agents.Adapter, legacyAssign
 		existing = stripBareOrchestratorSection(existing)
 	}
 
-	updated := filemerge.InjectMarkdownSection(existing, "sdd-orchestrator", content)
+	updated := filemerge.InjectMarkdownSection(existing, filemerge.SDDOrchestratorSectionID, content)
 
 	writeResult, err := filemerge.WriteFileAtomic(promptPath, []byte(updated), 0o644)
 	if err != nil {

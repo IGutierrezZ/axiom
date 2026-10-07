@@ -7,6 +7,8 @@ import (
 	"strings"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/agents"
+	"github.com/IGutierrezZ/axiom/v3/internal/components/agentguidance"
+	"github.com/IGutierrezZ/axiom/v3/internal/components/filemerge"
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
 )
 
@@ -19,50 +21,82 @@ type LegacyPromptResult struct {
 	Notes []string
 }
 
+// managedPromptSectionIDs are the only marker sections the installer writes into
+// an agent's system prompt file, taken from the constants its injectors use:
+// persona (persona), sdd-orchestrator and strict-tdd-mode (sdd), engram-protocol
+// (engram), codegraph-guidance (communitytool), agent-routing and the
+// remote-authorization boundary nested in it (agentguidance), and the retired
+// trigger-rules. Any other ID, even in an axiom or gentle-ai marker, is user
+// content: a user can write a block with that syntax and any name.
+var managedPromptSectionIDs = map[string]struct{}{
+	filemerge.PersonaSectionID:             {},
+	filemerge.SDDOrchestratorSectionID:     {},
+	filemerge.StrictTDDSectionID:           {},
+	filemerge.EngramProtocolSectionID:      {},
+	filemerge.CodeGraphGuidanceSectionID:   {},
+	filemerge.RemoteAuthorizationSectionID: {},
+	filemerge.LegacyTriggerRulesSectionID:  {},
+	agentguidance.RoutingSectionID:         {},
+}
+
 var managedSectionOpenMarker = regexp.MustCompile(`<!-- (axiom|gentle-ai):([A-Za-z0-9_.-]+) -->`)
 
 // RetireLegacyPromptFiles removes the prompt files an earlier release wrote
 // under a name the adapter no longer uses (for example Kiro's gentle-ai.md),
 // which otherwise stay next to the renamed file and deliver the prompt twice.
 //
-// A legacy file is deleted only when Axiom provably wrote all of it: the
-// current prompt file already exists, and nothing outside the managed marker
-// sections and the installer's own frontmatter is anything but the persona text
-// the installer generates. A file with any other content, an unreadable file
-// and a file that is not a regular file are kept, with a note for the user.
+// A legacy file is deleted only when Axiom provably wrote all of it:
+//   - the current prompt file is a regular file that already holds at least one
+//     managed section, so deleting the legacy copy cannot drop the prompt;
+//   - the legacy file holds at least one managed section, every marker section
+//     in it is one of managedPromptSectionIDs, and each is closed;
+//   - outside those sections and the installer's own frontmatter there is
+//     nothing, or exactly the persona text the installer generates.
+//
+// The content inside a managed section counts as Axiom-owned: sync rewrote it on
+// every run, so a user edit there never survived. Anything else (an unknown
+// section, text outside the sections, an unreadable or non-regular file) keeps
+// the file and adds a note for the user.
 func RetireLegacyPromptFiles(homeDir string, adapter agents.Adapter) LegacyPromptResult {
 	var result LegacyPromptResult
 	provider, ok := adapter.(agents.LegacyPromptFileProvider)
 	if !ok {
 		return result
 	}
-	if _, err := os.Stat(adapter.SystemPromptFile(homeDir)); err != nil {
+	current := adapter.SystemPromptFile(homeDir)
+	if _, err := os.Lstat(current); err != nil && os.IsNotExist(err) {
 		// Nothing replaces the legacy file yet, so deleting it would drop the prompt.
+		// Without a current file there is also no duplicate to warn about.
 		return result
 	}
+	currentReason := currentPromptProblem(current)
 	for _, path := range provider.LegacySystemPromptFiles(homeDir) {
 		info, err := os.Lstat(path)
 		if err != nil {
 			if !os.IsNotExist(err) {
-				result.Notes = append(result.Notes, keptLegacyPromptNote(path, adapter.SystemPromptFile(homeDir), err.Error()))
+				result.Notes = append(result.Notes, keptLegacyPromptNote(path, current, err.Error()))
 			}
 			continue
 		}
+		if currentReason != "" {
+			result.Notes = append(result.Notes, keptLegacyPromptNote(path, current, currentReason))
+			continue
+		}
 		if !info.Mode().IsRegular() {
-			result.Notes = append(result.Notes, keptLegacyPromptNote(path, adapter.SystemPromptFile(homeDir), "it is not a regular file"))
+			result.Notes = append(result.Notes, keptLegacyPromptNote(path, current, "it is not a regular file"))
 			continue
 		}
 		data, err := os.ReadFile(path)
 		if err != nil {
-			result.Notes = append(result.Notes, keptLegacyPromptNote(path, adapter.SystemPromptFile(homeDir), err.Error()))
+			result.Notes = append(result.Notes, keptLegacyPromptNote(path, current, err.Error()))
 			continue
 		}
-		if !isInstallerWrittenPrompt(adapter, string(data)) {
-			result.Notes = append(result.Notes, keptLegacyPromptNote(path, adapter.SystemPromptFile(homeDir), "it has content Axiom did not write"))
+		if reason := legacyPromptProblem(adapter, string(data)); reason != "" {
+			result.Notes = append(result.Notes, keptLegacyPromptNote(path, current, reason))
 			continue
 		}
 		if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
-			result.Notes = append(result.Notes, keptLegacyPromptNote(path, adapter.SystemPromptFile(homeDir), err.Error()))
+			result.Notes = append(result.Notes, keptLegacyPromptNote(path, current, err.Error()))
 			continue
 		}
 		result.Removed = append(result.Removed, path)
@@ -74,39 +108,74 @@ func keptLegacyPromptNote(path, current, reason string) string {
 	return fmt.Sprintf("The legacy prompt file %s was kept (%s). Axiom now writes %s, so the prompt may be duplicated; review %s and delete it manually.", path, reason, current, path)
 }
 
-// isInstallerWrittenPrompt reports whether content is made only of managed
-// marker sections, the installer's frontmatter and installer persona text.
-// Content with no managed section at all is never installer-written: the
-// markers are what ties a file to the installer.
-func isInstallerWrittenPrompt(adapter agents.Adapter, content string) bool {
-	rest := strings.ReplaceAll(content, "\r\n", "\n")
-	rest = strings.TrimPrefix(rest, "\ufeff")
+// currentPromptProblem returns why the current prompt file cannot stand in for
+// the legacy one, or "" when it is a regular file holding a managed section.
+func currentPromptProblem(path string) string {
+	info, err := os.Lstat(path)
+	if err != nil {
+		return err.Error()
+	}
+	if !info.Mode().IsRegular() {
+		return "the current prompt file is not a regular file"
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return err.Error()
+	}
+	_, sections, problem := removeManagedSections(normalizePrompt(string(data)))
+	if problem != "" || sections == 0 {
+		return "the current prompt file holds no section Axiom manages"
+	}
+	return ""
+}
+
+// normalizePrompt drops a byte order mark and normalizes line endings.
+func normalizePrompt(content string) string {
+	return strings.TrimPrefix(strings.ReplaceAll(content, "\r\n", "\n"), "\ufeff")
+}
+
+// legacyPromptProblem returns why content is not provably installer-written, or
+// "" when it is made only of managed sections, the installer's frontmatter and
+// installer persona text. The markers are what ties a file to the installer, so
+// content with no managed section at all is never installer-written.
+func legacyPromptProblem(adapter agents.Adapter, content string) string {
+	rest := normalizePrompt(content)
 	for _, frontmatter := range []string{wrapInstructionsFile(""), wrapSteeringFile("")} {
 		if strings.HasPrefix(rest, frontmatter) {
 			rest = strings.TrimPrefix(rest, frontmatter)
 			break
 		}
 	}
-	rest, sections, ok := removeManagedSections(rest)
-	if !ok || sections == 0 {
-		return false
+	rest, sections, problem := removeManagedSections(rest)
+	if problem != "" {
+		return problem
 	}
-	return strings.TrimSpace(rest) == "" || isKnownPersonaText(adapter, rest)
+	if sections == 0 {
+		return "it holds no section Axiom manages"
+	}
+	if strings.TrimSpace(rest) != "" && !isKnownPersonaText(adapter, rest) {
+		return "it has content Axiom did not write"
+	}
+	return ""
 }
 
-// removeManagedSections cuts every <!-- axiom|gentle-ai:ID --> ... closing pair
-// out of content. ok is false when a section is not closed.
-func removeManagedSections(content string) (rest string, sections int, ok bool) {
+// removeManagedSections cuts every managed marker section out of content and
+// counts them. problem is set when a section is not one the installer writes or
+// is not closed.
+func removeManagedSections(content string) (rest string, sections int, problem string) {
 	for {
 		loc := managedSectionOpenMarker.FindStringSubmatchIndex(content)
 		if loc == nil {
-			return content, sections, true
+			return content, sections, ""
 		}
 		prefix, id := content[loc[2]:loc[3]], content[loc[4]:loc[5]]
+		if _, managed := managedPromptSectionIDs[id]; !managed {
+			return content, sections, "it has a section Axiom does not manage: " + id
+		}
 		closeMarker := "<!-- /" + prefix + ":" + id + " -->"
 		end := strings.Index(content[loc[1]:], closeMarker)
 		if end < 0 {
-			return content, sections, false
+			return content, sections, "section " + id + " is not closed"
 		}
 		content = content[:loc[0]] + content[loc[1]+end+len(closeMarker):]
 		sections++

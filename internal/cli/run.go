@@ -862,7 +862,7 @@ func (r *installRuntime) stagePlan() pipeline.StagePlan {
 // prompt-owned WorkRun ceremony. Nothing authors it anymore, so any copy still
 // on disk is a stale instruction to invoke authority that no longer exists —
 // it has to be removed, not refreshed.
-const legacyTriggerRulesSection = "trigger-rules"
+const legacyTriggerRulesSection = filemerge.LegacyTriggerRulesSectionID
 
 // agentRoutingGuidanceStep delivers the organic routing guidance for one agent.
 //
@@ -2211,6 +2211,10 @@ func backupTargets(homeDir, workspaceDir string, scope InstallScope, selection m
 	// selection whose components do not happen to cover the same file would be
 	// rewritten without ever having been snapshotted (issue #1794).
 	for _, path := range routingGuidancePaths(homeDir, workspaceDir, scope, adapters) {
+		paths[path] = struct{}{}
+	}
+	// The legacy prompt retirement deletes files, so they need a snapshot too.
+	for _, path := range legacyPromptBackupPaths(homeDir, workspaceDir, scope, adapters) {
 		paths[path] = struct{}{}
 	}
 	adapterSkillPaths, err := adapterSkillBackupTargets(homeDir, workspaceDir, scope, selection, adapters)
