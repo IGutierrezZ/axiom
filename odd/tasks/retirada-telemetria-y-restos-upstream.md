@@ -261,7 +261,7 @@ Que Axiom **deje de enviar datos al upstream Gentle AI y de dirigir acciones con
 - **2026-10-05:** #81 fusionado (`6c97589a`); worktree `odd-up-t5a` y rama de S1 eliminados. #82 retargeteado a `main` y rebasado (`661abb22`); #83 rebasado encima (`bb315b5a`); los dos con `--force-with-lease` y pendientes de su CI.
 - **2026-10-05:** #82 en verde y fusionado (`0ea9aec6`); rama de S2 eliminada. #83 retargeteado a `main` y rebasado (`71c3466c`), pendiente de su CI.
 
-### [ ] T6 · Retirar la telemetría por completo (tamaño L, varios PRs)
+### [x] T6 · Retirar la telemetría por completo: **#84, #85, #86, #87, #88 y #89 fusionados** (`b08fffe2`, `d2a4099d`, `482ecee0`, `40ca98dc`, `eb381896`, `24a08e47`)
 
 **Inventario** (mapeo sobre `origin/main` `c504f2e6`):
 
@@ -411,7 +411,7 @@ Cada PR lleva riesgo `high` probable (borrado masivo y hooks), así que necesita
   - Mantener `DO_NOT_TRACK` en los `TestMain` hasta T6e.
   - El código de retirada debe reconocer los ID legacy (`gentle-ai.telemetry-*` y las marcas `// gentle-ai:managed telemetry-runtime/v1|v2`).
 
-### [~] T7 · Marca Gentle AI (tamaño M-L, varios PRs)
+### [~] T7 · Marca Gentle AI: **#90 a #101 fusionados**; queda #102 (T7l-b). T7m, aplazado fuera de este ODD
 
 **Decisiones del usuario (2026-10-06):**
 
@@ -615,7 +615,7 @@ En las preguntas abiertas se aplican las recomendaciones del plan:
 
 #88, #89 y #91 llevan `size:exception` aprobado.
 
-**Pendiente:**
+**Pendiente al relevo** (resuelto en la tercera sesión; ver más abajo: los seis PRs fusionados, T7j en #99, T7k en #100 y T7l en #101 y #102):
 1. Fusionar la tabla anterior en orden: #88 → #89, #91, y #96 → #97 → #98.
    - Antes de cada merge, comprobar `mergeable`.
    - Al fusionar sin CI combinado, compilar el `main` resultante en local: `go build ./... && go vet ./internal/... ./cmd/...`, más tests clave. `sdd` debe ir en solitario porque supera los 10 minutos en paralelo.
@@ -674,6 +674,11 @@ En las preguntas abiertas se aplican las recomendaciones del plan:
   - Todo va en #101 (`759e78d6`), que queda en +7 / −105.
   - #102 se rebasó encima (`541c13cf`).
   - `assets` pasa en verde.
+- **2026-10-07, segunda tanda** (CI en verde y `MERGEABLE CLEAN`):
+  - **Fusionados:** #98 (T7i) `84074c4e` y #101 (T7l-a) `de1d761f`.
+  - **#102:** retargeteado a `main` y rebasado con `--onto origin/main 759e78d6` (`6f7c9728`, −394); falta su CI.
+  - **Limpieza:** eliminados el worktree `odd-up-t7i` y las ramas de #98 y #101.
+  - **Comprobación del `main` combinado** más #102: build y vet limpios; `assets` y `cmd/...` en verde.
 - **Seguimientos nuevos:**
   - `docs/intended-usage.md` y `docs/prd-opencode-profiles.md` siguen con `gentle-orchestrator` y `gentle-sdd-*`;
   - el banner ASCII de `install.sh`;
@@ -699,10 +704,13 @@ En las preguntas abiertas se aplican las recomendaciones del plan:
 
 ## 8. Siguiente paso
 
-1. T6b (en curso), después T6e y T6f. Pedir `size:exception` para T6b y para T6e.
-2. T6: plan de PRs con un agente Plan (lanzado el 2026-10-05), plantear al usuario la decisión del stub de `axiom telemetry runtime` y después ejecutar T6a a T6d.
-3. T7: plantear al usuario las decisiones de `axiom-collab-perfect` y `chained-pr` y diseñar la lectura dual de los contratos.
-4. PR de cierre con este documento.
+**Cierre (2026-10-07).** T1 a T7 hechas, salvo T7m, aplazada fuera de este ODD.
+- **Queda para cerrar:** fusionar #102 (T7l-b) y este PR de cierre. Después, borrar el worktree `odd-up-t7l` y las ramas de #102 y del documento.
+- **Comprobación final de `main`** (`de1d761f` + #102): build y vet limpios; `assets` y `cmd/...` en verde.
+- **Criterios de aceptación** (sección 6):
+  - **Cumplidos:** la telemetría y sus envíos al upstream se han retirado, con una guarda contra la reaparición del endpoint. Ninguna skill propia dirige PRs ni issues al upstream, y la documentación tampoco. El hub y el PATH quedan aislados. `RefreshSkip` compara por identidad. `sync` retira las skills descatalogadas.
+  - **Cumplido salvo el *wire*:** no quedan consejos `gentle-ai <verbo>` visibles. Las excepciones son los comandos del contrato de revisión fijados por schemas publicados (T7m) y los reconocedores de legado.
+- **Siguientes pasos fuera de este ODD:** la lista «Aplazado o seguimiento» de la sección 7 bis y los «Seguimientos nuevos» de la tercera sesión, más el test intermitente `update` `TestCheckAllWithCooldown_ConcurrentReviewModeDisablePreservesMode`.
 
 ## 9. Historia relacionada (ODDs anteriores de la misma sesión)
 
