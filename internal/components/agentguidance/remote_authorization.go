@@ -12,5 +12,5 @@ import (
 // Executor integrations can reuse it without importing coordinator routing.
 func InjectRemoteAuthorization(prompt string) string {
 	contract := assets.MustRead("generic/remote-authorization-contract.md")
-	return filemerge.InjectMarkdownSection(prompt, "remote-authorization", strings.TrimSpace(contract))
+	return filemerge.InjectMarkdownSection(prompt, filemerge.RemoteAuthorizationSectionID, strings.TrimSpace(contract))
 }

@@ -64,6 +64,21 @@ func ExtractManagedSection(content, sectionID string) string {
 	return content
 }
 
+// Section IDs of the managed marker sections the installer writes into an
+// agent's system prompt file. Injectors and the legacy prompt retirement share
+// these so the set of installer-owned sections has one definition.
+const (
+	PersonaSectionID             = "persona"
+	SDDOrchestratorSectionID     = "sdd-orchestrator"
+	StrictTDDSectionID           = "strict-tdd-mode"
+	EngramProtocolSectionID      = "engram-protocol"
+	CodeGraphGuidanceSectionID   = "codegraph-guidance"
+	RemoteAuthorizationSectionID = "remote-authorization"
+	// LegacyTriggerRulesSectionID is a section no release writes any more;
+	// earlier ones did, so a legacy prompt file may still hold it.
+	LegacyTriggerRulesSectionID = "trigger-rules"
+)
+
 const (
 	markerPrefix = "<!-- axiom:"
 	markerSuffix = " -->"

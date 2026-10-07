@@ -1870,7 +1870,7 @@ func TestOrganicConfiguredAgentReceivesRoutingGuidanceCursor(t *testing.T) {
 	if err := os.MkdirAll(filepath.Join(home, ".cursor"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	const path = ".cursor/rules/gentle-ai.mdc"
+	const path = ".cursor/rules/axiom.mdc"
 	output, stderr, err := runOrganicCommand(
 		t, organicBinary, workspace, organicEnvironment(home),
 		"install", "--agent", "cursor", "--scope", "workspace", "--components", "permissions",

@@ -1,6 +1,7 @@
 package screens
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 	"testing"
@@ -11,7 +12,7 @@ import (
 // TestRenderSync_ConfirmState verifies the default confirm state — no operation
 // running, no result yet — shows sync description and a prompt.
 func TestRenderSync_ConfirmState(t *testing.T) {
-	out := RenderSync(nil, nil, false /*operationRunning*/, false /*hasSyncRun*/, 0)
+	out := RenderSync(nil, nil, nil, false /*operationRunning*/, false /*hasSyncRun*/, 0)
 
 	lower := strings.ToLower(out)
 	if !strings.Contains(lower, "sync") {
@@ -26,7 +27,7 @@ func TestRenderSync_ConfirmState(t *testing.T) {
 // TestRenderSync_RunningState verifies that while sync is running the screen
 // shows a spinner/progress indicator.
 func TestRenderSync_RunningState(t *testing.T) {
-	out := RenderSync(nil, nil, true /*operationRunning*/, false, 0)
+	out := RenderSync(nil, nil, nil, true /*operationRunning*/, false, 0)
 
 	lower := strings.ToLower(out)
 	if !strings.Contains(lower, "syncing") && !strings.Contains(lower, "please wait") {
@@ -38,7 +39,7 @@ func TestRenderSync_RunningState(t *testing.T) {
 // with changed files, the screen shows the file count.
 func TestRenderSync_ResultWithFilesChanged(t *testing.T) {
 	files := []string{"a", "b", "c", "d", "e"}
-	out := RenderSync(files, nil, false, true /*hasSyncRun*/, 0)
+	out := RenderSync(files, nil, nil, false, true /*hasSyncRun*/, 0)
 
 	if !strings.Contains(out, "5") {
 		t.Errorf("RenderSync(filesChanged=5) should show '5'; got:\n%s", out)
@@ -59,7 +60,7 @@ func TestRenderSync_ResultWithFilesChanged(t *testing.T) {
 // message.
 func TestRenderSync_ResultWithError(t *testing.T) {
 	syncErr := fmt.Errorf("connection refused: agent config dir not writable")
-	out := RenderSync(nil, syncErr, false, true /*hasSyncRun*/, 0)
+	out := RenderSync(nil, nil, syncErr, false, true /*hasSyncRun*/, 0)
 
 	lower := strings.ToLower(out)
 	if !strings.Contains(lower, "fail") && !strings.Contains(lower, "error") {
@@ -88,7 +89,7 @@ func TestRenderSync_TitleAlwaysPresent(t *testing.T) {
 
 	for _, s := range states {
 		t.Run(s.name, func(t *testing.T) {
-			out := RenderSync(s.files, s.syncErr, s.operationRunning, s.hasSyncRun, 0)
+			out := RenderSync(s.files, nil, s.syncErr, s.operationRunning, s.hasSyncRun, 0)
 			if !strings.Contains(out, "Sync") {
 				t.Errorf("RenderSync state=%q should contain 'Sync'; got:\n%s", s.name, out)
 			}
@@ -99,7 +100,7 @@ func TestRenderSync_TitleAlwaysPresent(t *testing.T) {
 // TestRenderSync_ZeroFilesChangedWithNoError verifies the "nothing to update"
 // case (hasSyncRun=true, filesChanged=0, no error) shows a completion message.
 func TestRenderSync_ZeroFilesChangedWithNoError(t *testing.T) {
-	out := RenderSync(nil, nil, false, true /*hasSyncRun*/, 0)
+	out := RenderSync(nil, nil, nil, false, true /*hasSyncRun*/, 0)
 
 	lower := strings.ToLower(out)
 	if !strings.Contains(lower, "sync complete") && !strings.Contains(lower, "complete") &&
@@ -115,7 +116,7 @@ func TestRenderSync_TruncatesLargeFileList(t *testing.T) {
 	for i := range files {
 		files[i] = fmt.Sprintf("file-%d.txt", i)
 	}
-	out := RenderSync(files, nil, false, true /*hasSyncRun*/, 0)
+	out := RenderSync(files, nil, nil, false, true /*hasSyncRun*/, 0)
 
 	// First file should be rendered.
 	if !strings.Contains(out, "file-0.txt") {
@@ -128,5 +129,29 @@ func TestRenderSync_TruncatesLargeFileList(t *testing.T) {
 	// Truncation message.
 	if !strings.Contains(out, "and 5 more") {
 		t.Errorf("RenderSync should show truncation message; got:\n%s", out)
+	}
+}
+
+// TestRenderSync_ResultShowsWarnings verifies that the non-fatal warnings a sync
+// raised are listed on the result screen, both with and without changed files.
+func TestRenderSync_ResultShowsWarnings(t *testing.T) {
+	warnings := []string{"a retired file was kept", "skill index refresh: boom"}
+	for _, files := range [][]string{nil, {"managed.md"}} {
+		out := stripANSI(RenderSync(files, warnings, nil, false, true, 0))
+		if !strings.Contains(out, "2 warning(s)") {
+			t.Errorf("RenderSync(files=%v) should count the warnings; got:\n%s", files, out)
+		}
+		for _, warning := range warnings {
+			if !strings.Contains(out, warning) {
+				t.Errorf("RenderSync(files=%v) should list warning %q; got:\n%s", files, warning, out)
+			}
+		}
+	}
+
+	if out := stripANSI(RenderSync(nil, nil, nil, false, true, 0)); strings.Contains(out, "warning") {
+		t.Errorf("RenderSync without warnings should not mention warnings; got:\n%s", out)
+	}
+	if out := stripANSI(RenderSync(nil, warnings, errors.New("sync failed"), false, true, 0)); strings.Contains(out, "warning(s)") {
+		t.Errorf("RenderSync with an error should not list warnings; got:\n%s", out)
 	}
 }

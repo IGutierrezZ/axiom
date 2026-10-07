@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	codeGraphGuidanceSectionID   = "codegraph-guidance"
+	codeGraphGuidanceSectionID   = filemerge.CodeGraphGuidanceSectionID
 	legacyCodeGraphGuidanceStart = "<!-- CODEGRAPH_START -->"
 	legacyCodeGraphGuidanceEnd   = "<!-- CODEGRAPH_END -->"
 	upstreamCodeGraphSkipPhrase  = "If there is no `.codegraph/` directory, skip CodeGraph entirely"

@@ -214,8 +214,8 @@ func TestGoldenSDD_Cursor(t *testing.T) {
 		t.Fatalf("sdd.Inject(cursor) changed = false")
 	}
 
-	// Cursor writes SDD orchestrator to ~/.cursor/rules/gentle-ai.mdc.
-	rulesFile := readTestFile(t, filepath.Join(home, ".cursor", "rules", "gentle-ai.mdc"))
+	// Cursor writes SDD orchestrator to ~/.cursor/rules/axiom.mdc.
+	rulesFile := readTestFile(t, filepath.Join(home, ".cursor", "rules", "axiom.mdc"))
 	assertGolden(t, "sdd-cursor-rules.golden", rulesFile)
 
 	// Golden-check a representative SDD skill file.

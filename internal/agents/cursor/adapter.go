@@ -74,7 +74,13 @@ func (a *Adapter) SystemPromptDir(homeDir string) string {
 }
 
 func (a *Adapter) SystemPromptFile(homeDir string) string {
-	return filepath.Join(homeDir, ".cursor", "rules", "gentle-ai.mdc")
+	return filepath.Join(homeDir, ".cursor", "rules", "axiom.mdc")
+}
+
+// LegacySystemPromptFiles lists the earlier prompt file names Axiom no longer
+// writes. A managed copy is retired on sync so the prompt is not duplicated.
+func (a *Adapter) LegacySystemPromptFiles(homeDir string) []string {
+	return []string{filepath.Join(a.SystemPromptDir(homeDir), "gentle-ai.mdc")}
 }
 
 func (a *Adapter) SkillsDir(homeDir string) string {

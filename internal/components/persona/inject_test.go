@@ -1388,7 +1388,7 @@ func TestInjectCursorGentlemanWritesRulesFileWithRealContent(t *testing.T) {
 	}
 
 	// Verify the generic persona content was used — not just neutral one-liner.
-	path := filepath.Join(home, ".cursor", "rules", "gentle-ai.mdc")
+	path := filepath.Join(home, ".cursor", "rules", "axiom.mdc")
 	content, readErr := os.ReadFile(path)
 	if readErr != nil {
 		t.Fatalf("ReadFile(%q) error = %v", path, readErr)

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"reflect"
 	"testing"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
@@ -89,8 +90,8 @@ func TestConfigPathsCrossPlatform(t *testing.T) {
 		t.Fatalf("MCPConfigPath() = %q, want %q", got, filepath.Join(home, ".cursor", "mcp.json"))
 	}
 
-	if got := a.SystemPromptFile(home); got != filepath.Join(home, ".cursor", "rules", "gentle-ai.mdc") {
-		t.Fatalf("SystemPromptFile() = %q, want %q", got, filepath.Join(home, ".cursor", "rules", "gentle-ai.mdc"))
+	if got := a.SystemPromptFile(home); got != filepath.Join(home, ".cursor", "rules", "axiom.mdc") {
+		t.Fatalf("SystemPromptFile() = %q, want %q", got, filepath.Join(home, ".cursor", "rules", "axiom.mdc"))
 	}
 }
 
@@ -112,5 +113,14 @@ func TestDesktopAppNotAutoInstallable(t *testing.T) {
 	_, err := a.InstallCommand(system.PlatformProfile{})
 	if err == nil {
 		t.Fatalf("InstallCommand() should return error for desktop app")
+	}
+}
+
+func TestLegacySystemPromptFiles(t *testing.T) {
+	home := t.TempDir()
+	a := NewAdapter()
+	want := []string{filepath.Join(home, ".cursor", "rules", "gentle-ai.mdc")}
+	if got := a.LegacySystemPromptFiles(home); !reflect.DeepEqual(got, want) {
+		t.Fatalf("LegacySystemPromptFiles() = %q, want %q", got, want)
 	}
 }

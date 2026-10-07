@@ -398,3 +398,13 @@ func contains(path string, components ...string) bool {
 	}
 	return true
 }
+
+func TestLegacySystemPromptFiles(t *testing.T) {
+	home := t.TempDir()
+	a := NewAdapter()
+	got := a.LegacySystemPromptFiles(home)
+	want := filepath.Join(home, ".kiro", "steering", "gentle-ai.md")
+	if len(got) != 1 || got[0] != want {
+		t.Fatalf("LegacySystemPromptFiles() = %q, want [%q]", got, want)
+	}
+}

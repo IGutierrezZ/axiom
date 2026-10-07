@@ -55,6 +55,14 @@ type Adapter interface {
 	SupportsMCP() bool
 }
 
+// LegacyPromptFileProvider is an optional adapter capability for agents whose
+// system prompt file was renamed. LegacySystemPromptFiles lists the earlier file
+// names Axiom no longer writes; sync retires a copy only when it proves Axiom
+// wrote it, so the prompt is not delivered twice.
+type LegacyPromptFileProvider interface {
+	LegacySystemPromptFiles(homeDir string) []string
+}
+
 // EffectiveCodeGraphWiringDetector is an optional adapter capability for agents
 // whose configuration format requires semantic validation beyond marker checks.
 type EffectiveCodeGraphWiringDetector interface {

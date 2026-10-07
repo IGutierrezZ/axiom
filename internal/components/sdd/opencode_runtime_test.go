@@ -96,6 +96,8 @@ func TestHistoricalOpenCodePluginDigestTable(t *testing.T) {
 	want := map[string]map[string]int{
 		"skill-registry.ts":            {"v1": 5, "v2": 1},
 		"opencode-review-transport.ts": {"v1": 7, "v2": 1},
+		"model-variants.ts":            {"v1": 6},
+		"sdd-task-result-artifacts.ts": {"v1": 6, "v2": 1},
 	}
 	seen := map[string]bool{}
 	for name, generations := range want {
@@ -122,44 +124,58 @@ func TestHistoricalOpenCodePluginDigestTable(t *testing.T) {
 
 func TestOpenCodeV2ReplacesKnownHistoricalPluginCopies(t *testing.T) {
 	withOpenCodeV2Runtime(t)
-	const historical = "// unmodified earlier managed copy that spawned gentle-ai\n"
-	sum := sha256.Sum256([]byte(historical))
-	digests := historicalOpenCodePluginDigests["skill-registry.ts"]
-	digests["v2"] = append(digests["v2"], hex.EncodeToString(sum[:]))
-	t.Cleanup(func() { digests["v2"] = digests["v2"][:len(digests["v2"])-1] })
+	for _, name := range ManagedOpenCodePluginNames() {
+		t.Run(name, func(t *testing.T) {
+			const historical = "// unmodified earlier managed copy that spawned gentle-ai\n"
+			sum := sha256.Sum256([]byte(historical))
+			if historicalOpenCodePluginDigests[name] == nil {
+				t.Fatalf("%s has no entry in the historical digest table", name)
+			}
+			digests := historicalOpenCodePluginDigests[name]
+			original, hadV2 := digests["v2"]
+			digests["v2"] = append(original[:len(original):len(original)], hex.EncodeToString(sum[:]))
+			t.Cleanup(func() {
+				if hadV2 {
+					digests["v2"] = original
+				} else {
+					delete(digests, "v2")
+				}
+			})
 
-	home := t.TempDir()
-	a := agent.NewAdapter()
-	assetDir, err := openCodePluginAssetDirectory(a.Agent())
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err := installOpenCodePluginsDirectory(home, a, assetDir); err != nil {
-		t.Fatal(err)
-	}
-	path := filepath.Join(a.GlobalConfigDir(home), "plugins", "skill-registry.ts")
-	if err := os.WriteFile(path, []byte(historical), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := RefreshInstalledOpenCodePlugins(home, a); err != nil {
-		t.Fatalf("known historical copy rejected: %v", err)
-	}
-	if got, _ := os.ReadFile(path); string(got) != assets.MustRead("opencode/plugins-v2/skill-registry.ts") {
-		t.Fatal("known historical copy was not replaced with the current asset")
-	}
+			home := t.TempDir()
+			a := agent.NewAdapter()
+			assetDir, err := openCodePluginAssetDirectory(a.Agent())
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := installOpenCodePluginsDirectory(home, a, assetDir); err != nil {
+				t.Fatal(err)
+			}
+			path := filepath.Join(a.GlobalConfigDir(home), "plugins", name)
+			if err := os.WriteFile(path, []byte(historical), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := RefreshInstalledOpenCodePlugins(home, a); err != nil {
+				t.Fatalf("known historical copy rejected: %v", err)
+			}
+			if got, _ := os.ReadFile(path); string(got) != assets.MustRead("opencode/plugins-v2/"+name) {
+				t.Fatal("known historical copy was not replaced with the current asset")
+			}
 
-	// The same bytes with one edit are no longer a known managed copy.
-	if err := os.WriteFile(path, []byte(historical+"// edited\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	_, err = RefreshInstalledOpenCodePlugins(home, a)
-	if err == nil || !strings.Contains(err.Error(), "unverified ownership; custom bytes preserved") {
-		t.Fatalf("edited copy error = %v", err)
-	}
-	if got, _ := os.ReadFile(path); string(got) != historical+"// edited\n" {
-		t.Fatal("edited copy was overwritten")
-	}
-	if _, err := installOpenCodePluginsDirectory(home, a, assetDir); err == nil {
-		t.Fatal("install replaced an edited copy")
+			// The same bytes with one edit are no longer a known managed copy.
+			if err := os.WriteFile(path, []byte(historical+"// edited\n"), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			_, err = RefreshInstalledOpenCodePlugins(home, a)
+			if err == nil || !strings.Contains(err.Error(), "unverified ownership; custom bytes preserved") {
+				t.Fatalf("edited copy error = %v", err)
+			}
+			if got, _ := os.ReadFile(path); string(got) != historical+"// edited\n" {
+				t.Fatal("edited copy was overwritten")
+			}
+			if _, err := installOpenCodePluginsDirectory(home, a, assetDir); err == nil {
+				t.Fatal("install replaced an edited copy")
+			}
+		})
 	}
 }

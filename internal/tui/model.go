@@ -344,7 +344,10 @@ type UpgradeDoneMsg struct {
 // SyncDoneMsg is sent when the sync operation completes.
 type SyncDoneMsg struct {
 	Files []string
-	Err   error
+	// Warnings are the non-fatal notices the sync raised (a kept retired file,
+	// a failed skill index refresh, soft verification warnings).
+	Warnings []string
+	Err      error
 }
 
 // UninstallDoneMsg is sent when the uninstall operation completes.
@@ -464,8 +467,17 @@ type UpgradeFunc func(ctx context.Context, results []update.UpdateResult) upgrad
 
 // SyncFunc is the signature of the function injected to perform config sync.
 // When overrides is non-nil, the sync merges those model assignments into the
-// selection before executing. Returns the list of changed file paths and any error.
-type SyncFunc func(overrides *model.SyncOverrides) ([]string, error)
+// selection before executing. Returns the outcome (changed file paths and
+// warnings) and any error.
+type SyncFunc func(overrides *model.SyncOverrides) (SyncOutcome, error)
+
+// SyncOutcome is what a completed sync reports back to the TUI.
+type SyncOutcome struct {
+	// Files lists the changed managed file paths.
+	Files []string
+	// Warnings lists the non-fatal notices the sync raised, ready to display.
+	Warnings []string
+}
 
 // UninstallFunc is the signature of the function injected to perform managed uninstall.
 type UninstallFunc func(agentIDs []model.AgentID, componentIDs []model.ComponentID) (componentuninstall.Result, error)
@@ -718,6 +730,9 @@ type Model struct {
 
 	// SyncFiles holds the list of files changed during the last sync run.
 	SyncFiles []string
+
+	// SyncWarnings holds the non-fatal warnings raised by the last sync run.
+	SyncWarnings []string
 
 	// SyncErr holds the error from the last sync run (nil on success).
 	SyncErr error
@@ -1298,6 +1313,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.OperationRunning = false
 		m.SyncFiles = msg.Files
+		m.SyncWarnings = msg.Warnings
 		m.SyncErr = msg.Err
 		m.HasSyncRun = true
 		m.PendingSyncOverrides = nil
@@ -1521,7 +1537,7 @@ func (m Model) View() string {
 	case ScreenUpgrade:
 		return screens.RenderUpgradeWithWidth(m.UpdateResults, m.UpgradeReport, m.UpgradeErr, m.OperationRunning, m.UpdateCheckDone, m.Cursor, m.SpinnerFrame, m.Width)
 	case ScreenSync:
-		return screens.RenderSync(m.SyncFiles, m.SyncErr, m.OperationRunning, m.HasSyncRun, m.SpinnerFrame)
+		return screens.RenderSync(m.SyncFiles, m.SyncWarnings, m.SyncErr, m.OperationRunning, m.HasSyncRun, m.SpinnerFrame)
 	case ScreenModelConfig:
 		return screens.RenderModelConfig(m.Cursor)
 	case ScreenProfiles:
@@ -1541,7 +1557,7 @@ func (m Model) View() string {
 	case ScreenProfileDelete:
 		return screens.RenderProfileDelete(m.ProfileDeleteTarget, m.Cursor)
 	case ScreenUpgradeSync:
-		return screens.RenderUpgradeSyncWithWidth(m.UpdateResults, m.UpgradeReport, m.SyncFiles, m.UpgradeErr, m.SyncErr, m.OperationRunning, m.UpdateCheckDone, m.Cursor, m.SpinnerFrame, m.Width)
+		return screens.RenderUpgradeSyncWithWidth(m.UpdateResults, m.UpgradeReport, m.SyncFiles, m.SyncWarnings, m.UpgradeErr, m.SyncErr, m.OperationRunning, m.UpdateCheckDone, m.Cursor, m.SpinnerFrame, m.Width)
 	case ScreenUninstallMode:
 		return screens.RenderUninstallMode(m.Cursor)
 	case ScreenUninstall:
@@ -3294,6 +3310,7 @@ func (m Model) startInstalling() (tea.Model, tea.Cmd) {
 // Unlike withResetOperationState, this preserves PendingSyncOverrides.
 func (m Model) withResetSyncState() Model {
 	m.SyncFiles = nil
+	m.SyncWarnings = nil
 	m.SyncErr = nil
 	m.HasSyncRun = false
 	m.OperationRunning = false
@@ -3309,6 +3326,7 @@ func (m Model) withResetOperationState() Model {
 	m.UpgradeReport = nil
 	m.UpgradeErr = nil
 	m.SyncFiles = nil
+	m.SyncWarnings = nil
 	m.SyncErr = nil
 	m.HasSyncRun = false
 	m.OperationRunning = false
@@ -3434,8 +3452,8 @@ func (m Model) startSync(overrides *model.SyncOverrides) tea.Cmd {
 		if syncFn == nil {
 			return SyncDoneMsg{Err: fmt.Errorf("sync function not configured")}
 		}
-		files, err := syncFn(overrides)
-		return SyncDoneMsg{Files: files, Err: err}
+		outcome, err := syncFn(overrides)
+		return SyncDoneMsg{Files: outcome.Files, Warnings: outcome.Warnings, Err: err}
 	}
 }
 
@@ -3779,8 +3797,8 @@ func (m Model) startUninstall() tea.Cmd {
 				msg.SyncErr = fmt.Errorf("sync function not configured")
 				return msg
 			}
-			files, syncErr := syncFn(nil)
-			msg.SyncFiles = files
+			outcome, syncErr := syncFn(nil)
+			msg.SyncFiles = outcome.Files
 			msg.SyncErr = syncErr
 			return msg
 		}
@@ -3877,8 +3895,8 @@ func (m Model) startUpgradeSync() tea.Cmd {
 		// Overrides are intentionally nil: upgrade-sync is triggered from
 		// Welcome menu, not ModelConfig. PendingSyncOverrides is cleared
 		// by withResetOperationState before entering this flow.
-		files, err := syncFn(nil)
-		return SyncDoneMsg{Files: files, Err: err}
+		outcome, err := syncFn(nil)
+		return SyncDoneMsg{Files: outcome.Files, Warnings: outcome.Warnings, Err: err}
 	}
 
 	return tea.Sequence(upgradeCmd, syncCmd)

@@ -145,7 +145,7 @@ func injectInternal(homeDir string, adapter agents.Adapter, persona model.Person
 		// Also strip legacy Agent Teams Lite block (standalone ATL installer leftover).
 		healed = filemerge.StripLegacyATLBlock(healed)
 
-		updated := filemerge.InjectMarkdownSection(healed, "persona", content)
+		updated := filemerge.InjectMarkdownSection(healed, filemerge.PersonaSectionID, content)
 
 		writeResult, err := filemerge.WriteFileAtomic(promptPath, []byte(updated), 0o644)
 		if err != nil {
@@ -177,7 +177,7 @@ func injectInternal(homeDir string, adapter agents.Adapter, persona model.Person
 			}
 
 			healed = filemerge.StripLegacyATLBlock(healed)
-			updated := filemerge.InjectMarkdownSection(healed, "persona", content)
+			updated := filemerge.InjectMarkdownSection(healed, filemerge.PersonaSectionID, content)
 
 			writeResult, err := filemerge.WriteFileAtomic(promptPath, []byte(updated), 0o644)
 			if err != nil {
@@ -297,7 +297,7 @@ func injectInternal(homeDir string, adapter agents.Adapter, persona model.Person
 		// rules in the shared prompt file.
 		healed := filemerge.StripLegacyPersonaBlock(existing)
 		healed = filemerge.StripLegacyATLBlock(healed)
-		updated := filemerge.InjectMarkdownSection(healed, "persona", content)
+		updated := filemerge.InjectMarkdownSection(healed, filemerge.PersonaSectionID, content)
 
 		writeResult, err := filemerge.WriteFileAtomic(promptPath, []byte(updated), 0o644)
 		if err != nil {
@@ -470,7 +470,7 @@ func injectOpenClawSoulPersona(workspaceDir, content string) (InjectionResult, e
 
 	healed := filemerge.StripLegacyPersonaBlock(existing)
 	healed = filemerge.StripLegacyATLBlock(healed)
-	updated := filemerge.InjectMarkdownSection(healed, "persona", content)
+	updated := filemerge.InjectMarkdownSection(healed, filemerge.PersonaSectionID, content)
 
 	writeResult, err := filemerge.WriteFileAtomic(soulPath, []byte(updated), 0o644)
 	if err != nil {

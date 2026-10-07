@@ -102,8 +102,8 @@ func (a *Adapter) SettingsPath(homeDir string) string {
 
 // --- Config strategies ---
 
-// SystemPromptStrategy uses MarkdownSections: gentle-ai markers are injected
-// into user_rules/gentle-ai.md without clobbering other user content.
+// SystemPromptStrategy uses MarkdownSections: Axiom markers are injected into
+// user_rules.md without clobbering other user content.
 func (a *Adapter) SystemPromptStrategy() model.SystemPromptStrategy {
 	return model.StrategyMarkdownSections
 }

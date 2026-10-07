@@ -2774,12 +2774,12 @@ func TestUninstallConfirm_CleanInstallRunsSyncAfterUninstall(t *testing.T) {
 		uninstallCalled = true
 		return componentuninstall.Result{RemovedFiles: []string{"/tmp/managed-file"}}, nil
 	}
-	m.SyncFn = func(overrides *model.SyncOverrides) ([]string, error) {
+	m.SyncFn = func(overrides *model.SyncOverrides) (SyncOutcome, error) {
 		syncCalled = true
 		if overrides != nil {
 			t.Fatalf("clean-install sync overrides = %+v, want nil", overrides)
 		}
-		return []string{"a", "b", "c", "d", "e", "f", "g"}, nil
+		return SyncOutcome{Files: []string{"a", "b", "c", "d", "e", "f", "g"}}, nil
 	}
 
 	updated, cmd := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
@@ -3817,9 +3817,9 @@ func TestModelConfig_SyncPassesOverridesToSyncFn(t *testing.T) {
 	m.PendingSyncOverrides = testOverrides
 
 	var capturedOverrides *model.SyncOverrides
-	m.SyncFn = func(overrides *model.SyncOverrides) ([]string, error) {
+	m.SyncFn = func(overrides *model.SyncOverrides) (SyncOutcome, error) {
 		capturedOverrides = overrides
-		return []string{"a", "b", "c"}, nil
+		return SyncOutcome{Files: []string{"a", "b", "c"}}, nil
 	}
 
 	// Press enter on ScreenSync to start the sync.
@@ -6332,9 +6332,9 @@ func TestStartUpgradeSync_DoesNotSetPendingSyncWhenGentleAINotUpgraded(t *testin
 	}
 
 	var syncCalled bool
-	m.SyncFn = func(_ *model.SyncOverrides) ([]string, error) {
+	m.SyncFn = func(_ *model.SyncOverrides) (SyncOutcome, error) {
 		syncCalled = true
-		return []string{"file.json"}, nil
+		return SyncOutcome{Files: []string{"file.json"}}, nil
 	}
 
 	msgs := executeUpgradeSyncSequence(t, m)
@@ -8966,9 +8966,9 @@ func TestNoAnimationPreservesSyncOperationCommand(t *testing.T) {
 	called := false
 	m := NewModel(system.DetectionResult{}, "dev")
 	m.Screen = ScreenSync
-	m.SyncFn = func(_ *model.SyncOverrides) ([]string, error) {
+	m.SyncFn = func(_ *model.SyncOverrides) (SyncOutcome, error) {
 		called = true
-		return []string{"changed"}, nil
+		return SyncOutcome{Files: []string{"changed"}}, nil
 	}
 
 	updated, cmd := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
@@ -9340,5 +9340,46 @@ func TestGovernanceScreensNavigationAndActions(t *testing.T) {
 	state = updated.(Model)
 	if state.Screen != ScreenWelcome {
 		t.Fatalf("cursor 5 Enter: screen = %v, want ScreenWelcome", state.Screen)
+	}
+}
+
+// TestSyncDoneMsg_WarningsReachTheSyncScreen verifies the whole TUI path: the
+// warnings a SyncFn reports travel through SyncDoneMsg and are rendered on the
+// sync result screen, then cleared when the screen is reset.
+func TestSyncDoneMsg_WarningsReachTheSyncScreen(t *testing.T) {
+	orig := readProfilesFn
+	readProfilesFn = func(_ string) ([]model.Profile, error) { return nil, nil }
+	t.Cleanup(func() { readProfilesFn = orig })
+
+	const warning = "The retired file was kept; review it manually."
+	m := NewModel(system.DetectionResult{}, "dev")
+	m.Screen = ScreenSync
+	m.SyncFn = func(*model.SyncOverrides) (SyncOutcome, error) {
+		return SyncOutcome{Files: []string{"managed.md"}, Warnings: []string{warning}}, nil
+	}
+
+	updated, cmd := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	if cmd == nil {
+		t.Fatal("enter on ScreenSync returned no command")
+	}
+	syncMsg := findSyncDoneMsgInBatch(t, cmd)
+	if syncMsg == nil {
+		t.Fatal("expected SyncDoneMsg from the sync command")
+	}
+	if len(syncMsg.Warnings) != 1 || syncMsg.Warnings[0] != warning {
+		t.Fatalf("SyncDoneMsg.Warnings = %q, want [%q]", syncMsg.Warnings, warning)
+	}
+
+	done, _ := updated.(Model).Update(*syncMsg)
+	state := done.(Model)
+	if len(state.SyncWarnings) != 1 {
+		t.Fatalf("SyncWarnings = %q, want the reported warning", state.SyncWarnings)
+	}
+	if view := state.View(); !strings.Contains(view, warning) {
+		t.Fatalf("sync result view lacks the warning %q:\n%s", warning, view)
+	}
+
+	if reset := state.withResetSyncState(); len(reset.SyncWarnings) != 0 {
+		t.Fatalf("withResetSyncState left warnings behind: %q", reset.SyncWarnings)
 	}
 }

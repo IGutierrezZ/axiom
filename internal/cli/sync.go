@@ -649,6 +649,16 @@ func (r *syncRuntime) stagePlan() pipeline.StagePlan {
 	if telemetryDir := openCodeGlobalConfigDir(r.homeDir, r.workspaceDir, r.scope, r.agentIDs); telemetryDir != "" {
 		apply = append(apply, openCodeTelemetryRetirementStep{id: "sync:opencode:retire-telemetry-plugin", configDir: telemetryDir, state: r.state})
 	}
+	if legacy := legacyPromptAdapters(adapters); len(legacy) > 0 {
+		apply = append(apply, legacyPromptRetirementStep{
+			id:       "sync:retire-legacy-prompt-files",
+			state:    r.state,
+			adapters: legacy,
+			targetDir: func(adapter agents.Adapter) string {
+				return componentInjectionDirScoped(r.homeDir, r.workspaceDir, r.scope, adapter)
+			},
+		})
+	}
 
 	return pipeline.StagePlan{Prepare: prepare, Apply: apply}
 }
@@ -728,6 +738,10 @@ func syncBackupTargetsScoped(homeDir, workspaceDir string, scope InstallScope, s
 	// do not cover the same file would otherwise be rewritten without a
 	// snapshot and could never be rolled back (issue #1794).
 	for _, path := range routingGuidancePaths(homeDir, workspaceDir, scope, adapters) {
+		paths[path] = struct{}{}
+	}
+	// The legacy prompt retirement deletes files, so they need a snapshot too.
+	for _, path := range legacyPromptBackupPaths(homeDir, workspaceDir, scope, adapters) {
 		paths[path] = struct{}{}
 	}
 	for _, adapter := range adapters {
@@ -2189,6 +2203,34 @@ func hasManagedPiCodeGraphManifest(homeDir string) bool {
 	return json.Unmarshal(data, &manifest) == nil && filepath.IsAbs(manifest.MCPPath) && manifest.MCP != nil && manifest.MCP.AfterHash != ""
 }
 
+func skillIndexRefreshWarning(detail string) string {
+	return "skill index refresh: " + detail
+}
+
+// noteWarnings returns the manual-action notes (such as retired files that were
+// kept) followed by the warnings raised by post-sync verification.
+func (r SyncResult) noteWarnings() []string {
+	warnings := append([]string(nil), r.Execution.ManualActions...)
+	for _, check := range r.Verify.Checks {
+		if check.Status == verify.CheckStatusWarning {
+			warnings = append(warnings, check.Error)
+		}
+	}
+	return warnings
+}
+
+// Warnings lists every warning a completed sync raised, in the order the CLI
+// report prints them, without the "WARNING:" prefix. It is the single source of
+// truth shared by RenderSyncReport and the TUI, which shows them on its sync
+// result screen.
+func (r SyncResult) Warnings() []string {
+	var warnings []string
+	if !r.SkillRegistryRefreshed && r.SkillRegistryError != "" {
+		warnings = append(warnings, skillIndexRefreshWarning(r.SkillRegistryError))
+	}
+	return append(warnings, r.noteWarnings()...)
+}
+
 // RenderSyncReport renders a human-readable summary of a sync execution.
 //
 // Unlike verify.RenderReport (which shows verification check statuses), this
@@ -2201,13 +2243,8 @@ func hasManagedPiCodeGraphManifest(homeDir string) bool {
 func RenderSyncReport(result SyncResult) string {
 	var b strings.Builder
 	backgroundReport := func() {
-		for _, note := range result.Execution.ManualActions {
-			fmt.Fprintf(&b, "WARNING: %s\n", note)
-		}
-		for _, check := range result.Verify.Checks {
-			if check.Status == verify.CheckStatusWarning {
-				fmt.Fprintf(&b, "WARNING: %s\n", check.Error)
-			}
+		for _, warning := range result.noteWarnings() {
+			fmt.Fprintf(&b, "WARNING: %s\n", warning)
 		}
 		if containsAgent(result.Agents, model.AgentPi) && result.PiBackground.Intent != "" {
 			fmt.Fprintf(&b, "Pi background intent: %s (policy effective: %s)\n", result.PiBackground.Intent, result.PiBackground.Effective)
@@ -2283,7 +2320,7 @@ func RenderSyncReport(result SyncResult) string {
 	if result.SkillRegistryRefreshed {
 		fmt.Fprintf(&b, "Skills indexed: %d in AGENTS.md\n", result.SkillsIndexed)
 	} else if result.SkillRegistryError != "" {
-		fmt.Fprintf(&b, "WARNING: skill index refresh: %s\n", result.SkillRegistryError)
+		fmt.Fprintf(&b, "WARNING: %s\n", skillIndexRefreshWarning(result.SkillRegistryError))
 	}
 
 	if !result.Verify.Ready {
