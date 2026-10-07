@@ -850,7 +850,7 @@ type reviewNextTransitionInput struct {
 const reviewSubmissionValuePlaceholder = "{{value}}"
 
 func reviewCorrectionPlanSubmission(contract string, binding ReviewTransitionBinding, request reviewtransaction.CorrectionPlanRequest) *ReviewTransitionSubmission {
-	if contract != ReviewIntegrationContractV2 || binding.RepositoryContext == "" {
+	if !isReviewContractV2(contract) || binding.RepositoryContext == "" {
 		return nil
 	}
 	return &ReviewTransitionSubmission{
@@ -941,7 +941,7 @@ func reviewStartArguments(status ReviewTargetStatusResult, lineage string, runti
 	if runtime != "" {
 		arguments = append(arguments, ReviewTransitionArgument{Name: "agent", Value: string(runtime)})
 	}
-	if contract == ReviewIntegrationContractV2 {
+	if isReviewContractV2(contract) {
 		arguments = append(arguments, ReviewTransitionArgument{Name: "consent", Value: string(reviewConsentModeRelay)})
 	}
 	arguments = append(arguments, reviewStartIntendedUntrackedArguments(intended)...)

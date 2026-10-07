@@ -1630,7 +1630,7 @@ func validReviewAcknowledgementToken(value string) bool {
 }
 
 func validateReviewTransitionExecution(execution ReviewTransitionExecution, arguments map[string]string) error {
-	if execution.Command != reviewTransitionCommandLine(execution.Operation, execution.Arguments) {
+	if reviewCommandCanonicalTool(execution.Command) != reviewTransitionCommandLine(execution.Operation, execution.Arguments) {
 		return errors.New("execution transition command does not match its arguments") // refusal:by-design world-action: a producer must publish the exact command its executable arguments define
 	}
 	exact := func(required []string, selectors []ReviewTransitionArgument) bool {

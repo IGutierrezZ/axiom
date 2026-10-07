@@ -138,9 +138,3 @@ func MatchReviewDialect(identifier string, isLegacy bool) string {
 	}
 	return identifier
 }
-
-// IsReviewContractSupported comprueba rápidamente si un contrato es reconocido.
-func IsReviewContractSupported(contract string) bool {
-	_, _, err := ResolveReviewContract(contract)
-	return err == nil
-}

@@ -256,7 +256,7 @@ func newReviewIntegrationConsentResult(
 			Command: reviewConsentOffPathCommand,
 		},
 	}
-	if contract == ReviewIntegrationContractV2 {
+	if isReviewContractV2(contract) {
 		// Issue #2676: this literal used to be unconditional, so a negotiated
 		// START explicitly bound to another runtime (OpenCode, Codex) still
 		// reported "claude-code" here while its own follow-up invocations
@@ -294,7 +294,10 @@ func validateReviewConsentInvocations(result ReviewIntegrationConsentResult, fol
 
 func (result ReviewIntegrationConsentResult) Validate() error {
 	legacyContract := result.Schema == ReviewIntegrationConsentSchema && result.Contract == ReviewIntegrationContractV1
-	historicalNativeGitContract := result.Schema == ReviewIntegrationConsentSchemaV2 && result.Contract == ReviewIntegrationContractV2 && result.Agent == ""
+	// Either v2 dialect names the same lifecycle; a producer echoes its own
+	// tool, so the validator accepts the contract and the command tool of both.
+	nativeContract := result.Contract == ReviewIntegrationContractV2 || result.Contract == AxiomReviewIntegrationContractV2
+	historicalNativeGitContract := result.Schema == ReviewIntegrationConsentSchemaV2 && nativeContract && result.Agent == ""
 	// The v3 shape must name a runtime that can actually carry immutable
 	// receipt-review transport -- the exact same authority
 	// reviewRuntimeWithImmutableTransport gates negotiated START on (Wave 4
@@ -305,7 +308,7 @@ func (result ReviewIntegrationConsentResult) Validate() error {
 	// RDD policy but still dormant for this contract (e.g. Kilocode has no
 	// proven fresh-reviewer boundary yet), because none of those can ever
 	// legitimately reach this envelope.
-	currentNativeGitContract := result.Schema == ReviewIntegrationConsentSchemaV3 && result.Contract == ReviewIntegrationContractV2 &&
+	currentNativeGitContract := result.Schema == ReviewIntegrationConsentSchemaV3 && nativeContract &&
 		reviewImmutableRuntimeCapability(model.AgentID(result.Agent)).supportsImmutableReceiptReview()
 	if (!legacyContract && !historicalNativeGitContract && !currentNativeGitContract) ||
 		result.Operation != "review.start" || result.Action != reviewConsentActionRequired || !result.Blocking {
@@ -335,13 +338,13 @@ func (result ReviewIntegrationConsentResult) Validate() error {
 		return err
 	}
 	for _, choice := range result.Choices {
-		if !strings.HasPrefix(choice.Invocation, "gentle-ai review start ") ||
+		if !strings.HasPrefix(reviewCommandCanonicalTool(choice.Invocation), "gentle-ai review start ") ||
 			!strings.Contains(choice.Invocation, " --target "+result.TargetIdentity) ||
 			!strings.Contains(choice.Invocation, " --consent "+choice.Answer) {
 			return fmt.Errorf("consent choice %q does not name a runnable candidate-scoped invocation", choice.Answer) // refusal:by-design world-action: this envelope is built and validated by the same file; the exit is a code fix, not a command
 		}
 	}
-	if result.OffPath.Note == "" || result.OffPath.Command != reviewConsentOffPathCommand {
+	if result.OffPath.Note == "" || reviewCommandCanonicalTool(result.OffPath.Command) != reviewConsentOffPathCommand {
 		return errors.New("consent question must document the deliberate off path") // refusal:by-design world-action: this envelope is built and validated by the same file; the exit is a code fix, not a command
 	}
 	return nil

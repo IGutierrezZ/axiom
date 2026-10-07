@@ -832,7 +832,7 @@ func runReviewStatus(ctx context.Context, args []string, stdout io.Writer) error
 		// names: a read-only STATUS creates no authority, tier, budget, or
 		// collection state, so it has no state to fail closed over, and the
 		// documented route never declares an identity.
-		if *contract == ReviewIntegrationContractV2 && reviewRuntimeAgentCount(args) != 0 {
+		if isReviewContractV2(*contract) && reviewRuntimeAgentCount(args) != 0 {
 			if reviewRuntimeAgentCount(args) != 1 {
 				// refusal:by-design world-action: an ambiguous runtime identity cannot safely select a review transport
 				return reviewPreflightRefusal(reviewImmutableTransportUnsupportedReason, errors.New("negotiated lifecycle STATUS requires exactly one generated runtime identity"))
@@ -1278,7 +1278,7 @@ func runReviewStatus(ctx context.Context, args []string, stdout io.Writer) error
 								}
 							}
 						}
-						if artifactErr == nil && *contract == ReviewIntegrationContractV2 && (record.State.State == reviewtransaction.StateCorrectionRequired || record.State.State == reviewtransaction.StateValidating) {
+						if artifactErr == nil && isReviewContractV2(*contract) && (record.State.State == reviewtransaction.StateCorrectionRequired || record.State.State == reviewtransaction.StateValidating) {
 							contextTarget := record.State.CurrentSnapshot.Identity
 							if validationRequest != nil {
 								contextTarget = validationRequest.CorrectionTargetIdentity
@@ -1310,7 +1310,7 @@ func runReviewStatus(ctx context.Context, args []string, stdout io.Writer) error
 								repositoryContext, artifactErr = reviewtransaction.DeriveReviewRepositoryContextHandle(ctx, root, reviewtransaction.ReviewRepositoryContextBinding{
 									LineageID: record.State.LineageID, TargetIdentity: record.State.InitialSnapshot.Identity, Revision: record.State.CapturePhaseRevision,
 								})
-								if artifactErr == nil && *contract == ReviewIntegrationContractV2 {
+								if artifactErr == nil && isReviewContractV2(*contract) {
 									result.RepositoryContext = &ReviewRepositoryContextReference{
 										Capability: reviewtransaction.ReviewRepositoryContextCapability, Handle: repositoryContext,
 										Revision: record.State.CapturePhaseRevision, TargetIdentity: record.State.InitialSnapshot.Identity,
@@ -1448,10 +1448,10 @@ func runReviewStatus(ctx context.Context, args []string, stdout io.Writer) error
 			result.NextTransition = &transition
 		}
 		// v1 envelopes keep their pinned schema; only v2 projects the root action.
-		if *contract == ReviewIntegrationContractV2 {
+		if isReviewContractV2(*contract) {
 			result.Action = reviewRootActionForTransition(result.Action, result.NextTransition)
 		}
-		if *contract == ReviewIntegrationContractV2 && result.NextTransition != nil {
+		if isReviewContractV2(*contract) && result.NextTransition != nil {
 			// The forecast is structural only: it rides the v2 envelope's
 			// `forecast` field and is never narrated to stderr, because a
 			// successful negotiated operation must stay byte-silent there.
@@ -2277,7 +2277,7 @@ func runReviewFacadeStart(ctx context.Context, args []string, stdout io.Writer) 
 			action = "resumed"
 		}
 		legacyResult := reviewFacadeStartResultFor(action, len(record.State.SelectedLenses) > 0, record.State)
-		if started.Replayed && (!negotiated || *contract == ReviewIntegrationContractV2) {
+		if started.Replayed && (!negotiated || isReviewContractV2(*contract)) {
 			legacyResult.Action = "replayed"
 		}
 		legacyResult.RiskEvidence = reviewConsentRiskEvidence(assessment)
@@ -2299,7 +2299,7 @@ func runReviewFacadeStart(ctx context.Context, args []string, stdout io.Writer) 
 		// (issue #3894): the consumer runs this returned STATUS invocation
 		// verbatim instead of hand-assembling selectors the CLI would refuse.
 		var nextTransition *ReviewNextTransition
-		if *contract == ReviewIntegrationContractV2 {
+		if isReviewContractV2(*contract) {
 			nextTransition = reviewStartStatusContinuation(record.State, record.State.CapturePhaseRevision, model.AgentID(strings.TrimSpace(*runtimeAgent)), repositoryContextHandle)
 		}
 		negotiatedResult, err := newReviewIntegrationStartResult(legacyResult, assessment, snapshot.Kind, frozenContext, repositoryContext, nextTransition, *contract)
