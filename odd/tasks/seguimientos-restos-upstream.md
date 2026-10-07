@@ -160,6 +160,14 @@ Previsión total: ~1.500-1.900 líneas en 5 PRs más el de cierre.
   - **Tests:** `review_dialect_test.go`, que incluye la regresión de que `axiom.*` recibía el consent v1.
   - **Verificación:** 61 + 103 tests de `internal/cli` en verde por nombre exacto, salvo un caso de symlinks (entorno); ratchet limpio.
   - Etapa (b) en curso.
+- **2026-10-07, U5 commit (b):** `baf78944`. Acumulado: +794/−121 en 36 ficheros.
+  - **Tipo `reviewDialect`:** se deriva de `--contract` en cada invocación y se enhebra por las transiciones, START, capabilities y consent.
+  - **Validadores:** exigen coherencia estricta entre herramienta y contrato.
+  - **`capture-*` y `acknowledge-approved`:** emiten `axiom` por defecto, tal como decidió el usuario.
+  - **Herramientas:** `-dialect` en crosslane, caso axiom en bench y variante en e2e (solo `go vet`).
+  - **Guard:** un lineage gentle-ai y uno axiom producen bytes equivalentes salvo herramienta y contrato.
+  - **Verificación:** ~250 tests de `internal/cli` en verde por nombre exacto. Quedan sin ejecutar en local, por timeout, 48 tests de transporte OpenCode y de STATUS negociado, que no tocan el código modificado; los cubre el CI.
+  - Etapa (c), activación en los prompts, en curso con un writer nuevo.
 
 ## 9. Siguiente paso
 
