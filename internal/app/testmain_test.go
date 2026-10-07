@@ -2,7 +2,9 @@ package app
 
 import (
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/system"
@@ -42,6 +44,12 @@ func TestMain(m *testing.M) {
 	if err := os.Unsetenv(system.EnvStateDirAxiom); err != nil {
 		panic(err)
 	}
+	// Pin the Go toolchain's own locations before LOCALAPPDATA/APPDATA move into
+	// the sandbox: on Windows GOCACHE defaults under LOCALAPPDATA and GOENV (the
+	// `go env -w` settings) under APPDATA, so the tests that `go build
+	// ./cmd/axiom` would otherwise start from a cold build cache and lose the
+	// developer's proxy settings.
+	pinGoToolchainEnv("GOCACHE", "GOENV")
 	for key, value := range map[string]string{
 		"LOCALAPPDATA": filepath.Join(testHome, "AppData", "Local"),
 		"APPDATA":      filepath.Join(testHome, "AppData", "Roaming"),
@@ -54,4 +62,23 @@ func TestMain(m *testing.M) {
 	code := m.Run()
 	_ = os.RemoveAll(testHome)
 	os.Exit(code)
+}
+
+// pinGoToolchainEnv exports the value `go env` resolves for each unset key, so
+// later changes to the home-like variables it derives from do not move it. A
+// missing go binary leaves the key unset; the tests that need go fail on their
+// own with a clearer message.
+func pinGoToolchainEnv(keys ...string) {
+	for _, key := range keys {
+		if os.Getenv(key) != "" {
+			continue
+		}
+		output, err := exec.Command("go", "env", key).Output()
+		if err != nil {
+			continue
+		}
+		if value := strings.TrimSpace(string(output)); value != "" {
+			_ = os.Setenv(key, value)
+		}
+	}
 }

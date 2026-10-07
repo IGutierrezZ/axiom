@@ -247,7 +247,7 @@ func buildCandidateBinary(t *testing.T) string {
 		binaryName += ".exe"
 	}
 	binary := filepath.Join(t.TempDir(), binaryName)
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), candidateBuildBudget)
 	defer cancel()
 	command := exec.CommandContext(ctx, "go", "build", "-o", binary, "./cmd/axiom")
 	command.Dir = repositoryRoot(t)
