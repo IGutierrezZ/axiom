@@ -88,7 +88,7 @@ Verificado con dos exploraciones de solo lectura y comprobación directa del orq
 
 > Estado: `[ ]` pendiente · `[~]` en curso o con PR abierto · `[x]` fusionado. Estrategia de entrega: `single-pr` por tarea unificada, con `size:exception` aprobado. Ruta: delegada (un writer por tarea, en su worktree), porque todas tocan 2 o más ficheros no triviales. Orden: primero U2, para que los tests de las demás ya corran aislados.
 
-- [ ] **U2 · Aislamiento y fiabilidad de tests** (D1-D6). `LOCALAPPDATA`/`APPDATA` y `AXIOM_STATE_DIR` en los `TestMain` señalados; `AXIOM_NO_PERSISTENT_PATH` en `bench/runner.go`; espera por condición en `opencode_v2_plugins_test.go` e ignorar `.tmp`; entorno aislado y presupuesto en `cooldown_concurrency_test.go`; timeout y sandbox completo en `documented_invocation_test.go`; canonicalizar rutas en el test de `sddstatus`; `deadcode-ratchet.sh` con `GOOS=linux` y fallo explícito si `go run` falla. ~150-250 líneas. Riesgo previsto bajo-medio.
+- [~] **U2 · Aislamiento y fiabilidad de tests** (D1-D6): **PR #104** (`a73b831a` + `5f13c8e9`, rama `test/aislamiento-y-fiabilidad`, worktree `odd-seg-u2`; +282/−18; riesgo `high`; verificador PASS WITH NOTES). Ruta: delegada (writer Sonnet, 12 ficheros); las dos notas del verificador se corrigieron inline (2 ediciones mecánicas). Pendiente del CI. `LOCALAPPDATA`/`APPDATA` y `AXIOM_STATE_DIR` en los `TestMain` señalados; `AXIOM_NO_PERSISTENT_PATH` en `bench/runner.go`; espera por condición en `opencode_v2_plugins_test.go` e ignorar `.tmp`; entorno aislado y presupuesto en `cooldown_concurrency_test.go`; timeout y sandbox completo en `documented_invocation_test.go`; canonicalizar rutas en el test de `sddstatus`; `deadcode-ratchet.sh` con `GOOS=linux` y fallo explícito si `go run` falla. ~150-250 líneas. Riesgo previsto bajo-medio.
 - [ ] **U1 · Variables y canal `AXIOM_*` con respaldo `GENTLE_AI_*`** (B1 + B2 + A5a + A3). `update/check.go` con `system.Getenv`; `AXIOM_ENGRAM_SETUP_MODE/STRICT` y `AXIOM_SDD_STATUS_ENGRAM`; `install.sh` y `install.ps1` con el mismo orden (`AXIOM_CHANNEL` y respaldo); banner y textos de ayuda de `install.sh`; docs de variables. ~80-120 líneas. Riesgo previsto `high` por `install.sh` → verificador.
 - [ ] **U3 · Migración de instalaciones en `sync`** (C1 + C2 + A4a + A4b). 13 digests históricos; aviso de `sync` en la TUI; retirada de `gentle-ai.md` y `gentle-ai.instructions.md` de Kiro y VS Code solo si son de Axiom; Cursor pasa a `axiom.mdc` con migración del `gentle-ai.mdc` gestionado. ~300-400 líneas. Riesgo previsto medio-alto (borra ficheros del usuario) → verificador.
 - [ ] **U4 · Retirada de `cmd/gentle-ai` y restos de marca** (A1a + A1b + A2 + A5b). `registry.go` e `instructions.go` a `cmd/axiom`; Dockerfiles y `lib.sh` de e2e; shim de `bench/record.go`; guard de `ci.yml:212`; borrar `cmd/gentle-ai` y el build `gentle-ai-deprecated`; `releasepolicy` con un solo build; tests y spec `axiom-distribution-identity`; docs con nombres vigentes; `__managed_by: axiom/sdd` con goldens y hashes. ~300-400 líneas más goldens. Riesgo previsto `high` (release) → verificador.
@@ -110,7 +110,19 @@ Previsión total: ~1.500-1.900 líneas en 5 PRs más el de cierre.
 
 - **2026-10-07, apertura:** contexto recuperado (Engram #457, #522 y el documento del ODD anterior en `origin/main`); sin PRs abiertos ni worktrees previos. Worktree `odd-seg-docs` creado desde `741b731e`. Dos exploraciones de solo lectura (T7m y A-D) y comprobación directa de `cmd/gentle-ai/main.go`, `registry.go:32`, `check.go:182`, `install.sh:567`, Dockerfiles de e2e y `ci.yml:212`. Pendientes las tres decisiones de la sección 2.
 - **2026-10-07, decisiones:** T7m entra en este ODD; se unifican las tareas y se aprueba `size:exception` para U1-U5; `cmd/gentle-ai` se retira del todo; alcance mínimo de los contratos `gentle-ai.*`. La lista S1-S11 se reagrupa en U1-U5.
+- **2026-10-07, U2:** writer (~97 min) con estado *partial* y causas medidas:
+  - **D1/D2:** fijar `AXIOM_STATE_DIR` de forma global rompía 14 `TestSelfUpdate_*`, así que se elimina en lugar de fijarse.
+  - **D4b:** presupuestos de build y de actor demasiado ajustados.
+  - **D5:** el test era lento por los shims reales del PATH, no estaba colgado.
+  - **D6:** nombres 8.3 en `sddstatus`; `GOOS=windows` frente al baseline Linux en el ratchet.
+
+  `assess`: `high` (`deadcode-ratchet.sh`, test de `update`). Verificador independiente: **PASS WITH NOTES**. El orquestador corrigió sus dos notas en `5f13c8e9`:
+  - el presupuesto de build declarado no se usaba;
+  - `GOCACHE`/`GOENV` quedaban fríos al aislar `LOCALAPPDATA`/`APPDATA`.
+
+  Con eso, los tests de cooldown y `TestSelfUpdate|TestTUIExecuteWithBackground…` pasan en verde (22 s frente a 120 s). PR #104 abierto con `type:chore`, sin `size:exception` (300 líneas).
+  - **Pendiente sin veredicto local:** `internal/reviewtransaction` completo (supera el timeout en Windows); la limpieza de `bench` falla por un `opencode.exe` bloqueado (preexistente).
 
 ## 9. Siguiente paso
 
-Implementar U2 en el worktree `C:\repos\axiom-wt\odd-seg-u2`.
+Esperar el CI de #104 (el usuario avisa) e implementar U1 en `C:\repos\axiom-wt\odd-seg-u1`.
