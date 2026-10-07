@@ -210,7 +210,7 @@ jobs:
           # The retired gentle-ai entrypoint announced itself on stderr. The
           # canonical binary must never emit a retired/deprecated notice for the
           # old name, whatever its exact wording.
-          notice_re="gentle-ai.*(retirado|deprecado)|(retirado|deprecado).*gentle-ai"
+          notice_re="gentle-ai.*(retirad[oa]|deprecad[oa]|obsolet[oa]|deprecated|retired)|(retirad[oa]|deprecad[oa]|obsolet[oa]|deprecated|retired).*gentle-ai"
           dirty_before="$(git status --porcelain)"
 
           smoke() {
