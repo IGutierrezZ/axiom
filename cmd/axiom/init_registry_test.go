@@ -30,8 +30,13 @@ func TestInitMutatesSelfToolEntryFieldByField(t *testing.T) {
 	if selfTool.Repo != "axiom" {
 		t.Errorf("Repo = %q, want %q", selfTool.Repo, "axiom")
 	}
-	if selfTool.GoImportPath != "github.com/IGutierrezZ/axiom/cmd/axiom" {
-		t.Errorf("GoImportPath = %q, want %q", selfTool.GoImportPath, "github.com/IGutierrezZ/axiom/cmd/axiom")
+	if selfTool.GoImportPath != "github.com/IGutierrezZ/axiom/v3/cmd/axiom" {
+		t.Errorf("GoImportPath = %q, want %q", selfTool.GoImportPath, "github.com/IGutierrezZ/axiom/v3/cmd/axiom")
+	}
+	// The import path must live inside the declared module so the go install
+	// self-upgrade stays available.
+	if !selfTool.GoInstallResolvable() {
+		t.Errorf("GoInstallResolvable() = false for GoImportPath %q and GoModulePath %q", selfTool.GoImportPath, selfTool.GoModulePath)
 	}
 	if selfTool.DetectCmd != nil {
 		t.Errorf("DetectCmd = %v, want nil", selfTool.DetectCmd)

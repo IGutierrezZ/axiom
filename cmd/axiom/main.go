@@ -47,9 +47,11 @@ func init() {
 			update.Tools[i].DetectCmd = nil // version resolved from build-time (app.Version)
 			update.Tools[i].VersionPrefix = "v"
 			update.Tools[i].InstallMethod = update.InstallBinary
-			update.Tools[i].GoImportPath = "github.com/IGutierrezZ/axiom/cmd/axiom"
-			// GoModulePath is intentionally preserved: it is the declared module
-			// of the published source and is NOT rewritten by this rename (D-01).
+			// GoImportPath and GoModulePath are intentionally preserved: the
+			// registry already declares the module's real major-version path
+			// (.../v3/cmd/axiom). Rewriting it without /v3 made
+			// GoInstallResolvable false and silently disabled the go install
+			// self-upgrade (D-01).
 		}
 	}
 }
