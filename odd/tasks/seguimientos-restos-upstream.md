@@ -29,7 +29,7 @@ Cerrar los seguimientos que dejó el ODD anterior: defectos funcionales que sigu
 | `cmd/gentle-ai`: retirarlo o mantenerlo | **Retirarlo del todo** (2026-10-07): borrar `cmd/gentle-ai` y el build `gentle-ai-deprecated`, ajustar `releasepolicy`, sus tests y la spec de identidad de distribución, y corregir los usos indebidos (registry, e2e, bench, guard del CI) |
 | Alcance de los IDs de protocolo `gentle-ai.*/vN` (incluye `__managed_by` y variables `GENTLE_AI_ENGRAM_*`/`GENTLE_AI_SDD_STATUS_ENGRAM`) | **Mínimo** (2026-10-07): variables `AXIOM_ENGRAM_*` y `AXIOM_SDD_STATUS_ENGRAM` con respaldo `GENTLE_AI_*`; `__managed_by` escrito como `axiom/sdd`; T7m con eco del dialecto. Los ~156 IDs `gentle-ai.*/vN` sin gemelo se quedan como contrato *wire* documentado; los separadores de hash y los persistidos no se tocan |
 | T7m: activar el dialecto en los prompts | **En este PR** (2026-10-07): commit (c) cambia `review-ledger-contract.md` y demás assets a `axiom.review-integration/v2` |
-| T7m: herramienta por defecto en `capture-*` y `acknowledge-approved` (sin `--contract`) | **`axiom` por defecto** (2026-10-07); los schemas de transición ya admiten ambos |
+| T7m: herramienta por defecto en `capture-*` y `acknowledge-approved` (sin `--contract`) | ~~`axiom` por defecto~~ → **revisada (2026-10-07)**. El verificador demostró que rompía la reproducción exacta de la confirmación para los negociadores `gentle-ai` y les cambiaba el contrato tras `correction_required`. Decisión nueva: STATUS añade `--contract axiom.review-integration/v2` a los tokens de `capture-*` y `acknowledge-approved` solo para quien negoció `axiom`. Sin ese flag, `capture-*` emite `gentle-ai` como hasta ahora |
 
 ## 3. Convenciones (vigentes del ODD anterior, sección 3)
 
@@ -168,6 +168,15 @@ Previsión total: ~1.500-1.900 líneas en 5 PRs más el de cierre.
   - **Guard:** un lineage gentle-ai y uno axiom producen bytes equivalentes salvo herramienta y contrato.
   - **Verificación:** ~250 tests de `internal/cli` en verde por nombre exacto. Quedan sin ejecutar en local, por timeout, 48 tests de transporte OpenCode y de STATUS negociado, que no tocan el código modificado; los cubre el CI.
   - Etapa (c), activación en los prompts, en curso con un writer nuevo.
+- **2026-10-07, U5 commit (c):** `01639d2d` (+60/−18).
+  - `review-ledger-contract.md` y `.codex/AGENTS.md` pasan a negociar `axiom.review-integration/v2`.
+  - Se actualizan 6 goldens, con una línea cada uno.
+  - Los prompts de OpenCode preservados migran al reemplazarse la sección (test nuevo).
+  - El permiso del validador ya admitía ambos dialectos.
+- **Verificador de U5 (a+b+c): FAIL** por la excepción de `capture-*`.
+  - El resto de invariantes se cumplen: gentle-ai v2 idéntico en START, STATUS, consent y capabilities; v1 intacto; los hashes coinciden; los goldens solo cambian el token; no hay código muerto.
+  - Notas: el START sin contrato pasaba a `axiom`; el stop-hook sigue negociando `gentle-ai`; la doc exagera al decir que nunca se mezclan; el envelope de fallo de `capture-*` publica el contrato `gentle-ai`.
+  - El usuario elige `--contract` en los tokens. Commit (d) en curso.
 
 ## 9. Siguiente paso
 
