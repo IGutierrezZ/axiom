@@ -94,7 +94,7 @@ Verificado con dos exploraciones de solo lectura y comprobación directa del orq
 - [~] **U1 · Variables y canal `AXIOM_*` con respaldo `GENTLE_AI_*`** (B1 + B2 + A5a + A3): **PR #105** (`a30dd755`, rama `fix/variables-y-canal-axiom`, worktree `odd-seg-u1`; 15 ficheros, +210/−41; `type:bug`; riesgo `high`; verificador PASS WITH NOTES). Ruta: delegada (writer Sonnet), más un comentario obsoleto de `engram/download.go` corregido inline. Pendiente del CI. `update/check.go` con `system.Getenv`; `AXIOM_ENGRAM_SETUP_MODE/STRICT` y `AXIOM_SDD_STATUS_ENGRAM`; `install.sh` y `install.ps1` con el mismo orden (`AXIOM_CHANNEL` y respaldo); banner y textos de ayuda de `install.sh`; docs de variables. ~80-120 líneas. Riesgo previsto `high` por `install.sh` → verificador.
 - [~] **U3 · Migración de instalaciones en `sync`** (C1 + C2 + A4a + A4b): **PR #106** (`25d37652`, `7ab87ed3`, `66ba2ae4`, `cb274e89`; rama `fix/migracion-instalaciones-sync`, worktree `odd-seg-u3`; 41 ficheros, +1305/−151; `type:bug` + `size:exception`; riesgo `high`). Ruta: delegada (writer Sonnet). Verificador: FAIL → una corrección acotada → validador del arreglo PASS WITH NOTES. Pendiente del CI. 13 digests históricos; aviso de `sync` en la TUI; retirada de `gentle-ai.md` y `gentle-ai.instructions.md` de Kiro y VS Code solo si son de Axiom; Cursor pasa a `axiom.mdc` con migración del `gentle-ai.mdc` gestionado. ~300-400 líneas. Riesgo previsto medio-alto (borra ficheros del usuario) → verificador.
 - [~] **U4 · Retirada de `cmd/gentle-ai` y restos de marca** (A1a + A1b + A2 + A5b): **PR #107** (`42a8eb6c`, `614634fe`, `e1ff0e90`, `bfc3d344`, `8eb0a495`; rama `chore/retirar-cmd-gentle-ai`, worktree `odd-seg-u4`; 51 ficheros, +319/−333; `type:chore` + `size:exception`; riesgo `high`; verificador PASS WITH NOTES). Ruta: delegada (writer Sonnet); `bfc3d344` y `8eb0a495` inline (ediciones mecánicas). Pendiente del CI. `registry.go` e `instructions.go` a `cmd/axiom`; Dockerfiles y `lib.sh` de e2e; shim de `bench/record.go`; guard de `ci.yml:212`; borrar `cmd/gentle-ai` y el build `gentle-ai-deprecated`; `releasepolicy` con un solo build; tests y spec `axiom-distribution-identity`; docs con nombres vigentes; `__managed_by: axiom/sdd` con goldens y hashes. ~300-400 líneas más goldens. Riesgo previsto `high` (release) → verificador.
-- [ ] **U5 · T7m: dialecto `axiom` en los comandos del contrato de revisión.** Antes, un agente Plan de solo lectura fija el diseño (eco del dialecto, helper de contrato, schemas v2 ampliados en su sitio frente a versiones nuevas, v1 intacto). Dos commits de unidad de trabajo en un solo PR: (a) lectura dual, las 26 comparaciones, los validadores exactos y los schemas; (b) productores con dialecto, fixtures, docs, bench, e2e y crosslane. ~650-800 líneas. Riesgo `high` → verificador.
+- [~] **U5 · T7m: dialecto `axiom` en los comandos del contrato de revisión:** **PR #108**. Commits `107b725e`, `baf78944`, `01639d2d` y `796d4cd2`, en la rama `feat/dialecto-axiom-contrato-revision` (worktree `odd-seg-u5`); 67 ficheros, +1970/−286; `type:feature` + `size:exception`. Verificador: FAIL → decisión del usuario → validador del arreglo PASS WITH NOTES. Ruta: agente Plan más writers delegados por etapas. Pendiente del CI. Antes, un agente Plan de solo lectura fija el diseño (eco del dialecto, helper de contrato, schemas v2 ampliados en su sitio frente a versiones nuevas, v1 intacto). Dos commits de unidad de trabajo en un solo PR: (a) lectura dual, las 26 comparaciones, los validadores exactos y los schemas; (b) productores con dialecto, fixtures, docs, bench, e2e y crosslane. ~650-800 líneas. Riesgo `high` → verificador.
 - [ ] **Cierre:** PR con este documento.
 
 Previsión total: ~1.500-1.900 líneas en 5 PRs más el de cierre.
@@ -177,7 +177,32 @@ Previsión total: ~1.500-1.900 líneas en 5 PRs más el de cierre.
   - El resto de invariantes se cumplen: gentle-ai v2 idéntico en START, STATUS, consent y capabilities; v1 intacto; los hashes coinciden; los goldens solo cambian el token; no hay código muerto.
   - Notas: el START sin contrato pasaba a `axiom`; el stop-hook sigue negociando `gentle-ai`; la doc exagera al decir que nunca se mezclan; el envelope de fallo de `capture-*` publica el contrato `gentle-ai`.
   - El usuario elige `--contract` en los tokens. Commit (d) en curso.
+- **2026-10-07, U5 commit (d):** `796d4cd2`.
+  - Las capturas y `acknowledge-approved` aceptan un `--contract` opcional (solo v2), que STATUS y START les pasan solo a quien negoció `axiom`.
+  - El START sin contrato vuelve a `gentle-ai`.
+  - El stop-hook pasa a negociar `axiom`.
+  - Eco del dialecto también en el relé de OpenCode (añadido por el writer, necesario con los prompts en `axiom`).
+  - `transition-execution`, `status-v5` y `status-v9` se amplían en su sitio.
+- **Validador del arreglo: PASS WITH NOTES.** Comparó los binarios de `main` y de la rama recorriendo el ciclo completo por CLI:
+  - `gentle-ai` v2 y sin contrato: 0 diferencias.
+  - `axiom`: la confirmación coincide con la que reofrece STATUS y la continuación mantiene el contrato.
+  - Los 7 hashes coinciden.
+  - Ratchet del orquestador: limpio.
+  - Se abre el PR #108.
 
 ## 9. Siguiente paso
 
-Esperar el CI de #104-#107 (el usuario avisa). U5 (T7m) en curso en `C:\repos\axiom-wt\odd-seg-u5`, por etapas: commit (a), luego (b) y (c).
+Esperar el CI de #104-#108; el usuario avisa con «revisa si ya está verde y continúa».
+
+Orden de merge propuesto, con squash: #104 (U2) → #105 (U1) → #106 (U3) → #107 (U4) → #108 (U5). Después de cada merge, rebase de los siguientes si hay conflicto:
+- #107 con #104, en `bench/runner.go`;
+- #108 con #107, en `e2e/organicruntime`.
+
+Después, el PR de cierre con este documento (rama `docs/odd-seguimientos-restos-upstream`).
+
+Seguimientos para después del ODD:
+- la constante `version` de `cmd/axiom/main.go` en cada release;
+- `ContendedPersistenceRejectsReviewModeDisable` y `TestRejectedTargetedValidatorCaptureRoutesEscalatedRecovery`, intermitentes bajo carga;
+- los avisos del flujo de desinstalación con clean install en la TUI;
+- el heredado creado solo con SDD, que se conserva con aviso;
+- los comentarios de `deadcode-ratchet.sh:33,39` y `PRD.md:1188`.
