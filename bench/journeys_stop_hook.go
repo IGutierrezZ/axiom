@@ -52,8 +52,10 @@ func stopHookJourneys() []Journey {
 					if !strings.Contains(observation.Stdout, `"decision":"block"`) {
 						return fmt.Errorf("stdout missing %q: %s", `"decision":"block"`, observation.Stdout)
 					}
-					if !strings.Contains(observation.Stdout, "gentle-ai review start") {
-						return fmt.Errorf("stdout missing %q: %s", "gentle-ai review start", observation.Stdout)
+					// The stop hook negotiates the axiom dialect, so the CLI
+					// echoes the axiom START route back.
+					if !strings.Contains(observation.Stdout, "axiom review start") {
+						return fmt.Errorf("stdout missing %q: %s", "axiom review start", observation.Stdout)
 					}
 					return nil
 				},
