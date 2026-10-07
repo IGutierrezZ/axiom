@@ -86,7 +86,7 @@ The v2 lifecycle has two spellings and every command accepts both: the `gentle-a
 
 A caller is answered in the dialect it negotiated. Under `axiom.review-integration/v2`, every command the output publishes (`next_transition` execute and withdraw commands, consent invocations and the off-path command, the capabilities bootstrap) names the `axiom` tool, and the `contract` field of the consent question echoes `axiom.review-integration/v2`. Under `gentle-ai.review-integration/v2` and under v1 the output is byte-identical to what it was before the axiom dialect existed. A result never mixes the two tools: its validator refuses a command whose tool does not match its own contract.
 
-Only the tool and the v2 contract identifier change with the dialect. Schema identifiers, hash domain separators, and persisted identifiers keep their published `gentle-ai` spelling.
+Only the tool and the v2 contract identifier change with the dialect. Schema identifiers, hash domain separators, and persisted identifiers keep their published `gentle-ai` spelling. The shipped agent prompts (the review ledger contract every runtime embeds) negotiate `axiom.review-integration/v2`, so an agent following them receives and runs only `axiom review ...`; the `gentle-ai` spelling stays accepted for callers that negotiate it.
 
 One exception: `axiom review capture-result`, `capture-refuter`, `capture-validation`, `capture-correction-plan`, and `axiom review acknowledge-approved` carry no `--contract`, so there is nothing to echo. The continuations they publish (`status_continuation` and `acknowledgement`) name the `axiom` tool by default. The transition schemas admit both tools, so a consumer that reads either spelling is unaffected.
 
