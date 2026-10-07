@@ -411,7 +411,7 @@ Cada PR lleva riesgo `high` probable (borrado masivo y hooks), así que necesita
   - Mantener `DO_NOT_TRACK` en los `TestMain` hasta T6e.
   - El código de retirada debe reconocer los ID legacy (`gentle-ai.telemetry-*` y las marcas `// gentle-ai:managed telemetry-runtime/v1|v2`).
 
-### [~] T7 · Marca Gentle AI: **#90 a #101 fusionados**; queda #102 (T7l-b). T7m, aplazado fuera de este ODD
+### [x] T7 · Marca Gentle AI: **#90 a #102 fusionados**. T7m, aplazado fuera de este ODD
 
 **Decisiones del usuario (2026-10-06):**
 
@@ -704,8 +704,8 @@ En las preguntas abiertas se aplican las recomendaciones del plan:
 
 ## 8. Siguiente paso
 
-**Cierre (2026-10-07).** T1 a T7 hechas, salvo T7m, aplazada fuera de este ODD.
-- **Queda para cerrar:** fusionar #102 (T7l-b) y este PR de cierre. Después, borrar el worktree `odd-up-t7l` y las ramas de #102 y del documento.
+**Cierre (2026-10-07).** T1 a T7 hechas y fusionadas en `main`; T7m queda aplazada fuera de este ODD.
+- #102 (T7l-b) fusionado como `48689def`, con CI en verde. **Queda para cerrar:** fusionar este PR de cierre y borrar los worktrees `odd-up-t7l` y `odd-upstream-docs` con sus ramas.
 - **Comprobación final de `main`** (`de1d761f` + #102): build y vet limpios; `assets` y `cmd/...` en verde.
 - **Criterios de aceptación** (sección 6):
   - **Cumplidos:** la telemetría y sus envíos al upstream se han retirado, con una guarda contra la reaparición del endpoint. Ninguna skill propia dirige PRs ni issues al upstream, y la documentación tampoco. El hub y el PATH quedan aislados. `RefreshSkip` compara por identidad. `sync` retira las skills descatalogadas.
