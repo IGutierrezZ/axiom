@@ -11,7 +11,7 @@ func TestSDDAttemptRetiredOperationsDoNotAdvertiseRuntimeGovernance(t *testing.T
 		t.Run(operation, func(t *testing.T) {
 			var output bytes.Buffer
 			err := RunSDDAttempt([]string{operation, "--help"}, &output)
-			if err == nil || strings.Contains(output.String(), "Usage: gentle-ai sdd-attempt "+operation) {
+			if err == nil || strings.Contains(output.String(), "Usage: gentle-ai sdd-attempt "+operation) || strings.Contains(output.String(), "Usage: axiom sdd-attempt "+operation) {
 				t.Fatalf("retired operation remains available: %s, err=%v output=%s", operation, err, output.String())
 			}
 		})

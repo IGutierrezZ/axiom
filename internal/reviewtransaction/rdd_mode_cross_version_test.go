@@ -205,7 +205,7 @@ func TestCloneScopeWriteRefusesToClaimSuccessOnAPartialPublish(t *testing.T) {
 	if !errors.Is(err, ErrRDDModePartiallyApplied) || !errors.As(err, &reported) {
 		t.Fatalf("partial publish error = %v, want ErrRDDModePartiallyApplied", err)
 	}
-	if reported.Mode != RDDModeUnset || !strings.Contains(err.Error(), "gentle-ai review mode enable --scope clone") {
+	if reported.Mode != RDDModeUnset || !strings.Contains(err.Error(), "axiom review mode enable --scope clone") {
 		t.Fatalf("partial publish refusal names no rerun: %v", err)
 	}
 	// The decision is real for this build; reporting it as reached-nowhere

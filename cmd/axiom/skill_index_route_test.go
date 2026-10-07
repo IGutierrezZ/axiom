@@ -174,7 +174,7 @@ func TestSkillRegistryCompatErrorMessages(t *testing.T) {
 		{
 			name: "missing subcommand",
 			args: []string{"skill-registry"},
-			want: "usage: gentle-ai skill-registry <refresh|list> [flags]",
+			want: "usage: axiom skill-registry <refresh|list> [flags]",
 		},
 		{
 			name: "unknown subcommand",

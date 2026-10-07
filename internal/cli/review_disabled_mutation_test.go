@@ -167,7 +167,7 @@ func TestDisabledReviewMutationRefusalNamesARunnableContinuation(t *testing.T) {
 		t.Fatalf("capture-result was not refused:\n%s", output.String())
 	}
 	message := err.Error()
-	if !strings.Contains(message, "gentle-ai review mode enable --scope=clone") {
+	if !strings.Contains(message, "axiom review mode enable --scope=clone") {
 		t.Fatalf("mutation refusal names no runnable continuation: %s", message)
 	}
 	if !strings.Contains(message, "frozen") {
@@ -202,7 +202,7 @@ func TestDisabledReviewCaptureResultEmitsTheTypedFailure(t *testing.T) {
 	if failure.MutationOutcome != ReviewMutationNotStarted {
 		t.Fatalf("capture-result failure claimed mutation outcome %q", failure.MutationOutcome)
 	}
-	if !strings.Contains(failure.Cause, "gentle-ai review mode enable --scope=clone") {
+	if !strings.Contains(failure.Cause, "axiom review mode enable --scope=clone") {
 		t.Fatalf("capture-result failure carries no runnable continuation: %#v", failure)
 	}
 	if err := failure.Validate(); err != nil {

@@ -1087,7 +1087,7 @@ func repairAuthorityDispositionAtRepo(ctx context.Context, repo, planDigest, inv
 		// refusal now lives in without carrying that continuation text
 		// forward, so cycle-1's CRITICAL-2 fix (which restored the CAUSE
 		// reaching the operator) still left it silent about what to do next.
-		return CompactReclaimRecord{}, fmt.Errorf("%w: submitted plan_digest/inventory_revision does not match the current provider-derived plan; run `gentle-ai review repair --preflight` again for the current values", ErrConcurrentUpdate)
+		return CompactReclaimRecord{}, fmt.Errorf("%w: submitted plan_digest/inventory_revision does not match the current provider-derived plan; run `axiom review repair --preflight` again for the current values", ErrConcurrentUpdate)
 	}
 	plan.Authorization = authorization
 	return executeAuthorityDisposition(ctx, repo, plan)

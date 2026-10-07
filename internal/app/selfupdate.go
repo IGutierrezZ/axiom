@@ -227,7 +227,7 @@ func restartAfterGentleAIUpgrade(latestVersion string, stdout io.Writer) error {
 	// PendingSync=true and completing the deferred sync. This sidesteps the
 	// Windows binary-lock issue and gives a consistent single path across all OSes.
 	// Tradeoff: Unix loses seamless re-exec restart; mitigated by clear copy below.
-	_, _ = fmt.Fprintf(stdout, "Updated to v%s — restart gentle-ai to continue.\n", latestVersion)
+	_, _ = fmt.Fprintf(stdout, "Updated to v%s — restart axiom to continue.\n", latestVersion)
 	return nil
 }
 
@@ -242,5 +242,5 @@ func restartAfterGentleAIUpgrade(latestVersion string, stdout io.Writer) error {
 //     (covers the TUI self-update path, where the new binary was not yet running
 //     when the upgrade completed).
 func printPostUpgradeDoctorAdvisory(stdout io.Writer) {
-	_, _ = fmt.Fprintf(stdout, "\n[info]    Run 'gentle-ai doctor' to verify ecosystem health after upgrade\n")
+	_, _ = fmt.Fprintf(stdout, "\n[info]    Run 'axiom doctor' to verify ecosystem health after upgrade\n")
 }

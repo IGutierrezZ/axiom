@@ -511,7 +511,7 @@ func TestRunArgsReviewSubcommandHelpExitsSuccessfully(t *testing.T) {
 			if err := RunArgs([]string{command, "--help"}, &output); err != nil {
 				t.Fatalf("RunArgs(%s --help) error = %v", command, err)
 			}
-			if !strings.Contains(output.String(), "Usage: gentle-ai "+command+" [flags]") {
+			if !strings.Contains(output.String(), "Usage: axiom "+command+" [flags]") {
 				t.Fatalf("RunArgs(%s --help) output:\n%s", command, output.String())
 			}
 		})
@@ -2345,7 +2345,7 @@ func TestRunArgs_TUIRestartsAfterGentleAIUpgradeResult(t *testing.T) {
 		t.Fatalf("RunArgs(TUI) error = %v", err)
 	}
 	// After task 4.6: restart message is printed, no re-exec occurs.
-	if !strings.Contains(buf.String(), "restart gentle-ai") {
+	if !strings.Contains(buf.String(), "restart axiom") {
 		t.Fatalf("output missing restart notice:\n%s", buf.String())
 	}
 }
@@ -2654,7 +2654,7 @@ func TestRunArgs_PendingSync_PrintsDoctorAdvisory(t *testing.T) {
 	}
 
 	out := buf.String()
-	if !strings.Contains(out, "Run 'gentle-ai doctor' to verify ecosystem health after upgrade") {
+	if !strings.Contains(out, "Run 'axiom doctor' to verify ecosystem health after upgrade") {
 		t.Errorf("stdout = %q, want doctor advisory when PendingSync=true on launch", out)
 	}
 }
@@ -2708,7 +2708,7 @@ func TestRunArgs_PendingSync_PrintsDoctorAdvisoryEvenOnSyncFailure(t *testing.T)
 	}
 
 	out := buf.String()
-	if !strings.Contains(out, "Run 'gentle-ai doctor' to verify ecosystem health after upgrade") {
+	if !strings.Contains(out, "Run 'axiom doctor' to verify ecosystem health after upgrade") {
 		t.Errorf("stdout = %q, want doctor advisory even when deferred sync fails", out)
 	}
 }

@@ -770,7 +770,7 @@ func TestInjectKimiYAMLSubagentsOmitCodeGraphGuidanceByDefault(t *testing.T) {
 			t.Fatalf("ReadFile(%q) error = %v", path, err)
 		}
 		text := string(content)
-		if strings.Contains(text, "  instructions: |-") || strings.Contains(text, "gentle-ai codegraph init --cwd <project-root>") {
+		if strings.Contains(text, "  instructions: |-") || strings.Contains(text, "gentle-ai codegraph init --cwd <project-root>") || strings.Contains(text, "axiom codegraph init --cwd <project-root>") {
 			t.Fatalf("%s YAML unexpectedly contains CodeGraph guidance by default", fileName)
 		}
 	}
@@ -795,7 +795,7 @@ func TestInjectKimiYAMLSubagentsRemainControlFilesWhenCodeGraphEnabled(t *testin
 				t.Fatalf("%s YAML missing %q:\n%s", fileName, want, text)
 			}
 		}
-		for _, forbidden := range []string{"  instructions: |-", "<!-- gentle-ai:codegraph-guidance -->", "<!-- axiom:codegraph-guidance -->", "gentle-ai codegraph init --cwd <project-root>"} {
+		for _, forbidden := range []string{"  instructions: |-", "<!-- gentle-ai:codegraph-guidance -->", "<!-- axiom:codegraph-guidance -->", "gentle-ai codegraph init --cwd <project-root>", "axiom codegraph init --cwd <project-root>"} {
 			if strings.Contains(text, forbidden) {
 				t.Fatalf("%s YAML unexpectedly contains %q:\n%s", fileName, forbidden, text)
 			}
@@ -864,7 +864,7 @@ func TestInjectOpenCodeMultiModeIdempotentWithPromptFiles(t *testing.T) {
 
 func containsCodeGraphGuidance(text string) bool {
 	hasMarker := strings.Contains(text, "<!-- axiom:codegraph-guidance -->") || strings.Contains(text, "<!-- gentle-ai:codegraph-guidance -->")
-	return hasMarker && strings.Contains(text, "gentle-ai codegraph init --cwd <project-root>")
+	return hasMarker && (strings.Contains(text, "axiom codegraph init --cwd <project-root>") || strings.Contains(text, "gentle-ai codegraph init --cwd <project-root>"))
 }
 
 func countCodeGraphGuidance(text string) int {

@@ -2183,7 +2183,7 @@ func TestCodeGraphGuidanceSyncStepRefreshesOldMarkerWhenConfigured(t *testing.T)
 	if strings.Contains(text, "stale CodeGraph lifecycle guidance") {
 		t.Fatalf("stale guidance was not refreshed:\n%s", text)
 	}
-	if !strings.Contains(text, "immediately run `gentle-ai codegraph init --cwd <project-root>`") || !strings.Contains(text, "custom notes") {
+	if !strings.Contains(text, "immediately run `axiom codegraph init --cwd <project-root>`") || !strings.Contains(text, "custom notes") {
 		t.Fatalf("latest guidance/user content missing after sync refresh:\n%s", text)
 	}
 	if !reflect.DeepEqual(changed, []string{settingsPath, agentsPath}) {
@@ -2508,7 +2508,7 @@ func TestCodeGraphGuidanceSyncStepRemovesLegacySkipBlockWhenConfigured(t *testin
 			t.Fatalf("legacy CodeGraph guidance %q was not removed during sync:\n%s", stale, text)
 		}
 	}
-	if !strings.Contains(text, "immediately run `gentle-ai codegraph init --cwd <project-root>`") || !strings.Contains(text, "custom notes") {
+	if !strings.Contains(text, "immediately run `axiom codegraph init --cwd <project-root>`") || !strings.Contains(text, "custom notes") {
 		t.Fatalf("latest guidance/user content missing after sync cleanup:\n%s", text)
 	}
 	if !reflect.DeepEqual(changed, []string{settingsPath, agentsPath}) {
@@ -2552,7 +2552,7 @@ func TestCodeGraphGuidanceSyncStepRepairsCodexConfigOnlyGuidance(t *testing.T) {
 	if !strings.Contains(text, "<!-- axiom:codegraph-guidance -->") && !strings.Contains(text, "<!-- gentle-ai:codegraph-guidance -->") {
 		t.Fatalf("Codex AGENTS.md missing managed CodeGraph guidance marker:\n%s", text)
 	}
-	if !strings.Contains(text, "immediately run `gentle-ai codegraph init --cwd <project-root>`") {
+	if !strings.Contains(text, "immediately run `axiom codegraph init --cwd <project-root>`") {
 		t.Fatalf("Codex AGENTS.md missing managed CodeGraph guidance instruction:\n%s", text)
 	}
 	if !reflect.DeepEqual(changed, []string{agentsPath}) {

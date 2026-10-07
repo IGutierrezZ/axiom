@@ -108,7 +108,7 @@ func engramHint(profile system.PlatformProfile) string {
 	if profile.PackageManager == "brew" && homebrewPackageInstalled("engram") {
 		return "brew upgrade engram"
 	}
-	return "gentle-ai upgrade (downloads pre-built binary)"
+	return "axiom upgrade (downloads pre-built binary)"
 }
 
 func ggaHint(profile system.PlatformProfile) string {

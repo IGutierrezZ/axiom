@@ -73,7 +73,7 @@ const targetedValidatorPromptInstruction = "You are the read-only targeted fix v
 	"immutable metadata summary marked `\"generated\": true` and `\"content_omitted\": true`. Its content hunks are " +
 	"not in this input, so the summary alone never verifies a claim about what those hunks say. " +
 	"When you can run commands, read those same immutable trees yourself with " +
-	"`gentle-ai review inspect-candidate --purpose targeted-validation " +
+	"`axiom review inspect-candidate --purpose targeted-validation " +
 	"--lineage <validation_request.lineage_id> " +
 	"--expected-revision <validation_request.expected_revision> " +
 	"--target <validation_request.correction_target_identity> " +

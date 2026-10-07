@@ -293,7 +293,7 @@ func (err *StoreResetInFlightError) Error() string {
 		names = append(names, fmt.Sprintf("%s (%s)", lineage.LineageID, lineage.State))
 	}
 	return fmt.Sprintf(
-		"review store reset refused: %d review(s) have not reached a terminal state: %s; finish or abandon them, or run `gentle-ai review store-reset --cwd %s --confirm --include-in-flight` to remove them anyway",
+		"review store reset refused: %d review(s) have not reached a terminal state: %s; finish or abandon them, or run `axiom review store-reset --cwd %s --confirm --include-in-flight` to remove them anyway",
 		len(err.Lineages), strings.Join(names, ", "), err.Repository,
 	)
 }

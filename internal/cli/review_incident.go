@@ -178,8 +178,8 @@ const (
 	// resolve it, and the PATH shape, because a bare-name spawn from an
 	// editor plugin is how the stale binary gets invoked: the caller
 	// installed the newer build but an older one answers first.
-	reviewAuthorityNewerReleaseAction = "upgrade this gentle-ai, or invoke the newer build directly; " +
-		"an editor plugin resolves gentle-ai from PATH, so run `which -a gentle-ai` and make the newer build the one it finds first"
+	reviewAuthorityNewerReleaseAction = "upgrade this axiom, or invoke the newer build directly; " +
+		"an editor plugin resolves axiom from PATH, so run `which -a axiom` and make the newer build the one it finds first"
 )
 
 // reviewGitOwnershipRefusal reports whether err was caused by Git refusing a

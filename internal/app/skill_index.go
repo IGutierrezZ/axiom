@@ -52,7 +52,7 @@ var (
 	// branding, out of scope).
 	skillIndexSurfaceLegacy = skillIndexSurface{
 		label: "skill-registry",
-		usage: "usage: gentle-ai skill-registry <refresh|list> [flags]",
+		usage: "usage: axiom skill-registry <refresh|list> [flags]",
 	}
 )
 

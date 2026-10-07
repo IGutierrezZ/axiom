@@ -1230,19 +1230,19 @@ func TestUpdateHint(t *testing.T) {
 			name:    "engram macOS non-brew",
 			tool:    ToolInfo{Name: "engram"},
 			profile: system.PlatformProfile{OS: "darwin", PackageManager: "brew"},
-			want:    "gentle-ai upgrade (downloads pre-built binary)",
+			want:    "axiom upgrade (downloads pre-built binary)",
 		},
 		{
 			name:    "engram linux",
 			tool:    ToolInfo{Name: "engram"},
 			profile: system.PlatformProfile{OS: "linux", PackageManager: "apt"},
-			want:    "gentle-ai upgrade (downloads pre-built binary)",
+			want:    "axiom upgrade (downloads pre-built binary)",
 		},
 		{
 			name:    "engram windows",
 			tool:    ToolInfo{Name: "engram"},
 			profile: system.PlatformProfile{OS: "windows", PackageManager: "winget"},
-			want:    "gentle-ai upgrade (downloads pre-built binary)",
+			want:    "axiom upgrade (downloads pre-built binary)",
 		},
 		{
 			name:          "gga macOS brew-owned",
