@@ -198,9 +198,9 @@ const reviewUndeclaredRuntimeIdentitySlot = "<your-runtime-identity>"
 // includes it for every v2 contract. Without it here, a caller that copies
 // this named continuation and runs it without a TTY silently mints a
 // medium/high-risk review lineage with no consent envelope.
-func reviewNegotiatedStartCommand(snapshot reviewtransaction.Snapshot, runtimeAgent string) string {
+func reviewNegotiatedStartCommand(dialect reviewDialect, snapshot reviewtransaction.Snapshot, runtimeAgent string) string {
 	identity := strings.TrimSpace(runtimeAgent)
-	command := fmt.Sprintf("gentle-ai review start --contract %s", ReviewIntegrationContractV2)
+	command := fmt.Sprintf("%s--contract %s", dialect.commandPrefix("start"), dialect.ContractV2())
 	if identity != "" {
 		command += " --agent " + identity
 	}
@@ -2024,6 +2024,12 @@ func runReviewFacadeStart(ctx context.Context, args []string, stdout io.Writer) 
 	if err != nil {
 		return err
 	}
+	// A negotiated START echoes the dialect it negotiated; the direct route
+	// negotiated nothing, so it falls back to the no-contract default.
+	dialect := reviewNoContractDialect
+	if negotiated {
+		dialect = reviewDialectForContract(*contract)
+	}
 	runtimeRequested := reviewRuntimeAgentCount(args) > 0
 	// Wave 4 S4 (design.md decision 5): transport capability admission is
 	// the broadest precondition — "can this runtime participate in review
@@ -2158,7 +2164,7 @@ func runReviewFacadeStart(ctx context.Context, args []string, stdout io.Writer) 
 	if !negotiated && target.Kind != reviewtransaction.TargetCurrentChanges && len(lenses) > 0 {
 		return reviewPreflightRefusal(reviewPreflightDirectRouteUncompletableReason,
 			fmt.Errorf("review start without --contract cannot produce a completable review because its %d selected lens(es) require repository_context, which only the negotiated contract form publishes; rerun with `axiom review start %s` instead",
-				len(lenses), strings.TrimPrefix(reviewNegotiatedStartCommand(snapshot, *runtimeAgent), "gentle-ai review start ")))
+				len(lenses), strings.TrimPrefix(reviewNegotiatedStartCommand(dialect, snapshot, *runtimeAgent), dialect.commandPrefix("start"))))
 	}
 	// The candidate is frozen and the tier is classified, so this is the one
 	// point where the kill switch can stop a start and consent can name the real
@@ -2173,7 +2179,7 @@ func runReviewFacadeStart(ctx context.Context, args []string, stdout io.Writer) 
 			question, questionErr := newReviewIntegrationConsentResult(snapshot, assessment,
 				reviewConsentFollowUpBase(*cwd, snapshot.Identity, formatReviewTargetEvidence(snapshot), selectedProjection, strings.TrimSpace(*lineage),
 					strings.TrimSpace(*baseRef), strings.TrimSpace(*policySource), strings.TrimSpace(*focus),
-					strings.TrimSpace(*tracePath), *committedOnly, *workspaceOverlay, *contract, *runtimeAgent, strings.TrimSpace(*locale), intendedScope), *contract, *runtimeAgent, consentLocale)
+					strings.TrimSpace(*tracePath), *committedOnly, *workspaceOverlay, dialect, *contract, *runtimeAgent, strings.TrimSpace(*locale), intendedScope), *contract, *runtimeAgent, consentLocale)
 			if questionErr != nil {
 				return questionErr
 			}
@@ -2260,7 +2266,7 @@ func runReviewFacadeStart(ctx context.Context, args []string, stdout io.Writer) 
 				return fmt.Errorf("commit zero-lens review acknowledgement: %w", err)
 			}
 			legacyResult := reviewFacadeStartResultFor("closed", false, state)
-			legacyResult.Acknowledgement = reviewApprovedAcknowledgementTransition(root, acknowledgement)
+			legacyResult.Acknowledgement = reviewApprovedAcknowledgementTransition(dialect, root, acknowledgement)
 			legacyResult.RiskEvidence = reviewConsentRiskEvidence(assessment)
 			legacyResult.Trace = reviewTraceOutcomeResult(store.TracePath, acknowledgement.TraceOutcome)
 			if !negotiated {
@@ -2300,7 +2306,7 @@ func runReviewFacadeStart(ctx context.Context, args []string, stdout io.Writer) 
 		// verbatim instead of hand-assembling selectors the CLI would refuse.
 		var nextTransition *ReviewNextTransition
 		if isReviewContractV2(*contract) {
-			nextTransition = reviewStartStatusContinuation(record.State, record.State.CapturePhaseRevision, model.AgentID(strings.TrimSpace(*runtimeAgent)), repositoryContextHandle)
+			nextTransition = reviewStartStatusContinuation(dialect, record.State, record.State.CapturePhaseRevision, model.AgentID(strings.TrimSpace(*runtimeAgent)), repositoryContextHandle)
 		}
 		negotiatedResult, err := newReviewIntegrationStartResult(legacyResult, assessment, snapshot.Kind, frozenContext, repositoryContext, nextTransition, *contract)
 		if err != nil {
@@ -2491,11 +2497,12 @@ func reviewConsentFollowUpBase(
 	projection reviewtransaction.Projection,
 	lineage, baseRef, policy, focus, trace string,
 	committedOnly, workspaceOverlay bool,
+	dialect reviewDialect,
 	contract, runtimeAgent string,
 	locale string, intendedScope reviewIntendedUntrackedScope,
 ) string {
 	parts := []string{
-		"gentle-ai review start",
+		dialect.Tool() + " review start",
 		"--contract " + contract,
 		"--cwd " + reviewTransitionShellWord(cwd),
 		"--target " + target,

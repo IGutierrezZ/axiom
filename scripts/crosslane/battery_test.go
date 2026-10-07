@@ -199,3 +199,23 @@ func TestHostShimPathResolvesAxiomAndGentleAI(t *testing.T) {
 		}
 	}
 }
+
+func TestDialectContractResolvesEveryDialect(t *testing.T) {
+	for _, tt := range []struct{ dialect, want string }{
+		{"gentle-ai", "gentle-ai.review-integration/v2"},
+		{"axiom", "axiom.review-integration/v2"},
+	} {
+		got, err := dialectContract(tt.dialect)
+		if err != nil || got != tt.want {
+			t.Errorf("dialectContract(%q) = %q, %v; want %q", tt.dialect, got, err, tt.want)
+		}
+	}
+	for _, bad := range []string{"", "Axiom", "gentle", "axiom.review-integration/v2"} {
+		if got, err := dialectContract(bad); err == nil {
+			t.Errorf("dialectContract(%q) = %q, want an error", bad, got)
+		}
+	}
+	if reviewContract != gentleReviewContract {
+		t.Errorf("default reviewContract = %q, want the gentle-ai dialect so an unflagged run is unchanged", reviewContract)
+	}
+}

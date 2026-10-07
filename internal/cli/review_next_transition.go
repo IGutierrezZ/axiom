@@ -259,7 +259,7 @@ func resolveReviewNextTransition(status ReviewTargetStatusResult, selectedLenses
 			if provenance := checkManagedReviewerAssets(); provenance.stale() {
 				return reviewManagedAssetsStopTransition(input.RuntimeAgent, provenance.staleAssetIdentities())
 			}
-			return reviewExecuteTransition("fresh_target_ready", "review.start", reviewStartArguments(status, input.StartLineage, input.RuntimeAgent, input.IntendedUntracked), []ReviewTransitionArgument{{Name: "target_identity", Value: status.TargetIdentity}}, ReviewTransitionBinding{LineageID: input.StartLineage, TargetIdentity: status.TargetIdentity}, nil)
+			return reviewExecuteTransition(reviewDialectForContract(status.Contract), "fresh_target_ready", "review.start", reviewStartArguments(status, input.StartLineage, input.RuntimeAgent, input.IntendedUntracked), []ReviewTransitionArgument{{Name: "target_identity", Value: status.TargetIdentity}}, ReviewTransitionBinding{LineageID: input.StartLineage, TargetIdentity: status.TargetIdentity}, nil)
 		case reviewtransaction.TargetApplicabilityAmbiguous:
 			return reviewCollectTransition("lineage_selection_required", ReviewTransitionInput{
 				Name: "lineage_selection", Schema: "gentle-ai.review-lineage-selection/v1", CaptureOperation: "external.select_lineage",
@@ -308,7 +308,7 @@ func resolveReviewNextTransition(status ReviewTargetStatusResult, selectedLenses
 		if acknowledgement.LineageID != binding.LineageID || acknowledgement.TargetIdentity != binding.TargetIdentity || acknowledgement.ExpectedRevision != binding.Revision {
 			return reviewStopTransition("corrupted_or_unverifiable_authority")
 		}
-		return ReviewNextTransition{Kind: reviewNextTransitionExecute, ReasonCode: "approved_acknowledgement_required", Execute: reviewApprovedAcknowledgementTransition(status.repositoryRoot, acknowledgement)}
+		return ReviewNextTransition{Kind: reviewNextTransitionExecute, ReasonCode: "approved_acknowledgement_required", Execute: reviewApprovedAcknowledgementTransition(reviewDialectForContract(status.Contract), status.repositoryRoot, acknowledgement)}
 	}
 	// The correction-stage gate follows the captured_artifacts_unverifiable
 	// precedent below, which already extends past reviewing with
@@ -346,7 +346,7 @@ func resolveReviewNextTransition(status ReviewTargetStatusResult, selectedLenses
 			return reviewStopTransition("captured_artifacts_unverifiable")
 		}
 		if len(artifacts) != len(selectedLenses) {
-			return reviewMissingCaptureTransition(captureBinding, selectedLenses, artifacts, input.CaptureContext, input.UnachievableLensAttempts, input.RuntimeAgent)
+			return reviewMissingCaptureTransition(reviewDialectForContract(status.Contract), captureBinding, selectedLenses, artifacts, input.CaptureContext, input.UnachievableLensAttempts, input.RuntimeAgent)
 		}
 		if input.ProviderRole == reviewerprovider.RoleRefuter {
 			return reviewProviderRoleTransition("provider_refuter_required", captureBinding, input.ProviderRole, input.RuntimeAgent, nil)
@@ -594,7 +594,7 @@ func reviewRootActionForTransition(action reviewtransaction.TargetStatusAction, 
 	}
 }
 
-func reviewMissingCaptureTransition(binding ReviewTransitionBinding, selectedLenses []string, artifacts []ReviewTransitionArtifact, context *reviewCaptureContext, unachievable []reviewtransaction.CompactUnachievableLensAttempt, runtime ...model.AgentID) ReviewNextTransition {
+func reviewMissingCaptureTransition(dialect reviewDialect, binding ReviewTransitionBinding, selectedLenses []string, artifacts []ReviewTransitionArtifact, context *reviewCaptureContext, unachievable []reviewtransaction.CompactUnachievableLensAttempt, runtime ...model.AgentID) ReviewNextTransition {
 	providerRuntime := model.AgentID("")
 	if len(runtime) > 0 && (runtime[0] == model.AgentOpenCode || reviewProviderCaptureRuntime(runtime[0]) || reviewProviderHostRelayMaterializeRuntime(runtime[0])) {
 		providerRuntime = runtime[0]
@@ -615,7 +615,7 @@ func reviewMissingCaptureTransition(binding ReviewTransitionBinding, selectedLen
 	var unachievableSlots []ReviewUnachievableLensSlot
 	for _, attempt := range unachievable {
 		if attempt.SelectedOrder >= 0 && attempt.SelectedOrder < len(selectedLenses) && !captured[attempt.SelectedOrder] {
-			unachievableSlots = append(unachievableSlots, reviewUnachievableLensSlotEntry(binding, attempt))
+			unachievableSlots = append(unachievableSlots, reviewUnachievableLensSlotEntry(dialect, binding, attempt))
 		}
 	}
 	if len(unachievableSlots) > 0 {
@@ -687,7 +687,7 @@ func reviewCaptureResultCommandName() string {
 // SubjectHash the declaration recorded and `--withdraw=true`. Reusing
 // reviewBindingArguments here is what guarantees this command can never drift
 // from the one `review capture-unachievable` (declaring form) itself accepts.
-func reviewUnachievableLensSlotEntry(binding ReviewTransitionBinding, attempt reviewtransaction.CompactUnachievableLensAttempt) ReviewUnachievableLensSlot {
+func reviewUnachievableLensSlotEntry(dialect reviewDialect, binding ReviewTransitionBinding, attempt reviewtransaction.CompactUnachievableLensAttempt) ReviewUnachievableLensSlot {
 	arguments := reviewBindingArguments(binding)
 	if binding.RepositoryContext != "" {
 		arguments = append(arguments, reviewRepositoryContextArguments(binding)...)
@@ -702,7 +702,7 @@ func reviewUnachievableLensSlotEntry(binding ReviewTransitionBinding, attempt re
 		Reason: attempt.Reason, Detail: attempt.Detail,
 		Withdraw: ReviewUnachievableLensWithdraw{
 			Operation: reviewCaptureUnachievableCaptureOperation,
-			Command:   reviewTransitionCommandLine(reviewCaptureUnachievableCaptureOperation, tokenized),
+			Command:   reviewTransitionCommandLine(dialect, reviewCaptureUnachievableCaptureOperation, tokenized),
 			Arguments: tokenized, Binding: binding,
 		},
 	}
@@ -959,9 +959,9 @@ func reviewStartArguments(status ReviewTargetStatusResult, lineage string, runti
 // It does carry the opaque repository context START published (issue #3932),
 // so a process cwd that does not hold this lineage fails closed instead of
 // silently preflighting a fresh target in whatever repository it found.
-func reviewStartStatusContinuation(state reviewtransaction.CompactState, revision string, runtime model.AgentID, repositoryContext string) *ReviewNextTransition {
+func reviewStartStatusContinuation(dialect reviewDialect, state reviewtransaction.CompactState, revision string, runtime model.AgentID, repositoryContext string) *ReviewNextTransition {
 	arguments := []ReviewTransitionArgument{
-		{Name: "contract", Value: ReviewIntegrationContractV2},
+		{Name: "contract", Value: dialect.ContractV2()},
 		{Name: "next-transition", Value: "true"},
 		{Name: "lineage", Value: state.LineageID},
 		{Name: "repository-context", Value: repositoryContext},
@@ -996,7 +996,7 @@ func reviewStartStatusContinuation(state reviewtransaction.CompactState, revisio
 		return nil
 	}
 	arguments = append(arguments, selectors...)
-	transition := reviewExecuteTransition("review_status_required", "review.status", arguments,
+	transition := reviewExecuteTransition(dialect, "review_status_required", "review.status", arguments,
 		[]ReviewTransitionArgument{{Name: "state", Value: string(reviewtransaction.StateReviewing)}},
 		ReviewTransitionBinding{LineageID: state.LineageID, Revision: revision, TargetIdentity: state.InitialSnapshot.Identity}, nil,
 	)
@@ -1026,7 +1026,7 @@ func reviewRepairTransition(status ReviewTargetStatusResult, input reviewNextTra
 			ReviewTransitionArgument{Name: "reason", Value: input.RepairReason},
 			ReviewTransitionArgument{Name: "maintainer-authorization", Value: "provided"},
 		)
-		return reviewExecuteTransition("repair_authorized", "review.repair", arguments, []ReviewTransitionArgument{
+		return reviewExecuteTransition(reviewDialectForContract(status.Contract), "repair_authorized", "review.repair", arguments, []ReviewTransitionArgument{
 			{Name: "repair_status", Value: string(reviewtransaction.AuthorityRepairEligible)},
 			{Name: "unique_candidate", Value: "true"}, {Name: "current_head", Value: candidate.Revision},
 			{Name: "repair_authorization", Value: "provided"},
@@ -1072,7 +1072,7 @@ func reviewDispositionTransition(status ReviewTargetStatusResult, input reviewNe
 		// candidate.LineageID/candidate.Revision) — the disposition plan's
 		// seed is the matching identity here (Wave 6 D7's status.Disposition
 		// carries it for exactly this reason).
-		return reviewExecuteTransition("disposition_authorized", "review.repair", arguments, []ReviewTransitionArgument{
+		return reviewExecuteTransition(reviewDialectForContract(status.Contract), "disposition_authorized", "review.repair", arguments, []ReviewTransitionArgument{
 			{Name: "plan_digest", Value: disposition.PlanDigest},
 			{Name: "authority_inventory_revision", Value: disposition.AuthorityInventoryRevision},
 			{Name: "disposition_authorization", Value: "provided"},
@@ -1135,7 +1135,7 @@ func reviewRecoveryCollection(status ReviewTargetStatusResult, binding ReviewTra
 	}
 	if input.recoveryAuthorized(binding) {
 		arguments := []ReviewTransitionArgument{{Name: "predecessor-lineage", Value: binding.LineageID}, {Name: "expected-predecessor-revision", Value: binding.Revision}, {Name: "successor-lineage", Value: input.Successor}, {Name: "disposition", Value: string(disposition)}, {Name: "reason", Value: input.Reason}, {Name: "actor", Value: input.Actor}, {Name: "maintainer-authorization", Value: input.Authorization}}
-		transition := reviewExecuteTransition("recovery_authorized", "review.recover", append(arguments, selectorArguments...), []ReviewTransitionArgument{{Name: "state", Value: string(status.Authority.State)}, {Name: "recovery_authorization", Value: "provided"}}, binding, nil)
+		transition := reviewExecuteTransition(reviewDialectForContract(status.Contract), "recovery_authorized", "review.recover", append(arguments, selectorArguments...), []ReviewTransitionArgument{{Name: "state", Value: string(status.Authority.State)}, {Name: "recovery_authorization", Value: "provided"}}, binding, nil)
 		if input.Selector != nil && !input.Selector.SelectorFreeAccountingOnlyRecovery {
 			transition.Execute.SelectorArguments = reviewTransitionSelectorArguments(selectorArguments)
 		}
@@ -1272,16 +1272,19 @@ func reviewTokenizedTransitionArguments(arguments []ReviewTransitionArgument) []
 	return tokenized
 }
 
-func reviewExecuteTransition(reason, operation string, arguments, preconditions []ReviewTransitionArgument, binding ReviewTransitionBinding, artifacts []ReviewTransitionArtifact) ReviewNextTransition {
+func reviewExecuteTransition(dialect reviewDialect, reason, operation string, arguments, preconditions []ReviewTransitionArgument, binding ReviewTransitionBinding, artifacts []ReviewTransitionArtifact) ReviewNextTransition {
 	tokenized := reviewTokenizedTransitionArguments(arguments)
 	return ReviewNextTransition{Kind: reviewNextTransitionExecute, ReasonCode: reason, Execute: &ReviewTransitionExecution{
-		Operation: operation, Command: reviewTransitionCommandLine(operation, tokenized),
+		Operation: operation, Command: reviewTransitionCommandLine(dialect, operation, tokenized),
 		Arguments: tokenized, Preconditions: preconditions, Binding: binding, Artifacts: artifacts,
 	}}
 }
 
-// reviewTransitionCommandTool is the canonical published tool name used to
-// assemble every emitted command line. It is deliberately NOT os.Args[0]: the
+// reviewTransitionCommandTool is the canonical published tool name of the
+// legacy dialect (reviewDialect's zero value) and the one prose uses. The tool
+// an emitted command line names is the negotiated dialect's, see reviewDialect.
+// It is the canonical published tool name used to assemble every emitted
+// command line. It is deliberately NOT os.Args[0]: the
 // binary is routinely invoked through a shim, a wrapper, or an absolute path
 // (benchmarking runs do exactly that), and echoing that path back would emit a
 // command that only runs on the machine that generated the payload. The
@@ -1309,13 +1312,13 @@ func reviewTransitionCommandVerb(operation string) (string, bool) {
 // DECISION keeps detached boolean values refused across the review command
 // family). An operation with no resolvable verb yields no command at all
 // rather than a half-assembled one.
-func reviewTransitionCommandLine(operation string, arguments []ReviewTransitionArgument) string {
+func reviewTransitionCommandLine(dialect reviewDialect, operation string, arguments []ReviewTransitionArgument) string {
 	verb, resolved := reviewTransitionCommandVerb(operation)
 	if !resolved {
 		return ""
 	}
 	parts := make([]string, 0, len(arguments)+3)
-	parts = append(parts, reviewTransitionCommandTool, "review", verb)
+	parts = append(parts, dialect.Tool(), "review", verb)
 	for _, argument := range arguments {
 		if argument.Token == "" {
 			return ""

@@ -287,7 +287,7 @@ func TestEveryPublishedTransitionOperationProducesARunnableCommand(t *testing.T)
 			if !dispatched[verb] {
 				t.Errorf("%s publishes transition operation %q, which resolves to verb %q, but review_facade.go dispatches no such command", schemaFile, operation, verb)
 			}
-			command := reviewTransitionCommandLine(operation, []ReviewTransitionArgument{{Name: "lineage", Value: "review-enum", Token: "--lineage=review-enum"}})
+			command := reviewTransitionCommandLine(reviewDialect{}, operation, []ReviewTransitionArgument{{Name: "lineage", Value: "review-enum", Token: "--lineage=review-enum"}})
 			if command != "gentle-ai review "+verb+" --lineage=review-enum" {
 				t.Errorf("%s transition operation %q renders command %q", schemaFile, operation, command)
 			}
@@ -305,11 +305,11 @@ func TestEveryPublishedTransitionOperationProducesARunnableCommand(t *testing.T)
 // never "gentle-ai review  --flag=value" or any other half-assembled line.
 func TestUnresolvedTransitionOperationEmitsNoHalfCommand(t *testing.T) {
 	for operation := range reviewTransitionOperationsWithoutRegistryEntry {
-		if command := reviewTransitionCommandLine(operation, []ReviewTransitionArgument{{Name: "lineage", Value: "review-gap", Token: "--lineage=review-gap"}}); command != "" {
+		if command := reviewTransitionCommandLine(reviewDialect{}, operation, []ReviewTransitionArgument{{Name: "lineage", Value: "review-gap", Token: "--lineage=review-gap"}}); command != "" {
 			t.Errorf("unresolved operation %q rendered command %q, want no command at all", operation, command)
 		}
 	}
-	if command := reviewTransitionCommandLine("review.not-an-operation", nil); command != "" {
+	if command := reviewTransitionCommandLine(reviewDialect{}, "review.not-an-operation", nil); command != "" {
 		t.Errorf("unknown operation rendered command %q, want no command at all", command)
 	}
 }
@@ -335,7 +335,7 @@ func TestReviewTransitionCommandVerbIsOwnedByTheOperationRegistry(t *testing.T) 
 // which every review verb refuses with "unexpected review <verb> argument" --
 // exactly the unrunnable-command class this whole change exists to close.
 func TestReviewTransitionCommandQuotesFreeTextValues(t *testing.T) {
-	command := reviewTransitionCommandLine("review.repair", []ReviewTransitionArgument{
+	command := reviewTransitionCommandLine(reviewDialect{}, "review.repair", []ReviewTransitionArgument{
 		{Name: "lineage", Value: "review-quote", Token: "--lineage=review-quote"},
 		{Name: "reason", Value: "historical alias repair", Token: "--reason=historical alias repair"},
 		{Name: "actor", Value: "o'brien", Token: "--actor=o'brien"},
@@ -360,7 +360,7 @@ func TestReviewTransitionCommandQuotedTokensSurviveShellWordSplitting(t *testing
 		{Name: "reason", Value: "historical alias repair", Token: "--reason=historical alias repair"},
 		{Name: "actor", Value: "o'brien", Token: "--actor=o'brien"},
 	}
-	command := reviewTransitionCommandLine("review.repair", arguments)
+	command := reviewTransitionCommandLine(reviewDialect{}, "review.repair", arguments)
 	script := "set -- " + strings.TrimPrefix(command, "gentle-ai review repair ") + "\nfor argument in \"$@\"; do printf '%s\\n' \"$argument\"; done"
 	output, err := exec.Command(shell, "-c", script).Output()
 	if err != nil {
@@ -441,7 +441,7 @@ func TestReviewNextTransitionExecuteCommandValidatesAgainstPublishedSchemas(t *t
 // transition carrying operator free text is still a legal payload, so the
 // schema must not accept only the unquoted common case.
 func TestReviewNextTransitionQuotedCommandValidatesAgainstPublishedSchemas(t *testing.T) {
-	transition := reviewExecuteTransition("repair_authorized", "review.repair",
+	transition := reviewExecuteTransition(reviewDialect{}, "repair_authorized", "review.repair",
 		[]ReviewTransitionArgument{
 			{Name: "lineage", Value: "review-quoted-schema"},
 			{Name: "reason", Value: "historical alias repair"},

@@ -378,6 +378,9 @@ func (result ReviewTargetStatusResult) validateWithCompactAuthority(authority *r
 		if err := result.NextTransition.Validate(); err != nil {
 			return err
 		}
+		if err := validateReviewDialectCommands(result.Contract, result.NextTransition.commandLines()...); err != nil {
+			return err
+		}
 		if err := result.validateNextTransitionTargets(); err != nil {
 			return err
 		}
@@ -1630,7 +1633,10 @@ func validReviewAcknowledgementToken(value string) bool {
 }
 
 func validateReviewTransitionExecution(execution ReviewTransitionExecution, arguments map[string]string) error {
-	if reviewCommandCanonicalTool(execution.Command) != reviewTransitionCommandLine(execution.Operation, execution.Arguments) {
+	// Either dialect renders the same arguments; which one the result may carry
+	// is a result-level rule (validateReviewDialectCommands), not this shape check.
+	if execution.Command != reviewTransitionCommandLine(reviewDialect{}, execution.Operation, execution.Arguments) &&
+		execution.Command != reviewTransitionCommandLine(reviewNoContractDialect, execution.Operation, execution.Arguments) {
 		return errors.New("execution transition command does not match its arguments") // refusal:by-design world-action: a producer must publish the exact command its executable arguments define
 	}
 	exact := func(required []string, selectors []ReviewTransitionArgument) bool {

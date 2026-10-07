@@ -80,6 +80,16 @@ The acknowledgement transition is an execution detail of `gentle-ai.review-integ
 
 After a successful burn, no terminal receipt, tombstone, witness, mirror, or delivery authority survives. Other lineages and worktrees are unaffected.
 
+## Dialecto
+
+The v2 lifecycle has two spellings and every command accepts both: the `gentle-ai` one (`--contract gentle-ai.review-integration/v2`, commands `gentle-ai review ...`) and the `axiom` one (`--contract axiom.review-integration/v2`, commands `axiom review ...`). The dialect is derived from `--contract` on every invocation and is never persisted in a lineage.
+
+A caller is answered in the dialect it negotiated. Under `axiom.review-integration/v2`, every command the output publishes (`next_transition` execute and withdraw commands, consent invocations and the off-path command, the capabilities bootstrap) names the `axiom` tool, and the `contract` field of the consent question echoes `axiom.review-integration/v2`. Under `gentle-ai.review-integration/v2` and under v1 the output is byte-identical to what it was before the axiom dialect existed. A result never mixes the two tools: its validator refuses a command whose tool does not match its own contract.
+
+Only the tool and the v2 contract identifier change with the dialect. Schema identifiers, hash domain separators, and persisted identifiers keep their published `gentle-ai` spelling.
+
+One exception: `axiom review capture-result`, `capture-refuter`, `capture-validation`, `capture-correction-plan`, and `axiom review acknowledge-approved` carry no `--contract`, so there is nothing to echo. The continuations they publish (`status_continuation` and `acknowledgement`) name the `axiom` tool by default. The transition schemas admit both tools, so a consumer that reads either spelling is unaffected.
+
 ## Reviewer transport
 
 The provider contract is shared by Claude Code, OpenCode, Codex, and Pi. Go derives frozen trees, manifest, subject hash, role, binding, schema, evidence limits, and admission. Adapters transport opaque provider output and never parse bindings, manufacture a verdict, or mutate review authority. Axiom writes nothing into the Pi system prompt because gentle-pi owns it, so this contract ships as `orchestration/pi.md` in the published provider contract bundle, which gentle-pi mirrors and injects at session start.

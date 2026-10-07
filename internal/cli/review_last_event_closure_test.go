@@ -128,7 +128,7 @@ func TestLastReviewerCaptureIssuesReplayableAcknowledgementThenBurns(t *testing.
 	var restartOutput bytes.Buffer
 	if err := RunReview([]string{
 		"status", "--cwd", repo, "--lineage", started.LineageID,
-		"--contract", ReviewIntegrationContractV2, "--next-transition",
+		"--contract", AxiomReviewIntegrationContractV2, "--next-transition",
 	}, &restartOutput); err != nil {
 		t.Fatalf("restart status: %v\n%s", err, restartOutput.String())
 	}
@@ -139,6 +139,12 @@ func TestLastReviewerCaptureIssuesReplayableAcknowledgementThenBurns(t *testing.
 		t.Fatalf("restart status transition = %#v, want pending acknowledgement", restarted.NextTransition)
 	}
 	assertApprovedAcknowledgementTransition(t, restarted.NextTransition.Execute, repo, started.LineageID, started.TargetIdentity, terminal.StoreRevision)
+	// capture-* carries no --contract, so its acknowledgement names the axiom
+	// tool by default (the single exception to the dialect echo); a STATUS that
+	// negotiates the axiom dialect publishes the very same command.
+	if !strings.HasPrefix(terminal.Acknowledgement.Command, "axiom review acknowledge-approved ") {
+		t.Fatalf("capture acknowledgement command = %q, want the axiom tool by default", terminal.Acknowledgement.Command)
+	}
 	if restarted.NextTransition.Execute.Command != terminal.Acknowledgement.Command {
 		t.Fatalf("restart acknowledgement command = %q, want %q", restarted.NextTransition.Execute.Command, terminal.Acknowledgement.Command)
 	}
@@ -581,7 +587,7 @@ func TestConcurrentAndReplayedTargetedValidatorCaptureHasOneCloser(t *testing.T)
 	var statusOutput bytes.Buffer
 	if err := RunReview([]string{
 		"status", "--cwd", repo, "--lineage", lineage,
-		"--contract", ReviewIntegrationContractV2, "--next-transition",
+		"--contract", AxiomReviewIntegrationContractV2, "--next-transition",
 	}, &statusOutput); err != nil {
 		t.Fatalf("status after concurrent targeted validator capture: %v\n%s", err, statusOutput.String())
 	}
@@ -593,6 +599,9 @@ func TestConcurrentAndReplayedTargetedValidatorCaptureHasOneCloser(t *testing.T)
 		t.Fatalf("status after concurrent targeted validator capture = authority=%#v transition=%#v, want the exact pending acknowledgement", status.Authority, status.NextTransition)
 	}
 	assertApprovedAcknowledgementTransition(t, status.NextTransition.Execute, repo, lineage, pending.TargetIdentity, pending.ExpectedRevision)
+	if !strings.HasPrefix(closer.Acknowledgement.Command, "axiom review acknowledge-approved ") {
+		t.Fatalf("capture acknowledgement command = %q, want the axiom tool by default", closer.Acknowledgement.Command)
+	}
 	if status.NextTransition.Execute.Command != closer.Acknowledgement.Command {
 		t.Fatalf("status acknowledgement command = %q, want %q", status.NextTransition.Execute.Command, closer.Acknowledgement.Command)
 	}

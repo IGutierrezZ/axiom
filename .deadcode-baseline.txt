@@ -109,7 +109,6 @@ internal/reviewtransaction/candidate_decline.go	CandidateDeclineAuthorization.va
 internal/reviewtransaction/candidate_decline.go	candidateDeclineDigest
 internal/reviewtransaction/candidate_decline.go	canonicalCandidateDeclinePayload
 internal/reviewtransaction/candidate_decline.go	parseCandidateDeclineAuthorization
-internal/reviewtransaction/contract.go	MatchReviewDialect
 internal/reviewtransaction/gate.go	hashArtifactSource
 internal/reviewtransaction/gate.go	hashLedgerArtifactSource
 internal/reviewtransaction/gate.go	publicationRemoteConfigured

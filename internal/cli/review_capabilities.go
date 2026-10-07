@@ -335,7 +335,9 @@ func reviewCapabilitiesStaticSurface(contracts ...string) ReviewCapabilitiesResu
 			Name: "provider_submission_descriptors", Supported: true,
 			Requires: []string{"native_next_transition", "opaque_repository_context", "provider_targeted_validation_request"},
 		})
-		result.Bootstrap.Command = reviewNextTransitionRefreshCommandV21
+		// The bootstrap names the tool and contract of the dialect the caller
+		// negotiated; gentle-ai v2 keeps reviewNextTransitionRefreshCommandV21.
+		result.Bootstrap.Command = reviewDialectForContract(contract).refreshCommand()
 		result.Compatibility.MinimumProtocolMajor, result.Compatibility.MaximumProtocolMajor = 2, 2
 		result.Compatibility.AdditiveMinorPolicy = "optional-fields-only"
 	}

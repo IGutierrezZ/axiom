@@ -16,7 +16,16 @@ func TestWaveReviewInvocationArgs(t *testing.T) {
 	if joined := strings.Join(got, "\x00"); joined != "review\x00start\x00--contract=gentle-ai.review-integration/v2\x00--consent=relay" {
 		t.Fatalf("review invocation args = %q", joined)
 	}
-	for _, invalid := range []string{"", "other review start", "gentle-ai status"} {
+	// The axiom dialect prints its own tool and contract; the very same
+	// arguments must come out, so a journey replays either dialect unchanged.
+	axiom, err := waveReviewInvocationArgs("axiom review start --contract=axiom.review-integration/v2 --consent=relay")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if joined := strings.Join(axiom, "\x00"); joined != "review\x00start\x00--contract=axiom.review-integration/v2\x00--consent=relay" {
+		t.Fatalf("axiom review invocation args = %q", joined)
+	}
+	for _, invalid := range []string{"", "other review start", "gentle-ai status", "axiom status"} {
 		if _, err := waveReviewInvocationArgs(invalid); err == nil {
 			t.Fatalf("accepted invalid review invocation %q", invalid)
 		}

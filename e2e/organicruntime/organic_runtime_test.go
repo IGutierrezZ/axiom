@@ -107,6 +107,22 @@ const (
 
 var organicBinary string
 
+// organicDialectEnvironment selects the review integration dialect the journeys
+// negotiate: "gentle-ai" (the default, byte-identical to the shipped journeys)
+// or "axiom". The occupied-slot prose assertion deliberately stays on the
+// gentle-ai refresh command: error prose is not a negotiated continuation.
+const organicDialectEnvironment = "GENTLE_AI_ORGANIC_DIALECT"
+
+// organicReviewContract is the v2 contract every journey passes to --contract.
+var organicReviewContract = organicDialectContract(os.Getenv(organicDialectEnvironment))
+
+func organicDialectContract(dialect string) string {
+	if dialect == "axiom" {
+		return "axiom.review-integration/v2"
+	}
+	return "gentle-ai.review-integration/v2"
+}
+
 func TestMain(m *testing.M) {
 	// The journeys run the real built binary (install, sync), which is not a test
 	// binary and would otherwise write the developer's persistent Windows PATH.
@@ -359,7 +375,7 @@ func TestCodexProviderAdapterUsesPinnedLocalRuntime(t *testing.T) {
 	harness.git("commit", "-qm", "feat: committed Codex correction candidate")
 	const lineage = "codex-loopback-egress-proof"
 	statusPayload := harness.gentle(
-		"review", "status", "--cwd", harness.repo.worktree, "--contract", "gentle-ai.review-integration/v2",
+		"review", "status", "--cwd", harness.repo.worktree, "--contract", organicReviewContract,
 		"--agent", "codex", "--lineage", lineage, "--base-ref", baseTree, "--committed-only", "--next-transition",
 	)
 	var negotiated organicProviderStatusResult
@@ -368,7 +384,7 @@ func TestCodexProviderAdapterUsesPinnedLocalRuntime(t *testing.T) {
 	}
 	start := negotiated.NextTransition.Execute
 	stdout, stderr, err := harness.gentleAllowFailure(
-		"review", "start", "--cwd", harness.repo.worktree, "--contract", "gentle-ai.review-integration/v2",
+		"review", "start", "--cwd", harness.repo.worktree, "--contract", organicReviewContract,
 		"--target", start.argument("target"), "--projection", start.argument("projection"), "--base-ref", baseTree, "--committed-only",
 		"--lineage", lineage, "--agent", "codex", "--consent", "granted", "--focus", "reliability",
 	)
@@ -380,7 +396,7 @@ func TestCodexProviderAdapterUsesPinnedLocalRuntime(t *testing.T) {
 		t.Fatalf("committed Codex START = %#v, %v\n%s", started, err, stdout)
 	}
 	statusPayload = harness.gentle(
-		"review", "status", "--cwd", harness.repo.worktree, "--contract", "gentle-ai.review-integration/v2",
+		"review", "status", "--cwd", harness.repo.worktree, "--contract", organicReviewContract,
 		"--agent", "codex", "--lineage", lineage, "--base-ref", baseTree, "--committed-only", "--next-transition",
 	)
 	var reviewing organicProviderStatusResult
@@ -995,7 +1011,7 @@ func TestOpenCodeRuntimeRunsFourBoundReviewersConcurrently(t *testing.T) {
 	start := initial.NextTransition.Execute
 	stdout, stderr, err := harness.gentleAllowFailure(
 		"review", "start", "--cwd", harness.repo.worktree,
-		"--contract", "gentle-ai.review-integration/v2", "--target", start.argument("target"), "--projection", start.argument("projection"),
+		"--contract", organicReviewContract, "--target", start.argument("target"), "--projection", start.argument("projection"),
 		"--lineage", lineage, "--agent", "opencode", "--consent", "granted",
 	)
 	if err != nil {
@@ -1527,7 +1543,7 @@ func organicProviderStart(t *testing.T, harness *organicHarness, lineage, agent 
 	}
 	transition := status.NextTransition.Execute
 	stdout, stderr, err := harness.gentleAllowFailure("review", "start", "--cwd", harness.repo.worktree,
-		"--contract", "gentle-ai.review-integration/v2", "--target", transition.argument("target"), "--projection", transition.argument("projection"),
+		"--contract", organicReviewContract, "--target", transition.argument("target"), "--projection", transition.argument("projection"),
 		"--lineage", lineage, "--agent", agent, "--consent", "granted", "--focus", "reliability")
 	if err != nil {
 		t.Fatalf("provider START: %v\nstdout:\n%s\nstderr:\n%s", err, stdout, stderr)
@@ -1597,7 +1613,7 @@ func (execute organicProviderExecute) argument(name string) string {
 
 func organicProviderStatus(t *testing.T, harness *organicHarness, lineage, agent string) organicProviderStatusResult {
 	t.Helper()
-	payload := harness.gentle("review", "status", "--cwd", harness.repo.worktree, "--contract", "gentle-ai.review-integration/v2", "--agent", agent, "--lineage", lineage, "--next-transition", "--projection", "workspace")
+	payload := harness.gentle("review", "status", "--cwd", harness.repo.worktree, "--contract", organicReviewContract, "--agent", agent, "--lineage", lineage, "--next-transition", "--projection", "workspace")
 	var status organicProviderStatusResult
 	if err := json.Unmarshal(payload, &status); err != nil {
 		t.Fatalf("decode provider status: %v\n%s", err, payload)
@@ -2247,7 +2263,7 @@ func TestOrganicRuntimeCurrentReviewHardening(t *testing.T) {
 
 				stdout, stderr, err := harness.gentleAllowFailure(
 					"review", "start", "--cwd", harness.repo.worktree,
-					"--contract", "gentle-ai.review-integration/v2", "--target", start.argument("target"), "--projection", start.argument("projection"),
+					"--contract", organicReviewContract, "--target", start.argument("target"), "--projection", start.argument("projection"),
 					"--lineage", lineage, "--agent", "opencode", "--consent", "granted", "--policy", policy,
 				)
 				if err == nil {
@@ -2324,7 +2340,7 @@ func TestOrganicRuntimeCurrentReviewHardening(t *testing.T) {
 		start := status.NextTransition.Execute
 		stdout, stderr, err := harness.gentleAllowFailure(
 			"review", "start", "--cwd", harness.repo.worktree,
-			"--contract", "gentle-ai.review-integration/v2", "--target", start.argument("target"), "--projection", start.argument("projection"),
+			"--contract", organicReviewContract, "--target", start.argument("target"), "--projection", start.argument("projection"),
 			"--lineage", lineage, "--agent", "opencode", "--consent", "granted",
 		)
 		if err != nil {
@@ -2458,7 +2474,7 @@ func TestOrganicRuntimeCurrentReviewHardening(t *testing.T) {
 
 		explicitPayload := harness.gentle(
 			"review", "status", "--cwd", harness.repo.worktree,
-			"--contract", "gentle-ai.review-integration/v2", "--agent", "opencode", "--lineage", lineage, "--next-transition",
+			"--contract", organicReviewContract, "--agent", "opencode", "--lineage", lineage, "--next-transition",
 		)
 		var explicit organicProviderStatusResult
 		if err := json.Unmarshal(explicitPayload, &explicit); err != nil {
@@ -2478,7 +2494,7 @@ func TestOrganicRuntimeCurrentReviewHardening(t *testing.T) {
 
 		stdout, stderr, err := harness.gentleAllowFailure(
 			"review", "status", "--cwd", harness.repo.worktree,
-			"--contract", "gentle-ai.review-integration/v2", "--agent", "opencode", "--next-transition",
+			"--contract", organicReviewContract, "--agent", "opencode", "--next-transition",
 		)
 		if err != nil {
 			t.Fatalf("fresh selector-free STATUS: %v\nstdout:\n%s\nstderr:\n%s", err, stdout, stderr)
@@ -2496,7 +2512,7 @@ func TestOrganicRuntimeCurrentReviewHardening(t *testing.T) {
 
 		stdout, stderr, err = harness.gentleAllowFailure(
 			"review", "status", "--cwd", harness.repo.worktree,
-			"--contract", "gentle-ai.review-integration/v2", "--agent", "opencode", "--next-transition",
+			"--contract", organicReviewContract, "--agent", "opencode", "--next-transition",
 			"--workspace-overlay", "--projection", "staged", "--base-ref", "HEAD",
 		)
 		if err != nil {
@@ -2528,7 +2544,7 @@ func TestOrganicRuntimeCurrentReviewHardening(t *testing.T) {
 		start := status.NextTransition.Execute
 		stdout, stderr, err := harness.gentleAllowFailure(
 			"review", "start", "--cwd", harness.repo.worktree,
-			"--contract", "gentle-ai.review-integration/v2", "--target", start.argument("target"), "--projection", start.argument("projection"),
+			"--contract", organicReviewContract, "--target", start.argument("target"), "--projection", start.argument("projection"),
 			"--lineage", lineage, "--agent", "opencode", "--consent", "granted",
 		)
 		if err != nil {
@@ -3156,7 +3172,7 @@ func organicAcknowledgementStatusSelectors(started organicStartResult) []string 
 func organicApprovedAcknowledgementStatus(t *testing.T, harness *organicHarness, lineage string, selectors ...string) *organicProviderExecute {
 	t.Helper()
 	arguments := []string{
-		"review", "status", "--cwd", harness.repo.worktree, "--contract", "gentle-ai.review-integration/v2",
+		"review", "status", "--cwd", harness.repo.worktree, "--contract", organicReviewContract,
 		"--lineage", lineage, "--next-transition",
 	}
 	arguments = append(arguments, selectors...)
@@ -3923,7 +3939,7 @@ func harnessCorrectionStatus(t *testing.T, harness *organicHarness, lineage stri
 	t.Helper()
 	payload := harness.gentle(
 		"review", "status", "--cwd", harness.repo.worktree, "--lineage", lineage,
-		"--contract", "gentle-ai.review-integration/v2", "--next-transition",
+		"--contract", organicReviewContract, "--next-transition",
 	)
 	var status organicCorrectionStatus
 	if err := json.Unmarshal(payload, &status); err != nil {

@@ -234,7 +234,9 @@ func TestV2TransitionSchemasAcceptProviderPayloadsAndRejectDrift(t *testing.T) {
 	var closureStatusOutput bytes.Buffer
 	if err := RunReview([]string{
 		"status", "--cwd", closureRepo, "--lineage", closureStart.LineageID,
-		"--contract", ReviewIntegrationContractV2, "--next-transition",
+		// capture-* names the axiom tool by default, so the byte-equal STATUS
+		// acknowledgement below is the one answered in the axiom dialect.
+		"--contract", AxiomReviewIntegrationContractV2, "--next-transition",
 	}, &closureStatusOutput); err != nil {
 		t.Fatalf("last-event STATUS: %v\n%s", err, closureStatusOutput.String())
 	}
@@ -274,7 +276,7 @@ func TestV2TransitionSchemasAcceptProviderPayloadsAndRejectDrift(t *testing.T) {
 func TestV2LastEventStatusContinuationHasItsOwnStrictExecutionShape(t *testing.T) {
 	closureSchema := compileWholePublishedReviewSchema(t, "v2", "last-event-closure.schema.json")
 	const revision = "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-	continuation := reviewCorrectionStatusContinuation("/frozen/repository", reviewtransaction.CompactState{
+	continuation := reviewCorrectionStatusContinuation(reviewNoContractDialect, "/frozen/repository", reviewtransaction.CompactState{
 		LineageID: "last-event-status",
 		InitialSnapshot: reviewtransaction.Snapshot{
 			Kind: reviewtransaction.TargetCurrentChanges, Identity: revision,

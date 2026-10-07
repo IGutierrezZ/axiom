@@ -24,8 +24,27 @@ const (
 	statusFail = "FAIL"
 	statusSkip = "SKIP"
 
-	reviewContract = "gentle-ai.review-integration/v2"
+	gentleReviewContract = "gentle-ai.review-integration/v2"
+	axiomReviewContract  = "axiom.review-integration/v2"
 )
+
+// reviewContract is the review integration contract every lane negotiates. It
+// defaults to the gentle-ai dialect so a run without -dialect is byte-identical
+// to the shipped battery; main sets it from -dialect before any lane runs.
+var reviewContract = gentleReviewContract
+
+// dialectContract resolves the -dialect flag value to the contract the lanes
+// negotiate. The binary answers in the dialect it was asked for, so the same
+// lanes prove the axiom echo when run with -dialect axiom.
+func dialectContract(dialect string) (string, error) {
+	switch dialect {
+	case "gentle-ai":
+		return gentleReviewContract, nil
+	case "axiom":
+		return axiomReviewContract, nil
+	}
+	return "", fmt.Errorf("unsupported -dialect %q: use gentle-ai or axiom", dialect)
+}
 
 type check struct {
 	Lane   string

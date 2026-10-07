@@ -385,7 +385,7 @@ func TestStatusRejectsNonCanonicalStartTransition(t *testing.T) {
 		t.Fatalf("START atomic binding = %#v, want lineage %q and target %q", binding, lineage, valid.TargetIdentity)
 	}
 	valid.NextTransition.Execute.Arguments = reviewTokenizedTransitionArguments(reviewStartArguments(valid, lineage, "", valid.intendedUntracked))
-	valid.NextTransition.Execute.Command = reviewTransitionCommandLine(valid.NextTransition.Execute.Operation, valid.NextTransition.Execute.Arguments)
+	valid.NextTransition.Execute.Command = reviewTransitionCommandLine(reviewDialect{}, valid.NextTransition.Execute.Operation, valid.NextTransition.Execute.Arguments)
 	if err := valid.Validate(); err != nil {
 		t.Fatalf("status treated embedded --cwd as an explicit flag: %v", err)
 	}
