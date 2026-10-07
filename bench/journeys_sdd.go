@@ -606,7 +606,7 @@ const sddVerifyReport = "```yaml\n" +
 	"test_command: go test ./internal/example\n" +
 	"test_exit_code: 0\n" +
 	"test_output_hash: sha256:2222222222222222222222222222222222222222222222222222222222222222\n" +
-	"build_command: go test ./cmd/gentle-ai\n" +
+	"build_command: go test ./cmd/axiom\n" +
 	"build_exit_code: 0\n" +
 	"build_output_hash: sha256:3333333333333333333333333333333333333333333333333333333333333333\n" +
 	"```\n"
@@ -622,7 +622,7 @@ const sddFailedVerifyReport = "```yaml\n" +
 	"test_command: go test ./internal/example\n" +
 	"test_exit_code: 1\n" +
 	"test_output_hash: sha256:2222222222222222222222222222222222222222222222222222222222222222\n" +
-	"build_command: go test ./cmd/gentle-ai\n" +
+	"build_command: go test ./cmd/axiom\n" +
 	"build_exit_code: 0\n" +
 	"build_output_hash: sha256:3333333333333333333333333333333333333333333333333333333333333333\n" +
 	"```\n"
@@ -638,7 +638,7 @@ const sddHistoricalStalePassReport = "```yaml\n" +
 	"test_command: go test ./internal/example\n" +
 	"test_exit_code: 0\n" +
 	"test_output_hash: sha256:2222222222222222222222222222222222222222222222222222222222222222\n" +
-	"build_command: go test ./cmd/gentle-ai\n" +
+	"build_command: go test ./cmd/axiom\n" +
 	"build_exit_code: 0\n" +
 	"build_output_hash: sha256:3333333333333333333333333333333333333333333333333333333333333333\n" +
 	"```\n"

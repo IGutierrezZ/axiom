@@ -39,7 +39,7 @@ func seedArchiveGatedSDDChange(t *testing.T, root string) {
 		"test_command: go test ./internal/example",
 		"test_exit_code: 0",
 		"test_output_hash: sha256:" + strings.Repeat("2", 64),
-		"build_command: go test ./cmd/gentle-ai",
+		"build_command: go test ./cmd/axiom",
 		"build_exit_code: 0",
 		"build_output_hash: sha256:" + strings.Repeat("3", 64),
 		"```",

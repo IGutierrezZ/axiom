@@ -633,7 +633,7 @@ func TestCheckSingleToolGentleAIBetaHintNamesAdvertisedTarget(t *testing.T) {
 	if result.UpdateHint != derived {
 		t.Fatalf("UpdateHint = %q, want the instruction derived from the advertised target: %q", result.UpdateHint, derived)
 	}
-	if result.UpdateHint != "go install github.com/IGutierrezZ/axiom/v3/cmd/gentle-ai@main" {
+	if result.UpdateHint != "go install github.com/IGutierrezZ/axiom/v3/cmd/axiom@main" {
 		t.Fatalf("UpdateHint = %q, want the go install @main command", result.UpdateHint)
 	}
 }
@@ -1219,7 +1219,7 @@ func TestUpdateHint(t *testing.T) {
 			name:    "gentle-ai windows",
 			tool:    upstreamSourceTool,
 			profile: system.PlatformProfile{OS: "windows", PackageManager: "winget"},
-			want:    "Windows binary distribution and Scoop are temporarily unavailable until publicly trusted Authenticode signing is enforced. Install/update from source with Go 1.25.10+: go install github.com/IGutierrezZ/axiom/v3/cmd/gentle-ai@latest",
+			want:    "Windows binary distribution and Scoop are temporarily unavailable until publicly trusted Authenticode signing is enforced. Install/update from source with Go 1.25.10+: go install github.com/IGutierrezZ/axiom/v3/cmd/axiom@latest",
 		},
 		{
 			name:          "engram macOS brew-owned",

@@ -3508,7 +3508,7 @@ const organicSDDVerifyReport = "```yaml\n" +
 	"test_command: go test ./internal/example\n" +
 	"test_exit_code: 0\n" +
 	"test_output_hash: sha256:2222222222222222222222222222222222222222222222222222222222222222\n" +
-	"build_command: go test ./cmd/gentle-ai\n" +
+	"build_command: go test ./cmd/axiom\n" +
 	"build_exit_code: 0\n" +
 	"build_output_hash: sha256:3333333333333333333333333333333333333333333333333333333333333333\n" +
 	"```\n"
@@ -4083,11 +4083,9 @@ func buildOrganicBinary(workspace string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	// Build the canonical binary, not ./cmd/gentle-ai. That one is a
-	// deprecation shim whose whole job is to print a notice to stderr on every
-	// invocation, which is correct for a human on the retired name and fatal
-	// here: several journeys assert that a silent transition writes nothing to
-	// stderr, and the shim's notice alone would fail them.
+	// Build the canonical binary. The retired gentle-ai package printed a
+	// notice to stderr on every invocation, and several journeys assert that a
+	// silent transition writes nothing to stderr.
 	name := "axiom"
 	if runtime.GOOS == "windows" {
 		name += ".exe"
@@ -4105,12 +4103,11 @@ func buildOrganicBinary(workspace string) (string, error) {
 	if err != nil || !info.Mode().IsRegular() {
 		return "", fmt.Errorf("built axiom binary %q is unusable: %v", path, err)
 	}
-	// Publish the same canonical binary under the retired name too. The
+	// Publish the same canonical binary under the legacy name too. The
 	// harness puts this directory on PATH, and the shipped reviewer assets
 	// still spell the invocation `gentle-ai`, so an agent-launched reviewer
 	// resolves that name from PATH and fails with "Executable not found" when
-	// only `axiom` exists. Copying rather than building ./cmd/gentle-ai keeps
-	// both names on the canonical dispatcher, without the shim's stderr notice.
+	// only `axiom` exists. Both names stay on the canonical dispatcher.
 	if err := copyOrganicBinary(path, filepath.Join(workspace, legacyOrganicBinaryName())); err != nil {
 		return "", err
 	}

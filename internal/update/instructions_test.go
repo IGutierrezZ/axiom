@@ -15,7 +15,7 @@ func TestSelfHintDerivedFromToolInfo(t *testing.T) {
 	t.Cleanup(func() { homebrewPackageInstalled = origHomebrewPackageInstalled })
 
 	forkCloneBuild := "git clone https://github.com/IGutierrezZ/axiom && cd axiom && go build -o axiom ./cmd/axiom"
-	upstreamGoInstall := "go install github.com/IGutierrezZ/axiom/v3/cmd/gentle-ai@latest"
+	upstreamGoInstall := "go install github.com/IGutierrezZ/axiom/v3/cmd/axiom@latest"
 
 	tests := []struct {
 		name          string

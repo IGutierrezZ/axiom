@@ -1194,8 +1194,8 @@ func TestCanonicalEngramGoInstallPackagePreservesDeclaredModuleCasing(t *testing
 		},
 		{
 			name: "unrelated package remains unchanged",
-			pkg:  "github.com/IGutierrezZ/axiom/v3/cmd/gentle-ai@latest",
-			want: "github.com/IGutierrezZ/axiom/v3/cmd/gentle-ai@latest",
+			pkg:  "github.com/IGutierrezZ/axiom/v3/cmd/axiom@latest",
+			want: "github.com/IGutierrezZ/axiom/v3/cmd/axiom@latest",
 		},
 	}
 

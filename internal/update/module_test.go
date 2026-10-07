@@ -8,7 +8,7 @@ import "testing"
 func TestGoInstallResolvable(t *testing.T) {
 	const (
 		upstreamModule = "github.com/IGutierrezZ/axiom/v3"
-		upstreamImport = "github.com/IGutierrezZ/axiom/v3/cmd/gentle-ai"
+		upstreamImport = "github.com/IGutierrezZ/axiom/v3/cmd/axiom"
 		forkImport     = "github.com/IGutierrezZ/axiom/cmd/axiom"
 		// partialModule is the upstream module path WITHOUT the /v3 major
 		// version suffix: a partial prefix that must not make the /v3 import

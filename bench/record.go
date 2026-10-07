@@ -90,7 +90,7 @@ func setupRecording(realBinary, outPath string) error {
 	if err := os.MkdirAll(shimDir, 0o755); err != nil {
 		return err
 	}
-	shim := filepath.Join(shimDir, "gentle-ai")
+	shim := filepath.Join(shimDir, "axiom")
 	script := "#!/bin/sh\n" +
 		"exec " + shellQuote(self) + " __shim --real " + shellQuote(real) +
 		" --log " + shellQuote(out) + " -- \"$@\"\n"
@@ -109,7 +109,7 @@ func setupRecording(realBinary, outPath string) error {
 	fmt.Printf("1. Put the shim first on PATH in the shell your agent runs in:\n\n")
 	fmt.Printf("   export PATH=%s:$PATH\n\n", shimDir)
 	fmt.Printf("   (fish: set -gx PATH %s $PATH)\n\n", shimDir)
-	fmt.Printf("2. Run your agent through the testing guide as usual. Every gentle-ai\n")
+	fmt.Printf("2. Run your agent through the testing guide as usual. Every axiom\n")
 	fmt.Printf("   invocation is appended to:\n\n   %s\n\n", out)
 	fmt.Printf("3. When the session is over, compute the friction dimensions:\n\n")
 	fmt.Printf("   %s analyze --session %s --out results-observed.json\n\n", self, out)
