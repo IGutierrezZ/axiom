@@ -143,27 +143,17 @@ func TestDelegatedWorkflowMutationContract(t *testing.T) {
 	if readReference, err := Read(delegatedWorkflowReference); err != nil || readReference != reference {
 		t.Fatalf("Read(%q) differs from MustRead: %v", delegatedWorkflowReference, err)
 	}
-	contributing, err := os.ReadFile(filepath.Join(repositoryRoot, "CONTRIBUTING.md"))
-	if err != nil {
-		t.Fatalf("read CONTRIBUTING.md: %v", err)
-	}
+	// Axiom no tiene guía de contribución: CONTRIBUTING.md se retira porque
+	// describía el flujo de issues del upstream, y este repositorio tiene las
+	// issues deshabilitadas. Solo queda el workflow por vigilar.
 	workflow, err := os.ReadFile(filepath.Join(repositoryRoot, ".github", "workflows", "pr-check.yml"))
 	if err != nil {
 		t.Fatalf("read pr-check workflow: %v", err)
 	}
-	for path, content := range map[string]string{"CONTRIBUTING.md": string(contributing), ".github/workflows/pr-check.yml": string(workflow)} {
-		for _, stale := range []string{"a maintainer will add the `status:approved` label", "has been approved by a maintainer", "Issues must be approved by a maintainer before work begins.", "Please comment on the issue and wait for it to be labelled status:approved."} {
-			if strings.Contains(content, stale) {
-				t.Errorf("%s retains stale maintainer-only approval authority %q", path, stale)
-			}
+	for _, stale := range []string{"a maintainer will add the `status:approved` label", "has been approved by a maintainer", "Issues must be approved by a maintainer before work begins.", "Please comment on the issue and wait for it to be labelled status:approved."} {
+		if strings.Contains(string(workflow), stale) {
+			t.Errorf(".github/workflows/pr-check.yml retains stale maintainer-only approval authority %q", stale)
 		}
-	}
-	// La documentación sigue describiendo el contrato canónico de creación de
-	// issues, porque describe el flujo del upstream. El workflow ya no, y es
-	// deliberado: este repositorio tiene las issues deshabilitadas, así que la
-	// puerta issue-first no podía pasar nunca y se retiró.
-	if !strings.Contains(string(contributing), "canonical issue-creation workflow contract") {
-		t.Error("CONTRIBUTING.md must route approval authority to the canonical issue-creation workflow contract")
 	}
 	// La puerta de presupuesto de revisión sí sigue viva y debe seguir estándolo.
 	if condition := "const hasException = labels.includes('size:exception');"; !strings.Contains(string(workflow), condition) {

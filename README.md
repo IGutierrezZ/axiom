@@ -173,7 +173,7 @@ Después, usa el agente con normalidad. Axiom crea respaldos antes de modificar 
 | **[Routing](docs/trigger-rules.md)** | How the agent picks direct, delegated or SDD |
 | **[Review](docs/review-integration.md)** · **[Architecture](docs/architecture/organic-rdd.md)** | The RDD contract, lifecycle and threat model |
 | **[Engram](docs/engram.md)** · **[Components](docs/components.md)** | Memory commands, skills, presets and personas |
-| **[Contributing](CONTRIBUTING.md)** · **[Codebase Guide](docs/CODEBASE-GUIDE.md)** | Extend or contribute |
+| **[Codebase Guide](docs/CODEBASE-GUIDE.md)** | How the codebase is organised and how to extend it |
 | **[Telemetry](docs/telemetry.md)** | Axiom sends no telemetry; what was removed and how old installs are cleaned up |
 
 <div align="right"><a href="#top">Back to top</a></div>
@@ -182,12 +182,8 @@ Después, usa el agente con normalidad. Axiom crea respaldos antes de modificar 
 
 ## Community
 
-Las incidencias de Axiom etiquetadas como [`up-for-grabs`](https://github.com/IGutierrezZ/axiom/issues?q=is%3Aissue+is%3Aopen+label%3Aup-for-grabs) están disponibles para colaborar.
-
 <div align="center">
 
-<a href="docs/community-roadmap.md"><img src="https://img.shields.io/badge/Community%20Roadmap-F095C8?style=for-the-badge&labelColor=1A1218&logo=readthedocs&logoColor=F095C8" alt="Community Roadmap"></a>
-<a href="CONTRIBUTING.md"><img src="https://img.shields.io/badge/Contributing%20Guide-F095C8?style=for-the-badge&labelColor=1A1218&logo=git&logoColor=F095C8" alt="Contributing Guide"></a>
 <a href="CONTRIBUTORS.md"><img src="https://img.shields.io/badge/Contributors-D7A0B8?style=for-the-badge&labelColor=1A1218&logo=github&logoColor=D7A0B8" alt="Contributors"></a>
 
 <br/><br/>
