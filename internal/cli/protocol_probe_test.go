@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/claude"
@@ -106,6 +107,21 @@ func TestMain(m *testing.M) {
 	// instead of writing the developer's real HKCU\Environment PATH.
 	if err := os.Setenv(system.NoPersistentPathEnvVar, "1"); err != nil {
 		panic(err)
+	}
+	// Keep the other home-like locations inside the sandbox as well: the
+	// Windows agent adapters read LOCALAPPDATA/APPDATA. A developer's own
+	// AXIOM_STATE_DIR is cleared (not pinned to one shared directory) so state
+	// keeps following the HOME each test injects, as system.AxiomDir intends.
+	if err := os.Unsetenv(system.EnvStateDirAxiom); err != nil {
+		panic(err)
+	}
+	for key, value := range map[string]string{
+		"LOCALAPPDATA": filepath.Join(testHome, "AppData", "Local"),
+		"APPDATA":      filepath.Join(testHome, "AppData", "Roaming"),
+	} {
+		if err := os.Setenv(key, value); err != nil {
+			panic(err)
+		}
 	}
 
 	verifyEngramVersion = func() (string, error) {

@@ -56,12 +56,15 @@ const root=await fs.mkdtemp(path.join(os.tmpdir(),'catalog-v2-'));process.env.HO
 let signal,wake;const queue=[];let revision=0;let subscribed=false;
 const location={directory:'/project',workspaceID:'one'};
 const ctx={location,model:{async list(){if(!subscribed)throw Error("snapshot before subscription");return {location:{directory:location.directory},data:[{providerID:'openai',id:'model',variants:[{id:revision?'high':'low'}]}]}}},event:{subscribe(opts){signal=opts.signal;signal.addEventListener('abort',()=>wake?.());return {[Symbol.asyncIterator]:async function*(){subscribed=true;while(!signal.aborted){if(!queue.length)await new Promise(r=>wake=r);while(queue.length)yield queue.shift()}}}}}};
-const cleanup=await plugin.setup(ctx);const tick=()=>new Promise(r=>setTimeout(r,30));await tick();
-const dir=path.join(root,'.gentle-ai','cache','opencode-v2');const read=async()=>JSON.parse(await fs.readFile(path.join(dir,(await fs.readdir(dir))[0]),'utf8'));
-if((await read()).openai.model[0]!=='low')throw Error('catalog');revision=1;queue.push({type:'model.updated',location});wake?.();await tick();if((await read()).openai.model[0]!=='high')throw Error('refresh');
+const cleanup=await plugin.setup(ctx);
+// Poll for the observable condition instead of sleeping a fixed time: the plugin writes <cache>.<hex>.tmp and renames it, so a slow machine may expose a temporary or half-written file.
+const waitFor=async(label,probe)=>{const deadline=Date.now()+15000;let last;while(Date.now()<deadline){try{if(await probe())return}catch(error){last=error}await new Promise(r=>setTimeout(r,20))}throw Error(label+' timed out'+(last?': '+last.message:''))};
+const dir=path.join(root,'.gentle-ai','cache','opencode-v2');const finals=async()=>(await fs.readdir(dir)).filter(f=>!f.endsWith('.tmp')).sort();
+const firstVariant=async()=>{const names=await finals();return names.length?JSON.parse(await fs.readFile(path.join(dir,names[0]),'utf8')).openai?.model?.[0]:undefined};
+await waitFor('catalog',async()=>(await firstVariant())==='low');revision=1;queue.push({type:'model.updated',location});wake?.();await waitFor('refresh',async()=>(await firstVariant())==='high');
 if(await fs.stat(path.join(root,'.gentle-ai','cache','model-variants.json')).then(()=>true,()=>false))throw Error('legacy cache overwritten');await cleanup();if(!signal.aborted)throw Error('catalog disposal');
-const second=await plugin.setup({location:{...location,workspaceID:'two'},model:ctx.model,event:{subscribe(opts){return {[Symbol.asyncIterator]:async function*(){await new Promise(r=>opts.signal.addEventListener('abort',r))}}}}});await tick();
-if((await fs.readdir(dir)).length!==2)throw Error('workspace caches collide');await second();await fs.rm(root,{recursive:true});
+const second=await plugin.setup({location:{...location,workspaceID:'two'},model:ctx.model,event:{subscribe(opts){return {[Symbol.asyncIterator]:async function*(){await new Promise(r=>opts.signal.addEventListener('abort',r))}}}}});
+await waitFor('workspace caches',async()=>(await finals()).length===2);await second();await fs.rm(root,{recursive:true});
 `)
 	runV2Plugin(t, "skill-registry", `
 const fs=await import('node:fs/promises');const os=await import('node:os');const path=await import('node:path');const root=await fs.mkdtemp(path.join(os.tmpdir(),'registry-v2-'));await fs.mkdir(path.join(root,'.git'));

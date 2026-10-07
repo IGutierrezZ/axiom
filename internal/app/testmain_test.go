@@ -2,6 +2,7 @@ package app
 
 import (
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/system"
@@ -30,6 +31,24 @@ func TestMain(m *testing.M) {
 	// the in-process guard and would write the real HKCU\Environment PATH.
 	if err := os.Setenv(system.NoPersistentPathEnvVar, "1"); err != nil {
 		panic(err)
+	}
+	// Keep every other home-like location inside the sandbox too: on Windows the
+	// agent adapters and the update detector read LOCALAPPDATA/APPDATA. A
+	// developer's own AXIOM_STATE_DIR must not leak in either, but it is cleared
+	// rather than pointed at one shared directory: system.AxiomDir derives the
+	// state location from the home it is given, and many tests inject a
+	// per-test home (selfUpdateHomeDirFn and similar) that a single global
+	// AXIOM_STATE_DIR would silently override, sharing state across tests.
+	if err := os.Unsetenv(system.EnvStateDirAxiom); err != nil {
+		panic(err)
+	}
+	for key, value := range map[string]string{
+		"LOCALAPPDATA": filepath.Join(testHome, "AppData", "Local"),
+		"APPDATA":      filepath.Join(testHome, "AppData", "Roaming"),
+	} {
+		if err := os.Setenv(key, value); err != nil {
+			panic(err)
+		}
 	}
 
 	code := m.Run()
