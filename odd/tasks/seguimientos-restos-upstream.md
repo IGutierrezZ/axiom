@@ -154,6 +154,12 @@ Previsión total: ~1.500-1.900 líneas en 5 PRs más el de cierre.
   - **Schemas:** se amplían en su sitio (precedente #48), sin versiones nuevas; v1 queda intacto.
   - **Commits:** tres, (a) lectura dual, (b) productores con eco y (c) activación en los prompts.
   - **Decisiones del usuario:** activar en este PR; `axiom` por defecto en `capture-*`.
+- **2026-10-07, U5 commit (a):** `107b725e` (+504/−39; producción +52/−21).
+  - **Lectura dual:** los 10 puntos de decisión usan `isReviewContractV2`; los validadores aceptan los dos dialectos con `reviewCommandCanonicalTool`; se borra `IsReviewContractSupported` con su línea del baseline.
+  - **Schemas:** consent, consent-v3 y capabilities hasta v2.3 se amplían en su sitio, con 5 hashes re-fijados.
+  - **Tests:** `review_dialect_test.go`, que incluye la regresión de que `axiom.*` recibía el consent v1.
+  - **Verificación:** 61 + 103 tests de `internal/cli` en verde por nombre exacto, salvo un caso de symlinks (entorno); ratchet limpio.
+  - Etapa (b) en curso.
 
 ## 9. Siguiente paso
 
