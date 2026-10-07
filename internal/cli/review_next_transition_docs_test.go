@@ -216,12 +216,17 @@ var reviewStatusNextTransitionInvocationRegexp = regexp.MustCompile("`(?:gentle-
 func TestNamedReviewStatusNextTransitionIsAlwaysComplete(t *testing.T) {
 	for label, content := range reviewStopReasonDocsCompleteDocuments(t) {
 		for _, invocation := range reviewStatusNextTransitionInvocationRegexp.FindAllString(content, -1) {
-			if !strings.Contains(invocation, "--contract gentle-ai.review-integration/v2") || !reviewAgentBindingRegexp.MatchString(invocation) {
-				t.Errorf("%s: %s is incomplete -- the real CLI refuses --next-transition without --contract gentle-ai.review-integration/v2 and a bound --agent (verified by execution)", label, invocation)
+			if !reviewV2ContractFlagRegexp.MatchString(invocation) || !reviewAgentBindingRegexp.MatchString(invocation) {
+				t.Errorf("%s: %s is incomplete -- the real CLI refuses --next-transition without a v2 --contract (gentle-ai or axiom dialect) and a bound --agent (verified by execution)", label, invocation)
 			}
 		}
 	}
 }
+
+// reviewV2ContractFlagRegexp accepts the v2 contract in either dialect: the
+// shipped prompts negotiate axiom.review-integration/v2 and the CLI echoes
+// whichever dialect was negotiated, so both spellings run.
+var reviewV2ContractFlagRegexp = regexp.MustCompile(`--contract (?:gentle-ai|axiom)\.review-integration/v2`)
 
 // reviewAgentBindingRegexp requires a bound `--agent` value without pinning
 // which one. Pinning `claude-code` here is what let issue #2440 through: the
