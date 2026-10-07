@@ -111,6 +111,11 @@ func (s *Sandbox) env() []string {
 		"LANG=C",
 		"AXIOM_INSTALL_SCOPE=global",
 		"GENTLE_AI_INSTALL_SCOPE=global",
+		// The bench module cannot import internal/system, so the literal of
+		// system.NoPersistentPathEnvVar is repeated here: the product binary under
+		// test is not a Go test binary and would otherwise write the developer's
+		// real persistent user PATH.
+		"AXIOM_NO_PERSISTENT_PATH=1",
 	}
 	if s.BenchCrashAtPhase != "" {
 		env = append(env, "GENTLE_AI_BENCH_CRASH_AT_PHASE="+s.BenchCrashAtPhase)

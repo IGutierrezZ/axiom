@@ -154,8 +154,17 @@ func TestCharacterization_EditAuthorityMissingBlocksApplyAndArchive(t *testing.T
 	// Transcribed verbatim from this test's real output on 2026-09-20 (D-03
 	// precedent), parameterized only by this run's own root/outside temp
 	// dirs -- never a substring check.
+	// Production resolves the named edit path through filepath.EvalSymlinks
+	// (edit_authority.go), so the reason carries its canonical spelling. That
+	// differs from t.TempDir() wherever the temp directory is reached through a
+	// symlink or a Windows 8.3 short name (C:/Users/IGUTIE~1/...), hence the
+	// expectation canonicalizes outside the same way. root is echoed verbatim.
+	canonicalOutside, err := filepath.EvalSymlinks(outside)
+	if err != nil {
+		t.Fatal(err)
+	}
 	exactBlockedReasons(t, "edit authority missing", status.BlockedReasons, []string{
-		fmt.Sprintf("blocked(edit_authority_missing): tasks.md targets edit paths outside the authorized edit roots: \"%s\"; edit tasks.md so every work unit stays inside the authorized edit roots, or grant this change edit authority for the named paths, or mark a read-only input with (read-only) right after its backticked path", outside),
+		fmt.Sprintf("blocked(edit_authority_missing): tasks.md targets edit paths outside the authorized edit roots: \"%s\"; edit tasks.md so every work unit stays inside the authorized edit roots, or grant this change edit authority for the named paths, or mark a read-only input with (read-only) right after its backticked path", canonicalOutside),
 		fmt.Sprintf("Run `axiom sdd continue \"%s\" --cwd \"%s\"` with authorized change-directory writes to prepare the required marker; this grants no edit roots.", change, root),
 	})
 }

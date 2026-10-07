@@ -17,6 +17,7 @@ import (
 
 func TestCheckAllWithCooldown_ConcurrentReviewModeDisablePreservesMode(t *testing.T) {
 	home := t.TempDir()
+	t.Setenv(system.EnvStateDirAxiom, filepath.Join(home, ".axiom"))
 	now := time.Date(2026, 6, 14, 12, 0, 0, 0, time.UTC)
 	stale := now.Add(-7 * time.Hour)
 	recordedAt := now.Add(-time.Hour)
@@ -29,7 +30,7 @@ func TestCheckAllWithCooldown_ConcurrentReviewModeDisablePreservesMode(t *testin
 	}
 
 	binary := buildCandidateBinary(t)
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), cooldownScenarioBudget)
 	defer cancel()
 	persistReached := make(chan struct{}, 1)
 	releasePersist := make(chan struct{})
@@ -66,7 +67,7 @@ func TestCheckAllWithCooldown_ConcurrentReviewModeDisablePreservesMode(t *testin
 
 	actorB := exec.CommandContext(ctx, binary, "review", "mode", "disable", "--scope", "global")
 	actorB.Dir = repositoryRoot(t)
-	actorB.Env = append(os.Environ(), "HOME="+home, "USERPROFILE="+home)
+	actorB.Env = isolatedActorEnv(home)
 	if output, err := actorB.CombinedOutput(); err != nil {
 		t.Fatalf("actor B review mode disable failed: %v\n%s", err, output)
 	}
@@ -99,6 +100,7 @@ func TestCheckAllWithCooldown_ConcurrentReviewModeDisablePreservesMode(t *testin
 
 func TestCheckAllWithCooldown_ContendedPersistenceRejectsReviewModeDisable(t *testing.T) {
 	home := t.TempDir()
+	t.Setenv(system.EnvStateDirAxiom, filepath.Join(home, ".axiom"))
 	now := time.Date(2026, 6, 14, 12, 0, 0, 0, time.UTC)
 	stale := now.Add(-7 * time.Hour)
 	recordedAt := now.Add(-time.Hour)
@@ -112,7 +114,7 @@ func TestCheckAllWithCooldown_ContendedPersistenceRejectsReviewModeDisable(t *te
 	}
 
 	binary := buildCandidateBinary(t)
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), cooldownScenarioBudget)
 	defer cancel()
 	writerEntered := make(chan struct{}, 1)
 	releaseWriter := make(chan struct{})
@@ -153,11 +155,11 @@ func TestCheckAllWithCooldown_ContendedPersistenceRejectsReviewModeDisable(t *te
 		t.Fatalf("state.Read before contended actor B: %v", err)
 	}
 
-	actorBContext, cancelActorB := context.WithTimeout(ctx, 5*time.Second)
+	actorBContext, cancelActorB := context.WithTimeout(ctx, cooldownActorBudget)
 	defer cancelActorB()
 	actorB := exec.CommandContext(actorBContext, binary, "review", "mode", "disable", "--scope", "global")
 	actorB.Dir = repositoryRoot(t)
-	actorB.Env = append(os.Environ(), "HOME="+home, "USERPROFILE="+home)
+	actorB.Env = isolatedActorEnv(home)
 	if output, err := actorB.CombinedOutput(); err == nil {
 		t.Fatalf("actor B unexpectedly disabled review mode while cooldown held the lock: %s", output)
 	}
@@ -181,11 +183,11 @@ func TestCheckAllWithCooldown_ContendedPersistenceRejectsReviewModeDisable(t *te
 		t.Fatalf("actor A state = %#v, want mode on with timestamp %v", afterActorA, now)
 	}
 
-	retryContext, cancelRetry := context.WithTimeout(ctx, 5*time.Second)
+	retryContext, cancelRetry := context.WithTimeout(ctx, cooldownActorBudget)
 	defer cancelRetry()
 	retry := exec.CommandContext(retryContext, binary, "review", "mode", "disable", "--scope", "global")
 	retry.Dir = repositoryRoot(t)
-	retry.Env = append(os.Environ(), "HOME="+home, "USERPROFILE="+home)
+	retry.Env = isolatedActorEnv(home)
 	if output, err := retry.CombinedOutput(); err != nil {
 		t.Fatalf("actor B retry review mode disable failed: %v\n%s", err, output)
 	}
@@ -197,6 +199,36 @@ func TestCheckAllWithCooldown_ContendedPersistenceRejectsReviewModeDisable(t *te
 	if final.RDDMode != "off" || final.LastUpdateCheck == nil || !final.LastUpdateCheck.Equal(now) {
 		t.Fatalf("final state = %#v, want mode off with timestamp %v", final, now)
 	}
+}
+
+// The scenarios below spawn a real axiom binary and link a fresh one, so their
+// wall-clock budgets must absorb a cold build cache and antivirus scans of a
+// just-written executable on a loaded machine. They are ceilings, not
+// expectations: a genuine deadlock still fails the test, only later, and the
+// failure messages name the budget and the context error.
+const (
+	// candidateBuildBudget bounds `go build ./cmd/axiom` (a cold link took ~25s
+	// on a developer Windows machine, which a 30s budget turned into a flake).
+	candidateBuildBudget = 3 * time.Minute
+	// cooldownScenarioBudget bounds a whole two-actor scenario.
+	cooldownScenarioBudget = time.Minute
+	// cooldownActorBudget bounds one `review mode disable` subprocess.
+	cooldownActorBudget = 30 * time.Second
+)
+
+// isolatedActorEnv returns the environment for a candidate axiom subprocess that
+// must see the scenario's home and nothing of the developer's real profile:
+// every home-like location, the state directory and the persistent PATH write
+// opt-out all point into home. Later entries win over the inherited ones.
+func isolatedActorEnv(home string) []string {
+	return append(os.Environ(),
+		"HOME="+home,
+		"USERPROFILE="+home,
+		"LOCALAPPDATA="+filepath.Join(home, "AppData", "Local"),
+		"APPDATA="+filepath.Join(home, "AppData", "Roaming"),
+		system.EnvStateDirAxiom+"="+filepath.Join(home, ".axiom"),
+		system.NoPersistentPathEnvVar+"=1",
+	)
 }
 
 func awaitSignal(t *testing.T, ctx context.Context, signal <-chan struct{}, message string) {
@@ -215,7 +247,7 @@ func buildCandidateBinary(t *testing.T) string {
 		binaryName += ".exe"
 	}
 	binary := filepath.Join(t.TempDir(), binaryName)
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), candidateBuildBudget)
 	defer cancel()
 	command := exec.CommandContext(ctx, "go", "build", "-o", binary, "./cmd/axiom")
 	command.Dir = repositoryRoot(t)

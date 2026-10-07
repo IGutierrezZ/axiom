@@ -3,6 +3,7 @@ package dashboard
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/system"
@@ -44,12 +45,20 @@ func runTests(m *testing.M) int {
 	for key, value := range map[string]string{
 		"HOME":                        home,
 		"USERPROFILE":                 home,
+		"LOCALAPPDATA":                filepath.Join(home, "AppData", "Local"),
+		"APPDATA":                     filepath.Join(home, "AppData", "Roaming"),
 		system.NoPersistentPathEnvVar: "1",
 	} {
 		if err := os.Setenv(key, value); err != nil {
 			fmt.Fprintf(os.Stderr, "dashboard tests: set %s: %v\n", key, err)
 			return 1
 		}
+	}
+	// A developer's own AXIOM_STATE_DIR is cleared, not pinned to one shared
+	// directory: system.AxiomDir must keep following the sandbox home.
+	if err := os.Unsetenv(system.EnvStateDirAxiom); err != nil {
+		fmt.Fprintf(os.Stderr, "dashboard tests: unset %s: %v\n", system.EnvStateDirAxiom, err)
+		return 1
 	}
 	sandboxHome = home
 

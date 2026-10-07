@@ -645,6 +645,19 @@ func TestSandboxEnvKeepsWindowsHomeInsideTheSandbox(t *testing.T) {
 	t.Fatalf("sandbox environment has no USERPROFILE=%q", sandbox.Home)
 }
 
+func TestSandboxEnvOptsOutOfPersistentPathWrites(t *testing.T) {
+	sandbox, err := newSandbox("gentle-ai", t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, entry := range sandbox.env() {
+		if entry == "AXIOM_NO_PERSISTENT_PATH=1" {
+			return
+		}
+	}
+	t.Fatal("sandbox environment has no AXIOM_NO_PERSISTENT_PATH=1")
+}
+
 func TestSelectedAuthorityCaptureHelpersSelectTheSandboxLineage(t *testing.T) {
 	tests := []struct {
 		name string

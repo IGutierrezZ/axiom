@@ -17,6 +17,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/IGutierrezZ/axiom/v3/internal/system"
 )
 
 var (
@@ -37,6 +39,22 @@ func TestMain(m *testing.M) {
 		panic(err)
 	}
 	if err := os.Setenv("USERPROFILE", testHome); err != nil {
+		panic(err)
+	}
+	// Keep the other home-like locations inside the sandbox, and opt out of
+	// persistent user PATH writes for any real axiom binary a test starts.
+	for key, value := range map[string]string{
+		"LOCALAPPDATA":                filepath.Join(testHome, "AppData", "Local"),
+		"APPDATA":                     filepath.Join(testHome, "AppData", "Roaming"),
+		system.NoPersistentPathEnvVar: "1",
+	} {
+		if err := os.Setenv(key, value); err != nil {
+			panic(err)
+		}
+	}
+	// A developer's own AXIOM_STATE_DIR is cleared, not pinned to one shared
+	// directory: system.AxiomDir must keep following the sandbox home.
+	if err := os.Unsetenv(system.EnvStateDirAxiom); err != nil {
 		panic(err)
 	}
 	code := m.Run()

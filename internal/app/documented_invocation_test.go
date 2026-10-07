@@ -9,9 +9,11 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"sort"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/app"
 	"github.com/IGutierrezZ/axiom/v3/internal/assets"
@@ -328,6 +330,11 @@ func newDocumentedInvocationSandbox(t *testing.T) string {
 	t.Setenv("USERPROFILE", home)
 	t.Setenv("XDG_CONFIG_HOME", filepath.Join(home, ".config"))
 	t.Setenv("XDG_STATE_HOME", filepath.Join(home, ".local", "state"))
+	// Every home-like location the product resolves stays inside the sandbox.
+	t.Setenv("LOCALAPPDATA", filepath.Join(home, "AppData", "Local"))
+	t.Setenv("APPDATA", filepath.Join(home, "AppData", "Roaming"))
+	t.Setenv("AXIOM_STATE_DIR", filepath.Join(home, ".axiom"))
+	t.Setenv("AXIOM_NO_PERSISTENT_PATH", "1")
 	git := func(args ...string) {
 		command := exec.Command("git", args...)
 		command.Dir = repo
@@ -344,7 +351,72 @@ func newDocumentedInvocationSandbox(t *testing.T) string {
 	git("add", ".")
 	git("commit", "-q", "-m", "seed")
 	t.Chdir(repo)
+	// Restrict PATH only after the fixture repository exists (git is needed to
+	// build it): the verbs under test (sync, setup) probe agent runtimes and
+	// helper tools through PATH, and on a developer machine that means running
+	// the real npm-shimmed opencode/claude/engram binaries. Measured on Windows,
+	// one `sync --agent opencode` took ~49s with the real PATH and ~6s with the
+	// restricted one, so the whole corpus (~80 subprocess-heavy invocations)
+	// ran for many minutes and looked like it never terminated.
+	t.Setenv("PATH", hermeticDocumentedInvocationPath(t, root))
 	return repo
+}
+
+// hermeticDocumentedInvocationPath returns a PATH that holds an empty directory
+// owned by the sandbox, the directory of the git binary the product legitimately
+// shells out to, and the operating system's own tool directories. No agent
+// runtime or package-manager shim is reachable through it.
+func hermeticDocumentedInvocationPath(t *testing.T, root string) string {
+	t.Helper()
+	bin := filepath.Join(root, "bin")
+	if err := os.MkdirAll(bin, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	entries := []string{bin}
+	if gitPath, err := exec.LookPath("git"); err == nil {
+		entries = append(entries, filepath.Dir(gitPath))
+	}
+	if runtime.GOOS == "windows" {
+		systemRoot := os.Getenv("SystemRoot")
+		if systemRoot == "" {
+			systemRoot = `C:\Windows`
+		}
+		entries = append(entries, filepath.Join(systemRoot, "System32"), systemRoot)
+	} else {
+		entries = append(entries, "/usr/bin", "/bin")
+	}
+	return strings.Join(entries, string(os.PathListSeparator))
+}
+
+// documentedInvocationBudget bounds one in-process documented invocation. A
+// healthy one takes seconds even on a loaded machine; the budget exists so a
+// future hang fails loudly, naming the command, instead of stalling the run
+// until the package-level test timeout kills it with no attribution.
+const documentedInvocationBudget = 3 * time.Minute
+
+// runDocumentedInvocation runs app.RunArgs and fails the test when it does not
+// return within documentedInvocationBudget. RunArgs has no context to cancel, so
+// a stuck call keeps its goroutine until the test binary exits; the failure is
+// still reported at once with the command and the budget.
+func runDocumentedInvocation(t *testing.T, args []string) (output []byte, runErr error) {
+	t.Helper()
+	type result struct {
+		output []byte
+		err    error
+	}
+	done := make(chan result, 1)
+	go func() {
+		var buffer bytes.Buffer
+		err := app.RunArgs(args[1:], &buffer)
+		done <- result{buffer.Bytes(), err}
+	}()
+	select {
+	case r := <-done:
+		return r.output, r.err
+	case <-time.After(documentedInvocationBudget):
+		t.Fatalf("documented invocation did not return within %v: %s", documentedInvocationBudget, strings.Join(args, " "))
+		return nil, nil
+	}
 }
 
 // registrySurfaceViolation cross-checks a documented negotiated review verb
@@ -426,12 +498,11 @@ func TestDocumentedInvocationsRunAsDocumented(t *testing.T) {
 				for index, arg := range args {
 					args[index] = strings.ReplaceAll(arg, repo, sandbox)
 				}
-				var output bytes.Buffer
-				runErr := app.RunArgs(args[1:], &output)
+				output, runErr := runDocumentedInvocation(t, args)
 				if isParseRejection(runErr) {
 					failure = fmt.Sprintf("the parser refuses it as printed: %v", runErr)
 				} else if tier == tierExecuted {
-					if envelope, dead := nonRetryableStop(output.Bytes()); dead && !strings.Contains(envelope, "immutable_review_transport_unsupported") {
+					if envelope, dead := nonRetryableStop(output); dead && !strings.Contains(envelope, "immutable_review_transport_unsupported") {
 						failure = "answers a non-retryable stop on a fresh repository: " + envelope
 					}
 				}
