@@ -94,6 +94,12 @@ func (a *Adapter) SystemPromptFile(homeDir string) string {
 	return filepath.Join(a.SystemPromptDir(homeDir), "axiom.md")
 }
 
+// LegacySystemPromptFiles lists the earlier prompt file names Axiom no longer
+// writes. A managed copy is retired on sync so the prompt is not duplicated.
+func (a *Adapter) LegacySystemPromptFiles(homeDir string) []string {
+	return []string{filepath.Join(a.SystemPromptDir(homeDir), "gentle-ai.md")}
+}
+
 func (a *Adapter) SkillsDir(homeDir string) string {
 	// Skills are always stored in ~/.kiro/skills/ on all platforms.
 	// This is intentionally independent from GlobalConfigDir() — Kiro uses a split-root

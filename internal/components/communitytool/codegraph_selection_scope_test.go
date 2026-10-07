@@ -23,7 +23,7 @@ func selectOnlyOpenCodeWithCodexAndCursorPresent(t *testing.T) (home, opencodeDi
 
 	opencodeDir = filepath.Join(home, ".config", "opencode")
 	codexPrompt = filepath.Join(home, ".codex", "AGENTS.md")
-	cursorPrompt = filepath.Join(home, ".cursor", "rules", "gentle-ai.mdc")
+	cursorPrompt = filepath.Join(home, ".cursor", "rules", "axiom.mdc")
 
 	mustWrite(t, filepath.Join(opencodeDir, "opencode.json"), "{}\n")
 	mustWrite(t, codexPrompt, "user codex instructions\n")

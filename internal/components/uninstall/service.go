@@ -825,6 +825,17 @@ func settingsTargets(homeDir string, adapter agents.Adapter) []string {
 	return dedupeSortedStrings(targets)
 }
 
+// systemPromptFiles lists the prompt file the adapter writes and the earlier
+// names a previous release used (Kiro, VS Code and Cursor renamed theirs), so an
+// uninstall also clears managed sections from a copy that sync has not retired.
+func systemPromptFiles(adapter agents.Adapter, homeDir string) []string {
+	files := []string{adapter.SystemPromptFile(homeDir)}
+	if provider, ok := adapter.(agents.LegacyPromptFileProvider); ok {
+		files = append(files, provider.LegacySystemPromptFiles(homeDir)...)
+	}
+	return files
+}
+
 func (s *Service) componentOperations(adapter agents.Adapter, componentID model.ComponentID) ([]operation, []string, error) {
 	ops := make([]operation, 0)
 	targets := make([]string, 0)
@@ -833,13 +844,14 @@ func (s *Service) componentOperations(adapter agents.Adapter, componentID model.
 	switch componentID {
 	case model.ComponentPersona:
 		if adapter.SupportsSystemPrompt() {
-			path := adapter.SystemPromptFile(homeDir)
-			targets = append(targets, path)
-			ops = append(ops, rewriteMarkdownFile(path, func(content string) (string, bool) {
-				updated, sectionsChanged := removeMarkdownSections(content, "persona")
-				updated, personaChanged := removeManagedPersonaPreamble(updated)
-				return updated, sectionsChanged || personaChanged
-			}))
+			for _, path := range systemPromptFiles(adapter, homeDir) {
+				targets = append(targets, path)
+				ops = append(ops, rewriteMarkdownFile(path, func(content string) (string, bool) {
+					updated, sectionsChanged := removeMarkdownSections(content, "persona")
+					updated, personaChanged := removeManagedPersonaPreamble(updated)
+					return updated, sectionsChanged || personaChanged
+				}))
+			}
 		}
 		if adapter.SupportsOutputStyles() {
 			path := filepath.Join(adapter.OutputStyleDir(homeDir), "gentleman.md")
@@ -871,11 +883,12 @@ func (s *Service) componentOperations(adapter agents.Adapter, componentID model.
 		targets = append(targets, engramTargets(adapter, homeDir)...)
 		ops = append(ops, engramOperations(adapter, homeDir)...)
 		if adapter.SupportsSystemPrompt() {
-			path := adapter.SystemPromptFile(homeDir)
-			targets = append(targets, path)
-			ops = append(ops, rewriteMarkdownFile(path, func(content string) (string, bool) {
-				return removeMarkdownSections(content, "engram-protocol")
-			}))
+			for _, path := range systemPromptFiles(adapter, homeDir) {
+				targets = append(targets, path)
+				ops = append(ops, rewriteMarkdownFile(path, func(content string) (string, bool) {
+					return removeMarkdownSections(content, "engram-protocol")
+				}))
+			}
 		}
 	case model.ComponentPermission:
 		for _, path := range settingsTargets(homeDir, adapter) {
@@ -941,11 +954,12 @@ func (s *Service) componentOperations(adapter agents.Adapter, componentID model.
 		}
 	case model.ComponentSDD:
 		if adapter.SupportsSystemPrompt() {
-			path := adapter.SystemPromptFile(homeDir)
-			targets = append(targets, path)
-			ops = append(ops, rewriteMarkdownFile(path, func(content string) (string, bool) {
-				return removeMarkdownSections(content, "sdd-orchestrator", "strict-tdd-mode")
-			}))
+			for _, path := range systemPromptFiles(adapter, homeDir) {
+				targets = append(targets, path)
+				ops = append(ops, rewriteMarkdownFile(path, func(content string) (string, bool) {
+					return removeMarkdownSections(content, "sdd-orchestrator", "strict-tdd-mode")
+				}))
+			}
 		}
 		if adapter.SupportsSlashCommands() {
 			commandsDir := adapter.CommandsDir(homeDir)

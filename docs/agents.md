@@ -135,14 +135,14 @@ Kiro usa agentes personalizados en `~/.kiro/agents/`. Axiom escribe los agentes 
 
 - Subagentes nativos en `~/.cursor/agents/sdd-{phase}.md` (ficheros instalados por Axiom)
 - Skills at `~/.cursor/skills/`
-- System prompt in `~/.cursor/rules/gentle-ai.mdc` (legacy file name kept for compatibility)
+- System prompt in `~/.cursor/rules/axiom.mdc`. `axiom sync` retira el antiguo `gentle-ai.mdc` solo si lo escribió Axiom; si tiene contenido propio lo conserva y avisa
 - MCP config in `~/.cursor/mcp.json`
 
 ### VS Code Copilot
 
 - Uses the `runSubagent` tool with support for parallel execution
 - Skills at `~/.copilot/skills/`
-- System prompt at `Code/User/prompts/axiom.instructions.md`
+- System prompt at `Code/User/prompts/axiom.instructions.md`. `axiom sync` retira el antiguo `gentle-ai.instructions.md` solo si lo escribió Axiom; si tiene contenido propio lo conserva y avisa
 - MCP config at `Code/User/mcp.json`
 
 ### Codex
@@ -196,7 +196,7 @@ Kiro usa agentes personalizados en `~/.kiro/agents/`. Axiom escribe los agentes 
 ### Kiro IDE
 
 - **Detección**: Axiom detecta Kiro mediante el ejecutable `kiro` en `PATH`; también informa de si existe `~/.kiro`. Tener solo el directorio de configuración no basta para marcar Kiro como instalado.
-- **Steering file** (all platforms): `~/.kiro/steering/axiom.md` with frontmatter `inclusion: always`
+- **Steering file** (all platforms): `~/.kiro/steering/axiom.md` with frontmatter `inclusion: always`. `axiom sync` retira el antiguo `gentle-ai.md` solo si lo escribió Axiom; si tiene contenido propio lo conserva y avisa
 - Native subagents at `~/.kiro/agents/sdd-{phase}.md` (11 phase files, plus the Judgment Day and review agents)
 - Skills (all platforms) at `~/.kiro/skills/`
 - **MCP config at a separate root** — always `~/.kiro/settings/mcp.json` (macOS/Linux) or `%USERPROFILE%\.kiro\settings\mcp.json` (Windows), regardless of GlobalConfigDir

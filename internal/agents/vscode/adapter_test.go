@@ -157,3 +157,13 @@ func TestMCPConfigPathUsesVSCodeUserProfile(t *testing.T) {
 		}
 	}
 }
+
+func TestLegacySystemPromptFiles(t *testing.T) {
+	home := t.TempDir()
+	a := NewAdapter()
+	got := a.LegacySystemPromptFiles(home)
+	want := filepath.Join(a.SystemPromptDir(home), "gentle-ai.instructions.md")
+	if len(got) != 1 || got[0] != want {
+		t.Fatalf("LegacySystemPromptFiles() = %q, want [%q]", got, want)
+	}
+}

@@ -14,13 +14,13 @@ import (
 // Regression test for issue. The reported machine had Codex and Cursor
 // installed but selected only OpenCode. Because the CodeGraph sync steps
 // discovered agents from the filesystem rather than the persisted selection,
-// every sync rewrote ~/.codex/AGENTS.md and ~/.cursor/rules/gentle-ai.mdc.
+// every sync rewrote ~/.codex/AGENTS.md and ~/.cursor/rules/axiom.mdc.
 func TestSyncNeverWritesOutsideSelectedAgents(t *testing.T) {
 	home := t.TempDir()
 
 	opencodeDir := filepath.Join(home, ".config", "opencode")
 	codexPrompt := filepath.Join(home, ".codex", "AGENTS.md")
-	cursorPrompt := filepath.Join(home, ".cursor", "rules", "gentle-ai.mdc")
+	cursorPrompt := filepath.Join(home, ".cursor", "rules", "axiom.mdc")
 
 	// OpenCode is selected and already has effective CodeGraph MCP wiring, so
 	// the reconcile path stays quiet and no installer subprocess is spawned.

@@ -844,6 +844,16 @@ func (r *installRuntime) stagePlan() pipeline.StagePlan {
 	if telemetryDir := openCodeGlobalConfigDir(r.homeDir, r.workspaceDir, r.scope, r.resolved.Agents); telemetryDir != "" {
 		apply = append(apply, openCodeTelemetryRetirementStep{id: "opencode:retire-telemetry-plugin", configDir: telemetryDir, state: r.state})
 	}
+	if legacy := legacyPromptAdapters(resolveAdapters(r.resolved.Agents)); len(legacy) > 0 {
+		apply = append(apply, legacyPromptRetirementStep{
+			id:       "retire-legacy-prompt-files",
+			state:    r.state,
+			adapters: legacy,
+			targetDir: func(adapter agents.Adapter) string {
+				return componentInjectionDirScoped(r.homeDir, r.workspaceDir, r.scope, adapter)
+			},
+		})
+	}
 
 	return pipeline.StagePlan{Prepare: prepare, Apply: apply}
 }

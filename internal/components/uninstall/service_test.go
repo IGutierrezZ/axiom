@@ -2320,3 +2320,68 @@ func TestUninstallSkillsRetiresOnlyUnmodifiedRetiredCopies(t *testing.T) {
 		})
 	}
 }
+
+// TestComponentOperationsSDD_RemovesManagedSectionsFromRenamedPromptFiles covers
+// Kiro, VS Code and Cursor, which renamed their prompt file: uninstall clears the
+// managed sections from the current name and from the legacy name a sync has not
+// retired yet, and keeps the user's own content in both.
+func TestComponentOperationsSDD_RemovesManagedSectionsFromRenamedPromptFiles(t *testing.T) {
+	homeDir := t.TempDir()
+	t.Setenv("APPDATA", filepath.Join(homeDir, "AppData", "Roaming"))
+	t.Setenv("XDG_CONFIG_HOME", filepath.Join(homeDir, ".config"))
+	svc, err := NewService(homeDir, t.TempDir(), "dev")
+	if err != nil {
+		t.Fatalf("NewService() error = %v", err)
+	}
+	const managed = "<!-- axiom:sdd-orchestrator -->\nmanaged\n<!-- /axiom:sdd-orchestrator -->\n"
+	for _, id := range []model.AgentID{model.AgentKiroIDE, model.AgentVSCodeCopilot, model.AgentCursor} {
+		t.Run(string(id), func(t *testing.T) {
+			adapter, ok := svc.registry.Get(id)
+			if !ok {
+				t.Fatalf("%s adapter not found in registry", id)
+			}
+			provider, ok := adapter.(agents.LegacyPromptFileProvider)
+			if !ok {
+				t.Fatalf("%s adapter does not declare legacy prompt files", id)
+			}
+			paths := append([]string{adapter.SystemPromptFile(homeDir)}, provider.LegacySystemPromptFiles(homeDir)...)
+			if len(paths) != 2 {
+				t.Fatalf("prompt files = %v, want the current and one legacy name", paths)
+			}
+			for _, path := range paths {
+				if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.WriteFile(path, []byte("My own rule\n\n"+managed), 0o644); err != nil {
+					t.Fatal(err)
+				}
+			}
+
+			ops, targets, err := svc.componentOperations(adapter, model.ComponentSDD)
+			if err != nil {
+				t.Fatalf("componentOperations() error = %v", err)
+			}
+			for _, path := range paths {
+				if !slices.Contains(targets, path) {
+					t.Fatalf("targets missing %q: %v", path, targets)
+				}
+			}
+			for _, op := range ops {
+				if slices.Contains(paths, op.path) {
+					if _, _, err := op.apply(op.path); err != nil {
+						t.Fatalf("op.apply(%q) error = %v", op.path, err)
+					}
+				}
+			}
+			for _, path := range paths {
+				got, err := os.ReadFile(path)
+				if err != nil {
+					t.Fatalf("ReadFile(%q): %v", path, err)
+				}
+				if strings.Contains(string(got), "managed") || !strings.Contains(string(got), "My own rule") {
+					t.Fatalf("%s = %q, want the managed section removed and the user rule kept", path, got)
+				}
+			}
+		})
+	}
+}

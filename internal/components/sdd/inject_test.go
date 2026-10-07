@@ -2465,7 +2465,7 @@ func TestInjectCursorWritesSDDOrchestratorAndSkills(t *testing.T) {
 	}
 
 	// Verify SDD orchestrator was injected into the system prompt file.
-	promptPath := filepath.Join(home, ".cursor", "rules", "gentle-ai.mdc")
+	promptPath := filepath.Join(home, ".cursor", "rules", "axiom.mdc")
 	content, readErr := os.ReadFile(promptPath)
 	if readErr != nil {
 		t.Fatalf("ReadFile(%q) error = %v", promptPath, readErr)
