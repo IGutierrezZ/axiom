@@ -18,8 +18,10 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	if err := os.Unsetenv("AXIOM_CHANNEL"); err != nil {
-		panic(err)
+	for _, key := range []string{system.EnvChannelAxiom, system.EnvChannelGentleAI} {
+		if err := os.Unsetenv(key); err != nil {
+			panic(err)
+		}
 	}
 
 	os.Exit(m.Run())
@@ -2034,21 +2036,23 @@ func TestDetectInstalledVersionPs1FallbackInvokesViaPowershell(t *testing.T) {
 func unsetUpdateChannelEnv(t *testing.T) {
 	t.Helper()
 
-	oldValue, hadValue := os.LookupEnv("AXIOM_CHANNEL")
-	if err := os.Unsetenv("AXIOM_CHANNEL"); err != nil {
-		t.Fatalf("unset AXIOM_CHANNEL: %v", err)
-	}
-	t.Cleanup(func() {
-		if hadValue {
-			if err := os.Setenv("AXIOM_CHANNEL", oldValue); err != nil {
-				t.Fatalf("restore AXIOM_CHANNEL: %v", err)
+	for _, key := range []string{system.EnvChannelAxiom, system.EnvChannelGentleAI} {
+		oldValue, hadValue := os.LookupEnv(key)
+		if err := os.Unsetenv(key); err != nil {
+			t.Fatalf("unset %s: %v", key, err)
+		}
+		t.Cleanup(func() {
+			if hadValue {
+				if err := os.Setenv(key, oldValue); err != nil {
+					t.Fatalf("restore %s: %v", key, err)
+				}
+				return
 			}
-			return
-		}
-		if err := os.Unsetenv("AXIOM_CHANNEL"); err != nil {
-			t.Fatalf("restore unset AXIOM_CHANNEL: %v", err)
-		}
-	})
+			if err := os.Unsetenv(key); err != nil {
+				t.Fatalf("restore unset %s: %v", key, err)
+			}
+		})
+	}
 }
 
 // simulateStrayForeignRequest sends the exact request shape issue #2483
@@ -2119,4 +2123,38 @@ func mockCmd(name string, args ...string) *exec.Cmd {
 		}
 	}
 	return exec.Command(name, args...)
+}
+
+// TestIsBetaUpdateChannelPrecedence pins AXIOM_CHANNEL as the primary variable
+// and GENTLE_AI_CHANNEL as the legacy fallback.
+func TestIsBetaUpdateChannelPrecedence(t *testing.T) {
+	tests := []struct {
+		name     string
+		axiom    string
+		legacy   string
+		wantBeta bool
+	}{
+		{name: "neither set defaults to stable", wantBeta: false},
+		{name: "legacy fallback beta", legacy: "beta", wantBeta: true},
+		{name: "legacy fallback nightly", legacy: "nightly", wantBeta: true},
+		{name: "axiom beta", axiom: "beta", wantBeta: true},
+		{name: "axiom stable wins over legacy beta", axiom: "stable", legacy: "beta", wantBeta: false},
+		{name: "axiom beta wins over legacy stable", axiom: "beta", legacy: "stable", wantBeta: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			unsetUpdateChannelEnv(t)
+			if tt.axiom != "" {
+				t.Setenv(system.EnvChannelAxiom, tt.axiom)
+			}
+			if tt.legacy != "" {
+				t.Setenv(system.EnvChannelGentleAI, tt.legacy)
+			}
+
+			if got := isBetaUpdateChannel(); got != tt.wantBeta {
+				t.Fatalf("isBetaUpdateChannel() = %v, want %v", got, tt.wantBeta)
+			}
+		})
+	}
 }

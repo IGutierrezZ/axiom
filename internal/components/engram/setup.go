@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
+	"github.com/IGutierrezZ/axiom/v3/internal/system"
 )
 
 // execCommandContext is a package-level seam over exec.CommandContext,
@@ -75,9 +76,26 @@ func ProbeProtocolFlagCommand(ctx context.Context, command string) (string, erro
 }
 
 const (
-	SetupModeEnvVar   = "GENTLE_AI_ENGRAM_SETUP_MODE"
-	SetupStrictEnvVar = "GENTLE_AI_ENGRAM_SETUP_STRICT"
+	SetupModeEnvVar   = "AXIOM_ENGRAM_SETUP_MODE"
+	SetupStrictEnvVar = "AXIOM_ENGRAM_SETUP_STRICT"
+
+	// SetupModeGentleAIEnvVar and SetupStrictGentleAIEnvVar are the legacy
+	// fallbacks read when the AXIOM_* variables are unset or empty.
+	SetupModeGentleAIEnvVar   = "GENTLE_AI_ENGRAM_SETUP_MODE"
+	SetupStrictGentleAIEnvVar = "GENTLE_AI_ENGRAM_SETUP_STRICT"
 )
+
+// SetupModeFromEnv resolves the setup mode from AXIOM_ENGRAM_SETUP_MODE,
+// falling back to GENTLE_AI_ENGRAM_SETUP_MODE.
+func SetupModeFromEnv() SetupMode {
+	return ParseSetupMode(system.Getenv(SetupModeEnvVar, SetupModeGentleAIEnvVar))
+}
+
+// SetupStrictFromEnv resolves strict setup from AXIOM_ENGRAM_SETUP_STRICT,
+// falling back to GENTLE_AI_ENGRAM_SETUP_STRICT.
+func SetupStrictFromEnv() bool {
+	return ParseSetupStrict(system.Getenv(SetupStrictEnvVar, SetupStrictGentleAIEnvVar))
+}
 
 type SetupMode string
 

@@ -94,7 +94,7 @@ Usage: install.sh [OPTIONS]
 
 Options:
   --method METHOD   Force install method: brew, go, binary (default: auto-detect)
-  --channel CHANNEL Axiom channel: stable (default), beta, or nightly (env: GENTLE_AI_CHANNEL)
+  --channel CHANNEL Axiom channel: stable (default), beta, or nightly (env: AXIOM_CHANNEL, fallback: GENTLE_AI_CHANNEL)
   --dir DIR         Custom install directory for binary method
   --insecure        Skip checksum verification (not recommended)
   -h, --help        Show this help
@@ -525,13 +525,13 @@ verify_installation() {
 print_banner() {
     echo ""
     echo -e "${CYAN}${BOLD}"
-    echo "   ____            _   _              _    ___ "
-    echo "  / ___| ___ _ __ | |_| | ___        / \  |_ _|"
-    echo " | |  _ / _ \ '_ \| __| |/ _ \_____ / _ \  | | "
-    echo " | |_| |  __/ | | | |_| |  __/_____/ ___ \ | | "
-    echo "  \____|\___|_| |_|\__|_|\___|    /_/   \_\___|"
+    echo "    _          _                 "
+    echo "   / \   __  _(_) ___  _ __ ___  "
+    echo "  / _ \  \ \/ / |/ _ \| '_ \` _ \ "
+    echo " / ___ \  >  <| | (_) | | | | | |"
+    echo "/_/   \_\/_/\_\_|\___/|_| |_| |_|"
     echo -e "${NC}"
-    echo -e "  ${DIM}Axiom — Ecosystem, Frameworks, Workflows${NC}"
+    echo -e "  ${DIM}Axiom — Deterministic, Spec-Driven Software Engineering${NC}"
     echo ""
 }
 
@@ -541,7 +541,7 @@ print_next_steps() {
     echo ""
     echo -e "${BOLD}Next steps:${NC}"
     if [ "${CHANNEL}" = "beta" ]; then
-        echo -e "  ${CYAN}1.${NC} Run ${BOLD}GENTLE_AI_CHANNEL=beta ${BINARY_NAME} install${NC} to keep using the beta channel"
+        echo -e "  ${CYAN}1.${NC} Run ${BOLD}AXIOM_CHANNEL=beta ${BINARY_NAME} install${NC} to keep using the beta channel"
     else
         echo -e "  ${CYAN}1.${NC} Run ${BOLD}${BINARY_NAME}${NC} to start the TUI installer"
     fi
@@ -564,7 +564,7 @@ main() {
     FORCE_METHOD=""
     INSTALL_DIR=""
     INSECURE="false"
-    CHANNEL="${GENTLE_AI_CHANNEL:-stable}"
+    CHANNEL="${AXIOM_CHANNEL:-${GENTLE_AI_CHANNEL:-stable}}"
 
     while [ $# -gt 0 ]; do
         case "$1" in

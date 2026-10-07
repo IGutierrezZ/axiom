@@ -3,7 +3,6 @@ package update
 import (
 	"context"
 	"fmt"
-	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -12,7 +11,11 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/system"
 )
 
-var updateChannelEnv = os.Getenv
+// updateChannelEnv resolves the release channel from AXIOM_CHANNEL, falling
+// back to the legacy GENTLE_AI_CHANNEL. Tests may replace it.
+var updateChannelEnv = func() string {
+	return system.Getenv(system.EnvChannelAxiom, system.EnvChannelGentleAI)
+}
 
 // CheckAll runs update checks for all registered tools concurrently.
 // currentVersion is the build-time version of gentle-ai (from app.Version).
@@ -179,7 +182,7 @@ func isGentleAIRepo(tool ToolInfo) bool {
 }
 
 func isBetaUpdateChannel() bool {
-	channel := strings.TrimSpace(updateChannelEnv("AXIOM_CHANNEL"))
+	channel := strings.TrimSpace(updateChannelEnv())
 	switch strings.ToLower(channel) {
 	case "beta", "nightly", "main":
 		return true
