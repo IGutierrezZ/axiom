@@ -554,7 +554,11 @@ func TestKilocodeReviewSettingsMatchCurrentMainBaseline(t *testing.T) {
 	// name `axiom review ...` instead of the always-failing `gentle-ai review ...`,
 	// the skill `chained-pr` instead of the nonexistent `gentle-ai-chained-pr`, and the
 	// `axiom.sdd-integration.consent/v1` ID Go actually emits. Deliberate, not drift.
-	const want = "8ca2ef55b937fea44bf5866e77cf83686be4d0c62f523f21be92e36ce1747772"
+	// ODD seguimientos U4: the shared OpenCode overlay now writes the managed-agent
+	// marker `__managed_by: "axiom/sdd"` instead of `"gentle-ai/sdd"`. The reader
+	// still accepts both, so existing installs keep being recognized. Deliberate,
+	// not drift.
+	const want = "2297dbb7ad60c8e5a5260ed3d3d7c581fb6baf282d66e1d2e59687c38268d8a9"
 	if got != want {
 		t.Fatalf("Kilocode settings SHA-256 = %s, want current-main baseline %s", got, want)
 	}

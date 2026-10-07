@@ -63,7 +63,7 @@ Support depends on the agent:
 
 | Agent | How multi-mode works |
 | ----- | -------------------- |
-| **OpenCode** | SDD Profiles generate `gentle-orchestrator` plus phase sub-agents in `opencode.json` |
+| **OpenCode** | SDD Profiles generate `axiom-orchestrator` plus phase sub-agents in `opencode.json` |
 | **Kilo Code** | OpenCode-compatible SDD profile overlay in `~/.config/kilo` |
 | **Kiro IDE** | Native phase agents with per-agent `model:` frontmatter |
 | **Pi** | Owned by `gentle-pi` through Pi-managed agents, chains, and model overrides |
@@ -75,13 +75,13 @@ If you want OpenCode profiles:
 
 1. Connect your AI providers in OpenCode first
 2. Create a profile via Axiom TUI ("OpenCode SDD Profiles") or CLI (`--profile` flag)
-3. The base/default SDD conductor is `gentle-orchestrator`
+3. The base/default SDD conductor is `axiom-orchestrator`
 4. Named profiles generate `sdd-orchestrator-{name}` + suffixed sub-agents, each assigned to your chosen model
-5. In OpenCode, press **Tab** to switch between `gentle-orchestrator` and custom profiles
+5. In OpenCode, press **Tab** to switch between `axiom-orchestrator` and custom profiles
 
 You can create multiple profiles (e.g., "cheap" for experimentation, "premium" for production) and switch between them freely.
 
-If you prefer a **runtime profile manager** that keeps profiles outside `opencode.json`, Axiom supports that too. During sync, OpenCode can auto-detect external profile files under `~/.config/opencode/profiles/*.json` and switch to a safer compatibility path that preserves the active `gentle-orchestrator` prompt instead of overwriting it.
+If you prefer a **runtime profile manager** that keeps profiles outside `opencode.json`, Axiom supports that too. During sync, OpenCode can auto-detect external profile files under `~/.config/opencode/profiles/*.json` and switch to a safer compatibility path that preserves the active `axiom-orchestrator` prompt instead of overwriting it.
 
 **Full step-by-step guide**: [OpenCode SDD Profiles](opencode-profiles.md)
 
@@ -182,7 +182,7 @@ You never need this diagram to use SDD -- the agent drives the phases. It is her
 
 ```mermaid
 flowchart TD
-    A["User: sdd-new / sdd-explore<br/>(gentle-sdd-* in Claude Code)"] --> B["Explore<br/>investigate codebase and approaches"]
+    A["User: sdd-new / sdd-explore<br/>(/sdd-* commands in Claude Code)"] --> B["Explore<br/>investigate codebase and approaches"]
     B --> BR{"External research<br/>selected?"}
     BR -->|"yes"| BX["Research<br/>optional source-backed findings<br/>authorized tools · honest limitations"]
     BR -->|"no"| C["Propose<br/>intent · scope · approach"]

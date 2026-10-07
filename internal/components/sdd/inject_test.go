@@ -9436,3 +9436,48 @@ func TestInjectRefreshesStaleArchiveSkillWithFinalStateAuthority(t *testing.T) {
 		t.Fatal("installed lazy SDD workflow missing archive final-state handoff section")
 	}
 }
+
+// An install written before the ownership marker rename carries
+// `__managed_by: "gentle-ai/sdd"` on every managed agent. Sync must keep
+// recognizing that install and rewrite its markers to the current `axiom/sdd`.
+func TestInjectOpenCodeRewritesLegacyManagedByMarker(t *testing.T) {
+	home := t.TempDir()
+	mockNoPackageManager(t)
+
+	settingsPath := filepath.Join(home, ".config", "opencode", "opencode.json")
+	if err := os.MkdirAll(filepath.Dir(settingsPath), 0o755); err != nil {
+		t.Fatalf("MkdirAll(settings dir) error = %v", err)
+	}
+	seed := `{
+  "agent": {
+    "axiom-orchestrator": {"mode": "primary", "hidden": true, "prompt": "old", "permission": {}, "__managed_by": "gentle-ai/sdd"},
+    "sdd-apply": {"mode": "subagent", "hidden": true, "prompt": "old", "permission": {}, "__managed_by": "gentle-ai/sdd"}
+  }
+}`
+	if err := os.WriteFile(settingsPath, []byte(seed), 0o644); err != nil {
+		t.Fatalf("WriteFile(opencode.json) error = %v", err)
+	}
+
+	if _, err := Inject(home, opencodeAdapter(), model.SDDModeMulti); err != nil {
+		t.Fatalf("Inject() error = %v", err)
+	}
+
+	settingsBytes, err := os.ReadFile(settingsPath)
+	if err != nil {
+		t.Fatalf("ReadFile(opencode.json) error = %v", err)
+	}
+	if strings.Contains(string(settingsBytes), "gentle-ai/sdd") {
+		t.Fatalf("opencode.json still carries the legacy managed-by marker after sync:\n%s", settingsBytes)
+	}
+	root := map[string]any{}
+	if err := json.Unmarshal(settingsBytes, &root); err != nil {
+		t.Fatalf("Unmarshal(opencode.json) error = %v", err)
+	}
+	agentMap, _ := root["agent"].(map[string]any)
+	for _, key := range []string{"axiom-orchestrator", "sdd-apply"} {
+		def, _ := agentMap[key].(map[string]any)
+		if def["__managed_by"] != "axiom/sdd" {
+			t.Fatalf("agent %q __managed_by = %v, want %q", key, def["__managed_by"], "axiom/sdd")
+		}
+	}
+}
