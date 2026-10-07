@@ -28,6 +28,8 @@ Cerrar los seguimientos que dejó el ODD anterior: defectos funcionales que sigu
 | T7m dentro de este ODD o en uno propio | **Dentro de este ODD** (2026-10-07). El usuario pide unificar todas las tareas unificables y aprueba `size:exception` para esos PRs unificados, aunque superen 400 líneas |
 | `cmd/gentle-ai`: retirarlo o mantenerlo | **Retirarlo del todo** (2026-10-07): borrar `cmd/gentle-ai` y el build `gentle-ai-deprecated`, ajustar `releasepolicy`, sus tests y la spec de identidad de distribución, y corregir los usos indebidos (registry, e2e, bench, guard del CI) |
 | Alcance de los IDs de protocolo `gentle-ai.*/vN` (incluye `__managed_by` y variables `GENTLE_AI_ENGRAM_*`/`GENTLE_AI_SDD_STATUS_ENGRAM`) | **Mínimo** (2026-10-07): variables `AXIOM_ENGRAM_*` y `AXIOM_SDD_STATUS_ENGRAM` con respaldo `GENTLE_AI_*`; `__managed_by` escrito como `axiom/sdd`; T7m con eco del dialecto. Los ~156 IDs `gentle-ai.*/vN` sin gemelo se quedan como contrato *wire* documentado; los separadores de hash y los persistidos no se tocan |
+| T7m: activar el dialecto en los prompts | **En este PR** (2026-10-07): commit (c) cambia `review-ledger-contract.md` y demás assets a `axiom.review-integration/v2` |
+| T7m: herramienta por defecto en `capture-*` y `acknowledge-approved` (sin `--contract`) | **`axiom` por defecto** (2026-10-07); los schemas de transición ya admiten ambos |
 
 ## 3. Convenciones (vigentes del ODD anterior, sección 3)
 
@@ -146,7 +148,13 @@ Previsión total: ~1.500-1.900 líneas en 5 PRs más el de cierre.
     - `update` `TestCheckAllWithCooldown_ContendedPersistenceRejectsReviewModeDisable` es intermitente con 3 `go test` en paralelo;
     - los comentarios de `scripts/deadcode-ratchet.sh:33,39` y `PRD.md:1188` siguen nombrando `cmd/gentle-ai`.
   - PR #107.
+- **2026-10-07, plan de U5 (agente Plan):**
+  - **Mapa corregido:** son 10 puntos de decisión de un solo dialecto, no 26. Con `axiom.*`, el consent sale como v1.
+  - **Dialecto:** se deriva en cada invocación del `--contract` y no se persiste.
+  - **Schemas:** se amplían en su sitio (precedente #48), sin versiones nuevas; v1 queda intacto.
+  - **Commits:** tres, (a) lectura dual, (b) productores con eco y (c) activación en los prompts.
+  - **Decisiones del usuario:** activar en este PR; `axiom` por defecto en `capture-*`.
 
 ## 9. Siguiente paso
 
-Esperar el CI de #104-#107 (el usuario avisa). U5 (T7m): plan con un agente Plan de solo lectura antes del writer.
+Esperar el CI de #104-#107 (el usuario avisa). U5 (T7m) en curso en `C:\repos\axiom-wt\odd-seg-u5`, por etapas: commit (a), luego (b) y (c).
