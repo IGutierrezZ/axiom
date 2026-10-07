@@ -7,6 +7,7 @@ import (
 // Well-known environment variable names with Axiom canonical keys.
 const (
 	EnvChannelAxiom                     = "AXIOM_CHANNEL"
+	EnvChannelGentleAI                  = "GENTLE_AI_CHANNEL"
 	EnvOpenCodeBackgroundSubagentsAxiom = "AXIOM_OPENCODE_BACKGROUND_SUBAGENTS"
 	EnvStateDirAxiom                    = "AXIOM_STATE_DIR"
 )

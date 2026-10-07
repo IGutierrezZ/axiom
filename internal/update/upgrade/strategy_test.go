@@ -23,8 +23,10 @@ func TestMain(m *testing.M) {
 	opencode.VersionRunnerOverride = func(context.Context, opencode.Command) (opencode.CommandOutput, error) {
 		return opencode.CommandOutput{Stdout: []byte("1.18.30")}, nil
 	}
-	if err := os.Unsetenv("AXIOM_CHANNEL"); err != nil {
-		panic(err)
+	for _, key := range []string{"AXIOM_CHANNEL", "GENTLE_AI_CHANNEL"} {
+		if err := os.Unsetenv(key); err != nil {
+			panic(err)
+		}
 	}
 
 	os.Exit(m.Run())

@@ -178,7 +178,7 @@ function Main {
         [string]$Method = "auto",
 
         [ValidateSet("stable", "beta", "nightly")]
-        [string]$Channel = $(if ($env:AXIOM_CHANNEL) { $env:AXIOM_CHANNEL } else { "stable" }),
+        [string]$Channel = $(if ($env:AXIOM_CHANNEL) { $env:AXIOM_CHANNEL } elseif ($env:GENTLE_AI_CHANNEL) { $env:GENTLE_AI_CHANNEL } else { "stable" }),
 
         [string]$InstallDir = "",
 

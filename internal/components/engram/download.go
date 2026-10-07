@@ -134,7 +134,8 @@ const engramCoreTagPattern = `^v[0-9]+\.[0-9]+\.[0-9]+$`
 //
 // When isBeta is true, engram is installed from source via `go install @main`
 // instead of downloading a release archive. This mirrors the install-time beta
-// path used by the CLI and ensures the upgrade executor honors GENTLE_AI_CHANNEL.
+// path used by the CLI and ensures the upgrade executor honors AXIOM_CHANNEL
+// (with the legacy GENTLE_AI_CHANNEL fallback).
 //
 // Checksum verification is mandatory for the stable (release) path: the install
 // fails if checksums.txt is unavailable, if the archive is not listed, or if

@@ -231,3 +231,27 @@ func TestInstallScriptsGoInstallPackageMatchesModuleMajor(t *testing.T) {
 		}
 	}
 }
+
+// TestInstallScriptsReadAxiomChannelBeforeLegacy pins the same precedence in
+// both installers as in the Go resolvers: AXIOM_CHANNEL first, then the legacy
+// GENTLE_AI_CHANNEL, then stable.
+func TestInstallScriptsReadAxiomChannelBeforeLegacy(t *testing.T) {
+	tests := []struct {
+		script string
+		want   string
+	}{
+		{"install.sh", `CHANNEL="${AXIOM_CHANNEL:-${GENTLE_AI_CHANNEL:-stable}}"`},
+		{"install.ps1", `if ($env:AXIOM_CHANNEL) { $env:AXIOM_CHANNEL } elseif ($env:GENTLE_AI_CHANNEL) { $env:GENTLE_AI_CHANNEL } else { "stable" }`},
+	}
+	for _, tc := range tests {
+		t.Run(tc.script, func(t *testing.T) {
+			content, err := os.ReadFile(filepath.Join("..", "..", "scripts", tc.script))
+			if err != nil {
+				t.Fatalf("ReadFile(%q) error = %v", tc.script, err)
+			}
+			if !strings.Contains(string(content), tc.want) {
+				t.Fatalf("scripts/%s does not resolve the channel as %q", tc.script, tc.want)
+			}
+		})
+	}
+}

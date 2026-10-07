@@ -179,3 +179,49 @@ func TestProbeProtocolFlagCommandUsesProvidedBinary(t *testing.T) {
 		t.Fatalf("probe command = %q, want beta binary path", gotCommand)
 	}
 }
+
+func TestSetupModeFromEnvPrecedence(t *testing.T) {
+	tests := []struct {
+		name   string
+		axiom  string
+		legacy string
+		want   SetupMode
+	}{
+		{name: "neither set defaults to supported", want: SetupModeSupported},
+		{name: "legacy fallback", legacy: "off", want: SetupModeOff},
+		{name: "axiom primary", axiom: "opencode", want: SetupModeOpenCode},
+		{name: "axiom wins over legacy", axiom: "off", legacy: "opencode", want: SetupModeOff},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv(SetupModeEnvVar, tt.axiom)
+			t.Setenv(SetupModeGentleAIEnvVar, tt.legacy)
+			if got := SetupModeFromEnv(); got != tt.want {
+				t.Fatalf("SetupModeFromEnv() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestSetupStrictFromEnvPrecedence(t *testing.T) {
+	tests := []struct {
+		name   string
+		axiom  string
+		legacy string
+		want   bool
+	}{
+		{name: "neither set is not strict", want: false},
+		{name: "legacy fallback", legacy: "1", want: true},
+		{name: "axiom primary", axiom: "true", want: true},
+		{name: "axiom wins over legacy", axiom: "0", legacy: "1", want: false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv(SetupStrictEnvVar, tt.axiom)
+			t.Setenv(SetupStrictGentleAIEnvVar, tt.legacy)
+			if got := SetupStrictFromEnv(); got != tt.want {
+				t.Fatalf("SetupStrictFromEnv() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
