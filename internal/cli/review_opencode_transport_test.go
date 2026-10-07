@@ -305,7 +305,7 @@ func TestOpenCodeReviewTransportRefusesCanonicalTaskAuthorityMismatchesBeforePro
 			if test.mutate != nil {
 				test.mutate(&binding)
 			}
-			forged, err := newReviewProviderTask(reviewProviderRole(binding.Role), ReviewTransitionBinding{
+			forged, err := newReviewProviderTask(reviewDialect{}, reviewProviderRole(binding.Role), ReviewTransitionBinding{
 				LineageID: binding.LineageID, Revision: binding.Revision, TargetIdentity: binding.TargetIdentity,
 				RepositoryContext: binding.RepositoryContext,
 			})
@@ -383,7 +383,7 @@ func openCodeTargetedValidatorAgainstReviewContextTask(t *testing.T) (string, st
 	}
 	var binding reviewLensContextBinding
 	decodeStrictReviewJSON(t, []byte(encoded), &binding)
-	task, err := newReviewProviderTask(reviewerprovider.RoleTargetedValidator, ReviewTransitionBinding{
+	task, err := newReviewProviderTask(reviewDialect{}, reviewerprovider.RoleTargetedValidator, ReviewTransitionBinding{
 		LineageID: binding.Lineage, Revision: binding.Revision, TargetIdentity: binding.Target, RepositoryContext: binding.RepositoryContext,
 	})
 	if err != nil {
@@ -540,7 +540,7 @@ func TestOpenCodeReviewTransportRefuterClosesThroughSharedGoReducer(t *testing.T
 	contextHandle := rctx2ReviewRepositoryContextForTest(t, repo, reviewtransaction.ReviewRepositoryContextBinding{
 		LineageID: record.State.LineageID, TargetIdentity: record.State.InitialSnapshot.Identity, Revision: record.State.CapturePhaseRevision,
 	})
-	task, err := newReviewProviderTask(reviewerprovider.RoleRefuter, ReviewTransitionBinding{
+	task, err := newReviewProviderTask(reviewDialect{}, reviewerprovider.RoleRefuter, ReviewTransitionBinding{
 		LineageID: record.State.LineageID, Revision: record.State.CapturePhaseRevision, TargetIdentity: record.State.InitialSnapshot.Identity, RepositoryContext: contextHandle,
 	})
 	if err != nil {

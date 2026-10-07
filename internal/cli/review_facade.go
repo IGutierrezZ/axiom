@@ -663,8 +663,9 @@ func RunReview(args []string, stdout io.Writer) error {
 //
 // DECISION (capture ambiguity diagnosis): emission is unconditional, not
 // gated on a contract flag, because these verbs cannot know they have a
-// machine caller -- orchestrators invoke them WITHOUT --contract, exactly as
-// the negotiated collect transitions render their submission argv. Their
+// machine caller -- orchestrators invoke them with exactly the argv the
+// negotiated collect transitions render, which carries --contract only for an
+// axiom caller (to select the dialect of the answer). Their
 // success paths already print one JSON document on stdout unconditionally, so
 // refusals printing one JSON document is symmetric; without it a machine
 // caller that parses stdout (the gentle-pi runtime's shared invoke path) can
@@ -688,7 +689,12 @@ func runReviewCollectCaptureCommand(operation string, args []string, stdout io.W
 	// The capture verbs exist only in the v2.1 negotiated lifecycle and the
 	// published v1 failure schema does not admit their operation names, so
 	// the envelope publishes under the v2 identity unconditionally.
+	// The envelope echoes the dialect the invocation negotiated through its
+	// optional --contract; without it, it keeps the gentle-ai identity.
 	failure.Schema, failure.Contract = ReviewIntegrationFailureSchemaV2, ReviewIntegrationContractV2
+	if _, contract, _ := reviewIntegrationContractArgument(args[1:]); reviewDialectForContract(contract).axiom {
+		failure.Schema, failure.Contract = reviewtransaction.AxiomReviewFailureV2Contract, AxiomReviewIntegrationContractV2
+	}
 	// Generate the defect report before emitting the envelope so a stdout
 	// write failure cannot suppress the artifact, exactly as the negotiated
 	// route does.
@@ -2025,8 +2031,8 @@ func runReviewFacadeStart(ctx context.Context, args []string, stdout io.Writer) 
 		return err
 	}
 	// A negotiated START echoes the dialect it negotiated; the direct route
-	// negotiated nothing, so it falls back to the no-contract default.
-	dialect := reviewNoContractDialect
+	// negotiated nothing, so it keeps the legacy dialect, byte for byte.
+	dialect := reviewDialect{}
 	if negotiated {
 		dialect = reviewDialectForContract(*contract)
 	}

@@ -289,6 +289,9 @@ func (result ReviewIntegrationStartResult) Validate() error {
 		if err := validateReviewDialectCommands(result.Contract, result.Acknowledgement.Command); err != nil {
 			return err
 		}
+		if err := validateReviewDialectCaptureTokens(result.Contract, nil, result.Acknowledgement); err != nil {
+			return err
+		}
 		if result.Acknowledgement.Binding.LineageID != result.LineageID {
 			return errors.New("negotiated START acknowledgement does not bind the approved zero-lens authority") // refusal:by-design world-action: STATUS must re-render the exact pending acknowledgement from active authority
 		}

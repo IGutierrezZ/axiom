@@ -155,17 +155,35 @@
         "operation": {"const": "review.acknowledge-approved"},
         "command": {"type": "string", "pattern": "^(axiom|gentle-ai) review acknowledge-approved"},
         "arguments": {
-          "type": "array",
-          "minItems": 5,
-          "maxItems": 5,
-          "prefixItems": [
-            {"type": "object", "additionalProperties": false, "required": ["name", "value", "token"], "properties": {"name": {"const": "cwd"}, "value": {"type": "string", "minLength": 1}, "token": {"type": "string", "minLength": 1}}},
-            {"type": "object", "additionalProperties": false, "required": ["name", "value", "token"], "properties": {"name": {"const": "lineage"}, "value": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"}, "token": {"type": "string", "minLength": 1}}},
-            {"type": "object", "additionalProperties": false, "required": ["name", "value", "token"], "properties": {"name": {"const": "target"}, "value": {"$ref": "transition-binding.schema.json#/$defs/sha256"}, "token": {"type": "string", "minLength": 1}}},
-            {"type": "object", "additionalProperties": false, "required": ["name", "value", "token"], "properties": {"name": {"const": "expected-revision"}, "value": {"$ref": "transition-binding.schema.json#/$defs/sha256"}, "token": {"type": "string", "minLength": 1}}},
-            {"type": "object", "additionalProperties": false, "required": ["name", "value", "token"], "properties": {"name": {"const": "token"}, "value": {"type": "string", "pattern": "^[0-9a-f]{64}$"}, "token": {"type": "string", "minLength": 1}}}
-          ],
-          "items": false
+          "oneOf": [
+            {
+              "type": "array",
+              "minItems": 5,
+              "maxItems": 5,
+              "prefixItems": [
+                {"type": "object", "additionalProperties": false, "required": ["name", "value", "token"], "properties": {"name": {"const": "cwd"}, "value": {"type": "string", "minLength": 1}, "token": {"type": "string", "minLength": 1}}},
+                {"type": "object", "additionalProperties": false, "required": ["name", "value", "token"], "properties": {"name": {"const": "lineage"}, "value": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"}, "token": {"type": "string", "minLength": 1}}},
+                {"type": "object", "additionalProperties": false, "required": ["name", "value", "token"], "properties": {"name": {"const": "target"}, "value": {"$ref": "transition-binding.schema.json#/$defs/sha256"}, "token": {"type": "string", "minLength": 1}}},
+                {"type": "object", "additionalProperties": false, "required": ["name", "value", "token"], "properties": {"name": {"const": "expected-revision"}, "value": {"$ref": "transition-binding.schema.json#/$defs/sha256"}, "token": {"type": "string", "minLength": 1}}},
+                {"type": "object", "additionalProperties": false, "required": ["name", "value", "token"], "properties": {"name": {"const": "token"}, "value": {"type": "string", "pattern": "^[0-9a-f]{64}$"}, "token": {"type": "string", "minLength": 1}}}
+              ],
+              "items": false
+            },
+            {
+              "type": "array",
+              "minItems": 6,
+              "maxItems": 6,
+              "prefixItems": [
+                {"type": "object", "additionalProperties": false, "required": ["name", "value", "token"], "properties": {"name": {"const": "contract"}, "value": {"const": "axiom.review-integration/v2"}, "token": {"const": "--contract=axiom.review-integration/v2"}}},
+                {"type": "object", "additionalProperties": false, "required": ["name", "value", "token"], "properties": {"name": {"const": "cwd"}, "value": {"type": "string", "minLength": 1}, "token": {"type": "string", "minLength": 1}}},
+                {"type": "object", "additionalProperties": false, "required": ["name", "value", "token"], "properties": {"name": {"const": "lineage"}, "value": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"}, "token": {"type": "string", "minLength": 1}}},
+                {"type": "object", "additionalProperties": false, "required": ["name", "value", "token"], "properties": {"name": {"const": "target"}, "value": {"$ref": "transition-binding.schema.json#/$defs/sha256"}, "token": {"type": "string", "minLength": 1}}},
+                {"type": "object", "additionalProperties": false, "required": ["name", "value", "token"], "properties": {"name": {"const": "expected-revision"}, "value": {"$ref": "transition-binding.schema.json#/$defs/sha256"}, "token": {"type": "string", "minLength": 1}}},
+                {"type": "object", "additionalProperties": false, "required": ["name", "value", "token"], "properties": {"name": {"const": "token"}, "value": {"type": "string", "pattern": "^[0-9a-f]{64}$"}, "token": {"type": "string", "minLength": 1}}}
+              ],
+              "items": false
+            }
+          ]
         },
         "preconditions": {
           "type": "array",

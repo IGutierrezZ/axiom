@@ -403,7 +403,7 @@ func TestReviewNextTransitionCollectAndStopCarryNoCommand(t *testing.T) {
 		Revision:       "sha256:" + strings.Repeat("a", 64),
 		TargetIdentity: "sha256:" + strings.Repeat("b", 64),
 	}
-	collect := reviewCollectTransition("reviewer_results_required", reviewCaptureInput(binding, "review-reliability", 0, nil))
+	collect := reviewCollectTransition("reviewer_results_required", reviewCaptureInput(reviewDialect{}, binding, "review-reliability", 0, nil))
 	if collect.Execute != nil {
 		t.Fatalf("collect transition = %#v, want no execute payload", collect)
 	}

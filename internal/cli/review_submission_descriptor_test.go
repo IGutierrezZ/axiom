@@ -35,7 +35,7 @@ func TestReviewerCaptureDescriptorUsesCaptureResult(t *testing.T) {
 		LineageID: "descriptor-reviewer", Revision: descriptorTestSHA("a"), TargetIdentity: descriptorTestSHA("b"),
 		RepositoryContext: "rctx1_" + strings.Repeat("c", 64),
 	}
-	input := reviewCaptureInput(binding, reviewtransaction.LensReliability, 0, nil, model.AgentPi)
+	input := reviewCaptureInput(reviewDialect{}, binding, reviewtransaction.LensReliability, 0, nil, model.AgentPi)
 	if input.CaptureOperation != reviewCaptureResultCaptureOperation || input.Submission == nil ||
 		input.Submission.OperationToken != "capture-result" || input.Submission.Value == nil ||
 		input.Submission.Value.Slot != "reviewer_result" {

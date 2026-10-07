@@ -52,9 +52,11 @@ type reviewIntegrationOperationMetadata struct {
 	// CollectCapture marks the third row class: a collect-satisfying capture
 	// operation ("review.capture-result", "review.capture-refuter",
 	// "review.capture-validation"). These verbs are
-	// dispatched on the plain route -- orchestrators invoke them WITHOUT
-	// --contract, exactly as the negotiated collect transitions render them --
-	// so they never join the negotiated command route or the published
+	// dispatched on the plain route -- orchestrators invoke them with exactly
+	// the tokens the negotiated collect transitions render, which carry
+	// --contract only for a caller that negotiated the axiom dialect (it selects
+	// the dialect of the answer, it does not negotiate the route) -- so they
+	// never join the negotiated command route or the published
 	// capabilities `operations` array (whose length is a pinned contract).
 	// They DO join the failure envelope's operation vocabulary: their success
 	// paths print JSON on stdout, and a machine caller that received bare
@@ -92,11 +94,11 @@ var reviewIntegrationOperationRegistry = []reviewIntegrationOperationMetadata{
 	{Command: "assess", Operation: "review.assess", Label: "Review ASSESS"},
 	// CollectCapture rows carry the exact flag sets their Run functions define,
 	// so a refusal envelope never silently drops the bound lineage.
-	{Command: "capture-correction-plan", Operation: reviewCaptureCorrectionPlanOperation, Label: "Review CAPTURE-CORRECTION-PLAN", CollectCapture: true, ValueFlags: []string{"cwd", "repository-context", "lineage", "target", "expected-revision", "request-hash"}, IntFlags: []string{"correction-lines"}, MutatesAuthority: true},
-	{Command: "capture-refuter", Operation: reviewCaptureRefuterCaptureOperation, Label: "Review CAPTURE-REFUTER", CollectCapture: true, ValueFlags: []string{"cwd", "repository-context", "lineage", "target", "expected-revision", "agent"}, BoolFlags: []string{"materialize", "execute"}, MutatesAuthority: true, ReadOnlyFlag: "materialize"},
-	{Command: "capture-result", Operation: reviewCaptureResultCaptureOperation, Label: "Review CAPTURE-RESULT", CollectCapture: true, ValueFlags: []string{"cwd", "repository-context", "lineage", "target", "lens", "expected-revision", "subject-hash", "agent", "input"}, BoolFlags: []string{"preflight", "materialize"}, IntFlags: []string{"order"}, MutatesAuthority: true, ReadOnlyFlag: "preflight"},
-	{Command: "capture-unachievable", Operation: reviewCaptureUnachievableCaptureOperation, Label: "Review CAPTURE-UNACHIEVABLE", CollectCapture: true, ValueFlags: []string{"cwd", "repository-context", "lineage", "target", "expected-revision", "request-hash", "reason", "detail"}, BoolFlags: []string{"withdraw"}, MutatesAuthority: true},
-	{Command: "capture-validation", Operation: reviewCaptureValidationCaptureOperation, Label: "Review CAPTURE-VALIDATION", CollectCapture: true, ValueFlags: []string{"cwd", "repository-context", "lineage", "target", "expected-revision", "request-hash", "agent"}, BoolFlags: []string{"materialize", "execute"}, MutatesAuthority: true, ReadOnlyFlag: "materialize"},
+	{Command: "capture-correction-plan", Operation: reviewCaptureCorrectionPlanOperation, Label: "Review CAPTURE-CORRECTION-PLAN", CollectCapture: true, ValueFlags: []string{"cwd", "contract", "repository-context", "lineage", "target", "expected-revision", "request-hash"}, IntFlags: []string{"correction-lines"}, MutatesAuthority: true},
+	{Command: "capture-refuter", Operation: reviewCaptureRefuterCaptureOperation, Label: "Review CAPTURE-REFUTER", CollectCapture: true, ValueFlags: []string{"cwd", "contract", "repository-context", "lineage", "target", "expected-revision", "agent"}, BoolFlags: []string{"materialize", "execute"}, MutatesAuthority: true, ReadOnlyFlag: "materialize"},
+	{Command: "capture-result", Operation: reviewCaptureResultCaptureOperation, Label: "Review CAPTURE-RESULT", CollectCapture: true, ValueFlags: []string{"cwd", "contract", "repository-context", "lineage", "target", "lens", "expected-revision", "subject-hash", "agent", "input"}, BoolFlags: []string{"preflight", "materialize"}, IntFlags: []string{"order"}, MutatesAuthority: true, ReadOnlyFlag: "preflight"},
+	{Command: "capture-unachievable", Operation: reviewCaptureUnachievableCaptureOperation, Label: "Review CAPTURE-UNACHIEVABLE", CollectCapture: true, ValueFlags: []string{"cwd", "contract", "repository-context", "lineage", "target", "expected-revision", "request-hash", "reason", "detail"}, BoolFlags: []string{"withdraw"}, MutatesAuthority: true},
+	{Command: "capture-validation", Operation: reviewCaptureValidationCaptureOperation, Label: "Review CAPTURE-VALIDATION", CollectCapture: true, ValueFlags: []string{"cwd", "contract", "repository-context", "lineage", "target", "expected-revision", "request-hash", "agent"}, BoolFlags: []string{"materialize", "execute"}, MutatesAuthority: true, ReadOnlyFlag: "materialize"},
 	{Command: "acknowledge-approved", Operation: "review.acknowledge-approved", Label: "Review ACKNOWLEDGE-APPROVED"},
 	// review.recover owns a verb without joining the published negotiated
 	// surface (see Negotiated above). It is emitted as an execute transition by

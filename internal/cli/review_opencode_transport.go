@@ -73,6 +73,9 @@ type openCodeTransportTaskBinding struct {
 	Order             openCodeHostBindingOrder
 	SubjectHash       string
 	Role              reviewProviderRole
+	// Contract is the dialect the Task binding names (empty for the legacy one);
+	// the closure the transport returns echoes it.
+	Contract string
 	// canonicalTaskPrompt is the Go-rebuilt binding line for a provider role
 	// task. It replaces the host-authored prompt before materialization so no
 	// caller-authored byte can ride the relay into the reviewer child.
@@ -132,6 +135,7 @@ type openCodeHostLensBinding struct {
 	Revision          string                   `json:"revision"`
 	RepositoryContext string                   `json:"repository_context"`
 	SubjectHash       string                   `json:"subject_hash"`
+	Contract          string                   `json:"contract,omitempty"`
 }
 
 // openCodeTransportMaterialization carries the original, Go-issued Task
@@ -154,6 +158,13 @@ type openCodeTransportSession struct {
 	taskPrompt     string
 	nonce          string
 	passThrough    bool
+}
+
+// dialect is the dialect the Task binding named; the transport echoes it in the
+// closure it returns, so an axiom caller is never switched to another contract.
+func (session openCodeTransportSession) dialect() reviewDialect {
+	dialect, _ := reviewDialectForBindingContract(session.binding.Contract)
+	return dialect
 }
 
 var openCodeTransportRandom = rand.Read
@@ -378,6 +389,9 @@ func openCodeTransportStartBound(ctx context.Context, taskPrompt string) (openCo
 		if binding.SubjectHash != "" && binding.SubjectHash != request.Binding.SubjectHash {
 			return openCodeTransportSession{}, openCodeTransportBindingInvalid("Task subject hash does not match the provider-issued artifact subject")
 		}
+		// The rebuilt binding keeps the dialect the host's frame named, so a
+		// re-intercepted frame decodes back to the same bytes.
+		request.Binding.Contract = binding.Contract
 		encoded, err := json.Marshal(request.Binding)
 		if err != nil {
 			return openCodeTransportSession{}, openCodeTransportFailure("opencode_review_transport_materialization_unavailable")
@@ -416,7 +430,7 @@ func openCodeTransportComplete(ctx context.Context, session openCodeTransportSes
 		return openCodeTransportEnvelope{}, openCodeTransportFailure("opencode_review_transport_completion_unavailable")
 	}
 	if session.binding.Role != "" {
-		closure, err := openCodeTransportCaptureRole(ctx, session.root, store, record, session.binding.Role, hostOutput)
+		closure, err := openCodeTransportCaptureRole(ctx, session.dialect(), session.root, store, record, session.binding.Role, hostOutput)
 		if err != nil {
 			return openCodeTransportEnvelope{}, openCodeTransportFailure("opencode_provider_role_result_refused")
 		}
@@ -455,7 +469,7 @@ func openCodeTransportComplete(ctx context.Context, session openCodeTransportSes
 	if currentErr != nil {
 		return openCodeTransportEnvelope{}, openCodeTransportFailure("opencode_review_transport_capture_failed")
 	}
-	closure, err := closeReviewOnLastCapturedLens(ctx, session.root, store, currentRecord, model.AgentOpenCode)
+	closure, err := closeReviewOnLastCapturedLens(ctx, session.dialect(), session.root, store, currentRecord, model.AgentOpenCode)
 	if err != nil && !reviewLastCapturedLensClosureSuperseded(store, currentRecord) {
 		return openCodeTransportEnvelope{}, openCodeTransportFailure("opencode_review_transport_capture_failed")
 	}
@@ -503,7 +517,11 @@ func decodeOpenCodeTransportBinding(prompt string) (openCodeTransportTaskBinding
 		if err := decoder.Decode(&extra); !errors.Is(err, io.EOF) || binding.RepositoryContext == "" || binding.Role == "" {
 			return openCodeTransportTaskBinding{}, openCodeTransportBindingInvalid("Task prompt binding is incomplete")
 		}
-		issued, err := newReviewProviderTask(reviewProviderRole(binding.Role), ReviewTransitionBinding{
+		dialect, admitted := reviewDialectForBindingContract(binding.Contract)
+		if !admitted {
+			return openCodeTransportTaskBinding{}, openCodeTransportBindingInvalid("Task prompt binding names an unsupported contract")
+		}
+		issued, err := newReviewProviderTask(dialect, reviewProviderRole(binding.Role), ReviewTransitionBinding{
 			LineageID: binding.LineageID, Revision: binding.Revision, TargetIdentity: binding.TargetIdentity,
 			RepositoryContext: binding.RepositoryContext,
 		})
@@ -512,7 +530,7 @@ func decodeOpenCodeTransportBinding(prompt string) (openCodeTransportTaskBinding
 		}
 		return openCodeTransportTaskBinding{
 			LineageID: binding.LineageID, Revision: binding.Revision, TargetIdentity: binding.TargetIdentity,
-			RepositoryContext: binding.RepositoryContext, Role: reviewProviderRole(binding.Role),
+			RepositoryContext: binding.RepositoryContext, Role: reviewProviderRole(binding.Role), Contract: binding.Contract,
 			canonicalTaskPrompt: issued.Prompt,
 		}, nil
 	}
@@ -531,9 +549,13 @@ func decodeOpenCodeTransportBinding(prompt string) (openCodeTransportTaskBinding
 		binding.Revision == "" || binding.RepositoryContext == "" || binding.Lens == "" {
 		return openCodeTransportTaskBinding{}, openCodeTransportBindingInvalid("Task prompt binding is incomplete")
 	}
+	if _, admitted := reviewDialectForBindingContract(binding.Contract); !admitted {
+		return openCodeTransportTaskBinding{}, openCodeTransportBindingInvalid("Task prompt binding names an unsupported contract")
+	}
 	return openCodeTransportTaskBinding{
 		LineageID: binding.Lineage, Revision: binding.Revision, TargetIdentity: binding.Target,
 		RepositoryContext: binding.RepositoryContext, Lens: binding.Lens, Order: binding.Order, SubjectHash: binding.SubjectHash,
+		Contract: binding.Contract,
 	}, nil
 }
 
@@ -591,7 +613,7 @@ func decodeOpenCodeTransportMaterialization(prompt string) (taskPrompt string, r
 	return materialization.TaskPrompt, true, nil
 }
 
-func openCodeTransportCaptureRole(ctx context.Context, root string, store reviewtransaction.CompactStore, record reviewtransaction.CompactRecord, role reviewProviderRole, raw []byte) (*reviewLastEventClosureResult, error) {
+func openCodeTransportCaptureRole(ctx context.Context, dialect reviewDialect, root string, store reviewtransaction.CompactStore, record reviewtransaction.CompactRecord, role reviewProviderRole, raw []byte) (*reviewLastEventClosureResult, error) {
 	switch role {
 	case reviewerprovider.RoleRefuter:
 		if _, err := reviewProviderCaptureRefuterRaw(ctx, root, store, record.State, record.State.CapturePhaseRevision, raw); err != nil {
@@ -601,9 +623,9 @@ func openCodeTransportCaptureRole(ctx context.Context, root string, store review
 		if err != nil {
 			return nil, err
 		}
-		return closeReviewOnLastCapturedLens(ctx, root, store, current, model.AgentOpenCode)
+		return closeReviewOnLastCapturedLens(ctx, dialect, root, store, current, model.AgentOpenCode)
 	case reviewerprovider.RoleTargetedValidator:
-		_, _, closure, err := reviewProviderCloseTargetedValidatorRaw(ctx, root, store, record.State, record.State.CapturePhaseRevision, raw)
+		_, _, closure, err := reviewProviderCloseTargetedValidatorRaw(ctx, dialect, root, store, record.State, record.State.CapturePhaseRevision, raw)
 		return closure, err
 	default:
 		return nil, fmt.Errorf("unsupported provider role task %q", role) // refusal:by-design world-action: the relay session role is fixed by the Go-issued Task binding

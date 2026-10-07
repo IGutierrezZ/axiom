@@ -349,7 +349,7 @@ func resolveReviewNextTransition(status ReviewTargetStatusResult, selectedLenses
 			return reviewMissingCaptureTransition(reviewDialectForContract(status.Contract), captureBinding, selectedLenses, artifacts, input.CaptureContext, input.UnachievableLensAttempts, input.RuntimeAgent)
 		}
 		if input.ProviderRole == reviewerprovider.RoleRefuter {
-			return reviewProviderRoleTransition("provider_refuter_required", captureBinding, input.ProviderRole, input.RuntimeAgent, nil)
+			return reviewProviderRoleTransition(reviewDialectForContract(status.Contract), "provider_refuter_required", captureBinding, input.ProviderRole, input.RuntimeAgent, nil)
 		}
 		return reviewStopTransition("manual_intervention_required")
 	case reviewtransaction.StateCorrectionRequired:
@@ -371,7 +371,7 @@ func resolveReviewNextTransition(status ReviewTargetStatusResult, selectedLenses
 				if input.CapturedProviderTargetedValidatorInconclusive {
 					reason = reviewInconclusiveTargetedValidationReason
 				}
-				return reviewProviderRoleTransition(reason, validationBinding, input.ProviderRole, input.RuntimeAgent, input.ValidationRequest)
+				return reviewProviderRoleTransition(reviewDialectForContract(status.Contract), reason, validationBinding, input.ProviderRole, input.RuntimeAgent, input.ValidationRequest)
 			}
 			if input.CapturedProviderTargetedValidatorInconclusive || input.CapturedProviderTargetedValidator {
 				return reviewStopTransition("manual_intervention_required")
@@ -391,7 +391,7 @@ func resolveReviewNextTransition(status ReviewTargetStatusResult, selectedLenses
 		}
 		transition := reviewCollectTransition("correction_plan_required", ReviewTransitionInput{
 			Name: "correction_lines", Schema: "gentle-ai.review-correction-plan/v1", CaptureOperation: reviewCaptureCorrectionPlanOperation,
-			Arguments:  append(append(reviewBindingArguments(captureBinding), reviewRepositoryContextArguments(captureBinding)...), ReviewTransitionArgument{Name: "request-hash", Value: input.CorrectionRequest.RequestHash}),
+			Arguments:  reviewDialectForContract(status.Contract).withCaptureContract(append(append(reviewBindingArguments(captureBinding), reviewRepositoryContextArguments(captureBinding)...), ReviewTransitionArgument{Name: "request-hash", Value: input.CorrectionRequest.RequestHash})),
 			Submission: reviewCorrectionPlanSubmission(input.Contract, captureBinding, *input.CorrectionRequest),
 		})
 		transition.CorrectionRequest = input.CorrectionRequest
@@ -444,25 +444,25 @@ func reviewProviderRoleInputName(role reviewProviderRole) string {
 	return "provider_" + strings.ReplaceAll(string(role), "-", "_")
 }
 
-func reviewProviderRoleTransition(reason string, binding ReviewTransitionBinding, role reviewProviderRole, runtime model.AgentID, validation *reviewtransaction.TargetedValidationRequest) ReviewNextTransition {
+func reviewProviderRoleTransition(dialect reviewDialect, reason string, binding ReviewTransitionBinding, role reviewProviderRole, runtime model.AgentID, validation *reviewtransaction.TargetedValidationRequest) ReviewNextTransition {
 	switch {
 	case reviewProviderHostRelayMaterializeRuntime(runtime):
 		// The pi host relay never receives a Go-owned spawn (#4611): it
 		// materializes the opaque prompt itself and submits its own
 		// reviewer's raw result back through the submission descriptor.
-		input, err := reviewProviderRoleMaterializeSubmissionInput(binding, role, runtime, validation)
+		input, err := reviewProviderRoleMaterializeSubmissionInput(dialect, binding, role, runtime, validation)
 		if err != nil {
 			return reviewStopTransition("captured_artifacts_unverifiable")
 		}
 		return reviewCollectTransition(reason, input)
 	case reviewProviderCaptureRuntime(runtime):
-		input, err := reviewProviderCompiledRoleExecuteInput(binding, role, runtime, validation)
+		input, err := reviewProviderCompiledRoleExecuteInput(dialect, binding, role, runtime, validation)
 		if err != nil {
 			return reviewStopTransition("captured_artifacts_unverifiable")
 		}
 		return reviewCollectTransition(reason, input)
 	}
-	task, err := newReviewProviderTask(role, binding)
+	task, err := newReviewProviderTask(dialect, role, binding)
 	if err != nil {
 		return reviewStopTransition("captured_artifacts_unverifiable")
 	}
@@ -492,7 +492,7 @@ const (
 // schema, and capture_operation shared by both the compiled --execute
 // rendering and the pi materialize+submission rendering, so the two forms
 // can never drift on which role maps to which schema or operation.
-func reviewProviderRoleBindingArguments(binding ReviewTransitionBinding, role reviewProviderRole, validation *reviewtransaction.TargetedValidationRequest) ([]ReviewTransitionArgument, ReviewTransitionInput, error) {
+func reviewProviderRoleBindingArguments(dialect reviewDialect, binding ReviewTransitionBinding, role reviewProviderRole, validation *reviewtransaction.TargetedValidationRequest) ([]ReviewTransitionArgument, ReviewTransitionInput, error) {
 	if binding.LineageID == "" || !providerSHA256(binding.Revision) || !providerSHA256(binding.TargetIdentity) ||
 		reviewtransaction.ValidateReviewRepositoryContextHandle(binding.RepositoryContext) != nil {
 		return nil, ReviewTransitionInput{}, errors.New("provider role binding is incomplete") // refusal:by-design world-action: only a Go-issued STATUS transition may bind a provider role input
@@ -515,7 +515,7 @@ func reviewProviderRoleBindingArguments(binding ReviewTransitionBinding, role re
 	default:
 		return nil, ReviewTransitionInput{}, fmt.Errorf("unsupported provider role %q", role) // refusal:by-design world-action: only the refuter and targeted-validator roles render a non-lens collection input
 	}
-	return arguments, input, nil
+	return dialect.withCaptureContract(arguments), input, nil
 }
 
 // reviewProviderCompiledRoleExecuteInput renders the one collection input for
@@ -525,8 +525,8 @@ func reviewProviderRoleBindingArguments(binding ReviewTransitionBinding, role re
 // the same process, so the rendered arguments themselves advance authority
 // and no submission descriptor exists for a caller to author a verdict
 // through.
-func reviewProviderCompiledRoleExecuteInput(binding ReviewTransitionBinding, role reviewProviderRole, runtime model.AgentID, validation *reviewtransaction.TargetedValidationRequest) (ReviewTransitionInput, error) {
-	arguments, input, err := reviewProviderRoleBindingArguments(binding, role, validation)
+func reviewProviderCompiledRoleExecuteInput(dialect reviewDialect, binding ReviewTransitionBinding, role reviewProviderRole, runtime model.AgentID, validation *reviewtransaction.TargetedValidationRequest) (ReviewTransitionInput, error) {
+	arguments, input, err := reviewProviderRoleBindingArguments(dialect, binding, role, validation)
 	if err != nil {
 		return ReviewTransitionInput{}, err
 	}
@@ -546,8 +546,8 @@ func reviewProviderCompiledRoleExecuteInput(binding ReviewTransitionBinding, rol
 // materializes, runs its own reviewer out of process, and submits the raw
 // bytes back through --input, admitted by the same raw admitters --execute
 // used to feed.
-func reviewProviderRoleMaterializeSubmissionInput(binding ReviewTransitionBinding, role reviewProviderRole, runtime model.AgentID, validation *reviewtransaction.TargetedValidationRequest) (ReviewTransitionInput, error) {
-	arguments, input, err := reviewProviderRoleBindingArguments(binding, role, validation)
+func reviewProviderRoleMaterializeSubmissionInput(dialect reviewDialect, binding ReviewTransitionBinding, role reviewProviderRole, runtime model.AgentID, validation *reviewtransaction.TargetedValidationRequest) (ReviewTransitionInput, error) {
+	arguments, input, err := reviewProviderRoleBindingArguments(dialect, binding, role, validation)
 	if err != nil {
 		return ReviewTransitionInput{}, err
 	}
@@ -626,7 +626,7 @@ func reviewMissingCaptureTransition(dialect reviewDialect, binding ReviewTransit
 	inputs := make([]ReviewTransitionInput, 0)
 	for order, lens := range selectedLenses {
 		if !captured[order] {
-			capture := reviewCaptureInput(binding, lens, order, context, providerRuntime)
+			capture := reviewCaptureInput(dialect, binding, lens, order, context, providerRuntime)
 			if providerRuntime == model.AgentOpenCode {
 				task, err := newReviewLensProviderTask(capture.Arguments, capture.ArtifactSubject)
 				if err != nil {
@@ -688,7 +688,7 @@ func reviewCaptureResultCommandName() string {
 // reviewBindingArguments here is what guarantees this command can never drift
 // from the one `review capture-unachievable` (declaring form) itself accepts.
 func reviewUnachievableLensSlotEntry(dialect reviewDialect, binding ReviewTransitionBinding, attempt reviewtransaction.CompactUnachievableLensAttempt) ReviewUnachievableLensSlot {
-	arguments := reviewBindingArguments(binding)
+	arguments := dialect.withCaptureContract(reviewBindingArguments(binding))
 	if binding.RepositoryContext != "" {
 		arguments = append(arguments, reviewRepositoryContextArguments(binding)...)
 	}
@@ -708,8 +708,8 @@ func reviewUnachievableLensSlotEntry(dialect reviewDialect, binding ReviewTransi
 	}
 }
 
-func reviewCaptureInput(binding ReviewTransitionBinding, lens string, order int, context *reviewCaptureContext, runtime ...model.AgentID) ReviewTransitionInput {
-	arguments := reviewBindingArguments(binding)
+func reviewCaptureInput(dialect reviewDialect, binding ReviewTransitionBinding, lens string, order int, context *reviewCaptureContext, runtime ...model.AgentID) ReviewTransitionInput {
+	arguments := dialect.withCaptureContract(reviewBindingArguments(binding))
 	if binding.RepositoryContext != "" {
 		arguments = append(arguments, reviewRepositoryContextArguments(binding)...)
 	}
@@ -789,6 +789,14 @@ func reviewCaptureInput(binding ReviewTransitionBinding, lens string, order int,
 // to rename and serialize STATUS argument rows.
 func newReviewLensProviderTask(arguments []ReviewTransitionArgument, subject *reviewtransaction.ArtifactSubject) (ReviewProviderTask, error) {
 	values, err := reviewTransitionArgumentMap(arguments)
+	// The axiom dialect leads the capture tokens with --contract; the opaque task
+	// binding carries it too, so the transport that closes the review answers in
+	// the same dialect.
+	contract := values["contract"]
+	delete(values, "contract")
+	if _, admitted := reviewDialectForBindingContract(contract); !admitted && err == nil {
+		err = errors.New("lens provider task contract is not a published dialect") // refusal:by-design world-action: only a complete native capture input may issue an OpenCode lens task
+	}
 	if err != nil || subject == nil || len(values) != 7 ||
 		values["lineage"] != subject.LineageID || values["expected-revision"] != subject.AuthorityRevision ||
 		values["target"] != subject.TargetIdentity || values["lens"] != subject.Lens || values["subject-hash"] != subject.SubjectHash ||
@@ -802,6 +810,7 @@ func newReviewLensProviderTask(arguments []ReviewTransitionArgument, subject *re
 	payload, err := json.Marshal(reviewLensContextBinding{
 		Lineage: values["lineage"], Target: values["target"], Lens: values["lens"], Order: order,
 		Revision: values["expected-revision"], RepositoryContext: values["repository-context"], SubjectHash: subject.SubjectHash,
+		Contract: contract,
 	})
 	if err != nil {
 		return ReviewProviderTask{}, err
@@ -853,19 +862,28 @@ func reviewCorrectionPlanSubmission(contract string, binding ReviewTransitionBin
 	if !isReviewContractV2(contract) || binding.RepositoryContext == "" {
 		return nil
 	}
+	dialect := reviewDialectForContract(contract)
+	// The submission runs capture-correction-plan, which reads its dialect from
+	// --contract, so an axiom caller's tokens lead with it (and a gentle-ai
+	// caller's stay byte-identical).
+	tokens := make([]string, 0, 7)
+	for _, argument := range dialect.captureContractArguments() {
+		tokens = append(tokens, reviewTransitionArgumentToken(argument))
+	}
+	tokens = append(tokens,
+		reviewTransitionArgumentToken(ReviewTransitionArgument{Name: "lineage", Value: binding.LineageID}),
+		reviewTransitionArgumentToken(ReviewTransitionArgument{Name: "expected-revision", Value: binding.Revision}),
+		reviewTransitionArgumentToken(ReviewTransitionArgument{Name: "target", Value: binding.TargetIdentity}),
+		reviewTransitionArgumentToken(ReviewTransitionArgument{Name: "request-hash", Value: request.RequestHash}),
+		reviewTransitionArgumentToken(ReviewTransitionArgument{Name: "repository-context", Value: binding.RepositoryContext}),
+		"--correction-lines="+reviewSubmissionValuePlaceholder,
+	)
 	return &ReviewTransitionSubmission{
 		OperationToken: "capture-correction-plan",
-		ArgumentTokens: []string{
-			reviewTransitionArgumentToken(ReviewTransitionArgument{Name: "lineage", Value: binding.LineageID}),
-			reviewTransitionArgumentToken(ReviewTransitionArgument{Name: "expected-revision", Value: binding.Revision}),
-			reviewTransitionArgumentToken(ReviewTransitionArgument{Name: "target", Value: binding.TargetIdentity}),
-			reviewTransitionArgumentToken(ReviewTransitionArgument{Name: "request-hash", Value: request.RequestHash}),
-			reviewTransitionArgumentToken(ReviewTransitionArgument{Name: "repository-context", Value: binding.RepositoryContext}),
-			"--correction-lines=" + reviewSubmissionValuePlaceholder,
-		},
+		ArgumentTokens: tokens,
 		Value: &ReviewTransitionSubmissionValue{
 			Slot: "correction_lines", Domain: "positive_correction_lines", Minimum: 1,
-			Maximum: request.CorrectionBudget, SubstitutionLocation: 5,
+			Maximum: request.CorrectionBudget, SubstitutionLocation: len(tokens) - 1,
 		},
 	}
 }

@@ -81,7 +81,7 @@ func TestCommittedBaseDiffLastReviewerCapturePublishesExactStatusContinuation(t 
 		t.Fatal(err)
 	}
 	wantArguments := map[string]string{
-		"cwd": repo, "contract": AxiomReviewIntegrationContractV2, "next-transition": "true",
+		"cwd": repo, "contract": ReviewIntegrationContractV2, "next-transition": "true",
 		"lineage": lineage, "base-ref": record.State.InitialSnapshot.BaseTree, "committed-only": "true",
 	}
 	if len(arguments) != len(wantArguments) {
@@ -98,7 +98,7 @@ func TestCommittedBaseDiffLastReviewerCapturePublishesExactStatusContinuation(t 
 			t.Fatalf("status continuation argument %q token = %q, want %q", argument.Name, argument.Token, want)
 		}
 	}
-	if want := reviewTransitionCommandLine(reviewNoContractDialect, continuation.Operation, continuation.Arguments); continuation.Command != want {
+	if want := reviewTransitionCommandLine(reviewDialect{}, continuation.Operation, continuation.Arguments); continuation.Command != want {
 		t.Fatalf("status continuation command = %q, want %q", continuation.Command, want)
 	}
 
@@ -256,7 +256,7 @@ func TestCorrectionStatusContinuationUsesFrozenTargetSelectors(t *testing.T) {
 			want: map[string]string{"base-ref": tree, "workspace-overlay": "true"}, absent: []string{"agent", "committed-only", "projection"}},
 	} {
 		t.Run(testCase.name, func(t *testing.T) {
-			continuation := reviewCorrectionStatusContinuation(reviewNoContractDialect, "/frozen/repository", reviewtransaction.CompactState{
+			continuation := reviewCorrectionStatusContinuation(reviewDialect{}, "/frozen/repository", reviewtransaction.CompactState{
 				LineageID:       "correction-status-" + testCase.name,
 				InitialSnapshot: reviewtransaction.Snapshot{Kind: testCase.kind, Projection: testCase.projection, BaseTree: tree, Identity: "sha256:" + strings.Repeat("a", 64)},
 			}, "sha256:"+strings.Repeat("b", 64), "")
@@ -285,7 +285,7 @@ func TestCorrectionStatusContinuationRefusesUnsupportedTargetKind(t *testing.T) 
 		reviewtransaction.TargetKind("malformed-target-kind"),
 	} {
 		t.Run(string(kind), func(t *testing.T) {
-			continuation := reviewCorrectionStatusContinuation(reviewNoContractDialect, "/frozen/repository", reviewtransaction.CompactState{
+			continuation := reviewCorrectionStatusContinuation(reviewDialect{}, "/frozen/repository", reviewtransaction.CompactState{
 				LineageID: "unsupported-correction-status",
 				InitialSnapshot: reviewtransaction.Snapshot{
 					Kind: kind, Identity: "sha256:" + strings.Repeat("a", 64),

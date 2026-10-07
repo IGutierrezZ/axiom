@@ -36,11 +36,13 @@ type reviewProviderTaskBinding struct {
 	TargetIdentity    string `json:"target_identity"`
 	RepositoryContext string `json:"repository_context"`
 	Role              string `json:"role"`
+	// Contract is set only for an axiom caller (reviewDialect.bindingContract).
+	Contract string `json:"contract,omitempty"`
 }
 
 // newReviewProviderTask produces an opaque host task that only Go may
 // materialize and admit through the live OpenCode relay.
-func newReviewProviderTask(role reviewProviderRole, binding ReviewTransitionBinding) (ReviewProviderTask, error) {
+func newReviewProviderTask(dialect reviewDialect, role reviewProviderRole, binding ReviewTransitionBinding) (ReviewProviderTask, error) {
 	agent := reviewProviderRoleOpenCodeAgent(role)
 	if agent == "" || binding.LineageID == "" || !providerSHA256(binding.Revision) || !providerSHA256(binding.TargetIdentity) ||
 		reviewtransaction.ValidateReviewRepositoryContextHandle(binding.RepositoryContext) != nil {
@@ -48,7 +50,7 @@ func newReviewProviderTask(role reviewProviderRole, binding ReviewTransitionBind
 	}
 	payload, err := json.Marshal(reviewProviderTaskBinding{
 		LineageID: binding.LineageID, Revision: binding.Revision, TargetIdentity: binding.TargetIdentity,
-		RepositoryContext: binding.RepositoryContext, Role: string(role),
+		RepositoryContext: binding.RepositoryContext, Role: string(role), Contract: dialect.bindingContract(),
 	})
 	if err != nil {
 		return ReviewProviderTask{}, err
@@ -619,7 +621,7 @@ func reviewProviderAdmitTargetedValidatorRaw(request reviewProviderTargetedValid
 	return result, native, nil
 }
 
-func reviewProviderCloseTargetedValidatorRaw(ctx context.Context, repo string, store reviewtransaction.CompactStore, state reviewtransaction.CompactState, revision string, raw []byte) (facadeValidationResult, reviewtransaction.ScopedValidationResult, *reviewLastEventClosureResult, error) {
+func reviewProviderCloseTargetedValidatorRaw(ctx context.Context, dialect reviewDialect, repo string, store reviewtransaction.CompactStore, state reviewtransaction.CompactState, revision string, raw []byte) (facadeValidationResult, reviewtransaction.ScopedValidationResult, *reviewLastEventClosureResult, error) {
 	correction, err := reviewProviderTargetedValidatorCorrection(ctx, repo, state)
 	if err != nil {
 		return facadeValidationResult{}, reviewtransaction.ScopedValidationResult{}, nil, err
@@ -640,7 +642,7 @@ func reviewProviderCloseTargetedValidatorRaw(ctx context.Context, repo string, s
 		}
 		return facadeValidationResult{}, reviewtransaction.ScopedValidationResult{}, nil, err
 	}
-	closure, err := reviewProviderCaptureAdmittedTargetedValidatorResult(ctx, repo, store, state, correction, request, result, native)
+	closure, err := reviewProviderCaptureAdmittedTargetedValidatorResult(ctx, dialect, repo, store, state, correction, request, result, native)
 	return result, native, closure, err
 }
 
@@ -651,7 +653,7 @@ func reviewProviderCloseTargetedValidatorRaw(ctx context.Context, repo string, s
 // corrective re-invocation on a rejected result (issue #4061) can retry
 // admission alone and only ever durably capture the one verdict that was
 // actually admitted.
-func reviewProviderCaptureAdmittedTargetedValidatorResult(ctx context.Context, repo string, store reviewtransaction.CompactStore, state reviewtransaction.CompactState, correction reviewtransaction.Snapshot, request reviewProviderTargetedValidatorRequest, result facadeValidationResult, native reviewtransaction.ScopedValidationResult) (*reviewLastEventClosureResult, error) {
+func reviewProviderCaptureAdmittedTargetedValidatorResult(ctx context.Context, dialect reviewDialect, repo string, store reviewtransaction.CompactStore, state reviewtransaction.CompactState, correction reviewtransaction.Snapshot, request reviewProviderTargetedValidatorRequest, result facadeValidationResult, native reviewtransaction.ScopedValidationResult) (*reviewLastEventClosureResult, error) {
 	evidence := reviewProviderTargetedValidatorEvidence(result)
 	payload, err := canonicalProviderRoleResult(compactProviderTargetedValidatorResult{
 		Outcome: reviewProviderTargetedValidatorOutcome(native), Evidence: evidence,
@@ -703,7 +705,7 @@ func reviewProviderCaptureAdmittedTargetedValidatorResult(ctx context.Context, r
 		return nil, err
 	}
 	if outcome == "passed" {
-		return closeCorrectionOnCapturedValidator(ctx, repo, store, current, correction, request.ValidationRequest, native)
+		return closeCorrectionOnCapturedValidator(ctx, dialect, repo, store, current, correction, request.ValidationRequest, native)
 	}
 	return newCorrectionCapturedValidatorClosure(repo, current.State, current.Revision, request.ValidationRequest)
 }

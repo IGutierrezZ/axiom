@@ -51,6 +51,9 @@ type reviewProviderRoleCaptureBinding struct {
 	execute           bool
 	input             string
 	root              string
+	// dialect is the one the invocation negotiated through --contract; the
+	// closure continuations echo it.
+	dialect reviewDialect
 }
 
 // parseReviewProviderRoleCapture owns the complete refusal matrix shared by
@@ -74,17 +77,22 @@ func parseReviewProviderRoleCapture(command string, args []string, stdout io.Wri
 	materialize := flags.Bool("materialize", false, "print the exact Go-materialized opaque provider role task without capturing anything; mutually exclusive with --execute and --input")
 	execute := flags.Bool("execute", false, "run the Go-owned locked-down pi process on the Go-materialized role request and capture its raw result; mutually exclusive with --materialize and --input")
 	input := flags.String("input", "", "raw provider role result JSON file or - for stdin, submitted by a host-relay runtime that materialized and ran this role itself; mutually exclusive with --materialize and --execute")
+	contract := flags.String("contract", "", "optional review integration v2 contract the provider-issued tokens were negotiated under; selects the dialect the closure continuations echo")
 	if err := parseReviewFlags(flags, args); err != nil {
 		return nil, err
 	}
 	if reviewHelpRequested(args) {
 		return nil, nil
 	}
+	dialect, dialectErr := reviewCaptureCommandDialect(flags, command, *contract)
+	if dialectErr != nil {
+		return nil, dialectErr
+	}
 	binding := &reviewProviderRoleCaptureBinding{
 		command: command, repositoryContext: strings.TrimSpace(*repositoryContext),
 		lineage: strings.TrimSpace(*lineage), target: strings.TrimSpace(*target), revision: strings.TrimSpace(*revision),
 		runtime: model.AgentID(strings.TrimSpace(*runtimeAgent)), materialize: *materialize, execute: *execute,
-		input: strings.TrimSpace(*input),
+		input: strings.TrimSpace(*input), dialect: dialect,
 	}
 	if requestHash != nil {
 		binding.requestHash = strings.TrimSpace(*requestHash)
@@ -238,7 +246,7 @@ func RunReviewCaptureRefuter(args []string, stdout io.Writer) error {
 	if currentErr != nil {
 		return reviewPreflightError(currentErr)
 	}
-	closure, err := closeReviewOnLastCapturedLens(ctx, binding.root, store, currentRecord, binding.runtime)
+	closure, err := closeReviewOnLastCapturedLens(ctx, binding.dialect, binding.root, store, currentRecord, binding.runtime)
 	if err != nil && !reviewLastCapturedLensClosureSuperseded(store, currentRecord) {
 		return reviewPreflightError(err)
 	}
@@ -312,7 +320,7 @@ func RunReviewCaptureValidation(args []string, stdout io.Writer) error {
 	if readErr != nil {
 		return reviewPreflightError(fmt.Errorf("read provider targeted validator result: %w", readErr))
 	}
-	_, _, closure, err := reviewProviderCloseTargetedValidatorRaw(ctx, binding.root, store, state, state.CapturePhaseRevision, raw)
+	_, _, closure, err := reviewProviderCloseTargetedValidatorRaw(ctx, binding.dialect, binding.root, store, state, state.CapturePhaseRevision, raw)
 	if err != nil {
 		return reviewPreflightError(err)
 	}
@@ -400,7 +408,7 @@ func reviewProviderCaptureValidationWithOneCorrection(ctx context.Context, bindi
 		}
 		return nil, reviewPreflightError(err)
 	}
-	closure, err := reviewProviderCaptureAdmittedTargetedValidatorResult(ctx, binding.root, store, state, correction, request, captured.result, captured.native)
+	closure, err := reviewProviderCaptureAdmittedTargetedValidatorResult(ctx, binding.dialect, binding.root, store, state, correction, request, captured.result, captured.native)
 	if err != nil {
 		return nil, reviewPreflightError(err)
 	}

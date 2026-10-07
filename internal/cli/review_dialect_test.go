@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -67,8 +68,8 @@ func TestReviewDialectForContract(t *testing.T) {
 			}
 		})
 	}
-	if !reviewNoContractDialect.axiom {
-		t.Fatal("the no-contract dialect must default to axiom")
+	if (reviewDialect{}).axiom || (reviewDialect{}).Tool() != "gentle-ai" {
+		t.Fatal("the zero dialect (v1, and any caller that negotiated nothing) must be gentle-ai")
 	}
 }
 
@@ -251,8 +252,15 @@ func TestDualContract_V2DialectsAnswerOneAuthorityIdentically(t *testing.T) {
 
 	// Each continuation runs verbatim and is answered in its own dialect.
 	gentleStatus, axiomStatus := reviewContinuationStatus(t, repo, gentleStarted), reviewContinuationStatus(t, repo, axiomStarted)
-	if want := swapReviewDialect(gentleStatus); !bytes.Equal(axiomStatus, want) {
-		t.Fatalf("axiom continuation STATUS is not the gentle-ai one in the axiom spelling:\ngot=%s\nwant=%s", axiomStatus, want)
+	// The capture tokens an axiom caller receives lead with --contract and the
+	// gentle-ai ones do not: that one token is the only other difference, so
+	// removing it must give back exactly the gentle-ai answer in the axiom spelling.
+	var axiomWithoutLead, gentleSwapped ReviewTargetStatusResult
+	decodeStrictReviewJSON(t, axiomStatus, &axiomWithoutLead)
+	stripAxiomCaptureContract(t, &axiomWithoutLead)
+	decodeStrictReviewJSON(t, swapReviewDialect(gentleStatus), &gentleSwapped)
+	if !reflect.DeepEqual(axiomWithoutLead, gentleSwapped) {
+		t.Fatalf("axiom continuation STATUS is not the gentle-ai one in the axiom spelling plus the capture contract token:\ngot=%s\nwant=%s", axiomStatus, swapReviewDialect(gentleStatus))
 	}
 	assertNoForeignDialect(t, "axiom continuation STATUS", axiomStatus, "gentle-ai review", ReviewIntegrationContractV2)
 	assertNoForeignDialect(t, "gentle-ai continuation STATUS", gentleStatus, "axiom review", AxiomReviewIntegrationContractV2)

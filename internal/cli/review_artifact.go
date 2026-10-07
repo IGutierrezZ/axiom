@@ -154,11 +154,16 @@ func RunReviewCaptureResult(args []string, stdout io.Writer) error {
 	input := flags.String("input", "", "raw reviewer result JSON file or - for stdin; `axiom review schema reviewer` emits the schema and a working example")
 	preflight := flags.Bool("preflight", false, "validate the capture binding and, when --input is supplied, the result admission without persisting anything")
 	materialize := flags.Bool("materialize", false, "print the exact Go-materialized opaque provider task for a host-relay --agent runtime without capturing anything; mutually exclusive with --input and --preflight")
+	contract := flags.String("contract", "", "optional review integration v2 contract the provider-issued tokens were negotiated under; selects the dialect the closure continuations echo")
 	if err := parseReviewFlags(flags, args); err != nil {
 		return err
 	}
 	if reviewHelpRequested(args) {
 		return nil
+	}
+	dialect, dialectErr := reviewCaptureCommandDialect(flags, "capture-result", *contract)
+	if dialectErr != nil {
+		return dialectErr
 	}
 	providerRuntime := model.AgentID(strings.TrimSpace(*runtimeAgent))
 	providerRuntimeSupplied := providerRuntime != ""
@@ -383,7 +388,7 @@ func RunReviewCaptureResult(args []string, stdout io.Writer) error {
 	if currentErr != nil {
 		return reviewPreflightError(currentErr)
 	}
-	closure, err := closeReviewOnLastCapturedLens(ctx, root, store, currentRecord, providerRuntime)
+	closure, err := closeReviewOnLastCapturedLens(ctx, dialect, root, store, currentRecord, providerRuntime)
 	if err != nil && !reviewLastCapturedLensClosureSuperseded(store, currentRecord) {
 		return reviewPreflightError(err)
 	}

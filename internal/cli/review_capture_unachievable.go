@@ -68,11 +68,17 @@ func RunReviewCaptureUnachievable(args []string, stdout io.Writer) error {
 	reason := flags.String("reason", "", "short machine-readable cause, e.g. relay_transport_bound_exceeded; required unless --withdraw is set")
 	detail := flags.String("detail", "", "optional bounded evidence, e.g. elapsed and limit; refused together with --withdraw")
 	withdraw := flags.Bool("withdraw", false, "retract a previously recorded unachievable declaration for the exact --request-hash instead of recording a new one")
+	contract := flags.String("contract", "", "optional review integration v2 contract the provider-issued tokens were negotiated under")
 	if err := parseReviewFlags(flags, args); err != nil {
 		return err
 	}
 	if reviewHelpRequested(args) {
 		return nil
+	}
+	// The result names no tool and no contract, so there is no dialect to echo;
+	// the flag is validated so the exact tokens STATUS issued are accepted.
+	if _, err := reviewCaptureCommandDialect(flags, "capture-unachievable", *contract); err != nil {
+		return err
 	}
 	if flags.NArg() != 0 || strings.TrimSpace(*lineage) == "" || strings.TrimSpace(*target) == "" ||
 		strings.TrimSpace(*revision) == "" || strings.TrimSpace(*requestHash) == "" {

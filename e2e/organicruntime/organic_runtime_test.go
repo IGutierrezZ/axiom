@@ -116,6 +116,16 @@ const organicDialectEnvironment = "GENTLE_AI_ORGANIC_DIALECT"
 // organicReviewContract is the v2 contract every journey passes to --contract.
 var organicReviewContract = organicDialectContract(os.Getenv(organicDialectEnvironment))
 
+// organicCaptureContractArguments are the extra tokens STATUS issues to the
+// capture commands of a caller that negotiated the axiom dialect (a gentle-ai
+// caller gets none): the journeys that build those commands by hand replay them.
+func organicCaptureContractArguments() []string {
+	if organicReviewContract == organicDialectContract("axiom") {
+		return []string{"--contract", organicReviewContract}
+	}
+	return nil
+}
+
 func organicDialectContract(dialect string) string {
 	if dialect == "axiom" {
 		return "axiom.review-integration/v2"
@@ -479,11 +489,11 @@ exec "$GENTLE_AI_RUNTIME_TRACE_BINARY" -ff -o "$GENTLE_AI_RUNTIME_TRACE_LOG" -e 
 		"NO_PROXY=127.0.0.1,localhost,::1",
 		"no_proxy=127.0.0.1,localhost,::1",
 	)
-	arguments := []string{
+	arguments := append([]string{
 		"review", "capture-result", "--agent", "codex",
 		"--repository-context", binding["repository-context"], "--expected-revision", binding["expected-revision"],
 		"--lineage", binding["lineage"], "--target", binding["target"], "--lens", binding["lens"], "--order", strconv.Itoa(order),
-	}
+	}, organicCaptureContractArguments()...)
 	stdout, stderr, err = runOrganicCommand(t, organicBinary, harness.repo.worktree, environment, arguments...)
 	if err != nil {
 		t.Fatalf("registered Codex provider route: %v\nstdout:\n%s\nstderr:\n%s", err, stdout, stderr)
@@ -1487,9 +1497,9 @@ func TestNativeProviderCaptureResultCLIUsesCompiledAdapters(t *testing.T) {
 			bin := t.TempDir()
 			fake := organicWriteProviderCaptureFake(t, bin, test.binary, test.agent, binding, []string{"internal/provider/candidate.go"})
 			environment := append(harness.environment(), fake.environment...)
-			arguments := []string{"review", "capture-result", "--agent", test.agent, "--repository-context", binding["repository-context"],
+			arguments := append([]string{"review", "capture-result", "--agent", test.agent, "--repository-context", binding["repository-context"],
 				"--expected-revision", binding["expected-revision"], "--lineage", binding["lineage"], "--target", binding["target"],
-				"--lens", binding["lens"], "--order", binding["order"]}
+				"--lens", binding["lens"], "--order", binding["order"]}, organicCaptureContractArguments()...)
 			stdout, stderr, err := runOrganicCommand(t, organicBinary, harness.repo.worktree, environment, arguments...)
 			fake.assertInvoked(t)
 			if err != nil {
@@ -1518,8 +1528,8 @@ func TestNativeProviderCaptureFailureReoffersTheSameBinding(t *testing.T) {
 			bin := t.TempDir()
 			fake := organicWriteProviderCaptureFake(t, bin, test.binary, test.agent, nil, nil)
 			environment := append(harness.environment(), fake.environment...)
-			arguments := []string{"review", "capture-result", "--agent", test.agent, "--repository-context", before["repository-context"],
-				"--expected-revision", before["expected-revision"], "--lineage", before["lineage"], "--target", before["target"], "--lens", before["lens"], "--order", before["order"]}
+			arguments := append([]string{"review", "capture-result", "--agent", test.agent, "--repository-context", before["repository-context"],
+				"--expected-revision", before["expected-revision"], "--lineage", before["lineage"], "--target", before["target"], "--lens", before["lens"], "--order", before["order"]}, organicCaptureContractArguments()...)
 			_, _, err := runOrganicCommand(t, organicBinary, harness.repo.worktree, environment, arguments...)
 			fake.assertInvoked(t)
 			if err == nil {
@@ -3191,17 +3201,30 @@ func organicApprovedAcknowledgementStatus(t *testing.T, harness *organicHarness,
 
 func organicAcknowledgementArguments(t *testing.T, execution *organicProviderExecute, repo, lineage string) []string {
 	t.Helper()
-	if execution == nil || execution.Operation != "review.acknowledge-approved" || len(execution.Arguments) != 5 {
+	contractArguments := organicCaptureContractArguments()
+	if execution == nil || execution.Operation != "review.acknowledge-approved" || len(execution.Arguments) != 5+len(contractArguments)/2 {
 		t.Fatalf("acknowledgement execution = %#v, want exact v2 acknowledgement", execution)
 	}
 	wantNames := []string{"cwd", "lineage", "target", "expected-revision", "token"}
-	tokens := make([]string, len(wantNames))
+	var tokens []string
+	if len(contractArguments) > 0 {
+		// A caller that negotiated the axiom dialect receives the contract as
+		// the leading acknowledgement argument.
+		lead := execution.Arguments[0]
+		if lead.Name != "contract" || lead.Value != organicReviewContract || lead.Token != "--contract="+organicReviewContract {
+			t.Fatalf("acknowledgement lead argument = %#v, want the negotiated contract", lead)
+		}
+		tokens = append(tokens, lead.Token)
+		execution = &organicProviderExecute{Operation: execution.Operation, Arguments: execution.Arguments[1:], Artifacts: execution.Artifacts}
+	}
+	tokens = append(tokens, make([]string, len(wantNames))...)
+	offset := len(tokens) - len(wantNames)
 	for index, name := range wantNames {
 		argument := execution.Arguments[index]
 		if argument.Name != name || argument.Value == "" || argument.Token == "" {
 			t.Fatalf("acknowledgement argument %d = %#v, want named non-empty %q argument", index, argument, name)
 		}
-		tokens[index] = argument.Token
+		tokens[offset+index] = argument.Token
 	}
 	// Compared by directory identity, not by string: on Windows the harness
 	// holds the 8.3 short TEMP form while Go emits the canonical worktree root.
@@ -3243,7 +3266,7 @@ func (harness *organicHarness) assertReviewAcknowledgedAndBurned(lineage string,
 
 	wrong := append([]string{"review", "acknowledge-approved"}, tokens...)
 	wrongToken := strings.Repeat("0", 64)
-	if wrongToken == finalized.Acknowledgement.Arguments[4].Value {
+	if wrongToken == finalized.Acknowledgement.Arguments[len(finalized.Acknowledgement.Arguments)-1].Value {
 		wrongToken = strings.Repeat("1", 64)
 	}
 	wrong[len(wrong)-1] = "--token=" + wrongToken
@@ -3290,10 +3313,10 @@ func (harness *organicHarness) assertInvalidatedUnmanagedGate(gate organicGateRe
 func (harness *organicHarness) captureReviewerResult(lineage string, started organicStartResult, order int, result organicReviewerResult) (string, string, error) {
 	harness.t.Helper()
 	lens := started.SelectedLenses[order]
-	binding := []string{
+	binding := append([]string{
 		"review", "capture-result", "--cwd", harness.repo.worktree, "--lineage", lineage,
 		"--target", started.targetIdentity(), "--lens", lens, "--order", strconv.Itoa(order),
-	}
+	}, organicCaptureContractArguments()...)
 	var preflight organicCapturePreflight
 	if err := json.Unmarshal(harness.gentle(append(binding, "--preflight")...), &preflight); err != nil {
 		harness.t.Fatalf("decode capture-result preflight for %s: %v", lens, err)

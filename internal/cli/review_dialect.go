@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"flag"
 	"fmt"
 	"strings"
 
@@ -18,12 +19,6 @@ import (
 // identifiers, hash domain separators, and persisted ids keep their published
 // gentle-ai spelling on purpose: they are wire contract, not dialect.
 type reviewDialect struct{ axiom bool }
-
-// reviewNoContractDialect is the dialect of a continuation emitted by a command
-// that carries no --contract of its own (capture-* and acknowledge-approved).
-// It is axiom by default and is the single exception to the echo rule: those
-// commands have nothing to echo, and the transition schemas admit both tools.
-var reviewNoContractDialect = reviewDialect{axiom: true}
 
 // reviewAxiomCommandTool is the published tool name of the axiom dialect.
 const reviewAxiomCommandTool = "axiom"
@@ -46,6 +41,64 @@ func isReviewContractV2(contract string) bool {
 func reviewDialectForContract(contract string) reviewDialect {
 	canonical, legacy, err := reviewtransaction.ResolveReviewContract(contract)
 	return reviewDialect{axiom: err == nil && !legacy && canonical == reviewtransaction.AxiomReviewIntegrationV2Contract}
+}
+
+// captureContractArguments is the one extra argument the provider-issued
+// tokens of the capture-* and acknowledge-approved commands carry for a caller
+// that negotiated the axiom dialect: those commands read their dialect from
+// --contract, so STATUS hands it back to them. The legacy dialect adds nothing,
+// so its tokens (and the continuations the commands then emit) keep the exact
+// bytes they always had. The argument is always the first one of the token list.
+func (dialect reviewDialect) captureContractArguments() []ReviewTransitionArgument {
+	if !dialect.axiom {
+		return nil
+	}
+	return []ReviewTransitionArgument{{Name: "contract", Value: dialect.ContractV2()}}
+}
+
+// bindingContract is the contract an opaque provider Task binding carries for
+// this dialect: the axiom identifier, or the empty string for the legacy dialect
+// so its Task bytes never change. It is how a host relay that holds no --contract
+// hands the dialect back to the transport that closes the review.
+func (dialect reviewDialect) bindingContract() string {
+	if !dialect.axiom {
+		return ""
+	}
+	return dialect.ContractV2()
+}
+
+// reviewDialectForBindingContract resolves the dialect an opaque Task binding
+// names. Only the empty string (legacy) and the axiom v2 identifier are
+// admissible: anything else was not issued by this product.
+func reviewDialectForBindingContract(contract string) (reviewDialect, bool) {
+	switch contract {
+	case "":
+		return reviewDialect{}, true
+	case (reviewDialect{axiom: true}).ContractV2():
+		return reviewDialect{axiom: true}, true
+	}
+	return reviewDialect{}, false
+}
+
+// withCaptureContract returns arguments led by the capture contract argument of
+// this dialect (none for the legacy one), without touching the input slice.
+func (dialect reviewDialect) withCaptureContract(arguments []ReviewTransitionArgument) []ReviewTransitionArgument {
+	return append(dialect.captureContractArguments(), arguments...)
+}
+
+// reviewCaptureCommandDialect resolves the dialect of a capture-* or
+// acknowledge-approved invocation from its optional --contract. Without the flag
+// the command answers exactly as it always did, in the legacy dialect. With it,
+// only the v2 lifecycle in either spelling is accepted: those commands exist only
+// there, so v1 and unknown values are refused before anything is read or written.
+func reviewCaptureCommandDialect(flags *flag.FlagSet, command, contract string) (reviewDialect, error) {
+	if !reviewFlagWasProvided(flags, "contract") {
+		return reviewDialect{}, nil
+	}
+	if !isReviewContractV2(contract) {
+		return reviewDialect{}, reviewPreflightError(fmt.Errorf("review %s accepts only --contract %s or --contract %s, not %q", command, ReviewIntegrationContractV2, AxiomReviewIntegrationContractV2, contract)) // refusal:by-design operator-knowledge: the capture and acknowledgement commands exist only in the v2 lifecycle; run the exact tokens STATUS issued
+	}
+	return reviewDialectForContract(contract), nil
 }
 
 // Tool returns the command tool this dialect publishes.
@@ -102,6 +155,66 @@ func validateReviewDialectCommands(contract string, commands ...string) error {
 	for _, command := range commands {
 		if command != "" && !dialect.ownsCommand(command) {
 			return fmt.Errorf("review command %q does not use the %s tool of contract %q", command, dialect.Tool(), contract) // refusal:by-design world-action: a producer must echo the dialect its contract declares; the exit is a code fix, not a command
+		}
+	}
+	return nil
+}
+
+// validateReviewDialectCaptureTokens refuses a result whose capture tokens do
+// not follow the dialect of the result's own contract: the argument list and the
+// submission descriptor of every native capture input, every unachievable-slot
+// withdraw command, and every acknowledgement lead with --contract exactly when
+// the contract is axiom v2, so a gentle-ai result never hands a caller a token
+// it must not replay and an axiom result never drops the one that keeps its
+// dialect through the command it runs.
+func validateReviewDialectCaptureTokens(contract string, transition *ReviewNextTransition, acknowledgements ...*ReviewTransitionExecution) error {
+	dialect := reviewDialectForContract(contract)
+	arguments := func(list []ReviewTransitionArgument) error {
+		count, err := reviewCaptureContractArgumentCount(list)
+		if err != nil {
+			return err
+		}
+		if dialect.axiom != (count == 1) || count == 1 && list[0].Value != dialect.ContractV2() {
+			return fmt.Errorf("capture token list does not follow the %s dialect of contract %q", dialect.Tool(), contract) // refusal:by-design world-action: a producer must echo the dialect its contract declares; the exit is a code fix, not a command
+		}
+		return nil
+	}
+	if transition != nil {
+		if transition.Collect != nil {
+			for _, input := range transition.Collect.Inputs {
+				if _, native := reviewNativeCaptureVerb(input.CaptureOperation); !native {
+					continue
+				}
+				if err := arguments(input.Arguments); err != nil {
+					return err
+				}
+				if input.Submission == nil {
+					continue
+				}
+				count, err := reviewCaptureContractTokenCount(input.Submission.ArgumentTokens)
+				if err != nil {
+					return err
+				}
+				if dialect.axiom != (count == 1) {
+					return fmt.Errorf("capture submission descriptor does not follow the %s dialect of contract %q", dialect.Tool(), contract) // refusal:by-design world-action: a producer must echo the dialect its contract declares; the exit is a code fix, not a command
+				}
+			}
+		}
+		if transition.UnachievableLensSlots != nil {
+			for _, slot := range *transition.UnachievableLensSlots {
+				if err := arguments(slot.Withdraw.Arguments); err != nil {
+					return err
+				}
+			}
+		}
+		acknowledgements = append(acknowledgements, transition.Execute)
+	}
+	for _, execution := range acknowledgements {
+		if execution == nil || execution.Operation != "review.acknowledge-approved" {
+			continue
+		}
+		if err := arguments(execution.Arguments); err != nil {
+			return err
 		}
 	}
 	return nil

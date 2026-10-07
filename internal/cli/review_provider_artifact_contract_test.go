@@ -146,8 +146,11 @@ func TestReviewProviderArtifactV25StatusContractsArePinned(t *testing.T) {
 		// allowed property, but the native-git transport no longer needs to
 		// inline it since artifact_subject.changed_path_manifest_sha256 already
 		// commits to it. Deliberate, not drift.
-		"schemas/start.schema.json":     "0c459bd01a8f2814cba76d8f791e096c31f35ddc1ceaf1f8f781b1f5b85a463c",
-		"schemas/status-v5.schema.json": "acaf6317b109a956bb1b53a21a3f4e92159d3fa20bc7db2123a29b7d1155932a",
+		"schemas/start.schema.json": "0c459bd01a8f2814cba76d8f791e096c31f35ddc1ceaf1f8f781b1f5b85a463c",
+		// T7m (d): capture-correction-plan and capture-result submission descriptors
+		// admit the optional leading --contract=axiom.review-integration/v2 token a
+		// caller that negotiated the axiom dialect receives. Deliberate, not drift.
+		"schemas/status-v5.schema.json": "17711d2c14610f2cd9c435733692bceee09c8c3d37fa118f419a0f611a6e7400",
 	}
 	for name, expected := range want {
 		payload, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(name)))
@@ -224,7 +227,9 @@ func TestReviewProviderArtifactConformanceSchemasArePinned(t *testing.T) {
 		// references. Deliberate, not drift.
 		// issue #3932: start_status_execution carries the opaque
 		// repository-context row, so a foreign process cwd fails closed.
-		"schemas/transition-execution.schema.json":   "945fe0038ae37ef1fff2f798e837bd266e0ba63de3b99971e27980731934966a",
+		// T7m (d): the approved acknowledgement admits the optional leading
+		// contract argument of the axiom dialect. Deliberate, not drift.
+		"schemas/transition-execution.schema.json":   "a80627b49aaf5d3825ad80f1b55e5784b625e1c3b98aed759e17c0155b95dbb2",
 		"schemas/opencode-provider-role.schema.json": "c6b9f216f89c044f8e844b55e7200114850cfbc16642bca0677f30a399d8aa9b",
 	}
 	for name, expected := range want {

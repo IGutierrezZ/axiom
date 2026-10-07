@@ -608,7 +608,7 @@ func (b *battery) acknowledgeApproved(lane, name, repo, agent string, env []stri
 		wrongToken = strings.Repeat("1", 64)
 	}
 	wrongArguments := getSlice(wrong, "arguments")
-	wrongArgument, _ := wrongArguments[4].(map[string]any)
+	wrongArgument, _ := wrongArguments[len(wrongArguments)-1].(map[string]any)
 	wrongArgument["value"] = wrongToken
 	wrongArgument["token"] = "--token=" + wrongToken
 	if _, wrongStderr, wrongCode := b.runTransitionExecution("acknowledgement-wrong-binding", repo, env, wrong); wrongCode == 0 {
@@ -651,8 +651,30 @@ func (b *battery) acknowledgeApproved(lane, name, repo, agent string, env []stri
 	return true
 }
 
+// captureContractArguments are the extra argv words the capture commands of
+// the lanes receive: STATUS issues them --contract only for a caller that
+// negotiated the axiom dialect, so a lane that builds a capture by hand replays
+// the same tokens.
+func captureContractArguments() []string {
+	if reviewContract == axiomReviewContract {
+		return []string{"--contract", reviewContract}
+	}
+	return nil
+}
+
+// crosslaneAcknowledgementTokens returns the five bound tokens of an
+// acknowledgement and its token value. Under the axiom dialect the execution
+// leads with one extra --contract argument, which is dropped here.
 func crosslaneAcknowledgementTokens(execution map[string]any) ([]string, string, bool) {
 	arguments := getSlice(execution, "arguments")
+	if len(captureContractArguments()) > 0 {
+		lead, _ := arguments[0].(map[string]any)
+		if len(arguments) != 6 || getString(lead, "name") != "contract" || getString(lead, "value") != reviewContract ||
+			getString(lead, "token") != "--contract="+reviewContract {
+			return nil, "", false
+		}
+		arguments = arguments[1:]
+	}
 	if len(arguments) != 5 {
 		return nil, "", false
 	}
