@@ -17,12 +17,12 @@ import (
 //  3. !operationRunning && (upgradeReport != nil || upgradeErr != nil) → show combined results
 //  4. Otherwise → show confirmation screen
 func RenderUpgradeSync(results []update.UpdateResult, upgradeReport *upgrade.UpgradeReport, syncFiles []string, upgradeErr error, syncErr error, operationRunning bool, updateCheckDone bool, cursor int, spinnerFrame int) string {
-	return RenderUpgradeSyncWithWidth(results, upgradeReport, syncFiles, upgradeErr, syncErr, operationRunning, updateCheckDone, cursor, spinnerFrame, 0)
+	return RenderUpgradeSyncWithWidth(results, upgradeReport, syncFiles, nil, upgradeErr, syncErr, operationRunning, updateCheckDone, cursor, spinnerFrame, 0)
 }
 
 // RenderUpgradeSyncWithWidth handles all states of the combined upgrade+sync
 // screen, constraining long manual hints to the terminal width when width is known.
-func RenderUpgradeSyncWithWidth(results []update.UpdateResult, upgradeReport *upgrade.UpgradeReport, syncFiles []string, upgradeErr error, syncErr error, operationRunning bool, updateCheckDone bool, cursor int, spinnerFrame int, width int) string {
+func RenderUpgradeSyncWithWidth(results []update.UpdateResult, upgradeReport *upgrade.UpgradeReport, syncFiles []string, syncWarnings []string, upgradeErr error, syncErr error, operationRunning bool, updateCheckDone bool, cursor int, spinnerFrame int, width int) string {
 	var b strings.Builder
 
 	b.WriteString(styles.TitleStyle.Render("Upgrade + Sync"))
@@ -57,7 +57,7 @@ func RenderUpgradeSyncWithWidth(results []update.UpdateResult, upgradeReport *up
 	// State 3: both operations done — show combined results
 	// Triggered when not running and either upgrade report or upgrade error is present.
 	if !operationRunning && (upgradeReport != nil || upgradeErr != nil) {
-		b.WriteString(renderUpgradeSyncResult(upgradeReport, syncFiles, upgradeErr, syncErr, width))
+		b.WriteString(renderUpgradeSyncResult(upgradeReport, syncFiles, syncWarnings, upgradeErr, syncErr, width))
 		return b.String()
 	}
 
@@ -113,7 +113,7 @@ func renderUpgradeSyncConfirm(results []update.UpdateResult, updateCheckDone boo
 	return b.String()
 }
 
-func renderUpgradeSyncResult(report *upgrade.UpgradeReport, syncFiles []string, upgradeErr error, syncErr error, width int) string {
+func renderUpgradeSyncResult(report *upgrade.UpgradeReport, syncFiles []string, syncWarnings []string, upgradeErr error, syncErr error, width int) string {
 	var b strings.Builder
 
 	// --- Upgrade section ---
@@ -197,6 +197,9 @@ func renderUpgradeSyncResult(report *upgrade.UpgradeReport, syncFiles []string, 
 		b.WriteString("  " + styles.SuccessStyle.Render("✓") + "  " + fmt.Sprintf("%s synchronized", styles.HeadingStyle.Render(fmt.Sprintf("%d file(s)", len(syncFiles)))))
 		b.WriteString("\n")
 		b.WriteString(renderChangedFiles(syncFiles))
+	}
+	if syncErr == nil && !reportUpgradedSelfTool(report) {
+		b.WriteString(renderSyncWarnings(syncWarnings))
 	}
 
 	b.WriteString("\n\n")

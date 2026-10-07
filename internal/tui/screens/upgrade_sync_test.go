@@ -103,7 +103,7 @@ func TestRenderUpgradeSync_LongManualHintUsesWidth(t *testing.T) {
 		{ToolName: "axiom", Status: upgrade.UpgradeSkipped, ManualHint: longHint},
 	}}
 
-	out := stripANSI(RenderUpgradeSyncWithWidth(nil, report, nil, nil, nil, false, true, 0, 0, 80))
+	out := stripANSI(RenderUpgradeSyncWithWidth(nil, report, nil, nil, nil, nil, false, true, 0, 0, 80))
 	lines := strings.Split(out, "\n")
 	for i, line := range lines {
 		if !strings.Contains(line, "Go 1.25.10+:") {
@@ -266,5 +266,22 @@ func TestRenderUpgradeSync_TruncatesLargeFileList(t *testing.T) {
 	}
 	if !strings.Contains(out, "and 3 more") {
 		t.Errorf("should show truncation message; got:\n%s", out)
+	}
+}
+
+// TestRenderUpgradeSyncWithWidth_ResultShowsSyncWarnings verifies that the
+// combined result screen lists the warnings the sync phase raised.
+func TestRenderUpgradeSyncWithWidth_ResultShowsSyncWarnings(t *testing.T) {
+	report := &upgrade.UpgradeReport{}
+	warnings := []string{"a retired file was kept"}
+
+	out := stripANSI(RenderUpgradeSyncWithWidth(nil, report, []string{"managed.md"}, warnings, nil, nil, false, true, 0, 0, 80))
+	if !strings.Contains(out, "1 warning(s)") || !strings.Contains(out, warnings[0]) {
+		t.Errorf("combined result should list the sync warning; got:\n%s", out)
+	}
+
+	out = stripANSI(RenderUpgradeSyncWithWidth(nil, report, []string{"managed.md"}, nil, nil, nil, false, true, 0, 0, 80))
+	if strings.Contains(out, "warning") {
+		t.Errorf("combined result without warnings should not mention warnings; got:\n%s", out)
 	}
 }

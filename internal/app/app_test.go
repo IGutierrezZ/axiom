@@ -745,14 +745,14 @@ func TestTuiSyncProfilePersistsWhenSDDComponentMissingFromState(t *testing.T) {
 		Name:              "demo",
 		OrchestratorModel: model.ModelAssignment{ProviderID: "anthropic", ModelID: "claude-sonnet-4-5"},
 	}
-	changed, err := tuiSync(home)(&model.SyncOverrides{
+	outcome, err := tuiSync(home)(&model.SyncOverrides{
 		TargetAgents: []model.AgentID{model.AgentOpenCode},
 		Profiles:     []model.Profile{profile},
 	})
 	if err != nil {
 		t.Fatalf("tuiSync() error = %v", err)
 	}
-	if len(changed) == 0 {
+	if len(outcome.Files) == 0 {
 		t.Fatal("tuiSync() changed 0 files, want the profile written to opencode.json")
 	}
 
@@ -945,7 +945,7 @@ func TestTuiInstallOnThenSyncPreservesAndRefreshesOpenCodeActivation(t *testing.
 		t.Fatalf("WriteFile(stale launcher): %v", err)
 	}
 
-	changed, err := tuiSync(home)(nil)
+	outcome, err := tuiSync(home)(nil)
 	if err != nil {
 		t.Fatalf("TUI sync error = %v", err)
 	}
@@ -953,8 +953,8 @@ func TestTuiInstallOnThenSyncPreservesAndRefreshesOpenCodeActivation(t *testing.
 	if err != nil {
 		t.Fatalf("ReadFile(refreshed launcher): %v", err)
 	}
-	if string(after) != string(before) || !slices.Contains(changed, launcher) {
-		t.Fatalf("TUI sync launcher/changed files = %q/%v, want refreshed launcher and changed path", after, changed)
+	if string(after) != string(before) || !slices.Contains(outcome.Files, launcher) {
+		t.Fatalf("TUI sync launcher/changed files = %q/%v, want refreshed launcher and changed path", after, outcome.Files)
 	}
 	settingsPath := filepath.Join(home, ".config", "opencode", "opencode.json")
 	settings, err := os.ReadFile(settingsPath)
@@ -1009,14 +1009,14 @@ func TestTuiSyncClaudeModelConfigWritesSelectedAssignments(t *testing.T) {
 		"default":     model.ClaudeModelHaiku,
 	}
 
-	changed, err := tuiSync(home)(&model.SyncOverrides{
+	outcome, err := tuiSync(home)(&model.SyncOverrides{
 		TargetAgents:           []model.AgentID{model.AgentClaudeCode},
 		ClaudeModelAssignments: assignments,
 	})
 	if err != nil {
 		t.Fatalf("tuiSync Claude model config error: %v", err)
 	}
-	if len(changed) == 0 {
+	if len(outcome.Files) == 0 {
 		t.Fatal("tuiSync Claude model config changed 0 files, want Claude assets written")
 	}
 
@@ -1127,14 +1127,14 @@ func TestTuiSyncClaudePhaseAssignmentsPersistAndGenerateEffort(t *testing.T) {
 		Effort: model.ClaudeEffortMax,
 	}
 
-	changed, err := tuiSync(home)(&model.SyncOverrides{
+	outcome, err := tuiSync(home)(&model.SyncOverrides{
 		TargetAgents:           []model.AgentID{model.AgentClaudeCode},
 		ClaudePhaseAssignments: phaseAssignments,
 	})
 	if err != nil {
 		t.Fatalf("tuiSync Claude phase config error: %v", err)
 	}
-	if len(changed) == 0 {
+	if len(outcome.Files) == 0 {
 		t.Fatal("tuiSync Claude phase config changed 0 files, want Claude assets written")
 	}
 
@@ -1184,14 +1184,14 @@ func TestTuiSyncClaudePhaseAssignmentsPersistAndGenerateEffort(t *testing.T) {
 	}
 	beforeAgentFiles := filesUnder(t, filepath.Join(home, ".claude", "agents"))
 
-	changed, err = tuiSync(home)(&model.SyncOverrides{
+	outcome, err = tuiSync(home)(&model.SyncOverrides{
 		TargetAgents:           []model.AgentID{model.AgentClaudeCode},
 		ClaudePhaseAssignments: phaseAssignments,
 	})
 	if err != nil {
 		t.Fatalf("second tuiSync Claude phase config error: %v", err)
 	}
-	if len(changed) == 0 {
+	if len(outcome.Files) == 0 {
 		t.Log("second tuiSync reported no file changes")
 	}
 	afterAgentFiles := filesUnder(t, filepath.Join(home, ".claude", "agents"))
@@ -2129,12 +2129,12 @@ func TestTuiSyncMigratesLegacyCodexCarrilDefaults(t *testing.T) {
 		t.Fatalf("state.Write: %v", err)
 	}
 
-	changed, err := tuiSync(home)(nil)
+	outcome, err := tuiSync(home)(nil)
 	if err != nil {
 		t.Fatalf("tuiSync() error = %v", err)
 	}
-	changedSet := make(map[string]bool, len(changed))
-	for _, path := range changed {
+	changedSet := make(map[string]bool, len(outcome.Files))
+	for _, path := range outcome.Files {
 		changedSet[path] = true
 	}
 
@@ -2155,7 +2155,7 @@ func TestTuiSyncMigratesLegacyCodexCarrilDefaults(t *testing.T) {
 			}
 		}
 		if !changedSet[path] {
-			t.Errorf("tuiSync changed files missing %s: %#v", path, changed)
+			t.Errorf("tuiSync changed files missing %s: %#v", path, outcome.Files)
 		}
 	}
 
@@ -2908,4 +2908,29 @@ func writeFakeOpenCodeRuntime(t *testing.T) string {
 		t.Fatal(err)
 	}
 	return binDir
+}
+
+// TestTuiSyncCarriesSyncWarningsToTheTUI verifies that a warning raised by the
+// shared sync (here a failed skill index refresh) is returned by tuiSync, so the
+// TUI can show it instead of dropping it as the CLI report is never rendered.
+func TestTuiSyncCarriesSyncWarningsToTheTUI(t *testing.T) {
+	t.Setenv("AXIOM_INSTALL_SCOPE", "global")
+	t.Cleanup(codex.SetRuntimeVersionCommandForTest("codex-cli 0.144.0", nil))
+	home := t.TempDir()
+	if err := state.Write(home, state.InstallState{InstalledAgents: []string{"codex"}}); err != nil {
+		t.Fatalf("state.Write: %v", err)
+	}
+
+	original := cli.PostSyncSkillRegenerator
+	cli.PostSyncSkillRegenerator = func(string, string) (int, error) { return 0, errors.New("index is read-only") }
+	t.Cleanup(func() { cli.PostSyncSkillRegenerator = original })
+
+	outcome, err := tuiSync(home)(nil)
+	if err != nil {
+		t.Fatalf("tuiSync() error = %v", err)
+	}
+	const want = "skill index refresh: index is read-only"
+	if !slices.Contains(outcome.Warnings, want) {
+		t.Fatalf("tuiSync() warnings = %q, want %q", outcome.Warnings, want)
+	}
 }

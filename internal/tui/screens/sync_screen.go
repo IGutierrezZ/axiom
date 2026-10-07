@@ -16,7 +16,7 @@ import (
 //  1. operationRunning → "Syncing configurations..." with spinner
 //  2. hasSyncRun && (filesChanged > 0 || syncErr != nil) → show result
 //  3. Otherwise → show confirmation screen
-func RenderSync(files []string, syncErr error, operationRunning bool, hasSyncRun bool, spinnerFrame int) string {
+func RenderSync(files []string, warnings []string, syncErr error, operationRunning bool, hasSyncRun bool, spinnerFrame int) string {
 	var b strings.Builder
 
 	b.WriteString(styles.TitleStyle.Render("Sync Configurations"))
@@ -32,7 +32,7 @@ func RenderSync(files []string, syncErr error, operationRunning bool, hasSyncRun
 
 	// State 2: sync has run — show result
 	if hasSyncRun {
-		b.WriteString(renderSyncResult(files, syncErr))
+		b.WriteString(renderSyncResult(files, warnings, syncErr))
 		return b.String()
 	}
 
@@ -53,6 +53,24 @@ func renderChangedFiles(files []string) string {
 			break
 		}
 		b.WriteString(styles.SubtextStyle.Render(fmt.Sprintf("  - %s", f)))
+		b.WriteString("\n")
+	}
+	return b.String()
+}
+
+// renderSyncWarnings lists the non-fatal warnings a completed sync raised, so
+// a kept retired file or a failed index refresh is not lost when the CLI report
+// is not what the user is reading.
+func renderSyncWarnings(warnings []string) string {
+	if len(warnings) == 0 {
+		return ""
+	}
+	var b strings.Builder
+	b.WriteString("\n")
+	b.WriteString(styles.WarningStyle.Render(fmt.Sprintf("%d warning(s)", len(warnings))))
+	b.WriteString("\n")
+	for _, warning := range warnings {
+		b.WriteString(styles.SubtextStyle.Render("  ! " + warning))
 		b.WriteString("\n")
 	}
 	return b.String()
@@ -82,7 +100,7 @@ func renderSyncConfirm() string {
 	return b.String()
 }
 
-func renderSyncResult(files []string, syncErr error) string {
+func renderSyncResult(files []string, warnings []string, syncErr error) string {
 	var b strings.Builder
 
 	if syncErr != nil {
@@ -101,6 +119,10 @@ func renderSyncResult(files []string, syncErr error) string {
 		b.WriteString(fmt.Sprintf("%s %s", styles.HeadingStyle.Render(fmt.Sprintf("%d file(s)", len(files))), styles.UnselectedStyle.Render("synchronized")))
 		b.WriteString("\n")
 		b.WriteString(renderChangedFiles(files))
+	}
+
+	if syncErr == nil {
+		b.WriteString(renderSyncWarnings(warnings))
 	}
 
 	b.WriteString("\n\n")
