@@ -599,3 +599,71 @@ func TestLocateAtEvaluatesOnlyTheGivenDirectory(t *testing.T) {
 		}
 	})
 }
+
+func TestLocationLegacySpecsDivergence(t *testing.T) {
+	// legacyDir es la ubicación antigua <raíz>/<specs_repository>/specs.
+	tests := []struct {
+		name            string
+		specsRepository string
+		legacyDir       string // relativo a la raíz; "" no crea ubicación antigua
+		wantWarning     bool
+	}{
+		{name: "specs_repository vacío", specsRepository: "", legacyDir: filepath.Join("specs")},
+		{name: "specs_repository punto", specsRepository: ".", legacyDir: filepath.Join("specs")},
+		{name: "specs_repository openspec", specsRepository: "openspec", legacyDir: filepath.Join("openspec", "specs")},
+		{name: "specs_repository ./openspec", specsRepository: "./openspec", legacyDir: filepath.Join("openspec", "specs")},
+		{name: "specs divergente con ubicación antigua", specsRepository: "specs", legacyDir: filepath.Join("specs", "specs"), wantWarning: true},
+		{name: "specs con barra invertida y subcarpeta", specsRepository: `docs\specs`, legacyDir: filepath.Join("docs", "specs", "specs"), wantWarning: true},
+		{name: "specs divergente sin ubicación antigua", specsRepository: "specs"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ws := workspacetest.Embedded(t, tt.specsRepository)
+			if tt.legacyDir != "" {
+				workspacetest.MkdirAll(t, filepath.Join(ws.Master, tt.legacyDir))
+			}
+			loc := mustLocate(t, ws.Master)
+			warning, ok := loc.LegacySpecsDivergence()
+			if ok != tt.wantWarning {
+				t.Fatalf("LegacySpecsDivergence() = (%q, %v), se esperaba aviso=%v", warning, ok, tt.wantWarning)
+			}
+			if !ok {
+				if warning != "" {
+					t.Fatalf("sin aviso, el texto debe estar vacío: %q", warning)
+				}
+				return
+			}
+			legacy := filepath.Join(ws.Master, tt.legacyDir)
+			current := filepath.Join(ws.Home, "specs")
+			for _, want := range []string{legacy, current, "workspace.specs_repository"} {
+				if !strings.Contains(warning, want) {
+					t.Errorf("el aviso debe nombrar %q y la acción: %q", want, warning)
+				}
+			}
+		})
+	}
+
+	t.Run("solo en monorepo-embedded", func(t *testing.T) {
+		ws := workspacetest.Canonical(t)
+		workspacetest.MkdirAll(t, filepath.Join(ws.Specs, "repo-specs", "specs"))
+		loc := mustLocate(t, ws.Master)
+		if warning, ok := loc.LegacySpecsDivergence(); ok {
+			t.Fatalf("el multirepo no emite el aviso Q14: %q", warning)
+		}
+	})
+	t.Run("sin configuración cargada", func(t *testing.T) {
+		dir := t.TempDir()
+		workspacetest.MkdirAll(t, filepath.Join(dir, "openspec", "changes"))
+		workspacetest.MkdirAll(t, filepath.Join(dir, "specs", "specs"))
+		if warning, ok := mustLocate(t, dir).LegacySpecsDivergence(); ok {
+			t.Fatalf("sin axiom.yaml no hay specs_repository que divergir: %q", warning)
+		}
+	})
+	t.Run("ruta equivalente a openspec tras normalizar", func(t *testing.T) {
+		ws := workspacetest.Embedded(t, "./openspec/../openspec")
+		workspacetest.MkdirAll(t, filepath.Join(ws.Home, "specs"))
+		if warning, ok := mustLocate(t, ws.Master).LegacySpecsDivergence(); ok {
+			t.Fatalf("la misma carpeta no diverge de sí misma: %q", warning)
+		}
+	})
+}

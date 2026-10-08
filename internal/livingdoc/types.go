@@ -10,7 +10,7 @@ type RequirementMeta struct {
 	LineNumber int      `json:"line_number"`
 }
 
-// LivingSpecEntry representa una especificación viva consolidada en openspec/specs/.
+// LivingSpecEntry representa una especificación viva consolidada en <planning home>/specs/.
 type LivingSpecEntry struct {
 	Domain         string            `json:"domain"`
 	Title          string            `json:"title"`
@@ -27,6 +27,9 @@ type LivingCatalog struct {
 	TotalRequirements int               `json:"total_requirements"`
 	TotalScenarios    int               `json:"total_scenarios"`
 	LastSync          time.Time         `json:"last_sync"`
+	// Warnings reúne los avisos de lectura del catálogo, entre ellos el de la
+	// ubicación antigua divergente (Q14, REQ-24.10).
+	Warnings []string `json:"warnings,omitempty"`
 }
 
 // SyncReport resume el resultado determinista de una sincronización de índice de especificaciones vivas.

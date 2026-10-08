@@ -354,6 +354,31 @@ func completeRoots(loc *Location) error {
 	return nil
 }
 
+// LegacySpecsDivergence devuelve el aviso Q14 de los consumidores de catálogo
+// (REQ-24.10, D-07). Se emite solo en monorepo-embedded, con specs_repository
+// fuera de {"", ".", "openspec"}, cuando existe <raíz>/<specs_repository>/specs y
+// no es el mismo directorio que <planning home>/specs. Los consumidores leen
+// únicamente el planning home; el aviso evita que la ubicación antigua quede
+// oculta sin que nadie lo sepa. Es de solo lectura y se calcula en un único
+// sitio para que los cuatro consumidores no reproduzcan la divergencia.
+func (l Location) LegacySpecsDivergence() (string, bool) {
+	if l.Config == nil || l.Config.Workspace.Topology != TopologyMonorepoEmbedded {
+		return "", false
+	}
+	segments := specsSegments(l.Config.Workspace.SpecsRepository)
+	if len(segments) == 0 || (len(segments) == 1 && sameSegment(segments[0], planningHomeDirName)) {
+		return "", false
+	}
+	legacy := filepath.Join(specsRepositoryPath(l.Config.Workspace.SpecsRepository, l.WorkspaceRoot), "specs")
+	current := filepath.Join(l.PlanningHome, "specs")
+	if !isDir(legacy) || pathidentity.SameDirectory(legacy, current) {
+		return "", false
+	}
+	return fmt.Sprintf(
+		"Existe %s (workspace.specs_repository: %q), pero el catálogo se lee solo de %s y las especificaciones de la ubicación antigua quedan fuera. Consolídalas en %s o corrige `workspace.specs_repository` en %s.",
+		pathquote.Quote(legacy), l.Config.Workspace.SpecsRepository, pathquote.Quote(current), pathquote.Quote(current), pathquote.Quote(l.ConfigPath)), true
+}
+
 // separatesSpecs informa de si la topología guarda las especificaciones en un
 // repositorio distinto de la carpeta maestra (monorepo-decoupled y multirepo).
 func separatesSpecs(cfg *WorkspaceConfig) bool {
