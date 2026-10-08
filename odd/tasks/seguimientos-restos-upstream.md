@@ -217,6 +217,12 @@ Previsión total: ~1.500-1.900 líneas en 5 PRs más el de cierre.
     - sandbox con `os.MkdirTemp` y limpieza propia;
     - si `RemoveAll` falla, el test sigue fallando e informa del árbol restante con mtime, de los procesos con cwd o fd dentro, de las goroutines y de las invocaciones actual y previa.
   - Su CI se relanza hasta capturar el fallo; el arreglo irá en ese mismo PR.
+- **2026-10-08, causa de H1:** el primer CI de #109 falló y su diagnóstico la identificó.
+  - **Qué quedaba:** en los tres informes, solo `home/.config/go/telemetry/...` (contadores de go1.24.13), sin ningún proceso vivo 272 ms después.
+  - **Quién lo escribe:** la detección de dependencias ejecuta `go version` (`internal/system/deps.go:83`) y la telemetría del toolchain escribe desde un proceso hijo que sobrevive al comando.
+  - **Por qué desde #104:** el PATH restringido resuelve en Linux el `go` del sistema, y `XDG_CONFIG_HOME` apunta dentro del sandbox.
+  - **Arreglo** (`799f5796`, inline: un único fichero de test): el sandbox escribe `mode=off` de la telemetría de Go en cada directorio de configuración, igual que `go telemetry off`. Verificado en `x/telemetry` (`dir.go:120`, `start.go:151`).
+  - **Estado:** #109 sale de borrador; falta su CI. Después se relanza #107.
 
 ## 9. Siguiente paso
 
