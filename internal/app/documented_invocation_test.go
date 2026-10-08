@@ -347,6 +347,25 @@ func newDocumentedInvocationSandbox(t *testing.T, command string) (string, *docu
 	t.Setenv("APPDATA", filepath.Join(home, "AppData", "Roaming"))
 	t.Setenv("AXIOM_STATE_DIR", filepath.Join(home, ".axiom"))
 	t.Setenv("AXIOM_NO_PERSISTENT_PATH", "1")
+	// Dependency detection runs `go version` (internal/system/deps.go), and a
+	// go toolchain with telemetry enabled writes counter files under its user
+	// config dir from a detached child that outlives the command, racing the
+	// sandbox removal ("directory not empty" in CI). Turn Go telemetry off in
+	// every user config dir the toolchain may resolve, exactly as
+	// `go telemetry off` would, so no go invocation writes here at all.
+	for _, configDir := range []string{
+		filepath.Join(home, ".config"),
+		filepath.Join(home, "AppData", "Roaming"),
+		filepath.Join(home, "Library", "Application Support"),
+	} {
+		modeDir := filepath.Join(configDir, "go", "telemetry")
+		if err := os.MkdirAll(modeDir, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(modeDir, "mode"), []byte("off"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
 	git := func(args ...string) {
 		command := exec.Command("git", args...)
 		command.Dir = repo
