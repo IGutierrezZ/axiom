@@ -86,8 +86,15 @@ Son las mismas de la sección 4 del ODD anterior:
 
 > Estado: `[ ]` pendiente · `[~]` en curso o con PR abierto · `[x]` fusionado. Ruta: delegada, con un writer por tarea en su worktree, salvo lo que sea mecánico y de un solo fichero.
 
-- [ ] **P1 · `bench` aislado en Windows (S1, opción b).** Primero, un test que falle si el PATH del sandbox resuelve un ejecutable fuera de él. Después, se cierra el PATH y los journeys con shims POSIX se marcan `unsupported` en Windows. Riesgo previsto `high` (aislamiento y procesos), así que lleva verificador.
-- [~] **P2 · Versión con `go install` (S2).** PR #111 (rama `fix/version-go-install`, commit `34492be0`). Ruta delegada: un writer `sonnet` en el worktree `p2-version`. Riesgo `medium` (`executable_change`, 95 líneas), así que basta la autoverificación del writer y una comprobación puntual del orquestador (`TestResolveVersion` y `TestVersionDefault` en verde). También se actualiza REQ-22.8 de la especificación viva `axiom-updater-resilience`. Opción (a) con test: la constante solo como último recurso, y `ReadBuildInfo` cuando no hay ldflags. Comprobar que `axiom version` y la comparación de versiones del actualizador siguen igual con GoReleaser.
+- [~] **P1 · `bench` aislado en Windows (S1, opción b).** Tres PRs apilados contra `main` (estrategia `stacked-to-main`, elegida por el usuario):
+  - #112 C1, PATH cerrado: `fix/bench-windows-01-path`, `25334646`, 185 líneas.
+  - #113 C2, guardia fail-closed: `fix/bench-windows-02-guard`, `f2076677`, 574 líneas con `size:exception` aprobada por el usuario. No hay corte cohesivo: separaría la guardia de su consumidor.
+  - #114 C3, `unsupported` en Windows (j105, j116 y j3043): `fix/bench-windows-03-unsupported`, `cdbba284`, 187 líneas.
+
+  Ruta delegada: un writer `sonnet` en el worktree `p1-bench` y un verificador independiente `sonnet` de solo lectura. Riesgo `high` (`process_boundary`). El verificador lo dio por apto con correcciones y sus cuatro correcciones menores están aplicadas: `pathWithin` fail-closed ante junctions, `!IsDir()` en Windows, README matizado y `sandbox_git_unavailable`. El orquestador compiló y testeó C1 y C2 por separado. Queda pendiente en CI la deriva de bytes de stderr en j2138 y j3043, porque falta `node` en el PATH.
+
+  Objetivo original: Primero, un test que falle si el PATH del sandbox resuelve un ejecutable fuera de él. Después, se cierra el PATH y los journeys con shims POSIX se marcan `unsupported` en Windows. Riesgo previsto `high` (aislamiento y procesos), así que lleva verificador.
+- [x] **P2 · Versión con `go install` (S2).** Fusionado en `770914de`. PR #111 (rama `fix/version-go-install`, commit `34492be0`). Ruta delegada: un writer `sonnet` en el worktree `p2-version`. Riesgo `medium` (`executable_change`, 95 líneas), así que basta la autoverificación del writer y una comprobación puntual del orquestador (`TestResolveVersion` y `TestVersionDefault` en verde). También se actualiza REQ-22.8 de la especificación viva `axiom-updater-resilience`. Opción (a) con test: la constante solo como último recurso, y `ReadBuildInfo` cuando no hay ldflags. Comprobar que `axiom version` y la comparación de versiones del actualizador siguen igual con GoReleaser.
 - [ ] **P3 · Migración: avisos de desinstalación y prompts heredados solo con SDD (S4 + S5).** Comparten el ámbito de migración de instalaciones del ODD anterior (U3). Riesgo previsto `high` (borra ficheros del usuario), así que lleva verificador y repite el ataque de propiedad del ODD anterior.
 - [ ] **P4 · Tests intermitentes y comentarios (S3 + S6).** Presupuestos o esperas por condición en los dos tests, sin ocultar fallos reales, y los comentarios del ratchet. `PRD.md` no se toca.
 - [ ] **Cierre:** PR con este documento.
@@ -106,6 +113,8 @@ Previsión: unas 300-600 líneas en 4 PRs, todos por debajo de 400 líneas salvo
 
 ## 8. Progreso
 
+- **2026-10-09, P1:** se abren #112, #113 y #114. En Windows, un subconjunto de 8 journeys con el PATH padre reducido a Go y Git dio 5 completed, 3 unsupported y 0 failed. El corpus completo no se ejecuta en Windows porque tarda horas; la referencia es «Run benchmark evidence» en Linux. Hay 14 tests de `bench` que ya fallan en Windows, igual que en `origin/main`.
+- **2026-10-09, P2:** fusionado #111 con squash (`770914de`) y eliminados su worktree y sus ramas.
 - **2026-10-08, P2:** se abre el PR #111. `go test ./cmd/axiom/`, `go vet`, `gofmtcheck` y `deadcode-ratchet` en verde en local. `internal/update` ya tolera pseudo-versiones y `+dirty`, así que no se toca. Falta el CI.
 - **2026-10-08, reanudación:** se concilia con `origin/main` `21b9808a`: no hay PRs abiertos y las líneas de S2 a S6 no han cambiado. En S1 aparecen tres shims ejecutables más, ya añadidos al inventario. El usuario decide S1 = (b), S2 = (a) y S6 = histórico. No fija orden, así que se empieza por P2 y después se sigue el de la sección 6.
 - **2026-10-08, apertura:** se abre el documento desde `origin/main` `21b9808a`, en el worktree `odd-post-docs` y la rama `docs/odd-seguimientos-post-restos-upstream`. Los seis puntos se han comprobado con `rg` sobre `main`. Matiz de S2: GoReleaser ya inyecta `main.version`, así que el problema solo afecta a `go install`. Por decisión del usuario, la ejecución va en otra sesión.
