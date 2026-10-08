@@ -21,6 +21,8 @@ func issue3748Journeys() []Journey {
 		Review: reviewOptedIn,
 		Title:  "Codex committed correction executes the provider-returned STATUS continuation unchanged",
 		Source: "issue #3748 follow-up to PR #3751: Codex parity for committed correction re-entry",
+		// The fixture ships a #!/bin/sh `codex`; see Journey.ExecutesPOSIXShims.
+		ExecutesPOSIXShims: true,
 		Steps: []Step{
 			{Name: "fixture: committed medium-risk candidate and isolated Codex runtime", Fixture: issue3748CodexFixture},
 			{Name: "negotiate and start the committed Codex review", Requires: statusCapability, Composite: issue3748StartCodexReview},

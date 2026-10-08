@@ -247,6 +247,43 @@ a complete argv carrying the flag under test that can fail on repository state.
 A recognized flag with missing state is supported; an unknown flag is not.
 Probe invocations are uncounted like every other probe.
 
+## The sandbox PATH is closed
+
+A journey's processes never see the caller's `PATH`. `Sandbox.path` builds an
+allow-list: the journey's own `PathOverride`, the policy runtime fixture, the
+directory `git` resolves in (the product shells out to it) and, on POSIX only,
+`/usr/bin` and `/bin` (the shims call `cat`, `sed` and `head`). The caller's PATH
+entries are not inherited, and `go` is not on it.
+
+The allow-list is not a sealed room. The WHOLE directory `git` resolves in
+enters the PATH, so every other tool in that directory stays reachable. When git
+lives in a shared directory (`/opt/homebrew/bin`, `/usr/local/bin`, scoop
+shims), that includes whatever else is installed there. If an agent is among
+it, the guard below aborts the run (fail-closed) instead of isolating it: the
+fix is to run with a git that lives somewhere agent-free, not to expect the
+sandbox to hide the agent.
+
+This exists because the sandbox used to inherit the whole `PATH`: a shim the
+host could not execute (every POSIX `#!/bin/sh` shim on Windows) silently fell
+through to the real agent installed in a user directory, and a real `claude`
+answered "Not logged in" inside a journey.
+
+Two guards fail closed, never as a pass or a skip:
+
+- `run` proves the shared part of the PATH agent-free before the product runs
+  once; otherwise it writes `run_status: failed` with
+  `sandbox_path_not_isolated` and exits nonzero. A missing `git` is a different
+  problem and gets its own `sandbox_git_unavailable`.
+- Before every step, `runJourney` checks that no known agent
+  (`agentBinaryNames`) resolves outside the sandbox root, so a fixture that puts
+  a directory outside it on the PATH fails the journey.
+
+A journey whose fixture ships an executable `#!/bin/sh` shim declares
+`ExecutesPOSIXShims`, and on Windows it is reported `unsupported` with that
+reason instead of running. Declaring a shebang inside a candidate file that is
+never executed does not count, and a journey that sets `PathOverride` without
+the declaration fails.
+
 ## Comparing two binaries
 
 `compare` computes the dimension totals over the **comparable subset**:

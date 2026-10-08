@@ -75,6 +75,10 @@ func issue3043Journeys() []Journey {
 		Review: reviewUntouched,
 		Title:  "OpenCode background subagents activate through a managed launcher",
 		Source: "https://github.com/Gentleman-Programming/gentle-ai/issues/3043",
+		// The fixture ships a #!/bin/sh `opencode` and the product writes a
+		// #!/bin/sh managed launcher that the journey executes; see
+		// Journey.ExecutesPOSIXShims.
+		ExecutesPOSIXShims: true,
 		Steps: []Step{
 			{Name: "fixture: isolated OpenCode runtime", Fixture: issue3043OpenCodeRuntime},
 			{Name: "install reports managed activation", Args: issue3043InstallArgs, After: issue3043VerifyInstall},
