@@ -123,15 +123,26 @@
           "if": {"properties": {"operation_token": {"const": "capture-refuter"}}, "required": ["operation_token"]},
           "then": {
             "properties": {
-              "argument_tokens": {"minItems": 6, "maxItems": 6, "prefixItems": [
-                {"pattern": "^--lineage=\\S+$"},
-                {"pattern": "^--expected-revision=sha256:[0-9a-f]{64}$"},
-                {"pattern": "^--target=sha256:[0-9a-f]{64}$"},
-                {"pattern": "^--repository-context=rctx[12]_[0-9a-f]{64}$"},
-                {"pattern": "^--agent=\\S+$"},
-                {"const": "--input={{value}}"}
-              ], "items": false},
-              "value": {"properties": {"slot": {"const": "provider_refuter"}, "schema": {"const": "https://gentle-ai.dev/schema/review/refuter/v1"}, "substitution_location": {"const": 5}}}
+              "argument_tokens": {"oneOf": [
+                {"minItems": 6, "maxItems": 6, "prefixItems": [
+                  {"pattern": "^--lineage=\\S+$"},
+                  {"pattern": "^--expected-revision=sha256:[0-9a-f]{64}$"},
+                  {"pattern": "^--target=sha256:[0-9a-f]{64}$"},
+                  {"pattern": "^--repository-context=rctx[12]_[0-9a-f]{64}$"},
+                  {"pattern": "^--agent=\\S+$"},
+                  {"const": "--input={{value}}"}
+                ], "items": false},
+                {"minItems": 7, "maxItems": 7, "prefixItems": [
+                  {"const": "--contract=axiom.review-integration/v2"},
+                  {"pattern": "^--lineage=\\S+$"},
+                  {"pattern": "^--expected-revision=sha256:[0-9a-f]{64}$"},
+                  {"pattern": "^--target=sha256:[0-9a-f]{64}$"},
+                  {"pattern": "^--repository-context=rctx[12]_[0-9a-f]{64}$"},
+                  {"pattern": "^--agent=\\S+$"},
+                  {"const": "--input={{value}}"}
+                ], "items": false}
+              ]},
+              "value": {"properties": {"slot": {"const": "provider_refuter"}, "schema": {"const": "https://gentle-ai.dev/schema/review/refuter/v1"}, "substitution_location": {"enum": [5, 6]}}}
             }
           }
         },
@@ -139,16 +150,28 @@
           "if": {"properties": {"operation_token": {"const": "capture-validation"}}, "required": ["operation_token"]},
           "then": {
             "properties": {
-              "argument_tokens": {"minItems": 7, "maxItems": 7, "prefixItems": [
-                {"pattern": "^--lineage=\\S+$"},
-                {"pattern": "^--expected-revision=sha256:[0-9a-f]{64}$"},
-                {"pattern": "^--target=sha256:[0-9a-f]{64}$"},
-                {"pattern": "^--repository-context=rctx[12]_[0-9a-f]{64}$"},
-                {"pattern": "^--request-hash=sha256:[0-9a-f]{64}$"},
-                {"pattern": "^--agent=\\S+$"},
-                {"const": "--input={{value}}"}
-              ], "items": false},
-              "value": {"properties": {"slot": {"const": "provider_targeted_validator"}, "schema": {"const": "https://gentle-ai.dev/schema/review/validator/v1"}, "substitution_location": {"const": 6}}}
+              "argument_tokens": {"oneOf": [
+                {"minItems": 7, "maxItems": 7, "prefixItems": [
+                  {"pattern": "^--lineage=\\S+$"},
+                  {"pattern": "^--expected-revision=sha256:[0-9a-f]{64}$"},
+                  {"pattern": "^--target=sha256:[0-9a-f]{64}$"},
+                  {"pattern": "^--repository-context=rctx[12]_[0-9a-f]{64}$"},
+                  {"pattern": "^--request-hash=sha256:[0-9a-f]{64}$"},
+                  {"pattern": "^--agent=\\S+$"},
+                  {"const": "--input={{value}}"}
+                ], "items": false},
+                {"minItems": 8, "maxItems": 8, "prefixItems": [
+                  {"const": "--contract=axiom.review-integration/v2"},
+                  {"pattern": "^--lineage=\\S+$"},
+                  {"pattern": "^--expected-revision=sha256:[0-9a-f]{64}$"},
+                  {"pattern": "^--target=sha256:[0-9a-f]{64}$"},
+                  {"pattern": "^--repository-context=rctx[12]_[0-9a-f]{64}$"},
+                  {"pattern": "^--request-hash=sha256:[0-9a-f]{64}$"},
+                  {"pattern": "^--agent=\\S+$"},
+                  {"const": "--input={{value}}"}
+                ], "items": false}
+              ]},
+              "value": {"properties": {"slot": {"const": "provider_targeted_validator"}, "schema": {"const": "https://gentle-ai.dev/schema/review/validator/v1"}, "substitution_location": {"enum": [6, 7]}}}
             }
           }
         }

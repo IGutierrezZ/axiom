@@ -171,6 +171,8 @@ This one is for people using agents. A controller must not infer a lifecycle act
 gentle-ai review status --next-transition --contract gentle-ai.review-integration/v2
 ```
 
+> **Dialect.** Negotiating `--contract axiom.review-integration/v2` instead answers every returned command with the `axiom` tool (for example `axiom review status ...`); the flow is otherwise identical. `gentle-ai.review-integration/v2` keeps the `gentle-ai` tool. The capture and acknowledgement tokens STATUS returns then lead with `--contract=axiom.review-integration/v2`, so the continuations those commands publish keep the same dialect; under `gentle-ai.review-integration/v2` those tokens carry no contract and the continuations stay in the `gentle-ai` dialect. See the Dialecto section of [review-integration.md](../review-integration.md).
+
 2. [ ] First read `next_transition.kind`. If it is `execute`, run the returned operation with its ordered argument tokens exactly as returned → **Expected**: the transition runs without reordered, synthesized, or added arguments.
 3. [ ] If it is `collect`, inspect `inputs[].arguments` → **Expected**: each carries a complete token for the bound capture. A model must first produce that bound reviewer result; do not invent an execute action.
 4. [ ] Submit a completed result only through the returned collect input. Do **not** add `--cwd`: inputs that carry `--repository-context` refuse both contexts together.

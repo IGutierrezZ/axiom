@@ -139,14 +139,14 @@ func TestNegotiatedStartCommandEchoesTheCallersOwnRuntime(t *testing.T) {
 	}
 	for _, agent := range []model.AgentID{model.AgentClaudeCode, model.AgentOpenCode, model.AgentCodex} {
 		t.Run(string(agent), func(t *testing.T) {
-			command := reviewNegotiatedStartCommand(snapshot, string(agent))
+			command := reviewNegotiatedStartCommand(reviewDialect{}, snapshot, string(agent))
 			if strings.Count(command, "--agent ") != 1 || !strings.Contains(command, "--agent "+string(agent)+" ") {
 				t.Errorf("negotiated start command does not contain exactly one exact caller identity %q: %s", agent, command)
 			}
 		})
 	}
 
-	if unbound := reviewNegotiatedStartCommand(snapshot, "   "); strings.Contains(unbound, "--agent") || strings.Contains(unbound, reviewUndeclaredRuntimeIdentitySlot) {
+	if unbound := reviewNegotiatedStartCommand(reviewDialect{}, snapshot, "   "); strings.Contains(unbound, "--agent") || strings.Contains(unbound, reviewUndeclaredRuntimeIdentitySlot) {
 		t.Errorf("a blank runtime identity emitted an agent segment: %s", unbound)
 	}
 }

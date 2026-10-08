@@ -69,7 +69,7 @@ func TestNativeReviewExecutionContractsRetainTheirCLIStatusRoute(t *testing.T) {
 			if err != nil {
 				t.Fatalf("ReviewExecutionContractFor(%s): %v", agent, err)
 			}
-			status := "axiom review status --cwd <repo> --contract gentle-ai.review-integration/v2 --agent " + string(agent) + " --next-transition"
+			status := "axiom review status --cwd <repo> --contract axiom.review-integration/v2 --agent " + string(agent) + " --next-transition"
 			if count := strings.Count(contract, status); count != 1 {
 				t.Fatalf("native contract contains %d canonical STATUS routes, want 1", count)
 			}

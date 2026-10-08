@@ -269,6 +269,9 @@ func (result ReviewIntegrationStartResult) Validate() error {
 		if err := result.NextTransition.Validate(); err != nil {
 			return err
 		}
+		if err := validateReviewDialectCommands(result.Contract, result.NextTransition.commandLines()...); err != nil {
+			return err
+		}
 		binding := result.NextTransition.Execute.Binding
 		if binding.LineageID != result.LineageID ||
 			result.RepositoryContext != nil && binding.TargetIdentity != result.RepositoryContext.TargetIdentity {
@@ -281,6 +284,12 @@ func (result ReviewIntegrationStartResult) Validate() error {
 	}
 	if result.Acknowledgement != nil {
 		if err := validateReviewApprovedAcknowledgementExecution(*result.Acknowledgement); err != nil {
+			return err
+		}
+		if err := validateReviewDialectCommands(result.Contract, result.Acknowledgement.Command); err != nil {
+			return err
+		}
+		if err := validateReviewDialectCaptureTokens(result.Contract, nil, result.Acknowledgement); err != nil {
 			return err
 		}
 		if result.Acknowledgement.Binding.LineageID != result.LineageID {

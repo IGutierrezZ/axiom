@@ -42,7 +42,15 @@ func run() int {
 	withModel := flag.Bool("with-model", false, "reserved; live Claude model proof remains intentionally disabled")
 	withHost := flag.Bool("with-host", false, "spawn REAL host applications (codex exec, pi print mode, an opencode session) end to end (uses the dev subscription)")
 	keepWork := flag.Bool("keep-work", false, "keep the scratch working directory for inspection")
+	dialect := flag.String("dialect", "gentle-ai", "review integration dialect every lane negotiates: gentle-ai (default) or axiom")
 	flag.Parse()
+
+	contract, err := dialectContract(*dialect)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "crosslane: %v\n", err)
+		return 2
+	}
+	reviewContract = contract
 
 	if *binary == "" {
 		fmt.Fprintln(os.Stderr, "crosslane: --binary <path> is required")

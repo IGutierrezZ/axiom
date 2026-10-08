@@ -252,7 +252,7 @@ func TestReviewNegotiatedStartCommandCarriesTargetEvidence(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	command := reviewNegotiatedStartCommand(snapshot, "claude-code")
+	command := reviewNegotiatedStartCommand(reviewDialect{}, snapshot, "claude-code")
 	index := strings.Index(command, " --target-evidence ")
 	if index < 0 {
 		t.Fatalf("negotiated START command carries no evidence token: %q", command)

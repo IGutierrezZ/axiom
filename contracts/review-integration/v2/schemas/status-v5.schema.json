@@ -122,8 +122,8 @@
       "required": ["operation_token", "argument_tokens", "value"],
       "properties": {
         "operation_token": {"const": "capture-correction-plan"},
-        "argument_tokens": {"type": "array", "minItems": 6, "maxItems": 6, "prefixItems": [{"pattern": "^--lineage=\\S+$"}, {"pattern": "^--expected-revision=sha256:[0-9a-f]{64}$"}, {"pattern": "^--target=sha256:[0-9a-f]{64}$"}, {"pattern": "^--request-hash=sha256:[0-9a-f]{64}$"}, {"pattern": "^--repository-context=rctx[12]_[0-9a-f]{64}$"}, {"const": "--correction-lines={{value}}"}], "items": false},
-        "value": {"type": "object", "additionalProperties": false, "required": ["slot", "domain", "minimum", "maximum", "substitution_location"], "properties": {"slot": {"const": "correction_lines"}, "domain": {"const": "positive_correction_lines"}, "minimum": {"const": 1}, "maximum": {"type": "integer", "minimum": 1, "maximum": 200}, "substitution_location": {"const": 5}}}
+        "argument_tokens": {"oneOf": [{"type": "array", "minItems": 6, "maxItems": 6, "prefixItems": [{"pattern": "^--lineage=\\S+$"}, {"pattern": "^--expected-revision=sha256:[0-9a-f]{64}$"}, {"pattern": "^--target=sha256:[0-9a-f]{64}$"}, {"pattern": "^--request-hash=sha256:[0-9a-f]{64}$"}, {"pattern": "^--repository-context=rctx[12]_[0-9a-f]{64}$"}, {"const": "--correction-lines={{value}}"}], "items": false}, {"type": "array", "minItems": 7, "maxItems": 7, "prefixItems": [{"const": "--contract=axiom.review-integration/v2"}, {"pattern": "^--lineage=\\S+$"}, {"pattern": "^--expected-revision=sha256:[0-9a-f]{64}$"}, {"pattern": "^--target=sha256:[0-9a-f]{64}$"}, {"pattern": "^--request-hash=sha256:[0-9a-f]{64}$"}, {"pattern": "^--repository-context=rctx[12]_[0-9a-f]{64}$"}, {"const": "--correction-lines={{value}}"}], "items": false}]},
+        "value": {"type": "object", "additionalProperties": false, "required": ["slot", "domain", "minimum", "maximum", "substitution_location"], "properties": {"slot": {"const": "correction_lines"}, "domain": {"const": "positive_correction_lines"}, "minimum": {"const": 1}, "maximum": {"type": "integer", "minimum": 1, "maximum": 200}, "substitution_location": {"enum": [5, 6]}}}
       }
     },
     "capture_result_submission_descriptor": {
@@ -131,7 +131,7 @@
       "required": ["operation_token", "argument_tokens", "value"],
       "properties": {
         "operation_token": {"const": "capture-result"},
-        "argument_tokens": {"type": "array", "minItems": 8, "maxItems": 8, "prefixItems": [{"pattern": "^--lineage=\\S+$"}, {"pattern": "^--expected-revision=sha256:[0-9a-f]{64}$"}, {"pattern": "^--target=sha256:[0-9a-f]{64}$"}, {"pattern": "^--repository-context=rctx[12]_[0-9a-f]{64}$"}, {"pattern": "^--lens=\\S+$"}, {"pattern": "^--order=[0-9]+$"}, {"pattern": "^--subject-hash=sha256:[0-9a-f]{64}$"}, {"const": "--input={{value}}"}], "items": false},
+        "argument_tokens": {"oneOf": [{"type": "array", "minItems": 8, "maxItems": 8, "prefixItems": [{"pattern": "^--lineage=\\S+$"}, {"pattern": "^--expected-revision=sha256:[0-9a-f]{64}$"}, {"pattern": "^--target=sha256:[0-9a-f]{64}$"}, {"pattern": "^--repository-context=rctx[12]_[0-9a-f]{64}$"}, {"pattern": "^--lens=\\S+$"}, {"pattern": "^--order=[0-9]+$"}, {"pattern": "^--subject-hash=sha256:[0-9a-f]{64}$"}, {"const": "--input={{value}}"}], "items": false}, {"type": "array", "minItems": 9, "maxItems": 9, "prefixItems": [{"const": "--contract=axiom.review-integration/v2"}, {"pattern": "^--lineage=\\S+$"}, {"pattern": "^--expected-revision=sha256:[0-9a-f]{64}$"}, {"pattern": "^--target=sha256:[0-9a-f]{64}$"}, {"pattern": "^--repository-context=rctx[12]_[0-9a-f]{64}$"}, {"pattern": "^--lens=\\S+$"}, {"pattern": "^--order=[0-9]+$"}, {"pattern": "^--subject-hash=sha256:[0-9a-f]{64}$"}, {"const": "--input={{value}}"}], "items": false}]},
         "value": {"$ref": "#/$defs/capture_result_submission_value"}
       }
     },
@@ -142,7 +142,7 @@
         "slot": {"const": "reviewer_result"},
         "domain": {"const": "artifact_path_or_stdin"},
         "schema": {"const": "https://gentle-ai.dev/schema/review/reviewer/v1"},
-        "substitution_location": {"const": 7}
+        "substitution_location": {"enum": [7, 8]}
       }
     },
     "git_tree": {"type": "string", "pattern": "^[0-9a-f]{40}([0-9a-f]{24})?$"}

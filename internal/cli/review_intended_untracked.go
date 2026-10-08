@@ -143,7 +143,7 @@ func reviewIntendedUntrackedCollection(status ReviewTargetStatusResult, scope re
 	paths, _ := json.Marshal(scope.Inventory)
 	input := ReviewTransitionInput{Name: "intended_untracked_selection", Schema: reviewIntendedUntrackedSelectionSchema, CaptureOperation: "external.select_intended_untracked", Arguments: append(reviewTargetArguments(status), ReviewTransitionArgument{Name: "eligible_paths_json", Value: string(paths)}, ReviewTransitionArgument{Name: "expected_untracked_inventory", Value: scope.Digest})}
 	if agent != "" {
-		tokens := []string{"--contract=" + ReviewIntegrationContractV2, "--next-transition=true", "--agent=" + string(agent), "--projection=workspace", "--intended-untracked-selection=" + reviewSubmissionValuePlaceholder}
+		tokens := []string{"--contract=" + reviewDialectForContract(status.Contract).ContractV2(), "--next-transition=true", "--agent=" + string(agent), "--projection=workspace", "--intended-untracked-selection=" + reviewSubmissionValuePlaceholder}
 		input.Submission = &ReviewTransitionSubmission{OperationToken: "status", ArgumentTokens: tokens, Value: &ReviewTransitionSubmissionValue{Slot: "intended_untracked_selection", Domain: "schema_bound_json", Schema: reviewIntendedUntrackedSelectionSchema, SubstitutionLocation: 4}}
 	}
 	return reviewCollectTransition("intended_untracked_selection_required", input)

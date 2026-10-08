@@ -274,7 +274,7 @@ func TestV2TransitionSchemasAcceptProviderPayloadsAndRejectDrift(t *testing.T) {
 func TestV2LastEventStatusContinuationHasItsOwnStrictExecutionShape(t *testing.T) {
 	closureSchema := compileWholePublishedReviewSchema(t, "v2", "last-event-closure.schema.json")
 	const revision = "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-	continuation := reviewCorrectionStatusContinuation("/frozen/repository", reviewtransaction.CompactState{
+	continuation := reviewCorrectionStatusContinuation(reviewDialect{}, "/frozen/repository", reviewtransaction.CompactState{
 		LineageID: "last-event-status",
 		InitialSnapshot: reviewtransaction.Snapshot{
 			Kind: reviewtransaction.TargetCurrentChanges, Identity: revision,

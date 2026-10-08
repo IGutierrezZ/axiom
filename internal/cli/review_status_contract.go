@@ -378,6 +378,12 @@ func (result ReviewTargetStatusResult) validateWithCompactAuthority(authority *r
 		if err := result.NextTransition.Validate(); err != nil {
 			return err
 		}
+		if err := validateReviewDialectCommands(result.Contract, result.NextTransition.commandLines()...); err != nil {
+			return err
+		}
+		if err := validateReviewDialectCaptureTokens(result.Contract, result.NextTransition); err != nil {
+			return err
+		}
 		if err := result.validateNextTransitionTargets(); err != nil {
 			return err
 		}
@@ -1253,6 +1259,14 @@ func (transition ReviewNextTransition) Validate() error {
 			if err != nil {
 				return err
 			}
+			// An axiom caller's capture tokens lead with --contract; it is the
+			// only argument a binding gains, so every exact count below moves by it.
+			contractArguments := 0
+			if _, native := reviewNativeCaptureVerb(input.CaptureOperation); native {
+				if contractArguments, err = reviewCaptureContractArgumentCount(input.Arguments); err != nil {
+					return err
+				}
+			}
 			submissionAllowed := input.CaptureOperation == reviewCaptureCorrectionPlanOperation || input.CaptureOperation == "review.capture-result" || input.CaptureOperation == "external.select_intended_untracked" ||
 				input.CaptureOperation == reviewCaptureRefuterCaptureOperation || input.CaptureOperation == reviewCaptureValidationCaptureOperation
 			if input.Submission != nil && !submissionAllowed {
@@ -1267,9 +1281,9 @@ func (transition ReviewNextTransition) Validate() error {
 				order, orderErr := strconv.Atoi(arguments["order"])
 				legacyTransport := input.ArtifactSubject != nil && input.ArtifactSubject.Schema == reviewtransaction.ArtifactSubjectSchemaV1
 				nativeGitTransport := input.ArtifactSubject != nil && input.ArtifactSubject.Schema == reviewtransaction.ArtifactSubjectSchema
-				argumentCount := 6
+				argumentCount := 6 + contractArguments
 				if nativeGitTransport {
-					argumentCount = 7
+					argumentCount++
 				}
 				providerRuntime := model.AgentID(arguments["agent"])
 				providerCapture := providerRuntime != "" && reviewProviderCaptureRuntime(providerRuntime)
@@ -1356,9 +1370,9 @@ func (transition ReviewNextTransition) Validate() error {
 				// actually advances authority; Go never spawns anything for
 				// this role (#4611).
 				providerRuntime := model.AgentID(arguments["agent"])
-				argumentCount, schema := 6, reviewRefuterSchemaID
+				argumentCount, schema := 6+contractArguments, reviewRefuterSchemaID
 				if input.CaptureOperation == reviewCaptureValidationCaptureOperation {
-					argumentCount, schema = 7, reviewValidatorSchemaID
+					argumentCount, schema = 7+contractArguments, reviewValidatorSchemaID
 				}
 				// Fail closed on the argument count BEFORE any arithmetic over
 				// it: a hostile envelope with a truncated (or empty) argument
@@ -1402,7 +1416,7 @@ func (transition ReviewNextTransition) Validate() error {
 				}
 			}
 			if input.CaptureOperation == reviewCaptureCorrectionPlanOperation &&
-				(input.Schema != "gentle-ai.review-correction-plan/v1" || len(arguments) != 5 ||
+				(input.Schema != "gentle-ai.review-correction-plan/v1" || len(arguments) != 5+contractArguments ||
 					strings.TrimSpace(arguments["lineage"]) == "" || !validReviewCapabilitySHA256(arguments["expected-revision"]) ||
 					!validReviewCapabilitySHA256(arguments["target"]) || !validReviewCapabilitySHA256(arguments["request-hash"]) ||
 					reviewtransaction.ValidateReviewRepositoryContextHandle(arguments["repository-context"]) != nil) {
@@ -1532,9 +1546,13 @@ func (submission ReviewTransitionSubmission) validateCaptureResult() error {
 // repository-context and the identified host-relay runtime; the targeted
 // validator additionally binds the frozen validation request hash.
 func (submission ReviewTransitionSubmission) validateProviderRoleCapture() error {
-	expected, slot, schema := 6, reviewProviderRoleInputName(reviewerprovider.RoleRefuter), reviewRefuterSchemaID
+	contractTokens, err := reviewCaptureContractTokenCount(submission.ArgumentTokens)
+	if err != nil {
+		return err
+	}
+	expected, slot, schema := 6+contractTokens, reviewProviderRoleInputName(reviewerprovider.RoleRefuter), reviewRefuterSchemaID
 	if submission.OperationToken == "capture-validation" {
-		expected, slot, schema = 7, reviewProviderRoleInputName(reviewerprovider.RoleTargetedValidator), reviewValidatorSchemaID
+		expected, slot, schema = 7+contractTokens, reviewProviderRoleInputName(reviewerprovider.RoleTargetedValidator), reviewValidatorSchemaID
 	}
 	if submission.Value == nil || len(submission.Values) != 0 || len(submission.ArgumentTokens) != expected ||
 		submission.Value.SubstitutionLocation != expected-1 {
@@ -1545,7 +1563,7 @@ func (submission ReviewTransitionSubmission) validateProviderRoleCapture() error
 			return errors.New("submission descriptor contains an unsafe argument token") // refusal:by-design world-action: only a provider code fix can emit safe argv tokens
 		}
 	}
-	tokens := submission.ArgumentTokens
+	tokens := submission.ArgumentTokens[contractTokens:]
 	if !strings.HasPrefix(tokens[0], "--lineage=") || !validReviewIntegrationLineage(strings.TrimPrefix(tokens[0], "--lineage=")) ||
 		!strings.HasPrefix(tokens[1], "--expected-revision=") || !validReviewCapabilitySHA256(strings.TrimPrefix(tokens[1], "--expected-revision=")) ||
 		!strings.HasPrefix(tokens[2], "--target=") || !validReviewCapabilitySHA256(strings.TrimPrefix(tokens[2], "--target=")) ||
@@ -1557,11 +1575,11 @@ func (submission ReviewTransitionSubmission) validateProviderRoleCapture() error
 		(!strings.HasPrefix(tokens[4], "--request-hash=") || !validReviewCapabilitySHA256(strings.TrimPrefix(tokens[4], "--request-hash="))) {
 		return errors.New("submission descriptor bindings are invalid") // refusal:by-design world-action: only a provider code fix can restore authority bindings
 	}
-	if !strings.HasPrefix(tokens[expected-2], "--agent=") ||
-		!reviewProviderHostRelayMaterializeRuntime(model.AgentID(strings.TrimPrefix(tokens[expected-2], "--agent="))) {
+	if !strings.HasPrefix(tokens[expected-contractTokens-2], "--agent=") ||
+		!reviewProviderHostRelayMaterializeRuntime(model.AgentID(strings.TrimPrefix(tokens[expected-contractTokens-2], "--agent="))) {
 		return errors.New("submission descriptor bindings are invalid") // refusal:by-design world-action: only a provider code fix can bind the identified host-relay runtime
 	}
-	if tokens[expected-1] != "--input="+reviewSubmissionValuePlaceholder ||
+	if tokens[expected-contractTokens-1] != "--input="+reviewSubmissionValuePlaceholder ||
 		submission.Value.Slot != slot || submission.Value.Domain != "artifact_path_or_stdin" ||
 		submission.Value.Schema != schema || submission.Value.Minimum != 0 ||
 		submission.Value.Maximum != 0 || len(submission.Value.AllowedValues) != 0 {
@@ -1571,10 +1589,14 @@ func (submission ReviewTransitionSubmission) validateProviderRoleCapture() error
 }
 
 func (submission ReviewTransitionSubmission) validateCorrectionPlan() error {
+	contractTokens, err := reviewCaptureContractTokenCount(submission.ArgumentTokens)
+	if err != nil {
+		return err
+	}
 	if submission.Value == nil || len(submission.Values) != 0 || submission.Value.Slot != "correction_lines" ||
 		submission.Value.Domain != "positive_correction_lines" || submission.Value.Minimum != 1 ||
 		submission.Value.Maximum <= 0 || submission.Value.Schema != "" || len(submission.Value.AllowedValues) != 0 ||
-		submission.Value.SubstitutionLocation != 5 || len(submission.ArgumentTokens) != 6 {
+		submission.Value.SubstitutionLocation != 5+contractTokens || len(submission.ArgumentTokens) != 6+contractTokens {
 		return errors.New("correction-plan submission descriptor is invalid") // refusal:by-design world-action: only a provider code fix can alter the exact pre-edit forecast binding
 	}
 	for _, token := range submission.ArgumentTokens {
@@ -1582,20 +1604,56 @@ func (submission ReviewTransitionSubmission) validateCorrectionPlan() error {
 			return errors.New("correction-plan submission descriptor contains an unsafe argument token") // refusal:by-design world-action: only a provider code fix can emit safe argv tokens
 		}
 	}
-	if !strings.HasPrefix(submission.ArgumentTokens[0], "--lineage=") ||
-		!validReviewIntegrationLineage(strings.TrimPrefix(submission.ArgumentTokens[0], "--lineage=")) ||
-		!strings.HasPrefix(submission.ArgumentTokens[1], "--expected-revision=") ||
-		!validReviewCapabilitySHA256(strings.TrimPrefix(submission.ArgumentTokens[1], "--expected-revision=")) ||
-		!strings.HasPrefix(submission.ArgumentTokens[2], "--target=") ||
-		!validReviewCapabilitySHA256(strings.TrimPrefix(submission.ArgumentTokens[2], "--target=")) ||
-		!strings.HasPrefix(submission.ArgumentTokens[3], "--request-hash=") ||
-		!validReviewCapabilitySHA256(strings.TrimPrefix(submission.ArgumentTokens[3], "--request-hash=")) ||
-		!strings.HasPrefix(submission.ArgumentTokens[4], "--repository-context=") ||
-		reviewtransaction.ValidateReviewRepositoryContextHandle(strings.TrimPrefix(submission.ArgumentTokens[4], "--repository-context=")) != nil ||
-		submission.ArgumentTokens[5] != "--correction-lines="+reviewSubmissionValuePlaceholder {
+	tokens := submission.ArgumentTokens[contractTokens:]
+	if !strings.HasPrefix(tokens[0], "--lineage=") ||
+		!validReviewIntegrationLineage(strings.TrimPrefix(tokens[0], "--lineage=")) ||
+		!strings.HasPrefix(tokens[1], "--expected-revision=") ||
+		!validReviewCapabilitySHA256(strings.TrimPrefix(tokens[1], "--expected-revision=")) ||
+		!strings.HasPrefix(tokens[2], "--target=") ||
+		!validReviewCapabilitySHA256(strings.TrimPrefix(tokens[2], "--target=")) ||
+		!strings.HasPrefix(tokens[3], "--request-hash=") ||
+		!validReviewCapabilitySHA256(strings.TrimPrefix(tokens[3], "--request-hash=")) ||
+		!strings.HasPrefix(tokens[4], "--repository-context=") ||
+		reviewtransaction.ValidateReviewRepositoryContextHandle(strings.TrimPrefix(tokens[4], "--repository-context=")) != nil ||
+		tokens[5] != "--correction-lines="+reviewSubmissionValuePlaceholder {
 		return errors.New("correction-plan submission descriptor bindings are invalid") // refusal:by-design world-action: only a provider code fix can restore the exact pre-edit forecast binding
 	}
 	return nil
+}
+
+// reviewCaptureContractArgumentCount reports whether the arguments of one
+// capture token list lead with the axiom --contract argument (1) or not (0).
+// The argument may appear only first and only as the axiom v2 identifier, which
+// is all a dialect ever adds; the check against the result's own contract is
+// validateReviewDialectCaptureTokens.
+func reviewCaptureContractArgumentCount(arguments []ReviewTransitionArgument) (int, error) {
+	count := 0
+	for index, argument := range arguments {
+		if argument.Name != "contract" {
+			continue
+		}
+		if index != 0 || argument.Value != (reviewDialect{axiom: true}).ContractV2() {
+			return 0, errors.New("capture token list carries an invalid --contract argument") // refusal:by-design world-action: only a provider code fix can restore the dialect contract of a capture binding
+		}
+		count = 1
+	}
+	return count, nil
+}
+
+// reviewCaptureContractTokenCount is reviewCaptureContractArgumentCount for the
+// rendered argv tokens of a submission descriptor.
+func reviewCaptureContractTokenCount(tokens []string) (int, error) {
+	count := 0
+	for index, token := range tokens {
+		if !strings.HasPrefix(token, "--contract=") {
+			continue
+		}
+		if index != 0 || token != reviewTransitionArgumentToken(ReviewTransitionArgument{Name: "contract", Value: (reviewDialect{axiom: true}).ContractV2()}) {
+			return 0, errors.New("capture submission descriptor carries an invalid --contract token") // refusal:by-design world-action: only a provider code fix can restore the dialect contract of a capture binding
+		}
+		count = 1
+	}
+	return count, nil
 }
 
 func reviewTransitionArgumentMap(arguments []ReviewTransitionArgument, operation ...string) (map[string]string, error) {
@@ -1630,7 +1688,10 @@ func validReviewAcknowledgementToken(value string) bool {
 }
 
 func validateReviewTransitionExecution(execution ReviewTransitionExecution, arguments map[string]string) error {
-	if execution.Command != reviewTransitionCommandLine(execution.Operation, execution.Arguments) {
+	// Either dialect renders the same arguments; which one the result may carry
+	// is a result-level rule (validateReviewDialectCommands), not this shape check.
+	if execution.Command != reviewTransitionCommandLine(reviewDialect{}, execution.Operation, execution.Arguments) &&
+		execution.Command != reviewTransitionCommandLine(reviewDialect{axiom: true}, execution.Operation, execution.Arguments) {
 		return errors.New("execution transition command does not match its arguments") // refusal:by-design world-action: a producer must publish the exact command its executable arguments define
 	}
 	exact := func(required []string, selectors []ReviewTransitionArgument) bool {
@@ -1652,7 +1713,15 @@ func validateReviewTransitionExecution(execution ReviewTransitionExecution, argu
 	}
 	switch execution.Operation {
 	case "review.acknowledge-approved":
-		if !exact([]string{"cwd", "lineage", "target", "expected-revision", "token"}, nil) ||
+		required := []string{"cwd", "lineage", "target", "expected-revision", "token"}
+		contractArguments, contractErr := reviewCaptureContractArgumentCount(execution.Arguments)
+		if contractErr != nil {
+			return contractErr
+		}
+		if contractArguments == 1 {
+			required = append(required, "contract")
+		}
+		if !exact(required, nil) ||
 			arguments["lineage"] != execution.Binding.LineageID || arguments["target"] != execution.Binding.TargetIdentity ||
 			arguments["expected-revision"] != execution.Binding.Revision || !validReviewAcknowledgementToken(arguments["token"]) ||
 			len(execution.Preconditions) != 1 || execution.Preconditions[0] != (ReviewTransitionArgument{Name: "state", Value: string(reviewtransaction.StateApproved)}) {

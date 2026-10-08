@@ -34,11 +34,17 @@ func RunReviewCaptureCorrectionPlan(args []string, stdout io.Writer) error {
 	revision := flags.String("expected-revision", "", "exact compact authority revision")
 	requestHash := flags.String("request-hash", "", "provider-issued correction plan request hash")
 	correctionLines := flags.Int("correction-lines", 0, "positive pre-edit correction line forecast")
+	contract := flags.String("contract", "", "optional review integration v2 contract the provider-issued tokens were negotiated under")
 	if err := parseReviewFlags(flags, args); err != nil {
 		return err
 	}
 	if reviewHelpRequested(args) {
 		return nil
+	}
+	// The result names no tool and no contract, so there is no dialect to echo;
+	// the flag is validated so the exact tokens STATUS issued are accepted.
+	if _, err := reviewCaptureCommandDialect(flags, "capture-correction-plan", *contract); err != nil {
+		return err
 	}
 	if flags.NArg() != 0 || strings.TrimSpace(*lineage) == "" || strings.TrimSpace(*target) == "" ||
 		strings.TrimSpace(*revision) == "" || strings.TrimSpace(*requestHash) == "" || *correctionLines <= 0 {

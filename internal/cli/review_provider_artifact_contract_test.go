@@ -63,10 +63,16 @@ func TestReviewProviderArtifactV20ContractsArePinned(t *testing.T) {
 		// already committed to by artifact_subject.changed_path_manifest_sha256
 		// -- so this fixture legitimately dropped that array. Deliberate, not
 		// drift.
-		"fixtures/status.fixture.json":     "3fc2539d5bcaa8dc3ed650ba7f5e8915856a3d9f8caf1cfcb1b0354ecacbe0f8",
-		"schemas/capabilities.schema.json": "d6e7e593aa86853161a4434f7c9ac89eb34560a5e718ab5853ee6a85cdd33554",
-		"schemas/consent.schema.json":      "a45c858d43af3b570bc2d128f636e647141b63c5957fb6b1eed0b44062e30d1e",
-		"schemas/status.schema.json":       "a4a7a565e2831ae69849408ab4b9cea61156f5e24c3363270d26a0d7d588cfc9",
+		"fixtures/status.fixture.json": "3fc2539d5bcaa8dc3ed650ba7f5e8915856a3d9f8caf1cfcb1b0354ecacbe0f8",
+		// T7m (a) dual-dialect reading: the v2 schemas are widened in place (precedent
+		// #48, no new schema version) so the axiom command tool and contract are
+		// admitted next to the gentle-ai ones. v1 is frozen and untouched.
+		// Deliberate, not drift.
+		"schemas/capabilities.schema.json": "fee0169a6007c281bc905adaa5d65a30ff33ffa22868d3e1ab3adf733954fa6b",
+		// T7m (a): same in-place widening of the v2 schema for the axiom dialect.
+		// Deliberate, not drift.
+		"schemas/consent.schema.json": "ef57d26080019ffa048d2e268c6b9eef9b0855630327a7f5b334a2f30c3865fb",
+		"schemas/status.schema.json":  "a4a7a565e2831ae69849408ab4b9cea61156f5e24c3363270d26a0d7d588cfc9",
 	}
 	for name, expected := range want {
 		payload, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(name)))
@@ -87,8 +93,10 @@ func TestReviewProviderArtifactV21ContractsArePinned(t *testing.T) {
 		// issue #2659: consent-v3 embeds a freshly minted target_identity;
 		// the purified identity domain legitimately changed that hash.
 		// Deliberate, not drift.
-		"fixtures/consent-v3.fixture.json":      "9b2f173bc35ac985ab07e3d97cba1d5a9f2cb6e25162addc03a78858b7deb081",
-		"schemas/capabilities-v2.1.schema.json": "1118109155fd320cfc05d8c3c48de05f12b38c664c30552a16cfbac2744d988b",
+		"fixtures/consent-v3.fixture.json": "9b2f173bc35ac985ab07e3d97cba1d5a9f2cb6e25162addc03a78858b7deb081",
+		// T7m (a): same in-place widening of the v2 schema for the axiom dialect.
+		// Deliberate, not drift.
+		"schemas/capabilities-v2.1.schema.json": "e785c512999d883905012fd367490eed10f181ec73ec6ccdf451b351f6aa8bf5",
 		// Cross-lane battery conformance fix: the schema pinned the choice
 		// invocations to `--agent claude-code`, but the live emitter omits the
 		// agent token when the caller declared no runtime (the pinned fixture
@@ -98,7 +106,9 @@ func TestReviewProviderArtifactV21ContractsArePinned(t *testing.T) {
 		// relay drives consent with its own declared runtime identity, which
 		// the emitter legitimately publishes once the relay handshake is
 		// declared. Deliberate, not drift.
-		"schemas/consent-v3.schema.json": "337206edc96f5cb8059389ee98d1053bc21911c38cae86cdbf52c33bd7ead270",
+		// T7m (a): same in-place widening of the v2 schema for the axiom dialect.
+		// Deliberate, not drift.
+		"schemas/consent-v3.schema.json": "e4451b9bd346edbb0df9f105642e92ba9865cedfc5151e587037c2bd82549f6d",
 		"schemas/status.schema.json":     "a4a7a565e2831ae69849408ab4b9cea61156f5e24c3363270d26a0d7d588cfc9",
 	}
 	for name, expected := range want {
@@ -136,8 +146,11 @@ func TestReviewProviderArtifactV25StatusContractsArePinned(t *testing.T) {
 		// allowed property, but the native-git transport no longer needs to
 		// inline it since artifact_subject.changed_path_manifest_sha256 already
 		// commits to it. Deliberate, not drift.
-		"schemas/start.schema.json":     "0c459bd01a8f2814cba76d8f791e096c31f35ddc1ceaf1f8f781b1f5b85a463c",
-		"schemas/status-v5.schema.json": "acaf6317b109a956bb1b53a21a3f4e92159d3fa20bc7db2123a29b7d1155932a",
+		"schemas/start.schema.json": "0c459bd01a8f2814cba76d8f791e096c31f35ddc1ceaf1f8f781b1f5b85a463c",
+		// T7m (d): capture-correction-plan and capture-result submission descriptors
+		// admit the optional leading --contract=axiom.review-integration/v2 token a
+		// caller that negotiated the axiom dialect receives. Deliberate, not drift.
+		"schemas/status-v5.schema.json": "17711d2c14610f2cd9c435733692bceee09c8c3d37fa118f419a0f611a6e7400",
 	}
 	for name, expected := range want {
 		payload, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(name)))
@@ -160,8 +173,10 @@ func TestReviewProviderArtifactV23StartContractsArePinned(t *testing.T) {
 	want := map[string]string{
 		"fixtures/capabilities-v2.3.fixture.json": "ed5fb324791eec28287c621f19dffd69323120f61ce537e7b329fc018a29fe42",
 		"fixtures/start-v4.fixture.json":          "639a6e78b40cb5e000ec15265fd444c243e28594035c7d376c378142162bfb02",
-		"schemas/capabilities-v2.3.schema.json":   "cb10bb237c535ec0ec22c24ffa65e0c77e0028e2ce7eb8c113423987343a310b",
-		"schemas/start-v4.schema.json":            "b1950091cd0503afba085f88e6ab36ffd63192c44f324aed846a536cc9e6ff39",
+		// T7m (a): same in-place widening of the v2 schema for the axiom dialect.
+		// Deliberate, not drift.
+		"schemas/capabilities-v2.3.schema.json": "d1d135d6b70f2f3b61e777729065511468f5e37a7d1dd28263e754c1fd0854a9",
+		"schemas/start-v4.schema.json":          "b1950091cd0503afba085f88e6ab36ffd63192c44f324aed846a536cc9e6ff39",
 	}
 	for name, expected := range want {
 		payload, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(name)))
@@ -212,7 +227,9 @@ func TestReviewProviderArtifactConformanceSchemasArePinned(t *testing.T) {
 		// references. Deliberate, not drift.
 		// issue #3932: start_status_execution carries the opaque
 		// repository-context row, so a foreign process cwd fails closed.
-		"schemas/transition-execution.schema.json":   "945fe0038ae37ef1fff2f798e837bd266e0ba63de3b99971e27980731934966a",
+		// T7m (d): the approved acknowledgement admits the optional leading
+		// contract argument of the axiom dialect. Deliberate, not drift.
+		"schemas/transition-execution.schema.json":   "a80627b49aaf5d3825ad80f1b55e5784b625e1c3b98aed759e17c0155b95dbb2",
 		"schemas/opencode-provider-role.schema.json": "c6b9f216f89c044f8e844b55e7200114850cfbc16642bca0677f30a399d8aa9b",
 	}
 	for name, expected := range want {

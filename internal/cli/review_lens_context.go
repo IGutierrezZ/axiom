@@ -93,6 +93,10 @@ type reviewLensContextBinding struct {
 	Revision          string `json:"revision"`
 	RepositoryContext string `json:"repository_context"`
 	SubjectHash       string `json:"subject_hash"`
+	// Contract is set only on the opaque Task binding an axiom caller receives
+	// (see reviewDialect.bindingContract); it never appears for the legacy
+	// dialect, so every other binding keeps its exact bytes.
+	Contract string `json:"contract,omitempty"`
 }
 
 // reviewLensContextError is a typed, path-free refusal. Code is the first token

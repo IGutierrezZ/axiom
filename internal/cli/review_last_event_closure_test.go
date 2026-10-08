@@ -50,24 +50,27 @@ func captureCleanCLIReviewerResult(t *testing.T, repo string, started ReviewFaca
 	captureCLIReviewerResultWithFindings(t, repo, started, order, []facadeFinding{}, stdout)
 }
 
-func captureCLIReviewerResultWithFindings(t *testing.T, repo string, started ReviewFacadeStartResult, order int, findings []facadeFinding, stdout *bytes.Buffer) {
+func captureCLIReviewerResultWithFindings(t *testing.T, repo string, started ReviewFacadeStartResult, order int, findings []facadeFinding, stdout *bytes.Buffer, extra ...string) {
 	t.Helper()
-	args := cliReviewerCaptureArgs(t, repo, started, order, findings)
+	args := cliReviewerCaptureArgs(t, repo, started, order, findings, extra...)
 	if err := RunReviewCaptureResult(args, stdout); err != nil {
 		t.Fatalf("capture-result for lens %q: %v\n%s", started.SelectedLenses[order], err, stdout.String())
 	}
 }
 
-func cliReviewerCaptureArgs(t *testing.T, repo string, started ReviewFacadeStartResult, order int, findings []facadeFinding) []string {
+// cliReviewerCaptureArgs builds the capture-result argv for one lens. extra
+// carries the tokens STATUS adds for a caller that negotiated the axiom dialect
+// (the leading --contract), so a test replays exactly what that caller runs.
+func cliReviewerCaptureArgs(t *testing.T, repo string, started ReviewFacadeStartResult, order int, findings []facadeFinding, extra ...string) []string {
 	t.Helper()
 	lens := started.SelectedLenses[order]
-	binding := []string{
+	binding := append([]string{
 		"--cwd", repo,
 		"--lineage", started.LineageID,
 		"--target", started.TargetIdentity,
 		"--lens", lens,
 		"--order", strconv.Itoa(order),
-	}
+	}, extra...)
 	var preflightOutput bytes.Buffer
 	if err := RunReviewCaptureResult(append(binding, "--preflight"), &preflightOutput); err != nil {
 		t.Fatalf("capture-result --preflight for lens %q: %v", lens, err)
@@ -178,11 +181,26 @@ func TestLastReviewerCaptureIssuesReplayableAcknowledgementThenBurns(t *testing.
 
 func assertApprovedAcknowledgementTransition(t *testing.T, transition *ReviewTransitionExecution, repo, lineage, target, revision string) {
 	t.Helper()
+	assertApprovedAcknowledgementTransitionFor(t, reviewDialect{}, transition, repo, lineage, target, revision)
+}
+
+// assertApprovedAcknowledgementTransitionFor is the acknowledgement shape of one
+// dialect: an axiom caller's execution leads with its --contract argument.
+func assertApprovedAcknowledgementTransitionFor(t *testing.T, dialect reviewDialect, transition *ReviewTransitionExecution, repo, lineage, target, revision string) {
+	t.Helper()
 	if transition == nil || transition.Operation != "review.acknowledge-approved" ||
 		transition.Binding.LineageID != lineage || transition.Binding.TargetIdentity != target || transition.Binding.Revision != revision ||
-		len(transition.Arguments) != 5 {
+		len(transition.Arguments) != 5+len(dialect.captureContractArguments()) {
 		t.Fatalf("acknowledgement transition = %#v, want exact v2 acknowledgement binding", transition)
 	}
+	arguments := transition.Arguments
+	for _, lead := range dialect.captureContractArguments() {
+		if arguments[0].Name != lead.Name || arguments[0].Value != lead.Value || arguments[0].Token != reviewTransitionArgumentToken(lead) {
+			t.Fatalf("acknowledgement lead argument = %#v, want %#v", arguments[0], lead)
+		}
+		arguments = arguments[1:]
+	}
+	transition = &ReviewTransitionExecution{Operation: transition.Operation, Command: transition.Command, Arguments: arguments, Binding: transition.Binding}
 	want := []ReviewTransitionArgument{
 		{Name: "cwd", Value: repo},
 		{Name: "lineage", Value: lineage},

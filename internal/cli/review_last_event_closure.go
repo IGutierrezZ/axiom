@@ -15,6 +15,12 @@ const reviewLastEventClosureSchema = "gentle-ai.review-last-event-closure/v1"
 
 const reviewApprovedLastEventAcknowledgementAction = "the approved review completed on the last admitted event and awaits its exact acknowledgement"
 
+// reviewLastEventClosureResult is the answer of the capture-* verbs. Their
+// continuations (StatusContinuation, Acknowledgement) echo the dialect the
+// command was invoked with: STATUS hands --contract to an axiom caller's capture
+// tokens, so those continuations name the axiom tool and contract, and a caller
+// that negotiated gentle-ai (no --contract on the tokens) is answered with the
+// gentle-ai ones, exactly as before.
 type reviewLastEventClosureResult struct {
 	Schema                    string                                              `json:"schema"`
 	Operation                 string                                              `json:"operation"`
@@ -30,14 +36,14 @@ type reviewLastEventClosureResult struct {
 	StoreRevision             string                                              `json:"store_revision"`
 }
 
-func reviewApprovedAcknowledgementTransition(repo string, acknowledgement reviewtransaction.ApprovedCompactAcknowledgement) *ReviewTransitionExecution {
-	return reviewExecuteTransition("approved_acknowledgement_required", "review.acknowledge-approved", []ReviewTransitionArgument{
+func reviewApprovedAcknowledgementTransition(dialect reviewDialect, repo string, acknowledgement reviewtransaction.ApprovedCompactAcknowledgement) *ReviewTransitionExecution {
+	return reviewExecuteTransition(dialect, "approved_acknowledgement_required", "review.acknowledge-approved", dialect.withCaptureContract([]ReviewTransitionArgument{
 		{Name: "cwd", Value: repo},
 		{Name: "lineage", Value: acknowledgement.LineageID},
 		{Name: "target", Value: acknowledgement.TargetIdentity},
 		{Name: "expected-revision", Value: acknowledgement.ExpectedRevision},
 		{Name: "token", Value: acknowledgement.Token},
-	}, []ReviewTransitionArgument{{Name: "state", Value: string(reviewtransaction.StateApproved)}}, ReviewTransitionBinding{
+	}), []ReviewTransitionArgument{{Name: "state", Value: string(reviewtransaction.StateApproved)}}, ReviewTransitionBinding{
 		LineageID: acknowledgement.LineageID, TargetIdentity: acknowledgement.TargetIdentity, Revision: acknowledgement.ExpectedRevision,
 	}, nil).Execute
 }
@@ -64,11 +70,18 @@ func RunReviewAcknowledgeApproved(args []string, stdout io.Writer) error {
 	target := flags.String("target", "", "exact approved target identity")
 	expectedRevision := flags.String("expected-revision", "", "exact approved authority revision")
 	token := flags.String("token", "", "opaque approved acknowledgement token")
+	contract := flags.String("contract", "", "optional review integration v2 contract the acknowledgement was issued under")
 	if err := parseReviewFlags(flags, args); err != nil {
 		return err
 	}
 	if reviewHelpRequested(args) {
 		return nil
+	}
+	// The burn envelope below names no tool and no contract, so the dialect has
+	// nothing to echo here; the flag is validated so a token list that carries it
+	// is accepted and a foreign contract is refused before the burn.
+	if _, err := reviewCaptureCommandDialect(flags, "acknowledge-approved", *contract); err != nil {
+		return err
 	}
 	if flags.NArg() != 0 {
 		return fmt.Errorf("unexpected review acknowledge-approved argument %q", flags.Arg(0)) // refusal:by-design operator-knowledge: run the exact acknowledgement continuation without positional arguments
@@ -87,6 +100,7 @@ func RunReviewAcknowledgeApproved(args []string, stdout io.Writer) error {
 
 func closeCorrectionOnCapturedValidator(
 	ctx context.Context,
+	dialect reviewDialect,
 	repo string,
 	store reviewtransaction.CompactStore,
 	record reviewtransaction.CompactRecord,
@@ -140,7 +154,7 @@ func closeCorrectionOnCapturedValidator(
 		reviewerResults := append([]reviewtransaction.LensResult(nil), view.LensResults...)
 		result.Action = reviewApprovedLastEventAcknowledgementAction
 		result.ReviewerResults = &reviewerResults
-		result.Acknowledgement = reviewApprovedAcknowledgementTransition(repo, acknowledgement)
+		result.Acknowledgement = reviewApprovedAcknowledgementTransition(dialect, repo, acknowledgement)
 	case reviewtransaction.StateEscalated:
 		result.Action = "the targeted validator rejected the correction; maintainer action is informational"
 		result.Escalation = state.EscalationEvidence()
@@ -200,6 +214,7 @@ func reviewLastCapturedLensClosureSuperseded(store reviewtransaction.CompactStor
 
 func closeReviewOnLastCapturedLens(
 	ctx context.Context,
+	dialect reviewDialect,
 	repo string,
 	store reviewtransaction.CompactStore,
 	record reviewtransaction.CompactRecord,
@@ -240,7 +255,7 @@ func closeReviewOnLastCapturedLens(
 			if err != nil {
 				return nil, err
 			}
-			return closeReviewOnLastCapturedLens(ctx, repo, store, current, runtime)
+			return closeReviewOnLastCapturedLens(ctx, dialect, repo, store, current, runtime)
 		}
 		if readErr != nil {
 			return nil, readErr
@@ -290,10 +305,10 @@ func closeReviewOnLastCapturedLens(
 		result.Action = reviewApprovedLastEventAcknowledgementAction
 		result.AdvisoryFindings = reviewtransaction.AdvisoryFindingSetFor(state)
 		result.ReviewerResults = &reviewerResults
-		result.Acknowledgement = reviewApprovedAcknowledgementTransition(repo, acknowledgement)
+		result.Acknowledgement = reviewApprovedAcknowledgementTransition(dialect, repo, acknowledgement)
 	case reviewtransaction.StateCorrectionRequired:
 		result.Action = "candidate-caused severe findings require one bounded correction"
-		result.StatusContinuation = reviewCorrectionStatusContinuation(repo, state, revision, runtime)
+		result.StatusContinuation = reviewCorrectionStatusContinuation(dialect, repo, state, revision, runtime)
 		if result.StatusContinuation == nil {
 			return nil, fmt.Errorf("correction-required review has unsupported initial target kind %q", state.InitialSnapshot.Kind) // refusal:by-design human-authority: only a recognized frozen selector may reopen correction planning
 		}
@@ -309,10 +324,10 @@ func closeReviewOnLastCapturedLens(
 // reviewCorrectionStatusContinuation is the one provider-owned re-entry after a
 // final reviewer event opened the bounded correction. It uses frozen authority
 // facts rather than a caller's remembered selector spelling.
-func reviewCorrectionStatusContinuation(repo string, state reviewtransaction.CompactState, revision string, runtime model.AgentID) *ReviewTransitionExecution {
+func reviewCorrectionStatusContinuation(dialect reviewDialect, repo string, state reviewtransaction.CompactState, revision string, runtime model.AgentID) *ReviewTransitionExecution {
 	arguments := []ReviewTransitionArgument{
 		{Name: "cwd", Value: repo},
-		{Name: "contract", Value: ReviewIntegrationContractV2},
+		{Name: "contract", Value: dialect.ContractV2()},
 		{Name: "next-transition", Value: "true"},
 		{Name: "lineage", Value: state.LineageID},
 	}
@@ -340,7 +355,7 @@ func reviewCorrectionStatusContinuation(repo string, state reviewtransaction.Com
 	default:
 		return nil
 	}
-	return reviewExecuteTransition("correction_status_required", "review.status", arguments,
+	return reviewExecuteTransition(dialect, "correction_status_required", "review.status", arguments,
 		[]ReviewTransitionArgument{{Name: "state", Value: string(reviewtransaction.StateCorrectionRequired)}},
 		ReviewTransitionBinding{LineageID: state.LineageID, Revision: revision, TargetIdentity: state.InitialSnapshot.Identity}, nil,
 	).Execute

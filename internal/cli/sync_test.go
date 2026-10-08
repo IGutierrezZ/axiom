@@ -3913,7 +3913,9 @@ func TestRunSyncWithSelection_WritesExpectedFiles(t *testing.T) {
 	}
 	orchestrator := orchestratorEntry.Prompt
 	postApply := string(applyPayload)
-	canonicalStatusAxiom := "axiom review status --cwd <repo> --contract gentle-ai.review-integration/v2 --agent " + string(model.AgentOpenCode) + " --next-transition"
+	// The shipped prompts negotiate the axiom dialect, so the CLI echoes axiom
+	// commands back; the legacy spelling stays accepted for older renders.
+	canonicalStatusAxiom := "axiom review status --cwd <repo> --contract axiom.review-integration/v2 --agent " + string(model.AgentOpenCode) + " --next-transition"
 	canonicalStatusGentle := "gentle-ai review status --cwd <repo> --contract gentle-ai.review-integration/v2 --agent " + string(model.AgentOpenCode) + " --next-transition"
 
 	// Only the parent orchestrator owns canonical STATUS negotiation. It must

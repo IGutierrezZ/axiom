@@ -262,13 +262,17 @@ func reviewStopHookResolveTargetIdentity(ctx context.Context, repo, runtimeAgent
 		return "", "", ReviewTargetStatusResult{}, false, nil
 	}
 
+	// The hook negotiates the axiom dialect, like the agent prompts it reminds:
+	// the START it returns (shown to the agent verbatim) then names the axiom
+	// tool, and every token the agent replays after it keeps that dialect.
+	//
 	// Calling runReviewStatus directly (rather than RunReview) avoids a
 	// package-level initialization cycle: RunReview's dispatch is reached
 	// through reviewFacadeCommandRunner, a package var whose initializer is
 	// runReviewCommandContext -- the same function that routes to this verb.
 	var statusOutput bytes.Buffer
 	statusErr := runReviewStatus(ctx, []string{
-		"--cwd", root, "--contract", ReviewIntegrationContractV2,
+		"--cwd", root, "--contract", AxiomReviewIntegrationContractV2,
 		"--agent", runtimeAgent, "--next-transition",
 	}, &statusOutput)
 	if statusErr != nil {
@@ -287,7 +291,7 @@ func reviewStopHookResolveTargetIdentity(ctx context.Context, repo, runtimeAgent
 // (carrying --consent=relay), the lossless-relay instruction for any consent
 // envelope that START returns, and the once-per-candidate scope of this hook.
 func reviewStopHookReasonText(targetIdentity, root, runtimeAgent, startCommand string) string {
-	statusCommand := fmt.Sprintf("axiom review status --cwd %s --contract %s --agent %s --next-transition", root, ReviewIntegrationContractV2, runtimeAgent)
+	statusCommand := fmt.Sprintf("axiom review status --cwd %s --contract %s --agent %s --next-transition", root, AxiomReviewIntegrationContractV2, runtimeAgent)
 	return strings.Join([]string{
 		"Receipt-driven development is enabled for this repository, and it holds an unreviewed candidate (target_identity " + targetIdentity + ").",
 		"By the review contract entry rule, you must run the selectorless STATUS preflight below and route only from its returned next_transition before reporting completion; never infer a command from prose or a stale reply.",

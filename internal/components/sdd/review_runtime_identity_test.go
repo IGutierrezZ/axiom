@@ -105,8 +105,13 @@ func TestGeneratedOrchestratorInstructionsNameTheExecutingRuntime(t *testing.T) 
 				assertReviewInstructionsBindRuntime(t, agent.ID, "orchestrator", content)
 				return
 			}
-			if strings.Contains(content, "gentle-ai review status --cwd <repo> --contract gentle-ai.review-integration/v2") {
-				t.Fatal("non-RDD runtime received negotiated review lifecycle instructions")
+			for _, negotiated := range []string{
+				"axiom review status --cwd <repo> --contract axiom.review-integration/v2",
+				"gentle-ai review status --cwd <repo> --contract gentle-ai.review-integration/v2",
+			} {
+				if strings.Contains(content, negotiated) {
+					t.Fatal("non-RDD runtime received negotiated review lifecycle instructions")
+				}
 			}
 			if !strings.Contains(content, "## SDD Workflow") {
 				t.Fatal("non-RDD runtime lost its normal SDD workflow")
@@ -148,9 +153,15 @@ func TestAdvertisedRenderedReviewProtocolsBindRuntimeOnce(t *testing.T) {
 				t.Fatalf("rendered review protocol binds %q, want %q", bindings[0], "--agent "+string(agent.ID))
 			}
 
-			status := "axiom review status --cwd <repo> --contract gentle-ai.review-integration/v2 --agent " + string(agent.ID) + " --next-transition"
+			status := "axiom review status --cwd <repo> --contract axiom.review-integration/v2 --agent " + string(agent.ID) + " --next-transition"
 			if got := strings.Count(content, status); got != 1 {
 				t.Fatalf("rendered review protocol contains %d canonical STATUS commands, want exactly one", got)
+			}
+			// The agent negotiates the axiom dialect so every continuation it
+			// receives and runs is `axiom review ...`; the gentle-ai dialect is
+			// recognised by the CLI but never taught by the shipped prompt.
+			if strings.Contains(content, "--contract gentle-ai.review-integration/v2") {
+				t.Fatal("rendered review protocol negotiates the legacy gentle-ai dialect")
 			}
 		})
 	}

@@ -104,12 +104,12 @@ func (b *battery) runAdvisoryLane() {
 		b.fail(advisoryLane, "reviewer manifest", err.Error())
 		return
 	}
-	capture, stderr, code := b.runJSON("result-artifact", repo,
+	capture, stderr, code := b.runJSON("result-artifact", repo, append([]string{
 		"review", "capture-result",
 		"--lineage", args["lineage"], "--expected-revision", args["expected-revision"],
 		"--target", args["target"], "--repository-context", args["repository-context"],
 		"--lens", args["lens"], "--order", args["order"], "--subject-hash", args["subject-hash"],
-		"--input", reviewerPath)
+		"--input", reviewerPath}, captureContractArguments()...)...)
 	if code != 0 || !admittedCapture(capture) {
 		b.fail(advisoryLane, "non-blocking reviewer result captured", fmt.Sprintf("exit=%d state=%q %s", code, operationState(capture), firstLine(stderr)))
 		return

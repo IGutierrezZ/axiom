@@ -87,7 +87,7 @@ func boundedReviewRequiredClausesFor(agent model.AgentID) []string {
 	}
 	return append(captureTransportClausesFor(agent), []string{
 		"Native Compact Review Orchestration",
-		"axiom review status --cwd <repo> --contract gentle-ai.review-integration/v2 --agent " + string(agent) + " --next-transition",
+		"axiom review status --cwd <repo> --contract axiom.review-integration/v2 --agent " + string(agent) + " --next-transition",
 		"## Entry rule",
 		"before reporting it complete",
 		"Selectorless STATUS only preflights the current worktree candidate",
@@ -213,7 +213,7 @@ func TestBoundedReviewStopInventoryIsCompleteWithoutRepeatingStatus(t *testing.T
 	if strings.Contains(inventory, "axiom review status --cwd") {
 		t.Fatal("stop inventory repeats the canonical STATUS command instead of using S")
 	}
-	canonicalStatus := "axiom review status --cwd <repo> --contract gentle-ai.review-integration/v2 --agent " + runtimeAgentIDPlaceholder + " --next-transition"
+	canonicalStatus := "axiom review status --cwd <repo> --contract axiom.review-integration/v2 --agent " + runtimeAgentIDPlaceholder + " --next-transition"
 	if got := strings.Count(content, canonicalStatus); got != 1 {
 		t.Fatalf("bounded review contract contains %d canonical STATUS commands, want exactly one", got)
 	}
@@ -298,7 +298,7 @@ func TestGeneratedOpenCodeReviewControllersUseNegotiatedStatusRouting(t *testing
 		t.Run(name, func(t *testing.T) {
 			clauses := append([]string{"lineage, revision, and target"}, required...)
 			if name == "orchestrator" {
-				clauses = append(clauses, "axiom review status --cwd <repo> --contract gentle-ai.review-integration/v2 --agent "+string(model.AgentOpenCode)+" --next-transition")
+				clauses = append(clauses, "axiom review status --cwd <repo> --contract axiom.review-integration/v2 --agent "+string(model.AgentOpenCode)+" --next-transition")
 			} else if strings.Contains(content, "axiom review status --cwd <repo>") {
 				t.Error("generated OpenCode post-apply controller repeats the canonical STATUS command")
 			}
@@ -479,6 +479,34 @@ func TestOpenCodeOrchestratorAddsOnlyOneConcurrentReviewerGroupContract(t *testi
 	}
 	if twice != once {
 		t.Fatal("preserved OpenCode prompt rendering is not idempotent")
+	}
+}
+
+// TestPreservedOpenCodePromptMigratesGentleAIReviewNegotiation pins that an
+// installed OpenCode prompt still teaching the gentle-ai dialect is rewritten
+// to negotiate axiom.review-integration/v2 on sync. The managed Review
+// Execution Contract section is replaced wholesale, so no per-clause table is
+// needed; an operator-owned section outside it is untouched.
+func TestPreservedOpenCodePromptMigratesGentleAIReviewNegotiation(t *testing.T) {
+	t.Parallel()
+
+	const legacyStatus = "axiom review status --cwd <repo> --contract gentle-ai.review-integration/v2 --agent opencode --next-transition"
+	preserved := "Operator-owned prompt.\n\n#### Review Execution Contract\n\n" +
+		"1. **Preflight only.** `" + legacyStatus + "`.\n\n" +
+		"#### Cost and Context Balance\n\nOperator-owned balance guidance.\n"
+	once := renderPreservedOpenCodeOrchestratorPrompt(preserved, model.AgentOpenCode)
+	if strings.Contains(once, "--contract gentle-ai.review-integration/v2") {
+		t.Fatal("preserved OpenCode prompt kept the legacy gentle-ai negotiation after migration")
+	}
+	canonical := "axiom review status --cwd <repo> --contract axiom.review-integration/v2 --agent " + string(model.AgentOpenCode) + " --next-transition"
+	if got := strings.Count(once, canonical); got != 1 {
+		t.Fatalf("preserved OpenCode prompt carries %d axiom STATUS negotiations, want exactly one", got)
+	}
+	if !strings.Contains(once, "Operator-owned prompt.") || !strings.Contains(once, "Operator-owned balance guidance.") {
+		t.Fatal("migration dropped operator-owned prompt sections")
+	}
+	if twice := renderPreservedOpenCodeOrchestratorPrompt(once, model.AgentOpenCode); twice != once {
+		t.Fatal("preserved OpenCode prompt migration is not idempotent")
 	}
 }
 

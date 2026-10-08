@@ -198,9 +198,9 @@ const reviewUndeclaredRuntimeIdentitySlot = "<your-runtime-identity>"
 // includes it for every v2 contract. Without it here, a caller that copies
 // this named continuation and runs it without a TTY silently mints a
 // medium/high-risk review lineage with no consent envelope.
-func reviewNegotiatedStartCommand(snapshot reviewtransaction.Snapshot, runtimeAgent string) string {
+func reviewNegotiatedStartCommand(dialect reviewDialect, snapshot reviewtransaction.Snapshot, runtimeAgent string) string {
 	identity := strings.TrimSpace(runtimeAgent)
-	command := fmt.Sprintf("gentle-ai review start --contract %s", ReviewIntegrationContractV2)
+	command := fmt.Sprintf("%s--contract %s", dialect.commandPrefix("start"), dialect.ContractV2())
 	if identity != "" {
 		command += " --agent " + identity
 	}
@@ -663,8 +663,9 @@ func RunReview(args []string, stdout io.Writer) error {
 //
 // DECISION (capture ambiguity diagnosis): emission is unconditional, not
 // gated on a contract flag, because these verbs cannot know they have a
-// machine caller -- orchestrators invoke them WITHOUT --contract, exactly as
-// the negotiated collect transitions render their submission argv. Their
+// machine caller -- orchestrators invoke them with exactly the argv the
+// negotiated collect transitions render, which carries --contract only for an
+// axiom caller (to select the dialect of the answer). Their
 // success paths already print one JSON document on stdout unconditionally, so
 // refusals printing one JSON document is symmetric; without it a machine
 // caller that parses stdout (the gentle-pi runtime's shared invoke path) can
@@ -688,7 +689,12 @@ func runReviewCollectCaptureCommand(operation string, args []string, stdout io.W
 	// The capture verbs exist only in the v2.1 negotiated lifecycle and the
 	// published v1 failure schema does not admit their operation names, so
 	// the envelope publishes under the v2 identity unconditionally.
+	// The envelope echoes the dialect the invocation negotiated through its
+	// optional --contract; without it, it keeps the gentle-ai identity.
 	failure.Schema, failure.Contract = ReviewIntegrationFailureSchemaV2, ReviewIntegrationContractV2
+	if _, contract, _ := reviewIntegrationContractArgument(args[1:]); reviewDialectForContract(contract).axiom {
+		failure.Schema, failure.Contract = reviewtransaction.AxiomReviewFailureV2Contract, AxiomReviewIntegrationContractV2
+	}
 	// Generate the defect report before emitting the envelope so a stdout
 	// write failure cannot suppress the artifact, exactly as the negotiated
 	// route does.
@@ -832,7 +838,7 @@ func runReviewStatus(ctx context.Context, args []string, stdout io.Writer) error
 		// names: a read-only STATUS creates no authority, tier, budget, or
 		// collection state, so it has no state to fail closed over, and the
 		// documented route never declares an identity.
-		if *contract == ReviewIntegrationContractV2 && reviewRuntimeAgentCount(args) != 0 {
+		if isReviewContractV2(*contract) && reviewRuntimeAgentCount(args) != 0 {
 			if reviewRuntimeAgentCount(args) != 1 {
 				// refusal:by-design world-action: an ambiguous runtime identity cannot safely select a review transport
 				return reviewPreflightRefusal(reviewImmutableTransportUnsupportedReason, errors.New("negotiated lifecycle STATUS requires exactly one generated runtime identity"))
@@ -1278,7 +1284,7 @@ func runReviewStatus(ctx context.Context, args []string, stdout io.Writer) error
 								}
 							}
 						}
-						if artifactErr == nil && *contract == ReviewIntegrationContractV2 && (record.State.State == reviewtransaction.StateCorrectionRequired || record.State.State == reviewtransaction.StateValidating) {
+						if artifactErr == nil && isReviewContractV2(*contract) && (record.State.State == reviewtransaction.StateCorrectionRequired || record.State.State == reviewtransaction.StateValidating) {
 							contextTarget := record.State.CurrentSnapshot.Identity
 							if validationRequest != nil {
 								contextTarget = validationRequest.CorrectionTargetIdentity
@@ -1310,7 +1316,7 @@ func runReviewStatus(ctx context.Context, args []string, stdout io.Writer) error
 								repositoryContext, artifactErr = reviewtransaction.DeriveReviewRepositoryContextHandle(ctx, root, reviewtransaction.ReviewRepositoryContextBinding{
 									LineageID: record.State.LineageID, TargetIdentity: record.State.InitialSnapshot.Identity, Revision: record.State.CapturePhaseRevision,
 								})
-								if artifactErr == nil && *contract == ReviewIntegrationContractV2 {
+								if artifactErr == nil && isReviewContractV2(*contract) {
 									result.RepositoryContext = &ReviewRepositoryContextReference{
 										Capability: reviewtransaction.ReviewRepositoryContextCapability, Handle: repositoryContext,
 										Revision: record.State.CapturePhaseRevision, TargetIdentity: record.State.InitialSnapshot.Identity,
@@ -1448,10 +1454,10 @@ func runReviewStatus(ctx context.Context, args []string, stdout io.Writer) error
 			result.NextTransition = &transition
 		}
 		// v1 envelopes keep their pinned schema; only v2 projects the root action.
-		if *contract == ReviewIntegrationContractV2 {
+		if isReviewContractV2(*contract) {
 			result.Action = reviewRootActionForTransition(result.Action, result.NextTransition)
 		}
-		if *contract == ReviewIntegrationContractV2 && result.NextTransition != nil {
+		if isReviewContractV2(*contract) && result.NextTransition != nil {
 			// The forecast is structural only: it rides the v2 envelope's
 			// `forecast` field and is never narrated to stderr, because a
 			// successful negotiated operation must stay byte-silent there.
@@ -2024,6 +2030,12 @@ func runReviewFacadeStart(ctx context.Context, args []string, stdout io.Writer) 
 	if err != nil {
 		return err
 	}
+	// A negotiated START echoes the dialect it negotiated; the direct route
+	// negotiated nothing, so it keeps the legacy dialect, byte for byte.
+	dialect := reviewDialect{}
+	if negotiated {
+		dialect = reviewDialectForContract(*contract)
+	}
 	runtimeRequested := reviewRuntimeAgentCount(args) > 0
 	// Wave 4 S4 (design.md decision 5): transport capability admission is
 	// the broadest precondition — "can this runtime participate in review
@@ -2158,7 +2170,7 @@ func runReviewFacadeStart(ctx context.Context, args []string, stdout io.Writer) 
 	if !negotiated && target.Kind != reviewtransaction.TargetCurrentChanges && len(lenses) > 0 {
 		return reviewPreflightRefusal(reviewPreflightDirectRouteUncompletableReason,
 			fmt.Errorf("review start without --contract cannot produce a completable review because its %d selected lens(es) require repository_context, which only the negotiated contract form publishes; rerun with `axiom review start %s` instead",
-				len(lenses), strings.TrimPrefix(reviewNegotiatedStartCommand(snapshot, *runtimeAgent), "gentle-ai review start ")))
+				len(lenses), strings.TrimPrefix(reviewNegotiatedStartCommand(dialect, snapshot, *runtimeAgent), dialect.commandPrefix("start"))))
 	}
 	// The candidate is frozen and the tier is classified, so this is the one
 	// point where the kill switch can stop a start and consent can name the real
@@ -2173,7 +2185,7 @@ func runReviewFacadeStart(ctx context.Context, args []string, stdout io.Writer) 
 			question, questionErr := newReviewIntegrationConsentResult(snapshot, assessment,
 				reviewConsentFollowUpBase(*cwd, snapshot.Identity, formatReviewTargetEvidence(snapshot), selectedProjection, strings.TrimSpace(*lineage),
 					strings.TrimSpace(*baseRef), strings.TrimSpace(*policySource), strings.TrimSpace(*focus),
-					strings.TrimSpace(*tracePath), *committedOnly, *workspaceOverlay, *contract, *runtimeAgent, strings.TrimSpace(*locale), intendedScope), *contract, *runtimeAgent, consentLocale)
+					strings.TrimSpace(*tracePath), *committedOnly, *workspaceOverlay, dialect, *contract, *runtimeAgent, strings.TrimSpace(*locale), intendedScope), *contract, *runtimeAgent, consentLocale)
 			if questionErr != nil {
 				return questionErr
 			}
@@ -2260,7 +2272,7 @@ func runReviewFacadeStart(ctx context.Context, args []string, stdout io.Writer) 
 				return fmt.Errorf("commit zero-lens review acknowledgement: %w", err)
 			}
 			legacyResult := reviewFacadeStartResultFor("closed", false, state)
-			legacyResult.Acknowledgement = reviewApprovedAcknowledgementTransition(root, acknowledgement)
+			legacyResult.Acknowledgement = reviewApprovedAcknowledgementTransition(dialect, root, acknowledgement)
 			legacyResult.RiskEvidence = reviewConsentRiskEvidence(assessment)
 			legacyResult.Trace = reviewTraceOutcomeResult(store.TracePath, acknowledgement.TraceOutcome)
 			if !negotiated {
@@ -2277,7 +2289,7 @@ func runReviewFacadeStart(ctx context.Context, args []string, stdout io.Writer) 
 			action = "resumed"
 		}
 		legacyResult := reviewFacadeStartResultFor(action, len(record.State.SelectedLenses) > 0, record.State)
-		if started.Replayed && (!negotiated || *contract == ReviewIntegrationContractV2) {
+		if started.Replayed && (!negotiated || isReviewContractV2(*contract)) {
 			legacyResult.Action = "replayed"
 		}
 		legacyResult.RiskEvidence = reviewConsentRiskEvidence(assessment)
@@ -2299,8 +2311,8 @@ func runReviewFacadeStart(ctx context.Context, args []string, stdout io.Writer) 
 		// (issue #3894): the consumer runs this returned STATUS invocation
 		// verbatim instead of hand-assembling selectors the CLI would refuse.
 		var nextTransition *ReviewNextTransition
-		if *contract == ReviewIntegrationContractV2 {
-			nextTransition = reviewStartStatusContinuation(record.State, record.State.CapturePhaseRevision, model.AgentID(strings.TrimSpace(*runtimeAgent)), repositoryContextHandle)
+		if isReviewContractV2(*contract) {
+			nextTransition = reviewStartStatusContinuation(dialect, record.State, record.State.CapturePhaseRevision, model.AgentID(strings.TrimSpace(*runtimeAgent)), repositoryContextHandle)
 		}
 		negotiatedResult, err := newReviewIntegrationStartResult(legacyResult, assessment, snapshot.Kind, frozenContext, repositoryContext, nextTransition, *contract)
 		if err != nil {
@@ -2491,11 +2503,12 @@ func reviewConsentFollowUpBase(
 	projection reviewtransaction.Projection,
 	lineage, baseRef, policy, focus, trace string,
 	committedOnly, workspaceOverlay bool,
+	dialect reviewDialect,
 	contract, runtimeAgent string,
 	locale string, intendedScope reviewIntendedUntrackedScope,
 ) string {
 	parts := []string{
-		"gentle-ai review start",
+		dialect.Tool() + " review start",
 		"--contract " + contract,
 		"--cwd " + reviewTransitionShellWord(cwd),
 		"--target " + target,

@@ -41,8 +41,8 @@ func decodeConsentQuestion(t *testing.T, payload []byte) ReviewIntegrationConsen
 	return result
 }
 
-// invocationArgs turns a runnable `gentle-ai review start ...` invocation from
-// the consent envelope into router arguments, proving the invocation is
+// invocationArgs turns a runnable `<tool> review start ...` invocation (either
+// dialect's tool) from the consent envelope into router arguments, proving the invocation is
 // literally runnable rather than merely descriptive.
 func invocationArgs(t *testing.T, invocation string) []string {
 	t.Helper()
@@ -50,7 +50,7 @@ func invocationArgs(t *testing.T, invocation string) []string {
 	if err != nil {
 		t.Fatalf("parse consent invocation: %v", err)
 	}
-	if len(words) < 3 || words[0] != "gentle-ai" || words[1] != "review" || words[2] != "start" {
+	if len(words) < 3 || (words[0] != "gentle-ai" && words[0] != "axiom") || words[1] != "review" || words[2] != "start" {
 		t.Fatalf("consent invocation is not a runnable gentle-ai review start command: %q", invocation)
 	}
 	return words[2:]
@@ -623,7 +623,7 @@ func TestV21ConsentInvocationMustMatchProviderOwnedRequest(t *testing.T) {
 	if err := json.Unmarshal(fixture, &question); err != nil {
 		t.Fatal(err)
 	}
-	base := reviewConsentFollowUpBase("/repo", question.TargetIdentity, testTargetEvidenceFromInvocation(t, question.Choices[0].Invocation), question.Projection, "review-consent-fixture", "", "", "reliability", "", false, false, ReviewIntegrationContractV2, "", "", reviewIntendedUntrackedScope{})
+	base := reviewConsentFollowUpBase("/repo", question.TargetIdentity, testTargetEvidenceFromInvocation(t, question.Choices[0].Invocation), question.Projection, "review-consent-fixture", "", "", "reliability", "", false, false, reviewDialect{}, ReviewIntegrationContractV2, "", "", reviewIntendedUntrackedScope{})
 	if err := validateReviewConsentInvocations(question, base); err != nil {
 		t.Fatalf("canonical v2.1 consent invocation: %v", err)
 	}
