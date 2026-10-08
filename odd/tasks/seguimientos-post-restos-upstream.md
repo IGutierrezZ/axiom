@@ -4,7 +4,7 @@
 > Espejo de recuperación en Engram: topic `odd/seguimientos-post-restos-upstream/tasks`, proyecto `axiom`.
 > Rama del documento: `docs/odd-seguimientos-post-restos-upstream`, subida a `origin`, con su worktree en `C:\repos\axiom-wt\odd-post-docs`. Este documento viaja **solo** en el PR de cierre.
 > Abierto el 2026-10-08 desde `origin/main` `21b9808a`. Recoge los seguimientos de la sección 9 del ODD `seguimientos-restos-upstream` (cerrado con el PR #110).
-> **Estado:** abierto y sin implementar. Esta sesión solo lo abre; la ejecución va en otra sesión.
+> **Estado:** en ejecución desde el 2026-10-08 (segunda sesión). Decisiones S1, S2 y S6 tomadas.
 
 ---
 
@@ -40,9 +40,9 @@ Cerrar los seguimientos que dejó el ODD anterior:
 | Carril | ODD (2026-10-08) |
 | Entrega | PRs independientes contra `main`; el documento va en un PR de cierre |
 | `size:exception` | Solo con aprobación explícita en cada PR y si no hay un corte cohesivo |
-| S1: cómo arreglar `bench` en Windows | **Pendiente.** Ver la sección 5 |
-| S2: de dónde sale la versión de un binario instalado con `go install` | **Pendiente.** Ver la sección 5 |
-| S6: `PRD.md:1188` (tabla histórica del upstream) | **Pendiente:** actualizarla a `axiom` o dejarla como histórica |
+| S1: cómo arreglar `bench` en Windows | **(b)** (2026-10-08): los journeys con shims POSIX se marcan `unsupported` en Windows y el PATH del sandbox no incluye directorios del usuario. Su cobertura queda en el CI de Linux |
+| S2: de dónde sale la versión de un binario instalado con `go install` | **(a)** (2026-10-08): primero el valor de ldflags, después `debug.ReadBuildInfo().Main.Version` si no es `(devel)` ni está vacío, y la constante como último recurso |
+| S6: `PRD.md:1188` (tabla histórica del upstream) | **Se deja histórica** (2026-10-08): el PRD es entero el borrador del upstream (24 menciones a `gentle-ai`). Solo se corrigen los comentarios del ratchet |
 
 ## 3. Convenciones
 
@@ -75,7 +75,7 @@ Son las mismas de la sección 4 del ODD anterior:
 
 | ID | Punto | Estado y líneas | Clase | Tamaño | Riesgo |
 |---|---|---|---|---|---|
-| S1 | `bench` en Windows llama a agentes reales | Los journeys crean shims POSIX (`#!/bin/sh`) que Windows no ejecuta, por ejemplo `bench/journeys_provider_capture.go:43` (`provider-bin`), `journeys_issue_3043.go:20` y `journeys_wave3.go:59`. Si el shim no se ejecuta, el PATH del sandbox resuelve el `claude` real: en `j105` respondió «Not logged in». **Opciones:** (a) shims portables (`.cmd` o un binario Go de `bench`, como el `commandShim` de `bench/main.go:262`); (b) marcar `unsupported` en Windows los journeys con shims POSIX y garantizar que el PATH del sandbox nunca incluye directorios del usuario. | defecto (aislamiento) | M | medio-alto |
+| S1 | `bench` en Windows llama a agentes reales | Los journeys crean shims POSIX (`#!/bin/sh`) que Windows no ejecuta, por ejemplo `bench/journeys_provider_capture.go:48` (el directorio `provider-bin` está en `:43`), `journeys_issue_3043.go:20`, `journeys_wave3.go:59`, `journeys_issue3748.go:57`, `journeys_edge.go:338` y `record.go:94`. Conciliado el 2026-10-08: los dos últimos no estaban en el inventario de apertura. Si el shim no se ejecuta, el PATH del sandbox resuelve el `claude` real: en `j105` respondió «Not logged in». **Opciones:** (a) shims portables (`.cmd` o un binario Go de `bench`, como el `commandShim` de `bench/main.go:262`); (b) marcar `unsupported` en Windows los journeys con shims POSIX y garantizar que el PATH del sandbox nunca incluye directorios del usuario. | defecto (aislamiento) | M | medio-alto |
 | S2 | Versión de un binario instalado con `go install` | `cmd/axiom/main.go:62` fija `var version = "v3.5.1"`. GoReleaser inyecta `-X main.version` (`.goreleaser.yaml:26-29`), pero `go install …/v3/cmd/axiom@vX` no lo hace, así que ese binario informa de la constante. Si no se sube en cada release, el aviso de actualización no se apaga. Desde #107 este camino vuelve a estar activo. **Opciones:** (a) si `version` no se inyectó, usar `debug.ReadBuildInfo().Main.Version`, que `go install @vX` sí rellena; (b) una comprobación de release que exija que la constante coincida con el tag. | defecto | S | medio |
 | S3 | Tests intermitentes bajo carga | `internal/update/cooldown_concurrency_test.go:101` (`TestCheckAllWithCooldown_ContendedPersistenceRejectsReviewModeDisable`) y `internal/cli/review_next_transition_scope_recovery_test.go:35` (`TestRejectedTargetedValidatorCaptureRoutesEscalatedRecovery`). Fallan con `operation_timeout` cuando hay varios `go test` en paralelo y pasan en solitario. | deuda de tests | S-M | bajo |
 | S4 | La TUI pierde los avisos del `sync` interno de la desinstalación con *clean install* | `internal/tui/model.go`: `SyncFunc` devuelve `SyncOutcome{Files, Warnings}` (`:472-475`), pero el flujo de `UninstallDoneMsg` (`:353-354`) solo usa los ficheros. Requiere añadir un campo a `UninstallDoneMsg` y un parámetro a `RenderUninstallResult`. | defecto | S-M | bajo |
@@ -86,10 +86,10 @@ Son las mismas de la sección 4 del ODD anterior:
 
 > Estado: `[ ]` pendiente · `[~]` en curso o con PR abierto · `[x]` fusionado. Ruta: delegada, con un writer por tarea en su worktree, salvo lo que sea mecánico y de un solo fichero.
 
-- [ ] **P1 · `bench` aislado en Windows (S1).** Primero, un test que falle si el PATH del sandbox resuelve un ejecutable fuera de él. Después, la opción que se decida. Riesgo previsto `high` (aislamiento y procesos), así que lleva verificador.
+- [ ] **P1 · `bench` aislado en Windows (S1, opción b).** Primero, un test que falle si el PATH del sandbox resuelve un ejecutable fuera de él. Después, se cierra el PATH y los journeys con shims POSIX se marcan `unsupported` en Windows. Riesgo previsto `high` (aislamiento y procesos), así que lleva verificador.
 - [ ] **P2 · Versión con `go install` (S2).** Opción (a) con test: la constante solo como último recurso, y `ReadBuildInfo` cuando no hay ldflags. Comprobar que `axiom version` y la comparación de versiones del actualizador siguen igual con GoReleaser.
 - [ ] **P3 · Migración: avisos de desinstalación y prompts heredados solo con SDD (S4 + S5).** Comparten el ámbito de migración de instalaciones del ODD anterior (U3). Riesgo previsto `high` (borra ficheros del usuario), así que lleva verificador y repite el ataque de propiedad del ODD anterior.
-- [ ] **P4 · Tests intermitentes y comentarios (S3 + S6).** Presupuestos o esperas por condición en los dos tests, sin ocultar fallos reales; comentarios del ratchet; `PRD.md` según la decisión.
+- [ ] **P4 · Tests intermitentes y comentarios (S3 + S6).** Presupuestos o esperas por condición en los dos tests, sin ocultar fallos reales, y los comentarios del ratchet. `PRD.md` no se toca.
 - [ ] **Cierre:** PR con este documento.
 
 Previsión: unas 300-600 líneas en 4 PRs, todos por debajo de 400 líneas salvo que P1 crezca.
@@ -106,6 +106,7 @@ Previsión: unas 300-600 líneas en 4 PRs, todos por debajo de 400 líneas salvo
 
 ## 8. Progreso
 
+- **2026-10-08, reanudación:** se concilia con `origin/main` `21b9808a`: no hay PRs abiertos y las líneas de S2 a S6 no han cambiado. En S1 aparecen tres shims ejecutables más, ya añadidos al inventario. El usuario decide S1 = (b), S2 = (a) y S6 = histórico. No fija orden, así que se empieza por P2 y después se sigue el de la sección 6.
 - **2026-10-08, apertura:** se abre el documento desde `origin/main` `21b9808a`, en el worktree `odd-post-docs` y la rama `docs/odd-seguimientos-post-restos-upstream`. Los seis puntos se han comprobado con `rg` sobre `main`. Matiz de S2: GoReleaser ya inyecta `main.version`, así que el problema solo afecta a `go install`. Por decisión del usuario, la ejecución va en otra sesión.
 
 ## 9. Siguiente paso
