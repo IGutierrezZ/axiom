@@ -137,6 +137,26 @@ func commandRunWith(args []string, isExecutable func(string) bool, journeys func
 		}
 	}
 
+	// The shared part of every sandbox PATH is proven agent-free before the
+	// product binary is run even once. Failing here writes the refusal as the
+	// run's evidence and exits nonzero: a corpus that could drive a real agent
+	// must never report a number.
+	if err := checkSandboxBasePath(); err != nil {
+		results := Results{
+			Schema:        ResultsSchema,
+			Mode:          ModeDriven,
+			Binary:        resolved,
+			RunStatus:     "failed",
+			FailureReason: sandboxBaseFailureReason(err) + ": " + err.Error(),
+		}
+		if werr := writeJSON(*out, results); werr != nil {
+			fmt.Fprintf(os.Stderr, "write results: %v\n", werr)
+			return 1
+		}
+		fmt.Fprintf(os.Stderr, "bench: %v\n", err)
+		return runExitCode(results)
+	}
+
 	results := Results{
 		Schema:        ResultsSchema,
 		Mode:          ModeDriven,
