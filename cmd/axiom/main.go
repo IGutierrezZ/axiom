@@ -619,7 +619,13 @@ func runHandoffShow(args []string) {
 		os.Exit(1)
 	}
 
-	handoffPath, err := resolveHandoffFile(*pathFlag, *changeFlag)
+	loc, err := workspace.Locate(*pathFlag)
+	if err != nil {
+		fmt.Printf("[ERROR] %v\n", err)
+		os.Exit(1)
+	}
+
+	handoffPath, err := resolveHandoffFile(loc.WorkspaceRoot, *changeFlag)
 	if err != nil {
 		fmt.Printf("[ERROR] %v\n", err)
 		os.Exit(1)
@@ -669,13 +675,13 @@ func runHandoffCreate(args []string) {
 		os.Exit(1)
 	}
 
-	baseDir, err := filepath.Abs(*pathFlag)
+	loc, err := workspace.Locate(*pathFlag)
 	if err != nil {
-		fmt.Printf("Error al resolver ruta base: %v\n", err)
+		fmt.Printf("[ERROR] %v\n", err)
 		os.Exit(1)
 	}
 
-	targetPath := filepath.Join(baseDir, "openspec", "changes", *changeFlag, "handoff.md")
+	targetPath := filepath.Join(loc.WorkspaceRoot, "openspec", "changes", *changeFlag, "handoff.md")
 
 	h := &handoff.Handoff{
 		Metadata: handoff.Metadata{
@@ -716,13 +722,13 @@ func runHandoffValidate(args []string) {
 		os.Exit(1)
 	}
 
-	baseDir, err := filepath.Abs(*pathFlag)
+	loc, err := workspace.Locate(*pathFlag)
 	if err != nil {
-		fmt.Printf("Error al resolver ruta base: %v\n", err)
+		fmt.Printf("[ERROR] %v\n", err)
 		os.Exit(1)
 	}
 
-	handoffPath, err := resolveHandoffFile(baseDir, *changeFlag)
+	handoffPath, err := resolveHandoffFile(loc.WorkspaceRoot, *changeFlag)
 	if err != nil {
 		fmt.Printf("[ERROR] %v\n", err)
 		os.Exit(1)
@@ -734,16 +740,9 @@ func runHandoffValidate(args []string) {
 		os.Exit(1)
 	}
 
-	// Cargar configuración de workspace opcionalmente si existe axiom.yaml
-	var wsConfig *workspace.WorkspaceConfig
-	configPath := filepath.Join(baseDir, "axiom.yaml")
-	if _, err := os.Stat(configPath); err == nil {
-		if loadedCfg, err := workspace.LoadConfig(configPath); err == nil {
-			wsConfig = loadedCfg
-		}
-	}
-
-	if err := handoff.Validate(h, wsConfig); err != nil {
+	// La configuración de roles es la que devuelve la resolución (a través del
+	// puntero, si lo hay); es nula si no hay axiom.yaml o no se puede cargar.
+	if err := handoff.Validate(h, loc.Config); err != nil {
 		fmt.Printf("[ERROR] HANDOFF INVALID (Validación semántica fallida):\n  %v\n", err)
 		os.Exit(1)
 	}
@@ -764,17 +763,15 @@ func runRoleList(args []string) {
 		os.Exit(1)
 	}
 
-	baseDir, changeName, changeDir, err := resolveChangeDir(*pathFlag, *changeFlag)
+	loc, changeName, changeDir, err := resolveChangeDir(*pathFlag, *changeFlag)
 	if err != nil {
 		fmt.Printf("[ERROR] %v\n", err)
 		os.Exit(1)
 	}
 
-	var wsConfig *workspace.WorkspaceConfig
-	cfgPath := filepath.Join(baseDir, "axiom.yaml")
-	if _, err := os.Stat(cfgPath); err == nil {
-		wsConfig, _ = workspace.LoadConfig(cfgPath)
-	}
+	// Roles de la configuración que devuelve la resolución, a través del
+	// puntero si lo hay; nula si no hay axiom.yaml o no se puede cargar.
+	wsConfig := loc.Config
 
 	designFile := filepath.Join(changeDir, "design.md")
 	roster, err := resolveCLIRoster(changeDir, designFile, wsConfig)
@@ -818,17 +815,15 @@ func runRoleStatus(args []string) {
 		os.Exit(1)
 	}
 
-	baseDir, changeName, changeDir, err := resolveChangeDir(*pathFlag, *changeFlag)
+	loc, changeName, changeDir, err := resolveChangeDir(*pathFlag, *changeFlag)
 	if err != nil {
 		fmt.Printf("[ERROR] %v\n", err)
 		os.Exit(1)
 	}
 
-	var wsConfig *workspace.WorkspaceConfig
-	cfgPath := filepath.Join(baseDir, "axiom.yaml")
-	if _, err := os.Stat(cfgPath); err == nil {
-		wsConfig, _ = workspace.LoadConfig(cfgPath)
-	}
+	// Roles de la configuración que devuelve la resolución, a través del
+	// puntero si lo hay; nula si no hay axiom.yaml o no se puede cargar.
+	wsConfig := loc.Config
 
 	designFile := filepath.Join(changeDir, "design.md")
 	roster, err := resolveCLIRoster(changeDir, designFile, wsConfig)
@@ -893,17 +888,15 @@ func runRoleBarrier(args []string) {
 		os.Exit(1)
 	}
 
-	baseDir, changeName, changeDir, err := resolveChangeDir(*pathFlag, *changeFlag)
+	loc, changeName, changeDir, err := resolveChangeDir(*pathFlag, *changeFlag)
 	if err != nil {
 		fmt.Printf("[ERROR] %v\n", err)
 		os.Exit(1)
 	}
 
-	var wsConfig *workspace.WorkspaceConfig
-	cfgPath := filepath.Join(baseDir, "axiom.yaml")
-	if _, err := os.Stat(cfgPath); err == nil {
-		wsConfig, _ = workspace.LoadConfig(cfgPath)
-	}
+	// Roles de la configuración que devuelve la resolución, a través del
+	// puntero si lo hay; nula si no hay axiom.yaml o no se puede cargar.
+	wsConfig := loc.Config
 
 	designFile := filepath.Join(changeDir, "design.md")
 	roster, err := resolveCLIRoster(changeDir, designFile, wsConfig)
@@ -958,7 +951,7 @@ func runRoleBarrier(args []string) {
 		}
 
 		if *migrateDeferredFlag {
-			cumulativeFile := filepath.Join(baseDir, "openspec", "changes", "e2e-cumulative", "tasks.md")
+			cumulativeFile := filepath.Join(loc.WorkspaceRoot, "openspec", "changes", "e2e-cumulative", "tasks.md")
 			if err := multirole.MigrateDeferredTasks(cumulativeFile, report.DeferredTasks); err != nil {
 				fmt.Printf("\n[AVISO] No se pudieron migrar las tareas diferidas: %v\n", err)
 			} else {
@@ -1020,25 +1013,30 @@ func printRosterConflictWarning(roster multirole.Roster) {
 	fmt.Printf("[AVISO] %s\n", roster.Conflict.Detail)
 }
 
-func resolveChangeDir(baseDir, change string) (string, string, string, error) {
-	absBase, err := filepath.Abs(baseDir)
+// resolveChangeDir resuelve el workspace desde startDir con workspace.Locate y
+// devuelve su Location, el nombre del cambio y su directorio bajo el planning
+// home. Los verbos `role` leen de ahí la raíz (loc.WorkspaceRoot) y la
+// configuración de roles (loc.Config), de modo que un puntero sin axiom.yaml en
+// startDir se honra (REQ-24.8).
+func resolveChangeDir(startDir, change string) (workspace.Location, string, string, error) {
+	loc, err := workspace.Locate(startDir)
 	if err != nil {
-		return "", "", "", fmt.Errorf("ruta base inválida: %w", err)
+		return workspace.Location{}, "", "", err
 	}
 
-	changesDir := filepath.Join(absBase, "openspec", "changes")
+	changesDir := filepath.Join(loc.WorkspaceRoot, "openspec", "changes")
 
 	if change != "" {
 		target := filepath.Join(changesDir, change)
 		if _, err := os.Stat(target); err != nil {
-			return "", "", "", fmt.Errorf("no existe el directorio del cambio %q en: %s", change, target)
+			return workspace.Location{}, "", "", fmt.Errorf("no existe el directorio del cambio %q en: %s", change, target)
 		}
-		return absBase, change, target, nil
+		return loc, change, target, nil
 	}
 
 	entries, err := os.ReadDir(changesDir)
 	if err != nil {
-		return "", "", "", fmt.Errorf("no se pudo inspeccionar el directorio de cambios %q: %w", changesDir, err)
+		return workspace.Location{}, "", "", fmt.Errorf("no se pudo inspeccionar el directorio de cambios %q: %w", changesDir, err)
 	}
 
 	var foundDirs []string
@@ -1049,21 +1047,21 @@ func resolveChangeDir(baseDir, change string) (string, string, string, error) {
 	}
 
 	if len(foundDirs) == 0 {
-		return "", "", "", fmt.Errorf("no se encontró ningún cambio activo bajo %s", changesDir)
+		return workspace.Location{}, "", "", fmt.Errorf("no se encontró ningún cambio activo bajo %s", changesDir)
 	}
 	if len(foundDirs) > 1 {
-		return "", "", "", fmt.Errorf("se encontraron múltiples cambios activos (%s). Especifica el cambio con --change", strings.Join(foundDirs, ", "))
+		return workspace.Location{}, "", "", fmt.Errorf("se encontraron múltiples cambios activos (%s). Especifica el cambio con --change", strings.Join(foundDirs, ", "))
 	}
 
 	changeName := foundDirs[0]
-	return absBase, changeName, filepath.Join(changesDir, changeName), nil
+	return loc, changeName, filepath.Join(changesDir, changeName), nil
 }
 
-func resolveHandoffFile(baseDir, change string) (string, error) {
-	absBase, err := filepath.Abs(baseDir)
-	if err != nil {
-		return "", fmt.Errorf("ruta base inválida: %w", err)
-	}
+// resolveHandoffFile busca el handoff.md de change (o el único de los cambios
+// activos) bajo el planning home de workspaceRoot, que es el que resuelve
+// workspace.Locate y no el directorio de partida del verbo (REQ-24.8).
+func resolveHandoffFile(workspaceRoot, change string) (string, error) {
+	absBase := workspaceRoot
 
 	if change != "" {
 		target := filepath.Join(absBase, "openspec", "changes", change, "handoff.md")
