@@ -95,12 +95,20 @@ Todos los mensajes de confirmación, cabeceras, títulos y diálogos en TUI y We
 
 ### Requirement: Versión de build visible y consistente (REQ-22.8)
 
-El símbolo de versión en `cmd/axiom/main.go` DEBE declararse como variable mutable (`var version = "v0.1.0"`), permitiendo que el linker (`-X main.version=...`) en los flujos de CI y GoReleaser inyecte el tag exacto de la versión compilada.
+El símbolo de versión en `cmd/axiom/main.go` DEBE declararse como variable mutable sin valor por defecto (`var version string`), para que el linker (`-X main.version=...`) inyecte el tag exacto en los flujos de CI y GoReleaser. La versión informada DEBE resolverse con esta prioridad:
+1. el valor inyectado;
+2. si no hay inyección, `debug.ReadBuildInfo().Main.Version`, que `go install …@vX` rellena, salvo que esté vacía o sea `(devel)`;
+3. la constante `fallbackVersion` como último recurso.
 
 #### Scenario: Inyección de versión en tiempo de enlace
 - **DADO** una compilación con `-ldflags="-X main.version=v3.5.0"`
 - **CUANDO** se ejecuta `axiom --version`
 - **ENTONCES** la salida refleja `v3.5.0`
+
+#### Scenario: Binario instalado con go install
+- **DADO** un binario instalado con `go install github.com/IGutierrezZ/axiom/v3/cmd/axiom@v3.6.0`, sin ldflags
+- **CUANDO** se ejecuta `axiom --version`
+- **ENTONCES** la salida refleja `v3.6.0`, no la constante `fallbackVersion`
 
 ---
 

@@ -11,6 +11,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"runtime"
+	"runtime/debug"
 	"strings"
 	"syscall"
 	"time"
@@ -56,13 +57,37 @@ func init() {
 	}
 }
 
-// version is the build-time version symbol, injectable via
-// -X main.version=<value>.
-// A compilation without injection reports "v3.5.1" (O-1, D-05).
-var version = "v3.5.1"
+// fallbackVersion is the last-resort version, reported only when the binary
+// was neither stamped by ldflags nor built from a tagged module (O-1, D-05).
+const fallbackVersion = "v3.5.1"
 
-// Version is the exported alias used by cli.AppVersion, app.Version, and tests.
-var Version = version
+// version is the build-time version symbol, injectable via
+// -X main.version=<value>. It is empty when nothing injected it: GoReleaser
+// stamps it, whereas `go install` and a plain `go build` do not.
+var version string
+
+// Version is the resolved version used by cli.AppVersion, app.Version, and
+// tests. Package-level variables are initialized before init(), and after any
+// -X stamp, so it always sees the final value of version.
+var Version = resolveVersion(version, debug.ReadBuildInfo)
+
+// resolveVersion picks the version to report, in priority order:
+//  1. injected, the ldflags value (GoReleaser builds);
+//  2. the module version embedded by the Go toolchain, which is the tag for
+//     `go install ...@vX` (and a pseudo-version for a build from a checkout),
+//     unless it is empty or "(devel)";
+//  3. fallbackVersion.
+func resolveVersion(injected string, readBuildInfo func() (*debug.BuildInfo, bool)) string {
+	if v := strings.TrimSpace(injected); v != "" {
+		return v
+	}
+	if info, ok := readBuildInfo(); ok && info != nil {
+		if v := strings.TrimSpace(info.Main.Version); v != "" && v != "(devel)" {
+			return v
+		}
+	}
+	return fallbackVersion
+}
 
 const (
 	Platform  = "axiom"
