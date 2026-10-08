@@ -3,7 +3,7 @@
 > **Documento vivo ODD.** Fichero autoritativo: `odd/tasks/seguimientos-restos-upstream.md`.
 > Espejo de recuperación en Engram: topic `odd/seguimientos-restos-upstream/tasks`, proyecto `axiom`.
 > Rama del documento: `docs/odd-seguimientos-restos-upstream`, con su worktree en `C:\repos\axiom-wt\odd-seg-docs`. Este documento viaja **solo** en el PR de cierre.
-> Abierto el 2026-10-07 desde `origin/main` `741b731e`. Recoge lo que quedó fuera del ODD `retirada-telemetria-y-restos-upstream` (cerrado con el PR #103).
+> Abierto el 2026-10-07 desde `origin/main` `741b731e`. **Cerrado el 2026-10-08**: U1-U5 y H1 fusionados (#104-#109). Recoge lo que quedó fuera del ODD `retirada-telemetria-y-restos-upstream` (cerrado con el PR #103).
 
 ---
 
@@ -90,12 +90,13 @@ Verificado con dos exploraciones de solo lectura y comprobación directa del orq
 
 > Estado: `[ ]` pendiente · `[~]` en curso o con PR abierto · `[x]` fusionado. Estrategia de entrega: `single-pr` por tarea unificada, con `size:exception` aprobado. Ruta: delegada (un writer por tarea, en su worktree), porque todas tocan 2 o más ficheros no triviales. Orden: primero U2, para que los tests de las demás ya corran aislados.
 
-- [x] **U2 · Aislamiento y fiabilidad de tests** (D1-D6): **PR #104, fusionado como `935aebb1`** (`a73b831a` + `5f13c8e9`, rama `test/aislamiento-y-fiabilidad`, worktree `odd-seg-u2`; +282/−18; riesgo `high`; verificador PASS WITH NOTES). Ruta: delegada (writer Sonnet, 12 ficheros); las dos notas del verificador se corrigieron inline (2 ediciones mecánicas). Pendiente del CI. `LOCALAPPDATA`/`APPDATA` y `AXIOM_STATE_DIR` en los `TestMain` señalados; `AXIOM_NO_PERSISTENT_PATH` en `bench/runner.go`; espera por condición en `opencode_v2_plugins_test.go` e ignorar `.tmp`; entorno aislado y presupuesto en `cooldown_concurrency_test.go`; timeout y sandbox completo en `documented_invocation_test.go`; canonicalizar rutas en el test de `sddstatus`; `deadcode-ratchet.sh` con `GOOS=linux` y fallo explícito si `go run` falla. ~150-250 líneas. Riesgo previsto bajo-medio.
-- [x] **U1 · Variables y canal `AXIOM_*` con respaldo `GENTLE_AI_*`** (B1 + B2 + A5a + A3): **PR #105, fusionado como `f3bf9ed8`** (`a30dd755`, rama `fix/variables-y-canal-axiom`, worktree `odd-seg-u1`; 15 ficheros, +210/−41; `type:bug`; riesgo `high`; verificador PASS WITH NOTES). Ruta: delegada (writer Sonnet), más un comentario obsoleto de `engram/download.go` corregido inline. Pendiente del CI. `update/check.go` con `system.Getenv`; `AXIOM_ENGRAM_SETUP_MODE/STRICT` y `AXIOM_SDD_STATUS_ENGRAM`; `install.sh` y `install.ps1` con el mismo orden (`AXIOM_CHANNEL` y respaldo); banner y textos de ayuda de `install.sh`; docs de variables. ~80-120 líneas. Riesgo previsto `high` por `install.sh` → verificador.
-- [x] **U3 · Migración de instalaciones en `sync`** (C1 + C2 + A4a + A4b): **PR #106, fusionado como `6335b56d`** (`25d37652`, `7ab87ed3`, `66ba2ae4`, `cb274e89`; rama `fix/migracion-instalaciones-sync`, worktree `odd-seg-u3`; 41 ficheros, +1305/−151; `type:bug` + `size:exception`; riesgo `high`). Ruta: delegada (writer Sonnet). Verificador: FAIL → una corrección acotada → validador del arreglo PASS WITH NOTES. Pendiente del CI. 13 digests históricos; aviso de `sync` en la TUI; retirada de `gentle-ai.md` y `gentle-ai.instructions.md` de Kiro y VS Code solo si son de Axiom; Cursor pasa a `axiom.mdc` con migración del `gentle-ai.mdc` gestionado. ~300-400 líneas. Riesgo previsto medio-alto (borra ficheros del usuario) → verificador.
-- [~] **U4 · Retirada de `cmd/gentle-ai` y restos de marca** (A1a + A1b + A2 + A5b): **PR #107** (`42a8eb6c`, `614634fe`, `e1ff0e90`, `bfc3d344`, `8eb0a495`; rama `chore/retirar-cmd-gentle-ai`, worktree `odd-seg-u4`; 51 ficheros, +319/−333; `type:chore` + `size:exception`; riesgo `high`; verificador PASS WITH NOTES). Ruta: delegada (writer Sonnet); `bfc3d344` y `8eb0a495` inline (ediciones mecánicas). Pendiente del CI. `registry.go` e `instructions.go` a `cmd/axiom`; Dockerfiles y `lib.sh` de e2e; shim de `bench/record.go`; guard de `ci.yml:212`; borrar `cmd/gentle-ai` y el build `gentle-ai-deprecated`; `releasepolicy` con un solo build; tests y spec `axiom-distribution-identity`; docs con nombres vigentes; `__managed_by: axiom/sdd` con goldens y hashes. ~300-400 líneas más goldens. Riesgo previsto `high` (release) → verificador.
-- [x] **U5 · T7m: dialecto `axiom` en los comandos del contrato de revisión:** **PR #108, fusionado como `250ff359`**. Commits `107b725e`, `baf78944`, `01639d2d` y `796d4cd2`, en la rama `feat/dialecto-axiom-contrato-revision` (worktree `odd-seg-u5`); 67 ficheros, +1970/−286; `type:feature` + `size:exception`. Verificador: FAIL → decisión del usuario → validador del arreglo PASS WITH NOTES. Ruta: agente Plan más writers delegados por etapas. Pendiente del CI. Antes, un agente Plan de solo lectura fija el diseño (eco del dialecto, helper de contrato, schemas v2 ampliados en su sitio frente a versiones nuevas, v1 intacto). Dos commits de unidad de trabajo en un solo PR: (a) lectura dual, las 26 comparaciones, los validadores exactos y los schemas; (b) productores con dialecto, fixtures, docs, bench, e2e y crosslane. ~650-800 líneas. Riesgo `high` → verificador.
-- [ ] **Cierre:** PR con este documento.
+- [x] **U2 · Aislamiento y fiabilidad de tests** (D1-D6): **PR #104, fusionado como `935aebb1`** (`a73b831a` + `5f13c8e9`, rama `test/aislamiento-y-fiabilidad`, worktree `odd-seg-u2`; +282/−18; riesgo `high`; verificador PASS WITH NOTES). Ruta: delegada (writer Sonnet, 12 ficheros); las dos notas del verificador se corrigieron inline (2 ediciones mecánicas). `LOCALAPPDATA`/`APPDATA` y `AXIOM_STATE_DIR` en los `TestMain` señalados; `AXIOM_NO_PERSISTENT_PATH` en `bench/runner.go`; espera por condición en `opencode_v2_plugins_test.go` e ignorar `.tmp`; entorno aislado y presupuesto en `cooldown_concurrency_test.go`; timeout y sandbox completo en `documented_invocation_test.go`; canonicalizar rutas en el test de `sddstatus`; `deadcode-ratchet.sh` con `GOOS=linux` y fallo explícito si `go run` falla. ~150-250 líneas. Riesgo previsto bajo-medio.
+- [x] **U1 · Variables y canal `AXIOM_*` con respaldo `GENTLE_AI_*`** (B1 + B2 + A5a + A3): **PR #105, fusionado como `f3bf9ed8`** (`a30dd755`, rama `fix/variables-y-canal-axiom`, worktree `odd-seg-u1`; 15 ficheros, +210/−41; `type:bug`; riesgo `high`; verificador PASS WITH NOTES). Ruta: delegada (writer Sonnet), más un comentario obsoleto de `engram/download.go` corregido inline. `update/check.go` con `system.Getenv`; `AXIOM_ENGRAM_SETUP_MODE/STRICT` y `AXIOM_SDD_STATUS_ENGRAM`; `install.sh` y `install.ps1` con el mismo orden (`AXIOM_CHANNEL` y respaldo); banner y textos de ayuda de `install.sh`; docs de variables. ~80-120 líneas. Riesgo previsto `high` por `install.sh` → verificador.
+- [x] **U3 · Migración de instalaciones en `sync`** (C1 + C2 + A4a + A4b): **PR #106, fusionado como `6335b56d`** (`25d37652`, `7ab87ed3`, `66ba2ae4`, `cb274e89`; rama `fix/migracion-instalaciones-sync`, worktree `odd-seg-u3`; 41 ficheros, +1305/−151; `type:bug` + `size:exception`; riesgo `high`). Ruta: delegada (writer Sonnet). Verificador: FAIL → una corrección acotada → validador del arreglo PASS WITH NOTES. 13 digests históricos; aviso de `sync` en la TUI; retirada de `gentle-ai.md` y `gentle-ai.instructions.md` de Kiro y VS Code solo si son de Axiom; Cursor pasa a `axiom.mdc` con migración del `gentle-ai.mdc` gestionado. ~300-400 líneas. Riesgo previsto medio-alto (borra ficheros del usuario) → verificador.
+- [x] **U4 · Retirada de `cmd/gentle-ai` y restos de marca** (A1a + A1b + A2 + A5b): **PR #107, fusionado como `34d30cb3`** (`42a8eb6c`, `614634fe`, `e1ff0e90`, `bfc3d344`, `8eb0a495`; rama `chore/retirar-cmd-gentle-ai`, worktree `odd-seg-u4`; 51 ficheros, +319/−333; `type:chore` + `size:exception`; riesgo `high`; verificador PASS WITH NOTES). Ruta: delegada (writer Sonnet); `bfc3d344` y `8eb0a495` inline (ediciones mecánicas). `registry.go` e `instructions.go` a `cmd/axiom`; Dockerfiles y `lib.sh` de e2e; shim de `bench/record.go`; guard de `ci.yml:212`; borrar `cmd/gentle-ai` y el build `gentle-ai-deprecated`; `releasepolicy` con un solo build; tests y spec `axiom-distribution-identity`; docs con nombres vigentes; `__managed_by: axiom/sdd` con goldens y hashes. ~300-400 líneas más goldens. Riesgo previsto `high` (release) → verificador.
+- [x] **U5 · T7m: dialecto `axiom` en los comandos del contrato de revisión:** **PR #108, fusionado como `250ff359`**. Commits `107b725e`, `baf78944`, `01639d2d` y `796d4cd2`, en la rama `feat/dialecto-axiom-contrato-revision` (worktree `odd-seg-u5`); 67 ficheros, +1970/−286; `type:feature` + `size:exception`. Verificador: FAIL → decisión del usuario → validador del arreglo PASS WITH NOTES. Ruta: agente Plan más writers delegados por etapas. Antes, un agente Plan de solo lectura fija el diseño (eco del dialecto, helper de contrato, schemas v2 ampliados en su sitio frente a versiones nuevas, v1 intacto). Dos commits de unidad de trabajo en un solo PR: (a) lectura dual, las 26 comparaciones, los validadores exactos y los schemas; (b) productores con dialecto, fixtures, docs, bench, e2e y crosslane. ~650-800 líneas. Riesgo `high` → verificador.
+- [x] **H1 · Test intermitente `TestDocumentedInvocationsRunAsDocumented` en Linux, introducido por U2:** **PR #109, fusionado como `077f478c`**. El commit de diagnóstico capturó la causa en el CI: la telemetría de Go escribía en el sandbox. Arreglo: `mode=off` en el sandbox. Ruta: writer delegado para el diagnóstico; el arreglo, inline.
+- [~] **Cierre:** PR con este documento.
 
 Previsión total: ~1.500-1.900 líneas en 5 PRs más el de cierre.
 
@@ -229,20 +230,41 @@ Previsión total: ~1.500-1.900 líneas en 5 PRs más el de cierre.
   - En local: build y vet limpios (también `bench`) y en verde `cmd/...` e `internal/components`.
   - El CI de #107 sirve además como segunda confirmación del arreglo de H1.
 
-## 9. Siguiente paso
+## 9. Cierre (2026-10-08)
 
-Esperar el CI de #104-#108; el usuario avisa con «revisa si ya está verde y continúa».
+**Fusionado en `main`**, con squash:
 
-Orden de merge propuesto, con squash: #104 (U2) → #105 (U1) → #106 (U3) → #107 (U4) → #108 (U5). Después de cada merge, rebase de los siguientes si hay conflicto:
-- #107 con #104, en `bench/runner.go`;
-- #108 con #107, en `e2e/organicruntime`.
+| PR | Tarea | Commit |
+|---|---|---|
+| #105 | U1 | `f3bf9ed8` |
+| #106 | U3 | `6335b56d` |
+| #104 | U2 | `935aebb1` |
+| #108 | U5 (T7m) | `250ff359` |
+| #109 | H1 | `077f478c` |
+| #107 | U4 | `34d30cb3` |
 
-Después, el PR de cierre con este documento (rama `docs/odd-seguimientos-restos-upstream`).
+Todos los worktrees y ramas de las tareas están eliminados. Solo queda este documento, en la rama `docs/odd-seguimientos-restos-upstream`.
 
-Seguimientos para después del ODD:
+**Criterios de aceptación (sección 7):**
+- **Cumplido:** ningún camino de actualización ni prueba e2e usa ya el stub `gentle-ai`, porque `cmd/gentle-ai` y su build se han retirado. Además, la autoactualización con `go install` vuelve a estar disponible con la ruta `/v3`.
+- **Cumplido:** `AXIOM_*` es la variable principal y `GENTLE_AI_*` el respaldo en Go, `install.sh` e `install.ps1`.
+- **Cumplido:** `sync` acepta las copias históricas de los plugins y retira los prompts heredados de Kiro, VS Code y Cursor solo con prueba de propiedad. Los editados por el usuario se conservan y se avisa.
+- **Cumplido, salvo el flujo de desinstalación con *clean install*:** la TUI muestra los avisos de `sync`.
+- **Cumplido:** los tests aíslan `LOCALAPPDATA`, `APPDATA` y `~/.axiom`. Los intermitentes D4 están corregidos y H1, que introdujo U2, está resuelto.
+- **Cumplido al fusionar:** el CI estaba en verde en todos los PRs. Los dos rojos de #108 por fijaciones antiguas y el de #107 por H1 se corrigieron antes del merge.
+
+**Fuera de alcance por decisión del usuario:** los ~156 IDs `gentle-ai.*/vN` sin gemelo `axiom.*`, los separadores de hash y los IDs persistidos, que siguen como contrato *wire*.
+
+**Seguimientos:**
 - bench en Windows: el shim del proveedor no se ejecuta y el arnés llega al `claude` real del PATH;
-- la constante `version` de `cmd/axiom/main.go` en cada release;
-- `ContendedPersistenceRejectsReviewModeDisable` y `TestRejectedTargetedValidatorCaptureRoutesEscalatedRecovery`, intermitentes bajo carga;
-- los avisos del flujo de desinstalación con clean install en la TUI;
-- el heredado creado solo con SDD, que se conserva con aviso;
-- los comentarios de `deadcode-ratchet.sh:33,39` y `PRD.md:1188`.
+- la constante `version` de `cmd/axiom/main.go` hay que subirla en cada release (`go install` no inyecta ldflags);
+- `ContendedPersistenceRejectsReviewModeDisable` y `TestRejectedTargetedValidatorCaptureRoutesEscalatedRecovery`, intermitentes bajo carga en local;
+- los avisos del flujo de desinstalación con *clean install* en la TUI;
+- el prompt heredado creado solo con SDD (sin persona) se conserva con aviso, porque su frontmatter no se reconoce;
+- los comentarios de `scripts/deadcode-ratchet.sh:33,39` y `PRD.md:1188`, que aún nombran `cmd/gentle-ai`.
+
+**Lecciones:**
+- Si un cambio toca la superficie de comandos, antes del PR hay que pasar `gentle-ai-bench run` (el paso «Run benchmark evidence» del CI) y buscar con `rg` las cadenas literales que cambian en los tests de `internal/cli` y `bench`.
+- Un sandbox de test que cambia HOME o XDG y deja `go` en el PATH debe desactivar la telemetría de Go.
+- Para un fallo de CI que no se reproduce en local, ha funcionado una limpieza de diagnóstico que sigue fallando e informa del árbol restante, de los procesos y de las goroutines.
+- Un PR verde sobre su base no garantiza un `main` verde: conviene verificar el `main` combinado tras cada tanda de merges.
