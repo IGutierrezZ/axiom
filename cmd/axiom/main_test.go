@@ -70,7 +70,21 @@ func TestRunSDDUnknownSubcommand(t *testing.T) {
 	}
 }
 
+// isolateSDDStatusFromCheckout aísla las pruebas de `sdd status` del checkout y
+// de la memoria real del desarrollador: con el descubrimiento ascendente del
+// planning home, una resolución desde el directorio del paquete llegaría a la
+// raíz del repositorio, donde `.engram/` está versionado y `openspec/config.yaml`
+// no declara `artifact_store`, de modo que `Resolve` ejecutaría `engram export`
+// contra el almacén real (R28). En un directorio temporal vacío no hay marcador
+// ni Engram que consultar.
+func isolateSDDStatusFromCheckout(t *testing.T) {
+	t.Helper()
+	t.Chdir(t.TempDir())
+	t.Setenv("GENTLE_AI_SDD_STATUS_ENGRAM", "")
+}
+
 func TestRunSDDStatusJSON(t *testing.T) {
+	isolateSDDStatusFromCheckout(t)
 	var stdout, stderr bytes.Buffer
 	exitCode := runSDD([]string{"status", "inc-13-sdd-commands-axiom-cli-integration", "--json"}, &stdout, &stderr)
 	if exitCode != 0 {
@@ -89,6 +103,7 @@ func TestRunSDDStatusJSON(t *testing.T) {
 }
 
 func TestRunSDDStatusNonexistentChange(t *testing.T) {
+	isolateSDDStatusFromCheckout(t)
 	var stdout, stderr bytes.Buffer
 	exitCode := runSDD([]string{"status", "cambio-que-no-existe-123456789"}, &stdout, &stderr)
 	if exitCode != 0 {

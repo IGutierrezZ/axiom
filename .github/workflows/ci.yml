@@ -81,6 +81,21 @@ jobs:
       - name: Run unit tests
         run: go test ./...
 
+      # Ninguna prueba debe escribir en el checkout ni dejar ficheros nuevos: con
+      # el descubrimiento ascendente del planning home (inc-24), una prueba que
+      # resuelve desde el directorio de su paquete llega a la raíz del
+      # repositorio. Este paso compara con un árbol limpio, a diferencia del
+      # paso de humo de más abajo, que conserva su comparación con el estado
+      # previo.
+      - name: Verify the checkout is clean after the unit tests
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "FAIL: go test ./... changed the checkout:" >&2
+            git status --porcelain >&2
+            git diff --stat >&2
+            exit 1
+          fi
+
       - name: Build, vet, and test benchmark module
         working-directory: bench
         run: |
