@@ -316,9 +316,21 @@ func findNonRetryableStop(document any) (string, bool) {
 
 // --- sandbox --------------------------------------------------------------
 
-func newDocumentedInvocationSandbox(t *testing.T) string {
+// newDocumentedInvocationSandbox builds the fixture repository and home for one
+// documented invocation. The sandbox is removed by documentedSandbox.cleanup
+// instead of t.TempDir so that a removal failure names what was still being
+// written (see that method). command is the invocation about to run in it.
+func newDocumentedInvocationSandbox(t *testing.T, command string) (string, *documentedSandbox) {
 	t.Helper()
-	root := t.TempDir()
+	root, err := os.MkdirTemp("", "documented-invocation-*")
+	if err != nil {
+		t.Fatal(err)
+	}
+	sandbox := &documentedSandbox{root: root, started: time.Now(), command: command, previous: lastDocumentedCommand}
+	lastDocumentedCommand = command
+	// Registered before every t.Setenv/t.Chdir below, so (cleanups run last in,
+	// first out) the working directory has left the sandbox before it is removed.
+	t.Cleanup(func() { sandbox.cleanup(t) })
 	repo := filepath.Join(root, "repo")
 	home := filepath.Join(root, "home")
 	for _, dir := range []string{repo, home} {
@@ -359,7 +371,7 @@ func newDocumentedInvocationSandbox(t *testing.T) string {
 	// restricted one, so the whole corpus (~80 subprocess-heavy invocations)
 	// ran for many minutes and looked like it never terminated.
 	t.Setenv("PATH", hermeticDocumentedInvocationPath(t, root))
-	return repo
+	return repo, sandbox
 }
 
 // hermeticDocumentedInvocationPath returns a PATH that holds an empty directory
@@ -417,6 +429,155 @@ func runDocumentedInvocation(t *testing.T, args []string) (output []byte, runErr
 		t.Fatalf("documented invocation did not return within %v: %s", documentedInvocationBudget, strings.Join(args, " "))
 		return nil, nil
 	}
+}
+
+// lastDocumentedCommand is the invocation the previous sandbox ran, so a cleanup
+// failure can also name the neighbour that may have left work behind.
+var lastDocumentedCommand string
+
+const (
+	// documentedCleanupRetryDelay is how long a failed removal waits before the
+	// single retry that exists only to show whether the tree was still changing.
+	documentedCleanupRetryDelay = 250 * time.Millisecond
+	// documentedGoroutineDumpLimit bounds the goroutine listing in the report.
+	documentedGoroutineDumpLimit = 24 << 10
+)
+
+// documentedSandbox owns one invocation's scratch tree. Removing it used to be
+// t.TempDir's job, which on Linux CI intermittently failed with "directory not
+// empty" and no hint of who was still writing. cleanup keeps the same failure
+// (it never swallows or hides the error) but attaches the evidence.
+type documentedSandbox struct {
+	root        string
+	started     time.Time
+	command     string
+	previous    string
+	runDuration time.Duration
+}
+
+func (s *documentedSandbox) cleanup(t *testing.T) {
+	if t.Failed() {
+		t.Logf("RunArgs wall time for %q: %v", s.command, s.runDuration)
+	}
+	removeStart := time.Now()
+	err := os.RemoveAll(s.root)
+	if err == nil {
+		return
+	}
+	first := s.tree(removeStart)
+	processes := s.processesInside()
+	goroutines := goroutineDump()
+	time.Sleep(documentedCleanupRetryDelay)
+	retryStart := time.Now()
+	second := s.tree(retryStart)
+	retryErr := os.RemoveAll(s.root)
+	t.Errorf("sandbox cleanup failed: %v\n"+
+		"invocation:          %s\n"+
+		"previous invocation: %s\n"+
+		"RunArgs wall time:   %v\n"+
+		"sandbox age at removal start: %v\n"+
+		"remaining tree at the failure (mtime as time, offset from sandbox start, offset from RemoveAll start):\n%s"+
+		"processes with cwd or an open fd inside the sandbox:\n%s"+
+		"goroutines:\n%s\n"+
+		"tree %v later, before the single retry (still changing => a live writer):\n%s"+
+		"retry RemoveAll: %v",
+		err, s.command, s.previous, s.runDuration, removeStart.Sub(s.started),
+		first, processes, goroutines, retryStart.Sub(removeStart), second, retryErr)
+}
+
+// tree lists what is left under the sandbox, one entry per line.
+func (s *documentedSandbox) tree(removeStart time.Time) string {
+	var b strings.Builder
+	_ = filepath.WalkDir(s.root, func(path string, entry fs.DirEntry, walkErr error) error {
+		rel, _ := filepath.Rel(s.root, path)
+		if walkErr != nil {
+			fmt.Fprintf(&b, "  %s: %v\n", rel, walkErr)
+			return nil
+		}
+		info, err := entry.Info()
+		if err != nil {
+			fmt.Fprintf(&b, "  %s: %v\n", rel, err)
+			return nil
+		}
+		kind := "file"
+		switch {
+		case info.IsDir():
+			kind = "dir"
+		case info.Mode()&fs.ModeSymlink != 0:
+			kind = "symlink"
+		}
+		mtime := info.ModTime()
+		fmt.Fprintf(&b, "  %-48s %-7s %8d B  %s  %+.6fs  %+.6fs\n", rel, kind, info.Size(),
+			mtime.Format("15:04:05.000000000"), mtime.Sub(s.started).Seconds(), mtime.Sub(removeStart).Seconds())
+		return nil
+	})
+	return b.String()
+}
+
+// processesInside lists the processes whose working directory or open file
+// descriptors point into the sandbox. Only Linux exposes this through /proc.
+func (s *documentedSandbox) processesInside() string {
+	if runtime.GOOS != "linux" {
+		return "  (not collected on " + runtime.GOOS + ")\n"
+	}
+	root, err := filepath.EvalSymlinks(s.root)
+	if err != nil {
+		root = s.root
+	}
+	inside := func(target string) bool {
+		target = strings.TrimSuffix(target, " (deleted)")
+		return target == root || strings.HasPrefix(target, root+string(os.PathSeparator))
+	}
+	var b strings.Builder
+	processes, _ := os.ReadDir("/proc")
+	for _, process := range processes {
+		dir := filepath.Join("/proc", process.Name())
+		var holds []string
+		if target, err := os.Readlink(filepath.Join(dir, "cwd")); err == nil && inside(target) {
+			holds = append(holds, "cwd="+target)
+		}
+		fds, _ := os.ReadDir(filepath.Join(dir, "fd"))
+		for _, fd := range fds {
+			if target, err := os.Readlink(filepath.Join(dir, "fd", fd.Name())); err == nil && inside(target) {
+				holds = append(holds, "fd"+fd.Name()+"="+target)
+			}
+		}
+		if len(holds) == 0 {
+			continue
+		}
+		comm, _ := os.ReadFile(filepath.Join(dir, "comm"))
+		cmdline, _ := os.ReadFile(filepath.Join(dir, "cmdline"))
+		fmt.Fprintf(&b, "  pid=%s ppid=%s comm=%s cmdline=%q holds %s\n", process.Name(), parentPID(dir),
+			strings.TrimSpace(string(comm)), strings.ReplaceAll(string(cmdline), "\x00", " "), strings.Join(holds, ", "))
+	}
+	if b.Len() == 0 {
+		return "  (none)\n"
+	}
+	return b.String()
+}
+
+// parentPID reads the parent from /proc/<pid>/stat, whose comm field may itself
+// contain spaces and parentheses, hence the search from the last ')'.
+func parentPID(procDir string) string {
+	stat, err := os.ReadFile(filepath.Join(procDir, "stat"))
+	if err != nil {
+		return "?"
+	}
+	text := string(stat)
+	fields := strings.Fields(text[strings.LastIndex(text, ")")+1:])
+	if len(fields) < 2 {
+		return "?"
+	}
+	return fields[1]
+}
+
+func goroutineDump() string {
+	buffer := make([]byte, 1<<20)
+	dump := string(buffer[:runtime.Stack(buffer, true)])
+	if len(dump) > documentedGoroutineDumpLimit {
+		dump = dump[:documentedGoroutineDumpLimit] + "\n... (truncated)"
+	}
+	return dump
 }
 
 // registrySurfaceViolation cross-checks a documented negotiated review verb
@@ -494,11 +655,13 @@ func TestDocumentedInvocationsRunAsDocumented(t *testing.T) {
 			if violation := registrySurfaceViolation(words); violation != "" {
 				failure = violation
 			} else {
-				sandbox := newDocumentedInvocationSandbox(t)
+				sandbox, diagnostics := newDocumentedInvocationSandbox(t, command)
 				for index, arg := range args {
 					args[index] = strings.ReplaceAll(arg, repo, sandbox)
 				}
+				began := time.Now()
 				output, runErr := runDocumentedInvocation(t, args)
+				diagnostics.runDuration = time.Since(began)
 				if isParseRejection(runErr) {
 					failure = fmt.Sprintf("the parser refuses it as printed: %v", runErr)
 				} else if tier == tierExecuted {
