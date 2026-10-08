@@ -1,0 +1,39 @@
+schema: axiom.sdd-gate-ledger/v1
+change: inc-24-spec-baseline-profile
+records:
+    - gate: spec
+      decision: rejected
+      reason: 'Ajustes pedidos por el usuario: (1) archive debe reescribir los IDs provisionales del cambio por los definitivos en todo el texto integrado (specs y delta de contexto) y registrar la correspondencia en la traza; (2) anadir una opcion por documento scenarios: include|omit (por defecto include) para no imponer el formato de escenarios OpenSpec en la spec viva del proyecto (D1).'
+      artifact_digest: bf559734c0cc2cce0449215e2ccfb03f05343bb5c9c4d68bbe9a8bf4bdfc3eb2
+      actor: cli
+      recorded_at: 2026-10-04T14:31:36.8822111Z
+    - gate: spec
+      decision: approved
+      reason: 'Aprobada por el usuario tras los ajustes REQ-24.59-24.61. Pasan a design: numeros provisionales fuera de rango al especificar y como arrancar una familia sin IDs.'
+      artifact_digest: 2c14f5a1354df468e6bf0d8490b150cc13d8ba7c5d20dbe3280de9395fabf2db
+      actor: cli
+      recorded_at: 2026-10-04T14:50:22.1923222Z
+    - gate: design
+      decision: rejected
+      reason: 'Corregir y volver a presentar: H1 aislar TestRunSDDStatusJSON y TestRunSDDStatusNonexistentChange (dejan de ser hermeticos con el recorrido ascendente y .engram versionado); H2 resolver cambios archivados con prefijo de fecha; H3 sustituir el rechazo tardio de D-09 por validacion temprana (scenarios include exige level<=3; cuerpo sin encabezados de nivel<=level comprobado en integrate check) con enmienda de REQ-24.42/24.60; aceptar el rechazo de init con puntero (D-06) y el almacen de ficheros obligatorio (D-21) con enmienda de spec; AXIOM_CEILING_DIRECTORIES solo como costura de pruebas; absorber H5-H14.'
+      artifact_digest: 541a870dd3bd0bf19d186ecf12752a2cc4400f85ed7fc9920545bbaec05e342a
+      actor: cli
+      recorded_at: 2026-10-04T18:17:19.274434Z
+    - gate: spec
+      decision: approved
+      reason: 'Re-aprobada por el usuario con las enmiendas de la revision de diseno: REQ-24.62, REQ-2.2 (init y puntero propio), REQ-24.42/24.60/24.54, REQ-24.56(g), REQ-24.7/24.18/24.22, REQ-24.23, REQ-24.5 y REQ-24.51(c); verificadas por el orquestador.'
+      artifact_digest: eb00004e9dc69e468d61749dcd65a2876e031a0b31919100d2e2cd3f89db153a
+      actor: cli
+      recorded_at: 2026-10-04T21:43:31.1248579Z
+    - gate: design
+      decision: approved
+      reason: Aprobado por el usuario condicionado a M1, M2, m1, m3, m5 y m14; correcciones verificadas por el orquestador. Menores m2, m4 y m6-m13 pasan a la fase de tareas.
+      artifact_digest: 1094cd6bf9e0322fe04f0c5439e212c918e1aec32a9fe5fc25cee89b65cc4e38
+      actor: cli
+      recorded_at: 2026-10-04T21:43:31.3115888Z
+    - gate: tasks
+      decision: approved
+      reason: 'Aprobada por el usuario: 186 tareas en 7 tramos A1-C3, PR unico con size:exception; incluye m2, m4, m6-m13, spike R17, aislamiento de tests y paso de CI de checkout limpio.'
+      artifact_digest: 720872fb1b40a4ece19c5d405d18b4a4a2bf8fbf7e2d77faff3c4812fc7eb340
+      actor: cli
+      recorded_at: 2026-10-08T15:28:58.7274547Z
