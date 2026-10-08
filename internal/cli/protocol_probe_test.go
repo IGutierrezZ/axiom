@@ -16,6 +16,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/qwen"
 	runtimeopencode "github.com/IGutierrezZ/axiom/v3/internal/opencode"
 	"github.com/IGutierrezZ/axiom/v3/internal/system"
+	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
 // TestMain overrides verifyEngramVersion and probeEngramProtocolFlag with
@@ -49,6 +50,11 @@ import (
 // TestRunInstallRefusesMissingKimiRegardlessOfUVPresence for that opposite,
 // deliberately-kept case.
 func TestMain(m *testing.M) {
+	// Ceiling for the upward planning-home discovery (inc-24, R29): a marker
+	// (`.axiom-workspace`, `axiom.yaml`, `openspec/`) in an ancestor of the
+	// system temp directory, for instance in a developer's home directory,
+	// must not change what the tests resolve.
+	workspace.DiscoveryCeilingOverride = []string{os.TempDir()}
 	runtimeopencode.VersionRunnerOverride = func(context.Context, runtimeopencode.Command) (runtimeopencode.CommandOutput, error) {
 		return runtimeopencode.CommandOutput{Stdout: []byte("1.18.30")}, nil
 	}

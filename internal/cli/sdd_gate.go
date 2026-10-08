@@ -57,10 +57,11 @@ func runSDDGateRecord(args []string, stdout io.Writer) error {
 	if err != nil {
 		return err
 	}
-	workspaceRoot, changeRoot, err := resolveGovernanceChangeRoot(parsed.CWD, parsed.Change)
+	loc, changeRoot, err := resolveGovernanceChangeRoot(parsed.CWD, parsed.Change)
 	if err != nil {
 		return err
 	}
+	workspaceRoot := loc.WorkspaceRoot
 
 	sealed, err := kickoff.Load(changeRoot)
 	if err != nil {
