@@ -1854,6 +1854,31 @@ func TestSDDPhaseCommonEnforcesExecutorBoundary(t *testing.T) {
 	}
 }
 
+// inc-24 (REQ-24.11, R17): the shared convention tells phase agents that
+// `openspec/...` paths resolve against `actionContext.workspaceRoot`, not the
+// directory they were launched in, and that shell blocks position themselves in
+// the same invocation because the working directory does not persist between
+// calls.
+func TestSDDPhaseCommonResolvesOpenSpecPathsAgainstWorkspaceRoot(t *testing.T) {
+	content := MustRead("skills/_shared/sdd-phase-common.md")
+
+	for _, want := range []string{
+		"## G. Working Directory and `openspec/...` Paths",
+		"Resolve every `openspec/...` path a skill cites",
+		"against `actionContext.workspaceRoot` from the status the orchestrator injected",
+		"Never resolve them against the working directory.",
+		`cd "<workspaceRoot>" && ...`,
+		"inside the same invocation",
+		"the working directory does not persist between shell calls",
+		"`../<repository-name>/...`",
+		"keep working unchanged",
+	} {
+		if !strings.Contains(content, want) {
+			t.Errorf("sdd-phase-common missing working-directory rule %q", want)
+		}
+	}
+}
+
 func TestSDDStatusContractPreservesFrozenExternalV2Projection(t *testing.T) {
 	content := MustRead("skills/_shared/sdd-status-contract.md")
 

@@ -160,6 +160,35 @@ Si prefieres una experiencia visual:
 
 ---
 
+### Espacio Canónico Multirepo (Montaje Manual)
+
+Para un multirepo con carpeta maestra no versionada, Axiom no genera la estructura: se monta a mano. La carpeta maestra contiene un puntero `.axiom-workspace` que apunta a `<specs_repository>/axiom.yaml`, el repositorio de especificaciones y los repositorios de código hermanos:
+
+```text
+<maestra>/                  carpeta maestra, no versionada
+├── .axiom-workspace        puntero: config: repo-specs/axiom.yaml
+├── repo-specs/             repositorio de especificaciones (git)
+│   ├── axiom.yaml          topology: multirepo, specs_repository: repo-specs
+│   └── openspec/           planning home: changes/ y specs/
+├── repo-backend/           repositorio de código (git)
+└── repo-frontend/          repositorio de código (git)
+```
+
+1. Crea la carpeta maestra y, dentro, los repositorios de especificaciones y de código.
+2. Escribe `.axiom-workspace` en la carpeta maestra con `config: repo-specs/axiom.yaml`.
+3. Escribe `repo-specs/axiom.yaml` con `workspace.topology: "multirepo"`, `workspace.specs_repository: "repo-specs"` y los roles de cada repositorio de código (sus rutas son relativas a la carpeta maestra).
+4. Comprueba la estructura con `axiom workspace validate --path <maestra>`.
+
+Desde la carpeta maestra, desde `repo-specs` o desde un repositorio de código (por ejemplo `repo-backend/src`), todos los verbos SDD (`sdd status`, `sdd continue`, `sdd kickoff`, `sdd gate`, `sdd-attempt grant`, `handoff` y `role`) resuelven el mismo planning home: `<maestra>/repo-specs/openspec`. El primitivo de resolución asciende desde el directorio de partida y gana el marcador más cercano (`.axiom-workspace`, `axiom.yaml` u `openspec/`). Un directorio `openspec/` propio en la carpeta maestra, junto al puntero, se rechaza por ambiguo: consolida sus cambios en el planning home o retira el puntero.
+
+La autoridad de edición de un cambio parte del repositorio de especificaciones: los repositorios de código hermanos no se autorizan de forma implícita y requieren la autorización por cambio de `axiom sdd-attempt grant`.
+
+**Evidencia `pr_merged`.** `axiom sdd gate record --evidence-kind pr_merged` se verifica contra el grafo git del repositorio de especificaciones (`workspaceRoot`), no contra el de un repositorio de código. La integración de un repositorio de código se acredita con las evidencias `deployment` o `attestation`.
+
+**Cambio de resolución respecto a versiones anteriores.** Antes, los verbos SDD lanzados desde un subdirectorio sin marcadores propios resolvían `<subdirectorio>/openspec`. Ahora resuelven el planning home del marcador más cercano. Lo mismo ocurre con un `axiom.yaml` directo de `monorepo-decoupled` o `multirepo` cuyo `specs_repository` no termina en `openspec`: el planning home pasa a ser `<repositorio de especificaciones>/openspec` y, si `<maestra>/openspec` existe y es otro directorio, `axiom sdd status` lo avisa en `notes`. Un binario anterior ignora el puntero en los verbos SDD, así que todo el equipo debe usar el binario nuevo.
+
+---
+
 ### Aprovisionamiento Aislado de Agentes (`setup`)
 
 Una vez inicializado el proyecto, ejecuta en la raíz del mismo:
