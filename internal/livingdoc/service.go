@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
@@ -56,6 +57,17 @@ func indexPathOf(loc workspace.Location) string {
 	return filepath.Join(loc.PlanningHome, "INDEX.md")
 }
 
+// projectNameOf devuelve workspace.name de la configuración resuelta o, sin él, el
+// nombre del directorio de la carpeta maestra (m11).
+func projectNameOf(loc workspace.Location) string {
+	if loc.Config != nil {
+		if name := strings.TrimSpace(loc.Config.Workspace.Name); name != "" {
+			return name
+		}
+	}
+	return filepath.Base(loc.Master)
+}
+
 // GetCatalog devuelve el catálogo completo de especificaciones vivas consolidadas.
 // Lee solo <planning home>/specs; si existe la ubicación antigua divergente
 // (Q14), la nombra en Warnings.
@@ -68,6 +80,7 @@ func (s *Service) GetCatalog(ctx context.Context) (*LivingCatalog, error) {
 	if err != nil {
 		return catalog, err
 	}
+	catalog.ProjectName = projectNameOf(loc)
 	if warning, ok := loc.LegacySpecsDivergence(); ok {
 		catalog.Warnings = append(catalog.Warnings, warning)
 	}
@@ -99,7 +112,7 @@ func (s *Service) Sync(ctx context.Context) (*SyncReport, error) {
 	if err != nil {
 		return nil, err
 	}
-	report, err := s.indexer.SyncIndex(specsRootOf(loc), indexPathOf(loc))
+	report, err := s.indexer.SyncIndexForProject(projectNameOf(loc), specsRootOf(loc), indexPathOf(loc))
 	if err != nil {
 		return nil, err
 	}

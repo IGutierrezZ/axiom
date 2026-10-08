@@ -127,7 +127,7 @@ func TestScanSpecsAndSyncIndex(t *testing.T) {
 		t.Errorf("métricas incorrectas: reqs=%d, scenarios=%d", catalog.TotalRequirements, catalog.TotalScenarios)
 	}
 
-	report, err := indexer.SyncIndex(specsDir, indexFile)
+	report, err := indexer.SyncIndexForProject("", specsDir, indexFile)
 	if err != nil {
 		t.Fatalf("error sincronizando índice: %v", err)
 	}

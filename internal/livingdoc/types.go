@@ -27,6 +27,10 @@ type LivingCatalog struct {
 	TotalRequirements int               `json:"total_requirements"`
 	TotalScenarios    int               `json:"total_scenarios"`
 	LastSync          time.Time         `json:"last_sync"`
+	// ProjectName es el nombre del proyecto que lo contiene: workspace.name o, sin
+	// él, el nombre de la carpeta maestra. Lo rellena el servicio y lo usa la
+	// cabecera de INDEX.md.
+	ProjectName string `json:"project_name,omitempty"`
 	// Warnings reúne los avisos de lectura del catálogo, entre ellos el de la
 	// ubicación antigua divergente (Q14, REQ-24.10).
 	Warnings []string `json:"warnings,omitempty"`
