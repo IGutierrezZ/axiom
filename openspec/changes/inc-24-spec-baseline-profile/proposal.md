@@ -79,7 +79,7 @@ La adopción de proyectos con documentación propia (tabla D3) está bloqueada p
 
 - Correcciones del cold-start de knowledge (`####` del grabador frente a `###` del compose, dominios falsos del sweep, sobrescritura del coldstart), salvo las guardas mínimas de Q11.
 - `git init` del review en raíces no git.
-- Nombre `gentle-ai` en las continuaciones del review.
+- Nombre `gentle-ai` en las continuaciones del review (main ya lo resolvió en #96–#99).
 - Rutas `--cwd` con espacios sin comillas.
 - Comando `axiom adopt`.
 - Integración con Azure DevOps.
