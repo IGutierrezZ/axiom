@@ -11,13 +11,30 @@ import (
 
 // ParseConfig deserializa y valida la estructura sintáctica básica de axiom.yaml desde bytes.
 func ParseConfig(data []byte) (*WorkspaceConfig, error) {
+	return parseLayered(data)
+}
+
+// parseLayered es la carga por capas de axiom.yaml (D-03). En esta unidad solo
+// decodifica y valida la configuración base (nombre, topología y roles), con sus
+// mensajes y su orden de siempre; ParseConfig y LoadConfig delegan en ella sin
+// cambio de comportamiento. La decodificación parte de un yaml.Node para que las
+// declaraciones de capas posteriores se puedan leer aparte de la base.
+func parseLayered(data []byte) (*WorkspaceConfig, error) {
 	if len(strings.TrimSpace(string(data))) == 0 {
 		return nil, fmt.Errorf("el archivo de configuración está vacío")
 	}
 
-	var cfg WorkspaceConfig
-	if err := yaml.Unmarshal(data, &cfg); err != nil {
+	var document yaml.Node
+	if err := yaml.Unmarshal(data, &document); err != nil {
 		return nil, fmt.Errorf("error al parsear axiom.yaml: %w", err)
+	}
+	var cfg WorkspaceConfig
+	// Un documento que solo contiene comentarios no tiene nodo que decodificar:
+	// equivale a una configuración vacía, como cuando se decodificaba directo.
+	if document.Kind != 0 {
+		if err := document.Decode(&cfg); err != nil {
+			return nil, fmt.Errorf("error al parsear axiom.yaml: %w", err)
+		}
 	}
 
 	// Validaciones estructurales elementales
