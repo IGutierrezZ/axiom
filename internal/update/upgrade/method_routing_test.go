@@ -26,7 +26,7 @@ func TestEffectiveMethodSelfToolRouting(t *testing.T) {
 		Name:         "gentle-ai",
 		Owner:        "Gentleman-Programming",
 		Repo:         "gentle-ai",
-		GoImportPath: "github.com/IGutierrezZ/axiom/v3/cmd/gentle-ai",
+		GoImportPath: "github.com/IGutierrezZ/axiom/v3/cmd/axiom",
 		GoModulePath: "github.com/IGutierrezZ/axiom/v3",
 	}
 

@@ -8,7 +8,7 @@ Axiom exposes a CLI and TUI. It configures MCP for agents. It does not expose a 
 
 | Interface | Status in this repo | Primary files | Read for details |
 |---|---|---|---|
-| CLI | Implemented | `cmd/gentle-ai/main.go`, `internal/app/`, `internal/cli/` | [Usage](../usage.md) |
+| CLI | Implemented | `cmd/axiom/main.go`, `internal/app/`, `internal/cli/` | [Usage](../usage.md) |
 | TUI | Implemented | `internal/tui/model.go`, `internal/tui/router.go`, `internal/tui/screens/` | [Usage](../usage.md) |
 | MCP | Configured, not hosted by Axiom | `internal/components/engram/`, `internal/components/mcp/` | [Engram Commands](../engram.md) |
 | Local HTTP API | Not present in this source tree | No dashboard/server package found | Use external Engram docs if needed |

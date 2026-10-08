@@ -59,15 +59,15 @@ El sistema NO DEBE modificar el namespace de protocolo bajo `contracts/**`: los 
 
 ---
 
-### Requirement: Pasarela gentle-ai y shim de crosslane conservados (REQ-20.11)
+### Requirement: Binario gentle-ai retirado y shim de crosslane conservado (REQ-20.11)
 
-El sistema DEBE conservar `cmd/gentle-ai` como pasarela de deprecación hacia `axiom`, y DEBE conservar sin cambios de comportamiento el shim ejecutable `gentle-ai` en `$PATH` que generan `scripts/crosslane/battery.go` y `scripts/crosslane/host.go`.
+El sistema NO DEBE compilar ni publicar el binario `gentle-ai`: el paquete `cmd/gentle-ai` y el build `gentle-ai-deprecated` de `.goreleaser.yaml` se retiraron por decisión de producto (ODD `seguimientos-restos-upstream`). El sistema DEBE conservar sin cambios de comportamiento el shim ejecutable `gentle-ai` en `$PATH` que generan `scripts/crosslane/battery.go` y `scripts/crosslane/host.go`, que es un reconocedor del nombre heredado y no un producto.
 
-#### Scenario: cmd/gentle-ai emite su aviso de deprecación
-- **DADO** el binario compilado desde `cmd/gentle-ai`
-- **CUANDO** se invoca con cualquier argumento
-- **ENTONCES** emite el aviso de deprecación hacia `axiom` en la salida de error estándar
-- **Y** delega la ejecución al mismo comportamiento que `internal/app.RunArgs`
+#### Scenario: El release publica solo el binario canónico
+- **DADO** la configuración de release `.goreleaser.yaml`
+- **CUANDO** se resuelven sus builds
+- **ENTONCES** el único build es el que compila `./cmd/axiom` como `axiom`
+- **Y** ningún build, archivo ni compuerta de release referencia `cmd/gentle-ai` ni un binario `gentle-ai`
 
 ---
 

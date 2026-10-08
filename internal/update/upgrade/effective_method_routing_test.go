@@ -36,14 +36,14 @@ func TestEffectiveMethodWindowsPrecedenceIsUnchanged(t *testing.T) {
 		},
 		{
 			name:          "brew-owned package wins over go-install on Windows",
-			tool:          update.ToolInfo{Name: "gentle-ai", InstallMethod: update.InstallBinary, GoImportPath: "github.com/IGutierrezZ/axiom/v3/cmd/gentle-ai"},
+			tool:          update.ToolInfo{Name: "gentle-ai", InstallMethod: update.InstallBinary, GoImportPath: "github.com/IGutierrezZ/axiom/v3/cmd/axiom"},
 			profile:       system.PlatformProfile{OS: "windows", PackageManager: "brew", GoAvailable: true},
 			brewInstalled: true,
 			want:          update.InstallBrew,
 		},
 		{
 			name:    "no Go on Windows routes to source build",
-			tool:    update.ToolInfo{Name: "gentle-ai", InstallMethod: update.InstallBinary, GoImportPath: "github.com/IGutierrezZ/axiom/v3/cmd/gentle-ai"},
+			tool:    update.ToolInfo{Name: "gentle-ai", InstallMethod: update.InstallBinary, GoImportPath: "github.com/IGutierrezZ/axiom/v3/cmd/axiom"},
 			profile: system.PlatformProfile{OS: "windows", PackageManager: "winget", GoAvailable: false},
 			want:    update.InstallSourceBuild,
 		},
@@ -68,7 +68,7 @@ func TestEffectiveMethodWindowsPrecedenceIsUnchanged(t *testing.T) {
 // gentleAIImportPath is the module path gentle-ai publishes its command under.
 // It is asserted against the registry below so the tests and the shipped
 // declaration cannot drift apart.
-const gentleAIImportPath = "github.com/IGutierrezZ/axiom/v3/cmd/gentle-ai"
+const gentleAIImportPath = "github.com/IGutierrezZ/axiom/v3/cmd/axiom"
 
 // registryGentleAI returns the shipped gentle-ai registry entry. Routing tests
 // use the real declaration rather than a hand-built ToolInfo so a regression in
@@ -445,7 +445,7 @@ func TestGentleAIWindowsWithoutGoNamesRunnableSourceInstall(t *testing.T) {
 			Owner:         "Gentleman-Programming",
 			Repo:          "gentle-ai",
 			InstallMethod: update.InstallBinary,
-			GoImportPath:  "github.com/IGutierrezZ/axiom/v3/cmd/gentle-ai",
+			GoImportPath:  "github.com/IGutierrezZ/axiom/v3/cmd/axiom",
 			GoModulePath:  "github.com/IGutierrezZ/axiom/v3",
 		},
 		LatestVersion: "2.2.0",
@@ -462,7 +462,7 @@ func TestGentleAIWindowsWithoutGoNamesRunnableSourceInstall(t *testing.T) {
 		t.Fatalf("executeOne = %#v, want a non-error skip", result)
 	}
 	for _, required := range []string{
-		"go install github.com/IGutierrezZ/axiom/v3/cmd/gentle-ai@latest",
+		"go install github.com/IGutierrezZ/axiom/v3/cmd/axiom@latest",
 	} {
 		if !strings.Contains(result.ManualHint, required) {
 			t.Errorf("manual hint is missing %q: %s", required, result.ManualHint)

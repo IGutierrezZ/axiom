@@ -102,9 +102,8 @@ that has read the implementation recovers using knowledge a real user does not
 have, so the run comes out clean for the wrong reason. The whole point is
 measuring whether the tool explains itself.
 
-`record` writes a directory containing an executable named `gentle-ai` (the
-shim keeps that historical name; it delegates to the `axiom` binary) and
-prints the one line that puts it first on `PATH`. The shim logs every
+`record` writes a directory containing an executable named `axiom` (it
+delegates to the real `axiom` binary under test) and prints the one line that puts it first on `PATH`. The shim logs every
 invocation and delegates to the real binary, preserving argv, stdin, stdout,
 stderr and the exit code. Because it intercepts at the process boundary, it
 works with any agent or harness.

@@ -25,7 +25,7 @@ This appendix maps main docs and source files to responsibilities. Use it to mak
 
 | Source path | Responsibility |
 |---|---|
-| `cmd/gentle-ai/main.go` | Binary entrypoint and version handoff. |
+| `cmd/axiom/main.go` | Binary entrypoint and version handoff. |
 | `internal/app/` | Command dispatch, help, app-level version/update routing. |
 | `internal/cli/run.go` | Install flow orchestration. |
 | `internal/cli/sync.go` | Managed config sync flow and SDD profile flags. |

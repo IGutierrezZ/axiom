@@ -76,7 +76,10 @@ El binario `axiom` DEBE soportar nativamente los subcomandos de gestión de herr
 
 Pasarela de compatibilidad y transición no disruptiva para usuarios y scripts existentes.
 
-### Requirement: Pasarela de compatibilidad y deprecación de gentle-ai (REQ-14.4)
+### Requirement: Pasarela de compatibilidad y deprecación de gentle-ai (REQ-14.4) — RETIRADO
+
+> **Retirado:** el binario `gentle-ai` y el paquete `cmd/gentle-ai` ya no se compilan ni se publican (ODD `seguimientos-restos-upstream`; véase REQ-20.11 de `axiom-distribution-identity`). Se conserva el identificador REQ-14.4 y el texto original solo por trazabilidad; el requisito no vincula.
+
 El binario `gentle-ai` DEBE actuar como un envoltorio ligero que emite una advertencia de deprecación en `stderr` recomendando migrar al comando `axiom`, mientras delega fielmente la ejecución con todos los argumentos al motor unificado.
 
 #### Scenario: Advertencia informativa de deprecación al invocar gentle-ai

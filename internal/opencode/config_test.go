@@ -394,3 +394,31 @@ func writeOpenCodeConfigFixture(t *testing.T, path string, managed bool) {
 		t.Fatalf("write config fixture: %v", err)
 	}
 }
+
+// TestManagedConfigPriorityRecognizesBothManagedByMarkers pins that the writer's
+// current ownership marker (axiom/sdd) and the one older installs carry
+// (gentle-ai/sdd) both rank as explicit ownership proof, so a config written
+// before the marker rename is still recognized and migrated by sync.
+func TestManagedConfigPriorityRecognizesBothManagedByMarkers(t *testing.T) {
+	tests := []struct {
+		name   string
+		marker string
+		want   int
+	}{
+		{name: "current marker", marker: "axiom/sdd", want: 2},
+		{name: "legacy marker from older installs", marker: "gentle-ai/sdd", want: 2},
+		{name: "foreign marker is not proof of ownership", marker: "someone-else/sdd", want: 0},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "opencode.json")
+			content := `{"agent":{"custom":{"mode":"primary","__managed_by":"` + tt.marker + `"}}}`
+			if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
+				t.Fatalf("write fixture: %v", err)
+			}
+			if got := managedConfigPriority(path); got != tt.want {
+				t.Fatalf("managedConfigPriority() = %d, want %d", got, tt.want)
+			}
+		})
+	}
+}

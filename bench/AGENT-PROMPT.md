@@ -57,24 +57,24 @@ reading the code destroys the measurement and makes the report worthless.
 
 It prints a shim directory. Your shell probably does NOT keep variables between
 commands, so exporting the PATH once is not enough. Prefix ALL commands like
-this (the recording shim is still named `gentle-ai`; it delegates to the `axiom`
-binary you are measuring):
+this (the recording shim is named `axiom`; it delegates to the `axiom` binary
+you are measuring):
 
-  CI=1 PATH=/tmp/session-guide.jsonl.shim:$PATH gentle-ai <whatever>
+  CI=1 PATH=/tmp/session-guide.jsonl.shim:$PATH axiom <whatever>
 
 `CI=1` is mandatory: without it, when the tool asks whether you want to review,
 your shell hangs waiting for an answer nobody is going to give.
 
 Verify the shim before continuing:
 
-  PATH=/tmp/session-guide.jsonl.shim:$PATH which gentle-ai
+  PATH=/tmp/session-guide.jsonl.shim:$PATH which axiom
 
 It has to return the shim's path. If it returns another one, stop and say so:
 with no shim there is no measurement.
 
 Also write down the exact version under test:
 
-  CI=1 PATH=/tmp/session-guide.jsonl.shim:$PATH gentle-ai --version
+  CI=1 PATH=/tmp/session-guide.jsonl.shim:$PATH axiom --version
 
 Expected while recording: `doctor` may report a second copy of the binary on
 PATH and recommend removing one. That is the shim, it is correct that doctor
@@ -93,8 +93,8 @@ Two measurement traps that ruined earlier reports:
 
 - **Do not use pipes to capture output if you are going to look at the exit
   code.** In bash, `$?` gives you the status of the LAST command in the
-  pipeline. `gentle-ai ... | tee log` always gives 0 even if the binary failed.
-  Use redirection to a file: `gentle-ai ... > out.txt 2> err.txt` and then
+  pipeline. `axiom ... | tee log` always gives 0 even if the binary failed.
+  Use redirection to a file: `axiom ... > out.txt 2> err.txt` and then
   `echo $?`.
 - **The consent flow needs a real terminal.** If your environment does not have
   one, mark that flow N/A. If you want to try it: on Linux you can use `expect`

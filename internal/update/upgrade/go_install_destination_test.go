@@ -312,7 +312,7 @@ func TestBetaGoInstallMainUpgradeWarnsWhenDestinationDiffers(t *testing.T) {
 			Owner:         "Gentleman-Programming",
 			Repo:          "gentle-ai",
 			InstallMethod: update.InstallBinary,
-			GoImportPath:  "github.com/IGutierrezZ/axiom/v3/cmd/gentle-ai",
+			GoImportPath:  "github.com/IGutierrezZ/axiom/v3/cmd/axiom",
 			GoModulePath:  "github.com/IGutierrezZ/axiom/v3",
 		},
 		LatestVersion: "main@abc1234",

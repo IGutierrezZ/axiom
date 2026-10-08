@@ -23,9 +23,8 @@ const canonicalBinaryPath = "./cmd/axiom"
 
 // deprecatedShimPath is named so this guard family can reject its
 // reappearance as a BUILD TARGET, not so production code invokes it.
-// cmd/gentle-ai/main.go itself stays as the deprecation pass-through into
-// app.RunArgs that D2.4 requires; only its use as a build target elsewhere
-// is disallowed.
+// The cmd/gentle-ai package was retired for good: it is neither built nor
+// published, and its use as a build target is disallowed.
 const deprecatedShimPath = "./cmd/gentle-ai"
 
 // repositoryRoot resolves the repository root from cmd/axiom, where every
@@ -269,8 +268,9 @@ type goreleaserConfig struct {
 // publishes a build whose main package is canonicalBinaryPath under the
 // "axiom" binary name [D-04, D-08]. Phase F0.a and F0.b ran this guard
 // before it existed; this phase (F0.c1) adds it RED (only
-// main: ./cmd/gentle-ai published) and turns it GREEN by splitting
-// .goreleaser.yaml's single build into the two D2.4 requires.
+// main: ./cmd/gentle-ai published) and turned it GREEN by splitting
+// .goreleaser.yaml's single build. The retired ./cmd/gentle-ai build has since
+// been removed, leaving the canonical build as the only one.
 func TestReleaseArtifactBuildsCanonicalBinary(t *testing.T) {
 	repoRoot := repositoryRoot(t)
 	path := filepath.Join(repoRoot, ".goreleaser.yaml")
@@ -285,19 +285,24 @@ func TestReleaseArtifactBuildsCanonicalBinary(t *testing.T) {
 		t.Fatalf("parse %s: %v", path, err)
 	}
 
+	published := false
 	for _, build := range config.Builds {
+		if build.Main == deprecatedShimPath {
+			t.Errorf("%s: builds[] entry %q publishes the retired %s", path, build.ID, deprecatedShimPath)
+		}
 		if build.Main == canonicalBinaryPath && build.Binary == "axiom" {
-			return
+			published = true
 		}
 	}
-	t.Errorf("%s: no builds[] entry publishes main: %s with binary: axiom", path, canonicalBinaryPath)
+	if !published {
+		t.Errorf("%s: no builds[] entry publishes main: %s with binary: axiom", path, canonicalBinaryPath)
+	}
 }
 
 // buildTargetException documents why one specific workflow file is allowed
 // to keep naming deprecatedShimPath as a build target. The exceptions list
-// TestWorkflowsBuildCanonicalBinary consults is empty for this phase: F0.c1's
-// audit found no legitimate site that still needs to build the deprecated
-// shim as its own target.
+// TestWorkflowsBuildCanonicalBinary consults is empty: no legitimate site
+// builds the retired package, which no longer exists.
 type buildTargetException struct {
 	File   string // repository-relative path, forward slashes
 	Reason string // why the shim is correct here; never empty
@@ -310,9 +315,8 @@ var workflowBuildTargetExceptions = []buildTargetException{}
 // TestWorkflowsBuildCanonicalBinary rejects any non-comment line under
 // .github/workflows/*.yml that names deprecatedShimPath, unless its file is
 // listed in workflowBuildTargetExceptions with a written reason [D-04].
-// Comment lines that merely explain why the shim is wrong here (for example
-// ci.yml's "Build the canonical binary, not ./cmd/gentle-ai" notes above the
-// job's own ./cmd/axiom builds) are not build targets and are excluded, so
+// Comment lines that merely mention the retired package (for example
+// ci.yml's notes above the job's own ./cmd/axiom builds) are not build targets and are excluded, so
 // this guard does not force an exception entry for explanatory prose.
 func TestWorkflowsBuildCanonicalBinary(t *testing.T) {
 	repoRoot := repositoryRoot(t)
@@ -432,7 +436,7 @@ func TestAppDispatchIsSubsetOfCanonicalDispatch(t *testing.T) {
 
 	for verb := range appVerbs {
 		if _, ok := axiomVerbs[verb]; !ok {
-			t.Errorf("verb %q is reachable through the deprecated cmd/gentle-ai shim (internal/app.RunArgs) but not through the canonical cmd/axiom binary", verb)
+			t.Errorf("verb %q is reachable through internal/app.RunArgs but not through the canonical cmd/axiom binary", verb)
 		}
 	}
 }
@@ -440,7 +444,7 @@ func TestAppDispatchIsSubsetOfCanonicalDispatch(t *testing.T) {
 // TestDeadcodeRatchetTargetsCanonicalBinary fixes
 // scripts/deadcode-ratchet.sh's default DEADCODE_TARGET so the dead-code
 // ratchet measures reachability from the canonical binary, not the
-// deprecated shim [D-04].
+// retired gentle-ai package [D-04].
 //
 // Characterization test (task 3.6): the target was already corrected to
 // ./cmd/axiom before this increment started (scripts/deadcode-ratchet.sh:41),

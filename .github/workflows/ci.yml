@@ -90,13 +90,12 @@ jobs:
 
       - name: Run benchmark evidence
         run: |
-          # Build the canonical binary, not ./cmd/gentle-ai. That one is a
-          # deprecation shim that writes a notice to stderr on every
-          # invocation, and the journeys read the product's own output:
-          # j122 parsed the notice's first letter as JSON ("invalid character
-          # 'A'"), and the TUI journeys captured it ahead of the menu they
-          # wait for. The file keeps the retired name because the corpus
-          # resolves the product by that name.
+          # Build the canonical binary. The retired ./cmd/gentle-ai package
+          # wrote a notice to stderr on every invocation, and the journeys
+          # read the product's own output: j122 parsed the notice's first
+          # letter as JSON ("invalid character 'A'"), and the TUI journeys
+          # captured it ahead of the menu they wait for. The file keeps the
+          # legacy name because the corpus resolves the product by that name.
           go build -trimpath -o "$RUNNER_TEMP/gentle-ai" ./cmd/axiom
           "$RUNNER_TEMP/gentle-ai-bench" run --binary "$RUNNER_TEMP/gentle-ai" --out "$RUNNER_TEMP/bench-portable.json"
           jq -e '
@@ -157,8 +156,7 @@ jobs:
               | ($matches | length == 1) and ($matches[0].status == "unsupported");
             unsupported_once("j97-opencode-custom-agent-model-picker-runtime")
           ' "$RUNNER_TEMP/bench-model-picker-untagged.json"
-          # Canonical package, same reason as the build above: ./cmd/gentle-ai
-          # is the deprecation shim and its stderr notice reaches the journeys.
+          # Canonical package, same as the build above.
           go build -tags bench_fixture -trimpath -o "$RUNNER_TEMP/gentle-ai-bench-fixture" ./cmd/axiom
           "$RUNNER_TEMP/gentle-ai-bench" run --binary "$RUNNER_TEMP/gentle-ai-bench-fixture" --axis model-picker --only j97-opencode-custom-agent-model-picker-runtime --out "$RUNNER_TEMP/bench-model-picker.json"
           jq -e '
@@ -209,7 +207,10 @@ jobs:
         run: |
           go build -trimpath -o "$RUNNER_TEMP/axiom-canonical-smoke" ./cmd/axiom
           bin="$RUNNER_TEMP/axiom-canonical-smoke"
-          notice="'gentle-ai' está deprecado"
+          # The retired gentle-ai entrypoint announced itself on stderr. The
+          # canonical binary must never emit a retired/deprecated notice for the
+          # old name, whatever its exact wording.
+          notice_re="gentle-ai.*(retirad[oa]|deprecad[oa]|obsolet[oa]|deprecated|retired)|(retirad[oa]|deprecad[oa]|obsolet[oa]|deprecated|retired).*gentle-ai"
           dirty_before="$(git status --porcelain)"
 
           smoke() {
@@ -225,8 +226,8 @@ jobs:
               rm -f "$err_file"
               exit 1
             fi
-            if grep -qF "$notice" "$err_file"; then
-              echo "FAIL: axiom $label emitted the cmd/gentle-ai deprecation notice on stderr" >&2
+            if grep -qiE "$notice_re" "$err_file"; then
+              echo "FAIL: axiom $label emitted a retired/deprecated gentle-ai notice on stderr" >&2
               cat "$err_file" >&2
               rm -f "$err_file"
               exit 1
@@ -363,10 +364,9 @@ jobs:
           go test -v ./internal/reviewtransaction -count=1 -run $selector
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-      # Canonical package, same reason as the "Run benchmark evidence" step:
-      # ./cmd/gentle-ai is the deprecation shim, and these release-blocker
-      # tests read the product's own behavior. The output keeps the retired
-      # "gentle-ai.exe" name: nothing downstream (GENTLE_AI_TEST_BINARY below,
+      # Canonical package, same as the "Run benchmark evidence" step: these
+      # release-blocker tests read the product's own behavior. The output keeps
+      # the legacy "gentle-ai.exe" name: nothing downstream (GENTLE_AI_TEST_BINARY below,
       # the Defender exclusion above) needs it renamed, and this repository's
       # own precedent for this exact kind of switch (ci.yml's benchmark
       # steps) is to keep the artifact name and change only the build target.

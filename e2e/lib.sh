@@ -41,29 +41,29 @@ log_info()  { printf "${BLUE}[INFO]${NC}  %s\n" "$1"; }
 # ---------------------------------------------------------------------------
 # Binary resolution
 # ---------------------------------------------------------------------------
-# The binary should be built and placed at /usr/local/bin/gentle-ai inside
-# the Docker container. If not found, fall back to $HOME/gentle-ai or the
+# The binary should be built and placed at /usr/local/bin/axiom inside
+# the Docker container. If not found, fall back to $HOME/axiom or the
 # current directory.
 # Resolution priority (highest → lowest):
-#   1. ./gentle-ai in the current repo directory (freshly built local binary)
-#   2. ~/gentle-ai (explicit copy in home)
-#   3. gentle-ai on PATH (system-installed, e.g. Homebrew)
-# This ensures `go build ./cmd/gentle-ai && bash e2e/e2e_test.sh` always
+#   1. ./axiom in the current repo directory (freshly built local binary)
+#   2. ~/axiom (explicit copy in home)
+#   3. axiom on PATH (system-installed, e.g. Homebrew)
+# This ensures `go build ./cmd/axiom && bash e2e/e2e_test.sh` always
 # tests the locally built binary rather than the installed release version.
 resolve_binary() {
-    # Prefer the locally built binary (./gentle-ai) produced by `go build ./cmd/gentle-ai`.
+    # Prefer the locally built binary (./axiom) produced by `go build ./cmd/axiom`.
     # We check both the current directory and the script's parent directory so
     # the resolver works whether the test is invoked from the repo root or from e2e/.
     local repo_root
     repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-    if [ -x "$repo_root/gentle-ai" ]; then
-        echo "$repo_root/gentle-ai"
-    elif [ -x "./gentle-ai" ]; then
-        echo "./gentle-ai"
-    elif [ -x "$HOME/gentle-ai" ]; then
-        echo "$HOME/gentle-ai"
-    elif command -v gentle-ai >/dev/null 2>&1; then
-        echo "gentle-ai"
+    if [ -x "$repo_root/axiom" ]; then
+        echo "$repo_root/axiom"
+    elif [ -x "./axiom" ]; then
+        echo "./axiom"
+    elif [ -x "$HOME/axiom" ]; then
+        echo "$HOME/axiom"
+    elif command -v axiom >/dev/null 2>&1; then
+        echo "axiom"
     else
         echo ""
     fi

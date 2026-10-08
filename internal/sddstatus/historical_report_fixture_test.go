@@ -16,7 +16,7 @@ func testVerifyEnvelope(verdict string, blockers, critical int, requirements, sc
 		"test_command: go test ./internal/example",
 		"test_exit_code: " + itoa(testExit),
 		"test_output_hash: sha256:" + strings.Repeat("b", 64),
-		"build_command: go test ./cmd/gentle-ai",
+		"build_command: go test ./cmd/axiom",
 		"build_exit_code: " + itoa(buildExit),
 		"build_output_hash: sha256:" + strings.Repeat("c", 64),
 		"```",

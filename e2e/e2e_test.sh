@@ -22,7 +22,7 @@ source "$SCRIPT_DIR/lib.sh"
 # ---------------------------------------------------------------------------
 BINARY="$(resolve_binary)"
 if [ -z "$BINARY" ]; then
-    echo "ERROR: gentle-ai binary not found. Build it first."
+    echo "ERROR: axiom binary not found. Build it first."
     exit 1
 fi
 log_info "Using binary: $BINARY"
@@ -69,7 +69,7 @@ test_version_command() {
 
     output=$($BINARY version 2>&1) || true
 
-    if echo "$output" | grep -q "gentle-ai"; then
+    if echo "$output" | grep -q "axiom"; then
         log_pass "Version command returns binary name"
     else
         log_fail "Version command failed: $output"

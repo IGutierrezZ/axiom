@@ -20,7 +20,7 @@ var upstreamSourceTool = ToolInfo{
 	Name:         "gentle-ai",
 	Owner:        "Gentleman-Programming",
 	Repo:         "gentle-ai",
-	GoImportPath: "github.com/IGutierrezZ/axiom/v3/cmd/gentle-ai",
+	GoImportPath: "github.com/IGutierrezZ/axiom/v3/cmd/axiom",
 	GoModulePath: "github.com/IGutierrezZ/axiom/v3",
 }
 
@@ -35,25 +35,25 @@ func TestSourceInstallCommand(t *testing.T) {
 			name:    "resolvable exact release emits go install at tag",
 			tool:    upstreamSourceTool,
 			version: "2.2.0",
-			want:    "go install github.com/IGutierrezZ/axiom/v3/cmd/gentle-ai@v2.2.0",
+			want:    "go install github.com/IGutierrezZ/axiom/v3/cmd/axiom@v2.2.0",
 		},
 		{
 			name:    "resolvable already-prefixed version emits go install at tag",
 			tool:    upstreamSourceTool,
 			version: "v2.2.0",
-			want:    "go install github.com/IGutierrezZ/axiom/v3/cmd/gentle-ai@v2.2.0",
+			want:    "go install github.com/IGutierrezZ/axiom/v3/cmd/axiom@v2.2.0",
 		},
 		{
 			name:    "resolvable beta main target emits go install at main",
 			tool:    upstreamSourceTool,
 			version: "main@972997650b51",
-			want:    "go install github.com/IGutierrezZ/axiom/v3/cmd/gentle-ai@main",
+			want:    "go install github.com/IGutierrezZ/axiom/v3/cmd/axiom@main",
 		},
 		{
 			name:    "resolvable empty version emits go install at latest",
 			tool:    upstreamSourceTool,
 			version: "",
-			want:    "go install github.com/IGutierrezZ/axiom/v3/cmd/gentle-ai@latest",
+			want:    "go install github.com/IGutierrezZ/axiom/v3/cmd/axiom@latest",
 		},
 		{
 			name:    "fork module discrepancy emits clone and build at tag",

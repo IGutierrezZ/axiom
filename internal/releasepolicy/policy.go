@@ -309,13 +309,12 @@ func validateArtifacts(root string, payload []byte, markerTime time.Time, contra
 	if err := requireJSONEOF(decoder); err != nil {
 		return err
 	}
-	// Eight binaries, not four, and no Homebrew formula. Both differences are
-	// this fork's distribution, not drift: D-08 keeps publishing `gentle-ai`
-	// alongside the product's own binary as the deprecation alias that
-	// crosslane's shim depends on, and the upstream tap was withdrawn because
-	// this fork does not own it. Measured against a real snapshot, never
-	// inferred from the configuration.
-	expectedCounts := map[string]int{"Metadata": 1, "Binary": 8, "Archive": 6, "Checksum": 1}
+	// Four binaries (the canonical axiom build for each target) and no
+	// Homebrew formula. The upstream tap was withdrawn because this fork does
+	// not own it, and the retired gentle-ai binary is no longer built nor
+	// published. Measured against a real snapshot, never inferred from the
+	// configuration.
+	expectedCounts := map[string]int{"Metadata": 1, "Binary": 4, "Archive": 6, "Checksum": 1}
 	byType := make(map[string][]artifact)
 	counts := make(map[string]int)
 	paths := make(map[string]struct{})
@@ -340,15 +339,11 @@ func validateArtifacts(root string, payload []byte, markerTime time.Time, contra
 		"darwin/amd64": "darwin_amd64_v1",
 		"darwin/arm64": "darwin_arm64_v8.0",
 	}
-	// The matrix is every target times both build IDs. Keying the seen-set on
-	// the platform alone would have reported a repeat for what is a second
-	// legitimate build, so the key carries the ID.
-	//
-	// The path prefix is the build ID, not the binary name. They differ for
-	// the deprecated build -- dist/gentle-ai-deprecated_<target>/gentle-ai --
-	// and a check written against the name would assert a path this
-	// configuration never emits, passing only by never running.
-	expectedBuilds := map[string]string{"axiom": "axiom", "gentle-ai-deprecated": "gentle-ai"}
+	// The matrix is every target of the single canonical build. The seen-set
+	// is keyed on build ID and platform so a repeated target is still reported
+	// as a repeat. The path prefix is the build ID, not the binary name, and
+	// the two happen to coincide for the canonical build.
+	expectedBuilds := map[string]string{"axiom": "axiom"}
 	seenBinaries := make(map[string]struct{})
 	for _, item := range byType["Binary"] {
 		platform := item.GOOS + "/" + item.GOARCH
@@ -411,13 +406,14 @@ func validateArtifacts(root string, payload []byte, markerTime time.Time, contra
 		} else if version != snapshotVersion {
 			return errors.New("resolved archives do not share one snapshot version")
 		}
-		// The default archive carries no ids filter, so it packages both
-		// builds. Sorted before comparing: GoReleaser's own order is an
-		// implementation detail, and pinning it would make this gate fail on a
-		// change that ships exactly the same bytes.
+		// The default archive carries no ids filter, so it packages every
+		// build, which is only the canonical axiom binary. Sorted before
+		// comparing: GoReleaser's own order is an implementation detail, and
+		// pinning it would make this gate fail on a change that ships exactly
+		// the same bytes.
 		archived := append([]string{}, extraStrings(item.Extra, "Binaries")...)
 		sort.Strings(archived)
-		if item.Path != "dist/"+item.Name || extraString(item.Extra, "Format") != "tar.gz" || extraString(item.Extra, "ID") != "default" || !reflect.DeepEqual(archived, []string{"axiom", "gentle-ai"}) {
+		if item.Path != "dist/"+item.Name || extraString(item.Extra, "Format") != "tar.gz" || extraString(item.Extra, "ID") != "default" || !reflect.DeepEqual(archived, []string{"axiom"}) {
 			return fmt.Errorf("resolved archive identity changed at %s", platform)
 		}
 		if _, exists := seenArchives[platform]; exists {
@@ -579,24 +575,6 @@ builds:
   - id: axiom
     main: ./cmd/axiom
     binary: axiom
-    env:
-      - CGO_ENABLED=0
-    goos:
-      - linux
-      - darwin
-    goarch:
-      - amd64
-      - arm64
-    flags:
-      - -trimpath
-    ldflags:
-      - >-
-        -s -w
-        -X main.version={{ .Version }}
-        -X github.com/IGutierrezZ/axiom/v3/internal/update/upgrade.releaseMinisignPublicKeys={{ .Env.MINISIGN_PUBLIC_KEYS_CANONICAL }}
-  - id: gentle-ai-deprecated
-    main: ./cmd/gentle-ai
-    binary: gentle-ai
     env:
       - CGO_ENABLED=0
     goos:
