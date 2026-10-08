@@ -209,6 +209,14 @@ Previsión total: ~1.500-1.900 líneas en 5 PRs más el de cierre.
   - **`main` falla igual desde `935aebb1`** (#104, junto con #105 y #106), así que no es un fallo de #107. Algo sigue escribiendo en el sandbox cuando `sync` ya ha devuelto el control.
   - **Hotfix H1** en curso: worktree `odd-seg-fix`, rama `test/documented-invocations-tempdir`. Reproducción en WSL y causa raíz antes de tocar nada.
   - Después: relanzar el CI de #107 y fusionarlo.
+- **2026-10-08, H1 (test intermitente):**
+  - **Sin causa encontrada:** el writer no lo reproduce en WSL (`count` alto, en paralelo, con CPU limitada y carga de E/S) y no quedan goroutines, procesos ni escrituras tardías tras `RunArgs`.
+  - **Patrón en CI:** fallan siempre 2 subtests `sync_*` sin agentes, y algo crea entradas directamente en `<TempDir>/001` durante el borrado.
+  - **#107:** el rerun volvió a fallar en el mismo test. No se fusiona hasta resolverlo.
+  - **Decisión del usuario:** PR de diagnóstico. **PR #109 (borrador)** con `021b54df`, solo en el test:
+    - sandbox con `os.MkdirTemp` y limpieza propia;
+    - si `RemoveAll` falla, el test sigue fallando e informa del árbol restante con mtime, de los procesos con cwd o fd dentro, de las goroutines y de las invocaciones actual y previa.
+  - Su CI se relanza hasta capturar el fallo; el arreglo irá en ese mismo PR.
 
 ## 9. Siguiente paso
 
