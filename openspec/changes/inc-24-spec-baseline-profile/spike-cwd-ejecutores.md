@@ -1,8 +1,8 @@
 # Spike R17: directorio de trabajo de los ejecutores de fase (inc-24)
 
 > Tarea 1.32 de `tasks.md` · riesgo R17 (design §10) · decisión 8 de design §13.
-> Fecha: 2026-10-08. Entorno: Windows 11, Git Bash. Solo se registran observaciones; nada se infiere ni se completa con lo que «debería» ocurrir.
-> **Estado: parcial.** OpenCode se ejecutó. Claude Code no se pudo ejecutar en la sesión headless que pide el escenario (ver «Qué faltó»). La tarea 1.32 queda sin marcar.
+> Fecha: 2026-10-08 (OpenCode y primer intento de Claude Code) y 2026-10-09 (Claude Code tras renovar el login). Entorno: Windows 11, Git Bash. Solo se registran observaciones; nada se infiere ni se completa con lo que «debería» ocurrir.
+> **Estado: completo.** OpenCode 1.18.27 y Claude Code 2.1.283 se ejecutaron en una sesión headless abierta en el repositorio de código.
 
 ## Escenario
 
@@ -50,42 +50,46 @@ Conclusión para OpenCode: el `cd` de una llamada **no** persiste en la siguient
 
 ## Claude Code 2.1.283
 
-### Qué se pudo observar
+### Primer intento (2026-10-08): sin autenticación
 
-Se hizo en la sesión que ejecuta este lote, que es un sub-agente de Claude Code (el tipo de ejecutor que lanzan las fases SDD), con el directorio de trabajo del proyecto `C:\repos\axiom`. No es el escenario pedido (sesión abierta en un repositorio de código de un espacio canónico).
+`claude -p` salió con código 1 sin ejecutar ninguna herramienta: `Failed to authenticate: OAuth session expired and could not be refreshed` (`apiKeySource: none`, `terminal_reason: api_error`). No se probó ninguna otra vía de autenticación. En ese momento solo se observó, en el sub-agente que ejecutaba el lote (directorio del proyecto `C:\repos\axiom`), que un `cd` de una llamada no persiste en la siguiente (`pwd` → `/c/repos/axiom`; `cd /c/repos/axiom/internal && pwd` → `/c/repos/axiom/internal`; otra llamada `pwd` → `/c/repos/axiom`).
 
-| Llamada de shell | Salida |
-|---|---|
-| `pwd` | `/c/repos/axiom` |
-| `cd /c/repos/axiom/internal && pwd` | `/c/repos/axiom/internal` |
-| `pwd` (otra llamada) | `/c/repos/axiom` |
+### Segundo intento (2026-10-09): login renovado
 
-Conclusión parcial: en un sub-agente de Claude Code el `cd` de una llamada tampoco persiste en la siguiente. Coincide con lo que declara el propio entorno del sub-agente («el directorio de trabajo se restablece entre llamadas de shell»).
+Comprobación previa de autenticación, sin herramientas (`--disallowedTools Bash Read Edit Write`): respuesta `OK`, `is_error: false`, `terminal_reason: completed`.
 
-### Qué faltó
-
-El experimento de siete pasos en una sesión de Claude Code abierta en `repo-backend` no se pudo ejecutar. Comando intentado:
+Comando del escenario (directorio de partida `repo-backend`; se concede la herramienta de shell y la de lectura con `--allowedTools`, sin ningún flag que omita aprobaciones; la salida de eventos se analizó desde `stream-json`):
 
 ```text
 claude -p "<mensaje de los siete pasos>" --model haiku --output-format stream-json --verbose --allowedTools Bash Read --no-session-persistence --strict-mcp-config --disable-slash-commands --setting-sources project --max-turns 20
 ```
 
-Resultado: el proceso salió con código 1 sin ejecutar ninguna herramienta, con `Failed to authenticate: OAuth session expired and could not be refreshed` (`apiKeySource: none`, `terminal_reason: api_error`). Un proceso `claude -p` lanzado desde otro proceso de Claude Code no dispone de una sesión de autenticación válida en este entorno. No se intentó ninguna otra vía de autenticación: no se probaron claves ni credenciales ambientales.
+Resultado observado, tomado de los eventos `tool_use` y `tool_result` (`permission_denials` vacío):
 
-Por tanto, para Claude Code **no están verificados**:
+| Paso | Herramienta | Resultado |
+|---|---|---|
+| 1 | Bash `pwd` | `<maestra>/repo-backend` |
+| 2 | Bash | El modelo sustituyó `cat` por `bat` (la configuración global del usuario lo prescribe) y falló con `command not found` (código 127); este paso no aporta evidencia y se repitió abajo con un comando literal |
+| 3 | Read con la ruta relativa | `File does not exist. Note: your current working directory is <maestra>/repo-backend`: la lectura resuelve la ruta contra el directorio de partida |
+| 4 | Bash `cd "<workspaceRoot>" && pwd && cat openspec/changes/inc-99-ejemplo/tasks.md` | **Ejecutada sin pedir aprobación ni rechazo**: `pwd` → `<maestra>/repo-specs` y el contenido de `tasks.md`. La salida termina con `Shell cwd was reset to <maestra>/repo-backend` |
+| 5 | Bash `pwd` (otra llamada) | `<maestra>/repo-backend` |
+| 6 | Bash `cd "<workspaceRoot>"` (otra llamada) | Sin salida de datos; el runtime añade `Shell cwd was reset to <maestra>/repo-backend` |
+| 7 | Bash `pwd` (otra llamada) | `<maestra>/repo-backend` |
 
-- (i) cómo resuelven una ruta relativa `openspec/...` la lectura y el shell de una sesión abierta en un repositorio de código;
-- (ii) si una sesión headless de Claude Code permite `cd "<workspaceRoot>" && …` hacia un directorio fuera del de la sesión y con qué permisos;
-- (iii) la persistencia del directorio en una sesión de nivel superior (solo se observó en un sub-agente).
+Repetición del paso 2 con un comando literal, una sola llamada de Bash: `test -f openspec/changes/inc-99-ejemplo/tasks.md; echo "exit=$?"; pwd` → `exit=1` y `<maestra>/repo-backend`: la ruta relativa no existe desde el repositorio de código.
 
-Para cerrar la tarea 1.32 hace falta repetir el escenario en una sesión de Claude Code con autenticación válida, abierta en `repo-backend`, con el mismo mensaje de siete pasos, y completar esta tabla.
+Conclusiones para Claude Code:
+
+- (i) Las rutas relativas `openspec/...` se resuelven contra el directorio de partida de la sesión, tanto en shell como en la herramienta de lectura, y no se encuentran desde un repositorio de código.
+- (ii) `cd "<workspaceRoot>" && …` hacia un directorio hermano, fuera del de la sesión, funciona en la misma llamada con la herramienta de shell concedida por `--allowedTools`. No hubo aprobación pendiente. Con otras reglas de permisos del usuario el resultado puede diferir; no se probaron.
+- (iii) El directorio no persiste entre llamadas: el propio runtime restablece el directorio de la sesión tras cada llamada y lo avisa (`Shell cwd was reset to …`).
 
 ## Conclusiones sobre la redacción de la sección G
 
-Lo que sí está respaldado por observación en los dos entornos ejecutables:
+Respaldado por observación en los dos runtimes ejecutados en una sesión abierta en un repositorio de código:
 
-1. **Las rutas relativas `openspec/...` se resuelven contra el directorio donde se abrió el ejecutor**, no contra `workspaceRoot`. Desde un repositorio de código no se encuentran (OpenCode, pasos 2 y 3).
-2. **El directorio de trabajo no persiste entre llamadas de shell** (OpenCode y sub-agente de Claude Code). La regla debe pedir el `cd "<workspaceRoot>" && …` en la misma llamada y nunca un `cd` previo.
-3. **Acceder a `workspaceRoot` desde un repositorio de código puede requerir un permiso del runtime** (OpenCode: `external_directory`). El texto de la sección G no puede asumir que el ejecutor llegará a `workspaceRoot` por sí solo.
+1. **Las rutas relativas `openspec/...` se resuelven contra el directorio donde se abrió el ejecutor**, no contra `workspaceRoot`. Desde un repositorio de código no se encuentran (OpenCode, pasos 2 y 3; Claude Code, pasos 2 repetido y 3).
+2. **El directorio de trabajo no persiste entre llamadas de shell** (OpenCode y Claude Code). La regla pide el `cd "<workspaceRoot>" && …` en la misma llamada y nunca un `cd` previo.
+3. **Acceder a `workspaceRoot` desde un repositorio de código depende del runtime**: Claude Code lo permitió con la herramienta de shell concedida, y OpenCode en modo no interactivo lo rechazó con `external_directory`. El texto de la sección G no puede asumir que el ejecutor llegará a `workspaceRoot` por sí solo.
 
-La redacción de la sección G (tarea 1.33) sigue la regla que fija REQ-24.11 y recoge los puntos 1 y 2, que son los que la observación respalda. El punto 3 queda registrado aquí como riesgo de R17 para quien abra los ejecutores en un repositorio de código; la sección G no lo trata.
+La sección G (tarea 1.33) sigue la regla de REQ-24.11 y recoge los puntos 1 y 2, que la observación respalda en ambos runtimes; por tanto no cambia tras el segundo intento. El punto 3 queda registrado aquí como riesgo de R17 para quien abra ejecutores en un repositorio de código; la sección G no lo trata porque depende de la configuración de permisos de cada runtime y no de la convención compartida.
