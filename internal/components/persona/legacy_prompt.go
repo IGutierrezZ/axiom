@@ -39,6 +39,19 @@ var managedPromptSectionIDs = map[string]struct{}{
 	agentguidance.RoutingSectionID:         {},
 }
 
+// installerFrontmatters are the only headers a legacy prompt file may start
+// with: the ones the persona installer writes (wrapInstructionsFile and
+// wrapSteeringFile) and the ones the SDD component writes when it creates the
+// file on its own (shared with its injector through filemerge). A file is
+// matched byte for byte against each, so an extra key, a changed value or any
+// whitespace difference leaves the header as content Axiom did not write.
+var installerFrontmatters = []string{
+	wrapInstructionsFile(""),
+	wrapSteeringFile(""),
+	filemerge.SDDInstructionsFrontmatter,
+	filemerge.SDDSteeringFrontmatter,
+}
+
 var managedSectionOpenMarker = regexp.MustCompile(`<!-- (axiom|gentle-ai):([A-Za-z0-9_.-]+) -->`)
 
 // RetireLegacyPromptFiles removes the prompt files an earlier release wrote
@@ -50,7 +63,7 @@ var managedSectionOpenMarker = regexp.MustCompile(`<!-- (axiom|gentle-ai):([A-Za
 //     managed section, so deleting the legacy copy cannot drop the prompt;
 //   - the legacy file holds at least one managed section, every marker section
 //     in it is one of managedPromptSectionIDs, and each is closed;
-//   - outside those sections and the installer's own frontmatter there is
+//   - outside those sections and the frontmatter of installerFrontmatters there is
 //     nothing, or exactly the persona text the installer generates.
 //
 // The content inside a managed section counts as Axiom-owned: sync rewrote it on
@@ -140,7 +153,7 @@ func normalizePrompt(content string) string {
 // content with no managed section at all is never installer-written.
 func legacyPromptProblem(adapter agents.Adapter, content string) string {
 	rest := normalizePrompt(content)
-	for _, frontmatter := range []string{wrapInstructionsFile(""), wrapSteeringFile("")} {
+	for _, frontmatter := range installerFrontmatters {
 		if strings.HasPrefix(rest, frontmatter) {
 			rest = strings.TrimPrefix(rest, frontmatter)
 			break
