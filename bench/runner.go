@@ -83,17 +83,11 @@ func newSandbox(binary, root string) (*Sandbox, error) {
 }
 
 // env is a closed environment: only what the product legitimately needs.
-// PATH is inherited because the product shells out to git.
+// PATH is a closed allow-list (see Sandbox.path), never the caller's PATH: the
+// product shells out to git, and nothing else on the host may be reachable.
 func (s *Sandbox) env() []string {
-	path := os.Getenv("PATH")
-	if s.policyRuntimeBin != "" {
-		path = s.policyRuntimeBin + string(os.PathListSeparator) + path
-	}
-	if s.PathOverride != "" {
-		path = s.PathOverride + string(os.PathListSeparator) + path
-	}
 	env := []string{
-		"PATH=" + path,
+		"PATH=" + s.path(),
 		"HOME=" + s.Home,
 		"USERPROFILE=" + s.Home,
 		"XDG_CONFIG_HOME=" + filepath.Join(s.Home, ".config"),
