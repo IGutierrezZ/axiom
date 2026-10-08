@@ -15,6 +15,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/kickoff"
 	"github.com/IGutierrezZ/axiom/v3/internal/pathquote"
 	"github.com/IGutierrezZ/axiom/v3/internal/system"
+	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
 // EnvSDDStatusEngramAxiom opts a workspace into the Engram artifact store;
@@ -453,11 +454,26 @@ func explorationOnlyChangeDir(changeRoot string) bool {
 // OpenSpec held nothing, so `sdd.artifact_store` could not change the outcome
 // whenever OpenSpec data existed. The enum, the config key, and the documented
 // "choose your store" vocabulary were decoration over a hardcoded order.
+//
+// The workspace is resolved once, here, with workspace.Locate (inc-24, D-01):
+// the resolved root is then handed down as an explicit WorkspaceRoot so no
+// later step resolves it a second time, and the location's non-blocking notes
+// are projected onto the status afterwards.
 func Resolve(options ResolveOptions) (Status, error) {
-	workspaceRoot, err := resolveWorkspaceRoot(options)
+	workspaceRoot, location, err := resolveWorkspaceLocation(options)
 	if err != nil {
 		return Status{}, err
 	}
+	options.WorkspaceRoot = workspaceRoot
+	status, err := resolveStatus(options, workspaceRoot)
+	if err != nil {
+		return status, err
+	}
+	decorateWorkspaceDeclarations(&status, location)
+	return status, nil
+}
+
+func resolveStatus(options ResolveOptions, workspaceRoot string) (Status, error) {
 	declared, declaredOK := declaredArtifactStore(workspaceRoot)
 
 	if declaredOK && declared == ArtifactStoreEngram {
@@ -1171,14 +1187,47 @@ func RenderNativePhasePrompt(status Status, phase Phase) string {
 	return strings.Join(lines, "\n")
 }
 
+// resolveWorkspaceRoot returns the workspace root: an explicit
+// ResolveOptions.WorkspaceRoot keeps its previous behaviour (validated, never
+// searched), and a CWD is resolved with workspace.Locate, which walks up to the
+// nearest marker and roots the workspace by topology (inc-24, REQ-24.2).
 func resolveWorkspaceRoot(options ResolveOptions) (string, error) {
-	var root string
-	var err error
 	if strings.TrimSpace(options.WorkspaceRoot) != "" {
-		root, err = filepath.Abs(options.WorkspaceRoot)
-	} else {
-		root, err = absOrCWD(options.CWD)
+		return resolveExplicitWorkspaceRoot(options.WorkspaceRoot)
 	}
+	location, err := workspace.Locate(options.CWD)
+	if err != nil {
+		return "", err
+	}
+	return location.WorkspaceRoot, nil
+}
+
+// resolveWorkspaceLocation is resolveWorkspaceRoot for Resolve, which also needs
+// the location behind the root to project its notes. With an explicit root the
+// location comes from workspace.LocateAt, which evaluates only that directory:
+// internal calls that already know the root do not change behaviour, and a
+// rejection there is not surfaced because the root was already accepted.
+func resolveWorkspaceLocation(options ResolveOptions) (string, workspace.Location, error) {
+	if strings.TrimSpace(options.WorkspaceRoot) != "" {
+		root, err := resolveExplicitWorkspaceRoot(options.WorkspaceRoot)
+		if err != nil {
+			return "", workspace.Location{}, err
+		}
+		location, locateErr := workspace.LocateAt(root)
+		if locateErr != nil {
+			return root, workspace.Location{}, nil
+		}
+		return root, location, nil
+	}
+	location, err := workspace.Locate(options.CWD)
+	if err != nil {
+		return "", workspace.Location{}, err
+	}
+	return location.WorkspaceRoot, location, nil
+}
+
+func resolveExplicitWorkspaceRoot(workspaceRoot string) (string, error) {
+	root, err := filepath.Abs(workspaceRoot)
 	if err != nil {
 		return "", err
 	}
@@ -1201,13 +1250,6 @@ func resolveWorkspaceRoot(options ResolveOptions) (string, error) {
 		return "", fmt.Errorf("workspace root %q is a filesystem root, which never holds an SDD project: whatever produced this call passed the wrong --cwd. Rerun it against the project: `axiom sdd status --cwd \"<project-directory>\" --json`. If the change is Engram-backed, this dispatcher is blind to it and should not be called at all", root)
 	}
 	return root, nil
-}
-
-func absOrCWD(path string) (string, error) {
-	if strings.TrimSpace(path) == "" {
-		return os.Getwd()
-	}
-	return filepath.Abs(path)
 }
 
 // ambiguousChangeSelectionReasons names one runnable command per candidate
