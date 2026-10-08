@@ -16,7 +16,7 @@ func TestRenderUninstallResultIncludesManualCleanup(t *testing.T) {
 		ManualActions: []string{
 			"Remove manually if no longer needed: /tmp/skills (directory still contains non-managed files)",
 		},
-	}, nil, "", nil, model.EngramUninstallScopeGlobal, false, nil, nil)
+	}, nil, "", nil, model.EngramUninstallScopeGlobal, false, nil, nil, nil)
 
 	if !strings.Contains(out, "Manual cleanup required") {
 		t.Fatalf("RenderUninstallResult() should include manual cleanup heading; got:\n%s", out)
@@ -84,7 +84,7 @@ func TestRenderUninstallResultPiAdviceStatus(t *testing.T) {
 				if failed {
 					err = errors.New("cleanup failed")
 				}
-				out := RenderUninstallResult(result, err, "", nil, "", false, nil, nil)
+				out := RenderUninstallResult(result, err, "", nil, "", false, nil, nil, nil)
 				if !strings.Contains(out, "pi remove npm:gentle-pi") || !strings.Contains(out, "backup-test") || strings.Contains(out, "/retained/pi") != retained || strings.Contains(out, "Pi resources retained for review") != (retained && !failed) || strings.Contains(out, "✓ Uninstall complete") != (!retained && !failed) {
 					t.Fatalf("incorrect Pi report:\n%s", out)
 				}
@@ -107,7 +107,7 @@ func TestRenderUninstallResultDistinguishesRetainedPiResourcesAndCommands(t *tes
 			"pi remove npm:pi-web-access",
 			"pi remove npm:pi-btw",
 		},
-	}, nil, model.UninstallModePartial, nil, model.EngramUninstallScopeGlobal, false, nil, nil)
+	}, nil, model.UninstallModePartial, nil, model.EngramUninstallScopeGlobal, false, nil, nil, nil)
 
 	for _, want := range []string{
 		"Pi resources retained for review",
@@ -132,7 +132,7 @@ func TestRenderUninstallResultDistinguishesRetainedPiResourcesAndCommands(t *tes
 }
 
 func TestRenderUninstallResultIncludesSelectedProfiles(t *testing.T) {
-	out := RenderUninstallResult(componentuninstall.Result{}, nil, model.UninstallModePartial, []string{"cheap", "fast"}, model.EngramUninstallScopeGlobal, false, nil, nil)
+	out := RenderUninstallResult(componentuninstall.Result{}, nil, model.UninstallModePartial, []string{"cheap", "fast"}, model.EngramUninstallScopeGlobal, false, nil, nil, nil)
 
 	if !strings.Contains(out, "Profiles removed") {
 		t.Fatalf("RenderUninstallResult() should include profile summary heading; got:\n%s", out)
@@ -145,9 +145,40 @@ func TestRenderUninstallResultIncludesSelectedProfiles(t *testing.T) {
 func TestRenderUninstallResultIncludesEngramScopeSummary(t *testing.T) {
 	out := RenderUninstallResult(componentuninstall.Result{
 		RemovedDirectories: []string{"/tmp/workspace/.engram"},
-	}, nil, model.UninstallModePartial, nil, model.EngramUninstallScopeProject, true, nil, nil)
+	}, nil, model.UninstallModePartial, nil, model.EngramUninstallScopeProject, true, nil, nil, nil)
 
 	if !strings.Contains(out, "Engram scope: Project-only") {
 		t.Fatalf("RenderUninstallResult() should include Engram project scope summary; got:\n%s", out)
+	}
+}
+
+func TestRenderUninstallResultCleanInstallShowsSyncWarnings(t *testing.T) {
+	warnings := []string{"The legacy prompt file /tmp/kiro/gentle-ai.md was kept (it has content Axiom did not write)."}
+	out := RenderUninstallResult(componentuninstall.Result{}, nil, model.UninstallModeCleanInstall, nil, model.EngramUninstallScopeGlobal, false, []string{"a"}, warnings, nil)
+
+	for _, want := range []string{"Clean install sync complete", "1 warning(s)", warnings[0]} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("RenderUninstallResult() missing %q:\n%s", want, out)
+		}
+	}
+}
+
+func TestRenderUninstallResultCleanInstallWithoutWarningsIsUnchanged(t *testing.T) {
+	withNil := RenderUninstallResult(componentuninstall.Result{}, nil, model.UninstallModeCleanInstall, nil, model.EngramUninstallScopeGlobal, false, []string{"a"}, nil, nil)
+	withEmpty := RenderUninstallResult(componentuninstall.Result{}, nil, model.UninstallModeCleanInstall, nil, model.EngramUninstallScopeGlobal, false, []string{"a"}, []string{}, nil)
+
+	if withNil != withEmpty {
+		t.Fatalf("empty warnings changed the output:\n%s\n---\n%s", withNil, withEmpty)
+	}
+	if strings.Contains(withNil, "warning(s)") {
+		t.Fatalf("output without warnings mentions warnings:\n%s", withNil)
+	}
+}
+
+func TestRenderUninstallResultSyncWarningsHiddenWhenSyncFailed(t *testing.T) {
+	out := RenderUninstallResult(componentuninstall.Result{}, nil, model.UninstallModeCleanInstall, nil, model.EngramUninstallScopeGlobal, false, nil, []string{"stale warning"}, errors.New("sync boom"))
+
+	if strings.Contains(out, "stale warning") {
+		t.Fatalf("warnings shown although the sync failed:\n%s", out)
 	}
 }

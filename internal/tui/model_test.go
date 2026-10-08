@@ -2821,6 +2821,41 @@ func TestUninstallConfirm_CleanInstallRunsSyncAfterUninstall(t *testing.T) {
 	}
 }
 
+func TestUninstallConfirm_CleanInstallShowsSyncWarnings(t *testing.T) {
+	m := NewModel(system.DetectionResult{}, "dev")
+	m.Screen = ScreenUninstallConfirm
+	m.UninstallMode = model.UninstallModeCleanInstall
+	m.UninstallAgents = []model.AgentID{model.AgentOpenCode}
+	m.UninstallComponents = []model.ComponentID{model.ComponentSDD}
+	m.Cursor = 0
+
+	const warning = "The legacy prompt file /tmp/kiro/gentle-ai.md was kept (it has content Axiom did not write)."
+	m.UninstallFn = func(agentIDs []model.AgentID, componentIDs []model.ComponentID) (componentuninstall.Result, error) {
+		return componentuninstall.Result{RemovedFiles: []string{"/tmp/managed-file"}}, nil
+	}
+	m.SyncFn = func(overrides *model.SyncOverrides) (SyncOutcome, error) {
+		return SyncOutcome{Files: []string{"a"}, Warnings: []string{warning}}, nil
+	}
+
+	_, cmd := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	uninstallMsg := findUninstallDoneMsgInBatch(t, cmd)
+	if uninstallMsg == nil {
+		t.Fatal("expected UninstallDoneMsg from batch cmd, got nil")
+	}
+	if len(uninstallMsg.SyncWarnings) != 1 || uninstallMsg.SyncWarnings[0] != warning {
+		t.Fatalf("UninstallDoneMsg.SyncWarnings = %v, want [%q]", uninstallMsg.SyncWarnings, warning)
+	}
+
+	updated, _ := m.Update(*uninstallMsg)
+	state := updated.(Model)
+	if len(state.SyncCleanInstallWarnings) != 1 {
+		t.Fatalf("SyncCleanInstallWarnings = %v, want one warning", state.SyncCleanInstallWarnings)
+	}
+	if view := state.View(); !strings.Contains(view, warning) {
+		t.Fatalf("uninstall result view lost the sync warning:\n%s", view)
+	}
+}
+
 func TestStartUninstall_FullRemoveHomebrewManagedBinaryAddsManualAction(t *testing.T) {
 	m := NewModel(system.DetectionResult{}, "dev")
 	m.UninstallMode = model.UninstallModeFullRemove

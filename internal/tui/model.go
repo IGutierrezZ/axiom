@@ -355,7 +355,10 @@ type UninstallDoneMsg struct {
 	Result    componentuninstall.Result
 	Err       error
 	SyncFiles []string // only set for CleanInstall mode
-	SyncErr   error    // only set for CleanInstall mode
+	// SyncWarnings are the non-fatal notices the internal sync raised (a kept
+	// legacy file, a failed index refresh); only set for CleanInstall mode.
+	SyncWarnings []string
+	SyncErr      error // only set for CleanInstall mode
 }
 
 // UpgradePhaseCompletedMsg is sent by startUpgradeSync when the upgrade phase
@@ -820,6 +823,10 @@ type Model struct {
 
 	// SyncCleanInstallFiles holds the sync file paths changed after a clean install.
 	SyncCleanInstallFiles []string
+
+	// SyncCleanInstallWarnings holds the non-fatal warnings the sync of a clean
+	// install raised.
+	SyncCleanInstallWarnings []string
 
 	// SyncCleanInstallErr holds the sync error from a clean install.
 	SyncCleanInstallErr error
@@ -1340,6 +1347,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.UninstallResult = msg.Result
 		m.UninstallErr = msg.Err
 		m.SyncCleanInstallFiles = msg.SyncFiles
+		m.SyncCleanInstallWarnings = msg.SyncWarnings
 		m.SyncCleanInstallErr = msg.SyncErr
 		m.setScreen(ScreenUninstallResult)
 		return m, nil
@@ -1569,7 +1577,7 @@ func (m Model) View() string {
 	case ScreenUninstallConfirm:
 		return screens.RenderUninstallConfirm(m.UninstallMode, m.UninstallAgents, m.UninstallComponents, m.UninstallProfilesToRemove, m.UninstallEngramScope, m.UninstallEngramProjectScopeAvailable, m.Cursor, m.OperationRunning, m.SpinnerFrame)
 	case ScreenUninstallResult:
-		return screens.RenderUninstallResult(m.UninstallResult, m.UninstallErr, m.UninstallMode, m.UninstallProfilesToRemove, m.UninstallEngramScope, m.UninstallEngramProjectScopeAvailable, m.SyncCleanInstallFiles, m.SyncCleanInstallErr)
+		return screens.RenderUninstallResult(m.UninstallResult, m.UninstallErr, m.UninstallMode, m.UninstallProfilesToRemove, m.UninstallEngramScope, m.UninstallEngramProjectScopeAvailable, m.SyncCleanInstallFiles, m.SyncCleanInstallWarnings, m.SyncCleanInstallErr)
 	case ScreenDetection:
 		return screens.RenderDetection(m.Detection, m.Cursor)
 	case ScreenAgents:
@@ -3348,6 +3356,7 @@ func (m Model) withResetUninstallState() Model {
 	m.UninstallResult = componentuninstall.Result{}
 	m.UninstallErr = nil
 	m.SyncCleanInstallFiles = nil
+	m.SyncCleanInstallWarnings = nil
 	m.SyncCleanInstallErr = nil
 	m.OperationRunning = false
 	m.OperationMode = ""
@@ -3799,6 +3808,7 @@ func (m Model) startUninstall() tea.Cmd {
 			}
 			outcome, syncErr := syncFn(nil)
 			msg.SyncFiles = outcome.Files
+			msg.SyncWarnings = outcome.Warnings
 			msg.SyncErr = syncErr
 			return msg
 		}
