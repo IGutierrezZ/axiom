@@ -223,6 +223,11 @@ Previsión total: ~1.500-1.900 líneas en 5 PRs más el de cierre.
   - **Por qué desde #104:** el PATH restringido resuelve en Linux el `go` del sistema, y `XDG_CONFIG_HOME` apunta dentro del sandbox.
   - **Arreglo** (`799f5796`, inline: un único fichero de test): el sandbox escribe `mode=off` de la telemetría de Go en cada directorio de configuración, igual que `go telemetry off`. Verificado en `x/telemetry` (`dir.go:120`, `start.go:151`).
   - **Estado:** #109 sale de borrador; falta su CI. Después se relanza #107.
+- **2026-10-08, merge de H1:** el CI de #109 dio verde con el arreglo.
+  - #109 fusionado (`077f478c`); su worktree y sus ramas, eliminados.
+  - #107 rebasado sobre `main`, que ya incluye #108 y #109 (cabeza `2b93be78`), y subido con `--force-with-lease`.
+  - En local: build y vet limpios (también `bench`) y en verde `cmd/...` e `internal/components`.
+  - El CI de #107 sirve además como segunda confirmación del arreglo de H1.
 
 ## 9. Siguiente paso
 
