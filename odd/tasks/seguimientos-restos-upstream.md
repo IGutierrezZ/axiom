@@ -199,6 +199,10 @@ Previsión total: ~1.500-1.900 líneas en 5 PRs más el de cierre.
     - **Primera:** `TestNamedReviewStatusNextTransitionIsAlwaysComplete` y `TestRunSyncWithSelection_WritesExpectedFiles` esperaban el prompt negociando `gentle-ai`. Corregido en `3e7cb072`.
     - **Segunda:** el journey de bench `j125` esperaba `gentle-ai review start` del stop-hook. Corregido en `9f53ae37`; `j125` pasa en local.
     - **Lección:** el paso «Run benchmark evidence» del CI ejecuta journeys de bench que ningún verificador local había corrido. Para cambios en la superficie de comandos, hay que pasar `gentle-ai-bench run` antes del PR.
+    - **Benchmark local en Windows, no concluyente:**
+      - `j105` falla porque el shim del proveedor que crea bench no se ejecuta en Windows. Además, el arnés **llamó al `claude` real del PATH**, que respondió «Not logged in» sin hacer nada. Es un seguimiento nuevo: bench no aísla el PATH del proveedor en Windows.
+      - En el eje de transición fallan 13 de 56 journeys (`operation_timeout`, capturas vacías) y no se han comparado con `main`.
+      - La referencia es el CI de Linux.
 
 ## 9. Siguiente paso
 
@@ -211,6 +215,7 @@ Orden de merge propuesto, con squash: #104 (U2) → #105 (U1) → #106 (U3) → 
 Después, el PR de cierre con este documento (rama `docs/odd-seguimientos-restos-upstream`).
 
 Seguimientos para después del ODD:
+- bench en Windows: el shim del proveedor no se ejecuta y el arnés llega al `claude` real del PATH;
 - la constante `version` de `cmd/axiom/main.go` en cada release;
 - `ContendedPersistenceRejectsReviewModeDisable` y `TestRejectedTargetedValidatorCaptureRoutesEscalatedRecovery`, intermitentes bajo carga;
 - los avisos del flujo de desinstalación con clean install en la TUI;
