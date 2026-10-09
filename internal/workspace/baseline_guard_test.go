@@ -236,3 +236,84 @@ func TestSamePlanningHome(t *testing.T) {
 		}
 	})
 }
+
+// ReadDeclarations es la carga por capas aplicada al axiom.yaml propio de un
+// destino: coincide con la de Locate para el mismo fichero (REQ-24.22) y nunca
+// necesita resolver el planning home.
+func TestReadDeclarations(t *testing.T) {
+	dir := t.TempDir()
+	write := func(name, content string) string {
+		path := filepath.Join(dir, name)
+		workspacetest.WriteFile(t, path, content)
+		return path
+	}
+
+	t.Run("sin fichero es el valor cero", func(t *testing.T) {
+		got := ReadDeclarations(filepath.Join(dir, "no-existe.yaml"))
+		if got.ParseErr != nil || got.Baseline != nil || got.BaselineErr != nil || got.TechnicalContext != nil || got.TechnicalContextErr != nil {
+			t.Fatalf("ReadDeclarations sin fichero = %+v, se esperaba el valor cero", got)
+		}
+		if ownership, _ := got.Ownership(); ownership != BaselineDefault {
+			t.Fatalf("Ownership = %q, se esperaba por defecto", ownership)
+		}
+	})
+	t.Run("legible sin bloques nuevos", func(t *testing.T) {
+		got := ReadDeclarations(write("sin-bloques.yaml", locateEmbeddedConfig))
+		if got.ParseErr != nil || got.Baseline != nil || got.TechnicalContext != nil {
+			t.Fatalf("ReadDeclarations = %+v, se esperaba el valor cero", got)
+		}
+	})
+	t.Run("baseline y technical_context validos", func(t *testing.T) {
+		got := ReadDeclarations(write("validas.yaml", locateEmbeddedConfig+locateValidBaseline+"technical_context:\n  reference:\n    paths: [00_Glosario.md]\n"))
+		if got.BaselineErr != nil || got.TechnicalContextErr != nil || got.Baseline == nil || got.TechnicalContext == nil {
+			t.Fatalf("ReadDeclarations = %+v, se esperaban los dos bloques válidos", got)
+		}
+		if ownership, err := got.Ownership(); ownership != BaselineProject || err != nil {
+			t.Fatalf("Ownership = (%q, %v), se esperaba (del proyecto, nil)", ownership, err)
+		}
+	})
+	t.Run("cada bloque tiene su canal de error", func(t *testing.T) {
+		got := ReadDeclarations(write("invalidas.yaml", locateEmbeddedConfig+locateInvalidBaseline+"technical_context:\n  maintained:\n    paths: []\n"))
+		if got.BaselineErr == nil || got.TechnicalContextErr == nil || got.ParseErr != nil {
+			t.Fatalf("ReadDeclarations = %+v, se esperaban los dos errores de bloque sin ParseErr", got)
+		}
+	})
+	t.Run("una base invalida no oculta las declaraciones", func(t *testing.T) {
+		got := ReadDeclarations(write("base-invalida.yaml", locateInvalidBase+locateValidBaseline))
+		if got.ParseErr != nil || got.BaselineErr != nil || got.Baseline == nil {
+			t.Fatalf("ReadDeclarations = %+v, se esperaba la baseline válida pese a la base inválida", got)
+		}
+	})
+	t.Run("yaml ilegible deja la causa en ParseErr", func(t *testing.T) {
+		got := ReadDeclarations(write("ilegible.yaml", "workspace: [sin cerrar\n"))
+		if got.ParseErr == nil {
+			t.Fatal("ParseErr debe nombrar la causa de un YAML ilegible")
+		}
+		if ownership, cause := got.Ownership(); ownership != BaselineIndeterminate || cause == nil {
+			t.Fatalf("Ownership = (%q, %v), se esperaba indeterminada con causa", ownership, cause)
+		}
+	})
+	t.Run("un fichero que no se puede leer deja la causa en ParseErr", func(t *testing.T) {
+		// Un directorio con el nombre del fichero existe pero no se puede leer.
+		workspacetest.MkdirAll(t, filepath.Join(dir, "directorio.yaml"))
+		if got := ReadDeclarations(filepath.Join(dir, "directorio.yaml")); got.ParseErr == nil {
+			t.Fatal("ParseErr debe nombrar la causa de un fichero que no se puede leer")
+		}
+	})
+	t.Run("coincide con Locate para el mismo fichero", func(t *testing.T) {
+		for name, content := range map[string]string{
+			"sin baseline": locateEmbeddedConfig,
+			"valida":       locateEmbeddedConfig + locateValidBaseline,
+			"invalida":     locateEmbeddedConfig + locateInvalidBaseline,
+			"ilegible":     "workspace: [sin cerrar\n",
+		} {
+			ws := workspacetest.Embedded(t, ".")
+			workspacetest.WriteFile(t, filepath.Join(ws.Master, "axiom.yaml"), content)
+			fromLocate, locateCause := mustLocate(t, ws.Master).BaselineOwnership()
+			fromRead, readCause := ReadDeclarations(filepath.Join(ws.Master, "axiom.yaml")).Ownership()
+			if fromLocate != fromRead || (locateCause == nil) != (readCause == nil) {
+				t.Errorf("%s: Locate responde (%q, %v) y ReadDeclarations (%q, %v)", name, fromLocate, locateCause, fromRead, readCause)
+			}
+		}
+	})
+}

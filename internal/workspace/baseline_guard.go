@@ -53,9 +53,9 @@ func (l Location) BaselineOwnership() (BaselineOwnership, error) {
 	return l.Declarations.Ownership()
 }
 
-// declaredDomains devuelve los dominios del bloque `baseline:`, en el orden en
+// DeclaredDomains devuelve los dominios del bloque `baseline:`, en el orden en
 // que se declaran.
-func (d Declarations) declaredDomains() []string {
+func (d Declarations) DeclaredDomains() []string {
 	if d.Baseline == nil {
 		return nil
 	}
@@ -106,7 +106,7 @@ func (l Location) GuardSpecsWrite(op string) error {
 		Ownership:  ownership,
 		ConfigPath: l.ConfigPath,
 		Master:     l.Master,
-		Domains:    l.Declarations.declaredDomains(),
+		Domains:    l.Declarations.DeclaredDomains(),
 		Cause:      cause,
 	}
 }

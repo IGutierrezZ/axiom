@@ -95,6 +95,26 @@ func parseLayered(data []byte) (*WorkspaceConfig, error, Declarations) {
 	return &cfg, nil, declarations
 }
 
+// ReadDeclarations lee el axiom.yaml de configPath con la misma carga por capas
+// que LoadConfig, Locate y workspace validate (parseLayered) y devuelve solo las
+// declaraciones, cada una con su canal de error. Lo usa axiom init sobre el
+// axiom.yaml propio del destino, donde no puede llamar a Locate (D-06).
+//
+// Sin fichero devuelve el valor cero, que equivale a «sin declaraciones». Un
+// fichero que existe y no se puede leer, o que no es YAML, deja la causa en
+// ParseErr, como hace Locate con un axiom.yaml directo.
+func ReadDeclarations(configPath string) Declarations {
+	data, err := os.ReadFile(configPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return Declarations{}
+		}
+		return Declarations{ParseErr: fmt.Errorf("no se pudo leer el archivo '%s': %w", configPath, err)}
+	}
+	_, _, declarations := parseLayered(data)
+	return declarations
+}
+
 // validateBaseConfig aplica las validaciones estructurales de la configuración
 // base (nombre, topología y roles), con sus mensajes y su orden de siempre.
 func validateBaseConfig(cfg *WorkspaceConfig) error {
