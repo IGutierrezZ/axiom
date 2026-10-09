@@ -182,11 +182,25 @@ func TestBlockIdentityByTextUsesTheTitleAsKey(t *testing.T) {
 	}
 }
 
+// duplicatesOf agrupa por identificador los requisitos que se repiten.
+func duplicatesOf(requirements []Requirement) map[string][]Requirement {
+	groups := map[string][]Requirement{}
+	for _, requirement := range requirements {
+		groups[requirement.Key] = append(groups[requirement.Key], requirement)
+	}
+	for key, group := range groups {
+		if len(group) < 2 {
+			delete(groups, key)
+		}
+	}
+	return groups
+}
+
 func TestBlockDuplicatesAreGroupedByKey(t *testing.T) {
 	profile := requirementProfile(t)
 
 	doc := ParseDocument([]byte(readFixture(t, "01_Requisitos_Funcionales.md")))
-	groups := Duplicates(doc.Requirements(profile))
+	groups := duplicatesOf(doc.Requirements(profile))
 	if len(groups) != 2 {
 		t.Fatalf("grupos duplicados = %d, se esperaban 2 (RF-020 y RF-021)", len(groups))
 	}
@@ -204,7 +218,7 @@ func TestBlockDuplicatesAreGroupedByKey(t *testing.T) {
 	}
 
 	clean := ParseDocument([]byte(readFixture(t, "02_Requisitos_No_Funcionales.md")))
-	if groups := Duplicates(clean.Requirements(profile)); len(groups) != 0 {
+	if groups := duplicatesOf(clean.Requirements(profile)); len(groups) != 0 {
 		t.Errorf("el documento de no funcionales no tiene duplicados: %v", groups)
 	}
 	if got := len(clean.Requirements(profile)); got != 3 {

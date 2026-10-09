@@ -135,11 +135,11 @@ func TestDocumentATXHeadings(t *testing.T) {
 	}
 }
 
-func TestDocumentHeadingLineNumbersAreOneBased(t *testing.T) {
+func TestDocumentHeadingIndexesAreZeroBased(t *testing.T) {
 	doc := ParseDocument([]byte("texto\n\n## Dos\n"))
 	headings := doc.Headings()
-	if len(headings) != 1 || headings[0].LineNumber() != 3 || headings[0].Index != 2 {
-		t.Fatalf("encabezados = %#v, se esperaba uno en la línea 3", headings)
+	if len(headings) != 1 || headings[0].Index+1 != 3 || headings[0].Index != 2 {
+		t.Fatalf("encabezados = %#v, se esperaba uno en el índice 2", headings)
 	}
 }
 

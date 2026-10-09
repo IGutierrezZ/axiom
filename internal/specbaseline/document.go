@@ -54,19 +54,15 @@ func ParseDocument(data []byte) Document {
 
 // Bytes serializa el documento: BOM, si lo tenía, y cada línea con su final.
 func (d Document) Bytes() []byte {
-	return serialize(d.BOM, d.Lines)
-}
-
-func serialize(bom bool, lines []Line) []byte {
 	size := 0
-	for _, line := range lines {
+	for _, line := range d.Lines {
 		size += len(line.Text) + len(line.EOL)
 	}
 	out := make([]byte, 0, size+len(utf8BOM))
-	if bom {
+	if d.BOM {
 		out = append(out, utf8BOM...)
 	}
-	for _, line := range lines {
+	for _, line := range d.Lines {
 		out = append(out, line.Text...)
 		out = append(out, line.EOL...)
 	}
@@ -91,9 +87,6 @@ type Heading struct {
 	Level int    // de 1 a 6
 	Title string // sin los `#` de apertura ni los de cierre opcionales
 }
-
-// LineNumber devuelve el número de línea, desde 1.
-func (h Heading) LineNumber() int { return h.Index + 1 }
 
 // Headings devuelve los encabezados ATX del documento fuera de bloques de
 // código con vallas, en orden. Los encabezados setext no se reconocen (R33).
@@ -230,8 +223,8 @@ func (s TailSection) LineNumber() int { return s.Index + 1 }
 // completa cumple `heading`. Su bloque va desde el encabezado hasta el siguiente
 // encabezado ATX de nivel menor o igual que `level` fuera de vallas, de modo que
 // las subsecciones de nivel mayor pertenecen al bloque (REQ-24.41). Los
-// identificadores duplicados no se rechazan aquí: el llamador los detecta con
-// Duplicates.
+// identificadores duplicados no se rechazan aquí: la composición los
+// rechaza al operar sobre ellos (REQ-24.40).
 func (d Document) Requirements(p Profile) []Requirement {
 	headings := d.Headings()
 	var requirements []Requirement
@@ -299,19 +292,4 @@ func (d Document) tail(headings []Heading, at int, p Profile, blockEndIndex int)
 		position = blockEnd(headings, next, p.Level, len(d.Lines))
 	}
 	return tail
-}
-
-// Duplicates agrupa por identificador los requisitos que comparten identificador
-// (REQ-24.40). Solo incluye los identificadores que aparecen más de una vez.
-func Duplicates(requirements []Requirement) map[string][]Requirement {
-	groups := map[string][]Requirement{}
-	for _, requirement := range requirements {
-		groups[requirement.Key] = append(groups[requirement.Key], requirement)
-	}
-	for key, group := range groups {
-		if len(group) < 2 {
-			delete(groups, key)
-		}
-	}
-	return groups
 }
