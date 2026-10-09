@@ -62,13 +62,13 @@ func TestOpenSpecConfigDocumentsTheConfigurationBoundary(t *testing.T) {
 	}
 	doc := string(raw)
 	for _, want := range []string{
-		"## Frontera de configuración con `axiom.yaml`",
-		"`baseline` y `technical_context` viven solo en `axiom.yaml`",
-		"Una clave con ese nombre en `openspec/config.yaml` no tiene ningún efecto",
-		"Las reglas de conducta (`rules.<fase>`, `strict_tdd`, `artifact_store`) permanecen en `openspec/config.yaml`",
-		"`governance.context` no cambia",
-		"debe ser `openspec` o `hybrid`",
-		"`axiom workspace validate --path <carpeta maestra>`",
+		"## Configuration boundary with `axiom.yaml`",
+		"`baseline` and `technical_context` live only in `axiom.yaml`",
+		"A key with that name in `openspec/config.yaml` has no effect",
+		"The behavioral rules (`rules.<phase>`, `strict_tdd`, `artifact_store`) stay in `openspec/config.yaml`",
+		"`governance.context` is unchanged",
+		"it must be `openspec` or `hybrid`",
+		"`axiom workspace validate --path <master folder>`",
 	} {
 		if !strings.Contains(doc, want) {
 			t.Errorf("docs/openspec-config.md no contiene %q", want)

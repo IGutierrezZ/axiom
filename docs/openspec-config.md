@@ -150,20 +150,20 @@ If you are documenting or relying on this file, the safest framing today is:
 - the documented fields reflect current repo conventions
 - consumers should not assume a formally enforced, versioned runtime schema unless the implementation adds explicit parsing/validation later
 
-## Frontera de configuración con `axiom.yaml`
+## Configuration boundary with `axiom.yaml`
 
-Un proyecto con SDD se configura en dos ficheros y cada uno tiene su responsabilidad. La frontera es esta:
+An SDD project is configured in two files, and each one has its own responsibility. The boundary is:
 
-| Fichero | Qué declara | Quién lo valida |
-|---------|-------------|-----------------|
-| `axiom.yaml` | La declaración estructural: `baseline` (los documentos de la baseline del proyecto) y `technical_context` (el contexto técnico `maintained` y `reference`). `governance.context` no cambia y convive con ellos | La carga de `axiom.yaml` (sintaxis estricta) y `axiom workspace validate` (ficheros y almacén) |
-| `openspec/config.yaml` | Las reglas de conducta: `rules.<fase>`, `strict_tdd`, `testing` y `artifact_store` | Nadie en Go: es la convención de este documento |
+| File | What it declares | What validates it |
+|------|------------------|-------------------|
+| `axiom.yaml` | The structural declaration: `baseline` (the documents of the project baseline) and `technical_context` (the `maintained` and `reference` technical context). `governance.context` is unchanged and coexists with them | Loading `axiom.yaml` (strict syntax) and `axiom workspace validate` (files and artifact store) |
+| `openspec/config.yaml` | The behavioral rules: `rules.<phase>`, `strict_tdd`, `testing`, and `artifact_store` | Nothing in Go: it is the convention described in this document |
 
-En concreto:
+Specifically:
 
-- `baseline` y `technical_context` viven solo en `axiom.yaml`. Una clave con ese nombre en `openspec/config.yaml` no tiene ningún efecto: el status no la proyecta y archive no la lee.
-- Las reglas de conducta (`rules.<fase>`, `strict_tdd`, `artifact_store`) permanecen en `openspec/config.yaml` y no se trasladan a `axiom.yaml`.
-- Una baseline del proyecto (`baseline` con documentos) y un contexto técnico mantenido (`technical_context.maintained`) exigen un almacén de ficheros, porque la integración de archive lee y escribe la carpeta del cambio. Si `openspec/config.yaml` declara `artifact_store`, debe ser `openspec` o `hybrid`. Con `engram` o `none`, `axiom workspace validate` informa de un error y el status bloquea solo el archivado, con la causa y la continuación. Sin `artifact_store` declarado, la validación no reporta nada por este motivo; un contexto declarado solo como `reference` no exige almacén de ficheros.
-- Las skills no interpretan `axiom.yaml` por su cuenta: leen los localizadores `baseline` y `technicalContext` del status (`axiom sdd status --json`).
+- `baseline` and `technical_context` live only in `axiom.yaml`. A key with that name in `openspec/config.yaml` has no effect: the status does not project it and archive does not read it.
+- The behavioral rules (`rules.<phase>`, `strict_tdd`, `artifact_store`) stay in `openspec/config.yaml` and do not move to `axiom.yaml`.
+- A project baseline (`baseline` with documents) and a maintained technical context (`technical_context.maintained`) require a file-based artifact store, because the archive integration reads and writes the change folder. If `openspec/config.yaml` declares `artifact_store`, it must be `openspec` or `hybrid`. With `engram` or `none`, `axiom workspace validate` reports an error and the status blocks only archiving, naming the cause and the continuation. When no `artifact_store` is declared, validation reports nothing for this reason; a context declared only as `reference` does not require a file-based store.
+- Skills do not interpret `axiom.yaml` on their own: they read the `baseline` and `technicalContext` locators from the status (`axiom sdd status --json`).
 
-Para comprobar la declaración: `axiom workspace validate --path <carpeta maestra>`.
+To check the declaration: `axiom workspace validate --path <master folder>`.
