@@ -554,7 +554,7 @@ Que un provisional coincida con su propio definitivo se admite.
 
 **Flujo 3: baseline por defecto sin contexto mantenido.** Es el flujo actual (bloques fijados del `Step 2`, `Step 3` y el informe) más el paso `axiom archive sync --path "<ws>"` entre el `Step 2` y el `Step 3`.
 
-**`INDEX.md` y roadmaps (REQ-21.17(4)).** Con la baseline por defecto, `openspec/INDEX.md` lo produce `axiom archive sync`, el productor nativo existente (`livingdoc.Indexer.SyncIndex`), invocado por la skill en el punto indicado. Hoy ninguna skill lo ejecuta y el manual lo atribuye por error a `archive-compose`; se corrige el manual. Ni `axiom.yaml` ni `openspec/config.yaml` permiten declarar roadmaps, así que archive no actualiza ninguno: la cláusula no tiene objeto declarado, y declarar roadmaps queda para un cambio posterior. Con baseline del proyecto no hay `INDEX.md` (la guarda de D-06 rechazaría la sincronización).
+**`INDEX.md` y roadmaps (REQ-21.17(4)).** Con la baseline por defecto, `openspec/INDEX.md` lo produce `axiom archive sync`, el productor nativo existente (`livingdoc.Indexer.SyncIndexForProject`), invocado por la skill en el punto indicado. Hoy ninguna skill lo ejecuta y el manual lo atribuye por error a `archive-compose`; se corrige el manual. Ni `axiom.yaml` ni `openspec/config.yaml` permiten declarar roadmaps, así que archive no actualiza ninguno: la cláusula no tiene objeto declarado, y declarar roadmaps queda para un cambio posterior. Con baseline del proyecto no hay `INDEX.md` (la guarda de D-06 rechazaría la sincronización).
 
 Modos de `archive-compose`:
 
@@ -1437,7 +1437,7 @@ El fichero se decodifica de forma estricta. Las rutas son relativas, así que no
 | `internal/cli/sdd_planning_home_test.go`; `protocol_probe_test.go` | Crear; Modificar | `kickoff`, `gate` (incluido el cambio archivado con fecha) y `attempt` desde tres puntos de partida; techo en el `TestMain` existente |
 | `cmd/axiom/main.go` | Modificar | `resolveChangeDir`, `resolveHandoffFile`, `runHandoff*`, `runRole*` con `Location` |
 | `cmd/axiom/main_test.go` | Modificar | `TestRunSDDStatusJSON` y `TestRunSDDStatusNonexistentChange` con `t.Chdir(t.TempDir())` (H1) |
-| `cmd/axiom/planning_home_test.go`, `main_ceiling_test.go` | Crear | `handoff` y `role` en el canónico; techo |
+| `cmd/axiom/planning_home_test.go`, `cmd/axiom/testmain_test.go` | Crear y Modificar | `handoff` y `role` en el canónico; techo de pruebas dentro de `runTests` (el `TestMain` ya existente) |
 | `internal/tui/model_test.go` | Modificar | Aislar `TestGovernanceScreensNavigationAndActions` en un espacio temporal (R28) |
 | `internal/dashboard/dashboard_test.go` | Modificar | Aislar `TestArchiveEndpoints` en un espacio temporal con su propio `openspec/specs/`, en lugar de `NewService("../..")` (M1, R28). Ya lo fijó main (#71/#72): se omitió este hunk al rebasar y el fichero no entra en A1-c1 |
 | `.github/workflows/ci.yml` | Modificar | Paso nuevo tras `Run unit tests` (`go test ./...`): fallar si `git status --porcelain` no está vacío. Debe estar en verde en la fusión de A1 |

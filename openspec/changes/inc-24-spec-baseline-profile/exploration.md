@@ -105,7 +105,7 @@ Quién usa ya el loader y el puntero:
 
 - **Parsers de `### Requirement:` en Go (4):** compose (`sddstatus/openspec_archive_compose.go:33`), indexador (`livingdoc/indexer.go:17,116-133`), búsqueda (`knowledge/query.go:306-311`) y recuento (`knowledge/index.go:62-63`, `#{2,4}`). Más la prosa de las skills.
 - **Emisores con nivel distinto:** `knowledge/recorder.go:153` escribe `#### Requirement:`; `sweep.go:254` y `query.go:496` escriben `###` (cold-start, fuera de alcance).
-- **Dos escritores de `INDEX.md` con formato distinto:** `livingdoc.Indexer.SyncIndex` (`indexer.go:226-250`) y `knowledge.SyncIndex` (`index.go:21-60`), ambos con `os.WriteFile` incondicional.
+- **Dos escritores de `INDEX.md` con formato distinto:** `livingdoc.Indexer.SyncIndexForProject` (`indexer.go:235-263`; antes `SyncIndex`, renombrado en el commit A2-c2 de este cambio) y `knowledge.SyncIndex` (`index.go:21-60`), ambos con `os.WriteFile` incondicional.
 - **Creadores de `openspec/specs/` (riesgo de segunda baseline):** `hub/init.go:113-124` (todos los perfiles); skill `sdd-init` (`_shared/openspec-convention.md:34`); rama "Main Spec Does NOT Exist" de `sdd-archive` (`SKILL.md:160-202`); `knowledge sweep` (`sweep.go:75-95`) y grabador (`recorder.go:59-69`); `axiom archive coldstart` (`synthesizer.go:38-94`, sin comprobar existencia pese a REQ-2.2 de living-documentation).
 - **Las skills escriben con rutas fijas** `openspec/changes/{change-name}/...` (`sdd-propose:60,164`, `sdd-spec:59-87`, `sdd-design:70,164`, `sdd-tasks:67,225`, `sdd-archive:111-215`); solo `sdd-apply` es "store-blind" y lee por `artifactPaths` (`SKILL.md:46,62`). La convención compartida (`openspec-convention.md:29-59`) repite las rutas.
 
