@@ -149,3 +149,21 @@ If you are documenting or relying on this file, the safest framing today is:
 - several SDD skills and prompt assets look for it and may write to it
 - the documented fields reflect current repo conventions
 - consumers should not assume a formally enforced, versioned runtime schema unless the implementation adds explicit parsing/validation later
+
+## Frontera de configuración con `axiom.yaml`
+
+Un proyecto con SDD se configura en dos ficheros y cada uno tiene su responsabilidad. La frontera es esta:
+
+| Fichero | Qué declara | Quién lo valida |
+|---------|-------------|-----------------|
+| `axiom.yaml` | La declaración estructural: `baseline` (los documentos de la baseline del proyecto) y `technical_context` (el contexto técnico `maintained` y `reference`). `governance.context` no cambia y convive con ellos | La carga de `axiom.yaml` (sintaxis estricta) y `axiom workspace validate` (ficheros y almacén) |
+| `openspec/config.yaml` | Las reglas de conducta: `rules.<fase>`, `strict_tdd`, `testing` y `artifact_store` | Nadie en Go: es la convención de este documento |
+
+En concreto:
+
+- `baseline` y `technical_context` viven solo en `axiom.yaml`. Una clave con ese nombre en `openspec/config.yaml` no tiene ningún efecto: el status no la proyecta y archive no la lee.
+- Las reglas de conducta (`rules.<fase>`, `strict_tdd`, `artifact_store`) permanecen en `openspec/config.yaml` y no se trasladan a `axiom.yaml`.
+- Una baseline del proyecto (`baseline` con documentos) y un contexto técnico mantenido (`technical_context.maintained`) exigen un almacén de ficheros, porque la integración de archive lee y escribe la carpeta del cambio. Si `openspec/config.yaml` declara `artifact_store`, debe ser `openspec` o `hybrid`. Con `engram` o `none`, `axiom workspace validate` informa de un error y el status bloquea solo el archivado, con la causa y la continuación. Sin `artifact_store` declarado, la validación no reporta nada por este motivo; un contexto declarado solo como `reference` no exige almacén de ficheros.
+- Las skills no interpretan `axiom.yaml` por su cuenta: leen los localizadores `baseline` y `technicalContext` del status (`axiom sdd status --json`).
+
+Para comprobar la declaración: `axiom workspace validate --path <carpeta maestra>`.

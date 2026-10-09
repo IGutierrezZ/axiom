@@ -54,6 +54,28 @@ func TestManualDeInicioDocumentsPRMergedEvidence(t *testing.T) {
 	)
 }
 
+// REQ-24.21: la frontera entre axiom.yaml y openspec/config.yaml se documenta.
+func TestOpenSpecConfigDocumentsTheConfigurationBoundary(t *testing.T) {
+	raw, err := os.ReadFile(filepath.Join("..", "..", "docs", "openspec-config.md"))
+	if err != nil {
+		t.Fatalf("no se pudo leer docs/openspec-config.md: %v", err)
+	}
+	doc := string(raw)
+	for _, want := range []string{
+		"## Frontera de configuración con `axiom.yaml`",
+		"`baseline` y `technical_context` viven solo en `axiom.yaml`",
+		"Una clave con ese nombre en `openspec/config.yaml` no tiene ningún efecto",
+		"Las reglas de conducta (`rules.<fase>`, `strict_tdd`, `artifact_store`) permanecen en `openspec/config.yaml`",
+		"`governance.context` no cambia",
+		"debe ser `openspec` o `hybrid`",
+		"`axiom workspace validate --path <carpeta maestra>`",
+	} {
+		if !strings.Contains(doc, want) {
+			t.Errorf("docs/openspec-config.md no contiene %q", want)
+		}
+	}
+}
+
 // m6 de design §13: el cambio de resolución desde un subdirectorio sin
 // marcadores propios y el aviso de usar el binario nuevo en todo el equipo.
 func TestManualDeInicioDocumentsTheResolutionChangeFromASubdirectory(t *testing.T) {

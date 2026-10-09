@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -573,7 +574,12 @@ func runWorkspaceValidate(args []string) {
 	configFile := filepath.Join(baseDir, "axiom.yaml")
 	cfg, err := workspace.LoadConfig(configFile)
 	if err != nil {
-		fmt.Printf("[ERROR] No se pudo cargar la configuración de Axiom:\n  %v\n", err)
+		// Una declaración inválida acumula todas sus violaciones en un único
+		// error (REQ-24.17): se imprime una por línea.
+		fmt.Println("[ERROR] No se pudo cargar la configuración de Axiom:")
+		for _, line := range errorLines(err) {
+			fmt.Printf("  %s\n", line)
+		}
 		os.Exit(1)
 	}
 
@@ -581,6 +587,15 @@ func runWorkspaceValidate(args []string) {
 	if err != nil {
 		fmt.Printf("[ERROR] Error inesperado en el motor de validación:\n  %v\n", err)
 		os.Exit(1)
+	}
+
+	// Las declaraciones de baseline y de contexto técnico se validan contra el
+	// sistema de ficheros real y el almacén declarado, fuera de Validate (m9).
+	declarationErrors, declarationWarnings := workspace.ValidateDeclarationPaths(cfg, baseDir)
+	report.Errors = append(report.Errors, declarationErrors...)
+	report.Warnings = append(report.Warnings, declarationWarnings...)
+	if len(declarationErrors) > 0 {
+		report.Valid = false
 	}
 
 	if !report.Valid {
@@ -613,8 +628,30 @@ func runWorkspaceValidate(args []string) {
 		fmt.Printf("      * %s (%s) — %d repositorio(s)\n", roleKey, role.Name, len(role.Repositories))
 	}
 	fmt.Printf("  - Total rutas verificadas: %d\n", len(report.CheckedPaths))
+	// Las advertencias no alteran el resultado, pero se imprimen también aquí
+	// (REQ-24.27): una ruta de contexto inexistente no puede pasar inadvertida.
+	if len(report.Warnings) > 0 {
+		fmt.Println("\nAdvertencias:")
+		for i, w := range report.Warnings {
+			fmt.Printf("  %d. %s\n", i+1, w)
+		}
+	}
 	fmt.Println("\nResultado: COMPLIANT")
 	os.Exit(0)
+}
+
+// errorLines aplana un error, incluidos los acumulados con errors.Join, en una
+// lista de mensajes de una sola línea cada uno.
+func errorLines(err error) []string {
+	var joined interface{ Unwrap() []error }
+	if errors.As(err, &joined) {
+		var lines []string
+		for _, inner := range joined.Unwrap() {
+			lines = append(lines, errorLines(inner)...)
+		}
+		return lines
+	}
+	return strings.Split(strings.TrimSpace(err.Error()), "\n")
 }
 
 func runHandoffShow(args []string) {
