@@ -3536,7 +3536,7 @@ func renderClaudeModelAssignmentsSection(assignments map[string]model.ClaudePhas
 	var b strings.Builder
 	b.WriteString("## Model Assignments\n\n")
 	b.WriteString("Read this table at session start (or before the first Claude Agent delegation), cache it for the session, and use the mapped alias for every Claude Agent call. Named SDD/Judgment-Day roles use their named row; organic explorer/mapper/writer/verifier and other generic delegations use the `default` assignment. If a named SDD/Judgment-Day role is missing, use the `default` row. If you do not have access to the assigned model (for example, no Opus access), substitute `sonnet` and continue.\n\n")
-	b.WriteString("The Claude Code session model is controlled by Claude Code itself; Gentle AI does not configure the main orchestrator model.\n\n")
+	b.WriteString("The Claude Code session model is controlled by Claude Code itself; Axiom does not configure the main orchestrator model.\n\n")
 	b.WriteString("**Mandatory model gate:** Every Claude Agent tool call MUST include `model`. Before each Claude Agent call, resolve named SDD/Judgment-Day roles from this table; for organic explorer/mapper/writer/verifier and other generic delegations, use the `default` assignment.\n\n")
 	b.WriteString("| Phase | Default Model | Effort | Reason |\n")
 	b.WriteString("|-------|---------------|--------|--------|\n")

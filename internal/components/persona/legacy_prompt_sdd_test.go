@@ -136,7 +136,7 @@ func TestRetireLegacyPromptFilesKeepsSDDFrontmatterWithAnExtraKey(t *testing.T) 
 			"no closing":     strings.TrimSuffix(frontmatter, "---\n"),
 		}
 		if c.name == "vscode" {
-			edits["changed value"] = strings.Replace(frontmatter, "Gentle AI Persona", "My Persona", 1)
+			edits["changed value"] = strings.Replace(frontmatter, "Axiom Persona", "My Persona", 1)
 		}
 		for name, edited := range edits {
 			t.Run(c.name+"/"+name, func(t *testing.T) {
@@ -289,5 +289,32 @@ func TestRetireLegacyPromptFilesRemovesCopyWithOwnPersonaFrontmatter(t *testing.
 				t.Fatalf("result = %+v, want only %s removed", result, legacy)
 			}
 		})
+	}
+}
+
+// Files earlier releases installed carry the instructions header under the
+// previous product name. They are still installer-written, but only where the
+// adapter keeps an instructions file.
+func TestRetireLegacyPromptFilesRemovesCopyWithPreviousNameFrontmatter(t *testing.T) {
+	home := t.TempDir()
+	headers := map[string]string{
+		"persona": legacyInstructionsFrontmatter,
+		"sdd":     filemerge.LegacySDDInstructionsFrontmatter,
+	}
+	for _, c := range legacyPromptCases(t, home) {
+		for name, frontmatter := range headers {
+			t.Run(c.name+"/"+name, func(t *testing.T) {
+				content := sddOnlyContent(frontmatter)
+				legacy := writeSDDOnlyLegacyPrompt(t, home, c, sddOnlyContent(""), content)
+				if c.name != "vscode" {
+					assertLegacyPromptKept(t, home, c, legacy, content)
+					return
+				}
+				result := RetireLegacyPromptFiles(home, c.adapter)
+				if len(result.Removed) != 1 || result.Removed[0] != legacy || len(result.Notes) != 0 {
+					t.Fatalf("result = %+v, want only %s removed", result, legacy)
+				}
+			})
+		}
 	}
 }

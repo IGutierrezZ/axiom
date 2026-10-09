@@ -86,6 +86,14 @@ const (
 // has one definition.
 const (
 	SDDInstructionsFrontmatter = "---\n" +
+		"name: Axiom Persona\n" +
+		"description: Gentleman persona with SDD orchestration and Engram protocol\n" +
+		"applyTo: \"**\"\n" +
+		"---\n"
+	// LegacySDDInstructionsFrontmatter is the instructions header earlier
+	// releases wrote under their previous product name. It is only recognized,
+	// never written, so files they installed still count as installer-written.
+	LegacySDDInstructionsFrontmatter = "---\n" +
 		"name: Gentle AI Persona\n" +
 		"description: Gentleman persona with SDD orchestration and Engram protocol\n" +
 		"applyTo: \"**\"\n" +

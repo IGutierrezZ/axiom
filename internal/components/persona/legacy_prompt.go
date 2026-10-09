@@ -39,6 +39,15 @@ var managedPromptSectionIDs = map[string]struct{}{
 	agentguidance.RoutingSectionID:         {},
 }
 
+// legacyInstructionsFrontmatter is the header wrapInstructionsFile wrote under
+// the previous product name. Files installed by those releases still start with
+// it, so it keeps proving that the installer wrote them.
+const legacyInstructionsFrontmatter = "---\n" +
+	"name: Gentle AI Persona\n" +
+	"description: Teaching-oriented persona with SDD orchestration and Engram protocol\n" +
+	"applyTo: \"**\"\n" +
+	"---\n\n"
+
 // installerFrontmatters returns the only headers a legacy prompt file of this
 // adapter may start with, chosen by the prompt strategy that decides which
 // header Axiom writes at that path: steering files (Kiro) take the steering
@@ -46,7 +55,8 @@ var managedPromptSectionIDs = map[string]struct{}{
 // target (Cursor) none. For each target they are the persona installer's
 // (wrapSteeringFile, wrapInstructionsFile) and the one the SDD component writes
 // when it creates the file on its own (shared with its injector through
-// filemerge). A header that belongs to another adapter is not what Axiom wrote
+// filemerge), plus the instructions headers earlier releases wrote under the
+// previous product name. A header that belongs to another adapter is not what Axiom wrote
 // at this path. A file is matched byte for byte, so an extra key, a changed
 // value or any whitespace difference leaves the header as content Axiom did not
 // write.
@@ -55,7 +65,12 @@ func installerFrontmatters(adapter agents.Adapter) []string {
 	case model.StrategySteeringFile:
 		return []string{wrapSteeringFile(""), filemerge.SDDSteeringFrontmatter}
 	case model.StrategyInstructionsFile:
-		return []string{wrapInstructionsFile(""), filemerge.SDDInstructionsFrontmatter}
+		return []string{
+			wrapInstructionsFile(""),
+			filemerge.SDDInstructionsFrontmatter,
+			legacyInstructionsFrontmatter,
+			filemerge.LegacySDDInstructionsFrontmatter,
+		}
 	}
 	return nil
 }

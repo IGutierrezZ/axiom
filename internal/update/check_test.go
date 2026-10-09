@@ -930,8 +930,8 @@ func TestFetchLatestRelease_GithubToken(t *testing.T) {
 		t.Fatalf("Authorization = %q, want %q", gotAuth, "Bearer test-token-123")
 	}
 
-	if gotUserAgent != "gentle-ai-update-check" {
-		t.Fatalf("User-Agent = %q, want %q", gotUserAgent, "gentle-ai-update-check")
+	if gotUserAgent != "axiom-update-check" {
+		t.Fatalf("User-Agent = %q, want %q", gotUserAgent, "axiom-update-check")
 	}
 }
 

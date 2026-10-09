@@ -95,7 +95,7 @@ func codexReviewerArguments(scratch, outputPath string) ([]string, error) {
 
 	return append(arguments,
 		"--config", `model_provider="`+codexReviewerLoopbackProviderID+`"`,
-		"--config", fmt.Sprintf(`model_providers.%s={name="Gentle AI reviewer loopback",base_url=%q,wire_api="responses"}`, codexReviewerLoopbackProviderID, baseURL),
+		"--config", fmt.Sprintf(`model_providers.%s={name="Axiom reviewer loopback",base_url=%q,wire_api="responses"}`, codexReviewerLoopbackProviderID, baseURL),
 	), nil
 }
 
