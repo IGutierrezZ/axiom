@@ -45,7 +45,7 @@ var currentOpenCodeOrchestratorSections = []orchestratorContractSection{
 	},
 	{
 		name:   "provider defect handoff",
-		marker: "#### Gentle AI Provider Defect Handoff (MANDATORY)",
+		marker: "#### Axiom Provider Defect Handoff (MANDATORY)",
 		sentinels: []string{
 			"`report_and_continue`, `continue_without_reporting`, `stop_here`",
 			"Only after explicit consent and that final privacy scan",

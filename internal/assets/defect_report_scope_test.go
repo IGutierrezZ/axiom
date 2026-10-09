@@ -35,7 +35,7 @@ func TestDefectHandoffAdmitsOnlyFailuresGentleAIProduced(t *testing.T) {
 			// The gate itself: production, not context.
 			for _, required := range []string{
 				"what produced the failure",
-				"a Gentle AI invocation produced it",
+				"an Axiom invocation produced it",
 				"hosting a failure is not enough",
 			} {
 				if !strings.Contains(content, required) {
