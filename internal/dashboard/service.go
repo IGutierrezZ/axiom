@@ -100,6 +100,31 @@ func (s *Service) getRootPath() string {
 	return s.rootPath
 }
 
+// planningRoot devuelve el planning home de los cambios y del catálogo
+// (`<planning home>/changes`, `<planning home>/specs`). Resuelve
+// workspace.Locate desde la ruta registrada en cada llamada, sin guardar el
+// resultado: el servicio vive mucho tiempo y la ruta registrada puede cambiar
+// (SwitchWorkspace) o el espacio de trabajo cambiar en disco (REQ-24.10, D-07).
+// `rootPath` sigue siendo la ruta registrada en el Hub: en la topología canónica,
+// la carpeta maestra, que no es el repositorio de especificaciones.
+func (s *Service) planningRoot() (string, error) {
+	loc, err := workspace.Locate(s.getRootPath())
+	if err != nil {
+		return "", err
+	}
+	return loc.PlanningHome, nil
+}
+
+// displayPath devuelve path relativa a la ruta registrada, con barras normales,
+// o la ruta absoluta si queda fuera de ella.
+func (s *Service) displayPath(path string) string {
+	rel, err := filepath.Rel(s.getRootPath(), path)
+	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+		return filepath.ToSlash(path)
+	}
+	return filepath.ToSlash(rel)
+}
+
 // GetWorkspace obtiene la información del espacio de trabajo y su estado de cumplimiento.
 func (s *Service) GetWorkspace() (*WorkspaceDTO, error) {
 	curPath := s.getRootPath()
@@ -162,10 +187,13 @@ func (s *Service) GetWorkspace() (*WorkspaceDTO, error) {
 // GetIncrements escanea y lista los incrementos activos y archivados.
 func (s *Service) GetIncrements() ([]IncrementSummaryDTO, error) {
 	var list []IncrementSummaryDTO
-	root := s.getRootPath()
+	root, err := s.planningRoot()
+	if err != nil {
+		return nil, err
+	}
 
-	// 1. Escanear cambios activos en openspec/changes/
-	activeDir := filepath.Join(root, "openspec", "changes")
+	// 1. Escanear cambios activos en <planning home>/changes/
+	activeDir := filepath.Join(root, "changes")
 	if entries, err := os.ReadDir(activeDir); err == nil {
 		for _, e := range entries {
 			if !e.IsDir() || e.Name() == "archive" || e.Name() == "e2e-cumulative" {
@@ -177,8 +205,8 @@ func (s *Service) GetIncrements() ([]IncrementSummaryDTO, error) {
 		}
 	}
 
-	// 2. Escanear cambios archivados en openspec/changes/archive/
-	archiveDir := filepath.Join(root, "openspec", "changes", "archive")
+	// 2. Escanear cambios archivados en <planning home>/changes/archive/
+	archiveDir := filepath.Join(root, "changes", "archive")
 	if entries, err := os.ReadDir(archiveDir); err == nil {
 		for _, e := range entries {
 			if !e.IsDir() {
@@ -400,22 +428,25 @@ func (s *Service) inspectIncrement(path, name, kind string) IncrementSummaryDTO 
 
 // FindIncrementPath busca la ruta de un incremento por nombre o prefijo/sufijo.
 func (s *Service) FindIncrementPath(name string) (string, string, error) {
-	root := s.getRootPath()
+	root, err := s.planningRoot()
+	if err != nil {
+		return "", "", err
+	}
 
 	// 1. Probar en activos
-	activePath := filepath.Join(root, "openspec", "changes", name)
+	activePath := filepath.Join(root, "changes", name)
 	if dirExists(activePath) {
 		return activePath, "active", nil
 	}
 
 	// 2. Probar en archivados exacto
-	archivePath := filepath.Join(root, "openspec", "changes", "archive", name)
+	archivePath := filepath.Join(root, "changes", "archive", name)
 	if dirExists(archivePath) {
 		return archivePath, "archived", nil
 	}
 
 	// 3. Probar en archivados buscando por sufijo (ej. 'inc-01' en '2026-09-14-inc-01-...')
-	archiveDir := filepath.Join(root, "openspec", "changes", "archive")
+	archiveDir := filepath.Join(root, "changes", "archive")
 	if entries, err := os.ReadDir(archiveDir); err == nil {
 		for _, e := range entries {
 			if e.IsDir() && (strings.Contains(e.Name(), name) || strings.HasSuffix(e.Name(), name)) {
@@ -425,6 +456,21 @@ func (s *Service) FindIncrementPath(name string) (string, string, error) {
 	}
 
 	return "", "", fmt.Errorf("incremento '%s' no encontrado", name)
+}
+
+// requireActiveIncrement devuelve la ruta de un cambio activo. Un fallo de la
+// resolución del planning home se propaga tal cual, con su causa y su
+// continuación; cualquier otro caso se informa como cambio activo inexistente.
+func (s *Service) requireActiveIncrement(name string) (string, error) {
+	path, kind, err := s.FindIncrementPath(name)
+	var locateErr *workspace.LocateError
+	if errors.As(err, &locateErr) {
+		return "", err
+	}
+	if err != nil || kind != "active" {
+		return "", fmt.Errorf("el incremento %q no existe como cambio activo", name)
+	}
+	return path, nil
 }
 
 // GetIncrementDetail retorna el detalle completo de un cambio y el contenido de sus artefactos.
@@ -821,7 +867,10 @@ func (s *Service) MigrateIncompleteTasksToCumulative(changeName, role string) (i
 		return 0, err
 	}
 
-	root := s.getRootPath()
+	root, err := s.planningRoot()
+	if err != nil {
+		return 0, err
+	}
 	var tasksFiles []string
 
 	// Buscar tasks.<role>.md o tasks.md
@@ -869,13 +918,8 @@ func (s *Service) MigrateIncompleteTasksToCumulative(changeName, role string) (i
 		return 0, nil
 	}
 
-	// Directorio acumulativo para el rol
-	specsRepo := "openspec"
-	if cfg, err := workspace.LoadConfig(filepath.Join(root, "axiom.yaml")); err == nil && cfg.Workspace.SpecsRepository != "" {
-		specsRepo = cfg.Workspace.SpecsRepository
-	}
-
-	cumulativeDir := filepath.Join(root, specsRepo, "changes", fmt.Sprintf("cumulative-%s", role))
+	// Directorio acumulativo para el rol, junto a los demás cambios del planning home
+	cumulativeDir := filepath.Join(root, "changes", fmt.Sprintf("cumulative-%s", role))
 	if err := os.MkdirAll(cumulativeDir, 0755); err != nil {
 		return 0, fmt.Errorf("error creando directorio de incremento acumulativo: %w", err)
 	}
@@ -925,14 +969,17 @@ func (s *Service) CreateIncrement(req CreateIncrementRequest) (*CreateIncrementR
 		return nil, fmt.Errorf("el nombre %q no es válido: debe estar en minúsculas kebab-case (ej. mi-cambio-funcional)", name)
 	}
 
-	root := s.getRootPath()
-	activePath := filepath.Join(root, "openspec", "changes", name)
+	root, err := s.planningRoot()
+	if err != nil {
+		return nil, err
+	}
+	activePath := filepath.Join(root, "changes", name)
 	if _, err := os.Stat(activePath); err == nil {
 		return nil, fmt.Errorf("el incremento %q ya existe como cambio activo", name)
 	}
 
 	// Comprobar colisión con archivados
-	archiveDir := filepath.Join(root, "openspec", "changes", "archive")
+	archiveDir := filepath.Join(root, "changes", "archive")
 	if entries, err := os.ReadDir(archiveDir); err == nil {
 		for _, e := range entries {
 			if e.IsDir() && (e.Name() == name || strings.HasSuffix(e.Name(), "-"+name)) {
@@ -1013,9 +1060,8 @@ func (s *Service) ContinueIncrement(name string) (*IncrementActionResponse, erro
 		return nil, fmt.Errorf("el nombre del incremento es obligatorio")
 	}
 	root := s.getRootPath()
-	_, kind, err := s.FindIncrementPath(name)
-	if err != nil || kind != "active" {
-		return nil, fmt.Errorf("el incremento %q no existe como cambio activo", name)
+	if _, err := s.requireActiveIncrement(name); err != nil {
+		return nil, err
 	}
 
 	var stdout bytes.Buffer
@@ -1045,9 +1091,9 @@ func (s *Service) VerifyIncrement(name string) (*IncrementActionResponse, error)
 	if name == "" {
 		return nil, fmt.Errorf("el nombre del incremento es obligatorio")
 	}
-	targetPath, kind, err := s.FindIncrementPath(name)
-	if err != nil || kind != "active" {
-		return nil, fmt.Errorf("el incremento %q no existe como cambio activo", name)
+	targetPath, err := s.requireActiveIncrement(name)
+	if err != nil {
+		return nil, err
 	}
 
 	verifyFile := filepath.Join(targetPath, "verify-report.md")
@@ -1080,9 +1126,9 @@ func (s *Service) CreateHandoff(req CreateHandoffRequest) (*CreateHandoffRespons
 		return nil, fmt.Errorf("el nombre del cambio es obligatorio")
 	}
 
-	targetPath, kind, err := s.FindIncrementPath(change)
-	if err != nil || kind != "active" {
-		return nil, fmt.Errorf("el incremento %q no existe como cambio activo", change)
+	targetPath, err := s.requireActiveIncrement(change)
+	if err != nil {
+		return nil, err
 	}
 
 	fromPhase := handoff.Phase(strings.ToLower(strings.TrimSpace(req.FromPhase)))
@@ -1114,7 +1160,7 @@ func (s *Service) CreateHandoff(req CreateHandoffRequest) (*CreateHandoffRespons
 	}
 	artifacts := strings.TrimSpace(req.Artifacts)
 	if artifacts == "" {
-		artifacts = fmt.Sprintf("openspec/changes/%s", change)
+		artifacts = s.displayPath(targetPath)
 	}
 	decisions := strings.TrimSpace(req.Decisions)
 	if decisions == "" {
