@@ -380,6 +380,7 @@ func TestAllEmbeddedAssetsAreReadable(t *testing.T) {
 		"skills/_shared/sdd-phase-common.md",
 		"skills/_shared/sdd-status-contract.md",
 		"skills/_shared/research-lifecycle.md",
+		"skills/_shared/project-baseline-convention.md",
 		"kiro/agents/sdd-research.md",
 
 		// Hermes agent files
@@ -1808,7 +1809,7 @@ func TestEmbeddedAssetCount(t *testing.T) {
 			continue
 		}
 		if entry.Name() == "_shared" {
-			for _, sharedFile := range []string{"README.md", "persistence-contract.md", "engram-convention.md", "openspec-convention.md", "sdd-phase-common.md", "sdd-status-contract.md", "research-lifecycle.md", "skill-resolver.md"} {
+			for _, sharedFile := range []string{"README.md", "persistence-contract.md", "engram-convention.md", "openspec-convention.md", "sdd-phase-common.md", "sdd-status-contract.md", "research-lifecycle.md", "skill-resolver.md", "project-baseline-convention.md"} {
 				sharedPath := "skills/_shared/" + sharedFile
 				if _, err := Read(sharedPath); err != nil {
 					t.Fatalf("shared directory missing %q: %v", sharedFile, err)
@@ -2007,6 +2008,70 @@ func TestSDDStatusContractDocumentsBaselineAndTechnicalContext(t *testing.T) {
 	} {
 		if !strings.Contains(content, want) {
 			t.Errorf("sdd-status-contract missing baseline/technicalContext rule %q", want)
+		}
+	}
+}
+
+// REQ-24.19, REQ-24.24, REQ-24.29 y REQ-24.30: la convención compartida fija de
+// dónde se leen los localizadores de la baseline y del contexto técnico, qué se
+// lee y qué está prohibido, para que cada skill la cite en lugar de repetirla.
+func TestProjectBaselineConventionStatesLocatorsReadingAndProhibitions(t *testing.T) {
+	content := MustRead("skills/_shared/project-baseline-convention.md")
+
+	for _, want := range []string{
+		// 1. Localizadores del status; nunca axiom.yaml.
+		"Read the `baseline` and `technicalContext` locators from the status",
+		"never read or interpret `axiom.yaml`",
+		"`baseline.documents[]`",
+		"`technicalContext.maintained` and `technicalContext.reference`",
+		"If `notes` report a declaration cause, the declaration is invalid, not the default",
+		// 2. Lectura: la entrada de cada modo y el resto bajo demanda.
+		"Read the `entry` file of each declared `technicalContext` mode and consult the remaining `paths` only on demand",
+		"A mode declared without `entry` has nothing to preload",
+		"read the project's specifications from `baseline.documents`",
+		// 3. Prohibiciones.
+		"Never create, modify, or delete files under `technicalContext.reference` paths.",
+		"change only through the archive integration",
+		"never create or write `openspec/specs/` or `openspec/INDEX.md`",
+		"A domain that the baseline does not declare is rejected by archive",
+	} {
+		if !strings.Contains(content, want) {
+			t.Errorf("project-baseline-convention missing %q", want)
+		}
+	}
+}
+
+// REQ-24.24: el texto de sdd-init no prescribe crear openspec/specs/ cuando el
+// status proyecta baseline, en la skill, en su referencia y en la convención de
+// OpenSpec compartida.
+func TestSDDInitDoesNotPrescribeSpecsWithAProjectBaseline(t *testing.T) {
+	skill := MustRead("skills/sdd-init/SKILL.md")
+	for _, want := range []string{
+		"If the status projects `baseline`, do not create `openspec/specs/` or `openspec/INDEX.md`",
+		"`../_shared/project-baseline-convention.md`",
+	} {
+		if !strings.Contains(skill, want) {
+			t.Errorf("sdd-init SKILL.md missing %q", want)
+		}
+	}
+
+	details := MustRead("skills/sdd-init/references/init-details.md")
+	for _, want := range []string{
+		"If the status projects `baseline`, do not create `openspec/specs/` or `openspec/INDEX.md`",
+		"create only `config.yaml` and `changes/archive/`",
+	} {
+		if !strings.Contains(details, want) {
+			t.Errorf("sdd-init references/init-details.md missing %q", want)
+		}
+	}
+
+	convention := MustRead("skills/_shared/openspec-convention.md")
+	for _, want := range []string{
+		"`openspec/specs/` (only when the status does not project `baseline`)",
+		"no skill creates `openspec/specs/` or `openspec/INDEX.md`",
+	} {
+		if !strings.Contains(convention, want) {
+			t.Errorf("openspec-convention missing %q", want)
 		}
 	}
 }

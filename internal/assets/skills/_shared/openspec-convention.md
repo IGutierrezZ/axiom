@@ -31,7 +31,7 @@ openspec/
 | Skill | Creates / Reads | Path |
 |-------|----------------|------|
 | orchestrator | Optional recovery hint | `openspec/changes/{change-name}/state.yaml` |
-| sdd-init | Creates | `openspec/config.yaml`, `openspec/specs/`, `openspec/changes/`, `openspec/changes/archive/` |
+| sdd-init | Creates | `openspec/config.yaml`, `openspec/specs/` (only when the status does not project `baseline`), `openspec/changes/`, `openspec/changes/archive/` |
 | orchestrator | Seals once (`axiom sdd kickoff seal`) | `openspec/changes/{change-name}/kickoff.yaml` |
 | orchestrator | Appends (`axiom sdd gate record`) | `openspec/changes/{change-name}/gates.yaml` |
 | sdd-explore | Creates (optional) | `openspec/changes/{change-name}/exploration.md` |
@@ -45,6 +45,8 @@ openspec/
 | orchestrator | Creates when the last active role's role-apply gate is approved | `openspec/changes/{change-name}/handoff.md` |
 | sdd-archive | Moves | `openspec/changes/{change-name}/` → `openspec/changes/archive/YYYY-MM-DD-{change-name}/` |
 | sdd-archive | Updates | `openspec/specs/{domain}/spec.md` (merges deltas into main specs) |
+
+When the status projects `baseline`, the project's own declared documents are the baseline: no skill creates `openspec/specs/` or `openspec/INDEX.md`. See `project-baseline-convention.md`.
 
 ## Reading Artifacts
 
