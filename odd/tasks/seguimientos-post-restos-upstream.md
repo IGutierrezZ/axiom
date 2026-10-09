@@ -95,7 +95,13 @@ Son las mismas de la sección 4 del ODD anterior:
 
   Objetivo original: Primero, un test que falle si el PATH del sandbox resuelve un ejecutable fuera de él. Después, se cierra el PATH y los journeys con shims POSIX se marcan `unsupported` en Windows. Riesgo previsto `high` (aislamiento y procesos), así que lleva verificador.
 - [x] **P2 · Versión con `go install` (S2).** Fusionado en `770914de`. PR #111 (rama `fix/version-go-install`, commit `34492be0`). Ruta delegada: un writer `sonnet` en el worktree `p2-version`. Riesgo `medium` (`executable_change`, 95 líneas), así que basta la autoverificación del writer y una comprobación puntual del orquestador (`TestResolveVersion` y `TestVersionDefault` en verde). También se actualiza REQ-22.8 de la especificación viva `axiom-updater-resilience`. Opción (a) con test: la constante solo como último recurso, y `ReadBuildInfo` cuando no hay ldflags. Comprobar que `axiom version` y la comparación de versiones del actualizador siguen igual con GoReleaser.
-- [ ] **P3 · Migración: avisos de desinstalación y prompts heredados solo con SDD (S4 + S5).** Comparten el ámbito de migración de instalaciones del ODD anterior (U3). Riesgo previsto `high` (borra ficheros del usuario), así que lleva verificador y repite el ataque de propiedad del ODD anterior.
+- [~] **P3 · Migración: avisos de desinstalación y prompts heredados solo con SDD (S4 + S5).** Dos PRs independientes contra `main`, porque el total pasaba de 441 líneas y S4 y S5 no comparten ficheros:
+  - #115, S4 (TUI): `fix/tui-avisos-desinstalacion`, `b5fb762b`, 93 líneas.
+  - #116, S5 (persona): `fix/persona-prompt-heredado-sdd`, `32349403` + `3d9da705`, 348 líneas.
+
+  Ruta delegada: un writer `sonnet` en el worktree `p3-migracion` y un verificador independiente `sonnet`. `assess` da `medium`, pero se trata como `high` por decisión del usuario. El verificador repitió el ataque de propiedad de U3 en unas 40 combinaciones y lo dio por APTO. Su MENOR 1 (frontmatter válidos para cualquier adaptador) se corrigió en `3d9da705`, con RED observado en 8 casos cruzados. Kiro ya se retiraba antes, porque el steering de SDD es prefijo del de persona; el hueco real era VS Code. El orquestador recompiló las dos ramas y repitió sus tests: `persona`, `sdd`, `cli -run TestLegacyPrompt*`, `tui` y `tui/screens`.
+
+  Objetivo original: Comparten el ámbito de migración de instalaciones del ODD anterior (U3). Riesgo previsto `high` (borra ficheros del usuario), así que lleva verificador y repite el ataque de propiedad del ODD anterior.
 - [ ] **P4 · Tests intermitentes y comentarios (S3 + S6).** Presupuestos o esperas por condición en los dos tests, sin ocultar fallos reales, y los comentarios del ratchet. `PRD.md` no se toca.
 - [ ] **Cierre:** PR con este documento.
 
@@ -113,6 +119,7 @@ Previsión: unas 300-600 líneas en 4 PRs, todos por debajo de 400 líneas salvo
 
 ## 8. Progreso
 
+- **2026-10-09, P3:** se abren #115 y #116. Seguimientos que deja el verificador, preexistentes desde U3: el contenido dentro de una sección gestionada se considera propio, y hay una carrera teórica entre `Lstat` y `Remove`.
 - **2026-10-09, P1:** se abren #112, #113 y #114. En Windows, un subconjunto de 8 journeys con el PATH padre reducido a Go y Git dio 5 completed, 3 unsupported y 0 failed. El corpus completo no se ejecuta en Windows porque tarda horas; la referencia es «Run benchmark evidence» en Linux. Hay 14 tests de `bench` que ya fallan en Windows, igual que en `origin/main`.
 - **2026-10-09, P2:** fusionado #111 con squash (`770914de`) y eliminados su worktree y sus ramas.
 - **2026-10-08, P2:** se abre el PR #111. `go test ./cmd/axiom/`, `go vet`, `gofmtcheck` y `deadcode-ratchet` en verde en local. `internal/update` ya tolera pseudo-versiones y `+dirty`, así que no se toca. Falta el CI.
