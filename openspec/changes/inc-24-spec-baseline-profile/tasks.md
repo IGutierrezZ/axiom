@@ -206,7 +206,7 @@ Estas decisiones no están fijadas por la spec ni por el diseño; cada una indic
 - [x] 2.16 [A2-c5] Modificar `internal/tui/model.go`: los cuatro cargadores usan `Locate(".")` (§3.4).
 - [x] 2.17 [A2-c5] Modificar `cmd/axiom/main.go`: `runUI` reconoce el puntero al decidir si el directorio está configurado; `archive list` imprime los avisos de `LivingCatalog.Warnings` (REQ-24.10, REQ-3.1). Prueba de ambos.
 - [x] 2.18 [A2-c5] Cierre del commit A2-c5: `go test ./internal/tui ./cmd/axiom -count=1`; arnés: `axiom archive list` desde el repositorio de código del canónico; límite `internal/tui/model.go`, `cmd/axiom/main.go` y pruebas; commit `feat(tui): cargar SDD y documentación viva desde el planning home`.
-- [ ] 2.19 [A2] Cierre del tramo A2: batería de las reglas de ejecución (3). Salida: catálogo, dashboard y TUI desde la carpeta maestra; aviso Q14 en todos los consumidores.
+- [x] 2.19 [A2] Cierre del tramo A2: batería de las reglas de ejecución (3). Salida: catálogo, dashboard y TUI desde la carpeta maestra; aviso Q14 en todos los consumidores.
 
 ## Fase 3: B1 — Declaración, validación y proyección en el status
 
