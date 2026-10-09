@@ -176,27 +176,47 @@ func TestSweepAndQueryEmitTheLegacyLocationNote(t *testing.T) {
 	}
 }
 
-func TestExplicitSpecsRootSkipsTheResolution(t *testing.T) {
-	// Con una raíz de especificaciones explícita no se invoca Locate: el puntero
-	// roto no afecta y no hay notes.
-	ws := workspacetest.Canonical(t, workspacetest.WithBrokenPointer())
-	writeGoModule(t, ws.Backend, "billing", "regla")
-	specsRoot := filepath.Join(t.TempDir(), "openspec")
+// Con una raíz de especificaciones explícita se usa tal cual y no hay avisos de
+// ubicación (no se resuelve el planning home), pero la guarda de baseline se
+// evalúa igualmente desde la raíz de código: no se puede eludir pasando una ruta
+// (REQ-24.22, D-06).
+func TestExplicitSpecsRootIsUsedAsGiven(t *testing.T) {
+	t.Run("resoluble: se siembra en la raíz dada", func(t *testing.T) {
+		ws := workspacetest.Canonical(t)
+		writeGoModule(t, ws.Backend, "billing", "regla")
+		specsRoot := filepath.Join(t.TempDir(), "openspec")
 
-	res, err := RunSweep(context.Background(), SweepOptions{
-		WorkspaceRoot: ws.Backend,
-		SpecsRoot:     specsRoot,
-		Headless:      true,
+		res, err := RunSweep(context.Background(), SweepOptions{WorkspaceRoot: ws.Backend, SpecsRoot: specsRoot, Headless: true})
+		if err != nil {
+			t.Fatalf("RunSweep con raíz explícita: %v", err)
+		}
+		if len(res.Notes) != 0 {
+			t.Errorf("notes = %v, con raíz explícita no hay avisos de ubicación", res.Notes)
+		}
+		if _, err := os.Stat(filepath.Join(specsRoot, "specs")); err != nil {
+			t.Errorf("la raíz explícita debe usarse tal cual: %v", err)
+		}
 	})
-	if err != nil {
-		t.Fatalf("RunSweep con raíz explícita: %v", err)
-	}
-	if len(res.Notes) != 0 {
-		t.Errorf("notes = %v, sin resolución no hay avisos", res.Notes)
-	}
-	if _, err := os.Stat(filepath.Join(specsRoot, "specs")); err != nil {
-		t.Errorf("la raíz explícita debe usarse tal cual: %v", err)
-	}
+
+	t.Run("irresoluble: no hay respuesta de baseline y se omite la escritura", func(t *testing.T) {
+		ws := workspacetest.Canonical(t, workspacetest.WithBrokenPointer())
+		writeGoModule(t, ws.Backend, "billing", "regla")
+		specsRoot := filepath.Join(t.TempDir(), "openspec")
+
+		res, err := RunSweep(context.Background(), SweepOptions{WorkspaceRoot: ws.Backend, SpecsRoot: specsRoot, Headless: true})
+		if err != nil {
+			t.Fatalf("RunSweep con raíz explícita: %v", err)
+		}
+		if len(res.CreatedSpecs) != 0 || !res.SpecsSkipped {
+			t.Errorf("CreatedSpecs = %v, SpecsSkipped = %v: se esperaba omitir la siembra", res.CreatedSpecs, res.SpecsSkipped)
+		}
+		if len(res.Notes) != 1 || !strings.Contains(res.Notes[0], "apunta a un archivo inexistente") {
+			t.Errorf("notes = %q, se esperaba la causa del rechazo de la resolución", res.Notes)
+		}
+		if _, err := os.Stat(specsRoot); !os.IsNotExist(err) {
+			t.Errorf("no debe escribirse nada en la raíz explícita (err=%v)", err)
+		}
+	})
 }
 
 func TestKnowledgeRejectsAnUnresolvablePlanningHome(t *testing.T) {

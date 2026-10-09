@@ -22,12 +22,19 @@ func RunQuery(ctx context.Context, opts QueryOptions) (*QueryResult, error) {
 		return nil, fmt.Errorf("ruta workspace inválida: %w", err)
 	}
 
-	var notes []string
-	if opts.SpecsRoot == "" {
-		opts.SpecsRoot, notes, err = defaultSpecsRoot(absWorkspace)
-		if err != nil {
-			return nil, err
-		}
+	// La guarda de escritura solo importa con --enrich, pero la resolución se hace
+	// siempre: la búsqueda spec-first lee del planning home y, con baseline del
+	// proyecto, avisa de que no cubre la baseline externa (REQ-24.25).
+	target, err := resolveSpecsTarget(absWorkspace, opts.SpecsRoot, opQueryEnrich)
+	if err != nil {
+		return nil, err
+	}
+	opts.SpecsRoot = target.root
+	notes := target.notes
+	if len(target.externalDomains) > 0 {
+		notes = append(notes, fmt.Sprintf(
+			"La búsqueda spec-first no cubre la baseline externa del proyecto (dominios %s): solo consulta %s.",
+			strings.Join(target.externalDomains, ", "), filepath.Join(opts.SpecsRoot, "specs")))
 	}
 
 	res := &QueryResult{
@@ -73,7 +80,11 @@ func RunQuery(ctx context.Context, opts QueryOptions) (*QueryResult, error) {
 	res.DirectAnswer = answerSb.String()
 
 	// 4. Auto-enriquecimiento explícito (Solo lectura por defecto; requiere opts.Enrich = true)
-	if opts.Enrich && len(codeEvidences) > 0 {
+	if opts.Enrich && len(codeEvidences) > 0 && target.blocked != nil {
+		// Con baseline del proyecto, o indeterminada, no se enriquece: la consulta
+		// se responde y se anota la omisión (REQ-24.23).
+		res.Notes = append(res.Notes, skipNote(target.blocked, "el enriquecimiento de la especificación viva"))
+	} else if opts.Enrich && len(codeEvidences) > 0 {
 		targetDomain := slugify(domainHint)
 		if targetDomain == "" || targetDomain == "." {
 			targetDomain = "general"

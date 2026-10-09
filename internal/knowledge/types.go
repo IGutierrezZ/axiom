@@ -37,8 +37,12 @@ type SweepResult struct {
 	CreatedSpecs    []string        `json:"created_specs"`
 	Duration        time.Duration   `json:"duration"`
 	// Notes reúne los avisos no bloqueantes del barrido, entre ellos el de la
-	// ubicación antigua divergente (Q14, REQ-24.10).
+	// ubicación antigua divergente (Q14, REQ-24.10) y la omisión de la siembra con
+	// una baseline del proyecto (REQ-24.23).
 	Notes []string `json:"notes,omitempty"`
+	// SpecsSkipped indica que se omitió la siembra y el índice por la guarda de
+	// baseline. No se serializa: el contrato JSON solo añade `notes`.
+	SpecsSkipped bool `json:"-"`
 }
 
 // QueryType define la lente de análisis para la consulta.

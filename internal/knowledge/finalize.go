@@ -22,6 +22,13 @@ func FinalizeCrawl(ctx context.Context, jobPath string) (*FinalizeResult, error)
 		return nil, fmt.Errorf("error cargando job para finalizar: %w", err)
 	}
 
+	// Con baseline del proyecto, o indeterminada, no se reconcilia INDEX.md: se
+	// resuelve el planning home de la raíz de código en el momento de escribir
+	// (REQ-24.23).
+	if err := guardCrawlWrite(job, opFinalize); err != nil {
+		return nil, err
+	}
+
 	projectName := filepath.Base(job.WorkspaceRoot)
 
 	// 1. Reconciliar openspec/INDEX.md

@@ -1687,6 +1687,19 @@ func runArchiveList(args []string) {
 		fmt.Printf("[AVISO] %s\n", warning)
 	}
 
+	// Con baseline del proyecto el catálogo no se indexa: se informa de que es
+	// externa y de dónde está, para que un catálogo vacío no se interprete como
+	// ausencia de especificación (REQ-24.25).
+	if catalog.ExternalBaseline != nil {
+		fmt.Println("\nLa baseline de especificaciones es externa (del proyecto): sus documentos no se indexan aquí.")
+		fmt.Println("Dominios y rutas declarados:")
+		for _, document := range catalog.ExternalBaseline.Documents {
+			fmt.Printf("  - %-25s %s\n", document.Domain, document.Path)
+		}
+		fmt.Println()
+		return
+	}
+
 	if len(catalog.Specs) == 0 {
 		fmt.Println("\nNo se encontraron especificaciones vivas en openspec/specs/.")
 		fmt.Println("Ejecuta 'axiom archive sync' o 'axiom archive coldstart' para generarlas.")
@@ -1727,6 +1740,15 @@ func runArchiveShow(args []string) {
 	svc := livingdoc.NewService(baseDir, nil, nil)
 	entry, content, err := svc.GetSpecDetail(domain)
 	if err != nil {
+		// Un dominio de la baseline externa del proyecto no se indexa: se informa de
+		// que le pertenece y de dónde está su documento, sin error (REQ-24.25).
+		var external *livingdoc.ExternalBaselineError
+		if errors.As(err, &external) {
+			fmt.Printf("[INFO] El dominio %q pertenece a la baseline externa del proyecto y no se indexa.\n", external.Domain)
+			fmt.Printf("  - Documento:  %s\n", external.Path)
+			fmt.Printf("  - Declarada:  %s\n", external.ConfigPath)
+			return
+		}
 		fmt.Printf("[ERROR] %v\n", err)
 		os.Exit(1)
 	}
@@ -1823,16 +1845,30 @@ func runInit(args []string) {
 	fmt.Printf("  - Directorio:          %s\n", res.Record.Path)
 	fmt.Printf("  - Topología:           %s\n", res.Record.Topology)
 	fmt.Printf("  - Archivo Config:      %s\n", res.ConfigPath)
+	// Con una baseline que no es la de OpenSpec por defecto no se crean
+	// openspec/specs/ ni openspec/INDEX.md (REQ-24.23).
+	baselineOwned := res.BaselineOwnership != workspace.BaselineDefault
 	if res.AlreadyExisted {
 		fmt.Println("  - Estado:              Ya contenía axiom.yaml (registrado y marcado como activo)")
 	} else if effectiveProfile == "knowledge" {
-		fmt.Println("  - Estructura creada:   openspec/specs/, openspec/changes/, openspec/INDEX.md, .mcp.json")
+		if baselineOwned {
+			fmt.Println("  - Estructura creada:   openspec/changes/, .mcp.json")
+		} else {
+			fmt.Println("  - Estructura creada:   openspec/specs/, openspec/changes/, openspec/INDEX.md, .mcp.json")
+		}
 		fmt.Println("  - Perfil activo:       knowledge (multirepo, documentación viva, sin arneses de testeo)")
+	} else if baselineOwned {
+		fmt.Println("  - Estructura creada:   openspec/changes/, .axiom/inbox/skills/")
 	} else {
 		fmt.Println("  - Estructura creada:   openspec/specs/, openspec/changes/, .axiom/inbox/skills/")
 	}
 	if hubMgr != nil {
 		fmt.Printf("  - Registro global:     %s [ACTIVO]\n", hubMgr.GetConfigPath())
+	}
+	// Avisos de la inicialización: la omisión de la baseline, la conservación del
+	// axiom.yaml con --force y las violaciones de sus declaraciones.
+	for _, note := range res.Notes {
+		fmt.Printf("  - [AVISO] %s\n", note)
 	}
 	fmt.Println("================================================================================")
 	fmt.Println("¡Listo! Ejecuta 'axiom ui' para abrir el panel de control interactivo.")
@@ -2174,6 +2210,11 @@ func runKnowledgeSweep(args []string) {
 	if len(res.CreatedSpecs) > 0 {
 		fmt.Printf("  - Specs Sembradas:     %d en openspec/specs/\n", len(res.CreatedSpecs))
 	}
+	// Avisos no bloqueantes del barrido: la ubicación antigua divergente y la
+	// omisión de la siembra con una baseline del proyecto (REQ-24.23).
+	for _, note := range res.Notes {
+		fmt.Printf("  - [AVISO] %s\n", note)
+	}
 	if len(res.Ambiguities) > 0 {
 		fmt.Println("\n--- SOBRE DE AMBIGÜEDADES / INCERTIDUMBRES (DIFERIDO) ---")
 		for i, amb := range res.Ambiguities {
@@ -2184,7 +2225,11 @@ func runKnowledgeSweep(args []string) {
 		fmt.Println("\n  - Ambigüedades:        Ninguna detectada.")
 	}
 	fmt.Println("================================================================================")
-	fmt.Printf("Barrido completado en %v. Catálogo maestro actualizado en openspec/INDEX.md.\n", res.Duration.Round(time.Millisecond))
+	if res.SpecsSkipped {
+		fmt.Printf("Barrido completado en %v. No se sembraron especificaciones ni se actualizó openspec/INDEX.md.\n", res.Duration.Round(time.Millisecond))
+	} else {
+		fmt.Printf("Barrido completado en %v. Catálogo maestro actualizado en openspec/INDEX.md.\n", res.Duration.Round(time.Millisecond))
+	}
 }
 
 func runKnowledgeQuery(args []string) {
@@ -2252,6 +2297,13 @@ func runKnowledgeQuery(args []string) {
 				fmt.Printf("  - [%s] %s: %s\n", ev.Source, ev.File, ev.Context)
 			}
 		}
+	}
+
+	// Avisos no bloqueantes de la consulta: la ubicación antigua divergente, la
+	// omisión del enriquecimiento y que la búsqueda spec-first no cubre la
+	// baseline externa (REQ-24.23, REQ-24.25).
+	for _, note := range res.Notes {
+		fmt.Printf("\n[AVISO] %s\n", note)
 	}
 
 	fmt.Println("\n================================================================================")
