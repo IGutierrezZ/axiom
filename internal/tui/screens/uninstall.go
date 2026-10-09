@@ -361,7 +361,7 @@ func RenderUninstallConfirm(mode model.UninstallMode, selected []model.AgentID, 
 	return b.String()
 }
 
-func RenderUninstallResult(result componentuninstall.Result, err error, mode model.UninstallMode, selectedProfiles []string, engramScope model.EngramUninstallScope, engramProjectScopeAvailable bool, syncFiles []string, syncErr error) string {
+func RenderUninstallResult(result componentuninstall.Result, err error, mode model.UninstallMode, selectedProfiles []string, engramScope model.EngramUninstallScope, engramProjectScopeAvailable bool, syncFiles []string, syncWarnings []string, syncErr error) string {
 	var b strings.Builder
 
 	b.WriteString(styles.TitleStyle.Render("Uninstall Result"))
@@ -439,6 +439,7 @@ func RenderUninstallResult(result componentuninstall.Result, err error, mode mod
 				b.WriteString(styles.SuccessStyle.Render("✓ Clean install sync complete"))
 				b.WriteString("\n")
 				b.WriteString(styles.UnselectedStyle.Render(fmt.Sprintf("Synced files: %d", len(syncFiles))))
+				b.WriteString(renderSyncWarnings(syncWarnings))
 			}
 		}
 	}
