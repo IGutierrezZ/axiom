@@ -88,4 +88,4 @@ Ordered by number of merged pull requests descending, then alphabetically by Git
 
 ## Contributing
 
-Want to contribute? Check out the [open issues](https://github.com/Gentleman-Programming/gentle-ai/issues) and read the contribution guidelines in the repo.
+Want to contribute? Check out the [open issues](https://github.com/IGutierrezZ/axiom/issues) and read the contribution guidelines in the repo.

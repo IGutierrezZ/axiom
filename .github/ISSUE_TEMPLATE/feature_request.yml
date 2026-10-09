@@ -1,5 +1,5 @@
 name: Feature Request
-description: Suggest a new feature or enhancement for Gentle AI
+description: Suggest a new feature or enhancement for Axiom
 labels: ["enhancement", "status:needs-review"]
 
 body:
@@ -15,14 +15,14 @@ body:
     attributes:
       label: Pre-flight Checklist
       options:
-        - label: I have searched [existing issues](https://github.com/Gentleman-Programming/gentle-ai/issues) and this is not a duplicate
+        - label: I have searched [existing issues](https://github.com/IGutierrezZ/axiom/issues) and this is not a duplicate
           required: true
 
   - type: dropdown
     id: area
     attributes:
       label: 🔍 Affected Area
-      description: Which area of Gentle AI would this feature affect?
+      description: Which area of Axiom would this feature affect?
       options:
         - CLI (commands, flags)
         - TUI (terminal UI)
@@ -54,7 +54,7 @@ body:
       description: Describe the solution you'd like. Be as specific as possible.
       placeholder: |
         Example usage:
-          gga <command> <flags>
+          axiom <command> <flags>
 
         Expected output:
           ...
