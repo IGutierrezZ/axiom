@@ -2076,6 +2076,59 @@ func TestSDDInitDoesNotPrescribeSpecsWithAProjectBaseline(t *testing.T) {
 	}
 }
 
+// REQ-24.29: las cuatro fases lectoras leen la `entry` de cada modo de
+// technicalContext y consultan el resto bajo demanda. sdd-apply renderiza dos
+// niveles de modelo desde un mismo SKILL.md: ambos llevan la instrucción.
+func TestReadingPhaseSkillsReadTheTechnicalContextEntry(t *testing.T) {
+	const want = "When the status projects `technicalContext`, read the `entry` file of each mode and consult the remaining `paths` only on demand"
+	for _, phase := range []string{"sdd-explore", "sdd-design", "sdd-apply", "sdd-verify"} {
+		t.Run(phase, func(t *testing.T) {
+			content := MustRead("skills/" + phase + "/SKILL.md")
+			if !strings.Contains(content, want) {
+				t.Fatalf("%s must read the technicalContext entry and consult the rest on demand: missing %q", phase, want)
+			}
+			if !strings.Contains(content, "../_shared/project-baseline-convention.md") {
+				t.Errorf("%s must cite the shared project baseline convention", phase)
+			}
+			if phase == "sdd-apply" {
+				for _, tier := range []string{"capable", "small"} {
+					if section := extractModelSectionForTest(content, tier); !strings.Contains(section, want) {
+						t.Errorf("sdd-apply model-%s section is missing the technicalContext reading instruction", tier)
+					}
+				}
+			}
+		})
+	}
+}
+
+// REQ-24.30: el texto de cada skill de fase prohíbe escribir en las rutas del
+// modo `reference`. sdd-tasks no gana nada más sobre el contexto técnico (D-22).
+func TestEveryPhaseSkillForbidsWritingTheReferenceContext(t *testing.T) {
+	const want = "Never create, modify, or delete files under `technicalContext.reference` paths."
+	for _, phase := range []string{"sdd-explore", "sdd-propose", "sdd-spec", "sdd-design", "sdd-tasks", "sdd-apply", "sdd-verify", "sdd-archive"} {
+		t.Run(phase, func(t *testing.T) {
+			content := MustRead("skills/" + phase + "/SKILL.md")
+			if !strings.Contains(content, want) {
+				t.Fatalf("%s must forbid writing under the technicalContext.reference paths: missing %q", phase, want)
+			}
+			if phase == "sdd-apply" {
+				for _, tier := range []string{"capable", "small"} {
+					if section := extractModelSectionForTest(content, tier); !strings.Contains(section, want) {
+						t.Errorf("sdd-apply model-%s section is missing the reference-context prohibition", tier)
+					}
+				}
+			}
+		})
+	}
+
+	t.Run("sdd-tasks gana solo la prohibicion", func(t *testing.T) {
+		content := MustRead("skills/sdd-tasks/SKILL.md")
+		if got := strings.Count(content, "technicalContext"); got != 1 {
+			t.Fatalf("sdd-tasks mentions technicalContext %d times, want only the reference prohibition (1)", got)
+		}
+	})
+}
+
 func TestOpenCodeSDDOverlaySubagentsAreExplicitExecutors(t *testing.T) {
 	for _, assetPath := range []string{"opencode/sdd-overlay-single.json", "opencode/sdd-overlay-multi.json"} {
 		t.Run(assetPath, func(t *testing.T) {

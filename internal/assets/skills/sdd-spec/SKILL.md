@@ -255,6 +255,7 @@ Si el usuario elige generar `handoff.md`:
 - **Sufficient detail**: Preserve complete requirements and testable Given/When/Then scenarios, including relevant edge cases. Use the detail each scenario needs to make its expected behavior unambiguous. Do not truncate required detail to meet a word or line cap.
 - ODD-5.1: El repositorio de especificaciones opera siempre directo en la rama principal (main/master). Jamás crees ramas ni worktrees en él.
 - ODD-5.2: Antes de ceder el testigo en handoff.md, confirma que las especificaciones están commiteadas y pusheadas a remoto.
+- Never create, modify, or delete files under `technicalContext.reference` paths.
 - Return envelope per **Section D** from `skills/_shared/sdd-phase-common.md`.
 
 ## RFC 2119 Keywords Quick Reference

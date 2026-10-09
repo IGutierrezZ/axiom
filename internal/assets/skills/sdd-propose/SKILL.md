@@ -188,4 +188,5 @@ Ready for specs (sdd-spec) or design (sdd-design).
 - Modified Capabilities → each will become a delta spec in the change folder
 - If nothing changes at the spec level (pure refactor, config change), explicitly write "None" under both sub-sections — don't leave them as template placeholders
 - **Sufficient detail**: Keep the proposal concise but complete enough to explain intent, scope, risks, rollback and success criteria. Use bullets or tables where they improve clarity. Do not truncate required detail to meet a word or line cap.
+- Never create, modify, or delete files under `technicalContext.reference` paths.
 - Return envelope per **Section D** from `skills/_shared/sdd-phase-common.md`.

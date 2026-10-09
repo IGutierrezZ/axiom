@@ -58,6 +58,8 @@ Before designing, read the actual code that will be affected:
 - Dependencies and interfaces
 - Test infrastructure (if any)
 
+When the status projects `technicalContext`, read the `entry` file of each mode and consult the remaining `paths` only on demand (see `../_shared/project-baseline-convention.md`).
+
 ### Step 2a: Applicability-Driven Threat Matrix
 
 If the design changes routing, shell commands, subprocesses, VCS/PR automation, executable-file classification, or process integration, read `references/threat-matrix.md` and include its matrix in the design. Mark every row `Applicable` or explicit `N/A` with a reason. Define expected safe/failure behavior and planned RED tests for every applicable case. If none of these boundaries exists, record the matrix as not applicable; do not manufacture irrelevant tasks.
@@ -199,6 +201,7 @@ Si el usuario elige generar `handoff.md`:
 - Applicable threat-matrix rows are design requirements and MUST propagate to tasks and RED tests unchanged; explicit `N/A` rows require no task.
 - ODD-5.1: El repositorio de especificaciones opera siempre directo en la rama principal (main/master). Jamás crees ramas ni worktrees en él.
 - ODD-5.2: Antes de ceder el testigo en handoff.md, confirma que el diseño y arquitectura están commiteados y pusheados a remoto.
+- Never create, modify, or delete files under `technicalContext.reference` paths.
 - Return envelope per **Section D** from `skills/_shared/sdd-phase-common.md`.
 
 ## References

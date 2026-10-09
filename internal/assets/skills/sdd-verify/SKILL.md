@@ -35,6 +35,8 @@ Public/contextual comments follow the target context language by default. Explic
 - Do not require a report schema, validator, immutable attestation, evidence search, or settlement. Missing, stale, malformed, or failed reports do not gate archive.
 - SDD never offers, launches, or consumes RDD. Findings do not start automatic review, refuter, or correction loops.
 - Apply `rules.verify` from `openspec/config.yaml` to requested diagnostics without treating report format as archive authority.
+- When the status projects `technicalContext`, read the `entry` file of each mode and consult the remaining `paths` only on demand (see `../_shared/project-baseline-convention.md`).
+- Never create, modify, or delete files under `technicalContext.reference` paths.
 
 ## Decision Gates
 

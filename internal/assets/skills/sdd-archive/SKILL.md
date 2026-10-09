@@ -392,4 +392,5 @@ Unfinished tasks and unresolved findings: {list or none observed}.
 - The archive is an AUDIT TRAIL — never delete or modify archived changes
 - If `openspec/changes/archive/` doesn't exist, create it
 - Apply any `rules.archive` from `openspec/config.yaml`
+- Never create, modify, or delete files under `technicalContext.reference` paths.
 - Return envelope per **Section D** from `skills/_shared/sdd-phase-common.md`.

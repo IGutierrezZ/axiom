@@ -87,6 +87,8 @@ INVESTIGATE:
 └── Identify dependencies and coupling
 ```
 
+When the status projects `technicalContext`, read the `entry` file of each mode and consult the remaining `paths` only on demand (see `../_shared/project-baseline-convention.md`).
+
 ### Step 4: Analyze Options
 
 If there are multiple approaches, compare them:
@@ -150,4 +152,5 @@ Return EXACTLY this format to the orchestrator (and write the same content to `e
 - INTERROGATION RULE: Actively interrogate underspecified functional aspects and edge cases before closing exploration
 - If you can't find enough information, say so clearly
 - If the request is too vague to explore, say what clarification is needed
+- Never create, modify, or delete files under `technicalContext.reference` paths.
 - Return envelope per **Section D** from `skills/_shared/sdd-phase-common.md`.
