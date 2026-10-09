@@ -68,7 +68,7 @@ func TestResolveEmbeddedLayoutIsEquivalentForEverySpecsRepository(t *testing.T) 
 	referenceKeys := statusJSONKeys(t, reference)
 	for _, key := range referenceKeys {
 		if key == "baseline" || key == "technicalContext" {
-			t.Fatalf("el status no debe proyectar %q en esta unidad: %v", key, referenceKeys)
+			t.Fatalf("el status no debe proyectar %q sin declaración: %v", key, referenceKeys)
 		}
 	}
 	for _, tc := range layouts {

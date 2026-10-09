@@ -38,6 +38,12 @@ type StatusV2Projection struct {
 	// non-continuous kickoff. This is an additive v2 field; no existing
 	// value or field changes (task 14.3).
 	Governance *governanceV2 `json:"governance,omitempty"`
+	// Baseline and TechnicalContext project Status.Baseline and
+	// Status.TechnicalContext unchanged (inc-24): additive optional v2 fields,
+	// present only with a valid declaration. Like Consent, the wire type
+	// already matches the public contract 1:1.
+	Baseline         *BaselineProjection         `json:"baseline,omitempty"`
+	TechnicalContext *TechnicalContextProjection `json:"technicalContext,omitempty"`
 	// GateQuestion projects Status.GateQuestion unchanged: like Consent, the
 	// wire type already matches the public contract 1:1, so no *V2
 	// translation type is needed (design.md S5.5 defines the wire shape
@@ -216,6 +222,8 @@ func ProjectStatusV2(status Status) (StatusV2Projection, error) {
 		BlockedReasons:  status.BlockedReasons,
 		Notes:           status.Notes,
 	}
+	projected.Baseline = status.Baseline
+	projected.TechnicalContext = status.TechnicalContext
 	if status.PhaseInstructions != nil {
 		projected.PhaseInstructions = &phaseInstructionsV2{
 			Apply: status.PhaseInstructions.Apply, Verify: status.PhaseInstructions.Verify,

@@ -194,6 +194,12 @@ type Status struct {
 	// increment shipped -- the byte-for-byte regression this increment's own
 	// control gate guards (kickoff_absence_regression_test.go).
 	Governance *Governance `json:"governance,omitempty"`
+	// Baseline and TechnicalContext are inc-24's additive projection of the
+	// valid `baseline:` and `technical_context:` declarations of axiom.yaml.
+	// Structural absence (nil, omitempty) when the declaration is absent or
+	// invalid: an invalid block is never projected, not even partially.
+	Baseline         *BaselineProjection         `json:"baseline,omitempty"`
+	TechnicalContext *TechnicalContextProjection `json:"technicalContext,omitempty"`
 	// GateQuestion is the typed blocking question for the one gate
 	// firstOpenGate names when NextRecommended is "await-gate" (design.md
 	// S5.5): the same Lossless Blocking Prompt shape as Consent, scoped to
@@ -214,6 +220,31 @@ type Status struct {
 	// continuation command. It is deliberately internal: status reports why
 	// preparation is needed but never gains authority to perform it.
 	consentPreparationRoots []string
+}
+
+// BaselineProjection lists the documents of the project baseline. Every path
+// is absolute; Integration is `compose` for a document with a requirement
+// profile and `directed` or `register` for a prose document.
+type BaselineProjection struct {
+	Documents []BaselineDocumentProjection `json:"documents"`
+}
+
+type BaselineDocumentProjection struct {
+	Domain      string `json:"domain"`
+	Path        string `json:"path"`
+	Integration string `json:"integration"`
+}
+
+// TechnicalContextProjection carries, per declared mode, the absolute paths
+// and, when declared, the absolute entry file. An undeclared mode is absent.
+type TechnicalContextProjection struct {
+	Maintained *ContextModeProjection `json:"maintained,omitempty"`
+	Reference  *ContextModeProjection `json:"reference,omitempty"`
+}
+
+type ContextModeProjection struct {
+	Paths []string `json:"paths"`
+	Entry string   `json:"entry,omitempty"`
 }
 
 // ArchivedProjection is the positive terminal projection for a change that is
