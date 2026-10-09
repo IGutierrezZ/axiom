@@ -558,7 +558,7 @@ func probePiCodeGraphMCPWithTransport(ctx context.Context, stdin io.WriteCloser,
 	decoder := json.NewDecoder(bufio.NewReader(stdout))
 	if err := encoder.Encode(map[string]any{
 		"jsonrpc": "2.0", "id": 1, "method": "initialize",
-		"params": map[string]any{"protocolVersion": "2025-03-26", "capabilities": map[string]any{}, "clientInfo": map[string]any{"name": "gentle-ai", "version": "1"}},
+		"params": map[string]any{"protocolVersion": "2025-03-26", "capabilities": map[string]any{}, "clientInfo": map[string]any{"name": "axiom", "version": "1"}},
 	}); err != nil {
 		return PiCodeGraphMCPProbeResult{}, fmt.Errorf("send MCP initialize: %w", err)
 	}

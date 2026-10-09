@@ -1041,7 +1041,7 @@ func TestTuiSyncClaudeModelConfigWritesSelectedAssignments(t *testing.T) {
 		"| sdd-apply | haiku | default | Implementation |",
 		"| default | haiku | default | Generic and SDD/JD delegation fallback |",
 		"Every Claude Agent tool call MUST include `model`",
-		"Gentle AI does not configure the main orchestrator model",
+		"Axiom does not configure the main orchestrator model",
 	} {
 		if !strings.Contains(string(body), want) {
 			t.Fatalf("Claude parent prompt missing %q; got:\n%s", want, body)

@@ -743,7 +743,7 @@ func reviewLensContextInstructionText(binding reviewLensContextBinding, paths in
 	if !found {
 		return "", reviewLensContextRefusal("lens_context_lens_not_selected", reviewLensContextRefreshAction)
 	}
-	return fmt.Sprintf(`You are the %s lens of one bounded Gentle AI review. %s
+	return fmt.Sprintf(`You are the %s lens of one bounded Axiom review. %s
 
 Scope. The %s sections below are the complete and only view of this candidate: all %d changed paths are represented in the canonical manifest order carried by %s. Authored paths carry full immutable patches; generated paths carry immutable metadata summaries without content hunks. Do not read the working tree, the index, HEAD, or any other file, and do not run any command. Nothing outside these sections is part of this candidate, and anything you cannot see here is not evidence.
 
