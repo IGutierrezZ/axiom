@@ -87,22 +87,22 @@ Son las mismas de la sección 4 del ODD anterior:
 > Estado: `[ ]` pendiente · `[~]` en curso o con PR abierto · `[x]` fusionado. Ruta: delegada, con un writer por tarea en su worktree, salvo lo que sea mecánico y de un solo fichero.
 
 - [~] **P1 · `bench` aislado en Windows (S1, opción b).** Tres PRs apilados contra `main` (estrategia `stacked-to-main`, elegida por el usuario):
-  - #112 C1, PATH cerrado: `fix/bench-windows-01-path`, `25334646`, 185 líneas.
-  - #113 C2, guardia fail-closed: `fix/bench-windows-02-guard`, `f2076677`, 574 líneas con `size:exception` aprobada por el usuario. No hay corte cohesivo: separaría la guardia de su consumidor.
-  - #114 C3, `unsupported` en Windows (j105, j116 y j3043): `fix/bench-windows-03-unsupported`, `cdbba284`, 187 líneas.
+  - #112 C1, PATH cerrado: **fusionado** en `93cd7c65`. «Run benchmark evidence» en verde en Linux.
+  - #113 C2, guardia fail-closed: `fix/bench-windows-02-guard`, rebasado tras el merge de C1 a `8241f2b9` y reapuntado a `main`, 574 líneas con `size:exception` aprobada por el usuario. No hay corte cohesivo: separaría la guardia de su consumidor.
+  - #114 C3, `unsupported` en Windows (j105, j116 y j3043): `fix/bench-windows-03-unsupported`, rebasado a `5883a1b5` (árbol de `bench` idéntico al verificado en `cdbba284`), 187 líneas.
 
   Ruta delegada: un writer `sonnet` en el worktree `p1-bench` y un verificador independiente `sonnet` de solo lectura. Riesgo `high` (`process_boundary`). El verificador lo dio por apto con correcciones y sus cuatro correcciones menores están aplicadas: `pathWithin` fail-closed ante junctions, `!IsDir()` en Windows, README matizado y `sandbox_git_unavailable`. El orquestador compiló y testeó C1 y C2 por separado. Queda pendiente en CI la deriva de bytes de stderr en j2138 y j3043, porque falta `node` en el PATH.
 
   Objetivo original: Primero, un test que falle si el PATH del sandbox resuelve un ejecutable fuera de él. Después, se cierra el PATH y los journeys con shims POSIX se marcan `unsupported` en Windows. Riesgo previsto `high` (aislamiento y procesos), así que lleva verificador.
 - [x] **P2 · Versión con `go install` (S2).** Fusionado en `770914de`. PR #111 (rama `fix/version-go-install`, commit `34492be0`). Ruta delegada: un writer `sonnet` en el worktree `p2-version`. Riesgo `medium` (`executable_change`, 95 líneas), así que basta la autoverificación del writer y una comprobación puntual del orquestador (`TestResolveVersion` y `TestVersionDefault` en verde). También se actualiza REQ-22.8 de la especificación viva `axiom-updater-resilience`. Opción (a) con test: la constante solo como último recurso, y `ReadBuildInfo` cuando no hay ldflags. Comprobar que `axiom version` y la comparación de versiones del actualizador siguen igual con GoReleaser.
 - [~] **P3 · Migración: avisos de desinstalación y prompts heredados solo con SDD (S4 + S5).** Dos PRs independientes contra `main`, porque el total pasaba de 441 líneas y S4 y S5 no comparten ficheros:
-  - #115, S4 (TUI): `fix/tui-avisos-desinstalacion`, `b5fb762b`, 93 líneas.
+  - #115, S4 (TUI): **fusionado** en `2e0e3a90`.
   - #116, S5 (persona): `fix/persona-prompt-heredado-sdd`, `32349403` + `3d9da705`, 348 líneas.
 
   Ruta delegada: un writer `sonnet` en el worktree `p3-migracion` y un verificador independiente `sonnet`. `assess` da `medium`, pero se trata como `high` por decisión del usuario. El verificador repitió el ataque de propiedad de U3 en unas 40 combinaciones y lo dio por APTO. Su MENOR 1 (frontmatter válidos para cualquier adaptador) se corrigió en `3d9da705`, con RED observado en 8 casos cruzados. Kiro ya se retiraba antes, porque el steering de SDD es prefijo del de persona; el hueco real era VS Code. El orquestador recompiló las dos ramas y repitió sus tests: `persona`, `sdd`, `cli -run TestLegacyPrompt*`, `tui` y `tui/screens`.
 
   Objetivo original: Comparten el ámbito de migración de instalaciones del ODD anterior (U3). Riesgo previsto `high` (borra ficheros del usuario), así que lleva verificador y repite el ataque de propiedad del ODD anterior.
-- [~] **P4 · Tests intermitentes y comentarios (S3 + S6).** PR #117 (`test/intermitentes-y-comentarios`, `bbc9562c` + `86f99382`, 41 líneas, `type:chore`).
+- [x] **P4 · Tests intermitentes y comentarios (S3 + S6).** Fusionado en `b24d0fa9`. PR #117 (`test/intermitentes-y-comentarios`, `bbc9562c` + `86f99382`, 41 líneas, `type:chore`).
   - **Test de `cli`:** la causa medida es el presupuesto fijo de 25 s del facade bajo carga (fallos a 25,00 s; reproducido con 3 s). El test sube el presupuesto a 3 min solo durante su ejecución, y el valor del producto no cambia.
   - **Test de `update`:** no se toca, porque no falló en unas 47 pasadas con carga. Queda documentado, como permite el criterio de aceptación.
   - **Comentario del ratchet:** corregido. El orquestador arregló una inexactitud histórica del writer y aplicó el MENOR del verificador.
@@ -125,6 +125,16 @@ Previsión: unas 300-600 líneas en 4 PRs, todos por debajo de 400 líneas salvo
 
 ## 8. Progreso
 
+- **2026-10-09, primera tanda de merges:**
+  - **Fusionados con squash:** #115, #117 y #112.
+  - **#116 bloqueado por política:** el check obligatorio «Verify PR Origin & Authority» quedó `CANCELLED` en una ejecución superada. Se relanza y queda en cola.
+  - **Pila de P1:** C2 y C3 se rebasan sobre `main` y #113 se reapunta a `main`. Su CI se repite.
+  - **`main` combinado (`93cd7c65`) verificado en un worktree temporal:**
+    - `go build ./...` y `go vet` de `cmd/axiom` y `tui`;
+    - tests de `cmd/axiom`, de desinstalación de `tui` y `tui/screens`, y los dos tests de P4 en `cli`;
+    - `bench`: build, vet y tests de PATH;
+    - `gofmtcheck` y ratchet.
+  - **Limpieza:** eliminados los worktrees y las ramas de #115, #117 y #112.
 - **2026-10-09, P4:** se abre #117. Seguimiento: un STATUS negociado tarda 5-8 s en un repo mínimo en Windows, y otros tests de `internal/cli` con el presupuesto de 25 s podrían ser intermitentes bajo carga.
 - **2026-10-09, P3:** se abren #115 y #116. Seguimientos que deja el verificador, preexistentes desde U3: el contenido dentro de una sección gestionada se considera propio, y hay una carrera teórica entre `Lstat` y `Remove`.
 - **2026-10-09, P1:** se abren #112, #113 y #114. En Windows, un subconjunto de 8 journeys con el PATH padre reducido a Go y Git dio 5 completed, 3 unsupported y 0 failed. El corpus completo no se ejecuta en Windows porque tarda horas; la referencia es «Run benchmark evidence» en Linux. Hay 14 tests de `bench` que ya fallan en Windows, igual que en `origin/main`.
