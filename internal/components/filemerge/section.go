@@ -79,6 +79,22 @@ const (
 	LegacyTriggerRulesSectionID = "trigger-rules"
 )
 
+// Frontmatter the SDD component writes at the top of a prompt file it creates
+// from scratch, for the agents that keep their prompt in a file with its own
+// header (VS Code instructions files and Kiro steering files). The SDD injector
+// writes them and the legacy prompt retirement recognizes them, so each literal
+// has one definition.
+const (
+	SDDInstructionsFrontmatter = "---\n" +
+		"name: Gentle AI Persona\n" +
+		"description: Gentleman persona with SDD orchestration and Engram protocol\n" +
+		"applyTo: \"**\"\n" +
+		"---\n"
+	SDDSteeringFrontmatter = "---\n" +
+		"inclusion: always\n" +
+		"---\n"
+)
+
 const (
 	markerPrefix = "<!-- axiom:"
 	markerSuffix = " -->"

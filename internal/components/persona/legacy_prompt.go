@@ -39,6 +39,27 @@ var managedPromptSectionIDs = map[string]struct{}{
 	agentguidance.RoutingSectionID:         {},
 }
 
+// installerFrontmatters returns the only headers a legacy prompt file of this
+// adapter may start with, chosen by the prompt strategy that decides which
+// header Axiom writes at that path: steering files (Kiro) take the steering
+// headers, instructions files (VS Code) the instructions headers, and any other
+// target (Cursor) none. For each target they are the persona installer's
+// (wrapSteeringFile, wrapInstructionsFile) and the one the SDD component writes
+// when it creates the file on its own (shared with its injector through
+// filemerge). A header that belongs to another adapter is not what Axiom wrote
+// at this path. A file is matched byte for byte, so an extra key, a changed
+// value or any whitespace difference leaves the header as content Axiom did not
+// write.
+func installerFrontmatters(adapter agents.Adapter) []string {
+	switch adapter.SystemPromptStrategy() {
+	case model.StrategySteeringFile:
+		return []string{wrapSteeringFile(""), filemerge.SDDSteeringFrontmatter}
+	case model.StrategyInstructionsFile:
+		return []string{wrapInstructionsFile(""), filemerge.SDDInstructionsFrontmatter}
+	}
+	return nil
+}
+
 var managedSectionOpenMarker = regexp.MustCompile(`<!-- (axiom|gentle-ai):([A-Za-z0-9_.-]+) -->`)
 
 // RetireLegacyPromptFiles removes the prompt files an earlier release wrote
@@ -50,7 +71,7 @@ var managedSectionOpenMarker = regexp.MustCompile(`<!-- (axiom|gentle-ai):([A-Za
 //     managed section, so deleting the legacy copy cannot drop the prompt;
 //   - the legacy file holds at least one managed section, every marker section
 //     in it is one of managedPromptSectionIDs, and each is closed;
-//   - outside those sections and the installer's own frontmatter there is
+//   - outside those sections and the frontmatter installerFrontmatters allows for the adapter there is
 //     nothing, or exactly the persona text the installer generates.
 //
 // The content inside a managed section counts as Axiom-owned: sync rewrote it on
@@ -140,7 +161,7 @@ func normalizePrompt(content string) string {
 // content with no managed section at all is never installer-written.
 func legacyPromptProblem(adapter agents.Adapter, content string) string {
 	rest := normalizePrompt(content)
-	for _, frontmatter := range []string{wrapInstructionsFile(""), wrapSteeringFile("")} {
+	for _, frontmatter := range installerFrontmatters(adapter) {
 		if strings.HasPrefix(rest, frontmatter) {
 			rest = strings.TrimPrefix(rest, frontmatter)
 			break

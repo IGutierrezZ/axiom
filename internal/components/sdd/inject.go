@@ -3058,11 +3058,11 @@ func injectFileAppend(homeDir string, adapter agents.Adapter, content string) (I
 	}
 
 	if adapter.SystemPromptStrategy() == model.StrategyInstructionsFile && strings.TrimSpace(existing) == "" {
-		existing = instructionsFrontmatter
+		existing = filemerge.SDDInstructionsFrontmatter
 	}
 
 	if adapter.SystemPromptStrategy() == model.StrategySteeringFile && strings.TrimSpace(existing) == "" {
-		existing = steeringFrontmatter
+		existing = filemerge.SDDSteeringFrontmatter
 	}
 
 	// If there is a bare (un-marked) legacy orchestrator block, strip it first
@@ -3283,16 +3283,6 @@ func removePiManagedSections(content string) (string, bool) {
 	}
 	return content, removed
 }
-
-const instructionsFrontmatter = "---\n" +
-	"name: Gentle AI Persona\n" +
-	"description: Gentleman persona with SDD orchestration and Engram protocol\n" +
-	"applyTo: \"**\"\n" +
-	"---\n"
-
-const steeringFrontmatter = "---\n" +
-	"inclusion: always\n" +
-	"---\n"
 
 // stripBareOrchestratorSection removes an un-marked "## Agent Teams Orchestrator"
 // (or legacy equivalent) block from content. It finds the first matching heading
