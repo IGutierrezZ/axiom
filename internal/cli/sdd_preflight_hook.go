@@ -155,7 +155,7 @@ func runSDDPreflightHook(args []string, stdin io.Reader, stdout io.Writer) error
 		updated = map[string]any{}
 	}
 	updated["prompt"] = block + "\n\n" + payload.ToolInput.Prompt
-	return writeSDDPreflightHookDecision(stdout, "allow", "parent-confirmed SDD preflight attached by Gentle AI", updated)
+	return writeSDDPreflightHookDecision(stdout, "allow", "parent-confirmed SDD preflight attached by Axiom", updated)
 }
 
 // sddPreflightTranscriptRecord is the subset of one JSONL transcript line

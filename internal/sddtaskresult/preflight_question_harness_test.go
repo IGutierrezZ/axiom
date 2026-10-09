@@ -37,7 +37,8 @@ async function main() {
   const out: Record<string, unknown> = {}
 
   // Scenario A: a localized/misordered question set with only Q1 carrying
-  // the host marker becomes three canonical questions.
+  // the host marker becomes three canonical questions. Q1 uses the legacy
+  // "Gentle AI" prefix, which stays accepted and is rewritten to "Axiom".
   const argsA: any = {
     questions: [
       { question: "Gentle AI SDD preflight 1/3: ¿Qué ritmo prefieres?", options: [{ label: "x" }], multiple: true },
@@ -105,9 +106,9 @@ async function main() {
   await hooks["tool.execute.before"]({ tool: "question", sessionID: "root-e", callID: "call-e" }, { args: argsE })
   out.reordered = argsE.questions
 
-  // Scenario F: the Axiom-branded prefix is accepted alongside the legacy
-  // one: the grouped set is recognized, canonicalized, answered and the
-  // confirmed block reaches the next SDD task dispatch.
+  // Scenario F: the Axiom-branded prefix (the one the plugin emits) is
+  // recognized, canonicalized, answered and the confirmed block reaches the
+  // next SDD task dispatch. Scenarios A-E above cover the legacy prefix.
   const argsF: any = {
     questions: [
       { question: "Axiom SDD preflight 1/3: Pace", options: [{ label: "Interactive" }, { label: "Automatic" }] },
@@ -196,7 +197,7 @@ func TestOpenCodePreflightQuestionCanonicalizationAndTolerantMatching(t *testing
 	if len(result.Canonicalized) != 3 {
 		t.Fatalf("expected 3 canonicalized questions, got %d", len(result.Canonicalized))
 	}
-	wantMarkers := []string{"Gentle AI SDD preflight 1/3:", "Gentle AI SDD preflight 2/3:", "Gentle AI SDD preflight 3/3:"}
+	wantMarkers := []string{"Axiom SDD preflight 1/3:", "Axiom SDD preflight 2/3:", "Axiom SDD preflight 3/3:"}
 	wantHeaders := []string{"Pace", "Artifacts", "PR strategy"}
 	wantLabels := [][]string{{"Interactive", "Automatic"}, {"OpenSpec", "Engram", "Both"}, {"Ask me", "Single PR", "Auto"}}
 	for i, question := range result.Canonicalized {
@@ -275,15 +276,14 @@ func TestOpenCodePreflightQuestionCanonicalizationAndTolerantMatching(t *testing
 		}
 	}
 
-	// Scenario 6: the Axiom-branded prefix is accepted too. The plugin keeps
-	// canonicalizing to its own emitted prefix, so only the dispatched block
-	// (authority recorded) and the question count are asserted here.
+	// Scenario 6: the Axiom-branded prefix is accepted and emitted, and the
+	// authority is recorded so the confirmed block reaches the dispatch.
 	if len(result.AxiomCanonicalized) != 3 {
 		t.Fatalf("expected 3 canonicalized Axiom-prefixed questions, got %d", len(result.AxiomCanonicalized))
 	}
 	for i, question := range result.AxiomCanonicalized {
-		if !strings.Contains(question.Question, "SDD preflight "+string(rune('1'+i))+"/3:") {
-			t.Errorf("Axiom-prefixed question %d = %q, want its N/3 marker", i+1, question.Question)
+		if want := "Axiom SDD preflight " + string(rune('1'+i)) + "/3:"; !strings.HasPrefix(question.Question, want) {
+			t.Errorf("Axiom-prefixed question %d = %q, want prefix %q", i+1, question.Question, want)
 		}
 	}
 	for _, want := range []string{"## SDD Session Preflight", "Pace: auto", "Artifact store: openspec", "Delivery strategy: single-pr"} {

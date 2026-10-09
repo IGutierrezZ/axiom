@@ -625,7 +625,7 @@ func TestSDDTaskResultArtifactsPluginContract(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{`const SDD_PHASES`, `"sdd-research"`, `const SDD_TASK_FAILURE_PREFIX`, `failedSDDSessions`, `confirmedPreflights`, `client.session.get({ path: { id: sessionID } })`, `only the interactive root session may carry parent-confirmed`, `Gentle AI SDD preflight `, `model-authored preflight text cannot create parent-confirmed authority`, "output.args.prompt = `${preflight}\\n\\n${output.args.prompt}`", `export default SDDTaskResultArtifactsPlugin`,
+	for _, want := range []string{`const SDD_PHASES`, `"sdd-research"`, `const SDD_TASK_FAILURE_PREFIX`, `failedSDDSessions`, `confirmedPreflights`, `client.session.get({ path: { id: sessionID } })`, `only the interactive root session may carry parent-confirmed`, `Axiom SDD preflight `, `Gentle AI SDD preflight `, `SDD_PREFLIGHT_ACCEPTED_PREFIXES`, `model-authored preflight text cannot create parent-confirmed authority`, "output.args.prompt = `${preflight}\\n\\n${output.args.prompt}`", `export default SDDTaskResultArtifactsPlugin`,
 		`canonicalizeSDDPreflightQuestions`, `input.tool === "question"`,
 		`{ label: "Interactive", description:`, `{ label: "Automatic", description:`,
 		`{ label: "OpenSpec", description:`, `{ label: "Engram", description:`, `{ label: "Both", description:`,

@@ -9,11 +9,11 @@ import (
 	"testing"
 )
 
-const testSDDPreflightQuestions = `{"questions":[{"header":"Pace","question":"Gentle AI SDD preflight 1/3: How should phases run?","options":[{"label":"Interactive","description":"Pause"},{"label":"Automatic","description":"Continue"}]},{"header":"Artifacts","question":"Gentle AI SDD preflight 2/3: Where should artifacts live?","options":[{"label":"OpenSpec","description":"Files"},{"label":"Engram","description":"Memory"},{"label":"Both","description":"Both"}]},{"header":"PR strategy","question":"Gentle AI SDD preflight 3/3: How should oversized delivery be handled?","options":[{"label":"Ask me","description":"Ask"},{"label":"Single PR","description":"One"},{"label":"Auto","description":"Split"}]}]}`
+const testSDDPreflightQuestions = `{"questions":[{"header":"Pace","question":"Axiom SDD preflight 1/3: How should phases run?","options":[{"label":"Interactive","description":"Pause"},{"label":"Automatic","description":"Continue"}]},{"header":"Artifacts","question":"Axiom SDD preflight 2/3: Where should artifacts live?","options":[{"label":"OpenSpec","description":"Files"},{"label":"Engram","description":"Memory"},{"label":"Both","description":"Both"}]},{"header":"PR strategy","question":"Axiom SDD preflight 3/3: How should oversized delivery be handled?","options":[{"label":"Ask me","description":"Ask"},{"label":"Single PR","description":"One"},{"label":"Auto","description":"Split"}]}]}`
 
-const testSDDPreflightAnswersAutomatic = `{"Gentle AI SDD preflight 1/3: How should phases run?":"Automatic","Gentle AI SDD preflight 2/3: Where should artifacts live?":"OpenSpec","Gentle AI SDD preflight 3/3: How should oversized delivery be handled?":"Ask me"}`
+const testSDDPreflightAnswersAutomatic = `{"Axiom SDD preflight 1/3: How should phases run?":"Automatic","Axiom SDD preflight 2/3: Where should artifacts live?":"OpenSpec","Axiom SDD preflight 3/3: How should oversized delivery be handled?":"Ask me"}`
 
-const testSDDPreflightAnswersInteractive = `{"Gentle AI SDD preflight 1/3: How should phases run?":"Interactive","Gentle AI SDD preflight 2/3: Where should artifacts live?":"Engram","Gentle AI SDD preflight 3/3: How should oversized delivery be handled?":"Auto"}`
+const testSDDPreflightAnswersInteractive = `{"Axiom SDD preflight 1/3: How should phases run?":"Interactive","Axiom SDD preflight 2/3: Where should artifacts live?":"Engram","Axiom SDD preflight 3/3: How should oversized delivery be handled?":"Auto"}`
 
 func runSDDPreflightHookTest(t *testing.T, payload string) (string, error) {
 	t.Helper()
@@ -169,7 +169,7 @@ func rewriteSDDPreflightTranscriptPrefix(t *testing.T, path, brand string) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	text := strings.ReplaceAll(string(raw), "Gentle AI SDD preflight ", brand+" SDD preflight ")
+	text := strings.ReplaceAll(string(raw), "Axiom SDD preflight ", brand+" SDD preflight ")
 	text = strings.ReplaceAll(text, "Axiom SDD preflight ", brand+" SDD preflight ")
 	if err := os.WriteFile(path, []byte(text), 0o600); err != nil {
 		t.Fatal(err)
@@ -380,7 +380,7 @@ func TestSDDPreflightHookDeniesOutsideDomainAnswer(t *testing.T) {
 		answersRaw string
 		isError    bool
 	}{
-		{toolUseID: "toolu-1", answersRaw: `{"Gentle AI SDD preflight 1/3: How should phases run?":"Nonsense","Gentle AI SDD preflight 2/3: Where should artifacts live?":"OpenSpec","Gentle AI SDD preflight 3/3: How should oversized delivery be handled?":"Ask me"}`},
+		{toolUseID: "toolu-1", answersRaw: `{"Axiom SDD preflight 1/3: How should phases run?":"Nonsense","Axiom SDD preflight 2/3: Where should artifacts live?":"OpenSpec","Axiom SDD preflight 3/3: How should oversized delivery be handled?":"Ask me"}`},
 	})
 	pre := preToolUseAgentPayload(sessionID, transcript, "sdd-apply", "Apply", "")
 	denyCase(t, pre, "missing, invalid, or uncorroborated")
@@ -396,7 +396,7 @@ func TestSDDPreflightHookDeniesMultiSelectAnswer(t *testing.T) {
 		answersRaw string
 		isError    bool
 	}{
-		{toolUseID: "toolu-1", answersRaw: `{"Gentle AI SDD preflight 1/3: How should phases run?":["Automatic","Interactive"],"Gentle AI SDD preflight 2/3: Where should artifacts live?":"OpenSpec","Gentle AI SDD preflight 3/3: How should oversized delivery be handled?":"Ask me"}`},
+		{toolUseID: "toolu-1", answersRaw: `{"Axiom SDD preflight 1/3: How should phases run?":["Automatic","Interactive"],"Axiom SDD preflight 2/3: Where should artifacts live?":"OpenSpec","Axiom SDD preflight 3/3: How should oversized delivery be handled?":"Ask me"}`},
 	})
 	pre := preToolUseAgentPayload(sessionID, transcript, "sdd-apply", "Apply", "")
 	denyCase(t, pre, "missing, invalid, or uncorroborated")

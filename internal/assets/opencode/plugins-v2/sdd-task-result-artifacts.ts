@@ -3,10 +3,10 @@ import { Plugin } from "@opencode/plugin"
 
 const SDD_PHASES = ["sdd-init", "sdd-explore", "sdd-research", "sdd-propose", "sdd-spec", "sdd-design", "sdd-tasks", "sdd-apply", "sdd-verify", "sdd-archive", "sdd-onboard"]
 const SDD_TASK_FAILURE_PREFIX = "AXIOM_SDD_FAILURE "
-const SDD_PREFLIGHT_QUESTION_PREFIX = "Gentle AI SDD preflight "
-// The Axiom-branded prefix is accepted alongside the legacy one indefinitely: plugins and agent
-// instructions already installed on a machine keep emitting the legacy prefix until `axiom sync`.
-const SDD_PREFLIGHT_ACCEPTED_PREFIXES = [SDD_PREFLIGHT_QUESTION_PREFIX, "Axiom SDD preflight "]
+const SDD_PREFLIGHT_QUESTION_PREFIX = "Axiom SDD preflight "
+// The legacy prefix stays accepted indefinitely: plugins and agent instructions already installed
+// on a machine keep emitting it until `axiom sync`. Canonicalization rewrites it to the Axiom prefix.
+const SDD_PREFLIGHT_ACCEPTED_PREFIXES = [SDD_PREFLIGHT_QUESTION_PREFIX, "Gentle AI SDD preflight "]
 const SDD_PREFLIGHT_HEADING = "## SDD Session Preflight"
 // #2855: host cwd does not identify the coordinator's selected change/store.
 const SDD_TASK_CONTINUATION_GUIDANCE = "Return to the active SDD coordinator and inspect only its retained structured status for the selected change and artifact store. If that status is unavailable, report this terminal failure and ask the user to select the change and artifact store. Do not infer either, run unscoped status discovery, retry, or launch another phase."
