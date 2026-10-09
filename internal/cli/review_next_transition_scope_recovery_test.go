@@ -5,11 +5,13 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/reviewtransaction"
 )
 
 func TestNegotiatedStatusRoutesHistoricalScopeChangeToRecovery(t *testing.T) {
+	withFacadeOperationBudget(t, loadedMachineFacadeOperationBudget)
 	reviewEnabledHome(t)
 	repo := initReviewCLIRepo(t)
 	writeReviewStartCandidate(t, repo, "docs/attempt.md", "# reviewed\n", 0o644)
@@ -32,7 +34,30 @@ func TestNegotiatedStatusRoutesHistoricalScopeChangeToRecovery(t *testing.T) {
 	}
 }
 
+// loadedMachineFacadeOperationBudget is the aggregate budget the facade gets in
+// scenarios whose assertions are about routing, not about the timeout itself.
+// A negotiated STATUS spawns many git processes: it takes 5-8s on an idle
+// Windows machine and exceeded the product's 25s default (operation_timeout)
+// once other go test processes ran alongside. The ceiling only has to stay
+// finite so a genuine hang still fails; the timeout contract itself is covered
+// by TestNegotiatedFacadeAggregateTimeoutPreservesMutationTruth and
+// TestNegotiatedStatusUsesRealMaintenanceLockTruth.
+const loadedMachineFacadeOperationBudget = 3 * time.Minute
+
+// withFacadeOperationBudget raises reviewFacadeOperationTimeout for one test
+// through the same package-level seam the failure-contract tests use, and
+// restores the product default afterwards. It never lowers the budget.
+func withFacadeOperationBudget(t *testing.T, budget time.Duration) {
+	t.Helper()
+	original := reviewFacadeOperationTimeout
+	t.Cleanup(func() { reviewFacadeOperationTimeout = original })
+	if budget > original {
+		reviewFacadeOperationTimeout = budget
+	}
+}
+
 func TestRejectedTargetedValidatorCaptureRoutesEscalatedRecovery(t *testing.T) {
+	withFacadeOperationBudget(t, loadedMachineFacadeOperationBudget)
 	reviewEnabledHome(t)
 	repo, lineage, request := providerCorrectionReadyWithoutVerificationEvidence(t)
 	store, err := reviewtransaction.CompactAuthoritativeStore(t.Context(), repo, lineage)
