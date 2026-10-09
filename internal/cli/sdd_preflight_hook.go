@@ -14,7 +14,12 @@ import (
 )
 
 const (
-	sddPreflightQuestionPrefix      = "Gentle AI SDD preflight "
+	sddPreflightLegacyQuestionPrefix = "Gentle AI SDD preflight "
+	// sddPreflightAxiomQuestionPrefix is the Axiom-branded form of the
+	// preflight question prefix. Both prefixes stay accepted indefinitely:
+	// installed plugins and agent instructions already written on users'
+	// machines keep using the legacy prefix until the next `axiom sync`.
+	sddPreflightAxiomQuestionPrefix = "Axiom SDD preflight "
 	maxSDDPreflightHookPayloadBytes = 256 << 10
 	maxSDDPreflightTranscriptLine   = 8 << 20
 )
@@ -289,10 +294,37 @@ func readSDDPreflightTranscriptLine(r *bufio.Reader) (line []byte, ok bool, done
 	}
 }
 
+// sddPreflightQuestionPrefixes lists every accepted question prefix.
+func sddPreflightQuestionPrefixes() []string {
+	return []string{sddPreflightLegacyQuestionPrefix, sddPreflightAxiomQuestionPrefix}
+}
+
+// hasSDDPreflightQuestionPrefix reports whether the question starts with any
+// accepted preflight prefix.
+func hasSDDPreflightQuestionPrefix(question string) bool {
+	for _, prefix := range sddPreflightQuestionPrefixes() {
+		if strings.HasPrefix(question, prefix) {
+			return true
+		}
+	}
+	return false
+}
+
+// hasSDDPreflightQuestionMarker reports whether the question starts with the
+// `N/3:` marker of the given zero-based index under any accepted prefix.
+func hasSDDPreflightQuestionMarker(question string, index int) bool {
+	for _, prefix := range sddPreflightQuestionPrefixes() {
+		if strings.HasPrefix(question, fmt.Sprintf("%s%d/3:", prefix, index+1)) {
+			return true
+		}
+	}
+	return false
+}
+
 func resolveSDDPreflightHookBlock(questions []sddPreflightHookQuestion, answersRaw json.RawMessage) (string, bool, error) {
 	recognized := false
 	for _, question := range questions {
-		if strings.HasPrefix(question.Question, sddPreflightQuestionPrefix) {
+		if hasSDDPreflightQuestionPrefix(question.Question) {
 			recognized = true
 			break
 		}
@@ -305,8 +337,7 @@ func resolveSDDPreflightHookBlock(questions []sddPreflightHookQuestion, answersR
 		return "", true, sddPreflightHookProtocolError("parent-confirmed SDD preflight requires exactly three questions")
 	}
 	for i, question := range questions {
-		prefix := fmt.Sprintf("%s%d/3:", sddPreflightQuestionPrefix, i+1)
-		if !strings.HasPrefix(question.Question, prefix) || question.MultiSelect || len(question.Options) != len(expectedLabels[i]) {
+		if !hasSDDPreflightQuestionMarker(question.Question, i) || question.MultiSelect || len(question.Options) != len(expectedLabels[i]) {
 			return "", true, sddPreflightHookProtocolError("SDD preflight question %d is malformed", i+1)
 		}
 		for optionIndex, option := range question.Options {

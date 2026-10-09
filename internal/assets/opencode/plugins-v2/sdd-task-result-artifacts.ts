@@ -4,6 +4,9 @@ import { Plugin } from "@opencode/plugin"
 const SDD_PHASES = ["sdd-init", "sdd-explore", "sdd-research", "sdd-propose", "sdd-spec", "sdd-design", "sdd-tasks", "sdd-apply", "sdd-verify", "sdd-archive", "sdd-onboard"]
 const SDD_TASK_FAILURE_PREFIX = "AXIOM_SDD_FAILURE "
 const SDD_PREFLIGHT_QUESTION_PREFIX = "Gentle AI SDD preflight "
+// The Axiom-branded prefix is accepted alongside the legacy one indefinitely: plugins and agent
+// instructions already installed on a machine keep emitting the legacy prefix until `axiom sync`.
+const SDD_PREFLIGHT_ACCEPTED_PREFIXES = [SDD_PREFLIGHT_QUESTION_PREFIX, "Axiom SDD preflight "]
 const SDD_PREFLIGHT_HEADING = "## SDD Session Preflight"
 // #2855: host cwd does not identify the coordinator's selected change/store.
 const SDD_TASK_CONTINUATION_GUIDANCE = "Return to the active SDD coordinator and inspect only its retained structured status for the selected change and artifact store. If that status is unavailable, report this terminal failure and ask the user to select the change and artifact store. Do not infer either, run unscoped status discovery, retry, or launch another phase."
@@ -41,7 +44,7 @@ const SDD_PREFLIGHT_GROUPS: SDDPreflightGroup[] = [
     ],
   },
 ]
-const SDD_PREFLIGHT_MARKER = /^Gentle AI SDD preflight \d\/3:\s*/
+const SDD_PREFLIGHT_MARKER = /^(?:Gentle AI|Axiom) SDD preflight \d\/3:\s*/
 const SDD_PREFLIGHT_RETRY_GUIDANCE = "ask the grouped preflight again with the question tool; typed chat answers cannot create preflight authority"
 
 function sddPreflightGuidance(message: string): Error {
@@ -49,7 +52,7 @@ function sddPreflightGuidance(message: string): Error {
 }
 
 function isSDDPreflightQuestion(question: unknown): boolean {
-  return !!question && typeof question === "object" && !Array.isArray(question) && typeof (question as Record<string, unknown>).question === "string" && ((question as Record<string, unknown>).question as string).startsWith(SDD_PREFLIGHT_QUESTION_PREFIX)
+  return !!question && typeof question === "object" && !Array.isArray(question) && typeof (question as Record<string, unknown>).question === "string" && SDD_PREFLIGHT_ACCEPTED_PREFIXES.some((prefix) => ((question as Record<string, unknown>).question as string).startsWith(prefix))
 }
 
 // Canonicalizes a recognized grouped SDD preflight before OpenCode renders
@@ -134,7 +137,7 @@ function sddPreflightBlock(args: unknown, metadata: unknown): string | undefined
     const group = SDD_PREFLIGHT_GROUPS[index]
     if (!raw || typeof raw !== "object" || Array.isArray(raw)) throw sddPreflightGuidance(`SDD preflight question ${index + 1} is malformed`)
     const question = raw as SDDPreflightQuestion
-    if (typeof question.question !== "string" || !question.question.startsWith(`${SDD_PREFLIGHT_QUESTION_PREFIX}${index + 1}/3:`) || question.multiple === true || !Array.isArray(question.options) || question.options.length !== group.options.length) {
+    if (typeof question.question !== "string" || !SDD_PREFLIGHT_ACCEPTED_PREFIXES.some((prefix) => (question.question as string).startsWith(`${prefix}${index + 1}/3:`)) || question.multiple === true || !Array.isArray(question.options) || question.options.length !== group.options.length) {
       throw sddPreflightGuidance(`SDD preflight question ${index + 1} is malformed`)
     }
     if (question.options.some((option, optionIndex) => option?.label !== group.options[optionIndex].label)) throw sddPreflightGuidance(`SDD preflight question ${index + 1} changed the canonical option semantics`)

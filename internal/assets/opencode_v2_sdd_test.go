@@ -38,6 +38,37 @@ let cleaned=0;await reject(()=>plugin.setup({...ctx,tool:{async hook(name,fn){if
 `)
 }
 
+// TestOpenCodeV2SDDPreflightAcceptsBothPrefixes pins that the managed plugin
+// recognizes the preflight under the legacy "Gentle AI" prefix and under the
+// "Axiom" prefix, so plugins and agent instructions already written on users'
+// machines keep working until the next sync.
+func TestOpenCodeV2SDDPreflightAcceptsBothPrefixes(t *testing.T) {
+	runV2Plugin(t, "sdd-task-result-artifacts", `
+const hooks={};let disposals=0,signal,wake;const queue=[];
+const ctx={location:{directory:'/project',workspaceID:'one'},tool:{async hook(name,fn){await Promise.resolve();hooks[name]=fn;return {async dispose(){disposals++}}}},session:{async get(arg){if(Object.keys(arg).join()!=='sessionID')throw Error('V1 SDK shape');return {id:arg.sessionID,...(arg.sessionID==='child'?{parentID:'root'}:{})}}},event:{subscribe(opts){signal=opts.signal;signal.addEventListener('abort',()=>wake?.());return {[Symbol.asyncIterator]:async function*(){while(!signal.aborted){if(!queue.length)await new Promise(r=>wake=r);while(queue.length)yield queue.shift()}}}}}};
+const cleanup=await plugin.setup(ctx);
+const reject=async(fn,why)=>{let failed=false;try{await fn()}catch{failed=true}if(!failed)throw Error(why)};
+for(const prefix of ['Gentle AI SDD preflight','Axiom SDD preflight']){
+ const sessionID='root-'+prefix.split(' ')[0];
+ const request=()=>({tool:'subagent',sessionID,id:'call',input:{agent:'sdd-apply',prompt:'Implement approved tasks',description:'Apply'}});
+ await reject(()=>hooks['execute.before'](request()),'missing preflight accepted for '+prefix);
+ const question={tool:'question',sessionID,id:'q',input:{questions:[{question:prefix+' 1/3: Pace?',options:[]},{question:'Artifacts?',options:[]},{question:'PR?',options:[]}]}};
+ await hooks['execute.before'](question);
+ for(const [index,q] of question.input.questions.entries()){if(!/^(?:Gentle AI|Axiom) SDD preflight \d\/3: /.test(q.question)||!q.question.includes(String(index+1)+'/3:'))throw Error('marker not canonicalized for '+prefix+': '+q.question)}
+ await hooks['execute.after']({...question,status:'completed',result:{output:{answers:[['Automatic'],['Engram'],['Auto']]}}});
+ const call=request();await hooks['execute.before'](call);
+ if(!call.input.prompt.startsWith('## SDD Session Preflight'))throw Error('authority missing for '+prefix);
+ // Prefixes already canonical (typed by the model with a different prefix) are also recognized after canonicalization.
+ const already={tool:'question',sessionID:sessionID+'-b',id:'q',input:{questions:[{question:prefix+' 1/3: Pace',options:[{label:'Interactive'},{label:'Automatic'}]},{question:prefix+' 2/3: Artifacts',options:[{label:'OpenSpec'},{label:'Engram'},{label:'Both'}]},{question:prefix+' 3/3: PR',options:[{label:'Ask me'},{label:'Single PR'},{label:'Auto'}]}]}};
+ await hooks['execute.before'](already);
+ await hooks['execute.after']({...already,status:'completed',result:{output:{answers:[['Interactive'],['OpenSpec'],['Ask me']]}}});
+ const second={tool:'subagent',sessionID:sessionID+'-b',id:'call2',input:{agent:'sdd-apply',prompt:'Implement approved tasks',description:'Apply'}};await hooks['execute.before'](second);
+ if(!second.input.prompt.startsWith('## SDD Session Preflight'))throw Error('authority missing for '+prefix+' (full set)');
+}
+await cleanup();
+`)
+}
+
 func TestOpenCodeV2ReviewRelay(t *testing.T) {
 	source, _ := Read("opencode/plugins-v2/opencode-review-transport.ts")
 	for _, forbidden := range []string{"ReviewerResultSchema", "repository_context", "capture-result", "TRANSPORT_ISOLATION_SYSTEM", "session.hook", "readFile", "subject_hash", "retry", "OPENCODE_DISABLE"} {

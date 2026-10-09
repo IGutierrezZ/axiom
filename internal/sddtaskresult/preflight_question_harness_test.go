@@ -105,6 +105,26 @@ async function main() {
   await hooks["tool.execute.before"]({ tool: "question", sessionID: "root-e", callID: "call-e" }, { args: argsE })
   out.reordered = argsE.questions
 
+  // Scenario F: the Axiom-branded prefix is accepted alongside the legacy
+  // one: the grouped set is recognized, canonicalized, answered and the
+  // confirmed block reaches the next SDD task dispatch.
+  const argsF: any = {
+    questions: [
+      { question: "Axiom SDD preflight 1/3: Pace", options: [{ label: "Interactive" }, { label: "Automatic" }] },
+      { question: "Axiom SDD preflight 2/3: Artifacts", options: [{ label: "OpenSpec" }, { label: "Engram" }, { label: "Both" }] },
+      { question: "Axiom SDD preflight 3/3: PR strategy", options: [{ label: "Ask me" }, { label: "Single PR" }, { label: "Auto" }] },
+    ],
+  }
+  await hooks["tool.execute.before"]({ tool: "question", sessionID: "root-f", callID: "call-f" }, { args: argsF })
+  out.axiomCanonicalized = argsF.questions
+  await hooks["tool.execute.after"](
+    { tool: "question", sessionID: "root-f", args: argsF },
+    { title: "q", output: "", metadata: { answers: [["Automatic"], ["OpenSpec"], ["Single PR"]] } },
+  )
+  const dispatchF: any = { subagent_type: "sdd-explore", prompt: "do the sdd-explore work" }
+  await hooks["tool.execute.before"]({ tool: "task", sessionID: "root-f", callID: "call-f2" }, { args: dispatchF })
+  out.axiomDispatchedPrompt = dispatchF.prompt
+
   process.stdout.write(JSON.stringify(out))
 }
 
@@ -125,11 +145,13 @@ type preflightHarnessQuestion struct {
 }
 
 type preflightHarnessResult struct {
-	Canonicalized     []preflightHarnessQuestion `json:"canonicalized"`
-	DispatchedPrompt  string                     `json:"dispatchedPrompt"`
-	EmptyAnswerError  *string                    `json:"emptyAnswerError"`
-	TwoQuestionsError *string                    `json:"twoQuestionsError"`
-	Reordered         []preflightHarnessQuestion `json:"reordered"`
+	Canonicalized         []preflightHarnessQuestion `json:"canonicalized"`
+	DispatchedPrompt      string                     `json:"dispatchedPrompt"`
+	EmptyAnswerError      *string                    `json:"emptyAnswerError"`
+	TwoQuestionsError     *string                    `json:"twoQuestionsError"`
+	Reordered             []preflightHarnessQuestion `json:"reordered"`
+	AxiomCanonicalized    []preflightHarnessQuestion `json:"axiomCanonicalized"`
+	AxiomDispatchedPrompt string                     `json:"axiomDispatchedPrompt"`
 }
 
 // TestOpenCodePreflightQuestionCanonicalizationAndTolerantMatching runs the
@@ -250,6 +272,23 @@ func TestOpenCodePreflightQuestionCanonicalizationAndTolerantMatching(t *testing
 		option := result.Reordered[2].Options[j]
 		if option.Label != want[0] || option.Description != want[1] {
 			t.Errorf("pr strategy option %d = %q/%q, want %q/%q", j+1, option.Label, option.Description, want[0], want[1])
+		}
+	}
+
+	// Scenario 6: the Axiom-branded prefix is accepted too. The plugin keeps
+	// canonicalizing to its own emitted prefix, so only the dispatched block
+	// (authority recorded) and the question count are asserted here.
+	if len(result.AxiomCanonicalized) != 3 {
+		t.Fatalf("expected 3 canonicalized Axiom-prefixed questions, got %d", len(result.AxiomCanonicalized))
+	}
+	for i, question := range result.AxiomCanonicalized {
+		if !strings.Contains(question.Question, "SDD preflight "+string(rune('1'+i))+"/3:") {
+			t.Errorf("Axiom-prefixed question %d = %q, want its N/3 marker", i+1, question.Question)
+		}
+	}
+	for _, want := range []string{"## SDD Session Preflight", "Pace: auto", "Artifact store: openspec", "Delivery strategy: single-pr"} {
+		if !strings.Contains(result.AxiomDispatchedPrompt, want) {
+			t.Errorf("Axiom-prefixed dispatched prompt missing %q; got:\n%s", want, result.AxiomDispatchedPrompt)
 		}
 	}
 }
