@@ -88,16 +88,16 @@ Son las mismas de la sección 4 del ODD anterior:
 
 - [~] **P1 · `bench` aislado en Windows (S1, opción b).** Tres PRs apilados contra `main` (estrategia `stacked-to-main`, elegida por el usuario):
   - #112 C1, PATH cerrado: **fusionado** en `93cd7c65`. «Run benchmark evidence» en verde en Linux.
-  - #113 C2, guardia fail-closed: `fix/bench-windows-02-guard`, rebasado tras el merge de C1 a `8241f2b9` y reapuntado a `main`, 574 líneas con `size:exception` aprobada por el usuario. No hay corte cohesivo: separaría la guardia de su consumidor.
-  - #114 C3, `unsupported` en Windows (j105, j116 y j3043): `fix/bench-windows-03-unsupported`, rebasado a `5883a1b5` (árbol de `bench` idéntico al verificado en `cdbba284`), 187 líneas.
+  - #113 C2, guardia fail-closed: **fusionado** en `6eb6bd19`, con «Run benchmark evidence» en verde. Antes se rebasó a `8241f2b9` y se reapuntó a `main`; 574 líneas con `size:exception` aprobada por el usuario. No hay corte cohesivo: separaría la guardia de su consumidor.
+  - #114 C3, `unsupported` en Windows (j105, j116 y j3043): `fix/bench-windows-03-unsupported`, rebasado sobre `main` a `61cb673f` y reapuntado a `main`. Su árbol de `bench` es idéntico al verificado en `cdbba284`; 187 líneas.
 
   Ruta delegada: un writer `sonnet` en el worktree `p1-bench` y un verificador independiente `sonnet` de solo lectura. Riesgo `high` (`process_boundary`). El verificador lo dio por apto con correcciones y sus cuatro correcciones menores están aplicadas: `pathWithin` fail-closed ante junctions, `!IsDir()` en Windows, README matizado y `sandbox_git_unavailable`. El orquestador compiló y testeó C1 y C2 por separado. Queda pendiente en CI la deriva de bytes de stderr en j2138 y j3043, porque falta `node` en el PATH.
 
   Objetivo original: Primero, un test que falle si el PATH del sandbox resuelve un ejecutable fuera de él. Después, se cierra el PATH y los journeys con shims POSIX se marcan `unsupported` en Windows. Riesgo previsto `high` (aislamiento y procesos), así que lleva verificador.
 - [x] **P2 · Versión con `go install` (S2).** Fusionado en `770914de`. PR #111 (rama `fix/version-go-install`, commit `34492be0`). Ruta delegada: un writer `sonnet` en el worktree `p2-version`. Riesgo `medium` (`executable_change`, 95 líneas), así que basta la autoverificación del writer y una comprobación puntual del orquestador (`TestResolveVersion` y `TestVersionDefault` en verde). También se actualiza REQ-22.8 de la especificación viva `axiom-updater-resilience`. Opción (a) con test: la constante solo como último recurso, y `ReadBuildInfo` cuando no hay ldflags. Comprobar que `axiom version` y la comparación de versiones del actualizador siguen igual con GoReleaser.
-- [~] **P3 · Migración: avisos de desinstalación y prompts heredados solo con SDD (S4 + S5).** Dos PRs independientes contra `main`, porque el total pasaba de 441 líneas y S4 y S5 no comparten ficheros:
+- [x] **P3 · Migración: avisos de desinstalación y prompts heredados solo con SDD (S4 + S5).** Dos PRs independientes contra `main`, porque el total pasaba de 441 líneas y S4 y S5 no comparten ficheros:
   - #115, S4 (TUI): **fusionado** en `2e0e3a90`.
-  - #116, S5 (persona): `fix/persona-prompt-heredado-sdd`, `32349403` + `3d9da705`, 348 líneas.
+  - #116, S5 (persona): **fusionado** en `45246039`.
 
   Ruta delegada: un writer `sonnet` en el worktree `p3-migracion` y un verificador independiente `sonnet`. `assess` da `medium`, pero se trata como `high` por decisión del usuario. El verificador repitió el ataque de propiedad de U3 en unas 40 combinaciones y lo dio por APTO. Su MENOR 1 (frontmatter válidos para cualquier adaptador) se corrigió en `3d9da705`, con RED observado en 8 casos cruzados. Kiro ya se retiraba antes, porque el steering de SDD es prefijo del de persona; el hueco real era VS Code. El orquestador recompiló las dos ramas y repitió sus tests: `persona`, `sdd`, `cli -run TestLegacyPrompt*`, `tui` y `tui/screens`.
 
@@ -125,6 +125,16 @@ Previsión: unas 300-600 líneas en 4 PRs, todos por debajo de 400 líneas salvo
 
 ## 8. Progreso
 
+- **2026-10-09, segunda tanda de merges:**
+  - **Actions desbloqueado:** el usuario lo desbloquea. Los eventos perdidos durante el bloqueo se vuelven a disparar quitando y poniendo la etiqueta (#113, #116) y cerrando y reabriendo #113.
+  - **Fusionados:** #116 (`45246039`) y #113 (`6eb6bd19`).
+  - **#114:** se rebasa sobre `main` y se reapunta.
+  - **`main` combinado (`6eb6bd19`) verificado:**
+    - build y vet;
+    - tests de `persona` y `cli -run TestLegacyPrompt*`;
+    - `bench`: build, vet y tests de la guardia;
+    - `gofmtcheck` y ratchet.
+  - **Limpieza:** eliminados el worktree `p3-migracion` y las ramas de #116 y #113.
 - **2026-10-09, bloqueo de CI:**
   - GitHub Actions no crea ejecuciones nuevas desde la 01:33Z: el *force-push* de C2 (`8241f2b9`) y C3 (`5883a1b5`) no ha disparado ninguna.
   - El relanzamiento del check obligatorio de #116 (run `37862998660`) lleva en `queued` desde la 00:05Z.
