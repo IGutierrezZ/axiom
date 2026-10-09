@@ -223,6 +223,13 @@ func fileExists(p string) bool {
 	return err == nil && !info.IsDir()
 }
 
+// hasWorkspaceConfig indica si dir lleva la configuración de un espacio de
+// trabajo: un axiom.yaml propio o un puntero .axiom-workspace, que es el caso de
+// la carpeta maestra del espacio canónico (REQ-24.10).
+func hasWorkspaceConfig(dir string) bool {
+	return fileExists(filepath.Join(dir, "axiom.yaml")) || fileExists(filepath.Join(dir, workspace.WorkspacePointerFilename))
+}
+
 func main() {
 	cli.AppVersion = Version
 	app.Version = Version
@@ -1122,8 +1129,8 @@ func runUI(args []string) {
 
 	// Si se invocó con '.' por defecto y no hay axiom.yaml en '.', resolver el workspace activo del Hub
 	if *pathFlag == "." && hubMgr != nil {
-		if !fileExists(filepath.Join(baseDir, "axiom.yaml")) {
-			if active, err := hubMgr.GetActive(); err == nil && active != nil && fileExists(filepath.Join(active.Path, "axiom.yaml")) {
+		if !hasWorkspaceConfig(baseDir) {
+			if active, err := hubMgr.GetActive(); err == nil && active != nil && hasWorkspaceConfig(active.Path) {
 				baseDir = active.Path
 			}
 		}
@@ -1635,6 +1642,12 @@ func runArchiveList(args []string) {
 	if err != nil {
 		fmt.Printf("[ERROR] Fallo al obtener catálogo de especificaciones vivas: %v\n", err)
 		os.Exit(1)
+	}
+
+	// Avisos no bloqueantes de la lectura, entre ellos el de la ubicación antigua
+	// divergente (Q14, REQ-24.10).
+	for _, warning := range catalog.Warnings {
+		fmt.Printf("[AVISO] %s\n", warning)
 	}
 
 	if len(catalog.Specs) == 0 {
