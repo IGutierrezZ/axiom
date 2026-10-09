@@ -217,7 +217,7 @@ func TestCoordinatorOrchestratorsCarryGentleAIProviderDefectHandoff(t *testing.T
 		text string
 	}{
 		{name: "admissibility before lossless relay", text: "Before losslessly relaying any blocking choice envelope, classify its semantic admissibility"},
-		{name: "direct repair prohibition", text: "never offer to switch to, inspect, modify, or directly repair the Gentle AI repository"},
+		{name: "direct repair prohibition", text: "never offer to switch to, inspect, modify, or directly repair the Axiom repository"},
 		{name: "invalid upstream envelope", text: "reject it as semantically inadmissible and issue this separate orchestrator-owned handoff envelope"},
 		{name: "localized consent", text: "Ask the user first, in the active orchestrator conversation language"},
 		{name: "explicit consent", text: "for explicit consent to report the apparent defect"},
@@ -225,9 +225,9 @@ func TestCoordinatorOrchestratorsCarryGentleAIProviderDefectHandoff(t *testing.T
 		{name: "exact answer tokens", text: "`report_and_continue`, `continue_without_reporting`, `stop_here`"},
 		{name: "localized labels", text: "Localize their labels and descriptions without changing these semantics"},
 		{name: "no internal labels", text: "do not expose machine or internal codes in user-facing labels"},
-		{name: "report and continue choice", text: "**Report the Gentle AI defect and continue**: Only after explicit consent and that final privacy scan"},
+		{name: "report and continue choice", text: "**Report the Axiom defect and continue**: Only after explicit consent and that final privacy scan"},
 		{name: "continue without reporting choice", text: "**Continue without reporting**: Perform no GitHub search, write, comment, or label, and no report-side privacy scan is required."},
-		{name: "fixed repository", text: "`Gentleman-Programming/gentle-ai`"},
+		{name: "fixed repository", text: "`IGutierrezZ/axiom`"},
 		{name: "definitive equivalent lookup", text: "complete a definitive lookup across open and closed issues for an equivalent defect or canonical tracker"},
 		{name: "equivalent definition", text: "same observable defect and affected contract, backed by concrete evidence rather than title similarity alone"},
 		{name: "canonical definition", text: "owns the causal class"},
@@ -297,7 +297,7 @@ func TestCoordinatorOrchestratorsCarryGentleAIProviderDefectHandoff(t *testing.T
 				t.Errorf("provider-defect handoff has %d numbered semantic choices; want exactly 3", got)
 			}
 			for index, choice := range []string{
-				"  1. **Report the Gentle AI defect and continue**:",
+				"  1. **Report the Axiom defect and continue**:",
 				"  2. **Continue without reporting**:",
 				"  3. **Stop here**:",
 			} {
@@ -484,7 +484,7 @@ func sddConsentRelaySection(t *testing.T, path string) string {
 
 func providerDefectHandoffSection(t *testing.T, path string) string {
 	t.Helper()
-	const heading = "#### Gentle AI Provider Defect Handoff (MANDATORY)"
+	const heading = "#### Axiom Provider Defect Handoff (MANDATORY)"
 	content := MustRead(path)
 	start := strings.Index(content, heading)
 	if start == -1 {

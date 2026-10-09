@@ -558,7 +558,10 @@ func TestKilocodeReviewSettingsMatchCurrentMainBaseline(t *testing.T) {
 	// marker `__managed_by: "axiom/sdd"` instead of `"gentle-ai/sdd"`. The reader
 	// still accepts both, so existing installs keep being recognized. Deliberate,
 	// not drift.
-	const want = "2297dbb7ad60c8e5a5260ed3d3d7c581fb6baf282d66e1d2e59687c38268d8a9"
+	// ODD seguimientos U1: the provider-defect handoff now names Axiom and sends
+	// reports to `IGutierrezZ/axiom` instead of the upstream tracker. Deliberate,
+	// not drift.
+	const want = "7837076fafe74bd52c003ad3f9a9c72a7f4a1cd8e0f9385f04303adf9b0fbf94"
 	if got != want {
 		t.Fatalf("Kilocode settings SHA-256 = %s, want current-main baseline %s", got, want)
 	}

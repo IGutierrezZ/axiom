@@ -1,8 +1,8 @@
 {
-  "name": "gentleman-ai-installer",
+  "name": "axiom",
   "version": "1.0.0",
   "private": true,
-  "description": "Gentle-AI — ecosystem, frameworks, and workflows for AI coding agents.",
+  "description": "Axiom — ecosystem, frameworks, and workflows for AI coding agents.",
   "main": "index.js",
   "directories": {
     "doc": "docs"
@@ -12,14 +12,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Gentleman-Programming/gentle-ai.git"
+    "url": "git+https://github.com/IGutierrezZ/axiom.git"
   },
   "keywords": [],
   "author": "",
   "license": "MIT",
   "type": "commonjs",
   "bugs": {
-    "url": "https://github.com/Gentleman-Programming/gentle-ai/issues"
+    "url": "https://github.com/IGutierrezZ/axiom/issues"
   },
-  "homepage": "https://github.com/Gentleman-Programming/gentle-ai#readme"
+  "homepage": "https://github.com/IGutierrezZ/axiom#readme"
 }
