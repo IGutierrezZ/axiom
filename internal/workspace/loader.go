@@ -1,6 +1,7 @@
 package workspace
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -9,66 +10,124 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// ParseConfig deserializa y valida la estructura sintáctica básica de axiom.yaml desde bytes.
+// ParseConfig deserializa y valida la estructura sintáctica de axiom.yaml desde
+// bytes: la configuración base y, si existen, los bloques `baseline:` y
+// `technical_context:`. Si la base o alguna declaración es inválida devuelve un
+// error que acumula todas las violaciones (REQ-24.17).
 func ParseConfig(data []byte) (*WorkspaceConfig, error) {
-	return parseLayered(data)
+	cfg, baseErr, declarations := parseLayered(data)
+	if err := joinLoadErrors(baseErr, declarations); err != nil {
+		return nil, err
+	}
+	return cfg, nil
 }
 
-// parseLayered es la carga por capas de axiom.yaml (D-03). En esta unidad solo
-// decodifica y valida la configuración base (nombre, topología y roles), con sus
-// mensajes y su orden de siempre; ParseConfig y LoadConfig delegan en ella sin
-// cambio de comportamiento. La decodificación parte de un yaml.Node para que las
-// declaraciones de capas posteriores se puedan leer aparte de la base.
-func parseLayered(data []byte) (*WorkspaceConfig, error) {
+// joinLoadErrors reúne en un solo error el de la configuración base y los de las
+// declaraciones. Con un único error lo devuelve tal cual, para conservar los
+// mensajes de la configuración base de siempre.
+func joinLoadErrors(baseErr error, declarations Declarations) error {
+	var errs []error
+	for _, err := range []error{baseErr, declarations.BaselineErr, declarations.TechnicalContextErr} {
+		if err != nil {
+			errs = append(errs, err)
+		}
+	}
+	switch len(errs) {
+	case 0:
+		return nil
+	case 1:
+		return errs[0]
+	default:
+		return errors.Join(errs...)
+	}
+}
+
+// parseLayered es la carga por capas de axiom.yaml (D-03). Devuelve la
+// configuración base (nil si es inválida), su error y las declaraciones, cada una
+// con su propio canal de error: una declaración inválida no impide leer la base
+// y una base inválida no oculta los errores de las declaraciones.
+//
+// ParseErr solo es no nulo cuando el contenido no se puede leer como YAML. Sin
+// fichero, las declaraciones conservan su valor cero, que equivale a «sin
+// declaraciones»: un proyecto sin axiom.yaml nunca bloquea el archivado (R1).
+// La base se decodifica desde un yaml.Node, con las claves `baseline` y
+// `technical_context` fuera de la decodificación base; el resto de claves
+// desconocidas se sigue ignorando.
+//
+// El orden del tipo de retorno (configuración, error de la base, declaraciones)
+// es el que fija el diseño (§4.1, D-03).
+func parseLayered(data []byte) (*WorkspaceConfig, error, Declarations) {
 	if len(strings.TrimSpace(string(data))) == 0 {
-		return nil, fmt.Errorf("el archivo de configuración está vacío")
+		return nil, fmt.Errorf("el archivo de configuración está vacío"), Declarations{}
 	}
 
 	var document yaml.Node
 	if err := yaml.Unmarshal(data, &document); err != nil {
-		return nil, fmt.Errorf("error al parsear axiom.yaml: %w", err)
+		parseErr := fmt.Errorf("error al parsear axiom.yaml: %w", err)
+		return nil, parseErr, Declarations{ParseErr: parseErr}
 	}
+
 	var cfg WorkspaceConfig
+	var baseErr error
 	// Un documento que solo contiene comentarios no tiene nodo que decodificar:
 	// equivale a una configuración vacía, como cuando se decodificaba directo.
 	if document.Kind != 0 {
 		if err := document.Decode(&cfg); err != nil {
-			return nil, fmt.Errorf("error al parsear axiom.yaml: %w", err)
+			baseErr = fmt.Errorf("error al parsear axiom.yaml: %w", err)
 		}
 	}
+	// Las declaraciones se evalúan aunque la base falle: su validación solo
+	// necesita la topología y specs_repository, tal como se hayan leído.
+	declarations := readDeclarationBlocks(&document, lexicalDisplacement(&cfg))
 
-	// Validaciones estructurales elementales
+	if baseErr == nil {
+		baseErr = validateBaseConfig(&cfg)
+	}
+	if baseErr != nil {
+		return nil, baseErr, declarations
+	}
+	if declarations.BaselineErr == nil {
+		cfg.Baseline = declarations.Baseline
+	}
+	if declarations.TechnicalContextErr == nil {
+		cfg.TechnicalContext = declarations.TechnicalContext
+	}
+	return &cfg, nil, declarations
+}
+
+// validateBaseConfig aplica las validaciones estructurales de la configuración
+// base (nombre, topología y roles), con sus mensajes y su orden de siempre.
+func validateBaseConfig(cfg *WorkspaceConfig) error {
 	if strings.TrimSpace(cfg.Workspace.Name) == "" {
-		return nil, fmt.Errorf("el campo 'workspace.name' es obligatorio y no puede estar vacío")
+		return fmt.Errorf("el campo 'workspace.name' es obligatorio y no puede estar vacío")
 	}
 
 	switch cfg.Workspace.Topology {
 	case TopologyMonorepoEmbedded, TopologyMonorepoDecoupled, TopologyMultirepo:
 		// Topología válida
 	default:
-		return nil, fmt.Errorf("topología desconocida o ausente '%s'. Debe ser: %s, %s o %s",
+		return fmt.Errorf("topología desconocida o ausente '%s'. Debe ser: %s, %s o %s",
 			cfg.Workspace.Topology, TopologyMonorepoEmbedded, TopologyMonorepoDecoupled, TopologyMultirepo)
 	}
 
 	if len(cfg.Roles) == 0 {
-		return nil, fmt.Errorf("debe definirse al menos un rol de desarrollo en la sección 'roles'")
+		return fmt.Errorf("debe definirse al menos un rol de desarrollo en la sección 'roles'")
 	}
 
 	for roleKey, role := range cfg.Roles {
 		if strings.TrimSpace(role.Name) == "" {
-			return nil, fmt.Errorf("el rol '%s' debe tener un nombre descriptivo en 'name'", roleKey)
+			return fmt.Errorf("el rol '%s' debe tener un nombre descriptivo en 'name'", roleKey)
 		}
 		if len(role.Repositories) == 0 {
-			return nil, fmt.Errorf("el rol '%s' debe contener al menos un repositorio en 'repositories'", roleKey)
+			return fmt.Errorf("el rol '%s' debe contener al menos un repositorio en 'repositories'", roleKey)
 		}
 		for i, repo := range role.Repositories {
 			if strings.TrimSpace(repo.Path) == "" {
-				return nil, fmt.Errorf("el repositorio #%d en el rol '%s' no puede tener una ruta vacía", i+1, roleKey)
+				return fmt.Errorf("el repositorio #%d en el rol '%s' no puede tener una ruta vacía", i+1, roleKey)
 			}
 		}
 	}
-
-	return &cfg, nil
+	return nil
 }
 
 const (

@@ -252,7 +252,7 @@ func ResolveOwnPointer(dir string) (loc Location, found bool, err error) {
 	data, err := os.ReadFile(configPath)
 	if err == nil {
 		var cfg *WorkspaceConfig
-		cfg, err = parseLayered(data)
+		cfg, err, _ = parseLayered(data)
 		if err == nil {
 			loc = Location{
 				Start:      absDir,
@@ -283,7 +283,7 @@ func locateFromConfig(start, dir string) (Location, error) {
 	data, err := os.ReadFile(configPath)
 	var cfg *WorkspaceConfig
 	if err == nil {
-		cfg, err = parseLayered(data)
+		cfg, err, _ = parseLayered(data)
 	}
 	if err != nil {
 		// Caso 3 de REQ-24.7: un axiom.yaml directo que no se puede cargar no
