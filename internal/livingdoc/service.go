@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/IGutierrezZ/axiom/v3/internal/pathquote"
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
@@ -68,19 +69,63 @@ func projectNameOf(loc workspace.Location) string {
 	return filepath.Base(loc.Master)
 }
 
+// Operaciones que escriben <planning home>/specs o <planning home>/INDEX.md, tal
+// como las nombra el rechazo de la guarda (REQ-24.23).
+const (
+	opSync      = "la sincronización del catálogo de especificaciones vivas (`axiom archive sync`)"
+	opColdStart = "la adopción orgánica (`axiom archive coldstart`)"
+)
+
+// externalBaselineOf devuelve la baseline del proyecto declarada, con las rutas
+// absolutas (las declaradas son relativas a workspaceRoot), o nil si no es del
+// proyecto.
+func externalBaselineOf(loc workspace.Location) *ExternalBaseline {
+	if ownership, _ := loc.BaselineOwnership(); ownership != workspace.BaselineProject {
+		return nil
+	}
+	documents := make([]ExternalBaselineDocument, 0, len(loc.Declarations.Baseline.Documents))
+	for _, document := range loc.Declarations.Baseline.Documents {
+		documents = append(documents, ExternalBaselineDocument{Domain: document.Domain, Path: declaredPath(loc, document.Path)})
+	}
+	return &ExternalBaseline{Documents: documents}
+}
+
+// declaredPath convierte una ruta declarada, relativa a workspaceRoot y escrita
+// con `/`, en la ruta absoluta del sistema operativo.
+func declaredPath(loc workspace.Location, declared string) string {
+	slashed := strings.ReplaceAll(strings.TrimSpace(declared), `\`, "/")
+	return filepath.Clean(filepath.Join(loc.WorkspaceRoot, filepath.FromSlash(slashed)))
+}
+
 // GetCatalog devuelve el catálogo completo de especificaciones vivas consolidadas.
 // Lee solo <planning home>/specs; si existe la ubicación antigua divergente
 // (Q14), la nombra en Warnings.
+//
+// Con baseline del proyecto declarada no escanea nada: devuelve Specs vacío y
+// ExternalBaseline con los dominios y las rutas declarados, de modo que un
+// catálogo vacío no se interprete como ausencia de especificación (REQ-24.25).
+// Con una baseline indeterminada lee el catálogo como siempre, porque no escribe,
+// y avisa de la causa.
 func (s *Service) GetCatalog(ctx context.Context) (*LivingCatalog, error) {
 	loc, err := s.resolve()
 	if err != nil {
 		return nil, err
 	}
-	catalog, _, err := s.indexer.ScanSpecs(specsRootOf(loc))
-	if err != nil {
-		return catalog, err
+	var catalog *LivingCatalog
+	if external := externalBaselineOf(loc); external != nil {
+		catalog = &LivingCatalog{Specs: []LivingSpecEntry{}, ExternalBaseline: external}
+	} else {
+		catalog, _, err = s.indexer.ScanSpecs(specsRootOf(loc))
+		if err != nil {
+			return catalog, err
+		}
 	}
 	catalog.ProjectName = projectNameOf(loc)
+	if ownership, cause := loc.BaselineOwnership(); ownership == workspace.BaselineIndeterminate {
+		catalog.Warnings = append(catalog.Warnings, fmt.Sprintf(
+			"No se puede determinar si la baseline de especificaciones es del proyecto (%v): el catálogo muestra solo %s. Ejecuta `axiom workspace validate --path %s` y corrige %s.",
+			cause, pathquote.Quote(specsRootOf(loc)), pathquote.Quote(loc.Master), pathquote.Quote(loc.ConfigPath)))
+	}
 	if warning, ok := loc.LegacySpecsDivergence(); ok {
 		catalog.Warnings = append(catalog.Warnings, warning)
 	}
@@ -88,10 +133,19 @@ func (s *Service) GetCatalog(ctx context.Context) (*LivingCatalog, error) {
 }
 
 // GetSpecDetail obtiene los metadatos y el contenido Markdown completo de una especificación viva.
+// Un dominio declarado por la baseline del proyecto devuelve *ExternalBaselineError
+// con la ruta de su documento: no se indexa ni se lee aquí (REQ-24.25).
 func (s *Service) GetSpecDetail(domain string) (*LivingSpecEntry, string, error) {
 	loc, err := s.resolve()
 	if err != nil {
 		return nil, "", err
+	}
+	if external := externalBaselineOf(loc); external != nil {
+		for _, document := range external.Documents {
+			if document.Domain == domain {
+				return nil, "", &ExternalBaselineError{Domain: domain, Path: document.Path, ConfigPath: loc.ConfigPath}
+			}
+		}
 	}
 	specPath := filepath.Join(specsRootOf(loc), domain, "spec.md")
 	contentBytes, err := os.ReadFile(specPath)
@@ -107,9 +161,14 @@ func (s *Service) GetSpecDetail(domain string) (*LivingSpecEntry, string, error)
 }
 
 // Sync ejecuta el re-escaneo y regenera el archivo INDEX.md del planning home.
+// Con una baseline del proyecto, o indeterminada, se rechaza sin escribir nada
+// con un *workspace.SecondBaselineError (REQ-24.23).
 func (s *Service) Sync(ctx context.Context) (*SyncReport, error) {
 	loc, err := s.resolve()
 	if err != nil {
+		return nil, err
+	}
+	if err := loc.GuardSpecsWrite(opSync); err != nil {
 		return nil, err
 	}
 	report, err := s.indexer.SyncIndexForProject(projectNameOf(loc), specsRootOf(loc), indexPathOf(loc))
@@ -123,9 +182,14 @@ func (s *Service) Sync(ctx context.Context) (*SyncReport, error) {
 }
 
 // ColdStart ejecuta la adopción orgánica para un cambio y sincroniza el catálogo.
+// Con una baseline del proyecto, o indeterminada, se rechaza antes de escribir
+// nada con un *workspace.SecondBaselineError (REQ-24.23).
 func (s *Service) ColdStart(changeName, domain string) (*LivingSpecEntry, error) {
 	loc, err := s.resolve()
 	if err != nil {
+		return nil, err
+	}
+	if err := loc.GuardSpecsWrite(opColdStart); err != nil {
 		return nil, err
 	}
 	entry, err := s.synthesizer.ColdStart(loc.WorkspaceRoot, changeName, domain)

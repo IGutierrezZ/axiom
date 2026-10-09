@@ -2024,6 +2024,18 @@ document.addEventListener('DOMContentLoaded', () => {
         metricSync.textContent = new Date(catalog.last_sync).toLocaleTimeString();
       }
 
+      // Con baseline del proyecto declarada el catálogo no se indexa: se informa de
+      // que es externa y de dónde está, para que un catálogo vacío no se
+      // interprete como ausencia de especificación (REQ-24.25).
+      const externalBaseline = catalog.external_baseline;
+      if (externalBaseline && Array.isArray(externalBaseline.documents)) {
+        const items = externalBaseline.documents.map(doc =>
+          `<li><strong>${escapeHtml(doc.domain)}</strong>: <code>${escapeHtml(doc.path)}</code></li>`
+        ).join('');
+        listContainer.innerHTML = `<div class="empty-state external-baseline-notice"><p>La baseline de especificaciones es externa (del proyecto): sus documentos no se indexan aquí. Dominios y rutas declarados:</p><ul>${items}</ul></div>`;
+        return;
+      }
+
       if (specs.length === 0) {
         listContainer.innerHTML = '<p class="empty-state">No hay especificaciones vivas en openspec/specs/. Usa "Sincronizar" o el CLI para generarlas.</p>';
         return;
@@ -2063,6 +2075,18 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  // livingDocErrorMessage extrae el mensaje del cuerpo de error de la API de
+  // especificaciones vivas, que nombra la baseline declarada y la continuación.
+  async function livingDocErrorMessage(res, fallback) {
+    try {
+      const body = await res.json();
+      if (body && body.error) return body.error;
+    } catch (_) {
+      // El cuerpo no es JSON: se usa el mensaje genérico.
+    }
+    return fallback;
+  }
+
   async function loadLivingDocDetail(domain) {
     const viewer = document.getElementById('livingdoc-viewer');
     const titleEl = document.getElementById('livingdoc-detail-title');
@@ -2073,7 +2097,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     try {
       const res = await fetch(`/api/archive/specs/${encodeURIComponent(domain)}`);
-      if (!res.ok) throw new Error('Especificación viva no encontrada');
+      if (!res.ok) throw new Error(await livingDocErrorMessage(res, 'Especificación viva no encontrada'));
       const data = await res.json();
 
       if (titleEl) titleEl.textContent = data.entry ? (data.entry.title || data.entry.domain) : domain;
@@ -2094,7 +2118,8 @@ document.addEventListener('DOMContentLoaded', () => {
       btnSyncLivingDoc.innerHTML = `${ICONS.refresh} Sincronizando...`;
       try {
         const res = await fetch('/api/archive/sync', { method: 'POST' });
-        if (!res.ok) throw new Error('Error en sincronización');
+        // Con baseline del proyecto responde 409 con el rechazo y su continuación.
+        if (!res.ok) throw new Error(await livingDocErrorMessage(res, 'Error en sincronización'));
         await loadLivingDocs();
         btnSyncLivingDoc.innerHTML = `${ICONS.check} ¡Sincronizado!`;
         setTimeout(() => {

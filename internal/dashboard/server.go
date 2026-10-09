@@ -3,6 +3,7 @@ package dashboard
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/fs"
 	"net"
@@ -10,7 +11,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/IGutierrezZ/axiom/v3/internal/livingdoc"
 	"github.com/IGutierrezZ/axiom/v3/internal/semantic"
+	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
 // Server representa el servidor HTTP local para el dashboard web de Axiom.
@@ -661,6 +664,18 @@ func (s *Server) handleArchiveSpecDetail(w http.ResponseWriter, r *http.Request)
 	}
 	entry, content, err := s.service.GetLivingSpecDetail(domain)
 	if err != nil {
+		// Un dominio de la baseline externa del proyecto no se indexa: es un error
+		// de cliente que nombra la baseline y la ruta de su documento (REQ-24.25).
+		var external *livingdoc.ExternalBaselineError
+		if errors.As(err, &external) {
+			s.respondJSON(w, http.StatusNotFound, map[string]interface{}{
+				"error":             err.Error(),
+				"external_baseline": true,
+				"domain":            external.Domain,
+				"path":              external.Path,
+			})
+			return
+		}
 		s.respondJSON(w, http.StatusNotFound, map[string]string{"error": err.Error()})
 		return
 	}
@@ -677,6 +692,17 @@ func (s *Server) handleArchiveSync(w http.ResponseWriter, r *http.Request) {
 	}
 	report, err := s.service.SyncLivingDocs(r.Context())
 	if err != nil {
+		// Con una baseline del proyecto, o indeterminada, el servicio rechaza sin
+		// escribir: 409 con el mensaje, que nombra la baseline y la continuación
+		// (REQ-24.23).
+		var second *workspace.SecondBaselineError
+		if errors.As(err, &second) {
+			s.respondJSON(w, http.StatusConflict, map[string]string{
+				"error":     err.Error(),
+				"ownership": string(second.Ownership),
+			})
+			return
+		}
 		s.respondJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		return
 	}
