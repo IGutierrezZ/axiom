@@ -3,8 +3,6 @@ package workspace
 import (
 	"errors"
 	"fmt"
-	"io/fs"
-	"os"
 	"path"
 	"path/filepath"
 	"regexp"
@@ -139,22 +137,6 @@ func (p RequirementProfile) Compile() (*regexp.Regexp, error) {
 		return nil, fmt.Errorf("el patrón 'heading' debe definir los grupos con nombre 'id' y 'title' (por ejemplo (?P<id>...) y (?P<title>...))")
 	}
 	return re, nil
-}
-
-// ReadDeclarations lee configPath y aplica la carga por capas; devuelve solo las
-// declaraciones (las usa axiom init para el axiom.yaml propio del destino). Un
-// fichero inexistente equivale a «sin declaraciones»; uno que existe y no se
-// puede leer deja la causa en ParseErr.
-func ReadDeclarations(configPath string) Declarations {
-	data, err := os.ReadFile(configPath)
-	if err != nil {
-		if errors.Is(err, fs.ErrNotExist) {
-			return Declarations{}
-		}
-		return Declarations{ParseErr: fmt.Errorf("no se pudo leer el archivo '%s': %w", configPath, err)}
-	}
-	_, _, declarations := parseLayered(data)
-	return declarations
 }
 
 // Claves admitidas por nodo (D-04). yaml.v3 no ofrece KnownFields en
