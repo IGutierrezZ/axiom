@@ -233,3 +233,61 @@ func TestRetireLegacyPromptFilesKeepsSDDOnlyCopyWhenCurrentPromptHasNoSection(t 
 		})
 	}
 }
+
+// Each frontmatter proves ownership only for the target that writes it: Kiro
+// writes steering files, VS Code instructions files and Cursor none. A header
+// that belongs to another adapter is not what Axiom wrote at this path.
+func TestRetireLegacyPromptFilesKeepsFrontmatterOfAnotherAdapter(t *testing.T) {
+	home := t.TempDir()
+	instructions := map[string]string{
+		"persona instructions": wrapInstructionsFile(""),
+		"sdd instructions":     filemerge.SDDInstructionsFrontmatter,
+	}
+	steering := map[string]string{
+		"persona steering": wrapSteeringFile(""),
+		"sdd steering":     filemerge.SDDSteeringFrontmatter,
+	}
+	foreign := map[string]map[string]string{
+		"kiro":   instructions,
+		"vscode": steering,
+		"cursor": {},
+	}
+	for _, set := range []map[string]string{instructions, steering} {
+		for name, frontmatter := range set {
+			foreign["cursor"][name] = frontmatter
+		}
+	}
+	for _, c := range legacyPromptCases(t, home) {
+		for name, frontmatter := range foreign[c.name] {
+			t.Run(c.name+"/"+name, func(t *testing.T) {
+				legacyContent := sddOnlyContent(frontmatter)
+				legacy := writeSDDOnlyLegacyPrompt(t, home, c, sddOnlyContent(""), legacyContent)
+				assertLegacyPromptKept(t, home, c, legacy, legacyContent)
+			})
+		}
+	}
+}
+
+// The persona frontmatter of the adapter's own target still proves ownership.
+func TestRetireLegacyPromptFilesRemovesCopyWithOwnPersonaFrontmatter(t *testing.T) {
+	home := t.TempDir()
+	for _, c := range legacyPromptCases(t, home) {
+		var frontmatter string
+		switch c.name {
+		case "kiro":
+			frontmatter = wrapSteeringFile("")
+		case "vscode":
+			frontmatter = wrapInstructionsFile("")
+		default:
+			continue
+		}
+		t.Run(c.name, func(t *testing.T) {
+			content := sddOnlyContent(frontmatter)
+			legacy := writeSDDOnlyLegacyPrompt(t, home, c, content, content)
+			result := RetireLegacyPromptFiles(home, c.adapter)
+			if len(result.Removed) != 1 || result.Removed[0] != legacy || len(result.Notes) != 0 {
+				t.Fatalf("result = %+v, want only %s removed", result, legacy)
+			}
+		})
+	}
+}
