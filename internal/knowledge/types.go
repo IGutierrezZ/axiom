@@ -36,6 +36,9 @@ type SweepResult struct {
 	Ambiguities     []AmbiguityItem `json:"ambiguities"`
 	CreatedSpecs    []string        `json:"created_specs"`
 	Duration        time.Duration   `json:"duration"`
+	// Notes reúne los avisos no bloqueantes del barrido, entre ellos el de la
+	// ubicación antigua divergente (Q14, REQ-24.10).
+	Notes []string `json:"notes,omitempty"`
 }
 
 // QueryType define la lente de análisis para la consulta.
@@ -73,4 +76,7 @@ type QueryResult struct {
 	ResolvedFromSpec bool           `json:"resolved_from_spec"`
 	SpecUpdated      bool           `json:"spec_updated"`
 	TargetSpecPath   string         `json:"target_spec_path,omitempty"`
+	// Notes reúne los avisos no bloqueantes de la consulta, entre ellos el de la
+	// ubicación antigua divergente (Q14, REQ-24.10).
+	Notes []string `json:"notes,omitempty"`
 }

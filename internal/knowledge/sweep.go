@@ -38,8 +38,12 @@ func RunSweep(ctx context.Context, opts SweepOptions) (*SweepResult, error) {
 		return nil, fmt.Errorf("ruta workspace inválida: %w", err)
 	}
 
+	var notes []string
 	if opts.SpecsRoot == "" {
-		opts.SpecsRoot = filepath.Join(absWorkspace, "openspec")
+		opts.SpecsRoot, notes, err = defaultSpecsRoot(absWorkspace)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	detector := hub.NewDetector()
@@ -52,6 +56,7 @@ func RunSweep(ctx context.Context, opts SweepOptions) (*SweepResult, error) {
 		Modules:         make([]ModuleSummary, 0),
 		Ambiguities:     make([]AmbiguityItem, 0),
 		CreatedSpecs:    make([]string, 0),
+		Notes:           notes,
 	}
 
 	if tech != nil {

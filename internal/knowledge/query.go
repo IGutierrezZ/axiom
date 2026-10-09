@@ -22,14 +22,19 @@ func RunQuery(ctx context.Context, opts QueryOptions) (*QueryResult, error) {
 		return nil, fmt.Errorf("ruta workspace inválida: %w", err)
 	}
 
+	var notes []string
 	if opts.SpecsRoot == "" {
-		opts.SpecsRoot = filepath.Join(absWorkspace, "openspec")
+		opts.SpecsRoot, notes, err = defaultSpecsRoot(absWorkspace)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	res := &QueryResult{
 		Evidences:        make([]EvidenceItem, 0),
 		ResolvedFromSpec: false,
 		SpecUpdated:      false,
+		Notes:            notes,
 	}
 
 	questionLower := strings.ToLower(opts.Question)

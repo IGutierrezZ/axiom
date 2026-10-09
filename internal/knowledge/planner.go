@@ -45,7 +45,12 @@ func GenerateCrawlPlan(ctx context.Context, opts CrawlPlanOptions) (*CrawlJob, e
 	}
 
 	if opts.SpecsRoot == "" {
-		opts.SpecsRoot = filepath.Join(absWorkspace, "openspec")
+		// El plan de crawl no devuelve avisos: el de la ubicación divergente lo
+		// emiten sweep y query.
+		opts.SpecsRoot, _, err = defaultSpecsRoot(absWorkspace)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	jobPath := opts.JobPath
