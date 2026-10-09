@@ -90,7 +90,7 @@ const roseArt = [
   "               ⠐⠈",
 ]
 
-const compactArt = ["✦ Gentle AI ✦"]
+const compactArt = ["✦ Axiom ✦"]
 
 const Logo = () => {
   const dim = useTerminalDimensions()
