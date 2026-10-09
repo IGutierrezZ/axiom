@@ -893,7 +893,7 @@ func assertReviewConsentPrompt(t *testing.T, prompt, reason string) string {
 		"result safer",
 		"1) Review this change",
 		"2) Skip this time",
-		"gentle-ai review mode disable",
+		"axiom review mode disable",
 	} {
 		if !strings.Contains(prompt, want) {
 			t.Fatalf("consent prompt missing %q:\n%s", want, prompt)

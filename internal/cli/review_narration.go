@@ -139,13 +139,13 @@ var reviewStopReasonNarration = map[string]string{
 		"<repo>", "<id>"),
 	"lens_context_budget_exceeded": "This frozen candidate cannot fit complete reviewer evidence without truncation, so this review stops before an inspection result. " +
 		"Reduce the candidate scope or target identity, then run `axiom review start` for that new candidate; or run `" + reviewModeDisableCloneCommand + "` " + reviewModeDisableCloneCaveat + " to deliver under ordinary repository policy instead.",
-	"managed_assets_outdated": "This installation's reviewer assets no longer match this version of Gentle AI, so this review stops before it starts. " +
+	"managed_assets_outdated": "This installation's reviewer assets no longer match this version of Axiom, so this review stops before it starts. " +
 		"Run `axiom sync --agent " + reviewUndeclaredRuntimeIdentitySlot + "` to bring them back in sync, then re-run " +
 		"`axiom review status --cwd <repo> --contract gentle-ai.review-integration/v2 --agent " + reviewUndeclaredRuntimeIdentitySlot + " --next-transition`.",
 	"corrupted_or_unverifiable_authority": "This review's stored record cannot be trusted as-is, and it cannot be repaired automatically. " +
 		"Ask a maintainer to inspect it directly, or run `" + reviewModeDisableCloneCommand + "` " +
 		reviewModeDisableCloneCaveat + " to deliver under ordinary repository policy instead.",
-	"manual_intervention_required": "This review reached a state Gentle AI does not recognize. " +
+	"manual_intervention_required": "This review reached a state Axiom does not recognize. " +
 		"This is a product defect. If you just want your work delivered, run `" + reviewModeDisableCloneCommand + "` " +
 		reviewModeDisableCloneCaveat + " so ordinary repository policy (hooks, tests, CI) decides instead; nothing is silently approved. To get this review itself fixed, ask a maintainer to review it and report the defect.",
 	"missing_authority_binding": "This run reached a state that should never happen: it lost track of the record it needs to continue. " +

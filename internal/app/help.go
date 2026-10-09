@@ -51,7 +51,7 @@ COMMANDS
                'review start' asks per candidate before a review that would do work;
                accepting covers that candidate only and nothing is granted for later candidates,
                'not now' applies to that candidate only and persists nothing, turning reviews
-               off for good needs a deliberate 'axiom review mode disable' (or 'gentle-ai review mode disable'), and a session
+               off for good needs a deliberate 'axiom review mode disable', and a session
                without a terminal reviews the change and says so instead of asking
 
 COMPATIBILITY COMMANDS

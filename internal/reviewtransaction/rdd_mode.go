@@ -73,7 +73,7 @@ var (
 	// recorded but could not publish at the readable location a coexisting
 	// gentle-ai reads. It is the opposite of a fallback: it exists so a
 	// half-applied kill switch can never be reported as a working one.
-	ErrRDDModePartiallyApplied = errors.New("clone-local review mode was not applied for every gentle-ai on this machine")
+	ErrRDDModePartiallyApplied = errors.New("clone-local review mode was not applied for every axiom or gentle-ai installation on this machine")
 
 	// rddConsentPayload is the exact latch content. It deliberately carries no
 	// timestamp: identical bytes keep the immutable no-replace publish idempotent,
@@ -281,7 +281,7 @@ func (err *RDDModePartialApplyError) Error() string {
 		decision, verb = "disables", "disable"
 	}
 	return fmt.Sprintf(
-		"%v: this clone %s receipt-driven development for this gentle-ai, but publishing the same decision under gentle-ai/%s/%s/%s/%s failed, so a gentle-ai installed before the switch moved still reads the value it already has there and keeps enforcing it: %v; rerun `axiom review mode %s --scope clone` to publish it in both places",
+		"%v: this clone %s receipt-driven development for this axiom, but publishing the same decision under gentle-ai/%s/%s/%s/%s failed, so a gentle-ai installed before the switch moved still reads the value it already has there and keeps enforcing it: %v; rerun `axiom review mode %s --scope clone` to publish it in both places",
 		ErrRDDModePartiallyApplied,
 		decision,
 		rddModeLegacySwitchDirectory,

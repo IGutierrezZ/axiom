@@ -98,7 +98,7 @@ func reviewConsentEnvelopeTextFor(locale reviewConsentLocale, assessment reviewt
 		}
 	}
 	return reviewConsentEnvelopeText{
-		headline:       "Gentle AI puede revisar este cambio antes de que lo des por terminado.",
+		headline:       "Axiom puede revisar este cambio antes de que lo des por terminado.",
 		reason:         reviewConsentSpanishReason(assessment),
 		value:          "La revisión lleva un poco más de tiempo y hace que el resultado sea considerablemente más seguro.",
 		evidence:       reviewConsentSpanishRiskEvidence(assessment),

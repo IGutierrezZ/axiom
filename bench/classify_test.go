@@ -454,6 +454,19 @@ func TestConsentNoticeIsCountedFromRealStderr(t *testing.T) {
 	}
 }
 
+// TestConsentNoticeCountingIsIndependentOfTheBrandPrefix proves the counter
+// keys on the notice body, so recordings made by older binaries ("Gentle AI")
+// and by current ones ("Axiom") count the same.
+func TestConsentNoticeCountingIsIndependentOfTheBrandPrefix(t *testing.T) {
+	for _, brand := range []string{"Gentle AI", "Axiom"} {
+		for _, body := range consentNotices {
+			if got := countConsentNotices(brand + " " + body + "."); got != 1 {
+				t.Fatalf("consent notices in %q = %d, want 1", brand+" "+body, got)
+			}
+		}
+	}
+}
+
 func TestCaptureResultDetectionExcludesPreflight(t *testing.T) {
 	if !isCaptureResult([]string{"review", "capture-result", "--lens", "review-risk", "--input", "r.json"}) {
 		t.Fatal("a real capture must count as a model run")
