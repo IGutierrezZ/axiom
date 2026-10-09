@@ -1980,6 +1980,37 @@ func TestSDDStatusContractPreservesFrozenExternalV2Projection(t *testing.T) {
 	}
 }
 
+// REQ-24.19 y REQ-24.28: el contrato compartido documenta baseline y
+// technicalContext como campos opcionales y la regla de leer sus localizadores del
+// status en lugar de interpretar axiom.yaml.
+func TestSDDStatusContractDocumentsBaselineAndTechnicalContext(t *testing.T) {
+	content := MustRead("skills/_shared/sdd-status-contract.md")
+
+	for _, want := range []string{
+		// El esquema los lista como opcionales, con su forma.
+		"baseline: # optional; present only with a valid `baseline:` declaration in axiom.yaml",
+		"integration: compose | directed | register",
+		"technicalContext: # optional; present only with a valid `technical_context:` declaration in axiom.yaml",
+		"maintained: # optional mode",
+		// La sección nueva fija la regla de lectura y la omisión.
+		"## Project Baseline and Technical Context",
+		"`baseline` and `technicalContext` are additive, optional fields of the status.",
+		"so phase skills never interpret that file themselves",
+		"Read the locators from the status",
+		"Never read `axiom.yaml` to find them",
+		"Both fields are omitted entirely (never `null`, never empty)",
+		"An invalid declaration is never projected, not even partially.",
+		"planning and `apply` are never blocked by it",
+		"Only archive is gated by a declaration cause",
+		"it appears in `blockedReasons` (and `nextRecommended` becomes `resolve-blockers`) only when the route would otherwise be `archive`",
+		"The context delta (`context-impact.md`) is not projected",
+	} {
+		if !strings.Contains(content, want) {
+			t.Errorf("sdd-status-contract missing baseline/technicalContext rule %q", want)
+		}
+	}
+}
+
 func TestOpenCodeSDDOverlaySubagentsAreExplicitExecutors(t *testing.T) {
 	for _, assetPath := range []string{"opencode/sdd-overlay-single.json", "opencode/sdd-overlay-multi.json"} {
 		t.Run(assetPath, func(t *testing.T) {
