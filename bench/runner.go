@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -729,7 +730,14 @@ type Journey struct {
 	// Review is the journey's receipt-driven-development precondition. It is
 	// mandatory: see ReviewPrecondition.
 	Review ReviewPrecondition
-	Steps  []Step
+	// ExecutesPOSIXShims declares that the journey writes `#!/bin/sh` shims (an
+	// agent, a runtime launcher) that the product or the journey EXECUTES, by
+	// putting their directory on the sandbox PATH. Windows cannot execute them,
+	// so there the journey is reported `unsupported` instead of running: it
+	// would otherwise resolve a real agent, or measure a flow without the shim.
+	// A shebang written into a fixture file that is never run does not count.
+	ExecutesPOSIXShims bool
+	Steps              []Step
 }
 
 // optIntoReviewMode turns receipt-driven development on for one sandbox through
@@ -870,6 +878,9 @@ func (r *journeyRun) runTTY(args []string, modelRun bool, exchange func(*bufio.R
 }
 
 func runJourney(binary string, journey Journey) JourneyResult {
+	if reason := journeyUnsupportedReason(journey, runtime.GOOS); reason != "" {
+		return unsupportedJourneyResult(journey, reason)
+	}
 	result := JourneyResult{ID: journey.ID, Title: journey.Title, Source: journey.Source, Status: StatusCompleted}
 
 	root, err := os.MkdirTemp("", "gentle-ai-bench-"+journey.ID+"-")
@@ -940,6 +951,11 @@ func runJourney(binary string, journey Journey) JourneyResult {
 			// A fixture may add a directory to the sandbox PATH, so the guard
 			// runs again before anything it set up can be executed.
 			if failIsolation() {
+				break
+			}
+			if sandbox.PathOverride != "" && !journey.ExecutesPOSIXShims {
+				result.Status = StatusFailed
+				result.FailureReason = fmt.Sprintf("fixture %q put %s on the sandbox PATH, but the journey does not declare ExecutesPOSIXShims, so it would run on Windows without its shim", step.Name, sandbox.PathOverride)
 				break
 			}
 		}

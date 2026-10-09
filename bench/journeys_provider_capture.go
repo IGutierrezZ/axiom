@@ -24,6 +24,8 @@ func providerCaptureRetryJourneys() []Journey {
 		Review: reviewOptedIn,
 		Title:  "Compiled provider capture retries the same pending binding after a transport failure",
 		Source: "issue #3138: Go owns provider capture binding and retry lifecycle",
+		// The fixture ships a #!/bin/sh `claude`; see Journey.ExecutesPOSIXShims.
+		ExecutesPOSIXShims: true,
 		Steps: []Step{
 			{Name: "fixture: isolated Claude provider fake", Fixture: providerCaptureRetryFixture},
 			{Name: "fixture: stage candidate", Fixture: stageWaveCandidate},
