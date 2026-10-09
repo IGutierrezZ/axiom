@@ -4,7 +4,7 @@
 > Espejo de recuperación en Engram: topic `odd/seguimientos-post-restos-upstream/tasks`, proyecto `axiom`.
 > Rama del documento: `docs/odd-seguimientos-post-restos-upstream`, subida a `origin`, con su worktree en `C:\repos\axiom-wt\odd-post-docs`. Este documento viaja **solo** en el PR de cierre.
 > Abierto el 2026-10-08 desde `origin/main` `21b9808a`. Recoge los seguimientos de la sección 9 del ODD `seguimientos-restos-upstream` (cerrado con el PR #110).
-> **Estado:** en ejecución desde el 2026-10-08 (segunda sesión). Decisiones S1, S2 y S6 tomadas.
+> **Estado:** **CERRADO** el 2026-10-09. Todas las tareas están fusionadas en `main` (`a639530a`); ver la sección 9.
 
 ---
 
@@ -86,12 +86,12 @@ Son las mismas de la sección 4 del ODD anterior:
 
 > Estado: `[ ]` pendiente · `[~]` en curso o con PR abierto · `[x]` fusionado. Ruta: delegada, con un writer por tarea en su worktree, salvo lo que sea mecánico y de un solo fichero.
 
-- [~] **P1 · `bench` aislado en Windows (S1, opción b).** Tres PRs apilados contra `main` (estrategia `stacked-to-main`, elegida por el usuario):
+- [x] **P1 · `bench` aislado en Windows (S1, opción b).** Tres PRs apilados contra `main` (estrategia `stacked-to-main`, elegida por el usuario):
   - #112 C1, PATH cerrado: **fusionado** en `93cd7c65`. «Run benchmark evidence» en verde en Linux.
   - #113 C2, guardia fail-closed: **fusionado** en `6eb6bd19`, con «Run benchmark evidence» en verde. Antes se rebasó a `8241f2b9` y se reapuntó a `main`; 574 líneas con `size:exception` aprobada por el usuario. No hay corte cohesivo: separaría la guardia de su consumidor.
-  - #114 C3, `unsupported` en Windows (j105, j116 y j3043): `fix/bench-windows-03-unsupported`, rebasado sobre `main` a `61cb673f` y reapuntado a `main`. Su árbol de `bench` es idéntico al verificado en `cdbba284`; 187 líneas.
+  - #114 C3, `unsupported` en Windows (j105, j116 y j3043): **fusionado** en `a639530a`, con «Run benchmark evidence» en verde. Antes se rebasó a `61cb673f`, con el árbol de `bench` idéntico al verificado en `cdbba284`; 187 líneas.
 
-  Ruta delegada: un writer `sonnet` en el worktree `p1-bench` y un verificador independiente `sonnet` de solo lectura. Riesgo `high` (`process_boundary`). El verificador lo dio por apto con correcciones y sus cuatro correcciones menores están aplicadas: `pathWithin` fail-closed ante junctions, `!IsDir()` en Windows, README matizado y `sandbox_git_unavailable`. El orquestador compiló y testeó C1 y C2 por separado. Queda pendiente en CI la deriva de bytes de stderr en j2138 y j3043, porque falta `node` en el PATH.
+  Ruta delegada: un writer `sonnet` en el worktree `p1-bench` y un verificador independiente `sonnet` de solo lectura. Riesgo `high` (`process_boundary`). El verificador lo dio por apto con correcciones y sus cuatro correcciones menores están aplicadas: `pathWithin` fail-closed ante junctions, `!IsDir()` en Windows, README matizado y `sandbox_git_unavailable`. El orquestador compiló y testeó C1 y C2 por separado. «Run benchmark evidence» pasó en los tres PRs; la posible deriva de bytes de stderr en j2138 y j3043 (sin `node` en el PATH) no hizo fallar nada.
 
   Objetivo original: Primero, un test que falle si el PATH del sandbox resuelve un ejecutable fuera de él. Después, se cierra el PATH y los journeys con shims POSIX se marcan `unsupported` en Windows. Riesgo previsto `high` (aislamiento y procesos), así que lleva verificador.
 - [x] **P2 · Versión con `go install` (S2).** Fusionado en `770914de`. PR #111 (rama `fix/version-go-install`, commit `34492be0`). Ruta delegada: un writer `sonnet` en el worktree `p2-version`. Riesgo `medium` (`executable_change`, 95 líneas), así que basta la autoverificación del writer y una comprobación puntual del orquestador (`TestResolveVersion` y `TestVersionDefault` en verde). También se actualiza REQ-22.8 de la especificación viva `axiom-updater-resilience`. Opción (a) con test: la constante solo como último recurso, y `ReadBuildInfo` cuando no hay ldflags. Comprobar que `axiom version` y la comparación de versiones del actualizador siguen igual con GoReleaser.
@@ -109,7 +109,7 @@ Son las mismas de la sección 4 del ODD anterior:
   - **Ruta y riesgo:** writer y verificador independiente `sonnet`. Riesgo `high` (`process_boundary`, `shell_source`), y el verificador lo dio por APTO.
 
   Objetivo original: Presupuestos o esperas por condición en los dos tests, sin ocultar fallos reales, y los comentarios del ratchet. `PRD.md` no se toca.
-- [ ] **Cierre:** PR con este documento.
+- [x] **Cierre:** PR con este documento.
 
 Previsión: unas 300-600 líneas en 4 PRs, todos por debajo de 400 líneas salvo que P1 crezca.
 
@@ -157,9 +157,39 @@ Previsión: unas 300-600 líneas en 4 PRs, todos por debajo de 400 líneas salvo
 - **2026-10-08, reanudación:** se concilia con `origin/main` `21b9808a`: no hay PRs abiertos y las líneas de S2 a S6 no han cambiado. En S1 aparecen tres shims ejecutables más, ya añadidos al inventario. El usuario decide S1 = (b), S2 = (a) y S6 = histórico. No fija orden, así que se empieza por P2 y después se sigue el de la sección 6.
 - **2026-10-08, apertura:** se abre el documento desde `origin/main` `21b9808a`, en el worktree `odd-post-docs` y la rama `docs/odd-seguimientos-post-restos-upstream`. Los seis puntos se han comprobado con `rg` sobre `main`. Matiz de S2: GoReleaser ya inyecta `main.version`, así que el problema solo afecta a `go install`. Por decisión del usuario, la ejecución va en otra sesión.
 
-## 9. Siguiente paso
+## 9. Cierre (2026-10-09)
 
-En la sesión nueva:
-1. Recuperar el contexto (sección 0).
-2. Plantear, de una en una, las decisiones S1, S2 y S6 de la sección 2.
-3. Empezar por P2, que es la tarea más pequeña y de mayor impacto para los usuarios de `go install`, salvo que el usuario prefiera otro orden.
+**Fusionado en `main`**, con squash:
+
+| PR | Tarea | Commit |
+|---|---|---|
+| #111 | P2 (S2) | `770914de` |
+| #115 | P3 · S4 | `2e0e3a90` |
+| #117 | P4 (S3 + S6) | `b24d0fa9` |
+| #112 | P1 · C1 | `93cd7c65` |
+| #116 | P3 · S5 | `45246039` |
+| #113 | P1 · C2 (`size:exception`) | `6eb6bd19` |
+| #114 | P1 · C3 | `a639530a` |
+
+Todos los worktrees y ramas de las tareas están eliminados. Solo queda este documento, en la rama `docs/odd-seguimientos-post-restos-upstream`. El `main` final (`a639530a`) se verificó en un worktree temporal: build, `bench` (build, vet y tests de aislamiento y `unsupported`), `gofmtcheck` y ratchet. El CI de `main` en `6eb6bd19` también está en verde.
+
+**Criterios de aceptación (sección 7):**
+- **Cumplido:** en Windows, el PATH del sandbox de `bench` es una lista cerrada. Una guardia fail-closed aborta si un agente se resuelve fuera del sandbox, y los journeys con shims POSIX se declaran `unsupported`.
+- **Cumplido:** un binario instalado con `go install …@vX` informa de `vX` gracias a `ReadBuildInfo`; la constante queda como último recurso.
+- **Cumplido:** la desinstalación con *clean install* de la TUI muestra los avisos de su `sync`.
+- **Cumplido:** `sync` retira el prompt heredado creado solo con SDD, con prueba de propiedad acotada por adaptador. Los ficheros editados por el usuario se conservan con aviso; el ataque de propiedad se repitió en unas 40 combinaciones.
+- **Cumplido con documentación:** el test intermitente de `cli` está corregido y su causa medida. El de `update` no se reproduce en unas 47 pasadas y queda documentado.
+- **Cumplido:** ningún comentario vigente describe `cmd/gentle-ai` como si existiera. `PRD.md` se deja como documento histórico, por decisión del usuario.
+- **Cumplido al fusionar:** el CI estaba en verde en todos los PRs.
+
+**Seguimientos:**
+- Un STATUS negociado tarda 5-8 s en un repo mínimo en Windows. Otros tests de `internal/cli` con el presupuesto de 25 s del facade podrían ser intermitentes bajo carga.
+- El corpus completo de `bench` no se ha ejecutado en Windows, porque tarda horas.
+- En Windows siguen fallando 14 tests de `bench` que ya fallaban en `main`: scripts `#!/bin/sh` usados como binario falso y el borrado de `opencode.exe` enlazado.
+- Herencia de U3: el contenido dentro de una sección gestionada se considera propio, y hay una carrera teórica entre `Lstat` y `Remove`.
+- La guardia de `bench` aborta si hay agentes en el directorio de `git`, por ejemplo con Homebrew en `/opt/homebrew/bin`. Falla cerrado, pero deja `bench` inutilizable en esas máquinas.
+
+**Lecciones:**
+- Los eventos que llegan con GitHub Actions bloqueado se pierden. Tras desbloquearlo hay que volver a dispararlos: quitar y poner una etiqueta (`labeled`) o cerrar y reabrir el PR. Un relanzamiento que quedó en cola durante el bloqueo se queda atascado.
+- En una pila, la rama hija necesita `rebase --onto` sobre `main` tras el squash de la madre, y reapuntarse antes del *force-push*.
+- Si los commits de un writer salen sin tildes, se corrige el mensaje del squash (`--subject`/`--body-file`) en vez de reescribir la pila.
