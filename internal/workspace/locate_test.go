@@ -667,3 +667,141 @@ func TestLocationLegacySpecsDivergence(t *testing.T) {
 		}
 	})
 }
+
+const (
+	// Declaración inválida (baseline sin documentos) con base válida.
+	locateInvalidBaseline = "baseline:\n  documents: []\n"
+	// Declaración válida de un documento de prosa.
+	locateValidBaseline = "baseline:\n  documents:\n    - domain: modelo-de-datos\n      path: 03_Modelo_Datos.md\n"
+	// Base inválida: sin roles.
+	locateInvalidBase = "workspace: {name: x, topology: monorepo-embedded}\n"
+
+	locateCanonicalConfig = "workspace:\n  name: ejemplo-canonico\n  topology: multirepo\n  specs_repository: repo-specs\nroles:\n  backend:\n    name: Backend\n    repositories:\n      - path: repo-backend\n  frontend:\n    name: Frontend\n    repositories:\n      - path: repo-frontend\n"
+	locateEmbeddedConfig  = "workspace:\n  name: ejemplo-embebido\n  topology: monorepo-embedded\n  specs_repository: .\nroles:\n  core:\n    name: Core\n    repositories:\n      - path: .\n"
+)
+
+// REQ-24.18 y D-03: Locate rellena las declaraciones con la carga por capas y,
+// con una base válida, las declaraciones inválidas nunca hacen rechazar.
+func TestLocateFillsTheDeclarations(t *testing.T) {
+	t.Run("puntero con declaraciones validas", func(t *testing.T) {
+		ws := workspacetest.Canonical(t)
+		workspacetest.WriteFile(t, filepath.Join(ws.Specs, "axiom.yaml"), locateCanonicalConfig+locateValidBaseline+"technical_context:\n  reference:\n    paths: [00_Glosario.md]\n")
+		for name, start := range map[string]string{"carpeta maestra": ws.Master, "repositorio de especificaciones": ws.Specs} {
+			loc := mustLocate(t, start)
+			if loc.Declarations.BaselineErr != nil || loc.Declarations.TechnicalContextErr != nil || loc.Declarations.ParseErr != nil {
+				t.Fatalf("%s: declaraciones válidas con error: %+v", name, loc.Declarations)
+			}
+			if loc.Declarations.Baseline == nil || len(loc.Declarations.Baseline.Documents) != 1 || loc.Declarations.TechnicalContext == nil {
+				t.Fatalf("%s: Declarations = %+v, se esperaban los dos bloques", name, loc.Declarations)
+			}
+			if loc.Config == nil || loc.Config.Baseline != loc.Declarations.Baseline {
+				t.Fatalf("%s: la configuración base debe llevar el mismo bloque válido", name)
+			}
+		}
+	})
+
+	t.Run("sin bloques nuevos son el valor cero", func(t *testing.T) {
+		ws := workspacetest.Canonical(t)
+		loc := mustLocate(t, ws.Master)
+		if loc.Declarations.ParseErr != nil || loc.Declarations.Baseline != nil || loc.Declarations.BaselineErr != nil ||
+			loc.Declarations.TechnicalContext != nil || loc.Declarations.TechnicalContextErr != nil {
+			t.Fatalf("Declarations = %+v, se esperaba el valor cero", loc.Declarations)
+		}
+	})
+
+	t.Run("sin axiom.yaml ni puntero son el valor cero", func(t *testing.T) {
+		dir := t.TempDir()
+		workspacetest.MkdirAll(t, filepath.Join(dir, "openspec"))
+		for _, start := range []string{dir, t.TempDir()} {
+			loc := mustLocate(t, start)
+			if loc.Declarations.ParseErr != nil || loc.Declarations.Baseline != nil || loc.Declarations.BaselineErr != nil {
+				t.Fatalf("Declarations = %+v, sin axiom.yaml se esperaba el valor cero", loc.Declarations)
+			}
+		}
+	})
+
+	t.Run("puntero con declaracion invalida y base valida no rechaza", func(t *testing.T) {
+		ws := workspacetest.Canonical(t)
+		workspacetest.WriteFile(t, filepath.Join(ws.Specs, "axiom.yaml"), locateCanonicalConfig+locateInvalidBaseline+"technical_context: {}\n")
+		before := treeSnapshot(t, ws.Master)
+		loc := mustLocate(t, ws.Master)
+		if loc.Master != ws.Master || loc.WorkspaceRoot != ws.Specs || loc.PlanningHome != ws.Home {
+			t.Fatalf("la resolución no cambia con una declaración inválida: %+v", loc)
+		}
+		if loc.Declarations.BaselineErr == nil || loc.Declarations.TechnicalContextErr == nil {
+			t.Fatalf("las dos declaraciones inválidas deben quedar en su canal: %+v", loc.Declarations)
+		}
+		if loc.Declarations.Baseline != nil || loc.Declarations.TechnicalContext != nil || loc.Declarations.ParseErr != nil {
+			t.Fatalf("un bloque inválido no se proyecta y ParseErr es solo para el YAML ilegible: %+v", loc.Declarations)
+		}
+		if loc.Config == nil || len(loc.Config.Roles) != 2 || loc.Config.Baseline != nil {
+			t.Fatalf("los roles siguen disponibles en la configuración base: %+v", loc.Config)
+		}
+		if len(loc.Notes) != 0 {
+			t.Fatalf("una declaración inválida no genera aviso de resolución: %v", loc.Notes)
+		}
+		if after := treeSnapshot(t, ws.Master); !reflect.DeepEqual(before, after) {
+			t.Fatalf("Locate escribió en disco: %v", after)
+		}
+	})
+
+	t.Run("puntero con base invalida rechaza aunque la declaracion sea valida", func(t *testing.T) {
+		ws := workspacetest.Canonical(t)
+		workspacetest.WriteFile(t, filepath.Join(ws.Specs, "axiom.yaml"), locateInvalidBase+locateValidBaseline)
+		locateErr := wantLocateError(t, ws.Master, LocateConfigUnloadable)
+		if !strings.Contains(locateErr.Continuation, "axiom workspace validate") {
+			t.Fatalf("la continuación debe nombrar axiom workspace validate: %q", locateErr.Continuation)
+		}
+	})
+
+	t.Run("puntero con declaracion invalida y base invalida rechaza por la base", func(t *testing.T) {
+		ws := workspacetest.Canonical(t)
+		workspacetest.WriteFile(t, filepath.Join(ws.Specs, "axiom.yaml"), locateInvalidBase+locateInvalidBaseline)
+		locateErr := wantLocateError(t, ws.Master, LocateConfigUnloadable)
+		if !strings.Contains(locateErr.Error(), "roles") {
+			t.Fatalf("el rechazo debe nombrar la causa de la base: %s", locateErr)
+		}
+	})
+
+	t.Run("sin puntero la base invalida conserva la resolucion embebida y evalua la declaracion", func(t *testing.T) {
+		for name, tc := range map[string]struct {
+			baseline string
+			valid    bool
+		}{"declaracion valida": {locateValidBaseline, true}, "declaracion invalida": {locateInvalidBaseline, false}} {
+			t.Run(name, func(t *testing.T) {
+				dir := t.TempDir()
+				workspacetest.MkdirAll(t, filepath.Join(dir, "openspec"))
+				workspacetest.WriteFile(t, filepath.Join(dir, "axiom.yaml"), locateInvalidBase+tc.baseline)
+				loc := mustLocate(t, dir)
+				if loc.WorkspaceRoot != dir || loc.Origin != OriginConfig || loc.Config != nil || loc.ConfigErr == nil || len(loc.Notes) != 1 {
+					t.Fatalf("se conserva la resolución embebida con aviso: %+v", loc)
+				}
+				if loc.Declarations.ParseErr != nil {
+					t.Fatalf("el YAML es legible: ParseErr = %v", loc.Declarations.ParseErr)
+				}
+				if tc.valid != (loc.Declarations.Baseline != nil) || tc.valid != (loc.Declarations.BaselineErr == nil) {
+					t.Fatalf("la declaración se evalúa aunque la base falle (válida=%v): %+v", tc.valid, loc.Declarations)
+				}
+			})
+		}
+	})
+
+	t.Run("sin puntero un YAML ilegible deja la causa en ParseErr", func(t *testing.T) {
+		dir := t.TempDir()
+		workspacetest.MkdirAll(t, filepath.Join(dir, "openspec"))
+		workspacetest.WriteFile(t, filepath.Join(dir, "axiom.yaml"), "workspace: [sin cerrar\n")
+		loc := mustLocate(t, dir)
+		if loc.Declarations.ParseErr == nil || loc.ConfigErr == nil || loc.Config != nil || len(loc.Notes) != 1 {
+			t.Fatalf("un YAML ilegible se resuelve embebido con aviso y ParseErr: %+v", loc)
+		}
+	})
+
+	t.Run("sin puntero una declaracion invalida con base valida no rechaza", func(t *testing.T) {
+		ws := workspacetest.Embedded(t, ".")
+		workspacetest.WriteFile(t, filepath.Join(ws.Master, "axiom.yaml"), locateEmbeddedConfig+locateInvalidBaseline)
+		loc := mustLocate(t, ws.Master)
+		if loc.Config == nil || loc.ConfigErr != nil || loc.Declarations.BaselineErr == nil || len(loc.Notes) != 0 {
+			t.Fatalf("la base válida carga y la declaración inválida queda en su canal: %+v", loc)
+		}
+	})
+}

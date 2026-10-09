@@ -49,6 +49,7 @@ type Location struct {
 	ConfigPath    string           // axiom.yaml efectivo; "" si no hay
 	Config        *WorkspaceConfig // configuración base; nil si no hay o no es cargable
 	ConfigErr     error            // causa de no carga de un axiom.yaml directo
+	Declarations  Declarations     // baseline y technical_context de axiom.yaml, con su estado de validación
 	Notes         []string         // avisos no bloqueantes
 }
 
@@ -251,16 +252,21 @@ func ResolveOwnPointer(dir string) (loc Location, found bool, err error) {
 	}
 	data, err := os.ReadFile(configPath)
 	if err == nil {
+		// Los errores de las declaraciones nunca rechazan (D-03): sin la
+		// configuración base no se sabe dónde está el planning home, pero un
+		// bloque baseline o technical_context inválido no lo oculta.
 		var cfg *WorkspaceConfig
-		cfg, err, _ = parseLayered(data)
+		var declarations Declarations
+		cfg, err, declarations = parseLayered(data)
 		if err == nil {
 			loc = Location{
-				Start:      absDir,
-				MarkerDir:  absDir,
-				Master:     absDir,
-				Origin:     OriginPointer,
-				ConfigPath: configPath,
-				Config:     cfg,
+				Start:        absDir,
+				MarkerDir:    absDir,
+				Master:       absDir,
+				Origin:       OriginPointer,
+				ConfigPath:   configPath,
+				Config:       cfg,
+				Declarations: declarations,
 			}
 			if rootsErr := completeRoots(&loc); rootsErr != nil {
 				return Location{}, true, rootsErr
@@ -282,12 +288,18 @@ func locateFromConfig(start, dir string) (Location, error) {
 	configPath := filepath.Join(dir, DefaultConfigFilename)
 	data, err := os.ReadFile(configPath)
 	var cfg *WorkspaceConfig
+	var declarations Declarations
 	if err == nil {
-		cfg, err, _ = parseLayered(data)
+		cfg, err, declarations = parseLayered(data)
+	} else {
+		// Un axiom.yaml que existe y no se puede leer deja la causa en ParseErr.
+		declarations.ParseErr = err
 	}
 	if err != nil {
 		// Caso 3 de REQ-24.7: un axiom.yaml directo que no se puede cargar no
-		// se rechaza; se conserva la resolución embebida y se avisa.
+		// se rechaza; se conserva la resolución embebida y se avisa. Las
+		// declaraciones se evalúan igualmente, de modo que el status pueda
+		// bloquear el archivado por su causa.
 		return Location{
 			Start:         start,
 			MarkerDir:     dir,
@@ -297,6 +309,7 @@ func locateFromConfig(start, dir string) (Location, error) {
 			Origin:        OriginConfig,
 			ConfigPath:    configPath,
 			ConfigErr:     err,
+			Declarations:  declarations,
 			Notes: []string{fmt.Sprintf(
 				"El axiom.yaml %s no se pudo cargar (%v); se conserva la resolución embebida en %s. Ejecuta `axiom workspace validate --path %s` para ver la causa.",
 				pathquote.Quote(configPath), err, pathquote.Quote(dir), pathquote.Quote(dir)),
@@ -304,12 +317,13 @@ func locateFromConfig(start, dir string) (Location, error) {
 		}, nil
 	}
 	loc := Location{
-		Start:      start,
-		MarkerDir:  dir,
-		Master:     deduceMaster(cfg, dir),
-		Origin:     OriginConfig,
-		ConfigPath: configPath,
-		Config:     cfg,
+		Start:        start,
+		MarkerDir:    dir,
+		Master:       deduceMaster(cfg, dir),
+		Origin:       OriginConfig,
+		ConfigPath:   configPath,
+		Config:       cfg,
+		Declarations: declarations,
 	}
 	if err := completeRoots(&loc); err != nil {
 		return Location{}, err
