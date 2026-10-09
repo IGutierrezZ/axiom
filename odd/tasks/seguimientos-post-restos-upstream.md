@@ -125,6 +125,10 @@ Previsión: unas 300-600 líneas en 4 PRs, todos por debajo de 400 líneas salvo
 
 ## 8. Progreso
 
+- **2026-10-09, bloqueo de CI:**
+  - GitHub Actions no crea ejecuciones nuevas desde la 01:33Z: el *force-push* de C2 (`8241f2b9`) y C3 (`5883a1b5`) no ha disparado ninguna.
+  - El relanzamiento del check obligatorio de #116 (run `37862998660`) lleva en `queued` desde la 00:05Z.
+  - No se fusiona nada sin CI. Pendiente de que el usuario revise Actions o la cuota de la cuenta.
 - **2026-10-09, primera tanda de merges:**
   - **Fusionados con squash:** #115, #117 y #112.
   - **#116 bloqueado por política:** el check obligatorio «Verify PR Origin & Authority» quedó `CANCELLED` en una ejecución superada. Se relanza y queda en cola.
