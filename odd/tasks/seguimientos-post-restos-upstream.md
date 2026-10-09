@@ -102,7 +102,13 @@ Son las mismas de la sección 4 del ODD anterior:
   Ruta delegada: un writer `sonnet` en el worktree `p3-migracion` y un verificador independiente `sonnet`. `assess` da `medium`, pero se trata como `high` por decisión del usuario. El verificador repitió el ataque de propiedad de U3 en unas 40 combinaciones y lo dio por APTO. Su MENOR 1 (frontmatter válidos para cualquier adaptador) se corrigió en `3d9da705`, con RED observado en 8 casos cruzados. Kiro ya se retiraba antes, porque el steering de SDD es prefijo del de persona; el hueco real era VS Code. El orquestador recompiló las dos ramas y repitió sus tests: `persona`, `sdd`, `cli -run TestLegacyPrompt*`, `tui` y `tui/screens`.
 
   Objetivo original: Comparten el ámbito de migración de instalaciones del ODD anterior (U3). Riesgo previsto `high` (borra ficheros del usuario), así que lleva verificador y repite el ataque de propiedad del ODD anterior.
-- [ ] **P4 · Tests intermitentes y comentarios (S3 + S6).** Presupuestos o esperas por condición en los dos tests, sin ocultar fallos reales, y los comentarios del ratchet. `PRD.md` no se toca.
+- [~] **P4 · Tests intermitentes y comentarios (S3 + S6).** PR #117 (`test/intermitentes-y-comentarios`, `bbc9562c` + `86f99382`, 41 líneas, `type:chore`).
+  - **Test de `cli`:** la causa medida es el presupuesto fijo de 25 s del facade bajo carga (fallos a 25,00 s; reproducido con 3 s). El test sube el presupuesto a 3 min solo durante su ejecución, y el valor del producto no cambia.
+  - **Test de `update`:** no se toca, porque no falló en unas 47 pasadas con carga. Queda documentado, como permite el criterio de aceptación.
+  - **Comentario del ratchet:** corregido. El orquestador arregló una inexactitud histórica del writer y aplicó el MENOR del verificador.
+  - **Ruta y riesgo:** writer y verificador independiente `sonnet`. Riesgo `high` (`process_boundary`, `shell_source`), y el verificador lo dio por APTO.
+
+  Objetivo original: Presupuestos o esperas por condición en los dos tests, sin ocultar fallos reales, y los comentarios del ratchet. `PRD.md` no se toca.
 - [ ] **Cierre:** PR con este documento.
 
 Previsión: unas 300-600 líneas en 4 PRs, todos por debajo de 400 líneas salvo que P1 crezca.
@@ -119,6 +125,7 @@ Previsión: unas 300-600 líneas en 4 PRs, todos por debajo de 400 líneas salvo
 
 ## 8. Progreso
 
+- **2026-10-09, P4:** se abre #117. Seguimiento: un STATUS negociado tarda 5-8 s en un repo mínimo en Windows, y otros tests de `internal/cli` con el presupuesto de 25 s podrían ser intermitentes bajo carga.
 - **2026-10-09, P3:** se abren #115 y #116. Seguimientos que deja el verificador, preexistentes desde U3: el contenido dentro de una sección gestionada se considera propio, y hay una carrera teórica entre `Lstat` y `Remove`.
 - **2026-10-09, P1:** se abren #112, #113 y #114. En Windows, un subconjunto de 8 journeys con el PATH padre reducido a Go y Git dio 5 completed, 3 unsupported y 0 failed. El corpus completo no se ejecuta en Windows porque tarda horas; la referencia es «Run benchmark evidence» en Linux. Hay 14 tests de `bench` que ya fallan en Windows, igual que en `origin/main`.
 - **2026-10-09, P2:** fusionado #111 con squash (`770914de`) y eliminados su worktree y sus ramas.
