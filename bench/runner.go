@@ -26,7 +26,9 @@ type Sandbox struct {
 	policyRuntimeBin string
 	Binary           string
 	// PathOverride is prepended to PATH for journeys that need a deterministic
-	// local runtime probe without depending on the host installation.
+	// local runtime probe without depending on the host installation. It must
+	// live inside Root: checkIsolation refuses a PATH that resolves an agent
+	// anywhere else.
 	PathOverride string
 	Root         string
 	Home         string
@@ -904,8 +906,23 @@ func runJourney(binary string, journey Journey) JourneyResult {
 		}
 	}
 
+	// failIsolation is the fail-closed guard. It never degrades to a skip or a
+	// pass: a sandbox PATH that resolves a real agent outside the sandbox root
+	// fails the journey before the next step can drive that agent.
+	failIsolation := func() bool {
+		if err := sandbox.checkIsolation(); err != nil {
+			result.Status = StatusFailed
+			result.FailureReason = err.Error()
+			return true
+		}
+		return false
+	}
+
 	for _, step := range journey.Steps {
 		run.step = step.Name
+		if failIsolation() {
+			break
+		}
 		if step.Skip != nil {
 			if reason := step.Skip(run.sandbox); reason != "" {
 				result.Status = StatusUnsupported
@@ -918,6 +935,11 @@ func runJourney(binary string, journey Journey) JourneyResult {
 			if err := step.Fixture(sandbox); err != nil {
 				result.Status = StatusFailed
 				result.FailureReason = fmt.Sprintf("fixture %q: %v", step.Name, err)
+				break
+			}
+			// A fixture may add a directory to the sandbox PATH, so the guard
+			// runs again before anything it set up can be executed.
+			if failIsolation() {
 				break
 			}
 		}
