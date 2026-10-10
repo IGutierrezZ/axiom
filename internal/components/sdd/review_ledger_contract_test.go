@@ -561,7 +561,11 @@ func TestKilocodeReviewSettingsMatchCurrentMainBaseline(t *testing.T) {
 	// ODD seguimientos U1: the provider-defect handoff now names Axiom and sends
 	// reports to `IGutierrezZ/axiom` instead of the upstream tracker. Deliberate,
 	// not drift.
-	const want = "7837076fafe74bd52c003ad3f9a9c72a7f4a1cd8e0f9385f04303adf9b0fbf94"
+	// ODD seguimientos U4: the shared session preflight body, which Kilocode embeds,
+	// now tells the model to ask `Axiom SDD preflight N/3:` instead of
+	// `Gentle AI SDD preflight N/3:`. The runtime matchers keep accepting both
+	// prefixes. Deliberate, not drift.
+	const want = "bf4ec88a0915509e34fb1a07ee5d29bf7073028918bcfdd768a1aaa0f67a7136"
 	if got != want {
 		t.Fatalf("Kilocode settings SHA-256 = %s, want current-main baseline %s", got, want)
 	}

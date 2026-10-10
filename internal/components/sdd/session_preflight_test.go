@@ -256,7 +256,7 @@ func TestSDDSessionPreflightFallbackStatesPromptOnlyLimitation(t *testing.T) {
 
 func TestSDDSessionPreflightProjectionCanonicalAndBounded(t *testing.T) {
 	block := sddSessionPreflightBlock()
-	for _, want := range []string{"<!-- gentle-ai:sdd-session-preflight -->", "### SDD Session Preflight (HARD GATE)", "Phrase examples are routing hints, never the authority boundary", "Gentle AI SDD preflight 1/3:", "Gentle AI SDD preflight 2/3:", "Gentle AI SDD preflight 3/3:", "Only a successful parent `question` result", "Model-authored defaults, summaries", "runtime derives and prepends the canonical `## SDD Session Preflight` block", "1. **Pace**", "2. **Artifacts**", "3. **PR strategy**", "Both -> `hybrid`", "fixed at 400 changed lines", "<!-- /gentle-ai:sdd-session-preflight -->"} {
+	for _, want := range []string{"<!-- gentle-ai:sdd-session-preflight -->", "### SDD Session Preflight (HARD GATE)", "Phrase examples are routing hints, never the authority boundary", "Axiom SDD preflight 1/3:", "Axiom SDD preflight 2/3:", "Axiom SDD preflight 3/3:", "Only a successful parent `question` result", "Model-authored defaults, summaries", "runtime derives and prepends the canonical `## SDD Session Preflight` block", "1. **Pace**", "2. **Artifacts**", "3. **PR strategy**", "Both -> `hybrid`", "fixed at 400 changed lines", "<!-- /gentle-ai:sdd-session-preflight -->"} {
 		if !strings.Contains(block, want) {
 			t.Fatalf("canonical block missing %q", want)
 		}

@@ -9,11 +9,11 @@ import (
 	"testing"
 )
 
-const testSDDPreflightQuestions = `{"questions":[{"header":"Pace","question":"Gentle AI SDD preflight 1/3: How should phases run?","options":[{"label":"Interactive","description":"Pause"},{"label":"Automatic","description":"Continue"}]},{"header":"Artifacts","question":"Gentle AI SDD preflight 2/3: Where should artifacts live?","options":[{"label":"OpenSpec","description":"Files"},{"label":"Engram","description":"Memory"},{"label":"Both","description":"Both"}]},{"header":"PR strategy","question":"Gentle AI SDD preflight 3/3: How should oversized delivery be handled?","options":[{"label":"Ask me","description":"Ask"},{"label":"Single PR","description":"One"},{"label":"Auto","description":"Split"}]}]}`
+const testSDDPreflightQuestions = `{"questions":[{"header":"Pace","question":"Axiom SDD preflight 1/3: How should phases run?","options":[{"label":"Interactive","description":"Pause"},{"label":"Automatic","description":"Continue"}]},{"header":"Artifacts","question":"Axiom SDD preflight 2/3: Where should artifacts live?","options":[{"label":"OpenSpec","description":"Files"},{"label":"Engram","description":"Memory"},{"label":"Both","description":"Both"}]},{"header":"PR strategy","question":"Axiom SDD preflight 3/3: How should oversized delivery be handled?","options":[{"label":"Ask me","description":"Ask"},{"label":"Single PR","description":"One"},{"label":"Auto","description":"Split"}]}]}`
 
-const testSDDPreflightAnswersAutomatic = `{"Gentle AI SDD preflight 1/3: How should phases run?":"Automatic","Gentle AI SDD preflight 2/3: Where should artifacts live?":"OpenSpec","Gentle AI SDD preflight 3/3: How should oversized delivery be handled?":"Ask me"}`
+const testSDDPreflightAnswersAutomatic = `{"Axiom SDD preflight 1/3: How should phases run?":"Automatic","Axiom SDD preflight 2/3: Where should artifacts live?":"OpenSpec","Axiom SDD preflight 3/3: How should oversized delivery be handled?":"Ask me"}`
 
-const testSDDPreflightAnswersInteractive = `{"Gentle AI SDD preflight 1/3: How should phases run?":"Interactive","Gentle AI SDD preflight 2/3: Where should artifacts live?":"Engram","Gentle AI SDD preflight 3/3: How should oversized delivery be handled?":"Auto"}`
+const testSDDPreflightAnswersInteractive = `{"Axiom SDD preflight 1/3: How should phases run?":"Interactive","Axiom SDD preflight 2/3: Where should artifacts live?":"Engram","Axiom SDD preflight 3/3: How should oversized delivery be handled?":"Auto"}`
 
 func runSDDPreflightHookTest(t *testing.T, payload string) (string, error) {
 	t.Helper()
@@ -160,6 +160,98 @@ func TestSDDPreflightHookAllowsCorroboratedCanonicalPreflight(t *testing.T) {
 	}
 }
 
+// rewriteSDDPreflightTranscriptPrefix rewrites every preflight question and
+// answer key in the transcript to the given brand prefix ("Gentle AI" or
+// "Axiom"), whichever brand the fixture constants currently use.
+func rewriteSDDPreflightTranscriptPrefix(t *testing.T, path, brand string) {
+	t.Helper()
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := strings.ReplaceAll(string(raw), "Axiom SDD preflight ", brand+" SDD preflight ")
+	text = strings.ReplaceAll(text, "Axiom SDD preflight ", brand+" SDD preflight ")
+	if err := os.WriteFile(path, []byte(text), 0o600); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// TestSDDPreflightHookAcceptsLegacyAndAxiomPrefix pins that the hook accepts
+// the preflight under both the legacy "Gentle AI" prefix and the "Axiom"
+// prefix: installed plugins and agent instructions already on users' machines
+// keep asking with the legacy prefix until the next sync.
+func TestSDDPreflightHookAcceptsLegacyAndAxiomPrefix(t *testing.T) {
+	for _, brand := range []string{"Gentle AI", "Axiom"} {
+		t.Run(brand, func(t *testing.T) {
+			dir := t.TempDir()
+			sessionID := "sess-prefix"
+			transcript := writeSDDPreflightTranscript(t, dir, sessionID, []struct {
+				toolUseID  string
+				sidechain  bool
+				sessionID  string
+				answersRaw string
+				isError    bool
+			}{
+				{toolUseID: "toolu-1", answersRaw: testSDDPreflightAnswersAutomatic},
+			})
+			rewriteSDDPreflightTranscriptPrefix(t, transcript, brand)
+			pre := preToolUseAgentPayload(sessionID, transcript, "sdd-explore", "Explore the request", "")
+			out, err := runSDDPreflightHookTest(t, pre)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var got map[string]any
+			if err := json.Unmarshal([]byte(out), &got); err != nil {
+				t.Fatalf("decode output %q: %v", out, err)
+			}
+			specific := got["hookSpecificOutput"].(map[string]any)
+			if specific["permissionDecision"] != "allow" {
+				t.Fatalf("%s prefix: decision = %#v", brand, specific)
+			}
+			prompt := specific["updatedInput"].(map[string]any)["prompt"].(string)
+			for _, want := range []string{"## SDD Session Preflight", "- Pace: auto", "- Artifact store: openspec", "Explore the request"} {
+				if !strings.Contains(prompt, want) {
+					t.Fatalf("%s prefix: prompt missing %q: %s", brand, want, prompt)
+				}
+			}
+		})
+	}
+}
+
+// TestSDDPreflightHookRejectsMalformedMarkerUnderEveryPrefix pins that the
+// per-question N/3 marker stays enforced under both accepted prefixes.
+func TestSDDPreflightHookRejectsMalformedMarkerUnderEveryPrefix(t *testing.T) {
+	for _, brand := range []string{"Gentle AI", "Axiom"} {
+		t.Run(brand, func(t *testing.T) {
+			dir := t.TempDir()
+			sessionID := "sess-marker"
+			transcript := writeSDDPreflightTranscript(t, dir, sessionID, []struct {
+				toolUseID  string
+				sidechain  bool
+				sessionID  string
+				answersRaw string
+				isError    bool
+			}{
+				{toolUseID: "toolu-1", answersRaw: testSDDPreflightAnswersAutomatic},
+			})
+			rewriteSDDPreflightTranscriptPrefix(t, transcript, brand)
+			raw, err := os.ReadFile(transcript)
+			if err != nil {
+				t.Fatal(err)
+			}
+			// Swap the first two markers so question 1 carries "2/3:".
+			text := strings.ReplaceAll(string(raw), brand+" SDD preflight 1/3:", brand+" SDD preflight X/3:")
+			text = strings.ReplaceAll(text, brand+" SDD preflight 2/3:", brand+" SDD preflight 1/3:")
+			text = strings.ReplaceAll(text, brand+" SDD preflight X/3:", brand+" SDD preflight 2/3:")
+			if err := os.WriteFile(transcript, []byte(text), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			pre := preToolUseAgentPayload(sessionID, transcript, "sdd-apply", "Apply", "")
+			denyCase(t, pre, "missing, invalid, or uncorroborated")
+		})
+	}
+}
+
 func TestSDDPreflightHookLastAnswerWins(t *testing.T) {
 	dir := t.TempDir()
 	sessionID := "sess-last"
@@ -288,7 +380,7 @@ func TestSDDPreflightHookDeniesOutsideDomainAnswer(t *testing.T) {
 		answersRaw string
 		isError    bool
 	}{
-		{toolUseID: "toolu-1", answersRaw: `{"Gentle AI SDD preflight 1/3: How should phases run?":"Nonsense","Gentle AI SDD preflight 2/3: Where should artifacts live?":"OpenSpec","Gentle AI SDD preflight 3/3: How should oversized delivery be handled?":"Ask me"}`},
+		{toolUseID: "toolu-1", answersRaw: `{"Axiom SDD preflight 1/3: How should phases run?":"Nonsense","Axiom SDD preflight 2/3: Where should artifacts live?":"OpenSpec","Axiom SDD preflight 3/3: How should oversized delivery be handled?":"Ask me"}`},
 	})
 	pre := preToolUseAgentPayload(sessionID, transcript, "sdd-apply", "Apply", "")
 	denyCase(t, pre, "missing, invalid, or uncorroborated")
@@ -304,7 +396,7 @@ func TestSDDPreflightHookDeniesMultiSelectAnswer(t *testing.T) {
 		answersRaw string
 		isError    bool
 	}{
-		{toolUseID: "toolu-1", answersRaw: `{"Gentle AI SDD preflight 1/3: How should phases run?":["Automatic","Interactive"],"Gentle AI SDD preflight 2/3: Where should artifacts live?":"OpenSpec","Gentle AI SDD preflight 3/3: How should oversized delivery be handled?":"Ask me"}`},
+		{toolUseID: "toolu-1", answersRaw: `{"Axiom SDD preflight 1/3: How should phases run?":["Automatic","Interactive"],"Axiom SDD preflight 2/3: Where should artifacts live?":"OpenSpec","Axiom SDD preflight 3/3: How should oversized delivery be handled?":"Ask me"}`},
 	})
 	pre := preToolUseAgentPayload(sessionID, transcript, "sdd-apply", "Apply", "")
 	denyCase(t, pre, "missing, invalid, or uncorroborated")
