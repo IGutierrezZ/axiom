@@ -69,10 +69,7 @@ func reviewCompactFacadeLineageAbsent(lineageID string) error {
 	return &reviewCompactFacadeLineageAbsentError{LineageID: strings.TrimSpace(lineageID)}
 }
 
-const facadeReviewPolicy = `Gentle AI native bounded review policy.
-
-Only candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.
-`
+const facadeReviewPolicy = reviewtransaction.FacadeReviewPolicy
 
 type ReviewFacadeStartResult struct {
 	Operation        string                       `json:"operation"`

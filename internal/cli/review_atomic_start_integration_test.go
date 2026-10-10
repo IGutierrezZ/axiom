@@ -423,3 +423,98 @@ func writeAtomicStartCorruptSibling(t *testing.T, repo, version, lineage string)
 		t.Fatal(err)
 	}
 }
+
+func atomicStartV2WithPolicy(t *testing.T, repo, lineage, policyPath string) (ReviewIntegrationStartResult, error) {
+	t.Helper()
+	args := []string{"start", "--contract", ReviewIntegrationContractV2, "--cwd", repo, "--lineage", lineage}
+	if policyPath != "" {
+		args = append(args, "--policy", policyPath)
+	}
+	var output bytes.Buffer
+	if err := RunReview(boundNegotiatedStartArgs(t, args), &output); err != nil {
+		return ReviewIntegrationStartResult{}, err
+	}
+	return decodeNegotiatedReviewStart(t, output.Bytes()), nil
+}
+
+// TestAtomicStartReplaysLineageFrozenWithLegacyDefaultPolicyUnderAxiomDefault
+// covers the upgrade path: a lineage frozen by an older binary with the legacy
+// default policy text must still replay when the same START is retried by the
+// current binary with the default (Axiom) policy, byte-identically.
+func TestAtomicStartReplaysLineageFrozenWithLegacyDefaultPolicyUnderAxiomDefault(t *testing.T) {
+	reviewEnabledHome(t)
+	repo := initReviewCLIRepo(t)
+	writeAtomicStartDocumentationCandidate(t, repo)
+	const lineage = "legacy-policy-upgrade"
+
+	legacyPolicy := filepath.Join(canonicalReviewCLITempDir(t), "legacy-policy.txt")
+	if err := os.WriteFile(legacyPolicy, []byte(reviewtransaction.LegacyFacadeReviewPolicy), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	created, err := atomicStartV2WithPolicy(t, repo, lineage, legacyPolicy)
+	if err != nil || created.Action != "created" {
+		t.Fatalf("START with legacy policy file = %#v, %v", created, err)
+	}
+	store := atomicCompactStartStore(t, repo, lineage)
+	before, err := os.ReadFile(store.StatePath())
+	if err != nil {
+		t.Fatal(err)
+	}
+	record, err := store.Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if record.State.PolicyHash != facadePayloadHash([]byte(reviewtransaction.LegacyFacadeReviewPolicy)) {
+		t.Fatalf("legacy lineage froze policy hash %q", record.State.PolicyHash)
+	}
+
+	replayed, err := atomicStartV2WithPolicy(t, repo, lineage, "")
+	if err != nil {
+		t.Fatalf("START with default Axiom policy over a legacy lineage: %v", err)
+	}
+	if replayed.Action != "replayed" || replayed.LineageID != lineage {
+		t.Fatalf("START with default policy = %#v, want replay of %q", replayed, lineage)
+	}
+	after, err := os.ReadFile(store.StatePath())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(before, after) {
+		t.Fatal("replay under the default Axiom policy changed legacy authority bytes")
+	}
+
+	otherPolicy := filepath.Join(canonicalReviewCLITempDir(t), "other-policy.txt")
+	if err := os.WriteFile(otherPolicy, []byte("a different review policy\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := atomicStartV2WithPolicy(t, repo, lineage, otherPolicy); err == nil {
+		t.Fatal("START with an unrelated policy file replayed a legacy lineage")
+	}
+	after, err = os.ReadFile(store.StatePath())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(before, after) {
+		t.Fatal("conflicting policy START mutated the legacy authority")
+	}
+}
+
+// TestAtomicStartDefaultPolicyFreezesAxiomText pins that new lineages freeze
+// the Axiom policy and not the legacy text.
+func TestAtomicStartDefaultPolicyFreezesAxiomText(t *testing.T) {
+	reviewEnabledHome(t)
+	repo := initReviewCLIRepo(t)
+	writeAtomicStartDocumentationCandidate(t, repo)
+	created, err := atomicStartV2WithPolicy(t, repo, "axiom-default-policy", "")
+	if err != nil || created.Action != "created" {
+		t.Fatalf("START with default policy = %#v, %v", created, err)
+	}
+	record, err := atomicCompactStartStore(t, repo, "axiom-default-policy").Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if record.State.FrozenPolicyContent == nil || *record.State.FrozenPolicyContent != reviewtransaction.FacadeReviewPolicy ||
+		record.State.PolicyHash != facadePayloadHash([]byte(reviewtransaction.FacadeReviewPolicy)) {
+		t.Fatalf("default START froze policy %q", record.State.PolicyHash)
+	}
+}

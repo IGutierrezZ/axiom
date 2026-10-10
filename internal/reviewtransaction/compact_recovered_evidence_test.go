@@ -217,3 +217,54 @@ func cloneCompactRecoveredEvidence(value CompactRecoveredEvidence) CompactRecove
 	value.AdmittedRoleReferences = append([]CompactRecoveredEvidenceReference(nil), value.AdmittedRoleReferences...)
 	return value
 }
+
+func TestCompactRecoveredEvidenceScopeMatchesAcceptsOnlyTheLegacyPolicyHashPair(t *testing.T) {
+	const tree = "1111111111111111111111111111111111111111"
+	scoped := func(policyHash string) CompactState {
+		return CompactState{
+			PolicyHash: policyHash, RiskLevel: RiskLow, SelectedLenses: []string{LensRisk},
+			GenesisPaths:    []string{"tracked.txt"},
+			CurrentSnapshot: Snapshot{CandidateTree: tree},
+			InitialSnapshot: Snapshot{CandidateTree: tree, Projection: ProjectionWorkspace},
+		}
+	}
+	other := compactAtomicStartHash("f")
+	tests := []struct {
+		name                   string
+		predecessor, successor CompactState
+		want                   bool
+	}{
+		{"identical policy", scoped(other), scoped(other), true},
+		{"legacy predecessor with current successor", scoped(compactLegacyFacadePolicyHash), scoped(compactCurrentFacadePolicyHash), true},
+		{"current predecessor with legacy successor", scoped(compactCurrentFacadePolicyHash), scoped(compactLegacyFacadePolicyHash), false},
+		{"legacy predecessor with unrelated successor", scoped(compactLegacyFacadePolicyHash), scoped(other), false},
+		{"unrelated predecessor with current successor", scoped(other), scoped(compactCurrentFacadePolicyHash), false},
+		{"risk mismatch stays strict", scoped(compactLegacyFacadePolicyHash), func() CompactState {
+			state := scoped(compactCurrentFacadePolicyHash)
+			state.RiskLevel = RiskHigh
+			return state
+		}(), false},
+		{"lens mismatch stays strict", scoped(compactLegacyFacadePolicyHash), func() CompactState {
+			state := scoped(compactCurrentFacadePolicyHash)
+			state.SelectedLenses = []string{LensRisk, LensResilience}
+			return state
+		}(), false},
+		{"candidate tree mismatch stays strict", scoped(compactLegacyFacadePolicyHash), func() CompactState {
+			state := scoped(compactCurrentFacadePolicyHash)
+			state.InitialSnapshot.CandidateTree = "2222222222222222222222222222222222222222"
+			return state
+		}(), false},
+		{"genesis paths mismatch stays strict", scoped(compactLegacyFacadePolicyHash), func() CompactState {
+			state := scoped(compactCurrentFacadePolicyHash)
+			state.GenesisPaths = []string{"other.txt"}
+			return state
+		}(), false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := compactRecoveredEvidenceScopeMatches(tt.predecessor, tt.successor); got != tt.want {
+				t.Fatalf("compactRecoveredEvidenceScopeMatches = %t, want %t", got, tt.want)
+			}
+		})
+	}
+}
