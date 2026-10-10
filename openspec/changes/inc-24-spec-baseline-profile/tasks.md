@@ -111,6 +111,7 @@ Estas decisiones no están fijadas por la spec ni por el diseño; cada una indic
 | Erratas | `design.md` está aprobado y no se reabre. Las correcciones de texto de m6 (§9), m7 (D-08 y §7.3) y m10 (D-04) viven aquí, en la tabla de menores, y en los comentarios y pruebas de las tareas indicadas | Editar `design.md` en `apply` |
 | D-12 separación (C1) | Un ADDED insertado tras una línea no en blanco recibe una línea en blanco delante; detrás hereda la serie del bloque de referencia con mínimo 1 salvo al final del fichero. Solo inserta bytes (REQ-24.45). Aclaración de D-12 decidida por el usuario el 2026-10-10 | Heredar 0 blancos delante (bloque pegado, asimétrico) o quitar el mínimo detrás (contradice D-12) |
 | Tiempo de pruebas de specbaseline (C2) | Repositorio plantilla copiado por prueba, entorno git fijado en TestMain y t.Parallel; de 496 s (1.270 s medidos antes por el usuario) a 109-189 s en Windows. Decidido por el usuario el 2026-10-10 | Shard propio en el CI de Windows (oculta el coste) |
+| Índice de git en verify (C2) | `git diff` contra el commit del plan se ejecuta con GIT_INDEX_FILE en una copia temporal del índice; el índice real no se escribe. Decidido por el usuario el 2026-10-11 | Confiar en GIT_OPTIONAL_LOCKS=0 (no evita la reescritura en `git diff`) o usar `git diff-index` sin refresco (falsos positivos por marcas de tiempo) |
 
 ## Fase 0: Preparación (sin commit de código)
 

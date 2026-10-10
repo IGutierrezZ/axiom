@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -55,8 +56,10 @@ type gitRepository struct {
 }
 
 // gitEnvironment es el entorno de git: el del proceso sin las variables que
-// redirigen el repositorio, con `GIT_OPTIONAL_LOCKS=0` para que ninguna lectura
-// refresque el índice y sin preguntas interactivas.
+// redirigen el repositorio, con `GIT_OPTIONAL_LOCKS=0` y sin preguntas
+// interactivas. `GIT_OPTIONAL_LOCKS=0` evita que `git status` refresque el índice,
+// pero no que lo haga `git diff` (git 2.41, comprobado): ese comando se ejecuta
+// con `withScratchIndex`.
 func gitEnvironment() []string {
 	var env []string
 	for _, entry := range os.Environ() {
@@ -99,6 +102,14 @@ type gitResult struct {
 // código de salida distinto de cero no es un error de ejecución: lo decide quien
 // llama a partir de gitResult.exit.
 func execGit(ctx context.Context, dir string, args ...string) (gitResult, error) {
+	return execGitEnv(ctx, dir, nil, args...)
+}
+
+// execGitEnv es execGit con variables de entorno añadidas solo para esa
+// invocación. Se añaden después de gitEnvironment, que retira las que redirigen el
+// repositorio: así una variable como GIT_INDEX_FILE solo la fija quien llama, nunca
+// el proceso.
+func execGitEnv(ctx context.Context, dir string, extraEnv []string, args ...string) (gitResult, error) {
 	binary, err := exec.LookPath("git")
 	if err != nil {
 		return gitResult{}, fmt.Errorf("git no está disponible en el PATH: la verificación por diff de la integración lo requiere: %w", err)
@@ -108,7 +119,7 @@ func execGit(ctx context.Context, dir string, args ...string) (gitResult, error)
 
 	cmd := exec.CommandContext(ctx, binary, args...)
 	cmd.Dir = dir
-	cmd.Env = gitEnvironment()
+	cmd.Env = append(gitEnvironment(), extraEnv...)
 	stdout := &limitedBuffer{limit: gitOutputLimit}
 	stderr := &limitedBuffer{limit: gitStderrLimit}
 	cmd.Stdout, cmd.Stderr = stdout, stderr
@@ -128,6 +139,87 @@ func execGit(ctx context.Context, dir string, args ...string) (gitResult, error)
 		return result, fmt.Errorf("la salida de git %s en %s supera el límite de %d bytes", args[0], dir, gitOutputLimit)
 	}
 	return result, nil
+}
+
+// withScratchIndex ejecuta fn con una ruta de índice temporal para GIT_INDEX_FILE,
+// y la borra al terminar, también si fn falla. Con las marcas de tiempo del índice
+// desfasadas (un `touch` de un fichero seguido tras el commit), `git diff` refresca
+// el índice y lo reescribe aunque se invoque con GIT_OPTIONAL_LOCKS=0 (git 2.41,
+// comprobado también con `--no-optional-locks`): el comando contradiría la promesa de
+// solo lectura. Git refresca la copia y el índice real no se toca.
+//
+//   - La copia está en un directorio privado del temporal del sistema, fuera del
+//     repositorio, y se crea con `os.MkdirTemp` en lugar de con `os.CreateTemp`: así el
+//     `index.lock` que git crea junto al índice cuando lo escribe cae también en él y
+//     se borra con el directorio.
+//   - El índice real se localiza con `git rev-parse --git-path index`, resuelto contra
+//     la raíz del repositorio: en un worktree enlazado o con GIT_DIR no es
+//     `<raíz>/.git/index`. La copia conserva la fecha del original, de modo que git
+//     decide igual qué entradas son «racy».
+//   - Sin índice real (repositorio recién creado o sin índice) no se copia nada: la ruta
+//     apunta a un fichero que no existe dentro del directorio privado, que git lee como
+//     un índice vacío, igual que con el repositorio sin índice, y nada se crea en el
+//     repositorio.
+//   - Con `core.splitIndex` el índice enlaza con `sharedindex.*` en el directorio git;
+//     git los resuelve desde ese directorio y no desde la ruta del índice, así que la
+//     copia funciona (las pruebas comprueban que ni el índice ni los compartidos
+//     cambian). Si falta un índice compartido, git falla y el error llega a quien
+//     llama; no se ignora.
+func (r gitRepository) withScratchIndex(ctx context.Context, fn func(indexFile string) error) error {
+	located, err := execGit(ctx, r.root, "rev-parse", "--git-path", "index")
+	if err != nil {
+		return err
+	}
+	if located.exit != 0 {
+		return fmt.Errorf("git rev-parse --git-path index en %s terminó con el código %d: %s", r.root, located.exit, located.stderr)
+	}
+	realIndex := filepath.FromSlash(strings.TrimRight(string(located.stdout), "\r\n"))
+	if realIndex == "" {
+		return fmt.Errorf("git rev-parse --git-path index en %s no devolvió ninguna ruta", r.root)
+	}
+	if !filepath.IsAbs(realIndex) {
+		realIndex = filepath.Join(r.root, realIndex)
+	}
+
+	scratch, err := os.MkdirTemp("", "axiom-indice-*")
+	if err != nil {
+		return fmt.Errorf("crear la carpeta temporal del índice de git de %s: %w", r.root, err)
+	}
+	defer func() { _ = os.RemoveAll(scratch) }()
+	indexFile := filepath.Join(scratch, "index")
+	if err := copyIndex(realIndex, indexFile); err != nil {
+		return fmt.Errorf("copiar el índice de git de %s: %w", r.root, err)
+	}
+	return fn(indexFile)
+}
+
+// copyIndex copia el índice src en dst conservando su fecha de modificación. Un src
+// que no existe no es un error: no se crea dst.
+func copyIndex(src, dst string) error {
+	in, err := os.Open(src)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	defer in.Close()
+	info, err := in.Stat()
+	if err != nil {
+		return err
+	}
+	out, err := os.OpenFile(dst, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
+	if err != nil {
+		return err
+	}
+	if _, err := io.Copy(out, in); err != nil {
+		_ = out.Close()
+		return err
+	}
+	if err := out.Close(); err != nil {
+		return err
+	}
+	return os.Chtimes(dst, info.ModTime(), info.ModTime())
 }
 
 // deepestExistingDir devuelve el directorio existente más profundo de una ruta:

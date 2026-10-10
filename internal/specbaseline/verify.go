@@ -778,9 +778,17 @@ type nameStatus struct {
 // diffNames devuelve los ficheros del árbol de trabajo que difieren del commit, con
 // o sin stage: `git diff --name-status -z --no-renames <commit>`. Con
 // `core.autocrlf` git ya normaliza los finales de línea, de modo que un fichero que
-// solo difiere en ellos no aparece. Solo lee.
+// solo difiere en ellos no aparece. Solo lee: `git diff` refresca el índice y lo
+// reescribe si sus marcas de tiempo están desfasadas, de modo que se ejecuta con
+// GIT_INDEX_FILE en una copia temporal del índice (`withScratchIndex`) y el índice
+// real no se toca.
 func (r gitRepository) diffNames(ctx context.Context, commit string) ([]nameStatus, error) {
-	result, err := execGit(ctx, r.root, "-c", "core.fsmonitor=false", "diff", "--no-ext-diff", "--no-textconv", "--no-renames", "--name-status", "-z", commit, "--")
+	var result gitResult
+	err := r.withScratchIndex(ctx, func(indexFile string) error {
+		var diffErr error
+		result, diffErr = execGitEnv(ctx, r.root, []string{"GIT_INDEX_FILE=" + indexFile}, "-c", "core.fsmonitor=false", "diff", "--no-ext-diff", "--no-textconv", "--no-renames", "--name-status", "-z", commit, "--")
+		return diffErr
+	})
 	if err != nil {
 		return nil, err
 	}

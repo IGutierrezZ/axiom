@@ -129,7 +129,6 @@ func newIntegrationFixture(t *testing.T, withGit bool) *integrationFixture {
 		integrationTemplate.materialize(t, master, func(t testing.TB, dir string) {
 			buildIntegrationFixture(t, newIntegrationFixtureAt(dir), true)
 		})
-		refreshIndexes(t, f.specs, f.backend)
 		return f
 	}
 	buildIntegrationFixture(t, f, false)

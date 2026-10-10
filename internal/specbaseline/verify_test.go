@@ -1176,6 +1176,33 @@ func TestVerifyNeverChangesTheWorkingTreeAndIgnoresTheProcessDirectory(t *testin
 	}
 }
 
+// Con las marcas de tiempo del índice desfasadas (un `touch` de un fichero seguido
+// tras el commit), `git diff` reescribiría `.git/index`: Verify promete solo leer,
+// de modo que el índice de cada repositorio queda con los mismos bytes y el informe
+// es el mismo que con el índice al día.
+func TestVerifyDoesNotRewriteAStaleGitIndexAndReportsTheSame(t *testing.T) {
+	t.Parallel()
+	f, target, _ := integratedFixture(t)
+	repos := []string{f.specs, f.backend}
+	for _, repo := range repos {
+		runGit(t, repo, "update-index", "-q", "--refresh")
+	}
+	fresh := verifyOf(t, target)
+	mustPass(t, fresh)
+
+	for _, repo := range repos {
+		makeIndexStale(t, repo)
+	}
+	before := []string{gitIndexState(t, f.specs), gitIndexState(t, f.backend)}
+	stale := verifyOf(t, target)
+	if got := []string{gitIndexState(t, f.specs), gitIndexState(t, f.backend)}; !reflect.DeepEqual(got, before) {
+		t.Error("verify reescribió el índice de git con las marcas de tiempo desfasadas")
+	}
+	if !reflect.DeepEqual(stale, fresh) {
+		t.Errorf("el informe con el índice desfasado difiere del del índice al día:\n%s\n---\n%s", describeViolations(stale), describeViolations(fresh))
+	}
+}
+
 // El verificador ignora las variables de git que redirigen el repositorio.
 func TestVerifyIgnoresGitVariablesThatRedirectTheRepository(t *testing.T) {
 	// Sin t.Parallel: fija variables de entorno de git (t.Setenv).
