@@ -97,7 +97,28 @@ func TestReviewCaptureResultOpaqueBindingMismatchNamesRefreshCommand(t *testing.
 		"--expected-revision", started.RepositoryContext.Revision,
 		"--lens", "not-the-selected-lens", "--order", "0", "--preflight",
 	}, io.Discard)
-	if err == nil || !strings.Contains(err.Error(), reviewNextTransitionRefreshCommandV21) {
-		t.Fatalf("opaque capture binding mismatch error = %v, want it to contain %q", err, reviewNextTransitionRefreshCommandV21)
+	if err == nil || !strings.Contains(err.Error(), reviewProseRefreshCommand) {
+		t.Fatalf("opaque capture binding mismatch error = %v, want it to contain %q", err, reviewProseRefreshCommand)
+	}
+}
+
+// TestReviewProseCommandsNameAxiomAndItsContract pins that every prose command
+// the review CLI tells a person or agent to run names the `axiom` binary and
+// the Axiom contract, whatever dialect was negotiated. The structured legacy
+// refresh constants stay byte-pinned elsewhere (review_dialect_test.go).
+func TestReviewProseCommandsNameAxiomAndItsContract(t *testing.T) {
+	for name, command := range map[string]string{
+		"refresh":            reviewProseRefreshCommand,
+		"capture-result":     reviewCaptureResultCommandName(),
+		"intended-untracked": reviewIntendedUntrackedInventoryCommand,
+	} {
+		if !strings.HasPrefix(command, "axiom review ") || strings.Contains(command, "gentle-ai") {
+			t.Errorf("%s prose command = %q, want it to start with `axiom review ` and not name gentle-ai", name, command)
+		}
+	}
+	for name, command := range map[string]string{"refresh": reviewProseRefreshCommand, "intended-untracked": reviewIntendedUntrackedInventoryCommand} {
+		if !strings.Contains(command, "--contract "+AxiomReviewIntegrationContractV2+" ") {
+			t.Errorf("%s prose command = %q, want --contract %s", name, command, AxiomReviewIntegrationContractV2)
+		}
 	}
 }

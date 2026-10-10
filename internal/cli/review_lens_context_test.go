@@ -233,7 +233,7 @@ func TestNegotiatedStartRefusesOverBudgetCandidateWithoutPersistingAuthority(t *
 		t.Fatalf("over-budget START envelope does not report a refusal that wrote nothing: %#v", failure.Failure)
 	}
 	if !strings.Contains(failure.Failure.Cause, "chained sequence of smaller reviewable commits") ||
-		!strings.Contains(failure.Failure.Cause, "gentle-ai review status") {
+		!strings.Contains(failure.Failure.Cause, "axiom review status") {
 		t.Fatalf("over-budget START cause does not name the runnable continuation: %q", failure.Failure.Cause)
 	}
 	if strings.Contains(output.String(), "GENTLE_AI_REVIEW_") {
@@ -293,7 +293,7 @@ func TestReviewLensContextCarriesAggregateDeadline(t *testing.T) {
 		t.Fatalf("deadline guidance = %q, want %q", err, want)
 	}
 	if !strings.Contains(err.Error(), "execute the returned transition once") || !strings.Contains(err.Error(), "if the same lens slot reaches the same deadline again") ||
-		!strings.Contains(err.Error(), "split the candidate into a chained sequence of smaller reviewable commits") || !strings.Contains(err.Error(), reviewNextTransitionRefreshCommandV21) {
+		!strings.Contains(err.Error(), "split the candidate into a chained sequence of smaller reviewable commits") || !strings.Contains(err.Error(), reviewProseRefreshCommand) {
 		t.Fatalf("deadline guidance is not a single transition execution followed by a runnable reduced-scope exit: %q", err)
 	}
 }
@@ -397,7 +397,7 @@ func TestReviewLensContextRecoveryGuidanceRefreshesThenExecutesNextTransition(t 
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			if !strings.Contains(test.action, reviewNextTransitionRefreshCommandV21) ||
+			if !strings.Contains(test.action, reviewProseRefreshCommand) ||
 				!strings.Contains(test.action, "refresh the exact native next transition") ||
 				!strings.Contains(test.action, "execute the returned transition") {
 				t.Fatalf("recovery guidance = %q, want STATUS to refresh the exact transition and the caller to execute it", test.action)
@@ -688,7 +688,7 @@ func TestReviewLensContextAfterCollectionClosesNamesTheFindingsSurface(t *testin
 		t.Fatalf("lens-context after collection closed error = %v, want lens_context_unavailable_after_collection", err)
 	}
 	if !strings.Contains(refusal.Action, "next_transition.correction_request.findings") ||
-		!strings.Contains(refusal.Action, reviewNextTransitionRefreshCommandV21) {
+		!strings.Contains(refusal.Action, reviewProseRefreshCommand) {
 		t.Fatalf("lens-context after collection closed action = %q, want it to name the findings surface", refusal.Action)
 	}
 }

@@ -19,7 +19,7 @@ const reviewIntendedUntrackedSelectionSchema = "gentle-ai.review-intended-untrac
 // refused without a negotiated contract and runtime identity, so a refusal
 // that names the bare form sends the operator to a command that fails
 // (issue #2895).
-const reviewIntendedUntrackedInventoryCommand = "axiom review status --cwd <repo> --contract " + ReviewIntegrationContractV2 + " --agent <runtime> --next-transition"
+const reviewIntendedUntrackedInventoryCommand = "axiom review status --cwd <repo> --contract " + AxiomReviewIntegrationContractV2 + " --agent <runtime> --next-transition"
 
 type reviewRepeatedPathFlag []string
 

@@ -118,7 +118,7 @@ var reviewStopReasonNarration = map[string]string{
 		"This is a product defect, not something to retry. If you just want your work delivered, run `" + reviewModeDisableCloneCommand + "` " +
 		reviewModeDisableCloneCaveat + " so ordinary repository policy (hooks, tests, CI) decides instead; nothing is silently approved. To get this review itself fixed, report the defect with this run's details.",
 	"corrected_candidate_unavailable": "Change the candidate content so it differs from the frozen original, then re-run " +
-		"`axiom review status --cwd <repo> --contract gentle-ai.review-integration/v2 --agent " + reviewUndeclaredRuntimeIdentitySlot + " --next-transition`. " +
+		"`axiom review status --cwd <repo> --contract axiom.review-integration/v2 --agent " + reviewUndeclaredRuntimeIdentitySlot + " --next-transition`. " +
 		"That is the right path when the review found real defects. If instead the reviewers were given the wrong input " +
 		"and their findings describe content that was never the candidate, a maintainer can quarantine those results and " +
 		"reopen their lenses over the same frozen content: run `axiom review reopen-results --prepare --cwd <repo> --lineage <id> " +
@@ -126,7 +126,7 @@ var reviewStopReasonNarration = map[string]string{
 		"(repeat `--quarantine-lens` per affected lens) and follow its output.",
 	"empty_base_diff_bootstrap_required": "This selected committed base has no changes to review. " +
 		"If you are following the authorized first-publication bootstrap, a maintainer must first insert an empty root below the content commit. " +
-		"Then run `axiom review status --cwd <repo> --contract gentle-ai.review-integration/v2 --agent " + reviewUndeclaredRuntimeIdentitySlot + " --next-transition --base-ref <empty-root> --committed-only`.",
+		"Then run `axiom review status --cwd <repo> --contract axiom.review-integration/v2 --agent " + reviewUndeclaredRuntimeIdentitySlot + " --next-transition --base-ref <empty-root> --committed-only`.",
 	// The correction-stage sibling is rendered, not literal:
 	// reviewCorrectionContextBudgetAction fills the concrete release with the
 	// values InspectCompactPristineAbandonment publishes for the real
@@ -141,7 +141,7 @@ var reviewStopReasonNarration = map[string]string{
 		"Reduce the candidate scope or target identity, then run `axiom review start` for that new candidate; or run `" + reviewModeDisableCloneCommand + "` " + reviewModeDisableCloneCaveat + " to deliver under ordinary repository policy instead.",
 	"managed_assets_outdated": "This installation's reviewer assets no longer match this version of Axiom, so this review stops before it starts. " +
 		"Run `axiom sync --agent " + reviewUndeclaredRuntimeIdentitySlot + "` to bring them back in sync, then re-run " +
-		"`axiom review status --cwd <repo> --contract gentle-ai.review-integration/v2 --agent " + reviewUndeclaredRuntimeIdentitySlot + " --next-transition`.",
+		"`axiom review status --cwd <repo> --contract axiom.review-integration/v2 --agent " + reviewUndeclaredRuntimeIdentitySlot + " --next-transition`.",
 	"corrupted_or_unverifiable_authority": "This review's stored record cannot be trusted as-is, and it cannot be repaired automatically. " +
 		"Ask a maintainer to inspect it directly, or run `" + reviewModeDisableCloneCommand + "` " +
 		reviewModeDisableCloneCaveat + " to deliver under ordinary repository policy instead.",
