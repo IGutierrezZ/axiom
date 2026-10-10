@@ -122,7 +122,7 @@ func TestReleaseDistributionPolicyAssertionFailsClosed(t *testing.T) {
 		{
 			name: "provider contract archive version differs from committed semver",
 			mutate: func(t *testing.T, root string) {
-				replaceReleasePolicyFile(t, root, filepath.Join("dist", "artifacts.json"), "gentle-ai-review-provider-contract-1.2.0.tar.gz", "gentle-ai-review-provider-contract-2.0.0.tar.gz")
+				replaceReleasePolicyFile(t, root, filepath.Join("dist", "artifacts.json"), "gentle-ai-review-provider-contract-"+releasePolicyContractSemver(t)+".tar.gz", "gentle-ai-review-provider-contract-2.0.0.tar.gz")
 			},
 		},
 		{
@@ -423,7 +423,7 @@ func newReleasePolicyFixture(t *testing.T) string {
 		filepath.Join("internal", "releasepolicycmd", "main.go"):          readRepositoryFile(t, "internal", "releasepolicycmd", "main.go"),
 		filepath.Join("scripts", "verify-release-assets.sh"):              readRepositoryFile(t, "scripts", "verify-release-assets.sh"),
 		filepath.Join("scripts", "verify-release-distribution-policy.sh"): readRepositoryFile(t, "scripts", "verify-release-distribution-policy.sh"),
-		filepath.Join("dist", "artifacts.json"):                           releasePolicyArtifactsFixture,
+		filepath.Join("dist", "artifacts.json"):                           releasePolicyArtifacts(t),
 	}
 	for path, content := range files {
 		fullPath := filepath.Join(root, path)
@@ -491,7 +491,7 @@ func releasePolicyOutputPaths(t *testing.T) []string {
 	var artifacts []struct {
 		Path string `json:"path"`
 	}
-	if err := json.Unmarshal([]byte(releasePolicyArtifactsFixture), &artifacts); err != nil {
+	if err := json.Unmarshal([]byte(releasePolicyArtifacts(t)), &artifacts); err != nil {
 		t.Fatal(err)
 	}
 	paths := make([]string, 0, len(artifacts))
@@ -535,6 +535,19 @@ func replaceReleasePolicyFile(t *testing.T, root, path, old, replacement string)
 	}
 }
 
+// releasePolicyContractSemver is the committed provider contract version the
+// fixture's provider contract archive must be named after; reading it keeps the
+// fixture correct across CONTRACT_SEMVER bumps.
+func releasePolicyContractSemver(t *testing.T) string {
+	t.Helper()
+	return strings.TrimSpace(readRepositoryFile(t, "contracts", "review-provider-contract", "CONTRACT_SEMVER"))
+}
+
+func releasePolicyArtifacts(t *testing.T) string {
+	t.Helper()
+	return strings.ReplaceAll(releasePolicyArtifactsFixture, "{{CONTRACT_SEMVER}}", releasePolicyContractSemver(t))
+}
+
 const releasePolicyArtifactsFixture = `[
   {"name":"metadata.json","path":"dist/metadata.json","type":"Metadata"},
   {"name":"axiom","path":"dist/axiom_linux_amd64_v1/axiom","goos":"linux","goarch":"amd64","target":"linux_amd64_v1","type":"Binary","extra":{"Binary":"axiom","ID":"axiom"}},
@@ -545,7 +558,7 @@ const releasePolicyArtifactsFixture = `[
   {"name":"axiom_0.0.0-SNAPSHOT_linux_arm64.tar.gz","path":"dist/axiom_0.0.0-SNAPSHOT_linux_arm64.tar.gz","goos":"linux","goarch":"arm64","target":"linux_arm64_v8.0","type":"Archive","extra":{"Binaries":["axiom"],"Format":"tar.gz","ID":"default"}},
   {"name":"axiom_0.0.0-SNAPSHOT_darwin_amd64.tar.gz","path":"dist/axiom_0.0.0-SNAPSHOT_darwin_amd64.tar.gz","goos":"darwin","goarch":"amd64","target":"darwin_amd64_v1","type":"Archive","extra":{"Binaries":["axiom"],"Format":"tar.gz","ID":"default"}},
   {"name":"axiom_0.0.0-SNAPSHOT_darwin_arm64.tar.gz","path":"dist/axiom_0.0.0-SNAPSHOT_darwin_arm64.tar.gz","goos":"darwin","goarch":"arm64","target":"darwin_arm64_v8.0","type":"Archive","extra":{"Binaries":["axiom"],"Format":"tar.gz","ID":"default"}},
-  {"name":"gentle-ai-review-provider-contract-1.2.0.tar.gz","path":"dist/gentle-ai-review-provider-contract-1.2.0.tar.gz","type":"Archive","extra":{"Binaries":[],"Format":"tar.gz","ID":"review-provider-contract"}},
+  {"name":"gentle-ai-review-provider-contract-{{CONTRACT_SEMVER}}.tar.gz","path":"dist/gentle-ai-review-provider-contract-{{CONTRACT_SEMVER}}.tar.gz","type":"Archive","extra":{"Binaries":[],"Format":"tar.gz","ID":"review-provider-contract"}},
   {"name":"gentle-ai-release-provenance-v1.tar.gz","path":"dist/gentle-ai-release-provenance-v1.tar.gz","type":"Archive","extra":{"Binaries":[],"Format":"tar.gz","ID":"release-provenance"}},
   {"name":"checksums.txt","path":"dist/checksums.txt","type":"Checksum","extra":{}}
 ]`

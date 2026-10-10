@@ -173,10 +173,14 @@ func TestReleaseAssetVerifierPreservesReadOnlyRotationVerification(t *testing.T)
 		return base64.StdEncoding.EncodeToString(payload)
 	}
 	firstKey, signingKey := makeKey(1), makeKey(2)
+	// The fake release must carry the provider contract archive named after the
+	// committed CONTRACT_SEMVER, which verify-release-assets.sh also reads.
+	contractSemver := strings.TrimSpace(readRepositoryFile(t, "contracts", "review-provider-contract", "CONTRACT_SEMVER"))
 	fakeBin := t.TempDir()
 	ghLog := filepath.Join(t.TempDir(), "gh-calls.log")
 	writeExecutable := func(name, content string) {
 		t.Helper()
+		content = strings.ReplaceAll(content, "@CONTRACT_SEMVER@", contractSemver)
 		if err := os.WriteFile(filepath.Join(fakeBin, name), []byte(content), 0o700); err != nil {
 			t.Fatal(err)
 		}
@@ -187,7 +191,7 @@ printf '%s\n' "$*" >>"$GH_CALL_LOG"
 tag=${RELEASE_VERIFICATION_TAG:-$GITHUB_REF_NAME}
 if [[ "$1" == api && "$2" == "repos/$GITHUB_REPOSITORY/releases/tags/$tag" ]]; then
   cat <<JSON
-{"tag_name":"$tag","draft":false,"prerelease":false,"assets":[{"name":"axiom_1.2.3_darwin_amd64.tar.gz"},{"name":"axiom_1.2.3_darwin_arm64.tar.gz"},{"name":"axiom_1.2.3_linux_amd64.tar.gz"},{"name":"axiom_1.2.3_linux_arm64.tar.gz"},{"name":"gentle-ai-review-provider-contract-1.2.0.tar.gz"},{"name":"gentle-ai-release-provenance-v1.tar.gz"},{"name":"checksums.txt"},{"name":"checksums.txt.minisig"}]}
+{"tag_name":"$tag","draft":false,"prerelease":false,"assets":[{"name":"axiom_1.2.3_darwin_amd64.tar.gz"},{"name":"axiom_1.2.3_darwin_arm64.tar.gz"},{"name":"axiom_1.2.3_linux_amd64.tar.gz"},{"name":"axiom_1.2.3_linux_arm64.tar.gz"},{"name":"gentle-ai-review-provider-contract-@CONTRACT_SEMVER@.tar.gz"},{"name":"gentle-ai-release-provenance-v1.tar.gz"},{"name":"checksums.txt"},{"name":"checksums.txt.minisig"}]}
 JSON
   exit 0
 fi
@@ -205,9 +209,9 @@ if [[ "$1" == release && "$2" == download && "$3" == "$tag" ]]; then
   for platform in darwin_amd64 darwin_arm64 linux_amd64 linux_arm64; do
     printf 'archive %s\n' "$platform" >"$directory/axiom_1.2.3_${platform}.tar.gz"
   done
-  printf 'provider contract\n' >"$directory/gentle-ai-review-provider-contract-1.2.0.tar.gz"
+  printf 'provider contract\n' >"$directory/gentle-ai-review-provider-contract-@CONTRACT_SEMVER@.tar.gz"
   printf 'release provenance\n' >"$directory/gentle-ai-release-provenance-v1.tar.gz"
-  (cd "$directory" && sha256sum axiom_1.2.3_*.tar.gz gentle-ai-review-provider-contract-1.2.0.tar.gz gentle-ai-release-provenance-v1.tar.gz >checksums.txt)
+  (cd "$directory" && sha256sum axiom_1.2.3_*.tar.gz gentle-ai-review-provider-contract-@CONTRACT_SEMVER@.tar.gz gentle-ai-release-provenance-v1.tar.gz >checksums.txt)
   printf 'test signature\n' >"$directory/checksums.txt.minisig"
   exit 0
 fi

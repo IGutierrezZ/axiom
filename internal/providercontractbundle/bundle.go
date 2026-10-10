@@ -63,6 +63,13 @@ var contractSemverIntroducingRuntimesField = contractSemverComponents{major: 1, 
 // file, so an empty inventory there is correct, not incomplete.
 var contractSemverIntroducingOrchestrationField = contractSemverComponents{major: 1, minor: 2, patch: 0}
 
+// contractSemverIntroducingAxiomText is the first contract_semver whose README
+// and per-role result schema titles name Axiom instead of Gentle AI. Bundles
+// published at an earlier contract (1.2.0 and before) carry the legacy bytes and
+// stay verifiable; see bundleTextFor. CONTRACT_SEMVER must be at or after it, or
+// a release would publish the new text under a version that promises the old.
+var contractSemverIntroducingAxiomText = contractSemverComponents{major: 1, minor: 2, patch: 1}
+
 type contractSemverComponents struct{ major, minor, patch int }
 
 // parseContractSemver decomposes an already-pattern-validated MAJOR.MINOR.PATCH
@@ -146,7 +153,7 @@ type manifest struct {
 // orchestrationRuntimeIdentities is deliberately closed, the same discipline
 // reviewerprovider applies to registeredRuntimeIdentities: a runtime is added
 // here only once it has no other delivery channel for the review execution
-// contract inside Gentle AI's own installer (no system prompt, skill, or
+// contract inside Axiom's own installer (no system prompt, skill, or
 // file-subagent surface to splice generic SDD composition into), so this
 // bundle becomes that runtime's sole channel. Pi is first: its capability
 // manifest advertises MCP only, so sdd.Inject is a no-op for it and the
@@ -230,7 +237,35 @@ func validPiFacadeLifecycle(content string) bool {
 	return true
 }
 
-var bundleREADME = []byte(`# Gentle AI review provider contract
+var bundleREADME = []byte(`# Axiom review provider contract
+
+This data-only bundle describes the provider result contracts admitted by Axiom.
+
+## Activation
+
+1. Verify the signed release checksum manifest before using this archive.
+2. Verify every listed file hash and the transport capability before activation.
+3. Confirm your runtime identity appears in the manifest's registered runtimes before trusting the layout.
+4. Pass the Go-materialized opaque prompt to the provider and return only raw output or an error.
+
+## Orchestration
+
+manifest.json's orchestration array lists, for closed runtimes only, one
+orchestration/<runtime>.md file: the exact review execution contract text
+Axiom's own installer would have spliced into that runtime's system
+prompt, for a runtime whose adapter has no system prompt to splice it into.
+It carries no executable content, same as every other file in this bundle: a
+runtime mirrors and delivers the text as-is and still relies on Go for every
+review decision, prompt, receipt, and delivery gate.
+
+Go remains the admission authority for prompts, results, receipts, and delivery gates.
+`)
+
+// legacyBundleREADME is the exact README every bundle published before
+// contractSemverIntroducingAxiomText shipped. A published archive is immutable,
+// so Verify keeps accepting those bytes for the contract versions that carried
+// them; sha256 18baab5ee79aefd0bc62a28da0dadcf2162544f57a940c5b859cd6bc4932a085.
+var legacyBundleREADME = []byte(`# Gentle AI review provider contract
 
 This data-only bundle describes the provider result contracts admitted by Gentle AI.
 
@@ -253,6 +288,77 @@ review decision, prompt, receipt, and delivery gate.
 
 Go remains the admission authority for prompts, results, receipts, and delivery gates.
 `)
+
+// bundleText is the pair of human-readable surfaces whose bytes depend on the
+// contract version: the README and each role's result schema (by role ID).
+type bundleText struct {
+	readme  []byte
+	schemas map[string][]byte
+}
+
+// legacyResultSchemaTitles maps each current Axiom schema title to the exact
+// title the same schema carried at contract versions before 1.2.1.
+var legacyResultSchemaTitles = []struct{ current, legacy string }{
+	{`"title": "Axiom reviewer result"`, `"title": "Gentle AI reviewer result"`},
+	{`"title":"Axiom refuter result"`, `"title":"Gentle AI refuter result"`},
+	{`"title":"Axiom targeted validator result"`, `"title":"Gentle AI targeted validator result"`},
+}
+
+// legacyResultSchema returns the schema bytes published before the Axiom text
+// bump: the current schema with its single title swapped back. It fails loudly
+// unless exactly one known title occurs exactly once, so a schema edit that
+// would silently desynchronize the legacy bytes is caught.
+func legacyResultSchema(current []byte) ([]byte, error) {
+	var legacy []byte
+	matched := 0
+	for _, title := range legacyResultSchemaTitles {
+		count := bytes.Count(current, []byte(title.current))
+		if count == 0 {
+			continue
+		}
+		if count != 1 {
+			return nil, fmt.Errorf("%w: result schema carries %d copies of title %q, want 1", errInvalidBundle, count, title.current)
+		}
+		matched++
+		legacy = bytes.Replace(current, []byte(title.current), []byte(title.legacy), 1)
+	}
+	if matched != 1 {
+		return nil, fmt.Errorf("%w: result schema carries %d known Axiom titles, want 1", errInvalidBundle, matched)
+	}
+	return legacy, nil
+}
+
+// bundleTextFor returns the README and result schemas a bundle published at
+// contractSemver must carry. Both come from the same side of the 1.2.1
+// boundary, all or nothing: Generate and Verify read this one source so a
+// mixed legacy/current set can never be produced or accepted.
+func bundleTextFor(contractSemver string, contracts []reviewerprovider.Contract) (bundleText, error) {
+	// A semver the pattern admits but the parser cannot read (an out-of-range
+	// component) must not fall back to the legacy text: refuse it here so this
+	// gate fails closed as parseContractSemver documents.
+	if _, ok := parseContractSemver(contractSemver); !ok {
+		return bundleText{}, fmt.Errorf("%w: contract semver %q is not readable", errInvalidBundle, contractSemver)
+	}
+	text := bundleText{schemas: make(map[string][]byte, len(contracts))}
+	axiomText := contractSemverAtLeast(contractSemver, contractSemverIntroducingAxiomText)
+	if axiomText {
+		text.readme = slices.Clone(bundleREADME)
+	} else {
+		text.readme = slices.Clone(legacyBundleREADME)
+	}
+	for _, contract := range contracts {
+		if axiomText {
+			text.schemas[contract.ID] = slices.Clone(contract.ResultSchema)
+			continue
+		}
+		schema, err := legacyResultSchema(contract.ResultSchema)
+		if err != nil {
+			return bundleText{}, fmt.Errorf("%w: role %q: %v", errInvalidBundle, contract.ID, err)
+		}
+		text.schemas[contract.ID] = schema
+	}
+	return text, nil
+}
 
 // ReadContractSemver reads the one committed provider-contract version file.
 func ReadContractSemver(filename string) (string, error) {
@@ -303,7 +409,11 @@ func generatedFiles(contractSemver string) (map[string][]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	files := map[string][]byte{"README.md": slices.Clone(bundleREADME)}
+	text, err := bundleTextFor(contractSemver, contracts)
+	if err != nil {
+		return nil, err
+	}
+	files := map[string][]byte{"README.md": text.readme}
 	roles := make([]roleManifest, 0, len(contracts))
 	for _, contract := range contracts {
 		schemaPath := path.Join("schemas", contract.ID+".schema.json")
@@ -312,7 +422,7 @@ func generatedFiles(contractSemver string) (map[string][]byte, error) {
 		if err != nil {
 			return nil, fmt.Errorf("%w: %s vector: %v", errInvalidBundle, contract.ID, err)
 		}
-		files[schemaPath] = slices.Clone(contract.ResultSchema)
+		files[schemaPath] = text.schemas[contract.ID]
 		files[vectorPath] = vector
 		capabilities := slices.Clone(contract.RequiredCapabilities)
 		sort.Strings(capabilities)
@@ -599,7 +709,11 @@ func validateEntries(entries map[string][]byte) error {
 		return err
 	}
 	expected := map[string]struct{}{"README.md": {}, "manifest.json": {}}
-	if err := validateFileReference(entries, decoded.README, "README.md", bundleREADME); err != nil {
+	text, err := bundleTextFor(decoded.ContractSemver, contracts)
+	if err != nil {
+		return err
+	}
+	if err := validateFileReference(entries, decoded.README, "README.md", text.readme); err != nil {
 		return err
 	}
 	if len(decoded.Roles) != len(contracts) {
@@ -620,7 +734,7 @@ func validateEntries(entries map[string][]byte) error {
 		}
 		schemaPath := path.Join("schemas", contract.ID+".schema.json")
 		vectorPath := path.Join("vectors", contract.ID+".json")
-		if err := validateFileReference(entries, role.Schema, schemaPath, contract.ResultSchema); err != nil {
+		if err := validateFileReference(entries, role.Schema, schemaPath, text.schemas[contract.ID]); err != nil {
 			return err
 		}
 		vector, vectorErr := canonicalVector(contract.ResultSchema)
