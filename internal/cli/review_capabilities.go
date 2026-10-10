@@ -61,6 +61,13 @@ const (
 const reviewNextTransitionRefreshCommand = "gentle-ai review status --cwd <repo> --contract " + ReviewIntegrationContractV1 + " --next-transition"
 const reviewNextTransitionRefreshCommandV21 = "gentle-ai review status --cwd <repo> --contract " + ReviewIntegrationContractV2 + " --next-transition"
 
+// reviewProseRefreshCommand is the refresh command every prose message names
+// (refusal actions, error text, narration), whatever dialect was negotiated:
+// prose tells a person or agent to run the product, so it always says the
+// `axiom` binary and the Axiom contract. The two constants above stay legacy
+// because they feed schema- and digest-pinned structured output.
+const reviewProseRefreshCommand = reviewAxiomCommandTool + " review status --cwd <repo> --contract " + AxiomReviewIntegrationContractV2 + " --next-transition"
+
 var reviewCapabilitiesBuildInfoReader = debug.ReadBuildInfo
 var reviewCapabilitiesExecutablePath = os.Executable
 

@@ -31,7 +31,7 @@ const (
 	// transport failure nor a bad binding: the slot holds a different reviewer
 	// result already.
 	reviewerResultSlotOccupiedCode   = "reviewer_result_slot_occupied"
-	reviewerResultSlotOccupiedAction = "refresh the negotiated STATUS transition with " + reviewNextTransitionRefreshCommandV21 + " and follow its authoritative continuation"
+	reviewerResultSlotOccupiedAction = "refresh the negotiated STATUS transition with " + reviewProseRefreshCommand + " and follow its authoritative continuation"
 )
 
 func reviewReviewerResultSlotOccupiedFailure() error {
@@ -180,7 +180,7 @@ func RunReviewCaptureResult(args []string, stdout io.Writer) error {
 	}
 	if flags.NArg() != 0 || strings.TrimSpace(*lineage) == "" || strings.TrimSpace(*target) == "" ||
 		strings.TrimSpace(*lens) == "" || *order < 0 || (!*preflight && !rawInputSupplied && !providerExecution) {
-		return reviewPreflightError(errors.New("review capture-result requires an exact repository context, --lineage, --target, --lens, --order, and either --input or --agent (or --preflight); `axiom review status --contract gentle-ai.review-integration/v1 --next-transition` prints the exact bindings and `axiom review schema reviewer` emits the result schema with a working example"))
+		return reviewPreflightError(errors.New("review capture-result requires an exact repository context, --lineage, --target, --lens, --order, and either --input or --agent (or --preflight); `axiom review status --contract axiom.review-integration/v2 --next-transition` prints the exact bindings and `axiom review schema reviewer` emits the result schema with a working example"))
 	}
 	if providerRuntimeSupplied && *preflight {
 		return reviewPreflightError(errors.New("review capture-result --agent cannot be combined with --preflight")) // refusal:by-design world-action: a provider runtime identity belongs only to a real materialize, capture, or host-relay submission
@@ -269,7 +269,7 @@ func RunReviewCaptureResult(args []string, stdout io.Writer) error {
 	if state.State != reviewtransaction.StateReviewing || state.LineageID != *lineage || state.InitialSnapshot.Identity != *target ||
 		(strings.TrimSpace(*revision) != "" && state.CapturePhaseRevision != *revision) || *order >= len(state.SelectedLenses) || state.SelectedLenses[*order] != *lens {
 		if contextHandle != "" {
-			return reviewPreflightRefusal(reviewPreflightCaptureBindingMismatchReason, fmt.Errorf("capture binding does not match the current reviewing authority under the provider-issued repository context; ask the parent orchestrator to refresh the exact native next transition by running %s", reviewNextTransitionRefreshCommandV21))
+			return reviewPreflightRefusal(reviewPreflightCaptureBindingMismatchReason, fmt.Errorf("capture binding does not match the current reviewing authority under the provider-issued repository context; ask the parent orchestrator to refresh the exact native next transition by running %s", reviewProseRefreshCommand))
 		}
 		return reviewPreflightRefusal(reviewPreflightCaptureBindingMismatchReason, fmt.Errorf("capture binding does not match the current reviewing authority under repository %q; verify the frozen lineage, target, lens, and order for that repository, or re-run with --cwd set to the repository where the review was started", root))
 	}
@@ -468,7 +468,7 @@ func capturedCompactReviewView(ctx context.Context, repo, storeDir string, state
 		return reviewtransaction.CompactReviewView{}, nil, err
 	}
 	if len(artifacts) != len(state.SelectedLenses) {
-		return reviewtransaction.CompactReviewView{}, nil, fmt.Errorf("last-event closure requires all %d captured reviewer result(s); capture each missing one with `%s` (see `%s` for the exact lineage/target/lens/order bindings)", len(state.SelectedLenses), reviewCaptureResultCommandName(), reviewNextTransitionRefreshCommand)
+		return reviewtransaction.CompactReviewView{}, nil, fmt.Errorf("last-event closure requires all %d captured reviewer result(s); capture each missing one with `%s` (see `%s` for the exact lineage/target/lens/order bindings)", len(state.SelectedLenses), reviewCaptureResultCommandName(), reviewProseRefreshCommand)
 	}
 	view, err := state.CompactReviewView()
 	if err != nil {

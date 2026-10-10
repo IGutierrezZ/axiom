@@ -1038,10 +1038,10 @@ func runReviewStatus(ctx context.Context, args []string, stdout io.Writer) error
 		// lineage fails closed instead of preflighting a fresh target there.
 		if requestedContext := strings.TrimSpace(*repositoryContextHandle); requestedContext != "" {
 			if requestedLineage == "" || !*nextTransition || reviewtransaction.ValidateReviewRepositoryContextHandle(requestedContext) != nil {
-				return reviewPreflightError(errors.New("review status --repository-context is only valid with --next-transition and the --lineage START issued it for; rerun the exact continuation `axiom review status --contract gentle-ai.review-integration/v2 --next-transition --lineage <lineage> --repository-context <handle>` START returned"))
+				return reviewPreflightError(errors.New("review status --repository-context is only valid with --next-transition and the --lineage START issued it for; rerun the exact continuation `axiom review status --contract axiom.review-integration/v2 --next-transition --lineage <lineage> --repository-context <handle>` START returned"))
 			}
 			if !requestedLineageOccupied {
-				return reviewPreflightError(fmt.Errorf("review lineage %q is not held by repository %s; rerun the same command from the repository that owns the lineage, or name it: `axiom review status --cwd <repository> --contract %s --next-transition --lineage %s --repository-context %s`", requestedLineage, root, *contract, requestedLineage, requestedContext))
+				return reviewPreflightError(fmt.Errorf("review lineage %q is not held by repository %s; rerun the same command from the repository that owns the lineage, or name it: `axiom review status --cwd <repository> --contract %s --next-transition --lineage %s --repository-context %s`", requestedLineage, root, AxiomReviewIntegrationContractV2, requestedLineage, requestedContext))
 			}
 			// Issue #4023: the authority store above is scoped to the Git
 			// common dir, so a linked worktree of the same repository also
@@ -1055,7 +1055,7 @@ func runReviewStatus(ctx context.Context, args []string, stdout io.Writer) error
 				return fmt.Errorf("inspect negotiated START lineage worktree binding: %w", err)
 			}
 			if foreignWorktree {
-				return reviewPreflightError(fmt.Errorf("review lineage %q is held by a different worktree of repository %s (expected worktree %s); rerun the same command from the worktree that started the lineage, or name it: `axiom review status --cwd <repository> --contract %s --next-transition --lineage %s --repository-context %s`", requestedLineage, root, reviewDefectReportRedactionMarker, *contract, requestedLineage, requestedContext))
+				return reviewPreflightError(fmt.Errorf("review lineage %q is held by a different worktree of repository %s (expected worktree %s); rerun the same command from the worktree that started the lineage, or name it: `axiom review status --cwd <repository> --contract %s --next-transition --lineage %s --repository-context %s`", requestedLineage, root, reviewDefectReportRedactionMarker, AxiomReviewIntegrationContractV2, requestedLineage, requestedContext))
 			}
 		}
 		if *nextTransition && (requestedLineage == "" || !requestedLineageOccupied) {
@@ -2239,7 +2239,7 @@ func runReviewFacadeStart(ctx context.Context, args []string, stdout io.Writer) 
 		}
 		if err := (reviewtransaction.SnapshotBuilder{Repo: root}).ValidateLiveSnapshot(ctx, snapshot); err != nil {
 			return reviewPreflightRefusal(reviewPreflightStaleTargetReason,
-				fmt.Errorf("frozen review target changed before authority creation; refresh it with `axiom review status --cwd <repo> --contract %s --next-transition`: %w", ReviewIntegrationContractV2, err))
+				fmt.Errorf("frozen review target changed before authority creation; refresh it with `axiom review status --cwd <repo> --contract %s --next-transition`: %w", AxiomReviewIntegrationContractV2, err))
 		}
 
 		started, err := runReviewFacadeCompactAtomicStart(ctx, root, request)
@@ -2728,7 +2728,7 @@ func compactReviewInputFromView(view reviewtransaction.CompactReviewView) review
 
 func prepareCompactReviewerResults(state reviewtransaction.CompactState, results []facadeReviewerResult, refuter facadeRefuterResult, repository ...facadeRepositoryEvidence) (reviewtransaction.CompactReviewInput, error) {
 	if len(results) != len(state.SelectedLenses) {
-		return reviewtransaction.CompactReviewInput{}, fmt.Errorf("last-event closure requires all %d original reviewer result(s); capture each missing one with `%s` (see `%s` for the exact lineage/target/lens/order bindings)", len(state.SelectedLenses), reviewCaptureResultCommandName(), reviewNextTransitionRefreshCommand)
+		return reviewtransaction.CompactReviewInput{}, fmt.Errorf("last-event closure requires all %d original reviewer result(s); capture each missing one with `%s` (see `%s` for the exact lineage/target/lens/order bindings)", len(state.SelectedLenses), reviewCaptureResultCommandName(), reviewProseRefreshCommand)
 	}
 	lensResults := make([]reviewtransaction.LensResult, len(results))
 	classifications := make([]reviewtransaction.FindingEvidence, 0)

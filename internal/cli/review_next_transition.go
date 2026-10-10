@@ -675,10 +675,12 @@ func reviewNativeCaptureVerb(captureOperation string) (string, bool) {
 }
 
 // reviewCaptureResultCommandName renders the exact runnable command name for
-// reviewCaptureResultCaptureOperation, e.g. "gentle-ai review capture-result".
+// reviewCaptureResultCaptureOperation, e.g. "axiom review capture-result". It is
+// prose-only (closure refusals), so it names the axiom tool whatever dialect
+// the transition negotiated.
 func reviewCaptureResultCommandName() string {
 	verb, _ := reviewNativeCaptureVerb(reviewCaptureResultCaptureOperation)
-	return reviewTransitionCommandTool + " review " + verb
+	return reviewAxiomCommandTool + " review " + verb
 }
 
 // reviewUnachievableLensSlotEntry renders one declared slot's complete

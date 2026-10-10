@@ -273,7 +273,7 @@ func managedAssetsExecutableToken(path string) string {
 // managedAssetsContinuationExecutable resolves the executable identity the
 // continuation is anchored to. os.Executable is authoritative when it returns
 // a safe single-line path; an absolute argv[0] is the bounded fallback for
-// hosts where that lookup fails. The final bare `gentle-ai` fallback retains legacy
+// hosts where that lookup fails. The final bare `axiom` fallback retains legacy
 // recovery behavior but is intentionally not presented as an exact identity.
 func managedAssetsContinuationExecutable() string {
 	if path, err := reviewManagedAssetsExecutablePath(); err == nil && managedAssetsExecutableIdentity(path) {
@@ -282,7 +282,7 @@ func managedAssetsContinuationExecutable() string {
 	if len(os.Args) > 0 && managedAssetsArgvZeroIdentity(os.Args[0]) {
 		return managedAssetsExecutableToken(os.Args[0])
 	}
-	return "gentle-ai"
+	return reviewAxiomCommandTool
 }
 
 // managedAssetsExecutableIdentity accepts os.Executable's resolved identity

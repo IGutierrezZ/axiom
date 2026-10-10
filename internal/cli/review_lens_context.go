@@ -117,22 +117,22 @@ func reviewLensContextRefusal(code, action string) error {
 
 const (
 	reviewLensContextRefreshAction = "ask the parent orchestrator to refresh the exact native next transition by running " +
-		reviewNextTransitionRefreshCommandV21 + ", then run this operation again with the tokens it returns"
+		reviewProseRefreshCommand + ", then run this operation again with the tokens it returns"
 	reviewLensContextBudgetAction = "immutable candidate evidence is never truncated and retrying this candidate cannot succeed; " +
 		"split the candidate into a chained sequence of smaller reviewable commits, each under the budget, then refresh the exact native next transition by running " +
-		reviewNextTransitionRefreshCommandV21 + " and execute the returned transition for the reduced scope"
+		reviewProseRefreshCommand + " and execute the returned transition for the reduced scope"
 	reviewLensContextStartBudgetAction = "no review authority was created, so nothing has to be abandoned or repaired; " +
 		"immutable candidate evidence is never truncated and retrying this exact candidate cannot succeed, so split it into a chained sequence of smaller reviewable commits, each under the budget, " +
-		"then refresh the exact native next transition by running " + reviewNextTransitionRefreshCommandV21 +
+		"then refresh the exact native next transition by running " + reviewProseRefreshCommand +
 		" and execute the returned transition for the reduced scope"
 	reviewLensContextEmptyPatchAction = "one content-changing path produced no patch bytes at all, which no legitimate candidate does; " +
-		"refresh the exact native next transition by running " + reviewNextTransitionRefreshCommandV21 +
+		"refresh the exact native next transition by running " + reviewProseRefreshCommand +
 		" and run this operation again, and if the same path keeps producing no patch treat it as a native inspection defect and stop retrying"
-	reviewLensContextDeadlineAction = "refresh the exact native next transition by running " + reviewNextTransitionRefreshCommandV21 +
-		", then execute the returned transition once; if the same lens slot reaches the same deadline again, an identical retry cannot change its frozen scope or deadline, so split the candidate into a chained sequence of smaller reviewable commits, then refresh the exact native next transition by running " + reviewNextTransitionRefreshCommandV21 + " and execute the returned transition for the reduced scope"
+	reviewLensContextDeadlineAction = "refresh the exact native next transition by running " + reviewProseRefreshCommand +
+		", then execute the returned transition once; if the same lens slot reaches the same deadline again, an identical retry cannot change its frozen scope or deadline, so split the candidate into a chained sequence of smaller reviewable commits, then refresh the exact native next transition by running " + reviewProseRefreshCommand + " and execute the returned transition for the reduced scope"
 	reviewLensContextConflictAction = "this frozen lens slot already recorded a reviewer context produced by a different mechanism, and audit history is never rewritten; " +
 		"produce this lens context by the same mechanism that already recorded one, or start a review for a fresh candidate by running " +
-		reviewNextTransitionRefreshCommandV21
+		reviewProseRefreshCommand
 	// reviewLensContextCollectionClosedAction is issue #4019's fix: once
 	// collection closes (correction_required, validating, escalated, approved,
 	// ...), no next_transition ever re-offers lens-context tokens again, so the
@@ -140,7 +140,7 @@ const (
 	// unfollowable. The admitted findings that closed collection are readable
 	// through review status's own provider-owned surface instead.
 	reviewLensContextCollectionClosedAction = "reviewer lens context is produced only while its capture is still open; a capture already closed to correction, validation, escalation, or approval has no lens-context tokens to refresh -- run " +
-		reviewNextTransitionRefreshCommandV21 + " and read the admitted findings from its next_transition.correction_request.findings instead of retrying lens-context"
+		reviewProseRefreshCommand + " and read the admitted findings from its next_transition.correction_request.findings instead of retrying lens-context"
 )
 
 // RunReviewLensContext emits the finished reviewer lens context for one

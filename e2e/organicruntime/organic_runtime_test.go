@@ -2591,7 +2591,7 @@ func TestOrganicRuntimeCurrentReviewHardening(t *testing.T) {
 			t.Fatal("differing result replaced an occupied reviewer slot")
 		}
 		if !strings.Contains(conflictStderr, "reviewer_result_slot_occupied") ||
-			!strings.Contains(conflictStderr, "gentle-ai review status --cwd <repo> --contract gentle-ai.review-integration/v2 --next-transition") ||
+			!strings.Contains(conflictStderr, "axiom review status --cwd <repo> --contract axiom.review-integration/v2 --next-transition") ||
 			!strings.Contains(conflictStderr, "authoritative continuation") {
 			t.Fatalf("occupied-slot continuation = %q", conflictStderr)
 		}

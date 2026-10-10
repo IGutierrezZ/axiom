@@ -94,7 +94,7 @@ func assertOccupiedReviewerSlotStatusContinuation(t *testing.T, err error, repo,
 			t.Fatalf("occupied slot advertises %q instead of STATUS continuation: %s", forbidden, message)
 		}
 	}
-	if !strings.Contains(message, reviewNextTransitionRefreshCommandV21) || !strings.Contains(message, "authoritative continuation") {
+	if !strings.Contains(message, reviewProseRefreshCommand) || !strings.Contains(message, "authoritative continuation") {
 		t.Fatalf("occupied slot does not advertise the STATUS continuation: %s", message)
 	}
 	var statusOutput bytes.Buffer

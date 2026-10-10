@@ -435,7 +435,7 @@ func TestManagedAssetsContinuationUsesInvokingExecutable(t *testing.T) {
 		"unresolvable executable keeps the bare fallback": {
 			executable: func() (string, error) { return "", errors.New("unresolvable") },
 			goos:       "linux",
-			want:       `gentle-ai sync --agent opencode`,
+			want:       `axiom sync --agent opencode`,
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -591,13 +591,13 @@ func TestManagedAssetsContinuationRejectsUnsafeExecutableIdentities(t *testing.T
 			name:       "multiline argv zero falls through to canonical fallback",
 			resolveErr: errors.New("executable unavailable"),
 			argvZero:   filepath.Join(t.TempDir(), "gentle\rai"),
-			want:       "gentle-ai sync --agent opencode",
+			want:       "axiom sync --agent opencode",
 		},
 		{
 			name:       "relative argv zero falls through to canonical fallback",
 			resolveErr: errors.New("executable unavailable"),
 			argvZero:   "gentle-ai",
-			want:       "gentle-ai sync --agent opencode",
+			want:       "axiom sync --agent opencode",
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {

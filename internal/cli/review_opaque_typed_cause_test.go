@@ -129,7 +129,7 @@ func TestOpaqueRepositoryContextCaptureNamesDistinctCauses(t *testing.T) {
 				}
 			},
 			code: reviewerResultSlotOccupiedCode,
-			want: reviewNextTransitionRefreshCommandV21,
+			want: reviewProseRefreshCommand,
 		},
 		{
 			name: "compact-authority-unwritable",
