@@ -66,21 +66,25 @@ func (m IDMap) Lookup(provisional string) (IDAssignment, bool) {
 	return m.assignments[at], true
 }
 
-// Substitute reemplaza cada ID provisional del cambio por su ID definitivo. Solo
-// sustituye tokens completos: una aparición exacta, sensible a mayúsculas, que no
-// va precedida ni seguida por una letra Unicode, un dígito, `_` o `-`
-// (REQ-24.59, D-11). La sustitución es de una sola pasada: el texto ya
-// sustituido no se vuelve a examinar. Quien llama la aplica solo al texto que
-// integra, nunca al texto preexistente de los documentos.
-func (m IDMap) Substitute(text string) string {
+// tokenSpan es una aparición de un ID provisional como token completo: el
+// intervalo [start, end) del texto y el índice de su asignación.
+type tokenSpan struct {
+	start, end int
+	assignment int
+}
+
+// tokenSpans localiza, en orden de aparición, los tokens completos de todos los
+// IDs provisionales del texto. Un token es una aparición exacta, sensible a
+// mayúsculas, que no va precedida ni seguida por una letra Unicode, un dígito, `_`
+// o `-`. Con provisionales que se solapan gana el más largo, y un intervalo ya
+// reservado no se vuelve a reservar. Es la única regla de token: la comparten
+// Substitute y CountProvisional, de modo que la verificación (e) cuenta
+// exactamente lo que la sustitución habría reemplazado.
+func (m IDMap) tokenSpans(text string) []tokenSpan {
 	if len(m.assignments) == 0 || text == "" {
-		return text
+		return nil
 	}
-	type span struct {
-		start, end int
-		definitive string
-	}
-	var spans []span
+	var spans []tokenSpan
 	overlaps := func(start, end int) bool {
 		for _, s := range spans {
 			if start < s.end && s.start < end {
@@ -90,34 +94,62 @@ func (m IDMap) Substitute(text string) string {
 		return false
 	}
 	for _, at := range m.byLength {
-		assignment := m.assignments[at]
+		provisional := m.assignments[at].Provisional
 		for from := 0; from < len(text); {
-			found := strings.Index(text[from:], assignment.Provisional)
+			found := strings.Index(text[from:], provisional)
 			if found < 0 {
 				break
 			}
 			start := from + found
-			end := start + len(assignment.Provisional)
+			end := start + len(provisional)
 			from = start + 1
 			if !isTokenAt(text, start, end) || overlaps(start, end) {
 				continue
 			}
-			spans = append(spans, span{start: start, end: end, definitive: assignment.Definitive})
+			spans = append(spans, tokenSpan{start: start, end: end, assignment: at})
 		}
 	}
+	sort.Slice(spans, func(a, b int) bool { return spans[a].start < spans[b].start })
+	return spans
+}
+
+// Substitute reemplaza cada ID provisional del cambio por su ID definitivo. Solo
+// sustituye tokens completos: una aparición exacta, sensible a mayúsculas, que no
+// va precedida ni seguida por una letra Unicode, un dígito, `_` o `-`
+// (REQ-24.59, D-11). La sustitución es de una sola pasada: el texto ya
+// sustituido no se vuelve a examinar. Quien llama la aplica solo al texto que
+// integra, nunca al texto preexistente de los documentos.
+func (m IDMap) Substitute(text string) string {
+	spans := m.tokenSpans(text)
 	if len(spans) == 0 {
 		return text
 	}
-	sort.Slice(spans, func(a, b int) bool { return spans[a].start < spans[b].start })
 	var out strings.Builder
 	cursor := 0
 	for _, s := range spans {
 		out.WriteString(text[cursor:s.start])
-		out.WriteString(s.definitive)
+		out.WriteString(m.assignments[s.assignment].Definitive)
 		cursor = s.end
 	}
 	out.WriteString(text[cursor:])
 	return out.String()
+}
+
+// CountProvisional cuenta, por ID provisional, las apariciones como token
+// completo en el texto, con la misma regla de token que Substitute. Solo cuenta
+// los provisionales cuyo ID definitivo es distinto: un provisional igual a su
+// propio definitivo se admite (D-11) y no es una sustitución pendiente. La
+// verificación nativa (e) compara este recuento del contenido actual de un
+// documento con el del commit registrado por `prepare`, una medida que tolera el
+// reajuste del texto preexistente y no depende del final de línea (D-12, D-15).
+func (m IDMap) CountProvisional(text string) map[string]int {
+	counts := map[string]int{}
+	for _, s := range m.tokenSpans(text) {
+		if a := m.assignments[s.assignment]; a.Provisional != a.Definitive {
+			counts[a.Provisional]++
+		}
+	}
+	return counts
 }
 
 // isTokenAt dice si text[start:end] es un token completo: ni precedido ni

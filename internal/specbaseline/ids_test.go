@@ -439,3 +439,78 @@ func TestSubstitutePrefersTheLongestProvisionalID(t *testing.T) {
 		t.Error("el ID más corto también se sustituye")
 	}
 }
+
+// Recuento de provisionales para la verificación (e) (REQ-24.51, D-15, D-20).
+
+func countingMap() IDMap {
+	return newIDMap([]IDAssignment{
+		{Provisional: "RF-9001", Definitive: "RF-008", Domain: "d"},
+		{Provisional: "RF-9002", Definitive: "RF-009", Domain: "d"},
+		{Provisional: "RF-010", Definitive: "RF-010", Domain: "d"},
+	})
+}
+
+func TestCountProvisionalCountsEachCompleteTokenOfAProvisional(t *testing.T) {
+	tests := []struct {
+		name string
+		text string
+		want map[string]int
+	}{
+		{name: "sin texto", text: "", want: map[string]int{}},
+		{name: "sin apariciones", text: "Texto sin IDs del cambio.", want: map[string]int{}},
+		{name: "una aparición", text: "Véase RF-9001.", want: map[string]int{"RF-9001": 1}},
+		{name: "varias apariciones de dos provisionales", text: "RF-9001 depende de RF-9002 y de RF-9001 otra vez", want: map[string]int{"RF-9001": 2, "RF-9002": 1}},
+		{name: "entre signos de puntuación", text: "(RF-9001), «RF-9001»; [RF-9001]", want: map[string]int{"RF-9001": 3}},
+		{name: "un número más largo no es el token", text: "RF-90010 y RF-90011", want: map[string]int{}},
+		{name: "precedido por letra", text: "xRF-9001 y éRF-9001", want: map[string]int{}},
+		{name: "precedido o seguido por guion o guion bajo", text: "_RF-9001 RF-9001_ -RF-9001 RF-9001-bis", want: map[string]int{}},
+		{name: "precedido por un dígito", text: "7RF-9001", want: map[string]int{}},
+		{name: "distingue mayúsculas", text: "rf-9001 Rf-9001", want: map[string]int{}},
+		{name: "con salto de línea CRLF", text: "RF-9001\r\nRF-9001\r\n", want: map[string]int{"RF-9001": 2}},
+		{name: "un provisional igual a su definitivo no cuenta", text: "RF-010 y RF-010", want: map[string]int{}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := countingMap().CountProvisional(tt.text); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("CountProvisional(%q) = %v, se esperaba %v", tt.text, got, tt.want)
+			}
+		})
+	}
+}
+
+// El recuento y la sustitución comparten una sola regla de token: tras sustituir,
+// no queda ningún provisional que contar, y un texto sin sustituir cuenta
+// exactamente las apariciones que la sustitución reemplazaría.
+func TestCountProvisionalAgreesWithSubstitute(t *testing.T) {
+	m := countingMap()
+	text := "RF-9001, RF-9002, RF-90010, xRF-9001, RF-9001-bis, RF-010 y RF-9001.\r\n"
+	counts := m.CountProvisional(text)
+	if counts["RF-9001"] != 2 || counts["RF-9002"] != 1 {
+		t.Fatalf("recuento = %v", counts)
+	}
+	replaced := m.Substitute(text)
+	if after := m.CountProvisional(replaced); len(after) != 0 {
+		t.Errorf("tras sustituir no deben quedar provisionales: %v\n%s", after, replaced)
+	}
+	if got := strings.Count(replaced, "RF-008"); got != counts["RF-9001"] {
+		t.Errorf("la sustitución reemplaza %d apariciones de RF-9001 y el recuento dice %d", got, counts["RF-9001"])
+	}
+}
+
+func TestCountProvisionalPrefersTheLongestProvisionalWithoutOverlaps(t *testing.T) {
+	m := newIDMap([]IDAssignment{
+		{Provisional: "NFR-9001", Definitive: "NFR-004", Domain: "d"},
+		{Provisional: "FR-9001", Definitive: "FR-004", Domain: "d"},
+	})
+	// FR-9001 aparece dentro de NFR-9001 pero precedido por una letra: no es token.
+	got := m.CountProvisional("NFR-9001 y FR-9001")
+	if want := map[string]int{"NFR-9001": 1, "FR-9001": 1}; !reflect.DeepEqual(got, want) {
+		t.Errorf("CountProvisional() = %v, se esperaba %v", got, want)
+	}
+}
+
+func TestCountProvisionalOfAnEmptyMapIsEmpty(t *testing.T) {
+	if got := (IDMap{}).CountProvisional("RF-9001"); len(got) != 0 {
+		t.Errorf("CountProvisional() = %v, se esperaba un mapa vacío", got)
+	}
+}
