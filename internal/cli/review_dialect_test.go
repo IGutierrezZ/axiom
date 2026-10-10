@@ -328,16 +328,19 @@ func TestDualContract_ConsentValidateRequiresACoherentDialect(t *testing.T) {
 // command each dialect publishes and proves the published schemas admit it.
 func TestDualContract_CapabilitiesBootstrapEchoesTheDialect(t *testing.T) {
 	const axiomBootstrap = "axiom review status --cwd <repo> --contract axiom.review-integration/v2 --next-transition"
-	for _, tt := range []struct{ contract, want string }{
-		{contract: ReviewIntegrationContractV2, want: "gentle-ai review status --cwd <repo> --contract gentle-ai.review-integration/v2 --next-transition"},
-		{contract: AxiomReviewIntegrationContractV2, want: axiomBootstrap},
+	for _, tt := range []struct{ contract, want, packageName string }{
+		{contract: ReviewIntegrationContractV2, want: "gentle-ai review status --cwd <repo> --contract gentle-ai.review-integration/v2 --next-transition", packageName: "gentle-ai"},
+		{contract: AxiomReviewIntegrationContractV2, want: axiomBootstrap, packageName: "axiom"},
+		// v2.6 admits both package names, so the axiom contract still accepts the
+		// legacy name: the schema is the published surface, the emitter picks one.
+		{contract: AxiomReviewIntegrationContractV2, want: axiomBootstrap, packageName: "gentle-ai"},
 	} {
-		t.Run(tt.contract, func(t *testing.T) {
+		t.Run(tt.contract+"/"+tt.packageName, func(t *testing.T) {
 			surface := reviewCapabilitiesStaticSurface(tt.contract)
 			if surface.Bootstrap == nil || surface.Bootstrap.Command != tt.want {
 				t.Fatalf("bootstrap = %#v, want %q", surface.Bootstrap, tt.want)
 			}
-			surface.Package = ReviewCapabilitiesPackage{Name: "gentle-ai", Version: "3.1.0", ReleaseChannel: "stable"}
+			surface.Package = ReviewCapabilitiesPackage{Name: tt.packageName, Version: "3.1.0", ReleaseChannel: "stable"}
 			surface.Build = ReviewCapabilitiesBuild{
 				ID:            reviewCapabilitiesBuildDigest("3.1.0", ReviewCapabilitiesBuild{GoVersion: "go1.25.0", VCSModified: "false"}),
 				GoVersion:     "go1.25.0",

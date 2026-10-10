@@ -137,6 +137,50 @@ func TestReviewCapabilitiesV26AdvertisementIsCurrent(t *testing.T) {
 	validateReviewCapabilitiesSchema(t, "capabilities-v2.6.schema.json", ReviewIntegrationCapabilitiesSchemaIDV26, output.Bytes())
 }
 
+// TestReviewCapabilitiesPackageNameFollowsDialect pins D5: package.name is
+// axiom only for a caller that negotiated the axiom dialect; the legacy
+// gentle-ai v2 alias, v1 and the empty default keep gentle-ai. The v2 outputs
+// are validated against the only published schema that admits both names.
+func TestReviewCapabilitiesPackageNameFollowsDialect(t *testing.T) {
+	for _, tt := range []struct {
+		name      string
+		arguments []string
+		want      string
+		v26       bool
+	}{
+		{name: "axiom v2", arguments: []string{"capabilities", "--contract", AxiomReviewIntegrationContractV2}, want: "axiom", v26: true},
+		{name: "gentle-ai v2 alias", arguments: []string{"capabilities", "--contract", ReviewIntegrationContractV2}, want: "gentle-ai", v26: true},
+		{name: "v1", arguments: []string{"capabilities", "--contract", ReviewIntegrationContractV1}, want: "gentle-ai"},
+		{name: "empty default", arguments: []string{"capabilities"}, want: "gentle-ai"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			var output bytes.Buffer
+			if err := RunReview(tt.arguments, &output); err != nil {
+				t.Fatal(err)
+			}
+			var got ReviewCapabilitiesResult
+			if err := json.Unmarshal(output.Bytes(), &got); err != nil {
+				t.Fatal(err)
+			}
+			if got.Package.Name != tt.want {
+				t.Fatalf("package.name = %q, want %q", got.Package.Name, tt.want)
+			}
+			if !tt.v26 {
+				return
+			}
+			schema := validateReviewCapabilitiesSchema(t, "capabilities-v2.6.schema.json", ReviewIntegrationCapabilitiesSchemaIDV26, output.Bytes())
+			var document map[string]any
+			if err := json.Unmarshal(output.Bytes(), &document); err != nil {
+				t.Fatal(err)
+			}
+			document["package"].(map[string]any)["name"] = "other"
+			if err := schema.Validate(document); err == nil {
+				t.Fatal("capabilities v2.6 schema accepted an unknown package.name")
+			}
+		})
+	}
+}
+
 func TestReviewCapabilitiesV22ArtifactRemainsReadable(t *testing.T) {
 	fixture, err := os.ReadFile(filepath.Join("..", "..", "contracts", "review-integration", "v2", "fixtures", "capabilities-v2.2.fixture.json"))
 	if err != nil {
