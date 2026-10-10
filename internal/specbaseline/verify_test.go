@@ -166,6 +166,7 @@ func loadPlan(t *testing.T, f *integrationFixture) Plan {
 // Éxito: marca integradas las entradas dirigidas y de contexto, las de solo
 // registro siguen pendientes, escribe verified_at y solo toca integration.yaml.
 func TestVerifyPassesAndMarksTheDirectedAndContextEntriesIntegrated(t *testing.T) {
+	t.Parallel()
 	f, target, prepared := integratedFixture(t)
 	before := snapshot(t, f.master)
 
@@ -213,6 +214,7 @@ func TestVerifyPassesAndMarksTheDirectedAndContextEntriesIntegrated(t *testing.T
 
 // Verificar dos veces es idempotente: el plan ya marcado vuelve a verificarse.
 func TestVerifyCanBeRepeatedOverAnAlreadyVerifiedPlan(t *testing.T) {
+	t.Parallel()
 	f, target, _ := integratedFixture(t)
 	mustPass(t, verifyOf(t, target))
 	first := loadPlan(t, f)
@@ -225,6 +227,7 @@ func TestVerifyCanBeRepeatedOverAnAlreadyVerifiedPlan(t *testing.T) {
 
 // REQ-24.55: una entrada `add` que crea el documento queda como `created`.
 func TestVerifyRecordsCreatedForTheAddEntryThatCreatedTheDocument(t *testing.T) {
+	t.Parallel()
 	f := newIntegrationFixture(t, true)
 	f.writeChange(t, ContextDeltaFileName, "## Entrada: context/PAGOS.md\n\n- Ancla: Reintentos\n- Acción: add\n- Motivo: documenta los pagos (RF-9001)\n\n"+
 		"## Entrada: ../repo-backend/docs/API.md\n\n- Ancla: Errores\n- Acción: add\n- Motivo: documenta el error del cobro\n")
@@ -264,6 +267,7 @@ func TestVerifyRecordsCreatedForTheAddEntryThatCreatedTheDocument(t *testing.T) 
 
 // Si falla, lista todas las violaciones y no modifica documentos ni plan.
 func TestVerifyFailureListsEveryViolationAndModifiesNeitherDocumentsNorPlan(t *testing.T) {
+	t.Parallel()
 	f, target, _ := integratedFixture(t)
 	writeRepoFile(t, f.specs, "referencia/legado/README.sh", "#!/bin/sh\n")
 	writeRepoFile(t, f.specs, "03_Modelo_Datos.mdx", "# Otro\n")
@@ -312,6 +316,7 @@ func gitIndexDigest(t *testing.T, repo string) string {
 
 // (c) Alcance por identidad (REQ-24.51, REQ-24.30, REQ-24.57, design §8).
 func TestVerifyScopeRejectsEveryPathOutsideTheAllowedSet(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name      string
 		mutate    func(t *testing.T, f *integrationFixture)
@@ -413,6 +418,7 @@ func TestVerifyScopeRejectsEveryPathOutsideTheAllowedSet(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			f, target, _ := integratedFixture(t)
 			tt.mutate(t, f)
 			report := verifyOf(t, target)
@@ -423,6 +429,7 @@ func TestVerifyScopeRejectsEveryPathOutsideTheAllowedSet(t *testing.T) {
 
 // El control de las pruebas anteriores: lo permitido no genera violaciones de alcance.
 func TestVerifyScopeAllowsTheChangeFolderAndTheNamedDocuments(t *testing.T) {
+	t.Parallel()
 	f, target, _ := integratedFixture(t)
 	f.writeChange(t, "notas.md", "# Notas del cambio\n")
 	f.writeChange(t, "specs/modelo-de-datos/borrador.md", "# Borrador\n")
@@ -440,6 +447,7 @@ func TestVerifyScopeAllowsTheChangeFolderAndTheNamedDocuments(t *testing.T) {
 // REQ-24.57: con «Sin impacto», cualquier edición de las rutas mantenidas contradice
 // la decisión registrada.
 func TestVerifyNoImpactDecisionRejectsAnEditOfTheMaintainedPaths(t *testing.T) {
+	t.Parallel()
 	f := newIntegrationFixture(t, true)
 	f.writeChange(t, ContextDeltaFileName, "Sin impacto: el cambio solo corrige una errata en un mensaje de error\n")
 	commitAll(t, f.specs, "sin impacto")
@@ -467,6 +475,7 @@ func TestVerifyNoImpactDecisionRejectsAnEditOfTheMaintainedPaths(t *testing.T) {
 
 // El alcance con la baseline por defecto incluye las specs del cambio e INDEX.md.
 func TestVerifyScopeWithTheDefaultBaselineIncludesTheChangeSpecsAndTheIndex(t *testing.T) {
+	t.Parallel()
 	const defaultConfig = `workspace:
   name: ejemplo
   topology: multirepo
@@ -510,15 +519,18 @@ technical_context:
 	}
 
 	t.Run("las specs de los dominios del cambio y el índice pasan", func(t *testing.T) {
+		t.Parallel()
 		_, target := setup(t)
 		mustPass(t, verifyOf(t, target))
 	})
 	t.Run("la spec de un dominio que el cambio no toca es una violación", func(t *testing.T) {
+		t.Parallel()
 		f, target := setup(t)
 		writeRepoFile(t, f.specs, "openspec/specs/otro-dominio/spec.md", "# otro\n")
 		mustViolate(t, verifyOf(t, target), ViolationScope, "repo-specs/openspec/specs/otro-dominio/spec.md", "conjunto permitido")
 	})
 	t.Run("un fichero distinto de spec.md bajo el dominio es una violación", func(t *testing.T) {
+		t.Parallel()
 		f, target := setup(t)
 		writeRepoFile(t, f.specs, "openspec/specs/modelo-de-datos/README.sh", "#!/bin/sh\n")
 		mustViolate(t, verifyOf(t, target), ViolationScope, "repo-specs/openspec/specs/modelo-de-datos/README.sh")
@@ -527,13 +539,16 @@ technical_context:
 
 // Un commit entre prepare y verify no oculta una edición fuera de alcance (H6).
 func TestVerifyACommitBetweenPrepareAndVerifyDoesNotHideAnOutOfScopeEdit(t *testing.T) {
+	t.Parallel()
 	t.Run("lo confirmado dentro de alcance sigue verificándose y pasa", func(t *testing.T) {
+		t.Parallel()
 		f, target, _ := integratedFixture(t)
 		commitAll(t, f.specs, "edición dirigida")
 		commitAll(t, f.backend, "edición del contexto")
 		mustPass(t, verifyOf(t, target))
 	})
 	t.Run("lo confirmado fuera de alcance es una violación", func(t *testing.T) {
+		t.Parallel()
 		f, target, _ := integratedFixture(t)
 		writeRepoFile(t, f.specs, "notas/README.sh", "#!/bin/sh\n")
 		commitAll(t, f.specs, "edición dirigida y un script")
@@ -541,6 +556,7 @@ func TestVerifyACommitBetweenPrepareAndVerifyDoesNotHideAnOutOfScopeEdit(t *test
 		mustViolate(t, report, ViolationScope, "repo-specs/notas/README.sh")
 	})
 	t.Run("lo confirmado y borrado fuera de alcance también", func(t *testing.T) {
+		t.Parallel()
 		f, target, _ := integratedFixture(t)
 		if err := os.Remove(filepath.Join(f.specs, "referencia", "legado", "VIEJO.md")); err != nil {
 			t.Fatal(err)
@@ -553,6 +569,7 @@ func TestVerifyACommitBetweenPrepareAndVerifyDoesNotHideAnOutOfScopeEdit(t *test
 // Un cambio en el índice de un fichero ajeno anterior a prepare no se atribuye al
 // archivado; si el fichero cambia después, sí.
 func TestVerifyDoesNotAttributeAForeignChangeThatPrepareAlreadySaw(t *testing.T) {
+	t.Parallel()
 	f := newIntegrationFixture(t, true)
 	writeRepoFile(t, f.specs, "notas/borrador.md", "# Borrador ajeno\n")
 	runGit(t, f.specs, "add", "notas/borrador.md")
@@ -584,6 +601,7 @@ func TestVerifyDoesNotAttributeAForeignChangeThatPrepareAlreadySaw(t *testing.T)
 // core.autocrlf=true: git normaliza los finales de línea y el verificador no
 // atribuye al archivado un fichero que solo difiere en ellos (D-12).
 func TestVerifyWorksWithAutocrlfAndCRLFDocuments(t *testing.T) {
+	t.Parallel()
 	f := newIntegrationFixture(t, true)
 	runGit(t, f.specs, "config", "core.autocrlf", "true")
 	runGit(t, f.backend, "config", "core.autocrlf", "true")
@@ -639,6 +657,7 @@ func TestVerifyWorksWithAutocrlfAndCRLFDocuments(t *testing.T) {
 // El alcance se decide por identidad, no por texto: un directorio de contexto
 // declarado como enlace simbólico se alcanza por su destino real.
 func TestVerifyScopeIsDecidedByIdentityThroughASymlink(t *testing.T) {
+	t.Parallel()
 	f := newIntegrationFixture(t, true)
 	realDir := filepath.Join(f.specs, "contexto-real")
 	if err := os.Rename(filepath.Join(f.specs, "context"), realDir); err != nil {
@@ -667,6 +686,7 @@ func TestVerifyScopeIsDecidedByIdentityThroughASymlink(t *testing.T) {
 
 // Un repositorio sin commits se compara con el árbol vacío (design §8).
 func TestVerifyARepositoryWithoutCommitsIsComparedWithTheEmptyTree(t *testing.T) {
+	t.Parallel()
 	const config = `workspace:
   name: ejemplo
   topology: multirepo
@@ -721,15 +741,18 @@ technical_context:
 	}
 
 	t.Run("lo que ya había antes de prepare no se atribuye", func(t *testing.T) {
+		t.Parallel()
 		_, target, _ := setup(t)
 		mustPass(t, verifyOf(t, target))
 	})
 	t.Run("un fichero nuevo fuera de alcance es una violación", func(t *testing.T) {
+		t.Parallel()
 		_, target, fresh := setup(t)
 		writeRepoFile(t, fresh, "README.sh", "#!/bin/sh\n")
 		mustViolate(t, verifyOf(t, target), ViolationScope, "repo-nuevo/README.sh", "conjunto permitido")
 	})
 	t.Run("el fichero previo, retocado, sí se atribuye", func(t *testing.T) {
+		t.Parallel()
 		_, target, fresh := setup(t)
 		appendText(t, filepath.Join(fresh, "LEEME-previo.md"), "\nretoque\n")
 		mustViolate(t, verifyOf(t, target), ViolationScope, "repo-nuevo/LEEME-previo.md")
@@ -738,7 +761,9 @@ technical_context:
 
 // El HEAD que registró prepare debe seguir existiendo: sin él no hay comparación.
 func TestVerifyNeedsTheRecordedHeadAndTheRecordedRepositories(t *testing.T) {
+	t.Parallel()
 	t.Run("un commit que ya no existe", func(t *testing.T) {
+		t.Parallel()
 		f, target, plan := integratedFixture(t)
 		plan = loadPlan(t, f)
 		for i := range plan.Repositories {
@@ -752,6 +777,7 @@ func TestVerifyNeedsTheRecordedHeadAndTheRecordedRepositories(t *testing.T) {
 		mustViolate(t, verifyOf(t, target), ViolationScope, "repo-specs", strings.Repeat("a", 40), "axiom sdd integrate prepare")
 	})
 	t.Run("un repositorio que ya no es git", func(t *testing.T) {
+		t.Parallel()
 		f, target, _ := integratedFixture(t)
 		if err := os.RemoveAll(filepath.Join(f.backend, ".git")); err != nil {
 			t.Fatal(err)
@@ -762,7 +788,9 @@ func TestVerifyNeedsTheRecordedHeadAndTheRecordedRepositories(t *testing.T) {
 
 // (a) Presencia (REQ-24.51 a, D-15).
 func TestVerifyPresenceRequiresTheEditedDocuments(t *testing.T) {
+	t.Parallel()
 	t.Run("un documento dirigido sin editar", func(t *testing.T) {
+		t.Parallel()
 		f, target, _ := preparedFixture(t)
 		composeAll(t, target)
 		replaceText(t, filepath.Join(f.specs, filepath.FromSlash(docContexto)), "Gestiona los pedidos.", "Gestiona los pedidos y reintenta (RF-008).")
@@ -771,6 +799,7 @@ func TestVerifyPresenceRequiresTheEditedDocuments(t *testing.T) {
 		mustViolate(t, report, ViolationPresence, "Entidad Reintento", docModelo)
 	})
 	t.Run("un documento de contexto modificado sin editar", func(t *testing.T) {
+		t.Parallel()
 		f, target, _ := preparedFixture(t)
 		composeAll(t, target)
 		appendText(t, filepath.Join(f.specs, docModelo), sectionModelo)
@@ -778,6 +807,7 @@ func TestVerifyPresenceRequiresTheEditedDocuments(t *testing.T) {
 		mustViolate(t, verifyOf(t, target), ViolationPresence, "C1", docContexto)
 	})
 	t.Run("un documento de contexto con add sin editar", func(t *testing.T) {
+		t.Parallel()
 		f, target, _ := preparedFixture(t)
 		composeAll(t, target)
 		appendText(t, filepath.Join(f.specs, docModelo), sectionModelo)
@@ -785,6 +815,7 @@ func TestVerifyPresenceRequiresTheEditedDocuments(t *testing.T) {
 		mustViolate(t, verifyOf(t, target), ViolationPresence, "C2", "API.md")
 	})
 	t.Run("una entrada remove no exige que el documento aparezca en el diff", func(t *testing.T) {
+		t.Parallel()
 		f := newIntegrationFixture(t, true)
 		f.writeChange(t, ContextDeltaFileName, "## Entrada: context/ARQUITECTURA.md\n\n- Ancla: Componentes > Servicio de catálogo\n- Acción: remove\n- Motivo: el servicio de catálogo desaparece\n")
 		commitAll(t, f.specs, "contexto con remove")
@@ -806,6 +837,7 @@ func TestVerifyPresenceRequiresTheEditedDocuments(t *testing.T) {
 		mustPass(t, verifyOf(t, target))
 	})
 	t.Run("las entradas esperadas se recalculan desde los ficheros actuales del cambio", func(t *testing.T) {
+		t.Parallel()
 		f, target, _ := integratedFixture(t)
 		replaceText(t, filepath.Join(f.changeRoot, ContextDeltaFileName), "se añade el reintento de pago", "se añade el reintento con retroceso")
 		report := verifyOf(t, target)
@@ -813,6 +845,7 @@ func TestVerifyPresenceRequiresTheEditedDocuments(t *testing.T) {
 		mustViolate(t, report, ViolationPresence, "C1")
 	})
 	t.Run("un delta cambiado después de prepare", func(t *testing.T) {
+		t.Parallel()
 		f, target, _ := integratedFixture(t)
 		f.writeChange(t, "specs/modelo-de-datos/spec.md", fixtureDeltaModelo+"\n### Requirement: Entidad Aviso\n\nTexto.\n")
 		report := verifyOf(t, target)
@@ -820,6 +853,7 @@ func TestVerifyPresenceRequiresTheEditedDocuments(t *testing.T) {
 		mustViolate(t, report, ViolationPresence, "Entidad Aviso")
 	})
 	t.Run("una entrada retirada de los ficheros del cambio", func(t *testing.T) {
+		t.Parallel()
 		f, target, _ := integratedFixture(t)
 		f.removeChange(t, "specs/modelo-de-datos")
 		mustViolate(t, verifyOf(t, target), ViolationPresence, "Entidad Reintento", "ya no está")
@@ -828,18 +862,22 @@ func TestVerifyPresenceRequiresTheEditedDocuments(t *testing.T) {
 
 // Las composiciones se comprueban por huella after, no por ancla (D-15 b).
 func TestVerifyChecksTheCompositionByItsAfterFingerprint(t *testing.T) {
+	t.Parallel()
 	t.Run("una composición sin aplicar", func(t *testing.T) {
+		t.Parallel()
 		f, target, _ := preparedFixture(t)
 		f.applyDirectedEdits(t)
 		report := verifyOf(t, target)
 		mustViolate(t, report, ViolationCompose, "requisitos-funcionales", docRequisitos, "axiom sdd archive-compose")
 	})
 	t.Run("un documento retocado después de componerse", func(t *testing.T) {
+		t.Parallel()
 		f, target, _ := integratedFixture(t)
 		appendText(t, filepath.Join(f.specs, docRequisitos), "\nretoque a mano\n")
 		mustViolate(t, verifyOf(t, target), ViolationCompose, "requisitos-funcionales", "after")
 	})
 	t.Run("una interrupción tras renombrar: el plan sigue pendiente y el documento ya está en after", func(t *testing.T) {
+		t.Parallel()
 		f, target, _ := integratedFixture(t)
 		plan := loadPlan(t, f)
 		for i := range plan.Documents {
@@ -869,6 +907,7 @@ func TestVerifyChecksTheCompositionByItsAfterFingerprint(t *testing.T) {
 		}
 	})
 	t.Run("pendiente con after igual a before solo se reconoce por el estado del plan", func(t *testing.T) {
+		t.Parallel()
 		f, target, _ := integratedFixture(t)
 		plan := loadPlan(t, f)
 		for i := range plan.Documents {
@@ -886,6 +925,7 @@ func TestVerifyChecksTheCompositionByItsAfterFingerprint(t *testing.T) {
 
 // (b) Anclas (REQ-24.51 b, D-15).
 func TestVerifyAnchorsOfTheDirectedSection(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name    string
 		section string // texto que sustituye a la sección del cambio
@@ -901,6 +941,7 @@ func TestVerifyAnchorsOfTheDirectedSection(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			f, target, _ := preparedFixture(t)
 			composeAll(t, target)
 			appendText(t, filepath.Join(f.specs, docModelo), tt.section)
@@ -920,17 +961,21 @@ func TestVerifyAnchorsOfTheDirectedSection(t *testing.T) {
 }
 
 func TestVerifyAnchorsOfTheContextEntries(t *testing.T) {
+	t.Parallel()
 	t.Run("modify cuya ancla ya no existe", func(t *testing.T) {
+		t.Parallel()
 		f, target, _ := integratedFixture(t)
 		replaceText(t, filepath.Join(f.specs, filepath.FromSlash(docContexto)), "### Servicio de pedidos", "### Servicio de reintentos")
 		mustViolate(t, verifyOf(t, target), ViolationAnchor, "C1", "Componentes > Servicio de pedidos")
 	})
 	t.Run("add cuya ancla queda repetida", func(t *testing.T) {
+		t.Parallel()
 		f, target, _ := integratedFixture(t)
 		appendText(t, filepath.Join(f.backend, filepath.FromSlash(docAPI)), "\n## Errores\n\nOtra vez.\n")
 		mustViolate(t, verifyOf(t, target), ViolationAnchor, "C2", "Errores", "2 secciones")
 	})
 	t.Run("add cuya ancla no se creó", func(t *testing.T) {
+		t.Parallel()
 		f, target, _ := integratedFixture(t)
 		replaceText(t, filepath.Join(f.backend, filepath.FromSlash(docAPI)), "## Errores", "## Fallos")
 		mustViolate(t, verifyOf(t, target), ViolationAnchor, "C2", "Errores", "ninguna sección")
@@ -939,7 +984,9 @@ func TestVerifyAnchorsOfTheContextEntries(t *testing.T) {
 
 // (d) Traza (REQ-24.51 d).
 func TestVerifyRequiresAReadableTraceWithTheExpectedSchema(t *testing.T) {
+	t.Parallel()
 	t.Run("sin plan", func(t *testing.T) {
+		t.Parallel()
 		f, target, _ := integratedFixture(t)
 		if err := os.Remove(filepath.Join(f.changeRoot, PlanFileName)); err != nil {
 			t.Fatal(err)
@@ -951,6 +998,7 @@ func TestVerifyRequiresAReadableTraceWithTheExpectedSchema(t *testing.T) {
 		}
 	})
 	t.Run("YAML ilegible", func(t *testing.T) {
+		t.Parallel()
 		f, target, _ := integratedFixture(t)
 		if err := os.WriteFile(filepath.Join(f.changeRoot, PlanFileName), []byte("schema: [\n"), 0o644); err != nil {
 			t.Fatal(err)
@@ -958,6 +1006,7 @@ func TestVerifyRequiresAReadableTraceWithTheExpectedSchema(t *testing.T) {
 		mustViolate(t, verifyOf(t, target), ViolationTrace, PlanFileName)
 	})
 	t.Run("esquema distinto", func(t *testing.T) {
+		t.Parallel()
 		f, target, _ := integratedFixture(t)
 		path := filepath.Join(f.changeRoot, PlanFileName)
 		data, err := os.ReadFile(path)
@@ -970,11 +1019,13 @@ func TestVerifyRequiresAReadableTraceWithTheExpectedSchema(t *testing.T) {
 		mustViolate(t, verifyOf(t, target), ViolationTrace, "axiom.sdd-integration/v1")
 	})
 	t.Run("clave desconocida", func(t *testing.T) {
+		t.Parallel()
 		f, target, _ := integratedFixture(t)
 		appendText(t, filepath.Join(f.changeRoot, PlanFileName), "extra: 1\n")
 		mustViolate(t, verifyOf(t, target), ViolationTrace, PlanFileName)
 	})
 	t.Run("el plan es de otro cambio", func(t *testing.T) {
+		t.Parallel()
 		f, target, _ := integratedFixture(t)
 		plan := loadPlan(t, f)
 		plan.Change = "inc-98-otro"
@@ -987,7 +1038,9 @@ func TestVerifyRequiresAReadableTraceWithTheExpectedSchema(t *testing.T) {
 
 // (e) Sustitución de IDs (REQ-24.51 e, REQ-24.59, D-15).
 func TestVerifyRejectsAProvisionalIDLeftInTheAddedText(t *testing.T) {
+	t.Parallel()
 	t.Run("en una sección dirigida", func(t *testing.T) {
+		t.Parallel()
 		f, target, _ := preparedFixture(t)
 		composeAll(t, target)
 		appendText(t, filepath.Join(f.specs, docModelo), strings.Replace(sectionModelo, "RF-008", "RF-9001", 1))
@@ -999,6 +1052,7 @@ func TestVerifyRejectsAProvisionalIDLeftInTheAddedText(t *testing.T) {
 		}
 	})
 	t.Run("en una entrada de contexto", func(t *testing.T) {
+		t.Parallel()
 		f, target, _ := preparedFixture(t)
 		composeAll(t, target)
 		appendText(t, filepath.Join(f.specs, docModelo), sectionModelo)
@@ -1007,6 +1061,7 @@ func TestVerifyRejectsAProvisionalIDLeftInTheAddedText(t *testing.T) {
 		mustViolate(t, verifyOf(t, target), ViolationIDs, "RF-9001", "RF-008", docContexto)
 	})
 	t.Run("en el documento compuesto", func(t *testing.T) {
+		t.Parallel()
 		f, target, _ := integratedFixture(t)
 		// El retoque rompe además la huella after (compose), y deja un provisional.
 		appendText(t, filepath.Join(f.specs, docRequisitos), "\nVéase RF-9001.\n")
@@ -1017,6 +1072,7 @@ func TestVerifyRejectsAProvisionalIDLeftInTheAddedText(t *testing.T) {
 }
 
 func TestVerifyCountsProvisionalIDsAgainstTheRecordedCommit(t *testing.T) {
+	t.Parallel()
 	// El texto preexistente puede mencionar el provisional: contar tokens, no líneas,
 	// tolera ese texto y el reajuste del texto preexistente.
 	setup := func(t *testing.T, after string) VerifyReport {
@@ -1037,13 +1093,16 @@ func TestVerifyCountsProvisionalIDsAgainstTheRecordedCommit(t *testing.T) {
 	}
 
 	t.Run("el texto previo no cuenta", func(t *testing.T) {
+		t.Parallel()
 		mustPass(t, setup(t, sectionModelo))
 	})
 	t.Run("una aparición más que en el commit registrado sí", func(t *testing.T) {
+		t.Parallel()
 		report := setup(t, strings.Replace(sectionModelo, "RF-008", "RF-9001", 1))
 		mustViolate(t, report, ViolationIDs, "RF-9001", "RF-008", docModelo)
 	})
 	t.Run("reajustar el texto previo sin añadir apariciones se tolera", func(t *testing.T) {
+		t.Parallel()
 		f := newIntegrationFixture(t, true)
 		writeRepoFile(t, f.specs, docModelo, fixtureModelo+"\nNota histórica: el borrador citaba RF-9001.\n")
 		commitAll(t, f.specs, "texto previo con el provisional")
@@ -1064,6 +1123,7 @@ func TestVerifyCountsProvisionalIDsAgainstTheRecordedCommit(t *testing.T) {
 
 // Un documento que no existía en el commit registrado se compara con el vacío.
 func TestVerifyComparesANewDocumentWithAnEmptyCommittedText(t *testing.T) {
+	t.Parallel()
 	f := newIntegrationFixture(t, true)
 	f.writeChange(t, ContextDeltaFileName, "## Entrada: context/PAGOS.md\n\n- Ancla: Reintentos\n- Acción: add\n- Motivo: documenta los pagos\n")
 	commitAll(t, f.specs, "contexto nuevo")
@@ -1081,6 +1141,7 @@ func TestVerifyComparesANewDocumentWithAnEmptyCommittedText(t *testing.T) {
 
 // El informe es JSON estable: las violaciones nunca son null.
 func TestVerifyReportJSONShape(t *testing.T) {
+	t.Parallel()
 	_, target, _ := integratedFixture(t)
 	report := verifyOf(t, target)
 	data, err := json.Marshal(report)
@@ -1099,6 +1160,7 @@ func TestVerifyReportJSONShape(t *testing.T) {
 // Verify solo lee: ningún documento ni el índice de git cambian, y el repositorio
 // elegido es el de la ruta, no el del proceso (design §8).
 func TestVerifyNeverChangesTheWorkingTreeAndIgnoresTheProcessDirectory(t *testing.T) {
+	// Sin t.Parallel: cambia el directorio del proceso (t.Chdir).
 	f, target, _ := integratedFixture(t)
 	other := t.TempDir()
 	t.Chdir(other)
@@ -1116,6 +1178,7 @@ func TestVerifyNeverChangesTheWorkingTreeAndIgnoresTheProcessDirectory(t *testin
 
 // El verificador ignora las variables de git que redirigen el repositorio.
 func TestVerifyIgnoresGitVariablesThatRedirectTheRepository(t *testing.T) {
+	// Sin t.Parallel: fija variables de entorno de git (t.Setenv).
 	f, target, _ := integratedFixture(t)
 	foreign := newRepo(t, filepath.Join(t.TempDir(), "ajeno"))
 	t.Setenv("GIT_DIR", filepath.Join(foreign, ".git"))

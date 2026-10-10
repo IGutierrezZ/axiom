@@ -355,6 +355,7 @@ func requirePrecondition(t *testing.T, err error, fragments ...string) {
 }
 
 func TestCaptureRepositoriesRecordsHeadAndAnEmptyPhotoOfACleanTree(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	master, specs, backend := siblings(t)
 	affected := []affectedPath{
@@ -378,6 +379,7 @@ func TestCaptureRepositoriesRecordsHeadAndAnEmptyPhotoOfACleanTree(t *testing.T)
 }
 
 func TestCaptureRepositoriesStopsOnAnyStateOfAnAffectedDocument(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	tests := []struct {
 		name  string
@@ -404,6 +406,7 @@ func TestCaptureRepositoriesStopsOnAnyStateOfAnAffectedDocument(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			master, specs, _ := siblings(t)
 			tt.setup(t, specs)
 			_, err := captureRepositories(ctx, master, []affectedPath{{Path: filepath.Join(specs, "01_Requisitos.md")}}, nil)
@@ -412,6 +415,7 @@ func TestCaptureRepositoriesStopsOnAnyStateOfAnAffectedDocument(t *testing.T) {
 	}
 
 	t.Run("documento afectado sin seguimiento", func(t *testing.T) {
+		t.Parallel()
 		master, _, backend := siblings(t)
 		writeRepoFile(t, backend, "docs/NUEVO.md", "# Nuevo\n")
 		_, err := captureRepositories(ctx, master, []affectedPath{{Path: filepath.Join(backend, "docs", "NUEVO.md")}}, nil)
@@ -420,6 +424,7 @@ func TestCaptureRepositoriesStopsOnAnyStateOfAnAffectedDocument(t *testing.T) {
 }
 
 func TestCaptureRepositoriesExemptsADocumentThatWillBeCreated(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	master, _, backend := siblings(t)
 	creates := filepath.Join(backend, "docs", "PAGOS.md")
@@ -446,6 +451,7 @@ func TestCaptureRepositoriesExemptsADocumentThatWillBeCreated(t *testing.T) {
 }
 
 func TestCaptureRepositoriesKeepsForeignChangesInThePhoto(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	master, specs, _ := siblings(t)
 	writeRepoFile(t, specs, "viejo.md", "viejo\n")
@@ -476,6 +482,7 @@ func TestCaptureRepositoriesKeepsForeignChangesInThePhoto(t *testing.T) {
 }
 
 func TestCaptureRepositoriesStopsAboveTheDirtyLimit(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	master, specs, _ := siblings(t)
 	for i := 0; i <= MaxDirtyEntries; i++ {
@@ -494,6 +501,7 @@ func TestCaptureRepositoriesStopsAboveTheDirtyLimit(t *testing.T) {
 }
 
 func TestCaptureRepositoriesOfARepositoryWithoutCommits(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	isolateGit(t)
 	master := t.TempDir()
@@ -508,6 +516,7 @@ func TestCaptureRepositoriesOfARepositoryWithoutCommits(t *testing.T) {
 }
 
 func TestCaptureRepositoriesStopsWhenAnAffectedDocumentIsNotInAGitRepository(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	master, specs, _ := siblings(t)
 	plain := plainRepo(t, master, "sin-git")
@@ -519,6 +528,7 @@ func TestCaptureRepositoriesStopsWhenAnAffectedDocumentIsNotInAGitRepository(t *
 }
 
 func TestCaptureRepositoriesWatchesTheOtherRepositoriesWithoutStoppingOnThem(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	master, specs, backend := siblings(t)
 	frontend := newRepo(t, filepath.Join(master, "repo-frontend"))
@@ -546,6 +556,7 @@ func TestCaptureRepositoriesWatchesTheOtherRepositoriesWithoutStoppingOnThem(t *
 }
 
 func TestCaptureRepositoriesNamesTheMasterRepositoryAsDot(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	isolateGit(t)
 	master := newRepo(t, t.TempDir())
@@ -558,6 +569,7 @@ func TestCaptureRepositoriesNamesTheMasterRepositoryAsDot(t *testing.T) {
 }
 
 func TestCaptureRepositoriesRejectsASymlinkThatLeavesTheMasterFolder(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	master, specs, _ := siblings(t)
 	outside := t.TempDir()
@@ -578,6 +590,7 @@ func TestCaptureRepositoriesRejectsASymlinkThatLeavesTheMasterFolder(t *testing.
 // Estado del push: aviso con el número y la procedencia del dato, nota sin
 // upstream o con HEAD desacoplado, y nunca la red.
 func TestCaptureRepositoriesWarnsOfABranchBehindItsUpstream(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	isolateGit(t)
 	master := t.TempDir()

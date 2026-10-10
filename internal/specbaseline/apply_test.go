@@ -119,6 +119,7 @@ func leftoverTemps(t *testing.T, dir string) []string {
 }
 
 func TestApplyComposeWritesTheCompositionAndMarksThePlan(t *testing.T) {
+	t.Parallel()
 	f, target, plan := preparedFixture(t)
 	before := snapshot(t, f.master)
 
@@ -177,6 +178,7 @@ func TestApplyComposeWritesTheCompositionAndMarksThePlan(t *testing.T) {
 }
 
 func TestApplyComposeWritesEveryDocumentOfSeveralDomains(t *testing.T) {
+	t.Parallel()
 	f, target, plan := preparedTwoCompose(t)
 	report, err := ApplyCompose(context.Background(), target, []string{"requisitos-funcionales", "reglas-de-negocio"})
 	if err != nil {
@@ -208,6 +210,7 @@ func TestApplyComposeWritesEveryDocumentOfSeveralDomains(t *testing.T) {
 }
 
 func TestApplyComposeTakesTheSupersedeOptionsFromThePlan(t *testing.T) {
+	t.Parallel()
 	f := newIntegrationFixture(t, true)
 	f.writeChange(t, "specs/requisitos-funcionales/spec.md", "## REMOVED Requirements\n\n### Requirement: RF-007: Consulta de producto\n\n(Reason: sustituido por la consulta unificada)\n")
 	commitAll(t, f.specs, "delta de eliminación")
@@ -229,6 +232,7 @@ func TestApplyComposeTakesTheSupersedeOptionsFromThePlan(t *testing.T) {
 }
 
 func TestApplyComposeRequiresThePlan(t *testing.T) {
+	t.Parallel()
 	f := newIntegrationFixture(t, true)
 	before := snapshot(t, f.master)
 	report, err := ApplyCompose(context.Background(), f.target(t), []string{"requisitos-funcionales"})
@@ -265,6 +269,7 @@ func TestApplyComposeReportsTheArtifactStoreCause(t *testing.T) {
 // D-13, paso 2: la lista de --document coincide exactamente con los dominios de
 // composición del plan.
 func TestApplyComposeDomainListMustMatchThePlanExactly(t *testing.T) {
+	t.Parallel()
 	f, target, plan := preparedTwoCompose(t)
 	command := composeCommand(target, plan.Documents)
 	before := snapshot(t, f.master)
@@ -296,6 +301,7 @@ func TestApplyComposeDomainListMustMatchThePlanExactly(t *testing.T) {
 }
 
 func TestApplyComposeRejectsAnExtraComposeDomainThatTheDeltaDoesNotHave(t *testing.T) {
+	t.Parallel()
 	f, _, _ := preparedTwoCompose(t)
 	// reglas-de-negocio está declarado con perfil, pero el plan no lo incluye si el
 	// cambio no tiene su delta.
@@ -320,6 +326,7 @@ func TestApplyComposeRejectsAnExtraComposeDomainThatTheDeltaDoesNotHave(t *testi
 // REQ-24.43: reaplicar un documento ya integrado se rechaza, nombra verify y no
 // modifica nada.
 func TestApplyComposeRefusesAnAlreadyIntegratedDocument(t *testing.T) {
+	t.Parallel()
 	f, target, _ := preparedFixture(t)
 	if report, err := ApplyCompose(context.Background(), target, []string{"requisitos-funcionales"}); err != nil {
 		t.Fatal(err)
@@ -341,6 +348,7 @@ func TestApplyComposeRefusesAnAlreadyIntegratedDocument(t *testing.T) {
 // Un documento que ya coincide con su huella after se reconoce como integrado
 // aunque el plan siga pendiente (por ejemplo, tras una interrupción).
 func TestApplyComposeRecognizesTheAfterFingerprintWhileThePlanIsPending(t *testing.T) {
+	t.Parallel()
 	f, target, plan := preparedFixture(t)
 	if report, err := ApplyCompose(context.Background(), target, []string{"requisitos-funcionales"}); err != nil {
 		t.Fatal(err)
@@ -411,7 +419,9 @@ func TestAlreadyIntegratedHelper(t *testing.T) {
 // R35: si los documentos o las entradas cambiaron desde prepare, se rechaza con la
 // continuación y no se escribe ninguno.
 func TestApplyComposeRefusesWhenTheDocumentsOrInputsChangedSincePrepare(t *testing.T) {
+	t.Parallel()
 	t.Run("un documento cambió", func(t *testing.T) {
+		t.Parallel()
 		f, target, _ := preparedTwoCompose(t)
 		writeRepoFile(t, f.specs, docReglas, applyReglas+"\nLínea añadida a mano.\n")
 		before := snapshot(t, f.master)
@@ -426,6 +436,7 @@ func TestApplyComposeRefusesWhenTheDocumentsOrInputsChangedSincePrepare(t *testi
 	})
 
 	t.Run("un delta cambió", func(t *testing.T) {
+		t.Parallel()
 		f, target, _ := preparedFixture(t)
 		f.writeChange(t, "specs/requisitos-funcionales/spec.md", strings.Replace(fixtureDeltaRequisitos, "tres veces", "cuatro veces", 1))
 		before := snapshot(t, f.master)
@@ -441,6 +452,7 @@ func TestApplyComposeRefusesWhenTheDocumentsOrInputsChangedSincePrepare(t *testi
 }
 
 func TestApplyComposeRefusesAnAfterFingerprintThatNoLongerMatches(t *testing.T) {
+	t.Parallel()
 	f, target, plan := preparedFixture(t)
 	plan.Documents[0].AfterSHA256 = sha256Hex([]byte("otro resultado"))
 	if err := WritePlan(filepath.Join(f.changeRoot, PlanFileName), plan); err != nil {
@@ -477,6 +489,7 @@ func failRenames(t *testing.T, fail func(n int) bool) *atomic.Int32 {
 // REQ-24.46: si un renombrado falla se restauran desde memoria los ya renombrados
 // y ningún documento queda modificado.
 func TestApplyComposeIsAllOrNothingWhenARenameFails(t *testing.T) {
+	// Sin t.Parallel: sustituye renameFile, una variable de paquete.
 	f, target, _ := preparedTwoCompose(t)
 	original := snapshot(t, f.master)
 	calls := failRenames(t, func(n int) bool { return n == 2 }) // el segundo documento
@@ -502,6 +515,7 @@ func TestApplyComposeIsAllOrNothingWhenARenameFails(t *testing.T) {
 }
 
 func TestApplyComposeReportsADocumentLeftModifiedWhenTheRestoreFails(t *testing.T) {
+	// Sin t.Parallel: sustituye renameFile, una variable de paquete.
 	f, target, _ := preparedTwoCompose(t)
 	failRenames(t, func(n int) bool { return n >= 2 }) // también la restauración
 
@@ -526,6 +540,7 @@ func TestApplyComposeReportsADocumentLeftModifiedWhenTheRestoreFails(t *testing.
 }
 
 func TestApplyComposeRestoresTheDocumentsWhenThePlanCannotBeMarked(t *testing.T) {
+	// Sin t.Parallel: sustituye renameFile, una variable de paquete.
 	f, target, _ := preparedTwoCompose(t)
 	original := snapshot(t, f.master)
 	failRenames(t, func(n int) bool { return n == 3 }) // el plan, tras los dos documentos
@@ -547,6 +562,7 @@ func TestApplyComposeRestoresTheDocumentsWhenThePlanCannotBeMarked(t *testing.T)
 // Todos los temporales se crean antes de renombrar el primero: un fallo al crear el
 // segundo no deja ningún documento modificado ni temporales.
 func TestApplyComposeStopsBeforeRenamingWhenATempCannotBeCreated(t *testing.T) {
+	// Sin t.Parallel: sustituye createTemp, una variable de paquete.
 	f, target, _ := preparedTwoCompose(t)
 	original := snapshot(t, f.master)
 	previous := createTemp
@@ -578,6 +594,7 @@ func TestApplyComposeStopsBeforeRenamingWhenATempCannotBeCreated(t *testing.T) {
 }
 
 func TestApplyComposeKeepsASymlinkedDocumentAndWritesItsTarget(t *testing.T) {
+	t.Parallel()
 	f := newIntegrationFixture(t, true)
 	real := filepath.Join(f.specs, "real", docRequisitos)
 	if err := os.MkdirAll(filepath.Dir(real), 0o755); err != nil {
@@ -611,6 +628,7 @@ func TestApplyComposeKeepsASymlinkedDocumentAndWritesItsTarget(t *testing.T) {
 }
 
 func TestApplyComposeRefusesASymlinkedDocumentOutsideTheMasterFolder(t *testing.T) {
+	t.Parallel()
 	f, target, _ := preparedFixture(t)
 	outside := t.TempDir()
 	outsideDoc := filepath.Join(outside, docRequisitos)

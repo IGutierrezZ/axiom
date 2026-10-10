@@ -110,6 +110,7 @@ Estas decisiones no están fijadas por la spec ni por el diseño; cada una indic
 | A1/B1 | En A1, `parseLayered` devuelve `(*WorkspaceConfig, error)` y `Location` no lleva `Declarations`; B1 amplía la firma a `(cfg, baseErr, decl)` y añade el campo (m4). Es coherente con D-03 y §5, que fijan «solo con la base en esta unidad» | Definir `Declarations` vacío en A1 |
 | Erratas | `design.md` está aprobado y no se reabre. Las correcciones de texto de m6 (§9), m7 (D-08 y §7.3) y m10 (D-04) viven aquí, en la tabla de menores, y en los comentarios y pruebas de las tareas indicadas | Editar `design.md` en `apply` |
 | D-12 separación (C1) | Un ADDED insertado tras una línea no en blanco recibe una línea en blanco delante; detrás hereda la serie del bloque de referencia con mínimo 1 salvo al final del fichero. Solo inserta bytes (REQ-24.45). Aclaración de D-12 decidida por el usuario el 2026-10-10 | Heredar 0 blancos delante (bloque pegado, asimétrico) o quitar el mínimo detrás (contradice D-12) |
+| Tiempo de pruebas de specbaseline (C2) | Repositorio plantilla copiado por prueba, entorno git fijado en TestMain y t.Parallel; de 496 s (1.270 s medidos antes por el usuario) a 109-189 s en Windows. Decidido por el usuario el 2026-10-10 | Shard propio en el CI de Windows (oculta el coste) |
 
 ## Fase 0: Preparación (sin commit de código)
 

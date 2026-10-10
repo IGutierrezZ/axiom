@@ -12,9 +12,9 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/pathidentity"
 )
 
-// isolateGit deja a los procesos git de la prueba sin acceso a la configuración
-// del usuario, con un autor fijo y sin red: ninguna prueba de este fichero la
-// necesita (D-15, design §8).
+// isolateGit omite la prueba cuando no puede ejecutar git. El aislamiento del
+// entorno de git (sin configuración del usuario, con un autor fijo y sin red) lo
+// fija TestMain una sola vez para todo el binario (D-15, design §8).
 func isolateGit(t *testing.T) {
 	t.Helper()
 	if testing.Short() {
@@ -23,20 +23,10 @@ func isolateGit(t *testing.T) {
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skipf("git no está disponible: %v", err)
 	}
-	home := t.TempDir()
-	t.Setenv("HOME", home)
-	t.Setenv("USERPROFILE", home)
-	t.Setenv("GIT_CONFIG_GLOBAL", filepath.Join(home, "gitconfig"))
-	t.Setenv("GIT_CONFIG_NOSYSTEM", "1")
-	t.Setenv("GIT_AUTHOR_NAME", "Autor de Prueba")
-	t.Setenv("GIT_AUTHOR_EMAIL", "autor@ejemplo.invalid")
-	t.Setenv("GIT_COMMITTER_NAME", "Autor de Prueba")
-	t.Setenv("GIT_COMMITTER_EMAIL", "autor@ejemplo.invalid")
-	t.Setenv("GIT_TERMINAL_PROMPT", "0")
 }
 
 // runGit ejecuta git en dir y falla la prueba si termina con error.
-func runGit(t *testing.T, dir string, args ...string) string {
+func runGit(t testing.TB, dir string, args ...string) string {
 	t.Helper()
 	command := exec.Command("git", args...)
 	command.Dir = dir
@@ -47,20 +37,27 @@ func runGit(t *testing.T, dir string, args ...string) string {
 	return strings.TrimRight(string(output), "\r\n")
 }
 
+// emptyRepoTemplate es el repositorio recién creado que newRepo copia en cada
+// prueba.
+var emptyRepoTemplate = &treeTemplate{name: "repositorio-vacio"}
+
 // newRepo crea un repositorio git en dir, con la rama main y sin conversión de
-// finales de línea.
-func newRepo(t *testing.T, dir string) string {
+// finales de línea. El repositorio es la copia de uno que se crea una sola vez con
+// `git init`: cada prueba recibe el suyo, independiente.
+func newRepo(t testing.TB, dir string) string {
 	t.Helper()
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	runGit(t, dir, "init", "-q")
-	runGit(t, dir, "symbolic-ref", "HEAD", "refs/heads/main")
-	runGit(t, dir, "config", "core.autocrlf", "false")
+	emptyRepoTemplate.materialize(t, dir, func(t testing.TB, fresh string) {
+		runGit(t, fresh, "init", "-q")
+		runGit(t, fresh, "symbolic-ref", "HEAD", "refs/heads/main")
+		runGit(t, fresh, "config", "core.autocrlf", "false")
+	})
 	return dir
 }
 
-func writeRepoFile(t *testing.T, dir, rel, content string) {
+func writeRepoFile(t testing.TB, dir, rel, content string) {
 	t.Helper()
 	path := filepath.Join(dir, filepath.FromSlash(rel))
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
@@ -71,7 +68,7 @@ func writeRepoFile(t *testing.T, dir, rel, content string) {
 	}
 }
 
-func commitAll(t *testing.T, dir, message string) string {
+func commitAll(t testing.TB, dir, message string) string {
 	t.Helper()
 	runGit(t, dir, "add", "-A")
 	runGit(t, dir, "commit", "-q", "-m", message)
@@ -85,24 +82,46 @@ func sameDir(t *testing.T, got, want string) {
 	}
 }
 
+// refreshIndexes deja el índice de cada repositorio copiado como el de uno recién
+// confirmado. Los ficheros copiados tienen otras marcas de tiempo que las que
+// guarda el índice de la plantilla y, con ellas desactualizadas, `git diff` (el que
+// usa el verificador) refresca y reescribe el índice aunque se invoque con
+// GIT_OPTIONAL_LOCKS=0: las pruebas que exigen que verify nunca lo escriba partirían
+// de un estado distinto del que tenían antes de usar plantillas.
+func refreshIndexes(t testing.TB, repos ...string) {
+	t.Helper()
+	for _, repo := range repos {
+		runGit(t, repo, "update-index", "-q", "--refresh")
+	}
+}
+
+var siblingsTemplate = &treeTemplate{name: "hermanos"}
+
 // siblings monta la carpeta maestra de la matriz de amenazas: <maestra>/specs y
-// <maestra>/repo-backend son repositorios hermanos.
+// <maestra>/repo-backend son repositorios hermanos. Se construye una sola vez y se
+// copia a la carpeta de cada prueba.
 func siblings(t *testing.T) (master, specs, backend string) {
 	t.Helper()
 	isolateGit(t)
 	master = t.TempDir()
-	specs = newRepo(t, filepath.Join(master, "specs"))
-	backend = newRepo(t, filepath.Join(master, "repo-backend"))
-	writeRepoFile(t, specs, "01_Requisitos.md", "# Requisitos\n")
-	writeRepoFile(t, backend, "docs/API.md", "# API\n")
-	commitAll(t, specs, "specs")
-	commitAll(t, backend, "backend")
+	specs = filepath.Join(master, "specs")
+	backend = filepath.Join(master, "repo-backend")
+	siblingsTemplate.materialize(t, master, func(t testing.TB, dir string) {
+		specs := newRepo(t, filepath.Join(dir, "specs"))
+		backend := newRepo(t, filepath.Join(dir, "repo-backend"))
+		writeRepoFile(t, specs, "01_Requisitos.md", "# Requisitos\n")
+		writeRepoFile(t, backend, "docs/API.md", "# API\n")
+		commitAll(t, specs, "specs")
+		commitAll(t, backend, "backend")
+	})
+	refreshIndexes(t, specs, backend)
 	return master, specs, backend
 }
 
 // Selección de repositorio (design §8): el repositorio es el de la ruta, nunca el
 // del proceso.
 func TestGitOpenRepositorySelectsTheRepositoryOfThePath(t *testing.T) {
+	// Sin t.Parallel: cambia el directorio del proceso y las variables de entorno de git (t.Chdir, t.Setenv).
 	ctx := context.Background()
 	master, specs, backend := siblings(t)
 	nested := newRepo(t, filepath.Join(specs, "vendor", "libreria"))
@@ -163,6 +182,7 @@ func TestGitOpenRepositorySelectsTheRepositoryOfThePath(t *testing.T) {
 }
 
 func TestGitOpenRepositoryRejectsWhatItCannotTrust(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	isolateGit(t)
 	base := t.TempDir()
@@ -186,6 +206,7 @@ func TestGitOpenRepositoryRejectsWhatItCannotTrust(t *testing.T) {
 }
 
 func TestGitStatusParsesPorcelainWithoutQuoting(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	_, specs, _ := siblings(t)
 	writeRepoFile(t, specs, "notas ñ.md", "uno\n")
@@ -227,6 +248,7 @@ func TestGitStatusParsesPorcelainWithoutQuoting(t *testing.T) {
 }
 
 func TestGitStatusOnAnEmptyRepositoryAndHead(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	isolateGit(t)
 	dir := newRepo(t, filepath.Join(t.TempDir(), "vacio"))
@@ -251,6 +273,7 @@ func TestGitStatusOnAnEmptyRepositoryAndHead(t *testing.T) {
 
 // Estado del push (design §8): solo referencias locales, nunca la red.
 func TestGitUpstreamReportsOnlyWhatLocalReferencesSay(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	isolateGit(t)
 	base := t.TempDir()

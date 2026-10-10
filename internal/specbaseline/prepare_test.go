@@ -100,6 +100,21 @@ type integrationFixture struct {
 	master, specs, backend, changeRoot string
 }
 
+// integrationTemplate es el espacio canónico con git y todo confirmado: se monta
+// una sola vez y se copia a la carpeta de cada prueba que lo necesita.
+var integrationTemplate = &treeTemplate{name: "espacio-integracion"}
+
+// newIntegrationFixtureAt describe el espacio canónico cuya carpeta maestra es
+// master, sin crear nada en disco.
+func newIntegrationFixtureAt(master string) *integrationFixture {
+	return &integrationFixture{
+		master:     master,
+		specs:      filepath.Join(master, "repo-specs"),
+		backend:    filepath.Join(master, "repo-backend"),
+		changeRoot: filepath.Join(master, "repo-specs", "openspec", "changes", "inc-99-ejemplo"),
+	}
+}
+
 func newIntegrationFixture(t *testing.T, withGit bool) *integrationFixture {
 	t.Helper()
 	if withGit {
@@ -109,12 +124,23 @@ func newIntegrationFixture(t *testing.T, withGit bool) *integrationFixture {
 	if err != nil {
 		t.Fatal(err)
 	}
-	f := &integrationFixture{
-		master:     master,
-		specs:      filepath.Join(master, "repo-specs"),
-		backend:    filepath.Join(master, "repo-backend"),
-		changeRoot: filepath.Join(master, "repo-specs", "openspec", "changes", "inc-99-ejemplo"),
+	f := newIntegrationFixtureAt(master)
+	if withGit {
+		integrationTemplate.materialize(t, master, func(t testing.TB, dir string) {
+			buildIntegrationFixture(t, newIntegrationFixtureAt(dir), true)
+		})
+		refreshIndexes(t, f.specs, f.backend)
+		return f
 	}
+	buildIntegrationFixture(t, f, false)
+	return f
+}
+
+// buildIntegrationFixture escribe el espacio canónico en f.master y, con git, lo
+// confirma en los dos repositorios.
+func buildIntegrationFixture(t testing.TB, f *integrationFixture, withGit bool) {
+	t.Helper()
+	master := f.master
 	if withGit {
 		newRepo(t, f.specs)
 		newRepo(t, f.backend)
@@ -135,10 +161,9 @@ func newIntegrationFixture(t *testing.T, withGit bool) *integrationFixture {
 		commitAll(t, f.specs, "baseline")
 		commitAll(t, f.backend, "backend")
 	}
-	return f
 }
 
-func (f *integrationFixture) writeChange(t *testing.T, rel, content string) {
+func (f *integrationFixture) writeChange(t testing.TB, rel, content string) {
 	t.Helper()
 	writeRepoFile(t, f.changeRoot, rel, content)
 }
@@ -471,6 +496,7 @@ func TestCheckFamilySuggestionOfTheProvisionalStart(t *testing.T) {
 }
 
 func TestCheckWithoutContextDeltaWarnsWhilePrepareFails(t *testing.T) {
+	t.Parallel()
 	f := newIntegrationFixture(t, true)
 	f.removeChange(t, ContextDeltaFileName)
 	commitAll(t, f.specs, "sin delta de contexto")
@@ -541,6 +567,7 @@ func TestCheckValidatesTheContextDelta(t *testing.T) {
 }
 
 func TestCheckAndPrepareReportTheArtifactStoreCause(t *testing.T) {
+	t.Parallel()
 	for _, store := range []string{"engram", "none"} {
 		t.Run("baseline y contexto con "+store, func(t *testing.T) {
 			f := newIntegrationFixture(t, true)
@@ -636,6 +663,7 @@ func TestCheckRejectsAnInvalidOrUnreadableDeclaration(t *testing.T) {
 }
 
 func TestPrepareWritesOnlyTheIntegrationPlan(t *testing.T) {
+	// Sin t.Parallel: sustituye now, una variable de paquete.
 	fixed := time.Date(2026, 10, 10, 9, 30, 15, 987, time.UTC)
 	previous := now
 	now = func() time.Time { return fixed }
@@ -743,6 +771,7 @@ func TestPrepareWritesOnlyTheIntegrationPlan(t *testing.T) {
 }
 
 func TestPrepareReportCarriesTheComposeCommandAndTheSubstitutedText(t *testing.T) {
+	t.Parallel()
 	f := newIntegrationFixture(t, true)
 	target := f.target(t)
 	_, report, err := Prepare(context.Background(), target, PlanOptions{})
@@ -795,6 +824,7 @@ func TestPrepareReportCarriesTheComposeCommandAndTheSubstitutedText(t *testing.T
 }
 
 func TestPrepareReemitsTheSamePlanAndRejectsChangedInputs(t *testing.T) {
+	// Sin t.Parallel: sustituye now, una variable de paquete.
 	first := time.Date(2026, 10, 10, 9, 0, 0, 0, time.UTC)
 	previous := now
 	t.Cleanup(func() { now = previous })
@@ -848,6 +878,7 @@ func TestPrepareReemitsTheSamePlanAndRejectsChangedInputs(t *testing.T) {
 }
 
 func TestPrepareRejectsAChangeWhoseCompositionsAreAlreadyIntegrated(t *testing.T) {
+	t.Parallel()
 	f := newIntegrationFixture(t, true)
 	plan, report, err := Prepare(context.Background(), f.target(t), PlanOptions{})
 	if err != nil {
@@ -874,6 +905,7 @@ func TestPrepareRejectsAChangeWhoseCompositionsAreAlreadyIntegrated(t *testing.T
 }
 
 func TestPrepareStopsOnGitPreconditionsWithoutWritingAnything(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name  string
 		setup func(t *testing.T, f *integrationFixture)
@@ -896,6 +928,7 @@ func TestPrepareStopsOnGitPreconditionsWithoutWritingAnything(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			f := newIntegrationFixture(t, true)
 			tt.setup(t, f)
 			before := snapshot(t, f.master)
@@ -914,6 +947,7 @@ func TestPrepareStopsOnGitPreconditionsWithoutWritingAnything(t *testing.T) {
 	}
 
 	t.Run("un documento afectado en un directorio que no es git", func(t *testing.T) {
+		t.Parallel()
 		f := newIntegrationFixture(t, true)
 		if err := os.RemoveAll(filepath.Join(f.backend, ".git")); err != nil {
 			t.Fatal(err)
@@ -926,6 +960,7 @@ func TestPrepareStopsOnGitPreconditionsWithoutWritingAnything(t *testing.T) {
 	})
 
 	t.Run("un documento por crear y la suciedad ajena no detienen", func(t *testing.T) {
+		t.Parallel()
 		f := newIntegrationFixture(t, true)
 		f.writeChange(t, ContextDeltaFileName, "## Entrada: context/PAGOS.md\n\n- Ancla: Pagos\n- Acción: add\n- Motivo: documenta los pagos\n")
 		writeRepoFile(t, f.specs, "04_Flujos_Negocio.md", fixtureFlujos+"\nsucio de solo registro\n") // un documento de solo registro no se edita
@@ -942,6 +977,7 @@ func TestPrepareStopsOnGitPreconditionsWithoutWritingAnything(t *testing.T) {
 }
 
 func TestPrepareRequiresEditAuthorizationOutsideTheSpecsRepository(t *testing.T) {
+	t.Parallel()
 	f := newIntegrationFixture(t, true)
 	target := f.target(t)
 	target.AllowedRoots = []string{target.Location.WorkspaceRoot} // sin repo-backend
@@ -972,6 +1008,7 @@ func TestPrepareRequiresEditAuthorizationOutsideTheSpecsRepository(t *testing.T)
 }
 
 func TestPrepareRecordsTheNoImpactDecisionWithoutNeedingAuthorization(t *testing.T) {
+	t.Parallel()
 	f := newIntegrationFixture(t, true)
 	f.writeChange(t, ContextDeltaFileName, "Sin impacto: el cambio solo corrige una errata en un mensaje de error\n")
 	commitAll(t, f.specs, "sin impacto")
@@ -994,6 +1031,7 @@ func TestPrepareRecordsTheNoImpactDecisionWithoutNeedingAuthorization(t *testing
 }
 
 func TestPrepareIsAllOrNothingWhenOneCompositionFails(t *testing.T) {
+	t.Parallel()
 	f := newIntegrationFixture(t, true)
 	f.writeChange(t, "specs/requisitos-funcionales/spec.md", fixtureDeltaRequisitos+"\n### Requirement: RF-777: Inexistente\n\nTexto.\n")
 	commitAll(t, f.specs, "delta con un MODIFIED sobre un ID inexistente")
@@ -1013,6 +1051,7 @@ func TestPrepareIsAllOrNothingWhenOneCompositionFails(t *testing.T) {
 }
 
 func TestPrepareAddsContextEntriesForANewMaintainedDocumentAndRecordsTheOptions(t *testing.T) {
+	t.Parallel()
 	f := newIntegrationFixture(t, true)
 	f.writeChange(t, ContextDeltaFileName, "## Entrada: context/PAGOS.md\n\n- Ancla: Reintentos\n- Acción: add\n- Motivo: documenta los pagos (RF-9001)\n\nTexto (RF-9001).\n")
 	f.writeChange(t, "specs/requisitos-funcionales/spec.md", "## REMOVED Requirements\n\n### Requirement: RF-007: Consulta de producto\n(Reason: sustituido por RF-9001)\n")
