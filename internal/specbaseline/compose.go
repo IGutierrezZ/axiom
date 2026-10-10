@@ -16,57 +16,6 @@ const supersededMarker = " [SUPERSEDED / DEPRECADO]"
 // requisitos indicados con --superseded-requirements.
 const explicitSupersededReason = "Superado por consolidación de arquitectura"
 
-type (
-	// EntryKind es el tipo de una entrada de la traza.
-	EntryKind string
-	// TraceAction es la acción que registra una entrada de la traza.
-	TraceAction string
-	// TraceState es el estado de una entrada de la traza.
-	TraceState string
-)
-
-const (
-	// EntryCompose es una entrada de composición con perfil.
-	EntryCompose EntryKind = "compose"
-	// EntryDirected es una entrada de edición dirigida de un documento de prosa.
-	EntryDirected EntryKind = "directed"
-	// EntryRegister es una entrada de solo registro.
-	EntryRegister EntryKind = "register"
-	// EntryContext es una entrada del contexto técnico mantenido.
-	EntryContext EntryKind = "context"
-
-	// ActionAdded registra un requisito añadido.
-	ActionAdded TraceAction = "added"
-	// ActionModified registra un requisito modificado (o renombrado).
-	ActionModified TraceAction = "modified"
-	// ActionRemoved registra un requisito eliminado o superado.
-	ActionRemoved TraceAction = "removed"
-	// ActionCreated registra un documento creado.
-	ActionCreated TraceAction = "created"
-
-	// StatePending marca una entrada aún no integrada.
-	StatePending TraceState = "pending"
-	// StateIntegrated marca una entrada ya integrada.
-	StateIntegrated TraceState = "integrated"
-)
-
-// TraceEntry es una entrada de la traza de integración (REQ-24.52). La
-// composición produce las de tipo `compose`, en estado `pending`: pasarlas a
-// `integrated` corresponde a quien escribe el documento.
-type TraceEntry struct {
-	ID               string      `yaml:"id" json:"id"`
-	Provisional      string      `yaml:"provisional,omitempty" json:"provisional,omitempty"`
-	Kind             EntryKind   `yaml:"kind" json:"kind"`
-	Domain           string      `yaml:"domain,omitempty" json:"domain,omitempty"`
-	Document         string      `yaml:"document" json:"document"` // relativo a workspaceRoot, con '/'
-	Anchor           string      `yaml:"anchor" json:"anchor"`
-	Action           TraceAction `yaml:"action" json:"action"`
-	State            TraceState  `yaml:"state" json:"state"`
-	Reason           string      `yaml:"reason,omitempty" json:"reason,omitempty"`
-	ScenariosOmitted bool        `yaml:"scenarios_omitted,omitempty" json:"scenariosOmitted,omitempty"`
-	Warnings         []string    `yaml:"warnings,omitempty" json:"warnings,omitempty"`
-}
-
 // PlannedDocument es un documento con perfil que participa en la composición
 // del cambio.
 type PlannedDocument struct {
