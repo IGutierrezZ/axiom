@@ -495,7 +495,7 @@ func emitReviewMode(stdout io.Writer, result ReviewModeResult, emitJSON bool) er
 	// still enforcing review.
 	_, err = fmt.Fprint(
 		stdout,
-		"  note:        applied for this gentle-ai only; a gentle-ai installed before the switch moved reads a location this command could not open, and keeps enforcing the value it holds there\n",
+		"  note:        applied for this axiom only; a gentle-ai installed before the switch moved reads a location this command could not open, and keeps enforcing the value it holds there\n",
 	)
 	return err
 }
@@ -570,7 +570,7 @@ func normalizeReviewConsentLocale(value string) (reviewConsentLocale, error) {
 }
 
 const (
-	reviewConsentHeadline = "Gentle AI can review this change before you call it done."
+	reviewConsentHeadline = "Axiom can review this change before you call it done."
 	reviewConsentValue    = "Reviewing takes a little longer and makes the result safer."
 
 	// reviewConsentAnswerRunLabel and reviewConsentAnswerNotNowLabel are the
@@ -586,7 +586,7 @@ const (
 	// safety net off for good must cost more than pressing a number in a hurry.
 	// The relayed consent envelope carries the same note as a documented off
 	// path outside the choice set, for exactly the same reason.
-	reviewConsentOffPathCommand = "gentle-ai review mode disable"
+	reviewConsentOffPathCommand = "axiom review mode disable"
 	reviewConsentOffPathNote    = "To turn reviews off for good, run '" + reviewConsentOffPathCommand + "'."
 	reviewConsentOffPath        = reviewConsentOffPathNote + "\n"
 	reviewConsentQuestion       = "Choose 1 or 2 [1]: "
@@ -596,11 +596,11 @@ const (
 	// provenance sentence about how reviews got switched on, because with
 	// receipt-driven development opt-in there is only one way: an explicit
 	// enable. A clone that never opted in is refused long before this point.
-	reviewConsentSkippedNotice = "Gentle AI reviewed this change without asking, because this session has no terminal to answer on. " +
+	reviewConsentSkippedNotice = "Axiom reviewed this change without asking, because this session has no terminal to answer on. " +
 		"Run 'axiom review mode disable' to turn reviews off, or 'axiom review mode status' to see the current setting."
 
-	reviewConsentUnreadableNotice = "Gentle AI could not read an answer, so it reviewed this change and will ask again next time."
-	reviewConsentUnknownNotice    = "Gentle AI did not recognize that answer, so it reviewed this change and will ask again next time."
+	reviewConsentUnreadableNotice = "Axiom could not read an answer, so it reviewed this change and will ask again next time."
+	reviewConsentUnknownNotice    = "Axiom did not recognize that answer, so it reviewed this change and will ask again next time."
 
 	// reviewConsentDeclinedNotice confirms a decline in the user's own terms.
 	// It goes to the console stream, never stdout: stdout stays pure JSON.
@@ -757,7 +757,7 @@ func authorizeReviewStart(ctx context.Context, repo string, assessment reviewtra
 	if err != nil {
 		// A damaged latch must neither block the review nor silently disable it:
 		// review the candidate, and say why the question was skipped.
-		_, _ = fmt.Fprintf(console.Output, "Gentle AI reviewed this change without asking: %v.\n", err)
+		_, _ = fmt.Fprintf(console.Output, "Axiom reviewed this change without asking: %v.\n", err)
 		return nil
 	}
 	if asked {

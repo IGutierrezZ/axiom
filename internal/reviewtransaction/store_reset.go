@@ -185,7 +185,7 @@ var storeResetPreservedTargets = []storeResetTarget{
 	},
 	{
 		name: "review-artifacts", parts: []string{"review-artifacts"},
-		reason: "no gentle-ai code writes or reads this path, so its contents were placed by hand; a reset never removes what the product did not create",
+		reason: "no axiom code writes or reads this path, so its contents were placed by hand; a reset never removes what the product did not create",
 	},
 	{
 		name: "REVIEW-MAINTENANCE.lock", parts: []string{"REVIEW-MAINTENANCE.lock"},

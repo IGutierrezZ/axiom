@@ -124,7 +124,7 @@ const (
 	// or KEY=VALUE token, so reviewScrubDefectReportField leaves it byte
 	// identical: this string can never become a path leak.
 	reviewGitTrustRefusalAction = "Git declined to open the bound repository in this process because it is owned by a different account; " +
-		"gentle-ai never provisions a safe.directory exception and never bypasses that protection. " +
+		"axiom never provisions a safe.directory exception and never bypasses that protection. " +
 		"Restart the host process under a Git context that already trusts that repository, then retry the same exact binding"
 	// gitSafeDirectoryHint is the second half of Git's ownership refusal:
 	// every version that emits the refusal also emits this remediation hint

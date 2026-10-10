@@ -63,7 +63,7 @@ func TestCloneScopeDisableSaysWhenItReachedOnlyThisBuild(t *testing.T) {
 		t.Fatalf("repeated clone-scoped disable failed: %v", err)
 	}
 	if !strings.Contains(output.String(), "note:") ||
-		!strings.Contains(output.String(), "applied for this gentle-ai only") {
+		!strings.Contains(output.String(), "applied for this axiom only") {
 		t.Fatalf("the human-readable disable claimed a machine-wide switch it did not publish:\n%s", output.String())
 	}
 }

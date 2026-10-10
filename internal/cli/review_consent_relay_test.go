@@ -56,6 +56,10 @@ func invocationArgs(t *testing.T, invocation string) []string {
 	return words[2:]
 }
 
+// frozenConsentFixtureHeadline is the headline recorded in the versioned
+// consent fixtures, which must stay byte-unchanged.
+const frozenConsentFixtureHeadline = "Gentle AI can review this change before you call it done."
+
 func normalizeConsentFixtureCWD(t *testing.T, payload []byte, root string) []byte {
 	t.Helper()
 	var envelope struct {
@@ -158,7 +162,7 @@ func TestNegotiatedHighRiskStartWithRelayDeclarationEmitsBlockingConsentQuestion
 	}
 	// The envelope must carry the same semantic phrases the interactive question
 	// uses, so the orchestrator can localize the complete decision faithfully.
-	if question.Headline != "Gentle AI can review this change before you call it done." {
+	if question.Headline != "Axiom can review this change before you call it done." {
 		t.Fatalf("consent headline = %q, want the established offer", question.Headline)
 	}
 	if question.Value != "Reviewing takes a little longer and makes the result safer." {
@@ -205,7 +209,7 @@ func TestNegotiatedHighRiskStartWithRelayDeclarationEmitsBlockingConsentQuestion
 			}
 		}
 	}
-	if question.OffPath.Command != reviewConsentOffPathCommand || !strings.Contains(question.OffPath.Note, "for good") {
+	if question.OffPath.Command != reviewConsentOffPathCommandFor(reviewDialectForContract(ReviewIntegrationContractV1)) || !strings.Contains(question.OffPath.Note, "for good") {
 		t.Fatalf("consent off path = %#v", question.OffPath)
 	}
 
@@ -233,7 +237,7 @@ func TestRelayedConsentMediumRiskKeepsBriefDecisionAndRiskContext(t *testing.T) 
 		"start", "--contract", ReviewIntegrationContractV2, "--cwd", repo,
 		"--lineage", "review-consent-medium-copy", "--consent", "relay",
 	})).Bytes())
-	if question.RiskLevel != reviewtransaction.RiskMedium || question.Headline != "Gentle AI can review this change before you call it done." {
+	if question.RiskLevel != reviewtransaction.RiskMedium || question.Headline != "Axiom can review this change before you call it done." {
 		t.Fatalf("medium consent identity/copy = %#v", question)
 	}
 	if question.Value != "Reviewing takes a little longer and makes the result safer." ||
@@ -564,6 +568,10 @@ func TestConsentQuestionMatchesVersionedFixture(t *testing.T) {
 				t.Fatal(err)
 			}
 			normalized := normalizeConsentFixtureCWD(t, output.Bytes(), root)
+			// The fixtures are frozen contract artifacts (v1 FREEZE.md) and still
+			// carry the upstream headline. The schema treats headline as free
+			// text, so the current wording is normalized to the frozen one.
+			normalized = bytes.Replace(normalized, []byte(reviewConsentHeadline), []byte(frozenConsentFixtureHeadline), 1)
 			fixturePath := filepath.Join("..", "..", "contracts", "review-integration", tt.fixture)
 			if os.Getenv("GENTLE_AI_CONSENT_FIXTURE_UPDATE") == "1" {
 				if err := os.WriteFile(fixturePath, normalized, 0o644); err != nil {

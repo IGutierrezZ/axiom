@@ -67,7 +67,7 @@ func reviewAssessPublicRisk(level reviewtransaction.RiskLevel) (string, error) {
 	case reviewtransaction.RiskHigh:
 		return "high", nil
 	default:
-		return "", fmt.Errorf("review assess computed an unsupported risk level %q; this is a defect in gentle-ai itself, not a request error -- file it and retry with axiom review assess --help", level)
+		return "", fmt.Errorf("review assess computed an unsupported risk level %q; this is a defect in axiom itself, not a request error -- file it and retry with axiom review assess --help", level)
 	}
 }
 

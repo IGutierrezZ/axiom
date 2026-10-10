@@ -192,7 +192,7 @@ func buildReviewCapabilities(contracts ...string) (ReviewCapabilitiesResult, err
 	}
 	version := strings.TrimSpace(AppVersion)
 	if version == "" {
-		return ReviewCapabilitiesResult{}, errors.New("gentle-ai package version is unavailable")
+		return ReviewCapabilitiesResult{}, errors.New("axiom package version is unavailable")
 	}
 	build, err := reviewCapabilitiesBuildIdentity(version)
 	if err != nil {
@@ -395,16 +395,16 @@ func reviewCapabilitiesBuildDigest(packageVersion string, build ReviewCapabiliti
 func reviewCapabilitiesExecutableDigest() (string, error) {
 	path, err := reviewCapabilitiesExecutablePath()
 	if err != nil {
-		return "", fmt.Errorf("resolve gentle-ai executable: %w", err)
+		return "", fmt.Errorf("resolve axiom executable: %w", err)
 	}
 	file, err := os.Open(path)
 	if err != nil {
-		return "", fmt.Errorf("open gentle-ai executable: %w", err)
+		return "", fmt.Errorf("open axiom executable: %w", err)
 	}
 	defer file.Close()
 	hash := sha256.New()
 	if _, err := io.Copy(hash, file); err != nil {
-		return "", fmt.Errorf("hash gentle-ai executable: %w", err)
+		return "", fmt.Errorf("hash axiom executable: %w", err)
 	}
 	return "sha256:" + hex.EncodeToString(hash.Sum(nil)), nil
 }

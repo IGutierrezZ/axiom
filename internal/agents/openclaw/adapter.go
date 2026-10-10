@@ -168,5 +168,5 @@ type AgentNotInstallableError struct {
 }
 
 func (e AgentNotInstallableError) Error() string {
-	return fmt.Sprintf("agent %q must be installed manually before Gentle AI can configure it", e.Agent)
+	return fmt.Sprintf("agent %q must be installed manually before Axiom can configure it", e.Agent)
 }

@@ -20,7 +20,7 @@ import (
 
 // reviewDefectReportIssuesURL is the single destination every tool-fault
 // Tier C statement points at, per organic-dx tasks.md 5.6.
-const reviewDefectReportIssuesURL = "https://github.com/Gentleman-Programming/gentle-ai/issues/new/choose"
+const reviewDefectReportIssuesURL = "https://github.com/IGutierrezZ/axiom/issues/new/choose"
 
 // reviewDefectReportDirName is the subdirectory under the repository's
 // Git-common-dir "gentle-ai" root (the same convention repository_locator.go
@@ -202,13 +202,13 @@ func reviewScrubDefectReportIdentifierValue(value string) string {
 func (report reviewDefectReport) render() string {
 	var body strings.Builder
 	fmt.Fprintf(&body, "# Bug Description\n\n")
-	fmt.Fprintf(&body, "Gentle AI reached a tool-internal fault state (`%s`) that should never happen. %s\n\n",
+	fmt.Fprintf(&body, "Axiom reached a tool-internal fault state (`%s`) that should never happen. %s\n\n",
 		report.Input.ReasonCode, report.Input.TerminalPrecondition)
 	fmt.Fprintf(&body, "## Steps to Reproduce\n\n")
 	fmt.Fprintf(&body, "Not automatically captured. Re-run the operation that surfaced this:\n\n```\n%s\n```\n\n", report.Input.Operation)
 	fmt.Fprintf(&body, "## Expected Behavior\n\nThe operation completes, or reports a caller-actionable stop.\n\n")
 	fmt.Fprintf(&body, "## Actual Behavior\n\n%s\n\n", report.Input.ErrorMessage)
-	fmt.Fprintf(&body, "## Gentle AI Version\n\n%s (%s)\n\n", report.Version, report.Commit)
+	fmt.Fprintf(&body, "## Axiom Version\n\n%s (%s)\n\n", report.Version, report.Commit)
 	fmt.Fprintf(&body, "## Operating System\n\n%s/%s\n\n", report.OS, report.Arch)
 	fmt.Fprintf(&body, "## AI Agent / Client\n\nUnspecified (filled automatically; edit if known)\n\n")
 	fmt.Fprintf(&body, "## Affected Area\n\nCLI (commands, flags)\n\n")
