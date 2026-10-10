@@ -8,7 +8,9 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"math/big"
 	"os"
+	"path"
 	"path/filepath"
 	"runtime"
 	"sort"
@@ -18,6 +20,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/pathidentity"
+	"github.com/IGutierrezZ/axiom/v3/internal/pathquote"
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
@@ -374,12 +377,12 @@ func captureRepositories(ctx context.Context, master string, affected []affected
 
 		photo := make([]DirtyEntry, 0, len(entries))
 		for _, entry := range entries {
-			path := strings.TrimSuffix(entry.Path, "/")
-			fingerprint, err := workingTreeFingerprint(filepath.Join(work.repo.root, filepath.FromSlash(path)))
+			entryPath := strings.TrimSuffix(entry.Path, "/")
+			fingerprint, err := workingTreeFingerprint(filepath.Join(work.repo.root, filepath.FromSlash(entryPath)))
 			if err != nil {
-				return repositoryCapture{}, fmt.Errorf("calcular la huella de %s en el repositorio %s: %w", path, name, err)
+				return repositoryCapture{}, fmt.Errorf("calcular la huella de %s en el repositorio %s: %w", entryPath, name, err)
 			}
-			photo = append(photo, DirtyEntry{Path: path, SHA256: fingerprint})
+			photo = append(photo, DirtyEntry{Path: entryPath, SHA256: fingerprint})
 		}
 		state := work.repo.upstream(ctx)
 		var notes []string
@@ -480,4 +483,969 @@ func displayPath(master, p string) string {
 		return filepath.ToSlash(relative)
 	}
 	return p
+}
+
+// Esquemas de los informes de `check` y de `prepare` (§4.4).
+const (
+	// CheckSchema es el esquema del informe de `integrate check`.
+	CheckSchema = "axiom.sdd-integration-check/v1"
+	// PrepareSchema es el esquema del informe de `integrate prepare`.
+	PrepareSchema = "axiom.sdd-integration-plan/v1"
+	// ContextDeltaFileName es el nombre de trabajo del delta de contexto (D-16).
+	ContextDeltaFileName = "context-impact.md"
+
+	// BaselineKindProject y BaselineKindDefault son los valores de Report.Baseline.
+	BaselineKindProject = "project"
+	BaselineKindDefault = "default"
+)
+
+// now es el reloj de `prepare`; las pruebas lo fijan.
+var now = time.Now
+
+// ChangeTarget es el cambio sobre el que actúan `check` y `prepare`: lo resuelve
+// el adaptador de la CLI a partir de la ubicación del workspace y del status.
+type ChangeTarget struct {
+	Location      workspace.Location
+	Change        string
+	ChangeRoot    string   // carpeta del cambio, absoluta
+	AllowedRoots  []string // actionContext.allowedEditRoots del status
+	ArtifactStore string   // almacén efectivo que el adaptador toma del status (m8)
+}
+
+// OperationReport son las operaciones de un tipo (ADDED, MODIFIED, REMOVED o
+// RENAMED) de la delta de un dominio, con los identificadores de sus requisitos.
+type OperationReport struct {
+	Section string   `json:"section"`
+	IDs     []string `json:"ids"`
+}
+
+// BodyConflict es un cuerpo de delta con un encabezado que cerraría el bloque del
+// requisito (REQ-24.42): el requisito, el encabezado y su línea en el delta.
+type BodyConflict struct {
+	Section     string `json:"section"`
+	Requirement string `json:"requirement"`
+	Heading     string `json:"heading"`
+	Line        int    `json:"line"`
+	Level       int    `json:"level"`
+}
+
+// FamilyReport describe una familia de IDs con requisitos ADDED en un documento:
+// su máximo, el rango definitivo que recibirán y el inicio provisional sugerido
+// para los IDs provisionales, que han de quedar fuera de ese rango (D-11).
+type FamilyReport struct {
+	Family          string `json:"family"`
+	Max             string `json:"max"`
+	FirstDefinitive string `json:"firstDefinitive"`
+	LastDefinitive  string `json:"lastDefinitive"`
+	SuggestedStart  string `json:"suggestedStart,omitempty"`
+	Note            string `json:"note,omitempty"`
+}
+
+// DocumentReport es lo que `check` y `prepare` dicen de un documento de la baseline
+// con delta en el cambio.
+type DocumentReport struct {
+	Domain      string                    `json:"domain"`
+	Path        string                    `json:"path"` // relativa a workspaceRoot, con '/'
+	Integration workspace.IntegrationMode `json:"integration"`
+	Operations  []OperationReport         `json:"operations"`
+	Conflicts   []BodyConflict            `json:"conflicts,omitempty"`
+	Families    []FamilyReport            `json:"families,omitempty"`
+	Warnings    []string                  `json:"warnings,omitempty"` // colas de secciones contiguas (REQ-24.41)
+}
+
+// ContextEntryReport es una entrada del delta de contexto tal como la ve `check`.
+type ContextEntryReport struct {
+	ID       string `json:"id"` // C1..Cn
+	Document string `json:"document"`
+	Anchor   string `json:"anchor"`
+	Action   string `json:"action"`
+	Reason   string `json:"reason"`
+	Create   bool   `json:"create,omitempty"` // la entrada `add` crea el documento
+}
+
+// ContextReport es el estado del delta de contexto: si el contexto mantenido está
+// declarado, si el fichero existe, la decisión y sus entradas.
+type ContextReport struct {
+	Declared bool                 `json:"declared"`
+	Present  bool                 `json:"present"`
+	Decision string               `json:"decision"` // entries | no_impact | none
+	Reason   string               `json:"reason,omitempty"`
+	Entries  []ContextEntryReport `json:"entries,omitempty"`
+}
+
+// DirectedEntry es lo que hay que integrar de un requisito de la delta de un
+// dominio de prosa, con los IDs provisionales ya sustituidos.
+type DirectedEntry struct {
+	Section string `json:"section"` // ADDED, MODIFIED, REMOVED o RENAMED
+	Name    string `json:"name"`
+	Text    string `json:"text"`
+}
+
+// DirectedItem es el trabajo de edición dirigida de un documento de prosa: la
+// sección titulada con el identificador del cambio y sus entradas (REQ-24.50).
+type DirectedItem struct {
+	Domain   string          `json:"domain"`
+	Document string          `json:"document"`
+	Section  string          `json:"section"` // título esperado de la sección: el identificador del cambio
+	Entries  []DirectedEntry `json:"entries"`
+}
+
+// ContextItem es el trabajo de edición de una entrada del delta de contexto, con
+// los IDs provisionales ya sustituidos en el motivo y el texto (REQ-24.59).
+type ContextItem struct {
+	ID       string `json:"id"`
+	Document string `json:"document"`
+	Anchor   string `json:"anchor"`
+	Action   string `json:"action"`
+	Reason   string `json:"reason"`
+	Text     string `json:"text,omitempty"`
+	Create   bool   `json:"create,omitempty"`
+}
+
+// Report es la salida de `check` (axiom.sdd-integration-check/v1) y de `prepare`
+// (axiom.sdd-integration-plan/v1). Los errores impiden integrar; con errores quien
+// llama sale con un código distinto de cero.
+type Report struct {
+	Schema         string           `json:"schema"`
+	Change         string           `json:"change"`
+	Baseline       string           `json:"baseline"` // project | default
+	Documents      []DocumentReport `json:"documents"`
+	IDMap          []IDAssignment   `json:"idMap"`
+	Context        ContextReport    `json:"context"`
+	ComposeCommand string           `json:"composeCommand,omitempty"`
+	Directed       []DirectedItem   `json:"directed,omitempty"`
+	ContextItems   []ContextItem    `json:"contextItems,omitempty"`
+	Register       []TraceEntry     `json:"register,omitempty"`
+	Warnings       []string         `json:"warnings"`
+	Errors         []string         `json:"errors"`
+}
+
+func newReport(schema, change string) Report {
+	return Report{
+		Schema:    schema,
+		Change:    change,
+		Baseline:  BaselineKindDefault,
+		Documents: []DocumentReport{},
+		IDMap:     []IDAssignment{},
+		Context:   ContextReport{Decision: ContextNone},
+		Warnings:  []string{},
+		Errors:    []string{},
+	}
+}
+
+func (r *Report) fail(format string, args ...any) {
+	r.Errors = append(r.Errors, fmt.Sprintf(format, args...))
+}
+
+func (r *Report) warn(format string, args ...any) {
+	r.Warnings = append(r.Warnings, fmt.Sprintf(format, args...))
+}
+
+// gatheredDocument es un documento de la baseline con delta en el cambio.
+type gatheredDocument struct {
+	declared workspace.BaselineDocument
+	mode     workspace.IntegrationMode
+	relPath  string
+	abs      string
+	original []byte
+	delta    []byte
+	profile  Profile // solo con integración compose
+}
+
+// gathered es lo que `check` y `prepare` leen del disco antes de evaluar nada.
+type gathered struct {
+	project        bool
+	maintained     bool
+	documents      []gatheredDocument // dominios con delta, en el orden de baseline.documents
+	contextData    []byte             // nil si no hay delta de contexto
+	contextPresent bool
+}
+
+// gather lee la declaración, los deltas, los documentos de los dominios con delta y
+// el delta de contexto (REQ-24.18, REQ-24.62, REQ-24.48). Devuelve false si el
+// resto de comprobaciones no tiene sentido: declaración ilegible o inválida, o un
+// almacén sin ficheros.
+func gather(t ChangeTarget, report *Report) (*gathered, bool) {
+	loc := t.Location
+	declarations := loc.Declarations
+	g := &gathered{}
+	switch {
+	case declarations.ParseErr != nil:
+		report.fail("%s no se puede leer como YAML: %v. Continuación: corrige el YAML y vuelve a ejecutar el comando (`axiom workspace validate --path %s` comprueba la declaración)", pathquote.Quote(loc.ConfigPath), declarations.ParseErr, pathquote.Quote(loc.Master))
+		return g, false
+	case declarations.BaselineErr != nil || declarations.TechnicalContextErr != nil:
+		for _, err := range []error{declarations.BaselineErr, declarations.TechnicalContextErr} {
+			if err != nil {
+				report.fail("la declaración de %s no es válida: %v. Continuación: corrígela con `axiom workspace validate --path %s` y vuelve a ejecutar el comando", pathquote.Quote(loc.ConfigPath), err, pathquote.Quote(loc.Master))
+			}
+		}
+		return g, false
+	}
+
+	g.project = declarations.Baseline != nil
+	g.maintained = declarations.TechnicalContext != nil && declarations.TechnicalContext.Maintained != nil
+	if g.project {
+		report.Baseline = BaselineKindProject
+	}
+	report.Context.Declared = g.maintained
+
+	if (g.project || g.maintained) && (t.ArtifactStore == "engram" || t.ArtifactStore == "none") {
+		var declared []string
+		if g.project {
+			declared = append(declared, "la baseline del proyecto ('baseline')")
+		}
+		if g.maintained {
+			declared = append(declared, "el contexto técnico mantenido ('technical_context.maintained')")
+		}
+		report.fail("%s exige un almacén de artefactos de ficheros y el almacén de este cambio es %q: sin la carpeta del cambio en ficheros no hay delta de contexto ni traza que integrar (REQ-24.62). Continuación: declara `artifact_store: openspec` o `hybrid` en `openspec/config.yaml`, o retira la declaración", strings.Join(declared, " y "), t.ArtifactStore)
+		return g, false
+	}
+
+	if g.project {
+		g.gatherDocuments(t, report)
+	}
+	if g.maintained {
+		data, err := os.ReadFile(filepath.Join(t.ChangeRoot, ContextDeltaFileName))
+		switch {
+		case errors.Is(err, fs.ErrNotExist):
+		case err != nil:
+			report.fail("no se puede leer %s: %v", ContextDeltaFileName, err)
+		default:
+			g.contextData, g.contextPresent = data, true
+		}
+	}
+	report.Context.Present = g.contextPresent
+	return g, true
+}
+
+// gatherDocuments lee los deltas de <cambio>/specs/<dominio>/spec.md y los
+// documentos declarados de los dominios que tienen delta. Un dominio no
+// declarado se rechaza antes de tocar ningún documento (REQ-24.48).
+func (g *gathered) gatherDocuments(t ChangeTarget, report *Report) {
+	loc := t.Location
+	deltas := map[string][]byte{}
+	var domains []string
+	entries, err := os.ReadDir(filepath.Join(t.ChangeRoot, "specs"))
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
+		report.fail("no se pueden leer los deltas del cambio en %s: %v", filepath.Join(t.ChangeRoot, "specs"), err)
+	}
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+		data, err := os.ReadFile(filepath.Join(t.ChangeRoot, "specs", entry.Name(), "spec.md"))
+		switch {
+		case errors.Is(err, fs.ErrNotExist):
+			continue
+		case err != nil:
+			report.fail("no se puede leer el delta del dominio %q: %v", entry.Name(), err)
+			continue
+		}
+		deltas[entry.Name()] = data
+		domains = append(domains, entry.Name())
+	}
+
+	declared := map[string]bool{}
+	for _, document := range loc.Declarations.Baseline.Documents {
+		declared[document.Domain] = true
+	}
+	for _, domain := range domains {
+		if !declared[domain] {
+			report.fail("el dominio %q del cambio no figura en 'baseline.documents' de %s: no se integra ni se promueve, y nunca se crea %s. Continuación: declara el dominio en 'baseline.documents' de axiom.yaml (`axiom workspace validate --path %s` comprueba la declaración) o retira la delta del cambio",
+				domain, pathquote.Quote(loc.ConfigPath), pathquote.Quote(filepath.Join(loc.PlanningHome, "specs", domain)), pathquote.Quote(loc.Master))
+		}
+	}
+
+	for _, document := range loc.Declarations.Baseline.Documents {
+		delta, ok := deltas[document.Domain]
+		if !ok {
+			continue
+		}
+		item := gatheredDocument{
+			declared: document,
+			mode:     document.EffectiveIntegration(),
+			relPath:  path.Clean(strings.ReplaceAll(document.Path, `\`, "/")),
+			delta:    delta,
+		}
+		item.abs = filepath.Join(loc.WorkspaceRoot, filepath.FromSlash(item.relPath))
+		original, err := os.ReadFile(item.abs)
+		if err != nil {
+			report.fail("no se puede leer el documento %s del dominio %q: %v. Continuación: comprueba la declaración con `axiom workspace validate --path %s`", item.relPath, document.Domain, err, pathquote.Quote(loc.Master))
+			continue
+		}
+		item.original = original
+		if item.mode == workspace.IntegrationCompose {
+			profile, err := CompileProfile(document)
+			if err != nil {
+				report.fail("%v", err)
+				continue
+			}
+			item.profile = profile
+		}
+		g.documents = append(g.documents, item)
+	}
+}
+
+// composeDocuments son los documentos con perfil de requisito, en el orden de
+// `baseline.documents`, en la forma que consumen PlanIDs y ComposeDocument.
+func (g *gathered) composeDocuments() []PlannedDocument {
+	var planned []PlannedDocument
+	for _, document := range g.documents {
+		if document.mode == workspace.IntegrationCompose {
+			planned = append(planned, PlannedDocument{
+				Domain:   document.declared.Domain,
+				Path:     document.abs,
+				RelPath:  document.relPath,
+				Profile:  document.profile,
+				Original: document.original,
+				Delta:    document.delta,
+			})
+		}
+	}
+	return planned
+}
+
+// evaluation es el resultado de validar y componer en memoria todo el cambio
+// antes de escribir nada (REQ-24.46).
+type evaluation struct {
+	ids          IDMap
+	outputs      map[string][]byte // documento compuesto por dominio
+	planDocs     []PlanDocument
+	entries      []TraceEntry
+	directed     []DirectedItem
+	contextItems []ContextItem
+	decision     ContextDecision
+	creates      map[string]bool // documentos de contexto que archive crea, por ruta relativa
+}
+
+// evaluate valida los deltas, calcula la correspondencia de IDs, compone en
+// memoria cada documento con perfil, prepara las entradas dirigidas, de solo
+// registro y de contexto, y valida el delta de contexto. No escribe nada. Reúne
+// todos los errores que puede en el informe.
+func evaluate(t ChangeTarget, g *gathered, opts PlanOptions, report *Report) evaluation {
+	ev := evaluation{outputs: map[string][]byte{}, creates: map[string]bool{}, decision: ContextDecision{Decision: ContextNone}}
+
+	planned := g.composeDocuments()
+	ids, idsErr := PlanIDs(planned)
+	if idsErr != nil {
+		report.fail("%v", idsErr)
+	}
+	ev.ids = ids
+	report.IDMap = append([]IDAssignment{}, ids.Assignments()...)
+
+	for _, document := range g.documents {
+		item := DocumentReport{
+			Domain:      document.declared.Domain,
+			Path:        document.relPath,
+			Integration: document.mode,
+			Operations:  []OperationReport{},
+		}
+		parsed := parseDelta(document.delta)
+		item.Operations = operationReports(document, parsed)
+		planDocument := PlanDocument{
+			Domain:       document.declared.Domain,
+			Path:         document.relPath,
+			Integration:  document.mode,
+			BeforeSHA256: sha256Hex(document.original),
+		}
+		if parsed.empty() {
+			report.fail("dominio %q: el delta no declara requisitos ADDED, MODIFIED, REMOVED ni RENAMED. Continuación: escribe el delta en el formato nativo, con una sección '## ADDED Requirements', '## MODIFIED Requirements', '## REMOVED Requirements' o '## RENAMED Requirements' y un bloque '### Requirement: <nombre>' por requisito", document.declared.Domain)
+		}
+
+		switch document.mode {
+		case workspace.IntegrationCompose:
+			item.Conflicts = bodyConflicts(document, parsed)
+			for _, conflict := range item.Conflicts {
+				report.fail("dominio %q, sección %s, requisito %q: el cuerpo contiene el encabezado %q (línea %d del delta, nivel %d), de nivel menor o igual que el nivel %d de los requisitos: cerraría el bloque del requisito. Continuación: rebaja el encabezado a un nivel mayor que %d o conviértelo en texto",
+					document.declared.Domain, conflict.Section, conflict.Requirement, conflict.Heading, conflict.Line, conflict.Level, document.profile.Level, document.profile.Level)
+			}
+			if idsErr == nil {
+				item.Families = planFamilies(planned[composeIndex(planned, document.declared.Domain)], parsed)
+			}
+			if idsErr == nil && len(item.Conflicts) == 0 && !parsed.empty() {
+				result, err := ComposeDocument(ComposeInput{
+					Document:           planned[composeIndex(planned, document.declared.Domain)],
+					IDs:                ids,
+					Supersede:          opts.Supersede,
+					ExplicitSuperseded: opts.SupersededRequirements,
+				})
+				if err != nil {
+					report.fail("%v", err)
+				} else {
+					ev.outputs[document.declared.Domain] = result.Output
+					planDocument.AfterSHA256 = sha256Hex(result.Output)
+					planDocument.State = StatePending
+					ev.entries = append(ev.entries, result.Entries...)
+					item.Warnings = result.Warnings
+					for _, warning := range result.Warnings {
+						report.warn("%s", warning)
+					}
+				}
+			}
+		default:
+			ev.entries = append(ev.entries, directedEntries(document, parsed, ids, document.mode, t.Change)...)
+			if document.mode == workspace.IntegrationDirected {
+				ev.directed = append(ev.directed, directedItem(document, parsed, ids, t.Change))
+			}
+		}
+		report.Documents = append(report.Documents, item)
+		ev.planDocs = append(ev.planDocs, planDocument)
+	}
+	ev.evaluateContext(t, g, report)
+	return ev
+}
+
+// composeIndex devuelve la posición del dominio entre los documentos con perfil.
+func composeIndex(planned []PlannedDocument, domain string) int {
+	for i, document := range planned {
+		if document.Domain == domain {
+			return i
+		}
+	}
+	return -1
+}
+
+var deltaSections = []string{sectionAdded, sectionModified, sectionRemoved, sectionRenamed}
+
+func deltaBlocks(parsed delta, section string) []deltaBlock {
+	switch section {
+	case sectionAdded:
+		return parsed.Added
+	case sectionModified:
+		return parsed.Modified
+	case sectionRemoved:
+		return parsed.Removed
+	default:
+		return parsed.Renamed
+	}
+}
+
+// operationReports lista las operaciones del delta por sección, con el identificador
+// de cada requisito: su ID con identidad `id` o su nombre en otro caso.
+func operationReports(document gatheredDocument, parsed delta) []OperationReport {
+	var reports []OperationReport
+	for _, section := range deltaSections {
+		blocks := deltaBlocks(parsed, section)
+		if len(blocks) == 0 {
+			continue
+		}
+		ids := make([]string, len(blocks))
+		for i, block := range blocks {
+			ids[i] = block.Name
+			if document.mode == workspace.IntegrationCompose && section != sectionRenamed {
+				if id, _, key, err := parseRequirementName(document.declared.Domain, document.profile, section, block.Name); err == nil {
+					ids[i] = key
+					if document.profile.Identity == workspace.IdentityID {
+						ids[i] = id
+					}
+				}
+			}
+		}
+		reports = append(reports, OperationReport{Section: section, IDs: ids})
+	}
+	return reports
+}
+
+// bodyConflicts devuelve, para cada requisito ADDED o MODIFIED, los encabezados del
+// cuerpo que se integraría que cerrarían el bloque (REQ-24.42, D-09). Con
+// `scenarios: omit` se evalúa el cuerpo ya sin sus escenarios.
+func bodyConflicts(document gatheredDocument, parsed delta) []BodyConflict {
+	var conflicts []BodyConflict
+	for _, section := range []string{sectionAdded, sectionModified} {
+		for _, block := range deltaBlocks(parsed, section) {
+			body := block.Body
+			if document.profile.Scenarios == workspace.ScenariosOmit {
+				body, _ = omitScenarios(body)
+			}
+			for _, violation := range bodyViolations(body, document.profile.Level) {
+				conflicts = append(conflicts, BodyConflict{Section: section, Requirement: block.Name, Heading: violation.Text, Line: violation.Number, Level: violation.Level})
+			}
+		}
+	}
+	return conflicts
+}
+
+// planFamilies describe las familias de IDs con requisitos ADDED de un documento
+// con identidad `id`: el máximo del documento original, el rango definitivo y el
+// inicio provisional sugerido (D-11). El inicio es `9·10^d + 1` con
+// `d = max(3, dígitos(máximo + K))`, siendo K el número de ADDED de la familia, y
+// se prueba también `9·10^(ancho-1)` por si el patrón fija el ancho; se sugiere el
+// primero que cumple el patrón `heading` y queda fuera del rango definitivo.
+func planFamilies(document PlannedDocument, parsed delta) []FamilyReport {
+	if document.Profile.Identity != workspace.IdentityID || len(parsed.Added) == 0 {
+		return nil
+	}
+	scanned := scanDocIDs(document)
+	counts := map[string]int64{}
+	var order []string
+	for _, block := range parsed.Added {
+		id, _, _, err := parseRequirementName(document.Domain, document.Profile, sectionAdded, block.Name)
+		if err != nil {
+			continue
+		}
+		family, digits := splitID(id)
+		if digits == "" || scanned.families[family] == nil {
+			continue
+		}
+		if counts[family] == 0 {
+			order = append(order, family)
+		}
+		counts[family]++
+	}
+
+	var reports []FamilyReport
+	for _, family := range order {
+		stats := scanned.families[family]
+		count := big.NewInt(counts[family])
+		first := new(big.Int).Add(stats.max, big.NewInt(1))
+		last := new(big.Int).Add(stats.max, count)
+		report := FamilyReport{
+			Family:          family,
+			Max:             family + padNumber(stats.max, stats.width),
+			FirstDefinitive: family + padNumber(first, stats.width),
+			LastDefinitive:  family + padNumber(last, stats.width),
+		}
+
+		d := len(last.String())
+		if d < 3 {
+			d = 3
+		}
+		first9 := new(big.Int).Mul(big.NewInt(9), new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(d)), nil))
+		candidates := []*big.Int{first9.Add(first9, big.NewInt(1))}
+		if stats.width > 1 {
+			candidates = append(candidates, new(big.Int).Mul(big.NewInt(9), new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(stats.width-1)), nil)))
+		}
+		var tried []string
+		for _, candidate := range candidates {
+			id := family + candidate.String()
+			tried = append(tried, id)
+			if candidate.Cmp(last) <= 0 {
+				continue
+			}
+			if _, exists := scanned.existing[id]; exists {
+				continue
+			}
+			if matched, _, ok := document.Profile.Match(document.Profile.RenderHeading(id, "Título provisional")); ok && matched == id {
+				report.SuggestedStart = id
+				break
+			}
+		}
+		if report.SuggestedStart == "" {
+			report.Note = fmt.Sprintf("ningún candidato (%s) cumple el patrón 'heading' del perfil y queda fuera del rango definitivo %s..%s: elige un ID provisional que cumpla el patrón", strings.Join(tried, ", "), report.FirstDefinitive, report.LastDefinitive)
+		}
+		reports = append(reports, report)
+	}
+	return reports
+}
+
+func padNumber(n *big.Int, width int) string {
+	text := n.String()
+	if pad := width - len(text); pad > 0 {
+		text = strings.Repeat("0", pad) + text
+	}
+	return text
+}
+
+// directedEntries son las entradas de la traza de un dominio de prosa: una por
+// requisito de la delta, anclada a la sección titulada con el identificador del
+// cambio. Las de un dominio `register` quedan pendientes y no editan el documento
+// (REQ-24.50, REQ-24.53).
+func directedEntries(document gatheredDocument, parsed delta, ids IDMap, mode workspace.IntegrationMode, change string) []TraceEntry {
+	kind := EntryDirected
+	if mode == workspace.IntegrationRegister {
+		kind = EntryRegister
+	}
+	var entries []TraceEntry
+	for _, section := range deltaSections {
+		for _, block := range deltaBlocks(parsed, section) {
+			entries = append(entries, TraceEntry{
+				ID:       ids.Substitute(block.Name),
+				Kind:     kind,
+				Domain:   document.declared.Domain,
+				Document: document.relPath,
+				Anchor:   change,
+				Action:   sectionAction(section),
+				State:    StatePending,
+				Reason:   ids.Substitute(block.Reason),
+			})
+		}
+	}
+	return entries
+}
+
+func sectionAction(section string) TraceAction {
+	switch section {
+	case sectionAdded:
+		return ActionAdded
+	case sectionRemoved:
+		return ActionRemoved
+	default:
+		return ActionModified
+	}
+}
+
+// directedItem es el trabajo de edición dirigida de un documento de prosa, con los
+// IDs provisionales del cambio ya sustituidos por los definitivos.
+func directedItem(document gatheredDocument, parsed delta, ids IDMap, change string) DirectedItem {
+	item := DirectedItem{Domain: document.declared.Domain, Document: document.relPath, Section: change, Entries: []DirectedEntry{}}
+	for _, section := range deltaSections {
+		for _, block := range deltaBlocks(parsed, section) {
+			body := block.Body
+			for len(body) > 0 && strings.TrimSpace(body[0].Text) == "" {
+				body = body[1:]
+			}
+			lines := make([]string, 0, len(body)+1)
+			for _, line := range body {
+				lines = append(lines, ids.Substitute(line.Text))
+			}
+			if block.HasReason {
+				lines = append(lines, "(Reason: "+ids.Substitute(block.Reason)+")")
+			}
+			item.Entries = append(item.Entries, DirectedEntry{Section: section, Name: ids.Substitute(block.Name), Text: strings.Join(lines, "\n")})
+		}
+	}
+	return item
+}
+
+// evaluateContext valida el delta de contexto (REQ-24.31, REQ-24.32, REQ-24.30):
+// su formato, que cada documento esté bajo una ruta mantenida y no bajo una de
+// referencia, y que cada ancla resuelva según su acción. Prepara los trabajos de
+// edición con los IDs provisionales sustituidos.
+func (ev *evaluation) evaluateContext(t ChangeTarget, g *gathered, report *Report) {
+	if !g.maintained || !g.contextPresent {
+		return
+	}
+	delta, err := ParseContextDelta(g.contextData)
+	if err != nil {
+		report.fail("%s (REQ-24.31): %v. Continuación: corrige el formato del delta de contexto (`## Entrada: <ruta>` con `- Ancla:`, `- Acción:` y `- Motivo:`, o `Sin impacto: <motivo>`)", ContextDeltaFileName, err)
+	}
+	report.Context.Reason = delta.Reason
+	switch {
+	case err != nil:
+		return
+	case delta.NoImpact:
+		report.Context.Decision = ContextNoImpact
+		ev.decision = ContextDecision{Decision: ContextNoImpact, Reason: delta.Reason}
+		return
+	}
+	report.Context.Decision = ContextEntries
+	ev.decision = ContextDecision{Decision: ContextEntries}
+
+	scope := contextScope(t.Location)
+	for _, entry := range delta.Entries {
+		report.Context.Entries = append(report.Context.Entries, ContextEntryReport{ID: entry.ID, Document: entry.Document, Anchor: entry.Anchor.String(), Action: string(entry.Action), Reason: entry.Reason})
+		if err := scope.CheckDocument(entry); err != nil {
+			report.fail("%v", err)
+			continue
+		}
+		data, readErr := os.ReadFile(scope.Resolve(entry.Document))
+		exists := readErr == nil
+		if readErr != nil && !errors.Is(readErr, fs.ErrNotExist) {
+			report.fail("la entrada %s (línea %d): no se puede leer %s: %v", entry.ID, entry.Line, entry.Document, readErr)
+			continue
+		}
+		create, err := CheckAnchor(entry, data, exists)
+		if err != nil {
+			report.fail("%v", err)
+			continue
+		}
+		if create {
+			ev.creates[entry.Document] = true
+			report.Context.Entries[len(report.Context.Entries)-1].Create = true
+		}
+		ev.contextItems = append(ev.contextItems, ContextItem{
+			ID:       entry.ID,
+			Document: entry.Document,
+			Anchor:   entry.Anchor.String(),
+			Action:   string(entry.Action),
+			Reason:   ev.ids.Substitute(entry.Reason),
+			Text:     ev.ids.Substitute(entry.Body),
+			Create:   create,
+		})
+	}
+}
+
+// contextScope reúne las rutas declaradas que deciden si una entrada del delta de
+// contexto puede editar un documento.
+func contextScope(loc workspace.Location) ContextScope {
+	scope := ContextScope{WorkspaceRoot: loc.WorkspaceRoot}
+	normalize := func(paths []string) []string {
+		out := make([]string, 0, len(paths))
+		for _, p := range paths {
+			out = append(out, strings.ReplaceAll(strings.TrimSpace(p), `\`, "/"))
+		}
+		return out
+	}
+	if technical := loc.Declarations.TechnicalContext; technical != nil {
+		if technical.Maintained != nil {
+			scope.Maintained = normalize(technical.Maintained.Paths)
+		}
+		if technical.Reference != nil {
+			scope.Reference = normalize(technical.Reference.Paths)
+		}
+	}
+	if baseline := loc.Declarations.Baseline; baseline != nil {
+		for _, document := range baseline.Documents {
+			scope.BaselineDocuments = append(scope.BaselineDocuments, path.Clean(strings.ReplaceAll(document.Path, `\`, "/")))
+		}
+	}
+	return scope
+}
+
+// composeCommand es el comando literal que imprime `prepare` para componer todos
+// los documentos con perfil del cambio (D-13, paso 2).
+func composeCommand(t ChangeTarget, planDocs []PlanDocument) string {
+	var domains []string
+	for _, document := range planDocs {
+		if document.Integration == workspace.IntegrationCompose {
+			domains = append(domains, "--document "+pathquote.ShellWord(document.Domain))
+		}
+	}
+	if len(domains) == 0 {
+		return ""
+	}
+	return fmt.Sprintf("axiom sdd archive-compose --cwd %s --change %s %s --in-place", pathquote.Quote(t.Location.WorkspaceRoot), pathquote.ShellWord(t.Change), strings.Join(domains, " "))
+}
+
+// Check hace las validaciones de la integración sin exigir git ni autorización de
+// edición, y no escribe nada, tampoco en la carpeta del cambio (REQ-24.42, D-13).
+// Un delta de contexto ausente es un aviso. Quien llama sale con un código distinto
+// de cero si Report.Errors no está vacío; el error devuelto es solo de ejecución.
+func Check(ctx context.Context, t ChangeTarget) (Report, error) {
+	report := newReport(CheckSchema, t.Change)
+	g, ok := gather(t, &report)
+	if !ok {
+		return report, ctx.Err()
+	}
+	evaluate(t, g, PlanOptions{}, &report)
+	if g.maintained && !g.contextPresent {
+		report.warn("el cambio no lleva delta de contexto %s y el contexto técnico mantenido está declarado: registra el impacto previsto o «Sin impacto: <motivo>» antes de archivar; la ausencia nunca se asume como «Sin impacto» (REQ-24.36)", ContextDeltaFileName)
+	}
+	return report, ctx.Err()
+}
+
+// Prepare valida y compone en memoria todo el cambio, comprueba las precondiciones
+// de la integración (REQ-24.49) y la autorización de edición de las rutas
+// mantenidas fuera del repositorio de especificaciones (REQ-24.37), registra el
+// HEAD y la foto de suciedad de cada repositorio afectado y escribe
+// `<carpeta del cambio>/integration.yaml`: nunca escribe en la baseline ni en las
+// rutas mantenidas (D-13, paso 1). Con un plan existente lo reemite si las entradas
+// y las huellas coinciden, rechaza como «ya integrado» si todas las composiciones
+// lo están, y rechaza con la continuación si las entradas cambiaron. Los
+// rechazos de validación van en Report.Errors, sin plan; el error devuelto es solo
+// de ejecución.
+func Prepare(ctx context.Context, t ChangeTarget, opts PlanOptions) (Plan, Report, error) {
+	report := newReport(PrepareSchema, t.Change)
+	opts.SupersededRequirements = cleanList(opts.SupersededRequirements)
+	g, ok := gather(t, &report)
+	if !ok || len(report.Errors) > 0 {
+		return Plan{}, report, ctx.Err()
+	}
+
+	digest := inputsDigest(g.deltaInputs(), g.contextData, declarationSnapshot(t.Location.Declarations))
+	planPath := filepath.Join(t.ChangeRoot, PlanFileName)
+	existing, readErr := ReadPlan(planPath)
+	reuse := readErr == nil
+	if readErr != nil && !errors.Is(readErr, fs.ErrNotExist) {
+		report.fail("no se puede leer el plan existente: %v. Continuación: retira %s de la carpeta del cambio y vuelve a preparar con `axiom sdd integrate prepare`", readErr, PlanFileName)
+		return Plan{}, report, ctx.Err()
+	}
+	if reuse {
+		current := Plan{InputsSHA256: digest}
+		for _, document := range g.documents {
+			current.Documents = append(current.Documents, PlanDocument{Domain: document.declared.Domain, Integration: document.mode, BeforeSHA256: sha256Hex(document.original)})
+		}
+		kept, err := reconcilePlan(existing, current)
+		if err != nil {
+			report.fail("%v", err)
+			return Plan{}, report, ctx.Err()
+		}
+		existing = kept
+	}
+
+	ev := evaluate(t, g, opts, &report)
+	if g.maintained && !g.contextPresent {
+		report.fail("el cambio no lleva delta de contexto %s y el contexto técnico mantenido está declarado: archive se detiene hasta que se registre el impacto previsto o «Sin impacto: <motivo>»; la ausencia nunca se asume como «Sin impacto» (REQ-24.36, REQ-24.56). Continuación: redacta %s en la carpeta del cambio", ContextDeltaFileName, ContextDeltaFileName)
+	}
+	if len(report.Errors) > 0 {
+		return Plan{}, report, ctx.Err()
+	}
+	report.Directed, report.ContextItems, report.ComposeCommand = ev.directed, ev.contextItems, composeCommand(t, ev.planDocs)
+	report.Register = ev.registered()
+	if reuse {
+		return existing, report, ctx.Err()
+	}
+
+	authorizeContextEdits(ctx, t, ev, &report)
+	if len(report.Errors) > 0 {
+		return Plan{}, report, ctx.Err()
+	}
+
+	capture, err := captureRepositories(ctx, t.Location.Master, ev.affected(g, t.Location), watchedDirectories(t.Location))
+	var stop *PreconditionError
+	if errors.As(err, &stop) {
+		for _, problem := range stop.Problems {
+			report.fail("%s", problem)
+		}
+		return Plan{}, report, ctx.Err()
+	}
+	if err != nil {
+		report.fail("%v", err)
+		return Plan{}, report, ctx.Err()
+	}
+	for _, warning := range capture.Warnings {
+		report.warn("%s", warning)
+	}
+
+	plan := Plan{
+		Schema:       PlanSchema,
+		Change:       t.Change,
+		PreparedAt:   now().UTC().Truncate(time.Second),
+		InputsSHA256: digest,
+		Options:      PlanOptions{Supersede: opts.Supersede, SupersededRequirements: opts.SupersededRequirements},
+		Repositories: capture.Repositories,
+		IDMap:        report.IDMap,
+		Documents:    ev.planDocs,
+		Context:      ev.decision,
+		Entries:      append(append([]TraceEntry(nil), ev.entries...), ev.contextEntries()...),
+	}
+	if err := WritePlan(planPath, plan); err != nil {
+		return Plan{}, report, err
+	}
+	return plan, report, ctx.Err()
+}
+
+func cleanList(items []string) []string {
+	cleaned := []string{}
+	for _, item := range items {
+		if trimmed := strings.TrimSpace(item); trimmed != "" {
+			cleaned = append(cleaned, trimmed)
+		}
+	}
+	return cleaned
+}
+
+// deltaInputs son los deltas de los dominios del cambio, para la huella de entradas.
+func (g *gathered) deltaInputs() []DeltaInput {
+	inputs := make([]DeltaInput, 0, len(g.documents))
+	for _, document := range g.documents {
+		inputs = append(inputs, DeltaInput{Domain: document.declared.Domain, Data: document.delta})
+	}
+	return inputs
+}
+
+// registered son las entradas de solo registro de la traza.
+func (ev evaluation) registered() []TraceEntry {
+	var entries []TraceEntry
+	for _, entry := range ev.entries {
+		if entry.Kind == EntryRegister {
+			entries = append(entries, entry)
+		}
+	}
+	return entries
+}
+
+// contextEntries son las entradas de la traza del delta de contexto: una por
+// entrada con los IDs provisionales sustituidos en el motivo (REQ-24.59).
+func (ev evaluation) contextEntries() []TraceEntry {
+	var entries []TraceEntry
+	for _, item := range ev.contextItems {
+		action := ActionModified
+		switch ContextAction(item.Action) {
+		case ContextAdd:
+			action = ActionAdded
+		case ContextRemove:
+			action = ActionRemoved
+		}
+		entries = append(entries, TraceEntry{ID: item.ID, Kind: EntryContext, Document: item.Document, Anchor: item.Anchor, Action: action, State: StatePending, Reason: item.Reason})
+	}
+	return entries
+}
+
+// affected son los documentos que la integración edita: los de composición y los
+// dirigidos, y los del delta de contexto. Los de solo registro no se editan. Los
+// documentos que archive crea quedan exentos de la precondición (REQ-24.49).
+func (ev evaluation) affected(g *gathered, loc workspace.Location) []affectedPath {
+	var paths []affectedPath
+	for _, document := range g.documents {
+		if document.mode != workspace.IntegrationRegister {
+			paths = append(paths, affectedPath{Path: document.abs})
+		}
+	}
+	scope := contextScope(loc)
+	for _, item := range ev.contextItems {
+		paths = append(paths, affectedPath{Path: scope.Resolve(item.Document), Creates: item.Create})
+	}
+	return paths
+}
+
+// watchedDirectories son los directorios cuyos repositorios se vigilan sin
+// detener la integración: el de especificaciones, los de las rutas mantenidas y de
+// referencia y los de los roles declarados (D-15). Solo los que existen.
+func watchedDirectories(loc workspace.Location) []string {
+	candidates := []string{loc.WorkspaceRoot}
+	scope := contextScope(loc)
+	for _, declared := range append(append([]string(nil), scope.Maintained...), scope.Reference...) {
+		candidates = append(candidates, scope.Resolve(declared))
+	}
+	if loc.Config != nil {
+		roles := make([]string, 0, len(loc.Config.Roles))
+		for name := range loc.Config.Roles {
+			roles = append(roles, name)
+		}
+		sort.Strings(roles)
+		for _, name := range roles {
+			for _, repo := range loc.Config.Roles[name].Repositories {
+				location := filepath.Clean(strings.TrimSpace(repo.Path))
+				if !filepath.IsAbs(location) {
+					location = filepath.Join(loc.Master, location)
+				}
+				candidates = append(candidates, location)
+			}
+		}
+	}
+	var watched []string
+	for _, candidate := range candidates {
+		info, err := os.Stat(candidate)
+		if err != nil {
+			continue
+		}
+		if !info.IsDir() {
+			candidate = filepath.Dir(candidate)
+		}
+		watched = append(watched, candidate)
+	}
+	return watched
+}
+
+// authorizeContextEdits comprueba que cada documento que edita el delta de
+// contexto está bajo alguna raíz de edición autorizada del cambio
+// (actionContext.allowedEditRoots). El repositorio de especificaciones siempre lo
+// está; los de código hermanos solo con una autorización por cambio, que nunca se
+// concede de forma implícita (REQ-24.37).
+func authorizeContextEdits(ctx context.Context, t ChangeTarget, ev evaluation, report *Report) {
+	allowed := t.AllowedRoots
+	if len(allowed) == 0 {
+		allowed = []string{t.Location.WorkspaceRoot}
+	}
+	scope := contextScope(t.Location)
+	for _, item := range ev.contextItems {
+		target := resolveDeepest(scope.Resolve(item.Document))
+		authorized := false
+		for _, root := range allowed {
+			if pathidentity.Contains(root, target) {
+				authorized = true
+				break
+			}
+		}
+		if authorized {
+			continue
+		}
+		root := deepestExistingDir(target)
+		if repo, err := openRepository(ctx, target); err == nil {
+			root = repo.root
+		}
+		report.fail("la entrada %s edita %s, que no está bajo ninguna raíz de edición autorizada del cambio (actionContext.allowedEditRoots): falta la autorización de edición de %s. Continuación: concédela por cambio con `axiom sdd-attempt grant --cwd %s --change %s --root %s` (más `--change-instance`, `--request-id`, `--actor` y `--reason`); nunca se concede de forma implícita (REQ-24.37)",
+			item.ID, item.Document, pathquote.Quote(root), pathquote.Quote(t.Location.WorkspaceRoot), pathquote.ShellWord(t.Change), pathquote.Quote(root))
+	}
 }

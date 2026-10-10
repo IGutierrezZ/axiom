@@ -23,6 +23,14 @@
 //     nada: devuelve los bytes compuestos, la traza y los avisos.
 //   - ids.go: la correspondencia de IDs provisionales a definitivos de un
 //     cambio entero (PlanIDs) y su sustitución por tokens completos (D-11).
+//   - contextdelta.go y anchors.go: el delta de contexto `context-impact.md`,
+//     su gramática determinista y las anclas por ruta de encabezados (D-16).
+//   - gitview.go: la lectura de solo lectura de git, con el repositorio elegido
+//     por la ruta del documento y nunca por el proceso (D-15, design §8).
+//   - plan.go y trace.go: el plan `integration.yaml`, las huellas del árbol de
+//     trabajo, la foto acotada de la suciedad previa y `Check` y `Prepare`, que
+//     validan y componen todo el cambio en memoria antes de escribir nada
+//     (D-13, REQ-24.46).
 //
 // Limitaciones documentadas: los encabezados setext no se reconocen (R33), y la
 // detección de vallas de código (unas 40 líneas) duplica la del motor nativo
