@@ -29,7 +29,7 @@ import (
 // older contract while still carrying fields that contract never promised
 // (#3256). Tests that exercise pre-1.1.0/pre-1.2.0 compatibility build their
 // own minimal legacy-shaped manifest instead of using this label.
-const currentShapeContractSemver = "1.2.0"
+const currentShapeContractSemver = "1.2.1"
 
 func TestGenerateIsDeterministicAndVerifiable(t *testing.T) {
 	first := filepath.Join(t.TempDir(), "first")
@@ -540,7 +540,7 @@ func equalStrings(left, right []string) bool {
 // bound review execution contract, with the runtime placeholder resolved and
 // its capture command named exactly once.
 func TestGeneratedOrchestrationEntryCarriesTheBoundPiContract(t *testing.T) {
-	files, err := generatedFiles("1.2.0")
+	files, err := generatedFiles(currentShapeContractSemver)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -616,7 +616,7 @@ func TestPiFacadeLifecycleValidation(t *testing.T) {
 
 func TestGenerateThenVerifyRoundTripsTheOrchestrationManifestEntry(t *testing.T) {
 	directory := t.TempDir()
-	if err := Generate(directory, "1.2.0"); err != nil {
+	if err := Generate(directory, currentShapeContractSemver); err != nil {
 		t.Fatal(err)
 	}
 	files := readGeneratedFiles(t, directory)
@@ -648,7 +648,7 @@ func TestGenerateThenVerifyRoundTripsTheOrchestrationManifestEntry(t *testing.T)
 // TestVerifyArchiveRejectsATamperedOrchestrationFile proves the orchestration
 // entry is protected by the same sha256 binding as every other bundle file.
 func TestVerifyArchiveRejectsATamperedOrchestrationFile(t *testing.T) {
-	files, err := generatedFiles("1.2.0")
+	files, err := generatedFiles(currentShapeContractSemver)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -668,7 +668,7 @@ func TestVerifyArchiveRejectsATamperedOrchestrationFile(t *testing.T) {
 // and the README's manual-inspection instructions), so there is no caller
 // depending on the older layout staying acceptable.
 func TestVerifyArchiveRejectsAManifestMissingTheOrchestrationEntry(t *testing.T) {
-	files, err := generatedFiles("1.2.0")
+	files, err := generatedFiles(currentShapeContractSemver)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -696,7 +696,7 @@ func TestVerifyArchiveRejectsAManifestMissingTheOrchestrationEntry(t *testing.T)
 // identity list, the same way every other runtime-scoped claim in this bundle
 // is, rather than trusted from the manifest bytes alone.
 func TestVerifyArchiveRejectsAnUnregisteredOrchestrationRuntime(t *testing.T) {
-	files, err := generatedFiles("1.2.0")
+	files, err := generatedFiles(currentShapeContractSemver)
 	if err != nil {
 		t.Fatal(err)
 	}
