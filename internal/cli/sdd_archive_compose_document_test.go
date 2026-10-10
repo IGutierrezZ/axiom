@@ -446,7 +446,7 @@ func TestRunSDDArchiveComposeDocumentCalculatesTheIDMapOfTheWholeChange(t *testi
 		if err != nil {
 			t.Fatalf("runSDDArchiveComposeWithStderr() error = %v", err)
 		}
-		want := "# Secundarios\n\n### RF-050: Auditoría\n\nCuerpo de auditoría.\n### RF-051: Registro de accesos\n\nDepende de RF-102.\n"
+		want := "# Secundarios\n\n### RF-050: Auditoría\n\nCuerpo de auditoría.\n\n### RF-051: Registro de accesos\n\nDepende de RF-102.\n"
 		if secondary != want {
 			t.Errorf("salida = %q\nse esperaba %q (referencia sustituida y escenarios omitidos)", secondary, want)
 		}

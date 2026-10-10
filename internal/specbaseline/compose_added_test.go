@@ -266,7 +266,7 @@ func TestComposeAddedWithSectionPlacementGoesAtTheEndOfTheSection(t *testing.T) 
 		if err != nil {
 			t.Fatalf("ComposeDocument() error = %v", err)
 		}
-		if want := addedDocument + "### RF-008: Anexo nuevo\n\nCuerpo.\n"; string(got.Output) != want {
+		if want := addedDocument + "\n### RF-008: Anexo nuevo\n\nCuerpo.\n"; string(got.Output) != want {
 			t.Errorf("salida = %q\nse esperaba %q", got.Output, want)
 		}
 	})
@@ -355,7 +355,7 @@ func TestComposeAddedAnchorMustBeAUniqueExistingRequirement(t *testing.T) {
 		if err != nil {
 			t.Fatalf("ComposeDocument() error = %v", err)
 		}
-		if !strings.HasSuffix(string(got.Output), "### RF-050: Informe mensual\n\nEl sistema DEBE generar un informe mensual de ventas.\n### RF-051: Nuevo\n\nCuerpo.\n") {
+		if !strings.HasSuffix(string(got.Output), "### RF-050: Informe mensual\n\nEl sistema DEBE generar un informe mensual de ventas.\n\n### RF-051: Nuevo\n\nCuerpo.\n") {
 			t.Errorf("salida = %q", got.Output)
 		}
 	})
@@ -467,7 +467,7 @@ func TestComposeAddedKeepsEveryByteOutsideTheInsertedBlocks(t *testing.T) {
 		}
 		for _, block := range []string{
 			"### RF-051: Tras la cola\n\nCuerpo uno.\n\n",
-			"### RF-052: En informes\n\nCuerpo dos.\n",
+			"\n### RF-052: En informes\n\nCuerpo dos.\n",
 		} {
 			if !bytes.Contains(output, []byte(strings.ReplaceAll(block, "\n", v.eol()))) {
 				t.Fatalf("falta el bloque %q en la salida", block)
@@ -497,9 +497,9 @@ func TestComposeAddedInheritsTheBlankLinesOfTheReferenceBlock(t *testing.T) {
 			want:     "### RF-1: Uno\n\ntexto\n\n\n### RF-3: Nuevo\n\nCuerpo.\n\n\n### RF-2: Dos\n\ntexto\n",
 		},
 		{
-			name:     "sin líneas en blanco entre bloques: mínimo una",
+			name:     "sin líneas en blanco entre bloques: una delante y mínimo una detrás",
 			original: "### RF-1: Uno\ntexto\n### RF-2: Dos\ntexto\n",
-			want:     "### RF-1: Uno\ntexto\n### RF-3: Nuevo\n\nCuerpo.\n\n### RF-2: Dos\ntexto\n",
+			want:     "### RF-1: Uno\ntexto\n\n### RF-3: Nuevo\n\nCuerpo.\n\n### RF-2: Dos\ntexto\n",
 		},
 	}
 	for _, tt := range tests {
@@ -526,7 +526,7 @@ func TestComposeAddedAtTheEndOfAFileWithoutFinalNewline(t *testing.T) {
 		}
 		// La última línea recibe el final de línea del documento (el único byte
 		// añadido fuera del bloque insertado) y el nuevo bloque termina sin él.
-		assertOutput(t, v, got, "### RF-1: Uno\n\ntexto\n\n### RF-2: Dos\n\ntexto\n### RF-3: Nuevo\n\nCuerpo.")
+		assertOutput(t, v, got, "### RF-1: Uno\n\ntexto\n\n### RF-2: Dos\n\ntexto\n\n### RF-3: Nuevo\n\nCuerpo.")
 	})
 
 	t.Run("con final de línea", func(t *testing.T) {
@@ -534,7 +534,7 @@ func TestComposeAddedAtTheEndOfAFileWithoutFinalNewline(t *testing.T) {
 		if err != nil {
 			t.Fatalf("ComposeDocument() error = %v", err)
 		}
-		assertOutput(t, byteVariants[1], got, "### RF-1: Uno\n\ntexto\n\n### RF-2: Dos\n\ntexto\n### RF-3: Nuevo\n\nCuerpo.\n")
+		assertOutput(t, byteVariants[1], got, "### RF-1: Uno\n\ntexto\n\n### RF-2: Dos\n\ntexto\n\n### RF-3: Nuevo\n\nCuerpo.\n")
 	})
 }
 
@@ -590,7 +590,7 @@ func TestComposeAddedWithTextIdentityDefaultsToAfterTheLastBlockAndItsTail(t *te
 		if err != nil {
 			t.Fatalf("ComposeDocument() error = %v", err)
 		}
-		if want := "# Documento vacío\n### Gamma\n\nCuerpo gamma.\n"; string(got.Output) != want {
+		if want := "# Documento vacío\n\n### Gamma\n\nCuerpo gamma.\n"; string(got.Output) != want {
 			t.Errorf("salida = %q, se esperaba %q", got.Output, want)
 		}
 	})
@@ -925,4 +925,148 @@ func TestComposeAddedSplitsTheTextThatFollowsTheAnchorBlock(t *testing.T) {
 		}
 		assertOutput(t, v, got, want)
 	})
+}
+
+// Un ADDED insertado tras una línea que no está en blanco recibe una línea en
+// blanco delante; detrás hereda la serie del bloque de referencia con un mínimo de
+// una salvo al final del fichero. Solo se insertan bytes (D-12, REQ-24.45).
+func TestComposeAddedSeparatesTheBlockFromANonBlankPreviousLine(t *testing.T) {
+	idProfile := requirementProfile(t)
+	textProfile := profileFor(t, `^### (?P<id>)(?P<title>.+)$`, 3, workspace.IdentityText, "### {id}{title}", workspace.ScenariosInclude)
+	afterRF1 := addedDeltaOf(added("RF-9001: Nuevo", "after RF-1", "Cuerpo."))
+	sectionPagos := addedDeltaOf(added("RF-9001: Nuevo", `section "Pagos"`, "Cuerpo."))
+	textDelta := join("## ADDED Requirements", "", "### Requirement: Gamma", "", "Cuerpo gamma.")
+	tests := []struct {
+		name, original, delta, want string
+		profile                     Profile
+	}{
+		{
+			name:     "after ID con referencia sin blancos finales",
+			profile:  idProfile,
+			delta:    afterRF1,
+			original: "### RF-1: Uno\ntexto\n### RF-2: Dos\ntexto\n",
+			want:     "### RF-1: Uno\ntexto\n\n### RF-3: Nuevo\n\nCuerpo.\n\n### RF-2: Dos\ntexto\n",
+		},
+		{
+			name:     "after ID con referencia sin blancos finales y varios bloques insertados",
+			profile:  idProfile,
+			delta:    addedDeltaOf(added("RF-9001: Uno nuevo", "after RF-1", "A."), added("RF-9002: Otro nuevo", "after RF-1", "B.")),
+			original: "### RF-1: Uno\ntexto\n### RF-2: Dos\ntexto\n",
+			want:     "### RF-1: Uno\ntexto\n\n### RF-3: Uno nuevo\n\nA.\n\n### RF-4: Otro nuevo\n\nB.\n\n### RF-2: Dos\ntexto\n",
+		},
+		{
+			name:     "control: after ID con referencia con blancos finales no cambia",
+			profile:  idProfile,
+			delta:    afterRF1,
+			original: "### RF-1: Uno\n\ntexto\n\n### RF-2: Dos\n\ntexto\n",
+			want:     "### RF-1: Uno\n\ntexto\n\n### RF-3: Nuevo\n\nCuerpo.\n\n### RF-2: Dos\n\ntexto\n",
+		},
+		{
+			name:     "control: la serie de dos blancos se hereda detrás y delante no se añade",
+			profile:  idProfile,
+			delta:    afterRF1,
+			original: "### RF-1: Uno\n\ntexto\n\n\n### RF-2: Dos\n\ntexto\n",
+			want:     "### RF-1: Uno\n\ntexto\n\n\n### RF-3: Nuevo\n\nCuerpo.\n\n\n### RF-2: Dos\n\ntexto\n",
+		},
+		{
+			name:     "section cuyo último bloque no tiene blancos finales",
+			profile:  idProfile,
+			delta:    sectionPagos,
+			original: "## Pagos\n\n### RF-1: Uno\ntexto\n## Anexos\n\ntexto\n",
+			want:     "## Pagos\n\n### RF-1: Uno\ntexto\n\n### RF-2: Nuevo\n\nCuerpo.\n\n## Anexos\n\ntexto\n",
+		},
+		{
+			name:     "section cuyo último bloque es el encabezado de la sección",
+			profile:  idProfile,
+			delta:    sectionPagos,
+			original: "## Previo\n\n### RF-1: Uno\n\ntexto\n\n## Pagos\n## Anexos\n\ntexto\n",
+			want:     "## Previo\n\n### RF-1: Uno\n\ntexto\n\n## Pagos\n\n### RF-2: Nuevo\n\nCuerpo.\n\n## Anexos\n\ntexto\n",
+		},
+		{
+			name:     "control: section con blancos finales no cambia",
+			profile:  idProfile,
+			delta:    sectionPagos,
+			original: "## Pagos\n\n### RF-1: Uno\n\ntexto\n\n## Anexos\n\ntexto\n",
+			want:     "## Pagos\n\n### RF-1: Uno\n\ntexto\n\n### RF-2: Nuevo\n\nCuerpo.\n\n## Anexos\n\ntexto\n",
+		},
+		{
+			name:     "final del fichero con salto final tras un bloque sin blancos",
+			profile:  idProfile,
+			delta:    afterRF1,
+			original: "### RF-1: Uno\ntexto\n",
+			want:     "### RF-1: Uno\ntexto\n\n### RF-2: Nuevo\n\nCuerpo.\n",
+		},
+		{
+			name:     "final del fichero sin salto final tras un bloque sin blancos",
+			profile:  idProfile,
+			delta:    afterRF1,
+			original: "### RF-1: Uno\ntexto",
+			want:     "### RF-1: Uno\ntexto\n\n### RF-2: Nuevo\n\nCuerpo.",
+		},
+		{
+			name:     "section al final del fichero sin salto final tras un bloque sin blancos",
+			profile:  idProfile,
+			delta:    sectionPagos,
+			original: "## Pagos\n\n### RF-1: Uno\ntexto",
+			want:     "## Pagos\n\n### RF-1: Uno\ntexto\n\n### RF-2: Nuevo\n\nCuerpo.",
+		},
+		{
+			name:     "control: final del fichero tras un bloque con blancos hereda la serie",
+			profile:  idProfile,
+			delta:    afterRF1,
+			original: "### RF-1: Uno\n\ntexto\n\n",
+			want:     "### RF-1: Uno\n\ntexto\n\n### RF-2: Nuevo\n\nCuerpo.\n\n",
+		},
+		{
+			name:     "identidad text por defecto tras un último bloque sin blancos",
+			profile:  textProfile,
+			delta:    textDelta,
+			original: "### Alfa\ntexto\n### Beta\ntexto\n",
+			want:     "### Alfa\ntexto\n### Beta\ntexto\n\n### Gamma\n\nCuerpo gamma.\n",
+		},
+		{
+			name:     "identidad text por defecto al final del fichero sin salto final",
+			profile:  textProfile,
+			delta:    textDelta,
+			original: "### Alfa\ntexto\n### Beta\ntexto",
+			want:     "### Alfa\ntexto\n### Beta\ntexto\n\n### Gamma\n\nCuerpo gamma.",
+		},
+		{
+			name:     "identidad text por defecto sin requisitos tras una línea sin blancos",
+			profile:  textProfile,
+			delta:    textDelta,
+			original: "# Documento\ntexto",
+			want:     "# Documento\ntexto\n\n### Gamma\n\nCuerpo gamma.",
+		},
+		{
+			name:     "control: identidad text por defecto con blancos finales no cambia",
+			profile:  textProfile,
+			delta:    textDelta,
+			original: "### Alfa\n\ntexto\n\n### Beta\n\ntexto\n\n",
+			want:     "### Alfa\n\ntexto\n\n### Beta\n\ntexto\n\n### Gamma\n\nCuerpo gamma.\n\n",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			forEachVariant(t, func(t *testing.T, v byteVariant) {
+				got, err := composeAdded(t, tt.profile, v, tt.original, tt.delta)
+				if err != nil {
+					t.Fatalf("ComposeDocument() error = %v", err)
+				}
+				assertOutput(t, v, got, tt.want)
+			})
+		})
+	}
+}
+
+func TestComposeAddedInAnEmptyDocumentDoesNotPrependABlankLine(t *testing.T) {
+	profile := profileFor(t, `^### (?P<id>)(?P<title>.+)$`, 3, workspace.IdentityText, "### {id}{title}", workspace.ScenariosInclude)
+	deltaText := join("## ADDED Requirements", "", "### Requirement: Gamma", "", "Cuerpo gamma.")
+	got, err := composeAdded(t, profile, byteVariants[0], "", deltaText)
+	if err != nil {
+		t.Fatalf("ComposeDocument() error = %v", err)
+	}
+	if want := "### Gamma\n\nCuerpo gamma.\n"; string(got.Output) != want {
+		t.Errorf("salida = %q, se esperaba %q", got.Output, want)
+	}
 }

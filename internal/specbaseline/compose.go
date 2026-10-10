@@ -866,8 +866,10 @@ func tailExtent(lines []Line, profile Profile) int {
 }
 
 // blanksBefore cuenta las líneas en blanco que preceden a la posición: la serie de
-// líneas en blanco finales del bloque de referencia (D-12).
-func (c *composer) blanksBefore(p insertionPoint) int {
+// líneas en blanco finales del bloque de referencia (D-12). El segundo resultado
+// indica si esa serie la delimita una línea que no está en blanco; si no hay
+// ninguna línea anterior, o solo hay líneas en blanco, es falso.
+func (c *composer) blanksBefore(p insertionPoint) (int, bool) {
 	count := 0
 	for i := p.seg; i >= 0; i-- {
 		if i >= len(c.segments) {
@@ -879,27 +881,33 @@ func (c *composer) blanksBefore(p insertionPoint) int {
 		}
 		for j := len(lines) - 1; j >= 0; j-- {
 			if strings.TrimSpace(lines[j].Text) != "" {
-				return count
+				return count, true
 			}
 			count++
 		}
 	}
-	return count
+	return count, false
 }
 
-// newBlock construye las líneas de un bloque insertado: el encabezado, el cuerpo
-// y la serie de líneas en blanco finales que hereda del bloque de referencia, con
-// un mínimo de una salvo al final del documento. Usa el final de línea del
-// encabezado de referencia. Si se inserta tras una última línea sin salto, esa
-// línea recibe el final de línea del documento y el bloque nuevo termina sin él,
-// de modo que el documento conserva su final (D-12).
+// newBlock construye las líneas de un bloque insertado: una línea en blanco
+// delante si la línea anterior al punto de inserción no lo está, el encabezado, el
+// cuerpo y la serie de líneas en blanco finales que hereda del bloque de
+// referencia, con un mínimo de una salvo al final del documento. Usa el final de
+// línea del encabezado de referencia. Si se inserta tras una última línea sin
+// salto, esa línea recibe el final de línea del documento y el bloque nuevo
+// termina sin él, de modo que el documento conserva su final. Solo inserta líneas:
+// no modifica ningún byte existente salvo ese final de línea (D-12).
 func (c *composer) newBlock(p insertionPoint, eol, heading string, body []deltaLine) []Line {
 	atEnd := p.seg >= len(c.segments)
-	blanks := c.blanksBefore(p)
+	blanks, afterText := c.blanksBefore(p)
+	separate := afterText && blanks == 0
 	if !atEnd && blanks < 1 {
 		blanks = 1
 	}
-	lines := make([]Line, 0, len(body)+1+blanks)
+	lines := make([]Line, 0, len(body)+2+blanks)
+	if separate {
+		lines = append(lines, Line{EOL: eol})
+	}
 	lines = append(lines, Line{Text: heading, EOL: eol})
 	for _, line := range body {
 		lines = append(lines, Line{Text: line.Text, EOL: eol})
