@@ -203,7 +203,7 @@ func buildReviewCapabilities(contracts ...string) (ReviewCapabilitiesResult, err
 		return ReviewCapabilitiesResult{}, err
 	}
 	result := reviewCapabilitiesStaticSurface(contract)
-	result.Package = ReviewCapabilitiesPackage{Name: "gentle-ai", Version: version, ReleaseChannel: reviewReleaseChannel(version)}
+	result.Package = ReviewCapabilitiesPackage{Name: reviewCapabilitiesPackageName(contract), Version: version, ReleaseChannel: reviewReleaseChannel(version)}
 	result.Build = build
 	result.Executable = ReviewCapabilitiesExecutable{
 		SHA256: executableDigest, Evidence: "self-reported", Verification: "compare-with-published-manifest",
@@ -212,6 +212,17 @@ func buildReviewCapabilities(contracts ...string) (ReviewCapabilitiesResult, err
 		return ReviewCapabilitiesResult{}, fmt.Errorf("validate review capabilities: %w", err)
 	}
 	return result, nil
+}
+
+// reviewCapabilitiesPackageName is the package name capabilities advertises to
+// the caller of contract: axiom only for a caller that negotiated the axiom
+// dialect, gentle-ai for every legacy contract (the gentle-ai v2 alias, v1 and
+// the empty default) so their bytes keep the name they always had.
+func reviewCapabilitiesPackageName(contract string) string {
+	if reviewDialectForContract(contract).axiom {
+		return reviewAxiomCommandTool
+	}
+	return "gentle-ai"
 }
 
 func reviewCapabilitiesStaticSurface(contracts ...string) ReviewCapabilitiesResult {

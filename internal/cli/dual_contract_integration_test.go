@@ -319,7 +319,7 @@ func TestDualContract_SchemaValidationWithCompiledSchemas(t *testing.T) {
 
 	// 4. Validar capacidades v2.6 negociadas con Axiom
 	surface := reviewCapabilitiesStaticSurface(AxiomReviewIntegrationContractV2)
-	surface.Package = ReviewCapabilitiesPackage{Name: "gentle-ai", Version: "3.1.0", ReleaseChannel: "stable"}
+	surface.Package = ReviewCapabilitiesPackage{Name: "axiom", Version: "3.1.0", ReleaseChannel: "stable"}
 	surface.Build = ReviewCapabilitiesBuild{
 		ID:            reviewCapabilitiesBuildDigest("3.1.0", ReviewCapabilitiesBuild{GoVersion: "go1.25.0", VCSModified: "false"}),
 		GoVersion:     "go1.25.0",

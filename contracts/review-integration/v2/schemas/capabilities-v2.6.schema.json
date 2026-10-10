@@ -42,7 +42,29 @@
       }
     },
     "package": {
-      "$ref": "capabilities-v2.3.schema.json#/properties/package"
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "version",
+        "release_channel"
+      ],
+      "properties": {
+        "name": {
+          "enum": ["gentle-ai", "axiom"]
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "release_channel": {
+          "enum": [
+            "development",
+            "prerelease",
+            "stable"
+          ]
+        }
+      }
     },
     "build": {
       "$ref": "capabilities-v2.3.schema.json#/properties/build"
