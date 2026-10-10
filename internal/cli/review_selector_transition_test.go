@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
@@ -139,10 +140,39 @@ func TestStatusRecoverTransitionExecutesExactBaseDiffSelectors(t *testing.T) {
 func TestStatusRecoverTransitionExecutesAccountingOnlyRecoveryWithoutSelectors(t *testing.T) {
 	reviewEnabledHome(t)
 	repo := initReviewCLIRepo(t)
+	runAccountingOnlyRecoveryThroughStatus(t, repo, nil)
+}
+
+// TestStatusRecoverCarriesEvidenceFromALegacyPolicyLineage proves the
+// upgrade path end to end: a predecessor frozen with the legacy default policy
+// text recovers into a successor built with the current default policy, and
+// the recovered evidence is still carried forward.
+func TestStatusRecoverCarriesEvidenceFromALegacyPolicyLineage(t *testing.T) {
+	reviewEnabledHome(t)
+	repo := initReviewCLIRepo(t)
+	legacyPolicy := filepath.Join(canonicalReviewCLITempDir(t), "legacy-policy.txt")
+	if err := os.WriteFile(legacyPolicy, []byte(reviewtransaction.LegacyFacadeReviewPolicy), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	predecessor, successor := runAccountingOnlyRecoveryThroughStatus(t, repo, []string{"--policy", legacyPolicy})
+	if want := facadePayloadHash([]byte(reviewtransaction.LegacyFacadeReviewPolicy)); predecessor.PolicyHash != want {
+		t.Fatalf("predecessor policy hash = %q, want the legacy default %q", predecessor.PolicyHash, want)
+	}
+	if want := facadePayloadHash([]byte(reviewtransaction.FacadeReviewPolicy)); successor.PolicyHash != want {
+		t.Fatalf("successor policy hash = %q, want the current default %q", successor.PolicyHash, want)
+	}
+}
+
+// runAccountingOnlyRecoveryThroughStatus drives an evidence-bound
+// accounting-only recovery through negotiated STATUS and returns the
+// predecessor and successor states. startExtra is appended to the
+// predecessor's START arguments.
+func runAccountingOnlyRecoveryThroughStatus(t *testing.T, repo string, startExtra []string) (reviewtransaction.CompactState, reviewtransaction.CompactState) {
+	t.Helper()
 	writeReviewStartCandidate(t, repo, "candidate.go", "package candidate\n\nfunc value() int { return 1 }\n", 0o644)
-	startedBytes, err := runLegacyFacadeStartForTestBytes(t, []string{
+	startedBytes, err := runLegacyFacadeStartForTestBytes(t, append([]string{
 		"--cwd", repo, "--lineage", "selector-accounting-only",
-	})
+	}, startExtra...))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -297,6 +327,7 @@ func TestStatusRecoverTransitionExecutesAccountingOnlyRecoveryWithoutSelectors(t
 	if replay.StoreRevision != recovered.StoreRevision || !bytes.Equal(beforeReplay, afterReplay) {
 		t.Fatalf("accounting-only recovery replay mutated authority: first=%#v replay=%#v", recovered, replay)
 	}
+	return predecessor.State, successorRecord.State
 }
 
 func TestStatusStopsFreshStagedWorkspaceOverlay(t *testing.T) {

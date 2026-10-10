@@ -1389,7 +1389,7 @@ func (store CompactStore) CreateOrReplayAtomicStart(ctx context.Context, request
 		if record.State.InitialAtomicStart == nil {
 			return conflict("initial_atomic_start")
 		}
-		if field := compactAtomicStartMismatch(*record.State.InitialAtomicStart, request.Binding); field != "" {
+		if field := compactAtomicStartReplayMismatch(*record.State.InitialAtomicStart, request.Binding); field != "" {
 			return conflict(field)
 		}
 		return CompactAtomicStartResult{Record: record, Replayed: true}, nil

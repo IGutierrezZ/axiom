@@ -509,3 +509,106 @@ func TestCompactStoreCreateOrReplayAtomicStartRecreatesAfterApprovedAuthorityBur
 		t.Fatalf("CreateOrReplayAtomicStart(after burn) = %#v, %v", recreated, err)
 	}
 }
+
+// compactAtomicStartLegacyPolicyRequest freezes the legacy default policy text
+// and hash, exactly as a binary from before the Axiom policy rename did.
+func compactAtomicStartLegacyPolicyRequest(t *testing.T, repo, lineage string) CompactAtomicStartRequest {
+	t.Helper()
+	request := compactAtomicStartFixture(t, repo, lineage)
+	policy := LegacyFacadeReviewPolicy
+	request.State.PolicyHash, request.State.FrozenPolicyContent = compactPolicyContentHash(policy), &policy
+	request.Binding.PolicyHash = request.State.PolicyHash
+	return request
+}
+
+func TestCompactStoreCreateOrReplayAtomicStartReplaysLegacyPolicyLineageUnderCurrentDefault(t *testing.T) {
+	const lineage = "compact-atomic-start-legacy-policy-replay"
+	repo := initSnapshotRepo(t)
+	store := compactAtomicStartStore(t, repo, lineage)
+	legacy := compactAtomicStartLegacyPolicyRequest(t, repo, lineage)
+	created, err := store.CreateOrReplayAtomicStart(context.Background(), legacy)
+	if err != nil {
+		t.Fatalf("create legacy lineage: %v", err)
+	}
+	before, err := os.ReadFile(store.StatePath())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	current := legacy
+	current.Binding = cloneCompactAtomicStartBinding(legacy.Binding)
+	policy := FacadeReviewPolicy
+	current.State.PolicyHash, current.State.FrozenPolicyContent = compactPolicyContentHash(policy), &policy
+	current.Binding.PolicyHash = current.State.PolicyHash
+	replayed, err := store.CreateOrReplayAtomicStart(context.Background(), current)
+	if err != nil {
+		t.Fatalf("replay under current default policy: %v", err)
+	}
+	if !replayed.Replayed || replayed.Record.Revision != created.Record.Revision {
+		t.Fatalf("replay = replayed %t revision %q, want replay of %q", replayed.Replayed, replayed.Record.Revision, created.Record.Revision)
+	}
+	if replayed.Record.State.PolicyHash != compactLegacyFacadePolicyHash || replayed.Record.State.FrozenPolicyContent == nil ||
+		*replayed.Record.State.FrozenPolicyContent != LegacyFacadeReviewPolicy {
+		t.Fatalf("replayed record rewrote the frozen policy: %q", replayed.Record.State.PolicyHash)
+	}
+	after, err := os.ReadFile(store.StatePath())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(before, after) {
+		t.Fatal("legacy policy replay mutated review-state.json")
+	}
+}
+
+func TestCompactStoreCreateOrReplayAtomicStartKeepsPolicyConflictsStrictOutsideTheLegacyPair(t *testing.T) {
+	tests := []struct {
+		name            string
+		frozen, request string
+	}{
+		{"legacy frozen against unrelated policy", compactLegacyFacadePolicyHash, compactAtomicStartHash("f")},
+		{"current frozen against legacy request", compactCurrentFacadePolicyHash, compactLegacyFacadePolicyHash},
+		{"unrelated frozen against current request", compactAtomicStartHash("f"), compactCurrentFacadePolicyHash},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			const lineage = "compact-atomic-start-policy-strict"
+			repo := initSnapshotRepo(t)
+			store := compactAtomicStartStore(t, repo, lineage)
+			request := compactAtomicStartFixture(t, repo, lineage)
+			request.State.PolicyHash = tt.frozen
+			switch tt.frozen {
+			case compactLegacyFacadePolicyHash:
+				policy := LegacyFacadeReviewPolicy
+				request.State.FrozenPolicyContent = &policy
+			case compactCurrentFacadePolicyHash:
+				policy := FacadeReviewPolicy
+				request.State.FrozenPolicyContent = &policy
+			default:
+				request.State.FrozenPolicyContent = nil
+			}
+			request.Binding.PolicyHash = tt.frozen
+			if _, err := store.CreateOrReplayAtomicStart(context.Background(), request); err != nil {
+				t.Fatal(err)
+			}
+			before, err := os.ReadFile(store.StatePath())
+			if err != nil {
+				t.Fatal(err)
+			}
+			conflicting := request
+			conflicting.Binding = cloneCompactAtomicStartBinding(request.Binding)
+			conflicting.Binding.PolicyHash = tt.request
+			_, err = store.CreateOrReplayAtomicStart(context.Background(), conflicting)
+			var conflict *CompactAtomicStartConflictError
+			if !errors.As(err, &conflict) || conflict.Field != "policy_hash" {
+				t.Fatalf("replay error = %T %v, want policy_hash conflict", err, err)
+			}
+			after, err := os.ReadFile(store.StatePath())
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !bytes.Equal(before, after) {
+				t.Fatal("policy conflict mutated review-state.json")
+			}
+		})
+	}
+}

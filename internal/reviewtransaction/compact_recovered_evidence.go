@@ -68,7 +68,7 @@ func compactAccountingOnlyEscalation(state CompactState) bool {
 }
 
 func compactRecoveredEvidenceScopeMatches(predecessor, successor CompactState) bool {
-	return predecessor.PolicyHash == successor.PolicyHash && predecessor.RiskLevel == successor.RiskLevel &&
+	return compactPolicyHashesEquivalent(predecessor.PolicyHash, successor.PolicyHash) && predecessor.RiskLevel == successor.RiskLevel &&
 		equalStrings(predecessor.SelectedLenses, successor.SelectedLenses) &&
 		predecessor.CurrentSnapshot.CandidateTree == successor.InitialSnapshot.CandidateTree &&
 		equalStrings(predecessor.GenesisPaths, successor.GenesisPaths) &&
