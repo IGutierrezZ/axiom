@@ -160,7 +160,7 @@ func ComposeDocument(in ComposeInput) (ComposeResult, error) {
 	document := in.Document
 	c := &composer{input: in, profile: document.Profile, domain: document.Domain}
 	if c.profile.Heading == nil {
-		return ComposeResult{}, c.fail("DOCUMENTO", "", "el documento no tiene un perfil de requisito compilado", "declara 'requirement' en baseline.documents del dominio en axiom.yaml")
+		return ComposeResult{}, missingProfileError(c.domain)
 	}
 	if c.profile.Scenarios == workspace.ScenariosOmit {
 		return ComposeResult{}, c.fail("DOCUMENTO", "", "la composición con 'scenarios: omit' todavía no está disponible", "declara 'scenarios: include' o espera a la composición de ADDED y escenarios")
@@ -243,20 +243,35 @@ func (c *composer) fail(section, requirement, reason, continuation string) *Comp
 // su título y su identificador (REQ-24.39). Rechaza un nombre que no cumple el
 // patrón `heading`.
 func (c *composer) parseName(section, name string) (id, title, key string, err error) {
-	line := c.profile.HeadingLine(name)
-	id, title, ok := c.profile.Match(line)
+	return parseRequirementName(c.domain, c.profile, section, name)
+}
+
+// parseRequirementName es parseName sin el estado de una composición: lo
+// comparten la composición y PlanIDs, que leen el nombre de un requisito del
+// delta con las mismas reglas.
+func parseRequirementName(domain string, profile Profile, section, name string) (id, title, key string, err error) {
+	fail := func(reason, continuation string) error {
+		return &ComposeError{Domain: domain, Section: section, Requirement: name, Reason: reason, Continuation: continuation}
+	}
+	line := profile.HeadingLine(name)
+	id, title, ok := profile.Match(line)
 	if !ok {
-		return "", "", "", c.fail(section, name,
-			fmt.Sprintf("el nombre del requisito no cumple el patrón 'heading' %q (se evalúa la línea %q)", c.profile.Heading.String(), line),
+		return "", "", "", fail(
+			fmt.Sprintf("el nombre del requisito no cumple el patrón 'heading' %q (se evalúa la línea %q)", profile.Heading.String(), line),
 			"escribe el nombre como el encabezado del proyecto sin los '#' iniciales ni el espacio que los sigue, de modo que los '#' del nivel, un espacio y el nombre cumplan 'heading'")
 	}
-	key = c.profile.Key(id, title)
+	key = profile.Key(id, title)
 	if strings.TrimSpace(key) == "" {
-		return "", "", "", c.fail(section, name,
-			fmt.Sprintf("el nombre del requisito no define el %s con el que se identifica", identityLabel(c.profile)),
+		return "", "", "", fail(
+			fmt.Sprintf("el nombre del requisito no define el %s con el que se identifica", identityLabel(profile)),
 			"incluye en el nombre el identificador del requisito, según el patrón 'heading' del perfil")
 	}
 	return id, title, key, nil
+}
+
+// missingProfileError es el rechazo de un documento sin perfil compilado.
+func missingProfileError(domain string) error {
+	return &ComposeError{Domain: domain, Section: "DOCUMENTO", Reason: "el documento no tiene un perfil de requisito compilado", Continuation: "declara 'requirement' en baseline.documents del dominio en axiom.yaml"}
 }
 
 func identityLabel(p Profile) string {
