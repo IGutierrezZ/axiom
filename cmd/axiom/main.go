@@ -152,6 +152,7 @@ COMANDOS DE GOBERNANZA Y WORKSPACE:
   sdd continue         Calcula y emite la siguiente acción autorizada del despachador SDD
   sdd attempt          Registra la autoridad de edición por raíz para el cambio activo (grant)
   sdd archive-compose  Compone el reporte de archivado formal y actualiza las especificaciones vivas
+  sdd integrate        Valida (check) y prepara (prepare) la integración de un cambio en la baseline del proyecto
   review               Gestiona el ciclo de revisión formal RDD (start, resume, step, mode, validate)
   ui                   Inicia el servidor local y abre el dashboard web interactivo
 
@@ -2019,6 +2020,7 @@ func runSDD(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stdout, "  continue         Calcula y emite la siguiente acción autorizada del despachador SDD")
 		fmt.Fprintln(stdout, "  attempt          Registra la autoridad de edición por raíz para el cambio activo (grant)")
 		fmt.Fprintln(stdout, "  archive-compose  Compone el reporte de archivado formal y actualiza las especificaciones vivas")
+		fmt.Fprintln(stdout, "  integrate        Valida (check) y prepara (prepare) la integración de un cambio en la baseline del proyecto")
 		fmt.Fprintln(stdout, "  task-result      Valida y extrae el resultado tipado de una fase delegada")
 		fmt.Fprintln(stdout, "  preflight-hook   Ejecuta el hook previo de verificación SDD")
 		fmt.Fprintln(stdout, "  kickoff          Sella la configuración de kickoff de un cambio (seal, show)")
@@ -2042,6 +2044,8 @@ func runSDD(args []string, stdout, stderr io.Writer) int {
 		err = cli.RunSDDAttempt(subArgs, stdout)
 	case "archive-compose":
 		err = cli.RunSDDArchiveCompose(subArgs, stdout)
+	case "integrate":
+		err = cli.RunSDDIntegrate(subArgs, stdout)
 	case "task-result":
 		err = cli.RunSDDTaskResult(subArgs, stdout)
 	case "preflight-hook":
@@ -2051,7 +2055,7 @@ func runSDD(args []string, stdout, stderr io.Writer) int {
 	case "gate":
 		err = cli.RunSDDGate(subArgs, stdout)
 	default:
-		fmt.Fprintf(stderr, "Error: subcomando '%s' no reconocido para sdd. Opciones: status, continue, attempt, archive-compose, task-result, preflight-hook, kickoff, gate\n", subCmd)
+		fmt.Fprintf(stderr, "Error: subcomando '%s' no reconocido para sdd. Opciones: status, continue, attempt, archive-compose, integrate, task-result, preflight-hook, kickoff, gate\n", subCmd)
 		return 1
 	}
 
