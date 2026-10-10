@@ -42,6 +42,9 @@ type deltaBlock struct {
 	Body      []deltaLine
 	Reason    string // valor de la nota (Reason: ...)
 	HasReason bool
+	// Placements son los valores de las notas (Placement: ...), en orden: la
+	// ubicación de un requisito ADDED (D-11).
+	Placements []string
 }
 
 // delta agrupa los requisitos de un delta por sección, en el orden del fichero.
@@ -105,8 +108,11 @@ func parseDelta(data []byte) delta {
 		}
 		if !fenced[i] {
 			if note := deltaNote.FindStringSubmatch(line.Text); note != nil {
-				if note[1] == "Reason" {
+				switch note[1] {
+				case "Reason":
 					current.Reason, current.HasReason = strings.TrimSpace(note[2]), true
+				case "Placement":
+					current.Placements = append(current.Placements, strings.TrimSpace(note[2]))
 				}
 				continue
 			}
@@ -156,4 +162,38 @@ func bodyViolations(body []deltaLine, level int) []headingViolation {
 		}
 	}
 	return violations
+}
+
+// scenarioLevel es el nivel de los encabezados `#### Scenario:` del formato
+// nativo del delta.
+const scenarioLevel = 4
+
+// omitScenarios elimina del cuerpo cada escenario: el fragmento que comienza en
+// una línea `#### Scenario:` y termina antes del siguiente encabezado ATX de nivel
+// menor o igual que 4, o al final del cuerpo, siempre fuera de bloques de código
+// con vallas (D-10, REQ-24.61). Un encabezado de nivel 4 que no es un escenario,
+// como `#### Notas`, y su texto se conservan. Devuelve el cuerpo sin las líneas
+// en blanco finales y si había algún escenario.
+func omitScenarios(body []deltaLine) (kept []deltaLine, omitted bool) {
+	lines := make([]Line, len(body))
+	for i, line := range body {
+		lines[i] = Line{Text: line.Text}
+	}
+	fenced := fencedLines(lines)
+	inScenario := false
+	for i, line := range body {
+		if !fenced[i] {
+			if level, title, ok := parseATX(line.Text); ok && level <= scenarioLevel {
+				inScenario = level == scenarioLevel && strings.HasPrefix(title, "Scenario:")
+				omitted = omitted || inScenario
+			}
+		}
+		if !inScenario {
+			kept = append(kept, line)
+		}
+	}
+	for len(kept) > 0 && strings.TrimSpace(kept[len(kept)-1].Text) == "" {
+		kept = kept[:len(kept)-1]
+	}
+	return kept, omitted
 }

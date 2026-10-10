@@ -839,29 +839,6 @@ func TestComposeRefusesADeltaWithoutRequirements(t *testing.T) {
 	}
 }
 
-func TestComposeRefusesWhatThisStageDoesNotCompose(t *testing.T) {
-	profile := requirementProfile(t)
-
-	t.Run("ADDED", func(t *testing.T) {
-		deltaText := join("## ADDED Requirements", "", "### Requirement: RF-9001: Reintento", "", "(Placement: after RF-100)", "", "Cuerpo.")
-		_, err := composeVariant(t, profile, byteVariants[0], baseDocument, deltaText)
-		assertComposeError(t, err, "ADDED", "RF-9001")
-	})
-
-	t.Run("scenarios omit", func(t *testing.T) {
-		omit := profileFor(t, `^### (?P<id>RF-\d+): (?P<title>.+)$`, 3, workspace.IdentityID, "### {id}: {title}", workspace.ScenariosOmit)
-		deltaText := join("## MODIFIED Requirements", "", "### Requirement: RF-101: Baja", "", "Cuerpo.")
-		_, err := composeVariant(t, omit, byteVariants[0], baseDocument, deltaText)
-		assertComposeError(t, err, "scenarios: omit")
-	})
-
-	t.Run("un documento sin perfil compilado", func(t *testing.T) {
-		deltaText := join("## MODIFIED Requirements", "", "### Requirement: RF-101: Baja", "", "Cuerpo.")
-		_, err := composeVariant(t, Profile{}, byteVariants[0], baseDocument, deltaText)
-		assertComposeError(t, err, "perfil")
-	})
-}
-
 func TestComposeTraceHasOneEntryPerDeltaRequirement(t *testing.T) {
 	profile := requirementProfile(t)
 	deltaText := join(

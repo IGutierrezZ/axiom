@@ -2,6 +2,7 @@ package specbaseline
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
@@ -77,9 +78,14 @@ type PlannedDocument struct {
 	Delta    []byte
 }
 
-// ComposeInput reúne lo necesario para componer un documento con perfil.
+// ComposeInput reúne lo necesario para componer un documento con perfil. IDs es
+// la correspondencia de IDs provisionales a definitivos de todo el cambio, que
+// calcula PlanIDs una sola vez (REQ-24.59): sin ella no se puede componer un ADDED
+// con identidad `id`, y con ella se sustituyen los IDs provisionales en el texto
+// que se integra.
 type ComposeInput struct {
 	Document           PlannedDocument
+	IDs                IDMap
 	Supersede          bool
 	ExplicitSuperseded []string
 }
@@ -135,6 +141,11 @@ type segment struct {
 	title      string
 	key        string
 	superseded bool
+	// added marca el bloque de un requisito ADDED recién insertado; anchor es la
+	// ubicación que declaró, para que los ADDED con la misma ancla queden en el
+	// orden del delta (D-11).
+	added  bool
+	anchor string
 }
 
 // composer lleva el estado de una composición en memoria.
@@ -146,6 +157,9 @@ type composer struct {
 	segments []segment
 	warnings []string
 	entries  []TraceEntry
+	// removed son los identificadores que un REMOVED del mismo delta eliminó sin
+	// --supersede: no pueden ser el ancla de un ADDED.
+	removed map[string]bool
 }
 
 // ComposeDocument compone el delta sobre el documento con el perfil de
@@ -154,16 +168,15 @@ type composer struct {
 // pertenece a un bloque editado conserva sus bytes (REQ-24.45). Devuelve
 // *ComposeError ante cualquier delta no aplicable: nunca una composición parcial.
 //
-// En este tramo no se componen todavía los ADDED ni `scenarios: omit` (se
-// incorporan con la asignación de IDs): se rechazan con un *ComposeError.
+// Después de ellas inserta los ADDED en el orden del delta, cada uno en la
+// ubicación que declara, y sustituye los IDs provisionales del cambio por los
+// definitivos en el texto que integra (D-11). Con `scenarios: omit` integra los
+// requisitos sin sus escenarios (D-10).
 func ComposeDocument(in ComposeInput) (ComposeResult, error) {
 	document := in.Document
-	c := &composer{input: in, profile: document.Profile, domain: document.Domain}
+	c := &composer{input: in, profile: document.Profile, domain: document.Domain, removed: map[string]bool{}}
 	if c.profile.Heading == nil {
 		return ComposeResult{}, missingProfileError(c.domain)
-	}
-	if c.profile.Scenarios == workspace.ScenariosOmit {
-		return ComposeResult{}, c.fail("DOCUMENTO", "", "la composición con 'scenarios: omit' todavía no está disponible", "declara 'scenarios: include' o espera a la composición de ADDED y escenarios")
 	}
 
 	parsed := ParseDocument(document.Original)
@@ -193,9 +206,10 @@ func ComposeDocument(in ComposeInput) (ComposeResult, error) {
 	if err := c.supersedeExplicit(); err != nil {
 		return ComposeResult{}, err
 	}
-	if len(deltaDoc.Added) > 0 {
-		block := deltaDoc.Added[0]
-		return ComposeResult{}, c.fail(sectionAdded, block.Name, "la composición de ADDED con perfil de requisito (ubicación explícita e ID definitivo) todavía no está disponible", "retira el ADDED del delta o espera a que la composición lo admita")
+	for _, block := range deltaDoc.Added {
+		if err := c.add(block); err != nil {
+			return ComposeResult{}, err
+		}
 	}
 
 	var lines []Line
@@ -300,12 +314,18 @@ func (c *composer) find(section, name, key string) (int, error) {
 			fmt.Sprintf("el documento no contiene ningún requisito con %s %q", identityLabel(c.profile), key),
 			"comprueba el identificador en el documento de la baseline o retira la operación del delta")
 	}
+	return -1, c.ambiguous(section, name, key, found)
+}
+
+// ambiguous es el rechazo de un identificador que aparece más de una vez: nombra
+// todas sus apariciones, con su línea y su encabezado (REQ-24.40).
+func (c *composer) ambiguous(section, name, key string, found []int) error {
 	occurrences := make([]string, len(found))
 	for i, at := range found {
 		requisite := c.segments[at].requisite
 		occurrences[i] = fmt.Sprintf("línea %d %q", requisite.LineNumber(), requisite.Line)
 	}
-	return -1, c.fail(section, name,
+	return c.fail(section, name,
 		fmt.Sprintf("el identificador %q es ambiguo: aparece %d veces en el documento (%s)", key, len(found), strings.Join(occurrences, "; ")),
 		"normaliza los identificadores duplicados en el repositorio del proyecto, en un commit propio, y vuelve a ejecutar la composición")
 }
@@ -324,6 +344,12 @@ func (c *composer) tailWarnings(section string, seg segment) []string {
 	}
 	c.warnings = append(c.warnings, warnings...)
 	return warnings
+}
+
+// render emite el encabezado de un requisito sustituyendo en él los IDs
+// provisionales del cambio: el texto del delta que se integra nunca conserva uno.
+func (c *composer) render(id, title string) string {
+	return c.input.IDs.Substitute(c.profile.RenderHeading(id, title))
 }
 
 func (c *composer) entry(key, anchor string, action TraceAction, reason string, warnings []string) {
@@ -375,10 +401,10 @@ func (c *composer) rename(block deltaBlock) error {
 	}
 
 	seg := &c.segments[at]
-	heading := c.profile.RenderHeading(newID, newTitle)
+	heading := c.render(newID, newTitle)
 	seg.lines = append([]Line{{Text: heading, EOL: seg.lines[0].EOL}}, seg.lines[1:]...)
 	seg.id, seg.title, seg.key = newID, newTitle, newKey
-	c.entry(newKey, heading, ActionModified, fmt.Sprintf("renombrado desde %q: %s", oldKey, block.Reason), nil)
+	c.entry(newKey, heading, ActionModified, c.input.IDs.Substitute(fmt.Sprintf("renombrado desde %q: %s", oldKey, block.Reason)), nil)
 	return nil
 }
 
@@ -392,23 +418,45 @@ func (c *composer) modify(block deltaBlock) error {
 	if err != nil {
 		return err
 	}
-	if err := c.checkBody(sectionModified, block); err != nil {
+	body, omitted, err := c.integratedBody(sectionModified, block)
+	if err != nil {
 		return err
 	}
 
 	seg := &c.segments[at]
-	heading := c.profile.RenderHeading(id, title)
+	heading := c.render(id, title)
 	warnings := c.tailWarnings(sectionModified, *seg)
-	seg.lines = c.replacement(seg.lines, heading, block.Body)
+	seg.lines = c.replacement(seg.lines, heading, body)
 	seg.id, seg.title = id, title
 	c.entry(key, heading, ActionModified, "", warnings)
+	c.entries[len(c.entries)-1].ScenariosOmitted = omitted
 	return nil
+}
+
+// integratedBody devuelve el cuerpo que se integra de un requisito ADDED o
+// MODIFIED: sin los escenarios con `scenarios: omit` (D-10), comprobado contra los
+// encabezados que cerrarían el bloque (D-09: la regla se aplica al texto que se
+// integra) y con los IDs provisionales ya sustituidos. Informa de si omitió algún
+// escenario.
+func (c *composer) integratedBody(section string, block deltaBlock) ([]deltaLine, bool, error) {
+	body, omitted := block.Body, false
+	if c.profile.Scenarios == workspace.ScenariosOmit {
+		body, omitted = omitScenarios(body)
+	}
+	if err := c.checkBody(section, block.Name, body); err != nil {
+		return nil, false, err
+	}
+	integrated := make([]deltaLine, len(body))
+	for i, line := range body {
+		integrated[i] = deltaLine{Text: c.input.IDs.Substitute(line.Text), Number: line.Number}
+	}
+	return integrated, omitted, nil
 }
 
 // checkBody rechaza el cuerpo de un delta que contiene, fuera de vallas, un
 // encabezado de nivel menor o igual que el de los requisitos (D-09, REQ-24.42).
-func (c *composer) checkBody(section string, block deltaBlock) error {
-	violations := bodyViolations(block.Body, c.profile.Level)
+func (c *composer) checkBody(section, name string, body []deltaLine) error {
+	violations := bodyViolations(body, c.profile.Level)
 	if len(violations) == 0 {
 		return nil
 	}
@@ -416,7 +464,7 @@ func (c *composer) checkBody(section string, block deltaBlock) error {
 	for i, violation := range violations {
 		found[i] = fmt.Sprintf("%q (línea %d del delta, nivel %d)", violation.Text, violation.Number, violation.Level)
 	}
-	return c.fail(section, block.Name,
+	return c.fail(section, name,
 		fmt.Sprintf("el cuerpo contiene, fuera de bloques de código, un encabezado de nivel menor o igual que el nivel %d de los requisitos: %s; cerraría el bloque del requisito y dejaría el resto del cuerpo fuera de él", c.profile.Level, strings.Join(found, ", ")),
 		fmt.Sprintf("rebaja el encabezado a un nivel mayor que %d o conviértelo en texto", c.profile.Level))
 }
@@ -474,14 +522,16 @@ func (c *composer) remove(block deltaBlock) error {
 
 	seg := &c.segments[at]
 	warnings := c.tailWarnings(sectionRemoved, *seg)
+	reason := c.input.IDs.Substitute(block.Reason)
 	if c.input.Supersede {
-		anchor := c.supersede(seg, block.Reason)
-		c.entry(key, anchor, ActionRemoved, block.Reason, warnings)
+		anchor := c.supersede(seg, reason)
+		c.entry(key, anchor, ActionRemoved, reason, warnings)
 		return nil
 	}
 	anchor := seg.requisite.Line
 	c.segments = append(c.segments[:at], c.segments[at+1:]...)
-	c.entry(key, anchor, ActionRemoved, block.Reason, warnings)
+	c.removed[key] = true
+	c.entry(key, anchor, ActionRemoved, reason, warnings)
 	return nil
 }
 
@@ -544,4 +594,350 @@ func (c *composer) supersedeExplicit() error {
 		}
 	}
 	return nil
+}
+
+var (
+	// placementAfter y placementSection son las dos formas de la nota
+	// (Placement: ...) de un requisito ADDED (D-11).
+	placementAfter   = regexp.MustCompile(`^after[ \t]+(\S.*)$`)
+	placementSection = regexp.MustCompile(`^section[ \t]+"(.+)"$`)
+)
+
+type placementKind int
+
+const (
+	// placeDefault es la ausencia de nota: tras el último bloque de requisito y su
+	// cola (solo con identidad `text`).
+	placeDefault placementKind = iota
+	placeAfter
+	placeSection
+)
+
+// placement es la ubicación declarada de un requisito ADDED.
+type placement struct {
+	kind  placementKind
+	value string // el identificador del ancla o el título de la sección
+}
+
+// insertionPoint es una posición entre líneas del documento: antes de la línea
+// `line` del tramo `seg`. Con seg igual al número de tramos es el final del
+// documento.
+type insertionPoint struct {
+	seg, line int
+}
+
+func (c *composer) isText(seg segment) bool { return seg.requisite == nil && !seg.added }
+
+// add inserta un requisito ADDED (REQ-24.43, D-11): su ubicación se evalúa sobre
+// el documento después de RENAMED, MODIFIED y REMOVED, y su encabezado se emite
+// con el ID definitivo que PlanIDs le asignó.
+func (c *composer) add(block deltaBlock) error {
+	id, title, key, err := c.parseName(sectionAdded, block.Name)
+	if err != nil {
+		return err
+	}
+	provisional := ""
+	if c.profile.Identity == workspace.IdentityID {
+		assignment, ok := c.input.IDs.Lookup(id)
+		if !ok || assignment.Domain != c.domain {
+			return c.fail(sectionAdded, block.Name,
+				fmt.Sprintf("la correspondencia de IDs del cambio no asigna un ID definitivo al ID provisional %q de este dominio", id),
+				"calcula la correspondencia de todo el cambio con PlanIDs y pásala en ComposeInput.IDs antes de componer")
+		}
+		provisional, id, key = id, assignment.Definitive, assignment.Definitive
+	} else if c.exists(key) {
+		return c.fail(sectionAdded, block.Name,
+			fmt.Sprintf("ya existe un requisito con %s %q en el documento", identityLabel(c.profile), key),
+			"elige un nombre que no exista o usa MODIFIED sobre el requisito existente")
+	}
+
+	place, err := c.placement(block)
+	if err != nil {
+		return err
+	}
+	var (
+		point  insertionPoint
+		refEOL string
+		marker string
+	)
+	switch place.kind {
+	case placeAfter:
+		at, err := c.anchorBlock(block, place.value)
+		if err != nil {
+			return err
+		}
+		point, refEOL, marker = c.afterBlock(at), c.eolOf(c.segments[at].lines[0]), "after:"+place.value
+	case placeSection:
+		if point, refEOL, err = c.sectionEnd(block, place.value); err != nil {
+			return err
+		}
+		marker = "section:" + place.value
+	default:
+		point, refEOL = c.afterLastBlock()
+		marker = "last"
+	}
+	// Los ADDED con la misma ancla se insertan en el orden del delta, cada uno
+	// tras el anterior.
+	for point.line == 0 && point.seg < len(c.segments) && c.segments[point.seg].added && c.segments[point.seg].anchor == marker {
+		point.seg++
+	}
+
+	body, omitted, err := c.integratedBody(sectionAdded, block)
+	if err != nil {
+		return err
+	}
+	heading := c.render(id, title)
+	c.insert(point, segment{
+		lines: c.newBlock(point, refEOL, heading, body),
+		id:    id, title: title, key: key,
+		added: true, anchor: marker,
+	})
+	c.entry(key, heading, ActionAdded, "", nil)
+	last := &c.entries[len(c.entries)-1]
+	last.Provisional, last.ScenariosOmitted = provisional, omitted
+	return nil
+}
+
+// exists dice si el documento, con las operaciones ya aplicadas y los ADDED ya
+// insertados, tiene un requisito con ese identificador.
+func (c *composer) exists(key string) bool {
+	for _, seg := range c.segments {
+		if (seg.requisite != nil || seg.added) && !seg.superseded && seg.key == key {
+			return true
+		}
+	}
+	return false
+}
+
+func (c *composer) eolOf(line Line) string {
+	if line.EOL != "" {
+		return line.EOL
+	}
+	return c.eol
+}
+
+// placement lee la nota (Placement: ...) del bloque. Con identidad `id` es
+// obligatoria; con identidad `text` es opcional.
+func (c *composer) placement(block deltaBlock) (placement, error) {
+	switch len(block.Placements) {
+	case 0:
+		if c.profile.Identity == workspace.IdentityID {
+			return placement{}, c.fail(sectionAdded, block.Name,
+				"falta la nota (Placement: ...): con identidad 'id' la ubicación de un requisito ADDED debe ser explícita y no se deduce del orden de los IDs",
+				`añade al bloque una línea "(Placement: after <ID>)" o "(Placement: section "<título>")"`)
+		}
+		return placement{}, nil
+	case 1:
+	default:
+		return placement{}, c.fail(sectionAdded, block.Name,
+			fmt.Sprintf("el bloque declara %d notas (Placement: ...) y solo puede declarar una", len(block.Placements)),
+			"deja una sola nota (Placement: ...) en el bloque")
+	}
+	raw := block.Placements[0]
+	if match := placementAfter.FindStringSubmatch(raw); match != nil {
+		return placement{kind: placeAfter, value: strings.TrimSpace(match[1])}, nil
+	}
+	if match := placementSection.FindStringSubmatch(raw); match != nil {
+		return placement{kind: placeSection, value: strings.TrimSpace(match[1])}, nil
+	}
+	return placement{}, c.fail(sectionAdded, block.Name,
+		fmt.Sprintf("la nota (Placement: %s) no tiene un formato reconocido", raw),
+		`escribe "(Placement: after <ID>)" o "(Placement: section "<título>")"`)
+}
+
+// anchorBlock localiza el tramo del único requisito `<ID>` de `(Placement: after
+// <ID>)`. Un identificador duplicado, inexistente o eliminado por el mismo delta
+// sin --supersede se rechaza (REQ-24.40, REQ-24.43).
+func (c *composer) anchorBlock(block deltaBlock, key string) (int, error) {
+	var found []int
+	for i, seg := range c.segments {
+		if seg.requisite != nil && seg.key == key {
+			found = append(found, i)
+		}
+	}
+	switch len(found) {
+	case 1:
+		return found[0], nil
+	case 0:
+		if c.removed[key] {
+			return -1, c.fail(sectionAdded, block.Name,
+				fmt.Sprintf("la ubicación (Placement: after %s) apunta a un requisito que el mismo delta elimina sin --supersede", key),
+				"elige como ubicación otro requisito del documento o conserva el bloque con --supersede")
+		}
+		return -1, c.fail(sectionAdded, block.Name,
+			fmt.Sprintf("la ubicación (Placement: after %s) apunta a un requisito que el documento no contiene", key),
+			"comprueba el identificador en el documento de la baseline o elige otra ubicación")
+	}
+	return -1, c.ambiguous(sectionAdded, block.Name, key, found)
+}
+
+// afterBlock es la posición inmediatamente posterior al bloque del tramo `at` y a
+// su cola contigua de secciones no requisito (D-09).
+func (c *composer) afterBlock(at int) insertionPoint {
+	next := at + 1
+	if next < len(c.segments) && c.isText(c.segments[next]) {
+		return c.normalize(insertionPoint{seg: next, line: tailExtent(c.segments[next].lines, c.profile)})
+	}
+	return insertionPoint{seg: next}
+}
+
+// afterLastBlock es la ubicación por defecto de un ADDED con identidad `text`:
+// tras el último bloque de requisito y su cola, o al final del documento si no hay
+// ninguno.
+func (c *composer) afterLastBlock() (insertionPoint, string) {
+	for i := len(c.segments) - 1; i >= 0; i-- {
+		if c.segments[i].requisite != nil {
+			return c.afterBlock(i), c.eolOf(c.segments[i].lines[0])
+		}
+	}
+	return insertionPoint{seg: len(c.segments)}, c.eol
+}
+
+// sectionEnd localiza el final de la sección de nivel `level-1` con ese título,
+// que debe ser única entre los encabezados de ese nivel: el punto anterior al
+// siguiente encabezado de nivel menor o igual, o el final del documento (D-11).
+func (c *composer) sectionEnd(block deltaBlock, title string) (insertionPoint, string, error) {
+	level := c.profile.Level - 1
+	if level < 1 {
+		return insertionPoint{}, "", c.fail(sectionAdded, block.Name,
+			fmt.Sprintf("la ubicación (Placement: section %q) no es posible con requisitos de nivel %d: no hay un nivel de sección superior", title, c.profile.Level),
+			"usa (Placement: after <ID>)")
+	}
+	type hit struct{ seg, line int }
+	var hits []hit
+	for i, seg := range c.segments {
+		if !c.isText(seg) {
+			continue
+		}
+		for _, heading := range scanHeadings(seg.lines) {
+			if heading.Level == level && strings.TrimSpace(heading.Title) == title {
+				hits = append(hits, hit{seg: i, line: heading.Index})
+			}
+		}
+	}
+	if len(hits) != 1 {
+		return insertionPoint{}, "", c.fail(sectionAdded, block.Name,
+			fmt.Sprintf("el título de sección %q de (Placement: section ...) aparece %d veces entre los encabezados de nivel %d del documento y debe aparecer exactamente una", title, len(hits), level),
+			"usa un título de sección que aparezca una sola vez o (Placement: after <ID>)")
+	}
+	start := hits[0]
+	eol := c.eolOf(c.segments[start.seg].lines[start.line])
+	for i := start.seg; i < len(c.segments); i++ {
+		if !c.isText(c.segments[i]) {
+			continue
+		}
+		for _, heading := range scanHeadings(c.segments[i].lines) {
+			if (i > start.seg || heading.Index > start.line) && heading.Level <= level {
+				return c.normalize(insertionPoint{seg: i, line: heading.Index}), eol, nil
+			}
+		}
+	}
+	return insertionPoint{seg: len(c.segments)}, eol, nil
+}
+
+// normalize convierte «al final de un tramo» en «al principio del siguiente».
+func (c *composer) normalize(p insertionPoint) insertionPoint {
+	if p.seg < len(c.segments) && p.line >= len(c.segments[p.seg].lines) {
+		return insertionPoint{seg: p.seg + 1}
+	}
+	return p
+}
+
+// tailExtent devuelve cuántas líneas del tramo de texto que sigue a un bloque
+// pertenecen a su cola contigua: las secciones no requisito del nivel de los
+// requisitos, hasta el siguiente encabezado de nivel menor (D-09).
+func tailExtent(lines []Line, profile Profile) int {
+	headings := scanHeadings(lines)
+	position := 0
+	for position < len(lines) {
+		at := -1
+		for i, heading := range headings {
+			if heading.Index == position {
+				at = i
+				break
+			}
+		}
+		if at < 0 || headings[at].Level != profile.Level {
+			return position
+		}
+		position = blockEnd(headings, at, profile.Level, len(lines))
+	}
+	return position
+}
+
+// blanksBefore cuenta las líneas en blanco que preceden a la posición: la serie de
+// líneas en blanco finales del bloque de referencia (D-12).
+func (c *composer) blanksBefore(p insertionPoint) int {
+	count := 0
+	for i := p.seg; i >= 0; i-- {
+		if i >= len(c.segments) {
+			continue
+		}
+		lines := c.segments[i].lines
+		if i == p.seg {
+			lines = lines[:p.line]
+		}
+		for j := len(lines) - 1; j >= 0; j-- {
+			if strings.TrimSpace(lines[j].Text) != "" {
+				return count
+			}
+			count++
+		}
+	}
+	return count
+}
+
+// newBlock construye las líneas de un bloque insertado: el encabezado, el cuerpo
+// y la serie de líneas en blanco finales que hereda del bloque de referencia, con
+// un mínimo de una salvo al final del documento. Usa el final de línea del
+// encabezado de referencia. Si se inserta tras una última línea sin salto, esa
+// línea recibe el final de línea del documento y el bloque nuevo termina sin él,
+// de modo que el documento conserva su final (D-12).
+func (c *composer) newBlock(p insertionPoint, eol, heading string, body []deltaLine) []Line {
+	atEnd := p.seg >= len(c.segments)
+	blanks := c.blanksBefore(p)
+	if !atEnd && blanks < 1 {
+		blanks = 1
+	}
+	lines := make([]Line, 0, len(body)+1+blanks)
+	lines = append(lines, Line{Text: heading, EOL: eol})
+	for _, line := range body {
+		lines = append(lines, Line{Text: line.Text, EOL: eol})
+	}
+	for i := 0; i < blanks; i++ {
+		lines = append(lines, Line{EOL: eol})
+	}
+	if atEnd {
+		if last := c.lastLine(); last != nil && last.EOL == "" {
+			last.EOL = c.eol
+			lines[len(lines)-1].EOL = ""
+		}
+	}
+	return lines
+}
+
+// lastLine devuelve la última línea del documento, copiando su tramo para no
+// modificar el documento original, o nil si no tiene líneas.
+func (c *composer) lastLine() *Line {
+	for i := len(c.segments) - 1; i >= 0; i-- {
+		if len(c.segments[i].lines) == 0 {
+			continue
+		}
+		c.segments[i].lines = append([]Line(nil), c.segments[i].lines...)
+		return &c.segments[i].lines[len(c.segments[i].lines)-1]
+	}
+	return nil
+}
+
+// insert coloca el tramo en la posición, partiendo en dos el tramo de texto que
+// la contiene si cae en medio de él.
+func (c *composer) insert(p insertionPoint, s segment) {
+	if p.seg < len(c.segments) && p.line > 0 {
+		whole := c.segments[p.seg]
+		head := segment{lines: whole.lines[:p.line:p.line]}
+		tail := segment{lines: whole.lines[p.line:]}
+		c.segments = append(c.segments[:p.seg], append([]segment{head, s, tail}, c.segments[p.seg+1:]...)...)
+		return
+	}
+	c.segments = append(c.segments[:p.seg], append([]segment{s}, c.segments[p.seg:]...)...)
 }

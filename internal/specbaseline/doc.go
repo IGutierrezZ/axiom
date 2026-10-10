@@ -17,9 +17,12 @@
 //   - profile.go: el perfil de requisito compilado (patrón `heading`, nivel,
 //     identidad, plantilla `render` y tratamiento de escenarios).
 //   - delta.go: lectura del delta en formato nativo (D-10).
-//   - compose.go: la composición de MODIFIED, REMOVED y RENAMED por
-//     identificador, sin escribir nada: devuelve los bytes compuestos, la traza
-//     y los avisos.
+//   - compose.go: la composición de ADDED, MODIFIED, REMOVED y RENAMED por
+//     identificador, con la ubicación explícita de los ADDED, los escenarios
+//     `include` u `omit` y la sustitución de IDs provisionales, sin escribir
+//     nada: devuelve los bytes compuestos, la traza y los avisos.
+//   - ids.go: la correspondencia de IDs provisionales a definitivos de un
+//     cambio entero (PlanIDs) y su sustitución por tokens completos (D-11).
 //
 // Limitaciones documentadas: los encabezados setext no se reconocen (R33), y la
 // detección de vallas de código (unas 40 líneas) duplica la del motor nativo

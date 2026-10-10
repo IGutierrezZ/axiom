@@ -347,3 +347,186 @@ func TestRunSDDArchiveComposeHelpDocumentsTheDocumentMode(t *testing.T) {
 		}
 	}
 }
+
+// composeAddedConfig declara dos documentos con perfil de requisito: el segundo
+// omite los escenarios y comparte la familia `RF-` con el primero.
+const composeAddedConfig = `workspace:
+  name: ejemplo-compose
+  topology: monorepo-embedded
+  specs_repository: ""
+roles:
+  core:
+    name: Core
+    repositories:
+      - path: .
+baseline:
+  documents:
+    - domain: requisitos-funcionales
+      path: docs/01_Requisitos_Funcionales.md
+      requirement:
+        heading: '^#+ (?P<id>RF-\d+): (?P<title>.+)$'
+        level: 3
+        render: '### {id}: {title}'
+    - domain: requisitos-secundarios
+      path: docs/02_Requisitos_Secundarios.md
+      scenarios: omit
+      requirement:
+        heading: '^#+ (?P<id>RF-\d+): (?P<title>.+)$'
+        level: 3
+        render: '### {id}: {title}'
+`
+
+const composeSecondaryDocument = "# Secundarios\n\n### RF-050: Auditoría\n\nCuerpo de auditoría.\n"
+
+const composeAddedDelta = "## ADDED Requirements\n\n" +
+	"### Requirement: RF-9001: Reintento de cobro\n(Placement: after RF-100)\n\nEl sistema DEBE reintentar el cobro; ver RF-9001.\n"
+
+const composeAddedComposed = "# Requisitos\n\n## Catálogo\n\n" +
+	"### RF-100: Alta\n\nCuerpo original de alta.\n\n" +
+	"### Notas de implantación\n\nSección contigua.\n\n" +
+	"### RF-102: Reintento de cobro\n\nEl sistema DEBE reintentar el cobro; ver RF-102.\n\n" +
+	"### RF-101: Baja\n\nCuerpo de baja.\n"
+
+func TestRunSDDArchiveComposeDocumentAddsARequirementWithItsDefinitiveID(t *testing.T) {
+	root := composeWorkspace(t, composeAddedConfig, map[string]string{
+		"docs/01_Requisitos_Funcionales.md": composeProfileDocument,
+		"docs/02_Requisitos_Secundarios.md": composeSecondaryDocument,
+		"cambio/delta.md":                   composeAddedDelta,
+	})
+	stdout, stderr, err := runCompose(t, "--cwd", root, "--document", "requisitos-funcionales", "--delta", "cambio/delta.md")
+	if err != nil {
+		t.Fatalf("runSDDArchiveComposeWithStderr() error = %v", err)
+	}
+	if stdout != composeAddedComposed {
+		t.Errorf("salida = %q\nse esperaba %q", stdout, composeAddedComposed)
+	}
+	if want := `Correspondencia de IDs: RF-9001 -> RF-102 (dominio "requisitos-funcionales")`; !strings.Contains(stderr, want) {
+		t.Errorf("la salida de error debe imprimir la correspondencia %q: %q", want, stderr)
+	}
+	if strings.Contains(stdout, "RF-9001") {
+		t.Error("el documento no debe conservar el ID provisional")
+	}
+	original, err := os.ReadFile(filepath.Join(root, "docs", "01_Requisitos_Funcionales.md"))
+	if err != nil || string(original) != composeProfileDocument {
+		t.Errorf("el comando no debe modificar el documento (err = %v)", err)
+	}
+}
+
+func TestRunSDDArchiveComposeDocumentCalculatesTheIDMapOfTheWholeChange(t *testing.T) {
+	changeDelta := func(domain string) string { return "openspec/changes/inc-99/specs/" + domain + "/spec.md" }
+	secondaryDelta := "## ADDED Requirements\n\n### Requirement: RF-9002: Registro de accesos\n(Placement: after RF-050)\n\n" +
+		"Depende de RF-9001.\n\n#### Scenario: acceso correcto\n\n- **CUANDO** entra\n"
+
+	t.Run("la correspondencia incluye los demás dominios del cambio", func(t *testing.T) {
+		root := composeWorkspace(t, composeAddedConfig, map[string]string{
+			"docs/01_Requisitos_Funcionales.md":   composeProfileDocument,
+			"docs/02_Requisitos_Secundarios.md":   composeSecondaryDocument,
+			changeDelta("requisitos-funcionales"): composeAddedDelta,
+			changeDelta("requisitos-secundarios"): secondaryDelta,
+		})
+		stdout, stderr, err := runCompose(t, "--cwd", root, "--document", "requisitos-funcionales", "--delta", changeDelta("requisitos-funcionales"))
+		if err != nil {
+			t.Fatalf("runSDDArchiveComposeWithStderr() error = %v", err)
+		}
+		if stdout != composeAddedComposed {
+			t.Errorf("salida = %q", stdout)
+		}
+		for _, want := range []string{
+			`Correspondencia de IDs: RF-9001 -> RF-102 (dominio "requisitos-funcionales")`,
+			`Correspondencia de IDs: RF-9002 -> RF-051 (dominio "requisitos-secundarios")`,
+		} {
+			if !strings.Contains(stderr, want) {
+				t.Errorf("falta %q en la salida de error: %q", want, stderr)
+			}
+		}
+
+		// El otro dominio, con scenarios: omit, sustituye la referencia a un ID de
+		// su cambio calculado sobre el cambio entero.
+		secondary, _, err := runCompose(t, "--cwd", root, "--document", "requisitos-secundarios", "--delta", changeDelta("requisitos-secundarios"))
+		if err != nil {
+			t.Fatalf("runSDDArchiveComposeWithStderr() error = %v", err)
+		}
+		want := "# Secundarios\n\n### RF-050: Auditoría\n\nCuerpo de auditoría.\n### RF-051: Registro de accesos\n\nDepende de RF-102.\n"
+		if secondary != want {
+			t.Errorf("salida = %q\nse esperaba %q (referencia sustituida y escenarios omitidos)", secondary, want)
+		}
+	})
+
+	t.Run("un ID provisional repetido entre dominios solo se detecta con el cambio entero", func(t *testing.T) {
+		duplicated := strings.Replace(secondaryDelta, "RF-9002", "RF-9001", 1)
+		files := map[string]string{
+			"docs/01_Requisitos_Funcionales.md":   composeProfileDocument,
+			"docs/02_Requisitos_Secundarios.md":   composeSecondaryDocument,
+			changeDelta("requisitos-funcionales"): composeAddedDelta,
+			changeDelta("requisitos-secundarios"): duplicated,
+			"cambio/delta.md":                     composeAddedDelta,
+		}
+		root := composeWorkspace(t, composeAddedConfig, files)
+
+		output := filepath.Join(root, "salida.md")
+		_, _, err := runCompose(t, "--cwd", root, "--document", "requisitos-funcionales", "--delta", changeDelta("requisitos-funcionales"), "--output", output)
+		if err == nil {
+			t.Fatal("un ID provisional declarado en dos dominios del cambio debe rechazarse")
+		}
+		for _, want := range []string{"RF-9001", "dos requisitos ADDED", "requisitos-funcionales", "requisitos-secundarios", "Continuación"} {
+			if !strings.Contains(err.Error(), want) {
+				t.Errorf("el error no menciona %q: %v", want, err)
+			}
+		}
+		if _, statErr := os.Stat(output); !os.IsNotExist(statErr) {
+			t.Error("no debe escribirse nada ante un rechazo")
+		}
+
+		// El mismo delta fuera de la carpeta del cambio se compone solo.
+		if _, _, err := runCompose(t, "--cwd", root, "--document", "requisitos-funcionales", "--delta", "cambio/delta.md"); err != nil {
+			t.Fatalf("el delta suelto solo calcula su propia correspondencia: %v", err)
+		}
+	})
+}
+
+func TestRunSDDArchiveComposeDocumentRejectsAnAddedWithoutPlacementOrWithAnUnknownAnchor(t *testing.T) {
+	root := composeWorkspace(t, composeAddedConfig, map[string]string{
+		"docs/01_Requisitos_Funcionales.md": composeProfileDocument,
+		"docs/02_Requisitos_Secundarios.md": composeSecondaryDocument,
+		"sin-ubicacion.md":                  "## ADDED Requirements\n\n### Requirement: RF-9001: Sin ubicación\n\nCuerpo.\n",
+		"ancla-inexistente.md":              "## ADDED Requirements\n\n### Requirement: RF-9001: Sin ancla\n(Placement: after RF-999)\n\nCuerpo.\n",
+	})
+	for name, wants := range map[string][]string{
+		"sin-ubicacion.md":     {"ADDED", "RF-9001", "ubicación", "explícita"},
+		"ancla-inexistente.md": {"ADDED", "RF-999", "no contiene"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			output := filepath.Join(root, "salida.md")
+			_, _, err := runCompose(t, "--cwd", root, "--document", "requisitos-funcionales", "--delta", name, "--output", output)
+			if err == nil {
+				t.Fatal("se esperaba un rechazo")
+			}
+			for _, want := range wants {
+				if !strings.Contains(err.Error(), want) {
+					t.Errorf("el error no menciona %q: %v", want, err)
+				}
+			}
+			if _, statErr := os.Stat(output); !os.IsNotExist(statErr) {
+				t.Error("no debe escribirse nada ante un rechazo")
+			}
+		})
+	}
+}
+
+func TestRunSDDArchiveComposeDocumentStopsOnAFamilyWithoutIDs(t *testing.T) {
+	config := strings.Replace(composeAddedConfig, `'^#+ (?P<id>RF-\d+): (?P<title>.+)$'`, `'^#+ (?P<id>(?:RF|NFR)-\d+): (?P<title>.+)$'`, 1)
+	root := composeWorkspace(t, config, map[string]string{
+		"docs/01_Requisitos_Funcionales.md": composeProfileDocument,
+		"docs/02_Requisitos_Secundarios.md": composeSecondaryDocument,
+		"cambio/delta.md":                   "## ADDED Requirements\n\n### Requirement: NFR-9001: Rendimiento\n(Placement: after RF-100)\n\nCuerpo.\n",
+	})
+	_, _, err := runCompose(t, "--cwd", root, "--document", "requisitos-funcionales", "--delta", "cambio/delta.md")
+	if err == nil {
+		t.Fatal("una familia sin ningún ID debe detener la composición")
+	}
+	for _, want := range []string{"NFR-9001", `familia de IDs "NFR-"`, "siembra la numeración", "axiom sdd integrate check"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("el error no menciona %q: %v", want, err)
+		}
+	}
+}
