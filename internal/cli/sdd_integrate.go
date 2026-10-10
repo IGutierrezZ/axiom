@@ -111,8 +111,8 @@ var resolveIntegrationStatus = sddstatus.Resolve
 // resolveIntegrationTarget resuelve el espacio con workspace.Locate y toma del
 // status SDD la carpeta del cambio, las raíces de edición autorizadas y el
 // almacén de artefactos efectivo (m8).
-func resolveIntegrationTarget(verb string, parsed integrateArgs) (specbaseline.ChangeTarget, error) {
-	start := parsed.cwd
+func resolveIntegrationTarget(prefix, cwd, change string) (specbaseline.ChangeTarget, error) {
+	start := cwd
 	if strings.TrimSpace(start) == "" {
 		start = "."
 	}
@@ -120,12 +120,12 @@ func resolveIntegrationTarget(verb string, parsed integrateArgs) (specbaseline.C
 	if err != nil {
 		return specbaseline.ChangeTarget{}, err
 	}
-	status, err := resolveIntegrationStatus(sddstatus.ResolveOptions{CWD: start, ChangeName: parsed.change})
+	status, err := resolveIntegrationStatus(sddstatus.ResolveOptions{CWD: start, ChangeName: change})
 	if err != nil {
-		return specbaseline.ChangeTarget{}, fmt.Errorf("integrate %s: no se pudo resolver el estado SDD del cambio %q: %w; ejecuta `axiom sdd status %s --cwd %s` para ver la causa", verb, parsed.change, err, pathquote.ShellWord(parsed.change), pathquote.Quote(loc.WorkspaceRoot))
+		return specbaseline.ChangeTarget{}, fmt.Errorf("%s: no se pudo resolver el estado SDD del cambio %q: %w; ejecuta `axiom sdd status %s --cwd %s` para ver la causa", prefix, change, err, pathquote.ShellWord(change), pathquote.Quote(loc.WorkspaceRoot))
 	}
 	if status.Archived != nil {
-		return specbaseline.ChangeTarget{}, fmt.Errorf("integrate %s: el cambio %q ya está archivado en %s y no se integra de nuevo; consulta `axiom sdd status %s --cwd %s`", verb, parsed.change, status.Archived.Path, pathquote.ShellWord(parsed.change), pathquote.Quote(loc.WorkspaceRoot))
+		return specbaseline.ChangeTarget{}, fmt.Errorf("%s: el cambio %q ya está archivado en %s y no se integra de nuevo; consulta `axiom sdd status %s --cwd %s`", prefix, change, status.Archived.Path, pathquote.ShellWord(change), pathquote.Quote(loc.WorkspaceRoot))
 	}
 
 	store := string(status.ArtifactStore)
@@ -136,14 +136,14 @@ func resolveIntegrationTarget(verb string, parsed integrateArgs) (specbaseline.C
 	case store == string(sddstatus.ArtifactStoreEngram) || store == string(sddstatus.ArtifactStoreNone):
 		// Sin ficheros no hay carpeta del cambio: `check` y `prepare` informan de la
 		// causa de REQ-24.62 si la baseline o el contexto mantenido están declarados.
-		changeRoot = filepath.Join(loc.PlanningHome, "changes", parsed.change)
+		changeRoot = filepath.Join(loc.PlanningHome, "changes", change)
 	default:
-		return specbaseline.ChangeTarget{}, fmt.Errorf("integrate %s: no existe el cambio activo %q en %s; comprueba el nombre con `axiom sdd status --cwd %s` y vuelve a ejecutar el comando",
-			verb, parsed.change, filepath.Join(loc.PlanningHome, "changes"), pathquote.Quote(loc.WorkspaceRoot))
+		return specbaseline.ChangeTarget{}, fmt.Errorf("%s: no existe el cambio activo %q en %s; comprueba el nombre con `axiom sdd status --cwd %s` y vuelve a ejecutar el comando",
+			prefix, change, filepath.Join(loc.PlanningHome, "changes"), pathquote.Quote(loc.WorkspaceRoot))
 	}
 	return specbaseline.ChangeTarget{
 		Location:      loc,
-		Change:        parsed.change,
+		Change:        change,
 		ChangeRoot:    changeRoot,
 		AllowedRoots:  status.ActionContext.AllowedEditRoots,
 		ArtifactStore: store,
@@ -155,7 +155,7 @@ func runSDDIntegrateCheck(args []string, stdout io.Writer) error {
 	if err != nil {
 		return err
 	}
-	target, err := resolveIntegrationTarget("check", parsed)
+	target, err := resolveIntegrationTarget("integrate check", parsed.cwd, parsed.change)
 	if err != nil {
 		return err
 	}
@@ -174,7 +174,7 @@ func runSDDIntegratePrepare(args []string, stdout io.Writer) error {
 	if err != nil {
 		return err
 	}
-	target, err := resolveIntegrationTarget("prepare", parsed)
+	target, err := resolveIntegrationTarget("integrate prepare", parsed.cwd, parsed.change)
 	if err != nil {
 		return err
 	}

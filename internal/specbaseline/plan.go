@@ -183,14 +183,22 @@ func declarationSnapshot(declarations workspace.Declarations) []byte {
 // AlreadyIntegratedError es el rechazo de preparar o aplicar de nuevo un cambio
 // cuyas composiciones ya figuran como integradas (REQ-24.43, D-13). Nombra la
 // correspondencia de IDs y propone verificar o consultar la traza.
+//
+// Domain, si no está vacío, indica que el rechazo es de un documento concreto: el
+// plan lo marca como integrado o el documento ya coincide con su huella after.
 type AlreadyIntegratedError struct {
 	Change string
+	Domain string
 	IDs    []IDAssignment
 }
 
 func (e *AlreadyIntegratedError) Error() string {
 	var b strings.Builder
-	fmt.Fprintf(&b, "el cambio %q figura ya integrado: todas sus composiciones están marcadas como integradas en %s y no se vuelven a aplicar", e.Change, PlanFileName)
+	if e.Domain != "" {
+		fmt.Fprintf(&b, "la composición del dominio %q del cambio %q figura ya integrada (el plan %s la marca como integrada o el documento ya coincide con su huella after) y no se vuelve a aplicar", e.Domain, e.Change, PlanFileName)
+	} else {
+		fmt.Fprintf(&b, "el cambio %q figura ya integrado: todas sus composiciones están marcadas como integradas en %s y no se vuelven a aplicar", e.Change, PlanFileName)
+	}
 	if len(e.IDs) > 0 {
 		pairs := make([]string, len(e.IDs))
 		for i, id := range e.IDs {
@@ -216,6 +224,36 @@ func (e *PlanChangedError) Error() string {
 		documents = strings.Join(e.Documents, " ")
 	}
 	return fmt.Sprintf("el plan de integración del cambio %q (%s) ya no corresponde a las entradas actuales: cambiaron los deltas, el delta de contexto, la declaración o un documento de la baseline desde `prepare`. Continuación: devolver los documentos a su estado anterior con `git checkout -- %s`, retirar %s de la carpeta del cambio y volver a preparar con `axiom sdd integrate prepare`", e.Change, PlanFileName, documents, PlanFileName)
+}
+
+// alreadyIntegratedDomain comprueba si la composición de un dominio ya está
+// integrada (REQ-24.43): el plan la marca como integrada o el documento actual ya
+// coincide con la huella after que fijó prepare. Devuelve nil si el dominio no
+// figura en el plan como composición o si aún no se ha aplicado.
+func alreadyIntegratedDomain(plan Plan, domain string, current []byte) *AlreadyIntegratedError {
+	for _, document := range plan.Documents {
+		if document.Domain != domain || document.Integration != workspace.IntegrationCompose {
+			continue
+		}
+		// Una composición que no cambia el documento (after igual a before) no se
+		// reconoce por su huella: solo por el estado del plan.
+		matchesAfter := document.AfterSHA256 != "" && document.AfterSHA256 != document.BeforeSHA256 && document.AfterSHA256 == sha256Hex(current)
+		if document.State == StateIntegrated || matchesAfter {
+			return &AlreadyIntegratedError{Change: plan.Change, Domain: domain, IDs: plan.IDMap}
+		}
+	}
+	return nil
+}
+
+// AlreadyIntegrated comprueba, para el modo documento de archive-compose, si el
+// plan del cambio registra la composición del dominio como integrada o si el
+// documento actual ya coincide con su huella after (REQ-24.43, D-13). Devuelve
+// *AlreadyIntegratedError, que nombra la correspondencia de IDs, o nil.
+func AlreadyIntegrated(plan Plan, domain string, current []byte) error {
+	if err := alreadyIntegratedDomain(plan, domain, current); err != nil {
+		return err
+	}
+	return nil
 }
 
 // reconcilePlan decide qué hace `prepare` cuando ya existe un plan (D-13). Si todas
@@ -751,8 +789,7 @@ func (g *gathered) gatherDocuments(t ChangeTarget, report *Report) {
 	}
 	for _, domain := range domains {
 		if !declared[domain] {
-			report.fail("el dominio %q del cambio no figura en 'baseline.documents' de %s: no se integra ni se promueve, y nunca se crea %s. Continuación: declara el dominio en 'baseline.documents' de axiom.yaml (`axiom workspace validate --path %s` comprueba la declaración) o retira la delta del cambio",
-				domain, pathquote.Quote(loc.ConfigPath), pathquote.Quote(filepath.Join(loc.PlanningHome, "specs", domain)), pathquote.Quote(loc.Master))
+			report.fail("%s", undeclaredDomainMessage(loc, domain))
 		}
 	}
 
@@ -784,6 +821,13 @@ func (g *gathered) gatherDocuments(t ChangeTarget, report *Report) {
 		}
 		g.documents = append(g.documents, item)
 	}
+}
+
+// undeclaredDomainMessage es el rechazo de un dominio que no figura en
+// 'baseline.documents' (REQ-24.48): no se integra ni se promueve.
+func undeclaredDomainMessage(loc workspace.Location, domain string) string {
+	return fmt.Sprintf("el dominio %q del cambio no figura en 'baseline.documents' de %s: no se integra ni se promueve, y nunca se crea %s. Continuación: declara el dominio en 'baseline.documents' de axiom.yaml (`axiom workspace validate --path %s` comprueba la declaración) o retira la delta del cambio",
+		domain, pathquote.Quote(loc.ConfigPath), pathquote.Quote(filepath.Join(loc.PlanningHome, "specs", domain)), pathquote.Quote(loc.Master))
 }
 
 // composeDocuments son los documentos con perfil de requisito, en el orden de
@@ -1448,4 +1492,349 @@ func authorizeContextEdits(ctx context.Context, t ChangeTarget, ev evaluation, r
 		report.fail("la entrada %s edita %s, que no está bajo ninguna raíz de edición autorizada del cambio (actionContext.allowedEditRoots): falta la autorización de edición de %s. Continuación: concédela por cambio con `axiom sdd-attempt grant --cwd %s --change %s --root %s` (más `--change-instance`, `--request-id`, `--actor` y `--reason`); nunca se concede de forma implícita (REQ-24.37)",
 			item.ID, item.Document, pathquote.Quote(root), pathquote.Quote(t.Location.WorkspaceRoot), pathquote.ShellWord(t.Change), pathquote.Quote(root))
 	}
+}
+
+// ApplySchema es el esquema del informe de `archive-compose --change --in-place`.
+const ApplySchema = "axiom.sdd-integration-apply/v1"
+
+// stagedDocument es un documento de composición listo para escribirse: la ruta
+// real (con los enlaces simbólicos resueltos), sus permisos, los bytes que tiene
+// ahora y los bytes que recibirá.
+type stagedDocument struct {
+	domain   string
+	relPath  string
+	target   string
+	perm     os.FileMode
+	before   string // huella del plan antes de componer
+	original []byte
+	composed []byte
+}
+
+// ApplyCompose es el paso 2 del flujo 1 de D-13: compone y escribe todos los
+// documentos con perfil del cambio que fijó `prepare` (REQ-24.43, REQ-24.46). Exige
+// el plan; la lista de dominios debe coincidir exactamente con las composiciones
+// del plan, y cada documento debe estar en su huella before. Valida y compone todo
+// en memoria, comprueba que cada resultado coincide con su huella after y solo
+// entonces escribe: las huellas de todos los documentos se comprueban antes de
+// escribir el primero, cada documento se escribe con un temporal del mismo
+// directorio y un renombrado, y si un renombrado falla se restauran desde memoria
+// los ya renombrados. Marca las composiciones como integradas en el plan. Un
+// documento ya integrado se rechaza nombrando `axiom sdd integrate verify`.
+//
+// Los rechazos de validación van en Report.Errors, sin escribir nada; el error
+// devuelto es solo de ejecución (un fallo de escritura, con el estado en que
+// queda cada documento).
+func ApplyCompose(ctx context.Context, t ChangeTarget, domains []string) (Report, error) {
+	report := newReport(ApplySchema, t.Change)
+	g, ok := gather(t, &report)
+	if !ok || len(report.Errors) > 0 {
+		return report, ctx.Err()
+	}
+	if !g.project {
+		report.fail("el cambio %q no tiene baseline del proyecto declarada: --in-place solo compone los documentos de la baseline del proyecto. Continuación: sin baseline declarada se compone con el motor nativo, `axiom sdd archive-compose --canonical <ruta> --delta <ruta>`", t.Change)
+		return report, ctx.Err()
+	}
+
+	planPath := filepath.Join(t.ChangeRoot, PlanFileName)
+	plan, err := ReadPlan(planPath)
+	switch {
+	case errors.Is(err, fs.ErrNotExist):
+		report.fail("el cambio %q no tiene plan de integración (%s): --in-place compone lo que fijó `prepare`. Continuación: ejecuta `axiom sdd integrate prepare --cwd %s --change %s` y usa el comando que imprime", t.Change, PlanFileName, pathquote.Quote(t.Location.WorkspaceRoot), pathquote.ShellWord(t.Change))
+		return report, ctx.Err()
+	case err != nil:
+		report.fail("no se puede leer el plan de integración: %v. Continuación: retira %s de la carpeta del cambio y vuelve a preparar con `axiom sdd integrate prepare --cwd %s --change %s`", err, PlanFileName, pathquote.Quote(t.Location.WorkspaceRoot), pathquote.ShellWord(t.Change))
+		return report, ctx.Err()
+	}
+
+	if !checkApplyDomains(t, plan, domains, &report) {
+		return report, ctx.Err()
+	}
+	current := map[string]gatheredDocument{}
+	for _, document := range g.documents {
+		current[document.declared.Domain] = document
+	}
+	for _, document := range plan.Documents {
+		if document.Integration != workspace.IntegrationCompose {
+			continue
+		}
+		if found, ok := current[document.Domain]; ok {
+			if integrated := alreadyIntegratedDomain(plan, document.Domain, found.original); integrated != nil {
+				report.fail("%v", integrated)
+				return report, ctx.Err()
+			}
+		}
+	}
+
+	fresh := Plan{InputsSHA256: inputsDigest(g.deltaInputs(), g.contextData, declarationSnapshot(t.Location.Declarations))}
+	for _, document := range g.documents {
+		fresh.Documents = append(fresh.Documents, PlanDocument{Domain: document.declared.Domain, Integration: document.mode, BeforeSHA256: sha256Hex(document.original)})
+	}
+	if _, err := reconcilePlan(plan, fresh); err != nil {
+		report.fail("%v", err)
+		return report, ctx.Err()
+	}
+
+	ev := evaluate(t, g, plan.Options, &report)
+	if len(report.Errors) > 0 {
+		return report, ctx.Err()
+	}
+	staged := stageComposition(t, g, plan, ev, &report)
+	if len(report.Errors) > 0 {
+		return report, ctx.Err()
+	}
+
+	// Las huellas de todos los documentos se comprueban otra vez justo antes de
+	// escribir el primero: un documento editado entre la lectura y la escritura
+	// detiene la integración sin haber tocado ninguno.
+	var drifted []string
+	for _, document := range staged {
+		fingerprint, err := workingTreeFingerprint(document.target)
+		if err != nil {
+			report.fail("no se puede leer el documento %s del dominio %q antes de escribir: %v", document.relPath, document.domain, err)
+			return report, ctx.Err()
+		}
+		if fingerprint != document.before {
+			drifted = append(drifted, document.relPath)
+		}
+	}
+	if len(drifted) > 0 {
+		report.fail("%v", &PlanChangedError{Change: plan.Change, Documents: drifted})
+		return report, ctx.Err()
+	}
+
+	if err := writeStaged(staged); err != nil {
+		return report, err
+	}
+
+	integrated := plan
+	integrated.Documents = append([]PlanDocument(nil), plan.Documents...)
+	for i := range integrated.Documents {
+		if integrated.Documents[i].Integration == workspace.IntegrationCompose {
+			integrated.Documents[i].State = StateIntegrated
+		}
+	}
+	integrated.Entries = append([]TraceEntry(nil), plan.Entries...)
+	for i := range integrated.Entries {
+		if integrated.Entries[i].Kind == EntryCompose {
+			integrated.Entries[i].State = StateIntegrated
+		}
+	}
+	if err := WritePlan(planPath, integrated); err != nil {
+		// Sin la marca en el plan, los documentos ya escritos quedarían como
+		// «pendientes» y una reaplicación los trataría como no integrados.
+		if restoreErr := restoreStaged(staged, len(staged)); restoreErr != nil {
+			return report, fmt.Errorf("no se pudo marcar la integración en %s: %w; además, la restauración de los documentos falló: %v. Continuación: devuelve los documentos con `git checkout -- %s` y vuelve a ejecutar el comando", PlanFileName, err, restoreErr, stagedPaths(staged))
+		}
+		return report, fmt.Errorf("no se pudo marcar la integración en %s: %w; los documentos se han restaurado a su estado anterior y nada ha cambiado. Continuación: vuelve a ejecutar el comando que imprime `axiom sdd integrate prepare`", PlanFileName, err)
+	}
+	return report, ctx.Err()
+}
+
+// checkApplyDomains comprueba que la lista de --document coincide exactamente con
+// los dominios de composición del plan (D-13, paso 2). Un dominio no declarado o de
+// prosa se rechaza con su causa (REQ-24.47, REQ-24.48).
+func checkApplyDomains(t ChangeTarget, plan Plan, requested []string, report *Report) bool {
+	ok := true
+	declared := map[string]workspace.BaselineDocument{}
+	for _, document := range t.Location.Declarations.Baseline.Documents {
+		declared[document.Domain] = document
+	}
+	seen := map[string]bool{}
+	var extra []string
+	planned := map[string]bool{}
+	var plannedOrder []string
+	for _, document := range plan.Documents {
+		if document.Integration == workspace.IntegrationCompose {
+			planned[document.Domain] = true
+			plannedOrder = append(plannedOrder, document.Domain)
+		}
+	}
+	for _, domain := range requested {
+		if seen[domain] {
+			report.fail("el dominio %q figura repetido en --document. Continuación: indica cada dominio una sola vez, como en el comando que imprime `axiom sdd integrate prepare`", domain)
+			ok = false
+			continue
+		}
+		seen[domain] = true
+		document, isDeclared := declared[domain]
+		switch {
+		case !isDeclared:
+			report.fail("%s", undeclaredDomainMessage(t.Location, domain))
+			ok = false
+		case document.Requirement == nil:
+			report.fail("el dominio %q es de prosa (sin perfil de requisito) y no se compone: su documento se integra por edición dirigida o solo registro, según su 'integration' (%s). Continuación: retíralo de --document y usa el comando que imprime `axiom sdd integrate prepare`", domain, document.EffectiveIntegration())
+			ok = false
+		case !planned[domain]:
+			extra = append(extra, domain)
+		}
+	}
+	var missing []string
+	for _, domain := range plannedOrder {
+		if !seen[domain] {
+			missing = append(missing, domain)
+		}
+	}
+	if len(missing) > 0 || len(extra) > 0 {
+		var detail []string
+		if len(missing) > 0 {
+			detail = append(detail, "faltan "+strings.Join(missing, ", "))
+		}
+		if len(extra) > 0 {
+			detail = append(detail, "sobran "+strings.Join(extra, ", "))
+		}
+		report.fail("la lista de --document no coincide con los dominios de composición del plan de %s (%s). Continuación: ejecuta exactamente el comando que imprime `axiom sdd integrate prepare`: %s", t.Change, strings.Join(detail, "; "), composeCommand(t, plan.Documents))
+		ok = false
+	}
+	if len(requested) == 0 && len(plannedOrder) == 0 {
+		report.fail("el plan de %s no tiene documentos de composición: no hay nada que componer con --in-place. Continuación: sigue con la edición dirigida y `axiom sdd integrate verify --cwd %s --change %s`", t.Change, pathquote.Quote(t.Location.WorkspaceRoot), pathquote.ShellWord(t.Change))
+		ok = false
+	}
+	return ok
+}
+
+// stageComposition prepara, en el orden del plan, los documentos de composición
+// con sus bytes compuestos, tras comprobar que cada resultado coincide con la
+// huella after que fijó `prepare` y que la ruta real sigue dentro de la carpeta
+// maestra.
+func stageComposition(t ChangeTarget, g *gathered, plan Plan, ev evaluation, report *Report) []stagedDocument {
+	master := resolveDeepest(filepath.Clean(t.Location.Master))
+	documents := map[string]gatheredDocument{}
+	for _, document := range g.documents {
+		documents[document.declared.Domain] = document
+	}
+	var staged []stagedDocument
+	for _, planned := range plan.Documents {
+		if planned.Integration != workspace.IntegrationCompose {
+			continue
+		}
+		document, ok := documents[planned.Domain]
+		composed, composedOK := ev.outputs[planned.Domain]
+		if !ok || !composedOK {
+			report.fail("el dominio %q del plan ya no tiene delta o no compone: el plan no corresponde a las entradas actuales. Continuación: retira %s de la carpeta del cambio y vuelve a preparar con `axiom sdd integrate prepare --cwd %s --change %s`", planned.Domain, PlanFileName, pathquote.Quote(t.Location.WorkspaceRoot), pathquote.ShellWord(t.Change))
+			continue
+		}
+		if sha256Hex(composed) != planned.AfterSHA256 {
+			report.fail("la composición del dominio %q produce un documento distinto del que registró `prepare` (huella after): el motor, el perfil o las entradas cambiaron. Continuación: retira %s de la carpeta del cambio y vuelve a preparar con `axiom sdd integrate prepare --cwd %s --change %s`", planned.Domain, PlanFileName, pathquote.Quote(t.Location.WorkspaceRoot), pathquote.ShellWord(t.Change))
+			continue
+		}
+		target, err := filepath.EvalSymlinks(document.abs)
+		if err != nil {
+			report.fail("no se puede resolver el documento %s del dominio %q: %v", document.relPath, planned.Domain, err)
+			continue
+		}
+		if !pathidentity.Contains(master, target) {
+			report.fail("el documento %s del dominio %q resuelve a %s, fuera de la carpeta maestra %s: un enlace simbólico no puede sacar la integración de ella. Continuación: declara en 'baseline.documents' una ruta dentro de la carpeta maestra", document.relPath, planned.Domain, pathquote.Quote(target), pathquote.Quote(master))
+			continue
+		}
+		info, err := os.Stat(target)
+		if err != nil {
+			report.fail("no se puede leer el documento %s del dominio %q: %v", document.relPath, planned.Domain, err)
+			continue
+		}
+		staged = append(staged, stagedDocument{
+			domain:   planned.Domain,
+			relPath:  document.relPath,
+			target:   target,
+			perm:     info.Mode().Perm(),
+			before:   planned.BeforeSHA256,
+			original: document.original,
+			composed: composed,
+		})
+	}
+	return staged
+}
+
+// writeStaged escribe todos los documentos o ninguno (REQ-24.46). Primero crea un
+// temporal con los bytes nuevos junto a cada documento, de modo que un fallo de
+// escritura o de espacio se detecta antes de renombrar ninguno; después renombra
+// cada temporal sobre su documento, y si un renombrado falla restaura desde
+// memoria los ya renombrados.
+func writeStaged(staged []stagedDocument) error {
+	temps := make([]string, len(staged))
+	cleanup := func(from int) {
+		for i := from; i < len(temps); i++ {
+			if temps[i] != "" {
+				_ = os.Remove(temps[i])
+				temps[i] = ""
+			}
+		}
+	}
+	for i, document := range staged {
+		name, err := writeTemp(document.target, document.composed, document.perm)
+		if err != nil {
+			cleanup(0)
+			return fmt.Errorf("no se pudo preparar la escritura de %s (dominio %q): %w; no se ha modificado ningún documento. Continuación: libera espacio o permisos y vuelve a ejecutar el comando que imprime `axiom sdd integrate prepare`", document.relPath, document.domain, err)
+		}
+		temps[i] = name
+	}
+	for i, document := range staged {
+		if err := renameFile(temps[i], document.target); err != nil {
+			cleanup(i)
+			if restoreErr := restoreStaged(staged, i); restoreErr != nil {
+				return fmt.Errorf("no se pudo sustituir %s (dominio %q): %w; además, la restauración de los documentos ya sustituidos falló: %v. Continuación: devuelve los documentos con `git checkout -- %s` y vuelve a ejecutar el comando que imprime `axiom sdd integrate prepare`", document.relPath, document.domain, err, restoreErr, stagedPaths(staged[:i]))
+			}
+			return fmt.Errorf("no se pudo sustituir %s (dominio %q): %w; los documentos ya sustituidos se han restaurado y no se ha modificado ninguno. Continuación: vuelve a ejecutar el comando que imprime `axiom sdd integrate prepare`", document.relPath, document.domain, err)
+		}
+		temps[i] = ""
+	}
+	return nil
+}
+
+// createTemp crea el temporal de una composición; las pruebas lo sustituyen para
+// provocar un fallo antes de renombrar ningún documento.
+var createTemp = os.CreateTemp
+
+// writeTemp escribe data en un fichero temporal del mismo directorio que target y
+// devuelve su nombre, sin renombrarlo.
+func writeTemp(target string, data []byte, perm os.FileMode) (string, error) {
+	temp, err := createTemp(filepath.Dir(target), "."+filepath.Base(target)+".tmp-*")
+	if err != nil {
+		return "", err
+	}
+	name := temp.Name()
+	fail := func(cause error) (string, error) {
+		_ = temp.Close()
+		_ = os.Remove(name)
+		return "", cause
+	}
+	if _, err := temp.Write(data); err != nil {
+		return fail(err)
+	}
+	if err := temp.Sync(); err != nil {
+		return fail(err)
+	}
+	if err := temp.Close(); err != nil {
+		_ = os.Remove(name)
+		return "", err
+	}
+	if err := os.Chmod(name, perm); err != nil {
+		_ = os.Remove(name)
+		return "", err
+	}
+	return name, nil
+}
+
+// restoreStaged devuelve a su contenido original, desde memoria, los primeros n
+// documentos. Intenta todos aunque alguno falle y reúne los fallos.
+func restoreStaged(staged []stagedDocument, n int) error {
+	var failures []string
+	for _, document := range staged[:n] {
+		if err := writeFileAtomic(document.target, document.original, document.perm); err != nil {
+			failures = append(failures, fmt.Sprintf("%s: %v", document.relPath, err))
+		}
+	}
+	if len(failures) > 0 {
+		return errors.New(strings.Join(failures, "; "))
+	}
+	return nil
+}
+
+// stagedPaths lista las rutas de los documentos, separadas por espacios, para una
+// continuación `git checkout -- ...`.
+func stagedPaths(staged []stagedDocument) string {
+	paths := make([]string, len(staged))
+	for i, document := range staged {
+		paths[i] = pathquote.ShellWord(document.relPath)
+	}
+	return strings.Join(paths, " ")
 }

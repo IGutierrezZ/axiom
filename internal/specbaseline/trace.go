@@ -140,6 +140,10 @@ func WritePlan(file string, plan Plan) error {
 	return writeFileAtomic(file, data, 0o644)
 }
 
+// renameFile es el renombrado con el que se sustituyen los ficheros; las pruebas
+// lo sustituyen para provocar un fallo a mitad de la escritura.
+var renameFile = os.Rename
+
 // writeFileAtomic escribe data en un temporal del mismo directorio y lo renombra
 // sobre file: o queda el contenido anterior o queda el nuevo, nunca uno parcial.
 func writeFileAtomic(file string, data []byte, perm os.FileMode) error {
@@ -167,7 +171,7 @@ func writeFileAtomic(file string, data []byte, perm os.FileMode) error {
 		_ = os.Remove(name)
 		return fmt.Errorf("fijar los permisos de %s: %w", file, err)
 	}
-	if err := os.Rename(name, file); err != nil {
+	if err := renameFile(name, file); err != nil {
 		_ = os.Remove(name)
 		return fmt.Errorf("sustituir %s: %w", file, err)
 	}
