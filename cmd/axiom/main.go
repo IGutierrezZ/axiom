@@ -152,7 +152,7 @@ COMANDOS DE GOBERNANZA Y WORKSPACE:
   sdd continue         Calcula y emite la siguiente acción autorizada del despachador SDD
   sdd attempt          Registra la autoridad de edición por raíz para el cambio activo (grant)
   sdd archive-compose  Compone el reporte de archivado formal y actualiza las especificaciones vivas
-  sdd integrate        Valida (check) y prepara (prepare) la integración de un cambio en la baseline del proyecto
+  sdd integrate        Valida (check), prepara (prepare), verifica (verify) y consulta la traza (show) de la integración de un cambio en la baseline del proyecto
   review               Gestiona el ciclo de revisión formal RDD (start, resume, step, mode, validate)
   ui                   Inicia el servidor local y abre el dashboard web interactivo
 
@@ -2020,7 +2020,7 @@ func runSDD(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stdout, "  continue         Calcula y emite la siguiente acción autorizada del despachador SDD")
 		fmt.Fprintln(stdout, "  attempt          Registra la autoridad de edición por raíz para el cambio activo (grant)")
 		fmt.Fprintln(stdout, "  archive-compose  Compone el reporte de archivado formal y actualiza las especificaciones vivas")
-		fmt.Fprintln(stdout, "  integrate        Valida (check) y prepara (prepare) la integración de un cambio en la baseline del proyecto")
+		fmt.Fprintln(stdout, "  integrate        Valida (check), prepara (prepare), verifica (verify) y consulta la traza (show) de la integración de un cambio en la baseline del proyecto")
 		fmt.Fprintln(stdout, "  task-result      Valida y extrae el resultado tipado de una fase delegada")
 		fmt.Fprintln(stdout, "  preflight-hook   Ejecuta el hook previo de verificación SDD")
 		fmt.Fprintln(stdout, "  kickoff          Sella la configuración de kickoff de un cambio (seal, show)")

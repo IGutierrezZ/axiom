@@ -2,6 +2,7 @@ package specbaseline
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -10,6 +11,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 
 	"gopkg.in/yaml.v3"
 
@@ -309,4 +311,140 @@ func checkPlanPath(label, value string, allowParent bool) string {
 		return fmt.Sprintf("%s %q no puede salir de su base", label, value)
 	}
 	return ""
+}
+
+// Formatos de `integrate show` (§4.4).
+const (
+	// TraceFormatMarkdown es la traza como tabla Markdown para el informe de archive.
+	TraceFormatMarkdown = "markdown"
+	// TraceFormatJSON es la traza como JSON.
+	TraceFormatJSON = "json"
+	// TraceSchema es el esquema del JSON de `integrate show`.
+	TraceSchema = "axiom.sdd-integration-trace/v1"
+)
+
+// TraceView es el JSON de `integrate show --format json`: la traza del plan sin la
+// línea base de git, que no es parte de la auditoría (REQ-24.52).
+type TraceView struct {
+	Schema     string         `json:"schema"`
+	Change     string         `json:"change"`
+	PreparedAt time.Time      `json:"preparedAt"`
+	VerifiedAt *time.Time     `json:"verifiedAt,omitempty"`
+	Context    TraceContext   `json:"context"`
+	IDMap      []IDAssignment `json:"idMap"`
+	Entries    []TraceEntry   `json:"entries"`
+	Warnings   []string       `json:"warnings"`
+}
+
+// TraceContext es la decisión del cambio sobre el contexto técnico mantenido.
+type TraceContext struct {
+	Decision string `json:"decision"` // entries | no_impact | none
+	Reason   string `json:"reason,omitempty"`
+}
+
+// traceView proyecta el plan a la vista de la traza. Los avisos son los de cada
+// entrada, precedidos por su identificador.
+func traceView(plan Plan) TraceView {
+	view := TraceView{
+		Schema:     TraceSchema,
+		Change:     plan.Change,
+		PreparedAt: plan.PreparedAt.UTC(),
+		Context:    TraceContext{Decision: plan.Context.Decision, Reason: plan.Context.Reason},
+		IDMap:      append([]IDAssignment{}, plan.IDMap...),
+		Entries:    append([]TraceEntry{}, plan.Entries...),
+		Warnings:   []string{},
+	}
+	if plan.VerifiedAt != nil {
+		verified := plan.VerifiedAt.UTC()
+		view.VerifiedAt = &verified
+	}
+	for _, entry := range plan.Entries {
+		for _, warning := range entry.Warnings {
+			view.Warnings = append(view.Warnings, entry.ID+": "+warning)
+		}
+	}
+	return view
+}
+
+// RenderTrace da forma a la traza de integración (REQ-24.52, D-13 paso 6) como
+// Markdown o JSON. El Markdown es la sección que se añade al informe de archive con
+// `axiom sdd integrate show --format markdown >> archive-report.md`: empieza por una
+// línea en blanco que la separa del informe, lleva la tabla «Identificador |
+// Documento | Ancla | Acción | Estado» con el identificador de un ADDED con perfil
+// como `RF-9001 → RF-008`, y después la decisión «Sin impacto» con su motivo, los
+// escenarios omitidos y los avisos. El formato es `markdown` o `json`.
+func RenderTrace(plan Plan, format string) ([]byte, error) {
+	view := traceView(plan)
+	switch format {
+	case TraceFormatJSON:
+		data, err := json.MarshalIndent(view, "", "  ")
+		if err != nil {
+			return nil, fmt.Errorf("serializar la traza: %w", err)
+		}
+		return append(data, '\n'), nil
+	case TraceFormatMarkdown:
+		return []byte(traceMarkdown(view)), nil
+	default:
+		return nil, fmt.Errorf("el formato %q de la traza no se reconoce: usa %q o %q", format, TraceFormatMarkdown, TraceFormatJSON)
+	}
+}
+
+// markdownCell escapa un texto para una celda de tabla Markdown.
+func markdownCell(text string) string {
+	text = strings.NewReplacer("\r\n", " ", "\n", " ", "\r", " ").Replace(text)
+	return strings.ReplaceAll(text, "|", `\|`)
+}
+
+func traceMarkdown(view TraceView) string {
+	var b strings.Builder
+	b.WriteString("\n## Traza de integración\n\n")
+	fmt.Fprintf(&b, "Cambio: `%s`. Preparada: %s. Verificada: ", view.Change, view.PreparedAt.Format(time.RFC3339))
+	if view.VerifiedAt != nil {
+		b.WriteString(view.VerifiedAt.Format(time.RFC3339))
+	} else {
+		b.WriteString("pendiente")
+	}
+	b.WriteString(".\n\n")
+
+	if len(view.Entries) == 0 {
+		b.WriteString("La integración no registra entradas.\n")
+	} else {
+		b.WriteString("| Identificador | Documento | Ancla | Acción | Estado |\n|---|---|---|---|---|\n")
+		for _, entry := range view.Entries {
+			identifier := entry.ID
+			if entry.Provisional != "" && entry.Provisional != entry.ID {
+				identifier = entry.Provisional + " → " + entry.ID
+			}
+			fmt.Fprintf(&b, "| %s | %s | %s | %s | %s |\n", markdownCell(identifier), markdownCell(entry.Document), markdownCell(entry.Anchor), entry.Action, entry.State)
+		}
+	}
+
+	if view.Context.Decision == ContextNoImpact {
+		fmt.Fprintf(&b, "\n### Decisión sobre el contexto técnico\n\nSin impacto: %s\n", view.Context.Reason)
+	}
+
+	var omitted []string
+	for _, entry := range view.Entries {
+		if entry.ScenariosOmitted {
+			label := entry.ID
+			if entry.Domain != "" {
+				label += " (dominio " + entry.Domain + ")"
+			}
+			omitted = append(omitted, label)
+		}
+	}
+	if len(omitted) > 0 {
+		b.WriteString("\n### Escenarios omitidos\n\n")
+		for _, label := range omitted {
+			fmt.Fprintf(&b, "- %s\n", label)
+		}
+	}
+
+	if len(view.Warnings) > 0 {
+		b.WriteString("\n### Avisos\n\n")
+		for _, warning := range view.Warnings {
+			fmt.Fprintf(&b, "- %s\n", warning)
+		}
+	}
+	return b.String()
 }

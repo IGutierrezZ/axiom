@@ -648,7 +648,7 @@ func TestIntegrateHelpListsCheckAndPrepare(t *testing.T) {
 		if err != nil {
 			t.Fatalf("integrate %v: %v", args, err)
 		}
-		for _, want := range []string{"Uso: axiom sdd integrate <check|prepare>", "--supersede", "integration.yaml", "archive-compose --change"} {
+		for _, want := range []string{"Uso: axiom sdd integrate <check|prepare|verify|show>", "--supersede", "integration.yaml", "archive-compose --change"} {
 			if !strings.Contains(stdout, want) {
 				t.Errorf("la ayuda no contiene %q:\n%s", want, stdout)
 			}

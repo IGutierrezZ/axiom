@@ -6,32 +6,36 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"io/fs"
 	"path/filepath"
 	"strings"
 
+	"github.com/IGutierrezZ/axiom/v3/internal/kickoff"
 	"github.com/IGutierrezZ/axiom/v3/internal/pathquote"
 	"github.com/IGutierrezZ/axiom/v3/internal/sddstatus"
 	"github.com/IGutierrezZ/axiom/v3/internal/specbaseline"
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
-// RunSDDIntegrate is the CLI entry point for `axiom sdd integrate <check|prepare>`
-// (inc-24, REQ-24.42, REQ-24.54, D-13, design §4.4). It is a thin adapter: it
-// resolves the workspace with workspace.Locate, takes the change root, the edit
-// roots and the effective artifact store from the SDD status, and hands them to
-// specbaseline.Check and specbaseline.Prepare, which own every decision.
+// RunSDDIntegrate is the CLI entry point for
+// `axiom sdd integrate <check|prepare|verify|show>` (inc-24, REQ-24.42, REQ-24.51,
+// REQ-24.52, REQ-24.54, D-13, design §4.4). It is a thin adapter: it resolves the
+// workspace with workspace.Locate, takes the change root, the edit roots and the
+// effective artifact store from the SDD status, and hands them to
+// specbaseline.Check, Prepare and Verify, which own every decision.
 //
 // A rejection of the integration (a conflicting body, an undeclared domain, a
-// missing authorization) is carried in the report, which is always printed; the
-// command then exits with a non-zero code. `check` never writes anything and
-// needs neither git nor an authorization; `prepare` writes only
-// <change>/integration.yaml.
+// missing authorization, a failed verification) is carried in the report, which is
+// always printed; the command then exits with a non-zero code. `check` never
+// writes anything and needs neither git nor an authorization; `prepare` and
+// `verify` write only <change>/integration.yaml; `show` only reads it, also for a
+// change already archived under a dated folder.
 func RunSDDIntegrate(args []string, stdout io.Writer) error {
 	if hasGovernanceHelpFlag(args) {
 		return renderSDDIntegrateHelp(stdout)
 	}
 	if len(args) == 0 {
-		return errors.New("integrate requiere un subcomando: check o prepare; ejecuta `axiom sdd integrate --help`")
+		return errors.New("integrate requiere un subcomando: check, prepare, verify o show; ejecuta `axiom sdd integrate --help`")
 	}
 	sub, rest := args[0], args[1:]
 	switch sub {
@@ -39,13 +43,17 @@ func RunSDDIntegrate(args []string, stdout io.Writer) error {
 		return runSDDIntegrateCheck(rest, stdout)
 	case "prepare":
 		return runSDDIntegratePrepare(rest, stdout)
+	case "verify":
+		return runSDDIntegrateVerify(rest, stdout)
+	case "show":
+		return runSDDIntegrateShow(rest, stdout)
 	default:
-		return fmt.Errorf("subcomando %q no reconocido para integrate; opciones: check, prepare; ejecuta `axiom sdd integrate --help`", sub)
+		return fmt.Errorf("subcomando %q no reconocido para integrate; opciones: check, prepare, verify, show; ejecuta `axiom sdd integrate --help`", sub)
 	}
 }
 
 func renderSDDIntegrateHelp(stdout io.Writer) error {
-	_, _ = fmt.Fprintln(stdout, "Uso: axiom sdd integrate <check|prepare> [argumentos]")
+	_, _ = fmt.Fprintln(stdout, "Uso: axiom sdd integrate <check|prepare|verify|show> [argumentos]")
 	_, _ = fmt.Fprintln(stdout, "  check   --cwd <ruta> --change <nombre> [--json]")
 	_, _ = fmt.Fprintln(stdout, "          Valida los deltas del cambio contra la baseline declarada (dominios, cuerpos, correspondencia de IDs y delta de contexto).")
 	_, _ = fmt.Fprintln(stdout, "          No escribe nada, no exige git ni autorización de edición y sale con código distinto de cero si hay errores.")
@@ -53,14 +61,21 @@ func renderSDDIntegrateHelp(stdout io.Writer) error {
 	_, _ = fmt.Fprintln(stdout, "          Valida y compone en memoria todo el cambio, comprueba las precondiciones git y la autorización de edición,")
 	_, _ = fmt.Fprintln(stdout, "          registra el HEAD de cada repositorio afectado y escribe solo <cambio>/integration.yaml.")
 	_, _ = fmt.Fprintln(stdout, "          Imprime el comando de composición (`axiom sdd archive-compose --change ... --in-place`) y los trabajos de edición dirigida.")
+	_, _ = fmt.Fprintln(stdout, "  verify  --cwd <ruta> --change <nombre> [--json]")
+	_, _ = fmt.Fprintln(stdout, "          Verificación nativa de la integración tras la edición dirigida: traza, composiciones, presencia, anclas, alcance por diff e IDs provisionales.")
+	_, _ = fmt.Fprintln(stdout, "          Con éxito marca las entradas como integradas y escribe solo <cambio>/integration.yaml; si falla, lista todas las violaciones, sale con código 1 y no modifica nada.")
+	_, _ = fmt.Fprintln(stdout, "  show    --cwd <ruta> --change <nombre> [--format markdown|json]")
+	_, _ = fmt.Fprintln(stdout, "          Muestra la traza de integración del cambio, también de uno ya archivado con prefijo de fecha; con markdown es la sección que se añade al informe de archive.")
+	_, _ = fmt.Fprintln(stdout, "          Sale con código 1 si el cambio no tiene traza.")
 	return nil
 }
 
-// integrateArgs son los argumentos comunes de `check` y `prepare`.
+// integrateArgs son los argumentos de `check`, `prepare`, `verify` y `show`.
 type integrateArgs struct {
 	cwd     string
 	change  string
 	asJSON  bool
+	format  string // solo show: markdown o json
 	options specbaseline.PlanOptions
 }
 
@@ -69,7 +84,13 @@ func parseIntegrateArgs(verb string, args []string) (integrateArgs, error) {
 	flags.SetOutput(io.Discard)
 	cwd := flags.String("cwd", "", "Directorio desde el que resolver el workspaceRoot (por defecto, el directorio actual)")
 	change := flags.String("change", "", "Nombre del cambio activo")
-	asJSON := flags.Bool("json", false, "Emite el informe en JSON")
+	var asJSON *bool
+	var format *string
+	if verb == "show" {
+		format = flags.String("format", specbaseline.TraceFormatMarkdown, "Formato de la traza: markdown o json")
+	} else {
+		asJSON = flags.Bool("json", false, "Emite el informe en JSON")
+	}
 	var supersede *bool
 	var superseded *string
 	if verb == "prepare" {
@@ -85,7 +106,16 @@ func parseIntegrateArgs(verb string, args []string) (integrateArgs, error) {
 	if err := checkIntegrationChangeName(verb, *change); err != nil {
 		return integrateArgs{}, err
 	}
-	parsed := integrateArgs{cwd: *cwd, change: *change, asJSON: *asJSON}
+	parsed := integrateArgs{cwd: *cwd, change: *change}
+	if asJSON != nil {
+		parsed.asJSON = *asJSON
+	}
+	if format != nil {
+		parsed.format = *format
+		if parsed.format != specbaseline.TraceFormatMarkdown && parsed.format != specbaseline.TraceFormatJSON {
+			return integrateArgs{}, fmt.Errorf("integrate show: --format %q no es válido; usa markdown o json en `axiom sdd integrate show --cwd <ruta> --change <cambio> --format markdown`", parsed.format)
+		}
+	}
 	if verb == "prepare" {
 		parsed.options = specbaseline.PlanOptions{Supersede: *supersede, SupersededRequirements: splitSupersededRequirements(*superseded)}
 	}
@@ -194,6 +224,104 @@ func runSDDIntegratePrepare(args []string, stdout io.Writer) error {
 		return err
 	}
 	return integrateReportError("prepare", target, report)
+}
+
+func runSDDIntegrateVerify(args []string, stdout io.Writer) error {
+	parsed, err := parseIntegrateArgs("verify", args)
+	if err != nil {
+		return err
+	}
+	target, err := resolveIntegrationTarget("integrate verify", parsed.cwd, parsed.change)
+	if err != nil {
+		return err
+	}
+	report, err := specbaseline.Verify(context.Background(), target)
+	if err != nil {
+		return fmt.Errorf("integrate verify: %w; vuelve a ejecutar `%s`", err, integrateCommand("verify", target))
+	}
+	if parsed.asJSON {
+		if err := encodeJSON(stdout, report); err != nil {
+			return err
+		}
+	} else if _, err := io.WriteString(stdout, integrateVerifyText(target, report)); err != nil {
+		return err
+	}
+	if report.Passed {
+		return nil
+	}
+	return fmt.Errorf("integrate verify: la verificación de la integración del cambio %q no se superó (%d violación(es), listadas en el informe); el cambio sigue en openspec/changes sin archivar; corrígelas y vuelve a ejecutar `%s`", target.Change, len(report.Violations), integrateCommand("verify", target))
+}
+
+// integrateVerifyText es la forma legible del informe de `verify`.
+func integrateVerifyText(target specbaseline.ChangeTarget, report specbaseline.VerifyReport) string {
+	var b strings.Builder
+	if report.Passed {
+		fmt.Fprintf(&b, "Verificación de la integración del cambio %s: superada\n", report.Change)
+		fmt.Fprintf(&b, "Las entradas dirigidas y de contexto quedan integradas en %s.\n", filepath.Join(target.ChangeRoot, specbaseline.PlanFileName))
+		fmt.Fprintf(&b, "Siguiente paso: mueve el cambio a openspec/changes/archive y añade la traza al informe con `axiom sdd integrate show --cwd %s --change %s --format markdown`\n", pathquote.Quote(target.Location.WorkspaceRoot), pathquote.ShellWord(target.Change))
+		return b.String()
+	}
+	fmt.Fprintf(&b, "Verificación de la integración del cambio %s: no superada (%d violación(es))\n\nViolaciones:\n", report.Change, len(report.Violations))
+	for _, violation := range report.Violations {
+		fmt.Fprintf(&b, "  - [%s]", violation.Check)
+		if violation.Entry != "" {
+			fmt.Fprintf(&b, " entrada %s", violation.Entry)
+		}
+		if violation.File != "" {
+			fmt.Fprintf(&b, " (%s)", violation.File)
+		}
+		fmt.Fprintf(&b, ": %s\n", violation.Detail)
+	}
+	return b.String()
+}
+
+func runSDDIntegrateShow(args []string, stdout io.Writer) error {
+	parsed, err := parseIntegrateArgs("show", args)
+	if err != nil {
+		return err
+	}
+	loc, changeRoot, err := resolveTraceRoot("integrate show", parsed.cwd, parsed.change)
+	if err != nil {
+		return err
+	}
+	planPath := filepath.Join(changeRoot, specbaseline.PlanFileName)
+	plan, err := specbaseline.ReadPlan(planPath)
+	switch {
+	case errors.Is(err, fs.ErrNotExist):
+		return fmt.Errorf("integrate show: el cambio %q no tiene traza de integración (no existe %s): la traza la escribe `axiom sdd integrate prepare`; ejecútalo con `axiom sdd integrate prepare --cwd %s --change %s` si el cambio sigue activo", parsed.change, planPath, pathquote.Quote(loc.WorkspaceRoot), pathquote.ShellWord(parsed.change))
+	case err != nil:
+		return fmt.Errorf("integrate show: la traza de integración del cambio %q no se puede leer: %w; comprueba %s o vuelve a preparar con `axiom sdd integrate prepare --cwd %s --change %s`", parsed.change, err, planPath, pathquote.Quote(loc.WorkspaceRoot), pathquote.ShellWord(parsed.change))
+	}
+	data, err := specbaseline.RenderTrace(plan, parsed.format)
+	if err != nil {
+		return fmt.Errorf("integrate show: %w; usa `axiom sdd integrate show --cwd %s --change %s --format markdown`", err, pathquote.Quote(loc.WorkspaceRoot), pathquote.ShellWord(parsed.change))
+	}
+	_, err = stdout.Write(data)
+	return err
+}
+
+// resolveTraceRoot resuelve el espacio con workspace.Locate y la carpeta del
+// cambio para leer su traza: la activa o, si el cambio ya se archivó, la carpeta
+// archivada que kickoff.ArchivedChangeRoot encuentra con su nombre exacto o con el
+// prefijo de fecha YYYY-MM-DD- (D-13 paso 6). A diferencia de resolveIntegrationTarget,
+// no rechaza un cambio archivado: `show` solo lee.
+func resolveTraceRoot(prefix, cwd, change string) (workspace.Location, string, error) {
+	start := cwd
+	if strings.TrimSpace(start) == "" {
+		start = "."
+	}
+	loc, err := workspace.Locate(start)
+	if err != nil {
+		return workspace.Location{}, "", err
+	}
+	if active := filepath.Join(loc.PlanningHome, "changes", change); isDirectory(active) {
+		return loc, active, nil
+	}
+	if archived, ok := kickoff.ArchivedChangeRoot(loc.WorkspaceRoot, change); ok {
+		return loc, archived, nil
+	}
+	return workspace.Location{}, "", fmt.Errorf("%s: no existe el cambio %q, ni activo en %s ni archivado en %s; comprueba el nombre con `axiom sdd status --cwd %s` y vuelve a ejecutar el comando",
+		prefix, change, filepath.Join(loc.PlanningHome, "changes"), filepath.Join(loc.PlanningHome, "changes", "archive"), pathquote.Quote(loc.WorkspaceRoot))
 }
 
 func integrateCommand(verb string, target specbaseline.ChangeTarget) string {
