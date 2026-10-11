@@ -2358,6 +2358,107 @@ func TestProjectBaselineConventionCoversTheContextDeltaGatesAndModel(t *testing.
 	}
 }
 
+// REQ-21.9, REQ-21.11, REQ-24.36 y D-18: la sección compartida de compuertas, que
+// se compone en las 12 plantillas de orquestador, presenta el delta de contexto en
+// las compuertas `design` y `role-apply` y documenta la remediación con la línea
+// fechada. El sobre nativo `gateQuestion` no cambia: la sección no nombra sus campos.
+func TestSharedGateSectionPresentsAndRemediatesTheContextDelta(t *testing.T) {
+	shared := MustRead("skills/_shared/sdd-orchestrator-sections.md")
+	const start = "<!-- sdd-orchestrator-section:SDD Change Kickoff and Block Gates:start -->"
+	const end = "<!-- sdd-orchestrator-section:SDD Change Kickoff and Block Gates:end -->"
+	from := strings.Index(shared, start)
+	to := strings.Index(shared, end)
+	if from < 0 || to < from {
+		t.Fatalf("sdd-orchestrator-sections.md has no %q section", "SDD Change Kickoff and Block Gates")
+	}
+	section := shared[from:to]
+	for _, want := range []string{
+		// Presentación (REQ-21.9, REQ-21.11, REQ-24.36).
+		"When the native status projects `technicalContext.maintained`, the `design` gate also presents `<changeRoot>/context-impact.md`",
+		"evaluates whether it is coherent with the design",
+		"states explicitly that it is missing when it is — never assume `Sin impacto`",
+		"each `role-apply` gate also presents the updated context delta and evaluates whether it reflects what that role implemented",
+		"Without a maintained technical context, both gates stay exactly as described above.",
+		// Remediación (REQ-21.12, D-18).
+		"correcting `context-impact.md` alone does not reopen it",
+		"the remediating phase (`sdd-design` for `design`, `sdd-apply` for `role-apply`) corrects the delta",
+		"`YYYY-MM-DD: <rejection reason>; <what changed in the delta>`",
+		"`## Registro de remediación` section of the artifact the gate judges (`design.md`, or the role's tasks file)",
+		"the gate returns to `pending`, and you present it again with the corrected delta",
+		"Never edit `gates.yaml` and never look for a reopen command: there is none.",
+		"`project-baseline-convention.md`, sections 5 and 6",
+		// Las compuertas existentes y la frontera con RDD siguen intactas.
+		"re-present the SAME gate afterward, never skip ahead to the next one",
+		"a gate approval is never a receipt",
+	} {
+		if !strings.Contains(section, want) {
+			t.Errorf("shared gates section missing %q", want)
+		}
+	}
+	for _, forbidden := range []string{"gateQuestion", "gateCriteria", "gateEvidence"} {
+		if strings.Contains(section, forbidden) {
+			t.Errorf("shared gates section must not touch the native gate envelope, found %q", forbidden)
+		}
+	}
+	// La sección sigue una sola vez en la fuente compartida y cada orquestador la
+	// referencia por su marcador, sin duplicar el cuerpo.
+	if strings.Count(shared, "never look for a reopen command: there is none") != 1 {
+		t.Error("the remediation sentence must live once in the shared section")
+	}
+	for _, path := range allSDDOrchestratorAssetPaths(t) {
+		if strings.Contains(MustRead(path), "never look for a reopen command: there is none") {
+			t.Errorf("%s duplicates the shared gates body", path)
+		}
+	}
+}
+
+// D-14 y REQ-24.50: la plantilla perezosa de Claude Code gana la regla de modelo
+// del archivado con integración dirigida; la convención compartida la nombra igual.
+func TestClaudeWorkflowCarriesTheArchiveDirectedIntegrationModelRule(t *testing.T) {
+	const name = "Archive Directed Integration Model (MANDATORY)"
+	content := MustRead("claude/sdd-orchestrator-workflow.md")
+	rule := markdownSection(content, "### "+name)
+	if rule == "" {
+		t.Fatalf("claude/sdd-orchestrator-workflow.md missing the %q rule", name)
+	}
+	for _, want := range []string{
+		"read the native status",
+		"projects `technicalContext.maintained`, or any `baseline.documents[].integration == \"directed\"`",
+		"launch `sdd-archive` with the model assigned to `sdd-apply` in the Model Assignments table",
+		"in every other case launch it with the model of the `sdd-archive` row",
+		"Claude Code accepts `model` per call",
+		"never from reading `axiom.yaml`",
+		"Never block or delay archive on this rule",
+		"`axiom sdd integrate verify` protects the result whatever the model",
+		"`project-baseline-convention.md`, section 7",
+	} {
+		if !strings.Contains(rule, want) {
+			t.Errorf("rule %q missing %q", name, want)
+		}
+	}
+	if !strings.Contains(MustRead("skills/_shared/project-baseline-convention.md"), `"`+name+`"`) {
+		t.Errorf("project-baseline-convention.md does not name the rule %q", name)
+	}
+	// Solo existe en la plantilla de Claude Code: los demás runtimes dependen de la
+	// configuración de su modelo (D-14), y lo explica la convención.
+	for _, path := range allSDDOrchestratorAssetPaths(t) {
+		if path == "claude/sdd-orchestrator-workflow.md" {
+			continue
+		}
+		if strings.Contains(MustRead(path), name) {
+			t.Errorf("%s must not carry the Claude-only rule %q", path, name)
+		}
+	}
+	// El orden del flujo de archivado no cambia: la regla sigue a la entrega de
+	// hechos finales y precede a las claves de tema.
+	handoff := strings.Index(content, "### Archive Final-State Handoff (MANDATORY)")
+	model := strings.Index(content, "### "+name)
+	topics := strings.Index(content, "### Topic Keys")
+	if !(handoff >= 0 && handoff < model && model < topics) {
+		t.Errorf("rule order is wrong: handoff=%d model=%d topic keys=%d", handoff, model, topics)
+	}
+}
+
 // REQ-24.30: el texto de cada skill de fase prohíbe escribir en las rutas del
 // modo `reference`. sdd-tasks no gana nada más sobre el contexto técnico (D-22).
 func TestEveryPhaseSkillForbidsWritingTheReferenceContext(t *testing.T) {
