@@ -37,3 +37,9 @@ records:
       artifact_digest: 720872fb1b40a4ece19c5d405d18b4a4a2bf8fbf7e2d77faff3c4812fc7eb340
       actor: cli
       recorded_at: 2026-10-08T15:28:58.7274547Z
+    - gate: role-apply:fullstack
+      decision: approved
+      reason: 'Aprobada por el usuario tras la fase 8 y el rebase sobre main 902b4487: 186/186 tareas, build/vet/gofmtcheck limpios, pruebas verdes salvo fallos ambientales conocidos; cobertura no medida en porcentaje; pruebas del ciclo de revision de internal/cli sin completar en Windows.'
+      artifact_digest: b20439fa5ebcd13cd0478d3578f5a2ca6eeb5448dbc0de696d02f64522a20ef7
+      actor: cli
+      recorded_at: 2026-10-11T20:03:23.0773862Z
