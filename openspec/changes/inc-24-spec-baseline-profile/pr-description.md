@@ -1,6 +1,6 @@
 # feat: baseline del proyecto y raíz multirepo para SDD (inc-24-spec-baseline-profile)
 
-> Descripción del PR único. Rama `feat/inc-24-spec-baseline-profile`, cabeza `0ea60f2e` antes del commit de cierre de la fase 8, 61 commits sobre `e6870d49`. Sin `push` ni PR abierto: ambos son decisión del usuario.
+> Descripción del PR único. Rama `feat/inc-24-spec-baseline-profile`, cabeza `9f4bd977` antes del commit de cierre de la fase 8, 61 commits sobre `main` 60e75cb2 (rebasada el 2026-10-11; base anterior `e6870d49`). Sin `push` ni PR abierto: ambos son decisión del usuario.
 
 ## Resumen
 
@@ -27,19 +27,19 @@ Cada tramo deja el árbol verde al cerrarse. Orden en la rama: A1, A2, B1, B2, C
 
 | Tramo | Inicio | Fin | Depende de | Fuera de alcance | Líneas reales (previsión) |
 |---|---|---|---|---|---|
-| Fase 0. Artefactos de planificación | `f085c585` | `f085c585` | | Código | 5.463 (no previsto: tarea 0.2) |
-| A1. Resolver, verbos SDD, aislamiento de pruebas y CI | `387693a5` | `030830a0` | | Declaraciones (B1), catálogo (A2), composición (C1) | 2.638 (1.150–1.580) |
-| A2. Consumidores de catálogo | `62d2290e` | `bd5d3e2b` | A1 | Guardas contra una segunda baseline y baseline externa (B2) | 1.805 (600–930) |
-| B1. Declaración, validación y proyección en el status | `93690640` | `90d1f7dc` | A1 | Guardas de creadores (B2), skills (B2b, C3) | 3.544 (1.440–2.050) |
-| B2. Guardas nativas y skills de lectura | `c187e998` | `79dba680` | B1 y A2 | Integración de archive y composición (C1 a C3) | 3.090 (1.250–1.960) |
-| C1. Composición con perfil, ADDED e IDs | `b707c674` | `27ae649d`, más la corrección `3122d35e` | B1 | Plan, git, verificador y verbo `integrate` (C2) | 6.049; 6.201 con la corrección (1.700–2.400) |
-| C2. Plan, `integrate` y verificador | `030e8fac` | `bc1e8d12`, más las correcciones `df05d3ba` y `6b317c06` | C1 | Skills y compuertas (C3) | 10.704; 11.449 con las correcciones (1.900–2.880) |
-| C3. Skills de integración, compuertas, ODD y documentación | `2868a9a9` | `2ba1c316`, más `0ea60f2e` | C2 y B2 | Nuevos comportamientos nativos | 943 (620–1.100) |
+| Fase 0. Artefactos de planificación | `b62a878d` | `b62a878d` | | Código | 5.463 (no previsto: tarea 0.2) |
+| A1. Resolver, verbos SDD, aislamiento de pruebas y CI | `9ca41444` | `45ef306b` | | Declaraciones (B1), catálogo (A2), composición (C1) | 2.638 (1.150–1.580) |
+| A2. Consumidores de catálogo | `fb4d85dd` | `39c73eda` | A1 | Guardas contra una segunda baseline y baseline externa (B2) | 1.805 (600–930) |
+| B1. Declaración, validación y proyección en el status | `76bba3d7` | `40795ea1` | A1 | Guardas de creadores (B2), skills (B2b, C3) | 3.544 (1.440–2.050) |
+| B2. Guardas nativas y skills de lectura | `d884af70` | `e0836ed1` | B1 y A2 | Integración de archive y composición (C1 a C3) | 3.090 (1.250–1.960) |
+| C1. Composición con perfil, ADDED e IDs | `bf858b09` | `07c41ade`, más la corrección `3901229d` | B1 | Plan, git, verificador y verbo `integrate` (C2) | 6.049; 6.201 con la corrección (1.700–2.400) |
+| C2. Plan, `integrate` y verificador | `3f79294a` | `8ff80922`, más las correcciones `a96f7df9` y `ba35bace` | C1 | Skills y compuertas (C3) | 10.704; 11.449 con las correcciones (1.900–2.880) |
+| C3. Skills de integración, compuertas, ODD y documentación | `cd269120` | `f336c725`, más `9f4bd977` | C2 y B2 | Nuevos comportamientos nativos | 943 (620–1.100) |
 
 Notas del mapa:
 
 - B2 y C1 solo dependen de B1 y comparten pocos ficheros; en el PR único se integran como commits secuenciales y su orden es intercambiable.
-- Los tramos A1 y A2 tienen un commit cada uno intercalado tras el rebase sobre `main`: `223b2570` (aislamiento de `AXIOM_SDD_STATUS_ENGRAM` en las pruebas de `sdd status`) y `059e0a1b` (ajuste del plan). Ambos están dentro del rango de A2 de la tabla.
+- Los tramos A1 y A2 tienen un commit cada uno intercalado tras el rebase sobre `main`: `13f70ee8` (aislamiento de `AXIOM_SDD_STATUS_ENGRAM` en las pruebas de `sdd status`) y `a24cb13f` (ajuste del plan). Ambos están dentro del rango de A2 de la tabla.
 - Los rangos se calculan con `git diff --shortstat` entre el fin del tramo anterior y el fin del tramo, sin `testdata/golden`, sin `.codex/AGENTS.md` y sin `tasks.md`.
 - Los tramos que superan en más de un 25 % el límite superior de su previsión son A1, A2, B1, B2, C1 y C2. Solo C3 queda dentro. El total real sin la Fase 0 es de 29.370 líneas frente a 8.660–12.900 previstas. No se rehízo nada por tamaño.
 
@@ -51,102 +51,102 @@ SHAs vigentes tras el último rebase local. Las copias previas están en `backup
 
 | SHA | Commit |
 |---|---|
-| `f085c585` | docs(openspec): artefactos de planificación de inc-24 |
+| `b62a878d` | docs(openspec): artefactos de planificación de inc-24 |
 
 **A1**
 
 | SHA | Commit |
 |---|---|
-| `387693a5` | test: aislar del checkout las pruebas que lo escriben o consultan Engram y comprobar el checkout limpio en CI |
-| `0b357cd4` | refactor(workspace): extraer parseLayered de la carga de configuración base |
-| `0f655051` | feat(workspace): primitivo Locate con descubrimiento ascendente y enraizado por topología |
-| `41a7b26a` | feat(kickoff): resolver cambios archivados con prefijo de fecha |
-| `20b9afbb` | feat(sddstatus): resolver el planning home con Locate y avisar de la ubicación divergente |
-| `6c619428` | feat(cli): resolver kickoff, gate y attempt con Locate y cambios archivados con fecha |
-| `e043621b` | feat(cmd): resolver handoff y role con Locate |
-| `468c69e0` | docs: regla de ejecutores, receta del espacio canónico y evidencia pr_merged |
-| `030830a0` | docs(spike): completar R17 en Claude Code y cerrar A1 |
+| `9ca41444` | test: aislar del checkout las pruebas que lo escriben o consultan Engram y comprobar el checkout limpio en CI |
+| `f3f0bdbc` | refactor(workspace): extraer parseLayered de la carga de configuración base |
+| `7e5d9e45` | feat(workspace): primitivo Locate con descubrimiento ascendente y enraizado por topología |
+| `1dc27167` | feat(kickoff): resolver cambios archivados con prefijo de fecha |
+| `cf4dea83` | feat(sddstatus): resolver el planning home con Locate y avisar de la ubicación divergente |
+| `d6e886fc` | feat(cli): resolver kickoff, gate y attempt con Locate y cambios archivados con fecha |
+| `7bf1abb4` | feat(cmd): resolver handoff y role con Locate |
+| `f5522c66` | docs: regla de ejecutores, receta del espacio canónico y evidencia pr_merged |
+| `45ef306b` | docs(spike): completar R17 en Claude Code y cerrar A1 |
 
 **A2**
 
 | SHA | Commit |
 |---|---|
-| `62d2290e` | feat(livingdoc): resolver el catálogo con Locate y avisar de la ubicación divergente |
-| `776b4788` | fix(livingdoc): tomar el nombre del proyecto de INDEX.md de workspace.name |
-| `223b2570` | test(cmd): aislar también AXIOM_SDD_STATUS_ENGRAM en las pruebas de sdd status |
-| `059e0a1b` | docs(openspec): ajustar el plan de inc-24 tras rebasar sobre main |
-| `de5c1740` | feat(knowledge): tomar la raíz de especificaciones del planning home y avisar de la ubicación divergente |
-| `8c485d34` | docs(openspec): corregir las referencias a testmain_test.go y SyncIndexForProject en el diseño |
-| `b4645f7d` | feat(dashboard): resolver las rutas de openspec con el planning home en cada llamada |
-| `f0938a63` | feat(tui): cargar SDD y documentación viva desde el planning home |
-| `bd5d3e2b` | docs(openspec): cerrar el tramo A2 en tasks.md |
+| `fb4d85dd` | feat(livingdoc): resolver el catálogo con Locate y avisar de la ubicación divergente |
+| `30eb24ed` | fix(livingdoc): tomar el nombre del proyecto de INDEX.md de workspace.name |
+| `13f70ee8` | test(cmd): aislar también AXIOM_SDD_STATUS_ENGRAM en las pruebas de sdd status |
+| `a24cb13f` | docs(openspec): ajustar el plan de inc-24 tras rebasar sobre main |
+| `75d1245e` | feat(knowledge): tomar la raíz de especificaciones del planning home y avisar de la ubicación divergente |
+| `d688ff84` | docs(openspec): corregir las referencias a testmain_test.go y SyncIndexForProject en el diseño |
+| `6a58858f` | feat(dashboard): resolver las rutas de openspec con el planning home en cada llamada |
+| `075095cc` | feat(tui): cargar SDD y documentación viva desde el planning home |
+| `39c73eda` | docs(openspec): cerrar el tramo A2 en tasks.md |
 
 **B1**
 
 | SHA | Commit |
 |---|---|
-| `93690640` | feat(workspace): decodificación estricta de baseline y technical_context |
-| `a1868291` | feat(workspace): Locate rellena las declaraciones y rechaza un puntero con configuración inutilizable |
-| `0c1b96f2` | feat(workspace): validar las declaraciones contra el sistema de ficheros y el almacén declarado |
-| `eacda0ed` | feat(cmd): workspace validate informa de las declaraciones y de las advertencias con COMPLIANT |
-| `6e72f5f2` | feat(sddstatus): proyectar baseline y technicalContext en el status v2 |
-| `d2bb72a4` | feat(sddstatus): bloquear solo el archivado por declaración inválida, delta de contexto ausente o almacén sin ficheros |
-| `9d0946a0` | docs(assets): contrato del status con baseline y technicalContext |
-| `4925cab9` | refactor(workspace): diferir ReadDeclarations a B2, con su primer llamador |
-| `8a82d306` | docs(openspec): cerrar el tramo B1 en tasks.md (3.27) |
-| `90d1f7dc` | docs: escribir en inglés la frontera de configuración con axiom.yaml |
+| `76bba3d7` | feat(workspace): decodificación estricta de baseline y technical_context |
+| `56e5e8f4` | feat(workspace): Locate rellena las declaraciones y rechaza un puntero con configuración inutilizable |
+| `75f0fe1a` | feat(workspace): validar las declaraciones contra el sistema de ficheros y el almacén declarado |
+| `e9bb3d6e` | feat(cmd): workspace validate informa de las declaraciones y de las advertencias con COMPLIANT |
+| `be8ed850` | feat(sddstatus): proyectar baseline y technicalContext en el status v2 |
+| `4b68e615` | feat(sddstatus): bloquear solo el archivado por declaración inválida, delta de contexto ausente o almacén sin ficheros |
+| `9d94aa69` | docs(assets): contrato del status con baseline y technicalContext |
+| `89852e87` | refactor(workspace): diferir ReadDeclarations a B2, con su primer llamador |
+| `2ee7033a` | docs(openspec): cerrar el tramo B1 en tasks.md (3.27) |
+| `40795ea1` | docs: escribir en inglés la frontera de configuración con axiom.yaml |
 
 **B2**
 
 | SHA | Commit |
 |---|---|
-| `c187e998` | feat(workspace): consulta única de baseline y guarda contra una segunda baseline |
-| `facac323` | feat(hub): init respeta el puntero propio, la baseline del proyecto y --force |
-| `e39131d7` | feat(livingdoc): guardas de sync y coldstart y baseline externa en catálogo, dashboard y TUI |
-| `8a08a61f` | feat(knowledge): guardas de siembra, enriquecimiento y crawl y salidas de la CLI |
-| `0ba8519d` | feat(assets): convención compartida de la baseline del proyecto y guarda de sdd-init |
-| `d9ec71c7` | feat(assets): lectura del contexto técnico y prohibición de escribir en rutas de referencia |
-| `79dba680` | docs(openspec): cerrar el tramo B2 en tasks.md (4.27) |
+| `d884af70` | feat(workspace): consulta única de baseline y guarda contra una segunda baseline |
+| `cb226286` | feat(hub): init respeta el puntero propio, la baseline del proyecto y --force |
+| `43016491` | feat(livingdoc): guardas de sync y coldstart y baseline externa en catálogo, dashboard y TUI |
+| `ce39afd7` | feat(knowledge): guardas de siembra, enriquecimiento y crawl y salidas de la CLI |
+| `5777a4ef` | feat(assets): convención compartida de la baseline del proyecto y guarda de sdd-init |
+| `7fa53594` | feat(assets): lectura del contexto técnico y prohibición de escribir en rutas de referencia |
+| `e0836ed1` | docs(openspec): cerrar el tramo B2 en tasks.md (4.27) |
 
 **C1**
 
 | SHA | Commit |
 |---|---|
-| `b707c674` | feat(specbaseline): modelo de documento por líneas y reconocimiento de requisitos con perfil |
-| `f52bee5c` | feat(specbaseline): composición con perfil de MODIFIED, REMOVED y RENAMED por ID |
-| `d2740f97` | feat(cli): archive-compose con --cwd y --document |
-| `9a108f0e` | feat(specbaseline): asignación y sustitución de IDs provisionales |
-| `00fe7870` | feat(specbaseline): ADDED con ubicación explícita y scenarios omit |
-| `27ae649d` | docs(openspec): cerrar el tramo C1 en tasks.md (5.19) |
-| `3122d35e` | fix(specbaseline): separar con una línea en blanco el ADDED insertado tras un bloque sin blancos finales |
+| `bf858b09` | feat(specbaseline): modelo de documento por líneas y reconocimiento de requisitos con perfil |
+| `7a3194eb` | feat(specbaseline): composición con perfil de MODIFIED, REMOVED y RENAMED por ID |
+| `b6006d85` | feat(cli): archive-compose con --cwd y --document |
+| `902c507e` | feat(specbaseline): asignación y sustitución de IDs provisionales |
+| `296b7b40` | feat(specbaseline): ADDED con ubicación explícita y scenarios omit |
+| `07c41ade` | docs(openspec): cerrar el tramo C1 en tasks.md (5.19) |
+| `3901229d` | fix(specbaseline): separar con una línea en blanco el ADDED insertado tras un bloque sin blancos finales |
 
 **C2**
 
 | SHA | Commit |
 |---|---|
-| `030e8fac` | feat(specbaseline): delta de contexto y anclas por ruta de encabezados |
-| `0bb3451a` | feat(specbaseline): lectura git de solo lectura y plan de integración |
-| `84692215` | feat(specbaseline): check y prepare de la integración |
-| `2c22c56f` | feat(cli): axiom sdd integrate check y prepare |
-| `3bfba6b4` | feat(cli): archive-compose --change --in-place con reaplicación idempotente |
-| `0d120b97` | feat(specbaseline): verificador nativo de la integración dirigida |
-| `11cfe2d8` | feat(cli): axiom sdd integrate verify y show |
-| `bc1e8d12` | docs(openspec): cerrar el tramo C2 en tasks.md (6.27) |
-| `df05d3ba` | test(specbaseline): acelerar las pruebas con git real con un repositorio plantilla y ejecución en paralelo |
-| `6b317c06` | fix(specbaseline): verify no reescribe el índice de git al comparar con el commit del plan |
+| `3f79294a` | feat(specbaseline): delta de contexto y anclas por ruta de encabezados |
+| `bb5f6e57` | feat(specbaseline): lectura git de solo lectura y plan de integración |
+| `4f469142` | feat(specbaseline): check y prepare de la integración |
+| `9c9c7d91` | feat(cli): axiom sdd integrate check y prepare |
+| `b1990222` | feat(cli): archive-compose --change --in-place con reaplicación idempotente |
+| `89cee618` | feat(specbaseline): verificador nativo de la integración dirigida |
+| `7c947f59` | feat(cli): axiom sdd integrate verify y show |
+| `8ff80922` | docs(openspec): cerrar el tramo C2 en tasks.md (6.27) |
+| `a96f7df9` | test(specbaseline): acelerar las pruebas con git real con un repositorio plantilla y ejecución en paralelo |
+| `ba35bace` | fix(specbaseline): verify no reescribe el índice de git al comparar con el commit del plan |
 
 **C3**
 
 | SHA | Commit |
 |---|---|
-| `2868a9a9` | feat(assets): rama de integración de proyecto en sdd-archive |
-| `1448eabb` | feat(assets): lectura de la baseline y reglas de IDs en las skills de planificación |
-| `943a21d5` | feat(assets): delta de contexto en sdd-design, sdd-apply y sdd-verify |
-| `97d037e6` | feat(assets): presentación y remediación de las compuertas por el delta de contexto y modelo de archive |
-| `58626491` | feat(agentguidance): cierre de ODD con contexto técnico mantenido |
-| `b98c22d0` | docs(manual): baseline del proyecto, modelo de archive por runtime y corrección de INDEX.md |
-| `2ba1c316` | docs(openspec): cerrar el tramo C3 en tasks.md (7.21) |
-| `0ea60f2e` | docs(codex): añadir a .codex/AGENTS.md el párrafo de compuertas con el delta de contexto |
+| `cd269120` | feat(assets): rama de integración de proyecto en sdd-archive |
+| `077cf03f` | feat(assets): lectura de la baseline y reglas de IDs en las skills de planificación |
+| `4c913b7c` | feat(assets): delta de contexto en sdd-design, sdd-apply y sdd-verify |
+| `abfb7ea1` | feat(assets): presentación y remediación de las compuertas por el delta de contexto y modelo de archive |
+| `73df66eb` | feat(agentguidance): cierre de ODD con contexto técnico mantenido |
+| `676bd587` | docs(manual): baseline del proyecto, modelo de archive por runtime y corrección de INDEX.md |
+| `f336c725` | docs(openspec): cerrar el tramo C3 en tasks.md (7.21) |
+| `9f4bd977` | docs(codex): añadir a .codex/AGENTS.md el párrafo de compuertas con el delta de contexto |
 
 El commit de cierre de la fase 8 (`docs(openspec): cerrar la fase 8 en tasks.md`) se añade encima de esta lista y solo toca `tasks.md` y este fichero.
 
@@ -156,21 +156,21 @@ Decisiones que ni la spec ni el diseño fijaban, tomadas por el usuario durante 
 
 | Decisión | Commit | Qué cambia | Alternativa descartada |
 |---|---|---|---|
-| D-12 separación (C1), 2026-10-10 | `3122d35e` | Un ADDED insertado tras una línea no en blanco recibe una línea en blanco delante. Detrás hereda la serie del bloque de referencia con mínimo 1 salvo al final del fichero. Solo inserta bytes (REQ-24.45). | Heredar 0 blancos delante (bloque pegado, asimétrico) o quitar el mínimo detrás (contradice D-12). |
-| Tiempo de pruebas de specbaseline (C2), 2026-10-10 | `df05d3ba` | Repositorio plantilla copiado por prueba, entorno git fijado en `TestMain` y `t.Parallel`. De 496 s (1.270 s medidos antes por el usuario) a 109–189 s en Windows, con la misma lista de 918 pruebas. | Shard propio en el CI de Windows (oculta el coste). |
-| Índice de git en verify (C2), 2026-10-11 | `6b317c06` | `git diff` contra el commit del plan se ejecuta con `GIT_INDEX_FILE` sobre una copia temporal del índice. El índice real no se escribe. Una auditoría con git 2.41.0.windows.2 mostró que solo `git diff --name-status` reescribía el índice, incluso con `GIT_OPTIONAL_LOCKS=0`. | Confiar en `GIT_OPTIONAL_LOCKS=0`, o usar `git diff-index` sin refresco (falsos positivos por marcas de tiempo). |
-| Regeneración de `.codex/AGENTS.md` (C3), 2026-10-11 | `58626491` y `0ea60f2e` | `axiom sync` de Codex escribe en el HOME aunque se pase `--scope workspace`. Se regeneró con HOME aislado y se llevó al repositorio solo la oración nueva del paso 7. El párrafo de compuertas del commit C3-c4 (2 líneas) que el sync aislado sí genera se añadió después en `0ea60f2e`. Corrige la premisa de D-19 y de la tarea 7.16. | Edición manual de la oración (no prueba que el binario la genere). |
+| D-12 separación (C1), 2026-10-10 | `3901229d` | Un ADDED insertado tras una línea no en blanco recibe una línea en blanco delante. Detrás hereda la serie del bloque de referencia con mínimo 1 salvo al final del fichero. Solo inserta bytes (REQ-24.45). | Heredar 0 blancos delante (bloque pegado, asimétrico) o quitar el mínimo detrás (contradice D-12). |
+| Tiempo de pruebas de specbaseline (C2), 2026-10-10 | `a96f7df9` | Repositorio plantilla copiado por prueba, entorno git fijado en `TestMain` y `t.Parallel`. De 496 s (1.270 s medidos antes por el usuario) a 109–189 s en Windows, con la misma lista de 918 pruebas. | Shard propio en el CI de Windows (oculta el coste). |
+| Índice de git en verify (C2), 2026-10-11 | `ba35bace` | `git diff` contra el commit del plan se ejecuta con `GIT_INDEX_FILE` sobre una copia temporal del índice. El índice real no se escribe. Una auditoría con git 2.41.0.windows.2 mostró que solo `git diff --name-status` reescribía el índice, incluso con `GIT_OPTIONAL_LOCKS=0`. | Confiar en `GIT_OPTIONAL_LOCKS=0`, o usar `git diff-index` sin refresco (falsos positivos por marcas de tiempo). |
+| Regeneración de `.codex/AGENTS.md` (C3), 2026-10-11 | `73df66eb` y `9f4bd977` | `axiom sync` de Codex escribe en el HOME aunque se pase `--scope workspace`. Se regeneró con HOME aislado y se llevó al repositorio solo la oración nueva del paso 7. El párrafo de compuertas del commit C3-c4 (2 líneas) que el sync aislado sí genera se añadió después en `9f4bd977`. Corrige la premisa de D-19 y de la tarea 7.16. | Edición manual de la oración (no prueba que el binario la genere). |
 
 Otros ajustes sin decisión del usuario, registrados en los commits y en `tasks.md`:
 
-- `4925cab9`: `ReadDeclarations` se difiere a B2 para que nazca con su primer llamador y no deje código inalcanzable en B1.
-- `00fe7870`: reescrito con `--amend` para dar continuación a cinco rechazos de C1-c3 que rompían el ratchet de refusals de `internal/cli`.
-- `97d037e6`: rederivada la constante SHA-256 de los ajustes de Kilocode (`TestKilocodeReviewSettingsMatchCurrentMainBaseline`), porque esos ajustes embeben la sección compartida de compuertas.
+- `89852e87`: `ReadDeclarations` se difiere a B2 para que nazca con su primer llamador y no deje código inalcanzable en B1.
+- `296b7b40`: reescrito con `--amend` para dar continuación a cinco rechazos de C1-c3 que rompían el ratchet de refusals de `internal/cli`.
+- `abfb7ea1`: rederivada la constante SHA-256 de los ajustes de Kilocode (`TestKilocodeReviewSettingsMatchCurrentMainBaseline`), porque esos ajustes embeben la sección compartida de compuertas.
 - Decisiones del plan (m9, m11, m12, m13, firma de `parseLayered`, erratas): ver la tabla de `tasks.md`; se aplicaron como estaban previstas.
 
 ## Verificación realizada y sus límites
 
-Batería ejecutada sobre la cabeza `0ea60f2e`, con `git status --porcelain` vacío al empezar y al terminar.
+Batería ejecutada sobre la cabeza `9f4bd977`, con `git status --porcelain` vacío al empezar y al terminar.
 
 **En verde**
 
@@ -196,5 +196,6 @@ Batería ejecutada sobre la cabeza `0ea60f2e`, con `git status --porcelain` vac�
 
 - **T3 (aislamiento de pruebas del dashboard).** Fusionada en `main`: `ccff924c` (#71) y `7aa6e9bc` (#72), ambos ancestros de `e6870d49`. El tramo A2 se secuencia después de ellos, como pedía el diseño.
 - **Retirada de skills de la otra sesión.** Fusionada en `main`: #81, #82, #83, #90 y #91, ancestros de `e6870d49`. `chained-pr` vive ya en `internal/assets/skills/chained-pr`, que es la ruta que usa `tasks.md`.
-- **`main` ha avanzado después de rebasar la rama.** Las cifras de esta descripción se calculan contra `e6870d49`, la base del último rebase. La referencia local `origin/main` es ahora `60e75cb2`, diez commits más (#120 a #128, cambios de marca Axiom en textos de agentes, revisión y contrato). La rama está 10 commits por detrás de `main` y 61 por delante. Una fusión de prueba (`git merge-tree`) prevé conflicto de contenido en dos ficheros: `internal/components/sdd/review_ledger_contract_test.go` (la constante SHA-256 de los ajustes de Kilocode) y `testdata/golden/sdd-opencode-multi-settings.golden`. `internal/assets/assets_test.go` y doce goldens más se fusionan solos. Antes de abrir el PR hay que rebasar y regenerar los goldens, y volver a derivar la constante de Kilocode. Esta rama no lo ha hecho: es decisión del usuario.
+- **Rama rebasada sobre `main` 60e75cb2 (2026-10-11).** La nueva base es `60e75cb2` (#128), diez commits más que `e6870d49` (#120 a #128, cambios de marca Axiom en textos de agentes, revisión y contrato); `main` local incluye además `902b4487` (#129, solo documentos `odd/tasks`), que también es ancestro de la rama. La rama queda 0 commits por detrás de `main` y 63 por delante (los 62 de la rama y el commit que actualiza estos SHAs). Las cifras de esta descripción y los `git diff` con `e6870d49` citados arriba se midieron contra la base anterior; los SHAs citados son los posteriores al rebase (copia de seguridad previa: `backup/inc-24-pre-rebase-3`, cabeza `038f5f58`).
+- **Conflictos resueltos en el rebase.** Hubo dos, ambos en el commit de presentación y remediación de las compuertas (`abfb7ea1`, antes `97d037e6`). (1) `internal/components/sdd/review_ledger_contract_test.go`: se conservaron los comentarios de la marca de main (U1, U4, U6) y el de INC-24 (C3-c4), y la constante SHA-256 de los ajustes de Kilocode se volvió a derivar con el contenido resultante: `3d6a2041020dce8810d7a99e6de53f3f78b82c10c330d3425c8626b89413f7cc`. (2) `testdata/golden/sdd-opencode-multi-settings.golden`: se tomó la versión de main y se regeneró con `go test ./internal/components/ -run 'TestGoldenSDD_|TestGoldenCombined_' -update`; el diff frente a main es solo el párrafo del delta de contexto de las compuertas `design` y `role-apply`. `internal/assets/assets_test.go` y los demás goldens se fusionaron sin conflicto.
 - Sin `push`, sin PR y sin `fetch` desde esta sesión.
