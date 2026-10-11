@@ -24,6 +24,7 @@
    - [Uso por CLI y por Web UI](#uso-por-cli-y-por-web-ui)
 8. [Gestión de Especificaciones Vivas (OpenSpec)](#8-gestión-de-especificaciones-vivas-openspec)
    - [Podado Progresivo y Superación de Especificaciones](#podado-progresivo-y-superación-de-especificaciones-supersede)
+   - [Baseline del Proyecto y Contexto Técnico](#baseline-del-proyecto-y-contexto-técnico)
 9. [Flujo Dual de Desarrollo: ODD Cotidiano vs. SDD Formal](#9-flujo-dual-de-desarrollo-odd-cotidiano-vs-sdd-formal)
    - [Compuertas de Bloque e Integración Pre-Archive](#b-carril-formal-sdd-spec-driven-development)
 10. [Relevos Estructurados entre Roles y Fases (Handoffs)](#10-relevos-estructurados-entre-roles-y-fases-handoffs)
@@ -347,7 +348,7 @@ Axiom adopta y potencia el estándar **OpenSpec**:
 * `openspec/specs/<dominio>/spec.md`: Especificaciones vivas consolidadas del sistema.
 * `openspec/changes/<incremento>/`: Ciclos de cambio activos o en fase de propuesta.
 * `openspec/changes/archive/`: Registro histórico inmutable de incrementos completados.
-* `openspec/INDEX.md`: Catálogo maestro indexado de requerimientos y capacidades.
+* `openspec/INDEX.md`: Catálogo maestro indexado de requerimientos y capacidades. Lo genera `axiom archive sync`, no `axiom sdd archive-compose`.
 
 ### Compatibilidad y Migración
 * **Compatibilidad Directa:** Si un proyecto ya dispone de especificaciones en formato Markdown / OpenSpec, Axiom y su Dashboard Web las leen de forma nativa e inmediata.
@@ -366,6 +367,54 @@ A medida que el sistema evoluciona, nuevas capacidades reemplazan contratos prev
   axiom sdd archive-compose <nombre-cambio> --supersede <capacidad-obsoleta> --superseded-requirements REQ-1.1,REQ-1.2
   ```
 * **Trazabilidad en el Catálogo:** El compilador de archivo retira la especificación obsoleta o genera la sección canónica `## Especificaciones Históricas Superadas`, referenciando el cambio que la sustituye y manteniendo la trazabilidad histórica completa sin contaminar los requerimientos activos.
+
+### Baseline del Proyecto y Contexto Técnico
+
+Un proyecto que ya tiene sus propios documentos de requisitos (con su propia numeración y estructura) puede declararlos como **baseline del proyecto** en lugar de usar `openspec/specs/`. Se declara solo en `axiom.yaml` (nunca en `openspec/config.yaml`, que conserva las reglas de conducta) con dos bloques opcionales:
+
+```yaml
+baseline:
+  documents:
+    - domain: requisitos-funcionales        # un dominio, un documento
+      path: 01_Requisitos_Funcionales.md    # relativa a workspaceRoot, dentro de la carpeta maestra
+      scenarios: omit                       # include (por defecto) u omit
+      requirement:                          # perfil de requisito: hace direccionable cada requisito
+        heading: '^### (?P<id>RF-\d+): (?P<title>.+)$'
+        level: 3
+        identity: id                        # id (por defecto) o text
+        render: '### {id}: {title}'
+    - domain: modelo-de-datos
+      path: 03_Modelo_Datos.md
+      integration: directed                 # prosa: archive la edita en secciones del cambio
+    - domain: flujos-de-negocio
+      path: 04_Flujos_Negocio.md
+      integration: register                 # prosa: archive solo la registra
+
+technical_context:
+  maintained:                               # lo mantiene el archivado con un delta por cambio
+    entry: context/INDICE.md
+    paths: [context]
+  reference:                                # solo lectura: ninguna fase lo modifica
+    paths: [referencia]
+```
+
+* **Validación.** `axiom workspace validate --path <maestra>` comprueba la declaración contra el sistema de ficheros y el almacén de artefactos. Una declaración inválida nunca degrada a la baseline por defecto: el estado de `axiom sdd status --json` la señala y bloquea solo el archivado, con la causa y esta continuación.
+* **Almacén de ficheros.** Una baseline del proyecto o un contexto mantenido exigen `artifact_store` `openspec` o `hybrid` en `openspec/config.yaml`; con `engram` o `none` la validación lo reporta y el archivado se detiene.
+* **Sin segunda baseline.** Con una baseline del proyecto declarada, ninguna operación de Axiom crea `openspec/specs/` ni `openspec/INDEX.md`; el catálogo y el panel informan de que la baseline es externa.
+* **Integración en el archivado.** Antes de dar por terminada la fase `spec`, `axiom sdd integrate check --cwd <maestra> --change <cambio>` comprueba los deltas sin escribir. Al archivar, `axiom sdd integrate prepare` fija el plan y `axiom sdd archive-compose --cwd <maestra> --change <cambio> --document <dominio> --in-place` compone los documentos con perfil; `axiom sdd integrate verify` comprueba la edición dirigida y `axiom sdd integrate show` imprime la traza que se añade al informe de archivado.
+
+#### Adopción en cuatro pasos
+
+1. Monta a mano la topología canónica (receta en [Espacio Canónico Multirepo](#espacio-canónico-multirepo-montaje-manual)).
+2. Declara `baseline:` y `technical_context:` en `axiom.yaml`, con `artifact_store` `openspec` o `hybrid` si se integra en ellos.
+3. Ejecuta `axiom workspace validate --path <maestra>` hasta que sea conforme.
+4. Para los cambios con baseline con perfil de requisito, ejecuta `axiom sdd integrate check` desde `sdd-spec`.
+
+Un binario anterior ignora los bloques nuevos y no ve el puntero en los verbos SDD: todo el equipo debe usar el binario nuevo antes de declarar la baseline.
+
+#### Modelo de `sdd-archive` con integración dirigida
+
+Los documentos `integration: directed` y el contexto mantenido los edita el propio `sdd-archive`, lo que exige un modelo de nivel de implementación. Claude Code lo resuelve solo: el orquestador lanza `sdd-archive` con el modelo asignado a `sdd-apply` cuando el estado proyecta contexto mantenido o integración dirigida. En los runtimes con el modelo fijado por agente (OpenCode, Kiro y otros) no existe esa elevación: al declarar integración dirigida o contexto mantenido, asigna a `sdd-archive` un modelo de nivel de implementación con el selector de modelos existente. Nunca bloquea el archivado: `axiom sdd integrate verify` protege el resultado con cualquier modelo.
 
 ---
 
@@ -398,7 +447,7 @@ Para cambios estructurales profundos, refactorizaciones de arquitectura o requer
      ```bash
      axiom sdd gate record --gate integration --decision approved --evidence-kind pr_merged|deployment|attestation [--commit <sha>]
      ```
-  3. Cumplida la compuerta, `axiom sdd archive-compose` consolida las especificaciones en `openspec/specs/`, actualiza `openspec/INDEX.md` y congela el cambio en `openspec/changes/archive/`.
+  3. Cumplida la compuerta, `axiom sdd archive-compose` consolida las especificaciones en `openspec/specs/`, `axiom archive sync` regenera `openspec/INDEX.md` (`archive-compose` no lo produce) y el cambio se congela en `openspec/changes/archive/`.
 * **Filtro Dinámico de Roles en Web UI:** En `axiom ui` (pestaña Tareas / SDD), un selector dinámico permite filtrar las tareas activas según el rol asignado (`core`, `frontend`, `qa`, `fullstack`).
 
 ---
