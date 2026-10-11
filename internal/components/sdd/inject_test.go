@@ -3709,8 +3709,7 @@ func TestInjectOpenCodeReviewValidatorHasBoundedInspectionPermissions(t *testing
 		"edit":  "deny",
 		"task":  "deny",
 		"bash": map[string]any{
-			"axiom review inspect-candidate --purpose targeted-validation *":     "allow",
-			"gentle-ai review inspect-candidate --purpose targeted-validation *": "allow",
+			"axiom review inspect-candidate --purpose targeted-validation *": "allow",
 			"*": "deny",
 		},
 	}
