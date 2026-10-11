@@ -61,7 +61,7 @@ FOR EACH entry under "New Capabilities":
 
 FOR EACH entry under "Modified Capabilities":
 ├── This becomes a DELTA spec: openspec/changes/{change-name}/specs/<capability-name>/spec.md
-└── Read existing openspec/specs/<capability-name>/spec.md first — your delta modifies it
+└── Read the existing specification of that domain first (Step 3) — your delta modifies it
 ```
 
 Both kinds live under the change. A new capability is written under the change; sdd-archive promotes it to `openspec/specs/<capability-name>/spec.md`; never write to `openspec/specs/` during the spec phase. The dispatcher reads only `openspec/changes/{change-name}/specs/<capability-name>/spec.md`, and a spec written anywhere else keeps the change routed to `spec`.
@@ -70,7 +70,7 @@ If the proposal has no Capabilities section (older format), fall back to inferri
 
 ### Step 3: Read Existing Specs
 
-**IF mode is `openspec` or `hybrid`:** If `openspec/specs/{domain}/spec.md` exists, read it to understand CURRENT behavior. Your delta specs describe CHANGES to this behavior.
+**IF mode is `openspec` or `hybrid`:** When the status projects `baseline`, read the documents of the affected domains from `baseline.documents` (see `../_shared/project-baseline-convention.md`) to understand CURRENT behavior, and read `openspec/specs/{domain}/spec.md` only when `baseline` is absent. Your delta specs describe CHANGES to this behavior.
 
 **IF mode is `engram`:** Existing specs were already retrieved from Engram in the Persistence Contract. Skip filesystem reads.
 
@@ -98,7 +98,7 @@ openspec/changes/{change-name}/
 When writing a `## MODIFIED Requirements` section, follow this exact workflow:
 
 ```
-1. Locate the requirement in openspec/specs/{domain}/spec.md
+1. Locate the requirement in the existing baseline document of the domain (Step 3)
 2. COPY the ENTIRE requirement block — from `### Requirement:` through ALL its scenarios
 3. PASTE it under `## MODIFIED Requirements`
 4. EDIT the copy to reflect the new behavior
@@ -170,6 +170,19 @@ The system {MUST/SHALL/SHOULD} {do something specific}.
 (Reason: {why the requirement is being renamed})
 (Migration: {how references/tests/docs should update, or "None" if no migration is needed})
 ```
+
+#### Deltas for a Project Baseline with a Requirement Profile
+
+This applies when the status projects `baseline` and the affected domain is a `baseline.documents` entry with `integration: compose` (a document with a requirement profile). Prose domains (`directed` or `register`) keep the format above with no ID rules. The shared rules live in `../_shared/project-baseline-convention.md`, section 4.
+
+- **Names.** A requirement name is the project's own heading without the leading `#` signs, for example `RF-120: <title>`. Never invent another name format.
+- **Existing IDs.** MODIFIED, REMOVED, and RENAMED requirements use the IDs that exist in the baseline document. Read them from the document; never guess or renumber.
+- **New requirements.** An ADDED requirement carries a provisional ID that matches the document's heading pattern, equals no existing ID, is unique across the change, and sits outside the existing range. Start where `axiom sdd integrate check` suggests. Archive replaces provisional IDs with the next free definitive IDs, so new requirements may cite each other by their provisional IDs.
+- **Placement.** Every ADDED requirement carries a note line `(Placement: after <ID>)` or `(Placement: section "<title>")`; never rely on the order of IDs.
+- **Bodies.** A requirement body (description and scenarios) contains no heading at or above the level of the project's requirement headings outside code fences.
+- A domain that `baseline.documents` does not declare is rejected at archive: write deltas only for declared domains.
+
+Before you finish the spec phase with such a baseline, run `axiom sdd integrate check --cwd "<workspaceRoot>" --change <cambio>` and correct every violation it reports.
 
 #### For NEW Specs (No Existing Spec)
 

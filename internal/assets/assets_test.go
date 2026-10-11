@@ -2102,6 +2102,123 @@ func TestReadingPhaseSkillsReadTheTechnicalContextEntry(t *testing.T) {
 	}
 }
 
+// REQ-24.54: sdd-explore, sdd-propose, sdd-spec y, como DEBERÍA, sdd-onboard leen la
+// baseline del campo `baseline` del status; las rutas openspec/specs/ solo rigen sin
+// él. Las ubicaciones fijadas por pins anteriores (copias de sdd-propose y ubicación
+// local del cambio en sdd-spec) no se tocan.
+func TestPlanningSkillsReadTheBaselineFromTheStatus(t *testing.T) {
+	const (
+		readBaseline = "When the status projects `baseline`, read the documents of the affected domains from `baseline.documents`"
+		onlyDefault  = "only when `baseline` is absent"
+	)
+	for _, phase := range []string{"sdd-explore", "sdd-propose", "sdd-spec", "sdd-onboard"} {
+		t.Run(phase, func(t *testing.T) {
+			content := MustRead("skills/" + phase + "/SKILL.md")
+			for _, want := range []string{readBaseline, onlyDefault, "`../_shared/project-baseline-convention.md`"} {
+				if !strings.Contains(content, want) {
+					t.Errorf("%s missing baseline reading wording %q", phase, want)
+				}
+			}
+		})
+	}
+
+	// Las lecturas incondicionales de openspec/specs/ ya no figuran.
+	for path, retired := range map[string][]string{
+		"skills/sdd-explore/SKILL.md": {"Read `openspec/config.yaml` and `openspec/specs/`."},
+		"skills/sdd-propose/SKILL.md": {
+			"If `openspec/specs/` has relevant specs, read them",
+			"Research `openspec/specs/` before filling this in.",
+			"Research `openspec/specs/` first",
+			"Use existing spec names from openspec/specs/.",
+		},
+		"skills/sdd-spec/SKILL.md": {
+			"If `openspec/specs/{domain}/spec.md` exists, read it to understand CURRENT behavior",
+			"Locate the requirement in openspec/specs/{domain}/spec.md",
+			"Read existing openspec/specs/<capability-name>/spec.md first",
+		},
+	} {
+		content := MustRead(path)
+		for _, old := range retired {
+			if strings.Contains(content, old) {
+				t.Errorf("%s still reads openspec/specs/ unconditionally: %q", path, old)
+			}
+		}
+	}
+
+	t.Run("sdd-propose names only declared domains", func(t *testing.T) {
+		content := MustRead("skills/sdd-propose/SKILL.md")
+		if want := "name only domains that `baseline.documents` declares"; !strings.Contains(content, want) {
+			t.Errorf("sdd-propose missing %q", want)
+		}
+	})
+}
+
+// REQ-24.54, REQ-24.42 y D-11: sdd-spec fija las reglas de IDs de una baseline con
+// perfil de requisito y la frase que ordena ejecutar la comprobación previa antes
+// de dar por terminada la fase; la convención compartida las concentra.
+func TestSDDSpecWritesProfileDeltasAndRunsTheCheck(t *testing.T) {
+	const checkSentence = "Before you finish the spec phase with such a baseline, run `axiom sdd integrate check --cwd \"<workspaceRoot>\" --change <cambio>` and correct every violation it reports."
+
+	skill := MustRead("skills/sdd-spec/SKILL.md")
+	for _, want := range []string{
+		"#### Deltas for a Project Baseline with a Requirement Profile",
+		"`integration: compose`",
+		"Prose domains (`directed` or `register`) keep the format above with no ID rules",
+		"without the leading `#` signs, for example `RF-120: <title>`",
+		"use the IDs that exist in the baseline document",
+		"provisional ID that matches the document's heading pattern",
+		"Start where `axiom sdd integrate check` suggests",
+		`(Placement: after <ID>)`,
+		`(Placement: section "<title>")`,
+		"never rely on the order of IDs",
+		"contains no heading at or above the level of the project's requirement headings outside code fences",
+		"A domain that `baseline.documents` does not declare is rejected at archive",
+		checkSentence,
+	} {
+		if !strings.Contains(skill, want) {
+			t.Errorf("sdd-spec missing profile delta wording %q", want)
+		}
+	}
+	// La comprobación va después de las reglas y antes de la sección de specs nuevas.
+	if rules, check, fresh := strings.Index(skill, "#### Deltas for a Project Baseline"), strings.Index(skill, checkSentence), strings.Index(skill, "#### For NEW Specs"); rules < 0 || check < rules || fresh < check {
+		t.Errorf("the profile delta rules and the check sentence are out of order: %d %d %d", rules, check, fresh)
+	}
+
+	convention := MustRead("skills/_shared/project-baseline-convention.md")
+	for _, want := range []string{
+		"## 4. Deltas for a baseline with a requirement profile",
+		"a document with a requirement profile",
+		"A name that does not match is rejected, naming the requirement and the pattern.",
+		"never guess or renumber",
+		"prints a suggested provisional start for each ID family",
+		"A family with no ID in the document cannot receive an ADDED requirement.",
+		"The note is delta metadata and is never integrated.",
+		"`check` names the offending line",
+		"the next free definitive ID of its family (with the zero padding of the family's highest ID)",
+		"Before the spec phase is finished, run `axiom sdd integrate check --cwd \"<workspaceRoot>\" --change <cambio>`",
+	} {
+		if !strings.Contains(convention, want) {
+			t.Errorf("project-baseline-convention missing profile delta rule %q", want)
+		}
+	}
+}
+
+// D-16 y D-13: la convención de OpenSpec lista el delta de contexto y el plan de
+// integración en el árbol y en la tabla de rutas.
+func TestOpenSpecConventionListsTheContextDeltaAndTheIntegrationPlan(t *testing.T) {
+	convention := MustRead("skills/_shared/openspec-convention.md")
+	for _, want := range []string{
+		"├── context-impact.md <- context delta, only when the status projects `technicalContext.maintained`",
+		"└── integration.yaml <- integration plan and trace, written by `axiom sdd integrate prepare`",
+		"| sdd-design, sdd-apply | Create, then keep current (only when the status projects `technicalContext.maintained`) | `openspec/changes/{change-name}/context-impact.md` |",
+		"| native `axiom sdd integrate` | Writes (`prepare`, then `verify`) | `openspec/changes/{change-name}/integration.yaml` |",
+	} {
+		if !strings.Contains(convention, want) {
+			t.Errorf("openspec-convention missing %q", want)
+		}
+	}
+}
+
 // REQ-24.30: el texto de cada skill de fase prohíbe escribir en las rutas del
 // modo `reference`. sdd-tasks no gana nada más sobre el contexto técnico (D-22).
 func TestEveryPhaseSkillForbidsWritingTheReferenceContext(t *testing.T) {
