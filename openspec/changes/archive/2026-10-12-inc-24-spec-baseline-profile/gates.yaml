@@ -43,3 +43,12 @@ records:
       artifact_digest: b20439fa5ebcd13cd0478d3578f5a2ca6eeb5448dbc0de696d02f64522a20ef7
       actor: cli
       recorded_at: 2026-10-11T20:03:23.0773862Z
+    - gate: integration
+      decision: approved
+      reason: 'PR #133 fusionado en main con commit de merge 0bb66889 el 2026-10-11'
+      evidence_kind: pr_merged
+      evidence_ref: 0bb668893ec00360071de6609c546a79387e0289
+      evidence_base_ref: origin/main
+      verified: true
+      actor: cli
+      recorded_at: 2026-10-11T22:19:49.6136772Z
