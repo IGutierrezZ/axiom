@@ -363,6 +363,7 @@ func TestAllEmbeddedAssetsAreReadable(t *testing.T) {
 		"skills/sdd-init/references/init-details.md",
 		"skills/sdd-apply/SKILL.md",
 		"skills/sdd-archive/SKILL.md",
+		"skills/sdd-archive/references/project-baseline-integration.md",
 		"skills/sdd-design/SKILL.md",
 		"skills/sdd-explore/SKILL.md",
 		"skills/sdd-propose/SKILL.md",
@@ -2686,6 +2687,143 @@ func TestSDDArchiveStoreSpecificFilesystemContract(t *testing.T) {
 	)
 	if guards := strings.Count(moveBlock, "if [ -e \"$destination\" ] || [ -L \"$destination\" ]; then"); guards != 2 {
 		t.Fatalf("archive move has %d destination guards, want 2", guards)
+	}
+}
+
+// REQ-24.47, REQ-24.24, REQ-24.62, REQ-21.17 y REQ-24.56 (g): sdd-archive decide
+// primero la rama de integración del proyecto, nombra la forma de la invocación de
+// composición sin plantillar rutas de openspec/specs/, para como blocked con la
+// causa literal sin deducir el almacén y refresca el catálogo maestro solo en la
+// rama por defecto, sin tocar los bloques fijados.
+func TestSDDArchiveProjectBaselineBranch(t *testing.T) {
+	skill := MustRead("skills/sdd-archive/SKILL.md")
+
+	const invocation = `axiom sdd archive-compose --cwd "<workspaceRoot>" --change "{change-name}" --document "<dominio>" [--document ...] --in-place`
+	for _, want := range []string{
+		"#### Project Baseline Branch (decide first)",
+		"`../_shared/project-baseline-convention.md`",
+		"**IF the status projects `baseline` or `technicalContext.maintained`:**",
+		"`references/project-baseline-integration.md`",
+		"takes precedence over the `engram` and `none` lines below",
+		"never create, write, or copy anything under `openspec/specs/` or `openspec/INDEX.md`",
+		"Execute that command literally",
+		invocation,
+		"STOP and report `blocked` when the status marks the archive as blocked",
+		"or when `axiom sdd integrate prepare` rejects",
+		"`engram` or `none`, case (g)",
+		"Quote the cause literally",
+		"Do not deduce or change the artifact store",
+		"do not move the change to the archive",
+		"**IF neither is projected:**",
+		"#### Refresh the Master Catalog (default baseline only)",
+		`axiom archive sync --path "<workspaceRoot>"`,
+		"Skip this step when the status projects `baseline`",
+		"never promote or copy a delta to `openspec/specs/{domain}/`",
+		"bounded `Edit` operations",
+		"never a whole-file rewrite",
+		`never assume "Sin impacto"`,
+		"Never create, modify, or delete files under `technicalContext.reference` paths.",
+	} {
+		if !strings.Contains(skill, want) {
+			t.Errorf("skills/sdd-archive/SKILL.md missing project baseline wording %q", want)
+		}
+	}
+
+	// El texto de la invocación de composición no plantilla rutas de openspec/specs/.
+	at := strings.Index(skill, invocation)
+	if at < 0 {
+		t.Fatal("the composition invocation is missing")
+	}
+	open := strings.LastIndex(skill[:at], "```bash\n")
+	closing := strings.Index(skill[at:], "\n```")
+	if open < 0 || closing < 0 {
+		t.Fatal("the composition invocation is not inside a fenced bash block")
+	}
+	if block := skill[open : at+closing]; strings.Contains(block, "openspec/specs/") {
+		t.Errorf("the composition invocation block names openspec/specs/: %q", block)
+	}
+
+	// La rama se decide antes que las líneas por almacén y que los bloques fijados;
+	// el paso del catálogo vive entre la copia de specs y el Step 3.
+	index := func(fragment string) int {
+		t.Helper()
+		at := strings.Index(skill, fragment)
+		if at < 0 {
+			t.Fatalf("skills/sdd-archive/SKILL.md missing %q", fragment)
+		}
+		return at
+	}
+	branch := index("#### Project Baseline Branch (decide first)")
+	if engram := index("**IF mode is `engram`:** Skip filesystem sync"); branch >= engram {
+		t.Error("the project baseline branch must precede the engram line of Step 2")
+	}
+	if exists := index("#### If Main Spec Exists"); branch >= exists {
+		t.Error("the project baseline branch must precede the default composition blocks")
+	}
+	catalog := index("#### Refresh the Master Catalog (default baseline only)")
+	if copyBlock := index("#### If Main Spec Does NOT Exist"); catalog <= copyBlock {
+		t.Error("the master catalog refresh must follow the full-spec copy block")
+	}
+	if move := index("### Step 3: Move to Archive"); catalog >= move {
+		t.Error("the master catalog refresh must precede Step 3")
+	}
+}
+
+// REQ-24.50, REQ-24.52, REQ-24.55 a REQ-24.57 y D-13: la referencia de sdd-archive
+// describe los tres flujos paso a paso, las causas de parada y los límites de la
+// edición dirigida.
+func TestSDDArchiveProjectBaselineReferenceDescribesTheFlows(t *testing.T) {
+	reference := MustRead("skills/sdd-archive/references/project-baseline-integration.md")
+
+	for _, want := range []string{
+		"## Which flow applies",
+		"## Stop protocol (every flow)",
+		"## Flow 1: project baseline",
+		"## Flow 2: default baseline with a maintained context",
+		"## Flow 3: default baseline, no integration plan",
+		"## Directed edits",
+		// Flujo 1: prepare, composición literal, verificación, traza.
+		`axiom sdd integrate prepare --cwd "<workspaceRoot>" --change "{change-name}"`,
+		"Execute `composeCommand` literally",
+		"writes all of their documents or none",
+		`axiom sdd integrate verify --cwd "<workspaceRoot>" --change "{change-name}"`,
+		"Run Step 3 of `SKILL.md` unchanged.",
+		`axiom sdd integrate show --cwd "<workspaceRoot>" --change "{change-name}" --format markdown >> "openspec/changes/archive/YYYY-MM-DD-{change-name}/archive-report.md"`,
+		"never retyping it",
+		// Flujos 2 y 3: bloques por defecto y catálogo.
+		"Run the default Step 2 blocks",
+		`axiom archive sync --path "<workspaceRoot>"`,
+		"No `integrate` command runs.",
+		// Protocolo de parada.
+		"Quote the message literally",
+		"uncommitted changes, reported and reversible with git",
+		"never run Step 3 after a stop",
+		`Never assume "Sin impacto"`,
+		"never deduce the artifact store",
+		"is a resume signal",
+		"`artifact_store: openspec` or `hybrid`",
+		"`axiom workspace validate`",
+		// Edición dirigida.
+		"bounded `Edit` operations",
+		"never copy a document through Read and Write",
+		"(`verify` rejects it)",
+		"leave exactly one such section",
+		"they stay `pending` in the trace",
+		"`context.decision` is `no_impact`",
+		"edit nothing under the maintained paths",
+		"Never touch `technicalContext.reference` paths",
+		"Never run `git add` or `git commit`",
+	} {
+		if !strings.Contains(reference, want) {
+			t.Errorf("project-baseline-integration.md missing %q", want)
+		}
+	}
+
+	// Las siete causas (a) a (g) de REQ-24.56 figuran con su continuación.
+	for _, cause := range []string{"(a) ", "(b) ", "(c) ", "(d) ", "(e) ", "(f) ", "(g) "} {
+		if !strings.Contains(reference, "| "+cause) {
+			t.Errorf("project-baseline-integration.md missing the stop cause %q", cause)
+		}
 	}
 }
 
