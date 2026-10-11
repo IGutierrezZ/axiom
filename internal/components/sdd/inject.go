@@ -3114,8 +3114,43 @@ func renderSessionPreflightPrompt(adapter agents.Adapter, opts InjectOptions) (s
 	return content, nil
 }
 
+// Managed section opening-marker prefixes. Axiom writes the canonical prefix;
+// the legacy prefix is still recognized in files written by older installers.
+const (
+	axiomManagedMarkerPrefix  = "<!-- axiom:"
+	legacyManagedMarkerPrefix = "<!-- gentle-ai:"
+)
+
+// managedMarkerPrefixes lists every opening-marker prefix of a managed section.
+var managedMarkerPrefixes = []string{axiomManagedMarkerPrefix, legacyManagedMarkerPrefix}
+
+// firstManagedMarkerIndex returns the index of the earliest managed section
+// opening marker (of either prefix) at or after from, or -1 when none exists.
+func firstManagedMarkerIndex(content string, from int) int {
+	best := -1
+	for _, prefix := range managedMarkerPrefixes {
+		if rel := strings.Index(content[from:], prefix); rel >= 0 && (best == -1 || from+rel < best) {
+			best = from + rel
+		}
+	}
+	return best
+}
+
+// sddOrchestratorMarkerIndex returns the index of the earliest managed
+// sdd-orchestrator opening marker (of either prefix), or -1 when none exists.
+func sddOrchestratorMarkerIndex(content string) int {
+	best := -1
+	for _, prefix := range managedMarkerPrefixes {
+		marker := prefix + filemerge.SDDOrchestratorSectionID + " -->"
+		if idx := strings.Index(content, marker); idx >= 0 && (best == -1 || idx < best) {
+			best = idx
+		}
+	}
+	return best
+}
+
 func hasLegacyBareOrchestrator(content string) bool {
-	markedIdx := strings.Index(content, "<!-- gentle-ai:sdd-orchestrator -->")
+	markedIdx := sddOrchestratorMarkerIndex(content)
 	if markedIdx >= 0 {
 		prefix := content[:markedIdx]
 		if strings.Contains(prefix, "# Agent Teams Lite — Orchestrator Instructions") {
@@ -3153,10 +3188,11 @@ func hasLegacyBareOrchestrator(content string) bool {
 //
 // Strategy:
 //   - start at the first known orchestrator heading
-//   - end at the next managed marker ("<!-- gentle-ai:") if present, else EOF
+//   - end at the earliest next managed marker of either prefix
+//     ("<!-- axiom:" or the legacy "<!-- gentle-ai:") if present, else EOF
 //   - preserve content before/after and normalize surrounding blank lines
 func stripBareOrchestratorForFilePrompt(content string) string {
-	if markedIdx := strings.Index(content, "<!-- gentle-ai:sdd-orchestrator -->"); markedIdx >= 0 {
+	if markedIdx := sddOrchestratorMarkerIndex(content); markedIdx >= 0 {
 		prefix := content[:markedIdx]
 		if start := strings.Index(prefix, "# Agent Teams Lite — Orchestrator Instructions"); start >= 0 {
 			before := strings.TrimRight(content[:start], "\n")
@@ -3187,8 +3223,8 @@ func stripBareOrchestratorForFilePrompt(content string) string {
 	}
 
 	end := len(content)
-	if rel := strings.Index(content[start:], "<!-- gentle-ai:"); rel >= 0 {
-		end = start + rel
+	if next := firstManagedMarkerIndex(content, start); next >= 0 {
+		end = next
 	}
 
 	before := strings.TrimRight(content[:start], "\n")
@@ -3370,7 +3406,7 @@ func injectMarkdownSections(homeDir string, adapter agents.Adapter, legacyAssign
 	// If bare (un-marked) orchestrator content exists but the HTML markers are
 	// not present, strip the bare block first. This migrates legacy files to the
 	// canonical marker-based state without duplicating the section.
-	if hasSDDOrchestrator(existing) && !strings.Contains(existing, "<!-- gentle-ai:sdd-orchestrator -->") {
+	if hasSDDOrchestrator(existing) && sddOrchestratorMarkerIndex(existing) < 0 {
 		existing = stripBareOrchestratorSection(existing)
 	}
 
