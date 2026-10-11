@@ -565,7 +565,11 @@ func TestKilocodeReviewSettingsMatchCurrentMainBaseline(t *testing.T) {
 	// now tells the model to ask `Axiom SDD preflight N/3:` instead of
 	// `Gentle AI SDD preflight N/3:`. The runtime matchers keep accepting both
 	// prefixes. Deliberate, not drift.
-	const want = "bf4ec88a0915509e34fb1a07ee5d29bf7073028918bcfdd768a1aaa0f67a7136"
+	// ODD seguimientos U6: the OpenCode orchestrator asset Kilocode embeds now
+	// opens with `# Axiom — SDD Orchestrator Instructions` instead of
+	// `# Gentle AI — SDD Orchestrator Instructions`. Prose only; markers and
+	// contract IDs are untouched. Deliberate, not drift.
+	const want = "aa4742abc5c7c8a483415c810af1170ae3ef337f79e6985031567fa117febc92"
 	if got != want {
 		t.Fatalf("Kilocode settings SHA-256 = %s, want current-main baseline %s", got, want)
 	}

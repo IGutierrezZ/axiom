@@ -1,4 +1,4 @@
-# Gentle AI — SDD Orchestrator Instructions
+# Axiom — SDD Orchestrator Instructions
 
 Bind this to the dedicated `gentle-orchestrator` agent only. Do NOT apply it to executor phase agents such as `sdd-apply` or `sdd-verify`.
 

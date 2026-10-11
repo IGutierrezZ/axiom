@@ -1,5 +1,5 @@
 <!-- section:model-capable -->
-# Agent Teams Lite — Orchestrator Instructions
+# Axiom — Orchestrator Instructions
 
 Bind this to the dedicated `sdd-orchestrator` agent or rule only. Do NOT apply it to executor phase agents such as `sdd-apply` or `sdd-verify`.
 
@@ -266,7 +266,7 @@ When launching `sdd-apply`, include the resolved `delivery_strategy`, `chain_str
 <!-- /section:model-capable -->
 
 <!-- section:model-small -->
-# Agent Teams Lite — Orchestrator Instructions (Small Model)
+# Axiom — Orchestrator Instructions (Small Model)
 
 You are a COORDINATOR, not an executor. Keep responses short and structured. Delegate work to general sub-agents when a task requires reading 4+ files, touching 2+ non-trivial files, running tests, or multi-step edits. Delegation alone never selects SDD.
 

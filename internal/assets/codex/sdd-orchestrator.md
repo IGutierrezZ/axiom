@@ -128,7 +128,7 @@ session exposes the Codex multi-agent v2 collaboration surface:
   below.
 - Otherwise → use the **Graceful Degradation Path** below.
 
-`features.multi_agent` is enabled by default (gentle-ai writes `multi_agent = true` during installation) so SDD delegates phases and the per-phase reasoning_effort table applies. Setting `multi_agent = false` disables the normal delegated path; it does not make monolithic SDD execution the default.
+`features.multi_agent` is enabled by default (axiom writes `multi_agent = true` during installation) so SDD delegates phases and the per-phase reasoning_effort table applies. Setting `multi_agent = false` disables the normal delegated path; it does not make monolithic SDD execution the default.
 
 ---
 
@@ -159,7 +159,7 @@ explicitly requested background execution.
 
 For each phase:
 
-1. Look up the phase's `reasoning_effort` **AND** `model` values in the **Model Profiles** table below (the values are preset-driven and written by gentle-ai — do not assume fixed tiers). This applies both for preset (per-carril) tables and Custom (per-phase) tables — always pass the model and effort shown in the table for that phase.
+1. Look up the phase's `reasoning_effort` **AND** `model` values in the **Model Profiles** table below (the values are preset-driven and written by axiom — do not assume fixed tiers). This applies both for preset (per-carril) tables and Custom (per-phase) tables — always pass the model and effort shown in the table for that phase.
 2. Canonical SDD phase and skill identifiers remain hyphenated (for example, `sdd-design`). `task_name` is a Codex transport identifier: use only lowercase letters, digits, and underscores (for example, `sdd_design`). `spawn_agent` with that `task_name`, the phase prompt as `message`, `reasoning_effort` set to the tier value, and `model` set to the table's Model value for that phase. The `spawn_agent` tool has NO `profile` parameter — tier selection is the `reasoning_effort` argument, not a profile name.
 3. Record the returned `task_name` (the canonical full task path), associate it with the canonical SDD phase, and reuse it verbatim when correlating updates. Set `fork_turns: "none"` whenever you override `reasoning_effort` or `model`. A full-history fork (the default) REJECTS these overrides, so the override is silently ignored unless `fork_turns` is `"none"`.
 4. Repeat `wait_agent(timeout_ms=<bounded timeout>)` and `list_agents()` until the target agent reaches a terminal state.
@@ -416,7 +416,7 @@ Each phase returns: `status`, `executive_summary`, `artifacts`, `next_recommende
 
 ## Model Profiles
 
-When the Codex CLI is installed and supports GPT-5.6 profiles, gentle-ai writes three SDD model-selection profile files into `~/.codex/` during installation. Without the CLI, gentle-ai still configures shared files but leaves existing profile files unchanged. Each profile pins both a `model` and a `model_reasoning_effort` so Codex picks the right tier for each carril.
+When the Codex CLI is installed and supports GPT-5.6 profiles, axiom writes three SDD model-selection profile files into `~/.codex/` during installation. Without the CLI, axiom still configures shared files but leaves existing profile files unchanged. Each profile pins both a `model` and a `model_reasoning_effort` so Codex picks the right tier for each carril.
 
 These profile files apply to whole CLI sessions: `codex --profile <name> "<prompt>"`. They do NOT apply to spawned sub-agents. When delegating a phase via `spawn_agent`, pass the tier's effort directly as `reasoning_effort` (with `fork_turns: "none"`), using the same tier values below.
 

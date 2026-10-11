@@ -1,4 +1,4 @@
-# Agent Teams Lite — Orchestrator Instructions (Cursor)
+# Axiom — Orchestrator Instructions (Cursor)
 
 Bind this to the dedicated `sdd-orchestrator` agent or rule only. Do NOT apply it to executor phase agents such as `sdd-apply` or `sdd-verify`.
 
@@ -51,7 +51,7 @@ When native SDD status reports `blocked(edit_authority_missing)`, its structured
 
 ### Delegation Mechanism (Cursor Native Subagents)
 
-Cursor supports native sub-agent delegation via files in `~/.cursor/agents/`. Each SDD phase has a dedicated agent file installed there by gentle-ai. When you need to delegate, **invoke the corresponding subagent by name**. Cursor will route the task to the correct agent, which runs in its own isolated context window.
+Cursor supports native sub-agent delegation via files in `~/.cursor/agents/`. Each SDD phase has a dedicated agent file installed there by axiom. When you need to delegate, **invoke the corresponding subagent by name**. Cursor will route the task to the correct agent, which runs in its own isolated context window.
 
 Available subagents (all installed in `~/.cursor/agents/`):
 

@@ -1139,6 +1139,7 @@ func TestInjectOpenCodeUsesOpenCodeSpecificOrchestratorPrompt(t *testing.T) {
 			text := string(content)
 			for _, unwanted := range []string{
 				"Agent Teams Lite",
+				"# Axiom — Orchestrator Instructions",
 				"| orchestrator | opus |",
 				"| sdd-explore | sonnet |",
 				"| sdd-archive | haiku |",
@@ -1149,7 +1150,7 @@ func TestInjectOpenCodeUsesOpenCodeSpecificOrchestratorPrompt(t *testing.T) {
 			}
 
 			for _, wanted := range []string{
-				"Gentle AI",
+				"# Axiom — SDD Orchestrator Instructions",
 				"Read the configured models from `opencode.json`",
 				"Always collect this preflight with the `question` tool",
 				"present the proceed/adjust/stop options through the lossless blocking-prompt route",
