@@ -118,7 +118,10 @@ var (
 	errInvalidBundle = errors.New("invalid provider contract bundle")
 	// refusal:by-design input: an invalid local contract version cannot name a release asset.
 	errInvalidContractSemver = errors.New("invalid provider contract semver")
-	contractSemverPattern    = regexp.MustCompile(`^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$`)
+	// Each component is capped at nine digits so every accepted semver fits the
+	// int parseContractSemver reads it into; an overflowing one is refused here
+	// instead of reaching the version gates as an unparseable value.
+	contractSemverPattern = regexp.MustCompile(`^(0|[1-9][0-9]{0,8})\.(0|[1-9][0-9]{0,8})\.(0|[1-9][0-9]{0,8})$`)
 )
 
 type fileReference struct {
