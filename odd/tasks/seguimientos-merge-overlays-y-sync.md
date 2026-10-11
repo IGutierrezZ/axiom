@@ -2,7 +2,7 @@
 
 > **Documento vivo ODD.** Fichero autoritativo: `odd/tasks/seguimientos-merge-overlays-y-sync.md`.
 > Espejo de recuperación en Engram: topic `odd/seguimientos-merge-overlays-y-sync/tasks`, proyecto `axiom`.
-> **Estado: creado el 2026-10-11 y PENDIENTE DE LANZAR.** Todavía no hay rama de trabajo ni código cambiado.
+> **Estado: LANZADO el 2026-10-12 por el carril ODD.** Rama del documento: `docs/odd-seguimientos-merge-sync` (worktree `axiom-wt/odd-seguimientos-merge-sync-docs`). W1 en curso.
 > Origen: cierre del ODD `marca-restos-persona-overlays` (`odd/tasks/marca-restos-persona-overlays.md`). Al ejecutar `axiom sync` tras fusionar #130-#134 salieron S1 y S3; S2 ya estaba anotado como seguimiento menor.
 
 ---
@@ -44,13 +44,13 @@ Hacer que `axiom sync` retire de verdad las reglas gestionadas obsoletas de las 
 
 ## 5. Decisiones del usuario
 
-- (pendiente) D0: carril ODD o SDD.
-- (pendiente) S1: ¿retirar por migración de claves heredadas enumeradas (recomendado, conserva las reglas del usuario) o marcar `permission.bash` de los agentes gestionados con `__replace__` (más simple, pero pisa las personalizaciones del usuario)?
+- D0 (2026-10-12): carril **ODD**, elegido por el usuario.
+- S1 (2026-10-12): **migración de claves heredadas enumeradas.** La fija la restricción de la sección 2 (no borrar reglas del usuario); `__replace__` las pisaría, así que queda descartado.
 - (pendiente) S3: ¿basta con mostrar el scope y la ruta efectiva en el informe de sync, o se quiere además guardar el scope en el estado o avisar si el global está desfasado?
 
 ## 6. Tareas (commit → PR → merge)
 
-- [ ] **W1 · S1 · Retirar reglas gestionadas obsoletas:** una migración en `mergeOpenCodeJSONFile`, junto a `migrateLegacyOpenCode*`, que elimine de los agentes gestionados las claves de permiso heredadas enumeradas, empezando por `gentle-ai review inspect-candidate --purpose targeted-validation *`. Tests: una base con la clave heredada y otra personalizada del usuario; tras el merge solo desaparece la heredada. Verificar con `axiom sync --scope global` que desaparece de `~/.config/opencode/opencode.json`.
+- [ ] **W1 · S1 · Retirar reglas gestionadas obsoletas** (rama `fix/opencode-retirar-permisos-heredados`, worktree `axiom-wt/w1-retirar-permisos-heredados`; ruta: delegada, disparador de escritor: `inject.go` + test): una migración en `mergeOpenCodeJSONFile`, junto a `migrateLegacyOpenCode*`, que elimine de los agentes gestionados las claves de permiso heredadas enumeradas, empezando por `gentle-ai review inspect-candidate --purpose targeted-validation *`. Tests: una base con la clave heredada y otra personalizada del usuario; tras el merge solo desaparece la heredada. Verificar con `axiom sync --scope global` que desaparece de `~/.config/opencode/opencode.json`.
 - [ ] **W2 · S2 · Arnés crosslane:** exigir solo `axiom review inspect-candidate` en `scripts/crosslane/opencode.go:357` y ajustar el mensaje de fallo.
 - [ ] **W3 · S3 · Scope visible en sync:** incluir el scope y la ruta raíz efectiva en el informe de `axiom sync`, también en el de no-op y en el de `--dry-run`. Lo demás, según la decisión del usuario.
 - [ ] **W4 · Cierre:** actualizar este documento y abrir el PR `type:docs`.
@@ -70,3 +70,4 @@ Previsión: unas 80-200 líneas en total, sobre todo tests de S1.
   - Evidencia de S1 y S3: `axiom sync` desde el repo informó de un no-op (scope workspace). `axiom sync --scope global` actualizó `~/.config/opencode/opencode.json` (23 entradas `__managed_by: axiom`, prompt del validador con `axiom`), pero la clave `gentle-ai` siguió en la línea 157.
   - La investigación la hizo un subagente sonnet de solo lectura.
 - Instalación accidental en el workspace: `C:\repos\axiom\.config\opencode\` (ignorada por git, `.gitignore:38`) también conserva la clave `gentle-ai`. Se puede borrar a mano; no forma parte del repo.
+- 2026-10-12: lanzado. Conciliación: `origin/main` en `32683e0a`; los ficheros de la sección 4 no han cambiado desde `8cf608bd`. D0 = ODD; S1 = migración enumerada. Creados los worktrees del documento y de W1 desde `origin/main`.
