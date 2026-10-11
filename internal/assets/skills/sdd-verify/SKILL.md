@@ -38,6 +38,16 @@ Public/contextual comments follow the target context language by default. Explic
 - When the status projects `technicalContext`, read the `entry` file of each mode and consult the remaining `paths` only on demand (see `../_shared/project-baseline-convention.md`).
 - Never create, modify, or delete files under `technicalContext.reference` paths.
 
+## Context Warning (non-blocking)
+
+With `technicalContext.maintained` declared and a context delta (`context-impact.md`) that says `Sin impacto`, report a warning when the diff of the change touches a path of this closed list, and name the paths that trigger it:
+
+- (a) dependency manifests: `go.mod`, `package.json`, `Cargo.toml`, `pyproject.toml`, `requirements.txt`, or `*.csproj`;
+- (b) a top-level directory created by the change;
+- (c) build or CI command files: `Makefile`, `Dockerfile`, `CMakeLists.txt`, `.github/workflows/*`, or `.goreleaser.yaml`.
+
+Classify by path only: never run a file or interpret its content as a command. When the delta has entries, or the diff touches none of those paths, emit no warning. Write the warning in the `Avisos de contexto` section of the report (see `references/report-format.md`). It is informational: it never alters `nextRecommended` or `dependencies` and never blocks archive.
+
 ## Decision Gates
 
 | Condition | Action |

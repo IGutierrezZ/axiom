@@ -2219,6 +2219,145 @@ func TestOpenSpecConventionListsTheContextDeltaAndTheIntegrationPlan(t *testing.
 	}
 }
 
+// REQ-24.35 y design §8 («rutas con aspecto de documentación»): sdd-verify avisa,
+// sin bloquear, cuando un «Sin impacto» es dudoso. La lista de patrones es cerrada,
+// la clasificación es solo por ruta y el aviso nunca toca nextRecommended ni las
+// dependencias.
+func TestSDDVerifyWarnsWithoutBlockingOnADoubtfulNoImpact(t *testing.T) {
+	skill := MustRead("skills/sdd-verify/SKILL.md")
+	for _, want := range []string{
+		"## Context Warning (non-blocking)",
+		"`technicalContext.maintained` declared and a context delta (`context-impact.md`) that says `Sin impacto`",
+		"closed list",
+		// (a) manifiestos de dependencias, con requirements.txt.
+		"`go.mod`, `package.json`, `Cargo.toml`, `pyproject.toml`, `requirements.txt`, or `*.csproj`",
+		// (b) módulo nuevo de primer nivel.
+		"a top-level directory created by the change",
+		// (c) comandos de build o CI, con CMakeLists.txt.
+		"`Makefile`, `Dockerfile`, `CMakeLists.txt`, `.github/workflows/*`, or `.goreleaser.yaml`",
+		"Classify by path only: never run a file or interpret its content as a command.",
+		"name the paths that trigger it",
+		"When the delta has entries, or the diff touches none of those paths, emit no warning.",
+		"`Avisos de contexto` section",
+		"never alters `nextRecommended` or `dependencies`",
+		"never blocks archive",
+	} {
+		if !strings.Contains(skill, want) {
+			t.Errorf("sdd-verify missing context warning wording %q", want)
+		}
+	}
+	for _, pattern := range []string{"requirements.txt", "CMakeLists.txt"} {
+		if !strings.Contains(skill, "`"+pattern+"`") {
+			t.Errorf("the closed pattern list of sdd-verify must include %s", pattern)
+		}
+	}
+
+	report := MustRead("skills/sdd-verify/references/report-format.md")
+	for _, want := range []string{
+		"**Avisos de contexto:**",
+		"the closed pattern list in `SKILL.md`",
+		"Omit the section when the delta has entries or no path matches.",
+		"never alters `nextRecommended` or `dependencies`",
+	} {
+		if !strings.Contains(report, want) {
+			t.Errorf("sdd-verify report-format missing %q", want)
+		}
+	}
+}
+
+// REQ-24.33, REQ-21.12 y D-18: sdd-design redacta el delta de contexto sin escribir
+// el contexto y remedia una compuerta `design` rechazada por el delta con una línea
+// fechada en el registro de remediación de design.md.
+func TestSDDDesignDraftsTheContextDeltaAndRemediatesTheGate(t *testing.T) {
+	skill := MustRead("skills/sdd-design/SKILL.md")
+	for _, want := range []string{
+		"### Step 2b: Context Delta (only with `technicalContext.maintained`)",
+		"draft `openspec/changes/{change-name}/context-impact.md`",
+		"or `Sin impacto: <motivo>` with a reasoned motive",
+		"`../_shared/project-baseline-convention.md`, section 5",
+		"Never edit any file under the `technicalContext.maintained` paths",
+		"Without a maintained context, create no context delta.",
+		`axiom sdd integrate check --cwd "<workspaceRoot>" --change "{change-name}"`,
+		"a `design` gate rejected because of the context delta",
+		"append one dated line to the `## Registro de remediación` section of `design.md`",
+		"never a task checkbox",
+		"section 6",
+	} {
+		if !strings.Contains(skill, want) {
+			t.Errorf("sdd-design missing context delta wording %q", want)
+		}
+	}
+}
+
+// REQ-24.34, REQ-21.12 y D-18: sdd-apply mantiene el delta de contexto al día sin
+// reabrir design.md, con un solo delta por cambio, y remedia una compuerta
+// `role-apply`. sdd-apply renderiza dos niveles de modelo: ambos llevan las reglas.
+func TestSDDApplyKeepsTheContextDeltaCurrentInBothModelTiers(t *testing.T) {
+	content := MustRead("skills/sdd-apply/SKILL.md")
+	for _, tier := range []string{"capable", "small"} {
+		t.Run(tier, func(t *testing.T) {
+			section := extractModelSectionForTest(content, tier)
+			for _, want := range []string{
+				"When the status projects `technicalContext.maintained`, keep `context-impact.md` current with what was actually implemented",
+				"add, modify, or remove entries, or switch between entries and `Sin impacto: <motivo>`",
+				"never reopen `design.md`",
+				"never edit any file under the maintained paths",
+				"A change with several roles has one context delta: every role updates that same file.",
+				"a `role-apply` gate rejected because of the context delta",
+				"append one dated line to the `## Registro de remediación` section of the role's tasks file",
+				"`../_shared/project-baseline-convention.md`",
+			} {
+				if !strings.Contains(section, want) {
+					t.Errorf("sdd-apply model-%s missing context delta wording %q", tier, want)
+				}
+			}
+		})
+	}
+}
+
+// D-17 puntos 5 a 7: la convención compartida concentra el formato de
+// context-impact.md, la remediación de las compuertas por el delta (D-18) y la
+// regla de modelo de D-14 para los runtimes sin modelo por llamada.
+func TestProjectBaselineConventionCoversTheContextDeltaGatesAndModel(t *testing.T) {
+	content := MustRead("skills/_shared/project-baseline-convention.md")
+	for _, want := range []string{
+		// 5. Formato del delta de contexto.
+		"## 5. The context delta (`context-impact.md`)",
+		"# Delta de contexto: <cambio>",
+		"## Entrada: context/ARQUITECTURA.md",
+		"- Ancla: Componentes > Servicio de pagos",
+		"- Acción: modify",
+		"- Motivo: ",
+		"Sin impacto: el cambio solo corrige una errata en un mensaje de error",
+		"`- Ancla:`, `- Acción:` (`add`, `modify`, or `remove`), and `- Motivo:`",
+		"a repeated (document, anchor) pair",
+		"`Parent > Title`, or `Grandparent > Parent > Title`, with an optional ordinal ` #N`",
+		"More than one match is rejected, listing each; no match is valid only with `add`.",
+		"`Sin impacto: <motivo>` needs a non-empty motive and cannot coexist with entries",
+		`A change with no context delta is never "Sin impacto"`,
+		"also when the change was sealed as continuous",
+		// 6. Remediación de las compuertas.
+		"## 6. Remediating a gate rejected because of the context delta",
+		"Correcting `context-impact.md` alone does not reopen a rejected gate.",
+		"`YYYY-MM-DD: <rejection reason>; <what changed in the delta>`",
+		"`## Registro de remediación` section of the artifact the gate judges (`design.md`, or the role's tasks file)",
+		"The line is never a task checkbox, so it never alters progress.",
+		"the gate returns to `pending`",
+		"never look for a reopen command: there is none",
+		// 7. Modelo del archivado con integración dirigida.
+		"## 7. Model for `sdd-archive` with directed integration",
+		"Claude Code launches `sdd-archive` with the model assigned to `sdd-apply`",
+		`"Archive Directed Integration Model (MANDATORY)"`,
+		"In runtimes where the model is fixed per agent (OpenCode, Kiro, and others)",
+		"assign `sdd-archive` an implementation-level model with the existing model selector",
+		"Never block archive on this",
+	} {
+		if !strings.Contains(content, want) {
+			t.Errorf("project-baseline-convention missing %q", want)
+		}
+	}
+}
+
 // REQ-24.30: el texto de cada skill de fase prohíbe escribir en las rutas del
 // modo `reference`. sdd-tasks no gana nada más sobre el contexto técnico (D-22).
 func TestEveryPhaseSkillForbidsWritingTheReferenceContext(t *testing.T) {

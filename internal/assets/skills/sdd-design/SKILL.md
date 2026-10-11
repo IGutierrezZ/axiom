@@ -64,6 +64,12 @@ When the status projects `technicalContext`, read the `entry` file of each mode 
 
 If the design changes routing, shell commands, subprocesses, VCS/PR automation, executable-file classification, or process integration, read `references/threat-matrix.md` and include its matrix in the design. Mark every row `Applicable` or explicit `N/A` with a reason. Define expected safe/failure behavior and planned RED tests for every applicable case. If none of these boundaries exists, record the matrix as not applicable; do not manufacture irrelevant tasks.
 
+### Step 2b: Context Delta (only with `technicalContext.maintained`)
+
+When the status projects `technicalContext.maintained`, draft `openspec/changes/{change-name}/context-impact.md` with the impact the design is expected to have on the maintained documentation, or `Sin impacto: <motivo>` with a reasoned motive. Use the format in `../_shared/project-baseline-convention.md`, section 5, and validate it with `axiom sdd integrate check --cwd "<workspaceRoot>" --change "{change-name}"`, correcting what it reports. Never edit any file under the `technicalContext.maintained` paths: the archive integrates the delta. Without a maintained context, create no context delta.
+
+When a `design` gate rejected because of the context delta reopens this phase, correct `context-impact.md`, then append one dated line to the `## Registro de remediación` section of `design.md` (create the section when it is missing). The line states the rejection reason and what changed in the delta, and is never a task checkbox. It changes the digest the gate judges, so the gate returns to pending and is presented again; see the same convention, section 6.
+
 ### Step 3: Write design.md
 
 **IF mode is `openspec` or `hybrid`:** Create the design document:
@@ -201,6 +207,7 @@ Si el usuario elige generar `handoff.md`:
 - Applicable threat-matrix rows are design requirements and MUST propagate to tasks and RED tests unchanged; explicit `N/A` rows require no task.
 - ODD-5.1: El repositorio de especificaciones opera siempre directo en la rama principal (main/master). Jamás crees ramas ni worktrees en él.
 - ODD-5.2: Antes de ceder el testigo en handoff.md, confirma que el diseño y arquitectura están commiteados y pusheados a remoto.
+- With a maintained technical context, draft the context delta in Step 2b and leave every maintained document untouched.
 - Never create, modify, or delete files under `technicalContext.reference` paths.
 - Return envelope per **Section D** from `skills/_shared/sdd-phase-common.md`.
 

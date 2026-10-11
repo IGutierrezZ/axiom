@@ -301,6 +301,8 @@ Si las tareas del rol se han completado y validado satisfactoriamente:
 - ODD-5.1: En el repositorio de especificaciones (`specs_repository`) NUNCA crees ramas ni worktrees; trabaja siempre directo en `main`/`master`.
 - ODD-5.5: En repositorios de código, formula el cuestionario interactivo de pre-vuelo (worktree sí/no, nombre de rama y rama base) antes de implementar.
 - ODD-5.6: Al finalizar la verificación en PASS, ofrece commit y pregunta interactivamente la rama destino del PR (`develop`, `main`, etc.) antes de proponer `gh pr create`.
+- When the status projects `technicalContext.maintained`, keep `context-impact.md` current with what was actually implemented: add, modify, or remove entries, or switch between entries and `Sin impacto: <motivo>`; never reopen `design.md` and never edit any file under the maintained paths. A change with several roles has one context delta: every role updates that same file. Validate it with `axiom sdd integrate check --cwd "<workspaceRoot>" --change "{change-name}"` (see `../_shared/project-baseline-convention.md`).
+- When a `role-apply` gate rejected because of the context delta reopens this phase, correct `context-impact.md` and append one dated line to the `## Registro de remediación` section of the role's tasks file (never a task checkbox), as `../_shared/project-baseline-convention.md`, section 6, describes.
 - Never create, modify, or delete files under `technicalContext.reference` paths.
 - Return envelope per **Section D** from `skills/_shared/sdd-phase-common.md`.
 <!-- /section:model-capable -->
@@ -343,6 +345,8 @@ You are an IMPLEMENTER sub-agent. You receive specific tasks and implement them 
 - If previous apply-progress exists, read it via mem_search + mem_get_observation and MERGE before saving
 - Apply any `rules.apply` from `openspec/config.yaml`
 - When the status projects `technicalContext`, read the `entry` file of each mode and consult the remaining `paths` only on demand (see `../_shared/project-baseline-convention.md`).
+- When the status projects `technicalContext.maintained`, keep `context-impact.md` current with what was actually implemented: add, modify, or remove entries, or switch between entries and `Sin impacto: <motivo>`; never reopen `design.md` and never edit any file under the maintained paths. A change with several roles has one context delta: every role updates that same file. Validate it with `axiom sdd integrate check --cwd "<workspaceRoot>" --change "{change-name}"` (see `../_shared/project-baseline-convention.md`).
+- When a `role-apply` gate rejected because of the context delta reopens this phase, correct `context-impact.md` and append one dated line to the `## Registro de remediación` section of the role's tasks file (never a task checkbox), as `../_shared/project-baseline-convention.md`, section 6, describes.
 - Never create, modify, or delete files under `technicalContext.reference` paths.
 
 ## Steps
