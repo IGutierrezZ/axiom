@@ -195,6 +195,83 @@ func TestRenderRoutingProjectsODDProtocolBeforeTopology(t *testing.T) {
 	}
 }
 
+// TestRenderRoutingClosesODDWithTheMaintainedTechnicalContext guards
+// organic-agent-trigger-rules REQ-24.58 (inc-24, design D-19): the ODD close
+// step carries one deterministic English sentence about the maintained
+// technical context. It must sit inside step 7, render once, be identical in
+// two renders and for every adapter, and leave every other step untouched.
+func TestRenderRoutingClosesODDWithTheMaintainedTechnicalContext(t *testing.T) {
+	t.Parallel()
+
+	const sentence = "When the project declares a maintained technical context (`technical_context.maintained` in `axiom.yaml`), a work unit that changes something that context documents updates the affected documentation in that same work-unit commit; documentation declared as reference (`technical_context.reference`) is never modified, and without a maintained context this adds no requirement."
+
+	reference, err := RenderRouting(model.AgentClaudeCode)
+	if err != nil {
+		t.Fatalf("RenderRouting(%q) error = %v", model.AgentClaudeCode, err)
+	}
+
+	for _, agent := range catalog.AllAgents() {
+		t.Run(string(agent.ID), func(t *testing.T) {
+			t.Parallel()
+
+			first, err := RenderRouting(agent.ID)
+			if err != nil {
+				t.Fatalf("RenderRouting(%q) error = %v", agent.ID, err)
+			}
+			second, err := RenderRouting(agent.ID)
+			if err != nil {
+				t.Fatalf("second RenderRouting(%q) error = %v", agent.ID, err)
+			}
+			if first != second {
+				t.Fatalf("RenderRouting(%q) is not identical across two renders", agent.ID)
+			}
+			if first != reference {
+				t.Fatalf("RenderRouting(%q) differs from the reference adapter: the sentence must not depend on the agent", agent.ID)
+			}
+
+			if got := strings.Count(first, sentence); got != 1 {
+				t.Fatalf("RenderRouting(%q) renders the maintained-context sentence %d times, want exactly once:\n%s", agent.ID, got, first)
+			}
+
+			// The sentence belongs to step 7 ("Close."), after the existing text of
+			// that step and before the paragraph that follows the protocol.
+			closeOffset := strings.Index(first, "7. **Close.**")
+			sentenceOffset := strings.Index(first, sentence)
+			resumeOffset := strings.Index(first, "Resume an interrupted feature with")
+			if closeOffset < 0 || sentenceOffset < closeOffset || resumeOffset < sentenceOffset {
+				t.Fatalf("RenderRouting(%q) must place the sentence inside step 7 (close=%d sentence=%d resume=%d):\n%s", agent.ID, closeOffset, sentenceOffset, resumeOffset, first)
+			}
+			closeStep := first[closeOffset:resumeOffset]
+			if strings.Count(closeStep, "\n") > 2 {
+				t.Fatalf("RenderRouting(%q) step 7 must stay a single paragraph, got:\n%q", agent.ID, closeStep)
+			}
+			for _, kept := range []string{
+				"Report the verified outcome, every failed, skipped, or pending check, and the next step.",
+				"native review runs only under the user-owned receipt-driven development switch.",
+			} {
+				if !strings.Contains(closeStep, kept) {
+					t.Fatalf("RenderRouting(%q) step 7 lost its existing text %q:\n%s", agent.ID, kept, closeStep)
+				}
+			}
+
+			// No other ODD step changes, and the SDD lane gains nothing.
+			for _, step := range []string{"0. **Evaluate scope and lane.**", "1. **Authorize.**", "2. **Explore.**", "3. **Resolve uncertainty.**", "4. **Classify.**", "5. **Track before the first write.**", "6. **Implement task by task.**"} {
+				offset := strings.Index(first, step)
+				if offset < 0 {
+					t.Fatalf("RenderRouting(%q) lost step %q", agent.ID, step)
+				}
+				end := strings.Index(first[offset:], "\n")
+				if strings.Contains(first[offset:offset+end], "technical context") {
+					t.Fatalf("RenderRouting(%q) step %q must not mention the technical context", agent.ID, step)
+				}
+			}
+			if strings.Count(first, "technical_context") != 2 {
+				t.Fatalf("RenderRouting(%q) must mention technical_context only inside the new sentence", agent.ID)
+			}
+		})
+	}
+}
+
 // TestRenderRoutingAsksLaneSelectionBeforeAuthorize guards INC-21's Step 0
 // (REQ-21.1-21.3, design.md S4.7/H-2): the ODD/SDD lane-selection blocking
 // question, and ODD's own "no additional questions" instruction (REQ-21.2),
