@@ -1,8 +1,8 @@
 # Catálogo Maestro de Especificaciones Vivas — Axiom
 
 > **Proyecto:** Axiom (Spec-Driven Development Platform)
-> **Última Sincronización:** 2026-10-02 15:03:17 UTC
-> **Total Dominios:** 59 | **Total Requerimientos:** 371 | **Total Escenarios BDD:** 573
+> **Última Sincronización:** 2026-10-11 22:22:34 UTC
+> **Total Dominios:** 63 | **Total Requerimientos:** 433 | **Total Escenarios BDD:** 885
 
 ---
 
@@ -17,23 +17,25 @@
 | `axiom-sdd-cli-integration` | Especificación de Requerimientos: Integración de Comandos SDD en la CLI axiom (INC-13) | 4 | 6 | [Ver Spec](specs/axiom-sdd-cli-integration/spec.md) |
 | `axiom-skills-index-governance` | Especificación Viva: Gobernanza del Índice Unificado de Skills | 6 | 13 | [Ver Spec](specs/axiom-skills-index-governance/spec.md) |
 | `axiom-tui-branding` | Especificación de Requerimientos: Unificación de TUI Bubbletea, Comandos de Ecosistema en CLI axiom y Pasarela de gentle-ai (INC-14) | 4 | 9 | [Ver Spec](specs/axiom-tui-branding/spec.md) |
-| `axiom-updater-resilience` | Especificación Viva: Resiliencia y Gobernanza del Actualizador Autónomo de Axiom | 9 | 9 | [Ver Spec](specs/axiom-updater-resilience/spec.md) |
+| `axiom-updater-resilience` | Especificación Viva: Resiliencia y Gobernanza del Actualizador Autónomo de Axiom | 9 | 10 | [Ver Spec](specs/axiom-updater-resilience/spec.md) |
 | `axiom-user-state-and-env` | Especificación de Requerimientos: Unificación de Estado en ~/.axiom y Variables AXIOM_* (INC-12) | 3 | 5 | [Ver Spec](specs/axiom-user-state-and-env/spec.md) |
 | `dashboard-sdd-orchestration` | Especificación de Requerimientos: Orquestación Interactiva SDD y Creación de Cambios en Dashboard Web y CLI (INC-15) | 5 | 10 | [Ver Spec](specs/dashboard-sdd-orchestration/spec.md) |
 | `engram-protocol-injection` | Engram protocol injection Specification | 5 | 12 | [Ver Spec](specs/engram-protocol-injection/spec.md) |
 | `gga` | GGA Specification | 3 | 8 | [Ver Spec](specs/gga/spec.md) |
 | `installer-picker-navigation` | Installer Picker Navigation Specification | 3 | 9 | [Ver Spec](specs/installer-picker-navigation/spec.md) |
-| `living-documentation` | Especificación Viva: Motor de Documentación Viva y Adopción Orgánica en Archive (INC-07) | 11 | 12 | [Ver Spec](specs/living-documentation/spec.md) |
+| `living-documentation` | Especificación Viva: Motor de Documentación Viva y Adopción Orgánica en Archive (INC-07) | 11 | 23 | [Ver Spec](specs/living-documentation/spec.md) |
 | `local-web-dashboard` | Especificación Viva: Servidor HTTP Local Embebido y Dashboard Web | 8 | 15 | [Ver Spec](specs/local-web-dashboard/spec.md) |
-| `multi-project-hub` | Especificación Viva: Hub Multi-Proyecto, Selector Dinámico en Dashboard Web y CLI axiom init (INC-08) | 6 | 10 | [Ver Spec](specs/multi-project-hub/spec.md) |
+| `multi-project-hub` | Especificación Viva: Hub Multi-Proyecto, Selector Dinámico en Dashboard Web y CLI axiom init (INC-08) | 6 | 15 | [Ver Spec](specs/multi-project-hub/spec.md) |
 | `multi-role-fan-out` | Especificación Viva: Despliegue Multi-Rol y Barrera de Sincronización en SDD | 8 | 13 | [Ver Spec](specs/multi-role-fan-out/spec.md) |
 | `odd-cli-commands` | Especificación de Requerimientos: Comandos CLI para ODD (INC-19) | 4 | 0 | [Ver Spec](specs/odd-cli-commands/spec.md) |
 | `odd-living-document` | Especificación de Requerimientos: Documento Vivo ODD y Espejo de Recuperación en Engram (INC-19) | 4 | 0 | [Ver Spec](specs/odd-living-document/spec.md) |
 | `odd-sdd-promotion` | Especificación de Requerimientos: Promoción de Documentos ODD a Propuestas SDD (INC-19) | 4 | 0 | [Ver Spec](specs/odd-sdd-promotion/spec.md) |
 | `odd-ui-integration` | Especificación de Requerimientos: Integración de ODD en Dashboard Web y TUI (INC-19) | 3 | 0 | [Ver Spec](specs/odd-ui-integration/spec.md) |
 | `orchestrator-commands-markers` | Especificación de Requerimientos: axiom-orchestrator y Comandos Slash Canónicos (INC-11) | 4 | 5 | [Ver Spec](specs/orchestrator-commands-markers/spec.md) |
-| `organic-agent-trigger-rules` | Organic Agent Routing Projection | 13 | 19 | [Ver Spec](specs/organic-agent-trigger-rules/spec.md) |
+| `organic-agent-trigger-rules` | Organic Agent Routing Projection | 14 | 23 | [Ver Spec](specs/organic-agent-trigger-rules/spec.md) |
 | `persona-behavior-contract` | persona-behavior-contract Specification | 17 | 32 | [Ver Spec](specs/persona-behavior-contract/spec.md) |
+| `planning-home-resolution` | Especificación de Requerimientos: Resolución del Planning Home desde Cualquier Directorio (INC-24) | 12 | 51 | [Ver Spec](specs/planning-home-resolution/spec.md) |
+| `project-technical-context` | Especificación de Requerimientos: Contexto Técnico del Proyecto: Declaración, Lectura y Mantenimiento (INC-24) | 12 | 45 | [Ver Spec](specs/project-technical-context/spec.md) |
 | `rdd-authority-disposition-plan` | RDD Authority Disposition Plan Specification | 7 | 11 | [Ver Spec](specs/rdd-authority-disposition-plan/spec.md) |
 | `rdd-authority-graph-classification` | RDD Authority Graph Classification Specification | 4 | 6 | [Ver Spec](specs/rdd-authority-graph-classification/spec.md) |
 | `rdd-authority-store` | RDD Authority Store Specification | 5 | 7 | [Ver Spec](specs/rdd-authority-store/spec.md) |
@@ -55,20 +57,22 @@
 | `rdd-simplification-design` | RDD Simplification Design Specification | 9 | 14 | [Ver Spec](specs/rdd-simplification-design/spec.md) |
 | `rdd-transport-capability` | RDD Transport Capability Specification | 4 | 8 | [Ver Spec](specs/rdd-transport-capability/spec.md) |
 | `review-findings-ledger` | Bounded Review Transaction and Findings Ledger | 18 | 24 | [Ver Spec](specs/review-findings-ledger/spec.md) |
-| `sdd-archive-lifecycle` | Especificación de Requerimientos: Ciclo de Vida de Archive, Integración Formal y Sellado Inmutable (INC-21) | 3 | 5 | [Ver Spec](specs/sdd-archive-lifecycle/spec.md) |
-| `sdd-block-review-gates` | Especificación de Requerimientos: Compuertas de Revisión por Bloque (spec, design, tasks, apply) (INC-21) | 6 | 12 | [Ver Spec](specs/sdd-block-review-gates/spec.md) |
+| `sdd-archive-lifecycle` | Especificación de Requerimientos: Ciclo de Vida de Archive, Integración Formal y Sellado Inmutable (INC-21) | 6 | 22 | [Ver Spec](specs/sdd-archive-lifecycle/spec.md) |
+| `sdd-block-review-gates` | Especificación de Requerimientos: Compuertas de Revisión por Bloque (spec, design, tasks, apply) (INC-21) | 6 | 19 | [Ver Spec](specs/sdd-block-review-gates/spec.md) |
 | `sdd-lane-kickoff` | Especificación de Requerimientos: Selección Temprana y Bloqueante de Carril ODD/SDD en el Kickoff (INC-21) | 4 | 8 | [Ver Spec](specs/sdd-lane-kickoff/spec.md) |
 | `sdd-orchestrator-assets` | SDD Orchestrator Assets Specification | 17 | 39 | [Ver Spec](specs/sdd-orchestrator-assets/spec.md) |
 | `sdd-preflight-configuration` | Especificación de Requerimientos: Cuestionario Pre-Vuelo de SDD, Modalidad de Avance y Asignación Obligatoria de Roles (INC-21) | 2 | 5 | [Ver Spec](specs/sdd-preflight-configuration/spec.md) |
 | `sdd-research` | sdd-research Specification | 3 | 9 | [Ver Spec](specs/sdd-research/spec.md) |
 | `sdd-role-closure-handoff` | Especificación de Requerimientos: Cierre de Último Rol, Aviso Formal y Relevo de Integración (INC-21) | 3 | 6 | [Ver Spec](specs/sdd-role-closure-handoff/spec.md) |
 | `semantic-code` | Especificación de Requerimientos: Conector Semántico de Código (Serena MCP & CodeGraph) (INC-06) | 11 | 14 | [Ver Spec](specs/semantic-code/spec.md) |
+| `spec-baseline-declaration` | Especificación de Requerimientos: Declaración de la Baseline del Proyecto y Guarda contra una Segunda Baseline (INC-24) | 15 | 71 | [Ver Spec](specs/spec-baseline-declaration/spec.md) |
+| `spec-baseline-integration` | Especificación de Requerimientos: Integración de los Cambios en la Baseline del Proyecto (INC-24) | 19 | 91 | [Ver Spec](specs/spec-baseline-integration/spec.md) |
 | `structured-handoffs` | Especificación Viva: Handoffs Estructurados y Ciclo de Vida de Transición | 7 | 13 | [Ver Spec](specs/structured-handoffs/spec.md) |
 | `tui-spanish-localization` | Especificación Viva: Localización Integral al Castellano y Desacoplamiento de Avisos en la TUI (Axiom) | 4 | 9 | [Ver Spec](specs/tui-spanish-localization/spec.md) |
-| `tui-ui-parity` | Especificación Viva: Paridad Bidireccional entre TUI y Web UI | 10 | 11 | [Ver Spec](specs/tui-ui-parity/spec.md) |
+| `tui-ui-parity` | Especificación Viva: Paridad Bidireccional entre TUI y Web UI | 10 | 12 | [Ver Spec](specs/tui-ui-parity/spec.md) |
 | `upstream-absorption-protocol` | Especificación Viva: Protocolo de Absorción por Tandas desde Upstream | 6 | 9 | [Ver Spec](specs/upstream-absorption-protocol/spec.md) |
 | `visual-decoupling` | Especificación de Requerimientos: Desacoplamiento Visual y Limpieza de Marca (Axiom) | 4 | 7 | [Ver Spec](specs/visual-decoupling/spec.md) |
-| `workspace-topology` | Especificación Viva: Topología de Workspace y CLI de Axiom | 7 | 15 | [Ver Spec](specs/workspace-topology/spec.md) |
+| `workspace-topology` | Especificación Viva: Topología de Workspace y CLI de Axiom | 7 | 23 | [Ver Spec](specs/workspace-topology/spec.md) |
 
 ---
 
@@ -153,7 +157,7 @@ Contrato de nombre publicado por clase de superficie: instalador y tap, compuert
   - *Escenario BDD:* contracts/** permanece sin cambios
 - **[REQ-20.11]** Binario gentle-ai retirado y shim de crosslane conservado
   - *Escenario BDD:* El release publica solo el binario canónico
-- **[REQ-20.12]** Nombres de servicio de telemetría de despliegue — **RETIRADO**: la telemetría y su despliegue se eliminaron por decisión de producto
+- **[REQ-axiom-distribution-identity-6]** Nombres de servicio de telemetría de despliegue (REQ-20.12) — RETIRADO
   - *Escenario BDD:* Los nombres de servicio de telemetría se renombran
 - **[REQ-20.13]** Raíz de respaldos resuelta exclusivamente a través de internal/backup
   - *Escenario BDD:* Un escritor de producción resuelve la raíz a través del paquete
@@ -220,7 +224,7 @@ Gobernanza del catálogo de habilidades (skills) de agentes en tres destinos sin
   - *Escenario BDD:* Ayuda de install desde axiom
   - *Escenario BDD:* Sincronización de agentes mediante axiom sync
   - *Escenario BDD:* Diagnóstico del ecosistema mediante axiom doctor
-- **[REQ-14.4]** Pasarela de compatibilidad y deprecación de gentle-ai — **RETIRADO**: el binario `gentle-ai` ya no se compila ni se publica
+- **[REQ-axiom-tui-branding-4]** Pasarela de compatibilidad y deprecación de gentle-ai (REQ-14.4) — RETIRADO
   - *Escenario BDD:* Advertencia informativa de deprecación al invocar gentle-ai
 
 ### Dominio: `axiom-updater-resilience` — Especificación Viva: Resiliencia y Gobernanza del Actualizador Autónomo de Axiom
@@ -245,6 +249,7 @@ Estrategias y salvaguardas de actualización del binario `axiom` para entornos W
   - *Escenario BDD:* Textos de interfaz limpios
 - **[REQ-22.8]** Versión de build visible y consistente
   - *Escenario BDD:* Inyección de versión en tiempo de enlace
+  - *Escenario BDD:* Binario instalado con go install
 - **[REQ-22.9]** Registro durable de la versión upstream de referencia
   - *Escenario BDD:* Conservación de la versión upstream de referencia
 
@@ -355,26 +360,37 @@ Definir de forma ejecutable, determinista y verificable los requerimientos funci
 - **[REQ-1.1]** Escaneo y Extracción de Especificaciones Vivas
   - *Escenario BDD:* Indexación exitosa de especificaciones vivas existentes
   - *Escenario BDD:* Directorio de especificaciones vacío o inexistente
+  - *Escenario BDD:* Raíz resuelta en el workspace canónico
+  - *Escenario BDD:* Ubicación antigua divergente emite un aviso
+  - *Escenario BDD:* Con baseline del proyecto se informa y no se indexa
 - **[REQ-1.2]** Generación Determinista de `openspec/INDEX.md`
   - *Escenario BDD:* Generación y persistencia de `openspec/INDEX.md`
+  - *Escenario BDD:* Con baseline del proyecto no se genera el índice
 - **[REQ-1.3]** Detección de Inconsistencias o Requerimientos Huérfanos
   - *Escenario BDD:* Advertencia ante requerimiento sin escenarios
 - **[REQ-2.1]** Síntesis de Especificación Viva a partir de un Cambio Archivado
   - *Escenario BDD:* Adopción orgánica de un nuevo dominio
+  - *Escenario BDD:* Arranque en frío rechazado con baseline del proyecto
 - **[REQ-2.2]** Preservación de Especificaciones Existentes
   - *Escenario BDD:* Protección contra sobreescritura de specs vivas existentes
 - **[REQ-3.1]** Comando `axiom archive sync`
   - *Escenario BDD:* Sincronización exitosa desde CLI
+  - *Escenario BDD:* Sincronización rechazada con baseline del proyecto
+  - *Escenario BDD:* Sincronización desde el workspace canónico
 - **[REQ-3.2]** Comando `axiom archive list`
   - *Escenario BDD:* Listado de especificaciones en consola
 - **[REQ-3.3]** Comando `axiom archive show`
   - *Escenario BDD:* Consulta de una especificación viva por dominio
 - **[REQ-3.4]** Comando `axiom archive coldstart`
   - *Escenario BDD:* Ejecución de coldstart para un cambio nuevo
+  - *Escenario BDD:* Coldstart rechazado con baseline del proyecto
 - **[REQ-4.1]** Endpoints REST para Especificaciones Vivas
   - *Escenario BDD:* Petición HTTP a `/api/archive/specs`
+  - *Escenario BDD:* Catálogo con baseline del proyecto
+  - *Escenario BDD:* Sincronización rechazada con baseline del proyecto
 - **[REQ-4.2]** Interfaz Web SPA con Explorador de Documentación Viva
   - *Escenario BDD:* Exploración de especificaciones vivas en el navegador
+  - *Escenario BDD:* Pestaña con baseline del proyecto
 
 ### Dominio: `local-web-dashboard` — Especificación Viva: Servidor HTTP Local Embebido y Dashboard Web
 
@@ -424,6 +440,11 @@ Definir formal y deterministamente los requerimientos funcionales, no funcionale
   - *Escenario BDD:* Detección automática en proyecto .NET / C#
 - **[REQ-2.2]** Generación de Andamiaje `axiom.yaml` y Registro Automático
   - *Escenario BDD:* Inicialización exitosa de proyecto virgen
+  - *Escenario BDD:* Inicialización sobre un `axiom.yaml` que declara una baseline del proyecto
+  - *Escenario BDD:* Inicialización rechazada en una carpeta maestra con puntero hacia otro planning home
+  - *Escenario BDD:* Un puntero propio que no puede resolverse rechaza la inicialización
+  - *Escenario BDD:* Un puntero que resuelve a `<directorio>/openspec` no se rechaza aunque ese directorio no exista todavía
+  - *Escenario BDD:* Un puntero en un directorio ancestro no impide inicializar
 - **[REQ-3.1]** Endpoints REST de Gestión Multi-Proyecto
   - *Escenario BDD:* Conmutación en caliente de workspace en la UI
 - **[REQ-3.2]** Componente UI Selector de Proyectos y Pantalla de Bienvenida
@@ -554,6 +575,11 @@ Define the managed, provider-neutral instructions that project Gentle AI's
 - **[REQ-organic-agent-trigger-rules-13]** Organic Driven Development is the orchestrator's mandatory default protocol
   - *Escenario BDD:* ODD is projected before any routing decision
   - *Escenario BDD:* SDD still requires explicit selection even with ODD as default
+- **[REQ-24.58]** El cierre de ODD mantiene al día el contexto técnico mantenido
+  - *Escenario BDD:* La regla figura en el paso de cierre del protocolo ODD
+  - *Escenario BDD:* La regla no exige nada sin contexto mantenido
+  - *Escenario BDD:* La documentación de referencia no se modifica
+  - *Escenario BDD:* El renderizado sigue siendo determinista
 
 ### Dominio: `persona-behavior-contract` — persona-behavior-contract Specification
 
@@ -608,6 +634,140 @@ Define the managed, provider-neutral instructions that project Gentle AI's
   - *Escenario BDD:* Axiom persona is default and uses Peninsular Spanish
 - **[REQ-10.3 & REQ-10.4]** SDD Language Domain Contract for Axiom Projects
   - *Escenario BDD:* SDD technical artifacts generated in Spanish in Axiom projects
+
+### Dominio: `planning-home-resolution` — Especificación de Requerimientos: Resolución del Planning Home desde Cualquier Directorio (INC-24)
+
+Definir cómo localiza Axiom el *planning home* (el directorio `openspec` que contiene los cambios SDD) desde cualquier directorio de partida de un workspace: la carpeta maestra, el repositorio de especificaciones o un repositorio de código. Un único primitivo de resolución sustituye a las tres convenciones incompatibles actuales: el motor SDD asume `<cwd>/openspec`; livingdoc, dashboard y skillregistry derivan `<specs_repository>/...`; y el perfil knowledge usa `specs_repository` relativo a su propio `axiom.yaml`.
+
+**Archivo:** [`specs/planning-home-resolution/spec.md`](specs/planning-home-resolution/spec.md)
+
+- **[REQ-24.1]** Primitivo Único y de Solo Lectura de Resolución del Planning Home
+  - *Escenario BDD:* Resolución completa desde la carpeta maestra del workspace canónico
+  - *Escenario BDD:* La resolución no escribe en disco
+  - *Escenario BDD:* Una resolución fallida no deja efectos y nombra la continuación
+- **[REQ-24.2]** Descubrimiento Ascendente por Proximidad
+  - *Escenario BDD:* Gana el directorio más cercano frente a un proyecto anidado
+  - *Escenario BDD:* Un subdirectorio de un proyecto embebido resuelve la raíz del proyecto
+  - *Escenario BDD:* El directorio de partida se evalúa antes que sus ancestros
+  - *Escenario BDD:* Precedencia entre marcadores de un mismo directorio
+  - *Escenario BDD:* Sin marcadores la raíz es el directorio de partida
+  - *Escenario BDD:* El descubrimiento de subdirectorios no actúa como marcador
+  - *Escenario BDD:* Directorio de partida inválido
+- **[REQ-24.3]** Enraizado por Topología en Monorepo Desacoplado y Multirepo
+  - *Escenario BDD:* Multirepo canónico
+  - *Escenario BDD:* Monorepo desacoplado con `axiom.yaml` en la carpeta maestra
+  - *Escenario BDD:* Perfil knowledge con `specs_repository` terminado en `openspec`
+  - *Escenario BDD:* `specs_repository` de varios segmentos terminado en `openspec`
+- **[REQ-24.4]** Invariancia del Layout Monorepo Embebido
+  - *Escenario BDD:* Equivalencia con distintos valores de `specs_repository`
+  - *Escenario BDD:* Este repositorio no cambia
+  - *Escenario BDD:* Proyecto con solo `openspec/` y sin configuración
+  - *Escenario BDD:* Puntero que apunta al propio `axiom.yaml` embebido
+- **[REQ-24.5]** Deducción de la Carpeta Maestra desde el Repositorio de Especificaciones
+  - *Escenario BDD:* Desde el repositorio de especificaciones se deduce la carpeta maestra
+  - *Escenario BDD:* `specs_repository` de varios segmentos
+  - *Escenario BDD:* En `monorepo-embedded` no se aplica la deducción por sufijo
+  - *Escenario BDD:* El directorio que contiene `specs_repository` es la carpeta maestra
+  - *Escenario BDD:* Sin coincidencia de sufijo la carpeta maestra es el directorio del `axiom.yaml`
+  - *Escenario BDD:* `workspace.root` no altera la resolución
+- **[REQ-24.6]** Rechazo de la Ambigüedad de Carpeta Maestra con `openspec/` Propio y Puntero
+  - *Escenario BDD:* Ambigüedad rechazada con continuación
+  - *Escenario BDD:* La ambigüedad se detecta también desde un repositorio de código
+  - *Escenario BDD:* Mismo planning home no es ambiguo
+  - *Escenario BDD:* Sin puntero no hay ambigüedad
+- **[REQ-24.7]** Configuración No Resoluble o No Cargable
+  - *Escenario BDD:* Puntero sin `config` ni `specs`
+  - *Escenario BDD:* Destino del puntero con configuración inválida
+  - *Escenario BDD:* Puntero hacia un `axiom.yaml` que no es YAML válido
+  - *Escenario BDD:* Puntero hacia una configuración legible con un bloque `baseline:` inválido
+  - *Escenario BDD:* `axiom.yaml` directo no cargable conserva la resolución embebida
+  - *Escenario BDD:* Repositorio de especificaciones declarado e inexistente
+  - *Escenario BDD:* `specs_repository` terminado en `openspec` con el planning home aún sin crear
+- **[REQ-24.8]** Consumo Idéntico por los Verbos del Flujo SDD
+  - *Escenario BDD:* Mismo planning home desde tres puntos de partida
+  - *Escenario BDD:* Todos los verbos operan sobre el mismo cambio
+  - *Escenario BDD:* La configuración apuntada por el puntero se honra sin `axiom.yaml` en la carpeta maestra
+  - *Escenario BDD:* Directorio de partida de los verbos con `--path`
+- **[REQ-24.9]** Semántica de `workspaceRoot`, `planningHome` y Autoridad de Edición en el Status
+  - *Escenario BDD:* Valores del status en el workspace canónico
+  - *Escenario BDD:* Un repositorio de código hermano exige autorización por cambio
+  - *Escenario BDD:* Los cambios archivados siguen sellados
+- **[REQ-24.10]** Los Consumidores de Catálogo Comparten la Convención de Raíz
+  - *Escenario BDD:* Catálogo del workspace canónico
+  - *Escenario BDD:* Raíz de especificaciones por defecto de knowledge
+  - *Escenario BDD:* Ubicación divergente en un proyecto embebido
+  - *Escenario BDD:* Dashboard y TUI leen el mismo planning home
+- **[REQ-24.11]** Regla de Ejecutores para las Rutas `openspec/...`
+  - *Escenario BDD:* Regla presente en la convención compartida
+  - *Escenario BDD:* Comando existente lanzado desde un repositorio de código
+- **[REQ-24.12]** Documentación de la Receta Canónica y de la Evidencia `pr_merged`
+  - *Escenario BDD:* Receta canónica documentada
+  - *Escenario BDD:* `pr_merged` se verifica contra el repositorio de especificaciones
+  - *Escenario BDD:* Evidencia alternativa para repositorios de código
+
+### Dominio: `project-technical-context` — Especificación de Requerimientos: Contexto Técnico del Proyecto: Declaración, Lectura y Mantenimiento (INC-24)
+
+Definir el contexto técnico del proyecto como concepto de primera clase: cómo se declara en `axiom.yaml` con dos modos (**mantenido** y **de referencia**), cómo lo leen las fases SDD, cómo lo mantiene el flujo mediante un **delta de contexto** por cambio, simétrico a las delta specs, y la garantía de que la documentación de referencia nunca se modifica.
+
+**Archivo:** [`specs/project-technical-context/spec.md`](specs/project-technical-context/spec.md)
+
+- **[REQ-24.26]** Bloque `technical_context:` con Dos Modos
+  - *Escenario BDD:* Declaración con los dos modos
+  - *Escenario BDD:* Solo contexto de referencia
+  - *Escenario BDD:* Ruta en ambos modos
+  - *Escenario BDD:* Solapamiento por contención
+  - *Escenario BDD:* Ruta compartida con la baseline
+  - *Escenario BDD:* Entrada fuera de las rutas del modo
+  - *Escenario BDD:* Ruta absoluta o fuera de la carpeta maestra
+- **[REQ-24.27]** Validación del Contexto Técnico
+  - *Escenario BDD:* Ruta inexistente solo avisa
+  - *Escenario BDD:* Lista de rutas vacía
+  - *Escenario BDD:* Modo desconocido
+- **[REQ-24.28]** Proyección Aditiva de `technicalContext` en el Status v2
+  - *Escenario BDD:* Ambos modos proyectados
+  - *Escenario BDD:* Un solo modo
+  - *Escenario BDD:* Sin declaración
+  - *Escenario BDD:* El estado de artefactos no cambia
+- **[REQ-24.29]** Lectura del Contexto por las Fases Lectoras y Presupuesto de Lectura
+  - *Escenario BDD:* Las cuatro fases lectoras leen la entrada
+  - *Escenario BDD:* Modo sin entrada
+  - *Escenario BDD:* Sin contexto declarado
+- **[REQ-24.30]** Las Rutas de Referencia Nunca se Modifican
+  - *Escenario BDD:* El archivado no deja cambios en referencia
+  - *Escenario BDD:* Una entrada del delta dirigida a una ruta de referencia
+  - *Escenario BDD:* Una edición que toca una ruta de referencia
+  - *Escenario BDD:* Las skills lo prescriben
+- **[REQ-24.31]** Delta de Contexto por Cambio
+  - *Escenario BDD:* Delta con entradas válidas
+  - *Escenario BDD:* «Sin impacto» con motivo
+  - *Escenario BDD:* «Sin impacto» sin motivo
+  - *Escenario BDD:* Mezcla de entradas y «Sin impacto»
+  - *Escenario BDD:* Entrada fuera de las rutas mantenidas
+  - *Escenario BDD:* Sin contexto mantenido el delta no se exige
+- **[REQ-24.32]** Anclaje por Fichero y Sección con Títulos Repetidos
+  - *Escenario BDD:* Título repetido desambiguado por la ruta de encabezados
+  - *Escenario BDD:* Ancla ambigua
+  - *Escenario BDD:* Ancla inexistente según la acción
+- **[REQ-24.33]** Redacción del Impacto Previsto en `sdd-design`
+  - *Escenario BDD:* El diseño genera el delta
+  - *Escenario BDD:* El diseño no escribe en el contexto
+  - *Escenario BDD:* Sin contexto mantenido no se genera delta
+- **[REQ-24.34]** Actualización del Impacto Final en `sdd-apply`
+  - *Escenario BDD:* La implementación revela un impacto no previsto
+  - *Escenario BDD:* Apply no reabre el diseño ni escribe el contexto
+  - *Escenario BDD:* Varios roles actualizan el mismo delta
+- **[REQ-24.35]** Aviso No Bloqueante de `sdd-verify` ante un «Sin Impacto» Dudoso
+  - *Escenario BDD:* Manifiesto de dependencias con «Sin impacto»
+  - *Escenario BDD:* Módulo nuevo de primer nivel
+  - *Escenario BDD:* Sin señales no hay aviso
+  - *Escenario BDD:* Con entradas en el delta no hay aviso
+- **[REQ-24.36]** La Ausencia del Delta de Contexto Nunca se Asume
+  - *Escenario BDD:* La compuerta de diseño señala la ausencia
+  - *Escenario BDD:* Archive se detiene sin el delta
+- **[REQ-24.37]** Rutas Mantenidas Fuera del Repositorio de Especificaciones
+  - *Escenario BDD:* Sin autorización archive se detiene
+  - *Escenario BDD:* Con autorización la integración se verifica en ambos repositorios
+  - *Escenario BDD:* Los repositorios de código no se autorizan por declarar la ruta
 
 ### Dominio: `rdd-authority-disposition-plan` — RDD Authority Disposition Plan Specification
 
@@ -1091,11 +1251,31 @@ Define one explicit, content-addressed implementation-review transaction shared 
 - **[REQ-21.16]** Precondición de Integración o Despliegue para Ejecutar `archive`
   - *Escenario BDD:* PR fusionado habilita el archivado
   - *Escenario BDD:* Archive solicitado sin integración ni despliegue se rechaza explícitamente
+  - *Escenario BDD:* La evidencia pr_merged en multirepo se verifica contra el repositorio de especificaciones
 - **[REQ-21.17]** Contenido del Archivado
   - *Escenario BDD:* Archivado exitoso actualiza incremento, especificación viva e inventario
+  - *Escenario BDD:* Archivado con baseline del proyecto integra en los documentos declarados
+  - *Escenario BDD:* Archivado con contexto mantenido integra el delta de contexto
+  - *Escenario BDD:* La integración se verifica antes de transferir el incremento
 - **[REQ-21.18]** Sellado Inmutable Post-Archive y Gestión Exclusiva vía Bug o Nuevo Incremento
   - *Escenario BDD:* Intento de reabrir un incremento archivado se rechaza
   - *Escenario BDD:* Regresión post-archive se gestiona mediante bug o nuevo incremento
+- **[REQ-24.55]** Integración del Delta de Contexto en las Rutas Mantenidas
+  - *Escenario BDD:* Entrada `modify` integrada con traza
+  - *Escenario BDD:* Documento mantenido inexistente se crea dentro de las rutas declaradas
+  - *Escenario BDD:* Una entrada `add` fuera de las rutas mantenidas se rechaza
+  - *Escenario BDD:* Archive no genera contexto a partir del código
+  - *Escenario BDD:* Los IDs provisionales se sustituyen en el texto integrado del contexto
+- **[REQ-24.56]** Condiciones de Parada del Archivado con Baseline o Contexto del Proyecto
+  - *Escenario BDD:* Falta el delta de contexto
+  - *Escenario BDD:* Falla una precondición de la integración
+  - *Escenario BDD:* Falla la verificación nativa tras una edición dirigida
+  - *Escenario BDD:* Declaración inválida
+  - *Escenario BDD:* Almacén de artefactos sin ficheros
+  - *Escenario BDD:* Sin baseline del proyecto ni contexto mantenido el almacén Engram no detiene el archivado
+- **[REQ-24.57]** «Sin Impacto» Explícito en el Archivado
+  - *Escenario BDD:* «Sin impacto» deja el contexto intacto y registra la decisión
+  - *Escenario BDD:* Una edición del contexto con «Sin impacto» se rechaza
 
 ### Dominio: `sdd-block-review-gates` — Especificación de Requerimientos: Compuertas de Revisión por Bloque (spec, design, tasks, apply) (INC-21)
 
@@ -1112,12 +1292,19 @@ Define one explicit, content-addressed implementation-review transaction shared 
 - **[REQ-21.9]** Compuerta de `design`
   - *Escenario BDD:* Diseño conforme aprobado habilita tasks
   - *Escenario BDD:* Desviación arquitectónica se señala explícitamente en la compuerta
+  - *Escenario BDD:* El impacto previsto en el contexto mantenido se presenta en la compuerta
+  - *Escenario BDD:* La ausencia del delta de contexto se señala en la compuerta
+  - *Escenario BDD:* Sin contexto mantenido la compuerta no cambia
+  - *Escenario BDD:* Las plantillas del orquestador prescriben la presentación del delta en la compuerta de diseño
 - **[REQ-21.10]** Compuerta de `tasks`
   - *Escenario BDD:* Tasks de un único rol aprobadas habilitan apply
   - *Escenario BDD:* Tasks multi-rol se presentan juntas antes de iniciar cualquier apply
 - **[REQ-21.11]** Compuerta de `apply` por Rol
   - *Escenario BDD:* Rol concluido y aprobado habilita el siguiente rol pendiente
   - *Escenario BDD:* Incumplimiento de calidad bloquea la conclusión del rol
+  - *Escenario BDD:* El impacto final en el contexto mantenido se presenta en la compuerta
+  - *Escenario BDD:* Un impacto final no reflejado en el delta puede rechazarse
+  - *Escenario BDD:* Las plantillas del orquestador prescriben la presentación del delta en la compuerta de apply
 - **[REQ-21.12]** Rechazo de una Compuerta Bloquea el Avance y Exige Remediación
   - *Escenario BDD:* Rechazo de la compuerta de spec exige remediación antes de reintentar
   - *Escenario BDD:* Rechazo de la compuerta de apply de un rol impide el cierre de ese rol
@@ -1285,6 +1472,216 @@ Definir de forma ejecutable, determinista y verificable los requerimientos funci
 - **[REQ-4.2]** Interfaz Web SPA con Panel Semántico y Buscador
   - *Escenario BDD:* Exploración de símbolos desde el navegador web
 
+### Dominio: `spec-baseline-declaration` — Especificación de Requerimientos: Declaración de la Baseline del Proyecto y Guarda contra una Segunda Baseline (INC-24)
+
+Definir cómo declara un proyecto, en `axiom.yaml`, dónde está su *baseline* (la especificación viva que archive mantiene) y con qué formato; cómo se valida esa declaración, incluida su compatibilidad con el almacén de artefactos; cómo se proyecta en el status v2 sin romper su contrato; y cómo se garantiza que ningún creador de Axiom produce una segunda baseline cuando la declarada es del proyecto. Sin declaración, la baseline es OpenSpec (`<planning home>/specs/`) y todo el comportamiento es idéntico al actual.
+
+**Archivo:** [`specs/spec-baseline-declaration/spec.md`](specs/spec-baseline-declaration/spec.md)
+
+- **[REQ-24.13]** Bloque `baseline:` Opcional y Defecto OpenSpec
+  - *Escenario BDD:* Sin bloque la baseline es OpenSpec
+  - *Escenario BDD:* Con bloque la baseline es la del proyecto
+  - *Escenario BDD:* El bloque se admite en las tres topologías
+  - *Escenario BDD:* Bloque sin documentos
+- **[REQ-24.14]** Documentos por Dominio y Mapeo Dominio a Documento
+  - *Escenario BDD:* Declaración válida de dos dominios
+  - *Escenario BDD:* Dominio duplicado
+  - *Escenario BDD:* Documento declarado en dos dominios
+  - *Escenario BDD:* Ruta absoluta o que sale del repositorio de especificaciones
+  - *Escenario BDD:* Identificador de dominio no válido
+- **[REQ-24.15]** Perfil de Requisito
+  - *Escenario BDD:* Perfil válido
+  - *Escenario BDD:* Patrón sin los grupos `id` y `title`
+  - *Escenario BDD:* Identidad desconocida
+  - *Escenario BDD:* Plantilla incoherente con el nivel
+  - *Escenario BDD:* Patrón que no compila
+- **[REQ-24.16]** Documentos de Prosa y Modo de Integración
+  - *Escenario BDD:* Documento de prosa con el valor por defecto
+  - *Escenario BDD:* Documento de prosa en modo solo registro
+  - *Escenario BDD:* Valor de integración desconocido
+  - *Escenario BDD:* Integración declarada en un documento con perfil
+- **[REQ-24.17]** Validación de la Declaración por el Loader y por `axiom workspace validate`
+  - *Escenario BDD:* Declaración válida
+  - *Escenario BDD:* Documento inexistente
+  - *Escenario BDD:* Clave desconocida dentro del bloque
+  - *Escenario BDD:* Claves desconocidas fuera de los bloques nuevos
+- **[REQ-24.18]** Una Declaración Inválida Falla Cerrada
+  - *Escenario BDD:* Una declaración inválida bloquea el archivado
+  - *Escenario BDD:* Los creadores rechazan escribir
+  - *Escenario BDD:* `axiom.yaml` con error de sintaxis YAML
+  - *Escenario BDD:* Un `axiom.yaml` ilegible se rechaza con puntero y deja el status operativo sin él
+  - *Escenario BDD:* Un `technical_context:` inválido bloquea el archivado sin afectar a los creadores de baseline
+  - *Escenario BDD:* Errores de validación ajenos a los bloques nuevos no alteran la baseline
+- **[REQ-24.19]** Proyección de `baseline` en el Status v2
+  - *Escenario BDD:* Status con baseline declarada
+  - *Escenario BDD:* Status sin declaración
+  - *Escenario BDD:* Proyección sin cambio seleccionado
+  - *Escenario BDD:* Contrato compartido documentado
+- **[REQ-24.20]** Contrato del Status v2 Solo Aditivo
+  - *Escenario BDD:* Conjunto de claves obligatorias intacto
+  - *Escenario BDD:* Con declaración solo aparecen claves nuevas opcionales
+  - *Escenario BDD:* `planningHome` no cambia con la declaración
+- **[REQ-24.21]** Frontera de Configuración entre `axiom.yaml` y `openspec/config.yaml`
+  - *Escenario BDD:* Una declaración en `openspec/config.yaml` no tiene efecto
+  - *Escenario BDD:* `governance.context` convive con la declaración
+  - *Escenario BDD:* Frontera documentada
+- **[REQ-24.22]** Consulta Única de Baseline del Proyecto
+  - *Escenario BDD:* Todos los creadores coinciden
+  - *Escenario BDD:* Sin `axiom.yaml` la respuesta es `por defecto`
+  - *Escenario BDD:* `axiom.yaml` ilegible o con baseline inválida
+  - *Escenario BDD:* Errores ajenos al bloque `baseline:`
+- **[REQ-24.23]** Guarda en las Operaciones de la CLI, el Dashboard y la TUI
+  - *Escenario BDD:* `axiom init` sobre una declaración existente
+  - *Escenario BDD:* `axiom init --profile=knowledge` con baseline del proyecto
+  - *Escenario BDD:* `axiom archive coldstart` rechazado
+  - *Escenario BDD:* `axiom archive sync` rechazado
+  - *Escenario BDD:* `axiom knowledge sweep` omite la siembra
+  - *Escenario BDD:* Registro y finalización de `axiom knowledge crawl` rechazados
+  - *Escenario BDD:* `axiom knowledge query --enrich` no enriquece
+  - *Escenario BDD:* Sincronización desde el dashboard web y la TUI
+  - *Escenario BDD:* Sin baseline del proyecto el comportamiento previo se conserva
+- **[REQ-24.24]** Guarda en las Skills Creadoras de Baseline
+  - *Escenario BDD:* `sdd-init` no prescribe `openspec/specs/` con baseline del proyecto
+  - *Escenario BDD:* Rama sin baseline de `sdd-archive` con baseline del proyecto
+  - *Escenario BDD:* Sin baseline del proyecto la rama sin baseline se conserva
+- **[REQ-24.25]** Las Lecturas de Catálogo Informan de que la Baseline es Externa
+  - *Escenario BDD:* `axiom archive list` con baseline externa
+  - *Escenario BDD:* `axiom archive show` de un dominio declarado
+  - *Escenario BDD:* Búsqueda spec-first de knowledge
+- **[REQ-24.60]** Clave `scenarios` por Documento con Perfil de Requisito
+  - *Escenario BDD:* Valor por defecto
+  - *Escenario BDD:* Valor `omit` explícito
+  - *Escenario BDD:* Valor no válido
+  - *Escenario BDD:* Clave en un documento de prosa
+  - *Escenario BDD:* `include` por defecto con un nivel de requisito superior a 3
+  - *Escenario BDD:* `include` explícito con un nivel de requisito superior a 3
+  - *Escenario BDD:* `omit` admite un nivel de requisito superior a 3
+  - *Escenario BDD:* El nivel 3 con `include` es válido
+- **[REQ-24.62]** Baseline del Proyecto y Contexto Mantenido Exigen un Almacén de Artefactos de Ficheros
+  - *Escenario BDD:* Baseline del proyecto con almacén `engram`
+  - *Escenario BDD:* Contexto mantenido con almacén `none`
+  - *Escenario BDD:* Los almacenes de ficheros y la ausencia de declaración no se reportan
+  - *Escenario BDD:* El status bloquea el archivado sin bloquear la planificación
+  - *Escenario BDD:* El almacén declarado prevalece sobre el hallado en disco
+  - *Escenario BDD:* Sin baseline del proyecto ni contexto mantenido el almacén no se exige
+
+### Dominio: `spec-baseline-integration` — Especificación de Requerimientos: Integración de los Cambios en la Baseline del Proyecto (INC-24)
+
+Definir cómo integra archive un cambio en la baseline declarada del proyecto: la composición determinista sobre documentos direccionables por requisito (patrón de encabezado, identidad por ID, plantilla de render, duplicados, frontera de bloque, fidelidad de bytes), la integración de documentos de prosa mediante edición dirigida con verificación nativa y traza por entrada, las precondiciones de la integración y la lectura de la baseline por las fases de planificación.
+
+**Archivo:** [`specs/spec-baseline-integration/spec.md`](specs/spec-baseline-integration/spec.md)
+
+- **[REQ-24.38]** Composición Nativa Intacta sin Perfil
+  - *Escenario BDD:* La salida nativa no cambia
+  - *Escenario BDD:* Rechazo nativo sin escribir
+  - *Escenario BDD:* `--supersede` conserva su comportamiento
+- **[REQ-24.39]** Reconocimiento de Requisitos e Identidad según el Perfil
+  - *Escenario BDD:* Se reconocen solo los encabezados de requisito
+  - *Escenario BDD:* Operación sobre el bloque correcto por ID
+  - *Escenario BDD:* Nombre del delta incompatible con el patrón
+  - *Escenario BDD:* Identidad por texto
+  - *Escenario BDD:* El nivel declarado filtra los encabezados
+- **[REQ-24.40]** Rechazo de Operaciones sobre IDs Duplicados
+  - *Escenario BDD:* Operación sobre un ID duplicado
+  - *Escenario BDD:* ADDED relativo a un ID duplicado
+  - *Escenario BDD:* Un ID único sigue siendo operable
+- **[REQ-24.41]** Frontera de Bloque por Nivel y Secciones No Requisito Contiguas
+  - *Escenario BDD:* Las subsecciones de nivel mayor pertenecen al bloque
+  - *Escenario BDD:* Una sección contigua del mismo nivel se conserva con aviso
+  - *Escenario BDD:* REMOVED conserva las secciones contiguas
+  - *Escenario BDD:* La frontera es un encabezado de nivel menor
+  - *Escenario BDD:* Un encabezado dentro de un bloque de código no corta el bloque
+- **[REQ-24.42]** Formato del Delta, Render por Plantilla y Cuerpo Íntegro sin Encabezados que Cierren el Bloque
+  - *Escenario BDD:* Encabezado renderizado y cuerpo íntegro
+  - *Escenario BDD:* Los escenarios del delta se integran como subsecciones del bloque
+  - *Escenario BDD:* Las notas del delta no se integran
+  - *Escenario BDD:* Un encabezado del cuerpo de nivel menor o igual que el del requisito se detecta en la comprobación previa
+  - *Escenario BDD:* La comprobación previa se puede ejecutar durante la fase de especificación
+  - *Escenario BDD:* El archivado repite la comprobación como última guarda
+  - *Escenario BDD:* Los encabezados de nivel mayor y los de bloques de código no son infracción
+  - *Escenario BDD:* Con `omit` no cuentan los escenarios omitidos
+- **[REQ-24.43]** Requisitos ADDED con Ubicación Explícita e ID Definitivo Asignado en Archive
+  - *Escenario BDD:* ADDED tras un requisito existente con IDs no ordenados
+  - *Escenario BDD:* La cola de secciones contiguas no se separa de su requisito
+  - *Escenario BDD:* ADDED sin ubicación
+  - *Escenario BDD:* Ubicación al final de una sección
+  - *Escenario BDD:* Título de sección repetido o inexistente
+  - *Escenario BDD:* ID provisional que colisiona
+  - *Escenario BDD:* Varios ADDED reciben IDs consecutivos
+  - *Escenario BDD:* Reaplicar el delta no duplica
+- **[REQ-24.44]** MODIFIED, REMOVED y RENAMED con Identidad por ID
+  - *Escenario BDD:* MODIFIED con cambio de título
+  - *Escenario BDD:* MODIFIED sobre un ID inexistente
+  - *Escenario BDD:* REMOVED elimina el bloque
+  - *Escenario BDD:* REMOVED con `--supersede`
+  - *Escenario BDD:* RENAMED con identidad por ID
+  - *Escenario BDD:* RENAMED con identidad por texto
+- **[REQ-24.45]** Fidelidad de Bytes al Componer
+  - *Escenario BDD:* Round-trip en LF, CRLF y CRLF con BOM
+  - *Escenario BDD:* Los bloques editados usan el final de línea del documento
+  - *Escenario BDD:* El BOM se conserva y no se añade
+  - *Escenario BDD:* Final de fichero sin salto de línea
+- **[REQ-24.46]** Validación Completa antes de Escribir
+  - *Escenario BDD:* Un dominio falla y ninguno se modifica
+  - *Escenario BDD:* Todas las operaciones válidas se aplican
+  - *Escenario BDD:* La integración dirigida no empieza si una composición falla
+- **[REQ-24.47]** Resolución de Documento y Perfil en `axiom sdd archive-compose`
+  - *Escenario BDD:* Documento y perfil desde la declaración
+  - *Escenario BDD:* Sin baseline declarada se usa la ruta OpenSpec
+  - *Escenario BDD:* `--document` junto con `--canonical`
+  - *Escenario BDD:* Dominio de prosa
+  - *Escenario BDD:* La skill no plantilla rutas
+- **[REQ-24.48]** Un Dominio No Declarado se Rechaza
+  - *Escenario BDD:* Dominio no declarado
+  - *Escenario BDD:* Un dominio no declarado impide todo el archivado
+- **[REQ-24.49]** Precondiciones de la Integración
+  - *Escenario BDD:* Documento afectado con cambios sin confirmar
+  - *Escenario BDD:* Cambios sin confirmar en documentos no afectados
+  - *Escenario BDD:* Repositorio que no es git
+  - *Escenario BDD:* Los registros del proyecto no se tocan
+- **[REQ-24.50]** Integración Dirigida de Documentos de Prosa
+  - *Escenario BDD:* Delta de un dominio de prosa
+  - *Escenario BDD:* Integración repetida
+- **[REQ-24.51]** Verificación Nativa de la Integración Dirigida
+  - *Escenario BDD:* Verificación superada
+  - *Escenario BDD:* Entrada ausente de la traza
+  - *Escenario BDD:* Ancla inexistente o repetida
+  - *Escenario BDD:* El diff toca un documento no declarado
+  - *Escenario BDD:* Con la baseline por defecto el alcance incluye `INDEX.md`
+  - *Escenario BDD:* El diff toca una ruta de referencia
+  - *Escenario BDD:* Un ID provisional sin sustituir en el texto añadido
+  - *Escenario BDD:* Tras un fallo el cambio permanece activo
+- **[REQ-24.52]** Traza de Integración por Entrada
+  - *Escenario BDD:* Traza en la carpeta del cambio y en el informe
+  - *Escenario BDD:* Mapeo de IDs provisionales
+  - *Escenario BDD:* Decisión «Sin impacto»
+- **[REQ-24.53]** Modo Solo Registro para Documentos de Prosa
+  - *Escenario BDD:* Documento en modo solo registro
+  - *Escenario BDD:* Mezcla de modos en un mismo cambio
+- **[REQ-24.54]** Lectura de la Baseline por las Fases de Planificación
+  - *Escenario BDD:* Las skills toman la baseline del localizador
+  - *Escenario BDD:* Sin baseline del proyecto se mantiene la lectura actual
+  - *Escenario BDD:* `sdd-spec` redacta el delta en el formato del proyecto
+  - *Escenario BDD:* `sdd-spec` ejecuta la comprobación previa
+- **[REQ-24.59]** Sustitución de los IDs Provisionales por los Definitivos en Todo el Texto Integrado
+  - *Escenario BDD:* Referencia cruzada entre dos requisitos nuevos
+  - *Escenario BDD:* Referencia dentro de una sección de un documento de prosa
+  - *Escenario BDD:* Referencia dentro del delta de contexto
+  - *Escenario BDD:* Se sustituye también la nota de motivo de un bloque superado
+  - *Escenario BDD:* Las apariciones ajenas al cambio no se tocan
+  - *Escenario BDD:* Un ID provisional se sustituye solo como token completo
+  - *Escenario BDD:* Un ID provisional sin sufijo numérico detiene el archivado
+  - *Escenario BDD:* Una familia de IDs sin ningún ID existente detiene el archivado
+  - *Escenario BDD:* Un ID provisional declarado dos veces es ambiguo
+  - *Escenario BDD:* Un ID provisional que coincide con el definitivo de otro requisito
+- **[REQ-24.61]** Escenarios de la Delta Spec en el Bloque del Proyecto: `include` y `omit`
+  - *Escenario BDD:* Por defecto los escenarios se integran
+  - *Escenario BDD:* Con `omit` solo se integra la descripción
+  - *Escenario BDD:* Los escenarios omitidos permanecen en el cambio archivado
+  - *Escenario BDD:* La traza registra la omisión
+  - *Escenario BDD:* Un encabezado de nivel 4 que no es un escenario se conserva
+  - *Escenario BDD:* La baseline OpenSpec por defecto no se ve afectada
+
 ### Dominio: `structured-handoffs` — Especificación Viva: Handoffs Estructurados y Ciclo de Vida de Transición
 
 Definir de forma rigurosa, ejecutable y verificable los requerimientos funcionales y escenarios BDD para el artefacto canónico `handoff.md`, el paquete de dominio `internal/handoff` y los subcomandos de la CLI `axiom handoff` en el runtime de Axiom.
@@ -1359,6 +1756,7 @@ Permite a los usuarios operar las tareas de mantenimiento, diagnóstico y config
   - *Escenario BDD:* Inspección de relevo formal en la TUI
 - **[REQ-17.10]** Pantalla de Catálogo de Especificaciones Vivas en TUI
   - *Escenario BDD:* Sincronización del catálogo maestro desde la TUI
+  - *Escenario BDD:* Pantalla con baseline del proyecto
 
 ### Dominio: `upstream-absorption-protocol` — Especificación Viva: Protocolo de Absorción por Tandas desde Upstream
 
@@ -1413,19 +1811,27 @@ Definir de forma canónica el comportamiento del punto de entrada CLI `axiom` y 
   - *Escenario BDD:* Validación de espacio de trabajo conforme
   - *Escenario BDD:* Validación con ruta explícita mediante --path
   - *Escenario BDD:* Espacio de trabajo no conforme finaliza con error
+  - *Escenario BDD:* Declaración de baseline inválida finaliza con error
+  - *Escenario BDD:* Ruta de contexto técnico inexistente solo avisa
+  - *Escenario BDD:* Declaración incompatible con el almacén de artefactos finaliza con error
 - **[REQ-2.1]** Estructura del Esquema axiom.yaml
   - *Escenario BDD:* Archivo axiom.yaml completo y bien formado
   - *Escenario BDD:* Topología desconocida o ausente
   - *Escenario BDD:* Lista de roles vacía
+  - *Escenario BDD:* Los bloques opcionales ausentes no alteran la validación
+  - *Escenario BDD:* Los bloques opcionales presentes y válidos se cargan
+  - *Escenario BDD:* Clave desconocida dentro de un bloque nuevo
 - **[REQ-2.2]** Topología Monorepo Embebido
   - *Escenario BDD:* Monorepo embebido con specs en raíz o subdirectorio válido
 - **[REQ-2.3]** Topología Monorepo Desacoplado
   - *Escenario BDD:* Monorepo desacoplado con repositorio de specs presente
   - *Escenario BDD:* Monorepo desacoplado sin repositorio de specs
+  - *Escenario BDD:* Patrón canónico con puntero en monorepo desacoplado
 - **[REQ-2.4]** Topología Multirepo Federado
   - *Escenario BDD:* Multirepo conforme con todos sus repositorios
   - *Escenario BDD:* Multirepo sin repositorio canónico de especificaciones
   - *Escenario BDD:* Repositorio asignado a un rol no existe físicamente
+  - *Escenario BDD:* Patrón canónico con puntero en multirepo
 - **[REQ-2.5]** Reporte de Validación Estructurado
   - *Escenario BDD:* Generación de reporte completo en caso de fallo
 

@@ -52,7 +52,8 @@ En modalidad "con paradas", al completarse la fase `spec` el orquestador DEBE de
 
 ### Requirement: Compuerta de `design` (REQ-21.9)
 
-En modalidad "con paradas", al completarse la fase `design` el orquestador DEBE detenerse y evaluar explícitamente si el diseño satisface todos los requerimientos del spec y si respeta las directrices de arquitectura, las tecnologías declaradas en `axiom.yaml` y los patrones existentes del repositorio. El orquestador NO DEBE iniciar la fase `tasks` mientras esta compuerta no reciba una aprobación explícita del usuario.
+En modalidad "con paradas", al completarse la fase `design` el orquestador DEBE detenerse y evaluar explícitamente si el diseño satisface todos los requerimientos del spec y si respeta las directrices de arquitectura, las tecnologías declaradas en `axiom.yaml` y los patrones existentes del repositorio. El orquestador NO DEBE iniciar la fase `tasks` mientras esta compuerta no reciba una aprobación explícita del usuario. Con `technical_context.maintained` declarado, la compuerta DEBE además presentar el delta de contexto con el impacto previsto y evaluar si es coherente con el diseño; si el delta falta, DEBE señalar esa ausencia explícitamente como parte de la presentación (REQ-24.36).
+(Previously: la compuerta no evaluaba el impacto previsto en el contexto técnico mantenido)
 
 #### Scenario: Diseño conforme aprobado habilita tasks
 
@@ -66,6 +67,32 @@ En modalidad "con paradas", al completarse la fase `design` el orquestador DEBE 
 - **CUANDO** se presenta la compuerta de `design`
 - **ENTONCES** el orquestador señala explícitamente esa desviación como parte de la presentación de la compuerta
 - **Y** no inicia `tasks` hasta recibir una aprobación explícita
+
+#### Scenario: El impacto previsto en el contexto mantenido se presenta en la compuerta
+
+- **DADO** `technical_context.maintained` declarado y un diseño con su delta de contexto
+- **CUANDO** se presenta la compuerta de `design`
+- **ENTONCES** la presentación incluye el delta de contexto y evalúa su coherencia con el diseño
+- **Y** no inicia `tasks` hasta recibir una aprobación explícita
+
+#### Scenario: La ausencia del delta de contexto se señala en la compuerta
+
+- **DADO** `technical_context.maintained` declarado y un diseño sin delta de contexto
+- **CUANDO** se presenta la compuerta de `design`
+- **ENTONCES** el orquestador señala explícitamente que falta el delta de contexto
+- **Y** no asume «Sin impacto»
+
+#### Scenario: Sin contexto mantenido la compuerta no cambia
+
+- **DADO** un `axiom.yaml` sin `technical_context.maintained`
+- **CUANDO** se presenta la compuerta de `design`
+- **ENTONCES** la presentación no incluye ni exige delta de contexto
+
+#### Scenario: Las plantillas del orquestador prescriben la presentación del delta en la compuerta de diseño
+
+- **DADO** los textos de las plantillas de orquestador que describen la compuerta `design`
+- **CUANDO** se inspeccionan (pin de texto)
+- **ENTONCES** indican presentar el delta de contexto, y señalar su ausencia, cuando el status proyecta `technicalContext.maintained`
 
 ---
 
@@ -91,7 +118,8 @@ En modalidad "con paradas", al completarse la fase `tasks` el orquestador DEBE p
 
 ### Requirement: Compuerta de `apply` por Rol (REQ-21.11)
 
-En modalidad "con paradas", al finalizar la implementación de cada rol activo (incluido el rol único `fullstack`), el orquestador DEBE detenerse y evaluar: conformidad con el diseño asignado a ese rol, cumplimiento de las funcionalidades de la `spec` asignadas a ese rol, y estándares de calidad (compilación limpia, pruebas unitarias ejecutadas, cobertura y estilo). El orquestador NO DEBE marcar el rol como concluido, ni permitir que otro rol pendiente inicie su propia fase `apply`, mientras esta compuerta no reciba una aprobación explícita.
+En modalidad "con paradas", al finalizar la implementación de cada rol activo (incluido el rol único `fullstack`), el orquestador DEBE detenerse y evaluar: conformidad con el diseño asignado a ese rol, cumplimiento de las funcionalidades de la `spec` asignadas a ese rol, y estándares de calidad (compilación limpia, pruebas unitarias ejecutadas, cobertura y estilo). El orquestador NO DEBE marcar el rol como concluido, ni permitir que otro rol pendiente inicie su propia fase `apply`, mientras esta compuerta no reciba una aprobación explícita. Con `technical_context.maintained` declarado, la compuerta DEBE además presentar el delta de contexto actualizado y evaluar que el impacto final refleja lo implementado por ese rol.
+(Previously: la compuerta no evaluaba el impacto final en el contexto técnico mantenido)
 
 #### Scenario: Rol concluido y aprobado habilita el siguiente rol pendiente
 
@@ -105,6 +133,26 @@ En modalidad "con paradas", al finalizar la implementación de cada rol activo (
 - **CUANDO** se presenta la compuerta de `apply` de ese rol
 - **ENTONCES** el orquestador la rechaza en el criterio de calidad correspondiente y no marca el rol como concluido
 - **Y** ese rol no puede disparar el aviso de último rol (REQ-21.13) hasta que su compuerta se apruebe
+
+#### Scenario: El impacto final en el contexto mantenido se presenta en la compuerta
+
+- **DADO** `technical_context.maintained` declarado y un rol que termina su implementación con el delta de contexto actualizado
+- **CUANDO** se presenta la compuerta de `apply` de ese rol
+- **ENTONCES** la presentación incluye el delta de contexto actualizado y evalúa que refleja lo implementado por el rol
+- **Y** no marca el rol como concluido hasta recibir una aprobación explícita
+
+#### Scenario: Un impacto final no reflejado en el delta puede rechazarse
+
+- **DADO** un rol cuya implementación cambia algo documentado en el contexto mantenido mientras el delta declara «Sin impacto»
+- **CUANDO** se presenta la compuerta de `apply` de ese rol
+- **ENTONCES** el orquestador señala la discrepancia como parte de la presentación
+- **Y** el usuario puede rechazar la compuerta para que se remedie el delta antes de reintentar el avance (REQ-21.12)
+
+#### Scenario: Las plantillas del orquestador prescriben la presentación del delta en la compuerta de apply
+
+- **DADO** los textos de las plantillas de orquestador que describen la compuerta `apply` por rol
+- **CUANDO** se inspeccionan (pin de texto)
+- **ENTONCES** indican presentar el delta de contexto actualizado cuando el status proyecta `technicalContext.maintained`
 
 ---
 
