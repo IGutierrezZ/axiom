@@ -1,4 +1,4 @@
-# Agent Teams Lite — Orchestrator Instructions
+# Axiom — Orchestrator Instructions
 
 Bind this to the Claude Code orchestrator rule only. Do NOT apply it to executor phase agents such as `sdd-apply` or `sdd-verify`.
 

@@ -1,4 +1,4 @@
-# Agent Teams Lite — Orchestrator Rule for Kimi
+# Axiom — Orchestrator Rule for Kimi
 
 Bind this to the dedicated `sdd-orchestrator` agent or rule only. Do NOT apply it to executor phase agents such as `sdd-apply` or `sdd-verify`.
 

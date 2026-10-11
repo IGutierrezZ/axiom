@@ -842,6 +842,7 @@ func TestGenerateProfileOverlay_OrchestratorPromptSuffixed(t *testing.T) {
 
 	for _, unwanted := range []string{
 		"Agent Teams Lite",
+		"# Axiom — Orchestrator Instructions",
 		"| orchestrator | opus |",
 		"| sdd-explore | sonnet |",
 		"| sdd-archive | haiku |",
@@ -852,7 +853,7 @@ func TestGenerateProfileOverlay_OrchestratorPromptSuffixed(t *testing.T) {
 	}
 
 	for _, wanted := range []string{
-		"Gentle AI",
+		"# Axiom — SDD Orchestrator Instructions",
 		"| orchestrator | anthropic/claude-haiku-3-5 |",
 	} {
 		if !strings.Contains(prompt, wanted) {

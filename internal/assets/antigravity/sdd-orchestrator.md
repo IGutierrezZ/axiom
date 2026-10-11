@@ -1,4 +1,4 @@
-# Agent Teams Lite — Orchestrator Instructions (Antigravity)
+# Axiom — Orchestrator Instructions (Antigravity)
 
 Bind this to the dedicated `sdd-orchestrator` Antigravity context only. Do NOT apply it to executor phase agents such as `sdd-apply` or `sdd-verify`.
 
