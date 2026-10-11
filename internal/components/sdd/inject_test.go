@@ -2934,6 +2934,178 @@ func TestInjectFileAppendRemovesLegacyBlockWhenMarkedSectionAlreadyExists(t *tes
 	}
 }
 
+// injectCursorLegacyPrompt writes existing as the Cursor prompt file, runs Inject
+// and returns the resulting prompt text.
+func injectCursorLegacyPrompt(t *testing.T, existing string) string {
+	t.Helper()
+	home := t.TempDir()
+
+	cursorAdapter, err := agents.NewAdapter("cursor")
+	if err != nil {
+		t.Fatalf("NewAdapter(cursor) error = %v", err)
+	}
+
+	promptPath := cursorAdapter.SystemPromptFile(home)
+	if err := os.MkdirAll(filepath.Dir(promptPath), 0o755); err != nil {
+		t.Fatalf("MkdirAll() error = %v", err)
+	}
+	if err := os.WriteFile(promptPath, []byte(existing), 0o644); err != nil {
+		t.Fatalf("WriteFile() error = %v", err)
+	}
+
+	if _, err := Inject(home, cursorAdapter, ""); err != nil {
+		t.Fatalf("Inject() error = %v", err)
+	}
+
+	content, err := os.ReadFile(promptPath)
+	if err != nil {
+		t.Fatalf("ReadFile() error = %v", err)
+	}
+	return string(content)
+}
+
+const legacyBareOrchestratorBlock = "## Agent Teams Orchestrator\n\n" +
+	"### Result Contract\n" +
+	"Each phase returns: `status`, `executive_summary`, `artifacts`, `next_recommended`, `risks`.\n\n" +
+	"### Sub-Agent Launch Pattern\n\n" +
+	"SKILL: Load `{skill-path}` before starting.\n\n"
+
+func TestInjectFileAppendKeepsAxiomSectionsAfterLegacyOrchestratorBlock(t *testing.T) {
+	existing := "## Rules\n\nLegacy intro.\n\n" + legacyBareOrchestratorBlock +
+		"<!-- axiom:engram-protocol -->\n" +
+		"## Engram Persistent Memory - Protocol\n" +
+		"<!-- /axiom:engram-protocol -->\n"
+
+	text := injectCursorLegacyPrompt(t, existing)
+
+	if strings.Contains(text, "SKILL: Load `{skill-path}` before starting.") {
+		t.Fatal("legacy sub-agent launch content survived after migration")
+	}
+	if strings.Count(text, "### Result Contract") != 1 {
+		t.Fatal("result contract section duplicated after migration")
+	}
+	if strings.Count(text, "<!-- axiom:engram-protocol -->") != 1 ||
+		strings.Count(text, "<!-- /axiom:engram-protocol -->") != 1 ||
+		!strings.Contains(text, "## Engram Persistent Memory - Protocol") {
+		t.Fatalf("axiom engram-protocol section was not preserved exactly once:\n%s", text)
+	}
+	if !strings.Contains(text, "Legacy intro.") {
+		t.Fatal("content before the legacy block was lost")
+	}
+}
+
+func TestInjectFileAppendCutsLegacyBlockAtEarliestMarkerOfEitherPrefix(t *testing.T) {
+	tests := []struct {
+		name  string
+		first string
+		last  string
+	}{
+		{
+			name:  "axiom before gentle-ai",
+			first: "<!-- axiom:persona -->\nAxiom persona body\n<!-- /axiom:persona -->\n",
+			last:  "<!-- gentle-ai:engram-protocol -->\nGentle engram body\n<!-- /gentle-ai:engram-protocol -->\n",
+		},
+		{
+			name:  "gentle-ai before axiom",
+			first: "<!-- gentle-ai:persona -->\nGentle persona body\n<!-- /gentle-ai:persona -->\n",
+			last:  "<!-- axiom:engram-protocol -->\nAxiom engram body\n<!-- /axiom:engram-protocol -->\n",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			existing := "## Rules\n\nLegacy intro.\n\n" + legacyBareOrchestratorBlock + tc.first + "\n" + tc.last
+
+			text := injectCursorLegacyPrompt(t, existing)
+
+			if strings.Contains(text, "SKILL: Load `{skill-path}` before starting.") {
+				t.Fatal("legacy sub-agent launch content survived after migration")
+			}
+			for _, body := range []string{"persona body", "engram body"} {
+				if strings.Count(text, body) != 1 {
+					t.Fatalf("section body %q should be preserved exactly once:\n%s", body, text)
+				}
+			}
+		})
+	}
+}
+
+func TestInjectFileAppendRemovesLegacyBlockToEOFWithoutFollowingMarker(t *testing.T) {
+	existing := "## Rules\n\nLegacy intro.\n\n" + legacyBareOrchestratorBlock + "Trailing legacy text.\n"
+
+	text := injectCursorLegacyPrompt(t, existing)
+
+	if strings.Contains(text, "SKILL: Load `{skill-path}` before starting.") ||
+		strings.Contains(text, "Trailing legacy text.") {
+		t.Fatalf("legacy block was not removed up to EOF:\n%s", text)
+	}
+	if strings.Count(text, "### Result Contract") != 1 {
+		t.Fatal("result contract section should exist exactly once after migration")
+	}
+	if !strings.Contains(text, "Legacy intro.") {
+		t.Fatal("content before the legacy block was lost")
+	}
+}
+
+func TestInjectFileAppendRemovesLegacyBlockWhenAxiomMarkedSectionAlreadyExists(t *testing.T) {
+	canonical := assets.MustRead("generic/sdd-orchestrator.md")
+	existing := "## Agent Teams Orchestrator\n\nLegacy duplicate block.\n\n" +
+		"<!-- axiom:sdd-orchestrator -->\n" + canonical + "\n<!-- /axiom:sdd-orchestrator -->\n" +
+		"<!-- axiom:engram-protocol -->\nEngram body\n<!-- /axiom:engram-protocol -->\n"
+
+	text := injectCursorLegacyPrompt(t, existing)
+
+	if strings.Contains(text, "Legacy duplicate block.") {
+		t.Fatal("legacy duplicate block survived even with axiom marked section present")
+	}
+	if strings.Count(text, "## Agent Teams Orchestrator") != 1 {
+		t.Fatal("orchestrator heading should exist exactly once after cleanup")
+	}
+	if strings.Count(text, "<!-- axiom:sdd-orchestrator -->") != 1 {
+		t.Fatal("axiom sdd-orchestrator marker should exist exactly once after cleanup")
+	}
+	if strings.Count(text, "Engram body") != 1 {
+		t.Fatal("axiom engram-protocol section should be preserved exactly once")
+	}
+}
+
+func TestStripBareOrchestratorForFilePromptRecognizesBothPrefixes(t *testing.T) {
+	for _, prefix := range []string{"axiom", "gentle-ai"} {
+		t.Run(prefix, func(t *testing.T) {
+			section := "<!-- " + prefix + ":persona -->\nPersona body\n<!-- /" + prefix + ":persona -->\n"
+			got := stripBareOrchestratorForFilePrompt("Intro.\n\n" + legacyBareOrchestratorBlock + section)
+			want := "Intro.\n\n" + section
+			if got != want {
+				t.Fatalf("stripBareOrchestratorForFilePrompt() = %q, want %q", got, want)
+			}
+		})
+	}
+}
+
+func TestStripBareOrchestratorForFilePromptMarkedBranchRecognizesBothPrefixes(t *testing.T) {
+	for _, prefix := range []string{"axiom", "gentle-ai"} {
+		t.Run(prefix, func(t *testing.T) {
+			managed := "<!-- " + prefix + ":sdd-orchestrator -->\nManaged body\n<!-- /" + prefix + ":sdd-orchestrator -->\n"
+			input := "Intro.\n\n# Agent Teams Lite — Orchestrator Instructions\n\nLegacy body.\n\n" + managed
+			if !hasLegacyBareOrchestrator(input) {
+				t.Fatal("hasLegacyBareOrchestrator() = false, want true")
+			}
+			got := stripBareOrchestratorForFilePrompt(input)
+			want := "Intro.\n\n" + managed
+			if got != want {
+				t.Fatalf("stripBareOrchestratorForFilePrompt() = %q, want %q", got, want)
+			}
+		})
+	}
+}
+
+func TestHasLegacyBareOrchestratorIgnoresCanonicalAxiomSection(t *testing.T) {
+	managed := "<!-- axiom:sdd-orchestrator -->\n## Agent Teams Orchestrator\n\nBody\n<!-- /axiom:sdd-orchestrator -->\n"
+	if hasLegacyBareOrchestrator(managed) {
+		t.Fatal("hasLegacyBareOrchestrator() = true for a canonical axiom-marked section, want false")
+	}
+}
+
 func TestInjectMarkdownSections_stripsLegacyATLBlockWithMarkedSection(t *testing.T) {
 	home := t.TempDir()
 
@@ -2985,6 +3157,45 @@ You are a COORDINATOR, not an executor.
 	}
 	if !strings.Contains(text, "<!-- /axiom:sdd-orchestrator -->") && !strings.Contains(text, "<!-- /gentle-ai:sdd-orchestrator -->") {
 		t.Fatal("sdd-orchestrator close marker must be present after ATL strip")
+	}
+}
+
+func TestInjectMarkdownSections_axiomMarkedSectionSkipsBareOrchestratorStrip(t *testing.T) {
+	home := t.TempDir()
+
+	claudeAdpt := claudeAdapter()
+	promptPath := claudeAdpt.SystemPromptFile(home)
+	if err := os.MkdirAll(filepath.Dir(promptPath), 0o755); err != nil {
+		t.Fatalf("MkdirAll() error = %v", err)
+	}
+
+	existing := "Intro.\n\n## Agent Teams Orchestrator\n\nLegacy bare block.\n\n" +
+		"<!-- axiom:sdd-orchestrator -->\n## Agent Teams Orchestrator\n\nManaged body.\n<!-- /axiom:sdd-orchestrator -->\n\n" +
+		"<!-- axiom:engram-protocol -->\n## Engram Protocol\n\nEngram body.\n<!-- /axiom:engram-protocol -->\n"
+	if err := os.WriteFile(promptPath, []byte(existing), 0o644); err != nil {
+		t.Fatalf("WriteFile() error = %v", err)
+	}
+
+	if _, err := Inject(home, claudeAdpt, ""); err != nil {
+		t.Fatalf("Inject() error = %v", err)
+	}
+
+	content, err := os.ReadFile(promptPath)
+	if err != nil {
+		t.Fatalf("ReadFile() error = %v", err)
+	}
+	text := string(content)
+
+	if strings.Contains(text, "Managed body.") {
+		t.Fatalf("axiom sdd-orchestrator section was not refreshed in place:\n%s", text)
+	}
+	if strings.Count(text, "<!-- axiom:sdd-orchestrator -->") != 1 ||
+		strings.Count(text, "<!-- /axiom:sdd-orchestrator -->") != 1 {
+		t.Fatalf("axiom sdd-orchestrator markers should appear exactly once:\n%s", text)
+	}
+	if strings.Count(text, "Engram body.") != 1 ||
+		strings.Count(text, "<!-- axiom:engram-protocol -->") != 1 {
+		t.Fatalf("axiom engram-protocol section should be preserved exactly once:\n%s", text)
 	}
 }
 
