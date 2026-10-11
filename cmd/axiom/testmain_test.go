@@ -9,6 +9,7 @@ import (
 
 	"github.com/IGutierrezZ/axiom/v3/internal/hub"
 	"github.com/IGutierrezZ/axiom/v3/internal/system"
+	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
 // sandboxHome is the throwaway home directory every test in this package runs
@@ -58,6 +59,11 @@ func runTests(m *testing.M) int {
 		fmt.Fprintf(os.Stderr, "cmd/axiom tests: unset %s: %v\n", system.EnvStateDirAxiom, err)
 		return 1
 	}
+	// Techo del descubrimiento ascendente del planning home (inc-24, R29): un
+	// marcador (`.axiom-workspace`, `axiom.yaml` u `openspec/`) en un ancestro del
+	// directorio temporal del sistema, por ejemplo en el directorio personal de
+	// un desarrollador, no puede alterar el resultado de las pruebas.
+	workspace.DiscoveryCeilingOverride = []string{os.TempDir()}
 	sandboxHome = home
 
 	return m.Run()

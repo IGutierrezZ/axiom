@@ -9285,7 +9285,14 @@ func TestOpenCodePluginUninstallStandaloneResetMatchesPluginsPattern(t *testing.
 }
 
 func TestGovernanceScreensNavigationAndActions(t *testing.T) {
-	t.Cleanup(func() { _ = os.RemoveAll("openspec") })
+	// La tecla `s` de la pantalla de documentación viva sincroniza el catálogo y
+	// reescribe `openspec/INDEX.md` del directorio resuelto. Se ejecuta en un
+	// espacio temporal con su propio `openspec/` para no tocar el checkout (R28).
+	workspaceDir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(workspaceDir, "openspec", "specs"), 0o755); err != nil {
+		t.Fatalf("crear openspec/specs temporal: %v", err)
+	}
+	t.Chdir(workspaceDir)
 
 	m := NewModel(system.DetectionResult{}, "dev")
 	m.Screen = ScreenGovernance

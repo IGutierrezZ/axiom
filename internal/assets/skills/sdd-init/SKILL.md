@@ -39,6 +39,7 @@ Run this phase when the orchestrator/user asks to initialize SDD in a project. Y
 - Always build `.atl/skill-registry.md`; also save `skill-registry` to Engram when available.
 - Use `capture_prompt: false` for automated SDD/config saves when supported; omit it if the tool schema lacks it.
 - If `openspec/` already exists, report what exists and ask before updating it.
+- If the status projects `baseline`, do not create `openspec/specs/` or `openspec/INDEX.md`: the project's own baseline is authoritative (see `../_shared/project-baseline-convention.md`).
 
 ## Decision Gates
 
@@ -74,3 +75,4 @@ Return `status`, `executive_summary`, `artifacts`, `next_recommended`, and `risk
 - [references/init-details.md](references/init-details.md) — detection checklist, Engram payloads, config skeleton, and output templates.
 - `../_shared/engram-convention.md` — Engram artifact naming.
 - `../_shared/openspec-convention.md` — openspec layout and rules.
+- `../_shared/project-baseline-convention.md` — project baseline and technical context declared in `axiom.yaml`.

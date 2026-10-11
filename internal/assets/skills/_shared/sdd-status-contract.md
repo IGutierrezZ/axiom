@@ -84,6 +84,17 @@ relationships:
   conflictsWith: []
   sameDomainActiveChanges: []
 consent: <optional exact axiom.sdd-integration.consent/v1 envelope>
+baseline: # optional; present only with a valid `baseline:` declaration in axiom.yaml
+  documents:
+    - domain: <domain>
+      path: <absolute path>
+      integration: compose | directed | register
+technicalContext: # optional; present only with a valid `technical_context:` declaration in axiom.yaml
+  maintained: # optional mode
+    paths: [<absolute paths>]
+    entry: <absolute path, optional>
+  reference: # optional mode, same shape
+    paths: [<absolute paths>]
 phaseInstructions:
   apply: [<instruction strings>]
   verify: [<instruction strings>]
@@ -96,6 +107,16 @@ notes: []
 SDD status never reads review mode, offers RDD, or exposes review state. After completed implementation, proceed directly toward archive; verification is optional and standalone non-SDD review remains separate.
 
 `phaseInstructions` is optional and appears only when instructions are requested. It carries execution-phase keys (`apply`, `verify`, `archive`); planning-phase instructions (`propose`, `spec`, `design`, `tasks`) are surfaced in dispatcher markdown. `consent` requires an OpenSpec-backed native status reporting `blocked(edit_authority_missing)` with a valid persisted marker; never reconstruct it. Empty path fields MUST be arrays, not null. `blockedReasons` and `notes` are always arrays as well, both `[]` rather than null when empty. `changeName` and `changeRoot` are nullable; all other non-optional sections are required in native output.
+
+## Project Baseline and Technical Context
+
+`baseline` and `technicalContext` are additive, optional fields of the status. They project the structural declaration of `axiom.yaml` (`baseline:` and `technical_context:`) so phase skills never interpret that file themselves.
+
+- Read the locators from the status: `baseline.documents[]` (each with `domain`, an absolute `path`, and `integration`: `compose` for a document with a requirement profile, `directed` or `register` for a prose document) and `technicalContext.maintained` / `technicalContext.reference` (each with absolute `paths` and, when declared, an absolute `entry`). Never read `axiom.yaml` to find them, and never assume a default location for them.
+- Both fields are omitted entirely (never `null`, never empty) when `axiom.yaml` declares no valid block. A mode that is not declared does not appear. With no declaration the baseline is the OpenSpec default under `planningHome.path`; an absent `baseline` accompanied by a declaration cause in `notes` is an invalid declaration, not the default.
+- An invalid declaration is never projected, not even partially. The status stays operational: planning and `apply` are never blocked by it.
+- Only archive is gated by a declaration cause: `dependencies.archive` is `blocked` when `axiom.yaml` is unreadable or a declared block is invalid, when `technicalContext.maintained` is declared and the change has no `context-impact.md`, or when a project baseline or maintained context is declared with an artifact store that has no files (`engram` or `none`). The cause always appears in `notes`; it appears in `blockedReasons` (and `nextRecommended` becomes `resolve-blockers`) only when the route would otherwise be `archive`.
+- The context delta (`context-impact.md`) is not projected: `artifacts`, `artifactPaths`, and `contextFiles` are unchanged by it.
 
 ## Apply State
 

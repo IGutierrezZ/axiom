@@ -169,6 +169,30 @@ roles:
 			wantErr:     true,
 			errContains: "no puede tener una ruta vacía",
 		},
+		{
+			name:        "documento solo con comentarios",
+			yamlData:    "# nada que configurar\n",
+			wantErr:     true,
+			errContains: "'workspace.name' es obligatorio",
+		},
+		{
+			name:        "documento vacio",
+			yamlData:    "  \n",
+			wantErr:     true,
+			errContains: "está vacío",
+		},
+		{
+			name:        "YAML con sintaxis invalida",
+			yamlData:    "workspace: [sin cerrar\n",
+			wantErr:     true,
+			errContains: "error al parsear axiom.yaml",
+		},
+		{
+			name:        "YAML con tipos incorrectos",
+			yamlData:    "workspace: [uno, dos]\n",
+			wantErr:     true,
+			errContains: "error al parsear axiom.yaml",
+		},
 	}
 
 	for _, tt := range tests {

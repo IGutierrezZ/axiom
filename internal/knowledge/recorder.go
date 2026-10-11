@@ -56,6 +56,13 @@ func RecordUnit(ctx context.Context, jobPath string, input UnitAnalysisInput) (*
 		return nil, fmt.Errorf("el análisis de la unidad debe contener al menos 'summary' o 'raw_markdown'")
 	}
 
+	// Con baseline del proyecto, o indeterminada, no se escribe en la especificación
+	// viva: se resuelve el planning home de la raíz de código en el momento de
+	// escribir (REQ-24.23).
+	if err := guardCrawlWrite(job, opRecordUnit); err != nil {
+		return nil, err
+	}
+
 	targetSpecPath := filepath.Join(job.WorkspaceRoot, unit.SpecPath)
 	specDir := filepath.Dir(targetSpecPath)
 	if err := os.MkdirAll(specDir, 0755); err != nil {

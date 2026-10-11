@@ -74,6 +74,8 @@ openspec/
     └── archive/
 ```
 
+`specs/` belongs to the OpenSpec default baseline. If the status projects `baseline`, do not create `openspec/specs/` or `openspec/INDEX.md`: create only `config.yaml` and `changes/archive/`, and leave the project's own baseline untouched. The same applies when `notes` report an invalid `baseline:` declaration.
+
 `config.yaml` should include concise context, `strict_tdd`, testing capabilities, and phase rules for proposal/spec/design/tasks/apply/verify/archive. Keep `context:` under 10 lines.
 
 ## Testing Capabilities Format

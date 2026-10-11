@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/system"
+	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
 // sandboxHome is the throwaway home directory every test in this package runs
@@ -61,6 +62,10 @@ func runTests(m *testing.M) int {
 		return 1
 	}
 	sandboxHome = home
+	// El techo del descubrimiento ascendente de workspace.Locate es el directorio
+	// temporal: un marcador (`.axiom-workspace`, `axiom.yaml` u `openspec/`) en un
+	// ancestro de ese directorio no puede alterar el resultado de las pruebas (R29).
+	workspace.DiscoveryCeilingOverride = []string{os.TempDir()}
 
 	guard := newRepoGuard()
 	code := m.Run()

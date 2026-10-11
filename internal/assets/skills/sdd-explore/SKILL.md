@@ -50,8 +50,10 @@ The orchestrator will give you:
 > Follow **Section B** from `skills/_shared/sdd-phase-common.md` for retrieval.
 
 - **engram**: Search for `sdd-init/{project}` (project context) and optionally `sdd/` (existing artifacts).
-- **openspec**: Read `openspec/config.yaml` and `openspec/specs/`.
+- **openspec**: Read `openspec/config.yaml` and the baseline (see below).
 - **none**: Use whatever context the orchestrator passed in the prompt.
+
+When the status projects `baseline`, read the documents of the affected domains from `baseline.documents` (see `../_shared/project-baseline-convention.md`) and read `openspec/specs/` only when `baseline` is absent.
 
 ## What to Do
 
@@ -86,6 +88,8 @@ INVESTIGATE:
 ├── Look for patterns already in use
 └── Identify dependencies and coupling
 ```
+
+When the status projects `technicalContext`, read the `entry` file of each mode and consult the remaining `paths` only on demand (see `../_shared/project-baseline-convention.md`).
 
 ### Step 4: Analyze Options
 
@@ -150,4 +154,5 @@ Return EXACTLY this format to the orchestrator (and write the same content to `e
 - INTERROGATION RULE: Actively interrogate underspecified functional aspects and edge cases before closing exploration
 - If you can't find enough information, say so clearly
 - If the request is too vague to explore, say what clarification is needed
+- Never create, modify, or delete files under `technicalContext.reference` paths.
 - Return envelope per **Section D** from `skills/_shared/sdd-phase-common.md`.

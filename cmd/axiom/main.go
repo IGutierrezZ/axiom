@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -151,6 +152,7 @@ COMANDOS DE GOBERNANZA Y WORKSPACE:
   sdd continue         Calcula y emite la siguiente acción autorizada del despachador SDD
   sdd attempt          Registra la autoridad de edición por raíz para el cambio activo (grant)
   sdd archive-compose  Compone el reporte de archivado formal y actualiza las especificaciones vivas
+  sdd integrate        Valida (check), prepara (prepare), verifica (verify) y consulta la traza (show) de la integración de un cambio en la baseline del proyecto
   review               Gestiona el ciclo de revisión formal RDD (start, resume, step, mode, validate)
   ui                   Inicia el servidor local y abre el dashboard web interactivo
 
@@ -221,6 +223,13 @@ func printVersion() {
 func fileExists(p string) bool {
 	info, err := os.Stat(p)
 	return err == nil && !info.IsDir()
+}
+
+// hasWorkspaceConfig indica si dir lleva la configuración de un espacio de
+// trabajo: un axiom.yaml propio o un puntero .axiom-workspace, que es el caso de
+// la carpeta maestra del espacio canónico (REQ-24.10).
+func hasWorkspaceConfig(dir string) bool {
+	return fileExists(filepath.Join(dir, "axiom.yaml")) || fileExists(filepath.Join(dir, workspace.WorkspacePointerFilename))
 }
 
 func main() {
@@ -566,7 +575,12 @@ func runWorkspaceValidate(args []string) {
 	configFile := filepath.Join(baseDir, "axiom.yaml")
 	cfg, err := workspace.LoadConfig(configFile)
 	if err != nil {
-		fmt.Printf("[ERROR] No se pudo cargar la configuración de Axiom:\n  %v\n", err)
+		// Una declaración inválida acumula todas sus violaciones en un único
+		// error (REQ-24.17): se imprime una por línea.
+		fmt.Println("[ERROR] No se pudo cargar la configuración de Axiom:")
+		for _, line := range errorLines(err) {
+			fmt.Printf("  %s\n", line)
+		}
 		os.Exit(1)
 	}
 
@@ -574,6 +588,15 @@ func runWorkspaceValidate(args []string) {
 	if err != nil {
 		fmt.Printf("[ERROR] Error inesperado en el motor de validación:\n  %v\n", err)
 		os.Exit(1)
+	}
+
+	// Las declaraciones de baseline y de contexto técnico se validan contra el
+	// sistema de ficheros real y el almacén declarado, fuera de Validate (m9).
+	declarationErrors, declarationWarnings := workspace.ValidateDeclarationPaths(cfg, baseDir)
+	report.Errors = append(report.Errors, declarationErrors...)
+	report.Warnings = append(report.Warnings, declarationWarnings...)
+	if len(declarationErrors) > 0 {
+		report.Valid = false
 	}
 
 	if !report.Valid {
@@ -606,8 +629,30 @@ func runWorkspaceValidate(args []string) {
 		fmt.Printf("      * %s (%s) — %d repositorio(s)\n", roleKey, role.Name, len(role.Repositories))
 	}
 	fmt.Printf("  - Total rutas verificadas: %d\n", len(report.CheckedPaths))
+	// Las advertencias no alteran el resultado, pero se imprimen también aquí
+	// (REQ-24.27): una ruta de contexto inexistente no puede pasar inadvertida.
+	if len(report.Warnings) > 0 {
+		fmt.Println("\nAdvertencias:")
+		for i, w := range report.Warnings {
+			fmt.Printf("  %d. %s\n", i+1, w)
+		}
+	}
 	fmt.Println("\nResultado: COMPLIANT")
 	os.Exit(0)
+}
+
+// errorLines aplana un error, incluidos los acumulados con errors.Join, en una
+// lista de mensajes de una sola línea cada uno.
+func errorLines(err error) []string {
+	var joined interface{ Unwrap() []error }
+	if errors.As(err, &joined) {
+		var lines []string
+		for _, inner := range joined.Unwrap() {
+			lines = append(lines, errorLines(inner)...)
+		}
+		return lines
+	}
+	return strings.Split(strings.TrimSpace(err.Error()), "\n")
 }
 
 func runHandoffShow(args []string) {
@@ -619,7 +664,13 @@ func runHandoffShow(args []string) {
 		os.Exit(1)
 	}
 
-	handoffPath, err := resolveHandoffFile(*pathFlag, *changeFlag)
+	loc, err := workspace.Locate(*pathFlag)
+	if err != nil {
+		fmt.Printf("[ERROR] %v\n", err)
+		os.Exit(1)
+	}
+
+	handoffPath, err := resolveHandoffFile(loc.WorkspaceRoot, *changeFlag)
 	if err != nil {
 		fmt.Printf("[ERROR] %v\n", err)
 		os.Exit(1)
@@ -669,13 +720,13 @@ func runHandoffCreate(args []string) {
 		os.Exit(1)
 	}
 
-	baseDir, err := filepath.Abs(*pathFlag)
+	loc, err := workspace.Locate(*pathFlag)
 	if err != nil {
-		fmt.Printf("Error al resolver ruta base: %v\n", err)
+		fmt.Printf("[ERROR] %v\n", err)
 		os.Exit(1)
 	}
 
-	targetPath := filepath.Join(baseDir, "openspec", "changes", *changeFlag, "handoff.md")
+	targetPath := filepath.Join(loc.WorkspaceRoot, "openspec", "changes", *changeFlag, "handoff.md")
 
 	h := &handoff.Handoff{
 		Metadata: handoff.Metadata{
@@ -716,13 +767,13 @@ func runHandoffValidate(args []string) {
 		os.Exit(1)
 	}
 
-	baseDir, err := filepath.Abs(*pathFlag)
+	loc, err := workspace.Locate(*pathFlag)
 	if err != nil {
-		fmt.Printf("Error al resolver ruta base: %v\n", err)
+		fmt.Printf("[ERROR] %v\n", err)
 		os.Exit(1)
 	}
 
-	handoffPath, err := resolveHandoffFile(baseDir, *changeFlag)
+	handoffPath, err := resolveHandoffFile(loc.WorkspaceRoot, *changeFlag)
 	if err != nil {
 		fmt.Printf("[ERROR] %v\n", err)
 		os.Exit(1)
@@ -734,16 +785,9 @@ func runHandoffValidate(args []string) {
 		os.Exit(1)
 	}
 
-	// Cargar configuración de workspace opcionalmente si existe axiom.yaml
-	var wsConfig *workspace.WorkspaceConfig
-	configPath := filepath.Join(baseDir, "axiom.yaml")
-	if _, err := os.Stat(configPath); err == nil {
-		if loadedCfg, err := workspace.LoadConfig(configPath); err == nil {
-			wsConfig = loadedCfg
-		}
-	}
-
-	if err := handoff.Validate(h, wsConfig); err != nil {
+	// La configuración de roles es la que devuelve la resolución (a través del
+	// puntero, si lo hay); es nula si no hay axiom.yaml o no se puede cargar.
+	if err := handoff.Validate(h, loc.Config); err != nil {
 		fmt.Printf("[ERROR] HANDOFF INVALID (Validación semántica fallida):\n  %v\n", err)
 		os.Exit(1)
 	}
@@ -764,17 +808,15 @@ func runRoleList(args []string) {
 		os.Exit(1)
 	}
 
-	baseDir, changeName, changeDir, err := resolveChangeDir(*pathFlag, *changeFlag)
+	loc, changeName, changeDir, err := resolveChangeDir(*pathFlag, *changeFlag)
 	if err != nil {
 		fmt.Printf("[ERROR] %v\n", err)
 		os.Exit(1)
 	}
 
-	var wsConfig *workspace.WorkspaceConfig
-	cfgPath := filepath.Join(baseDir, "axiom.yaml")
-	if _, err := os.Stat(cfgPath); err == nil {
-		wsConfig, _ = workspace.LoadConfig(cfgPath)
-	}
+	// Roles de la configuración que devuelve la resolución, a través del
+	// puntero si lo hay; nula si no hay axiom.yaml o no se puede cargar.
+	wsConfig := loc.Config
 
 	designFile := filepath.Join(changeDir, "design.md")
 	roster, err := resolveCLIRoster(changeDir, designFile, wsConfig)
@@ -818,17 +860,15 @@ func runRoleStatus(args []string) {
 		os.Exit(1)
 	}
 
-	baseDir, changeName, changeDir, err := resolveChangeDir(*pathFlag, *changeFlag)
+	loc, changeName, changeDir, err := resolveChangeDir(*pathFlag, *changeFlag)
 	if err != nil {
 		fmt.Printf("[ERROR] %v\n", err)
 		os.Exit(1)
 	}
 
-	var wsConfig *workspace.WorkspaceConfig
-	cfgPath := filepath.Join(baseDir, "axiom.yaml")
-	if _, err := os.Stat(cfgPath); err == nil {
-		wsConfig, _ = workspace.LoadConfig(cfgPath)
-	}
+	// Roles de la configuración que devuelve la resolución, a través del
+	// puntero si lo hay; nula si no hay axiom.yaml o no se puede cargar.
+	wsConfig := loc.Config
 
 	designFile := filepath.Join(changeDir, "design.md")
 	roster, err := resolveCLIRoster(changeDir, designFile, wsConfig)
@@ -893,17 +933,15 @@ func runRoleBarrier(args []string) {
 		os.Exit(1)
 	}
 
-	baseDir, changeName, changeDir, err := resolveChangeDir(*pathFlag, *changeFlag)
+	loc, changeName, changeDir, err := resolveChangeDir(*pathFlag, *changeFlag)
 	if err != nil {
 		fmt.Printf("[ERROR] %v\n", err)
 		os.Exit(1)
 	}
 
-	var wsConfig *workspace.WorkspaceConfig
-	cfgPath := filepath.Join(baseDir, "axiom.yaml")
-	if _, err := os.Stat(cfgPath); err == nil {
-		wsConfig, _ = workspace.LoadConfig(cfgPath)
-	}
+	// Roles de la configuración que devuelve la resolución, a través del
+	// puntero si lo hay; nula si no hay axiom.yaml o no se puede cargar.
+	wsConfig := loc.Config
 
 	designFile := filepath.Join(changeDir, "design.md")
 	roster, err := resolveCLIRoster(changeDir, designFile, wsConfig)
@@ -958,7 +996,7 @@ func runRoleBarrier(args []string) {
 		}
 
 		if *migrateDeferredFlag {
-			cumulativeFile := filepath.Join(baseDir, "openspec", "changes", "e2e-cumulative", "tasks.md")
+			cumulativeFile := filepath.Join(loc.WorkspaceRoot, "openspec", "changes", "e2e-cumulative", "tasks.md")
 			if err := multirole.MigrateDeferredTasks(cumulativeFile, report.DeferredTasks); err != nil {
 				fmt.Printf("\n[AVISO] No se pudieron migrar las tareas diferidas: %v\n", err)
 			} else {
@@ -1020,25 +1058,30 @@ func printRosterConflictWarning(roster multirole.Roster) {
 	fmt.Printf("[AVISO] %s\n", roster.Conflict.Detail)
 }
 
-func resolveChangeDir(baseDir, change string) (string, string, string, error) {
-	absBase, err := filepath.Abs(baseDir)
+// resolveChangeDir resuelve el workspace desde startDir con workspace.Locate y
+// devuelve su Location, el nombre del cambio y su directorio bajo el planning
+// home. Los verbos `role` leen de ahí la raíz (loc.WorkspaceRoot) y la
+// configuración de roles (loc.Config), de modo que un puntero sin axiom.yaml en
+// startDir se honra (REQ-24.8).
+func resolveChangeDir(startDir, change string) (workspace.Location, string, string, error) {
+	loc, err := workspace.Locate(startDir)
 	if err != nil {
-		return "", "", "", fmt.Errorf("ruta base inválida: %w", err)
+		return workspace.Location{}, "", "", err
 	}
 
-	changesDir := filepath.Join(absBase, "openspec", "changes")
+	changesDir := filepath.Join(loc.WorkspaceRoot, "openspec", "changes")
 
 	if change != "" {
 		target := filepath.Join(changesDir, change)
 		if _, err := os.Stat(target); err != nil {
-			return "", "", "", fmt.Errorf("no existe el directorio del cambio %q en: %s", change, target)
+			return workspace.Location{}, "", "", fmt.Errorf("no existe el directorio del cambio %q en: %s", change, target)
 		}
-		return absBase, change, target, nil
+		return loc, change, target, nil
 	}
 
 	entries, err := os.ReadDir(changesDir)
 	if err != nil {
-		return "", "", "", fmt.Errorf("no se pudo inspeccionar el directorio de cambios %q: %w", changesDir, err)
+		return workspace.Location{}, "", "", fmt.Errorf("no se pudo inspeccionar el directorio de cambios %q: %w", changesDir, err)
 	}
 
 	var foundDirs []string
@@ -1049,21 +1092,21 @@ func resolveChangeDir(baseDir, change string) (string, string, string, error) {
 	}
 
 	if len(foundDirs) == 0 {
-		return "", "", "", fmt.Errorf("no se encontró ningún cambio activo bajo %s", changesDir)
+		return workspace.Location{}, "", "", fmt.Errorf("no se encontró ningún cambio activo bajo %s", changesDir)
 	}
 	if len(foundDirs) > 1 {
-		return "", "", "", fmt.Errorf("se encontraron múltiples cambios activos (%s). Especifica el cambio con --change", strings.Join(foundDirs, ", "))
+		return workspace.Location{}, "", "", fmt.Errorf("se encontraron múltiples cambios activos (%s). Especifica el cambio con --change", strings.Join(foundDirs, ", "))
 	}
 
 	changeName := foundDirs[0]
-	return absBase, changeName, filepath.Join(changesDir, changeName), nil
+	return loc, changeName, filepath.Join(changesDir, changeName), nil
 }
 
-func resolveHandoffFile(baseDir, change string) (string, error) {
-	absBase, err := filepath.Abs(baseDir)
-	if err != nil {
-		return "", fmt.Errorf("ruta base inválida: %w", err)
-	}
+// resolveHandoffFile busca el handoff.md de change (o el único de los cambios
+// activos) bajo el planning home de workspaceRoot, que es el que resuelve
+// workspace.Locate y no el directorio de partida del verbo (REQ-24.8).
+func resolveHandoffFile(workspaceRoot, change string) (string, error) {
+	absBase := workspaceRoot
 
 	if change != "" {
 		target := filepath.Join(absBase, "openspec", "changes", change, "handoff.md")
@@ -1124,8 +1167,8 @@ func runUI(args []string) {
 
 	// Si se invocó con '.' por defecto y no hay axiom.yaml en '.', resolver el workspace activo del Hub
 	if *pathFlag == "." && hubMgr != nil {
-		if !fileExists(filepath.Join(baseDir, "axiom.yaml")) {
-			if active, err := hubMgr.GetActive(); err == nil && active != nil && fileExists(filepath.Join(active.Path, "axiom.yaml")) {
+		if !hasWorkspaceConfig(baseDir) {
+			if active, err := hubMgr.GetActive(); err == nil && active != nil && hasWorkspaceConfig(active.Path) {
 				baseDir = active.Path
 			}
 		}
@@ -1639,6 +1682,25 @@ func runArchiveList(args []string) {
 		os.Exit(1)
 	}
 
+	// Avisos no bloqueantes de la lectura, entre ellos el de la ubicación antigua
+	// divergente (Q14, REQ-24.10).
+	for _, warning := range catalog.Warnings {
+		fmt.Printf("[AVISO] %s\n", warning)
+	}
+
+	// Con baseline del proyecto el catálogo no se indexa: se informa de que es
+	// externa y de dónde está, para que un catálogo vacío no se interprete como
+	// ausencia de especificación (REQ-24.25).
+	if catalog.ExternalBaseline != nil {
+		fmt.Println("\nLa baseline de especificaciones es externa (del proyecto): sus documentos no se indexan aquí.")
+		fmt.Println("Dominios y rutas declarados:")
+		for _, document := range catalog.ExternalBaseline.Documents {
+			fmt.Printf("  - %-25s %s\n", document.Domain, document.Path)
+		}
+		fmt.Println()
+		return
+	}
+
 	if len(catalog.Specs) == 0 {
 		fmt.Println("\nNo se encontraron especificaciones vivas en openspec/specs/.")
 		fmt.Println("Ejecuta 'axiom archive sync' o 'axiom archive coldstart' para generarlas.")
@@ -1679,6 +1741,15 @@ func runArchiveShow(args []string) {
 	svc := livingdoc.NewService(baseDir, nil, nil)
 	entry, content, err := svc.GetSpecDetail(domain)
 	if err != nil {
+		// Un dominio de la baseline externa del proyecto no se indexa: se informa de
+		// que le pertenece y de dónde está su documento, sin error (REQ-24.25).
+		var external *livingdoc.ExternalBaselineError
+		if errors.As(err, &external) {
+			fmt.Printf("[INFO] El dominio %q pertenece a la baseline externa del proyecto y no se indexa.\n", external.Domain)
+			fmt.Printf("  - Documento:  %s\n", external.Path)
+			fmt.Printf("  - Declarada:  %s\n", external.ConfigPath)
+			return
+		}
 		fmt.Printf("[ERROR] %v\n", err)
 		os.Exit(1)
 	}
@@ -1775,16 +1846,30 @@ func runInit(args []string) {
 	fmt.Printf("  - Directorio:          %s\n", res.Record.Path)
 	fmt.Printf("  - Topología:           %s\n", res.Record.Topology)
 	fmt.Printf("  - Archivo Config:      %s\n", res.ConfigPath)
+	// Con una baseline que no es la de OpenSpec por defecto no se crean
+	// openspec/specs/ ni openspec/INDEX.md (REQ-24.23).
+	baselineOwned := res.BaselineOwnership != workspace.BaselineDefault
 	if res.AlreadyExisted {
 		fmt.Println("  - Estado:              Ya contenía axiom.yaml (registrado y marcado como activo)")
 	} else if effectiveProfile == "knowledge" {
-		fmt.Println("  - Estructura creada:   openspec/specs/, openspec/changes/, openspec/INDEX.md, .mcp.json")
+		if baselineOwned {
+			fmt.Println("  - Estructura creada:   openspec/changes/, .mcp.json")
+		} else {
+			fmt.Println("  - Estructura creada:   openspec/specs/, openspec/changes/, openspec/INDEX.md, .mcp.json")
+		}
 		fmt.Println("  - Perfil activo:       knowledge (multirepo, documentación viva, sin arneses de testeo)")
+	} else if baselineOwned {
+		fmt.Println("  - Estructura creada:   openspec/changes/, .axiom/inbox/skills/")
 	} else {
 		fmt.Println("  - Estructura creada:   openspec/specs/, openspec/changes/, .axiom/inbox/skills/")
 	}
 	if hubMgr != nil {
 		fmt.Printf("  - Registro global:     %s [ACTIVO]\n", hubMgr.GetConfigPath())
+	}
+	// Avisos de la inicialización: la omisión de la baseline, la conservación del
+	// axiom.yaml con --force y las violaciones de sus declaraciones.
+	for _, note := range res.Notes {
+		fmt.Printf("  - [AVISO] %s\n", note)
 	}
 	fmt.Println("================================================================================")
 	fmt.Println("¡Listo! Ejecuta 'axiom ui' para abrir el panel de control interactivo.")
@@ -1935,6 +2020,7 @@ func runSDD(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stdout, "  continue         Calcula y emite la siguiente acción autorizada del despachador SDD")
 		fmt.Fprintln(stdout, "  attempt          Registra la autoridad de edición por raíz para el cambio activo (grant)")
 		fmt.Fprintln(stdout, "  archive-compose  Compone el reporte de archivado formal y actualiza las especificaciones vivas")
+		fmt.Fprintln(stdout, "  integrate        Valida (check), prepara (prepare), verifica (verify) y consulta la traza (show) de la integración de un cambio en la baseline del proyecto")
 		fmt.Fprintln(stdout, "  task-result      Valida y extrae el resultado tipado de una fase delegada")
 		fmt.Fprintln(stdout, "  preflight-hook   Ejecuta el hook previo de verificación SDD")
 		fmt.Fprintln(stdout, "  kickoff          Sella la configuración de kickoff de un cambio (seal, show)")
@@ -1958,6 +2044,8 @@ func runSDD(args []string, stdout, stderr io.Writer) int {
 		err = cli.RunSDDAttempt(subArgs, stdout)
 	case "archive-compose":
 		err = cli.RunSDDArchiveCompose(subArgs, stdout)
+	case "integrate":
+		err = cli.RunSDDIntegrate(subArgs, stdout)
 	case "task-result":
 		err = cli.RunSDDTaskResult(subArgs, stdout)
 	case "preflight-hook":
@@ -1967,7 +2055,7 @@ func runSDD(args []string, stdout, stderr io.Writer) int {
 	case "gate":
 		err = cli.RunSDDGate(subArgs, stdout)
 	default:
-		fmt.Fprintf(stderr, "Error: subcomando '%s' no reconocido para sdd. Opciones: status, continue, attempt, archive-compose, task-result, preflight-hook, kickoff, gate\n", subCmd)
+		fmt.Fprintf(stderr, "Error: subcomando '%s' no reconocido para sdd. Opciones: status, continue, attempt, archive-compose, integrate, task-result, preflight-hook, kickoff, gate\n", subCmd)
 		return 1
 	}
 
@@ -2126,6 +2214,11 @@ func runKnowledgeSweep(args []string) {
 	if len(res.CreatedSpecs) > 0 {
 		fmt.Printf("  - Specs Sembradas:     %d en openspec/specs/\n", len(res.CreatedSpecs))
 	}
+	// Avisos no bloqueantes del barrido: la ubicación antigua divergente y la
+	// omisión de la siembra con una baseline del proyecto (REQ-24.23).
+	for _, note := range res.Notes {
+		fmt.Printf("  - [AVISO] %s\n", note)
+	}
 	if len(res.Ambiguities) > 0 {
 		fmt.Println("\n--- SOBRE DE AMBIGÜEDADES / INCERTIDUMBRES (DIFERIDO) ---")
 		for i, amb := range res.Ambiguities {
@@ -2136,7 +2229,11 @@ func runKnowledgeSweep(args []string) {
 		fmt.Println("\n  - Ambigüedades:        Ninguna detectada.")
 	}
 	fmt.Println("================================================================================")
-	fmt.Printf("Barrido completado en %v. Catálogo maestro actualizado en openspec/INDEX.md.\n", res.Duration.Round(time.Millisecond))
+	if res.SpecsSkipped {
+		fmt.Printf("Barrido completado en %v. No se sembraron especificaciones ni se actualizó openspec/INDEX.md.\n", res.Duration.Round(time.Millisecond))
+	} else {
+		fmt.Printf("Barrido completado en %v. Catálogo maestro actualizado en openspec/INDEX.md.\n", res.Duration.Round(time.Millisecond))
+	}
 }
 
 func runKnowledgeQuery(args []string) {
@@ -2204,6 +2301,13 @@ func runKnowledgeQuery(args []string) {
 				fmt.Printf("  - [%s] %s: %s\n", ev.Source, ev.File, ev.Context)
 			}
 		}
+	}
+
+	// Avisos no bloqueantes de la consulta: la ubicación antigua divergente, la
+	// omisión del enriquecimiento y que la búsqueda spec-first no cubre la
+	// baseline externa (REQ-24.23, REQ-24.25).
+	for _, note := range res.Notes {
+		fmt.Printf("\n[AVISO] %s\n", note)
 	}
 
 	fmt.Println("\n================================================================================")

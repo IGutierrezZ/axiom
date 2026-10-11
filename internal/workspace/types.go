@@ -49,10 +49,16 @@ type GovernanceConfig struct {
 }
 
 // WorkspaceConfig es la raíz del archivo de configuración axiom.yaml.
+//
+// Baseline y TechnicalContext se decodifican aparte y de forma estricta (D-04),
+// por eso llevan yaml:"-": la decodificación base ignora esas claves y
+// parseLayered las rellena solo cuando el bloque es válido.
 type WorkspaceConfig struct {
-	Workspace  WorkspaceSection      `yaml:"workspace"`
-	Roles      map[string]RoleConfig `yaml:"roles"`
-	Governance GovernanceConfig      `yaml:"governance,omitempty"`
+	Workspace        WorkspaceSection        `yaml:"workspace"`
+	Roles            map[string]RoleConfig   `yaml:"roles"`
+	Governance       GovernanceConfig        `yaml:"governance,omitempty"`
+	Baseline         *BaselineConfig         `yaml:"-"`
+	TechnicalContext *TechnicalContextConfig `yaml:"-"`
 }
 
 // ValidationReport contiene el resultado determinista de la validación del espacio de trabajo.

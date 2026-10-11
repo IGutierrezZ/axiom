@@ -569,7 +569,11 @@ func TestKilocodeReviewSettingsMatchCurrentMainBaseline(t *testing.T) {
 	// opens with `# Axiom — SDD Orchestrator Instructions` instead of
 	// `# Gentle AI — SDD Orchestrator Instructions`. Prose only; markers and
 	// contract IDs are untouched. Deliberate, not drift.
-	const want = "aa4742abc5c7c8a483415c810af1170ae3ef337f79e6985031567fa117febc92"
+	// INC-24 (C3-c4): the shared "SDD Change Kickoff and Block Gates" section gains one
+	// paragraph (D-18) that presents the context delta in the `design` and `role-apply`
+	// gates and documents the remediation line. Kilocode embeds the OpenCode orchestrator,
+	// which composes that shared section, so the hash moves. Deliberate, not drift.
+	const want = "3d6a2041020dce8810d7a99e6de53f3f78b82c10c330d3425c8626b89413f7cc"
 	if got != want {
 		t.Fatalf("Kilocode settings SHA-256 = %s, want current-main baseline %s", got, want)
 	}

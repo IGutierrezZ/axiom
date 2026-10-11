@@ -94,6 +94,7 @@ Archival is a mechanical filesystem operation. File content MUST NEVER pass thro
 - After every copy or move, run `diff -r` (source vs. destination) as a MANDATORY readback. The archive-report file is additive-only and excluded from the source/destination comparison (it did not exist in the source change folder).
 - The verbatim `diff -r` output MUST appear in the phase result. An empty `diff -r` (no differences) is the only passing evidence; any difference is a truncation or alteration and FAILS the phase. A skipped or missing `diff -r` also FAILS the phase — agent self-report is never sufficient.
 - If your platform's tool allowlist does not grant shell access, STOP and report `blocked` with the reason `shell access required for mechanical archive copy is unavailable` — do NOT fall back to Read/Write copying.
+- This contract governs copies and moves. The directed edits of project documents (see `references/project-baseline-integration.md`) use bounded `Edit` operations on the sections the plan names, never a whole-file rewrite, and `axiom sdd integrate verify` is their evidence instead of `diff -r`.
 
 ## What to Do
 
@@ -103,6 +104,22 @@ Follow **Section A** from `skills/_shared/sdd-phase-common.md`.
 ### Step 2: Sync Delta Specs to Main Specs
 
 Inspect available delta specs; preserve edit permissions and the mechanical safety checks below.
+
+#### Project Baseline Branch (decide first)
+
+Read `baseline` and `technicalContext` from the status (see `../_shared/project-baseline-convention.md`). Never read `axiom.yaml` and never deduce the artifact store yourself.
+
+**IF the status projects `baseline` or `technicalContext.maintained`:** follow `references/project-baseline-integration.md` for the integration, for the moment Step 3 runs, and for the integration trace in the archive report. This branch takes precedence over the `engram` and `none` lines below, which would otherwise skip the integration silently. With `baseline` projected, the default blocks below never run: the project's own documents are the baseline, so never create, write, or copy anything under `openspec/specs/` or `openspec/INDEX.md`. With only `technicalContext.maintained` projected, the reference says when those default blocks run.
+
+Composition into project documents runs only through the command that `axiom sdd integrate prepare` prints. Execute that command literally, from the workspace root, and never rebuild its paths or flags by hand. Its general form is:
+
+```bash
+axiom sdd archive-compose --cwd "<workspaceRoot>" --change "{change-name}" --document "<dominio>" [--document ...] --in-place
+```
+
+STOP and report `blocked` when the status marks the archive as blocked (`dependencies.archive`, `blockedReasons`, `notes`) or when `axiom sdd integrate prepare` rejects. That includes a project baseline or a maintained context declared with an artifact store that keeps no files (`engram` or `none`, case (g)). Quote the cause literally and name the continuation the message gives. Do not deduce or change the artifact store, do not fall back to a manual merge, and do not move the change to the archive.
+
+**IF neither is projected:** the default flow below applies unchanged, followed by the master catalog refresh that precedes Step 3.
 
 **IF mode is `engram`:** Skip filesystem sync — artifacts live in Engram only. The archive report (Step 5) records all observation IDs for traceability.
 
@@ -200,6 +217,18 @@ else
 fi
 # Empty diff above is the only passing evidence; include verbatim output in the result.
 ```
+
+#### Refresh the Master Catalog (default baseline only)
+
+After every delta spec is in place (composed or copied above) and before Step 3, regenerate `openspec/INDEX.md` with the native producer (REQ-21.17 (4)). Run it once for the whole change:
+
+```bash
+axiom archive sync --path "<workspaceRoot>"
+```
+
+- A nonzero exit is a blocking failure: STOP and report `blocked` with the exact message. Do not write `openspec/INDEX.md` by hand and do not move the change.
+- Skip this step when the status projects `baseline`: the project's own baseline has no `openspec/INDEX.md`, and archive never creates one.
+- Archive updates no roadmap: `axiom.yaml` and `openspec/config.yaml` cannot declare any, so there is nothing else to refresh.
 
 ### Step 3: Move to Archive
 
@@ -308,6 +337,7 @@ Never automatically delete, overwrite, or merge the outer archive directory. If 
 - [ ] Archive preserves all artifacts that existed; missing artifacts are reported
 - [ ] Archived tasks retain their original bytes; completed and unfinished counts are reported honestly
 - [ ] Active changes directory no longer has this change
+- [ ] With the project branch: `axiom sdd integrate verify` passed before the move, and the integration trace was appended to the archive report
 - [ ] Verbatim `diff -r` readback output is included in the result and is empty (no differences)
 
 A failed or skipped `diff -r` FAILS the phase regardless of the checkboxes above — agent self-report is never sufficient evidence of byte-identity.
@@ -348,6 +378,8 @@ En proyectos gobernados por Axiom, el informe `archive-report.md` (o en Engram) 
 - `tasks.md`
 - `verify-report.md`
 ```
+
+When the project branch ran, append the integration trace mechanically with `axiom sdd integrate show`, as `references/project-baseline-integration.md` describes. Never retype the trace.
 
 ### Step 6: Return Summary
 
@@ -392,4 +424,7 @@ Unfinished tasks and unresolved findings: {list or none observed}.
 - The archive is an AUDIT TRAIL — never delete or modify archived changes
 - If `openspec/changes/archive/` doesn't exist, create it
 - Apply any `rules.archive` from `openspec/config.yaml`
+- Never create, modify, or delete files under `technicalContext.reference` paths.
+- With a project baseline (the status projects `baseline`), never promote or copy a delta to `openspec/specs/{domain}/` and never create or update `openspec/INDEX.md`. A domain the baseline does not declare is rejected; a declared one is integrated through `axiom sdd archive-compose` or the directed edit.
+- Never edit the files of `baseline.documents` or `technicalContext.maintained` outside the integration plan, and never assume "Sin impacto" when the change has no context delta.
 - Return envelope per **Section D** from `skills/_shared/sdd-phase-common.md`.

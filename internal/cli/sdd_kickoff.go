@@ -4,11 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"os"
 	"path/filepath"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/kickoff"
-	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
 // RunSDDKickoff is the CLI entry point for `axiom sdd kickoff <seal|show>`
@@ -46,7 +44,7 @@ func runSDDKickoffSeal(args []string, stdout io.Writer) error {
 	if err != nil {
 		return err
 	}
-	workspaceRoot, changeRoot, err := resolveGovernanceChangeRoot(parsed.CWD, parsed.Change)
+	loc, changeRoot, err := resolveGovernanceChangeRoot(parsed.CWD, parsed.Change)
 	if err != nil {
 		return err
 	}
@@ -54,8 +52,10 @@ func runSDDKickoffSeal(args []string, stdout io.Writer) error {
 	var sealing kickoff.Kickoff
 	if parsed.Infer {
 		designPath := filepath.Join(changeRoot, "design.md")
-		wsConfig := loadWorkspaceConfigIfPresent(workspaceRoot)
-		inferred, note, inferErr := kickoff.InferKickoff(designPath, wsConfig)
+		// loc.Config is the base configuration the resolver already loaded
+		// (through the pointer when there is one); it is nil when there is no
+		// axiom.yaml or it cannot be loaded, which InferKickoff accepts.
+		inferred, note, inferErr := kickoff.InferKickoff(designPath, loc.Config)
 		if inferErr != nil {
 			if note != "" {
 				return fmt.Errorf("%s: %w", note, inferErr)
@@ -105,19 +105,6 @@ func runSDDKickoffShow(args []string, stdout io.Writer) error {
 	}
 	_, err = fmt.Fprintln(stdout, renderKickoffSummaryText(*sealed, false))
 	return err
-}
-
-// loadWorkspaceConfigIfPresent mirrors the established
-// cmd/axiom/main.go:728 idiom (runRoleList and its siblings): a missing or
-// unreadable axiom.yaml is not fatal here — multirole.DetectRoles and
-// InferKickoff both accept a nil *workspace.WorkspaceConfig.
-func loadWorkspaceConfigIfPresent(workspaceRoot string) *workspace.WorkspaceConfig {
-	cfgPath := filepath.Join(workspaceRoot, "axiom.yaml")
-	if _, err := os.Stat(cfgPath); err != nil {
-		return nil
-	}
-	cfg, _ := workspace.LoadConfig(cfgPath)
-	return cfg
 }
 
 func renderKickoffSealResult(stdout io.Writer, asJSON bool, sealed kickoff.Kickoff, wrote bool) error {

@@ -141,3 +141,12 @@ Close your **final report message** (the return envelope) with a `## Key Learnin
 ```
 
 This applies to your final text response to the orchestrator, not intermediate tool outputs or artifact content. Engram will automatically extract and persist these learnings.
+
+## G. Working Directory and `openspec/...` Paths
+
+The directory a phase agent was launched in is not the planning home. In a multi-repository workspace a phase can start inside a code repository, and a relative path resolves against that directory, not against the specs repository that owns `openspec/`.
+
+- Resolve every `openspec/...` path a skill cites, and every other path that is relative to the change artifacts, against `actionContext.workspaceRoot` from the status the orchestrator injected. Never resolve them against the working directory.
+- Run every shell block that operates on those paths with `cd "<workspaceRoot>" && ...` inside the same invocation. Do not rely on an earlier `cd`: the working directory does not persist between shell calls in every runtime.
+- In a multi-repository workspace, name code in a code repository with the form `../<repository-name>/...` relative to `workspaceRoot`, or with an absolute path, never with a path relative to the working directory.
+- Orchestrator commands that derive `--cwd` from the containing git repository keep working unchanged: they resolve the same planning home.

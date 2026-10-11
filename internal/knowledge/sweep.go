@@ -38,9 +38,14 @@ func RunSweep(ctx context.Context, opts SweepOptions) (*SweepResult, error) {
 		return nil, fmt.Errorf("ruta workspace inválida: %w", err)
 	}
 
-	if opts.SpecsRoot == "" {
-		opts.SpecsRoot = filepath.Join(absWorkspace, "openspec")
+	// La guarda de escritura se evalúa siempre: con baseline del proyecto, o
+	// indeterminada, el barrido omite la siembra y el índice y completa el resto
+	// (REQ-24.23).
+	target, err := resolveSpecsTarget(absWorkspace, opts.SpecsRoot, opSweep)
+	if err != nil {
+		return nil, err
 	}
+	opts.SpecsRoot = target.root
 
 	detector := hub.NewDetector()
 	tech, _ := detector.Detect(absWorkspace)
@@ -52,6 +57,7 @@ func RunSweep(ctx context.Context, opts SweepOptions) (*SweepResult, error) {
 		Modules:         make([]ModuleSummary, 0),
 		Ambiguities:     make([]AmbiguityItem, 0),
 		CreatedSpecs:    make([]string, 0),
+		Notes:           target.notes,
 	}
 
 	if tech != nil {
@@ -72,27 +78,33 @@ func RunSweep(ctx context.Context, opts SweepOptions) (*SweepResult, error) {
 	ambiguities := detectAmbiguities(absWorkspace, modules)
 	result.Ambiguities = ambiguities
 
-	// 4. Sembrar borradores canónicos en openspec/specs/<modulo>/spec.md
-	specsDir := filepath.Join(opts.SpecsRoot, "specs")
-	_ = os.MkdirAll(specsDir, 0755)
+	// 4. Sembrar borradores canónicos en openspec/specs/<modulo>/spec.md y 5.
+	// sincronizar el catálogo maestro openspec/INDEX.md, salvo que la baseline sea
+	// del proyecto o no se pueda determinar.
+	if target.blocked != nil {
+		result.SpecsSkipped = true
+		result.Notes = append(result.Notes, skipNote(target.blocked, "la siembra de borradores en openspec/specs/ y la sincronización de openspec/INDEX.md"))
+	} else {
+		specsDir := filepath.Join(opts.SpecsRoot, "specs")
+		_ = os.MkdirAll(specsDir, 0755)
 
-	projectName := filepath.Base(absWorkspace)
-	for _, mod := range modules {
-		modDomain := slugify(mod.Name)
-		modSpecDir := filepath.Join(specsDir, modDomain)
-		modSpecFile := filepath.Join(modSpecDir, "spec.md")
+		projectName := filepath.Base(absWorkspace)
+		for _, mod := range modules {
+			modDomain := slugify(mod.Name)
+			modSpecDir := filepath.Join(specsDir, modDomain)
+			modSpecFile := filepath.Join(modSpecDir, "spec.md")
 
-		if _, err := os.Stat(modSpecFile); os.IsNotExist(err) {
-			_ = os.MkdirAll(modSpecDir, 0755)
-			specContent := generateDraftSpec(projectName, mod.Name, mod.Description, mod.Components)
-			if err := os.WriteFile(modSpecFile, []byte(specContent), 0644); err == nil {
-				result.CreatedSpecs = append(result.CreatedSpecs, modSpecFile)
+			if _, err := os.Stat(modSpecFile); os.IsNotExist(err) {
+				_ = os.MkdirAll(modSpecDir, 0755)
+				specContent := generateDraftSpec(projectName, mod.Name, mod.Description, mod.Components)
+				if err := os.WriteFile(modSpecFile, []byte(specContent), 0644); err == nil {
+					result.CreatedSpecs = append(result.CreatedSpecs, modSpecFile)
+				}
 			}
 		}
-	}
 
-	// 5. Sincronizar catálogo maestro openspec/INDEX.md
-	_ = SyncIndex(projectName, opts.SpecsRoot)
+		_ = SyncIndex(projectName, opts.SpecsRoot)
+	}
 
 	result.Duration = time.Since(start)
 	return result, nil

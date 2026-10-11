@@ -149,3 +149,21 @@ If you are documenting or relying on this file, the safest framing today is:
 - several SDD skills and prompt assets look for it and may write to it
 - the documented fields reflect current repo conventions
 - consumers should not assume a formally enforced, versioned runtime schema unless the implementation adds explicit parsing/validation later
+
+## Configuration boundary with `axiom.yaml`
+
+An SDD project is configured in two files, and each one has its own responsibility. The boundary is:
+
+| File | What it declares | What validates it |
+|------|------------------|-------------------|
+| `axiom.yaml` | The structural declaration: `baseline` (the documents of the project baseline) and `technical_context` (the `maintained` and `reference` technical context). `governance.context` is unchanged and coexists with them | Loading `axiom.yaml` (strict syntax) and `axiom workspace validate` (files and artifact store) |
+| `openspec/config.yaml` | The behavioral rules: `rules.<phase>`, `strict_tdd`, `testing`, and `artifact_store` | Nothing in Go: it is the convention described in this document |
+
+Specifically:
+
+- `baseline` and `technical_context` live only in `axiom.yaml`. A key with that name in `openspec/config.yaml` has no effect: the status does not project it and archive does not read it.
+- The behavioral rules (`rules.<phase>`, `strict_tdd`, `artifact_store`) stay in `openspec/config.yaml` and do not move to `axiom.yaml`.
+- A project baseline (`baseline` with documents) and a maintained technical context (`technical_context.maintained`) require a file-based artifact store, because the archive integration reads and writes the change folder. If `openspec/config.yaml` declares `artifact_store`, it must be `openspec` or `hybrid`. With `engram` or `none`, `axiom workspace validate` reports an error and the status blocks only archiving, naming the cause and the continuation. When no `artifact_store` is declared, validation reports nothing for this reason; a context declared only as `reference` does not require a file-based store.
+- Skills do not interpret `axiom.yaml` on their own: they read the `baseline` and `technicalContext` locators from the status (`axiom sdd status --json`).
+
+To check the declaration: `axiom workspace validate --path <master folder>`.

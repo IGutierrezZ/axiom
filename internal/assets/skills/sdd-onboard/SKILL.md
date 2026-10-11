@@ -78,7 +78,7 @@ Narrate as you explore:
  Let me look at the relevant code..."
 ```
 
-Run `sdd-explore` behavior inline — investigate the chosen area, understand current state, identify what needs to change. Explain your findings to the user in plain language.
+Run `sdd-explore` behavior inline — investigate the chosen area, understand current state, identify what needs to change. Explain your findings to the user in plain language. When the status projects `baseline`, read the documents of the affected domains from `baseline.documents` (see `../_shared/project-baseline-convention.md`) and read `openspec/specs/` only when `baseline` is absent.
 
 Conclude with:
 ```
@@ -185,7 +185,7 @@ Run `sdd-archive` behavior. Show the result:
 
 ```
 "Done! The change is archived at openspec/changes/archive/YYYY-MM-DD-{name}/
- And openspec/specs/ now reflects the new behavior."
+ And the baseline now reflects the new behavior."
 ```
 
 ### Phase 10: Summary
@@ -215,7 +215,7 @@ Small tweaks? Just code. Features, APIs, architecture decisions? SDD first.
 
 **Next steps**:
 - Try /sdd-new for your next real feature
-- Check openspec/specs/ — that's your growing source of truth
+- Check the baseline (`openspec/specs/` unless the status projects `baseline`) — that's your growing source of truth
 - Questions? The orchestrator is always available
 ```
 

@@ -643,6 +643,10 @@ type Model struct {
 	ActiveHandoff     *handoff.Handoff
 	HandoffErr        string
 	LivingSpecs       []livingdoc.LivingSpecEntry
+	// LivingExternalBaseline indica que la baseline de especificaciones es del
+	// proyecto: el catálogo está vacío porque no se indexa, no porque falte
+	// especificación (REQ-24.25). Los dominios y rutas van en GovernanceMessage.
+	LivingExternalBaseline bool
 
 	// BackgroundIntent is the effective OpenCode background choice for the
 	// current install. BackgroundPersist is published only after success.
@@ -1706,7 +1710,7 @@ func (m Model) View() string {
 	case ScreenHandoffs:
 		return screens.RenderHandoffs(m.ActiveHandoff, m.SDDActiveChange, m.HandoffErr)
 	case ScreenLivingDoc:
-		return screens.RenderLivingDoc(m.LivingSpecs, m.Cursor, m.GovernanceMessage)
+		return screens.RenderLivingDoc(m.LivingSpecs, m.LivingExternalBaseline, m.Cursor, m.GovernanceMessage)
 	default:
 		return ""
 	}
@@ -5956,11 +5960,32 @@ func (m *Model) loadHubProjects() {
 	m.HubActivePath = cfg.ActiveWorkspace
 }
 
+// locatePlanningHome resuelve el planning home desde el directorio actual en
+// cada carga, sin guardar el resultado: la TUI vive mucho tiempo (REQ-24.10,
+// D-07). Un fallo de la resolución queda en GovernanceMessage con su causa y su
+// continuación; el aviso de la ubicación antigua divergente (Q14), también.
+func (m *Model) locatePlanningHome() (workspace.Location, bool) {
+	loc, err := workspace.Locate(".")
+	if err != nil {
+		m.GovernanceMessage = "Error resolviendo el planning home: " + err.Error()
+		return workspace.Location{}, false
+	}
+	if warning, ok := loc.LegacySpecsDivergence(); ok {
+		m.GovernanceMessage = warning
+	}
+	return loc, true
+}
+
 func (m *Model) loadSDDIncrements() {
 	m.GovernanceMessage = ""
 	var list []screens.SDDIncrementInfo
-	root := "."
-	activeDir := filepath.Join(root, "openspec", "changes")
+	m.SDDIncrements = nil
+	loc, ok := m.locatePlanningHome()
+	if !ok {
+		return
+	}
+	root := loc.PlanningHome
+	activeDir := filepath.Join(root, "changes")
 	if entries, err := os.ReadDir(activeDir); err == nil {
 		for _, e := range entries {
 			if !e.IsDir() || e.Name() == "archive" || e.Name() == "e2e-cumulative" {
@@ -5975,7 +6000,7 @@ func (m *Model) loadSDDIncrements() {
 		}
 	}
 
-	archiveDir := filepath.Join(root, "openspec", "changes", "archive")
+	archiveDir := filepath.Join(root, "changes", "archive")
 	if entries, err := os.ReadDir(archiveDir); err == nil {
 		for _, e := range entries {
 			if !e.IsDir() {
@@ -6037,8 +6062,11 @@ func (m *Model) loadMultiRoleState() {
 	m.MultiRoles = nil
 	m.MultiRoleBarrier = nil
 
-	cfg, err := workspace.LoadConfig("axiom.yaml")
-	if err == nil && cfg != nil {
+	loc, ok := m.locatePlanningHome()
+	if !ok {
+		return
+	}
+	if cfg := loc.Config; cfg != nil {
 		for key, role := range cfg.Roles {
 			m.MultiRoles = append(m.MultiRoles, screens.MultiRoleInfo{
 				ID:         key,
@@ -6049,7 +6077,7 @@ func (m *Model) loadMultiRoleState() {
 	}
 
 	if m.SDDActiveChange != "" {
-		changeDir := filepath.Join("openspec", "changes", m.SDDActiveChange)
+		changeDir := filepath.Join(loc.PlanningHome, "changes", m.SDDActiveChange)
 		var assignments []multirole.RoleAssignment
 		for _, r := range m.MultiRoles {
 			assignments = append(assignments, multirole.RoleAssignment{
@@ -6072,8 +6100,14 @@ func (m *Model) loadActiveHandoff() {
 		return
 	}
 
+	loc, err := workspace.Locate(".")
+	if err != nil {
+		m.HandoffErr = "Error resolviendo el planning home: " + err.Error()
+		return
+	}
+
 	candidates := []string{
-		filepath.Join("openspec", "changes", m.SDDActiveChange, "handoff.md"),
+		filepath.Join(loc.PlanningHome, "changes", m.SDDActiveChange, "handoff.md"),
 		filepath.Join(".openspec", "handoffs", m.SDDActiveChange+".md"),
 	}
 
@@ -6100,6 +6134,8 @@ func (m *Model) loadActiveHandoff() {
 
 func (m *Model) loadLivingDocs() {
 	m.GovernanceMessage = ""
+	m.LivingSpecs = nil
+	m.LivingExternalBaseline = false
 	srv := livingdoc.NewService(".", nil, nil)
 	cat, err := srv.GetCatalog(context.Background())
 	if err != nil {
@@ -6108,5 +6144,25 @@ func (m *Model) loadLivingDocs() {
 	}
 	if cat != nil {
 		m.LivingSpecs = cat.Specs
+		var messages []string
+		// Con baseline del proyecto el catálogo no se indexa: se muestran los
+		// dominios y las rutas declarados en lugar del catálogo (REQ-24.25).
+		if cat.ExternalBaseline != nil {
+			m.LivingExternalBaseline = true
+			messages = append(messages, externalBaselineMessage(cat.ExternalBaseline))
+		}
+		// Entre los avisos del catálogo va el de la ubicación antigua divergente (Q14).
+		messages = append(messages, cat.Warnings...)
+		m.GovernanceMessage = strings.Join(messages, " ")
 	}
+}
+
+// externalBaselineMessage explica que la baseline es del proyecto y lista los
+// dominios con la ruta de su documento.
+func externalBaselineMessage(external *livingdoc.ExternalBaseline) string {
+	documents := make([]string, 0, len(external.Documents))
+	for _, document := range external.Documents {
+		documents = append(documents, document.Domain+" → "+document.Path)
+	}
+	return "La baseline de especificaciones es externa (del proyecto) y no se indexa aquí. Dominios y rutas declarados: " + strings.Join(documents, "; ") + "."
 }

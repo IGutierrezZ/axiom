@@ -175,12 +175,22 @@ func (idx *Indexer) ParseSpecContent(content, domain, filePath string, modTime t
 	return entry, warnings
 }
 
-// RenderIndexMarkdown genera la representación Markdown canónica de openspec/INDEX.md.
+// defaultProjectName es el nombre que usa INDEX.md cuando el catálogo no lleva
+// ProjectName: el de la propia plataforma, que es lo que el índice decía siempre.
+const defaultProjectName = "Axiom"
+
+// RenderIndexMarkdown genera la representación Markdown canónica de INDEX.md.
+// El nombre del proyecto sustituye solo al literal «Axiom» del título y de
+// «Proyecto» (m11); el resto de la cabecera no cambia.
 func (idx *Indexer) RenderIndexMarkdown(catalog *LivingCatalog) string {
 	var sb strings.Builder
 
-	sb.WriteString("# Catálogo Maestro de Especificaciones Vivas — Axiom\n\n")
-	sb.WriteString("> **Proyecto:** Axiom (Spec-Driven Development Platform)\n")
+	projectName := catalog.ProjectName
+	if projectName == "" {
+		projectName = defaultProjectName
+	}
+	sb.WriteString(fmt.Sprintf("# Catálogo Maestro de Especificaciones Vivas — %s\n\n", projectName))
+	sb.WriteString(fmt.Sprintf("> **Proyecto:** %s (Spec-Driven Development Platform)\n", projectName))
 	sb.WriteString(fmt.Sprintf("> **Última Sincronización:** %s\n", catalog.LastSync.Format("2006-01-02 15:04:05 MST")))
 	sb.WriteString(fmt.Sprintf("> **Total Dominios:** %d | **Total Requerimientos:** %d | **Total Escenarios BDD:** %d\n\n",
 		len(catalog.Specs), catalog.TotalRequirements, catalog.TotalScenarios))
@@ -222,12 +232,15 @@ func (idx *Indexer) RenderIndexMarkdown(catalog *LivingCatalog) string {
 	return sb.String()
 }
 
-// SyncIndex escanea el directorio de especificaciones vivas y genera o actualiza el archivo INDEX.md.
-func (idx *Indexer) SyncIndex(specsRoot, indexFilePath string) (*SyncReport, error) {
+// SyncIndexForProject escanea el directorio de especificaciones vivas y genera o
+// actualiza el archivo INDEX.md. El nombre del proyecto figura en la cabecera
+// de INDEX.md; un nombre vacío conserva el de la plataforma.
+func (idx *Indexer) SyncIndexForProject(projectName, specsRoot, indexFilePath string) (*SyncReport, error) {
 	catalog, warnings, err := idx.ScanSpecs(specsRoot)
 	if err != nil {
 		return nil, fmt.Errorf("error escaneando especificaciones vivas: %w", err)
 	}
+	catalog.ProjectName = projectName
 
 	mdContent := idx.RenderIndexMarkdown(catalog)
 

@@ -65,7 +65,7 @@ openspec/changes/{change-name}/
 
 ### Step 3: Read Existing Specs
 
-**IF mode is `openspec` or `hybrid`:** If `openspec/specs/` has relevant specs, read them to understand current behavior that this change might affect.
+**IF mode is `openspec` or `hybrid`:** When the status projects `baseline`, read the documents of the affected domains from `baseline.documents` (see `../_shared/project-baseline-convention.md`) and read `openspec/specs/` only when `baseline` is absent. Read the relevant specs to understand current behavior that this change might affect. With a project baseline, `openspec/specs/` is not the baseline: name only domains that `baseline.documents` declares.
 
 **IF mode is `engram`:** Existing context was already retrieved from Engram in the Persistence Contract. Skip filesystem reads.
 
@@ -99,7 +99,7 @@ Be specific about the user need or technical debt being addressed.}
 
 > This section is the CONTRACT between proposal and specs phases.
 > The sdd-spec agent reads this to know exactly which spec files to create or update.
-> Research `openspec/specs/` before filling this in.
+> Research the baseline (Step 3) before filling this in.
 
 ### New Capabilities
 <!-- Capabilities being introduced. Each gets a full spec at `openspec/changes/{change-name}/specs/<name>/spec.md` during the spec phase and becomes `openspec/specs/<name>/spec.md` at archive.
@@ -110,7 +110,7 @@ Be specific about the user need or technical debt being addressed.}
 ### Modified Capabilities
 <!-- Existing capabilities whose REQUIREMENTS are changing (not just implementation).
      Only list here if spec-level behavior changes. Each needs a delta spec.
-     Use existing spec names from openspec/specs/. Leave empty if none. -->
+     Use existing spec names from the baseline (Step 3). Leave empty if none. -->
 - `<existing-capability-name>`: <what requirement is changing>
 
 ## Approach
@@ -183,9 +183,10 @@ Ready for specs (sdd-spec) or design (sdd-design).
 - Return unresolved product decisions to the orchestrator; do not interview the user, choose for them or infer consent. Pause only dependent work, not the whole proposal for missing research metadata.
 - Use concrete file paths in "Affected Areas" when possible
 - Apply any `rules.proposal` from `openspec/config.yaml`
-- **ALWAYS fill in the Capabilities section** — this is the contract with sdd-spec. Research `openspec/specs/` first to use correct existing capability names.
+- **ALWAYS fill in the Capabilities section** — this is the contract with sdd-spec. Research the baseline (Step 3) first to use correct existing capability names.
 - New Capabilities → each gets a full spec at `openspec/changes/{change-name}/specs/<name>/spec.md` during the spec phase and becomes `openspec/specs/<name>/spec.md` at archive
 - Modified Capabilities → each will become a delta spec in the change folder
 - If nothing changes at the spec level (pure refactor, config change), explicitly write "None" under both sub-sections — don't leave them as template placeholders
 - **Sufficient detail**: Keep the proposal concise but complete enough to explain intent, scope, risks, rollback and success criteria. Use bullets or tables where they improve clarity. Do not truncate required detail to meet a word or line cap.
+- Never create, modify, or delete files under `technicalContext.reference` paths.
 - Return envelope per **Section D** from `skills/_shared/sdd-phase-common.md`.

@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/sddstatus"
+	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
 // RunSDDAttempt retains only the existing grant verb for explicit edit consent.
@@ -62,7 +63,15 @@ func runSDDAttempt(ctx context.Context, args []string, stdout io.Writer) error {
 	if len(missing) > 0 {
 		return fmt.Errorf("sdd-attempt grant requires %s; rerun `axiom sdd-attempt grant` with those missing flags", strings.Join(missing, ", "))
 	}
-	store, err := sddstatus.OpenRuntimeStore(ctx, *cwd, *change)
+	// The grant belongs to the specs repository that owns the planning home,
+	// whatever directory --cwd names: a code repository of a canonical
+	// workspace resolves to the same workspaceRoot as the master folder
+	// (REQ-24.8, REQ-24.9).
+	loc, err := workspace.Locate(*cwd)
+	if err != nil {
+		return fmt.Errorf("resolve sdd-attempt grant workspace: %w", err)
+	}
+	store, err := sddstatus.OpenRuntimeStore(ctx, loc.WorkspaceRoot, *change)
 	if err != nil {
 		return fmt.Errorf("open SDD edit authority: %w", err)
 	}

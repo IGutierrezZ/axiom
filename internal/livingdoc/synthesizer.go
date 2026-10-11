@@ -24,6 +24,8 @@ func NewSynthesizer(indexer *Indexer) *Synthesizer {
 }
 
 // ColdStart adopta orgánicamente un cambio, promoviendo su spec.md a especificación viva si no existía.
+// workspaceRoot es la raíz ya resuelta por workspace.Locate (el padre del planning
+// home), no el directorio de partida del servicio.
 func (s *Synthesizer) ColdStart(workspaceRoot, changeName, targetDomain string) (*LivingSpecEntry, error) {
 	if targetDomain == "" {
 		// Limpiar prefijos de fecha o de incremento (ej. 2026-09-14-inc-01-workspace -> workspace)
