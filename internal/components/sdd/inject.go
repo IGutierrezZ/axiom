@@ -2713,7 +2713,86 @@ func readAndMigrateOpenCodeCompatibleJSON(path string) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("migrate OpenCode-compatible command prompt field: %w", err)
 	}
+	baseJSON, err = retireObsoleteOpenCodePermissionKeys(baseJSON)
+	if err != nil {
+		return nil, fmt.Errorf("retire obsolete OpenCode-compatible permission keys: %w", err)
+	}
 	return baseJSON, nil
+}
+
+// obsoleteOpenCodePermissionKeys enumerates the managed permission keys that a
+// previous release wrote into agent entries and that the current overlays no
+// longer declare, grouped by agent and then by permission action.
+//
+// The settings merge is a deep merge that never deletes base keys, and the
+// merge of "permission" is deliberately conservative so user rules survive. A
+// key dropped from an overlay would therefore stay in existing installs for
+// good, so each one is retired here, by exact name, before the merge. Never
+// add a pattern or a prefix: only keys that a release really wrote belong here.
+//
+// review-validator / bash: the validator's allowance for the legacy
+// "gentle-ai" spelling of the read-only inspection command, written by the
+// overlays from 2663f2cc until #132 removed it.
+var obsoleteOpenCodePermissionKeys = map[string]map[string][]string{
+	"review-validator": {
+		"bash": {"gentle-ai review inspect-candidate --purpose targeted-validation *"},
+	},
+}
+
+// retireObsoleteOpenCodePermissionKeys deletes from the base settings the
+// permission keys listed in obsoleteOpenCodePermissionKeys. Every other rule,
+// including the ones the user added to the same permission object, is kept
+// untouched and in order (OpenCode permission rules are order-sensitive). A
+// permission object left empty stays in place: the overlay fills it again.
+func retireObsoleteOpenCodePermissionKeys(baseJSON []byte) ([]byte, error) {
+	if len(strings.TrimSpace(string(baseJSON))) == 0 {
+		return baseJSON, nil
+	}
+
+	root, err := filemerge.UnmarshalJSONObject(baseJSON)
+	if err != nil {
+		// Preserve prior behavior for non-JSON/non-parseable inputs.
+		return baseJSON, nil
+	}
+
+	agents, ok := root["agent"].(map[string]any)
+	if !ok {
+		return baseJSON, nil
+	}
+
+	changed := false
+	for agentName, byAction := range obsoleteOpenCodePermissionKeys {
+		agent, ok := agents[agentName].(map[string]any)
+		if !ok {
+			continue
+		}
+		permission, ok := agent["permission"].(map[string]any)
+		if !ok {
+			continue
+		}
+		for action, keys := range byAction {
+			rules, ok := permission[action].(map[string]any)
+			if !ok {
+				continue
+			}
+			for _, key := range keys {
+				if _, exists := rules[key]; exists {
+					delete(rules, key)
+					changed = true
+				}
+			}
+		}
+	}
+
+	if !changed {
+		return baseJSON, nil
+	}
+
+	encoded, err := filemerge.MarshalJSONPreservingPermissions(baseJSON, root)
+	if err != nil {
+		return nil, err
+	}
+	return append(encoded, '\n'), nil
 }
 
 func mergeJSONFileContents(path string, baseJSON, overlay []byte) (mergeJSONResult, error) {

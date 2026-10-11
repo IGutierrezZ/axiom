@@ -9692,3 +9692,126 @@ func TestInjectOpenCodeRewritesLegacyManagedByMarker(t *testing.T) {
 		}
 	}
 }
+
+const legacyValidatorBashKey = "gentle-ai review inspect-candidate --purpose targeted-validation *"
+
+func openCodeValidatorBashRules(t *testing.T, content []byte) map[string]any {
+	t.Helper()
+	root, err := filemerge.UnmarshalJSONObject(content)
+	if err != nil {
+		t.Fatalf("UnmarshalJSONObject() error = %v\n%s", err, content)
+	}
+	agent, _ := root["agent"].(map[string]any)["review-validator"].(map[string]any)
+	permission, _ := agent["permission"].(map[string]any)
+	rules, _ := permission["bash"].(map[string]any)
+	if rules == nil {
+		t.Fatalf("review-validator permission.bash missing:\n%s", content)
+	}
+	return rules
+}
+
+func TestRetireObsoleteOpenCodePermissionKeysKeepsUserRules(t *testing.T) {
+	seed := []byte(`{
+  "theme": "dark",
+  "agent": {
+    "review-validator": {
+      "mode": "subagent",
+      "permission": {
+        "edit": "deny",
+        "bash": {
+          "gentle-ai review inspect-candidate --purpose targeted-validation *": "allow",
+          "git status": "allow",
+          "*": "deny"
+        }
+      }
+    },
+    "custom": {"permission": {"bash": {"gentle-ai review inspect-candidate --purpose targeted-validation *": "allow"}}}
+  }
+}
+`)
+	content, err := retireObsoleteOpenCodePermissionKeys(seed)
+	if err != nil {
+		t.Fatalf("retireObsoleteOpenCodePermissionKeys() error = %v", err)
+	}
+	rules := openCodeValidatorBashRules(t, content)
+	if _, exists := rules[legacyValidatorBashKey]; exists {
+		t.Fatalf("legacy permission key should be retired:\n%s", content)
+	}
+	if rules["git status"] != "allow" || rules["*"] != "deny" || len(rules) != 2 {
+		t.Fatalf("user rules must survive untouched, got %#v", rules)
+	}
+	// Rule order is significant in OpenCode: the user rule precedes the catch-all.
+	if strings.Index(string(content), `"git status"`) > strings.Index(string(content), `"*": "deny"`) {
+		t.Fatalf("permission rule order changed:\n%s", content)
+	}
+	root, _ := filemerge.UnmarshalJSONObject(content)
+	if root["theme"] != "dark" {
+		t.Fatalf("unrelated settings lost:\n%s", content)
+	}
+	// Only the enumerated agent is touched: the same key on another agent is user-owned.
+	custom := root["agent"].(map[string]any)["custom"].(map[string]any)["permission"].(map[string]any)["bash"].(map[string]any)
+	if custom[legacyValidatorBashKey] != "allow" {
+		t.Fatalf("rule on a non-managed agent must be preserved, got %#v", custom)
+	}
+}
+
+func TestRetireObsoleteOpenCodePermissionKeysNoopWithoutLegacyKey(t *testing.T) {
+	for name, seed := range map[string]string{
+		"empty":               ``,
+		"not json":            `not json at all`,
+		"no agent":            `{"theme":"dark"}`,
+		"validator no bash":   `{"agent":{"review-validator":{"permission":{"edit":"deny"}}}}`,
+		"validator bash text": `{"agent":{"review-validator":{"permission":{"bash":"deny"}}}}`,
+		"jsonc with comments": "// keep\n{\n  \"agent\": {\"review-validator\": {\"permission\": {\"bash\": {\"axiom review inspect-candidate --purpose targeted-validation *\": \"allow\", \"*\": \"deny\"}}}}, // keep too\n}\n",
+	} {
+		t.Run(name, func(t *testing.T) {
+			content, err := retireObsoleteOpenCodePermissionKeys([]byte(seed))
+			if err != nil {
+				t.Fatalf("retireObsoleteOpenCodePermissionKeys() error = %v", err)
+			}
+			if string(content) != seed {
+				t.Fatalf("base without the legacy key must be returned byte for byte\nwant: %q\n got: %q", seed, content)
+			}
+		})
+	}
+}
+
+func TestMergeOpenCodeJSONFileRetiresLegacyValidatorPermission(t *testing.T) {
+	overlay, err := assets.Read(overlayAssetPath(model.SDDModeMulti))
+	if err != nil {
+		t.Fatalf("assets.Read() error = %v", err)
+	}
+	overlayRoot, err := filemerge.UnmarshalJSONObject([]byte(overlay))
+	if err != nil {
+		t.Fatalf("UnmarshalJSONObject(overlay) error = %v", err)
+	}
+	patch, err := json.Marshal(map[string]any{"agent": map[string]any{"review-validator": overlayRoot["agent"].(map[string]any)["review-validator"]}})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	path := filepath.Join(t.TempDir(), "opencode.json")
+	seed := `{"agent":{"review-validator":{"permission":{"bash":{"gentle-ai review inspect-candidate --purpose targeted-validation *":"allow","git status":"allow","*":"deny"}}}}}`
+	if err := os.WriteFile(path, []byte(seed), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := mergeOpenCodeJSONFile(path, patch); err != nil {
+		t.Fatalf("mergeOpenCodeJSONFile() error = %v", err)
+	}
+	first, _ := os.ReadFile(path)
+	rules := openCodeValidatorBashRules(t, first)
+	if _, exists := rules[legacyValidatorBashKey]; exists {
+		t.Fatalf("sync must retire the legacy validator permission:\n%s", first)
+	}
+	if rules["axiom review inspect-candidate --purpose targeted-validation *"] != "allow" || rules["git status"] != "allow" || rules["*"] != "deny" {
+		t.Fatalf("managed and user rules must both be present, got %#v", rules)
+	}
+
+	if _, err := mergeOpenCodeJSONFile(path, patch); err != nil {
+		t.Fatalf("second mergeOpenCodeJSONFile() error = %v", err)
+	}
+	second, _ := os.ReadFile(path)
+	if string(first) != string(second) {
+		t.Fatalf("merge must be idempotent\nfirst=%s\nsecond=%s", first, second)
+	}
+}
