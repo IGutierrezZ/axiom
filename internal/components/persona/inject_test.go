@@ -3094,12 +3094,13 @@ func TestInjectHermesNeutralWritesSOULMD(t *testing.T) {
 	}
 }
 
-// TestHermesPersonaAssetsContainIdentitySection verifies that both Hermes persona
-// assets include an explicit ## Identity section that names "Gentle AI" and "Hermes".
+// TestHermesPersonaAssetsContainIdentitySection verifies that every Hermes persona
+// asset includes an explicit ## Identity section that names "Axiom" and "Hermes".
 // This ensures that when a user asks "who are you?" the agent does not fall back to a
-// generic assistant identity — it answers as Gentle AI running on Hermes Agent.
+// generic assistant identity — it answers as Axiom running on Hermes Agent.
 func TestHermesPersonaAssetsContainIdentitySection(t *testing.T) {
 	paths := []string{
+		"hermes/persona-axiom.md",
 		"hermes/persona-gentleman.md",
 		"hermes/persona-neutral.md",
 	}
@@ -3111,8 +3112,11 @@ func TestHermesPersonaAssetsContainIdentitySection(t *testing.T) {
 			if !strings.Contains(content, "## Identity") {
 				t.Fatalf("%s missing ## Identity section", path)
 			}
-			if !strings.Contains(content, "Gentle AI") {
-				t.Fatalf("%s ## Identity section must mention \"Gentle AI\"", path)
+			if !strings.Contains(content, "You are **Axiom running on Hermes Agent**.") {
+				t.Fatalf("%s ## Identity section must present the agent as \"Axiom running on Hermes Agent\"", path)
+			}
+			if strings.Contains(content, "Gentle AI") {
+				t.Fatalf("%s must not present the agent as the upstream brand \"Gentle AI\"", path)
 			}
 			if !strings.Contains(content, "Hermes") {
 				t.Fatalf("%s ## Identity section must mention \"Hermes\"", path)
