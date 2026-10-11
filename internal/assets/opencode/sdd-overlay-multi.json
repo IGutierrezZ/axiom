@@ -221,7 +221,6 @@
         "task": "deny",
         "bash": {
           "axiom review inspect-candidate --purpose targeted-validation *": "allow",
-          "gentle-ai review inspect-candidate --purpose targeted-validation *": "allow",
           "*": "deny"
         }
       }
