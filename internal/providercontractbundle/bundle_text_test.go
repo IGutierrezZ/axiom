@@ -171,6 +171,27 @@ func TestVerifyArchiveRejectsTextThatDoesNotMatchTheDeclaredContract(t *testing.
 	}
 }
 
+// An overflowing component must be refused by the semver pattern itself, at the
+// manifest identity check, before any version gate can read it as unparseable.
+func TestVerifyArchiveRejectsAnOverflowingContractSemverComponent(t *testing.T) {
+	base, err := generatedFiles("1.2.1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, semver := range []string{"1000000000.2.1", "1.1000000000.1", "1.2.1000000000"} {
+		t.Run(semver, func(t *testing.T) {
+			files := cloneFiles(base)
+			rebindManifest(t, files, semver)
+			archive := filepath.Join(t.TempDir(), "overflow.tar.gz")
+			writeArchive(t, archive, files, nil, false)
+			err := VerifyArchive(archive)
+			if err == nil || !strings.Contains(err.Error(), "manifest identity is unsupported") {
+				t.Fatalf("VerifyArchive(%s) = %v, want a manifest identity refusal", semver, err)
+			}
+		})
+	}
+}
+
 func TestLegacyResultSchemaFailsLoudlyUnlessExactlyOneKnownTitleOccurs(t *testing.T) {
 	const lens = `{"title": "Axiom reviewer result"}`
 	for _, test := range []struct {

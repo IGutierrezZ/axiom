@@ -304,13 +304,23 @@ func TestVerifyArchiveRejectsOversizedPAXMetadata(t *testing.T) {
 
 func TestReadContractSemverRejectsNonCanonicalInput(t *testing.T) {
 	filename := filepath.Join(t.TempDir(), "CONTRACT_SEMVER")
-	for _, value := range []string{"v1.0.0\n", "1.0\n", "01.0.0\n", "1.0.0"} {
+	for _, value := range []string{"v1.0.0\n", "1.0\n", "01.0.0\n", "1.0.0", "1000000000.0.0\n", "0.1000000000.0\n", "0.0.1000000000\n"} {
 		if err := os.WriteFile(filename, []byte(value), 0o600); err != nil {
 			t.Fatal(err)
 		}
 		if _, err := ReadContractSemver(filename); err == nil {
 			t.Fatalf("ReadContractSemver accepted %q", value)
 		}
+	}
+}
+
+func TestReadContractSemverAcceptsTheLargestBoundedComponents(t *testing.T) {
+	filename := filepath.Join(t.TempDir(), "CONTRACT_SEMVER")
+	if err := os.WriteFile(filename, []byte("999999999.999999999.999999999\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := ReadContractSemver(filename); err != nil {
+		t.Fatalf("ReadContractSemver rejected nine-digit components: %v", err)
 	}
 }
 
