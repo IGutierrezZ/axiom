@@ -70,7 +70,7 @@ Espacio canónico (fixture de la spec): `<maestra>` sin versionar, con `.axiom-w
   - Actualizar este documento y su espejo en Engram con la evidencia y los SHAs.
   - Preparar el PR (`type:chore`) y dejar push, PR y merge a decisión del usuario.
   - **Hecho (2026-10-12).** `go build ./...` y `go vet ./internal/cli/... ./internal/workspace/... ./internal/specbaseline/...` → sin errores; `git status --porcelain` vacío. Commits: T1 `e2fe1432`, T2 `255af8d4` y este cierre. `git diff --stat c0258679..HEAD` solo toca ficheros `_test.go` y este documento: no cambia código de producción.
-  - PR propuesto: título `test: cubrir W1 y etiquetar S4, seguimientos de inc-24`, etiqueta `type:chore`. Push y PR pendientes de la decisión del usuario.
+  - PR [IGutierrezZ/axiom#139](https://github.com/IGutierrezZ/axiom/pull/139) (`type:chore`), fusionado con squash en `main` el 2026-10-12 como `76b5d019`, con el CI en verde.
 
 ## Criterios de aceptación
 
@@ -84,8 +84,9 @@ Espacio canónico (fixture de la spec): `<maestra>` sin versionar, con `.axiom-w
 - 2026-10-12: documento abierto (3 tareas). Pendiente de ejecución desde otra sesión.
 - 2026-10-12: T1 hecha (W1 cubierto; mutación confirma que la prueba detecta un repositorio equivocado).
 - 2026-10-12: T2 hecha (etiquetas REQ-24.16 y REQ-24.44 en pruebas que los cubren).
-- 2026-10-12: T3 hecha. 3/3. Pendiente: push y PR, a decisión del usuario.
+- 2026-10-12: T3 hecha. 3/3.
+- 2026-10-12: #139 fusionado (`76b5d019`). ODD cerrado; worktree y rama de trabajo retirados.
 
 ## Siguiente paso
 
-Push de la rama y PR `type:chore`, cuando el usuario lo autorice.
+Ninguno. ODD cerrado.
