@@ -59,6 +59,7 @@ Restart OpenCode after enabling managed activation. Restart the shell if the lau
 - **GGA on Windows** works from both Git Bash and PowerShell. Axiom installs a `gga.ps1` shim that automatically delegates to Git Bash, so no manual shell switching is required.
 - **PowerShell source-installer output** is forced to UTF-8 and installs through Go's configured `GOBIN`/`GOPATH`.
 - **Fresh install detection** falls back to known Engram™/GGA install locations when the running process has a stale `PATH`.
+- **Running the test suite on Windows** (contributors): see [Windows test policy](testing/windows-tests.md) for focused local runs, symlink skips, `TEMP` placement, and when CI runs the Windows tests.
 
 ---
 
