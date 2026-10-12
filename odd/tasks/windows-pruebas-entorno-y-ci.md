@@ -66,6 +66,45 @@ Estas fallan solo con carga:
 - `C:\repos\axiom` es el checkout de otra sesión y no se toca.
 - En local no se ejecuta la suite completa en Windows: solo paquetes focalizados con `-run`, más el ratchet de código muerto y el de refusals.
 
+## Diagnóstico de T1 (2026-10-12)
+
+Datos de la máquina: Windows 11 Enterprise 10.0.26200, Go 1.26.3 y modo desarrollador desactivado.
+
+- `os.Symlink` falla con el error 1314 (`ERROR_PRIVILEGE_NOT_HELD`).
+- `mklink /J` funciona.
+- `net.Listen("unix")` funciona.
+- `codegraph` está en el PATH.
+
+| Paquete | Prueba(s) | Resultado y causa confirmada | Clase | Destino |
+|---|---|---|---|---|
+| `internal/pathidentity` | `TestSameDirectoryAcceptsTwoSpellingsOfOneDirectory`, `TestContainsAcceptsAPathAddressedThroughAnAliasedAncestor`, `TestContainsAcceptsTheRootItself`, `TestContainsAcceptsADescendantThatDoesNotExistYet` | Error 1314 en el helper compartido `aliasedRoots` (`identity_test.go:25`) | Capacidad | T2 |
+| `internal/releasepolicy` | `TestValidateRunMarkerRejectsAMarkerInsideASymlinkedDist` | Error 1314 (`run_marker_identity_test.go:24`) | Capacidad | T2 |
+| `internal/reviewtransaction` | `TestMaintenanceLockRejectsSymlinksAndStaleBytesAreNotOwnership`, `TestMaintenanceLockRejectsSymlinkedAuthorityComponent` | Error 1314 (`maintenance_lock_test.go:126`, `:330`) | Capacidad | T2 |
+| `internal/cli` | `TestCodeGraphGuidanceSyncStepRestoresSymlinkAfterInstallerFailure`, `TestCodeGraphGuidanceSyncStepPreservesBrokenSymlinkChain` | Error 1314 (`sync_test.go:2265`, `:2329`) | Capacidad | T2 |
+| `internal/cli` | `TestRunSyncMigratesLegacyManagedPiCodeGraphSelection` | No usa enlaces simbólicos. Ejecuta el `codegraph install` real porque no sustituye `cmdLookPath` (`sync_test.go:2774`; la prueba hermana de `:2755` sí lo hace). Pasa sin `codegraph` en el PATH. | Defecto de aislamiento de la prueba | Hallazgo H1 |
+| `internal/components/filemerge` | `TestWriteFileAtomicFollowsDirectoryJunction`, `TestWriteFileAtomicFollowsRelativeDirectoryJunction` | La *junction* se crea bien. Falla `os.CreateTemp` (`O_CREATE\|O_EXCL`) a través de ella, y solo bajo `...\AppData\Local\...`. Con `TMP=TEMP=C:\jntmp`, pasan. | Entorno del arnés (TEMP) | Documentar en T5; hallazgo H4 |
+| `internal/backup` | `TestSnapshotterSkipsUnixSockets` | `net.Listen("unix")` funciona, pero `os.Lstat` del socket falla con `ERROR_CANT_ACCESS_FILE`, solo bajo `AppData\Local`. Pasa con TEMP fuera de esa ruta. | Entorno del arnés (TEMP) | Documentar en T5 |
+| `internal/semantic` | `TestServiceReindexCodeGraph` | `service.go:260` llama a `exec.LookPath("codegraph")` sin pasar por el `Detector` inyectado y ejecuta el `codegraph index` real | Defecto de aislamiento | Hallazgo H2 |
+| `internal/opencode` | `TestRunCatalogCommandCancelsOverflowingChild` | Falla 4 de 4 veces: 1,1–1,4 s frente a un presupuesto de 1 s. El reloj incluye el primer `exec` del binario recién compilado (`catalog_test.go:118-141`). | Tiempo | T3 |
+| `internal/tui` | `TestRuntimeCatalogDiscoveryIgnoresStaleProjectResults` | Lee el `opencode.json` real del usuario, que trae el proveedor `litellm` (`model.go:5397`). La prueba solo aísla `modelPickerSettingsPath`. | Defecto de aislamiento | Hallazgo H3 |
+| `e2e/organicruntime` | `TestNativeProviderCaptureResultCLIUsesCompiledAdapters` | Pasa sola (97 s); con el paquete entero, agota el tiempo | Tiempo | T3 |
+| `e2e/organicruntime` | `TestNativeProviderCaptureFailureReoffersTheSameBinding` | Falla incluso sola: el subtest codex muere a los 118 s con la salida vacía, señal del `organicLocalTimeout` de 90 s (inferido) | Tiempo | T3 |
+| `internal/sddstatus` | Procesos git con carga | Sin carga, el paquete pasa en 169 s. El presupuesto es `reviewtransaction.LocalGitCommandTimeout = 120s` (`snapshot.go:1899`). | Tiempo | T3 |
+| `bench/` (módulo aparte) | 19 pruebas | Cuatro causas: falsos binarios `#!/bin/sh` que Windows no ejecuta; TTY/ConPTY; «Access is denied» al limpiar un `.exe` bloqueado; y git o PATH. El CI solo ejecuta `bench` en Ubuntu (`ci.yml:99-103`). | Entorno del arnés y capacidad POSIX | Fuera de alcance: se documenta en T5 que `bench` no se ejecuta en Windows |
+
+**Cruce con CI.** El comentario de `windows-full-suite.yml` no enumera los dieciocho fallos. La única ejecución disponible, la 36278046574 del 2026-09-26, muestra 107 FAIL en 9 paquetes, la mayoría por la deriva del renombrado gentle-ai→axiom. Muchos ya se corrigieron en `main` (#60, #63, #70).
+
+- Ninguna prueba de la tabla local falló en ese runner. Se infiere que el runner tiene privilegio de enlaces simbólicos y un TEMP sin el problema de `AppData\Local`.
+- Para tener una línea base fiable hace falta una ejecución nueva de `windows-full-suite`, que lanza el usuario. De esa ejecución salen fallos que podrían ser defectos reales: H5.
+
+**Hallazgos (no se arreglan en este ODD; se deciden aparte):**
+
+- **H1** `internal/cli`: `TestRunSyncMigratesLegacyManagedPiCodeGraphSelection` depende de que no haya `codegraph` en el PATH. Corrección sugerida: sustituir `cmdLookPath` como hace la prueba hermana.
+- **H2** `internal/semantic`: `Service.ReindexCodeGraph` ignora el `Detector` inyectado (`service.go:260`). Es un defecto de diseño, y por eso la prueba depende del host.
+- **H3** `internal/tui`: `TestRuntimeCatalogDiscoveryIgnoresStaleProjectResults` lee la configuración real de OpenCode. Corrección sugerida: aislar `USERPROFILE`, `HOME` y `OPENCODE_CONFIG_DIR`.
+- **H4** `internal/components/filemerge`: `ensureAtomicParentDir` (`writer.go:300-345`) resuelve la *junction*, pero descarta la ruta resuelta, y `replaceDurably` crea el temporal a través de la *junction*. No es la causa del fallo, pero crear el temporal en la ruta resuelta evitaría `O_EXCL` sobre un punto de reanálisis. Es un endurecimiento opcional del producto.
+- **H5** CI (2026-09-26): `edit_authority_missing` con rutas `C:\Users\runneradmin\...` en tres pruebas de `e2e/organicruntime` (`TestSDDEditAuthorityConsentGrantLoop`, `TestSDDPreparationInvocationRoundTripsSpacedChange`, `TestSDDSameParentRepositoryConsentGrantLoop`), en `internal/sddstatus` (`TestCharacterization_EditAuthorityMissingBlocksApplyAndArchive`) y en `internal/cli` (`TestSDDStatusDoesNotPrepareConsentMarker`). Puede ser un defecto real de rutas Windows; hay que confirmarlo con una ejecución nueva.
+
 ## Política de CI propuesta (T4) — confirmar con el usuario antes de implementarla
 
 Se aplica a `windows-runtime` (`ci.yml`) y a `windows-full-suite.yml`:
@@ -96,21 +135,23 @@ Coste asumido: un cambio que rompa Windows sin tocar las rutas del punto 2 se de
 
 ## Tareas
 
-- [ ] **T1 · Inventario y diagnóstico**
-  - Ruta: delegada (mapeo de más de 4 ficheros).
-  - Confirmar la causa de cada fila de las tablas, sobre todo las marcadas «a diagnosticar», y cruzarlas con los 18 fallos genuinos del comentario del workflow.
-  - Clasificar cada fallo como **Capacidad**, **Tiempo** o **Defecto real**. Los defectos reales se anotan aquí como hallazgos y no se arreglan en este ODD.
-  - Sin commit de código; se actualiza este documento.
+- [x] **T1 · Inventario y diagnóstico**
+  - Ruta: delegada (dos mapeos en paralelo: diagnóstico local, y cruce con CI y presupuestos de tiempo). Disparador: mapeo de más de 4 ficheros.
+  - Resultado en la sección «Diagnóstico de T1». Sin commit de código; solo se actualiza este documento.
 - [ ] **T2 · Helper de capacidades y omisión motivada**
   - Ruta: delegada (writer único; varios ficheros).
-  - Helper compartido de pruebas (ubicación a decidir según los helpers existentes del repo) con sondas cacheadas por proceso: `RequireSymlink(t)`, `RequireDirJunction(t)` si aplica y `RequireUnixSocket(t)`.
-  - Aplicarlo solo a las pruebas clasificadas como Capacidad en T1.
+  - Alcance ajustado por T1: solo `RequireSymlink(t)`. Las *junctions* y los sockets Unix funcionan en esta máquina; sus fallos son del arnés (ver T1), así que no se crean sondas para ellos.
+  - Ubicación: paquete hoja nuevo `internal/testenv` (no hay helpers de pruebas compartidos en el repo). Se reutiliza la detección del error 1314 de `isSymlinkPrivilegeError` (`internal/components/filemerge/writer_test.go`).
+  - Aplicarlo solo a las 9 pruebas clasificadas como Capacidad en T1.
   - Probar el propio helper: debe omitir solo cuando la sonda falla.
   - Comprobación: en esta máquina, cada una de esas pruebas pasa a SKIP con un motivo claro; en Linux (WSL, `GOOS=linux go test -c`) se ejecutan y pasan.
   - Commit: `test: omitir con motivo las pruebas que requieren capacidades del sistema no disponibles`.
 - [ ] **T3 · Presupuestos de tiempo de las pruebas**
   - Ruta: delegada.
-  - Localizar los presupuestos de las pruebas de clase Tiempo, empezando por el de git de `internal/sddstatus` y el de `operation_timeout` de `e2e/organicruntime`.
+  - Presupuestos localizados en T1:
+    - `reviewtransaction.LocalGitCommandTimeout` y `RemoteGitCommandTimeout`: variables de producción que ya son una costura de pruebas. Se escalan en el `TestMain` de `internal/sddstatus`.
+    - `organicLocalTimeout` y sus hermanas en `e2e/organicruntime`.
+    - El presupuesto de 1 s de `TestRunCatalogCommandCancelsOverflowingChild` en `internal/opencode`.
   - Hacerlos configurables con una variable de entorno de escala, por ejemplo `AXIOM_TEST_TIMEOUT_SCALE`, y con un valor por defecto más holgado en Windows si la medición lo justifica.
   - El presupuesto de producción no cambia.
   - Comprobación: los paquetes afectados pasan con la máquina cargada (`go test -p 4`).
@@ -142,7 +183,8 @@ Coste asumido: un cambio que rompa Windows sin tocar las rutas del punto 2 se de
 ## Progreso
 
 - 2026-10-12: documento abierto con 6 tareas. T4 espera las decisiones (a) a (c) del usuario. Pendiente de ejecución desde otra sesión.
+- 2026-10-12: T1 cerrada. Resultado: 9 pruebas de Capacidad (todas por enlaces simbólicos), 4 de Tiempo, 3 de entorno por la ruta de TEMP, 3 con defecto de aislamiento (H1–H3) y `bench` fuera de alcance. Hallazgos H1–H5 anotados. El alcance de T2 se reduce a `RequireSymlink`.
 
 ## Siguiente paso
 
-T1.
+T2 y T3.
