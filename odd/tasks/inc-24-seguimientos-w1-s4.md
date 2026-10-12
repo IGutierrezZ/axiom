@@ -65,10 +65,12 @@ Espacio canónico (fixture de la spec): `<maestra>` sin versionar, con `.axiom-w
   - Checks: `rg -n "REQ-24.16|REQ-24.44" --glob '*_test.go' internal` encuentra las etiquetas; `go test ./internal/workspace ./internal/specbaseline -count=1 -timeout 30m`; `gofmt -l internal/workspace internal/specbaseline`.
   - **Hecho (2026-10-12).** Ruta: en línea. Cobertura comprobada antes de etiquetar. REQ-24.16: `TestDeclarationsValidBlocksAreLoaded` (`directed` por defecto en prosa, `register` declarado, composición con perfil) y los casos `integracion*` de `TestDeclarationsBaselineValidation` (valor desconocido, `compose` y `integration` en un documento con perfil, rechazados). REQ-24.44: `TestComposeModifiedReplacesOnlyTheBlockAndDropsTheNotes`, `TestComposeModifiedOnAMissingIDNamesSectionAndRequirement`, `TestComposeRemovedDeletesOnlyTheBlockAndKeepsItsTail`, `TestComposeRemovedWithSupersedeKeepsTheBlockMarked`, `TestComposeRenamedWithIDIdentityIsRejected`, `TestComposeRenamedWithTextIdentityRetitlesTheBlock` y `TestComposeTextIdentityMatchesTheNativeEngine`.
   - Checks: `rg` encuentra 3 líneas con REQ-24.16 y 7 con REQ-24.44; `gofmt -l` → vacío; `go test ./internal/workspace ./internal/specbaseline -count=1 -timeout 30m` → `ok` (3,6 s y 194 s).
-- [ ] **T3 · Cierre**
+- [x] **T3 · Cierre**
   - `go build ./...`, `go vet ./internal/cli/... ./internal/workspace/... ./internal/specbaseline/...` y `git status --porcelain` vacío.
   - Actualizar este documento y su espejo en Engram con la evidencia y los SHAs.
   - Preparar el PR (`type:chore`) y dejar push, PR y merge a decisión del usuario.
+  - **Hecho (2026-10-12).** `go build ./...` y `go vet ./internal/cli/... ./internal/workspace/... ./internal/specbaseline/...` → sin errores; `git status --porcelain` vacío. Commits: T1 `e2fe1432`, T2 `255af8d4` y este cierre. `git diff --stat c0258679..HEAD` solo toca ficheros `_test.go` y este documento: no cambia código de producción.
+  - PR propuesto: título `test: cubrir W1 y etiquetar S4, seguimientos de inc-24`, etiqueta `type:chore`. Push y PR pendientes de la decisión del usuario.
 
 ## Criterios de aceptación
 
@@ -82,7 +84,8 @@ Espacio canónico (fixture de la spec): `<maestra>` sin versionar, con `.axiom-w
 - 2026-10-12: documento abierto (3 tareas). Pendiente de ejecución desde otra sesión.
 - 2026-10-12: T1 hecha (W1 cubierto; mutación confirma que la prueba detecta un repositorio equivocado).
 - 2026-10-12: T2 hecha (etiquetas REQ-24.16 y REQ-24.44 en pruebas que los cubren).
+- 2026-10-12: T3 hecha. 3/3. Pendiente: push y PR, a decisión del usuario.
 
 ## Siguiente paso
 
-T3.
+Push de la rama y PR `type:chore`, cuando el usuario lo autorice.
