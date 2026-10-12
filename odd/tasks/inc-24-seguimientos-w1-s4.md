@@ -46,13 +46,16 @@ Espacio canónico (fixture de la spec): `<maestra>` sin versionar, con `.axiom-w
 
 ## Tareas
 
-- [ ] **T1 · W1: `pr_merged` contra el repositorio de especificaciones en el espacio canónico**
+- [x] **T1 · W1: `pr_merged` contra el repositorio de especificaciones en el espacio canónico**
   - Ruta: delegado (writer único). Disparador: preparar la escritura exige leer los helpers de `sdd_gate_test.go` (`newGovernanceGitWorkspace`, línea 280; casos `pr_merged` hacia las líneas 303-360) y la resolución de `workspace.Locate`.
   - Montar el espacio canónico de la spec con dos repositorios git reales: `repo-specs` con el cambio `inc-99-ejemplo` sellado y un commit `S` en su rama principal, y `repo-backend` con un commit `C`.
   - Desde `--cwd <maestra>`: con `--commit S` se acepta y `gates.yaml` anexa el registro; con `--commit C` se rechaza, `gates.yaml` no anexa nada y el mensaje nombra la causa.
   - Etiquetar la prueba con `REQ-24.12` y `REQ-21.16`.
   - Comprobación de mutación local (no se commitea) y registro de su resultado aquí.
   - Commit: `test(cli): evidencia pr_merged contra el repositorio de especificaciones en el espacio canónico`.
+  - **Hecho (2026-10-12).** Ruta: delegado (writer único). Prueba nueva `TestSDDGateRecordPRMergedVerifiesAgainstSpecsRepositoryInCanonicalWorkspace` en `internal/cli/sdd_gate_planning_home_test.go`. Reutiliza `workspacetest.Canonical`, `sealForGateTest` y `runGateTestGit`. Dos subtests sobre el mismo fixture: C se rechaza (el error nombra C, `ancestro` y `main`; `gates.yaml` sin cambios y 0 registros) y S se acepta (1 registro integration aprobado, `Verified=true`, `EvidenceRef=S`, `EvidenceBaseRef=main`).
+  - Mutación local (no commiteada, revertida con `git checkout`): `verifyGateEvidence(loc.Master, …)` hace fallar el subtest de S (`not a git repository`); `verifyGateEvidence(<maestra>/repo-backend, …)` hace fallar los dos (acepta C y rechaza S). Sin defecto de producción.
+  - Checks: `go test ./internal/cli -run 'SDDGateRecord|PlanningHome|TestEveryProductionRefusal|TestRefusalRatchet' -count=1` → `ok` (18,1 s, writer); prueba nueva repetida por el orquestador → `PASS`; `gofmt -l internal/cli` → vacío.
   - Checks: `go test ./internal/cli -run 'SDDGateRecord|PlanningHome|TestEveryProductionRefusal|TestRefusalRatchet' -count=1`, `gofmt -l internal/cli`.
 - [ ] **T2 · S4: etiquetas REQ-24.16 y REQ-24.44**
   - Ruta: en línea (cambio mecánico, solo comentarios).
@@ -75,7 +78,8 @@ Espacio canónico (fixture de la spec): `<maestra>` sin versionar, con `.axiom-w
 ## Progreso
 
 - 2026-10-12: documento abierto (3 tareas). Pendiente de ejecución desde otra sesión.
+- 2026-10-12: T1 hecha (W1 cubierto; mutación confirma que la prueba detecta un repositorio equivocado).
 
 ## Siguiente paso
 
-T1.
+T2.
