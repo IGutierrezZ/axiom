@@ -179,7 +179,21 @@ Coste asumido: un cambio que rompa Windows sin tocar las rutas del punto 2 se de
   - El presupuesto de producción no cambia.
   - Comprobación: los paquetes afectados pasan con la máquina cargada (`go test -p 4`).
   - Commit: `test: presupuestos de tiempo de las pruebas escalables y holgados con carga`.
-- [ ] **T4 · Ejecución selectiva de Windows en CI**
+- [x] **T4 · Ejecución selectiva de Windows en CI** — `d0082af2`, 298 líneas, rama `ci/windows-ejecucion-selectiva`.
+  - Ruta: delegada (writer único). Disparador: dos ficheros no triviales.
+  - Diseño:
+    - **Job `changes` en `ci.yml`** (Ubuntu, `contents: read`, sin credenciales persistentes): `git diff --name-only` sobre `base...head` en un PR y sobre `before..sha` en un push. Si no puede calcular el diff (rama nueva, force push, rango roto), falla abierto y ejecuta.
+    - **`windows-runtime`** se ejecuta con `!cancelled()` y cualquiera de estas condiciones: `workflow_dispatch`, `changes.outputs.windows`, que el job `changes` no termine bien, o la etiqueta `ci:windows` en el PR.
+    - **`windows-full-suite.yml`** se lanza con `workflow_dispatch`, con `pull_request` (`labeled`/`synchronize`/`reopened`, protegido por la etiqueta) y con el `schedule` `'20 3 * * 1'`. Un job `gate` (`actions: read`) compara `github.sha` con el `headSha` de la última ejecución correcta en `main`.
+    - Ahora los *shards* hacen checkout del *head* del PR.
+  - Comportamiento con la etiqueta: si se pone después de abrir el PR, solo lanza la suite completa. `windows-runtime` la recoge en el siguiente push, porque `ci.yml` no escucha el evento `labeled`.
+  - Prueba guardia `TestRequiredChecksFailClosedWhenFormatFails`: ahora admite por job sus `needs` y los fragmentos que debe contener su `if:`, incluido `!cancelled()`.
+  - Evidencia:
+    - Las pruebas de `internal/assets` sobre workflows pasan.
+    - `actionlint@v1.7.7`: exit 0.
+    - Detector de rutas: 29 casos correctos. Puerta del `schedule`: 11 casos correctos, con un `gh` simulado.
+  - Verificación: riesgo `high` (`shell_source`). Un verificador independiente no encontró bloqueos. Se aplicaron tres sugerencias suyas de severidad baja: el fragmento `!cancelled()` en la prueba guardia, permisos mínimos en `changes` y un comentario de concurrencia que había quedado obsoleto.
+  - Pendiente del usuario en GitHub: crear la etiqueta `ci:windows`, hacer push y lanzar una ejecución de prueba con `workflow_dispatch`.
   - Ruta: en línea o delegada según tamaño. **Requiere antes las decisiones (a) a (c) del usuario.**
   - Implementar la política en `ci.yml` (`windows-runtime`) y en `windows-full-suite.yml`.
   - Los filtros de rutas a nivel de job necesitan detectar los cambios dentro del workflow, sin depender de acciones de terceros no fijadas.
@@ -187,11 +201,27 @@ Coste asumido: un cambio que rompa Windows sin tocar las rutas del punto 2 se de
   - Actualizar el comentario de cabecera de `windows-full-suite.yml`.
   - Comprobación: validar la sintaxis (por ejemplo, `actionlint` si está disponible) y una ejecución manual de prueba con `workflow_dispatch`. El usuario autoriza el push.
   - Commit: `ci: ejecutar las pruebas de Windows solo por cambio relevante, etiqueta o antigüedad`.
-- [ ] **T5 · Documentación de la política**
+- [x] **T5 · Documentación de la política** — `3ff8b022`.
+  - Nueva página `docs/testing/windows-tests.md`, en inglés como el resto de `docs/`, enlazada desde «Windows Notes» de `docs/platforms.md`. Explica:
+    - qué se ejecuta en local: paquetes focalizados;
+    - la omisión de las pruebas de enlaces simbólicos y cómo habilitarlas;
+    - que TEMP debe quedar fuera de `%LOCALAPPDATA%`;
+    - `AXIOM_TEST_TIMEOUT_SCALE`;
+    - que `bench/` solo se ejecuta en Linux;
+    - la política de CI.
+  - Evidencia: `go test ./internal/components/sdd ./internal/assets -count=1` pasa.
   - Ruta: en línea.
   - En `docs/platforms.md`, o en la guía de contribución si existe, qué se ejecuta en local en Windows (paquetes focalizados), cómo forzar Windows en un PR y cada cuánto se ejecuta solo.
   - Commit: `docs: política de pruebas en Windows`.
-- [ ] **T6 · Cierre**
+- [ ] **T6 · Cierre** — comprobaciones hechas; faltan los PRs, que decide el usuario.
+  - Evidencia en la cabeza `3ff8b022`:
+    - `go build ./...`, `go vet ./...` y `gofmtcheck`: OK.
+    - Ratchet de código muerto: «no new unreachable functions».
+    - `go test -count=1` de `testenv`, `pathidentity`, `releasepolicy`, `sddstatus` (93 s), `opencode` y `assets`: ok.
+    - `reviewtransaction -run TestMaintenanceLock` y `cli -run TestCodeGraphGuidanceSyncStep`: ok.
+    - `git status --porcelain` vacío.
+    - `cli` y `reviewtransaction` completos no se ejecutan en local (instrucción del usuario).
+    - Para `e2e/organicruntime` vale la ejecución del writer de T3, porque el código no ha cambiado desde entonces.
   - `go build ./...`, `go vet ./...`, `go run ./internal/gofmtcheck`, `bash scripts/deadcode-ratchet.sh`, los paquetes tocados con `-count=1` y `git status --porcelain` vacío.
   - Actualizar este documento y el espejo.
   - Preparar los PRs. Push, PR y merge los decide el usuario.
@@ -214,6 +244,14 @@ Coste asumido: un cambio que rompa Windows sin tocar las rutas del punto 2 se de
   - PR 2: rama `ci/windows-ejecucion-selectiva`, apilada sobre el PR 1, con T4–T5. Se rebasa sobre `main` cuando se fusione el PR 1.
   - H6 y H7 quedan anotados como defectos (instrucción del usuario: no arreglar defectos reales). T3 se mantiene parcial por ellos.
 
+- 2026-10-12: T4 (`d0082af2`) y T5 (`3ff8b022`) hechas en `ci/windows-ejecucion-selectiva`. Comprobaciones de T6 en verde.
+  - Tamaño sin contar el documento ODD: PR 1, 411 líneas; PR 2, 354 líneas.
+  - Con el documento ODD, el PR 1 llega a unas 630 líneas.
+
 ## Siguiente paso
 
-T4 en la rama `ci/windows-ejecucion-selectiva`.
+El usuario decide push, PRs y merge, y si el PR 1 se queda entero con `size:exception` o se divide. Después:
+
+- crear la etiqueta `ci:windows`;
+- lanzar `windows-full-suite` con `workflow_dispatch` para tener una línea base nueva (H5);
+- decidir aparte H1–H7.
