@@ -2,7 +2,7 @@
 
 > **Documento vivo ODD.** Fichero autoritativo: `odd/tasks/seguimientos-merge-overlays-y-sync.md`.
 > Espejo de recuperación en Engram: topic `odd/seguimientos-merge-overlays-y-sync/tasks`, proyecto `axiom`.
-> **Estado: LANZADO el 2026-10-12 por el carril ODD.** Rama del documento: `docs/odd-seguimientos-merge-sync` (worktree `axiom-wt/odd-seguimientos-merge-sync-docs`). W1 fusionado (#137). W2 en revisión en #138.
+> **Estado: LANZADO el 2026-10-12 por el carril ODD.** Rama del documento: `docs/odd-seguimientos-merge-sync` (worktree `axiom-wt/odd-seguimientos-merge-sync-docs`). W1 fusionado (#137). W2 en #138 (verde, pendiente de que el usuario lo fusione). W3 implementado en local; push y PR pendientes de autorización.
 > Origen: cierre del ODD `marca-restos-persona-overlays` (`odd/tasks/marca-restos-persona-overlays.md`). Al ejecutar `axiom sync` tras fusionar #130-#134 salieron S1 y S3; S2 ya estaba anotado como seguimiento menor.
 
 ---
@@ -53,7 +53,7 @@ Hacer que `axiom sync` retire de verdad las reglas gestionadas obsoletas de las 
 
 - [x] **W1 · S1 · Retirar reglas gestionadas obsoletas** (fusionado por el usuario con #137, squash `bd82ed31`; rama y worktree borrados; rama `fix/opencode-retirar-permisos-heredados`, worktree `axiom-wt/w1-retirar-permisos-heredados`; ruta: delegada, disparador de escritor: `inject.go` + test): una migración en `mergeOpenCodeJSONFile`, junto a `migrateLegacyOpenCode*`, que elimine de los agentes gestionados las claves de permiso heredadas enumeradas, empezando por `gentle-ai review inspect-candidate --purpose targeted-validation *`. Tests: una base con la clave heredada y otra personalizada del usuario; tras el merge solo desaparece la heredada. Verificar con `axiom sync --scope global` que desaparece de `~/.config/opencode/opencode.json`.
 - [x] **W2 · S2 · Arnés crosslane** (commit `3f3d85f8` en `fix/crosslane-solo-grafia-axiom`, worktree `axiom-wt/w2-crosslane-solo-axiom`; ruta: inline, un solo fichero mecánico; PR #138, `type:bug`): exigir solo `axiom review inspect-candidate` en `scripts/crosslane/opencode.go:357` y ajustar el mensaje de fallo.
-- [ ] **W3 · S3 · Scope visible en sync** (rama `feat/sync-mostrar-scope`, worktree `axiom-wt/w3-sync-mostrar-scope`; ruta: delegada, disparador de escritor y de preparación: `sync.go` + tests): incluir el scope y la ruta raíz efectiva en el informe de `axiom sync`, también en el de no-op y en el de `--dry-run`.
+- [x] **W3 · S3 · Scope visible en sync** (commit `64985002`; PR pendiente de autorización; rama `feat/sync-mostrar-scope`, worktree `axiom-wt/w3-sync-mostrar-scope`; ruta: delegada, disparador de escritor y de preparación: `sync.go` + tests): incluir el scope y la ruta raíz efectiva en el informe de `axiom sync`, también en el de no-op y en el de `--dry-run`.
 - [ ] **W4 · Cierre:** actualizar este documento y abrir el PR `type:docs`.
 
 Previsión: unas 80-200 líneas en total, sobre todo tests de S1.
@@ -83,3 +83,7 @@ Previsión: unas 80-200 líneas en total, sobre todo tests de S1.
 - 2026-10-12, W2 (`3f3d85f8`, 4+/2- en `scripts/crosslane/opencode.go`, inline): el arnés exige solo `axiom review inspect-candidate` en el prompt hijo del validador y el mensaje de fallo nombra el comando. Comprobado antes: el texto lo emite fijo `internal/reviewerprovider/contract.go:76` con `axiom`, sin depender del dialecto (el arnés usa `-dialect gentle-ai` por defecto). `gofmt` limpio; `go build`, `go vet` y `go test ./scripts/crosslane/` OK. El arnés completo no se ejecutó (necesita binario y hosts reales).
 - 2026-10-12: con autorización del usuario, push de `fix/crosslane-solo-grafia-axiom` y PR #138 (`type:bug`). CI en curso.
 - 2026-10-12: #138 en verde; el modo automático volvió a bloquear `gh pr merge` (el permiso local sigue sin añadir), queda para el usuario. S3 decidido; W3 arranca desde `origin/main` `bd82ed31`.
+- 2026-10-12, W3 (`64985002`, +152/-1 en `internal/cli/sync.go`, `sync_test.go` y `docs/usage.md`, escritor sonnet delegado):
+  - `SyncResult` gana `Scope` y `ScopeRoot` (resuelto con `ResolveAgentConfigDir`, la misma función que decide dónde escribir). `RenderSyncReport` imprime `Scope: <scope> (<raíz>)` tras la cabecera en los informes con cambios, no-op y `--dry-run`; sin `Scope` no imprime la línea. `axiom sync` no tiene salida JSON. `docs/usage.md` describe la línea y recomienda `--scope global`.
+  - Matiz anotado, fuera de S3: en scope workspace, los agentes sin soporte de workspace siguen escribiendo en el home (aparecen en la lista de ficheros cambiados).
+  - Verificación del escritor: build, `go vet ./internal/cli/`, tests nuevos y existentes del informe de sync (51 s), Golden y `gofmtcheck` OK. Repetición del orquestador: tests `TestRenderSyncReport|TestRunSyncReportsEffectiveScope` OK; con el binario de la rama, `sync --dry-run` desde el repo muestra `Scope: workspace (C:\repos\axiom)` y `sync --scope global --dry-run` muestra `Scope: global (C:\Users\igutierrezz)`. Riesgo `medium` (`executable_change`).
