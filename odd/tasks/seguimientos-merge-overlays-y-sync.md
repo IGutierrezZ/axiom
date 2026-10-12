@@ -2,7 +2,7 @@
 
 > **Documento vivo ODD.** Fichero autoritativo: `odd/tasks/seguimientos-merge-overlays-y-sync.md`.
 > Espejo de recuperación en Engram: topic `odd/seguimientos-merge-overlays-y-sync/tasks`, proyecto `axiom`.
-> **Estado: creado el 2026-10-11 y PENDIENTE DE LANZAR.** Todavía no hay rama de trabajo ni código cambiado.
+> **Estado: CERRADO el 2026-10-12.** W1 (#137), W2 (#138) y W3 (#140) fusionados; W4 es el PR de este documento. Seguimientos abiertos en la sección 9.
 > Origen: cierre del ODD `marca-restos-persona-overlays` (`odd/tasks/marca-restos-persona-overlays.md`). Al ejecutar `axiom sync` tras fusionar #130-#134 salieron S1 y S3; S2 ya estaba anotado como seguimiento menor.
 
 ---
@@ -44,23 +44,24 @@ Hacer que `axiom sync` retire de verdad las reglas gestionadas obsoletas de las 
 
 ## 5. Decisiones del usuario
 
-- (pendiente) D0: carril ODD o SDD.
-- (pendiente) S1: ¿retirar por migración de claves heredadas enumeradas (recomendado, conserva las reglas del usuario) o marcar `permission.bash` de los agentes gestionados con `__replace__` (más simple, pero pisa las personalizaciones del usuario)?
-- (pendiente) S3: ¿basta con mostrar el scope y la ruta efectiva en el informe de sync, o se quiere además guardar el scope en el estado o avisar si el global está desfasado?
+- D0 (2026-10-12): carril **ODD**, elegido por el usuario.
+- S1 (2026-10-12): **migración de claves heredadas enumeradas.** La fija la restricción de la sección 2 (no borrar reglas del usuario); `__replace__` las pisaría, así que queda descartado.
+- (pendiente) S1b: ¿retirar también la regla heredada de la forma nativa v2 de OpenCode (`agents[].permissions`, regla `{action: shell, resource: "gentle-ai review inspect-candidate --purpose targeted-validation *", effect: allow}`)? `mergeOpenCodeJSONFile` sale por `nativeAgentOverlay` + `mergeNativePermissionRules` antes de la migración de W1, y esa rama conserva las reglas previas. Solo afecta a instalaciones nativas generadas entre `5a395e45` (soporte v2) y #132.
+- S3 (2026-10-12): **solo mostrar el scope y la ruta raíz efectiva** en el informe de `axiom sync` (también no-op y `--dry-run`). Sin estado nuevo ni aviso de global desfasado. Elegido por el usuario.
 
 ## 6. Tareas (commit → PR → merge)
 
-- [ ] **W1 · S1 · Retirar reglas gestionadas obsoletas:** una migración en `mergeOpenCodeJSONFile`, junto a `migrateLegacyOpenCode*`, que elimine de los agentes gestionados las claves de permiso heredadas enumeradas, empezando por `gentle-ai review inspect-candidate --purpose targeted-validation *`. Tests: una base con la clave heredada y otra personalizada del usuario; tras el merge solo desaparece la heredada. Verificar con `axiom sync --scope global` que desaparece de `~/.config/opencode/opencode.json`.
-- [ ] **W2 · S2 · Arnés crosslane:** exigir solo `axiom review inspect-candidate` en `scripts/crosslane/opencode.go:357` y ajustar el mensaje de fallo.
-- [ ] **W3 · S3 · Scope visible en sync:** incluir el scope y la ruta raíz efectiva en el informe de `axiom sync`, también en el de no-op y en el de `--dry-run`. Lo demás, según la decisión del usuario.
-- [ ] **W4 · Cierre:** actualizar este documento y abrir el PR `type:docs`.
+- [x] **W1 · S1 · Retirar reglas gestionadas obsoletas** (fusionado por el usuario con #137, squash `bd82ed31`; rama y worktree borrados; rama `fix/opencode-retirar-permisos-heredados`, worktree `axiom-wt/w1-retirar-permisos-heredados`; ruta: delegada, disparador de escritor: `inject.go` + test): una migración en `mergeOpenCodeJSONFile`, junto a `migrateLegacyOpenCode*`, que elimine de los agentes gestionados las claves de permiso heredadas enumeradas, empezando por `gentle-ai review inspect-candidate --purpose targeted-validation *`. Tests: una base con la clave heredada y otra personalizada del usuario; tras el merge solo desaparece la heredada. Verificar con `axiom sync --scope global` que desaparece de `~/.config/opencode/opencode.json`.
+- [x] **W2 · S2 · Arnés crosslane** (fusionado por el usuario con #138, squash `f0f6a801`; commit `3f3d85f8` en `fix/crosslane-solo-grafia-axiom`, worktree `axiom-wt/w2-crosslane-solo-axiom`; ruta: inline, un solo fichero mecánico; PR #138, `type:bug`): exigir solo `axiom review inspect-candidate` en `scripts/crosslane/opencode.go:357` y ajustar el mensaje de fallo.
+- [x] **W3 · S3 · Scope visible en sync** (fusionado por el usuario con #140, squash `005f15c5`; commit `64985002`; rama `feat/sync-mostrar-scope`, worktree `axiom-wt/w3-sync-mostrar-scope`; ruta: delegada, disparador de escritor y de preparación: `sync.go` + tests): incluir el scope y la ruta raíz efectiva en el informe de `axiom sync`, también en el de no-op y en el de `--dry-run`.
+- [x] **W4 · Cierre:** actualizar este documento y abrir el PR `type:docs` (rama `docs/odd-seguimientos-merge-sync`, rebasada sobre `origin/main` `005f15c5`).
 
-Previsión: unas 80-200 líneas en total, sobre todo tests de S1.
+Previsión: unas 80-200 líneas en total, sobre todo tests de S1. Real: W1 +202, W2 +4/-2, W3 +152/-1 (unas 360 líneas, por los tests de S1 y S3).
 
 ## 7. Criterios de aceptación
 
 - Tras `axiom sync --scope global`, ninguna instalación existente conserva reglas de permiso gestionadas que el overlay ya no declara, y las reglas añadidas por el usuario se mantienen.
-- `rg "gentle-ai review inspect-candidate"` solo aparece en el dialecto heredado, en los contratos congelados y en las listas de cadenas prohibidas de los tests.
+- `rg "gentle-ai review inspect-candidate"` solo aparece en el dialecto heredado, en los contratos congelados, en las listas de cadenas prohibidas de los tests y en la lista de claves obsoletas de W1 (`obsoleteOpenCodePermissionKeys`) con sus tests, que la necesitan para retirarla.
 - El informe de `axiom sync` dice qué scope y qué ruta ha sincronizado.
 - Build, tests dirigidos y goldens en verde; el CI de cada PR en verde antes de fusionar.
 
@@ -70,3 +71,35 @@ Previsión: unas 80-200 líneas en total, sobre todo tests de S1.
   - Evidencia de S1 y S3: `axiom sync` desde el repo informó de un no-op (scope workspace). `axiom sync --scope global` actualizó `~/.config/opencode/opencode.json` (23 entradas `__managed_by: axiom`, prompt del validador con `axiom`), pero la clave `gentle-ai` siguió en la línea 157.
   - La investigación la hizo un subagente sonnet de solo lectura.
 - Instalación accidental en el workspace: `C:\repos\axiom\.config\opencode\` (ignorada por git, `.gitignore:38`) también conserva la clave `gentle-ai`. Se puede borrar a mano; no forma parte del repo.
+- 2026-10-12: lanzado. Conciliación: `origin/main` en `32683e0a`; los ficheros de la sección 4 no han cambiado desde `8cf608bd`. D0 = ODD; S1 = migración enumerada. Creados los worktrees del documento y de W1 desde `origin/main`.
+- 2026-10-12, W1 (`0405d4a8`, +202 líneas en `inject.go` y `inject_test.go`, escritor sonnet delegado):
+  - `retireObsoleteOpenCodePermissionKeys` y el mapa `obsoleteOpenCodePermissionKeys` (agente → acción → claves exactas). Se llama al final de `readAndMigrateOpenCodeCompatibleJSON`, así que cubre OpenCode y los proveedores compatibles. Sin clave heredada devuelve los mismos bytes; con ella reserializa con `MarshalJSONPreservingPermissions` (conserva el orden de las reglas; pierde comentarios JSONC, igual que `RemoveJSONAgentTools`).
+  - Procedencia: la única clave de permiso con grafía `gentle-ai` que se escribió alguna vez, en `sdd-overlay-single.json` y `sdd-overlay-multi.json` desde `2663f2cc` hasta #132.
+  - Verificación del escritor: `go build ./...` OK; `go vet` OK; tests dirigidos OK; Golden OK; paquete `sdd` completo OK (96 s). `go test ./internal/components/filemerge/` falla en `TestWriteFileAtomicFollows{,Relative}DirectoryJunction` («createtemp … `.gentle-ai-*.tmp`: file already exists»); el orquestador lo reprodujo sobre `main` `32683e0a`: es previo y ajeno a W1.
+  - Repetición del orquestador: tests `RetireObsolete|RetiresLegacyValidator` OK. Riesgo `axiom review assess`: `medium` (`executable_change`); RDD desactivado, basta la autoverificación.
+  - Instalación real: copia de seguridad de `~/.config/opencode/opencode.json` y `axiom sync --scope global` con el binario de la rama. Diff semántico: desaparece solo `agent.review-validator.permission.bash["gentle-ai review inspect-candidate --purpose targeted-validation *"]` y se refresca el prompt del orquestador (assets de `main` posteriores a `8cf608bd`). Una segunda ejecución informa de un no-op.
+- 2026-10-12: con autorización del usuario, push de `fix/opencode-retirar-permisos-heredados` y PR #137 (`type:bug`). CI en curso.
+- 2026-10-12: el usuario fusionó #137 a mano (squash `bd82ed31`) porque el modo automático bloqueó `gh pr merge`. El permiso para la próxima vez (`.claude/settings.local.json`) también quedó bloqueado por automodificación; lo añade el usuario.
+- 2026-10-12, W2 (`3f3d85f8`, 4+/2- en `scripts/crosslane/opencode.go`, inline): el arnés exige solo `axiom review inspect-candidate` en el prompt hijo del validador y el mensaje de fallo nombra el comando. Comprobado antes: el texto lo emite fijo `internal/reviewerprovider/contract.go:76` con `axiom`, sin depender del dialecto (el arnés usa `-dialect gentle-ai` por defecto). `gofmt` limpio; `go build`, `go vet` y `go test ./scripts/crosslane/` OK. El arnés completo no se ejecutó (necesita binario y hosts reales).
+- 2026-10-12: con autorización del usuario, push de `fix/crosslane-solo-grafia-axiom` y PR #138 (`type:bug`). CI en curso.
+- 2026-10-12: #138 en verde; el modo automático volvió a bloquear `gh pr merge` (el permiso local sigue sin añadir), queda para el usuario. S3 decidido; W3 arranca desde `origin/main` `bd82ed31`.
+- 2026-10-12, W3 (`64985002`, +152/-1 en `internal/cli/sync.go`, `sync_test.go` y `docs/usage.md`, escritor sonnet delegado):
+  - `SyncResult` gana `Scope` y `ScopeRoot` (resuelto con `ResolveAgentConfigDir`, la misma función que decide dónde escribir). `RenderSyncReport` imprime `Scope: <scope> (<raíz>)` tras la cabecera en los informes con cambios, no-op y `--dry-run`; sin `Scope` no imprime la línea. `axiom sync` no tiene salida JSON. `docs/usage.md` describe la línea y recomienda `--scope global`.
+  - Matiz anotado, fuera de S3: en scope workspace, los agentes sin soporte de workspace siguen escribiendo en el home (aparecen en la lista de ficheros cambiados).
+  - Verificación del escritor: build, `go vet ./internal/cli/`, tests nuevos y existentes del informe de sync (51 s), Golden y `gofmtcheck` OK. Repetición del orquestador: tests `TestRenderSyncReport|TestRunSyncReportsEffectiveScope` OK; con el binario de la rama, `sync --dry-run` desde el repo muestra `Scope: workspace (C:\repos\axiom)` y `sync --scope global --dry-run` muestra `Scope: global (C:\Users\igutierrezz)`. Riesgo `medium` (`executable_change`).
+- 2026-10-12: con autorización del usuario, push de `feat/sync-mostrar-scope` y PR #140 (`type:feature`). CI en curso.
+- 2026-10-12: el usuario fusionó #138 (squash `f0f6a801`) y #140 (squash `005f15c5`), ambos con el CI en verde. Borrados los worktrees y las ramas locales de W2 y W3, y sus ramas remotas.
+- 2026-10-12, W4: comprobación final de los criterios de la sección 7 sobre `origin/main` `005f15c5`:
+  - Criterio 1: verificado en W1 con `axiom sync --scope global` sobre la instalación real (solo desaparece la clave `gentle-ai`; las reglas del usuario se mantienen; segunda ejecución no-op).
+  - Criterio 2: `git grep 'gentle-ai review inspect-candidate' origin/main` (sin `openspec/` ni `odd/`) solo da `inject.go` (lista de claves obsoletas de W1), `inject_test.go` (sus tests), `opencode_v2_test.go` (caso que exige `deny`) y `bounded_review_contract_test.go` (lista de cadenas prohibidas).
+  - Criterio 3: verificado en W3 con `--dry-run` en ambos scopes.
+  - Criterio 4: CI en verde en #137, #138 y #140 antes de fusionar.
+  - Nota de entorno: el checkout principal `C:\repos\axiom` está en una rama de otra sesión (`docs/readme-contributors-attribution`); este ODD no lo tocó salvo un `git pull --ff-only` inocuo de esa rama desde su remoto.
+
+## 9. Seguimientos abiertos (fuera de este ODD)
+
+- **S1b · Forma nativa v2 de OpenCode:** `mergeOpenCodeJSONFile` sale por `nativeAgentOverlay` + `mergeNativePermissionRules` antes de la migración de W1, así que una instalación nativa (`agents[].permissions`) generada entre `5a395e45` y #132 conservaría la regla `{action: shell, resource: "gentle-ai review inspect-candidate --purpose targeted-validation *", effect: allow}`. Pendiente de decisión del usuario.
+- **Agentes sin scope workspace:** con `--scope workspace`, VS Code Copilot, Trae, Windsurf, Antigravity y Codex siguen escribiendo en el home. La línea `Scope:` de W3 no lo advierte; los ficheros sí salen en la lista de cambios. Pendiente de decisión del usuario.
+- **Tests de junctions de `filemerge`:** `TestWriteFileAtomicFollows{,Relative}DirectoryJunction` fallan en Windows en `main` («createtemp … `.gentle-ai-*.tmp`: file already exists»), y el prefijo temporal `.gentle-ai-` es resto de marca. Propuesto como tarea aparte.
+- **Permiso de merge:** el modo automático bloquea `gh pr merge` y la escritura de `.claude/settings.local.json`. Para que «revisa si ya está verde y continúa» fusione sin intervención, el usuario debe añadir a mano `Bash(gh pr merge * --repo IGutierrezZ/axiom --squash *)` en `.claude/settings.local.json`.
+- **Binario instalado:** el `axiom` instalado es anterior a #137-#140. Reinstalarlo desde `main` y ejecutar `axiom sync --scope global` deja la instalación global con la migración de W1 y la línea `Scope:` de W3.
