@@ -129,6 +129,12 @@ Coste asumido: un cambio que rompa Windows sin tocar las rutas del punto 2 se de
 - (b) La periodicidad del punto 4.
 - (c) Si `windows-full-suite` también se dispara por cambio relevante o solo por antigüedad y a mano. Por coste, se propone que solo `windows-runtime` reaccione a los cambios.
 
+**Decididas por el usuario el 2026-10-12:**
+
+- (a) La lista propuesta, sin filtrar por paquete.
+- (b) Semanal, los lunes a las 03:20 UTC, solo si hay commits nuevos.
+- (c) `windows-full-suite` se lanza solo por antigüedad, a mano o con la etiqueta. Solo `windows-runtime` reacciona a los cambios.
+
 ## Modo de trabajo
 
 - **TDD:** modo estándar. Fuente: `openspec/config.yaml` (`strict_tdd: false`). Runner: `go test`.
@@ -203,6 +209,11 @@ Coste asumido: un cambio que rompa Windows sin tocar las rutas del punto 2 se de
 - 2026-10-12: T1 cerrada. Resultado: 9 pruebas de Capacidad (todas por enlaces simbólicos), 4 de Tiempo, 3 de entorno por la ruta de TEMP, 3 con defecto de aislamiento (H1–H3) y `bench` fuera de alcance. Hallazgos H1–H5 anotados. El alcance de T2 se reduce a `RequireSymlink`.
 - 2026-10-12: T2 hecha (`87fd84ff`). T3 parcial (`b245fc3a`): con carga quedan H6 y H7, que necesitan una decisión aparte. Líneas acumuladas: unas 410 (umbral de `ask-on-risk` alcanzado; corte natural previsto: PR 1 con T1–T3).
 
+- 2026-10-12: el usuario decide (a) a (c) y la estrategia de cadena `stacked-to-main`.
+  - PR 1: rama `fix/windows-pruebas-entorno-y-ci`, con T1–T3 y el documento ODD. Base: `main`.
+  - PR 2: rama `ci/windows-ejecucion-selectiva`, apilada sobre el PR 1, con T4–T5. Se rebasa sobre `main` cuando se fusione el PR 1.
+  - H6 y H7 quedan anotados como defectos (instrucción del usuario: no arreglar defectos reales). T3 se mantiene parcial por ellos.
+
 ## Siguiente paso
 
-Decisiones (a) a (c) del usuario para T4, y qué hacer con H7 antes de cerrar T3.
+T4 en la rama `ci/windows-ejecucion-selectiva`.
