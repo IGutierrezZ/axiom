@@ -130,6 +130,8 @@ switch ($Verb) {
         $remoteUrl = (git -C $wtPath remote get-url origin 2>$null).Trim()
         $remoteUrl = $remoteUrl -replace '\.git$', ''
         $compareUrl = "$remoteUrl/compare/main...$branch" + '?expand=1'
+        # HOST/OWNER/REPO de origin (https o ssh) para no depender de 'gh repo set-default'.
+        $ghRepo = $remoteUrl -replace '^(?:[a-zA-Z][a-zA-Z0-9+.-]*://)?(?:[^@/]+@)?([^/:]+)[:/]', '$1/'
 
         $gh = Get-Command gh -ErrorAction SilentlyContinue
         if ($gh) {
@@ -138,7 +140,7 @@ switch ($Verb) {
                 Info "Creando el Pull Request mediante gh CLI..."
                 Push-Location $wtPath
                 try {
-                    & gh pr create --base main --fill
+                    & gh pr create --repo $ghRepo --base main --head $branch --fill
                     if ($LASTEXITCODE -eq 0) {
                         Ok "Pull Request creado exitosamente."
                         return

@@ -111,10 +111,12 @@ case "$VERB" in
 
         REMOTE_URL="$(git -C "$WT_PATH" remote get-url origin | sed 's/\.git$//')"
         COMPARE_URL="$REMOTE_URL/compare/main...$BRANCH?expand=1"
+        # HOST/OWNER/REPO de origin (https o ssh) para no depender de 'gh repo set-default'.
+        GH_REPO="$(printf '%s' "$REMOTE_URL" | sed -E 's#^([a-zA-Z][a-zA-Z0-9+.-]*://)?([^@/]+@)?([^/:]+)[:/]#\3/#')"
 
         if command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1; then
             echo "[INFO] Creando Pull Request mediante gh CLI..."
-            (cd "$WT_PATH" && gh pr create --base main --fill)
+            (cd "$WT_PATH" && gh pr create --repo "$GH_REPO" --base main --head "$BRANCH" --fill)
             echo "[OK] Pull Request creado exitosamente."
         else
             echo "[AVISO] gh CLI no disponible o no autenticado. Abre el PR manualmente en GitHub:"
