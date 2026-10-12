@@ -248,9 +248,11 @@ Coste asumido: un cambio que rompa Windows sin tocar las rutas del punto 2 se de
   - Tamaño sin contar el documento ODD: PR 1, 411 líneas; PR 2, 354 líneas.
   - Con el documento ODD, el PR 1 llega a unas 630 líneas.
 
+- 2026-10-12: el usuario decide dejar el PR 1 entero con `size:exception` (unas 630 líneas; el exceso es casi todo el documento ODD).
+
 ## Siguiente paso
 
-El usuario decide push, PRs y merge, y si el PR 1 se queda entero con `size:exception` o se divide. Después:
+El usuario decide el push, la creación de los PRs y el merge. El PR 1 lleva la etiqueta `size:exception`. Después:
 
 - crear la etiqueta `ci:windows`;
 - lanzar `windows-full-suite` con `workflow_dispatch` para tener una línea base nueva (H5);
