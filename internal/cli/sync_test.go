@@ -5862,6 +5862,136 @@ func TestRenderSyncReportNoOpOmitsChangedFilePaths(t *testing.T) {
 	}
 }
 
+// ─── Scope reporting ────────────────────────────────────────────────────────
+
+// TestRenderSyncReportShowsScopeAndRoot verifies that every report variant
+// (changes, no-op, dry-run) names the effective scope and root right after the
+// header, so a workspace sync is never mistaken for a global one.
+func TestRenderSyncReportShowsScopeAndRoot(t *testing.T) {
+	variants := []struct {
+		name       string
+		result     SyncResult
+		wantHeader string
+	}{
+		{
+			name:       "changes",
+			result:     SyncResult{Agents: []model.AgentID{model.AgentOpenCode}, FilesChanged: 1, ChangedFiles: []string{"a"}, Verify: verify.Report{Ready: true}},
+			wantHeader: "axiom sync — managed sync executed",
+		},
+		{
+			name:       "no-op",
+			result:     SyncResult{Agents: []model.AgentID{model.AgentOpenCode}, NoOp: true},
+			wantHeader: "axiom sync — no managed sync actions needed",
+		},
+		{
+			name:       "no-op without agents",
+			result:     SyncResult{NoOp: true},
+			wantHeader: "axiom sync — no managed sync actions needed",
+		},
+		{
+			name:       "dry-run",
+			result:     SyncResult{Agents: []model.AgentID{model.AgentOpenCode}, DryRun: true},
+			wantHeader: "axiom sync — dry-run",
+		},
+	}
+	scopes := []struct {
+		scope InstallScope
+		root  string
+	}{
+		{ScopeWorkspace, filepath.Join("repo", "work")},
+		{ScopeGlobal, filepath.Join("users", "home")},
+	}
+
+	for _, v := range variants {
+		for _, s := range scopes {
+			t.Run(v.name+"/"+string(s.scope), func(t *testing.T) {
+				result := v.result
+				result.Scope = s.scope
+				result.ScopeRoot = s.root
+
+				lines := strings.Split(RenderSyncReport(result), "\n")
+				if len(lines) < 2 || lines[0] != v.wantHeader {
+					t.Fatalf("report header = %q, want %q", lines[0], v.wantHeader)
+				}
+				if want := "Scope: " + string(s.scope) + " (" + s.root + ")"; lines[1] != want {
+					t.Fatalf("report line 2 = %q, want %q", lines[1], want)
+				}
+			})
+		}
+	}
+}
+
+// TestRenderSyncReportOmitsScopeLineWhenUnset keeps callers that build a
+// SyncResult without scope (e.g. the TUI seam) from printing an empty "Scope:".
+func TestRenderSyncReportOmitsScopeLineWhenUnset(t *testing.T) {
+	report := RenderSyncReport(SyncResult{Agents: []model.AgentID{model.AgentOpenCode}, NoOp: true})
+	if strings.Contains(report, "Scope:") {
+		t.Fatalf("report must not mention Scope without a resolved scope; got:\n%s", report)
+	}
+}
+
+// TestRunSyncReportsEffectiveScopeAndRoot exercises the real flow: the default
+// scope is the workspace (cwd), --scope global targets the home directory, and
+// the scope shows up in the dry-run, executed and no-op reports.
+func TestRunSyncReportsEffectiveScopeAndRoot(t *testing.T) {
+	home := t.TempDir()
+	setSyncTestHome(t, home)
+	workspace := t.TempDir()
+	t.Chdir(workspace)
+	workspaceRoot, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("Getwd() error = %v", err)
+	}
+
+	scopeLine := func(scope InstallScope, root string) string {
+		return "Scope: " + string(scope) + " (" + root + ")"
+	}
+	base := []string{"--agents", "opencode", "--sdd-mode", "single"}
+
+	// Default scope (flag and env unset) is the workspace.
+	t.Setenv(ScopeAxiomEnvVar, "")
+	t.Setenv(ScopeGentleAIEnvVar, "")
+
+	dry, err := RunSync(append([]string{"--dry-run"}, base...))
+	if err != nil {
+		t.Fatalf("RunSync(--dry-run) error = %v", err)
+	}
+	if report := RenderSyncReport(dry); !strings.Contains(report, scopeLine(ScopeWorkspace, workspaceRoot)) {
+		t.Errorf("dry-run report lacks the workspace scope line %q:\n%s", scopeLine(ScopeWorkspace, workspaceRoot), report)
+	}
+
+	executed, err := RunSync(base)
+	if err != nil {
+		t.Fatalf("RunSync() error = %v", err)
+	}
+	if executed.NoOp {
+		t.Fatalf("first workspace sync should write files, got NoOp")
+	}
+	if report := RenderSyncReport(executed); !strings.Contains(report, scopeLine(ScopeWorkspace, workspaceRoot)) {
+		t.Errorf("executed report lacks the workspace scope line:\n%s", report)
+	}
+
+	noOp, err := RunSync(base)
+	if err != nil {
+		t.Fatalf("RunSync() second run error = %v", err)
+	}
+	if !noOp.NoOp {
+		t.Fatalf("second workspace sync should be a no-op")
+	}
+	if report := RenderSyncReport(noOp); !strings.Contains(report, scopeLine(ScopeWorkspace, workspaceRoot)) {
+		t.Errorf("no-op report lacks the workspace scope line:\n%s", report)
+	}
+
+	// An explicit global scope targets the home directory instead.
+	globalDry, err := RunSync(append([]string{"--dry-run", "--scope", "global"}, base...))
+	if err != nil {
+		t.Fatalf("RunSync(--scope global --dry-run) error = %v", err)
+	}
+	if report := RenderSyncReport(globalDry); !strings.Contains(report, scopeLine(ScopeGlobal, home)) {
+		t.Errorf("global dry-run report lacks the global scope line %q:\n%s", scopeLine(ScopeGlobal, home), report)
+	}
+}
+
 // ─── Deduplication ──────────────────────────────────────────────────────────
 
 func TestDedupPathsRemovesDuplicates(t *testing.T) {
