@@ -38,6 +38,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
 	"github.com/IGutierrezZ/axiom/v3/internal/reviewerprovider"
 	"github.com/IGutierrezZ/axiom/v3/internal/system"
+	"github.com/IGutierrezZ/axiom/v3/internal/testenv"
 	"github.com/IGutierrezZ/axiom/v3/internal/versions"
 )
 
@@ -47,9 +48,6 @@ const (
 	realAgentE2EEnvironment = "GENTLE_AI_REAL_AGENT_E2E"
 	pinnedOpenCodeVersion   = versions.OpenCode
 
-	organicLocalTimeout     = 90 * time.Second
-	organicSetupTimeout     = 5 * time.Minute
-	organicAgentTimeout     = 4 * time.Minute
 	organicCommandWaitDelay = 10 * time.Second
 
 	// organicWithdrawalDeadline replaces the retired short-TTL harness. The
@@ -59,6 +57,29 @@ const (
 	// honest — a journey that needs longer than this has stopped being a journey.
 	organicWithdrawalDeadline = 60 * time.Second
 )
+
+// Time budgets of the harness commands. They are variables so TestMain can
+// scale them with AXIOM_TEST_TIMEOUT_SCALE (default 2 on Windows, where a loaded
+// machine measured the local budget expiring at 118s of a 90s budget). Only the
+// harness budgets move; the built binary keeps its production budgets.
+var (
+	organicLocalTimeout = 90 * time.Second
+	organicSetupTimeout = 5 * time.Minute
+	organicAgentTimeout = 4 * time.Minute
+)
+
+// scaleOrganicTimeBudgets applies the test time scale to the harness budgets.
+// It runs once, in the process that drives the journeys.
+func scaleOrganicTimeBudgets() error {
+	for _, budget := range []*time.Duration{&organicLocalTimeout, &organicSetupTimeout, &organicAgentTimeout} {
+		scaled, err := testenv.Scaled(*budget)
+		if err != nil {
+			return err
+		}
+		*budget = scaled
+	}
+	return nil
+}
 
 // Actor process contract. The delegated worker must be a real, separate OS
 // process rather than an in-test closure, because the behaviour under test is
@@ -147,6 +168,10 @@ func TestMain(m *testing.M) {
 	}
 	if role := strings.TrimSpace(os.Getenv(organicActorRoleEnvironment)); role != "" {
 		os.Exit(runOrganicActor(role))
+	}
+	if err := scaleOrganicTimeBudgets(); err != nil {
+		fmt.Fprintf(os.Stderr, "scale the organic time budgets: %v\n", err)
+		os.Exit(1)
 	}
 	if binary := strings.TrimSpace(os.Getenv(organicTestBinaryEnvironment)); binary != "" {
 		resolvedBinary, err := exec.LookPath(binary)

@@ -10,6 +10,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/IGutierrezZ/axiom/v3/internal/testenv"
 )
 
 const verboseCatalog = `custom/qwen/qwen3
@@ -122,22 +124,36 @@ func TestRunCatalogCommandCancelsOverflowingChild(t *testing.T) {
 		helper += ".exe"
 	}
 	source := filepath.Join(dir, "main.go")
-	if err := os.WriteFile(source, []byte("package main\nimport (\"fmt\"; \"strings\")\nfunc main() { for { fmt.Println(strings.Repeat(\"x\", 1024)) } }\n"), 0o600); err != nil {
+	if err := os.WriteFile(source, []byte("package main\nimport (\"fmt\"; \"os\"; \"strings\")\nfunc main() { if len(os.Args) > 1 { return }; for { fmt.Println(strings.Repeat(\"x\", 1024)) } }\n"), 0o600); err != nil {
 		t.Fatalf("write helper: %v", err)
 	}
 	if err := exec.Command("go", "build", "-o", helper, source).Run(); err != nil {
 		t.Fatalf("build helper: %v", err)
 	}
+	// Run the freshly built executable once, with an argument that makes it
+	// exit at once, before the clock starts. The first execution of a new
+	// binary pays for the system's file scanning (measured at 1.1-2.2s on
+	// Windows), a cost that says nothing about how fast the overflow cancels
+	// the child. Only the startup is moved out of the measurement: the child
+	// that is timed still loops forever and is stopped solely by the overflow.
+	if err := exec.Command(helper, "warm-up").Run(); err != nil {
+		t.Fatalf("warm up helper: %v", err)
+	}
+	// The helper never stops by itself, so cancellation by overflow is proven by
+	// finishing well before the context deadline. The deadline stays at twice the
+	// budget whatever the scale: a cancellation that never happened would run
+	// into the deadline and exceed the budget.
+	budget := testenv.MustScaled(time.Second)
 	started := time.Now()
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 2*budget)
 	defer cancel()
 	output, err := runCatalogCommand(ctx, Command{Path: helper, OutputLimit: 128})
 	var catalogErr *CatalogError
 	if !errors.As(err, &catalogErr) || catalogErr.Kind != CatalogErrorOutputTooLarge {
 		t.Fatalf("error = %v stdout=%d stderr=%d, want output_too_large", err, len(output.Stdout), len(output.Stderr))
 	}
-	if elapsed := time.Since(started); elapsed > time.Second {
-		t.Fatalf("overflowing helper ran for %v, want prompt cancellation", elapsed)
+	if elapsed := time.Since(started); elapsed > budget {
+		t.Fatalf("overflowing helper ran for %v, want prompt cancellation within %v", elapsed, budget)
 	}
 }
 
