@@ -104,6 +104,8 @@ Datos de la máquina: Windows 11 Enterprise 10.0.26200, Go 1.26.3 y modo desarro
 - **H3** `internal/tui`: `TestRuntimeCatalogDiscoveryIgnoresStaleProjectResults` lee la configuración real de OpenCode. Corrección sugerida: aislar `USERPROFILE`, `HOME` y `OPENCODE_CONFIG_DIR`.
 - **H4** `internal/components/filemerge`: `ensureAtomicParentDir` (`writer.go:300-345`) resuelve la *junction*, pero descarta la ruta resuelta, y `replaceDurably` crea el temporal a través de la *junction*. No es la causa del fallo, pero crear el temporal en la ruta resuelta evitaría `O_EXCL` sobre un punto de reanálisis. Es un endurecimiento opcional del producto.
 - **H5** CI (2026-09-26): `edit_authority_missing` con rutas `C:\Users\runneradmin\...` en tres pruebas de `e2e/organicruntime` (`TestSDDEditAuthorityConsentGrantLoop`, `TestSDDPreparationInvocationRoundTripsSpacedChange`, `TestSDDSameParentRepositoryConsentGrantLoop`), en `internal/sddstatus` (`TestCharacterization_EditAuthorityMissingBlocksApplyAndArchive`) y en `internal/cli` (`TestSDDStatusDoesNotPrepareConsentMarker`). Puede ser un defecto real de rutas Windows; hay que confirmarlo con una ejecución nueva.
+- **H6** `internal/opencode`: `TestRunCatalogCommandDeadlineNotBlockedByInheritingDescendantWindows` falla con carga al limpiar el directorio temporal. Un nieto sigue dormido 30 s y mantiene bloqueado `descendant-helper.exe`. Es la misma clase de limpieza de `.exe` bloqueado que en `bench`; hace falta una limpieza tolerante, no un presupuesto.
+- **H7** `e2e/organicruntime`: con carga, el presupuesto de producción de 25 s del binario hijo (`reviewFacadeOperationTimeout`, `internal/cli/review_facade.go:493`) agota `review status` con `operation_timeout`. Las pruebas no pueden escalarlo. Arreglarlo exige una decisión de producción: una costura por entorno o un presupuesto más holgado.
 
 ## Política de CI propuesta (T4) — confirmar con el usuario antes de implementarla
 
@@ -138,7 +140,13 @@ Coste asumido: un cambio que rompa Windows sin tocar las rutas del punto 2 se de
 - [x] **T1 · Inventario y diagnóstico**
   - Ruta: delegada (dos mapeos en paralelo: diagnóstico local, y cruce con CI y presupuestos de tiempo). Disparador: mapeo de más de 4 ficheros.
   - Resultado en la sección «Diagnóstico de T1». Sin commit de código; solo se actualiza este documento.
-- [ ] **T2 · Helper de capacidades y omisión motivada**
+- [x] **T2 · Helper de capacidades y omisión motivada** — `87fd84ff`, 190 líneas.
+  - Evidencia:
+    - `go test ./internal/testenv`: PASS.
+    - Las 9 pruebas: SKIP en esta máquina, con el motivo «symlink creation requires privilege on Windows (error 1314); enable Windows Developer Mode or run as administrator…».
+    - En WSL (Ubuntu, binarios compilados para Linux con `TMPDIR=/tmp`) las 9 pruebas y `testenv` pasan sin omitirse.
+    - Ratchet de código muerto: sin cambios, porque `testenv` solo lo importan pruebas.
+  - Verificación: riesgo `high` (señal `process_boundary` en `timeout.go`). El verificador independiente no encontró bloqueos y la comprobación puntual del padre coincide.
   - Ruta: delegada (writer único; varios ficheros).
   - Alcance ajustado por T1: solo `RequireSymlink(t)`. Las *junctions* y los sockets Unix funcionan en esta máquina; sus fallos son del arnés (ver T1), así que no se crean sondas para ellos.
   - Ubicación: paquete hoja nuevo `internal/testenv` (no hay helpers de pruebas compartidos en el repo). Se reutiliza la detección del error 1314 de `isSymlinkPrivilegeError` (`internal/components/filemerge/writer_test.go`).
@@ -146,7 +154,16 @@ Coste asumido: un cambio que rompa Windows sin tocar las rutas del punto 2 se de
   - Probar el propio helper: debe omitir solo cuando la sonda falla.
   - Comprobación: en esta máquina, cada una de esas pruebas pasa a SKIP con un motivo claro; en Linux (WSL, `GOOS=linux go test -c`) se ejecutan y pasan.
   - Commit: `test: omitir con motivo las pruebas que requieren capacidades del sistema no disponibles`.
-- [ ] **T3 · Presupuestos de tiempo de las pruebas**
+- [ ] **T3 · Presupuestos de tiempo de las pruebas** — PARCIAL. `b245fc3a`, 221 líneas.
+  - Hecho:
+    - `AXIOM_TEST_TIMEOUT_SCALE`: número mayor o igual que 1. Un valor inválido aborta con un mensaje; nunca se reduce un presupuesto. Por defecto vale 2 en Windows y 1 en el resto.
+    - Se aplica en tres sitios: el `TestMain` de `internal/sddstatus`, las variables de tiempo de `e2e/organicruntime` y `TestRunCatalogCommandCancelsOverflowingChild`. En esta última se añade además un `exec` de calentamiento antes del reloj, porque la medición era coste de arranque en frío. La prueba sigue demostrando la cancelación.
+  - Evidencia por separado:
+    - opencode: 3/3 PASS.
+    - Las dos pruebas de organicruntime: PASS en 233 s.
+    - sddstatus: ok en 75 s.
+  - Con carga (`go test -p 4`, dos ejecuciones): sddstatus pasa siempre. Hubo un fallo distinto en cada ejecución, ambos fuera del alcance de los presupuestos de las pruebas: H7 en la 1 y H6 en la 2.
+  - Fuera del alcance de las pruebas: `StagingCommandTimeoutFloor` se inicializa al cargar el paquete desde `LocalGitCommandTimeout` y no se escala. Se añadirá solo si aparece un agotamiento de *staging* en sddstatus.
   - Ruta: delegada.
   - Presupuestos localizados en T1:
     - `reviewtransaction.LocalGitCommandTimeout` y `RemoteGitCommandTimeout`: variables de producción que ya son una costura de pruebas. Se escalan en el `TestMain` de `internal/sddstatus`.
@@ -184,7 +201,8 @@ Coste asumido: un cambio que rompa Windows sin tocar las rutas del punto 2 se de
 
 - 2026-10-12: documento abierto con 6 tareas. T4 espera las decisiones (a) a (c) del usuario. Pendiente de ejecución desde otra sesión.
 - 2026-10-12: T1 cerrada. Resultado: 9 pruebas de Capacidad (todas por enlaces simbólicos), 4 de Tiempo, 3 de entorno por la ruta de TEMP, 3 con defecto de aislamiento (H1–H3) y `bench` fuera de alcance. Hallazgos H1–H5 anotados. El alcance de T2 se reduce a `RequireSymlink`.
+- 2026-10-12: T2 hecha (`87fd84ff`). T3 parcial (`b245fc3a`): con carga quedan H6 y H7, que necesitan una decisión aparte. Líneas acumuladas: unas 410 (umbral de `ask-on-risk` alcanzado; corte natural previsto: PR 1 con T1–T3).
 
 ## Siguiente paso
 
-T2 y T3.
+Decisiones (a) a (c) del usuario para T4, y qué hacer con H7 antes de cerrar T3.
