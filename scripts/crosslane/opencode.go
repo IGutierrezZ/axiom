@@ -354,8 +354,10 @@ func (b *battery) checkValidatorInspectionRecipe(repo, childPrompt string) {
 		b.fail(openCodeLane, name, "child prompt Input is not decodable JSON: "+err.Error())
 		return
 	}
-	if !strings.Contains(childPrompt, "axiom review inspect-candidate") && !strings.Contains(childPrompt, "gentle-ai review inspect-candidate") {
-		b.fail(openCodeLane, name, "child prompt never names the immutable inspection command")
+	// The validator briefing (internal/reviewerprovider) names the inspector
+	// with the axiom binary in every dialect, so no legacy spelling is accepted.
+	if !strings.Contains(childPrompt, "axiom review inspect-candidate") {
+		b.fail(openCodeLane, name, "child prompt never names the immutable inspection command `axiom review inspect-candidate`")
 		return
 	}
 	if request.RepositoryContext == "" || len(request.ValidationRequest.CorrectionPaths) == 0 {
