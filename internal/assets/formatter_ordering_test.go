@@ -47,13 +47,36 @@ func TestRequiredChecksFailClosedWhenFormatFails(t *testing.T) {
 		"        if: needs.go-format.result != 'success'\n" +
 		"        run: exit 1\n"
 
-	jobs := []struct{ id, next string }{
+	jobs := []struct {
+		id, next string
+		// needs and ifTokens override the manual-only default for a job whose
+		// trigger legitimately changed. ifTokens must all appear in the job's
+		// `if:` expression, so the fail-closed guard below stays mandatory.
+		needs    string
+		ifTokens []string
+	}{
 		{id: "unit-tests", next: "windows-runtime"},
 		// The sharded Windows full suite is deliberately NOT here: it lives in
 		// its own workflow while the pre-existing Windows failures it exposed
 		// are paid down, so it is not one of ci.yml's required checks and owes
 		// no fail-closed contract to a go-format job in another file.
-		{id: "windows-runtime", next: "darwin-runtime"},
+		//
+		// windows-runtime is no longer manual-only: it also runs when the diff
+		// touches Windows paths (the `changes` job) or the PR carries the
+		// ci:windows label. It still owes the format guard, so that a red
+		// go-format cannot be bypassed by a Windows run that was selected.
+		{
+			id:    "windows-runtime",
+			next:  "darwin-runtime",
+			needs: "[go-format, changes]",
+			ifTokens: []string{
+				"!cancelled()",
+				"github.event_name == 'workflow_dispatch'",
+				"needs.changes.outputs.windows == 'true'",
+				"needs.changes.result != 'success'",
+				"contains(github.event.pull_request.labels.*.name, 'ci:windows')",
+			},
+		},
 		// darwin-runtime is a required check like its siblings, so it owes the
 		// same fail-closed contract. Listing it here is also what keeps the
 		// section slicing honest: a job this list does not know about gets
@@ -78,13 +101,39 @@ func TestRequiredChecksFailClosedWhenFormatFails(t *testing.T) {
 				}
 				section = section[:end]
 			}
-			expectedIf := "    if: always()\n"
-			if !strings.Contains(section, expectedIf) {
-				expectedIf = "    if: github.event_name == 'workflow_dispatch'\n"
+			needs := "go-format"
+			if job.needs != "" {
+				needs = job.needs
 			}
-			for _, required := range []string{"    needs: go-format\n", expectedIf, guard} {
-				if !strings.Contains(section, required) {
-					t.Fatalf("%s missing fail-closed contract %q", job.id, required)
+			required := []string{"    needs: " + needs + "\n", guard}
+			if job.ifTokens == nil {
+				expectedIf := "    if: always()\n"
+				if !strings.Contains(section, expectedIf) {
+					expectedIf = "    if: github.event_name == 'workflow_dispatch'\n"
+				}
+				required = append(required, expectedIf)
+			} else {
+				// The expression is folded over several lines, so check its
+				// tokens against the normalized `if:` block, not one line.
+				const ifKey = "\n    if: "
+				ifStart := strings.Index(section, ifKey)
+				if ifStart < 0 {
+					t.Fatalf("%s has no job-level if", job.id)
+				}
+				ifBlock := section[ifStart+len(ifKey):]
+				if end := strings.Index(ifBlock, "\n    runs-on:"); end >= 0 {
+					ifBlock = ifBlock[:end]
+				}
+				ifBlock = strings.Join(strings.Fields(ifBlock), " ")
+				for _, token := range job.ifTokens {
+					if !strings.Contains(ifBlock, token) {
+						t.Fatalf("%s if expression %q missing %q", job.id, ifBlock, token)
+					}
+				}
+			}
+			for _, want := range required {
+				if !strings.Contains(section, want) {
+					t.Fatalf("%s missing fail-closed contract %q", job.id, want)
 				}
 			}
 
