@@ -189,10 +189,10 @@ Después, usa el agente con normalidad. Axiom crea respaldos antes de modificar 
 <br/><br/>
 
 <a href="CONTRIBUTORS.md">
-  <img width="100%" src="https://contrib.rocks/image?repo=IGutierrezZ/axiom&columns=16" alt="Contribuidores de Axiom" />
+  <img width="100%" src="https://contrib.rocks/image?repo=IGutierrezZ/axiom&columns=16" alt="Contribuidores del historial compartido de Axiom y Gentle AI" />
 </a>
 
-<p><sub>This project exists because of these people.</sub></p>
+<p><sub>Axiom evolucionó a partir de una bifurcación de <em>Gentle AI</em>. Estas personas contribuyeron al historial que comparten ambos proyectos. Véanse <a href="CONTRIBUTORS.md">CONTRIBUTORS.md</a> y <a href="#origen-y-evolución">Origen y Evolución</a>.</sub></p>
 
 </div>
 
