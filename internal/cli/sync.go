@@ -80,6 +80,12 @@ type SyncResult struct {
 	Execution pipeline.ExecutionResult
 	Verify    verify.Report
 	DryRun    bool
+	// Scope is the effective install scope of this sync and ScopeRoot the root
+	// directory it targets (workspace root or user home, as resolved by
+	// ResolveAgentConfigDir). RenderSyncReport shows both so the report always
+	// says which installation was synced. Empty Scope omits the line.
+	Scope     InstallScope
+	ScopeRoot string
 	// NoOp is true when no managed asset changes were needed:
 	// either no agents were discovered/provided, or all managed assets
 	// were already current (idempotent re-sync).
@@ -1757,6 +1763,8 @@ func runSyncWithSelectionScoped(homeDir, workspaceDir string, scope InstallScope
 	result := SyncResult{
 		Agents:       agentIDs,
 		Selection:    selection,
+		Scope:        scope,
+		ScopeRoot:    ResolveAgentConfigDir(scope, homeDir, workspaceDir),
 		Background:   background,
 		PiBackground: piBackground,
 	}
@@ -2066,6 +2074,8 @@ func RunSync(args []string) (SyncResult, error) {
 			Agents:       agentIDs,
 			Selection:    selection,
 			DryRun:       true,
+			Scope:        scope,
+			ScopeRoot:    ResolveAgentConfigDir(scope, homeDir, workspaceDir),
 			Background:   background,
 			PiBackground: piBackground,
 		}
@@ -2266,8 +2276,17 @@ func RenderSyncReport(result SyncResult) string {
 		}
 	}
 
+	// scopeReport names the scope and root this sync targeted, so a workspace
+	// sync is never mistaken for a global one (the default scope is workspace).
+	scopeReport := func() {
+		if result.Scope != "" {
+			fmt.Fprintf(&b, "Scope: %s (%s)\n", result.Scope, result.ScopeRoot)
+		}
+	}
+
 	if result.NoOp {
 		fmt.Fprintln(&b, "axiom sync — no managed sync actions needed")
+		scopeReport()
 		if len(result.Agents) == 0 {
 			fmt.Fprintln(&b, "No agents were discovered or specified. Nothing to sync.")
 		} else {
@@ -2280,6 +2299,7 @@ func RenderSyncReport(result SyncResult) string {
 
 	if result.DryRun {
 		fmt.Fprintln(&b, "axiom sync — dry-run")
+		scopeReport()
 		fmt.Fprintf(&b, "Agents: %s\n", joinAgentIDs(result.Agents))
 
 		compParts := make([]string, 0, len(result.Selection.Components))
@@ -2296,6 +2316,7 @@ func RenderSyncReport(result SyncResult) string {
 	}
 
 	fmt.Fprintln(&b, "axiom sync — managed sync executed")
+	scopeReport()
 	fmt.Fprintf(&b, "Agents synced: %s\n", joinAgentIDs(result.Agents))
 
 	compParts := make([]string, 0, len(result.Selection.Components))
