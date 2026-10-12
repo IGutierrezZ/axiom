@@ -55,6 +55,8 @@
 #>
 
 $ErrorActionPreference = 'Continue'
+# Claude Code lee stderr como UTF-8; sin esto los acentos salen en la página de códigos OEM.
+try { [Console]::OutputEncoding = New-Object System.Text.UTF8Encoding($false) } catch { }
 
 function Write-Reason([string]$Message) {
     [Console]::Error.WriteLine($Message)
