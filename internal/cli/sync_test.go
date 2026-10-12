@@ -34,6 +34,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/pipeline"
 	"github.com/IGutierrezZ/axiom/v3/internal/planner"
 	"github.com/IGutierrezZ/axiom/v3/internal/state"
+	"github.com/IGutierrezZ/axiom/v3/internal/testenv"
 	"github.com/IGutierrezZ/axiom/v3/internal/verify"
 )
 
@@ -2255,6 +2256,7 @@ func TestCodeGraphGuidanceSyncStepRollbackRestoresSuccessfulReconcile(t *testing
 }
 
 func TestCodeGraphGuidanceSyncStepRestoresSymlinkAfterInstallerFailure(t *testing.T) {
+	testenv.RequireSymlink(t)
 	home := t.TempDir()
 	settingsPath := filepath.Join(home, ".config", "opencode", "opencode.json")
 	innerLinkPath := filepath.Join(home, "shared", "current-opencode.json")
@@ -2317,6 +2319,7 @@ func TestCodeGraphGuidanceSyncStepRestoresSymlinkAfterInstallerFailure(t *testin
 }
 
 func TestCodeGraphGuidanceSyncStepPreservesBrokenSymlinkChain(t *testing.T) {
+	testenv.RequireSymlink(t)
 	home := t.TempDir()
 	settingsPath := filepath.Join(home, ".config", "opencode", "opencode.json")
 	innerLinkPath := filepath.Join(home, "shared", "current-opencode.json")

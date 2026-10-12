@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/IGutierrezZ/axiom/v3/internal/testenv"
 )
 
 func TestAuthorityLockCancellationPreservesSentinelAndCallerDeadline(t *testing.T) {
@@ -105,6 +107,7 @@ func TestMaintenanceLockModesAndRelease(t *testing.T) {
 }
 
 func TestMaintenanceLockRejectsSymlinksAndStaleBytesAreNotOwnership(t *testing.T) {
+	testenv.RequireSymlink(t)
 	dir := t.TempDir()
 	path := filepath.Join(dir, "gentle-ai", "review-transactions", "MAINTENANCE.lock")
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
@@ -325,6 +328,7 @@ func TestMaintenanceLockUsesGitCommonDirAcrossWorktrees(t *testing.T) {
 }
 
 func TestMaintenanceLockRejectsSymlinkedAuthorityComponent(t *testing.T) {
+	testenv.RequireSymlink(t)
 	dir := t.TempDir()
 	outside := t.TempDir()
 	if err := os.Symlink(outside, filepath.Join(dir, "gentle-ai")); err != nil {

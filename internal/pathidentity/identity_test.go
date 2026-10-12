@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/IGutierrezZ/axiom/v3/internal/testenv"
 )
 
 // aliasedRoots returns two different spellings of one directory: the real
@@ -14,6 +16,7 @@ import (
 // distinct strings that the operating system resolves to one inode.
 func aliasedRoots(t *testing.T) (real string, aliased string) {
 	t.Helper()
+	testenv.RequireSymlink(t)
 	base, err := filepath.EvalSymlinks(t.TempDir())
 	if err != nil {
 		t.Fatal(err)

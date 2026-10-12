@@ -4,6 +4,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/IGutierrezZ/axiom/v3/internal/testenv"
 )
 
 // TestValidateRunMarkerRejectsAMarkerInsideASymlinkedDist pins the same
@@ -13,6 +15,7 @@ import (
 // directory look like a marker living outside it, and the guard that keeps the
 // run identity out of the directory GoReleaser regenerates stopped guarding.
 func TestValidateRunMarkerRejectsAMarkerInsideASymlinkedDist(t *testing.T) {
+	testenv.RequireSymlink(t)
 	root, err := filepath.EvalSymlinks(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
