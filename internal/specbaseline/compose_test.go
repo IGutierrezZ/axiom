@@ -82,6 +82,7 @@ func assertComposeError(t *testing.T, err error, wantParts ...string) *ComposeEr
 	return composeErr
 }
 
+// REQ-24.44: MODIFIED sustituye el bloque cuyo id coincide y puede cambiar su título.
 func TestComposeModifiedReplacesOnlyTheBlockAndDropsTheNotes(t *testing.T) {
 	profile := requirementProfile(t)
 	deltaText := join(
@@ -340,6 +341,7 @@ func TestComposeRejectsOperationsOnDuplicatedIDsButKeepsTheRestOperable(t *testi
 	})
 }
 
+// REQ-24.44: con identidad id, RENAMED se rechaza nombrando MODIFIED y que no se renumera.
 func TestComposeRenamedWithIDIdentityIsRejected(t *testing.T) {
 	profile := requirementProfile(t)
 	deltaText := join("## RENAMED Requirements", "", "### Requirement: RF-100: Alta → RF-100: Alta de cliente", "", "(Reason: nombre más claro)")
@@ -350,6 +352,7 @@ func TestComposeRenamedWithIDIdentityIsRejected(t *testing.T) {
 	}
 }
 
+// REQ-24.44: con identidad text, RENAMED retitula el bloque como la composición nativa.
 func TestComposeRenamedWithTextIdentityRetitlesTheBlock(t *testing.T) {
 	profile := profileFor(t, `^### (?P<id>RF-\d+): (?P<title>.+)$`, 3, workspace.IdentityText, "### {id}: {title}", workspace.ScenariosInclude)
 	renamed := join(
@@ -384,6 +387,7 @@ func TestComposeRenamedWithTextIdentityRetitlesTheBlock(t *testing.T) {
 	})
 }
 
+// REQ-24.44: un MODIFIED cuyo id no existe se rechaza.
 func TestComposeModifiedOnAMissingIDNamesSectionAndRequirement(t *testing.T) {
 	profile := requirementProfile(t)
 	deltaText := join(
@@ -411,6 +415,7 @@ func TestComposeRejectsANameThatDoesNotMatchTheHeadingPattern(t *testing.T) {
 	}
 }
 
+// REQ-24.44: REMOVED elimina el bloque cuyo id coincide.
 func TestComposeRemovedDeletesOnlyTheBlockAndKeepsItsTail(t *testing.T) {
 	profile := requirementProfile(t)
 	deltaText := join("## REMOVED Requirements", "", "### Requirement: RF-100: Alta", "", "(Reason: sustituido por el nuevo alta)")
@@ -454,6 +459,7 @@ func TestComposeRemovedRequiresTheReasonNote(t *testing.T) {
 	assertComposeError(t, err, "REMOVED", "RF-100", "(Reason")
 }
 
+// REQ-24.44: REMOVED con --supersede conserva el bloque marcado [SUPERSEDED / DEPRECADO].
 func TestComposeRemovedWithSupersedeKeepsTheBlockMarked(t *testing.T) {
 	profile := requirementProfile(t)
 	deltaText := join("## REMOVED Requirements", "", "### Requirement: RF-101: Baja", "", "(Reason: sustituido por el nuevo flujo)")
@@ -578,6 +584,8 @@ func toProfileHeadings(text string) string {
 	return strings.ReplaceAll(text, "### Requirement: ", "### ")
 }
 
+// REQ-24.44: con identidad text, las cuatro operaciones se comportan como la
+// composición nativa tomando el título como nombre.
 func TestComposeTextIdentityMatchesTheNativeEngine(t *testing.T) {
 	canonical := join(
 		"## Requirements",
