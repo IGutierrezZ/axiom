@@ -57,12 +57,14 @@ Espacio canónico (fixture de la spec): `<maestra>` sin versionar, con `.axiom-w
   - Mutación local (no commiteada, revertida con `git checkout`): `verifyGateEvidence(loc.Master, …)` hace fallar el subtest de S (`not a git repository`); `verifyGateEvidence(<maestra>/repo-backend, …)` hace fallar los dos (acepta C y rechaza S). Sin defecto de producción.
   - Checks: `go test ./internal/cli -run 'SDDGateRecord|PlanningHome|TestEveryProductionRefusal|TestRefusalRatchet' -count=1` → `ok` (18,1 s, writer); prueba nueva repetida por el orquestador → `PASS`; `gofmt -l internal/cli` → vacío.
   - Checks: `go test ./internal/cli -run 'SDDGateRecord|PlanningHome|TestEveryProductionRefusal|TestRefusalRatchet' -count=1`, `gofmt -l internal/cli`.
-- [ ] **T2 · S4: etiquetas REQ-24.16 y REQ-24.44**
+- [x] **T2 · S4: etiquetas REQ-24.16 y REQ-24.44**
   - Ruta: en línea (cambio mecánico, solo comentarios).
   - Añadir `REQ-24.16` al comentario de `TestDeclarationsBaselineValidation` (`internal/workspace/declarations_test.go:177`) o a los casos que validan `integration: directed|register` en documentos de prosa. Comprobar que esos casos lo cubren de verdad; si no, se informa y no se etiqueta.
   - Añadir `REQ-24.44` a las pruebas de MODIFIED, REMOVED y RENAMED por ID de `internal/specbaseline/compose_test.go` (por ejemplo, `TestComposeModifiedReplacesOnlyTheBlockAndDropsTheNotes`, `TestComposeRenamedWithIDIdentityIsRejected` y `TestComposeRenamedWithTextIdentityRetitlesTheBlock`).
   - Commit: `test: etiquetar con REQ-24.16 y REQ-24.44 las pruebas que los cubren`.
   - Checks: `rg -n "REQ-24.16|REQ-24.44" --glob '*_test.go' internal` encuentra las etiquetas; `go test ./internal/workspace ./internal/specbaseline -count=1 -timeout 30m`; `gofmt -l internal/workspace internal/specbaseline`.
+  - **Hecho (2026-10-12).** Ruta: en línea. Cobertura comprobada antes de etiquetar. REQ-24.16: `TestDeclarationsValidBlocksAreLoaded` (`directed` por defecto en prosa, `register` declarado, composición con perfil) y los casos `integracion*` de `TestDeclarationsBaselineValidation` (valor desconocido, `compose` y `integration` en un documento con perfil, rechazados). REQ-24.44: `TestComposeModifiedReplacesOnlyTheBlockAndDropsTheNotes`, `TestComposeModifiedOnAMissingIDNamesSectionAndRequirement`, `TestComposeRemovedDeletesOnlyTheBlockAndKeepsItsTail`, `TestComposeRemovedWithSupersedeKeepsTheBlockMarked`, `TestComposeRenamedWithIDIdentityIsRejected`, `TestComposeRenamedWithTextIdentityRetitlesTheBlock` y `TestComposeTextIdentityMatchesTheNativeEngine`.
+  - Checks: `rg` encuentra 3 líneas con REQ-24.16 y 7 con REQ-24.44; `gofmt -l` → vacío; `go test ./internal/workspace ./internal/specbaseline -count=1 -timeout 30m` → `ok` (3,6 s y 194 s).
 - [ ] **T3 · Cierre**
   - `go build ./...`, `go vet ./internal/cli/... ./internal/workspace/... ./internal/specbaseline/...` y `git status --porcelain` vacío.
   - Actualizar este documento y su espejo en Engram con la evidencia y los SHAs.
@@ -79,7 +81,8 @@ Espacio canónico (fixture de la spec): `<maestra>` sin versionar, con `.axiom-w
 
 - 2026-10-12: documento abierto (3 tareas). Pendiente de ejecución desde otra sesión.
 - 2026-10-12: T1 hecha (W1 cubierto; mutación confirma que la prueba detecta un repositorio equivocado).
+- 2026-10-12: T2 hecha (etiquetas REQ-24.16 y REQ-24.44 en pruebas que los cubren).
 
 ## Siguiente paso
 
-T2.
+T3.

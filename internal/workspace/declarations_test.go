@@ -55,6 +55,8 @@ func TestDeclarationsAbsentAreTheZeroValue(t *testing.T) {
 	}
 }
 
+// REQ-24.16: un documento de prosa integra con directed por defecto o con
+// register si lo declara; un documento con perfil integra por composición.
 func TestDeclarationsValidBlocksAreLoaded(t *testing.T) {
 	cfg, baseErr, declarations := parseDeclarations(t, `baseline:
   documents:
@@ -173,7 +175,9 @@ func proseDoc(domain, path string) string {
 	return "    - domain: " + domain + "\n      path: " + path + "\n"
 }
 
-// REQ-24.13 a 24.16, 24.60: tablas de validación sintáctica de baseline.
+// REQ-24.13 a REQ-24.16 y REQ-24.60: tablas de validación sintáctica de baseline.
+// Los casos de integration cubren REQ-24.16: solo 'directed' o 'register', y
+// nunca en un documento con perfil de requisito.
 func TestDeclarationsBaselineValidation(t *testing.T) {
 	profile := func(domain, extra string) string {
 		return "    - domain: " + domain + "\n      path: " + domain + ".md\n      requirement:\n" +
