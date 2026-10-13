@@ -57,6 +57,103 @@ jobs:
       - name: Check Go formatting
         run: go run ./internal/gofmtcheck
 
+  # Decide si el diff toca algo que solo existe para Windows o que decide su
+  # comportamiento. Se hace aquí, con git, y no con una acción de terceros de
+  # detección de cambios: el workflow no depende de nada que no esté fijado por
+  # SHA. No filtra por paquete: 46 paquetes tienen código específico de Windows
+  # (internal/cli entre ellos) y cambian a menudo, así que filtrar por paquete
+  # equivaldría a ejecutar casi siempre. La suite completa de Linux sigue
+  # corriendo en cada PR y cubre los contratos entre paquetes.
+  #
+  # Falla abierto: si no se puede calcular el diff, o la referencia anterior ya
+  # no existe (rama nueva, force push), el resultado es `true`. Un cálculo roto
+  # nunca debe dejar Windows sin ejecutar en silencio.
+  changes:
+    name: Detect Windows-relevant changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    # Solo lee la historia: no necesita más permisos ni conservar credenciales.
+    permissions:
+      contents: read
+    outputs:
+      windows: ${{ steps.detect.outputs.windows }}
+    steps:
+      # Checkout por defecto, no el del candidato: en un PR es la referencia de
+      # fusión del repositorio base, que contiene el SHA base y el del PR aunque
+      # el PR venga de un fork, y aquí no se ejecuta código del PR, solo se lee
+      # su lista de ficheros. fetch-depth 0 trae la historia que necesita el diff.
+      - name: Checkout history for the diff
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd  # v5.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Detect changes that need Windows
+        id: detect
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PUSH_BEFORE_SHA: ${{ github.event.before }}
+          PUSH_AFTER_SHA: ${{ github.sha }}
+        run: |
+          # Un fichero justifica ejecutar Windows. El `*` de `case` también
+          # cruza `/`, así que `*_windows.go` equivale a `**/*_windows.go`.
+          is_windows_file() {
+            case "$1" in
+              *_windows.go | *_windows_test.go | *_other.go | *_unix.go) return 0 ;;
+              go.mod | go.sum) return 0 ;;
+              .github/workflows/ci.yml | .github/workflows/windows-full-suite.yml) return 0 ;;
+              scripts/*/*) return 1 ;; # scripts/*.ps1 no es recursivo
+              scripts/*.ps1) return 0 ;;
+            esac
+            return 1
+          }
+
+          fail_open() {
+            echo "::warning::$1; running the Windows lane."
+            echo 'windows=true' >> "$GITHUB_OUTPUT"
+            exit 0
+          }
+
+          case "$EVENT_NAME" in
+            workflow_dispatch)
+              echo 'windows=true' >> "$GITHUB_OUTPUT"
+              exit 0
+              ;;
+            pull_request)
+              # Tres puntos: se compara contra el ancestro común, es decir, solo
+              # lo que aporta el PR aunque la base haya avanzado.
+              range="$PR_BASE_SHA...$PR_HEAD_SHA"
+              ;;
+            push)
+              if [[ "$PUSH_BEFORE_SHA" =~ ^0+$ ]]; then
+                fail_open 'push without a previous commit (new branch)'
+              fi
+              range="$PUSH_BEFORE_SHA..$PUSH_AFTER_SHA"
+              ;;
+            *)
+              fail_open "unexpected event $EVENT_NAME"
+              ;;
+          esac
+
+          # --no-renames: un fichero renombrado aparece con sus dos rutas, así
+          # que sacar un *_windows.go de su sitio también cuenta.
+          if ! files="$(git -c core.quotepath=off diff --name-only --no-renames "$range")"; then
+            fail_open "could not diff $range (force push or missing history)"
+          fi
+
+          relevant=false
+          while IFS= read -r file; do
+            if [ -n "$file" ] && is_windows_file "$file"; then
+              echo "Windows-relevant: $file"
+              relevant=true
+            fi
+          done <<< "$files"
+
+          echo "windows=$relevant" >> "$GITHUB_OUTPUT"
+          echo "Compared $range: windows=$relevant"
+
   unit-tests:
     name: Unit Tests
     needs: go-format
@@ -300,9 +397,26 @@ jobs:
 
   windows-runtime:
     name: Windows Runtime
-    needs: go-format
-    # Restringido a ejecución manual bajo demanda para evitar consumo masivo de runners Windows (factor 2x)
-    if: github.event_name == 'workflow_dispatch'
+    needs: [go-format, changes]
+    # Los runners Windows cuestan el doble, así que no corre en cada PR o push.
+    # Corre cuando:
+    #   - se lanza a mano (workflow_dispatch);
+    #   - el diff toca rutas de Windows (job `changes`);
+    #   - el PR lleva la etiqueta `ci:windows`, que lo fuerza aunque el diff no
+    #     toque esas rutas. Se lee la etiqueta que el PR tiene al abrirse,
+    #     sincronizarse o reabrirse; una etiqueta añadida después la atiende
+    #     windows-full-suite.yml, para que un `labeled` no relance todo este
+    #     workflow.
+    # `!cancelled()` y `needs.changes.result != 'success'` hacen que, si el
+    # propio job `changes` falla, Windows se ejecute en lugar de omitirse en
+    # silencio. El paso de abajo sigue cerrando el acceso si go-format falla.
+    if: >-
+      !cancelled() && (
+      github.event_name == 'workflow_dispatch'
+      || needs.changes.result != 'success'
+      || needs.changes.outputs.windows == 'true'
+      || (github.event_name == 'pull_request'
+      && contains(github.event.pull_request.labels.*.name, 'ci:windows')))
     runs-on: windows-latest
     # Release blockers only; the full suite moved to windows-full-suite. Must
     # exceed the sum of its own step budgets, or a step can never reach its

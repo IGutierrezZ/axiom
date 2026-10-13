@@ -16,29 +16,117 @@ name: Windows Full Suite
 # so it gates again.
 #
 # Everything below is otherwise identical to the ci.yml job it replaces.
+#
+# Cuándo se ejecuta. Son 10 shards de ~30 min en runners Windows, que cuestan el
+# doble, así que no se lanza en cada push. A diferencia del job windows-runtime
+# de ci.yml, no reacciona a los cambios de ruta: solo corre
+#   - a mano (workflow_dispatch);
+#   - en un PR con la etiqueta `ci:windows`: al añadirla, y después en cada
+#     push (synchronize) o reapertura mientras la lleve. Esta es también la vía
+#     para una etiqueta añadida tras abrir el PR, porque ci.yml no escucha
+#     `labeled` y relanzar todos sus jobs por una etiqueta sería un gasto inútil;
+#   - cada lunes a las 03:20 UTC, y solo si `main` tiene commits que ninguna
+#     ejecución correcta ha cubierto todavía. Una semana sin commits nuevos no
+#     gasta ningún minuto de Windows.
+# El job `gate` decide todo esto en un runner Linux de segundos; los shards solo
+# se crean si `gate` da luz verde.
 
 on:
-  # Desactivada la ejecución automática (push y cron diario de 03:20 UTC)
-  # para evitar el sobreconsumo masivo de minutos de runners Windows (10 shards * ~30 min * 2x).
-  # Solo ejecutable manualmente bajo demanda por los mantenedores.
   workflow_dispatch:
+  # `labeled` por la etiqueta; `synchronize` y `reopened` para seguir ejecutando
+  # un PR que ya la lleva. Cualquier otra etiqueta u otro evento sobre un PR sin
+  # `ci:windows` termina en `gate` sin lanzar nada.
+  pull_request:
+    types: [labeled, synchronize, reopened]
+  schedule:
+    - cron: '20 3 * * 1'
 
 permissions:
   contents: read
 
 # Una ejecución nueva deja obsoleta a la anterior del mismo disparador sobre la
 # misma referencia, así que se cancela en lugar de encolarse detrás. El nombre
-# del evento forma parte de la clave para que un push no cancele la ejecución
-# diaria de seguridad ni un workflow_dispatch manual, que es la única vía de
-# re-ejecutar cuando el fichero del workflow ha cambiado.
+# del evento forma parte de la clave para que un PR etiquetado no cancele la
+# ejecución semanal ni un workflow_dispatch manual, que es la única vía de re-ejecutar
+# cuando el fichero del workflow ha cambiado. Un `labeled` de otra etiqueta que
+# no es `ci:windows` no hace trabajo real, así que se le da una clave propia
+# (con el id de la ejecución): no puede cancelar una ejecución real en curso.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}-${{ (github.event.action == 'labeled' && github.event.label.name != 'ci:windows') && github.run_id || '' }}
   cancel-in-progress: true
 
 jobs:
+  # Puerta barata en Linux: decide si hay que gastar minutos de Windows. Aplica
+  # a todos los disparadores, pero solo `schedule` consulta el historial.
+  gate:
+    name: Decide whether to run
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    # Solo lee el historial de ejecuciones (`gh run list`); sin checkout.
+    permissions:
+      actions: read
+    outputs:
+      run: ${{ steps.decide.outputs.run }}
+    steps:
+      - name: Decide whether the shards run
+        id: decide
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_ACTION: ${{ github.event.action }}
+          LABEL_ADDED: ${{ github.event.label.name }}
+          PR_HAS_LABEL: ${{ contains(github.event.pull_request.labels.*.name, 'ci:windows') }}
+          CURRENT_SHA: ${{ github.sha }}
+        run: |
+          decide() {
+            case "$EVENT_NAME" in
+              workflow_dispatch)
+                echo true 'manual run'
+                ;;
+              pull_request)
+                # `labeled` de otra etiqueta no cuenta aunque el PR ya lleve
+                # `ci:windows`: solo reacciona la propia `ci:windows`.
+                if [ "$EVENT_ACTION" = labeled ]; then
+                  if [ "$LABEL_ADDED" = 'ci:windows' ]; then
+                    echo true 'ci:windows label added'
+                  else
+                    echo false "label '$LABEL_ADDED' is not ci:windows"
+                  fi
+                elif [ "$PR_HAS_LABEL" = true ]; then
+                  echo true "PR carries ci:windows ($EVENT_ACTION)"
+                else
+                  echo false "PR does not carry ci:windows ($EVENT_ACTION)"
+                fi
+                ;;
+              schedule)
+                # Falla abierto: si no se puede consultar el historial, o no
+                # hay ninguna ejecución correcta en main, se ejecuta.
+                if ! last="$(gh run list --workflow windows-full-suite.yml --branch main \
+                  --status success --limit 1 --json headSha --jq '.[0].headSha // ""')"; then
+                  echo true 'could not read the run history'
+                elif [ -z "$last" ]; then
+                  echo true 'no successful run on main yet'
+                elif [ "$last" = "$CURRENT_SHA" ]; then
+                  echo false "main has no new commits since the last successful run ($last)"
+                else
+                  echo true "main moved from $last to $CURRENT_SHA"
+                fi
+                ;;
+              *)
+                echo true "unexpected event $EVENT_NAME"
+                ;;
+            esac
+          }
+
+          read -r run reason < <(decide)
+          echo "run=$run" >> "$GITHUB_OUTPUT"
+          echo "run=$run: $reason"
+          echo "run=$run: $reason" >> "$GITHUB_STEP_SUMMARY"
+
   # Coverage is identical to running the suite in one job -- every package runs
-  # on every push and schedule -- but wall-clock is set by the slowest shard
-  # rather than the sum.
+  # on every run that gets past the gate -- but wall-clock is set by the slowest
+  # shard rather than the sum.
   #
   # Sharding, not test selection: the shards are content-independent, so a
   # change is never the reason a package does or does not run. Selecting tests
@@ -71,6 +159,8 @@ jobs:
   # a refactor of shared global state and not a CI change.
   windows-full-suite:
     name: Windows Full Suite (${{ matrix.shard.name }})
+    needs: gate
+    if: needs.gate.outputs.run == 'true'
     runs-on: windows-latest
     timeout-minutes: 40
     strategy:
@@ -138,7 +228,10 @@ jobs:
       - name: Checkout exact event candidate
         uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd  # v5.0.1
         with:
-          ref: ${{ github.sha }}
+          # En un PR se prueba su cabeza, como hace ci.yml, y no la referencia de
+          # fusión que es `github.sha` en ese evento.
+          repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Set up Go
         uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c  # v6.4.0
