@@ -24,7 +24,7 @@ import (
 // requested without --contract. runReviewStatus emits it and names every
 // accepted contract value rather than only describing the requirement.
 const reviewContractRequiredForActionEligibilityReason = "--action-eligibility and --next-transition require --contract " +
-	ReviewIntegrationContractV1 + " or " + ReviewIntegrationContractV2
+	ReviewIntegrationContractV1 + " or " + AxiomReviewIntegrationContractV2
 
 // reviewStatusTargetSelectorsRequireContractReason is the sibling of
 // reviewContractRequiredForActionEligibilityReason above: it names the same
@@ -32,19 +32,19 @@ const reviewContractRequiredForActionEligibilityReason = "--action-eligibility a
 // flags (target selectors such as --lineage, --base-ref, --base-tree,
 // --workspace-overlay, --projection, --gate, and the recovery selectors).
 const reviewStatusTargetSelectorsRequireContractReason = "review status target selectors require --contract " +
-	ReviewIntegrationContractV1 + " or " + ReviewIntegrationContractV2
+	ReviewIntegrationContractV1 + " or " + AxiomReviewIntegrationContractV2
 
 // reviewStartTargetRequiresContractReason is the sibling of
 // reviewContractRequiredForActionEligibilityReason above, naming the same
 // exact contract value for review start --target used without --contract.
-const reviewStartTargetRequiresContractReason = "review start --target requires --contract " + ReviewIntegrationContractV1
+const reviewStartTargetRequiresContractReason = "review start --target requires --contract " + AxiomReviewIntegrationContractV2
 
 // reviewStartConsentRequiresContractReason keeps the consent declaration a
 // strictly negotiated-form surface: the typed question exists for callers
 // that relay envelopes, and the unnegotiated form keeps today's console
 // behavior byte for byte. The refusal names the exact runnable rerun.
 const reviewStartConsentRequiresContractReason = "review start --consent requires the negotiated form; rerun as axiom review start --contract " +
-	ReviewIntegrationContractV1 + " with the bound --target and --projection"
+	AxiomReviewIntegrationContractV2 + " with the bound --target and --projection"
 
 // reviewStartConsentValueReason names the exact allowed-answer domain for the
 // consent declaration, mirroring the choice tokens the typed question emits.
@@ -2167,7 +2167,7 @@ func runReviewFacadeStart(ctx context.Context, args []string, stdout io.Writer) 
 	if !negotiated && target.Kind != reviewtransaction.TargetCurrentChanges && len(lenses) > 0 {
 		return reviewPreflightRefusal(reviewPreflightDirectRouteUncompletableReason,
 			fmt.Errorf("review start without --contract cannot produce a completable review because its %d selected lens(es) require repository_context, which only the negotiated contract form publishes; rerun with `axiom review start %s` instead",
-				len(lenses), strings.TrimPrefix(reviewNegotiatedStartCommand(dialect, snapshot, *runtimeAgent), dialect.commandPrefix("start"))))
+				len(lenses), strings.TrimPrefix(reviewNegotiatedStartCommand(reviewProseDialect, snapshot, *runtimeAgent), reviewProseDialect.commandPrefix("start"))))
 	}
 	// The candidate is frozen and the tier is classified, so this is the one
 	// point where the kill switch can stop a start and consent can name the real

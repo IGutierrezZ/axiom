@@ -68,6 +68,13 @@ const reviewNextTransitionRefreshCommandV21 = "gentle-ai review status --cwd <re
 // because they feed schema- and digest-pinned structured output.
 const reviewProseRefreshCommand = reviewAxiomCommandTool + " review status --cwd <repo> --contract " + AxiomReviewIntegrationContractV2 + " --next-transition"
 
+// reviewProseDialect is the dialect every prose message renders its commands
+// in, for the same reason as reviewProseRefreshCommand: a refusal tells a person
+// or agent what to run next, so it names the axiom tool and contract even when
+// the caller that hit it negotiated nothing and therefore carries the zero
+// (legacy) dialect. Structured output keeps answering in the negotiated dialect.
+var reviewProseDialect = reviewDialect{axiom: true}
+
 var reviewCapabilitiesBuildInfoReader = debug.ReadBuildInfo
 var reviewCapabilitiesExecutablePath = os.Executable
 
@@ -184,10 +191,10 @@ func RunReviewCapabilities(args []string, stdout io.Writer) error {
 func validateReviewIntegrationContract(contract string) error {
 	canonical, _, err := reviewtransaction.ResolveReviewContract(contract)
 	if err != nil {
-		return fmt.Errorf("unsupported review integration contract %q; retry with axiom review capabilities --contract %s or axiom review capabilities --contract %s", contract, ReviewIntegrationContractV1, ReviewIntegrationContractV2)
+		return fmt.Errorf("unsupported review integration contract %q; retry with axiom review capabilities --contract %s or axiom review capabilities --contract %s", contract, ReviewIntegrationContractV1, AxiomReviewIntegrationContractV2)
 	}
 	if canonical != reviewtransaction.AxiomReviewIntegrationV2Contract && canonical != ReviewIntegrationContractV1 {
-		return fmt.Errorf("unsupported review integration contract %q; retry with axiom review capabilities --contract %s or axiom review capabilities --contract %s", contract, ReviewIntegrationContractV1, ReviewIntegrationContractV2)
+		return fmt.Errorf("unsupported review integration contract %q; retry with axiom review capabilities --contract %s or axiom review capabilities --contract %s", contract, ReviewIntegrationContractV1, AxiomReviewIntegrationContractV2)
 	}
 	return nil
 }
