@@ -2,7 +2,8 @@
 
 > **Documento vivo ODD.** Fichero autoritativo: `odd/tasks/windows-pruebas-entorno-y-ci.md`, en la rama `fix/windows-pruebas-entorno-y-ci` (worktree `C:\repos\axiom-wt\windows-pruebas-entorno-y-ci`, creado desde `origin/main` `bd82ed31` el 2026-10-12).
 > Espejo de recuperación en Engram: topic `odd/windows-pruebas-entorno-y-ci/tasks`, proyecto `axiom`.
-> Abierto en la sesión de cierre de inc-24. **Se ejecuta desde otra sesión.**
+> Abierto en la sesión de cierre de inc-24.
+> **Estado: CERRADO el 2026-10-13.** PR 1 (#145) y PR 2 (#146) fusionados. Los hallazgos pendientes pasan a tres ODD de seguimiento (sección «Destino de los hallazgos»).
 
 ## Objetivo
 
@@ -110,6 +111,15 @@ Datos de la máquina: Windows 11 Enterprise 10.0.26200, Go 1.26.3 y modo desarro
 
 **Línea base 2026-10-12 (run 38289022694, `workflow_dispatch` sobre `main` `d47d51aa`):** 9 de 10 shards en verde; solo falla H8. **H5 queda descartado:** los shards de `sddstatus`, `cli` y `rest` (que incluye `e2e/organicruntime`) pasan, y `edit_authority_missing` ya no aparece. H7 tampoco aparece en CI.
 
+### Destino de los hallazgos
+
+- **H5:** cerrado. No se reproduce en la línea base de CI y ya estaba corregido en `main`.
+- **H8:** pasa a `odd/tasks/windows-lock-autoridad-concurrente.md`.
+- **H1, H3 y H6:** pasan a `odd/tasks/pruebas-aislamiento-host.md` (correcciones solo de pruebas, un único PR).
+- **H2:** pasa a `odd/tasks/semantic-detector-codegraph.md` (cambio de producto).
+- **H4:** aparcado. Es un endurecimiento opcional que no causa ningún fallo; se reabre solo con evidencia.
+- **H7:** aparcado. No aparece en la línea base de CI; se acepta como un límite de una máquina local saturada. Se reabre solo si aparece en CI.
+
 ## Política de CI propuesta (T4) — confirmar con el usuario antes de implementarla
 
 Se aplica a `windows-runtime` (`ci.yml`) y a `windows-full-suite.yml`:
@@ -216,7 +226,11 @@ Coste asumido: un cambio que rompa Windows sin tocar las rutas del punto 2 se de
   - Ruta: en línea.
   - En `docs/platforms.md`, o en la guía de contribución si existe, qué se ejecuta en local en Windows (paquetes focalizados), cómo forzar Windows en un PR y cada cuánto se ejecuta solo.
   - Commit: `docs: política de pruebas en Windows`.
-- [ ] **T6 · Cierre** — comprobaciones hechas; faltan los PRs, que decide el usuario.
+- [x] **T6 · Cierre** — PRs fusionados el 2026-10-13.
+  - PR 1, IGutierrezZ/axiom#145: fusionado por squash como `d8a4c1b1`. Una ejecución cancelada de «PR Validation» (38272983907), dejada por la concurrencia al abrir el PR con dos etiquetas, bloqueaba la regla requerida y se relanzó.
+  - PR 2, IGutierrezZ/axiom#146: rebasado sobre `main` con `--onto`, redirigido a `main` y fusionado por squash como `eea58801`. El force-push no disparó los workflows, así que un commit vacío relanzó el CI; desapareció con el squash. `Windows Runtime` se ejecutó y pasó porque el diff tocaba los workflows.
+  - Se creó la etiqueta `ci:windows`.
+  - Línea base: run 38289022694.
   - Evidencia en la cabeza `3ff8b022`:
     - `go build ./...`, `go vet ./...` y `gofmtcheck`: OK.
     - Ratchet de código muerto: «no new unreachable functions».
@@ -253,10 +267,12 @@ Coste asumido: un cambio que rompa Windows sin tocar las rutas del punto 2 se de
 
 - 2026-10-12: el usuario decide dejar el PR 1 entero con `size:exception` (unas 630 líneas; el exceso es casi todo el documento ODD).
 
+- 2026-10-13: ODD cerrado. T6 hecha: #145 (`d8a4c1b1`) y #146 (`eea58801`) fusionados; etiqueta `ci:windows` creada; línea base en el run 38289022694 (9 de 10 shards en verde, H5 descartado, H8 nuevo). T3 sigue parcial por H6 y H7, ambos con destino en «Destino de los hallazgos». Los seguimientos quedan en tres ODD nuevos, propuestos y sin iniciar.
+
 ## Siguiente paso
 
-El usuario decide el push, la creación de los PRs y el merge. El PR 1 lleva la etiqueta `size:exception`. Después:
+ODD cerrado. Los seguimientos viven en tres ODD nuevos, que se lanzan en sesiones aparte, en este orden:
 
-- crear la etiqueta `ci:windows`;
-- lanzar `windows-full-suite` con `workflow_dispatch` para tener una línea base nueva (H5);
-- decidir aparte H1–H7.
+1. H8: `odd/tasks/windows-lock-autoridad-concurrente.md`.
+2. Aislamiento de pruebas (H1, H3 y H6): `odd/tasks/pruebas-aislamiento-host.md`.
+3. H2: `odd/tasks/semantic-detector-codegraph.md`.
