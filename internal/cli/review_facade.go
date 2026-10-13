@@ -775,7 +775,7 @@ func runReviewCommand(args []string, stdout io.Writer) error {
 }
 
 func runReviewStatus(ctx context.Context, args []string, stdout io.Writer) error {
-	flags := newReviewFlagSet("review status", stdout, "Read every compact-v2 and shipped legacy-v1 authority from the shared Git common directory; initialize local Git only for a genuinely unversioned workspace.")
+	flags := newReviewFlagSet("review status", stdout, "Read every compact-v2 and shipped legacy-v1 authority from the shared Git common directory; initialize local Git only for a genuinely unversioned workspace, never for a multirepo master folder.")
 	cwd := flags.String("cwd", ".", "repository path")
 	contract := flags.String("contract", "", "optional negotiated review integration contract")
 	runtimeAgent := flags.String("agent", "", "generated active runtime identity for negotiated lifecycle routing")
@@ -879,9 +879,9 @@ func runReviewStatus(ctx context.Context, args []string, stdout io.Writer) error
 		if selectedBaseTree != "" && !validReviewGitTree(selectedBaseTree) {
 			return reviewPreflightError(errors.New("review status --base-tree requires an exact Git tree object ID; rerun `axiom review status --base-tree <tree> --workspace-overlay` with the frozen tree ID"))
 		}
-		root, err := reviewtransaction.PrepareReviewRepositoryRoot(ctx, *cwd)
+		root, err := reviewPrepareRepositoryRoot(ctx, *cwd, "resolve negotiated review repository root")
 		if err != nil {
-			return fmt.Errorf("resolve negotiated review repository root: %w", err)
+			return err
 		}
 		// STATUS accepts a nested selector, but every subsequent snapshot
 		// operation must use the canonical worktree root it resolved. Leaving
@@ -1478,9 +1478,9 @@ func runReviewStatus(ctx context.Context, args []string, stdout io.Writer) error
 	if strings.TrimSpace(*runtimeAgent) != "" || strings.TrimSpace(*repositoryContextHandle) != "" || strings.TrimSpace(*baseRef) != "" || strings.TrimSpace(*baseTree) != "" || committedOnlyProvided || *workspaceOverlay || *projection != string(reviewtransaction.ProjectionWorkspace) || *gate != string(reviewtransaction.GatePreCommit) || *recoverySuccessor != "" || *recoveryReason != "" || *recoveryActor != "" || *recoveryAuthorization != "" || *repairActor != "" || *repairReason != "" || *repairAuthorization != "" || reviewIntendedUntrackedDeclared(untrackedScope, intendedUntracked, expectedUntrackedInventory) {
 		return errors.New(reviewStatusTargetSelectorsRequireContractReason)
 	}
-	root, err := reviewtransaction.PrepareReviewRepositoryRoot(ctx, *cwd)
+	root, err := reviewPrepareRepositoryRoot(ctx, *cwd, "resolve review repository root")
 	if err != nil {
-		return fmt.Errorf("resolve review repository root: %w", err)
+		return err
 	}
 	var report reviewtransaction.AuthorityStatusReport
 	if trimmedLineage := strings.TrimSpace(*lineage); trimmedLineage != "" {
@@ -2068,9 +2068,9 @@ func runReviewFacadeStart(ctx context.Context, args []string, stdout io.Writer) 
 	if err != nil {
 		return reviewPreflightError(err)
 	}
-	root, err := reviewtransaction.PrepareReviewRepositoryRoot(ctx, *cwd)
+	root, err := reviewPrepareRepositoryRoot(ctx, *cwd, "resolve review repository root")
 	if err != nil {
-		return fmt.Errorf("resolve review repository root: %w", err)
+		return err
 	}
 	selectedProjection := reviewtransaction.Projection(strings.TrimSpace(*projection))
 	if selectedProjection != reviewtransaction.ProjectionWorkspace && selectedProjection != reviewtransaction.ProjectionStaged {

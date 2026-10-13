@@ -586,6 +586,25 @@ func reviewPreflightRefusalWithContinuation(reason reviewPreflightReason, err er
 	return &reviewIntegrationPreflightError{cause: err, reason: &reason, continuation: continuation}
 }
 
+// reviewPrepareRepositoryRoot is the lifecycle entry boundary shared by review
+// status and start: it resolves the repository root, initializing local Git
+// only for a genuinely unversioned directory. A multirepo master folder is
+// refused by that boundary, and the refusal surfaces here as the typed
+// invalid_request preflight failure instead of an unexpected fault, because
+// the operator can fix it by pointing --cwd at one of the named repositories.
+// Every other failure keeps its plain wrapped form.
+func reviewPrepareRepositoryRoot(ctx context.Context, cwd, failureContext string) (string, error) {
+	root, err := reviewtransaction.PrepareReviewRepositoryRoot(ctx, cwd)
+	if err == nil {
+		return root, nil
+	}
+	var multirepo *reviewtransaction.ReviewMultirepoWorkspaceError
+	if errors.As(err, &multirepo) {
+		return "", reviewPreflightError(fmt.Errorf("%s: %w", failureContext, err))
+	}
+	return "", fmt.Errorf("%s: %w", failureContext, err)
+}
+
 func reviewIntegrationFailureRoute(args []string) (string, bool, *ReviewIntegrationFailure) {
 	if len(args) == 0 {
 		return "", false, nil

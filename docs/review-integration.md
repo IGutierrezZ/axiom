@@ -41,6 +41,10 @@ A session in repository A may review a nested target in unrelated repository B o
 
 This lifecycle is available only to Claude Code, Codex, OpenCode, and Pi. Unsupported runtimes fail before repository or authority mutation.
 
+## Multirepo master folders
+
+`axiom review status` and `axiom review start` initialize local Git only for a genuinely unversioned directory. They never do it for the master folder of a multirepo workspace: a directory that carries `.axiom-workspace` (itself or in an ancestor) or whose direct children hold `.git` metadata is refused before anything is written. The refusal is the typed `invalid_request` preflight failure with `next_action: correct_request`; its message names the workspace, lists up to five of its repositories, and names the continuation `axiom review status --cwd <repo>`. Point `--cwd` at one of those repositories and rerun. The refusal applies whether or not receipt-driven development is enabled.
+
 ## Atomic lifecycle
 
 ### 1. Selectorless STATUS preflights only
@@ -106,7 +110,7 @@ Medium and high-risk START may return the typed `gentle-ai.review-integration.co
 
 ## Read-only risk assessment (`axiom review assess`)
 
-`axiom review assess --cwd <repo> [--base-ref <ref> --committed-only] [--untracked-scope exclude|select --intended-untracked <path> --expected-untracked-inventory <digest>] [--json]` prints the same candidate risk classification START uses to select lenses (`reviewtransaction.AssessSnapshotRisk`), without creating any review authority, lineage, or store mutation. It works identically with receipt-driven development on or off, so a host can gate delegated verification on the result before ever calling `review start`.
+`axiom review assess --cwd <repo> [--base-ref <ref> --committed-only] [--untracked-scope exclude|select --intended-untracked <path> --expected-untracked-inventory <digest>] [--json]` prints the same candidate risk classification START uses to select lenses (`reviewtransaction.AssessSnapshotRisk`), without creating any review authority, lineage, or store mutation. It works identically with receipt-driven development on or off, so a host can gate delegated verification on the result before ever calling `review start`. It is read-only in the strict sense: unlike `status` and `start`, it never initializes Git, so a `--cwd` outside any repository (a multirepo master folder included) fails with the typed `invalid_request` preflight failure naming `axiom review assess --cwd <repo>`.
 
 It builds the exact same candidate `review start` would: current changes by default, or an immutable base-to-HEAD comparison with `--base-ref` (which requires `--committed-only` to acknowledge dirty tracked changes, exactly like `review start`). The untracked-scope flags accept the same values `review start` does.
 
