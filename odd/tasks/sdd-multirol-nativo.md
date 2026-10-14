@@ -185,12 +185,23 @@ Defectos P0 observados en la prueba, registrados en `HALLAZGOS_AXIOM.md` de la c
 
 ## Cortes de entrega (`stacked-to-main`)
 
-| PR | Commits | Contenido |
-|---|---|---|
-| 1 | `ff3888ee`, `7956969b`, `35766431` | Registro del ODD y T1 |
-| 2 | `9e1b1a5d`, `d9aa7f3b` | T2 |
-| 3 | `2477bcc7` y el cierre del documento | T3 |
+| PR | Commits en la rama | Commit en `main` | Contenido |
+|---|---|---|---|
+| [IGutierrezZ/axiom#154](https://github.com/IGutierrezZ/axiom/pull/154) | `ff3888ee`, `7956969b`, `35766431` | `2d3918bc` | Registro del ODD y T1 |
+| [IGutierrezZ/axiom#155](https://github.com/IGutierrezZ/axiom/pull/155) | `cb7fef96`, `3861040f` (rebase de `9e1b1a5d` y `d9aa7f3b`) | `ba7dde1e` | T2, con `size:exception` (834 líneas, unas 440 de pruebas) |
+| [IGutierrezZ/axiom#156](https://github.com/IGutierrezZ/axiom/pull/156) | `2477bcc7`, `e863a91a` y las fusiones de sincronización `7c7b99ec` y `b1257e7a` | `3ebb9f3f` | T3 |
+
+Los tres PR se fusionaron con squash el 2026-10-14, con la CI en verde.
+
+Incidencias de la entrega:
+- Tras fusionar el #154 con squash, el #155 se rebasó sobre `main` y se subió con `--force-with-lease`.
+- Con el autofix ya activo, el #156 se sincronizó fusionando su base (primero la rama del #155 y después `main`), sin rebase.
+- En ambos casos se comprobó que el árbol resultante era idéntico byte a byte al ya verificado y que el diff frente a la base era solo T3.
+
+## Estado
+
+**Cerrado.** La issue #153 se actualiza y se cierra con referencia a #155 y #156.
 
 ## Siguiente paso
 
-Todas las tareas están hechas. Push y PR los decide el usuario. Después de fusionar, conviene reinstalar el binario y repetir el escenario (c) de la prueba EMT en modo `checkpointed`, con el rol QA y desde worktrees.
+Repetir el escenario (c) de la prueba EMT con el binario reinstalado, en modo `checkpointed`, con el rol QA, `handoff_policy: per_checkpoint` y worktrees para los repos de código. Los seguimientos fuera de alcance siguen anotados en la sección correspondiente.
