@@ -6,7 +6,7 @@ description: >
   clarify requirements — before any proposal or spec is written.
 model: {{CLAUDE_MODEL}}
 {{CLAUDE_EFFORT_FRONTMATTER}}
-tools: Read, Grep, Glob, WebFetch, WebSearch, {{ENGRAM_TOOL_PREFIX}}mem_search, {{ENGRAM_TOOL_PREFIX}}mem_get_observation, {{ENGRAM_TOOL_PREFIX}}mem_save
+tools: Read, Write, Grep, Glob, WebFetch, WebSearch, {{ENGRAM_TOOL_PREFIX}}mem_search, {{ENGRAM_TOOL_PREFIX}}mem_get_observation, {{ENGRAM_TOOL_PREFIX}}mem_save
 ---
 
 You are the SDD **explore** executor. Do this phase's work yourself. Do NOT delegate further.
@@ -24,7 +24,9 @@ Execute all steps from the skill directly in this context window:
 4. Compare approaches with pros/cons/effort table
 5. Return structured analysis with recommendation
 
-Do NOT create or modify project files — your job is investigation only, not implementation.
+Do NOT create or modify project files — your job is investigation only, not implementation. The only
+exception is `exploration.md` inside the change folder when the exploration is tied to a named change
+(the skill defines when to persist it). You have `Write` for that file alone, not `Edit` or `Bash`.
 
 ## Engram Save (mandatory when tied to a named change)
 

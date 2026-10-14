@@ -8031,7 +8031,9 @@ func TestInjectClaudeSubAgentsIgnoreInvalidAliases(t *testing.T) {
 
 // TestInjectClaudeSubAgentsScopedTools verifies that each generated Claude
 // sub-agent carries a scoped tools: frontmatter entry so the phase cannot use
-// tools outside its contract (e.g. sdd-explore cannot Edit/Write; no phase
+// tools outside its contract (e.g. sdd-explore cannot Edit/Bash and only
+// gets Write to persist exploration.md; spec/design get Bash for
+// `axiom sdd integrate check`; no phase
 // carries Task so recursion is impossible).
 func TestInjectClaudeSubAgentsScopedTools(t *testing.T) {
 	home := t.TempDir()
@@ -8048,8 +8050,8 @@ func TestInjectClaudeSubAgentsScopedTools(t *testing.T) {
 	}{
 		{
 			phase:       "sdd-explore",
-			mustContain: []string{"Read", "Grep", "Glob", "WebFetch", "WebSearch", "mcp__plugin_engram_engram__mem_save"},
-			mustNotHave: []string{"Edit", "Write", "Bash", "Task"},
+			mustContain: []string{"Read", "Write", "Grep", "Glob", "WebFetch", "WebSearch", "mcp__plugin_engram_engram__mem_save"},
+			mustNotHave: []string{"Edit", "Bash", "Task"},
 		},
 		{
 			phase:       "sdd-propose",
@@ -8058,13 +8060,13 @@ func TestInjectClaudeSubAgentsScopedTools(t *testing.T) {
 		},
 		{
 			phase:       "sdd-spec",
-			mustContain: []string{"Read", "Edit", "Write", "Grep", "Glob", "mcp__plugin_engram_engram__mem_search", "mcp__plugin_engram_engram__mem_get_observation", "mcp__plugin_engram_engram__mem_save"},
-			mustNotHave: []string{"Bash", "Task"},
+			mustContain: []string{"Read", "Edit", "Write", "Grep", "Glob", "Bash", "mcp__plugin_engram_engram__mem_search", "mcp__plugin_engram_engram__mem_get_observation", "mcp__plugin_engram_engram__mem_save"},
+			mustNotHave: []string{"Task"},
 		},
 		{
 			phase:       "sdd-design",
-			mustContain: []string{"Read", "Edit", "Write", "Grep", "Glob", "mcp__plugin_engram_engram__mem_search", "mcp__plugin_engram_engram__mem_get_observation", "mcp__plugin_engram_engram__mem_save"},
-			mustNotHave: []string{"Bash", "Task"},
+			mustContain: []string{"Read", "Edit", "Write", "Grep", "Glob", "Bash", "mcp__plugin_engram_engram__mem_search", "mcp__plugin_engram_engram__mem_get_observation", "mcp__plugin_engram_engram__mem_save"},
+			mustNotHave: []string{"Task"},
 		},
 		{
 			phase:       "sdd-tasks",

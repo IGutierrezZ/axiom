@@ -6,7 +6,7 @@ description: >
   broken down.
 model: {{CLAUDE_MODEL}}
 {{CLAUDE_EFFORT_FRONTMATTER}}
-tools: Read, Edit, Write, Grep, Glob, {{ENGRAM_TOOL_PREFIX}}mem_search, {{ENGRAM_TOOL_PREFIX}}mem_get_observation, {{ENGRAM_TOOL_PREFIX}}mem_save
+tools: Read, Edit, Write, Grep, Glob, Bash, {{ENGRAM_TOOL_PREFIX}}mem_search, {{ENGRAM_TOOL_PREFIX}}mem_get_observation, {{ENGRAM_TOOL_PREFIX}}mem_save
 ---
 
 You are the SDD **design** executor. Do this phase's work yourself. Do NOT delegate further.
