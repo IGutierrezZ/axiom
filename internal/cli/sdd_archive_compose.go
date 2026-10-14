@@ -210,7 +210,7 @@ func composeDocumentMode(loc workspace.Location, domain, deltaPath string, delta
 		return documentComposition{}, fmt.Errorf("sdd-archive-compose: no se puede leer %s para resolver la baseline: %w; corrige el YAML y vuelve a ejecutar el comando", loc.ConfigPath, declarations.ParseErr)
 	}
 	if declarations.BaselineErr != nil {
-		return documentComposition{}, fmt.Errorf("sdd-archive-compose: la baseline declarada en %s no es válida: %w; corrígela (`axiom workspace validate --path %s`) y vuelve a ejecutar el comando", loc.ConfigPath, declarations.BaselineErr, loc.Master)
+		return documentComposition{}, fmt.Errorf("sdd-archive-compose: la baseline declarada en %s no es válida: %w; corrígela (`axiom workspace validate --path %s`) y vuelve a ejecutar el comando", loc.ConfigPath, declarations.BaselineErr, pathquote.Quote(loc.Master))
 	}
 
 	if declarations.Baseline == nil {
@@ -236,7 +236,7 @@ func composeDocumentMode(loc workspace.Location, domain, deltaPath string, delta
 	}
 	if declared == nil {
 		return documentComposition{}, fmt.Errorf("sdd-archive-compose: el dominio %q no figura en 'baseline.documents' de %s: no se integra ni se promueve, y nunca se crea %s. Continuación: declara el dominio en 'baseline.documents' de axiom.yaml (`axiom workspace validate --path %s` comprueba la declaración) o retira la delta del cambio",
-			domain, loc.ConfigPath, filepath.Join(loc.PlanningHome, "specs", domain), loc.Master)
+			domain, loc.ConfigPath, filepath.Join(loc.PlanningHome, "specs", domain), pathquote.Quote(loc.Master))
 	}
 	if declared.Requirement == nil {
 		// refusal:by-design world-action: a prose document has no requirement profile to compose; it is integrated by directed edit or registry-only, not by this command.

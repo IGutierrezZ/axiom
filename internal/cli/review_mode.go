@@ -172,7 +172,7 @@ func (scope ReviewModeUnreadableScope) label() string {
 func (scope ReviewModeUnreadableScope) commands() []string {
 	suffix := " --scope=" + scope.Scope
 	if scope.Scope == reviewModeScopeClone {
-		suffix += " --cwd " + scope.Repo
+		suffix += " --cwd " + pathquote.Quote(scope.Repo)
 	}
 	return []string{
 		"`axiom review mode enable" + suffix + "`",

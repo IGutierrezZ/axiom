@@ -6,6 +6,7 @@ import (
 	"io"
 	"strings"
 
+	"github.com/IGutierrezZ/axiom/v3/internal/pathquote"
 	"github.com/IGutierrezZ/axiom/v3/internal/reviewtransaction"
 )
 
@@ -46,7 +47,7 @@ discarded_work = entries[].discarded_work; use captured_lens_results comma-joine
 --reason = %q or %q
 You choose --actor; the binding uses it with surrounding whitespace trimmed.
 --maintainer-authorization is exactly these final eight lines, joined by LF, with no trailing newline:
-%s`, cwd, reviewtransaction.CompactAbandonReasonOperatorDisposition, reviewtransaction.CompactAbandonReasonRetiredSchema,
+%s`, pathquote.Quote(cwd), reviewtransaction.CompactAbandonReasonOperatorDisposition, reviewtransaction.CompactAbandonReasonRetiredSchema,
 		strings.NewReplacer("captured_lens_results=", "captured_lens_results=<entries[].discarded_work.captured_lens_results comma-joined with \",\" in listed order>", "findings_present=false", "findings_present=<entries[].discarded_work.findings_present>", "evidence_records_present=false", "evidence_records_present=<entries[].discarded_work.evidence_records_present>").Replace(
 			reviewtransaction.RenderCompactAbandonAuthorization("<--lineage>", "<--expected-revision>", "<entries[].snapshot_identity>", "<--actor>", "<--reason>", reviewtransaction.CompactDiscardedWorkSummary{})))
 }

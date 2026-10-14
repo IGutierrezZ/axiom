@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
+	"github.com/IGutierrezZ/axiom/v3/internal/pathquote"
 	"github.com/IGutierrezZ/axiom/v3/internal/reviewerprovider"
 	"github.com/IGutierrezZ/axiom/v3/internal/reviewtransaction"
 )
@@ -1846,7 +1847,7 @@ func reviewRecoverCommand(cwd, predecessor, expected, successor, disposition str
 	command := fmt.Sprintf("%s --predecessor-lineage %s --expected-predecessor-revision %s --successor-lineage %s --disposition %s",
 		reviewRunnableCommand("review.recover"), predecessor, expected, successor, disposition)
 	if cwd != "" {
-		command += " --cwd " + cwd
+		command += " --cwd " + pathquote.Quote(cwd)
 	}
 	return command
 }
@@ -1953,7 +1954,7 @@ func RunReviewInvalidate(args []string, stdout io.Writer) error {
 			if gateName == "" {
 				gateName = "<gate>"
 			}
-			return fmt.Errorf("review invalidate no longer performs gate-derived invalidation for lineage %q; invalidated is now a derived verdict, never a write; see it instead: axiom review validate --cwd %s --lineage %s --gate %s", *lineage, strings.TrimSpace(*cwd), *lineage, gateName)
+			return fmt.Errorf("review invalidate no longer performs gate-derived invalidation for lineage %q; invalidated is now a derived verdict, never a write; see it instead: axiom review validate --cwd %s --lineage %s --gate %s", *lineage, pathquote.Quote(strings.TrimSpace(*cwd)), *lineage, gateName)
 		}
 		if strings.TrimSpace(*reason) == "" {
 			return errors.New("pristine review invalidation requires --reason")

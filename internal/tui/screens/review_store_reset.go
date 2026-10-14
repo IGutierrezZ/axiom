@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/IGutierrezZ/axiom/v3/internal/pathquote"
 	"github.com/IGutierrezZ/axiom/v3/internal/reviewtransaction"
 	"github.com/IGutierrezZ/axiom/v3/internal/tui/styles"
 )
@@ -121,7 +122,7 @@ func RenderReviewStoreResetConfirm(report reviewtransaction.StoreResetReport, su
 		b.WriteString("\n")
 		b.WriteString(styles.UnselectedStyle.Render("Finish or abandon them first. To remove them anyway, run:"))
 		b.WriteString("\n")
-		b.WriteString(styles.SelectedStyle.Render("  axiom review store-reset --cwd " + report.Repository + " --confirm --include-in-flight"))
+		b.WriteString(styles.SelectedStyle.Render("  axiom review store-reset --cwd " + pathquote.Quote(report.Repository) + " --confirm --include-in-flight"))
 		b.WriteString("\n\n")
 		b.WriteString(renderOptions(ReviewStoreResetConfirmOptions(report, surveyErr), cursor))
 		b.WriteString("\n")

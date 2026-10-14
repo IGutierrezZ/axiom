@@ -32,7 +32,7 @@ func parseEmittedContinuations(t *testing.T, reasons []string) []string {
 	for _, reason := range reasons {
 		for _, match := range sddStatusContinuationRe.FindAllStringSubmatch(reason, -1) {
 			found = true
-			args := strings.Fields(match[1])
+			args := splitQuotedFields(match[1])
 			parsed, err := ParseCommandArgs(args)
 			if err != nil {
 				t.Fatalf("emitted continuation does not parse through ParseCommandArgs: %q\nerror: %v", "axiom sdd status "+match[1], err)
@@ -44,6 +44,67 @@ func parseEmittedContinuations(t *testing.T, reasons []string) []string {
 		t.Fatalf("no runnable sdd-status continuation found in blocked reasons: %v", reasons)
 	}
 	return selectors
+}
+
+// splitQuotedFields splits a printed command the way a shell does for the
+// double-quoted words pathquote.Quote emits: quotes group a word, including its
+// spaces, and are dropped from the value.
+func splitQuotedFields(command string) []string {
+	var words []string
+	var current strings.Builder
+	inQuotes, started := false, false
+	for _, r := range command {
+		switch {
+		case r == '"':
+			inQuotes, started = !inQuotes, true
+		case (r == ' ' || r == '\t') && !inQuotes:
+			if started {
+				words = append(words, current.String())
+				current.Reset()
+				started = false
+			}
+		default:
+			current.WriteRune(r)
+			started = true
+		}
+	}
+	if started {
+		words = append(words, current.String())
+	}
+	return words
+}
+
+// TestAmbiguityContinuationsQuoteSpacedWorkspaceRoot proves the continuations
+// printed for an ambiguous change selection stay runnable when the workspace
+// root contains spaces: split like a shell, each one parses back to the exact
+// root and to the change it names.
+func TestAmbiguityContinuationsQuoteSpacedWorkspaceRoot(t *testing.T) {
+	root := filepath.Join(t.TempDir(), "mi carpeta", "repo con espacios")
+	mkdir(t, root)
+	seedReadyChange(t, root, "first", "- [ ] 1.1 Work\n")
+	seedReadyChange(t, root, "second", "- [ ] 1.1 Work\n")
+
+	status, err := Resolve(ResolveOptions{CWD: root})
+	if err != nil {
+		t.Fatalf("Resolve() error = %v", err)
+	}
+
+	continuations := 0
+	for _, reason := range status.BlockedReasons {
+		for _, match := range sddStatusContinuationRe.FindAllStringSubmatch(reason, -1) {
+			continuations++
+			parsed, parseErr := ParseCommandArgs(splitQuotedFields(match[1]))
+			if parseErr != nil {
+				t.Fatalf("continuation %q does not parse: %v", match[0], parseErr)
+			}
+			if parsed.CWD != root {
+				t.Fatalf("continuation %q parses to --cwd %q, want the exact path %q", match[0], parsed.CWD, root)
+			}
+		}
+	}
+	if continuations != 2 {
+		t.Fatalf("found %d continuations in %v, want one per ambiguous change", continuations, status.BlockedReasons)
+	}
 }
 
 func TestOpenSpecAmbiguityContinuationsParseAndCarryTheSelector(t *testing.T) {
