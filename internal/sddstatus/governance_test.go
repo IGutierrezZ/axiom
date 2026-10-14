@@ -2,6 +2,7 @@ package sddstatus
 
 import (
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -191,14 +192,11 @@ func TestLoadGovernanceReturnsNilWithoutErrorWhenNoKickoffIsSealed(t *testing.T)
 	}
 }
 
-// TestLoadGovernanceReturnsNilForContinuousExecutionStyle is Phase 13's
-// extension of loadGovernance (task 13.2, D-05): a sealed kickoff in
-// continuous mode must report NO governance at all, not a Governance value
-// with an empty Gates slice. kickoff.EvaluateGates already returns an empty
-// slice for continuous mode on its own, so this proves loadGovernance goes
-// one step further and reports structural absence, matching the field-level
-// contract Status.Governance documents.
-func TestLoadGovernanceReturnsNilForContinuousExecutionStyle(t *testing.T) {
+// TestLoadGovernanceProjectsRosterWithoutGatesForContinuousExecutionStyle is
+// D-05 narrowed (REQ-21.7 forbids only gates in continuous): a sealed
+// continuous kickoff projects the kickoff and its role roster, with an
+// empty, non-nil Gates slice, and never reads the gate ledger.
+func TestLoadGovernanceProjectsRosterWithoutGatesForContinuousExecutionStyle(t *testing.T) {
 	changeRoot := t.TempDir()
 	writeFile(t, filepath.Join(changeRoot, "tasks.md"), "- [ ] 1.1 Work\n")
 	_, ok, err := kickoff.Seal(changeRoot, kickoff.Kickoff{
@@ -218,8 +216,17 @@ func TestLoadGovernanceReturnsNilForContinuousExecutionStyle(t *testing.T) {
 	if err != nil {
 		t.Fatalf("loadGovernance() error = %v", err)
 	}
-	if got != nil {
-		t.Fatalf("loadGovernance() = %#v, se esperaba nil para un sello en modo continuo (D-05)", got)
+	if got == nil {
+		t.Fatal("loadGovernance() = nil, se esperaba el roster proyectado para un sello en modo continuo (D-05 acotada)")
+	}
+	if got.Gates == nil || len(got.Gates) != 0 {
+		t.Fatalf("Gates = %#v, se esperaba un slice vacio no nulo: continuous nunca evalua compuertas (REQ-21.7)", got.Gates)
+	}
+	if got.Roster.Source != "kickoff" || !reflect.DeepEqual(got.Roster.Roles, []string{"fullstack"}) {
+		t.Fatalf("Roster = %+v, se esperaba {kickoff [fullstack]}", got.Roster)
+	}
+	if governanceGated(got) {
+		t.Fatal("governanceGated() = true para un sello continuous, se esperaba false")
 	}
 }
 

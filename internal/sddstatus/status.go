@@ -647,10 +647,10 @@ func resolveByPreferenceOrder(options ResolveOptions) (Status, error) {
 		}
 	}
 
-	// INC-21 (D-05): loadGovernance itself reports structural absence (nil,
-	// nil) for a change with no sealed kickoff.yaml, and for one sealed in
-	// continuous mode -- the only two cases this resolver must cost nothing
-	// extra for. A corrupt kickoff.yaml or gates.yaml is a named error here,
+	// INC-21 (D-05, narrowed): loadGovernance reports structural absence (nil,
+	// nil) only for a change with no sealed kickoff.yaml. A continuous seal
+	// projects its roster with no gates, and every gate consumer below is
+	// guarded by governanceGated. A corrupt kickoff.yaml or gates.yaml is a named error here,
 	// exactly like every other resolver read in this function: it is never
 	// swallowed into "no governance" (T-10).
 	governance, err := loadGovernance(changeRoot)
@@ -1601,11 +1601,11 @@ func artifactBlockedReasonsForRoleTasks(artifacts map[string]ArtifactState, task
 			reasons.genuine = append(reasons.genuine, "tasks.md has no markdown task checkboxes.")
 		}
 	}
-	// INC-21 (D-05): a nil governance means no sealed kickoff.yaml, or one
-	// sealed in continuous mode -- both cases add nothing here, unchanged
-	// from the logic above (kickoff_absence_regression_test.go guards this
-	// exact byte-for-byte identity for the unsealed case).
-	if governance != nil {
+	// INC-21 (D-05, narrowed): an ungated governance (no sealed kickoff.yaml,
+	// or one sealed in continuous mode) adds nothing here, unchanged from the
+	// logic above (kickoff_absence_regression_test.go guards this exact
+	// byte-for-byte identity for the unsealed case).
+	if governanceGated(governance) {
 		if reason, ok := governanceBlockedReason(governance); ok {
 			reasons.genuine = append(reasons.genuine, reason)
 		}
@@ -1682,15 +1682,15 @@ func artifactDependency(state ArtifactState) DependencyState {
 }
 
 func resolveNextRecommended(dependencies Dependencies, applyState ApplyState, governance *Governance) string {
-	// INC-21 (D-05, D-09): a nil governance means no sealed kickoff.yaml, or
-	// one sealed in continuous mode -- both leave every branch below exactly
+	// INC-21 (D-05, D-09): an ungated governance (no sealed kickoff.yaml, or
+	// one sealed in continuous mode) leaves every branch below exactly
 	// as it was before this increment (kickoff_absence_regression_test.go
 	// guards that identity byte for byte). A pending or rejected gate takes
 	// precedence over every other route: REQ-21.8-21.11 forbid starting the
 	// NEXT phase (or the next role's apply) while its own gate is
 	// undecided, even when that next phase would otherwise already look
 	// ready by dependency state alone.
-	if governance != nil {
+	if governanceGated(governance) {
 		if next, ok := governanceNextRecommended(governance); ok {
 			return next
 		}

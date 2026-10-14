@@ -1043,11 +1043,11 @@ func TestResolveReturnsErrorForCorruptKickoffNeverSilentlyUnsealed(t *testing.T)
 	}
 }
 
-// TestResolveContinuousExecutionStyleNeverEvaluatesGates is D-05's
-// end-to-end proof through the public resolver: a continuous-execution seal
-// must never surface a Governance block, and routing stays exactly what it
-// would be without any seal at all.
-func TestResolveContinuousExecutionStyleNeverEvaluatesGates(t *testing.T) {
+// TestResolveContinuousExecutionStyleProjectsRosterNeverGates is D-05
+// (narrowed) end-to-end through the public resolver: a continuous-execution
+// seal projects the roster but never a gate, and routing stays exactly what
+// it would be without any seal at all.
+func TestResolveContinuousExecutionStyleProjectsRosterNeverGates(t *testing.T) {
 	root := t.TempDir()
 	changeName := "governed-continuous"
 	changeRoot := seedReadyChange(t, root, changeName, "- [ ] 1.1 Wire routes\n")
@@ -1057,8 +1057,11 @@ func TestResolveContinuousExecutionStyleNeverEvaluatesGates(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Resolve() error = %v", err)
 	}
-	if status.Governance != nil {
-		t.Fatalf("Status.Governance = %#v, want nil for a continuous-execution sealed change (D-05)", status.Governance)
+	if status.Governance == nil {
+		t.Fatal("Status.Governance = nil, want the roster projected for a continuous-execution sealed change (D-05 narrowed)")
+	}
+	if len(status.Governance.Gates) != 0 || status.GateQuestion != nil {
+		t.Fatalf("Gates = %v gateQuestion = %v, want no gate in continuous mode (REQ-21.7)", status.Governance.Gates, status.GateQuestion)
 	}
 	if status.NextRecommended != "apply" {
 		t.Fatalf("NextRecommended = %q, want apply unchanged by an ungated continuous seal", status.NextRecommended)
