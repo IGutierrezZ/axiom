@@ -53,7 +53,7 @@ Defectos P0 observados en la prueba, registrados en `HALLAZGOS_AXIOM.md` de la c
 | ID | Tarea | Ruta | Evidencia del disparador | Estado |
 |---|---|---|---|---|
 | T1 | Herramientas de los subagentes `sdd-spec`, `sdd-design` y `sdd-explore` | delegada | escritor único; 3 assets, una prueba y la documentación | Hecha, `7956969b` |
-| T2 | `sdd status` resuelve las tareas por rol desde el kickoff sellado | delegada | más de 4 ficheros de `sddstatus` y `cli` | Pendiente |
+| T2 | `sdd status` resuelve las tareas por rol desde el kickoff sellado | delegada | más de 4 ficheros de `sddstatus` y `cli` | Hecha, `9e1b1a5d` |
 | T3 | Roster y progreso por rol en `continuous`, sin puertas | delegada | `governance.go`, `status.go`, `status_v2.go` y sus pruebas | Pendiente |
 
 - [x] **T1 · Herramientas de los subagentes.** Commit `7956969b`.
@@ -64,7 +64,7 @@ Defectos P0 observados en la prueba, registrados en `HALLAZGOS_AXIOM.md` de la c
     - propose y tasks: sin cambios.
   - Revisar si alguna documentación lista las herramientas de cada agente y alinearla.
   - Anotar como seguimiento la herramienta equivalente en Kimi (`internal/assets/kimi/agents/`, `exclude_tools` con `WriteFile`).
-- [ ] **T2 · Tareas por rol en `sdd status`.**
+- [x] **T2 · Tareas por rol en `sdd status`.** Commit `9e1b1a5d`.
   - Con un kickoff sellado de más de un rol (o con un rol cuyo `TasksFile` no sea `tasks.md`), `resolveArtifactPaths` resuelve los ficheros `TasksFile` de cada rol. Usar `kickoff.Load` (`internal/kickoff/seal.go:35`).
   - `artifacts.tasks`: `done` si existen todos, `partial` si falta alguno.
   - `taskProgress`: el agregado de todos los roles.
@@ -133,7 +133,32 @@ Defectos P0 observados en la prueba, registrados en `HALLAZGOS_AXIOM.md` de la c
     - `go build ./...`: OK
   - Comprobación del padre: `TestInjectClaudeSubAgentsScopedTools` PASS. `axiom review assess --base-ref ff3888ee --committed-only`: riesgo `medium`. Con RDD desactivado basta la autoverificación del escritor.
   - Seguimiento: Kimi (`internal/assets/kimi/agents/sdd-{explore,spec,design}.yaml`) excluye `WriteFile`. Los `sdd-explore.md` de Kimi, Cursor y Kiro siguen diciendo «Do NOT create or modify project files».
+- 2026-10-14: T2 hecha (`9e1b1a5d`, `Refs #153`). Son unas 775 líneas añadidas y 28 borradas, de las que unas 440 son pruebas; supera la previsión por la cobertura multirol y multirepo.
+  - Código:
+    - `kickoff.RoleTaskFiles` (en `types.go`), que comparten `status` y el digest de la CLI.
+    - `internal/sddstatus/role_tasks.go`, nuevo.
+    - Cambios en `status.go`, `edit_authority.go`, `governance.go`, `workspace_declarations.go` y `cli/sdd_gate_digest.go`.
+  - Decisiones:
+    - `allComplete` exige que no quede ninguna tarea pendiente, que exista al menos una, que cada fichero de rol tenga casillas y que no falte ningún fichero.
+    - Un fichero de rol sin casillas bloquea el apply.
+    - El digest `tasks` cubre todos los ficheros de rol y solo se calcula cuando existen todos; es el mismo en `status` y en la CLI.
+    - La autoridad de edición se evalúa por rol, sobre la unidad actual de cada fichero, y une las raíces.
+    - `fullstack` y los cambios no sellados no cambian ni un byte.
+  - Verificación del escritor:
+    - `go test ./internal/sddstatus/`: ok (612,8 s)
+    - `go test ./internal/kickoff/`: ok
+    - `go test ./internal/cli/ -run 'SDDGate|SDDStatus|Kickoff|GateDigest'`: ok
+    - `go vet ./...`: limpio
+    - `go build ./...`: OK
+    - Ratchet de código muerto: sin funciones nuevas inalcanzables
+  - Comprobación del padre:
+    - `assess --base-ref 35766431 --committed-only`: riesgo `medium`.
+    - Prueba real: sobre una copia del cambio EMT `tablon-anuncios-caducidad` con las tareas desmarcadas, el binario anterior da `tasks: missing`, `taskProgress` 0 y `next: tasks`. El de la rama da `tasks: done`, `pending: 42` y `blocked(edit_authority_missing)` nombrando `kvp.emt.api` y `kvp.emt.ui`. Sin marcador de instancia, pide `axiom sdd continue`, que es lo esperado. La copia se borró.
+  - Seguimientos:
+    - Los textos del sobre de consentimiento (`edit_authority_consent.go` y `consent_contract.go`) siguen diciendo «tasks.md».
+    - La pista de fase «Write tasks.md…» no ha cambiado.
+    - `blockerReasons.finalize` oculta las razones de planificación mientras la siguiente fase es `tasks`. Es un comportamiento previo.
 
 ## Siguiente paso
 
-T2.
+T3.
