@@ -3,6 +3,7 @@ package sddstatus
 import (
 	"encoding/json"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -150,11 +151,11 @@ func TestProjectStatusV2GovernanceAbsentWithoutSealOmitsJSONKey(t *testing.T) {
 	}
 }
 
-// TestProjectStatusV2GovernanceAbsentForContinuousSeal is REQ-21.7's second
-// scenario at the v2 boundary: a continuous-execution seal chains phases
-// without ever presenting a gate, so Governance stays nil there too, not
-// only for a change with no seal at all.
-func TestProjectStatusV2GovernanceAbsentForContinuousSeal(t *testing.T) {
+// TestProjectStatusV2GovernanceProjectsRosterWithoutGatesForContinuousSeal is
+// REQ-21.7's second scenario at the v2 boundary: a continuous-execution seal
+// chains phases without ever presenting a gate, so the projected governance
+// carries the roster and an empty gate list, never a gate or a gate question.
+func TestProjectStatusV2GovernanceProjectsRosterWithoutGatesForContinuousSeal(t *testing.T) {
 	root := t.TempDir()
 	changeName := "governed-v2-continuous"
 	changeRoot := seedReadyChange(t, root, changeName, "- [ ] 1.1 Wire routes\n")
@@ -168,8 +169,21 @@ func TestProjectStatusV2GovernanceAbsentForContinuousSeal(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ProjectStatusV2() error = %v", err)
 	}
-	if projection.Governance != nil {
-		t.Fatalf("StatusV2Projection.Governance = %+v, want nil for a continuous-execution seal (REQ-21.7)", projection.Governance)
+	if projection.Governance == nil {
+		t.Fatal("StatusV2Projection.Governance = nil, want the roster for a continuous-execution seal (D-05 narrowed)")
+	}
+	if len(projection.Governance.Gates) != 0 || projection.GateQuestion != nil {
+		t.Fatalf("Gates = %+v gateQuestion = %v, want no gate in continuous mode (REQ-21.7)", projection.Governance.Gates, projection.GateQuestion)
+	}
+	if projection.Governance.Kickoff.ExecutionStyle != "continuous" || !reflect.DeepEqual(projection.Governance.Roster.Roles, []string{"fullstack"}) {
+		t.Fatalf("Governance = %+v, want continuous execution style and roster [fullstack]", projection.Governance)
+	}
+	encoded, err := json.Marshal(projection.Governance)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if !strings.Contains(string(encoded), `"gates":[]`) {
+		t.Fatalf("serialized governance = %s, want an explicit empty gates array", encoded)
 	}
 	if projection.NextRecommended != "apply" {
 		t.Fatalf("NextRecommended = %q, want apply: continuous mode chains phases without any gate (REQ-21.7)", projection.NextRecommended)
