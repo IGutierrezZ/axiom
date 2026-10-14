@@ -52,11 +52,11 @@ Defectos P0 observados en la prueba, registrados en `HALLAZGOS_AXIOM.md` de la c
 
 | ID | Tarea | Ruta | Evidencia del disparador | Estado |
 |---|---|---|---|---|
-| T1 | Herramientas de los subagentes `sdd-spec`, `sdd-design` y `sdd-explore` | delegada | escritor único; 3 assets, una prueba y la documentación | Pendiente |
+| T1 | Herramientas de los subagentes `sdd-spec`, `sdd-design` y `sdd-explore` | delegada | escritor único; 3 assets, una prueba y la documentación | Hecha, `7956969b` |
 | T2 | `sdd status` resuelve las tareas por rol desde el kickoff sellado | delegada | más de 4 ficheros de `sddstatus` y `cli` | Pendiente |
 | T3 | Roster y progreso por rol en `continuous`, sin puertas | delegada | `governance.go`, `status.go`, `status_v2.go` y sus pruebas | Pendiente |
 
-- [ ] **T1 · Herramientas de los subagentes.**
+- [x] **T1 · Herramientas de los subagentes.** Commit `7956969b`.
   - Añadir Bash a `sdd-spec.md` y `sdd-design.md`, y Write a `sdd-explore.md`, en `internal/assets/claude/agents/`.
   - Actualizar `TestInjectClaudeSubAgentsScopedTools`:
     - explore: con Write, sin Edit, Bash ni Task;
@@ -121,8 +121,19 @@ Defectos P0 observados en la prueba, registrados en `HALLAZGOS_AXIOM.md` de la c
 
 ## Progreso
 
-- 2026-10-14: ODD registrado tras el mapeo delegado del código. Las referencias anteriores proceden de ese mapeo.
+- 2026-10-14: ODD registrado tras el mapeo delegado del código (`ff3888ee`). Las referencias anteriores proceden de ese mapeo.
+- 2026-10-14: T1 hecha (`7956969b`).
+  - Cambios: `Bash` en `sdd-spec` y `sdd-design`, y `Write` en `sdd-explore`. El cuerpo de `sdd-explore` limita `Write` a `exploration.md`.
+  - Se actualizaron `TestInjectClaudeSubAgentsScopedTools` y los golden `testdata/golden/sdd-claude-agent-sdd-{explore,spec,design}.golden`.
+  - Verificación del escritor:
+    - `go test ./internal/components/sdd/ -run TestInjectClaudeSubAgents`: PASS
+    - `go test ./internal/assets/`: PASS
+    - `go test ./internal/components/ -run Golden`: PASS
+    - `go vet`: limpio
+    - `go build ./...`: OK
+  - Comprobación del padre: `TestInjectClaudeSubAgentsScopedTools` PASS. `axiom review assess --base-ref ff3888ee --committed-only`: riesgo `medium`. Con RDD desactivado basta la autoverificación del escritor.
+  - Seguimiento: Kimi (`internal/assets/kimi/agents/sdd-{explore,spec,design}.yaml`) excluye `WriteFile`. Los `sdd-explore.md` de Kimi, Cursor y Kiro siguen diciendo «Do NOT create or modify project files».
 
 ## Siguiente paso
 
-T1.
+T2.
