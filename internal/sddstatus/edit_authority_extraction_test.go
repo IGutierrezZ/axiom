@@ -6,6 +6,8 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/IGutierrezZ/axiom/v3/internal/pathquote"
 )
 
 // This file pins the shared extractor fix for the "prose read as a
@@ -28,6 +30,7 @@ import (
 func TestExtractEditAuthorityTargetTokensExcludesNonPathProseAndKeepsRealPaths(t *testing.T) {
 	workspace := t.TempDir()
 	mkdir(t, filepath.Join(workspace, "internal", "sddstatus"))
+	mkdir(t, filepath.Join(workspace, "Repos EMT", "api"))
 
 	tests := []struct {
 		name string
@@ -89,6 +92,56 @@ func TestExtractEditAuthorityTargetTokensExcludesNonPathProseAndKeepsRealPaths(t
 			line: "- [ ] 1.1 Add the loader to `src/app/[id]/page.tsx`",
 			want: []string{"src/app/[id]/page.tsx"},
 		},
+		{
+			name: "spaced relative path whose first segment exists under the workspace is extracted",
+			line: "- [ ] 1.1 Update `Repos EMT/api/handler.go` with the new route",
+			want: []string{"Repos EMT/api/handler.go"},
+		},
+		{
+			name: "spaced path anchored with ./ is extracted",
+			line: "- [ ] 1.1 Update `./mi carpeta/handler.go` with the new route",
+			want: []string{"./mi carpeta/handler.go"},
+		},
+		{
+			name: "spaced path anchored with ../ is extracted",
+			line: "- [ ] 1.1 Update `../otro repo/lib.ts` for the shared client",
+			want: []string{"../otro repo/lib.ts"},
+		},
+		{
+			name: "spaced relative path with no anchor and no existing first segment is not extracted",
+			line: "- [ ] 1.1 See `Some Folder/handler.go` for the old behaviour",
+			want: nil,
+		},
+		{
+			name: "go test command line is not a path",
+			line: "- [ ] 1.1 Run `go test ./...` before merging",
+			want: nil,
+		},
+		{
+			name: "command with a flag is not a path even when it starts with a script path",
+			line: "- [ ] 1.1 Regenerate the fixtures with `scripts/x.sh --update`",
+			want: nil,
+		},
+		{
+			name: "command chained with && is not a path",
+			line: "- [ ] 1.1 Build with `cd web && ./build.sh`",
+			want: nil,
+		},
+		{
+			name: "command with a redirection is not a path even when anchored with ./",
+			line: "- [ ] 1.1 Capture `./mi carpeta/run.sh > out.log` for the report",
+			want: nil,
+		},
+		{
+			name: "command with a flag is not a path even under an explicit Files marker",
+			line: "- [ ] 1.1 Files: `./mi carpeta/run.sh --update` regenerates the fixtures",
+			want: nil,
+		},
+		{
+			name: "spaced URL is not a path",
+			line: "- [ ] 1.1 Fetch `https://example.com/a b/c.json` for the fixture",
+			want: nil,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -136,6 +189,62 @@ func TestExplicitlyDeclaredWildcardTargetIsStillFlagged(t *testing.T) {
 	want := realPath(t, shared)
 	if len(flagged) != 1 || flagged[0] != want {
 		t.Fatalf("detectUnauthorizedEditRoots() = %v, want exactly [%s]", flagged, want)
+	}
+}
+
+// TestSpacedAbsolutePathOutsideRootsIsFlaggedWithQuotedReason pins the fail-open
+// this fix closes: a workspace folder with a space in its name used to make the
+// whole token "a command", so a task editing a real file outside every
+// authorized root was never detected. The path is flagged as one root, and the
+// blocked reason prints it quoted so the exits stay copy-pasteable.
+func TestSpacedAbsolutePathOutsideRootsIsFlaggedWithQuotedReason(t *testing.T) {
+	workspace := t.TempDir()
+	planning := filepath.Join(workspace, "planning")
+	external := filepath.Join(workspace, "Repos EMT", "otro repo")
+	initEditAuthorityGitRepo(t, planning, false)
+	mkdir(t, external)
+	mkdir(t, filepath.Join(planning, "mi carpeta"))
+
+	tasks := strings.Join([]string{
+		"- [ ] 1.1 Update `" + filepath.Join(external, "handler.go") + "` with the new route",
+		"- [ ] 1.2 Update `" + filepath.Join(planning, "mi carpeta", "notes.md") + "` inside the authorized root",
+		"",
+	}, "\n")
+	flagged := detectUnauthorizedEditRoots(tasks, planning, []string{planning})
+	want := realPath(t, external)
+	if len(flagged) != 1 || flagged[0] != want {
+		t.Fatalf("detectUnauthorizedEditRoots() = %v, want exactly [%s]", flagged, want)
+	}
+	if reason := editAuthorityBlockedReason(flagged); !strings.Contains(reason, pathquote.Quote(want)) {
+		t.Fatalf("blocked reason = %q, want it to name %s quoted", reason, pathquote.Quote(want))
+	}
+}
+
+// TestSpacedExternalPathBlocksApplyWithEditAuthorityMissing is the end-to-end
+// form of the same defect: native status for a tasks.md whose only target is a
+// spaced path outside the authorized roots must block apply.
+func TestSpacedExternalPathBlocksApplyWithEditAuthorityMissing(t *testing.T) {
+	workspace := t.TempDir()
+	planning := filepath.Join(workspace, "planning")
+	external := filepath.Join(workspace, "Repos EMT", "otro repo")
+	initEditAuthorityGitRepo(t, planning, true)
+	mkdir(t, external)
+
+	seedReadyChange(t, planning, "spaced-external-target", strings.Join([]string{
+		"- [ ] 1.1 Update `" + filepath.Join(external, "handler.go") + "` with the new route",
+		"",
+	}, "\n"))
+
+	status, err := Resolve(ResolveOptions{CWD: planning, ChangeName: "spaced-external-target"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	reasons := strings.Join(status.BlockedReasons, "\n")
+	if status.ApplyState != ApplyBlocked || !strings.Contains(reasons, "blocked(edit_authority_missing)") {
+		t.Fatalf("applyState = %q, blockedReasons = %v; want apply blocked by edit_authority_missing", status.ApplyState, status.BlockedReasons)
+	}
+	if want := pathquote.Quote(realPath(t, external)); !strings.Contains(reasons, want) {
+		t.Fatalf("blocked reasons = %q, want them to name %s", reasons, want)
 	}
 }
 

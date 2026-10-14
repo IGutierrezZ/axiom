@@ -136,11 +136,76 @@ func sameRepositoryEditRoot(path string) string {
 	return path
 }
 
+// shellOperatorMarkers are the substrings that turn a token containing
+// whitespace into a shell command line: sequencing, pipes, redirection and
+// command substitution. No path anchoring can rescue a token carrying one.
+var shellOperatorMarkers = []string{"&&", "||", ";", "|", ">", "<", "$("}
+
+// windowsAbsolutePrefix matches a drive-letter or UNC prefix, recognized on
+// every platform so a task plan written on Windows reads the same anywhere.
+var windowsAbsolutePrefix = regexp.MustCompile(`^(?:[A-Za-z]:[\\/]|\\\\)`)
+
+// pathAnchorPrefixes are the leading spellings that declare a token a path
+// rather than prose: the home directory and the current and parent
+// directories, in both separator styles.
+var pathAnchorPrefixes = []string{"~/", "./", "../", `~\`, `.\`, `..\`}
+
+// spacedTokenIsPath decides whether a backticked token that contains
+// whitespace can still be a filesystem path. Real workspaces live in folders
+// such as `Repos EMT/api/x.go`, but the same shape also carries command lines
+// (`go test ./...`, `scripts/x.sh --update`) and HTTP routes (`GET
+// /api/health`), so a token with whitespace is a path only when nothing marks
+// it a command and something anchors it as a path:
+//
+//   - a word starting with `-` is a flag, and any shell operator is a command
+//     line, so both reject outright, even under an explicit Files: context;
+//   - otherwise it must be absolute (drive letter, UNC or `/`), start with
+//     `~/`, `./` or `../`, have a first separator-delimited segment that exists
+//     under workspaceRoot, or sit in an explicit Files:/Edit:/Touch:
+//     declaration.
+//
+// Tokens without whitespace never reach this function.
+func spacedTokenIsPath(token string, workspaceRoot string, explicitContext bool) bool {
+	for _, word := range strings.Fields(token) {
+		if strings.HasPrefix(word, "-") {
+			return false
+		}
+	}
+	for _, marker := range shellOperatorMarkers {
+		if strings.Contains(token, marker) {
+			return false
+		}
+	}
+	if explicitContext || isRootedToken(token) || windowsAbsolutePrefix.MatchString(token) {
+		return true
+	}
+	for _, prefix := range pathAnchorPrefixes {
+		if strings.HasPrefix(token, prefix) {
+			return true
+		}
+	}
+	return firstSegmentExists(token, workspaceRoot)
+}
+
+// firstSegmentExists reports whether the first separator-delimited segment of
+// a relative token names an existing entry under workspaceRoot, which is what
+// ties a spaced relative path such as `Repos EMT/api/x.go` to the workspace.
+func firstSegmentExists(token string, workspaceRoot string) bool {
+	separator := strings.IndexAny(token, `/\`)
+	if separator <= 0 {
+		return false
+	}
+	_, err := os.Lstat(filepath.Join(workspaceRoot, token[:separator]))
+	return err == nil
+}
+
 // pathLikeToken reports whether one backticked token reads as a genuine
 // filesystem edit path rather than prose that merely contains a slash.
 //
-// Whitespace or a URL scheme always means a command or prose, never a path,
-// and a token without any separator is never a path either. Past that, the
+// A URL scheme always means prose, never a path, and a token without any
+// separator is never a path either. A token with whitespace is a path only
+// when spacedTokenIsPath says so (a space in a folder name is legitimate; a
+// command line or an HTTP method plus route is not). Past that, the
 // affirmative signals run FIRST: an explicit Files:/Edit:/Touch: declaration
 // on the line, or the token (or its parent directory) already existing under
 // workspaceRoot, settle the question outright — a real target must never be
@@ -156,7 +221,10 @@ func sameRepositoryEditRoot(path string) string {
 // extension reads as a URL route, not an absolute filesystem path (#4192's
 // bare `/`, gp#598's `/api/health`).
 func pathLikeToken(token string, workspaceRoot string, explicitContext bool) bool {
-	if strings.ContainsAny(token, " \t") || strings.Contains(token, "://") {
+	if strings.Contains(token, "://") {
+		return false
+	}
+	if strings.ContainsAny(token, " \t") && !spacedTokenIsPath(token, workspaceRoot, explicitContext) {
 		return false
 	}
 	if !strings.ContainsRune(token, '/') && !strings.ContainsRune(token, filepath.Separator) {
