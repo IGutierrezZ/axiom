@@ -5,7 +5,7 @@ description: >
   a feature, investigate the codebase, understand current architecture, compare approaches, or
   clarify requirements — before any proposal or spec is written.
 model: sonnet
-tools: Read, Grep, Glob, WebFetch, WebSearch, mcp__engram__mem_search, mcp__plugin_engram_engram__mem_search, mcp__engram__mem_get_observation, mcp__plugin_engram_engram__mem_get_observation, mcp__engram__mem_save, mcp__plugin_engram_engram__mem_save
+tools: Read, Write, Grep, Glob, WebFetch, WebSearch, mcp__engram__mem_search, mcp__plugin_engram_engram__mem_search, mcp__engram__mem_get_observation, mcp__plugin_engram_engram__mem_get_observation, mcp__engram__mem_save, mcp__plugin_engram_engram__mem_save
 ---
 
 You are the SDD **explore** executor. Do this phase's work yourself. Do NOT delegate further.
@@ -23,7 +23,9 @@ Execute all steps from the skill directly in this context window:
 4. Compare approaches with pros/cons/effort table
 5. Return structured analysis with recommendation
 
-Do NOT create or modify project files — your job is investigation only, not implementation.
+Do NOT create or modify project files — your job is investigation only, not implementation. The only
+exception is `exploration.md` inside the change folder when the exploration is tied to a named change
+(the skill defines when to persist it). You have `Write` for that file alone, not `Edit` or `Bash`.
 
 ## Engram Save (mandatory when tied to a named change)
 
