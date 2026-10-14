@@ -54,7 +54,7 @@ Defectos P0 observados en la prueba, registrados en `HALLAZGOS_AXIOM.md` de la c
 |---|---|---|---|---|
 | T1 | Herramientas de los subagentes `sdd-spec`, `sdd-design` y `sdd-explore` | delegada | escritor único; 3 assets, una prueba y la documentación | Hecha, `7956969b` |
 | T2 | `sdd status` resuelve las tareas por rol desde el kickoff sellado | delegada | más de 4 ficheros de `sddstatus` y `cli` | Hecha, `9e1b1a5d` |
-| T3 | Roster y progreso por rol en `continuous`, sin puertas | delegada | `governance.go`, `status.go`, `status_v2.go` y sus pruebas | Pendiente |
+| T3 | Roster y progreso por rol en `continuous`, sin puertas | delegada | `governance.go`, `status.go`, `status_v2.go` y sus pruebas | Hecha, `2477bcc7` |
 
 - [x] **T1 · Herramientas de los subagentes.** Commit `7956969b`.
   - Añadir Bash a `sdd-spec.md` y `sdd-design.md`, y Write a `sdd-explore.md`, en `internal/assets/claude/agents/`.
@@ -77,7 +77,7 @@ Defectos P0 observados en la prueba, registrados en `HALLAZGOS_AXIOM.md` de la c
     - el sobre de consentimiento nombra los repos hermanos de ambos roles;
     - un rol sin fichero deja `partial`;
     - `fullstack` y no sellado no cambian ni un byte.
-- [ ] **T3 · Roster en `continuous`.**
+- [x] **T3 · Roster en `continuous`.** Commit `2477bcc7`.
   - En `continuous`, el estado proyecta `governance` con `kickoff`, `roster` y el progreso por rol, y con las puertas vacías u omitidas.
   - En `continuous` no se aplican `firstOpenGate`, `archiveDependencyFromGovernance`, `verifyDependencyFromHandoff` ni `governanceNextRecommended`. Hay que blindarlo con pruebas.
   - Actualizar las pruebas que fijan `Governance == nil` en `continuous`: `governance_test.go:201`, `status_test.go:1047` y `status_v2_test.go:154`.
@@ -158,7 +158,39 @@ Defectos P0 observados en la prueba, registrados en `HALLAZGOS_AXIOM.md` de la c
     - Los textos del sobre de consentimiento (`edit_authority_consent.go` y `consent_contract.go`) siguen diciendo «tasks.md».
     - La pista de fase «Write tasks.md…» no ha cambiado.
     - `blockerReasons.finalize` oculta las razones de planificación mientras la siguiente fase es `tasks`. Es un comportamiento previo.
+- 2026-10-14: T3 hecha (`2477bcc7`, `Refs #153`). Son 295 líneas añadidas y 65 borradas.
+  - Código:
+    - Nuevo `governanceGated`: el gobierno existe y el modo no es `continuous`.
+    - En `continuous`, `loadGovernance` devuelve el kickoff, el roster y `gates: []`, sin leer el registro de puertas.
+    - Quedan protegidos `firstOpenGate` (que cubre `gateQuestion`, `await-gate` y el bloqueo por puerta), `resolveNextRecommended`, `artifactBlockedReasonsForRoleTasks`, `archiveDependencyFromGovernance` (sin puerta de integración) y `verifyDependencyFromHandoff` (sin `handoff.md`).
+    - La v2 lleva `governance` con el roster y `gates: []`; el contrato congelado lo admite.
+    - Se acota D-05: REQ-21.7 solo prohíbe las puertas. La nota está en el comentario del código.
+    - `sdd-status-contract.md` documenta el bloque `governance`.
+  - Decisión: no se añade progreso por rol. `taskProgress` ya agrega todos los roles y `artifactPaths.tasks` sigue el orden del roster; queda como seguimiento opcional.
+  - Pruebas:
+    - Nuevas en `governance_continuous_test.go` (5).
+    - Renombradas al nuevo invariante: las de `governance_test.go`, `status_test.go` y `status_v2_test.go`, y la subprueba de `declarations_archive_block_test.go`.
+  - Verificación del escritor:
+    - `go test ./internal/sddstatus/`: ok (414 s)
+    - `go test ./internal/kickoff/`: ok
+    - `go test ./internal/assets/`: ok
+    - `go test ./internal/cli/ -run 'SDDGate|SDDStatus|Kickoff|GateDigest|Handoff'`: ok
+    - `go vet ./...`: limpio
+    - `go build ./...`: OK
+    - Ratchet de código muerto: OK
+    - `gofmt`: limpio
+  - Comprobación del padre:
+    - `assess --base-ref d9aa7f3b --committed-only`: riesgo `medium`.
+    - Prueba real con la copia del cambio EMT completado: roster `[backend, frontend]`, `gates: []`, sin `gateQuestion`, `tasks: done` con 42/42, `applyState: all_done`, `next: archive`, `archive: ready` y sin razones de bloqueo. La copia se borró.
+
+## Cortes de entrega (`stacked-to-main`)
+
+| PR | Commits | Contenido |
+|---|---|---|
+| 1 | `ff3888ee`, `7956969b`, `35766431` | Registro del ODD y T1 |
+| 2 | `9e1b1a5d`, `d9aa7f3b` | T2 |
+| 3 | `2477bcc7` y el cierre del documento | T3 |
 
 ## Siguiente paso
 
-T3.
+Todas las tareas están hechas. Push y PR los decide el usuario. Después de fusionar, conviene reinstalar el binario y repetir el escenario (c) de la prueba EMT en modo `checkpointed`, con el rol QA y desde worktrees.
