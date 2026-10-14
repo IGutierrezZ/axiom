@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/IGutierrezZ/axiom/v3/internal/kickoff"
 	"github.com/IGutierrezZ/axiom/v3/internal/sddstatus"
 )
 
@@ -206,4 +207,57 @@ func TestRunSDDGateRecordSpecGateDigestCoversMultiFileSpecs(t *testing.T) {
 	if !found {
 		t.Fatal(`no se encontro la compuerta "spec" en status.Governance.Gates`)
 	}
+}
+
+// TestRunSDDGateRecordTasksGateDigestCoversEveryRoleFile pins the read/write
+// agreement for a change sealed with several roles: the tasks gate is judged
+// against the role task files (there is no shared tasks.md), the record digests
+// that same set, and the very next status read keeps the approval instead of
+// reopening it.
+func TestRunSDDGateRecordTasksGateDigestCoversEveryRoleFile(t *testing.T) {
+	root, changeRoot := newGovernanceWorkspace(t, "inc-99-example")
+	sealForGateTest(t, root, "inc-99-example", "--role", "backend", "--role", "frontend")
+
+	if got, err := digestIfAllPresent(tasksArtifactPathsForDigest(changeRoot, mustLoadKickoff(t, changeRoot))); err != nil || got != "" {
+		t.Fatalf("digest before any role file exists = (%q, %v), want none", got, err)
+	}
+	for role, text := range map[string]string{"backend": "- [ ] 1.1 api\n", "frontend": "- [ ] 1.1 vista\n"} {
+		if err := os.WriteFile(filepath.Join(changeRoot, "tasks."+role+".md"), []byte(text), 0644); err != nil {
+			t.Fatalf("preparar tasks.%s.md: %v", role, err)
+		}
+	}
+
+	if err := RunSDDGate([]string{
+		"record", "--cwd", root, "--change", "inc-99-example",
+		"--gate", "tasks", "--decision", "approved", "--reason", "plan por rol coherente", "--actor", "reviewer",
+	}, &bytes.Buffer{}); err != nil {
+		t.Fatalf("RunSDDGate() error = %v", err)
+	}
+
+	status, err := sddstatus.Resolve(sddstatus.ResolveOptions{CWD: root, ChangeName: "inc-99-example"})
+	if err != nil || status.Governance == nil {
+		t.Fatalf("sddstatus.Resolve() = (governance=%v, err=%v)", status.Governance != nil, err)
+	}
+	found := false
+	for _, gate := range status.Governance.Gates {
+		if gate.Key != kickoff.GateTasks {
+			continue
+		}
+		found = true
+		if gate.Status != "approved" || gate.Reopened {
+			t.Fatalf(`gate "tasks" = {Status:%q Reopened:%v}, se esperaba approved sin reabrir: el digest del registro y el de status deben coincidir`, gate.Status, gate.Reopened)
+		}
+	}
+	if !found {
+		t.Fatal(`no se encontro la compuerta "tasks" en status.Governance.Gates`)
+	}
+}
+
+func mustLoadKickoff(t *testing.T, changeRoot string) *kickoff.Kickoff {
+	t.Helper()
+	sealed, err := kickoff.Load(changeRoot)
+	if err != nil || sealed == nil {
+		t.Fatalf("kickoff.Load() = (%v, %v), se esperaba un kickoff sellado", sealed, err)
+	}
+	return sealed
 }

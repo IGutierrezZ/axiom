@@ -4,6 +4,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"reflect"
 	"runtime"
 	"testing"
 	"time"
@@ -209,5 +210,30 @@ func TestSealInjectableClockLeavesOtherFieldsUntouched(t *testing.T) {
 	}
 	if !sealed.SealedAt.Equal(fixed) {
 		t.Errorf("SealedAt = %v, se esperaba el reloj inyectado %v", sealed.SealedAt, fixed)
+	}
+}
+
+func TestRoleTaskFiles(t *testing.T) {
+	role := func(name, tasks string) KickoffRole { return KickoffRole{Role: name, TasksFile: tasks} }
+	tests := []struct {
+		name  string
+		roles []KickoffRole
+		want  []string
+	}{
+		{name: "no roles", roles: nil, want: nil},
+		{name: "single fullstack keeps tasks.md", roles: []KickoffRole{role("fullstack", "tasks.md")}, want: nil},
+		{name: "single role with its own file", roles: []KickoffRole{role("backend", "tasks.backend.md")}, want: []string{"tasks.backend.md"}},
+		{
+			name:  "several roles keep kickoff order",
+			roles: []KickoffRole{role("frontend", "tasks.frontend.md"), role("backend", "tasks.backend.md")},
+			want:  []string{"tasks.frontend.md", "tasks.backend.md"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := RoleTaskFiles(tt.roles); !reflect.DeepEqual(got, tt.want) {
+				t.Fatalf("RoleTaskFiles() = %v, want %v", got, tt.want)
+			}
+		})
 	}
 }

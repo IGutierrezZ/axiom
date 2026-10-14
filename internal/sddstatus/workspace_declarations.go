@@ -274,7 +274,12 @@ func siblingRepositoryPathNote(status *Status, location workspace.Location) (str
 	if len(siblings) == 0 {
 		return "", false
 	}
-	tasks := readText(firstPath(status.ArtifactPaths.Tasks))
+	// Per-role changes keep one plan per role file, so the note reads them all.
+	var tasksTexts []string
+	for _, path := range status.ArtifactPaths.Tasks {
+		tasksTexts = append(tasksTexts, readText(path))
+	}
+	tasks := strings.Join(tasksTexts, "\n")
 	if tasks == "" {
 		return "", false
 	}
