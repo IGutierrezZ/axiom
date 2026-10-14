@@ -2,7 +2,8 @@
 
 > Documento vivo ODD. Fichero autoritativo: `odd/tasks/bloqueos-prueba-multirepo.md`.
 > Espejo de recuperación en Engram: topic `odd/bloqueos-prueba-multirepo/tasks`, proyecto `axiom`.
-> Worktree `C:\repos\axiom-wt\bloqueos-prueba-multirepo`, rama `fix/bloqueos-prueba-multirepo`, base `origin/main` 17d4029e (abierto el 2026-10-14).
+> **CERRADO el 2026-10-14.** Las cuatro unidades se fusionaron en `main` en PRs independientes, #148–#151. Los worktrees y las ramas de trabajo se han eliminado.
+> Se abrió el 2026-10-14 sobre `origin/main` 17d4029e, en la rama `fix/bloqueos-prueba-multirepo`.
 
 ## Objetivo
 
@@ -38,21 +39,25 @@ Quitar los defectos que impiden probar Axiom sobre un multirepo real. En esa top
   - Los llamadores de `cli` envuelven el rechazo en `reviewPreflightError`.
   - Se añaden pruebas y se actualiza la documentación de `assess`.
   - Unas 300 líneas.
-- [ ] **T2 · Prosa del review con el contrato axiom.** Corrige los mensajes `review_facade.go:26-27,34-35,40,46-47,2169-2170` y `review_capabilities.go:187,190`, que pasan a nombrar `AxiomReviewIntegrationContractV2` y el binario `axiom`. Actualiza `review_status_lineage_test.go:55-60` y `review_start_runtime_identity_test.go`. Unas 100 líneas.
-- [ ] **T3 · Rutas entrecomilladas en continuaciones.**
+- [x] **T2 · Prosa del review con el contrato axiom.** Corrige los mensajes `review_facade.go:26-27,34-35,40,46-47,2169-2170` y `review_capabilities.go:187,190`, que pasan a nombrar `AxiomReviewIntegrationContractV2` y el binario `axiom`. Actualiza `review_status_lineage_test.go:55-60` y `review_start_runtime_identity_test.go`. Unas 100 líneas.
+- [x] **T3 · Rutas entrecomilladas en continuaciones.**
   - Los 8 `--cwd %s` crudos, los 2 `%q`, `--path %s` en `sdd_archive_compose.go:213,238` y las concatenaciones de `review_facade.go:1849`, `review_mode.go:175` y `tui/screens/review_store_reset.go:124` pasan a usar `pathquote.Quote` (o `ShellWord` donde ya se usa para comandos máquina).
   - Se añade una prueba con un directorio temporal con espacios por familia.
   - Unas 190 líneas.
-- [ ] **T4 · Autoridad de edición con rutas con espacios.**
+- [x] **T4 · Autoridad de edición con rutas con espacios.**
   - En `pathLikeToken` deja de rechazarse por igual todo token con espacios. Un token con espacios se acepta solo si está anclado como ruta: absoluto, `./`, `../`, `~/`, primer segmento existente bajo `workspaceRoot`, o contexto explícito.
   - Se siguen rechazando comandos (palabras con `-` inicial, `&&`, `||`, `;`, `|`, `>`, `<`, `$(`) y `://`.
   - Se añaden filas de regresión para `go test ./...` y `GET /api/health`.
   - Unas 150 líneas.
-- [ ] **T5 · Reinstalar el binario** desde esta rama, con T1 a T4 incluidas, y comprobar `axiom version`.
-- [ ] **T6 · PATH de usuario.**
+- [x] **T5 · Reinstalar el binario** desde esta rama, con T1 a T4 incluidas.
+  - Hecho el 2026-10-14 a las 02:11 con `go install ./cmd/axiom` desde `dbc5a9d4`.
+  - `axiom version` sigue mostrando `v3.5.1 commit:dev` y el binario no incluye la revisión de git, así que la comprobación es de comportamiento: smoke test con `axiom review assess --cwd <carpeta con .axiom-workspace y un repo hijo>`, que termina con salida 1 sin crear `.git`.
+- [x] **T6 · PATH de usuario.**
   - Se quita `C:\Users\igutierrezz\AppData\Local\gentle-ai\bin`.
   - También dos entradas filtradas por ejecuciones del bench (`…\Temp\gentle-ai-bench-…\home\AppData\Local\engram\bin`).
   - Antes se guarda una copia del valor anterior y después se comprueba que `gentle-ai` ya no se resuelve.
+  - Hecho por el orquestador el 2026-10-14: 3 entradas quitadas, quedan 24. En una shell nueva `gentle-ai` no se resuelve y `axiom` y `engram` apuntan a sus binarios. La copia del valor anterior está en el scratchpad de la sesión (`user-path-backup-2026-10-14.txt`). Los ficheros de `AppData\Local\gentle-ai` no se han borrado.
+  - La fuga del bench al PATH real queda propuesta como tarea aparte.
 
 ## Criterios de aceptación
 
@@ -64,4 +69,23 @@ Quitar los defectos que impiden probar Axiom sobre un multirepo real. En esa top
 
 ## Progreso
 
-T1 hecha. Pendiente: T2.
+Todas las tareas están hechas y fusionadas (2026-10-14). Se entregaron en un PR independiente por unidad, cada uno con un cherry-pick de su commit sobre 17d4029e y fusionado con squash.
+
+| Tarea | Commit de trabajo | PR | Merge en `main` | Cambio |
+|---|---|---|---|---|
+| T1 | `5515385b` | #148 | `1e4a789d` | 8 ficheros, +644/−11 (`size:exception`, aplicada por indicación del propietario) |
+| T2 | `66a3da94` | #149 | `40bc2984` | 6 ficheros, +96/−15 |
+| T3 | `f0632eb3` | #150 | `74a9028c` | 19 ficheros, +196/−22 |
+| T4 | `dbc5a9d4` | #151 | `703aebaa` | 3 ficheros, +182/−3 |
+
+Antes de subirla, cada rama de PR pasó por separado `go build ./...`, `go vet ./...`, `go run ./internal/gofmtcheck`, `bash scripts/deadcode-ratchet.sh`, los ratchets de guardas, rechazos y continuaciones, y sus pruebas dirigidas. En GitHub, el CI de los cuatro PRs quedó en verde. En #151 hubo que relanzar «Verify PR Origin & Authority»: la concurrencia del workflow había cancelado la ejecución más reciente al abrir el PR con etiqueta, y el ruleset de `main` la tomaba como el estado del check obligatorio.
+
+Verificación:
+- Writer, por unidad: `go build ./...`, `go vet ./...`, `bash scripts/deadcode-ratchet.sh`, el ratchet de rechazos, `TestEveryNamedReviewContinuationIsStructurallyReal` y pruebas dirigidas por familia, todo en verde.
+- Fallos previos, reproducidos también en la base 17d4029e: `internal/tui` `TestRuntimeCatalogDiscoveryIgnoresStaleProjectResults` e `internal/cli` `TestReviewStatusSelectorFreeResolvesRepositoryRoot/safe_symlink` (privilegio de enlaces simbólicos en Windows).
+- Evaluación de riesgo: `axiom review assess --base-ref 17d4029e --committed-only` da `medium` (`executable_change`). Con RDD apagado basta la autoverificación del writer más una comprobación del orquestador.
+- Comprobación del orquestador: las pruebas dirigidas de T1 en `reviewtransaction` y las de autoridad de edición en `sddstatus`, más `go build ./...`, en verde.
+
+Seguimientos fuera de este ODD:
+- La fuga del bench al PATH de usuario está propuesta como tarea aparte.
+- El componente `permission` se trata en su propio ODD.
