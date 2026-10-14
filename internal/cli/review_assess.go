@@ -7,6 +7,7 @@ import (
 	"io"
 	"strings"
 
+	"github.com/IGutierrezZ/axiom/v3/internal/pathquote"
 	"github.com/IGutierrezZ/axiom/v3/internal/reviewtransaction"
 )
 
@@ -97,7 +98,9 @@ func reviewAssessmentReasons(reasons []reviewtransaction.RiskReason) []ReviewAss
 // it: no authority, no lineage, no store mutation, and no lock beyond an
 // ordinary read. It works identically whether or not receipt-driven
 // development is enabled, so a host can gate delegated verification on the
-// result before ever calling review start (issue #4295).
+// result before ever calling review start (issue #4295). It also never
+// initializes Git: unlike review status and start, a --cwd outside any
+// repository is refused instead of bootstrapped.
 //
 // When the candidate cannot be built or assessed, this command fails closed:
 // every returned error names a runnable `gentle-ai review assess ...`
@@ -107,7 +110,7 @@ func reviewAssessmentReasons(reasons []reviewtransaction.RiskReason) []ReviewAss
 func RunReviewAssess(args []string, stdout io.Writer) error {
 	ctx := context.Background()
 	flags := newReviewFlagSet("review assess", stdout,
-		"Print the read-only candidate risk assessment review start would use to select lenses, without creating any review authority.")
+		"Print the read-only candidate risk assessment review start would use to select lenses, without creating any review authority or initializing Git.")
 	cwd := flags.String("cwd", ".", "repository path")
 	baseRef := flags.String("base-ref", "", "optional base revision for an immutable base-to-HEAD assessment")
 	committedOnly := flags.Bool("committed-only", false, "acknowledge that --base-ref excludes dirty tracked changes")
@@ -128,8 +131,16 @@ func RunReviewAssess(args []string, stdout io.Writer) error {
 		return reviewPreflightError(fmt.Errorf("unexpected review assess argument %q; run `axiom review assess --help` for the closed command form", flags.Arg(0)))
 	}
 
-	root, err := reviewtransaction.PrepareReviewRepositoryRoot(ctx, *cwd)
+	// Read-only by contract: unlike status and start, assess never prepares the
+	// repository, so a directory outside Git (a multirepo master folder
+	// included) is refused rather than initialized.
+	root, err := (reviewtransaction.SnapshotBuilder{Repo: *cwd}).ResolveRepositoryRoot(ctx)
 	if err != nil {
+		if reviewtransaction.ReviewRootResolutionReportsNoRepository(err) {
+			return reviewPreflightError(fmt.Errorf(
+				"review assess is read-only and never initializes Git: %s is not inside a Git repository; rerun `axiom review assess --cwd <repo>` with --cwd naming a repository",
+				pathquote.Quote(*cwd)))
+		}
 		return fmt.Errorf("review assess: resolve repository root: %w", err)
 	}
 	builder := reviewtransaction.SnapshotBuilder{Repo: root}
