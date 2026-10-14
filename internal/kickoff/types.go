@@ -187,3 +187,30 @@ func defaultRoleArtifactFiles(role string) (tasksFile, verifyFile string) {
 	}
 	return fmt.Sprintf("tasks.%s.md", role), fmt.Sprintf("verify-report.%s.md", role)
 }
+
+// RoleTaskFiles returns the tasks file name of every sealed role, in the
+// order the kickoff names its roles, when the change splits its plan per
+// role: more than one role, or any role whose TasksFile is not the plain
+// "tasks.md". It returns nil for the one shape every pre-multirole consumer
+// already handles -- a single role (the "fullstack" default) whose plan IS
+// tasks.md -- so a caller can treat a nil result as "the shared tasks.md,
+// unchanged". internal/sddstatus (status, edit authority, gate digests) and
+// internal/cli (the gate-record digest) both resolve the tasks artifact
+// through this single function, so they can never disagree on which files
+// make up a multi-role change's "tasks" artifact.
+func RoleTaskFiles(roles []KickoffRole) []string {
+	perRole := len(roles) > 1
+	for _, role := range roles {
+		if role.TasksFile != "tasks.md" {
+			perRole = true
+		}
+	}
+	if !perRole {
+		return nil
+	}
+	files := make([]string, 0, len(roles))
+	for _, role := range roles {
+		files = append(files, role.TasksFile)
+	}
+	return files
+}

@@ -357,15 +357,32 @@ func withinAnyRoot(target string, roots []string) bool {
 // editAuthorityBlockedReason names each unauthorized edit root and the three
 // exits: keep the plan inside the authorized edit roots, grant authority for
 // the named paths, or mark a genuine read-only input with `(read-only)`.
-func editAuthorityBlockedReason(roots []string) string {
+//
+// files names the plan files that carry those targets; none means the shared
+// tasks.md, and the text is then the historical string byte for byte.
+func editAuthorityBlockedReason(roots []string, files ...string) string {
 	quoted := make([]string, 0, len(roots))
 	for _, root := range roots {
 		quoted = append(quoted, pathquote.Quote(root))
 	}
+	plans, verb := planFilesLabel(files)
 	return fmt.Sprintf(
-		"blocked(edit_authority_missing): tasks.md targets edit paths outside the authorized edit roots: %s; edit tasks.md so every work unit stays inside the authorized edit roots, or grant this change edit authority for the named paths, or mark a read-only input with (read-only) right after its backticked path",
-		strings.Join(quoted, ", "),
+		"blocked(edit_authority_missing): %s %s edit paths outside the authorized edit roots: %s; edit %s so every work unit stays inside the authorized edit roots, or grant this change edit authority for the named paths, or mark a read-only input with (read-only) right after its backticked path",
+		plans, verb, strings.Join(quoted, ", "), plans,
 	)
+}
+
+// planFilesLabel renders the plan files a diagnostic names and the verb that
+// agrees with them: "tasks.md targets" for the shared plan (also when files is
+// empty) and "tasks.a.md, tasks.b.md target" for per-role plans.
+func planFilesLabel(files []string) (label, verb string) {
+	if len(files) == 0 {
+		return "tasks.md", "targets"
+	}
+	if len(files) == 1 {
+		return files[0], "targets"
+	}
+	return fileList(files), "target"
 }
 
 // taskWorkUnitPrefix captures a checkbox line's own leading task number (the
@@ -455,14 +472,18 @@ func detectUnauthorizedEditRootsForCurrentWorkUnit(tasksText, workspaceRoot stri
 // non-empty `blockedReasons` is a gate in every consumer contract — must never
 // reach that gated field. It exists purely so a human sees the future authority
 // need before reaching that work unit.
-func futureEditRootsNote(roots []string) string {
+func futureEditRootsNote(roots []string, files ...string) string {
 	quoted := make([]string, 0, len(roots))
 	for _, root := range roots {
 		quoted = append(quoted, pathquote.Quote(root))
 	}
+	plans := "tasks.md"
+	if len(files) > 0 {
+		plans = fileList(files)
+	}
 	return fmt.Sprintf(
-		"note(future_edit_roots): a later work unit in tasks.md targets edit paths outside the authorized edit roots: %s; this does not block the current work unit and needs no action until that work unit is reached",
-		strings.Join(quoted, ", "),
+		"note(future_edit_roots): a later work unit in %s targets edit paths outside the authorized edit roots: %s; this does not block the current work unit and needs no action until that work unit is reached",
+		plans, strings.Join(quoted, ", "),
 	)
 }
 
@@ -476,17 +497,54 @@ func futureEditRootsNote(roots []string) string {
 // scoped to the current work unit (#4103): a future work unit's own
 // unauthorized roots are reported through the non-blocking notes channel (#4372),
 // never as a blocker.
-func applyEditAuthorityBlock(applyState ApplyState, reasons *blockerReasons, tasksText string, workspaceRoot string, allowedEditRoots []string) (ApplyState, []string) {
+func applyEditAuthorityBlock(applyState ApplyState, reasons *blockerReasons, plans []planText, workspaceRoot string, allowedEditRoots []string) (ApplyState, []string) {
 	if applyState != ApplyReady {
 		return applyState, nil
 	}
-	roots, futureRoots := detectUnauthorizedEditRootsForCurrentWorkUnit(tasksText, workspaceRoot, allowedEditRoots)
-	if len(futureRoots) != 0 {
-		reasons.notes = append(reasons.notes, futureEditRootsNote(futureRoots))
+	// Roles apply in parallel, each in its own repository, so the current work
+	// unit is evaluated per plan file and the unauthorized roots are united: one
+	// consent envelope then covers every active role. A single plan (the shared
+	// tasks.md) takes this same path with one iteration and is unchanged.
+	var roots, futureRoots, blockingFiles, futureFiles []string
+	for _, plan := range plans {
+		blocking, future := detectUnauthorizedEditRootsForCurrentWorkUnit(plan.text, workspaceRoot, allowedEditRoots)
+		if len(blocking) != 0 {
+			roots = append(roots, blocking...)
+			blockingFiles = append(blockingFiles, plan.name)
+		}
+		if len(future) != 0 {
+			futureRoots = append(futureRoots, future...)
+			futureFiles = append(futureFiles, plan.name)
+		}
+	}
+	roots = uniqueSorted(roots)
+	// A root that blocks the current work unit of one role is not also "future".
+	blockingSet := make(map[string]bool, len(roots))
+	for _, root := range roots {
+		blockingSet[root] = true
+	}
+	var pureFuture []string
+	for _, root := range uniqueSorted(futureRoots) {
+		if !blockingSet[root] {
+			pureFuture = append(pureFuture, root)
+		}
+	}
+	if len(pureFuture) != 0 {
+		reasons.notes = append(reasons.notes, futureEditRootsNote(pureFuture, planFileNames(plans, futureFiles)...))
 	}
 	if len(roots) == 0 {
 		return applyState, nil
 	}
-	reasons.genuine = append(reasons.genuine, editAuthorityBlockedReason(roots))
+	reasons.genuine = append(reasons.genuine, editAuthorityBlockedReason(roots, planFileNames(plans, blockingFiles)...))
 	return ApplyBlocked, roots
+}
+
+// planFileNames returns the plan files to name in a diagnostic: nothing for the
+// shared tasks.md (so the historical wording applies) and the contributing
+// files for per-role plans.
+func planFileNames(plans []planText, contributing []string) []string {
+	if len(plans) < 2 && (len(plans) == 0 || plans[0].name == "tasks.md") {
+		return nil
+	}
+	return contributing
 }
