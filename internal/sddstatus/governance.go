@@ -207,6 +207,15 @@ func gateEvidence(state kickoff.GateState, artifactPaths ArtifactPaths) []string
 		return append([]string{}, artifactPaths.Tasks...)
 	}
 	if state.Key == kickoff.RoleApplyGate(state.Blocks) {
+		// A per-role change judges this gate against that role's own plan; the
+		// default tasks.<role>.md naming picks it, and any other layout falls
+		// back to every tasks locator rather than naming none.
+		own := "tasks." + strings.ToLower(state.Blocks) + ".md"
+		for _, path := range artifactPaths.Tasks {
+			if filepath.Base(path) == own {
+				return []string{path}
+			}
+		}
 		return append([]string{}, artifactPaths.Tasks...)
 	}
 	return []string{}
@@ -393,6 +402,14 @@ func governanceArtifactInputs(changeRoot string, roles []kickoff.KickoffRole) (m
 		return nil, nil, err
 	}
 
+	// A per-role change's shared "tasks" digest covers every role file, and only
+	// once ALL of them exist: a subset is not the artifact the gate judges, and
+	// internal/cli's gate-record digest applies the same all-or-nothing rule.
+	tasksPaths := artifactPaths.Tasks
+	if expected := roleTaskPaths(changeRoot, roles); len(expected) != 0 && len(tasksPaths) != len(expected) {
+		tasksPaths = nil
+	}
+
 	artifacts := make(map[string]string, 3+len(roles))
 	for _, entry := range []struct {
 		key   string
@@ -400,7 +417,7 @@ func governanceArtifactInputs(changeRoot string, roles []kickoff.KickoffRole) (m
 	}{
 		{key: "spec", paths: artifactPaths.Specs},
 		{key: "design", paths: artifactPaths.Design},
-		{key: "tasks", paths: artifactPaths.Tasks},
+		{key: "tasks", paths: tasksPaths},
 	} {
 		if err := setGovernanceArtifactDigest(entry.key, entry.paths, artifacts); err != nil {
 			return nil, nil, err

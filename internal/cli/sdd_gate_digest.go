@@ -20,7 +20,7 @@ import (
 // It mirrors, file for file, the resolution
 // internal/sddstatus/status.go's resolveArtifactPaths/findSpecFiles and
 // internal/sddstatus/governance.go's governanceArtifactInputs already
-// apply: design.md and tasks.md as single files, specs/**/spec.md
+// apply: design.md and tasks.md (or, per role, each sealed TasksFile) as files, specs/**/spec.md
 // (sorted, alphabetically) with a flat spec.md fallback for the "spec"
 // gate, and a role-apply:<rol> gate's own sealed TasksFile. The
 // "integration" gate is deliberately excluded: machine.go's EvaluateGates
@@ -47,12 +47,31 @@ func gateArtifactDigest(changeRoot string, gate kickoff.GateKey, sealed *kickoff
 	case kickoff.GateDesign:
 		return digestIfAllPresent([]string{filepath.Join(changeRoot, "design.md")})
 	case kickoff.GateTasks:
-		return digestIfAllPresent([]string{filepath.Join(changeRoot, "tasks.md")})
+		return digestIfAllPresent(tasksArtifactPathsForDigest(changeRoot, sealed))
 	case kickoff.GateIntegration:
 		return "", nil
 	default:
 		return roleApplyArtifactDigestForRecord(changeRoot, gate, sealed)
 	}
+}
+
+// tasksArtifactPathsForDigest resolves the shared "tasks" artifact the same way
+// internal/sddstatus does: tasks.md, or -- for a change sealed with more than one
+// role, or with a role whose plan is not tasks.md -- every role's own TasksFile
+// (kickoff.RoleTaskFiles). digestIfAllPresent then yields a digest only once ALL
+// of them exist, which is exactly when sddstatus's governanceArtifactInputs sets
+// the shared "tasks" digest, so a recorded tasks gate matches the status read.
+func tasksArtifactPathsForDigest(changeRoot string, sealed *kickoff.Kickoff) []string {
+	if sealed != nil {
+		if names := kickoff.RoleTaskFiles(sealed.Config.Roles); len(names) != 0 {
+			paths := make([]string, 0, len(names))
+			for _, name := range names {
+				paths = append(paths, filepath.Join(changeRoot, name))
+			}
+			return paths
+		}
+	}
+	return []string{filepath.Join(changeRoot, "tasks.md")}
 }
 
 // roleApplyArtifactDigestForRecord resolves a role-apply:<rol> gate's
