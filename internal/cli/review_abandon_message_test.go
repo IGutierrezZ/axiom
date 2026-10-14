@@ -84,7 +84,9 @@ func runReviewCommandNamedBy(t *testing.T, message string) map[string]any {
 	if len(named) != 1 {
 		t.Fatalf("refusal names %d runnable commands, want exactly one:\n%s", len(named), message)
 	}
-	argv := strings.Fields(named[0])
+	// Split the way a shell does: the repository path is printed double-quoted
+	// so a path with spaces stays one word.
+	argv := splitCommandLine(named[0])
 	var output bytes.Buffer
 	if err := RunReview(argv[2:], &output); err != nil {
 		t.Fatalf("the command the refusal named does not run as printed (%q): %v", named[0], err)

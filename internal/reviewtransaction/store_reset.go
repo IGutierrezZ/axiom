@@ -11,6 +11,8 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/IGutierrezZ/axiom/v3/internal/pathquote"
 )
 
 // Clone-scoped review store reset.
@@ -294,7 +296,7 @@ func (err *StoreResetInFlightError) Error() string {
 	}
 	return fmt.Sprintf(
 		"review store reset refused: %d review(s) have not reached a terminal state: %s; finish or abandon them, or run `axiom review store-reset --cwd %s --confirm --include-in-flight` to remove them anyway",
-		len(err.Lineages), strings.Join(names, ", "), err.Repository,
+		len(err.Lineages), strings.Join(names, ", "), pathquote.Quote(err.Repository),
 	)
 }
 

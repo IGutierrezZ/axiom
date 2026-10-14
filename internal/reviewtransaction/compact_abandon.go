@@ -12,6 +12,8 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/IGutierrezZ/axiom/v3/internal/pathquote"
 )
 
 // CompactAbandonAuthorizationSchema is the first line of the exact nine-line
@@ -147,8 +149,8 @@ func compactDiscardedWorkSummary(ctx context.Context, store CompactStore, record
 }
 
 func compactAbandonV2Rerun(repo, lineage, revision, snapshotIdentity, actor, reason string, discarded CompactDiscardedWorkSummary) string {
-	return fmt.Sprintf("Re-run `axiom review abandon --cwd %q --lineage %q --expected-revision %q --reason %q --actor %q --maintainer-authorization <the exact binding below>` using schema %s:\n%s",
-		repo, lineage, revision, reason, strings.TrimSpace(actor), CompactAbandonAuthorizationSchema,
+	return fmt.Sprintf("Re-run `axiom review abandon --cwd %s --lineage %q --expected-revision %q --reason %q --actor %q --maintainer-authorization <the exact binding below>` using schema %s:\n%s",
+		pathquote.Quote(repo), lineage, revision, reason, strings.TrimSpace(actor), CompactAbandonAuthorizationSchema,
 		compactAbandonAuthorizationBindingV2(lineage, revision, snapshotIdentity, actor, reason, discarded))
 }
 

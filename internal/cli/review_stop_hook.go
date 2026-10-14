@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/components/filemerge"
+	"github.com/IGutierrezZ/axiom/v3/internal/pathquote"
 	"github.com/IGutierrezZ/axiom/v3/internal/reviewtransaction"
 )
 
@@ -291,7 +292,7 @@ func reviewStopHookResolveTargetIdentity(ctx context.Context, repo, runtimeAgent
 // (carrying --consent=relay), the lossless-relay instruction for any consent
 // envelope that START returns, and the once-per-candidate scope of this hook.
 func reviewStopHookReasonText(targetIdentity, root, runtimeAgent, startCommand string) string {
-	statusCommand := fmt.Sprintf("axiom review status --cwd %s --contract %s --agent %s --next-transition", root, AxiomReviewIntegrationContractV2, runtimeAgent)
+	statusCommand := fmt.Sprintf("axiom review status --cwd %s --contract %s --agent %s --next-transition", pathquote.Quote(root), AxiomReviewIntegrationContractV2, runtimeAgent)
 	return strings.Join([]string{
 		"Receipt-driven development is enabled for this repository, and it holds an unreviewed candidate (target_identity " + targetIdentity + ").",
 		"By the review contract entry rule, you must run the selectorless STATUS preflight below and route only from its returned next_transition before reporting completion; never infer a command from prose or a stale reply.",

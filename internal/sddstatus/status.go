@@ -581,7 +581,7 @@ func resolveByPreferenceOrder(options ResolveOptions) (Status, error) {
 					"No active OpenSpec changes found under openspec/changes.",
 					fmt.Sprintf(
 						"Exploration-only directories are not active changes: %s. Run `axiom sdd status <change-name> --cwd %s` to inspect one explicitly.",
-						strings.Join(activeChanges, ", "), workspaceRoot,
+						strings.Join(activeChanges, ", "), pathquote.Quote(workspaceRoot),
 					),
 				}, options.IncludeInstructions), nil
 			}
@@ -1308,7 +1308,7 @@ func ambiguousChangeSelectionReasons(subject, workspaceRoot string, changes []st
 	for _, change := range changes {
 		reasons = append(reasons, fmt.Sprintf(
 			"Run `axiom sdd status %s --cwd %s` to continue with %s.",
-			change, workspaceRoot, change,
+			change, pathquote.Quote(workspaceRoot), change,
 		))
 	}
 	return reasons

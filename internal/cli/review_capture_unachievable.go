@@ -7,6 +7,7 @@ import (
 	"io"
 	"strings"
 
+	"github.com/IGutierrezZ/axiom/v3/internal/pathquote"
 	"github.com/IGutierrezZ/axiom/v3/internal/reviewtransaction"
 )
 
@@ -127,7 +128,7 @@ func RunReviewCaptureUnachievable(args []string, stdout io.Writer) error {
 		if contextHandle != "" {
 			return reviewPreflightRefusal(reviewPreflightCaptureBindingMismatchReason, fmt.Errorf("capture-unachievable binding does not match the current reviewing authority under the provider-issued repository context; ask the parent orchestrator to refresh the exact native next transition by running %s", reviewProseRefreshCommand))
 		}
-		return reviewPreflightRefusal(reviewPreflightCaptureBindingMismatchReason, fmt.Errorf("capture-unachievable binding does not match the current reviewing authority under repository %q; verify the frozen lineage, target, and revision by running axiom review status --cwd %s --contract %s --next-transition, or re-run with --cwd set to the repository where the review was started", root, root, AxiomReviewIntegrationContractV2))
+		return reviewPreflightRefusal(reviewPreflightCaptureBindingMismatchReason, fmt.Errorf("capture-unachievable binding does not match the current reviewing authority under repository %q; verify the frozen lineage, target, and revision by running axiom review status --cwd %s --contract %s --next-transition, or re-run with --cwd set to the repository where the review was started", root, pathquote.Quote(root), AxiomReviewIntegrationContractV2))
 	}
 	if *withdraw {
 		removed, err := store.WithdrawUnachievableLensAttempt(ctx, reviewtransaction.CompactUnachievableLensWithdrawalRequest{

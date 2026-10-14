@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/kickoff"
+	"github.com/IGutierrezZ/axiom/v3/internal/pathquote"
 )
 
 func TestResolvePreservesNormalizedWorkspace(t *testing.T) {
@@ -155,7 +156,7 @@ func TestAmbiguousChangeSelectionNamesARunnableCommandPerChange(t *testing.T) {
 	for _, change := range []string{"first", "second"} {
 		// The selector is positional: ParseCommandArgs has no --change flag
 		// (#3278, #2790), so this is the only runnable spelling.
-		want := "axiom sdd status " + change + " --cwd " + root
+		want := "axiom sdd status " + change + " --cwd " + pathquote.Quote(root)
 		if !strings.Contains(reasons, want) {
 			t.Fatalf("blocked reasons named no runnable command for %q; a refusal that lists options and no command is the shape this project does not ship.\ngot:\n%s", change, reasons)
 		}

@@ -10,6 +10,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/IGutierrezZ/axiom/v3/internal/pathquote"
 )
 
 // reviewStopHookTestPayload builds one Stop hook stdin payload. Extra fields
@@ -128,7 +130,7 @@ func TestReviewStopHookBlocksWithReasonAndBothCommands(t *testing.T) {
 	if result.Schema != reviewStopHookSchema || result.Decision != "block" {
 		t.Fatalf("result = %#v", result)
 	}
-	wantStatusCommand := fmt.Sprintf("axiom review status --cwd %s --contract %s --agent claude-code --next-transition", repo, AxiomReviewIntegrationContractV2)
+	wantStatusCommand := fmt.Sprintf("axiom review status --cwd %s --contract %s --agent claude-code --next-transition", pathquote.Quote(repo), AxiomReviewIntegrationContractV2)
 	if !strings.Contains(result.Reason, wantStatusCommand) {
 		t.Fatalf("reason missing canonical STATUS command:\n%s", result.Reason)
 	}
