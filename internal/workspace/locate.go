@@ -394,23 +394,19 @@ func (l Location) LegacySpecsDivergence() (string, bool) {
 }
 
 // separatesSpecs informa de si la topología guarda las especificaciones en un
-// repositorio distinto de la carpeta maestra (monorepo-decoupled y multirepo).
+// repositorio distinto de la carpeta maestra: solo multirepo (REQ-24.3).
 func separatesSpecs(cfg *WorkspaceConfig) bool {
 	if cfg == nil {
 		return false
 	}
-	switch cfg.Workspace.Topology {
-	case TopologyMonorepoDecoupled, TopologyMultirepo:
-		return true
-	}
-	return false
+	return cfg.Workspace.Topology == TopologyMultirepo
 }
 
 // Roots aplica el enraizado por topología (REQ-24.3, REQ-24.4). En
 // monorepo-embedded, o sin configuración, workspaceRoot es la carpeta maestra.
-// En monorepo-decoupled y multirepo es el repositorio de especificaciones o, si
-// el último segmento de specs_repository es openspec, su padre. openspec/
-// permanece siempre literal bajo workspaceRoot.
+// En multirepo es el repositorio de especificaciones o, si el último segmento de
+// specs_repository es openspec, su padre. openspec/ permanece siempre literal
+// bajo workspaceRoot.
 func Roots(cfg *WorkspaceConfig, master string) (workspaceRoot, planningHome string) {
 	if !separatesSpecs(cfg) {
 		return master, filepath.Join(master, planningHomeDirName)
@@ -447,10 +443,10 @@ func specsSegments(specsRepository string) []string {
 }
 
 // deduceMaster determina la carpeta maestra de un axiom.yaml directo hallado en
-// dir (REQ-24.5). En monorepo-embedded es siempre dir. En monorepo-decoupled y
-// multirepo: (1) specs_repository vacío o "." → dir; (2) dir contiene un
-// directorio con esa ruta → dir; (3) la ruta de dir termina con los segmentos
-// de specs_repository → dir sin ese sufijo; (4) en otro caso, dir.
+// dir (REQ-24.5). En monorepo-embedded es siempre dir. En multirepo:
+// (1) specs_repository vacío o "." → dir; (2) dir contiene un directorio con esa
+// ruta → dir; (3) la ruta de dir termina con los segmentos de specs_repository →
+// dir sin ese sufijo; (4) en otro caso, dir.
 func deduceMaster(cfg *WorkspaceConfig, dir string) string {
 	if !separatesSpecs(cfg) {
 		return dir

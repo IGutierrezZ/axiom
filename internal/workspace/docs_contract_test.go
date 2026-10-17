@@ -123,6 +123,34 @@ func TestManualDeInicioDocumentsTheArchiveModelForDirectedIntegration(t *testing
 	)
 }
 
+// workspace-topology REQ-25.25 (escenario «Ninguna documentación presenta el
+// valor como válido»): el manual de inicio, la plantilla axiom.example.yaml y la
+// visión de arquitectura no ofrecen `monorepo-decoupled` como valor de
+// `workspace.topology`. Una mención solo se admite si la propia línea la declara
+// retirada y remite a `multirepo`. docs/archive/ROADMAP.md queda fuera: es el
+// registro histórico de INC-01, no documentación vigente. Las specs vivas las
+// actualiza sdd-archive con los deltas del cambio.
+func TestDocsDoNotOfferTheRetiredTopologyAsValid(t *testing.T) {
+	for _, file := range []string{
+		filepath.Join("docs", "manual-de-inicio.md"),
+		"axiom.example.yaml",
+		filepath.Join("docs", "architecture", "AXIOM_ENTERPRISE_VISION.md"),
+	} {
+		raw, err := os.ReadFile(filepath.Join("..", "..", file))
+		if err != nil {
+			t.Fatalf("no se pudo leer %s: %v", file, err)
+		}
+		for number, line := range strings.Split(string(raw), "\n") {
+			if !strings.Contains(line, "monorepo-decoupled") {
+				continue
+			}
+			if !strings.Contains(line, "retirad") || !strings.Contains(line, "multirepo") {
+				t.Errorf("%s:%d presenta `monorepo-decoupled` sin declararlo retirado y remitir a `multirepo`: %s", file, number+1, strings.TrimSpace(line))
+			}
+		}
+	}
+}
+
 // REQ-21.17 (4): `INDEX.md` lo produce `axiom archive sync`, no `archive-compose`.
 func TestManualDeInicioAttributesIndexMdToArchiveSync(t *testing.T) {
 	doc := readManualDeInicio(t)

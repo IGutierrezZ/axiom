@@ -115,6 +115,28 @@ func ReadDeclarations(configPath string) Declarations {
 	return declarations
 }
 
+// retiredTopologyMonorepoDecoupled es el literal de la topología retirada en
+// INC-25 (REQ-25.25). No es una TopologyType: nada lo acepta ni lo trata como
+// valor válido, solo se reconoce para dar un mensaje propio en lugar del genérico.
+const retiredTopologyMonorepoDecoupled = "monorepo-decoupled"
+
+// topologyError devuelve el error de una topología que no es válida, o nil si lo
+// es. El literal retirado tiene mensaje propio, que es también su migración
+// (sin alias ni sustitución automática); el resto de valores conserva el mensaje
+// de siempre con los dos valores admitidos (REQ-2.1).
+func topologyError(topology TopologyType) error {
+	switch topology {
+	case TopologyMonorepoEmbedded, TopologyMultirepo:
+		return nil
+	case retiredTopologyMonorepoDecoupled:
+		return fmt.Errorf("la topología `%s` fue retirada: sustitúyela por `%s` en `workspace.topology` y ejecuta `axiom workspace validate`",
+			retiredTopologyMonorepoDecoupled, TopologyMultirepo)
+	default:
+		return fmt.Errorf("topología desconocida o ausente '%s'. Debe ser: %s o %s",
+			topology, TopologyMonorepoEmbedded, TopologyMultirepo)
+	}
+}
+
 // validateBaseConfig aplica las validaciones estructurales de la configuración
 // base (nombre, topología y roles), con sus mensajes y su orden de siempre.
 func validateBaseConfig(cfg *WorkspaceConfig) error {
@@ -122,12 +144,8 @@ func validateBaseConfig(cfg *WorkspaceConfig) error {
 		return fmt.Errorf("el campo 'workspace.name' es obligatorio y no puede estar vacío")
 	}
 
-	switch cfg.Workspace.Topology {
-	case TopologyMonorepoEmbedded, TopologyMonorepoDecoupled, TopologyMultirepo:
-		// Topología válida
-	default:
-		return fmt.Errorf("topología desconocida o ausente '%s'. Debe ser: %s, %s o %s",
-			cfg.Workspace.Topology, TopologyMonorepoEmbedded, TopologyMonorepoDecoupled, TopologyMultirepo)
+	if err := topologyError(cfg.Workspace.Topology); err != nil {
+		return err
 	}
 
 	if len(cfg.Roles) == 0 {

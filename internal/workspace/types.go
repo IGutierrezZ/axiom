@@ -1,14 +1,14 @@
 package workspace
 
 // TopologyType define las topologías de espacio de trabajo admitidas en Axiom.
+// La topología de repositorio de especificaciones separado que existió antes de
+// INC-25 fue retirada (REQ-25.25) y ya no tiene constante: el cargador la
+// rechaza con un mensaje que nombra `multirepo` (loader.go).
 type TopologyType string
 
 const (
 	// TopologyMonorepoEmbedded: código y especificaciones conviven en el mismo repositorio.
 	TopologyMonorepoEmbedded TopologyType = "monorepo-embedded"
-
-	// TopologyMonorepoDecoupled: código en monorrepo y especificaciones en repositorio independiente dentro de la carpeta maestra.
-	TopologyMonorepoDecoupled TopologyType = "monorepo-decoupled"
 
 	// TopologyMultirepo: múltiples repositorios de código por roles y repositorio canónico de especificaciones obligatorio.
 	TopologyMultirepo TopologyType = "multirepo"

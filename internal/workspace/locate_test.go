@@ -278,7 +278,7 @@ func TestLocateDeducesTheMasterFolderFromTheSpecsRepository(t *testing.T) {
 	})
 	t.Run("sin coincidencia de sufijo", func(t *testing.T) {
 		dir := t.TempDir()
-		workspacetest.WriteFile(t, filepath.Join(dir, "axiom.yaml"), config("monorepo-decoupled", "especificacion"))
+		workspacetest.WriteFile(t, filepath.Join(dir, "axiom.yaml"), config("multirepo", "especificacion"))
 		workspacetest.MkdirAll(t, filepath.Join(dir, "especificacion"))
 		loc := mustLocate(t, dir)
 		if loc.Master != dir || loc.WorkspaceRoot != filepath.Join(dir, "especificacion") || loc.PlanningHome != filepath.Join(dir, "especificacion", "openspec") {
@@ -316,7 +316,7 @@ func TestLocateRootsByTopology(t *testing.T) {
 		wantRoot        string // relativo a la carpeta maestra
 		wantHome        string
 	}{
-		{"monorepo desacoplado", "monorepo-decoupled", "especificacion", "especificacion", "especificacion", "especificacion/openspec"},
+		{"multirepo con repositorio de especificaciones propio", "multirepo", "especificacion", "especificacion", "especificacion", "especificacion/openspec"},
 		{"perfil knowledge terminado en openspec", "multirepo", "openspec", "openspec", ".", "openspec"},
 		{"varios segmentos terminado en openspec", "multirepo", "docs/openspec", "docs", "docs", "docs/openspec"},
 		{"openspec sin crear", "multirepo", "openspec", "", ".", "openspec"},
@@ -453,9 +453,97 @@ func TestLocateKeepsTheEmbeddedResolutionForAnUnloadableDirectConfig(t *testing.
 	}
 }
 
+func retiredTopologyConfig(specsRepository string) string {
+	return "workspace: {name: x, topology: monorepo-decoupled, specs_repository: " + specsRepository + "}\nroles: {a: {name: a, repositories: [{path: .}]}}\n"
+}
+
+// workspace-topology REQ-25.25 (escenario «Un puntero hacia una configuración con
+// la topología retirada rechaza la resolución») y planning-home-resolution
+// REQ-24.7 (caso 2): la configuración base no se carga, así que el planning home
+// es desconocido y no hay resolución que devolver.
+func TestLocateRejectsAPointerToARetiredTopology(t *testing.T) {
+	ws := workspacetest.Canonical(t)
+	workspacetest.WriteFile(t, filepath.Join(ws.Specs, "axiom.yaml"), retiredTopologyConfig("repo-specs"))
+	before := treeSnapshot(t, ws.Master)
+
+	locateErr := wantLocateError(t, ws.Master, LocateConfigUnloadable)
+	for _, want := range []string{"`monorepo-decoupled` fue retirada", "`multirepo`", "axiom workspace validate"} {
+		if !strings.Contains(locateErr.Error(), want) {
+			t.Errorf("el rechazo debe contener %q: %s", want, locateErr)
+		}
+	}
+	if after := treeSnapshot(t, ws.Master); !reflect.DeepEqual(before, after) {
+		t.Fatalf("el rechazo escribió en disco: %v", after)
+	}
+}
+
+// REQ-24.7 (caso 3) y REQ-25.25: un axiom.yaml directo con la topología retirada
+// no se rechaza. Conserva la resolución embebida y avisa, sin darle la semántica
+// de repositorio de especificaciones separado que tenía antes (REQ-24.3).
+func TestLocateKeepsTheEmbeddedResolutionForADirectConfigWithARetiredTopology(t *testing.T) {
+	master := t.TempDir()
+	workspacetest.WriteFile(t, filepath.Join(master, "axiom.yaml"), retiredTopologyConfig("especificacion"))
+	workspacetest.MkdirAll(t, filepath.Join(master, "especificacion"))
+
+	loc := mustLocate(t, master)
+	if loc.WorkspaceRoot != master || loc.PlanningHome != filepath.Join(master, "openspec") || loc.Master != master {
+		t.Fatalf("Location = %+v, se esperaba la resolución embebida y no el repositorio especificacion", loc)
+	}
+	if loc.Config != nil || loc.ConfigErr == nil {
+		t.Fatalf("Config = %+v ConfigErr = %v, se esperaba configuración nula y la causa", loc.Config, loc.ConfigErr)
+	}
+	if len(loc.Notes) != 1 {
+		t.Fatalf("Notes = %v, se esperaba un único aviso", loc.Notes)
+	}
+	for _, want := range []string{"`monorepo-decoupled` fue retirada", "`multirepo`", "axiom workspace validate"} {
+		if !strings.Contains(loc.Notes[0], want) {
+			t.Errorf("el aviso debe contener %q: %s", want, loc.Notes[0])
+		}
+	}
+}
+
+// REQ-24.3 y REQ-24.5: el enraizado por repositorio de especificaciones y la
+// deducción de la carpeta maestra por sufijo rigen solo para multirepo. Un valor
+// retirado que llegara a una configuración construida a mano tampoco los recibe.
+func TestOnlyMultirepoSeparatesTheSpecsRepository(t *testing.T) {
+	master := filepath.Join(string(filepath.Separator), "w")
+	dir := filepath.Join(master, "especificacion")
+	for _, tc := range []struct {
+		name         string
+		topology     TopologyType
+		wantSeparate bool
+	}{
+		{"multirepo", TopologyMultirepo, true},
+		{"embebido", TopologyMonorepoEmbedded, false},
+		{"valor retirado", TopologyType("monorepo-decoupled"), false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			cfg := &WorkspaceConfig{Workspace: WorkspaceSection{Topology: tc.topology, SpecsRepository: "especificacion"}}
+			if got := separatesSpecs(cfg); got != tc.wantSeparate {
+				t.Fatalf("separatesSpecs = %v, se esperaba %v", got, tc.wantSeparate)
+			}
+			root, home := Roots(cfg, master)
+			wantRoot, wantHome := master, filepath.Join(master, "openspec")
+			if tc.wantSeparate {
+				wantRoot, wantHome = dir, filepath.Join(dir, "openspec")
+			}
+			if root != wantRoot || home != wantHome {
+				t.Fatalf("Roots = (%q, %q), se esperaba (%q, %q)", root, home, wantRoot, wantHome)
+			}
+			wantMaster := dir
+			if tc.wantSeparate {
+				wantMaster = master
+			}
+			if got := deduceMaster(cfg, dir); got != wantMaster {
+				t.Fatalf("deduceMaster = %q, se esperaba %q", got, wantMaster)
+			}
+		})
+	}
+}
+
 func TestLocateWarnsAboutADivergentMasterOpenSpecWithoutPointer(t *testing.T) {
 	master := t.TempDir()
-	workspacetest.WriteFile(t, filepath.Join(master, "axiom.yaml"), "workspace: {name: x, topology: monorepo-decoupled, specs_repository: especificacion}\nroles: {a: {name: a, repositories: [{path: .}]}}\n")
+	workspacetest.WriteFile(t, filepath.Join(master, "axiom.yaml"), "workspace: {name: x, topology: multirepo, specs_repository: especificacion}\nroles: {a: {name: a, repositories: [{path: .}]}}\n")
 	workspacetest.MkdirAll(t, filepath.Join(master, "especificacion"))
 	workspacetest.MkdirAll(t, filepath.Join(master, "openspec", "changes", "antiguo"))
 
@@ -504,7 +592,7 @@ func TestRoots(t *testing.T) {
 		{"sin configuración", nil, master, filepath.Join(master, "openspec")},
 		{"embebido ignora specs_repository", cfg(TopologyMonorepoEmbedded, "specs"), master, filepath.Join(master, "openspec")},
 		{"multirepo con repositorio", cfg(TopologyMultirepo, "repo-specs"), filepath.Join(master, "repo-specs"), filepath.Join(master, "repo-specs", "openspec")},
-		{"desacoplado terminado en openspec", cfg(TopologyMonorepoDecoupled, "docs/openspec"), filepath.Join(master, "docs"), filepath.Join(master, "docs", "openspec")},
+		{"multirepo con varios segmentos terminado en openspec", cfg(TopologyMultirepo, "docs/openspec"), filepath.Join(master, "docs"), filepath.Join(master, "docs", "openspec")},
 		{"vacío es la maestra", cfg(TopologyMultirepo, ""), master, filepath.Join(master, "openspec")},
 		{"punto es la maestra", cfg(TopologyMultirepo, "."), master, filepath.Join(master, "openspec")},
 		{"ruta absoluta", cfg(TopologyMultirepo, abs), abs, filepath.Join(abs, "openspec")},

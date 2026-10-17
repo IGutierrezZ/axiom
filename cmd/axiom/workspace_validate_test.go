@@ -196,6 +196,28 @@ func TestWorkspaceValidateResolvesDeclarationsAgainstTheSpecsRepository(t *testi
 	}
 }
 
+// workspace-topology REQ-25.25 (escenario «La validación termina con código 1 y
+// la corrección») y REQ-1.2 (escenario «Topología retirada finaliza con error
+// accionable»): la topología retirada no se acepta y el mensaje nombra multirepo.
+func TestWorkspaceValidateRejectsTheRetiredTopology(t *testing.T) {
+	master := t.TempDir()
+	workspacetest.WriteFile(t, filepath.Join(master, "axiom.yaml"),
+		"workspace:\n  name: ejemplo-retirado\n  topology: monorepo-decoupled\n  specs_repository: especificacion\nroles:\n  core:\n    name: Core\n    repositories:\n      - path: .\n")
+	workspacetest.MkdirAll(t, filepath.Join(master, "especificacion"))
+
+	output, code := runAxiom(t, "workspace", "validate", "--path", master)
+	if code != 1 {
+		t.Fatalf("salió con %d, se esperaba 1:\n%s", code, output)
+	}
+	wantOutput(t, output,
+		"No se pudo cargar la configuración de Axiom",
+		"la topología `monorepo-decoupled` fue retirada: sustitúyela por `multirepo` en `workspace.topology`",
+	)
+	if strings.Contains(output, "COMPLIANT") && !strings.Contains(output, "NON-COMPLIANT") {
+		t.Errorf("la topología retirada no puede dar un resultado conforme:\n%s", output)
+	}
+}
+
 // Sin bloques nuevos el comando se comporta como antes.
 func TestWorkspaceValidateWithoutDeclarationsIsUnchanged(t *testing.T) {
 	master := validateWorkspace(t, "", "artifact_store: none\n")

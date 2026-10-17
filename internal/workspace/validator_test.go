@@ -99,16 +99,18 @@ func TestValidateTopology(t *testing.T) {
 		}
 	})
 
-	t.Run("monorepo desacoplado valido", func(t *testing.T) {
+	t.Run("topologia retirada rechazada aunque exista el repositorio de specs", func(t *testing.T) {
 		fs := newMockFS()
 		fs.addDir(baseDir)
 		fs.addDir(filepath.Join(baseDir, "especificacion"))
 		fs.addDir(filepath.Join(baseDir, "monorepo-app"))
 
+		// Un valor retirado solo llega aquí en una configuración construida a mano:
+		// la carga ya lo rechaza (REQ-25.25), pero Validate tampoco lo acepta.
 		cfg := &WorkspaceConfig{
 			Workspace: WorkspaceSection{
-				Name:            "DecoupledProject",
-				Topology:        TopologyMonorepoDecoupled,
+				Name:            "RetiredProject",
+				Topology:        TopologyType("monorepo-decoupled"),
 				SpecsRepository: "especificacion",
 			},
 			Roles: map[string]RoleConfig{
@@ -125,40 +127,27 @@ func TestValidateTopology(t *testing.T) {
 		if err != nil {
 			t.Fatalf("error inesperado: %v", err)
 		}
-		if !report.Valid {
-			t.Errorf("se esperaba valido, errores: %v", report.Errors)
+		if report.Valid {
+			t.Fatalf("se esperaba reporte invalido para la topologia retirada")
 		}
+		assertContains(t, report.Errors, "la topología `monorepo-decoupled` fue retirada: sustitúyela por `multirepo`")
 	})
 
-	t.Run("monorepo desacoplado rechazado si falta repositorio de specs", func(t *testing.T) {
+	t.Run("topologia desconocida rechazada", func(t *testing.T) {
 		fs := newMockFS()
 		fs.addDir(baseDir)
-		fs.addDir(filepath.Join(baseDir, "monorepo-app"))
-
 		cfg := &WorkspaceConfig{
-			Workspace: WorkspaceSection{
-				Name:            "DecoupledProject",
-				Topology:        TopologyMonorepoDecoupled,
-				SpecsRepository: "especificacion", // No agregada al fs
-			},
-			Roles: map[string]RoleConfig{
-				"team": {
-					Name: "Team",
-					Repositories: []RepositoryEntry{
-						{Path: "monorepo-app"},
-					},
-				},
-			},
+			Workspace: WorkspaceSection{Name: "Otra", Topology: TopologyType("otra"), SpecsRepository: "."},
+			Roles:     map[string]RoleConfig{"team": {Name: "Team", Repositories: []RepositoryEntry{{Path: "."}}}},
 		}
-
 		report, err := Validate(fs, cfg, baseDir)
 		if err != nil {
 			t.Fatalf("error inesperado: %v", err)
 		}
 		if report.Valid {
-			t.Errorf("se esperaba reporte invalido por falta de specs")
+			t.Fatalf("se esperaba reporte invalido para una topologia desconocida")
 		}
-		assertContains(t, report.Errors, "repositorio de especificaciones desacoplado 'especificacion' no existe")
+		assertContains(t, report.Errors, "topología desconocida o ausente 'otra'")
 	})
 
 	t.Run("multirepo valido con roles y repositorios completos", func(t *testing.T) {
