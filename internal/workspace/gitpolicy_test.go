@@ -2,6 +2,7 @@ package workspace
 
 import (
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -791,4 +792,259 @@ func TestExampleRepositoriesBlockIsValidOnceUncommented(t *testing.T) {
 		}
 	}
 	t.Errorf("la plantilla debe mostrar una entrada con ajustes propios: %+v", cfg.Repositories)
+}
+
+// repositoriesConfig carga declarationsBase más el bloque `repositories:` dado.
+func repositoriesConfig(t *testing.T, block string) *WorkspaceConfig {
+	t.Helper()
+	cfg, err := ParseConfig([]byte(declarationsBase + block))
+	if err != nil {
+		t.Fatalf("la configuración de la prueba debe ser válida: %v", err)
+	}
+	return cfg
+}
+
+// requireRealGit omite la prueba con -short o sin git instalado: ejecuta
+// `git init` real (skill go-testing, regla 9 de tasks.md).
+func requireRealGit(t *testing.T) {
+	t.Helper()
+	if testing.Short() {
+		t.Skip("prueba con git real: se omite con -short")
+	}
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skipf("git no está instalado: %v", err)
+	}
+}
+
+// gitRepositoryAt crea dir y lo inicializa como repositorio git real, con el
+// entorno aislado de la configuración del desarrollador.
+func gitRepositoryAt(t *testing.T, dir string) string {
+	t.Helper()
+	workspacetest.MkdirAll(t, dir)
+	workspacetest.InitGit(t, dir)
+	return dir
+}
+
+// outsideAnyGitRepository devuelve un directorio temporal sin ningún `.git` en sus
+// ancestros, u omite la prueba si el directorio temporal del sistema está dentro
+// de un repositorio git (una prueba de «no es un repositorio» no sería fiable).
+func outsideAnyGitRepository(t *testing.T) string {
+	t.Helper()
+	dir := t.TempDir()
+	for current := dir; ; {
+		if _, err := os.Lstat(filepath.Join(current, ".git")); err == nil {
+			t.Skipf("el directorio temporal %s está dentro de un repositorio git", dir)
+		}
+		parent := filepath.Dir(current)
+		if parent == current {
+			return dir
+		}
+		current = parent
+	}
+}
+
+// wantOneMessage comprueba que exactamente un mensaje contiene todos los
+// fragmentos.
+func wantOneMessage(t *testing.T, messages []string, wants ...string) {
+	t.Helper()
+	matches := 0
+	for _, message := range messages {
+		all := true
+		for _, want := range wants {
+			all = all && strings.Contains(message, want)
+		}
+		if all {
+			matches++
+		}
+	}
+	if matches != 1 {
+		t.Errorf("se esperaba un mensaje con %q, y hay %d entre %q", wants, matches, messages)
+	}
+}
+
+// REQ-25.27: sin entradas, o sin configuración, no hay nada que comprobar en disco.
+func TestValidateRepositoryPoliciesWithoutEntriesChecksNothing(t *testing.T) {
+	for name, cfg := range map[string]*WorkspaceConfig{
+		"configuración nula": nil,
+		"sin bloque":         repositoriesConfig(t, ""),
+		"lista vacía":        repositoriesConfig(t, "repositories: []\n"),
+	} {
+		t.Run(name, func(t *testing.T) {
+			errs, warnings := ValidateRepositoryPolicies(cfg, t.TempDir())
+			if errs != nil || warnings != nil {
+				t.Errorf("errs = %q, warnings = %q, se esperaba nil", errs, warnings)
+			}
+		})
+	}
+}
+
+// REQ-25.27 (escenarios «Dos entradas de la misma raíz git» y «Ruta que no es un
+// repositorio git solo avisa»): cada entrada se comprueba en disco; repositorios
+// reales y distintos, o una subcarpeta de uno de ellos, no dan errores ni avisos.
+func TestValidateRepositoryPoliciesAcceptsRealRepositories(t *testing.T) {
+	requireRealGit(t)
+	master := t.TempDir()
+	gitRepositoryAt(t, filepath.Join(master, "repo-backend"))
+	gitRepositoryAt(t, filepath.Join(master, "repo-frontend"))
+	workspacetest.MkdirAll(t, filepath.Join(master, "repo-infra", "terraform"))
+	gitRepositoryAt(t, filepath.Join(master, "repo-infra"))
+
+	cfg := repositoriesConfig(t, "repositories:\n  - path: repo-backend\n    integration_branch: release\n  - path: repo-frontend\n    branch_prefix: ui\n  - path: repo-infra/terraform\n")
+	errs, warnings := ValidateRepositoryPolicies(cfg, master)
+	if len(errs) != 0 || len(warnings) != 0 {
+		t.Errorf("repositorios reales y distintos: errs = %q, warnings = %q", errs, warnings)
+	}
+}
+
+func TestValidateRepositoryPoliciesAcceptsTheMasterFolderItself(t *testing.T) {
+	requireRealGit(t)
+	master := gitRepositoryAt(t, t.TempDir())
+	errs, warnings := ValidateRepositoryPolicies(repositoriesConfig(t, "repositories:\n  - path: .\n    branch_prefix: inc\n"), master)
+	if len(errs) != 0 || len(warnings) != 0 {
+		t.Errorf("la carpeta maestra es un repositorio: errs = %q, warnings = %q", errs, warnings)
+	}
+}
+
+// REQ-25.27 (escenario «Dos entradas de la misma raíz git»): dos rutas dentro de
+// un mismo repositorio son un error que nombra ambas y la raíz compartida.
+func TestValidateRepositoryPoliciesRejectsTwoEntriesOfTheSameGitRoot(t *testing.T) {
+	requireRealGit(t)
+	master := t.TempDir()
+	app := gitRepositoryAt(t, filepath.Join(master, "app"))
+	workspacetest.MkdirAll(t, filepath.Join(app, "web"))
+	workspacetest.MkdirAll(t, filepath.Join(app, "api"))
+	workspacetest.MkdirAll(t, filepath.Join(app, "worker"))
+	gitRepositoryAt(t, filepath.Join(master, "otro"))
+
+	t.Run("dos entradas", func(t *testing.T) {
+		cfg := repositoriesConfig(t, "repositories:\n  - path: app/web\n  - path: otro\n  - path: app/api\n")
+		errs, warnings := ValidateRepositoryPolicies(cfg, master)
+		if len(errs) != 1 || len(warnings) != 0 {
+			t.Fatalf("errs = %q, warnings = %q, se esperaba un error y ningún aviso", errs, warnings)
+		}
+		wantOneMessage(t, errs, "'app/web'", "repositories[0]", "'app/api'", "repositories[2]", "mismo repositorio git", app)
+	})
+
+	t.Run("la tercera entrada se compara con la primera", func(t *testing.T) {
+		cfg := repositoriesConfig(t, "repositories:\n  - path: app/web\n  - path: app/api\n  - path: app/worker\n")
+		errs, _ := ValidateRepositoryPolicies(cfg, master)
+		if len(errs) != 2 {
+			t.Fatalf("errs = %q, se esperaban dos errores", errs)
+		}
+		wantOneMessage(t, errs, "'app/web'", "'app/api'", app)
+		wantOneMessage(t, errs, "'app/web'", "'app/worker'", app)
+	})
+
+	t.Run("la raíz del repositorio y una subcarpeta suya", func(t *testing.T) {
+		cfg := repositoriesConfig(t, "repositories:\n  - path: app\n  - path: app/web\n")
+		errs, _ := ValidateRepositoryPolicies(cfg, master)
+		wantOneMessage(t, errs, "'app'", "'app/web'", app)
+	})
+}
+
+// El mismo directorio con otra grafía no esquiva la regla: las raíces se comparan
+// por identidad, no por texto. Las entradas solo necesitan una entrada `.git`, así
+// que no hace falta git.
+func TestValidateRepositoryPoliciesComparesGitRootsByIdentity(t *testing.T) {
+	t.Run("mediante un enlace simbólico", func(t *testing.T) {
+		master := t.TempDir()
+		app := filepath.Join(master, "app")
+		workspacetest.MkdirAll(t, filepath.Join(app, ".git"))
+		linkDirOrSkip(t, app, filepath.Join(master, "alias"))
+
+		errs, _ := ValidateRepositoryPolicies(repositoriesConfig(t, "repositories:\n  - path: app\n  - path: alias\n"), master)
+		wantOneMessage(t, errs, "'app'", "'alias'", "mismo repositorio git")
+	})
+
+	// En Windows y macOS `app` y `APP` son el mismo directorio y las raíces solo
+	// difieren en el texto; en un sistema que distingue mayúsculas son dos
+	// directorios distintos y la prueba no tiene sentido.
+	t.Run("con otra capitalización en un sistema que no distingue mayúsculas", func(t *testing.T) {
+		master := t.TempDir()
+		app := filepath.Join(master, "app")
+		workspacetest.MkdirAll(t, filepath.Join(app, ".git"))
+		workspacetest.MkdirAll(t, filepath.Join(app, "api"))
+		workspacetest.MkdirAll(t, filepath.Join(app, "web"))
+		if _, err := os.Stat(filepath.Join(master, "APP")); err != nil {
+			t.Skip("el sistema de ficheros distingue mayúsculas: `app` y `APP` son directorios distintos")
+		}
+
+		errs, _ := ValidateRepositoryPolicies(repositoriesConfig(t, "repositories:\n  - path: app/web\n  - path: APP/api\n"), master)
+		wantOneMessage(t, errs, "'app/web'", "'APP/api'", "mismo repositorio git")
+	})
+}
+
+// REQ-25.27 (escenario «Ruta inexistente o fuera de la carpeta maestra»): una ruta
+// que no existe, o que no es un directorio, es un error por entrada nombrando la
+// ruta y la regla incumplida.
+func TestValidateRepositoryPoliciesReportsMissingAndNonDirectoryPaths(t *testing.T) {
+	master := t.TempDir()
+	workspacetest.WriteFile(t, filepath.Join(master, "fichero.txt"), "no soy un directorio\n")
+
+	cfg := repositoriesConfig(t, "repositories:\n  - path: repo-inexistente\n  - path: fichero.txt\n")
+	errs, warnings := ValidateRepositoryPolicies(cfg, master)
+	if len(errs) != 2 || len(warnings) != 0 {
+		t.Fatalf("errs = %q, warnings = %q, se esperaban dos errores y ningún aviso", errs, warnings)
+	}
+	wantOneMessage(t, errs, "'repo-inexistente'", "repositories[0].path", "no existe como directorio", filepath.Join(master, "repo-inexistente"))
+	wantOneMessage(t, errs, "'fichero.txt'", "repositories[1].path", "no es un directorio")
+}
+
+// REQ-25.27 (escenario «Ruta que no es un repositorio git solo avisa»): una ruta
+// que existe pero no pertenece a ningún repositorio es una advertencia, nunca un
+// error, de modo que el resultado sigue siendo conforme.
+func TestValidateRepositoryPoliciesWarnsAboutAPathThatIsNotAGitRepository(t *testing.T) {
+	master := outsideAnyGitRepository(t)
+	workspacetest.MkdirAll(t, filepath.Join(master, "docs"))
+
+	cfg := repositoriesConfig(t, "repositories:\n  - path: docs\n  - path: .\n")
+	errs, warnings := ValidateRepositoryPolicies(cfg, master)
+	if len(errs) != 0 {
+		t.Errorf("una ruta que no es un repositorio git no es un error: %q", errs)
+	}
+	if len(warnings) != 2 {
+		t.Fatalf("warnings = %q, se esperaban dos avisos", warnings)
+	}
+	wantOneMessage(t, warnings, "'docs'", "repositories[0].path", "ningún repositorio git", filepath.Join(master, "docs"))
+	wantOneMessage(t, warnings, "'.'", "repositories[1].path", "ningún repositorio git")
+}
+
+// Los tres resultados conviven en una sola pasada, en el orden de las entradas.
+func TestValidateRepositoryPoliciesReportsEveryFindingInOneRun(t *testing.T) {
+	requireRealGit(t)
+	master := outsideAnyGitRepository(t)
+	app := gitRepositoryAt(t, filepath.Join(master, "app"))
+	workspacetest.MkdirAll(t, filepath.Join(app, "web"))
+	workspacetest.MkdirAll(t, filepath.Join(app, "api"))
+	workspacetest.MkdirAll(t, filepath.Join(master, "docs"))
+
+	cfg := repositoriesConfig(t, "repositories:\n  - path: app/web\n  - path: ausente\n  - path: docs\n  - path: app/api\n")
+	errs, warnings := ValidateRepositoryPolicies(cfg, master)
+	if len(errs) != 2 || len(warnings) != 1 {
+		t.Fatalf("errs = %q, warnings = %q, se esperaban dos errores y un aviso", errs, warnings)
+	}
+	wantOneMessage(t, errs[:1], "'ausente'", "no existe como directorio")
+	wantOneMessage(t, errs[1:], "'app/web'", "'app/api'", "mismo repositorio git")
+	wantOneMessage(t, warnings, "'docs'", "ningún repositorio git")
+}
+
+// Si la carpeta maestra no existe, Validate ya lo reporta: repetir un error por
+// cada entrada solo añadiría ruido con la misma causa.
+func TestValidateRepositoryPoliciesLeavesAMissingMasterFolderToValidate(t *testing.T) {
+	missing := filepath.Join(t.TempDir(), "no-existe")
+	errs, warnings := ValidateRepositoryPolicies(repositoriesConfig(t, "repositories:\n  - path: app\n"), missing)
+	if errs != nil || warnings != nil {
+		t.Errorf("errs = %q, warnings = %q, se esperaba nil", errs, warnings)
+	}
+}
+
+// Una configuración construida a mano con una ruta que la carga habría rechazado
+// no se comprueba en disco (ni sale de la carpeta maestra): el error ya está en la
+// carga.
+func TestValidateRepositoryPoliciesIgnoresPathsTheLoadRejects(t *testing.T) {
+	cfg := &WorkspaceConfig{Repositories: []RepositoryPolicy{{Path: "../fuera"}, {Path: "/opt/repo"}, {Path: ""}}}
+	errs, warnings := ValidateRepositoryPolicies(cfg, t.TempDir())
+	if errs != nil || warnings != nil {
+		t.Errorf("errs = %q, warnings = %q, se esperaba nil", errs, warnings)
+	}
 }

@@ -182,6 +182,9 @@ func TestDocsDocumentTheGitBranchPolicyBlock(t *testing.T) {
 		"Dos entradas con la misma ruta se rechazan",
 		"Un repositorio sin entrada, o una entrada sin una de las claves, hereda el valor del bloque `git:`",
 		"Una clave desconocida dentro de una entrada es un error",
+		"`axiom workspace validate` comprueba además en disco que cada `path` existe como directorio",
+		"dos entradas que resuelven a la misma raíz git se rechazan nombrando ambas rutas y la raíz compartida",
+		"Una ruta que no pertenece a ningún repositorio git solo produce una advertencia",
 	)
 
 	example, err := os.ReadFile(filepath.Join("..", "..", "axiom.example.yaml"))

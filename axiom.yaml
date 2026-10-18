@@ -6,6 +6,12 @@ workspace:
     - "internal/assets/skills"
   root: "."
 
+# Política de ramas del proyecto (REQ-25.24, REQ-25.26): los cambios de este
+# repositorio se integran en main y sus ramas llevan el prefijo inc.
+git:
+  integration_branch: "main"
+  branch_prefix: "inc"
+
 roles:
   fullstack:
     name: "Axiom Fullstack Engine"

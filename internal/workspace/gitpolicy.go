@@ -3,11 +3,15 @@ package workspace
 import (
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"gopkg.in/yaml.v3"
 
+	"github.com/IGutierrezZ/axiom/v3/internal/gitcommon"
 	"github.com/IGutierrezZ/axiom/v3/internal/gitref"
+	"github.com/IGutierrezZ/axiom/v3/internal/pathidentity"
 )
 
 const (
@@ -242,4 +246,84 @@ func gitValue(label string, node *yaml.Node, validate func(string) error) (strin
 		return "", fmt.Errorf("%s: el valor '%s' no es válido: %w", label, node.Value, err)
 	}
 	return node.Value, nil
+}
+
+// ValidateRepositoryPolicies comprueba las entradas de `repositories:` de cfg
+// contra el sistema de ficheros real y devuelve los errores y las advertencias para
+// que quien llama los fusione en el informe de Validate (REQ-25.27, D-03.4). master
+// es la carpeta maestra, la ruta que recibe `workspace validate` y contra la que
+// son relativas las entradas.
+//
+// Las reglas de forma (ruta relativa, contenida en la carpeta maestra y sin
+// repetidos, claves y valores) ya se validaron al cargar la configuración, así que
+// una entrada inválida no llega aquí: cfg no la lleva. Aquí solo se comprueba lo
+// que depende del disco, entrada por entrada y en su orden:
+//   - la ruta existe y es un directorio (error si no);
+//   - su raíz git se obtiene con gitcommon.GitRootFromFiles, sin lanzar procesos;
+//     una ruta que no pertenece a ningún repositorio git solo avisa, nunca falla;
+//   - dos entradas con la misma raíz git son un error que nombra las dos rutas y la
+//     raíz compartida. Las raíces se comparan por identidad y no por texto, para
+//     que otra grafía del mismo directorio (un enlace, un nombre corto de Windows)
+//     no esquive la regla.
+//
+// Si la carpeta maestra no existe, Validate ya lo reporta: comprobar cada entrada
+// contra ella solo añadiría un error por entrada con la misma causa. Como en
+// ValidateDeclarationPaths, no forma parte de Validate: conserva su firma y su FS
+// abstracto, y la comprobación por identidad necesita el sistema de ficheros real.
+func ValidateRepositoryPolicies(cfg *WorkspaceConfig, master string) (errs, warnings []string) {
+	if cfg == nil || len(cfg.Repositories) == 0 {
+		return nil, nil
+	}
+	master = filepath.Clean(master)
+	if info, err := os.Stat(master); err != nil || !info.IsDir() {
+		return nil, nil
+	}
+
+	type locatedRepository struct {
+		label string
+		path  string
+		root  string
+	}
+	var located []locatedRepository
+	for i, entry := range cfg.Repositories {
+		clean, err := checkRepositoryPath(entry.Path)
+		if err != nil {
+			continue // ya rechazada al cargar la configuración
+		}
+		label := fmt.Sprintf("repositories[%d]", i)
+		full := filepath.Join(master, filepath.FromSlash(clean))
+
+		info, err := os.Stat(full)
+		switch {
+		case err != nil && os.IsNotExist(err):
+			errs = append(errs, fmt.Sprintf("la ruta '%s' de '%s.path' no existe como directorio (ruta: '%s'): crea el repositorio o corrige la entrada", entry.Path, label, full))
+			continue
+		case err != nil:
+			errs = append(errs, fmt.Sprintf("no se pudo acceder a la ruta '%s' de '%s.path': %v", entry.Path, label, err))
+			continue
+		case !info.IsDir():
+			errs = append(errs, fmt.Sprintf("la ruta '%s' de '%s.path' no es un directorio (ruta: '%s'): una entrada de 'repositories' debe apuntar a un repositorio", entry.Path, label, full))
+			continue
+		}
+
+		root, ok := gitcommon.GitRootFromFiles(full)
+		if !ok {
+			warnings = append(warnings, fmt.Sprintf("la ruta '%s' de '%s.path' no pertenece a ningún repositorio git (ruta: '%s'): una ruta que no es un repositorio se omite al aplicar la política de ramas", entry.Path, label, full))
+			continue
+		}
+
+		shared := false
+		for _, first := range located {
+			if !pathidentity.SameDirectory(first.root, root) {
+				continue
+			}
+			errs = append(errs, fmt.Sprintf("las entradas '%s' (%s) y '%s' (%s) pertenecen al mismo repositorio git (raíz: '%s'): declara una sola entrada por repositorio", first.path, first.label, entry.Path, label, root))
+			shared = true
+			break
+		}
+		if !shared {
+			located = append(located, locatedRepository{label: label, path: entry.Path, root: root})
+		}
+	}
+	return errs, warnings
 }

@@ -599,6 +599,15 @@ func runWorkspaceValidate(args []string) {
 		report.Valid = false
 	}
 
+	// Las entradas de `repositories:` se comprueban en disco con el mismo criterio
+	// (REQ-25.27): que existan, su raíz git y que dos no compartan la misma.
+	repositoryErrors, repositoryWarnings := workspace.ValidateRepositoryPolicies(cfg, baseDir)
+	report.Errors = append(report.Errors, repositoryErrors...)
+	report.Warnings = append(report.Warnings, repositoryWarnings...)
+	if len(repositoryErrors) > 0 {
+		report.Valid = false
+	}
+
 	if !report.Valid {
 		fmt.Printf("[ERROR] Espacio de trabajo NO CONFORME (Topología: %s)\n", report.Topology)
 		fmt.Printf("Directorio evaluado: %s\n\n", report.WorkspaceRoot)
