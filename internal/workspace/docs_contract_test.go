@@ -151,10 +151,11 @@ func TestDocsDoNotOfferTheRetiredTopologyAsValid(t *testing.T) {
 	}
 }
 
-// workspace-topology REQ-25.26: el manual documenta el bloque `git:` de
-// axiom.yaml (esquema, valores por defecto, validación y lo que no se declara
-// ahí) y la plantilla lo muestra comentado. El verbo `axiom branch` que lo
-// consume llega después, y el manual lo dice.
+// workspace-topology REQ-25.26 y REQ-25.27: el manual documenta los bloques
+// `git:` y `repositories:` de axiom.yaml (esquema, valores por defecto,
+// herencia, validación y lo que no se declara ahí) y la plantilla los muestra
+// comentados. El verbo `axiom branch` que los consume llega después, y el manual
+// lo dice.
 func TestDocsDocumentTheGitBranchPolicyBlock(t *testing.T) {
 	doc := readManualDeInicio(t)
 	assertDocContains(t, doc,
@@ -169,14 +170,28 @@ func TestDocsDocumentTheGitBranchPolicyBlock(t *testing.T) {
 		"El modo de trabajo y la raíz de los worktrees **no** se declaran en `axiom.yaml`",
 		"`axiom workspace validate` rechaza un bloque `git:` inválido nombrando la clave, el valor y la regla incumplida",
 		"Los binarios anteriores ignoran el bloque",
-		"el verbo `axiom branch` que lo aplicará llega en una entrega posterior",
+		"el verbo `axiom branch` que los aplicará llega en una entrega posterior",
+		// El bloque `repositories:` (REQ-25.27) se documenta en la misma sección.
+		"[Ajustes por Repositorio (`repositories:`)](#ajustes-por-repositorio-repositories)",
+		"### Ajustes por Repositorio (`repositories:`)",
+		"repositories:\n  - path: repo-backend",
+		"    integration_branch: release",
+		"  - path: repo-frontend\n    branch_prefix: ui",
+		"`path` es obligatoria y relativa a la carpeta maestra",
+		"no puede ser absoluta ni salir de la carpeta maestra",
+		"Dos entradas con la misma ruta se rechazan",
+		"Un repositorio sin entrada, o una entrada sin una de las claves, hereda el valor del bloque `git:`",
+		"Una clave desconocida dentro de una entrada es un error",
 	)
 
 	example, err := os.ReadFile(filepath.Join("..", "..", "axiom.example.yaml"))
 	if err != nil {
 		t.Fatalf("no se pudo leer axiom.example.yaml: %v", err)
 	}
-	for _, want := range []string{"# git:", "#   integration_branch: main", "#   branch_prefix: feat"} {
+	for _, want := range []string{
+		"# git:", "#   integration_branch: main", "#   branch_prefix: feat",
+		"# repositories:", "#   - path: backend-api", "#     integration_branch: release",
+	} {
 		if !strings.Contains(string(example), want) {
 			t.Errorf("axiom.example.yaml no contiene %q", want)
 		}

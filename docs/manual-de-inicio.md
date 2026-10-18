@@ -20,6 +20,7 @@
    - [Sincronización Continua de Especificaciones](#sincronización-continua-de-especificaciones)
 6. [El Archivo de Configuración Maestro (`axiom.yaml`)](#6-el-archivo-de-configuración-maestro-axiomyaml)
    - [Política de Ramas (`git:`)](#política-de-ramas-git)
+   - [Ajustes por Repositorio (`repositories:`)](#ajustes-por-repositorio-repositories)
 7. [Gobernanza de Skills y Autoskills](#7-gobernanza-de-skills-y-autoskills)
    - [Flujo Human-in-the-Loop](#flujo-human-in-the-loop)
    - [Uso por CLI y por Web UI](#uso-por-cli-y-por-web-ui)
@@ -300,7 +301,25 @@ git:
 - `axiom workspace validate` rechaza un bloque `git:` inválido nombrando la clave, el valor y la regla incumplida, con código de salida `1`. Un `git:` inválido no impide resolver el proyecto (la resolución solo necesita la configuración base): solo fallan la carga estricta y la validación.
 - Los binarios anteriores ignoran el bloque, así que declararlo no rompe a un equipo con versiones mezcladas.
 
-Por ahora el bloque solo define el esquema: el verbo `axiom branch` que lo aplicará llega en una entrega posterior.
+### Ajustes por Repositorio (`repositories:`)
+
+Cuando un repositorio necesita una rama de integración o un prefijo distintos de los del bloque `git:`, `axiom.yaml` puede declarar además un bloque opcional `repositories:` de primer nivel, con una entrada por repositorio. No confundirlo con la clave `repositories` de cada rol, que lista los repositorios sobre los que trabaja el rol:
+
+```yaml
+repositories:
+  - path: repo-backend             # Obligatoria: ruta relativa a la carpeta maestra
+    integration_branch: release    # Opcional: sustituye a git.integration_branch
+  - path: repo-frontend
+    branch_prefix: ui              # Opcional: sustituye a git.branch_prefix
+```
+
+- `path` es obligatoria y relativa a la carpeta maestra: no puede ser absoluta ni salir de la carpeta maestra, así que `/opt/repo`, `C:\repos\app` y `../fuera` se rechazan. Dos entradas con la misma ruta se rechazan nombrando las dos, aunque la escriban de forma distinta (`app` y `./app`).
+- `integration_branch` y `branch_prefix` siguen las mismas reglas de validez que en `git:`. Un repositorio sin entrada, o una entrada sin una de las claves, hereda el valor del bloque `git:` (y, sin él, el valor por defecto): `repositories:` solo sustituye lo que declara.
+- Una clave desconocida dentro de una entrada es un error, igual que una entrada sin `path`. El modo de trabajo y la raíz de los worktrees siguen sin declararse en `axiom.yaml`.
+- `axiom workspace validate` rechaza un bloque `repositories:` inválido nombrando la entrada (`repositories[0]`), la clave, el valor y la regla incumplida, con código de salida `1`. Igual que `git:`, un `repositories:` inválido no impide resolver el proyecto: solo fallan la carga estricta y la validación.
+- Los binarios anteriores ignoran el bloque, como el de `git:`.
+
+Por ahora los bloques `git:` y `repositories:` solo definen el esquema: el verbo `axiom branch` que los aplicará llega en una entrega posterior.
 
 ---
 

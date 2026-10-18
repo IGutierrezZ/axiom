@@ -42,6 +42,20 @@ workspace:
 #   branch_prefix: feat
 
 # ------------------------------------------------------------------------------
+# Ajustes de Ramas por Repositorio (opcional)
+# ------------------------------------------------------------------------------
+# Un repositorio puede sustituir la rama de integración o el prefijo del bloque
+# 'git'. 'path' es obligatoria, relativa a la carpeta maestra y sin salir de ella;
+# 'integration_branch' y 'branch_prefix' siguen las reglas de 'git' y, si faltan,
+# el repositorio hereda el valor de 'git'. No puede haber dos entradas con la
+# misma ruta. Una clave desconocida es un error.
+# repositories:
+#   - path: backend-api
+#     integration_branch: release
+#   - path: frontend-portal
+#     branch_prefix: ui
+
+# ------------------------------------------------------------------------------
 # Definición de Roles de Implementación (de 1 a N roles)
 # ------------------------------------------------------------------------------
 roles:
