@@ -11,9 +11,9 @@ import (
 )
 
 // ParseConfig deserializa y valida la estructura sintáctica de axiom.yaml desde
-// bytes: la configuración base y, si existen, los bloques `baseline:` y
-// `technical_context:`. Si la base o alguna declaración es inválida devuelve un
-// error que acumula todas las violaciones (REQ-24.17).
+// bytes: la configuración base y, si existen, los bloques `baseline:`,
+// `technical_context:` y `git:`. Si la base o alguna declaración es inválida
+// devuelve un error que acumula todas las violaciones (REQ-24.17).
 func ParseConfig(data []byte) (*WorkspaceConfig, error) {
 	cfg, baseErr, declarations := parseLayered(data)
 	if err := joinLoadErrors(baseErr, declarations); err != nil {
@@ -27,7 +27,7 @@ func ParseConfig(data []byte) (*WorkspaceConfig, error) {
 // mensajes de la configuración base de siempre.
 func joinLoadErrors(baseErr error, declarations Declarations) error {
 	var errs []error
-	for _, err := range []error{baseErr, declarations.BaselineErr, declarations.TechnicalContextErr} {
+	for _, err := range []error{baseErr, declarations.BaselineErr, declarations.TechnicalContextErr, declarations.GitErr} {
 		if err != nil {
 			errs = append(errs, err)
 		}
@@ -50,8 +50,8 @@ func joinLoadErrors(baseErr error, declarations Declarations) error {
 // ParseErr solo es no nulo cuando el contenido no se puede leer como YAML. Sin
 // fichero, las declaraciones conservan su valor cero, que equivale a «sin
 // declaraciones»: un proyecto sin axiom.yaml nunca bloquea el archivado (R1).
-// La base se decodifica desde un yaml.Node, con las claves `baseline` y
-// `technical_context` fuera de la decodificación base; el resto de claves
+// La base se decodifica desde un yaml.Node, con las claves `baseline`,
+// `technical_context` y `git` fuera de la decodificación base; el resto de claves
 // desconocidas se sigue ignorando.
 //
 // El orden del tipo de retorno (configuración, error de la base, declaraciones)
@@ -91,6 +91,10 @@ func parseLayered(data []byte) (*WorkspaceConfig, error, Declarations) {
 	}
 	if declarations.TechnicalContextErr == nil {
 		cfg.TechnicalContext = declarations.TechnicalContext
+	}
+	// La política de ramas se proyecta ya resuelta, también sin bloque (REQ-25.26).
+	if declarations.GitErr == nil {
+		cfg.Git = resolveGit(declarations.Git)
 	}
 	return &cfg, nil, declarations
 }

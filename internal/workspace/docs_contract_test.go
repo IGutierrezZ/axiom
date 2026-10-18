@@ -151,6 +151,38 @@ func TestDocsDoNotOfferTheRetiredTopologyAsValid(t *testing.T) {
 	}
 }
 
+// workspace-topology REQ-25.26: el manual documenta el bloque `git:` de
+// axiom.yaml (esquema, valores por defecto, validación y lo que no se declara
+// ahí) y la plantilla lo muestra comentado. El verbo `axiom branch` que lo
+// consume llega después, y el manual lo dice.
+func TestDocsDocumentTheGitBranchPolicyBlock(t *testing.T) {
+	doc := readManualDeInicio(t)
+	assertDocContains(t, doc,
+		"[Política de Ramas (`git:`)](#política-de-ramas-git)",
+		"### Política de Ramas (`git:`)",
+		"git:\n  integration_branch: main",
+		"  branch_prefix: feat",
+		"rigen `integration_branch: main` y `branch_prefix: feat`",
+		"nombres de referencia git válidos",
+		"`branch_prefix` además no puede empezar ni terminar en `/`",
+		"Una clave desconocida dentro de `git:` es un error",
+		"El modo de trabajo y la raíz de los worktrees **no** se declaran en `axiom.yaml`",
+		"`axiom workspace validate` rechaza un bloque `git:` inválido nombrando la clave, el valor y la regla incumplida",
+		"Los binarios anteriores ignoran el bloque",
+		"el verbo `axiom branch` que lo aplicará llega en una entrega posterior",
+	)
+
+	example, err := os.ReadFile(filepath.Join("..", "..", "axiom.example.yaml"))
+	if err != nil {
+		t.Fatalf("no se pudo leer axiom.example.yaml: %v", err)
+	}
+	for _, want := range []string{"# git:", "#   integration_branch: main", "#   branch_prefix: feat"} {
+		if !strings.Contains(string(example), want) {
+			t.Errorf("axiom.example.yaml no contiene %q", want)
+		}
+	}
+}
+
 // REQ-21.17 (4): `INDEX.md` lo produce `axiom archive sync`, no `archive-compose`.
 func TestManualDeInicioAttributesIndexMdToArchiveSync(t *testing.T) {
 	doc := readManualDeInicio(t)
