@@ -86,6 +86,8 @@ type Declarations struct {
 	BaselineErr         error
 	TechnicalContext    *TechnicalContextConfig
 	TechnicalContextErr error
+	Git                 *GitConfig // lo declarado en `git:`, sin defectos; nil sin bloque o con bloque inválido (REQ-25.26)
+	GitErr              error
 }
 
 // EffectiveIntegration devuelve el modo de integración efectivo del documento:
@@ -157,9 +159,10 @@ var (
 // nivel de requisito igual o mayor cerrarían el bloque (REQ-24.60).
 const maxScenarioLevel = 3
 
-// readDeclarationBlocks localiza los bloques `baseline` y `technical_context` en
-// el mapeo raíz del documento y los decodifica y valida de forma estricta.
-// displacement es el desplazamiento léxico de la carpeta maestra a workspaceRoot.
+// readDeclarationBlocks localiza los bloques `baseline`, `technical_context` y
+// `git` en el mapeo raíz del documento y los decodifica y valida de forma
+// estricta. displacement es el desplazamiento léxico de la carpeta maestra a
+// workspaceRoot.
 func readDeclarationBlocks(document *yaml.Node, displacement string) Declarations {
 	root := document
 	if root.Kind == yaml.DocumentNode && len(root.Content) > 0 {
@@ -177,6 +180,9 @@ func readDeclarationBlocks(document *yaml.Node, displacement string) Declaration
 	}
 	if node, ok := mappingValue(root, "technical_context"); ok {
 		declarations.TechnicalContext, declarations.TechnicalContextErr = decodeTechnicalContext(node, displacement, baselinePaths)
+	}
+	if node, ok := mappingValue(root, "git"); ok {
+		declarations.Git, declarations.GitErr = decodeGit(node)
 	}
 	return declarations
 }

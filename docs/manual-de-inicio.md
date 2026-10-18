@@ -19,6 +19,7 @@
    - [Política Git Diferencial y Gestión de Worktrees](#política-git-diferencial-y-gestión-de-worktrees-odd-5)
    - [Sincronización Continua de Especificaciones](#sincronización-continua-de-especificaciones)
 6. [El Archivo de Configuración Maestro (`axiom.yaml`)](#6-el-archivo-de-configuración-maestro-axiomyaml)
+   - [Política de Ramas (`git:`)](#política-de-ramas-git)
 7. [Gobernanza de Skills y Autoskills](#7-gobernanza-de-skills-y-autoskills)
    - [Flujo Human-in-the-Loop](#flujo-human-in-the-loop)
    - [Uso por CLI y por Web UI](#uso-por-cli-y-por-web-ui)
@@ -282,6 +283,24 @@ axiom workspace validate
 ```
 
 El comando también informa de cualquier entrada inválida de `workspace.skill_roots`; el escaneo de skills las ignora en silencio.
+
+### Política de Ramas (`git:`)
+
+`axiom.yaml` puede declarar un bloque opcional `git:` con la política de ramas del proyecto. Es política versionada que comparte todo el equipo, por eso vive en `axiom.yaml`:
+
+```yaml
+git:
+  integration_branch: main   # Rama a la que se integra el trabajo (por defecto: main)
+  branch_prefix: feat        # Prefijo de las ramas de cambio (por defecto: feat)
+```
+
+- Sin el bloque, o sin una de las claves, rigen `integration_branch: main` y `branch_prefix: feat`.
+- Ambos valores deben ser nombres de referencia git válidos (reglas de `git check-ref-format`): cadenas no vacías, sin espacios ni caracteres de control, sin `..`, `@{`, `//` ni los caracteres `~ ^ : ? * [ \`, y sin componentes que empiecen por `.` o terminen en `.lock`. `branch_prefix` además no puede empezar ni terminar en `/` (`inc//` se rechaza).
+- Una clave desconocida dentro de `git:` es un error. El modo de trabajo y la raíz de los worktrees **no** se declaran en `axiom.yaml`: son preferencias personales de cada usuario.
+- `axiom workspace validate` rechaza un bloque `git:` inválido nombrando la clave, el valor y la regla incumplida, con código de salida `1`. Un `git:` inválido no impide resolver el proyecto (la resolución solo necesita la configuración base): solo fallan la carga estricta y la validación.
+- Los binarios anteriores ignoran el bloque, así que declararlo no rompe a un equipo con versiones mezcladas.
+
+Por ahora el bloque solo define el esquema: el verbo `axiom branch` que lo aplicará llega en una entrega posterior.
 
 ---
 
