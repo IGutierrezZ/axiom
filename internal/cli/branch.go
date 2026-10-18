@@ -36,7 +36,12 @@ de ramas de axiom.yaml (bloques git: y repositories:; sin ellos, main) y la base
 rama, si existe, su worktree, si tiene cambios sin confirmar, los commits de adelanto y
 de atraso respecto de su base (solo con referencias locales) y la rama destino
 propuesta para su PR. Un cambio sin ramas creadas se informa como «no iniciado», con
-código de salida 0. No ejecuta fetch, pull, push ni ls-remote.
+código de salida 0. En multirepo, el repositorio de specs se informa in situ, sin ramas
+ni worktrees. Si el cambio tiene registro local (en el git common dir), informa también
+del modo de trabajo materializado y de los worktrees registrados; sin él, indica que no
+lo tiene. Rechaza con plan_conflict o path_too_long un plan cuyos worktrees se
+solaparían con otro árbol de trabajo o superarían el límite de Windows. No ejecuta fetch,
+pull, push ni ls-remote ni escribe ningún fichero.
 
 Banderas:
   --change <nombre>   Nombre del cambio (obligatorio)

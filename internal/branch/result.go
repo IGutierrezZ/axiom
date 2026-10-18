@@ -29,26 +29,40 @@ const (
 // absolutas; la serialización es estable y no lleva marcas de tiempo (REQ-25.2).
 //
 // Se construye con NewResult, Refused y NotStarted, que mantienen el estado y su
-// etiqueta emparejados. Los campos de cada operación (por ahora, los de `status`) los
-// rellena quien la ejecuta, y solo en un resultado que no es un rechazo.
+// etiqueta emparejados (SetMode hace lo propio con el modo). Los campos de cada
+// operación (por ahora, los de `status`) los rellena quien la ejecuta, y solo en un
+// resultado que no es un rechazo.
 type Result struct {
-	Schema        string                 `json:"schema"`
-	Operation     string                 `json:"operation"`
-	Status        Status                 `json:"status"`
-	StatusLabel   string                 `json:"statusLabel"`
-	Code          Code                   `json:"code,omitempty"`
-	Message       string                 `json:"message,omitempty"`
-	Continuation  string                 `json:"continuation,omitempty"`
-	Details       map[string]string      `json:"details,omitempty"`
-	Change        string                 `json:"change,omitempty"`
-	Lane          Lane                   `json:"lane,omitempty"`
-	Topology      workspace.TopologyType `json:"topology,omitempty"`
-	WorkspaceRoot string                 `json:"workspaceRoot,omitempty"`
-	PlanningHome  string                 `json:"planningHome,omitempty"`
-	OddDocument   string                 `json:"oddDocument,omitempty"`
-	Repositories  []RepositoryResult     `json:"repositories,omitempty"`
-	Skipped       []SkippedPath          `json:"skipped,omitempty"`
-	Warnings      []string               `json:"warnings,omitempty"`
+	Schema       string            `json:"schema"`
+	Operation    string            `json:"operation"`
+	Status       Status            `json:"status"`
+	StatusLabel  string            `json:"statusLabel"`
+	Code         Code              `json:"code,omitempty"`
+	Message      string            `json:"message,omitempty"`
+	Continuation string            `json:"continuation,omitempty"`
+	Details      map[string]string `json:"details,omitempty"`
+	Change       string            `json:"change,omitempty"`
+	Lane         Lane              `json:"lane,omitempty"`
+	// Mode es el modo de trabajo materializado del cambio y ModeSource, de dónde salió
+	// (ModeSource*); solo se conocen cuando el cambio tiene registro local.
+	Mode            Mode                   `json:"mode,omitempty"`
+	ModeLabel       string                 `json:"modeLabel,omitempty"`
+	ModeSource      string                 `json:"modeSource,omitempty"`
+	ModeSourceLabel string                 `json:"modeSourceLabel,omitempty"`
+	Topology        workspace.TopologyType `json:"topology,omitempty"`
+	WorkspaceRoot   string                 `json:"workspaceRoot,omitempty"`
+	PlanningHome    string                 `json:"planningHome,omitempty"`
+	OddDocument     string                 `json:"oddDocument,omitempty"`
+	Registry        *RegistryResult        `json:"registry,omitempty"`
+	Repositories    []RepositoryResult     `json:"repositories,omitempty"`
+	Skipped         []SkippedPath          `json:"skipped,omitempty"`
+	Warnings        []string               `json:"warnings,omitempty"`
+}
+
+// RegistryResult informa del registro local del cambio (REQ-25.14): Present es falso
+// cuando el cambio no tiene registro, que no es un error (`ensure` lo reconstruye).
+type RegistryResult struct {
+	Present bool `json:"present"`
 }
 
 // RepositoryResult describe un repositorio del plan de un cambio en el resultado de
@@ -89,17 +103,21 @@ type BaseResult struct {
 // la rama no existe o no se pudo resolver su base); PRTarget, la rama destino
 // propuesta para su PR.
 type BranchResult struct {
-	Name       string     `json:"name"`
-	Kind       BranchKind `json:"kind"`
-	KindLabel  string     `json:"kindLabel"`
-	Role       string     `json:"role,omitempty"`
-	Exists     bool       `json:"exists"`
-	Worktree   string     `json:"worktree,omitempty"`
-	Dirty      bool       `json:"dirty"`
-	ComparedTo string     `json:"comparedTo,omitempty"`
-	Ahead      *int       `json:"ahead,omitempty"`
-	Behind     *int       `json:"behind,omitempty"`
-	PRTarget   string     `json:"prTarget"`
+	Name      string     `json:"name"`
+	Kind      BranchKind `json:"kind"`
+	KindLabel string     `json:"kindLabel"`
+	Role      string     `json:"role,omitempty"`
+	Exists    bool       `json:"exists"`
+	Worktree  string     `json:"worktree,omitempty"`
+	// RegisteredWorktree es el worktree que el registro local guarda para la rama,
+	// aparte del que git conoce (Worktree): así se ve cuando divergen. Vacío si el cambio
+	// no tiene registro o este no lista worktree para la rama.
+	RegisteredWorktree string `json:"registeredWorktree,omitempty"`
+	Dirty              bool   `json:"dirty"`
+	ComparedTo         string `json:"comparedTo,omitempty"`
+	Ahead              *int   `json:"ahead,omitempty"`
+	Behind             *int   `json:"behind,omitempty"`
+	PRTarget           string `json:"prTarget"`
 }
 
 // NewRepositoryResult describe un repositorio del plan con sus ramas planificadas,
@@ -136,6 +154,13 @@ func NewResult(operation string) Result {
 
 func (r *Result) setStatus(status Status) {
 	r.Status, r.StatusLabel = status, Label(string(status))
+}
+
+// SetMode fija el modo de trabajo materializado y su origen (ModeSource*), cada uno con
+// su etiqueta en castellano.
+func (r *Result) SetMode(mode Mode, source string) {
+	r.Mode, r.ModeLabel = mode, Label(string(mode))
+	r.ModeSource, r.ModeSourceLabel = source, Label(source)
 }
 
 // Refused devuelve el resultado marcado con el rechazo: su estado sale del código
@@ -198,6 +223,16 @@ func (r Result) WriteText(stdout, stderr io.Writer) {
 		fmt.Fprintf(stdout, "Cambio: %s (carril %s)\n", r.Change, r.Lane)
 		fmt.Fprintf(stdout, "Estado: %s\n", r.StatusLabel)
 	}
+	if r.Mode != "" {
+		fmt.Fprintf(stdout, "Modo de trabajo: %s (%s)\n", r.ModeLabel, r.ModeSourceLabel)
+	}
+	if r.Registry != nil {
+		if r.Registry.Present {
+			fmt.Fprintln(stdout, "Registro local: presente")
+		} else {
+			fmt.Fprintln(stdout, "Registro local: ausente")
+		}
+	}
 	for _, repository := range r.Repositories {
 		repository.writeText(stdout)
 	}
@@ -250,6 +285,9 @@ func (b BranchResult) textParts() []string {
 		parts = append(parts, "worktree "+b.Worktree, "con cambios sin confirmar")
 	default:
 		parts = append(parts, "worktree "+b.Worktree, "limpio")
+	}
+	if b.RegisteredWorktree != "" && b.RegisteredWorktree != b.Worktree {
+		parts = append(parts, "worktree registrado "+b.RegisteredWorktree)
 	}
 	if b.Ahead != nil && b.Behind != nil {
 		parts = append(parts, fmt.Sprintf("adelanto %d, atraso %d respecto de %s", *b.Ahead, *b.Behind, b.ComparedTo))

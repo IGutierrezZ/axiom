@@ -28,6 +28,16 @@ const (
 	ModeAsk      Mode = "ask"
 )
 
+// Los orígenes del modo de trabajo materializado de un cambio (REQ-25.8, design §4.4):
+// la respuesta a `ask`, la bandera `--mode`, la preferencia personal del hub o el valor
+// por defecto. El registro local los guarda y `status` los informa con su etiqueta.
+const (
+	ModeSourceAnswer  = "answer"
+	ModeSourceFlag    = "flag"
+	ModeSourceHub     = "hub"
+	ModeSourceDefault = "default"
+)
+
 // RepoRole es el papel de un repositorio según la topología (REQ-25.5).
 type RepoRole string
 

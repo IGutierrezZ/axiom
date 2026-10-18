@@ -415,7 +415,7 @@ func TestStatusResultSerialisesTheChangeAndItsPlan(t *testing.T) {
 	}
 	// Los resultados que no son de un cambio no llevan estas claves.
 	_, bare := resultJSON(t, NewResult("status"))
-	for _, absent := range []string{"change", "lane", "topology", "workspaceRoot", "planningHome", "oddDocument", "skipped"} {
+	for _, absent := range []string{"change", "lane", "topology", "workspaceRoot", "planningHome", "oddDocument", "skipped", "mode", "modeLabel", "modeSource", "modeSourceLabel", "registry"} {
 		if _, present := bare[absent]; present {
 			t.Errorf("un resultado vacío no lleva la clave %q", absent)
 		}
@@ -469,6 +469,109 @@ func TestWriteTextPrintsTheStatusOfAChange(t *testing.T) {
 	result.NotStarted().WriteText(&stdout, &stderr)
 	if !strings.Contains(stdout.String(), "Estado: no iniciado") {
 		t.Errorf("un cambio no iniciado se nombra con su etiqueta:\n%s", stdout.String())
+	}
+}
+
+// REQ-25.15 y REQ-25.14: el resultado de `status` informa del modo de trabajo
+// materializado y de su origen, cada uno con su etiqueta, y de si el cambio tiene
+// registro local (`registry.present`, siempre impreso: `false` también es información).
+func TestStatusResultCarriesTheModeAndTheRegistry(t *testing.T) {
+	t.Run("con registro", func(t *testing.T) {
+		result := NewResult("status")
+		result.SetMode(ModeWorktree, ModeSourceHub)
+		result.Registry = &RegistryResult{Present: true}
+
+		_, decoded := resultJSON(t, result)
+		for key, want := range map[string]any{
+			"mode": "worktree", "modeLabel": "un worktree por rama",
+			"modeSource": "hub", "modeSourceLabel": "preferencias personales del hub",
+		} {
+			if decoded[key] != want {
+				t.Errorf("%s = %v, se esperaba %v", key, decoded[key], want)
+			}
+		}
+		if registry, _ := decoded["registry"].(map[string]any); registry["present"] != true {
+			t.Errorf("registry = %v, se esperaba present=true", decoded["registry"])
+		}
+	})
+	t.Run("sin registro no hay modo y present es falso", func(t *testing.T) {
+		result := NewResult("status")
+		result.Registry = &RegistryResult{}
+
+		_, decoded := resultJSON(t, result)
+		registry, _ := decoded["registry"].(map[string]any)
+		if present, ok := registry["present"]; !ok || present != false {
+			t.Errorf("registry = %v, se esperaba present=false impreso", decoded["registry"])
+		}
+		for _, absent := range []string{"mode", "modeLabel", "modeSource", "modeSourceLabel"} {
+			if _, present := decoded[absent]; present {
+				t.Errorf("sin registro no se conoce el modo: no debe llevar %q", absent)
+			}
+		}
+	})
+	t.Run("el modo in_place y el origen por defecto", func(t *testing.T) {
+		result := NewResult("status")
+		result.SetMode(ModeInPlace, ModeSourceDefault)
+		if result.ModeLabel != "en la carpeta del proyecto" || result.ModeSourceLabel != "valor por defecto" {
+			t.Errorf("etiquetas = %q / %q", result.ModeLabel, result.ModeSourceLabel)
+		}
+	})
+}
+
+// El worktree que el registro guarda para una rama se informa aparte del que git
+// conoce (`worktree`): así se ve cuando divergen. Sale solo cuando el registro lo tiene.
+func TestBranchResultReportsTheRegisteredWorktreeApartFromTheRealOne(t *testing.T) {
+	result := NewResult("status")
+	result.Repositories = []RepositoryResult{NewRepositoryResult(statusPlan())}
+	first := &result.Repositories[0].Branches[0]
+	first.Exists, first.Worktree = true, `C:\repos\axiom-wt\x\axiom`
+	first.RegisteredWorktree = `C:\registrado\x\axiom`
+
+	_, decoded := resultJSON(t, result)
+	branches := decoded["repositories"].([]any)[0].(map[string]any)["branches"].([]any)
+	registered, plain := branches[0].(map[string]any), branches[1].(map[string]any)
+	if registered["registeredWorktree"] != `C:\registrado\x\axiom` || registered["worktree"] != `C:\repos\axiom-wt\x\axiom` {
+		t.Errorf("rama con worktree registrado = %v", registered)
+	}
+	if _, present := plain["registeredWorktree"]; present {
+		t.Errorf("una rama sin worktree registrado no lleva la clave: %v", plain)
+	}
+
+	var stdout, stderr bytes.Buffer
+	result.WriteText(&stdout, &stderr)
+	if !strings.Contains(stdout.String(), `worktree registrado C:\registrado\x\axiom`) {
+		t.Errorf("el texto debe nombrar el worktree registrado cuando difiere del real:\n%s", stdout.String())
+	}
+	stdout.Reset()
+	first.RegisteredWorktree = first.Worktree
+	result.WriteText(&stdout, &stderr)
+	if strings.Contains(stdout.String(), "worktree registrado") {
+		t.Errorf("si el registrado coincide con el real no se repite:\n%s", stdout.String())
+	}
+}
+
+// El texto de `status` nombra el modo con su origen y si hay registro local.
+func TestWriteTextPrintsTheModeAndTheRegistry(t *testing.T) {
+	result := NewResult("status")
+	result.Change, result.Lane = "x", LaneSDD
+	result.SetMode(ModeWorktree, ModeSourceAnswer)
+	result.Registry = &RegistryResult{Present: true}
+
+	var stdout, stderr bytes.Buffer
+	result.WriteText(&stdout, &stderr)
+	for _, want := range []string{"Modo de trabajo: un worktree por rama (respuesta registrada)\n", "Registro local: presente\n"} {
+		if !strings.Contains(stdout.String(), want) {
+			t.Errorf("la salida de texto debe contener %q:\n%s", want, stdout.String())
+		}
+	}
+
+	stdout.Reset()
+	absent := NewResult("status")
+	absent.Change, absent.Lane = "x", LaneSDD
+	absent.Registry = &RegistryResult{}
+	absent.WriteText(&stdout, &stderr)
+	if !strings.Contains(stdout.String(), "Registro local: ausente\n") || strings.Contains(stdout.String(), "Modo de trabajo") {
+		t.Errorf("sin registro se informa de su ausencia y no del modo:\n%s", stdout.String())
 	}
 }
 

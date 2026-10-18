@@ -1,0 +1,361 @@
+package registry
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io/fs"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"reflect"
+	"strings"
+	"testing"
+
+	"github.com/IGutierrezZ/axiom/v3/internal/branch"
+	"github.com/IGutierrezZ/axiom/v3/internal/gitcommon"
+	"github.com/IGutierrezZ/axiom/v3/internal/pathidentity"
+	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
+)
+
+// TestMain deja a los procesos git de las pruebas sin acceso a la configuración del
+// usuario, con un autor fijo y sin red (tasks.md, regla 9), con el mismo patrón que
+// internal/specbaseline, y fija el techo de descubrimiento de proyectos de las pruebas
+// (workspace.DiscoveryCeilingOverride).
+func TestMain(m *testing.M) {
+	os.Exit(runTests(m))
+}
+
+func runTests(m *testing.M) int {
+	root, err := os.MkdirTemp("", "registry-pruebas-*")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "registry: crear la carpeta temporal de las pruebas: %v\n", err)
+		return 1
+	}
+	defer func() { _ = os.RemoveAll(root) }()
+
+	home := filepath.Join(root, "home")
+	if err := os.MkdirAll(home, 0o755); err != nil {
+		fmt.Fprintf(os.Stderr, "registry: crear el HOME aislado: %v\n", err)
+		return 1
+	}
+	for key, value := range map[string]string{
+		"HOME":                home,
+		"USERPROFILE":         home,
+		"GIT_CONFIG_GLOBAL":   filepath.Join(home, "gitconfig"),
+		"GIT_CONFIG_NOSYSTEM": "1",
+		"GIT_AUTHOR_NAME":     "Autor de Prueba",
+		"GIT_AUTHOR_EMAIL":    "autor@ejemplo.invalid",
+		"GIT_COMMITTER_NAME":  "Autor de Prueba",
+		"GIT_COMMITTER_EMAIL": "autor@ejemplo.invalid",
+		"GIT_TERMINAL_PROMPT": "0",
+	} {
+		if err := os.Setenv(key, value); err != nil {
+			fmt.Fprintf(os.Stderr, "registry: fijar %s: %v\n", key, err)
+			return 1
+		}
+	}
+	workspace.DiscoveryCeilingOverride = []string{os.TempDir()}
+	return m.Run()
+}
+
+func requireGit(t *testing.T) {
+	t.Helper()
+	if testing.Short() {
+		t.Skip("prueba con git real: se omite con -short")
+	}
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skipf("git no está instalado: %v", err)
+	}
+}
+
+// runGit ejecuta git directamente, sin pasar por gitcommon.Run, para que el oráculo de
+// una prueba no dependa del código que prueba.
+func runGit(t *testing.T, dir string, args ...string) {
+	t.Helper()
+	if output, err := exec.Command("git", append([]string{"-C", dir}, args...)...).CombinedOutput(); err != nil {
+		t.Fatalf("git %v en %s: %v\n%s", args, dir, err, output)
+	}
+}
+
+// newRepository crea un repositorio real en la rama main y con un commit, y devuelve su
+// raíz y su git common dir.
+func newRepository(t *testing.T) (root, commonDir string) {
+	t.Helper()
+	requireGit(t)
+	root = t.TempDir()
+	runGit(t, root, "init", "-q", "-b", "main")
+	runGit(t, root, "commit", "-q", "--allow-empty", "-m", "inicial")
+	return root, commonDirOf(t, root)
+}
+
+func commonDirOf(t *testing.T, dir string) string {
+	t.Helper()
+	common, err := gitcommon.CommonDir(context.Background(), dir)
+	if err != nil {
+		t.Fatalf("git common dir de %s: %v", dir, err)
+	}
+	return common
+}
+
+// recordFile es la ruta del registro de un cambio, escrita como la fija el diseño
+// (§4.4): `<common dir>/axiom/branch/v1/<carril>/<cambio>.json`. La prueba no la toma
+// del código que prueba.
+func recordFile(commonDir, lane, change string) string {
+	return filepath.Join(commonDir, "axiom", "branch", "v1", lane, change+".json")
+}
+
+func writeFile(t *testing.T, path, content string) {
+	t.Helper()
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// validRecord es el registro de un cambio materializado en modo worktree, con rutas
+// absolutas.
+func validRecord(root, commonDir string) branch.Record {
+	return branch.Record{
+		Schema:        branch.RegistrySchema,
+		Lane:          branch.LaneSDD,
+		Change:        "x",
+		Mode:          branch.ModeWorktree,
+		ModeSource:    branch.ModeSourceAnswer,
+		Exceptions:    branch.Exceptions{Branch: "inc/x"},
+		ArchivePrefix: "",
+		PlanningRepo:  root,
+		Repositories: []branch.RecordRepo{{
+			Name:      "axiom",
+			GitRoot:   root,
+			CommonDir: commonDir,
+			Role:      branch.RepoChangeBranch,
+			Branches: []branch.RecordBranch{
+				{Name: "inc/x", Kind: branch.KindChange, Worktree: filepath.Join(filepath.Dir(root), "x", "axiom")},
+				{Name: "inc/x-core", Kind: branch.KindRole, RoleID: "core", Worktree: filepath.Join(filepath.Dir(root), "x-core", "axiom")},
+			},
+		}},
+	}
+}
+
+func writeRecord(t *testing.T, commonDir, lane string, record branch.Record) string {
+	t.Helper()
+	data, err := json.MarshalIndent(record, "", "  ")
+	if err != nil {
+		t.Fatal(err)
+	}
+	path := recordFile(commonDir, lane, record.Change)
+	writeFile(t, path, string(data)+"\n")
+	return path
+}
+
+func load(t *testing.T, commonDir string, lane branch.Lane, change string) (*branch.Record, error) {
+	t.Helper()
+	return New().Load(commonDir, lane, change)
+}
+
+// REQ-25.14 y design D-07: sin fichero, el registro no existe y no es un error
+// (`status` informa `registry.present: false`); leerlo no crea nada.
+func TestLoadOfAnAbsentRecordReturnsNilWithoutCreatingAnything(t *testing.T) {
+	_, commonDir := newRepository(t)
+
+	t.Run("sin carpeta del registro", func(t *testing.T) {
+		record, err := load(t, commonDir, branch.LaneSDD, "x")
+		if record != nil || err != nil {
+			t.Fatalf("Load = %+v, %v; se esperaba nil, nil", record, err)
+		}
+		if _, statErr := os.Stat(filepath.Join(commonDir, "axiom")); !errors.Is(statErr, fs.ErrNotExist) {
+			t.Errorf("leer un registro ausente no debe crear %s (%v)", filepath.Join(commonDir, "axiom"), statErr)
+		}
+	})
+	t.Run("con la carpeta del carril pero sin el fichero del cambio", func(t *testing.T) {
+		writeFile(t, recordFile(commonDir, "sdd", "otro"), "{}")
+		record, err := load(t, commonDir, branch.LaneSDD, "x")
+		if record != nil || err != nil {
+			t.Fatalf("Load = %+v, %v; se esperaba nil, nil", record, err)
+		}
+	})
+}
+
+// REQ-25.14: `Load` lee `<common dir>/axiom/branch/v1/<carril>/<cambio>.json`; cada
+// carril tiene sus propios registros, aunque el cambio se llame igual.
+func TestLoadReadsTheRecordOfTheChangeAndLane(t *testing.T) {
+	root, commonDir := newRepository(t)
+	want := validRecord(root, commonDir)
+	writeRecord(t, commonDir, "sdd", want)
+
+	got, err := load(t, commonDir, branch.LaneSDD, "x")
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if !reflect.DeepEqual(got, &want) {
+		t.Errorf("Load = %+v\nse esperaba %+v", got, &want)
+	}
+
+	t.Run("el carril odd no ve el registro del carril sdd", func(t *testing.T) {
+		if record, err := load(t, commonDir, branch.LaneODD, "x"); record != nil || err != nil {
+			t.Fatalf("Load odd = %+v, %v; se esperaba nil, nil", record, err)
+		}
+		odd := validRecord(root, commonDir)
+		odd.Lane = branch.LaneODD
+		odd.Mode, odd.ModeSource = branch.ModeInPlace, branch.ModeSourceFlag
+		writeRecord(t, commonDir, "odd", odd)
+		record, err := load(t, commonDir, branch.LaneODD, "x")
+		if err != nil || record == nil || record.Mode != branch.ModeInPlace {
+			t.Fatalf("Load odd = %+v, %v; se esperaba el registro in_place", record, err)
+		}
+	})
+	t.Run("otro cambio no ve el registro", func(t *testing.T) {
+		if record, err := load(t, commonDir, branch.LaneSDD, "y"); record != nil || err != nil {
+			t.Fatalf("Load y = %+v, %v; se esperaba nil, nil", record, err)
+		}
+	})
+	t.Run("tolera campos que no conoce", func(t *testing.T) {
+		data, err := json.Marshal(want)
+		if err != nil {
+			t.Fatal(err)
+		}
+		extended := strings.Replace(string(data), `{"schema"`, `{"futuro":{"a":1},"schema"`, 1)
+		writeFile(t, recordFile(commonDir, "sdd", "x"), extended)
+		got, err := load(t, commonDir, branch.LaneSDD, "x")
+		if err != nil || got == nil || got.Change != "x" {
+			t.Fatalf("Load = %+v, %v; un campo desconocido no invalida el registro", got, err)
+		}
+	})
+}
+
+// REQ-25.14, escenario «El registro es visible desde un worktree enlazado»: el git
+// common dir es el mismo desde el checkout principal y desde cualquier worktree
+// enlazado, de modo que el registro escrito desde uno se lee desde el otro.
+func TestTheRecordIsVisibleFromALinkedWorktree(t *testing.T) {
+	root, commonDir := newRepository(t)
+	linked := filepath.Join(t.TempDir(), "x", "axiom")
+	runGit(t, root, "worktree", "add", "-q", "-b", "inc/x", linked, "main")
+
+	linkedCommon := commonDirOf(t, linked)
+	if !pathidentity.SameDirectory(commonDir, linkedCommon) {
+		t.Fatalf("el common dir del worktree enlazado (%s) debe ser el del checkout principal (%s)", linkedCommon, commonDir)
+	}
+	want := validRecord(root, commonDir)
+	writeRecord(t, commonDir, "sdd", want)
+
+	got, err := load(t, linkedCommon, branch.LaneSDD, "x")
+	if err != nil || got == nil {
+		t.Fatalf("Load desde el worktree enlazado = %+v, %v", got, err)
+	}
+	if !reflect.DeepEqual(got, &want) {
+		t.Errorf("el registro leído desde el worktree enlazado difiere:\n%+v\n%+v", got, &want)
+	}
+}
+
+// REQ-25.14 y design D-07: un fichero corrupto es `config_invalid` para quien lo
+// consume: el error nombra el fichero y la causa. El registro es estado local
+// derivado: `ensure` lo reconstruye, así que nada lo interpreta con indulgencia.
+func TestLoadRejectsACorruptRecordNamingTheFile(t *testing.T) {
+	root, commonDir := newRepository(t)
+	valid := validRecord(root, commonDir)
+
+	mutate := func(change func(*branch.Record)) string {
+		record := valid
+		record.Repositories = append([]branch.RecordRepo(nil), valid.Repositories...)
+		record.Repositories[0].Branches = append([]branch.RecordBranch(nil), valid.Repositories[0].Branches...)
+		change(&record)
+		data, err := json.Marshal(record)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return string(data)
+	}
+	tests := []struct {
+		name    string
+		content string
+		wantIn  string
+	}{
+		{"JSON mal formado", `{"schema": "axiom.branch-registry/v1", `, "JSON"},
+		{"fichero vacío", ``, "JSON"},
+		{"datos detrás del documento", mutate(func(*branch.Record) {}) + `{}`, "JSON"},
+		{"esquema desconocido", mutate(func(r *branch.Record) { r.Schema = "axiom.branch-registry/v2" }), "esquema"},
+		{"sin esquema", mutate(func(r *branch.Record) { r.Schema = "" }), "esquema"},
+		{"carril distinto del que se pidió", mutate(func(r *branch.Record) { r.Lane = branch.LaneODD }), "carril"},
+		{"cambio distinto del que se pidió", mutate(func(r *branch.Record) { r.Change = "otro" }), "cambio"},
+		{"modo desconocido", mutate(func(r *branch.Record) { r.Mode = "ask" }), "modo"},
+		{"modo vacío", mutate(func(r *branch.Record) { r.Mode = "" }), "modo"},
+		{"origen del modo desconocido", mutate(func(r *branch.Record) { r.ModeSource = "azar" }), "origen del modo"},
+		{"repositorio del planning home relativo", mutate(func(r *branch.Record) { r.PlanningRepo = "axiom" }), "planningRepo"},
+		{"raíz git relativa", mutate(func(r *branch.Record) { r.Repositories[0].GitRoot = "axiom" }), "gitRoot"},
+		{"common dir relativo", mutate(func(r *branch.Record) { r.Repositories[0].CommonDir = ".git" }), "commonDir"},
+		{"worktree relativo", mutate(func(r *branch.Record) { r.Repositories[0].Branches[0].Worktree = "x/axiom" }), "worktree"},
+		{"prefijo de excepción inválido", mutate(func(r *branch.Record) { r.Exceptions.Prefix = "mi prefijo//" }), "prefix"},
+		{"rama de excepción inválida", mutate(func(r *branch.Record) { r.Exceptions.Branch = "a..b" }), "branch"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			path := recordFile(commonDir, "sdd", "x")
+			writeFile(t, path, tc.content)
+
+			record, err := load(t, commonDir, branch.LaneSDD, "x")
+
+			if record != nil || err == nil {
+				t.Fatalf("Load = %+v, %v; se esperaba un error", record, err)
+			}
+			var failure *FileError
+			if !errors.As(err, &failure) {
+				t.Fatalf("el error %T (%v) debe ser un *FileError", err, err)
+			}
+			if failure.Path != path || !strings.Contains(err.Error(), path) {
+				t.Errorf("el error debe nombrar el fichero %s: path %q, mensaje %q", path, failure.Path, err.Error())
+			}
+			if !strings.Contains(err.Error(), tc.wantIn) {
+				t.Errorf("el mensaje %q debe nombrar la causa (%q)", err.Error(), tc.wantIn)
+			}
+			if failure.Unwrap() == nil {
+				t.Error("el error conserva su causa")
+			}
+		})
+	}
+
+	t.Run("un directorio en lugar del fichero no se puede leer", func(t *testing.T) {
+		path := recordFile(commonDir, "sdd", "dir")
+		if err := os.MkdirAll(path, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		_, err := load(t, commonDir, branch.LaneSDD, "dir")
+		var failure *FileError
+		if !errors.As(err, &failure) || failure.Path != path {
+			t.Fatalf("Load = %v; se esperaba un *FileError que nombre %s", err, path)
+		}
+	})
+}
+
+// Un nombre de cambio o un carril inválidos nunca llegan a componer una ruta: el motor
+// los valida antes, y el registro no sale de su carpeta aunque se le entregue uno.
+func TestLoadNeverLeavesTheRegistryFolder(t *testing.T) {
+	_, commonDir := newRepository(t)
+	outside := filepath.Join(commonDir, "axiom", "branch", "v1", "fuera.json")
+	writeFile(t, outside, "{}")
+
+	for _, tc := range []struct {
+		lane   branch.Lane
+		change string
+	}{
+		{branch.LaneSDD, "../fuera"},
+		{branch.LaneSDD, `..\fuera`},
+		{branch.LaneSDD, ""},
+		{branch.LaneSDD, "a/b"},
+		{"../v1", "x"},
+		{"", "x"},
+	} {
+		record, err := load(t, commonDir, tc.lane, tc.change)
+		if record != nil || err == nil {
+			t.Errorf("Load(%q, %q) = %+v, %v; se esperaba un error", tc.lane, tc.change, record, err)
+			continue
+		}
+		var failure *FileError
+		if errors.As(err, &failure) {
+			t.Errorf("Load(%q, %q): un argumento inválido no es un fallo de fichero: %v", tc.lane, tc.change, err)
+		}
+	}
+}

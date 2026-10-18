@@ -122,8 +122,13 @@ func initRepository(t *testing.T, dir string) {
 // configWithRoles es un axiom.yaml de monorepo embebido. roles asocia cada rol con las
 // rutas de sus repositorios; extra son bloques adicionales (`git:`, `repositories:`).
 func configWithRoles(roles map[string][]string, extra string) string {
+	return configFor("monorepo-embedded", ".", roles, extra)
+}
+
+// configFor es un axiom.yaml de la topología y del repositorio de specs dados.
+func configFor(topology, specsRepository string, roles map[string][]string, extra string) string {
 	var builder strings.Builder
-	builder.WriteString("workspace:\n  name: ejemplo\n  topology: monorepo-embedded\n  specs_repository: .\nroles:\n")
+	fmt.Fprintf(&builder, "workspace:\n  name: ejemplo\n  topology: %s\n  specs_repository: %s\nroles:\n", topology, specsRepository)
 	for _, name := range slices.Sorted(maps.Keys(roles)) {
 		fmt.Fprintf(&builder, "  %s:\n    name: %s\n    repositories:\n", name, name)
 		for _, path := range roles[name] {
@@ -149,7 +154,14 @@ func newProject(t *testing.T, config string) string {
 // `axiom sdd kickoff seal`.
 func sealChange(t *testing.T, master, change string, roles ...string) {
 	t.Helper()
-	changeRoot := filepath.Join(master, "openspec", "changes", change)
+	sealChangeAt(t, master, change, roles...)
+}
+
+// sealChangeAt sella el kickoff del cambio bajo el workspaceRoot dado: la carpeta
+// maestra en un monorepo embebido y el repositorio de specs en un multirepo.
+func sealChangeAt(t *testing.T, workspaceRoot, change string, roles ...string) {
+	t.Helper()
+	changeRoot := filepath.Join(workspaceRoot, "openspec", "changes", change)
 	if err := os.MkdirAll(changeRoot, 0o755); err != nil {
 		t.Fatal(err)
 	}
