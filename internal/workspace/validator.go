@@ -75,20 +75,6 @@ func Validate(fs FS, cfg *WorkspaceConfig, baseDir string) (*ValidationReport, e
 			}
 		}
 
-	case TopologyMonorepoDecoupled:
-		// En monorepo desacoplado, specs DEBE ser un repositorio independiente (no ".")
-		if specsRepo == "" || specsRepo == "." {
-			report.Valid = false
-			report.Errors = append(report.Errors, "la topología 'monorepo-decoupled' requiere un repositorio de especificaciones independiente en la carpeta maestra (no puede ser '.' ni estar vacío)")
-		} else {
-			targetSpecs := filepath.Join(cleanBaseDir, specsRepo)
-			report.CheckedPaths = append(report.CheckedPaths, targetSpecs)
-			if ok, err := fs.IsDir(targetSpecs); err != nil || !ok {
-				report.Valid = false
-				report.Errors = append(report.Errors, fmt.Sprintf("el repositorio de especificaciones desacoplado '%s' no existe en la carpeta maestra", specsRepo))
-			}
-		}
-
 	case TopologyMultirepo:
 		// En multirepo, es REQUISITO OBLIGATORIO tener un repositorio canónico de specs
 		if specsRepo == "" || specsRepo == "." {
@@ -102,6 +88,12 @@ func Validate(fs FS, cfg *WorkspaceConfig, baseDir string) (*ValidationReport, e
 				report.Errors = append(report.Errors, fmt.Sprintf("el repositorio canónico de especificaciones '%s' no existe en la carpeta maestra", specsRepo))
 			}
 		}
+
+	default:
+		// La carga ya rechaza estos valores; una configuración construida a mano
+		// con la topología retirada o desconocida tampoco se da por válida (REQ-25.25).
+		report.Valid = false
+		report.Errors = append(report.Errors, topologyError(cfg.Workspace.Topology).Error())
 	}
 
 	// 3. Validación de repositorios asignados a cada rol

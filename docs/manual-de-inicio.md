@@ -111,16 +111,14 @@ axiom doctor
 
 ## 5. Inicialización y Configuración de Proyectos
 
-Axiom puede gobernar cualquier proyecto nuevo o existente en tres topologías:
+Axiom puede gobernar cualquier proyecto nuevo o existente en dos topologías:
 
 ### Topologías Soportadas
 
 1. **`monorepo-embedded` (Por defecto):**  
    El código del proyecto y las especificaciones residen en el mismo repositorio Git (bajo la carpeta `openspec/`). Ideal para la mayoría de aplicaciones, microservicios agrupados o proyectos como el propio Axiom.
-2. **`monorepo-decoupled`:**  
-   El código está en un único repositorio, pero las especificaciones residen en un repositorio Git independiente clonado dentro de la misma carpeta raíz de trabajo.
-3. **`multirepo`:**  
-   Múltiples repositorios de código independientes (por ejemplo `frontend/`, `backend/`, `infra/`), coordinados bajo una carpeta paraguas común, con un repositorio canónico obligatorio para las especificaciones (`specs_repository`).
+2. **`multirepo`:**  
+   Uno o varios repositorios de código independientes (por ejemplo `frontend/`, `backend/`, `infra/`), coordinados bajo una carpeta paraguas común, con un repositorio canónico obligatorio para las especificaciones (`specs_repository`), que incluye el caso de un único repositorio de código con las especificaciones en un repositorio aparte.
 
 ---
 
@@ -155,7 +153,7 @@ Si prefieres una experiencia visual:
 2. Axiom abrirá automáticamente tu navegador en el servidor local (ej. `http://localhost:4040`).
 3. En la barra superior o sección **Workspace / Proyectos**:
    * Pulsa en **"Agregar Proyecto"** o **"Inicializar Proyecto con Axiom (1 Clic)"**.
-   * Introduce la ruta física (`path`), el nombre del proyecto y selecciona la topología (`monorepo-embedded`, `monorepo-decoupled` o `multirepo`).
+   * Introduce la ruta física (`path`), el nombre del proyecto y selecciona la topología (`monorepo-embedded` o `multirepo`).
    * El dashboard ejecutará en segundo plano el detector de tecnologías y creará la estructura sin necesidad de escribir comandos.
    * Puedes conmutar de un proyecto a otro instantáneamente desde el selector desplegable.
 
@@ -186,7 +184,7 @@ La autoridad de edición de un cambio parte del repositorio de especificaciones:
 
 **Evidencia `pr_merged`.** `axiom sdd gate record --evidence-kind pr_merged` se verifica contra el grafo git del repositorio de especificaciones (`workspaceRoot`), no contra el de un repositorio de código. La integración de un repositorio de código se acredita con las evidencias `deployment` o `attestation`.
 
-**Cambio de resolución respecto a versiones anteriores.** Antes, los verbos SDD lanzados desde un subdirectorio sin marcadores propios resolvían `<subdirectorio>/openspec`. Ahora resuelven el planning home del marcador más cercano. Lo mismo ocurre con un `axiom.yaml` directo de `monorepo-decoupled` o `multirepo` cuyo `specs_repository` no termina en `openspec`: el planning home pasa a ser `<repositorio de especificaciones>/openspec` y, si `<maestra>/openspec` existe y es otro directorio, `axiom sdd status` lo avisa en `notes`. Un binario anterior ignora el puntero en los verbos SDD, así que todo el equipo debe usar el binario nuevo.
+**Cambio de resolución respecto a versiones anteriores.** Antes, los verbos SDD lanzados desde un subdirectorio sin marcadores propios resolvían `<subdirectorio>/openspec`. Ahora resuelven el planning home del marcador más cercano. Lo mismo ocurre con un `axiom.yaml` directo de `multirepo` cuyo `specs_repository` no termina en `openspec`: el planning home pasa a ser `<repositorio de especificaciones>/openspec` y, si `<maestra>/openspec` existe y es otro directorio, `axiom sdd status` lo avisa en `notes`. Un binario anterior ignora el puntero en los verbos SDD, así que todo el equipo debe usar el binario nuevo.
 
 ---
 
@@ -245,7 +243,7 @@ El archivo `axiom.yaml` es la única fuente de verdad técnica de la estructura 
 ```yaml
 workspace:
   name: "MiProyecto"
-  topology: "monorepo-embedded"   # Opciones: monorepo-embedded | monorepo-decoupled | multirepo
+  topology: "monorepo-embedded"   # Opciones: monorepo-embedded | multirepo
   specs_repository: "openspec"    # Carpeta local o subrepositorio Git de especificaciones
   skill_roots:                    # Opcional: directorios versionados con skills fuera de "skills/"
     - "internal/assets/skills"

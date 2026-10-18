@@ -322,7 +322,7 @@ func TestDeclarationsTechnicalContextValidation(t *testing.T) {
 		},
 		{
 			name:    "specs_repository terminado en openspec desplaza a su padre",
-			config:  "workspace:\n  name: e\n  topology: monorepo-decoupled\n  specs_repository: repo-specs/openspec\nroles:\n  core:\n    name: Core\n    repositories:\n      - path: .\n",
+			config:  "workspace:\n  name: e\n  topology: multirepo\n  specs_repository: repo-specs/openspec\nroles:\n  core:\n    name: Core\n    repositories:\n      - path: .\n",
 			blocks:  "technical_context:\n  maintained:\n    paths: [../repo-backend/docs/]\n  reference:\n    paths: [../../fuera.md]\n",
 			wantErr: []string{"'../../fuera.md'", "sale de la carpeta maestra"},
 		},

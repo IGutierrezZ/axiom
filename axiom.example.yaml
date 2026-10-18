@@ -10,13 +10,12 @@ workspace:
 
   # Topología del espacio de trabajo. Opciones admitidas:
   #   - monorepo-embedded: Código y especificaciones residen en el mismo repositorio Git.
-  #   - monorepo-decoupled: Monorrepo de código y repositorio de specs independiente en la carpeta maestra.
-  #   - multirepo: Múltiples repositorios de código y repositorio canónico de specs OBLIGATORIO.
+  #   - multirepo: Uno o varios repositorios de código y repositorio canónico de specs OBLIGATORIO.
   topology: "multirepo"
 
   # Ruta relativa al repositorio canónico de especificaciones dentro de la carpeta maestra.
   # Para 'monorepo-embedded': usa "." o la subcarpeta interna (ej. "openspec" o "specs").
-  # Para 'monorepo-decoupled' y 'multirepo': debe ser el nombre de la carpeta del repo de specs.
+  # Para 'multirepo': debe ser el nombre de la carpeta del repo de specs.
   specs_repository: "especificacion"
 
   # Directorios versionados con skills canónicas fuera de "skills/" (opcional).
