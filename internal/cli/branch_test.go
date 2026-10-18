@@ -203,6 +203,11 @@ type branchResultJSON struct {
 	Repositories    []branchRepositoryJSON `json:"repositories"`
 	Skipped         []branchSkippedJSON    `json:"skipped"`
 	Warnings        []string               `json:"warnings"`
+	// Sin `--change`, `registered` y `pendingArchive` (una lista); con él, `pendingArchive`
+	// es un booleano y, si es verdadero, `pendingArchiveContinuation` lleva la orden.
+	Registered                 []branchRegisteredJSON `json:"registered"`
+	PendingArchive             json.RawMessage        `json:"pendingArchive"`
+	PendingArchiveContinuation string                 `json:"pendingArchiveContinuation"`
 }
 
 func decodeBranchResult(t *testing.T, stdout string) branchResultJSON {
@@ -578,16 +583,15 @@ func TestBranchStatusPrintsSpanishTextWithoutJSON(t *testing.T) {
 	}
 }
 
-// Los errores de uso de `status` terminan con 2 y nombran la continuación: el cambio
-// es obligatorio en esta fase y el carril solo admite sdd u odd.
+// Los errores de uso de `status` terminan con 2 y nombran la continuación: el carril
+// solo admite sdd u odd, y un `--change` presente no puede estar en blanco (sin la
+// bandera, `status` lista los registrados y los pendientes: branch_pending_test.go).
 func TestBranchStatusUsageErrorsExitWithCode2(t *testing.T) {
 	tests := []struct {
 		name string
 		args []string
 		want string
 	}{
-		{"sin --change", []string{"status"}, "--change"},
-		{"sin --change y con --json", []string{"status", "--json"}, "--change"},
 		{"--change vacío", []string{"status", "--change", ""}, "--change"},
 		{"--change solo con espacios", []string{"status", "--change", "  "}, "--change"},
 		{"--change sin valor", []string{"status", "--change"}, "change"},
@@ -734,7 +738,7 @@ func TestBranchStatusLaunchesNoRemoteGitOperation(t *testing.T) {
 		// El HEAD se lee de ficheros (REQ-25.21) y solo se lanzan las lecturas de la
 		// lista cerrada de `internal/branch/gitcli`.
 		switch invocation[1] {
-		case "rev-parse", "worktree", "status", "rev-list":
+		case "rev-parse", "worktree", "status", "rev-list", "ls-tree":
 		default:
 			t.Errorf("status lanzó %q, fuera de la lista cerrada de lecturas: %v", invocation[1], invocation)
 		}

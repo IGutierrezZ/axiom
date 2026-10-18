@@ -7,6 +7,8 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
+	"slices"
 	"strings"
 	"testing"
 
@@ -425,10 +427,11 @@ func TestReadsLaunchOnlyTheClosedListOfReadSubcommands(t *testing.T) {
 	_, _ = git.Worktrees(ctx, repo)
 	_, _ = git.DirtyPaths(ctx, repo)
 	_, _, _ = git.AheadBehind(ctx, repo, "refs/heads/main", "refs/heads/feat/x")
+	_, _, _ = git.TreeDirs(ctx, repo, "refs/heads/main", "openspec/changes")
 
-	allowed := map[string]bool{"rev-parse": true, "worktree": true, "status": true, "rev-list": true}
-	if len(*seen) != 7 {
-		t.Fatalf("el observador vio %d invocaciones, se esperaban 7: %v", len(*seen), *seen)
+	allowed := map[string]bool{"rev-parse": true, "worktree": true, "status": true, "rev-list": true, "ls-tree": true}
+	if len(*seen) != 8 {
+		t.Fatalf("el observador vio %d invocaciones, se esperaban 8: %v", len(*seen), *seen)
 	}
 	for _, invocation := range *seen {
 		if !allowed[invocation[1]] {
@@ -467,4 +470,145 @@ func insideNoRepository(t *testing.T) string {
 		}
 		current = parent
 	}
+}
+
+// changesTree crea un repositorio con `openspec/changes/` como lo deja el archivado:
+// carpetas de cambios (una con espacio y otra con una letra no ASCII), `archive/`, un
+// fichero suelto y un submódulo, todo confirmado en main.
+func changesTree(t *testing.T) string {
+	t.Helper()
+	repo := newRepository(t)
+	for _, name := range []string{"archive", "x", "mi cambio", "ñandú"} {
+		writeFile(t, filepath.Join(repo, "openspec", "changes", name, "proposal.md"), "contenido\n")
+	}
+	writeFile(t, filepath.Join(repo, "openspec", "changes", ".gitkeep"), "")
+	writeFile(t, filepath.Join(repo, "openspec", "solo-ficheros", "a.md"), "a\n")
+	runGit(t, repo, "add", "-A")
+	// Una entrada de tipo commit (un submódulo) no es un directorio del árbol.
+	runGit(t, repo, "update-index", "--add", "--cacheinfo", "160000,"+runGit(t, repo, "rev-parse", "HEAD")+",openspec/changes/submodulo")
+	commit(t, repo, "cambios")
+	return repo
+}
+
+// design D-17: `TreeDirs` lista los subdirectorios inmediatos de una carpeta en el
+// árbol de una referencia (`git ls-tree -z`): solo entradas de tipo `tree`, en el orden
+// de git, con nombres con espacios y no ASCII íntegros, y dice si la carpeta existe.
+func TestTreeDirsListsTheImmediateDirectoriesOfAFolder(t *testing.T) {
+	ctx := context.Background()
+	repo := changesTree(t)
+	head := runGit(t, repo, "rev-parse", "HEAD")
+	git := New()
+
+	t.Run("solo los directorios, sin ficheros ni submódulos", func(t *testing.T) {
+		dirs, exists, err := git.TreeDirs(ctx, repo, "refs/heads/main", "openspec/changes")
+		if err != nil || !exists {
+			t.Fatalf("TreeDirs = %v, %v, %v; se esperaba que la carpeta exista", dirs, exists, err)
+		}
+		if want := []string{"archive", "mi cambio", "x", "ñandú"}; !reflect.DeepEqual(dirs, want) {
+			t.Errorf("directorios = %q, se esperaba %q", dirs, want)
+		}
+	})
+	t.Run("la referencia puede ser un commit", func(t *testing.T) {
+		dirs, exists, err := git.TreeDirs(ctx, repo, head, "openspec/changes")
+		if err != nil || !exists || len(dirs) != 4 {
+			t.Fatalf("TreeDirs(%s) = %q, %v, %v", head, dirs, exists, err)
+		}
+	})
+	t.Run("no es recursivo", func(t *testing.T) {
+		dirs, _, err := git.TreeDirs(ctx, repo, head, "openspec")
+		if err != nil || !reflect.DeepEqual(dirs, []string{"changes", "solo-ficheros"}) {
+			t.Errorf("TreeDirs(openspec) = %q, %v; se esperaban solo sus hijos directos", dirs, err)
+		}
+	})
+	t.Run("desde una subcarpeta la ruta sigue siendo la de la raíz", func(t *testing.T) {
+		dirs, exists, err := git.TreeDirs(ctx, filepath.Join(repo, "openspec"), head, "openspec/changes")
+		if err != nil || !exists || len(dirs) != 4 {
+			t.Errorf("TreeDirs desde openspec/ = %q, %v, %v", dirs, exists, err)
+		}
+	})
+	t.Run("una carpeta con solo ficheros existe y no tiene directorios", func(t *testing.T) {
+		dirs, exists, err := git.TreeDirs(ctx, repo, head, "openspec/solo-ficheros")
+		if err != nil || !exists || len(dirs) != 0 {
+			t.Errorf("TreeDirs = %q, %v, %v; se esperaba existente y sin directorios", dirs, exists, err)
+		}
+	})
+	t.Run("una ruta que no existe no es un error", func(t *testing.T) {
+		for _, missing := range []string{"nope/changes", "openspec/changes/no-existe", "openspec/changes/.gitkeep"} {
+			dirs, exists, err := git.TreeDirs(ctx, repo, head, missing)
+			if err != nil || exists || len(dirs) != 0 {
+				t.Errorf("TreeDirs(%q) = %q, %v, %v; se esperaba inexistente sin error (un fichero no es una carpeta)", missing, dirs, exists, err)
+			}
+		}
+	})
+	t.Run("no lee el árbol de trabajo", func(t *testing.T) {
+		writeFile(t, filepath.Join(repo, "openspec", "changes", "sin-confirmar", "a.md"), "a\n")
+		dirs, _, err := git.TreeDirs(ctx, repo, head, "openspec/changes")
+		if err != nil || len(dirs) != 4 {
+			t.Errorf("TreeDirs = %q, %v; una carpeta sin confirmar no está en el árbol de la referencia", dirs, err)
+		}
+	})
+}
+
+// Un nombre sin sentido para git nunca llega a lanzarlo, y una referencia que no
+// existe es un error que nombra el comando y el directorio.
+func TestTreeDirsRejectsArgumentsThatGitWouldReadAsOptionsOrMagic(t *testing.T) {
+	ctx := context.Background()
+	repo := changesTree(t)
+	seen := observe(t)
+	git := New()
+
+	for _, relPath := range []string{"", ".", "/openspec", "../fuera", "openspec/../x", "-openspec", ":(top)openspec", "openspec\x00x"} {
+		if _, _, err := git.TreeDirs(ctx, repo, "refs/heads/main", relPath); err == nil {
+			t.Errorf("TreeDirs con la ruta %q debía fallar", relPath)
+		}
+	}
+	for _, rev := range []string{"", "-r"} {
+		if _, _, err := git.TreeDirs(ctx, repo, rev, "openspec/changes"); err == nil {
+			t.Errorf("TreeDirs con la referencia %q debía fallar", rev)
+		}
+	}
+	if len(*seen) != 0 {
+		t.Errorf("un argumento inválido se rechaza antes de lanzar git, pero el observador vio %v", *seen)
+	}
+
+	_, _, err := git.TreeDirs(ctx, repo, "refs/heads/no-existe", "openspec/changes")
+	if err == nil || !strings.Contains(err.Error(), "ls-tree") || !strings.Contains(err.Error(), repo) {
+		t.Errorf("una referencia inexistente da un error que nombra el comando y %s: %v", repo, err)
+	}
+}
+
+// Los nombres con caracteres que git trataría de forma especial en una salida
+// entrecomillada o en un patrón salen íntegros: la salida es `-z` y la ruta es un prefijo
+// literal, no un patrón (git ls-tree no expande comodines).
+func TestTreeDirsKeepsUnusualNamesIntact(t *testing.T) {
+	ctx := context.Background()
+	repo := newRepository(t)
+	names := []string{"con'apóstrofe", "a#b", "100%", "[corchetes]", "a{b}", "a;b", "a&b", "a$b", "a  b"}
+	for _, name := range names {
+		writeFile(t, filepath.Join(repo, "openspec", "changes", name, "f"), "f\n")
+	}
+	writeFile(t, filepath.Join(repo, "raro[dir]", "changes", "uno", "f"), "f\n")
+	// `rarod` coincidiría con `raro[dir]` si la ruta se leyese como un patrón.
+	writeFile(t, filepath.Join(repo, "rarod", "changes", "falso", "f"), "f\n")
+	runGit(t, repo, "add", "-A")
+	commit(t, repo, "nombres raros")
+	git := New()
+
+	t.Run("los nombres de las carpetas", func(t *testing.T) {
+		dirs, exists, err := git.TreeDirs(ctx, repo, "refs/heads/main", "openspec/changes")
+		if err != nil || !exists {
+			t.Fatalf("TreeDirs = %q, %v, %v", dirs, exists, err)
+		}
+		for _, name := range names {
+			if !slices.Contains(dirs, name) {
+				t.Errorf("falta %q entre %q", name, dirs)
+			}
+		}
+	})
+	t.Run("la ruta se toma literalmente, sin comodines", func(t *testing.T) {
+		dirs, exists, err := git.TreeDirs(ctx, repo, "refs/heads/main", "raro[dir]/changes")
+		if err != nil || !exists || !reflect.DeepEqual(dirs, []string{"uno"}) {
+			t.Errorf("TreeDirs(raro[dir]/changes) = %q, %v, %v; se esperaba solo [uno]", dirs, exists, err)
+		}
+	})
 }

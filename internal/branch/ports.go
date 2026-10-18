@@ -38,7 +38,7 @@ type Registry interface {
 	Load(commonDir string, lane Lane, change string) (*Record, error) // nil, nil cuando no existe
 	Save(commonDir string, rec Record) error                          // no escribe si los bytes no cambian
 	Delete(commonDir string, lane Lane, change string) error
-	List(commonDir string) ([]Record, error)
+	List(commonDir string, lane Lane) ([]Record, error) // los del carril, ordenados por cambio
 }
 
 // Prefs son las preferencias personales de worktree del hub (REQ-25.8).

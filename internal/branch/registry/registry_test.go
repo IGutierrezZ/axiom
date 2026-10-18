@@ -359,3 +359,169 @@ func TestLoadNeverLeavesTheRegistryFolder(t *testing.T) {
 		}
 	}
 }
+
+// recordOf es el registro de un cambio y carril dados, derivado del válido de la prueba.
+func recordOf(root, commonDir string, lane branch.Lane, change string) branch.Record {
+	record := validRecord(root, commonDir)
+	record.Lane, record.Change = lane, change
+	return record
+}
+
+func changesOf(records []branch.Record) []string {
+	var changes []string
+	for _, record := range records {
+		changes = append(changes, record.Change)
+	}
+	return changes
+}
+
+// REQ-25.15 (escenario «`status` sin `--change` lista registrados y pendientes») y
+// design D-07: `List` devuelve los registros del carril en un orden estable (por cambio,
+// no por nombre de fichero: `a-b.json` precede a `a.json`), sin mezclar carriles, y sin
+// crear nada.
+func TestListReturnsTheRecordsOfTheLaneInAStableOrder(t *testing.T) {
+	root, commonDir := newRepository(t)
+
+	t.Run("sin carpeta del registro no hay nada que listar y no se crea nada", func(t *testing.T) {
+		records, err := New().List(commonDir, branch.LaneSDD)
+		if err != nil || len(records) != 0 {
+			t.Fatalf("List = %+v, %v; se esperaba una lista vacía sin error", records, err)
+		}
+		if _, statErr := os.Stat(filepath.Join(commonDir, "axiom")); !errors.Is(statErr, fs.ErrNotExist) {
+			t.Errorf("listar no debe crear %s (%v)", filepath.Join(commonDir, "axiom"), statErr)
+		}
+	})
+
+	for _, change := range []string{"b", "a-b", "a"} {
+		writeRecord(t, commonDir, "sdd", recordOf(root, commonDir, branch.LaneSDD, change))
+	}
+	writeRecord(t, commonDir, "odd", recordOf(root, commonDir, branch.LaneODD, "z"))
+
+	t.Run("ordena por cambio", func(t *testing.T) {
+		records, err := New().List(commonDir, branch.LaneSDD)
+		if err != nil {
+			t.Fatalf("List: %v", err)
+		}
+		if got, want := changesOf(records), []string{"a", "a-b", "b"}; !reflect.DeepEqual(got, want) {
+			t.Errorf("cambios = %v, se esperaba %v", got, want)
+		}
+		want := recordOf(root, commonDir, branch.LaneSDD, "a")
+		if !reflect.DeepEqual(records[0], want) {
+			t.Errorf("el registro leído difiere:\n%+v\n%+v", records[0], want)
+		}
+	})
+	t.Run("cada carril lista solo los suyos", func(t *testing.T) {
+		records, err := New().List(commonDir, branch.LaneODD)
+		if err != nil || !reflect.DeepEqual(changesOf(records), []string{"z"}) {
+			t.Fatalf("List odd = %v, %v; se esperaba solo z", changesOf(records), err)
+		}
+	})
+	t.Run("lo que no es un registro se ignora", func(t *testing.T) {
+		writeFile(t, filepath.Join(commonDir, "axiom", "branch", "v1", "sdd", "notas.txt"), "no es un registro")
+		if err := os.MkdirAll(filepath.Join(commonDir, "axiom", "branch", "v1", "sdd", "carpeta"), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		records, err := New().List(commonDir, branch.LaneSDD)
+		if err != nil || !reflect.DeepEqual(changesOf(records), []string{"a", "a-b", "b"}) {
+			t.Fatalf("List = %v, %v; un fichero que no es .json y una carpeta no son registros", changesOf(records), err)
+		}
+	})
+	t.Run("es visible desde un worktree enlazado", func(t *testing.T) {
+		linked := filepath.Join(t.TempDir(), "x", "axiom")
+		runGit(t, root, "worktree", "add", "-q", "-b", "inc/x", linked, "main")
+		records, err := New().List(commonDirOf(t, linked), branch.LaneSDD)
+		if err != nil || !reflect.DeepEqual(changesOf(records), []string{"a", "a-b", "b"}) {
+			t.Fatalf("List desde el worktree enlazado = %v, %v", changesOf(records), err)
+		}
+	})
+}
+
+// design D-07: un fichero que existe y no es un registro válido es un *FileError que lo
+// nombra, como en `Load`, y no se devuelve una lista a medias: el registro es estado
+// derivado y nada lo interpreta con indulgencia.
+func TestListRejectsAnInvalidRecordNamingTheFile(t *testing.T) {
+	root, commonDir := newRepository(t)
+	writeRecord(t, commonDir, "sdd", recordOf(root, commonDir, branch.LaneSDD, "bueno"))
+
+	tests := []struct {
+		name   string
+		setup  func(t *testing.T) string
+		wantIn string
+	}{
+		{"JSON mal formado", func(t *testing.T) string {
+			path := recordFile(commonDir, "sdd", "roto")
+			writeFile(t, path, `{"schema": `)
+			return path
+		}, "JSON"},
+		{"un directorio en lugar del fichero", func(t *testing.T) string {
+			path := recordFile(commonDir, "sdd", "carpeta")
+			if err := os.MkdirAll(path, 0o755); err != nil {
+				t.Fatal(err)
+			}
+			return path
+		}, "registro local"},
+		{"un nombre que no puede ser el de un cambio", func(t *testing.T) string {
+			path := recordFile(commonDir, "sdd", "a b")
+			writeFile(t, path, "{}")
+			return path
+		}, "nombre de cambio"},
+		{"un registro de otro cambio", func(t *testing.T) string {
+			path := recordFile(commonDir, "sdd", "x")
+			data, err := json.Marshal(recordOf(root, commonDir, branch.LaneSDD, "otro"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			writeFile(t, path, string(data))
+			return path
+		}, "cambio"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			path := tc.setup(t)
+			t.Cleanup(func() { _ = os.RemoveAll(path) })
+
+			records, err := New().List(commonDir, branch.LaneSDD)
+
+			if records != nil || err == nil {
+				t.Fatalf("List = %v, %v; se esperaba un error sin lista", changesOf(records), err)
+			}
+			var failure *FileError
+			if !errors.As(err, &failure) || failure.Path != path {
+				t.Fatalf("el error %T (%v) debe ser un *FileError que nombre %s", err, err, path)
+			}
+			if !strings.Contains(err.Error(), tc.wantIn) {
+				t.Errorf("el mensaje %q debe nombrar la causa (%q)", err.Error(), tc.wantIn)
+			}
+		})
+	}
+}
+
+// Un carril o un git common dir que no pueden componer la carpeta del registro no
+// llegan a leer nada: error corriente, no de fichero.
+func TestListNeverLeavesTheRegistryFolder(t *testing.T) {
+	_, commonDir := newRepository(t)
+	writeFile(t, filepath.Join(commonDir, "axiom", "branch", "v1", "fuera", "x.json"), "{}")
+
+	for _, tc := range []struct {
+		name      string
+		commonDir string
+		lane      branch.Lane
+	}{
+		{"carril que sube de carpeta", commonDir, "../v1"},
+		{"carril vacío", commonDir, ""},
+		{"carril desconocido", commonDir, "fuera"},
+		{"git common dir relativo", ".git", branch.LaneSDD},
+		{"git common dir vacío", "", branch.LaneSDD},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			records, err := New().List(tc.commonDir, tc.lane)
+			if records != nil || err == nil {
+				t.Fatalf("List = %v, %v; se esperaba un error", changesOf(records), err)
+			}
+			var failure *FileError
+			if errors.As(err, &failure) {
+				t.Errorf("un argumento inválido no es un fallo de fichero: %v", err)
+			}
+		})
+	}
+}

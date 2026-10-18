@@ -2,15 +2,18 @@ package engine
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/branch"
+	"github.com/IGutierrezZ/axiom/v3/internal/branch/registry"
 	"github.com/IGutierrezZ/axiom/v3/internal/gitcommon"
 	"github.com/IGutierrezZ/axiom/v3/internal/pathidentity"
 	"github.com/IGutierrezZ/axiom/v3/internal/pathquote"
+	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
 // originRemote es el remoto cuya rama de integración, ya traída a local, sirve de base
@@ -23,11 +26,18 @@ const originRemote = "origin"
 // de su base y el destino propuesto para su PR. Un cambio sin ramas creadas es
 // `not_started`, no un error. Con registro local, informa además del modo de trabajo
 // materializado y de los worktrees registrados, y aplica las excepciones que el registro
-// guarda (`--prefix`, `--branch`, `--base`); sin él, `registry.present` es falso.
-// cwd debe ser un directorio absoluto; el cambio es obligatorio en esta rebanada. Nunca
-// ejecuta operaciones remotas (REQ-25.1) ni escribe el registro.
+// guarda (`--prefix`, `--branch`, `--base`); sin él, `registry.present` es falso. Con
+// cambio, añade si está pendiente de archivar (`pendingArchive`, REQ-25.20).
+//
+// El cambio es opcional (REQ-25.15): sin él, `Status` no describe ningún plan, sino que
+// lista los cambios registrados del carril y los pendientes de archivar del proyecto.
+// cwd debe ser un directorio absoluto. Nunca ejecuta operaciones remotas (REQ-25.1) ni
+// escribe el registro.
 func (e *Engine) Status(ctx context.Context, cwd, change string, lane branch.Lane) branch.Result {
 	const operation = "status"
+	if change == "" {
+		return e.statusOfProject(ctx, operation, cwd, lane)
+	}
 	facts, refusal := e.gather(ctx, operation, cwd, change, lane)
 	if refusal != nil {
 		return branch.NewResult(operation).Refused(refusal)
@@ -40,7 +50,66 @@ func (e *Engine) Status(ctx context.Context, cwd, change string, lane branch.Lan
 	if refusal != nil {
 		return branch.NewResult(operation).Refused(refusal)
 	}
+	e.reportPendingArchive(ctx, &result, facts.location, change, lane)
 	return result
+}
+
+// statusOfProject es `status` sin cambio (REQ-25.15, REQ-25.20): los cambios con registro
+// local del carril, ordenados por nombre, y los pendientes de archivar de la rama de
+// integración. Los pendientes son información y no una negativa: si no se pueden evaluar,
+// el campo se omite con un aviso y la salida sigue siendo 0.
+func (e *Engine) statusOfProject(ctx context.Context, operation, cwd string, lane branch.Lane) branch.Result {
+	refused := func(refusal *branch.Refusal) branch.Result { return branch.NewResult(operation).Refused(refusal) }
+	if reason := directoryProblem(cwd); reason != "" {
+		return refused(branch.UnusableDirectory(operation, reason))
+	}
+	location, err := workspace.Locate(cwd)
+	if err != nil {
+		return refused(branch.LocateRefusal(err))
+	}
+	if refusal := branch.ConfigRefusal(location); refusal != nil {
+		return refused(refusal)
+	}
+	// El registro vive en el git common dir del repositorio del planning home (REQ-25.14).
+	planning, refusal := e.repositoryFacts(ctx, operation, location, location.WorkspaceRoot, ".", location.WorkspaceRoot)
+	if refusal != nil {
+		return refused(refusal)
+	}
+	records, err := e.registry.List(planning.CommonDir, lane)
+	if err != nil {
+		return refused(registryListRefusal(err, cwd))
+	}
+
+	result := branch.NewResult(operation)
+	result.Lane, result.Topology = lane, topologyOf(location)
+	result.WorkspaceRoot, result.PlanningHome = location.WorkspaceRoot, location.PlanningHome
+	result.Registered = make([]branch.RegisteredChange, 0, len(records))
+	for _, record := range records {
+		result.Registered = append(result.Registered, branch.NewRegisteredChange(record))
+	}
+	pending, warnings := e.PendingArchive(ctx, location)
+	if pending != nil {
+		result.PendingArchive = &branch.PendingArchive{Changes: pending}
+	}
+	result.Warnings = warnings
+	return result
+}
+
+// registryListRefusal traduce el fallo de listar el registro local a `config_invalid`: un
+// fichero que no es válido se nombra y se borra (es estado derivado que `ensure`
+// reconstruye); un carril que no puede nombrar un registro, se corrige.
+func registryListRefusal(err error, cwd string) *branch.Refusal {
+	refusal := &branch.Refusal{
+		Code:         branch.CodeConfigInvalid,
+		Message:      err.Error(),
+		Continuation: fmt.Sprintf("usa `--lane sdd` o `--lane odd` y repite `axiom branch status --lane sdd --cwd %s`", pathquote.Quote(cwd)),
+	}
+	var failure *registry.FileError
+	if errors.As(err, &failure) {
+		refusal.Continuation = fmt.Sprintf("borra %s (es estado local derivado) y repite `axiom branch status --cwd %s`", pathquote.Quote(failure.Path), pathquote.Quote(cwd))
+		refusal.Details = map[string]string{"path": failure.Path}
+	}
+	return refusal
 }
 
 // describe lee el estado de git de cada rama del plan y compone el resultado.

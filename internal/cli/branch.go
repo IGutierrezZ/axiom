@@ -28,24 +28,34 @@ Subcomandos:
 Ejecuta ` + "`axiom branch <subcomando> --help`" + ` para ver las banderas de cada subcomando.
 `
 
-const branchStatusHelp = `Uso: axiom branch status --change <nombre> [--lane sdd|odd] [--cwd <ruta>] [--json]
+const branchStatusHelp = `Uso: axiom branch status [--change <nombre>] [--lane sdd|odd] [--cwd <ruta>] [--json]
 
-Muestra, solo con lecturas, el estado de las ramas y los worktrees de un cambio: por
-repositorio, su papel, la rama actual, la rama de integración que resuelve la política
-de ramas de axiom.yaml (bloques git: y repositories:; sin ellos, main) y la base; por
-rama, si existe, su worktree, si tiene cambios sin confirmar, los commits de adelanto y
-de atraso respecto de su base (solo con referencias locales) y la rama destino
+Con --change, muestra, solo con lecturas, el estado de las ramas y los worktrees de un
+cambio: por repositorio, su papel, la rama actual, la rama de integración que resuelve la
+política de ramas de axiom.yaml (bloques git: y repositories:; sin ellos, main) y la
+base; por rama, si existe, su worktree, si tiene cambios sin confirmar, los commits de
+adelanto y de atraso respecto de su base (solo con referencias locales) y la rama destino
 propuesta para su PR. Un cambio sin ramas creadas se informa como «no iniciado», con
 código de salida 0. En multirepo, el repositorio de specs se informa in situ, sin ramas
 ni worktrees. Si el cambio tiene registro local (en el git common dir), informa también
 del modo de trabajo materializado y de los worktrees registrados; sin él, indica que no
-lo tiene. Rechaza con plan_conflict o path_too_long un plan cuyos worktrees se
-solaparían con otro árbol de trabajo o superarían el límite de Windows. No ejecuta fetch,
-pull, push ni ls-remote ni escribe ningún fichero.
+lo tiene. Indica además si el cambio está pendiente de archivar (pendingArchive) y, si
+lo está, la orden para archivarlo. Rechaza con plan_conflict o path_too_long un plan cuyos
+worktrees se solaparían con otro árbol de trabajo o superarían el límite de Windows.
+
+Sin --change, lista los cambios registrados del carril (modo de trabajo y worktrees) y
+los cambios pendientes de archivar del proyecto: los que ya están en el árbol de la rama
+de integración local (origin/<integración> si existe en local y, si no, la local) y
+siguen sin archivar, cada uno con la orden axiom branch ensure --change <c> --archive.
+Es información, no una comprobación: nunca produce un código de fallo ni bloquea nada, y
+si no existe la rama de integración la lista se omite con un aviso. En multirepo, el
+repositorio de specs no tiene pendientes.
+
+No ejecuta fetch, pull, push ni ls-remote ni escribe ningún fichero.
 
 Banderas:
-  --change <nombre>   Nombre del cambio (obligatorio)
-  --lane sdd|odd      Carril del cambio (por defecto, sdd)
+  --change <nombre>   Nombre del cambio (opcional)
+  --lane sdd|odd      Carril del cambio y de los registros que se listan (por defecto, sdd)
   --cwd <ruta>        Directorio de partida (por defecto, el directorio de trabajo del proceso)
   --json              Imprime el resultado como axiom.branch-result/v1
 `
@@ -87,8 +97,17 @@ func runBranchStatus(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintf(stderr, "Error: argumento inesperado '%s' para branch status. Ejecuta `axiom branch status --help`.\n", flags.Arg(0))
 		return branch.ExitUsage
 	}
-	if strings.TrimSpace(*change) == "" {
-		fmt.Fprintln(stderr, "Error: falta --change <nombre>: branch status muestra el estado de un cambio. Ejecuta `axiom branch status --help`.")
+	// Sin la bandera, `status` lista los registrados y los pendientes; una bandera presente
+	// pero en blanco (casi siempre una variable de entorno vacía) no se confunde con su
+	// ausencia, para no listar lo que el usuario no pidió.
+	changeGiven := false
+	flags.Visit(func(given *flag.Flag) {
+		if given.Name == "change" {
+			changeGiven = true
+		}
+	})
+	if changeGiven && strings.TrimSpace(*change) == "" {
+		fmt.Fprintln(stderr, "Error: --change no puede estar vacío: indica el nombre del cambio o quita la bandera para listar los registrados y los pendientes de archivar. Ejecuta `axiom branch status --help`.")
 		return branch.ExitUsage
 	}
 	if *lane != string(branch.LaneSDD) && *lane != string(branch.LaneODD) {
