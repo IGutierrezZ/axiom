@@ -119,7 +119,7 @@ USO:
 COMANDOS DE GOBERNANZA Y WORKSPACE:
   init                 Inicializa un proyecto con axiom.yaml, andamiaje base y lo registra en el Hub
   change create        Crea un nuevo incremento/cambio SDD con plantilla proposal.md en español
-  branch status        Muestra el repositorio git, su git common dir y la rama actual (solo lectura; --json)
+  branch status        Muestra el estado de las ramas y worktrees de un cambio (solo lectura; --change, --json)
   project list        Lista los proyectos registrados en el Hub global (~/.axiom/workspaces.json)
   project switch       Conmuta el proyecto activo por defecto
   project add          Registra un proyecto existente en el Hub

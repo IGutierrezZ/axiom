@@ -4,12 +4,14 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"reflect"
 	"regexp"
 	"strings"
 	"testing"
 	"unicode"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/pathquote"
+	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
 // allCodes son los dieciséis códigos tipados de la spec (design §2.2).
@@ -291,15 +293,195 @@ func TestResultUnusableDirectoryKeepsItsReasonAndPointsToCwd(t *testing.T) {
 	}
 }
 
+// statusPlan es un plan con un repositorio de dos roles, como el que entrega el
+// planificador al motor.
+func statusPlan() RepoPlan {
+	return RepoPlan{
+		Name:              "axiom",
+		GitRoot:           `C:\repos\axiom`,
+		CommonDir:         `C:\repos\axiom\.git`,
+		RelPath:           ".",
+		Role:              RepoChangeBranch,
+		Roles:             []string{"core", "qa"},
+		IntegrationBranch: "main",
+		Branches: []BranchPlan{
+			{Name: "feat/x", Kind: KindChange, PRTarget: "main", Worktree: `C:\repos\axiom-wt\x\axiom`},
+			{Name: "feat/x-core", Kind: KindRole, RoleID: "core", From: "feat/x", PRTarget: "feat/x"},
+		},
+	}
+}
+
+// REQ-25.15 y REQ-25.2 (G-4): el resultado de `status` lleva el papel de cada
+// repositorio y el tipo de cada rama como token con su etiqueta en un campo hermano.
+func TestNewRepositoryResultPairsRoleAndKindWithTheirLabels(t *testing.T) {
+	repository := NewRepositoryResult(statusPlan())
+
+	if repository.Name != "axiom" || repository.GitRoot != `C:\repos\axiom` || repository.CommonDir != `C:\repos\axiom\.git` {
+		t.Errorf("identidad del repositorio = %+v", repository)
+	}
+	if repository.Role != RepoChangeBranch || repository.RoleLabel != "repositorio con rama de cambio" {
+		t.Errorf("role %q / roleLabel %q; se esperaba change_branch con su etiqueta", repository.Role, repository.RoleLabel)
+	}
+	if repository.IntegrationBranch != "main" || !reflect.DeepEqual(repository.Roles, []string{"core", "qa"}) {
+		t.Errorf("integración %q, roles %v", repository.IntegrationBranch, repository.Roles)
+	}
+	if len(repository.Branches) != 2 {
+		t.Fatalf("ramas = %+v, se esperaban dos", repository.Branches)
+	}
+	change, role := repository.Branches[0], repository.Branches[1]
+	if change.Name != "feat/x" || change.Kind != KindChange || change.KindLabel != "rama del cambio" || change.PRTarget != "main" {
+		t.Errorf("rama del cambio = %+v", change)
+	}
+	if role.Name != "feat/x-core" || role.Kind != KindRole || role.KindLabel != "rama de rol" || role.Role != "core" || role.PRTarget != "feat/x" {
+		t.Errorf("rama de rol = %+v", role)
+	}
+	if change.Exists || change.Worktree != "" || change.Dirty || change.Ahead != nil || change.Behind != nil {
+		t.Errorf("el estado de git lo rellena el motor: una rama recién planificada no existe ni tiene worktree: %+v", change)
+	}
+}
+
+// REQ-25.15: el estado de una rama distingue «cero commits» de «no se calculó»:
+// adelanto y atraso salen como `0` cuando se calcularon y no salen cuando no.
+func TestBranchResultDistinguishesZeroFromNotComputed(t *testing.T) {
+	zero, two := 0, 2
+	result := NewResult("status")
+	result.Repositories = []RepositoryResult{NewRepositoryResult(statusPlan())}
+	first := &result.Repositories[0].Branches[0]
+	first.Exists, first.Ahead, first.Behind, first.ComparedTo = true, &zero, &two, "origin/main"
+
+	_, decoded := resultJSON(t, result)
+	branches := decoded["repositories"].([]any)[0].(map[string]any)["branches"].([]any)
+	computed, notComputed := branches[0].(map[string]any), branches[1].(map[string]any)
+
+	if computed["ahead"] != float64(0) || computed["behind"] != float64(2) || computed["comparedTo"] != "origin/main" || computed["exists"] != true {
+		t.Errorf("rama con adelanto y atraso calculados = %v", computed)
+	}
+	for _, absent := range []string{"ahead", "behind", "comparedTo", "worktree"} {
+		if _, present := notComputed[absent]; present {
+			t.Errorf("una rama sin cálculo no lleva %q: %v", absent, notComputed)
+		}
+	}
+	if notComputed["exists"] != false || notComputed["dirty"] != false {
+		t.Errorf("exists y dirty se imprimen siempre: %v", notComputed)
+	}
+}
+
+// REQ-25.15 (escenario «Cambio no iniciado»): `not_started` es un resultado alcanzado
+// (código de salida 0), con su etiqueta, y conserva el resto del resultado.
+func TestNotStartedKeepsTheResultAndExitsWithZero(t *testing.T) {
+	result := NewResult("status")
+	result.Change = "x"
+	started := result.NotStarted()
+
+	if started.Status != StatusNotStarted || started.StatusLabel != "no iniciado" || started.ExitCode() != 0 {
+		t.Errorf("status %q / %q, salida %d; se esperaba not_started / no iniciado / 0", started.Status, started.StatusLabel, started.ExitCode())
+	}
+	if started.Change != "x" || started.Operation != "status" || started.Code != "" {
+		t.Errorf("not_started conserva el resultado y no lleva código: %+v", started)
+	}
+	if result.Status != StatusReady {
+		t.Errorf("NotStarted no altera el resultado original: %q", result.Status)
+	}
+}
+
+// REQ-25.2: el resultado de `status` lleva el cambio, el carril, la topología y las
+// rutas del plan; las claves salen en camelCase y sin marcas de tiempo.
+func TestStatusResultSerialisesTheChangeAndItsPlan(t *testing.T) {
+	result := NewResult("status")
+	result.Change, result.Lane, result.Topology = "x", LaneSDD, workspace.TopologyMonorepoEmbedded
+	result.WorkspaceRoot, result.PlanningHome = `C:\wt\x\axiom`, `C:\wt\x\axiom\openspec`
+	result.OddDocument = `C:\wt\x\axiom\odd\tasks\x.md`
+	result.Repositories = []RepositoryResult{NewRepositoryResult(statusPlan())}
+	result.Repositories[0].Base = &BaseResult{Ref: "origin/main", SHA: "abc123", Source: "remote-tracking"}
+	result.Skipped = []SkippedPath{{Path: `C:\p\scripts`, Role: "tooling", Code: CodeNotAGitRepository, Message: "no es un repositorio"}}
+
+	_, decoded := resultJSON(t, result)
+	for key, want := range map[string]any{
+		"change": "x", "lane": "sdd", "topology": "monorepo-embedded",
+		"workspaceRoot": `C:\wt\x\axiom`, "planningHome": `C:\wt\x\axiom\openspec`,
+		"oddDocument": `C:\wt\x\axiom\odd\tasks\x.md`,
+	} {
+		if decoded[key] != want {
+			t.Errorf("%s = %v, se esperaba %v", key, decoded[key], want)
+		}
+	}
+	base := decoded["repositories"].([]any)[0].(map[string]any)["base"].(map[string]any)
+	if base["ref"] != "origin/main" || base["sha"] != "abc123" || base["source"] != "remote-tracking" || base["fetched"] != false {
+		t.Errorf("base = %v; se esperaba ref, sha, source y fetched=false", base)
+	}
+	skipped := decoded["skipped"].([]any)[0].(map[string]any)
+	if skipped["path"] != `C:\p\scripts` || skipped["role"] != "tooling" || skipped["code"] != "not_a_git_repository" || skipped["message"] == "" {
+		t.Errorf("skipped = %v", skipped)
+	}
+	// Los resultados que no son de un cambio no llevan estas claves.
+	_, bare := resultJSON(t, NewResult("status"))
+	for _, absent := range []string{"change", "lane", "topology", "workspaceRoot", "planningHome", "oddDocument", "skipped"} {
+		if _, present := bare[absent]; present {
+			t.Errorf("un resultado vacío no lleva la clave %q", absent)
+		}
+	}
+}
+
+// El texto de `status` nombra el cambio, el estado con su etiqueta y, por repositorio,
+// sus ramas con su worktree, su limpieza, su adelanto y atraso y el destino del PR.
+func TestWriteTextPrintsTheStatusOfAChange(t *testing.T) {
+	zero, three := 0, 3
+	result := NewResult("status")
+	result.Change, result.Lane = "x", LaneSDD
+	result.Repositories = []RepositoryResult{NewRepositoryResult(statusPlan())}
+	repository := &result.Repositories[0]
+	repository.CurrentBranch = "main"
+	repository.Base = &BaseResult{Ref: "origin/main", SHA: "0123456789abcdef", Source: "remote-tracking"}
+	repository.Branches[0].Exists, repository.Branches[0].Dirty = true, true
+	repository.Branches[0].Worktree = `C:\repos\axiom-wt\x\axiom`
+	repository.Branches[0].ComparedTo = "origin/main"
+	repository.Branches[0].Ahead, repository.Branches[0].Behind = &zero, &three
+	result.Warnings = []string{"algo que revisar"}
+
+	var stdout, stderr bytes.Buffer
+	result.WriteText(&stdout, &stderr)
+
+	if stderr.Len() != 0 {
+		t.Errorf("un resultado listo no escribe en stderr: %q", stderr.String())
+	}
+	for _, want := range []string{
+		"Cambio: x (carril sdd)",
+		"Estado: listo",
+		"axiom (repositorio con rama de cambio)",
+		"Rama actual: main\n",
+		"Base: origin/main (0123456789ab)",
+		"feat/x (rama del cambio)",
+		`worktree C:\repos\axiom-wt\x\axiom`,
+		"con cambios sin confirmar",
+		"adelanto 0, atraso 3 respecto de origin/main",
+		"PR hacia main",
+		"feat/x-core (rama de rol)",
+		"sin crear",
+		"PR hacia feat/x",
+		"Aviso: algo que revisar\n",
+	} {
+		if !strings.Contains(stdout.String(), want) {
+			t.Errorf("la salida de texto debe contener %q:\n%s", want, stdout.String())
+		}
+	}
+
+	stdout.Reset()
+	result.NotStarted().WriteText(&stdout, &stderr)
+	if !strings.Contains(stdout.String(), "Estado: no iniciado") {
+		t.Errorf("un cambio no iniciado se nombra con su etiqueta:\n%s", stdout.String())
+	}
+}
+
 // Regla 11: toda negativa nombra una continuación ejecutable (una orden `axiom ...`).
 func TestResultEveryRefusalNamesAnExecutableContinuation(t *testing.T) {
 	executable := regexp.MustCompile("(?:gentle-ai|axiom) [a-z][a-z-]*")
 	refusals := map[string]*Refusal{
-		"NotAGitRepository": NotAGitRepository("status", `C:\x`),
-		"UnusableDirectory": UnusableDirectory("status", "razón"),
-		"GitFailed":         GitFailed("status", `C:\x`, "operación", errors.New("fallo")),
-		"ConfigRefusal":     ConfigRefusal(configLocation(errors.New("git inválido"), nil, nil)),
-		"LocateRefusal":     LocateRefusal(errors.New("no se pudo resolver")),
+		"NotAGitRepository":  NotAGitRepository("status", `C:\x`),
+		"UnusableDirectory":  UnusableDirectory("status", "razón"),
+		"GitFailed":          GitFailed("status", `C:\x`, "operación", errors.New("fallo")),
+		"ConfigRefusal":      ConfigRefusal(configLocation(errors.New("git inválido"), nil, nil)),
+		"LocateRefusal":      LocateRefusal(errors.New("no se pudo resolver")),
+		"ValidateChangeName": ValidateChangeName("status", `C:\x`, "a b:c"),
 	}
 	for name, refusal := range refusals {
 		if refusal == nil {

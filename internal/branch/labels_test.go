@@ -53,6 +53,27 @@ func TestEveryStatusVerdictAndMergeLayerTokenHasALabel(t *testing.T) {
 	}
 }
 
+// El papel de cada repositorio y el tipo de cada rama son valores de clasificación del
+// `status` (REQ-25.15): cada token lleva su etiqueta en castellano, con los términos
+// de la spec.
+func TestEveryRepositoryRoleAndBranchKindTokenHasASpanishLabel(t *testing.T) {
+	tests := map[string]string{
+		string(RepoChangeBranch): "repositorio con rama de cambio",
+		string(RepoSpecsInPlace): "repositorio de specs in situ",
+		string(RepoCode):         "repositorio de código",
+		string(KindChange):       "rama del cambio",
+		string(KindRole):         "rama de rol",
+		string(KindArchive):      "rama de archivado",
+	}
+	for token, want := range tests {
+		t.Run(token, func(t *testing.T) {
+			if got := Label(token); got != want {
+				t.Errorf("Label(%q) = %q, se esperaba %q", token, got, want)
+			}
+		})
+	}
+}
+
 // Un token que el dominio no conoce no produce una etiqueta vacía: el campo hermano
 // repite el token, que al menos es legible y estable.
 func TestLabelOfAnUnknownTokenIsTheTokenItself(t *testing.T) {
