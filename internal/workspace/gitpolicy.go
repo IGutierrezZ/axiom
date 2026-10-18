@@ -3,10 +3,15 @@ package workspace
 import (
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 
+	"github.com/IGutierrezZ/axiom/v3/internal/gitcommon"
 	"github.com/IGutierrezZ/axiom/v3/internal/gitref"
+	"github.com/IGutierrezZ/axiom/v3/internal/pathidentity"
 )
 
 const (
@@ -31,8 +36,25 @@ type GitConfig struct {
 	BranchPrefix      string `yaml:"branch_prefix,omitempty"`
 }
 
-// gitKeys es la lista cerrada de claves del bloque `git:` (D-03).
-var gitKeys = []string{"integration_branch", "branch_prefix"}
+// RepositoryPolicy es una entrada del bloque `repositories:` de axiom.yaml
+// (REQ-25.27): los ajustes de rama de un repositorio, que sustituyen a los del
+// bloque `git:` solo en lo que la entrada declara.
+//
+// Path es la ruta tal como se escribió, relativa a la carpeta maestra. Los otros
+// dos campos conservan lo escrito y quedan vacíos si la clave no se declaró: un
+// valor vacío significa «hereda el del bloque `git:`». La herencia no se aplica
+// aquí; la resuelve quien consume la política de ramas.
+type RepositoryPolicy struct {
+	Path              string `yaml:"path"`
+	IntegrationBranch string `yaml:"integration_branch,omitempty"`
+	BranchPrefix      string `yaml:"branch_prefix,omitempty"`
+}
+
+// Listas cerradas de claves de los bloques de política de ramas (D-03).
+var (
+	gitKeys        = []string{"integration_branch", "branch_prefix"}
+	repositoryKeys = []string{"path", "integration_branch", "branch_prefix"}
+)
 
 // resolveGit devuelve la política de ramas efectiva a partir de lo declarado, que
 // puede ser nil (sin bloque): completa con los valores por defecto cada clave que
@@ -67,47 +89,149 @@ func decodeGit(node *yaml.Node) (*GitConfig, error) {
 		return nil, errors.New("el bloque 'git' debe ser un mapeo con las claves opcionales 'integration_branch' y 'branch_prefix'; para usar los valores por defecto, elimina el bloque")
 	}
 
+	values, errs := decodeStringKeys(node, "git", gitKeys, branchValidator)
+	if err := errors.Join(errs...); err != nil {
+		return nil, err
+	}
+	return &GitConfig{IntegrationBranch: values["integration_branch"], BranchPrefix: values["branch_prefix"]}, nil
+}
+
+// decodeRepositories decodifica y valida el bloque `repositories:` con el mismo
+// patrón que decodeGit (REQ-25.27): una lista de mapeos, cada uno recorrido contra
+// la lista cerrada de claves `path`, `integration_branch` y `branch_prefix`, con
+// los errores acumulados. Cada error nombra la entrada (`repositories[0]`), la
+// clave y, si procede, el valor y la regla incumplida.
+//
+// Un bloque que no es una lista, incluido el nulo, se rechaza, igual que un
+// `git:` que no es un mapeo; una lista vacía es válida y equivale a no declarar
+// entradas. `path` es obligatoria, relativa a la carpeta maestra y no puede
+// salir de ella (checkRepositoryPath), y dos entradas no pueden declarar la misma
+// ruta. Que la ruta exista y cuántas entradas comparten raíz git son reglas del
+// sistema de ficheros que aplica `workspace validate` (ValidateRepositoryPolicies).
+func decodeRepositories(node *yaml.Node) ([]RepositoryPolicy, error) {
+	node = resolveAlias(node)
+	if node == nil || node.Kind != yaml.SequenceNode {
+		return nil, errors.New("el bloque 'repositories' debe ser una lista de entradas con 'path' y, opcionalmente, 'integration_branch' y 'branch_prefix'; para usar los valores del bloque 'git', elimina el bloque")
+	}
+
+	type declaredPath struct {
+		index int
+		raw   string
+	}
 	var errs []error
-	errs = append(errs, unknownKeys(node, "git", gitKeys)...)
-
-	var declared GitConfig
-	seen := map[string]bool{}
-	for i := 0; i+1 < len(node.Content); i += 2 {
-		key := node.Content[i]
-		if !containsString(gitKeys, key.Value) {
-			continue // ya reportada por unknownKeys
-		}
-		if seen[key.Value] {
-			errs = append(errs, fmt.Errorf("clave duplicada '%s' en 'git' (línea %d)", key.Value, key.Line))
+	entries := make([]RepositoryPolicy, 0, len(node.Content))
+	firstByPath := map[string]declaredPath{}
+	for i, item := range node.Content {
+		label := fmt.Sprintf("repositories[%d]", i)
+		item = resolveAlias(item)
+		if item == nil || item.Kind != yaml.MappingNode {
+			errs = append(errs, fmt.Errorf("%s debe ser un mapeo con 'path' y, opcionalmente, 'integration_branch' y 'branch_prefix'", label))
 			continue
 		}
-		seen[key.Value] = true
 
-		isPrefix := key.Value == "branch_prefix"
-		validate := gitref.ValidRefName
-		if isPrefix {
-			validate = gitref.ValidPrefix
-		}
-		value, err := gitValue("git."+key.Value, node.Content[i+1], validate)
-		if err != nil {
-			errs = append(errs, err)
+		values, entryErrs := decodeStringKeys(item, label, repositoryKeys, repositoryValidator)
+		errs = append(errs, entryErrs...)
+		if _, declared := mappingValue(item, "path"); !declared {
+			errs = append(errs, fmt.Errorf("%s no declara 'path'", label))
 			continue
 		}
-		if isPrefix {
-			declared.BranchPrefix = value
+		raw, hasPath := values["path"]
+		if !hasPath {
+			continue // su valor inválido ya está reportado
+		}
+
+		// La ruta es válida: decodeStringKeys ya la comprobó. Se compara sin
+		// distinguir mayúsculas, como el resto de rutas de axiom.yaml, que se
+		// comparte entre Windows y Linux.
+		clean, _ := checkRepositoryPath(raw)
+		key := strings.ToLower(clean)
+		if first, seen := firstByPath[key]; seen {
+			errs = append(errs, fmt.Errorf("las entradas repositories[%d] ('%s') y %s ('%s') declaran la misma ruta '%s': declara cada repositorio una sola vez",
+				first.index, first.raw, label, raw, clean))
 		} else {
-			declared.IntegrationBranch = value
+			firstByPath[key] = declaredPath{index: i, raw: raw}
 		}
+		entries = append(entries, RepositoryPolicy{Path: raw, IntegrationBranch: values["integration_branch"], BranchPrefix: values["branch_prefix"]})
 	}
 
 	if err := errors.Join(errs...); err != nil {
 		return nil, err
 	}
-	return &declared, nil
+	if len(entries) == 0 {
+		return nil, nil
+	}
+	return entries, nil
 }
 
-// gitValue lee el valor de una clave de `git:` y lo valida con validate. label
-// es la clave completa (`git.branch_prefix`) que nombran los errores.
+// branchValidator devuelve la validación del valor de una clave de rama:
+// `branch_prefix` sigue gitref.ValidPrefix y `integration_branch`,
+// gitref.ValidRefName.
+func branchValidator(key string) func(string) error {
+	if key == "branch_prefix" {
+		return gitref.ValidPrefix
+	}
+	return gitref.ValidRefName
+}
+
+// repositoryValidator es branchValidator más la regla de `path`.
+func repositoryValidator(key string) func(string) error {
+	if key == "path" {
+		return func(raw string) error {
+			_, err := checkRepositoryPath(raw)
+			return err
+		}
+	}
+	return branchValidator(key)
+}
+
+// checkRepositoryPath valida la ruta de una entrada de `repositories:` y la
+// devuelve normalizada con «/»: relativa a la carpeta maestra y contenida en ella.
+// Que exista como directorio lo comprueba workspace validate.
+func checkRepositoryPath(raw string) (string, error) {
+	clean, err := checkRelativeTo(raw, "la carpeta maestra")
+	if err != nil {
+		return "", err
+	}
+	if escapes(clean) {
+		return "", errors.New("sale de la carpeta maestra: un repositorio debe permanecer dentro de ella")
+	}
+	return clean, nil
+}
+
+// decodeStringKeys recorre los pares clave-valor de un mapeo contra la lista
+// cerrada keys y devuelve el valor de cada clave que se declaró y es válida, junto
+// con todos los errores: claves desconocidas, claves repetidas y valores que no
+// son una cadena o no superan la validación que devuelve validatorFor. label
+// nombra el mapeo en los errores (`git`, `repositories[0]`) y prefija cada clave
+// en los de sus valores (`git.branch_prefix`).
+func decodeStringKeys(node *yaml.Node, label string, keys []string, validatorFor func(key string) func(string) error) (map[string]string, []error) {
+	errs := unknownKeys(node, label, keys)
+	values := map[string]string{}
+	seen := map[string]bool{}
+	for i := 0; i+1 < len(node.Content); i += 2 {
+		key := node.Content[i]
+		if !containsString(keys, key.Value) {
+			continue // ya reportada por unknownKeys
+		}
+		if seen[key.Value] {
+			errs = append(errs, fmt.Errorf("clave duplicada '%s' en '%s' (línea %d)", key.Value, label, key.Line))
+			continue
+		}
+		seen[key.Value] = true
+
+		value, err := gitValue(label+"."+key.Value, node.Content[i+1], validatorFor(key.Value))
+		if err != nil {
+			errs = append(errs, err)
+			continue
+		}
+		values[key.Value] = value
+	}
+	return values, errs
+}
+
+// gitValue lee el valor de una clave de `git:` o de una entrada de
+// `repositories:` y lo valida con validate. label es la clave completa
+// (`git.branch_prefix`) que nombran los errores.
 func gitValue(label string, node *yaml.Node, validate func(string) error) (string, error) {
 	node = resolveAlias(node)
 	switch {
@@ -122,4 +246,84 @@ func gitValue(label string, node *yaml.Node, validate func(string) error) (strin
 		return "", fmt.Errorf("%s: el valor '%s' no es válido: %w", label, node.Value, err)
 	}
 	return node.Value, nil
+}
+
+// ValidateRepositoryPolicies comprueba las entradas de `repositories:` de cfg
+// contra el sistema de ficheros real y devuelve los errores y las advertencias para
+// que quien llama los fusione en el informe de Validate (REQ-25.27, D-03.4). master
+// es la carpeta maestra, la ruta que recibe `workspace validate` y contra la que
+// son relativas las entradas.
+//
+// Las reglas de forma (ruta relativa, contenida en la carpeta maestra y sin
+// repetidos, claves y valores) ya se validaron al cargar la configuración, así que
+// una entrada inválida no llega aquí: cfg no la lleva. Aquí solo se comprueba lo
+// que depende del disco, entrada por entrada y en su orden:
+//   - la ruta existe y es un directorio (error si no);
+//   - su raíz git se obtiene con gitcommon.GitRootFromFiles, sin lanzar procesos;
+//     una ruta que no pertenece a ningún repositorio git solo avisa, nunca falla;
+//   - dos entradas con la misma raíz git son un error que nombra las dos rutas y la
+//     raíz compartida. Las raíces se comparan por identidad y no por texto, para
+//     que otra grafía del mismo directorio (un enlace, un nombre corto de Windows)
+//     no esquive la regla.
+//
+// Si la carpeta maestra no existe, Validate ya lo reporta: comprobar cada entrada
+// contra ella solo añadiría un error por entrada con la misma causa. Como en
+// ValidateDeclarationPaths, no forma parte de Validate: conserva su firma y su FS
+// abstracto, y la comprobación por identidad necesita el sistema de ficheros real.
+func ValidateRepositoryPolicies(cfg *WorkspaceConfig, master string) (errs, warnings []string) {
+	if cfg == nil || len(cfg.Repositories) == 0 {
+		return nil, nil
+	}
+	master = filepath.Clean(master)
+	if info, err := os.Stat(master); err != nil || !info.IsDir() {
+		return nil, nil
+	}
+
+	type locatedRepository struct {
+		label string
+		path  string
+		root  string
+	}
+	var located []locatedRepository
+	for i, entry := range cfg.Repositories {
+		clean, err := checkRepositoryPath(entry.Path)
+		if err != nil {
+			continue // ya rechazada al cargar la configuración
+		}
+		label := fmt.Sprintf("repositories[%d]", i)
+		full := filepath.Join(master, filepath.FromSlash(clean))
+
+		info, err := os.Stat(full)
+		switch {
+		case err != nil && os.IsNotExist(err):
+			errs = append(errs, fmt.Sprintf("la ruta '%s' de '%s.path' no existe como directorio (ruta: '%s'): crea el repositorio o corrige la entrada", entry.Path, label, full))
+			continue
+		case err != nil:
+			errs = append(errs, fmt.Sprintf("no se pudo acceder a la ruta '%s' de '%s.path': %v", entry.Path, label, err))
+			continue
+		case !info.IsDir():
+			errs = append(errs, fmt.Sprintf("la ruta '%s' de '%s.path' no es un directorio (ruta: '%s'): una entrada de 'repositories' debe apuntar a un repositorio", entry.Path, label, full))
+			continue
+		}
+
+		root, ok := gitcommon.GitRootFromFiles(full)
+		if !ok {
+			warnings = append(warnings, fmt.Sprintf("la ruta '%s' de '%s.path' no pertenece a ningún repositorio git (ruta: '%s'): una ruta que no es un repositorio se omite al aplicar la política de ramas", entry.Path, label, full))
+			continue
+		}
+
+		shared := false
+		for _, first := range located {
+			if !pathidentity.SameDirectory(first.root, root) {
+				continue
+			}
+			errs = append(errs, fmt.Sprintf("las entradas '%s' (%s) y '%s' (%s) pertenecen al mismo repositorio git (raíz: '%s'): declara una sola entrada por repositorio", first.path, first.label, entry.Path, label, root))
+			shared = true
+			break
+		}
+		if !shared {
+			located = append(located, locatedRepository{label: label, path: entry.Path, root: root})
+		}
+	}
+	return errs, warnings
 }

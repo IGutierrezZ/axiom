@@ -88,6 +88,8 @@ type Declarations struct {
 	TechnicalContextErr error
 	Git                 *GitConfig // lo declarado en `git:`, sin defectos; nil sin bloque o con bloque inválido (REQ-25.26)
 	GitErr              error
+	Repositories        []RepositoryPolicy // lo declarado en `repositories:`; nil sin bloque, sin entradas o con bloque inválido (REQ-25.27)
+	RepositoriesErr     error
 }
 
 // EffectiveIntegration devuelve el modo de integración efectivo del documento:
@@ -159,10 +161,10 @@ var (
 // nivel de requisito igual o mayor cerrarían el bloque (REQ-24.60).
 const maxScenarioLevel = 3
 
-// readDeclarationBlocks localiza los bloques `baseline`, `technical_context` y
-// `git` en el mapeo raíz del documento y los decodifica y valida de forma
-// estricta. displacement es el desplazamiento léxico de la carpeta maestra a
-// workspaceRoot.
+// readDeclarationBlocks localiza los bloques `baseline`, `technical_context`,
+// `git` y `repositories` en el mapeo raíz del documento y los decodifica y valida
+// de forma estricta. displacement es el desplazamiento léxico de la carpeta
+// maestra a workspaceRoot.
 func readDeclarationBlocks(document *yaml.Node, displacement string) Declarations {
 	root := document
 	if root.Kind == yaml.DocumentNode && len(root.Content) > 0 {
@@ -183,6 +185,9 @@ func readDeclarationBlocks(document *yaml.Node, displacement string) Declaration
 	}
 	if node, ok := mappingValue(root, "git"); ok {
 		declarations.Git, declarations.GitErr = decodeGit(node)
+	}
+	if node, ok := mappingValue(root, "repositories"); ok {
+		declarations.Repositories, declarations.RepositoriesErr = decodeRepositories(node)
 	}
 	return declarations
 }
@@ -473,13 +478,19 @@ func contextOverlaps(modes [len(contextModeLabels)][]contextPath, baseline []bas
 // sistemas: axiom.yaml se versiona y lo comparten clones en Windows y Linux, así
 // que «C:\x» o «/opt/x» se rechazan también donde no serían absolutas.
 func checkRelative(raw string) (string, error) {
+	return checkRelativeTo(raw, "workspaceRoot")
+}
+
+// checkRelativeTo es checkRelative para una ruta que se declara relativa a otro
+// ancla, que el error nombra (por ejemplo, «la carpeta maestra»).
+func checkRelativeTo(raw, anchor string) (string, error) {
 	trimmed := strings.TrimSpace(raw)
 	if trimmed == "" {
 		return "", errors.New("la ruta está vacía")
 	}
 	slashed := strings.ReplaceAll(trimmed, `\`, "/")
 	if strings.HasPrefix(slashed, "/") || hasDriveLetter(slashed) || filepath.IsAbs(trimmed) {
-		return "", errors.New("debe ser relativa a workspaceRoot, sin unidad de disco ni barra inicial")
+		return "", fmt.Errorf("debe ser relativa a %s, sin unidad de disco ni barra inicial", anchor)
 	}
 	return path.Clean(slashed), nil
 }

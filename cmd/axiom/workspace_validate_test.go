@@ -1,10 +1,13 @@
 package main
 
 import (
+	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace/workspacetest"
 )
 
@@ -228,5 +231,165 @@ func TestWorkspaceValidateWithoutDeclarationsIsUnchanged(t *testing.T) {
 	wantOutput(t, output, "COMPLIANT")
 	if strings.Contains(output, "Advertencias") {
 		t.Errorf("sin declaraciones no hay advertencias:\n%s", output)
+	}
+}
+
+// requireRealGit omite la prueba con -short o sin git instalado: los repositorios
+// de estas pruebas se crean con `git init` real.
+func requireRealGit(t *testing.T) {
+	t.Helper()
+	if testing.Short() {
+		t.Skip("prueba con git real: se omite con -short")
+	}
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skipf("git no está instalado: %v", err)
+	}
+}
+
+// outsideAnyGitRepository omite la prueba si el directorio temporal del sistema
+// está dentro de un repositorio git: una ruta «que no es un repositorio» no sería
+// fiable en esa máquina.
+func outsideAnyGitRepository(t *testing.T, dir string) {
+	t.Helper()
+	for current := dir; ; {
+		if _, err := os.Lstat(filepath.Join(current, ".git")); err == nil {
+			t.Skipf("el directorio temporal %s está dentro de un repositorio git", dir)
+		}
+		parent := filepath.Dir(current)
+		if parent == current {
+			return
+		}
+		current = parent
+	}
+}
+
+// workspace-topology REQ-1.2 (escenario «Bloque `git:` o `repositories:` inválido
+// finaliza con error»), REQ-25.26 y REQ-25.27: un bloque inválido, de forma o de
+// sistema de ficheros, termina con código 1 y detalla en castellano la clave o la
+// ruta y la regla incumplida.
+func TestWorkspaceValidateRejectsAnInvalidGitOrRepositoriesBlock(t *testing.T) {
+	for name, tc := range map[string]struct {
+		blocks string
+		wants  []string
+	}{
+		"prefijo inválido": {"git:\n  branch_prefix: \"a b//\"\n",
+			[]string{"No se pudo cargar la configuración de Axiom", "git.branch_prefix", "'a b//'"}},
+		"rama de integración inválida": {"git:\n  integration_branch: \"a b:c\"\n",
+			[]string{"git.integration_branch", "'a b:c'", "espacio"}},
+		"clave desconocida en git": {"git:\n  worktree_mode: worktree\n",
+			[]string{"clave desconocida 'worktree_mode'", "claves admitidas: integration_branch, branch_prefix"}},
+		"ruta que sale de la carpeta maestra": {"repositories:\n  - path: ../fuera\n",
+			[]string{"repositories[0].path", "'../fuera'", "sale de la carpeta maestra"}},
+		"ruta absoluta": {"repositories:\n  - path: /opt/repo\n",
+			[]string{"repositories[0].path", "'/opt/repo'", "debe ser relativa a la carpeta maestra"}},
+		"clave desconocida en una entrada": {"repositories:\n  - path: .\n    worktree_mode: worktree\n",
+			[]string{"clave desconocida 'worktree_mode'", "'repositories[0]'"}},
+		"dos entradas con la misma ruta": {"repositories:\n  - path: app\n  - path: ./app\n",
+			[]string{"repositories[0] ('app')", "repositories[1] ('./app')", "misma ruta 'app'"}},
+		"ruta inexistente": {"repositories:\n  - path: repo-inexistente\n",
+			[]string{"NO CONFORME", "repositories[0].path", "'repo-inexistente'", "no existe como directorio", "NON-COMPLIANT"}},
+		"git y repositories inválidos a la vez": {"git:\n  branch_prefix: \"inc//\"\nrepositories:\n  - path: ../fuera\n",
+			[]string{"git.branch_prefix", "'inc//'", "repositories[0].path", "'../fuera'"}},
+	} {
+		t.Run(name, func(t *testing.T) {
+			master := validateWorkspace(t, tc.blocks, "")
+			output, code := runAxiom(t, "workspace", "validate", "--path", master)
+			if code != 1 {
+				t.Fatalf("salió con %d, se esperaba 1:\n%s", code, output)
+			}
+			wantOutput(t, output, tc.wants...)
+			if strings.Contains(output, "COMPLIANT") && !strings.Contains(output, "NON-COMPLIANT") {
+				t.Errorf("un bloque inválido no puede dar un resultado conforme:\n%s", output)
+			}
+		})
+	}
+}
+
+// REQ-25.27 (escenario «Dos entradas de la misma raíz git»): dos rutas de un mismo
+// repositorio real son un error que nombra ambas y la raíz compartida.
+func TestWorkspaceValidateRejectsTwoEntriesOfTheSameGitRoot(t *testing.T) {
+	requireRealGit(t)
+	master := validateWorkspace(t, "repositories:\n  - path: app/web\n  - path: app/api\n", "")
+	workspacetest.MkdirAll(t, filepath.Join(master, "app", "web"))
+	workspacetest.MkdirAll(t, filepath.Join(master, "app", "api"))
+	workspacetest.InitGit(t, filepath.Join(master, "app"))
+
+	output, code := runAxiom(t, "workspace", "validate", "--path", master)
+	if code != 1 {
+		t.Fatalf("salió con %d, se esperaba 1:\n%s", code, output)
+	}
+	wantOutput(t, output, "NO CONFORME", "'app/web'", "'app/api'", "mismo repositorio git", filepath.Join(master, "app"), "NON-COMPLIANT")
+}
+
+// REQ-1.2 y REQ-25.27: bloques `git:` y `repositories:` válidos, con repositorios
+// reales, terminan con COMPLIANT, sin advertencias y con código 0.
+func TestWorkspaceValidateAcceptsValidGitAndRepositoriesBlocks(t *testing.T) {
+	requireRealGit(t)
+	master := validateWorkspace(t, "git:\n  integration_branch: develop\n  branch_prefix: inc\nrepositories:\n  - path: repo-backend\n    integration_branch: release\n  - path: repo-frontend\n    branch_prefix: ui\n", "")
+	workspacetest.MkdirAll(t, filepath.Join(master, "repo-backend"))
+	workspacetest.MkdirAll(t, filepath.Join(master, "repo-frontend"))
+	workspacetest.InitGit(t, filepath.Join(master, "repo-backend"))
+	workspacetest.InitGit(t, filepath.Join(master, "repo-frontend"))
+
+	output, code := runAxiom(t, "workspace", "validate", "--path", master)
+	if code != 0 {
+		t.Fatalf("salió con %d:\n%s", code, output)
+	}
+	wantOutput(t, output, "COMPLIANT")
+	if strings.Contains(output, "Advertencias") {
+		t.Errorf("con repositorios reales no hay advertencias:\n%s", output)
+	}
+}
+
+// REQ-25.27 (escenario «Ruta que no es un repositorio git solo avisa»): una ruta
+// que existe pero no pertenece a ningún repositorio es una advertencia, con
+// COMPLIANT y código 0.
+func TestWorkspaceValidateOnlyWarnsAboutAPathThatIsNotAGitRepository(t *testing.T) {
+	master := validateWorkspace(t, "repositories:\n  - path: repo-docs\n", "")
+	outsideAnyGitRepository(t, master)
+	workspacetest.MkdirAll(t, filepath.Join(master, "repo-docs"))
+
+	output, code := runAxiom(t, "workspace", "validate", "--path", master)
+	if code != 0 {
+		t.Fatalf("una ruta que no es un repositorio git no altera el código de salida; salió con %d:\n%s", code, output)
+	}
+	wantOutput(t, output, "Advertencias:", "'repo-docs'", "repositories[0].path", "ningún repositorio git", "COMPLIANT")
+	if strings.Contains(output, "NON-COMPLIANT") {
+		t.Errorf("el resultado debe ser conforme:\n%s", output)
+	}
+}
+
+// workspace-topology REQ-25.24 (escenario «`axiom.yaml` de este repositorio
+// declara `git:`») y decisión T5: el axiom.yaml versionado declara de forma
+// explícita `integration_branch: main` y `branch_prefix: inc`, y supera la
+// validación con COMPLIANT. La prueba lee el fichero con una ruta relativa al
+// paquete.
+func TestRepositoryAxiomYamlDeclaresItsGitPolicyAndIsCompliant(t *testing.T) {
+	root := filepath.Join("..", "..")
+	configPath := filepath.Join(root, "axiom.yaml")
+
+	declarations := workspace.ReadDeclarations(configPath)
+	if declarations.ParseErr != nil || declarations.GitErr != nil {
+		t.Fatalf("el bloque git: del axiom.yaml del repositorio debe ser válido: parse=%v git=%v", declarations.ParseErr, declarations.GitErr)
+	}
+	want := workspace.GitConfig{IntegrationBranch: "main", BranchPrefix: "inc"}
+	if declarations.Git == nil || *declarations.Git != want {
+		t.Fatalf("el axiom.yaml del repositorio debe declarar %+v (declarado, no por defecto), y declara %+v", want, declarations.Git)
+	}
+	cfg, err := workspace.LoadConfig(configPath)
+	if err != nil {
+		t.Fatalf("LoadConfig(%s): %v", configPath, err)
+	}
+	if cfg.Git == nil || *cfg.Git != want {
+		t.Errorf("la política resuelta es %+v, se esperaba %+v", cfg.Git, want)
+	}
+
+	output, code := runAxiom(t, "workspace", "validate", "--path", root)
+	if code != 0 {
+		t.Fatalf("workspace validate sobre el repositorio salió con %d:\n%s", code, output)
+	}
+	wantOutput(t, output, "COMPLIANT")
+	if strings.Contains(output, "NON-COMPLIANT") {
+		t.Errorf("el repositorio debe ser conforme:\n%s", output)
 	}
 }

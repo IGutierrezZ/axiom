@@ -50,14 +50,18 @@ type GovernanceConfig struct {
 
 // WorkspaceConfig es la raíz del archivo de configuración axiom.yaml.
 //
-// Baseline, TechnicalContext y Git se decodifican aparte y de forma estricta
-// (D-04), por eso llevan yaml:"-": la decodificación base ignora esas claves y
-// parseLayered las rellena solo cuando el bloque es válido.
+// Baseline, TechnicalContext, Git y Repositories se decodifican aparte y de forma
+// estricta (D-04), por eso llevan yaml:"-": la decodificación base ignora esas
+// claves y parseLayered las rellena solo cuando el bloque es válido.
 //
 // Git es la política de ramas ya resuelta (REQ-25.26): tras una carga correcta
 // nunca es nil, y lo que axiom.yaml no declara lleva su valor por defecto. Es nil
 // solo en una configuración construida a mano o cuando el bloque `git:` es
 // inválido (el motivo queda en Declarations.GitErr).
+//
+// Repositories, en cambio, conserva lo declarado en `repositories:` (REQ-25.27),
+// sin resolver la herencia de Git: es nil sin bloque o sin entradas, y también
+// cuando el bloque es inválido (el motivo queda en Declarations.RepositoriesErr).
 type WorkspaceConfig struct {
 	Workspace        WorkspaceSection        `yaml:"workspace"`
 	Roles            map[string]RoleConfig   `yaml:"roles"`
@@ -65,6 +69,7 @@ type WorkspaceConfig struct {
 	Baseline         *BaselineConfig         `yaml:"-"`
 	TechnicalContext *TechnicalContextConfig `yaml:"-"`
 	Git              *GitConfig              `yaml:"-"`
+	Repositories     []RepositoryPolicy      `yaml:"-"`
 }
 
 // ValidationReport contiene el resultado determinista de la validación del espacio de trabajo.
