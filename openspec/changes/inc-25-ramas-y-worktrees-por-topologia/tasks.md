@@ -305,7 +305,7 @@ Estas decisiones no están fijadas por la spec ni por el diseño; cada una indic
 - [x] S3.10 [c2] Ampliar `internal/branch/registry/registry.go` con `Save`, `Lock` y `Delete` (`reviewtransaction.AcquireAuthorityFileLock` y `ReplaceFileAtomic`, las primitivas de `kickoff.AppendGate`) y la reconstrucción; la fase 5 de `Engine.Ensure` escribe el registro solo si cambian sus bytes.
 - [x] S3.11 [c2] Añadir `Fetch` (la única operación remota) a `internal/branch/gitcli/ops.go` y la opción `--fetch` a `ensure` en `internal/branch/engine/ensure.go` y `internal/cli/branch.go`; documentar en el texto de ayuda que ninguna orden hace red sin `--fetch`.
 - [x] S3.12 [c2] Cierre del commit S3-c2: prueba focalizada de la tabla; arnés: `axiom branch ensure --change x --fetch --json` contra un remoto desnudo local y contra una ruta inexistente; límite y mensaje: los de la tabla. Corte de PR-10.
-- [ ] S3.13 [S3] Cierre de la rebanada S3: batería de la regla 3 (`CreateBranch`, `AddWorktree`, `Fetch`, `Save`, `Lock`, `Delete` alcanzables desde `axiom branch ensure`) y `git status --porcelain` igual al previo.
+- [x] S3.13 [S3] Cierre de la rebanada S3: batería de la regla 3 (`CreateBranch`, `AddWorktree`, `Fetch`, `Save`, `Lock`, `Delete` alcanzables desde `axiom branch ensure`) y `git status --porcelain` igual al previo.
 
 ## Fase 4: S4 — `ensure` (variantes)
 
