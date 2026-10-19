@@ -51,12 +51,15 @@ type Result struct {
 	ModeSource      string                 `json:"modeSource,omitempty"`
 	ModeSourceLabel string                 `json:"modeSourceLabel,omitempty"`
 	Topology        workspace.TopologyType `json:"topology,omitempty"`
-	WorkspaceRoot   string                 `json:"workspaceRoot,omitempty"`
-	PlanningHome    string                 `json:"planningHome,omitempty"`
-	OddDocument     string                 `json:"oddDocument,omitempty"`
-	Registry        *RegistryResult        `json:"registry,omitempty"`
-	Repositories    []RepositoryResult     `json:"repositories,omitempty"`
-	Skipped         []SkippedPath          `json:"skipped,omitempty"`
+	// WorktreeRoot es la raíz de worktrees del plan (REQ-25.11); solo la informa `ensure`,
+	// que es quien los crea.
+	WorktreeRoot  string             `json:"worktreeRoot,omitempty"`
+	WorkspaceRoot string             `json:"workspaceRoot,omitempty"`
+	PlanningHome  string             `json:"planningHome,omitempty"`
+	OddDocument   string             `json:"oddDocument,omitempty"`
+	Registry      *RegistryResult    `json:"registry,omitempty"`
+	Repositories  []RepositoryResult `json:"repositories,omitempty"`
+	Skipped       []SkippedPath      `json:"skipped,omitempty"`
 	// Registered son los cambios con registro local que `status` sin `--change` lista
 	// (nil si no se listó; vacío pero no nil si se listó y no hay ninguno, que se imprime
 	// como `[]`). PendingArchive son los cambios pendientes de archivar (REQ-25.20): una
@@ -320,6 +323,9 @@ func (r Result) WriteText(stdout, stderr io.Writer) {
 	}
 	if r.Mode != "" {
 		fmt.Fprintf(stdout, "Modo de trabajo: %s (%s)\n", r.ModeLabel, r.ModeSourceLabel)
+	}
+	if r.WorktreeRoot != "" {
+		fmt.Fprintf(stdout, "Raíz de worktrees: %s\n", r.WorktreeRoot)
 	}
 	if r.Registry != nil {
 		if r.Registry.Present {

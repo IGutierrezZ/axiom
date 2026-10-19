@@ -92,7 +92,7 @@ func wantSameFile(t *testing.T, what, got, want string) {
 
 // newEngine monta un motor con las reglas de rutas de un sistema operativo dado.
 func newEngine(goos string) *Engine {
-	return &Engine{git: gitcli.New(), registry: registry.New(), goos: goos}
+	return &Engine{git: gitcli.New(), writer: gitcli.New(), registry: registry.New(), goos: goos}
 }
 
 // REQ-25.14 (escenario «Registro ausente informado por `status`»): un cambio sin
