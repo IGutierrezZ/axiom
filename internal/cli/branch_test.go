@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 	"testing"
 
@@ -196,6 +197,7 @@ type branchResultJSON struct {
 	ModeSource      string                 `json:"modeSource"`
 	ModeSourceLabel string                 `json:"modeSourceLabel"`
 	Topology        string                 `json:"topology"`
+	WorktreeRoot    string                 `json:"worktreeRoot"`
 	WorkspaceRoot   string                 `json:"workspaceRoot"`
 	PlanningHome    string                 `json:"planningHome"`
 	OddDocument     string                 `json:"oddDocument"`
@@ -252,15 +254,16 @@ func helpVerbs(help string) []string {
 }
 
 // REQ-25.1 y decisión T3: la ayuda lista solo los verbos implementados (por ahora
-// `status`); ni `push`, ni `pr`, ni el retirado `check`.
+// `ensure` y `status`); ni `push`, ni `pr`, ni el retirado `check`.
 func TestBranchWithoutSubcommandShowsTheHelpOfTheImplementedVerbs(t *testing.T) {
+	implemented := []string{"ensure", "status"}
 	t.Run("sin subcomando es un error de uso con la ayuda", func(t *testing.T) {
 		code, stdout, _ := runBranchCLI(t)
 		if code != 2 {
 			t.Errorf("código de salida = %d, se esperaba 2 (uso)", code)
 		}
-		if verbs := helpVerbs(stdout); len(verbs) != 1 || verbs[0] != "status" {
-			t.Errorf("la ayuda lista %v, se esperaba solo [status]:\n%s", verbs, stdout)
+		if verbs := helpVerbs(stdout); !slices.Equal(verbs, implemented) {
+			t.Errorf("la ayuda lista %v, se esperaba %v:\n%s", verbs, implemented, stdout)
 		}
 	})
 
@@ -270,8 +273,8 @@ func TestBranchWithoutSubcommandShowsTheHelpOfTheImplementedVerbs(t *testing.T) 
 			if code != 0 || stderr != "" {
 				t.Errorf("código %d, stderr %q; se esperaba 0 y stderr vacío", code, stderr)
 			}
-			if verbs := helpVerbs(stdout); len(verbs) != 1 || verbs[0] != "status" {
-				t.Errorf("la ayuda lista %v, se esperaba solo [status]:\n%s", verbs, stdout)
+			if verbs := helpVerbs(stdout); !slices.Equal(verbs, implemented) {
+				t.Errorf("la ayuda lista %v, se esperaba %v:\n%s", verbs, implemented, stdout)
 			}
 			for _, retired := range []string{"push", "pr", "check"} {
 				if strings.Contains(" "+strings.Join(strings.Fields(stdout), " ")+" ", " "+retired+" ") {

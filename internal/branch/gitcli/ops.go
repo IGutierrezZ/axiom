@@ -1,9 +1,10 @@
-// Package gitcli son las lecturas tipadas de git del motor de ramas (INC-25, design
+// Package gitcli son las operaciones tipadas de git del motor de ramas (INC-25, design
 // D-01): el adaptador de los puertos de `internal/branch` sobre gitcommon.Run, el único
-// punto que ejecuta git (REQ-25.1, G-7). Usa una lista cerrada de subcomandos de
-// lectura (`rev-parse`, `worktree list`, `status`, `rev-list` y `ls-tree`) y ninguno remoto; las
-// escrituras de `ensure` y `done` y el resto de lecturas llegan con el primer
-// llamador que las usa.
+// punto que ejecuta git (REQ-25.1, G-7). Las lecturas usan una lista cerrada de
+// subcomandos (`rev-parse`, `worktree list`, `status`, `rev-list` y `ls-tree`) y las
+// escrituras de `ensure` son solo `branch` y `worktree add`; ninguna es remota. El resto
+// de escrituras de `done` y las lecturas que faltan llegan con el primer llamador que las
+// usa.
 //
 // Los textos de error están en castellano y nombran el comando de git y el directorio.
 package gitcli
@@ -238,6 +239,49 @@ func (*Git) TreeDirs(ctx context.Context, dir, rev, relPath string) (dirs []stri
 		}
 	}
 	return dirs, exists, nil
+}
+
+// CreateBranch crea la rama local name apuntando a startPoint (`git branch --no-track
+// <name> <startPoint>`). Nunca mueve ni reinicia una rama existente: si name ya existe,
+// git falla y la rama queda donde estaba (REQ-25.7). `--no-track` evita que git configure
+// un upstream cuando el punto de partida es una referencia remota ya traída a local:
+// `axiom branch` nunca publica ni sigue una rama remota. dir es el checkout principal.
+func (*Git) CreateBranch(ctx context.Context, dir, name, startPoint string) error {
+	if err := plainArgument(name); err != nil {
+		return err
+	}
+	if err := plainArgument(startPoint); err != nil {
+		return err
+	}
+	return runWrite(ctx, dir, "branch", "--no-track", name, startPoint)
+}
+
+// AddWorktree despliega la rama local existente branch en un worktree nuevo en path
+// (`git worktree add <path> <branch>`). Nunca crea la rama: si no existe, git falla y no
+// deja nada. path debe ser absoluta (los worktrees nunca se colocan por una ruta relativa
+// al directorio del proceso) y dir es el checkout principal, que no cambia de rama, de
+// índice ni de árbol de trabajo (REQ-25.8).
+func (*Git) AddWorktree(ctx context.Context, dir, path, branchName string) error {
+	if !filepath.IsAbs(path) {
+		return errors.New("la ruta " + strconv.Quote(path) + " del worktree no es válida para git: debe ser absoluta")
+	}
+	if err := plainArgument(branchName); err != nil {
+		return err
+	}
+	return runWrite(ctx, dir, "worktree", "add", path, branchName)
+}
+
+// runWrite ejecuta una escritura de git y devuelve un error en castellano, con el comando,
+// el directorio y el resumen de git, si no termina con el código 0.
+func runWrite(ctx context.Context, dir string, args ...string) error {
+	result, err := gitcommon.Run(ctx, dir, args...)
+	if err != nil {
+		return err
+	}
+	if result.ExitCode != 0 {
+		return commandFailed(dir, result, args...)
+	}
+	return nil
 }
 
 // plainArgument rechaza un nombre o una referencia que git leería como una opción

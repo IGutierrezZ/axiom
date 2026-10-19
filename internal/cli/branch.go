@@ -13,9 +13,9 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/branch/engine"
 )
 
-// `axiom branch` (INC-25, D-02): la familia de verbos que planifica y consulta las
-// ramas y worktrees de un cambio. Esta rebanada trae `status` sobre el motor
-// internal/branch/engine (planificador puro, lecturas de git y resultado
+// `axiom branch` (INC-25, D-02): la familia de verbos que planifica, crea y consulta las
+// ramas y worktrees de un cambio. Trae `status` y `ensure` sobre el motor
+// internal/branch/engine (planificador puro, operaciones de git y resultado
 // `axiom.branch-result/v1`); los demás verbos llegan con las rebanadas siguientes y la
 // ayuda lista solo los verbos que existen (decisión T3). Ningún verbo ejecuta `push`,
 // abre un PR ni hace operaciones remotas (REQ-25.1).
@@ -23,6 +23,7 @@ import (
 const branchHelp = `Uso: axiom branch <subcomando> [argumentos]
 
 Subcomandos:
+  ensure   Crea la rama de un cambio y su worktree si faltan (idempotente)
   status   Estado de las ramas y los worktrees de un cambio (solo lectura)
 
 Ejecuta ` + "`axiom branch <subcomando> --help`" + ` para ver las banderas de cada subcomando.
@@ -60,6 +61,44 @@ Banderas:
   --json              Imprime el resultado como axiom.branch-result/v1
 `
 
+const branchEnsureHelp = `Uso: axiom branch ensure --change <nombre> [--lane sdd|odd] [--cwd <ruta>] [--json]
+
+Crea lo que falta de las ramas de un cambio y de sus worktrees. En cada repositorio del
+plan crea la rama del cambio (<prefijo>/<cambio>; con dos o más roles sobre el mismo
+repositorio es la rama de seguimiento y cada rol saca <prefijo>/<cambio>-<rol> desde ella)
+y, en modo worktree, un worktree por rama en la raíz de worktrees:
+<carpeta del proyecto>-wt/<cambio>/<repositorio>, fuera de cualquier repositorio del plan
+(el sufijo del rol va en la carpeta del cambio: <cambio>-<rol>). El prefijo y la rama de
+integración salen de los bloques git: y repositories: de axiom.yaml (sin ellos, feat y
+main). Antes del sellado del kickoff solo se crea la rama del cambio del repositorio del
+proyecto; una ejecución posterior completa las ramas de rol y los repositorios de código.
+
+La base es origin/<integración> si esa referencia ya existe en local y, si no, la rama
+local de integración. Antes de crear nada comprueba todos los repositorios del plan: sin
+base (base_not_found), con una rama desplegada en un worktree desconocido
+(branch_checked_out_elsewhere) o con una ruta planificada ocupada (plan_conflict) rechaza
+sin dejar efectos.
+
+Crea solo lo que falta: una rama que ya existe se reutiliza sin moverla ni reiniciarla y
+un worktree que ya está en su ruta se devuelve tal cual. El checkout principal no se toca
+(ni su HEAD, ni su índice, ni su árbol de trabajo). El resultado describe el estado final
+y la orden es idempotente: repetirla con el mismo estado da el mismo resultado byte a
+byte y no cambia ni ramas ni worktrees. Si git falla a medias (git_failed), repetir la
+orden completa lo que falte.
+
+No ejecuta fetch, pull, push ni ls-remote ni abre ningún PR: trabaja solo con las
+referencias que ya hay en local.
+
+Banderas:
+  --change <nombre>   Nombre del cambio (obligatorio)
+  --lane sdd|odd      Carril del cambio (por defecto, sdd)
+  --cwd <ruta>        Directorio de partida (por defecto, el directorio de trabajo del proceso)
+  --json              Imprime el resultado como axiom.branch-result/v1
+
+Código de salida: 0 si el cambio queda preparado, 1 ante un rechazo o un error de git,
+2 ante un error de uso.
+`
+
 // RunBranch ejecuta `axiom branch <subcomando>` y devuelve el código de salida.
 func RunBranch(args []string, stdout, stderr io.Writer) int {
 	if len(args) == 0 {
@@ -70,12 +109,52 @@ func RunBranch(args []string, stdout, stderr io.Writer) int {
 	case "--help", "-h", "help":
 		fmt.Fprint(stdout, branchHelp)
 		return branch.ExitReady
+	case "ensure":
+		return runBranchEnsure(rest, stdout, stderr)
 	case "status":
 		return runBranchStatus(rest, stdout, stderr)
 	default:
-		fmt.Fprintf(stderr, "Error: subcomando '%s' no reconocido para branch; el disponible es status. Ejecuta `axiom branch --help`.\n", subcommand)
+		fmt.Fprintf(stderr, "Error: subcomando '%s' no reconocido para branch; los disponibles son ensure y status. Ejecuta `axiom branch --help`.\n", subcommand)
 		return branch.ExitUsage
 	}
+}
+
+// runBranchEnsure ejecuta `axiom branch ensure`: --change es obligatorio y no puede
+// estar en blanco; --lane solo admite sdd u odd.
+func runBranchEnsure(args []string, stdout, stderr io.Writer) int {
+	flags := flag.NewFlagSet("branch ensure", flag.ContinueOnError)
+	flags.SetOutput(io.Discard)
+	change := flags.String("change", "", "nombre del cambio")
+	lane := flags.String("lane", string(branch.LaneSDD), "carril del cambio: sdd u odd")
+	cwd := flags.String("cwd", ".", "directorio de partida")
+	asJSON := flags.Bool("json", false, "imprime el resultado como axiom.branch-result/v1")
+	if err := flags.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			fmt.Fprint(stdout, branchEnsureHelp)
+			return branch.ExitReady
+		}
+		fmt.Fprintf(stderr, "Error: %v. Ejecuta `axiom branch ensure --help`.\n", err)
+		return branch.ExitUsage
+	}
+	if flags.NArg() > 0 {
+		fmt.Fprintf(stderr, "Error: argumento inesperado '%s' para branch ensure. Ejecuta `axiom branch ensure --help`.\n", flags.Arg(0))
+		return branch.ExitUsage
+	}
+	if strings.TrimSpace(*change) == "" {
+		fmt.Fprintln(stderr, "Error: falta --change: indica el nombre del cambio, por ejemplo `axiom branch ensure --change <nombre>`. Ejecuta `axiom branch ensure --help`.")
+		return branch.ExitUsage
+	}
+	if *lane != string(branch.LaneSDD) && *lane != string(branch.LaneODD) {
+		fmt.Fprintf(stderr, "Error: --lane '%s' no es válido: usa sdd u odd. Ejecuta `axiom branch ensure --help`.\n", *lane)
+		return branch.ExitUsage
+	}
+	dir, err := filepath.Abs(*cwd)
+	if err != nil {
+		fmt.Fprintf(stderr, "Error: no se pudo resolver --cwd '%s' (%v). Indica una ruta absoluta con `axiom branch ensure --change <nombre> --cwd <ruta>`.\n", *cwd, err)
+		return branch.ExitUsage
+	}
+	result := engine.Default().Ensure(context.Background(), engine.EnsureRequest{CWD: dir, Change: *change, Lane: branch.Lane(*lane)})
+	return writeBranchResult(result, *asJSON, stdout, stderr)
 }
 
 func runBranchStatus(args []string, stdout, stderr io.Writer) int {

@@ -1,8 +1,8 @@
 // Package engine es el motor de `axiom branch` (INC-25, design D-01 y §4.2): reúne los
 // hechos de solo lectura de un cambio (el proyecto, su kickoff, sus repositorios y su
 // estado en git), se los entrega al planificador puro de internal/branch y describe el
-// resultado. Esta rebanada trae `Status`; las operaciones que escriben llegan con las
-// siguientes.
+// resultado. Trae `Status`, de solo lectura, y `Ensure`, que crea las ramas del cambio y
+// sus worktrees; el resto de operaciones que escriben llegan con las siguientes rebanadas.
 //
 // No lanza procesos ni abre la red: toda lectura de git pasa por gitcommon.Run a través
 // de internal/branch/gitcli (REQ-25.1). Los textos para el usuario están en castellano.
@@ -49,19 +49,32 @@ type gitReader interface {
 
 var _ gitReader = (*gitcli.Git)(nil)
 
+// gitWriter son las escrituras de git que usa `ensure` (design D-05, fase 4): crear la
+// rama y desplegarla en un worktree, siempre con dir en el checkout principal. Es un
+// subconjunto del puerto branch.Git y, como las lecturas, crece con el primer llamador.
+// No tiene ningún método que publique: `axiom branch` nunca ejecuta `push` (REQ-25.1).
+type gitWriter interface {
+	CreateBranch(ctx context.Context, dir, name, startPoint string) error
+	AddWorktree(ctx context.Context, dir, path, branch string) error
+}
+
+var _ gitWriter = (*gitcli.Git)(nil)
+
 // Engine es el motor de ramas.
 type Engine struct {
 	git      gitReader
+	writer   gitWriter
 	registry *registry.Store
 	// goos es el sistema operativo cuyas reglas de rutas aplica el planificador
 	// (branch.PathRules): en Windows rige el límite de longitud de los worktrees.
 	goos string
 }
 
-// Default monta el motor con las lecturas reales de git, el registro local y las reglas
+// Default monta el motor con las operaciones reales de git, el registro local y las reglas
 // de rutas del sistema operativo en el que corre.
 func Default() *Engine {
-	return &Engine{git: gitcli.New(), registry: registry.New(), goos: runtime.GOOS}
+	git := gitcli.New()
+	return &Engine{git: git, writer: git, registry: registry.New(), goos: runtime.GOOS}
 }
 
 // changeFacts son los hechos de solo lectura de un cambio: la entrada del planificador y
