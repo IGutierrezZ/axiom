@@ -181,6 +181,17 @@ type branchRegistryJSON struct {
 	Present bool `json:"present"`
 }
 
+// branchDecisionJSON es la `decision` de un `decision_required` (REQ-25.8, design §4.3).
+type branchDecisionJSON struct {
+	Question string `json:"question"`
+	Choices  []struct {
+		Answer     string `json:"answer"`
+		Label      string `json:"label"`
+		Effect     string `json:"effect"`
+		Invocation string `json:"invocation"`
+	} `json:"choices"`
+}
+
 type branchResultJSON struct {
 	Schema          string                 `json:"schema"`
 	Operation       string                 `json:"operation"`
@@ -190,6 +201,7 @@ type branchResultJSON struct {
 	Message         string                 `json:"message"`
 	Continuation    string                 `json:"continuation"`
 	Details         map[string]string      `json:"details"`
+	Decision        *branchDecisionJSON    `json:"decision"`
 	Change          string                 `json:"change"`
 	Lane            string                 `json:"lane"`
 	Mode            string                 `json:"mode"`

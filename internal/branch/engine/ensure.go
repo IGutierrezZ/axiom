@@ -16,19 +16,24 @@ import (
 
 // EnsureRequest es la petición de `ensure`. CWD debe ser un directorio absoluto. Fetch pide
 // `git fetch origin` en cada repositorio del plan antes de resolver la base (`--fetch`,
-// REQ-25.10): sin él, `ensure` no hace ninguna operación remota.
+// REQ-25.10): sin él, `ensure` no hace ninguna operación remota. Mode es `--mode`: la
+// respuesta a `ask` o un modo explícito (`worktree` o `in_place`); vacío si no se indicó
+// (REQ-25.8).
 type EnsureRequest struct {
 	CWD    string
 	Change string
 	Lane   branch.Lane
 	Fetch  bool
+	Mode   branch.Mode
 }
 
 // Ensure crea lo que falta de las ramas del cambio y de sus worktrees (REQ-25.7, design
 // D-05) en modo `worktree`, con la base resuelta sin red (D-06):
 //
 //  1. bloquea el cambio en exclusiva (un bloqueo por cambio en el git common dir: con otra
-//     ejecución en marcha, `plan_conflict`), reúne los hechos de solo lectura (gather) y
+//     ejecución en marcha, `plan_conflict`), reúne los hechos de solo lectura (gather),
+//     resuelve el modo de trabajo (registro > `--mode` > hub > defecto, D-08: con `ask` y sin
+//     respuesta, `decision_required` antes de cualquier otra cosa, también antes del fetch) y
 //     planifica (branch.Plan);
 //  2. comprueba, sin efectos, todos los repositorios del plan antes de mutar ninguno
 //     (checkPlan): con `--fetch`, el `git fetch origin` de cada repositorio, antes de
@@ -46,7 +51,8 @@ type EnsureRequest struct {
 // Un fallo de git durante la aplicación es `git_failed` y repetir `ensure` completa lo
 // pendiente; un fallo de la comprobación (incluido `fetch_failed`) no deja ni ramas, ni
 // worktrees, ni registro. La única operación remota es `git fetch origin` con `--fetch`.
-// El modo `in_place`, `ask` y las excepciones llegan con las rebanadas siguientes.
+// El modo `in_place` (hasta S4-c2, rechazado) y las excepciones llegan con las rebanadas
+// siguientes.
 func (e *Engine) Ensure(ctx context.Context, r EnsureRequest) branch.Result {
 	const operation = "ensure"
 	refused := func(refusal *branch.Refusal) branch.Result {
@@ -56,6 +62,11 @@ func (e *Engine) Ensure(ctx context.Context, r EnsureRequest) branch.Result {
 			refusal.Continuation = fmt.Sprintf("comprueba que git está instalado y que puedes escribir en el repositorio, y repite `axiom branch %s --change %s --cwd %s`: completa lo que falte", operation, r.Change, pathquote.Quote(r.CWD))
 		}
 		return branch.NewResult(operation).Refused(refusal)
+	}
+	// Solo `worktree` e `in_place` son respuestas: `ask` es una preferencia, no un modo que
+	// se materialice.
+	if r.Mode != "" && r.Mode != branch.ModeWorktree && r.Mode != branch.ModeInPlace {
+		return refused(branch.InvalidMode(operation, r.Change, r.CWD, r.Lane, r.Mode))
 	}
 
 	// El bloqueo se toma en cuanto se conoce el git common dir y se suelta al terminar,
@@ -78,6 +89,13 @@ func (e *Engine) Ensure(ctx context.Context, r EnsureRequest) branch.Result {
 	facts, refusal := e.gatherUnder(ctx, operation, r.CWD, r.Change, r.Lane, acquire)
 	if refusal != nil {
 		return refused(refusal)
+	}
+	mode, refusal := resolveMode(operation, r, facts)
+	if refusal != nil {
+		return refused(refusal)
+	}
+	if mode.mode == branch.ModeInPlace {
+		return refused(branch.InPlaceNotAvailable(operation, r.Change, r.CWD, r.Lane))
 	}
 	plan, refusal := branch.Plan(facts.input)
 	if refusal != nil {
@@ -103,7 +121,7 @@ func (e *Engine) Ensure(ctx context.Context, r EnsureRequest) branch.Result {
 		}
 	}
 
-	record := newRecord(facts, plan)
+	record := newRecord(facts, plan, mode)
 	if err := e.registry.Save(facts.input.PlanningRepo.CommonDir, record); err != nil {
 		return refused(writeRefusal(err, operation, r.Change, r.CWD))
 	}
@@ -121,6 +139,9 @@ func (e *Engine) Ensure(ctx context.Context, r EnsureRequest) branch.Result {
 		}
 	}
 	result.WorktreeRoot = plan.WorktreeRoot
+	if facts.prefs.warning != "" {
+		result.Warnings = append(result.Warnings, facts.prefs.warning)
+	}
 	return result
 }
 

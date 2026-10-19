@@ -62,7 +62,7 @@ Banderas:
   --json              Imprime el resultado como axiom.branch-result/v1
 `
 
-const branchEnsureHelp = `Uso: axiom branch ensure --change <nombre> [--lane sdd|odd] [--fetch] [--cwd <ruta>] [--json]
+const branchEnsureHelp = `Uso: axiom branch ensure --change <nombre> [--lane sdd|odd] [--mode worktree|in_place] [--fetch] [--cwd <ruta>] [--json]
 
 Crea lo que falta de las ramas de un cambio y de sus worktrees. En cada repositorio del
 plan crea la rama del cambio (<prefijo>/<cambio>; con dos o más roles sobre el mismo
@@ -87,6 +87,16 @@ y la orden es idempotente: repetirla con el mismo estado da el mismo resultado b
 byte y no cambia ni ramas ni worktrees. Si git falla a medias (git_failed), repetir la
 orden completa lo que falte.
 
+El modo de trabajo sale de tus preferencias personales del hub (~/.axiom/workspaces.json,
+nunca de axiom.yaml) y, sin ellas, es worktree; la raíz de worktrees también puede venir de
+ahí. --mode worktree|in_place lo fija para el cambio y se registra con su origen. El registro
+del cambio manda sobre --mode y sobre el hub, y un --mode distinto del ya materializado es
+plan_conflict. Con el modo ask y sin respuesta registrada, ensure devuelve decision_required
+(código de salida 1) con la pregunta y las dos órdenes posibles, sin crear nada (tampoco el
+registro) y sin leer la entrada estándar: ensure no espera entrada, quien invoca presenta la
+pregunta y repite la orden con --mode. La respuesta se registra por cambio y no modifica tus
+preferencias. El modo in_place todavía no está disponible: se rechaza con plan_conflict.
+
 Guarda el plan en un registro local por cambio, dentro del git common dir del repositorio
 del proyecto (<git common dir>/axiom/branch/v1/<carril>/<cambio>.json), que solo se
 reescribe si cambia su contenido: es estado local derivado y no se versiona. Si lo borras,
@@ -102,6 +112,8 @@ ni ls-remote ni abre ningún PR.
 Banderas:
   --change <nombre>   Nombre del cambio (obligatorio)
   --lane sdd|odd      Carril del cambio (por defecto, sdd)
+  --mode worktree|in_place
+                      Modo de trabajo del cambio; es la respuesta a decision_required (por defecto, el de tus preferencias)
   --fetch             Ejecuta git fetch origin en cada repositorio del plan antes de resolver la base
   --cwd <ruta>        Directorio de partida (por defecto, el directorio de trabajo del proceso)
   --json              Imprime el resultado como axiom.branch-result/v1
@@ -137,6 +149,7 @@ func runBranchEnsure(args []string, stdout, stderr io.Writer) int {
 	flags.SetOutput(io.Discard)
 	change := flags.String("change", "", "nombre del cambio")
 	lane := flags.String("lane", string(branch.LaneSDD), "carril del cambio: sdd u odd")
+	mode := flags.String("mode", "", "modo de trabajo del cambio: worktree o in_place")
 	fetch := flags.Bool("fetch", false, "ejecuta git fetch origin en cada repositorio del plan antes de resolver la base")
 	cwd := flags.String("cwd", ".", "directorio de partida")
 	asJSON := flags.Bool("json", false, "imprime el resultado como axiom.branch-result/v1")
@@ -160,12 +173,24 @@ func runBranchEnsure(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintf(stderr, "Error: --lane '%s' no es válido: usa sdd u odd. Ejecuta `axiom branch ensure --help`.\n", *lane)
 		return branch.ExitUsage
 	}
+	// Una bandera presente pero en blanco (casi siempre una variable de entorno vacía) no se
+	// confunde con su ausencia: ask no es una respuesta y vacío tampoco.
+	modeGiven := false
+	flags.Visit(func(given *flag.Flag) {
+		if given.Name == "mode" {
+			modeGiven = true
+		}
+	})
+	if modeGiven && *mode != string(branch.ModeWorktree) && *mode != string(branch.ModeInPlace) {
+		fmt.Fprintf(stderr, "Error: --mode '%s' no es válido: usa worktree o in_place (ask es una preferencia del hub, no una respuesta). Ejecuta `axiom branch ensure --help`.\n", *mode)
+		return branch.ExitUsage
+	}
 	dir, err := filepath.Abs(*cwd)
 	if err != nil {
 		fmt.Fprintf(stderr, "Error: no se pudo resolver --cwd '%s' (%v). Indica una ruta absoluta con `axiom branch ensure --change <nombre> --cwd <ruta>`.\n", *cwd, err)
 		return branch.ExitUsage
 	}
-	result := engine.Default().Ensure(context.Background(), engine.EnsureRequest{CWD: dir, Change: *change, Lane: branch.Lane(*lane), Fetch: *fetch})
+	result := engine.Default().Ensure(context.Background(), engine.EnsureRequest{CWD: dir, Change: *change, Lane: branch.Lane(*lane), Fetch: *fetch, Mode: branch.Mode(*mode)})
 	return writeBranchResult(result, *asJSON, stdout, stderr)
 }
 

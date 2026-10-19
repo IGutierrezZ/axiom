@@ -42,8 +42,11 @@ type Result struct {
 	Message      string            `json:"message,omitempty"`
 	Continuation string            `json:"continuation,omitempty"`
 	Details      map[string]string `json:"details,omitempty"`
-	Change       string            `json:"change,omitempty"`
-	Lane         Lane              `json:"lane,omitempty"`
+	// Decision es la pregunta tipada de un `decision_required` (REQ-25.8): quien invoca la
+	// presenta y repite la orden con la respuesta. Solo la lleva ese estado.
+	Decision *Decision `json:"decision,omitempty"`
+	Change   string    `json:"change,omitempty"`
+	Lane     Lane      `json:"lane,omitempty"`
 	// Mode es el modo de trabajo materializado del cambio y ModeSource, de dónde salió
 	// (ModeSource*); solo se conocen cuando el cambio tiene registro local.
 	Mode            Mode                   `json:"mode,omitempty"`
@@ -265,6 +268,7 @@ func (r *Result) SetMode(mode Mode, source string) {
 func (r Result) Refused(refusal *Refusal) Result {
 	r.setStatus(refusal.Code.status())
 	r.Code, r.Message, r.Continuation, r.Details = refusal.Code, refusal.Message, refusal.Continuation, refusal.Details
+	r.Decision = refusal.Decision
 	return r
 }
 
@@ -451,6 +455,25 @@ type Refusal struct {
 	Message      string
 	Continuation string
 	Details      map[string]string
+	// Decision solo la lleva `decision_required` (REQ-25.8).
+	Decision *Decision
+}
+
+// Decision es la pregunta de un `decision_required` (design §4.3): el texto y las respuestas
+// posibles, cada una con su efecto y la orden que la da. Los tokens de Answer son estables, en
+// inglés; Label y Effect están en castellano.
+type Decision struct {
+	Question string           `json:"question"`
+	Choices  []DecisionChoice `json:"choices"`
+}
+
+// DecisionChoice es una respuesta posible de una Decision: Answer es el valor de `--mode`,
+// Label su etiqueta, Effect lo que hace y Invocation la orden completa que la da.
+type DecisionChoice struct {
+	Answer     string `json:"answer"`
+	Label      string `json:"label"`
+	Effect     string `json:"effect"`
+	Invocation string `json:"invocation"`
 }
 
 // UnusableDirectory es el rechazo `not_a_git_repository` de un directorio de partida

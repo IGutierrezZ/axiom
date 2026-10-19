@@ -111,3 +111,88 @@ func PlannedPathConflict(operation, change, master, name, worktree, message, fix
 		Details:      map[string]string{"branch": name, "worktree": worktree},
 	}
 }
+
+// El modo de trabajo de `ensure` (REQ-25.8, design D-08): la decisión de `ask` y los rechazos
+// del modo. La continuación de todos ellos es una orden `axiom branch ensure --mode ...` con
+// el cambio, el carril y la carpeta de partida.
+
+// modeInvocation es la orden de `ensure` que da una respuesta de modo. cwd es el directorio de
+// partida; el carril `sdd`, el de por defecto, no se repite.
+func modeInvocation(operation, change, cwd string, lane Lane, mode Mode) string {
+	laneFlag := ""
+	if lane == LaneODD {
+		laneFlag = " --lane " + string(lane)
+	}
+	return fmt.Sprintf("axiom branch %s --change %s%s --mode %s --cwd %s", operation, change, laneFlag, mode, pathquote.Quote(cwd))
+}
+
+// DecisionRequired es el resultado `decision_required` de un proyecto en modo `ask` cuyo
+// cambio no tiene respuesta registrada (REQ-25.8): no se ha creado nada, ni siquiera el
+// registro, y `ensure` no espera entrada. La decisión lleva las dos respuestas posibles, cada
+// una con la orden que la da; quien invoca (una skill, el dashboard) presenta la pregunta y
+// repite `ensure` con `--mode`.
+func DecisionRequired(operation, change, cwd string, lane Lane) *Refusal {
+	worktree := modeInvocation(operation, change, cwd, lane, ModeWorktree)
+	inPlace := modeInvocation(operation, change, cwd, lane, ModeInPlace)
+	return &Refusal{
+		Code:    CodeDecisionRequired,
+		Message: fmt.Sprintf("el modo de trabajo del proyecto es «%s» y el cambio %s no tiene respuesta registrada: no se ha creado nada ni se ha escrito el registro", Label(string(ModeAsk)), change),
+		Continuation: fmt.Sprintf("elige un modo y repite `%s` (%s) o `%s` (%s): la respuesta se registra para este cambio y no modifica tus preferencias del hub",
+			worktree, Label(string(ModeWorktree)), inPlace, Label(string(ModeInPlace))),
+		Details: map[string]string{"change": change, "mode": string(ModeAsk)},
+		Decision: &Decision{
+			Question: fmt.Sprintf("El modo de trabajo del proyecto es «%s» y el cambio %s no tiene respuesta registrada: ¿%s o %s?", Label(string(ModeAsk)), change, Label(string(ModeWorktree)), Label(string(ModeInPlace))),
+			Choices: []DecisionChoice{
+				{
+					Answer:     string(ModeWorktree),
+					Label:      Label(string(ModeWorktree)),
+					Effect:     "crea la rama del cambio desde la base y un worktree por rama en la raíz de worktrees; el checkout principal no se toca",
+					Invocation: worktree,
+				},
+				{
+					Answer:     string(ModeInPlace),
+					Label:      Label(string(ModeInPlace)),
+					Effect:     "crea (o selecciona) la rama del cambio y hace checkout de ella en el propio repositorio; exige el árbol de trabajo limpio",
+					Invocation: inPlace,
+				},
+			},
+		},
+	}
+}
+
+// ModeConflict es el rechazo `plan_conflict` de un `--mode` distinto del modo con el que el
+// cambio ya está materializado (REQ-25.8): un cambio no cambia de modo. No se ha tocado nada;
+// la continuación repite `ensure` con el modo materializado.
+func ModeConflict(operation, change, cwd string, lane Lane, materialized, requested Mode) *Refusal {
+	return &Refusal{
+		Code:         CodePlanConflict,
+		Message:      fmt.Sprintf("el cambio %s ya está materializado en modo %s y se pidió --mode %s: un cambio no cambia de modo", change, materialized, requested),
+		Continuation: fmt.Sprintf("repite con el modo materializado, `%s`, o sin --mode", modeInvocation(operation, change, cwd, lane, materialized)),
+		Details:      map[string]string{"change": change, "mode": string(materialized), "requested": string(requested)},
+	}
+}
+
+// InvalidMode es el rechazo `config_invalid` de una petición cuyo modo no es una respuesta
+// válida: solo `worktree` e `in_place` se materializan (`ask` es una preferencia, no una
+// respuesta). No se ha tocado nada.
+func InvalidMode(operation, change, cwd string, lane Lane, mode Mode) *Refusal {
+	return &Refusal{
+		Code:    CodeConfigInvalid,
+		Message: fmt.Sprintf("el modo «%s» no es una respuesta válida: usa %s o %s", mode, ModeWorktree, ModeInPlace),
+		Continuation: fmt.Sprintf("repite `%s` o `%s`", modeInvocation(operation, change, cwd, lane, ModeWorktree),
+			modeInvocation(operation, change, cwd, lane, ModeInPlace)),
+		Details: map[string]string{"change": change, "mode": string(mode)},
+	}
+}
+
+// InPlaceNotAvailable es el rechazo `plan_conflict` del modo `in_place` mientras `ensure` no
+// lo materializa (S4-c2): en vez de crear un worktree que el modo no pide, o de registrar un
+// modo que no se aplicó, no toca nada y ofrece el modo `worktree`.
+func InPlaceNotAvailable(operation, change, cwd string, lane Lane) *Refusal {
+	return &Refusal{
+		Code:         CodePlanConflict,
+		Message:      fmt.Sprintf("el modo %s todavía no está disponible en esta versión de `axiom branch %s`: el cambio %s no se ha tocado", ModeInPlace, operation, change),
+		Continuation: fmt.Sprintf("usa un worktree por rama con `%s`", modeInvocation(operation, change, cwd, lane, ModeWorktree)),
+		Details:      map[string]string{"change": change, "mode": string(ModeInPlace)},
+	}
+}

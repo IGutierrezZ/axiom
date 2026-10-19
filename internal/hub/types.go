@@ -16,6 +16,11 @@ type WorkspaceRecord struct {
 	LastAccessed time.Time `json:"last_accessed"`
 	IsConfigured bool      `json:"is_configured"`
 	Tech         []string  `json:"tech,omitempty"`
+	// WorktreeMode y WorktreeRoot son las preferencias personales de worktree del proyecto
+	// (REQ-25.29, prefs.go): opcionales, no cambian el esquema `"1.0"` y un binario anterior
+	// los ignora.
+	WorktreeMode string `json:"worktree_mode,omitempty"`
+	WorktreeRoot string `json:"worktree_root,omitempty"`
 }
 
 // HubConfig representa el archivo de configuración central ~/.axiom/workspaces.json.

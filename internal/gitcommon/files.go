@@ -114,6 +114,26 @@ func GitDirFromFiles(gitRoot string) (string, error) {
 	return filepath.Clean(target), nil
 }
 
+// MainWorktreeFromFiles devuelve el checkout principal del repositorio cuyo git common dir
+// es commonDir y true: el directorio padre del common dir cuando este se llama `.git`, que
+// es lo que ocurre en un clon normal y desde cualquiera de sus worktrees enlazados (todos
+// comparten el common dir del principal). Con un common dir que no se llama `.git` (un
+// repositorio con `--separate-git-dir`, uno desnudo) el checkout principal no se deduce de
+// los nombres y devuelve ("", false): quien lo necesita decide qué hacer. No lanza procesos.
+//
+// commonDir es el que devuelve CommonDir (`git rev-parse --git-common-dir`) y debe ser
+// absoluto; la ruta se limpia, de modo que un separador final o segmentos redundantes no
+// cambian el resultado. La
+// ruta devuelta conserva la grafía de commonDir: quien la compare con otra debe hacerlo por
+// identidad (pathidentity.SameDirectory).
+func MainWorktreeFromFiles(commonDir string) (string, bool) {
+	cleaned := filepath.Clean(commonDir)
+	if commonDir == "" || !filepath.IsAbs(cleaned) || filepath.Base(cleaned) != gitEntryName {
+		return "", false
+	}
+	return filepath.Dir(cleaned), true
+}
+
 // ReadHead dice en qué está el HEAD del repositorio cuya raíz es gitRoot, leyendo
 // `<gitdir>/HEAD` sin lanzar procesos (REQ-25.21):
 //

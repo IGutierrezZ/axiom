@@ -18,23 +18,21 @@ import (
 // newRecord compone el registro del cambio con el estado final de git: las ramas del plan
 // (tras aplicarlo existen todas y cada una está desplegada) con el worktree en el que git
 // las tiene, que puede ser otro que el planificado si ya estaba registrado. El modo y su
-// origen los fija el registro previo, si lo hay (prioridad: registro > --mode > hub >
-// defecto, D-08); sin él, `worktree` por defecto. Las excepciones y el prefijo de archivado
-// de un registro previo se conservan. Sin marcas de tiempo: el mismo estado da los mismos
-// bytes.
-func newRecord(facts changeFacts, plan branch.ChangePlan) branch.Record {
+// origen son los que resolvió `resolveMode` (prioridad: registro > --mode > hub > defecto,
+// D-08): con un registro previo, los de este. Las excepciones y el prefijo de archivado de un
+// registro previo se conservan. Sin marcas de tiempo: el mismo estado da los mismos bytes.
+func newRecord(facts changeFacts, plan branch.ChangePlan, mode workMode) branch.Record {
 	record := branch.Record{
 		Schema:       branch.RegistrySchema,
 		Lane:         plan.Lane,
 		Change:       plan.Change,
-		Mode:         branch.ModeWorktree,
-		ModeSource:   branch.ModeSourceDefault,
+		Mode:         mode.mode,
+		ModeSource:   mode.source,
 		Exceptions:   facts.input.Exceptions,
 		PlanningRepo: facts.input.PlanningRepo.GitRoot,
 		Repositories: make([]branch.RecordRepo, 0, len(plan.Repositories)),
 	}
 	if previous := facts.record; previous != nil {
-		record.Mode, record.ModeSource = previous.Mode, previous.ModeSource
 		record.ArchivePrefix = previous.ArchivePrefix
 	}
 	for _, repo := range plan.Repositories {
