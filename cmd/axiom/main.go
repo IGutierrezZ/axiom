@@ -119,7 +119,8 @@ USO:
 COMANDOS DE GOBERNANZA Y WORKSPACE:
   init                 Inicializa un proyecto con axiom.yaml, andamiaje base y lo registra en el Hub
   change create        Crea un nuevo incremento/cambio SDD con plantilla proposal.md en español
-  project list         Lista los proyectos registrados en el Hub global (~/.axiom/workspaces.json)
+  branch status        Muestra el repositorio git, su git common dir y la rama actual (solo lectura; --json)
+  project list        Lista los proyectos registrados en el Hub global (~/.axiom/workspaces.json)
   project switch       Conmuta el proyecto activo por defecto
   project add          Registra un proyecto existente en el Hub
   project remove       Desvincula un proyecto del catálogo global
@@ -304,6 +305,9 @@ func main() {
 	case "change":
 		exitCode := runChange(os.Args[2:], os.Stdout, os.Stderr)
 		os.Exit(exitCode)
+
+	case "branch":
+		os.Exit(cli.RunBranch(os.Args[2:], os.Stdout, os.Stderr))
 
 	case "workspace":
 
