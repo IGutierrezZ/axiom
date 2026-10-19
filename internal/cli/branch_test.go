@@ -46,14 +46,41 @@ func branchTestGit(t *testing.T, dir string, args ...string) {
 	}
 }
 
+// initBranchRepository convierte dir en un repositorio real, en la rama main y con
+// un commit. El entorno de git ya debe estar aislado (isolateBranchGit).
+func initBranchRepository(t *testing.T, dir string) {
+	t.Helper()
+	branchTestGit(t, dir, "init", "-q", "-b", "main")
+	branchTestGit(t, dir, "commit", "-q", "--allow-empty", "-m", "inicial")
+}
+
 // newBranchRepository crea un repositorio real, en la rama main y con un commit.
 func newBranchRepository(t *testing.T) string {
 	t.Helper()
 	isolateBranchGit(t)
 	dir := t.TempDir()
-	branchTestGit(t, dir, "init", "-q", "-b", "main")
-	branchTestGit(t, dir, "commit", "-q", "--allow-empty", "-m", "inicial")
+	initBranchRepository(t, dir)
 	return dir
+}
+
+// branchConfigBase es un axiom.yaml mínimo y válido; los bloques de política de ramas
+// se le añaden detrás.
+const branchConfigBase = `workspace:
+  name: ejemplo
+  topology: monorepo-embedded
+  specs_repository: .
+roles:
+  core:
+    name: Core
+    repositories:
+      - path: .
+`
+
+func writeBranchConfig(t *testing.T, dir, blocks string) {
+	t.Helper()
+	if err := os.WriteFile(filepath.Join(dir, "axiom.yaml"), []byte(branchConfigBase+blocks), 0o644); err != nil {
+		t.Fatal(err)
+	}
 }
 
 // branchOutsideGit devuelve un directorio que no pertenece a ningún repositorio git,
@@ -80,21 +107,27 @@ func runBranchCLI(t *testing.T, args ...string) (code int, stdout, stderr string
 	return code, out.String(), errOut.String()
 }
 
-// branchResultJSON es lo que las pruebas leen del `axiom.branch-result/v1` mínimo
-// de esta rebanada.
+// branchRepositoryJSON y branchResultJSON son lo que las pruebas leen del
+// `axiom.branch-result/v1` de `status`.
+type branchRepositoryJSON struct {
+	GitRoot           string `json:"gitRoot"`
+	CommonDir         string `json:"commonDir"`
+	IntegrationBranch string `json:"integrationBranch"`
+	CurrentBranch     string `json:"currentBranch"`
+	Detached          bool   `json:"detached"`
+}
+
 type branchResultJSON struct {
-	Schema        string   `json:"schema"`
-	Operation     string   `json:"operation"`
-	Status        string   `json:"status"`
-	StatusLabel   string   `json:"statusLabel"`
-	Code          string   `json:"code"`
-	Message       string   `json:"message"`
-	Continuation  string   `json:"continuation"`
-	GitRoot       string   `json:"gitRoot"`
-	CommonDir     string   `json:"commonDir"`
-	CurrentBranch string   `json:"currentBranch"`
-	Detached      bool     `json:"detached"`
-	Warnings      []string `json:"warnings"`
+	Schema       string                 `json:"schema"`
+	Operation    string                 `json:"operation"`
+	Status       string                 `json:"status"`
+	StatusLabel  string                 `json:"statusLabel"`
+	Code         string                 `json:"code"`
+	Message      string                 `json:"message"`
+	Continuation string                 `json:"continuation"`
+	Details      map[string]string      `json:"details"`
+	Repositories []branchRepositoryJSON `json:"repositories"`
+	Warnings     []string               `json:"warnings"`
 }
 
 func decodeBranchResult(t *testing.T, stdout string) branchResultJSON {
@@ -106,6 +139,15 @@ func decodeBranchResult(t *testing.T, stdout string) branchResultJSON {
 		t.Fatalf("la salida no es un axiom.branch-result/v1 reconocible: %v\n%s", err, stdout)
 	}
 	return result
+}
+
+// onlyBranchRepository devuelve el único repositorio de un resultado de `status`.
+func onlyBranchRepository(t *testing.T, result branchResultJSON) branchRepositoryJSON {
+	t.Helper()
+	if len(result.Repositories) != 1 {
+		t.Fatalf("se esperaba un único repositorio, hay %d: %+v", len(result.Repositories), result)
+	}
+	return result.Repositories[0]
 }
 
 func wantBranchDirectory(t *testing.T, what, got, want string) {
@@ -180,9 +222,10 @@ func TestBranchRejectsUnrecognisedSubcommandsWithCode2(t *testing.T) {
 	}
 }
 
-// REQ-25.2: `status --json --cwd <ruta>` imprime un `axiom.branch-result/v1` con la
-// raíz git, el git common dir y la rama actual (por ReadHead).
-func TestBranchStatusPrintsTheMinimalResultAsJSON(t *testing.T) {
+// REQ-25.2: `status --json --cwd <ruta>` imprime un `axiom.branch-result/v1` con, por
+// repositorio, la raíz git, el git common dir, la rama actual (por ReadHead) y la rama
+// de integración de la política.
+func TestBranchStatusPrintsTheResultAsJSON(t *testing.T) {
 	repo := newBranchRepository(t)
 
 	code, stdout, stderr := runBranchCLI(t, "status", "--json", "--cwd", repo)
@@ -199,10 +242,11 @@ func TestBranchStatusPrintsTheMinimalResultAsJSON(t *testing.T) {
 	if result.Code != "" || result.Message != "" || result.Continuation != "" {
 		t.Errorf("un resultado listo no lleva código, mensaje ni continuación: %+v", result)
 	}
-	wantBranchDirectory(t, "gitRoot", result.GitRoot, repo)
-	wantBranchDirectory(t, "commonDir", result.CommonDir, filepath.Join(repo, ".git"))
-	if result.CurrentBranch != "main" || result.Detached {
-		t.Errorf("currentBranch %q, detached %v; se esperaba main y false", result.CurrentBranch, result.Detached)
+	repository := onlyBranchRepository(t, result)
+	wantBranchDirectory(t, "gitRoot", repository.GitRoot, repo)
+	wantBranchDirectory(t, "commonDir", repository.CommonDir, filepath.Join(repo, ".git"))
+	if repository.CurrentBranch != "main" || repository.Detached {
+		t.Errorf("currentBranch %q, detached %v; se esperaba main y false", repository.CurrentBranch, repository.Detached)
 	}
 }
 
@@ -231,10 +275,11 @@ func TestBranchStatusInALinkedWorktree(t *testing.T) {
 		t.Fatalf("código de salida = %d, se esperaba 0\n%s", code, stdout)
 	}
 	result := decodeBranchResult(t, stdout)
-	wantBranchDirectory(t, "gitRoot", result.GitRoot, linked)
-	wantBranchDirectory(t, "commonDir", result.CommonDir, filepath.Join(main, ".git"))
-	if result.CurrentBranch != "inc/mi-cambio" {
-		t.Errorf("currentBranch = %q, se esperaba inc/mi-cambio", result.CurrentBranch)
+	repository := onlyBranchRepository(t, result)
+	wantBranchDirectory(t, "gitRoot", repository.GitRoot, linked)
+	wantBranchDirectory(t, "commonDir", repository.CommonDir, filepath.Join(main, ".git"))
+	if repository.CurrentBranch != "inc/mi-cambio" {
+		t.Errorf("currentBranch = %q, se esperaba inc/mi-cambio", repository.CurrentBranch)
 	}
 }
 
@@ -247,8 +292,9 @@ func TestBranchStatusWithADetachedHead(t *testing.T) {
 		t.Fatalf("código de salida = %d, se esperaba 0\n%s", code, stdout)
 	}
 	result := decodeBranchResult(t, stdout)
-	if result.CurrentBranch != "" || !result.Detached {
-		t.Errorf("currentBranch %q, detached %v; se esperaba una rama vacía y HEAD desacoplado", result.CurrentBranch, result.Detached)
+	repository := onlyBranchRepository(t, result)
+	if repository.CurrentBranch != "" || !repository.Detached {
+		t.Errorf("currentBranch %q, detached %v; se esperaba una rama vacía y HEAD desacoplado", repository.CurrentBranch, repository.Detached)
 	}
 }
 
@@ -265,8 +311,9 @@ func TestBranchStatusWarnsWhenHeadHasAnUnknownForm(t *testing.T) {
 	if code != 0 || result.Status != "ready" {
 		t.Fatalf("código %d, status %q; se esperaba 0 y ready", code, result.Status)
 	}
-	if result.CurrentBranch != "" || result.Detached || len(result.Warnings) != 1 {
-		t.Errorf("currentBranch %q, detached %v, avisos %v; se esperaba sin rama y un aviso", result.CurrentBranch, result.Detached, result.Warnings)
+	repository := onlyBranchRepository(t, result)
+	if repository.CurrentBranch != "" || repository.Detached || len(result.Warnings) != 1 {
+		t.Errorf("currentBranch %q, detached %v, avisos %v; se esperaba sin rama y un aviso", repository.CurrentBranch, repository.Detached, result.Warnings)
 	}
 }
 
@@ -283,21 +330,21 @@ func TestBranchStatusCwdFixesTheStartingDirectory(t *testing.T) {
 	t.Run("con --cwd manda el argumento", func(t *testing.T) {
 		t.Chdir(other)
 		_, stdout, _ := runBranchCLI(t, "status", "--json", "--cwd", repo)
-		wantBranchDirectory(t, "gitRoot", decodeBranchResult(t, stdout).GitRoot, repo)
+		wantBranchDirectory(t, "gitRoot", onlyBranchRepository(t, decodeBranchResult(t, stdout)).GitRoot, repo)
 	})
 	t.Run("sin --cwd rige el directorio del proceso", func(t *testing.T) {
 		t.Chdir(sub)
 		_, stdout, _ := runBranchCLI(t, "status", "--json")
-		wantBranchDirectory(t, "gitRoot", decodeBranchResult(t, stdout).GitRoot, repo)
+		wantBranchDirectory(t, "gitRoot", onlyBranchRepository(t, decodeBranchResult(t, stdout)).GitRoot, repo)
 	})
 	t.Run("un --cwd relativo se resuelve contra el proceso y la salida es absoluta", func(t *testing.T) {
 		t.Chdir(repo)
 		_, stdout, _ := runBranchCLI(t, "status", "--json", "--cwd", filepath.Join("app", "web"))
-		wantBranchDirectory(t, "gitRoot", decodeBranchResult(t, stdout).GitRoot, repo)
+		wantBranchDirectory(t, "gitRoot", onlyBranchRepository(t, decodeBranchResult(t, stdout)).GitRoot, repo)
 	})
 	t.Run("una subcarpeta resuelve a la raíz del repositorio", func(t *testing.T) {
 		_, stdout, _ := runBranchCLI(t, "status", "--json", "--cwd", sub)
-		wantBranchDirectory(t, "gitRoot", decodeBranchResult(t, stdout).GitRoot, repo)
+		wantBranchDirectory(t, "gitRoot", onlyBranchRepository(t, decodeBranchResult(t, stdout)).GitRoot, repo)
 	})
 }
 
@@ -315,7 +362,7 @@ func TestBranchStatusOutsideGitIsRefusedWithATypedCode(t *testing.T) {
 	if result.Status != "refused" || result.StatusLabel != "rechazado" || result.Code != "not_a_git_repository" {
 		t.Errorf("status %q / %q, code %q; se esperaba refused / rechazado / not_a_git_repository", result.Status, result.StatusLabel, result.Code)
 	}
-	if result.GitRoot != "" || result.CommonDir != "" || result.CurrentBranch != "" {
+	if len(result.Repositories) != 0 {
 		t.Errorf("un rechazo no lleva datos del repositorio: %+v", result)
 	}
 	if !strings.Contains(result.Message, outside) {
@@ -452,6 +499,180 @@ func TestBranchStatusLaunchesNoRemoteGitOperation(t *testing.T) {
 		// El HEAD se lee de ficheros (REQ-25.21): ninguna invocación lo consulta.
 		if len(invocation) > 1 && invocation[1] != "rev-parse" {
 			t.Errorf("status solo consulta rutas con rev-parse, lanzó %v", invocation)
+		}
+	}
+}
+
+// REQ-25.2 (G-4): cada token del JSON lleva su etiqueta en castellano en un campo
+// hermano, tanto en un resultado listo como en un rechazo.
+func TestBranchStatusPairsEveryTokenWithItsLabel(t *testing.T) {
+	repo := newBranchRepository(t)
+	_, ready, _ := runBranchCLI(t, "status", "--json", "--cwd", repo)
+	_, refused, _ := runBranchCLI(t, "status", "--json", "--cwd", branchOutsideGit(t))
+
+	for name, tc := range map[string]struct {
+		stdout, status, label string
+	}{
+		"listo":     {ready, "ready", "listo"},
+		"rechazado": {refused, "refused", "rechazado"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			var generic map[string]any
+			if err := json.Unmarshal([]byte(tc.stdout), &generic); err != nil {
+				t.Fatalf("la salida no es JSON: %v\n%s", err, tc.stdout)
+			}
+			if generic["status"] != tc.status || generic["statusLabel"] != tc.label {
+				t.Errorf("status %v / statusLabel %v; se esperaba %s / %s", generic["status"], generic["statusLabel"], tc.status, tc.label)
+			}
+		})
+	}
+}
+
+// REQ-25.3: sin configuración rige `main`; el bloque `git:` lo sustituye; una entrada
+// de `repositories:` prevalece sobre `git:` solo en su repositorio.
+func TestBranchStatusShowsTheIntegrationBranchPerRepository(t *testing.T) {
+	statusOf := func(t *testing.T, cwd string) branchRepositoryJSON {
+		t.Helper()
+		code, stdout, stderr := runBranchCLI(t, "status", "--json", "--cwd", cwd)
+		if code != 0 || stderr != "" {
+			t.Fatalf("código %d, stderr %q; se esperaba 0\n%s", code, stderr, stdout)
+		}
+		return onlyBranchRepository(t, decodeBranchResult(t, stdout))
+	}
+
+	t.Run("sin axiom.yaml rige main", func(t *testing.T) {
+		repo := newBranchRepository(t)
+		if got := statusOf(t, repo).IntegrationBranch; got != "main" {
+			t.Errorf("integrationBranch = %q, se esperaba main", got)
+		}
+	})
+	t.Run("axiom.yaml sin bloques rige main", func(t *testing.T) {
+		repo := newBranchRepository(t)
+		writeBranchConfig(t, repo, "")
+		if got := statusOf(t, repo).IntegrationBranch; got != "main" {
+			t.Errorf("integrationBranch = %q, se esperaba main", got)
+		}
+	})
+	t.Run("el bloque git sustituye el valor por defecto", func(t *testing.T) {
+		repo := newBranchRepository(t)
+		writeBranchConfig(t, repo, "git:\n  integration_branch: develop\n")
+		if got := statusOf(t, repo).IntegrationBranch; got != "develop" {
+			t.Errorf("integrationBranch = %q, se esperaba develop", got)
+		}
+	})
+	t.Run("una entrada de repositories para el repositorio de la carpeta maestra prevalece", func(t *testing.T) {
+		repo := newBranchRepository(t)
+		writeBranchConfig(t, repo, "git:\n  integration_branch: develop\nrepositories:\n  - path: .\n    integration_branch: release\n")
+		if got := statusOf(t, repo).IntegrationBranch; got != "release" {
+			t.Errorf("integrationBranch = %q, se esperaba release", got)
+		}
+	})
+	t.Run("cada repositorio de la carpeta maestra toma su propia política", func(t *testing.T) {
+		isolateBranchGit(t)
+		master := t.TempDir()
+		writeBranchConfig(t, master, "git:\n  integration_branch: main\nrepositories:\n  - path: repo-backend\n    integration_branch: release\n")
+		for _, name := range []string{"repo-backend", "repo-frontend"} {
+			dir := filepath.Join(master, name)
+			if err := os.MkdirAll(dir, 0o755); err != nil {
+				t.Fatal(err)
+			}
+			initBranchRepository(t, dir)
+		}
+		if got := statusOf(t, filepath.Join(master, "repo-backend")).IntegrationBranch; got != "release" {
+			t.Errorf("repo-backend: integrationBranch = %q, se esperaba release", got)
+		}
+		if got := statusOf(t, filepath.Join(master, "repo-frontend")).IntegrationBranch; got != "main" {
+			t.Errorf("repo-frontend: integrationBranch = %q, se esperaba main", got)
+		}
+	})
+	t.Run("un repositorio fuera de la carpeta maestra solo hereda la política del workspace", func(t *testing.T) {
+		repo := newBranchRepository(t)
+		master := filepath.Join(repo, "app")
+		if err := os.MkdirAll(master, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		writeBranchConfig(t, master, "git:\n  integration_branch: develop\nrepositories:\n  - path: .\n    integration_branch: release\n")
+		if got := statusOf(t, master).IntegrationBranch; got != "develop" {
+			t.Errorf("integrationBranch = %q; la entrada «.» es de la carpeta maestra, no del repositorio que la contiene (se esperaba develop)", got)
+		}
+	})
+	t.Run("sin --json la rama de integración sale en el texto", func(t *testing.T) {
+		repo := newBranchRepository(t)
+		writeBranchConfig(t, repo, "git:\n  integration_branch: develop\n")
+		_, stdout, _ := runBranchCLI(t, "status", "--cwd", repo)
+		if !strings.Contains(stdout, "Rama de integración: develop") {
+			t.Errorf("el texto debe mostrar la rama de integración:\n%s", stdout)
+		}
+	})
+}
+
+// REQ-25.3: un valor inválido o una configuración ilegible en axiom.yaml es
+// `config_invalid`, con código de salida 1, la causa en el mensaje y la continuación
+// ejecutable con la carpeta maestra citada.
+func TestBranchStatusRefusesAnInvalidConfigurationAsConfigInvalid(t *testing.T) {
+	tests := []struct {
+		name      string
+		content   string
+		wantCause string
+	}{
+		{"prefijo inválido", branchConfigBase + "git:\n  branch_prefix: \"mi prefijo//\"\n", "branch_prefix"},
+		{"rama de integración inválida", branchConfigBase + "git:\n  integration_branch: \"a b\"\n", "integration_branch"},
+		{"repositories con ruta fuera de la carpeta maestra", branchConfigBase + "repositories:\n  - path: ../fuera\n", "repositories[0]"},
+		{"YAML ilegible", "workspace: [sin cerrar\n", "axiom.yaml"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			repo := newBranchRepository(t)
+			if err := os.WriteFile(filepath.Join(repo, "axiom.yaml"), []byte(tc.content), 0o644); err != nil {
+				t.Fatal(err)
+			}
+
+			code, stdout, _ := runBranchCLI(t, "status", "--json", "--cwd", repo)
+			if code != 1 {
+				t.Errorf("código de salida = %d, se esperaba 1", code)
+			}
+			result := decodeBranchResult(t, stdout)
+			if result.Status != "refused" || result.StatusLabel != "rechazado" || result.Code != "config_invalid" {
+				t.Errorf("status %q / %q, code %q; se esperaba refused / rechazado / config_invalid", result.Status, result.StatusLabel, result.Code)
+			}
+			if !strings.Contains(result.Message, tc.wantCause) {
+				t.Errorf("el mensaje %q debe nombrar la causa %q", result.Message, tc.wantCause)
+			}
+			for _, want := range []string{"axiom workspace validate --path", pathquote.Quote(repo)} {
+				if !strings.Contains(result.Continuation, want) {
+					t.Errorf("la continuación %q debe contener %q", result.Continuation, want)
+				}
+			}
+			if len(result.Repositories) != 0 {
+				t.Errorf("un rechazo no lleva repositorios: %+v", result.Repositories)
+			}
+		})
+	}
+}
+
+// REQ-25.2: un fallo de git que ningún otro código cubre es `git_failed` y nombra la
+// operación y resume el error. Aquí git no se puede ejecutar: el PATH no lo contiene.
+func TestBranchStatusReportsGitFailedWhenGitCannotRun(t *testing.T) {
+	repo := newBranchRepository(t)
+	t.Setenv("PATH", t.TempDir())
+
+	code, stdout, _ := runBranchCLI(t, "status", "--json", "--cwd", repo)
+	if code != 1 {
+		t.Errorf("código de salida = %d, se esperaba 1", code)
+	}
+	result := decodeBranchResult(t, stdout)
+	if result.Status != "error" || result.StatusLabel != "error" || result.Code != "git_failed" {
+		t.Errorf("status %q / %q, code %q; se esperaba error / error / git_failed", result.Status, result.StatusLabel, result.Code)
+	}
+	if result.Details["operation"] == "" || !strings.Contains(result.Message, result.Details["operation"]) {
+		t.Errorf("el mensaje %q debe nombrar la operación %q", result.Message, result.Details["operation"])
+	}
+	if result.Details["summary"] == "" || !strings.Contains(result.Message, result.Details["summary"]) {
+		t.Errorf("el mensaje %q debe resumir el error %q", result.Message, result.Details["summary"])
+	}
+	for _, want := range []string{"axiom branch status --cwd", pathquote.Quote(repo)} {
+		if !strings.Contains(result.Continuation, want) {
+			t.Errorf("la continuación %q debe contener %q", result.Continuation, want)
 		}
 	}
 }
