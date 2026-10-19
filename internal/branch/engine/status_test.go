@@ -323,7 +323,7 @@ func TestStatusOfAChangeWithABranchAndAWorktree(t *testing.T) {
 			t.Errorf("status lanzó la operación remota git %s: %v", invocation[1], invocation)
 		}
 		switch invocation[1] {
-		case "rev-parse", "worktree", "status", "rev-list":
+		case "rev-parse", "worktree", "status", "rev-list", "ls-tree":
 		default:
 			t.Errorf("status lanzó %q, fuera de la lista cerrada de lecturas: %v", invocation[1], invocation)
 		}
@@ -602,8 +602,11 @@ func TestStatusWithoutTheIntegrationBranchWarnsAndSkipsTheComparison(t *testing.
 	if repository.Base != nil || feature.Ahead != nil || feature.Behind != nil || feature.ComparedTo != "" || !feature.Exists {
 		t.Errorf("base %+v, rama %+v; sin rama de integración no hay base ni comparación", repository.Base, feature)
 	}
-	if len(result.Warnings) != 1 || !strings.Contains(result.Warnings[0], "«develop»") {
-		t.Errorf("avisos = %v, se esperaba uno que nombre la rama de integración develop", result.Warnings)
+	// Dos avisos con la misma causa y distinto efecto: no se calculan adelanto ni atraso, y
+	// la lista de pendientes de archivar no se evalúa (REQ-25.20).
+	if len(result.Warnings) != 2 || !strings.Contains(result.Warnings[0], "«develop»") || !strings.Contains(result.Warnings[0], "adelanto") ||
+		!strings.Contains(result.Warnings[1], "«develop»") || !strings.Contains(result.Warnings[1], "pendientes de archivar") {
+		t.Errorf("avisos = %v, se esperaban dos que nombren la rama de integración develop: el de la comparación y el de los pendientes", result.Warnings)
 	}
 }
 
@@ -668,7 +671,8 @@ func TestStatusRefusals(t *testing.T) {
 	t.Run("un nombre de cambio inválido, antes de lanzar git ni leer el disco", func(t *testing.T) {
 		repo := newProject(t, configWithRoles(map[string][]string{"core": {"."}}, ""))
 		seen := observe(t)
-		for _, invalid := range []string{"a b:c", "../fuera", "CON", ""} {
+		// El nombre vacío ya no es inválido: sin cambio, `status` lista (pending_test.go).
+		for _, invalid := range []string{"a b:c", "../fuera", "CON", "   "} {
 			result := status(t, repo, invalid, branch.LaneSDD)
 
 			wantRefusal(t, result, branch.CodeInvalidName, branch.StatusRefused)

@@ -5,9 +5,9 @@
 // git common dir del repositorio del planning home, de modo que el checkout principal y
 // cualquier worktree enlazado lo ven igual, y borrarlo no daña el repositorio.
 //
-// Esta rebanada trae solo la lectura (`Load`); quien escribe el registro es `ensure`,
-// que llega con las rebanadas siguientes. El paquete no ejecuta procesos: el motor
-// obtiene el common dir con git y se lo entrega.
+// Esta rebanada trae solo la lectura (`Load` y `List`); quien escribe el registro es
+// `ensure`, que llega con las rebanadas siguientes. El paquete no ejecuta procesos: el
+// motor obtiene el common dir con git y se lo entrega.
 package registry
 
 import (
@@ -17,6 +17,8 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
+	"strings"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/branch"
 	"github.com/IGutierrezZ/axiom/v3/internal/gitref"
@@ -70,14 +72,67 @@ func (*Store) Load(commonDir string, lane branch.Lane, change string) (*branch.R
 	return &record, nil
 }
 
-// validateKey comprueba que los tres datos componen la ruta de un registro sin salir de
-// su carpeta.
-func validateKey(commonDir string, lane branch.Lane, change string) error {
+// List lee los registros de todos los cambios del carril en el git common dir dado,
+// ordenados por nombre de cambio (no por nombre de fichero: `a-b.json` precede a
+// `a.json`). Sin carpeta del carril no hay registros y devuelve una lista vacía, no nil.
+// Solo cuentan los ficheros `<cambio>.json`; lo demás de la carpeta se ignora. Un
+// registro que existe y no se puede leer o no es válido devuelve un *FileError que lo
+// nombra, y ninguna lista a medias: el registro es estado derivado y no se interpreta con
+// indulgencia (como en Load). Un carril o un common dir que no pueden componer la carpeta
+// del registro devuelven un error corriente. No escribe nada.
+func (s *Store) List(commonDir string, lane branch.Lane) ([]branch.Record, error) {
+	if err := validateScope(commonDir, lane); err != nil {
+		return nil, err
+	}
+	dir := filepath.Join(commonDir, "axiom", "branch", "v1", string(lane))
+	entries, err := os.ReadDir(dir)
+	switch {
+	case errors.Is(err, fs.ErrNotExist):
+		return []branch.Record{}, nil
+	case err != nil:
+		return nil, &FileError{Path: dir, Cause: err}
+	}
+	records := []branch.Record{}
+	for _, entry := range entries {
+		change, isRecord := strings.CutSuffix(entry.Name(), ".json")
+		if !isRecord {
+			continue
+		}
+		record, err := s.Load(commonDir, lane, change)
+		if err != nil {
+			// Un nombre de fichero que no puede ser el de un cambio no es un registro que
+			// escribiera `ensure`: se nombra el fichero como en cualquier otro fallo.
+			var failure *FileError
+			if !errors.As(err, &failure) {
+				err = &FileError{Path: filepath.Join(dir, entry.Name()), Cause: err}
+			}
+			return nil, err
+		}
+		if record != nil {
+			records = append(records, *record)
+		}
+	}
+	slices.SortFunc(records, func(a, b branch.Record) int { return strings.Compare(a.Change, b.Change) })
+	return records, nil
+}
+
+// validateScope comprueba que el common dir y el carril componen la carpeta de un
+// registro sin salir de ella.
+func validateScope(commonDir string, lane branch.Lane) error {
 	if !filepath.IsAbs(commonDir) {
 		return fmt.Errorf("el git common dir %q no es una ruta absoluta", commonDir)
 	}
 	if lane != branch.LaneSDD && lane != branch.LaneODD {
 		return fmt.Errorf("el carril %q no es válido: usa %s u %s", lane, branch.LaneSDD, branch.LaneODD)
+	}
+	return nil
+}
+
+// validateKey comprueba que los tres datos componen la ruta de un registro sin salir de
+// su carpeta.
+func validateKey(commonDir string, lane branch.Lane, change string) error {
+	if err := validateScope(commonDir, lane); err != nil {
+		return err
 	}
 	if err := gitref.ValidBranchComponent(change); err != nil {
 		return fmt.Errorf("el nombre de cambio %q no puede nombrar un registro: %w", change, err)

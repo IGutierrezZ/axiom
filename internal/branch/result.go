@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"strconv"
 	"strings"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
@@ -56,7 +57,99 @@ type Result struct {
 	Registry        *RegistryResult        `json:"registry,omitempty"`
 	Repositories    []RepositoryResult     `json:"repositories,omitempty"`
 	Skipped         []SkippedPath          `json:"skipped,omitempty"`
-	Warnings        []string               `json:"warnings,omitempty"`
+	// Registered son los cambios con registro local que `status` sin `--change` lista
+	// (nil si no se listó; vacío pero no nil si se listó y no hay ninguno, que se imprime
+	// como `[]`). PendingArchive son los cambios pendientes de archivar (REQ-25.20): una
+	// lista sin `--change` y un booleano con él (nil si no se evaluó, con un aviso que lo
+	// explica); PendingArchiveContinuation es la orden para archivar el cambio pedido,
+	// solo cuando está pendiente.
+	Registered                 []RegisteredChange `json:"registered,omitzero"`
+	PendingArchive             *PendingArchive    `json:"pendingArchive,omitempty"`
+	PendingArchiveContinuation string             `json:"pendingArchiveContinuation,omitempty"`
+	Warnings                   []string           `json:"warnings,omitempty"`
+}
+
+// PendingChange es un cambio pendiente de archivar: ya está en el árbol de la rama de
+// integración y aún no se ha archivado (REQ-25.20). Continuation es la orden que lo
+// archiva.
+type PendingChange struct {
+	Change       string `json:"change"`
+	Continuation string `json:"continuation"`
+}
+
+// NewPendingChange describe un cambio pendiente de archivar con la orden para archivarlo.
+func NewPendingChange(change string) PendingChange {
+	return PendingChange{Change: change, Continuation: archiveContinuation(change)}
+}
+
+// PendingArchive es el campo `pendingArchive` de `status` (design §4.3): sin `--change`,
+// la lista de cambios pendientes de archivar de todo el proyecto (Changes, que se imprime
+// `[]` si se evaluó y no hay ninguno); con él, un booleano que dice si el cambio pedido
+// está pendiente (Requested).
+type PendingArchive struct {
+	Changes   []PendingChange
+	Requested *bool
+}
+
+// MarshalJSON imprime el booleano de `--change` o, sin él, la lista.
+func (p PendingArchive) MarshalJSON() ([]byte, error) {
+	if p.Requested != nil {
+		return json.Marshal(*p.Requested)
+	}
+	changes := p.Changes
+	if changes == nil {
+		changes = []PendingChange{}
+	}
+	return json.Marshal(changes)
+}
+
+// RegisteredChange es un cambio con registro local en la lista de `status` sin
+// `--change` (REQ-25.14, REQ-25.15): su carril, su modo de trabajo materializado y su
+// origen, cada token con su etiqueta, y las ramas del registro con su worktree.
+type RegisteredChange struct {
+	Change          string             `json:"change"`
+	Lane            Lane               `json:"lane"`
+	Mode            Mode               `json:"mode"`
+	ModeLabel       string             `json:"modeLabel"`
+	ModeSource      string             `json:"modeSource"`
+	ModeSourceLabel string             `json:"modeSourceLabel"`
+	Branches        []RegisteredBranch `json:"branches,omitempty"`
+}
+
+// RegisteredBranch es una rama del registro de un cambio, con el repositorio al que
+// pertenece y, si lo tiene, su worktree (ruta absoluta).
+type RegisteredBranch struct {
+	Repository string     `json:"repository"`
+	Name       string     `json:"name"`
+	Kind       BranchKind `json:"kind"`
+	KindLabel  string     `json:"kindLabel"`
+	Role       string     `json:"role,omitempty"`
+	Worktree   string     `json:"worktree,omitempty"`
+}
+
+// NewRegisteredChange resume un registro local para la lista de `status`: las ramas de
+// todos sus repositorios, en el orden del registro.
+func NewRegisteredChange(record Record) RegisteredChange {
+	registered := RegisteredChange{
+		Change:     record.Change,
+		Lane:       record.Lane,
+		Mode:       record.Mode,
+		ModeLabel:  Label(string(record.Mode)),
+		ModeSource: record.ModeSource, ModeSourceLabel: Label(record.ModeSource),
+	}
+	for _, repo := range record.Repositories {
+		for _, recorded := range repo.Branches {
+			registered.Branches = append(registered.Branches, RegisteredBranch{
+				Repository: repo.Name,
+				Name:       recorded.Name,
+				Kind:       recorded.Kind,
+				KindLabel:  Label(string(recorded.Kind)),
+				Role:       recorded.RoleID,
+				Worktree:   recorded.Worktree,
+			})
+		}
+	}
+	return registered
 }
 
 // RegistryResult informa del registro local del cambio (REQ-25.14): Present es falso
@@ -222,6 +315,8 @@ func (r Result) WriteText(stdout, stderr io.Writer) {
 	if r.Change != "" {
 		fmt.Fprintf(stdout, "Cambio: %s (carril %s)\n", r.Change, r.Lane)
 		fmt.Fprintf(stdout, "Estado: %s\n", r.StatusLabel)
+	} else if r.Lane != "" {
+		fmt.Fprintf(stdout, "Proyecto: %s (carril %s)\n", r.WorkspaceRoot, r.Lane)
 	}
 	if r.Mode != "" {
 		fmt.Fprintf(stdout, "Modo de trabajo: %s (%s)\n", r.ModeLabel, r.ModeSourceLabel)
@@ -239,9 +334,48 @@ func (r Result) WriteText(stdout, stderr io.Writer) {
 	for _, skipped := range r.Skipped {
 		fmt.Fprintf(stdout, "Omitido: %s (rol %s): %s\n", skipped.Path, skipped.Role, skipped.Message)
 	}
+	r.writeChangeLists(stdout)
 	for _, warning := range r.Warnings {
 		fmt.Fprintf(stdout, "Aviso: %s\n", warning)
 	}
+}
+
+// writeChangeLists escribe los cambios registrados y los pendientes de archivar de
+// `status` sin `--change` y, con `--change`, si el cambio pedido está pendiente. Lo que no
+// se evaluó no se menciona: el aviso del resultado dice por qué.
+func (r Result) writeChangeLists(stdout io.Writer) {
+	if r.Registered != nil {
+		fmt.Fprintf(stdout, "Cambios registrados: %s\n", countOrNone(len(r.Registered)))
+		for _, registered := range r.Registered {
+			fmt.Fprintf(stdout, "  - %s: %s (%s)\n", registered.Change, registered.ModeLabel, registered.ModeSourceLabel)
+			for _, recorded := range registered.Branches {
+				line := fmt.Sprintf("    - %s: %s (%s)", recorded.Repository, recorded.Name, recorded.KindLabel)
+				if recorded.Worktree != "" {
+					line += ", worktree " + recorded.Worktree
+				}
+				fmt.Fprintln(stdout, line)
+			}
+		}
+	}
+	pending := r.PendingArchive
+	switch {
+	case pending == nil:
+	case pending.Requested == nil:
+		fmt.Fprintf(stdout, "Cambios pendientes de archivar: %s\n", countOrNone(len(pending.Changes)))
+		for _, change := range pending.Changes {
+			fmt.Fprintf(stdout, "  - %s: %s\n", change.Change, change.Continuation)
+		}
+	case *pending.Requested:
+		fmt.Fprintf(stdout, "Pendiente de archivar: sí (%s)\n", r.PendingArchiveContinuation)
+	}
+}
+
+// countOrNone es el recuento de una lista para el texto: «ninguno» si está vacía.
+func countOrNone(count int) string {
+	if count == 0 {
+		return "ninguno"
+	}
+	return strconv.Itoa(count)
 }
 
 // writeText escribe un repositorio del resultado: con nombre, bajo su encabezado; sin

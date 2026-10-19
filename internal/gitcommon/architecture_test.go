@@ -124,9 +124,16 @@ func TestArchitectureOnlyExecGoLaunchesProcesses(t *testing.T) {
 	}
 
 	// El recorrido no puede ser vacuo: ve el punto de ejecución y las lecturas de
-	// ficheros, y el punto de ejecución sí importa os/exec (si no, la excepción
-	// estaría caducada).
-	for _, want := range []string{execPointLabel, "internal/gitcommon/files.go"} {
+	// ficheros, y todo `internal/branch/**`, también sus subpaquetes (el motor, las
+	// lecturas de git y el registro local: tasks.md S2.30). El punto de ejecución sí
+	// importa os/exec (si no, la excepción estaría caducada).
+	for _, want := range []string{
+		execPointLabel, "internal/gitcommon/files.go",
+		"internal/branch/planner.go", "internal/branch/placement.go", "internal/branch/result.go",
+		"internal/branch/engine/engine.go", "internal/branch/engine/status.go", "internal/branch/engine/pending.go",
+		"internal/branch/gitcli/ops.go",
+		"internal/branch/registry/registry.go",
+	} {
 		if !labels[want] {
 			t.Errorf("el recorrido no vio %s; ve %v", want, labels)
 		}

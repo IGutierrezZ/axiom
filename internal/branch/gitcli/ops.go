@@ -1,7 +1,7 @@
 // Package gitcli son las lecturas tipadas de git del motor de ramas (INC-25, design
 // D-01): el adaptador de los puertos de `internal/branch` sobre gitcommon.Run, el único
 // punto que ejecuta git (REQ-25.1, G-7). Usa una lista cerrada de subcomandos de
-// lectura (`rev-parse`, `worktree list`, `status` y `rev-list`) y ninguno remoto; las
+// lectura (`rev-parse`, `worktree list`, `status`, `rev-list` y `ls-tree`) y ninguno remoto; las
 // escrituras de `ensure` y `done` y el resto de lecturas llegan con el primer
 // llamador que las usa.
 //
@@ -198,11 +198,79 @@ func (*Git) AheadBehind(ctx context.Context, dir, base, branchRef string) (ahead
 	return ahead, behind, nil
 }
 
+// TreeDirs lista los subdirectorios inmediatos de relPath en el árbol de rev, sin leer el
+// árbol de trabajo (`git ls-tree -z --full-tree <rev> -- <relPath>/`): solo cuentan las
+// entradas de tipo `tree` (ni ficheros ni submódulos), en el orden de git. exists dice si
+// relPath es una carpeta que tiene algo en rev; una ruta que no existe, o que es un
+// fichero, no es un error. relPath es relativa a la raíz del repositorio, con «/», y se
+// toma literalmente (ls-tree no expande comodines); dir es cualquier directorio del
+// repositorio. Los nombres salen íntegros porque la salida es `-z`.
+func (*Git) TreeDirs(ctx context.Context, dir, rev, relPath string) (dirs []string, exists bool, err error) {
+	if err := plainArgument(rev); err != nil {
+		return nil, false, err
+	}
+	if err := pathspecArgument(relPath); err != nil {
+		return nil, false, err
+	}
+	folder := strings.TrimSuffix(relPath, "/") + "/"
+	args := []string{"ls-tree", "-z", "--full-tree", rev, "--", folder}
+	result, err := gitcommon.Run(ctx, dir, args...)
+	if err != nil {
+		return nil, false, err
+	}
+	if result.ExitCode != 0 {
+		return nil, false, commandFailed(dir, result, args...)
+	}
+	for _, record := range strings.Split(string(result.Stdout), "\x00") {
+		if record == "" {
+			continue
+		}
+		// `<modo> <tipo> <objeto>\t<ruta>`: la ruta va tras el único tabulador.
+		meta, entry, found := strings.Cut(record, "\t")
+		fields := strings.Fields(meta)
+		name, inside := strings.CutPrefix(entry, folder)
+		if !found || len(fields) != 3 || !inside || name == "" || strings.Contains(name, "/") {
+			return nil, false, fmt.Errorf("git %s en %s devolvió una entrada que no se entiende: %q", strings.Join(args, " "), dir, record)
+		}
+		exists = true
+		if fields[1] == "tree" {
+			dirs = append(dirs, name)
+		}
+	}
+	return dirs, exists, nil
+}
+
 // plainArgument rechaza un nombre o una referencia que git leería como una opción
 // (empieza por «-») o que está vacío, antes de lanzar nada.
 func plainArgument(arg string) error {
 	if arg == "" || strings.HasPrefix(arg, "-") {
 		return errors.New("la referencia " + strconv.Quote(arg) + " no es válida para git: no puede estar vacía ni empezar por «-»")
+	}
+	return nil
+}
+
+// pathspecArgument rechaza una ruta que git leería de otro modo que como una ruta
+// literal relativa a la raíz del repositorio: vacía, la propia raíz, absoluta, con
+// segmentos `..` o `.`, con caracteres de control, o que empieza por «-» (una opción) o
+// «:» (un prefijo de patrón mágico).
+func pathspecArgument(relPath string) error {
+	invalid := func(reason string) error {
+		return fmt.Errorf("la ruta %s no es válida para git: %s", strconv.Quote(relPath), reason)
+	}
+	switch {
+	case relPath == "" || relPath == ".":
+		return invalid("debe nombrar una carpeta distinta de la raíz del repositorio")
+	case strings.HasPrefix(relPath, "/") || strings.HasPrefix(relPath, `\`) || filepath.IsAbs(relPath):
+		return invalid("debe ser relativa a la raíz del repositorio")
+	case strings.HasPrefix(relPath, "-") || strings.HasPrefix(relPath, ":"):
+		return invalid("no puede empezar por «-» ni por «:»")
+	case strings.ContainsFunc(relPath, func(r rune) bool { return r < 0x20 || r == 0x7f }):
+		return invalid("no puede llevar caracteres de control")
+	}
+	for _, segment := range strings.Split(relPath, "/") {
+		if segment == "." || segment == ".." {
+			return invalid("no puede llevar segmentos «.» ni «..»")
+		}
 	}
 	return nil
 }

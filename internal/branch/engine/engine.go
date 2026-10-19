@@ -44,6 +44,7 @@ type gitReader interface {
 	Worktrees(ctx context.Context, dir string) ([]branch.WorktreeEntry, error)
 	DirtyPaths(ctx context.Context, dir string) ([]string, error)
 	AheadBehind(ctx context.Context, dir, base, branch string) (ahead, behind int, err error)
+	TreeDirs(ctx context.Context, dir, rev, relPath string) (dirs []string, exists bool, err error)
 }
 
 var _ gitReader = (*gitcli.Git)(nil)
@@ -67,6 +68,9 @@ func Default() *Engine {
 // lo que el motor necesita después para describir el resultado.
 type changeFacts struct {
 	input branch.PlanInput
+	// location es el proyecto que resolvió cwd: lo necesita la lista de pendientes de
+	// archivar, que lee el planning home de la rama de integración.
+	location workspace.Location
 	// record es el registro local del cambio, o nil si no lo tiene.
 	record *branch.Record
 	// worktrees es `git worktree list` de cada repositorio del plan, por raíz git: se lee
@@ -94,10 +98,7 @@ func (e *Engine) gather(ctx context.Context, operation, cwd, change string, lane
 		return changeFacts{}, refusal
 	}
 
-	topology := workspace.TopologyMonorepoEmbedded
-	if location.Config != nil {
-		topology = location.Config.Workspace.Topology
-	}
+	topology := topologyOf(location)
 	planning, refusal := e.repositoryFacts(ctx, operation, location, location.WorkspaceRoot, ".", location.WorkspaceRoot)
 	if refusal != nil {
 		return changeFacts{}, refusal
@@ -140,6 +141,7 @@ func (e *Engine) gather(ctx context.Context, operation, cwd, change string, lane
 	return changeFacts{
 		record:    record,
 		worktrees: worktrees,
+		location:  location,
 		input: branch.PlanInput{
 			Operation:     operation,
 			Lane:          lane,
@@ -163,6 +165,14 @@ func (e *Engine) gather(ctx context.Context, operation, cwd, change string, lane
 			PathRules:         branch.PathRules{GOOS: e.goos},
 		},
 	}, nil
+}
+
+// topologyOf es la topología del proyecto: sin axiom.yaml rige el monorepo embebido.
+func topologyOf(location workspace.Location) workspace.TopologyType {
+	if location.Config != nil {
+		return location.Config.Workspace.Topology
+	}
+	return workspace.TopologyMonorepoEmbedded
 }
 
 // resolveDirectory devuelve dir con la grafía que usa git (los enlaces simbólicos y los
