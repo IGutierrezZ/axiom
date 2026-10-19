@@ -14,31 +14,39 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/pathquote"
 )
 
-// EnsureRequest es la petición de `ensure`. CWD debe ser un directorio absoluto.
+// EnsureRequest es la petición de `ensure`. CWD debe ser un directorio absoluto. Fetch pide
+// `git fetch origin` en cada repositorio del plan antes de resolver la base (`--fetch`,
+// REQ-25.10): sin él, `ensure` no hace ninguna operación remota.
 type EnsureRequest struct {
 	CWD    string
 	Change string
 	Lane   branch.Lane
+	Fetch  bool
 }
 
 // Ensure crea lo que falta de las ramas del cambio y de sus worktrees (REQ-25.7, design
 // D-05) en modo `worktree`, con la base resuelta sin red (D-06):
 //
-//  1. reúne los hechos de solo lectura (gather) y planifica (branch.Plan);
+//  1. bloquea el cambio en exclusiva (un bloqueo por cambio en el git common dir: con otra
+//     ejecución en marcha, `plan_conflict`), reúne los hechos de solo lectura (gather) y
+//     planifica (branch.Plan);
 //  2. comprueba, sin efectos, todos los repositorios del plan antes de mutar ninguno
-//     (checkPlan): la base existe, ninguna rama está desplegada en un worktree desconocido
-//     y las rutas planificadas están libres;
+//     (checkPlan): con `--fetch`, el `git fetch origin` de cada repositorio, antes de
+//     resolver la base; que la base existe, que ninguna rama está desplegada en un
+//     worktree desconocido y que las rutas planificadas están libres;
 //  3. aplica solo lo que falta (apply): crea las ramas que no existen, desde la base o,
 //     las de rol, desde la de seguimiento, y los worktrees que no existen, siempre con
 //     cmd.Dir en el checkout principal. Nunca mueve ni reinicia una rama existente ni
 //     toca el checkout principal;
-//  4. describe el estado final, sin acciones ni marcas de tiempo, de modo que repetir la
+//  4. guarda el registro local, compuesto desde el plan y el estado final de git: solo se
+//     escribe si cambian sus bytes, y un registro borrado se recompone idéntico;
+//  5. describe el estado final, sin acciones ni marcas de tiempo, de modo que repetir la
 //     orden con el mismo estado da el mismo resultado byte a byte.
 //
 // Un fallo de git durante la aplicación es `git_failed` y repetir `ensure` completa lo
-// pendiente. Nunca ejecuta operaciones remotas ni escribe el registro local: la
-// idempotencia sale del estado de git. El modo `in_place`, `ask`, las excepciones y el
-// registro con escritura llegan con las rebanadas siguientes.
+// pendiente; un fallo de la comprobación (incluido `fetch_failed`) no deja ni ramas, ni
+// worktrees, ni registro. La única operación remota es `git fetch origin` con `--fetch`.
+// El modo `in_place`, `ask` y las excepciones llegan con las rebanadas siguientes.
 func (e *Engine) Ensure(ctx context.Context, r EnsureRequest) branch.Result {
 	const operation = "ensure"
 	refused := func(refusal *branch.Refusal) branch.Result {
@@ -50,7 +58,24 @@ func (e *Engine) Ensure(ctx context.Context, r EnsureRequest) branch.Result {
 		return branch.NewResult(operation).Refused(refusal)
 	}
 
-	facts, refusal := e.gather(ctx, operation, r.CWD, r.Change, r.Lane)
+	// El bloqueo se toma en cuanto se conoce el git common dir y se suelta al terminar,
+	// también cuando se rechaza.
+	var unlock func()
+	defer func() {
+		if unlock != nil {
+			unlock()
+		}
+	}()
+	acquire := func(commonDir string) *branch.Refusal {
+		release, err := e.registry.Lock(ctx, commonDir, r.Lane, r.Change)
+		if err != nil {
+			return lockRefusal(err, operation, r.Change, r.CWD)
+		}
+		unlock = release
+		return nil
+	}
+
+	facts, refusal := e.gatherUnder(ctx, operation, r.CWD, r.Change, r.Lane, acquire)
 	if refusal != nil {
 		return refused(refusal)
 	}
@@ -59,7 +84,7 @@ func (e *Engine) Ensure(ctx context.Context, r EnsureRequest) branch.Result {
 		return refused(refusal)
 	}
 
-	pending, refusal := e.checkPlan(ctx, operation, r.CWD, plan, facts)
+	pending, fetched, refusal := e.checkPlan(ctx, operation, r.CWD, plan, facts, r.Fetch)
 	if refusal != nil {
 		return refused(refusal)
 	}
@@ -68,7 +93,8 @@ func (e *Engine) Ensure(ctx context.Context, r EnsureRequest) branch.Result {
 			return refused(refusal)
 		}
 		// El estado final se lee de git otra vez: es el mismo camino que sigue la
-		// ejecución que no tiene nada que crear, de modo que ambas describen lo mismo.
+		// ejecución que no tiene nada que crear, de modo que ambas describen lo mismo. El
+		// cambio ya está bloqueado: esta lectura no lo vuelve a bloquear.
 		if facts, refusal = e.gather(ctx, operation, r.CWD, r.Change, r.Lane); refusal != nil {
 			return refused(refusal)
 		}
@@ -77,12 +103,22 @@ func (e *Engine) Ensure(ctx context.Context, r EnsureRequest) branch.Result {
 		}
 	}
 
+	record := newRecord(facts, plan)
+	if err := e.registry.Save(facts.input.PlanningRepo.CommonDir, record); err != nil {
+		return refused(writeRefusal(err, operation, r.Change, r.CWD))
+	}
+	facts.record = &record
+
 	result, refusal := e.describe(ctx, operation, r.CWD, facts, plan)
 	if refusal != nil {
 		return refused(refusal)
 	}
-	if facts.record == nil {
-		result.SetMode(branch.ModeWorktree, branch.ModeSourceDefault)
+	// `fetched` dice qué repositorios se trajeron en esta ejecución: describe solo lee
+	// referencias locales y deja `base.fetched` en falso.
+	for i := range result.Repositories {
+		if base := result.Repositories[i].Base; base != nil && fetched[result.Repositories[i].GitRoot] {
+			base.Fetched = true
+		}
 	}
 	result.WorktreeRoot = plan.WorktreeRoot
 	return result
@@ -104,39 +140,53 @@ type repositorySteps struct {
 	name         string
 	mainCheckout string
 	steps        []ensureStep
+	// fetched dice que la comprobación ejecutó `git fetch origin` en este repositorio.
+	fetched bool
 }
 
 // checkPlan es la fase 3 de D-05: comprueba, sin efectos, todos los repositorios del plan
-// antes de mutar ninguno y devuelve lo que falta por crear en cada uno. Los repositorios
-// sin ramas (el de specs de un multirepo, que se trabaja in situ) no tienen nada que
-// comprobar.
-func (e *Engine) checkPlan(ctx context.Context, operation, cwd string, plan branch.ChangePlan, facts changeFacts) ([]repositorySteps, *branch.Refusal) {
+// antes de mutar ninguno y devuelve lo que falta por crear en cada uno, y los repositorios
+// (por raíz git) en los que se ejecutó `git fetch origin`. Con fetch, cada repositorio con
+// ramas se trae justo antes de resolver su base. Los repositorios sin ramas (el de specs de
+// un multirepo, que se trabaja in situ) no tienen nada que comprobar ni que traer.
+func (e *Engine) checkPlan(ctx context.Context, operation, cwd string, plan branch.ChangePlan, facts changeFacts, fetch bool) ([]repositorySteps, map[string]bool, *branch.Refusal) {
 	var pending []repositorySteps
+	fetched := map[string]bool{}
 	for _, repo := range plan.Repositories {
 		if len(repo.Branches) == 0 {
 			continue
 		}
-		steps, refusal := e.checkRepository(ctx, operation, cwd, repo, facts)
+		steps, refusal := e.checkRepository(ctx, operation, cwd, repo, facts, fetch)
 		if refusal != nil {
-			return nil, refusal
+			return nil, nil, refusal
 		}
+		fetched[repo.GitRoot] = steps.fetched
 		if len(steps.steps) > 0 {
 			pending = append(pending, steps)
 		}
 	}
-	return pending, nil
+	return pending, fetched, nil
 }
 
-// checkRepository comprueba un repositorio del plan: que tiene base y, por rama, si existe,
-// si está desplegada y dónde, y si su ruta planificada está libre. Devuelve el rechazo que
-// impide aplicar el plan, o los pasos que faltan.
-func (e *Engine) checkRepository(ctx context.Context, operation, cwd string, repo branch.RepoPlan, facts changeFacts) (repositorySteps, *branch.Refusal) {
+// checkRepository comprueba un repositorio del plan: con fetch, trae `origin`; después, que
+// tiene base y, por rama, si existe, si está desplegada y dónde, y si su ruta planificada
+// está libre. Devuelve el rechazo que impide aplicar el plan, o los pasos que faltan.
+func (e *Engine) checkRepository(ctx context.Context, operation, cwd string, repo branch.RepoPlan, facts changeFacts, fetch bool) (repositorySteps, *branch.Refusal) {
 	change, master := facts.input.Change, facts.input.Master
 	listed := facts.worktrees[repo.GitRoot]
 	if len(listed) == 0 {
 		return repositorySteps{}, gitRefusal(operation, cwd, "listar los worktrees de "+repo.GitRoot, errors.New("git no devolvió ningún worktree"))
 	}
 	pending := repositorySteps{name: repo.Name, mainCheckout: listed[0].Path}
+
+	// El fetch va antes de resolver la base (D-06): es lo único que cambia el resultado de
+	// resolveBase. Solo trae referencias remotas locales; no crea ramas ni worktrees.
+	if fetch {
+		if err := e.writer.Fetch(ctx, pending.mainCheckout, originRemote); err != nil {
+			return repositorySteps{}, branch.FetchFailed(operation, change, master, repo, originRemote, err)
+		}
+		pending.fetched = true
+	}
 
 	base, haveBase, err := e.resolveBase(ctx, repo)
 	if err != nil {

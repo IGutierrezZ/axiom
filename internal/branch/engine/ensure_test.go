@@ -20,7 +20,7 @@ import (
 // Pruebas de `ensure` con git real, entorno aislado y sin red (REQ-25.7, REQ-25.8,
 // REQ-25.10, REQ-25.11, matriz de amenazas «Selección de repositorio git», «Estado del
 // commit» y «Estado del push»). Cubren el modo `worktree` con la base sin red; el registro
-// con escritura y `--fetch` llegan en el commit siguiente (S3-c2).
+// local con escritura está en ensure_registry_test.go y `--fetch`, en ensure_fetch_test.go.
 
 func ensureOf(t *testing.T, cwd, change string) branch.Result {
 	t.Helper()
@@ -331,8 +331,9 @@ func TestEnsureTakesTheBaseFromTheRemoteTrackingReferenceIfItExists(t *testing.T
 
 // REQ-25.10, escenario «Sin `--fetch` no hay operaciones remotas», y matriz de amenazas
 // «Estado del push»: con un remoto configurado y un observador en el único punto que ejecuta
-// git, `ensure` no lanza ninguna operación remota y solo escribe con `git branch` y
-// `git worktree add`.
+// git, `ensure` sin `--fetch` no lanza ninguna operación remota (ni `fetch`: la lista
+// cerrada de subcomandos no lo incluye) y solo escribe con `git branch` y `git worktree
+// add`. Con `--fetch` la lista añade `fetch` y nada más (ensure_fetch_test.go).
 func TestEnsureLaunchesNoRemoteOperationWithoutFetch(t *testing.T) {
 	repo := embeddedCoreProject(t)
 	runGit(t, repo, "remote", "add", "origin", "https://ejemplo.invalid/repo.git")
@@ -417,6 +418,10 @@ func (f failingWriter) AddWorktree(ctx context.Context, dir, path, branchName st
 		return errors.New("fallo simulado de git al crear el worktree")
 	}
 	return f.real.AddWorktree(ctx, dir, path, branchName)
+}
+
+func (f failingWriter) Fetch(ctx context.Context, dir, remote string) error {
+	return f.real.Fetch(ctx, dir, remote)
 }
 
 // REQ-25.2 y D-05: un fallo de git durante la aplicación es `git_failed`, que nombra la

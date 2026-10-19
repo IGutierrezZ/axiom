@@ -49,13 +49,15 @@ type gitReader interface {
 
 var _ gitReader = (*gitcli.Git)(nil)
 
-// gitWriter son las escrituras de git que usa `ensure` (design D-05, fase 4): crear la
-// rama y desplegarla en un worktree, siempre con dir en el checkout principal. Es un
-// subconjunto del puerto branch.Git y, como las lecturas, crece con el primer llamador.
-// No tiene ningún método que publique: `axiom branch` nunca ejecuta `push` (REQ-25.1).
+// gitWriter son las operaciones de git que cambian algo y usa `ensure` (design D-05, fases
+// 3 y 4): crear la rama y desplegarla en un worktree, siempre con dir en el checkout
+// principal, y `Fetch`, la única operación remota (`ensure --fetch`, REQ-25.10). Es un
+// subconjunto del puerto branch.Git y, como las lecturas, crece con el primer llamador. No
+// tiene ningún método que publique: `axiom branch` nunca ejecuta `push` (REQ-25.1).
 type gitWriter interface {
 	CreateBranch(ctx context.Context, dir, name, startPoint string) error
 	AddWorktree(ctx context.Context, dir, path, branch string) error
+	Fetch(ctx context.Context, dir, remote string) error
 }
 
 var _ gitWriter = (*gitcli.Git)(nil)
@@ -97,6 +99,15 @@ type changeFacts struct {
 // los roles sellados, y los worktrees que git ya conoce en ellos. Devuelve el rechazo que
 // impide planificar, siempre antes de leer nada con el nombre del cambio.
 func (e *Engine) gather(ctx context.Context, operation, cwd, change string, lane branch.Lane) (changeFacts, *branch.Refusal) {
+	return e.gatherUnder(ctx, operation, cwd, change, lane, nil)
+}
+
+// gatherUnder es gather con un gancho opcional: lock, si no es nil, se llama con el git
+// common dir del repositorio del planning home en cuanto se conoce y antes de leer el
+// registro ni ningún otro hecho del cambio. `ensure` bloquea ahí el cambio (design D-05), de
+// modo que todo lo que lee y decide después lo hace con el cambio ya en exclusiva. Un
+// rechazo del gancho aborta la lectura.
+func (e *Engine) gatherUnder(ctx context.Context, operation, cwd, change string, lane branch.Lane, lock func(commonDir string) *branch.Refusal) (changeFacts, *branch.Refusal) {
 	if reason := directoryProblem(cwd); reason != "" {
 		return changeFacts{}, branch.UnusableDirectory(operation, reason)
 	}
@@ -121,6 +132,11 @@ func (e *Engine) gather(ctx context.Context, operation, cwd, change string, lane
 		workspaceRel = "."
 	}
 
+	if lock != nil {
+		if refusal := lock(planning.CommonDir); refusal != nil {
+			return changeFacts{}, refusal
+		}
+	}
 	// El registro vive en el git common dir del repositorio del planning home (REQ-25.14).
 	record, err := e.registry.Load(planning.CommonDir, lane, change)
 	if err != nil {
