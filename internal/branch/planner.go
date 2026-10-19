@@ -71,6 +71,10 @@ type PlanInput struct {
 	WorkspaceRel  string
 	PlanningRepo  RepoFacts
 	CodeRepos     []RepoFacts
+	// IncludedRepos son los repositorios que el carril ODD incluye bajo demanda con `--repo`
+	// (REQ-25.13): ODD no tiene roles y cada uno recibe solo la rama de la feature. Fuera del
+	// carril ODD no cuentan.
+	IncludedRepos []RepoFacts
 	Skipped       []SkippedPath
 	// HasKickoff dice si el cambio tiene `kickoff.yaml`; SealedRoles son sus roles.
 	// Antes del sellado el plan solo contiene la rama del cambio en el planning home.
@@ -197,9 +201,13 @@ type repoSelection struct {
 // selectRepositories elige los repositorios del plan. El del planning home entra
 // siempre; los demás solo cuando algún rol sellado (o `fullstack`) los toca, y solo
 // después del sellado y en el carril SDD: el carril ODD no divide en roles y, antes
-// del sellado, los roles del cambio aún no se conocen (S-1).
+// del sellado, los roles del cambio aún no se conocen (S-1). El carril ODD añade los
+// repositorios que se piden con `--repo`, sin roles.
 func selectRepositories(in PlanInput, sealed []string) []repoSelection {
 	selections := []repoSelection{{facts: in.PlanningRepo, planning: true, roles: touchingRoles(in.PlanningRepo, sealed)}}
+	if in.Lane == LaneODD {
+		return append(selections, includedSelections(in.IncludedRepos)...)
+	}
 	if len(sealed) == 0 {
 		return selections
 	}
@@ -214,6 +222,23 @@ func selectRepositories(in PlanInput, sealed []string) []repoSelection {
 		if roles := touchingRoles(facts, sealed); len(roles) > 0 {
 			selections = append(selections, repoSelection{facts: facts, roles: roles})
 		}
+	}
+	return selections
+}
+
+// includedSelections son los repositorios incluidos con `--repo` en el carril ODD, sin roles y
+// en orden estable (por nombre y, a igualdad, por raíz git).
+func includedSelections(included []RepoFacts) []repoSelection {
+	included = slices.Clone(included)
+	slices.SortFunc(included, func(a, b RepoFacts) int {
+		if byName := strings.Compare(repoName(a), repoName(b)); byName != 0 {
+			return byName
+		}
+		return strings.Compare(a.GitRoot, b.GitRoot)
+	})
+	selections := make([]repoSelection, 0, len(included))
+	for _, facts := range included {
+		selections = append(selections, repoSelection{facts: facts})
 	}
 	return selections
 }
