@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -275,10 +276,101 @@ func TestBranchEnsureUsageErrorsExitWithCode2(t *testing.T) {
 		if code != 0 || stderr != "" {
 			t.Errorf("código %d, stderr %q; se esperaba 0 y stderr vacío", code, stderr)
 		}
-		for _, want := range []string{"--change", "--lane", "--cwd", "--json", "worktree", "idempotente", "No ejecuta fetch, pull, push ni ls-remote"} {
+		for _, want := range []string{"--change", "--lane", "--cwd", "--json", "--fetch", "worktree", "idempotente", "Ninguna orden hace red sin --fetch", "git fetch origin", "Nunca ejecuta push"} {
 			if !strings.Contains(stdout, want) {
 				t.Errorf("la ayuda de ensure debe documentar %q:\n%s", want, stdout)
 			}
 		}
+		if strings.Contains(stdout, "No ejecuta fetch") {
+			t.Errorf("la ayuda ya no puede decir que ensure no ejecuta fetch: con --fetch sí lo hace:\n%s", stdout)
+		}
 	})
+}
+
+// newBranchRemote crea un remoto desnudo local, lo registra como `origin` en repo y publica
+// main; devuelve su ruta. Es preparación de la prueba: no hay red.
+func newBranchRemote(t *testing.T, repo string) string {
+	t.Helper()
+	remote := t.TempDir()
+	branchGitOutput(t, remote, "init", "-q", "--bare", "-b", "main")
+	branchGitOutput(t, repo, "remote", "add", "origin", remote)
+	branchGitOutput(t, repo, "push", "-q", "origin", "main")
+	return remote
+}
+
+// REQ-25.10, escenario «`--fetch` es explícito»: `ensure --fetch` ejecuta un fetch antes de
+// resolver la base, de modo que contra un remoto desnudo local que avanzó la base alcanza el
+// commit nuevo y el JSON devuelve `fetched: true`; sin la bandera, no.
+func TestBranchEnsureFetchReachesTheNewRemoteCommit(t *testing.T) {
+	repo := newBranchRepository(t)
+	remote := newBranchRemote(t, repo)
+	scratch := t.TempDir()
+	clone := filepath.Join(scratch, "clon")
+	branchGitOutput(t, scratch, "clone", "-q", remote, clone)
+	branchGitOutput(t, clone, "commit", "-q", "--allow-empty", "-m", "avance del remoto")
+	branchGitOutput(t, clone, "push", "-q", "origin", "main")
+	advanced := branchGitOutput(t, clone, "rev-parse", "HEAD")
+	stale := branchGitOutput(t, repo, "rev-parse", "refs/remotes/origin/main")
+
+	t.Run("sin --fetch", func(t *testing.T) {
+		other := newBranchRepository(t)
+		newBranchRemote(t, other)
+		code, stdout, stderr := runBranchCLI(t, "ensure", "--change", "x", "--json", "--cwd", other)
+		if code != 0 || stderr != "" {
+			t.Fatalf("código %d, stderr %q", code, stderr)
+		}
+		if base := onlyBranchRepository(t, decodeBranchResult(t, stdout)).Base; base == nil || base.Fetched || base.Source != "remote-tracking" {
+			t.Errorf("base = %+v, se esperaba la referencia remota local sin fetch", base)
+		}
+	})
+	t.Run("con --fetch", func(t *testing.T) {
+		code, stdout, stderr := runBranchCLI(t, "ensure", "--change", "x", "--fetch", "--json", "--cwd", repo)
+
+		if code != 0 || stderr != "" {
+			t.Fatalf("código %d, stderr %q; se esperaba 0\n%s", code, stderr, stdout)
+		}
+		base := onlyBranchRepository(t, decodeBranchResult(t, stdout)).Base
+		if base == nil || base.Ref != "origin/main" || base.SHA != advanced || base.SHA == stale || base.Source != "remote-tracking" || !base.Fetched {
+			t.Errorf("base = %+v, se esperaba origin/main en %s (no en %s) con fetched=true", base, advanced, stale)
+		}
+		if got := branchGitOutput(t, repo, "rev-parse", "refs/heads/feat/x"); got != advanced {
+			t.Errorf("feat/x apunta a %s, se esperaba %s", got, advanced)
+		}
+	})
+}
+
+// REQ-25.10, escenario «`--fetch` fallido no deja efectos»: contra un remoto que no existe,
+// código de salida 1, `fetch_failed` en JSON y en texto, y ni rama, ni worktree, ni registro.
+func TestBranchEnsureFetchFailedExitsWithCode1AndCreatesNothing(t *testing.T) {
+	repo := newBranchRepository(t)
+	branchGitOutput(t, repo, "remote", "add", "origin", filepath.Join(t.TempDir(), "no-existe.git"))
+
+	code, stdout, _ := runBranchCLI(t, "ensure", "--change", "x", "--fetch", "--json", "--cwd", repo)
+
+	if code != 1 {
+		t.Errorf("código de salida = %d, se esperaba 1", code)
+	}
+	result := decodeBranchResult(t, stdout)
+	if result.Status != "refused" || result.Code != "fetch_failed" || result.Message == "" || result.Details["remote"] != "origin" {
+		t.Errorf("status %q, code %q, mensaje %q, detalles %v; se esperaba refused / fetch_failed", result.Status, result.Code, result.Message, result.Details)
+	}
+	for _, want := range []string{"axiom branch ensure --change x --fetch --cwd", pathquote.Quote(repo)} {
+		if !strings.Contains(result.Continuation, want) {
+			t.Errorf("la continuación %q debe contener %q", result.Continuation, want)
+		}
+	}
+	code, out, stderr := runBranchCLI(t, "ensure", "--change", "x", "--fetch", "--cwd", repo)
+	if code != 1 || out != "" || !strings.Contains(stderr, "fetch_failed") || !strings.Contains(stderr, "Continuación:") {
+		t.Errorf("en texto: código %d, stdout %q, stderr %q; se esperaba 1, stdout vacío y el código y la continuación por stderr", code, out, stderr)
+	}
+	if got := branchGitOutput(t, repo, "branch", "--list", "feat/x"); got != "" {
+		t.Errorf("no debía crearse la rama: %q", got)
+	}
+	if got := branchGitOutput(t, repo, "worktree", "list", "--porcelain"); strings.Count(got, "worktree ") != 1 {
+		t.Errorf("no debía crearse ningún worktree:\n%s", got)
+	}
+	record := filepath.Join(filepath.FromSlash(branchGitOutput(t, repo, "rev-parse", "--absolute-git-dir")), "axiom", "branch", "v1", "sdd", "x.json")
+	if _, err := os.Stat(record); err == nil {
+		t.Errorf("no debía escribirse el registro %s", record)
+	}
 }

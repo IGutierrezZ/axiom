@@ -17,8 +17,9 @@ import (
 // ramas y worktrees de un cambio. Trae `status` y `ensure` sobre el motor
 // internal/branch/engine (planificador puro, operaciones de git y resultado
 // `axiom.branch-result/v1`); los demás verbos llegan con las rebanadas siguientes y la
-// ayuda lista solo los verbos que existen (decisión T3). Ningún verbo ejecuta `push`,
-// abre un PR ni hace operaciones remotas (REQ-25.1).
+// ayuda lista solo los verbos que existen (decisión T3). Ningún verbo ejecuta `push` ni
+// abre un PR, y ninguno hace operaciones remotas salvo `ensure --fetch`, que ejecuta
+// `git fetch origin` (REQ-25.1, REQ-25.10).
 
 const branchHelp = `Uso: axiom branch <subcomando> [argumentos]
 
@@ -61,7 +62,7 @@ Banderas:
   --json              Imprime el resultado como axiom.branch-result/v1
 `
 
-const branchEnsureHelp = `Uso: axiom branch ensure --change <nombre> [--lane sdd|odd] [--cwd <ruta>] [--json]
+const branchEnsureHelp = `Uso: axiom branch ensure --change <nombre> [--lane sdd|odd] [--fetch] [--cwd <ruta>] [--json]
 
 Crea lo que falta de las ramas de un cambio y de sus worktrees. En cada repositorio del
 plan crea la rama del cambio (<prefijo>/<cambio>; con dos o más roles sobre el mismo
@@ -86,12 +87,22 @@ y la orden es idempotente: repetirla con el mismo estado da el mismo resultado b
 byte y no cambia ni ramas ni worktrees. Si git falla a medias (git_failed), repetir la
 orden completa lo que falte.
 
-No ejecuta fetch, pull, push ni ls-remote ni abre ningún PR: trabaja solo con las
-referencias que ya hay en local.
+Guarda el plan en un registro local por cambio, dentro del git common dir del repositorio
+del proyecto (<git common dir>/axiom/branch/v1/<carril>/<cambio>.json), que solo se
+reescribe si cambia su contenido: es estado local derivado y no se versiona. Si lo borras,
+el repositorio no sufre y la siguiente ejecución lo reconstruye desde las ramas y los
+worktrees existentes. Un bloqueo por cambio impide dos ejecuciones a la vez (plan_conflict).
+
+Ninguna orden hace red sin --fetch: con él, ensure ejecuta git fetch origin una vez en cada
+repositorio del plan que tiene ramas, antes de resolver la base, y el resultado marca
+base.fetched; si el fetch falla (fetch_failed) no crea ninguna rama, worktree ni registro.
+Sin --fetch trabaja solo con las referencias que ya hay en local. Nunca ejecuta push, pull
+ni ls-remote ni abre ningún PR.
 
 Banderas:
   --change <nombre>   Nombre del cambio (obligatorio)
   --lane sdd|odd      Carril del cambio (por defecto, sdd)
+  --fetch             Ejecuta git fetch origin en cada repositorio del plan antes de resolver la base
   --cwd <ruta>        Directorio de partida (por defecto, el directorio de trabajo del proceso)
   --json              Imprime el resultado como axiom.branch-result/v1
 
@@ -126,6 +137,7 @@ func runBranchEnsure(args []string, stdout, stderr io.Writer) int {
 	flags.SetOutput(io.Discard)
 	change := flags.String("change", "", "nombre del cambio")
 	lane := flags.String("lane", string(branch.LaneSDD), "carril del cambio: sdd u odd")
+	fetch := flags.Bool("fetch", false, "ejecuta git fetch origin en cada repositorio del plan antes de resolver la base")
 	cwd := flags.String("cwd", ".", "directorio de partida")
 	asJSON := flags.Bool("json", false, "imprime el resultado como axiom.branch-result/v1")
 	if err := flags.Parse(args); err != nil {
@@ -153,7 +165,7 @@ func runBranchEnsure(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintf(stderr, "Error: no se pudo resolver --cwd '%s' (%v). Indica una ruta absoluta con `axiom branch ensure --change <nombre> --cwd <ruta>`.\n", *cwd, err)
 		return branch.ExitUsage
 	}
-	result := engine.Default().Ensure(context.Background(), engine.EnsureRequest{CWD: dir, Change: *change, Lane: branch.Lane(*lane)})
+	result := engine.Default().Ensure(context.Background(), engine.EnsureRequest{CWD: dir, Change: *change, Lane: branch.Lane(*lane), Fetch: *fetch})
 	return writeBranchResult(result, *asJSON, stdout, stderr)
 }
 

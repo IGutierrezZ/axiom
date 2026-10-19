@@ -12,6 +12,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/branch"
 	"github.com/IGutierrezZ/axiom/v3/internal/gitcommon"
@@ -521,6 +522,238 @@ func TestListNeverLeavesTheRegistryFolder(t *testing.T) {
 			var failure *FileError
 			if errors.As(err, &failure) {
 				t.Errorf("un argumento inválido no es un fallo de fichero: %v", err)
+			}
+		})
+	}
+}
+
+// REQ-25.14 y design D-07: `Save` escribe el registro con una serialización estable (JSON
+// con sangrado de dos espacios y `\n`, sin `\r` ni marcas de tiempo), en la ruta que fija el
+// diseño, sin dejar ficheros temporales, y lo que escribe lo lee `Load` igual.
+func TestSaveWritesTheStableSerializationWithNewlines(t *testing.T) {
+	root, commonDir := newRepository(t)
+	want := validRecord(root, commonDir)
+
+	if err := New().Save(commonDir, want); err != nil {
+		t.Fatalf("Save: %v", err)
+	}
+
+	path := recordFile(commonDir, "sdd", "x")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("el registro debe estar en %s: %v", path, err)
+	}
+	expected, err := json.MarshalIndent(want, "", "  ")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(data) != string(expected)+"\n" {
+		t.Errorf("serialización:\n%s\nse esperaba JSON con sangrado de dos espacios y un único `\\n` final:\n%s\n", data, expected)
+	}
+	if strings.Contains(string(data), "\r") {
+		t.Errorf("el registro se escribe con `\\n`, también en Windows: %q", data)
+	}
+	got, err := load(t, commonDir, branch.LaneSDD, "x")
+	if err != nil || !reflect.DeepEqual(got, &want) {
+		t.Fatalf("Load tras Save = %+v, %v; se esperaba %+v", got, err, &want)
+	}
+	entries, err := os.ReadDir(filepath.Dir(path))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) != 1 || entries[0].Name() != "x.json" {
+		var names []string
+		for _, entry := range entries {
+			names = append(names, entry.Name())
+		}
+		t.Errorf("la carpeta del registro solo debe tener x.json, tiene %v (sin temporales)", names)
+	}
+}
+
+// design D-05 (fase 5): «solo se escribe si cambian sus bytes». Un registro idéntico no
+// toca el fichero (su fecha de modificación no cambia); uno distinto lo reemplaza.
+func TestSaveDoesNotWriteWhenTheBytesDoNotChange(t *testing.T) {
+	root, commonDir := newRepository(t)
+	record := validRecord(root, commonDir)
+	if err := New().Save(commonDir, record); err != nil {
+		t.Fatalf("Save: %v", err)
+	}
+	path := recordFile(commonDir, "sdd", "x")
+	old := time.Date(2001, time.February, 3, 4, 5, 6, 0, time.UTC)
+	if err := os.Chtimes(path, old, old); err != nil {
+		t.Fatal(err)
+	}
+
+	t.Run("bytes idénticos", func(t *testing.T) {
+		if err := New().Save(commonDir, record); err != nil {
+			t.Fatalf("Save: %v", err)
+		}
+		info, err := os.Stat(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !info.ModTime().Equal(old) {
+			t.Errorf("fecha de modificación %v, se esperaba %v: un registro idéntico no se reescribe", info.ModTime(), old)
+		}
+	})
+	t.Run("bytes distintos", func(t *testing.T) {
+		changed := record
+		changed.Mode, changed.ModeSource = branch.ModeInPlace, branch.ModeSourceFlag
+		if err := New().Save(commonDir, changed); err != nil {
+			t.Fatalf("Save: %v", err)
+		}
+		info, err := os.Stat(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if info.ModTime().Equal(old) {
+			t.Error("un registro distinto debe reescribir el fichero")
+		}
+		got, err := load(t, commonDir, branch.LaneSDD, "x")
+		if err != nil || got == nil || got.Mode != branch.ModeInPlace || got.ModeSource != branch.ModeSourceFlag {
+			t.Fatalf("Load = %+v, %v; se esperaba el registro in_place", got, err)
+		}
+	})
+}
+
+// El registro es estado derivado y `Load` no lo interpreta con indulgencia: `Save` tampoco
+// escribe nada que `Load` rechazaría, y un rechazo no crea ni la carpeta del registro.
+func TestSaveRefusesARecordThatLoadWouldRejectWithoutWritingAnything(t *testing.T) {
+	root, commonDir := newRepository(t)
+	tests := []struct {
+		name      string
+		commonDir string
+		mutate    func(*branch.Record)
+	}{
+		{"esquema desconocido", commonDir, func(r *branch.Record) { r.Schema = "otro/v9" }},
+		{"carril inválido", commonDir, func(r *branch.Record) { r.Lane = "xyz" }},
+		{"cambio que no puede nombrar un registro", commonDir, func(r *branch.Record) { r.Change = "a b" }},
+		{"modo sin materializar", commonDir, func(r *branch.Record) { r.Mode = branch.ModeAsk }},
+		{"ruta del worktree relativa", commonDir, func(r *branch.Record) { r.Repositories[0].Branches[0].Worktree = "x/axiom" }},
+		{"git common dir relativo", ".git", func(*branch.Record) {}},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			record := validRecord(root, commonDir)
+			tc.mutate(&record)
+
+			if err := New().Save(tc.commonDir, record); err == nil {
+				t.Fatal("Save debía rechazar el registro")
+			}
+			if _, err := os.Stat(filepath.Join(commonDir, "axiom")); !errors.Is(err, fs.ErrNotExist) {
+				t.Errorf("un registro rechazado no debe crear nada (%v)", err)
+			}
+		})
+	}
+}
+
+// design D-07, «Coexistencia con gentle-ai/»: espacios de nombres separados. Guardar y
+// bloquear el registro nunca toca `<git common dir>/gentle-ai/`.
+func TestTheRegistryNeverTouchesTheGentleAIFolder(t *testing.T) {
+	root, commonDir := newRepository(t)
+	lineage := filepath.Join(commonDir, "gentle-ai", "review-transactions", "linaje-1", "estado.json")
+	writeFile(t, lineage, `{"linaje":"abierto"}`)
+	old := time.Date(2002, time.March, 4, 5, 6, 7, 0, time.UTC)
+	if err := os.Chtimes(lineage, old, old); err != nil {
+		t.Fatal(err)
+	}
+
+	unlock, err := New().Lock(context.Background(), commonDir, branch.LaneSDD, "x")
+	if err != nil {
+		t.Fatalf("Lock: %v", err)
+	}
+	saveErr := New().Save(commonDir, validRecord(root, commonDir))
+	unlock()
+	if saveErr != nil {
+		t.Fatalf("Save: %v", saveErr)
+	}
+
+	data, err := os.ReadFile(lineage)
+	if err != nil || string(data) != `{"linaje":"abierto"}` {
+		t.Fatalf("el linaje de RDD cambió: %q, %v", data, err)
+	}
+	if info, err := os.Stat(lineage); err != nil || !info.ModTime().Equal(old) {
+		t.Errorf("el linaje de RDD no debe tocarse (%v, %v)", info, err)
+	}
+	entries, err := os.ReadDir(filepath.Join(commonDir, "gentle-ai"))
+	if err != nil || len(entries) != 1 || entries[0].Name() != "review-transactions" {
+		t.Errorf("gentle-ai/ no debe ganar ni perder entradas: %v, %v", entries, err)
+	}
+	if _, err := os.Stat(recordFile(commonDir, "sdd", "x")); err != nil {
+		t.Errorf("el registro vive en axiom/branch/v1: %v", err)
+	}
+}
+
+// REQ-25.14 y design D-05: el bloqueo es exclusivo por cambio y carril, no es reentrante
+// (un segundo `ensure` del mismo cambio lo encuentra ocupado), no bloquea otros cambios ni
+// el otro carril, se libera al terminar y liberarlo dos veces es inocuo.
+func TestLockIsExclusivePerChangeAndLane(t *testing.T) {
+	_, commonDir := newRepository(t)
+	store := New()
+
+	unlock, err := store.Lock(context.Background(), commonDir, branch.LaneSDD, "x")
+	if err != nil {
+		t.Fatalf("Lock: %v", err)
+	}
+
+	if _, err := store.Lock(context.Background(), commonDir, branch.LaneSDD, "x"); !errors.Is(err, ErrBusy) {
+		t.Errorf("segundo Lock del mismo cambio = %v; se esperaba ErrBusy", err)
+	}
+	for name, other := range map[string]func() (func(), error){
+		"otro cambio": func() (func(), error) { return store.Lock(context.Background(), commonDir, branch.LaneSDD, "y") },
+		"otro carril": func() (func(), error) { return store.Lock(context.Background(), commonDir, branch.LaneODD, "x") },
+	} {
+		release, err := other()
+		if err != nil {
+			t.Errorf("%s: el bloqueo de x/sdd no debe bloquearlo: %v", name, err)
+			continue
+		}
+		release()
+	}
+
+	unlock()
+	unlock()
+	again, err := store.Lock(context.Background(), commonDir, branch.LaneSDD, "x")
+	if err != nil {
+		t.Fatalf("tras liberar, el cambio vuelve a poder bloquearse: %v", err)
+	}
+	again()
+	if _, err := os.Stat(filepath.Join(commonDir, "axiom", "branch", "v1", "sdd", "x.lock")); err != nil {
+		t.Errorf("el bloqueo es `<cambio>.lock` junto al registro: %v", err)
+	}
+}
+
+// El bloqueo, como el resto del almacén, nunca sale de la carpeta del registro y rechaza
+// sin crear nada una clave que no puede componerla o un contexto ya cancelado.
+func TestLockRefusesAKeyThatCannotNameARecordWithoutCreatingAnything(t *testing.T) {
+	_, commonDir := newRepository(t)
+	cancelled, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	for _, tc := range []struct {
+		name      string
+		ctx       context.Context
+		commonDir string
+		lane      branch.Lane
+		change    string
+	}{
+		{"cambio con espacios", context.Background(), commonDir, branch.LaneSDD, "a b"},
+		{"cambio que sube de carpeta", context.Background(), commonDir, branch.LaneSDD, "../x"},
+		{"carril desconocido", context.Background(), commonDir, "fuera", "x"},
+		{"git common dir relativo", context.Background(), ".git", branch.LaneSDD, "x"},
+		{"contexto cancelado", cancelled, commonDir, branch.LaneSDD, "x"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			unlock, err := New().Lock(tc.ctx, tc.commonDir, tc.lane, tc.change)
+			if err == nil {
+				unlock()
+				t.Fatal("Lock debía rechazar la petición")
+			}
+			if errors.Is(err, ErrBusy) {
+				t.Errorf("una clave inválida no es un bloqueo ocupado: %v", err)
+			}
+			if _, statErr := os.Stat(filepath.Join(commonDir, "axiom")); !errors.Is(statErr, fs.ErrNotExist) {
+				t.Errorf("un rechazo no debe crear nada (%v)", statErr)
 			}
 		})
 	}

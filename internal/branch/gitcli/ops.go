@@ -2,9 +2,10 @@
 // D-01): el adaptador de los puertos de `internal/branch` sobre gitcommon.Run, el único
 // punto que ejecuta git (REQ-25.1, G-7). Las lecturas usan una lista cerrada de
 // subcomandos (`rev-parse`, `worktree list`, `status`, `rev-list` y `ls-tree`) y las
-// escrituras de `ensure` son solo `branch` y `worktree add`; ninguna es remota. El resto
-// de escrituras de `done` y las lecturas que faltan llegan con el primer llamador que las
-// usa.
+// escrituras de `ensure` son solo `branch` y `worktree add`; ninguna es remota. La única
+// operación remota es Fetch (`git fetch origin`, `ensure --fetch`, REQ-25.10): el puerto no
+// tiene ningún método que publique. El resto de escrituras de `done` y las lecturas que
+// faltan llegan con el primer llamador que las usa.
 //
 // Los textos de error están en castellano y nombran el comando de git y el directorio.
 package gitcli
@@ -269,6 +270,19 @@ func (*Git) AddWorktree(ctx context.Context, dir, path, branchName string) error
 		return err
 	}
 	return runWrite(ctx, dir, "worktree", "add", path, branchName)
+}
+
+// Fetch trae las referencias del remoto (`git fetch <remote>`, sin `--prune`): es la única
+// operación remota del motor y solo la lanza `ensure --fetch` (REQ-25.10, design D-06).
+// Actualiza las referencias remotas locales (`refs/remotes/<remote>/*`) y no mueve la rama
+// actual ni toca el árbol de trabajo. dir es el checkout principal. Un fallo (remoto
+// inexistente o inalcanzable) devuelve un error en castellano con el comando, el directorio
+// y el resumen de git.
+func (*Git) Fetch(ctx context.Context, dir, remote string) error {
+	if err := plainArgument(remote); err != nil {
+		return err
+	}
+	return runWrite(ctx, dir, "fetch", remote)
 }
 
 // runWrite ejecuta una escritura de git y devuelve un error en castellano, con el comando,

@@ -5,12 +5,15 @@
 // git common dir del repositorio del planning home, de modo que el checkout principal y
 // cualquier worktree enlazado lo ven igual, y borrarlo no daña el repositorio.
 //
-// Esta rebanada trae solo la lectura (`Load` y `List`); quien escribe el registro es
-// `ensure`, que llega con las rebanadas siguientes. El paquete no ejecuta procesos: el
-// motor obtiene el common dir con git y se lo entrega.
+// Trae la lectura (`Load` y `List`) y, desde `ensure`, la escritura (`Save`, que no toca el
+// fichero si los bytes no cambian) y el bloqueo exclusivo por cambio (`Lock`). El borrado
+// llega con `done`, su primer llamador. El paquete no ejecuta procesos: el motor obtiene el
+// common dir con git y se lo entrega, y reconstruye el registro desde el estado de git.
 package registry
 
 import (
+	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -19,16 +22,123 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"sync"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/branch"
 	"github.com/IGutierrezZ/axiom/v3/internal/gitref"
+	"github.com/IGutierrezZ/axiom/v3/internal/reviewtransaction"
 )
 
-// Store lee el registro local.
+// Store lee y escribe el registro local.
 type Store struct{}
 
-// New devuelve el lector del registro local.
+// New devuelve el almacén del registro local.
 func New() *Store { return &Store{} }
+
+// ErrBusy dice que otra ejecución de `axiom branch` tiene bloqueado el cambio (`Lock`). El
+// motor lo traduce a `plan_conflict` con este mismo texto (design D-05).
+var ErrBusy = errors.New("otra ejecución de `axiom branch` está modificando el cambio")
+
+// folder es la carpeta del registro de un carril: `<common dir>/axiom/branch/v1/<carril>`.
+// El registro y su bloqueo viven aquí y nunca bajo `<common dir>/gentle-ai/` (design D-07).
+func folder(commonDir string, lane branch.Lane) string {
+	return filepath.Join(commonDir, "axiom", "branch", "v1", string(lane))
+}
+
+// Lock bloquea en exclusiva el cambio y el carril dados, con `<cambio>.lock` junto al
+// registro, mediante el bloqueo de ficheros de reviewtransaction. No espera: si otra
+// ejecución lo tiene, devuelve ErrBusy. unlock lo libera y puede llamarse más de una vez.
+// Una clave que no puede componer la ruta de un registro, o un contexto ya cancelado,
+// devuelven un error corriente sin crear nada.
+func (*Store) Lock(ctx context.Context, commonDir string, lane branch.Lane, change string) (unlock func(), err error) {
+	if err := validateKey(commonDir, lane, change); err != nil {
+		return nil, err
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	path := filepath.Join(folder(commonDir, lane), change+".lock")
+	lock, err := reviewtransaction.AcquireAuthorityFileLock(path)
+	switch {
+	case errors.Is(err, reviewtransaction.ErrStoreLockContended):
+		return nil, ErrBusy
+	case err != nil:
+		return nil, &WriteError{Path: path, Cause: fmt.Errorf("no se pudo bloquear el cambio: %w", err)}
+	}
+	var once sync.Once
+	return func() { once.Do(func() { _ = lock.Release() }) }, nil
+}
+
+// WriteError es el fallo de escribir o bloquear un fichero del registro: el directorio no se
+// puede crear o el fichero no se puede escribir ni publicar. El motor lo traduce a
+// `config_invalid`: el registro es estado local derivado y sin él `ensure` lo reconstruye.
+type WriteError struct {
+	Path  string // absoluta
+	Cause error
+}
+
+func (e *WriteError) Error() string {
+	return fmt.Sprintf("no se pudo escribir el registro local %s: %v", e.Path, e.Cause)
+}
+
+func (e *WriteError) Unwrap() error { return e.Cause }
+
+// Save guarda el registro del cambio en `<common dir>/axiom/branch/v1/<carril>/<cambio>.json`
+// con una serialización estable (JSON con sangrado de dos espacios, `\n` y sin marcas de
+// tiempo). Si el fichero ya tiene esos mismos bytes no lo toca; si no, lo publica de forma
+// atómica con un temporal de la misma carpeta (las primitivas de kickoff.AppendGate:
+// ReplaceFileAtomic y SyncReviewDirectory). Rechaza, sin crear nada, un registro que Load
+// no aceptaría. Quien llama tiene el cambio bloqueado con Lock.
+func (*Store) Save(commonDir string, record branch.Record) error {
+	if err := validateKey(commonDir, record.Lane, record.Change); err != nil {
+		return err
+	}
+	if err := validate(record, record.Lane, record.Change); err != nil {
+		return fmt.Errorf("el registro de %q no es válido: %w", record.Change, err)
+	}
+	payload, err := json.MarshalIndent(record, "", "  ")
+	if err != nil {
+		return fmt.Errorf("serializar el registro de %q: %w", record.Change, err)
+	}
+	payload = append(payload, '\n')
+
+	dir := folder(commonDir, record.Lane)
+	path := filepath.Join(dir, record.Change+".json")
+	switch current, err := os.ReadFile(path); {
+	case err == nil && bytes.Equal(current, payload):
+		return nil
+	case err != nil && !errors.Is(err, fs.ErrNotExist):
+		return &WriteError{Path: path, Cause: err}
+	}
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return &WriteError{Path: dir, Cause: err}
+	}
+	// El temporal no acaba en `.json`: List solo cuenta los `<cambio>.json`.
+	temporary, err := os.CreateTemp(dir, "."+record.Change+"-*.tmp")
+	if err != nil {
+		return &WriteError{Path: path, Cause: err}
+	}
+	temporaryPath := temporary.Name()
+	defer func() { _ = os.Remove(temporaryPath) }()
+	if _, err := temporary.Write(payload); err != nil {
+		_ = temporary.Close()
+		return &WriteError{Path: path, Cause: err}
+	}
+	if err := temporary.Sync(); err != nil {
+		_ = temporary.Close()
+		return &WriteError{Path: path, Cause: err}
+	}
+	if err := temporary.Close(); err != nil {
+		return &WriteError{Path: path, Cause: err}
+	}
+	if err := reviewtransaction.ReplaceFileAtomic(temporaryPath, path); err != nil {
+		return &WriteError{Path: path, Cause: err}
+	}
+	if err := reviewtransaction.SyncReviewDirectory(dir); err != nil {
+		return &WriteError{Path: dir, Cause: err}
+	}
+	return nil
+}
 
 // FileError es el fallo de un fichero del registro que existe: no se puede leer, no es
 // un JSON válido o su contenido no es coherente con el esquema o con el cambio al que
@@ -54,7 +164,7 @@ func (*Store) Load(commonDir string, lane branch.Lane, change string) (*branch.R
 	if err := validateKey(commonDir, lane, change); err != nil {
 		return nil, err
 	}
-	path := filepath.Join(commonDir, "axiom", "branch", "v1", string(lane), change+".json")
+	path := filepath.Join(folder(commonDir, lane), change+".json")
 	data, err := os.ReadFile(path)
 	switch {
 	case errors.Is(err, fs.ErrNotExist):
@@ -84,7 +194,7 @@ func (s *Store) List(commonDir string, lane branch.Lane) ([]branch.Record, error
 	if err := validateScope(commonDir, lane); err != nil {
 		return nil, err
 	}
-	dir := filepath.Join(commonDir, "axiom", "branch", "v1", string(lane))
+	dir := folder(commonDir, lane)
 	entries, err := os.ReadDir(dir)
 	switch {
 	case errors.Is(err, fs.ErrNotExist):

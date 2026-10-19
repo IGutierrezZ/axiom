@@ -58,6 +58,47 @@ func BranchCheckedOutElsewhere(operation, change, master string, repo RepoPlan, 
 	}
 }
 
+// ChangeLocked es el rechazo `plan_conflict` de un cambio que otra ejecución de `axiom
+// branch` tiene bloqueado (design D-05): el bloqueo exclusivo por cambio impide dos `ensure`
+// a la vez. No se ha tocado nada; la continuación es esperar y repetir.
+func ChangeLocked(operation, change, master string) *Refusal {
+	return &Refusal{
+		Code:         CodePlanConflict,
+		Message:      fmt.Sprintf("otra ejecución de `axiom branch` está modificando el cambio %s: no se ha tocado nada", change),
+		Continuation: fmt.Sprintf("espera a que termine esa ejecución y repite `%s`", repeatContinuation(operation, change, master)),
+		Details:      map[string]string{"change": change},
+	}
+}
+
+// RegistryWriteFailed es el rechazo `config_invalid` de un registro local que no se puede
+// bloquear o escribir (design D-07: es estado local derivado en el git common dir). path es
+// el fichero o la carpeta que falló. Nada del plan queda a medias: si ya se aplicó, repetir
+// `ensure` reconstruye el registro desde el estado de git.
+func RegistryWriteFailed(operation, change, master, path string, err error) *Refusal {
+	return &Refusal{
+		Code:         CodeConfigInvalid,
+		Message:      err.Error(),
+		Continuation: fmt.Sprintf("comprueba que puedes escribir en %s (el git common dir del repositorio) y repite `%s`: reconstruye el registro desde el estado de git", pathquote.Quote(path), repeatContinuation(operation, change, master)),
+		Details:      map[string]string{"path": path},
+	}
+}
+
+// FetchFailed es el rechazo `fetch_failed` de `--fetch` (REQ-25.10, supuesto S-8): el
+// `git fetch <remote>` de un repositorio del plan falló. Se lanza durante la comprobación
+// sin efectos, de modo que no se ha creado ninguna rama, worktree ni registro. Nombra el
+// repositorio y el remoto, resume el error de git y ofrece las dos salidas: reintentar con
+// `--fetch` tras revisar el remoto, o seguir sin red con las referencias locales.
+func FetchFailed(operation, change, master string, repo RepoPlan, remote string, err error) *Refusal {
+	return &Refusal{
+		Code: CodeFetchFailed,
+		Message: fmt.Sprintf("`git fetch %s` falló en el repositorio %s (%s): %v; no se ha creado ninguna rama, worktree ni registro",
+			remote, repo.Name, repo.GitRoot, err),
+		Continuation: fmt.Sprintf("comprueba el remoto con `git -C %s remote -v` y repite `axiom branch %s --change %s --fetch --cwd %s`, o repite `%s` sin --fetch para trabajar con las referencias que ya hay en local",
+			pathquote.Quote(repo.GitRoot), operation, change, pathquote.Quote(master), repeatContinuation(operation, change, master)),
+		Details: map[string]string{"repository": repo.GitRoot, "remote": remote, "summary": err.Error()},
+	}
+}
+
 // PlannedPathConflict es el rechazo `plan_conflict` de una ruta de worktree planificada
 // que no está libre para su rama (design D-05, fase 3): la ocupa un worktree con otra
 // rama, un worktree cuyo directorio ya no existe o un directorio con contenido. message

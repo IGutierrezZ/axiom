@@ -188,3 +188,77 @@ func TestWritesLaunchOnlyBranchAndWorktreeAdd(t *testing.T) {
 		}
 	}
 }
+
+// Fetch (INC-25, S3.11) es la única operación remota del puerto: `git fetch origin` desde el
+// directorio que recibe, sin `--prune`, y solo trae referencias: ni mueve la rama actual ni
+// toca el árbol de trabajo.
+func TestFetchBringsTheRemoteCommitsLaunchingOnlyFetchOrigin(t *testing.T) {
+	ctx := context.Background()
+	repo := newRepository(t)
+	remote := t.TempDir()
+	runGit(t, remote, "init", "-q", "--bare", "-b", "main")
+	runGit(t, repo, "remote", "add", "origin", remote)
+	runGit(t, repo, "push", "-q", "origin", "main")
+	scratch := t.TempDir()
+	clone := filepath.Join(scratch, "clon")
+	runGit(t, scratch, "clone", "-q", remote, clone)
+	commit(t, clone, "avance del remoto")
+	runGit(t, clone, "push", "-q", "origin", "main")
+	advanced := runGit(t, clone, "rev-parse", "HEAD")
+	local := runGit(t, repo, "rev-parse", "main")
+	seen := observe(t)
+
+	if err := New().Fetch(ctx, repo, "origin"); err != nil {
+		t.Fatalf("Fetch: %v", err)
+	}
+
+	if got := runGit(t, repo, "rev-parse", "refs/remotes/origin/main"); got != advanced {
+		t.Errorf("origin/main apunta a %s, se esperaba el commit del remoto %s", got, advanced)
+	}
+	if got := runGit(t, repo, "rev-parse", "main"); got != local {
+		t.Errorf("fetch no mueve la rama local: main pasó de %s a %s", local, got)
+	}
+	if len(*seen) != 1 || (*seen)[0][0] != repo || strings.Join((*seen)[0][1:], " ") != "fetch origin" {
+		t.Errorf("se esperaba una única invocación `git fetch origin` en %s, el observador vio %v", repo, *seen)
+	}
+}
+
+// Un fetch que falla devuelve un error en castellano que nombra el comando, el directorio y
+// el resumen de git: un remoto que no existe y un repositorio sin `origin`.
+func TestFetchFailureNamesTheCommandAndTheDirectory(t *testing.T) {
+	ctx := context.Background()
+	t.Run("remoto que no existe", func(t *testing.T) {
+		repo := newRepository(t)
+		runGit(t, repo, "remote", "add", "origin", filepath.Join(t.TempDir(), "no-existe.git"))
+
+		err := New().Fetch(ctx, repo, "origin")
+
+		if err == nil || !strings.Contains(err.Error(), "git fetch origin") || !strings.Contains(err.Error(), repo) {
+			t.Errorf("error = %v; debía nombrar `git fetch origin` y %s", err, repo)
+		}
+	})
+	t.Run("sin remoto origin", func(t *testing.T) {
+		repo := newRepository(t)
+
+		err := New().Fetch(ctx, repo, "origin")
+
+		if err == nil || !strings.Contains(err.Error(), "git fetch origin") {
+			t.Errorf("error = %v; debía nombrar `git fetch origin`", err)
+		}
+	})
+}
+
+// Fetch rechaza, antes de lanzar nada, un remoto que git leería como una opción o vacío.
+func TestFetchRejectsARemoteThatLooksLikeAnOption(t *testing.T) {
+	repo := newRepository(t)
+	seen := observe(t)
+
+	for name, remote := range map[string]string{"opción": "--all", "guion": "-v", "vacío": ""} {
+		if err := New().Fetch(context.Background(), repo, remote); err == nil {
+			t.Errorf("%s: debía rechazarse", name)
+		}
+	}
+	if len(*seen) != 0 {
+		t.Errorf("el rechazo es previo a lanzar git, pero el observador vio %v", *seen)
+	}
+}
