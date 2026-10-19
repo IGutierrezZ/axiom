@@ -285,30 +285,6 @@ func TestEnsureRejectsAModeThatIsNotAnAnswer(t *testing.T) {
 	wantNothingCreated(t, repo, state, "x")
 }
 
-// Transitorio dentro de la cadena de PR de S4: el modo `in_place` llega con S4-c2. Hasta
-// entonces `ensure` lo rechaza sin crear nada en vez de materializar un worktree que el modo
-// no pide ni registrar un modo que no aplicó.
-func TestEnsureInPlaceModeIsNotAvailableYetAndCreatesNothing(t *testing.T) {
-	repo := embeddedCoreProject(t)
-	state := repositoryState(t, repo)
-
-	for name, request := range map[string]struct {
-		prefs branch.Prefs
-		mode  branch.Mode
-	}{"por el hub": {hubInPlace, ""}, "por --mode": {hubWorktree, branch.ModeInPlace}} {
-		t.Run(name, func(t *testing.T) {
-			result := ensureWith(t, request.prefs, EnsureRequest{CWD: repo, Change: "x", Mode: request.mode})
-
-			wantRefusal(t, result, branch.CodePlanConflict, branch.StatusRefused)
-			if !strings.Contains(result.Message, "in_place") || !strings.Contains(result.Continuation, "--mode worktree") {
-				t.Errorf("mensaje %q y continuación %q deben nombrar in_place y ofrecer --mode worktree", result.Message, result.Continuation)
-			}
-			wantNothingCreated(t, repo, state, "x")
-			wantNoRegistryFile(t, repo, "x")
-		})
-	}
-}
-
 // useRealHub aísla HOME y USERPROFILE y devuelve el gestor del hub que usa `Default()`.
 func useRealHub(t *testing.T) *hub.Manager {
 	t.Helper()

@@ -5,6 +5,7 @@ import (
 
 	"github.com/IGutierrezZ/axiom/v3/internal/branch"
 	"github.com/IGutierrezZ/axiom/v3/internal/branch/registry"
+	"github.com/IGutierrezZ/axiom/v3/internal/pathidentity"
 )
 
 // El registro local en `ensure` (design D-05 fases 5 y 6, D-07, REQ-25.14): `ensure` lo
@@ -43,6 +44,13 @@ func newRecord(facts changeFacts, plan branch.ChangePlan, mode workMode) branch.
 				deployed[entry.Branch] = entry.Path
 			}
 		}
+		// En `in_place` la rama no tiene worktree: está desplegada en el propio repositorio,
+		// que es el primer worktree de git (el checkout principal), o no lo está. Una rama de
+		// rol que otra herramienta tenga en un worktree ajeno no es de este registro.
+		var main string
+		if listed := facts.worktrees[repo.GitRoot]; len(listed) > 0 {
+			main = listed[0].Path
+		}
 		registered := branch.RecordRepo{
 			Name:      repo.Name,
 			GitRoot:   repo.GitRoot,
@@ -51,12 +59,13 @@ func newRecord(facts changeFacts, plan branch.ChangePlan, mode workMode) branch.
 			Branches:  make([]branch.RecordBranch, 0, len(repo.Branches)),
 		}
 		for _, planned := range repo.Branches {
-			registered.Branches = append(registered.Branches, branch.RecordBranch{
-				Name:     planned.Name,
-				Kind:     planned.Kind,
-				RoleID:   planned.RoleID,
-				Worktree: deployed[planned.Name],
-			})
+			recorded := branch.RecordBranch{Name: planned.Name, Kind: planned.Kind, RoleID: planned.RoleID}
+			if mode.mode == branch.ModeInPlace {
+				recorded.InPlace = deployed[planned.Name] != "" && pathidentity.SameDirectory(deployed[planned.Name], main)
+			} else {
+				recorded.Worktree = deployed[planned.Name]
+			}
+			registered.Branches = append(registered.Branches, recorded)
 		}
 		record.Repositories = append(record.Repositories, registered)
 	}

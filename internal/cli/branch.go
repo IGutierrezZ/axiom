@@ -95,7 +95,14 @@ plan_conflict. Con el modo ask y sin respuesta registrada, ensure devuelve decis
 (código de salida 1) con la pregunta y las dos órdenes posibles, sin crear nada (tampoco el
 registro) y sin leer la entrada estándar: ensure no espera entrada, quien invoca presenta la
 pregunta y repite la orden con --mode. La respuesta se registra por cambio y no modifica tus
-preferencias. El modo in_place todavía no está disponible: se rechaza con plan_conflict.
+preferencias.
+
+En modo in_place no hay worktrees: ensure crea las ramas igual y despliega la del cambio
+(la de seguimiento, si hay ramas de rol) con git switch en el propio repositorio. Antes de
+cambiar de rama exige el árbol limpio, sin cambios con stage, sin stage ni ficheros sin
+seguimiento (los ignorados cuentan como limpios): si no, rechaza con dirty_worktree sin
+modificar nada y nombra los ficheros. Si el repositorio ya está en la rama del cambio no
+cambia de rama y no mira la suciedad.
 
 Guarda el plan en un registro local por cambio, dentro del git common dir del repositorio
 del proyecto (<git common dir>/axiom/branch/v1/<carril>/<cambio>.json), que solo se

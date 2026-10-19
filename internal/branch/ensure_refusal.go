@@ -2,6 +2,7 @@ package branch
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/pathquote"
 )
@@ -185,14 +186,40 @@ func InvalidMode(operation, change, cwd string, lane Lane, mode Mode) *Refusal {
 	}
 }
 
-// InPlaceNotAvailable es el rechazo `plan_conflict` del modo `in_place` mientras `ensure` no
-// lo materializa (S4-c2): en vez de crear un worktree que el modo no pide, o de registrar un
-// modo que no se aplicó, no toca nada y ofrece el modo `worktree`.
-func InPlaceNotAvailable(operation, change, cwd string, lane Lane) *Refusal {
+// maxDirtyPathsListed es cuántos ficheros sin confirmar nombra el mensaje de `dirty_worktree`
+// antes de resumir el resto: la lista completa va en Details.
+const maxDirtyPathsListed = 10
+
+// DirtyWorktree es el rechazo `dirty_worktree` de `ensure` en modo `in_place` (REQ-25.9, matriz
+// de amenazas «Estado del commit»): el repositorio tiene cambios sin confirmar (ficheros
+// rastreados modificados, con o sin stage, o ficheros sin seguimiento no ignorados) y cambiar
+// de rama los pondría en riesgo. Se decide en la comprobación sin efectos, de modo que no se ha
+// modificado nada: ni HEAD, ni el índice, ni el árbol de trabajo, ni la rama del cambio ni el
+// registro. Nombra el repositorio, su ruta y los ficheros, y ofrece la continuación: confirmar
+// o guardar los cambios y repetir, o, mientras el cambio no esté materializado en `in_place`
+// (changeMaterialized falso), usar un worktree por rama. paths son las rutas que devuelve git,
+// con «/».
+func DirtyWorktree(operation, change, cwd string, lane Lane, repo RepoPlan, dir string, paths []string, changeMaterialized bool) *Refusal {
+	listed := paths
+	more := ""
+	if len(listed) > maxDirtyPathsListed {
+		listed = listed[:maxDirtyPathsListed]
+		more = fmt.Sprintf(" y %d más", len(paths)-maxDirtyPathsListed)
+	}
+	target := repo.IntegrationBranch
+	if len(repo.Branches) > 0 {
+		target = repo.Branches[0].Name
+	}
+	continuation := fmt.Sprintf("confirma esos cambios o guárdalos (por ejemplo, `git -C %s stash push --include-untracked`) y repite `%s`",
+		pathquote.Quote(dir), modeInvocation(operation, change, cwd, lane, ModeInPlace))
+	if !changeMaterialized {
+		continuation += fmt.Sprintf(", o trabaja en un worktree por rama con `%s`", modeInvocation(operation, change, cwd, lane, ModeWorktree))
+	}
 	return &Refusal{
-		Code:         CodePlanConflict,
-		Message:      fmt.Sprintf("el modo %s todavía no está disponible en esta versión de `axiom branch %s`: el cambio %s no se ha tocado", ModeInPlace, operation, change),
-		Continuation: fmt.Sprintf("usa un worktree por rama con `%s`", modeInvocation(operation, change, cwd, lane, ModeWorktree)),
-		Details:      map[string]string{"change": change, "mode": string(ModeInPlace)},
+		Code: CodeDirtyWorktree,
+		Message: fmt.Sprintf("el repositorio %s (%s) tiene cambios sin confirmar y cambiar a la rama %s los pondría en riesgo: %s%s; no se ha modificado nada",
+			repo.Name, dir, target, strings.Join(listed, ", "), more),
+		Continuation: continuation,
+		Details:      map[string]string{"repository": dir, "branch": target, "paths": strings.Join(paths, "\n")},
 	}
 }

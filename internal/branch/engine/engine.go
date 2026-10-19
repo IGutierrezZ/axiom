@@ -50,13 +50,15 @@ type gitReader interface {
 var _ gitReader = (*gitcli.Git)(nil)
 
 // gitWriter son las operaciones de git que cambian algo y usa `ensure` (design D-05, fases
-// 3 y 4): crear la rama y desplegarla en un worktree, siempre con dir en el checkout
-// principal, y `Fetch`, la única operación remota (`ensure --fetch`, REQ-25.10). Es un
-// subconjunto del puerto branch.Git y, como las lecturas, crece con el primer llamador. No
-// tiene ningún método que publique: `axiom branch` nunca ejecuta `push` (REQ-25.1).
+// 3 y 4): crear la rama y desplegarla en un worktree (modo `worktree`) o en el propio
+// repositorio con `Switch` (modo `in_place`), siempre con dir en el checkout principal, y
+// `Fetch`, la única operación remota (`ensure --fetch`, REQ-25.10). Es un subconjunto del
+// puerto branch.Git y, como las lecturas, crece con el primer llamador. No tiene ningún método
+// que publique: `axiom branch` nunca ejecuta `push` (REQ-25.1).
 type gitWriter interface {
 	CreateBranch(ctx context.Context, dir, name, startPoint string) error
 	AddWorktree(ctx context.Context, dir, path, branch string) error
+	Switch(ctx context.Context, dir, branch string) error
 	Fetch(ctx context.Context, dir, remote string) error
 }
 
