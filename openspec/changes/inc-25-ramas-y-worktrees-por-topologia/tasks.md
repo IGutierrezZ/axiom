@@ -333,7 +333,7 @@ Estas decisiones no están fijadas por la spec ni por el diseño; cada una indic
 - [x] S4.11 [c3] [RED] En `ensure_test.go` (REQ-25.13): `--lane odd` en monorepo prepara `<prefijo>/<feature>` y su worktree; en multirepo trabaja in situ en el repositorio de specs; `--repo` incluye repositorios de código; no se crea `kickoff.yaml`; `oddDocument` es `<workspaceRoot>/odd/tasks/<feature>.md`.
 - [x] S4.12 [c3] Implementar en `internal/branch/engine/ensure.go`, `internal/branch/planner.go` e `internal/cli/branch.go`: flags `--prefix`, `--branch`, `--base` y `--repo` (repetible), registro de las excepciones y `plan_conflict` ante contradicción, `specs_repo_not_on_integration`, plan del carril ODD y raíces de multirepo.
 - [x] S4.13 [c3] Cierre del commit S4-c3: prueba focalizada de la tabla; arnés: `axiom branch ensure --lane odd --change feat-x --json` sobre un embebido y un multirepo temporales; límite y mensaje: los de la tabla. Corte de PR-13.
-- [ ] S4.14 [S4] Cierre de la rebanada S4: batería de la regla 3 (`LookupWorktreePrefs`, `ValidateWorktreePrefs`, `MainWorktreeFromFiles` y `Switch` alcanzables desde `ensure`) y `git status --porcelain` igual al previo.
+- [x] S4.14 [S4] Cierre de la rebanada S4: batería de la regla 3 (`LookupWorktreePrefs`, `ValidateWorktreePrefs`, `MainWorktreeFromFiles` y `Switch` alcanzables desde `ensure`) y `git status --porcelain` igual al previo.
 
 ## Fase 5: S5 — Rama de archivado y `ensure --archive`
 
