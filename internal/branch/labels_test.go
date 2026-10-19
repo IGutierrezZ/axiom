@@ -74,6 +74,27 @@ func TestEveryRepositoryRoleAndBranchKindTokenHasASpanishLabel(t *testing.T) {
 	}
 }
 
+// El modo de trabajo materializado y su origen son valores de clasificación del
+// `status` (REQ-25.15): cada token lleva su etiqueta en castellano.
+func TestEveryModeAndModeSourceTokenHasASpanishLabel(t *testing.T) {
+	tests := map[string]string{
+		string(ModeWorktree): "un worktree por rama",
+		string(ModeInPlace):  "en la carpeta del proyecto",
+		string(ModeAsk):      "preguntar",
+		ModeSourceAnswer:     "respuesta registrada",
+		ModeSourceFlag:       "bandera --mode",
+		ModeSourceHub:        "preferencias personales del hub",
+		ModeSourceDefault:    "valor por defecto",
+	}
+	for token, want := range tests {
+		t.Run(token, func(t *testing.T) {
+			if got := Label(token); got != want {
+				t.Errorf("Label(%q) = %q, se esperaba %q", token, got, want)
+			}
+		})
+	}
+}
+
 // Un token que el dominio no conoce no produce una etiqueta vacía: el campo hermano
 // repite el token, que al menos es legible y estable.
 func TestLabelOfAnUnknownTokenIsTheTokenItself(t *testing.T) {

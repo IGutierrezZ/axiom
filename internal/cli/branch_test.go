@@ -141,17 +141,18 @@ type branchBaseJSON struct {
 }
 
 type branchBranchJSON struct {
-	Name       string `json:"name"`
-	Kind       string `json:"kind"`
-	KindLabel  string `json:"kindLabel"`
-	Role       string `json:"role"`
-	Exists     bool   `json:"exists"`
-	Worktree   string `json:"worktree"`
-	Dirty      bool   `json:"dirty"`
-	ComparedTo string `json:"comparedTo"`
-	Ahead      *int   `json:"ahead"`
-	Behind     *int   `json:"behind"`
-	PRTarget   string `json:"prTarget"`
+	Name               string `json:"name"`
+	Kind               string `json:"kind"`
+	KindLabel          string `json:"kindLabel"`
+	Role               string `json:"role"`
+	Exists             bool   `json:"exists"`
+	Worktree           string `json:"worktree"`
+	RegisteredWorktree string `json:"registeredWorktree"`
+	Dirty              bool   `json:"dirty"`
+	ComparedTo         string `json:"comparedTo"`
+	Ahead              *int   `json:"ahead"`
+	Behind             *int   `json:"behind"`
+	PRTarget           string `json:"prTarget"`
 }
 
 type branchRepositoryJSON struct {
@@ -175,24 +176,33 @@ type branchSkippedJSON struct {
 	Message string `json:"message"`
 }
 
+type branchRegistryJSON struct {
+	Present bool `json:"present"`
+}
+
 type branchResultJSON struct {
-	Schema        string                 `json:"schema"`
-	Operation     string                 `json:"operation"`
-	Status        string                 `json:"status"`
-	StatusLabel   string                 `json:"statusLabel"`
-	Code          string                 `json:"code"`
-	Message       string                 `json:"message"`
-	Continuation  string                 `json:"continuation"`
-	Details       map[string]string      `json:"details"`
-	Change        string                 `json:"change"`
-	Lane          string                 `json:"lane"`
-	Topology      string                 `json:"topology"`
-	WorkspaceRoot string                 `json:"workspaceRoot"`
-	PlanningHome  string                 `json:"planningHome"`
-	OddDocument   string                 `json:"oddDocument"`
-	Repositories  []branchRepositoryJSON `json:"repositories"`
-	Skipped       []branchSkippedJSON    `json:"skipped"`
-	Warnings      []string               `json:"warnings"`
+	Schema          string                 `json:"schema"`
+	Operation       string                 `json:"operation"`
+	Status          string                 `json:"status"`
+	StatusLabel     string                 `json:"statusLabel"`
+	Code            string                 `json:"code"`
+	Message         string                 `json:"message"`
+	Continuation    string                 `json:"continuation"`
+	Details         map[string]string      `json:"details"`
+	Change          string                 `json:"change"`
+	Lane            string                 `json:"lane"`
+	Mode            string                 `json:"mode"`
+	ModeLabel       string                 `json:"modeLabel"`
+	ModeSource      string                 `json:"modeSource"`
+	ModeSourceLabel string                 `json:"modeSourceLabel"`
+	Topology        string                 `json:"topology"`
+	WorkspaceRoot   string                 `json:"workspaceRoot"`
+	PlanningHome    string                 `json:"planningHome"`
+	OddDocument     string                 `json:"oddDocument"`
+	Registry        *branchRegistryJSON    `json:"registry"`
+	Repositories    []branchRepositoryJSON `json:"repositories"`
+	Skipped         []branchSkippedJSON    `json:"skipped"`
+	Warnings        []string               `json:"warnings"`
 }
 
 func decodeBranchResult(t *testing.T, stdout string) branchResultJSON {
@@ -312,8 +322,13 @@ func TestBranchStatusPrintsTheResultAsJSON(t *testing.T) {
 	if result.Change != "x" || result.Lane != "sdd" || result.Topology != "monorepo-embedded" {
 		t.Errorf("cambio %q, carril %q, topología %q; se esperaba x, sdd y monorepo-embedded", result.Change, result.Lane, result.Topology)
 	}
-	// El workspace del cambio está en su worktree, aún sin crear: <raíz de worktrees>/<cambio>/<repo>.
-	wantWorkspace := filepath.Join(filepath.Dir(repo), filepath.Base(repo)+"-wt", "x", filepath.Base(repo))
+	// El workspace del cambio está en su worktree, aún sin crear: <raíz de worktrees>/<cambio>/<repo>,
+	// con la grafía que usa git (en Windows, los temporales llegan con nombres cortos 8.3).
+	resolved, err := filepath.EvalSymlinks(repo)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wantWorkspace := filepath.Join(filepath.Dir(resolved), filepath.Base(resolved)+"-wt", "x", filepath.Base(resolved))
 	if result.WorkspaceRoot != wantWorkspace || result.PlanningHome != filepath.Join(wantWorkspace, "openspec") {
 		t.Errorf("workspaceRoot %q, planningHome %q; se esperaba %q y su carpeta openspec", result.WorkspaceRoot, result.PlanningHome, wantWorkspace)
 	}
@@ -445,6 +460,10 @@ func TestBranchStatusCwdFixesTheStartingDirectory(t *testing.T) {
 	if err := os.MkdirAll(sub, 0o755); err != nil {
 		t.Fatal(err)
 	}
+	// El proyecto está en la raíz del repositorio: sin axiom.yaml la carpeta maestra sería
+	// la subcarpeta de partida y su raíz de worktrees quedaría dentro del repositorio
+	// (`plan_conflict`, TestBranchStatusRefusesAWorktreeRootInsideTheRepository).
+	writeBranchConfig(t, repo, "")
 
 	t.Run("con --cwd manda el argumento", func(t *testing.T) {
 		t.Chdir(other)
@@ -855,14 +874,43 @@ repositories:
 		}
 	})
 	t.Run("un repositorio fuera de la carpeta maestra solo hereda la política del workspace", func(t *testing.T) {
-		repo := newBranchRepository(t)
-		master := filepath.Join(repo, "app")
-		if err := os.MkdirAll(master, 0o755); err != nil {
+		// Un repositorio declarado con una ruta absoluta fuera de la carpeta maestra no
+		// puede tener entrada propia en `repositories:` (sus rutas son relativas a ella):
+		// la entrada «.» es de la carpeta maestra y no se le aplica.
+		master := newBranchRepository(t)
+		external := newBranchRepository(t)
+		config := `workspace:
+  name: ejemplo
+  topology: monorepo-embedded
+  specs_repository: .
+roles:
+  backend:
+    name: Backend
+    repositories:
+      - path: "` + filepath.ToSlash(external) + `"
+git:
+  integration_branch: develop
+repositories:
+  - path: .
+    integration_branch: release
+`
+		if err := os.WriteFile(filepath.Join(master, "axiom.yaml"), []byte(config), 0o644); err != nil {
 			t.Fatal(err)
 		}
-		writeBranchConfig(t, master, "git:\n  integration_branch: develop\nrepositories:\n  - path: .\n    integration_branch: release\n")
-		if got := integrationOf(t, master); got != "develop" {
-			t.Errorf("integrationBranch = %q; la entrada «.» es de la carpeta maestra, no del repositorio que la contiene (se esperaba develop)", got)
+		sealBranchChange(t, master, "x", "backend")
+
+		got := map[string]string{}
+		for _, repository := range statusOf(t, master) {
+			got[repository.Name] = repository.IntegrationBranch
+		}
+		want := map[string]string{filepath.Base(master): "release", filepath.Base(external): "develop"}
+		if len(got) != len(want) {
+			t.Fatalf("repositorios = %v, se esperaban %v", got, want)
+		}
+		for name, integration := range want {
+			if got[name] != integration {
+				t.Errorf("%s: integrationBranch = %q, se esperaba %q (el repositorio fuera de la carpeta maestra solo hereda la política del workspace)", name, got[name], integration)
+			}
 		}
 	})
 	t.Run("sin --json la rama de integración sale en el texto", func(t *testing.T) {

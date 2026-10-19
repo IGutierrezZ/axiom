@@ -34,6 +34,15 @@ var labels = map[string]string{
 	string(KindChange):       "rama del cambio",
 	string(KindRole):         "rama de rol",
 	string(KindArchive):      "rama de archivado",
+
+	// Modo de trabajo materializado y su origen (REQ-25.15, design §4.4).
+	string(ModeWorktree): "un worktree por rama",
+	string(ModeInPlace):  "en la carpeta del proyecto",
+	string(ModeAsk):      "preguntar",
+	ModeSourceAnswer:     "respuesta registrada",
+	ModeSourceFlag:       "bandera --mode",
+	ModeSourceHub:        "preferencias personales del hub",
+	ModeSourceDefault:    "valor por defecto",
 }
 
 // Label devuelve la etiqueta en castellano de un token estable. Un token que el

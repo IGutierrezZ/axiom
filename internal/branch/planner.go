@@ -79,6 +79,10 @@ type PlanInput struct {
 	Policy       Policy
 	Exceptions   Exceptions
 	WorktreeRoot string
+	// ExistingWorktrees son los worktrees que git ya conoce en los repositorios del plan,
+	// incluido el checkout principal de cada uno.
+	ExistingWorktrees []WorktreeEntry
+	PathRules         PathRules
 }
 
 // ChangePlan es el plan de un cambio: sus repositorios en orden estable (primero el
@@ -131,8 +135,10 @@ type BranchPlan struct {
 // Plan calcula el plan de un cambio en monorepo embebido o en multirepo (REQ-25.4,
 // REQ-25.5, REQ-25.11, REQ-25.13). Es determinista: la misma entrada da el mismo plan
 // sea cual sea el orden de los roles y de los repositorios que se le entregan, y no
-// altera su entrada. Devuelve un rechazo, sin plan, ante un nombre inválido
-// (`invalid_name`) o un valor inválido de la política (`config_invalid`).
+// altera su entrada. Devuelve un rechazo, sin plan, ante un nombre inválido o repetido
+// (`invalid_name`), un valor inválido de la política (`config_invalid`), worktrees que
+// se solaparían con otro árbol de trabajo (`plan_conflict`) o una ruta demasiado larga
+// para Windows (`path_too_long`).
 func Plan(in PlanInput) (ChangePlan, *Refusal) {
 	if refusal := ValidateChangeName(in.Operation, in.Master, in.Change); refusal != nil {
 		return ChangePlan{}, refusal
@@ -149,7 +155,11 @@ func Plan(in PlanInput) (ChangePlan, *Refusal) {
 		Skipped:      sortedSkipped(in.Skipped),
 		Warnings:     untouchedRoleWarnings(in, sealed),
 	}
-	for _, selection := range selectRepositories(in, sealed) {
+	selections := selectRepositories(in, sealed)
+	if refusal := checkRepositoryNames(in, selections); refusal != nil {
+		return ChangePlan{}, refusal
+	}
+	for _, selection := range selections {
 		repo, refusal := planRepository(in, selection)
 		if refusal != nil {
 			return ChangePlan{}, refusal
@@ -158,6 +168,12 @@ func Plan(in PlanInput) (ChangePlan, *Refusal) {
 		if tracking := trackingBranch(repo); tracking != "" {
 			plan.Warnings = append(plan.Warnings, fmt.Sprintf("Publica la rama de seguimiento %s del repositorio %s en el remoto antes del primer PR de rol; axiom branch nunca ejecuta push.", tracking, repo.Name))
 		}
+	}
+	if refusal := checkPlacement(in, plan.Repositories); refusal != nil {
+		return ChangePlan{}, refusal
+	}
+	if refusal := checkPathLength(in, plan.Repositories); refusal != nil {
+		return ChangePlan{}, refusal
 	}
 	plan.WorkspaceRoot, plan.PlanningHome = plannedWorkspace(in, plan.Repositories[0])
 	if in.Lane == LaneODD {

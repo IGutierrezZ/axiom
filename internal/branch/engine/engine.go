@@ -17,11 +17,13 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"strings"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/branch"
 	"github.com/IGutierrezZ/axiom/v3/internal/branch/gitcli"
+	"github.com/IGutierrezZ/axiom/v3/internal/branch/registry"
 	"github.com/IGutierrezZ/axiom/v3/internal/gitcommon"
 	"github.com/IGutierrezZ/axiom/v3/internal/kickoff"
 	"github.com/IGutierrezZ/axiom/v3/internal/multirole"
@@ -48,32 +50,48 @@ var _ gitReader = (*gitcli.Git)(nil)
 
 // Engine es el motor de ramas.
 type Engine struct {
-	git gitReader
+	git      gitReader
+	registry *registry.Store
+	// goos es el sistema operativo cuyas reglas de rutas aplica el planificador
+	// (branch.PathRules): en Windows rige el límite de longitud de los worktrees.
+	goos string
 }
 
-// Default monta el motor con las lecturas reales de git.
+// Default monta el motor con las lecturas reales de git, el registro local y las reglas
+// de rutas del sistema operativo en el que corre.
 func Default() *Engine {
-	return &Engine{git: gitcli.New()}
+	return &Engine{git: gitcli.New(), registry: registry.New(), goos: runtime.GOOS}
 }
 
-// planInput reúne los hechos de solo lectura de un cambio y compone la entrada del
-// planificador (design §3.1): el proyecto que resuelve cwd, el kickoff del cambio, y las
-// raíces git del planning home y de los repositorios que declaran los roles sellados.
-// Devuelve el rechazo que impide planificar, siempre antes de leer nada con el nombre
-// del cambio.
-func (e *Engine) planInput(ctx context.Context, operation, cwd, change string, lane branch.Lane) (branch.PlanInput, *branch.Refusal) {
+// changeFacts son los hechos de solo lectura de un cambio: la entrada del planificador y
+// lo que el motor necesita después para describir el resultado.
+type changeFacts struct {
+	input branch.PlanInput
+	// record es el registro local del cambio, o nil si no lo tiene.
+	record *branch.Record
+	// worktrees es `git worktree list` de cada repositorio del plan, por raíz git: se lee
+	// una vez, para el planificador y para describir las ramas.
+	worktrees map[string][]branch.WorktreeEntry
+}
+
+// gather reúne los hechos de solo lectura de un cambio y compone la entrada del
+// planificador (design §3.1): el proyecto que resuelve cwd, el kickoff y el registro
+// local del cambio, las raíces git del planning home y de los repositorios que declaran
+// los roles sellados, y los worktrees que git ya conoce en ellos. Devuelve el rechazo que
+// impide planificar, siempre antes de leer nada con el nombre del cambio.
+func (e *Engine) gather(ctx context.Context, operation, cwd, change string, lane branch.Lane) (changeFacts, *branch.Refusal) {
 	if reason := directoryProblem(cwd); reason != "" {
-		return branch.PlanInput{}, branch.UnusableDirectory(operation, reason)
+		return changeFacts{}, branch.UnusableDirectory(operation, reason)
 	}
 	if refusal := branch.ValidateChangeName(operation, cwd, change); refusal != nil {
-		return branch.PlanInput{}, refusal
+		return changeFacts{}, refusal
 	}
 	location, err := workspace.Locate(cwd)
 	if err != nil {
-		return branch.PlanInput{}, branch.LocateRefusal(err)
+		return changeFacts{}, branch.LocateRefusal(err)
 	}
 	if refusal := branch.ConfigRefusal(location); refusal != nil {
-		return branch.PlanInput{}, refusal
+		return changeFacts{}, refusal
 	}
 
 	topology := workspace.TopologyMonorepoEmbedded
@@ -82,38 +100,96 @@ func (e *Engine) planInput(ctx context.Context, operation, cwd, change string, l
 	}
 	planning, refusal := e.repositoryFacts(ctx, operation, location, location.WorkspaceRoot, ".", location.WorkspaceRoot)
 	if refusal != nil {
-		return branch.PlanInput{}, refusal
+		return changeFacts{}, refusal
 	}
 	workspaceRel, inside := relativeWithin(planning.GitRoot, location.WorkspaceRoot)
 	if !inside {
 		workspaceRel = "."
 	}
 
+	// El registro vive en el git common dir del repositorio del planning home (REQ-25.14).
+	record, err := e.registry.Load(planning.CommonDir, lane, change)
+	if err != nil {
+		return changeFacts{}, registryRefusal(err, cwd, change)
+	}
+	var exceptions branch.Exceptions
+	if record != nil {
+		exceptions = record.Exceptions
+	}
+
 	hasKickoff, sealed, refusal := sealedRoles(cwd, location, change, lane)
 	if refusal != nil {
-		return branch.PlanInput{}, refusal
+		return changeFacts{}, refusal
 	}
 	code, skipped, refusal := e.declaredRepositories(ctx, operation, location, &planning, sealed)
 	if refusal != nil {
-		return branch.PlanInput{}, refusal
+		return changeFacts{}, refusal
 	}
 
-	return branch.PlanInput{
-		Operation:     operation,
-		Lane:          lane,
-		Change:        change,
-		Topology:      topology,
-		Master:        location.Master,
-		WorkspaceRoot: location.WorkspaceRoot,
-		WorkspaceRel:  workspaceRel,
-		PlanningRepo:  planning,
-		CodeRepos:     code,
-		Skipped:       skipped,
-		HasKickoff:    hasKickoff,
-		SealedRoles:   sealed,
-		Policy:        branch.ResolvePolicy(location.Config),
-		WorktreeRoot:  branch.DefaultWorktreeRoot(location.Master),
+	worktrees := map[string][]branch.WorktreeEntry{}
+	var existing []branch.WorktreeEntry
+	for _, facts := range append([]branch.RepoFacts{planning}, code...) {
+		listed, err := e.git.Worktrees(ctx, facts.GitRoot)
+		if err != nil {
+			return changeFacts{}, gitRefusal(operation, cwd, "listar los worktrees de "+facts.GitRoot, err)
+		}
+		worktrees[facts.GitRoot] = listed
+		existing = append(existing, listed...)
+	}
+
+	return changeFacts{
+		record:    record,
+		worktrees: worktrees,
+		input: branch.PlanInput{
+			Operation:     operation,
+			Lane:          lane,
+			Change:        change,
+			Topology:      topology,
+			Master:        location.Master,
+			WorkspaceRoot: location.WorkspaceRoot,
+			WorkspaceRel:  workspaceRel,
+			PlanningRepo:  planning,
+			CodeRepos:     code,
+			Skipped:       skipped,
+			HasKickoff:    hasKickoff,
+			SealedRoles:   sealed,
+			Policy:        branch.ResolvePolicy(location.Config),
+			Exceptions:    exceptions,
+			// La raíz de worktrees se calcula con la grafía que usa git (en Windows, la
+			// carpeta maestra puede llegar con un nombre corto 8.3): el planificador
+			// compara sus rutas con las de git por texto.
+			WorktreeRoot:      branch.DefaultWorktreeRoot(resolveDirectory(location.Master)),
+			ExistingWorktrees: existing,
+			PathRules:         branch.PathRules{GOOS: e.goos},
+		},
 	}, nil
+}
+
+// resolveDirectory devuelve dir con la grafía que usa git (los enlaces simbólicos y los
+// nombres cortos 8.3 resueltos), o dir tal cual si no se puede resolver.
+func resolveDirectory(dir string) string {
+	if resolved, err := filepath.EvalSymlinks(dir); err == nil {
+		return resolved
+	}
+	return dir
+}
+
+// registryRefusal traduce el fallo del registro local a `config_invalid`: el registro es
+// estado derivado, de modo que la continuación es borrar el fichero y reconstruirlo con
+// `ensure`.
+func registryRefusal(err error, cwd, change string) *branch.Refusal {
+	rebuild := fmt.Sprintf("axiom branch ensure --change %s --cwd %s", change, pathquote.Quote(cwd))
+	refusal := &branch.Refusal{
+		Code:         branch.CodeConfigInvalid,
+		Message:      err.Error(),
+		Continuation: fmt.Sprintf("borra el fichero del registro local (es estado derivado) y reconstrúyelo con `%s`", rebuild),
+	}
+	var failure *registry.FileError
+	if errors.As(err, &failure) {
+		refusal.Continuation = fmt.Sprintf("borra %s (es estado local derivado) y reconstrúyelo con `%s`", pathquote.Quote(failure.Path), rebuild)
+		refusal.Details = map[string]string{"path": failure.Path}
+	}
+	return refusal
 }
 
 // repositoryFacts lee la raíz git y el git common dir del repositorio que contiene dir
