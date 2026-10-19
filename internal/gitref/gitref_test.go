@@ -108,6 +108,62 @@ func TestValidPrefix(t *testing.T) {
 	})
 }
 
+// REQ-25.11, escenario «Nombre con carácter inválido en Windows», y design D-04:
+// un componente de cambio o de rol debe ser válido a la vez como rama git y como
+// nombre de directorio de Windows (`^[A-Za-z0-9][A-Za-z0-9._-]*$`, sin `..`, sin
+// terminar en `.` ni en `.lock`, sin nombres reservados de dispositivo).
+func TestValidBranchComponent(t *testing.T) {
+	runRefNameCases(t, ValidBranchComponent, []refNameCase{
+		{"palabra simple", "x", ""},
+		{"con guiones", "mi-cambio", ""},
+		{"con número de incremento", "inc-25", ""},
+		{"con punto interior", "v1.2", ""},
+		{"con guion bajo", "A_b", ""},
+		{"empieza por dígito", "9a", ""},
+		{"punto interior y mayúsculas", "Mi.Cambio-2", ""},
+		{"el nombre de este cambio", "inc-25-ramas-y-worktrees-por-topologia", ""},
+		{"COM0 no es un dispositivo", "COM0", ""},
+		{"COM10 no es un dispositivo", "COM10", ""},
+		{"LPT0 no es un dispositivo", "LPT0", ""},
+		{"contiene un nombre reservado sin serlo", "console", ""},
+		{"empieza como un nombre reservado", "auxiliar", ""},
+		{"el nombre reservado no es el primer segmento", "a.con", ""},
+		{"nul con sufijo sin punto", "nul-1", ""},
+
+		{"vacío", "", "no puede estar vacío"},
+		{"caso del diseño con espacio y dos puntos", "a b:c", "espacio"},
+		{"espacio", "a b", "espacio"},
+		{"dos puntos", "a:b", "«:»"},
+		{"interrogación", "a?b", "«?»"},
+		{"asterisco", "a*b", "«*»"},
+		{"menor que", "a<b", "«<»"},
+		{"comilla doble", `a"b`, "«\"»"},
+		{"barra", "a/b", "«/»"},
+		{"barra invertida", `a\b`, "«\\»"},
+		{"barra vertical", "a|b", "«|»"},
+		{"carácter de control", "a\x01b", "control"},
+		{"tabulador", "a\tb", "control"},
+		{"carácter no ASCII", "ñandú", "«ñ»"},
+		{"empieza por guion", "-a", "empezar por una letra o un dígito"},
+		{"empieza por punto", ".a", "empezar por una letra o un dígito"},
+		{"empieza por guion bajo", "_a", "empezar por una letra o un dígito"},
+		{"dos puntos seguidos", "a..b", "«..»"},
+		{"termina en punto", "a.", "terminar en «.»"},
+		{"termina en .lock", "a.lock", "«.lock»"},
+		{"CON", "CON", "reservado de Windows"},
+		{"con en minúsculas", "con", "reservado de Windows"},
+		{"Prn", "Prn", "reservado de Windows"},
+		{"AUX", "AUX", "reservado de Windows"},
+		{"nul", "nul", "reservado de Windows"},
+		{"COM1", "COM1", "reservado de Windows"},
+		{"com9", "com9", "reservado de Windows"},
+		{"LPT1", "LPT1", "reservado de Windows"},
+		{"lpt9", "lpt9", "reservado de Windows"},
+		{"reservado con extensión", "NUL.txt", "reservado de Windows"},
+		{"reservado con varias extensiones", "con.v2.md", "reservado de Windows"},
+	})
+}
+
 // gitref es una hoja pura (design §4.6, B1): solo importa la biblioteca estándar,
 // de modo que `workspace`, `kickoff` y `branch` pueden usarla sin formar ciclos.
 func TestGitrefImportsOnlyTheStandardLibrary(t *testing.T) {

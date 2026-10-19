@@ -4,6 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"strings"
+
+	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
 // ResultSchema es el contrato de salida común de la familia `axiom branch`
@@ -25,32 +28,103 @@ const (
 // castellano; `code` aparece solo cuando el estado no es «listo»; todas las rutas son
 // absolutas; la serialización es estable y no lleva marcas de tiempo (REQ-25.2).
 //
-// Se construye con NewResult y Refused, que mantienen el estado y su etiqueta
-// emparejados. Los campos de cada operación (por ahora, los de `status`) los rellena
-// quien la ejecuta.
+// Se construye con NewResult, Refused y NotStarted, que mantienen el estado y su
+// etiqueta emparejados. Los campos de cada operación (por ahora, los de `status`) los
+// rellena quien la ejecuta, y solo en un resultado que no es un rechazo.
 type Result struct {
-	Schema       string             `json:"schema"`
-	Operation    string             `json:"operation"`
-	Status       Status             `json:"status"`
-	StatusLabel  string             `json:"statusLabel"`
-	Code         Code               `json:"code,omitempty"`
-	Message      string             `json:"message,omitempty"`
-	Continuation string             `json:"continuation,omitempty"`
-	Details      map[string]string  `json:"details,omitempty"`
-	Repositories []RepositoryResult `json:"repositories,omitempty"`
-	Warnings     []string           `json:"warnings,omitempty"`
+	Schema        string                 `json:"schema"`
+	Operation     string                 `json:"operation"`
+	Status        Status                 `json:"status"`
+	StatusLabel   string                 `json:"statusLabel"`
+	Code          Code                   `json:"code,omitempty"`
+	Message       string                 `json:"message,omitempty"`
+	Continuation  string                 `json:"continuation,omitempty"`
+	Details       map[string]string      `json:"details,omitempty"`
+	Change        string                 `json:"change,omitempty"`
+	Lane          Lane                   `json:"lane,omitempty"`
+	Topology      workspace.TopologyType `json:"topology,omitempty"`
+	WorkspaceRoot string                 `json:"workspaceRoot,omitempty"`
+	PlanningHome  string                 `json:"planningHome,omitempty"`
+	OddDocument   string                 `json:"oddDocument,omitempty"`
+	Repositories  []RepositoryResult     `json:"repositories,omitempty"`
+	Skipped       []SkippedPath          `json:"skipped,omitempty"`
+	Warnings      []string               `json:"warnings,omitempty"`
 }
 
-// RepositoryResult describe un repositorio del resultado de `status`. GitRoot y
-// CommonDir son absolutas; IntegrationBranch es la de la política resuelta para ese
-// repositorio (REQ-25.3). CurrentBranch queda vacía con HEAD desacoplado o de forma
-// desconocida (esta última se acompaña de un aviso en Result.Warnings).
+// RepositoryResult describe un repositorio del plan de un cambio en el resultado de
+// `status` (REQ-25.15). GitRoot y CommonDir son absolutas; IntegrationBranch es la de
+// la política resuelta para ese repositorio (REQ-25.3). CurrentBranch queda vacía con
+// HEAD desacoplado o de forma desconocida (esta última se acompaña de un aviso en
+// Result.Warnings). Role lleva su etiqueta en RoleLabel; Roles son los roles del
+// cambio que tocan el repositorio.
 type RepositoryResult struct {
-	GitRoot           string `json:"gitRoot"`
-	CommonDir         string `json:"commonDir"`
-	IntegrationBranch string `json:"integrationBranch"`
-	CurrentBranch     string `json:"currentBranch,omitempty"`
-	Detached          bool   `json:"detached,omitempty"`
+	Name              string         `json:"name"`
+	GitRoot           string         `json:"gitRoot"`
+	CommonDir         string         `json:"commonDir"`
+	Role              RepoRole       `json:"role"`
+	RoleLabel         string         `json:"roleLabel"`
+	Roles             []string       `json:"roles,omitempty"`
+	IntegrationBranch string         `json:"integrationBranch"`
+	CurrentBranch     string         `json:"currentBranch,omitempty"`
+	Detached          bool           `json:"detached,omitempty"`
+	Base              *BaseResult    `json:"base,omitempty"`
+	Branches          []BranchResult `json:"branches,omitempty"`
+}
+
+// BaseResult es la base de un repositorio: la referencia, su commit y de dónde sale
+// (design D-06). Source es `remote-tracking` (la referencia remota que ya hay en
+// local) o `local` (la rama de integración local); Fetched dice si esta ejecución
+// hizo `fetch`, que `status` nunca hace.
+type BaseResult struct {
+	Ref     string `json:"ref"`
+	SHA     string `json:"sha"`
+	Source  string `json:"source"`
+	Fetched bool   `json:"fetched"`
+}
+
+// BranchResult es una rama del plan y su estado en git (REQ-25.15). Name es la rama
+// esperada; Worktree, la ruta absoluta del worktree donde está desplegada (vacía si no
+// lo está); Ahead y Behind, los commits que lleva de adelanto y de atraso respecto de
+// ComparedTo, calculados solo con referencias locales (nil cuando no se calcularon:
+// la rama no existe o no se pudo resolver su base); PRTarget, la rama destino
+// propuesta para su PR.
+type BranchResult struct {
+	Name       string     `json:"name"`
+	Kind       BranchKind `json:"kind"`
+	KindLabel  string     `json:"kindLabel"`
+	Role       string     `json:"role,omitempty"`
+	Exists     bool       `json:"exists"`
+	Worktree   string     `json:"worktree,omitempty"`
+	Dirty      bool       `json:"dirty"`
+	ComparedTo string     `json:"comparedTo,omitempty"`
+	Ahead      *int       `json:"ahead,omitempty"`
+	Behind     *int       `json:"behind,omitempty"`
+	PRTarget   string     `json:"prTarget"`
+}
+
+// NewRepositoryResult describe un repositorio del plan con sus ramas planificadas,
+// todavía sin el estado de git: el motor rellena la rama actual, la base y, por rama,
+// si existe, su worktree, su limpieza y su adelanto y atraso.
+func NewRepositoryResult(repo RepoPlan) RepositoryResult {
+	result := RepositoryResult{
+		Name:              repo.Name,
+		GitRoot:           repo.GitRoot,
+		CommonDir:         repo.CommonDir,
+		Role:              repo.Role,
+		RoleLabel:         Label(string(repo.Role)),
+		Roles:             repo.Roles,
+		IntegrationBranch: repo.IntegrationBranch,
+	}
+	for _, planned := range repo.Branches {
+		result.Branches = append(result.Branches, BranchResult{
+			Name:      planned.Name,
+			Kind:      planned.Kind,
+			KindLabel: Label(string(planned.Kind)),
+			Role:      planned.RoleID,
+			PRTarget:  planned.PRTarget,
+		})
+	}
+	return result
 }
 
 // NewResult devuelve un resultado listo de la operación dada, con su esquema.
@@ -70,6 +144,13 @@ func (r *Result) setStatus(status Status) {
 func (r Result) Refused(refusal *Refusal) Result {
 	r.setStatus(refusal.Code.status())
 	r.Code, r.Message, r.Continuation, r.Details = refusal.Code, refusal.Message, refusal.Continuation, refusal.Details
+	return r
+}
+
+// NotStarted devuelve el resultado marcado como no iniciado: un cambio sin ramas
+// creadas no es un error (REQ-25.15) y la operación sale con ExitReady.
+func (r Result) NotStarted() Result {
+	r.setStatus(StatusNotStarted)
 	return r
 }
 
@@ -113,20 +194,75 @@ func (r Result) WriteText(stdout, stderr io.Writer) {
 		fmt.Fprintf(stderr, "Error [%s]: %s\nContinuación: %s\n", r.Code, r.Message, r.Continuation)
 		return
 	}
+	if r.Change != "" {
+		fmt.Fprintf(stdout, "Cambio: %s (carril %s)\n", r.Change, r.Lane)
+		fmt.Fprintf(stdout, "Estado: %s\n", r.StatusLabel)
+	}
 	for _, repository := range r.Repositories {
-		fmt.Fprintf(stdout, "Repositorio git: %s\n", repository.GitRoot)
-		fmt.Fprintf(stdout, "Directorio común de git: %s\n", repository.CommonDir)
-		switch {
-		case repository.Detached:
-			fmt.Fprintln(stdout, "Rama actual: ninguna (HEAD desacoplado)")
-		case repository.CurrentBranch != "":
-			fmt.Fprintf(stdout, "Rama actual: %s\n", repository.CurrentBranch)
-		}
-		fmt.Fprintf(stdout, "Rama de integración: %s\n", repository.IntegrationBranch)
+		repository.writeText(stdout)
+	}
+	for _, skipped := range r.Skipped {
+		fmt.Fprintf(stdout, "Omitido: %s (rol %s): %s\n", skipped.Path, skipped.Role, skipped.Message)
 	}
 	for _, warning := range r.Warnings {
 		fmt.Fprintf(stdout, "Aviso: %s\n", warning)
 	}
+}
+
+// writeText escribe un repositorio del resultado: con nombre, bajo su encabezado; sin
+// él (un repositorio descrito solo por su raíz), sin sangrado.
+func (r RepositoryResult) writeText(stdout io.Writer) {
+	indent := ""
+	if r.Name != "" {
+		indent = "  "
+		fmt.Fprintf(stdout, "%s (%s)\n", r.Name, r.RoleLabel)
+	}
+	fmt.Fprintf(stdout, "%sRepositorio git: %s\n", indent, r.GitRoot)
+	fmt.Fprintf(stdout, "%sDirectorio común de git: %s\n", indent, r.CommonDir)
+	switch {
+	case r.Detached:
+		fmt.Fprintf(stdout, "%sRama actual: ninguna (HEAD desacoplado)\n", indent)
+	case r.CurrentBranch != "":
+		fmt.Fprintf(stdout, "%sRama actual: %s\n", indent, r.CurrentBranch)
+	}
+	fmt.Fprintf(stdout, "%sRama de integración: %s\n", indent, r.IntegrationBranch)
+	if len(r.Roles) > 0 {
+		fmt.Fprintf(stdout, "%sRoles del cambio: %s\n", indent, strings.Join(r.Roles, ", "))
+	}
+	if r.Base != nil {
+		fmt.Fprintf(stdout, "%sBase: %s (%s)\n", indent, r.Base.Ref, shortSHA(r.Base.SHA))
+	}
+	for _, branch := range r.Branches {
+		fmt.Fprintf(stdout, "%s- %s (%s): %s\n", indent, branch.Name, branch.KindLabel, strings.Join(branch.textParts(), ", "))
+	}
+}
+
+// textParts son los datos de una rama que salen en el texto: su estado en git y el
+// destino de su PR.
+func (b BranchResult) textParts() []string {
+	var parts []string
+	switch {
+	case !b.Exists:
+		parts = append(parts, "sin crear")
+	case b.Worktree == "":
+		parts = append(parts, "creada, sin worktree")
+	case b.Dirty:
+		parts = append(parts, "worktree "+b.Worktree, "con cambios sin confirmar")
+	default:
+		parts = append(parts, "worktree "+b.Worktree, "limpio")
+	}
+	if b.Ahead != nil && b.Behind != nil {
+		parts = append(parts, fmt.Sprintf("adelanto %d, atraso %d respecto de %s", *b.Ahead, *b.Behind, b.ComparedTo))
+	}
+	return append(parts, "PR hacia "+b.PRTarget)
+}
+
+// shortSHA abrevia un identificador de commit a los 12 primeros caracteres.
+func shortSHA(sha string) string {
+	if len(sha) > 12 {
+		return sha[:12]
+	}
+	return sha
 }
 
 // Refusal es la negativa tipada de una operación: el código estable, el mensaje en

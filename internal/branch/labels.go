@@ -25,6 +25,15 @@ var labels = map[string]string{
 	string(LayerEquivalentTree): "árbol equivalente",
 	string(LayerPRMerged):       "PR fusionado",
 	string(LayerForced):         "forzado",
+
+	// Papel del repositorio y tipo de rama del `status` (REQ-25.15): los términos de la
+	// spec («repositorio con rama de cambio», «rama de rol»…).
+	string(RepoChangeBranch): "repositorio con rama de cambio",
+	string(RepoSpecsInPlace): "repositorio de specs in situ",
+	string(RepoCode):         "repositorio de código",
+	string(KindChange):       "rama del cambio",
+	string(KindRole):         "rama de rol",
+	string(KindArchive):      "rama de archivado",
 }
 
 // Label devuelve la etiqueta en castellano de un token estable. Un token que el
