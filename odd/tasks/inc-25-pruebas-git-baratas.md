@@ -36,7 +36,7 @@ Que las pruebas con git real de `internal/branch/**`, `internal/gitcommon` y `in
   - Fijar `GIT_TEMPLATE_DIR` a un directorio vacío. Antes, comprobar que ninguna prueba depende de `.git/hooks`.
   - Medir `go test ./internal/branch/engine -count=1` antes y después.
   - Criterio: los mismos tests en verde, sin `gc` en segundo plano, y tiempo medido y registrado.
-- [ ] **T2 · `t.Parallel()` en las pruebas del motor sin estado global** (ruta: delegada)
+- [x] **T2 · `t.Parallel()` en las pruebas del motor sin estado global** (ruta: delegada)
   - Marcar `t.Parallel()` en las pruebas de `internal/branch/engine` que no usan `observe(t)`, `t.Setenv`, `t.Chdir` ni globales de paquete.
   - Las que sí los usan siguen en serie.
   - Criterio: `go test ./internal/branch/engine -count=1` y `-race` (si está disponible) en verde, con el tiempo medido y registrado.
@@ -58,8 +58,13 @@ Que las pruebas con git real de `internal/branch/**`, `internal/gitcommon` y `in
     - `go test ./internal/branch/engine -count=1`: 561 s antes, 467 s después (aislado). Dentro de `go test ./internal/branch/... ./internal/gitcommon`: 322 s. Mejora real pero modesta y con mucho ruido entre ejecuciones; la sobrecarga sigue siendo el arranque de procesos git.
     - `gitcli` + `registry` + `gitcommon` (una ejecución conjunta): antes 46,1 s, 15,8 s y 25,5 s; después 46,4 s, 17,3 s y 25,6 s (sin diferencia apreciable).
   - Comprobaciones: `go build ./...`, `go vet ./...`, `go run ./internal/gofmtcheck`, `bash scripts/deadcode-ratchet.sh` (sin funciones inalcanzables nuevas), `go test ./internal/branch/... ./internal/gitcommon -count=1 -timeout 20m` y `go test ./internal/cli -run 'TestBranch' -count=1 -timeout 20m`, todo en verde.
-  - Commit: ver `git log` de la rama (mensaje `test(branch): aislar la configuración git de las pruebas y desactivar el mantenimiento automático`).
+  - Commit: `d27945bd` (`test(branch): aislar la configuración git de las pruebas y desactivar el mantenimiento automático`).
+- T2 (hecha): 84 de las 113 pruebas de `internal/branch/engine` (más `TestMain`) llaman a `t.Parallel()` al inicio, y 29 siguen en serie. Se auditó con un análisis del AST (grafo de llamadas transitivo por nombre) que ninguna prueba paralela alcance, directamente o por un ayudante, `observe(t)` (que cambia el global `gitcommon.Observe`), `useRealHub`, `t.Setenv`, `t.Chdir`, `os.Setenv`/`os.Unsetenv` ni asignaciones a globales de paquete. Las 29 en serie son exactamente las que los usan: 25 por `observe(t)` (una de ellas, `TestStatusRefusals`, también por `t.Setenv`), 2 por `useRealHub` (`t.Setenv` de `HOME`) y 2 solo por `t.Setenv`/`t.Chdir` (`TestEnsureSelectsTheRepositoryFromTheDirectoryNotFromTheEnvironment` y `TestEnsureReportsGitFailedNamingTheOperationAndRepeatingCompletes`). Ninguna prueba serial tiene subpruebas paralelas. Go ejecuta las paralelas solo cuando terminan todas las seriales, así que los cambios de globales nunca se solapan con ellas. Las paralelas solo leen el hub del `HOME` aislado de `TestMain` y cada una trabaja en su propio `t.TempDir()`. Sin correcciones sobre el diff parcial anterior: las 84 líneas eran correctas y no había pruebas seguras sin marcar.
+  - Tiempos (Windows, 12 CPU lógicas, git 2.41, go 1.26.3; una ejecución por medida, con ruido): `go test ./internal/branch/engine -count=1 -parallel 1` (equivale a serie) 327 s; con el `-parallel` por defecto 139 s, 136 s y 135 s en tres ejecuciones, y 151 s dentro de `go test ./internal/branch/... ./internal/gitcommon`.
+  - `-race` no disponible: `CGO_ENABLED=0` y no hay `gcc` en el `PATH`. No se ejecutó; la ausencia de carreras se apoya en la auditoría y en las tres ejecuciones paralelas sin fallos.
+  - Comprobaciones: `go build ./...`, `go vet ./...`, `go run ./internal/gofmtcheck`, `bash scripts/deadcode-ratchet.sh` (sin funciones inalcanzables nuevas), `go test ./internal/branch/... ./internal/gitcommon -count=1 -timeout 20m` y `go test ./internal/cli -run 'TestBranch' -count=1 -timeout 20m`, todo en verde.
+  - Commit: ver `git log` de la rama (mensaje `test(engine): ejecutar en paralelo las pruebas del motor sin estado global`).
 
 ## Siguiente paso
 
-T2.
+Evaluar T3.

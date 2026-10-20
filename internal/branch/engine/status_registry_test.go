@@ -99,6 +99,7 @@ func newEngine(goos string) *Engine {
 // registro no falla, `registry.present` es falso, el modo no se conoce y leerlo no crea
 // nada en el repositorio.
 func TestStatusReportsAnAbsentRegistryWithoutCreatingAnything(t *testing.T) {
+	t.Parallel()
 	repo := newProject(t, configWithRoles(map[string][]string{"core": {"."}}, ""))
 
 	result := status(t, repo, "x", branch.LaneSDD)
@@ -118,6 +119,7 @@ func TestStatusReportsAnAbsentRegistryWithoutCreatingAnything(t *testing.T) {
 // REQ-25.14 y REQ-25.15: con registro, `status` informa del modo materializado y su
 // origen, y del worktree que el registro guarda para cada rama, aparte del que git conoce.
 func TestStatusReadsTheModeAndTheRegisteredWorktreesFromTheRegistry(t *testing.T) {
+	t.Parallel()
 	repo := newProject(t, configWithRoles(map[string][]string{"core": {"."}}, ""))
 	worktree := plannedWorktree(t, repo, "x", filepath.Base(repo))
 	runGit(t, repo, "worktree", "add", "-q", "-b", "feat/x", worktree, "main")
@@ -185,6 +187,7 @@ func TestStatusReadsTheModeAndTheRegisteredWorktreesFromTheRegistry(t *testing.T
 // ejecutado desde un worktree enlazado resuelve el registro con el git common dir, que es
 // el del checkout principal.
 func TestStatusSeesTheRegistryFromALinkedWorktree(t *testing.T) {
+	t.Parallel()
 	repo := newProject(t, configWithRoles(map[string][]string{"core": {"."}}, ""))
 	linked := filepath.Join(t.TempDir(), "enlazado")
 	runGit(t, repo, "worktree", "add", "-q", "-b", "inc/otra", linked, "main")
@@ -205,6 +208,7 @@ func TestStatusSeesTheRegistryFromALinkedWorktree(t *testing.T) {
 // `--base`) fijan los nombres de rama y la base con los que `status` mide el cambio, de
 // modo que describe lo que `ensure` materializó.
 func TestStatusAppliesTheExceptionsOfTheRegistry(t *testing.T) {
+	t.Parallel()
 	repo := newProject(t, configWithRoles(map[string][]string{"core": {"."}}, ""))
 	runGit(t, repo, "branch", "release/2", "main~1")
 	runGit(t, repo, "branch", "inc/x", "main")
@@ -277,6 +281,7 @@ func TestStatusAppliesTheExceptionsOfTheRegistry(t *testing.T) {
 // REQ-25.14 y design D-07: un fichero corrupto es `config_invalid` con el fichero y la
 // continuación de borrarlo y reconstruirlo con `ensure`.
 func TestStatusRefusesACorruptRegistryNamingTheFile(t *testing.T) {
+	t.Parallel()
 	repo := newProject(t, configWithRoles(map[string][]string{"core": {"."}}, ""))
 	path := recordFile(commonDir(repo), "sdd", "x")
 	writeFile(t, path, "esto no es JSON {")
@@ -301,6 +306,7 @@ func TestStatusRefusesACorruptRegistryNamingTheFile(t *testing.T) {
 // Un registro que existe pero no se puede leer (aquí, un directorio en el lugar del
 // fichero) también es `config_invalid` y nombra el fichero.
 func TestStatusRefusesAnUnreadableRegistryAsConfigInvalid(t *testing.T) {
+	t.Parallel()
 	repo := newProject(t, configWithRoles(map[string][]string{"core": {"."}}, ""))
 	path := recordFile(commonDir(repo), "sdd", "x")
 	if err := os.MkdirAll(path, 0o755); err != nil {
@@ -316,6 +322,7 @@ func TestStatusRefusesAnUnreadableRegistryAsConfigInvalid(t *testing.T) {
 // El carril lo valida la CLI; si llegara uno que no puede nombrar un registro, el motor
 // no lo lee ni sale de la carpeta del registro: `config_invalid` sin fichero que nombrar.
 func TestStatusRefusesALaneThatCannotNameARegistry(t *testing.T) {
+	t.Parallel()
 	repo := newProject(t, configWithRoles(map[string][]string{"core": {"."}}, ""))
 
 	result := status(t, repo, "x", branch.Lane("../v1"))
@@ -353,6 +360,7 @@ func newMultirepo(t *testing.T, roles map[string][]string, codeRepositories ...s
 // ni worktrees ni checkout; cada repositorio de código recibe la misma rama del cambio
 // desde su propia integración.
 func TestStatusMultirepoWorksTheSpecsRepositoryInPlace(t *testing.T) {
+	t.Parallel()
 	master, specs := newMultirepo(t, map[string][]string{"backend": {"repo-backend"}, "frontend": {"repo-frontend"}}, "repo-backend", "repo-frontend")
 	sealChangeAt(t, specs, "x", "backend", "frontend")
 
@@ -410,6 +418,7 @@ func TestStatusMultirepoWorksTheSpecsRepositoryInPlace(t *testing.T) {
 // un multirepo con el rol `knowledge` sobre `.`, el propio repositorio de specs: no hay
 // ramas ni worktrees que crear.
 func TestStatusOfTheKnowledgeAndSpecOnlyProfilesHasNoBranches(t *testing.T) {
+	t.Parallel()
 	repo := newProject(t, configFor("multirepo", "openspec", map[string][]string{"knowledge": {"."}}, ""))
 	sealChangeAt(t, repo, "x", "knowledge")
 
@@ -431,6 +440,7 @@ func TestStatusOfTheKnowledgeAndSpecOnlyProfilesHasNoBranches(t *testing.T) {
 // de los roles se resuelven con las consultas de git; el plan tiene un único repositorio
 // por raíz y los dos roles cuentan como roles del cambio sobre él.
 func TestStatusResolvesDeclaredSubfoldersToTheirGitRootAndDeduplicates(t *testing.T) {
+	t.Parallel()
 	repo := newProject(t, configWithRoles(map[string][]string{"api": {"services/api"}, "web": {"services/web"}}, ""))
 	for _, dir := range []string{"services/api", "services/web"} {
 		if err := os.MkdirAll(filepath.Join(repo, filepath.FromSlash(dir)), 0o755); err != nil {
@@ -462,6 +472,7 @@ func TestStatusResolvesDeclaredSubfoldersToTheirGitRootAndDeduplicates(t *testin
 // REQ-25.4 y REQ-25.6: un repositorio de código compartido por dos roles se planifica
 // una sola vez, con una rama de rol por cada uno.
 func TestStatusAnEmbeddedRepositorySharedByTwoRolesIsPlannedOnce(t *testing.T) {
+	t.Parallel()
 	repo := newProject(t, configWithRoles(map[string][]string{"api": {"repo-backend"}, "jobs": {"repo-backend"}}, ""))
 	dir := filepath.Join(repo, "repo-backend")
 	if err := os.MkdirAll(dir, 0o755); err != nil {
@@ -490,6 +501,7 @@ func TestStatusAnEmbeddedRepositorySharedByTwoRolesIsPlannedOnce(t *testing.T) {
 // hermana `<carpeta maestra>-wt`) queda dentro del repositorio del plan, como ocurre
 // cuando la carpeta maestra es una subcarpeta del repositorio.
 func TestStatusRefusesAWorktreeRootInsideTheRepository(t *testing.T) {
+	t.Parallel()
 	repo := newRepository(t)
 	master := filepath.Join(repo, "app")
 	writeFile(t, filepath.Join(master, "axiom.yaml"), configWithRoles(map[string][]string{"core": {"."}}, ""))
@@ -513,6 +525,7 @@ func TestStatusRefusesAWorktreeRootInsideTheRepository(t *testing.T) {
 // un worktree existente distinto del suyo, por ejemplo uno antiguo de los scripts
 // locales en `<raíz>/<cambio>`; los worktrees de otros cambios no estorban.
 func TestStatusRefusesAPlannedPathInsideAnOldWorktree(t *testing.T) {
+	t.Parallel()
 	repo := newProject(t, configWithRoles(map[string][]string{"core": {"."}}, ""))
 	root := branch.DefaultWorktreeRoot(canonicalDirectory(t, repo))
 
@@ -545,6 +558,7 @@ func TestStatusRefusesAPlannedPathInsideAnOldWorktree(t *testing.T) {
 // sistema no hay límite propio. El carril ODD no lee el kickoff del cambio, de modo que la
 // ruta del kickoff, más larga que la del worktree, no interviene.
 func TestStatusAppliesTheWindowsPathLimitOfItsOperatingSystem(t *testing.T) {
+	t.Parallel()
 	repo := newProject(t, configWithRoles(map[string][]string{"core": {"."}}, ""))
 	change := strings.Repeat("c", 200)
 

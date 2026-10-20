@@ -141,6 +141,7 @@ func TestEnsureInPlaceRefusesADirtyTreeWithoutModifyingTheRepository(t *testing.
 
 // REQ-25.9: un fichero ignorado no cuenta como cambio sin confirmar: `in_place` procede.
 func TestEnsureInPlaceTreatsAnIgnoredFileAsClean(t *testing.T) {
+	t.Parallel()
 	repo := embeddedCoreProject(t)
 	writeFile(t, filepath.Join(repo, ".gitignore"), "*.log\n")
 	runGit(t, repo, "add", ".gitignore")
@@ -278,6 +279,7 @@ func TestEnsureInPlaceIsANoOpWhenAlreadyOnTheExpectedBranchWithADirtyTree(t *tes
 // del cambio y tiene el árbol sucio, `ensure` rechaza igual, pero no ofrece `--mode worktree`,
 // que el registro rechazaría con `plan_conflict`: solo confirmar o guardar y repetir.
 func TestEnsureInPlaceOffersNoWorktreeModeForAChangeAlreadyMaterializedInPlace(t *testing.T) {
+	t.Parallel()
 	repo := embeddedCoreProject(t)
 	wantReady(t, ensureInPlace(t, repo, "x"))
 	runGit(t, repo, "switch", "-q", "main")
@@ -323,6 +325,7 @@ func TestEnsureInPlaceDeploysAnExistingBranchWithoutMovingIt(t *testing.T) {
 // `--mode` (origen `hub`), y un cambio materializado en `in_place` rechaza un `--mode worktree`
 // con `plan_conflict` sin tocar nada.
 func TestEnsureInPlaceFromTheHubAndAModeConflictWithTheRegistry(t *testing.T) {
+	t.Parallel()
 	repo := embeddedCoreProject(t)
 
 	result := ensureWith(t, hubInPlace, EnsureRequest{CWD: repo, Change: "x"})
@@ -348,6 +351,7 @@ func TestEnsureInPlaceFromTheHubAndAModeConflictWithTheRegistry(t *testing.T) {
 // design D-05 fase 3 y R26: con ramas de rol, `in_place` crea todas las ramas del plan pero
 // solo despliega la de seguimiento (la del cambio); las de rol quedan creadas desde ella.
 func TestEnsureInPlaceCreatesTheRoleBranchesButOnlyDeploysTheTrackingBranch(t *testing.T) {
+	t.Parallel()
 	repo := newProject(t, configWithRoles(map[string][]string{"core": {"."}, "qa": {"."}}, ""))
 	sealChange(t, repo, "x", "core", "qa")
 	runGit(t, repo, "add", "-A")
@@ -407,6 +411,7 @@ func TestEnsureInPlaceRefusesABranchCheckedOutInAnotherWorktree(t *testing.T) {
 // Con el segundo repositorio sucio, el primero (limpio) no cambia de rama ni crea la rama del
 // cambio.
 func TestEnsureInPlaceChecksEveryRepositoryForDirtinessBeforeSwitchingAny(t *testing.T) {
+	t.Parallel()
 	master, specs := newMultirepo(t, map[string][]string{"backend": {"repo-backend"}, "frontend": {"repo-frontend"}}, "repo-backend", "repo-frontend")
 	sealChangeAt(t, specs, "x", "backend", "frontend")
 	runGit(t, specs, "add", "-A")
@@ -451,6 +456,7 @@ func TestEnsureInPlaceChecksEveryRepositoryForDirtinessBeforeSwitchingAny(t *tes
 // la rama ya creada se conserva, el repositorio no cambia de rama, no se escribe el registro y
 // repetir `ensure` completa lo pendiente.
 func TestEnsureInPlaceReportsGitFailedWhenSwitchFailsAndRepeatingCompletes(t *testing.T) {
+	t.Parallel()
 	repo := embeddedCoreProject(t)
 	engine := newEngine(runtime.GOOS)
 	engine.writer = failingWriter{real: gitcli.New(), failSwitch: true}
@@ -480,6 +486,7 @@ func TestEnsureInPlaceReportsGitFailedWhenSwitchFailsAndRepeatingCompletes(t *te
 // cambia el checkout principal y por tanto no la mira (escenario «El checkout principal no
 // se toca en modo `worktree`»).
 func TestEnsureWorktreeModeIgnoresADirtyTree(t *testing.T) {
+	t.Parallel()
 	repo := embeddedCoreProject(t)
 	writeFile(t, filepath.Join(repo, "suelto.txt"), "suelto\n")
 

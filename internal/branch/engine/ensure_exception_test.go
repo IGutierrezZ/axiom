@@ -35,6 +35,7 @@ func commitAll(t *testing.T, repo, message string) {
 // la indicada y no `feat/x`; el worktree sigue componiéndose con el nombre del cambio, no con el
 // de la rama (`<raíz>/<cambio>/<repo>`), y la excepción queda registrada.
 func TestEnsureExceptionBranchFixesTheChangeBranchName(t *testing.T) {
+	t.Parallel()
 	repo := embeddedCoreProject(t)
 
 	result := ensureWith(t, hubWorktree, EnsureRequest{CWD: repo, Change: "x", Exceptions: branch.Exceptions{Branch: "inc/inc-25-x"}})
@@ -60,6 +61,7 @@ func TestEnsureExceptionBranchFixesTheChangeBranchName(t *testing.T) {
 // REQ-25.12, escenario «`--branch` con ramas de rol deriva los nombres»: la rama de seguimiento
 // es la indicada y las de rol son `<rama>-<rol>`.
 func TestEnsureExceptionBranchWithRoleBranchesDerivesTheRoleNames(t *testing.T) {
+	t.Parallel()
 	repo := newProject(t, configWithRoles(map[string][]string{"core": {"."}, "qa": {"."}}, ""))
 	sealChange(t, repo, "x", "core", "qa")
 	commitAll(t, repo, "kickoff")
@@ -95,6 +97,7 @@ func wantNamesEqual(t *testing.T, what string, got []string, want ...string) {
 // referencia fijada): `base.ref` es la indicada, la rama del cambio sale de ella y una base que
 // no existe es `base_not_found` sin crear nada.
 func TestEnsureExceptionBaseFixesTheBaseOfTheChange(t *testing.T) {
+	t.Parallel()
 	repo := embeddedCoreProject(t)
 	runGit(t, repo, "switch", "-q", "-c", "release/2")
 	commit(t, repo, "versión 2")
@@ -200,6 +203,7 @@ func TestEnsureExceptionALaterContradictionIsPlanConflictAndARepeatIsIdempotent(
 // registra y una nueva la sustituye; cuando el sellado añade el repositorio de código, la rama
 // registrada se aplica sin repetir la excepción.
 func TestEnsureExceptionIsReplacedWhileNothingIsMaterializedYet(t *testing.T) {
+	t.Parallel()
 	master, specs := newMultirepo(t, map[string][]string{"backend": {"repo-backend"}}, "repo-backend")
 	request := func(exceptions branch.Exceptions) EnsureRequest {
 		return EnsureRequest{CWD: master, Change: "x", Mode: branch.ModeInPlace, Exceptions: exceptions}

@@ -45,6 +45,7 @@ func wantNoOpenSpecChanges(t *testing.T, root string) {
 // `<worktree>/odd/tasks/mi-feature.md`; no se crea ningún fichero bajo `openspec/changes/` ni en
 // el checkout ni en el worktree, y el registro es el del carril odd.
 func TestEnsureOddLaneInAMonorepoPreparesTheBranchAndItsWorktree(t *testing.T) {
+	t.Parallel()
 	repo := embeddedCoreProject(t)
 
 	result := ensureOdd(t, repo, "mi-feature", EnsureRequest{})
@@ -160,6 +161,7 @@ func TestEnsureOddLaneRepoFlagIncludesCodeRepositoriesWithOnlyTheFeatureBranch(t
 // y solo la rama de la feature; el repositorio del planning home no se repite si se indica a sí
 // mismo (`.`).
 func TestEnsureOddLaneRepoFlagInAMonorepoIncludesTheOtherRepositoryOnce(t *testing.T) {
+	t.Parallel()
 	requireGit(t)
 	parent := t.TempDir()
 	repo, nested := filepath.Join(parent, "proyecto"), filepath.Join(parent, "servicio")

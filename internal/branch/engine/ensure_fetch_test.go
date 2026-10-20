@@ -204,6 +204,7 @@ func TestEnsureFetchRunsOneFetchPerCodeRepositoryOfAMultirepo(t *testing.T) {
 // raíz de worktrees ni registro; también cuando el fallo es del segundo repositorio, porque el
 // fetch es parte de la comprobación sin efectos de todo el plan.
 func TestEnsureFetchFailedLeavesNoEffects(t *testing.T) {
+	t.Parallel()
 	t.Run("remoto inalcanzable", func(t *testing.T) {
 		repo := embeddedCoreProject(t)
 		runGit(t, repo, "remote", "add", "origin", filepath.Join(t.TempDir(), "no-existe.git"))
@@ -274,6 +275,7 @@ func wantFetchFailed(t *testing.T, result branch.Result, repo string) {
 // que publique (`push`) y `Fetch` es la única operación remota; ni el adaptador real ni las
 // interfaces locales del motor añaden ninguna.
 func TestTheGitPortHasNoPushMethodAndFetchIsTheOnlyRemoteOperation(t *testing.T) {
+	t.Parallel()
 	remote := func(name string) bool {
 		lower := strings.ToLower(name)
 		for _, word := range []string{"push", "pull", "lsremote", "publish", "upload"} {
