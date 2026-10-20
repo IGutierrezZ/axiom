@@ -17,6 +17,21 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/pathquote"
 )
 
+// isolatedBranchGitConfig es el gitconfig global de estas pruebas: sin gc ni
+// mantenimiento automático en segundo plano (que compite con la limpieza del directorio
+// temporal) y sin fsmonitor, caché de ficheros sin seguimiento ni fsync, que solo
+// encarecen cada proceso git en Windows.
+const isolatedBranchGitConfig = `[gc]
+	auto = 0
+	autoDetach = false
+[maintenance]
+	auto = false
+[core]
+	fsmonitor = false
+	untrackedCache = false
+	fsync = none
+`
+
 // isolateBranchGit deja a git sin acceso a la configuración del usuario, con un
 // autor fijo y sin preguntas ni red (tasks.md, regla 9). Omite la prueba con -short
 // o sin git: ejecuta procesos externos (skill go-testing).
@@ -29,9 +44,18 @@ func isolateBranchGit(t *testing.T) {
 		t.Skipf("git no está disponible: %v", err)
 	}
 	home := t.TempDir()
+	gitConfig := filepath.Join(home, "gitconfig")
+	if err := os.WriteFile(gitConfig, []byte(isolatedBranchGitConfig), 0o644); err != nil {
+		t.Fatalf("escribir el gitconfig aislado: %v", err)
+	}
+	templateDir := filepath.Join(home, "git-template")
+	if err := os.MkdirAll(templateDir, 0o755); err != nil {
+		t.Fatalf("crear la plantilla vacía de git: %v", err)
+	}
 	t.Setenv("HOME", home)
 	t.Setenv("USERPROFILE", home)
-	t.Setenv("GIT_CONFIG_GLOBAL", filepath.Join(home, "gitconfig"))
+	t.Setenv("GIT_CONFIG_GLOBAL", gitConfig)
+	t.Setenv("GIT_TEMPLATE_DIR", templateDir)
 	t.Setenv("GIT_CONFIG_NOSYSTEM", "1")
 	t.Setenv("GIT_AUTHOR_NAME", "Autor de Prueba")
 	t.Setenv("GIT_AUTHOR_EMAIL", "autor@ejemplo.invalid")

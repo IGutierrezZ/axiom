@@ -28,6 +28,21 @@ func TestMain(m *testing.M) {
 	os.Exit(runTests(m))
 }
 
+// isolatedGitConfig es el gitconfig global de las pruebas: sin gc ni mantenimiento
+// automático en segundo plano (que compite con la limpieza del directorio temporal) y
+// sin fsmonitor, caché de ficheros sin seguimiento ni fsync, que solo encarecen cada
+// proceso git en Windows.
+const isolatedGitConfig = `[gc]
+	auto = 0
+	autoDetach = false
+[maintenance]
+	auto = false
+[core]
+	fsmonitor = false
+	untrackedCache = false
+	fsync = none
+`
+
 func runTests(m *testing.M) int {
 	root, err := os.MkdirTemp("", "engine-pruebas-*")
 	if err != nil {
@@ -41,10 +56,21 @@ func runTests(m *testing.M) int {
 		fmt.Fprintf(os.Stderr, "engine: crear el HOME aislado: %v\n", err)
 		return 1
 	}
+	gitConfig := filepath.Join(home, "gitconfig")
+	if err := os.WriteFile(gitConfig, []byte(isolatedGitConfig), 0o644); err != nil {
+		fmt.Fprintf(os.Stderr, "engine: escribir el gitconfig aislado: %v\n", err)
+		return 1
+	}
+	templateDir := filepath.Join(root, "git-template")
+	if err := os.MkdirAll(templateDir, 0o755); err != nil {
+		fmt.Fprintf(os.Stderr, "engine: crear la plantilla vacía de git: %v\n", err)
+		return 1
+	}
 	for key, value := range map[string]string{
 		"HOME":                home,
 		"USERPROFILE":         home,
-		"GIT_CONFIG_GLOBAL":   filepath.Join(home, "gitconfig"),
+		"GIT_CONFIG_GLOBAL":   gitConfig,
+		"GIT_TEMPLATE_DIR":    templateDir,
 		"GIT_CONFIG_NOSYSTEM": "1",
 		"GIT_AUTHOR_NAME":     "Autor de Prueba",
 		"GIT_AUTHOR_EMAIL":    "autor@ejemplo.invalid",
