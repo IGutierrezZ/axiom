@@ -100,6 +100,9 @@ type changeFacts struct {
 	// prefs son las preferencias personales de worktree del proyecto (hub): su raíz entra en
 	// el plan y `ensure` resuelve con ellas el modo de trabajo.
 	prefs workPrefs
+	// warnings son los avisos de la selección de repositorios (`--repo`): `ensure` los añade al
+	// resultado.
+	warnings []string
 }
 
 // gather reúne los hechos de solo lectura de un cambio y compone la entrada del
@@ -117,6 +120,13 @@ func (e *Engine) gather(ctx context.Context, operation, cwd, change string, lane
 // modo que todo lo que lee y decide después lo hace con el cambio ya en exclusiva. Un
 // rechazo del gancho aborta la lectura.
 func (e *Engine) gatherUnder(ctx context.Context, operation, cwd, change string, lane branch.Lane, lock func(commonDir string) *branch.Refusal) (changeFacts, *branch.Refusal) {
+	return e.gatherWith(ctx, operation, cwd, change, lane, lock, gatherOptions{})
+}
+
+// gatherWith es gatherUnder con las peticiones de `ensure` que condicionan el plan: las
+// excepciones de la invocación, que se contrastan con las del registro (REQ-25.12), y los
+// repositorios de `--repo` (REQ-25.13).
+func (e *Engine) gatherWith(ctx context.Context, operation, cwd, change string, lane branch.Lane, lock func(commonDir string) *branch.Refusal, options gatherOptions) (changeFacts, *branch.Refusal) {
 	if reason := directoryProblem(cwd); reason != "" {
 		return changeFacts{}, branch.UnusableDirectory(operation, reason)
 	}
@@ -151,9 +161,9 @@ func (e *Engine) gatherUnder(ctx context.Context, operation, cwd, change string,
 	if err != nil {
 		return changeFacts{}, registryRefusal(err, cwd, change)
 	}
-	var exceptions branch.Exceptions
-	if record != nil {
-		exceptions = record.Exceptions
+	exceptions, refusal := mergeExceptions(operation, cwd, change, lane, record, options.exceptions)
+	if refusal != nil {
+		return changeFacts{}, refusal
 	}
 
 	hasKickoff, sealed, refusal := sealedRoles(cwd, location, change, lane)
@@ -164,10 +174,15 @@ func (e *Engine) gatherUnder(ctx context.Context, operation, cwd, change string,
 	if refusal != nil {
 		return changeFacts{}, refusal
 	}
+	chosen, refusal := e.chooseRepositories(ctx, operation, location, planning, lane, code, record, options.repos)
+	if refusal != nil {
+		return changeFacts{}, refusal
+	}
+	code, skipped = chosen.code, append(skipped, chosen.skipped...)
 
 	worktrees := map[string][]branch.WorktreeEntry{}
 	var existing []branch.WorktreeEntry
-	for _, facts := range append([]branch.RepoFacts{planning}, code...) {
+	for _, facts := range slices.Concat([]branch.RepoFacts{planning}, code, chosen.included) {
 		listed, err := e.git.Worktrees(ctx, facts.GitRoot)
 		if err != nil {
 			return changeFacts{}, gitRefusal(operation, cwd, "listar los worktrees de "+facts.GitRoot, err)
@@ -182,6 +197,7 @@ func (e *Engine) gatherUnder(ctx context.Context, operation, cwd, change string,
 		worktrees: worktrees,
 		location:  location,
 		prefs:     prefs,
+		warnings:  chosen.warnings,
 		input: branch.PlanInput{
 			Operation:     operation,
 			Lane:          lane,
@@ -192,6 +208,7 @@ func (e *Engine) gatherUnder(ctx context.Context, operation, cwd, change string,
 			WorkspaceRel:  workspaceRel,
 			PlanningRepo:  planning,
 			CodeRepos:     code,
+			IncludedRepos: chosen.included,
 			Skipped:       skipped,
 			HasKickoff:    hasKickoff,
 			SealedRoles:   sealed,

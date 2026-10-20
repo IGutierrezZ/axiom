@@ -62,7 +62,7 @@ Banderas:
   --json              Imprime el resultado como axiom.branch-result/v1
 `
 
-const branchEnsureHelp = `Uso: axiom branch ensure --change <nombre> [--lane sdd|odd] [--mode worktree|in_place] [--fetch] [--cwd <ruta>] [--json]
+const branchEnsureHelp = `Uso: axiom branch ensure --change <nombre> [--lane sdd|odd] [--mode worktree|in_place] [--prefix <prefijo>] [--branch <rama>] [--base <ref>] [--repo <ruta>]... [--fetch] [--cwd <ruta>] [--json]
 
 Crea lo que falta de las ramas de un cambio y de sus worktrees. En cada repositorio del
 plan crea la rama del cambio (<prefijo>/<cambio>; con dos o más roles sobre el mismo
@@ -104,6 +104,27 @@ seguimiento (los ignorados cuentan como limpios): si no, rechaza con dirty_workt
 modificar nada y nombra los ficheros. Si el repositorio ya está en la rama del cambio no
 cambia de rama y no mira la suciedad.
 
+--prefix, --branch y --base son excepciones por cambio a la política del proyecto: --prefix
+sustituye el prefijo, --branch el nombre completo de la rama del cambio (con ramas de rol,
+la de seguimiento; las de rol salen como <rama>-<rol>) y --base la referencia de la que
+salen las ramas. Se registran con el cambio: repetirlas idénticas es idempotente, una que
+contradice lo ya materializado es plan_conflict sin tocar nada y un --prefix, --branch o
+--base inválidos son invalid_name sin efectos. --repo <ruta> (repetible) acota a los
+indicados los repositorios de código del plan en el carril sdd y, en el carril odd, los
+incluye.
+
+En un multirepo el repositorio de specs se trabaja in situ en su rama de integración:
+ensure nunca crea en él ramas, worktrees ni checkout, y si está en otra rama (o con HEAD
+desacoplado) rechaza con specs_repo_not_on_integration. Cada repositorio de código con un
+rol recibe <prefijo>/<cambio> desde su propia integración, con el worktree fuera de la
+carpeta maestra.
+
+El carril odd (--lane odd) aplica la misma política sin roles, sin kickoff y sin rama de
+archivado: en un monorepo prepara <prefijo>/<cambio> y su worktree; en un multirepo trabaja
+in situ en el repositorio de specs y solo incluye los repositorios que pidas con --repo,
+cada uno con solo esa rama. El documento ODD es <raíz del proyecto>/odd/tasks/<cambio>.md,
+y el resultado indica su ruta en oddDocument.
+
 Guarda el plan en un registro local por cambio, dentro del git common dir del repositorio
 del proyecto (<git common dir>/axiom/branch/v1/<carril>/<cambio>.json), que solo se
 reescribe si cambia su contenido: es estado local derivado y no se versiona. Si lo borras,
@@ -121,7 +142,11 @@ Banderas:
   --lane sdd|odd      Carril del cambio (por defecto, sdd)
   --mode worktree|in_place
                       Modo de trabajo del cambio; es la respuesta a decision_required (por defecto, el de tus preferencias)
-  --fetch             Ejecuta git fetch origin en cada repositorio del plan antes de resolver la base
+  --prefix <prefijo>  Prefijo de la rama del cambio, solo para este cambio
+  --branch <rama>     Nombre completo de la rama del cambio, solo para este cambio
+  --base <ref>        Referencia de la que salen las ramas, solo para este cambio
+  --repo <ruta>       Repositorio que se incluye (odd) o al que se acota el plan (sdd); repetible
+  --fetch            Ejecuta git fetch origin en cada repositorio del plan antes de resolver la base
   --cwd <ruta>        Directorio de partida (por defecto, el directorio de trabajo del proceso)
   --json              Imprime el resultado como axiom.branch-result/v1
 
@@ -158,6 +183,11 @@ func runBranchEnsure(args []string, stdout, stderr io.Writer) int {
 	lane := flags.String("lane", string(branch.LaneSDD), "carril del cambio: sdd u odd")
 	mode := flags.String("mode", "", "modo de trabajo del cambio: worktree o in_place")
 	fetch := flags.Bool("fetch", false, "ejecuta git fetch origin en cada repositorio del plan antes de resolver la base")
+	prefix := flags.String("prefix", "", "prefijo de la rama del cambio, solo para este cambio")
+	branchName := flags.String("branch", "", "nombre de la rama del cambio, solo para este cambio")
+	base := flags.String("base", "", "referencia de la que salen las ramas del cambio, solo para este cambio")
+	var repos branchRepeatedFlag
+	flags.Var(&repos, "repo", "repositorio que se incluye (ODD) o al que se acota el plan (SDD); repetible")
 	cwd := flags.String("cwd", ".", "directorio de partida")
 	asJSON := flags.Bool("json", false, "imprime el resultado como axiom.branch-result/v1")
 	if err := flags.Parse(args); err != nil {
@@ -192,12 +222,19 @@ func runBranchEnsure(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintf(stderr, "Error: --mode '%s' no es válido: usa worktree o in_place (ask es una preferencia del hub, no una respuesta). Ejecuta `axiom branch ensure --help`.\n", *mode)
 		return branch.ExitUsage
 	}
+	if blank := branchBlankFlag(flags, "prefix", "branch", "base", "repo"); blank != "" {
+		fmt.Fprintf(stderr, "Error: --%s no puede estar vacío: indica un valor o quita la bandera. Ejecuta `axiom branch ensure --help`.\n", blank)
+		return branch.ExitUsage
+	}
 	dir, err := filepath.Abs(*cwd)
 	if err != nil {
 		fmt.Fprintf(stderr, "Error: no se pudo resolver --cwd '%s' (%v). Indica una ruta absoluta con `axiom branch ensure --change <nombre> --cwd <ruta>`.\n", *cwd, err)
 		return branch.ExitUsage
 	}
-	result := engine.Default().Ensure(context.Background(), engine.EnsureRequest{CWD: dir, Change: *change, Lane: branch.Lane(*lane), Fetch: *fetch, Mode: branch.Mode(*mode)})
+	result := engine.Default().Ensure(context.Background(), engine.EnsureRequest{
+		CWD: dir, Change: *change, Lane: branch.Lane(*lane), Fetch: *fetch, Mode: branch.Mode(*mode),
+		Exceptions: branch.Exceptions{Prefix: *prefix, Branch: *branchName, Base: *base}, Repos: repos,
+	})
 	return writeBranchResult(result, *asJSON, stdout, stderr)
 }
 

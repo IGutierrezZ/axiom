@@ -18,13 +18,17 @@ import (
 // `git fetch origin` en cada repositorio del plan antes de resolver la base (`--fetch`,
 // REQ-25.10): sin él, `ensure` no hace ninguna operación remota. Mode es `--mode`: la
 // respuesta a `ask` o un modo explícito (`worktree` o `in_place`); vacío si no se indicó
-// (REQ-25.8).
+// (REQ-25.8). Exceptions son `--prefix`, `--branch` y `--base`, que se registran por cambio
+// (REQ-25.12); Repos, los `--repo` (REQ-25.12, REQ-25.13): en el carril ODD incluyen
+// repositorios y en el SDD acotan los del plan.
 type EnsureRequest struct {
-	CWD    string
-	Change string
-	Lane   branch.Lane
-	Fetch  bool
-	Mode   branch.Mode
+	CWD        string
+	Change     string
+	Lane       branch.Lane
+	Fetch      bool
+	Mode       branch.Mode
+	Exceptions branch.Exceptions
+	Repos      []string
 }
 
 // Ensure crea lo que falta de las ramas del cambio y las despliega según el modo de trabajo
@@ -56,7 +60,13 @@ type EnsureRequest struct {
 // Un fallo de git durante la aplicación es `git_failed` y repetir `ensure` completa lo
 // pendiente; un fallo de la comprobación (incluido `fetch_failed`) no deja ni ramas, ni
 // worktrees, ni registro. La única operación remota es `git fetch origin` con `--fetch`.
-// Las excepciones llegan con las rebanadas siguientes.
+//
+// Las excepciones por cambio (`--prefix`, `--branch`, `--base`, REQ-25.12) se validan antes de
+// bloquear nada (`invalid_name`), se contrastan con las del registro (una contradicción de lo
+// materializado es `plan_conflict`, la repetición idéntica es idempotente) y se registran. En un
+// multirepo, el repositorio de specs se trabaja in situ: nunca recibe ramas, worktrees ni
+// checkout, y fuera de su integración se rechaza (`specs_repo_not_on_integration`, REQ-25.5). El
+// carril ODD (REQ-25.13) no tiene roles ni kickoff y `--repo` incluye repositorios de código.
 func (e *Engine) Ensure(ctx context.Context, r EnsureRequest) branch.Result {
 	const operation = "ensure"
 	refused := func(refusal *branch.Refusal) branch.Result {
@@ -72,6 +82,11 @@ func (e *Engine) Ensure(ctx context.Context, r EnsureRequest) branch.Result {
 	if r.Mode != "" && r.Mode != branch.ModeWorktree && r.Mode != branch.ModeInPlace {
 		return refused(branch.InvalidMode(operation, r.Change, r.CWD, r.Lane, r.Mode))
 	}
+	// Un nombre inválido de la invocación se rechaza antes de bloquear el cambio ni leer nada.
+	if refusal := branch.ValidateExceptions(operation, r.CWD, r.Change, r.Exceptions); refusal != nil {
+		return refused(refusal)
+	}
+	options := gatherOptions{exceptions: r.Exceptions, repos: r.Repos}
 
 	// El bloqueo se toma en cuanto se conoce el git common dir y se suelta al terminar,
 	// también cuando se rechaza.
@@ -90,7 +105,7 @@ func (e *Engine) Ensure(ctx context.Context, r EnsureRequest) branch.Result {
 		return nil
 	}
 
-	facts, refusal := e.gatherUnder(ctx, operation, r.CWD, r.Change, r.Lane, acquire)
+	facts, refusal := e.gatherWith(ctx, operation, r.CWD, r.Change, r.Lane, acquire, options)
 	if refusal != nil {
 		return refused(refusal)
 	}
@@ -117,7 +132,7 @@ func (e *Engine) Ensure(ctx context.Context, r EnsureRequest) branch.Result {
 		// El estado final se lee de git otra vez: es el mismo camino que sigue la
 		// ejecución que no tiene nada que crear, de modo que ambas describen lo mismo. El
 		// cambio ya está bloqueado: esta lectura no lo vuelve a bloquear.
-		if facts, refusal = e.gather(ctx, operation, r.CWD, r.Change, r.Lane); refusal != nil {
+		if facts, refusal = e.gatherWith(ctx, operation, r.CWD, r.Change, r.Lane, nil, options); refusal != nil {
 			return refused(refusal)
 		}
 		facts.input.InPlace = mode.mode == branch.ModeInPlace
@@ -147,6 +162,7 @@ func (e *Engine) Ensure(ctx context.Context, r EnsureRequest) branch.Result {
 	if !facts.input.InPlace {
 		result.WorktreeRoot = plan.WorktreeRoot
 	}
+	result.Warnings = append(result.Warnings, facts.warnings...)
 	if facts.prefs.warning != "" {
 		result.Warnings = append(result.Warnings, facts.prefs.warning)
 	}
@@ -180,12 +196,18 @@ type repositorySteps struct {
 // antes de mutar ninguno y devuelve lo que falta por crear en cada uno, y los repositorios
 // (por raíz git) en los que se ejecutó `git fetch origin`. Con fetch, cada repositorio con
 // ramas se trae justo antes de resolver su base. Los repositorios sin ramas (el de specs de
-// un multirepo, que se trabaja in situ) no tienen nada que comprobar ni que traer.
+// un multirepo, que se trabaja in situ) no tienen nada que traer ni que crear, pero sí que
+// estar en su rama de integración (checkSpecsRepository, REQ-25.5).
 func (e *Engine) checkPlan(ctx context.Context, operation, cwd string, plan branch.ChangePlan, facts changeFacts, fetch bool) ([]repositorySteps, map[string]bool, *branch.Refusal) {
 	var pending []repositorySteps
 	fetched := map[string]bool{}
 	for _, repo := range plan.Repositories {
 		if len(repo.Branches) == 0 {
+			if repo.Role == branch.RepoSpecsInPlace {
+				if refusal := checkSpecsRepository(operation, cwd, repo, facts); refusal != nil {
+					return nil, nil, refusal
+				}
+			}
 			continue
 		}
 		steps, refusal := e.checkRepository(ctx, operation, cwd, repo, facts, fetch)
