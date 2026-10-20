@@ -67,6 +67,10 @@ type Engine struct {
 	git      gitReader
 	writer   gitWriter
 	registry *registry.Store
+	// prefs son las preferencias personales de worktree del hub (REQ-25.29). nil, en las
+	// pruebas que construyen el motor a mano, equivale a los valores por defecto sin leer
+	// el hub.
+	prefs branch.Prefs
 	// goos es el sistema operativo cuyas reglas de rutas aplica el planificador
 	// (branch.PathRules): en Windows rige el límite de longitud de los worktrees.
 	goos string
@@ -76,7 +80,7 @@ type Engine struct {
 // de rutas del sistema operativo en el que corre.
 func Default() *Engine {
 	git := gitcli.New()
-	return &Engine{git: git, writer: git, registry: registry.New(), goos: runtime.GOOS}
+	return &Engine{git: git, writer: git, registry: registry.New(), prefs: hubPrefs{}, goos: runtime.GOOS}
 }
 
 // changeFacts son los hechos de solo lectura de un cambio: la entrada del planificador y
@@ -91,6 +95,9 @@ type changeFacts struct {
 	// worktrees es `git worktree list` de cada repositorio del plan, por raíz git: se lee
 	// una vez, para el planificador y para describir las ramas.
 	worktrees map[string][]branch.WorktreeEntry
+	// prefs son las preferencias personales de worktree del proyecto (hub): su raíz entra en
+	// el plan y `ensure` resuelve con ellas el modo de trabajo.
+	prefs workPrefs
 }
 
 // gather reúne los hechos de solo lectura de un cambio y compone la entrada del
@@ -167,10 +174,12 @@ func (e *Engine) gatherUnder(ctx context.Context, operation, cwd, change string,
 		existing = append(existing, listed...)
 	}
 
+	prefs := e.workPrefs(location, planning)
 	return changeFacts{
 		record:    record,
 		worktrees: worktrees,
 		location:  location,
+		prefs:     prefs,
 		input: branch.PlanInput{
 			Operation:     operation,
 			Lane:          lane,
@@ -186,10 +195,11 @@ func (e *Engine) gatherUnder(ctx context.Context, operation, cwd, change string,
 			SealedRoles:   sealed,
 			Policy:        branch.ResolvePolicy(location.Config),
 			Exceptions:    exceptions,
-			// La raíz de worktrees se calcula con la grafía que usa git (en Windows, la
-			// carpeta maestra puede llegar con un nombre corto 8.3): el planificador
-			// compara sus rutas con las de git por texto.
-			WorktreeRoot:      branch.DefaultWorktreeRoot(resolveDirectory(location.Master)),
+			// La raíz de worktrees es la de las preferencias del hub o, sin ellas, la de por
+			// defecto de la carpeta maestra del checkout principal, con la grafía que usa git
+			// (en Windows, la carpeta maestra puede llegar con un nombre corto 8.3): el
+			// planificador compara sus rutas con las de git por texto.
+			WorktreeRoot:      prefs.root,
 			ExistingWorktrees: existing,
 			PathRules:         branch.PathRules{GOOS: e.goos},
 		},
