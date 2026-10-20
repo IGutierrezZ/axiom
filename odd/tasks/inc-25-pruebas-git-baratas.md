@@ -40,7 +40,7 @@ Que las pruebas con git real de `internal/branch/**`, `internal/gitcommon` y `in
   - Marcar `t.Parallel()` en las pruebas de `internal/branch/engine` que no usan `observe(t)`, `t.Setenv`, `t.Chdir` ni globales de paquete.
   - Las que sí los usan siguen en serie.
   - Criterio: `go test ./internal/branch/engine -count=1` y `-race` (si está disponible) en verde, con el tiempo medido y registrado.
-- [ ] **T3 · Timeout propio (solo si hace falta)**
+- [x] **T3 · Timeout propio (solo si hace falta)**: no necesaria, decisión del usuario del 2026-10-20.
   - Si, tras la T1 y la T2, `engine` sigue por encima de unos 300 s dentro de `go test ./...` en Windows, proponer al usuario cómo darle un timeout propio. Go no permite un timeout por paquete dentro de un único `go test ./...`, así que habría que separar la invocación en scripts o en la CI.
   - Sin decisión del usuario no se toca nada.
 
@@ -63,8 +63,13 @@ Que las pruebas con git real de `internal/branch/**`, `internal/gitcommon` y `in
   - Tiempos (Windows, 12 CPU lógicas, git 2.41, go 1.26.3; una ejecución por medida, con ruido): `go test ./internal/branch/engine -count=1 -parallel 1` (equivale a serie) 327 s; con el `-parallel` por defecto 139 s, 136 s y 135 s en tres ejecuciones, y 151 s dentro de `go test ./internal/branch/... ./internal/gitcommon`.
   - `-race` no disponible: `CGO_ENABLED=0` y no hay `gcc` en el `PATH`. No se ejecutó; la ausencia de carreras se apoya en la auditoría y en las tres ejecuciones paralelas sin fallos.
   - Comprobaciones: `go build ./...`, `go vet ./...`, `go run ./internal/gofmtcheck`, `bash scripts/deadcode-ratchet.sh` (sin funciones inalcanzables nuevas), `go test ./internal/branch/... ./internal/gitcommon -count=1 -timeout 20m` y `go test ./internal/cli -run 'TestBranch' -count=1 -timeout 20m`, todo en verde.
-  - Commit: ver `git log` de la rama (mensaje `test(engine): ejecutar en paralelo las pruebas del motor sin estado global`).
+  - Commit: `f677a858` (`test(engine): ejecutar en paralelo las pruebas del motor sin estado global`).
+- T3 (no necesaria, decisión del usuario del 2026-10-20):
+  - Medición de `go test ./... -count=1` sobre `f677a858`, de 16:36 a 16:52, con la máquina muy cargada. `internal/branch/engine` pasa en 445 s, frente a 568 s antes y a un límite de 600 s. `gitcli`, `registry`, `gitcommon` y `hub` también pasan.
+  - Los fallos son todos de la línea base o de carga y no tocan este cambio. Expiran organicruntime, app, cli, communitytool, components/sdd y reviewtransaction. Fallan backup, filemerge, semantic, tui y update.
+  - Motivo para no hacerla: el límite de 10 min solo afecta al `go test ./...` local en Windows, donde ya expiran otros paquetes. La CI de Linux tarda 29 s en `engine`, y la suite completa de Windows (`windows-full-suite.yml`) usa `-timeout=30m`.
+  - No se toca código, scripts ni la CI.
 
 ## Siguiente paso
 
-Evaluar T3.
+PR contra la rama de seguimiento `inc/inc-25-ramas-y-worktrees-por-topologia`. Tras la fusión, borrar la rama y el worktree.
