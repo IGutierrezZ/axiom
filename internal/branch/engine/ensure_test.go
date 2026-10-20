@@ -57,7 +57,7 @@ func checkoutState(t *testing.T, repo string) string {
 }
 
 func isWriteInvocation(invocation []string) bool {
-	return invocation[1] == "branch" || (invocation[1] == "worktree" && len(invocation) > 2 && invocation[2] == "add")
+	return invocation[1] == "branch" || invocation[1] == "switch" || (invocation[1] == "worktree" && len(invocation) > 2 && invocation[2] == "add")
 }
 
 func wantNothingCreated(t *testing.T, repo, wantState string, change string) {
@@ -404,6 +404,7 @@ type failingWriter struct {
 	real         gitWriter
 	failBranch   bool
 	failWorktree bool
+	failSwitch   bool
 }
 
 func (f failingWriter) CreateBranch(ctx context.Context, dir, name, startPoint string) error {
@@ -418,6 +419,13 @@ func (f failingWriter) AddWorktree(ctx context.Context, dir, path, branchName st
 		return errors.New("fallo simulado de git al crear el worktree")
 	}
 	return f.real.AddWorktree(ctx, dir, path, branchName)
+}
+
+func (f failingWriter) Switch(ctx context.Context, dir, branchName string) error {
+	if f.failSwitch {
+		return errors.New("fallo simulado de git al cambiar de rama")
+	}
+	return f.real.Switch(ctx, dir, branchName)
 }
 
 func (f failingWriter) Fetch(ctx context.Context, dir, remote string) error {

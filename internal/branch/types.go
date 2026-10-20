@@ -175,10 +175,13 @@ type RecordRepo struct {
 	Branches  []RecordBranch `json:"branches"`
 }
 
-// RecordBranch es una rama del plan registrada, con su worktree si lo hay.
+// RecordBranch es una rama del plan registrada, con su worktree si lo hay o, en el modo
+// `in_place`, `inPlace` cuando está desplegada en el propio repositorio en lugar de en un
+// worktree (design §4.4). Una rama nunca lleva las dos cosas.
 type RecordBranch struct {
 	Name     string     `json:"name"`
 	Kind     BranchKind `json:"kind"`
 	RoleID   string     `json:"role,omitempty"`
 	Worktree string     `json:"worktree,omitempty"`
+	InPlace  bool       `json:"inPlace,omitempty"`
 }

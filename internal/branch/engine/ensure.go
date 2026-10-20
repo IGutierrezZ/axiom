@@ -27,8 +27,10 @@ type EnsureRequest struct {
 	Mode   branch.Mode
 }
 
-// Ensure crea lo que falta de las ramas del cambio y de sus worktrees (REQ-25.7, design
-// D-05) en modo `worktree`, con la base resuelta sin red (D-06):
+// Ensure crea lo que falta de las ramas del cambio y las despliega según el modo de trabajo
+// (REQ-25.7, REQ-25.8, design D-05): en `worktree`, un worktree por rama; en `in_place`, la
+// rama de seguimiento en el propio repositorio con `git switch`. La base se resuelve sin red
+// (D-06):
 //
 //  1. bloquea el cambio en exclusiva (un bloqueo por cambio en el git common dir: con otra
 //     ejecución en marcha, `plan_conflict`), reúne los hechos de solo lectura (gather),
@@ -38,11 +40,14 @@ type EnsureRequest struct {
 //  2. comprueba, sin efectos, todos los repositorios del plan antes de mutar ninguno
 //     (checkPlan): con `--fetch`, el `git fetch origin` de cada repositorio, antes de
 //     resolver la base; que la base existe, que ninguna rama está desplegada en un
-//     worktree desconocido y que las rutas planificadas están libres;
+//     worktree desconocido y que las rutas planificadas están libres; en `in_place`, que
+//     el repositorio tiene el árbol limpio si va a cambiar de rama (`dirty_worktree`, sin
+//     modificar nada: ya en la rama esperada es un no-op, REQ-25.9);
 //  3. aplica solo lo que falta (apply): crea las ramas que no existen, desde la base o,
-//     las de rol, desde la de seguimiento, y los worktrees que no existen, siempre con
-//     cmd.Dir en el checkout principal. Nunca mueve ni reinicia una rama existente ni
-//     toca el checkout principal;
+//     las de rol, desde la de seguimiento, y los worktrees que no existen (en `in_place`,
+//     el `git switch` a la rama de seguimiento), siempre con cmd.Dir en el checkout
+//     principal. Nunca mueve ni reinicia una rama existente; en `worktree` tampoco toca el
+//     checkout principal;
 //  4. guarda el registro local, compuesto desde el plan y el estado final de git: solo se
 //     escribe si cambian sus bytes, y un registro borrado se recompone idéntico;
 //  5. describe el estado final, sin acciones ni marcas de tiempo, de modo que repetir la
@@ -51,8 +56,7 @@ type EnsureRequest struct {
 // Un fallo de git durante la aplicación es `git_failed` y repetir `ensure` completa lo
 // pendiente; un fallo de la comprobación (incluido `fetch_failed`) no deja ni ramas, ni
 // worktrees, ni registro. La única operación remota es `git fetch origin` con `--fetch`.
-// El modo `in_place` (hasta S4-c2, rechazado) y las excepciones llegan con las rebanadas
-// siguientes.
+// Las excepciones llegan con las rebanadas siguientes.
 func (e *Engine) Ensure(ctx context.Context, r EnsureRequest) branch.Result {
 	const operation = "ensure"
 	refused := func(refusal *branch.Refusal) branch.Result {
@@ -94,9 +98,9 @@ func (e *Engine) Ensure(ctx context.Context, r EnsureRequest) branch.Result {
 	if refusal != nil {
 		return refused(refusal)
 	}
-	if mode.mode == branch.ModeInPlace {
-		return refused(branch.InPlaceNotAvailable(operation, r.Change, r.CWD, r.Lane))
-	}
+	// En `in_place` las ramas se despliegan en el propio repositorio: el plan no lleva rutas
+	// de worktree (ni se comprueba su colocación ni su longitud).
+	facts.input.InPlace = mode.mode == branch.ModeInPlace
 	plan, refusal := branch.Plan(facts.input)
 	if refusal != nil {
 		return refused(refusal)
@@ -116,6 +120,7 @@ func (e *Engine) Ensure(ctx context.Context, r EnsureRequest) branch.Result {
 		if facts, refusal = e.gather(ctx, operation, r.CWD, r.Change, r.Lane); refusal != nil {
 			return refused(refusal)
 		}
+		facts.input.InPlace = mode.mode == branch.ModeInPlace
 		if plan, refusal = branch.Plan(facts.input); refusal != nil {
 			return refused(refusal)
 		}
@@ -138,7 +143,10 @@ func (e *Engine) Ensure(ctx context.Context, r EnsureRequest) branch.Result {
 			base.Fetched = true
 		}
 	}
-	result.WorktreeRoot = plan.WorktreeRoot
+	// En `in_place` no hay worktrees: la raíz de worktrees no se informa.
+	if !facts.input.InPlace {
+		result.WorktreeRoot = plan.WorktreeRoot
+	}
 	if facts.prefs.warning != "" {
 		result.Warnings = append(result.Warnings, facts.prefs.warning)
 	}
@@ -152,6 +160,9 @@ type ensureStep struct {
 	createFrom string
 	// worktree es la ruta del worktree que falta, o vacía si la rama ya está desplegada.
 	worktree string
+	// switchTo dice que, en `in_place`, la rama aún no está desplegada en el propio
+	// repositorio y hay que cambiar a ella con `git switch`.
+	switchTo bool
 }
 
 // repositorySteps son los pasos pendientes de un repositorio del plan, con su checkout
@@ -225,6 +236,9 @@ func (e *Engine) checkRepository(ctx context.Context, operation, cwd string, rep
 			deployed[entry.Branch] = entry
 		}
 	}
+	if facts.input.InPlace {
+		return e.checkInPlaceRepository(ctx, operation, cwd, repo, facts, pending, base, deployed)
+	}
 
 	for _, planned := range repo.Branches {
 		exists, err := e.git.BranchExists(ctx, repo.GitRoot, planned.Name)
@@ -278,6 +292,57 @@ func (e *Engine) checkRepository(ctx context.Context, operation, cwd string, rep
 	return pending, nil
 }
 
+// checkInPlaceRepository es checkRepository en modo `in_place` (REQ-25.8, REQ-25.9): las
+// ramas del plan se crean igual (la del cambio desde la base, las de rol desde ella), pero
+// solo la de seguimiento, la primera, se despliega, y en el propio repositorio, que es su
+// checkout principal (limitación documentada, R26: las ramas de rol no se despliegan). Si ya
+// es la rama actual del checkout principal, no hay nada que cambiar y el árbol puede estar
+// sucio (no-op); si está desplegada en otro worktree, git no admite desplegarla también aquí
+// (`branch_checked_out_elsewhere`); si no, hay que cambiar de rama y el árbol debe estar
+// limpio: `dirty_worktree` sin efectos (git status --porcelain=v1 -z --untracked-files=normal,
+// con los ficheros ignorados como limpios). pending ya lleva el checkout principal.
+func (e *Engine) checkInPlaceRepository(ctx context.Context, operation, cwd string, repo branch.RepoPlan, facts changeFacts, pending repositorySteps, base baseReference, deployed map[string]branch.WorktreeEntry) (repositorySteps, *branch.Refusal) {
+	change, master := facts.input.Change, facts.input.Master
+	switching := false
+	for i, planned := range repo.Branches {
+		exists, err := e.git.BranchExists(ctx, repo.GitRoot, planned.Name)
+		if err != nil {
+			return repositorySteps{}, gitRefusal(operation, cwd, "comprobar si existe la rama "+planned.Name, err)
+		}
+		step := ensureStep{branch: planned.Name}
+		if !exists {
+			step.createFrom = base.sha
+			if planned.Kind == branch.KindRole {
+				step.createFrom = "refs/heads/" + planned.From
+			}
+		}
+		if i == 0 {
+			entry, isDeployed := deployed[planned.Name]
+			switch {
+			case !isDeployed:
+				step.switchTo = true
+				switching = true
+			case !e.samePlace(entry.Path, pending.mainCheckout):
+				return repositorySteps{}, branch.BranchCheckedOutElsewhere(operation, change, master, repo, planned.Name, entry.Path, pending.mainCheckout, false)
+			}
+		}
+		if step.createFrom != "" || step.switchTo {
+			pending.steps = append(pending.steps, step)
+		}
+	}
+	if !switching {
+		return pending, nil
+	}
+	dirty, err := e.git.DirtyPaths(ctx, pending.mainCheckout)
+	if err != nil {
+		return repositorySteps{}, gitRefusal(operation, cwd, "leer el estado del repositorio "+pending.mainCheckout, err)
+	}
+	if len(dirty) > 0 {
+		return repositorySteps{}, branch.DirtyWorktree(operation, change, cwd, facts.input.Lane, repo, pending.mainCheckout, dirty, facts.record != nil)
+	}
+	return pending, nil
+}
+
 // apply es la fase 4 de D-05: ejecuta solo lo que falta, repositorio a repositorio y rama
 // a rama, en el orden del plan (la rama de seguimiento antes que las de rol). Un fallo de
 // git para la aplicación con `git_failed`; lo ya creado se conserva y repetir `ensure`
@@ -293,6 +358,11 @@ func (e *Engine) apply(ctx context.Context, operation, cwd string, pending []rep
 			if step.worktree != "" {
 				if err := e.writer.AddWorktree(ctx, repo.mainCheckout, step.worktree, step.branch); err != nil {
 					return branch.GitFailed(operation, cwd, fmt.Sprintf("crear el worktree %s de la rama %s", step.worktree, step.branch), err)
+				}
+			}
+			if step.switchTo {
+				if err := e.writer.Switch(ctx, repo.mainCheckout, step.branch); err != nil {
+					return branch.GitFailed(operation, cwd, fmt.Sprintf("cambiar el repositorio %s a la rama %s", repo.name, step.branch), err)
 				}
 			}
 		}

@@ -2,7 +2,8 @@
 // D-01): el adaptador de los puertos de `internal/branch` sobre gitcommon.Run, el único
 // punto que ejecuta git (REQ-25.1, G-7). Las lecturas usan una lista cerrada de
 // subcomandos (`rev-parse`, `worktree list`, `status`, `rev-list` y `ls-tree`) y las
-// escrituras de `ensure` son solo `branch` y `worktree add`; ninguna es remota. La única
+// escrituras de `ensure` son solo `branch`, `worktree add` y `switch` (modo `in_place`);
+// ninguna es remota. La única
 // operación remota es Fetch (`git fetch origin`, `ensure --fetch`, REQ-25.10): el puerto no
 // tiene ningún método que publique. El resto de escrituras de `done` y las lecturas que
 // faltan llegan con el primer llamador que las usa.
@@ -270,6 +271,20 @@ func (*Git) AddWorktree(ctx context.Context, dir, path, branchName string) error
 		return err
 	}
 	return runWrite(ctx, dir, "worktree", "add", path, branchName)
+}
+
+// Switch despliega la rama local existente name en el propio repositorio (`git switch
+// --no-guess <name>`): es el cambio de rama del modo `in_place` (REQ-25.8). Nunca crea la
+// rama ni la adivina desde una referencia remota local del mismo nombre, que crearía una rama
+// con seguimiento (`--no-guess`): si no existe, git falla y el repositorio queda como estaba.
+// Tampoco sobrescribe cambios sin confirmar: ante un conflicto, git se niega. Quien llama
+// comprueba antes, sin efectos, que el árbol está limpio (REQ-25.9). dir es el checkout
+// principal del repositorio, que es el que cambia de rama.
+func (*Git) Switch(ctx context.Context, dir, name string) error {
+	if err := plainArgument(name); err != nil {
+		return err
+	}
+	return runWrite(ctx, dir, "switch", "--no-guess", name)
 }
 
 // Fetch trae las referencias del remoto (`git fetch <remote>`, sin `--prune`): es la única

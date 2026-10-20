@@ -79,6 +79,10 @@ type PlanInput struct {
 	Policy       Policy
 	Exceptions   Exceptions
 	WorktreeRoot string
+	// InPlace dice que el modo efectivo es `in_place` (REQ-25.8): las ramas se crean igual,
+	// pero se despliegan en el propio repositorio, de modo que el plan no lleva ruta de
+	// worktree y ni la raíz de worktrees ni su longitud pueden impedirlo.
+	InPlace bool
 	// ExistingWorktrees son los worktrees que git ya conoce en los repositorios del plan,
 	// incluido el checkout principal de cada uno.
 	ExistingWorktrees []WorktreeEntry
@@ -332,7 +336,7 @@ func planRepository(in PlanInput, selection repoSelection) (RepoPlan, *Refusal) 
 		Name:     changeBranch,
 		Kind:     KindChange,
 		PRTarget: effective.IntegrationBranch,
-		Worktree: filepath.Join(in.WorktreeRoot, in.Change, name),
+		Worktree: plannedWorktree(in, in.Change, name),
 	}}
 	if len(selection.roles) < 2 {
 		return repo, nil
@@ -347,10 +351,20 @@ func planRepository(in PlanInput, selection repoSelection) (RepoPlan, *Refusal) 
 			RoleID:   role,
 			From:     changeBranch,
 			PRTarget: changeBranch,
-			Worktree: filepath.Join(in.WorktreeRoot, in.Change+"-"+role, name),
+			Worktree: plannedWorktree(in, in.Change+"-"+role, name),
 		})
 	}
 	return repo, nil
+}
+
+// plannedWorktree es la ruta del worktree de una rama: `<raíz>/<carpeta>/<repo>`, o vacía en
+// el modo `in_place`, en el que las ramas se despliegan en el propio repositorio y no hay
+// nada que colocar ni medir (design D-05; la ruta vacía ya está excluida de la colocación).
+func plannedWorktree(in PlanInput, folder, repo string) string {
+	if in.InPlace {
+		return ""
+	}
+	return filepath.Join(in.WorktreeRoot, folder, repo)
 }
 
 // repositoryRole es el papel de un repositorio según la topología (REQ-25.5): en

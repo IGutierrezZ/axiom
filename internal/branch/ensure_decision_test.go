@@ -110,13 +110,6 @@ func TestModeRefusalsNameAnExecutableContinuation(t *testing.T) {
 			wantMessage:  []string{"ask", "worktree", "in_place"},
 			wantContinue: "axiom branch ensure --change x --mode worktree --cwd " + pathquote.Quote(modeTestCWD),
 		},
-		{
-			name:         "in_place todavía no disponible",
-			refusal:      InPlaceNotAvailable("ensure", "x", modeTestCWD, LaneSDD),
-			wantCode:     CodePlanConflict,
-			wantMessage:  []string{"in_place"},
-			wantContinue: "axiom branch ensure --change x --mode worktree --cwd " + pathquote.Quote(modeTestCWD),
-		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
