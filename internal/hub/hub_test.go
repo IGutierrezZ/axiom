@@ -1,10 +1,16 @@
 package hub
 
 import (
+	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/IGutierrezZ/axiom/v3/internal/pathidentity"
+	"github.com/IGutierrezZ/axiom/v3/internal/pathquote"
 )
 
 func TestDetector(t *testing.T) {
@@ -384,34 +390,304 @@ func TestInteractiveRolesAndNonBlocking(t *testing.T) {
 	}
 }
 
+// writeGitFile escribe un fichero de git sintético (`.git`, `commondir`) creando sus
+// directorios.
+func writeGitFile(t *testing.T, path, content string) {
+	t.Helper()
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatalf("crear el directorio de %s: %v", path, err)
+	}
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatalf("escribir %s: %v", path, err)
+	}
+}
+
+// syntheticLinkedWorktree crea, sin git, un worktree enlazado: su `.git` es un fichero que
+// apunta a `<principal>/.git/worktrees/<nombre>`, cuyo git dir declara su `commondir`. Devuelve
+// la raíz del worktree y la del checkout principal.
+func syntheticLinkedWorktree(t *testing.T, base, name string) (linked, main string) {
+	t.Helper()
+	main = filepath.Join(base, name+"-principal")
+	gitDir := filepath.Join(main, ".git", "worktrees", name)
+	writeGitFile(t, filepath.Join(gitDir, "commondir"), "../..\n")
+	linked = filepath.Join(base, name)
+	writeGitFile(t, filepath.Join(linked, ".git"), "gitdir: "+filepath.ToSlash(gitDir)+"\n")
+	return linked, main
+}
+
+// REQ-25.31: un worktree enlazado se reconoce por la evidencia de git (`.git` fichero cuyo git
+// dir contiene `commondir`), nunca por el nombre de un segmento de su ruta.
 func TestIsGitWorktree(t *testing.T) {
 	tempDir := t.TempDir()
 
-	// 1. Directorio normal sin git
-	if IsGitWorktree(tempDir) {
-		t.Errorf("un directorio ordinario no debe ser detectado como worktree")
+	t.Run("directorio normal sin git y ruta vacía", func(t *testing.T) {
+		if IsGitWorktree(tempDir) {
+			t.Errorf("un directorio ordinario no debe ser detectado como worktree")
+		}
+		if IsGitWorktree("") {
+			t.Errorf("la ruta vacía no es un worktree")
+		}
+	})
+
+	t.Run("repositorio git normal (directorio .git)", func(t *testing.T) {
+		normalRepo := filepath.Join(tempDir, "normal-repo")
+		_ = os.MkdirAll(filepath.Join(normalRepo, ".git"), 0755)
+		if IsGitWorktree(normalRepo) {
+			t.Errorf("un repositorio ordinario con directorio .git no debe ser detectado como worktree")
+		}
+	})
+
+	t.Run("worktree enlazado: .git fichero cuyo git dir tiene commondir", func(t *testing.T) {
+		linked, _ := syntheticLinkedWorktree(t, tempDir, "linked-wt")
+		if !IsGitWorktree(linked) {
+			t.Errorf("un worktree con .git fichero y commondir debe ser detectado como worktree")
+		}
+		sub := filepath.Join(linked, "src")
+		_ = os.MkdirAll(sub, 0755)
+		if !IsGitWorktree(sub) {
+			t.Errorf("una subcarpeta de un worktree enlazado pertenece a un worktree enlazado")
+		}
+	})
+
+	t.Run("submódulo: .git fichero sin commondir no es un worktree enlazado", func(t *testing.T) {
+		super := filepath.Join(tempDir, "super")
+		_ = os.MkdirAll(filepath.Join(super, ".git", "modules", "sub"), 0755)
+		sub := filepath.Join(super, "sub")
+		writeGitFile(t, filepath.Join(sub, ".git"), "gitdir: ../.git/modules/sub\n")
+		if IsGitWorktree(sub) {
+			t.Errorf("un submódulo (gitdir sin commondir) no debe ser detectado como worktree enlazado")
+		}
+	})
+
+	t.Run("un .git fichero hacia un git dir inexistente no cuenta", func(t *testing.T) {
+		dangling := filepath.Join(tempDir, "dangling")
+		writeGitFile(t, filepath.Join(dangling, ".git"), "gitdir: /fake/main/.git/worktrees/dangling\n")
+		if IsGitWorktree(dangling) {
+			t.Errorf("sin un git dir legible con commondir no hay evidencia de worktree enlazado")
+		}
+	})
+
+	t.Run("el nombre de la ruta no decide: axiom-wt y -wt en un checkout principal", func(t *testing.T) {
+		for _, segment := range []string{"axiom-wt", "proyecto-wt"} {
+			repo := filepath.Join(tempDir, segment, "feature-x")
+			_ = os.MkdirAll(filepath.Join(repo, ".git"), 0755)
+			if IsGitWorktree(repo) {
+				t.Errorf("un checkout principal bajo %q no es un worktree enlazado", segment)
+			}
+		}
+		if IsGitWorktree(filepath.Join(tempDir, "axiom-wt", "no-existe")) {
+			t.Errorf("una ruta bajo 'axiom-wt' sin repositorio no es un worktree")
+		}
+	})
+}
+
+// requireGit omite la prueba con -short o sin git instalado: las pruebas con repositorios
+// reales ejecutan procesos externos (skill go-testing, regla 9 de tasks.md).
+func requireGit(t *testing.T) {
+	t.Helper()
+	if testing.Short() {
+		t.Skip("prueba con git real: se omite con -short")
+	}
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skipf("git no está instalado: %v", err)
+	}
+}
+
+func runGit(t *testing.T, dir string, args ...string) {
+	t.Helper()
+	command := exec.Command("git", append([]string{"-C", dir}, args...)...)
+	if output, err := command.CombinedOutput(); err != nil {
+		t.Fatalf("git %v en %s: %v\n%s", args, dir, err, output)
+	}
+}
+
+// newGitRepository crea un checkout principal real, con un commit, en dir.
+func newGitRepository(t *testing.T, dir string) string {
+	t.Helper()
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatalf("crear %s: %v", dir, err)
+	}
+	runGit(t, dir, "init", "-q", "-b", "main")
+	runGit(t, dir, "commit", "-q", "--allow-empty", "-m", "inicial")
+	return dir
+}
+
+// REQ-25.31, escenario 1: un checkout principal bajo una ruta con un segmento `axiom-wt` o
+// terminado en `-wt` se registra: el nombre de la ruta no es evidencia de worktree.
+func TestRegisterAcceptsAMainCheckoutUnderAWtSegment(t *testing.T) {
+	requireGit(t)
+	for _, segment := range []string{"axiom-wt", "proyecto-wt"} {
+		t.Run(segment, func(t *testing.T) {
+			base := t.TempDir()
+			repo := newGitRepository(t, filepath.Join(base, segment, "proj"))
+			if IsGitWorktree(repo) {
+				t.Fatalf("IsGitWorktree(%q) = true; un checkout principal no es un worktree enlazado", repo)
+			}
+			mgr, err := NewManager(filepath.Join(base, "workspaces.json"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			rec, err := mgr.Register(repo, "Proj", "monorepo-embedded")
+			if err != nil {
+				t.Fatalf("Register de un checkout principal bajo %q: %v", segment, err)
+			}
+			if !pathidentity.SameDirectory(rec.Path, repo) {
+				t.Errorf("el registro guarda %q, se esperaba %q", rec.Path, repo)
+			}
+		})
+	}
+}
+
+// quotedMainCheckout extrae la ruta citada de la continuación `axiom project add "<ruta>"` de
+// un rechazo.
+func quotedMainCheckout(t *testing.T, err error) string {
+	t.Helper()
+	match := regexp.MustCompile(`axiom project add "([^"]+)"`).FindStringSubmatch(err.Error())
+	if match == nil {
+		t.Fatalf("el rechazo no nombra la continuación `axiom project add \"<checkout principal>\"`: %v", err)
+	}
+	return match[1]
+}
+
+// REQ-25.31, escenario 2: un worktree enlazado real no se registra y el rechazo nombra su
+// checkout principal citado, de modo que `axiom project add <checkout principal>` se pueda copiar.
+func TestRegisterRefusesALinkedWorktreeAndNamesTheMainCheckout(t *testing.T) {
+	requireGit(t)
+	base := t.TempDir()
+	main := newGitRepository(t, filepath.Join(base, "proyecto-wt", "proj"))
+	linked := filepath.Join(base, "enlazado")
+	runGit(t, main, "worktree", "add", "-q", "-b", "inc/x", linked, "HEAD")
+
+	if !IsGitWorktree(linked) {
+		t.Fatalf("IsGitWorktree(%q) = false; un worktree enlazado real debe detectarse", linked)
+	}
+	mgr, err := NewManager(filepath.Join(base, "workspaces.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = mgr.Register(linked, "Enlazado", "monorepo-embedded")
+	if err == nil {
+		t.Fatal("Register de un worktree enlazado debe fallar")
+	}
+	if got := quotedMainCheckout(t, err); !pathidentity.SameDirectory(got, main) {
+		t.Errorf("el rechazo cita %q, se esperaba el checkout principal %q", got, main)
+	}
+	if !strings.Contains(err.Error(), "worktree") {
+		t.Errorf("el rechazo debe decir que la ruta es un worktree: %v", err)
+	}
+	if list, _ := mgr.List(); len(list) != 0 {
+		t.Errorf("un rechazo no debe registrar nada, hay %d entradas", len(list))
 	}
 
-	// 2. Repositorio git normal (directorio .git)
-	normalRepo := filepath.Join(tempDir, "normal-repo")
-	_ = os.MkdirAll(filepath.Join(normalRepo, ".git"), 0755)
-	if IsGitWorktree(normalRepo) {
-		t.Errorf("un repositorio ordinario con directorio .git no debe ser detectado como worktree")
+	t.Run("desde una subcarpeta del worktree enlazado", func(t *testing.T) {
+		sub := filepath.Join(linked, "src")
+		if err := os.MkdirAll(sub, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		_, err := mgr.Register(sub, "Sub", "monorepo-embedded")
+		if err == nil {
+			t.Fatal("Register de una subcarpeta de un worktree enlazado debe fallar")
+		}
+		if got := quotedMainCheckout(t, err); !pathidentity.SameDirectory(got, main) {
+			t.Errorf("el rechazo cita %q, se esperaba el checkout principal %q", got, main)
+		}
+	})
+}
+
+// Si el checkout principal no se puede deducir (el common dir no se llama `.git`), el rechazo
+// lo dice y pide registrar el checkout principal del repositorio, sin inventar una ruta.
+func TestRegisterRefusalWithoutAResolvableMainCheckout(t *testing.T) {
+	base := t.TempDir()
+	gitDir := filepath.Join(base, "almacen", "worktrees", "x")
+	writeGitFile(t, filepath.Join(gitDir, "commondir"), "../..\n")
+	linked := filepath.Join(base, "x")
+	writeGitFile(t, filepath.Join(linked, ".git"), "gitdir: "+filepath.ToSlash(gitDir)+"\n")
+
+	mgr, err := NewManager(filepath.Join(base, "workspaces.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = mgr.Register(linked, "X", "monorepo-embedded")
+	if err == nil {
+		t.Fatal("Register de un worktree enlazado debe fallar")
+	}
+	msg := err.Error()
+	for _, want := range []string{"worktree", "checkout principal", pathquote.Quote(linked)} {
+		if !strings.Contains(msg, want) {
+			t.Errorf("el rechazo debe contener %q: %v", want, err)
+		}
+	}
+	if strings.Contains(msg, `axiom project add "`) {
+		t.Errorf("no debe inventar un checkout principal que no se pudo resolver: %v", err)
+	}
+}
+
+// REQ-25.31, escenario 3: un submódulo (`.git` fichero sin `commondir`) no se trata como
+// worktree enlazado y se registra como cualquier checkout.
+func TestRegisterAcceptsASubmodule(t *testing.T) {
+	base := t.TempDir()
+	super := filepath.Join(base, "super")
+	if err := os.MkdirAll(filepath.Join(super, ".git", "modules", "sub"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	sub := filepath.Join(super, "sub")
+	writeGitFile(t, filepath.Join(sub, ".git"), "gitdir: ../.git/modules/sub\n")
+
+	mgr, err := NewManager(filepath.Join(base, "workspaces.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := mgr.Register(sub, "Sub", "monorepo-embedded"); err != nil {
+		t.Fatalf("un submódulo no es un worktree enlazado: %v", err)
+	}
+}
+
+// REQ-25.31, escenario 4: crear worktrees enlazados de un proyecto registrado no altera su
+// registro, no añade proyectos y `Prune` no los toca.
+func TestLinkedWorktreesDoNotAlterTheRegisteredProject(t *testing.T) {
+	requireGit(t)
+	base := t.TempDir()
+	main := newGitRepository(t, filepath.Join(base, "axiom-wt", "proj"))
+	mgr, err := NewManager(filepath.Join(base, "workspaces.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	rec, err := mgr.Register(main, "Proj", "monorepo-embedded")
+	if err != nil {
+		t.Fatal(err)
 	}
 
-	// 3. Worktree vinculado con archivo .git apuntando a worktrees
-	wtRepo := filepath.Join(tempDir, "linked-wt")
-	_ = os.MkdirAll(wtRepo, 0755)
-	_ = os.WriteFile(filepath.Join(wtRepo, ".git"), []byte("gitdir: /fake/main/.git/worktrees/linked-wt\n"), 0644)
-	if !IsGitWorktree(wtRepo) {
-		t.Errorf("un worktree con archivo .git hacia worktrees debe ser detectado como worktree")
+	for i, name := range []string{"uno", "dos"} {
+		runGit(t, main, "worktree", "add", "-q", "-b", fmt.Sprintf("inc/%d", i), filepath.Join(base, name), "HEAD")
 	}
 
-	// 4. Ruta dentro de convención axiom-wt
-	axiomWtRepo := filepath.Join(tempDir, "axiom-wt", "feature-x")
-	if !IsGitWorktree(axiomWtRepo) {
-		t.Errorf("una ruta bajo 'axiom-wt' debe ser detectada como worktree por convención")
+	assertOnlyTheProject := func(stage string) {
+		t.Helper()
+		list, err := mgr.List()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(list) != 1 || list[0].ID != rec.ID || !pathidentity.SameDirectory(list[0].Path, main) {
+			t.Fatalf("%s: se esperaba solo el proyecto registrado %q, hay %v", stage, main, list)
+		}
+		cfg, err := mgr.Load()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if cfg.ActiveWorkspace != rec.ID {
+			t.Errorf("%s: el proyecto activo es %q, se esperaba %q", stage, cfg.ActiveWorkspace, rec.ID)
+		}
 	}
+	assertOnlyTheProject("tras crear los worktrees")
+
+	pruned, err := mgr.Prune()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(pruned) != 0 {
+		t.Errorf("Prune no debe purgar el proyecto ni añadir nada, purgó %v", pruned)
+	}
+	assertOnlyTheProject("tras Prune")
 }
 
 func TestManagerWorktreeIsolationAndPrune(t *testing.T) {
@@ -431,9 +707,7 @@ func TestManagerWorktreeIsolationAndPrune(t *testing.T) {
 	}
 
 	// Intentar registrar un worktree debe fallar
-	wtProj := filepath.Join(tempDir, "fake-wt")
-	_ = os.MkdirAll(wtProj, 0755)
-	_ = os.WriteFile(filepath.Join(wtProj, ".git"), []byte("gitdir: /fake/main/.git/worktrees/fake-wt\n"), 0644)
+	wtProj, _ := syntheticLinkedWorktree(t, tempDir, "fake-wt")
 
 	_, err = mgr.Register(wtProj, "Worktree Proj", "monorepo-embedded")
 	if err == nil {

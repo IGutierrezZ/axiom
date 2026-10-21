@@ -114,6 +114,74 @@ func GitDirFromFiles(gitRoot string) (string, error) {
 	return filepath.Clean(target), nil
 }
 
+// commonDirFileName es el fichero del git dir de un worktree enlazado que apunta al common
+// dir del repositorio. Un checkout normal y un submódulo no lo tienen.
+const commonDirFileName = "commondir"
+
+// CommonDirFromFiles devuelve el git common dir del repositorio cuya raíz es gitRoot, leyendo
+// ficheros sin lanzar procesos: es el equivalente de CommonDir (`git rev-parse
+// --git-common-dir`) para quien no puede o no debe depender de un binario git.
+//
+// Parte del git dir (GitDirFromFiles). Si contiene un fichero `commondir`, como el de un
+// worktree enlazado, el common dir es su primera línea, relativa al git dir salvo que sea
+// absoluta (git escribe `../..`); se tolera CRLF y los espacios alrededor. Si no lo contiene,
+// el propio git dir es el common dir: un clon, un submódulo o un repositorio con
+// `--separate-git-dir`. La ruta devuelta es absoluta y está limpia, y conserva la grafía de
+// las que se leen: quien la compare con otra debe hacerlo por identidad
+// (pathidentity.SameDirectory).
+func CommonDirFromFiles(gitRoot string) (string, error) {
+	gitDir, err := GitDirFromFiles(gitRoot)
+	if err != nil {
+		return "", err
+	}
+	content, err := readSmallFile(filepath.Join(gitDir, commonDirFileName))
+	if errors.Is(err, os.ErrNotExist) {
+		return gitDir, nil
+	}
+	if err != nil {
+		return "", fmt.Errorf("leer el %s de %s: %w", commonDirFileName, gitDir, err)
+	}
+	firstLine, _, _ := strings.Cut(content, "\n")
+	target := filepath.FromSlash(strings.TrimSpace(firstLine))
+	if target == "" {
+		return "", fmt.Errorf("el %s de %s está vacío: se esperaba la ruta del common dir", commonDirFileName, gitDir)
+	}
+	if !filepath.IsAbs(target) {
+		target = filepath.Join(gitDir, target)
+	}
+	return filepath.Clean(target), nil
+}
+
+// LinkedWorktreeRoot devuelve la raíz del worktree enlazado al que pertenece path, o "" si
+// path no está en uno. Un worktree enlazado es el que cumple a la vez que su `.git` es un
+// fichero (no un directorio) y que su git dir contiene un fichero `commondir`: esa es la
+// evidencia de git, y no el nombre de ninguna carpeta de la ruta. Un checkout principal (`.git`
+// directorio) y un submódulo (`.git` fichero, pero su git dir no tiene `commondir`) devuelven
+// "". Tampoco cuenta un `.git` fichero ilegible o cuyo git dir no se puede leer. No lanza
+// procesos.
+//
+// La raíz se busca como en GitRootFromFiles, ascendiendo desde path, así que una subcarpeta de
+// un worktree enlazado devuelve la raíz del worktree. La raíz devuelta conserva la grafía de
+// path: quien la compare debe hacerlo por identidad (pathidentity.SameDirectory).
+func LinkedWorktreeRoot(path string) string {
+	root, ok := GitRootFromFiles(path)
+	if !ok {
+		return ""
+	}
+	info, err := os.Stat(filepath.Join(root, gitEntryName))
+	if err != nil || info.IsDir() {
+		return ""
+	}
+	gitDir, err := GitDirFromFiles(root)
+	if err != nil {
+		return ""
+	}
+	if _, err := os.Stat(filepath.Join(gitDir, commonDirFileName)); err != nil {
+		return ""
+	}
+	return root
+}
+
 // MainWorktreeFromFiles devuelve el checkout principal del repositorio cuyo git common dir
 // es commonDir y true: el directorio padre del common dir cuando este se llama `.git`, que
 // es lo que ocurre en un clon normal y desde cualquiera de sus worktrees enlazados (todos

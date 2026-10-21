@@ -1175,11 +1175,15 @@ func TestDashboardWorktreeExclusion(t *testing.T) {
 		t.Fatalf("error creando Hub Manager: %v", err)
 	}
 
-	// 1. Crear un worktree simulado con axiom.yaml y .git
+	// 1. Crear un worktree enlazado simulado con axiom.yaml y .git: la evidencia es un
+	// `.git` fichero cuyo git dir contiene `commondir` (REQ-25.31), no la ruta.
 	wtDir := filepath.Join(tempDir, "axiom-wt", "my-feature")
 	_ = os.MkdirAll(wtDir, 0755)
 	_ = os.WriteFile(filepath.Join(wtDir, "axiom.yaml"), []byte("workspace:\n  name: Feature\n"), 0644)
-	_ = os.WriteFile(filepath.Join(wtDir, ".git"), []byte("gitdir: /fake/main/.git/worktrees/my-feature\n"), 0644)
+	gitDir := filepath.Join(tempDir, "principal", ".git", "worktrees", "my-feature")
+	_ = os.MkdirAll(gitDir, 0755)
+	_ = os.WriteFile(filepath.Join(gitDir, "commondir"), []byte("../..\n"), 0644)
+	_ = os.WriteFile(filepath.Join(wtDir, ".git"), []byte("gitdir: "+filepath.ToSlash(gitDir)+"\n"), 0644)
 
 	// Iniciar servicio con NewServiceWithHub sobre el worktree
 	svc := NewServiceWithHub(wtDir, hubMgr)
