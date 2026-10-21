@@ -27,7 +27,10 @@ const originRemote = "origin"
 // `not_started`, no un error. Con registro local, informa además del modo de trabajo
 // materializado y de los worktrees registrados, y aplica las excepciones que el registro
 // guarda (`--prefix`, `--branch`, `--base`); sin él, `registry.present` es falso. Con
-// cambio, añade si está pendiente de archivar (`pendingArchive`, REQ-25.20).
+// cambio, añade si está pendiente de archivar (`pendingArchive`, REQ-25.20). Cuando existe la
+// rama de archivado del cambio (en git o en el registro), la incluye al final de las ramas del
+// repositorio del planning home, con los mismos datos y el destino de su PR en la rama de
+// integración (REQ-25.15, REQ-25.45).
 //
 // El cambio es opcional (REQ-25.15): sin él, `Status` no describe ningún plan, sino que
 // lista los cambios registrados del carril y los pendientes de archivar del proyecto.
@@ -44,6 +47,10 @@ func (e *Engine) Status(ctx context.Context, cwd, change string, lane branch.Lan
 	}
 	plan, refusal := branch.Plan(facts.input)
 	if refusal != nil {
+		return branch.NewResult(operation).Refused(refusal)
+	}
+	// La rama de archivado, cuando existe, figura en el plan con el mismo detalle (REQ-25.15).
+	if plan, refusal = e.withArchiveBranch(ctx, operation, cwd, facts, plan); refusal != nil {
 		return branch.NewResult(operation).Refused(refusal)
 	}
 	result, refusal := e.describe(ctx, operation, cwd, facts, plan)
