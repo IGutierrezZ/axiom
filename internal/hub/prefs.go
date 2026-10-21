@@ -12,8 +12,9 @@ import (
 
 // Preferencias personales de worktree de un proyecto (INC-25, REQ-25.29, design D-08): el
 // modo de trabajo y la raíz de worktrees. Viven en la entrada del proyecto de
-// `~/.axiom/workspaces.json` y nunca en `axiom.yaml`. Este fichero trae la lectura y la
-// validación; la escritura (`SetWorktreePrefs`) llega con su primer llamador, en S7.
+// `~/.axiom/workspaces.json` y nunca en `axiom.yaml`. Este fichero trae la validación, la
+// lectura (`LookupWorktreePrefs`) y la escritura (`SetWorktreePrefs`); el registro con
+// preferencias (`RegisterWithWorktreePrefs`) está en manager.go.
 
 // Los modos de trabajo que admite la preferencia (REQ-25.8): un worktree por rama, la propia
 // carpeta del proyecto, o preguntar en cada cambio.
@@ -79,6 +80,36 @@ func (m *Manager) LookupWorktreePrefs(projectPath string) (WorktreePrefs, bool, 
 		effective.Root = branch.DefaultWorktreeRoot(projectPath)
 	}
 	return effective, saved.Mode != "", nil
+}
+
+// SetWorktreePrefs guarda las preferencias de worktree del proyecto registrado que idOrPath
+// nombra, por id o por ruta (sameProject), y devuelve su entrada actualizada. Sustituye ambos
+// campos: un campo vacío es «sin preferencia» y se retira del JSON. Valida antes de leer el
+// hub, de modo que un valor inválido no lo modifica (REQ-25.29); un proyecto que no está
+// registrado es un error que lo dice y tampoco lo modifica.
+func (m *Manager) SetWorktreePrefs(idOrPath string, p WorktreePrefs) (*WorkspaceRecord, error) {
+	if err := ValidateWorktreePrefs(p); err != nil {
+		return nil, err
+	}
+
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	cfg, err := m.loadUnlocked()
+	if err != nil {
+		return nil, err
+	}
+	for i := range cfg.Workspaces {
+		if cfg.Workspaces[i].ID != idOrPath && !sameProject(cfg.Workspaces[i].Path, idOrPath) {
+			continue
+		}
+		cfg.Workspaces[i].WorktreeMode, cfg.Workspaces[i].WorktreeRoot = p.Mode, p.Root
+		if err := m.saveUnlocked(cfg); err != nil {
+			return nil, err
+		}
+		return &cfg.Workspaces[i], nil
+	}
+	return nil, fmt.Errorf("el proyecto «%s» no está registrado en %s", idOrPath, m.configPath)
 }
 
 // sameProject dice si dos rutas son la misma carpeta de proyecto: la misma carpeta existente

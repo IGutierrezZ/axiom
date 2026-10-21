@@ -1,6 +1,7 @@
 package hub
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -688,6 +689,300 @@ func TestLinkedWorktreesDoNotAlterTheRegisteredProject(t *testing.T) {
 		t.Errorf("Prune no debe purgar el proyecto ni añadir nada, purgó %v", pruned)
 	}
 	assertOnlyTheProject("tras Prune")
+}
+
+// Escritura de las preferencias personales de worktree (INC-25, REQ-25.29, S7): persisten en
+// la entrada del proyecto sin cambiar el esquema y se validan antes de tocar el hub.
+
+func readHubBytes(t *testing.T, config string) []byte {
+	t.Helper()
+	raw, err := os.ReadFile(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return raw
+}
+
+// REQ-25.29, escenario «Persistencia de las preferencias»: el modo y la raíz quedan en la
+// entrada del proyecto y se recuperan; la búsqueda admite el id y la ruta.
+func TestSetWorktreePrefsPersistsAndIsReadBack(t *testing.T) {
+	manager, project, config := newPrefsHub(t)
+	root := filepath.Join(t.TempDir(), "worktrees", "axiom")
+
+	rec, err := manager.SetWorktreePrefs(project, WorktreePrefs{Mode: WorktreeModeAsk, Root: root})
+
+	if err != nil {
+		t.Fatalf("SetWorktreePrefs: %v", err)
+	}
+	if rec.WorktreeMode != WorktreeModeAsk || rec.WorktreeRoot != root {
+		t.Errorf("la entrada devuelta = (%q, %q), se esperaba (ask, %q)", rec.WorktreeMode, rec.WorktreeRoot, root)
+	}
+	prefs, stored, err := manager.LookupWorktreePrefs(project)
+	if err != nil || !stored || prefs != (WorktreePrefs{Mode: WorktreeModeAsk, Root: root}) {
+		t.Errorf("LookupWorktreePrefs = (%+v, %v, %v), se esperaba (ask, %q) guardada", prefs, stored, err, root)
+	}
+	if raw := string(readHubBytes(t, config)); !strings.Contains(raw, `"worktree_mode": "ask"`) {
+		t.Errorf("workspaces.json debe guardar el modo en la entrada:\n%s", raw)
+	}
+
+	t.Run("por id", func(t *testing.T) {
+		if _, err := manager.SetWorktreePrefs(rec.ID, WorktreePrefs{Mode: WorktreeModeInPlace}); err != nil {
+			t.Fatalf("SetWorktreePrefs por id: %v", err)
+		}
+		prefs, _, _ := manager.LookupWorktreePrefs(project)
+		if prefs.Mode != WorktreeModeInPlace {
+			t.Errorf("modo = %q, se esperaba in_place", prefs.Mode)
+		}
+	})
+
+	t.Run("sustituye ambos campos y vacío es sin preferencia", func(t *testing.T) {
+		if _, err := manager.SetWorktreePrefs(project, WorktreePrefs{}); err != nil {
+			t.Fatalf("SetWorktreePrefs vacío: %v", err)
+		}
+		_, stored, err := manager.LookupWorktreePrefs(project)
+		if err != nil || stored {
+			t.Errorf("tras vaciar, stored = %v (err %v), se esperaba sin preferencia", stored, err)
+		}
+		if raw := string(readHubBytes(t, config)); strings.Contains(raw, "worktree_") {
+			t.Errorf("vaciar las preferencias retira los campos del JSON:\n%s", raw)
+		}
+	})
+}
+
+// REQ-25.29, escenarios «Modo inválido rechazado» y «Raíz relativa rechazada»: el rechazo
+// está en castellano y el fichero no cambia ni un byte.
+func TestSetWorktreePrefsRejectsInvalidValuesWithoutChangingTheHub(t *testing.T) {
+	tests := []struct {
+		name  string
+		prefs WorktreePrefs
+		want  []string
+	}{
+		{"modo siempre", WorktreePrefs{Mode: "siempre"}, []string{"«siempre»", "worktree", "in_place", "ask"}},
+		{"raíz relativa", WorktreePrefs{Root: "../wt"}, []string{"ruta absoluta", "../wt"}},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			manager, project, config := newPrefsHub(t)
+			before := readHubBytes(t, config)
+
+			_, err := manager.SetWorktreePrefs(project, tc.prefs)
+
+			if err == nil {
+				t.Fatal("se esperaba un error")
+			}
+			for _, want := range tc.want {
+				if !strings.Contains(err.Error(), want) {
+					t.Errorf("el error %q debe contener %q", err, want)
+				}
+			}
+			if after := readHubBytes(t, config); string(after) != string(before) {
+				t.Error("un valor inválido no debe modificar el hub")
+			}
+		})
+	}
+}
+
+func TestSetWorktreePrefsOfAnUnregisteredProjectSaysSo(t *testing.T) {
+	manager, _, config := newPrefsHub(t)
+	before := readHubBytes(t, config)
+	other := filepath.Join(t.TempDir(), "sin-registrar")
+
+	_, err := manager.SetWorktreePrefs(other, WorktreePrefs{Mode: WorktreeModeAsk})
+
+	if err == nil || !strings.Contains(err.Error(), "no está registrado") || !strings.Contains(err.Error(), other) {
+		t.Errorf("error = %v, se esperaba que dijera que el proyecto %q no está registrado", err, other)
+	}
+	if after := readHubBytes(t, config); string(after) != string(before) {
+		t.Error("un proyecto desconocido no debe modificar el hub")
+	}
+}
+
+// REQ-25.29, escenario «Re-registrar conserva las preferencias»: Register no cambia su
+// firma ni toca lo guardado.
+func TestRegisterAgainKeepsTheWorktreePrefs(t *testing.T) {
+	manager, project, _ := newPrefsHub(t)
+	if _, err := manager.SetWorktreePrefs(project, WorktreePrefs{Mode: WorktreeModeInPlace}); err != nil {
+		t.Fatal(err)
+	}
+
+	rec, err := manager.Register(project, "mi-proyecto", "monorepo-embedded")
+
+	if err != nil {
+		t.Fatalf("Register: %v", err)
+	}
+	if rec.WorktreeMode != WorktreeModeInPlace {
+		t.Errorf("la entrada devuelta perdió el modo: %q", rec.WorktreeMode)
+	}
+	if prefs, stored, _ := manager.LookupWorktreePrefs(project); !stored || prefs.Mode != WorktreeModeInPlace {
+		t.Errorf("tras re-registrar, el modo = (%q, stored %v), se esperaba in_place guardado", prefs.Mode, stored)
+	}
+}
+
+// REQ-25.29, escenario «Desregistrar elimina las preferencias».
+func TestUnregisterRemovesTheWorktreePrefsWithTheEntry(t *testing.T) {
+	manager, project, config := newPrefsHub(t)
+	root := filepath.Join(t.TempDir(), "wt")
+	rec, err := manager.SetWorktreePrefs(project, WorktreePrefs{Mode: WorktreeModeAsk, Root: root})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := manager.Unregister(rec.ID); err != nil {
+		t.Fatalf("Unregister: %v", err)
+	}
+
+	raw := string(readHubBytes(t, config))
+	for _, gone := range []string{"worktree_mode", "worktree_root", "mi-proyecto"} {
+		if strings.Contains(raw, gone) {
+			t.Errorf("tras desregistrar, workspaces.json no debe contener %q:\n%s", gone, raw)
+		}
+	}
+}
+
+// REQ-25.29, escenario «Un binario anterior ignora las preferencias»: el JSON con los campos
+// nuevos carga en un tipo sin ellos, con el esquema `"1.0"` y el resto de campos intactos.
+func TestAnOlderBinaryIgnoresTheWorktreePrefs(t *testing.T) {
+	manager, project, config := newPrefsHub(t)
+	root := filepath.Join(t.TempDir(), "wt")
+	rec, err := manager.SetWorktreePrefs(project, WorktreePrefs{Mode: WorktreeModeAsk, Root: root})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// El registro tal y como lo conocía el binario anterior: sin los campos de preferencias.
+	type olderRecord struct {
+		ID           string   `json:"id"`
+		Name         string   `json:"name"`
+		Path         string   `json:"path"`
+		Topology     string   `json:"topology"`
+		IsConfigured bool     `json:"is_configured"`
+		Tech         []string `json:"tech,omitempty"`
+	}
+	var older struct {
+		Version         string        `json:"version"`
+		ActiveWorkspace string        `json:"active_workspace"`
+		Workspaces      []olderRecord `json:"workspaces"`
+	}
+	if err := json.Unmarshal(readHubBytes(t, config), &older); err != nil {
+		t.Fatalf("un binario anterior no puede cargar el hub: %v", err)
+	}
+
+	if older.Version != "1.0" {
+		t.Errorf("version = %q, se esperaba 1.0", older.Version)
+	}
+	if len(older.Workspaces) != 1 {
+		t.Fatalf("workspaces = %d, se esperaba 1", len(older.Workspaces))
+	}
+	got := older.Workspaces[0]
+	if got.ID != rec.ID || got.Name != "mi-proyecto" || got.Path != rec.Path || got.Topology != rec.Topology {
+		t.Errorf("el resto de campos se conserva: %+v frente a %+v", got, rec)
+	}
+	if older.ActiveWorkspace != rec.ID {
+		t.Errorf("active_workspace = %q, se esperaba %q", older.ActiveWorkspace, rec.ID)
+	}
+}
+
+// REQ-25.30: el registro con preferencias valida antes de registrar, aplica solo lo que no
+// está vacío (re-registrar con el modo conserva la raíz guardada) y sin preferencias no
+// escribe nada más que el registro.
+func TestRegisterWithWorktreePrefs(t *testing.T) {
+	t.Run("un valor inválido no registra nada", func(t *testing.T) {
+		config := filepath.Join(t.TempDir(), "workspaces.json")
+		manager, err := NewManager(config)
+		if err != nil {
+			t.Fatal(err)
+		}
+		project := filepath.Join(t.TempDir(), "p")
+		if err := os.MkdirAll(project, 0o755); err != nil {
+			t.Fatal(err)
+		}
+
+		_, err = manager.RegisterWithWorktreePrefs(project, "", "", WorktreePrefs{Mode: "siempre"})
+
+		if err == nil || !strings.Contains(err.Error(), "«siempre»") {
+			t.Errorf("error = %v, se esperaba el rechazo del modo", err)
+		}
+		if _, statErr := os.Stat(config); !os.IsNotExist(statErr) {
+			t.Error("un valor inválido no debe crear ni modificar el hub")
+		}
+	})
+
+	t.Run("sin preferencias solo registra", func(t *testing.T) {
+		manager, project, config := newPrefsHub(t)
+
+		rec, err := manager.RegisterWithWorktreePrefs(project, "mi-proyecto", "", WorktreePrefs{})
+
+		if err != nil {
+			t.Fatal(err)
+		}
+		if rec.WorktreeMode != "" || rec.WorktreeRoot != "" {
+			t.Errorf("sin preferencias no se guarda ninguna: %+v", rec)
+		}
+		if strings.Contains(string(readHubBytes(t, config)), "worktree_") {
+			t.Error("sin preferencias el JSON no lleva los campos nuevos")
+		}
+	})
+
+	t.Run("fusiona: el modo conserva la raíz guardada", func(t *testing.T) {
+		manager, project, _ := newPrefsHub(t)
+		root := filepath.Join(t.TempDir(), "wt")
+		if _, err := manager.RegisterWithWorktreePrefs(project, "mi-proyecto", "", WorktreePrefs{Root: root}); err != nil {
+			t.Fatal(err)
+		}
+
+		rec, err := manager.RegisterWithWorktreePrefs(project, "mi-proyecto", "", WorktreePrefs{Mode: WorktreeModeAsk})
+
+		if err != nil {
+			t.Fatal(err)
+		}
+		if rec.WorktreeMode != WorktreeModeAsk || rec.WorktreeRoot != root {
+			t.Errorf("la entrada = (%q, %q), se esperaba (ask, %q)", rec.WorktreeMode, rec.WorktreeRoot, root)
+		}
+	})
+}
+
+// REQ-25.30: Init valida las preferencias antes de escribir ni registrar nada y, con ellas
+// válidas, las guarda en la entrada del hub.
+func TestInitAppliesAndValidatesTheWorktreePrefs(t *testing.T) {
+	config := filepath.Join(t.TempDir(), "workspaces.json")
+	manager, err := NewManager(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	initializer := NewInitializer(manager, nil)
+
+	t.Run("un valor inválido no escribe nada", func(t *testing.T) {
+		target := filepath.Join(t.TempDir(), "nuevo")
+
+		_, err := initializer.Init(InitOptions{Path: target, WorktreePrefs: WorktreePrefs{Mode: "siempre"}})
+
+		if err == nil || !strings.Contains(err.Error(), "«siempre»") {
+			t.Fatalf("error = %v, se esperaba el rechazo del modo", err)
+		}
+		if _, statErr := os.Stat(target); !os.IsNotExist(statErr) {
+			t.Error("un valor inválido no debe crear el directorio destino")
+		}
+		if _, statErr := os.Stat(config); !os.IsNotExist(statErr) {
+			t.Error("un valor inválido no debe crear el hub")
+		}
+	})
+
+	t.Run("un valor válido se guarda en la entrada", func(t *testing.T) {
+		target := filepath.Join(t.TempDir(), "otro")
+		root := filepath.Join(t.TempDir(), "wt")
+
+		res, err := initializer.Init(InitOptions{Path: target, WorktreePrefs: WorktreePrefs{Mode: WorktreeModeAsk, Root: root}})
+
+		if err != nil {
+			t.Fatal(err)
+		}
+		if res.Record.WorktreeMode != WorktreeModeAsk || res.Record.WorktreeRoot != root {
+			t.Errorf("registro = (%q, %q), se esperaba (ask, %q)", res.Record.WorktreeMode, res.Record.WorktreeRoot, root)
+		}
+		if prefs, stored, err := manager.LookupWorktreePrefs(target); err != nil || !stored || prefs.Mode != WorktreeModeAsk {
+			t.Errorf("LookupWorktreePrefs = (%+v, %v, %v), se esperaba ask guardada", prefs, stored, err)
+		}
+	})
 }
 
 func TestManagerWorktreeIsolationAndPrune(t *testing.T) {

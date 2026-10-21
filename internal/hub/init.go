@@ -135,6 +135,10 @@ func loadViolations(err error) []string {
 // pero no cambian el resultado: REQ-24.23 sitúa a init entre las operaciones que
 // completan su resultado.
 func (ini *Initializer) Init(opts InitOptions) (*InitResult, error) {
+	// Las preferencias de worktree se validan antes de escribir ni registrar nada.
+	if err := ValidateWorktreePrefs(opts.WorktreePrefs); err != nil {
+		return nil, err
+	}
 	if opts.Path == "" {
 		opts.Path = "."
 	}
@@ -291,7 +295,7 @@ func (ini *Initializer) Init(opts InitOptions) (*InitResult, error) {
 	// 3. Registrar en el catálogo global si el gestor está provisto
 	var record WorkspaceRecord
 	if ini.manager != nil {
-		rec, err := ini.manager.Register(absPath, opts.Name, opts.Topology)
+		rec, err := ini.manager.RegisterWithWorktreePrefs(absPath, opts.Name, opts.Topology, opts.WorktreePrefs)
 		if err != nil {
 			return nil, fmt.Errorf("proyecto configurado pero no pudo registrarse en el Hub: %w", err)
 		}

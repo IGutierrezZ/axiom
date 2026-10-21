@@ -79,6 +79,9 @@ type InitOptions struct {
 	Force    bool
 	Roles    []RoleInput
 	Profile  string // "knowledge", "spec-only", "full"
+	// WorktreePrefs son las preferencias personales de worktree que se guardan en la entrada
+	// del hub al registrar el proyecto (REQ-25.30); vacías, no se guarda ninguna.
+	WorktreePrefs WorktreePrefs
 }
 
 // InitResult detalla los resultados de la operación de inicialización.
