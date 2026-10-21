@@ -15,18 +15,23 @@ import (
 // modo que ambos nombran la misma rama.
 
 // archivePlanInput es la entrada del plan de archivado de un cambio (branch.PlanInput.Archive):
-// los hechos del cambio, con la rama del cambio registrada de la que deriva el nombre y las
-// excepciones de la invocación. requested.Prefix es el prefijo de la rama de archivado; sin él
-// rige el que guarda el registro, si lo hay. Branch y Base se pasan tal cual para que el
-// planificador las rechace (`plan_conflict`, S-16).
+// los hechos del cambio, con la rama del cambio registrada de la que deriva el nombre, la de
+// archivado que el registro ya guarda y las excepciones de la invocación. requested.Prefix es el
+// prefijo de la rama de archivado; sin él rige la rama de archivado registrada y, si no hay
+// ninguna, el prefijo de archivado que guarda el registro. Branch y Base se pasan tal cual para
+// que el planificador las rechace (`plan_conflict`, S-16).
 func archivePlanInput(facts changeFacts, requested branch.Exceptions) branch.PlanInput {
 	in := facts.input
 	in.Archive = true
 	// La rama del cambio sale de los hechos antes de sustituir las excepciones: las registradas
 	// son las del cambio y las de la invocación son las del archivado.
 	in.ChangeBranch = registeredChangeBranch(facts)
+	recorded, isRecorded := recordedArchiveBranch(facts.record, in.PlanningRepo)
+	if isRecorded {
+		in.ArchiveBranch = recorded.Name
+	}
 	prefix := requested.Prefix
-	if prefix == "" && facts.record != nil {
+	if prefix == "" && !isRecorded && facts.record != nil {
 		prefix = facts.record.ArchivePrefix
 	}
 	in.Exceptions = branch.Exceptions{Prefix: prefix, Branch: requested.Branch, Base: requested.Base}
@@ -37,14 +42,15 @@ func archivePlanInput(facts changeFacts, requested branch.Exceptions) branch.Pla
 
 // registeredChangeBranch es la rama del cambio de la que deriva la de archivado (design D-25,
 // paso 3: «registro, instantánea o política, en ese orden»; la instantánea llega con S8): la
-// rama de tipo `change` que el registro guarda para el repositorio del planning home y, sin
-// ella, la que fijan las excepciones registradas del cambio (`--branch`, o `--prefix` más el
+// rama de tipo `change` que el registro guarda para el repositorio del planning home (se reconoce
+// por su git common dir, que es el mismo desde el checkout principal y desde un worktree enlazado)
+// y, sin ella, la que fijan las excepciones registradas del cambio (`--branch`, o `--prefix` más el
 // cambio). Vacía, la compone la política.
 func registeredChangeBranch(facts changeFacts) string {
 	planning := facts.input.PlanningRepo
 	if facts.record != nil {
 		for _, repo := range facts.record.Repositories {
-			if !pathidentity.SameDirectory(repo.GitRoot, planning.GitRoot) {
+			if !pathidentity.SameDirectory(repo.CommonDir, planning.CommonDir) {
 				continue
 			}
 			for _, recorded := range repo.Branches {
@@ -64,13 +70,13 @@ func registeredChangeBranch(facts changeFacts) string {
 }
 
 // recordedArchiveBranch devuelve la rama de archivado que el registro guarda para el repositorio
-// del planning home, o el nombre vacío si no hay ninguna.
+// del planning home, y false si no guarda ninguna.
 func recordedArchiveBranch(record *branch.Record, planning branch.RepoFacts) (branch.RecordBranch, bool) {
 	if record == nil {
 		return branch.RecordBranch{}, false
 	}
 	for _, repo := range record.Repositories {
-		if !pathidentity.SameDirectory(repo.GitRoot, planning.GitRoot) {
+		if !pathidentity.SameDirectory(repo.CommonDir, planning.CommonDir) {
 			continue
 		}
 		for _, recorded := range repo.Branches {
@@ -101,7 +107,9 @@ func (e *Engine) withArchiveBranch(ctx context.Context, operation, cwd string, f
 	if err != nil {
 		return branch.ChangePlan{}, gitRefusal(operation, cwd, "comprobar si existe la rama "+planned.Name, err)
 	}
-	if recorded, isRecorded := recordedArchiveBranch(facts.record, facts.input.PlanningRepo); !exists && !(isRecorded && recorded.Name == planned.Name) {
+	// Una rama de archivado registrada figura aunque ya no exista en git: el registro es lo que
+	// `ensure --archive` materializó y `status` informa de que falta.
+	if _, isRecorded := recordedArchiveBranch(facts.record, facts.input.PlanningRepo); !exists && !isRecorded {
 		return plan, nil
 	}
 	// El repositorio del planning home es siempre el primero del plan.

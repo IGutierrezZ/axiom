@@ -20,7 +20,10 @@ import (
 // respuesta a `ask` o un modo explícito (`worktree` o `in_place`); vacío si no se indicó
 // (REQ-25.8). Exceptions son `--prefix`, `--branch` y `--base`, que se registran por cambio
 // (REQ-25.12); Repos, los `--repo` (REQ-25.12, REQ-25.13): en el carril ODD incluyen
-// repositorios y en el SDD acotan los del plan.
+// repositorios y en el SDD acotan los del plan. Archive pide el plan de archivado en lugar del
+// del cambio (`--archive`, REQ-25.45, design D-25): solo crea la rama de archivado del repositorio
+// del planning home, con Exceptions.Prefix como único prefijo admitido, y rechaza el cambio que
+// aún no está fusionado en la base (`change_not_integrated`).
 type EnsureRequest struct {
 	CWD        string
 	Change     string
@@ -29,6 +32,7 @@ type EnsureRequest struct {
 	Mode       branch.Mode
 	Exceptions branch.Exceptions
 	Repos      []string
+	Archive    bool
 }
 
 // Ensure crea lo que falta de las ramas del cambio y las despliega según el modo de trabajo
@@ -67,26 +71,43 @@ type EnsureRequest struct {
 // multirepo, el repositorio de specs se trabaja in situ: nunca recibe ramas, worktrees ni
 // checkout, y fuera de su integración se rechaza (`specs_repo_not_on_integration`, REQ-25.5). El
 // carril ODD (REQ-25.13) no tiene roles ni kickoff y `--repo` incluye repositorios de código.
+//
+// Con Archive (`--archive`, design D-25) la misma secuencia planifica y crea solo la rama de
+// archivado (archive.go): aplica el modo registrado del cambio, comprueba además que la base ya
+// contiene el cambio fusionado, no toca las ramas del cambio ni las de rol y registra la rama con
+// `kind: archive`.
 func (e *Engine) Ensure(ctx context.Context, r EnsureRequest) branch.Result {
 	const operation = "ensure"
+	// command es la orden que repiten las continuaciones: la de archivado lleva `--archive`, de
+	// modo que repetirla no cree la rama del cambio. El resultado sigue siendo el de `ensure`.
+	command := operation
+	if r.Archive {
+		command = archiveCommand
+	}
 	refused := func(refusal *branch.Refusal) branch.Result {
 		if refusal.Code == branch.CodeGitFailed {
 			// Un fallo de git no deja un estado inconsistente: repetir `ensure` completa
 			// lo que falte, de modo que la continuación es la orden con el cambio.
-			refusal.Continuation = fmt.Sprintf("comprueba que git está instalado y que puedes escribir en el repositorio, y repite `axiom branch %s --change %s --cwd %s`: completa lo que falte", operation, r.Change, pathquote.Quote(r.CWD))
+			refusal.Continuation = fmt.Sprintf("comprueba que git está instalado y que puedes escribir en el repositorio, y repite `axiom branch %s --change %s --cwd %s`: completa lo que falte", command, r.Change, pathquote.Quote(r.CWD))
 		}
 		return branch.NewResult(operation).Refused(refusal)
 	}
 	// Solo `worktree` e `in_place` son respuestas: `ask` es una preferencia, no un modo que
 	// se materialice.
 	if r.Mode != "" && r.Mode != branch.ModeWorktree && r.Mode != branch.ModeInPlace {
-		return refused(branch.InvalidMode(operation, r.Change, r.CWD, r.Lane, r.Mode))
+		return refused(branch.InvalidMode(command, r.Change, r.CWD, r.Lane, r.Mode))
 	}
 	// Un nombre inválido de la invocación se rechaza antes de bloquear el cambio ni leer nada.
-	if refusal := branch.ValidateExceptions(operation, r.CWD, r.Change, r.Exceptions); refusal != nil {
+	if refusal := branch.ValidateExceptions(command, r.CWD, r.Change, r.Exceptions); refusal != nil {
 		return refused(refusal)
 	}
 	options := gatherOptions{exceptions: r.Exceptions, repos: r.Repos}
+	if r.Archive {
+		// El archivado no toca el plan del cambio: sus excepciones no se contrastan con las
+		// registradas (la petición las lleva al plan de archivado) y `--repo` no tiene
+		// repositorios que acotar.
+		options = gatherOptions{}
+	}
 
 	// El bloqueo se toma en cuanto se conoce el git common dir y se suelta al terminar,
 	// también cuando se rechaza.
@@ -99,17 +120,27 @@ func (e *Engine) Ensure(ctx context.Context, r EnsureRequest) branch.Result {
 	acquire := func(commonDir string) *branch.Refusal {
 		release, err := e.registry.Lock(ctx, commonDir, r.Lane, r.Change)
 		if err != nil {
-			return lockRefusal(err, operation, r.Change, r.CWD)
+			return lockRefusal(err, command, r.Change, r.CWD)
 		}
 		unlock = release
 		return nil
 	}
+	// gather reúne los hechos de solo lectura; con `--archive`, la entrada del planificador pasa a
+	// ser la del plan de archivado, y una petición que no se puede atender se rechaza ya, antes de
+	// preguntar por el modo de trabajo.
+	gather := func(lock func(commonDir string) *branch.Refusal) (changeFacts, *branch.Refusal) {
+		facts, refusal := e.gatherWith(ctx, command, r.CWD, r.Change, r.Lane, lock, options)
+		if refusal == nil && r.Archive {
+			refusal = useArchivePlan(&facts, r)
+		}
+		return facts, refusal
+	}
 
-	facts, refusal := e.gatherWith(ctx, operation, r.CWD, r.Change, r.Lane, acquire, options)
+	facts, refusal := gather(acquire)
 	if refusal != nil {
 		return refused(refusal)
 	}
-	mode, refusal := resolveMode(operation, r, facts)
+	mode, refusal := resolveMode(command, r, facts)
 	if refusal != nil {
 		return refused(refusal)
 	}
@@ -121,18 +152,18 @@ func (e *Engine) Ensure(ctx context.Context, r EnsureRequest) branch.Result {
 		return refused(refusal)
 	}
 
-	pending, fetched, refusal := e.checkPlan(ctx, operation, r.CWD, plan, facts, r.Fetch)
+	pending, fetched, refusal := e.checkPlan(ctx, command, r.CWD, plan, facts, r.Fetch)
 	if refusal != nil {
 		return refused(refusal)
 	}
 	if len(pending) > 0 {
-		if refusal := e.apply(ctx, operation, r.CWD, pending); refusal != nil {
+		if refusal := e.apply(ctx, command, r.CWD, pending); refusal != nil {
 			return refused(refusal)
 		}
 		// El estado final se lee de git otra vez: es el mismo camino que sigue la
 		// ejecución que no tiene nada que crear, de modo que ambas describen lo mismo. El
 		// cambio ya está bloqueado: esta lectura no lo vuelve a bloquear.
-		if facts, refusal = e.gatherWith(ctx, operation, r.CWD, r.Change, r.Lane, nil, options); refusal != nil {
+		if facts, refusal = gather(nil); refusal != nil {
 			return refused(refusal)
 		}
 		facts.input.InPlace = mode.mode == branch.ModeInPlace
@@ -142,15 +173,19 @@ func (e *Engine) Ensure(ctx context.Context, r EnsureRequest) branch.Result {
 	}
 
 	record := newRecord(facts, plan, mode)
+	if r.Archive {
+		record = newArchiveRecord(facts, plan, mode)
+	}
 	if err := e.registry.Save(facts.input.PlanningRepo.CommonDir, record); err != nil {
-		return refused(writeRefusal(err, operation, r.Change, r.CWD))
+		return refused(writeRefusal(err, command, r.Change, r.CWD))
 	}
 	facts.record = &record
 
-	result, refusal := e.describe(ctx, operation, r.CWD, facts, plan)
+	result, refusal := e.describe(ctx, command, r.CWD, facts, plan)
 	if refusal != nil {
 		return refused(refusal)
 	}
+	result.Operation = operation
 	// `fetched` dice qué repositorios se trajeron en esta ejecución: describe solo lee
 	// referencias locales y deja `base.fetched` en falso.
 	for i := range result.Repositories {
@@ -248,6 +283,12 @@ func (e *Engine) checkRepository(ctx context.Context, operation, cwd string, rep
 	}
 	if !haveBase {
 		return repositorySteps{}, branch.BaseNotFound(operation, change, master, repo)
+	}
+	// La rama de archivado solo sale de una base que ya contiene el cambio fusionado (D-25).
+	if facts.input.Archive {
+		if refusal := e.checkIntegrated(ctx, operation, cwd, repo, facts, base, pending.fetched); refusal != nil {
+			return repositorySteps{}, refusal
+		}
 	}
 
 	registered := registeredWorktrees(facts.record, repo)

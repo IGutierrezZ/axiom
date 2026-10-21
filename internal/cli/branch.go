@@ -19,7 +19,8 @@ import (
 // `axiom.branch-result/v1`); los demás verbos llegan con las rebanadas siguientes y la
 // ayuda lista solo los verbos que existen (decisión T3). Ningún verbo ejecuta `push` ni
 // abre un PR, y ninguno hace operaciones remotas salvo `ensure --fetch`, que ejecuta
-// `git fetch origin` (REQ-25.1, REQ-25.10).
+// `git fetch origin` (REQ-25.1, REQ-25.10). `ensure --archive` crea la rama de archivado de un
+// cambio ya fusionado (REQ-25.45).
 
 const branchHelp = `Uso: axiom branch <subcomando> [argumentos]
 
@@ -62,7 +63,7 @@ Banderas:
   --json              Imprime el resultado como axiom.branch-result/v1
 `
 
-const branchEnsureHelp = `Uso: axiom branch ensure --change <nombre> [--lane sdd|odd] [--mode worktree|in_place] [--prefix <prefijo>] [--branch <rama>] [--base <ref>] [--repo <ruta>]... [--fetch] [--cwd <ruta>] [--json]
+const branchEnsureHelp = `Uso: axiom branch ensure --change <nombre> [--lane sdd|odd] [--mode worktree|in_place] [--prefix <prefijo>] [--branch <rama>] [--base <ref>] [--repo <ruta>]... [--archive] [--fetch] [--cwd <ruta>] [--json]
 
 Crea lo que falta de las ramas de un cambio y de sus worktrees. En cada repositorio del
 plan crea la rama del cambio (<prefijo>/<cambio>; con dos o más roles sobre el mismo
@@ -125,6 +126,21 @@ in situ en el repositorio de specs y solo incluye los repositorios que pidas con
 cada uno con solo esa rama. El documento ODD es <raíz del proyecto>/odd/tasks/<cambio>.md,
 y el resultado indica su ruta en oddDocument.
 
+--archive crea, en lugar de las ramas del cambio, la rama de archivado <prefijo>/<cambio>-archive
+(o <rama del cambio registrada>-archive si el cambio se materializó con --branch) del repositorio
+del proyecto, desde la rama de integración, una vez fusionado el PR del cambio, y, según el modo de
+trabajo del cambio, su worktree (<carpeta del proyecto>-wt/<cambio>-archive/<repositorio>) o su
+checkout con git switch (en in_place exige el árbol limpio). Solo admite --prefix (que fija el
+prefijo de la rama de archivado sin tocar el del cambio), --mode, --fetch, --cwd y --json:
+--branch y --base son plan_conflict y --repo, un error de uso. Si la base evaluada
+(origin/<integración> si existe en local y, si no, la local) no contiene la carpeta
+openspec/changes/<cambio>/, rechaza con change_not_integrated sin crear nada, nombra la base y
+sugiere --fetch; si en su lugar contiene changes/archive/<fecha>-<cambio>/, el cambio ya está
+archivado y no hay nada que archivar. En un multirepo, donde el archive se hace in situ en el
+repositorio de specs, y en el carril odd, que no archiva, rechaza con archive_branch_not_applicable.
+No toca las ramas del cambio ni las de rol, reutiliza el modo registrado del cambio (también la
+respuesta a ask) y es idempotente; registra la rama con tipo archive y nunca la publica.
+
 Guarda el plan en un registro local por cambio, dentro del git common dir del repositorio
 del proyecto (<git common dir>/axiom/branch/v1/<carril>/<cambio>.json), que solo se
 reescribe si cambia su contenido: es estado local derivado y no se versiona. Si lo borras,
@@ -146,7 +162,8 @@ Banderas:
   --branch <rama>     Nombre completo de la rama del cambio, solo para este cambio
   --base <ref>        Referencia de la que salen las ramas, solo para este cambio
   --repo <ruta>       Repositorio que se incluye (odd) o al que se acota el plan (sdd); repetible
-  --fetch            Ejecuta git fetch origin en cada repositorio del plan antes de resolver la base
+  --archive           Crea la rama de archivado del cambio ya fusionado; solo admite --prefix, --mode, --fetch, --cwd y --json
+  --fetch           Ejecuta git fetch origin en cada repositorio del plan antes de resolver la base
   --cwd <ruta>        Directorio de partida (por defecto, el directorio de trabajo del proceso)
   --json              Imprime el resultado como axiom.branch-result/v1
 
@@ -188,6 +205,7 @@ func runBranchEnsure(args []string, stdout, stderr io.Writer) int {
 	base := flags.String("base", "", "referencia de la que salen las ramas del cambio, solo para este cambio")
 	var repos branchRepeatedFlag
 	flags.Var(&repos, "repo", "repositorio que se incluye (ODD) o al que se acota el plan (SDD); repetible")
+	archive := flags.Bool("archive", false, "crea la rama de archivado del cambio ya fusionado")
 	cwd := flags.String("cwd", ".", "directorio de partida")
 	asJSON := flags.Bool("json", false, "imprime el resultado como axiom.branch-result/v1")
 	if err := flags.Parse(args); err != nil {
@@ -226,6 +244,12 @@ func runBranchEnsure(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintf(stderr, "Error: --%s no puede estar vacío: indica un valor o quita la bandera. Ejecuta `axiom branch ensure --help`.\n", blank)
 		return branch.ExitUsage
 	}
+	// Con --archive el plan es el de la rama de archivado, que solo planifica el repositorio del
+	// proyecto: no hay repositorios que incluir ni que acotar (REQ-25.12).
+	if *archive && len(repos) > 0 {
+		fmt.Fprintln(stderr, "Error: --repo no se admite con --archive: la rama de archivado solo se crea en el repositorio del proyecto y solo admite --prefix, --mode, --fetch, --cwd y --json. Repite `axiom branch ensure --change <nombre> --archive` sin --repo o ejecuta `axiom branch ensure --help`.")
+		return branch.ExitUsage
+	}
 	dir, err := filepath.Abs(*cwd)
 	if err != nil {
 		fmt.Fprintf(stderr, "Error: no se pudo resolver --cwd '%s' (%v). Indica una ruta absoluta con `axiom branch ensure --change <nombre> --cwd <ruta>`.\n", *cwd, err)
@@ -233,7 +257,7 @@ func runBranchEnsure(args []string, stdout, stderr io.Writer) int {
 	}
 	result := engine.Default().Ensure(context.Background(), engine.EnsureRequest{
 		CWD: dir, Change: *change, Lane: branch.Lane(*lane), Fetch: *fetch, Mode: branch.Mode(*mode),
-		Exceptions: branch.Exceptions{Prefix: *prefix, Branch: *branchName, Base: *base}, Repos: repos,
+		Exceptions: branch.Exceptions{Prefix: *prefix, Branch: *branchName, Base: *base}, Repos: repos, Archive: *archive,
 	})
 	return writeBranchResult(result, *asJSON, stdout, stderr)
 }
