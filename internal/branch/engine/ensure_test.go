@@ -80,6 +80,7 @@ func embeddedCoreProject(t *testing.T) string {
 // `<raíz>/<cambio>/<repo>`; el checkout principal queda como estaba y el resultado
 // describe el estado final, con la base y el modo.
 func TestEnsureCreatesTheChangeBranchAndItsWorktree(t *testing.T) {
+	t.Parallel()
 	repo := embeddedCoreProject(t)
 	head := runGit(t, repo, "rev-parse", "HEAD")
 	// El checkout principal tiene trabajo sin confirmar: no se toca (REQ-25.8).
@@ -156,6 +157,7 @@ func TestEnsureIsIdempotentByteForByte(t *testing.T) {
 // REQ-25.7, escenario «La rama existente se reutiliza sin moverla»: una rama con commits
 // propios y sin worktree recibe su worktree y no cambia de commit.
 func TestEnsureReusesAnExistingBranchWithoutMovingIt(t *testing.T) {
+	t.Parallel()
 	repo := embeddedCoreProject(t)
 	runGit(t, repo, "switch", "-q", "-c", "feat/x")
 	commit(t, repo, "propio de feat/x")
@@ -179,6 +181,7 @@ func TestEnsureReusesAnExistingBranchWithoutMovingIt(t *testing.T) {
 // REQ-25.7, escenario «Rama desplegada en un worktree desconocido»: `branch_checked_out_elsewhere`
 // con la ruta existente y sin crear nada, sea un worktree ajeno o el propio checkout principal.
 func TestEnsureRefusesABranchCheckedOutInAnUnknownWorktree(t *testing.T) {
+	t.Parallel()
 	t.Run("en un worktree ajeno", func(t *testing.T) {
 		repo := embeddedCoreProject(t)
 		elsewhere := filepath.Join(t.TempDir(), "ajeno")
@@ -226,6 +229,7 @@ func TestEnsureRefusesABranchCheckedOutInAnUnknownWorktree(t *testing.T) {
 // solo se crea `feat/x`; con dos roles sellados se completan, sin alterar lo creado,
 // `feat/x-core` y `feat/x-qa` desde ella, cada una con su worktree.
 func TestEnsureCompletesIncrementallyBeforeAndAfterSealing(t *testing.T) {
+	t.Parallel()
 	repo := newProject(t, configWithRoles(map[string][]string{"core": {"."}, "qa": {"."}}, ""))
 	name := filepath.Base(repo)
 
@@ -265,6 +269,7 @@ func TestEnsureCompletesIncrementallyBeforeAndAfterSealing(t *testing.T) {
 // REQ-25.7, escenario «Se rechaza un nombre de cambio que no es válido»: `invalid_name`
 // antes de crear nada.
 func TestEnsureRefusesAnInvalidChangeNameBeforeCreatingAnything(t *testing.T) {
+	t.Parallel()
 	repo := embeddedCoreProject(t)
 	state := repositoryState(t, repo)
 
@@ -297,6 +302,7 @@ func remoteWithMain(t *testing.T, repo string) string {
 // REQ-25.10: con `origin/main` y `main` en commits distintos, la base es la referencia
 // remota ya traída a local y la rama nace de ella; sin remoto, la rama local.
 func TestEnsureTakesTheBaseFromTheRemoteTrackingReferenceIfItExists(t *testing.T) {
+	t.Parallel()
 	t.Run("referencia remota local", func(t *testing.T) {
 		repo := embeddedCoreProject(t)
 		remoteWithMain(t, repo)
@@ -366,6 +372,7 @@ func TestEnsureLaunchesNoRemoteOperationWithoutFetch(t *testing.T) {
 // REQ-25.10, escenario «Rama de integración inexistente»: `base_not_found` nombrando la rama
 // esperada, sin crear nada; también en un repositorio sin commits (matriz «Estado del commit»).
 func TestEnsureRefusesAMissingIntegrationBranch(t *testing.T) {
+	t.Parallel()
 	t.Run("rama de integración inexistente", func(t *testing.T) {
 		repo := newProject(t, configWithRoles(map[string][]string{"core": {"."}}, "git:\n  integration_branch: develop\n"))
 		state := repositoryState(t, repo)
@@ -501,6 +508,7 @@ func TestEnsureReportsGitFailedNamingTheOperationAndRepeatingCompletes(t *testin
 // REQ-25.2: un axiom.yaml ilegible o con un valor de política inválido es `config_invalid`
 // y no se crea nada.
 func TestEnsureRefusesAnInvalidConfigurationAsConfigInvalid(t *testing.T) {
+	t.Parallel()
 	for name, content := range map[string]string{
 		"prefijo inválido": configWithRoles(map[string][]string{"core": {"."}}, "git:\n  branch_prefix: \"mi prefijo//\"\n"),
 		"YAML ilegible":    "workspace: [sin cerrar\n",
@@ -584,6 +592,7 @@ func TestEnsureRunsEveryWriteFromTheMainCheckout(t *testing.T) {
 // la raíz git real que la contiene, nunca por texto, y una que no es un repositorio se
 // omite con `not_a_git_repository` sin impedir el resto del plan (REQ-25.6).
 func TestEnsureResolvesRolePathsToTheirRealGitRoot(t *testing.T) {
+	t.Parallel()
 	requireGit(t)
 	parent := t.TempDir()
 	master := filepath.Join(parent, "proyecto")
@@ -644,6 +653,7 @@ func TestEnsureResolvesRolePathsToTheirRealGitRoot(t *testing.T) {
 // repositorio de specs no recibe ramas ni worktrees y los repositorios de código crean los
 // suyos fuera de la carpeta maestra, en la raíz de worktrees.
 func TestEnsureCreatesTheWorktreesOfAMultirepoOutsideTheMasterFolder(t *testing.T) {
+	t.Parallel()
 	master, specs := newMultirepo(t, map[string][]string{"backend": {"repo-backend"}, "frontend": {"repo-frontend"}}, "repo-backend", "repo-frontend")
 	sealChangeAt(t, specs, "x", "backend", "frontend")
 	specsState := repositoryState(t, specs)
@@ -672,6 +682,7 @@ func TestEnsureCreatesTheWorktreesOfAMultirepoOutsideTheMasterFolder(t *testing.
 // D-05, fase 3: la comprobación sin efectos cubre TODOS los repositorios antes de mutar
 // ninguno. Si el segundo no tiene base, el primero tampoco se crea.
 func TestEnsureChecksEveryRepositoryBeforeMutatingAny(t *testing.T) {
+	t.Parallel()
 	master, specs := newMultirepo(t, map[string][]string{"backend": {"repo-backend"}, "frontend": {"repo-frontend"}}, "repo-backend", "repo-frontend")
 	sealChangeAt(t, specs, "x", "backend", "frontend")
 	runGit(t, filepath.Join(master, "repo-frontend"), "branch", "-m", "main", "tronco")
@@ -719,6 +730,7 @@ func TestEnsureReusesAWorktreeAlreadyAtThePlannedPath(t *testing.T) {
 // por un worktree con otra rama, por un worktree cuyo directorio ya no existe, o por un
 // directorio con contenido.
 func TestEnsureRefusesAPlannedPathThatIsNotFree(t *testing.T) {
+	t.Parallel()
 	t.Run("un worktree con otra rama", func(t *testing.T) {
 		repo := embeddedCoreProject(t)
 		planned := plannedWorktree(t, repo, "x", filepath.Base(repo))
@@ -781,6 +793,7 @@ func TestEnsureRefusesAPlannedPathThatIsNotFree(t *testing.T) {
 
 // REQ-25.11 y D-04: el límite de Windows se comprueba antes de crear nada.
 func TestEnsureAppliesTheWindowsPathLimitBeforeCreatingAnything(t *testing.T) {
+	t.Parallel()
 	repo := embeddedCoreProject(t)
 	state := repositoryState(t, repo)
 	change := strings.Repeat("c", 200)

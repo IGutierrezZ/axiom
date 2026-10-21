@@ -53,6 +53,7 @@ func setOldModTime(t *testing.T, path string) time.Time {
 // mismo estado no reescribe el fichero, y las dos describen el mismo estado final (también
 // `registry.present`). El registro no toca `gentle-ai/`.
 func TestEnsureWritesTheRegistryAndRepeatingDoesNotRewriteIt(t *testing.T) {
+	t.Parallel()
 	repo := embeddedCoreProject(t)
 	lineage := filepath.Join(commonDir(repo), "gentle-ai", "review-transactions", "linaje-1", "estado.json")
 	writeFile(t, lineage, `{"linaje":"abierto"}`)
@@ -192,6 +193,7 @@ func TestEnsureReconstructsTheRegistryFromBranchesAndWorktreesCreatedByOtherTool
 // la rama del cambio; con dos roles sellados, la siguiente ejecución lo reescribe con las
 // tres ramas, cada una con su tipo, su rol y su worktree.
 func TestEnsureUpdatesTheRegistryWhenSealingCompletesTheRoleBranches(t *testing.T) {
+	t.Parallel()
 	repo := newProject(t, configWithRoles(map[string][]string{"core": {"."}, "qa": {"."}}, ""))
 	name := filepath.Base(repo)
 	wantReady(t, ensureOf(t, repo, "x"))
@@ -227,6 +229,7 @@ func TestEnsureUpdatesTheRegistryWhenSealingCompletesTheRoleBranches(t *testing.
 // D-08 y REQ-25.14: un registro que ya existe fija el modo y su origen (prioridad: registro
 // > `--mode` > hub > defecto); `ensure` completa sus ramas y conserva el origen.
 func TestEnsureKeepsTheModeAndSourceOfAnExistingRegistry(t *testing.T) {
+	t.Parallel()
 	repo := embeddedCoreProject(t)
 	writeRegistry(t, commonDir(repo), registeredRecord(repo))
 
@@ -249,6 +252,7 @@ func TestEnsureKeepsTheModeAndSourceOfAnExistingRegistry(t *testing.T) {
 // bloqueo ocupado, `plan_conflict` con el mensaje fijado por el diseño, sin crear nada ni
 // escribir el registro; otro cambio no se bloquea; al liberarlo, `ensure` procede.
 func TestEnsureRefusesWhileAnotherRunHoldsTheLockOfTheChange(t *testing.T) {
+	t.Parallel()
 	repo := embeddedCoreProject(t)
 	unlock, err := registry.New().Lock(context.Background(), commonDir(repo), branch.LaneSDD, "x")
 	if err != nil {
@@ -288,6 +292,7 @@ func TestEnsureRefusesWhileAnotherRunHoldsTheLockOfTheChange(t *testing.T) {
 // El bloqueo se libera también cuando `ensure` rechaza: tras un `base_not_found`, el cambio
 // puede volver a bloquearse.
 func TestEnsureReleasesTheLockWhenItRefuses(t *testing.T) {
+	t.Parallel()
 	repo := newProject(t, configWithRoles(map[string][]string{"core": {"."}}, "git:\n  integration_branch: develop\n"))
 
 	wantRefusal(t, ensureOf(t, repo, "x"), branch.CodeBaseNotFound, branch.StatusRefused)
@@ -303,6 +308,7 @@ func TestEnsureReleasesTheLockWhenItRefuses(t *testing.T) {
 // REQ-25.14 y D-07 («Fichero corrupto»): `config_invalid` nombrando el fichero y la
 // continuación de borrarlo, sin crear nada; borrado, `ensure` lo reconstruye.
 func TestEnsureRefusesACorruptRegistryAndRebuildsItOnceDeleted(t *testing.T) {
+	t.Parallel()
 	repo := embeddedCoreProject(t)
 	path := recordFile(commonDir(repo), "sdd", "x")
 	writeFile(t, path, `{"schema": `)
@@ -327,6 +333,7 @@ func TestEnsureRefusesACorruptRegistryAndRebuildsItOnceDeleted(t *testing.T) {
 // D-05: el registro se escribe en la fase 5, tras aplicar. Un rechazo de la fase 3 o un
 // fallo de git a medias no lo escriben; repetir `ensure` completa lo pendiente y lo guarda.
 func TestEnsureWritesTheRegistryOnlyAfterApplyingThePlan(t *testing.T) {
+	t.Parallel()
 	t.Run("un rechazo de la comprobación", func(t *testing.T) {
 		repo := embeddedCoreProject(t)
 		runGit(t, repo, "switch", "-q", "-c", "feat/x")
@@ -354,6 +361,7 @@ func TestEnsureWritesTheRegistryOnlyAfterApplyingThePlan(t *testing.T) {
 // que no se llama `.git` (`--separate-git-dir`), el registro se crea bajo el directorio que
 // devuelve `git rev-parse --git-common-dir` y nunca bajo un `.git` supuesto.
 func TestEnsureResolvesTheRegistryWithTheGitCommonDirWhenItIsNotDotGit(t *testing.T) {
+	t.Parallel()
 	requireGit(t)
 	repo := t.TempDir()
 	separate := filepath.Join(t.TempDir(), "datos-de-git")

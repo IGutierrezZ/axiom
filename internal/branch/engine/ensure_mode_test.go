@@ -68,6 +68,7 @@ func wantMode(t *testing.T, result branch.Result, mode branch.Mode, source strin
 // por cambio (`hub`, `flag`, `answer`). El origen `answer` es la respuesta a `ask`; `flag`, un
 // `--mode` con un hub que no pregunta.
 func TestEnsureModePriorityIsRegistryThenFlagThenHubThenDefault(t *testing.T) {
+	t.Parallel()
 	repo := embeddedCoreProject(t)
 
 	t.Run("el hub fija el modo y se registra con origen hub", func(t *testing.T) {
@@ -250,6 +251,7 @@ func TestEnsureAskAnswerIsRecordedPerChangeAndReused(t *testing.T) {
 
 // design D-08: la raíz de worktrees de las preferencias sustituye a la de por defecto.
 func TestEnsureUsesTheWorktreeRootOfThePrefs(t *testing.T) {
+	t.Parallel()
 	repo := embeddedCoreProject(t)
 	root := filepath.Join(t.TempDir(), "mis-worktrees")
 	prefs := hubWorktree
@@ -266,6 +268,7 @@ func TestEnsureUsesTheWorktreeRootOfThePrefs(t *testing.T) {
 // design D-08 y REQ-25.8: una petición con un modo que no es una respuesta (`ask`, o un
 // valor desconocido) es `config_invalid` y no toca nada.
 func TestEnsureRejectsAModeThatIsNotAnAnswer(t *testing.T) {
+	t.Parallel()
 	repo := embeddedCoreProject(t)
 	state := repositoryState(t, repo)
 

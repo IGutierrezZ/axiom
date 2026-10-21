@@ -28,6 +28,21 @@ func TestMain(m *testing.M) {
 	os.Exit(runTests(m))
 }
 
+// isolatedGitConfig es el gitconfig global de las pruebas: sin gc ni mantenimiento
+// automático en segundo plano (que compite con la limpieza del directorio temporal) y
+// sin fsmonitor, caché de ficheros sin seguimiento ni fsync, que solo encarecen cada
+// proceso git en Windows.
+const isolatedGitConfig = `[gc]
+	auto = 0
+	autoDetach = false
+[maintenance]
+	auto = false
+[core]
+	fsmonitor = false
+	untrackedCache = false
+	fsync = none
+`
+
 func runTests(m *testing.M) int {
 	root, err := os.MkdirTemp("", "engine-pruebas-*")
 	if err != nil {
@@ -41,10 +56,21 @@ func runTests(m *testing.M) int {
 		fmt.Fprintf(os.Stderr, "engine: crear el HOME aislado: %v\n", err)
 		return 1
 	}
+	gitConfig := filepath.Join(home, "gitconfig")
+	if err := os.WriteFile(gitConfig, []byte(isolatedGitConfig), 0o644); err != nil {
+		fmt.Fprintf(os.Stderr, "engine: escribir el gitconfig aislado: %v\n", err)
+		return 1
+	}
+	templateDir := filepath.Join(root, "git-template")
+	if err := os.MkdirAll(templateDir, 0o755); err != nil {
+		fmt.Fprintf(os.Stderr, "engine: crear la plantilla vacía de git: %v\n", err)
+		return 1
+	}
 	for key, value := range map[string]string{
 		"HOME":                home,
 		"USERPROFILE":         home,
-		"GIT_CONFIG_GLOBAL":   filepath.Join(home, "gitconfig"),
+		"GIT_CONFIG_GLOBAL":   gitConfig,
+		"GIT_TEMPLATE_DIR":    templateDir,
 		"GIT_CONFIG_NOSYSTEM": "1",
 		"GIT_AUTHOR_NAME":     "Autor de Prueba",
 		"GIT_AUTHOR_EMAIL":    "autor@ejemplo.invalid",
@@ -349,6 +375,7 @@ func TestStatusOfAChangeWithABranchAndAWorktree(t *testing.T) {
 // REQ-25.15: con la rama de integración remota ya traída a local, la base es esa
 // referencia (`remote-tracking`) y el adelanto y el atraso se miden contra ella.
 func TestStatusUsesTheLocalRemoteTrackingReferenceAsTheBase(t *testing.T) {
+	t.Parallel()
 	repo := newProject(t, configWithRoles(map[string][]string{"core": {"."}}, ""))
 	remote := filepath.Join(t.TempDir(), "remoto.git")
 	runGit(t, repo, "init", "-q", "--bare", remote)
@@ -377,6 +404,7 @@ func TestStatusUsesTheLocalRemoteTrackingReferenceAsTheBase(t *testing.T) {
 // REQ-25.15, escenario «Cambio no iniciado»: un cambio sin ramas es `not_started`
 // (etiqueta «no iniciado», salida 0), no un error, y el plan sigue visible.
 func TestStatusOfAChangeWithoutBranchesIsNotStarted(t *testing.T) {
+	t.Parallel()
 	repo := newProject(t, configWithRoles(map[string][]string{"core": {"."}}, ""))
 
 	result := status(t, repo, "nuevo", branch.LaneSDD)
@@ -400,6 +428,7 @@ func TestStatusOfAChangeWithoutBranchesIsNotStarted(t *testing.T) {
 // de seguimiento y el de esta, la integración; el adelanto de una rama de rol se mide
 // contra la de seguimiento.
 func TestStatusProposesThePRTargetOfEachBranch(t *testing.T) {
+	t.Parallel()
 	repo := newProject(t, configWithRoles(map[string][]string{"core": {"."}, "qa": {"."}}, ""))
 	sealChange(t, repo, "x", "core", "qa")
 	runGit(t, repo, "branch", "feat/x")
@@ -443,6 +472,7 @@ func TestStatusProposesThePRTargetOfEachBranch(t *testing.T) {
 // REQ-25.4 (S-1): antes del sellado el plan solo tiene la rama del cambio, aunque
 // axiom.yaml declare roles.
 func TestStatusBeforeSealingListsOnlyTheChangeBranch(t *testing.T) {
+	t.Parallel()
 	repo := newProject(t, configWithRoles(map[string][]string{"core": {"."}, "qa": {"."}}, ""))
 
 	repository := onlyRepository(t, status(t, repo, "x", branch.LaneSDD))
@@ -456,6 +486,7 @@ func TestStatusBeforeSealingListsOnlyTheChangeBranch(t *testing.T) {
 // REQ-25.6: `fullstack` toca el repositorio del planning home y los declarados; un
 // repositorio anidado toma su política propia (aquí, su rama de integración).
 func TestStatusPlansEveryRepositoryWithItsOwnPolicy(t *testing.T) {
+	t.Parallel()
 	repo := newProject(t, configWithRoles(
 		map[string][]string{"backend": {"repo-backend"}, "frontend": {"repo-frontend"}},
 		"git:\n  integration_branch: main\nrepositories:\n  - path: repo-backend\n    integration_branch: release\n"))
@@ -501,6 +532,7 @@ func TestStatusPlansEveryRepositoryWithItsOwnPolicy(t *testing.T) {
 // REQ-25.6: una ruta declarada que no existe o que no es un repositorio git se omite
 // sin abortar el plan, con su código y un mensaje que nombra la ruta y el rol.
 func TestStatusSkipsDeclaredPathsThatAreNotGitRepositories(t *testing.T) {
+	t.Parallel()
 	requireGit(t)
 	outside := t.TempDir()
 	for current := outside; ; {
@@ -546,6 +578,7 @@ func TestStatusSkipsDeclaredPathsThatAreNotGitRepositories(t *testing.T) {
 // REQ-25.13: el carril ODD no lee el kickoff, no divide en roles y su resultado nombra
 // el documento `odd/tasks/<feature>.md`.
 func TestStatusOddLaneNamesTheOddDocument(t *testing.T) {
+	t.Parallel()
 	repo := newProject(t, configWithRoles(map[string][]string{"core": {"."}, "qa": {"."}}, ""))
 	sealChange(t, repo, "mi-feature", "core", "qa")
 
@@ -568,6 +601,7 @@ func TestStatusOddLaneNamesTheOddDocument(t *testing.T) {
 // Un HEAD desacoplado se informa sin rama actual; uno que no se puede leer sin git
 // deja la rama vacía y un aviso, sin fallar.
 func TestStatusReportsADetachedAndAnUnreadableHead(t *testing.T) {
+	t.Parallel()
 	repo := newProject(t, configWithRoles(map[string][]string{"core": {"."}}, ""))
 
 	runGit(t, repo, "checkout", "-q", "--detach")
@@ -591,6 +625,7 @@ func TestStatusReportsADetachedAndAnUnreadableHead(t *testing.T) {
 // falla (el rechazo `base_not_found` es de `ensure`): avisa y no calcula adelanto ni
 // atraso.
 func TestStatusWithoutTheIntegrationBranchWarnsAndSkipsTheComparison(t *testing.T) {
+	t.Parallel()
 	repo := newProject(t, configWithRoles(map[string][]string{"core": {"."}}, "git:\n  integration_branch: develop\n"))
 	runGit(t, repo, "branch", "feat/x")
 
@@ -613,6 +648,7 @@ func TestStatusWithoutTheIntegrationBranchWarnsAndSkipsTheComparison(t *testing.
 // Un worktree que git aún lista pero cuya carpeta ya no existe no hace fallar
 // `status`: se informa con un aviso y la rama figura sin worktree.
 func TestStatusToleratesAWorktreeWhoseDirectoryIsGone(t *testing.T) {
+	t.Parallel()
 	repo := newProject(t, configWithRoles(map[string][]string{"core": {"."}}, ""))
 	worktree := filepath.Join(t.TempDir(), "x", filepath.Base(repo))
 	runGit(t, repo, "worktree", "add", "-q", "-b", "feat/x", worktree, "main")
@@ -739,6 +775,7 @@ func TestStatusRefusals(t *testing.T) {
 // relativeWithin asciende por identidad de ruta: git devuelve la grafía larga de
 // Windows y la carpeta maestra puede llevar el nombre corto 8.3 (tasks.md, regla 10).
 func TestRelativeWithin(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	nested := filepath.Join(root, "app", "web")
 	if err := os.MkdirAll(nested, 0o755); err != nil {

@@ -83,6 +83,7 @@ func requested(t *testing.T, result branch.Result) bool {
 // REQ-25.20, escenario «Un cambio fusionado y sin archivar figura como pendiente», y
 // «Los pendientes no producen código de fallo»: con dos pendientes, la salida es 0.
 func TestStatusWithoutChangeListsMergedAndUnarchivedChangesAsPending(t *testing.T) {
+	t.Parallel()
 	repo := embeddedProject(t)
 	addChanges(t, repo, "", "inc-99-ejemplo", "inc-98-otro")
 
@@ -106,6 +107,7 @@ func TestStatusWithoutChangeListsMergedAndUnarchivedChangesAsPending(t *testing.
 // REQ-25.20, escenarios «Solo `archive/` no genera pendientes» y «Un fichero suelto no
 // cuenta como cambio»: la lista está vacía, pero evaluada (se imprime `[]`).
 func TestPendingArchiveIgnoresTheArchiveFolderAndLooseFiles(t *testing.T) {
+	t.Parallel()
 	repo := embeddedProject(t)
 	writeFile(t, filepath.Join(repo, "openspec", "changes", "archive", "2026-10-01-viejo", "proposal.md"), "archivado\n")
 	writeFile(t, filepath.Join(repo, "openspec", "changes", ".gitkeep"), "")
@@ -125,6 +127,7 @@ func TestPendingArchiveIgnoresTheArchiveFolderAndLooseFiles(t *testing.T) {
 // REQ-25.20, escenario «Los sumideros exentos no son pendientes»: `e2e-cumulative` y
 // `cumulative-<rol>` se excluyen por nombre; lo que solo se les parece, no.
 func TestPendingArchiveExemptsTheCumulativeSinksByName(t *testing.T) {
+	t.Parallel()
 	repo := embeddedProject(t)
 	addChanges(t, repo, "", "archive", "e2e-cumulative", "cumulative-core", "cumulative-qa.v2_b")
 
@@ -141,6 +144,7 @@ func TestPendingArchiveExemptsTheCumulativeSinksByName(t *testing.T) {
 }
 
 func TestIsPendingChange(t *testing.T) {
+	t.Parallel()
 	for name, want := range map[string]bool{
 		"inc-99-ejemplo":         true,
 		"archive":                false,
@@ -164,6 +168,7 @@ func TestIsPendingChange(t *testing.T) {
 // El nombre de una carpeta con espacios sale citado en la continuación, de modo que la
 // orden se puede copiar tal cual.
 func TestPendingArchiveQuotesUnusualNamesInTheContinuation(t *testing.T) {
+	t.Parallel()
 	repo := embeddedProject(t)
 	addChanges(t, repo, "", "mi cambio")
 
@@ -179,6 +184,7 @@ func TestPendingArchiveQuotesUnusualNamesInTheContinuation(t *testing.T) {
 // REQ-25.20 y design D-06: la evaluación usa la referencia de integración local de
 // REQ-25.10: `origin/<integración>` si existe en local y, si no, la rama local.
 func TestPendingArchiveEvaluatesTheLocalIntegrationReference(t *testing.T) {
+	t.Parallel()
 	repo := embeddedProject(t)
 	remote := filepath.Join(t.TempDir(), "remoto.git")
 	runGit(t, repo, "init", "-q", "--bare", "-b", "main", remote)
@@ -246,6 +252,7 @@ func TestPendingArchiveUsesNoNetworkAndNeverChangesBranch(t *testing.T) {
 // la rama de integración ni local ni remota local, la salida sigue siendo 0, el campo no
 // se imprime y un aviso lo explica.
 func TestPendingArchiveWithoutTheIntegrationReferenceIsOmittedWithAWarning(t *testing.T) {
+	t.Parallel()
 	repo := newProject(t, configWithRoles(map[string][]string{"core": {"."}}, "git:\n  integration_branch: develop\n"))
 	addChanges(t, repo, "", "inc-99-ejemplo")
 
@@ -272,6 +279,7 @@ func TestPendingArchiveWithoutTheIntegrationReferenceIsOmittedWithAWarning(t *te
 // cambios activos viven allí en la rama de integración de forma normal, así que la lista
 // está vacía (evaluada) y sin avisos, y `--change` indica que no está pendiente.
 func TestPendingArchiveOfAMultirepoSpecsRepositoryIsEmpty(t *testing.T) {
+	t.Parallel()
 	master, specs := newMultirepo(t, map[string][]string{"backend": {"repo-backend"}}, "repo-backend")
 	addChanges(t, specs, "", "inc-99-activo")
 	sealChangeAt(t, specs, "x", "backend")
@@ -300,6 +308,7 @@ func TestPendingArchiveOfAMultirepoSpecsRepositoryIsEmpty(t *testing.T) {
 // El planning home puede estar en una subcarpeta del repositorio: la lista se lee de
 // `<subcarpeta>/openspec/changes`, no de la raíz del repositorio.
 func TestPendingArchiveReadsThePlanningHomeOfASubfolderProject(t *testing.T) {
+	t.Parallel()
 	repo := newRepository(t)
 	app := filepath.Join(repo, "app")
 	writeFile(t, filepath.Join(app, "axiom.yaml"), configWithRoles(map[string][]string{"core": {"."}}, ""))
@@ -318,6 +327,7 @@ func TestPendingArchiveReadsThePlanningHomeOfASubfolderProject(t *testing.T) {
 // Un repositorio sin la carpeta `openspec/changes` en la integración no tiene pendientes,
 // y no es un error ni un aviso.
 func TestPendingArchiveOfAProjectWithoutAChangesFolderIsEmpty(t *testing.T) {
+	t.Parallel()
 	repo := embeddedProject(t)
 
 	result := status(t, repo, "", branch.LaneSDD)
@@ -333,6 +343,7 @@ func TestPendingArchiveOfAProjectWithoutAChangesFolderIsEmpty(t *testing.T) {
 // está pendiente»: verdadero con la continuación para archivarlo, o falso; un cambio
 // fusionado que nunca tuvo ramas sigue siendo `not_started`.
 func TestStatusWithChangeInformsWhetherItIsPendingToArchive(t *testing.T) {
+	t.Parallel()
 	repo := embeddedProject(t)
 	addChanges(t, repo, "", "inc-99-ejemplo")
 
@@ -383,6 +394,7 @@ func TestStatusWithChangeInformsWhetherItIsPendingToArchive(t *testing.T) {
 // registrado y `y` fusionado y pendiente; los registrados salen ordenados, con su modo y
 // sus ramas con rutas absolutas, y solo los del carril pedido.
 func TestStatusWithoutChangeListsRegisteredAndPending(t *testing.T) {
+	t.Parallel()
 	repo := embeddedProject(t)
 	addChanges(t, repo, "", "y")
 	worktree := plannedWorktree(t, repo, "x", filepath.Base(repo))
@@ -428,6 +440,7 @@ func TestStatusWithoutChangeListsRegisteredAndPending(t *testing.T) {
 // Sin nada registrado ni pendiente, `status` sin `--change` no falla: ambas listas
 // vacías pero evaluadas.
 func TestStatusWithoutChangeOfAnEmptyProject(t *testing.T) {
+	t.Parallel()
 	repo := embeddedProject(t)
 
 	result := status(t, repo, "", branch.LaneSDD)
@@ -445,6 +458,7 @@ func TestStatusWithoutChangeOfAnEmptyProject(t *testing.T) {
 // El registro es estado derivado: un fichero corrupto es `config_invalid` con el fichero
 // y la orden para borrarlo, igual que con `--change`.
 func TestStatusWithoutChangeRefusesACorruptRegistryNamingTheFile(t *testing.T) {
+	t.Parallel()
 	repo := embeddedProject(t)
 	path := recordFile(commonDir(repo), "sdd", "roto")
 	writeFile(t, path, "esto no es JSON {")
@@ -466,6 +480,7 @@ func TestStatusWithoutChangeRefusesACorruptRegistryNamingTheFile(t *testing.T) {
 // Un carril que no puede nombrar un registro se rechaza sin leer nada, y nombra cómo
 // pedir uno válido.
 func TestStatusWithoutChangeRefusesALaneThatCannotNameARegistry(t *testing.T) {
+	t.Parallel()
 	repo := embeddedProject(t)
 
 	result := status(t, repo, "", branch.Lane("../v1"))
@@ -484,6 +499,7 @@ func TestStatusWithoutChangeRefusesALaneThatCannotNameARegistry(t *testing.T) {
 // Los rechazos de la resolución del proyecto, los mismos que con `--change`: fuera de un
 // repositorio, `not_a_git_repository` con la orden para indicar uno.
 func TestStatusWithoutChangeRefusesOutsideAGitRepository(t *testing.T) {
+	t.Parallel()
 	requireGit(t)
 	outside := t.TempDir()
 	for current := outside; ; {
@@ -544,6 +560,7 @@ func (f *fakeGit) TreeDirs(_ context.Context, _, rev, relPath string) ([]string,
 // ante cualquier fallo de git al evaluar: nunca falla, nunca bloquea, y la lista no se
 // inventa (nil, no vacía).
 func TestPendingArchiveNeverFailsWhenGitDoes(t *testing.T) {
+	t.Parallel()
 	master := t.TempDir()
 	location := workspace.Location{Master: master, WorkspaceRoot: master, PlanningHome: filepath.Join(master, "openspec")}
 	boom := errors.New("fallo simulado de git")

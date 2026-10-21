@@ -181,6 +181,7 @@ func TestEnsureMultirepoRefusesASpecsRepositoryOutsideItsIntegrationBranch(t *te
 // seguimiento en él), mientras que la de un repositorio de código sí: se comprueba antes de
 // cambiar de rama en ninguno.
 func TestEnsureMultirepoGivesEveryCodeRepositoryTheChangeBranchFromItsOwnIntegration(t *testing.T) {
+	t.Parallel()
 	master, specs := newMultirepo(t, map[string][]string{"backend": {"repo-backend"}, "frontend": {"repo-frontend"}}, "repo-backend", "repo-frontend")
 	writeFile(t, filepath.Join(master, "axiom.yaml"), configFor("multirepo", "repo-specs", map[string][]string{"backend": {"repo-backend"}, "frontend": {"repo-frontend"}},
 		"git:\n  integration_branch: main\nrepositories:\n  - path: repo-backend\n    integration_branch: develop\n    branch_prefix: back\n"))
@@ -244,6 +245,7 @@ func TestEnsureMultirepoGivesEveryCodeRepositoryTheChangeBranchFromItsOwnIntegra
 // dos roles sobre rutas del mismo repositorio de código dan un único repositorio con la rama de
 // seguimiento y una rama por rol; solo la de seguimiento se despliega en `in_place` (R26).
 func TestEnsureMultirepoSharedRepositoryOfTwoRolesGetsTheTrackingAndTheRoleBranches(t *testing.T) {
+	t.Parallel()
 	master, specs := newMultirepo(t, map[string][]string{"core": {"repo-shared"}, "qa": {"repo-shared/pruebas"}}, "repo-shared")
 	if err := os.MkdirAll(filepath.Join(master, "repo-shared", "pruebas"), 0o755); err != nil {
 		t.Fatal(err)
@@ -280,6 +282,7 @@ func TestEnsureMultirepoSharedRepositoryOfTwoRolesGetsTheTrackingAndTheRoleBranc
 // plan los repositorios de código indicados; uno que no pertenece al plan se avisa y se ignora, y
 // una ruta que no existe o no es un repositorio git se omite con `not_a_git_repository`.
 func TestEnsureMultirepoRepoFlagNarrowsTheCodeRepositoriesOfTheSDDPlan(t *testing.T) {
+	t.Parallel()
 	master, specs := newMultirepo(t, map[string][]string{"backend": {"repo-backend"}, "frontend": {"repo-frontend"}}, "repo-backend", "repo-frontend", "repo-otro")
 	sealChangeAt(t, specs, "x", "backend", "frontend")
 	sealChangeAt(t, specs, "y", "backend", "frontend")
