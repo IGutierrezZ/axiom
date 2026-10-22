@@ -806,7 +806,7 @@ func (s *Service) GetProjects() (*ProjectListDTO, error) {
 
 	projInterfaces := make([]interface{}, len(projects))
 	for i, p := range projects {
-		projInterfaces[i] = p
+		projInterfaces[i] = newProjectDTO(p)
 	}
 
 	return &ProjectListDTO{
@@ -829,11 +829,8 @@ func (s *Service) AddProject(req ProjectAddRequest) (*hub.WorkspaceRecord, error
 		return nil, errors.New("debes especificar la ruta del proyecto ('path')")
 	}
 
-	if hub.IsGitWorktree(req.Path) {
-		return nil, fmt.Errorf("la ruta '%s' corresponde a un worktree git; los worktrees no deben registrarse como proyectos en el Hub", req.Path)
-	}
-
-	return s.hubManager.Register(req.Path, req.Name, req.Topology)
+	// El hub rechaza los worktrees enlazados con un mensaje que nombra su checkout principal.
+	return s.hubManager.RegisterWithWorktreePrefs(req.Path, req.Name, req.Topology, hub.WorktreePrefs{Mode: req.WorktreeMode, Root: req.WorktreeRoot})
 }
 
 // InitProject inicializa un proyecto con axiom.yaml y lo registra.
@@ -845,10 +842,11 @@ func (s *Service) InitProject(req ProjectInitRequest) (*hub.InitResult, error) {
 
 	ini := hub.NewInitializer(s.hubManager, s.hubDetector)
 	res, err := ini.Init(hub.InitOptions{
-		Path:     targetPath,
-		Name:     req.Name,
-		Topology: req.Topology,
-		Roles:    req.Roles,
+		Path:          targetPath,
+		Name:          req.Name,
+		Topology:      req.Topology,
+		Roles:         req.Roles,
+		WorktreePrefs: hub.WorktreePrefs{Mode: req.WorktreeMode, Root: req.WorktreeRoot},
 	})
 	if err != nil {
 		return nil, err

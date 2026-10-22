@@ -1,6 +1,7 @@
 package gitcommon
 
 import (
+	"context"
 	"errors"
 	"go/parser"
 	"go/token"
@@ -494,5 +495,145 @@ func TestReadHeadAgreesWithGitOnRealRepositories(t *testing.T) {
 		if err != nil || branch != "principal" || detached {
 			t.Errorf("ReadHead = (%q, %v, %v), se esperaba (\"principal\", false, nil)", branch, detached, err)
 		}
+	})
+}
+
+// wantCommonDir comprueba que CommonDirFromFiles(gitRoot) resuelve el directorio want. Se
+// compara por identidad, como wantRoot: la grafía de la ruta no es la de git en Windows.
+func wantCommonDir(t *testing.T, gitRoot, want string) {
+	t.Helper()
+	got, err := CommonDirFromFiles(gitRoot)
+	if err != nil {
+		t.Fatalf("CommonDirFromFiles(%q): %v", gitRoot, err)
+	}
+	if !pathidentity.SameDirectory(got, want) {
+		t.Errorf("CommonDirFromFiles(%q) = %q, se esperaba el directorio %q", gitRoot, got, want)
+	}
+}
+
+// design §4.6: el common dir sale de ficheros. En un clon es su `.git`; en un worktree
+// enlazado es el del checkout principal, que el git dir declara en `commondir`.
+func TestCommonDirFromFilesAgreesWithGitOnRealRepositories(t *testing.T) {
+	requireGit(t)
+	ctx := context.Background()
+	main := newRepository(t)
+	linked := filepath.Join(t.TempDir(), "enlazado")
+	runGit(t, main, "worktree", "add", "-q", "-b", "inc/x", linked, "HEAD")
+
+	t.Run("un clon es su propio .git", func(t *testing.T) {
+		wantCommonDir(t, main, filepath.Join(main, ".git"))
+	})
+
+	t.Run("un worktree enlazado comparte el common dir del principal", func(t *testing.T) {
+		want, err := CommonDir(ctx, linked)
+		if err != nil {
+			t.Fatal(err)
+		}
+		wantCommonDir(t, linked, want)
+		wantCommonDir(t, linked, filepath.Join(main, ".git"))
+	})
+}
+
+func TestCommonDirFromFilesReadsTheCommondirFile(t *testing.T) {
+	// linkedFixture crea un worktree enlazado sintético: `.git` es un fichero que apunta a
+	// un git dir con el `commondir` dado.
+	linkedFixture := func(t *testing.T, commondir string) (root, common string) {
+		t.Helper()
+		base := t.TempDir()
+		common = mkdirAll(t, filepath.Join(base, "principal", ".git"))
+		gitDir := mkdirAll(t, filepath.Join(common, "worktrees", "enlazado"))
+		root = mkdirAll(t, filepath.Join(base, "enlazado"))
+		writeFile(t, filepath.Join(root, ".git"), "gitdir: "+filepath.ToSlash(gitDir)+"\n")
+		writeFile(t, filepath.Join(gitDir, "commondir"), commondir)
+		return root, common
+	}
+
+	t.Run("relativo al git dir", func(t *testing.T) {
+		root, common := linkedFixture(t, "../..\n")
+		wantCommonDir(t, root, common)
+	})
+
+	t.Run("tolera CRLF y espacios", func(t *testing.T) {
+		root, common := linkedFixture(t, "  ../..  \r\nlínea ignorada\r\n")
+		wantCommonDir(t, root, common)
+	})
+
+	t.Run("absoluto", func(t *testing.T) {
+		_, common := linkedFixture(t, "../..\n")
+		root, _ := linkedFixture(t, filepath.ToSlash(common)+"\n")
+		wantCommonDir(t, root, common)
+	})
+
+	t.Run("sin commondir devuelve el propio git dir", func(t *testing.T) {
+		base := t.TempDir()
+		gitDir := mkdirAll(t, filepath.Join(base, "super", ".git", "modules", "sub"))
+		root := mkdirAll(t, filepath.Join(base, "super", "sub"))
+		writeFile(t, filepath.Join(root, ".git"), "gitdir: ../.git/modules/sub\n")
+		wantCommonDir(t, root, gitDir)
+	})
+
+	t.Run("una raíz vacía o sin .git falla", func(t *testing.T) {
+		for _, input := range []string{"", t.TempDir()} {
+			if got, err := CommonDirFromFiles(input); err == nil {
+				t.Errorf("CommonDirFromFiles(%q) = %q, se esperaba un error", input, got)
+			}
+		}
+	})
+}
+
+// wantNoLinkedRoot comprueba que path no está en un worktree enlazado.
+func wantNoLinkedRoot(t *testing.T, path string) {
+	t.Helper()
+	if got := LinkedWorktreeRoot(path); got != "" {
+		t.Errorf("LinkedWorktreeRoot(%q) = %q, se esperaba \"\"", path, got)
+	}
+}
+
+// REQ-25.31: un worktree enlazado se reconoce por su evidencia en git (`.git` fichero cuyo
+// git dir tiene `commondir`), no por el nombre de su ruta.
+func TestLinkedWorktreeRoot(t *testing.T) {
+	t.Run("repositorio real", func(t *testing.T) {
+		requireGit(t)
+		main := newRepository(t)
+		linked := filepath.Join(t.TempDir(), "enlazado")
+		runGit(t, main, "worktree", "add", "-q", "-b", "inc/x", linked, "HEAD")
+		sub := mkdirAll(t, filepath.Join(linked, "src", "interno"))
+
+		wantNoLinkedRoot(t, main)
+		wantNoLinkedRoot(t, mkdirAll(t, filepath.Join(main, "src")))
+
+		for _, start := range []string{linked, sub, filepath.Join(linked, "src", "nuevo.go")} {
+			got := LinkedWorktreeRoot(start)
+			if !pathidentity.SameDirectory(got, linked) {
+				t.Errorf("LinkedWorktreeRoot(%q) = %q, se esperaba la raíz %q", start, got, linked)
+			}
+		}
+	})
+
+	t.Run("un submódulo no es un worktree enlazado", func(t *testing.T) {
+		base := t.TempDir()
+		mkdirAll(t, filepath.Join(base, "super", ".git", "modules", "sub"))
+		sub := mkdirAll(t, filepath.Join(base, "super", "sub"))
+		writeFile(t, filepath.Join(sub, ".git"), "gitdir: ../.git/modules/sub\n")
+		wantNoLinkedRoot(t, sub)
+	})
+
+	t.Run("un .git fichero ilegible o sin gitdir no cuenta", func(t *testing.T) {
+		root := t.TempDir()
+		writeFile(t, filepath.Join(root, ".git"), "no es un puntero\n")
+		wantNoLinkedRoot(t, root)
+
+		dangling := t.TempDir()
+		writeFile(t, filepath.Join(dangling, ".git"), "gitdir: "+filepath.ToSlash(filepath.Join(dangling, "no-existe"))+"\n")
+		wantNoLinkedRoot(t, dangling)
+	})
+
+	t.Run("fuera de un repositorio y con la ruta vacía", func(t *testing.T) {
+		dir := t.TempDir()
+		if insideGit(dir) {
+			t.Skip("el directorio temporal está dentro de un repositorio git")
+		}
+		wantNoLinkedRoot(t, dir)
+		wantNoLinkedRoot(t, "")
 	})
 }
