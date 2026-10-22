@@ -91,6 +91,16 @@ type PlanInput struct {
 	// incluido el checkout principal de cada uno.
 	ExistingWorktrees []WorktreeEntry
 	PathRules         PathRules
+	// Archive pide el plan de archivado de `ensure --archive` (REQ-25.45, design D-25): un plan
+	// aparte, con solo la rama de archivado del repositorio del planning home, que no toca las
+	// ramas del cambio ni las de rol. Con él, Exceptions son las de la invocación y no las del
+	// cambio: Prefix es el prefijo de la rama de archivado (el del registro, si la invocación
+	// no lo repite) y Branch y Base no se admiten (`plan_conflict`, supuesto S-16).
+	Archive bool
+	// ChangeBranch es la rama del cambio que guarda el registro local (o la que fijan las
+	// excepciones registradas), de la que deriva `<rama del cambio>-archive` cuando no hay
+	// `--prefix`. Vacía, la compone la política: `<prefijo>/<cambio>`. Solo cuenta con Archive.
+	ChangeBranch string
 }
 
 // ChangePlan es el plan de un cambio: sus repositorios en orden estable (primero el
@@ -146,8 +156,12 @@ type BranchPlan struct {
 // altera su entrada. Devuelve un rechazo, sin plan, ante un nombre inválido o repetido
 // (`invalid_name`), un valor inválido de la política (`config_invalid`), worktrees que
 // se solaparían con otro árbol de trabajo (`plan_conflict`) o una ruta demasiado larga
-// para Windows (`path_too_long`).
+// para Windows (`path_too_long`). Con PlanInput.Archive calcula, aparte, el plan de la rama de
+// archivado (planArchive, REQ-25.45).
 func Plan(in PlanInput) (ChangePlan, *Refusal) {
+	if in.Archive {
+		return planArchive(in)
+	}
 	if refusal := ValidateChangeName(in.Operation, in.Master, in.Change); refusal != nil {
 		return ChangePlan{}, refusal
 	}
