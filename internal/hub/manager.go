@@ -206,6 +206,36 @@ func (m *Manager) Register(path, name, topology string) (*WorkspaceRecord, error
 	return &rec, nil
 }
 
+// RegisterWithWorktreePrefs registra el proyecto como Register y aplica las preferencias de
+// worktree que no están vacías (REQ-25.30). Valida primero: un valor inválido no registra ni
+// toca el hub. Es una fusión, no una sustitución: re-registrar con solo el modo conserva la
+// raíz ya guardada y viceversa. Sin preferencias no escribe nada más que el registro.
+func (m *Manager) RegisterWithWorktreePrefs(path, name, topology string, p WorktreePrefs) (*WorkspaceRecord, error) {
+	if err := ValidateWorktreePrefs(p); err != nil {
+		return nil, err
+	}
+	rec, err := m.Register(path, name, topology)
+	if err != nil {
+		return nil, err
+	}
+	if p == (WorktreePrefs{}) {
+		return rec, nil
+	}
+
+	merged := WorktreePrefs{Mode: rec.WorktreeMode, Root: rec.WorktreeRoot}
+	if p.Mode != "" {
+		merged.Mode = p.Mode
+	}
+	if p.Root != "" {
+		merged.Root = p.Root
+	}
+	updated, err := m.SetWorktreePrefs(rec.ID, merged)
+	if err != nil {
+		return nil, fmt.Errorf("el proyecto quedó registrado pero no se pudieron guardar sus preferencias de worktree: %w", err)
+	}
+	return updated, nil
+}
+
 // Unregister elimina un proyecto del catálogo sin alterar sus archivos físicos.
 func (m *Manager) Unregister(idOrPath string) error {
 	m.mu.Lock()
