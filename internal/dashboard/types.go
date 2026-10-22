@@ -104,19 +104,52 @@ type ProjectSwitchRequest struct {
 	Path string `json:"path,omitempty"`
 }
 
-// ProjectAddRequest representa la solicitud para registrar un proyecto en el Hub.
+// ProjectAddRequest representa la solicitud para registrar un proyecto en el Hub. Las
+// preferencias personales de worktree (REQ-25.29) son opcionales: vacías, no se guarda ninguna.
 type ProjectAddRequest struct {
-	Path     string `json:"path"`
-	Name     string `json:"name,omitempty"`
-	Topology string `json:"topology,omitempty"`
+	Path         string `json:"path"`
+	Name         string `json:"name,omitempty"`
+	Topology     string `json:"topology,omitempty"`
+	WorktreeMode string `json:"worktree_mode,omitempty"`
+	WorktreeRoot string `json:"worktree_root,omitempty"`
 }
 
 // ProjectInitRequest representa la solicitud para inicializar un proyecto.
 type ProjectInitRequest struct {
-	Path     string          `json:"path,omitempty"`
-	Name     string          `json:"name,omitempty"`
-	Topology string          `json:"topology,omitempty"`
-	Roles    []hub.RoleInput `json:"roles,omitempty"`
+	Path         string          `json:"path,omitempty"`
+	Name         string          `json:"name,omitempty"`
+	Topology     string          `json:"topology,omitempty"`
+	Roles        []hub.RoleInput `json:"roles,omitempty"`
+	WorktreeMode string          `json:"worktree_mode,omitempty"`
+	WorktreeRoot string          `json:"worktree_root,omitempty"`
+}
+
+// WorktreePrefsDTO son unas preferencias personales de worktree (REQ-25.29): el modo y la
+// raíz de worktrees. Es el cuerpo del PUT de `/api/projects/active/worktree-prefs` y, en las
+// respuestas, la forma de `worktree_prefs` (lo guardado en el hub, donde un campo vacío es «sin
+// preferencia») y de `effective_worktree_prefs` (lo que rige, con los valores por defecto
+// aplicados, nunca vacío). Los campos se emiten siempre, también vacíos.
+type WorktreePrefsDTO struct {
+	Mode string `json:"mode"`
+	Root string `json:"root"`
+}
+
+// ProjectDTO es un proyecto del listado `GET /api/projects`: su entrada del hub más las
+// preferencias de worktree guardadas y las efectivas. Los campos de la entrada se mantienen
+// planos, de modo que los clientes anteriores siguen leyendo el listado igual.
+type ProjectDTO struct {
+	hub.WorkspaceRecord
+	WorktreePrefs          WorktreePrefsDTO `json:"worktree_prefs"`
+	EffectiveWorktreePrefs WorktreePrefsDTO `json:"effective_worktree_prefs"`
+}
+
+// ProjectWorktreePrefsDTO es la respuesta de `GET|PUT /api/projects/active/worktree-prefs`:
+// el proyecto activo y sus preferencias de worktree, guardadas y efectivas.
+type ProjectWorktreePrefsDTO struct {
+	ID                     string           `json:"id"`
+	Path                   string           `json:"path"`
+	WorktreePrefs          WorktreePrefsDTO `json:"worktree_prefs"`
+	EffectiveWorktreePrefs WorktreePrefsDTO `json:"effective_worktree_prefs"`
 }
 
 // MigrateCumulativeRequest representa la solicitud para transferir tareas pendientes de un rol no bloqueante.

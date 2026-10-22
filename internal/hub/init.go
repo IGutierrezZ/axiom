@@ -52,12 +52,21 @@ type ownMarkers struct {
 	violations   []string               // violaciones de la validación de carga, una por línea
 }
 
-// declares informa de si el axiom.yaml existente declara `baseline:` o
-// `technical_context:`, válidos o no, o no se puede leer: con --force no se
-// sobrescribe un fichero cuyas declaraciones la regeneración perdería (m13).
+// declares informa de si el axiom.yaml existente declara `baseline:`,
+// `technical_context:`, `git:` o `repositories:`, válidos o no, o no se puede
+// leer: con --force no se sobrescribe un fichero cuyas declaraciones la
+// regeneración perdería (m13). Un bloque inválido cuenta igual que uno válido,
+// porque lo que se pierde es lo que el usuario escribió.
+//
+// `repositories:` con una lista vacía no deja entradas ni error y no cuenta:
+// no hay nada que perder.
 func (m ownMarkers) declares() bool {
 	d := m.declarations
-	return d.ParseErr != nil || d.Baseline != nil || d.BaselineErr != nil || d.TechnicalContext != nil || d.TechnicalContextErr != nil
+	return d.ParseErr != nil ||
+		d.Baseline != nil || d.BaselineErr != nil ||
+		d.TechnicalContext != nil || d.TechnicalContextErr != nil ||
+		d.Git != nil || d.GitErr != nil ||
+		len(d.Repositories) > 0 || d.RepositoriesErr != nil
 }
 
 // inspectOwnMarkers evalúa solo los marcadores de absPath, antes de escribir ni
@@ -126,6 +135,10 @@ func loadViolations(err error) []string {
 // pero no cambian el resultado: REQ-24.23 sitúa a init entre las operaciones que
 // completan su resultado.
 func (ini *Initializer) Init(opts InitOptions) (*InitResult, error) {
+	// Las preferencias de worktree se validan antes de escribir ni registrar nada.
+	if err := ValidateWorktreePrefs(opts.WorktreePrefs); err != nil {
+		return nil, err
+	}
 	if opts.Path == "" {
 		opts.Path = "."
 	}
@@ -169,11 +182,12 @@ func (ini *Initializer) Init(opts InitOptions) (*InitResult, error) {
 		notes = append(notes, fmt.Sprintf("Ejecuta `axiom workspace validate --path %s` para ver el informe completo, incluidas las reglas que dependen del sistema de ficheros.", pathquote.Quote(absPath)))
 	}
 
-	// --force no sobrescribe un axiom.yaml que declara baseline: o technical_context:
-	// (o que no se puede leer): la regeneración perdería la declaración (m13).
+	// --force no sobrescribe un axiom.yaml que declara baseline:, technical_context:,
+	// git: o repositories: (o que no se puede leer): la regeneración perdería la
+	// declaración (m13).
 	preserveConfig := alreadyExisted && opts.Force && markers.declares()
 	if preserveConfig {
-		notes = append(notes, fmt.Sprintf("Se conserva %s sin sobrescribirlo aunque se pidió --force: declara `baseline:` o `technical_context:`, o no se puede leer, y regenerarlo perdería esa declaración. Edítalo a mano o retira esos bloques antes de volver a ejecutar `axiom init --force`.", pathquote.Quote(configPath)))
+		notes = append(notes, fmt.Sprintf("Se conserva %s sin sobrescribirlo aunque se pidió --force: declara `baseline:`, `technical_context:`, `git:` o `repositories:`, o no se puede leer, y regenerarlo perdería esa declaración. Edítalo a mano o retira esos bloques antes de volver a ejecutar `axiom init --force`.", pathquote.Quote(configPath)))
 	}
 
 	writeBaseline := ownership == workspace.BaselineDefault
@@ -281,7 +295,7 @@ func (ini *Initializer) Init(opts InitOptions) (*InitResult, error) {
 	// 3. Registrar en el catálogo global si el gestor está provisto
 	var record WorkspaceRecord
 	if ini.manager != nil {
-		rec, err := ini.manager.Register(absPath, opts.Name, opts.Topology)
+		rec, err := ini.manager.RegisterWithWorktreePrefs(absPath, opts.Name, opts.Topology, opts.WorktreePrefs)
 		if err != nil {
 			return nil, fmt.Errorf("proyecto configurado pero no pudo registrarse en el Hub: %w", err)
 		}

@@ -118,7 +118,7 @@ func ProjectSkillDirs(cwd string) []string {
 		filepath.Join(cwd, ".hermes", "skills"),
 	)
 
-	// Multirrepo / Monorrepo desacoplado.
+	// Multirrepo: repositorio de especificaciones y repositorios de los roles.
 	if cfg != nil {
 		specsRepo := strings.TrimSpace(cfg.Workspace.SpecsRepository)
 		if specsRepo != "" && specsRepo != "." {

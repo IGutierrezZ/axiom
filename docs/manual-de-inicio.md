@@ -19,6 +19,8 @@
    - [Política Git Diferencial y Gestión de Worktrees](#política-git-diferencial-y-gestión-de-worktrees-odd-5)
    - [Sincronización Continua de Especificaciones](#sincronización-continua-de-especificaciones)
 6. [El Archivo de Configuración Maestro (`axiom.yaml`)](#6-el-archivo-de-configuración-maestro-axiomyaml)
+   - [Política de Ramas (`git:`)](#política-de-ramas-git)
+   - [Ajustes por Repositorio (`repositories:`)](#ajustes-por-repositorio-repositories)
 7. [Gobernanza de Skills y Autoskills](#7-gobernanza-de-skills-y-autoskills)
    - [Flujo Human-in-the-Loop](#flujo-human-in-the-loop)
    - [Uso por CLI y por Web UI](#uso-por-cli-y-por-web-ui)
@@ -111,16 +113,14 @@ axiom doctor
 
 ## 5. Inicialización y Configuración de Proyectos
 
-Axiom puede gobernar cualquier proyecto nuevo o existente en tres topologías:
+Axiom puede gobernar cualquier proyecto nuevo o existente en dos topologías:
 
 ### Topologías Soportadas
 
 1. **`monorepo-embedded` (Por defecto):**  
    El código del proyecto y las especificaciones residen en el mismo repositorio Git (bajo la carpeta `openspec/`). Ideal para la mayoría de aplicaciones, microservicios agrupados o proyectos como el propio Axiom.
-2. **`monorepo-decoupled`:**  
-   El código está en un único repositorio, pero las especificaciones residen en un repositorio Git independiente clonado dentro de la misma carpeta raíz de trabajo.
-3. **`multirepo`:**  
-   Múltiples repositorios de código independientes (por ejemplo `frontend/`, `backend/`, `infra/`), coordinados bajo una carpeta paraguas común, con un repositorio canónico obligatorio para las especificaciones (`specs_repository`).
+2. **`multirepo`:**  
+   Uno o varios repositorios de código independientes (por ejemplo `frontend/`, `backend/`, `infra/`), coordinados bajo una carpeta paraguas común, con un repositorio canónico obligatorio para las especificaciones (`specs_repository`), que incluye el caso de un único repositorio de código con las especificaciones en un repositorio aparte.
 
 ---
 
@@ -155,7 +155,7 @@ Si prefieres una experiencia visual:
 2. Axiom abrirá automáticamente tu navegador en el servidor local (ej. `http://localhost:4040`).
 3. En la barra superior o sección **Workspace / Proyectos**:
    * Pulsa en **"Agregar Proyecto"** o **"Inicializar Proyecto con Axiom (1 Clic)"**.
-   * Introduce la ruta física (`path`), el nombre del proyecto y selecciona la topología (`monorepo-embedded`, `monorepo-decoupled` o `multirepo`).
+   * Introduce la ruta física (`path`), el nombre del proyecto y selecciona la topología (`monorepo-embedded` o `multirepo`).
    * El dashboard ejecutará en segundo plano el detector de tecnologías y creará la estructura sin necesidad de escribir comandos.
    * Puedes conmutar de un proyecto a otro instantáneamente desde el selector desplegable.
 
@@ -188,7 +188,7 @@ Las rutas con espacios (`Repos EMT/api/x.go`) cuentan como destinos de edición 
 
 **Evidencia `pr_merged`.** `axiom sdd gate record --evidence-kind pr_merged` se verifica contra el grafo git del repositorio de especificaciones (`workspaceRoot`), no contra el de un repositorio de código. La integración de un repositorio de código se acredita con las evidencias `deployment` o `attestation`.
 
-**Cambio de resolución respecto a versiones anteriores.** Antes, los verbos SDD lanzados desde un subdirectorio sin marcadores propios resolvían `<subdirectorio>/openspec`. Ahora resuelven el planning home del marcador más cercano. Lo mismo ocurre con un `axiom.yaml` directo de `monorepo-decoupled` o `multirepo` cuyo `specs_repository` no termina en `openspec`: el planning home pasa a ser `<repositorio de especificaciones>/openspec` y, si `<maestra>/openspec` existe y es otro directorio, `axiom sdd status` lo avisa en `notes`. Un binario anterior ignora el puntero en los verbos SDD, así que todo el equipo debe usar el binario nuevo.
+**Cambio de resolución respecto a versiones anteriores.** Antes, los verbos SDD lanzados desde un subdirectorio sin marcadores propios resolvían `<subdirectorio>/openspec`. Ahora resuelven el planning home del marcador más cercano. Lo mismo ocurre con un `axiom.yaml` directo de `multirepo` cuyo `specs_repository` no termina en `openspec`: el planning home pasa a ser `<repositorio de especificaciones>/openspec` y, si `<maestra>/openspec` existe y es otro directorio, `axiom sdd status` lo avisa en `notes`. Un binario anterior ignora el puntero en los verbos SDD, así que todo el equipo debe usar el binario nuevo.
 
 ---
 
@@ -247,7 +247,7 @@ El archivo `axiom.yaml` es la única fuente de verdad técnica de la estructura 
 ```yaml
 workspace:
   name: "MiProyecto"
-  topology: "monorepo-embedded"   # Opciones: monorepo-embedded | monorepo-decoupled | multirepo
+  topology: "monorepo-embedded"   # Opciones: monorepo-embedded | multirepo
   specs_repository: "openspec"    # Carpeta local o subrepositorio Git de especificaciones
   skill_roots:                    # Opcional: directorios versionados con skills fuera de "skills/"
     - "internal/assets/skills"
@@ -286,6 +286,43 @@ axiom workspace validate
 ```
 
 El comando también informa de cualquier entrada inválida de `workspace.skill_roots`; el escaneo de skills las ignora en silencio.
+
+### Política de Ramas (`git:`)
+
+`axiom.yaml` puede declarar un bloque opcional `git:` con la política de ramas del proyecto. Es política versionada que comparte todo el equipo, por eso vive en `axiom.yaml`:
+
+```yaml
+git:
+  integration_branch: main   # Rama a la que se integra el trabajo (por defecto: main)
+  branch_prefix: feat        # Prefijo de las ramas de cambio (por defecto: feat)
+```
+
+- Sin el bloque, o sin una de las claves, rigen `integration_branch: main` y `branch_prefix: feat`.
+- Ambos valores deben ser nombres de referencia git válidos (reglas de `git check-ref-format`): cadenas no vacías, sin espacios ni caracteres de control, sin `..`, `@{`, `//` ni los caracteres `~ ^ : ? * [ \`, y sin componentes que empiecen por `.` o terminen en `.lock`. `branch_prefix` además no puede empezar ni terminar en `/` (`inc//` se rechaza).
+- Una clave desconocida dentro de `git:` es un error. El modo de trabajo y la raíz de los worktrees **no** se declaran en `axiom.yaml`: son preferencias personales de cada usuario.
+- `axiom workspace validate` rechaza un bloque `git:` inválido nombrando la clave, el valor y la regla incumplida, con código de salida `1`. Un `git:` inválido no impide resolver el proyecto (la resolución solo necesita la configuración base): solo fallan la carga estricta y la validación.
+- Los binarios anteriores ignoran el bloque, así que declararlo no rompe a un equipo con versiones mezcladas.
+
+### Ajustes por Repositorio (`repositories:`)
+
+Cuando un repositorio necesita una rama de integración o un prefijo distintos de los del bloque `git:`, `axiom.yaml` puede declarar además un bloque opcional `repositories:` de primer nivel, con una entrada por repositorio. No confundirlo con la clave `repositories` de cada rol, que lista los repositorios sobre los que trabaja el rol:
+
+```yaml
+repositories:
+  - path: repo-backend             # Obligatoria: ruta relativa a la carpeta maestra
+    integration_branch: release    # Opcional: sustituye a git.integration_branch
+  - path: repo-frontend
+    branch_prefix: ui              # Opcional: sustituye a git.branch_prefix
+```
+
+- `path` es obligatoria y relativa a la carpeta maestra: no puede ser absoluta ni salir de la carpeta maestra, así que `/opt/repo`, `C:\repos\app` y `../fuera` se rechazan. Dos entradas con la misma ruta se rechazan nombrando las dos, aunque la escriban de forma distinta (`app` y `./app`).
+- `integration_branch` y `branch_prefix` siguen las mismas reglas de validez que en `git:`. Un repositorio sin entrada, o una entrada sin una de las claves, hereda el valor del bloque `git:` (y, sin él, el valor por defecto): `repositories:` solo sustituye lo que declara.
+- Una clave desconocida dentro de una entrada es un error, igual que una entrada sin `path`. El modo de trabajo y la raíz de los worktrees siguen sin declararse en `axiom.yaml`.
+- `axiom workspace validate` rechaza un bloque `repositories:` inválido nombrando la entrada (`repositories[0]`), la clave, el valor y la regla incumplida, con código de salida `1`. Igual que `git:`, un `repositories:` inválido no impide resolver el proyecto: solo fallan la carga estricta y la validación.
+- `axiom workspace validate` comprueba además en disco que cada `path` existe como directorio y obtiene su raíz git ascendiendo hasta una entrada `.git`, sin lanzar procesos (un worktree enlazado tiene su propia raíz): dos entradas que resuelven a la misma raíz git se rechazan nombrando ambas rutas y la raíz compartida (`app/web` y `app/api` dentro de un mismo repositorio). Una ruta que no pertenece a ningún repositorio git solo produce una advertencia que la nombra: el resultado sigue siendo `COMPLIANT`.
+- Los binarios anteriores ignoran el bloque, como el de `git:`.
+
+Por ahora los bloques `git:` y `repositories:` solo definen el esquema: el verbo `axiom branch` que los aplicará llega en una entrega posterior.
 
 ---
 

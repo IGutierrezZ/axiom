@@ -123,6 +123,84 @@ func TestManualDeInicioDocumentsTheArchiveModelForDirectedIntegration(t *testing
 	)
 }
 
+// workspace-topology REQ-25.25 (escenario «Ninguna documentación presenta el
+// valor como válido»): el manual de inicio, la plantilla axiom.example.yaml y la
+// visión de arquitectura no ofrecen `monorepo-decoupled` como valor de
+// `workspace.topology`. Una mención solo se admite si la propia línea la declara
+// retirada y remite a `multirepo`. docs/archive/ROADMAP.md queda fuera: es el
+// registro histórico de INC-01, no documentación vigente. Las specs vivas las
+// actualiza sdd-archive con los deltas del cambio.
+func TestDocsDoNotOfferTheRetiredTopologyAsValid(t *testing.T) {
+	for _, file := range []string{
+		filepath.Join("docs", "manual-de-inicio.md"),
+		"axiom.example.yaml",
+		filepath.Join("docs", "architecture", "AXIOM_ENTERPRISE_VISION.md"),
+	} {
+		raw, err := os.ReadFile(filepath.Join("..", "..", file))
+		if err != nil {
+			t.Fatalf("no se pudo leer %s: %v", file, err)
+		}
+		for number, line := range strings.Split(string(raw), "\n") {
+			if !strings.Contains(line, "monorepo-decoupled") {
+				continue
+			}
+			if !strings.Contains(line, "retirad") || !strings.Contains(line, "multirepo") {
+				t.Errorf("%s:%d presenta `monorepo-decoupled` sin declararlo retirado y remitir a `multirepo`: %s", file, number+1, strings.TrimSpace(line))
+			}
+		}
+	}
+}
+
+// workspace-topology REQ-25.26 y REQ-25.27: el manual documenta los bloques
+// `git:` y `repositories:` de axiom.yaml (esquema, valores por defecto,
+// herencia, validación y lo que no se declara ahí) y la plantilla los muestra
+// comentados. El verbo `axiom branch` que los consume llega después, y el manual
+// lo dice.
+func TestDocsDocumentTheGitBranchPolicyBlock(t *testing.T) {
+	doc := readManualDeInicio(t)
+	assertDocContains(t, doc,
+		"[Política de Ramas (`git:`)](#política-de-ramas-git)",
+		"### Política de Ramas (`git:`)",
+		"git:\n  integration_branch: main",
+		"  branch_prefix: feat",
+		"rigen `integration_branch: main` y `branch_prefix: feat`",
+		"nombres de referencia git válidos",
+		"`branch_prefix` además no puede empezar ni terminar en `/`",
+		"Una clave desconocida dentro de `git:` es un error",
+		"El modo de trabajo y la raíz de los worktrees **no** se declaran en `axiom.yaml`",
+		"`axiom workspace validate` rechaza un bloque `git:` inválido nombrando la clave, el valor y la regla incumplida",
+		"Los binarios anteriores ignoran el bloque",
+		"el verbo `axiom branch` que los aplicará llega en una entrega posterior",
+		// El bloque `repositories:` (REQ-25.27) se documenta en la misma sección.
+		"[Ajustes por Repositorio (`repositories:`)](#ajustes-por-repositorio-repositories)",
+		"### Ajustes por Repositorio (`repositories:`)",
+		"repositories:\n  - path: repo-backend",
+		"    integration_branch: release",
+		"  - path: repo-frontend\n    branch_prefix: ui",
+		"`path` es obligatoria y relativa a la carpeta maestra",
+		"no puede ser absoluta ni salir de la carpeta maestra",
+		"Dos entradas con la misma ruta se rechazan",
+		"Un repositorio sin entrada, o una entrada sin una de las claves, hereda el valor del bloque `git:`",
+		"Una clave desconocida dentro de una entrada es un error",
+		"`axiom workspace validate` comprueba además en disco que cada `path` existe como directorio",
+		"dos entradas que resuelven a la misma raíz git se rechazan nombrando ambas rutas y la raíz compartida",
+		"Una ruta que no pertenece a ningún repositorio git solo produce una advertencia",
+	)
+
+	example, err := os.ReadFile(filepath.Join("..", "..", "axiom.example.yaml"))
+	if err != nil {
+		t.Fatalf("no se pudo leer axiom.example.yaml: %v", err)
+	}
+	for _, want := range []string{
+		"# git:", "#   integration_branch: main", "#   branch_prefix: feat",
+		"# repositories:", "#   - path: backend-api", "#     integration_branch: release",
+	} {
+		if !strings.Contains(string(example), want) {
+			t.Errorf("axiom.example.yaml no contiene %q", want)
+		}
+	}
+}
+
 // REQ-21.17 (4): `INDEX.md` lo produce `axiom archive sync`, no `archive-compose`.
 func TestManualDeInicioAttributesIndexMdToArchiveSync(t *testing.T) {
 	doc := readManualDeInicio(t)

@@ -33,6 +33,16 @@ document.addEventListener('DOMContentLoaded', () => {
   const inputProjectPath = document.getElementById('input-project-path');
   const btnBrowseProjectPath = document.getElementById('btn-browse-project-path');
   const inputProjectName = document.getElementById('input-project-name');
+  const selectProjectWorktreeMode = document.getElementById('select-project-worktree-mode');
+  const inputProjectWorktreeRoot = document.getElementById('input-project-worktree-root');
+  const worktreeRootPlaceholder = inputProjectWorktreeRoot ? inputProjectWorktreeRoot.placeholder : '';
+
+  // Preferencias personales de worktree del proyecto activo (INC-25, REQ-25.33)
+  const selectWorktreePrefsMode = document.getElementById('select-worktree-prefs-mode');
+  const inputWorktreePrefsRoot = document.getElementById('input-worktree-prefs-root');
+  const btnSaveWorktreePrefs = document.getElementById('btn-save-worktree-prefs');
+  const worktreePrefsEffective = document.getElementById('worktree-prefs-effective');
+  const worktreePrefsStatus = document.getElementById('worktree-prefs-status');
 
   // Elementos del Modal Explorador de Carpetas
   const modalFolderPicker = document.getElementById('modal-folder-picker');
@@ -852,6 +862,25 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // Raíz de worktrees por defecto de un proyecto: `<padre>/<nombre>-wt`, es decir, la ruta del
+  // proyecto con el sufijo -wt. Devuelve '' si todavía no hay una ruta de la que calcularla.
+  function defaultWorktreeRoot(projectPath) {
+    const clean = (projectPath || '').trim().replace(/[\\/]+$/, '');
+    if (!clean || /[\\/:]$/.test(clean) || !/[\\/]/.test(clean)) return '';
+    return clean + '-wt';
+  }
+
+  // Muestra en el campo de raíz el valor por defecto que se aplicará si se deja vacío.
+  function updateWorktreeRootPlaceholder() {
+    if (!inputProjectWorktreeRoot) return;
+    const def = defaultWorktreeRoot(inputProjectPath ? inputProjectPath.value : '');
+    inputProjectWorktreeRoot.placeholder = def ? 'por defecto: ' + def : worktreeRootPlaceholder;
+  }
+  if (inputProjectPath) {
+    inputProjectPath.addEventListener('input', updateWorktreeRootPlaceholder);
+    inputProjectPath.addEventListener('change', updateWorktreeRootPlaceholder);
+  }
+
   // Botón Examinar en Modal Añadir Proyecto
   if (btnBrowseProjectPath) {
     btnBrowseProjectPath.addEventListener('click', () => {
@@ -886,6 +915,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const baseName = parts[parts.length - 1];
             if (baseName) inputProjectName.value = baseName;
           }
+          updateWorktreeRootPlaceholder();
           if (modalAddProject) modalAddProject.classList.remove('hidden');
         }
       });
@@ -897,6 +927,9 @@ document.addEventListener('DOMContentLoaded', () => {
     btnAddProject.addEventListener('click', () => {
       inputProjectPath.value = '';
       inputProjectName.value = '';
+      if (selectProjectWorktreeMode) selectProjectWorktreeMode.value = 'worktree';
+      if (inputProjectWorktreeRoot) inputProjectWorktreeRoot.value = '';
+      updateWorktreeRootPlaceholder();
       if (rolesBuilderContainer) rolesBuilderContainer.innerHTML = '';
       modalAddProject.classList.remove('hidden');
     });
@@ -912,6 +945,10 @@ document.addEventListener('DOMContentLoaded', () => {
       const pathVal = inputProjectPath.value.trim();
       const nameVal = inputProjectName.value.trim();
       const topologyVal = selectProjectTopology ? selectProjectTopology.value : 'monorepo-embedded';
+      // `worktree` es el modo por defecto: elegirlo no guarda nada, de modo que volver a vincular
+      // un proyecto ya registrado no pisa el modo que ya tenía. La raíz vacía tampoco se envía.
+      const worktreeModeVal = selectProjectWorktreeMode && selectProjectWorktreeMode.value !== 'worktree' ? selectProjectWorktreeMode.value : '';
+      const worktreeRootVal = inputProjectWorktreeRoot ? inputProjectWorktreeRoot.value.trim() : '';
 
       if (!pathVal) {
         alert('Debes ingresar la ruta del proyecto en disco.');
@@ -950,7 +987,9 @@ document.addEventListener('DOMContentLoaded', () => {
             path: pathVal,
             name: nameVal,
             topology: topologyVal,
-            roles: roles
+            roles: roles,
+            worktree_mode: worktreeModeVal || undefined,
+            worktree_root: worktreeRootVal || undefined
           })
         });
 
@@ -967,6 +1006,71 @@ document.addEventListener('DOMContentLoaded', () => {
       } finally {
         btnSubmitAddProject.disabled = false;
         btnSubmitAddProject.textContent = 'Vincular e Inicializar';
+      }
+    });
+  }
+
+  // Preferencias personales de worktree del proyecto activo: lectura y guardado en el Hub.
+  function showWorktreePrefsStatus(message, isError) {
+    if (!worktreePrefsStatus) return;
+    worktreePrefsStatus.textContent = message;
+    worktreePrefsStatus.className = message ? (isError ? 'text-danger' : 'text-success') : '';
+  }
+
+  function renderWorktreePrefs(data) {
+    const saved = data.worktree_prefs || {};
+    const effective = data.effective_worktree_prefs || {};
+    selectWorktreePrefsMode.value = saved.mode || '';
+    inputWorktreePrefsRoot.value = saved.root || '';
+    inputWorktreePrefsRoot.placeholder = 'por defecto: ' + (effective.root || '');
+    worktreePrefsEffective.textContent = 'Vigentes: modo ' + effective.mode + ', raíz ' + effective.root;
+  }
+
+  async function loadWorktreePrefs() {
+    if (!selectWorktreePrefsMode) return;
+    try {
+      const res = await fetch('/api/projects/active/worktree-prefs');
+      const data = await res.json();
+      const editable = res.ok;
+      selectWorktreePrefsMode.disabled = !editable;
+      inputWorktreePrefsRoot.disabled = !editable;
+      btnSaveWorktreePrefs.disabled = !editable;
+      if (!editable) {
+        worktreePrefsEffective.textContent = '';
+        showWorktreePrefsStatus(data.error || 'No se pudieron leer las preferencias de worktree.', true);
+        return;
+      }
+      renderWorktreePrefs(data);
+      showWorktreePrefsStatus('', false);
+    } catch (err) {
+      showWorktreePrefsStatus('No se pudieron leer las preferencias de worktree: ' + err.message, true);
+    }
+  }
+
+  if (btnSaveWorktreePrefs) {
+    btnSaveWorktreePrefs.addEventListener('click', async () => {
+      btnSaveWorktreePrefs.disabled = true;
+      try {
+        const res = await fetch('/api/projects/active/worktree-prefs', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            mode: selectWorktreePrefsMode.value,
+            root: inputWorktreePrefsRoot.value.trim()
+          })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          showWorktreePrefsStatus(data.error || 'No se pudieron guardar las preferencias.', true);
+          return;
+        }
+        renderWorktreePrefs(data);
+        showWorktreePrefsStatus('Preferencias guardadas en tu Hub.', false);
+        await loadProjects();
+      } catch (err) {
+        showWorktreePrefsStatus('No se pudieron guardar las preferencias: ' + err.message, true);
+      } finally {
+        btnSaveWorktreePrefs.disabled = false;
       }
     });
   }
@@ -1067,6 +1171,7 @@ document.addEventListener('DOMContentLoaded', () => {
   async function loadAllData() {
     await Promise.all([
       loadWorkspace(),
+      loadWorktreePrefs(),
       loadIncrements(),
       loadSkills(),
       loadSkillsInbox(),

@@ -10,13 +10,12 @@ workspace:
 
   # Topología del espacio de trabajo. Opciones admitidas:
   #   - monorepo-embedded: Código y especificaciones residen en el mismo repositorio Git.
-  #   - monorepo-decoupled: Monorrepo de código y repositorio de specs independiente en la carpeta maestra.
-  #   - multirepo: Múltiples repositorios de código y repositorio canónico de specs OBLIGATORIO.
+  #   - multirepo: Uno o varios repositorios de código y repositorio canónico de specs OBLIGATORIO.
   topology: "multirepo"
 
   # Ruta relativa al repositorio canónico de especificaciones dentro de la carpeta maestra.
   # Para 'monorepo-embedded': usa "." o la subcarpeta interna (ej. "openspec" o "specs").
-  # Para 'monorepo-decoupled' y 'multirepo': debe ser el nombre de la carpeta del repo de specs.
+  # Para 'multirepo': debe ser el nombre de la carpeta del repo de specs.
   specs_repository: "especificacion"
 
   # Directorios versionados con skills canónicas fuera de "skills/" (opcional).
@@ -29,6 +28,32 @@ workspace:
 
   # Ruta raíz del workspace (por defecto: "." que corresponde a la carpeta maestra)
   root: "."
+
+# ------------------------------------------------------------------------------
+# Política de Ramas (opcional)
+# ------------------------------------------------------------------------------
+# Política versionada del proyecto. Sin este bloque, o sin una de sus claves, rigen
+# los valores por defecto que se muestran. Ambos valores deben ser nombres de
+# referencia git válidos y 'branch_prefix' no puede empezar ni terminar en "/".
+# Una clave desconocida es un error. El modo de trabajo y la raíz de los worktrees
+# NO se declaran aquí: son preferencias personales de cada usuario.
+# git:
+#   integration_branch: main
+#   branch_prefix: feat
+
+# ------------------------------------------------------------------------------
+# Ajustes de Ramas por Repositorio (opcional)
+# ------------------------------------------------------------------------------
+# Un repositorio puede sustituir la rama de integración o el prefijo del bloque
+# 'git'. 'path' es obligatoria, relativa a la carpeta maestra y sin salir de ella;
+# 'integration_branch' y 'branch_prefix' siguen las reglas de 'git' y, si faltan,
+# el repositorio hereda el valor de 'git'. No puede haber dos entradas con la
+# misma ruta. Una clave desconocida es un error.
+# repositories:
+#   - path: backend-api
+#     integration_branch: release
+#   - path: frontend-portal
+#     branch_prefix: ui
 
 # ------------------------------------------------------------------------------
 # Definición de Roles de Implementación (de 1 a N roles)
