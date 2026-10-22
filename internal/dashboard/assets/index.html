@@ -535,6 +535,28 @@
                 </tbody>
               </table>
             </div>
+
+            <!-- Preferencias personales de worktree del proyecto activo (INC-25, REQ-25.33) -->
+            <h4 class="subsection-title" style="margin-top: 1.5rem; font-size: 0.95rem;">Preferencias personales de worktree</h4>
+            <p class="description" style="margin-top: 0.25rem;">Se guardan en tu Hub (<code>~/.axiom/workspaces.json</code>), solo para este equipo: no modifican <code>axiom.yaml</code> ni ningún fichero del proyecto.</p>
+            <div style="display: grid; grid-template-columns: 1fr 2fr auto; gap: 1rem; align-items: end; margin-top: 0.5rem;">
+              <div>
+                <label for="select-worktree-prefs-mode" style="display: block; font-weight: 600; margin-bottom: 0.4rem; font-size: 0.85rem;">Modo de trabajo:</label>
+                <select id="select-worktree-prefs-mode" class="form-select" style="width: 100%; box-sizing: border-box;">
+                  <option value="">por defecto (worktree)</option>
+                  <option value="worktree">worktree</option>
+                  <option value="in_place">in_place</option>
+                  <option value="ask">ask</option>
+                </select>
+              </div>
+              <div>
+                <label for="input-worktree-prefs-root" style="display: block; font-weight: 600; margin-bottom: 0.4rem; font-size: 0.85rem;">Raíz de worktrees (ruta absoluta):</label>
+                <input type="text" id="input-worktree-prefs-root" class="form-select" style="width: 100%; box-sizing: border-box;" placeholder="por defecto: «carpeta»-wt junto a la carpeta del proyecto">
+              </div>
+              <button type="button" id="btn-save-worktree-prefs" class="btn btn-primary">Guardar preferencias</button>
+            </div>
+            <p id="worktree-prefs-effective" style="font-size: 0.8rem; color: var(--color-text-muted); margin: 0.5rem 0 0;"></p>
+            <p id="worktree-prefs-status" style="font-size: 0.85rem; margin: 0.35rem 0 0;"></p>
           </div>
         </div>
 
@@ -665,6 +687,25 @@
               </select>
             </div>
           </div>
+
+          <!-- Preferencias personales de worktree (INC-25, REQ-25.29): se guardan en el Hub, nunca en axiom.yaml -->
+          <div style="display: grid; grid-template-columns: 1fr 1.6fr; gap: 1rem; margin-bottom: 0.5rem;">
+            <div>
+              <label for="select-project-worktree-mode" style="display: block; font-weight: 600; margin-bottom: 0.5rem; font-size: 0.9rem;">Modo de trabajo:</label>
+              <select id="select-project-worktree-mode" class="form-select" style="width: 100%; box-sizing: border-box;">
+                <option value="worktree" selected>worktree (un worktree por cambio)</option>
+                <option value="in_place">in_place (en la carpeta del proyecto)</option>
+                <option value="ask">ask (preguntar en cada cambio)</option>
+              </select>
+            </div>
+            <div>
+              <label for="input-project-worktree-root" style="display: block; font-weight: 600; margin-bottom: 0.5rem; font-size: 0.9rem;">Raíz de worktrees (ruta absoluta):</label>
+              <input type="text" id="input-project-worktree-root" class="form-select" style="width: 100%; box-sizing: border-box;" placeholder="por defecto: «carpeta»-wt junto a la carpeta del proyecto">
+            </div>
+          </div>
+          <p style="font-size: 0.8rem; color: var(--color-text-muted); margin-top: 0; margin-bottom: 1.25rem;">
+            Preferencias personales: se guardan en tu Hub, no en <code>axiom.yaml</code>. Si dejas la raíz vacía se usa la ruta por defecto.
+          </p>
 
           <!-- Constructor Dinámico de Roles -->
           <div style="border-top: 1px solid var(--color-border-subtle); padding-top: 1rem; margin-bottom: 1.5rem;">

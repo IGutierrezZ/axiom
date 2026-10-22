@@ -46,6 +46,7 @@ func (s *Server) registerRoutes() {
 	s.mux.HandleFunc("/api/projects/switch", s.handleProjectsSwitch)
 	s.mux.HandleFunc("/api/projects/add", s.handleProjectsAdd)
 	s.mux.HandleFunc("/api/projects/init", s.handleProjectsInit)
+	s.mux.HandleFunc("/api/projects/active/worktree-prefs", s.handleActiveWorktreePrefs)
 	s.mux.HandleFunc("/api/fs/directories", s.handleFSDirectories)
 	s.mux.HandleFunc("/api/fs/native-picker", s.handleFSNativePicker)
 	s.mux.HandleFunc("/api/workspace", s.handleWorkspace)
@@ -212,6 +213,11 @@ func (s *Server) handleProjectsAdd(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if err := validateWorktreePrefs(req.WorktreeMode, req.WorktreeRoot); err != nil {
+		s.respondJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return
+	}
+
 	rec, err := s.service.AddProject(req)
 	if err != nil {
 		s.respondJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
@@ -229,6 +235,11 @@ func (s *Server) handleProjectsInit(w http.ResponseWriter, r *http.Request) {
 	var req ProjectInitRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil && err.Error() != "EOF" {
 		s.respondJSON(w, http.StatusBadRequest, map[string]string{"error": "JSON inválido"})
+		return
+	}
+
+	if err := validateWorktreePrefs(req.WorktreeMode, req.WorktreeRoot); err != nil {
+		s.respondJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
 		return
 	}
 
