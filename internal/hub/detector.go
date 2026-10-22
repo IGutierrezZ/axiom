@@ -2,11 +2,15 @@ package hub
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/IGutierrezZ/axiom/v3/internal/gitcommon"
+	"github.com/IGutierrezZ/axiom/v3/internal/pathquote"
 )
 
 // Detector inspecciona un directorio de código fuente para inferir tecnologías y dependencias.
@@ -401,49 +405,28 @@ func dirExists(path string) bool {
 	return err == nil && info.IsDir()
 }
 
-// IsGitWorktree determina si la ruta especificada corresponde a un worktree secundario de git
-// (donde .git es un archivo con la directiva gitdir) o a la ruta de worktrees de Axiom (axiom-wt).
+// IsGitWorktree dice si path está en un worktree enlazado de git: su raíz git tiene un `.git`
+// fichero cuyo git dir contiene `commondir` (REQ-25.31). La evidencia es la de git y no el
+// nombre de la ruta: un checkout principal bajo `axiom-wt` o `proyecto-wt` no es un worktree y
+// un submódulo (`.git` fichero sin `commondir`) tampoco. La ruta vacía no es un worktree.
 func IsGitWorktree(path string) bool {
-	if path == "" {
-		return false
-	}
-	cleanPath := filepath.Clean(path)
-	absPath, err := filepath.Abs(cleanPath)
-	if err == nil {
-		cleanPath = absPath
-	}
+	return path != "" && gitcommon.LinkedWorktreeRoot(path) != ""
+}
 
-	// 1. Detección por convención estructural de Axiom (carpeta axiom-wt)
-	normalized := filepath.ToSlash(cleanPath)
-	for _, segment := range strings.Split(normalized, "/") {
-		if strings.EqualFold(segment, "axiom-wt") {
-			return true
+// linkedWorktreeRefusal construye el error con el que Register rechaza un worktree enlazado: lo
+// dice y nombra la continuación ejecutable, que es registrar su checkout principal. El checkout
+// principal sale del common dir del repositorio (CommonDirFromFiles) y, de él, de
+// MainWorktreeFromFiles; si no se puede deducir (un common dir que no se llama `.git`), el
+// mensaje lo dice en lugar de inventar una ruta.
+func linkedWorktreeRefusal(path string) error {
+	root := gitcommon.LinkedWorktreeRoot(path)
+	if root == "" {
+		root = path
+	}
+	if commonDir, err := gitcommon.CommonDirFromFiles(root); err == nil {
+		if main, ok := gitcommon.MainWorktreeFromFiles(commonDir); ok {
+			return fmt.Errorf("la ruta %s es un worktree git enlazado y los worktrees no se registran como proyectos en el Hub: registra su checkout principal con `axiom project add %s`", pathquote.Quote(root), pathquote.Quote(main))
 		}
 	}
-
-	// 2. Detección Git estándar: en un worktree vinculado, .git es un archivo regular
-	// que contiene un puntero "gitdir: <ruta>/worktrees/<nombre>"
-	gitEntry := filepath.Join(cleanPath, ".git")
-	info, err := os.Stat(gitEntry)
-	if err == nil && !info.IsDir() {
-		data, err := os.ReadFile(gitEntry)
-		if err == nil {
-			content := strings.TrimSpace(string(data))
-			if strings.HasPrefix(content, "gitdir:") {
-				targetDir := strings.TrimSpace(strings.TrimPrefix(content, "gitdir:"))
-				if strings.Contains(targetDir, "/worktrees/") || strings.Contains(targetDir, "\\worktrees\\") {
-					return true
-				}
-				if !filepath.IsAbs(targetDir) {
-					targetDir = filepath.Join(cleanPath, targetDir)
-				}
-				if fileExists(filepath.Join(targetDir, "commondir")) {
-					return true
-				}
-				return true
-			}
-		}
-	}
-
-	return false
+	return fmt.Errorf("la ruta %s es un worktree git enlazado y los worktrees no se registran como proyectos en el Hub; no se pudo determinar su checkout principal: registra el checkout principal del repositorio con `axiom project add <checkout principal>`", pathquote.Quote(root))
 }

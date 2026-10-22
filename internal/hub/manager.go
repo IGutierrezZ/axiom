@@ -121,7 +121,7 @@ func (m *Manager) Register(path, name, topology string) (*WorkspaceRecord, error
 	}
 
 	if IsGitWorktree(absPath) {
-		return nil, fmt.Errorf("la ruta '%s' corresponde a un worktree git; los worktrees no deben registrarse como proyectos en el Hub", absPath)
+		return nil, linkedWorktreeRefusal(absPath)
 	}
 
 	m.mu.Lock()
