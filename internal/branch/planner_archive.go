@@ -38,7 +38,7 @@ func archiveOperation(operation string) string {
 //     situ en el repositorio de specs, así que ninguno tiene rama de archivado
 //     (`archive_branch_not_applicable`);
 //  2. banderas: con `--archive` solo se admite `--prefix`; `--branch` y `--base` son
-//     `plan_conflict` (supuesto S-16);
+//     `plan_conflict` (supuesto S-16); ambos pasos son CheckArchiveRequest;
 //  3. nombre: con prefijo, `<prefijo>/<cambio>-archive`; sin él, `<rama del cambio
 //     registrada>-archive`, y sin rama registrada la compone la política;
 //  4. ruta: `<raíz>/<cambio>-archive/<repo>`, con las mismas comprobaciones de colocación y de
@@ -51,11 +51,8 @@ func planArchive(in PlanInput) (ChangePlan, *Refusal) {
 	if refusal := ValidateChangeName(in.Operation, in.Master, in.Change); refusal != nil {
 		return ChangePlan{}, refusal
 	}
-	if refusal := archiveApplicable(in); refusal != nil {
+	if refusal := CheckArchiveRequest(in); refusal != nil {
 		return ChangePlan{}, refusal
-	}
-	if in.Exceptions.Branch != "" || in.Exceptions.Base != "" {
-		return ChangePlan{}, ArchiveOptionsConflict(in)
 	}
 	if refusal := validateExceptions(in); refusal != nil {
 		return ChangePlan{}, refusal
@@ -70,6 +67,9 @@ func planArchive(in PlanInput) (ChangePlan, *Refusal) {
 	archiveBranch, refusal := archiveBranchName(in, name, effective)
 	if refusal != nil {
 		return ChangePlan{}, refusal
+	}
+	if registered := in.ArchiveBranch; registered != "" && registered != archiveBranch {
+		return ChangePlan{}, ArchiveBranchConflict(in.Operation, in.Change, in.Master, in.Lane, name, facts.GitRoot, registered, archiveBranch)
 	}
 
 	// Un rol `archive` colisionaría con esta rama (S-15): se rechaza igual que al planificar las
@@ -115,29 +115,39 @@ func planArchive(in PlanInput) (ChangePlan, *Refusal) {
 	return plan, nil
 }
 
-// archiveApplicable rechaza con `archive_branch_not_applicable` el carril o la topología sin
-// rama de archivado (REQ-25.45): el carril ODD, que no tiene archive, y `multirepo`, donde el
-// archive se hace in situ en la rama de integración del repositorio de specs (REQ-25.5).
-func archiveApplicable(in PlanInput) *Refusal {
+// CheckArchiveRequest comprueba, sin leer nada, lo que decide si la petición de archivado tiene
+// sentido (design D-25, pasos 1 y 2): la aplicabilidad, primero (`archive_branch_not_applicable`
+// en el carril ODD, que no tiene archive, y en `multirepo`, donde el archive se hace in situ en
+// la rama de integración del repositorio de specs, REQ-25.5), y las banderas después: con
+// `--archive` solo se admite `--prefix`, y `--branch` o `--base` son `plan_conflict` (S-16).
+// El motor lo llama antes de resolver el modo de trabajo, de modo que una petición que no se
+// puede atender no pregunta por el modo; el planificador lo repite.
+func CheckArchiveRequest(in PlanInput) *Refusal {
+	in.Operation = archiveOperation(in.Operation)
 	switch {
 	case in.Lane == LaneODD:
 		return ArchiveBranchNotApplicable(in, "el carril ODD no tiene archive y, por tanto, tampoco rama de archivado")
 	case in.Topology == workspace.TopologyMultirepo:
 		integration := repoPolicy(in.Policy, in.PlanningRepo).IntegrationBranch
 		return ArchiveBranchNotApplicable(in, fmt.Sprintf("en un multirepo no existe rama de archivado: el archive se hace in situ en la rama de integración «%s» del repositorio de specs", integration))
+	case in.Exceptions.Branch != "" || in.Exceptions.Base != "":
+		return ArchiveOptionsConflict(in)
 	}
 	return nil
 }
 
 // archiveBranchName compone el nombre de la rama de archivado (design D-25, paso 3): con el
 // prefijo de la invocación, `<prefijo>/<cambio>-archive`, sin tocar el prefijo del cambio; sin
-// él, la rama del cambio registrada más `-archive` o, si no hay ninguna, la que compondría la
-// política (`<prefijo>/<cambio>`). El prefijo de la política solo se valida cuando se usa.
+// él, la rama de archivado que el registro ya guarda y, sin ella, la rama del cambio registrada
+// más `-archive` o, si no hay ninguna, la que compondría la política (`<prefijo>/<cambio>`). El
+// prefijo de la política solo se valida cuando se usa.
 func archiveBranchName(in PlanInput, repository string, effective RepoPolicy) (string, *Refusal) {
 	var archive string
 	switch {
 	case in.Exceptions.Prefix != "":
 		archive = in.Exceptions.Prefix + "/" + in.Change + archiveSuffix
+	case in.ArchiveBranch != "":
+		archive = in.ArchiveBranch
 	case in.ChangeBranch != "":
 		archive = in.ChangeBranch + archiveSuffix
 	default:

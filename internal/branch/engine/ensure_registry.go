@@ -37,39 +37,70 @@ func newRecord(facts changeFacts, plan branch.ChangePlan, mode workMode) branch.
 		record.ArchivePrefix = previous.ArchivePrefix
 	}
 	for _, repo := range plan.Repositories {
-		// Las vistas de candidato de RDD son worktrees desacoplados: no cuentan (D-07).
-		deployed := map[string]string{}
-		for _, entry := range facts.worktrees[repo.GitRoot] {
-			if entry.Branch != "" && !entry.Detached {
-				deployed[entry.Branch] = entry.Path
-			}
-		}
-		// En `in_place` la rama no tiene worktree: está desplegada en el propio repositorio,
-		// que es el primer worktree de git (el checkout principal), o no lo está. Una rama de
-		// rol que otra herramienta tenga en un worktree ajeno no es de este registro.
-		var main string
-		if listed := facts.worktrees[repo.GitRoot]; len(listed) > 0 {
-			main = listed[0].Path
-		}
-		registered := branch.RecordRepo{
-			Name:      repo.Name,
-			GitRoot:   repo.GitRoot,
-			CommonDir: repo.CommonDir,
-			Role:      repo.Role,
-			Branches:  make([]branch.RecordBranch, 0, len(repo.Branches)),
-		}
-		for _, planned := range repo.Branches {
-			recorded := branch.RecordBranch{Name: planned.Name, Kind: planned.Kind, RoleID: planned.RoleID}
-			if mode.mode == branch.ModeInPlace {
-				recorded.InPlace = deployed[planned.Name] != "" && pathidentity.SameDirectory(deployed[planned.Name], main)
-			} else {
-				recorded.Worktree = deployed[planned.Name]
-			}
-			registered.Branches = append(registered.Branches, recorded)
-		}
+		registered := recordRepository(facts, repo, mode)
+		// La rama de archivado (`ensure --archive`) no es del plan del cambio, pero sigue siendo
+		// del cambio: el registro la conserva tal como estaba.
+		registered.Branches = append(registered.Branches, preservedArchiveBranches(facts.record, repo)...)
 		record.Repositories = append(record.Repositories, registered)
 	}
 	return record
+}
+
+// recordRepository compone la entrada del registro de un repositorio del plan con el estado
+// final de git: sus ramas planificadas, cada una con el worktree en el que git la tiene.
+func recordRepository(facts changeFacts, repo branch.RepoPlan, mode workMode) branch.RecordRepo {
+	// Las vistas de candidato de RDD son worktrees desacoplados: no cuentan (D-07).
+	deployed := map[string]string{}
+	for _, entry := range facts.worktrees[repo.GitRoot] {
+		if entry.Branch != "" && !entry.Detached {
+			deployed[entry.Branch] = entry.Path
+		}
+	}
+	// En `in_place` la rama no tiene worktree: está desplegada en el propio repositorio,
+	// que es el primer worktree de git (el checkout principal), o no lo está. Una rama de
+	// rol que otra herramienta tenga en un worktree ajeno no es de este registro.
+	var main string
+	if listed := facts.worktrees[repo.GitRoot]; len(listed) > 0 {
+		main = listed[0].Path
+	}
+	registered := branch.RecordRepo{
+		Name:      repo.Name,
+		GitRoot:   repo.GitRoot,
+		CommonDir: repo.CommonDir,
+		Role:      repo.Role,
+		Branches:  make([]branch.RecordBranch, 0, len(repo.Branches)),
+	}
+	for _, planned := range repo.Branches {
+		recorded := branch.RecordBranch{Name: planned.Name, Kind: planned.Kind, RoleID: planned.RoleID}
+		if mode.mode == branch.ModeInPlace {
+			recorded.InPlace = deployed[planned.Name] != "" && pathidentity.SameDirectory(deployed[planned.Name], main)
+		} else {
+			recorded.Worktree = deployed[planned.Name]
+		}
+		registered.Branches = append(registered.Branches, recorded)
+	}
+	return registered
+}
+
+// preservedArchiveBranches son las ramas de archivado que el registro previo guarda para el
+// repositorio del plan (se reconoce por su git common dir): el plan ordinario no las incluye y
+// el registro que compone `ensure` no las pierde.
+func preservedArchiveBranches(previous *branch.Record, repo branch.RepoPlan) []branch.RecordBranch {
+	if previous == nil {
+		return nil
+	}
+	var preserved []branch.RecordBranch
+	for _, registered := range previous.Repositories {
+		if !pathidentity.SameDirectory(registered.CommonDir, repo.CommonDir) {
+			continue
+		}
+		for _, recorded := range registered.Branches {
+			if recorded.Kind == branch.KindArchive {
+				preserved = append(preserved, recorded)
+			}
+		}
+	}
+	return preserved
 }
 
 // lockRefusal traduce el fallo de bloquear el cambio: un bloqueo ocupado es `plan_conflict`

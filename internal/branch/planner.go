@@ -101,6 +101,11 @@ type PlanInput struct {
 	// excepciones registradas), de la que deriva `<rama del cambio>-archive` cuando no hay
 	// `--prefix`. Vacía, la compone la política: `<prefijo>/<cambio>`. Solo cuenta con Archive.
 	ChangeBranch string
+	// ArchiveBranch es la rama de archivado que el registro ya guarda para el cambio. Sin
+	// `--prefix`, el plan la conserva tal cual aunque la rama del cambio o la política hayan
+	// cambiado desde entonces (una rama de archivado no cambia de nombre); un `--prefix` que
+	// daría otro nombre es `plan_conflict`. Solo cuenta con Archive.
+	ArchiveBranch string
 }
 
 // ChangePlan es el plan de un cambio: sus repositorios en orden estable (primero el

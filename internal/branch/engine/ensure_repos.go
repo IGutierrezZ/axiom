@@ -35,9 +35,13 @@ func mergeExceptions(operation, cwd, change string, lane branch.Lane, record *br
 		return requested, nil
 	}
 	effective := record.Exceptions
+	// La rama de archivado (`ensure --archive`) no es del plan del cambio: un registro que solo
+	// la tiene no materializa nada que una excepción del cambio pueda contradecir.
 	materialized := false
 	for _, repo := range record.Repositories {
-		materialized = materialized || len(repo.Branches) > 0
+		for _, recorded := range repo.Branches {
+			materialized = materialized || recorded.Kind != branch.KindArchive
+		}
 	}
 	conflict := false
 	for _, field := range []struct {

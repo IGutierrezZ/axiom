@@ -358,3 +358,105 @@ func TestPlanArchiveValidatesNamesLengthAndPlacement(t *testing.T) {
 		mustPlan(t, in)
 	})
 }
+
+// REQ-25.12 y design D-25: una rama de archivado que el registro ya guarda no cambia de nombre.
+// Sin `--prefix` el plan la conserva aunque la rama del cambio o la política hayan cambiado; con
+// un `--prefix` que da el mismo nombre es idempotente, y con uno que daría otro, `plan_conflict`
+// que nombra las dos ramas y vuelve a la registrada sin `--prefix`.
+func TestPlanArchiveKeepsTheRegisteredArchiveBranchAndRejectsAPrefixThatWouldRenameIt(t *testing.T) {
+	registered := func() PlanInput {
+		in := archiveInput("x", "core")
+		in.ChangeBranch = "inc/x"
+		in.ArchiveBranch = "feat/x-archive"
+		return in
+	}
+	t.Run("sin --prefix se conserva el nombre registrado", func(t *testing.T) {
+		if _, archive := onlyArchiveBranch(t, mustPlan(t, registered())); archive.Name != "feat/x-archive" {
+			t.Errorf("rama = %q, se esperaba la registrada feat/x-archive y no inc/x-archive", archive.Name)
+		}
+	})
+	t.Run("el mismo prefijo es idempotente", func(t *testing.T) {
+		in := registered()
+		in.ArchiveBranch = "doc/x-archive"
+		in.Exceptions = Exceptions{Prefix: "doc"}
+		if _, archive := onlyArchiveBranch(t, mustPlan(t, in)); archive.Name != "doc/x-archive" {
+			t.Errorf("rama = %q, se esperaba doc/x-archive", archive.Name)
+		}
+	})
+	t.Run("otro prefijo es plan_conflict", func(t *testing.T) {
+		in := registered()
+		in.Exceptions = Exceptions{Prefix: "doc"}
+
+		refusal := mustRefuse(t, in, CodePlanConflict)
+
+		for _, want := range []string{"feat/x-archive", "doc/x-archive"} {
+			if !strings.Contains(refusal.Message, want) {
+				t.Errorf("el mensaje %q debe nombrar %s", refusal.Message, want)
+			}
+		}
+		for _, want := range []string{
+			"axiom branch ensure --archive --change x --cwd " + pathquote.Quote(testMaster),
+			"git -C " + pathquote.Quote(testMaster) + " branch -D feat/x-archive",
+		} {
+			if !strings.Contains(refusal.Continuation, want) {
+				t.Errorf("la continuación %q debe contener %q", refusal.Continuation, want)
+			}
+		}
+		if refusal.Details["registered"] != "feat/x-archive" || refusal.Details["planned"] != "doc/x-archive" {
+			t.Errorf("details = %v", refusal.Details)
+		}
+	})
+}
+
+// REQ-25.45 y REQ-25.10: `change_not_integrated` nombra la base evaluada y la carpeta que falta,
+// sugiere `--fetch` con una orden ejecutable que conserva el `--prefix`, y, con la base ya traída
+// con `--fetch`, dice que falta fusionar el PR; si la base contiene el cambio archivado (G-13)
+// nombra la entrada y dice que no hay nada que archivar.
+func TestChangeNotIntegratedNamesTheBaseTheFolderAndAnExecutableContinuation(t *testing.T) {
+	repo := RepoPlan{Name: "axiom", GitRoot: testMaster, IntegrationBranch: "main"}
+	quoted := pathquote.Quote(testMaster)
+
+	t.Run("sin fetch sugiere --fetch", func(t *testing.T) {
+		refusal := ChangeNotIntegrated("x", testMaster, "", repo, "origin/main", "openspec/changes/x/", "", false)
+
+		if refusal.Code != CodeChangeNotIntegrated {
+			t.Fatalf("código = %s", refusal.Code)
+		}
+		for _, want := range []string{"origin/main", "openspec/changes/x/", "no se ha creado ninguna rama ni worktree"} {
+			if !strings.Contains(refusal.Message, want) {
+				t.Errorf("el mensaje %q debe contener %q", refusal.Message, want)
+			}
+		}
+		if want := "axiom branch ensure --cwd " + quoted + " --change x --archive --fetch"; !strings.Contains(refusal.Continuation, want) {
+			t.Errorf("la continuación %q debe contener %q", refusal.Continuation, want)
+		}
+	})
+	t.Run("la continuación conserva el prefijo", func(t *testing.T) {
+		refusal := ChangeNotIntegrated("x", testMaster, "doc", repo, "main", "openspec/changes/x/", "", false)
+		if want := "--change x --archive --fetch --prefix doc"; !strings.Contains(refusal.Continuation, want) {
+			t.Errorf("la continuación %q debe contener %q", refusal.Continuation, want)
+		}
+	})
+	t.Run("tras el fetch falta fusionar el PR", func(t *testing.T) {
+		refusal := ChangeNotIntegrated("x", testMaster, "", repo, "origin/main", "openspec/changes/x/", "", true)
+		if !strings.Contains(refusal.Message, "tras el --fetch") || !strings.Contains(refusal.Continuation, "fusiona el PR del cambio en main") {
+			t.Errorf("mensaje %q, continuación %q", refusal.Message, refusal.Continuation)
+		}
+	})
+	t.Run("cambio ya archivado", func(t *testing.T) {
+		entry := "openspec/changes/archive/2026-10-01-x/"
+		refusal := ChangeNotIntegrated("x", testMaster, "", repo, "main", "openspec/changes/x/", entry, false)
+
+		if refusal.Code != CodeChangeNotIntegrated || refusal.Details["archivedEntry"] != entry {
+			t.Fatalf("código %s, details %v", refusal.Code, refusal.Details)
+		}
+		for _, want := range []string{entry, "nada que archivar"} {
+			if !strings.Contains(refusal.Message, want) {
+				t.Errorf("el mensaje %q debe contener %q", refusal.Message, want)
+			}
+		}
+		if want := "axiom branch status --change x --cwd " + quoted; !strings.Contains(refusal.Continuation, want) {
+			t.Errorf("la continuación %q debe contener %q", refusal.Continuation, want)
+		}
+	})
+}

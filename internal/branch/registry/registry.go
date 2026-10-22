@@ -298,6 +298,13 @@ func validate(record branch.Record, lane branch.Lane, change string) error {
 			return fmt.Errorf("exceptions.branch %q no es válido: %w", name, err)
 		}
 	}
+	// El prefijo de la rama de archivado (`ensure --archive --prefix`, REQ-25.12) es un prefijo
+	// de rama como el de las excepciones.
+	if prefix := record.ArchivePrefix; prefix != "" {
+		if err := gitref.ValidPrefix(prefix); err != nil {
+			return fmt.Errorf("archivePrefix %q no es válido: %w", prefix, err)
+		}
+	}
 	return nil
 }
 

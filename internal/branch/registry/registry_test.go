@@ -1,6 +1,7 @@
 package registry
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -317,6 +318,7 @@ func TestLoadRejectsACorruptRecordNamingTheFile(t *testing.T) {
 		{"worktree relativo", mutate(func(r *branch.Record) { r.Repositories[0].Branches[0].Worktree = "x/axiom" }), "worktree"},
 		{"prefijo de excepción inválido", mutate(func(r *branch.Record) { r.Exceptions.Prefix = "mi prefijo//" }), "prefix"},
 		{"rama de excepción inválida", mutate(func(r *branch.Record) { r.Exceptions.Branch = "a..b" }), "branch"},
+		{"prefijo de archivado inválido", mutate(func(r *branch.Record) { r.ArchivePrefix = "mi prefijo//" }), "archivePrefix"},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -656,6 +658,7 @@ func TestSaveRefusesARecordThatLoadWouldRejectWithoutWritingAnything(t *testing.
 		{"cambio que no puede nombrar un registro", commonDir, func(r *branch.Record) { r.Change = "a b" }},
 		{"modo sin materializar", commonDir, func(r *branch.Record) { r.Mode = branch.ModeAsk }},
 		{"ruta del worktree relativa", commonDir, func(r *branch.Record) { r.Repositories[0].Branches[0].Worktree = "x/axiom" }},
+		{"prefijo de archivado inválido", commonDir, func(r *branch.Record) { r.ArchivePrefix = "a b" }},
 		{"git common dir relativo", ".git", func(*branch.Record) {}},
 	}
 	for _, tc := range tests {
@@ -782,5 +785,39 @@ func TestLockRefusesAKeyThatCannotNameARecordWithoutCreatingAnything(t *testing.
 				t.Errorf("un rechazo no debe crear nada (%v)", statErr)
 			}
 		})
+	}
+}
+
+// REQ-25.14, REQ-25.45 y design §4.4: el registro guarda la rama de archivado con `kind:
+// archive` y el prefijo de archivado, y los lee tal cual; repetir el guardado no reescribe el
+// fichero.
+func TestSaveAndLoadKeepTheArchiveBranchAndItsPrefix(t *testing.T) {
+	root, commonDir := newRepository(t)
+	record := validRecord(root, commonDir)
+	record.ArchivePrefix = "doc"
+	record.Repositories[0].Branches = append(record.Repositories[0].Branches,
+		branch.RecordBranch{Name: "doc/x-archive", Kind: branch.KindArchive, Worktree: filepath.Join(filepath.Dir(root), "x-archive", "axiom")})
+
+	if err := New().Save(commonDir, record); err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(recordFile(commonDir, "sdd", "x"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{`"archivePrefix": "doc"`, `"name": "doc/x-archive"`, `"kind": "archive"`} {
+		if !strings.Contains(string(data), want) {
+			t.Errorf("el registro debe contener %s:\n%s", want, data)
+		}
+	}
+	got, err := load(t, commonDir, branch.LaneSDD, "x")
+	if err != nil || got == nil || !reflect.DeepEqual(*got, record) {
+		t.Fatalf("Load = %+v, %v; se esperaba el mismo registro %+v", got, err, record)
+	}
+	if err := New().Save(commonDir, record); err != nil {
+		t.Fatal(err)
+	}
+	if again, err := os.ReadFile(recordFile(commonDir, "sdd", "x")); err != nil || !bytes.Equal(again, data) {
+		t.Errorf("repetir el guardado no cambia los bytes (%v)", err)
 	}
 }
