@@ -5,8 +5,9 @@
 // --is-ancestor`) y las escrituras son solo `branch` (crear y eliminar), `worktree add`,
 // `worktree remove` y `switch` (modo `in_place`); ninguna es remota. La única
 // operación remota es Fetch (`git fetch origin`, `ensure --fetch` y `done --fetch`, REQ-25.10):
-// el puerto no tiene ningún método que publique. Las operaciones de la capa de árbol equivalente
-// de `done` llegan con el primer llamador que las usa.
+// el puerto no tiene ningún método que publique. La capa de árbol equivalente de `done`
+// (`git merge-tree --write-tree`, desde git 2.38) y la lectura de la versión de git están en
+// capability.go.
 //
 // Los textos de error están en castellano y nombran el comando de git y el directorio.
 package gitcli

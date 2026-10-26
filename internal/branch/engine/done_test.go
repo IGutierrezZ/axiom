@@ -244,7 +244,7 @@ func TestDoneRefusesADirtyWorktreeOrAnUnmergedBranchUnlessForced(t *testing.T) {
 		if err := os.Remove(filepath.Join(worktree, "sucio.txt")); err != nil {
 			t.Fatal(err)
 		}
-		commit(t, worktree, "segundo commit, ya sin fusionar")
+		commitFile(t, worktree, "segundo.txt", "segundo commit, ya sin fusionar")
 		state := repositoryState(t, repo)
 
 		result := doneOf(t, doneRequest(repo))
@@ -301,11 +301,11 @@ func TestDoneProcessesTheRoleAndChangeBranchesSeparately(t *testing.T) {
 	commit(t, repo, "kickoff")
 	wantReady(t, ensureInPlace(t, repo, "x"))
 	runGit(t, repo, "switch", "-q", "feat/x-core")
-	commit(t, repo, "trabajo de core")
+	commitFile(t, repo, "core.txt", "trabajo de core")
 	runGit(t, repo, "switch", "-q", "feat/x")
 	mergeInto(t, repo, "feat/x-core")
 	runGit(t, repo, "switch", "-q", "feat/x-qa")
-	commit(t, repo, "trabajo de qa, sin fusionar")
+	commitFile(t, repo, "qa.txt", "trabajo de qa, sin fusionar")
 	runGit(t, repo, "switch", "-q", "feat/x")
 	seen := observe(t)
 
@@ -383,7 +383,7 @@ func TestDoneProcessesTheRoleAndChangeBranchesSeparately(t *testing.T) {
 func TestDoneInPlaceNeverSkipsACleanTreeEvenWhenForced(t *testing.T) {
 	repo := embeddedCoreProject(t)
 	wantReady(t, ensureInPlace(t, repo, "x"))
-	commit(t, repo, "trabajo sin fusionar")
+	commitFile(t, repo, "trabajo.txt", "trabajo sin fusionar")
 	writeFile(t, filepath.Join(repo, "sucio.txt"), "sin añadir\n")
 	state := inPlaceState(t, repo)
 	seen := observe(t)
@@ -452,7 +452,7 @@ func TestDoneProcessesTheArchiveBranchSeparatelyFromTheChangeBranch(t *testing.T
 	repo := embeddedCoreProject(t)
 	runGit(t, repo, "branch", "feat/x", "main")
 	runGit(t, repo, "switch", "-q", "-c", "feat/x-archive")
-	commit(t, repo, "documentación de archivado")
+	commitFile(t, repo, "archivado.md", "documentación de archivado")
 	runGit(t, repo, "switch", "-q", "main")
 
 	result := doneOf(t, doneRequest(repo))

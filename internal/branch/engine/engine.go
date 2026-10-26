@@ -47,6 +47,7 @@ type gitReader interface {
 	AheadBehind(ctx context.Context, dir, base, branch string) (ahead, behind int, err error)
 	TreeDirs(ctx context.Context, dir, rev, relPath string) (dirs []string, exists bool, err error)
 	IsAncestor(ctx context.Context, dir, ancestor, descendant string) (bool, error)
+	MergeTreeEquivalent(ctx context.Context, dir, target, branch string) (equivalent, supported bool, err error)
 }
 
 var _ gitReader = (*gitcli.Git)(nil)
@@ -78,6 +79,9 @@ type Engine struct {
 	// pruebas que construyen el motor a mano, equivale a los valores por defecto sin leer
 	// el hub.
 	prefs branch.Prefs
+	// lineages es la sonda de linajes RDD abiertos que `done` consulta antes de eliminar un
+	// worktree (REQ-25.17, A-4). nil equivale a no consultarla: la aporta quien monta el motor.
+	lineages branch.LineageProbe
 	// goos es el sistema operativo cuyas reglas de rutas aplica el planificador
 	// (branch.PathRules): en Windows rige el límite de longitud de los worktrees.
 	goos string
@@ -86,8 +90,17 @@ type Engine struct {
 // Default monta el motor con las operaciones reales de git, el registro local y las reglas
 // de rutas del sistema operativo en el que corre.
 func Default() *Engine {
+	return DefaultWithLineages(nil)
+}
+
+// DefaultWithLineages es Default con la sonda de linajes RDD abiertos que `done` consulta (A-4):
+// el adaptador lee el almacén de revisiones, que necesita git, de modo que lo aporta la CLI y el
+// motor solo conoce el puerto branch.LineageProbe. El diseño (§5) prevé que Default reciba
+// también el gestor del hub, pero el motor ya lee las preferencias del hub con hubPrefs{}, de
+// modo que la firma no recibe el gestor.
+func DefaultWithLineages(lineages branch.LineageProbe) *Engine {
 	git := gitcli.New()
-	return &Engine{git: git, writer: git, registry: registry.New(), prefs: hubPrefs{}, goos: runtime.GOOS}
+	return &Engine{git: git, writer: git, registry: registry.New(), prefs: hubPrefs{}, lineages: lineages, goos: runtime.GOOS}
 }
 
 // changeFacts son los hechos de solo lectura de un cambio: la entrada del planificador y

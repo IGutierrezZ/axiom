@@ -4,10 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"path/filepath"
 	"slices"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/branch"
 	"github.com/IGutierrezZ/axiom/v3/internal/gitcommon"
+	"github.com/IGutierrezZ/axiom/v3/internal/kickoff"
 	"github.com/IGutierrezZ/axiom/v3/internal/pathidentity"
 	"github.com/IGutierrezZ/axiom/v3/internal/pathquote"
 )
@@ -124,6 +126,7 @@ func (e *Engine) Done(ctx context.Context, r DoneRequest) branch.Result {
 	if warning != "" {
 		result.Warnings = append(result.Warnings, warning)
 	}
+	result.Warnings = append(result.Warnings, run.warnings...)
 	result.Warnings = append(result.Warnings, facts.warnings...)
 	switch {
 	case len(failures) == 0:
@@ -152,6 +155,17 @@ type doneRun struct {
 	request DoneRequest
 	facts   changeFacts
 	inPlace bool
+	// warnings son los avisos de la ejecución, sin repetir: la capa 2 omitida y los linajes RDD abiertos.
+	warnings []string
+	// prMerged guarda, tras leerla la primera vez, si el `gates.yaml` del cambio acredita el PR fusionado.
+	prMerged *bool
+}
+
+// warn añade un aviso a la ejecución si aún no consta.
+func (d *doneRun) warn(message string) {
+	if !slices.Contains(d.warnings, message) {
+		d.warnings = append(d.warnings, message)
+	}
 }
 
 // doneRepository es un repositorio del plan con las ramas que `done` procesa en él y su checkout
@@ -353,6 +367,15 @@ func (d *doneRun) branch(repository doneRepository, planned branch.BranchPlan) (
 		described.TipSha = tip
 	}
 
+	// Un linaje RDD abierto en lo que se va a eliminar solo avisa: no impide la operación (REQ-25.17).
+	if linked || inMain {
+		root := main
+		if linked {
+			root = deployed.Path
+		}
+		d.warnOfOpenLineages(planned.Name, root, main)
+	}
+
 	switch {
 	case linked:
 		if err := d.engine.writer.RemoveWorktree(d.ctx, main, deployed.Path, len(dirty) > 0); err != nil {
@@ -383,9 +406,11 @@ func removeFix(main, worktree string) string {
 }
 
 // mergeEvidence reúne la evidencia de fusión de una rama contra su destino (D-09): las referencias
-// que existen donde buscar su fusión (targets, para el mensaje) y el resultado de las capas. En este
-// commit solo se evalúa la capa 1, la ascendencia; el árbol equivalente y el PR fusionado llegan con
-// el siguiente y quedan sin evaluar. Usa solo referencias locales.
+// que existen donde buscar su fusión (targets, para el mensaje) y el resultado de las tres capas, que
+// se evalúan por orden y solo hasta la primera que confirma, porque ConfirmMerge se detiene en ella:
+// la ascendencia contra cada destino; si ninguno la confirma, el árbol equivalente contra cada
+// destino (si git lo admite; si no, la capa se omite con un aviso); y, si tampoco, el `gates.yaml` del
+// cambio, salvo para la rama de archivado, que no admite la capa 3. Usa solo referencias locales.
 func (d *doneRun) mergeEvidence(main string, planned branch.BranchPlan, repo branch.RepoPlan) (targets []string, evidence branch.MergeEvidence, err error) {
 	type reference struct{ shown, full string }
 	candidates := []reference{
@@ -396,6 +421,7 @@ func (d *doneRun) mergeEvidence(main string, planned branch.BranchPlan, repo bra
 	if planned.Kind == branch.KindRole {
 		candidates = []reference{{planned.From, "refs/heads/" + planned.From}}
 	}
+	var existing []string
 	for _, candidate := range candidates {
 		if candidate.shown == "" {
 			continue
@@ -408,14 +434,91 @@ func (d *doneRun) mergeEvidence(main string, planned branch.BranchPlan, repo bra
 			continue
 		}
 		targets = append(targets, candidate.shown)
-		if evidence.Ancestry {
-			continue
-		}
-		if evidence.Ancestry, err = d.engine.git.IsAncestor(d.ctx, main, "refs/heads/"+planned.Name, candidate.full); err != nil {
+		existing = append(existing, candidate.full)
+	}
+	branchRef := "refs/heads/" + planned.Name
+
+	// Capa 1: ascendencia.
+	for _, target := range existing {
+		if evidence.Ancestry, err = d.engine.git.IsAncestor(d.ctx, main, branchRef, target); err != nil {
 			return nil, evidence, err
 		}
+		if evidence.Ancestry {
+			return targets, evidence, nil
+		}
+	}
+
+	// Capa 2: árbol equivalente. Sin soporte se omite sin error y con un aviso (Q1).
+	for _, target := range existing {
+		equivalent, supported, err := d.engine.git.MergeTreeEquivalent(d.ctx, main, target, branchRef)
+		if err != nil {
+			return nil, evidence, err
+		}
+		if !supported {
+			d.warn("la capa de árbol equivalente (`git merge-tree --write-tree`) se omite porque git no la admite (requiere git 2.38 o superior): un merge por squash o rebase solo se confirma con evidencia `pr_merged` en gates.yaml o con --force")
+			break
+		}
+		evidence.TreeLayerSupported = true
+		if evidence.TreeEquivalent = equivalent; equivalent {
+			return targets, evidence, nil
+		}
+	}
+
+	// Capa 3: evidencia `pr_merged` del cambio. No aplica a la rama de archivado (REQ-25.16).
+	if planned.Kind != branch.KindArchive {
+		evidence.PRMerged = d.prMergedEvidence()
 	}
 	return targets, evidence, nil
+}
+
+// prMergedEvidence dice si el `gates.yaml` del cambio, activo o archivado (kickoff.ArchivedChangeRoot),
+// tiene un registro aprobado de la compuerta `integration` con evidencia `pr_merged` ya verificada
+// (REQ-25.16, capa 3). Se lee la primera vez que hace falta. Un `gates.yaml` que no se puede leer no
+// es evidencia: se avisa y la capa no confirma.
+func (d *doneRun) prMergedEvidence() bool {
+	if d.prMerged != nil {
+		return *d.prMerged
+	}
+	found := false
+	location, change := d.facts.location, d.request.Change
+	roots := []string{filepath.Join(location.PlanningHome, "changes", change)}
+	if archived, ok := kickoff.ArchivedChangeRoot(location.WorkspaceRoot, change); ok {
+		roots = append(roots, archived)
+	}
+	for _, root := range roots {
+		ledger, err := kickoff.LoadGates(root)
+		if err != nil {
+			d.warn(fmt.Sprintf("no se pudo leer gates.yaml para la capa de PR fusionado (%v): no se toma como evidencia", err))
+			continue
+		}
+		for _, record := range ledger.Records {
+			if record.Gate == kickoff.GateIntegration && record.Decision == kickoff.DecisionApproved &&
+				record.EvidenceKind == kickoff.EvidencePRMerged && record.Verified {
+				found = true
+			}
+		}
+	}
+	d.prMerged = &found
+	return found
+}
+
+// warnOfOpenLineages avisa de cada linaje RDD abierto en el worktree que se va a eliminar y nombra
+// `axiom review abandon`, que libera su autoridad (REQ-25.17, A-4). Es información: ni un fallo de
+// la sonda ni un linaje abierto impiden la operación. El aviso se compone con el checkout principal,
+// porque el worktree dejará de existir. Sin sonda no consulta nada.
+func (d *doneRun) warnOfOpenLineages(name, worktreeRoot, main string) {
+	if d.engine.lineages == nil {
+		return
+	}
+	lineages, err := d.engine.lineages.OpenLineages(d.ctx, worktreeRoot)
+	if err != nil {
+		d.warn(fmt.Sprintf("no se pudo comprobar si hay linajes RDD abiertos en %s (%v): la rama %s se elimina igualmente", worktreeRoot, err, name))
+		return
+	}
+	for _, lineage := range lineages {
+		d.warn(fmt.Sprintf("el worktree %s de la rama %s tiene un linaje RDD abierto (%s) y se elimina igualmente: libera su autoridad con `axiom review abandon --cwd %s --lineage %s` (ejecuta `axiom review abandon` sin banderas para ver la plantilla de la orden)",
+			worktreeRoot, name, lineage, pathquote.Quote(main), lineage))
+	}
 }
 
 // updateRegistry actualiza el registro local con lo que `done` hizo (D-09): borra de él las ramas
