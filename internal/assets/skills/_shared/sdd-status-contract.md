@@ -118,6 +118,22 @@ SDD status never reads review mode, offers RDD, or exposes review state. After c
 - Only archive is gated by a declaration cause: `dependencies.archive` is `blocked` when `axiom.yaml` is unreadable or a declared block is invalid, when `technicalContext.maintained` is declared and the change has no `context-impact.md`, or when a project baseline or maintained context is declared with an artifact store that has no files (`engram` or `none`). The cause always appears in `notes`; it appears in `blockedReasons` (and `nextRecommended` becomes `resolve-blockers`) only when the route would otherwise be `archive`.
 - The context delta (`context-impact.md`) is not projected: `artifacts`, `artifactPaths`, and `contextFiles` are unchanged by it.
 
+## Governance (sealed kickoff)
+
+`governance` is an additive, optional field. It is omitted entirely (never `null`) for a change with no sealed `kickoff.yaml`; every sealed change carries it:
+
+```yaml
+governance:
+  kickoff: { schema, flowMode, executionStyle: continuous | checkpointed, handoffPolicy, sealedAt, sealedBy }
+  roster: { source: kickoff, roles: [<role>, ...] } # in the order the kickoff names them
+  gates: [{ key, status, blocks, reason?, reopened? }]
+```
+
+- `roster` is present for every sealed change, in both execution styles, so a multi-role change (for example `backend` and `frontend`) is visible even when it runs `continuous`. Task progress per role is not a separate field: `taskProgress` is the aggregate over every role's `tasks.<role>.md`, and `artifactPaths.tasks` lists those files in roster order.
+- `gates` is populated only when `kickoff.executionStyle` is `checkpointed`. Under `continuous` it is always `[]`: no gate is evaluated or presented, and the orchestrator chains phases without stopping.
+- `gateQuestion` (the typed gate-decision envelope) appears only while `nextRecommended` is `await-gate`, which only a `checkpointed` change with an open gate can reach. Never expect it under `continuous`.
+- Gate-only preconditions never apply to `continuous`: archive is not blocked by a missing `integration` gate, and verify is not blocked by a missing `handoff.md`.
+
 ## Apply State
 
 - `blocked`: Required apply artifacts are missing, task selection is ambiguous, or action context makes edits unsafe.

@@ -581,7 +581,7 @@ func resolveByPreferenceOrder(options ResolveOptions) (Status, error) {
 					"No active OpenSpec changes found under openspec/changes.",
 					fmt.Sprintf(
 						"Exploration-only directories are not active changes: %s. Run `axiom sdd status <change-name> --cwd %s` to inspect one explicitly.",
-						strings.Join(activeChanges, ", "), workspaceRoot,
+						strings.Join(activeChanges, ", "), pathquote.Quote(workspaceRoot),
 					),
 				}, options.IncludeInstructions), nil
 			}
@@ -613,23 +613,44 @@ func resolveByPreferenceOrder(options ResolveOptions) (Status, error) {
 	if err != nil {
 		return Status{}, err
 	}
+	roleTaskFiles, err := resolveRoleTaskFiles(changeRoot)
+	if err != nil {
+		return Status{}, err
+	}
+	tasksState := singleArtifactState(artifactPaths.Tasks)
+	var perRoleTasks *roleTasks
+	if roleTaskFiles != nil {
+		resolved, err := resolveRoleTasks(roleTaskFiles)
+		if err != nil {
+			return Status{}, err
+		}
+		perRoleTasks = &resolved
+		tasksState = resolved.state
+	}
 	artifacts := artifactStates{
 		Proposal:      singleArtifactState(artifactPaths.Proposal),
 		Specs:         multiArtifactState(artifactPaths.Specs, filepath.Join(changeRoot, "specs")),
 		Design:        singleArtifactState(artifactPaths.Design),
-		Tasks:         singleArtifactState(artifactPaths.Tasks),
+		Tasks:         tasksState,
 		ApplyProgress: singleArtifactState(artifactPaths.ApplyProgress),
 		VerifyReport:  singleArtifactState(artifactPaths.VerifyReport),
 	}.statesFor(ArtifactStoreOpenSpec)
-	taskProgress, err := countTaskProgress(firstPath(artifactPaths.Tasks))
-	if err != nil {
-		return Status{}, err
+	var taskProgress TaskProgress
+	editPlans := []planText{{name: "tasks.md", text: readText(firstPath(artifactPaths.Tasks))}}
+	if perRoleTasks != nil {
+		taskProgress = perRoleTasks.progress
+		editPlans = roleTaskPlans(roleTaskFiles)
+	} else {
+		taskProgress, err = countTaskProgress(firstPath(artifactPaths.Tasks))
+		if err != nil {
+			return Status{}, err
+		}
 	}
 
-	// INC-21 (D-05): loadGovernance itself reports structural absence (nil,
-	// nil) for a change with no sealed kickoff.yaml, and for one sealed in
-	// continuous mode -- the only two cases this resolver must cost nothing
-	// extra for. A corrupt kickoff.yaml or gates.yaml is a named error here,
+	// INC-21 (D-05, narrowed): loadGovernance reports structural absence (nil,
+	// nil) only for a change with no sealed kickoff.yaml. A continuous seal
+	// projects its roster with no gates, and every gate consumer below is
+	// guarded by governanceGated. A corrupt kickoff.yaml or gates.yaml is a named error here,
 	// exactly like every other resolver read in this function: it is never
 	// swallowed into "no governance" (T-10).
 	governance, err := loadGovernance(changeRoot)
@@ -653,13 +674,13 @@ func resolveByPreferenceOrder(options ResolveOptions) (Status, error) {
 	if runtimeStatus != nil {
 		grantedRoots = runtimeStatus.GrantedRoots
 	}
-	coreReady := artifacts["proposal"] == ArtifactDone && artifacts["specs"] == ArtifactDone && artifacts["design"] == ArtifactDone && artifacts["tasks"] == ArtifactDone && taskProgress.Total > 0
+	coreReady := artifacts["proposal"] == ArtifactDone && artifacts["specs"] == ArtifactDone && artifacts["design"] == ArtifactDone && artifacts["tasks"] == ArtifactDone && taskProgress.Total > 0 && (perRoleTasks == nil || len(perRoleTasks.noCheckboxes) == 0)
 	applyState := resolveApplyState(coreReady, taskProgress)
-	blockedReasons := artifactBlockedReasons(artifacts, taskProgress, changeName, governance)
+	blockedReasons := artifactBlockedReasonsForRoleTasks(artifacts, taskProgress, changeName, governance, perRoleTasks)
 	if artifacts["specs"] == ArtifactPartial {
 		blockedReasons.genuine = append(blockedReasons.genuine, openSpecSpecsLayoutReason(changeName))
 	}
-	applyState, unauthorizedRoots := applyEditAuthorityBlock(applyState, &blockedReasons, readText(firstPath(artifactPaths.Tasks)), workspaceRoot, append([]string{workspaceRoot}, grantedRoots...))
+	applyState, unauthorizedRoots := applyEditAuthorityBlock(applyState, &blockedReasons, editPlans, workspaceRoot, append([]string{workspaceRoot}, grantedRoots...))
 	var consent *SDDIntegrationConsentResult
 	if len(unauthorizedRoots) != 0 {
 		if instance == "" {
@@ -791,7 +812,7 @@ func resolveEngramStatus(workspaceRoot string, requestedChange string, includeIn
 	// reason). This path passes nil unconditionally rather than resolving a
 	// synthetic changeRoot that loadGovernance was never meant to read.
 	blockedReasons := artifactBlockedReasons(artifacts, taskProgress, changeName, nil)
-	applyState, _ = applyEditAuthorityBlock(applyState, &blockedReasons, artifactsByType["tasks"].Content, workspaceRoot, []string{workspaceRoot})
+	applyState, _ = applyEditAuthorityBlock(applyState, &blockedReasons, []planText{{name: "tasks.md", text: artifactsByType["tasks"].Content}}, workspaceRoot, []string{workspaceRoot})
 	dependencies := resolveDependencies(artifacts, applyState, coreReady)
 	nextRecommended := resolveNextRecommended(dependencies, applyState, nil)
 	changeRoot := fmt.Sprintf("engram:sdd/%s", changeName)
@@ -1308,7 +1329,7 @@ func ambiguousChangeSelectionReasons(subject, workspaceRoot string, changes []st
 	for _, change := range changes {
 		reasons = append(reasons, fmt.Sprintf(
 			"Run `axiom sdd status %s --cwd %s` to continue with %s.",
-			change, workspaceRoot, change,
+			change, pathquote.Quote(workspaceRoot), change,
 		))
 	}
 	return reasons
@@ -1383,6 +1404,18 @@ func resolveArtifactPaths(changeRoot string) (ArtifactPaths, error) {
 	paths.Proposal = existingPath(filepath.Join(changeRoot, "proposal.md"))
 	paths.Design = existingPath(filepath.Join(changeRoot, "design.md"))
 	paths.Tasks = existingPath(filepath.Join(changeRoot, "tasks.md"))
+	roleFiles, err := resolveRoleTaskFiles(changeRoot)
+	if err != nil {
+		return ArtifactPaths{}, err
+	}
+	if roleFiles != nil {
+		// Per-role plans replace the shared tasks.md: only the role files that
+		// exist are locators, in kickoff role order.
+		paths.Tasks = []string{}
+		for _, roleFile := range roleFiles {
+			paths.Tasks = append(paths.Tasks, existingPath(roleFile)...)
+		}
+	}
 	paths.ApplyProgress = existingPath(filepath.Join(changeRoot, "apply-progress.md"))
 	paths.VerifyReport = existingPath(filepath.Join(changeRoot, "verify-report.md"))
 
@@ -1530,6 +1563,14 @@ func fencedCodeRun(line string) string {
 }
 
 func artifactBlockedReasons(artifacts map[string]ArtifactState, taskProgress TaskProgress, changeName string, governance *Governance) blockerReasons {
+	return artifactBlockedReasonsForRoleTasks(artifacts, taskProgress, changeName, governance, nil)
+}
+
+// artifactBlockedReasonsForRoleTasks is artifactBlockedReasons for a change
+// that may keep one plan per role. A nil roleTasks is the shared tasks.md and
+// emits the historical strings byte for byte; otherwise the tasks reasons name
+// the role files that are missing, partial or without checkboxes.
+func artifactBlockedReasonsForRoleTasks(artifacts map[string]ArtifactState, taskProgress TaskProgress, changeName string, governance *Governance, roleTasks *roleTasks) blockerReasons {
 	var reasons blockerReasons
 	if changeName == "" {
 		changeName = "<change>"
@@ -1544,17 +1585,27 @@ func artifactBlockedReasons(artifacts map[string]ArtifactState, taskProgress Tas
 	if artifacts["design"] != ArtifactDone {
 		reasons.expectedPlanning = append(reasons.expectedPlanning, "design.md is missing or partial.")
 	}
-	if artifacts["tasks"] != ArtifactDone {
-		reasons.expectedPlanning = append(reasons.expectedPlanning, "tasks.md is missing or partial.")
+	switch {
+	case roleTasks != nil:
+		if artifacts["tasks"] != ArtifactDone {
+			reasons.expectedPlanning = append(reasons.expectedPlanning, missingTasksReason(roleTasks.incomplete))
+		}
+		if artifacts["tasks"] == ArtifactDone && len(roleTasks.noCheckboxes) > 0 {
+			reasons.genuine = append(reasons.genuine, fmt.Sprintf("%s has no markdown task checkboxes.", fileList(roleTasks.noCheckboxes)))
+		}
+	default:
+		if artifacts["tasks"] != ArtifactDone {
+			reasons.expectedPlanning = append(reasons.expectedPlanning, "tasks.md is missing or partial.")
+		}
+		if artifacts["tasks"] == ArtifactDone && taskProgress.Total == 0 {
+			reasons.genuine = append(reasons.genuine, "tasks.md has no markdown task checkboxes.")
+		}
 	}
-	if artifacts["tasks"] == ArtifactDone && taskProgress.Total == 0 {
-		reasons.genuine = append(reasons.genuine, "tasks.md has no markdown task checkboxes.")
-	}
-	// INC-21 (D-05): a nil governance means no sealed kickoff.yaml, or one
-	// sealed in continuous mode -- both cases add nothing here, unchanged
-	// from the logic above (kickoff_absence_regression_test.go guards this
-	// exact byte-for-byte identity for the unsealed case).
-	if governance != nil {
+	// INC-21 (D-05, narrowed): an ungated governance (no sealed kickoff.yaml,
+	// or one sealed in continuous mode) adds nothing here, unchanged from the
+	// logic above (kickoff_absence_regression_test.go guards this exact
+	// byte-for-byte identity for the unsealed case).
+	if governanceGated(governance) {
 		if reason, ok := governanceBlockedReason(governance); ok {
 			reasons.genuine = append(reasons.genuine, reason)
 		}
@@ -1631,15 +1682,15 @@ func artifactDependency(state ArtifactState) DependencyState {
 }
 
 func resolveNextRecommended(dependencies Dependencies, applyState ApplyState, governance *Governance) string {
-	// INC-21 (D-05, D-09): a nil governance means no sealed kickoff.yaml, or
-	// one sealed in continuous mode -- both leave every branch below exactly
+	// INC-21 (D-05, D-09): an ungated governance (no sealed kickoff.yaml, or
+	// one sealed in continuous mode) leaves every branch below exactly
 	// as it was before this increment (kickoff_absence_regression_test.go
 	// guards that identity byte for byte). A pending or rejected gate takes
 	// precedence over every other route: REQ-21.8-21.11 forbid starting the
 	// NEXT phase (or the next role's apply) while its own gate is
 	// undecided, even when that next phase would otherwise already look
 	// ready by dependency state alone.
-	if governance != nil {
+	if governanceGated(governance) {
 		if next, ok := governanceNextRecommended(governance); ok {
 			return next
 		}

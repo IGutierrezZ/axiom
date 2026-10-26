@@ -55,9 +55,12 @@ func TestReviewStatusLineageInventoryContinuationAndSelectorValidation(t *testin
 	if err == nil || !strings.Contains(err.Error(), reviewStatusTargetSelectorsRequireContractReason) {
 		t.Fatalf("expected contract required error, got: %v", err)
 	}
+	// Prose steers the caller into the axiom dialect: v1 has no axiom spelling,
+	// but the v2 it names must be the axiom identifier, never the legacy alias.
 	if !strings.Contains(reviewStatusTargetSelectorsRequireContractReason, ReviewIntegrationContractV1) ||
-		!strings.Contains(reviewStatusTargetSelectorsRequireContractReason, ReviewIntegrationContractV2) {
-		t.Fatalf("selector contract reason does not name both v1 and v2: %q", reviewStatusTargetSelectorsRequireContractReason)
+		!strings.Contains(reviewStatusTargetSelectorsRequireContractReason, AxiomReviewIntegrationContractV2) ||
+		strings.Contains(reviewStatusTargetSelectorsRequireContractReason, ReviewIntegrationContractV2) {
+		t.Fatalf("selector contract reason does not name v1 and axiom v2 only: %q", reviewStatusTargetSelectorsRequireContractReason)
 	}
 }
 

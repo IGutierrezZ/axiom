@@ -92,10 +92,18 @@ func TestDirectReviewStartRefusalInventsNoRuntimeIdentity(t *testing.T) {
 	if len(words) < 3 || words[0] != "axiom" || words[1] != "review" || words[2] != "start" {
 		t.Fatalf("recovery command = %#v, want axiom review start", words)
 	}
+	// The printed command is prose: it names the axiom contract, not the legacy
+	// gentle-ai alias the unnegotiated caller happens to be answered in.
+	if !strings.Contains(command, "--contract "+AxiomReviewIntegrationContractV2+" ") || strings.Contains(command, "gentle-ai") {
+		t.Fatalf("recovery command steers into the legacy dialect: %s", command)
+	}
 	t.Chdir(repo)
 	var recovered bytes.Buffer
 	if err := RunReview(words[2:], &recovered); err != nil {
 		t.Fatalf("exact unbound recovery command is not executable: %v\n%s", err, recovered.String())
+	}
+	if !strings.Contains(recovered.String(), AxiomReviewIntegrationContractV2) {
+		t.Fatalf("exact recovery command was not answered in the axiom dialect:\n%s", recovered.String())
 	}
 }
 

@@ -207,6 +207,15 @@ func gateEvidence(state kickoff.GateState, artifactPaths ArtifactPaths) []string
 		return append([]string{}, artifactPaths.Tasks...)
 	}
 	if state.Key == kickoff.RoleApplyGate(state.Blocks) {
+		// A per-role change judges this gate against that role's own plan; the
+		// default tasks.<role>.md naming picks it, and any other layout falls
+		// back to every tasks locator rather than naming none.
+		own := "tasks." + strings.ToLower(state.Blocks) + ".md"
+		for _, path := range artifactPaths.Tasks {
+			if filepath.Base(path) == own {
+				return []string{path}
+			}
+		}
 		return append([]string{}, artifactPaths.Tasks...)
 	}
 	return []string{}
@@ -273,11 +282,20 @@ func newGovernanceGateQuestion(change, workspaceRoot string, gate kickoff.GateSt
 }
 
 // Governance is the per-status view of one change's sealed kickoff
-// configuration and block-review gate ledger (design.md S4.3). Status only
-// ever carries a non-nil Governance when the change has a sealed
-// kickoff.yaml AND its execution style is not continuous (D-05): the
-// resolver never even calls loadGovernance otherwise, so the unsealed and
-// continuous cases cost exactly nothing extra.
+// configuration, role roster and block-review gate ledger (design.md S4.3).
+// Status carries a non-nil Governance exactly when the change has a sealed
+// kickoff.yaml; an unsealed change costs nothing extra and stays byte
+// identical to before INC-21.
+//
+// D-05 is narrowed here. It originally extended the continuous-mode
+// absence to the whole block so continuous output stayed byte-identical to
+// pre-INC-21, but REQ-21.7 only forbids GATES under execution_style:
+// continuous. A multi-role multirepo change sealed as continuous still needs
+// its role roster projected, so a continuous seal now carries Kickoff and
+// Roster with an empty Gates slice. Everything that consumes the gates
+// (routing, blocked reasons, the gate question, the verify handoff
+// dependency and the archive integration dependency) must go through
+// governanceGated, never through "Governance != nil".
 type Governance struct {
 	Kickoff kickoff.Kickoff
 	Gates   []kickoff.GateState
@@ -298,6 +316,16 @@ type GovernanceRoster struct {
 // this slice ever produces.
 const governanceRosterSourceKickoff = "kickoff"
 
+// governanceGated reports whether block-review gates apply to this
+// governance view: it is non-nil AND its seal is not continuous. It is the
+// single explicit execution-style check every gate consumer shares (D-05
+// narrowed, REQ-21.7), so a continuous change that merely projects its roster
+// can never stop at, route to, or be blocked by a gate or by the handoff and
+// integration preconditions that only exist because gates do.
+func governanceGated(governance *Governance) bool {
+	return governance != nil && governance.Kickoff.Config.ExecutionStyle != kickoff.ExecutionContinuous
+}
+
 // firstOpenGate returns the first gate in governance.Gates whose decision
 // is not yet "approved" -- pending or genuinely rejected -- in the fixed
 // evaluation order kickoff.EvaluateGates already returns them in (machine.go:
@@ -307,6 +335,9 @@ const governanceRosterSourceKickoff = "kickoff"
 // nonPhaseRoutingInstructions) shares this single lookup, so none of them
 // can ever name a different gate than the others are reporting on.
 func firstOpenGate(governance *Governance) (kickoff.GateState, bool) {
+	if !governanceGated(governance) {
+		return kickoff.GateState{}, false
+	}
 	for _, gate := range governance.Gates {
 		if gate.Status != "approved" {
 			return gate, true
@@ -322,11 +353,10 @@ func firstOpenGate(governance *Governance) (kickoff.GateState, bool) {
 // corrupt kickoff.yaml or gates.yaml is a named error, never degraded to
 // "no governance" (T-10).
 //
-// D-05's continuous-mode zero cost is the CALLER's responsibility (never
-// call this function unless execution_style != continuous), not this
-// function's: kickoff.EvaluateGates already returns an empty gate slice for
-// continuous mode on its own, so calling this function in that mode is
-// merely redundant I/O, never incorrect.
+// A continuous seal projects the roster with an empty Gates slice and
+// performs no gate evaluation at all: no ledger read, no artifact digest
+// (D-05 narrowed, see Governance). Consumers must still check
+// governanceGated rather than rely on Gates being empty.
 func loadGovernance(changeRoot string) (*Governance, error) {
 	sealed, err := kickoff.Load(changeRoot)
 	if err != nil {
@@ -335,25 +365,22 @@ func loadGovernance(changeRoot string) (*Governance, error) {
 	if sealed == nil {
 		return nil, nil
 	}
-	// D-05: a continuous-execution seal reports NO governance, not a
-	// Governance value with an empty Gates slice. EvaluateGates already
-	// short-circuits to an empty slice for continuous mode on its own, but
-	// this function goes one step further and reports structural absence,
-	// matching what Status.Governance documents for every caller.
-	if sealed.Config.ExecutionStyle == kickoff.ExecutionContinuous {
-		return nil, nil
-	}
-
-	ledger, err := kickoff.LoadGates(changeRoot)
-	if err != nil {
-		return nil, err
-	}
 
 	roles := make([]multirole.RoleAssignment, 0, len(sealed.Config.Roles))
 	roleNames := make([]string, 0, len(sealed.Config.Roles))
 	for _, role := range sealed.Config.Roles {
 		roles = append(roles, multirole.RoleAssignment{Role: role.Role, GatePolicy: role.GatePolicy})
 		roleNames = append(roleNames, role.Role)
+	}
+	roster := GovernanceRoster{Source: governanceRosterSourceKickoff, Roles: roleNames}
+
+	if sealed.Config.ExecutionStyle == kickoff.ExecutionContinuous {
+		return &Governance{Kickoff: *sealed, Gates: []kickoff.GateState{}, Roster: roster}, nil
+	}
+
+	ledger, err := kickoff.LoadGates(changeRoot)
+	if err != nil {
+		return nil, err
 	}
 
 	artifacts, rolePending, err := governanceArtifactInputs(changeRoot, sealed.Config.Roles)
@@ -376,7 +403,7 @@ func loadGovernance(changeRoot string) (*Governance, error) {
 	return &Governance{
 		Kickoff: *sealed,
 		Gates:   gates,
-		Roster:  GovernanceRoster{Source: governanceRosterSourceKickoff, Roles: roleNames},
+		Roster:  roster,
 	}, nil
 }
 
@@ -393,6 +420,14 @@ func governanceArtifactInputs(changeRoot string, roles []kickoff.KickoffRole) (m
 		return nil, nil, err
 	}
 
+	// A per-role change's shared "tasks" digest covers every role file, and only
+	// once ALL of them exist: a subset is not the artifact the gate judges, and
+	// internal/cli's gate-record digest applies the same all-or-nothing rule.
+	tasksPaths := artifactPaths.Tasks
+	if expected := roleTaskPaths(changeRoot, roles); len(expected) != 0 && len(tasksPaths) != len(expected) {
+		tasksPaths = nil
+	}
+
 	artifacts := make(map[string]string, 3+len(roles))
 	for _, entry := range []struct {
 		key   string
@@ -400,7 +435,7 @@ func governanceArtifactInputs(changeRoot string, roles []kickoff.KickoffRole) (m
 	}{
 		{key: "spec", paths: artifactPaths.Specs},
 		{key: "design", paths: artifactPaths.Design},
-		{key: "tasks", paths: artifactPaths.Tasks},
+		{key: "tasks", paths: tasksPaths},
 	} {
 		if err := setGovernanceArtifactDigest(entry.key, entry.paths, artifacts); err != nil {
 			return nil, nil, err
@@ -469,7 +504,10 @@ func setGovernanceArtifactDigest(key string, paths []string, artifacts map[strin
 // exactly when it blocks Verify for a cause the caller must surface in
 // BlockedReasons; an unchanged baseline always pairs with an empty reason.
 func verifyDependencyFromHandoff(governance *Governance, changeRoot string, baseline DependencyState) (DependencyState, string) {
-	if governance == nil {
+	// A continuous seal never produces handoff.md (it is written on the last
+	// role-apply gate approval, and continuous has no gates), so requiring it
+	// there would block verify forever.
+	if !governanceGated(governance) {
 		return baseline, ""
 	}
 	multiRole := len(governance.Roster.Roles) > 1
@@ -510,7 +548,7 @@ func verifyDependencyFromHandoff(governance *Governance, changeRoot string, base
 // archiveDependencyFromGovernance is D-13's rule: REQ-21.16 forbids
 // archiving a change before its "integration" gate is approved, no matter
 // how favorable verify-report.md already is. It only ever NARROWS
-// baseline, from ready to blocked, and only when governance is non-nil (a
+// baseline, from ready to blocked, and only when governanceGated holds (a
 // sealed, non-continuous kickoff): an unsealed or continuous-mode change
 // keeps resolveDependencies' existing dependencies.Archive computation
 // exactly as it was before this increment (D-13's own documented zero-cost
@@ -519,7 +557,7 @@ func verifyDependencyFromHandoff(governance *Governance, changeRoot string, base
 // regardless of any integration evidence, so governance never needs to add
 // a second, redundant reason for the same outcome.
 func archiveDependencyFromGovernance(governance *Governance, changeName string, baseline DependencyState) (DependencyState, string) {
-	if governance == nil || baseline != DependencyReady {
+	if !governanceGated(governance) || baseline != DependencyReady {
 		return baseline, ""
 	}
 	for _, gate := range governance.Gates {

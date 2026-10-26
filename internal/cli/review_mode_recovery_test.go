@@ -183,7 +183,8 @@ func reviewModeCloneRecordPath(t *testing.T, repo string) string {
 func reviewModeNamedCommands(message string) [][]string {
 	commands := [][]string{}
 	for _, match := range reviewContinuationPattern.FindAllStringSubmatch(message, -1) {
-		fields := strings.Fields(match[1])
+		// Split the way a shell does: a repository path is printed double-quoted.
+		fields := splitCommandLine(match[1])
 		if len(fields) < 4 || fields[0] != "axiom" || fields[1] != "review" || fields[2] != "mode" {
 			continue
 		}

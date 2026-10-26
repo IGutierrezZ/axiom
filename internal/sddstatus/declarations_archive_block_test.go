@@ -262,8 +262,8 @@ func TestArchiveBlockedWithoutTheContextDelta(t *testing.T) {
 		ws := embeddedChange(t, declMaintainedOnly, "", tasksDone)
 		sealFullstackKickoff(t, filepath.Join(ws.Home, "changes", "demo"), "demo", kickoff.ExecutionContinuous)
 		status := resolveWithInstructions(t, ws.Master, "demo")
-		if status.Governance != nil {
-			t.Fatalf("una modalidad continua no tiene compuertas: %+v", status.Governance)
+		if status.Governance == nil || len(status.Governance.Gates) != 0 {
+			t.Fatalf("una modalidad continua proyecta el roster pero no tiene compuertas: %+v", status.Governance)
 		}
 		if status.Dependencies.Archive != DependencyBlocked || status.NextRecommended != "resolve-blockers" {
 			t.Fatalf("archive = %q next = %q: la ausencia del delta bloquea también en modalidad continua", status.Dependencies.Archive, status.NextRecommended)

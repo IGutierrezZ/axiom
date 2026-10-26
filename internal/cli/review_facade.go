@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
+	"github.com/IGutierrezZ/axiom/v3/internal/pathquote"
 	"github.com/IGutierrezZ/axiom/v3/internal/reviewerprovider"
 	"github.com/IGutierrezZ/axiom/v3/internal/reviewtransaction"
 )
@@ -24,7 +25,7 @@ import (
 // requested without --contract. runReviewStatus emits it and names every
 // accepted contract value rather than only describing the requirement.
 const reviewContractRequiredForActionEligibilityReason = "--action-eligibility and --next-transition require --contract " +
-	ReviewIntegrationContractV1 + " or " + ReviewIntegrationContractV2
+	ReviewIntegrationContractV1 + " or " + AxiomReviewIntegrationContractV2
 
 // reviewStatusTargetSelectorsRequireContractReason is the sibling of
 // reviewContractRequiredForActionEligibilityReason above: it names the same
@@ -32,19 +33,19 @@ const reviewContractRequiredForActionEligibilityReason = "--action-eligibility a
 // flags (target selectors such as --lineage, --base-ref, --base-tree,
 // --workspace-overlay, --projection, --gate, and the recovery selectors).
 const reviewStatusTargetSelectorsRequireContractReason = "review status target selectors require --contract " +
-	ReviewIntegrationContractV1 + " or " + ReviewIntegrationContractV2
+	ReviewIntegrationContractV1 + " or " + AxiomReviewIntegrationContractV2
 
 // reviewStartTargetRequiresContractReason is the sibling of
 // reviewContractRequiredForActionEligibilityReason above, naming the same
 // exact contract value for review start --target used without --contract.
-const reviewStartTargetRequiresContractReason = "review start --target requires --contract " + ReviewIntegrationContractV1
+const reviewStartTargetRequiresContractReason = "review start --target requires --contract " + AxiomReviewIntegrationContractV2
 
 // reviewStartConsentRequiresContractReason keeps the consent declaration a
 // strictly negotiated-form surface: the typed question exists for callers
 // that relay envelopes, and the unnegotiated form keeps today's console
 // behavior byte for byte. The refusal names the exact runnable rerun.
 const reviewStartConsentRequiresContractReason = "review start --consent requires the negotiated form; rerun as axiom review start --contract " +
-	ReviewIntegrationContractV1 + " with the bound --target and --projection"
+	AxiomReviewIntegrationContractV2 + " with the bound --target and --projection"
 
 // reviewStartConsentValueReason names the exact allowed-answer domain for the
 // consent declaration, mirroring the choice tokens the typed question emits.
@@ -775,7 +776,7 @@ func runReviewCommand(args []string, stdout io.Writer) error {
 }
 
 func runReviewStatus(ctx context.Context, args []string, stdout io.Writer) error {
-	flags := newReviewFlagSet("review status", stdout, "Read every compact-v2 and shipped legacy-v1 authority from the shared Git common directory; initialize local Git only for a genuinely unversioned workspace.")
+	flags := newReviewFlagSet("review status", stdout, "Read every compact-v2 and shipped legacy-v1 authority from the shared Git common directory; initialize local Git only for a genuinely unversioned workspace, never for a multirepo master folder.")
 	cwd := flags.String("cwd", ".", "repository path")
 	contract := flags.String("contract", "", "optional negotiated review integration contract")
 	runtimeAgent := flags.String("agent", "", "generated active runtime identity for negotiated lifecycle routing")
@@ -879,9 +880,9 @@ func runReviewStatus(ctx context.Context, args []string, stdout io.Writer) error
 		if selectedBaseTree != "" && !validReviewGitTree(selectedBaseTree) {
 			return reviewPreflightError(errors.New("review status --base-tree requires an exact Git tree object ID; rerun `axiom review status --base-tree <tree> --workspace-overlay` with the frozen tree ID"))
 		}
-		root, err := reviewtransaction.PrepareReviewRepositoryRoot(ctx, *cwd)
+		root, err := reviewPrepareRepositoryRoot(ctx, *cwd, "resolve negotiated review repository root")
 		if err != nil {
-			return fmt.Errorf("resolve negotiated review repository root: %w", err)
+			return err
 		}
 		// STATUS accepts a nested selector, but every subsequent snapshot
 		// operation must use the canonical worktree root it resolved. Leaving
@@ -1478,9 +1479,9 @@ func runReviewStatus(ctx context.Context, args []string, stdout io.Writer) error
 	if strings.TrimSpace(*runtimeAgent) != "" || strings.TrimSpace(*repositoryContextHandle) != "" || strings.TrimSpace(*baseRef) != "" || strings.TrimSpace(*baseTree) != "" || committedOnlyProvided || *workspaceOverlay || *projection != string(reviewtransaction.ProjectionWorkspace) || *gate != string(reviewtransaction.GatePreCommit) || *recoverySuccessor != "" || *recoveryReason != "" || *recoveryActor != "" || *recoveryAuthorization != "" || *repairActor != "" || *repairReason != "" || *repairAuthorization != "" || reviewIntendedUntrackedDeclared(untrackedScope, intendedUntracked, expectedUntrackedInventory) {
 		return errors.New(reviewStatusTargetSelectorsRequireContractReason)
 	}
-	root, err := reviewtransaction.PrepareReviewRepositoryRoot(ctx, *cwd)
+	root, err := reviewPrepareRepositoryRoot(ctx, *cwd, "resolve review repository root")
 	if err != nil {
-		return fmt.Errorf("resolve review repository root: %w", err)
+		return err
 	}
 	var report reviewtransaction.AuthorityStatusReport
 	if trimmedLineage := strings.TrimSpace(*lineage); trimmedLineage != "" {
@@ -1846,7 +1847,7 @@ func reviewRecoverCommand(cwd, predecessor, expected, successor, disposition str
 	command := fmt.Sprintf("%s --predecessor-lineage %s --expected-predecessor-revision %s --successor-lineage %s --disposition %s",
 		reviewRunnableCommand("review.recover"), predecessor, expected, successor, disposition)
 	if cwd != "" {
-		command += " --cwd " + cwd
+		command += " --cwd " + pathquote.Quote(cwd)
 	}
 	return command
 }
@@ -1953,7 +1954,7 @@ func RunReviewInvalidate(args []string, stdout io.Writer) error {
 			if gateName == "" {
 				gateName = "<gate>"
 			}
-			return fmt.Errorf("review invalidate no longer performs gate-derived invalidation for lineage %q; invalidated is now a derived verdict, never a write; see it instead: axiom review validate --cwd %s --lineage %s --gate %s", *lineage, strings.TrimSpace(*cwd), *lineage, gateName)
+			return fmt.Errorf("review invalidate no longer performs gate-derived invalidation for lineage %q; invalidated is now a derived verdict, never a write; see it instead: axiom review validate --cwd %s --lineage %s --gate %s", *lineage, pathquote.Quote(strings.TrimSpace(*cwd)), *lineage, gateName)
 		}
 		if strings.TrimSpace(*reason) == "" {
 			return errors.New("pristine review invalidation requires --reason")
@@ -2068,9 +2069,9 @@ func runReviewFacadeStart(ctx context.Context, args []string, stdout io.Writer) 
 	if err != nil {
 		return reviewPreflightError(err)
 	}
-	root, err := reviewtransaction.PrepareReviewRepositoryRoot(ctx, *cwd)
+	root, err := reviewPrepareRepositoryRoot(ctx, *cwd, "resolve review repository root")
 	if err != nil {
-		return fmt.Errorf("resolve review repository root: %w", err)
+		return err
 	}
 	selectedProjection := reviewtransaction.Projection(strings.TrimSpace(*projection))
 	if selectedProjection != reviewtransaction.ProjectionWorkspace && selectedProjection != reviewtransaction.ProjectionStaged {
@@ -2167,7 +2168,7 @@ func runReviewFacadeStart(ctx context.Context, args []string, stdout io.Writer) 
 	if !negotiated && target.Kind != reviewtransaction.TargetCurrentChanges && len(lenses) > 0 {
 		return reviewPreflightRefusal(reviewPreflightDirectRouteUncompletableReason,
 			fmt.Errorf("review start without --contract cannot produce a completable review because its %d selected lens(es) require repository_context, which only the negotiated contract form publishes; rerun with `axiom review start %s` instead",
-				len(lenses), strings.TrimPrefix(reviewNegotiatedStartCommand(dialect, snapshot, *runtimeAgent), dialect.commandPrefix("start"))))
+				len(lenses), strings.TrimPrefix(reviewNegotiatedStartCommand(reviewProseDialect, snapshot, *runtimeAgent), reviewProseDialect.commandPrefix("start"))))
 	}
 	// The candidate is frozen and the tier is classified, so this is the one
 	// point where the kill switch can stop a start and consent can name the real

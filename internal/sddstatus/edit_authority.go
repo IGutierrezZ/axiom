@@ -136,11 +136,76 @@ func sameRepositoryEditRoot(path string) string {
 	return path
 }
 
+// shellOperatorMarkers are the substrings that turn a token containing
+// whitespace into a shell command line: sequencing, pipes, redirection and
+// command substitution. No path anchoring can rescue a token carrying one.
+var shellOperatorMarkers = []string{"&&", "||", ";", "|", ">", "<", "$("}
+
+// windowsAbsolutePrefix matches a drive-letter or UNC prefix, recognized on
+// every platform so a task plan written on Windows reads the same anywhere.
+var windowsAbsolutePrefix = regexp.MustCompile(`^(?:[A-Za-z]:[\\/]|\\\\)`)
+
+// pathAnchorPrefixes are the leading spellings that declare a token a path
+// rather than prose: the home directory and the current and parent
+// directories, in both separator styles.
+var pathAnchorPrefixes = []string{"~/", "./", "../", `~\`, `.\`, `..\`}
+
+// spacedTokenIsPath decides whether a backticked token that contains
+// whitespace can still be a filesystem path. Real workspaces live in folders
+// such as `Repos EMT/api/x.go`, but the same shape also carries command lines
+// (`go test ./...`, `scripts/x.sh --update`) and HTTP routes (`GET
+// /api/health`), so a token with whitespace is a path only when nothing marks
+// it a command and something anchors it as a path:
+//
+//   - a word starting with `-` is a flag, and any shell operator is a command
+//     line, so both reject outright, even under an explicit Files: context;
+//   - otherwise it must be absolute (drive letter, UNC or `/`), start with
+//     `~/`, `./` or `../`, have a first separator-delimited segment that exists
+//     under workspaceRoot, or sit in an explicit Files:/Edit:/Touch:
+//     declaration.
+//
+// Tokens without whitespace never reach this function.
+func spacedTokenIsPath(token string, workspaceRoot string, explicitContext bool) bool {
+	for _, word := range strings.Fields(token) {
+		if strings.HasPrefix(word, "-") {
+			return false
+		}
+	}
+	for _, marker := range shellOperatorMarkers {
+		if strings.Contains(token, marker) {
+			return false
+		}
+	}
+	if explicitContext || isRootedToken(token) || windowsAbsolutePrefix.MatchString(token) {
+		return true
+	}
+	for _, prefix := range pathAnchorPrefixes {
+		if strings.HasPrefix(token, prefix) {
+			return true
+		}
+	}
+	return firstSegmentExists(token, workspaceRoot)
+}
+
+// firstSegmentExists reports whether the first separator-delimited segment of
+// a relative token names an existing entry under workspaceRoot, which is what
+// ties a spaced relative path such as `Repos EMT/api/x.go` to the workspace.
+func firstSegmentExists(token string, workspaceRoot string) bool {
+	separator := strings.IndexAny(token, `/\`)
+	if separator <= 0 {
+		return false
+	}
+	_, err := os.Lstat(filepath.Join(workspaceRoot, token[:separator]))
+	return err == nil
+}
+
 // pathLikeToken reports whether one backticked token reads as a genuine
 // filesystem edit path rather than prose that merely contains a slash.
 //
-// Whitespace or a URL scheme always means a command or prose, never a path,
-// and a token without any separator is never a path either. Past that, the
+// A URL scheme always means prose, never a path, and a token without any
+// separator is never a path either. A token with whitespace is a path only
+// when spacedTokenIsPath says so (a space in a folder name is legitimate; a
+// command line or an HTTP method plus route is not). Past that, the
 // affirmative signals run FIRST: an explicit Files:/Edit:/Touch: declaration
 // on the line, or the token (or its parent directory) already existing under
 // workspaceRoot, settle the question outright — a real target must never be
@@ -156,7 +221,10 @@ func sameRepositoryEditRoot(path string) string {
 // extension reads as a URL route, not an absolute filesystem path (#4192's
 // bare `/`, gp#598's `/api/health`).
 func pathLikeToken(token string, workspaceRoot string, explicitContext bool) bool {
-	if strings.ContainsAny(token, " \t") || strings.Contains(token, "://") {
+	if strings.Contains(token, "://") {
+		return false
+	}
+	if strings.ContainsAny(token, " \t") && !spacedTokenIsPath(token, workspaceRoot, explicitContext) {
 		return false
 	}
 	if !strings.ContainsRune(token, '/') && !strings.ContainsRune(token, filepath.Separator) {
@@ -289,15 +357,32 @@ func withinAnyRoot(target string, roots []string) bool {
 // editAuthorityBlockedReason names each unauthorized edit root and the three
 // exits: keep the plan inside the authorized edit roots, grant authority for
 // the named paths, or mark a genuine read-only input with `(read-only)`.
-func editAuthorityBlockedReason(roots []string) string {
+//
+// files names the plan files that carry those targets; none means the shared
+// tasks.md, and the text is then the historical string byte for byte.
+func editAuthorityBlockedReason(roots []string, files ...string) string {
 	quoted := make([]string, 0, len(roots))
 	for _, root := range roots {
 		quoted = append(quoted, pathquote.Quote(root))
 	}
+	plans, verb := planFilesLabel(files)
 	return fmt.Sprintf(
-		"blocked(edit_authority_missing): tasks.md targets edit paths outside the authorized edit roots: %s; edit tasks.md so every work unit stays inside the authorized edit roots, or grant this change edit authority for the named paths, or mark a read-only input with (read-only) right after its backticked path",
-		strings.Join(quoted, ", "),
+		"blocked(edit_authority_missing): %s %s edit paths outside the authorized edit roots: %s; edit %s so every work unit stays inside the authorized edit roots, or grant this change edit authority for the named paths, or mark a read-only input with (read-only) right after its backticked path",
+		plans, verb, strings.Join(quoted, ", "), plans,
 	)
+}
+
+// planFilesLabel renders the plan files a diagnostic names and the verb that
+// agrees with them: "tasks.md targets" for the shared plan (also when files is
+// empty) and "tasks.a.md, tasks.b.md target" for per-role plans.
+func planFilesLabel(files []string) (label, verb string) {
+	if len(files) == 0 {
+		return "tasks.md", "targets"
+	}
+	if len(files) == 1 {
+		return files[0], "targets"
+	}
+	return fileList(files), "target"
 }
 
 // taskWorkUnitPrefix captures a checkbox line's own leading task number (the
@@ -387,14 +472,18 @@ func detectUnauthorizedEditRootsForCurrentWorkUnit(tasksText, workspaceRoot stri
 // non-empty `blockedReasons` is a gate in every consumer contract — must never
 // reach that gated field. It exists purely so a human sees the future authority
 // need before reaching that work unit.
-func futureEditRootsNote(roots []string) string {
+func futureEditRootsNote(roots []string, files ...string) string {
 	quoted := make([]string, 0, len(roots))
 	for _, root := range roots {
 		quoted = append(quoted, pathquote.Quote(root))
 	}
+	plans := "tasks.md"
+	if len(files) > 0 {
+		plans = fileList(files)
+	}
 	return fmt.Sprintf(
-		"note(future_edit_roots): a later work unit in tasks.md targets edit paths outside the authorized edit roots: %s; this does not block the current work unit and needs no action until that work unit is reached",
-		strings.Join(quoted, ", "),
+		"note(future_edit_roots): a later work unit in %s targets edit paths outside the authorized edit roots: %s; this does not block the current work unit and needs no action until that work unit is reached",
+		plans, strings.Join(quoted, ", "),
 	)
 }
 
@@ -408,17 +497,54 @@ func futureEditRootsNote(roots []string) string {
 // scoped to the current work unit (#4103): a future work unit's own
 // unauthorized roots are reported through the non-blocking notes channel (#4372),
 // never as a blocker.
-func applyEditAuthorityBlock(applyState ApplyState, reasons *blockerReasons, tasksText string, workspaceRoot string, allowedEditRoots []string) (ApplyState, []string) {
+func applyEditAuthorityBlock(applyState ApplyState, reasons *blockerReasons, plans []planText, workspaceRoot string, allowedEditRoots []string) (ApplyState, []string) {
 	if applyState != ApplyReady {
 		return applyState, nil
 	}
-	roots, futureRoots := detectUnauthorizedEditRootsForCurrentWorkUnit(tasksText, workspaceRoot, allowedEditRoots)
-	if len(futureRoots) != 0 {
-		reasons.notes = append(reasons.notes, futureEditRootsNote(futureRoots))
+	// Roles apply in parallel, each in its own repository, so the current work
+	// unit is evaluated per plan file and the unauthorized roots are united: one
+	// consent envelope then covers every active role. A single plan (the shared
+	// tasks.md) takes this same path with one iteration and is unchanged.
+	var roots, futureRoots, blockingFiles, futureFiles []string
+	for _, plan := range plans {
+		blocking, future := detectUnauthorizedEditRootsForCurrentWorkUnit(plan.text, workspaceRoot, allowedEditRoots)
+		if len(blocking) != 0 {
+			roots = append(roots, blocking...)
+			blockingFiles = append(blockingFiles, plan.name)
+		}
+		if len(future) != 0 {
+			futureRoots = append(futureRoots, future...)
+			futureFiles = append(futureFiles, plan.name)
+		}
+	}
+	roots = uniqueSorted(roots)
+	// A root that blocks the current work unit of one role is not also "future".
+	blockingSet := make(map[string]bool, len(roots))
+	for _, root := range roots {
+		blockingSet[root] = true
+	}
+	var pureFuture []string
+	for _, root := range uniqueSorted(futureRoots) {
+		if !blockingSet[root] {
+			pureFuture = append(pureFuture, root)
+		}
+	}
+	if len(pureFuture) != 0 {
+		reasons.notes = append(reasons.notes, futureEditRootsNote(pureFuture, planFileNames(plans, futureFiles)...))
 	}
 	if len(roots) == 0 {
 		return applyState, nil
 	}
-	reasons.genuine = append(reasons.genuine, editAuthorityBlockedReason(roots))
+	reasons.genuine = append(reasons.genuine, editAuthorityBlockedReason(roots, planFileNames(plans, blockingFiles)...))
 	return ApplyBlocked, roots
+}
+
+// planFileNames returns the plan files to name in a diagnostic: nothing for the
+// shared tasks.md (so the historical wording applies) and the contributing
+// files for per-role plans.
+func planFileNames(plans []planText, contributing []string) []string {
+	if len(plans) < 2 && (len(plans) == 0 || plans[0].name == "tasks.md") {
+		return nil
+	}
+	return contributing
 }

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/IGutierrezZ/axiom/v3/internal/pathquote"
 	"github.com/IGutierrezZ/axiom/v3/internal/reviewtransaction"
 )
 
@@ -138,10 +139,10 @@ func reviewCorrectionContextBudgetAction(eligibility reviewtransaction.CompactAb
 			reviewModeDisableCloneCommand + "` " + reviewModeDisableCloneCaveat + " to deliver under ordinary repository policy instead."
 	}
 	return reviewCorrectionContextBudgetPreamble + fmt.Sprintf(
-		" Review authority DOES exist for this work, so it has to be released rather than left in place: run `axiom review abandon --cwd %q --lineage %q --expected-revision %q --reason operator_disposition --actor <you> --maintainer-authorization <binding>`"+
+		" Review authority DOES exist for this work, so it has to be released rather than left in place: run `axiom review abandon --cwd %s --lineage %q --expected-revision %q --reason operator_disposition --actor <you> --maintainer-authorization <binding>`"+
 			" (run `axiom review abandon` with no flags to print the exact binding template and where every value is read; the frozen candidate it binds is %q)."+
 			" Then review this change as smaller candidates, or run `%s` %s to deliver under ordinary repository policy instead.",
-		repo, lineage, eligibility.Revision, eligibility.SnapshotIdentity,
+		pathquote.Quote(repo), lineage, eligibility.Revision, eligibility.SnapshotIdentity,
 		reviewModeDisableCloneCommand, reviewModeDisableCloneCaveat)
 }
 

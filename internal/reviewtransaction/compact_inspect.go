@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+
+	"github.com/IGutierrezZ/axiom/v3/internal/pathquote"
 )
 
 const (
@@ -262,7 +264,7 @@ func SanctionedCompactRecoveryExits(ctx context.Context, repo string, report Com
 				"no repair or abandon operation admits this edge (anomaly classes: %s): its recovery metadata is malformed, but it has a successor of its own, so `review abandon` refuses it, and `review repair` covers only the disjoint content_mismatched_recovery_authorization class. "+
 					"This does not repair the edge, but a maintainer can stop it from blocking further review activity in this exact repository with `axiom review mode disable --scope clone --cwd %s`. "+
 					"This report, with anomaly_classes and non_reconcilable_reason, is the artifact to escalate for an actual repair.",
-				strings.Join(edge.AnomalyClasses, ","), root)
+				strings.Join(edge.AnomalyClasses, ","), pathquote.Quote(root))
 		default:
 			exit.Blocked = "no advertised operation admits this edge: `review abandon` does not accept the successor, and no other operation applies to this anomaly class. " +
 				"Nothing quarantines this shape today, so no command clears it and the entry stays exactly as persisted. " +
