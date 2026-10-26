@@ -175,7 +175,9 @@ func TestKickoffImportAllowlistTable(t *testing.T) {
 		{name: "allowed reviewtransaction", path: "github.com/IGutierrezZ/axiom/v3/internal/reviewtransaction", want: true},
 		{name: "allowed workspace", path: "github.com/IGutierrezZ/axiom/v3/internal/workspace", want: true},
 		{name: "allowed handoff", path: "github.com/IGutierrezZ/axiom/v3/internal/handoff", want: true},
+		{name: "allowed gitref leaf", path: "github.com/IGutierrezZ/axiom/v3/internal/gitref", want: true},
 		{name: "allowed yaml", path: "gopkg.in/yaml.v3", want: true},
+		{name: "disallowed branch planner", path: "github.com/IGutierrezZ/axiom/v3/internal/branch", want: false},
 		{name: "disallowed sibling internal package", path: "github.com/IGutierrezZ/axiom/v3/internal/sddstatus", want: false},
 		{name: "disallowed third-party package", path: "github.com/spf13/cobra", want: false},
 	}
@@ -246,6 +248,10 @@ var kickoffAllowedImportPrefixes = []string{
 	"github.com/IGutierrezZ/axiom/v3/internal/reviewtransaction",
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace",
 	"github.com/IGutierrezZ/axiom/v3/internal/handoff",
+	// gitref is a pure leaf (standard library only) that INC-25 shares between workspace,
+	// kickoff and the branch planner: the git snapshot of kickoff.yaml validates its names
+	// with it (design INC-25 D-12, gitsnapshot.go).
+	"github.com/IGutierrezZ/axiom/v3/internal/gitref",
 	"gopkg.in/yaml.v3",
 }
 

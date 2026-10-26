@@ -5,11 +5,13 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"reflect"
 	"regexp"
 	"strings"
 	"testing"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/branch"
+	"github.com/IGutierrezZ/axiom/v3/internal/kickoff"
 	"github.com/IGutierrezZ/axiom/v3/internal/pathidentity"
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace/workspacetest"
 )
@@ -186,11 +188,10 @@ func TestKickoffSealInferWorksFromAnyBranch(t *testing.T) {
 func TestKickoffSealOfAnAlreadySealedChangeWithoutSnapshotIsExempt(t *testing.T) {
 	captureSealWarnings(t)
 	ws := embeddedSealProject(t, "")
-	integrateGit(t, ws.Master, "switch", "-q", "-c", "feat/x")
-	if _, err := runSeal(t, ws.Master, sealBaseArgs...); err != nil {
+	// El retro-sellado no escribe instantánea: el cambio queda exento (R15).
+	if _, err := runSeal(t, ws.Master, "--infer"); err != nil {
 		t.Fatalf("primer sellado: %v", err)
 	}
-	integrateGit(t, ws.Master, "switch", "-q", "main")
 	kickoffPath := filepath.Join(ws.Home, "changes", sealChange, "kickoff.yaml")
 	before, err := os.ReadFile(kickoffPath)
 	if err != nil {
@@ -207,6 +208,167 @@ func TestKickoffSealOfAnAlreadySealedChangeWithoutSnapshotIsExempt(t *testing.T)
 	}
 	if !strings.Contains(out, "Kickoff ya estaba sellado") {
 		t.Errorf("la salida debe indicar que ya estaba sellado:\n%s", out)
+	}
+	if loaded, err := kickoff.Load(filepath.Join(ws.Home, "changes", sealChange)); err != nil || loaded == nil || loaded.Git != nil {
+		t.Errorf("el cambio retro-sellado sigue sin instantánea: %+v, %v", loaded, err)
+	}
+}
+
+// twoRoleConfig declara los roles core y qa sobre el repositorio del proyecto, con la política
+// git `main` y `feat`.
+const twoRoleConfig = "workspace:\n  name: ejemplo\n  topology: monorepo-embedded\n  specs_repository: \".\"\ngit:\n  integration_branch: main\n  branch_prefix: feat\nroles:\n  core:\n    name: core\n    repositories:\n      - path: \".\"\n  qa:\n    name: qa\n    repositories:\n      - path: \".\"\n"
+
+func loadSealed(t *testing.T, ws workspacetest.Workspace) kickoff.Kickoff {
+	t.Helper()
+	loaded, err := kickoff.Load(filepath.Join(ws.Home, "changes", sealChange))
+	if err != nil || loaded == nil {
+		t.Fatalf("kickoff.yaml debía existir: %+v, %v", loaded, err)
+	}
+	return *loaded
+}
+
+// REQ-25.36, escenario «El sellado escribe la instantánea»: desde la rama del cambio, en la misma
+// única escritura, `kickoff.yaml` lleva la integración, el prefijo, la base y los nombres
+// `feat/x`, `feat/x-core`, `feat/x-qa` y `feat/x-archive`, sin SHAs ni rutas absolutas.
+func TestKickoffSealWritesTheGitSnapshotOnce(t *testing.T) {
+	captureSealWarnings(t)
+	ws := embeddedSealProject(t, twoRoleConfig)
+	integrateGit(t, ws.Master, "switch", "-q", "-c", "feat/x")
+
+	if _, err := runSeal(t, ws.Master, append([]string{"--role", "core", "--role", "qa"}, sealBaseArgs...)...); err != nil {
+		t.Fatalf("sellar en feat/x: %v", err)
+	}
+
+	sealed := loadSealed(t, ws)
+	want := &kickoff.GitSnapshot{
+		IntegrationBranch: "main",
+		BranchPrefix:      "feat",
+		ChangeBranch:      "feat/x",
+		Repositories: []kickoff.GitSnapshotRepo{{
+			Path: ".", Name: filepath.Base(ws.Master), Role: "change_branch", IntegrationBranch: "main", Base: "main",
+			Branches: []kickoff.GitSnapshotBranch{
+				{Name: "feat/x", Kind: "change"},
+				{Name: "feat/x-core", Kind: "role", Role: "core"},
+				{Name: "feat/x-qa", Kind: "role", Role: "qa"},
+				{Name: "feat/x-archive", Kind: "archive"},
+			},
+		}},
+	}
+	if !reflect.DeepEqual(sealed.Git, want) {
+		t.Errorf("instantánea = %+v, se esperaba %+v", sealed.Git, want)
+	}
+	data, err := os.ReadFile(filepath.Join(ws.Home, "changes", sealChange, "kickoff.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if regexp.MustCompile(`\b[0-9a-f]{40}\b`).Match(data) || strings.Contains(string(data), ws.Master) || strings.Contains(string(data), filepath.ToSlash(ws.Master)) {
+		t.Errorf("kickoff.yaml no debe contener SHAs ni rutas absolutas:\n%s", data)
+	}
+	// Con -v se ve el bloque tal como queda escrito (el arnés en proceso, sin binario propio).
+	if _, block, found := strings.Cut(string(data), "\ngit:"); found {
+		t.Logf("bloque git: de kickoff.yaml:\ngit:%s", block)
+	}
+}
+
+// REQ-25.36, escenario «La instantánea no se reescribe»: un segundo sellado desde la rama
+// correcta devuelve al ganador y no modifica kickoff.yaml; desde `main` la instantánea ya no
+// exime y el segundo sellado se rechaza como `wrong_branch` sin tocar nada.
+func TestKickoffSealDoesNotRewriteTheSnapshotOnASecondSeal(t *testing.T) {
+	captureSealWarnings(t)
+	ws := embeddedSealProject(t, twoRoleConfig)
+	integrateGit(t, ws.Master, "switch", "-q", "-c", "feat/x")
+	if _, err := runSeal(t, ws.Master, sealBaseArgs...); err != nil {
+		t.Fatalf("primer sellado: %v", err)
+	}
+	path := filepath.Join(ws.Home, "changes", sealChange, "kickoff.yaml")
+	before, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	out, err := runSeal(t, ws.Master, "--execution-style", "checkpointed", "--handoff-policy", "none", "--role", "core", "--role", "qa")
+	if err != nil {
+		t.Fatalf("segundo sellado en la rama correcta: %v", err)
+	}
+	if !strings.Contains(out, "Kickoff ya estaba sellado") || !strings.Contains(out, "continuous") {
+		t.Errorf("la salida debe mostrar al ganador, sellado con continuous:\n%s", out)
+	}
+
+	integrateGit(t, ws.Master, "switch", "-q", "main")
+	_, err = runSeal(t, ws.Master, sealBaseArgs...)
+	wantWrongBranch(t, err, "main", "feat/x", ws.Master)
+
+	if after, _ := os.ReadFile(path); !bytes.Equal(before, after) {
+		t.Errorf("kickoff.yaml cambió:\n%s\n---\n%s", before, after)
+	}
+}
+
+// REQ-25.37: `seal --infer` no escribe instantánea aunque la rama sea la del cambio.
+func TestKickoffSealInferWritesNoSnapshot(t *testing.T) {
+	captureSealWarnings(t)
+	ws := embeddedSealProject(t, twoRoleConfig)
+	integrateGit(t, ws.Master, "switch", "-q", "-c", "feat/x")
+
+	if _, err := runSeal(t, ws.Master, "--infer"); err != nil {
+		t.Fatalf("seal --infer: %v", err)
+	}
+
+	if sealed := loadSealed(t, ws); sealed.Git != nil {
+		t.Errorf("--infer no escribe instantánea: %+v", sealed.Git)
+	}
+}
+
+// REQ-25.42 (fuera de git): sin repositorio no hay política que instantaneizar; se sella igual,
+// con aviso y sin bloque `git:`.
+func TestKickoffSealOutsideGitWritesNoSnapshot(t *testing.T) {
+	warnings := captureSealWarnings(t)
+	ws := workspacetest.Embedded(t, ".")
+	workspacetest.WriteFile(t, filepath.Join(ws.Home, "changes", sealChange, "proposal.md"), "# x\n")
+
+	if _, err := runSeal(t, ws.Master, sealBaseArgs...); err != nil {
+		t.Fatalf("sellar fuera de git: %v", err)
+	}
+
+	if sealed := loadSealed(t, ws); sealed.Git != nil {
+		t.Errorf("fuera de git no hay instantánea: %+v", sealed.Git)
+	}
+	if !strings.Contains(warnings.String(), "git") {
+		t.Errorf("fuera de git se avisa: %q", warnings.String())
+	}
+}
+
+// REQ-25.36 y REQ-25.38: en un multirepo la instantánea lista el repositorio de specs in situ,
+// sin ramas, y los de código con la rama del cambio, con rutas relativas a la carpeta maestra.
+func TestKickoffSealOfAMultirepoWritesTheSnapshotOfEveryRepository(t *testing.T) {
+	captureSealWarnings(t)
+	ws := multirepoSealProject(t)
+	change := planningHomeChange
+
+	var out bytes.Buffer
+	args := append([]string{"seal", "--cwd", ws.Master, "--change", change, "--role", "backend", "--role", "frontend"}, sealBaseArgs...)
+	if err := RunSDDKickoff(args, &out); err != nil {
+		t.Fatalf("sellar el multirepo: %v", err)
+	}
+
+	sealed, err := kickoff.Load(filepath.Join(ws.Home, "changes", change))
+	if err != nil || sealed == nil || sealed.Git == nil {
+		t.Fatalf("kickoff.yaml debía llevar instantánea: %+v, %v", sealed, err)
+	}
+	snapshot := sealed.Git
+	if snapshot.ChangeBranch != "feat/"+change || len(snapshot.Repositories) != 3 {
+		t.Fatalf("rama del cambio %q con %d repositorios, se esperaba feat/%s con tres", snapshot.ChangeBranch, len(snapshot.Repositories), change)
+	}
+	specs, backend, frontend := snapshot.Repositories[0], snapshot.Repositories[1], snapshot.Repositories[2]
+	if specs.Path != "repo-specs" || specs.Role != "specs_in_place" || len(specs.Branches) != 0 {
+		t.Errorf("repositorio de specs = %+v, se esperaba in situ y sin ramas", specs)
+	}
+	for _, code := range []kickoff.GitSnapshotRepo{backend, frontend} {
+		if code.Role != "code" || len(code.Branches) != 1 || code.Branches[0].Name != "feat/"+change || code.Branches[0].Kind != "change" {
+			t.Errorf("repositorio de código = %+v, se esperaba solo la rama del cambio", code)
+		}
+	}
+	if backend.Path != "repo-backend" || frontend.Path != "repo-frontend" {
+		t.Errorf("rutas %q y %q, se esperaban relativas a la carpeta maestra", backend.Path, frontend.Path)
 	}
 }
 

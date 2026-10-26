@@ -41,11 +41,11 @@ func archivePlanInput(facts changeFacts, requested branch.Exceptions) branch.Pla
 }
 
 // registeredChangeBranch es la rama del cambio de la que deriva la de archivado (design D-25,
-// paso 3: «registro, instantánea o política, en ese orden»; la instantánea llega con S8): la
+// paso 3: «registro, instantánea o política, en ese orden»): la
 // rama de tipo `change` que el registro guarda para el repositorio del planning home (se reconoce
 // por su git common dir, que es el mismo desde el checkout principal y desde un worktree enlazado)
-// y, sin ella, la que fijan las excepciones registradas del cambio (`--branch`, o `--prefix` más el
-// cambio). Vacía, la compone la política.
+// y, sin ella, la de la instantánea del kickoff y, sin ella, la que fijan las excepciones
+// registradas del cambio (`--branch`, o `--prefix` más el cambio). Vacía, la compone la política.
 func registeredChangeBranch(facts changeFacts) string {
 	planning := facts.input.PlanningRepo
 	if facts.record != nil {
@@ -59,6 +59,10 @@ func registeredChangeBranch(facts changeFacts) string {
 				}
 			}
 		}
+	}
+	// Tras el registro, la instantánea del kickoff (REQ-25.36): la rama con la que se selló.
+	if named := branch.SnapshotChangeBranch(facts.input, planning); named != "" {
+		return named
 	}
 	switch exceptions := facts.input.Exceptions; {
 	case exceptions.Branch != "":

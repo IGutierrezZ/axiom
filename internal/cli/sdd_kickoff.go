@@ -65,8 +65,8 @@ func runSDDKickoffSeal(args []string, stdout io.Writer) error {
 		sealing = inferred
 	} else {
 		sealing = parsed.ToKickoff(parsed.Change)
-		// Guarda A (REQ-25.38): sin --infer, sellar exige la rama que corresponde.
-		if err := requireSealBranch(changeRoot, sealing); err != nil {
+		// Guarda A (REQ-25.38) e instantánea de política git (REQ-25.36): sin --infer.
+		if err := applySealBranchPolicy(loc, changeRoot, &sealing); err != nil {
 			return err
 		}
 	}

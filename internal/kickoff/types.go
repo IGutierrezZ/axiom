@@ -123,6 +123,9 @@ type Kickoff struct {
 	SealedBy  string     `yaml:"sealed_by"`
 	Config    FlowConfig `yaml:"kickoff"`
 	Lifecycle Lifecycle  `yaml:"lifecycle"`
+	// Git es la instantánea de política git que escribe `seal` (REQ-25.36); nil en un kickoff
+	// preexistente o retro-sellado (gitsnapshot.go).
+	Git *GitSnapshot `yaml:"git,omitempty"`
 }
 
 // GateRecord is one append-only entry in gates.yaml: a single human
