@@ -217,6 +217,39 @@ type BranchResult struct {
 	Ahead              *int   `json:"ahead,omitempty"`
 	Behind             *int   `json:"behind,omitempty"`
 	PRTarget           string `json:"prTarget"`
+
+	// Lo que añade `done` por rama (design §4.3, REQ-25.16, REQ-25.17). Outcome es lo que hizo y
+	// ConfirmedBy, la capa que confirmó su fusión (`forced` con `--force`; vacía si no se
+	// confirmó), cada token con su etiqueta. En `done`, Worktree es el que tenía la rama (retirado
+	// si Outcome es `removed`). Discarded son los ficheros con cambios sin confirmar que `--force`
+	// descartó, y TipSha, la punta que tenía la rama eliminada sin fusión confirmada, para poder
+	// recuperarla. Code, Message y Continuation explican por qué una rama se conservó.
+	Outcome          DoneOutcome `json:"outcome,omitempty"`
+	OutcomeLabel     string      `json:"outcomeLabel,omitempty"`
+	ConfirmedBy      MergeLayer  `json:"confirmedBy,omitempty"`
+	ConfirmedByLabel string      `json:"confirmedByLabel,omitempty"`
+	Discarded        []string    `json:"discarded,omitempty"`
+	TipSha           string      `json:"tipSha,omitempty"`
+	Code             Code        `json:"code,omitempty"`
+	Message          string      `json:"message,omitempty"`
+	Continuation     string      `json:"continuation,omitempty"`
+}
+
+// SetOutcome fija lo que `done` hizo con la rama, con su etiqueta en castellano.
+func (b *BranchResult) SetOutcome(outcome DoneOutcome) {
+	b.Outcome, b.OutcomeLabel = outcome, Label(string(outcome))
+}
+
+// SetConfirmedBy fija la capa que confirmó la fusión de la rama, con su etiqueta en castellano.
+func (b *BranchResult) SetConfirmedBy(layer MergeLayer) {
+	b.ConfirmedBy, b.ConfirmedByLabel = layer, Label(string(layer))
+}
+
+// Keep marca la rama como conservada por el rechazo dado: su código, su mensaje y su
+// continuación quedan en la rama y no se pierden al resumir el resultado de `done`.
+func (b *BranchResult) Keep(refusal *Refusal) {
+	b.SetOutcome(OutcomeKept)
+	b.Code, b.Message, b.Continuation = refusal.Code, refusal.Message, refusal.Continuation
 }
 
 // NewRepositoryResult describe un repositorio del plan con sus ramas planificadas,
@@ -272,6 +305,15 @@ func (r Result) Refused(refusal *Refusal) Result {
 	return r
 }
 
+// Partial devuelve el resultado `partial` de `done` (design D-09): algunas ramas se
+// procesaron y otras se conservaron. Lleva el código, el mensaje y la continuación de la primera
+// que no se pudo procesar; el detalle de cada una está en su rama.
+func (r Result) Partial(refusal *Refusal) Result {
+	r.setStatus(StatusPartial)
+	r.Code, r.Message, r.Continuation, r.Details = refusal.Code, refusal.Message, refusal.Continuation, refusal.Details
+	return r
+}
+
 // NotStarted devuelve el resultado marcado como no iniciado: un cambio sin ramas
 // creadas no es un error (REQ-25.15) y la operación sale con ExitReady.
 func (r Result) NotStarted() Result {
@@ -313,9 +355,11 @@ func (r Result) WriteJSON(w io.Writer) error {
 
 // WriteText escribe el resultado como texto en castellano: un resultado que alcanzó
 // el estado pedido va a stdout y todo lo demás a stderr, con la continuación en una
-// línea aparte.
+// línea aparte. Un resultado que no alcanzó el estado pedido pero describe ramas (`done`, que
+// informa de lo que hizo con cada una) las escribe también en stdout, antes del error.
 func (r Result) WriteText(stdout, stderr io.Writer) {
-	if r.ExitCode() != ExitReady {
+	failed := r.ExitCode() != ExitReady
+	if failed && len(r.Repositories) == 0 {
 		fmt.Fprintf(stderr, "Error [%s]: %s\nContinuación: %s\n", r.Code, r.Message, r.Continuation)
 		return
 	}
@@ -347,6 +391,9 @@ func (r Result) WriteText(stdout, stderr io.Writer) {
 	r.writeChangeLists(stdout)
 	for _, warning := range r.Warnings {
 		fmt.Fprintf(stdout, "Aviso: %s\n", warning)
+	}
+	if failed {
+		fmt.Fprintf(stderr, "Error [%s]: %s\nContinuación: %s\n", r.Code, r.Message, r.Continuation)
 	}
 }
 
@@ -419,6 +466,9 @@ func (r RepositoryResult) writeText(stdout io.Writer) {
 // textParts son los datos de una rama que salen en el texto: su estado en git y el
 // destino de su PR.
 func (b BranchResult) textParts() []string {
+	if b.Outcome != "" {
+		return b.doneParts()
+	}
 	var parts []string
 	switch {
 	case !b.Exists:
@@ -437,6 +487,33 @@ func (b BranchResult) textParts() []string {
 		parts = append(parts, fmt.Sprintf("adelanto %d, atraso %d respecto de %s", *b.Ahead, *b.Behind, b.ComparedTo))
 	}
 	return append(parts, "PR hacia "+b.PRTarget)
+}
+
+// doneParts son los datos de una rama de `done` que salen en el texto: lo que se hizo con ella,
+// la capa que confirmó su fusión, el worktree que tenía y, si procede, lo que `--force` descartó,
+// la punta con la que se puede recuperar y el motivo por el que se conservó.
+func (b BranchResult) doneParts() []string {
+	parts := []string{b.OutcomeLabel}
+	if b.ConfirmedBy != "" {
+		parts = append(parts, "fusión confirmada por "+b.ConfirmedByLabel)
+	}
+	if b.Worktree != "" {
+		parts = append(parts, "worktree "+b.Worktree)
+	}
+	if len(b.Discarded) > 0 {
+		listed, more := b.Discarded, ""
+		if len(listed) > maxDirtyPathsListed {
+			listed, more = listed[:maxDirtyPathsListed], fmt.Sprintf(" y %d más", len(b.Discarded)-maxDirtyPathsListed)
+		}
+		parts = append(parts, fmt.Sprintf("descartados %d cambios sin confirmar (%s%s)", len(b.Discarded), strings.Join(listed, ", "), more))
+	}
+	if b.TipSha != "" {
+		parts = append(parts, "punta "+shortSHA(b.TipSha)+" para recuperarla")
+	}
+	if b.Code != "" {
+		parts = append(parts, fmt.Sprintf("%s: %s", b.Code, b.Message))
+	}
+	return parts
 }
 
 // shortSHA abrevia un identificador de commit a los 12 primeros caracteres.

@@ -26,6 +26,11 @@ var labels = map[string]string{
 	string(LayerPRMerged):       "PR fusionado",
 	string(LayerForced):         "forzado",
 
+	// Lo que `done` hizo con cada rama (REQ-25.17).
+	string(OutcomeRemoved): "eliminada",
+	string(OutcomeKept):    "conservada",
+	string(OutcomeAbsent):  "ya no existía",
+
 	// Papel del repositorio y tipo de rama del `status` (REQ-25.15): los términos de la
 	// spec («repositorio con rama de cambio», «rama de rol»…).
 	string(RepoChangeBranch): "repositorio con rama de cambio",

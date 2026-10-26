@@ -290,9 +290,9 @@ func helpVerbs(help string) []string {
 }
 
 // REQ-25.1 y decisión T3: la ayuda lista solo los verbos implementados (por ahora
-// `ensure` y `status`); ni `push`, ni `pr`, ni el retirado `check`.
+// `ensure`, `status` y `done`); ni `push`, ni `pr`, ni el retirado `check`.
 func TestBranchWithoutSubcommandShowsTheHelpOfTheImplementedVerbs(t *testing.T) {
-	implemented := []string{"ensure", "status"}
+	implemented := []string{"ensure", "status", "done"}
 	t.Run("sin subcomando es un error de uso con la ayuda", func(t *testing.T) {
 		code, stdout, _ := runBranchCLI(t)
 		if code != 2 {
