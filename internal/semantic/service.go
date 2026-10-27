@@ -257,7 +257,7 @@ func (s *Service) ReindexCodeGraph(ctx context.Context) (*ReindexResult, error) 
 		defer cancel()
 	}
 
-	bin, err := exec.LookPath("codegraph")
+	bin, err := s.detector.ResolveCodeGraph()
 	if err != nil {
 		duration := time.Since(start).Round(time.Millisecond).String()
 		return &ReindexResult{

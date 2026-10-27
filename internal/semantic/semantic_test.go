@@ -264,6 +264,9 @@ func TestServiceReindexCodeGraph(t *testing.T) {
 	if !res.Success {
 		t.Errorf("se esperaba éxito en la respuesta de reindexación informativa")
 	}
+	if res.Connector != string(ConnectorNativeAST) {
+		t.Errorf("connector = %q, se esperaba %q", res.Connector, ConnectorNativeAST)
+	}
 	if res.Message == "" {
 		t.Errorf("se esperaba mensaje en el resultado de reindexación")
 	}
