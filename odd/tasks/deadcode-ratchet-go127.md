@@ -1,8 +1,8 @@
 # ODD: el ratchet de deadcode debe funcionar con Go 1.27
 
-> **Documento vivo ODD.** Fichero autoritativo: `odd/tasks/deadcode-ratchet-go127.md`, en el repositorio `axiom`. Worktree `C:\repos\axiom-wt\deadcode-ratchet-go127`, rama `fix/deadcode-ratchet-go127`.
+> **Documento vivo ODD.** Fichero autoritativo: `odd/tasks/deadcode-ratchet-go127.md`, en el repositorio `axiom`.
 > Espejo de recuperación en Engram: topic `odd/deadcode-ratchet-go127/tasks`, proyecto `axiom`.
-> **Estado: En curso (2026-10-27).**
+> **Estado: Cerrado (2026-10-27).** Entregado en [IGutierrezZ/axiom#184](https://github.com/IGutierrezZ/axiom/pull/184), fusionado en `main` como `f077bf1b`.
 > Origen: seguimiento fuera de alcance del ODD `semantic-detector-codegraph` (`odd/tasks/semantic-detector-codegraph.md`) y del ODD `pruebas-aislamiento-host`.
 
 ## Objetivo
@@ -57,8 +57,9 @@ Fijar `deadcode@v0.49.0`: es la versión más reciente cuyo `go.mod` admite el G
 - [x] **T2 · Subir `deadcode` a v0.49.0** — Ruta: en línea (un fichero mecánico, ya entendido).
   - Cambiar `tool=` en `scripts/deadcode-ratchet.sh` y documentar por qué v0.49.0.
   - Comprobaciones: `bash scripts/deadcode-ratchet.sh` con Go 1.27.0 y con `GOTOOLCHAIN=go1.25.10`; `git diff --exit-code .deadcode-baseline.txt`; `go test ./cmd/axiom -run TestDeadcodeRatchetTargetsCanonicalBinary -count=1` (lee el script).
-  - **Resultado (2026-10-27):** Go 1.27.0 → `no new unreachable functions`; `GOTOOLCHAIN=go1.25.10` → `no new unreachable functions`; `.deadcode-baseline.txt` sin cambios; `go test ./cmd/axiom -run 'TestCanonicalBinary|Deadcode' -count=1` → `ok`. RDD apagado, sin evaluación de riesgo. Commit de la unidad en la rama `fix/deadcode-ratchet-go127`.
-- [ ] **T3 · Entregar** — push y PR con permiso del usuario; CI en verde.
+  - **Resultado (2026-10-27):** Go 1.27.0 → `no new unreachable functions`; `GOTOOLCHAIN=go1.25.10` → `no new unreachable functions`; `.deadcode-baseline.txt` sin cambios; `go test ./cmd/axiom -run 'TestCanonicalBinary|Deadcode' -count=1` → `ok`. RDD apagado, sin evaluación de riesgo. Commit de la unidad: `adf9a4ec`.
+- [x] **T3 · Entregar** — push y PR con permiso del usuario; CI en verde.
+  - **Resultado (2026-10-27):** [IGutierrezZ/axiom#184](https://github.com/IGutierrezZ/axiom/pull/184) con etiqueta `type:bug`. La CI ejecuta el ratchet con `GOTOOLCHAIN: local` (Go 1.25.10) y da `no new unreachable functions`, lo que confirma que una versión que exija Go 1.26 habría fallado allí.
 
 ## Criterios de aceptación
 
@@ -68,4 +69,17 @@ Fijar `deadcode@v0.49.0`: es la versión más reciente cuyo `go.mod` admite el G
 
 ## Progreso
 
-- 2026-10-27: T1 y T2 hechas. Siguiente: T3 (push y PR con permiso del usuario).
+- 2026-10-27: T1 y T2 hechas.
+- 2026-10-27: T3 hecha.
+
+## Entrega
+
+| PR | Commits en la rama | Commit en `main` | Contenido |
+|---|---|---|---|
+| [IGutierrezZ/axiom#184](https://github.com/IGutierrezZ/axiom/pull/184) | `adf9a4ec` | `f077bf1b` | T1 a T3 |
+
+Fusionado con squash el 2026-10-27, con la CI en verde (Unit Tests, Go Format y Claude Network-None Runtime, entre otras). El primer intento de CI falló solo por la falta de etiqueta `type:*`; se añadió `type:bug`. El repositorio no admite auto-merge, así que el merge se hizo a mano en cuanto la CI terminó. Worktree y rama retirados con `scripts/axiom-worktree.ps1 done`, y rama remota borrada.
+
+## Siguiente paso
+
+Ninguno en este ODD.
