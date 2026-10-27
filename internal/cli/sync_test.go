@@ -2781,6 +2781,12 @@ func TestRunSyncMigratesLegacyManagedPiCodeGraphSelection(t *testing.T) {
 	}
 	writeManagedPiCodeGraphManifest(t, home)
 
+	// The assertion is the Pi selection migration, so the host's codegraph
+	// CLI must not drive the OpenCode reconcile installer.
+	restoreLookPath := cmdLookPath
+	t.Cleanup(func() { cmdLookPath = restoreLookPath })
+	cmdLookPath = func(string) (string, error) { return "", os.ErrNotExist }
+
 	previousRefresh := refreshPiCodeGraphIfConfigured
 	refreshed := false
 	refreshPiCodeGraphIfConfigured = func(string, string) (communitytool.PiCodeGraphResult, bool, error) {
