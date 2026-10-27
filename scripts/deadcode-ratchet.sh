@@ -39,7 +39,12 @@ baseline="${repo_root}/.deadcode-baseline.txt"
 # against 277 from the canonical binary). DEADCODE_TARGET can still point the
 # analysis at another main package.
 target="${DEADCODE_TARGET:-./cmd/axiom}"
-tool="golang.org/x/tools/cmd/deadcode@v0.30.0"
+# The tool's SSA builder must understand the syntax of the host Go's standard
+# library: v0.30.0 panicked under Go 1.27 ("unexpected expr: *ast.KeyValueExpr")
+# while CI, on the go.mod toolchain, stayed green. v0.49.0 is the newest
+# x/tools whose go.mod still accepts the go directive of this repository
+# (v0.50.0 requires go 1.26), and it yields the same baseline on both.
+tool="golang.org/x/tools/cmd/deadcode@v0.49.0"
 
 cd "${repo_root}"
 
