@@ -111,6 +111,7 @@ func TestSDDCLIRepeatedStatusAndPreparationPreserveAuthority(t *testing.T) {
 	repo := initReviewCLIRepo(t)
 	outside := t.TempDir()
 	root := seedSDDStatusReadyChange(t, repo, "snapshots", "- [ ] Update `"+outside+"/main.go`\n")
+	retroSealForGuard(t, repo, "snapshots")
 	args := []string{"snapshots", "--cwd", repo, "--json"}
 	initial := consentCLISnapshot(t, repo)
 	for _, present := range []bool{false, true} {

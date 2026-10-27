@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/IGutierrezZ/axiom/v3/internal/branch"
 	"github.com/IGutierrezZ/axiom/v3/internal/handoff"
 	"github.com/IGutierrezZ/axiom/v3/internal/kickoff"
 	"github.com/IGutierrezZ/axiom/v3/internal/multirole"
@@ -62,6 +63,15 @@ func runSDDGateRecord(args []string, stdout io.Writer) error {
 		return err
 	}
 	workspaceRoot := loc.WorkspaceRoot
+	// Guarda A (REQ-25.19): una sola consulta cubre AppendGate y el handoff de integración de esta
+	// invocación; la compuerta de integración se registra en la rama de archivado (G-10).
+	writerContext := branch.ContextOrdinary
+	if parsed.Gate == kickoff.GateIntegration {
+		writerContext = branch.ContextArchive
+	}
+	if err := guardChangeWriter(changeRoot, parsed.Change, "sdd gate record", writerContext); err != nil {
+		return err
+	}
 
 	sealed, err := kickoff.Load(changeRoot)
 	if err != nil {

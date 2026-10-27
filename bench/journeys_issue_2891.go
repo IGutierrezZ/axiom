@@ -25,6 +25,25 @@ type issue2891Status struct {
 	} `json:"consent"`
 }
 
+const issue2891Kickoff = `schema: axiom.sdd-kickoff/v1
+change: same-repo-rollout
+sealed_at: 2026-01-01T00:00:00Z
+sealed_by: cli
+kickoff:
+    flow_mode: sdd
+    execution_style: continuous
+    execution_style_source: explicit
+    handoff_policy: none
+    roles:
+        - role: fullstack
+          gate_policy: blocking
+          tasks_file: tasks.md
+          verify_file: verify-report.md
+lifecycle:
+    deployment_target: local
+    post_archive_policy: bug_only
+`
+
 func issue2891SameParentRepository(sandbox *Sandbox) error {
 	if err := baseRepo(sandbox); err != nil {
 		return err
@@ -39,6 +58,9 @@ func issue2891SameParentRepository(sandbox *Sandbox) error {
 		filepath.Join(root, "specs", "api", "spec.md"): "### Requirement: API\n#### Scenario: Header accepted\n",
 		filepath.Join(root, "design.md"):               "# Design\n",
 		filepath.Join(root, "tasks.md"):                "- [ ] 1.1 Update `../service-dir/internal/api/handler.go` to accept the new header\n",
+		// A kickoff sealed without a git snapshot keeps the change exempt
+		// from the branch guard, so `sdd continue` can run from main.
+		filepath.Join(root, "kickoff.yaml"): issue2891Kickoff,
 	} {
 		if err := sandbox.write(path, content); err != nil {
 			return err

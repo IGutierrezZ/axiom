@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/IGutierrezZ/axiom/v3/internal/branch"
 	"github.com/IGutierrezZ/axiom/v3/internal/sddstatus"
 )
 
@@ -55,6 +56,12 @@ func RunSDDContinue(args []string, stdout io.Writer) error {
 	})
 	if err != nil {
 		return fmt.Errorf("resolve sdd status: %w", err)
+	}
+	// Guarda A (REQ-25.19): solo cuando se va a escribir el marcador de instancia.
+	if sddstatus.ChangeInstanceMarkerPending(status) {
+		if err := guardChangeWriter(*status.ChangeRoot, *status.ChangeName, "sdd continue", branch.ContextOrdinary); err != nil {
+			return err
+		}
 	}
 	if err := sddstatus.PrepareChangeInstanceConsent(status); err != nil {
 		return fmt.Errorf("prepare sdd continuation consent: %w", err)

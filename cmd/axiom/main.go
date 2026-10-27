@@ -762,6 +762,12 @@ func runHandoffCreate(args []string) {
 		},
 	}
 
+	// Guarda A (REQ-25.19): fuera de la rama del cambio no se escribe el relevo.
+	if err := cli.GuardChangeWriter(filepath.Dir(targetPath), *changeFlag, "handoff create"); err != nil {
+		fmt.Printf("[ERROR] %v\n", err)
+		os.Exit(1)
+	}
+
 	if err := handoff.WriteFile(targetPath, h); err != nil {
 		fmt.Printf("[ERROR] No se pudo escribir el archivo de handoff:\n  %v\n", err)
 		os.Exit(1)

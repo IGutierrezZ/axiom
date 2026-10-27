@@ -286,6 +286,11 @@ func newGovernanceGitWorkspace(t *testing.T, change string) (root, changeRoot st
 	writeCLIFixture(t, filepath.Join(root, "README.md"), "root\n")
 	runGateTestGit(t, root, "add", "--", "README.md")
 	runGateTestGit(t, root, "commit", "-q", "-m", "root")
+	// inc-25 (guarda A, REQ-25.19, REQ-25.37): el cambio vive en un repositorio git en `main` y la
+	// compuerta de integración se registra en el contexto de archivado. Un cambio sin ningún
+	// kickoff.yaml no está exento, así que el fixture lo retro-sella (`--infer`: kickoff.yaml sin
+	// instantánea de política git), que es la forma de un cambio preexistente y lo exime.
+	retroSealForGuard(t, root, change)
 	return root, changeRoot
 }
 
