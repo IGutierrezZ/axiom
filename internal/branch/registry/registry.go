@@ -6,8 +6,8 @@
 // cualquier worktree enlazado lo ven igual, y borrarlo no daña el repositorio.
 //
 // Trae la lectura (`Load` y `List`) y, desde `ensure`, la escritura (`Save`, que no toca el
-// fichero si los bytes no cambian) y el bloqueo exclusivo por cambio (`Lock`). El borrado
-// llega con `done`, su primer llamador. El paquete no ejecuta procesos: el motor obtiene el
+// fichero si los bytes no cambian) y el bloqueo exclusivo por cambio (`Lock`); `done` añade el
+// borrado (`Delete`). El paquete no ejecuta procesos: el motor obtiene el
 // common dir con git y se lo entrega, y reconstruye el registro desde el estado de git.
 package registry
 
@@ -132,6 +132,28 @@ func (*Store) Save(commonDir string, record branch.Record) error {
 		return &WriteError{Path: path, Cause: err}
 	}
 	if err := reviewtransaction.ReplaceFileAtomic(temporaryPath, path); err != nil {
+		return &WriteError{Path: path, Cause: err}
+	}
+	if err := reviewtransaction.SyncReviewDirectory(dir); err != nil {
+		return &WriteError{Path: dir, Cause: err}
+	}
+	return nil
+}
+
+// Delete borra el registro del cambio (`done` lo hace cuando el cambio no tiene ya ninguna rama
+// registrada, design D-09). Un registro que no existe no es un error: borrarlo es idempotente. Solo
+// borra el fichero `<cambio>.json`, nunca su bloqueo ni nada más de la carpeta. Quien llama tiene
+// el cambio bloqueado con Lock.
+func (*Store) Delete(commonDir string, lane branch.Lane, change string) error {
+	if err := validateKey(commonDir, lane, change); err != nil {
+		return err
+	}
+	dir := folder(commonDir, lane)
+	path := filepath.Join(dir, change+".json")
+	switch err := os.Remove(path); {
+	case errors.Is(err, fs.ErrNotExist):
+		return nil
+	case err != nil:
 		return &WriteError{Path: path, Cause: err}
 	}
 	if err := reviewtransaction.SyncReviewDirectory(dir); err != nil {

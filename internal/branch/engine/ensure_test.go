@@ -412,6 +412,8 @@ type failingWriter struct {
 	failBranch   bool
 	failWorktree bool
 	failSwitch   bool
+	failRemove   bool
+	failDelete   bool
 }
 
 func (f failingWriter) CreateBranch(ctx context.Context, dir, name, startPoint string) error {
@@ -433,6 +435,20 @@ func (f failingWriter) Switch(ctx context.Context, dir, branchName string) error
 		return errors.New("fallo simulado de git al cambiar de rama")
 	}
 	return f.real.Switch(ctx, dir, branchName)
+}
+
+func (f failingWriter) RemoveWorktree(ctx context.Context, dir, path string, force bool) error {
+	if f.failRemove {
+		return errors.New("fallo simulado de git al retirar el worktree")
+	}
+	return f.real.RemoveWorktree(ctx, dir, path, force)
+}
+
+func (f failingWriter) DeleteBranch(ctx context.Context, dir, name string) error {
+	if f.failDelete {
+		return errors.New("fallo simulado de git al eliminar la rama")
+	}
+	return f.real.DeleteBranch(ctx, dir, name)
 }
 
 func (f failingWriter) Fetch(ctx context.Context, dir, remote string) error {

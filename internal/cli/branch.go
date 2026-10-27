@@ -18,15 +18,17 @@ import (
 // internal/branch/engine (planificador puro, operaciones de git y resultado
 // `axiom.branch-result/v1`); los demás verbos llegan con las rebanadas siguientes y la
 // ayuda lista solo los verbos que existen (decisión T3). Ningún verbo ejecuta `push` ni
-// abre un PR, y ninguno hace operaciones remotas salvo `ensure --fetch`, que ejecuta
-// `git fetch origin` (REQ-25.1, REQ-25.10). `ensure --archive` crea la rama de archivado de un
-// cambio ya fusionado (REQ-25.45).
+// abre un PR, y ninguno hace operaciones remotas salvo `ensure --fetch` y `done --fetch`, que
+// ejecutan `git fetch origin` (REQ-25.1, REQ-25.10). `ensure --archive` crea la rama de archivado de un
+// cambio ya fusionado (REQ-25.45) y `done` elimina las ramas y los worktrees de un cambio fusionado
+// (REQ-25.16, REQ-25.17; branch_done.go).
 
 const branchHelp = `Uso: axiom branch <subcomando> [argumentos]
 
 Subcomandos:
   ensure   Crea la rama de un cambio y su worktree si faltan (idempotente)
   status   Estado de las ramas y los worktrees de un cambio (solo lectura)
+  done     Elimina el worktree y la rama local de un cambio ya fusionado
 
 Ejecuta ` + "`axiom branch <subcomando> --help`" + ` para ver las banderas de cada subcomando.
 `
@@ -185,8 +187,10 @@ func RunBranch(args []string, stdout, stderr io.Writer) int {
 		return runBranchEnsure(rest, stdout, stderr)
 	case "status":
 		return runBranchStatus(rest, stdout, stderr)
+	case "done":
+		return runBranchDone(rest, stdout, stderr)
 	default:
-		fmt.Fprintf(stderr, "Error: subcomando '%s' no reconocido para branch; los disponibles son ensure y status. Ejecuta `axiom branch --help`.\n", subcommand)
+		fmt.Fprintf(stderr, "Error: subcomando '%s' no reconocido para branch; los disponibles son ensure, status y done. Ejecuta `axiom branch --help`.\n", subcommand)
 		return branch.ExitUsage
 	}
 }

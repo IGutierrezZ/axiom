@@ -1,12 +1,12 @@
 // Package gitcli son las operaciones tipadas de git del motor de ramas (INC-25, design
 // D-01): el adaptador de los puertos de `internal/branch` sobre gitcommon.Run, el único
 // punto que ejecuta git (REQ-25.1, G-7). Las lecturas usan una lista cerrada de
-// subcomandos (`rev-parse`, `worktree list`, `status`, `rev-list` y `ls-tree`) y las
-// escrituras de `ensure` son solo `branch`, `worktree add` y `switch` (modo `in_place`);
-// ninguna es remota. La única
-// operación remota es Fetch (`git fetch origin`, `ensure --fetch`, REQ-25.10): el puerto no
-// tiene ningún método que publique. El resto de escrituras de `done` y las lecturas que
-// faltan llegan con el primer llamador que las usa.
+// subcomandos (`rev-parse`, `worktree list`, `status`, `rev-list`, `ls-tree` y `merge-base
+// --is-ancestor`) y las escrituras son solo `branch` (crear y eliminar), `worktree add`,
+// `worktree remove` y `switch` (modo `in_place`); ninguna es remota. La única
+// operación remota es Fetch (`git fetch origin`, `ensure --fetch` y `done --fetch`, REQ-25.10):
+// el puerto no tiene ningún método que publique. Las operaciones de la capa de árbol equivalente
+// de `done` llegan con el primer llamador que las usa.
 //
 // Los textos de error están en castellano y nombran el comando de git y el directorio.
 package gitcli
@@ -285,6 +285,58 @@ func (*Git) Switch(ctx context.Context, dir, name string) error {
 		return err
 	}
 	return runWrite(ctx, dir, "switch", "--no-guess", name)
+}
+
+// IsAncestor dice si ancestor es ancestro de descendant, o el mismo commit (`git merge-base
+// --is-ancestor`): la capa 1 de la detección de fusión de `done` (`ancestry`, REQ-25.16). Es una
+// lectura que usa solo referencias locales. Una referencia que git no resuelve no es «no es
+// ancestro» sino un error: quien llama comprueba antes que existen.
+func (*Git) IsAncestor(ctx context.Context, dir, ancestor, descendant string) (bool, error) {
+	if err := plainArgument(ancestor); err != nil {
+		return false, err
+	}
+	if err := plainArgument(descendant); err != nil {
+		return false, err
+	}
+	args := []string{"merge-base", "--is-ancestor", ancestor, descendant}
+	result, err := gitcommon.Run(ctx, dir, args...)
+	if err != nil {
+		return false, err
+	}
+	switch result.ExitCode {
+	case 0:
+		return true, nil
+	case 1:
+		return false, nil
+	}
+	return false, commandFailed(dir, result, args...)
+}
+
+// RemoveWorktree retira el worktree enlazado de path (`git worktree remove [--force] <path>`) y
+// su registro en git: es el primer paso del desmontaje de `done` (REQ-25.17). Sin force, git se
+// niega ante un worktree con cambios sin confirmar; con él los descarta. path debe ser absoluta y
+// dir es el checkout principal, nunca el worktree que se retira. Nunca borra la rama.
+func (*Git) RemoveWorktree(ctx context.Context, dir, path string, force bool) error {
+	if !filepath.IsAbs(path) {
+		return errors.New("la ruta " + strconv.Quote(path) + " del worktree no es válida para git: debe ser absoluta")
+	}
+	args := []string{"worktree", "remove"}
+	if force {
+		args = append(args, "--force")
+	}
+	return runWrite(ctx, dir, append(args, path)...)
+}
+
+// DeleteBranch elimina la rama local name aunque git no la considere fusionada
+// (`git branch -D <name>`): tras un squash o un rebase la fusión ya está confirmada por las capas
+// de `done`, y `-d` se negaría (REQ-25.17). Solo toca `refs/heads/<name>`: nunca una rama remota.
+// git se niega si la rama está desplegada en algún worktree, de modo que se retira antes. dir es
+// el checkout principal.
+func (*Git) DeleteBranch(ctx context.Context, dir, name string) error {
+	if err := plainArgument(name); err != nil {
+		return err
+	}
+	return runWrite(ctx, dir, "branch", "-D", name)
 }
 
 // Fetch trae las referencias del remoto (`git fetch <remote>`, sin `--prune`): es la única

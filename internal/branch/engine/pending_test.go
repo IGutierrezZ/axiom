@@ -555,6 +555,9 @@ func (f *fakeGit) TreeDirs(_ context.Context, _, rev, relPath string) ([]string,
 	f.treeDirArgs = append(f.treeDirArgs, [2]string{rev, relPath})
 	return f.treeDirs(rev, relPath)
 }
+func (f *fakeGit) IsAncestor(context.Context, string, string, string) (bool, error) {
+	return false, errors.New("no se usa")
+}
 
 // design D-17: «sin referencia, la lista se omite con un aviso y sin error»; lo mismo
 // ante cualquier fallo de git al evaluar: nunca falla, nunca bloquea, y la lista no se

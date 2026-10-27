@@ -95,6 +95,17 @@ const (
 	LayerForced         MergeLayer = "forced"
 )
 
+// DoneOutcome es lo que `done` hizo con una rama del plan (design §4.3, REQ-25.17): la eliminó
+// con su worktree, la conservó porque no se pudo procesar (cada motivo lleva su código tipado) o
+// ya no existía.
+type DoneOutcome string
+
+const (
+	OutcomeRemoved DoneOutcome = "removed"
+	OutcomeKept    DoneOutcome = "kept"
+	OutcomeAbsent  DoneOutcome = "absent"
+)
+
 // Status es el estado tipado de un resultado (design D-02). Es un token estable en
 // inglés y su etiqueta en castellano se obtiene con Label.
 type Status string

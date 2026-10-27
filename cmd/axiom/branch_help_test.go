@@ -5,12 +5,12 @@ import (
 	"testing"
 )
 
-// REQ-25.1 y decisión T3: la ayuda global lista `axiom branch ensure` y `axiom branch
-// status` y solo los verbos de rama implementados; ni `push`, ni `pr`, ni el retirado
-// `check`.
+// REQ-25.1 y decisión T3: la ayuda global lista `axiom branch ensure`, `axiom branch
+// status` y `axiom branch done` y solo los verbos de rama implementados; ni `push`, ni
+// `pr`, ni el retirado `check`.
 func TestBranchVerbsAreListedInTheGlobalHelp(t *testing.T) {
 	help := axiomHelpText()
-	implemented := map[string]bool{"ensure": true, "status": true}
+	implemented := map[string]bool{"ensure": true, "status": true, "done": true}
 
 	for verb := range implemented {
 		if !strings.Contains(help, "\n  branch "+verb+" ") {

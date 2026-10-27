@@ -1,8 +1,9 @@
 // Package engine es el motor de `axiom branch` (INC-25, design D-01 y §4.2): reúne los
 // hechos de solo lectura de un cambio (el proyecto, su kickoff, sus repositorios y su
 // estado en git), se los entrega al planificador puro de internal/branch y describe el
-// resultado. Trae `Status`, de solo lectura, y `Ensure`, que crea las ramas del cambio y
-// sus worktrees; el resto de operaciones que escriben llegan con las siguientes rebanadas.
+// resultado. Trae `Status`, de solo lectura, `Ensure`, que crea las ramas del cambio y
+// sus worktrees, y `Done`, que las elimina una vez fusionadas; el resto de operaciones que
+// escriben llegan con las siguientes rebanadas.
 //
 // No lanza procesos ni abre la red: toda lectura de git pasa por gitcommon.Run a través
 // de internal/branch/gitcli (REQ-25.1). Los textos para el usuario están en castellano.
@@ -45,20 +46,24 @@ type gitReader interface {
 	DirtyPaths(ctx context.Context, dir string) ([]string, error)
 	AheadBehind(ctx context.Context, dir, base, branch string) (ahead, behind int, err error)
 	TreeDirs(ctx context.Context, dir, rev, relPath string) (dirs []string, exists bool, err error)
+	IsAncestor(ctx context.Context, dir, ancestor, descendant string) (bool, error)
 }
 
 var _ gitReader = (*gitcli.Git)(nil)
 
-// gitWriter son las operaciones de git que cambian algo y usa `ensure` (design D-05, fases
-// 3 y 4): crear la rama y desplegarla en un worktree (modo `worktree`) o en el propio
-// repositorio con `Switch` (modo `in_place`), siempre con dir en el checkout principal, y
-// `Fetch`, la única operación remota (`ensure --fetch`, REQ-25.10). Es un subconjunto del
-// puerto branch.Git y, como las lecturas, crece con el primer llamador. No tiene ningún método
-// que publique: `axiom branch` nunca ejecuta `push` (REQ-25.1).
+// gitWriter son las operaciones de git que cambian algo y usan `ensure` y `done` (design D-05,
+// fases 3 y 4, y D-09): crear la rama y desplegarla en un worktree (modo `worktree`) o en el
+// propio repositorio con `Switch` (modo `in_place`), retirar el worktree y borrar la rama local en
+// `done`, siempre con dir en el checkout principal, y `Fetch`, la única operación remota
+// (`--fetch`, REQ-25.10). Es un subconjunto del puerto branch.Git y, como las lecturas, crece con
+// el primer llamador. No tiene ningún método que publique: `axiom branch` nunca ejecuta `push`
+// (REQ-25.1).
 type gitWriter interface {
 	CreateBranch(ctx context.Context, dir, name, startPoint string) error
 	AddWorktree(ctx context.Context, dir, path, branch string) error
 	Switch(ctx context.Context, dir, branch string) error
+	RemoveWorktree(ctx context.Context, dir, path string, force bool) error
+	DeleteBranch(ctx context.Context, dir, name string) error
 	Fetch(ctx context.Context, dir, remote string) error
 }
 
