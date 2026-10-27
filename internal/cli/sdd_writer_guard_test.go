@@ -420,10 +420,12 @@ func guardContinueProject(t *testing.T) workspacetest.Workspace {
 	return ws
 }
 
-// REQ-25.19, REQ-25.39: `sdd continue` guarda el marcador de instancia (`.axiom-instance`), el
-// único llamador de `PrepareChangeInstanceConsent`: fuera de rama se niega sin escribirlo y en la
-// rama del cambio lo escribe.
-func TestGuardContinueRefusesTheInstanceMarkerOutsideTheChangeBranch(t *testing.T) {
+// REQ-25.19, REQ-25.39, REQ-25.42: `sdd continue` guarda el marcador de instancia
+// (`.axiom-instance`), el único llamador de `PrepareChangeInstanceConsent`. Fuera de rama el status
+// ya proyecta blocked(wrong_branch) (S9-c2): continue no prepara el marcador y muestra el bloqueo en
+// lugar de rechazarse; en la rama del cambio lo escribe. La guarda A de continue solo cubre la
+// ventana entre la resolución y la escritura.
+func TestGuardContinueDoesNotPrepareTheInstanceMarkerOutsideTheChangeBranch(t *testing.T) {
 	ws := guardContinueProject(t)
 	marker := filepath.Join(guardChangeRoot(ws), ".axiom-instance")
 	args := []string{sealChange, "--cwd", ws.Master, "--json"}
@@ -431,12 +433,16 @@ func TestGuardContinueRefusesTheInstanceMarkerOutsideTheChangeBranch(t *testing.
 	var out bytes.Buffer
 	err := RunSDDContinue(args, &out)
 
-	wantWrongBranch(t, err, "main", "feat/x", ws.Master)
+	if err != nil {
+		t.Fatalf("fuera de rama continue refleja el bloqueo del status y no se rechaza: %v", err)
+	}
 	if _, statErr := os.Stat(marker); !errors.Is(statErr, os.ErrNotExist) {
 		t.Errorf("fuera de rama no se escribe el marcador (%v)", statErr)
 	}
-	if out.Len() != 0 {
-		t.Errorf("un rechazo no publica salida: %s", out.String())
+	for _, want := range []string{"blocked(wrong_branch)", "«main»", "«feat/x»", `\" --change x`} {
+		if !strings.Contains(out.String(), want) {
+			t.Errorf("la salida debe reflejar el bloqueo con %q: %s", want, out.String())
+		}
 	}
 
 	integrateGit(t, ws.Master, "switch", "-q", "feat/x")
