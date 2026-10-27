@@ -1594,7 +1594,7 @@ func (s *Service) GetSpecsSyncStatus(ctx context.Context) (*SpecsSyncStatusDTO, 
 	if out, err := cmdBranch.Output(); err == nil {
 		result.Branch = strings.TrimSpace(string(out))
 	} else {
-		result.Branch = "main"
+		result.Branch = s.planningIntegration()
 	}
 
 	// 3. Obtener remoto asociado

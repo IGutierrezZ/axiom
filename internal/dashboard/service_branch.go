@@ -11,6 +11,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/branch/engine"
 	"github.com/IGutierrezZ/axiom/v3/internal/cli"
 	"github.com/IGutierrezZ/axiom/v3/internal/pathquote"
+	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
 // Escritores guardados del dashboard y `ensure` al crear un cambio (INC-25, REQ-25.19 y
@@ -149,4 +150,16 @@ func (s *Service) writeIncrement(planningHome, name string, req CreateIncrementR
 // cerrado ante un fallo interno de la consulta y no bloquea lo exento ni lo que no puede comprobar.
 func guardIncrementFolder(changeRoot, change, op string) error {
 	return cli.GuardChangeWriter(changeRoot, change, op)
+}
+
+// planningIntegration es la rama de integración resuelta del proyecto registrado (design D-22,
+// REQ-25.23): `git.integration_branch` de su axiom.yaml o, sin él o sin poder localizar el
+// espacio de trabajo, el valor por defecto de branch.ResolvePolicy. Sustituye al literal `main`
+// que GetSpecsSyncStatus informaba cuando git no sabe decir la rama actual.
+func (s *Service) planningIntegration() string {
+	loc, err := workspace.Locate(s.getRootPath())
+	if err != nil {
+		return branch.ResolvePolicy(nil).IntegrationBranch
+	}
+	return engine.PlanningIntegration(loc)
 }

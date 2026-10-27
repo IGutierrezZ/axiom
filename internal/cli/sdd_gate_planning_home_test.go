@@ -139,3 +139,41 @@ func TestSDDGateRecordPRMergedVerifiesAgainstSpecsRepositoryInCanonicalWorkspace
 		}
 	})
 }
+
+// D-22 (REQ-25.23, escenario 5): sin --base-ref, la evidencia pr_merged se comprueba contra la
+// rama de integración resuelta del repositorio del planning home (`git.integration_branch`), no
+// contra un `main` fijo. El repositorio solo tiene la rama `develop`: con el literal `main` la
+// comprobación de ancestro fallaría porque esa referencia no existe.
+func TestSDDGateRecordCompletesTheBaseRefWithTheResolvedIntegration(t *testing.T) {
+	isolateGateGitEnv(t)
+	root, changeRoot := newGovernanceWorkspace(t, planningHomeChange)
+	writeCLIFixture(t, filepath.Join(root, "axiom.yaml"),
+		"workspace:\n  name: integracion-develop\n  topology: monorepo-embedded\ngit: {integration_branch: develop}\n"+
+			"roles:\n  core:\n    name: core\n    repositories:\n      - path: .\n")
+	writeCLIFixture(t, filepath.Join(root, "README.md"), "raíz\n")
+	runGateTestGit(t, root, "init", "-q", "-b", "develop")
+	runGateTestGit(t, root, "add", "-A")
+	runGateTestGit(t, root, "commit", "-q", "-m", "raíz")
+	commit := strings.TrimSpace(runGateTestGit(t, root, "rev-parse", "HEAD"))
+	retroSealForGuard(t, root, planningHomeChange)
+
+	var out bytes.Buffer
+	err := RunSDDGate([]string{
+		"record", "--cwd", root, "--change", planningHomeChange,
+		"--gate", "integration", "--decision", "approved", "--reason", "PR fusionado en develop",
+		"--evidence-kind", "pr_merged", "--commit", commit,
+	}, &out)
+	if err != nil {
+		t.Fatalf("gate record sin --base-ref con integración develop: %v", err)
+	}
+	ledger, loadErr := kickoff.LoadGates(changeRoot)
+	if loadErr != nil {
+		t.Fatalf("kickoff.LoadGates() error = %v", loadErr)
+	}
+	if len(ledger.Records) != 1 {
+		t.Fatalf("gates.yaml tiene %d registros, se esperaba exactamente 1", len(ledger.Records))
+	}
+	if rec := ledger.Records[0]; !rec.Verified || rec.EvidenceBaseRef != "develop" || rec.EvidenceRef != commit {
+		t.Fatalf("registro = %#v, se esperaba Verified=true, EvidenceBaseRef=develop y EvidenceRef=%s", rec, commit)
+	}
+}
