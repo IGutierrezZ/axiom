@@ -2,7 +2,7 @@
 
 > **Documento vivo ODD.** Fichero autoritativo: `odd/tasks/pruebas-aislamiento-host.md`, en el repositorio `axiom`. La rama y el worktree dedicados se crean al iniciar la ejecución, nunca en `C:\repos\axiom`.
 > Espejo de recuperación en Engram: topic `odd/pruebas-aislamiento-host/tasks`, proyecto `axiom` (creado el 2026-10-13 en estado propuesto; se actualiza al iniciar la ejecución).
-> **Estado: Listo para PR (2026-10-27). T1, T2 y T4 hechas; T3 fuera del PR por el defecto de producción H6-D (ver «Hallazgos»).** Rama `fix/pruebas-aislamiento-host`, worktree `C:\repos\axiom-wt\pruebas-aislamiento-host`.
+> **Estado: Cerrado (2026-10-27). T1, T2 y T4 fusionadas en #181 (`90db1040`); T3 fuera por el defecto de producción H6-D (ver «Hallazgos»).** Rama y worktree de trabajo eliminados tras el merge.
 > Origen: hallazgos H1, H3 y H6 del ODD `windows-pruebas-entorno-y-ci` (`odd/tasks/windows-pruebas-entorno-y-ci.md`).
 
 ## Objetivo
@@ -126,7 +126,8 @@ Re-comprobar al iniciar.
 - 2026-10-13: documento abierto desde el cierre del ODD `windows-pruebas-entorno-y-ci`. Líneas verificadas en el árbol de `main` `eea58801`. No iniciado.
 - 2026-10-27: ejecución iniciada desde `main` `e4b4cc3d`; las líneas citadas siguen siendo válidas. T1 (`f3b2a9a4`) y T2 (`72cba681`) hechas con RED y GREEN observados. T3 bloqueada por el hallazgo H6-D.
 - 2026-10-27: el usuario acepta H6-D como defecto de producción; T3 sale del PR. T4 hecha. Falta el push y el PR, con permiso del usuario.
+- 2026-10-27: ODD cerrado. #181 fusionado por squash en `main` (`90db1040`), con la etiqueta `type:bug`. CI: 9 comprobaciones en verde y 5 omitidas (e2e, Windows y Darwin, sin la etiqueta `ci:windows`, por decisión del usuario). Criterios de aceptación: se cumplen los de H1 y H3; el de H6 queda sin cumplir porque T3 sale del alcance; el diff de #181 incluye, además de los dos `_test.go`, este documento.
 
 ## Siguiente paso
 
-Push de `fix/pruebas-aislamiento-host` y PR contra `main` con `scripts/axiom-worktree.ps1 pr pruebas-aislamiento-host`, etiqueta `type:bug`, con permiso del usuario. Aparte: corregir H6-D en producción (asignación al Job antes de que el hijo pueda lanzar descendientes) y actualizar el ratchet de código muerto para Go 1.27.
+Ninguno en este ODD. Trabajos aparte, sin abrir: corregir H6-D en producción (asignar el hijo al Job antes de que pueda lanzar descendientes) y, con ello, la prueba de H6 y su comentario; y actualizar el ratchet de código muerto (`golang.org/x/tools`) para Go 1.27.
