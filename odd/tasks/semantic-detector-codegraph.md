@@ -71,15 +71,17 @@ Re-comprobar al iniciar.
   - **Resultado (2026-10-27, en línea: dos ediciones de una línea en producción y un fichero de prueba nuevo; no dispara el escritor delegado):** pruebas nuevas en `internal/semantic/reindex_test.go` con un `codegraph` falso en script (`.cmd` en Windows, `sh` en Unix), sin compilar ejecutables: `TestServiceReindexCodeGraphIgnoresPathWhenDetectorMisses` (falso en el PATH y `Detector` que no lo encuentra) y `TestServiceReindexCodeGraphRunsDetectorBinary` (PATH vacío y `Detector` que devuelve la ruta del falso; exige `index` y el directorio del workspace). `TestServiceReindexCodeGraph` exige además el conector `native-ast`.
   - RED observado antes del cambio: las tres fallan (conector `codegraph` y ejecución del falso del PATH; conector `native-ast` sin ejecutar el falso del `Detector`; `exit status 1` del `codegraph` real).
   - GREEN tras el cambio: `go test ./internal/semantic/... -count=1` → `ok` (7 pruebas), con el `codegraph` real en el PATH de esta máquina.
-- [ ] **T3 · Comprobar que la conducta pública no cambia**
+- [x] **T3 · Comprobar que la conducta pública no cambia**
   - Ruta: en línea.
   - Con `codegraph` real en el PATH y con `NewService(dir, nil, nil)` (el camino de `cmd/axiom/main.go:1618`), la reindexación sigue ejecutando `codegraph index` en la raíz del workspace y devolviendo el mismo `ReindexResult`. Sin `codegraph`, el mismo mensaje de antes.
   - Comprobar también las pruebas de `internal/dashboard` y de `cmd/axiom` que usen la reindexación, con `-run` focalizado.
   - Sin commit si no hay hallazgos; si aparece una divergencia, se anota y se decide con el usuario.
-- [ ] **T4 · Cierre**
+  - **Resultado (2026-10-27, en línea):** sin divergencias. `go test ./internal/dashboard -run TestSemantic -count=1` → `ok`: `TestSemanticEndpoints` (detector por defecto con `codegraph` falso en el PATH: conector `codegraph`, `index` en la raíz del proyecto), `TestSemanticReindexWithoutCodeGraph` (sin `codegraph`: `native-ast`) y `TestSemanticReindexSurfacesCodeGraphFailure` (fallo visible con 500). No se ejecutó el `codegraph index` real sobre un workspace para no escribir su índice; el camino `NewService(dir, nil, nil)` queda cubierto por esas pruebas con el falso. `cmd/axiom` no tiene pruebas de la reindexación.
+- [x] **T4 · Cierre**
   - `go build ./...`, `go vet ./...`, `go run ./internal/gofmtcheck`, `bash scripts/deadcode-ratchet.sh`, los paquetes tocados con `-count=1` y `git status --porcelain` vacío.
   - Si RDD está activo, evaluar el candidato con `axiom review assess` antes de declararlo terminado.
   - Actualizar este documento y el espejo. Preparar el PR; push, PR y merge los decide el usuario.
+  - **Resultado (2026-10-27):** `go build ./...` → OK; `go vet ./internal/semantic/... ./internal/dashboard/...` → OK; `go run ./internal/gofmtcheck` → OK; `go test ./internal/semantic/... -count=1` → `ok`. `go vet ./...` completo no se pasó (límite de tiempo en esta máquina; se acotó a los paquetes tocados y su consumidor). **No disponible:** `bash scripts/deadcode-ratchet.sh` entra en pánico dentro de `golang.org/x/tools@v0.30.0/go/ssa` con Go 1.27 (`panic: unexpected expr: *ast.KeyValueExpr`), ajeno al cambio; queda para la CI. RDD apagado, sin evaluación de riesgo. Commit de la unidad: `57679e91`.
 
 ## Criterios de aceptación
 
@@ -91,7 +93,8 @@ Re-comprobar al iniciar.
 
 - 2026-10-13: documento abierto desde el cierre del ODD `windows-pruebas-entorno-y-ci`. Líneas verificadas en el árbol de `main` `eea58801`. No iniciado.
 - 2026-10-27: conciliado con el espejo de Engram (#628, mismo contenido). Implementación autorizada por la sesión de origen. T1 y T2 hechas. TDD: estándar (`openspec/config.yaml`, `strict_tdd: false`), runner `go test`. RDD: `off (decided by default)`.
+- 2026-10-27: T3 y T4 hechas. Pendiente: push y PR con permiso del usuario (`axiom-worktree.ps1 pr semantic-detector-codegraph`, etiqueta `type:bug`).
 
 ## Siguiente paso
 
-El usuario lanza esta ejecución en una sesión aparte (tercer ODD de la serie: H8, aislamiento de pruebas, H2). Empezar por la conciliación: `mem_context`, `mem_search` del topic, este fichero, `git fetch --prune origin`, y comprobar que las líneas citadas siguen siendo válidas. Después T1.
+Tareas T1 a T4 hechas en la rama `fix/semantic-detector-codegraph`. Falta el push y el PR contra `main` con `scripts/axiom-worktree.ps1 pr semantic-detector-codegraph` (etiqueta `type:bug`), que decide el usuario; tras el merge, `scripts/axiom-worktree.ps1 done semantic-detector-codegraph`.
