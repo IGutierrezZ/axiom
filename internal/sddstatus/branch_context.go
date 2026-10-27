@@ -43,7 +43,16 @@ type branchQuery struct {
 // bloqueantes (git no disponible, ruta fuera de git, `HEAD` ilegible).
 type branchContext struct {
 	wrongBranch *branch.Verdict
-	notes       []string
+	// registeredRoots son las raíces que `axiom branch ensure` registró para el cambio (worktrees,
+	// incluido el de archivado, y la raíz del repositorio en `in_place`): entran en allowedEditRoots
+	// junto con las concesiones (REQ-25.43, design D-14). Sin registro, vacío.
+	registeredRoots []string
+	// rebase reubica una ruta del checkout principal de un repositorio registrado en su worktree.
+	// Nunca es nula: sin registro es la identidad.
+	rebase func(string) string
+	// plans son las fuentes de tareas con la base contra la que se resuelven sus rutas relativas.
+	plans []planText
+	notes []string
 }
 
 // resolveBranchContext es la guarda B (REQ-25.42, design D-13): consulta el veredicto único de S8
@@ -52,12 +61,15 @@ type branchContext struct {
 // comprobar no bloquea y deja un aviso. Un repositorio de código no se evalúa fuera de apply porque el
 // veredicto lo declara `not_applicable` con el consultante `status`.
 func resolveBranchContext(q branchQuery) branchContext {
+	// Las raíces registradas no dependen de la guarda: se leen siempre, aunque esté desactivada.
+	registered := resolveRegisteredFacts(q)
+	result := branchContext{registeredRoots: registered.roots, rebase: registered.rebase, plans: registered.plans, notes: registered.notes}
 	eng := engine.Default()
 	if branchEngine != nil {
 		eng = branchEngine()
 	}
 	if eng == nil {
-		return branchContext{}
+		return result
 	}
 	phase := branch.ContextOrdinary
 	if q.archivePhase {
@@ -68,7 +80,6 @@ func resolveBranchContext(q branchQuery) branchContext {
 		consultant = branch.ConsultantApply
 	}
 
-	var result branchContext
 	seen := map[string]bool{}
 	note := func(text string) {
 		if !seen[text] {
@@ -121,7 +132,7 @@ func touchedCodeRepositories(q branchQuery) []string {
 	seen := map[string]bool{}
 	var roots []string
 	for _, plan := range q.plans {
-		blocking, _ := detectUnauthorizedEditRootsForCurrentWorkUnit(plan.text, q.workspaceRoot, nil)
+		blocking, _ := detectUnauthorizedEditRootsForCurrentWorkUnit(plan.text, q.workspaceRoot, nil, identityRebase)
 		for _, root := range blocking {
 			if seen[root] || gitRootOf(root) != root {
 				continue

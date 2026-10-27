@@ -695,7 +695,8 @@ func resolveByPreferenceOrder(options ResolveOptions) (Status, error) {
 	if bctx.wrongBranch != nil {
 		applyState = ApplyBlocked
 	} else {
-		applyState, unauthorizedRoots = applyEditAuthorityBlock(applyState, &blockedReasons, editPlans, workspaceRoot, append([]string{workspaceRoot}, grantedRoots...))
+		allowed := append(append([]string{workspaceRoot}, grantedRoots...), bctx.registeredRoots...)
+		applyState, unauthorizedRoots = applyEditAuthorityBlock(applyState, &blockedReasons, bctx.plans, workspaceRoot, allowed, bctx.rebase)
 	}
 	blockedReasons.notes = append(blockedReasons.notes, bctx.notes...)
 	var consent *SDDIntegrationConsentResult
@@ -746,7 +747,7 @@ func resolveByPreferenceOrder(options ResolveOptions) (Status, error) {
 			gateQuestion = &envelope
 		}
 	}
-	status := baseStatus(ArtifactStoreOpenSpec, workspaceRoot, grantedRoots, &changeName, &changeRoot, nextRecommended, append([]string{}, blockedReasons.genuine...))
+	status := baseStatus(ArtifactStoreOpenSpec, workspaceRoot, append(append([]string{}, grantedRoots...), bctx.registeredRoots...), &changeName, &changeRoot, nextRecommended, append([]string{}, blockedReasons.genuine...))
 	status.Consent = consent
 	status.Governance = governance
 	status.GateQuestion = gateQuestion
@@ -839,7 +840,7 @@ func resolveEngramStatus(workspaceRoot string, requestedChange string, includeIn
 	// reason). This path passes nil unconditionally rather than resolving a
 	// synthetic changeRoot that loadGovernance was never meant to read.
 	blockedReasons := artifactBlockedReasons(artifacts, taskProgress, changeName, nil)
-	applyState, _ = applyEditAuthorityBlock(applyState, &blockedReasons, []planText{{name: "tasks.md", text: artifactsByType["tasks"].Content}}, workspaceRoot, []string{workspaceRoot})
+	applyState, _ = applyEditAuthorityBlock(applyState, &blockedReasons, []planText{{name: "tasks.md", text: artifactsByType["tasks"].Content}}, workspaceRoot, []string{workspaceRoot}, identityRebase)
 	dependencies := resolveDependencies(artifacts, applyState, coreReady)
 	nextRecommended := resolveNextRecommended(dependencies, applyState, nil)
 	changeRoot := fmt.Sprintf("engram:sdd/%s", changeName)
