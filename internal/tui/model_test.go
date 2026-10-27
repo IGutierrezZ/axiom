@@ -8305,6 +8305,15 @@ func TestInitializeModelPickerWorkingDirectoryFailureShowsDiscoveryFallback(t *t
 }
 
 func TestRuntimeCatalogDiscoveryIgnoresStaleProjectResults(t *testing.T) {
+	// initializeModelPicker resolves the effective OpenCode config from the
+	// user's home, OPENCODE_CONFIG_DIR and XDG_CONFIG_HOME; isolate all of them
+	// so a real opencode.json on the host cannot add providers to the catalog.
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
+	t.Setenv("XDG_CONFIG_HOME", "")
+	t.Setenv("OPENCODE_CONFIG_DIR", t.TempDir())
+
 	originalDiscover := modelPickerCatalogDiscoverer
 	originalDir := modelPickerWorkingDir
 	originalSettingsPath := modelPickerSettingsPath
