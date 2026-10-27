@@ -180,9 +180,14 @@ func (d *Detector) findSemanticToolsInJSON(content []byte) []string {
 	return uniqueStrings(found)
 }
 
+// ResolveCodeGraph devuelve la ruta del binario de CodeGraph, o un error si no se encuentra.
+func (d *Detector) ResolveCodeGraph() (string, error) {
+	return d.lookPathFunc("codegraph")
+}
+
 // CheckCodeGraphInPath comprueba si el binario de CodeGraph está en el PATH del sistema.
 func (d *Detector) CheckCodeGraphInPath() bool {
-	_, err := d.lookPathFunc("codegraph")
+	_, err := d.ResolveCodeGraph()
 	return err == nil
 }
 
