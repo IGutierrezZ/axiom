@@ -2,7 +2,7 @@
 
 > **Documento vivo ODD.** Fichero autoritativo: `odd/tasks/semantic-detector-codegraph.md`, en el repositorio `axiom`. La rama y el worktree dedicados se crean al iniciar la ejecución, nunca en `C:\repos\axiom`.
 > Espejo de recuperación en Engram: topic `odd/semantic-detector-codegraph/tasks`, proyecto `axiom` (creado el 2026-10-13 en estado propuesto; se actualiza al iniciar la ejecución).
-> **Estado: En ejecución (2026-10-27).** Rama `fix/semantic-detector-codegraph`, worktree `C:\repos\axiom-wt\semantic-detector-codegraph`, desde `origin/main` `e4b4cc3d`.
+> **Estado: Cerrado (2026-10-27).** Entregado en [IGutierrezZ/axiom#180](https://github.com/IGutierrezZ/axiom/pull/180), fusionado en `main` como `8c4f59fa`.
 > Origen: hallazgo H2 del ODD `windows-pruebas-entorno-y-ci` (`odd/tasks/windows-pruebas-entorno-y-ci.md`).
 
 ## Objetivo
@@ -93,8 +93,16 @@ Re-comprobar al iniciar.
 
 - 2026-10-13: documento abierto desde el cierre del ODD `windows-pruebas-entorno-y-ci`. Líneas verificadas en el árbol de `main` `eea58801`. No iniciado.
 - 2026-10-27: conciliado con el espejo de Engram (#628, mismo contenido). Implementación autorizada por la sesión de origen. T1 y T2 hechas. TDD: estándar (`openspec/config.yaml`, `strict_tdd: false`), runner `go test`. RDD: `off (decided by default)`.
-- 2026-10-27: T3 y T4 hechas. Pendiente: push y PR con permiso del usuario (`axiom-worktree.ps1 pr semantic-detector-codegraph`, etiqueta `type:bug`).
+- 2026-10-27: T3 y T4 hechas.
+
+## Entrega
+
+| PR | Commits en la rama | Commit en `main` | Contenido |
+|---|---|---|---|
+| [IGutierrezZ/axiom#180](https://github.com/IGutierrezZ/axiom/pull/180) | `57679e91`, `1f2c3995` | `8c4f59fa` | T1 a T4 |
+
+Fusionado con squash el 2026-10-27, con la CI en verde (Unit Tests, Go Format y Claude Network-None Runtime, entre otras). El repositorio no admite auto-merge, así que el merge se hizo a mano en cuanto la CI terminó. Worktree y rama retirados con `scripts/axiom-worktree.ps1 done`.
 
 ## Siguiente paso
 
-Tareas T1 a T4 hechas en la rama `fix/semantic-detector-codegraph`. Falta el push y el PR contra `main` con `scripts/axiom-worktree.ps1 pr semantic-detector-codegraph` (etiqueta `type:bug`), que decide el usuario; tras el merge, `scripts/axiom-worktree.ps1 done semantic-detector-codegraph`.
+Ninguno en este ODD. Seguimiento fuera de alcance: `scripts/deadcode-ratchet.sh` no funciona en local con Go 1.27, porque `golang.org/x/tools@v0.30.0` entra en pánico (`unexpected expr: *ast.KeyValueExpr`).
