@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -45,9 +46,10 @@ type VerdictQuery struct {
 // El `error` se reserva para los fallos internos —configuración, kickoff o registro
 // ilegibles— y es siempre un *branch.RefusalError `config_invalid` con su continuación.
 //
-// Los nombres esperados salen, para la rama del cambio y las de rol, del registro local
-// (REQ-25.12) y, sin él, de la política; la instantánea del kickoff se suma con el escritor
-// del sellado (S8-c2). No consulta los cambios activos de la rama de integración.
+// Los nombres esperados salen, para la rama del cambio y las de rol, de la instantánea del
+// kickoff (REQ-25.36) si tiene entrada para el repositorio y, sin kickoff, del registro local
+// (REQ-25.12) y de la política (expectedNames). No consulta los cambios activos de la rama de
+// integración.
 func (e *Engine) VerdictFor(ctx context.Context, q VerdictQuery) (branch.Verdict, error) {
 	if err := ctx.Err(); err != nil {
 		return branch.Verdict{}, err
@@ -80,22 +82,28 @@ func (e *Engine) VerdictFor(ctx context.Context, q VerdictQuery) (branch.Verdict
 		return branch.Verdict{}, &branch.RefusalError{Refusal: *refusal}
 	}
 
+	// Con kickoff, la instantánea de política git fija los nombres esperados; un kickoff sin ella (un
+	// cambio preexistente, un retro-sellado con `--infer`) deja el cambio exento (REQ-25.37, R15).
+	var snapshot *kickoff.GitSnapshot
 	if in.Lane != branch.LaneODD {
 		sealed, err := kickoff.Load(filepath.Join(loc.PlanningHome, "changes", q.Change))
 		if err != nil {
 			return branch.Verdict{}, kickoffUnreadable(loc, q.Change, err)
 		}
 		if sealed != nil {
-			return exempt(in, "el kickoff.yaml del cambio no tiene instantánea de política git: queda exento de las guardas de rama (REQ-25.37)"), nil
+			if sealed.Git == nil {
+				return exempt(in, "el kickoff.yaml del cambio no tiene instantánea de política git: queda exento de las guardas de rama (REQ-25.37)"), nil
+			}
+			snapshot = sealed.Git
 		}
 	}
 
-	// Sin kickoff, el nombre esperado sale del registro y de la política, y el nombre
+	// Sin instantánea de kickoff, el nombre esperado sale del registro y de la política, y el nombre
 	// del cambio compone la rama y el fichero del registro: uno que no forma un nombre de rama válido
 	// (un espacio, un carácter reservado) no tiene rama que comprobar. Es `not_applicable` con aviso,
 	// no un fallo interno: la guarda no bloquea lo que no puede comprobar. Va antes de abrir el
 	// registro, que no puede nombrarse con ese cambio.
-	if q.Change != "" {
+	if snapshot == nil && q.Change != "" {
 		if invalid := gitref.ValidBranchComponent(q.Change); invalid != nil {
 			return invalidChangeName(in, invalid), nil
 		}
@@ -131,7 +139,7 @@ func (e *Engine) VerdictFor(ctx context.Context, q VerdictQuery) (branch.Verdict
 	in.Repo = filepath.Base(root)
 	in.Current, in.Detached = current, detached
 	in.Master = master
-	in.Expected = expectedNames(q, loc, record, root, repoCommon)
+	in.Expected = expectedNames(q, loc, record, snapshot, root, repoCommon)
 	return branch.Decide(in), nil
 }
 
@@ -219,14 +227,16 @@ func roleOf(loc workspace.Location, isPlanning bool) branch.RepoRole {
 }
 
 // expectedNames compone los nombres esperados del repositorio cuya raíz es root y cuyo git
-// common dir es repoCommon (design D-10, «Nombres esperados»): para la rama del cambio y las de
-// rol, el registro (la rama registrada o las excepciones de REQ-25.12) y, sin él, la política del
-// repositorio; para la de archivado, el registro si `ensure --archive` recibió `--prefix` y, si no,
-// `<rama del cambio>-archive`. El carril ODD no tiene rama de archivado.
-func expectedNames(q VerdictQuery, loc workspace.Location, record *branch.Record, root, repoCommon string) branch.ExpectedNames {
+// common dir es repoCommon (design D-10, «Nombres esperados»). Para la rama del cambio y las de
+// rol: (1) la instantánea del kickoff, si tiene entrada para el repositorio; (2) sin ella, el
+// registro (la rama registrada o las excepciones de REQ-25.12); (3) la política del repositorio.
+// Para la de archivado: el registro si `ensure --archive` recibió `--prefix`; si no, la instantánea;
+// si no, `<rama del cambio>-archive`. El carril ODD no tiene rama de archivado.
+func expectedNames(q VerdictQuery, loc workspace.Location, record *branch.Record, snapshot *kickoff.GitSnapshot, root, repoCommon string) branch.ExpectedNames {
 	policy := branch.ResolvePolicy(loc.Config)
 	effective := branch.RepoPolicy{IntegrationBranch: policy.IntegrationBranch, BranchPrefix: policy.BranchPrefix}
-	if relative, inside := relativeWithin(loc.Master, root); inside {
+	relative, inside := relativeWithin(loc.Master, root)
+	if inside {
 		effective = policy.For(relative)
 	}
 
@@ -242,17 +252,35 @@ func expectedNames(q VerdictQuery, loc workspace.Location, record *branch.Record
 			changeBranch = effective.BranchPrefix + "/" + q.Change
 		}
 	}
+	// La instantánea manda sobre el registro y la política en la rama del cambio y en las de rol; un
+	// repositorio al que no da rama del cambio (uno fuera de la carpeta maestra, o un repositorio de
+	// código que no tocan los roles sellados) sigue con los nombres de arriba.
+	entry, fromSnapshot := snapshotEntry(snapshot, relative, inside)
+	snapshotChange := snapshotBranch(entry, "change")
+	fromSnapshot = fromSnapshot && snapshotChange != ""
+	if fromSnapshot {
+		changeBranch = snapshotChange
+	}
 	names := branch.ExpectedNames{Change: changeBranch, Integration: effective.IntegrationBranch}
 
 	// Con dos o más roles que tocan el repositorio hay ramas de rol (REQ-25.4); las registradas
 	// valen aunque el kickoff aún no las nombre.
 	roles := make(map[string]bool, len(recordedRoles))
-	for _, name := range recordedRoles {
-		roles[name] = true
-	}
-	if touching := rolesTouching(loc, root, q.SealRoles); len(touching) >= 2 {
-		for _, role := range touching {
-			roles[changeBranch+"-"+role] = true
+	switch {
+	case fromSnapshot:
+		for _, named := range entry.Branches {
+			if named.Kind == "role" {
+				roles[named.Name] = true
+			}
+		}
+	default:
+		for _, name := range recordedRoles {
+			roles[name] = true
+		}
+		if touching := rolesTouching(loc, root, q.SealRoles); len(touching) >= 2 {
+			for _, role := range touching {
+				roles[changeBranch+"-"+role] = true
+			}
 		}
 	}
 	for name := range roles {
@@ -261,16 +289,42 @@ func expectedNames(q VerdictQuery, loc workspace.Location, record *branch.Record
 	slices.Sort(names.Roles)
 
 	if q.Lane != branch.LaneODD {
-		switch {
+		switch snapshotArchive := snapshotBranch(entry, "archive"); {
 		case recordedArchive != "":
 			names.Archive = recordedArchive
 		case record != nil && record.ArchivePrefix != "":
 			names.Archive = record.ArchivePrefix + "/" + q.Change + "-archive"
+		case fromSnapshot && snapshotArchive != "":
+			names.Archive = snapshotArchive
 		default:
 			names.Archive = changeBranch + "-archive"
 		}
 	}
 	return names
+}
+
+// snapshotEntry devuelve la entrada de la instantánea del repositorio cuya ruta relativa a la
+// carpeta maestra es relative (`inside` es falso si queda fuera de ella: no tiene entrada propia).
+func snapshotEntry(snapshot *kickoff.GitSnapshot, relative string, inside bool) (kickoff.GitSnapshotRepo, bool) {
+	if snapshot == nil || !inside {
+		return kickoff.GitSnapshotRepo{}, false
+	}
+	for _, repo := range snapshot.Repositories {
+		if path.Clean(strings.ReplaceAll(repo.Path, `\`, "/")) == relative {
+			return repo, true
+		}
+	}
+	return kickoff.GitSnapshotRepo{}, false
+}
+
+// snapshotBranch es el nombre de la primera rama de ese tipo de la entrada, o vacío.
+func snapshotBranch(entry kickoff.GitSnapshotRepo, kind string) string {
+	for _, named := range entry.Branches {
+		if named.Kind == kind {
+			return named.Name
+		}
+	}
+	return ""
 }
 
 // recordedBranches devuelve las ramas que el registro guarda para el repositorio cuyo git common

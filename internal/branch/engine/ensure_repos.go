@@ -22,6 +22,10 @@ import (
 type gatherOptions struct {
 	exceptions branch.Exceptions
 	repos      []string
+	// sealing y sealRoles piden los hechos de un cambio como quedarían al sellarlo con esos roles
+	// (Engine.Snapshot), en lugar de los de su kickoff, que aún no existe.
+	sealing   bool
+	sealRoles []string
 }
 
 // mergeExceptions devuelve las excepciones efectivas del cambio (REQ-25.12). Sin registro rigen

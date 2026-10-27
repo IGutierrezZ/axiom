@@ -184,9 +184,13 @@ func (e *Engine) gatherWith(ctx context.Context, operation, cwd, change string, 
 		return changeFacts{}, refusal
 	}
 
-	hasKickoff, sealed, refusal := sealedRoles(cwd, location, change, lane)
+	hasKickoff, sealed, snapshot, refusal := sealedRoles(cwd, location, change, lane)
 	if refusal != nil {
 		return changeFacts{}, refusal
+	}
+	if options.sealing {
+		// `kickoff seal` calcula la instantánea con los roles que va a sellar: aún no hay kickoff.
+		hasKickoff, sealed, snapshot = true, options.sealRoles, nil
 	}
 	code, skipped, refusal := e.declaredRepositories(ctx, operation, location, &planning, sealed)
 	if refusal != nil {
@@ -230,6 +234,7 @@ func (e *Engine) gatherWith(ctx context.Context, operation, cwd, change string, 
 			Skipped:       skipped,
 			HasKickoff:    hasKickoff,
 			SealedRoles:   sealed,
+			Snapshot:      snapshot,
 			Policy:        branch.ResolvePolicy(location.Config),
 			Exceptions:    exceptions,
 			// La raíz de worktrees es la de las preferencias del hub o, sin ellas, la de por
@@ -307,17 +312,18 @@ func (e *Engine) completeFacts(ctx context.Context, operation string, location w
 
 // sealedRoles devuelve los roles sellados en el kickoff del cambio. El carril ODD no
 // tiene kickoff (REQ-25.13) y un cambio sin sellar no tiene roles aún: ambos devuelven
-// hasKickoff = false. Un kickoff que no se puede leer no se trata como «sin sellar»
-// (T-10): es un rechazo.
-func sealedRoles(cwd string, location workspace.Location, change string, lane branch.Lane) (hasKickoff bool, roles []string, refusal *branch.Refusal) {
+// hasKickoff = false. Con instantánea de política git (REQ-25.36) la devuelve también: el plan
+// conserva sus nombres de rama (decisión T2). Un kickoff que no se puede leer no se trata como
+// «sin sellar» (T-10): es un rechazo.
+func sealedRoles(cwd string, location workspace.Location, change string, lane branch.Lane) (hasKickoff bool, roles []string, snapshot *kickoff.GitSnapshot, refusal *branch.Refusal) {
 	if lane == branch.LaneODD {
-		return false, nil, nil
+		return false, nil, nil, nil
 	}
 	changeRoot := filepath.Join(location.PlanningHome, "changes", change)
 	sealed, err := kickoff.Load(changeRoot)
 	if err != nil {
 		kickoffPath := filepath.Join(changeRoot, kickoff.KickoffFileName)
-		return false, nil, &branch.Refusal{
+		return false, nil, nil, &branch.Refusal{
 			Code:         branch.CodeConfigInvalid,
 			Message:      fmt.Sprintf("el kickoff del cambio %s no se puede leer: %v", change, err),
 			Continuation: fmt.Sprintf("restaura o corrige %s y comprueba con `axiom sdd status %s --cwd %s`", pathquote.Quote(kickoffPath), change, pathquote.Quote(cwd)),
@@ -325,12 +331,12 @@ func sealedRoles(cwd string, location workspace.Location, change string, lane br
 		}
 	}
 	if sealed == nil {
-		return false, nil, nil
+		return false, nil, nil, nil
 	}
 	for _, role := range sealed.Config.Roles {
 		roles = append(roles, role.Role)
 	}
-	return true, roles, nil
+	return true, roles, sealed.Git, nil
 }
 
 // declaredRepository es una ruta que declara un rol en axiom.yaml.

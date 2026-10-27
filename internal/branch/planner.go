@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/gitref"
+	"github.com/IGutierrezZ/axiom/v3/internal/kickoff"
 	"github.com/IGutierrezZ/axiom/v3/internal/multirole"
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
@@ -78,8 +79,12 @@ type PlanInput struct {
 	Skipped       []SkippedPath
 	// HasKickoff dice si el cambio tiene `kickoff.yaml`; SealedRoles son sus roles.
 	// Antes del sellado el plan solo contiene la rama del cambio en el planning home.
-	HasKickoff   bool
-	SealedRoles  []string
+	HasKickoff  bool
+	SealedRoles []string
+	// Snapshot es la instantánea de política git del kickoff del cambio (REQ-25.36, decisión T2),
+	// o nil si no la tiene (un cambio preexistente o retro-sellado, o aún sin sellar): con ella
+	// sus nombres de rama prevalecen sobre la política (planner_snapshot.go).
+	Snapshot     *kickoff.GitSnapshot
 	Policy       Policy
 	Exceptions   Exceptions
 	WorktreeRoot string
@@ -376,6 +381,11 @@ func planRepository(in PlanInput, selection repoSelection) (RepoPlan, *Refusal) 
 	if in.Exceptions.Branch != "" {
 		changeBranch = in.Exceptions.Branch
 	}
+	// Con instantánea, sus nombres prevalecen sobre la política y las excepciones (D-10).
+	snapshot, hasSnapshot := snapshotRepo(in, facts)
+	if named := snapshotBranch(snapshot, KindChange, ""); hasSnapshot && named != "" {
+		changeBranch = named
+	}
 	repo.Branches = []BranchPlan{{
 		Name:     changeBranch,
 		Kind:     KindChange,
@@ -389,8 +399,12 @@ func planRepository(in PlanInput, selection repoSelection) (RepoPlan, *Refusal) 
 		if refusal := validateRoleName(in, role, changeBranch); refusal != nil {
 			return RepoPlan{}, refusal
 		}
+		roleBranch := changeBranch + "-" + role
+		if named := snapshotBranch(snapshot, KindRole, role); hasSnapshot && named != "" {
+			roleBranch = named
+		}
 		repo.Branches = append(repo.Branches, BranchPlan{
-			Name:     changeBranch + "-" + role,
+			Name:     roleBranch,
 			Kind:     KindRole,
 			RoleID:   role,
 			From:     changeBranch,
