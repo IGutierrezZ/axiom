@@ -25,6 +25,11 @@ This page covers how to run the Go tests on Windows and when CI runs the Windows
   - Unset, it is 2 on Windows and 1 elsewhere.
   - Production budgets never change.
   - Raise it on a loaded machine, for example `$env:AXIOM_TEST_TIMEOUT_SCALE = "3"`. Tests are never retried automatically.
+- **Tests that build binaries skip unless you opt in.** Corporate EDR tools (Cortex XDR) block and delete the unsigned Go binaries that some tests compile into `%TEMP%` and run, and every local run raises a security alert.
+  - Those tests call `testenv.RequireBinaryBuilds(t)` before any `go build` and skip with a message naming `AXIOM_TEST_BUILD_BINARIES`. `bench/` is a separate Go module and carries an equivalent local helper.
+  - The variable must be `1` or `true`. It is not implied by `CI`: the workflows set `AXIOM_TEST_BUILD_BINARIES: "1"` explicitly, so CI runs them all.
+  - On a machine without such an EDR, opt in with `$env:AXIOM_TEST_BUILD_BINARIES = "1"`.
+  - Affected: `internal/app`, `internal/update`, `internal/opencode`, `internal/components/gga`, `bench` and `e2e/organicruntime` (its `TestMain` builds nothing without the variable).
 - **`bench/` is Linux-only.** Its tests execute `#!/bin/sh` fakes and drive a TTY, so CI runs them only on Ubuntu.
 
 ## When CI runs the Windows tests

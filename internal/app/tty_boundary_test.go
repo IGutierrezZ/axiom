@@ -15,6 +15,7 @@ import (
 
 	"github.com/IGutierrezZ/axiom/v3/internal/state"
 	"github.com/IGutierrezZ/axiom/v3/internal/system"
+	"github.com/IGutierrezZ/axiom/v3/internal/testenv"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
@@ -228,6 +229,7 @@ func TestBuiltBinaryClosedStdinRefusesBeforeBubbleTea(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("closed-stdin process coverage is compile-only on Windows")
 	}
+	testenv.RequireBinaryBuilds(t)
 
 	_, sourceFile, _, ok := runtime.Caller(0)
 	if !ok {

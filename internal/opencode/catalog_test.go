@@ -118,6 +118,7 @@ func TestDiscoverCatalogRejectsInvalidOutput(t *testing.T) {
 }
 
 func TestRunCatalogCommandCancelsOverflowingChild(t *testing.T) {
+	testenv.RequireBinaryBuilds(t)
 	dir := t.TempDir()
 	helper := filepath.Join(dir, "catalog-helper")
 	if runtime.GOOS == "windows" {
