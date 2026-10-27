@@ -393,3 +393,109 @@ func TestRepositoryAxiomYamlDeclaresItsGitPolicyAndIsCompliant(t *testing.T) {
 		t.Errorf("el repositorio debe ser conforme:\n%s", output)
 	}
 }
+
+// addLinkedWorktree crea con git real un worktree enlazado de repo en worktree,
+// sobre la rama nueva branch. Hace falta un commit: se crea uno vacío con una
+// identidad fija y sin la configuración del desarrollador.
+func addLinkedWorktree(t *testing.T, repo, worktree, branch string) {
+	t.Helper()
+	for _, args := range [][]string{
+		{"-c", "user.name=Prueba", "-c", "user.email=prueba@example.invalid", "add", "-A"},
+		{"-c", "user.name=Prueba", "-c", "user.email=prueba@example.invalid", "commit", "-q", "--allow-empty", "-m", "inicial"},
+		{"worktree", "add", "-q", "-b", branch, worktree},
+	} {
+		command := exec.Command("git", append([]string{"-C", repo}, args...)...)
+		command.Env = append(os.Environ(), "GIT_CONFIG_GLOBAL="+os.DevNull, "GIT_CONFIG_NOSYSTEM=1", "GIT_TERMINAL_PROMPT=0")
+		if output, err := command.CombinedOutput(); err != nil {
+			t.Fatalf("git %v en %s: %v\n%s", args, repo, err, output)
+		}
+	}
+}
+
+// workspace-planning-home REQ-25.28 (escenario «La validación desde un worktree
+// externo no da falsos errores»): un worktree de repo-backend fuera de la carpeta
+// maestra, sin marcador propio, valida contra la carpeta maestra resuelta desde su
+// checkout principal y termina con COMPLIANT. Es el arnés de S9-c1: el CLI se
+// ejecuta en un subproceso del binario de pruebas (runAxiom), sin compilar nada.
+func TestWorkspaceValidateFromAnExternalLinkedWorktreeIsCompliant(t *testing.T) {
+	requireRealGit(t)
+	ws := workspacetest.Canonical(t)
+	workspacetest.InitGit(t, ws.Backend)
+	worktree := filepath.Join(t.TempDir(), "x", "repo-backend")
+	addLinkedWorktree(t, ws.Backend, worktree, "inc/x")
+
+	output, code := runAxiom(t, "workspace", "validate", "--path", worktree)
+	if code != 0 {
+		t.Fatalf("salió con %d, se esperaba 0:\n%s", code, output)
+	}
+	wantOutput(t, output, "COMPLIANT", "Proyecto: ejemplo-canonico", "worktree enlazado")
+	if strings.Contains(output, "NON-COMPLIANT") || strings.Contains(output, "No se pudo cargar") {
+		t.Errorf("la validación desde el worktree no debe dar falsos errores:\n%s", output)
+	}
+
+	// La misma carpeta maestra, desde el checkout principal, da el mismo resultado.
+	direct, directCode := runAxiom(t, "workspace", "validate", "--path", ws.Master)
+	if directCode != 0 {
+		t.Fatalf("desde la carpeta maestra salió con %d:\n%s", directCode, direct)
+	}
+	wantOutput(t, direct, "Directorio base: "+ws.Master, "Total rutas verificadas: 4")
+	wantOutput(t, output, "Directorio base: "+ws.Master, "Total rutas verificadas: 4")
+}
+
+// Un worktree sin marcador propio y sin planning home en su checkout principal no
+// se valida contra nada: el rechazo de siempre, con código 1.
+func TestWorkspaceValidateFromALinkedWorktreeWithoutAnyMarkerKeepsTheError(t *testing.T) {
+	requireRealGit(t)
+	repo := t.TempDir()
+	outsideAnyGitRepository(t, repo)
+	workspacetest.InitGit(t, repo)
+	worktree := filepath.Join(t.TempDir(), "x")
+	addLinkedWorktree(t, repo, worktree, "inc/x")
+
+	output, code := runAxiom(t, "workspace", "validate", "--path", worktree)
+	if code != 1 {
+		t.Fatalf("salió con %d, se esperaba 1:\n%s", code, output)
+	}
+	wantOutput(t, output, "No se pudo cargar la configuración de Axiom")
+}
+
+// REQ-25.28: `--path` sigue siendo la carpeta maestra cuando tiene marcador propio,
+// también en un worktree enlazado de un monorepo embebido: no se redirige al
+// checkout principal.
+func TestWorkspaceValidateKeepsPathAsTheMasterWhenTheWorktreeHasItsOwnMarker(t *testing.T) {
+	requireRealGit(t)
+	master := validateWorkspace(t, "", "")
+	workspacetest.InitGit(t, master)
+	worktree := filepath.Join(t.TempDir(), "x", "repo")
+	addLinkedWorktree(t, master, worktree, "inc/x")
+
+	output, code := runAxiom(t, "workspace", "validate", "--path", worktree)
+	if code != 0 {
+		t.Fatalf("salió con %d, se esperaba 0:\n%s", code, output)
+	}
+	wantOutput(t, output, "COMPLIANT", "Directorio base: "+worktree)
+	if strings.Contains(output, "worktree enlazado") {
+		t.Errorf("con marcador propio no se redirige a la carpeta maestra del checkout principal:\n%s", output)
+	}
+}
+
+// D-15: LocateAt sigue evaluando solo el directorio dado, también desde un
+// worktree enlazado sin marcador (lo usan las llamadas que ya conocen la raíz).
+func TestLocateAtDoesNotLeaveAnUnmarkedLinkedWorktree(t *testing.T) {
+	requireRealGit(t)
+	ws := workspacetest.Canonical(t)
+	workspacetest.InitGit(t, ws.Backend)
+	worktree := filepath.Join(t.TempDir(), "x", "repo-backend")
+	addLinkedWorktree(t, ws.Backend, worktree, "inc/x")
+
+	loc, err := workspace.LocateAt(worktree)
+	if err != nil {
+		t.Fatalf("LocateAt(%q) = %v", worktree, err)
+	}
+	if loc.Origin != workspace.OriginStart || len(loc.Notes) != 0 {
+		t.Fatalf("Location = %+v, LocateAt solo evalúa el directorio dado", loc)
+	}
+	if !strings.EqualFold(filepath.Clean(loc.WorkspaceRoot), filepath.Clean(worktree)) {
+		t.Fatalf("WorkspaceRoot = %q, se esperaba el propio worktree %q", loc.WorkspaceRoot, worktree)
+	}
+}

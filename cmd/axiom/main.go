@@ -578,7 +578,10 @@ func runWorkspaceValidate(args []string) {
 		os.Exit(1)
 	}
 
-	configFile := filepath.Join(baseDir, "axiom.yaml")
+	baseDir, configFile, locateNotes := validationTarget(baseDir)
+	for _, note := range locateNotes {
+		fmt.Printf("[AVISO] %s\n", note)
+	}
 	cfg, err := workspace.LoadConfig(configFile)
 	if err != nil {
 		// Una declaración inválida acumula todas sus violaciones en un único
