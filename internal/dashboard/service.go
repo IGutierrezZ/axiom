@@ -860,7 +860,7 @@ func (s *Service) InitProject(req ProjectInitRequest) (*hub.InitResult, error) {
 
 // MigrateIncompleteTasksToCumulative transfiere tareas pendientes de un rol no bloqueante a su incremento acumulativo correspondiente.
 func (s *Service) MigrateIncompleteTasksToCumulative(changeName, role string) (int, error) {
-	path, _, err := s.FindIncrementPath(changeName)
+	path, kind, err := s.FindIncrementPath(changeName)
 	if err != nil {
 		return 0, err
 	}
@@ -868,6 +868,14 @@ func (s *Service) MigrateIncompleteTasksToCumulative(changeName, role string) (i
 	root, err := s.planningRoot()
 	if err != nil {
 		return 0, err
+	}
+	// REQ-25.19: la guarda A protege el cambio de origen, que es un cambio activo con rama propia; el
+	// destino `cumulative-<rol>` es un sumidero exento por nombre y un origen archivado ya no es
+	// un cambio. El rechazo no deja nada escrito.
+	if kind == "active" {
+		if err := guardIncrementFolder(path, changeName, "migrar tareas al acumulativo"); err != nil {
+			return 0, err
+		}
 	}
 	var tasksFiles []string
 
@@ -986,69 +994,13 @@ func (s *Service) CreateIncrement(req CreateIncrementRequest) (*CreateIncrementR
 		}
 	}
 
-	if err := os.MkdirAll(activePath, 0755); err != nil {
-		return nil, fmt.Errorf("error al crear el directorio del incremento: %w", err)
+	// REQ-25.32: `ensure` prepara la rama (y, en modo worktree, el worktree) del cambio antes de
+	// escribir nada; el escritor guardado escribe en el planning home que devuelve.
+	planningHome, err := s.ensureIncrementBranch(name)
+	if err != nil {
+		return nil, err
 	}
-
-	intent := strings.TrimSpace(req.Intent)
-	if intent == "" {
-		intent = fmt.Sprintf("Implementación e integración de la funcionalidad %s bajo la metodología SDD.", name)
-	}
-
-	title := humanizeName(name)
-	changeType := strings.TrimSpace(req.Type)
-	if changeType == "" {
-		changeType = "feature"
-	}
-
-	proposalContent := fmt.Sprintf(`# Propuesta: %s (%s)
-
-## Propósito (Intent)
-
-%s
-
----
-
-## Alcance (Scope)
-
-### Dentro de Alcance (In Scope)
-- Diseño, implementación y verificación de las capacidades de %s.
-- Cobertura de pruebas unitarias y validación formal de requerimientos.
-
-### Fuera de Alcance (Out of Scope)
-- Cambios no relacionados directamente con los objetivos de esta iteración.
-
----
-
-## Capacidades (Capabilities)
-
-### Nuevas Capacidades
-- `+"`%s`"+`: Funcionalidad principal introducida por el cambio.
-
----
-
-## Enfoque de Implementación (Approach)
-1. Exploración y definición de especificaciones con escenarios BDD en spec.md.
-2. Diseño técnico detallado y arquitectura en design.md.
-3. Desglose y seguimiento de tareas en tasks.md.
-4. Verificación formal y consolidación de documentación viva en archive.
-`, title, name, intent, name, name)
-
-	if strings.TrimSpace(req.ProposalBody) != "" {
-		proposalContent = req.ProposalBody // INC-19: bytes exactos del renderizador ODD, sin normalizar [D-02]
-	}
-
-	proposalPath := filepath.Join(activePath, "proposal.md")
-	if err := os.WriteFile(proposalPath, []byte(proposalContent), 0644); err != nil {
-		return nil, fmt.Errorf("error al escribir proposal.md: %w", err)
-	}
-
-	return &CreateIncrementResponse{
-		Success: true,
-		Name:    name,
-		Path:    proposalPath,
-		Message: fmt.Sprintf("Incremento %s inicializado correctamente con proposal.md", name),
-	}, nil
+	return s.writeIncrement(planningHome, name, req)
 }
 
 // ContinueIncrement ejecuta la transición del despachador SDD sobre un cambio activo.
@@ -1196,6 +1148,10 @@ func (s *Service) CreateHandoff(req CreateHandoffRequest) (*CreateHandoffRespons
 		return nil, fmt.Errorf("handoff inválido: %w", err)
 	}
 
+	// REQ-25.19: guarda A antes de escribir `handoff.md`; fuera de la rama del cambio se niega sin escribir.
+	if err := guardIncrementFolder(targetPath, change, "crear el handoff"); err != nil {
+		return nil, err
+	}
 	filePath := filepath.Join(targetPath, "handoff.md")
 	if err := handoff.WriteFile(filePath, ho); err != nil {
 		return nil, fmt.Errorf("error al escribir handoff.md: %w", err)

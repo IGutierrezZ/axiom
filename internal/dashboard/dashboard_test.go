@@ -713,6 +713,10 @@ func TestInteractiveSDDOrchestrationEndpoints(t *testing.T) {
 
 	// Inicializar estructura básica de openspec
 	_ = os.MkdirAll(filepath.Join(tempDir, "openspec", "changes"), 0755)
+	// REQ-25.32 (INC-25 S8-c4): crear un incremento ejecuta `ensure`. El flujo siguiente continúa
+	// sobre el cambio recién creado desde la ruta registrada, así que el proyecto usa `in_place`
+	// (el cambio queda en el propio checkout); el modo `worktree` lo cubre service_branch_test.go.
+	gitProject(t, tempDir, hub.WorktreeModeInPlace)
 
 	svc := NewService(tempDir)
 	server := NewServer(svc)

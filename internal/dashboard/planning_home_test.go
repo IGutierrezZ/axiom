@@ -108,6 +108,9 @@ func TestCreateIncrementWritesUnderThePlanningHome(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			svc, ws := canonicalService(t, tt.start)
+			// REQ-25.32: `ensure` precede a la escritura. En un multirepo el repositorio de specs se
+			// trabaja in situ, en su rama de integración (REQ-25.5), de modo que solo necesita git.
+			commitGitRepo(t, ws.Specs)
 
 			res, err := svc.CreateIncrement(CreateIncrementRequest{Name: "mi-cambio", Intent: "Propósito X"})
 			if err != nil {

@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/cli"
+	"github.com/IGutierrezZ/axiom/v3/internal/hub"
 )
 
 func TestAppVersionInitialization(t *testing.T) {
@@ -347,6 +348,10 @@ func TestRunChangeCreate_Success(t *testing.T) {
 		t.Fatalf("error creando tempDir: %v", err)
 	}
 	defer os.RemoveAll(tempDir)
+	// REQ-25.32 (INC-25 S8-c4): crear un cambio ejecuta `ensure`; el proyecto es un repositorio git en
+	// `main` en modo `in_place` para que la carpeta del cambio quede en el propio checkout (el
+	// worktree lo cubre change_create_branch_test.go).
+	changeCreateProject(t, tempDir, hub.WorktreeModeInPlace)
 
 	var stdout, stderr bytes.Buffer
 	args := []string{
@@ -384,6 +389,7 @@ func TestRunChangeCreate_ValidationAndCollision(t *testing.T) {
 		t.Fatalf("error creando tempDir: %v", err)
 	}
 	defer os.RemoveAll(tempDir)
+	changeCreateProject(t, tempDir, hub.WorktreeModeInPlace) // `ensure` exige un repositorio git (REQ-25.32)
 
 	// 1. Nombre inválido
 	var stdout1, stderr1 bytes.Buffer
