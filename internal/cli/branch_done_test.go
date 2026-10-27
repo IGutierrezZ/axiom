@@ -34,14 +34,15 @@ type doneBranchJSON struct {
 }
 
 type doneResultJSON struct {
-	Schema       string `json:"schema"`
-	Operation    string `json:"operation"`
-	Status       string `json:"status"`
-	StatusLabel  string `json:"statusLabel"`
-	Code         string `json:"code"`
-	Message      string `json:"message"`
-	Continuation string `json:"continuation"`
-	Change       string `json:"change"`
+	Schema       string   `json:"schema"`
+	Operation    string   `json:"operation"`
+	Status       string   `json:"status"`
+	StatusLabel  string   `json:"statusLabel"`
+	Code         string   `json:"code"`
+	Message      string   `json:"message"`
+	Continuation string   `json:"continuation"`
+	Change       string   `json:"change"`
+	Warnings     []string `json:"warnings"`
 	Registry     *struct {
 		Present bool `json:"present"`
 	} `json:"registry"`
@@ -127,7 +128,13 @@ func TestBranchDoneRemovesAMergedChangeAndRefusesAnUnmergedOne(t *testing.T) {
 	mergedWorktree, unmergedWorktree := plannedBranchWorktree(t, repo, "x"), plannedBranchWorktree(t, repo, "y")
 	branchTestGit(t, mergedWorktree, "commit", "-q", "--allow-empty", "-m", "trabajo de x")
 	branchTestGit(t, repo, "merge", "-q", "--no-ff", "-m", "fusiona x", "feat/x")
-	branchTestGit(t, unmergedWorktree, "commit", "-q", "--allow-empty", "-m", "trabajo de y, sin fusionar")
+	// Con cambios reales: un commit vacío tendría el mismo árbol que `main` y la capa de árbol
+	// equivalente lo daría por fusionado.
+	if err := os.WriteFile(filepath.Join(unmergedWorktree, "y.txt"), []byte("trabajo de y\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	branchTestGit(t, unmergedWorktree, "add", "-A")
+	branchTestGit(t, unmergedWorktree, "commit", "-q", "-m", "trabajo de y, sin fusionar")
 
 	code, stdout, stderr := runBranchCLI(t, "done", "--change", "x", "--json", "--cwd", repo)
 

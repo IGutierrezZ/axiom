@@ -26,10 +26,17 @@ worktree que se retira.
 
 Antes de eliminar una rama confirma que está fusionada en su destino (la rama de rol, en la de
 seguimiento local; la del cambio y la de archivado, en cada referencia de integración que exista
-entre origin/<integración> y <integración>). En esta versión la fusión se confirma por
-ascendencia (ancestry): la rama es ancestro del destino. El resultado indica, por rama, la capa
-que la confirmó (confirmedBy). Una rama sin fusión confirmada se conserva con
-merge_not_confirmed: ni su worktree ni su rama se tocan.
+entre origin/<integración> y <integración>), por capas y deteniéndose en la primera que confirma:
+ancestry (la rama es ancestro del destino); equivalent_tree (la fusión simulada con git
+merge-tree produce el árbol del destino, de modo que detecta un squash o un rebase aunque el
+destino haya avanzado; exige git 2.38 o superior y, sin él, se omite con un aviso); y pr_merged (el
+gates.yaml del cambio, activo o archivado, tiene la compuerta integration aprobada con evidencia
+pr_merged verificada; no aplica a la rama de archivado, que solo admite las dos primeras). El
+resultado indica, por rama, la capa que la confirmó (confirmedBy). Una rama sin fusión confirmada
+se conserva con merge_not_confirmed: ni su worktree ni su rama se tocan.
+
+Si el worktree tiene un linaje de revisión (RDD) abierto, lo avisa, nombra axiom review abandon y
+elimina igualmente.
 
 Rechaza con dirty_worktree la rama cuyo worktree tiene cambios sin confirmar (con stage, sin
 stage o sin seguimiento; los ficheros ignorados cuentan como limpios): no elimina nada. Con
@@ -104,7 +111,7 @@ func runBranchDone(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintf(stderr, "Error: no se pudo resolver --cwd '%s' (%v). Indica una ruta absoluta con `axiom branch done --change <nombre> --cwd <ruta>`.\n", *cwd, err)
 		return branch.ExitUsage
 	}
-	result := engine.Default().Done(context.Background(), engine.DoneRequest{
+	result := engine.DefaultWithLineages(newBranchLineageProbe()).Done(context.Background(), engine.DoneRequest{
 		CWD: dir, Change: *change, Lane: branch.Lane(*lane), Force: *force, Fetch: *fetch,
 	})
 	return writeBranchResult(result, *asJSON, stdout, stderr)

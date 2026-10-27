@@ -558,6 +558,9 @@ func (f *fakeGit) TreeDirs(_ context.Context, _, rev, relPath string) ([]string,
 func (f *fakeGit) IsAncestor(context.Context, string, string, string) (bool, error) {
 	return false, errors.New("no se usa")
 }
+func (f *fakeGit) MergeTreeEquivalent(context.Context, string, string, string) (bool, bool, error) {
+	return false, false, errors.New("no se usa")
+}
 
 // design D-17: «sin referencia, la lista se omite con un aviso y sin error»; lo mismo
 // ante cualquier fallo de git al evaluar: nunca falla, nunca bloquea, y la lista no se
