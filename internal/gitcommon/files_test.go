@@ -534,6 +534,30 @@ func TestCommonDirFromFilesAgreesWithGitOnRealRepositories(t *testing.T) {
 	})
 }
 
+// design §4.6 (REQ-25.18): con `git init --separate-git-dir` la entrada `.git` es un fichero
+// `gitdir:` que apunta a un git dir sin `commondir`, que es a la vez su common dir; sale de
+// ficheros y coincide con la respuesta de git. Un worktree enlazado de ese repositorio
+// comparte ese mismo directorio.
+func TestCommonDirFromFilesAgreesWithGitOnASeparateGitDir(t *testing.T) {
+	requireGit(t)
+	ctx := context.Background()
+	base := t.TempDir()
+	root := mkdirAll(t, filepath.Join(base, "arbol"))
+	separate := filepath.Join(base, "almacen.git")
+	runGit(t, root, "init", "-q", "-b", "main", "--separate-git-dir", separate)
+	runGit(t, root, "commit", "-q", "--allow-empty", "-m", "inicial")
+	linked := filepath.Join(base, "enlazado")
+	runGit(t, root, "worktree", "add", "-q", "-b", "inc/x", linked, "HEAD")
+
+	want, err := CommonDir(ctx, root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wantCommonDir(t, root, want)
+	wantCommonDir(t, root, separate)
+	wantCommonDir(t, linked, separate)
+}
+
 func TestCommonDirFromFilesReadsTheCommondirFile(t *testing.T) {
 	// linkedFixture crea un worktree enlazado sintético: `.git` es un fichero que apunta a
 	// un git dir con el `commondir` dado.

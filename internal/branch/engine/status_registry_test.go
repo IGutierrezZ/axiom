@@ -338,6 +338,24 @@ func TestStatusRefusesALaneThatCannotNameARegistry(t *testing.T) {
 	}
 }
 
+// La continuación que reconstruye el registro cita el nombre del cambio como una palabra del
+// intérprete: un nombre con espacios no se parte en dos argumentos.
+func TestRegistryRefusalContinuationQuotesAChangeNameWithSpaces(t *testing.T) {
+	t.Parallel()
+	cwd := t.TempDir()
+
+	refusal := registryRefusal(errors.New("el registro no se puede leer"), cwd, "phase one")
+
+	for _, want := range []string{"axiom branch ensure --change 'phase one' --cwd", pathquote.Quote(cwd)} {
+		if !strings.Contains(refusal.Continuation, want) {
+			t.Errorf("la continuación %q debe contener %q", refusal.Continuation, want)
+		}
+	}
+	if plain := registryRefusal(errors.New("x"), cwd, "x"); !strings.Contains(plain.Continuation, "--change x --cwd") {
+		t.Errorf("un nombre seguro va sin comillas: %q", plain.Continuation)
+	}
+}
+
 // newMultirepo crea un multirepo: una carpeta maestra con su axiom.yaml y, dentro, el
 // repositorio de specs `repo-specs` y los repositorios de código dados, cada uno un
 // repositorio real con su commit en main.

@@ -264,7 +264,7 @@ func resolveDirectory(dir string) string {
 // estado derivado, de modo que la continuación es borrar el fichero y reconstruirlo con
 // `ensure`.
 func registryRefusal(err error, cwd, change string) *branch.Refusal {
-	rebuild := fmt.Sprintf("axiom branch ensure --change %s --cwd %s", change, pathquote.Quote(cwd))
+	rebuild := fmt.Sprintf("axiom branch ensure --change %s --cwd %s", pathquote.ShellWord(change), pathquote.Quote(cwd))
 	refusal := &branch.Refusal{
 		Code:         branch.CodeConfigInvalid,
 		Message:      err.Error(),
