@@ -2,7 +2,7 @@
 
 > **Documento vivo ODD.** Fichero autoritativo: `odd/tasks/pruebas-aislamiento-host.md`, en el repositorio `axiom`. La rama y el worktree dedicados se crean al iniciar la ejecución, nunca en `C:\repos\axiom`.
 > Espejo de recuperación en Engram: topic `odd/pruebas-aislamiento-host/tasks`, proyecto `axiom` (creado el 2026-10-13 en estado propuesto; se actualiza al iniciar la ejecución).
-> **Estado: En curso (2026-10-27). T1 y T2 hechas; T3 bloqueada por un posible defecto real de producción (ver «Hallazgos»).** Rama `fix/pruebas-aislamiento-host`, worktree `C:\repos\axiom-wt\pruebas-aislamiento-host`.
+> **Estado: Listo para PR (2026-10-27). T1, T2 y T4 hechas; T3 fuera del PR por el defecto de producción H6-D (ver «Hallazgos»).** Rama `fix/pruebas-aislamiento-host`, worktree `C:\repos\axiom-wt\pruebas-aislamiento-host`.
 > Origen: hallazgos H1, H3 y H6 del ODD `windows-pruebas-entorno-y-ci` (`odd/tasks/windows-pruebas-entorno-y-ci.md`).
 
 ## Objetivo
@@ -81,7 +81,7 @@ Re-comprobar al iniciar.
     - RED: con `USERPROFILE` y `HOME` apuntando a un inicio falso con un `opencode.json` que declara `litellm`, la prueba falla con `stale result replaced active catalog: [litellm poison project-b]`.
     - Corrección: `t.Setenv` de `HOME`, `USERPROFILE` y `OPENCODE_CONFIG_DIR` (ruta absoluta temporal), y además `XDG_CONFIG_HOME` vacío, porque `DefaultSettingsPathForHome` (`internal/opencode/models.go:24`) también lo lee.
     - GREEN: pasa con el inicio, `OPENCODE_CONFIG_DIR` y `XDG_CONFIG_HOME` del host contaminados con ese `opencode.json`, y pasa en el entorno limpio.
-- [ ] **T3 · H6: limpieza determinista del ayudante en Windows** — **BLOQUEADA**: el diagnóstico apunta a un defecto real de producción (ver «Hallazgos»). Pendiente de decisión del usuario.
+- [ ] **T3 · H6: limpieza determinista del ayudante en Windows** — **FUERA DE ESTE PR** (decisión del usuario, 2026-10-27): H6-D se acepta como defecto de producción y queda como hallazgo (ver «Hallazgos»). No se cambia la prueba.
   - Ruta: en línea o escritor delegado según el tamaño.
   - Diagnóstico previo, obligatorio: determinar por qué el nieto sigue vivo en la limpieza.
     - Si es el orden de cierre de la prueba (la limpieza se ejecuta antes de que termine la terminación del árbol), se corrige en la prueba.
@@ -91,7 +91,10 @@ Re-comprobar al iniciar.
     - `go test ./internal/opencode -run '^TestRunCatalogCommandDeadlineNotBlockedByInheritingDescendantWindows$' -count=1`;
     - bajo carga: `go test -p 4 ./internal/opencode/... -count=1`, varias veces, y comprobar que el directorio temporal se limpia sin error.
   - Commit: `test(opencode): limpieza determinista del ayudante descendiente en la prueba de plazo de Windows`.
-- [ ] **T4 · Cierre**
+- [x] **T4 · Cierre** (2026-10-27, Windows, go1.27.0)
+  - Evidencia: `go build ./...`, `go vet ./...` y `go run ./internal/gofmtcheck` en verde. Las pruebas de T1 y T2 pasan con `-count=1`. La de H6 no se ejecuta: T3 sale del PR y su prueba compila un `.exe` vetado por el EDR.
+  - `bash scripts/deadcode-ratchet.sh` **no verificable en esta máquina**: `panic: unexpected expr: *ast.KeyValueExpr` dentro de `golang.org/x/tools@v0.30.0/go/ssa`. Falla igual en `main` `e4b4cc3d`, así que es del entorno (herramienta frente a Go 1.27), no de este cambio, que solo toca pruebas.
+  - `git diff --stat origin/main...HEAD`: `internal/cli/sync_test.go`, `internal/tui/model_test.go` y este documento. Ningún fichero de producción.
   - `go build ./...`, `go vet ./...`, `go run ./internal/gofmtcheck`, `bash scripts/deadcode-ratchet.sh`, y las tres pruebas con `-count=1`.
   - `git diff --stat origin/main...HEAD` debe mostrar solo ficheros `_test.go`.
   - `git status --porcelain` vacío. Actualizar este documento y el espejo.
@@ -105,6 +108,7 @@ Re-comprobar al iniciar.
   - Al nieto solo lo mata `release()` (`JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE`), y solo si está en el Job.
   - `t.TempDir()` ya reintenta 2 s ante `ERROR_SHARING_VIOLATION` (`testing.go:1649`, `testing_windows.go:30`). Que la limpieza falle implica que el ejecutable sigue bloqueado más de 2 s: encaja con un nieto fuera del Job durmiendo 30 s, no con el orden de cierre de la prueba.
   - Conclusión: según la regla de T3, es un defecto real (carrera entre `Start` y `AssignProcessToJobObject`). No se arregla en este ODD ni se oculta con una limpieza más tolerante. Una corrección de producción típica sería crear el proceso suspendido, asignarlo al Job y reanudarlo.
+  - Decisión del usuario (2026-10-27): se acepta como defecto de producción; T3 sale de este PR. La corrección de producción, y con ella la de la prueba H6 (incluido su comentario), queda para un trabajo aparte.
   - Hipótesis alternativa no descartada: que el EDR mantenga abierto el `.exe` recién compilado más de 2 s.
 - **Restricción del EDR:** la prueba de H6 compila un ejecutable Go con `go build -o` y lo ejecuta, igual que `internal/opencode/catalog_test.go:130`. En esta máquina, el Cortex XDR corporativo veta compilar y ejecutar ejecutables propios, así que la verificación de T3 y `go test -p 4 ./internal/opencode/...` no se ejecutan aquí sin permiso expreso.
 - **Entorno de la máquina (2026-10-27):** tiene `node`, `npm` y `codegraph` (npm global) en el PATH; no tiene `opencode` ni `opencode.json` real.
@@ -121,7 +125,8 @@ Re-comprobar al iniciar.
 
 - 2026-10-13: documento abierto desde el cierre del ODD `windows-pruebas-entorno-y-ci`. Líneas verificadas en el árbol de `main` `eea58801`. No iniciado.
 - 2026-10-27: ejecución iniciada desde `main` `e4b4cc3d`; las líneas citadas siguen siendo válidas. T1 (`f3b2a9a4`) y T2 (`72cba681`) hechas con RED y GREEN observados. T3 bloqueada por el hallazgo H6-D.
+- 2026-10-27: el usuario acepta H6-D como defecto de producción; T3 sale del PR. T4 hecha. Falta el push y el PR, con permiso del usuario.
 
 ## Siguiente paso
 
-Decisión del usuario sobre T3: aceptar H6-D como defecto de producción, sacar T3 de este PR y cerrar con T1 y T2; o autorizar expresamente la ejecución de la prueba de H6 (compila un `.exe`) para confirmar el diagnóstico. Después, T4.
+Push de `fix/pruebas-aislamiento-host` y PR contra `main` con `scripts/axiom-worktree.ps1 pr pruebas-aislamiento-host`, etiqueta `type:bug`, con permiso del usuario. Aparte: corregir H6-D en producción (asignación al Job antes de que el hijo pueda lanzar descendientes) y actualizar el ratchet de código muerto para Go 1.27.
