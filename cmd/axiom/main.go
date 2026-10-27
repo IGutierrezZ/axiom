@@ -122,6 +122,7 @@ COMANDOS DE GOBERNANZA Y WORKSPACE:
   branch ensure        Crea la rama de un cambio y su worktree si faltan (idempotente; --change, --json)
   branch status        Muestra el estado de las ramas y worktrees de un cambio (solo lectura; --change, --json)
   branch done          Elimina el worktree y la rama local de un cambio ya fusionado (--change, --force, --fetch, --json)
+  branch guard         Hook de los runtimes: bloquea los documentos de Axiom en la rama equivocada (--agent)
   project list        Lista los proyectos registrados en el Hub global (~/.axiom/workspaces.json)
   project switch       Conmuta el proyecto activo por defecto
   project add          Registra un proyecto existente en el Hub
