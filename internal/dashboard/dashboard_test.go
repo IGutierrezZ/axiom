@@ -2,12 +2,14 @@ package dashboard
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"io"
 	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -1212,5 +1214,36 @@ func TestDashboardWorktreeExclusion(t *testing.T) {
 	}
 	if len(list) != 0 {
 		t.Errorf("el catálogo del Hub no debe contener worktrees, contiene %d", len(list))
+	}
+}
+
+// D-22 (REQ-25.23, escenario 5): cuando git no puede decir la rama actual (un repositorio recién
+// iniciado, sin ningún commit), GetSpecsSyncStatus informa la rama de integración resuelta del
+// proyecto y no un `main` fijo.
+func TestSpecsSyncStatusFallsBackToTheResolvedIntegration(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git no está disponible en el PATH")
+	}
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, "axiom.yaml"),
+		[]byte("workspace:\n  name: integracion-develop\n  topology: monorepo-embedded\ngit: {integration_branch: develop}\n"+
+			"roles:\n  core:\n    name: core\n    repositories:\n      - path: .\n"), 0o644); err != nil {
+		t.Fatalf("escribir axiom.yaml: %v", err)
+	}
+	cmd := exec.Command("git", "init", "-q", "-b", "trunk")
+	cmd.Dir = root
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("git init: %v\n%s", err, out)
+	}
+
+	status, err := NewService(root).GetSpecsSyncStatus(context.Background())
+	if err != nil {
+		t.Fatalf("GetSpecsSyncStatus() error = %v", err)
+	}
+	if !status.IsGitRepo {
+		t.Fatal("se esperaba un repositorio git")
+	}
+	if status.Branch != "develop" {
+		t.Fatalf("rama = %q, se esperaba la integración resuelta develop (git no tiene HEAD que leer)", status.Branch)
 	}
 }

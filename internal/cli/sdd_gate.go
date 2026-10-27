@@ -63,6 +63,7 @@ func runSDDGateRecord(args []string, stdout io.Writer) error {
 		return err
 	}
 	workspaceRoot := loc.WorkspaceRoot
+	parsed = completeGateBaseRef(parsed, loc)
 	// Guarda A (REQ-25.19): una sola consulta cubre AppendGate y el handoff de integración de esta
 	// invocación; la compuerta de integración se registra en la rama de archivado (G-10).
 	writerContext := branch.ContextOrdinary
