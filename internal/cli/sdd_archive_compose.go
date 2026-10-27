@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/IGutierrezZ/axiom/v3/internal/branch"
 	"github.com/IGutierrezZ/axiom/v3/internal/pathquote"
 	"github.com/IGutierrezZ/axiom/v3/internal/sddstatus"
 	"github.com/IGutierrezZ/axiom/v3/internal/specbaseline"
@@ -129,6 +130,20 @@ func runSDDArchiveComposeWithStderr(args []string, stdout, stderr io.Writer) err
 				}
 				return filepath.Join(loc.WorkspaceRoot, path)
 			}
+		}
+	}
+
+	// Guarda A (REQ-25.19): componer un delta de `changes/<c>/` a un fichero solo se hace en la
+	// rama de archivado. La previsualización por la salida estándar no escribe y no se guarda.
+	if output := resolve(*outputPath); output != "-" && strings.TrimSpace(output) != "" {
+		var guardErr error
+		if documentMode {
+			guardErr = guardComposeDelta(loc, resolve(*deltaPath), documents[0])
+		} else {
+			guardErr = guardComposeLooseDelta(resolve(*deltaPath))
+		}
+		if guardErr != nil {
+			return guardErr
 		}
 	}
 
@@ -421,6 +436,9 @@ func runSDDArchiveComposeInPlace(args inPlaceArgs, stdout, stderr io.Writer) err
 	}
 	target, err := resolveIntegrationTarget("sdd-archive-compose", args.cwd, args.change)
 	if err != nil {
+		return err
+	}
+	if err := guardChangeWriter(target.ChangeRoot, target.Change, "sdd archive-compose", branch.ContextArchive); err != nil {
 		return err
 	}
 	report, err := specbaseline.ApplyCompose(context.Background(), target, args.documents)
