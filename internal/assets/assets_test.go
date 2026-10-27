@@ -570,10 +570,10 @@ func TestOpenCodeEmbeddedAssetLayout(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ReadDir(opencode/plugins) error = %v", err)
 	}
-	if len(pluginEntries) != 4 {
-		t.Fatalf("opencode plugins count = %d, want 4", len(pluginEntries))
+	if len(pluginEntries) != 5 {
+		t.Fatalf("opencode plugins count = %d, want 5", len(pluginEntries))
 	}
-	wantPlugins := map[string]bool{"model-variants.ts": true, "opencode-review-transport.ts": true, "sdd-task-result-artifacts.ts": true, "skill-registry.ts": true}
+	wantPlugins := map[string]bool{"axiom-branch-guard.ts": true, "model-variants.ts": true, "opencode-review-transport.ts": true, "sdd-task-result-artifacts.ts": true, "skill-registry.ts": true}
 	for _, entry := range pluginEntries {
 		if !wantPlugins[entry.Name()] {
 			t.Fatalf("unexpected plugin entry = %q", entry.Name())
@@ -641,6 +641,63 @@ func TestSDDTaskResultArtifactsPluginContract(t *testing.T) {
 	for _, forbidden := range []string{"GENTLE_AI_REVIEW_BINDING", "opencode-transport", "review lens-context", "capture-result"} {
 		if strings.Contains(source, forbidden) {
 			t.Fatalf("SDD task plugin retains reviewer transport %q", forbidden)
+		}
+	}
+}
+
+// TestOpenCodeBranchGuardPluginContract fija el contenido de axiom-branch-guard.ts en las dos
+// generaciones de plugins de OpenCode (REQ-25.22; design D-18; R10): el plugin solo transporta la
+// carga a `axiom branch guard --agent opencode` y aplica la decisión que devuelve Go.
+func TestOpenCodeBranchGuardPluginContract(t *testing.T) {
+	for _, path := range []string{"opencode/plugins/axiom-branch-guard.ts", "opencode/plugins-v2/axiom-branch-guard.ts"} {
+		t.Run(path, func(t *testing.T) {
+			source, err := Read(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, want := range []string{
+				// Proceso: array de argumentos fijo, sin shell, carga por stdin y tiempo límite.
+				`import { spawn } from "node:child_process"`,
+				`const GUARD_COMMAND = "axiom"`,
+				`const GUARD_ARGS = ["branch", "guard", "--agent", "opencode"]`,
+				`spawn(GUARD_COMMAND, GUARD_ARGS,`,
+				`.end(JSON.stringify({ event, tool, filePath, cwd }))`,
+				`GUARD_TIMEOUT_MS`, `GUARD_MAX_OUTPUT`, `code !== 0`,
+				// Herramientas de escritura y eventos de la carga.
+				`new Set(["write", "edit", "patch"])`,
+				`"pre"`, `"post"`,
+				// Decisión de Go: bloqueo con Error y aviso en la salida de la herramienta.
+				`throw new Error(`,
+				`"block"`, `"warn"`,
+				// Fallo en abierto: nada de lo que falle se convierte en decisión.
+				`catch {`, `finish()`,
+			} {
+				if !strings.Contains(source, want) {
+					t.Errorf("%s no contiene %q", path, want)
+				}
+			}
+			for _, forbidden := range []string{
+				// La orden nunca pasa por un shell ni interpola datos de la carga.
+				"shell: true", "exec(", "execSync", "execFile", "spawnSync",
+				// El plugin no clasifica ni decide nada: eso es de Go.
+				"openspec/changes", "odd/tasks", "writeFile", "readFile", "gentle-ai\"",
+			} {
+				if strings.Contains(source, forbidden) {
+					t.Errorf("%s conserva %q", path, forbidden)
+				}
+			}
+		})
+	}
+	v1, _ := Read("opencode/plugins/axiom-branch-guard.ts")
+	for _, want := range []string{`"tool.execute.before"`, `"tool.execute.after"`, `output.output =`} {
+		if !strings.Contains(v1, want) {
+			t.Errorf("el plugin de OpenCode v1 no contiene %q", want)
+		}
+	}
+	v2, _ := Read("opencode/plugins-v2/axiom-branch-guard.ts")
+	for _, want := range []string{`ctx.tool.hook("execute.before"`, `ctx.tool.hook("execute.after"`} {
+		if !strings.Contains(v2, want) {
+			t.Errorf("el plugin de OpenCode v2 no contiene %q", want)
 		}
 	}
 }

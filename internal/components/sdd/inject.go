@@ -2534,7 +2534,8 @@ func OpenCodePluginLifecycleNames(agent model.AgentID) []string {
 func managedOpenCodePluginNames(agent model.AgentID) []string {
 	switch agent {
 	case model.AgentOpenCode:
-		return []string{"model-variants.ts", "opencode-review-transport.ts", "sdd-task-result-artifacts.ts", "skill-registry.ts"}
+		// axiom-branch-guard.ts es la capa D de la guarda de rama (inc-25, REQ-25.22): solo OpenCode.
+		return []string{"axiom-branch-guard.ts", "model-variants.ts", "opencode-review-transport.ts", "sdd-task-result-artifacts.ts", "skill-registry.ts"}
 	case model.AgentKilocode:
 		return []string{"model-variants.ts", "skill-registry.ts"}
 	default:

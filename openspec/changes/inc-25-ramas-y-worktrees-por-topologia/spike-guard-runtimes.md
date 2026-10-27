@@ -7,6 +7,7 @@ Este documento registra el resultado de los supuestos del diseño que solo se pu
 | A-4 | S6-c2 | «A-4: sonda de linajes RDD (decisión T6)» | Verificado (2026-10-26) |
 | A-2 | S11-c3 | «A-2: hook de Codex para `apply_patch`» | No verificado en runtime (Codex no instalado; forma tomada de la documentación oficial) |
 | A-5 | S11-c3 | «A-5: matcher de Claude Code» | Verificado parcialmente (2026-10-27) |
+| R10 | S11-c4 | «R10: plugin de OpenCode» | No verificado en runtime (OpenCode no instalado; 2026-10-27) |
 
 ## A-4: sonda de linajes RDD (decisión T6)
 
@@ -83,3 +84,21 @@ Este documento registra el resultado de los supuestos del diseño que solo se pu
 **Canales.** Los dos canales (`PreToolUse` con salida 2 para bloquear y `PostToolUse` con salida 2 para devolver el aviso al agente) están verificados en este repositorio por `scripts/claude-hooks/guard-primary-checkout.ps1` (design D-18).
 
 **Estado: A-5 verificado parcialmente.** La versión y la ausencia de `MultiEdit` en las herramientas expuestas están observadas; no se ha ejecutado un hook de la guarda en una sesión real, y se mantiene el riesgo del código 2 descrito en A-2 (aplica también a Claude Code).
+
+## R10: plugin de OpenCode
+
+**Riesgo (R10).** La capa D de OpenCode es de mejor esfuerzo: un `throw` en `tool.execute.before` puede no bloquear la escritura en todos los carriles de OpenCode (la exploración del diseño cita excepciones tragadas por el host). Este documento no cierra ese riesgo; solo lo registra.
+
+**Comprobación.** OpenCode **no está instalado** en esta máquina (`opencode` no existe en el `PATH`), así que el plugin no se ha podido ejecutar en OpenCode. Lo que sí está observado es su contrato frente a un doble del host: las pruebas de `internal/assets` ejecutan el plugin real en Node con `spawn` sustituido y comprueban la orden, la carga por `stdin`, el `Error` con `{"action":"block"}`, el aviso en `output.output` con `{"action":"warn"}` y el fallo en abierto. Nada de esto prueba el comportamiento del host.
+
+**Precedente en el repositorio.** `opencode-review-transport.ts` reescribe `output.output` en `tool.execute.after` y `sdd-task-result-artifacts.ts` lanza en `tool.execute.before` (design D-18). De ahí sale la forma del plugin, pero ese precedente no demuestra que el `throw` bloquee en todos los carriles.
+
+**Decisión.**
+
+- `axiom-branch-guard.ts` se instala solo en OpenCode (no en Kilocode) con `axiom sync`, junto a los demás plugins gestionados; el desinstalador lo retira por la lista de ciclo de vida de OpenCode.
+- `tool.execute.before` (`write`, `edit` y `patch`) lanza `spawn` con el array `axiom`, `branch`, `guard`, `--agent`, `opencode`, sin shell y sin interpolar datos de la carga, y envía por `stdin` la carga `{event, tool, filePath, cwd}`. Con `block` lanza un `Error` con el mensaje de Go; `tool.execute.after` añade el aviso a `output.output` con `warn`.
+- Tiempo límite de 4 s en el proceso hijo (la guarda tiene 1 s de presupuesto) y fallo en abierto: error de `spawn`, JSON inválido, salida distinta de 0, salida de más de 64 KiB o tiempo agotado no hacen nada.
+- `patch` solo se guarda si el host entrega `filePath` en los argumentos; si lleva solo el texto del parche, el plugin no tiene ruta que enviar y no hace nada. Es una limitación conocida de la capa D, no un fallo en cerrado.
+- Se añade también la variante de la generación v2 (`plugins-v2/axiom-branch-guard.ts`, con `ctx.tool.hook`): sin ella, `axiom sync` con OpenCode v2 no encontraría el activo. Su forma sigue la de los demás plugins v2 y tampoco está verificada en el host.
+
+**Estado: R10 no verificado en runtime.** El plugin queda «no verificado en runtime». Pendiente con OpenCode instalado: que el `throw` de `before` bloquee la escritura en cada carril (agente principal, subagentes, `patch`), que el host entregue `filePath` en `patch`, que el aviso de `after` llegue al agente, y los nombres de herramienta y la forma de `call.result` en OpenCode v2. Si el bloqueo no funciona en algún carril, las garantías siguen siendo las de las capas A y B.

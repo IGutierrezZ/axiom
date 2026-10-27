@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"runtime"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -10132,5 +10133,146 @@ func TestInjectBranchGuardTwoSyncsLeaveIdenticalBytes(t *testing.T) {
 		if !bytes.Equal(first[rt.name], second) {
 			t.Fatalf("la segunda sincronización de %s cambió los bytes:\n%s\n%s", rt.name, first[rt.name], second)
 		}
+	}
+}
+
+// --- Plugin axiom-branch-guard.ts de OpenCode (S11-c4; REQ-25.22; R10) ---
+
+const branchGuardPluginName = "axiom-branch-guard.ts"
+
+// El plugin figura en la lista gestionada de OpenCode (la que usan Inject, la sincronización, el
+// desinstalador y la restauración transaccional) y en la tabla de resúmenes, y no llega a Kilocode,
+// que no tiene el hook (REQ-25.22: solo Claude Code, Codex y OpenCode).
+func TestOpenCodeBranchGuardPluginIsManagedOnlyForOpenCode(t *testing.T) {
+	if !slices.Contains(ManagedOpenCodePluginNames(), branchGuardPluginName) {
+		t.Fatalf("ManagedOpenCodePluginNames() no contiene %q: %v", branchGuardPluginName, ManagedOpenCodePluginNames())
+	}
+	if !slices.Contains(OpenCodePluginLifecycleNames(model.AgentOpenCode), branchGuardPluginName) {
+		t.Fatalf("OpenCodePluginLifecycleNames(opencode) no contiene %q: instantánea y retirada no lo verían", branchGuardPluginName)
+	}
+	for _, agent := range []model.AgentID{model.AgentKilocode, model.AgentClaudeCode, model.AgentCodex} {
+		if slices.Contains(managedOpenCodePluginNames(agent), branchGuardPluginName) {
+			t.Errorf("%s no debe recibir %q", agent, branchGuardPluginName)
+		}
+	}
+	// Plugin nuevo: no existe ninguna revisión anterior que reconocer, pero la tabla debe tener su
+	// entrada (los lectores de la tabla indexan por plugin gestionado).
+	digests, ok := historicalOpenCodePluginDigests[branchGuardPluginName]
+	if !ok || len(digests) != 0 {
+		t.Fatalf("historicalOpenCodePluginDigests[%q] = %v, %t; want an entry with no historical digests", branchGuardPluginName, digests, ok)
+	}
+}
+
+// Arnés de S11.19 (en proceso, sin binario suelto): el mismo Inject que ejecuta `axiom sync`, con
+// HOME y USERPROFILE temporales, instala el plugin y una segunda ejecución deja bytes idénticos.
+func TestInjectOpenCodeBranchGuardPluginTwoSyncsLeaveIdenticalBytes(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
+	t.Setenv("XDG_CONFIG_HOME", filepath.Join(home, ".config"))
+	mockNoPackageManager(t)
+
+	adapter := opencodeAdapter()
+	pluginPath := filepath.Join(adapter.GlobalConfigDir(home), "plugins", branchGuardPluginName)
+
+	first, err := Inject(home, adapter, model.SDDModeMulti)
+	if err != nil {
+		t.Fatalf("primera sincronización: %v", err)
+	}
+	if !slices.Contains(first.Files, pluginPath) {
+		t.Fatalf("la primera sincronización no informa del plugin %q: %v", pluginPath, first.Files)
+	}
+	installed, err := os.ReadFile(pluginPath)
+	if err != nil {
+		t.Fatalf("el plugin no está instalado: %v", err)
+	}
+	if string(installed) != assets.MustRead("opencode/plugins/"+branchGuardPluginName) {
+		t.Fatal("el plugin instalado no coincide con el activo embebido")
+	}
+
+	second, err := Inject(home, adapter, model.SDDModeMulti)
+	if err != nil {
+		t.Fatalf("segunda sincronización: %v", err)
+	}
+	if second.Changed {
+		t.Fatalf("la segunda sincronización cambió ficheros: %v", second.Files)
+	}
+	again, err := os.ReadFile(pluginPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(installed, again) {
+		t.Fatal("la segunda sincronización cambió los bytes del plugin")
+	}
+}
+
+// Con OpenCode v2 el plugin sale del directorio de la generación v2 (si faltara, la instalación
+// entraría en pánico al leerlo) y también es idéntico en una segunda ejecución.
+func TestInstallOpenCodeBranchGuardPluginV2UsesV2AssetAndIsIdempotent(t *testing.T) {
+	withOpenCodeV2Runtime(t)
+	home := t.TempDir()
+	adapter := opencodeAdapter()
+	assetDir, err := openCodePluginAssetDirectory(adapter.Agent())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if assetDir != "opencode/plugins-v2/" {
+		t.Fatalf("directorio de activos = %q, want opencode/plugins-v2/", assetDir)
+	}
+	if _, err := installOpenCodePluginsDirectory(home, adapter, assetDir); err != nil {
+		t.Fatal(err)
+	}
+	pluginPath := filepath.Join(adapter.GlobalConfigDir(home), "plugins", branchGuardPluginName)
+	installed, err := os.ReadFile(pluginPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(installed) != assets.MustRead("opencode/plugins-v2/"+branchGuardPluginName) {
+		t.Fatal("el plugin v2 instalado no coincide con el activo v2")
+	}
+	again, err := installOpenCodePluginsDirectory(home, adapter, assetDir)
+	if err != nil || again.Changed {
+		t.Fatalf("la segunda instalación v2 cambió ficheros: changed=%t err=%v", again.Changed, err)
+	}
+}
+
+// Kilocode no recibe el plugin: no tiene hook de la guarda.
+func TestInjectKilocodeDoesNotReceiveBranchGuardPlugin(t *testing.T) {
+	home := t.TempDir()
+	mockNoPackageManager(t)
+	if _, err := Inject(home, kilocodeAdapter(), model.SDDModeMulti); err != nil {
+		t.Fatal(err)
+	}
+	pluginPath := filepath.Join(kilocodeAdapter().GlobalConfigDir(home), "plugins", branchGuardPluginName)
+	if _, err := os.Stat(pluginPath); !os.IsNotExist(err) {
+		t.Fatalf("Kilocode no debe recibir %q (stat err = %v)", pluginPath, err)
+	}
+}
+
+// La sincronización refresca una copia instalada y desactualizada y nunca crea un plugin que no
+// estaba instalado.
+func TestRefreshInstalledOpenCodePluginsKeepsBranchGuardPluginInSync(t *testing.T) {
+	home := t.TempDir()
+	adapter := opencodeAdapter()
+	pluginPath := filepath.Join(adapter.GlobalConfigDir(home), "plugins", branchGuardPluginName)
+
+	if result, err := RefreshInstalledOpenCodePlugins(home, adapter); err != nil || slices.Contains(result.Files, pluginPath) {
+		t.Fatalf("la sincronización no debe crear un plugin que no estaba instalado: files=%v err=%v", result.Files, err)
+	}
+	if err := os.MkdirAll(filepath.Dir(pluginPath), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(pluginPath, []byte("// copia desactualizada\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RefreshInstalledOpenCodePlugins(home, adapter); err != nil {
+		t.Fatal(err)
+	}
+	got, err := os.ReadFile(pluginPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(got) != assets.MustRead("opencode/plugins/"+branchGuardPluginName) {
+		t.Fatal("la copia desactualizada no se ha refrescado")
 	}
 }
