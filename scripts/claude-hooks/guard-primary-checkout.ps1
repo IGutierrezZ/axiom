@@ -6,13 +6,17 @@
 .DESCRIPTION
     Política local para desarrollar este repositorio (no es comportamiento del producto):
     el checkout principal (p. ej. C:\repos\axiom) está siempre en `main` y solo recibe
-    fast-forwards; todo cambio nace en un worktree creado con scripts/axiom-worktree.ps1.
+    fast-forwards; todo cambio nace en un worktree que prepara `axiom branch ensure`.
+    Es una política por ruta y complementa, sin sustituirla, la guarda del producto (`axiom branch guard`): esta deniega
+    cualquier escritura en el checkout principal y avisa tras Bash o PowerShell, que la del
+    producto no cubre.
 
     Lee por stdin el JSON del hook (hook_event_name, tool_name, tool_input, cwd) y actúa así:
 
     - PreToolUse con Write, Edit o NotebookEdit: si la ruta de destino cae dentro del
       checkout principal (y no dentro de su `.claude\`, que es configuración local no
-      versionada), la deniega con exit 2 y explica cómo crear el worktree.
+      versionada), la deniega con exit 2 y explica cómo preparar el worktree con
+      `axiom branch ensure`.
     - PostToolUse con Bash o PowerShell: si el checkout principal ha quedado fuera de `main`
       (rama distinta o HEAD desacoplado), o si `main` tiene commits que no están en
       `origin/main`, devuelve el aviso a Claude con exit 2 y la forma de corregirlo.
@@ -133,9 +137,9 @@ try {
         if ((Test-InsidePath $targetPath $primary) -and -not (Test-InsidePath $targetPath (Join-Path $primary '.claude'))) {
             Write-Reason ("Bloqueado: '$targetPath' está dentro del checkout principal '$primary'. " +
                 "El checkout principal está siempre en main y no se edita; todo cambio (código, openspec/ y odd/tasks/) " +
-                "se hace en un worktree propio. Crea uno con: " +
-                "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/axiom-worktree.ps1 new <slug> [-Prefix feat|inc|fix|refactor] " +
-                "y edita con rutas absolutas dentro de C:\repos\axiom-wt\<slug> (o usa git -C). " +
+                "se hace en un worktree propio. Prepáralo con: " +
+                "axiom branch ensure --cwd `"$primary`" --change <slug> --mode worktree --json " +
+                "y edita con las rutas absolutas del JSON (p. ej. C:\repos\axiom-wt\<slug>\axiom), con --cwd y git -C. " +
                 "Nunca uses git checkout -b ni EnterWorktree en el checkout principal.")
             exit 2
         }
@@ -156,9 +160,9 @@ try {
     if ($branch -ne 'main') {
         Write-Reason ("El checkout principal '$primary' ha quedado en '$branch' y debe estar siempre en main. " +
             "Restáuralo con: git -C `"$primary`" switch main " +
-            "(si había trabajo en curso, tras volver a main muévelo a un worktree, p. ej. " +
-            "git -C `"$primary`" worktree add ..\axiom-wt\<slug> <rama>) y continúa en el worktree. " +
-            "Para cambios nuevos usa scripts/axiom-worktree.ps1 new <slug>.")
+            "(si había trabajo en curso, tras volver a main prepara su worktree con " +
+            "axiom branch ensure --cwd `"$primary`" --change <slug> --branch <rama> --mode worktree) y continúa en el worktree. " +
+            "Para cambios nuevos usa axiom branch ensure.")
         exit 2
     }
 
@@ -168,8 +172,8 @@ try {
     if (-not [int]::TryParse(([string]($ahead | Select-Object -First 1)).Trim(), [ref]$aheadCount)) { exit 0 }
     if ($aheadCount -gt 0) {
         Write-Reason ("La rama main del checkout principal '$primary' tiene $aheadCount commit(s) que no están en origin/main. " +
-            "Está prohibido commitear directamente en main: mueve esos commits a una rama en un worktree " +
-            "(git -C `"$primary`" worktree add ..\axiom-wt\<slug> -b <rama>, y después restablece main a origin/main " +
+            "Está prohibido commitear directamente en main: mueve esos commits a una rama de un worktree que prepare " +
+            "axiom branch ensure --cwd `"$primary`" --change <slug> --mode worktree (y después restablece main a origin/main " +
             "cuando los commits estén a salvo) y abre el PR con scripts/axiom-worktree.ps1 pr <slug>.")
         exit 2
     }
