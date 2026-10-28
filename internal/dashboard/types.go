@@ -63,6 +63,14 @@ type IncrementSummaryDTO struct {
 	ReadyForArchive      bool     `json:"ready_for_archive"`
 	ChangeType           string   `json:"change_type,omitempty"`
 	IsBug                bool     `json:"is_bug"`
+	// WorktreePath y Branch indican dónde vive un cambio que se lee de un worktree registrado
+	// (REQ-25.34): la ruta absoluta del worktree y su rama. Ausentes, el cambio está en el checkout
+	// principal. Los campos de INC-25 van en camelCase (design D-20), a diferencia del resto del DTO.
+	WorktreePath string `json:"worktreePath,omitempty"`
+	Branch       string `json:"branch,omitempty"`
+	// PendingArchive marca un cambio activo ya presente en la rama de integración que aún no se
+	// ha archivado (REQ-25.20). Es informativo: no bloquea nada.
+	PendingArchive bool `json:"pendingArchive,omitempty"`
 }
 
 // IncrementDetailDTO contiene el detalle estructurado de un cambio y sus artefactos.

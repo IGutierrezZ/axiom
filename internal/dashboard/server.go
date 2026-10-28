@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"strings"
 	"time"
+	"unicode/utf16"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/branch"
 	"github.com/IGutierrezZ/axiom/v3/internal/livingdoc"
@@ -143,6 +144,8 @@ func (s *Server) withHeaders(next http.Handler) http.Handler {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+		// La SPA lee los avisos de los listados (REQ-25.34) de esta cabecera.
+		w.Header().Set("Access-Control-Expose-Headers", notesHeaderName)
 
 		if r.Method == "OPTIONS" {
 			w.WriteHeader(http.StatusOK)
@@ -335,10 +338,16 @@ func (s *Server) handleSpecsPull(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleIncrements(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
-		list, err := s.service.GetIncrements()
+		list, notes, err := s.service.GetIncrements()
 		if err != nil {
 			s.respondJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
 			return
+		}
+		// REQ-25.34: los avisos informativos (cambios pendientes de archivar, worktrees desaparecidos,
+		// falta de la referencia de integración) viajan en la cabecera, no en el cuerpo, que sigue
+		// siendo un array. Sin avisos no hay cabecera.
+		if header := notesHeader(notes); header != "" {
+			w.Header().Set(notesHeaderName, header)
 		}
 		s.respondJSON(w, http.StatusOK, list)
 	case http.MethodPost:
@@ -876,4 +885,35 @@ func (s *Server) respondJSON(w http.ResponseWriter, code int, data interface{}) 
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(code)
 	_ = json.NewEncoder(w).Encode(data)
+}
+
+// notesHeaderName es la cabecera de `GET /api/increments` con los avisos informativos de los
+// listados (REQ-25.34, design D-20): un array JSON de frases en castellano.
+const notesHeaderName = "X-Axiom-Notes"
+
+// notesHeader codifica los avisos como un array JSON en ASCII: un valor de cabecera HTTP no debe
+// llevar bytes fuera de ASCII, de modo que los acentos y el resto de caracteres no ASCII (también los
+// de las rutas) viajan escapados como `\uXXXX`, que cualquier decodificador JSON restituye. Sin avisos
+// devuelve la cadena vacía y la cabecera no se emite.
+func notesHeader(notes []string) string {
+	if len(notes) == 0 {
+		return ""
+	}
+	encoded, err := json.Marshal(notes)
+	if err != nil {
+		return ""
+	}
+	var header strings.Builder
+	for _, r := range string(encoded) {
+		switch {
+		case r < 0x7f:
+			header.WriteRune(r)
+		case r > 0xffff:
+			high, low := utf16.EncodeRune(r)
+			fmt.Fprintf(&header, `\u%04x\u%04x`, high, low)
+		default:
+			fmt.Fprintf(&header, `\u%04x`, r)
+		}
+	}
+	return header.String()
 }
