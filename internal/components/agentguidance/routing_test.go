@@ -272,6 +272,198 @@ func TestRenderRoutingClosesODDWithTheMaintainedTechnicalContext(t *testing.T) {
 	}
 }
 
+// worktreePrimitiveBanLine is the single line of the routing doctrine that names
+// the two runtime-specific worktree primitives (REQ-25.41). It is the only place
+// in the product that may contain those names.
+const worktreePrimitiveBanLine = "Never use `EnterWorktree` or `ExitWorktree`; work in another worktree only through the absolute paths that `axiom branch ensure` returns, with `--cwd`, `git -C`, and absolute paths."
+
+// routingLineStartingWith returns the full rendered line that starts with prefix.
+func routingLineStartingWith(t *testing.T, rendered, prefix string) string {
+	t.Helper()
+
+	for _, line := range strings.Split(rendered, "\n") {
+		if strings.HasPrefix(line, prefix) {
+			return line
+		}
+	}
+	t.Fatalf("rendered routing has no line starting with %q:\n%s", prefix, rendered)
+	return ""
+}
+
+// routingSection returns the body of the "### <heading>" subsection, up to the
+// next heading of the same or a higher level.
+func routingSection(t *testing.T, rendered, heading string) string {
+	t.Helper()
+
+	marker := "### " + heading + "\n"
+	start := strings.Index(rendered, marker)
+	if start < 0 {
+		t.Fatalf("rendered routing has no %q subsection:\n%s", "### "+heading, rendered)
+	}
+	body := rendered[start+len(marker):]
+	if end := strings.Index(body, "\n### "); end >= 0 {
+		body = body[:end]
+	}
+	return body
+}
+
+// TestRenderRoutingPreparesTheBranchWithAxiomBranchEnsure guards
+// organic-agent-trigger-rules REQ-25.40 (inc-25, design D-19): step 6 only
+// swaps its branch clause for the one that delegates to `axiom branch ensure`,
+// every other step keeps its text, and the clause is the same for every adapter.
+func TestRenderRoutingPreparesTheBranchWithAxiomBranchEnsure(t *testing.T) {
+	t.Parallel()
+
+	const (
+		newClause    = "on the branch that `axiom branch ensure --lane odd --change <feature-name>` prepared before the first write of `odd/tasks/<feature-name>.md` (see *Branches and worktrees*)"
+		retiredText  = "branch first when on the default branch"
+		retiredShort = "on the feature branch"
+	)
+
+	reference, err := RenderRouting(model.AgentClaudeCode)
+	if err != nil {
+		t.Fatalf("RenderRouting(%q) error = %v", model.AgentClaudeCode, err)
+	}
+	referenceStep := routingLineStartingWith(t, reference, "6. **Implement task by task.**")
+
+	for _, agent := range catalog.AllAgents() {
+		t.Run(string(agent.ID), func(t *testing.T) {
+			t.Parallel()
+
+			rendered, err := RenderRouting(agent.ID)
+			if err != nil {
+				t.Fatalf("RenderRouting(%q) error = %v", agent.ID, err)
+			}
+
+			if strings.Contains(rendered, retiredText) {
+				t.Fatalf("RenderRouting(%q) still carries the retired clause %q", agent.ID, retiredText)
+			}
+
+			step := routingLineStartingWith(t, rendered, "6. **Implement task by task.**")
+			if step != referenceStep {
+				t.Fatalf("RenderRouting(%q) step 6 differs from the reference adapter:\n got: %q\nwant: %q", agent.ID, step, referenceStep)
+			}
+			if strings.Count(step, newClause) != 1 {
+				t.Fatalf("RenderRouting(%q) step 6 must carry the ensure clause exactly once:\n%s", agent.ID, step)
+			}
+			if strings.Contains(step, "on the feature branch, ") {
+				t.Fatalf("RenderRouting(%q) step 6 keeps the retired %q clause:\n%s", agent.ID, retiredShort, step)
+			}
+			// The rest of the step keeps its existing text around the clause.
+			for _, kept := range []string{
+				"Route each task through the smallest useful topology below, honoring its mandatory delegation triggers, with the configured TDD mode and applicable checks.",
+				"Every task closes with at least one work-unit commit " + newClause + ", with tests and docs alongside the behavior, using a Conventional Commit message;",
+				"push, pull request creation, and merge remain the user's decisions under ordinary repository policy.",
+			} {
+				if !strings.Contains(step, kept) {
+					t.Fatalf("RenderRouting(%q) step 6 lost its existing text %q:\n%s", agent.ID, kept, step)
+				}
+			}
+
+			// The branch rule belongs to step 6 only; the other steps never name it.
+			for _, other := range []string{"0. **Evaluate scope and lane.**", "1. **Authorize.**", "2. **Explore.**", "3. **Resolve uncertainty.**", "4. **Classify.**", "5. **Track before the first write.**", "7. **Close.**"} {
+				if strings.Contains(routingLineStartingWith(t, rendered, other), "axiom branch") {
+					t.Fatalf("RenderRouting(%q) step %q must not mention axiom branch", agent.ID, other)
+				}
+			}
+		})
+	}
+}
+
+// TestRenderRoutingProjectsTheBranchesAndWorktreesSubsection guards REQ-25.40
+// and REQ-25.41: the subsection is identical for every adapter, names the
+// mechanism (JSON paths with --cwd and git -C), keeps decision_required as the
+// only interaction, never authorizes --fetch, and carries the one line that
+// bans the runtime-specific worktree primitives.
+func TestRenderRoutingProjectsTheBranchesAndWorktreesSubsection(t *testing.T) {
+	t.Parallel()
+
+	reference, err := RenderRouting(model.AgentClaudeCode)
+	if err != nil {
+		t.Fatalf("RenderRouting(%q) error = %v", model.AgentClaudeCode, err)
+	}
+	referenceSection := routingSection(t, reference, "Branches and worktrees")
+
+	for _, agent := range catalog.AllAgents() {
+		t.Run(string(agent.ID), func(t *testing.T) {
+			t.Parallel()
+
+			rendered, err := RenderRouting(agent.ID)
+			if err != nil {
+				t.Fatalf("RenderRouting(%q) error = %v", agent.ID, err)
+			}
+
+			if got := strings.Count(rendered, "### Branches and worktrees\n"); got != 1 {
+				t.Fatalf("RenderRouting(%q) renders the subsection %d times, want exactly once", agent.ID, got)
+			}
+			section := routingSection(t, rendered, "Branches and worktrees")
+			if section != referenceSection {
+				t.Fatalf("RenderRouting(%q) subsection differs from the reference adapter:\n got: %q\nwant: %q", agent.ID, section, referenceSection)
+			}
+
+			// It sits after the ODD protocol and its reference detail, ahead of the
+			// receipt-driven switch, so no adapter reads it as an SDD-only rule.
+			detail := strings.Index(rendered, "### Organic Driven Development\n")
+			branches := strings.Index(rendered, "### Branches and worktrees\n")
+			review := strings.Index(rendered, "### Receipt-driven development is user-owned\n")
+			if detail < 0 || branches < detail || review < branches {
+				t.Fatalf("RenderRouting(%q) subsection order is wrong (detail=%d branches=%d review=%d)", agent.ID, detail, branches, review)
+			}
+
+			for _, want := range []string{
+				"`axiom branch ensure --lane odd --change <feature-name> --json`",
+				"Before the first write of `odd/tasks/<feature-name>.md` or of any code, run `axiom branch ensure",
+				"absolute paths",
+				"`--cwd`",
+				"`git -C`",
+				"`decision_required`",
+				"the only interaction",
+				"Never pass `--fetch` without the explicit authorization of the user.",
+			} {
+				if !strings.Contains(section, want) {
+					t.Fatalf("RenderRouting(%q) subsection is missing %q:\n%s", agent.ID, want, section)
+				}
+			}
+
+			// The ask mode adds no governance question of its own.
+			if !strings.Contains(section, "do not add a governance question") {
+				t.Fatalf("RenderRouting(%q) subsection must forbid an extra governance question:\n%s", agent.ID, section)
+			}
+
+			// The ban is one line, present once, and the only place the two
+			// primitive names appear in the whole rendered doctrine.
+			if got := strings.Count(rendered, worktreePrimitiveBanLine+"\n"); got != 1 {
+				t.Fatalf("RenderRouting(%q) renders the ban line %d times, want exactly once:\n%s", agent.ID, got, rendered)
+			}
+			for _, name := range []string{"EnterWorktree", "ExitWorktree"} {
+				if got := strings.Count(rendered, name); got != 1 {
+					t.Fatalf("RenderRouting(%q) names %s %d times, want exactly once (in the ban line)", agent.ID, name, got)
+				}
+			}
+		})
+	}
+}
+
+// TestRenderRoutingBranchGuidanceIsDeterministic guards the REQ-25.40 scenario
+// "El renderizado sigue siendo determinista" for the new text.
+func TestRenderRoutingBranchGuidanceIsDeterministic(t *testing.T) {
+	t.Parallel()
+
+	for _, agent := range catalog.AllAgents() {
+		first, err := RenderRouting(agent.ID)
+		if err != nil {
+			t.Fatalf("RenderRouting(%q) error = %v", agent.ID, err)
+		}
+		second, err := RenderRouting(agent.ID)
+		if err != nil {
+			t.Fatalf("RenderRouting(%q) second call error = %v", agent.ID, err)
+		}
+		if routingSection(t, first, "Branches and worktrees") != routingSection(t, second, "Branches and worktrees") {
+			t.Fatalf("RenderRouting(%q) renders a different branch subsection on a second call", agent.ID)
+		}
+	}
+}
+
 // TestRenderRoutingAsksLaneSelectionBeforeAuthorize guards INC-21's Step 0
 // (REQ-21.1-21.3, design.md S4.7/H-2): the ODD/SDD lane-selection blocking
 // question, and ODD's own "no additional questions" instruction (REQ-21.2),

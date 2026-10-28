@@ -3721,3 +3721,72 @@ func TestSDDOptionalVerificationConsumersPreserveDiagnosticSemantics(t *testing.
 		}
 	})
 }
+
+// TestWorktreePrimitiveNamesLiveOnlyInTheRoutingDoctrineLine guards
+// organic-agent-trigger-rules REQ-25.41 (inc-25, design D-19): `EnterWorktree`
+// and `ExitWorktree` are runtime-specific primitives, so the product may name
+// them in exactly one place, the ban line of the routing doctrine, and no
+// embedded asset may name or prescribe them. The rendered line is compared across
+// adapters by the agentguidance tests; the assets package cannot import that
+// renderer without a cycle, so this pin reads its source.
+func TestWorktreePrimitiveNamesLiveOnlyInTheRoutingDoctrineLine(t *testing.T) {
+	primitives := []string{"EnterWorktree", "ExitWorktree"}
+
+	t.Run("no embedded asset names the primitives", func(t *testing.T) {
+		checked := 0
+		err := fs.WalkDir(FS, ".", func(path string, entry fs.DirEntry, err error) error {
+			if err != nil {
+				return err
+			}
+			if entry.IsDir() {
+				return nil
+			}
+			data, err := FS.ReadFile(path)
+			if err != nil {
+				return err
+			}
+			checked++
+			for _, primitive := range primitives {
+				if strings.Contains(string(data), primitive) {
+					t.Errorf("embedded asset %s names the runtime primitive %s; only the routing doctrine line may", path, primitive)
+				}
+			}
+			return nil
+		})
+		if err != nil {
+			t.Fatalf("walk embedded assets: %v", err)
+		}
+		if checked < 100 {
+			t.Fatalf("walked only %d embedded assets; the scan lost its coverage", checked)
+		}
+	})
+
+	t.Run("the routing doctrine names them on one line", func(t *testing.T) {
+		source, err := os.ReadFile(filepath.Join("..", "components", "agentguidance", "routing.go"))
+		if err != nil {
+			t.Fatalf("read routing.go: %v", err)
+		}
+
+		var lines []string
+		for _, line := range strings.Split(string(source), "\n") {
+			for _, primitive := range primitives {
+				if strings.Contains(line, primitive) {
+					lines = append(lines, line)
+					break
+				}
+			}
+		}
+		if len(lines) != 1 {
+			t.Fatalf("routing.go names the primitives on %d lines, want exactly one:\n%s", len(lines), strings.Join(lines, "\n"))
+		}
+		for _, want := range []string{
+			"Never use `EnterWorktree` or `ExitWorktree`",
+			"absolute paths that `axiom branch ensure` returns",
+			"`--cwd`, `git -C`, and absolute paths.",
+		} {
+			if !strings.Contains(lines[0], want) {
+				t.Fatalf("the ban line is missing %q:\n%s", want, lines[0])
+			}
+		}
+	})
+}
