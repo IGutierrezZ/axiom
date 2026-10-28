@@ -2325,6 +2325,45 @@ func TestComponentOperationsSDD_OpenCodeRemovesManagedPluginsUnderXDGConfigHome(
 	}
 }
 
+// Retirada del plugin de la guarda de rama (REQ-25.22): quitar el componente SDD de OpenCode
+// elimina axiom-branch-guard.ts y deja intactos los plugins ajenos del mismo directorio.
+func TestComponentOperationsSDD_OpenCodeRemovesBranchGuardPluginAndKeepsForeignPlugins(t *testing.T) {
+	homeDir := t.TempDir()
+	t.Setenv("HOME", homeDir)
+	t.Setenv("USERPROFILE", homeDir)
+	t.Setenv("XDG_CONFIG_HOME", filepath.Join(homeDir, ".xdg"))
+
+	svc, err := NewService(homeDir, t.TempDir(), "dev")
+	if err != nil {
+		t.Fatalf("NewService() error = %v", err)
+	}
+	adapter, ok := svc.registry.Get(model.AgentOpenCode)
+	if !ok {
+		t.Fatal("openCode adapter not found in registry")
+	}
+
+	pluginDir := filepath.Join(adapter.GlobalConfigDir(homeDir), "plugins")
+	guardPath := filepath.Join(pluginDir, "axiom-branch-guard.ts")
+	foreignPath := filepath.Join(pluginDir, "mi-plugin.ts")
+	if err := os.MkdirAll(pluginDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for _, path := range []string{guardPath, foreignPath} {
+		if err := os.WriteFile(path, []byte("// contenido"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	applySDDOpenCodeOperations(t, svc, adapter)
+
+	if _, err := os.Stat(guardPath); !os.IsNotExist(err) {
+		t.Fatalf("el plugin de la guarda debe retirarse; stat err = %v", err)
+	}
+	if _, err := os.Stat(foreignPath); err != nil {
+		t.Fatalf("el plugin ajeno debe conservarse: %v", err)
+	}
+}
+
 // TestUninstallSkillsRetiresOnlyUnmodifiedRetiredCopies pins that removing the
 // skills component also clears leftovers of skills that no longer ship, but
 // only when the copy is still byte-for-byte Axiom's.
