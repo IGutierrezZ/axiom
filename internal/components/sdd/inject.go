@@ -1877,7 +1877,11 @@ func installSkillRegistryAutomation(homeDir string, adapter agents.Adapter) (Inj
 		if err != nil {
 			return InjectionResult{}, fmt.Errorf("install Codex skill-registry hook: %w", err)
 		}
-		return InjectionResult{Changed: changed, Files: []string{hooksPath}}, nil
+		branchGuardChanged, err := ensureCodexBranchGuardHook(hooksPath, adapter.Agent())
+		if err != nil {
+			return InjectionResult{}, fmt.Errorf("install Codex branch guard hook: %w", err)
+		}
+		return InjectionResult{Changed: changed || branchGuardChanged, Files: []string{hooksPath}}, nil
 	}
 	if adapter.Agent() != model.AgentClaudeCode {
 		return InjectionResult{}, nil
@@ -1898,11 +1902,15 @@ func installSkillRegistryAutomation(homeDir string, adapter agents.Adapter) (Inj
 	if err != nil {
 		return InjectionResult{}, fmt.Errorf("install Claude SDD preflight hook: %w", err)
 	}
+	branchGuardChanged, err := ensureClaudeBranchGuardHook(settingsPath, adapter.Agent())
+	if err != nil {
+		return InjectionResult{}, fmt.Errorf("install Claude branch guard hook: %w", err)
+	}
 	telemetryHookChanged, err := retireClaudeTelemetryHooks(settingsPath)
 	if err != nil {
 		return InjectionResult{}, fmt.Errorf("retire Claude runtime telemetry hooks: %w", err)
 	}
-	return InjectionResult{Changed: changed || stopHookChanged || preflightHookChanged || telemetryHookChanged, Files: []string{settingsPath}}, nil
+	return InjectionResult{Changed: changed || stopHookChanged || preflightHookChanged || branchGuardChanged || telemetryHookChanged, Files: []string{settingsPath}}, nil
 }
 
 func ensureCodexSkillRegistryHook(hooksPath string) (bool, error) {
@@ -2267,6 +2275,107 @@ func ensureClaudeSDDPreflightHook(settingsPath string, agentID model.AgentID) (b
 	}
 	out = append(out, '\n')
 	wr, err := filemerge.WriteFileAtomic(settingsPath, out, 0o644)
+	if err != nil {
+		return false, err
+	}
+	return wr.Changed, nil
+}
+
+// The matchers and timeout of the `axiom branch guard` hook (REQ-25.22, design
+// D-18). They are constants on purpose: the command is the identity of the
+// entry, and Codex binds the trust of an unmanaged hook to the hash of its
+// entry (spike-guard-runtimes.md, A-2), so a changed command, matcher or
+// timeout would make the user trust the hook again.
+//
+// Exit code 2 is both the usage error of `axiom branch` and the block signal of
+// Claude Code and Codex: a stale `axiom` binary without the `guard` verb would
+// block every write. The command is therefore never changed here; `axiom sync`
+// installs the entry with the same binary that knows the verb (A-2).
+const (
+	claudeBranchGuardMatcher = "Write|Edit|MultiEdit|NotebookEdit"
+	codexBranchGuardMatcher  = "^apply_patch$"
+	branchGuardHookTimeout   = 30
+)
+
+// BranchGuardHookCommand is the exact command of the `axiom branch guard` hook
+// entry for the runtime being installed. Like the SDD preflight hook, the
+// runtime identity comes from the adapter the caller installs, never from a
+// compiled literal (issue #2440); for Claude Code and Codex it yields the same
+// bytes as before, so the Codex trust hash is unchanged. The uninstaller uses
+// it to retire exactly the entry this package installed.
+func BranchGuardHookCommand(agentID model.AgentID) string {
+	return fmt.Sprintf("axiom branch guard --agent %s", agentID)
+}
+
+// ensureClaudeBranchGuardHook installs the `axiom branch guard` PreToolUse
+// (blocks Axiom documents on the wrong branch) and PostToolUse (warns about any
+// other file) entries in the Claude Code settings file. The entry identity is
+// the exact command string under each event, foreign entries are preserved and
+// a second run changes nothing.
+func ensureClaudeBranchGuardHook(settingsPath string, agentID model.AgentID) (bool, error) {
+	return ensureBranchGuardHookEntries(settingsPath, "Claude settings", claudeBranchGuardMatcher, BranchGuardHookCommand(agentID))
+}
+
+// ensureCodexBranchGuardHook installs the same two entries for `apply_patch`
+// in the Codex hooks.json, next to the skill-registry hook. The shape follows
+// the official Codex documentation and is not verified at runtime (A-2).
+func ensureCodexBranchGuardHook(hooksPath string, agentID model.AgentID) (bool, error) {
+	return ensureBranchGuardHookEntries(hooksPath, "Codex hooks", codexBranchGuardMatcher, BranchGuardHookCommand(agentID))
+}
+
+// ensureBranchGuardHookEntries is the core shared by both runtimes. It parses
+// path, appends the entry to hooks.PreToolUse and hooks.PostToolUse unless the
+// exact command is already there, and writes only when something was added. An
+// unexpected shape is an error that leaves the file untouched.
+func ensureBranchGuardHookEntries(path, label, matcher, command string) (bool, error) {
+	root := map[string]any{}
+	if data, err := os.ReadFile(path); err == nil && len(strings.TrimSpace(string(data))) > 0 {
+		if err := json.Unmarshal(data, &root); err != nil {
+			return false, fmt.Errorf("parse %s %q: %w", label, path, err)
+		}
+	} else if err != nil && !os.IsNotExist(err) {
+		return false, err
+	}
+
+	hooksRaw, hasHooks := root["hooks"]
+	hooksMap, _ := hooksRaw.(map[string]any)
+	if hasHooks && hooksMap == nil {
+		return false, fmt.Errorf("%s %q has unsupported hooks shape: want object", label, path)
+	}
+	if hooksMap == nil {
+		hooksMap = map[string]any{}
+	}
+
+	changed := false
+	for _, event := range []string{"PreToolUse", "PostToolUse"} {
+		raw, has := hooksMap[event]
+		entries, _ := raw.([]any)
+		if has && entries == nil {
+			return false, fmt.Errorf("%s %q has unsupported hooks.%s shape: want array", label, path, event)
+		}
+		if claudeHookListContains(entries, command) {
+			continue
+		}
+		hooksMap[event] = append(entries, map[string]any{
+			"matcher": matcher,
+			"hooks":   []any{map[string]any{"type": "command", "command": command, "timeout": branchGuardHookTimeout}},
+		})
+		changed = true
+	}
+	if !changed {
+		return false, nil
+	}
+
+	root["hooks"] = hooksMap
+	out, err := json.MarshalIndent(root, "", "  ")
+	if err != nil {
+		return false, err
+	}
+	out = append(out, '\n')
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return false, err
+	}
+	wr, err := filemerge.WriteFileAtomic(path, out, 0o644)
 	if err != nil {
 		return false, err
 	}

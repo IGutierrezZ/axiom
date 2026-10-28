@@ -47,7 +47,8 @@ const (
 //     `tool_input.file_path` o `tool_input.notebook_path`.
 //   - Codex: la misma envoltura y, de `apply_patch`, las cabeceras `*** Add File:`,
 //     `*** Update File:`, `*** Delete File:` y `*** Move to:` del parche, que se buscan en todo
-//     `tool_input` porque la forma exacta de la carga es el supuesto A-2 (se verifica en S11-c3).
+//     `tool_input` porque la forma de la carga, tomada de la documentación oficial de Codex, no
+//     está verificada en una ejecución real (A-2, spike-guard-runtimes.md).
 //   - OpenCode: `{event, tool, filePath, cwd}`, que envía su plugin (`event` es `pre` o `post`).
 //
 // Una carga demasiado grande, JSON inválido o un agente desconocido es un error: quien llama falla

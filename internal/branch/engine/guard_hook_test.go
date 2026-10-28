@@ -113,6 +113,48 @@ func TestGuardHookOutputProtocolOfEachRuntime(t *testing.T) {
 	}
 }
 
+// A-2 (spike-guard-runtimes.md): la carga documentada de Codex para `apply_patch` completa, con
+// `tool_input.command` como cadena (`*** Begin Patch` … `*** End Patch`), la envoltura de sesión y,
+// en `PostToolUse`, `tool_response`. La guarda solo lee del parche; el resto de la carga no cambia
+// las rutas, y con `PreToolUse` sobre un documento en la rama equivocada se bloquea con salida 2.
+func TestGuardHookCodexDocumentedApplyPatchEnvelope(t *testing.T) {
+	repo := embeddedCoreProject(t)
+	document := documentOf(repo)
+	patch := "*** Begin Patch\n*** Add File: " + filepath.ToSlash(document) + "\n+hola\n*** Update File: internal/a.go\n@@\n-a\n+b\n*** End Patch\n"
+	envelope := func(event string, withResponse bool) string {
+		body := map[string]any{
+			"session_id": "019a-test", "transcript_path": filepath.Join(repo, "transcript.jsonl"), "cwd": repo,
+			"hook_event_name": event, "model": "gpt-5", "permission_mode": "default",
+			"tool_name": "apply_patch", "tool_use_id": "call_1", "tool_input": map[string]any{"command": patch},
+		}
+		if withResponse {
+			body["tool_response"] = map[string]any{"output": "Success. Updated the following files:\nA " + document + "\n*** Add File: otra.md"}
+		}
+		data, err := json.Marshal(body)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return string(data)
+	}
+
+	for event, want := range map[string]string{"PreToolUse": GuardEventPre, "PostToolUse": GuardEventPost} {
+		got, err := ParseGuardPayload(GuardAgentCodex, strings.NewReader(envelope(event, event == "PostToolUse")))
+		if err != nil {
+			t.Fatalf("%s: ParseGuardPayload: %v", event, err)
+		}
+		if got.Event != want || got.Tool != "apply_patch" || len(got.Paths) != 2 ||
+			!strings.EqualFold(filepath.ToSlash(got.Paths[0]), filepath.ToSlash(document)) ||
+			!strings.EqualFold(filepath.ToSlash(got.Paths[1]), filepath.ToSlash(filepath.Join(repo, "internal", "a.go"))) {
+			t.Errorf("%s: carga = %+v; se esperaban el evento %q, la herramienta apply_patch y las dos rutas del parche, sin leer tool_response", event, got, want)
+		}
+	}
+
+	code, stdout, stderr := runGuardFor(t, GuardAgentCodex, envelope("PreToolUse", false))
+	if code != 2 || stdout != "" || !strings.Contains(stderr, "axiom branch ensure --cwd ") {
+		t.Fatalf("código %d, stdout %q, stderr %q; se esperaba 2, stdout vacío y el motivo con la continuación por stderr", code, stdout, stderr)
+	}
+}
+
 // El protocolo de un aviso (`warn`, que llega con S11-c2): Claude Code y Codex lo devuelven con
 // salida 2 y el texto por `stderr`, que el runtime entrega al agente sin bloquear una escritura que
 // ya ocurrió; OpenCode, por `stdout`.

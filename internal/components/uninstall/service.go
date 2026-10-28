@@ -984,12 +984,12 @@ func (s *Service) componentOperations(adapter agents.Adapter, componentID model.
 		}
 		if path := adapter.SettingsPath(homeDir); path != "" && adapter.Agent() == model.AgentClaudeCode {
 			targets = append(targets, path)
-			ops = append(ops, rewriteSkillRegistryHook(path))
+			ops = append(ops, rewriteSkillRegistryHook(path, adapter.Agent()))
 		}
 		if adapter.Agent() == model.AgentCodex {
 			path := filepath.Join(adapter.GlobalConfigDir(homeDir), "hooks.json")
 			targets = append(targets, path)
-			ops = append(ops, rewriteSkillRegistryHook(path))
+			ops = append(ops, rewriteSkillRegistryHook(path, adapter.Agent()))
 		}
 		if path := sdd.SkillRegistryHookPath(adapter, homeDir); path != "" {
 			// Axiom owns the whole file; user hooks beside it are left alone.
@@ -1347,7 +1347,7 @@ func rewriteOpenCodeSDDSettings(path string, plan *opencodedefault.UninstallPlan
 	}}
 }
 
-func rewriteSkillRegistryHook(path string) operation {
+func rewriteSkillRegistryHook(path string, agentID model.AgentID) operation {
 	return operation{
 		typeID: opRewriteFile,
 		path:   path,
@@ -1359,7 +1359,7 @@ func rewriteSkillRegistryHook(path string) operation {
 				}
 				return false, false, fmt.Errorf("read skill-registry hook config %q: %w", path, err)
 			}
-			updated, changed, err := removeSkillRegistryHook(raw)
+			updated, changed, err := removeSkillRegistryHook(raw, sdd.BranchGuardHookCommand(agentID))
 			if err != nil {
 				return false, false, fmt.Errorf("clean skill-registry hook %q: %w", path, err)
 			}
@@ -1381,7 +1381,7 @@ func rewriteSkillRegistryHook(path string) operation {
 	}
 }
 
-func removeSkillRegistryHook(raw []byte) ([]byte, bool, error) {
+func removeSkillRegistryHook(raw []byte, branchGuardCommand string) ([]byte, bool, error) {
 	root := map[string]any{}
 	if err := json.Unmarshal(raw, &root); err != nil {
 		return nil, false, err
@@ -1418,6 +1418,7 @@ func removeSkillRegistryHook(raw []byte) ([]byte, bool, error) {
 					strings.Contains(cmd, "gentle-ai review stop-hook") ||
 					strings.Contains(cmd, "axiom sdd-preflight-hook") ||
 					strings.Contains(cmd, "gentle-ai sdd-preflight-hook") ||
+					cmd == branchGuardCommand ||
 					cmd == "axiom telemetry runtime claude --json" ||
 					cmd == "gentle-ai telemetry runtime claude --json" ||
 					cmd == "axiom telemetry runtime codex --json" ||
