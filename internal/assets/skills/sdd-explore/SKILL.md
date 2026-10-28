@@ -44,6 +44,7 @@ The orchestrator will give you:
 - **openspec**: Read and follow `skills/_shared/openspec-convention.md`.
 - **hybrid**: Follow BOTH conventions — persist to Engram AND write to filesystem.
 - **none**: Return result only.
+- When the exploration is tied to a named change, write `exploration.md` on the branch that `axiom branch ensure` prepared, under `workspaceRoot` from the status, using the absolute paths of its JSON with `--cwd`; never create a branch or a worktree yourself.
 
 ### Retrieving Context
 
