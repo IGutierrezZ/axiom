@@ -996,7 +996,7 @@ func (s *Service) CreateIncrement(req CreateIncrementRequest) (*CreateIncrementR
 
 	// REQ-25.32: `ensure` prepara la rama (y, en modo worktree, el worktree) del cambio antes de
 	// escribir nada; el escritor guardado escribe en el planning home que devuelve.
-	planningHome, err := s.ensureIncrementBranch(name)
+	planningHome, err := s.ensureIncrementBranch(name, req.Mode)
 	if err != nil {
 		return nil, err
 	}

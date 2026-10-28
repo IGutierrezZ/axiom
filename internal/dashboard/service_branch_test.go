@@ -219,9 +219,24 @@ func TestCreateIncrementRejectedEnsureLeavesNoFolder(t *testing.T) {
 
 	_, err := svc.CreateIncrement(CreateIncrementRequest{Name: "x"})
 	wantRefusal(t, err, branch.CodeDirtyWorktree)
+
+	// REQ-25.32: por HTTP el rechazo es un 409 con `{code, error, continuation}`.
 	rr := postIncrement(t, svc, CreateIncrementRequest{Name: "x"})
-	if rr.Code != http.StatusBadRequest {
-		t.Errorf("POST /api/increments = %d, se esperaba el rechazo (el 409 tipado llega en S10-c1): %s", rr.Code, rr.Body.String())
+	body := wantConflict(t, rr)
+	if body["code"] != string(branch.CodeDirtyWorktree) {
+		t.Errorf("code = %v, se esperaba %s: %v", body["code"], branch.CodeDirtyWorktree, body)
+	}
+	if msg, _ := body["error"].(string); msg == "" {
+		t.Errorf("error debía describir el rechazo: %v", body)
+	}
+	if next, _ := body["continuation"].(string); !strings.Contains(next, "axiom ") {
+		t.Errorf("continuation debía ser una orden de axiom: %v", body)
+	}
+	if _, present := body["decision"]; present {
+		t.Errorf("un rechazo que no es decision_required no lleva decisión: %v", body)
+	}
+	if _, present := body["status"]; present {
+		t.Errorf("un rechazo tipado no lleva status: %v", body)
 	}
 
 	wantAbsent(t, filepath.Join(ws.Home, "changes", "x"))
@@ -233,8 +248,21 @@ func TestCreateIncrementRejectedEnsureLeavesNoFolder(t *testing.T) {
 	}
 }
 
-// Modo `ask` sin respuesta: el rechazo es `decision_required` con su decisión y no se crea nada
-// (la respuesta HTTP 409 y el campo `mode` llegan en S10-c1).
+// wantConflict exige un 409 con cuerpo JSON y lo devuelve decodificado.
+func wantConflict(t *testing.T, rr *httptest.ResponseRecorder) map[string]any {
+	t.Helper()
+	if rr.Code != http.StatusConflict {
+		t.Fatalf("POST /api/increments = %d, se esperaba 409: %s", rr.Code, rr.Body.String())
+	}
+	var body map[string]any
+	if err := json.Unmarshal(rr.Body.Bytes(), &body); err != nil {
+		t.Fatalf("el 409 debía llevar un cuerpo JSON: %v\n%s", err, rr.Body.String())
+	}
+	return body
+}
+
+// REQ-25.32 escenario 2: modo `ask` sin respuesta. El servicio devuelve `decision_required` con su
+// decisión y el HTTP, un 409 con `{status, statusLabel, code, decision}`; no se crea nada.
 func TestCreateIncrementInAskModeReturnsTheDecisionWithoutWriting(t *testing.T) {
 	ws := embeddedProject(t, hub.WorktreeModeAsk)
 	svc := NewService(ws.Master)
@@ -244,9 +272,103 @@ func TestCreateIncrementInAskModeReturnsTheDecisionWithoutWriting(t *testing.T) 
 	if refusal.Decision == nil || len(refusal.Decision.Choices) != 2 {
 		t.Errorf("decision_required debía llevar la decisión con dos respuestas: %+v", refusal.Decision)
 	}
+
+	body := wantConflict(t, postIncrement(t, svc, CreateIncrementRequest{Name: "x"}))
+	if body["status"] != string(branch.StatusDecisionRequired) || body["statusLabel"] != branch.Label(string(branch.StatusDecisionRequired)) {
+		t.Errorf("status/statusLabel = %v / %v: %v", body["status"], body["statusLabel"], body)
+	}
+	if body["code"] != string(branch.CodeDecisionRequired) {
+		t.Errorf("code = %v, se esperaba %s", body["code"], branch.CodeDecisionRequired)
+	}
+	decision, _ := body["decision"].(map[string]any)
+	choices, _ := decision["choices"].([]any)
+	if decision["question"] == "" || len(choices) != 2 {
+		t.Fatalf("decision debía llevar la pregunta y dos respuestas: %v", body["decision"])
+	}
+	answers := map[string]bool{}
+	for _, raw := range choices {
+		choice, _ := raw.(map[string]any)
+		answer, _ := choice["answer"].(string)
+		answers[answer] = true
+	}
+	if !answers["worktree"] || !answers["in_place"] {
+		t.Errorf("las respuestas debían ser worktree e in_place: %v", answers)
+	}
+
 	wantAbsent(t, filepath.Join(ws.Home, "changes", "x"))
 	if branchExists(t, ws.Master, "feat/x") {
 		t.Error("decision_required no debía crear la rama")
+	}
+	if status := runGit(t, ws.Master, "status", "--porcelain"); status != "" {
+		t.Errorf("decision_required no debía tocar el checkout:\n%s", status)
+	}
+}
+
+// REQ-25.32 escenario 3: repetir la creación con `mode` completa la creación (`in_place` hace
+// checkout de `feat/x` y escribe allí) y la respuesta es solo de ese cambio: otro cambio en modo
+// `ask` vuelve a devolver `decision_required`.
+func TestCreateIncrementRepeatedWithModeCompletesTheCreation(t *testing.T) {
+	ws := embeddedProject(t, hub.WorktreeModeAsk)
+	svc := NewService(ws.Master)
+	wantConflict(t, postIncrement(t, svc, CreateIncrementRequest{Name: "x"}))
+	wantAbsent(t, filepath.Join(ws.Home, "changes", "x"))
+
+	rr := postIncrement(t, svc, CreateIncrementRequest{Name: "x", Intent: "Propósito X", Mode: "in_place"})
+	if rr.Code != http.StatusCreated {
+		t.Fatalf("la repetición con mode debía crear el cambio: %d %s", rr.Code, rr.Body.String())
+	}
+	if got := runGit(t, ws.Master, "branch", "--show-current"); got != "feat/x" {
+		t.Errorf("in_place debía hacer checkout de feat/x en el repositorio, está en %q", got)
+	}
+	if body := wantFile(t, filepath.Join(ws.Home, "changes", "x", "proposal.md")); !strings.Contains(body, "Propósito X") {
+		t.Errorf("proposal.md sin el propósito:\n%s", body)
+	}
+
+	// La respuesta se registró para x, no para el proyecto: y sigue preguntando.
+	runGit(t, ws.Master, "add", "-A")
+	runGit(t, ws.Master, "commit", "-q", "-m", "x")
+	runGit(t, ws.Master, "switch", "-q", "main")
+	body := wantConflict(t, postIncrement(t, svc, CreateIncrementRequest{Name: "y"}))
+	if body["code"] != string(branch.CodeDecisionRequired) {
+		t.Errorf("otro cambio en modo ask debía volver a preguntar: %v", body)
+	}
+}
+
+// REQ-25.32: un `mode` que `ensure` no admite es un rechazo (409) y no crea nada.
+func TestCreateIncrementRefusesAnUnknownMode(t *testing.T) {
+	ws := embeddedProject(t, hub.WorktreeModeWorktree)
+	svc := NewService(ws.Master)
+
+	body := wantConflict(t, postIncrement(t, svc, CreateIncrementRequest{Name: "x", Mode: "nonsense"}))
+
+	if code, _ := body["code"].(string); code == "" {
+		t.Errorf("el rechazo debía llevar un código tipado: %v", body)
+	}
+	wantAbsent(t, filepath.Join(ws.Home, "changes", "x"))
+	if branchExists(t, ws.Master, "feat/x") {
+		t.Error("un mode inválido no debía crear la rama")
+	}
+}
+
+// REQ-25.32 escenario 5: en un multirepo el repositorio de specs se trabaja in situ, en su rama de
+// integración: la creación escribe allí por HTTP, sin worktree ni rama de cambio.
+func TestCreateIncrementInMultirepoWritesInSituInTheSpecsRepository(t *testing.T) {
+	svc, ws := canonicalService(t, startAtMaster)
+	commitGitRepo(t, ws.Specs)
+
+	rr := postIncrement(t, svc, CreateIncrementRequest{Name: "x", Intent: "Propósito X"})
+
+	if rr.Code != http.StatusCreated {
+		t.Fatalf("POST /api/increments = %d: %s", rr.Code, rr.Body.String())
+	}
+	if body := wantFile(t, filepath.Join(ws.Home, "changes", "x", "proposal.md")); !strings.Contains(body, "Propósito X") {
+		t.Errorf("proposal.md del repositorio de specs sin el propósito:\n%s", body)
+	}
+	if got := runGit(t, ws.Specs, "branch", "--show-current"); got != "main" {
+		t.Errorf("el repositorio de specs debía seguir en su rama de integración, está en %q", got)
+	}
+	if branchExists(t, ws.Specs, "feat/x") {
+		t.Error("el repositorio de specs no tiene rama de cambio")
 	}
 }
 
