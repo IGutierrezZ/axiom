@@ -19,6 +19,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/app"
 	"github.com/IGutierrezZ/axiom/v3/internal/autoskill"
 	"github.com/IGutierrezZ/axiom/v3/internal/backup"
+	"github.com/IGutierrezZ/axiom/v3/internal/branch/engine"
 	"github.com/IGutierrezZ/axiom/v3/internal/cli"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/sdd"
 	"github.com/IGutierrezZ/axiom/v3/internal/handoff"
@@ -190,19 +191,30 @@ func (s *Service) GetWorkspace() (*WorkspaceDTO, error) {
 	}, nil
 }
 
-// GetIncrements escanea y lista los incrementos activos y archivados.
-func (s *Service) GetIncrements() ([]IncrementSummaryDTO, error) {
+// GetIncrements escanea y lista los incrementos activos y archivados. Agrega a los del checkout
+// principal los cambios activos de los worktrees registrados (REQ-25.34): si uno figura en ambos
+// sitios, prevalece el del worktree. Marca como `pendingArchive` los cambios activos ya presentes en la
+// rama de integración (REQ-25.20). Además del listado devuelve los avisos informativos que viajan en la
+// cabecera `X-Axiom-Notes`: los cambios pendientes de archivar, los worktrees desaparecidos y la falta de
+// la referencia de integración. Ninguno es un error ni bloquea el listado.
+func (s *Service) GetIncrements() ([]IncrementSummaryDTO, []string, error) {
 	var list []IncrementSummaryDTO
-	root, err := s.planningRoot()
+	loc, err := workspace.Locate(s.getRootPath())
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
+	root := loc.PlanningHome
+	registered, registryNotes := registeredIncrements(loc)
 
-	// 1. Escanear cambios activos en <planning home>/changes/
+	// 1. Escanear cambios activos en <planning home>/changes/; los que viven en un worktree se
+	// leen de él, no del checkout principal.
 	activeDir := filepath.Join(root, "changes")
 	if entries, err := os.ReadDir(activeDir); err == nil {
 		for _, e := range entries {
 			if !e.IsDir() || e.Name() == "archive" || e.Name() == "e2e-cumulative" {
+				continue
+			}
+			if _, inWorktree := registered[e.Name()]; inWorktree {
 				continue
 			}
 			incPath := filepath.Join(activeDir, e.Name())
@@ -210,6 +222,28 @@ func (s *Service) GetIncrements() ([]IncrementSummaryDTO, error) {
 			list = append(list, summary)
 		}
 	}
+	for name, change := range registered {
+		summary := s.inspectIncrement(change.ChangeRoot, name, "active")
+		summary.WorktreePath = change.WorktreeRoot
+		summary.Branch = change.Branch
+		list = append(list, summary)
+	}
+
+	// Cambios pendientes de archivar: informativos, sin error ni bloqueo.
+	var notes []string
+	pending, pendingNotes := engine.Default().PendingArchive(context.Background(), loc)
+	if len(pending) > 0 {
+		pendingSet := make(map[string]bool, len(pending))
+		for _, change := range pending {
+			pendingSet[change.Change] = true
+		}
+		for i := range list {
+			list[i].PendingArchive = pendingSet[list[i].Name]
+		}
+		notes = append(notes, pendingArchiveNote(pending))
+	}
+	notes = append(notes, registryNotes...)
+	notes = append(notes, pendingNotes...)
 
 	// 2. Escanear cambios archivados en <planning home>/changes/archive/
 	archiveDir := filepath.Join(root, "changes", "archive")
@@ -232,7 +266,7 @@ func (s *Service) GetIncrements() ([]IncrementSummaryDTO, error) {
 		return list[i].Name > list[j].Name
 	})
 
-	return list, nil
+	return list, notes, nil
 }
 
 func (s *Service) inspectIncrement(path, name, kind string) IncrementSummaryDTO {
@@ -433,35 +467,14 @@ func (s *Service) inspectIncrement(path, name, kind string) IncrementSummaryDTO 
 }
 
 // FindIncrementPath busca la ruta de un incremento por nombre o prefijo/sufijo.
+// Un cambio activo que vive en un worktree registrado se resuelve en el worktree y prevalece sobre
+// el del checkout principal (REQ-25.34).
 func (s *Service) FindIncrementPath(name string) (string, string, error) {
-	root, err := s.planningRoot()
+	location, err := s.locateIncrement(name)
 	if err != nil {
 		return "", "", err
 	}
-
-	// 1. Probar en activos
-	activePath := filepath.Join(root, "changes", name)
-	if dirExists(activePath) {
-		return activePath, "active", nil
-	}
-
-	// 2. Probar en archivados exacto
-	archivePath := filepath.Join(root, "changes", "archive", name)
-	if dirExists(archivePath) {
-		return archivePath, "archived", nil
-	}
-
-	// 3. Probar en archivados buscando por sufijo (ej. 'inc-01' en '2026-09-14-inc-01-...')
-	archiveDir := filepath.Join(root, "changes", "archive")
-	if entries, err := os.ReadDir(archiveDir); err == nil {
-		for _, e := range entries {
-			if e.IsDir() && (strings.Contains(e.Name(), name) || strings.HasSuffix(e.Name(), name)) {
-				return filepath.Join(archiveDir, e.Name()), "archived", nil
-			}
-		}
-	}
-
-	return "", "", fmt.Errorf("incremento '%s' no encontrado", name)
+	return location.path, location.kind, nil
 }
 
 // requireActiveIncrement devuelve la ruta de un cambio activo. Un fallo de la
@@ -481,13 +494,16 @@ func (s *Service) requireActiveIncrement(name string) (string, error) {
 
 // GetIncrementDetail retorna el detalle completo de un cambio y el contenido de sus artefactos.
 func (s *Service) GetIncrementDetail(name string) (*IncrementDetailDTO, error) {
-	path, kind, err := s.FindIncrementPath(name)
+	location, err := s.locateIncrement(name)
 	if err != nil {
 		return nil, err
 	}
+	path, kind := location.path, location.kind
 
 	root := s.getRootPath()
 	summary := s.inspectIncrement(path, filepath.Base(path), kind)
+	summary.WorktreePath = location.worktreePath
+	summary.Branch = location.branch
 
 	dto := &IncrementDetailDTO{
 		Summary:     summary,

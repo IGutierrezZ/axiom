@@ -39,7 +39,7 @@ func TestServiceWorkspace(t *testing.T) {
 
 func TestServiceIncrements(t *testing.T) {
 	svc := NewService("../..")
-	list, err := svc.GetIncrements()
+	list, _, err := svc.GetIncrements()
 	if err != nil {
 		t.Fatalf("GetIncrements falló: %v", err)
 	}
@@ -1077,7 +1077,7 @@ func TestIncrementSummaryOperationalFlagsAndRoleFiltering(t *testing.T) {
 	_ = os.WriteFile(filepath.Join(inc5, "verify-report.md"), []byte("# Verify\nverdict: pass\n"), 0o644)
 
 	svc := NewService(tmp)
-	increments, err := svc.GetIncrements()
+	increments, _, err := svc.GetIncrements()
 	if err != nil {
 		t.Fatalf("GetIncrements() error: %v", err)
 	}
