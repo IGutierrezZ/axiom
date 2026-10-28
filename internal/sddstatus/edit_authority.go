@@ -85,8 +85,18 @@ func editTargetTokens(line string, workspaceRoot string) []string {
 // sameRepositoryEditRoot. allowedEditRoots is a parameter so a later slice can
 // extend it with persisted per-change grants without touching detection
 // (#2540 S2-S4).
-func detectUnauthorizedEditRoots(tasksText string, workspaceRoot string, allowedEditRoots []string) []string {
-	planningGitRoot := gitRootOf(resolveExistingPath(workspaceRoot))
+//
+// base is the directory the relative task paths resolve against: the workspace
+// root, or the worktree of the change or role that owns the plan (INC-25 D-14).
+// rebase rewrites each resolved path before it is reduced to its Git root, so a
+// path inside the main checkout of a repository `axiom branch ensure`
+// registered lands in that repository's worktree; the identity (or nil) keeps
+// the historical behaviour byte for byte.
+func detectUnauthorizedEditRoots(tasksText string, base string, allowedEditRoots []string, rebase func(string) string) []string {
+	if rebase == nil {
+		rebase = identityRebase
+	}
+	planningGitRoot := gitRootOf(resolveExistingPath(base))
 	allowed := make([]string, 0, len(allowedEditRoots))
 	for _, root := range allowedEditRoots {
 		root = filepath.Clean(root)
@@ -98,12 +108,12 @@ func detectUnauthorizedEditRoots(tasksText string, workspaceRoot string, allowed
 
 	unauthorized := map[string]bool{}
 	for _, line := range strings.Split(tasksText, "\n") {
-		for _, token := range editTargetTokens(line, workspaceRoot) {
+		for _, token := range editTargetTokens(line, base) {
 			resolved := token
 			if !filepath.IsAbs(resolved) {
-				resolved = filepath.Join(workspaceRoot, resolved)
+				resolved = filepath.Join(base, resolved)
 			}
-			resolved = resolveExistingPath(filepath.Clean(resolved))
+			resolved = resolveExistingPath(rebase(filepath.Clean(resolved)))
 			target := gitRootOf(resolved)
 			missing := target
 			// #3504: a path in no Git repository is still outside every
@@ -415,7 +425,7 @@ func taskWorkUnitKey(line string) (unit int, ok bool) {
 // structure can be found at all. It returns the in-scope (blocking) roots
 // separately from the future work units' own roots, which are informational
 // only.
-func detectUnauthorizedEditRootsForCurrentWorkUnit(tasksText, workspaceRoot string, allowedEditRoots []string) (blocking []string, future []string) {
+func detectUnauthorizedEditRootsForCurrentWorkUnit(tasksText, base string, allowedEditRoots []string, rebase func(string) string) (blocking []string, future []string) {
 	lines := strings.Split(tasksText, "\n")
 
 	currentUnit, hasCurrent := 0, false
@@ -449,7 +459,7 @@ func detectUnauthorizedEditRootsForCurrentWorkUnit(tasksText, workspaceRoot stri
 		}
 	}
 
-	blocking = detectUnauthorizedEditRoots(strings.Join(inScope, "\n"), workspaceRoot, allowedEditRoots)
+	blocking = detectUnauthorizedEditRoots(strings.Join(inScope, "\n"), base, allowedEditRoots, rebase)
 	if len(outOfScope) == 0 {
 		return blocking, nil
 	}
@@ -457,7 +467,7 @@ func detectUnauthorizedEditRootsForCurrentWorkUnit(tasksText, workspaceRoot stri
 	for _, root := range blocking {
 		blockingSet[root] = true
 	}
-	for _, root := range detectUnauthorizedEditRoots(strings.Join(outOfScope, "\n"), workspaceRoot, allowedEditRoots) {
+	for _, root := range detectUnauthorizedEditRoots(strings.Join(outOfScope, "\n"), base, allowedEditRoots, rebase) {
 		if !blockingSet[root] {
 			future = append(future, root)
 		}
@@ -497,7 +507,13 @@ func futureEditRootsNote(roots []string, files ...string) string {
 // scoped to the current work unit (#4103): a future work unit's own
 // unauthorized roots are reported through the non-blocking notes channel (#4372),
 // never as a blocker.
-func applyEditAuthorityBlock(applyState ApplyState, reasons *blockerReasons, plans []planText, workspaceRoot string, allowedEditRoots []string) (ApplyState, []string) {
+//
+// Each plan resolves its relative paths against its own base (the worktree of
+// the change or of its role, INC-25 D-14) and falls back to workspaceRoot when
+// it has none; rebase relocates the paths of registered repositories' main
+// checkouts into their worktrees. Identity rebase and plans without a base keep
+// the behaviour from before the increment.
+func applyEditAuthorityBlock(applyState ApplyState, reasons *blockerReasons, plans []planText, workspaceRoot string, allowedEditRoots []string, rebase func(string) string) (ApplyState, []string) {
 	if applyState != ApplyReady {
 		return applyState, nil
 	}
@@ -507,7 +523,7 @@ func applyEditAuthorityBlock(applyState ApplyState, reasons *blockerReasons, pla
 	// tasks.md) takes this same path with one iteration and is unchanged.
 	var roots, futureRoots, blockingFiles, futureFiles []string
 	for _, plan := range plans {
-		blocking, future := detectUnauthorizedEditRootsForCurrentWorkUnit(plan.text, workspaceRoot, allowedEditRoots)
+		blocking, future := detectUnauthorizedEditRootsForCurrentWorkUnit(plan.text, plan.baseOr(workspaceRoot), allowedEditRoots, rebase)
 		if len(blocking) != 0 {
 			roots = append(roots, blocking...)
 			blockingFiles = append(blockingFiles, plan.name)
