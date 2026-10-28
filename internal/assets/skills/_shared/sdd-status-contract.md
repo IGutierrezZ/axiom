@@ -157,6 +157,16 @@ The orchestrator MUST carry `actionContext` into any phase launch.
 - If `allowedEditRoots` is present, only edit files within those roots.
 - If a command cannot prove a file is inside the authoritative workspace or allowed edit roots, stop and ask for clarification.
 
+## Branch Guard (`blocked(wrong_branch)`)
+
+`blocked(wrong_branch)` is the second typed reason of `blockedReasons`, next to `blocked(edit_authority_missing)`. It appears when the repository the change writes to is not on the branch the change expects.
+
+- The reason names the repository, the current branch and the expected branch, and carries an executable continuation: `axiom branch ensure --cwd <absolute path> --change <change>` (plus `--lane` when it applies). Run it, then repeat the status. It has no consent envelope: the continuation is a command the orchestrator runs, not a grant the human answers.
+- In a repository with a change branch (`monorepo-embedded`) it applies in every phase. In the archive phase the expected branch is the archive branch `<branch_prefix>/<change>-archive` and the continuation adds `--archive`: standing on the change branch, on the integration branch, or on a role branch blocks. In a `multirepo`, a code repository is checked only when apply evaluates a work unit that touches it, and the specs repository expects the integration branch, also in the archive phase.
+- When `wrong_branch` and `edit_authority_missing` both apply, `wrong_branch` is projected first, because the authorized edit roots depend on the right branch; after the branch is corrected, `blocked(edit_authority_missing)` may appear.
+- A change whose `kickoff.yaml` has no branch-policy snapshot (sealed before the branch policy, or with `--infer`) is exempt. Without git, or outside a git repository, the guard does not block and adds a note.
+- `axiom sdd continue` reports the same block and authorizes no next phase.
+
 ## Edit Authority Consent
 
 Status inspection requires no launch, review, delivery, or archive preflight and never runs a phase.

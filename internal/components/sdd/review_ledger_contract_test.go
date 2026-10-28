@@ -573,7 +573,11 @@ func TestKilocodeReviewSettingsMatchCurrentMainBaseline(t *testing.T) {
 	// paragraph (D-18) that presents the context delta in the `design` and `role-apply`
 	// gates and documents the remediation line. Kilocode embeds the OpenCode orchestrator,
 	// which composes that shared section, so the hash moves. Deliberate, not drift.
-	const want = "3d6a2041020dce8810d7a99e6de53f3f78b82c10c330d3425c8626b89413f7cc"
+	// INC-25 (S12-c2): the same shared kickoff section gains the opening paragraph that
+	// runs `axiom branch ensure` after the lane is chosen and before the pre-flight
+	// (REQ-25.35). Kilocode composes it through the OpenCode orchestrator, so the hash
+	// moves. Deliberate, not drift.
+	const want = "5218a0ed56cac12bf81d8205ba8ea0fa2b74def6ac45499e6310d97c2951f04e"
 	if got != want {
 		t.Fatalf("Kilocode settings SHA-256 = %s, want current-main baseline %s", got, want)
 	}

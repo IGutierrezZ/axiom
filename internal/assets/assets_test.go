@@ -3721,3 +3721,177 @@ func TestSDDOptionalVerificationConsumersPreserveDiagnosticSemantics(t *testing.
 		}
 	})
 }
+
+// TestWorktreePrimitiveNamesLiveOnlyInTheRoutingDoctrineLine guards
+// organic-agent-trigger-rules REQ-25.41 (inc-25, design D-19): `EnterWorktree`
+// and `ExitWorktree` are runtime-specific primitives, so the product may name
+// them in exactly one place, the ban line of the routing doctrine, and no
+// embedded asset may name or prescribe them. The rendered line is compared across
+// adapters by the agentguidance tests; the assets package cannot import that
+// renderer without a cycle, so this pin reads its source.
+func TestWorktreePrimitiveNamesLiveOnlyInTheRoutingDoctrineLine(t *testing.T) {
+	primitives := []string{"EnterWorktree", "ExitWorktree"}
+
+	t.Run("no embedded asset names the primitives", func(t *testing.T) {
+		checked := 0
+		err := fs.WalkDir(FS, ".", func(path string, entry fs.DirEntry, err error) error {
+			if err != nil {
+				return err
+			}
+			if entry.IsDir() {
+				return nil
+			}
+			data, err := FS.ReadFile(path)
+			if err != nil {
+				return err
+			}
+			checked++
+			for _, primitive := range primitives {
+				if strings.Contains(string(data), primitive) {
+					t.Errorf("embedded asset %s names the runtime primitive %s; only the routing doctrine line may", path, primitive)
+				}
+			}
+			return nil
+		})
+		if err != nil {
+			t.Fatalf("walk embedded assets: %v", err)
+		}
+		if checked < 100 {
+			t.Fatalf("walked only %d embedded assets; the scan lost its coverage", checked)
+		}
+	})
+
+	t.Run("the routing doctrine names them on one line", func(t *testing.T) {
+		source, err := os.ReadFile(filepath.Join("..", "components", "agentguidance", "routing.go"))
+		if err != nil {
+			t.Fatalf("read routing.go: %v", err)
+		}
+
+		var lines []string
+		for _, line := range strings.Split(string(source), "\n") {
+			for _, primitive := range primitives {
+				if strings.Contains(line, primitive) {
+					lines = append(lines, line)
+					break
+				}
+			}
+		}
+		if len(lines) != 1 {
+			t.Fatalf("routing.go names the primitives on %d lines, want exactly one:\n%s", len(lines), strings.Join(lines, "\n"))
+		}
+		for _, want := range []string{
+			"Never use `EnterWorktree` or `ExitWorktree`",
+			"absolute paths that `axiom branch ensure` returns",
+			"`--cwd`, `git -C`, and absolute paths.",
+		} {
+			if !strings.Contains(lines[0], want) {
+				t.Fatalf("the ban line is missing %q:\n%s", want, lines[0])
+			}
+		}
+	})
+}
+
+// inc-25 (REQ-25.35, REQ-25.23 punto 4, D-19): the shared kickoff section orders
+// `axiom branch ensure` after the lane is chosen and the change is named, and
+// before the pre-flight questionnaire and `kickoff seal`. It stays in the shared
+// source, so the twelve orchestrators pick it up through their marker.
+func TestSharedKickoffSectionRunsBranchEnsureBeforeThePreflight(t *testing.T) {
+	shared := MustRead("skills/_shared/sdd-orchestrator-sections.md")
+	const start = "<!-- sdd-orchestrator-section:SDD Change Kickoff and Block Gates:start -->"
+	const end = "<!-- sdd-orchestrator-section:SDD Change Kickoff and Block Gates:end -->"
+	from := strings.Index(shared, start)
+	to := strings.Index(shared, end)
+	if from < 0 || to < from {
+		t.Fatalf("sdd-orchestrator-sections.md has no %q section", "SDD Change Kickoff and Block Gates")
+	}
+	section := shared[from:to]
+
+	for _, want := range []string{
+		"run `axiom branch ensure --change <name> --json`",
+		"After the user chooses the SDD lane and the change is named",
+		"before the pre-flight questionnaire",
+		"use the absolute paths of its JSON as `--cwd` of every later command",
+		"Do not run it while the lane-selection question is unanswered",
+		"Repeating it when you resume the change is idempotent",
+		"A `decision_required` result is an environment preference (worktree or in place), not governance",
+		"repeat `ensure` with `--mode <answer>`",
+		"Never pass `--fetch` without the explicit authorization of the user.",
+	} {
+		if !strings.Contains(section, want) {
+			t.Errorf("shared kickoff section missing %q", want)
+		}
+	}
+
+	// The order is part of the contract: ensure, then pre-flight, then seal.
+	ensure := strings.Index(section, "run `axiom branch ensure --change <name> --json`")
+	preflight := strings.Index(section, "before the pre-flight questionnaire")
+	seal := strings.Index(section, "`axiom sdd kickoff seal --cwd <repo>")
+	if ensure < 0 || preflight < 0 || seal < 0 || !(ensure < seal) || preflight > seal {
+		t.Errorf("kickoff section must run ensure (%d) ahead of the pre-flight (%d) and the seal command (%d)", ensure, preflight, seal)
+	}
+	if strings.Count(shared, "run `axiom branch ensure --change <name> --json`") != 1 {
+		t.Error("the ensure instruction must live once in the shared section")
+	}
+	for _, path := range allSDDOrchestratorAssetPaths(t) {
+		if strings.Contains(MustRead(path), "axiom branch ensure --change <name> --json") {
+			t.Errorf("%s duplicates the shared kickoff body", path)
+		}
+	}
+}
+
+// inc-25 (REQ-25.42, D-19): the status contract documents `blocked(wrong_branch)`
+// as the second typed reason, with no envelope, an executable continuation, the
+// precedence over `edit_authority_missing`, and the archive branch in the
+// archive phase.
+func TestSDDStatusContractDocumentsBlockedWrongBranch(t *testing.T) {
+	content := MustRead("skills/_shared/sdd-status-contract.md")
+	section := markdownSection(content, "## Branch Guard (`blocked(wrong_branch)`)")
+	if strings.TrimSpace(section) == "" {
+		t.Fatal("sdd-status-contract has no Branch Guard section")
+	}
+	for _, want := range []string{
+		"second typed reason of `blockedReasons`, next to `blocked(edit_authority_missing)`",
+		"names the repository, the current branch and the expected branch",
+		"`axiom branch ensure --cwd <absolute path> --change <change>`",
+		"It has no consent envelope",
+		"a command the orchestrator runs, not a grant the human answers",
+		"In the archive phase the expected branch is the archive branch `<branch_prefix>/<change>-archive` and the continuation adds `--archive`",
+		"`wrong_branch` is projected first",
+		"the authorized edit roots depend on the right branch",
+		"after the branch is corrected, `blocked(edit_authority_missing)` may appear",
+		"exempt",
+		"`axiom sdd continue` reports the same block and authorizes no next phase",
+	} {
+		if !strings.Contains(section, want) {
+			t.Errorf("status contract Branch Guard section missing %q", want)
+		}
+	}
+	// The guard never gains an envelope: `consent` stays tied to edit authority.
+	if strings.Contains(section, "axiom.sdd-integration.consent/v1") {
+		t.Error("blocked(wrong_branch) must not carry the consent envelope")
+	}
+	// The guard section precedes the edit authority one, mirroring the precedence.
+	if strings.Index(content, "## Branch Guard (`blocked(wrong_branch)`)") > strings.Index(content, "## Edit Authority Consent") {
+		t.Error("the Branch Guard section must come before Edit Authority Consent")
+	}
+}
+
+// inc-25 (REQ-25.23 punto 4, D-19): section G of the shared phase convention
+// tells phase agents to work in the repositories and worktrees `ensure` returned
+// by absolute path, with `--cwd` and `git -C`, instead of changing directory.
+func TestSDDPhaseCommonUsesTheAbsolutePathsOfEnsure(t *testing.T) {
+	content := MustRead("skills/_shared/sdd-phase-common.md")
+	section := markdownSection(content, "## G. Working Directory and `openspec/...` Paths")
+	for _, want := range []string{
+		"`axiom branch ensure --change <c> --json`",
+		"`repositories[].branches[].worktree`",
+		"`--cwd`",
+		"`git -C`",
+		"absolute path",
+		"never change the working directory of the session",
+	} {
+		if !strings.Contains(section, want) {
+			t.Errorf("sdd-phase-common section G missing %q", want)
+		}
+	}
+}
