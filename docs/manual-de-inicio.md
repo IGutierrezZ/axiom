@@ -16,7 +16,7 @@
    - [Opción A: Línea de Comandos (CLI)](#opción-a-línea-de-comandos-cli)
    - [Opción B: Panel Web Interactivo (`axiom ui`)](#opción-b-panel-web-interactivo-axiom-ui)
    - [Aprovisionamiento Aislado de Agentes (`setup`)](#aprovisionamiento-aislado-de-agentes-setup)
-   - [Política Git Diferencial y Gestión de Worktrees](#política-git-diferencial-y-gestión-de-worktrees-odd-5)
+   - [Ramas y Worktrees (`axiom branch`)](#ramas-y-worktrees-axiom-branch)
    - [Sincronización Continua de Especificaciones](#sincronización-continua-de-especificaciones)
 6. [El Archivo de Configuración Maestro (`axiom.yaml`)](#6-el-archivo-de-configuración-maestro-axiomyaml)
    - [Política de Ramas (`git:`)](#política-de-ramas-git)
@@ -32,7 +32,7 @@
 10. [Relevos Estructurados entre Roles y Fases (Handoffs)](#10-relevos-estructurados-entre-roles-y-fases-handoffs)
 11. [Mantenimiento, Actualizaciones y Sincronización](#11-mantenimiento-actualizaciones-y-sincronización)
    - [Mantenimiento Semántico del CodeGraph](#mantenimiento-semántico-del-codegraph-axiom-semantic-reindex)
-   - [Limpieza Post-Merge de Worktrees](#automatización-post-archivado-y-scripts-de-soporte)
+   - [Automatización Post-Archivado y Scripts de Soporte](#automatización-post-archivado-y-scripts-de-soporte)
 
 ---
 
@@ -207,25 +207,42 @@ axiom setup
 
 ---
 
-### Política Git Diferencial y Gestión de Worktrees (ODD-5)
+### Ramas y Worktrees (`axiom branch`)
 
-Axiom establece una separación arquitectónica estricta entre repositorios de especificaciones y repositorios de código para evitar bloqueos y colisiones:
+Axiom prepara y retira las ramas y los worktrees de cada cambio con la familia `axiom branch`. Los orquestadores y las skills la invocan por ti (`axiom branch ensure` antes de la primera escritura de un cambio SDD o de un documento ODD); los mismos verbos están disponibles en la CLI. La política (rama de integración y prefijo) sale de `axiom.yaml` ([Política de Ramas (`git:`)](#política-de-ramas-git)); el modo de trabajo es una preferencia personal.
 
-1. **Repositorio de Especificaciones (`specs_repository` — Directo a `main`):**
-   - El repositorio de especificaciones opera **siempre en la rama principal (`main` o `master`)**, sin ramas secundarias ni worktrees.
-   - Las especificaciones y diseños son contratos vivos de verdad compartida. Al emitir un relevo formal (`handoff.md`), es mandatorio que las especificaciones estén commiteadas y sincronizadas con remoto (`git push`).
-2. **Repositorios de Código (Worktrees y Ramas Aisladas):**
-   - Antes de modificar código fuente, cada rol ejecuta el **cuestionario interactivo de pre-vuelo**:
-     1. ¿Crear worktree aislado o trabajar en el árbol actual?
-     2. Nombre de rama (`feat/<funcionalidad>`).
-     3. Rama base (`main`, `develop`, etc.).
-   - Al concluir la verificación en `PASS`, se ofrece registrar el commit y se solicita interactivamente la rama destino del Pull Request (`main`, `develop`, etc.) antes de proponer `gh pr create --base <rama-destino>`.
-3. **Limpieza Post-Merge (`axiom branch done`):**
-   - Tras fusionar el PR, `axiom branch done` confirma la fusión (ancestro, árbol equivalente o PR fusionado con evidencia), desmonta el worktree y elimina la rama local de cada rama del plan del cambio. Solo toca ramas locales y worktrees del plan, nunca una rama remota, y repetirlo es idempotente:
-     ```bash
-     axiom branch done --change <cambio>
-     ```
-   - En este repositorio, el envoltorio `scripts/axiom-worktree.ps1 done <slug>` (o `.sh`) lo invoca y después avanza `main` local.
+- `axiom branch ensure --change <cambio> [--lane sdd|odd] [--mode worktree|in_place] [--archive] [--fetch] [--json]`: crea solo lo que falta (rama del cambio, ramas de rol y sus worktrees) y devuelve las rutas absolutas con las que trabajar (`--cwd`, `git -C`). Es idempotente y no usa la red salvo con `--fetch`. Con el modo `ask` y sin respuesta registrada devuelve `decision_required` (código de salida `1`) sin crear nada; se repite con `--mode`.
+- `axiom branch status [--change <cambio>] [--json]`: solo lectura. Muestra el estado de las ramas y los worktrees del cambio, la rama destino propuesta para su PR (`prTarget`) y los cambios pendientes de archivar.
+- `axiom branch done --change <cambio> [--force]`: tras fusionar, confirma la fusión por capas (ascendencia, árbol equivalente o PR fusionado con evidencia) y elimina el worktree y la rama local. Nunca toca una rama remota y repetirlo es idempotente.
+- `axiom branch guard --agent <runtime>`: hook de la capa D (véase más abajo); no se invoca a mano.
+
+Modelo de ramas por topología:
+
+- **Monorepo embebido:** el cambio vive en `<prefijo>/<cambio>`, con su worktree en `<carpeta del proyecto>-wt/<cambio>/<repositorio>`. Si varios roles tocan el mismo repositorio, `<prefijo>/<cambio>` es la rama de seguimiento y cada rol saca `<prefijo>/<cambio>-<rol>` desde ella. Los artefactos de `openspec/` van en la rama del cambio desde la primera escritura.
+- **Multirepo:** el repositorio de especificaciones se trabaja in situ en su rama de integración, sin ramas ni worktrees; cada repositorio de código con un rol recibe `<prefijo>/<cambio>` desde su propia rama de integración.
+- La persona publica (`push`) y abre los PR; `axiom branch` nunca lo hace. Antes de ceder el testigo en un `handoff.md`, los artefactos quedan confirmados en la rama del cambio.
+
+El modo de trabajo (`worktree` por defecto, `in_place` o `ask`) y la raíz de los worktrees no se declaran en `axiom.yaml`: son preferencias personales del hub. Se fijan al registrar el proyecto (`axiom project add --worktree-mode in_place --worktree-root <ruta absoluta> <proyecto>`, o los dos campos del modal de registro de `axiom ui`) y `axiom branch ensure --mode` las sustituye para un cambio concreto.
+
+#### Flujo de la rama de archivado (monorepo)
+
+1. El PR del cambio se fusiona en la rama de integración.
+2. `axiom branch ensure --change <cambio> --archive` crea la rama `<prefijo>/<cambio>-archive` (y su worktree) desde la rama de integración. Si la referencia local de integración aún no contiene el cambio, rechaza con `change_not_integrated` y sugiere `--fetch`, que solo se usa con tu autorización.
+3. En esa rama, `sdd-archive` registra la evidencia `pr_merged`, compone el archivado y mueve el cambio a `openspec/changes/archive/`.
+4. La persona publica la rama y abre un PR documental aparte hacia la rama de integración.
+5. Tras fusionarlo, `axiom branch done --change <cambio>` retira el worktree y la rama de archivado. Si el PR documental se rechaza, se descarta la rama y el cambio sigue pendiente de archivar: `axiom branch status` lo lista con la orden que reinicia el flujo.
+
+Mientras no se archiva, un cambio ya fusionado figura como pendiente de archivar en `axiom branch status` y en el dashboard, sin bloquear nada. En multirepo no hay rama de archivado: el archive se hace in situ en el repositorio de especificaciones con la evidencia de integración o despliegue (`pr_merged`, `deployment` o `attestation`).
+
+#### Hook de guarda (capa D) e instalación
+
+`axiom sync` instala `axiom branch guard` como hook en Claude Code, Codex y OpenCode (no en Pi) de forma idempotente, y no instala hooks de git en ningún repositorio. El hook bloquea la escritura de documentos de Axiom (la carpeta de un cambio u `odd/tasks/<cambio>.md`) cuando el repositorio no está en la rama que corresponde, con la orden `axiom branch ensure` que lo corrige, y avisa sin bloquear en el resto de ficheros de un cambio registrado. Es inerte fuera de un proyecto Axiom, falla en abierto y solo afecta a las escrituras del agente, nunca a un editor humano.
+
+#### En este repositorio (política local)
+
+- `axiom.yaml` declara `git: {integration_branch: main, branch_prefix: inc}`.
+- El envoltorio `scripts/axiom-worktree.ps1` (o `.sh`) ofrece `new`, `pr` y `done` sobre `axiom branch`: los worktrees quedan en `C:\repos\axiom-wt\<slug>\axiom` y necesita un `axiom` con `axiom branch` en el PATH (`go install ./cmd/axiom`).
+- El hook local `scripts/claude-hooks/guard-primary-checkout.ps1` deniega cualquier escritura en el checkout principal (siempre en `main`) y avisa si un comando lo deja fuera de `main`; complementa a `axiom branch guard`, que no cubre Bash ni PowerShell.
 
 ---
 
@@ -319,7 +336,7 @@ repositories:
 - `axiom workspace validate` comprueba además en disco que cada `path` existe como directorio y obtiene su raíz git ascendiendo hasta una entrada `.git`, sin lanzar procesos (un worktree enlazado tiene su propia raíz): dos entradas que resuelven a la misma raíz git se rechazan nombrando ambas rutas y la raíz compartida (`app/web` y `app/api` dentro de un mismo repositorio). Una ruta que no pertenece a ningún repositorio git solo produce una advertencia que la nombra: el resultado sigue siendo `COMPLIANT`.
 - Los binarios anteriores ignoran el bloque, como el de `git:`.
 
-Por ahora los bloques `git:` y `repositories:` solo definen el esquema: el verbo `axiom branch` que los aplicará llega en una entrega posterior.
+Los bloques `git:` y `repositories:` los aplica el verbo `axiom branch` (rama de integración y prefijo de cada repositorio): véase [Ramas y Worktrees (`axiom branch`)](#ramas-y-worktrees-axiom-branch).
 
 ---
 
