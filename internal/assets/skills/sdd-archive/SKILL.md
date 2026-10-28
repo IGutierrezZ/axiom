@@ -86,6 +86,19 @@ Read the available tasks and reports before closure. Record completed and unfini
 - If structured status reports `actionContext.mode: workspace-planning`, STOP. Do not move workspace changes into repo-local archives or edit linked repos.
 - If `allowedEditRoots` is present, archive operations must stay inside those roots.
 
+### Archive Branch Flow
+
+In a `monorepo-embedded` workspace the archive is a documentation-only change: it runs on its own archive branch and travels in its own pull request. It never runs on the change branch, on a role branch, or on the integration branch (`git.integration_branch`); status reports `blocked(wrong_branch)` there, with the exact continuation.
+
+1. Once the pull request of the change is merged, run `axiom branch ensure --cwd "<workspaceRoot>" --change <c> --archive --json` and use the absolute path of its JSON as `--cwd`, as the repository of every `git -C` command, and as the root of every command below (`cd "<path>" && ...`, section G). If it refuses with `change_not_integrated`, the local integration reference does not hold the merged change yet: suggest `--fetch` only with the explicit authorization of the user, and never pass it on your own.
+2. On the archive branch, record the evidence of the merged pull request with `axiom sdd gate record --cwd <path> --change <c> --gate integration --decision approved --evidence-kind pr_merged` (add `--commit <sha>` with the merge commit when you have it). That evidence is the precondition of REQ-21.16.
+3. Run `axiom sdd integrate prepare`, then the `axiom sdd archive-compose` command it prints when the plan asks for one, then the move to `openspec/changes/archive/` of Step 3, and finally `axiom sdd integrate verify`, in that order.
+4. Commit the result on the archive branch. The person publishes it and opens a separate documentation pull request toward the integration branch (`git.integration_branch`); you never push and never open it.
+5. After that pull request is merged, the person removes the archive worktree and branch with `axiom branch done --cwd "<workspaceRoot>" --change <c>`.
+6. If the documentation pull request is rejected, discard the archive branch (with the user's confirmation, `axiom branch done --cwd "<workspaceRoot>" --change <c> --force`; the result reports the tip so the branch can be recovered): the change stays pending archive, and `axiom branch status` lists it again with the command that restarts this flow.
+
+In a `multirepo` there is no archive branch: the archive runs in place in the specs repository, on its integration branch, and `ensure --archive` refuses with `archive_branch_not_applicable`. The precondition is the evidence of REQ-21.16: `axiom sdd gate record ... --gate integration` with `--evidence-kind pr_merged` (verified against the specs repository), `deployment` or `attestation`.
+
 ## Mechanical Copy Contract (MANDATORY)
 
 Archival is a mechanical filesystem operation. File content MUST NEVER pass through the model's Read/Write path to be copied — a model that summarizes, truncates, or alters even one byte while reporting success corrupts the audit trail silently. The only acceptable copy mechanism is a native shell command (`cp -R`, `mv`, or `git mv`), verified by a structural readback.
