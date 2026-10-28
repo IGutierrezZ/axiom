@@ -50,6 +50,9 @@ func issue2696FlatSpecFixture(sandbox *Sandbox) error {
 		content string
 	}{
 		{name: "proposal.md", content: "# Flat spec change\n"},
+		// Sealed without a git snapshot: the change stays exempt from the
+		// branch guard, so status and continue can run from main.
+		{name: "kickoff.yaml", content: sddSealedKickoff(sddChange)},
 		{name: "spec.md", content: "### Requirement: flat spec\n#### Scenario: present\n\n- **WHEN** status runs\n- **THEN** the root spec is detected\n"},
 		{name: "design.md", content: "# Design\n"},
 		{name: "tasks.md", content: "- [ ] 1.1 Work\n"},
