@@ -134,6 +134,32 @@ func sddChangeRoot(sandbox *Sandbox) string {
 	return filepath.Join(sandbox.Repo, "openspec", "changes", sddChange)
 }
 
+// sddSealedKickoff returns a kickoff.yaml for change that is sealed without a
+// git snapshot. The branch guard of `sdd status` and `sdd continue` rejects with
+// wrong_branch a change without kickoff.yaml that sits on main, but a kickoff
+// sealed without a `git:` snapshot keeps the change exempt (REQ-25.37). The
+// fixtures that commit their change on main write it next to the artifacts.
+func sddSealedKickoff(change string) string {
+	return fmt.Sprintf(`schema: axiom.sdd-kickoff/v1
+change: %s
+sealed_at: 2026-01-01T00:00:00Z
+sealed_by: cli
+kickoff:
+    flow_mode: sdd
+    execution_style: continuous
+    execution_style_source: explicit
+    handoff_policy: none
+    roles:
+        - role: fullstack
+          gate_policy: blocking
+          tasks_file: tasks.md
+          verify_file: verify-report.md
+lifecycle:
+    deployment_target: local
+    post_archive_policy: bug_only
+`, change)
+}
+
 // sddRuntimeRepo is the base fixture for the remediation journeys: a repository
 // carrying a committed OpenSpec change, plus one staged prose file as the
 // candidate under work.
@@ -250,8 +276,11 @@ func sddPlanningArtifacts(verifyReport string) func(*Sandbox) error {
 		}
 		root := sddChangeRoot(sandbox)
 		files := map[string]string{
-			filepath.Join(root, "design.md"): "# design\n\n## Approach\n\nplain prose, no executable content.\n",
-			filepath.Join(root, "tasks.md"):  "# tasks\n\n- [x] 1.1 write the prose\n",
+			// Sealed without a git snapshot, so the change stays exempt from the
+			// branch guard and `sdd-status` can run from main.
+			filepath.Join(root, "kickoff.yaml"): sddSealedKickoff(sddChange),
+			filepath.Join(root, "design.md"):    "# design\n\n## Approach\n\nplain prose, no executable content.\n",
+			filepath.Join(root, "tasks.md"):     "# tasks\n\n- [x] 1.1 write the prose\n",
 			filepath.Join(root, "specs", "prose", "spec.md"): "### Requirement: prose exists\n" +
 				"#### Scenario: prose is present\n\n- **WHEN** the reader opens docs/attempt.md\n- **THEN** the prose is there\n",
 		}

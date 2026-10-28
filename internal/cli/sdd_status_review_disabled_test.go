@@ -44,6 +44,10 @@ func seedArchiveGatedSDDChange(t *testing.T, root string) {
 		"build_output_hash: sha256:" + strings.Repeat("3", 64),
 		"```",
 	}, "\n"))
+	// Un cambio sin kickoff.yaml no está exento de la guarda B (supuesto S-7) y estos repositorios
+	// están en master o main: el retro-sellado sin instantánea lo exime (REQ-25.37), como en los
+	// fixtures de la guarda A. Estas pruebas tratan del modo de revisión, no de la rama.
+	retroSealForGuard(t, root, "thin")
 	runReviewCLIGit(t, root, "init", "-q")
 	runReviewCLIGit(t, root, "config", "user.email", "test@example.com")
 	runReviewCLIGit(t, root, "config", "user.name", "Test")

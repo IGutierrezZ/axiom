@@ -3552,6 +3552,10 @@ func (harness *organicHarness) seedOrganicSDDChange(change string) {
 			"#### Scenario: prose is present\n\n- **WHEN** the reader opens the docs\n- **THEN** the prose is there\n",
 		root + "verify-report.md": organicSDDVerifyReport,
 	})
+	// The change sits at its archive decision in a repository that stays off any archive branch, and a
+	// change with no kickoff.yaml is not exempt from the status branch guard (S-7): the retro-sealed
+	// kickoff without a git snapshot exempts it (REQ-25.37) so these journeys keep testing review mode.
+	retroSealConsentChange(harness.t, harness.repo.worktree, change)
 	harness.git("add", "--", "openspec")
 	harness.git("commit", "-q", "-m", "test: seed the SDD change")
 }

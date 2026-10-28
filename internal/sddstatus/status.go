@@ -680,7 +680,24 @@ func resolveByPreferenceOrder(options ResolveOptions) (Status, error) {
 	if artifacts["specs"] == ArtifactPartial {
 		blockedReasons.genuine = append(blockedReasons.genuine, openSpecSpecsLayoutReason(changeName))
 	}
-	applyState, unauthorizedRoots := applyEditAuthorityBlock(applyState, &blockedReasons, editPlans, workspaceRoot, append([]string{workspaceRoot}, grantedRoots...))
+	// Guarda B (REQ-25.42, design D-13): un único punto, después de resolveApplyState y loadGovernance
+	// y antes de la autoridad de edición. Con la rama equivocada esta no se evalúa (S-9): sin sobre de
+	// consentimiento ni marcador pendiente; tras corregir la rama aparece edit_authority_missing.
+	bctx := resolveBranchContext(branchQuery{
+		workspaceRoot: workspaceRoot,
+		changeRoot:    changeRoot,
+		change:        changeName,
+		archivePhase:  applyState == ApplyAllDone && artifacts["verifyReport"] == ArtifactDone,
+		apply:         applyState == ApplyReady,
+		plans:         editPlans,
+	})
+	var unauthorizedRoots []string
+	if bctx.wrongBranch != nil {
+		applyState = ApplyBlocked
+	} else {
+		applyState, unauthorizedRoots = applyEditAuthorityBlock(applyState, &blockedReasons, editPlans, workspaceRoot, append([]string{workspaceRoot}, grantedRoots...))
+	}
+	blockedReasons.notes = append(blockedReasons.notes, bctx.notes...)
 	var consent *SDDIntegrationConsentResult
 	if len(unauthorizedRoots) != 0 {
 		if instance == "" {
@@ -709,6 +726,11 @@ func resolveByPreferenceOrder(options ResolveOptions) (Status, error) {
 		blockedReasons.genuine = append(blockedReasons.genuine, archiveReason)
 	}
 	nextRecommended := resolveNextRecommended(dependencies, applyState, governance)
+	if bctx.wrongBranch != nil {
+		// Ninguna fase ni compuerta se autoriza con la rama equivocada (REQ-25.42): tampoco hay
+		// pregunta de compuerta, que se construye solo para await-gate.
+		nextRecommended = "resolve-blockers"
+	}
 	// INC-21 (design.md S5.5): the gate-decision envelope is built only for
 	// the exact gate "await-gate" already names, so it can never disagree
 	// with the route it accompanies -- a rejected gate with a recognised
@@ -736,6 +758,11 @@ func resolveByPreferenceOrder(options ResolveOptions) (Status, error) {
 	status.ApplyState = applyState
 	status.consentPreparationRoots = append([]string{}, unauthorizedRoots...)
 	status.BlockedReasons = blockedReasons.finalize(status.NextRecommended, status.BlockedReasons)
+	if bctx.wrongBranch != nil {
+		// El motivo de la guarda B va siempre primero, también delante de los motivos de planificación
+		// que finalize antepone con la ruta resolve-blockers.
+		status.BlockedReasons = append([]string{wrongBranchReason(*bctx.wrongBranch)}, status.BlockedReasons...)
+	}
 	status.Notes = append(status.Notes, blockedReasons.notes...)
 	if options.IncludeInstructions {
 		instructions := renderPhaseInstructions(status)
