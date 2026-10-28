@@ -263,6 +263,10 @@ type ResolveOptions struct {
 	WorkspaceRoot       string
 	ChangeName          string
 	IncludeInstructions bool
+
+	// worktreeCandidates son los cambios activos de los worktrees registrados (REQ-25.44): sin nombre,
+	// se unen a los del checkout actual para el `select-change`. Solo los rellena Resolve.
+	worktreeCandidates []string
 }
 
 type CommandArgs struct {
@@ -491,11 +495,18 @@ func explorationOnlyChangeDir(changeRoot string) bool {
 // later step resolves it a second time, and the location's non-blocking notes
 // are projected onto the status afterwards.
 func Resolve(options ResolveOptions) (Status, error) {
+	explicitRoot := strings.TrimSpace(options.WorkspaceRoot) != ""
 	workspaceRoot, location, err := resolveWorkspaceLocation(options)
 	if err != nil {
 		return Status{}, err
 	}
 	options.WorkspaceRoot = workspaceRoot
+	if !explicitRoot {
+		// REQ-25.44 (design D-16): los cambios que viven en worktrees registrados se resuelven en ellos.
+		// Una raíz explícita es la de una llamada interna que ya sabe dónde está su cambio y no se mueve.
+		options, location = rerootOnRegisteredWorktrees(options, location)
+		workspaceRoot = options.WorkspaceRoot
+	}
 	status, err := resolveStatus(options, workspaceRoot)
 	if err != nil {
 		return status, err
@@ -569,7 +580,7 @@ func resolveByPreferenceOrder(options ResolveOptions) (Status, error) {
 
 	changeName := strings.TrimSpace(options.ChangeName)
 	if changeName == "" {
-		candidates := selectableOpenSpecChanges(changesDir, activeChanges)
+		candidates := unionNames(selectableOpenSpecChanges(changesDir, activeChanges), options.worktreeCandidates)
 		switch len(candidates) {
 		case 0:
 			if len(activeChanges) > 0 {
