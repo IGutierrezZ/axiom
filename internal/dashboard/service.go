@@ -134,6 +134,7 @@ func (s *Service) GetWorkspace() (*WorkspaceDTO, error) {
 	if err != nil {
 		// Proyecto sin axiom.yaml: proveer información descriptiva para el Zero-Config Welcome
 		detected, _ := s.hubDetector.Detect(curPath)
+		policy, repositories := branchPolicyView(nil)
 		return &WorkspaceDTO{
 			Name:         filepath.Base(curPath),
 			Topology:     "unconfigured",
@@ -143,6 +144,8 @@ func (s *Service) GetWorkspace() (*WorkspaceDTO, error) {
 			Message:      "Este proyecto aún no cuenta con un archivo axiom.yaml configurado.",
 			IsConfigured: false,
 			DetectedTech: detected,
+			BranchPolicy: policy,
+			Repositories: repositories,
 		}, nil
 	}
 
@@ -172,6 +175,7 @@ func (s *Service) GetWorkspace() (*WorkspaceDTO, error) {
 		}
 	}
 
+	policy, repositories := branchPolicyView(cfg)
 	return &WorkspaceDTO{
 		Name:            cfg.Workspace.Name,
 		Topology:        string(cfg.Workspace.Topology),
@@ -181,6 +185,8 @@ func (s *Service) GetWorkspace() (*WorkspaceDTO, error) {
 		Compliant:       compliant,
 		Message:         message,
 		IsConfigured:    true,
+		BranchPolicy:    policy,
+		Repositories:    repositories,
 	}, nil
 }
 

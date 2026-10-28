@@ -165,3 +165,23 @@ func (s *Service) planningIntegration() string {
 	}
 	return engine.PlanningIntegration(loc)
 }
+
+// branchPolicyView proyecta la política de ramas del proyecto para `GET /api/workspace`
+// (REQ-1.1, design D-20): la política efectiva del workspace, que resuelve branch.ResolvePolicy
+// (con `cfg == nil`, sin `git:` o con un bloque inválido, rigen los valores por defecto), y las
+// entradas de `repositories:` tal como se declararon, en su orden y sin aplicar la herencia. Es
+// solo lectura: no escribe axiom.yaml (REQ-25.33). `repositories` nunca es nil.
+func branchPolicyView(cfg *workspace.WorkspaceConfig) (BranchPolicyDTO, []RepositoryPolicyDTO) {
+	policy := branch.ResolvePolicy(cfg)
+	repositories := []RepositoryPolicyDTO{}
+	if cfg != nil {
+		for _, entry := range cfg.Repositories {
+			repositories = append(repositories, RepositoryPolicyDTO{
+				Path:              entry.Path,
+				IntegrationBranch: entry.IntegrationBranch,
+				BranchPrefix:      entry.BranchPrefix,
+			})
+		}
+	}
+	return BranchPolicyDTO{IntegrationBranch: policy.IntegrationBranch, BranchPrefix: policy.BranchPrefix}, repositories
+}

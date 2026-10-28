@@ -16,6 +16,26 @@ type WorkspaceDTO struct {
 	Message         string              `json:"message"`
 	IsConfigured    bool                `json:"is_configured"`
 	DetectedTech    interface{}         `json:"detected_tech,omitempty"`
+	// BranchPolicy es la política de ramas efectiva del proyecto (REQ-1.1): la del bloque `git:`
+	// con los valores por defecto aplicados. Solo lectura (REQ-25.33).
+	BranchPolicy BranchPolicyDTO `json:"branchPolicy"`
+	// Repositories son las entradas de `repositories:` tal como se declararon, en solo lectura
+	// (REQ-1.1, REQ-25.33). Es siempre un array, vacío sin entradas.
+	Repositories []RepositoryPolicyDTO `json:"repositories"`
+}
+
+// BranchPolicyDTO es la política de ramas efectiva del workspace.
+type BranchPolicyDTO struct {
+	IntegrationBranch string `json:"integrationBranch"`
+	BranchPrefix      string `json:"branchPrefix"`
+}
+
+// RepositoryPolicyDTO es una entrada de `repositories:`. Un campo vacío (omitido en el JSON)
+// significa que el repositorio hereda el valor del workspace.
+type RepositoryPolicyDTO struct {
+	Path              string `json:"path"`
+	IntegrationBranch string `json:"integrationBranch,omitempty"`
+	BranchPrefix      string `json:"branchPrefix,omitempty"`
 }
 
 // RoleMeta describe un rol dentro del espacio de trabajo.
