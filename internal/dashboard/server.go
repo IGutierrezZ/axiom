@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/IGutierrezZ/axiom/v3/internal/branch"
 	"github.com/IGutierrezZ/axiom/v3/internal/livingdoc"
 	"github.com/IGutierrezZ/axiom/v3/internal/semantic"
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
@@ -346,6 +347,13 @@ func (s *Server) handleIncrements(w http.ResponseWriter, r *http.Request) {
 		}
 		res, err := s.service.CreateIncrement(req)
 		if err != nil {
+			// REQ-25.32: un rechazo tipado de `ensure` o de la guarda A es un 409 con su código y su
+			// continuación (o, en `decision_required`, con la decisión), no un 400 genérico.
+			var refusal *branch.RefusalError
+			if errors.As(err, &refusal) {
+				s.respondJSON(w, http.StatusConflict, conflictBody(refusal))
+				return
+			}
 			s.respondJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
 			return
 		}
@@ -828,6 +836,38 @@ func (s *Server) handleEcosystemModels(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.respondJSON(w, http.StatusOK, models)
+}
+
+// decisionRequiredBody es el cuerpo del 409 de `decision_required` (REQ-25.32): el estado con su
+// etiqueta, el código y la decisión que la interfaz presenta antes de repetir la creación con `mode`.
+type decisionRequiredBody struct {
+	Status      string           `json:"status"`
+	StatusLabel string           `json:"statusLabel"`
+	Code        branch.Code      `json:"code"`
+	Decision    *branch.Decision `json:"decision"`
+}
+
+// refusalBody es el cuerpo del 409 de cualquier otro rechazo de `ensure` o de la guarda A: el
+// código tipado, el mensaje y la continuación ejecutable.
+type refusalBody struct {
+	Code         branch.Code `json:"code"`
+	Error        string      `json:"error"`
+	Continuation string      `json:"continuation"`
+}
+
+// conflictBody traduce un rechazo tipado al cuerpo del 409: `{status, statusLabel, code, decision}`
+// para `decision_required` y `{code, error, continuation}` para el resto.
+func conflictBody(refusal *branch.RefusalError) any {
+	if refusal.Code == branch.CodeDecisionRequired && refusal.Decision != nil {
+		status := string(branch.StatusDecisionRequired)
+		return decisionRequiredBody{
+			Status:      status,
+			StatusLabel: branch.Label(status),
+			Code:        refusal.Code,
+			Decision:    refusal.Decision,
+		}
+	}
+	return refusalBody{Code: refusal.Code, Error: refusal.Message, Continuation: refusal.Continuation}
 }
 
 func (s *Server) respondJSON(w http.ResponseWriter, code int, data interface{}) {

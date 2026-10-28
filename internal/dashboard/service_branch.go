@@ -21,15 +21,16 @@ import (
 //
 // El dashboard solo crea cambios por CreateIncrement: ejecuta `ensure` con el motor de la CLI y
 // llama a writeIncrement con el planning home que devuelve (en modo `worktree`, el del worktree
-// del cambio). La respuesta HTTP tipada de un rechazo (409) es de S10-c1; hasta entonces el
-// rechazo sale como error con su código, su mensaje y su continuación.
+// del cambio). Un rechazo sale como *branch.RefusalError con su código, su mensaje y su
+// continuación, y el servidor lo traduce a un 409 tipado (conflictBody, server.go).
 
 // ensureIncrementBranch ejecuta `ensure` para el cambio name del carril SDD y devuelve el
-// planning home donde hay que escribir. Sin respuesta de modo (`CreateIncrementRequest` aún no
-// tiene `mode`, S10-c1) rige el modo efectivo por defecto que resuelve `ensure`: el del
-// registro, el de las preferencias del hub o `worktree`. Cualquier resultado que no sea `ready`
-// (incluido `decision_required`) se devuelve como *branch.RefusalError, sin escribir nada.
-func (s *Service) ensureIncrementBranch(name string) (string, error) {
+// planning home donde hay que escribir. mode es la respuesta a un `decision_required`
+// (`CreateIncrementRequest.Mode`, REQ-25.32): vacío, rige el modo efectivo que resuelve `ensure`
+// (el del registro, el de las preferencias del hub o `worktree`); con valor, `ensure` lo aplica y lo
+// registra para este cambio. Cualquier resultado que no sea `ready` (incluido `decision_required`)
+// se devuelve como *branch.RefusalError, sin escribir nada.
+func (s *Service) ensureIncrementBranch(name, mode string) (string, error) {
 	cwd, err := filepath.Abs(s.getRootPath())
 	if err != nil {
 		return "", fmt.Errorf("no se pudo resolver la ruta del proyecto: %w", err)
@@ -38,6 +39,7 @@ func (s *Service) ensureIncrementBranch(name string) (string, error) {
 		CWD:    cwd,
 		Change: name,
 		Lane:   branch.LaneSDD,
+		Mode:   branch.Mode(strings.TrimSpace(mode)),
 	})
 	if result.Status != branch.StatusReady {
 		return "", ensureRefusal(result, name, cwd)

@@ -164,6 +164,9 @@ type CreateIncrementRequest struct {
 	Intent       string `json:"intent"`
 	Type         string `json:"type,omitempty"`          // "feature", "fix", "refactor", "architecture"
 	ProposalBody string `json:"proposal_body,omitempty"` // INC-19: cuerpo ya renderizado (promoción ODD), sustituye la plantilla generada cuando no está vacío
+	// Mode es la respuesta a un `decision_required` (REQ-25.32): `worktree` o `in_place`. Vacío, rige
+	// el modo efectivo que resuelve `ensure` (registro, hub o `worktree`); el valor se registra por cambio.
+	Mode string `json:"mode,omitempty"`
 }
 
 // CreateIncrementResponse reporta el resultado de la creación de un incremento.
