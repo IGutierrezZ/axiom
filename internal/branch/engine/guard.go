@@ -65,7 +65,8 @@ var guardNone = GuardDecision{Action: GuardActionNone}
 // da por buena la rama que lo sea en cualquiera de los dos contextos; la exactitud por fase la
 // garantizan las guardas A y B). Rige sin cambio registrado, con los nombres de la política (S-18).
 // Cualquier otra combinación de evento y ruta no hace nada; el aviso del resto de ficheros llega
-// con el evento `post`.
+// con el evento `post` (guardWarn, en guard_warn.go): cada evento tiene una única responsabilidad,
+// así que el aviso nunca se duplica.
 func (e *Engine) Guard(ctx context.Context, payload GuardPayload) (decision GuardDecision) {
 	decision = guardNone
 	defer func() {
@@ -73,6 +74,9 @@ func (e *Engine) Guard(ctx context.Context, payload GuardPayload) (decision Guar
 			decision = guardNone
 		}
 	}()
+	if payload.Event == GuardEventPost {
+		return e.guardWarn(ctx, payload)
+	}
 	if payload.Event != GuardEventPre {
 		return decision
 	}

@@ -263,7 +263,8 @@ func TestGuardDoesNothingWithACancelledContextOrARecoveredPanic(t *testing.T) {
 }
 
 // Cada evento tiene una única responsabilidad (design D-18, paso 5): `pre` solo bloquea y solo
-// documentos de Axiom; `post` no bloquea nada (el aviso del resto de ficheros llega con S11-c2).
+// documentos de Axiom; `post` no bloquea nada (el aviso del resto de ficheros está en
+// guard_warn_test.go).
 func TestGuardOnlyBlocksOnPreAndOnlyAxiomDocuments(t *testing.T) {
 	t.Parallel()
 	repo := embeddedCoreProject(t)
