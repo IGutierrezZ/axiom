@@ -444,7 +444,7 @@ func (s *Server) handleRoles(w http.ResponseWriter, r *http.Request) {
 		s.respondJSON(w, http.StatusNotFound, map[string]string{"error": err.Error()})
 		return
 	}
-	s.respondJSON(w, http.StatusOK, barrier)
+	s.respondJSON(w, http.StatusOK, NewBarrierDTO(barrier))
 }
 
 func (s *Server) handleHandoffs(w http.ResponseWriter, r *http.Request) {
@@ -461,7 +461,7 @@ func (s *Server) handleHandoffs(w http.ResponseWriter, r *http.Request) {
 			s.respondJSON(w, http.StatusNotFound, map[string]string{"error": err.Error()})
 			return
 		}
-		s.respondJSON(w, http.StatusOK, ho)
+		s.respondJSON(w, http.StatusOK, NewHandoffDTO(ho))
 	case http.MethodPost:
 		var req CreateHandoffRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {

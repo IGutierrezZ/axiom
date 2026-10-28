@@ -110,16 +110,28 @@ Debe seguir siendo HTML, CSS y JS sin framework, embebido con `go:embed` y usabl
 
 Ruta de cada tarea: «delegada» significa un escritor acotado, que se elige porque toca dos o más ficheros no triviales.
 
-- [ ] **T0 · Referencia de diseño y documento ODD** (en línea)
+- [x] **T0 · Referencia de diseño y documento ODD** (en línea)
   - Commit de `docs/redesign/` tal cual y de este documento.
   - Comprobación: `git status` limpio tras el commit.
-- [ ] **T1 · Contrato JSON de roles y handoff** (delegada: `types.go`, `service.go` y test)
+  - Evidencia: commit `6eb44edc`.
+- [x] **T1 · Contrato JSON de roles y handoff** (delegada: `types.go`, `service.go` y test)
   - Crear DTOs propios en `dashboard`, con `snake_case`, para `GET /api/roles`, `IncrementDetailDTO.barrier_report` y `GET /api/handoffs`. Los tipos de `multirole` y `handoff` no se tocan.
   - Roles: `satisfied`, `blockers`, `warnings` y `roles[]` con `{name, gate_policy, repositories, tasks{total,completed,pending,percent}, verify_done, verdict, compliant}`, más `deferred_tasks[]`.
   - Handoff: `metadata{change, from_phase, to_phase, from_role, to_role, timestamp, status}` y `sections{…}`.
   - Test de contrato que serialice una barrera y un handoff y compruebe las claves.
   - El `app.js` actual se adapta lo mínimo para que no falle hasta T3.
   - Comprobación: `go test ./internal/dashboard/...`.
+  - Resultado (2026-10-29):
+    - `contract_dto.go` con `NewBarrierDTO` y `NewHandoffDTO` en el límite del dashboard, y DTO en `types.go`. `multirole` y `handoff` no cambian.
+    - Cada rol expone `role` (id) y `name` (nombre visible, opcional), además de `gate_policy`, `repositories`, `deliverables`, `tasks_found`, `tasks{total,completed,pending,percent}`, `apply_done`, `verify_done`, `verdict` y `compliant`.
+    - `timestamp` va en RFC 3339, o `""` si es cero.
+    - `app.js` adaptado: `roles` como array y `sections.direct_instructions`. Antes leía `next_instructions`, que no existía.
+  - Verificación:
+    - `go build ./...`, OK;
+    - `go vet ./internal/dashboard/...`, OK;
+    - `go test ./internal/dashboard/... ./internal/tui/...`, ok (repetido por el orquestador);
+    - `gofmt -l internal/dashboard`, limpio.
+  - Sin probar en navegador; se cubre en T3.
 - [ ] **T2 · Base visual y estructura** (delegada)
   - **Tokens y tema:**
     - `tokens.css` integrado en `style.css`, con `--text-3` corregido para llegar a 4,5:1 sobre `--hover`;
@@ -219,7 +231,7 @@ Ruta de cada tarea: «delegada» significa un escritor acotado, que se elige por
 
 ## Siguiente paso
 
-T0: commit de la referencia de diseño y de este documento. Después, T1.
+T2: base visual y estructura.
 
 ## Seguimientos
 

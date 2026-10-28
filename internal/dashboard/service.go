@@ -519,7 +519,7 @@ func (s *Service) GetIncrementDetail(name string) (*IncrementDetailDTO, error) {
 		if errRoles == nil {
 			report, errReport := multirole.EvaluateBarrier(path, filepath.Base(path), roles)
 			if errReport == nil {
-				dto.BarrierReport = report
+				dto.BarrierReport = NewBarrierDTO(report)
 			}
 		}
 	}

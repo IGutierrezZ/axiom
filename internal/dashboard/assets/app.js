@@ -1413,8 +1413,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // Banner de la Barrera
       barrierBanner.classList.remove('hidden');
-      const roleKeys = Object.keys(barrier.roles || {});
-      const isSingleRole = roleKeys.length <= 1 && (roleKeys.length === 0 || roleKeys[0] === 'fullstack');
+      const roleList = Array.isArray(barrier.roles) ? barrier.roles : [];
+      const isSingleRole = roleList.length <= 1 && (roleList.length === 0 || roleList[0].role === 'fullstack');
 
       if (isSingleRole) {
         barrierBanner.className = 'barrier-banner satisfied';
@@ -1437,38 +1437,38 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // Renderizar tarjetas de cada rol
       rolesContainer.innerHTML = '';
-      if (!barrier.roles || Object.keys(barrier.roles).length === 0) {
+      if (roleList.length === 0) {
         rolesContainer.innerHTML = '<p class="empty-state">No se detectaron roles específicos (modo mono-rol).</p>';
         return;
       }
 
-      Object.entries(barrier.roles).forEach(([roleId, status]) => {
+      roleList.forEach((status) => {
         const rCard = document.createElement('div');
         rCard.className = 'role-card';
 
-        const isBlocking = status.role.gate_policy === 'blocking';
-        const isVerified = status.verify_verdict === 'pass';
+        const isVerified = status.verdict === 'pass';
+        const tasks = status.tasks || { total: 0, completed: 0, percent: 0 };
 
         rCard.innerHTML = `
           <div>
             <div class="card-header">
-              <div class="card-title">${status.role.name || roleId}</div>
+              <div class="card-title">${escapeHtml(status.name || status.role)}</div>
               <div class="card-badges">
-                <span class="badge badge-${status.role.gate_policy}">${status.role.gate_policy}</span>
-                <span class="badge ${isVerified ? 'badge-pass' : 'badge-fail'}">Verif: ${status.verify_verdict || 'pendiente'}</span>
+                <span class="badge badge-${escapeHtml(status.gate_policy)}">${escapeHtml(status.gate_policy)}</span>
+                <span class="badge ${isVerified ? 'badge-pass' : 'badge-fail'}">Verif: ${escapeHtml(status.verdict || 'pendiente')}</span>
               </div>
             </div>
             <div class="progress-container">
               <div class="progress-info">
-                <span>Tareas: ${status.progress.completed}/${status.progress.total}</span>
-                <span>${status.progress.percentage}%</span>
+                <span>Tareas: ${tasks.completed}/${tasks.total}</span>
+                <span>${Math.round(tasks.percent)}%</span>
               </div>
               <div class="progress-track">
-                <div class="progress-bar" style="width: ${status.progress.percentage}%"></div>
+                <div class="progress-bar" style="width: ${Math.round(tasks.percent)}%"></div>
               </div>
             </div>
             <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.5rem;">
-              Repositorios: <code>${(status.role.repositories || []).join(', ') || '.'}</code>
+              Repositorios: <code>${(status.repositories || []).map(escapeHtml).join(', ') || '.'}</code>
             </p>
           </div>
         `;
@@ -1509,7 +1509,7 @@ document.addEventListener('DOMContentLoaded', () => {
         { num: '2', title: 'Artefactos Modificados y Creados', text: ho.sections.artifacts },
         { num: '3', title: 'Decisiones Técnicas y Acuerdos', text: ho.sections.decisions },
         { num: '4', title: 'Riesgos, Bloqueos y Preguntas Abiertas', text: ho.sections.risks_and_blockers },
-        { num: '5', title: 'Instrucciones Directas para el Siguiente Rol', text: ho.sections.next_instructions }
+        { num: '5', title: 'Instrucciones Directas para el Siguiente Rol', text: ho.sections.direct_instructions }
       ];
 
       sections.forEach(s => {
