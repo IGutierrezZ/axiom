@@ -1,0 +1,98 @@
+/* ==========================================================================
+   Axiom Dashboard — tokens del rediseño (claro / oscuro)
+   Fuente: mockups de docs/redesign/mockups/*.dc.html
+   Uso: el tema efectivo se aplica como data-theme="light|dark" en <html>.
+   ========================================================================== */
+
+:root,
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  /* Superficies */
+  --bg: #F5F5F2;          /* fondo de página */
+  --side: #EDEDE9;        /* barra lateral */
+  --surface: #FFFFFF;     /* tarjetas, paneles */
+  --surface-2: #F3F3F0;   /* bloques internos, columnas del tablero */
+  --hover: #E6E6E1;       /* hover y fondo de controles segmentados */
+
+  /* Bordes */
+  --border: #E2E2DC;
+  --border-strong: #CBCBC4;
+
+  /* Texto (todos cumplen ≥ 4.5:1 sobre --bg y --surface) */
+  --text: #16171B;
+  --text-2: #45484F;
+  --text-3: #666A72;
+
+  /* Acento */
+  --accent: #3651D4;
+  --on-accent: #FFFFFF;
+  --accent-soft: #E9EDFC;
+  --accent-text: #2C44B8;
+
+  /* Estados */
+  --ok: #146B41;
+  --ok-soft: #E3F3EA;
+  --warn: #8F5500;
+  --warn-soft: #FAEED8;
+  --bad: #BB3127;
+  --bad-soft: #FBE6E3;
+
+  --shadow: 0 1px 2px rgba(20, 20, 30, .06), 0 1px 1px rgba(20, 20, 30, .04);
+
+  /* Tipografía */
+  --font-sans: "Instrument Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* Radios */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-xl: 12px;
+  --radius-2xl: 14px;
+  --radius-full: 999px;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --bg: #0E0F12;
+  --side: #0B0C0E;
+  --surface: #16171C;
+  --surface-2: #1C1E24;
+  --hover: #23262E;
+
+  --border: #262931;
+  --border-strong: #363A44;
+
+  --text: #ECEDF0;
+  --text-2: #B3B7C0;
+  --text-3: #8E939D;
+
+  --accent: #8A9BFF;
+  --on-accent: #0E1020;
+  --accent-soft: #1D2242;
+  --accent-text: #A9B6FF;
+
+  --ok: #5CCB94;
+  --ok-soft: #10271C;
+  --warn: #E9AC4A;
+  --warn-soft: #2A2010;
+  --bad: #F27C72;
+  --bad-soft: #321719;
+
+  --shadow: 0 0 0 1px rgba(255, 255, 255, .02);
+}
+
+html { background: var(--bg); }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.mono { font-family: var(--font-mono); }
