@@ -63,6 +63,8 @@ Todo proyecto gestionado por Axiom reside en una **carpeta maestra local común*
    - Uno o varios repositorios de código divididos por tecnologías o dominios (incluido el caso de un único repositorio de código con las especificaciones en un repositorio aparte).
    - **Regla estricta obligatoria:** Es indispensable la existencia de un repositorio canónico de especificaciones dentro de la carpeta maestra común (ej. `especificacion/`). Si el proyecto no lo tiene, Axiom lo inicializa automáticamente.
 
+**Ramas y worktrees.** Axiom prepara y retira las ramas y los worktrees de cada cambio con `axiom branch` (verbos `ensure`, `status`, `done` y `guard`), según la topología. En un monorepo embebido el cambio vive en una rama y un worktree propios y el archivado en una rama `-archive` con su PR documental aparte; en un multirepo, el repositorio de especificaciones se trabaja in situ en su rama de integración y cada repositorio de código recibe la rama de sus roles. La política (rama de integración y prefijo) se declara en `axiom.yaml` (`git:` y `repositories:`); el modo de trabajo (`worktree`, `in_place` o `ask`) es una preferencia personal del hub. Detalle en el [manual de inicio](../manual-de-inicio.md#ramas-y-worktrees-axiom-branch).
+
 ### 2.4. Mapeo Roles ➔ Repositorios (1 a N)
 
 La configuración `axiom.yaml` vincula de 1 a N roles con sus respectivos repositorios locales:

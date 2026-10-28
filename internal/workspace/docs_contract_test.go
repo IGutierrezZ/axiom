@@ -154,8 +154,8 @@ func TestDocsDoNotOfferTheRetiredTopologyAsValid(t *testing.T) {
 // workspace-topology REQ-25.26 y REQ-25.27: el manual documenta los bloques
 // `git:` y `repositories:` de axiom.yaml (esquema, valores por defecto,
 // herencia, validación y lo que no se declara ahí) y la plantilla los muestra
-// comentados. El verbo `axiom branch` que los consume llega después, y el manual
-// lo dice.
+// comentados. El verbo `axiom branch` que los aplica ya existe (inc-25, S12) y el
+// manual remite a su sección.
 func TestDocsDocumentTheGitBranchPolicyBlock(t *testing.T) {
 	doc := readManualDeInicio(t)
 	assertDocContains(t, doc,
@@ -170,7 +170,8 @@ func TestDocsDocumentTheGitBranchPolicyBlock(t *testing.T) {
 		"El modo de trabajo y la raíz de los worktrees **no** se declaran en `axiom.yaml`",
 		"`axiom workspace validate` rechaza un bloque `git:` inválido nombrando la clave, el valor y la regla incumplida",
 		"Los binarios anteriores ignoran el bloque",
-		"el verbo `axiom branch` que los aplicará llega en una entrega posterior",
+		"Los bloques `git:` y `repositories:` los aplica el verbo `axiom branch`",
+		"[Ramas y Worktrees (`axiom branch`)](#ramas-y-worktrees-axiom-branch)",
 		// El bloque `repositories:` (REQ-25.27) se documenta en la misma sección.
 		"[Ajustes por Repositorio (`repositories:`)](#ajustes-por-repositorio-repositories)",
 		"### Ajustes por Repositorio (`repositories:`)",
@@ -350,6 +351,141 @@ func TestScriptsGuardPrimaryCheckoutPointsToAxiomBranchEnsure(t *testing.T) {
 	} {
 		if strings.Contains(script, retired) {
 			t.Errorf("guard-primary-checkout.ps1 sigue remitiendo a la creación manual %q", retired)
+		}
+	}
+}
+
+// REQ-25.24 (escenario «La documentación remite al verbo»): CLAUDE.md, AGENTS.md y
+// GEMINI.md remiten a `axiom branch` para crear ramas y worktrees, al envoltorio
+// local y a `done`, y ninguno afirma que el worktree se crea o se decide en apply.
+// La prohibición local de las primitivas de cliente se conserva.
+func TestDocsRemitToAxiomBranchEnsure(t *testing.T) {
+	for _, file := range []string{"CLAUDE.md", "AGENTS.md", "GEMINI.md"} {
+		doc := readRepoFile(t, file)
+		for _, want := range []string{
+			"axiom branch ensure",
+			"axiom branch done",
+			"scripts/axiom-worktree",
+			"`EnterWorktree`",
+			"`ExitWorktree`",
+		} {
+			if !strings.Contains(doc, want) {
+				t.Errorf("%s no contiene %q", file, want)
+			}
+		}
+		for _, retired := range []string{
+			"lo crea en `apply`",
+			"se crea en apply",
+			"se crea en `apply`",
+			"se decide en apply",
+			"se decide en `apply`",
+			"desde `origin/main` actualizado",
+			"crea el worktree en `axiom-wt/<slug>`",
+			"cleanup-worktree",
+		} {
+			if strings.Contains(doc, retired) {
+				t.Errorf("%s conserva la afirmación retirada %q", file, retired)
+			}
+		}
+	}
+
+	// La instrucción gestionada de Codex que se versiona en el repositorio lleva la
+	// doctrina nueva (paso 6, subsección de ramas y sección de kickoff) y no la regla
+	// retirada. Se regenera con `axiom sync` (HOME aislado); aquí solo se fijan los
+	// tres textos de ramas y worktrees.
+	codex := readRepoFile(t, ".codex/AGENTS.md")
+	for _, want := range []string{
+		"### Branches and worktrees",
+		"run `axiom branch ensure --lane odd --change <feature-name> --json`",
+		"on the branch that `axiom branch ensure --lane odd --change <feature-name>` prepared",
+		"run `axiom branch ensure --change <name> --json` and use the absolute paths of its JSON as `--cwd` of every later command",
+		"Never use `EnterWorktree` or `ExitWorktree`; work in another worktree only through the absolute paths that `axiom branch ensure` returns",
+	} {
+		if !strings.Contains(codex, want) {
+			t.Errorf(".codex/AGENTS.md no contiene %q", want)
+		}
+	}
+	if strings.Contains(codex, "branch first when on the default branch") {
+		t.Error(".codex/AGENTS.md conserva la regla retirada «branch first when on the default branch»")
+	}
+
+	claude := readRepoFile(t, "CLAUDE.md")
+	for _, want := range []string{
+		"`EnterWorktree` / `ExitWorktree` están prohibidos",
+		"`axiom branch ensure --cwd <checkout principal> --change <slug> --mode worktree --json`",
+		"`C:\\repos\\axiom-wt\\<slug>\\axiom`",
+		"nunca ramificando en el directorio actual",
+	} {
+		if !strings.Contains(claude, want) {
+			t.Errorf("CLAUDE.md no contiene %q", want)
+		}
+	}
+}
+
+// REQ-25.24 y REQ-25.1: el manual documenta los cuatro verbos de `axiom branch`,
+// el flujo de la rama de archivado (PR del cambio, `ensure --archive`, PR
+// documental), el hook de la capa D y su instalación por `axiom sync`, las
+// preferencias personales del hub y la política local de este repositorio.
+func TestManualDeInicioDocumentsTheBranchVerbsAndTheArchiveFlow(t *testing.T) {
+	doc := readManualDeInicio(t)
+	assertDocContains(t, doc,
+		"[Ramas y Worktrees (`axiom branch`)](#ramas-y-worktrees-axiom-branch)",
+		"### Ramas y Worktrees (`axiom branch`)",
+		"- `axiom branch ensure --change <cambio>",
+		"- `axiom branch status",
+		"- `axiom branch done --change <cambio>",
+		"- `axiom branch guard --agent <runtime>`",
+		"`decision_required`",
+		"`prTarget`",
+		"La persona publica (`push`) y abre los PR; `axiom branch` nunca lo hace.",
+		"`axiom project add --worktree-mode in_place --worktree-root <ruta absoluta>",
+		"#### Flujo de la rama de archivado (monorepo)",
+		"1. El PR del cambio se fusiona en la rama de integración.",
+		"`axiom branch ensure --change <cambio> --archive`",
+		"`<prefijo>/<cambio>-archive`",
+		"`change_not_integrated`",
+		"`--fetch`, que solo se usa con tu autorización",
+		"un PR documental aparte hacia la rama de integración",
+		"`axiom branch done --change <cambio>`",
+		"el cambio sigue pendiente de archivar",
+		"#### Hook de guarda (capa D) e instalación",
+		"`axiom sync` instala `axiom branch guard` como hook en Claude Code, Codex y OpenCode (no en Pi)",
+		"no instala hooks de git",
+		"falla en abierto",
+		"#### En este repositorio (política local)",
+		"`git: {integration_branch: main, branch_prefix: inc}`",
+		"`scripts/axiom-worktree.ps1`",
+		"`scripts/claude-hooks/guard-primary-checkout.ps1`",
+	)
+
+	// La sección retirada ya no afirma que el repositorio de specs opera siempre en main
+	// ni que el worktree se decida con un cuestionario previo.
+	for _, retired := range []string{
+		"Política Git Diferencial y Gestión de Worktrees",
+		"opera **siempre en la rama principal (`main` o `master`)**",
+		"cuestionario interactivo de pre-vuelo",
+		"el verbo `axiom branch` que los aplicará llega en una entrega posterior",
+	} {
+		if strings.Contains(doc, retired) {
+			t.Errorf("docs/manual-de-inicio.md conserva el texto retirado %q", retired)
+		}
+	}
+}
+
+// REQ-25.24: la visión de arquitectura remite a `axiom branch` para las ramas y
+// los worktrees de cada topología.
+func TestDocsEnterpriseVisionRemitsToAxiomBranch(t *testing.T) {
+	doc := readRepoFile(t, "docs/architecture/AXIOM_ENTERPRISE_VISION.md")
+	for _, want := range []string{
+		"**Ramas y worktrees.**",
+		"`axiom branch`",
+		"`ensure`, `status`, `done` y `guard`",
+		"rama `-archive`",
+		"PR documental aparte",
+		"`git:` y `repositories:`",
+	} {
+		if !strings.Contains(doc, want) {
+			t.Errorf("AXIOM_ENTERPRISE_VISION.md no contiene %q", want)
 		}
 	}
 }
