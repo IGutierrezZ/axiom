@@ -449,3 +449,174 @@ func equalTrees(a, b map[string]string) bool {
 	}
 	return true
 }
+
+// Pruebas de la política de ramas en solo lectura de `GET /api/workspace` (INC-25, REQ-1.1,
+// REQ-25.33, design D-20). Decodifican el JSON con tipos propios de la prueba, no con los DTO de
+// producción: así fijan los nombres de los campos del contrato HTTP.
+
+// branchPolicyJSON y repositoryJSON son la forma observable de `branchPolicy` y de cada entrada
+// de `repositories[]`. Un campo vacío en repositoryJSON es «hereda el valor del bloque `git:`».
+type branchPolicyJSON struct {
+	IntegrationBranch string `json:"integrationBranch"`
+	BranchPrefix      string `json:"branchPrefix"`
+}
+
+type repositoryJSON struct {
+	Path              string `json:"path"`
+	IntegrationBranch string `json:"integrationBranch"`
+	BranchPrefix      string `json:"branchPrefix"`
+}
+
+type workspacePolicyJSON struct {
+	IsConfigured bool             `json:"is_configured"`
+	BranchPolicy branchPolicyJSON `json:"branchPolicy"`
+	Repositories []repositoryJSON `json:"repositories"`
+}
+
+// newPolicyProjectDir crea un proyecto temporal cuyo axiom.yaml es el texto dado.
+func newPolicyProjectDir(t *testing.T, axiomYAML string) string {
+	t.Helper()
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "axiom.yaml"), []byte(axiomYAML), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	return dir
+}
+
+func getWorkspacePolicy(t *testing.T, router http.Handler) (workspacePolicyJSON, map[string]json.RawMessage) {
+	t.Helper()
+	rr := request(router, http.MethodGet, "/api/workspace", "")
+	if rr.Code != http.StatusOK {
+		t.Fatalf("GET /api/workspace = %d, quiero 200: %s", rr.Code, rr.Body.String())
+	}
+	var got workspacePolicyJSON
+	if err := json.Unmarshal(rr.Body.Bytes(), &got); err != nil {
+		t.Fatalf("JSON inválido en /api/workspace: %v (%s)", err, rr.Body.String())
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(rr.Body.Bytes(), &raw); err != nil {
+		t.Fatal(err)
+	}
+	return got, raw
+}
+
+// policyHeader es el axiom.yaml mínimo que carga como configurado (la carga exige roles).
+const policyHeader = "workspace:\n  name: politica\n  topology: monorepo-embedded\n  specs_repository: openspec\nroles:\n  core:\n    name: Core\n    repositories:\n      - path: .\n"
+
+func TestWorkspaceBranchPolicy(t *testing.T) {
+	tests := []struct {
+		name       string
+		yaml       string // vacío: el proyecto no tiene axiom.yaml
+		wantPolicy branchPolicyJSON
+		wantRepos  []repositoryJSON
+	}{
+		{
+			name:       "git declara solo la rama de integración y el prefijo toma su valor por defecto",
+			yaml:       policyHeader + "git:\n  integration_branch: develop\n",
+			wantPolicy: branchPolicyJSON{IntegrationBranch: "develop", BranchPrefix: "feat"},
+		},
+		{
+			name:       "sin bloque git rigen los valores por defecto",
+			yaml:       policyHeader,
+			wantPolicy: branchPolicyJSON{IntegrationBranch: "main", BranchPrefix: "feat"},
+		},
+		{
+			name:       "git declara ambos valores",
+			yaml:       policyHeader + "git:\n  integration_branch: trunk\n  branch_prefix: inc\n",
+			wantPolicy: branchPolicyJSON{IntegrationBranch: "trunk", BranchPrefix: "inc"},
+		},
+		{
+			name:       "un repositorio declara su rama de integración y hereda el prefijo",
+			yaml:       policyHeader + "repositories:\n  - path: repo-backend\n    integration_branch: release\n",
+			wantPolicy: branchPolicyJSON{IntegrationBranch: "main", BranchPrefix: "feat"},
+			wantRepos:  []repositoryJSON{{Path: "repo-backend", IntegrationBranch: "release"}},
+		},
+		{
+			name: "varios repositorios con git: la política del workspace no se sustituye por la de un repositorio",
+			yaml: policyHeader + "git:\n  integration_branch: develop\n  branch_prefix: inc\n" +
+				"repositories:\n  - path: repo-backend\n    integration_branch: release\n    branch_prefix: fix\n  - path: repo-web\n",
+			wantPolicy: branchPolicyJSON{IntegrationBranch: "develop", BranchPrefix: "inc"},
+			wantRepos: []repositoryJSON{
+				{Path: "repo-backend", IntegrationBranch: "release", BranchPrefix: "fix"},
+				{Path: "repo-web"},
+			},
+		},
+		{
+			name:       "sin axiom.yaml rigen los valores por defecto",
+			yaml:       "",
+			wantPolicy: branchPolicyJSON{IntegrationBranch: "main", BranchPrefix: "feat"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dir := t.TempDir()
+			if tt.yaml != "" {
+				dir = newPolicyProjectDir(t, tt.yaml)
+			}
+			router, _, _ := newPrefsServer(t, dir)
+			got, raw := getWorkspacePolicy(t, router)
+
+			if want := tt.yaml != ""; got.IsConfigured != want {
+				t.Fatalf("is_configured = %v, quiero %v: el axiom.yaml de la prueba no se cargó como esperaba", got.IsConfigured, want)
+			}
+			if got.BranchPolicy != tt.wantPolicy {
+				t.Errorf("branchPolicy = %+v, quiero %+v", got.BranchPolicy, tt.wantPolicy)
+			}
+			if len(got.Repositories) != len(tt.wantRepos) {
+				t.Fatalf("repositories = %+v, quiero %+v", got.Repositories, tt.wantRepos)
+			}
+			for i, want := range tt.wantRepos {
+				if got.Repositories[i] != want {
+					t.Errorf("repositories[%d] = %+v, quiero %+v", i, got.Repositories[i], want)
+				}
+			}
+			// Sin entradas, `repositories` es un array vacío y no `null`: la SPA itera sin guardas.
+			if string(raw["repositories"]) == "null" || raw["repositories"] == nil {
+				t.Errorf("repositories debe ser un array JSON, es %s", raw["repositories"])
+			}
+		})
+	}
+}
+
+// Ninguna ruta del servidor escribe axiom.yaml (REQ-25.33): ni la lectura de la política ni
+// los métodos no permitidos sobre `/api/workspace` cambian el árbol del proyecto.
+func TestWorkspaceIsReadOnly(t *testing.T) {
+	dir := newPolicyProjectDir(t, policyHeader+"git:\n  integration_branch: develop\nrepositories:\n  - path: repo-backend\n    integration_branch: release\n")
+	router, _, _ := newPrefsServer(t, dir)
+	before := snapshotTree(t, dir)
+
+	getWorkspacePolicy(t, router)
+	for _, method := range []string{http.MethodPost, http.MethodPut, http.MethodPatch, http.MethodDelete} {
+		body := `{"branchPolicy":{"integrationBranch":"hack","branchPrefix":"hack"}}`
+		if rr := request(router, method, "/api/workspace", body); rr.Code != http.StatusMethodNotAllowed {
+			t.Errorf("%s /api/workspace = %d, quiero 405", method, rr.Code)
+		}
+	}
+
+	if after := snapshotTree(t, dir); !equalTrees(before, after) {
+		t.Errorf("el árbol del proyecto cambió:\nantes:   %v\ndespués: %v", before, after)
+	}
+	got, _ := getWorkspacePolicy(t, router)
+	if !got.IsConfigured {
+		t.Fatal("is_configured = false: el axiom.yaml de la prueba no se cargó")
+	}
+	if got.BranchPolicy.IntegrationBranch != "develop" {
+		t.Errorf("integrationBranch = %q tras los métodos rechazados, quiero develop", got.BranchPolicy.IntegrationBranch)
+	}
+}
+
+// El arnés de S10.6: GET /api/workspace con y sin `git:` y `repositories:`, mostrando el cuerpo
+// observable. `axiom ui` bloquea y no se ejecuta.
+func TestWorkspaceBranchPolicyHarness(t *testing.T) {
+	for name, yaml := range map[string]string{
+		"sin git ni repositories": policyHeader,
+		"con git y repositories":  policyHeader + "git:\n  integration_branch: develop\nrepositories:\n  - path: repo-backend\n    integration_branch: release\n",
+	} {
+		router, _, _ := newPrefsServer(t, newPolicyProjectDir(t, yaml))
+		rr := request(router, http.MethodGet, "/api/workspace", "")
+		t.Logf("%s: GET /api/workspace -> %d %s", name, rr.Code, strings.TrimSpace(rr.Body.String()))
+		if rr.Code != http.StatusOK {
+			t.Errorf("%s: GET /api/workspace = %d, quiero 200", name, rr.Code)
+		}
+	}
+}

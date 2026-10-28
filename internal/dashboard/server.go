@@ -290,8 +290,10 @@ func (s *Server) handleFSNativePicker(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// handleWorkspace responde `GET /api/workspace` con los metadatos del workspace y su política de
+// ramas (REQ-1.1). Es solo lectura: cualquier otro método responde 405 y ninguna ruta del servidor
+// escribe axiom.yaml (REQ-25.33).
 func (s *Server) handleWorkspace(w http.ResponseWriter, r *http.Request) {
-
 	if r.Method != http.MethodGet {
 		http.Error(w, "Método no permitido", http.StatusMethodNotAllowed)
 		return
