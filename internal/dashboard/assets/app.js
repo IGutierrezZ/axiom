@@ -291,15 +291,7 @@ document.addEventListener('DOMContentLoaded', () => {
       btnSubmitNewIncrement.textContent = 'Creando...';
 
       try {
-        const res = await fetch('/api/increments', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, type, intent })
-        });
-        const data = await res.json();
-        if (!res.ok || !data.success) {
-          throw new Error(data.error || 'Error al crear incremento');
-        }
+        await createIncrement({ name, type, intent });
 
         if (modalNewIncrement) modalNewIncrement.classList.add('hidden');
         await loadIncrements();
@@ -311,6 +303,68 @@ document.addEventListener('DOMContentLoaded', () => {
         btnSubmitNewIncrement.disabled = false;
         btnSubmitNewIncrement.textContent = 'Crear Incremento';
       }
+    });
+  }
+
+  // Crear un incremento (INC-25, REQ-25.32). Con el modo de trabajo en `ask` y sin respuesta, el servidor
+  // contesta 409 `decision_required` con la decisión: se presenta al usuario y la petición se repite una
+  // sola vez con `mode` (la respuesta elegida). Cualquier otro rechazo 409 trae `error` y `continuation`.
+  async function createIncrement(payload) {
+    let body = payload;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const res = await fetch('/api/increments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      const data = await res.json();
+      if (res.status === 409 && data.code === 'decision_required' && data.decision && attempt === 0) {
+        const answer = await askIncrementDecision(data.decision);
+        if (!answer) throw new Error('Creación cancelada: no elegiste cómo trabajar el cambio.');
+        body = { ...payload, mode: answer };
+        continue;
+      }
+      if (!res.ok || !data.success) {
+        const reason = data.error || data.statusLabel || 'Error al crear incremento';
+        throw new Error(data.continuation ? `${reason} Continuación: ${data.continuation}` : reason);
+      }
+      return data;
+    }
+    throw new Error('El servidor volvió a pedir la decisión tras responderla.');
+  }
+
+  // Presenta la decisión del servidor (pregunta y respuestas posibles) y devuelve la respuesta elegida o
+  // null si se cancela. El texto viene del servidor: se pinta con textContent, nunca como HTML.
+  function askIncrementDecision(decision) {
+    const modalDecision = document.getElementById('modal-increment-decision');
+    const questionEl = document.getElementById('increment-decision-question');
+    const choicesEl = document.getElementById('increment-decision-choices');
+    const btnCancelDecision = document.getElementById('btn-cancel-increment-decision');
+    return new Promise((resolve) => {
+      const finish = (answer) => {
+        modalDecision.classList.add('hidden');
+        btnCancelDecision.onclick = null;
+        resolve(answer);
+      };
+      questionEl.textContent = decision.question || '';
+      choicesEl.textContent = '';
+      (decision.choices || []).forEach((choice) => {
+        const btn = document.createElement('button');
+        btn.className = 'btn btn-secondary';
+        btn.style.textAlign = 'left';
+        const label = document.createElement('strong');
+        label.textContent = choice.label || choice.answer;
+        const effect = document.createElement('span');
+        effect.style.display = 'block';
+        effect.style.fontWeight = '400';
+        effect.textContent = choice.effect || '';
+        btn.appendChild(label);
+        btn.appendChild(effect);
+        btn.addEventListener('click', () => finish(choice.answer));
+        choicesEl.appendChild(btn);
+      });
+      btnCancelDecision.onclick = () => finish(null);
+      modalDecision.classList.remove('hidden');
     });
   }
 
@@ -1249,6 +1303,25 @@ document.addEventListener('DOMContentLoaded', () => {
           tbody.appendChild(tr);
         });
       }
+      // Política de ramas efectiva y ajustes por repositorio, en solo lectura (INC-25, REQ-1.1, REQ-25.33)
+      const policy = workspaceData.branchPolicy || {};
+      document.getElementById('top-ws-integration-branch').textContent = policy.integrationBranch || '--';
+      document.getElementById('top-ws-branch-prefix').textContent = policy.branchPrefix || '--';
+      const repoPolicyBox = document.getElementById('topology-repo-policy');
+      const repoPolicyBody = document.getElementById('topology-repo-policy-tbody');
+      repoPolicyBody.innerHTML = '';
+      const repoPolicies = workspaceData.repositories || [];
+      repoPolicies.forEach((repo) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><code>${escapeHtml(repo.path)}</code></td>
+          <td>${repo.integrationBranch ? '<code>' + escapeHtml(repo.integrationBranch) + '</code>' : 'hereda del workspace'}</td>
+          <td>${repo.branchPrefix ? '<code>' + escapeHtml(repo.branchPrefix) + '</code>' : 'hereda del workspace'}</td>
+        `;
+        repoPolicyBody.appendChild(tr);
+      });
+      repoPolicyBox.classList.toggle('hidden', repoPolicies.length === 0);
+
       updateRoleFilterButtons();
 
     } catch (err) {
@@ -1317,6 +1390,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const res = await fetch('/api/increments');
       if (!res.ok) throw new Error('Fallo al obtener incrementos');
       incrementsData = await res.json() || [];
+      renderIncrementNotes(res.headers.get('X-Axiom-Notes'));
 
       // Llenar selectores
       updateChangeSelects(incrementsData);
@@ -1325,6 +1399,27 @@ document.addEventListener('DOMContentLoaded', () => {
       console.error(err);
       incrementsContainer.innerHTML = '<div class="empty-state text-danger">Error al cargar incrementos.</div>';
     }
+  }
+
+  // Avisos informativos del listado (INC-25, REQ-25.34): la cabecera X-Axiom-Notes es un array JSON de
+  // frases (cambios pendientes de archivar, worktrees desaparecidos, falta de la referencia de
+  // integración). No son errores ni bloquean nada. Sin cabecera no hay aviso.
+  function renderIncrementNotes(header) {
+    const container = document.getElementById('increments-notes');
+    if (!container) return;
+    container.textContent = '';
+    let notes = [];
+    try {
+      notes = header ? JSON.parse(header) : [];
+    } catch (err) {
+      notes = [];
+    }
+    container.classList.toggle('hidden', notes.length === 0);
+    notes.forEach((note) => {
+      const line = document.createElement('div');
+      line.textContent = note;
+      container.appendChild(line);
+    });
   }
 
   function updateChangeSelects(items) {
@@ -1428,6 +1523,15 @@ document.addEventListener('DOMContentLoaded', () => {
         operationalBadge = `<span class="badge badge-ready-archive" title="Verificación superada, listo para archivar">Listo Archivar</span>`;
       }
 
+      // INC-25 (REQ-25.34): un cambio fusionado en la rama de integración y aún sin archivar, y el worktree
+      // y la rama de un cambio que vive en un worktree registrado.
+      const pendingArchiveBadge = inc.pendingArchive
+        ? `<span class="badge badge-pending-roles" title="Fusionado en la rama de integración y sin archivar: axiom branch ensure --change ${escapeHtml(inc.name)} --archive">Pendiente de archivar</span>`
+        : '';
+      const branchBadge = inc.branch
+        ? `<span class="badge badge-phase" title="Worktree: ${escapeHtml(inc.worktreePath)}">${escapeHtml(inc.branch)}</span>`
+        : '';
+
       card.innerHTML = `
         <div>
           <div class="card-header">
@@ -1437,6 +1541,8 @@ document.addEventListener('DOMContentLoaded', () => {
               <span class="badge badge-${inc.type}">${isArchived ? 'Archivado' : 'Activo'}</span>
               <span class="badge badge-phase">${inc.phase}</span>
               ${operationalBadge}
+              ${pendingArchiveBadge}
+              ${branchBadge}
             </div>
           </div>
           <div class="progress-container">

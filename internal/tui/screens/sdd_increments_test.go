@@ -4,6 +4,27 @@ import (
 	"testing"
 )
 
+// TestSDDIncrementsOptionsBadgeForPendingArchive fija la insignia de un cambio pendiente de archivar
+// (INC-25, REQ-25.34): solo la lleva el marcado, y la longitud de las opciones no cambia.
+func TestSDDIncrementsOptionsBadgeForPendingArchive(t *testing.T) {
+	increments := []SDDIncrementInfo{
+		{Name: "y", Type: "active", Phase: "spec", PendingArchive: true},
+		{Name: "x", Type: "active", Phase: "spec"},
+	}
+
+	options := SDDIncrementsOptions(increments)
+
+	if len(options) != len(increments)+4 {
+		t.Fatalf("SDDIncrementsOptions() longitud = %d, esperado %d", len(options), len(increments)+4)
+	}
+	if want := "▶ y [SPEC] (0/0 tareas, 0%) · pendiente de archivar"; options[0] != want {
+		t.Errorf("opción del pendiente = %q, esperado %q", options[0], want)
+	}
+	if want := "▶ x [SPEC] (0/0 tareas, 0%)"; options[1] != want {
+		t.Errorf("opción sin pendiente = %q, esperado %q", options[1], want)
+	}
+}
+
 // TestSDDIncrementsOptionsUnchangedByLaneHeader protege D-13: la cabecera
 // de conmutación de carril es de solo renderizado y NO debe alterar la
 // longitud ni el contenido de SDDIncrementsOptions, cuyo manejador en

@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -19,6 +20,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/agentbuilder"
 	"github.com/IGutierrezZ/axiom/v3/internal/agents"
 	"github.com/IGutierrezZ/axiom/v3/internal/backup"
+	"github.com/IGutierrezZ/axiom/v3/internal/branch/engine"
 	"github.com/IGutierrezZ/axiom/v3/internal/catalog"
 	"github.com/IGutierrezZ/axiom/v3/internal/cli"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/communitytool"
@@ -5985,19 +5987,45 @@ func (m *Model) loadSDDIncrements() {
 		return
 	}
 	root := loc.PlanningHome
+
+	// INC-25 (REQ-25.34, REQ-25.19): la TUI solo lista, y lista el mismo conjunto que `GET /api/increments`.
+	// Los cambios de los worktrees registrados y los pendientes de archivar los dan el motor, el mismo que
+	// usa el dashboard: son consultas de solo lectura, sin `ensure` ni escritura en ninguna carpeta de
+	// cambio. Sus avisos informativos (worktree desaparecido, sin referencia de integración) no se muestran.
+	ctx := context.Background()
+	registered, _ := engine.Default().RegisteredChangesByName(ctx, loc)
+	pending, _ := engine.Default().PendingArchive(ctx, loc)
+	pendingSet := make(map[string]bool, len(pending))
+	for _, change := range pending {
+		pendingSet[change.Change] = true
+	}
+
 	activeDir := filepath.Join(root, "changes")
 	if entries, err := os.ReadDir(activeDir); err == nil {
 		for _, e := range entries {
 			if !e.IsDir() || e.Name() == "archive" || e.Name() == "e2e-cumulative" {
 				continue
 			}
+			// El cambio de un worktree registrado prevalece sobre el del checkout principal.
+			if _, inWorktree := registered[e.Name()]; inWorktree {
+				continue
+			}
 			incPath := filepath.Join(activeDir, e.Name())
 			info := inspectIncrementForTUI(incPath, e.Name(), "active")
+			info.PendingArchive = pendingSet[e.Name()]
 			list = append(list, info)
-			if m.SDDActiveChange == "" {
-				m.SDDActiveChange = e.Name()
-			}
 		}
+	}
+	for name, change := range registered {
+		info := inspectIncrementForTUI(change.ChangeRoot, name, "active")
+		info.WorktreePath = change.WorktreeRoot
+		info.Branch = change.Branch
+		info.PendingArchive = pendingSet[name]
+		list = append(list, info)
+	}
+	sort.Slice(list, func(i, j int) bool { return list[i].Name < list[j].Name })
+	if len(list) > 0 && m.SDDActiveChange == "" {
+		m.SDDActiveChange = list[0].Name
 	}
 
 	archiveDir := filepath.Join(root, "changes", "archive")
