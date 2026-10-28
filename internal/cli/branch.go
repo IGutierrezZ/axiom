@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -14,10 +15,10 @@ import (
 )
 
 // `axiom branch` (INC-25, D-02): la familia de verbos que planifica, crea y consulta las
-// ramas y worktrees de un cambio. Trae `status` y `ensure` sobre el motor
+// ramas y worktrees de un cambio. Trae `status`, `ensure`, `done` y `guard` sobre el motor
 // internal/branch/engine (planificador puro, operaciones de git y resultado
-// `axiom.branch-result/v1`); los demás verbos llegan con las rebanadas siguientes y la
-// ayuda lista solo los verbos que existen (decisión T3). Ningún verbo ejecuta `push` ni
+// `axiom.branch-result/v1`); la ayuda lista los cuatro verbos de REQ-25.1. `guard` es el hook de
+// los runtimes con hooks (branch_guard.go). Ningún verbo ejecuta `push` ni
 // abre un PR, y ninguno hace operaciones remotas salvo `ensure --fetch` y `done --fetch`, que
 // ejecutan `git fetch origin` (REQ-25.1, REQ-25.10). `ensure --archive` crea la rama de archivado de un
 // cambio ya fusionado (REQ-25.45) y `done` elimina las ramas y los worktrees de un cambio fusionado
@@ -29,6 +30,7 @@ Subcomandos:
   ensure   Crea la rama de un cambio y su worktree si faltan (idempotente)
   status   Estado de las ramas y los worktrees de un cambio (solo lectura)
   done     Elimina el worktree y la rama local de un cambio ya fusionado
+  guard    Hook de los runtimes: bloquea los documentos de Axiom en la rama equivocada
 
 Ejecuta ` + "`axiom branch <subcomando> --help`" + ` para ver las banderas de cada subcomando.
 `
@@ -175,6 +177,11 @@ Código de salida: 0 si el cambio queda preparado, 1 ante un rechazo o un error 
 
 // RunBranch ejecuta `axiom branch <subcomando>` y devuelve el código de salida.
 func RunBranch(args []string, stdout, stderr io.Writer) int {
+	return runBranch(args, os.Stdin, stdout, stderr)
+}
+
+// runBranch es RunBranch con la entrada estándar inyectada: solo `guard` la lee (la carga del hook).
+func runBranch(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	if len(args) == 0 {
 		fmt.Fprint(stdout, branchHelp)
 		return branch.ExitUsage
@@ -189,8 +196,10 @@ func RunBranch(args []string, stdout, stderr io.Writer) int {
 		return runBranchStatus(rest, stdout, stderr)
 	case "done":
 		return runBranchDone(rest, stdout, stderr)
+	case "guard":
+		return runBranchGuard(rest, stdin, stdout, stderr)
 	default:
-		fmt.Fprintf(stderr, "Error: subcomando '%s' no reconocido para branch; los disponibles son ensure, status y done. Ejecuta `axiom branch --help`.\n", subcommand)
+		fmt.Fprintf(stderr, "Error: subcomando '%s' no reconocido para branch; los disponibles son ensure, status, done y guard. Ejecuta `axiom branch --help`.\n", subcommand)
 		return branch.ExitUsage
 	}
 }
