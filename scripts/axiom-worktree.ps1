@@ -1,17 +1,25 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-    Gestión unificada de worktrees y ciclo de vida de PRs para Axiom.
+    Envoltorio local de `axiom branch` para desarrollar Axiom.
 
 .DESCRIPTION
-    Una unidad de trabajo = un worktree aislado + una rama (feat/<slug>, inc/<slug>, etc.)
-    creada desde origin/main actualizado. El cambio se envía mediante Pull Request hacia main
-    y, tras el merge, se limpian el worktree y la rama local.
+    Una sola implementación de ramas y worktrees: la del producto (`axiom branch`). Este script
+    aporta la costumbre local y el verbo `pr`, que el producto deja fuera (la publicación es una
+    decisión de la persona):
+
+    new  <slug> [-Prefix p]  axiom branch ensure --cwd <checkout principal> --change <slug> [--prefix p] --json
+    pr   <slug>              push de la rama del cambio y PR hacia el prTarget de axiom branch status --json
+    done <slug> [-Force]     axiom branch done --cwd <checkout principal> --change <slug> y, después,
+                             el avance rápido de main
+
+    Los worktrees viven en <carpeta del proyecto>-wt/<slug>/<repositorio> (p. ej. axiom-wt\<slug>\axiom).
+    Necesita un `axiom` con el verbo `axiom branch` en el PATH (`go install ./cmd/axiom`).
 
 .USAGE
     scripts/axiom-worktree.ps1 new <slug> [-Prefix feat|inc|fix|refactor]
-    scripts/axiom-worktree.ps1 pr <slug> [-Prefix feat|inc|fix|refactor]
-    scripts/axiom-worktree.ps1 done <slug> [-Prefix feat|inc|fix|refactor] [-Force]
+    scripts/axiom-worktree.ps1 pr <slug>
+    scripts/axiom-worktree.ps1 done <slug> [-Force]
 #>
 param(
     [Parameter(Position = 0, Mandatory = $true)]
@@ -21,22 +29,23 @@ param(
     [Parameter(Position = 1, Mandatory = $true)]
     [string]$Slug,
 
+    # Sin -Prefix rige el branch_prefix de axiom.yaml (bloque git:).
     [Parameter(Position = 2, Mandatory = $false)]
     [ValidateSet('feat', 'inc', 'fix', 'refactor')]
-    [string]$Prefix = 'feat',
+    [string]$Prefix,
 
     [Parameter(Mandatory = $false)]
     [switch]$Force
 )
 
 $ErrorActionPreference = 'Continue'
+# axiom escribe JSON en UTF-8; sin esto las rutas con acentos se leen en la página de códigos OEM.
+try { [Console]::OutputEncoding = New-Object System.Text.UTF8Encoding($false) } catch { }
 
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $repoRoot  = Split-Path -Parent $scriptDir
 
-# La raíz de worktrees vive junto al checkout PRINCIPAL del repo. Al ejecutar
-# desde un worktree, el padre de $repoRoot ya es la carpeta de worktrees, así
-# que se deriva la raíz principal desde el git common dir.
+# El checkout principal es el padre del git common dir: desde un worktree, $repoRoot ya no lo es.
 $commonDir = git -C $repoRoot rev-parse --path-format=absolute --git-common-dir 2>$null
 if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($commonDir)) {
     $cd = (git -C $repoRoot rev-parse --git-common-dir 2>$null)
@@ -47,10 +56,8 @@ if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($commonDir)) {
 if ([string]::IsNullOrWhiteSpace($commonDir)) {
     $commonDir = Join-Path $repoRoot '.git'
 }
-$commonDir = $commonDir.Trim()
+$commonDir = ([string]($commonDir | Select-Object -First 1)).Trim()
 $mainRoot  = Split-Path -Parent $commonDir
-$wtRoot    = Join-Path -Path (Split-Path -Parent $mainRoot) -ChildPath 'axiom-wt'
-$wtPath    = Join-Path -Path $wtRoot -ChildPath $Slug
 
 function Info { param($msg) Write-Host $msg -ForegroundColor Cyan }
 function Ok   { param($msg) Write-Host $msg -ForegroundColor Green }
@@ -65,55 +72,83 @@ if ($Slug -notmatch '^[a-z0-9]+(-[a-z0-9]+)*$') {
 git -C $repoRoot rev-parse --is-inside-work-tree 2>$null | Out-Null
 if ($LASTEXITCODE -ne 0) { Fail "No es un repositorio git: $repoRoot" }
 
-# Resolución inteligente de rama: si ya existe una rama con prefijo común para este slug, la reutiliza
-$branch = "$Prefix/$Slug"
-if ($Verb -ne 'new') {
-    $candidates = @("$Prefix/$Slug", "feat/$Slug", "inc/$Slug", "fix/$Slug", "refactor/$Slug") | Select-Object -Unique
-    foreach ($cand in $candidates) {
-        git -C $repoRoot show-ref --verify --quiet "refs/heads/$cand" 2>$null
-        if ($LASTEXITCODE -eq 0) {
-            $branch = $cand
-            break
-        }
-    }
+# Sin un `axiom` que traiga `axiom branch` no hay nada que envolver.
+$axiomCmd = Get-Command axiom -ErrorAction SilentlyContinue
+if ($axiomCmd) {
+    & axiom branch --help 2>&1 | Out-Null
 }
+if (-not $axiomCmd -or $LASTEXITCODE -ne 0) {
+    Fail 'instala un `axiom` con `axiom branch` (`go install ./cmd/axiom`).'
+}
+
 
 switch ($Verb) {
 
     'new' {
-        if (Test-Path -LiteralPath $wtPath) {
-            Fail "Ya existe un worktree en: $wtPath"
+        $ensureArgs = @('--mode', 'worktree')
+        if ($Prefix) { $ensureArgs += @('--prefix', $Prefix) }
+
+        # `--mode worktree`: la política local exige un worktree propio y un checkout principal
+        # siempre en main, sea cual sea la preferencia personal del hub.
+        $lines = & axiom branch ensure --cwd $mainRoot --change $Slug @ensureArgs --json 2>&1
+        $exitCode = $LASTEXITCODE
+        $text = ($lines | ForEach-Object { "$_" }) -join "`n"
+        if ($exitCode -ne 0) {
+            Write-Host $text
+            Fail "axiom branch ensure rechazó el cambio '$Slug'."
+        }
+        try {
+            $result = $text | ConvertFrom-Json
+        } catch {
+            Fail "axiom branch ensure no devolvió un JSON legible: $text"
         }
 
-        git -C $repoRoot show-ref --verify --quiet "refs/heads/$branch" 2>$null
-        if ($LASTEXITCODE -eq 0) {
-            Fail "La rama $branch ya existe localmente. Elige otro slug o elimina la rama."
+        $worktrees = @()
+        foreach ($repository in @($result.repositories)) {
+            foreach ($b in @($repository.branches)) {
+                if ($b.worktree) { $worktrees += $b.worktree }
+            }
         }
-
-        Info "Actualizando origin/main..."
-        git -C $repoRoot fetch origin main
-        if ($LASTEXITCODE -ne 0) {
-            Warn "El fetch de origin/main falló (¿sin conexión?); se usa la referencia local como base."
+        if ($worktrees.Count -eq 0) {
+            Fail "axiom branch ensure no devolvió ningún worktree para '$Slug'."
         }
-
-        $base = 'origin/main'
-        git -C $repoRoot show-ref --verify --quiet 'refs/remotes/origin/main' 2>$null
-        if ($LASTEXITCODE -ne 0) { $base = 'main' }
-
-        New-Item -ItemType Directory -Force -Path $wtRoot | Out-Null
-        git -C $repoRoot worktree add -b $branch $wtPath $base
-        if ($LASTEXITCODE -ne 0) {
-            Fail "git worktree add falló. Revisa el error anterior."
-        }
-
-        Ok "Worktree creado: $wtPath"
-        Ok "Rama activa: $branch (base: $base)"
-        Info "Trabaja dentro de ese directorio. Al verificar y pasar pruebas, ejecuta: scripts/axiom-worktree.ps1 pr $Slug"
+        foreach ($path in $worktrees) { Ok "Worktree: $path" }
+        Info 'Trabaja con rutas absolutas dentro de esos directorios (--cwd y git -C).'
+        Info "Al verificar, ejecuta: scripts/axiom-worktree.ps1 pr $Slug"
     }
 
     'pr' {
-        if (-not (Test-Path -LiteralPath $wtPath)) {
-            Fail "No existe el worktree en: $wtPath"
+        $lines = & axiom branch status --cwd $mainRoot --change $Slug --json 2>&1
+        $exitCode = $LASTEXITCODE
+        $text = ($lines | ForEach-Object { "$_" }) -join "`n"
+        if ($exitCode -ne 0) {
+            Write-Host $text
+            Fail "axiom branch status falló para el cambio '$Slug'."
+        }
+        try {
+            $status = $text | ConvertFrom-Json
+        } catch {
+            Fail "axiom branch status no devolvió un JSON legible: $text"
+        }
+
+        # Rama del cambio, su worktree y la base del PR (`prTarget`) salen del plan del producto.
+        $changeBranch = $null
+        foreach ($repository in @($status.repositories)) {
+            foreach ($b in @($repository.branches)) {
+                if ($null -eq $changeBranch -and $b.kind -eq 'change') { $changeBranch = $b }
+            }
+        }
+        if ($null -eq $changeBranch) {
+            Fail "axiom branch status no encontró la rama del cambio '$Slug'. Créala con: scripts/axiom-worktree.ps1 new $Slug"
+        }
+        $branch   = [string]$changeBranch.name
+        $wtPath   = [string]$changeBranch.worktree
+        $prTarget = [string]$changeBranch.prTarget
+        if ([string]::IsNullOrWhiteSpace($wtPath) -or -not (Test-Path -LiteralPath $wtPath)) {
+            Fail "La rama $branch no tiene worktree en este equipo (worktree: '$wtPath')."
+        }
+        if ([string]::IsNullOrWhiteSpace($prTarget)) {
+            Fail "axiom branch status no propuso una rama destino (prTarget) para $branch."
         }
 
         $dirty = git -C $wtPath status --porcelain
@@ -129,7 +164,7 @@ switch ($Verb) {
 
         $remoteUrl = (git -C $wtPath remote get-url origin 2>$null).Trim()
         $remoteUrl = $remoteUrl -replace '\.git$', ''
-        $compareUrl = "$remoteUrl/compare/main...$branch" + '?expand=1'
+        $compareUrl = "$remoteUrl/compare/$prTarget...$branch" + '?expand=1'
         # HOST/OWNER/REPO de origin (https o ssh) para no depender de 'gh repo set-default'.
         $ghRepo = $remoteUrl -replace '^(?:[a-zA-Z][a-zA-Z0-9+.-]*://)?(?:[^@/]+@)?([^/:]+)[:/]', '$1/'
 
@@ -137,10 +172,10 @@ switch ($Verb) {
         if ($gh) {
             gh auth status 2>$null
             if ($LASTEXITCODE -eq 0) {
-                Info "Creando el Pull Request mediante gh CLI..."
+                Info "Creando el Pull Request mediante gh CLI (base: $prTarget)..."
                 Push-Location $wtPath
                 try {
-                    & gh pr create --repo $ghRepo --base main --head $branch --fill
+                    & gh pr create --repo $ghRepo --base $prTarget --head $branch --fill
                     if ($LASTEXITCODE -eq 0) {
                         Ok "Pull Request creado exitosamente."
                         return
@@ -161,32 +196,21 @@ switch ($Verb) {
     }
 
     'done' {
-        $currentBranch = (git -C $repoRoot rev-parse --abbrev-ref HEAD 2>$null).Trim()
-        if ($currentBranch -eq $branch) {
-            Fail "La rama $branch está chequeada en el checkout principal. Cambia a main antes de eliminar."
-        }
+        $doneArgs = @()
+        if ($Force) { $doneArgs += '--force' }
 
-        if (Test-Path -LiteralPath $wtPath) {
-            Info "Eliminando el worktree en $wtPath..."
-            if ($Force) {
-                git -C $repoRoot worktree remove --force $wtPath
-            } else {
-                git -C $repoRoot worktree remove $wtPath
-            }
-            if ($LASTEXITCODE -ne 0) {
-                Fail "No se pudo eliminar el worktree (¿cambios sin commitear?). Usa -Force o revísalo manualmente."
-            }
-        }
-        else {
-            Info "El directorio del worktree $wtPath no existe; continuando con limpieza de rama..."
+        # `axiom branch done` confirma la fusión y desmonta el worktree y la rama local del plan.
+        & axiom branch done --cwd $mainRoot --change $Slug @doneArgs
+        if ($LASTEXITCODE -ne 0) {
+            Fail "axiom branch done no desmanteló por completo el cambio '$Slug' (revisa el mensaje anterior)."
         }
 
         # Sincronizar main si estamos en él en el checkout principal
-        $currentBranch = (git -C $repoRoot rev-parse --abbrev-ref HEAD 2>$null).Trim()
+        $currentBranch = (git -C $mainRoot rev-parse --abbrev-ref HEAD 2>$null).Trim()
         if ($currentBranch -eq 'main') {
             Info "Actualizando main local con origin/main..."
-            git -C $repoRoot fetch origin main
-            git -C $repoRoot merge --ff-only origin/main
+            git -C $mainRoot fetch origin main
+            git -C $mainRoot merge --ff-only origin/main
             if ($LASTEXITCODE -eq 0) {
                 Ok "main local actualizado correctamente."
             } else {
@@ -194,29 +218,7 @@ switch ($Verb) {
             }
         }
 
-        Info "Eliminando rama local $branch..."
-        if ($Force) {
-            git -C $repoRoot branch -D $branch 2>$null
-        } else {
-            git -C $repoRoot branch -d $branch 2>$null
-        }
-        if ($LASTEXITCODE -ne 0) {
-            Warn "No se pudo borrar $branch localmente con -d (¿aún no mergeada?). Usa -Force si ya está integrada."
-        } else {
-            Ok "Rama local $branch eliminada."
-        }
-
-        # Desvincular del Hub global de Axiom si hubiera quedado registrado
-        $axiomCmd = Get-Command axiom -ErrorAction SilentlyContinue
-        if ($axiomCmd) {
-            & axiom project remove $Slug 2>$null | Out-Null
-            & axiom project remove $wtPath 2>$null | Out-Null
-        } elseif ((Get-Command go -ErrorAction SilentlyContinue) -and (Test-Path (Join-Path $repoRoot 'cmd\axiom\main.go'))) {
-            & go run (Join-Path $repoRoot 'cmd\axiom\main.go') project remove $Slug 2>$null | Out-Null
-            & go run (Join-Path $repoRoot 'cmd\axiom\main.go') project remove $wtPath 2>$null | Out-Null
-        }
-
-        git -C $repoRoot worktree prune
+        git -C $mainRoot worktree prune
         Ok "Ciclo de trabajo '$Slug' desmantelado y entorno limpio."
     }
 }

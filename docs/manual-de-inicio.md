@@ -220,15 +220,12 @@ Axiom establece una separación arquitectónica estricta entre repositorios de e
      2. Nombre de rama (`feat/<funcionalidad>`).
      3. Rama base (`main`, `develop`, etc.).
    - Al concluir la verificación en `PASS`, se ofrece registrar el commit y se solicita interactivamente la rama destino del Pull Request (`main`, `develop`, etc.) antes de proponer `gh pr create --base <rama-destino>`.
-3. **Limpieza Automática Post-Merge (`scripts/cleanup-worktree.*`):**
-   - Tras fusionar el PR, Axiom provee scripts canónicos para desmontar el worktree y eliminar la rama local de forma limpia:
+3. **Limpieza Post-Merge (`axiom branch done`):**
+   - Tras fusionar el PR, `axiom branch done` confirma la fusión (ancestro, árbol equivalente o PR fusionado con evidencia), desmonta el worktree y elimina la rama local de cada rama del plan del cambio. Solo toca ramas locales y worktrees del plan, nunca una rama remota, y repetirlo es idempotente:
      ```bash
-     # Linux / macOS
-     ./scripts/cleanup-worktree.sh <ruta-worktree> <nombre-rama>
-
-     # Windows (PowerShell)
-     ./scripts/cleanup-worktree.ps1 -WorktreePath <ruta-worktree> -BranchName <nombre-rama>
+     axiom branch done --change <cambio>
      ```
+   - En este repositorio, el envoltorio `scripts/axiom-worktree.ps1 done <slug>` (o `.sh`) lo invoca y después avanza `main` local.
 
 ---
 

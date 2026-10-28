@@ -217,3 +217,139 @@ func TestManualDeInicioAttributesIndexMdToArchiveSync(t *testing.T) {
 		}
 	}
 }
+
+// readRepoFile lee un fichero versionado del repositorio con una ruta relativa a
+// la raíz (los pins de scripts y documentos leen el texto que se publica).
+func readRepoFile(t *testing.T, rel string) string {
+	t.Helper()
+	raw, err := os.ReadFile(filepath.Join("..", "..", filepath.FromSlash(rel)))
+	if err != nil {
+		t.Fatalf("no se pudo leer %s: %v", rel, err)
+	}
+	return string(raw)
+}
+
+// repoMarkdownAndScripts lista los ficheros que forman la documentación y los
+// scripts vigentes: la raíz, docs/ (sin docs/archive, que es histórico) y
+// scripts/. openspec/ y odd/ quedan fuera: describen cambios, no instrucciones.
+func repoMarkdownAndScripts(t *testing.T) []string {
+	t.Helper()
+	root := filepath.Join("..", "..")
+	var files []string
+	for _, name := range []string{"CLAUDE.md", "AGENTS.md", "GEMINI.md", "README.md", "axiom.example.yaml"} {
+		files = append(files, name)
+	}
+	for _, dir := range []string{"docs", "scripts"} {
+		err := filepath.WalkDir(filepath.Join(root, dir), func(path string, entry os.DirEntry, err error) error {
+			if err != nil {
+				return err
+			}
+			if entry.IsDir() {
+				if filepath.ToSlash(path) == "../../docs/archive" {
+					return filepath.SkipDir
+				}
+				return nil
+			}
+			rel, relErr := filepath.Rel(root, path)
+			if relErr != nil {
+				return relErr
+			}
+			files = append(files, filepath.ToSlash(rel))
+			return nil
+		})
+		if err != nil {
+			t.Fatalf("no se pudo recorrer %s: %v", dir, err)
+		}
+	}
+	return files
+}
+
+// REQ-25.24, D-21: cleanup-worktree.* se retira (solo lo citaban ODD-5.6 y el
+// manual) y ningún documento ni script vigente lo cita; lo sustituye
+// `axiom branch done`.
+func TestScriptsCleanupWorktreeIsRetiredAndNoDocCitesIt(t *testing.T) {
+	for _, name := range []string{"scripts/cleanup-worktree.ps1", "scripts/cleanup-worktree.sh"} {
+		if _, err := os.Stat(filepath.Join("..", "..", filepath.FromSlash(name))); err == nil {
+			t.Errorf("%s debería estar retirado", name)
+		} else if !os.IsNotExist(err) {
+			t.Fatalf("no se pudo comprobar %s: %v", name, err)
+		}
+	}
+
+	files := repoMarkdownAndScripts(t)
+	if len(files) < 10 {
+		t.Fatalf("la comprobación solo ve %d ficheros; perdió cobertura", len(files))
+	}
+	for _, file := range files {
+		if strings.Contains(readRepoFile(t, file), "cleanup-worktree") {
+			t.Errorf("%s cita cleanup-worktree, retirado en favor de `axiom branch done`", file)
+		}
+	}
+}
+
+// REQ-25.24, D-21, G-12: axiom-worktree.* es un envoltorio fino de `axiom branch`
+// (una sola implementación de ramas y worktrees), conserva `pr` y, si el binario
+// no trae `axiom branch`, termina con el mensaje de instalación.
+func TestScriptsAxiomWorktreeIsAThinWrapperOfAxiomBranch(t *testing.T) {
+	for _, name := range []string{"scripts/axiom-worktree.ps1", "scripts/axiom-worktree.sh"} {
+		script := readRepoFile(t, name)
+		for _, want := range []string{
+			"axiom branch ensure --cwd",
+			"axiom branch done --cwd",
+			"axiom branch status --cwd",
+			"prTarget",
+			"instala un `axiom` con `axiom branch` (`go install ./cmd/axiom`)",
+			"axiom branch --help",
+		} {
+			if !strings.Contains(script, want) {
+				t.Errorf("%s no contiene %q", name, want)
+			}
+		}
+		// El verbo `pr` se conserva como entrega personal.
+		if !strings.Contains(script, "gh pr create") || !strings.Contains(script, "push") {
+			t.Errorf("%s perdió el verbo pr (push y gh pr create)", name)
+		}
+		// La implementación de ramas es la del producto: el script ya no ejecuta
+		// `git worktree add`, ni borra ramas, ni desregistra proyectos del hub.
+		for _, retired := range []string{
+			"worktree add",
+			"branch -d",
+			"branch -D",
+			"project remove",
+			"cleanup-worktree",
+		} {
+			if strings.Contains(script, retired) {
+				t.Errorf("%s conserva la implementación retirada %q", name, retired)
+			}
+		}
+	}
+}
+
+// REQ-25.24, G-12: la guarda local de rutas se conserva, con su política por ruta
+// y su fallo en abierto, y sus mensajes remiten a `axiom branch ensure` en lugar
+// de al envoltorio `new`.
+func TestScriptsGuardPrimaryCheckoutPointsToAxiomBranchEnsure(t *testing.T) {
+	script := readRepoFile(t, "scripts/claude-hooks/guard-primary-checkout.ps1")
+	for _, want := range []string{
+		"axiom branch ensure",
+		// La política por ruta y el fallo en abierto no cambian.
+		"Test-InsidePath $targetPath $primary",
+		"exit 0",
+		"exit 2",
+		"git -C $primary symbolic-ref",
+		"rev-list --count origin/main..main",
+		"La guarda falla en abierto",
+	} {
+		if !strings.Contains(script, want) {
+			t.Errorf("guard-primary-checkout.ps1 no contiene %q", want)
+		}
+	}
+	for _, retired := range []string{
+		"axiom-worktree.ps1 new",
+		"worktree add ..\\axiom-wt\\<slug>",
+	} {
+		if strings.Contains(script, retired) {
+			t.Errorf("guard-primary-checkout.ps1 sigue remitiendo a la creación manual %q", retired)
+		}
+	}
+}
