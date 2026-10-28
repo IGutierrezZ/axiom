@@ -167,6 +167,33 @@ func TestRegisteredChangesIgnoresWhatHasNoWorktreeOfTheChange(t *testing.T) {
 	}
 }
 
+// REQ-25.34, D-16: la agregación por nombre que comparten el dashboard y la TUI deja un solo cambio por
+// nombre, con el worktree de archivado por delante del del cambio, y no cuenta lo que no tiene la carpeta
+// del cambio en su worktree.
+func TestRegisteredChangesByNameKeepsTheArchiveWorktreeAndSkipsMissingChangeRoots(t *testing.T) {
+	root, loc := listingProject(t)
+	changeWorktree := listingWorktree(t, "x", true)
+	archiveWorktree := listingWorktree(t, "x", true)
+	withoutChange := listingWorktree(t, "z", false)
+	saveListing(t, root, "x", branch.ModeWorktree,
+		listingBranch("feat/x", branch.KindChange, changeWorktree),
+		listingBranch("feat/x-archive", branch.KindArchive, archiveWorktree),
+	)
+	saveListing(t, root, "z", branch.ModeWorktree, listingBranch("feat/z", branch.KindChange, withoutChange))
+
+	got, warnings := Default().RegisteredChangesByName(context.Background(), loc)
+
+	if len(warnings) != 0 {
+		t.Errorf("no se esperaban avisos: %v", warnings)
+	}
+	if len(got) != 1 {
+		t.Fatalf("RegisteredChangesByName() = %+v, se esperaba solo x", got)
+	}
+	if x := got["x"]; x.Branch != "feat/x-archive" || x.WorktreeRoot != archiveWorktree {
+		t.Errorf("x = %+v, debía prevalecer el worktree de archivado %s", x, archiveWorktree)
+	}
+}
+
 // Sin repositorio git, sin registro o con un registro ilegible no se lista nada y nunca falla; solo el
 // ilegible deja un aviso con la continuación de borrarlo.
 func TestRegisteredChangesWithoutARegistryReturnsNothing(t *testing.T) {

@@ -29,21 +29,9 @@ type incrementLocation struct {
 // registeredIncrements devuelve, por nombre, el cambio activo que gana la precedencia entre los de los
 // worktrees registrados (REQ-25.34, D-16): el del worktree de archivado antes que el del worktree del
 // cambio. Solo cuentan los worktrees que tienen la carpeta del cambio. Los avisos son los del motor
-// (worktree desaparecido, registro ilegible).
+// (worktree desaparecido, registro ilegible). La agregación es la del motor, la misma que usa la TUI.
 func registeredIncrements(loc workspace.Location) (map[string]engine.RegisteredChange, []string) {
-	changes, warnings := engine.Default().RegisteredChanges(context.Background(), loc)
-	byName := make(map[string]engine.RegisteredChange, len(changes))
-	for _, change := range changes {
-		if change.ChangeRoot == "" {
-			continue
-		}
-		// RegisteredChanges sale por nombre y, dentro de cada uno, en orden de precedencia: el
-		// primero que se ve de un nombre es el que prevalece.
-		if _, taken := byName[change.Name]; !taken {
-			byName[change.Name] = change
-		}
-	}
-	return byName, warnings
+	return engine.Default().RegisteredChangesByName(context.Background(), loc)
 }
 
 // locateIncrement busca el incremento por nombre: primero el cambio activo de un worktree registrado

@@ -104,6 +104,26 @@ func (e *Engine) RegisteredChanges(ctx context.Context, loc workspace.Location) 
 	return changes, warnings
 }
 
+// RegisteredChangesByName devuelve, por nombre, el cambio de worktree registrado que prevalece
+// (REQ-25.34, design D-16): el del worktree de archivado antes que el del worktree del cambio. Solo
+// cuentan las entradas cuyo worktree tiene la carpeta del cambio. Es la agregación que comparten el
+// dashboard y la TUI, de modo que listan el mismo conjunto; los avisos son los de RegisteredChanges.
+func (e *Engine) RegisteredChangesByName(ctx context.Context, loc workspace.Location) (map[string]RegisteredChange, []string) {
+	changes, warnings := e.RegisteredChanges(ctx, loc)
+	byName := make(map[string]RegisteredChange, len(changes))
+	for _, change := range changes {
+		if change.ChangeRoot == "" {
+			continue
+		}
+		// RegisteredChanges sale por nombre y, dentro de cada uno, en orden de precedencia: el
+		// primero que se ve de un nombre es el que prevalece.
+		if _, taken := byName[change.Name]; !taken {
+			byName[change.Name] = change
+		}
+	}
+	return byName, warnings
+}
+
 // kindPrecedence ordena las ramas de un mismo cambio: la de archivado, que ya está fusionada y solo falta
 // archivarla, antes que la del cambio (REQ-25.44, REQ-25.45).
 func kindPrecedence(kind branch.BranchKind) int {

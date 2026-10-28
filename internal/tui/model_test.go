@@ -4,7 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"reflect"
 	"slices"
@@ -13,12 +15,16 @@ import (
 	"time"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/backup"
+	"github.com/IGutierrezZ/axiom/v3/internal/branch"
+	"github.com/IGutierrezZ/axiom/v3/internal/branch/registry"
 	"github.com/IGutierrezZ/axiom/v3/internal/cli"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/communitytool"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/opencodeplugin"
 	componentuninstall "github.com/IGutierrezZ/axiom/v3/internal/components/uninstall"
+	"github.com/IGutierrezZ/axiom/v3/internal/gitcommon"
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
 	"github.com/IGutierrezZ/axiom/v3/internal/opencode"
+	"github.com/IGutierrezZ/axiom/v3/internal/pathidentity"
 	"github.com/IGutierrezZ/axiom/v3/internal/pipeline"
 	"github.com/IGutierrezZ/axiom/v3/internal/planner"
 	"github.com/IGutierrezZ/axiom/v3/internal/reviewtransaction"
@@ -28,6 +34,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/tui/styles"
 	"github.com/IGutierrezZ/axiom/v3/internal/update"
 	"github.com/IGutierrezZ/axiom/v3/internal/update/upgrade"
+	"github.com/IGutierrezZ/axiom/v3/internal/workspace/workspacetest"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/muesli/termenv"
@@ -9423,5 +9430,204 @@ func TestSyncDoneMsg_WarningsReachTheSyncScreen(t *testing.T) {
 
 	if reset := state.withResetSyncState(); len(reset.SyncWarnings) != 0 {
 		t.Fatalf("withResetSyncState left warnings behind: %q", reset.SyncWarnings)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// INC-25 S10-c4: la pantalla de incrementos lista los mismos cambios que
+// `GET /api/increments` (REQ-25.34) y solo lista (REQ-25.19). Se prueba con
+// Model.Update directo, sin teatest, sobre un repositorio git real y aislado:
+// un cambio vive solo en su worktree registrado, otro figura además en el
+// checkout principal y un tercero está fusionado y sin archivar.
+// ---------------------------------------------------------------------------
+
+// pendingArchiveBadge es el texto de la insignia de un cambio pendiente de archivar.
+const pendingArchiveBadge = "pendiente de archivar"
+
+// requireTUIGit omite la prueba con -short o sin git y aísla git de la configuración del desarrollador.
+func requireTUIGit(t *testing.T) {
+	t.Helper()
+	if testing.Short() {
+		t.Skip("prueba con git real: se omite con -short")
+	}
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skipf("git no está instalado: %v", err)
+	}
+	t.Setenv("GIT_CONFIG_GLOBAL", filepath.Join(t.TempDir(), "gitconfig"))
+	t.Setenv("GIT_CONFIG_NOSYSTEM", "1")
+	t.Setenv("GIT_AUTHOR_NAME", "Autor de Prueba")
+	t.Setenv("GIT_AUTHOR_EMAIL", "autor@ejemplo.invalid")
+	t.Setenv("GIT_COMMITTER_NAME", "Autor de Prueba")
+	t.Setenv("GIT_COMMITTER_EMAIL", "autor@ejemplo.invalid")
+	t.Setenv("GIT_TERMINAL_PROMPT", "0")
+}
+
+func tuiGit(t *testing.T, dir string, args ...string) string {
+	t.Helper()
+	command := exec.Command("git", args...)
+	command.Dir = dir
+	output, err := command.CombinedOutput()
+	if err != nil {
+		t.Fatalf("git %s en %s: %v\n%s", strings.Join(args, " "), dir, err, output)
+	}
+	return strings.TrimRight(string(output), "\r\n")
+}
+
+// sddListingFixture es un monorepo embebido con git en `main`.
+type sddListingFixture struct {
+	ws      workspacetest.Workspace
+	common  string
+	changes map[string]string // cambio -> raíz de su worktree
+}
+
+// newSDDListingFixture monta: `y` fusionado en `main` y sin archivar, un cambio archivado, el sumidero
+// exento `e2e-cumulative`, `x` solo en su worktree y `dup` en el checkout principal (sin confirmar) y
+// en su worktree, con una tarea hecha solo en la copia del worktree.
+func newSDDListingFixture(t *testing.T) sddListingFixture {
+	t.Helper()
+	requireTUIGit(t)
+	ws := workspacetest.Embedded(t, ".")
+	workspacetest.WriteFile(t, filepath.Join(ws.Home, "changes", "y", "proposal.md"), "# y fusionado\n")
+	workspacetest.WriteFile(t, filepath.Join(ws.Home, "changes", "archive", "2026-01-01-viejo", "proposal.md"), "# viejo\n")
+	workspacetest.WriteFile(t, filepath.Join(ws.Home, "changes", "e2e-cumulative", "tasks.md"), "- [ ] 1.1 a\n")
+	tuiGit(t, ws.Master, "init", "-q", "-b", "main")
+	tuiGit(t, ws.Master, "add", "-A")
+	tuiGit(t, ws.Master, "commit", "-q", "-m", "base")
+	workspacetest.WriteFile(t, filepath.Join(ws.Home, "changes", "dup", "tasks.md"), "- [ ] 1.1 a\n- [ ] 1.2 b\n")
+
+	common, err := gitcommon.CommonDirFromFiles(ws.Master)
+	if err != nil {
+		t.Fatalf("git common dir de %s: %v", ws.Master, err)
+	}
+	fx := sddListingFixture{ws: ws, common: common, changes: map[string]string{}}
+	fx.addWorktreeChange(t, "x", "proposal.md", "# x en su worktree\n")
+	fx.addWorktreeChange(t, "dup", "tasks.md", "- [x] 1.1 hecha\n")
+	return fx
+}
+
+// addWorktreeChange despliega feat/<change> en un worktree con un fichero del cambio y lo registra en el
+// registro local, como lo deja `axiom branch ensure` en modo worktree.
+func (fx sddListingFixture) addWorktreeChange(t *testing.T, change, file, content string) {
+	t.Helper()
+	root := filepath.Join(t.TempDir(), change)
+	tuiGit(t, fx.ws.Master, "worktree", "add", "-q", "-b", "feat/"+change, root)
+	workspacetest.WriteFile(t, filepath.Join(root, "openspec", "changes", change, file), content)
+	record := branch.Record{
+		Schema: branch.RegistrySchema, Lane: branch.LaneSDD, Change: change, Mode: branch.ModeWorktree,
+		ModeSource: branch.ModeSourceDefault, PlanningRepo: fx.ws.Master,
+		Repositories: []branch.RecordRepo{{
+			Name: filepath.Base(fx.ws.Master), GitRoot: fx.ws.Master, CommonDir: fx.common, Role: branch.RepoChangeBranch,
+			Branches: []branch.RecordBranch{{Name: "feat/" + change, Kind: branch.KindChange, Worktree: root}},
+		}},
+	}
+	if err := registry.New().Save(fx.common, record); err != nil {
+		t.Fatalf("registrar %s: %v", change, err)
+	}
+	fx.changes[change] = root
+}
+
+// openIncrements abre la pantalla de incrementos de la TUI desde la carpeta maestra del fixture.
+func (fx sddListingFixture) openIncrements(t *testing.T) Model {
+	t.Helper()
+	return openGovernanceEntry(t, governanceModel(t, fx.ws.Master), governanceSDDIncrements, ScreenSDDIncrements)
+}
+
+// REQ-25.34 escenario «La TUI lista el mismo conjunto»: lista los cambios activos del checkout principal y
+// los de los worktrees registrados (el del worktree prevalece), los pendientes de archivar y los
+// archivados, sin los sumideros exentos, igual que `GET /api/increments`.
+func TestSDDIncrementsListsTheSameChangesAsTheDashboard(t *testing.T) {
+	fx := newSDDListingFixture(t)
+
+	state := fx.openIncrements(t)
+
+	var got []string
+	byName := map[string]screens.SDDIncrementInfo{}
+	for _, increment := range state.SDDIncrements {
+		got = append(got, increment.Type+":"+increment.Name)
+		byName[increment.Name] = increment
+	}
+	slices.Sort(got)
+	want := []string{"active:dup", "active:x", "active:y", "archived:2026-01-01-viejo"}
+	if !slices.Equal(got, want) {
+		t.Fatalf("SDDIncrements = %v, se esperaba %v", got, want)
+	}
+
+	x := byName["x"]
+	if !pathidentity.SameDirectory(x.WorktreePath, fx.changes["x"]) || x.Branch != "feat/x" {
+		t.Errorf("x vive solo en su worktree: worktree=%q rama=%q, se esperaba %q feat/x", x.WorktreePath, x.Branch, fx.changes["x"])
+	}
+	if x.Phase != "spec" {
+		t.Errorf("x debía leerse de su worktree (proposal.md): fase = %q", x.Phase)
+	}
+	dup := byName["dup"]
+	if dup.Branch != "feat/dup" || dup.TasksTotal != 1 || dup.TasksCompleted != 1 {
+		t.Errorf("dup debía leerse del worktree y no del checkout principal (1/1 tareas, feat/dup): %+v", dup)
+	}
+	if y := byName["y"]; y.WorktreePath != "" || y.Branch != "" {
+		t.Errorf("y solo está en el checkout principal y no lleva worktree ni rama: %+v", y)
+	}
+}
+
+// REQ-25.34 y REQ-25.20: el cambio fusionado y sin archivar lleva la insignia de pendiente de archivar,
+// en la lista y en la pantalla renderizada; los demás no.
+func TestSDDIncrementsMarksThePendingArchiveChanges(t *testing.T) {
+	fx := newSDDListingFixture(t)
+
+	state := fx.openIncrements(t)
+
+	for _, increment := range state.SDDIncrements {
+		if want := increment.Name == "y"; increment.PendingArchive != want {
+			t.Errorf("%s: PendingArchive = %v, se esperaba %v", increment.Name, increment.PendingArchive, want)
+		}
+	}
+	view := state.View()
+	badges := 0
+	for _, line := range strings.Split(view, "\n") {
+		if !strings.Contains(line, pendingArchiveBadge) {
+			continue
+		}
+		badges++
+		if !strings.Contains(line, " y [") {
+			t.Errorf("la insignia solo corresponde a y: %q", line)
+		}
+	}
+	if badges != 1 {
+		t.Errorf("la pantalla debía llevar una sola insignia %q, lleva %d:\n%s", pendingArchiveBadge, badges, view)
+	}
+}
+
+// REQ-25.19 escenario «La TUI solo lista»: abrir la pantalla no ejecuta `ensure` ni escribe en ninguna
+// carpeta de cambio (ni del checkout principal ni de los worktrees), ni crea ramas, worktrees o registros.
+func TestSDDIncrementsOnlyListsAndWritesNothing(t *testing.T) {
+	fx := newSDDListingFixture(t)
+	roots := []string{filepath.Join(fx.ws.Home, "changes"), filepath.Join(fx.common, "axiom")}
+	for _, worktree := range fx.changes {
+		roots = append(roots, filepath.Join(worktree, "openspec", "changes"))
+	}
+	snapshot := func() string {
+		var entries []string
+		for _, root := range roots {
+			_ = filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+				if err != nil || d.IsDir() {
+					return nil
+				}
+				data, _ := os.ReadFile(path)
+				entries = append(entries, path+"="+string(data))
+				return nil
+			})
+		}
+		entries = append(entries, tuiGit(t, fx.ws.Master, "branch", "--list"), tuiGit(t, fx.ws.Master, "worktree", "list"))
+		slices.Sort(entries)
+		return strings.Join(entries, "\n")
+	}
+	before := snapshot()
+
+	state := fx.openIncrements(t)
+
+	if len(state.SDDIncrements) == 0 {
+		t.Fatal("la pantalla debía listar los cambios")
+	}
+	if after := snapshot(); after != before {
+		t.Errorf("la TUI no debe escribir al listar:\nantes:\n%s\ndespués:\n%s", before, after)
 	}
 }
