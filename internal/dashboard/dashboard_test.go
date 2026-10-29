@@ -163,29 +163,27 @@ func TestHTTPEndpoints(t *testing.T) {
 	}
 	_ = respSkills.Body.Close()
 
-	// 6. GET / (servido de index.html embebido)
+	// 6. GET / (servido de index.html embebido): contiene la estructura del rediseño.
 	respRoot, err := http.Get(ts.URL + "/")
 	if err != nil || respRoot.StatusCode != http.StatusOK {
 		t.Fatalf("GET / falló: status=%v, err=%v", respRoot.StatusCode, err)
 	}
 	bodyRoot, _ := io.ReadAll(respRoot.Body)
 	_ = respRoot.Body.Close()
-	if !strings.Contains(string(bodyRoot), "Axiom Enterprise") {
-		t.Errorf("GET / no contiene 'Axiom Enterprise'")
+	for _, marker := range []string{`aria-label="Navegación principal"`, `id="main"`, `/js/main.js`} {
+		if !strings.Contains(string(bodyRoot), marker) {
+			t.Errorf("GET / no contiene %q", marker)
+		}
 	}
 
-	// 7. GET /style.css y /app.js
-	respCSS, err := http.Get(ts.URL + "/style.css")
-	if err != nil || respCSS.StatusCode != http.StatusOK {
-		t.Errorf("GET /style.css falló: status=%v", respCSS.StatusCode)
+	// 7. Hojas de estilo y módulo de entrada (el resto de recursos, en assets_test.go).
+	for _, asset := range []string{"/tokens.css", "/style.css", "/js/main.js"} {
+		respAsset, err := http.Get(ts.URL + asset)
+		if err != nil || respAsset.StatusCode != http.StatusOK {
+			t.Errorf("GET %s falló: status=%v, err=%v", asset, respAsset.StatusCode, err)
+		}
+		_ = respAsset.Body.Close()
 	}
-	_ = respCSS.Body.Close()
-
-	respJS, err := http.Get(ts.URL + "/app.js")
-	if err != nil || respJS.StatusCode != http.StatusOK {
-		t.Errorf("GET /app.js falló: status=%v", respJS.StatusCode)
-	}
-	_ = respJS.Body.Close()
 }
 
 func TestPortFallback(t *testing.T) {
@@ -987,11 +985,9 @@ func TestEcosystemEndpoints(t *testing.T) {
 // sync (restart-required / upgrade-failed) y la instrucción de reinicio cuando
 // el binario en ejecución fue reemplazado.
 func TestEcosystemUpgradePresentsBothPhases(t *testing.T) {
-	raw, err := AssetsFS.ReadFile("assets/app.js")
-	if err != nil {
-		t.Fatalf("leer assets/app.js: %v", err)
-	}
-	js := string(raw)
+	// La presentación vive en js/core/ecosystem.js (lógica pura, probada con Node en
+	// platform_assets_test.go) y la pantalla la cablea a la acción de upgrade.
+	js := readAsset(t, "js/core/ecosystem.js") + "\n" + readAsset(t, "js/screens/ecosystem.js")
 
 	markers := []struct {
 		name string

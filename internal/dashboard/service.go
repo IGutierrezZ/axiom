@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -541,7 +542,7 @@ func (s *Service) GetIncrementDetail(name string) (*IncrementDetailDTO, error) {
 		if errRoles == nil {
 			report, errReport := multirole.EvaluateBarrier(path, filepath.Base(path), roles)
 			if errReport == nil {
-				dto.BarrierReport = report
+				dto.BarrierReport = NewBarrierDTO(report)
 			}
 		}
 	}
@@ -1474,9 +1475,31 @@ func (s *Service) GetBackups() ([]BackupItem, error) {
 			Description: m.Description,
 			Pinned:      m.Pinned,
 			Files:       files,
+			SizeBytes:   backupSizeBytes(m.RootDir),
 		})
 	}
 	return items, nil
+}
+
+// backupSizeBytes suma el tamaño de los ficheros regulares bajo la carpeta de un
+// respaldo, comprimido o no. El manifiesto no guarda el tamaño, así que se calcula
+// al listar; la retención limita cuántos respaldos hay. Si la carpeta no existe o
+// no se puede leer, devuelve 0 y el campo se omite del JSON.
+func backupSizeBytes(root string) int64 {
+	if root == "" {
+		return 0
+	}
+	var total int64
+	_ = filepath.WalkDir(root, func(_ string, d fs.DirEntry, err error) error {
+		if err != nil || !d.Type().IsRegular() {
+			return nil
+		}
+		if info, err := d.Info(); err == nil {
+			total += info.Size()
+		}
+		return nil
+	})
+	return total
 }
 
 // CreateBackup genera un snapshot de respaldo bajo demanda.

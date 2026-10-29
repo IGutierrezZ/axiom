@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"mime"
 	"net"
 	"net/http"
 	"strings"
@@ -17,6 +18,25 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/semantic"
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
+
+// init registra los tipos MIME de los recursos estáticos del dashboard.
+//
+// Go resuelve el Content-Type por extensión y, en Windows, lo toma del registro
+// del sistema: un .js asociado a text/plain haría que el navegador rechace los
+// módulos ES (<script type="module">). Se fijan explícitamente. .woff2 no lo
+// conoce el paquete mime y se registra para cuando se embeban las fuentes
+// (assets/fonts/, paso posterior).
+func init() {
+	for ext, typ := range map[string]string{
+		".js":    "text/javascript; charset=utf-8",
+		".mjs":   "text/javascript; charset=utf-8",
+		".css":   "text/css; charset=utf-8",
+		".svg":   "image/svg+xml",
+		".woff2": "font/woff2",
+	} {
+		_ = mime.AddExtensionType(ext, typ)
+	}
+}
 
 // Server representa el servidor HTTP local para el dashboard web de Axiom.
 type Server struct {
@@ -474,7 +494,7 @@ func (s *Server) handleRoles(w http.ResponseWriter, r *http.Request) {
 		s.respondJSON(w, http.StatusNotFound, map[string]string{"error": err.Error()})
 		return
 	}
-	s.respondJSON(w, http.StatusOK, barrier)
+	s.respondJSON(w, http.StatusOK, NewBarrierDTO(barrier))
 }
 
 func (s *Server) handleHandoffs(w http.ResponseWriter, r *http.Request) {
@@ -491,7 +511,7 @@ func (s *Server) handleHandoffs(w http.ResponseWriter, r *http.Request) {
 			s.respondJSON(w, http.StatusNotFound, map[string]string{"error": err.Error()})
 			return
 		}
-		s.respondJSON(w, http.StatusOK, ho)
+		s.respondJSON(w, http.StatusOK, NewHandoffDTO(ho))
 	case http.MethodPost:
 		var req CreateHandoffRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {

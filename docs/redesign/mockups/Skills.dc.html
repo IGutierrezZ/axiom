@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Axiom · Skills</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+.ax{--bg:#F5F5F2;--side:#EDEDE9;--surface:#FFFFFF;--surface-2:#F3F3F0;--hover:#E6E6E1;--border:#E2E2DC;--border-strong:#CBCBC4;--text:#16171B;--text-2:#45484F;--text-3:#666A72;--accent:#3651D4;--on-accent:#FFFFFF;--accent-soft:#E9EDFC;--accent-text:#2C44B8;--ok:#146B41;--ok-soft:#E3F3EA;--warn:#8F5500;--warn-soft:#FAEED8;--bad:#BB3127;--bad-soft:#FBE6E3;--shadow:0 1px 2px rgba(20,20,30,.06),0 1px 1px rgba(20,20,30,.04)}
+.ax[data-theme="dark"]{--bg:#0E0F12;--side:#0B0C0E;--surface:#16171C;--surface-2:#1C1E24;--hover:#23262E;--border:#262931;--border-strong:#363A44;--text:#ECEDF0;--text-2:#B3B7C0;--text-3:#8E939D;--accent:#8A9BFF;--on-accent:#0E1020;--accent-soft:#1D2242;--accent-text:#A9B6FF;--ok:#5CCB94;--ok-soft:#10271C;--warn:#E9AC4A;--warn-soft:#2A2010;--bad:#F27C72;--bad-soft:#321719;--shadow:0 0 0 1px rgba(255,255,255,.02)}
+.ax *{box-sizing:border-box}
+.ax button,.ax input,.ax select{font:inherit;color:inherit}
+.ax button{cursor:pointer}
+a{color:#3651D4}a:hover{color:#2C44B8}
+.ax a{color:var(--accent-text);text-decoration:none}
+.ax a:hover{text-decoration:underline}
+.ax .ni{display:flex;align-items:center;gap:10px;min-height:36px;padding:0 10px;border-radius:8px;color:var(--text-2);font-weight:500}
+.ax .ni:hover{background:var(--hover);color:var(--text);text-decoration:none}
+.ax .ni[aria-current="page"]{background:var(--surface);color:var(--text);box-shadow:var(--shadow)}
+.ax .ni[aria-current="page"] svg{color:var(--accent)}
+.ax .seg{border:0;background:transparent;color:var(--text-3)}
+.ax .seg:hover{color:var(--text)}
+.ax .seg[aria-pressed="true"]{background:var(--surface);color:var(--text);box-shadow:var(--shadow)}
+.ax .pp{display:flex;flex-direction:column;gap:6px;width:100%;padding:14px;border-radius:12px;border:1px solid var(--border);background:var(--surface);text-align:left}
+.ax .pp:hover{border-color:var(--border-strong)}
+.ax .pp[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.ax .sk:hover{border-color:var(--border-strong)}
+.ax .btn{display:inline-flex;align-items:center;gap:8px;min-height:36px;padding:0 14px;border-radius:8px;border:1px solid var(--border-strong);background:var(--surface);color:var(--text);font-weight:600;font-size:13px;white-space:nowrap}
+.ax .btn:hover{background:var(--hover);text-decoration:none}
+.ax .btn-p{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.ax .btn-p:hover{background:var(--accent);filter:brightness(1.08)}
+.ax button:focus-visible,.ax a:focus-visible,.ax input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.ax .mono{font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.ax input::placeholder{color:var(--text-3)}
+</style>
+</helmet>
+<div class="ax" data-theme="{{theme}}" style="min-height: 100vh; display: flex; flex-wrap: wrap; background: var(--bg); color: var(--text); font-family: 'Instrument Sans', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif; font-size: 14px; line-height: 1.45">
+
+<aside aria-label="Navegación principal" style="flex: 1 1 248px; display: flex; flex-direction: column; gap: 22px; padding: 18px 12px; background: var(--side); border-right: 1px solid var(--border)">
+<div style="display: flex; align-items: center; gap: 10px; padding: 0 6px">
+<div style="width: 30px; height: 30px; border-radius: 8px; background: var(--accent); color: var(--on-accent); display: flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 10 18H2L12 3z"/></svg></div>
+<span style="font-size: 16px; font-weight: 700; letter-spacing: -0.01em">Axiom</span>
+<span class="mono" style="font-size: 11px; color: var(--text-3); border: 1px solid var(--border); border-radius: 6px; padding: 1px 6px">v3</span>
+</div>
+<button aria-label="Cambiar de proyecto: portal-clientes" style="display: flex; align-items: center; gap: 10px; width: 100%; min-height: 52px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); text-align: left; box-shadow: var(--shadow)">
+<span style="width: 32px; height: 32px; flex: none; border-radius: 8px; background: var(--accent-soft); color: var(--accent-text); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px">PC</span>
+<span style="display: flex; flex-direction: column; min-width: 0; flex: 1"><span style="font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">portal-clientes</span><span style="font-size: 12px; color: var(--text-3)">multi-repo · 3 roles</span></span>
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="color: var(--text-3)"><path d="m8 9 4-4 4 4M8 15l4 4 4-4"/></svg>
+</button>
+<nav style="display: flex; flex-direction: column; gap: 18px">
+<div style="display: flex; flex-direction: column; gap: 2px">
+<span style="font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-3); padding: 0 10px 6px">Trabajo</span>
+<a class="ni" href="Main.dc.html"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg>Inicio</a>
+<a class="ni" href="Incrementos.dc.html"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="5" height="16" rx="1.5"/><rect x="10" y="4" width="5" height="10" rx="1.5"/><rect x="17" y="4" width="4" height="13" rx="1.5"/></svg><span style="flex: 1">Incrementos</span><span class="mono" style="font-size: 11px; color: var(--text-3)">10</span></a>
+</div>
+<div style="display: flex; flex-direction: column; gap: 2px">
+<span style="font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-3); padding: 0 10px 6px">Conocimiento</span>
+<a class="ni" href="Specs.dc.html"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 21V5M8 7h7"/></svg>Specs vivas</a>
+<a class="ni" href="Skills.dc.html" aria-current="page"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 20 7.5v9L12 21l-8-4.5v-9z"/><path d="M4 7.5 12 12l8-4.5M12 12v9"/></svg><span style="flex: 1">Skills</span><sc-if value="{{hasInbox}}" hint-placeholder-val="{{ true }}"><span style="font-size: 11px; font-weight: 700; color: var(--on-accent); background: var(--accent); border-radius: 999px; padding: 1px 7px">{{inboxCount}}</span></sc-if></a>
+<a class="ni" href="Codigo.dc.html"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="12" cy="18" r="2.5"/><path d="M8 7.5l3 8.3M16 7.5l-3 8.3M8.5 6h7"/></svg>Código y grafo</a>
+</div>
+<div style="display: flex; flex-direction: column; gap: 2px">
+<span style="font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-3); padding: 0 10px 6px">Plataforma</span>
+<a class="ni" href="Ecosistema.dc.html"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg><span style="flex: 1">Ecosistema</span><span aria-label="1 aviso" style="width: 8px; height: 8px; border-radius: 999px; background: var(--warn)"></span></a>
+</div>
+</nav>
+<div style="margin-top: auto; display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; align-items: center; gap: 8px; padding: 10px; border-radius: 10px; border: 1px solid var(--border); font-size: 12px; color: var(--text-2)">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="color: var(--warn); flex: none"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>
+<span style="flex: 1">Specs: <span class="mono">main</span> · 2 por detrás</span><a href="Main.dc.html#sync" style="font-weight: 600">Pull</a>
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<span id="theme-label" style="font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-3); padding: 0 4px">Tema · se guarda para ti</span>
+<div role="group" aria-labelledby="theme-label" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2px; padding: 3px; border-radius: 10px; background: var(--hover)">
+<button class="seg" aria-pressed="{{pLight}}" onClick="{{setLight}}" style="display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 34px; border-radius: 8px; font-size: 12px; font-weight: 600"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>Claro</button>
+<button class="seg" aria-pressed="{{pDark}}" onClick="{{setDark}}" style="display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 34px; border-radius: 8px; font-size: 12px; font-weight: 600"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5z"/></svg>Oscuro</button>
+<button class="seg" aria-pressed="{{pSys}}" onClick="{{setSystem}}" style="display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 34px; border-radius: 8px; font-size: 12px; font-weight: 600"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>Auto</button>
+</div>
+</div>
+</div>
+</aside>
+
+<div style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column">
+<header style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; padding: 12px 32px; min-height: 64px; border-bottom: 1px solid var(--border); background: var(--bg)">
+<div style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-3)"><span>portal-clientes</span><span aria-hidden="true">/</span><span style="color: var(--text); font-weight: 600">Skills</span></div>
+<div style="flex: 1"></div>
+<label style="display: flex; align-items: center; gap: 8px; flex: 0 1 380px; min-width: 200px; height: 38px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--text-3)">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+<span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Buscar</span>
+<input type="search" placeholder="Buscar incrementos, specs, skills, símbolos…" style="flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--text); font-size: 13px">
+<span class="mono" style="font-size: 11px; border: 1px solid var(--border); border-radius: 5px; padding: 1px 5px">Ctrl K</span>
+</label>
+<button class="btn" aria-label="Actualizar datos" style="width: 38px; padding: 0; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg></button>
+<button class="btn btn-p"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Nuevo incremento</button>
+</header>
+
+<main style="padding: 28px 32px 56px; display: flex; flex-direction: column; gap: 24px; width: 100%; max-width: 1280px">
+<section style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px">
+<div style="display: flex; flex-direction: column; gap: 6px; max-width: 680px">
+<h1 style="margin: 0; font-size: 30px; line-height: 1.15; font-weight: 650; letter-spacing: -0.02em">Skills</h1>
+<span style="color: var(--text-2)">Conocimiento que Axiom da a los agentes. Nada entra en producción sin que una persona lo apruebe.</span>
+</div>
+<button class="btn btn-p"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>Escanear stack y minar patrones</button>
+</section>
+
+<section aria-labelledby="in-h" style="display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; align-items: center; gap: 10px">
+<h2 id="in-h" style="margin: 0; font-size: 17px; font-weight: 650">Buzón de propuestas</h2>
+<span style="font-size: 12px; font-weight: 600; padding: 1px 9px; border-radius: 999px; background: var(--accent-soft); color: var(--accent-text)">{{inboxCount}} pendientes</span>
+<sc-if value="{{hasToast}}" hint-placeholder-val="{{ false }}"><span role="status" style="margin-left: auto; font-size: 13px; color: var(--text-2)">{{toast}}</span></sc-if>
+</div>
+
+<sc-if value="{{hasInbox}}" hint-placeholder-val="{{ true }}">
+<div style="display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start">
+<div style="flex: 1 1 300px; max-width: 100%; display: flex; flex-direction: column; gap: 8px">
+<sc-for list="{{inbox}}" as="p" hint-placeholder-count="3">
+<button class="pp" aria-pressed="{{p.sel}}" onClick="{{p.pick}}">
+<span style="display: flex; align-items: center; gap: 8px; width: 100%"><span class="mono" style="font-weight: 600; font-size: 13px; flex: 1; min-width: 0; overflow-wrap: anywhere">{{p.name}}</span><span class="mono" style="font-size: 11px; color: var(--text-3)">{{p.role}}</span></span>
+<span style="font-size: 13px; color: var(--text-2)">{{p.detected}}</span>
+<span style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-3)"><span style="font-weight: 600; padding: 1px 8px; border-radius: 999px; background: {{p.originBg}}; color: {{p.originFg}}">{{p.originLabel}}</span>{{p.created}}</span>
+</button>
+</sc-for>
+</div>
+
+<article aria-labelledby="pv-h" style="flex: 2 1 480px; min-width: 0; border-radius: 14px; background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow); overflow: hidden">
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 16px 20px; border-bottom: 1px solid var(--border)">
+<h3 id="pv-h" class="mono" style="margin: 0; font-size: 15px; font-weight: 600">{{cur.name}}</h3>
+<span style="font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: {{cur.originBg}}; color: {{cur.originFg}}">{{cur.originLabel}}</span>
+<sc-if value="{{cur.verified}}" hint-placeholder-val="{{ true }}"><span style="display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: var(--ok-soft); color: var(--ok)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 4 6v6c0 4.5 3.4 8 8 9 4.6-1 8-4.5 8-9V6z"/><path d="m8.5 12 2.5 2.5 4.5-5"/></svg>SHA-256 verificado</span></sc-if>
+<sc-if value="{{cur.local}}" hint-placeholder-val="{{ false }}"><span style="font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: var(--warn-soft); color: var(--warn)">Generada localmente · revisar</span></sc-if>
+<div style="flex: 1"></div>
+<button class="btn" onClick="{{reject}}">Rechazar</button>
+<button class="btn btn-p" onClick="{{approve}}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>Aprobar</button>
+</div>
+<div style="padding: 18px 20px 22px; display: flex; flex-direction: column; gap: 16px">
+<dl style="margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 8px 16px; font-size: 13px">
+<dt style="color: var(--text-3)">Por qué</dt><dd style="margin: 0; color: var(--text)">{{cur.why}}</dd>
+<dt style="color: var(--text-3)">Detectado por</dt><dd class="mono" style="margin: 0; font-size: 12px; color: var(--text-2)">{{cur.detected}}</dd>
+<dt style="color: var(--text-3)">Origen</dt><dd class="mono" style="margin: 0; font-size: 12px; color: var(--text-2)">{{cur.source}}</dd>
+<dt style="color: var(--text-3)">Rol</dt><dd class="mono" style="margin: 0; font-size: 12px; color: var(--text-2)">{{cur.role}}</dd>
+</dl>
+<div style="border-radius: 10px; background: var(--surface-2); border: 1px solid var(--border); overflow: hidden">
+<div style="display: flex; align-items: center; justify-content: space-between; padding: 8px 14px; border-bottom: 1px solid var(--border); font-size: 12px; color: var(--text-3)"><span class="mono">SKILL.md</span><span>vista previa</span></div>
+<pre class="mono" style="margin: 0; padding: 14px; font-size: 12.5px; line-height: 1.65; white-space: pre-wrap; color: var(--text-2)">{{cur.md}}</pre>
+</div>
+</div>
+</article>
+</div>
+</sc-if>
+<sc-if value="{{noInbox}}" hint-placeholder-val="{{ false }}">
+<div style="padding: 28px; border-radius: 14px; border: 1px dashed var(--border-strong); text-align: center; color: var(--text-2)">Buzón vacío. Escanea el stack para descubrir nuevas skills.</div>
+</sc-if>
+</section>
+
+<section aria-labelledby="ac-h" style="display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px">
+<h2 id="ac-h" style="margin: 0; font-size: 17px; font-weight: 650">Skills activas</h2>
+<span class="mono" style="font-size: 12px; color: var(--text-3)">skills/ · {{activeCount}}</span>
+<div style="flex: 1"></div>
+<label style="display: flex; align-items: center; gap: 8px; width: 280px; max-width: 100%; height: 36px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--text-3)">
+<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+<span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Filtrar skills</span>
+<input type="search" placeholder="Filtrar por nombre o trigger" value="{{q}}" onInput="{{onQ}}" style="flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--text); font-size: 13px">
+</label>
+</div>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr)); gap: 12px">
+<sc-for list="{{active}}" as="s" hint-placeholder-count="6">
+<article class="sk" style="display: flex; flex-direction: column; gap: 8px; padding: 16px; border-radius: 12px; background: var(--surface); border: 1px solid var(--border)">
+<div style="display: flex; align-items: center; gap: 8px"><h3 class="mono" style="margin: 0; font-size: 13px; font-weight: 600; flex: 1">{{s.name}}</h3><sc-if value="{{s.isNew}}" hint-placeholder-val="{{ false }}"><span style="font-size: 11px; font-weight: 600; padding: 1px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent-text)">Nueva</span></sc-if></div>
+<p style="margin: 0; color: var(--text-2); font-size: 13px">{{s.desc}}</p>
+<div style="display: flex; align-items: center; gap: 6px; margin-top: auto; padding-top: 6px; font-size: 12px; color: var(--text-3)"><span>Se activa con</span><span class="mono" style="padding: 0 6px; border-radius: 5px; background: var(--surface-2); border: 1px solid var(--border); color: var(--text-2)">{{s.trigger}}</span></div>
+</article>
+</sc-for>
+</div>
+</section>
+</main>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark","system"],"default":"dark","section":"Tema"},"$preview":{"width":1440,"height":1300}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const st = this.state || {};
+    const pref = st.theme || this.props.theme || 'dark';
+    let eff = pref;
+    if (pref === 'system') {
+      try { eff = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'; } catch (e) { eff = 'light'; }
+    }
+    const setT = (t) => () => this.setState({ theme: t });
+
+    const ORIGIN = {
+      autoskills: { l: 'Catálogo autoskills', bg: 'var(--accent-soft)', fg: 'var(--accent-text)' },
+      local: { l: 'Minería local', bg: 'var(--warn-soft)', fg: 'var(--warn)' }
+    };
+    const PROPOSALS = [
+      { name: 'react-testing-library', origin: 'autoskills', verified: true, role: 'frontend', source: 'midudev/autoskills', detected: 'package.json → @testing-library/react', created: 'hoy, 09:12',
+        why: 'web-portal usa Testing Library en 38 ficheros de test; la skill alinea a los agentes con sus buenas prácticas.',
+        md: '---\nname: react-testing-library\ndescription: Tests de componentes centrados en el usuario\n---\n\n# React Testing Library\n\n- Consulta por rol y texto accesible (getByRole) antes que por test-id.\n- Usa user-event en lugar de fireEvent.\n- Espera con findBy* en lugar de waitFor + getBy*.\n- Un comportamiento por test; nada de snapshots grandes.' },
+      { name: 'go-table-driven-tests', origin: 'local', verified: false, role: 'backend', source: 'minería heurística · svc-orders', detected: 'patrón repetido en 24 ficheros *_test.go', created: 'hoy, 09:12',
+        why: 'El equipo ya escribe tests en tabla de forma consistente; convertirlo en skill evita que los agentes generen tests ad hoc.',
+        md: '---\nname: go-table-driven-tests\ndescription: Tests en tabla con t.Run y casos con nombre\n---\n\n# Tests en tabla (Go)\n\n- Declara []struct{ name string; in; want } y recorre con t.Run(tc.name, …).\n- Usa t.Parallel() salvo que el caso toque estado global.\n- Compara con cmp.Diff y muestra el diff en el error.' },
+      { name: 'openapi-contract-first', origin: 'autoskills', verified: true, role: 'backend', source: 'midudev/autoskills', detected: 'openapi/*.yaml en api-gateway', created: 'ayer, 18:40',
+        why: 'Los handoffs ya congelan contratos OpenAPI; la skill hace que el agente modifique primero el contrato y regenere clientes.',
+        md: '---\nname: openapi-contract-first\ndescription: Cambia el contrato antes que el código\n---\n\n# Contract-first con OpenAPI\n\n- Edita openapi/*.yaml y valida con el linter antes de tocar handlers.\n- Regenera clientes y servidores; no edites código generado.\n- Todo cambio incompatible requiere nueva versión de ruta.' }
+    ];
+    const ACTIVE = [
+      { name: 'nextjs-app-router', desc: 'Convenciones de rutas, layouts y server components en web-portal.', trigger: 'app/**' },
+      { name: 'postgres-migrations', desc: 'Migraciones reversibles y revisión de bloqueos antes de desplegar.', trigger: 'migrations/*.sql' },
+      { name: 'playwright-e2e', desc: 'Escenarios E2E con page objects y datos sembrados.', trigger: 'e2e/**' },
+      { name: 'go-error-wrapping', desc: 'Envolver errores con contexto y usar errores centinela.', trigger: '*.go' },
+      { name: 'tailwind-tokens', desc: 'Usar tokens de diseño en lugar de valores sueltos.', trigger: '*.tsx' },
+      { name: 'conventional-commits', desc: 'Mensajes de commit y changelog con formato convencional.', trigger: 'git commit' }
+    ];
+
+    const done = st.done || {};
+    const approved = st.approved || [];
+    const pending = PROPOSALS.filter((p) => !done[p.name]);
+    const selName = st.sel && pending.some((p) => p.name === st.sel) ? st.sel : (pending[0] ? pending[0].name : '');
+    const dec = (p) => Object.assign({}, p, {
+      originLabel: ORIGIN[p.origin].l, originBg: ORIGIN[p.origin].bg, originFg: ORIGIN[p.origin].fg,
+      local: p.origin === 'local', sel: String(p.name === selName),
+      pick: () => this.setState({ sel: p.name })
+    });
+    const inbox = pending.map(dec);
+    const cur = inbox.find((p) => p.name === selName) || dec(PROPOSALS[0]);
+    const resolve = (ok) => () => {
+      if (!selName) return;
+      const nd = Object.assign({}, done); nd[selName] = ok ? 'ok' : 'no';
+      this.setState({
+        done: nd, sel: '',
+        approved: ok ? approved.concat([selName]) : approved,
+        toast: (ok ? 'Aprobada: ' : 'Rechazada: ') + selName
+      });
+    };
+
+    const q = (st.q || '').toLowerCase();
+    const extra = PROPOSALS.filter((p) => approved.indexOf(p.name) >= 0).map((p) => ({ name: p.name, desc: p.why, trigger: p.detected.split(' ')[0], isNew: true }));
+    const all = extra.concat(ACTIVE.map((s) => Object.assign({ isNew: false }, s)));
+    const active = all.filter((s) => !q || s.name.toLowerCase().indexOf(q) >= 0 || s.trigger.toLowerCase().indexOf(q) >= 0);
+
+    return {
+      theme: eff,
+      pLight: String(pref === 'light'), pDark: String(pref === 'dark'), pSys: String(pref === 'system'),
+      setLight: setT('light'), setDark: setT('dark'), setSystem: setT('system'),
+      inbox: inbox, inboxCount: inbox.length, hasInbox: inbox.length > 0, noInbox: inbox.length === 0,
+      cur: cur, approve: resolve(true), reject: resolve(false),
+      hasToast: !!st.toast, toast: st.toast || '',
+      q: st.q || '', onQ: (e) => this.setState({ q: e.target.value }),
+      active: active, activeCount: all.length
+    };
+  }
+}
+</script>
+</body>
+</html>

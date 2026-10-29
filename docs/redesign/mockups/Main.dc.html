@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Axiom · Inicio</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+.ax{--bg:#F5F5F2;--side:#EDEDE9;--surface:#FFFFFF;--surface-2:#F3F3F0;--hover:#E6E6E1;--border:#E2E2DC;--border-strong:#CBCBC4;--text:#16171B;--text-2:#45484F;--text-3:#666A72;--accent:#3651D4;--on-accent:#FFFFFF;--accent-soft:#E9EDFC;--accent-text:#2C44B8;--ok:#146B41;--ok-soft:#E3F3EA;--warn:#8F5500;--warn-soft:#FAEED8;--bad:#BB3127;--bad-soft:#FBE6E3;--shadow:0 1px 2px rgba(20,20,30,.06),0 1px 1px rgba(20,20,30,.04)}
+.ax[data-theme="dark"]{--bg:#0E0F12;--side:#0B0C0E;--surface:#16171C;--surface-2:#1C1E24;--hover:#23262E;--border:#262931;--border-strong:#363A44;--text:#ECEDF0;--text-2:#B3B7C0;--text-3:#8E939D;--accent:#8A9BFF;--on-accent:#0E1020;--accent-soft:#1D2242;--accent-text:#A9B6FF;--ok:#5CCB94;--ok-soft:#10271C;--warn:#E9AC4A;--warn-soft:#2A2010;--bad:#F27C72;--bad-soft:#321719;--shadow:0 0 0 1px rgba(255,255,255,.02)}
+.ax *{box-sizing:border-box}
+.ax button,.ax input,.ax select{font:inherit;color:inherit}
+.ax button{cursor:pointer}
+a{color:#3651D4}a:hover{color:#2C44B8}
+.ax a{color:var(--accent-text);text-decoration:none}
+.ax a:hover{text-decoration:underline}
+.ax .ni{display:flex;align-items:center;gap:10px;min-height:36px;padding:0 10px;border-radius:8px;color:var(--text-2);font-weight:500}
+.ax .ni:hover{background:var(--hover);color:var(--text);text-decoration:none}
+.ax .ni[aria-current="page"]{background:var(--surface);color:var(--text);box-shadow:var(--shadow)}
+.ax .ni[aria-current="page"] svg{color:var(--accent)}
+.ax .seg{border:0;background:transparent;color:var(--text-3)}
+.ax .seg:hover{color:var(--text)}
+.ax .seg[aria-pressed="true"]{background:var(--surface);color:var(--text);box-shadow:var(--shadow)}
+.ax .btn{display:inline-flex;align-items:center;gap:8px;min-height:36px;padding:0 14px;border-radius:8px;border:1px solid var(--border-strong);background:var(--surface);color:var(--text);font-weight:600;font-size:13px;white-space:nowrap}
+.ax .btn:hover{background:var(--hover);text-decoration:none}
+.ax .btn-p{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.ax .btn-p:hover{background:var(--accent);filter:brightness(1.08)}
+.ax .row:hover{background:var(--surface-2)}
+.ax button:focus-visible,.ax a:focus-visible,.ax input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.ax .mono{font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.ax input::placeholder{color:var(--text-3)}
+</style>
+</helmet>
+<div class="ax" data-theme="{{theme}}" style="min-height: 100vh; display: flex; flex-wrap: wrap; background: var(--bg); color: var(--text); font-family: 'Instrument Sans', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif; font-size: 14px; line-height: 1.45">
+
+<aside aria-label="Navegación principal" style="flex: 1 1 248px; display: flex; flex-direction: column; gap: 22px; padding: 18px 12px; background: var(--side); border-right: 1px solid var(--border)">
+<div style="display: flex; align-items: center; gap: 10px; padding: 0 6px">
+<div style="width: 30px; height: 30px; border-radius: 8px; background: var(--accent); color: var(--on-accent); display: flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 10 18H2L12 3z"/></svg></div>
+<span style="font-size: 16px; font-weight: 700; letter-spacing: -0.01em">Axiom</span>
+<span class="mono" style="font-size: 11px; color: var(--text-3); border: 1px solid var(--border); border-radius: 6px; padding: 1px 6px">v3</span>
+</div>
+
+<button aria-label="Cambiar de proyecto: portal-clientes" style="display: flex; align-items: center; gap: 10px; width: 100%; min-height: 52px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); text-align: left; box-shadow: var(--shadow)">
+<span style="width: 32px; height: 32px; flex: none; border-radius: 8px; background: var(--accent-soft); color: var(--accent-text); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px">PC</span>
+<span style="display: flex; flex-direction: column; min-width: 0; flex: 1">
+<span style="font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">portal-clientes</span>
+<span style="font-size: 12px; color: var(--text-3)">multi-repo · 3 roles</span>
+</span>
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="color: var(--text-3)"><path d="m8 9 4-4 4 4M8 15l4 4 4-4"/></svg>
+</button>
+
+<nav style="display: flex; flex-direction: column; gap: 18px">
+<div style="display: flex; flex-direction: column; gap: 2px">
+<span style="font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-3); padding: 0 10px 6px">Trabajo</span>
+<a class="ni" href="Main.dc.html" aria-current="page"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg>Inicio</a>
+<a class="ni" href="Incrementos.dc.html"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="5" height="16" rx="1.5"/><rect x="10" y="4" width="5" height="10" rx="1.5"/><rect x="17" y="4" width="4" height="13" rx="1.5"/></svg><span style="flex: 1">Incrementos</span><span class="mono" style="font-size: 11px; color: var(--text-3)">10</span></a>
+</div>
+<div style="display: flex; flex-direction: column; gap: 2px">
+<span style="font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-3); padding: 0 10px 6px">Conocimiento</span>
+<a class="ni" href="Specs.dc.html"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 21V5M8 7h7"/></svg>Specs vivas</a>
+<a class="ni" href="Skills.dc.html"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 20 7.5v9L12 21l-8-4.5v-9z"/><path d="M4 7.5 12 12l8-4.5M12 12v9"/></svg><span style="flex: 1">Skills</span><span style="font-size: 11px; font-weight: 700; color: var(--on-accent); background: var(--accent); border-radius: 999px; padding: 1px 7px">3</span></a>
+<a class="ni" href="Codigo.dc.html"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="12" cy="18" r="2.5"/><path d="M8 7.5l3 8.3M16 7.5l-3 8.3M8.5 6h7"/></svg>Código y grafo</a>
+</div>
+<div style="display: flex; flex-direction: column; gap: 2px">
+<span style="font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-3); padding: 0 10px 6px">Plataforma</span>
+<a class="ni" href="Ecosistema.dc.html"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg><span style="flex: 1">Ecosistema</span><span aria-label="1 aviso" style="width: 8px; height: 8px; border-radius: 999px; background: var(--warn)"></span></a>
+</div>
+</nav>
+
+<div style="margin-top: auto; display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; align-items: center; gap: 8px; padding: 10px; border-radius: 10px; border: 1px solid var(--border); font-size: 12px; color: var(--text-2)">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="color: var(--warn); flex: none"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>
+<span style="flex: 1">Specs: <span class="mono">main</span> · 2 por detrás</span>
+<a href="#sync" style="font-weight: 600">Pull</a>
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<span id="theme-label" style="font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-3); padding: 0 4px">Tema · se guarda para ti</span>
+<div role="group" aria-labelledby="theme-label" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2px; padding: 3px; border-radius: 10px; background: var(--hover)">
+<button class="seg" aria-pressed="{{pLight}}" onClick="{{setLight}}" style="display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 34px; border-radius: 8px; font-size: 12px; font-weight: 600"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>Claro</button>
+<button class="seg" aria-pressed="{{pDark}}" onClick="{{setDark}}" style="display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 34px; border-radius: 8px; font-size: 12px; font-weight: 600"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5z"/></svg>Oscuro</button>
+<button class="seg" aria-pressed="{{pSys}}" onClick="{{setSystem}}" style="display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 34px; border-radius: 8px; font-size: 12px; font-weight: 600"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>Auto</button>
+</div>
+</div>
+</div>
+</aside>
+
+<div style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column">
+<header style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; padding: 12px 32px; min-height: 64px; border-bottom: 1px solid var(--border); background: var(--bg)">
+<div style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-3)"><span>portal-clientes</span><span aria-hidden="true">/</span><span style="color: var(--text); font-weight: 600">Inicio</span></div>
+<div style="flex: 1"></div>
+<label style="display: flex; align-items: center; gap: 8px; flex: 0 1 380px; min-width: 200px; height: 38px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--text-3)">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+<span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Buscar</span>
+<input type="search" placeholder="Buscar incrementos, specs, skills, símbolos…" style="flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--text); font-size: 13px">
+<span class="mono" style="font-size: 11px; border: 1px solid var(--border); border-radius: 5px; padding: 1px 5px">Ctrl K</span>
+</label>
+<button class="btn" aria-label="Actualizar datos" style="width: 38px; padding: 0; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg></button>
+<button class="btn btn-p"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Nuevo incremento</button>
+</header>
+
+<main style="padding: 28px 32px 56px; display: flex; flex-direction: column; gap: 24px; max-width: 1280px; width: 100%">
+
+<section style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px">
+<div style="display: flex; flex-direction: column; gap: 6px">
+<span style="font-size: 13px; color: var(--text-3)">Miércoles, 28 de octubre</span>
+<h1 style="margin: 0; font-size: 30px; line-height: 1.15; font-weight: 650; letter-spacing: -0.02em">5 incrementos necesitan atención</h1>
+</div>
+<div style="display: flex; align-items: center; gap: 10px">
+<span id="lens-label" style="font-size: 12px; color: var(--text-3)">Ver como</span>
+<div role="group" aria-labelledby="lens-label" style="display: flex; gap: 2px; padding: 3px; border-radius: 10px; background: var(--hover)">
+<button class="seg" aria-pressed="true" style="min-height: 32px; padding: 0 12px; border-radius: 8px; font-size: 13px; font-weight: 600">Todo el equipo</button>
+<button class="seg" aria-pressed="false" style="min-height: 32px; padding: 0 12px; border-radius: 8px; font-size: 13px; font-weight: 600">backend</button>
+<button class="seg" aria-pressed="false" style="min-height: 32px; padding: 0 12px; border-radius: 8px; font-size: 13px; font-weight: 600">frontend</button>
+<button class="seg" aria-pressed="false" style="min-height: 32px; padding: 0 12px; border-radius: 8px; font-size: 13px; font-weight: 600">qa</button>
+</div>
+</div>
+</section>
+
+<div id="sync" style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; background: var(--warn-soft)">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="color: var(--warn); flex: none"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>
+<p style="margin: 0; flex: 1 1 320px">El repositorio de specs va <strong>2 commits por detrás</strong> de <span class="mono" style="font-size: 13px">origin/main</span>. Sincroniza antes de abrir un incremento nuevo.</p>
+<button class="btn">Hacer pull de specs</button>
+</div>
+
+<section aria-label="Indicadores" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr)); gap: 12px">
+<div style="display: flex; flex-direction: column; gap: 6px; padding: 16px 18px; border-radius: 12px; background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow)">
+<span style="font-size: 12px; color: var(--text-3); font-weight: 500">Incrementos activos</span>
+<span style="font-size: 30px; font-weight: 650; letter-spacing: -0.02em; line-height: 1.1">10</span>
+<span style="font-size: 12px; color: var(--text-2)"><span style="color: var(--bad); font-weight: 600">2 bugs</span> · 14 archivados</span>
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px; padding: 16px 18px; border-radius: 12px; background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow)">
+<span style="font-size: 12px; color: var(--text-3); font-weight: 500">Tareas completadas</span>
+<span style="font-size: 30px; font-weight: 650; letter-spacing: -0.02em; line-height: 1.1">45<span style="font-size: 16px; color: var(--text-3); font-weight: 500"> / 79</span></span>
+<div role="img" aria-label="57% completado" style="height: 6px; border-radius: 999px; background: var(--hover); overflow: hidden; margin-top: 4px"><div style="width: 57%; height: 100%; background: var(--accent); border-radius: 999px"></div></div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px; padding: 16px 18px; border-radius: 12px; background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow)">
+<span style="font-size: 12px; color: var(--text-3); font-weight: 500">En verificación</span>
+<span style="font-size: 30px; font-weight: 650; letter-spacing: -0.02em; line-height: 1.1">2</span>
+<span style="font-size: 12px; color: var(--text-2)">1 listo para archivar</span>
+</div>
+<a href="Ecosistema.dc.html" style="display: flex; flex-direction: column; gap: 6px; padding: 16px 18px; border-radius: 12px; background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow); color: var(--text)">
+<span style="font-size: 12px; color: var(--text-3); font-weight: 500">Salud del ecosistema</span>
+<span style="display: flex; align-items: center; gap: 8px; font-size: 22px; font-weight: 650; line-height: 1.35"><span style="width: 10px; height: 10px; border-radius: 999px; background: var(--ok)"></span>Correcta</span>
+<span style="font-size: 12px; color: var(--text-2)">1 aviso · Serena MCP sin configurar</span>
+</a>
+</section>
+
+<div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start">
+
+<div style="flex: 2 1 560px; min-width: 0; display: flex; flex-direction: column; gap: 20px">
+
+<section aria-labelledby="att-h" style="border-radius: 14px; background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow); overflow: hidden">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 20px; border-bottom: 1px solid var(--border)">
+<h2 id="att-h" style="margin: 0; font-size: 15px; font-weight: 650">Necesita atención</h2>
+<a href="Incrementos.dc.html" style="font-size: 13px; font-weight: 600">Ver tablero</a>
+</div>
+
+<div class="row" style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; padding: 14px 20px; border-bottom: 1px solid var(--border)">
+<span aria-hidden="true" style="width: 32px; height: 32px; flex: none; border-radius: 8px; background: var(--bad-soft); color: var(--bad); display: flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="8" width="10" height="12" rx="5"/><path d="M9 8V6a3 3 0 0 1 6 0v2M3 13h4M17 13h4M4 19l3-2M20 19l-3-2M4 7l3 2M20 7l-3 2"/></svg></span>
+<div style="flex: 1 1 260px; min-width: 0; display: flex; flex-direction: column; gap: 2px">
+<a href="Detalle.dc.html" style="color: var(--text); font-weight: 600">fix-login-timeout</a>
+<span style="font-size: 13px; color: var(--text-2)">6/6 tareas completadas · pendiente de verificación global</span>
+</div>
+<span class="mono" style="font-size: 11px; padding: 2px 8px; border-radius: 6px; border: 1px solid var(--border); color: var(--text-2)">verify</span>
+<button class="btn btn-p" style="min-height: 34px">Verificar</button>
+</div>
+
+<div class="row" style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; padding: 14px 20px; border-bottom: 1px solid var(--border)">
+<span aria-hidden="true" style="width: 32px; height: 32px; flex: none; border-radius: 8px; background: var(--warn-soft); color: var(--warn); display: flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M18 14a6 6 0 0 1 3.5 6"/></svg></span>
+<div style="flex: 1 1 260px; min-width: 0; display: flex; flex-direction: column; gap: 2px">
+<a href="Detalle.dc.html" style="color: var(--text); font-weight: 600">checkout-v2</a>
+<span style="font-size: 13px; color: var(--text-2)">Barrera bloqueada · esperando a <strong>frontend</strong> (2/4 tareas)</span>
+</div>
+<span class="mono" style="font-size: 11px; padding: 2px 8px; border-radius: 6px; border: 1px solid var(--border); color: var(--text-2)">apply</span>
+<a class="btn" href="Roles.dc.html" style="min-height: 34px">Ver barrera</a>
+</div>
+
+<div class="row" style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; padding: 14px 20px; border-bottom: 1px solid var(--border)">
+<span aria-hidden="true" style="width: 32px; height: 32px; flex: none; border-radius: 8px; background: var(--ok-soft); color: var(--ok); display: flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="5" rx="1"/><path d="M5 9v11h14V9M10 13h4"/></svg></span>
+<div style="flex: 1 1 260px; min-width: 0; display: flex; flex-direction: column; gap: 2px">
+<a href="Detalle.dc.html" style="color: var(--text); font-weight: 600">migrar-auth-oidc</a>
+<span style="font-size: 13px; color: var(--text-2)">Verificado (pass) · listo para archivar en specs vivas</span>
+</div>
+<span class="mono" style="font-size: 11px; padding: 2px 8px; border-radius: 6px; border: 1px solid var(--border); color: var(--text-2)">verify</span>
+<button class="btn" style="min-height: 34px">Archivar</button>
+</div>
+
+<div class="row" style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; padding: 14px 20px; border-bottom: 1px solid var(--border)">
+<span aria-hidden="true" style="width: 32px; height: 32px; flex: none; border-radius: 8px; background: var(--accent-soft); color: var(--accent-text); display: flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/></svg></span>
+<div style="flex: 1 1 260px; min-width: 0; display: flex; flex-direction: column; gap: 2px">
+<a href="Detalle.dc.html" style="color: var(--text); font-weight: 600">notificaciones-push</a>
+<span style="font-size: 13px; color: var(--text-2)">Propuesta lista · falta redactar la spec</span>
+</div>
+<span class="mono" style="font-size: 11px; padding: 2px 8px; border-radius: 6px; border: 1px solid var(--border); color: var(--text-2)">spec</span>
+<button class="btn" style="min-height: 34px">Continuar</button>
+</div>
+
+<div class="row" style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; padding: 14px 20px">
+<span aria-hidden="true" style="width: 32px; height: 32px; flex: none; border-radius: 8px; background: var(--accent-soft); color: var(--accent-text); display: flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/></svg></span>
+<div style="flex: 1 1 260px; min-width: 0; display: flex; flex-direction: column; gap: 2px">
+<a href="Detalle.dc.html" style="color: var(--text); font-weight: 600">busqueda-facetada</a>
+<span style="font-size: 13px; color: var(--text-2)">Spec completa · listo para design</span>
+</div>
+<span class="mono" style="font-size: 11px; padding: 2px 8px; border-radius: 6px; border: 1px solid var(--border); color: var(--text-2)">design</span>
+<button class="btn" style="min-height: 34px">Continuar</button>
+</div>
+</section>
+
+<section aria-labelledby="flow-h" style="border-radius: 14px; background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow); padding: 18px 20px 20px; display: flex; flex-direction: column; gap: 16px">
+<div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px">
+<h2 id="flow-h" style="margin: 0; font-size: 15px; font-weight: 650">Flujo SDD</h2>
+<span style="font-size: 12px; color: var(--text-3)">Incrementos por fase</span>
+</div>
+<ol style="list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(92px, 100%), 1fr)); gap: 6px">
+<li style="display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: 10px; background: var(--surface-2)"><span class="mono" style="font-size: 11px; color: var(--text-3)">01 explore</span><span style="font-size: 24px; font-weight: 650; line-height: 1">1</span><div style="display: flex; gap: 3px"><span style="height: 4px; flex: 1; border-radius: 2px; background: var(--accent)"></span></div></li>
+<li style="display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: 10px; background: var(--surface-2)"><span class="mono" style="font-size: 11px; color: var(--text-3)">02 spec</span><span style="font-size: 24px; font-weight: 650; line-height: 1">2</span><div style="display: flex; gap: 3px"><span style="height: 4px; flex: 1; border-radius: 2px; background: var(--accent)"></span><span style="height: 4px; flex: 1; border-radius: 2px; background: var(--bad)"></span></div></li>
+<li style="display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: 10px; background: var(--surface-2)"><span class="mono" style="font-size: 11px; color: var(--text-3)">03 design</span><span style="font-size: 24px; font-weight: 650; line-height: 1">1</span><div style="display: flex; gap: 3px"><span style="height: 4px; flex: 1; border-radius: 2px; background: var(--accent)"></span></div></li>
+<li style="display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: 10px; background: var(--surface-2)"><span class="mono" style="font-size: 11px; color: var(--text-3)">04 tasks</span><span style="font-size: 24px; font-weight: 650; line-height: 1">1</span><div style="display: flex; gap: 3px"><span style="height: 4px; flex: 1; border-radius: 2px; background: var(--accent)"></span></div></li>
+<li style="display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: 10px; background: var(--accent-soft)"><span class="mono" style="font-size: 11px; color: var(--accent-text)">05 apply</span><span style="font-size: 24px; font-weight: 650; line-height: 1">3</span><div style="display: flex; gap: 3px"><span style="height: 4px; flex: 1; border-radius: 2px; background: var(--accent)"></span><span style="height: 4px; flex: 1; border-radius: 2px; background: var(--accent)"></span><span style="height: 4px; flex: 1; border-radius: 2px; background: var(--accent)"></span></div></li>
+<li style="display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: 10px; background: var(--surface-2)"><span class="mono" style="font-size: 11px; color: var(--text-3)">06 verify</span><span style="font-size: 24px; font-weight: 650; line-height: 1">2</span><div style="display: flex; gap: 3px"><span style="height: 4px; flex: 1; border-radius: 2px; background: var(--bad)"></span><span style="height: 4px; flex: 1; border-radius: 2px; background: var(--accent)"></span></div></li>
+<li style="display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: 10px; border: 1px dashed var(--border-strong)"><span class="mono" style="font-size: 11px; color: var(--text-3)">07 archive</span><span style="font-size: 24px; font-weight: 650; line-height: 1; color: var(--text-2)">14</span><span style="font-size: 11px; color: var(--text-3)">en specs vivas</span></li>
+</ol>
+<div style="display: flex; gap: 16px; font-size: 12px; color: var(--text-3)"><span style="display: flex; align-items: center; gap: 6px"><span style="width: 10px; height: 4px; border-radius: 2px; background: var(--accent)"></span>Feature · refactor · arquitectura</span><span style="display: flex; align-items: center; gap: 6px"><span style="width: 10px; height: 4px; border-radius: 2px; background: var(--bad)"></span>Bug / fix</span></div>
+</section>
+</div>
+
+<div style="flex: 1 1 320px; min-width: 0; display: flex; flex-direction: column; gap: 20px">
+<section aria-labelledby="help-h" style="border-radius: 14px; background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow); overflow: hidden">
+<div style="padding: 16px 20px; border-bottom: 1px solid var(--border)"><h2 id="help-h" style="margin: 0; font-size: 15px; font-weight: 650">Axiom te ayuda</h2></div>
+<a class="row" href="Skills.dc.html" style="display: flex; gap: 12px; padding: 14px 20px; border-bottom: 1px solid var(--border); color: var(--text)">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="color: var(--accent); flex: none; margin-top: 2px"><path d="M12 3 20 7.5v9L12 21l-8-4.5v-9z"/><path d="M4 7.5 12 12l8-4.5M12 12v9"/></svg>
+<span style="display: flex; flex-direction: column; gap: 2px"><span style="font-weight: 600">3 skills propuestas para tu stack</span><span style="font-size: 13px; color: var(--text-2)">Detectadas al escanear el repo. Revísalas en el buzón.</span></span>
+</a>
+<a class="row" href="Codigo.dc.html" style="display: flex; gap: 12px; padding: 14px 20px; border-bottom: 1px solid var(--border); color: var(--text)">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="color: var(--accent); flex: none; margin-top: 2px"><circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="12" cy="18" r="2.5"/><path d="M8 7.5l3 8.3M16 7.5l-3 8.3M8.5 6h7"/></svg>
+<span style="display: flex; flex-direction: column; gap: 2px"><span style="font-weight: 600">Grafo de código al día</span><span style="font-size: 13px; color: var(--text-2)">CodeGraph indexado hace 2 h · 4.212 símbolos disponibles para los agentes.</span></span>
+</a>
+<a class="row" href="Specs.dc.html" style="display: flex; gap: 12px; padding: 14px 20px; border-bottom: 1px solid var(--border); color: var(--text)">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="color: var(--accent); flex: none; margin-top: 2px"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 21V5M8 7h7"/></svg>
+<span style="display: flex; flex-direction: column; gap: 2px"><span style="font-weight: 600">12 dominios en specs vivas</span><span style="font-size: 13px; color: var(--text-2)">186 requisitos consolidados. Consulta antes de proponer.</span></span>
+</a>
+<a class="row" href="Ecosistema.dc.html" style="display: flex; gap: 12px; padding: 14px 20px; color: var(--text)">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="color: var(--warn); flex: none; margin-top: 2px"><path d="M12 3 2.5 20h19z"/><path d="M12 10v4M12 17h.01"/></svg>
+<span style="display: flex; flex-direction: column; gap: 2px"><span style="font-weight: 600">Serena MCP sin configurar</span><span style="font-size: 13px; color: var(--text-2)">Axiom Doctor recomienda ejecutar la sincronización del workspace.</span></span>
+</a>
+</section>
+
+<section aria-labelledby="act-h" style="border-radius: 14px; background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow); padding: 16px 20px; display: flex; flex-direction: column; gap: 14px">
+<h2 id="act-h" style="margin: 0; font-size: 15px; font-weight: 650">Actividad reciente</h2>
+<ol style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 14px">
+<li style="display: flex; gap: 12px"><span style="width: 8px; height: 8px; margin-top: 7px; flex: none; border-radius: 999px; background: var(--accent)"></span><span style="display: flex; flex-direction: column; gap: 1px"><span>Handoff <span class="mono" style="font-size: 12px">design → apply</span> en <a href="Handoffs.dc.html">checkout-v2</a></span><span style="font-size: 12px; color: var(--text-3)">backend → frontend · hace 35 min</span></span></li>
+<li style="display: flex; gap: 12px"><span style="width: 8px; height: 8px; margin-top: 7px; flex: none; border-radius: 999px; background: var(--ok)"></span><span style="display: flex; flex-direction: column; gap: 1px"><span><a href="Detalle.dc.html">fix-login-timeout</a> completó sus 6 tareas</span><span style="font-size: 12px; color: var(--text-3)">backend · hace 2 h</span></span></li>
+<li style="display: flex; gap: 12px"><span style="width: 8px; height: 8px; margin-top: 7px; flex: none; border-radius: 999px; background: var(--ok)"></span><span style="display: flex; flex-direction: column; gap: 1px"><span><a href="Detalle.dc.html">migrar-auth-oidc</a> superó la verificación</span><span style="font-size: 12px; color: var(--text-3)">qa · ayer, 17:42</span></span></li>
+<li style="display: flex; gap: 12px"><span style="width: 8px; height: 8px; margin-top: 7px; flex: none; border-radius: 999px; background: var(--text-3)"></span><span style="display: flex; flex-direction: column; gap: 1px"><span>Skill aprobada: <span class="mono" style="font-size: 12px">conventional-commits</span></span><span style="font-size: 12px; color: var(--text-3)">ayer, 12:10</span></span></li>
+</ol>
+</section>
+</div>
+</div>
+</main>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark","system"],"default":"dark","section":"Tema"},"$preview":{"width":1440,"height":1240}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const st = this.state || {};
+    const pref = st.theme || this.props.theme || 'dark';
+    let eff = pref;
+    if (pref === 'system') {
+      try { eff = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'; } catch (e) { eff = 'light'; }
+    }
+    const set = (t) => () => this.setState({ theme: t });
+    return {
+      theme: eff,
+      pLight: String(pref === 'light'),
+      pDark: String(pref === 'dark'),
+      pSys: String(pref === 'system'),
+      setLight: set('light'),
+      setDark: set('dark'),
+      setSystem: set('system')
+    };
+  }
+}
+</script>
+</body>
+</html>

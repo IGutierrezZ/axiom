@@ -2,7 +2,6 @@ package dashboard
 
 import (
 	"github.com/IGutierrezZ/axiom/v3/internal/hub"
-	"github.com/IGutierrezZ/axiom/v3/internal/multirole"
 )
 
 // WorkspaceDTO representa el estado global y configuración del espacio de trabajo.
@@ -75,20 +74,90 @@ type IncrementSummaryDTO struct {
 
 // IncrementDetailDTO contiene el detalle estructurado de un cambio y sus artefactos.
 type IncrementDetailDTO struct {
-	Summary       IncrementSummaryDTO      `json:"summary"`
-	HasProposal   bool                     `json:"has_proposal"`
-	HasSpec       bool                     `json:"has_spec"`
-	HasDesign     bool                     `json:"has_design"`
-	HasTasks      bool                     `json:"has_tasks"`
-	HasVerify     bool                     `json:"has_verify"`
-	HasArchive    bool                     `json:"has_archive"`
-	Proposal      string                   `json:"proposal,omitempty"`
-	Spec          string                   `json:"spec,omitempty"`
-	Design        string                   `json:"design,omitempty"`
-	TasksContent  string                   `json:"tasks_content,omitempty"`
-	VerifyReport  string                   `json:"verify_report,omitempty"`
-	ArchiveReport string                   `json:"archive_report,omitempty"`
-	BarrierReport *multirole.BarrierReport `json:"barrier_report,omitempty"`
+	Summary       IncrementSummaryDTO `json:"summary"`
+	HasProposal   bool                `json:"has_proposal"`
+	HasSpec       bool                `json:"has_spec"`
+	HasDesign     bool                `json:"has_design"`
+	HasTasks      bool                `json:"has_tasks"`
+	HasVerify     bool                `json:"has_verify"`
+	HasArchive    bool                `json:"has_archive"`
+	Proposal      string              `json:"proposal,omitempty"`
+	Spec          string              `json:"spec,omitempty"`
+	Design        string              `json:"design,omitempty"`
+	TasksContent  string              `json:"tasks_content,omitempty"`
+	VerifyReport  string              `json:"verify_report,omitempty"`
+	ArchiveReport string              `json:"archive_report,omitempty"`
+	BarrierReport *BarrierDTO         `json:"barrier_report,omitempty"`
+}
+
+// BarrierDTO es el contrato JSON propio del dashboard para la barrera de sincronización
+// multi-rol. Desacopla la API de multirole.BarrierReport, que no lleva etiquetas json.
+type BarrierDTO struct {
+	Satisfied     bool              `json:"satisfied"`
+	Change        string            `json:"change"`
+	Blockers      []string          `json:"blockers"`
+	Warnings      []string          `json:"warnings"`
+	Roles         []RoleStatusDTO   `json:"roles"`
+	DeferredTasks []DeferredTaskDTO `json:"deferred_tasks"`
+}
+
+// RoleStatusDTO consolida el estado de un rol frente a la barrera (una entrada por rol).
+type RoleStatusDTO struct {
+	Role         string          `json:"role"` // identificador canónico del rol
+	Name         string          `json:"name"` // nombre descriptivo opcional (puede ir vacío)
+	GatePolicy   string          `json:"gate_policy"`
+	Repositories []string        `json:"repositories"`
+	Deliverables []string        `json:"deliverables"`
+	TasksFound   bool            `json:"tasks_found"`
+	Tasks        TaskProgressDTO `json:"tasks"`
+	ApplyDone    bool            `json:"apply_done"`
+	VerifyDone   bool            `json:"verify_done"`
+	Verdict      string          `json:"verdict"` // "pass", "fail" o "missing"
+	Compliant    bool            `json:"compliant"`
+}
+
+// TaskProgressDTO es el desglose numérico de tareas de un rol.
+type TaskProgressDTO struct {
+	Total     int     `json:"total"`
+	Completed int     `json:"completed"`
+	Pending   int     `json:"pending"`
+	Percent   float64 `json:"percent"`
+}
+
+// DeferredTaskDTO es una tarea no concluida de un rol diferido, con su trazabilidad de origen.
+type DeferredTaskDTO struct {
+	Change       string `json:"change"`
+	Role         string `json:"role"`
+	TaskText     string `json:"task_text"`
+	SpecRef      string `json:"spec_ref"`
+	ChangeDirRef string `json:"change_dir_ref"`
+}
+
+// HandoffDTO es el contrato JSON propio del dashboard para un relevo handoff.md.
+// Desacopla la API de handoff.Handoff, cuyos tipos no llevan etiquetas json.
+type HandoffDTO struct {
+	Metadata HandoffMetadataDTO `json:"metadata"`
+	Sections HandoffSectionsDTO `json:"sections"`
+}
+
+// HandoffMetadataDTO refleja el frontmatter del handoff; timestamp va en RFC 3339 o vacío si no existe.
+type HandoffMetadataDTO struct {
+	Change    string `json:"change"`
+	FromPhase string `json:"from_phase"`
+	ToPhase   string `json:"to_phase"`
+	FromRole  string `json:"from_role"`
+	ToRole    string `json:"to_role"`
+	Timestamp string `json:"timestamp"`
+	Status    string `json:"status"`
+}
+
+// HandoffSectionsDTO contiene el texto de las cinco secciones obligatorias del handoff.
+type HandoffSectionsDTO struct {
+	ExecutiveSummary   string `json:"executive_summary"`
+	Artifacts          string `json:"artifacts"`
+	Decisions          string `json:"decisions"`
+	RisksAndBlockers   string `json:"risks_and_blockers"`
+	DirectInstructions string `json:"direct_instructions"`
 }
 
 // SkillDTO representa una skill disponible en el proyecto.

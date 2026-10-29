@@ -1,0 +1,25 @@
+{
+  "v": 3,
+  "createdOnFiles": {"v": 1, "at": "2026-10-28T10:00:00Z"},
+  "title": "Axiom Dashboard — Propuesta",
+  "launch": {"view": "canvas"},
+  "pages": [],
+  "boards": {
+    "Main.dc.html": {"x": 0, "y": 0, "w": 1440, "h": 1240, "title": "Inicio · oscuro", "expand": "fill", "is_interactive": true},
+    "Incrementos.dc.html": {"x": 0, "y": 1660, "w": 1440, "h": 1100, "title": "Incrementos · tablero por fase", "expand": "fill", "is_interactive": true},
+    "Detalle.dc.html": {"x": 1520, "y": 1660, "w": 1440, "h": 1180, "title": "Incremento · artefactos", "expand": "fill", "is_interactive": true},
+    "Roles.dc.html": {"x": 3040, "y": 1660, "w": 1440, "h": 1100, "title": "Incremento · roles y barrera", "expand": "fill", "is_interactive": true},
+    "Handoffs.dc.html": {"x": 4560, "y": 1660, "w": 1440, "h": 1180, "title": "Incremento · handoffs", "expand": "fill", "is_interactive": true},
+    "Skills.dc.html": {"x": 0, "y": 3260, "w": 1440, "h": 1300, "title": "Skills y buzón", "expand": "fill", "is_interactive": true},
+    "Specs.dc.html": {"x": 1520, "y": 3260, "w": 1440, "h": 1160, "title": "Specs vivas", "expand": "fill", "is_interactive": true},
+    "Codigo.dc.html": {"x": 3040, "y": 3260, "w": 1440, "h": 1300, "title": "Código y grafo", "expand": "fill", "is_interactive": true},
+    "Ecosistema.dc.html": {"x": 4560, "y": 3260, "w": 1440, "h": 1360, "title": "Ecosistema", "expand": "fill", "is_interactive": true}
+  },
+  "order": ["Main.dc.html", "Incrementos.dc.html", "Detalle.dc.html", "Roles.dc.html", "Handoffs.dc.html", "Skills.dc.html", "Specs.dc.html", "Codigo.dc.html", "Ecosistema.dc.html"],
+  "notes": {
+    "t1": {"x": 0, "y": -300, "text": "Inicio: lo que necesita tu atención hoy", "kind": "title1", "maxW": 1440},
+    "t2": {"x": 0, "y": 1360, "text": "Flujo de trabajo: incrementos, roles, barrera y handoffs (tema claro)", "kind": "title1", "maxW": 5960},
+    "t3": {"x": 0, "y": 2960, "text": "Conocimiento y plataforma: skills, specs, código y ecosistema (tema oscuro)", "kind": "title1", "maxW": 5960}
+  },
+  "designSystems": []
+}
