@@ -21,6 +21,7 @@ func TestRunSDDAttemptGrantPersistsAndReplaysThroughTheCLI(t *testing.T) {
 		t.Fatal(err)
 	}
 	seedSDDStatusReadyChange(t, repo, change, "- [ ] 1.1 Update `"+filepath.Join(sibling, "main.go")+"`\n")
+	retroSealForGuard(t, repo, change)
 	var continued bytes.Buffer
 	if err := RunSDDContinue([]string{change, "--cwd", repo, "--json"}, &continued); err != nil {
 		t.Fatal(err)

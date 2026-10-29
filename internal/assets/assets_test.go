@@ -570,10 +570,10 @@ func TestOpenCodeEmbeddedAssetLayout(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ReadDir(opencode/plugins) error = %v", err)
 	}
-	if len(pluginEntries) != 4 {
-		t.Fatalf("opencode plugins count = %d, want 4", len(pluginEntries))
+	if len(pluginEntries) != 5 {
+		t.Fatalf("opencode plugins count = %d, want 5", len(pluginEntries))
 	}
-	wantPlugins := map[string]bool{"model-variants.ts": true, "opencode-review-transport.ts": true, "sdd-task-result-artifacts.ts": true, "skill-registry.ts": true}
+	wantPlugins := map[string]bool{"axiom-branch-guard.ts": true, "model-variants.ts": true, "opencode-review-transport.ts": true, "sdd-task-result-artifacts.ts": true, "skill-registry.ts": true}
 	for _, entry := range pluginEntries {
 		if !wantPlugins[entry.Name()] {
 			t.Fatalf("unexpected plugin entry = %q", entry.Name())
@@ -641,6 +641,63 @@ func TestSDDTaskResultArtifactsPluginContract(t *testing.T) {
 	for _, forbidden := range []string{"GENTLE_AI_REVIEW_BINDING", "opencode-transport", "review lens-context", "capture-result"} {
 		if strings.Contains(source, forbidden) {
 			t.Fatalf("SDD task plugin retains reviewer transport %q", forbidden)
+		}
+	}
+}
+
+// TestOpenCodeBranchGuardPluginContract fija el contenido de axiom-branch-guard.ts en las dos
+// generaciones de plugins de OpenCode (REQ-25.22; design D-18; R10): el plugin solo transporta la
+// carga a `axiom branch guard --agent opencode` y aplica la decisión que devuelve Go.
+func TestOpenCodeBranchGuardPluginContract(t *testing.T) {
+	for _, path := range []string{"opencode/plugins/axiom-branch-guard.ts", "opencode/plugins-v2/axiom-branch-guard.ts"} {
+		t.Run(path, func(t *testing.T) {
+			source, err := Read(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, want := range []string{
+				// Proceso: array de argumentos fijo, sin shell, carga por stdin y tiempo límite.
+				`import { spawn } from "node:child_process"`,
+				`const GUARD_COMMAND = "axiom"`,
+				`const GUARD_ARGS = ["branch", "guard", "--agent", "opencode"]`,
+				`spawn(GUARD_COMMAND, GUARD_ARGS,`,
+				`.end(JSON.stringify({ event, tool, filePath, cwd }))`,
+				`GUARD_TIMEOUT_MS`, `GUARD_MAX_OUTPUT`, `code !== 0`,
+				// Herramientas de escritura y eventos de la carga.
+				`new Set(["write", "edit", "patch"])`,
+				`"pre"`, `"post"`,
+				// Decisión de Go: bloqueo con Error y aviso en la salida de la herramienta.
+				`throw new Error(`,
+				`"block"`, `"warn"`,
+				// Fallo en abierto: nada de lo que falle se convierte en decisión.
+				`catch {`, `finish()`,
+			} {
+				if !strings.Contains(source, want) {
+					t.Errorf("%s no contiene %q", path, want)
+				}
+			}
+			for _, forbidden := range []string{
+				// La orden nunca pasa por un shell ni interpola datos de la carga.
+				"shell: true", "exec(", "execSync", "execFile", "spawnSync",
+				// El plugin no clasifica ni decide nada: eso es de Go.
+				"openspec/changes", "odd/tasks", "writeFile", "readFile", "gentle-ai\"",
+			} {
+				if strings.Contains(source, forbidden) {
+					t.Errorf("%s conserva %q", path, forbidden)
+				}
+			}
+		})
+	}
+	v1, _ := Read("opencode/plugins/axiom-branch-guard.ts")
+	for _, want := range []string{`"tool.execute.before"`, `"tool.execute.after"`, `output.output =`} {
+		if !strings.Contains(v1, want) {
+			t.Errorf("el plugin de OpenCode v1 no contiene %q", want)
+		}
+	}
+	v2, _ := Read("opencode/plugins-v2/axiom-branch-guard.ts")
+	for _, want := range []string{`ctx.tool.hook("execute.before"`, `ctx.tool.hook("execute.after"`} {
+		if !strings.Contains(v2, want) {
+			t.Errorf("el plugin de OpenCode v2 no contiene %q", want)
 		}
 	}
 }
@@ -3663,4 +3720,418 @@ func TestSDDOptionalVerificationConsumersPreserveDiagnosticSemantics(t *testing.
 			}
 		}
 	})
+}
+
+// TestWorktreePrimitiveNamesLiveOnlyInTheRoutingDoctrineLine guards
+// organic-agent-trigger-rules REQ-25.41 (inc-25, design D-19): `EnterWorktree`
+// and `ExitWorktree` are runtime-specific primitives, so the product may name
+// them in exactly one place, the ban line of the routing doctrine, and no
+// embedded asset may name or prescribe them. The rendered line is compared across
+// adapters by the agentguidance tests; the assets package cannot import that
+// renderer without a cycle, so this pin reads its source.
+func TestWorktreePrimitiveNamesLiveOnlyInTheRoutingDoctrineLine(t *testing.T) {
+	primitives := []string{"EnterWorktree", "ExitWorktree"}
+
+	t.Run("no embedded asset names the primitives", func(t *testing.T) {
+		checked := 0
+		err := fs.WalkDir(FS, ".", func(path string, entry fs.DirEntry, err error) error {
+			if err != nil {
+				return err
+			}
+			if entry.IsDir() {
+				return nil
+			}
+			data, err := FS.ReadFile(path)
+			if err != nil {
+				return err
+			}
+			checked++
+			for _, primitive := range primitives {
+				if strings.Contains(string(data), primitive) {
+					t.Errorf("embedded asset %s names the runtime primitive %s; only the routing doctrine line may", path, primitive)
+				}
+			}
+			return nil
+		})
+		if err != nil {
+			t.Fatalf("walk embedded assets: %v", err)
+		}
+		if checked < 100 {
+			t.Fatalf("walked only %d embedded assets; the scan lost its coverage", checked)
+		}
+	})
+
+	t.Run("the routing doctrine names them on one line", func(t *testing.T) {
+		source, err := os.ReadFile(filepath.Join("..", "components", "agentguidance", "routing.go"))
+		if err != nil {
+			t.Fatalf("read routing.go: %v", err)
+		}
+
+		var lines []string
+		for _, line := range strings.Split(string(source), "\n") {
+			for _, primitive := range primitives {
+				if strings.Contains(line, primitive) {
+					lines = append(lines, line)
+					break
+				}
+			}
+		}
+		if len(lines) != 1 {
+			t.Fatalf("routing.go names the primitives on %d lines, want exactly one:\n%s", len(lines), strings.Join(lines, "\n"))
+		}
+		for _, want := range []string{
+			"Never use `EnterWorktree` or `ExitWorktree`",
+			"absolute paths that `axiom branch ensure` returns",
+			"`--cwd`, `git -C`, and absolute paths.",
+		} {
+			if !strings.Contains(lines[0], want) {
+				t.Fatalf("the ban line is missing %q:\n%s", want, lines[0])
+			}
+		}
+	})
+}
+
+// inc-25 (REQ-25.35, REQ-25.23 punto 4, D-19): the shared kickoff section orders
+// `axiom branch ensure` after the lane is chosen and the change is named, and
+// before the pre-flight questionnaire and `kickoff seal`. It stays in the shared
+// source, so the twelve orchestrators pick it up through their marker.
+func TestSharedKickoffSectionRunsBranchEnsureBeforeThePreflight(t *testing.T) {
+	shared := MustRead("skills/_shared/sdd-orchestrator-sections.md")
+	const start = "<!-- sdd-orchestrator-section:SDD Change Kickoff and Block Gates:start -->"
+	const end = "<!-- sdd-orchestrator-section:SDD Change Kickoff and Block Gates:end -->"
+	from := strings.Index(shared, start)
+	to := strings.Index(shared, end)
+	if from < 0 || to < from {
+		t.Fatalf("sdd-orchestrator-sections.md has no %q section", "SDD Change Kickoff and Block Gates")
+	}
+	section := shared[from:to]
+
+	for _, want := range []string{
+		"run `axiom branch ensure --change <name> --json`",
+		"After the user chooses the SDD lane and the change is named",
+		"before the pre-flight questionnaire",
+		"use the absolute paths of its JSON as `--cwd` of every later command",
+		"Do not run it while the lane-selection question is unanswered",
+		"Repeating it when you resume the change is idempotent",
+		"A `decision_required` result is an environment preference (worktree or in place), not governance",
+		"repeat `ensure` with `--mode <answer>`",
+		"Never pass `--fetch` without the explicit authorization of the user.",
+	} {
+		if !strings.Contains(section, want) {
+			t.Errorf("shared kickoff section missing %q", want)
+		}
+	}
+
+	// The order is part of the contract: ensure, then pre-flight, then seal.
+	ensure := strings.Index(section, "run `axiom branch ensure --change <name> --json`")
+	preflight := strings.Index(section, "before the pre-flight questionnaire")
+	seal := strings.Index(section, "`axiom sdd kickoff seal --cwd <repo>")
+	if ensure < 0 || preflight < 0 || seal < 0 || !(ensure < seal) || preflight > seal {
+		t.Errorf("kickoff section must run ensure (%d) ahead of the pre-flight (%d) and the seal command (%d)", ensure, preflight, seal)
+	}
+	if strings.Count(shared, "run `axiom branch ensure --change <name> --json`") != 1 {
+		t.Error("the ensure instruction must live once in the shared section")
+	}
+	for _, path := range allSDDOrchestratorAssetPaths(t) {
+		if strings.Contains(MustRead(path), "axiom branch ensure --change <name> --json") {
+			t.Errorf("%s duplicates the shared kickoff body", path)
+		}
+	}
+}
+
+// inc-25 (REQ-25.42, D-19): the status contract documents `blocked(wrong_branch)`
+// as the second typed reason, with no envelope, an executable continuation, the
+// precedence over `edit_authority_missing`, and the archive branch in the
+// archive phase.
+func TestSDDStatusContractDocumentsBlockedWrongBranch(t *testing.T) {
+	content := MustRead("skills/_shared/sdd-status-contract.md")
+	section := markdownSection(content, "## Branch Guard (`blocked(wrong_branch)`)")
+	if strings.TrimSpace(section) == "" {
+		t.Fatal("sdd-status-contract has no Branch Guard section")
+	}
+	for _, want := range []string{
+		"second typed reason of `blockedReasons`, next to `blocked(edit_authority_missing)`",
+		"names the repository, the current branch and the expected branch",
+		"`axiom branch ensure --cwd <absolute path> --change <change>`",
+		"It has no consent envelope",
+		"a command the orchestrator runs, not a grant the human answers",
+		"In the archive phase the expected branch is the archive branch `<branch_prefix>/<change>-archive` and the continuation adds `--archive`",
+		"`wrong_branch` is projected first",
+		"the authorized edit roots depend on the right branch",
+		"after the branch is corrected, `blocked(edit_authority_missing)` may appear",
+		"exempt",
+		"`axiom sdd continue` reports the same block and authorizes no next phase",
+	} {
+		if !strings.Contains(section, want) {
+			t.Errorf("status contract Branch Guard section missing %q", want)
+		}
+	}
+	// The guard never gains an envelope: `consent` stays tied to edit authority.
+	if strings.Contains(section, "axiom.sdd-integration.consent/v1") {
+		t.Error("blocked(wrong_branch) must not carry the consent envelope")
+	}
+	// The guard section precedes the edit authority one, mirroring the precedence.
+	if strings.Index(content, "## Branch Guard (`blocked(wrong_branch)`)") > strings.Index(content, "## Edit Authority Consent") {
+		t.Error("the Branch Guard section must come before Edit Authority Consent")
+	}
+}
+
+// inc-25 (REQ-25.23 punto 4, D-19): section G of the shared phase convention
+// tells phase agents to work in the repositories and worktrees `ensure` returned
+// by absolute path, with `--cwd` and `git -C`, instead of changing directory.
+func TestSDDPhaseCommonUsesTheAbsolutePathsOfEnsure(t *testing.T) {
+	content := MustRead("skills/_shared/sdd-phase-common.md")
+	section := markdownSection(content, "## G. Working Directory and `openspec/...` Paths")
+	for _, want := range []string{
+		"`axiom branch ensure --change <c> --json`",
+		"`repositories[].branches[].worktree`",
+		"`--cwd`",
+		"`git -C`",
+		"absolute path",
+		"never change the working directory of the session",
+	} {
+		if !strings.Contains(section, want) {
+			t.Errorf("sdd-phase-common section G missing %q", want)
+		}
+	}
+}
+
+// branchSkillTier returns one rendered tier of a two-tier skill, or the whole
+// file for a single-tier one.
+func branchSkillTier(path, tier string) string {
+	return extractModelSectionForTest(MustRead(path), tier)
+}
+
+// inc-25 (REQ-25.23 escenarios 1 y 3, D-19): sdd-apply no pregunta por worktrees
+// ni los crea a mano, ni impone las reglas ODD-5.x retiradas; delega en
+// `axiom branch ensure`, `status` y `done`.
+func TestSDDApplyDelegatesBranchesAndWorktreesToAxiomBranch(t *testing.T) {
+	const path = "skills/sdd-apply/SKILL.md"
+	content := MustRead(path)
+
+	for _, forbidden := range []string{
+		"Pre-vuelo de Aislamiento",
+		"Cuestionario Interactivo",
+		"git worktree add",
+		"ODD-5.1",
+		"ODD-5.2",
+		"ODD-5.5",
+		"ODD-5.6",
+		"Cierre de Rol y Apertura de Pull Request",
+		"cleanup-worktree",
+		"¿Deseas crear un git worktree",
+		"¿Hacia qué rama base deseas dirigir el Pull Request",
+	} {
+		if strings.Contains(content, forbidden) {
+			t.Errorf("%s keeps the retired worktree guidance %q", path, forbidden)
+		}
+	}
+
+	capable := branchSkillTier(path, "capable")
+	for _, want := range []string{
+		"#### Step 2c: Branch and Worktree (`axiom branch`)",
+		"`axiom branch ensure --cwd \"<workspaceRoot>\" --change <c> --json`",
+		"creates only what is missing and is idempotent",
+		"`decision_required`",
+		"`--mode <answer>`",
+		"Never pass `--fetch` without the explicit authorization of the user.",
+		"Edit only under `repositories[].branches[].worktree` of the active role",
+		"`--cwd`",
+		"`git -C`",
+		"never change the working directory of the session",
+		"never create a branch or a worktree by hand",
+		"the person publishes the tracking branch before the first role pull request",
+		"`axiom branch status --cwd \"<workspaceRoot>\" --change <c> --json`",
+		"`prTarget`",
+		"do not ask the user for it",
+		"`axiom branch done --cwd \"<workspaceRoot>\" --change <c>`",
+		"specs repository",
+		"integration branch (`git.integration_branch`)",
+	} {
+		if !strings.Contains(capable, want) {
+			t.Errorf("%s model-capable tier is missing %q", path, want)
+		}
+	}
+
+	small := branchSkillTier(path, "small")
+	for _, want := range []string{
+		"`axiom branch ensure --cwd \"<workspaceRoot>\" --change <c> --json`",
+		"`repositories[].branches[].worktree`",
+		"`prTarget`",
+	} {
+		if !strings.Contains(small, want) {
+			t.Errorf("%s model-small tier is missing %q", path, want)
+		}
+	}
+}
+
+// inc-25 (REQ-25.23 escenario 2, D-19): sdd-spec y sdd-design ya no obligan a
+// operar en main ni prohíben ramas o worktrees.
+func TestSDDSpecAndDesignRemitToEnsureInsteadOfMain(t *testing.T) {
+	for _, path := range []string{"skills/sdd-spec/SKILL.md", "skills/sdd-design/SKILL.md"} {
+		content := MustRead(path)
+		for _, forbidden := range []string{
+			"ODD-5.1",
+			"ODD-5.2",
+			"SIEMPRE directo en la rama principal",
+			"siempre directo en la rama principal",
+			"(`main`/`master`)",
+			"(main/master)",
+			"Jamás crees ramas ni worktrees",
+			"sin ramas ni worktrees",
+			"`git push`",
+			"pusheadas a remoto",
+		} {
+			if strings.Contains(content, forbidden) {
+				t.Errorf("%s keeps the retired rule %q", path, forbidden)
+			}
+		}
+		for _, want := range []string{
+			"`axiom branch ensure`",
+			"`workspaceRoot`",
+			"rama del cambio",
+			"decisión de la persona",
+			"`--cwd`",
+		} {
+			if !strings.Contains(content, want) {
+				t.Errorf("%s is missing %q", path, want)
+			}
+		}
+	}
+}
+
+// inc-25 (REQ-25.23 punto 4, D-19): sdd-propose y sdd-explore llevan una línea
+// que remite a la rama preparada por `ensure` y a las rutas del status.
+func TestSDDProposeAndExploreCarryTheBranchLine(t *testing.T) {
+	for _, path := range []string{"skills/sdd-propose/SKILL.md", "skills/sdd-explore/SKILL.md"} {
+		content := MustRead(path)
+		for _, want := range []string{
+			"the branch that `axiom branch ensure` prepared",
+			"`workspaceRoot`",
+			"`--cwd`",
+			"never create a branch or a worktree yourself",
+		} {
+			if !strings.Contains(content, want) {
+				t.Errorf("%s is missing the branch line %q", path, want)
+			}
+		}
+	}
+}
+
+// inc-25 (REQ-25.23 escenario 6, REQ-25.39, REQ-21.16, D-19): sdd-archive indica,
+// en monorepo, la rama de archivado y el PR documental, y en multirepo el
+// archive in situ con la evidencia de REQ-21.16.
+func TestSDDArchiveFollowsTheArchiveBranchFlow(t *testing.T) {
+	content := MustRead("skills/sdd-archive/SKILL.md")
+	section := markdownSection(content, "### Archive Branch Flow")
+	if strings.TrimSpace(section) == "" {
+		t.Fatal("sdd-archive has no Archive Branch Flow section")
+	}
+	for _, want := range []string{
+		"`axiom branch ensure --cwd \"<workspaceRoot>\" --change <c> --archive --json`",
+		"Once the pull request of the change is merged",
+		"`change_not_integrated`",
+		"suggest `--fetch` only with the explicit authorization of the user",
+		"`axiom sdd gate record --cwd <path> --change <c> --gate integration --decision approved --evidence-kind pr_merged`",
+		"`axiom sdd integrate prepare`",
+		"`axiom sdd archive-compose`",
+		"`openspec/changes/archive/`",
+		"`axiom sdd integrate verify`",
+		"a separate documentation pull request toward the integration branch (`git.integration_branch`)",
+		"`axiom branch done --cwd \"<workspaceRoot>\" --change <c>`",
+		"If the documentation pull request is rejected",
+		"the change stays pending archive",
+		"In a `multirepo`",
+		"in place",
+		"REQ-21.16",
+	} {
+		if !strings.Contains(section, want) {
+			t.Errorf("sdd-archive Archive Branch Flow section is missing %q", want)
+		}
+	}
+
+	// The commands run in this order on the archive branch.
+	last := -1
+	for _, step := range []string{
+		"--evidence-kind pr_merged`",
+		"`axiom sdd integrate prepare`",
+		"`axiom sdd archive-compose`",
+		"`openspec/changes/archive/`",
+		"`axiom sdd integrate verify`",
+	} {
+		at := strings.Index(section, step)
+		if at < 0 || at < last {
+			t.Errorf("archive branch flow step %q is out of order (at %d, previous at %d)", step, at, last)
+		}
+		last = at
+	}
+}
+
+// inc-25 (REQ-25.23 escenario 5, D-22): ningún `main` o `master` con sentido de
+// integración en las skills SDD y en `_shared`. Una lista blanca nombra los usos
+// que no son la rama de integración (la spec viva, el catálogo maestro, los
+// nombres de la estrategia de PR encadenados); en el resto, las skills dicen
+// «la rama de integración (`git.integration_branch`)».
+func TestSDDSkillsNameTheIntegrationBranchNotALiteral(t *testing.T) {
+	literal := regexp.MustCompile(`\b(main|master)\b`)
+	allowed := []*regexp.Regexp{
+		regexp.MustCompile(`(?i)\bmain specs?\b`),
+		regexp.MustCompile(`(?i)\bmaster catalog\b`),
+		regexp.MustCompile(`(?i)\bmain step\b`),
+		regexp.MustCompile(`(?i)\bmain logic\b`),
+		// The chain-strategy vocabulary of sdd-tasks: `stacked-to-main` is a
+		// stable token and its label names the destination of that strategy.
+		regexp.MustCompile("stacked-to-main"),
+		regexp.MustCompile(`(?i)\bStacked PRs to main\b`),
+		regexp.MustCompile(`(?i)\beach PR merges to main in order\b`),
+		regexp.MustCompile(`(?i)\bOnly the tracker merges to main\b`),
+	}
+
+	var roots []string
+	skills, err := FS.ReadDir("skills")
+	if err != nil {
+		t.Fatalf("ReadDir(skills) error = %v", err)
+	}
+	for _, entry := range skills {
+		if entry.IsDir() && (strings.HasPrefix(entry.Name(), "sdd-") || entry.Name() == "_shared") {
+			roots = append(roots, "skills/"+entry.Name())
+		}
+	}
+	if len(roots) != 12 {
+		t.Fatalf("the literal inventory sees %d skill roots, want the eleven sdd-* skills and _shared", len(roots))
+	}
+
+	scanned := 0
+	for _, root := range roots {
+		err := fs.WalkDir(FS, root, func(path string, entry fs.DirEntry, err error) error {
+			if err != nil || entry.IsDir() || !strings.HasSuffix(path, ".md") {
+				return err
+			}
+			scanned++
+			for number, line := range strings.Split(MustRead(path), "\n") {
+				rest := line
+				for _, pattern := range allowed {
+					rest = pattern.ReplaceAllString(rest, "")
+				}
+				if literal.MatchString(rest) {
+					t.Errorf("%s:%d names a literal integration branch outside the allow-list: %s", path, number+1, strings.TrimSpace(line))
+				}
+			}
+			return nil
+		})
+		if err != nil {
+			t.Fatalf("walk %s: %v", root, err)
+		}
+	}
+	if scanned < 20 {
+		t.Fatalf("the literal inventory scanned only %d markdown assets", scanned)
+	}
+
+	// The skills that decide the destination of a pull request say so in terms of
+	// the resolved integration branch.
+	for _, path := range []string{"skills/sdd-apply/SKILL.md", "skills/sdd-archive/SKILL.md"} {
+		if !strings.Contains(MustRead(path), "integration branch (`git.integration_branch`)") {
+			t.Errorf("%s does not name the integration branch as `git.integration_branch`", path)
+		}
+	}
 }

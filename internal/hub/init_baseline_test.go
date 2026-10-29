@@ -20,6 +20,11 @@ const (
 	initInvalidBase    = "baseline:\n  documents: []\n"
 	initValidContext   = "technical_context:\n  reference:\n    paths: [00_Glosario.md]\n"
 	initInvalidContext = "technical_context:\n  maintained:\n    paths: []\n"
+	// Bloques de política de ramas (INC-25): válidos e inválidos.
+	initValidGit            = "git:\n  integration_branch: develop\n  branch_prefix: inc\n"
+	initInvalidGit          = "git:\n  branch_prefix: \"inc//\"\n"
+	initValidRepositories   = "repositories:\n  - path: repo-backend\n    integration_branch: release\n"
+	initInvalidRepositories = "repositories:\n  - path: ../fuera\n"
 	// Base sin roles: error ajeno a los bloques nuevos.
 	initRolelessConfig = "workspace:\n  name: ejemplo\n  topology: monorepo-embedded\n  specs_repository: openspec\n"
 )
@@ -500,6 +505,58 @@ func TestInitForceKeepsAConfigWithDeclarations(t *testing.T) {
 			}
 			if res.BaselineOwnership != tt.wantOwnership {
 				t.Errorf("ownership = %q, se esperaba %q", res.BaselineOwnership, tt.wantOwnership)
+			}
+			if sandbox.registered(t) != 1 {
+				t.Errorf("el proyecto debe quedar registrado")
+			}
+		})
+	}
+}
+
+// m13 (INC-25): los bloques `git:` y `repositories:` también son declaraciones
+// que la regeneración perdería, así que --force conserva un axiom.yaml que los
+// declare, válidos o no, y la nota nombra los cuatro bloques. Sin baseline
+// declarada el andamiaje de OpenSpec por defecto se crea como siempre.
+func TestInitForceKeepsAConfigWithGitOrRepositoriesDeclarations(t *testing.T) {
+	tests := []struct {
+		name   string
+		config string
+	}{
+		{"git valido", initEmbeddedConfig + initValidGit},
+		{"git invalido", initEmbeddedConfig + initInvalidGit},
+		{"git que no es un mapeo", initEmbeddedConfig + "git: main\n"},
+		{"repositories valido", initEmbeddedConfig + initValidRepositories},
+		{"repositories invalido", initEmbeddedConfig + initInvalidRepositories},
+		{"repositories que no es una lista", initEmbeddedConfig + "repositories: repo-backend\n"},
+		{"git y repositories", initEmbeddedConfig + initValidGit + initValidRepositories},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dir := t.TempDir()
+			configPath := filepath.Join(dir, "axiom.yaml")
+			workspacetest.WriteFile(t, configPath, tt.config)
+			sandbox := newInitSandbox(t)
+
+			res, err := sandbox.initializer.Init(InitOptions{Path: dir, Name: "Nuevo", Force: true})
+			if err != nil {
+				t.Fatalf("Init --force = %v, debe completar con código 0", err)
+			}
+			if got := readFile(t, configPath); got != tt.config {
+				t.Errorf("--force no sobrescribe un axiom.yaml con git: o repositories::\n%s", got)
+			}
+			if !res.AlreadyExisted || res.ConfigPath != configPath {
+				t.Errorf("AlreadyExisted/ConfigPath = %v / %q", res.AlreadyExisted, res.ConfigPath)
+			}
+			requireNote(t, res.Notes, "Se conserva")
+			requireNote(t, res.Notes, "--force")
+			for _, block := range []string{"`baseline:`", "`technical_context:`", "`git:`", "`repositories:`"} {
+				requireNote(t, res.Notes, block)
+			}
+			if !exists(filepath.Join(dir, "openspec", "specs")) {
+				t.Error("sin baseline del proyecto se crea openspec/specs/ aunque se conserve el axiom.yaml")
+			}
+			if res.BaselineOwnership != workspace.BaselineDefault {
+				t.Errorf("ownership = %q, se esperaba %q", res.BaselineOwnership, workspace.BaselineDefault)
 			}
 			if sandbox.registered(t) != 1 {
 				t.Errorf("el proyecto debe quedar registrado")

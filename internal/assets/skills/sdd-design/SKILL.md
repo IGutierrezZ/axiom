@@ -188,9 +188,9 @@ Al validar el diseño técnico unificado, formula explícitamente la siguiente p
 > *«¿Deseas generar relevo formal (`handoff.md`) hacia los roles de implementación declarados o continuar en auto-implementación (`fullstack`)?»*
 
 Si el usuario elige generar `handoff.md`:
-1. Verifica que los cambios en `design.md` estén registrados en el repositorio de especificaciones (ODD-5.2).
-2. Como política obligatoria (ODD-5.1), el repositorio de especificaciones (`specs_repository`) opera SIEMPRE directo en la rama principal (`main`/`master`), sin ramas ni worktrees.
-3. Asegura o solicita ejecutar `git commit` y `git push` en `specs_repository` antes de emitir y entregar formalmente el `handoff.md` a los roles de implementación.
+1. La rama la prepara `axiom branch ensure` (el orquestador la ejecuta antes de la fase): escribe `design.md` y `handoff.md` bajo `workspaceRoot` del status, con las rutas absolutas y el `--cwd` que da su JSON, y nunca crees una rama ni un worktree por tu cuenta.
+2. Verifica que los cambios en `design.md` estén confirmados con `git commit` en la rama del cambio antes de emitir y entregar formalmente el `handoff.md` a los roles de implementación.
+3. Publicar la rama (`push`) y abrir el pull request es decisión de la persona: no lo hagas tú.
 ```
 
 ## Rules
@@ -205,8 +205,7 @@ Si el usuario elige generar `handoff.md`:
 - If you have open questions that BLOCK the design, say so clearly — don't guess
 - **Sufficient detail**: Include enough detail to explain decisions, alternatives, rationale, interfaces and testing. Use tables or code snippets where they clarify non-obvious behavior. Do not truncate required detail to meet a word or line cap.
 - Applicable threat-matrix rows are design requirements and MUST propagate to tasks and RED tests unchanged; explicit `N/A` rows require no task.
-- ODD-5.1: El repositorio de especificaciones opera siempre directo en la rama principal (main/master). Jamás crees ramas ni worktrees en él.
-- ODD-5.2: Antes de ceder el testigo en handoff.md, confirma que el diseño y arquitectura están commiteados y pusheados a remoto.
+- Rama del cambio: la prepara `axiom branch ensure`; escribe bajo `workspaceRoot` del status y usa `--cwd` y las rutas absolutas de su JSON. Antes de ceder el testigo en handoff.md, confirma que el diseño y la arquitectura están confirmados en la rama del cambio; publicarla es decisión de la persona.
 - With a maintained technical context, draft the context delta in Step 2b and leave every maintained document untouched.
 - Never create, modify, or delete files under `technicalContext.reference` paths.
 - Return envelope per **Section D** from `skills/_shared/sdd-phase-common.md`.

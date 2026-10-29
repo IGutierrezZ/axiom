@@ -15,6 +15,26 @@ type WorkspaceDTO struct {
 	Message         string              `json:"message"`
 	IsConfigured    bool                `json:"is_configured"`
 	DetectedTech    interface{}         `json:"detected_tech,omitempty"`
+	// BranchPolicy es la política de ramas efectiva del proyecto (REQ-1.1): la del bloque `git:`
+	// con los valores por defecto aplicados. Solo lectura (REQ-25.33).
+	BranchPolicy BranchPolicyDTO `json:"branchPolicy"`
+	// Repositories son las entradas de `repositories:` tal como se declararon, en solo lectura
+	// (REQ-1.1, REQ-25.33). Es siempre un array, vacío sin entradas.
+	Repositories []RepositoryPolicyDTO `json:"repositories"`
+}
+
+// BranchPolicyDTO es la política de ramas efectiva del workspace.
+type BranchPolicyDTO struct {
+	IntegrationBranch string `json:"integrationBranch"`
+	BranchPrefix      string `json:"branchPrefix"`
+}
+
+// RepositoryPolicyDTO es una entrada de `repositories:`. Un campo vacío (omitido en el JSON)
+// significa que el repositorio hereda el valor del workspace.
+type RepositoryPolicyDTO struct {
+	Path              string `json:"path"`
+	IntegrationBranch string `json:"integrationBranch,omitempty"`
+	BranchPrefix      string `json:"branchPrefix,omitempty"`
 }
 
 // RoleMeta describe un rol dentro del espacio de trabajo.
@@ -42,6 +62,14 @@ type IncrementSummaryDTO struct {
 	ReadyForArchive      bool     `json:"ready_for_archive"`
 	ChangeType           string   `json:"change_type,omitempty"`
 	IsBug                bool     `json:"is_bug"`
+	// WorktreePath y Branch indican dónde vive un cambio que se lee de un worktree registrado
+	// (REQ-25.34): la ruta absoluta del worktree y su rama. Ausentes, el cambio está en el checkout
+	// principal. Los campos de INC-25 van en camelCase (design D-20), a diferencia del resto del DTO.
+	WorktreePath string `json:"worktreePath,omitempty"`
+	Branch       string `json:"branch,omitempty"`
+	// PendingArchive marca un cambio activo ya presente en la rama de integración que aún no se
+	// ha archivado (REQ-25.20). Es informativo: no bloquea nada.
+	PendingArchive bool `json:"pendingArchive,omitempty"`
 }
 
 // IncrementDetailDTO contiene el detalle estructurado de un cambio y sus artefactos.
@@ -173,19 +201,52 @@ type ProjectSwitchRequest struct {
 	Path string `json:"path,omitempty"`
 }
 
-// ProjectAddRequest representa la solicitud para registrar un proyecto en el Hub.
+// ProjectAddRequest representa la solicitud para registrar un proyecto en el Hub. Las
+// preferencias personales de worktree (REQ-25.29) son opcionales: vacías, no se guarda ninguna.
 type ProjectAddRequest struct {
-	Path     string `json:"path"`
-	Name     string `json:"name,omitempty"`
-	Topology string `json:"topology,omitempty"`
+	Path         string `json:"path"`
+	Name         string `json:"name,omitempty"`
+	Topology     string `json:"topology,omitempty"`
+	WorktreeMode string `json:"worktree_mode,omitempty"`
+	WorktreeRoot string `json:"worktree_root,omitempty"`
 }
 
 // ProjectInitRequest representa la solicitud para inicializar un proyecto.
 type ProjectInitRequest struct {
-	Path     string          `json:"path,omitempty"`
-	Name     string          `json:"name,omitempty"`
-	Topology string          `json:"topology,omitempty"`
-	Roles    []hub.RoleInput `json:"roles,omitempty"`
+	Path         string          `json:"path,omitempty"`
+	Name         string          `json:"name,omitempty"`
+	Topology     string          `json:"topology,omitempty"`
+	Roles        []hub.RoleInput `json:"roles,omitempty"`
+	WorktreeMode string          `json:"worktree_mode,omitempty"`
+	WorktreeRoot string          `json:"worktree_root,omitempty"`
+}
+
+// WorktreePrefsDTO son unas preferencias personales de worktree (REQ-25.29): el modo y la
+// raíz de worktrees. Es el cuerpo del PUT de `/api/projects/active/worktree-prefs` y, en las
+// respuestas, la forma de `worktree_prefs` (lo guardado en el hub, donde un campo vacío es «sin
+// preferencia») y de `effective_worktree_prefs` (lo que rige, con los valores por defecto
+// aplicados, nunca vacío). Los campos se emiten siempre, también vacíos.
+type WorktreePrefsDTO struct {
+	Mode string `json:"mode"`
+	Root string `json:"root"`
+}
+
+// ProjectDTO es un proyecto del listado `GET /api/projects`: su entrada del hub más las
+// preferencias de worktree guardadas y las efectivas. Los campos de la entrada se mantienen
+// planos, de modo que los clientes anteriores siguen leyendo el listado igual.
+type ProjectDTO struct {
+	hub.WorkspaceRecord
+	WorktreePrefs          WorktreePrefsDTO `json:"worktree_prefs"`
+	EffectiveWorktreePrefs WorktreePrefsDTO `json:"effective_worktree_prefs"`
+}
+
+// ProjectWorktreePrefsDTO es la respuesta de `GET|PUT /api/projects/active/worktree-prefs`:
+// el proyecto activo y sus preferencias de worktree, guardadas y efectivas.
+type ProjectWorktreePrefsDTO struct {
+	ID                     string           `json:"id"`
+	Path                   string           `json:"path"`
+	WorktreePrefs          WorktreePrefsDTO `json:"worktree_prefs"`
+	EffectiveWorktreePrefs WorktreePrefsDTO `json:"effective_worktree_prefs"`
 }
 
 // MigrateCumulativeRequest representa la solicitud para transferir tareas pendientes de un rol no bloqueante.
@@ -200,6 +261,9 @@ type CreateIncrementRequest struct {
 	Intent       string `json:"intent"`
 	Type         string `json:"type,omitempty"`          // "feature", "fix", "refactor", "architecture"
 	ProposalBody string `json:"proposal_body,omitempty"` // INC-19: cuerpo ya renderizado (promoción ODD), sustituye la plantilla generada cuando no está vacío
+	// Mode es la respuesta a un `decision_required` (REQ-25.32): `worktree` o `in_place`. Vacío, rige
+	// el modo efectivo que resuelve `ensure` (registro, hub o `worktree`); el valor se registra por cambio.
+	Mode string `json:"mode,omitempty"`
 }
 
 // CreateIncrementResponse reporta el resultado de la creación de un incremento.

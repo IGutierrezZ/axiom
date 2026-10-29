@@ -96,8 +96,8 @@ Then you MUST confirm the orchestrator/user provided a resolved delivery path:
 3. **`single-pr` above budget**: continue only after the prompt explicitly records `size:exception`.
 
 Also check for `Chain strategy` in the tasks artifact. If present and not `pending`, follow it consistently:
-- `stacked-to-main`: each PR targets the previous PR's branch (or `main` after the previous merges).
-- `feature-branch-chain`: PR #1 targets the feature/tracker branch; later PRs target the immediate previous PR branch. The tracker PR aggregates the feature branch to `main`; child PR diffs must stay focused on only the current work unit and must never target `main` directly.
+- `stacked-to-main`: each PR targets the previous PR's branch (or the integration branch (`git.integration_branch`) after the previous merges).
+- `feature-branch-chain`: PR #1 targets the feature/tracker branch; later PRs target the immediate previous PR branch. The tracker PR aggregates the feature branch to the integration branch (`git.integration_branch`); child PR diffs must stay focused on only the current work unit and must never target the integration branch directly.
 
 If neither delivery decision nor chain strategy is present, STOP before writing code and return `blocked` with: `Workload decision required before apply: estimated work may exceed 400 changed lines. Ask the user which chain strategy to use (stacked-to-main, feature-branch-chain, or size-exception).`
 
@@ -115,21 +115,14 @@ Before starting work, check for existing apply-progress:
 
 **CRITICAL**: If the orchestrator told you previous progress exists, you MUST read it. If you overwrite without reading, completed work from prior batches is permanently lost.
 
-#### Step 2c: Pre-vuelo de Aislamiento de Repositorio & Worktrees (ODD-5.5)
+#### Step 2c: Branch and Worktree (`axiom branch`)
 
-Si tu rol opera sobre un repositorio de código (backend, frontend, apps, etc.):
-1. **Diferenciación de Repositorios (ODD-5.1)**:
-   - El repositorio de especificaciones (`specs_repository`) opera SIEMPRE en la rama principal (`main`/`master`), sin ramas ni worktrees.
-   - Los repositorios de código deben aislar sus cambios para evitar interferir con ramas de trabajo activas o concurrentes.
-2. **Cuestionario Interactivo de Pre-vuelo**: Antes de escribir la primera línea de código o test, formula obligatoriamente al usuario:
-   - *«¿Deseas crear un git worktree aislado o trabajar en el árbol de trabajo actual?»*
-   - *«¿Qué nombre deseas para la rama?»* (ej. `feat/{change-name}-{rol}`).
-   - *«¿Cuál es la rama base de origen?»* (ofrecer `main`, `develop` o la que el usuario indique).
-3. Si el usuario confirma worktree:
-   ```bash
-   git worktree add -b feat/{change-name}-{rol} ../wt-{change-name}-{rol} origin/<rama-base>
-   ```
-   y ejecuta el trabajo dentro del directorio del worktree.
+Branches and worktrees are prepared and removed by `axiom branch`; never create a branch or a worktree by hand and never ask the user a worktree questionnaire.
+
+1. Before the first work unit, run `axiom branch ensure --cwd "<workspaceRoot>" --change <c> --json` (`<c>` is the change name). It creates only what is missing and is idempotent: repeat it when you resume. A `decision_required` result is an environment preference of the user (worktree or in place): present it and repeat the command with `--mode <answer>`. Never pass `--fetch` without the explicit authorization of the user.
+2. Edit only under `repositories[].branches[].worktree` of the active role in that JSON. Use that absolute path as `--cwd`, as the repository of every `git -C` command, and as the root of every file path; never change the working directory of the session to reach it.
+3. With several roles, the role branches start from the tracking branch of the change: the person publishes the tracking branch before the first role pull request.
+4. In a `multirepo`, the specs repository is worked in place on the integration branch (`git.integration_branch`): `ensure` creates no branch or worktree in it.
 
 ### Step 3: Read Testing Capabilities and Resolve Mode
 
@@ -267,16 +260,15 @@ If none, say "None."}
 ### Status
 {N}/{total} tasks complete. {Ready for next batch / Ready for archive / Blocked by X}
 
-### Cierre de Rol y Apertura de Pull Request (ODD-5.6)
-Si las tareas del rol se han completado y validado satisfactoriamente:
-1. **Oferta de Commit**: Pregunta al usuario si desea crear un commit formal con mensaje semántico (`feat(rol): ...`).
-2. **Selección de Rama Destino**: Formula al usuario la pregunta de destino:
-   - *«¿Hacia qué rama base deseas dirigir el Pull Request? [main / develop / otra]»*
-3. **Propuesta de Creación de PR**: Con la rama confirmada, formula la sugerencia de comando:
+### Closing the Work and Proposing the Pull Request
+When the assigned tasks are complete and checked:
+1. Offer the user a formal commit with a semantic message (`feat(<role>): ...`) on the branch of that role.
+2. Propose the target branch of the pull request from `prTarget` of `repositories[].branches[]` in `axiom branch status --cwd "<workspaceRoot>" --change <c> --json`; do not ask the user for it. A role branch targets the tracking branch of the change, and the tracking branch targets the integration branch (`git.integration_branch`).
+3. Suggest the command with that base, and leave publishing to the person:
    ```bash
-   gh pr create --base <rama-destino> --head <rama-actual> --title "<título>" --body "<resumen de cambios y verificación>"
+   gh pr create --base <prTarget> --head <current-branch> --title "<title>" --body "<summary of changes and verification>"
    ```
-4. **Limpieza posterior**: Recuerda al usuario que tras el merge podrá ejecutar `scripts/cleanup-worktree.sh` para desmantelar el worktree y borrar la rama local de forma limpia.
+4. After the merge, the person removes the worktrees and the local branches with `axiom branch done --cwd "<workspaceRoot>" --change <c>`.
 ```
 
 ## Rules
@@ -298,9 +290,7 @@ Si las tareas del rol se han completado y validado satisfactoriamente:
 - Apply any `rules.apply` from `openspec/config.yaml`
 - If Strict TDD Mode is active (Step 3), load `strict-tdd.md` and follow its cycle INSTEAD of Step 4
 - When Strict TDD is active, the `strict-tdd.md` module's rules OVERRIDE Step 4 entirely
-- ODD-5.1: En el repositorio de especificaciones (`specs_repository`) NUNCA crees ramas ni worktrees; trabaja siempre directo en `main`/`master`.
-- ODD-5.5: En repositorios de código, formula el cuestionario interactivo de pre-vuelo (worktree sí/no, nombre de rama y rama base) antes de implementar.
-- ODD-5.6: Al finalizar la verificación en PASS, ofrece commit y pregunta interactivamente la rama destino del PR (`develop`, `main`, etc.) antes de proponer `gh pr create`.
+- Branches and worktrees come from `axiom branch ensure` (Step 2c): edit only under `repositories[].branches[].worktree` of the active role, and propose the pull request base from `prTarget` instead of asking for it.
 - When the status projects `technicalContext.maintained`, keep `context-impact.md` current with what was actually implemented: add, modify, or remove entries, or switch between entries and `Sin impacto: <motivo>`; never reopen `design.md` and never edit any file under the maintained paths. A change with several roles has one context delta: every role updates that same file. Validate it with `axiom sdd integrate check --cwd "<workspaceRoot>" --change "{change-name}"` (see `../_shared/project-baseline-convention.md`).
 - When a `role-apply` gate rejected because of the context delta reopens this phase, correct `context-impact.md` and append one dated line to the `## Registro de remediación` section of the role's tasks file (never a task checkbox), as `../_shared/project-baseline-convention.md`, section 6, describes.
 - Never create, modify, or delete files under `technicalContext.reference` paths.
@@ -348,6 +338,7 @@ You are an IMPLEMENTER sub-agent. You receive specific tasks and implement them 
 - When the status projects `technicalContext.maintained`, keep `context-impact.md` current with what was actually implemented: add, modify, or remove entries, or switch between entries and `Sin impacto: <motivo>`; never reopen `design.md` and never edit any file under the maintained paths. A change with several roles has one context delta: every role updates that same file. Validate it with `axiom sdd integrate check --cwd "<workspaceRoot>" --change "{change-name}"` (see `../_shared/project-baseline-convention.md`).
 - When a `role-apply` gate rejected because of the context delta reopens this phase, correct `context-impact.md` and append one dated line to the `## Registro de remediación` section of the role's tasks file (never a task checkbox), as `../_shared/project-baseline-convention.md`, section 6, describes.
 - Never create, modify, or delete files under `technicalContext.reference` paths.
+- Never create a branch or a worktree by hand: run `axiom branch ensure --cwd "<workspaceRoot>" --change <c> --json` before the first work unit and edit only under `repositories[].branches[].worktree` of the active role, with that absolute path as `--cwd`, `git -C`, and the root of every file path. Propose the pull request base from `prTarget` in `axiom branch status --json`; do not ask for it.
 
 ## Steps
 

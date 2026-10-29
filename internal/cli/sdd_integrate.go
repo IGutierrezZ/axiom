@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/IGutierrezZ/axiom/v3/internal/branch"
 	"github.com/IGutierrezZ/axiom/v3/internal/kickoff"
 	"github.com/IGutierrezZ/axiom/v3/internal/pathquote"
 	"github.com/IGutierrezZ/axiom/v3/internal/sddstatus"
@@ -208,6 +209,9 @@ func runSDDIntegratePrepare(args []string, stdout io.Writer) error {
 	if err != nil {
 		return err
 	}
+	if err := guardChangeWriter(target.ChangeRoot, target.Change, "sdd integrate prepare", branch.ContextArchive); err != nil {
+		return err
+	}
 	_, report, err := specbaseline.Prepare(context.Background(), target, parsed.options)
 	if err != nil {
 		return fmt.Errorf("integrate prepare: %w; vuelve a ejecutar `%s`", err, integrateCommand("prepare", target))
@@ -233,6 +237,9 @@ func runSDDIntegrateVerify(args []string, stdout io.Writer) error {
 	}
 	target, err := resolveIntegrationTarget("integrate verify", parsed.cwd, parsed.change)
 	if err != nil {
+		return err
+	}
+	if err := guardChangeWriter(target.ChangeRoot, target.Change, "sdd integrate verify", branch.ContextArchive); err != nil {
 		return err
 	}
 	report, err := specbaseline.Verify(context.Background(), target)

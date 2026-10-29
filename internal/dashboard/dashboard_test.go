@@ -2,12 +2,14 @@ package dashboard
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"io"
 	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -37,7 +39,7 @@ func TestServiceWorkspace(t *testing.T) {
 
 func TestServiceIncrements(t *testing.T) {
 	svc := NewService("../..")
-	list, err := svc.GetIncrements()
+	list, _, err := svc.GetIncrements()
 	if err != nil {
 		t.Fatalf("GetIncrements falló: %v", err)
 	}
@@ -711,6 +713,10 @@ func TestInteractiveSDDOrchestrationEndpoints(t *testing.T) {
 
 	// Inicializar estructura básica de openspec
 	_ = os.MkdirAll(filepath.Join(tempDir, "openspec", "changes"), 0755)
+	// REQ-25.32 (INC-25 S8-c4): crear un incremento ejecuta `ensure`. El flujo siguiente continúa
+	// sobre el cambio recién creado desde la ruta registrada, así que el proyecto usa `in_place`
+	// (el cambio queda en el propio checkout); el modo `worktree` lo cubre service_branch_test.go.
+	gitProject(t, tempDir, hub.WorktreeModeInPlace)
 
 	svc := NewService(tempDir)
 	server := NewServer(svc)
@@ -1067,7 +1073,7 @@ func TestIncrementSummaryOperationalFlagsAndRoleFiltering(t *testing.T) {
 	_ = os.WriteFile(filepath.Join(inc5, "verify-report.md"), []byte("# Verify\nverdict: pass\n"), 0o644)
 
 	svc := NewService(tmp)
-	increments, err := svc.GetIncrements()
+	increments, _, err := svc.GetIncrements()
 	if err != nil {
 		t.Fatalf("GetIncrements() error: %v", err)
 	}
@@ -1171,11 +1177,15 @@ func TestDashboardWorktreeExclusion(t *testing.T) {
 		t.Fatalf("error creando Hub Manager: %v", err)
 	}
 
-	// 1. Crear un worktree simulado con axiom.yaml y .git
+	// 1. Crear un worktree enlazado simulado con axiom.yaml y .git: la evidencia es un
+	// `.git` fichero cuyo git dir contiene `commondir` (REQ-25.31), no la ruta.
 	wtDir := filepath.Join(tempDir, "axiom-wt", "my-feature")
 	_ = os.MkdirAll(wtDir, 0755)
 	_ = os.WriteFile(filepath.Join(wtDir, "axiom.yaml"), []byte("workspace:\n  name: Feature\n"), 0644)
-	_ = os.WriteFile(filepath.Join(wtDir, ".git"), []byte("gitdir: /fake/main/.git/worktrees/my-feature\n"), 0644)
+	gitDir := filepath.Join(tempDir, "principal", ".git", "worktrees", "my-feature")
+	_ = os.MkdirAll(gitDir, 0755)
+	_ = os.WriteFile(filepath.Join(gitDir, "commondir"), []byte("../..\n"), 0644)
+	_ = os.WriteFile(filepath.Join(wtDir, ".git"), []byte("gitdir: "+filepath.ToSlash(gitDir)+"\n"), 0644)
 
 	// Iniciar servicio con NewServiceWithHub sobre el worktree
 	svc := NewServiceWithHub(wtDir, hubMgr)
@@ -1200,5 +1210,36 @@ func TestDashboardWorktreeExclusion(t *testing.T) {
 	}
 	if len(list) != 0 {
 		t.Errorf("el catálogo del Hub no debe contener worktrees, contiene %d", len(list))
+	}
+}
+
+// D-22 (REQ-25.23, escenario 5): cuando git no puede decir la rama actual (un repositorio recién
+// iniciado, sin ningún commit), GetSpecsSyncStatus informa la rama de integración resuelta del
+// proyecto y no un `main` fijo.
+func TestSpecsSyncStatusFallsBackToTheResolvedIntegration(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git no está disponible en el PATH")
+	}
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, "axiom.yaml"),
+		[]byte("workspace:\n  name: integracion-develop\n  topology: monorepo-embedded\ngit: {integration_branch: develop}\n"+
+			"roles:\n  core:\n    name: core\n    repositories:\n      - path: .\n"), 0o644); err != nil {
+		t.Fatalf("escribir axiom.yaml: %v", err)
+	}
+	cmd := exec.Command("git", "init", "-q", "-b", "trunk")
+	cmd.Dir = root
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("git init: %v\n%s", err, out)
+	}
+
+	status, err := NewService(root).GetSpecsSyncStatus(context.Background())
+	if err != nil {
+		t.Fatalf("GetSpecsSyncStatus() error = %v", err)
+	}
+	if !status.IsGitRepo {
+		t.Fatal("se esperaba un repositorio git")
+	}
+	if status.Branch != "develop" {
+		t.Fatalf("rama = %q, se esperaba la integración resuelta develop (git no tiene HEAD que leer)", status.Branch)
 	}
 }

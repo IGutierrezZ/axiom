@@ -7,7 +7,20 @@ import (
 	"net/http/httptest"
 	"os"
 	"testing"
+
+	"github.com/IGutierrezZ/axiom/v3/internal/hub"
 )
+
+// characterizationProject es el proyecto de estas pruebas: desde INC-25 S8-c4 `CreateIncrement`
+// ejecuta `ensure` antes de escribir (REQ-25.32), de modo que el proyecto es un repositorio git en
+// `main` con las preferencias de worktree del hub. `proposal.md` se lee de `res.Path`, que ahora
+// cuelga del worktree del cambio.
+func characterizationProject(t *testing.T) string {
+	t.Helper()
+	root := t.TempDir()
+	gitProject(t, root, hub.WorktreeModeWorktree)
+	return root
+}
 
 // plantillaEsperadaConIntento es la plantilla vigente que CreateIncrement produce
 // cuando se aporta un Intent explícito, transcrita byte a byte de la salida real
@@ -115,7 +128,7 @@ func TestCreateIncrement_PlantillaVigenteSinCuerpoSembrado(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			svc := NewService(t.TempDir())
+			svc := NewService(characterizationProject(t))
 			res, err := svc.CreateIncrement(tt.req)
 			if err != nil {
 				t.Fatalf("CreateIncrement() error = %v", err)
@@ -149,7 +162,7 @@ Cuerpo íntegro ya renderizado por la promoción ODD, sin plantilla genérica.
 // esos bytes de forma literal en proposal.md, sin sustituirlos por la plantilla
 // generada [D-02].
 func TestCreateIncrement_ProposalBodySembrado(t *testing.T) {
-	svc := NewService(t.TempDir())
+	svc := NewService(characterizationProject(t))
 	req := CreateIncrementRequest{
 		Name:         "gestion-inventario",
 		Intent:       "Propósito irrelevante para este caso: ProposalBody manda",
@@ -176,7 +189,7 @@ func TestCreateIncrement_ProposalBodySembrado(t *testing.T) {
 // vigente; con proposal_body debe producir exactamente esos bytes. Reutiliza
 // los mismos literales que las pruebas unitarias anteriores (sin duplicarlos).
 func TestCreateIncrement_HTTPProposalBodyRegression(t *testing.T) {
-	svc := NewService(t.TempDir())
+	svc := NewService(characterizationProject(t))
 	server := NewServer(svc)
 	router := server.Router()
 

@@ -31,6 +31,9 @@ func issue4210Fixture(sandbox *Sandbox) error {
 	}
 	root := sddChangeRoot(sandbox)
 	for name, content := range map[string]string{
+		// Sealed without a git snapshot: the change stays exempt from the
+		// branch guard, so status and continue can run from main.
+		"kickoff.yaml":          sddSealedKickoff(sddChange),
 		"proposal.md":           "# Proposal\n",
 		"design.md":             "# Design\n",
 		"tasks.md":              "- [ ] 1.1 Finish implementation\n",

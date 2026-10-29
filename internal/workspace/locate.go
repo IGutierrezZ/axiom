@@ -10,6 +10,7 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/IGutierrezZ/axiom/v3/internal/gitcommon"
 	"github.com/IGutierrezZ/axiom/v3/internal/pathidentity"
 	"github.com/IGutierrezZ/axiom/v3/internal/pathquote"
 )
@@ -109,13 +110,36 @@ func locate(start string, ascend bool) (Location, error) {
 	if err != nil {
 		return Location{}, err
 	}
-	dir := abs
+	// REQ-25.28 y D-15: dentro de un worktree enlazado la ascensión se acota a su
+	// raíz, de modo que un marcador del directorio que lo contiene no cuenta. Solo
+	// con ascensión: LocateAt evalúa únicamente el directorio dado.
+	bound := ""
+	if ascend {
+		bound = gitcommon.LinkedWorktreeRoot(abs)
+	}
+	if dir, origin, found := findMarker(abs, ascend, bound); found {
+		return locateFromMarker(abs, dir, origin)
+	}
+	if bound != "" {
+		return locateFromMainCheckout(abs, bound)
+	}
+	return startLocation(abs), nil
+}
+
+// findMarker busca el marcador más cercano a from: evalúa from y, con ascend, sus
+// ancestros hasta el techo de pruebas o hasta bound, que si no está vacío es la
+// raíz de un worktree enlazado y se evalúa pero no se sobrepasa.
+func findMarker(from string, ascend bool, bound string) (string, Origin, bool) {
+	dir := from
 	for {
 		if ascend && coversCeiling(dir) {
 			break
 		}
 		if origin, found := markerAt(dir); found {
-			return locateFromMarker(abs, dir, origin)
+			return dir, origin, true
+		}
+		if bound != "" && pathidentity.SameDirectory(dir, bound) {
+			break
 		}
 		parent := filepath.Dir(dir)
 		if !ascend || parent == dir {
@@ -123,13 +147,19 @@ func locate(start string, ascend bool) (Location, error) {
 		}
 		dir = parent
 	}
+	return "", "", false
+}
+
+// startLocation es la resolución sin marcador: el directorio de partida es la
+// carpeta maestra y la raíz.
+func startLocation(abs string) Location {
 	return Location{
 		Start:         abs,
 		Master:        abs,
 		WorkspaceRoot: abs,
 		PlanningHome:  filepath.Join(abs, planningHomeDirName),
 		Origin:        OriginStart,
-	}, nil
+	}
 }
 
 // normalizeStart devuelve el directorio de partida absoluto y limpio, o el
@@ -394,23 +424,19 @@ func (l Location) LegacySpecsDivergence() (string, bool) {
 }
 
 // separatesSpecs informa de si la topología guarda las especificaciones en un
-// repositorio distinto de la carpeta maestra (monorepo-decoupled y multirepo).
+// repositorio distinto de la carpeta maestra: solo multirepo (REQ-24.3).
 func separatesSpecs(cfg *WorkspaceConfig) bool {
 	if cfg == nil {
 		return false
 	}
-	switch cfg.Workspace.Topology {
-	case TopologyMonorepoDecoupled, TopologyMultirepo:
-		return true
-	}
-	return false
+	return cfg.Workspace.Topology == TopologyMultirepo
 }
 
 // Roots aplica el enraizado por topología (REQ-24.3, REQ-24.4). En
 // monorepo-embedded, o sin configuración, workspaceRoot es la carpeta maestra.
-// En monorepo-decoupled y multirepo es el repositorio de especificaciones o, si
-// el último segmento de specs_repository es openspec, su padre. openspec/
-// permanece siempre literal bajo workspaceRoot.
+// En multirepo es el repositorio de especificaciones o, si el último segmento de
+// specs_repository es openspec, su padre. openspec/ permanece siempre literal
+// bajo workspaceRoot.
 func Roots(cfg *WorkspaceConfig, master string) (workspaceRoot, planningHome string) {
 	if !separatesSpecs(cfg) {
 		return master, filepath.Join(master, planningHomeDirName)
@@ -447,10 +473,10 @@ func specsSegments(specsRepository string) []string {
 }
 
 // deduceMaster determina la carpeta maestra de un axiom.yaml directo hallado en
-// dir (REQ-24.5). En monorepo-embedded es siempre dir. En monorepo-decoupled y
-// multirepo: (1) specs_repository vacío o "." → dir; (2) dir contiene un
-// directorio con esa ruta → dir; (3) la ruta de dir termina con los segmentos
-// de specs_repository → dir sin ese sufijo; (4) en otro caso, dir.
+// dir (REQ-24.5). En monorepo-embedded es siempre dir. En multirepo:
+// (1) specs_repository vacío o "." → dir; (2) dir contiene un directorio con esa
+// ruta → dir; (3) la ruta de dir termina con los segmentos de specs_repository →
+// dir sin ese sufijo; (4) en otro caso, dir.
 func deduceMaster(cfg *WorkspaceConfig, dir string) string {
 	if !separatesSpecs(cfg) {
 		return dir

@@ -1,8 +1,8 @@
 # Catálogo Maestro de Especificaciones Vivas — Axiom
 
 > **Proyecto:** Axiom (Spec-Driven Development Platform)
-> **Última Sincronización:** 2026-10-11 22:22:34 UTC
-> **Total Dominios:** 63 | **Total Requerimientos:** 433 | **Total Escenarios BDD:** 885
+> **Última Sincronización:** 2026-10-29 08:45:56 UTC
+> **Total Dominios:** 64 | **Total Requerimientos:** 478 | **Total Escenarios BDD:** 1176
 
 ---
 
@@ -14,27 +14,28 @@
 | `autoskills` | Especificación de Requerimientos: Autoskills (midudev/autoskills) y Minería Heurística con Gobernanza Human-in-the-Loop | 13 | 17 | [Ver Spec](specs/autoskills/spec.md) |
 | `axiom-binary-ci-coverage` | Especificación Viva: Cobertura de Integración Continua sobre el Binario Canónico | 2 | 2 | [Ver Spec](specs/axiom-binary-ci-coverage/spec.md) |
 | `axiom-distribution-identity` | Especificación Viva: Identidad de Distribución de Axiom | 8 | 8 | [Ver Spec](specs/axiom-distribution-identity/spec.md) |
-| `axiom-sdd-cli-integration` | Especificación de Requerimientos: Integración de Comandos SDD en la CLI axiom (INC-13) | 4 | 6 | [Ver Spec](specs/axiom-sdd-cli-integration/spec.md) |
+| `axiom-sdd-cli-integration` | Especificación de Requerimientos: Integración de Comandos SDD en la CLI axiom (INC-13) | 7 | 29 | [Ver Spec](specs/axiom-sdd-cli-integration/spec.md) |
 | `axiom-skills-index-governance` | Especificación Viva: Gobernanza del Índice Unificado de Skills | 6 | 13 | [Ver Spec](specs/axiom-skills-index-governance/spec.md) |
 | `axiom-tui-branding` | Especificación de Requerimientos: Unificación de TUI Bubbletea, Comandos de Ecosistema en CLI axiom y Pasarela de gentle-ai (INC-14) | 4 | 9 | [Ver Spec](specs/axiom-tui-branding/spec.md) |
 | `axiom-updater-resilience` | Especificación Viva: Resiliencia y Gobernanza del Actualizador Autónomo de Axiom | 9 | 10 | [Ver Spec](specs/axiom-updater-resilience/spec.md) |
 | `axiom-user-state-and-env` | Especificación de Requerimientos: Unificación de Estado en ~/.axiom y Variables AXIOM_* (INC-12) | 3 | 5 | [Ver Spec](specs/axiom-user-state-and-env/spec.md) |
+| `change-branch-lifecycle` | Especificación de Requerimientos: Ciclo de Vida de las Ramas y Worktrees de un Cambio por Topología (INC-25) | 25 | 168 | [Ver Spec](specs/change-branch-lifecycle/spec.md) |
 | `dashboard-sdd-orchestration` | Especificación de Requerimientos: Orquestación Interactiva SDD y Creación de Cambios en Dashboard Web y CLI (INC-15) | 5 | 10 | [Ver Spec](specs/dashboard-sdd-orchestration/spec.md) |
 | `engram-protocol-injection` | Engram protocol injection Specification | 5 | 12 | [Ver Spec](specs/engram-protocol-injection/spec.md) |
 | `gga` | GGA Specification | 3 | 8 | [Ver Spec](specs/gga/spec.md) |
 | `installer-picker-navigation` | Installer Picker Navigation Specification | 3 | 9 | [Ver Spec](specs/installer-picker-navigation/spec.md) |
 | `living-documentation` | Especificación Viva: Motor de Documentación Viva y Adopción Orgánica en Archive (INC-07) | 11 | 23 | [Ver Spec](specs/living-documentation/spec.md) |
-| `local-web-dashboard` | Especificación Viva: Servidor HTTP Local Embebido y Dashboard Web | 8 | 15 | [Ver Spec](specs/local-web-dashboard/spec.md) |
-| `multi-project-hub` | Especificación Viva: Hub Multi-Proyecto, Selector Dinámico en Dashboard Web y CLI axiom init (INC-08) | 6 | 15 | [Ver Spec](specs/multi-project-hub/spec.md) |
+| `local-web-dashboard` | Especificación Viva: Servidor HTTP Local Embebido y Dashboard Web | 11 | 35 | [Ver Spec](specs/local-web-dashboard/spec.md) |
+| `multi-project-hub` | Especificación Viva: Hub Multi-Proyecto, Selector Dinámico en Dashboard Web y CLI axiom init (INC-08) | 9 | 33 | [Ver Spec](specs/multi-project-hub/spec.md) |
 | `multi-role-fan-out` | Especificación Viva: Despliegue Multi-Rol y Barrera de Sincronización en SDD | 8 | 13 | [Ver Spec](specs/multi-role-fan-out/spec.md) |
 | `odd-cli-commands` | Especificación de Requerimientos: Comandos CLI para ODD (INC-19) | 4 | 0 | [Ver Spec](specs/odd-cli-commands/spec.md) |
 | `odd-living-document` | Especificación de Requerimientos: Documento Vivo ODD y Espejo de Recuperación en Engram (INC-19) | 4 | 0 | [Ver Spec](specs/odd-living-document/spec.md) |
 | `odd-sdd-promotion` | Especificación de Requerimientos: Promoción de Documentos ODD a Propuestas SDD (INC-19) | 4 | 0 | [Ver Spec](specs/odd-sdd-promotion/spec.md) |
 | `odd-ui-integration` | Especificación de Requerimientos: Integración de ODD en Dashboard Web y TUI (INC-19) | 3 | 0 | [Ver Spec](specs/odd-ui-integration/spec.md) |
 | `orchestrator-commands-markers` | Especificación de Requerimientos: axiom-orchestrator y Comandos Slash Canónicos (INC-11) | 4 | 5 | [Ver Spec](specs/orchestrator-commands-markers/spec.md) |
-| `organic-agent-trigger-rules` | Organic Agent Routing Projection | 14 | 23 | [Ver Spec](specs/organic-agent-trigger-rules/spec.md) |
+| `organic-agent-trigger-rules` | Organic Agent Routing Projection | 16 | 32 | [Ver Spec](specs/organic-agent-trigger-rules/spec.md) |
 | `persona-behavior-contract` | persona-behavior-contract Specification | 17 | 32 | [Ver Spec](specs/persona-behavior-contract/spec.md) |
-| `planning-home-resolution` | Especificación de Requerimientos: Resolución del Planning Home desde Cualquier Directorio (INC-24) | 12 | 51 | [Ver Spec](specs/planning-home-resolution/spec.md) |
+| `planning-home-resolution` | Especificación de Requerimientos: Resolución del Planning Home desde Cualquier Directorio (INC-24) | 13 | 58 | [Ver Spec](specs/planning-home-resolution/spec.md) |
 | `project-technical-context` | Especificación de Requerimientos: Contexto Técnico del Proyecto: Declaración, Lectura y Mantenimiento (INC-24) | 12 | 45 | [Ver Spec](specs/project-technical-context/spec.md) |
 | `rdd-authority-disposition-plan` | RDD Authority Disposition Plan Specification | 7 | 11 | [Ver Spec](specs/rdd-authority-disposition-plan/spec.md) |
 | `rdd-authority-graph-classification` | RDD Authority Graph Classification Specification | 4 | 6 | [Ver Spec](specs/rdd-authority-graph-classification/spec.md) |
@@ -57,9 +58,9 @@
 | `rdd-simplification-design` | RDD Simplification Design Specification | 9 | 14 | [Ver Spec](specs/rdd-simplification-design/spec.md) |
 | `rdd-transport-capability` | RDD Transport Capability Specification | 4 | 8 | [Ver Spec](specs/rdd-transport-capability/spec.md) |
 | `review-findings-ledger` | Bounded Review Transaction and Findings Ledger | 18 | 24 | [Ver Spec](specs/review-findings-ledger/spec.md) |
-| `sdd-archive-lifecycle` | Especificación de Requerimientos: Ciclo de Vida de Archive, Integración Formal y Sellado Inmutable (INC-21) | 6 | 22 | [Ver Spec](specs/sdd-archive-lifecycle/spec.md) |
+| `sdd-archive-lifecycle` | Especificación de Requerimientos: Ciclo de Vida de Archive, Integración Formal y Sellado Inmutable (INC-21) | 7 | 34 | [Ver Spec](specs/sdd-archive-lifecycle/spec.md) |
 | `sdd-block-review-gates` | Especificación de Requerimientos: Compuertas de Revisión por Bloque (spec, design, tasks, apply) (INC-21) | 6 | 19 | [Ver Spec](specs/sdd-block-review-gates/spec.md) |
-| `sdd-lane-kickoff` | Especificación de Requerimientos: Selección Temprana y Bloqueante de Carril ODD/SDD en el Kickoff (INC-21) | 4 | 8 | [Ver Spec](specs/sdd-lane-kickoff/spec.md) |
+| `sdd-lane-kickoff` | Especificación de Requerimientos: Selección Temprana y Bloqueante de Carril ODD/SDD en el Kickoff (INC-21) | 8 | 26 | [Ver Spec](specs/sdd-lane-kickoff/spec.md) |
 | `sdd-orchestrator-assets` | SDD Orchestrator Assets Specification | 17 | 39 | [Ver Spec](specs/sdd-orchestrator-assets/spec.md) |
 | `sdd-preflight-configuration` | Especificación de Requerimientos: Cuestionario Pre-Vuelo de SDD, Modalidad de Avance y Asignación Obligatoria de Roles (INC-21) | 2 | 5 | [Ver Spec](specs/sdd-preflight-configuration/spec.md) |
 | `sdd-research` | sdd-research Specification | 3 | 9 | [Ver Spec](specs/sdd-research/spec.md) |
@@ -72,7 +73,7 @@
 | `tui-ui-parity` | Especificación Viva: Paridad Bidireccional entre TUI y Web UI | 10 | 12 | [Ver Spec](specs/tui-ui-parity/spec.md) |
 | `upstream-absorption-protocol` | Especificación Viva: Protocolo de Absorción por Tandas desde Upstream | 6 | 9 | [Ver Spec](specs/upstream-absorption-protocol/spec.md) |
 | `visual-decoupling` | Especificación de Requerimientos: Desacoplamiento Visual y Limpieza de Marca (Axiom) | 4 | 7 | [Ver Spec](specs/visual-decoupling/spec.md) |
-| `workspace-topology` | Especificación Viva: Topología de Workspace y CLI de Axiom | 7 | 23 | [Ver Spec](specs/workspace-topology/spec.md) |
+| `workspace-topology` | Especificación Viva: Topología de Workspace y CLI de Axiom | 10 | 39 | [Ver Spec](specs/workspace-topology/spec.md) |
 
 ---
 
@@ -180,6 +181,32 @@ Contrato de nombre publicado por clase de superficie: instalador y tap, compuert
 - **[REQ-13.4]** Referencia exclusiva a la CLI axiom en prompts
   - *Escenario BDD:* Verificación de sintaxis de comandos en sdd-orchestrator-sections.md
   - *Escenario BDD:* Comandos slash de OpenCode apuntando a axiom
+- **[REQ-25.42]** `blocked(wrong_branch)` en `axiom sdd status`
+  - *Escenario BDD:* Status en la rama de integración de un monorepo
+  - *Escenario BDD:* Status en la rama del cambio no bloquea
+  - *Escenario BDD:* Se evalúa en toda fase en un monorepo
+  - *Escenario BDD:* En la fase archive solo la rama de archivado es correcta
+  - *Escenario BDD:* En la fase archive del repositorio de specs de un multirepo se exige la integración
+  - *Escenario BDD:* Los cambios activos en la rama de integración no bloquean
+  - *Escenario BDD:* Un repositorio de código de un multirepo solo se evalúa en apply
+  - *Escenario BDD:* Un cambio exento no se bloquea
+  - *Escenario BDD:* `wrong_branch` precede a `edit_authority_missing`
+  - *Escenario BDD:* `axiom sdd continue` refleja el bloqueo
+  - *Escenario BDD:* Sin git no se bloquea
+  - *Escenario BDD:* El contrato del status solo crece
+- **[REQ-25.43]** Las Raíces Registradas por `ensure` Entran en `allowedEditRoots`
+  - *Escenario BDD:* Las tareas de un cambio en worktree no exigen autorización
+  - *Escenario BDD:* La tarea de un rol se resuelve contra el worktree del rol
+  - *Escenario BDD:* Un repositorio no registrado exige concesión
+  - *Escenario BDD:* Un repositorio de código registrado por `ensure` entra en las raíces
+  - *Escenario BDD:* Sin registro el comportamiento es el anterior
+- **[REQ-25.44]** `status` y `continue` Resuelven los Cambios de los Worktrees Registrados
+  - *Escenario BDD:* Status desde el checkout principal resuelve el worktree
+  - *Escenario BDD:* Sin nombre de cambio se consideran los worktrees registrados
+  - *Escenario BDD:* El worktree prevalece sobre el checkout principal
+  - *Escenario BDD:* El worktree de la rama de archivado prevalece sobre el de la rama del cambio
+  - *Escenario BDD:* Un worktree desaparecido se omite con aviso
+  - *Escenario BDD:* `continue` resuelve igual que `status`
 
 ### Dominio: `axiom-skills-index-governance` — Especificación Viva: Gobernanza del Índice Unificado de Skills
 
@@ -267,6 +294,206 @@ Estrategias y salvaguardas de actualización del binario `axiom` para entornos W
 - **[REQ-12.3]** Precedencia de variables AXIOM_* sobre GENTLE_AI_*
   - *Escenario BDD:* Variable AXIOM_* toma precedencia
   - *Escenario BDD:* Fallback a GENTLE_AI_* si AXIOM_* no está definido
+
+### Dominio: `change-branch-lifecycle` — Especificación de Requerimientos: Ciclo de Vida de las Ramas y Worktrees de un Cambio por Topología (INC-25)
+
+Definir cómo crea, consulta, cierra y protege Axiom las ramas (y, opcionalmente, los worktrees) de un cambio, de forma determinista y común a todos los runtimes. Hasta ahora la política de ramas era prosa de agente («crea una rama si estás en la rama por defecto»), el worktree era opcional y llegaba tarde (en apply), las specs se escribían «siempre en main» y no existía configuración ni guarda mecánica. Esta capacidad convierte esa doctrina en un motor de la CLI, la familia `axiom branch ensure|status|done|guard`, que:
+
+**Archivo:** [`specs/change-branch-lifecycle/spec.md`](specs/change-branch-lifecycle/spec.md)
+
+- **[REQ-25.1]** Familia de Comandos `axiom branch`
+  - *Escenario BDD:* La ayuda lista los cuatro verbos
+  - *Escenario BDD:* Un subcomando no listado no existe
+  - *Escenario BDD:* Ningún subcomando publica ni abre PR
+  - *Escenario BDD:* Una prueba de arquitectura fija el único punto de ejecución de git
+  - *Escenario BDD:* El carril ODD no exige un cambio SDD
+- **[REQ-25.2]** Contrato de Salida Común con Rutas Absolutas
+  - *Escenario BDD:* Todas las rutas son absolutas
+  - *Escenario BDD:* Un rechazo termina con código distinto de cero y código tipado
+  - *Escenario BDD:* Los valores del JSON son tokens en inglés con etiqueta en castellano
+  - *Escenario BDD:* Una configuración ilegible se informa con `config_invalid`
+  - *Escenario BDD:* Un fallo de git no cubierto se informa con `git_failed`
+  - *Escenario BDD:* `--cwd` fija el directorio de partida
+- **[REQ-25.3]** Resolución de la Política de Ramas
+  - *Escenario BDD:* Sin configuración se aplican los valores por defecto
+  - *Escenario BDD:* El bloque `git:` sustituye los valores por defecto
+  - *Escenario BDD:* Un repositorio con ajustes propios prevalece sobre `git:`
+  - *Escenario BDD:* La excepción por cambio prevalece sobre todo lo demás
+  - *Escenario BDD:* Un prefijo inválido de la invocación se rechaza sin efectos
+  - *Escenario BDD:* Un prefijo inválido de `axiom.yaml` se rechaza como configuración
+- **[REQ-25.4]** Modelo de Ramas por Número de Roles que Tocan Cada Repositorio
+  - *Escenario BDD:* Un rol, rama única
+  - *Escenario BDD:* Dos roles sobre el mismo repositorio crean seguimiento y ramas de rol
+  - *Escenario BDD:* En multirepo cada repositorio de código con un rol usa la rama del cambio
+  - *Escenario BDD:* Dos roles que comparten un repositorio de código en multirepo
+  - *Escenario BDD:* Un rol sellado que no toca ningún repositorio declarado no crea ramas
+  - *Escenario BDD:* Un rol llamado `archive` colisiona con la rama de archivado
+  - *Escenario BDD:* La rama de archivado no pertenece al modelo de roles
+- **[REQ-25.5]** Papel del Repositorio según la Topología
+  - *Escenario BDD:* El repositorio de specs de un multirepo no recibe ramas ni worktrees
+  - *Escenario BDD:* Repositorio de specs fuera de su rama de integración
+  - *Escenario BDD:* Repositorio de specs en una rama de rol del cambio
+  - *Escenario BDD:* En monorepo embebido el repositorio del planning home recibe la rama del cambio
+- **[REQ-25.6]** Raíz Git Real de Cada Repositorio
+  - *Escenario BDD:* Una subcarpeta resuelve a la raíz git del repositorio que la contiene
+  - *Escenario BDD:* Dos roles sobre rutas del mismo repositorio se deduplican
+  - *Escenario BDD:* Ruta que no es un repositorio git se omite con mensaje
+  - *Escenario BDD:* Entrada `.` equivale a la raíz del proyecto
+- **[REQ-25.7]** `ensure` Planifica de Forma Determinista y es Idempotente
+  - *Escenario BDD:* Segunda ejecución sin cambios
+  - *Escenario BDD:* La rama existente se reutiliza sin moverla
+  - *Escenario BDD:* Rama desplegada en un worktree desconocido
+  - *Escenario BDD:* Ejecución previa al sellado y posterior al sellado
+  - *Escenario BDD:* Se rechaza un nombre de cambio que no es válido
+  - *Escenario BDD:* `--archive` no altera las ramas del cambio
+- **[REQ-25.8]** `ensure`: Modo de Trabajo `worktree`, `in_place` y `ask`
+  - *Escenario BDD:* Sin preferencias el modo es `worktree`
+  - *Escenario BDD:* El checkout principal no se toca en modo `worktree`
+  - *Escenario BDD:* Modo `in_place` hace checkout en el propio repositorio
+  - *Escenario BDD:* Modo `ask` devuelve `decision_required` sin crear nada
+  - *Escenario BDD:* La respuesta a `ask` se registra por cambio
+  - *Escenario BDD:* La rama de archivado reutiliza la respuesta registrada
+  - *Escenario BDD:* Un modo distinto del materializado se rechaza
+- **[REQ-25.9]** `ensure` en `in_place` Rechaza un Árbol Sucio
+  - *Escenario BDD:* Árbol sucio rechaza el cambio de rama
+  - *Escenario BDD:* Un fichero sin seguimiento también cuenta
+  - *Escenario BDD:* Ya en la rama esperada con el árbol sucio es un no-op
+- **[REQ-25.10]** Base sin Red y `--fetch` Explícito
+  - *Escenario BDD:* Sin `--fetch` no hay operaciones remotas
+  - *Escenario BDD:* La base es la referencia remota local si existe
+  - *Escenario BDD:* Sin referencia remota la base es la rama local
+  - *Escenario BDD:* `--fetch` es explícito
+  - *Escenario BDD:* `--fetch` fallido no deja efectos
+  - *Escenario BDD:* Rama de integración inexistente
+- **[REQ-25.11]** Rutas de Worktree y Límite de Longitud
+  - *Escenario BDD:* Ruta sin sufijo de rol con una sola rama
+  - *Escenario BDD:* Ruta con sufijo de rol cuando hay rama de rol
+  - *Escenario BDD:* Ruta de la rama de archivado
+  - *Escenario BDD:* `<repo>` es el último segmento de la ruta declarada
+  - *Escenario BDD:* Dos repositorios con el mismo último segmento se rechazan
+  - *Escenario BDD:* Raíz de worktrees por defecto fuera de cualquier repositorio
+  - *Escenario BDD:* Ruta demasiado larga en Windows
+  - *Escenario BDD:* Una ruta de exactamente 220 caracteres se admite
+  - *Escenario BDD:* Nombre con carácter inválido en Windows
+- **[REQ-25.12]** Excepciones por Cambio `--prefix`, `--branch` y `--base`
+  - *Escenario BDD:* `--branch` fija el nombre de la rama del cambio
+  - *Escenario BDD:* `--branch` con ramas de rol deriva los nombres
+  - *Escenario BDD:* `--base` fija la base
+  - *Escenario BDD:* Una excepción posterior contradictoria se rechaza
+  - *Escenario BDD:* Una repetición idéntica de la excepción es idempotente
+  - *Escenario BDD:* `--prefix` fija el prefijo de la rama de archivado
+  - *Escenario BDD:* La rama de archivado deriva de la rama del cambio registrada
+  - *Escenario BDD:* `--branch` y `--base` no se admiten con `--archive`
+- **[REQ-25.45]** Rama de Archivado y `ensure --archive`
+  - *Escenario BDD:* Crea la rama de archivado desde la integración con el cambio fusionado
+  - *Escenario BDD:* La base local sin el cambio fusionado se rechaza y sugiere `--fetch`
+  - *Escenario BDD:* `--fetch` explícito permite alcanzar el cambio fusionado
+  - *Escenario BDD:* Multirepo no tiene rama de archivado
+  - *Escenario BDD:* El carril ODD no tiene rama de archivado
+  - *Escenario BDD:* Modo `in_place` hace checkout de la rama de archivado
+  - *Escenario BDD:* Modo `in_place` con árbol sucio se rechaza
+  - *Escenario BDD:* Idempotencia y ausencia de publicación
+- **[REQ-25.13]** Carril ODD con la Misma Política
+  - *Escenario BDD:* ODD en monorepo prepara rama y worktree
+  - *Escenario BDD:* ODD en multirepo trabaja in situ en el repositorio de specs
+  - *Escenario BDD:* Un repositorio de código se incluye con `--repo`
+  - *Escenario BDD:* ODD no crea `kickoff.yaml`
+- **[REQ-25.14]** Registro Local en el Git Common Dir
+  - *Escenario BDD:* El registro se resuelve con el git common dir
+  - *Escenario BDD:* El registro es visible desde un worktree enlazado
+  - *Escenario BDD:* Borrar el registro no daña el repositorio
+  - *Escenario BDD:* Registro ausente informado por `status`
+- **[REQ-25.15]** `status`: Estado de Ramas y Worktrees del Cambio
+  - *Escenario BDD:* Estado de un cambio con rama y worktree
+  - *Escenario BDD:* Atraso calculado solo con referencias locales
+  - *Escenario BDD:* Cambio no iniciado
+  - *Escenario BDD:* Rama destino propuesta para el PR
+  - *Escenario BDD:* La rama de archivado figura en el plan
+  - *Escenario BDD:* `status` sin `--change` lista registrados y pendientes
+- **[REQ-25.16]** `done`: Detección de Fusión por Capas
+  - *Escenario BDD:* Fusión real detectada por ascendencia
+  - *Escenario BDD:* Merge por squash detectado por la capa `equivalent_tree`
+  - *Escenario BDD:* Sin soporte de `merge-tree` la capa se omite
+  - *Escenario BDD:* Evidencia `pr_merged` confirma la fusión
+  - *Escenario BDD:* La rama de archivado se confirma por `equivalent_tree` tras un squash
+  - *Escenario BDD:* La evidencia `pr_merged` no confirma la rama de archivado
+  - *Escenario BDD:* Nada confirma la fusión
+  - *Escenario BDD:* La detección no usa la red
+- **[REQ-25.17]** `done`: Seguridad y Eliminación de Worktree y Rama Local
+  - *Escenario BDD:* Eliminación tras una fusión confirmada
+  - *Escenario BDD:* Una rama integrada con squash se elimina tras confirmarse por `equivalent_tree`
+  - *Escenario BDD:* La rama de archivado se elimina como las demás
+  - *Escenario BDD:* Árbol sucio impide la eliminación
+  - *Escenario BDD:* Rama sin fusionar impide la eliminación
+  - *Escenario BDD:* `--force` elimina con fusión no confirmada y avisa de lo descartado
+  - *Escenario BDD:* Linaje RDD abierto genera un aviso
+  - *Escenario BDD:* Ramas de rol y de seguimiento se procesan por separado
+  - *Escenario BDD:* `in_place` con árbol limpio vuelve a la integración y elimina la rama local
+  - *Escenario BDD:* `in_place` con árbol sucio se rechaza incluso con `--force`
+  - *Escenario BDD:* `in_place` sin fusión confirmada se rechaza
+- **[REQ-25.18]** Veredicto Único de Rama, por Papel del Repositorio
+  - *Escenario BDD:* Rama del cambio en un monorepo es correcta
+  - *Escenario BDD:* La rama de integración es incorrecta para un cambio en monorepo
+  - *Escenario BDD:* Una rama de rol es correcta cuando hay ramas de rol
+  - *Escenario BDD:* La rama de archivado es incorrecta en el contexto ordinario
+  - *Escenario BDD:* En el contexto de archivado solo la rama de archivado es correcta
+  - *Escenario BDD:* En el contexto de archivado la rama del cambio, la de integración y las de rol son incorrectas
+  - *Escenario BDD:* Un HEAD desacoplado es incorrecto
+  - *Escenario BDD:* El repositorio de specs de un multirepo exige su rama de integración
+  - *Escenario BDD:* El repositorio de código de un multirepo solo se evalúa en apply
+  - *Escenario BDD:* Un cambio preexistente sin instantánea queda exento
+  - *Escenario BDD:* Los cambios activos en la rama de integración no alteran el veredicto
+  - *Escenario BDD:* Fuera de un repositorio git no se bloquea
+- **[REQ-25.19]** Guarda A en Todo Escritor Go de la Carpeta del Cambio
+  - *Escenario BDD:* Cada escritor se niega fuera de rama
+  - *Escenario BDD:* Cada escritor escribe en la rama correcta
+  - *Escenario BDD:* `archive-compose` solo escribe en la rama de archivado
+  - *Escenario BDD:* El dashboard y `axiom change create` ejecutan `ensure` y después escriben
+  - *Escenario BDD:* El escritor guardado invocado sin `ensure` en rama equivocada se niega
+  - *Escenario BDD:* La TUI solo lista
+  - *Escenario BDD:* Un sumidero acumulativo está exento por nombre
+- **[REQ-25.20]** Cambios Pendientes de Archivar Visibles en `status` y en el Dashboard
+  - *Escenario BDD:* Un cambio fusionado y sin archivar figura como pendiente
+  - *Escenario BDD:* Solo `archive/` no genera pendientes
+  - *Escenario BDD:* Los sumideros exentos no son pendientes
+  - *Escenario BDD:* Un fichero suelto no cuenta como cambio
+  - *Escenario BDD:* Los pendientes no producen código de fallo ni bloquean
+  - *Escenario BDD:* `status --change` indica que el cambio solicitado está pendiente
+  - *Escenario BDD:* El repositorio de specs de un multirepo no tiene pendientes
+  - *Escenario BDD:* Sin referencia de integración la lista se omite con aviso
+  - *Escenario BDD:* La evaluación no usa la red
+- **[REQ-25.21]** `guard`: Hook Opcional que Bloquea los Documentos de Axiom y Avisa en el Resto
+  - *Escenario BDD:* Bloquea un documento de Axiom en rama equivocada
+  - *Escenario BDD:* Permite un documento de Axiom en la rama correcta
+  - *Escenario BDD:* Avisa sin bloquear en un fichero de código en la rama equivocada
+  - *Escenario BDD:* Con varios cambios activos el aviso nombra los worktrees de todos
+  - *Escenario BDD:* En modo `in_place` el aviso nombra la rama esperada
+  - *Escenario BDD:* Sin aviso si el fichero está en el worktree correcto
+  - *Escenario BDD:* Sin cambio activo registrado en el repositorio no hace nada con el código
+  - *Escenario BDD:* El repositorio de specs de un multirepo queda exento del aviso
+  - *Escenario BDD:* Inerte fuera de un proyecto Axiom
+  - *Escenario BDD:* Fail-open ante un error interno
+  - *Escenario BDD:* El hook no lanza git ni ningún otro proceso
+  - *Escenario BDD:* El documento ODD está cubierto
+  - *Escenario BDD:* Solo afecta al agente a través del runtime
+- **[REQ-25.22]** Instalación del Hook por `axiom sync` y Prohibición de Hooks de Git
+  - *Escenario BDD:* Instalación en los tres runtimes
+  - *Escenario BDD:* Sincronizar dos veces no duplica
+  - *Escenario BDD:* No se instalan hooks de git
+  - *Escenario BDD:* Las entradas ajenas se conservan
+  - *Escenario BDD:* Pi queda fuera
+  - *Escenario BDD:* En un repositorio ajeno la instalación global es inerte
+- **[REQ-25.23]** Las Skills y la Doctrina Delegan en el Verbo
+  - *Escenario BDD:* Retirada del cuestionario de worktree y de ODD-5.x
+  - *Escenario BDD:* Spec y design ya no imponen `main`
+  - *Escenario BDD:* `sdd-apply` propone la rama destino del PR
+  - *Escenario BDD:* Rutas absolutas y `--cwd`
+  - *Escenario BDD:* No quedan literales `main` donde debe ir la integración
+  - *Escenario BDD:* `sdd-archive` remite a la rama de archivado
+- **[REQ-25.24]** Dogfooding en este Repositorio
+  - *Escenario BDD:* `axiom.yaml` de este repositorio declara `git:`
+  - *Escenario BDD:* La documentación remite al verbo
+  - *Escenario BDD:* Un cambio preexistente ya fusionado figura como pendiente de archivar
 
 ### Dominio: `dashboard-sdd-orchestration` — Especificación de Requerimientos: Orquestación Interactiva SDD y Creación de Cambios en Dashboard Web y CLI (INC-15)
 
@@ -401,6 +628,8 @@ Definir de forma rigurosa, ejecutable y verificable los requerimientos funcional
 - **[REQ-1.1]** Endpoint REST de Información del Workspace
   - *Escenario BDD:* Retorno exitoso de topología y roles
   - *Escenario BDD:* Reporte de error cuando el archivo de configuración es inválido
+  - *Escenario BDD:* La respuesta incluye la política de ramas efectiva
+  - *Escenario BDD:* La respuesta incluye los ajustes por repositorio
 - **[REQ-1.2]** Endpoints REST de Consulta de Incrementos
   - *Escenario BDD:* Listado consolidado de incrementos activos y archivados
   - *Escenario BDD:* Consulta de detalle de un incremento existente
@@ -421,6 +650,27 @@ Definir de forma rigurosa, ejecutable y verificable los requerimientos funcional
   - *Escenario BDD:* Inicio del servidor en puerto por defecto con apertura de navegador
   - *Escenario BDD:* Detección y fallback ante puerto ocupado
   - *Escenario BDD:* Ejecución en modo headless con --no-browser
+- **[REQ-25.32]** Crear un Cambio desde el Dashboard Invoca `ensure` Antes de Escribir
+  - *Escenario BDD:* La creación prepara la rama y escribe en el worktree
+  - *Escenario BDD:* Modo `ask` devuelve la decisión sin escribir
+  - *Escenario BDD:* Repetir con la respuesta completa la creación
+  - *Escenario BDD:* Un rechazo de `ensure` no deja carpeta
+  - *Escenario BDD:* Multirepo escribe in situ en el repositorio de specs
+- **[REQ-25.33]** `git:` y `repositories:` en Solo Lectura; Solo se Editan las Preferencias Personales
+  - *Escenario BDD:* `git:` se muestra pero no se puede editar
+  - *Escenario BDD:* Ninguna ruta escribe `axiom.yaml`
+  - *Escenario BDD:* Edición de las preferencias personales
+  - *Escenario BDD:* Una preferencia inválida se rechaza
+- **[REQ-25.34]** Los Listados Agregan los Cambios de los Worktrees Registrados
+  - *Escenario BDD:* Un cambio de un worktree figura en el listado
+  - *Escenario BDD:* El detalle de un cambio en worktree se resuelve
+  - *Escenario BDD:* El worktree prevalece sobre el checkout principal
+  - *Escenario BDD:* El worktree de la rama de archivado prevalece sobre el de la rama del cambio
+  - *Escenario BDD:* Un worktree desaparecido se omite con aviso
+  - *Escenario BDD:* Un cambio fusionado y sin archivar se muestra como pendiente
+  - *Escenario BDD:* Sin cambios pendientes no hay aviso de pendientes
+  - *Escenario BDD:* Una escritura sobre un cambio en worktree se dirige al worktree
+  - *Escenario BDD:* La TUI lista el mismo conjunto
 
 ### Dominio: `multi-project-hub` — Especificación Viva: Hub Multi-Proyecto, Selector Dinámico en Dashboard Web y CLI axiom init (INC-08)
 
@@ -447,8 +697,29 @@ Definir formal y deterministamente los requerimientos funcionales, no funcionale
   - *Escenario BDD:* Un puntero en un directorio ancestro no impide inicializar
 - **[REQ-3.1]** Endpoints REST de Gestión Multi-Proyecto
   - *Escenario BDD:* Conmutación en caliente de workspace en la UI
+  - *Escenario BDD:* Registro con preferencias personales
+  - *Escenario BDD:* Registro sin preferencias aplica los valores por defecto
 - **[REQ-3.2]** Componente UI Selector de Proyectos y Pantalla de Bienvenida
   - *Escenario BDD:* Navegación a proyecto no inicializado
+  - *Escenario BDD:* El modal de registro pide las preferencias personales
+- **[REQ-25.29]** Preferencias Personales de Worktree por Proyecto en el Hub
+  - *Escenario BDD:* Sin preferencias el modo efectivo es `worktree`
+  - *Escenario BDD:* Proyecto no registrado también recibe los valores por defecto
+  - *Escenario BDD:* Persistencia de las preferencias
+  - *Escenario BDD:* Modo inválido rechazado
+  - *Escenario BDD:* Raíz relativa rechazada
+  - *Escenario BDD:* Re-registrar conserva las preferencias
+  - *Escenario BDD:* Desregistrar elimina las preferencias
+  - *Escenario BDD:* Un binario anterior ignora las preferencias
+- **[REQ-25.30]** Las Preferencias se Piden al Registrar y se Pueden Editar
+  - *Escenario BDD:* Registro interactivo pregunta con valores por defecto
+  - *Escenario BDD:* Registro sin terminal no pregunta
+  - *Escenario BDD:* Registro con las opciones de preferencia
+- **[REQ-25.31]** Los Worktrees de los Cambios no Vuelven Irregistrable el Proyecto
+  - *Escenario BDD:* Un checkout principal con un segmento `-wt` en su ruta se registra
+  - *Escenario BDD:* Un worktree enlazado no se registra
+  - *Escenario BDD:* Crear worktrees no altera el registro del proyecto
+  - *Escenario BDD:* Los worktrees no aparecen como proyectos
 
 ### Dominio: `multi-role-fan-out` — Especificación Viva: Despliegue Multi-Rol y Barrera de Sincronización en SDD
 
@@ -580,6 +851,17 @@ Define the managed, provider-neutral instructions that project Gentle AI's
   - *Escenario BDD:* La regla no exige nada sin contexto mantenido
   - *Escenario BDD:* La documentación de referencia no se modifica
   - *Escenario BDD:* El renderizado sigue siendo determinista
+- **[REQ-25.40]** El Protocolo ODD Prepara la Rama con `axiom branch ensure`
+  - *Escenario BDD:* El paso de implementación invoca `ensure`
+  - *Escenario BDD:* Las rutas del resultado se usan como `--cwd`
+  - *Escenario BDD:* El resto del protocolo no cambia
+  - *Escenario BDD:* El renderizado sigue siendo determinista
+  - *Escenario BDD:* El modo `ask` no añade una pregunta de gobernanza
+- **[REQ-25.41]** Prohibición de `EnterWorktree` y `ExitWorktree` en los Assets del Producto
+  - *Escenario BDD:* La doctrina generada contiene la prohibición
+  - *Escenario BDD:* Ningún otro asset contiene los nombres
+  - *Escenario BDD:* La doctrina es idéntica en todos los adaptadores
+  - *Escenario BDD:* Los goldens fijan el texto
 
 ### Dominio: `persona-behavior-contract` — persona-behavior-contract Specification
 
@@ -653,11 +935,12 @@ Definir cómo localiza Axiom el *planning home* (el directorio `openspec` que co
   - *Escenario BDD:* Sin marcadores la raíz es el directorio de partida
   - *Escenario BDD:* El descubrimiento de subdirectorios no actúa como marcador
   - *Escenario BDD:* Directorio de partida inválido
-- **[REQ-24.3]** Enraizado por Topología en Monorepo Desacoplado y Multirepo
+- **[REQ-24.3]** Enraizado por Topología en Multirepo
   - *Escenario BDD:* Multirepo canónico
-  - *Escenario BDD:* Monorepo desacoplado con `axiom.yaml` en la carpeta maestra
+  - *Escenario BDD:* Multirepo con `axiom.yaml` en la carpeta maestra
   - *Escenario BDD:* Perfil knowledge con `specs_repository` terminado en `openspec`
   - *Escenario BDD:* `specs_repository` de varios segmentos terminado en `openspec`
+  - *Escenario BDD:* La topología retirada no se resuelve
 - **[REQ-24.4]** Invariancia del Layout Monorepo Embebido
   - *Escenario BDD:* Equivalencia con distintos valores de `specs_repository`
   - *Escenario BDD:* Este repositorio no cambia
@@ -690,7 +973,8 @@ Definir cómo localiza Axiom el *planning home* (el directorio `openspec` que co
   - *Escenario BDD:* Directorio de partida de los verbos con `--path`
 - **[REQ-24.9]** Semántica de `workspaceRoot`, `planningHome` y Autoridad de Edición en el Status
   - *Escenario BDD:* Valores del status en el workspace canónico
-  - *Escenario BDD:* Un repositorio de código hermano exige autorización por cambio
+  - *Escenario BDD:* Un repositorio de código hermano no registrado exige autorización por cambio
+  - *Escenario BDD:* Un repositorio registrado por `ensure` figura en `allowedEditRoots`
   - *Escenario BDD:* Los cambios archivados siguen sellados
 - **[REQ-24.10]** Los Consumidores de Catálogo Comparten la Convención de Raíz
   - *Escenario BDD:* Catálogo del workspace canónico
@@ -704,6 +988,12 @@ Definir cómo localiza Axiom el *planning home* (el directorio `openspec` que co
   - *Escenario BDD:* Receta canónica documentada
   - *Escenario BDD:* `pr_merged` se verifica contra el repositorio de especificaciones
   - *Escenario BDD:* Evidencia alternativa para repositorios de código
+- **[REQ-25.28]** Resolución desde un Worktree Enlazado, también Fuera de la Carpeta Maestra
+  - *Escenario BDD:* Un worktree de un monorepo embebido resuelve su propio planning home
+  - *Escenario BDD:* Un worktree de un repositorio de código de un multirepo resuelve el planning home de la carpeta maestra
+  - *Escenario BDD:* Sin marcador ni siquiera en el checkout principal
+  - *Escenario BDD:* La validación desde un worktree externo no da falsos errores
+  - *Escenario BDD:* La ubicación del worktree no mueve la carpeta maestra
 
 ### Dominio: `project-technical-context` — Especificación de Requerimientos: Contexto Técnico del Proyecto: Declaración, Lectura y Mantenimiento (INC-24)
 
@@ -1276,6 +1566,19 @@ Define one explicit, content-addressed implementation-review transaction shared 
 - **[REQ-24.57]** «Sin Impacto» Explícito en el Archivado
   - *Escenario BDD:* «Sin impacto» deja el contexto intacto y registra la decisión
   - *Escenario BDD:* Una edición del contexto con «Sin impacto» se rechaza
+- **[REQ-25.39]** En Monorepo el Archive se Ejecuta en la Rama de Archivado y se Entrega en un PR Documental Aparte
+  - *Escenario BDD:* Archive en la rama de archivado con la evidencia del PR del cambio
+  - *Escenario BDD:* Sin la evidencia del PR del cambio el archive se rechaza aunque la rama sea la de archivado
+  - *Escenario BDD:* Archivar en la rama del cambio se rechaza
+  - *Escenario BDD:* Archivar en la rama de integración se rechaza
+  - *Escenario BDD:* Archivar en una rama de rol se rechaza
+  - *Escenario BDD:* Status proyecta el bloqueo de rama en la fase archive
+  - *Escenario BDD:* Mientras no se archiva, el cambio fusionado figura como pendiente
+  - *Escenario BDD:* Un PR documental rechazado deja el cambio pendiente de archivar
+  - *Escenario BDD:* Multirepo archiva in situ y conserva la precondición
+  - *Escenario BDD:* Multirepo sin evidencia sigue rechazando el archive
+  - *Escenario BDD:* Multirepo no tiene rama de archivado
+  - *Escenario BDD:* La skill de archive indica rama y orden
 
 ### Dominio: `sdd-block-review-gates` — Especificación de Requerimientos: Compuertas de Revisión por Bloque (spec, design, tasks, apply) (INC-21)
 
@@ -1327,6 +1630,28 @@ Define one explicit, content-addressed implementation-review transaction shared 
   - *Escenario BDD:* Reanudación de un cambio con kickoff ya sellado
   - *Escenario BDD:* Cambio preexistente con artefactos pero sin kickoff sellado infiere un valor por defecto sin bloquear
   - *Escenario BDD:* El retro-sello no altera qué `tasks.<rol>.md` consulta la barrera
+- **[REQ-25.35]** `ensure` al Nombrar el Cambio, antes de Escribir en su Carpeta
+  - *Escenario BDD:* SDD ejecuta `ensure` antes del sellado y de `proposal.md`
+  - *Escenario BDD:* ODD ejecuta `ensure --lane odd` antes de escribir `odd/tasks/`
+  - *Escenario BDD:* `ensure` no se ejecuta mientras la pregunta de carril está sin responder
+  - *Escenario BDD:* Modo `ask` presenta la elección sin considerarla gobernanza
+  - *Escenario BDD:* Reanudar un cambio sellado no repite preguntas
+  - *Escenario BDD:* Doctrina presente en los orquestadores
+- **[REQ-25.36]** Instantánea de Política Git en `kickoff.yaml`, Escrita una Sola Vez por `seal`
+  - *Escenario BDD:* El sellado escribe la instantánea
+  - *Escenario BDD:* La instantánea refleja las excepciones por cambio
+  - *Escenario BDD:* La instantánea no se reescribe
+  - *Escenario BDD:* La lectura tolera la ausencia de instantánea
+  - *Escenario BDD:* Un binario anterior ignora la instantánea
+- **[REQ-25.37]** Exención de Cambios Preexistentes sin Instantánea y de `seal --infer`
+  - *Escenario BDD:* Cambio preexistente sin instantánea no se bloquea
+  - *Escenario BDD:* `seal --infer` funciona desde cualquier rama y no escribe instantánea
+  - *Escenario BDD:* El cambio retro-sellado sigue exento
+- **[REQ-25.38]** `kickoff seal` se Niega Fuera de la Rama que Corresponde
+  - *Escenario BDD:* Sellar en la rama de integración de un monorepo se rechaza
+  - *Escenario BDD:* Sellar en la rama del cambio procede
+  - *Escenario BDD:* Sellar en un multirepo exige la integración del repositorio de specs
+  - *Escenario BDD:* Sellar en un multirepo con el repositorio de specs en su integración procede
 
 ### Dominio: `sdd-orchestrator-assets` — SDD Orchestrator Assets Specification
 
@@ -1481,7 +1806,7 @@ Definir cómo declara un proyecto, en `axiom.yaml`, dónde está su *baseline* (
 - **[REQ-24.13]** Bloque `baseline:` Opcional y Defecto OpenSpec
   - *Escenario BDD:* Sin bloque la baseline es OpenSpec
   - *Escenario BDD:* Con bloque la baseline es la del proyecto
-  - *Escenario BDD:* El bloque se admite en las tres topologías
+  - *Escenario BDD:* El bloque se admite en las dos topologías
   - *Escenario BDD:* Bloque sin documentos
 - **[REQ-24.14]** Documentos por Dominio y Mapeo Dominio a Documento
   - *Escenario BDD:* Declaración válida de dos dominios
@@ -1814,6 +2139,8 @@ Definir de forma canónica el comportamiento del punto de entrada CLI `axiom` y 
   - *Escenario BDD:* Declaración de baseline inválida finaliza con error
   - *Escenario BDD:* Ruta de contexto técnico inexistente solo avisa
   - *Escenario BDD:* Declaración incompatible con el almacén de artefactos finaliza con error
+  - *Escenario BDD:* Bloque `git:` o `repositories:` inválido finaliza con error
+  - *Escenario BDD:* Topología retirada finaliza con error accionable
 - **[REQ-2.1]** Estructura del Esquema axiom.yaml
   - *Escenario BDD:* Archivo axiom.yaml completo y bien formado
   - *Escenario BDD:* Topología desconocida o ausente
@@ -1821,9 +2148,10 @@ Definir de forma canónica el comportamiento del punto de entrada CLI `axiom` y 
   - *Escenario BDD:* Los bloques opcionales ausentes no alteran la validación
   - *Escenario BDD:* Los bloques opcionales presentes y válidos se cargan
   - *Escenario BDD:* Clave desconocida dentro de un bloque nuevo
+  - *Escenario BDD:* Una versión anterior del binario tolera los bloques nuevos
 - **[REQ-2.2]** Topología Monorepo Embebido
   - *Escenario BDD:* Monorepo embebido con specs en raíz o subdirectorio válido
-- **[REQ-2.3]** Topología Monorepo Desacoplado
+- **[REQ-workspace-topology-5]** Topología Monorepo Desacoplado (REQ-2.3) [SUPERSEDED / DEPRECADO]
   - *Escenario BDD:* Monorepo desacoplado con repositorio de specs presente
   - *Escenario BDD:* Monorepo desacoplado sin repositorio de specs
   - *Escenario BDD:* Patrón canónico con puntero en monorepo desacoplado
@@ -1834,4 +2162,20 @@ Definir de forma canónica el comportamiento del punto de entrada CLI `axiom` y 
   - *Escenario BDD:* Patrón canónico con puntero en multirepo
 - **[REQ-2.5]** Reporte de Validación Estructurado
   - *Escenario BDD:* Generación de reporte completo en caso de fallo
+- **[REQ-25.25]** Retirada de la Topología `monorepo-decoupled` con Error Accionable
+  - *Escenario BDD:* La carga rechaza la topología retirada
+  - *Escenario BDD:* La validación termina con código 1 y la corrección
+  - *Escenario BDD:* Un puntero hacia una configuración con la topología retirada rechaza la resolución
+  - *Escenario BDD:* Ninguna documentación presenta el valor como válido
+- **[REQ-25.26]** Bloque `git:` Opcional de `axiom.yaml`
+  - *Escenario BDD:* Sin bloque rigen los valores por defecto
+  - *Escenario BDD:* Bloque parcial completa con los valores por defecto
+  - *Escenario BDD:* Valor inválido
+  - *Escenario BDD:* Clave desconocida en `git:`
+- **[REQ-25.27]** Bloque `repositories:` de Primer Nivel con Ajustes por Repositorio
+  - *Escenario BDD:* Entrada con rama de integración propia
+  - *Escenario BDD:* Ruta inexistente o fuera de la carpeta maestra
+  - *Escenario BDD:* Dos entradas de la misma raíz git
+  - *Escenario BDD:* Ruta que no es un repositorio git solo avisa
+  - *Escenario BDD:* Sin bloque `repositories:` todos heredan
 

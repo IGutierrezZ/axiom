@@ -7,6 +7,9 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/tui/styles"
 )
 
+// PendingArchiveBadge es la insignia de un cambio fusionado en la rama de integración y aún sin archivar.
+const PendingArchiveBadge = "pendiente de archivar"
+
 // SDDIncrementInfo modela la información de un incremento para la TUI.
 type SDDIncrementInfo struct {
 	Name           string
@@ -15,6 +18,12 @@ type SDDIncrementInfo struct {
 	TasksTotal     int
 	TasksCompleted int
 	ProgressPct    int
+	// WorktreePath y Branch solo están cuando el cambio se lee de un worktree registrado y no del
+	// checkout principal (INC-25, REQ-25.34).
+	WorktreePath string
+	Branch       string
+	// PendingArchive marca el cambio fusionado en la rama de integración y aún sin archivar (REQ-25.20).
+	PendingArchive bool
 }
 
 // SDDIncrementsOptions construye la lista de opciones para el ciclo de vida de incrementos.
@@ -27,6 +36,9 @@ func SDDIncrementsOptions(increments []SDDIncrementInfo) []string {
 		}
 		label := fmt.Sprintf("%s %s [%s] (%d/%d tareas, %d%%)",
 			prefix, inc.Name, strings.ToUpper(inc.Phase), inc.TasksCompleted, inc.TasksTotal, inc.ProgressPct)
+		if inc.PendingArchive {
+			label += " · " + PendingArchiveBadge
+		}
 		options = append(options, label)
 	}
 	options = append(options, "+ Crear nuevo incremento SDD")

@@ -180,7 +180,7 @@ func TestResolveReportsLocationNotesWithoutBlocking(t *testing.T) {
 
 	t.Run("planning home divergente sin puntero", func(t *testing.T) {
 		master := t.TempDir()
-		workspacetest.WriteFile(t, filepath.Join(master, "axiom.yaml"), "workspace: {name: x, topology: monorepo-decoupled, specs_repository: especificacion}\nroles: {a: {name: a, repositories: [{path: .}]}}\n")
+		workspacetest.WriteFile(t, filepath.Join(master, "axiom.yaml"), "workspace: {name: x, topology: multirepo, specs_repository: especificacion}\nroles: {a: {name: a, repositories: [{path: .}]}}\n")
 		specs := filepath.Join(master, "especificacion")
 		seedReadyChange(t, specs, "demo", planningHomeTasks)
 		workspacetest.MkdirAll(t, filepath.Join(master, "openspec", "changes", "antiguo"))

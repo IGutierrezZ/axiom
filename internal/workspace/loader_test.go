@@ -252,6 +252,72 @@ roles:
 	}
 }
 
+const retiredTopologyMessage = "la topología `monorepo-decoupled` fue retirada: sustitúyela por `multirepo` en `workspace.topology` y ejecuta `axiom workspace validate`"
+
+func configWithTopology(topology string) string {
+	return "workspace:\n  name: Test\n  topology: " + topology + "\n  specs_repository: especificacion\nroles:\n  core:\n    name: Core\n    repositories:\n      - path: .\n"
+}
+
+// workspace-topology REQ-25.25 (escenario «La carga rechaza la topología
+// retirada») y REQ-2.1: el literal retirado da un mensaje propio que nombra la
+// corrección, tanto desde bytes como desde un fichero.
+func TestLoadRejectsTheRetiredTopologyWithAnActionableMessage(t *testing.T) {
+	data := configWithTopology("monorepo-decoupled")
+
+	t.Run("ParseConfig", func(t *testing.T) {
+		cfg, err := ParseConfig([]byte(data))
+		if err == nil || cfg != nil {
+			t.Fatalf("ParseConfig = (%+v, %v), se esperaba un rechazo sin configuración", cfg, err)
+		}
+		if err.Error() != retiredTopologyMessage {
+			t.Errorf("mensaje = %q, se esperaba %q", err.Error(), retiredTopologyMessage)
+		}
+	})
+
+	t.Run("LoadConfig", func(t *testing.T) {
+		file := filepath.Join(t.TempDir(), "axiom.yaml")
+		if err := os.WriteFile(file, []byte(data), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		_, err := LoadConfig(file)
+		if err == nil || err.Error() != retiredTopologyMessage {
+			t.Fatalf("LoadConfig = %v, se esperaba %q", err, retiredTopologyMessage)
+		}
+	})
+
+	t.Run("sin alias ni migración automática", func(t *testing.T) {
+		cfg, err := ParseConfig([]byte(data))
+		if cfg != nil || err == nil {
+			t.Fatal("el valor retirado no debe producir una configuración, ni siquiera sustituido por multirepo")
+		}
+	})
+}
+
+// workspace-topology REQ-2.1 (escenario «Topología desconocida o ausente»): el
+// resto de valores conserva el mensaje existente, con los dos valores restantes.
+func TestLoadKeepsTheUnknownTopologyMessageWithTheRemainingValues(t *testing.T) {
+	for name, topology := range map[string]string{
+		"desconocida":           `"desconocido"`,
+		"ausente":               `""`,
+		"cercana a la retirada": `"monorepo-decoupled-x"`,
+	} {
+		t.Run(name, func(t *testing.T) {
+			_, err := ParseConfig([]byte(configWithTopology(topology)))
+			if err == nil {
+				t.Fatal("se esperaba un rechazo")
+			}
+			for _, want := range []string{"topología desconocida o ausente", "Debe ser: monorepo-embedded o multirepo"} {
+				if !strings.Contains(err.Error(), want) {
+					t.Errorf("el mensaje %q no contiene %q", err.Error(), want)
+				}
+			}
+			if strings.Contains(err.Error(), "fue retirada") {
+				t.Errorf("solo el literal retirado da el mensaje de retirada: %q", err.Error())
+			}
+		})
+	}
+}
+
 func TestResolveConfigFile_DirectAxiomYaml(t *testing.T) {
 	tempDir := t.TempDir()
 	configPath := filepath.Join(tempDir, "axiom.yaml")

@@ -2036,6 +2036,88 @@ func TestComponentOperationsSDD_ClaudeRemovesReviewAndPreflightHooks(t *testing.
 	}
 }
 
+// REQ-25.22: cuando el componente SDD del runtime deja de estar instalado, se retiran las entradas
+// de `axiom branch guard` (identidad por la orden exacta) y se conserva todo lo demás.
+func TestComponentOperationsSDD_RemovesBranchGuardHooks(t *testing.T) {
+	cases := []struct {
+		name    string
+		agent   model.AgentID
+		path    func(homeDir string, adapter agents.Adapter) string
+		matcher string
+		command string
+		other   string
+	}{
+		{
+			name:    "Claude Code",
+			agent:   model.AgentClaudeCode,
+			path:    func(homeDir string, adapter agents.Adapter) string { return adapter.SettingsPath(homeDir) },
+			matcher: "Write|Edit|MultiEdit|NotebookEdit",
+			command: "axiom branch guard --agent claude-code",
+			other:   "axiom branch guard --agent opencode",
+		},
+		{
+			name:  "Codex",
+			agent: model.AgentCodex,
+			path: func(homeDir string, adapter agents.Adapter) string {
+				return filepath.Join(adapter.GlobalConfigDir(homeDir), "hooks.json")
+			},
+			matcher: "^apply_patch$",
+			command: "axiom branch guard --agent codex",
+			other:   "axiom branch guard --agent opencode",
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			homeDir := t.TempDir()
+			svc, err := NewService(homeDir, t.TempDir(), "dev")
+			if err != nil {
+				t.Fatal(err)
+			}
+			adapter, ok := svc.registry.Get(tc.agent)
+			if !ok {
+				t.Fatalf("adapter %s not found in registry", tc.agent)
+			}
+			path := tc.path(homeDir, adapter)
+			if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+				t.Fatal(err)
+			}
+			initial := fmt.Sprintf(`{"hooks":{
+  "PreToolUse":[
+    {"matcher":%[1]q,"hooks":[{"type":"command","command":%[2]q,"timeout":30},{"type":"command","command":"echo keep pre"}]},
+    {"matcher":"Bash","hooks":[{"type":"command","command":%[3]q}]}
+  ],
+  "PostToolUse":[{"matcher":%[1]q,"hooks":[{"type":"command","command":%[2]q,"timeout":30}]}]
+}}`, tc.matcher, tc.command, tc.other)
+			if err := os.WriteFile(path, []byte(initial), 0o644); err != nil {
+				t.Fatal(err)
+			}
+
+			ops, _, err := svc.componentOperations(adapter, model.ComponentSDD)
+			if err != nil {
+				t.Fatalf("componentOperations() error = %v", err)
+			}
+			for _, op := range ops {
+				if op.typeID == opRewriteFile && op.path == path {
+					if _, _, err := op.apply(op.path); err != nil {
+						t.Fatalf("hooks rewrite op.apply() error = %v", err)
+					}
+				}
+			}
+			raw, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			text := string(raw)
+			if strings.Contains(text, tc.command) || strings.Contains(text, `"PostToolUse"`) {
+				t.Fatalf("la entrada de la guarda y el evento vaciado deben retirarse:\n%s", text)
+			}
+			if !strings.Contains(text, "echo keep pre") || !strings.Contains(text, tc.other) {
+				t.Fatalf("las entradas ajenas, incluida una variante de la orden que Axiom no instala aquí, se conservan:\n%s", text)
+			}
+		})
+	}
+}
+
 func TestComponentOperationsSDD_ClaudeRemovesTelemetryHooks(t *testing.T) {
 	homeDir := t.TempDir()
 	svc, err := NewService(homeDir, t.TempDir(), "dev")
@@ -2240,6 +2322,45 @@ func TestComponentOperationsSDD_OpenCodeRemovesManagedPluginsUnderXDGConfigHome(
 	}
 	if _, err := os.Stat(filepath.Join(homeDir, ".config", "opencode")); !os.IsNotExist(err) {
 		t.Fatalf("uninstall touched ~/.config/opencode although XDG_CONFIG_HOME is set (stat err = %v)", err)
+	}
+}
+
+// Retirada del plugin de la guarda de rama (REQ-25.22): quitar el componente SDD de OpenCode
+// elimina axiom-branch-guard.ts y deja intactos los plugins ajenos del mismo directorio.
+func TestComponentOperationsSDD_OpenCodeRemovesBranchGuardPluginAndKeepsForeignPlugins(t *testing.T) {
+	homeDir := t.TempDir()
+	t.Setenv("HOME", homeDir)
+	t.Setenv("USERPROFILE", homeDir)
+	t.Setenv("XDG_CONFIG_HOME", filepath.Join(homeDir, ".xdg"))
+
+	svc, err := NewService(homeDir, t.TempDir(), "dev")
+	if err != nil {
+		t.Fatalf("NewService() error = %v", err)
+	}
+	adapter, ok := svc.registry.Get(model.AgentOpenCode)
+	if !ok {
+		t.Fatal("openCode adapter not found in registry")
+	}
+
+	pluginDir := filepath.Join(adapter.GlobalConfigDir(homeDir), "plugins")
+	guardPath := filepath.Join(pluginDir, "axiom-branch-guard.ts")
+	foreignPath := filepath.Join(pluginDir, "mi-plugin.ts")
+	if err := os.MkdirAll(pluginDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for _, path := range []string{guardPath, foreignPath} {
+		if err := os.WriteFile(path, []byte("// contenido"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	applySDDOpenCodeOperations(t, svc, adapter)
+
+	if _, err := os.Stat(guardPath); !os.IsNotExist(err) {
+		t.Fatalf("el plugin de la guarda debe retirarse; stat err = %v", err)
+	}
+	if _, err := os.Stat(foreignPath); err != nil {
+		t.Fatalf("el plugin ajeno debe conservarse: %v", err)
 	}
 }
 
