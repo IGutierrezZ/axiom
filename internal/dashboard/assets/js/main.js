@@ -9,9 +9,9 @@ import { set, on } from './core/state.js';
 import { initTheme } from './core/theme.js';
 import { initProjects, loadProjects } from './projects.js';
 import { initShell, setActiveNav, renderBreadcrumb, routeLabel, closeMenu, checkSpecsSync } from './shell.js';
-import { initDetail, enterDetail } from './screens/detalle.js';
+import { initDetail, enterDetail, refreshDetail } from './screens/detalle.js';
 import { initEcosystem, loadEcosystem, renderTopology } from './screens/ecosystem.js';
-import { initIncrements, loadIncrements, updateRoleFilterButtons } from './screens/incrementos.js';
+import { initIncrements, loadIncrements, renderIncrements } from './screens/incrementos.js';
 import { initInicio, renderInicio } from './screens/inicio.js';
 import { initLivingDocs, loadLivingDocs } from './screens/livingdoc.js';
 import { initSemantic, loadSemanticData } from './screens/semantic.js';
@@ -30,6 +30,9 @@ const VIEW_BY_ROUTE = {
 
 // Ruta activa, para repintar la miga cuando llega el nombre del proyecto.
 let currentRoute = null;
+// Última vista mostrada: el foco pasa al título solo al cambiar de vista o de incremento,
+// no al pasar de pestaña dentro del mismo incremento (el teclado debe quedarse en la pestaña).
+let shownKey = null;
 
 async function loadWorkspace() {
   try {
@@ -53,6 +56,8 @@ async function loadAllData() {
     loadEcosystem(),
     checkSpecsSync()
   ]);
+  // Actualizar también refresca el incremento abierto, si lo hay.
+  if (currentRoute && currentRoute.name === 'incremento') refreshDetail();
 }
 
 function showView(route, { initial }) {
@@ -69,10 +74,12 @@ function showView(route, { initial }) {
 
   // Tras navegar (no en la carga inicial) el foco pasa al título de la vista,
   // para que los lectores de pantalla anuncien el cambio.
-  if (!initial) {
+  const key = `${route.name}:${route.change || ''}`;
+  if (!initial && key !== shownKey) {
     const heading = document.querySelector(`#${target} h1`);
     if (heading) heading.focus({ preventScroll: false });
   }
+  shownKey = key;
 }
 
 function boot() {
@@ -93,7 +100,7 @@ function boot() {
   // Las pantallas que dependen del workspace se repintan cuando llega.
   on('workspace', renderInicio);
   on('workspace', renderTopology);
-  on('workspace', updateRoleFilterButtons);
+  on('workspace', renderIncrements);
   on('workspace', () => {
     // La miga muestra el nombre del proyecto.
     const route = currentRoute;

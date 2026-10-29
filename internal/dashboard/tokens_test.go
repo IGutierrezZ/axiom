@@ -77,6 +77,11 @@ func TestThemeTokensMeetContrast(t *testing.T) {
 		{"--ok", "--ok-soft"}, {"--warn", "--warn-soft"}, {"--bad", "--bad-soft"},
 		{"--ok", "--surface"}, {"--warn", "--surface"}, {"--bad", "--surface"},
 		{"--accent", "--bg"},
+		// Banners, avisos y chips del flujo de trabajo (T3): texto normal y secundario sobre los fondos suaves.
+		{"--surface", "--ok"},
+	}
+	for _, soft := range []string{"--ok-soft", "--warn-soft", "--bad-soft", "--accent-soft"} {
+		pairs = append(pairs, [2]string{"--text", soft}, [2]string{"--text-2", soft})
 	}
 	for _, fg := range texts {
 		for _, bg := range surfaces {

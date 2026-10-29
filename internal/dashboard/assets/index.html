@@ -152,82 +152,51 @@
           <div class="page-header">
             <div>
               <h1 id="incrementos-title" class="page-title" tabindex="-1">Incrementos</h1>
-              <p class="page-sub">Seguimiento de los cambios activos y de las especificaciones vivas archivadas.</p>
+              <p class="page-sub">Ciclo de vida SDD de cada cambio, de la propuesta al archivo.</p>
+            </div>
+            <div class="seg-group seg-inline" role="group" aria-label="Vista" id="inc-view-toggle">
+              <button type="button" class="seg seg-wide" data-view="board" aria-pressed="true"><i data-icon="board" data-size="15"></i>Tablero</button>
+              <button type="button" class="seg seg-wide" data-view="list" aria-pressed="false"><i data-icon="list" data-size="15"></i>Lista</button>
             </div>
           </div>
-          <div class="filter-group" id="increments-filter-group" role="group" aria-label="Filtrar incrementos">
-            <button type="button" class="filter-btn" data-filter="all" aria-pressed="true">Todos (activos)</button>
-            <button type="button" class="filter-btn" data-filter="type:fix" aria-pressed="false"><i data-icon="bug" data-size="14"></i>Bugs / fixes</button>
-            <button type="button" class="filter-btn" data-filter="spec_pending" aria-pressed="false">Pendiente spec</button>
-            <button type="button" class="filter-btn" data-filter="ready_for_design" aria-pressed="false">Listo para design</button>
-            <span id="role-filters-container" class="chip-group"></span>
-            <button type="button" class="filter-btn" data-filter="ready_for_global_verify" aria-pressed="false">Pendiente verif. global</button>
-            <button type="button" class="filter-btn" data-filter="ready_for_archive" aria-pressed="false">Listo para archivar</button>
-            <button type="button" class="filter-btn" data-filter="archived" aria-pressed="false">Archivados</button>
+          <div class="ix-filters">
+            <div class="chip-group" id="inc-filters" role="group" aria-label="Filtrar incrementos"></div>
+            <div class="chip-group ix-roles" id="inc-role-filters" role="group" aria-label="Filtrar por rol con tareas pendientes" hidden></div>
           </div>
-          <div class="increments-grid" id="increments-container">
-            <div class="loading-state">Cargando incrementos del workspace…</div>
+          <p class="sr-only" id="inc-live" role="status" aria-live="polite"></p>
+          <div id="increments-container">
+            <div class="state" role="status"><div class="spinner" aria-hidden="true"></div><span>Cargando incrementos del workspace…</span></div>
           </div>
         </section>
 
         <!-- ===== Detalle de incremento (Artefactos · Roles y barrera · Handoff) ===== -->
         <section id="view-incremento" class="view" hidden aria-labelledby="inc-title">
-          <div class="page-header">
-            <div>
-              <span class="page-eyebrow"><a href="#/incrementos">Incrementos</a></span>
-              <h1 id="inc-title" class="page-title" tabindex="-1">Incremento</h1>
-              <div class="chip-group" id="inc-badges"></div>
-            </div>
-            <div class="page-actions">
-              <button type="button" id="btn-inc-continue" class="btn btn-primary" title="Ejecutar la siguiente transición SDD"><i data-icon="play"></i>Continuar SDD</button>
-              <button type="button" id="btn-inc-verify" class="btn" title="Validar formalmente el informe de verificación"><i data-icon="shield"></i>Validar verificación</button>
-            </div>
+          <div class="dt-head">
+            <div class="chip-group" id="inc-meta"></div>
+            <h1 id="inc-title" class="page-title" tabindex="-1">Incremento</h1>
+            <p id="inc-desc" class="page-sub" hidden></p>
           </div>
+
+          <div id="inc-stepper"></div>
+
+          <section class="card dt-next" aria-labelledby="inc-next-title">
+            <h2 id="inc-next-title" class="card-title-h">Siguiente paso</h2>
+            <div id="inc-next-body"></div>
+            <div class="console" id="inc-console" hidden>
+              <div class="console-head"><span><i data-icon="terminal" data-size="14"></i> <span data-role="title">Salida de ejecución</span></span><button type="button" class="btn btn-ghost btn-xs" data-role="clear">Limpiar</button></div>
+              <pre class="console-out" data-role="out" tabindex="0" aria-label="Salida de la ejecución"></pre>
+            </div>
+          </section>
+
           <nav class="tabs" aria-label="Secciones del incremento" id="inc-tabs">
             <a class="tab-link" href="#" data-tab="artefactos">Artefactos</a>
-            <a class="tab-link" href="#" data-tab="roles">Roles y barrera</a>
+            <a class="tab-link" href="#" data-tab="roles">Roles y barrera<span class="tab-pill" id="inc-tab-roles-pill" hidden></span></a>
             <a class="tab-link" href="#" data-tab="handoff">Handoff</a>
           </nav>
 
-          <div class="console" id="inc-console" hidden>
-            <div class="console-head"><span><i data-icon="terminal" data-size="14"></i> <span data-role="title">Salida de ejecución</span></span><button type="button" class="btn btn-ghost btn-xs" data-role="clear">Limpiar</button></div>
-            <pre class="console-out" data-role="out" tabindex="0"></pre>
-          </div>
-
           <div id="inc-panel-artefactos" data-panel="artefactos"></div>
-
-          <div id="inc-panel-roles" data-panel="roles" hidden>
-            <div id="barrier-result-card" class="barrier-banner hidden">
-              <div class="barrier-status-icon" id="barrier-icon"></div>
-              <div class="barrier-details">
-                <h3 id="barrier-title">Estado de la barrera</h3>
-                <p id="barrier-desc">Diagnóstico</p>
-              </div>
-            </div>
-            <div class="roles-grid" id="roles-container"></div>
-          </div>
-
-          <div id="inc-panel-handoff" data-panel="handoff" hidden>
-            <div class="page-actions" style="margin-bottom: 14px">
-              <button type="button" id="btn-open-create-handoff" class="btn" title="Redactar un nuevo relevo formal"><i data-icon="plus"></i>Crear handoff</button>
-            </div>
-            <div id="handoff-display" class="handoff-card hidden">
-              <div class="handoff-header">
-                <div class="handoff-flow">
-                  <span class="phase-chip" id="ho-from-phase">--</span>
-                  <span class="flow-arrow"><i data-icon="arrowRight"></i></span>
-                  <span class="phase-chip target" id="ho-to-phase">--</span>
-                </div>
-                <div class="handoff-meta-chips">
-                  <span class="badge" id="ho-roles">--</span>
-                  <span class="badge" id="ho-status">--</span>
-                  <span class="badge" id="ho-time">--</span>
-                </div>
-              </div>
-              <div class="handoff-sections" id="ho-sections-container"></div>
-            </div>
-            <div id="handoff-empty" class="state">Este incremento aún no tiene un handoff.md.</div>
-          </div>
+          <div id="inc-panel-roles" data-panel="roles" hidden></div>
+          <div id="inc-panel-handoff" data-panel="handoff" hidden></div>
         </section>
 
         <!-- ===== Specs vivas ===== -->

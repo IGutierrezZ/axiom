@@ -177,7 +177,27 @@ Ruta de cada tarea: «delegada» significa un escritor acotado, que se elige por
   - **Arnés de vista previa:** test que solo se activa con una variable de entorno y levanta el servidor real en un puerto fijo dentro de `go test`. Sirve para revisar en el navegador sin compilar `axiom.exe`.
   - **Tests rediseñados:** sirve `/`, `/style.css`, el JS y `/fonts/*.woff2` con su `Content-Type`.
   - Las pantallas aún sin migrar se muestran temporalmente con su contenido antiguo bajo la estructura nueva.
-- [ ] **T3 · Flujo de trabajo: Incrementos y detalle** (delegada)
+- [x] **T3 · Flujo de trabajo: Incrementos y detalle** (delegada)
+  - **Resultado (2026-10-29):**
+    - Módulos nuevos `js/core/markdown.js` (renderizador seguro: escapa antes de añadir etiquetas y solo enlaza http(s) y mailto) y `js/core/increment.js` (fases, chip de tipo, bandera única, `deriveNextStep`).
+    - Pantallas `js/screens/{incrementos,detalle,detalle-roles,detalle-handoff}.js`.
+    - Tablero: las columnas vacías se pliegan a una franja etiquetada con su contador; verify nunca se pliega; desplazamiento interno de la caja; a ≤ 640 px las fases se apilan. Los archivados salen atenuados, sin `opacity`, con «Ver los N archivados».
+  - **Recordatorios D5:** las órdenes salen de `internal/assets/claude/commands/` y un test comprueba que existen.
+    - `/sdd-continue <cambio>` para las fases de planificación;
+    - `/sdd-apply`, `/sdd-verify` y `/sdd-archive`.
+    - Solo Continuar es botón (`axiom sdd continue`). La interfaz deja de llamar a `/api/increments/verify`.
+  - **Tests:**
+    - `workflow_assets_test.go`, estructural;
+    - `TestMarkdownRendererRuntime`, con Node sobre entradas hostiles; se salta si no hay `node`;
+    - `tokens_test.go` ampliado.
+  - **Decisiones:**
+    - en «Siguiente paso», la planificación va antes que «esperando roles»;
+    - el handoff ausente muestra el estado vacío y otros 404 muestran error;
+    - Artefactos solo agrupa `tasks.md` por rol, porque el DTO no trae `tasks.<rol>.md`.
+  - **Verificación:**
+    - `go build`, `go vet`, `go test ./internal/dashboard/...` (repetido por el orquestador) y `gofmt -l`: OK.
+    - Navegador del orquestador: tablero y detalle en oscuro con el recordatorio `/sdd-archive`, sin errores de consola.
+    - El escritor probó además la lista, las tres pestañas, 390 px, Continuar con consola y la confirmación de Migrar.
   - **Tablero por fase:** las columnas vacías se pliegan y las de fases con acción (verify) quedan siempre visibles; se resuelve el desbordamiento a 1440 px.
   - **Vista lista:** con minipaso de 7 fases.
   - **Filtros:** chips con contador y filtro por rol a partir de `/api/workspace`.
@@ -250,7 +270,7 @@ Ruta de cada tarea: «delegada» significa un escritor acotado, que se elige por
 
 ## Siguiente paso
 
-T3: Incrementos y detalle.
+T4: Inicio.
 
 ## Seguimientos
 

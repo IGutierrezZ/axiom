@@ -1,31 +1,103 @@
-// Detalle de incremento: Artefactos · Roles y barrera · Handoff.
-// Provisional hasta T3. Aquí viven, bajo la ruta del incremento, las antiguas
-// pestañas globales Roles y Handoffs (el cambio ya no se elige en un desplegable).
+// Detalle de incremento: cabecera, pasos de fase, «Siguiente paso» y pestañas
+// Artefactos · Roles y barrera · Handoff, sincronizadas con la ruta por hash.
+// Roles y Handoff viven en detalle-roles.js y detalle-handoff.js.
 
 import { api, escapeHtml } from '../core/api.js';
-import { $, $all, openDialog, closeDialog, renderConsole, setBusy, toast, statusPill, stateEmpty, stateError, stateLoading } from '../core/components.js';
+import { $, $all, button, reminder, renderConsole, setBusy, stateEmpty, stateError, stateLoading, toast } from '../core/components.js';
 import { icon } from '../core/icons.js';
-import { hrefFor, navigate } from '../core/router.js';
-import { state } from '../core/state.js';
+import { deriveNextStep, detailSteps, formatDate, isArchived, typeChip } from '../core/increment.js';
+import { firstParagraph, renderMarkdown } from '../core/markdown.js';
+import { hrefFor } from '../core/router.js';
+import { barrierSummary, renderRoles } from './detalle-roles.js';
+import { initHandoff, renderHandoff } from './detalle-handoff.js';
 import { loadIncrements } from './incrementos.js';
 
-let currentChange = null;
-let currentDetail = null;
+// Estado de la vista abierta. token invalida respuestas tardías al cambiar de ruta.
+const ctx = { change: null, failed: null, detail: null, tab: 'artefactos', token: 0, artifact: null, raw: false };
 
 const ARTIFACTS = [
-  ['has_proposal', 'Propuesta', 'proposal.md'],
-  ['has_spec', 'Especificación', 'spec.md'],
-  ['has_design', 'Diseño técnico', 'design.md'],
-  ['has_tasks', 'Plan de tareas', 'tasks.md'],
-  ['has_verify', 'Informe de verificación', 'verify-report.md'],
-  ['has_archive', 'Informe de archivado', 'archive-report.md']
+  { id: 'proposal', flag: 'has_proposal', body: 'proposal', file: 'proposal.md' },
+  { id: 'spec', flag: 'has_spec', body: 'spec', file: 'spec.md' },
+  { id: 'design', flag: 'has_design', body: 'design', file: 'design.md' },
+  { id: 'tasks', flag: 'has_tasks', body: 'tasks_content', file: 'tasks.md' },
+  { id: 'verify', flag: 'has_verify', body: 'verify_report', file: 'verify-report.md' },
+  { id: 'archive', flag: 'has_archive', body: 'archive_report', file: 'archive-report.md' }
 ];
 
 function incrementUrl(change) {
   return `/api/increments/${encodeURIComponent(change)}`;
 }
 
-// ---- Cabecera, pestañas y paneles -------------------------------------------
+// ---- Cabecera y pasos --------------------------------------------------------------------
+
+function renderHeader(detail) {
+  const s = detail.summary;
+  const date = formatDate(s.date);
+  $('#inc-meta').innerHTML = [
+    typeChip(s),
+    isArchived(s) ? `<span class="badge badge-neutral">${icon('archive', 13)}Archivado</span>` : '',
+    `<span class="badge badge-mono">Fase: ${escapeHtml(s.phase)}</span>`,
+    s.tasks_total > 0 ? `<span class="badge badge-neutral">Tareas: ${s.tasks_completed}/${s.tasks_total} (${s.progress_pct}%)</span>` : '',
+    date ? `<time class="badge badge-neutral" datetime="${escapeHtml(s.date)}">${escapeHtml(date)}</time>` : ''
+  ].filter(Boolean).join('');
+  $('#inc-title').textContent = s.name;
+  const desc = firstParagraph(detail.proposal);
+  const descEl = $('#inc-desc');
+  descEl.hidden = !desc;
+  descEl.textContent = desc;
+}
+
+function renderStepper(detail) {
+  const steps = detailSteps(detail);
+  const stateText = { done: 'completada', current: 'en curso', todo: 'pendiente' };
+  $('#inc-stepper').innerHTML = `<ol class="dt-steps" aria-label="Fases SDD">${steps.map(st => {
+    const dot = st.state === 'done' ? icon('check', 12) : st.state === 'current' ? '<span class="dt-step-core"></span>' : '';
+    const sub = st.detail ? `${escapeHtml(st.detail)}${st.pct != null ? ` · ${st.pct}%` : ''}` : escapeHtml(st.file);
+    return `<li class="dt-step is-${st.state}"${st.state === 'current' ? ' aria-current="step"' : ''}>
+      <span class="dt-step-track"><span class="dt-step-dot">${dot}</span><span class="dt-step-bar"></span></span>
+      <span class="dt-step-label">${escapeHtml(st.label)}<span class="sr-only"> — ${stateText[st.state]}</span></span>
+      <span class="dt-step-sub mono">${sub}</span>
+    </li>`;
+  }).join('')}</ol>`;
+}
+
+// ---- Siguiente paso (D5) -------------------------------------------------------------------
+
+function renderNext(detail) {
+  const next = deriveNextStep(detail);
+  const action = next.canContinue
+    ? `<div class="dt-next-actions">${button({ label: 'Continuar con Axiom', iconName: 'play', variant: 'primary', attrs: 'data-action="continue" title="Ejecuta la orden de Axiom que calcula la siguiente instrucción SDD"' })}<span class="field-hint">Axiom calcula la siguiente instrucción SDD y la muestra aquí abajo. No ejecuta fases de agente.</span></div>`
+    : '';
+  const rem = next.reminder ? reminder(next.reminder) : '';
+  $('#inc-next-body').innerHTML = `<div class="dt-next-main"><div class="dt-next-text"><p class="dt-next-title">${escapeHtml(next.title)}</p><p class="muted">${escapeHtml(next.text)}</p></div>${action}</div>${rem}`;
+}
+
+async function runContinue(btn) {
+  const change = ctx.change;
+  if (!change) return;
+  const consoleBox = $('#inc-console');
+  const restore = setBusy(btn, 'Ejecutando…');
+  let ok = false;
+  let data = {};
+  let error = '';
+  try {
+    data = (await api('/api/increments/continue', { body: { name: change } })) || {};
+    ok = data.success !== false;
+  } catch (err) {
+    data = err.data || {};
+    error = err.message;
+  }
+  if (ok) {
+    renderConsole(consoleBox, { title: 'Continuar con Axiom', state: 'ok', text: `[ACCIÓN SDD: ${data.action || 'continue'}]\n\n${data.output || 'Transición efectuada con éxito.'}` });
+  } else {
+    renderConsole(consoleBox, { title: 'Continuar con Axiom', state: 'error', text: `[ERROR]\n\n${data.error || error || 'Fallo en la transición SDD'}\n\n${data.output || ''}` });
+  }
+  restore();
+  await loadIncrements();
+  if (ctx.change === change) await reloadDetail();
+}
+
+// ---- Pestañas --------------------------------------------------------------------------------------
 
 function renderTabs(change, tab) {
   $all('#inc-tabs .tab-link').forEach(link => {
@@ -39,288 +111,206 @@ function renderTabs(change, tab) {
   });
 }
 
-function renderHeader(detail) {
-  const s = detail.summary;
-  $('#inc-title').textContent = s.name;
-  const archived = s.type === 'archived';
-  $('#inc-badges').innerHTML = [
-    statusPill(archived ? 'ok' : 'accent', archived ? 'Archivado' : 'Activo'),
-    `<span class="badge badge-mono">Fase: ${escapeHtml(s.phase)}</span>`,
-    `<span class="badge badge-neutral">Tareas: ${s.tasks_completed}/${s.tasks_total} (${s.progress_pct}%)</span>`
-  ].join('');
-  $('#btn-inc-continue').disabled = archived;
-  $('#btn-inc-verify').disabled = archived;
+function renderTabPill(detail) {
+  const pill = $('#inc-tab-roles-pill');
+  const sum = barrierSummary(detail.barrier_report);
+  pill.hidden = !sum;
+  if (sum) {
+    pill.className = `tab-pill tab-pill-${sum.tone}`;
+    pill.textContent = sum.text;
+  }
 }
 
-function renderArtifacts(detail) {
-  const rows = ARTIFACTS.map(([flag, label, file]) => `<div class="row">
-      <div class="row-main"><span style="font-weight:600">${escapeHtml(label)}</span><span class="mono dim" style="font-size:12px">${escapeHtml(file)}</span></div>
-      ${detail[flag] ? statusPill('ok', 'Presente') : statusPill('bad', 'Ausente')}
-    </div>`).join('');
+// ---- Artefactos ----------------------------------------------------------------------------------------
 
-  let preview = '';
-  if (detail.proposal) {
-    const text = detail.proposal.length > 500 ? detail.proposal.substring(0, 500) + '…' : detail.proposal;
-    preview = `<div class="card"><h2 class="card-title-h">Vista previa de la propuesta</h2><pre class="preview-pre">${escapeHtml(text)}</pre></div>`;
+function availableArtifacts(detail) {
+  return ARTIFACTS.map(a => ({ ...a, exists: !!detail[a.flag], text: detail[a.body] || '' }));
+}
+
+function artifactMeta(a, detail) {
+  if (a.id === 'tasks' && detail.summary.tasks_total > 0) return `${detail.summary.tasks_completed}/${detail.summary.tasks_total}`;
+  return '';
+}
+
+function renderArtifacts() {
+  const detail = ctx.detail;
+  const panel = $('#inc-panel-artefactos');
+  const list = availableArtifacts(detail);
+  const existing = list.filter(a => a.exists);
+  if (existing.length === 0) {
+    panel.innerHTML = stateEmpty('Este incremento aún no tiene artefactos', 'Aparecerán a medida que avancen las fases SDD.', 'file');
+    return;
   }
-  $('#inc-panel-artefactos').innerHTML = `<div class="card card-flush"><div class="card-head"><h2 class="card-title-h">Artefactos detectados</h2></div><div class="row-list">${rows}</div></div>${preview ? `<div style="margin-top:20px">${preview}</div>` : ''}`;
+  if (!existing.some(a => a.id === ctx.artifact)) ctx.artifact = existing[0].id;
+  const selected = existing.find(a => a.id === ctx.artifact);
+
+  const nav = list.map(a => {
+    if (!a.exists) {
+      return `<li><span class="dt-doc is-missing">${icon('fileDashed', 16)}<span class="mono grow">${escapeHtml(a.file)}</span><span class="dt-doc-meta">no existe todavía</span></span></li>`;
+    }
+    const meta = artifactMeta(a, detail);
+    const current = a.id === ctx.artifact;
+    return `<li><button type="button" class="dt-doc" data-artifact="${a.id}"${current ? ' aria-current="true"' : ''}>${icon('file', 16)}<span class="mono grow">${escapeHtml(a.file)}</span>${meta ? `<span class="dt-doc-meta mono">${escapeHtml(meta)}</span>` : ''}</button></li>`;
+  }).join('');
+
+  let body;
+  if (!selected.text.trim()) {
+    body = stateEmpty('No hay contenido que mostrar', 'El artefacto existe, pero el servidor no ha devuelto su texto (puede estar repartido en varios ficheros).', 'file');
+  } else if (ctx.raw) {
+    body = `<pre class="md-raw" tabindex="0">${escapeHtml(selected.text)}</pre>`;
+  } else {
+    body = `<div class="md">${renderMarkdown(selected.text, { sectionStats: selected.id === 'tasks' })}</div>`;
+  }
+
+  panel.innerHTML = `<div class="dt-artifacts">
+    <nav class="dt-doclist" aria-label="Artefactos del incremento"><ul>${nav}</ul></nav>
+    <article class="dt-viewer" aria-labelledby="dt-viewer-title">
+      <div class="dt-viewer-head">
+        <h2 id="dt-viewer-title" class="mono">${escapeHtml(selected.file)}</h2>
+        <div class="seg-group seg-inline" role="group" aria-label="Formato del documento">
+          <button type="button" class="seg seg-wide" data-format="view" aria-pressed="${!ctx.raw}">Vista</button>
+          <button type="button" class="seg seg-wide" data-format="raw" aria-pressed="${ctx.raw}">Markdown</button>
+        </div>
+      </div>
+      <div class="dt-viewer-body">${body}</div>
+    </article>
+  </div>`;
+}
+
+// withFocus repinta conservando el foco del teclado en el control equivalente.
+function withFocus(fn) {
+  const el = document.activeElement;
+  let sel = null;
+  if (el && $('#inc-panel-artefactos').contains(el)) {
+    if (el.hasAttribute('data-artifact')) sel = `[data-artifact="${el.getAttribute('data-artifact')}"]`;
+    else if (el.hasAttribute('data-format')) sel = `[data-format="${el.getAttribute('data-format')}"]`;
+  }
+  fn();
+  if (sel) {
+    const target = $(sel, $('#inc-panel-artefactos'));
+    if (target) target.focus();
+  }
+}
+
+// ---- Montaje ------------------------------------------------------------------------------------------------
+
+function paintDetail() {
+  const detail = ctx.detail;
+  renderHeader(detail);
+  renderStepper(detail);
+  renderNext(detail);
+  renderTabPill(detail);
+  renderArtifacts();
+}
+
+async function renderTabContent() {
+  const { change, tab, detail } = ctx;
+  if (!detail) return;
+  const token = ctx.token;
+  const isCurrent = () => token === ctx.token && ctx.change === change;
+  if (tab === 'roles') {
+    await renderRoles($('#inc-panel-roles'), { detail, change, onMigrated: reloadDetail });
+  } else if (tab === 'handoff') {
+    await renderHandoff($('#inc-panel-handoff'), change, { archived: isArchived(detail.summary), isCurrent });
+  }
+}
+
+// refreshDetail repinta el detalle abierto con datos nuevos (botón Actualizar).
+export function refreshDetail() {
+  return reloadDetail();
+}
+
+// reloadDetail vuelve a pedir el detalle sin vaciar la pantalla (tras Continuar, Migrar o un handoff).
+async function reloadDetail() {
+  const change = ctx.change;
+  if (!change) return;
+  const token = ++ctx.token;
+  try {
+    const detail = await api(incrementUrl(change));
+    if (token !== ctx.token) return;
+    ctx.detail = detail;
+    paintDetail();
+    await renderTabContent();
+  } catch (err) {
+    if (token === ctx.token) toast(`No se pudo actualizar el incremento: ${err.message}`, 'bad');
+  }
+}
+
+function showLoading(change) {
+  $('#inc-title').textContent = change;
+  $('#inc-meta').innerHTML = '';
+  $('#inc-desc').hidden = true;
+  $('#inc-stepper').innerHTML = '';
+  $('#inc-next-body').innerHTML = stateLoading('Cargando el incremento…');
+  $('#inc-tab-roles-pill').hidden = true;
+  $('#inc-panel-artefactos').innerHTML = stateLoading('Cargando artefactos…');
+}
+
+function showLoadError(err) {
+  $('#inc-next-body').innerHTML = '';
+  $('#inc-panel-artefactos').innerHTML = `${stateError(err.message, 'No se pudo obtener el incremento')}<p class="ix-more">${button({ label: 'Reintentar', iconName: 'refresh', size: 'sm', attrs: 'data-action="retry"' })}</p>`;
 }
 
 // enterDetail monta la vista del incremento de la ruta (carga el detalle si cambió).
 export async function enterDetail(route) {
   const { change, tab } = route;
+  ctx.tab = tab;
   renderTabs(change, tab);
 
-  if (currentChange !== change || !currentDetail) {
-    // La consola solo se limpia al cambiar de incremento, no al refrescar el mismo.
-    if (currentChange !== change) $('#inc-console').hidden = true;
-    currentChange = change;
-    currentDetail = null;
-    $('#inc-title').textContent = change;
-    $('#inc-badges').innerHTML = '';
-    $('#inc-panel-artefactos').innerHTML = stateLoading('Cargando artefactos…');
+  if (ctx.change !== change || !ctx.detail) {
+    if (ctx.change !== change) {
+      // La consola, la selección de artefacto y el formato solo se reinician al cambiar de incremento.
+      $('#inc-console').hidden = true;
+      ctx.artifact = null;
+      ctx.raw = false;
+    }
+    ctx.change = change;
+    ctx.detail = null;
+    const token = ++ctx.token;
+    showLoading(change);
     try {
-      currentDetail = await api(incrementUrl(change));
-      if (currentChange !== change) return;
-      renderHeader(currentDetail);
-      renderArtifacts(currentDetail);
+      const detail = await api(incrementUrl(change));
+      if (token !== ctx.token) return;
+      ctx.detail = detail;
+      paintDetail();
     } catch (err) {
-      $('#inc-panel-artefactos').innerHTML = stateError(err.message, 'No se pudo obtener el incremento');
-      currentChange = null;
+      if (token !== ctx.token) return;
+      showLoadError(err);
+      ctx.failed = change;
+      ctx.change = null;
       return;
     }
   }
-
-  if (tab === 'roles') await loadRolesForChange(change);
-  if (tab === 'handoff') await loadHandoffForChange(change);
-}
-
-// ---- Acciones SDD (Continuar / Validar verificación) ------------------------
-
-async function runAction(path, change) {
-  try {
-    const data = await api(path, { body: { name: change } });
-    return { ok: !!data && data.success !== false, data: data || {}, error: '' };
-  } catch (err) {
-    return { ok: false, data: err.data || {}, error: err.message };
-  }
-}
-
-function initActions() {
-  const consoleBox = $('#inc-console');
-
-  const cont = $('#btn-inc-continue');
-  cont.addEventListener('click', async () => {
-    if (!currentChange) return;
-    const change = currentChange;
-    const restore = setBusy(cont, 'Ejecutando…');
-    const { ok, data, error } = await runAction('/api/increments/continue', change);
-    if (ok) {
-      renderConsole(consoleBox, { title: 'Continuar SDD', state: 'ok', text: `[ACCIÓN SDD: ${data.action || 'continue'}]\n\n${data.output || 'Transición efectuada con éxito.'}` });
-    } else {
-      renderConsole(consoleBox, { title: 'Continuar SDD', state: 'error', text: `[ERROR]\n\n${data.error || error || 'Fallo en la transición SDD'}\n\n${data.output || ''}` });
-    }
-    restore();
-    await loadIncrements();
-    currentDetail = null;
-    const route = { name: 'incremento', change, tab: currentTab() };
-    await enterDetail(route);
-  });
-
-  const verify = $('#btn-inc-verify');
-  verify.addEventListener('click', async () => {
-    if (!currentChange) return;
-    const restore = setBusy(verify, 'Validando…');
-    const { ok, data, error } = await runAction('/api/increments/verify', currentChange);
-    if (ok) {
-      renderConsole(consoleBox, { title: 'Verificación formal', state: 'ok', text: `[VERIFICACIÓN FORMAL: CORRECTA]\n\n${data.output || 'Conformidad de especificaciones aprobada.'}` });
-    } else {
-      renderConsole(consoleBox, { title: 'Verificación formal', state: 'error', text: `[VERIFICACIÓN FORMAL: INCONSISTENCIA O ERROR]\n\n${data.error || error || 'Fallo en la verificación'}\n\n${data.output || ''}` });
-    }
-    restore();
-  });
-}
-
-function currentTab() {
-  const active = document.querySelector('#inc-tabs .tab-link[aria-current="page"]');
-  return active ? active.getAttribute('data-tab') : 'artefactos';
-}
-
-// ---- Roles y barrera ---------------------------------------------------------
-
-async function loadRolesForChange(change) {
-  const rolesContainer = $('#roles-container');
-  const banner = $('#barrier-result-card');
-  rolesContainer.innerHTML = stateLoading('Evaluando roles y barrera…');
-  try {
-    const barrier = await api(`/api/roles?change=${encodeURIComponent(change)}`);
-    banner.classList.remove('hidden');
-    const roleList = Array.isArray(barrier.roles) ? barrier.roles : [];
-    const single = roleList.length <= 1 && (roleList.length === 0 || roleList[0].role === 'fullstack');
-
-    if (single) {
-      banner.className = 'barrier-banner satisfied';
-      $('#barrier-icon').innerHTML = icon('sparkles', 20);
-      $('#barrier-title').textContent = 'Rol unificado (fullstack): flujo continuo';
-      $('#barrier-desc').textContent = 'Axiom opera con el rol canónico unificado «fullstack». No requiere barreras fan-in concurrentes ni esperas entre agentes: el ciclo avanza de forma continua.';
-    } else if (barrier.satisfied) {
-      banner.className = 'barrier-banner satisfied';
-      $('#barrier-icon').innerHTML = icon('check', 20);
-      $('#barrier-title').textContent = 'Barrera superada';
-      $('#barrier-desc').textContent = 'Todos los roles obligatorios (blocking) han verificado sus tareas.';
-    } else {
-      banner.className = 'barrier-banner blocked';
-      $('#barrier-icon').innerHTML = icon('x', 20);
-      $('#barrier-title').textContent = 'Barrera bloqueada';
-      $('#barrier-desc').textContent = (barrier.blockers && barrier.blockers.length > 0)
-        ? barrier.blockers.join(' • ')
-        : 'Existen roles obligatorios con tareas pendientes o con la verificación fallida.';
-    }
-
-    if (roleList.length === 0) {
-      rolesContainer.innerHTML = stateEmpty('Sin roles específicos', 'Modo mono-rol: no se detectaron roles declarados.');
-      return;
-    }
-    rolesContainer.innerHTML = roleList.map(status => {
-      const verified = status.verdict === 'pass';
-      const tasks = status.tasks || { total: 0, completed: 0, percent: 0 };
-      const pct = Math.round(tasks.percent);
-      return `<div class="role-card">
-        <div>
-          <div class="card-header">
-            <div class="card-title">${escapeHtml(status.name || status.role)}</div>
-            <div class="card-badges">
-              <span class="badge badge-${escapeHtml(status.gate_policy)}">${escapeHtml(status.gate_policy)}</span>
-              ${verified ? statusPill('ok', `Verif.: ${status.verdict}`) : statusPill('bad', `Verif.: ${status.verdict || 'pendiente'}`)}
-            </div>
-          </div>
-          <div style="margin: 14px 0">
-            <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-2);margin-bottom:6px"><span>Tareas: ${tasks.completed}/${tasks.total}</span><span>${pct}%</span></div>
-            <div class="progress${pct >= 100 ? ' is-done' : ''}" role="img" aria-label="${pct}% de tareas completadas"><span style="width:${pct}%"></span></div>
-          </div>
-          <p class="dim" style="font-size:12px">Repositorios: <code>${escapeHtml((status.repositories || []).join(', ') || '.')}</code></p>
-        </div>
-      </div>`;
-    }).join('');
-  } catch (err) {
-    console.error(err);
-    rolesContainer.innerHTML = stateError(err.message, 'No se pudieron evaluar los roles');
-    banner.classList.add('hidden');
-  }
-}
-
-// ---- Handoff -----------------------------------------------------------------
-
-function showHandoffEmpty(text) {
-  $('#handoff-display').classList.add('hidden');
-  const empty = $('#handoff-empty');
-  empty.classList.remove('hidden');
-  empty.textContent = text;
-}
-
-async function loadHandoffForChange(change) {
-  try {
-    const ho = await api(`/api/handoffs?change=${encodeURIComponent(change)}`);
-    $('#handoff-empty').classList.add('hidden');
-    $('#handoff-display').classList.remove('hidden');
-    const meta = ho.metadata || {};
-    const sections = ho.sections || {};
-
-    $('#ho-from-phase').textContent = meta.from_phase || 'origen';
-    $('#ho-to-phase').textContent = meta.to_phase || 'destino';
-    $('#ho-roles').innerHTML = `${escapeHtml(meta.from_role)} ${icon('arrowRight', 12)} ${escapeHtml(meta.to_role)}`;
-    const ready = meta.status === 'ready';
-    const status = $('#ho-status');
-    status.className = `badge ${ready ? 'badge-ok' : 'badge-warn'}`;
-    status.innerHTML = `${icon(ready ? 'check' : 'alert', 13)}${escapeHtml(meta.status || 'ready')}`;
-    $('#ho-time').textContent = meta.timestamp ? new Date(meta.timestamp).toLocaleString('es-ES') : '--';
-
-    const parts = [
-      ['1', 'Resumen ejecutivo', sections.executive_summary],
-      ['2', 'Artefactos modificados y creados', sections.artifacts],
-      ['3', 'Decisiones técnicas y acuerdos', sections.decisions],
-      ['4', 'Riesgos, bloqueos y preguntas abiertas', sections.risks_and_blockers],
-      ['5', 'Instrucciones directas para el siguiente rol', sections.direct_instructions]
-    ];
-    $('#ho-sections-container').innerHTML = parts.map(([n, title, text]) =>
-      `<div class="section-box"><h3>${n}. ${escapeHtml(title)}</h3><div class="section-content">${escapeHtml(text || 'Sin contenido.')}</div></div>`
-    ).join('');
-  } catch (err) {
-    if (err.status === 404) showHandoffEmpty(`No se encontró un handoff.md para «${change}».`);
-    else showHandoffEmpty(`Error cargando el handoff: ${err.message}`);
-  }
-}
-
-// ---- Modal «Redactar handoff» -------------------------------------------------
-
-function fillHandoffChangeOptions(selected) {
-  const select = $('#handoff-modal-change');
-  select.innerHTML = state.increments
-    .filter(inc => inc.type === 'active')
-    .map(inc => `<option value="${escapeHtml(inc.name)}">${escapeHtml(inc.name)} (fase: ${escapeHtml(inc.phase)})</option>`)
-    .join('');
-  if (selected) select.value = selected;
-}
-
-function initHandoffModal() {
-  const dialog = $('#modal-create-handoff');
-  const errorBox = $('#handoff-error');
-  const submit = $('#btn-submit-create-handoff');
-  const val = (id) => $(id).value.trim();
-
-  $('#btn-open-create-handoff').addEventListener('click', () => {
-    fillHandoffChangeOptions(currentChange);
-    errorBox.hidden = true;
-    openDialog(dialog, '#handoff-modal-summary');
-  });
-
-  submit.addEventListener('click', async () => {
-    const change = $('#handoff-modal-change').value;
-    const summary = val('#handoff-modal-summary');
-    if (!change) {
-      errorBox.hidden = false;
-      errorBox.textContent = 'Debes seleccionar un incremento para el handoff.';
-      return;
-    }
-    if (!summary) {
-      errorBox.hidden = false;
-      errorBox.textContent = 'Debes indicar el resumen ejecutivo del relevo formal.';
-      $('#handoff-modal-summary').focus();
-      return;
-    }
-    errorBox.hidden = true;
-    const restore = setBusy(submit, 'Registrando…');
-    try {
-      const data = await api('/api/handoffs', {
-        body: {
-          change,
-          from_phase: $('#handoff-modal-from-phase').value,
-          to_phase: $('#handoff-modal-to-phase').value,
-          from_role: val('#handoff-modal-from-role'),
-          to_role: val('#handoff-modal-to-role'),
-          status: $('#handoff-modal-status').value,
-          executive_summary: summary,
-          artifacts: val('#handoff-modal-artifacts'),
-          decisions: val('#handoff-modal-decisions'),
-          risks: val('#handoff-modal-risks'),
-          instructions: val('#handoff-modal-instructions')
-        }
-      });
-      if (data && data.success === false) throw new Error(data.error || 'Error al registrar el handoff');
-      closeDialog(dialog);
-      toast('Handoff registrado.', 'ok');
-      navigate('incremento', { change, tab: 'handoff' });
-    } catch (err) {
-      errorBox.hidden = false;
-      errorBox.textContent = `Error al registrar el handoff: ${err.message}`;
-    } finally {
-      restore();
-    }
-  });
+  await renderTabContent();
 }
 
 export function initDetail() {
-  initActions();
-  initHandoffModal();
+  $('#inc-next-body').addEventListener('click', (event) => {
+    const btn = event.target.closest('[data-action="continue"]');
+    if (btn) runContinue(btn);
+  });
+
+  $('#inc-panel-artefactos').addEventListener('click', (event) => {
+    const art = event.target.closest('[data-artifact]');
+    const fmt = event.target.closest('[data-format]');
+    if (art) {
+      ctx.artifact = art.getAttribute('data-artifact');
+      withFocus(renderArtifacts);
+    } else if (fmt) {
+      ctx.raw = fmt.getAttribute('data-format') === 'raw';
+      withFocus(renderArtifacts);
+    } else if (event.target.closest('[data-action="retry"]') && ctx.failed) {
+      enterDetail({ name: 'incremento', change: ctx.failed, tab: ctx.tab });
+    }
+  });
+
+  initHandoff({
+    panel: $('#inc-panel-handoff'),
+    getChange: () => ctx.change,
+    onCreated: (change) => {
+      if (change === ctx.change) reloadDetail();
+      else window.location.hash = hrefFor('incremento', { change, tab: 'handoff' });
+    }
+  });
   // Los clics en las pestañas son enlaces de ruta (hash): no requieren JS.
 }
