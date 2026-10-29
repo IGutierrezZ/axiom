@@ -88,9 +88,83 @@ func reviewStopHookStateFile(home, sessionID string) string {
 	return filepath.Join(home, ".gentle-ai", "review-stop-hook", "v1", sessionID+".json")
 }
 
-func TestReviewStopHookFailedWriteDoesNotPersistReminder(t *testing.T) {
+// markReviewCLIAxiomProject makes repo an Axiom project for the hook's gate
+// (workspace.IsAxiomProject: an axiom.yaml of its own) without touching its
+// history or its candidate: the file is excluded locally, so the snapshot
+// (`ls-files --others --exclude-standard`) never sees it.
+func markReviewCLIAxiomProject(t *testing.T, repo string) {
+	t.Helper()
+	if err := os.WriteFile(filepath.Join(repo, "axiom.yaml"), []byte("workspace:\n  name: demo\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	infoDir := filepath.Join(repo, ".git", "info")
+	if err := os.MkdirAll(infoDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	exclude, err := os.OpenFile(filepath.Join(infoDir, "exclude"), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer exclude.Close()
+	if _, err := exclude.WriteString("\n/axiom.yaml\n"); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// initReviewStopHookRepo is initReviewCLIRepo for a repository that belongs to
+// an Axiom project, the only place the stop hook acts.
+func initReviewStopHookRepo(t *testing.T) string {
+	t.Helper()
+	repo := initReviewCLIRepo(t)
+	markReviewCLIAxiomProject(t, repo)
+	return repo
+}
+
+// A repository that is not an Axiom project -- even one with the openspec/
+// layout other tools use -- gets no reminder and no baseline, whatever the
+// review mode: the hook is installed machine-wide, so it must stay inert there
+// and write nothing under the user's home.
+func TestReviewStopHookIsInertOutsideAnAxiomProject(t *testing.T) {
 	home := reviewModeHome(t)
 	repo := initReviewCLIRepo(t)
+	if err := os.MkdirAll(filepath.Join(repo, "openspec", "changes", "x"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(repo, "openspec", "changes", "x", "proposal.md"), []byte("# x\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	stageReviewStopHookCandidate(t, repo)
+	enableReviewStopHookRDD(t, repo)
+	homeBefore := listFiles(t, home)
+
+	startStdout, startStderr := runReviewStopHookSessionStartTest(t, "sess-foreign", repo)
+	stdin := strings.NewReader(reviewStopHookTestPayload(t, "sess-foreign", repo, false, nil))
+	var stopStdout, stopStderr bytes.Buffer
+	if err := runReviewStopHook([]string{"--agent", "claude-code"}, stdin, &stopStdout, &stopStderr); err != nil {
+		t.Fatalf("Stop run: %v\nstderr: %s", err, stopStderr.String())
+	}
+	for name, stream := range map[string]string{
+		"SessionStart stdout": startStdout.String(), "SessionStart stderr": startStderr.String(),
+		"Stop stdout": stopStdout.String(), "Stop stderr": stopStderr.String(),
+	} {
+		if stream != "" {
+			t.Errorf("%s = %q, expected silence outside an Axiom project", name, stream)
+		}
+	}
+	if _, err := os.Stat(reviewStopHookStateFile(home, "sess-foreign")); !os.IsNotExist(err) {
+		t.Errorf("expected no session marker outside an Axiom project, stat err=%v", err)
+	}
+	if _, err := os.Stat(filepath.Join(home, ".gentle-ai", "review-stop-hook")); !os.IsNotExist(err) {
+		t.Errorf("expected no review-stop-hook state directory outside an Axiom project, stat err=%v", err)
+	}
+	if homeAfter := listFiles(t, home); strings.Join(homeAfter, "|") != strings.Join(homeBefore, "|") {
+		t.Errorf("the hook must not write under the user's home: before %v, after %v", homeBefore, homeAfter)
+	}
+}
+
+func TestReviewStopHookFailedWriteDoesNotPersistReminder(t *testing.T) {
+	home := reviewModeHome(t)
+	repo := initReviewStopHookRepo(t)
 	stageReviewStopHookCandidate(t, repo)
 	enableReviewStopHookRDD(t, repo)
 
@@ -114,7 +188,7 @@ func TestReviewStopHookFailedWriteDoesNotPersistReminder(t *testing.T) {
 
 func TestReviewStopHookBlocksWithReasonAndBothCommands(t *testing.T) {
 	home := reviewModeHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initReviewStopHookRepo(t)
 	stageReviewStopHookCandidate(t, repo)
 	enableReviewStopHookRDD(t, repo)
 
@@ -149,7 +223,7 @@ func TestReviewStopHookBlocksWithReasonAndBothCommands(t *testing.T) {
 
 func TestReviewStopHookSilentWhenStopHookActive(t *testing.T) {
 	reviewModeHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initReviewStopHookRepo(t)
 	stageReviewStopHookCandidate(t, repo)
 	enableReviewStopHookRDD(t, repo)
 
@@ -165,7 +239,7 @@ func TestReviewStopHookSilentWhenStopHookActive(t *testing.T) {
 
 func TestReviewStopHookSilentWhenRDDOff(t *testing.T) {
 	home := reviewModeHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initReviewStopHookRepo(t)
 	stageReviewStopHookCandidate(t, repo)
 	// Receipt-driven development is opt-in and off by default: no enable call.
 
@@ -201,7 +275,7 @@ func TestReviewStopHookSilentForNonRepositoryCwd(t *testing.T) {
 
 func TestReviewStopHookSilentForCleanWorktree(t *testing.T) {
 	reviewModeHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initReviewStopHookRepo(t)
 	enableReviewStopHookRDD(t, repo)
 	// No candidate staged: the worktree is clean.
 
@@ -217,7 +291,7 @@ func TestReviewStopHookSilentForCleanWorktree(t *testing.T) {
 
 func TestReviewStopHookSecondRunSameSessionIsSilent(t *testing.T) {
 	reviewModeHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initReviewStopHookRepo(t)
 	stageReviewStopHookCandidate(t, repo)
 	enableReviewStopHookRDD(t, repo)
 
@@ -241,7 +315,7 @@ func TestReviewStopHookSecondRunSameSessionIsSilent(t *testing.T) {
 
 func TestReviewStopHookDifferentSessionRemindsAgain(t *testing.T) {
 	reviewModeHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initReviewStopHookRepo(t)
 	stageReviewStopHookCandidate(t, repo)
 	enableReviewStopHookRDD(t, repo)
 
@@ -264,7 +338,7 @@ func TestReviewStopHookDifferentSessionRemindsAgain(t *testing.T) {
 
 func TestReviewStopHookInvalidSessionIDRemindsWithoutPersisting(t *testing.T) {
 	home := reviewModeHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initReviewStopHookRepo(t)
 	stageReviewStopHookCandidate(t, repo)
 	enableReviewStopHookRDD(t, repo)
 
@@ -298,7 +372,7 @@ func TestReviewStopHookInvalidSessionIDRemindsWithoutPersisting(t *testing.T) {
 
 func TestReviewStopHookIgnoresUnknownJSONFields(t *testing.T) {
 	reviewModeHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initReviewStopHookRepo(t)
 	stageReviewStopHookCandidate(t, repo)
 	enableReviewStopHookRDD(t, repo)
 
@@ -317,7 +391,7 @@ func TestReviewStopHookIgnoresUnknownJSONFields(t *testing.T) {
 
 func TestReviewStopHookRequiresSupportedAgent(t *testing.T) {
 	reviewModeHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initReviewStopHookRepo(t)
 	stageReviewStopHookCandidate(t, repo)
 	enableReviewStopHookRDD(t, repo)
 
@@ -345,7 +419,7 @@ func TestReviewStopHookRequiresSupportedAgent(t *testing.T) {
 
 func TestReviewStopHookSessionStartWritesBaselineSilently(t *testing.T) {
 	home := reviewModeHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initReviewStopHookRepo(t)
 	stageReviewStopHookCandidate(t, repo)
 	enableReviewStopHookRDD(t, repo)
 
@@ -369,7 +443,7 @@ func TestReviewStopHookSessionStartWritesBaselineSilently(t *testing.T) {
 
 func TestReviewStopHookStopSilentWhenCandidateMatchesSessionBaseline(t *testing.T) {
 	reviewModeHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initReviewStopHookRepo(t)
 	stageReviewStopHookCandidate(t, repo)
 	enableReviewStopHookRDD(t, repo)
 
@@ -392,7 +466,7 @@ func TestReviewStopHookStopSilentWhenCandidateMatchesSessionBaseline(t *testing.
 
 func TestReviewStopHookStopRemindsAfterCandidateChangesFromBaseline(t *testing.T) {
 	reviewModeHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initReviewStopHookRepo(t)
 	stageReviewStopHookCandidate(t, repo)
 	enableReviewStopHookRDD(t, repo)
 
@@ -422,7 +496,7 @@ func TestReviewStopHookStopRemindsAfterCandidateChangesFromBaseline(t *testing.T
 
 func TestReviewStopHookSessionStartOnCleanWorktreeThenDirtyStopReminds(t *testing.T) {
 	reviewModeHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initReviewStopHookRepo(t)
 	enableReviewStopHookRDD(t, repo)
 	// No candidate staged yet: the worktree is clean at session start.
 
@@ -447,7 +521,7 @@ func TestReviewStopHookSessionStartOnCleanWorktreeThenDirtyStopReminds(t *testin
 
 func TestReviewStopHookSessionStartSilentWhenRDDOff(t *testing.T) {
 	home := reviewModeHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initReviewStopHookRepo(t)
 	stageReviewStopHookCandidate(t, repo)
 	// Receipt-driven development is opt-in and off by default: no enable call.
 
@@ -462,7 +536,7 @@ func TestReviewStopHookSessionStartSilentWhenRDDOff(t *testing.T) {
 
 func TestReviewStopHookUnknownHookEventNameIsSilent(t *testing.T) {
 	reviewModeHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initReviewStopHookRepo(t)
 	stageReviewStopHookCandidate(t, repo)
 	enableReviewStopHookRDD(t, repo)
 
@@ -497,7 +571,7 @@ func reviewStopHookFakeIdentity(t *testing.T) string {
 // stable across two Stop events.
 func TestReviewStopHookStaysQuietWhileConsentStaleMarkerFreshAndCandidateMoves(t *testing.T) {
 	reviewModeHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initReviewStopHookRepo(t)
 	stageReviewStopHookCandidate(t, repo)
 	enableReviewStopHookRDD(t, repo)
 	if err := recordReviewConsentStaleRefusal(repo, reviewStopHookFakeIdentity(t)); err != nil {
@@ -539,7 +613,7 @@ func TestReviewStopHookStaysQuietWhileConsentStaleMarkerFreshAndCandidateMoves(t
 // reminder behavior.
 func TestReviewStopHookRemindsWhenConsentStaleMarkerExpired(t *testing.T) {
 	home := reviewModeHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initReviewStopHookRepo(t)
 	stageReviewStopHookCandidate(t, repo)
 	enableReviewStopHookRDD(t, repo)
 

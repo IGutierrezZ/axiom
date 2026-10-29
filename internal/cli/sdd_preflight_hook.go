@@ -11,6 +11,8 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
 const (
@@ -46,6 +48,7 @@ type sddPreflightHookToolInput struct {
 type sddPreflightHookPayload struct {
 	SessionID      string
 	TranscriptPath string
+	CWD            string
 	HookEventName  string
 	ToolName       string
 	AgentID        string
@@ -58,6 +61,7 @@ func (payload *sddPreflightHookPayload) UnmarshalJSON(raw []byte) error {
 	var wire struct {
 		SessionID      string          `json:"session_id"`
 		TranscriptPath string          `json:"transcript_path"`
+		CWD            string          `json:"cwd,omitempty"`
 		HookEventName  string          `json:"hook_event_name"`
 		ToolName       string          `json:"tool_name"`
 		AgentID        string          `json:"agent_id,omitempty"`
@@ -67,7 +71,7 @@ func (payload *sddPreflightHookPayload) UnmarshalJSON(raw []byte) error {
 	if err := json.Unmarshal(raw, &wire); err != nil {
 		return err
 	}
-	payload.SessionID, payload.TranscriptPath = wire.SessionID, wire.TranscriptPath
+	payload.SessionID, payload.TranscriptPath, payload.CWD = wire.SessionID, wire.TranscriptPath, wire.CWD
 	payload.HookEventName, payload.ToolName, payload.AgentID, payload.AgentType = wire.HookEventName, wire.ToolName, wire.AgentID, wire.AgentType
 	if len(wire.ToolInput) > 0 {
 		if err := json.Unmarshal(wire.ToolInput, &payload.ToolInput); err != nil {
@@ -131,6 +135,12 @@ func runSDDPreflightHook(args []string, stdin io.Reader, stdout io.Writer) error
 	if payload.HookEventName != "PreToolUse" || payload.ToolName != "Agent" || !isSDDPreflightHookPhase(payload.ToolInput.SubagentType) {
 		return nil
 	}
+	// The hook is installed machine-wide, so it only governs Axiom projects: in
+	// any other repository (including one with a bare openspec/ directory) the
+	// dispatch is allowed with no output and nothing is checked or written.
+	if !sddPreflightHookInAxiomProject(payload.CWD) {
+		return nil
+	}
 	if !sddPreflightHookSessionID.MatchString(payload.SessionID) {
 		return sddPreflightHookProtocolError("invalid hook session id")
 	}
@@ -156,6 +166,23 @@ func runSDDPreflightHook(args []string, stdin io.Reader, stdout io.Writer) error
 	}
 	updated["prompt"] = block + "\n\n" + payload.ToolInput.Prompt
 	return writeSDDPreflightHookDecision(stdout, "allow", "parent-confirmed SDD preflight attached by Axiom", updated)
+}
+
+// sddPreflightHookInAxiomProject reports whether the dispatch happens inside an
+// Axiom project (workspace.IsAxiomProject). cwd is the hook payload's working
+// directory; when the runner did not send one, the process directory, which
+// the runner sets to the session's, stands in. With neither, there is no
+// project to govern.
+func sddPreflightHookInAxiomProject(cwd string) bool {
+	cwd = strings.TrimSpace(cwd)
+	if cwd == "" {
+		cwd, _ = os.Getwd()
+	}
+	if cwd == "" {
+		return false
+	}
+	_, ok := workspace.IsAxiomProject(cwd)
+	return ok
 }
 
 // sddPreflightTranscriptRecord is the subset of one JSONL transcript line

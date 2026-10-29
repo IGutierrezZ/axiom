@@ -189,6 +189,39 @@ func TestGuardIsInertOutsideAnAxiomProject(t *testing.T) {
 	}
 }
 
+// El hook está instalado en toda la máquina: un repositorio ajeno que usa la disposición
+// `openspec/changes/<x>/` sin `axiom.yaml` no es un proyecto Axiom, así que ni el bloqueo (evento
+// `pre`) ni el aviso (evento `post`) hacen nada, aunque `Locate` sí reconozca ese `openspec/` como
+// marcador (REQ-24.2) y el repositorio esté en `main`. Con el `axiom.yaml` añadido, el mismo
+// repositorio vuelve a bloquear: lo único que cambia es el criterio de proyecto.
+func TestGuardIsInertInAForeignRepositoryWithABareOpenSpec(t *testing.T) {
+	t.Parallel()
+	requireGit(t)
+	dir := t.TempDir()
+	runGit(t, dir, "init", "-q", "-b", "main")
+	writeFile(t, filepath.Join(dir, "openspec", "changes", "x", "proposal.md"), "# x\n")
+	commit(t, dir, "inicial")
+	before := listDirectory(t, dir)
+	state := checkoutState(t, dir)
+
+	wantNothing(t, guardOf(t, preWrite(filepath.Join(dir, "openspec", "changes", "x", "proposal.md"))))
+	wantNothing(t, guardOf(t, preWrite(filepath.Join(dir, "openspec", "changes", "nuevo", "design.md"))))
+	wantNothing(t, guardOf(t, preWrite(filepath.Join(dir, "odd", "tasks", "x.md"))))
+	wantNothing(t, guardOf(t, postWrite(codeFileOf(dir))))
+	wantNothing(t, guardOf(t, postWrite(filepath.Join(dir, "openspec", "changes", "x", "proposal.md"))))
+
+	if after := checkoutState(t, dir); after != state {
+		t.Errorf("la guarda no debe tocar el repositorio:\nantes:\n%s\ndespués:\n%s", state, after)
+	}
+	if after := listDirectory(t, dir); !slices.Equal(after, before) {
+		t.Errorf("la guarda no debe escribir ficheros: antes %v, después %v", before, after)
+	}
+
+	// Un `axiom.yaml` propio lo convierte en proyecto Axiom y la guarda vuelve a actuar.
+	repo := embeddedCoreProject(t)
+	wantBlocked(t, guardOf(t, preWrite(documentOf(repo))))
+}
+
 func listDirectory(t *testing.T, dir string) []string {
 	t.Helper()
 	var names []string

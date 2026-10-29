@@ -16,6 +16,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/components/filemerge"
 	"github.com/IGutierrezZ/axiom/v3/internal/pathquote"
 	"github.com/IGutierrezZ/axiom/v3/internal/reviewtransaction"
+	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
 // reviewStopHookSchema identifies the reminder envelope this hook prints to
@@ -244,6 +245,12 @@ func runReviewStopHookStop(ctx context.Context, payload reviewStopHookPayload, r
 // internal error.
 func reviewStopHookResolveTargetIdentity(ctx context.Context, repo, runtimeAgent string) (root, targetIdentity string, status ReviewTargetStatusResult, ok bool, err error) {
 	if repo == "" {
+		return "", "", ReviewTargetStatusResult{}, false, nil
+	}
+	// The hook is installed machine-wide, so it only acts in Axiom projects: in
+	// any other repository -- even one with a bare openspec/ directory -- it is
+	// a silent no-op that reads no review mode and records no session marker.
+	if _, isProject := workspace.IsAxiomProject(repo); !isProject {
 		return "", "", ReviewTargetStatusResult{}, false, nil
 	}
 	root, rootErr := (reviewtransaction.SnapshotBuilder{Repo: repo}).ResolveRepositoryRoot(ctx)

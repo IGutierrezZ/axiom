@@ -23,7 +23,7 @@ func derivedRangeTerminalStatus(t *testing.T, repo string) ReviewTargetStatusRes
 
 func TestNextTransitionDerivedRangeAcknowledgementStaysTerminal(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initReviewStopHookRepo(t)
 	runReviewCLIGit(t, repo, "update-ref", "refs/remotes/origin/main", "HEAD")
 	runReviewCLIGit(t, repo, "symbolic-ref", "refs/remotes/origin/HEAD", "refs/remotes/origin/main")
 	writeZeroLensDocumentationCandidate(t, repo)
