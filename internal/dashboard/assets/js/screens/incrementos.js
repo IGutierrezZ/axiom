@@ -1,8 +1,14 @@
 // Incrementos: tablero por fase y vista lista, filtros con contador, filtro por rol
 // y modal «Nuevo incremento». Los datos vienen de GET /api/increments; los roles del
 // filtro, de /api/workspace (state.workspace.roles).
+//
+// Ramas y worktrees (INC-25): el listado trae además, en la cabecera X-Axiom-Notes,
+// avisos informativos que se muestran sobre el tablero; cada cambio marca si está
+// pendiente de archivar y en qué rama de worktree vive. Al crear un incremento, si el
+// servidor pide decidir cómo trabajarlo, se presenta la decisión en un diálogo.
 
-import { api, escapeHtml } from '../core/api.js';
+import { api, apiWithHeaders, escapeHtml } from '../core/api.js';
+import { branchBadge, createWithDecision, parseNotes, pendingArchiveBadge } from '../core/branches.js';
 import { $, $all, openDialog, closeDialog, setBusy, chip, button, stateEmpty, stateError, tableWrap } from '../core/components.js';
 import { icon } from '../core/icons.js';
 import { PHASES, phaseIndex, typeInfo, typeChip, flagBadge, progressBar, miniStepper, formatDate, isArchived } from '../core/increment.js';
@@ -55,6 +61,7 @@ const prefs = {
 
 let loadState = 'loading'; // loading | ready | error
 let loadError = '';
+let notes = [];            // avisos del listado (cabecera X-Axiom-Notes)
 
 function setPref(name, value) {
   prefs[name] = value;
@@ -129,7 +136,7 @@ function cardHtml(inc) {
     ? `<div class="ix-progress"><div class="ix-row"><span>${inc.tasks_completed}/${inc.tasks_total} tareas</span><span class="mono">${inc.progress_pct}%</span></div>${progressBar(inc.progress_pct, `Tareas de ${inc.name}`)}</div>`
     : (archived ? '' : '<span class="ix-note">Sin tareas todavía</span>');
   const flag = archived ? `<span class="badge badge-neutral">${icon('archive', 13)}Archivado</span>` : flagBadge(inc);
-  const footer = [flag, dateHtml(inc)].filter(Boolean).join('');
+  const footer = [flag, pendingArchiveBadge(inc), branchBadge(inc), dateHtml(inc)].filter(Boolean).join('');
   return `<article class="ix-card${archived ? ' is-archived' : ''}">
     <div class="ix-card-top">${typeChip(inc)}</div>
     <h4 class="ix-name"><a href="${link}">${escapeHtml(inc.name)}</a></h4>
@@ -163,7 +170,7 @@ function listHtml(items) {
       <td>${typeChip(inc)}</td>
       <td><span class="ix-phase-cell">${miniStepper(inc)}</span></td>
       <td class="mono">${escapeHtml(progress)}</td>
-      <td>${isArchived(inc) ? `<span class="badge badge-neutral">${icon('archive', 13)}Archivado</span>` : flagBadge(inc)}${dateHtml(inc)}</td>
+      <td><span class="ix-state-cell">${isArchived(inc) ? `<span class="badge badge-neutral">${icon('archive', 13)}Archivado</span>` : flagBadge(inc)}${pendingArchiveBadge(inc)}${branchBadge(inc)}</span>${dateHtml(inc)}</td>
     </tr>`;
   }).join('');
   return tableWrap(`<table class="data-table ix-table"><thead><tr><th scope="col">Incremento</th><th scope="col">Tipo</th><th scope="col">Fase</th><th scope="col">Progreso</th><th scope="col">Estado</th></tr></thead><tbody>${rows}</tbody></table>`, 'Lista de incrementos');
@@ -197,10 +204,26 @@ export function renderIncrements() {
   restoreFocus(key);
 }
 
+// renderNotes pinta los avisos del listado. Los redacta el servidor y pueden nombrar
+// rutas: cada uno va como texto, nunca como HTML. Sin avisos la región se oculta.
+function renderNotes() {
+  const box = $('#increments-notes');
+  const list = $('#increments-notes-list');
+  if (!box || !list) return;
+  list.textContent = '';
+  notes.forEach((note) => {
+    const item = document.createElement('li');
+    item.textContent = note;
+    list.appendChild(item);
+  });
+  box.hidden = notes.length === 0;
+}
+
 function paint() {
   const container = $('#increments-container');
   if (!container) return;
   renderControls();
+  renderNotes();
 
   if (loadState === 'loading') return;
   if (loadState === 'error') {
@@ -245,11 +268,13 @@ function announce(text) {
 
 export async function loadIncrements() {
   try {
-    const data = await api('/api/increments');
+    const { data, headers } = await apiWithHeaders('/api/increments');
+    notes = parseNotes(headers.get('X-Axiom-Notes'));
     set('increments', data || []);
     loadState = 'ready';
   } catch (err) {
     console.error(err);
+    notes = [];
     loadState = 'error';
     loadError = err.message;
   }
@@ -309,6 +334,41 @@ function initControls() {
 
 // ---- Modal «Nuevo incremento» ------------------------------------------------------------------
 
+// askIncrementDecision presenta la decisión del servidor (pregunta y respuestas posibles)
+// en su propio diálogo y devuelve la respuesta elegida, o null si se cancela, se pulsa
+// Escape o se pulsa fuera del diálogo. Elegir es un botón: el servidor ejecuta la creación con esa
+// respuesta (D5). El texto viene del servidor: se pinta con textContent, nunca como HTML.
+function askIncrementDecision(decision) {
+  const dialog = $('#dlg-increment-decision');
+  const choices = $('#inc-decision-choices');
+  let answer = null;
+  $('#inc-decision-question').textContent = decision.question;
+  choices.textContent = '';
+  decision.choices.forEach((choice) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'decision-choice';
+    btn.dataset.answer = choice.answer;
+    const label = document.createElement('strong');
+    label.textContent = choice.label || choice.answer;
+    btn.appendChild(label);
+    if (choice.effect) {
+      const effect = document.createElement('span');
+      effect.textContent = choice.effect;
+      btn.appendChild(effect);
+    }
+    btn.addEventListener('click', () => {
+      answer = choice.answer;
+      dialog.close();
+    });
+    choices.appendChild(btn);
+  });
+  return new Promise((resolve) => {
+    dialog.addEventListener('close', () => resolve(answer), { once: true });
+    openDialog(dialog, '.decision-choice');
+  });
+}
+
 function initNewIncrement() {
   const dialog = $('#modal-new-increment');
   const name = $('#input-inc-name');
@@ -355,8 +415,11 @@ function initNewIncrement() {
     clearInvalid();
     const restore = setBusy(submit, 'Creando…');
     try {
-      const data = await api('/api/increments', { body: { name: nameVal, type: type.value, intent: intentVal } });
-      if (data && data.success === false) throw new Error(data.error || 'Error al crear el incremento');
+      await createWithDecision(
+        payload => api('/api/increments', { body: payload }),
+        askIncrementDecision,
+        { name: nameVal, type: type.value, intent: intentVal }
+      );
       closeDialog(dialog);
       await loadIncrements();
       navigate('incremento', { change: nameVal });

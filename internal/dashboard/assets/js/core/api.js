@@ -16,6 +16,8 @@ function errorMessage(data, status, statusText) {
   if (data && typeof data === 'object') {
     if (data.error) return String(data.error);
     if (data.message) return String(data.message);
+    // Los 409 de «hace falta una decisión» solo traen la etiqueta del estado.
+    if (data.statusLabel) return String(data.statusLabel);
   }
   return statusText || `Error HTTP ${status}`;
 }
@@ -26,9 +28,10 @@ function errorMessage(data, status, statusText) {
 // Solo se comparte el GET sin cuerpo: las acciones (POST) nunca se agrupan.
 const inflight = new Map();
 
-// api ejecuta la petición y devuelve el JSON decodificado (o null si no hay cuerpo).
-// Con opts.body serializa JSON y usa POST por defecto.
-export async function api(path, opts = {}) {
+// apiWithHeaders ejecuta la petición y devuelve { data, headers }: el JSON ya
+// decodificado y las cabeceras de la respuesta, para los endpoints que avisan por
+// ellas (los avisos del listado de incrementos viajan en X-Axiom-Notes).
+export function apiWithHeaders(path, opts = {}) {
   const shared = !opts.method && opts.body === undefined;
   if (!shared) return request(path, opts);
   let pending = inflight.get(path);
@@ -37,6 +40,13 @@ export async function api(path, opts = {}) {
     inflight.set(path, pending);
   }
   return pending;
+}
+
+// api ejecuta la petición y devuelve el JSON decodificado (o null si no hay cuerpo).
+// Con opts.body serializa JSON y usa POST por defecto.
+export async function api(path, opts = {}) {
+  const { data } = await apiWithHeaders(path, opts);
+  return data;
 }
 
 async function request(path, opts) {
@@ -66,7 +76,7 @@ async function request(path, opts) {
   if (!res.ok) {
     throw new ApiError(errorMessage(data, res.status, res.statusText), res.status, data);
   }
-  return data;
+  return { data, headers: res.headers };
 }
 
 // escapeHtml escapa todo dato de la API antes de interpolarlo en HTML.

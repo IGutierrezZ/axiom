@@ -2,6 +2,7 @@
 // modal de añadir / inicializar proyecto.
 
 import { api, escapeHtml } from './core/api.js';
+import { defaultWorktreeRoot, registrationPrefs } from './core/branches.js';
 import { $, openDialog, closeDialog, toast, setBusy } from './core/components.js';
 import { icon } from './core/icons.js';
 import { state, set } from './core/state.js';
@@ -453,6 +454,17 @@ function initAddProject() {
   const dialog = $('#modal-add-project');
   const inputPath = $('#input-project-path');
   const inputName = $('#input-project-name');
+  const selectWorktreeMode = $('#select-project-worktree-mode');
+  const inputWorktreeRoot = $('#input-project-worktree-root');
+  const rootPlaceholder = inputWorktreeRoot.placeholder;
+
+  // Muestra en el campo de raíz el valor por defecto que se aplicará si se deja vacío.
+  const updateWorktreeRootPlaceholder = () => {
+    const def = defaultWorktreeRoot(inputPath.value);
+    inputWorktreeRoot.placeholder = def ? `por defecto: ${def}` : rootPlaceholder;
+  };
+  inputPath.addEventListener('input', updateWorktreeRootPlaceholder);
+  inputPath.addEventListener('change', updateWorktreeRootPlaceholder);
 
   const fillFromPicker = (selectedPath) => {
     inputPath.value = selectedPath;
@@ -460,11 +472,15 @@ function initAddProject() {
       const base = baseName(selectedPath);
       if (base) inputName.value = base;
     }
+    updateWorktreeRootPlaceholder();
   };
 
   const openAdd = () => {
     inputPath.value = '';
     inputName.value = '';
+    selectWorktreeMode.value = 'worktree';
+    inputWorktreeRoot.value = '';
+    updateWorktreeRootPlaceholder();
     $('#roles-builder-container').innerHTML = '';
     showError('add-project-error', '');
     openDialog(dialog, '#input-project-path');
@@ -511,8 +527,15 @@ function initAddProject() {
 
     const restore = setBusy(submit, 'Procesando…');
     try {
+      // Preferencias personales de worktree: el servidor las guarda en el Hub, no en axiom.yaml.
       await api('/api/projects/init', {
-        body: { path: pathVal, name: inputName.value.trim(), topology: $('#select-project-topology').value || 'monorepo-embedded', roles }
+        body: {
+          path: pathVal,
+          name: inputName.value.trim(),
+          topology: $('#select-project-topology').value || 'monorepo-embedded',
+          roles,
+          ...registrationPrefs(selectWorktreeMode.value, inputWorktreeRoot.value)
+        }
       });
       closeDialog(dialog);
       await loadProjects();

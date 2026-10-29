@@ -195,6 +195,11 @@
             <div class="chip-group ix-roles" id="inc-role-filters" role="group" aria-label="Filtrar por rol con tareas pendientes" hidden></div>
           </div>
           <p class="sr-only" id="inc-live" role="status" aria-live="polite"></p>
+          <!-- Avisos informativos del listado (cabecera X-Axiom-Notes): cambios pendientes de archivar, worktrees desaparecidos. No son errores. -->
+          <div class="alert" id="increments-notes" role="status" hidden>
+            <i data-icon="info" data-size="18"></i>
+            <ul class="notes-list grow" id="increments-notes-list" aria-label="Avisos del listado"></ul>
+          </div>
           <div id="increments-container">
             <div class="state" role="status"><div class="spinner" aria-hidden="true"></div><span>Cargando incrementos del workspace…</span></div>
           </div>
@@ -452,6 +457,41 @@
               </div>
             </section>
 
+            <section class="card card-flush eco-wide" aria-labelledby="eco-wt-h">
+              <div class="card-head">
+                <h2 class="card-title-h" id="eco-wt-h">Preferencias de worktree</h2>
+                <span class="badge badge-mono">~/.axiom</span>
+              </div>
+              <div id="eco-worktree-body" class="eco-pad">
+                <p class="eco-note">Cómo se trabaja cada cambio de este proyecto: en un worktree propio, en la carpeta del proyecto o preguntando cada vez. Se guardan en tu Hub (<code>~/.axiom/workspaces.json</code>), solo para este equipo: no modifican <code>axiom.yaml</code> ni ningún fichero del proyecto.</p>
+                <div id="eco-worktree-state">
+                  <div class="state" role="status"><div class="spinner" aria-hidden="true"></div><span>Cargando las preferencias de worktree…</span></div>
+                </div>
+                <form id="form-worktree-prefs" class="eco-wt-form" hidden novalidate>
+                  <div class="field-grid">
+                    <div class="field">
+                      <label for="select-worktree-prefs-mode">Modo de trabajo</label>
+                      <select id="select-worktree-prefs-mode" class="form-select">
+                        <option value="">por defecto (worktree)</option>
+                        <option value="worktree">worktree (un worktree por cambio)</option>
+                        <option value="in_place">in_place (en la carpeta del proyecto)</option>
+                        <option value="ask">ask (preguntar en cada cambio)</option>
+                      </select>
+                    </div>
+                    <div class="field">
+                      <label for="input-worktree-prefs-root">Raíz de worktrees (ruta absoluta)</label>
+                      <input type="text" id="input-worktree-prefs-root" class="form-input" placeholder="por defecto: «carpeta»-wt junto a la carpeta del proyecto" autocomplete="off">
+                    </div>
+                  </div>
+                  <div class="eco-wt-actions">
+                    <button type="submit" id="btn-save-worktree-prefs" class="btn btn-primary">Guardar preferencias</button>
+                    <span id="worktree-prefs-effective" class="eco-note"></span>
+                  </div>
+                  <p id="worktree-prefs-status" class="field-hint" role="status"></p>
+                </form>
+              </div>
+            </section>
+
             <section class="card card-flush eco-wide" aria-labelledby="eco-models-h">
               <div class="card-head">
                 <h2 class="card-title-h" id="eco-models-h">Modelos</h2>
@@ -483,6 +523,20 @@
         <button type="submit" value="ok" class="btn btn-primary" data-role="ok">Confirmar</button>
       </div>
     </form>
+  </dialog>
+
+  <!-- Decisión al crear un incremento: se rellena con la pregunta y las respuestas del servidor -->
+  <dialog id="dlg-increment-decision" class="modal" aria-labelledby="inc-decision-title" aria-describedby="inc-decision-question">
+    <div class="modal-head">
+      <h2 id="inc-decision-title">¿Cómo quieres trabajar este cambio?</h2>
+    </div>
+    <div class="modal-body">
+      <p id="inc-decision-question" class="decision-question"></p>
+      <div id="inc-decision-choices" class="decision-choices"></div>
+    </div>
+    <div class="modal-foot">
+      <button type="button" id="btn-cancel-inc-decision" class="btn" data-close>Cancelar</button>
+    </div>
   </dialog>
 
   <!-- Vista previa genérica (SKILL.md de una propuesta del buzón) -->
@@ -546,6 +600,22 @@
           </select>
         </div>
       </div>
+      <!-- Preferencias personales de worktree: se guardan en el Hub, no en axiom.yaml -->
+      <div class="field-grid">
+        <div class="field">
+          <label for="select-project-worktree-mode">Modo de trabajo</label>
+          <select id="select-project-worktree-mode" class="form-select">
+            <option value="worktree" selected>worktree (un worktree por cambio)</option>
+            <option value="in_place">in_place (en la carpeta del proyecto)</option>
+            <option value="ask">ask (preguntar en cada cambio)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="input-project-worktree-root">Raíz de worktrees (ruta absoluta)</label>
+          <input type="text" id="input-project-worktree-root" class="form-input" placeholder="por defecto: «carpeta»-wt junto a la carpeta del proyecto" autocomplete="off">
+        </div>
+      </div>
+      <p class="field-hint">Preferencias personales: se guardan en tu Hub, no en <code>axiom.yaml</code>. Si dejas la raíz vacía se usa la ruta por defecto.</p>
       <div class="form-stack" style="border-top: 1px solid var(--border); padding-top: 14px">
         <div class="field-row" style="justify-content: space-between">
           <span class="field-label">Roles del proyecto (opcional)</span>

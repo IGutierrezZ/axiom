@@ -343,7 +343,18 @@ Ruta de cada tarea: «delegada» significa un escritor acotado, que se elige por
   - `GetBackups` rellena `size_bytes` con la suma de los ficheros regulares bajo `RootDir` del respaldo (comprimido o no). Si no se puede leer, el campo se omite y la pantalla lo oculta.
   - Ecosistema ya muestra el número de ficheros a partir de `files`; no cambia la interfaz.
   - Test Go con un respaldo de tamaño conocido en un `HOME` temporal.
-- [ ] **T11 · Integrar `main` (inc-25) en el rediseño** (delegada: varios ficheros no triviales)
+- [x] **T11 · Integrar `main` (inc-25) en el rediseño** (delegada: varios ficheros no triviales)
+  - **Resultado:**
+    - **Fusión:** commit `7066059b` (`git merge origin/main`, sin rebase). `app.js` se mantiene borrado (`git rm`) e `index.html` conserva la versión del rediseño. La parte Go se fusionó sola y `go build ./...` compila. En ese commit intermedio el paquete de tests no compilaba (`readAsset` declarada dos veces: `assets_branch_test.go` de `main` frente a `assets_test.go`), y `assets_branch_test.go` y `TestRegistrationModalAsksWorktreePrefs` apuntaban a `app.js` y a los ids antiguos.
+    - **Dónde quedó cada función:**
+      - Avisos del listado (`X-Axiom-Notes`) e insignias «Pendiente de archivar» y de rama: Incrementos. `core/api.js` (`apiWithHeaders`), `core/branches.js` (`parseNotes`, `pendingArchiveBadge`, `branchBadge`), `screens/incrementos.js` (`renderNotes`, tarjeta y lista) y la región `#increments-notes` (`role="status"`).
+      - Política de ramas efectiva en solo lectura: Ecosistema, tarjeta Topología. `core/branches.js` (`branchPolicyRows`, `repoPolicyHtml`) usadas desde `topologyHtml` en `screens/ecosystem.js`.
+      - Preferencias personales de worktree del proyecto activo: Ecosistema, tarjeta nueva «Preferencias de worktree» (formulario con botón Guardar, `PUT /api/projects/active/worktree-prefs`; D5: guarda el servidor). `loadWorktreePrefs` y `saveWorktreePrefs` en `screens/ecosystem.js`. Un proyecto sin registrar en el Hub (404) se muestra como estado vacío con la orden que lo registra.
+      - Modo y raíz de worktree al registrar un proyecto: modal de alta en `projects.js` (`initAddProject`, `registrationPrefs`, marcador de raíz por defecto con `defaultWorktreeRoot`).
+      - Diálogo de decisión del 409 `decision_required`: `<dialog id="dlg-increment-decision">` y `askIncrementDecision` en `screens/incrementos.js`; el reintento único con `mode` vive en `createWithDecision` (`core/branches.js`). Un 409 sin decisión muestra su error y su continuación.
+    - **Tests adaptados o nuevos:** `assets_branch_test.go` reescrito (10 tests: estructura y ejecución en node de `api.js` y `branches.js`) y `TestRegistrationModalAsksWorktreePrefs` en `server_test.go` reducido a lo que sirve el servidor. RED observado antes de implementar (11 fallos); el resto de tests de `main` pasan tal cual.
+    - **Verificación:** `go test ./internal/dashboard/... ./internal/tui/... -count=1`, `go vet ./internal/dashboard/...` y `go run ./internal/gofmtcheck`: OK. En el navegador, con el arnés de T2: avisos y insignia reales del listado, diálogo de decisión con el `fetch` simulado (foco en la primera respuesta, texto sin interpretar como HTML, reintento con `mode`), guardado de preferencias y tabla por repositorio con datos simulados, modal de alta a 375 px sin desbordamiento.
+    - **Huecos:** el arnés no puede registrar el worktree en el Hub, así que el formulario de preferencias solo se vio con las respuestas simuladas; el aviso de «pendiente de archivar» no tiene botón (no hay endpoint, D5) y la orden va en el título de la insignia y en el aviso del servidor.
   - Motivo: al preparar el PR, `origin/main` iba 111 commits por delante y chocaba en `assets/app.js` (borrado aquí, modificado en `main`) e `index.html`. inc-25 añadió al dashboard antiguo cinco funciones que el rediseño debe conservar: avisos del listado (`X-Axiom-Notes`), política de ramas en solo lectura (workspace y por repositorio), preferencias personales de worktree (edición y guardado), modo y raíz de worktree al registrar un proyecto, y el diálogo `decision_required` al crear un cambio.
   - Fusionar `origin/main` (sin rebase), resolver conservando el rediseño y llevar esas funciones a los módulos nuevos; adaptar los tests de `main` que apuntan a `app.js` o a los ids antiguos sin perder su intención.
   - Checks: `go test ./internal/dashboard/... ./internal/tui/...`, `go vet ./internal/dashboard/...`, `go run ./internal/gofmtcheck`.
@@ -363,7 +374,7 @@ Ruta de cada tarea: «delegada» significa un escritor acotado, que se elige por
 
 ## Siguiente paso
 
-Tareas T0–T10 cerradas. Verify se queda como recordatorio (decisión del usuario). Falta push y PR (`scripts/axiom-worktree.ps1 pr dashboard-redesign`), con permiso del usuario.
+Tareas T0–T11 cerradas. Verify se queda como recordatorio (decisión del usuario). Falta push y PR (`scripts/axiom-worktree.ps1 pr dashboard-redesign`), con permiso del usuario.
 
 ## Seguimientos
 

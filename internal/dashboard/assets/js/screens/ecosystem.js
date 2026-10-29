@@ -7,8 +7,12 @@
 // - Las operaciones deshabilitan sus botones mientras corren y dejan su resultado
 //   en «Última operación» (solo las hechas en esta sesión de la página).
 // - Restaurar un respaldo pide confirmación explícita antes de llamar a la API.
+// - Ramas y worktrees (INC-25): la topología muestra la política de ramas efectiva en
+//   solo lectura (se declara en axiom.yaml) y una tarjeta propia edita las preferencias
+//   personales de worktree del proyecto activo, que el servidor guarda en el Hub.
 
 import { api, escapeHtml } from '../core/api.js';
+import { branchPolicyRows, effectivePrefsText, repoPolicyHtml } from '../core/branches.js';
 import { $, badge, confirmDialog, promptDialog, setBusy, stateEmpty, stateError, stateLoading, statusPill, tableWrap, toast } from '../core/components.js';
 import {
   OPERATION_LABEL, categoryText, formatBytes, formatEcosystemUpgradeSequence, healthSummary, operationOutcome, sortChecks, statusView
@@ -17,6 +21,7 @@ import { formatDateTime, plural } from '../core/format.js';
 import { icon } from '../core/icons.js';
 import { refreshOverview } from '../core/overview.js';
 import { on, state } from '../core/state.js';
+import { loadProjects } from '../projects.js';
 
 let busy = false;        // una operación (o restauración) en curso: bloquea las demás
 let diagnosing = false;  // «Volver a diagnosticar» en curso
@@ -126,8 +131,9 @@ function topologyHtml(ws) {
       <dt>Topología</dt><dd class="mono">${escapeHtml(ws.topology || '—')}</dd>
       <dt>Repo de specs</dt><dd class="mono">${escapeHtml(ws.specs_repository || 'openspec/')}</dd>
       <dt>Estado</dt><dd>${status}</dd>
+      ${branchPolicyRows(ws)}
     </dl>${note}
-    <h3 class="eco-sub">Roles</h3>${list}
+    <h3 class="eco-sub">Roles</h3>${list}${repoPolicyHtml(ws)}
   </div>`;
 }
 
@@ -199,9 +205,69 @@ async function loadBackups() {
   }
 }
 
+// ---- Preferencias personales de worktree -------------------------------------------------
+
+function showWorktreePrefsStatus(message, tone = '') {
+  const status = $('#worktree-prefs-status');
+  status.textContent = message;
+  status.className = `field-hint${tone ? ` text-${tone}` : ''}`;
+}
+
+function renderWorktreePrefs(data) {
+  const saved = data.worktree_prefs || {};
+  const effective = data.effective_worktree_prefs || {};
+  const root = $('#input-worktree-prefs-root');
+  $('#select-worktree-prefs-mode').value = saved.mode || '';
+  root.value = saved.root || '';
+  if (effective.root) root.placeholder = `por defecto: ${effective.root}`;
+  $('#worktree-prefs-effective').textContent = effectivePrefsText(effective);
+}
+
+// loadWorktreePrefs lee las preferencias del proyecto activo. Un proyecto que no está
+// en el Hub (404) no tiene dónde guardarlas: se dice con la orden que lo registra, que
+// ya viene en el mensaje del servidor, y no se ofrece el formulario.
+async function loadWorktreePrefs() {
+  const stateBox = $('#eco-worktree-state');
+  const form = $('#form-worktree-prefs');
+  try {
+    renderWorktreePrefs(await api('/api/projects/active/worktree-prefs'));
+    stateBox.innerHTML = '';
+    form.hidden = false;
+  } catch (err) {
+    console.error(err);
+    form.hidden = true;
+    stateBox.innerHTML = err.status === 404
+      ? stateEmpty('El proyecto activo no está registrado en el Hub', err.message, 'folder')
+      : stateError(err.message, 'No se pudieron leer las preferencias de worktree');
+  }
+}
+
+// saveWorktreePrefs envía ambas preferencias (un campo vacío retira la preferencia).
+// Guardar es un botón porque lo ejecuta el servidor (D5); después se refresca el
+// selector de proyecto, que lleva las mismas preferencias.
+async function saveWorktreePrefs() {
+  const restore = setBusy($('#btn-save-worktree-prefs'), 'Guardando…');
+  showWorktreePrefsStatus('');
+  try {
+    const data = await api('/api/projects/active/worktree-prefs', {
+      method: 'PUT',
+      body: { mode: $('#select-worktree-prefs-mode').value, root: $('#input-worktree-prefs-root').value.trim() }
+    });
+    renderWorktreePrefs(data);
+    showWorktreePrefsStatus('Preferencias guardadas en tu Hub.', 'ok');
+    toast('Preferencias de worktree guardadas');
+    await loadProjects();
+  } catch (err) {
+    showWorktreePrefsStatus(`No se pudieron guardar las preferencias: ${err.message}`, 'bad');
+    toast('No se pudieron guardar las preferencias de worktree', 'bad');
+  } finally {
+    restore();
+  }
+}
+
 export async function loadEcosystem() {
   // El Doctor lo refresca la caché (overview.js) junto con Actualizar.
-  await Promise.all([loadTopology(), loadModels(), loadBackups()]);
+  await Promise.all([loadTopology(), loadModels(), loadBackups(), loadWorktreePrefs()]);
 }
 
 // ---- Última operación ----------------------------------------------------------------------
@@ -320,6 +386,10 @@ export function initEcosystem() {
   $('#btn-eco-sync').addEventListener('click', event => runSync(event.currentTarget));
   $('#btn-eco-upgrade').addEventListener('click', event => runUpgrade(event.currentTarget));
   $('#btn-eco-create-backup').addEventListener('click', event => runBackup(event.currentTarget));
+  $('#form-worktree-prefs').addEventListener('submit', event => {
+    event.preventDefault();
+    saveWorktreePrefs();
+  });
   $('#eco-backups-body').addEventListener('click', event => {
     const button = event.target.closest('[data-restore]');
     if (button && !busy) restoreBackup(button);

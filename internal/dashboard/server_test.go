@@ -388,6 +388,10 @@ func TestProjectsWorktreePrefsHarness(t *testing.T) {
 	}
 }
 
+// El servidor sirve la página con los campos de worktree del modal de registro y el módulo que los
+// envía. El detalle de los campos y de la lógica (rediseño) lo cubre assets_branch_test.go; aquí se
+// fija solo que lo que el navegador recibe por HTTP es lo que ofrece las preferencias (REQ-25.29,
+// REQ-25.33) y que la interfaz no deja editar el bloque `git:`.
 func TestRegistrationModalAsksWorktreePrefs(t *testing.T) {
 	router, _, _ := newPrefsServer(t, newProjectDir(t, "assets"))
 
@@ -396,20 +400,11 @@ func TestRegistrationModalAsksWorktreePrefs(t *testing.T) {
 	if selectBlock == "" {
 		t.Fatal("index.html: el modal de registro no tiene el selector de modo `select-project-worktree-mode`")
 	}
-	for _, option := range []string{`value="worktree" selected`, `value="in_place"`, `value="ask"`} {
-		if !strings.Contains(selectBlock, option) {
-			t.Errorf("el selector de modo debe contener %q:\n%s", option, selectBlock)
-		}
-	}
 	if got := strings.Count(selectBlock, "<option"); got != 3 {
 		t.Errorf("el selector de modo tiene %d opciones, quiero 3", got)
 	}
-	rootInput := regexp.MustCompile(`<input[^>]*id="input-project-worktree-root"[^>]*>`).FindString(html)
-	if rootInput == "" {
+	if !regexp.MustCompile(`<input[^>]*id="input-project-worktree-root"[^>]*>`).MatchString(html) {
 		t.Fatal("index.html: el modal de registro no tiene el campo `input-project-worktree-root`")
-	}
-	if !strings.Contains(rootInput, "placeholder=") || !strings.Contains(rootInput, "por defecto") || !strings.Contains(rootInput, "-wt") {
-		t.Errorf("el campo de raíz debe mostrar su valor por defecto en el placeholder: %s", rootInput)
 	}
 	for _, marker := range []string{"input-worktree-prefs-root", "select-worktree-prefs-mode", "btn-save-worktree-prefs"} {
 		if !strings.Contains(html, marker) {
@@ -420,16 +415,21 @@ func TestRegistrationModalAsksWorktreePrefs(t *testing.T) {
 		t.Error("index.html no debe ofrecer controles de edición de `git:` (REQ-25.33)")
 	}
 
-	js := request(router, http.MethodGet, "/app.js", "").Body.String()
-	for _, marker := range []string{"worktree_mode:", "worktree_root:", "/api/projects/active/worktree-prefs", "defaultWorktreeRoot"} {
-		if !strings.Contains(js, marker) {
-			t.Errorf("app.js debe contener %q", marker)
+	// Los módulos que envían y guardan las preferencias se sirven como JavaScript.
+	for target, markers := range map[string][]string{
+		"/js/projects.js":          {"worktree"},
+		"/js/screens/ecosystem.js": {"/api/projects/active/worktree-prefs"},
+		"/js/core/branches.js":     {"worktree_mode", "worktree_root", "defaultWorktreeRoot"},
+	} {
+		rr := request(router, http.MethodGet, target, "")
+		if rr.Code != http.StatusOK || !strings.HasPrefix(rr.Header().Get("Content-Type"), "text/javascript") {
+			t.Errorf("GET %s = %d (%s), se esperaba un módulo JavaScript", target, rr.Code, rr.Header().Get("Content-Type"))
 		}
-	}
-	// La petición de alta del modal envía las preferencias elegidas.
-	submit := regexp.MustCompile(`(?s)fetch\('/api/projects/init',.*?roles: roles.*?\}\)`).FindString(js)
-	if !strings.Contains(submit, "worktree_mode") || !strings.Contains(submit, "worktree_root") {
-		t.Errorf("la petición de alta del modal debe enviar worktree_mode y worktree_root:\n%s", submit)
+		for _, marker := range markers {
+			if !strings.Contains(rr.Body.String(), marker) {
+				t.Errorf("%s debe contener %q", target, marker)
+			}
+		}
 	}
 }
 

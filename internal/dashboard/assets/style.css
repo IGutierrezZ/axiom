@@ -329,6 +329,15 @@ dialog.modal::backdrop { background: rgba(10, 10, 14, .55); }
 .modal-body { padding: 18px 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; min-height: 0; }
 .modal-foot { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 10px; padding: 14px 20px; border-top: 1px solid var(--border); background: var(--surface); }
 .modal-foot .grow { flex: 1; font-size: 12px; color: var(--text-3); }
+/* Decisión del servidor al crear un incremento: una respuesta por botón, con su efecto. */
+.decision-question { font-weight: 600; }
+.decision-choices { display: flex; flex-direction: column; gap: 10px; }
+.decision-choice {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 2px; width: 100%; padding: 12px 14px; text-align: left;
+  border: 1px solid var(--border-strong); border-radius: var(--radius-lg); background: var(--surface); color: var(--text); font-size: 14px;
+}
+.decision-choice:hover { background: var(--hover); border-color: var(--accent); }
+.decision-choice span { font-size: 12px; font-weight: 400; color: var(--text-2); }
 .modal-body pre {
   background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 12px 14px;
   font-size: 12px; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 50vh; overflow: auto; margin: 0;
@@ -549,6 +558,9 @@ dialog.modal::backdrop { background: rgba(10, 10, 14, .55); }
 .ix-card-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
 .ix-card .badge, .ix-table .badge { white-space: normal; max-width: 100%; }
 .ix-date { margin-left: auto; font-size: 12px; color: var(--text-3); }
+/* Avisos del listado (X-Axiom-Notes) y estado de una fila de la lista con sus insignias de rama. */
+.notes-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--text); }
+.ix-state-cell { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-right: 8px; }
 .ix-more { margin-top: 12px; }
 
 .ix-table { min-width: 46rem; }
@@ -1009,6 +1021,10 @@ h5.md-h, h6.md-h { font-size: 13px; }
 .eco-policy.is-deferred { border-style: dashed; }
 .eco-role-meta { display: grid; grid-template-columns: max-content minmax(0, 1fr); align-items: baseline; gap: 2px 10px; font-size: 12px; color: var(--text-2); }
 .eco-role-meta code { font-size: 12px; overflow-wrap: anywhere; }
+.eco-repo-policy { min-width: 28rem; }
+.eco-repo-policy th[scope="row"] { font-size: 12px; font-weight: 600; letter-spacing: 0; text-transform: none; color: var(--text); background: transparent; white-space: normal; }
+.eco-wt-form { display: flex; flex-direction: column; gap: 14px; }
+.eco-wt-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
 
 .eco-backups { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
 .eco-backup { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 12px 20px; border-top: 1px solid var(--border); }
