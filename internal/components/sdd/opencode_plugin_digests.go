@@ -59,6 +59,8 @@ var historicalOpenCodePluginDigests = map[string]map[string][]string{
 	"sdd-task-result-artifacts.ts": {
 		"v1": {
 			"0c514e085be33de5871da15bd2b021aea286676c2a4b723c31ba02b8acd8833d", // 7271ff29
+			"604d71f4eb0e2432c85e761e89bb0cf6343fc5a803d7bf6ba8f1a13dc63cd443", // 77c7523f
+			"84dee6b9b72b3faa7e723531d4f2c50f3c8293115bd550ba1312448f88918ab4", // 98aea408
 			"9440325b6ea325804f4972a993cbb457b7babe0085010a47e16c00763afb9c5f", // cfc87f6e
 			"a571b08f05c6f0d3726fbbd0144b387d2b139c4a701f398d7c7d2044878dd3d5", // 3c3b8a02
 			"b8f1cdcfe38df960d37d8700eb6a9875335302761bfca1d0d10df02b4c18b7d4", // 3b3ca3d3
@@ -66,7 +68,9 @@ var historicalOpenCodePluginDigests = map[string]map[string][]string{
 			"e497b37070f5178fcab110bd964b7fd0af6e299c467eb630093f9c4d9ca7e404", // 7a45a34c
 		},
 		"v2": {
+			"14457d4666937185349e4c64c44610493f690405e0afb3e32b352c6e2d772156", // 98aea408
 			"2c49d774b21edaf7bd6ffb9d3447d9dd54828dce6dd846fcc49274173bebd3ca", // 5a395e45
+			"bbc54a174975eb52a2fe92794bf49dcb9b3d979bfdd4bb9414a5aaf141f48e10", // 77c7523f
 		},
 	},
 }

@@ -6,9 +6,9 @@ import (
 )
 
 func TestOpenCodeV2SDDDispatch(t *testing.T) {
-	runV2Plugin(t, "sdd-task-result-artifacts", `
+	runV2Plugin(t, "sdd-task-result-artifacts", sddAxiomProjectFixture+`
 const hooks={};let disposals=0,signal,wake;const queue=[];
-const ctx={location:{directory:'/project',workspaceID:'one'},tool:{async hook(name,fn){await Promise.resolve();hooks[name]=fn;return {async dispose(){disposals++}}}},session:{async get(arg){if(Object.keys(arg).join()!=='sessionID')throw Error('V1 SDK shape');return {id:arg.sessionID,...(arg.sessionID==='child'?{parentID:'root'}:{})}}},event:{subscribe(opts){signal=opts.signal;signal.addEventListener('abort',()=>wake?.());return {[Symbol.asyncIterator]:async function*(){while(!signal.aborted){if(!queue.length)await new Promise(r=>wake=r);while(queue.length)yield queue.shift()}}}}}};
+const ctx={location:{directory:projectDir,workspaceID:'one'},tool:{async hook(name,fn){await Promise.resolve();hooks[name]=fn;return {async dispose(){disposals++}}}},session:{async get(arg){if(Object.keys(arg).join()!=='sessionID')throw Error('V1 SDK shape');return {id:arg.sessionID,...(arg.sessionID==='child'?{parentID:'root'}:{})}}},event:{subscribe(opts){signal=opts.signal;signal.addEventListener('abort',()=>wake?.());return {[Symbol.asyncIterator]:async function*(){while(!signal.aborted){if(!queue.length)await new Promise(r=>wake=r);while(queue.length)yield queue.shift()}}}}}};
 const cleanup=await plugin.setup(ctx);if(!hooks['execute.before']||!hooks['execute.after'])throw Error('registrations not awaited');
 const reject=async(fn,why)=>{let failed=false;try{await fn()}catch{failed=true}if(!failed)throw Error(why)};
 const request=()=>({tool:'subagent',sessionID:'root',id:'call',input:{agent:'sdd-apply',prompt:'Implement approved tasks',description:'Apply'}});
@@ -43,9 +43,9 @@ let cleaned=0;await reject(()=>plugin.setup({...ctx,tool:{async hook(name,fn){if
 // "Axiom" prefix, so plugins and agent instructions already written on users'
 // machines keep working until the next sync.
 func TestOpenCodeV2SDDPreflightAcceptsBothPrefixes(t *testing.T) {
-	runV2Plugin(t, "sdd-task-result-artifacts", `
+	runV2Plugin(t, "sdd-task-result-artifacts", sddAxiomProjectFixture+`
 const hooks={};let disposals=0,signal,wake;const queue=[];
-const ctx={location:{directory:'/project',workspaceID:'one'},tool:{async hook(name,fn){await Promise.resolve();hooks[name]=fn;return {async dispose(){disposals++}}}},session:{async get(arg){if(Object.keys(arg).join()!=='sessionID')throw Error('V1 SDK shape');return {id:arg.sessionID,...(arg.sessionID==='child'?{parentID:'root'}:{})}}},event:{subscribe(opts){signal=opts.signal;signal.addEventListener('abort',()=>wake?.());return {[Symbol.asyncIterator]:async function*(){while(!signal.aborted){if(!queue.length)await new Promise(r=>wake=r);while(queue.length)yield queue.shift()}}}}}};
+const ctx={location:{directory:projectDir,workspaceID:'one'},tool:{async hook(name,fn){await Promise.resolve();hooks[name]=fn;return {async dispose(){disposals++}}}},session:{async get(arg){if(Object.keys(arg).join()!=='sessionID')throw Error('V1 SDK shape');return {id:arg.sessionID,...(arg.sessionID==='child'?{parentID:'root'}:{})}}},event:{subscribe(opts){signal=opts.signal;signal.addEventListener('abort',()=>wake?.());return {[Symbol.asyncIterator]:async function*(){while(!signal.aborted){if(!queue.length)await new Promise(r=>wake=r);while(queue.length)yield queue.shift()}}}}}};
 const cleanup=await plugin.setup(ctx);
 const reject=async(fn,why)=>{let failed=false;try{await fn()}catch{failed=true}if(!failed)throw Error(why)};
 for(const prefix of ['Gentle AI SDD preflight','Axiom SDD preflight']){

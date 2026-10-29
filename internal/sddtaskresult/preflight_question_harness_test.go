@@ -32,7 +32,8 @@ async function main() {
       get: async ({ path }: { path: { id: string } }) => ({ data: { id: path.id, parentID: undefined } }),
     },
   }
-  const hooks = (await (Factory as any)({ client })) as Hooks
+  // The plugin is inert outside an Axiom project; the test directory carries an axiom.yaml.
+  const hooks = (await (Factory as any)({ client, directory: process.cwd() })) as Hooks
 
   const out: Record<string, unknown> = {}
 
@@ -174,6 +175,10 @@ func TestOpenCodePreflightQuestionCanonicalizationAndTolerantMatching(t *testing
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, "sdd-task-result-artifacts.ts"), []byte(pluginSource), 0o644); err != nil {
 		t.Fatalf("write plugin copy: %v", err)
+	}
+	// The plugin only acts inside an Axiom project, so the harness directory is one.
+	if err := os.WriteFile(filepath.Join(dir, "axiom.yaml"), []byte("name: harness\n"), 0o644); err != nil {
+		t.Fatalf("write axiom.yaml: %v", err)
 	}
 	harnessPath := filepath.Join(dir, "harness.ts")
 	if err := os.WriteFile(harnessPath, []byte(preflightQuestionHarnessSource), 0o644); err != nil {
