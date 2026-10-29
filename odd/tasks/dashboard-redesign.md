@@ -338,6 +338,11 @@ Ruta de cada tarea: «delegada» significa un escritor acotado, que se elige por
   - **Resultado:** `core/lazy.js` (`lazyLoader`) y `enterSemantic` / `refreshSemantic` en `semantic.js`; `main.js` ya no llama a `loadSemanticData` al arrancar. Test `TestCodeScreenLoadsLazily` (estructural y en node). En el navegador, tras recargar en Inicio: 0 peticiones a `/api/semantic/symbols` y `dependencies`; al entrar en Código, 1 de cada una (17.141 símbolos). Las fuentes se sirven desde `/fonts/` y la itálica solo se descarga si se usa.
   - Al arrancar solo se pide el estado semántico, que necesita Inicio. Los símbolos y dependencias se piden la primera vez que se entra en `#/codigo`, y al refrescar solo si esa pantalla ya se cargó.
   - Test de ejecución en node sobre la lógica de carga diferida.
+- [x] **T10 · Tamaño de los respaldos** (en línea; aprobado por el usuario el 2026-10-29)
+  - **Resultado:** `backupSizeBytes` en `service.go`; tests `TestGetBackupsReportsSizeOnDisk` y `TestBackupSizeBytesToleratesMissingRoot` (RED por compilación, luego GREEN). `go test ./internal/dashboard/...`, `go vet` y `gofmtcheck`: OK.
+  - `GetBackups` rellena `size_bytes` con la suma de los ficheros regulares bajo `RootDir` del respaldo (comprimido o no). Si no se puede leer, el campo se omite y la pantalla lo oculta.
+  - Ecosistema ya muestra el número de ficheros a partir de `files`; no cambia la interfaz.
+  - Test Go con un respaldo de tamaño conocido en un `HOME` temporal.
 
 ## Criterios de aceptación
 
@@ -354,11 +359,10 @@ Ruta de cada tarea: «delegada» significa un escritor acotado, que se elige por
 
 ## Siguiente paso
 
-Tareas T0–T9 cerradas. Falta decidir cómo vuelve verify a la interfaz y, después, push y PR (`scripts/axiom-worktree.ps1 pr dashboard-redesign`).
+Tareas T0–T10 cerradas. Verify se queda como recordatorio (decisión del usuario). Falta push y PR (`scripts/axiom-worktree.ps1 pr dashboard-redesign`), con permiso del usuario.
 
 ## Seguimientos
 
-- `POST /api/increments/verify`: el usuario no quiere retirarlo (2026-10-29). Pendiente de decidir cómo vuelve a la interfaz.
-- `GetBackups` no rellena `size_bytes`; hay que corregirlo para que se vea el tamaño de cada respaldo (hallazgo de T6).
+- `POST /api/increments/verify`: se conserva en el servidor (decisión del usuario, 2026-10-29). La interfaz no lo llama: verify es una fase de agente y queda como recordatorio `/sdd-verify` para lanzar desde el IDE o la CLI (D5).
 - Retirar Handoffs del dashboard y de la API (D4, decisión del usuario para una versión próxima).
 - Endpoints de actividad, archivar, specs afectadas e historial de dominio, si se quieren recuperar esos bloques (D3).
