@@ -201,7 +201,7 @@ axiom setup
 ```
 
 **¿Qué hace `axiom setup`?**
-* Ejecuta la instalación con **ámbito de workspace (`--scope=workspace`)**.
+* Ejecuta la instalación con **ámbito de workspace (`--scope=workspace`)**. La raíz del workspace es la del proyecto (el `axiom.yaml` más cercano o, si no hay, la raíz del repositorio git), no la subcarpeta desde la que lances el comando; Axiom avisa cuando son distintas.
 * Crea o actualiza la configuración local del proyecto (por ejemplo `opencode.json` con `"default_agent": "axiom-orchestrator"`).
 * **Garantía de Aislamiento:** No altera ni sobreescribe los archivos globales de usuario en `~/.config/opencode/` ni `~/.claude/`. Cada proyecto mantiene sus agentes, plugins y prompts de forma estrictamente local.
 * **Permisos:** el componente `permissions` escribe sus reglas de denegación en el proyecto (por ejemplo `.claude/settings.json`) y nunca en tu HOME. No activa modos de autoaprobación como `bypassPermissions` y respeta el `deny` que ya tengas.

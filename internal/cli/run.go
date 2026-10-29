@@ -202,6 +202,8 @@ func RunInstall(args []string, detection system.DetectionResult) (InstallResult,
 				"will be written to each selected agent's global config directory and will affect ALL workspaces for those agents on this machine.\n"+
 				"To install only into the current workspace, rerun with --scope=workspace.\n\n")
 	}
+	_, rootNotice := resolveWorkspaceDir(input.Scope, homeDir)
+	noteWorkspaceRoot(rootNotice)
 	runtime, err := newInstallRuntime(homeDir, input.Scope, input.Channel, input.Selection, resolved, profile)
 	if err != nil {
 		return result, err
@@ -721,7 +723,9 @@ func newInstallRuntime(homeDir string, scope InstallScope, channel InstallChanne
 		return nil, fmt.Errorf("create backup root directory %q: %w", backupRoot, err)
 	}
 
-	workspaceDir, _ := os.Getwd()
+	// En ámbito workspace la raíz es la del proyecto, no la carpeta desde la que
+	// se lanzó el comando. El aviso al usuario lo emite RunInstall.
+	workspaceDir, _ := resolveWorkspaceDir(scope, homeDir)
 
 	return &installRuntime{
 		homeDir:      homeDir,

@@ -621,13 +621,16 @@ func tuiSync(homeDir string) tui.SyncFunc {
 
 		applyOverrides(&selection, overrides)
 
-		workspaceDir, _ := os.Getwd()
+		cwd, _ := os.Getwd()
 		scope, _ := cli.ResolveInstallScope("")
 		if scope != cli.ScopeGlobal {
-			if _, statErr := os.Stat(filepath.Join(workspaceDir, "axiom.yaml")); statErr == nil || scope == cli.ScopeWorkspace {
+			if _, statErr := os.Stat(filepath.Join(cwd, "axiom.yaml")); statErr == nil || scope == cli.ScopeWorkspace {
 				scope = cli.ScopeWorkspace
 			}
 		}
+		// En ámbito workspace la raíz es la del proyecto, no la carpeta actual. Se
+		// descarta el aviso: la TUI ocupa la terminal y no debe recibir texto suelto.
+		workspaceDir, _ := cli.ResolveWorkspaceDir(scope, homeDir)
 
 		result, err := cli.RunSyncWithSelectionScoped(homeDir, workspaceDir, scope, selection)
 		if err != nil {

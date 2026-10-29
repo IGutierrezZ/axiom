@@ -527,7 +527,7 @@ func newSyncRuntime(homeDir string, selection model.Selection) (*syncRuntime, er
 func newSyncRuntimeScoped(homeDir, workspaceDir string, scope InstallScope, selection model.Selection) (*syncRuntime, error) {
 	backupRoot := backup.BackupRootFor(homeDir)
 	if workspaceDir == "" {
-		workspaceDir, _ = os.Getwd()
+		workspaceDir, _ = resolveWorkspaceDir(scope, homeDir)
 	}
 	compatibilityTransaction, err := newCompatibilityRefreshTransaction(homeDir, selection.Components, selection)
 	if err != nil {
@@ -1749,7 +1749,7 @@ func runSyncWithSelectionScoped(homeDir, workspaceDir string, scope InstallScope
 		applyResolvedPersona(&selection, persistedPersona)
 	}
 	if workspaceDir == "" {
-		workspaceDir, _ = os.Getwd()
+		workspaceDir, _ = resolveWorkspaceDir(scope, homeDir)
 	}
 	if len(selection.ModelAssignments) == 0 && len(persistedState.ModelAssignments) > 0 {
 		selection.ModelAssignments = restoreOpenCodeModelAssignmentsFromState(homeDir, workspaceDir, scope, persistedState, selection.SDDMode)
@@ -1872,7 +1872,7 @@ func runSyncWithSelectionScoped(homeDir, workspaceDir string, scope InstallScope
 	// Auto-regeneración del índice de skills en el workspace
 	targetWorkspace := workspaceDir
 	if targetWorkspace == "" {
-		targetWorkspace, _ = os.Getwd()
+		targetWorkspace, _ = resolveWorkspaceDir(scope, homeDir)
 	}
 	if PostSyncSkillRegenerator != nil {
 		count, regErr := PostSyncSkillRegenerator(targetWorkspace, homeDir)
@@ -1963,12 +1963,15 @@ func RunSync(args []string) (SyncResult, error) {
 		return SyncResult{}, err
 	}
 
-	workspaceDir, _ := os.Getwd()
-
 	homeDir, err := osUserHomeDir()
 	if err != nil {
 		return SyncResult{}, fmt.Errorf("resolve user home directory: %w", err)
 	}
+
+	// En ámbito workspace la raíz es la del proyecto aunque se lance desde una
+	// subcarpeta; el aviso sale por stderr para no mezclarse con el informe.
+	workspaceDir, rootNotice := resolveWorkspaceDir(scope, homeDir)
+	noteWorkspaceRoot(rootNotice)
 
 	// Resolve agents: explicit flag takes precedence over auto-discovery.
 	var agentIDs []model.AgentID
