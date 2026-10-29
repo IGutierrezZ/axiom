@@ -4,6 +4,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/IGutierrezZ/axiom/v3/internal/branch/engine"
 	"github.com/IGutierrezZ/axiom/v3/internal/reviewtransaction"
 	"github.com/IGutierrezZ/axiom/v3/internal/testenv"
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
@@ -20,6 +21,10 @@ import (
 // pruebas, nunca el valor declarado en reviewtransaction.
 func TestMain(m *testing.M) {
 	workspace.DiscoveryCeilingOverride = []string{os.TempDir()}
+	// La guarda B (rama del cambio) queda desactivada por defecto: los fixtures de las pruebas
+	// anteriores montan repositorios git en master o main sin kickoff.yaml y no tratan de la rama.
+	// branch_context_test.go la reactiva con useBranchGuard.
+	branchEngine = func() *engine.Engine { return nil }
 	reviewtransaction.LocalGitCommandTimeout = testenv.MustScaled(reviewtransaction.LocalGitCommandTimeout)
 	reviewtransaction.RemoteGitCommandTimeout = testenv.MustScaled(reviewtransaction.RemoteGitCommandTimeout)
 	os.Exit(m.Run())

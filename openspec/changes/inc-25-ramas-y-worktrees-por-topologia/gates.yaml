@@ -1,0 +1,33 @@
+schema: axiom.sdd-gate-ledger/v1
+change: inc-25-ramas-y-worktrees-por-topologia
+records:
+    - gate: spec
+      decision: approved
+      reason: Cubre D1-D15 y riesgos R4-R16; supuestos S-1..S-14 confirmados; S-6 según D3; excepción REQ-21.16 (D15) limitada a repos con rama de cambio; --force en in_place nunca salta árbol limpio
+      artifact_digest: e06b66d78debfb63eebaa440fab5fc1d47e5325ac2e8e512594008e749060bad
+      actor: cli
+      recorded_at: 2026-10-15T13:33:33.411132Z
+    - gate: spec
+      decision: approved
+      reason: 'Reapertura 2026-10-17: D16 archivado en PR documental aparte (D15 retirada), D17 sin check, D18 rama -archive, D19 guarda D avisa en codigo; lecturas G/A aceptadas; S-15..S-18 confirmados'
+      artifact_digest: da6a953e4a93ab095ee4e3ea3dc693bfdb15904be25bd355a05bf92dd671a7f2
+      actor: cli
+      recorded_at: 2026-10-17T12:12:34.7145278Z
+    - gate: design
+      decision: approved
+      reason: 'Revision 1: D16-D19 reflejadas; defectos B1-B7 corregidos (gitref hoja, rebanadas verticales sin tocar baseline deadcode, anclas, D-13); cobertura completa incl. REQ-25.20 y REQ-25.45; G-10, G-11, G-13, A-4, A-5 aceptadas; G-12: axiom-worktree envoltorio fino, cleanup-worktree retirado, guard-primary-checkout conservado como guarda local'
+      artifact_digest: 0153a673985a20772678fee30af4037f274d976fce1a120d6842ab2939163e7e
+      actor: cli
+      recorded_at: 2026-10-17T21:16:56.5332984Z
+    - gate: tasks
+      decision: approved
+      reason: 214 tareas en 12 rebanadas verticales y 51 commits; atomicas y verificables; T1-T6 aceptadas; T7 corregida (review_atomic_start_integration_test.go existe); prevision ~15.900 lineas
+      artifact_digest: f72631221e1065fe12355192399b3710ecec1a5c6eb3b4ff23ab6d5f4ea62b83
+      actor: cli
+      recorded_at: 2026-10-17T22:18:06.6603773Z
+    - gate: role-apply:fullstack
+      decision: approved
+      reason: '213/214 tareas (S12.26 en sdd-archive); 12 rebanadas con bateria de la regla 3 y CI verde; build, vet y gofmtcheck OK en 44dab2e4; CI de #161 verde en esa punta; cobertura no medida'
+      artifact_digest: 9ae4d1ffccb379e7baafcea2c82dbc22bd149da6ead91d3e9dfea5cf7f6cf795
+      actor: cli
+      recorded_at: 2026-10-29T08:14:47.5981754Z

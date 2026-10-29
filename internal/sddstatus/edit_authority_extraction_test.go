@@ -166,7 +166,7 @@ func TestExistingAbsoluteExtensionlessDirectoryOutsideRootsIsStillFlagged(t *tes
 	mkdir(t, external)
 
 	tasks := "- [ ] 1.1 Run the rollout script in `" + external + "`\n"
-	flagged := detectUnauthorizedEditRoots(tasks, planning, []string{planning})
+	flagged := detectUnauthorizedEditRoots(tasks, planning, []string{planning}, identityRebase)
 	want := realPath(t, external)
 	if len(flagged) != 1 || flagged[0] != want {
 		t.Fatalf("detectUnauthorizedEditRoots() = %v, want exactly [%s]", flagged, want)
@@ -185,7 +185,7 @@ func TestExplicitlyDeclaredWildcardTargetIsStillFlagged(t *testing.T) {
 	initEditAuthorityGitRepo(t, shared, false)
 
 	tasks := "- [ ] 1.1 Files: `../shared/*.ts` for the generated client types\n"
-	flagged := detectUnauthorizedEditRoots(tasks, planning, []string{planning})
+	flagged := detectUnauthorizedEditRoots(tasks, planning, []string{planning}, identityRebase)
 	want := realPath(t, shared)
 	if len(flagged) != 1 || flagged[0] != want {
 		t.Fatalf("detectUnauthorizedEditRoots() = %v, want exactly [%s]", flagged, want)
@@ -210,7 +210,7 @@ func TestSpacedAbsolutePathOutsideRootsIsFlaggedWithQuotedReason(t *testing.T) {
 		"- [ ] 1.2 Update `" + filepath.Join(planning, "mi carpeta", "notes.md") + "` inside the authorized root",
 		"",
 	}, "\n")
-	flagged := detectUnauthorizedEditRoots(tasks, planning, []string{planning})
+	flagged := detectUnauthorizedEditRoots(tasks, planning, []string{planning}, identityRebase)
 	want := realPath(t, external)
 	if len(flagged) != 1 || flagged[0] != want {
 		t.Fatalf("detectUnauthorizedEditRoots() = %v, want exactly [%s]", flagged, want)
@@ -375,7 +375,7 @@ func TestDetectUnauthorizedEditAuthorityRootsForCurrentWorkUnitScopesToCurrentUn
 		"",
 	}, "\n")
 
-	blocking, future := detectUnauthorizedEditRootsForCurrentWorkUnit(tasks, planning, []string{planning})
+	blocking, future := detectUnauthorizedEditRootsForCurrentWorkUnit(tasks, planning, []string{planning}, identityRebase)
 	wantA := realPath(t, serviceA)
 	wantB := realPath(t, serviceB)
 	if !reflect.DeepEqual(blocking, []string{wantA}) {

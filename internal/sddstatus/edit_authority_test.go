@@ -123,7 +123,7 @@ func TestDeletedAllowedRootDoesNotBroadenSiblingAuthorization(t *testing.T) {
 		t.Fatal(err)
 	}
 	tasks := "- [ ] 1.1 Update `../other-service/internal/api/handler.go`\n"
-	flagged := detectUnauthorizedEditRoots(tasks, planning, []string{planning, granted})
+	flagged := detectUnauthorizedEditRoots(tasks, planning, []string{planning, granted}, identityRebase)
 	want := realPath(t, sibling)
 	if len(flagged) != 1 || flagged[0] != want {
 		t.Fatalf("deleted granted root broadened authorization: got %v, want [%s]", flagged, want)
@@ -217,12 +217,12 @@ func TestDetectUnauthorizedEditRootsHonorsAllowedRoots(t *testing.T) {
 	}, "\n")
 
 	wantA := realPath(t, serviceA)
-	flagged := detectUnauthorizedEditRoots(tasks, planning, []string{planning})
+	flagged := detectUnauthorizedEditRoots(tasks, planning, []string{planning}, identityRebase)
 	if len(flagged) != 1 || flagged[0] != wantA {
 		t.Fatalf("detectUnauthorizedEditRoots() = %v, want exactly [%s]", flagged, wantA)
 	}
 
-	granted := detectUnauthorizedEditRoots(tasks, planning, []string{planning, serviceA})
+	granted := detectUnauthorizedEditRoots(tasks, planning, []string{planning, serviceA}, identityRebase)
 	if len(granted) != 0 {
 		t.Fatalf("granting %s must clear the block without detector rework, got %v", serviceA, granted)
 	}

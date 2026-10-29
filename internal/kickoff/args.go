@@ -317,7 +317,8 @@ type GateRecordArgs struct {
 	// EvidenceKind classifies the integration evidence this decision
 	// attaches, when any. Commit feeds the local ancestry check for
 	// EvidencePRMerged (the only kind Axiom can verify); BaseRef is the
-	// branch it must be an ancestor of, defaulting to "main" when omitted;
+	// branch it must be an ancestor of, left empty here when omitted (the CLI fills in the
+	// project's resolved integration branch, design D-22);
 	// Evidence is the free-text reference an operator supplies for
 	// EvidenceDeployment/EvidenceAttestation, neither of which Axiom can
 	// check locally (D-13, T-11).
@@ -461,9 +462,8 @@ func ParseGateRecordArgs(args []string) (GateRecordArgs, error) {
 		if strings.TrimSpace(parsed.Commit) == "" {
 			return GateRecordArgs{}, fmt.Errorf("gate record --evidence-kind pr_merged requiere --commit")
 		}
-		if parsed.BaseRef == "" {
-			parsed.BaseRef = "main"
-		}
+		// Sin --base-ref el campo queda vacío: la rama de integración depende del repositorio y la
+		// completa quien lo conoce (design D-22; cli.completeGateBaseRef).
 	}
 
 	return parsed, nil

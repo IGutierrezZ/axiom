@@ -119,7 +119,11 @@ USO:
 COMANDOS DE GOBERNANZA Y WORKSPACE:
   init                 Inicializa un proyecto con axiom.yaml, andamiaje base y lo registra en el Hub
   change create        Crea un nuevo incremento/cambio SDD con plantilla proposal.md en español
-  project list         Lista los proyectos registrados en el Hub global (~/.axiom/workspaces.json)
+  branch ensure        Crea la rama de un cambio y su worktree si faltan (idempotente; --change, --json)
+  branch status        Muestra el estado de las ramas y worktrees de un cambio (solo lectura; --change, --json)
+  branch done          Elimina el worktree y la rama local de un cambio ya fusionado (--change, --force, --fetch, --json)
+  branch guard         Hook de los runtimes: bloquea los documentos de Axiom en la rama equivocada (--agent)
+  project list        Lista los proyectos registrados en el Hub global (~/.axiom/workspaces.json)
   project switch       Conmuta el proyecto activo por defecto
   project add          Registra un proyecto existente en el Hub
   project remove       Desvincula un proyecto del catálogo global
@@ -304,6 +308,9 @@ func main() {
 	case "change":
 		exitCode := runChange(os.Args[2:], os.Stdout, os.Stderr)
 		os.Exit(exitCode)
+
+	case "branch":
+		os.Exit(cli.RunBranch(os.Args[2:], os.Stdout, os.Stderr))
 
 	case "workspace":
 
@@ -572,7 +579,10 @@ func runWorkspaceValidate(args []string) {
 		os.Exit(1)
 	}
 
-	configFile := filepath.Join(baseDir, "axiom.yaml")
+	baseDir, configFile, locateNotes := validationTarget(baseDir)
+	for _, note := range locateNotes {
+		fmt.Printf("[AVISO] %s\n", note)
+	}
 	cfg, err := workspace.LoadConfig(configFile)
 	if err != nil {
 		// Una declaración inválida acumula todas sus violaciones en un único
@@ -596,6 +606,15 @@ func runWorkspaceValidate(args []string) {
 	report.Errors = append(report.Errors, declarationErrors...)
 	report.Warnings = append(report.Warnings, declarationWarnings...)
 	if len(declarationErrors) > 0 {
+		report.Valid = false
+	}
+
+	// Las entradas de `repositories:` se comprueban en disco con el mismo criterio
+	// (REQ-25.27): que existan, su raíz git y que dos no compartan la misma.
+	repositoryErrors, repositoryWarnings := workspace.ValidateRepositoryPolicies(cfg, baseDir)
+	report.Errors = append(report.Errors, repositoryErrors...)
+	report.Warnings = append(report.Warnings, repositoryWarnings...)
+	if len(repositoryErrors) > 0 {
 		report.Valid = false
 	}
 
@@ -745,6 +764,12 @@ func runHandoffCreate(args []string) {
 			RisksAndBlockers:   "Ninguno reportado.",
 			DirectInstructions: fmt.Sprintf("Iniciar fase %s siguiendo las especificaciones aprobadas.", *toPhaseFlag),
 		},
+	}
+
+	// Guarda A (REQ-25.19): fuera de la rama del cambio no se escribe el relevo.
+	if err := cli.GuardChangeWriter(filepath.Dir(targetPath), *changeFlag, "handoff create"); err != nil {
+		fmt.Printf("[ERROR] %v\n", err)
+		os.Exit(1)
 	}
 
 	if err := handoff.WriteFile(targetPath, h); err != nil {
@@ -1795,14 +1820,31 @@ func runArchiveColdStart(args []string) {
 }
 
 func runInit(args []string) {
-	fs := flag.NewFlagSet("init", flag.ExitOnError)
+	if code := initCommand(args, os.Stdout, os.Stderr); code != 0 {
+		os.Exit(code)
+	}
+}
+
+// initCommand es el cuerpo de `axiom init` con sus salidas inyectadas, para probarlo sin
+// terminar el proceso. Devuelve el código de salida: 0, 1 ante un error y 2 ante una opción
+// desconocida, como el conjunto de opciones con `flag.ExitOnError` que lo precedía.
+func initCommand(args []string, stdout, stderr io.Writer) int {
+	fs := flag.NewFlagSet("init", flag.ContinueOnError)
+	fs.SetOutput(stderr)
 	nameFlag := fs.String("name", "", "Nombre descriptivo del proyecto (por defecto: nombre del directorio)")
 	pathFlag := fs.String("path", ".", "Ruta del directorio a inicializar")
 	topologyFlag := fs.String("topology", "monorepo-embedded", "Topología del workspace (monorepo-embedded, multirepo)")
 	forceFlag := fs.Bool("force", false, "Sobreescribir axiom.yaml si ya existe")
 	profileFlag := fs.String("profile", "full", "Perfil de inicialización (full, knowledge, spec-only)")
 	specOnlyFlag := fs.Bool("spec-only", false, "Alias para --profile=knowledge")
-	_ = fs.Parse(args)
+	worktreeModeFlag := fs.String("worktree-mode", "", "Modo de trabajo personal del proyecto (worktree, in_place, ask); sin él se pregunta en una terminal interactiva")
+	worktreeRootFlag := fs.String("worktree-root", "", "Raíz absoluta de los worktrees del proyecto; sin ella se pregunta en una terminal interactiva")
+	if err := fs.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			return 0
+		}
+		return 2
+	}
 
 	effectiveProfile := *profileFlag
 	if *specOnlyFlag || effectiveProfile == "spec-only" {
@@ -1811,68 +1853,88 @@ func runInit(args []string) {
 
 	absPath, err := filepath.Abs(*pathFlag)
 	if err != nil {
-		fmt.Printf("[ERROR] Ruta inválida: %v\n", err)
-		os.Exit(1)
+		fmt.Fprintf(stdout, "[ERROR] Ruta inválida: %v\n", err)
+		return 1
 	}
 
 	hubMgr, err := hub.NewManager("")
 	if err != nil {
-		fmt.Printf("[AVISO] No se pudo conectar con el registro global del hub: %v\n", err)
+		fmt.Fprintf(stdout, "[AVISO] No se pudo conectar con el registro global del hub: %v\n", err)
+	}
+
+	// Las preferencias de worktree se resuelven y validan antes de escribir ni registrar nada.
+	// Sin registro global no hay dónde guardarlas: no se preguntan, pero se validan las opciones.
+	var prefs hub.WorktreePrefs
+	if hubMgr != nil {
+		prefs, err = registrationWorktreePrefs(*worktreeModeFlag, *worktreeRootFlag, absPath)
+	} else {
+		prefs = hub.WorktreePrefs{Mode: *worktreeModeFlag, Root: *worktreeRootFlag}
+		if err = hub.ValidateWorktreePrefs(prefs); err == nil && prefs != (hub.WorktreePrefs{}) {
+			fmt.Fprintln(stdout, "[AVISO] Sin registro global no se guardan las preferencias de worktree.")
+			prefs = hub.WorktreePrefs{}
+		}
+	}
+	if err != nil {
+		fmt.Fprintf(stdout, "[ERROR] Preferencias de worktree no válidas: %v\n", err)
+		return 1
 	}
 
 	det := hub.NewDetector()
 	ini := hub.NewInitializer(hubMgr, det)
 
 	res, err := ini.Init(hub.InitOptions{
-		Path:     absPath,
-		Name:     *nameFlag,
-		Topology: *topologyFlag,
-		Force:    *forceFlag,
-		Profile:  effectiveProfile,
+		Path:          absPath,
+		Name:          *nameFlag,
+		Topology:      *topologyFlag,
+		Force:         *forceFlag,
+		Profile:       effectiveProfile,
+		WorktreePrefs: prefs,
 	})
 	if err != nil {
-		fmt.Printf("[ERROR] Fallo al inicializar el proyecto: %v\n", err)
-		os.Exit(1)
+		fmt.Fprintf(stdout, "[ERROR] Fallo al inicializar el proyecto: %v\n", err)
+		return 1
 	}
 
-	fmt.Println("================================================================================")
+	fmt.Fprintln(stdout, "================================================================================")
 	if res.AlreadyExisted {
-		fmt.Println("             Axiom — Proyecto Vinculado al Hub Global")
+		fmt.Fprintln(stdout, "             Axiom — Proyecto Vinculado al Hub Global")
 	} else {
-		fmt.Println("             Axiom — Proyecto Inicializado Exitosamente")
+		fmt.Fprintln(stdout, "             Axiom — Proyecto Inicializado Exitosamente")
 	}
-	fmt.Println("================================================================================")
-	fmt.Printf("  - Proyecto:            %s (ID: %s)\n", res.Record.Name, res.Record.ID)
-	fmt.Printf("  - Directorio:          %s\n", res.Record.Path)
-	fmt.Printf("  - Topología:           %s\n", res.Record.Topology)
-	fmt.Printf("  - Archivo Config:      %s\n", res.ConfigPath)
+	fmt.Fprintln(stdout, "================================================================================")
+	fmt.Fprintf(stdout, "  - Proyecto:            %s (ID: %s)\n", res.Record.Name, res.Record.ID)
+	fmt.Fprintf(stdout, "  - Directorio:          %s\n", res.Record.Path)
+	fmt.Fprintf(stdout, "  - Topología:           %s\n", res.Record.Topology)
+	fmt.Fprintf(stdout, "  - Archivo Config:      %s\n", res.ConfigPath)
 	// Con una baseline que no es la de OpenSpec por defecto no se crean
 	// openspec/specs/ ni openspec/INDEX.md (REQ-24.23).
 	baselineOwned := res.BaselineOwnership != workspace.BaselineDefault
 	if res.AlreadyExisted {
-		fmt.Println("  - Estado:              Ya contenía axiom.yaml (registrado y marcado como activo)")
+		fmt.Fprintln(stdout, "  - Estado:              Ya contenía axiom.yaml (registrado y marcado como activo)")
 	} else if effectiveProfile == "knowledge" {
 		if baselineOwned {
-			fmt.Println("  - Estructura creada:   openspec/changes/, .mcp.json")
+			fmt.Fprintln(stdout, "  - Estructura creada:   openspec/changes/, .mcp.json")
 		} else {
-			fmt.Println("  - Estructura creada:   openspec/specs/, openspec/changes/, openspec/INDEX.md, .mcp.json")
+			fmt.Fprintln(stdout, "  - Estructura creada:   openspec/specs/, openspec/changes/, openspec/INDEX.md, .mcp.json")
 		}
-		fmt.Println("  - Perfil activo:       knowledge (multirepo, documentación viva, sin arneses de testeo)")
+		fmt.Fprintln(stdout, "  - Perfil activo:       knowledge (multirepo, documentación viva, sin arneses de testeo)")
 	} else if baselineOwned {
-		fmt.Println("  - Estructura creada:   openspec/changes/, .axiom/inbox/skills/")
+		fmt.Fprintln(stdout, "  - Estructura creada:   openspec/changes/, .axiom/inbox/skills/")
 	} else {
-		fmt.Println("  - Estructura creada:   openspec/specs/, openspec/changes/, .axiom/inbox/skills/")
+		fmt.Fprintln(stdout, "  - Estructura creada:   openspec/specs/, openspec/changes/, .axiom/inbox/skills/")
 	}
 	if hubMgr != nil {
-		fmt.Printf("  - Registro global:     %s [ACTIVO]\n", hubMgr.GetConfigPath())
+		fmt.Fprintf(stdout, "  - Registro global:     %s [ACTIVO]\n", hubMgr.GetConfigPath())
 	}
+	printWorktreePrefs(stdout, res.Record)
 	// Avisos de la inicialización: la omisión de la baseline, la conservación del
 	// axiom.yaml con --force y las violaciones de sus declaraciones.
 	for _, note := range res.Notes {
-		fmt.Printf("  - [AVISO] %s\n", note)
+		fmt.Fprintf(stdout, "  - [AVISO] %s\n", note)
 	}
-	fmt.Println("================================================================================")
-	fmt.Println("¡Listo! Ejecuta 'axiom ui' para abrir el panel de control interactivo.")
+	fmt.Fprintln(stdout, "================================================================================")
+	fmt.Fprintln(stdout, "¡Listo! Ejecuta 'axiom ui' para abrir el panel de control interactivo.")
+	return 0
 }
 
 func runProjectList(args []string) {
@@ -1937,34 +1999,65 @@ func runProjectSwitch(args []string) {
 }
 
 func runProjectAdd(args []string) {
-	fs := flag.NewFlagSet("project add", flag.ExitOnError)
+	if code := projectAddCommand(args, os.Stdout, os.Stderr); code != 0 {
+		os.Exit(code)
+	}
+}
+
+// projectAddCommand es el cuerpo de `axiom project add` con sus salidas inyectadas, para
+// probarlo sin terminar el proceso. Devuelve el código de salida: 0, 1 ante un error y 2 ante
+// una opción desconocida. Las opciones van antes de la ruta posicional.
+func projectAddCommand(args []string, stdout, stderr io.Writer) int {
+	fs := flag.NewFlagSet("project add", flag.ContinueOnError)
+	fs.SetOutput(stderr)
 	nameFlag := fs.String("name", "", "Nombre descriptivo del proyecto")
 	topologyFlag := fs.String("topology", "monorepo-embedded", "Topología del proyecto")
-	_ = fs.Parse(args)
+	worktreeModeFlag := fs.String("worktree-mode", "", "Modo de trabajo personal del proyecto (worktree, in_place, ask); sin él se pregunta en una terminal interactiva")
+	worktreeRootFlag := fs.String("worktree-root", "", "Raíz absoluta de los worktrees del proyecto; sin ella se pregunta en una terminal interactiva")
+	if err := fs.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			return 0
+		}
+		return 2
+	}
 
 	if len(fs.Args()) == 0 {
-		fmt.Println("Error: debes especificar la ruta del directorio. Ej: 'axiom project add C:\\repos\\ludeka'")
-		os.Exit(1)
+		fmt.Fprintln(stdout, "Error: debes especificar la ruta del directorio. Ej: 'axiom project add C:\\repos\\ludeka'")
+		return 1
 	}
 	targetPath := fs.Args()[0]
 
 	hubMgr, err := hub.NewManager("")
 	if err != nil {
-		fmt.Printf("[ERROR] No se pudo cargar el gestor de Hub: %v\n", err)
-		os.Exit(1)
+		fmt.Fprintf(stdout, "[ERROR] No se pudo cargar el gestor de Hub: %v\n", err)
+		return 1
 	}
 
-	rec, err := hubMgr.Register(targetPath, *nameFlag, *topologyFlag)
+	// La carpeta maestra del valor por defecto de la raíz es la ruta absoluta del proyecto.
+	master, err := filepath.Abs(targetPath)
 	if err != nil {
-		fmt.Printf("[ERROR] Error registrando proyecto: %v\n", err)
-		os.Exit(1)
+		fmt.Fprintf(stdout, "[ERROR] Ruta inválida: %v\n", err)
+		return 1
+	}
+	prefs, err := registrationWorktreePrefs(*worktreeModeFlag, *worktreeRootFlag, master)
+	if err != nil {
+		fmt.Fprintf(stdout, "[ERROR] Preferencias de worktree no válidas: %v\n", err)
+		return 1
 	}
 
-	fmt.Printf("[OK] Proyecto registrado en el Hub global:\n")
-	fmt.Printf("  - ID:        %s\n", rec.ID)
-	fmt.Printf("  - Nombre:    %s\n", rec.Name)
-	fmt.Printf("  - Ruta:      %s\n", rec.Path)
-	fmt.Printf("  - Topología: %s\n", rec.Topology)
+	rec, err := hubMgr.RegisterWithWorktreePrefs(targetPath, *nameFlag, *topologyFlag, prefs)
+	if err != nil {
+		fmt.Fprintf(stdout, "[ERROR] Error registrando proyecto: %v\n", err)
+		return 1
+	}
+
+	fmt.Fprintf(stdout, "[OK] Proyecto registrado en el Hub global:\n")
+	fmt.Fprintf(stdout, "  - ID:        %s\n", rec.ID)
+	fmt.Fprintf(stdout, "  - Nombre:    %s\n", rec.Name)
+	fmt.Fprintf(stdout, "  - Ruta:      %s\n", rec.Path)
+	fmt.Fprintf(stdout, "  - Topología: %s\n", rec.Topology)
+	printWorktreePrefs(stdout, *rec)
+	return 0
 }
 
 func runProjectRemove(args []string) {

@@ -170,6 +170,7 @@ func TestSDDAttemptGrantOperatesOnTheSpecsRepositoryFromACodeRepository(t *testi
 		t.Fatal(err)
 	}
 	seedSDDStatusReadyChange(t, ws.Specs, "cli-grant", "- [ ] 1.1 Update `"+filepath.Join(sibling, "main.go")+"`\n")
+	retroSealForGuard(t, ws.Specs, "cli-grant")
 	runReviewCLIGit(t, ws.Specs, "add", "-A")
 	runReviewCLIGit(t, ws.Specs, "commit", "-qm", "base")
 

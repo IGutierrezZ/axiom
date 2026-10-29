@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/IGutierrezZ/axiom/v3/internal/branch"
 	"github.com/IGutierrezZ/axiom/v3/internal/sddstatus"
 )
 
@@ -56,16 +57,27 @@ func RunSDDContinue(args []string, stdout io.Writer) error {
 	if err != nil {
 		return fmt.Errorf("resolve sdd status: %w", err)
 	}
-	if err := sddstatus.PrepareChangeInstanceConsent(status); err != nil {
-		return fmt.Errorf("prepare sdd continuation consent: %w", err)
-	}
-	status, err = sddstatus.Resolve(sddstatus.ResolveOptions{
-		CWD:                 parsed.CWD,
-		ChangeName:          parsed.ChangeName,
-		IncludeInstructions: true,
-	})
-	if err != nil {
-		return fmt.Errorf("resolve prepared sdd continuation status: %w", err)
+	// Guarda B (REQ-25.42, D-11): con blocked(wrong_branch) no se prepara el marcador de instancia y se
+	// muestra el bloqueo tal cual: la autoridad de edición no se evalúa con la rama equivocada, así que
+	// la preparación sería un no-op, y la continuación que nombra el motivo no autoriza ninguna fase.
+	if !sddstatus.BlockedByWrongBranch(status) {
+		// Guarda A (REQ-25.19): solo cuando se va a escribir el marcador de instancia.
+		if sddstatus.ChangeInstanceMarkerPending(status) {
+			if err := guardChangeWriter(*status.ChangeRoot, *status.ChangeName, "sdd continue", branch.ContextOrdinary); err != nil {
+				return err
+			}
+		}
+		if err := sddstatus.PrepareChangeInstanceConsent(status); err != nil {
+			return fmt.Errorf("prepare sdd continuation consent: %w", err)
+		}
+		status, err = sddstatus.Resolve(sddstatus.ResolveOptions{
+			CWD:                 parsed.CWD,
+			ChangeName:          parsed.ChangeName,
+			IncludeInstructions: true,
+		})
+		if err != nil {
+			return fmt.Errorf("resolve prepared sdd continuation status: %w", err)
+		}
 	}
 
 	if parsed.JSON {

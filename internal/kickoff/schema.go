@@ -97,6 +97,9 @@ func (k Kickoff) Validate() error {
 	if !validDeploymentTargets[k.Lifecycle.DeploymentTarget] {
 		return fmt.Errorf("kickoff: deployment_target desconocido %q", k.Lifecycle.DeploymentTarget)
 	}
+	if k.Git != nil {
+		return k.Git.Validate()
+	}
 	return nil
 }
 

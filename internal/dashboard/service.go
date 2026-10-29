@@ -19,6 +19,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/app"
 	"github.com/IGutierrezZ/axiom/v3/internal/autoskill"
 	"github.com/IGutierrezZ/axiom/v3/internal/backup"
+	"github.com/IGutierrezZ/axiom/v3/internal/branch/engine"
 	"github.com/IGutierrezZ/axiom/v3/internal/cli"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/sdd"
 	"github.com/IGutierrezZ/axiom/v3/internal/handoff"
@@ -134,6 +135,7 @@ func (s *Service) GetWorkspace() (*WorkspaceDTO, error) {
 	if err != nil {
 		// Proyecto sin axiom.yaml: proveer información descriptiva para el Zero-Config Welcome
 		detected, _ := s.hubDetector.Detect(curPath)
+		policy, repositories := branchPolicyView(nil)
 		return &WorkspaceDTO{
 			Name:         filepath.Base(curPath),
 			Topology:     "unconfigured",
@@ -143,6 +145,8 @@ func (s *Service) GetWorkspace() (*WorkspaceDTO, error) {
 			Message:      "Este proyecto aún no cuenta con un archivo axiom.yaml configurado.",
 			IsConfigured: false,
 			DetectedTech: detected,
+			BranchPolicy: policy,
+			Repositories: repositories,
 		}, nil
 	}
 
@@ -172,6 +176,7 @@ func (s *Service) GetWorkspace() (*WorkspaceDTO, error) {
 		}
 	}
 
+	policy, repositories := branchPolicyView(cfg)
 	return &WorkspaceDTO{
 		Name:            cfg.Workspace.Name,
 		Topology:        string(cfg.Workspace.Topology),
@@ -181,22 +186,35 @@ func (s *Service) GetWorkspace() (*WorkspaceDTO, error) {
 		Compliant:       compliant,
 		Message:         message,
 		IsConfigured:    true,
+		BranchPolicy:    policy,
+		Repositories:    repositories,
 	}, nil
 }
 
-// GetIncrements escanea y lista los incrementos activos y archivados.
-func (s *Service) GetIncrements() ([]IncrementSummaryDTO, error) {
+// GetIncrements escanea y lista los incrementos activos y archivados. Agrega a los del checkout
+// principal los cambios activos de los worktrees registrados (REQ-25.34): si uno figura en ambos
+// sitios, prevalece el del worktree. Marca como `pendingArchive` los cambios activos ya presentes en la
+// rama de integración (REQ-25.20). Además del listado devuelve los avisos informativos que viajan en la
+// cabecera `X-Axiom-Notes`: los cambios pendientes de archivar, los worktrees desaparecidos y la falta de
+// la referencia de integración. Ninguno es un error ni bloquea el listado.
+func (s *Service) GetIncrements() ([]IncrementSummaryDTO, []string, error) {
 	var list []IncrementSummaryDTO
-	root, err := s.planningRoot()
+	loc, err := workspace.Locate(s.getRootPath())
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
+	root := loc.PlanningHome
+	registered, registryNotes := registeredIncrements(loc)
 
-	// 1. Escanear cambios activos en <planning home>/changes/
+	// 1. Escanear cambios activos en <planning home>/changes/; los que viven en un worktree se
+	// leen de él, no del checkout principal.
 	activeDir := filepath.Join(root, "changes")
 	if entries, err := os.ReadDir(activeDir); err == nil {
 		for _, e := range entries {
 			if !e.IsDir() || e.Name() == "archive" || e.Name() == "e2e-cumulative" {
+				continue
+			}
+			if _, inWorktree := registered[e.Name()]; inWorktree {
 				continue
 			}
 			incPath := filepath.Join(activeDir, e.Name())
@@ -204,6 +222,28 @@ func (s *Service) GetIncrements() ([]IncrementSummaryDTO, error) {
 			list = append(list, summary)
 		}
 	}
+	for name, change := range registered {
+		summary := s.inspectIncrement(change.ChangeRoot, name, "active")
+		summary.WorktreePath = change.WorktreeRoot
+		summary.Branch = change.Branch
+		list = append(list, summary)
+	}
+
+	// Cambios pendientes de archivar: informativos, sin error ni bloqueo.
+	var notes []string
+	pending, pendingNotes := engine.Default().PendingArchive(context.Background(), loc)
+	if len(pending) > 0 {
+		pendingSet := make(map[string]bool, len(pending))
+		for _, change := range pending {
+			pendingSet[change.Change] = true
+		}
+		for i := range list {
+			list[i].PendingArchive = pendingSet[list[i].Name]
+		}
+		notes = append(notes, pendingArchiveNote(pending))
+	}
+	notes = append(notes, registryNotes...)
+	notes = append(notes, pendingNotes...)
 
 	// 2. Escanear cambios archivados en <planning home>/changes/archive/
 	archiveDir := filepath.Join(root, "changes", "archive")
@@ -226,7 +266,7 @@ func (s *Service) GetIncrements() ([]IncrementSummaryDTO, error) {
 		return list[i].Name > list[j].Name
 	})
 
-	return list, nil
+	return list, notes, nil
 }
 
 func (s *Service) inspectIncrement(path, name, kind string) IncrementSummaryDTO {
@@ -427,35 +467,14 @@ func (s *Service) inspectIncrement(path, name, kind string) IncrementSummaryDTO 
 }
 
 // FindIncrementPath busca la ruta de un incremento por nombre o prefijo/sufijo.
+// Un cambio activo que vive en un worktree registrado se resuelve en el worktree y prevalece sobre
+// el del checkout principal (REQ-25.34).
 func (s *Service) FindIncrementPath(name string) (string, string, error) {
-	root, err := s.planningRoot()
+	location, err := s.locateIncrement(name)
 	if err != nil {
 		return "", "", err
 	}
-
-	// 1. Probar en activos
-	activePath := filepath.Join(root, "changes", name)
-	if dirExists(activePath) {
-		return activePath, "active", nil
-	}
-
-	// 2. Probar en archivados exacto
-	archivePath := filepath.Join(root, "changes", "archive", name)
-	if dirExists(archivePath) {
-		return archivePath, "archived", nil
-	}
-
-	// 3. Probar en archivados buscando por sufijo (ej. 'inc-01' en '2026-09-14-inc-01-...')
-	archiveDir := filepath.Join(root, "changes", "archive")
-	if entries, err := os.ReadDir(archiveDir); err == nil {
-		for _, e := range entries {
-			if e.IsDir() && (strings.Contains(e.Name(), name) || strings.HasSuffix(e.Name(), name)) {
-				return filepath.Join(archiveDir, e.Name()), "archived", nil
-			}
-		}
-	}
-
-	return "", "", fmt.Errorf("incremento '%s' no encontrado", name)
+	return location.path, location.kind, nil
 }
 
 // requireActiveIncrement devuelve la ruta de un cambio activo. Un fallo de la
@@ -475,13 +494,16 @@ func (s *Service) requireActiveIncrement(name string) (string, error) {
 
 // GetIncrementDetail retorna el detalle completo de un cambio y el contenido de sus artefactos.
 func (s *Service) GetIncrementDetail(name string) (*IncrementDetailDTO, error) {
-	path, kind, err := s.FindIncrementPath(name)
+	location, err := s.locateIncrement(name)
 	if err != nil {
 		return nil, err
 	}
+	path, kind := location.path, location.kind
 
 	root := s.getRootPath()
 	summary := s.inspectIncrement(path, filepath.Base(path), kind)
+	summary.WorktreePath = location.worktreePath
+	summary.Branch = location.branch
 
 	dto := &IncrementDetailDTO{
 		Summary:     summary,
@@ -806,7 +828,7 @@ func (s *Service) GetProjects() (*ProjectListDTO, error) {
 
 	projInterfaces := make([]interface{}, len(projects))
 	for i, p := range projects {
-		projInterfaces[i] = p
+		projInterfaces[i] = newProjectDTO(p)
 	}
 
 	return &ProjectListDTO{
@@ -829,11 +851,8 @@ func (s *Service) AddProject(req ProjectAddRequest) (*hub.WorkspaceRecord, error
 		return nil, errors.New("debes especificar la ruta del proyecto ('path')")
 	}
 
-	if hub.IsGitWorktree(req.Path) {
-		return nil, fmt.Errorf("la ruta '%s' corresponde a un worktree git; los worktrees no deben registrarse como proyectos en el Hub", req.Path)
-	}
-
-	return s.hubManager.Register(req.Path, req.Name, req.Topology)
+	// El hub rechaza los worktrees enlazados con un mensaje que nombra su checkout principal.
+	return s.hubManager.RegisterWithWorktreePrefs(req.Path, req.Name, req.Topology, hub.WorktreePrefs{Mode: req.WorktreeMode, Root: req.WorktreeRoot})
 }
 
 // InitProject inicializa un proyecto con axiom.yaml y lo registra.
@@ -845,10 +864,11 @@ func (s *Service) InitProject(req ProjectInitRequest) (*hub.InitResult, error) {
 
 	ini := hub.NewInitializer(s.hubManager, s.hubDetector)
 	res, err := ini.Init(hub.InitOptions{
-		Path:     targetPath,
-		Name:     req.Name,
-		Topology: req.Topology,
-		Roles:    req.Roles,
+		Path:          targetPath,
+		Name:          req.Name,
+		Topology:      req.Topology,
+		Roles:         req.Roles,
+		WorktreePrefs: hub.WorktreePrefs{Mode: req.WorktreeMode, Root: req.WorktreeRoot},
 	})
 	if err != nil {
 		return nil, err
@@ -862,7 +882,7 @@ func (s *Service) InitProject(req ProjectInitRequest) (*hub.InitResult, error) {
 
 // MigrateIncompleteTasksToCumulative transfiere tareas pendientes de un rol no bloqueante a su incremento acumulativo correspondiente.
 func (s *Service) MigrateIncompleteTasksToCumulative(changeName, role string) (int, error) {
-	path, _, err := s.FindIncrementPath(changeName)
+	path, kind, err := s.FindIncrementPath(changeName)
 	if err != nil {
 		return 0, err
 	}
@@ -870,6 +890,14 @@ func (s *Service) MigrateIncompleteTasksToCumulative(changeName, role string) (i
 	root, err := s.planningRoot()
 	if err != nil {
 		return 0, err
+	}
+	// REQ-25.19: la guarda A protege el cambio de origen, que es un cambio activo con rama propia; el
+	// destino `cumulative-<rol>` es un sumidero exento por nombre y un origen archivado ya no es
+	// un cambio. El rechazo no deja nada escrito.
+	if kind == "active" {
+		if err := guardIncrementFolder(path, changeName, "migrar tareas al acumulativo"); err != nil {
+			return 0, err
+		}
 	}
 	var tasksFiles []string
 
@@ -988,69 +1016,13 @@ func (s *Service) CreateIncrement(req CreateIncrementRequest) (*CreateIncrementR
 		}
 	}
 
-	if err := os.MkdirAll(activePath, 0755); err != nil {
-		return nil, fmt.Errorf("error al crear el directorio del incremento: %w", err)
+	// REQ-25.32: `ensure` prepara la rama (y, en modo worktree, el worktree) del cambio antes de
+	// escribir nada; el escritor guardado escribe en el planning home que devuelve.
+	planningHome, err := s.ensureIncrementBranch(name, req.Mode)
+	if err != nil {
+		return nil, err
 	}
-
-	intent := strings.TrimSpace(req.Intent)
-	if intent == "" {
-		intent = fmt.Sprintf("Implementación e integración de la funcionalidad %s bajo la metodología SDD.", name)
-	}
-
-	title := humanizeName(name)
-	changeType := strings.TrimSpace(req.Type)
-	if changeType == "" {
-		changeType = "feature"
-	}
-
-	proposalContent := fmt.Sprintf(`# Propuesta: %s (%s)
-
-## Propósito (Intent)
-
-%s
-
----
-
-## Alcance (Scope)
-
-### Dentro de Alcance (In Scope)
-- Diseño, implementación y verificación de las capacidades de %s.
-- Cobertura de pruebas unitarias y validación formal de requerimientos.
-
-### Fuera de Alcance (Out of Scope)
-- Cambios no relacionados directamente con los objetivos de esta iteración.
-
----
-
-## Capacidades (Capabilities)
-
-### Nuevas Capacidades
-- `+"`%s`"+`: Funcionalidad principal introducida por el cambio.
-
----
-
-## Enfoque de Implementación (Approach)
-1. Exploración y definición de especificaciones con escenarios BDD en spec.md.
-2. Diseño técnico detallado y arquitectura en design.md.
-3. Desglose y seguimiento de tareas en tasks.md.
-4. Verificación formal y consolidación de documentación viva en archive.
-`, title, name, intent, name, name)
-
-	if strings.TrimSpace(req.ProposalBody) != "" {
-		proposalContent = req.ProposalBody // INC-19: bytes exactos del renderizador ODD, sin normalizar [D-02]
-	}
-
-	proposalPath := filepath.Join(activePath, "proposal.md")
-	if err := os.WriteFile(proposalPath, []byte(proposalContent), 0644); err != nil {
-		return nil, fmt.Errorf("error al escribir proposal.md: %w", err)
-	}
-
-	return &CreateIncrementResponse{
-		Success: true,
-		Name:    name,
-		Path:    proposalPath,
-		Message: fmt.Sprintf("Incremento %s inicializado correctamente con proposal.md", name),
-	}, nil
+	return s.writeIncrement(planningHome, name, req)
 }
 
 // ContinueIncrement ejecuta la transición del despachador SDD sobre un cambio activo.
@@ -1198,6 +1170,10 @@ func (s *Service) CreateHandoff(req CreateHandoffRequest) (*CreateHandoffRespons
 		return nil, fmt.Errorf("handoff inválido: %w", err)
 	}
 
+	// REQ-25.19: guarda A antes de escribir `handoff.md`; fuera de la rama del cambio se niega sin escribir.
+	if err := guardIncrementFolder(targetPath, change, "crear el handoff"); err != nil {
+		return nil, err
+	}
 	filePath := filepath.Join(targetPath, "handoff.md")
 	if err := handoff.WriteFile(filePath, ho); err != nil {
 		return nil, fmt.Errorf("error al escribir handoff.md: %w", err)
@@ -1640,7 +1616,7 @@ func (s *Service) GetSpecsSyncStatus(ctx context.Context) (*SpecsSyncStatusDTO, 
 	if out, err := cmdBranch.Output(); err == nil {
 		result.Branch = strings.TrimSpace(string(out))
 	} else {
-		result.Branch = "main"
+		result.Branch = s.planningIntegration()
 	}
 
 	// 3. Obtener remoto asociado

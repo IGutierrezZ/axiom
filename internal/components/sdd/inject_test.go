@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"runtime"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -9815,5 +9816,463 @@ func TestMergeOpenCodeJSONFileRetiresLegacyValidatorPermission(t *testing.T) {
 	second, _ := os.ReadFile(path)
 	if string(first) != string(second) {
 		t.Fatalf("merge must be idempotent\nfirst=%s\nsecond=%s", first, second)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Instalación del hook de `axiom branch guard` por `axiom sync` (REQ-25.22, design D-18)
+// ---------------------------------------------------------------------------
+
+// Las órdenes y los matchers se fijan aquí como literales a propósito: el hook de Codex es «no
+// gestionado» y su confianza queda ligada al hash de la entrada (spike-guard-runtimes.md, A-2),
+// así que cambiar cualquiera de ellos rompe esta prueba antes de llegar a una máquina.
+const (
+	wantClaudeBranchGuardCommand = "axiom branch guard --agent claude-code"
+	wantClaudeBranchGuardMatcher = "Write|Edit|MultiEdit|NotebookEdit"
+	wantCodexBranchGuardCommand  = "axiom branch guard --agent codex"
+	wantCodexBranchGuardMatcher  = "^apply_patch$"
+)
+
+type branchGuardHooksFile struct {
+	Hooks map[string][]struct {
+		Matcher string `json:"matcher"`
+		Hooks   []struct {
+			Type    string `json:"type"`
+			Command string `json:"command"`
+			Timeout int    `json:"timeout"`
+		} `json:"hooks"`
+	} `json:"hooks"`
+}
+
+func readBranchGuardHooksFile(t *testing.T, path string) (branchGuardHooksFile, []byte) {
+	t.Helper()
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read %s: %v", path, err)
+	}
+	var parsed branchGuardHooksFile
+	if err := json.Unmarshal(raw, &parsed); err != nil {
+		t.Fatalf("%s is not valid JSON: %v\n%s", path, err, raw)
+	}
+	return parsed, raw
+}
+
+// assertBranchGuardEntries exige exactamente una entrada de la guarda en PreToolUse y otra en
+// PostToolUse, con el matcher y la orden literales.
+func assertBranchGuardEntries(t *testing.T, path, matcher, command string) {
+	t.Helper()
+	parsed, raw := readBranchGuardHooksFile(t, path)
+	for _, event := range []string{"PreToolUse", "PostToolUse"} {
+		found := 0
+		for _, entry := range parsed.Hooks[event] {
+			for _, hook := range entry.Hooks {
+				if hook.Command != command {
+					continue
+				}
+				found++
+				if entry.Matcher != matcher || hook.Type != "command" || hook.Timeout != 30 {
+					t.Fatalf("%s: entrada de %s = matcher %q type %q timeout %d, se esperaba %q, command y 30\n%s", path, event, entry.Matcher, hook.Type, hook.Timeout, matcher, raw)
+				}
+			}
+		}
+		if found != 1 {
+			t.Fatalf("%s: %s tiene %d entradas de %q, se esperaba 1\n%s", path, event, found, command, raw)
+		}
+	}
+}
+
+func TestEnsureClaudeBranchGuardHookInstallsPreAndPostToolUse(t *testing.T) {
+	settingsPath := filepath.Join(t.TempDir(), ".claude", "settings.json")
+	if err := os.MkdirAll(filepath.Dir(settingsPath), 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	changed, err := ensureClaudeBranchGuardHook(settingsPath, model.AgentClaudeCode)
+	if err != nil || !changed {
+		t.Fatalf("la primera instalación debe cambiar el fichero: changed=%v err=%v", changed, err)
+	}
+	assertBranchGuardEntries(t, settingsPath, wantClaudeBranchGuardMatcher, wantClaudeBranchGuardCommand)
+	first, err := os.ReadFile(settingsPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	changed, err = ensureClaudeBranchGuardHook(settingsPath, model.AgentClaudeCode)
+	if err != nil || changed {
+		t.Fatalf("la segunda instalación debe ser un no-op: changed=%v err=%v", changed, err)
+	}
+	second, err := os.ReadFile(settingsPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(first, second) {
+		t.Fatalf("la segunda instalación reescribió el fichero:\n%s\n%s", first, second)
+	}
+}
+
+func TestEnsureClaudeBranchGuardHookKeepsForeignEntries(t *testing.T) {
+	settingsPath := filepath.Join(t.TempDir(), ".claude", "settings.json")
+	if err := os.MkdirAll(filepath.Dir(settingsPath), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	seed := `{"model":"opus","hooks":{
+  "PreToolUse":[{"matcher":"Write|Edit","hooks":[{"type":"command","command":"echo foreign pre"}]}],
+  "PostToolUse":[{"matcher":"Bash","hooks":[{"type":"command","command":"echo foreign post"}]}],
+  "Stop":[{"hooks":[{"type":"command","command":"echo foreign stop"}]}]
+}}`
+	if err := os.WriteFile(settingsPath, []byte(seed), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	if changed, err := ensureClaudeBranchGuardHook(settingsPath, model.AgentClaudeCode); err != nil || !changed {
+		t.Fatalf("changed=%v err=%v", changed, err)
+	}
+	assertBranchGuardEntries(t, settingsPath, wantClaudeBranchGuardMatcher, wantClaudeBranchGuardCommand)
+	_, raw := readBranchGuardHooksFile(t, settingsPath)
+	for _, keep := range []string{`"model": "opus"`, "echo foreign pre", "echo foreign post", "echo foreign stop"} {
+		if !strings.Contains(string(raw), keep) {
+			t.Fatalf("la entrada ajena %q no se conservó:\n%s", keep, raw)
+		}
+	}
+}
+
+func TestEnsureClaudeBranchGuardHookRejectsUnexpectedHookSchema(t *testing.T) {
+	settingsPath := filepath.Join(t.TempDir(), ".claude", "settings.json")
+	if err := os.MkdirAll(filepath.Dir(settingsPath), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	original := []byte(`{"hooks":{"PreToolUse":{"bad":true}}}`)
+	if err := os.WriteFile(settingsPath, original, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	changed, err := ensureClaudeBranchGuardHook(settingsPath, model.AgentClaudeCode)
+	if err == nil || changed {
+		t.Fatalf("una forma inesperada debe fallar sin cambiar: changed=%v err=%v", changed, err)
+	}
+	after, readErr := os.ReadFile(settingsPath)
+	if readErr != nil || !bytes.Equal(original, after) {
+		t.Fatalf("el fichero no debe tocarse ante una forma inesperada: %v\n%s", readErr, after)
+	}
+}
+
+func TestEnsureCodexBranchGuardHookInstallsPreAndPostToolUse(t *testing.T) {
+	hooksPath := filepath.Join(t.TempDir(), ".codex", "hooks.json")
+
+	changed, err := ensureCodexBranchGuardHook(hooksPath, model.AgentCodex)
+	if err != nil || !changed {
+		t.Fatalf("la primera instalación debe crear el fichero: changed=%v err=%v", changed, err)
+	}
+	assertBranchGuardEntries(t, hooksPath, wantCodexBranchGuardMatcher, wantCodexBranchGuardCommand)
+	first, err := os.ReadFile(hooksPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	changed, err = ensureCodexBranchGuardHook(hooksPath, model.AgentCodex)
+	if err != nil || changed {
+		t.Fatalf("la segunda instalación debe ser un no-op: changed=%v err=%v", changed, err)
+	}
+	second, err := os.ReadFile(hooksPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(first, second) {
+		t.Fatalf("la segunda instalación reescribió el fichero:\n%s\n%s", first, second)
+	}
+}
+
+func TestEnsureCodexBranchGuardHookKeepsForeignEntries(t *testing.T) {
+	hooksPath := filepath.Join(t.TempDir(), ".codex", "hooks.json")
+	if err := os.MkdirAll(filepath.Dir(hooksPath), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	seed := `{"hooks":{
+  "PreToolUse":[{"matcher":"^apply_patch$","hooks":[{"type":"command","command":"echo foreign pre","timeout":5}]}],
+  "SessionStart":[{"matcher":"startup","hooks":[{"type":"command","command":"echo foreign start"}]}]
+}}`
+	if err := os.WriteFile(hooksPath, []byte(seed), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	if changed, err := ensureCodexBranchGuardHook(hooksPath, model.AgentCodex); err != nil || !changed {
+		t.Fatalf("changed=%v err=%v", changed, err)
+	}
+	assertBranchGuardEntries(t, hooksPath, wantCodexBranchGuardMatcher, wantCodexBranchGuardCommand)
+	_, raw := readBranchGuardHooksFile(t, hooksPath)
+	for _, keep := range []string{"echo foreign pre", "echo foreign start"} {
+		if !strings.Contains(string(raw), keep) {
+			t.Fatalf("la entrada ajena %q no se conservó:\n%s", keep, raw)
+		}
+	}
+}
+
+func TestEnsureCodexBranchGuardHookRejectsUnexpectedHookSchema(t *testing.T) {
+	hooksPath := filepath.Join(t.TempDir(), ".codex", "hooks.json")
+	if err := os.MkdirAll(filepath.Dir(hooksPath), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	original := []byte(`{"hooks":{"PostToolUse":"nope"}}`)
+	if err := os.WriteFile(hooksPath, original, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	changed, err := ensureCodexBranchGuardHook(hooksPath, model.AgentCodex)
+	if err == nil || changed {
+		t.Fatalf("una forma inesperada debe fallar sin cambiar: changed=%v err=%v", changed, err)
+	}
+	after, readErr := os.ReadFile(hooksPath)
+	if readErr != nil || !bytes.Equal(original, after) {
+		t.Fatalf("el fichero no debe tocarse ante una forma inesperada: %v\n%s", readErr, after)
+	}
+}
+
+// REQ-25.22: la instalación de Claude Code y de Codex entra por installSkillRegistryAutomation sin
+// alterar las demás rutas; Pi no recibe ninguna entrada y ningún repositorio recibe hooks de git.
+func TestInstallSkillRegistryAutomationBranchGuardReachesClaudeAndCodexOnly(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
+	repo := t.TempDir()
+	gitHooks := filepath.Join(repo, ".git", "hooks")
+	if err := os.MkdirAll(gitHooks, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Chdir(repo)
+
+	claudeSettings := claudeAdapter().SettingsPath(home)
+	codexHooks := filepath.Join(codexInjectAdapter().GlobalConfigDir(home), "hooks.json")
+
+	if _, err := installSkillRegistryAutomation(home, claudeAdapter()); err != nil {
+		t.Fatalf("installSkillRegistryAutomation(claude): %v", err)
+	}
+	if _, err := installSkillRegistryAutomation(home, codexInjectAdapter()); err != nil {
+		t.Fatalf("installSkillRegistryAutomation(codex): %v", err)
+	}
+	assertBranchGuardEntries(t, claudeSettings, wantClaudeBranchGuardMatcher, wantClaudeBranchGuardCommand)
+	assertBranchGuardEntries(t, codexHooks, wantCodexBranchGuardMatcher, wantCodexBranchGuardCommand)
+	claudeFirst, _ := os.ReadFile(claudeSettings)
+	codexFirst, _ := os.ReadFile(codexHooks)
+
+	for name, adapter := range map[string]agents.Adapter{"claude": claudeAdapter(), "codex": codexInjectAdapter()} {
+		result, err := installSkillRegistryAutomation(home, adapter)
+		if err != nil || result.Changed {
+			t.Fatalf("la segunda instalación de %s debe ser un no-op: changed=%v err=%v", name, result.Changed, err)
+		}
+	}
+	if after, _ := os.ReadFile(claudeSettings); !bytes.Equal(claudeFirst, after) {
+		t.Fatalf("settings.json de Claude cambió en la segunda ejecución:\n%s\n%s", claudeFirst, after)
+	}
+	if after, _ := os.ReadFile(codexHooks); !bytes.Equal(codexFirst, after) {
+		t.Fatalf("hooks.json de Codex cambió en la segunda ejecución:\n%s\n%s", codexFirst, after)
+	}
+	// Las demás rutas de installSkillRegistryAutomation siguen donde estaban.
+	if text := string(claudeFirst); strings.Count(text, "axiom sdd-preflight-hook --agent claude-code") != 1 || strings.Count(text, "axiom skill-registry refresh") != 1 {
+		t.Fatalf("la instalación de la guarda alteró los demás hooks de Claude:\n%s", text)
+	}
+	if text := string(codexFirst); strings.Count(text, "axiom skill-registry refresh") != 1 {
+		t.Fatalf("la instalación de la guarda alteró el hook de skill-registry de Codex:\n%s", text)
+	}
+
+	// Pi no tiene canal demostrado: no recibe ninguna entrada ni escribe ningún fichero.
+	piAdapter, err := agents.NewAdapter(model.AgentPi)
+	if err != nil {
+		t.Fatalf("NewAdapter(pi): %v", err)
+	}
+	piHome := t.TempDir()
+	result, err := installSkillRegistryAutomation(piHome, piAdapter)
+	if err != nil || result.Changed || len(result.Files) != 0 {
+		t.Fatalf("Pi no recibe ninguna entrada: %+v err=%v", result, err)
+	}
+	if entries, err := os.ReadDir(piHome); err != nil || len(entries) != 0 {
+		t.Fatalf("Pi no debe escribir nada: %v err=%v", entries, err)
+	}
+
+	// Nunca hay hooks de git.
+	if entries, err := os.ReadDir(gitHooks); err != nil || len(entries) != 0 {
+		t.Fatalf("no se instala ningún hook de git: %v err=%v", entries, err)
+	}
+}
+
+// Arnés de S11.15 (en proceso, sin binario suelto): el mismo Inject que ejecuta `axiom sync`, con
+// HOME y USERPROFILE temporales y dos veces, deja bytes idénticos en la configuración de cada
+// runtime y la entrada de la guarda aparece una sola vez.
+func TestInjectBranchGuardTwoSyncsLeaveIdenticalBytes(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
+
+	runtimes := []struct {
+		name    string
+		adapter agents.Adapter
+		path    string
+		matcher string
+		command string
+	}{
+		{"claude", claudeAdapter(), claudeAdapter().SettingsPath(home), wantClaudeBranchGuardMatcher, wantClaudeBranchGuardCommand},
+		{"codex", codexInjectAdapter(), filepath.Join(codexInjectAdapter().GlobalConfigDir(home), "hooks.json"), wantCodexBranchGuardMatcher, wantCodexBranchGuardCommand},
+	}
+	first := map[string][]byte{}
+	for _, rt := range runtimes {
+		if _, err := Inject(home, rt.adapter, model.SDDModeMulti); err != nil {
+			t.Fatalf("primera sincronización de %s: %v", rt.name, err)
+		}
+		assertBranchGuardEntries(t, rt.path, rt.matcher, rt.command)
+		data, err := os.ReadFile(rt.path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		first[rt.name] = data
+	}
+	for _, rt := range runtimes {
+		if _, err := Inject(home, rt.adapter, model.SDDModeMulti); err != nil {
+			t.Fatalf("segunda sincronización de %s: %v", rt.name, err)
+		}
+		second, err := os.ReadFile(rt.path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !bytes.Equal(first[rt.name], second) {
+			t.Fatalf("la segunda sincronización de %s cambió los bytes:\n%s\n%s", rt.name, first[rt.name], second)
+		}
+	}
+}
+
+// --- Plugin axiom-branch-guard.ts de OpenCode (S11-c4; REQ-25.22; R10) ---
+
+const branchGuardPluginName = "axiom-branch-guard.ts"
+
+// El plugin figura en la lista gestionada de OpenCode (la que usan Inject, la sincronización, el
+// desinstalador y la restauración transaccional) y en la tabla de resúmenes, y no llega a Kilocode,
+// que no tiene el hook (REQ-25.22: solo Claude Code, Codex y OpenCode).
+func TestOpenCodeBranchGuardPluginIsManagedOnlyForOpenCode(t *testing.T) {
+	if !slices.Contains(ManagedOpenCodePluginNames(), branchGuardPluginName) {
+		t.Fatalf("ManagedOpenCodePluginNames() no contiene %q: %v", branchGuardPluginName, ManagedOpenCodePluginNames())
+	}
+	if !slices.Contains(OpenCodePluginLifecycleNames(model.AgentOpenCode), branchGuardPluginName) {
+		t.Fatalf("OpenCodePluginLifecycleNames(opencode) no contiene %q: instantánea y retirada no lo verían", branchGuardPluginName)
+	}
+	for _, agent := range []model.AgentID{model.AgentKilocode, model.AgentClaudeCode, model.AgentCodex} {
+		if slices.Contains(managedOpenCodePluginNames(agent), branchGuardPluginName) {
+			t.Errorf("%s no debe recibir %q", agent, branchGuardPluginName)
+		}
+	}
+	// Plugin nuevo: no existe ninguna revisión anterior que reconocer, pero la tabla debe tener su
+	// entrada (los lectores de la tabla indexan por plugin gestionado).
+	digests, ok := historicalOpenCodePluginDigests[branchGuardPluginName]
+	if !ok || len(digests) != 0 {
+		t.Fatalf("historicalOpenCodePluginDigests[%q] = %v, %t; want an entry with no historical digests", branchGuardPluginName, digests, ok)
+	}
+}
+
+// Arnés de S11.19 (en proceso, sin binario suelto): el mismo Inject que ejecuta `axiom sync`, con
+// HOME y USERPROFILE temporales, instala el plugin y una segunda ejecución deja bytes idénticos.
+func TestInjectOpenCodeBranchGuardPluginTwoSyncsLeaveIdenticalBytes(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
+	t.Setenv("XDG_CONFIG_HOME", filepath.Join(home, ".config"))
+	mockNoPackageManager(t)
+
+	adapter := opencodeAdapter()
+	pluginPath := filepath.Join(adapter.GlobalConfigDir(home), "plugins", branchGuardPluginName)
+
+	first, err := Inject(home, adapter, model.SDDModeMulti)
+	if err != nil {
+		t.Fatalf("primera sincronización: %v", err)
+	}
+	if !slices.Contains(first.Files, pluginPath) {
+		t.Fatalf("la primera sincronización no informa del plugin %q: %v", pluginPath, first.Files)
+	}
+	installed, err := os.ReadFile(pluginPath)
+	if err != nil {
+		t.Fatalf("el plugin no está instalado: %v", err)
+	}
+	if string(installed) != assets.MustRead("opencode/plugins/"+branchGuardPluginName) {
+		t.Fatal("el plugin instalado no coincide con el activo embebido")
+	}
+
+	second, err := Inject(home, adapter, model.SDDModeMulti)
+	if err != nil {
+		t.Fatalf("segunda sincronización: %v", err)
+	}
+	if second.Changed {
+		t.Fatalf("la segunda sincronización cambió ficheros: %v", second.Files)
+	}
+	again, err := os.ReadFile(pluginPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(installed, again) {
+		t.Fatal("la segunda sincronización cambió los bytes del plugin")
+	}
+}
+
+// Con OpenCode v2 el plugin sale del directorio de la generación v2 (si faltara, la instalación
+// entraría en pánico al leerlo) y también es idéntico en una segunda ejecución.
+func TestInstallOpenCodeBranchGuardPluginV2UsesV2AssetAndIsIdempotent(t *testing.T) {
+	withOpenCodeV2Runtime(t)
+	home := t.TempDir()
+	adapter := opencodeAdapter()
+	assetDir, err := openCodePluginAssetDirectory(adapter.Agent())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if assetDir != "opencode/plugins-v2/" {
+		t.Fatalf("directorio de activos = %q, want opencode/plugins-v2/", assetDir)
+	}
+	if _, err := installOpenCodePluginsDirectory(home, adapter, assetDir); err != nil {
+		t.Fatal(err)
+	}
+	pluginPath := filepath.Join(adapter.GlobalConfigDir(home), "plugins", branchGuardPluginName)
+	installed, err := os.ReadFile(pluginPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(installed) != assets.MustRead("opencode/plugins-v2/"+branchGuardPluginName) {
+		t.Fatal("el plugin v2 instalado no coincide con el activo v2")
+	}
+	again, err := installOpenCodePluginsDirectory(home, adapter, assetDir)
+	if err != nil || again.Changed {
+		t.Fatalf("la segunda instalación v2 cambió ficheros: changed=%t err=%v", again.Changed, err)
+	}
+}
+
+// Kilocode no recibe el plugin: no tiene hook de la guarda.
+func TestInjectKilocodeDoesNotReceiveBranchGuardPlugin(t *testing.T) {
+	home := t.TempDir()
+	mockNoPackageManager(t)
+	if _, err := Inject(home, kilocodeAdapter(), model.SDDModeMulti); err != nil {
+		t.Fatal(err)
+	}
+	pluginPath := filepath.Join(kilocodeAdapter().GlobalConfigDir(home), "plugins", branchGuardPluginName)
+	if _, err := os.Stat(pluginPath); !os.IsNotExist(err) {
+		t.Fatalf("Kilocode no debe recibir %q (stat err = %v)", pluginPath, err)
+	}
+}
+
+// La sincronización refresca una copia instalada y desactualizada y nunca crea un plugin que no
+// estaba instalado.
+func TestRefreshInstalledOpenCodePluginsKeepsBranchGuardPluginInSync(t *testing.T) {
+	home := t.TempDir()
+	adapter := opencodeAdapter()
+	pluginPath := filepath.Join(adapter.GlobalConfigDir(home), "plugins", branchGuardPluginName)
+
+	if result, err := RefreshInstalledOpenCodePlugins(home, adapter); err != nil || slices.Contains(result.Files, pluginPath) {
+		t.Fatalf("la sincronización no debe crear un plugin que no estaba instalado: files=%v err=%v", result.Files, err)
+	}
+	if err := os.MkdirAll(filepath.Dir(pluginPath), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(pluginPath, []byte("// copia desactualizada\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RefreshInstalledOpenCodePlugins(home, adapter); err != nil {
+		t.Fatal(err)
+	}
+	got, err := os.ReadFile(pluginPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(got) != assets.MustRead("opencode/plugins/"+branchGuardPluginName) {
+		t.Fatal("la copia desactualizada no se ha refrescado")
 	}
 }

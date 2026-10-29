@@ -18,6 +18,7 @@ func TestSDDAttemptRefusesRecreatedMarker(t *testing.T) {
 	const change = "recreated-marker"
 	tasks := "- [ ] 1.1 Update `" + filepath.Join(outsideRoot, "main.go") + "`\n"
 	changeRoot := seedSDDStatusReadyChange(t, repo, change, tasks)
+	retroSealForGuard(t, repo, change)
 
 	var continued bytes.Buffer
 	if err := RunSDDContinue([]string{change, "--cwd", repo, "--json"}, &continued); err != nil {
@@ -41,6 +42,7 @@ func TestSDDAttemptRefusesRecreatedMarker(t *testing.T) {
 		t.Fatal(err)
 	}
 	changeRoot = seedSDDStatusReadyChange(t, repo, change, tasks)
+	retroSealForGuard(t, repo, change)
 	store, err := sddstatus.OpenRuntimeStore(t.Context(), repo, change)
 	if err != nil {
 		t.Fatal(err)

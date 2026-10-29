@@ -113,10 +113,22 @@ func isAre(names []string) string {
 }
 
 // planText is one task plan read for edit-authority detection: the file name a
-// blocked reason must cite and its text.
+// blocked reason must cite and its text. base is the directory its relative
+// paths resolve against when that is not the workspace root: the worktree of
+// the change, or of the role that owns the plan, that `axiom branch ensure`
+// registered (INC-25 D-14). Empty means the workspace root.
 type planText struct {
 	name string
 	text string
+	base string
+}
+
+// baseOr is the directory the plan's relative paths resolve against.
+func (plan planText) baseOr(workspaceRoot string) string {
+	if plan.base != "" {
+		return plan.base
+	}
+	return workspaceRoot
 }
 
 // roleTaskPlans reads the role task files (absolute paths) as plans, in order.

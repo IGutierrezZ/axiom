@@ -67,7 +67,7 @@ func TestPlanningHomeResolvesFromTheRegisteredPath(t *testing.T) {
 			writeFixtureFile(t, ws.Home, "changes/archive/2026-01-01-inc-98-viejo/proposal.md", "# Viejo\n")
 			registered := tt.start(ws)
 
-			list, err := svc.GetIncrements()
+			list, _, err := svc.GetIncrements()
 			if err != nil {
 				t.Fatalf("GetIncrements: %v", err)
 			}
@@ -108,6 +108,9 @@ func TestCreateIncrementWritesUnderThePlanningHome(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			svc, ws := canonicalService(t, tt.start)
+			// REQ-25.32: `ensure` precede a la escritura. En un multirepo el repositorio de specs se
+			// trabaja in situ, en su rama de integración (REQ-25.5), de modo que solo necesita git.
+			commitGitRepo(t, ws.Specs)
 
 			res, err := svc.CreateIncrement(CreateIncrementRequest{Name: "mi-cambio", Intent: "Propósito X"})
 			if err != nil {
@@ -212,12 +215,12 @@ func TestPlanningRootIsResolvedOnEveryCall(t *testing.T) {
 	svc, ws := canonicalService(t, startAtMaster, workspacetest.WithBrokenPointer())
 
 	var locateErr *workspace.LocateError
-	if _, err := svc.GetIncrements(); !errors.As(err, &locateErr) {
+	if _, _, err := svc.GetIncrements(); !errors.As(err, &locateErr) {
 		t.Fatalf("con el puntero roto se esperaba un *LocateError, obtenido %v", err)
 	}
 
 	writeFixtureFile(t, ws.Master, ".axiom-workspace", "config: repo-specs/axiom.yaml\n")
-	list, err := svc.GetIncrements()
+	list, _, err := svc.GetIncrements()
 	if err != nil {
 		t.Fatalf("tras reparar el puntero, GetIncrements debe resolver: %v", err)
 	}
@@ -232,7 +235,7 @@ func TestUnresolvablePlanningHomeIsPropagated(t *testing.T) {
 	svc, ws := canonicalService(t, startAtMaster, workspacetest.WithBrokenPointer())
 
 	calls := map[string]func() error{
-		"GetIncrements": func() error { _, err := svc.GetIncrements(); return err },
+		"GetIncrements": func() error { _, _, err := svc.GetIncrements(); return err },
 		"FindIncrementPath": func() error {
 			_, _, err := svc.FindIncrementPath("inc-99-ejemplo")
 			return err

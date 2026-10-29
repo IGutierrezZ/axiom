@@ -10,6 +10,8 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+
+	"github.com/IGutierrezZ/axiom/v3/internal/kickoff"
 )
 
 // Issue #2849: the built-binary consent loop. A blocked multi-repository
@@ -56,6 +58,24 @@ func seedConsentChange(t *testing.T, planning, name, tasks string) {
 		if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 			t.Fatal(err)
 		}
+	}
+}
+
+// retroSealConsentChange writes a kickoff.yaml without a git policy snapshot for the change, the
+// shape `kickoff seal` left before the snapshot existed (a pre-existing change): such a change is
+// exempt from the change-branch guard (REQ-25.37, R15). The planning repositories of these
+// fixtures stay on `main`, and a change with no kickoff.yaml at all is not exempt (S-7), so the
+// writers `sdd continue` runs would refuse with wrong_branch. It seals with `continuous` and the
+// default single role, writing the kickoff directly instead of through the guarded seal.
+func retroSealConsentChange(t *testing.T, planning, change string) {
+	t.Helper()
+	parsed, err := kickoff.ParseSealArgs([]string{"--cwd", planning, "--change", change, "--execution-style", "continuous", "--handoff-policy", "none"})
+	if err != nil {
+		t.Fatalf("seal arguments for %s: %v", change, err)
+	}
+	changeRoot := filepath.Join(planning, "openspec", "changes", change)
+	if _, _, err := kickoff.Seal(changeRoot, parsed.ToKickoff(change)); err != nil {
+		t.Fatalf("seal %s without a snapshot: %v", change, err)
 	}
 }
 
@@ -205,6 +225,7 @@ func TestSDDEditAuthorityConsentGrantLoop(t *testing.T) {
 		"- [ ] 1.2 Update `../service-b/internal/worker/consume.go` to forward the header",
 		"",
 	}, "\n"))
+	retroSealConsentChange(t, planning, change)
 
 	// Only explicit continuation prepares the identity before read-only re-entry.
 	initial, initialPayload := consentStatus(t, environment, planning, change)
@@ -296,6 +317,7 @@ func TestSDDSameParentRepositoryConsentGrantLoop(t *testing.T) {
 		"- [ ] 1.1 Update `../service-dir/internal/api/handler.go` to accept the new header",
 		"",
 	}, "\n"))
+	retroSealConsentChange(t, planning, change)
 
 	initial, initialPayload := consentStatus(t, environment, planning, change)
 	markerPath := filepath.Join(planning, "openspec", "changes", change, ".axiom-instance")
@@ -362,7 +384,14 @@ func TestSDDSingleRepoStatusStaysByteIdenticalWithZeroConsentFootprint(t *testin
 
 func TestSDDPreparationInvocationRoundTripsSpacedChange(t *testing.T) {
 	t.Parallel()
-	for _, change := range []string{"phase one", "phase-two"} {
+	// "phase one" is not a valid branch name: with no kickoff.yaml the branch guard does not apply
+	// to it (not_applicable with a warning), so it stays unsealed. "phase-two" is a valid name, and
+	// a change without any kickoff.yaml is not exempt (S-7): it is sealed without a snapshot.
+	for _, fixture := range []struct {
+		change string
+		seal   bool
+	}{{"phase one", false}, {"phase-two", true}} {
+		change := fixture.change
 		t.Run(change, func(t *testing.T) {
 			environment := consentShellEnvironment(t, t.TempDir())
 			workspace := t.TempDir()
@@ -370,6 +399,9 @@ func TestSDDPreparationInvocationRoundTripsSpacedChange(t *testing.T) {
 			initConsentGitRepo(t, planning, true)
 			initConsentGitRepo(t, filepath.Join(workspace, "service"), false)
 			seedConsentChange(t, planning, change, "- [ ] Update `../service/main.go`\n")
+			if fixture.seal {
+				retroSealConsentChange(t, planning, change)
+			}
 			initial, payload := consentStatus(t, environment, planning, change)
 			prefix := "`axiom sdd continue "
 			_, tail, found := strings.Cut(strings.Join(initial.BlockedReasons, "\n"), prefix)

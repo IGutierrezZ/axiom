@@ -278,7 +278,7 @@ func TestLocateDeducesTheMasterFolderFromTheSpecsRepository(t *testing.T) {
 	})
 	t.Run("sin coincidencia de sufijo", func(t *testing.T) {
 		dir := t.TempDir()
-		workspacetest.WriteFile(t, filepath.Join(dir, "axiom.yaml"), config("monorepo-decoupled", "especificacion"))
+		workspacetest.WriteFile(t, filepath.Join(dir, "axiom.yaml"), config("multirepo", "especificacion"))
 		workspacetest.MkdirAll(t, filepath.Join(dir, "especificacion"))
 		loc := mustLocate(t, dir)
 		if loc.Master != dir || loc.WorkspaceRoot != filepath.Join(dir, "especificacion") || loc.PlanningHome != filepath.Join(dir, "especificacion", "openspec") {
@@ -316,7 +316,7 @@ func TestLocateRootsByTopology(t *testing.T) {
 		wantRoot        string // relativo a la carpeta maestra
 		wantHome        string
 	}{
-		{"monorepo desacoplado", "monorepo-decoupled", "especificacion", "especificacion", "especificacion", "especificacion/openspec"},
+		{"multirepo con repositorio de especificaciones propio", "multirepo", "especificacion", "especificacion", "especificacion", "especificacion/openspec"},
 		{"perfil knowledge terminado en openspec", "multirepo", "openspec", "openspec", ".", "openspec"},
 		{"varios segmentos terminado en openspec", "multirepo", "docs/openspec", "docs", "docs", "docs/openspec"},
 		{"openspec sin crear", "multirepo", "openspec", "", ".", "openspec"},
@@ -453,9 +453,97 @@ func TestLocateKeepsTheEmbeddedResolutionForAnUnloadableDirectConfig(t *testing.
 	}
 }
 
+func retiredTopologyConfig(specsRepository string) string {
+	return "workspace: {name: x, topology: monorepo-decoupled, specs_repository: " + specsRepository + "}\nroles: {a: {name: a, repositories: [{path: .}]}}\n"
+}
+
+// workspace-topology REQ-25.25 (escenario «Un puntero hacia una configuración con
+// la topología retirada rechaza la resolución») y planning-home-resolution
+// REQ-24.7 (caso 2): la configuración base no se carga, así que el planning home
+// es desconocido y no hay resolución que devolver.
+func TestLocateRejectsAPointerToARetiredTopology(t *testing.T) {
+	ws := workspacetest.Canonical(t)
+	workspacetest.WriteFile(t, filepath.Join(ws.Specs, "axiom.yaml"), retiredTopologyConfig("repo-specs"))
+	before := treeSnapshot(t, ws.Master)
+
+	locateErr := wantLocateError(t, ws.Master, LocateConfigUnloadable)
+	for _, want := range []string{"`monorepo-decoupled` fue retirada", "`multirepo`", "axiom workspace validate"} {
+		if !strings.Contains(locateErr.Error(), want) {
+			t.Errorf("el rechazo debe contener %q: %s", want, locateErr)
+		}
+	}
+	if after := treeSnapshot(t, ws.Master); !reflect.DeepEqual(before, after) {
+		t.Fatalf("el rechazo escribió en disco: %v", after)
+	}
+}
+
+// REQ-24.7 (caso 3) y REQ-25.25: un axiom.yaml directo con la topología retirada
+// no se rechaza. Conserva la resolución embebida y avisa, sin darle la semántica
+// de repositorio de especificaciones separado que tenía antes (REQ-24.3).
+func TestLocateKeepsTheEmbeddedResolutionForADirectConfigWithARetiredTopology(t *testing.T) {
+	master := t.TempDir()
+	workspacetest.WriteFile(t, filepath.Join(master, "axiom.yaml"), retiredTopologyConfig("especificacion"))
+	workspacetest.MkdirAll(t, filepath.Join(master, "especificacion"))
+
+	loc := mustLocate(t, master)
+	if loc.WorkspaceRoot != master || loc.PlanningHome != filepath.Join(master, "openspec") || loc.Master != master {
+		t.Fatalf("Location = %+v, se esperaba la resolución embebida y no el repositorio especificacion", loc)
+	}
+	if loc.Config != nil || loc.ConfigErr == nil {
+		t.Fatalf("Config = %+v ConfigErr = %v, se esperaba configuración nula y la causa", loc.Config, loc.ConfigErr)
+	}
+	if len(loc.Notes) != 1 {
+		t.Fatalf("Notes = %v, se esperaba un único aviso", loc.Notes)
+	}
+	for _, want := range []string{"`monorepo-decoupled` fue retirada", "`multirepo`", "axiom workspace validate"} {
+		if !strings.Contains(loc.Notes[0], want) {
+			t.Errorf("el aviso debe contener %q: %s", want, loc.Notes[0])
+		}
+	}
+}
+
+// REQ-24.3 y REQ-24.5: el enraizado por repositorio de especificaciones y la
+// deducción de la carpeta maestra por sufijo rigen solo para multirepo. Un valor
+// retirado que llegara a una configuración construida a mano tampoco los recibe.
+func TestOnlyMultirepoSeparatesTheSpecsRepository(t *testing.T) {
+	master := filepath.Join(string(filepath.Separator), "w")
+	dir := filepath.Join(master, "especificacion")
+	for _, tc := range []struct {
+		name         string
+		topology     TopologyType
+		wantSeparate bool
+	}{
+		{"multirepo", TopologyMultirepo, true},
+		{"embebido", TopologyMonorepoEmbedded, false},
+		{"valor retirado", TopologyType("monorepo-decoupled"), false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			cfg := &WorkspaceConfig{Workspace: WorkspaceSection{Topology: tc.topology, SpecsRepository: "especificacion"}}
+			if got := separatesSpecs(cfg); got != tc.wantSeparate {
+				t.Fatalf("separatesSpecs = %v, se esperaba %v", got, tc.wantSeparate)
+			}
+			root, home := Roots(cfg, master)
+			wantRoot, wantHome := master, filepath.Join(master, "openspec")
+			if tc.wantSeparate {
+				wantRoot, wantHome = dir, filepath.Join(dir, "openspec")
+			}
+			if root != wantRoot || home != wantHome {
+				t.Fatalf("Roots = (%q, %q), se esperaba (%q, %q)", root, home, wantRoot, wantHome)
+			}
+			wantMaster := dir
+			if tc.wantSeparate {
+				wantMaster = master
+			}
+			if got := deduceMaster(cfg, dir); got != wantMaster {
+				t.Fatalf("deduceMaster = %q, se esperaba %q", got, wantMaster)
+			}
+		})
+	}
+}
+
 func TestLocateWarnsAboutADivergentMasterOpenSpecWithoutPointer(t *testing.T) {
 	master := t.TempDir()
-	workspacetest.WriteFile(t, filepath.Join(master, "axiom.yaml"), "workspace: {name: x, topology: monorepo-decoupled, specs_repository: especificacion}\nroles: {a: {name: a, repositories: [{path: .}]}}\n")
+	workspacetest.WriteFile(t, filepath.Join(master, "axiom.yaml"), "workspace: {name: x, topology: multirepo, specs_repository: especificacion}\nroles: {a: {name: a, repositories: [{path: .}]}}\n")
 	workspacetest.MkdirAll(t, filepath.Join(master, "especificacion"))
 	workspacetest.MkdirAll(t, filepath.Join(master, "openspec", "changes", "antiguo"))
 
@@ -504,7 +592,7 @@ func TestRoots(t *testing.T) {
 		{"sin configuración", nil, master, filepath.Join(master, "openspec")},
 		{"embebido ignora specs_repository", cfg(TopologyMonorepoEmbedded, "specs"), master, filepath.Join(master, "openspec")},
 		{"multirepo con repositorio", cfg(TopologyMultirepo, "repo-specs"), filepath.Join(master, "repo-specs"), filepath.Join(master, "repo-specs", "openspec")},
-		{"desacoplado terminado en openspec", cfg(TopologyMonorepoDecoupled, "docs/openspec"), filepath.Join(master, "docs"), filepath.Join(master, "docs", "openspec")},
+		{"multirepo con varios segmentos terminado en openspec", cfg(TopologyMultirepo, "docs/openspec"), filepath.Join(master, "docs"), filepath.Join(master, "docs", "openspec")},
 		{"vacío es la maestra", cfg(TopologyMultirepo, ""), master, filepath.Join(master, "openspec")},
 		{"punto es la maestra", cfg(TopologyMultirepo, "."), master, filepath.Join(master, "openspec")},
 		{"ruta absoluta", cfg(TopologyMultirepo, abs), abs, filepath.Join(abs, "openspec")},
@@ -802,6 +890,204 @@ func TestLocateFillsTheDeclarations(t *testing.T) {
 		loc := mustLocate(t, ws.Master)
 		if loc.Config == nil || loc.ConfigErr != nil || loc.Declarations.BaselineErr == nil || len(loc.Notes) != 0 {
 			t.Fatalf("la base válida carga y la declaración inválida queda en su canal: %+v", loc)
+		}
+	})
+}
+
+// evalTempDir devuelve un directorio temporal sin enlaces simbólicos ni nombres
+// cortos 8.3, de modo que las rutas esperadas coinciden con las que produce la
+// resolución.
+func evalTempDir(t *testing.T) string {
+	t.Helper()
+	resolved, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatalf("resolver el directorio temporal: %v", err)
+	}
+	return resolved
+}
+
+// linkWorktree convierte worktree en un worktree enlazado del repositorio cuyo
+// common dir es commonDir, solo con ficheros (sin lanzar git): su `.git` es un
+// fichero `gitdir:` y su git dir, `<common dir>/worktrees/<name>`, contiene el
+// fichero `commondir`. Es la misma evidencia que lee gitcommon.LinkedWorktreeRoot.
+func linkWorktree(t *testing.T, commonDir, worktree, name string) {
+	t.Helper()
+	gitDir := filepath.Join(commonDir, "worktrees", name)
+	workspacetest.WriteFile(t, filepath.Join(gitDir, "commondir"), "../..\n")
+	workspacetest.WriteFile(t, filepath.Join(worktree, ".git"), "gitdir: "+filepath.ToSlash(gitDir)+"\n")
+}
+
+// linkWorktreeOfCheckout monta un worktree enlazado cuyo checkout principal es
+// main (con un `.git` directorio, como un clon normal).
+func linkWorktreeOfCheckout(t *testing.T, main, worktree, name string) {
+	t.Helper()
+	linkWorktree(t, filepath.Join(main, ".git"), worktree, name)
+}
+
+// REQ-25.28 (escenario «Un worktree de un monorepo embebido resuelve su propio
+// planning home»): con marcador propio dentro del worktree, gana el más cercano y
+// el planning home es el del worktree, no el del checkout principal.
+func TestLocateALinkedWorktreeOfAnEmbeddedMonorepoResolvesItsOwnPlanningHome(t *testing.T) {
+	main := workspacetest.Embedded(t, "openspec")
+	worktree := filepath.Join(evalTempDir(t), "x", "repo")
+	workspacetest.WriteFile(t, filepath.Join(worktree, "axiom.yaml"), embeddedConfigOf(t, main.Master))
+	workspacetest.MkdirAll(t, filepath.Join(worktree, "openspec", "changes", "x"))
+	workspacetest.MkdirAll(t, filepath.Join(worktree, "internal"))
+	linkWorktreeOfCheckout(t, main.Master, worktree, "x")
+
+	loc := mustLocate(t, filepath.Join(worktree, "internal"))
+	if loc.WorkspaceRoot != worktree || loc.PlanningHome != filepath.Join(worktree, "openspec") || loc.Master != worktree {
+		t.Fatalf("Location = master %q root %q home %q; se esperaba el propio worktree %q", loc.Master, loc.WorkspaceRoot, loc.PlanningHome, worktree)
+	}
+	if loc.Origin != OriginConfig || loc.Config == nil || loc.ConfigPath != filepath.Join(worktree, "axiom.yaml") {
+		t.Fatalf("Origin %q ConfigPath %q: se esperaba el axiom.yaml del propio worktree", loc.Origin, loc.ConfigPath)
+	}
+	if len(loc.Notes) != 0 {
+		t.Fatalf("con marcador propio no hay nota: %v", loc.Notes)
+	}
+}
+
+// embeddedConfigOf devuelve el contenido del axiom.yaml del checkout principal,
+// que el worktree versiona igual.
+func embeddedConfigOf(t *testing.T, root string) string {
+	t.Helper()
+	data, err := os.ReadFile(filepath.Join(root, "axiom.yaml"))
+	if err != nil {
+		t.Fatalf("leer el axiom.yaml de %s: %v", root, err)
+	}
+	return string(data)
+}
+
+// REQ-25.28 (escenario «Un worktree de un repositorio de código de un multirepo
+// resuelve el planning home de la carpeta maestra»): sin marcador en el worktree
+// se resuelve como desde el checkout principal, y la ascensión no sale del
+// worktree: un marcador en el directorio que lo contiene no cuenta.
+func TestLocateALinkedWorktreeWithoutMarkerResolvesFromTheMainCheckout(t *testing.T) {
+	ws := workspacetest.Canonical(t)
+	outside := evalTempDir(t)
+	worktree := filepath.Join(outside, "x", "repo-backend")
+	workspacetest.MkdirAll(t, filepath.Join(worktree, "src"))
+	linkWorktreeOfCheckout(t, ws.Backend, worktree, "x")
+	workspacetest.MkdirAll(t, filepath.Join(ws.Backend, ".git"))
+	// Un marcador señuelo fuera del worktree, en su directorio padre.
+	workspacetest.MkdirAll(t, filepath.Join(outside, "x", "openspec"))
+
+	before := treeSnapshot(t, outside)
+	beforeMaster := treeSnapshot(t, ws.Master)
+	direct := mustLocate(t, ws.Backend)
+	for _, start := range []string{worktree, filepath.Join(worktree, "src")} {
+		loc := mustLocate(t, start)
+		if loc.Master != ws.Master || loc.WorkspaceRoot != ws.Specs || loc.PlanningHome != ws.Home {
+			t.Fatalf("desde %s: master %q root %q home %q; se esperaba %q %q %q", start, loc.Master, loc.WorkspaceRoot, loc.PlanningHome, ws.Master, ws.Specs, ws.Home)
+		}
+		if loc.Origin != direct.Origin || loc.ConfigPath != direct.ConfigPath || loc.MarkerDir != direct.MarkerDir {
+			t.Fatalf("desde %s la resolución difiere de la del checkout principal: %+v frente a %+v", start, loc, direct)
+		}
+		if loc.Start != start {
+			t.Fatalf("Start = %q, se esperaba el directorio de partida %q", loc.Start, start)
+		}
+		if len(loc.Notes) != 1 || !strings.Contains(loc.Notes[0], ws.Backend) {
+			t.Fatalf("Notes = %v, se esperaba una nota que nombre el checkout principal %q", loc.Notes, ws.Backend)
+		}
+	}
+	if after := treeSnapshot(t, outside); !reflect.DeepEqual(before, after) {
+		t.Fatalf("la resolución modificó el worktree: %v", after)
+	}
+	if after := treeSnapshot(t, ws.Master); !reflect.DeepEqual(beforeMaster, after) {
+		t.Fatalf("la resolución modificó la carpeta maestra: %v", after)
+	}
+}
+
+// REQ-25.28 (escenario «Sin marcador ni siquiera en el checkout principal»).
+func TestLocateALinkedWorktreeWithoutMarkerAnywhereRootsAtTheStart(t *testing.T) {
+	main := evalTempDir(t)
+	worktree := filepath.Join(evalTempDir(t), "x")
+	workspacetest.MkdirAll(t, worktree)
+	linkWorktreeOfCheckout(t, main, worktree, "x")
+
+	loc := mustLocate(t, worktree)
+	if loc.Origin != OriginStart || loc.Master != worktree || loc.WorkspaceRoot != worktree || loc.PlanningHome != filepath.Join(worktree, "openspec") || loc.MarkerDir != "" {
+		t.Fatalf("Location = %+v, se esperaba el directorio de partida con origen start", loc)
+	}
+	if len(loc.Notes) != 1 || !strings.Contains(loc.Notes[0], main) {
+		t.Fatalf("Notes = %v, se esperaba una nota que nombre el checkout principal %q", loc.Notes, main)
+	}
+}
+
+// D-15 punto 3: con un common dir que no se llama `.git` el checkout principal no
+// se deduce de los nombres, y la resolución es OriginStart con nota aunque el
+// repositorio tenga marcadores.
+func TestLocateALinkedWorktreeWhoseCommonDirIsNotNamedGitRootsAtTheStart(t *testing.T) {
+	commonDir := filepath.Join(evalTempDir(t), "separado.git")
+	worktree := filepath.Join(evalTempDir(t), "x")
+	workspacetest.MkdirAll(t, worktree)
+	linkWorktree(t, commonDir, worktree, "x")
+
+	loc := mustLocate(t, worktree)
+	if loc.Origin != OriginStart || loc.WorkspaceRoot != worktree || loc.MarkerDir != "" {
+		t.Fatalf("Location = %+v, se esperaba el directorio de partida con origen start", loc)
+	}
+	if len(loc.Notes) != 1 || !strings.Contains(loc.Notes[0], commonDir) {
+		t.Fatalf("Notes = %v, se esperaba una nota que nombre el common dir %q", loc.Notes, commonDir)
+	}
+}
+
+// REQ-25.28.3: la ubicación del worktree nunca alimenta a deduceMaster. El worktree
+// se llama como el repositorio de especificaciones (el sufijo que deduceMaster
+// retiraría de su ruta) y aun así la carpeta maestra es la del checkout principal.
+func TestLocateALinkedWorktreeNeverMovesTheMasterFolder(t *testing.T) {
+	master := evalTempDir(t)
+	workspacetest.WriteFile(t, filepath.Join(master, "axiom.yaml"),
+		"workspace:\n  name: ejemplo\n  topology: multirepo\n  specs_repository: repo-specs\nroles:\n  backend:\n    name: Backend\n    repositories:\n      - path: repo-backend\n")
+	workspacetest.MkdirAll(t, filepath.Join(master, "repo-specs"))
+	backend := filepath.Join(master, "repo-backend")
+	workspacetest.MkdirAll(t, filepath.Join(backend, ".git"))
+	worktree := filepath.Join(evalTempDir(t), "wt", "repo-specs")
+	workspacetest.MkdirAll(t, worktree)
+	linkWorktreeOfCheckout(t, backend, worktree, "x")
+
+	loc := mustLocate(t, worktree)
+	if loc.Master != master || loc.WorkspaceRoot != filepath.Join(master, "repo-specs") {
+		t.Fatalf("master %q root %q; se esperaba la carpeta maestra %q del checkout principal", loc.Master, loc.WorkspaceRoot, master)
+	}
+	if loc.Origin != OriginConfig || loc.Config == nil {
+		t.Fatalf("Location = %+v, se esperaba el axiom.yaml directo de la carpeta maestra", loc)
+	}
+}
+
+// REQ-25.28: un checkout principal, un directorio sin git y LocateAt no cambian.
+func TestLocateKeepsItsBehaviourOutsideLinkedWorktrees(t *testing.T) {
+	t.Run("checkout principal con marcador", func(t *testing.T) {
+		ws := workspacetest.Embedded(t, "openspec")
+		workspacetest.MkdirAll(t, filepath.Join(ws.Master, ".git"))
+		loc := mustLocate(t, ws.Master)
+		if loc.Origin != OriginConfig || loc.WorkspaceRoot != ws.Master || len(loc.Notes) != 0 {
+			t.Fatalf("Location = %+v", loc)
+		}
+	})
+	t.Run("submódulo sin commondir no es un worktree enlazado", func(t *testing.T) {
+		ws := workspacetest.Embedded(t, "openspec")
+		sub := filepath.Join(ws.Master, "vendor", "lib")
+		gitDir := filepath.Join(ws.Master, ".git", "modules", "lib")
+		workspacetest.MkdirAll(t, gitDir)
+		workspacetest.WriteFile(t, filepath.Join(sub, ".git"), "gitdir: "+filepath.ToSlash(gitDir)+"\n")
+		loc := mustLocate(t, sub)
+		if loc.Origin != OriginConfig || loc.WorkspaceRoot != ws.Master || len(loc.Notes) != 0 {
+			t.Fatalf("Location = %+v, un submódulo asciende como siempre hasta el marcador del proyecto", loc)
+		}
+	})
+	t.Run("LocateAt no asciende desde un worktree enlazado", func(t *testing.T) {
+		ws := workspacetest.Canonical(t)
+		worktree := filepath.Join(evalTempDir(t), "x", "repo-backend")
+		workspacetest.MkdirAll(t, worktree)
+		linkWorktreeOfCheckout(t, ws.Backend, worktree, "x")
+		workspacetest.MkdirAll(t, filepath.Join(ws.Backend, ".git"))
+		loc, err := LocateAt(worktree)
+		if err != nil {
+			t.Fatalf("LocateAt(%q) = %v", worktree, err)
+		}
+		if loc.Origin != OriginStart || loc.WorkspaceRoot != worktree || loc.Master != worktree || len(loc.Notes) != 0 {
+			t.Fatalf("Location = %+v, LocateAt solo evalúa el directorio dado", loc)
 		}
 	})
 }

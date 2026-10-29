@@ -263,6 +263,10 @@ type ResolveOptions struct {
 	WorkspaceRoot       string
 	ChangeName          string
 	IncludeInstructions bool
+
+	// worktreeCandidates son los cambios activos de los worktrees registrados (REQ-25.44): sin nombre,
+	// se unen a los del checkout actual para el `select-change`. Solo los rellena Resolve.
+	worktreeCandidates []string
 }
 
 type CommandArgs struct {
@@ -491,11 +495,18 @@ func explorationOnlyChangeDir(changeRoot string) bool {
 // later step resolves it a second time, and the location's non-blocking notes
 // are projected onto the status afterwards.
 func Resolve(options ResolveOptions) (Status, error) {
+	explicitRoot := strings.TrimSpace(options.WorkspaceRoot) != ""
 	workspaceRoot, location, err := resolveWorkspaceLocation(options)
 	if err != nil {
 		return Status{}, err
 	}
 	options.WorkspaceRoot = workspaceRoot
+	if !explicitRoot {
+		// REQ-25.44 (design D-16): los cambios que viven en worktrees registrados se resuelven en ellos.
+		// Una raíz explícita es la de una llamada interna que ya sabe dónde está su cambio y no se mueve.
+		options, location = rerootOnRegisteredWorktrees(options, location)
+		workspaceRoot = options.WorkspaceRoot
+	}
 	status, err := resolveStatus(options, workspaceRoot)
 	if err != nil {
 		return status, err
@@ -569,7 +580,7 @@ func resolveByPreferenceOrder(options ResolveOptions) (Status, error) {
 
 	changeName := strings.TrimSpace(options.ChangeName)
 	if changeName == "" {
-		candidates := selectableOpenSpecChanges(changesDir, activeChanges)
+		candidates := unionNames(selectableOpenSpecChanges(changesDir, activeChanges), options.worktreeCandidates)
 		switch len(candidates) {
 		case 0:
 			if len(activeChanges) > 0 {
@@ -680,7 +691,25 @@ func resolveByPreferenceOrder(options ResolveOptions) (Status, error) {
 	if artifacts["specs"] == ArtifactPartial {
 		blockedReasons.genuine = append(blockedReasons.genuine, openSpecSpecsLayoutReason(changeName))
 	}
-	applyState, unauthorizedRoots := applyEditAuthorityBlock(applyState, &blockedReasons, editPlans, workspaceRoot, append([]string{workspaceRoot}, grantedRoots...))
+	// Guarda B (REQ-25.42, design D-13): un único punto, después de resolveApplyState y loadGovernance
+	// y antes de la autoridad de edición. Con la rama equivocada esta no se evalúa (S-9): sin sobre de
+	// consentimiento ni marcador pendiente; tras corregir la rama aparece edit_authority_missing.
+	bctx := resolveBranchContext(branchQuery{
+		workspaceRoot: workspaceRoot,
+		changeRoot:    changeRoot,
+		change:        changeName,
+		archivePhase:  applyState == ApplyAllDone && artifacts["verifyReport"] == ArtifactDone,
+		apply:         applyState == ApplyReady,
+		plans:         editPlans,
+	})
+	var unauthorizedRoots []string
+	if bctx.wrongBranch != nil {
+		applyState = ApplyBlocked
+	} else {
+		allowed := append(append([]string{workspaceRoot}, grantedRoots...), bctx.registeredRoots...)
+		applyState, unauthorizedRoots = applyEditAuthorityBlock(applyState, &blockedReasons, bctx.plans, workspaceRoot, allowed, bctx.rebase)
+	}
+	blockedReasons.notes = append(blockedReasons.notes, bctx.notes...)
 	var consent *SDDIntegrationConsentResult
 	if len(unauthorizedRoots) != 0 {
 		if instance == "" {
@@ -709,6 +738,11 @@ func resolveByPreferenceOrder(options ResolveOptions) (Status, error) {
 		blockedReasons.genuine = append(blockedReasons.genuine, archiveReason)
 	}
 	nextRecommended := resolveNextRecommended(dependencies, applyState, governance)
+	if bctx.wrongBranch != nil {
+		// Ninguna fase ni compuerta se autoriza con la rama equivocada (REQ-25.42): tampoco hay
+		// pregunta de compuerta, que se construye solo para await-gate.
+		nextRecommended = "resolve-blockers"
+	}
 	// INC-21 (design.md S5.5): the gate-decision envelope is built only for
 	// the exact gate "await-gate" already names, so it can never disagree
 	// with the route it accompanies -- a rejected gate with a recognised
@@ -724,7 +758,7 @@ func resolveByPreferenceOrder(options ResolveOptions) (Status, error) {
 			gateQuestion = &envelope
 		}
 	}
-	status := baseStatus(ArtifactStoreOpenSpec, workspaceRoot, grantedRoots, &changeName, &changeRoot, nextRecommended, append([]string{}, blockedReasons.genuine...))
+	status := baseStatus(ArtifactStoreOpenSpec, workspaceRoot, append(append([]string{}, grantedRoots...), bctx.registeredRoots...), &changeName, &changeRoot, nextRecommended, append([]string{}, blockedReasons.genuine...))
 	status.Consent = consent
 	status.Governance = governance
 	status.GateQuestion = gateQuestion
@@ -736,6 +770,11 @@ func resolveByPreferenceOrder(options ResolveOptions) (Status, error) {
 	status.ApplyState = applyState
 	status.consentPreparationRoots = append([]string{}, unauthorizedRoots...)
 	status.BlockedReasons = blockedReasons.finalize(status.NextRecommended, status.BlockedReasons)
+	if bctx.wrongBranch != nil {
+		// El motivo de la guarda B va siempre primero, también delante de los motivos de planificación
+		// que finalize antepone con la ruta resolve-blockers.
+		status.BlockedReasons = append([]string{wrongBranchReason(*bctx.wrongBranch)}, status.BlockedReasons...)
+	}
 	status.Notes = append(status.Notes, blockedReasons.notes...)
 	if options.IncludeInstructions {
 		instructions := renderPhaseInstructions(status)
@@ -812,7 +851,7 @@ func resolveEngramStatus(workspaceRoot string, requestedChange string, includeIn
 	// reason). This path passes nil unconditionally rather than resolving a
 	// synthetic changeRoot that loadGovernance was never meant to read.
 	blockedReasons := artifactBlockedReasons(artifacts, taskProgress, changeName, nil)
-	applyState, _ = applyEditAuthorityBlock(applyState, &blockedReasons, []planText{{name: "tasks.md", text: artifactsByType["tasks"].Content}}, workspaceRoot, []string{workspaceRoot})
+	applyState, _ = applyEditAuthorityBlock(applyState, &blockedReasons, []planText{{name: "tasks.md", text: artifactsByType["tasks"].Content}}, workspaceRoot, []string{workspaceRoot}, identityRebase)
 	dependencies := resolveDependencies(artifacts, applyState, coreReady)
 	nextRecommended := resolveNextRecommended(dependencies, applyState, nil)
 	changeRoot := fmt.Sprintf("engram:sdd/%s", changeName)

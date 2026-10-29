@@ -296,6 +296,34 @@ func TestParseGateRecordArgsApprovedDoesNotRequireReason(t *testing.T) {
 	}
 }
 
+// TestParseGateRecordArgsLeavesBaseRefToTheCaller fija D-22 (REQ-25.23, escenario 5): el parseo
+// de argumentos no conoce la rama de integración del proyecto, así que ya no inventa `main` ante
+// un --base-ref vacío; lo completa quien conoce el repositorio (runSDDGateRecord). Un --base-ref
+// explícito se conserva tal cual.
+func TestParseGateRecordArgsLeavesBaseRefToTheCaller(t *testing.T) {
+	base := []string{"--change", "inc-99-example", "--gate", "integration", "--decision", "approved",
+		"--evidence-kind", "pr_merged", "--commit", "abc123"}
+	tests := []struct {
+		name  string
+		extra []string
+		want  string
+	}{
+		{name: "sin --base-ref queda vacío", want: ""},
+		{name: "--base-ref explícito se conserva", extra: []string{"--base-ref", "develop"}, want: "develop"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			parsed, err := ParseGateRecordArgs(append(append([]string{}, base...), tt.extra...))
+			if err != nil {
+				t.Fatalf("ParseGateRecordArgs() error = %v", err)
+			}
+			if parsed.BaseRef != tt.want {
+				t.Fatalf("BaseRef = %q, se esperaba %q", parsed.BaseRef, tt.want)
+			}
+		})
+	}
+}
+
 // TestParseGateRecordArgsGateVocabulary covers the closed --gate vocabulary:
 // the four fixed keys, a well-formed role-apply:<rol>, an empty role name
 // after the role-apply: prefix, and a totally unknown key.

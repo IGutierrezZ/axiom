@@ -16,6 +16,11 @@ type WorkspaceRecord struct {
 	LastAccessed time.Time `json:"last_accessed"`
 	IsConfigured bool      `json:"is_configured"`
 	Tech         []string  `json:"tech,omitempty"`
+	// WorktreeMode y WorktreeRoot son las preferencias personales de worktree del proyecto
+	// (REQ-25.29, prefs.go): opcionales, no cambian el esquema `"1.0"` y un binario anterior
+	// los ignora.
+	WorktreeMode string `json:"worktree_mode,omitempty"`
+	WorktreeRoot string `json:"worktree_root,omitempty"`
 }
 
 // HubConfig representa el archivo de configuración central ~/.axiom/workspaces.json.
@@ -74,6 +79,9 @@ type InitOptions struct {
 	Force    bool
 	Roles    []RoleInput
 	Profile  string // "knowledge", "spec-only", "full"
+	// WorktreePrefs son las preferencias personales de worktree que se guardan en la entrada
+	// del hub al registrar el proyecto (REQ-25.30); vacías, no se guarda ninguna.
+	WorktreePrefs WorktreePrefs
 }
 
 // InitResult detalla los resultados de la operación de inicialización.

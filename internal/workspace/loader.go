@@ -11,9 +11,9 @@ import (
 )
 
 // ParseConfig deserializa y valida la estructura sintáctica de axiom.yaml desde
-// bytes: la configuración base y, si existen, los bloques `baseline:` y
-// `technical_context:`. Si la base o alguna declaración es inválida devuelve un
-// error que acumula todas las violaciones (REQ-24.17).
+// bytes: la configuración base y, si existen, los bloques `baseline:`,
+// `technical_context:`, `git:` y `repositories:`. Si la base o alguna declaración
+// es inválida devuelve un error que acumula todas las violaciones (REQ-24.17).
 func ParseConfig(data []byte) (*WorkspaceConfig, error) {
 	cfg, baseErr, declarations := parseLayered(data)
 	if err := joinLoadErrors(baseErr, declarations); err != nil {
@@ -27,7 +27,7 @@ func ParseConfig(data []byte) (*WorkspaceConfig, error) {
 // mensajes de la configuración base de siempre.
 func joinLoadErrors(baseErr error, declarations Declarations) error {
 	var errs []error
-	for _, err := range []error{baseErr, declarations.BaselineErr, declarations.TechnicalContextErr} {
+	for _, err := range []error{baseErr, declarations.BaselineErr, declarations.TechnicalContextErr, declarations.GitErr, declarations.RepositoriesErr} {
 		if err != nil {
 			errs = append(errs, err)
 		}
@@ -50,9 +50,9 @@ func joinLoadErrors(baseErr error, declarations Declarations) error {
 // ParseErr solo es no nulo cuando el contenido no se puede leer como YAML. Sin
 // fichero, las declaraciones conservan su valor cero, que equivale a «sin
 // declaraciones»: un proyecto sin axiom.yaml nunca bloquea el archivado (R1).
-// La base se decodifica desde un yaml.Node, con las claves `baseline` y
-// `technical_context` fuera de la decodificación base; el resto de claves
-// desconocidas se sigue ignorando.
+// La base se decodifica desde un yaml.Node, con las claves `baseline`,
+// `technical_context`, `git` y `repositories` fuera de la decodificación base; el
+// resto de claves desconocidas se sigue ignorando.
 //
 // El orden del tipo de retorno (configuración, error de la base, declaraciones)
 // es el que fija el diseño (§4.1, D-03).
@@ -92,6 +92,15 @@ func parseLayered(data []byte) (*WorkspaceConfig, error, Declarations) {
 	if declarations.TechnicalContextErr == nil {
 		cfg.TechnicalContext = declarations.TechnicalContext
 	}
+	// La política de ramas se proyecta ya resuelta, también sin bloque (REQ-25.26).
+	if declarations.GitErr == nil {
+		cfg.Git = resolveGit(declarations.Git)
+	}
+	// Las entradas de `repositories:` se proyectan tal como se declararon: la
+	// herencia de `git:` la resuelve quien consume la política (REQ-25.27).
+	if declarations.RepositoriesErr == nil {
+		cfg.Repositories = declarations.Repositories
+	}
 	return &cfg, nil, declarations
 }
 
@@ -115,6 +124,28 @@ func ReadDeclarations(configPath string) Declarations {
 	return declarations
 }
 
+// retiredTopologyMonorepoDecoupled es el literal de la topología retirada en
+// INC-25 (REQ-25.25). No es una TopologyType: nada lo acepta ni lo trata como
+// valor válido, solo se reconoce para dar un mensaje propio en lugar del genérico.
+const retiredTopologyMonorepoDecoupled = "monorepo-decoupled"
+
+// topologyError devuelve el error de una topología que no es válida, o nil si lo
+// es. El literal retirado tiene mensaje propio, que es también su migración
+// (sin alias ni sustitución automática); el resto de valores conserva el mensaje
+// de siempre con los dos valores admitidos (REQ-2.1).
+func topologyError(topology TopologyType) error {
+	switch topology {
+	case TopologyMonorepoEmbedded, TopologyMultirepo:
+		return nil
+	case retiredTopologyMonorepoDecoupled:
+		return fmt.Errorf("la topología `%s` fue retirada: sustitúyela por `%s` en `workspace.topology` y ejecuta `axiom workspace validate`",
+			retiredTopologyMonorepoDecoupled, TopologyMultirepo)
+	default:
+		return fmt.Errorf("topología desconocida o ausente '%s'. Debe ser: %s o %s",
+			topology, TopologyMonorepoEmbedded, TopologyMultirepo)
+	}
+}
+
 // validateBaseConfig aplica las validaciones estructurales de la configuración
 // base (nombre, topología y roles), con sus mensajes y su orden de siempre.
 func validateBaseConfig(cfg *WorkspaceConfig) error {
@@ -122,12 +153,8 @@ func validateBaseConfig(cfg *WorkspaceConfig) error {
 		return fmt.Errorf("el campo 'workspace.name' es obligatorio y no puede estar vacío")
 	}
 
-	switch cfg.Workspace.Topology {
-	case TopologyMonorepoEmbedded, TopologyMonorepoDecoupled, TopologyMultirepo:
-		// Topología válida
-	default:
-		return fmt.Errorf("topología desconocida o ausente '%s'. Debe ser: %s, %s o %s",
-			cfg.Workspace.Topology, TopologyMonorepoEmbedded, TopologyMonorepoDecoupled, TopologyMultirepo)
+	if err := topologyError(cfg.Workspace.Topology); err != nil {
+		return err
 	}
 
 	if len(cfg.Roles) == 0 {

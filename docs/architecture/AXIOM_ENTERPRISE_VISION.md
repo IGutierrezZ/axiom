@@ -55,15 +55,15 @@ Cada cambio de fase o relevo entre personas/agentes genera un artefacto estructu
 
 ### 2.3. Topologías de Repositorio y Repositorio Canónico de Especificaciones
 
-Todo proyecto gestionado por Axiom reside en una **carpeta maestra local común** (`workspace_root`). Se soportan tres topologías canónicas:
+Todo proyecto gestionado por Axiom reside en una **carpeta maestra local común** (`workspace_root`). Se soportan dos topologías canónicas:
 
 1. **Monorepo Embebido (`monorepo-embedded`):**
    - Un único repositorio Git donde coexisten código y especificaciones (`openspec/`).
-2. **Monorepo Desacoplado (`monorepo-decoupled`):**
-   - El código vive en un repositorio Git monorrepo, pero las especificaciones y contratos residen en un repositorio Git independiente dentro de la carpeta maestra.
-3. **Multirepo Federado (`multirepo`):**
-   - Múltiples repositorios de código divididos por tecnologías o dominios.
+2. **Multirepo Federado (`multirepo`):**
+   - Uno o varios repositorios de código divididos por tecnologías o dominios (incluido el caso de un único repositorio de código con las especificaciones en un repositorio aparte).
    - **Regla estricta obligatoria:** Es indispensable la existencia de un repositorio canónico de especificaciones dentro de la carpeta maestra común (ej. `especificacion/`). Si el proyecto no lo tiene, Axiom lo inicializa automáticamente.
+
+**Ramas y worktrees.** Axiom prepara y retira las ramas y los worktrees de cada cambio con `axiom branch` (verbos `ensure`, `status`, `done` y `guard`), según la topología. En un monorepo embebido el cambio vive en una rama y un worktree propios y el archivado en una rama `-archive` con su PR documental aparte; en un multirepo, el repositorio de especificaciones se trabaja in situ en su rama de integración y cada repositorio de código recibe la rama de sus roles. La política (rama de integración y prefijo) se declara en `axiom.yaml` (`git:` y `repositories:`); el modo de trabajo (`worktree`, `in_place` o `ask`) es una preferencia personal del hub. Detalle en el [manual de inicio](../manual-de-inicio.md#ramas-y-worktrees-axiom-branch).
 
 ### 2.4. Mapeo Roles ➔ Repositorios (1 a N)
 
@@ -71,7 +71,7 @@ La configuración `axiom.yaml` vincula de 1 a N roles con sus respectivos reposi
 ```yaml
 workspace:
   name: "PlataformaEnterprise"
-  topology: "multirepo"       # monorepo-embedded | monorepo-decoupled | multirepo
+  topology: "multirepo"       # monorepo-embedded | multirepo
   specs_repository: "especificacion"
   root: "."
 

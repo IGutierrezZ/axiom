@@ -146,11 +146,11 @@ func TestDetectUnauthorizedEditRootsNamesNonGitOutsidePathsOnly(t *testing.T) {
 	mkdir(t, external)
 	mkdir(t, filepath.Join(planning, "internal", "api"))
 
-	outside := detectUnauthorizedEditRoots("- [ ] 1.1 Update `"+filepath.Join(external, "app", "settings.yaml")+"`\n", planning, []string{planning})
+	outside := detectUnauthorizedEditRoots("- [ ] 1.1 Update `"+filepath.Join(external, "app", "settings.yaml")+"`\n", planning, []string{planning}, identityRebase)
 	if want := realPath(t, external); len(outside) != 1 || outside[0] != want {
 		t.Fatalf("detectUnauthorizedEditRoots() = %v, want exactly [%s]", outside, want)
 	}
-	inside := detectUnauthorizedEditRoots("- [ ] 1.1 Update `internal/api/handler.go`\n- [ ] 1.2 Update `"+filepath.Join(planning, "internal", "api", "router.go")+"`\n", planning, []string{planning})
+	inside := detectUnauthorizedEditRoots("- [ ] 1.1 Update `internal/api/handler.go`\n- [ ] 1.2 Update `"+filepath.Join(planning, "internal", "api", "router.go")+"`\n", planning, []string{planning}, identityRebase)
 	if len(inside) != 0 {
 		t.Fatalf("paths inside the allowed root were flagged: %v", inside)
 	}

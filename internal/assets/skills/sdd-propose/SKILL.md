@@ -46,6 +46,7 @@ From the orchestrator:
 - **hybrid**: Follow BOTH conventions — persist to Engram AND write to filesystem. Retrieve dependencies from Engram (primary) with filesystem fallback.
 - **none**: Return result only. Never create or modify project files.
 - Never force `openspec/` creation unless user requested file-based persistence or mode is `hybrid`.
+- Write the change folder on the branch that `axiom branch ensure` prepared, under `workspaceRoot` from the status, using the absolute paths of its JSON with `--cwd`; never create a branch or a worktree yourself.
 
 ## What to Do
 
