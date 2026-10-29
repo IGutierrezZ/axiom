@@ -1,6 +1,8 @@
 package sdd
 
 import (
+	"encoding/json"
+	"fmt"
 	"path/filepath"
 	"strings"
 
@@ -56,4 +58,20 @@ func resolveSkillsDirPlaceholders(content string, adapter agents.Adapter, worksp
 	}
 	content = strings.ReplaceAll(content, skillsDirWindowsPlaceholder, windows)
 	return strings.ReplaceAll(content, skillsDirPlaceholder, posix)
+}
+
+// resolveOverlaySkillsDir resuelve el marcador de ruta de skills en un overlay
+// JSON de OpenCode o Kilo, donde el marcador vive dentro de cadenas JSON. Reutiliza
+// resolveSkillsDirPlaceholders y comprueba después que el documento sigue siendo
+// JSON válido, de modo que una ruta con caracteres que exigieran escape nunca deje
+// un opencode.json corrupto: es preferible fallar la inyección.
+func resolveOverlaySkillsDir(content string, adapter agents.Adapter, workspace bool) (string, error) {
+	resolved := resolveSkillsDirPlaceholders(content, adapter, workspace)
+	if resolved == content {
+		return content, nil
+	}
+	if !json.Valid([]byte(resolved)) {
+		return "", fmt.Errorf("resolver la ruta de skills del overlay de %s: el resultado no es JSON válido", adapter.Agent())
+	}
+	return resolved, nil
 }

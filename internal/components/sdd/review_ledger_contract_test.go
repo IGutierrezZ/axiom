@@ -577,7 +577,12 @@ func TestKilocodeReviewSettingsMatchCurrentMainBaseline(t *testing.T) {
 	// runs `axiom branch ensure` after the lane is chosen and before the pre-flight
 	// (REQ-25.35). Kilocode composes it through the OpenCode orchestrator, so the hash
 	// moves. Deliberate, not drift.
-	const want = "5218a0ed56cac12bf81d8205ba8ea0fa2b74def6ac45499e6310d97c2951f04e"
+	// huella-usuario-workspace T4b: los overlays compartidos de OpenCode dejan de fijar
+	// `~/.config/opencode/skills` y usan el marcador de ruta de skills, que la inyección
+	// resuelve con adapter.SkillsDir. Para Kilo la ruta global pasa a ser
+	// `~/.config/kilo/skills`, donde se instalan sus skills, en lugar de la de OpenCode;
+	// la de OpenCode queda byte a byte igual. Deliberate, not drift.
+	const want = "e1cde5f2d6ec634d1afe7034ea99ef5cc5623db5ea699e3c431bfa40360c3a56"
 	if got != want {
 		t.Fatalf("Kilocode settings SHA-256 = %s, want current-main baseline %s", got, want)
 	}

@@ -57,7 +57,7 @@
       "mode": "subagent",
       "hidden": true,
       "description": "Bootstrap SDD context and project configuration",
-      "prompt": "You are an SDD executor for the init phase, not the orchestrator. Do this phase's work yourself. Do NOT delegate, Do NOT call task, and Do NOT launch sub-agents. Read your skill file at ~/.config/opencode/skills/sdd-init/SKILL.md and follow it exactly.",
+      "prompt": "You are an SDD executor for the init phase, not the orchestrator. Do this phase's work yourself. Do NOT delegate, Do NOT call task, and Do NOT launch sub-agents. Read your skill file at {{AXIOM_SKILLS_DIR}}/sdd-init/SKILL.md and follow it exactly.",
       "permission": {}
     },
     "sdd-explore": {
@@ -65,7 +65,7 @@
       "mode": "subagent",
       "hidden": true,
       "description": "Investigate codebase and think through ideas",
-      "prompt": "You are an SDD executor for the explore phase, not the orchestrator. Do this phase's work yourself. Do NOT delegate, Do NOT call task, and Do NOT launch sub-agents. Read your skill file at ~/.config/opencode/skills/sdd-explore/SKILL.md and follow it exactly.",
+      "prompt": "You are an SDD executor for the explore phase, not the orchestrator. Do this phase's work yourself. Do NOT delegate, Do NOT call task, and Do NOT launch sub-agents. Read your skill file at {{AXIOM_SKILLS_DIR}}/sdd-explore/SKILL.md and follow it exactly.",
       "permission": {}
     },
     "sdd-research": {
@@ -73,7 +73,7 @@
       "mode": "subagent",
       "hidden": true,
       "description": "Collect source-backed evidence for selected SDD research",
-      "prompt": "You are the SDD research executor, not the orchestrator. Do NOT delegate or call task. Read ~/.config/opencode/skills/sdd-research/SKILL.md and follow it exactly. Use only actually available and authorized external tools. This managed configuration denies web access; disclose unavailable evidence without bypassing permissions. Return findings to the orchestrator; do not persist state or infer proposal readiness.",
+      "prompt": "You are the SDD research executor, not the orchestrator. Do NOT delegate or call task. Read {{AXIOM_SKILLS_DIR}}/sdd-research/SKILL.md and follow it exactly. Use only actually available and authorized external tools. This managed configuration denies web access; disclose unavailable evidence without bypassing permissions. Return findings to the orchestrator; do not persist state or infer proposal readiness.",
       "permission": {
         "bash": "deny",
         "webfetch": "deny",
@@ -86,7 +86,7 @@
       "mode": "subagent",
       "hidden": true,
       "description": "Create change proposals from explorations",
-      "prompt": "You are an SDD executor for the propose phase, not the orchestrator. Do this phase's work yourself. Do NOT delegate, Do NOT call task, and Do NOT launch sub-agents. Read your skill file at ~/.config/opencode/skills/sdd-propose/SKILL.md and follow it exactly.",
+      "prompt": "You are an SDD executor for the propose phase, not the orchestrator. Do this phase's work yourself. Do NOT delegate, Do NOT call task, and Do NOT launch sub-agents. Read your skill file at {{AXIOM_SKILLS_DIR}}/sdd-propose/SKILL.md and follow it exactly.",
       "permission": {}
     },
     "sdd-spec": {
@@ -94,7 +94,7 @@
       "mode": "subagent",
       "hidden": true,
       "description": "Write detailed specifications from proposals",
-      "prompt": "You are an SDD executor for the spec phase, not the orchestrator. Do this phase's work yourself. Do NOT delegate, Do NOT call task, and Do NOT launch sub-agents. Read your skill file at ~/.config/opencode/skills/sdd-spec/SKILL.md and follow it exactly.",
+      "prompt": "You are an SDD executor for the spec phase, not the orchestrator. Do this phase's work yourself. Do NOT delegate, Do NOT call task, and Do NOT launch sub-agents. Read your skill file at {{AXIOM_SKILLS_DIR}}/sdd-spec/SKILL.md and follow it exactly.",
       "permission": {}
     },
     "sdd-design": {
@@ -102,7 +102,7 @@
       "mode": "subagent",
       "hidden": true,
       "description": "Create technical design from proposals",
-      "prompt": "You are an SDD executor for the design phase, not the orchestrator. Do this phase's work yourself. Do NOT delegate, Do NOT call task, and Do NOT launch sub-agents. Read your skill file at ~/.config/opencode/skills/sdd-design/SKILL.md and follow it exactly.",
+      "prompt": "You are an SDD executor for the design phase, not the orchestrator. Do this phase's work yourself. Do NOT delegate, Do NOT call task, and Do NOT launch sub-agents. Read your skill file at {{AXIOM_SKILLS_DIR}}/sdd-design/SKILL.md and follow it exactly.",
       "permission": {}
     },
     "sdd-tasks": {
@@ -110,7 +110,7 @@
       "mode": "subagent",
       "hidden": true,
       "description": "Break down specs and designs into implementation tasks",
-      "prompt": "You are an SDD executor for the tasks phase, not the orchestrator. Do this phase's work yourself. Do NOT delegate, Do NOT call task, and Do NOT launch sub-agents. Read your skill file at ~/.config/opencode/skills/sdd-tasks/SKILL.md and follow it exactly.",
+      "prompt": "You are an SDD executor for the tasks phase, not the orchestrator. Do this phase's work yourself. Do NOT delegate, Do NOT call task, and Do NOT launch sub-agents. Read your skill file at {{AXIOM_SKILLS_DIR}}/sdd-tasks/SKILL.md and follow it exactly.",
       "permission": {}
     },
     "sdd-apply": {
@@ -118,7 +118,7 @@
       "mode": "subagent",
       "hidden": true,
       "description": "Implement code changes from task definitions",
-      "prompt": "You are an SDD executor for the apply phase, not the orchestrator. Do this phase's work yourself. Do NOT delegate, Do NOT call task, and Do NOT launch sub-agents. Read your skill file at ~/.config/opencode/skills/sdd-apply/SKILL.md and follow it exactly.",
+      "prompt": "You are an SDD executor for the apply phase, not the orchestrator. Do this phase's work yourself. Do NOT delegate, Do NOT call task, and Do NOT launch sub-agents. Read your skill file at {{AXIOM_SKILLS_DIR}}/sdd-apply/SKILL.md and follow it exactly.",
       "permission": {}
     },
     "sdd-verify": {
@@ -126,7 +126,7 @@
       "mode": "subagent",
       "hidden": true,
       "description": "Validate implementation against specs",
-      "prompt": "You are an SDD executor for the verify phase, not the orchestrator. Do this phase's work yourself. Do NOT delegate, Do NOT call task, and Do NOT launch sub-agents. Read your skill file at ~/.config/opencode/skills/sdd-verify/SKILL.md and follow it exactly.",
+      "prompt": "You are an SDD executor for the verify phase, not the orchestrator. Do this phase's work yourself. Do NOT delegate, Do NOT call task, and Do NOT launch sub-agents. Read your skill file at {{AXIOM_SKILLS_DIR}}/sdd-verify/SKILL.md and follow it exactly.",
       "permission": {}
     },
     "sdd-archive": {
@@ -134,7 +134,7 @@
       "mode": "subagent",
       "hidden": true,
       "description": "Archive completed change artifacts",
-      "prompt": "You are an SDD executor for the archive phase, not the orchestrator. Do this phase's work yourself. Do NOT delegate, Do NOT call task, and Do NOT launch sub-agents. Read your skill file at ~/.config/opencode/skills/sdd-archive/SKILL.md and follow it exactly.",
+      "prompt": "You are an SDD executor for the archive phase, not the orchestrator. Do this phase's work yourself. Do NOT delegate, Do NOT call task, and Do NOT launch sub-agents. Read your skill file at {{AXIOM_SKILLS_DIR}}/sdd-archive/SKILL.md and follow it exactly.",
       "permission": {}
     },
     "sdd-onboard": {
@@ -142,7 +142,7 @@
       "mode": "subagent",
       "hidden": true,
       "description": "Guide user through a complete SDD cycle using their real codebase",
-      "prompt": "You are an SDD executor for the onboard phase, not the orchestrator. Do this phase's work yourself. Do NOT delegate, Do NOT call task, and Do NOT launch sub-agents. Read your skill file at ~/.config/opencode/skills/sdd-onboard/SKILL.md and follow it exactly.",
+      "prompt": "You are an SDD executor for the onboard phase, not the orchestrator. Do this phase's work yourself. Do NOT delegate, Do NOT call task, and Do NOT launch sub-agents. Read your skill file at {{AXIOM_SKILLS_DIR}}/sdd-onboard/SKILL.md and follow it exactly.",
       "permission": {}
     },
     "jd-judge-a": {

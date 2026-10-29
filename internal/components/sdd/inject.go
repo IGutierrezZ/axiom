@@ -464,6 +464,10 @@ func Inject(homeDir string, adapter agents.Adapter, sddMode model.SDDModeID, opt
 		if err != nil {
 			return InjectionResult{}, err
 		}
+		content, err = resolveOverlaySkillsDir(content, adapter, installsInWorkspace(homeDir, opts))
+		if err != nil {
+			return InjectionResult{}, err
+		}
 		preparedOverlay, err = inlineOpenCodeSDDPrompts([]byte(content), homeDir, settingsPath, adapter.Agent(), opts.PreserveOpenCodeOrchestratorPrompt, opts.orchestratorPolicyRenderOptions(), opts.CodeGraphGuidanceMarkdown)
 		if err != nil {
 			return InjectionResult{}, err
