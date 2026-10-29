@@ -1,8 +1,8 @@
 # Catálogo Maestro de Especificaciones Vivas — Axiom
 
 > **Proyecto:** Axiom (Spec-Driven Development Platform)
-> **Última Sincronización:** 2026-10-29 08:45:56 UTC
-> **Total Dominios:** 64 | **Total Requerimientos:** 478 | **Total Escenarios BDD:** 1176
+> **Última Sincronización:** 2026-10-29 10:15:58 UTC
+> **Total Dominios:** 67 | **Total Requerimientos:** 494 | **Total Escenarios BDD:** 1194
 
 ---
 
@@ -24,6 +24,9 @@
 | `engram-protocol-injection` | Engram protocol injection Specification | 5 | 12 | [Ver Spec](specs/engram-protocol-injection/spec.md) |
 | `gga` | GGA Specification | 3 | 8 | [Ver Spec](specs/gga/spec.md) |
 | `installer-picker-navigation` | Installer Picker Navigation Specification | 3 | 9 | [Ver Spec](specs/installer-picker-navigation/spec.md) |
+| `knowledge-profile-init` | Especificación de Requerimientos: Perfil de Inicialización Knowledge (INC-23) | 6 | 8 | [Ver Spec](specs/knowledge-profile-init/spec.md) |
+| `knowledge-query-engine` | Especificación de Requerimientos: Consulta Spec-First con Auto-Enriquecimiento de la Spec Viva (INC-23) | 5 | 5 | [Ver Spec](specs/knowledge-query-engine/spec.md) |
+| `knowledge-sweep-command` | Especificación de Requerimientos: Barrido Autónomo Knowledge y Siembra Inicial (INC-23) | 5 | 5 | [Ver Spec](specs/knowledge-sweep-command/spec.md) |
 | `living-documentation` | Especificación Viva: Motor de Documentación Viva y Adopción Orgánica en Archive (INC-07) | 11 | 23 | [Ver Spec](specs/living-documentation/spec.md) |
 | `local-web-dashboard` | Especificación Viva: Servidor HTTP Local Embebido y Dashboard Web | 11 | 35 | [Ver Spec](specs/local-web-dashboard/spec.md) |
 | `multi-project-hub` | Especificación Viva: Hub Multi-Proyecto, Selector Dinámico en Dashboard Web y CLI axiom init (INC-08) | 9 | 33 | [Ver Spec](specs/multi-project-hub/spec.md) |
@@ -577,6 +580,61 @@ Defines the navigation contract for the installer TUI's conditional picker chain
 - **[REQ-installer-picker-navigation-3]** Cross-cutting guards remain outside the slice
   - *Escenario BDD:* ModelConfigMode exit-ramp returns to config menu
   - *Escenario BDD:* OpenCodePlugins guard precedes the dependency tree without SDD
+
+### Dominio: `knowledge-profile-init` — Especificación de Requerimientos: Perfil de Inicialización Knowledge (INC-23)
+
+Permite inicializar un espacio de trabajo ligero de Axiom enfocado en documentación viva, indexación semántica y catalogación, prescindiendo del arnés de ejecución de código.
+
+**Archivo:** [`specs/knowledge-profile-init/spec.md`](specs/knowledge-profile-init/spec.md)
+
+- **[REQ-23.1]** Flag de Perfil Knowledge y Alias en CLI Init
+  - *Escenario BDD:* Inicialización con bandera --profile=knowledge
+  - *Escenario BDD:* Inicialización con bandera alias --spec-only
+- **[REQ-23.2]** Configuración Canónica de axiom.yaml en Topología Multirepo
+  - *Escenario BDD:* Manifiesto axiom.yaml generado bajo perfil knowledge
+- **[REQ-23.3]** Andamiaje Estándar OpenSpec
+  - *Escenario BDD:* Creación de directorios y catálogo OpenSpec
+- **[REQ-23.4]** Configuración Automática de Servidores MCP en .mcp.json
+  - *Escenario BDD:* Inyección de servidores MCP en .mcp.json nuevo
+  - *Escenario BDD:* Fusión no destructiva con .mcp.json existente
+- **[REQ-23.5]** Oclusión Estricta de Ejecutores de Código y Suites de Testeo
+  - *Escenario BDD:* Ausencia de ejecutores y pipelines de testeo
+- **[REQ-23.6]** Creación de Borradores de Cambio para Traspaso Futuro
+  - *Escenario BDD:* Creación de cambio en modo borrador
+
+### Dominio: `knowledge-query-engine` — Especificación de Requerimientos: Consulta Spec-First con Auto-Enriquecimiento de la Spec Viva (INC-23)
+
+Permite formular consultas técnicas o funcionales sobre el proyecto, respondiendo con fundamentación y enriqueciendo automáticamente las especificaciones vivas.
+
+**Archivo:** [`specs/knowledge-query-engine/spec.md`](specs/knowledge-query-engine/spec.md)
+
+- **[REQ-23.12]** Subcomando de Consulta Técnica/Funcional
+  - *Escenario BDD:* Invocación de consulta funcional
+- **[REQ-23.13]** Resolución Spec-First con Cortocircuito Inmediato
+  - *Escenario BDD:* Respuesta directa desde la spec viva sin tocar código
+- **[REQ-23.14]** Triangulación Profunda con Evidencias ante Lagunas en la Spec
+  - *Escenario BDD:* Consulta que requiere inspección profunda de código
+- **[REQ-23.15]** Contrato de Respuesta en Dos Niveles
+  - *Escenario BDD:* Formato de la respuesta estructurada
+- **[REQ-23.16]** Auto-Enriquecimiento Obligatorio de la Spec Viva
+  - *Escenario BDD:* Auto-enriquecimiento de la spec tras investigación
+
+### Dominio: `knowledge-sweep-command` — Especificación de Requerimientos: Barrido Autónomo Knowledge y Siembra Inicial (INC-23)
+
+Permite realizar un barrido inicial rápido sobre los repositorios del proyecto para inferir la arquitectura técnica y los módulos funcionales sin bloqueos interactivos.
+
+**Archivo:** [`specs/knowledge-sweep-command/spec.md`](specs/knowledge-sweep-command/spec.md)
+
+- **[REQ-23.7]** Invocación Autónoma Headless
+  - *Escenario BDD:* Ejecución headless de barrido emitiendo JSON
+- **[REQ-23.8]** Detección Técnica Multidimensional
+  - *Escenario BDD:* Identificación de stack y puntos de entrada
+- **[REQ-23.9]** Inferencia Funcional de Módulos y Dominios
+  - *Escenario BDD:* Inferencia de módulos de negocio
+- **[REQ-23.10]** Política No Bloqueante y Sobre Diferido de Ambigüedades
+  - *Escenario BDD:* Detección de ambigüedades sin bloqueo
+- **[REQ-23.11]** Siembra Inicial en OpenSpec y Persistencia en Engram
+  - *Escenario BDD:* Persistencia y catalogación del barrido inicial
 
 ### Dominio: `living-documentation` — Especificación Viva: Motor de Documentación Viva y Adopción Orgánica en Archive (INC-07)
 
