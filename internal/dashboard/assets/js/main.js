@@ -5,10 +5,11 @@ import { api } from './core/api.js';
 import { bindCopyButtons, $ } from './core/components.js';
 import { hydrateIcons } from './core/icons.js';
 import { startRouter } from './core/router.js';
+import { refreshOverview } from './core/overview.js';
 import { set, on } from './core/state.js';
 import { initTheme } from './core/theme.js';
 import { initProjects, loadProjects } from './projects.js';
-import { initShell, setActiveNav, renderBreadcrumb, routeLabel, closeMenu, checkSpecsSync } from './shell.js';
+import { initShell, setActiveNav, renderBreadcrumb, routeLabel, closeMenu } from './shell.js';
 import { initDetail, enterDetail, refreshDetail } from './screens/detalle.js';
 import { initEcosystem, loadEcosystem, renderTopology } from './screens/ecosystem.js';
 import { initIncrements, loadIncrements, renderIncrements } from './screens/incrementos.js';
@@ -54,7 +55,9 @@ async function loadAllData() {
     loadSemanticData(),
     loadLivingDocs(),
     loadEcosystem(),
-    checkSpecsSync()
+    // Inicio y la barra lateral: las rutas que otras pantallas ya piden en este
+    // mismo instante se comparten (api() agrupa los GET simultáneos).
+    refreshOverview()
   ]);
   // Actualizar también refresca el incremento abierto, si lo hay.
   if (currentRoute && currentRoute.name === 'incremento') refreshDetail();

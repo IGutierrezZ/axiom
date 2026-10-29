@@ -70,17 +70,17 @@
           <div class="nav-group">
             <span class="nav-label">Trabajo</span>
             <a class="nav-item" href="#/inicio" data-nav="inicio"><i data-icon="home" data-size="18"></i><span class="grow">Inicio</span></a>
-            <a class="nav-item" href="#/incrementos" data-nav="incrementos"><i data-icon="board" data-size="18"></i><span class="grow">Incrementos</span></a>
+            <a class="nav-item" href="#/incrementos" data-nav="incrementos"><i data-icon="board" data-size="18"></i><span class="grow">Incrementos</span><span class="nav-count" id="badge-incrementos" hidden></span></a>
           </div>
           <div class="nav-group">
             <span class="nav-label">Conocimiento</span>
             <a class="nav-item" href="#/specs" data-nav="specs"><i data-icon="book" data-size="18"></i><span class="grow">Specs vivas</span></a>
-            <a class="nav-item" href="#/skills" data-nav="skills"><i data-icon="cube" data-size="18"></i><span class="grow">Skills</span></a>
+            <a class="nav-item" href="#/skills" data-nav="skills"><i data-icon="cube" data-size="18"></i><span class="grow">Skills</span><span class="nav-pill" id="badge-skills" hidden></span></a>
             <a class="nav-item" href="#/codigo" data-nav="codigo"><i data-icon="graph" data-size="18"></i><span class="grow">Código y grafo</span></a>
           </div>
           <div class="nav-group">
             <span class="nav-label">Plataforma</span>
-            <a class="nav-item" href="#/ecosistema" data-nav="ecosistema"><i data-icon="pulse" data-size="18"></i><span class="grow">Ecosistema</span></a>
+            <a class="nav-item" href="#/ecosistema" data-nav="ecosistema"><i data-icon="pulse" data-size="18"></i><span class="grow">Ecosistema</span><span id="badge-ecosistema" hidden></span></a>
           </div>
         </nav>
 
@@ -138,10 +138,41 @@
               <div>
                 <span class="page-eyebrow" id="inicio-eyebrow"></span>
                 <h1 id="inicio-title" class="page-title" tabindex="-1">Inicio</h1>
-                <p class="page-sub">El resumen de lo que necesita atención llegará pronto. Mientras tanto, el trabajo en curso está en Incrementos.</p>
+                <p class="page-sub" id="inicio-sub" role="status">Cargando el estado de los incrementos…</p>
               </div>
-              <div class="page-actions">
-                <a class="btn btn-primary" href="#/incrementos"><i data-icon="board"></i>Ver incrementos</a>
+            </div>
+
+            <div id="home-sync"></div>
+
+            <section aria-label="Indicadores">
+              <div class="kpi-grid" id="home-kpis"></div>
+            </section>
+
+            <div class="home-grid">
+              <div class="home-main">
+                <section class="card card-flush" aria-labelledby="home-att-h">
+                  <div class="card-head">
+                    <h2 class="card-title-h" id="home-att-h">Necesita atención</h2>
+                    <a href="#/incrementos">Ver tablero</a>
+                  </div>
+                  <div id="home-attention"></div>
+                  <div class="home-console" id="home-console-slot"></div>
+                </section>
+
+                <section class="card" aria-labelledby="home-flow-h">
+                  <div class="home-flow-head">
+                    <h2 class="card-title-h" id="home-flow-h">Flujo SDD</h2>
+                    <span class="dim">Incrementos activos por fase</span>
+                  </div>
+                  <div id="home-flow"></div>
+                </section>
+              </div>
+
+              <div class="home-side">
+                <section class="card card-flush" id="home-help" aria-labelledby="home-help-h" hidden>
+                  <div class="card-head"><h2 class="card-title-h" id="home-help-h">Axiom te ayuda</h2></div>
+                  <div id="home-help-body"></div>
+                </section>
               </div>
             </div>
           </div>

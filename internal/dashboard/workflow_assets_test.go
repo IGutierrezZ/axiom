@@ -116,11 +116,15 @@ func TestIncrementDetailTabsAndRoutes(t *testing.T) {
 		"aria-current", "hrefFor('incremento'", "data-artifact", "data-format", "aria-pressed",
 		"tasks_content", "verify_report", "archive_report", "no existe todavía",
 		"sectionStats", "withFocus", "ctx.token",
-		"/api/increments/continue", "renderConsole(", "aria-current=\"step\"",
+		"continueIncrement(", "renderConsole(", "aria-current=\"step\"",
 	} {
 		if !strings.Contains(detail, marker) {
 			t.Errorf("detalle.js no contiene %q", marker)
 		}
+	}
+	// La orden de Axiom se lanza desde un único sitio, compartido con Inicio.
+	if !strings.Contains(readAsset(t, "js/core/increment.js"), "/api/increments/continue") {
+		t.Errorf("increment.js debe llamar a /api/increments/continue (continueIncrement)")
 	}
 	roles := readAsset(t, "js/screens/detalle-roles.js")
 	for _, marker := range []string{

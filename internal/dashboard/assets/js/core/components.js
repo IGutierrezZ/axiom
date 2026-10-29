@@ -78,11 +78,13 @@ export function tableWrap(tableHtml, label = '') {
 
 // reminder: texto que dice qué paso de agente toca y que se lance desde el IDE
 // o la CLI favoritos, con la orden copiable. No es un botón de acción.
-export function reminder({ title, text, command = '' }) {
+// compact (listas, p. ej. Inicio): una línea con título y orden; el texto largo se
+// mantiene solo para lectores de pantalla.
+export function reminder({ title, text, command = '', compact = false }) {
   const cmd = command
     ? `<div class="reminder-cmd"><code>${escapeHtml(command)}</code>${iconButton({ iconName: 'copy', label: 'Copiar la orden', size: 'sm', attrs: `data-copy="${escapeHtml(command)}"` })}</div>`
     : '';
-  return `<aside class="reminder" aria-label="Recordatorio">${icon('terminal', 18)}<div class="reminder-body"><span class="reminder-title">${escapeHtml(title)}</span><span class="reminder-text">${escapeHtml(text)}</span>${cmd}</div></aside>`;
+  return `<aside class="reminder${compact ? ' reminder-compact' : ''}" aria-label="Recordatorio">${icon('terminal', compact ? 16 : 18)}<div class="reminder-body"><span class="reminder-title">${escapeHtml(title)}</span><span class="reminder-text${compact ? ' sr-only' : ''}">${escapeHtml(text)}</span>${cmd}</div></aside>`;
 }
 
 // copyText copia al portapapeles con respaldo para contextos sin la API moderna.

@@ -213,7 +213,27 @@ Ruta de cada tarea: «delegada» significa un escritor acotado, que se elige por
   - «Siguiente paso»: Continuar es un botón; Verificar y Archivar son recordatorios (D5).
   - Modal Nuevo incremento y consola de Continuar.
   - Desaparecen las pestañas globales Roles y Handoffs y sus desplegables.
-- [ ] **T4 · Inicio** (delegada)
+- [x] **T4 · Inicio** (delegada)
+  - **Resultado (2026-10-29):**
+    - **Regla de atención:** un incremento activo necesita atención cuando `statusFlag()` (`js/core/increment.js`) le asigna una bandera: `ready_for_global_verify`, `waiting_roles`, `ready_for_archive`, `pending_spec` o `ready_for_design`. `needsAttention` es `statusFlag(inc) !== null`, así que la regla se define una sola vez. La lista se ordena por verificación global, roles, archivado y spec/design, que comparten rango y van por nombre; muestra 8 filas como máximo y avisa «Mostrando N de M».
+    - **Caché `state.overview`** (`js/core/overview.js`) con 6 fuentes:
+      - cada una falla por separado;
+      - `api()` comparte en vuelo los GET simultáneos de la misma ruta;
+      - se refresca al cargar y con Actualizar;
+      - el sondeo de 60 s solo repite incrementos, doctor, sincronización e inbox, y solo con la pestaña visible;
+      - navegar entre rutas no hace peticiones.
+    - Las insignias de Incrementos, Skills y Ecosistema salen de esa caché.
+    - Cada fila lleva Continuar (`axiom sdd continue`) más el recordatorio compacto `/sdd-…`, y una nota explica que las fases las ejecuta el agente.
+    - `continueIncrement` es único y lo comparte el detalle.
+    - Corregido de paso el `padding` de `.card-flush` a ≤ 480 px (fallo de T2).
+  - **Tests:**
+    - `home_assets_test.go` (estructurales);
+    - `TestHomeLogicRuntime` con Node: prioridad, estadísticas, resumen del doctor, deduplicación y fallo aislado de una fuente.
+  - **Verificación:**
+    - `go build`, `go vet`, `go test ./internal/dashboard/...` (repetido por el orquestador) y `gofmt -l`: OK.
+    - Navegador del orquestador: Inicio con datos reales en oscuro, sin errores de consola.
+    - El escritor probó además claro, 390 px (KPI en 2×2) y datos inyectados (aviso de pull, bugs, Ver barrera, error de una fuente).
+    - Sin probar el clic en «Hacer pull de specs».
   - Titular accionable. Cuenta los incrementos con alguna bandera de atención; la regla se define en el código y en este documento.
   - Aviso de specs por detrás con botón Pull.
   - 4 KPI: activos y bugs, tareas, en verificación y salud del ecosistema.
@@ -270,7 +290,7 @@ Ruta de cada tarea: «delegada» significa un escritor acotado, que se elige por
 
 ## Siguiente paso
 
-T4: Inicio.
+T5: Skills, Specs vivas y Código.
 
 ## Seguimientos
 

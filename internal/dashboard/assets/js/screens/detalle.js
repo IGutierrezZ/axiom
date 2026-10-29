@@ -5,7 +5,7 @@
 import { api, escapeHtml } from '../core/api.js';
 import { $, $all, button, reminder, renderConsole, setBusy, stateEmpty, stateError, stateLoading, toast } from '../core/components.js';
 import { icon } from '../core/icons.js';
-import { deriveNextStep, detailSteps, formatDate, isArchived, typeChip } from '../core/increment.js';
+import { continueIncrement, deriveNextStep, detailSteps, formatDate, isArchived, typeChip } from '../core/increment.js';
 import { firstParagraph, renderMarkdown } from '../core/markdown.js';
 import { hrefFor } from '../core/router.js';
 import { barrierSummary, renderRoles } from './detalle-roles.js';
@@ -75,23 +75,9 @@ function renderNext(detail) {
 async function runContinue(btn) {
   const change = ctx.change;
   if (!change) return;
-  const consoleBox = $('#inc-console');
   const restore = setBusy(btn, 'Ejecutando…');
-  let ok = false;
-  let data = {};
-  let error = '';
-  try {
-    data = (await api('/api/increments/continue', { body: { name: change } })) || {};
-    ok = data.success !== false;
-  } catch (err) {
-    data = err.data || {};
-    error = err.message;
-  }
-  if (ok) {
-    renderConsole(consoleBox, { title: 'Continuar con Axiom', state: 'ok', text: `[ACCIÓN SDD: ${data.action || 'continue'}]\n\n${data.output || 'Transición efectuada con éxito.'}` });
-  } else {
-    renderConsole(consoleBox, { title: 'Continuar con Axiom', state: 'error', text: `[ERROR]\n\n${data.error || error || 'Fallo en la transición SDD'}\n\n${data.output || ''}` });
-  }
+  const result = await continueIncrement(change);
+  renderConsole($('#inc-console'), { title: 'Continuar con Axiom', state: result.ok ? 'ok' : 'error', text: result.text });
   restore();
   await loadIncrements();
   if (ctx.change === change) await reloadDetail();

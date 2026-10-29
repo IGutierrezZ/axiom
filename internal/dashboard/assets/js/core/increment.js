@@ -2,7 +2,7 @@
 // fases SDD, tipo, bandera de estado única, barra de progreso, minipaso y la
 // derivación del «Siguiente paso» (D5: botón solo para lo que ejecuta Axiom).
 
-import { escapeHtml } from './api.js';
+import { api, escapeHtml } from './api.js';
 import { icon } from './icons.js';
 
 export const PHASES = [
@@ -207,4 +207,81 @@ export function detailSteps(detail) {
     apply.pct = s.progress_pct;
   }
   return steps;
+}
+
+// ---- Atención (Inicio) ---------------------------------------------------------------
+
+// Regla única: un incremento activo necesita atención cuando statusFlag() le
+// pone alguna bandera (ready_for_global_verify, waiting_roles, ready_for_archive,
+// pending_spec o ready_for_design). Inicio, el titular y la lista parten de aquí.
+export function needsAttention(inc) {
+  return statusFlag(inc) !== null;
+}
+
+// Orden de la lista: verificación global, roles, archivado y, por último, spec
+// y design (mismo rango). A igual rango, por nombre.
+const ATTENTION_RANK = { gverify: 0, waiting: 1, archive: 2, spec: 3, design: 3 };
+
+// attentionItems devuelve [{inc, flag}] de los activos que necesitan atención, ya ordenados.
+export function attentionItems(increments) {
+  return (increments || [])
+    .map(inc => ({ inc, flag: statusFlag(inc) }))
+    .filter(item => item.flag !== null)
+    .sort((a, b) => (ATTENTION_RANK[a.flag.id] - ATTENTION_RANK[b.flag.id]) || String(a.inc.name).localeCompare(String(b.inc.name), 'es'));
+}
+
+// incrementStats resume la lista para los indicadores y el flujo SDD de Inicio.
+// byPhase cuenta solo activos (explore…verify); archived suma los archivados y
+// los activos que ya están en la fase archive.
+export function incrementStats(increments) {
+  const all = increments || [];
+  const active = all.filter(inc => !isArchived(inc));
+  const archivedList = all.filter(isArchived);
+  const byPhase = PHASES.filter(p => p.id !== 'archive').map(p => ({ id: p.id, label: p.label, count: 0, bugs: 0 }));
+  let tasksDone = 0;
+  let tasksTotal = 0;
+  let archivedActive = 0;
+  active.forEach(inc => {
+    tasksDone += inc.tasks_completed || 0;
+    tasksTotal += inc.tasks_total || 0;
+    if (inc.phase === 'archive') {
+      archivedActive += 1;
+      return;
+    }
+    const cell = byPhase[phaseIndex(inc.phase)];
+    cell.count += 1;
+    if (typeInfo(inc).id === 'bug') cell.bugs += 1;
+  });
+  return {
+    active: active.length,
+    bugs: active.filter(inc => typeInfo(inc).id === 'bug').length,
+    archived: archivedList.length + archivedActive,
+    tasksDone,
+    tasksTotal,
+    pct: tasksTotal > 0 ? Math.round((tasksDone / tasksTotal) * 100) : 0,
+    verifying: active.filter(inc => inc.phase === 'verify').length,
+    readyForArchive: active.filter(inc => inc.ready_for_archive).length,
+    byPhase
+  };
+}
+
+// ---- Continuar (orden de Axiom, D5) -----------------------------------------------------
+
+// continueIncrement ejecuta POST /api/increments/continue y devuelve {ok, text}
+// listo para la consola. Lo comparten el detalle y la lista de Inicio.
+export async function continueIncrement(name) {
+  let data = {};
+  let error = '';
+  let ok = false;
+  try {
+    data = (await api('/api/increments/continue', { body: { name } })) || {};
+    ok = data.success !== false;
+  } catch (err) {
+    data = err.data || {};
+    error = err.message;
+  }
+  if (ok) {
+    return { ok, text: `[ACCIÓN SDD: ${data.action || 'continue'}]\n\n${data.output || 'Transición efectuada con éxito.'}` };
+  }
+  return { ok, text: `[ERROR]\n\n${data.error || error || 'Fallo en la transición SDD'}\n\n${data.output || ''}` };
 }
