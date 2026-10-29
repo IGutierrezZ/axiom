@@ -166,25 +166,31 @@ func TestArchiveSyncWithTheDefaultBaselineStillWrites(t *testing.T) {
 	}
 }
 
-// REQ-4.2: la pestaña muestra el aviso de baseline externa en lugar del
-// catálogo vacío y el botón de sincronización muestra el rechazo con su
-// continuación. app.js se inspecciona por marcadores, como el resto de la
-// presentación web.
-func TestLivingDocsTabPresentsTheExternalBaseline(t *testing.T) {
-	raw, err := AssetsFS.ReadFile("assets/app.js")
-	if err != nil {
-		t.Fatalf("leer assets/app.js: %v", err)
-	}
-	js := string(raw)
+// REQ-4.2: la pantalla de specs vivas muestra el aviso de baseline externa en
+// lugar del catálogo vacío y el botón de sincronización muestra el rechazo con su
+// continuación. Sin navegador en las pruebas, js/screens/livingdoc.js y el helper
+// api() se inspeccionan por marcadores: api() extrae el campo `error` del cuerpo
+// del 409 (que nombra la baseline y la continuación) y la pantalla lo presenta.
+func TestLivingDocsScreenPresentsTheExternalBaseline(t *testing.T) {
+	js := readAsset(t, "js/screens/livingdoc.js")
 	for name, want := range map[string]string{
 		"lee el indicador del catálogo":           "catalog.external_baseline",
 		"avisa de que la baseline es externa":     "La baseline de especificaciones es externa",
 		"lista dominios y rutas":                  "doc.domain",
-		"muestra el rechazo de la sincronización": "livingDocErrorMessage(res, 'Error en sincronización')",
-		"muestra el error del detalle":            "livingDocErrorMessage(res, 'Especificación viva no encontrada')",
+		"consulta el catálogo con api()":          "api('/api/archive/specs')",
+		"sincroniza con api()":                    "api('/api/archive/sync'",
+		"muestra el rechazo de la sincronización": "Fallo al sincronizar: ${err.message}",
+		"muestra el error del catálogo":           "Error cargando el catálogo: ${escapeHtml(err.message)}",
+		"muestra el error del detalle":            "Error: ${escapeHtml(err.message)}",
 	} {
 		if !strings.Contains(js, want) {
-			t.Errorf("la pestaña no %s (%q)", name, want)
+			t.Errorf("la pantalla no %s (%q)", name, want)
 		}
+	}
+
+	// El mensaje del rechazo llega a la pantalla porque api() lo toma del cuerpo.
+	apiJS := readAsset(t, "js/core/api.js")
+	if !strings.Contains(apiJS, "if (data.error) return String(data.error)") {
+		t.Errorf("api() debe usar el campo error del cuerpo como mensaje de ApiError")
 	}
 }

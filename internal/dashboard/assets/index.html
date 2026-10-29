@@ -1,918 +1,685 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" data-theme="light">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Axiom Enterprise — Dashboard de Ingeniería SDD</title>
+  <title>Axiom — Dashboard de ingeniería SDD</title>
+  <!-- Anti-parpadeo: fija el tema antes de pintar. Lee axiom.theme (light|dark|system,
+       por defecto system) y resuelve system con matchMedia. Todo en try/catch. -->
+  <script>
+    (function () {
+      var pref = 'system';
+      try {
+        var stored = window.localStorage.getItem('axiom.theme');
+        if (stored === 'light' || stored === 'dark' || stored === 'system') pref = stored;
+      } catch (e) { /* sin almacenamiento: system */ }
+      var theme = pref;
+      if (pref === 'system') {
+        try { theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'; }
+        catch (e) { theme = 'light'; }
+      }
+      document.documentElement.dataset.theme = theme;
+    })();
+  </script>
+  <link rel="stylesheet" href="/tokens.css">
+  <link rel="stylesheet" href="/legacy.css">
   <link rel="stylesheet" href="/style.css">
 </head>
-<body class="modern-light-theme">
-  <div class="app-layout">
-    <!-- Header -->
-    <header class="app-header">
-      <div class="brand">
-        <div class="brand-logo" title="Axiom Engineering Platform">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 10 18H2L12 3z"/></svg>
+<body>
+  <a class="skip-link" href="#main">Saltar al contenido</a>
+
+  <div class="app">
+    <!-- ===== Barra lateral ===== -->
+    <aside class="sidebar" id="sidebar" aria-label="Navegación principal" data-open="false">
+      <div class="sidebar-head">
+        <div class="brand">
+          <span class="brand-mark"><i data-icon="logo" data-size="16"></i></span>
+          <span class="brand-name">Axiom</span>
+          <span class="brand-tag">v3</span>
         </div>
-        <div class="brand-info">
-          <h1>Axiom Enterprise</h1>
-          <span class="subtext">Spec-Driven Development Platform</span>
-        </div>
-      </div>
-      <div class="project-selector-wrapper">
-        <label for="project-select" class="project-select-label">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>
-          Proyecto:
-        </label>
-        <select id="project-select" class="project-select-dropdown">
-          <option value="">Cargando proyectos...</option>
-        </select>
-        <button id="btn-browse-header-project" class="btn btn-sm btn-secondary" title="Buscar y abrir carpeta de proyecto en local">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2"/></svg>
-          Explorar...
-        </button>
-        <button id="btn-add-project" class="btn btn-sm btn-outline" title="Vincular otro proyecto al Hub">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
-          Añadir
+        <button type="button" id="menu-toggle" class="btn btn-icon menu-toggle" aria-expanded="false" aria-controls="sidebar-body" aria-label="Abrir el menú">
+          <i data-icon="menu"></i>
         </button>
       </div>
-      <div class="workspace-pill" id="workspace-pill">
-        <span class="pill-dot"></span>
-        <span class="pill-title" id="ws-name">Cargando...</span>
-        <span class="pill-badge" id="ws-topology">--</span>
+
+      <div class="sidebar-body" id="sidebar-body">
+        <!-- Selector de proyecto -->
+        <div class="project-switch" id="project-switch">
+          <button type="button" id="project-trigger" class="project-trigger" aria-haspopup="true" aria-expanded="false" aria-controls="project-popover" aria-label="Cambiar de proyecto">
+            <span class="project-initials" id="project-initials" aria-hidden="true">--</span>
+            <span class="project-meta">
+              <span class="project-name" id="ws-name">Cargando…</span>
+              <span class="project-sub" id="ws-topology">--</span>
+            </span>
+            <i data-icon="chevronsUpDown" class="dim"></i>
+          </button>
+          <div id="project-popover" class="project-popover" role="group" aria-label="Proyectos" hidden>
+            <span class="popover-label" id="project-list-label">Proyectos</span>
+            <div id="project-list" role="group" aria-labelledby="project-list-label"></div>
+            <div class="popover-sep"></div>
+            <button type="button" id="btn-browse-header-project" class="popover-item" title="Buscar y abrir una carpeta de proyecto en local">
+              <i data-icon="folder"></i><span class="grow">Explorar…</span>
+            </button>
+            <button type="button" id="btn-add-project" class="popover-item" title="Vincular otro proyecto al Hub">
+              <i data-icon="plus"></i><span class="grow">Añadir proyecto…</span>
+            </button>
+          </div>
+        </div>
+
+        <nav class="nav" aria-label="Secciones">
+          <div class="nav-group">
+            <span class="nav-label">Trabajo</span>
+            <a class="nav-item" href="#/inicio" data-nav="inicio"><i data-icon="home" data-size="18"></i><span class="grow">Inicio</span></a>
+            <a class="nav-item" href="#/incrementos" data-nav="incrementos"><i data-icon="board" data-size="18"></i><span class="grow">Incrementos</span></a>
+          </div>
+          <div class="nav-group">
+            <span class="nav-label">Conocimiento</span>
+            <a class="nav-item" href="#/specs" data-nav="specs"><i data-icon="book" data-size="18"></i><span class="grow">Specs vivas</span></a>
+            <a class="nav-item" href="#/skills" data-nav="skills"><i data-icon="cube" data-size="18"></i><span class="grow">Skills</span></a>
+            <a class="nav-item" href="#/codigo" data-nav="codigo"><i data-icon="graph" data-size="18"></i><span class="grow">Código y grafo</span></a>
+          </div>
+          <div class="nav-group">
+            <span class="nav-label">Plataforma</span>
+            <a class="nav-item" href="#/ecosistema" data-nav="ecosistema"><i data-icon="pulse" data-size="18"></i><span class="grow">Ecosistema</span></a>
+          </div>
+        </nav>
+
+        <div class="sidebar-foot">
+          <!-- Aviso de specs por detrás del remoto (ODD-5.4); oculto salvo que haya commits pendientes -->
+          <div id="specs-sync-banner" class="sync-box" hidden role="status">
+            <i data-icon="download" style="color: var(--warn)"></i>
+            <span class="grow" id="specs-sync-text">Specs por detrás del remoto.</span>
+            <button type="button" id="btn-specs-pull" class="link-btn" title="Hacer pull del repositorio de specs">Pull</button>
+          </div>
+
+          <div class="theme-block">
+            <span class="theme-label" id="theme-label">Tema · se guarda para ti</span>
+            <div class="seg-group" role="group" aria-labelledby="theme-label">
+              <button type="button" class="seg" data-theme-pref="light" aria-pressed="false"><i data-icon="sun" data-size="14"></i>Claro</button>
+              <button type="button" class="seg" data-theme-pref="dark" aria-pressed="false"><i data-icon="moon" data-size="14"></i>Oscuro</button>
+              <button type="button" class="seg" data-theme-pref="system" aria-pressed="true"><i data-icon="monitor" data-size="14"></i>Auto</button>
+            </div>
+          </div>
+        </div>
       </div>
-      <div class="header-actions">
-        <button id="btn-refresh" class="btn btn-secondary" title="Actualizar datos">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
-          Actualizar
-        </button>
-      </div>
-    </header>
+    </aside>
 
-    <!-- Alerta de Sincronización Remota de Especificaciones (ODD-5.4) -->
-    <div id="specs-sync-banner" class="specs-sync-banner hidden">
-      <div class="sync-banner-content">
-        <span class="sync-banner-icon">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-        </span>
-        <span id="specs-sync-text">Hay cambios remotos pendientes en el repositorio de especificaciones.</span>
-      </div>
-      <div class="sync-banner-actions">
-        <button id="btn-specs-pull" class="btn btn-sm btn-primary">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17V3"/><path d="m6 11 6 6 6-6"/><path d="M19 21H5"/></svg>
-          Hacer Pull (Sincronizar Specs)
-        </button>
-      </div>
-    </div>
-
-    <!-- Main Navigation Tabs -->
-    <nav class="main-nav">
-      <button class="nav-tab active" data-tab="tab-increments">
-        <span class="tab-icon">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M9 12h6"/><path d="M9 16h6"/></svg>
-        </span>
-        Tablero de Incrementos
-      </button>
-      <button class="nav-tab" data-tab="tab-roles">
-        <span class="tab-icon">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-        </span>
-        Monitor Multi-Rol & Barrera
-      </button>
-      <button class="nav-tab" data-tab="tab-handoffs">
-        <span class="tab-icon">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m11 17 2 2a1 1 0 0 0 1.42 0l4.24-4.24a1 1 0 0 0 0-1.42l-2-2"/><path d="m7 7 2-2a1 1 0 0 1 1.42 0l4.24 4.24a1 1 0 0 1 0 1.42l-2 2"/><path d="M12 12h.01"/></svg>
-        </span>
-        Visor de Handoffs
-      </button>
-      <button class="nav-tab" data-tab="tab-skills">
-        <span class="tab-icon">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-        </span>
-        Catálogo de Skills
-      </button>
-      <button class="nav-tab" data-tab="tab-semantic">
-        <span class="tab-icon">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z"/><path d="M12 5a3 3 0 1 1 5.997.125 4 4 0 0 1 2.526 5.77 4 4 0 0 1-.556 6.588A4 4 0 1 1 12 18Z"/><path d="M15 13a4.5 4.5 0 0 1-3-4 4.5 4.5 0 0 1-3 4"/><path d="M12 18v4"/></svg>
-        </span>
-        Semántica & Grafo
-      </button>
-      <button class="nav-tab" data-tab="tab-livingdoc">
-        <span class="tab-icon">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
-        </span>
-        Especificaciones Vivas
-      </button>
-      <button class="nav-tab" data-tab="tab-ecosystem">
-        <span class="tab-icon">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
-        </span>
-        Ecosistema & Herramientas
-      </button>
-    </nav>
-
-    <!-- Main Content Container -->
-    <main class="content-area">
-      <!-- Zero-Config Welcome Banner (oculto si el proyecto está configurado) -->
-      <section id="zero-config-hero" class="zero-config-card" style="display: none;">
-        <div class="zero-config-icon">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg>
+    <!-- ===== Columna principal ===== -->
+    <div class="main-col">
+      <header class="topbar">
+        <nav aria-label="Ruta">
+          <ol class="crumbs" id="breadcrumb"></ol>
+        </nav>
+        <div class="topbar-spacer"></div>
+        <div class="topbar-actions">
+          <button type="button" id="btn-refresh" class="btn btn-icon" aria-label="Actualizar datos" title="Actualizar datos"><i data-icon="refresh"></i></button>
+          <button type="button" id="btn-new-increment" class="btn btn-primary" title="Crear un nuevo incremento SDD"><i data-icon="plus"></i>Nuevo incremento</button>
         </div>
-        <div class="zero-config-content">
-          <h3>Este repositorio aún no está gobernado con Axiom</h3>
-          <p id="zero-config-msg">No se encontró un archivo <code>axiom.yaml</code> en este proyecto. Puedes inicializarlo en un instante:</p>
-          <div class="detected-tech-box" id="zero-config-tech">
-            <span class="tech-badge">Detectando tecnología...</span>
-          </div>
-          <div class="zero-config-actions">
-            <button id="btn-init-project" class="btn btn-primary">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-              Inicializar Proyecto con Axiom (1 Clic)
-            </button>
-          </div>
-        </div>
-      </section>
+      </header>
 
-      <!-- TAB 1: INCREMENTOS -->
-      <section id="tab-increments" class="tab-panel active">
-        <div class="section-header">
-          <div>
-            <h2>Ciclo de Vida de Incrementos SDD</h2>
-            <p class="description">Seguimiento en tiempo real de cambios activos y especificaciones vivas archivadas.</p>
-          </div>
-          <div class="filter-group" id="increments-filter-group">
-            <button class="filter-btn active" data-filter="all">Todos (Activos)</button>
-            <button class="filter-btn" data-filter="type:fix">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m8 2 1.88 1.88"/><path d="M14.12 3.88 16 2"/><path d="M9 7.13v-1a3.003 3.003 0 1 1 6 0v1"/><path d="M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6"/><path d="M12 20v-9"/><path d="M6.53 9C4.6 8.8 3 7.1 3 5"/><path d="M6 13H2"/><path d="M3 21c0-2.1 1.7-3.9 3.8-4"/><path d="M20.97 5c0 2.1-1.6 3.8-3.5 4"/><path d="M22 13h-4"/><path d="M17.2 17c2.1.1 3.8 1.9 3.8 4"/></svg>
-              Bugs / Fixes
-            </button>
-            <button class="filter-btn" data-filter="spec_pending">Pendiente Spec</button>
-            <button class="filter-btn" data-filter="ready_for_design">Listo para Design</button>
-            <span id="role-filters-container" style="display: inline-flex; gap: 0.25rem;"></span>
-            <button class="filter-btn" data-filter="ready_for_global_verify">Pendiente Verif. Global</button>
-            <button class="filter-btn" data-filter="ready_for_archive">Listo para Archivar</button>
-            <button class="filter-btn" data-filter="archived">Archivados</button>
-            <button id="btn-new-increment" class="btn btn-primary" style="margin-left: 0.75rem;" title="Crear un nuevo incremento SDD">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
-              Nuevo Incremento
-            </button>
-          </div>
-        </div>
-
-        <div class="increments-grid" id="increments-container">
-          <div class="loading-state">Cargando incrementos del workspace...</div>
-        </div>
-      </section>
-
-      <!-- TAB 2: MULTI-ROL & BARRERA -->
-      <section id="tab-roles" class="tab-panel">
-        <div class="section-header">
-          <div>
-            <h2>Monitor de Concurrencia Multi-Rol y Barrera Fan-In</h2>
-            <p class="description">Inspección de avance atomizado por rol y validación de compuertas obligatorias y diferidas.</p>
-          </div>
-          <div class="selector-box">
-            <label for="role-change-select">Cambio:</label>
-            <select id="role-change-select" class="form-select">
-              <option value="">Seleccionar cambio...</option>
-            </select>
-          </div>
-        </div>
-
-        <div id="barrier-result-card" class="barrier-banner hidden">
-          <div class="barrier-status-icon" id="barrier-icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-          </div>
-          <div class="barrier-details">
-            <h3 id="barrier-title">Estado de la Barrera</h3>
-            <p id="barrier-desc">Diagnóstico</p>
-          </div>
-        </div>
-
-        <div class="roles-grid" id="roles-container">
-          <p class="empty-state">Selecciona un cambio arriba para inspeccionar sus roles y tareas asignadas.</p>
-        </div>
-      </section>
-
-      <!-- TAB 3: HANDOFFS -->
-      <section id="tab-handoffs" class="tab-panel">
-        <div class="section-header">
-          <div>
-            <h2>Visor de Handoffs Estructurados</h2>
-            <p class="description">Documentos de relevo formal entre fases SDD y roles concurrentes.</p>
-          </div>
-          <div class="selector-box" style="display: flex; gap: 0.75rem; align-items: center;">
-            <label for="handoff-change-select">Cambio:</label>
-            <select id="handoff-change-select" class="form-select">
-              <option value="">Seleccionar cambio...</option>
-            </select>
-            <button id="btn-open-create-handoff" class="btn btn-primary" title="Redactar nuevo relevo formal">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
-              Crear Handoff
-            </button>
-          </div>
-        </div>
-
-        <div id="handoff-display" class="handoff-card hidden">
-          <div class="handoff-header">
-            <div class="handoff-flow">
-              <span class="phase-chip" id="ho-from-phase">--</span>
-              <span class="flow-arrow">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-              </span>
-              <span class="phase-chip target" id="ho-to-phase">--</span>
-            </div>
-            <div class="handoff-meta-chips">
-              <span class="badge" id="ho-roles">--</span>
-              <span class="badge" id="ho-status">--</span>
-              <span class="badge timestamp" id="ho-time">--</span>
-            </div>
-          </div>
-          <div class="handoff-sections" id="ho-sections-container">
-            <!-- Secciones generadas dinámicamente -->
-          </div>
-        </div>
-        <div id="handoff-empty" class="empty-state">
-          Selecciona un cambio para ver su artefacto de relevo handoff.md.
-        </div>
-      </section>
-
-      <!-- TAB 4: SKILLS -->
-      <section id="tab-skills" class="tab-panel">
-        <div class="section-header">
-          <div>
-            <h2>Catálogo de Skills & Buzón de Autoskills</h2>
-            <p class="description">Gobernanza Human-in-the-Loop con catálogo auditado de midudev/autoskills y minería heurística local.</p>
-          </div>
-          <div>
-            <button id="btn-scan-skills" class="btn btn-primary" title="Detectar tecnologías del stack y minar patrones locales">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-              Escanear Tecnologías & Minar
-            </button>
-          </div>
-        </div>
-
-        <!-- Buzón de Propuestas (Human-in-the-Loop) -->
-        <div class="inbox-section">
-          <div class="inbox-header">
-            <h3>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="inline-icon"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>
-              Buzón de Propuestas Pendientes de Aprobación
-            </h3>
-            <span class="inbox-count-badge" id="inbox-count">0 pendientes</span>
-          </div>
-          <div id="scan-feedback" class="scan-feedback hidden"></div>
-          <div class="inbox-grid" id="inbox-container">
-            <div class="loading-state">Consultando buzón de propuestas...</div>
-          </div>
-        </div>
-
-        <h3 class="subsection-title" style="margin-top: 2rem;">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="inline-icon"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-          Skills Activas en Producción (skills/)
-        </h3>
-        <div class="skills-grid" id="skills-container">
-          <div class="loading-state">Escaneando catálogo de skills activas...</div>
-        </div>
-      </section>
-
-      <!-- TAB 5: SEMÁNTICA & GRAFO DE CÓDIGO -->
-      <section id="tab-semantic" class="tab-panel">
-        <div class="section-header">
-          <div>
-            <h2>Comprensión Semántica & Grafo de Código</h2>
-            <p class="description">Diagnóstico de conectores Serena MCP / CodeGraph y catálogo estructurado de símbolos, tipos y dependencias del workspace.</p>
-          </div>
-          <div class="filter-group">
-            <button class="btn btn-primary" id="btn-reindex-codegraph" title="Ejecutar reindexación de CodeGraph bajo demanda">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-              Reindexar CodeGraph
-            </button>
-            <button class="btn btn-secondary" id="btn-refresh-semantic">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
-              Recargar Semántica
-            </button>
-          </div>
-        </div>
-
-        <div id="reindex-feedback" class="scan-feedback hidden" style="margin-bottom: 1.5rem;"></div>
-
-        <!-- Tarjetas de Estado del Conector -->
-        <div class="semantic-status-cards" id="semantic-status-cards">
-          <div class="loading-state">Evaluando entorno semántico y conectores...</div>
-        </div>
-
-        <!-- Agentes Compatibles -->
-        <div class="card" style="margin-top: 1.5rem;">
-          <h3 class="subsection-title">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="inline-icon"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><circle cx="15.5" cy="8.5" r="1.5"/><path d="M9 15h6"/></svg>
-            Estado de Agentes de Desarrollo y MCPs
-          </h3>
-          <div id="semantic-agents-list" class="agents-list">
-            <div class="loading-state">Detectando configuraciones de agentes...</div>
-          </div>
-        </div>
-
-        <!-- Buscador de Símbolos -->
-        <div class="card" style="margin-top: 1.5rem;">
-          <div class="symbols-toolbar">
-            <div class="search-box">
-              <input type="text" id="semantic-search-input" placeholder="Buscar por struct, interface, función o signatura..." class="form-input">
-            </div>
-            <div class="kind-filters" id="semantic-kind-filters">
-              <button class="filter-btn active" data-kind="">Todos</button>
-              <button class="filter-btn" data-kind="struct">Structs</button>
-              <button class="filter-btn" data-kind="interface">Interfaces</button>
-              <button class="filter-btn" data-kind="func">Funciones</button>
-              <button class="filter-btn" data-kind="method">Métodos</button>
-            </div>
-          </div>
-
-          <div class="table-container" style="margin-top: 1rem;">
-            <table class="data-table" id="semantic-symbols-table">
-              <thead>
-                <tr>
-                  <th>Símbolo</th>
-                  <th>Tipo</th>
-                  <th>Paquete</th>
-                  <th>Signatura</th>
-                  <th>Ubicación</th>
-                </tr>
-              </thead>
-              <tbody id="semantic-symbols-body">
-                <tr><td colspan="5" class="loading-state">Cargando símbolos semánticos...</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- Dependencias entre Paquetes -->
-        <div class="card" style="margin-top: 1.5rem;">
-          <h3 class="subsection-title">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="inline-icon"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
-            Grafo de Dependencias entre Paquetes
-          </h3>
-          <div id="semantic-dependencies-container" class="dependencies-container">
-            <div class="loading-state">Calculando relaciones de importación...</div>
-          </div>
-        </div>
-      </section>
-
-      <!-- TAB 6: ESPECIFICACIONES VIVAS (LIVING DOCS) -->
-      <section id="tab-livingdoc" class="tab-panel">
-        <div class="section-header">
-          <div>
-            <h2>Catálogo Central de Especificaciones Vivas</h2>
-            <p class="description">Especificaciones consolidadas en openspec/specs/ y regeneradas continuamente tras cada archivado.</p>
-          </div>
-          <div class="header-actions">
-            <button id="btn-sync-livingdoc" class="btn btn-primary">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
-              Sincronizar Catálogo
-            </button>
-          </div>
-        </div>
-
-        <div class="livingdoc-stats-grid" id="livingdoc-metrics">
-          <div class="stat-card">
-            <span class="stat-label">Dominios Activos</span>
-            <span class="stat-value" id="metric-living-domains">0</span>
-          </div>
-          <div class="stat-card">
-            <span class="stat-label">Total Requisitos</span>
-            <span class="stat-value" id="metric-living-reqs">0</span>
-          </div>
-          <div class="stat-card">
-            <span class="stat-label">Última Sincronización</span>
-            <span class="stat-value" id="metric-living-sync" style="font-size: 1.05rem;">--</span>
-          </div>
-        </div>
-
-        <div class="livingdoc-layout" style="margin-top: 1.5rem; display: grid; grid-template-columns: 320px 1fr; gap: 1.5rem;">
-          <div class="card">
-            <h3 class="subsection-title">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="inline-icon"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
-              Dominios de Especificación
-            </h3>
-            <div id="livingdoc-domains-list" class="livingdoc-list" style="margin-top: 1rem;">
-              <div class="loading-state">Cargando catálogo...</div>
-            </div>
-          </div>
-          <div class="card">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
-              <h3 class="subsection-title" id="livingdoc-detail-title">Visor de Especificación Viva</h3>
-              <span id="livingdoc-detail-version" class="badge" style="display:none;"></span>
-            </div>
-            <div id="livingdoc-viewer" class="livingdoc-viewer-box">
-              <p class="empty-state">Selecciona un dominio de la izquierda para visualizar su especificación viva consolidada.</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- TAB 7: ECOSISTEMA & HERRAMIENTAS -->
-      <section id="tab-ecosystem" class="tab-panel">
-        <div class="section-header">
-          <div>
-            <h2>Salud del Ecosistema, Herramientas y Respaldos</h2>
-            <p class="description">Diagnóstico integral (Axiom Doctor), sincronización de agentes, actualización de herramientas y snapshots de respaldos.</p>
-          </div>
-          <div class="filter-group">
-            <button class="btn btn-secondary" id="btn-refresh-ecosystem">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
-              Actualizar Ecosistema
-            </button>
-          </div>
-        </div>
-
-        <!-- Acciones Rápidas de Mantenimiento -->
-        <div class="card" style="margin-top: 1rem;">
-          <h3 class="subsection-title">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="inline-icon"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-            Operaciones del Ecosistema
-          </h3>
-          <div style="display: flex; gap: 0.75rem; align-items: center; margin-top: 0.75rem; flex-wrap: wrap;">
-            <button id="btn-eco-sync" class="btn btn-primary" title="Sincronizar configuraciones y reglas de agentes en el workspace">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>
-              Sincronizar Workspace
-            </button>
-            <div style="display: inline-flex; align-items: center; gap: 0.5rem; background: var(--color-surface-subtle); padding: 0.35rem 0.75rem; border-radius: var(--radius-md); border: 1px solid var(--color-border-subtle);">
-              <label for="select-eco-channel" style="font-size: 0.825rem; font-weight: 500; color: var(--color-text-muted);">Canal:</label>
-              <select id="select-eco-channel" style="background: transparent; border: none; color: var(--color-text-main); font-size: 0.825rem; outline: none; cursor: pointer; font-weight: 600;">
-                <option value="stable">Estable (Releases)</option>
-                <option value="main">Main (Desarrollo Continuo)</option>
-              </select>
-            </div>
-            <button id="btn-eco-upgrade" class="btn btn-secondary" title="Comprobar y actualizar herramientas">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20"/><path d="m17 7-5-5-5 5"/></svg>
-              Actualizar Herramientas
-            </button>
-            <button id="btn-eco-create-backup" class="btn btn-outline" title="Crear un nuevo snapshot de respaldo">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
-              Crear Respaldo Ahora
-            </button>
-            <span class="badge" style="background: var(--color-surface-subtle); color: var(--color-text-muted); font-size: 0.72rem; border: 1px solid var(--color-border-subtle);" title="Sincronización acotada al proyecto activo">Ámbito: Workspace</span>
-          </div>
-          <div id="eco-action-output" class="console-box hidden" style="margin-top: 1rem;">
-            <div class="console-header">
-              <span id="eco-action-title">Consola de Operaciones</span>
-              <button class="btn-xs btn-outline" id="btn-clear-console">Limpiar</button>
-            </div>
-            <pre id="eco-console-content"></pre>
-          </div>
-        </div>
-
-        <!-- Diagnóstico del Sistema (Axiom Doctor) -->
-        <div class="card" style="margin-top: 1.5rem;">
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <h3 class="subsection-title">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="inline-icon"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
-              Diagnóstico de Salud (Axiom Doctor)
-            </h3>
-            <span id="eco-doctor-badge" class="badge">Verificando...</span>
-          </div>
-          <div class="table-container" style="margin-top: 1rem;">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>Componente</th>
-                  <th>Categoría</th>
-                  <th>Estado</th>
-                  <th>Detalles</th>
-                  <th>Recomendación</th>
-                </tr>
-              </thead>
-              <tbody id="eco-doctor-tbody">
-                <tr><td colspan="5" class="loading-state">Cargando diagnóstico del sistema...</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- Topología y Salud de Repositorios -->
-        <div class="card" style="margin-top: 1.5rem;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-            <h3 class="subsection-title" style="margin-bottom: 0;">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="inline-icon"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
-              Topología y Configuración de Repositorios
-            </h3>
-            <span class="badge" style="background: var(--color-surface-subtle); color: var(--color-text-main); border: 1px solid var(--color-border-subtle);">axiom.yaml</span>
-          </div>
-          <div class="topology-dashboard">
-            <div class="stat-cards-row">
-              <div class="stat-card">
-                <div class="stat-label">Espacio de Trabajo</div>
-                <div class="stat-value" id="top-ws-name">--</div>
-              </div>
-              <div class="stat-card">
-                <div class="stat-label">Topología Declarada</div>
-                <div class="stat-value text-accent" id="top-ws-topology">--</div>
-              </div>
-              <div class="stat-card">
-                <div class="stat-label">Repositorio Canónico Specs</div>
-                <div class="stat-value" id="top-ws-specs">--</div>
-              </div>
-              <div class="stat-card">
-                <div class="stat-label">Diagnóstico de Salud</div>
-                <div class="stat-value text-success" id="top-ws-health">--</div>
+      <main id="main" class="main" tabindex="-1">
+        <!-- ===== Inicio ===== -->
+        <section id="view-inicio" class="view" hidden aria-labelledby="inicio-title">
+          <!-- Zero-config: sustituye a Inicio cuando el proyecto no está gobernado con Axiom -->
+          <section id="zero-config-hero" class="zero-config" hidden aria-labelledby="zero-config-title">
+            <div class="zero-config-icon"><i data-icon="bolt" data-size="22"></i></div>
+            <div class="zero-config-body">
+              <h2 id="zero-config-title">Este repositorio aún no está gobernado con Axiom</h2>
+              <p id="zero-config-msg">No se encontró un archivo <code>axiom.yaml</code> en este proyecto. Puedes inicializarlo en un instante:</p>
+              <div class="tech-list" id="zero-config-tech"></div>
+              <div>
+                <button type="button" id="btn-init-project" class="btn btn-primary"><i data-icon="bolt"></i>Inicializar proyecto con Axiom (1 clic)</button>
               </div>
             </div>
+          </section>
 
-            <h4 class="subsection-title" style="margin-top: 1rem; font-size: 0.95rem;">Mapeo de Roles a Repositorios Locales (1 a N)</h4>
-            <div class="table-card" style="margin-top: 0.5rem;">
-              <table class="data-table">
-                <thead>
-                  <tr>
-                    <th>ID del Rol</th>
-                    <th>Nombre Descriptivo</th>
-                    <th>Política de Compuerta</th>
-                    <th>Tecnologías</th>
-                    <th>Rutas de Repositorios</th>
-                  </tr>
-                </thead>
-                <tbody id="topology-roles-tbody">
-                  <tr><td colspan="5" class="loading-state">Cargando roles...</td></tr>
+          <div id="inicio-content" class="view">
+            <div class="page-header">
+              <div>
+                <span class="page-eyebrow" id="inicio-eyebrow"></span>
+                <h1 id="inicio-title" class="page-title" tabindex="-1">Inicio</h1>
+                <p class="page-sub">El resumen de lo que necesita atención llegará pronto. Mientras tanto, el trabajo en curso está en Incrementos.</p>
+              </div>
+              <div class="page-actions">
+                <a class="btn btn-primary" href="#/incrementos"><i data-icon="board"></i>Ver incrementos</a>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ===== Incrementos ===== -->
+        <section id="view-incrementos" class="view" hidden aria-labelledby="incrementos-title">
+          <div class="page-header">
+            <div>
+              <h1 id="incrementos-title" class="page-title" tabindex="-1">Incrementos</h1>
+              <p class="page-sub">Seguimiento de los cambios activos y de las especificaciones vivas archivadas.</p>
+            </div>
+          </div>
+          <div class="filter-group" id="increments-filter-group" role="group" aria-label="Filtrar incrementos">
+            <button type="button" class="filter-btn" data-filter="all" aria-pressed="true">Todos (activos)</button>
+            <button type="button" class="filter-btn" data-filter="type:fix" aria-pressed="false"><i data-icon="bug" data-size="14"></i>Bugs / fixes</button>
+            <button type="button" class="filter-btn" data-filter="spec_pending" aria-pressed="false">Pendiente spec</button>
+            <button type="button" class="filter-btn" data-filter="ready_for_design" aria-pressed="false">Listo para design</button>
+            <span id="role-filters-container" class="chip-group"></span>
+            <button type="button" class="filter-btn" data-filter="ready_for_global_verify" aria-pressed="false">Pendiente verif. global</button>
+            <button type="button" class="filter-btn" data-filter="ready_for_archive" aria-pressed="false">Listo para archivar</button>
+            <button type="button" class="filter-btn" data-filter="archived" aria-pressed="false">Archivados</button>
+          </div>
+          <div class="increments-grid" id="increments-container">
+            <div class="loading-state">Cargando incrementos del workspace…</div>
+          </div>
+        </section>
+
+        <!-- ===== Detalle de incremento (Artefactos · Roles y barrera · Handoff) ===== -->
+        <section id="view-incremento" class="view" hidden aria-labelledby="inc-title">
+          <div class="page-header">
+            <div>
+              <span class="page-eyebrow"><a href="#/incrementos">Incrementos</a></span>
+              <h1 id="inc-title" class="page-title" tabindex="-1">Incremento</h1>
+              <div class="chip-group" id="inc-badges"></div>
+            </div>
+            <div class="page-actions">
+              <button type="button" id="btn-inc-continue" class="btn btn-primary" title="Ejecutar la siguiente transición SDD"><i data-icon="play"></i>Continuar SDD</button>
+              <button type="button" id="btn-inc-verify" class="btn" title="Validar formalmente el informe de verificación"><i data-icon="shield"></i>Validar verificación</button>
+            </div>
+          </div>
+          <nav class="tabs" aria-label="Secciones del incremento" id="inc-tabs">
+            <a class="tab-link" href="#" data-tab="artefactos">Artefactos</a>
+            <a class="tab-link" href="#" data-tab="roles">Roles y barrera</a>
+            <a class="tab-link" href="#" data-tab="handoff">Handoff</a>
+          </nav>
+
+          <div class="console" id="inc-console" hidden>
+            <div class="console-head"><span><i data-icon="terminal" data-size="14"></i> <span data-role="title">Salida de ejecución</span></span><button type="button" class="btn btn-ghost btn-xs" data-role="clear">Limpiar</button></div>
+            <pre class="console-out" data-role="out" tabindex="0"></pre>
+          </div>
+
+          <div id="inc-panel-artefactos" data-panel="artefactos"></div>
+
+          <div id="inc-panel-roles" data-panel="roles" hidden>
+            <div id="barrier-result-card" class="barrier-banner hidden">
+              <div class="barrier-status-icon" id="barrier-icon"></div>
+              <div class="barrier-details">
+                <h3 id="barrier-title">Estado de la barrera</h3>
+                <p id="barrier-desc">Diagnóstico</p>
+              </div>
+            </div>
+            <div class="roles-grid" id="roles-container"></div>
+          </div>
+
+          <div id="inc-panel-handoff" data-panel="handoff" hidden>
+            <div class="page-actions" style="margin-bottom: 14px">
+              <button type="button" id="btn-open-create-handoff" class="btn" title="Redactar un nuevo relevo formal"><i data-icon="plus"></i>Crear handoff</button>
+            </div>
+            <div id="handoff-display" class="handoff-card hidden">
+              <div class="handoff-header">
+                <div class="handoff-flow">
+                  <span class="phase-chip" id="ho-from-phase">--</span>
+                  <span class="flow-arrow"><i data-icon="arrowRight"></i></span>
+                  <span class="phase-chip target" id="ho-to-phase">--</span>
+                </div>
+                <div class="handoff-meta-chips">
+                  <span class="badge" id="ho-roles">--</span>
+                  <span class="badge" id="ho-status">--</span>
+                  <span class="badge" id="ho-time">--</span>
+                </div>
+              </div>
+              <div class="handoff-sections" id="ho-sections-container"></div>
+            </div>
+            <div id="handoff-empty" class="state">Este incremento aún no tiene un handoff.md.</div>
+          </div>
+        </section>
+
+        <!-- ===== Specs vivas ===== -->
+        <section id="view-specs" class="view" hidden aria-labelledby="specs-title">
+          <div class="page-header">
+            <div>
+              <h1 id="specs-title" class="page-title" tabindex="-1">Specs vivas</h1>
+              <p class="page-sub">Especificaciones consolidadas en <code>openspec/specs/</code> y regeneradas tras cada archivado.</p>
+            </div>
+            <div class="page-actions">
+              <button type="button" id="btn-sync-livingdoc" class="btn btn-primary"><i data-icon="refresh"></i>Sincronizar catálogo</button>
+            </div>
+          </div>
+
+          <div class="livingdoc-stats-grid" id="livingdoc-metrics">
+            <div class="stat-card"><span class="stat-label">Dominios activos</span><span class="stat-value" id="metric-living-domains">0</span></div>
+            <div class="stat-card"><span class="stat-label">Total de requisitos</span><span class="stat-value" id="metric-living-reqs">0</span></div>
+            <div class="stat-card"><span class="stat-label">Última sincronización</span><span class="stat-value" id="metric-living-sync" style="font-size: 1.05rem">--</span></div>
+          </div>
+
+          <div class="livingdoc-layout">
+            <div class="card legacy-card">
+              <h2 class="subsection-title">Dominios de especificación</h2>
+              <div id="livingdoc-domains-list" class="livingdoc-list">
+                <div class="loading-state">Cargando catálogo…</div>
+              </div>
+            </div>
+            <div class="card legacy-card">
+              <div class="card-head" style="padding: 0 0 12px; border: 0">
+                <h2 class="subsection-title" id="livingdoc-detail-title">Visor de especificación viva</h2>
+                <span id="livingdoc-detail-version" class="badge" hidden></span>
+              </div>
+              <div id="livingdoc-viewer" class="livingdoc-viewer-box" tabindex="0">
+                <p class="empty-state">Selecciona un dominio de la izquierda para ver su especificación viva consolidada.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ===== Skills ===== -->
+        <section id="view-skills" class="view" hidden aria-labelledby="skills-title">
+          <div class="page-header">
+            <div>
+              <h1 id="skills-title" class="page-title" tabindex="-1">Skills</h1>
+              <p class="page-sub">Buzón de propuestas con aprobación humana y catálogo de skills activas.</p>
+            </div>
+            <div class="page-actions">
+              <button type="button" id="btn-scan-skills" class="btn btn-primary" title="Detectar las tecnologías del stack y minar patrones locales"><i data-icon="bolt"></i>Escanear tecnologías y minar</button>
+            </div>
+          </div>
+
+          <div class="inbox-section">
+            <div class="inbox-header">
+              <h2 class="subsection-title">Buzón de propuestas pendientes de aprobación</h2>
+              <span class="badge" id="inbox-count">0 pendientes</span>
+            </div>
+            <div id="scan-feedback" class="scan-feedback hidden" role="status"></div>
+            <div class="inbox-grid" id="inbox-container">
+              <div class="loading-state">Consultando el buzón de propuestas…</div>
+            </div>
+          </div>
+
+          <h2 class="subsection-title">Skills activas (skills/)</h2>
+          <div class="skills-grid" id="skills-container">
+            <div class="loading-state">Escaneando el catálogo de skills activas…</div>
+          </div>
+        </section>
+
+        <!-- ===== Código y grafo ===== -->
+        <section id="view-codigo" class="view" hidden aria-labelledby="codigo-title">
+          <div class="page-header">
+            <div>
+              <h1 id="codigo-title" class="page-title" tabindex="-1">Código y grafo</h1>
+              <p class="page-sub">Conectores Serena MCP y CodeGraph, y catálogo de símbolos, tipos y dependencias del workspace.</p>
+            </div>
+            <div class="page-actions">
+              <button type="button" class="btn btn-primary" id="btn-reindex-codegraph" title="Reindexar CodeGraph bajo demanda"><i data-icon="bolt"></i>Reindexar CodeGraph</button>
+              <button type="button" class="btn" id="btn-refresh-semantic"><i data-icon="refresh"></i>Recargar</button>
+            </div>
+          </div>
+
+          <div id="reindex-feedback" class="scan-feedback hidden" role="status"></div>
+
+          <div class="semantic-status-cards" id="semantic-status-cards">
+            <div class="loading-state">Evaluando el entorno semántico y los conectores…</div>
+          </div>
+
+          <div class="card legacy-card">
+            <h2 class="subsection-title">Estado de agentes de desarrollo y MCPs</h2>
+            <div id="semantic-agents-list" class="agents-list">
+              <div class="loading-state">Detectando configuraciones de agentes…</div>
+            </div>
+          </div>
+
+          <div class="card legacy-card">
+            <div class="symbols-toolbar">
+              <div class="search-box">
+                <label class="sr-only" for="semantic-search-input">Buscar símbolos</label>
+                <input type="search" id="semantic-search-input" placeholder="Buscar por struct, interface, función o signatura…" class="form-input">
+              </div>
+              <div class="kind-filters" id="semantic-kind-filters" role="group" aria-label="Filtrar por tipo de símbolo">
+                <button type="button" class="filter-btn" data-kind="" aria-pressed="true">Todos</button>
+                <button type="button" class="filter-btn" data-kind="struct" aria-pressed="false">Structs</button>
+                <button type="button" class="filter-btn" data-kind="interface" aria-pressed="false">Interfaces</button>
+                <button type="button" class="filter-btn" data-kind="func" aria-pressed="false">Funciones</button>
+                <button type="button" class="filter-btn" data-kind="method" aria-pressed="false">Métodos</button>
+              </div>
+            </div>
+            <div class="table-wrap" role="region" aria-label="Símbolos" tabindex="0">
+              <table class="data-table" id="semantic-symbols-table">
+                <thead><tr><th>Símbolo</th><th>Tipo</th><th>Paquete</th><th>Signatura</th><th>Ubicación</th></tr></thead>
+                <tbody id="semantic-symbols-body">
+                  <tr><td colspan="5" class="loading-state">Cargando símbolos semánticos…</td></tr>
                 </tbody>
               </table>
             </div>
           </div>
-        </div>
 
-        <!-- Gestión de Respaldos (Backups) -->
-        <div class="card" style="margin-top: 1.5rem;">
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <h3 class="subsection-title">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="inline-icon"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-              Historial de Respaldos (~/.axiom/backups/)
-            </h3>
-            <span id="eco-backups-count" class="badge">0 respaldos</span>
+          <div class="card legacy-card">
+            <h2 class="subsection-title">Grafo de dependencias entre paquetes</h2>
+            <div id="semantic-dependencies-container" class="dependencies-container">
+              <div class="loading-state">Calculando relaciones de importación…</div>
+            </div>
           </div>
-          <div class="table-container" style="margin-top: 1rem;">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>Identificador</th>
-                  <th>Fecha de Creación</th>
-                  <th>Descripción</th>
-                  <th>Archivos</th>
-                  <th>Acciones</th>
-                </tr>
-              </thead>
-              <tbody id="eco-backups-tbody">
-                <tr><td colspan="5" class="loading-state">Consultando respaldos en el sistema...</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
+        </section>
 
-        <!-- Modelos de IA Asignados -->
-        <div class="card" style="margin-top: 1.5rem;">
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <h3 class="subsection-title">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="inline-icon"><path d="M12 2a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2 2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"/><rect width="16" height="12" x="4" y="8" rx="2"/><circle cx="9" cy="14" r="1"/><circle cx="15" cy="14" r="1"/></svg>
-              Modelos de IA y Persona Activa
-            </h3>
-            <span id="eco-persona-badge" class="badge">Persona: Axiom</span>
+        <!-- ===== Ecosistema ===== -->
+        <section id="view-ecosistema" class="view" hidden aria-labelledby="ecosistema-title">
+          <div class="page-header">
+            <div>
+              <h1 id="ecosistema-title" class="page-title" tabindex="-1">Ecosistema</h1>
+              <p class="page-sub">Diagnóstico (Axiom Doctor), sincronización de agentes, actualización de herramientas y respaldos.</p>
+            </div>
+            <div class="page-actions">
+              <button type="button" class="btn" id="btn-refresh-ecosystem"><i data-icon="refresh"></i>Actualizar ecosistema</button>
+            </div>
           </div>
-          <div class="table-container" style="margin-top: 1rem;">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>Agente</th>
-                  <th>Rol SDD</th>
-                  <th>Modelo Asignado</th>
-                  <th>Esfuerzo de Razonamiento</th>
-                </tr>
-              </thead>
-              <tbody id="eco-models-tbody">
-                <tr><td colspan="4" class="loading-state">Consultando asignación de modelos...</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-    </main>
 
-    <!-- Modal Detalle Incremento -->
-    <div id="inc-modal" class="modal-backdrop hidden">
-      <div class="modal-dialog" style="max-width: 750px;">
-        <div class="modal-header">
-          <h3 id="modal-title">Detalle del Incremento</h3>
-          <button class="btn-close" id="btn-modal-close">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-          </button>
-        </div>
-        <div class="modal-sdd-toolbar" id="modal-sdd-toolbar">
-          <button id="btn-inc-continue" class="btn btn-sm btn-primary" title="Ejecutar siguiente transición SDD">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-            Continuar SDD
-          </button>
-          <button id="btn-inc-verify" class="btn btn-sm btn-secondary" title="Validar formalmente reporte de verificación">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></svg>
-            Validar Verificación
-          </button>
-          <button id="btn-inc-create-handoff" class="btn btn-sm btn-outline" title="Redactar documento de relevo formal">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m11 17 2 2a1 1 0 0 0 1.42 0l4.24-4.24a1 1 0 0 0 0-1.42l-2-2"/><path d="m7 7 2-2a1 1 0 0 1 1.42 0l4.24 4.24a1 1 0 0 1 0 1.42l-2 2"/><path d="M12 12h.01"/></svg>
-            Redactar Handoff
-          </button>
-        </div>
-        <div class="modal-body" id="modal-content">
-          Cargando...
-        </div>
-        <div id="modal-console-container" class="modal-console hidden">
-          <div class="modal-console-header">
-            <span class="modal-console-title">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="inline-icon"><rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
-              Salida de Ejecución
-            </span>
-            <button id="btn-clear-console" class="btn btn-xs btn-outline">Limpiar</button>
+          <div class="card legacy-card">
+            <h2 class="subsection-title">Operaciones del ecosistema</h2>
+            <div class="page-actions">
+              <button type="button" id="btn-eco-sync" class="btn btn-primary" title="Sincronizar configuraciones y reglas de agentes en el workspace"><i data-icon="refresh"></i>Sincronizar workspace</button>
+              <span class="inline-field">
+                <label for="select-eco-channel">Canal:</label>
+                <select id="select-eco-channel">
+                  <option value="stable">Estable (releases)</option>
+                  <option value="main">Main (desarrollo continuo)</option>
+                </select>
+              </span>
+              <button type="button" id="btn-eco-upgrade" class="btn" title="Comprobar y actualizar herramientas"><i data-icon="download"></i>Actualizar herramientas</button>
+              <button type="button" id="btn-eco-create-backup" class="btn" title="Crear un nuevo snapshot de respaldo"><i data-icon="plus"></i>Crear respaldo ahora</button>
+              <span class="badge" title="Sincronización acotada al proyecto activo">Ámbito: workspace</span>
+            </div>
+            <div class="console" id="eco-action-output" hidden>
+              <div class="console-head"><span><i data-icon="terminal" data-size="14"></i> <span data-role="title" id="eco-action-title">Consola de operaciones</span></span><button type="button" class="btn btn-ghost btn-xs" data-role="clear" id="btn-clear-console">Limpiar</button></div>
+              <pre class="console-out" data-role="out" id="eco-console-content" tabindex="0"></pre>
+            </div>
           </div>
-          <pre id="modal-console-output" class="modal-console-output"></pre>
-        </div>
-      </div>
+
+          <div class="card legacy-card">
+            <div class="card-head" style="padding: 0; border: 0">
+              <h2 class="subsection-title">Diagnóstico de salud (Axiom Doctor)</h2>
+              <span id="eco-doctor-badge" class="badge">Verificando…</span>
+            </div>
+            <div class="table-wrap" role="region" aria-label="Diagnóstico" tabindex="0">
+              <table class="data-table">
+                <thead><tr><th>Componente</th><th>Categoría</th><th>Estado</th><th>Detalles</th><th>Recomendación</th></tr></thead>
+                <tbody id="eco-doctor-tbody"><tr><td colspan="5" class="loading-state">Cargando el diagnóstico del sistema…</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="card legacy-card">
+            <div class="card-head" style="padding: 0; border: 0">
+              <h2 class="subsection-title">Topología y configuración de repositorios</h2>
+              <span class="badge badge-mono">axiom.yaml</span>
+            </div>
+            <div class="stat-cards-row">
+              <div class="stat-card"><div class="stat-label">Espacio de trabajo</div><div class="stat-value" id="top-ws-name">--</div></div>
+              <div class="stat-card"><div class="stat-label">Topología declarada</div><div class="stat-value text-accent" id="top-ws-topology">--</div></div>
+              <div class="stat-card"><div class="stat-label">Repositorio canónico de specs</div><div class="stat-value" id="top-ws-specs">--</div></div>
+              <div class="stat-card"><div class="stat-label">Diagnóstico de salud</div><div class="stat-value" id="top-ws-health">--</div></div>
+            </div>
+            <h3 class="subsection-title">Mapeo de roles a repositorios locales (1 a N)</h3>
+            <div class="table-wrap" role="region" aria-label="Roles y repositorios" tabindex="0">
+              <table class="data-table">
+                <thead><tr><th>ID del rol</th><th>Nombre descriptivo</th><th>Política de compuerta</th><th>Tecnologías</th><th>Rutas de repositorios</th></tr></thead>
+                <tbody id="topology-roles-tbody"><tr><td colspan="5" class="loading-state">Cargando roles…</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="card legacy-card">
+            <div class="card-head" style="padding: 0; border: 0">
+              <h2 class="subsection-title">Historial de respaldos (~/.axiom/backups/)</h2>
+              <span id="eco-backups-count" class="badge">0 respaldos</span>
+            </div>
+            <div class="table-wrap" role="region" aria-label="Respaldos" tabindex="0">
+              <table class="data-table">
+                <thead><tr><th>Identificador</th><th>Fecha de creación</th><th>Descripción</th><th>Archivos</th><th>Acciones</th></tr></thead>
+                <tbody id="eco-backups-tbody"><tr><td colspan="5" class="loading-state">Consultando los respaldos del sistema…</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="card legacy-card">
+            <div class="card-head" style="padding: 0; border: 0">
+              <h2 class="subsection-title">Modelos de IA y persona activa</h2>
+              <span id="eco-persona-badge" class="badge">Persona: axiom</span>
+            </div>
+            <div class="table-wrap" role="region" aria-label="Modelos asignados" tabindex="0">
+              <table class="data-table">
+                <thead><tr><th>Agente</th><th>Rol SDD</th><th>Modelo asignado</th><th>Esfuerzo de razonamiento</th></tr></thead>
+                <tbody id="eco-models-tbody"><tr><td colspan="4" class="loading-state">Consultando la asignación de modelos…</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+      </main>
     </div>
-
-    <!-- Modal Añadir / Inicializar Proyecto al Hub -->
-    <div id="modal-add-project" class="modal-backdrop hidden">
-      <div class="modal-dialog" style="max-width: 620px;">
-        <div class="modal-header">
-          <h3>Vincular o Inicializar Proyecto en Axiom</h3>
-          <button class="btn-close" id="btn-close-add-project">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-          </button>
-        </div>
-        <div class="modal-body" style="padding: 1.5rem; max-height: 80vh; overflow-y: auto;">
-          <div style="margin-bottom: 1rem;">
-            <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; font-size: 0.9rem;">Ruta absoluta del proyecto en disco:</label>
-            <div style="display: flex; gap: 0.5rem; align-items: center;">
-              <input type="text" id="input-project-path" class="form-select" style="flex: 1; box-sizing: border-box;" placeholder="C:\repos\mi-proyecto o /home/usuario/proyectos/...">
-              <button type="button" id="btn-browse-project-path" class="btn btn-secondary" title="Examinar y buscar carpeta en disco local" style="white-space: nowrap; display: flex; align-items: center; gap: 0.35rem;">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2"/></svg>
-                Examinar...
-              </button>
-            </div>
-          </div>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.25rem;">
-            <div>
-              <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; font-size: 0.9rem;">Nombre descriptivo:</label>
-              <input type="text" id="input-project-name" class="form-select" style="width: 100%; box-sizing: border-box;" placeholder="Ej. Ludeka, MiServicio...">
-            </div>
-            <div>
-              <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; font-size: 0.9rem;">Topología:</label>
-              <select id="select-project-topology" class="form-select" style="width: 100%; box-sizing: border-box;">
-                <option value="monorepo-embedded">Monorepo Embebido</option>
-                <option value="multirepo">Multirepo</option>
-              </select>
-            </div>
-          </div>
-
-          <!-- Constructor Dinámico de Roles -->
-          <div style="border-top: 1px solid var(--color-border-subtle); padding-top: 1rem; margin-bottom: 1.5rem;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-              <label style="font-weight: 600; font-size: 0.95rem;">Roles del Proyecto (Opcional):</label>
-              <button type="button" id="btn-add-role-row" class="btn btn-secondary" style="font-size: 0.8rem; padding: 0.3rem 0.6rem;">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
-                Agregar Rol
-              </button>
-            </div>
-            <p style="font-size: 0.8rem; color: var(--color-text-muted); margin-top: 0; margin-bottom: 0.75rem;">
-              Si no configuras roles específicos, Axiom creará automáticamente un único rol <strong>fullstack</strong> que gobernará todo el repositorio.
-            </p>
-            <div id="roles-builder-container" style="display: flex; flex-direction: column; gap: 0.75rem;">
-              <!-- Tarjetas de rol dinámicas inyectadas por JS -->
-            </div>
-          </div>
-
-          <div style="display: flex; justify-content: flex-end; gap: 0.75rem;">
-            <button id="btn-cancel-add-project" class="btn btn-secondary">Cancelar</button>
-            <button id="btn-submit-add-project" class="btn btn-primary">Vincular e Inicializar</button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Modal Explorador / Buscador de Carpetas en Local -->
-    <div id="modal-folder-picker" class="modal-backdrop folder-picker-backdrop hidden">
-      <div class="modal-dialog folder-picker-dialog">
-        <div class="modal-header">
-          <div style="display: flex; align-items: center; gap: 0.6rem;">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--color-accent);"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>
-            <div>
-              <h3 style="margin: 0; font-size: 1.05rem;">Explorador de Carpetas Locales</h3>
-              <span class="subtext" style="font-size: 0.75rem; color: var(--color-text-muted);">Navega y selecciona una carpeta de tu sistema de archivos</span>
-            </div>
-          </div>
-          <button class="btn-close" id="btn-close-folder-picker">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-          </button>
-        </div>
-        <div class="modal-body folder-picker-body">
-          <!-- Accesos Rápidos (Drives, Home, Workspace, Botón SO) -->
-          <div class="folder-picker-shortcuts">
-            <span class="shortcut-label">Accesos rápidos:</span>
-            <div id="fp-drives-container" class="fp-chips-group"></div>
-            <button type="button" id="fp-btn-home" class="fp-chip" title="Directorio de Usuario">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-              Inicio
-            </button>
-            <button type="button" id="fp-btn-workspace" class="fp-chip" title="Directorio del Workspace">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="7" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
-              Workspace
-            </button>
-            <button type="button" id="fp-btn-native-so" class="fp-chip fp-chip-native" title="Abrir ventana nativa del explorador de carpetas del sistema operativo">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
-              Explorador del SO
-            </button>
-          </div>
-
-          <!-- Barra de Dirección / Breadcrumbs y Navegación -->
-          <div class="folder-picker-nav-bar">
-            <button type="button" id="fp-btn-up" class="btn btn-secondary btn-sm" title="Subir al directorio superior (..)">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg>
-              Subir
-            </button>
-            <div class="fp-path-container">
-              <div id="fp-breadcrumbs" class="fp-breadcrumbs"></div>
-              <input type="text" id="fp-path-input" class="fp-path-input hidden" placeholder="Ruta del directorio...">
-              <button type="button" id="fp-btn-toggle-input" class="fp-btn-icon" title="Editar ruta manualmente">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
-              </button>
-            </div>
-            <button type="button" id="fp-btn-refresh" class="btn btn-secondary btn-sm" title="Recargar">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
-            </button>
-          </div>
-
-          <!-- Filtro en tiempo real -->
-          <div class="folder-picker-filter-bar">
-            <input type="text" id="fp-filter-input" class="form-select" placeholder="Filtrar carpetas en este directorio..." style="width: 100%; box-sizing: border-box; font-size: 0.85rem; padding: 0.4rem 0.75rem;">
-          </div>
-
-          <!-- Contenedor desplazable de carpetas -->
-          <div class="folder-picker-list-container">
-            <div id="fp-folder-list" class="folder-picker-list">
-              <div class="loading-state">Cargando carpetas del sistema...</div>
-            </div>
-          </div>
-
-          <!-- Vista de Selección Activa -->
-          <div class="folder-picker-selection-info">
-            <span class="fp-selection-label">Carpeta seleccionada:</span>
-            <span id="fp-selected-path-display" class="fp-selected-path">—</span>
-          </div>
-        </div>
-        <div class="modal-footer" style="padding: 1rem 1.5rem; border-top: 1px solid var(--color-border-subtle); display: flex; justify-content: space-between; align-items: center; background: var(--color-surface-card);">
-          <span id="fp-count-info" style="font-size: 0.78rem; color: var(--color-text-muted);">0 carpetas encontradas</span>
-          <div style="display: flex; gap: 0.75rem;">
-            <button type="button" id="fp-btn-cancel" class="btn btn-secondary">Cancelar</button>
-            <button type="button" id="fp-btn-confirm" class="btn btn-primary">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-              Seleccionar esta Carpeta
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Modal Nuevo Incremento -->
-    <div id="modal-new-increment" class="modal-backdrop hidden">
-      <div class="modal-dialog" style="max-width: 580px;">
-        <div class="modal-header">
-          <h3>Crear Nuevo Incremento SDD</h3>
-          <button class="btn-close" id="btn-close-new-increment">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-          </button>
-        </div>
-        <div class="modal-body" style="padding: 1.5rem;">
-          <div style="margin-bottom: 1rem;">
-            <label for="input-inc-name" style="display: block; font-weight: 600; margin-bottom: 0.35rem; font-size: 0.85rem;">
-              Nombre del Incremento (kebab-case):
-            </label>
-            <input type="text" id="input-inc-name" class="form-select" style="width: 100%; box-sizing: border-box;" placeholder="ej. inc-16-metricas-rendimiento">
-            <span style="font-size: 0.75rem; color: var(--color-text-muted); display: block; margin-top: 0.25rem;">Solo letras minúsculas, números y guiones.</span>
-          </div>
-          <div style="margin-bottom: 1rem;">
-            <label for="select-inc-type" style="display: block; font-weight: 600; margin-bottom: 0.35rem; font-size: 0.85rem;">
-              Tipo de Cambio:
-            </label>
-            <select id="select-inc-type" class="form-select" style="width: 100%; box-sizing: border-box;">
-              <option value="feature">Feature (Nueva Capacidad o Funcionalidad)</option>
-              <option value="fix">Fix (Corrección de Defecto o Bug)</option>
-              <option value="refactor">Refactor (Refactorización Estructural)</option>
-              <option value="architecture">Architecture (Decisión de Arquitectura)</option>
-            </select>
-          </div>
-          <div style="margin-bottom: 1.5rem;">
-            <label for="input-inc-intent" style="display: block; font-weight: 600; margin-bottom: 0.35rem; font-size: 0.85rem;">
-              Intención / Propósito Técnico:
-            </label>
-            <textarea id="input-inc-intent" class="form-select" style="width: 100%; height: 90px; box-sizing: border-box; resize: vertical;" placeholder="Describa el objetivo técnico y valor que introduce este incremento..."></textarea>
-          </div>
-          <div style="display: flex; justify-content: flex-end; gap: 0.75rem;">
-            <button id="btn-cancel-new-increment" class="btn btn-secondary">Cancelar</button>
-            <button id="btn-submit-new-increment" class="btn btn-primary">Crear Incremento</button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Modal Redactar Handoff -->
-    <div id="modal-create-handoff" class="modal-backdrop hidden">
-      <div class="modal-dialog" style="max-width: 680px;">
-        <div class="modal-header">
-          <h3>Redactar Handoff Estructurado</h3>
-          <button class="btn-close" id="btn-close-create-handoff">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-          </button>
-        </div>
-        <div class="modal-body" style="padding: 1.5rem; max-height: 80vh; overflow-y: auto;">
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
-            <div>
-              <label for="handoff-modal-change" style="display: block; font-weight: 600; margin-bottom: 0.3rem; font-size: 0.85rem;">Cambio / Incremento:</label>
-              <select id="handoff-modal-change" class="form-select" style="width: 100%; box-sizing: border-box;"></select>
-            </div>
-            <div>
-              <label for="handoff-modal-status" style="display: block; font-weight: 600; margin-bottom: 0.3rem; font-size: 0.85rem;">Estado:</label>
-              <select id="handoff-modal-status" class="form-select" style="width: 100%; box-sizing: border-box;">
-                <option value="ready">Listo (ready)</option>
-                <option value="in-progress">En Progreso (in-progress)</option>
-                <option value="blocked">Bloqueado (blocked)</option>
-              </select>
-            </div>
-          </div>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
-            <div>
-              <label for="handoff-modal-from-phase" style="display: block; font-weight: 600; margin-bottom: 0.3rem; font-size: 0.85rem;">Fase Origen:</label>
-              <select id="handoff-modal-from-phase" class="form-select" style="width: 100%; box-sizing: border-box;">
-                <option value="explore">Explore</option>
-                <option value="propose">Propose</option>
-                <option value="spec">Spec</option>
-                <option value="design" selected>Design</option>
-                <option value="tasks">Tasks</option>
-                <option value="apply">Apply</option>
-                <option value="verify">Verify</option>
-                <option value="archive">Archive</option>
-              </select>
-            </div>
-            <div>
-              <label for="handoff-modal-to-phase" style="display: block; font-weight: 600; margin-bottom: 0.3rem; font-size: 0.85rem;">Fase Destino:</label>
-              <select id="handoff-modal-to-phase" class="form-select" style="width: 100%; box-sizing: border-box;">
-                <option value="explore">Explore</option>
-                <option value="propose">Propose</option>
-                <option value="spec">Spec</option>
-                <option value="design">Design</option>
-                <option value="tasks">Tasks</option>
-                <option value="apply" selected>Apply</option>
-                <option value="verify">Verify</option>
-                <option value="archive">Archive</option>
-              </select>
-            </div>
-          </div>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
-            <div>
-              <label for="handoff-modal-from-role" style="display: block; font-weight: 600; margin-bottom: 0.3rem; font-size: 0.85rem;">Rol Emisor:</label>
-              <input type="text" id="handoff-modal-from-role" class="form-select" style="width: 100%; box-sizing: border-box;" value="architect" placeholder="ej. architect">
-            </div>
-            <div>
-              <label for="handoff-modal-to-role" style="display: block; font-weight: 600; margin-bottom: 0.3rem; font-size: 0.85rem;">Rol Receptor:</label>
-              <input type="text" id="handoff-modal-to-role" class="form-select" style="width: 100%; box-sizing: border-box;" value="developer" placeholder="ej. developer">
-            </div>
-          </div>
-          <div style="margin-bottom: 1rem;">
-            <label for="handoff-modal-summary" style="display: block; font-weight: 600; margin-bottom: 0.3rem; font-size: 0.85rem;">1. Resumen Ejecutivo:</label>
-            <textarea id="handoff-modal-summary" class="form-select" style="width: 100%; height: 60px; box-sizing: border-box; resize: vertical;" placeholder="Síntesis del estado del cambio y objetivos transferidos..."></textarea>
-          </div>
-          <div style="margin-bottom: 1rem;">
-            <label for="handoff-modal-artifacts" style="display: block; font-weight: 600; margin-bottom: 0.3rem; font-size: 0.85rem;">2. Artefactos Modificados y Creados:</label>
-            <textarea id="handoff-modal-artifacts" class="form-select" style="width: 100%; height: 50px; box-sizing: border-box; resize: vertical;" placeholder="openspec/changes/..."></textarea>
-          </div>
-          <div style="margin-bottom: 1rem;">
-            <label for="handoff-modal-decisions" style="display: block; font-weight: 600; margin-bottom: 0.3rem; font-size: 0.85rem;">3. Decisiones Críticas Tomadas:</label>
-            <textarea id="handoff-modal-decisions" class="form-select" style="width: 100%; height: 50px; box-sizing: border-box; resize: vertical;" placeholder="Decisiones de arquitectura o alcance adoptadas..."></textarea>
-          </div>
-          <div style="margin-bottom: 1rem;">
-            <label for="handoff-modal-risks" style="display: block; font-weight: 600; margin-bottom: 0.3rem; font-size: 0.85rem;">4. Riesgos y Puntos de Atención:</label>
-            <textarea id="handoff-modal-risks" class="form-select" style="width: 100%; height: 50px; box-sizing: border-box; resize: vertical;" placeholder="Gotchas, dependencias o riesgos identificados..."></textarea>
-          </div>
-          <div style="margin-bottom: 1.25rem;">
-            <label for="handoff-modal-instructions" style="display: block; font-weight: 600; margin-bottom: 0.3rem; font-size: 0.85rem;">5. Instrucciones de Continuación:</label>
-            <textarea id="handoff-modal-instructions" class="form-select" style="width: 100%; height: 60px; box-sizing: border-box; resize: vertical;" placeholder="Pasos concretos para el rol receptor..."></textarea>
-          </div>
-          <div style="display: flex; justify-content: flex-end; gap: 0.75rem;">
-            <button id="btn-cancel-create-handoff" class="btn btn-secondary">Cancelar</button>
-            <button id="btn-submit-create-handoff" class="btn btn-primary">Registrar Handoff</button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Footer -->
-    <footer class="app-footer">
-      <span>Axiom Enterprise SDD Runtime v0.4.0 • Idioma Oficial: Castellano</span>
-      <span class="footer-status"><span class="pill-dot"></span> Servidor HTTP Local Activo</span>
-    </footer>
   </div>
 
-  <script src="/app.js"></script>
+  <!-- ===== Avisos y confirmaciones ===== -->
+  <div id="toast-region" class="toast-region" role="status" aria-live="polite"></div>
+
+  <dialog id="dlg-confirm" class="modal" aria-labelledby="dlg-confirm-title">
+    <form method="dialog" class="modal-form">
+      <div class="modal-head"><h2 id="dlg-confirm-title" data-role="title">Confirmar</h2></div>
+      <div class="modal-body">
+        <p data-role="message"></p>
+        <label class="sr-only" for="dlg-confirm-input">Valor</label>
+        <input type="text" id="dlg-confirm-input" data-role="input" hidden>
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn" data-role="cancel">Cancelar</button>
+        <button type="submit" value="ok" class="btn btn-primary" data-role="ok">Confirmar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Vista previa genérica (SKILL.md de una propuesta del buzón) -->
+  <dialog id="modal-preview" class="modal modal-wide" aria-labelledby="preview-title">
+    <div class="modal-head">
+      <div><h2 id="preview-title">Previsualización</h2><span class="modal-sub" id="preview-sub"></span></div>
+      <button type="button" class="btn btn-ghost btn-icon btn-sm" data-close aria-label="Cerrar"><i data-icon="x"></i></button>
+    </div>
+    <div class="modal-body" id="preview-content"></div>
+  </dialog>
+
+  <!-- Nuevo incremento -->
+  <dialog id="modal-new-increment" class="modal" aria-labelledby="new-inc-title">
+    <div class="modal-head">
+      <h2 id="new-inc-title">Crear nuevo incremento SDD</h2>
+      <button type="button" class="btn btn-ghost btn-icon btn-sm" data-close id="btn-close-new-increment" aria-label="Cerrar"><i data-icon="x"></i></button>
+    </div>
+    <div class="modal-body form-stack">
+      <div class="field">
+        <label for="input-inc-name">Nombre del incremento (kebab-case)</label>
+        <input type="text" id="input-inc-name" class="form-input" placeholder="ej. inc-16-metricas-rendimiento" autocomplete="off">
+        <span class="field-hint">Solo letras minúsculas, números y guiones.</span>
+      </div>
+      <div class="field">
+        <label for="select-inc-type">Tipo de cambio</label>
+        <select id="select-inc-type" class="form-select">
+          <option value="feature">Feature (nueva capacidad o funcionalidad)</option>
+          <option value="fix">Fix (corrección de defecto o bug)</option>
+          <option value="refactor">Refactor (refactorización estructural)</option>
+          <option value="architecture">Architecture (decisión de arquitectura)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="input-inc-intent">Intención / propósito técnico</label>
+        <textarea id="input-inc-intent" class="form-textarea" placeholder="Describe el objetivo técnico y el valor que introduce este incremento…"></textarea>
+      </div>
+      <div class="alert alert-bad" id="new-inc-error" role="alert" hidden></div>
+    </div>
+    <div class="modal-foot">
+      <button type="button" id="btn-cancel-new-increment" class="btn" data-close>Cancelar</button>
+      <button type="button" id="btn-submit-new-increment" class="btn btn-primary">Crear incremento</button>
+    </div>
+  </dialog>
+
+  <!-- Añadir / inicializar proyecto -->
+  <dialog id="modal-add-project" class="modal modal-wide" aria-labelledby="add-project-title">
+    <div class="modal-head">
+      <h2 id="add-project-title">Vincular o inicializar proyecto en Axiom</h2>
+      <button type="button" class="btn btn-ghost btn-icon btn-sm" data-close id="btn-close-add-project" aria-label="Cerrar"><i data-icon="x"></i></button>
+    </div>
+    <div class="modal-body form-stack">
+      <div class="field">
+        <label for="input-project-path">Ruta absoluta del proyecto en disco</label>
+        <div class="field-row">
+          <input type="text" id="input-project-path" class="form-input" placeholder="C:\repos\mi-proyecto o /home/usuario/proyectos/…" autocomplete="off">
+          <button type="button" id="btn-browse-project-path" class="btn" title="Examinar y buscar una carpeta del disco local"><i data-icon="folder"></i>Examinar…</button>
+        </div>
+      </div>
+      <div class="field-grid">
+        <div class="field">
+          <label for="input-project-name">Nombre descriptivo</label>
+          <input type="text" id="input-project-name" class="form-input" placeholder="Ej. Ludeka, MiServicio…" autocomplete="off">
+        </div>
+        <div class="field">
+          <label for="select-project-topology">Topología</label>
+          <select id="select-project-topology" class="form-select">
+            <option value="monorepo-embedded">Monorepo embebido</option>
+            <option value="multirepo">Multirepo</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-stack" style="border-top: 1px solid var(--border); padding-top: 14px">
+        <div class="field-row" style="justify-content: space-between">
+          <span class="field-label">Roles del proyecto (opcional)</span>
+          <button type="button" id="btn-add-role-row" class="btn btn-sm"><i data-icon="plus" data-size="14"></i>Agregar rol</button>
+        </div>
+        <p class="field-hint">Si no configuras roles específicos, Axiom creará un único rol <strong>fullstack</strong> que gobernará todo el repositorio.</p>
+        <div id="roles-builder-container" class="form-stack"></div>
+      </div>
+      <div class="alert alert-bad" id="add-project-error" role="alert" hidden></div>
+    </div>
+    <div class="modal-foot">
+      <button type="button" id="btn-cancel-add-project" class="btn" data-close>Cancelar</button>
+      <button type="button" id="btn-submit-add-project" class="btn btn-primary">Vincular e inicializar</button>
+    </div>
+  </dialog>
+
+  <!-- Explorador de carpetas locales -->
+  <dialog id="modal-folder-picker" class="modal modal-wide" aria-labelledby="fp-title">
+    <div class="modal-head">
+      <div>
+        <h2 id="fp-title">Explorador de carpetas locales</h2>
+        <span class="modal-sub">Navega y selecciona una carpeta de tu sistema de archivos</span>
+      </div>
+      <button type="button" class="btn btn-ghost btn-icon btn-sm" data-close id="btn-close-folder-picker" aria-label="Cerrar"><i data-icon="x"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="fp-shortcuts">
+        <span class="fp-label">Accesos rápidos:</span>
+        <div id="fp-drives-container" class="fp-chips-group"></div>
+        <button type="button" id="fp-btn-home" class="fp-chip" title="Directorio de usuario"><i data-icon="home2" data-size="14"></i>Inicio</button>
+        <button type="button" id="fp-btn-workspace" class="fp-chip" title="Directorio del workspace"><i data-icon="board" data-size="14"></i>Workspace</button>
+        <button type="button" id="fp-btn-native-so" class="fp-chip" title="Abrir el explorador de carpetas nativo del sistema operativo"><i data-icon="monitor" data-size="14"></i>Explorador del SO</button>
+      </div>
+
+      <div class="fp-navbar">
+        <button type="button" id="fp-btn-up" class="btn btn-sm" title="Subir al directorio superior"><i data-icon="arrowUp" data-size="14"></i>Subir</button>
+        <div class="fp-path">
+          <div id="fp-breadcrumbs" class="fp-breadcrumbs"></div>
+          <label class="sr-only" for="fp-path-input">Ruta del directorio</label>
+          <input type="text" id="fp-path-input" class="form-input hidden" placeholder="Ruta del directorio…" autocomplete="off">
+          <button type="button" id="fp-btn-toggle-input" class="btn btn-ghost btn-icon btn-sm" aria-label="Editar la ruta a mano" title="Editar la ruta a mano"><i data-icon="edit" data-size="14"></i></button>
+        </div>
+        <button type="button" id="fp-btn-refresh" class="btn btn-icon btn-sm" aria-label="Recargar" title="Recargar"><i data-icon="refresh" data-size="14"></i></button>
+      </div>
+
+      <div class="field">
+        <label for="fp-filter-input" class="sr-only">Filtrar carpetas</label>
+        <input type="search" id="fp-filter-input" class="form-input" placeholder="Filtrar carpetas en este directorio…" autocomplete="off">
+      </div>
+
+      <div id="fp-folder-list" class="fp-list" role="listbox" aria-label="Carpetas" aria-live="polite">
+        <div class="loading-state">Cargando carpetas del sistema…</div>
+      </div>
+
+      <div class="fp-selection">
+        <span class="fp-label">Carpeta seleccionada:</span>
+        <span id="fp-selected-path-display" class="fp-selected-path">—</span>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <span class="grow" id="fp-count-info" role="status">0 carpetas encontradas</span>
+      <button type="button" id="fp-btn-cancel" class="btn" data-close>Cancelar</button>
+      <button type="button" id="fp-btn-confirm" class="btn btn-primary"><i data-icon="check"></i>Seleccionar esta carpeta</button>
+    </div>
+  </dialog>
+
+  <!-- Redactar handoff -->
+  <dialog id="modal-create-handoff" class="modal modal-wide" aria-labelledby="handoff-title">
+    <div class="modal-head">
+      <h2 id="handoff-title">Redactar handoff estructurado</h2>
+      <button type="button" class="btn btn-ghost btn-icon btn-sm" data-close id="btn-close-create-handoff" aria-label="Cerrar"><i data-icon="x"></i></button>
+    </div>
+    <div class="modal-body form-stack">
+      <div class="field-grid">
+        <div class="field">
+          <label for="handoff-modal-change">Cambio / incremento</label>
+          <select id="handoff-modal-change" class="form-select"></select>
+        </div>
+        <div class="field">
+          <label for="handoff-modal-status">Estado</label>
+          <select id="handoff-modal-status" class="form-select">
+            <option value="ready">Listo (ready)</option>
+            <option value="in-progress">En progreso (in-progress)</option>
+            <option value="blocked">Bloqueado (blocked)</option>
+          </select>
+        </div>
+      </div>
+      <div class="field-grid">
+        <div class="field">
+          <label for="handoff-modal-from-phase">Fase origen</label>
+          <select id="handoff-modal-from-phase" class="form-select">
+            <option value="explore">Explore</option><option value="propose">Propose</option><option value="spec">Spec</option>
+            <option value="design" selected>Design</option><option value="tasks">Tasks</option><option value="apply">Apply</option>
+            <option value="verify">Verify</option><option value="archive">Archive</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="handoff-modal-to-phase">Fase destino</label>
+          <select id="handoff-modal-to-phase" class="form-select">
+            <option value="explore">Explore</option><option value="propose">Propose</option><option value="spec">Spec</option>
+            <option value="design">Design</option><option value="tasks">Tasks</option><option value="apply" selected>Apply</option>
+            <option value="verify">Verify</option><option value="archive">Archive</option>
+          </select>
+        </div>
+      </div>
+      <div class="field-grid">
+        <div class="field">
+          <label for="handoff-modal-from-role">Rol emisor</label>
+          <input type="text" id="handoff-modal-from-role" class="form-input" value="architect" placeholder="ej. architect">
+        </div>
+        <div class="field">
+          <label for="handoff-modal-to-role">Rol receptor</label>
+          <input type="text" id="handoff-modal-to-role" class="form-input" value="developer" placeholder="ej. developer">
+        </div>
+      </div>
+      <div class="field">
+        <label for="handoff-modal-summary">1. Resumen ejecutivo</label>
+        <textarea id="handoff-modal-summary" class="form-textarea" placeholder="Síntesis del estado del cambio y de los objetivos transferidos…"></textarea>
+      </div>
+      <div class="field">
+        <label for="handoff-modal-artifacts">2. Artefactos modificados y creados</label>
+        <textarea id="handoff-modal-artifacts" class="form-textarea" placeholder="openspec/changes/…"></textarea>
+      </div>
+      <div class="field">
+        <label for="handoff-modal-decisions">3. Decisiones críticas tomadas</label>
+        <textarea id="handoff-modal-decisions" class="form-textarea" placeholder="Decisiones de arquitectura o de alcance adoptadas…"></textarea>
+      </div>
+      <div class="field">
+        <label for="handoff-modal-risks">4. Riesgos y puntos de atención</label>
+        <textarea id="handoff-modal-risks" class="form-textarea" placeholder="Gotchas, dependencias o riesgos identificados…"></textarea>
+      </div>
+      <div class="field">
+        <label for="handoff-modal-instructions">5. Instrucciones de continuación</label>
+        <textarea id="handoff-modal-instructions" class="form-textarea" placeholder="Pasos concretos para el rol receptor…"></textarea>
+      </div>
+      <div class="alert alert-bad" id="handoff-error" role="alert" hidden></div>
+    </div>
+    <div class="modal-foot">
+      <button type="button" id="btn-cancel-create-handoff" class="btn" data-close>Cancelar</button>
+      <button type="button" id="btn-submit-create-handoff" class="btn btn-primary">Registrar handoff</button>
+    </div>
+  </dialog>
+
+  <script type="module" src="/js/main.js"></script>
 </body>
 </html>

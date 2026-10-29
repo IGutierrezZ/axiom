@@ -6,7 +6,6 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 )
 
@@ -119,48 +118,5 @@ func TestFSNativePickerEndpoint(t *testing.T) {
 	}
 }
 
-func TestEmbeddedAssets_FolderPicker(t *testing.T) {
-	tempDir := t.TempDir()
-	svc := NewService(tempDir)
-	server := NewServer(svc)
-
-	// 1. Validar que index.html contiene el modal y el botón de examinar
-	reqHTML := httptest.NewRequest(http.MethodGet, "/", nil)
-	rrHTML := httptest.NewRecorder()
-	server.Router().ServeHTTP(rrHTML, reqHTML)
-	if rrHTML.Code != http.StatusOK {
-		t.Fatalf("GET / falló con código %d", rrHTML.Code)
-	}
-	bodyHTML := rrHTML.Body.String()
-	for _, marker := range []string{"modal-folder-picker", "btn-browse-project-path", "btn-browse-header-project"} {
-		if !strings.Contains(bodyHTML, marker) {
-			t.Errorf("index.html embebido debe contener '%s'", marker)
-		}
-	}
-
-	// 2. Validar que app.js contiene la lógica del folder picker
-	reqJS := httptest.NewRequest(http.MethodGet, "/app.js", nil)
-	rrJS := httptest.NewRecorder()
-	server.Router().ServeHTTP(rrJS, reqJS)
-	if rrJS.Code != http.StatusOK {
-		t.Fatalf("GET /app.js falló con código %d", rrJS.Code)
-	}
-	bodyJS := rrJS.Body.String()
-	for _, marker := range []string{"openFolderPicker", "btn-browse-role-repo", "folderPickerState"} {
-		if !strings.Contains(bodyJS, marker) {
-			t.Errorf("app.js embebido debe contener '%s'", marker)
-		}
-	}
-
-	// 3. Validar que style.css contiene los estilos del folder picker
-	reqCSS := httptest.NewRequest(http.MethodGet, "/style.css", nil)
-	rrCSS := httptest.NewRecorder()
-	server.Router().ServeHTTP(rrCSS, reqCSS)
-	if rrCSS.Code != http.StatusOK {
-		t.Fatalf("GET /style.css falló con código %d", rrCSS.Code)
-	}
-	bodyCSS := rrCSS.Body.String()
-	if !strings.Contains(bodyCSS, "folder-picker-backdrop") {
-		t.Errorf("style.css embebido debe contener 'folder-picker-backdrop'")
-	}
-}
+// La cobertura del selector de carpetas embebido (index.html, js/projects.js y style.css)
+// vive en assets_test.go: TestFolderPickerIsServed y TestIndexHTMLShell.

@@ -132,7 +132,26 @@ Ruta de cada tarea: «delegada» significa un escritor acotado, que se elige por
     - `go test ./internal/dashboard/... ./internal/tui/...`, ok (repetido por el orquestador);
     - `gofmt -l internal/dashboard`, limpio.
   - Sin probar en navegador; se cubre en T3.
-- [ ] **T2 · Base visual y estructura** (delegada)
+- [x] **T2 · Base visual y estructura** (delegada)
+  - **Resultado (2026-10-29):**
+    - `app.js` sustituido por módulos ES en `assets/js/{main,shell,projects}.js`, `js/core/{api,icons,theme,router,components,state}.js` y `js/screens/*.js`.
+    - `tokens.css` aparte, con `--text-3` claro `#60646C`: 4,74:1 sobre `--hover` y ≥ 5,06:1 sobre el resto. `tokens_test.go` lo comprueba en ambos temas.
+    - `legacy.css` con los estilos de las pantallas aún sin migrar; se borra en T7.
+    - `server.go` registra los tipos `.woff2`, `.js`, `.mjs`, `.css` y `.svg`, porque el registro de Windows puede servir `.js` como `text/plain` y romper los módulos.
+    - Roles y Handoff ya viven en el detalle (`#/incrementos/<name>/{roles,handoff}`) y desaparecen los desplegables «Seleccionar cambio…».
+    - Los tests de literales se sustituyen por `assets_test.go`, `TestIndexHTMLShell`, `TestFolderPickerIsServed`, `TestLivingDocsScreenPresentsTheExternalBaseline` y los marcadores de upgrade sobre `js/screens/ecosystem.js`.
+  - **Pendiente de otras tareas:**
+    - Ctrl K: no se hace; no queda control muerto.
+    - Fuentes `@font-face`: a la espera de autorización para descargar los `.woff2`.
+    - Insignias de la barra lateral: T4.
+    - «Validar verificación» sigue como botón; T3 lo convierte en recordatorio.
+  - **Arnés:**
+    - Orden: `AXIOM_DASHBOARD_PREVIEW_PORT=4317 [AXIOM_DASHBOARD_PREVIEW_ROOT=<raíz>] go test ./internal/dashboard -run TestDashboardPreview -count=1 -timeout 0 -v`.
+    - Hay que reiniciarlo tras cambiar assets, porque van embebidos.
+    - El HOME está aislado, así que el Hub sale vacío.
+  - **Verificación:**
+    - `go build ./...`, `go vet ./internal/dashboard/...`, `go test ./internal/dashboard/...` (repetido por el orquestador) y `gofmt -l`: OK.
+    - Navegador con la raíz del worktree, sin errores de consola: Inicio, Incrementos, detalle Roles (datos reales de T1), Ecosistema en oscuro y Incrementos a 375 px con el menú plegado.
   - **Tokens y tema:**
     - `tokens.css` integrado en `style.css`, con `--text-3` corregido para llegar a 4,5:1 sobre `--hover`;
     - script anti-parpadeo en `<head>` y `data-theme` en `<html>`;
@@ -231,7 +250,7 @@ Ruta de cada tarea: «delegada» significa un escritor acotado, que se elige por
 
 ## Siguiente paso
 
-T2: base visual y estructura.
+T3: Incrementos y detalle.
 
 ## Seguimientos
 
