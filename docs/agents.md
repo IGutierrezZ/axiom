@@ -212,7 +212,7 @@ Kiro usa agentes personalizados en `~/.kiro/agents/`. Axiom escribe los agentes 
 - **Skills**: `~/.qwen/skills/`
 - **MCP config**: `~/.qwen/settings.json` (managed via `StrategyMergeIntoSettings` with `mcpServers` key)
 - **Slash commands**: `~/.qwen/commands/*.md` — supports custom namespaced slash commands (e.g., `commands/sdd/init.md` → `/sdd:init`)
-- **Permissions**: `auto_edit` mode — auto-approves file edits, manual approval for shell commands
+- **Permisos**: Axiom no inyecta permisos en Qwen Code ni impone el modo `auto_edit`; los valores del usuario no se tocan.
 - **Install**: via npm — `npm install -g @qwen-code/qwen-code@latest`
 - **Engram slug**: `"qwen-code"` for `engram setup` integration
 - **SDD orchestrator**: `internal/assets/qwen/sdd-orchestrator.md` with Qwen-specific path references

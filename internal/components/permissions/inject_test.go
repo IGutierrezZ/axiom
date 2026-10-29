@@ -17,9 +17,15 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/gemini"
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/hermes"
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/opencode"
+	"github.com/IGutierrezZ/axiom/v3/internal/agents/qwen"
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/vscode"
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
 )
+
+// unmatchedAction is what remoteAction reports when no rule of the bash object
+// matches the command: Axiom declares no catch-all, so the user's own default
+// decides and the fixture cannot say what it is.
+const unmatchedAction = "unmatched"
 
 // Fixture port of OpenCode v1.2.27 util/wildcard.ts and permission/service.ts:
 // anchored, case-sensitive POSIX matching, optional trailing " *", last match wins.
@@ -43,7 +49,7 @@ func remoteAction(t *testing.T, raw []byte, command string) string {
 	}
 	decoder := json.NewDecoder(strings.NewReader(string(permission["bash"])))
 	_, _ = decoder.Token()
-	action := "ask"
+	action := unmatchedAction
 	for decoder.More() {
 		key, _ := decoder.Token()
 		var value string
@@ -66,7 +72,7 @@ func TestRemoteMatcherBoundaryFixtures(t *testing.T) {
 	// These are matcher inputs, not shell programs. bash.ts extracts command
 	// nodes separately; no claim is made about parsing arbitrary shell syntax.
 	for _, input := range []string{"/usr/bin/ssh example.invalid", "env ssh example.invalid", "true && ssh example.invalid", `python -c 'import subprocess'`} {
-		if got := remoteAction(t, openCodeOverlayJSON, input); got != "allow" {
+		if got := remoteAction(t, openCodeOverlayJSON, input); got != unmatchedAction {
 			t.Errorf("unsupported matcher input %q unexpectedly intercepted: %s", input, got)
 		}
 	}
@@ -116,6 +122,7 @@ func claudeAdapter() agents.Adapter      { return claude.NewAdapter() }
 func opencodeAdapter() agents.Adapter    { return opencode.NewAdapter() }
 func geminiAdapter() agents.Adapter      { return gemini.NewAdapter() }
 func cursorAdapter() agents.Adapter      { return cursor.NewAdapter() }
+func qwenAdapter() agents.Adapter        { return qwen.NewAdapter() }
 func vscodeAdapter() agents.Adapter      { return vscode.NewAdapter() }
 func codexAdapter() agents.Adapter       { return codex.NewAdapter() }
 func antigravityAdapter() agents.Adapter { return antigravity.NewAdapter() }
@@ -281,113 +288,180 @@ func TestInjectAddsEnvToDenyList(t *testing.T) {
 	t.Fatalf("deny list missing explicit .env rule: %#v", denyList)
 }
 
-func TestInjectClaudeCodeUsesBypassPermissions(t *testing.T) {
-	home := t.TempDir()
-
-	if _, err := Inject(home, claudeAdapter()); err != nil {
-		t.Fatalf("Inject() error = %v", err)
-	}
-
-	settingsPath := filepath.Join(home, ".claude", "settings.json")
-	content, err := os.ReadFile(settingsPath)
+// settingsOf reads and decodes the JSON settings file at path.
+func settingsOf(t *testing.T, path string) map[string]any {
+	t.Helper()
+	content, err := os.ReadFile(path)
 	if err != nil {
-		t.Fatalf("read settings file: %v", err)
+		t.Fatalf("read settings file %q: %v", path, err)
 	}
-
 	var settings map[string]any
 	if err := json.Unmarshal(content, &settings); err != nil {
-		t.Fatalf("unmarshal: %v", err)
+		t.Fatalf("unmarshal %q: %v", path, err)
 	}
-
-	perms, ok := settings["permissions"].(map[string]any)
-	if !ok {
-		t.Fatalf("permissions node missing")
-	}
-
-	mode, ok := perms["defaultMode"].(string)
-	if !ok || mode != "bypassPermissions" {
-		t.Fatalf("expected defaultMode=bypassPermissions, got %q", mode)
-	}
+	return settings
 }
 
-func TestInjectGeminiCLIUsesAutoEditMode(t *testing.T) {
-	home := t.TempDir()
-
-	result, err := Inject(home, geminiAdapter())
-	if err != nil {
-		t.Fatalf("Inject() error = %v", err)
-	}
-	if !result.Changed {
-		t.Fatal("Inject() changed = false")
-	}
-
-	settingsPath := filepath.Join(home, ".gemini", "settings.json")
-	content, err := os.ReadFile(settingsPath)
-	if err != nil {
-		t.Fatalf("read settings file: %v", err)
-	}
-
-	var settings map[string]any
-	if err := json.Unmarshal(content, &settings); err != nil {
-		t.Fatalf("unmarshal: %v", err)
-	}
-
-	general, ok := settings["general"].(map[string]any)
-	if !ok {
-		t.Fatalf("general node missing: %#v", settings)
-	}
-
-	mode, ok := general["defaultApprovalMode"].(string)
-	if !ok || mode != "auto_edit" {
-		t.Fatalf("expected defaultApprovalMode=auto_edit, got %q", mode)
-	}
-
-	// Ensure no Claude Code keys leaked
-	if _, exists := settings["permissions"]; exists {
-		t.Fatal("gemini settings should not contain 'permissions' key")
-	}
-}
-
-func TestInjectVSCodeCopilotUsesAutoApprove(t *testing.T) {
-	home := t.TempDir()
+// isolateEditorUserDirs keeps the VS Code adapter's user directory under home so
+// a test never reaches the real editor settings.
+func isolateEditorUserDirs(t *testing.T, home string) {
+	t.Helper()
 	t.Setenv("XDG_CONFIG_HOME", filepath.Join(home, ".config"))
 	t.Setenv("APPDATA", filepath.Join(home, "AppData", "Roaming"))
+}
 
-	adapter := vscodeAdapter()
-	result, err := Inject(home, adapter)
-	if err != nil {
-		t.Fatalf("Inject() error = %v", err)
-	}
-	if !result.Changed {
-		t.Fatal("Inject() changed = false")
-	}
+// autoApprovalCase is an agent whose overlay used to impose an auto-approval
+// mode, with a seed that already carries the user's own value.
+type autoApprovalCase struct {
+	name    string
+	adapter agents.Adapter
+	seed    string
+	// none is true when the agent has no overlay left, so Inject must not
+	// create or write its file at all.
+	none bool
+}
 
-	settingsPath := adapter.SettingsPath(home)
-	content, err := os.ReadFile(settingsPath)
-	if err != nil {
-		t.Fatalf("read settings file: %v", err)
-	}
-
-	var settings map[string]any
-	if err := json.Unmarshal(content, &settings); err != nil {
-		t.Fatalf("unmarshal: %v", err)
-	}
-
-	autoApprove, ok := settings["chat.tools.autoApprove"].(bool)
-	if !ok || !autoApprove {
-		t.Fatalf("expected chat.tools.autoApprove=true, got %v", settings["chat.tools.autoApprove"])
-	}
-
-	// Ensure no Claude Code keys leaked
-	if _, exists := settings["permissions"]; exists {
-		t.Fatal("vscode settings should not contain 'permissions' key")
+func autoApprovalCases() []autoApprovalCase {
+	return []autoApprovalCase{
+		{"gemini-cli", geminiAdapter(), `{"general":{"defaultApprovalMode":"auto_edit"}}`, true},
+		{"qwen-code", qwenAdapter(), `{"permissions":{"defaultMode":"auto_edit"}}`, true},
+		{"vscode-copilot", vscodeAdapter(), `{"chat.tools.autoApprove": true}`, true},
+		{"claude-code", claudeAdapter(), `{"permissions":{"defaultMode":"bypassPermissions"}}`, false},
 	}
 }
 
-func TestInjectVSCodeCopilotMergesIntoJSONCSettings(t *testing.T) {
+func TestInjectNeverWritesAutoApprovalModes(t *testing.T) {
+	forbidden := []string{"bypassPermissions", "auto_edit", "chat.tools.autoApprove", "defaultMode", "defaultApprovalMode"}
+
+	for _, id := range []model.AgentID{
+		model.AgentClaudeCode, model.AgentOpenCode, model.AgentKilocode,
+		model.AgentGeminiCLI, model.AgentQwenCode, model.AgentVSCodeCopilot,
+	} {
+		t.Run(string(id), func(t *testing.T) {
+			home := t.TempDir()
+			isolateEditorUserDirs(t, home)
+			adapter, err := agents.NewAdapter(id)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if _, err := Inject(home, adapter); err != nil {
+				t.Fatalf("Inject() error = %v", err)
+			}
+
+			path := adapter.SettingsPath(home)
+			content, err := os.ReadFile(path)
+			if agentOverlay(id) == nil {
+				if !os.IsNotExist(err) {
+					t.Fatalf("%s has no overlay but %q exists (read err = %v): no file may be created", id, path, err)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("read %q: %v", path, err)
+			}
+			for _, word := range forbidden {
+				if strings.Contains(string(content), word) {
+					t.Errorf("%s settings contain %q:\n%s", id, word, content)
+				}
+			}
+			if id == model.AgentOpenCode || id == model.AgentKilocode {
+				var settings struct {
+					Permission struct {
+						Bash map[string]string `json:"bash"`
+						Read map[string]string `json:"read"`
+					} `json:"permission"`
+				}
+				if err := json.Unmarshal(content, &settings); err != nil {
+					t.Fatal(err)
+				}
+				for tool, rules := range map[string]map[string]string{"bash": settings.Permission.Bash, "read": settings.Permission.Read} {
+					for pattern, action := range rules {
+						if action == "allow" {
+							t.Errorf("%s permission.%s[%q] = allow, want no catch-all allow", id, tool, pattern)
+						}
+					}
+				}
+			}
+		})
+	}
+}
+
+func TestInjectLeavesUserAutoApprovalValuesUntouched(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("XDG_CONFIG_HOME", filepath.Join(home, ".config"))
-	t.Setenv("APPDATA", filepath.Join(home, "AppData", "Roaming"))
+	isolateEditorUserDirs(t, home)
+
+	for _, tt := range autoApprovalCases() {
+		t.Run(tt.name, func(t *testing.T) {
+			path := tt.adapter.SettingsPath(home)
+			if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(path, []byte(tt.seed), 0o644); err != nil {
+				t.Fatal(err)
+			}
+
+			result, err := Inject(home, tt.adapter)
+			if err != nil {
+				t.Fatalf("Inject() error = %v", err)
+			}
+
+			after, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if tt.none {
+				if result.Changed || len(result.Files) != 0 {
+					t.Fatalf("Inject() = %+v, want no change for an agent without overlay", result)
+				}
+				if string(after) != tt.seed {
+					t.Fatalf("settings = %q, want byte-identical %q", after, tt.seed)
+				}
+				return
+			}
+			// Claude keeps the user's mode and only gains the deny rules.
+			perms, _ := settingsOf(t, path)["permissions"].(map[string]any)
+			if perms["defaultMode"] != "bypassPermissions" {
+				t.Fatalf("user defaultMode = %v, want bypassPermissions preserved", perms["defaultMode"])
+			}
+			if _, ok := perms["deny"].([]any); !ok {
+				t.Fatalf("deny list missing after injection: %#v", perms)
+			}
+		})
+	}
+}
+
+func TestInjectOpenCodeKeepsUserCatchAllAllow(t *testing.T) {
+	for _, id := range []model.AgentID{model.AgentOpenCode, model.AgentKilocode} {
+		t.Run(string(id), func(t *testing.T) {
+			home := t.TempDir()
+			adapter, _ := agents.NewAdapter(id)
+			path := adapter.SettingsPath(home)
+			if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(path, []byte(`{"permission":{"bash":{"*":"allow"},"read":{"*":"allow"}}}`), 0o644); err != nil {
+				t.Fatal(err)
+			}
+
+			if _, err := Inject(home, adapter); err != nil {
+				t.Fatalf("Inject() error = %v", err)
+			}
+
+			permission, _ := settingsOf(t, path)["permission"].(map[string]any)
+			for _, tool := range []string{"bash", "read"} {
+				rules, _ := permission[tool].(map[string]any)
+				if rules["*"] != "allow" {
+					t.Errorf("user's %s catch-all = %v, want allow preserved", tool, rules["*"])
+				}
+			}
+		})
+	}
+}
+
+func TestInjectVSCodeCopilotLeavesJSONCSettingsUntouched(t *testing.T) {
+	home := t.TempDir()
+	isolateEditorUserDirs(t, home)
 
 	adapter := vscodeAdapter()
 	settingsPath := adapter.SettingsPath(home)
@@ -411,27 +485,156 @@ func TestInjectVSCodeCopilotMergesIntoJSONCSettings(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Inject() error = %v", err)
 	}
-	if !result.Changed {
-		t.Fatal("Inject() changed = false")
+	if result.Changed {
+		t.Fatal("Inject() changed = true, want false: VS Code has no protective overlay")
 	}
 
 	content, err := os.ReadFile(settingsPath)
 	if err != nil {
 		t.Fatalf("read settings file: %v", err)
 	}
+	if string(content) != baseSettings {
+		t.Fatalf("settings = %q, want byte-identical %q", content, baseSettings)
+	}
+}
 
-	var settings map[string]any
-	if err := json.Unmarshal(content, &settings); err != nil {
-		t.Fatalf("unmarshal: %v", err)
+// claudeDenyFromFile returns the permissions.deny list of a Claude settings file.
+func claudeDenyFromFile(t *testing.T, path string) []string {
+	t.Helper()
+	perms, _ := settingsOf(t, path)["permissions"].(map[string]any)
+	raw, _ := perms["deny"].([]any)
+	deny := make([]string, 0, len(raw))
+	for _, entry := range raw {
+		deny = append(deny, entry.(string))
+	}
+	return deny
+}
+
+func TestInjectClaudeCodeUnionsUserDenyList(t *testing.T) {
+	home := t.TempDir()
+	settingsPath := filepath.Join(home, ".claude", "settings.json")
+	if err := os.MkdirAll(filepath.Dir(settingsPath), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	// "Read(.env)" is also an Axiom entry: it must not be duplicated, and the
+	// user's entries keep their order ahead of everything Axiom adds.
+	seed := `{"permissions":{"deny":["Bash(curl *)","Read(.env)","WebFetch"],"allow":["Bash(ls)"]}}`
+	if err := os.WriteFile(settingsPath, []byte(seed), 0o644); err != nil {
+		t.Fatal(err)
 	}
 
-	autoApprove, ok := settings["chat.tools.autoApprove"].(bool)
-	if !ok || !autoApprove {
-		t.Fatalf("expected chat.tools.autoApprove=true, got %v", settings["chat.tools.autoApprove"])
+	if _, err := Inject(home, claudeAdapter()); err != nil {
+		t.Fatalf("Inject() error = %v", err)
 	}
 
-	if settings["editor.formatOnSave"] != true {
-		t.Fatalf("expected editor.formatOnSave=true, got %v", settings["editor.formatOnSave"])
+	deny := claudeDenyFromFile(t, settingsPath)
+	wantHead := []string{"Bash(curl *)", "Read(.env)", "WebFetch"}
+	if len(deny) < len(wantHead) || strings.Join(deny[:len(wantHead)], "|") != strings.Join(wantHead, "|") {
+		t.Fatalf("deny list must start with the user's entries in order %v, got %v", wantHead, deny)
+	}
+	seen := map[string]int{}
+	for _, entry := range deny {
+		seen[entry]++
+		if seen[entry] > 1 {
+			t.Errorf("deny entry %q duplicated in %v", entry, deny)
+		}
+	}
+	for _, axiomEntry := range []string{"Bash(rm -rf /)", "Read(.ssh/*)", "Edit(**/secrets/*)"} {
+		if seen[axiomEntry] != 1 {
+			t.Errorf("Axiom deny entry %q missing from %v", axiomEntry, deny)
+		}
+	}
+	perms, _ := settingsOf(t, settingsPath)["permissions"].(map[string]any)
+	if allow, _ := perms["allow"].([]any); len(allow) != 1 || allow[0] != "Bash(ls)" {
+		t.Errorf("user's allow list = %v, want it untouched", perms["allow"])
+	}
+}
+
+func TestInjectClaudeCodeDenyUnionIsIdempotent(t *testing.T) {
+	home := t.TempDir()
+	settingsPath := filepath.Join(home, ".claude", "settings.json")
+	if err := os.MkdirAll(filepath.Dir(settingsPath), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(settingsPath, []byte(`{"permissions":{"deny":["Bash(curl *)"]}}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	first, err := Inject(home, claudeAdapter())
+	if err != nil || !first.Changed {
+		t.Fatalf("first Inject() = %+v, %v; want changed", first, err)
+	}
+	before, err := os.ReadFile(settingsPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	second, err := Inject(home, claudeAdapter())
+	if err != nil || second.Changed {
+		t.Fatalf("second Inject() = %+v, %v; want unchanged", second, err)
+	}
+	after, err := os.ReadFile(settingsPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(before) != string(after) {
+		t.Fatalf("second injection rewrote the file:\nbefore=%s\nafter=%s", before, after)
+	}
+}
+
+func TestInjectClaudeCodeWithoutDenyListWritesAxiomRules(t *testing.T) {
+	home := t.TempDir()
+
+	if _, err := Inject(home, claudeAdapter()); err != nil {
+		t.Fatalf("Inject() error = %v", err)
+	}
+
+	deny := claudeDenyFromFile(t, filepath.Join(home, ".claude", "settings.json"))
+	if len(deny) == 0 || deny[0] != "Bash(rm -rf /)" {
+		t.Fatalf("deny list = %v, want Axiom's declared list in its own order", deny)
+	}
+}
+
+// TestTargetPathFollowsRoot pins that the destination is rooted where the
+// caller says (home for global, workspace for workspace), for every agent that
+// has one, so no path is baked to the user's home.
+func TestTargetPathFollowsRoot(t *testing.T) {
+	home := t.TempDir()
+	workspace := t.TempDir()
+	for _, tt := range []struct {
+		id   model.AgentID
+		rel  []string
+		name string
+	}{
+		{model.AgentClaudeCode, []string{".claude", "settings.json"}, "claude"},
+		{model.AgentOpenCode, []string{".config", "opencode", "opencode.json"}, "opencode"},
+		{model.AgentKilocode, []string{".config", "kilo", "opencode.json"}, "kilocode"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			adapter, err := agents.NewAdapter(tt.id)
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, root := range []string{home, workspace} {
+				want := filepath.Join(append([]string{root}, tt.rel...)...)
+				if got := TargetPath(root, adapter); got != want {
+					t.Errorf("TargetPath(%q) = %q, want %q", root, got, want)
+				}
+			}
+		})
+	}
+}
+
+func TestTargetPathEmptyForAgentsWithoutOverlay(t *testing.T) {
+	home := t.TempDir()
+	for _, id := range []model.AgentID{model.AgentGeminiCLI, model.AgentQwenCode, model.AgentVSCodeCopilot} {
+		adapter, err := agents.NewAdapter(id)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := TargetPath(home, adapter); got != "" {
+			t.Errorf("TargetPath(%s) = %q, want empty: no overlay left", id, got)
+		}
 	}
 }
 
@@ -731,10 +934,10 @@ func TestInjectClaudeCodeDefaultDenyRulesApplied(t *testing.T) {
 		}
 	}
 
-	// The overlay wins for defaultMode because arrays replace but maps deep-merge.
+	// Axiom never imposes a mode: the user's own defaultMode survives.
 	mode, _ := perms["defaultMode"].(string)
-	if mode != "bypassPermissions" {
-		t.Errorf("expected defaultMode=bypassPermissions after overlay, got %q", mode)
+	if mode != "default" {
+		t.Errorf("expected the user's defaultMode=default to be preserved, got %q", mode)
 	}
 }
 

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"os/exec"
@@ -1743,7 +1744,12 @@ func (s componentApplyStep) Run() error {
 		return nil
 	case model.ComponentPermission:
 		for _, adapter := range adapters {
-			if _, err := permissions.Inject(s.homeDir, adapter); err != nil {
+			root, ok := permissionsRoot(s.homeDir, s.workspaceDir, s.scope, adapter)
+			if !ok {
+				noteSkippedPermissions(s.homeDir, adapter)
+				continue
+			}
+			if _, err := permissions.Inject(root, adapter); err != nil {
 				return fmt.Errorf("inject permissions for %q: %w", adapter.Agent(), err)
 			}
 		}
@@ -2555,8 +2561,12 @@ func componentPathsWithWorkspaceScoped(homeDir, workspaceDir string, scope Insta
 				}
 			}
 		case model.ComponentPermission:
-			if p := permissions.TargetPath(homeDir, adapter); p != "" {
-				paths = append(paths, p)
+			// Permissions follow the install scope; an agent skipped in
+			// workspace scope has no path to back up or verify.
+			if root, ok := permissionsRoot(homeDir, workspaceDir, scope, adapter); ok {
+				if p := permissions.TargetPath(root, adapter); p != "" {
+					paths = append(paths, p)
+				}
 			}
 		case model.ComponentGGA:
 			if scope == ScopeWorkspace {
@@ -2677,6 +2687,35 @@ func componentInjectionDirScoped(homeDir, workspaceDir string, scope InstallScop
 	return ResolveAgentConfigDir(scope, homeDir, workspaceDir)
 }
 
+// permissionsNoticeWriter receives the informational line printed when the
+// permission component skips an agent in workspace scope.
+var permissionsNoticeWriter io.Writer = os.Stderr
+
+// permissionsRoot returns the root the permission component injects under for
+// the adapter. Permissions follow the install scope: the user's home for a
+// global install, the workspace root for a workspace install. ok is false when
+// the agent cannot hold workspace-scoped configuration (or no workspace root is
+// known): the agent is then skipped, never written under the user's home.
+func permissionsRoot(homeDir, workspaceDir string, scope InstallScope, adapter agents.Adapter) (root string, ok bool) {
+	if scope != ScopeWorkspace {
+		return homeDir, true
+	}
+	if strings.TrimSpace(workspaceDir) == "" || !adapterSupportsWorkspace(adapter) {
+		return "", false
+	}
+	return workspaceDir, true
+}
+
+// noteSkippedPermissions tells the user that an agent that would have received
+// permissions was skipped because it has no workspace mode. Agents with no
+// permission target at all stay silent: there was nothing to skip.
+func noteSkippedPermissions(homeDir string, adapter agents.Adapter) {
+	if permissions.TargetPath(homeDir, adapter) == "" {
+		return
+	}
+	fmt.Fprintf(permissionsNoticeWriter, "Permisos omitidos para %s: no admite el ámbito workspace y Axiom no escribe en la configuración global si no se pide con --scope global.\n", adapter.Agent())
+}
+
 func adapterSupportsWorkspace(adapter agents.Adapter) bool {
 	if adapter == nil {
 		return false
@@ -2740,6 +2779,9 @@ func componentPathDirScoped(homeDir, workspaceDir string, scope InstallScope, ad
 	case model.ComponentEngram, model.ComponentSDD, model.ComponentPersona, model.ComponentSkills, model.ComponentContext7:
 		return componentInjectionDirScoped(homeDir, workspaceDir, scope, adapter)
 	default:
+		// ComponentPermission is deliberately absent: an agent skipped in
+		// workspace scope has no root, which a single directory cannot express.
+		// Its callers resolve the root with permissionsRoot.
 		return homeDir
 	}
 }

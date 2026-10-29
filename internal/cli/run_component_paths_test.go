@@ -759,9 +759,6 @@ func TestComponentPathsPermissionsIncludesAgentsWithInjectionTarget(t *testing.T
 		model.AgentClaudeCode,
 		model.AgentOpenCode,
 		model.AgentKilocode,
-		model.AgentGeminiCLI,
-		model.AgentQwenCode,
-		model.AgentVSCodeCopilot,
 	})
 
 	paths := componentPaths(home, model.Selection{}, adapters, model.ComponentPermission)
@@ -771,6 +768,21 @@ func TestComponentPathsPermissionsIncludesAgentsWithInjectionTarget(t *testing.T
 		if !containsPath(paths, want) {
 			t.Fatalf("componentPaths(permissions) missing supported injection path %q\npaths=%v", want, paths)
 		}
+	}
+}
+
+// Gemini, Qwen and VS Code only ever received an auto-approval mode, which
+// Axiom no longer writes: they have no permission target to back up or verify.
+func TestComponentPathsPermissionsSkipsAgentsWithoutOverlay(t *testing.T) {
+	home := t.TempDir()
+	adapters := resolveAdapters([]model.AgentID{
+		model.AgentGeminiCLI,
+		model.AgentQwenCode,
+		model.AgentVSCodeCopilot,
+	})
+
+	if paths := componentPaths(home, model.Selection{}, adapters, model.ComponentPermission); len(paths) != 0 {
+		t.Fatalf("componentPaths(permissions) = %v, want none", paths)
 	}
 }
 
