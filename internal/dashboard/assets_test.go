@@ -80,7 +80,6 @@ func TestAssetsAreServedWithTheirContentType(t *testing.T) {
 		"/":            "text/html",
 		"/tokens.css":  "text/css",
 		"/style.css":   "text/css",
-		"/legacy.css":  "text/css",
 		"/js/main.js":  "text/javascript",
 		"/index.html":  "", // el FileServer redirige /index.html a /
 		"/no-existe.x": "",
@@ -316,7 +315,7 @@ func TestStylesKeepVisibleFocus(t *testing.T) {
 	if !strings.Contains(css, ":focus-visible { outline: 2px solid var(--accent)") {
 		t.Errorf("style.css debe definir el foco visible de 2 px en el acento")
 	}
-	for _, name := range []string{"style.css", "legacy.css"} {
+	for _, name := range []string{"style.css"} {
 		if strings.Contains(readAsset(t, name), "outline: 0") || strings.Contains(readAsset(t, name), "outline: none") {
 			// Se admite solo en contenedores no interactivos enfocados por programa (tabindex -1).
 			for _, line := range strings.Split(readAsset(t, name), "\n") {

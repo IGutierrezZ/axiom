@@ -979,7 +979,9 @@ func TestEcosystemEndpoints(t *testing.T) {
 // sync (restart-required / upgrade-failed) y la instrucción de reinicio cuando
 // el binario en ejecución fue reemplazado.
 func TestEcosystemUpgradePresentsBothPhases(t *testing.T) {
-	js := readAsset(t, "js/screens/ecosystem.js")
+	// La presentación vive en js/core/ecosystem.js (lógica pura, probada con Node en
+	// platform_assets_test.go) y la pantalla la cablea a la acción de upgrade.
+	js := readAsset(t, "js/core/ecosystem.js") + "\n" + readAsset(t, "js/screens/ecosystem.js")
 
 	markers := []struct {
 		name string

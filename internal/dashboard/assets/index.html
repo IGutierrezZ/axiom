@@ -22,7 +22,6 @@
     })();
   </script>
   <link rel="stylesheet" href="/tokens.css">
-  <link rel="stylesheet" href="/legacy.css">
   <link rel="stylesheet" href="/style.css">
 </head>
 <body>
@@ -380,91 +379,87 @@
           <div class="page-header">
             <div>
               <h1 id="ecosistema-title" class="page-title" tabindex="-1">Ecosistema</h1>
-              <p class="page-sub">Diagnóstico (Axiom Doctor), sincronización de agentes, actualización de herramientas y respaldos.</p>
-            </div>
-            <div class="page-actions">
-              <button type="button" class="btn" id="btn-refresh-ecosystem"><i data-icon="refresh"></i>Actualizar ecosistema</button>
+              <p class="page-sub">La salud de Axiom en tu máquina: herramientas, agentes, modelos y respaldos.</p>
             </div>
           </div>
 
-          <div class="card legacy-card">
-            <h2 class="subsection-title">Operaciones del ecosistema</h2>
-            <div class="page-actions">
-              <button type="button" id="btn-eco-sync" class="btn btn-primary" title="Sincronizar configuraciones y reglas de agentes en el workspace"><i data-icon="refresh"></i>Sincronizar workspace</button>
-              <span class="inline-field">
-                <label for="select-eco-channel">Canal:</label>
-                <select id="select-eco-channel">
-                  <option value="stable">Estable (releases)</option>
-                  <option value="main">Main (desarrollo continuo)</option>
-                </select>
-              </span>
-              <button type="button" id="btn-eco-upgrade" class="btn" title="Comprobar y actualizar herramientas"><i data-icon="download"></i>Actualizar herramientas</button>
-              <button type="button" id="btn-eco-create-backup" class="btn" title="Crear un nuevo snapshot de respaldo"><i data-icon="plus"></i>Crear respaldo ahora</button>
-              <span class="badge" title="Sincronización acotada al proyecto activo">Ámbito: workspace</span>
-            </div>
-            <div class="console" id="eco-action-output" hidden>
-              <div class="console-head"><span><i data-icon="terminal" data-size="14"></i> <span data-role="title" id="eco-action-title">Consola de operaciones</span></span><button type="button" class="btn btn-ghost btn-xs" data-role="clear" id="btn-clear-console">Limpiar</button></div>
-              <pre class="console-out" data-role="out" id="eco-console-content" tabindex="0"></pre>
-            </div>
-          </div>
+          <div id="eco-health"></div>
 
-          <div class="card legacy-card">
-            <div class="card-head" style="padding: 0; border: 0">
-              <h2 class="subsection-title">Diagnóstico de salud (Axiom Doctor)</h2>
-              <span id="eco-doctor-badge" class="badge">Verificando…</span>
+          <section class="card card-flush" aria-labelledby="eco-ops-h">
+            <div class="card-head"><h2 class="card-title-h" id="eco-ops-h">Operaciones</h2></div>
+            <div class="eco-ops">
+              <div class="eco-op">
+                <h3 class="eco-op-title">Sincronizar workspace</h3>
+                <p class="eco-op-desc">Regenera las reglas y la configuración de agentes y MCPs del proyecto activo.</p>
+                <button type="button" id="btn-eco-sync" class="btn btn-primary" data-eco-lock><i data-icon="refresh"></i>Sincronizar</button>
+              </div>
+              <div class="eco-op">
+                <h3 class="eco-op-title">Actualizar herramientas</h3>
+                <p class="eco-op-desc">Actualiza Axiom y encadena una sincronización si no hace falta reiniciar.</p>
+                <div class="eco-op-row">
+                  <span class="inline-field">
+                    <label for="select-eco-channel">Canal</label>
+                    <select id="select-eco-channel" data-eco-lock>
+                      <option value="stable">Estable (releases)</option>
+                      <option value="main">Main (desarrollo continuo)</option>
+                    </select>
+                  </span>
+                  <button type="button" id="btn-eco-upgrade" class="btn" data-eco-lock><i data-icon="download"></i>Actualizar</button>
+                </div>
+              </div>
+              <div class="eco-op">
+                <h3 class="eco-op-title">Crear respaldo</h3>
+                <p class="eco-op-desc">Guarda un snapshot de la configuración en <code>~/.axiom/backups</code> antes de hacer cambios grandes.</p>
+                <button type="button" id="btn-eco-create-backup" class="btn" data-eco-lock><i data-icon="archive"></i>Crear respaldo</button>
+              </div>
             </div>
-            <div class="table-wrap" role="region" aria-label="Diagnóstico" tabindex="0">
-              <table class="data-table">
-                <thead><tr><th>Componente</th><th>Categoría</th><th>Estado</th><th>Detalles</th><th>Recomendación</th></tr></thead>
-                <tbody id="eco-doctor-tbody"><tr><td colspan="5" class="loading-state">Cargando el diagnóstico del sistema…</td></tr></tbody>
-              </table>
-            </div>
-          </div>
+            <p id="eco-announce" class="sr-only" role="status" aria-live="polite"></p>
+            <details id="eco-last" class="eco-last" hidden>
+              <summary data-role="summary"></summary>
+              <pre class="console-out" data-role="out" tabindex="0" aria-label="Salida de la última operación"></pre>
+            </details>
+          </section>
 
-          <div class="card legacy-card">
-            <div class="card-head" style="padding: 0; border: 0">
-              <h2 class="subsection-title">Topología y configuración de repositorios</h2>
-              <span class="badge badge-mono">axiom.yaml</span>
+          <section class="card card-flush" aria-labelledby="eco-doctor-h">
+            <div class="card-head">
+              <h2 class="card-title-h" id="eco-doctor-h">Axiom Doctor</h2>
+              <span class="kn-count" id="eco-doctor-count"></span>
             </div>
-            <div class="stat-cards-row">
-              <div class="stat-card"><div class="stat-label">Espacio de trabajo</div><div class="stat-value" id="top-ws-name">--</div></div>
-              <div class="stat-card"><div class="stat-label">Topología declarada</div><div class="stat-value text-accent" id="top-ws-topology">--</div></div>
-              <div class="stat-card"><div class="stat-label">Repositorio canónico de specs</div><div class="stat-value" id="top-ws-specs">--</div></div>
-              <div class="stat-card"><div class="stat-label">Diagnóstico de salud</div><div class="stat-value" id="top-ws-health">--</div></div>
+            <div id="eco-doctor-body" class="eco-table-box">
+              <div class="state" role="status"><div class="spinner" aria-hidden="true"></div><span>Cargando el diagnóstico del sistema…</span></div>
             </div>
-            <h3 class="subsection-title">Mapeo de roles a repositorios locales (1 a N)</h3>
-            <div class="table-wrap" role="region" aria-label="Roles y repositorios" tabindex="0">
-              <table class="data-table">
-                <thead><tr><th>ID del rol</th><th>Nombre descriptivo</th><th>Política de compuerta</th><th>Tecnologías</th><th>Rutas de repositorios</th></tr></thead>
-                <tbody id="topology-roles-tbody"><tr><td colspan="5" class="loading-state">Cargando roles…</td></tr></tbody>
-              </table>
-            </div>
-          </div>
+          </section>
 
-          <div class="card legacy-card">
-            <div class="card-head" style="padding: 0; border: 0">
-              <h2 class="subsection-title">Historial de respaldos (~/.axiom/backups/)</h2>
-              <span id="eco-backups-count" class="badge">0 respaldos</span>
-            </div>
-            <div class="table-wrap" role="region" aria-label="Respaldos" tabindex="0">
-              <table class="data-table">
-                <thead><tr><th>Identificador</th><th>Fecha de creación</th><th>Descripción</th><th>Archivos</th><th>Acciones</th></tr></thead>
-                <tbody id="eco-backups-tbody"><tr><td colspan="5" class="loading-state">Consultando los respaldos del sistema…</td></tr></tbody>
-              </table>
-            </div>
-          </div>
+          <div class="eco-grid">
+            <section class="card card-flush" aria-labelledby="eco-top-h">
+              <div class="card-head">
+                <h2 class="card-title-h" id="eco-top-h">Topología</h2>
+                <span class="badge badge-mono">axiom.yaml</span>
+              </div>
+              <div id="eco-topology-body">
+                <div class="eco-pad"><div class="state" role="status"><div class="spinner" aria-hidden="true"></div><span>Cargando la topología…</span></div></div>
+              </div>
+            </section>
 
-          <div class="card legacy-card">
-            <div class="card-head" style="padding: 0; border: 0">
-              <h2 class="subsection-title">Modelos de IA y persona activa</h2>
-              <span id="eco-persona-badge" class="badge">Persona: axiom</span>
-            </div>
-            <div class="table-wrap" role="region" aria-label="Modelos asignados" tabindex="0">
-              <table class="data-table">
-                <thead><tr><th>Agente</th><th>Rol SDD</th><th>Modelo asignado</th><th>Esfuerzo de razonamiento</th></tr></thead>
-                <tbody id="eco-models-tbody"><tr><td colspan="4" class="loading-state">Consultando la asignación de modelos…</td></tr></tbody>
-              </table>
-            </div>
+            <section class="card card-flush" aria-labelledby="eco-backups-h">
+              <div class="card-head">
+                <h2 class="card-title-h" id="eco-backups-h">Respaldos</h2>
+                <span class="kn-count" id="eco-backups-count"></span>
+              </div>
+              <div id="eco-backups-body">
+                <div class="eco-pad"><div class="state" role="status"><div class="spinner" aria-hidden="true"></div><span>Consultando los respaldos del sistema…</span></div></div>
+              </div>
+            </section>
+
+            <section class="card card-flush eco-wide" aria-labelledby="eco-models-h">
+              <div class="card-head">
+                <h2 class="card-title-h" id="eco-models-h">Modelos</h2>
+                <span class="eco-persona">Persona activa: <span class="mono" id="eco-persona">—</span></span>
+              </div>
+              <div id="eco-models-body" class="eco-table-box">
+                <div class="state" role="status"><div class="spinner" aria-hidden="true"></div><span>Consultando la asignación de modelos…</span></div>
+              </div>
+            </section>
           </div>
         </section>
       </main>

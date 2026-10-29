@@ -20,10 +20,6 @@ export function phaseIndex(phase) {
   return i < 0 ? 0 : i;
 }
 
-export function phaseLabel(phase) {
-  return PHASES[phaseIndex(phase)].label;
-}
-
 export function isArchived(inc) {
   return !!inc && inc.type === 'archived';
 }

@@ -11,7 +11,7 @@ import { initTheme } from './core/theme.js';
 import { initProjects, loadProjects } from './projects.js';
 import { initShell, setActiveNav, renderBreadcrumb, routeLabel, closeMenu } from './shell.js';
 import { initDetail, enterDetail, refreshDetail } from './screens/detalle.js';
-import { initEcosystem, loadEcosystem, renderTopology } from './screens/ecosystem.js';
+import { initEcosystem, loadEcosystem } from './screens/ecosystem.js';
 import { initIncrements, loadIncrements, renderIncrements } from './screens/incrementos.js';
 import { initInicio, renderInicio } from './screens/inicio.js';
 import { enterSpecs, initLivingDocs, loadLivingDocs } from './screens/livingdoc.js';
@@ -105,7 +105,6 @@ function boot() {
 
   // Las pantallas que dependen del workspace se repintan cuando llega.
   on('workspace', renderInicio);
-  on('workspace', renderTopology);
   on('workspace', renderIncrements);
   on('workspace', () => {
     // La miga muestra el nombre del proyecto.

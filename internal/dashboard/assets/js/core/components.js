@@ -14,12 +14,6 @@ export function $all(selector, root = document) {
   return Array.from(root.querySelectorAll(selector));
 }
 
-export function htmlToElement(html) {
-  const tpl = document.createElement('template');
-  tpl.innerHTML = html.trim();
-  return tpl.content.firstElementChild;
-}
-
 // ---- Botones, chips e insignias -------------------------------------------
 
 // button devuelve un <button>. variant: primary | secondary | ghost | danger.

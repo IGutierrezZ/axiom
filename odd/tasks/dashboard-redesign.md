@@ -278,7 +278,30 @@ Ruta de cada tarea: «delegada» significa un escritor acotado, que se elige por
     - símbolos con filtros de tipo usando los parámetros de servidor (`query`, `kind`);
     - dependencias;
     - Reindexar.
-- [ ] **T6 · Plataforma: Ecosistema** (delegada)
+- [x] **T6 · Plataforma: Ecosistema** (delegada; incluye la limpieza de T7)
+  - **Resultado (2026-10-29):**
+    - `js/core/ecosystem.js` (nuevo, lógica pura):
+      - mapa a castellano: `ok`/`warning`/`error` → Correcto/Aviso/Error; `agent`/`tool`/`environment` → agente/herramienta/entorno; lo desconocido se muestra tal cual;
+      - `sortChecks`, que ordena error, aviso, desconocido y correcto;
+      - `healthSummary`, `formatBytes`, `formatEcosystemUpgradeSequence` (literales intactos) y `operationOutcome`.
+    - `js/screens/ecosystem.js` reescrito:
+      - banner y Doctor desde la caché compartida;
+      - operaciones con bloqueo mientras se ejecutan;
+      - «Última operación» solo de esta sesión de página;
+      - topología, modelos y respaldos;
+      - Restaurar con confirmación.
+    - Se quita el botón «Actualizar ecosistema», porque Actualizar y «Volver a diagnosticar» ya lo cubren.
+    - Un upgrade que deja `restart_required` se etiqueta «reinicio pendiente».
+  - **Limpieza (parte de T7):**
+    - eliminado `legacy.css`;
+    - eliminadas las reglas muertas de `style.css` y las funciones sin uso `htmlToElement`, `phaseLabel` y `DEFAULT_PATH`;
+    - el escaneo no encuentra ids de JS sin marcado ni iconos sin uso.
+  - **Hallazgo:** el servidor nunca rellena `size_bytes` en `GetBackups`, así que el tamaño solo se pinta si llega. Corregirlo es un cambio de servidor fuera del alcance y queda en Seguimientos.
+  - **Tests:** `platform_assets_test.go` (nuevo) y `TestEcosystemUpgradePresentsBothPhases`, que ahora lee `core/ecosystem.js` y la pantalla.
+  - **Verificación:**
+    - `go build`, `go vet`, `go test -count=1 ./internal/dashboard/...` (repetido por el orquestador) y `gofmt -l`: OK.
+    - Sin datos de los mockups ni Google Fonts en `assets/`; lo ha buscado el orquestador con `rg`.
+    - Navegador del escritor, con las operaciones simuladas y sin ejecutarse de verdad: estados de las operaciones, cancelar o confirmar Restaurar, error aislado de un bloque y 390 px.
   - Banner de salud y Doctor, con avisos y errores primero y mapa de traducción `warning`/categorías → castellano.
   - Operaciones Sync, Upgrade con canal y Crear respaldo.
   - Última operación en `<details>`, con las fases `upgrade → sync` y los literales de estado actuales (`restart-required`, `upgrade-failed`…).
@@ -309,10 +332,11 @@ Ruta de cada tarea: «delegada» significa un escritor acotado, que se elige por
 
 ## Siguiente paso
 
-T6: Ecosistema.
+T7: verificación final.
 
 ## Seguimientos
 
 - Retirar o redefinir `POST /api/increments/verify`, que queda sin uso en la interfaz (D5).
+- `GetBackups` no rellena `size_bytes`; hay que corregirlo para que se vea el tamaño de cada respaldo (hallazgo de T6).
 - Retirar Handoffs del dashboard y de la API (D4, decisión del usuario para una versión próxima).
 - Endpoints de actividad, archivar, specs afectadas e historial de dominio, si se quieren recuperar esos bloques (D3).

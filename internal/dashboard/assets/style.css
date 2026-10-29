@@ -148,14 +148,13 @@ dialog :focus-visible { outline-offset: 1px; }
 .view { display: flex; flex-direction: column; gap: 24px; min-width: 0; }
 .view > [tabindex="-1"]:focus { outline: none; }
 
-.page-header, .section-header {
+.page-header {
   display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px;
 }
-.page-header > div:first-child, .section-header > div:first-child { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.page-header > div:first-child { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .page-eyebrow { font-size: 13px; color: var(--text-3); }
 .page-title { font-size: 30px; line-height: 1.15; font-weight: 650; letter-spacing: -.02em; }
-.page-sub, .section-header .description { color: var(--text-2); max-width: 70ch; }
-.section-header h2 { font-size: 30px; line-height: 1.15; font-weight: 650; letter-spacing: -.02em; }
+.page-sub { color: var(--text-2); max-width: 70ch; }
 .page-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
 
 /* -------------------------------------------------------------------------
@@ -169,7 +168,7 @@ dialog :focus-visible { outline-offset: 1px; }
 .btn:hover:not(:disabled):not([aria-disabled="true"]) { background: var(--hover); text-decoration: none; }
 .btn-primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
 .btn-primary:hover:not(:disabled):not([aria-disabled="true"]) { background: var(--accent); filter: brightness(1.08); }
-.btn-secondary, .btn-outline { background: var(--surface); }
+.btn-secondary { background: var(--surface); }
 .btn-ghost { background: transparent; border-color: transparent; color: var(--text-2); }
 .btn-ghost:hover:not(:disabled) { background: var(--hover); color: var(--text); }
 .btn-danger { background: var(--bad-soft); border-color: var(--bad); color: var(--bad); }
@@ -178,7 +177,6 @@ dialog :focus-visible { outline-offset: 1px; }
 .btn-xs { min-height: 28px; padding: 0 8px; font-size: 12px; }
 .btn-icon { width: 38px; min-height: 38px; padding: 0; }
 .btn-icon.btn-sm { width: 32px; min-height: 32px; }
-.btn-block { width: 100%; }
 
 .link-btn { background: none; border: 0; padding: 0; color: var(--accent-text); font-weight: 600; text-decoration: none; }
 .link-btn:hover { text-decoration: underline; }
@@ -192,7 +190,7 @@ dialog :focus-visible { outline-offset: 1px; }
 .chip[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-text); }
 .chip-count { font-family: var(--font-mono); font-size: 11px; color: var(--text-3); }
 .chip[aria-pressed="true"] .chip-count { color: var(--accent-text); }
-.filter-group, .chip-group { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.chip-group { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 
 /* Control segmentado */
 .seg-group {
@@ -209,7 +207,7 @@ dialog :focus-visible { outline-offset: 1px; }
 /* -------------------------------------------------------------------------
    Insignias y estados (siempre con texto o icono, nunca solo color)
    ------------------------------------------------------------------------- */
-.badge, .ui-badge {
+.badge {
   display: inline-flex; align-items: center; gap: 6px; padding: 2px 8px; border-radius: var(--radius-sm);
   font-size: 12px; font-weight: 600; line-height: 1.4; border: 1px solid var(--border); background: var(--surface-2); color: var(--text-2); white-space: nowrap;
 }
@@ -260,7 +258,7 @@ dialog :focus-visible { outline-offset: 1px; }
 /* -------------------------------------------------------------------------
    Tablas con desplazamiento interno
    ------------------------------------------------------------------------- */
-.table-wrap, .table-container, .table-card {
+.table-wrap {
   overflow-x: auto; max-width: 100%; border: 1px solid var(--border); border-radius: var(--radius-xl); background: var(--surface);
 }
 .data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
@@ -303,14 +301,13 @@ dialog.modal {
 dialog.modal[open] { display: flex; }
 dialog.modal::backdrop { background: rgba(10, 10, 14, .55); }
 .modal-wide { width: min(760px, calc(100vw - 24px)); }
-.modal-xl { width: min(860px, calc(100vw - 24px)); }
 .modal-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 16px 20px; border-bottom: 1px solid var(--border); }
 .modal-head h2 { font-size: 17px; font-weight: 650; }
 .modal-sub { font-size: 12px; color: var(--text-3); }
 .modal-body { padding: 18px 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; min-height: 0; }
 .modal-foot { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 10px; padding: 14px 20px; border-top: 1px solid var(--border); background: var(--surface); }
 .modal-foot .grow { flex: 1; font-size: 12px; color: var(--text-3); }
-.modal-body pre, .preview-pre {
+.modal-body pre {
   background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 12px 14px;
   font-size: 12px; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 50vh; overflow: auto; margin: 0;
 }
@@ -342,7 +339,7 @@ dialog.modal::backdrop { background: rgba(10, 10, 14, .55); }
 .state-error { border-style: solid; border-color: transparent; background: var(--bad-soft); color: var(--bad); }
 .state-error .state-title, .state-error .state-icon { color: var(--bad); }
 .loading-state, .empty-state { padding: 20px; text-align: center; color: var(--text-2); }
-.error-banner, .text-danger { color: var(--bad); }
+.error-banner { color: var(--bad); }
 .error-banner { padding: 12px 14px; border-radius: var(--radius-md); background: var(--bad-soft); }
 .spinner {
   width: 18px; height: 18px; border-radius: var(--radius-full); border: 2px solid var(--border-strong); border-top-color: var(--accent);
@@ -440,7 +437,7 @@ dialog.modal::backdrop { background: rgba(10, 10, 14, .55); }
   .topbar-actions { width: 100%; }
   .topbar-actions .btn-primary { flex: 1; }
   .main { padding: 20px 16px 40px; }
-  .page-title, .section-header h2 { font-size: 24px; }
+  .page-title { font-size: 24px; }
 }
 @media (max-width: 480px) {
   .row { padding: 12px 14px; }
@@ -464,8 +461,6 @@ dialog.modal::backdrop { background: rgba(10, 10, 14, .55); }
   background: var(--surface); border: 1px solid var(--border-strong); box-shadow: 0 10px 30px rgba(10, 10, 20, .22); font-size: 13px;
 }
 .toast-ok .icon { color: var(--ok); } .toast-warn .icon { color: var(--warn); } .toast-bad .icon { color: var(--bad); }
-
-.subsection-title { font-size: 15px; font-weight: 650; }
 
 /* -------------------------------------------------------------------------
    Incrementos (T3): tablero por fase, lista, filtros y tarjetas
@@ -927,4 +922,86 @@ h5.md-h, h6.md-h { font-size: 13px; }
   .spec-step { grid-template-columns: minmax(0, 1fr); }
   .spec-req { padding: 12px; }
   .kn-preview-head .btn { flex: 1; }
+}
+
+/* -------------------------------------------------------------------------
+   Ecosistema (T6): salud, operaciones, Doctor, topología, modelos y respaldos
+   ------------------------------------------------------------------------- */
+.eco-banner {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 14px; padding: 16px 20px; border-radius: var(--radius-2xl);
+  background: var(--surface-2); border: 1px solid var(--border);
+}
+.eco-banner.is-ok { background: var(--ok-soft); border-color: transparent; }
+.eco-banner.is-warn { background: var(--warn-soft); border-color: transparent; }
+.eco-banner.is-bad { background: var(--bad-soft); border-color: transparent; }
+.eco-banner-icon { width: 40px; height: 40px; flex: none; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-lg); background: var(--surface); color: var(--text-2); }
+.eco-banner.is-ok .eco-banner-icon { color: var(--ok); }
+.eco-banner.is-warn .eco-banner-icon { color: var(--warn); }
+.eco-banner.is-bad .eco-banner-icon { color: var(--bad); }
+.eco-banner-text { flex: 1 1 20rem; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.eco-banner-title { font-size: 16px; font-weight: 650; }
+.eco-banner-sub { color: var(--text-2); }
+
+.eco-ops { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr)); margin: 0 -1px -1px 0; }
+.eco-op { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; padding: 18px 20px; min-width: 0; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+.eco-op-title { font-size: 14px; font-weight: 650; }
+.eco-op-desc { font-size: 13px; color: var(--text-2); flex: 1; }
+.eco-op-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.eco-last { border-top: 1px solid var(--border); }
+.eco-last > summary { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 12px 20px; cursor: pointer; font-size: 13px; color: var(--text-2); }
+.eco-last > summary::before {
+  content: ""; width: 7px; height: 7px; flex: none; border-right: 2px solid var(--text-3); border-bottom: 2px solid var(--text-3);
+  transform: rotate(-45deg); margin-right: 2px;
+}
+.eco-last[open] > summary::before { transform: rotate(45deg); }
+.eco-last-title { font-weight: 600; color: var(--text); }
+.eco-last-time { margin-left: auto; font-size: 12px; color: var(--text-3); }
+.eco-last .console-out { border-top: 1px solid var(--border); background: var(--surface-2); max-height: 320px; padding: 14px 20px 18px; }
+
+.eco-table-box > .table-wrap { border: 0; border-radius: 0; background: transparent; }
+.eco-table-box > .state { margin: 16px 20px; }
+.eco-doctor { min-width: 760px; }
+.eco-doctor th[scope="row"] { font-size: 12px; font-weight: 600; letter-spacing: 0; text-transform: none; color: var(--text); background: transparent; white-space: normal; }
+.eco-doctor tr.is-warn td, .eco-doctor tr.is-warn th[scope="row"] { background: var(--warn-soft); }
+.eco-doctor tr.is-bad td, .eco-doctor tr.is-bad th[scope="row"] { background: var(--bad-soft); }
+.eco-doctor td:nth-child(2), .eco-doctor td:nth-child(3) { white-space: nowrap; }
+.eco-details { color: var(--text-2); }
+
+.eco-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(420px, 100%), 1fr)); gap: 20px; align-items: start; }
+.eco-wide { grid-column: 1 / -1; }
+.eco-pad { padding: 16px 20px; display: flex; flex-direction: column; gap: 14px; }
+.eco-persona { font-size: 12px; color: var(--text-2); }
+.eco-persona .mono { font-weight: 600; color: var(--text); }
+.eco-dl { margin: 0; display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 8px 16px; font-size: 13px; align-items: center; }
+.eco-dl dt { color: var(--text-3); }
+.eco-dl dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.eco-dl dd.mono { font-size: 12px; }
+.eco-sub { font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); padding-top: 4px; border-top: 1px solid var(--border); }
+.eco-note { font-size: 12px; color: var(--text-2); }
+.eco-roles { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.eco-role { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.eco-role-head { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+.eco-role-id { font-size: 12px; font-weight: 600; }
+.eco-role-name { font-size: 12px; color: var(--text-2); }
+.eco-policy { font-size: 11px; padding: 0 7px; border-radius: var(--radius-full); border: 1px solid var(--border-strong); color: var(--text-2); }
+.eco-policy.is-deferred { border-style: dashed; }
+.eco-role-meta { display: grid; grid-template-columns: max-content minmax(0, 1fr); align-items: baseline; gap: 2px 10px; font-size: 12px; color: var(--text-2); }
+.eco-role-meta code { font-size: 12px; overflow-wrap: anywhere; }
+
+.eco-backups { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.eco-backup { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 12px 20px; border-top: 1px solid var(--border); }
+.eco-backup:first-child { border-top: 0; }
+.eco-backup:hover { background: var(--surface-2); }
+.eco-backup-main { flex: 1 1 14rem; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.eco-backup-title { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-weight: 600; }
+.eco-backup-meta { font-size: 12px; color: var(--text-3); }
+.eco-backup-meta code { font-size: 11px; }
+
+@media (max-width: 480px) {
+  .eco-banner { padding: 14px; }
+  .eco-op, .eco-last > summary, .eco-backup, .eco-pad { padding-left: 14px; padding-right: 14px; }
+  .eco-table-box > .state { margin-left: 14px; margin-right: 14px; }
+  .eco-last .console-out { padding-left: 14px; padding-right: 14px; }
+  .eco-dl { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+  .eco-dl dd { margin-bottom: 8px; }
 }

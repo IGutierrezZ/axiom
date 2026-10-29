@@ -1,231 +1,332 @@
-// Ecosistema: Doctor, operaciones (sync, upgrade, respaldos), topología y modelos.
-// Provisional hasta T6.
+// Ecosistema (#/ecosistema): salud de Axiom (Doctor), operaciones de plataforma
+// (sync, upgrade, respaldo), topología, modelos y respaldos.
+//
+// - El Doctor sale de la caché de Inicio (overview.js): no se consulta dos veces y
+//   «Volver a diagnosticar» la actualiza, igual que la insignia de la barra lateral.
+// - Cada bloque carga y falla por separado: uno que falle no vacía la página.
+// - Las operaciones deshabilitan sus botones mientras corren y dejan su resultado
+//   en «Última operación» (solo las hechas en esta sesión de la página).
+// - Restaurar un respaldo pide confirmación explícita antes de llamar a la API.
 
 import { api, escapeHtml } from '../core/api.js';
-import { $, renderConsole, confirmDialog, promptDialog, setBusy, toast } from '../core/components.js';
+import { $, badge, confirmDialog, promptDialog, setBusy, stateEmpty, stateError, stateLoading, statusPill, tableWrap, toast } from '../core/components.js';
+import {
+  OPERATION_LABEL, categoryText, formatBytes, formatEcosystemUpgradeSequence, healthSummary, operationOutcome, sortChecks, statusView
+} from '../core/ecosystem.js';
+import { formatDateTime, plural } from '../core/format.js';
 import { icon } from '../core/icons.js';
-import { state } from '../core/state.js';
+import { refreshOverview } from '../core/overview.js';
+import { on, state } from '../core/state.js';
 
-function showConsoleOutput(title, text, stateName = '') {
-  renderConsole($('#eco-action-output'), { title, text, state: stateName });
+let busy = false;        // una operación (o restauración) en curso: bloquea las demás
+let diagnosing = false;  // «Volver a diagnosticar» en curso
+let shownDoctor = null;  // última entrada de la caché pintada, para no repintar sin cambios
+let backups = [];
+
+const lockable = () => document.querySelectorAll('#view-ecosistema [data-eco-lock]');
+
+function setLocked(locked) {
+  busy = locked;
+  lockable().forEach(el => { el.disabled = locked; });
 }
 
-// Presenta el resultado de ambas fases de la cadena upgrade->sync (REQ-22.4),
-// incluida la omisión de sync con su motivo y la instrucción de reinicio
-// cuando el binario en ejecución fue reemplazado. No inventa estados que el
-// DTO no declara: lee exactamente phases.upgrade y phases.sync.
-export function formatEcosystemUpgradeSequence(data) {
-  if (!data || !data.phases) {
-    return ((data && data.output) || []).join('\n') || (data && data.message) || '';
-  }
-  const upgrade = data.phases.upgrade || {};
-  const sync = data.phases.sync || {};
-  const lines = [];
+// ---- Salud y Doctor (desde la caché) -------------------------------------------------------
 
-  let upgradeLine = 'Fase upgrade: ' + (upgrade.status || 'desconocido');
-  if (upgrade.restart_required) upgradeLine += ' — binario axiom reemplazado';
-  lines.push(upgradeLine);
-  if (upgrade.manual_hint) lines.push('Actualización manual requerida: ' + upgrade.manual_hint);
-  if (upgrade.error) lines.push('Error de upgrade: ' + upgrade.error);
-  if (upgrade.output && upgrade.output.length) lines.push(...upgrade.output);
+const BANNER_ICON = { ok: 'shield', warn: 'alert', bad: 'x' };
 
-  if (sync.executed) {
-    lines.push('Fase sync: ejecutada ' + (sync.success ? 'con éxito' : 'con errores'));
-    if (sync.output && sync.output.length) lines.push(...sync.output);
-    if (sync.error) lines.push('Error de sync: ' + sync.error);
-  } else {
-    const skipReasons = {
-      'restart-required': 'omitida — reinicia axiom para continuar; después ejecuta sync',
-      'upgrade-failed': 'omitida — la fase upgrade falló'
-    };
-    lines.push('Fase sync: ' + (skipReasons[sync.skipped_reason] || ('omitida (' + (sync.skipped_reason || '') + ')')));
-  }
-  return lines.join('\n');
+function bannerButton() {
+  return `<button type="button" class="btn" id="btn-eco-diagnose"${diagnosing ? ' disabled aria-busy="true"' : ''}>${icon('refresh', 16)}${diagnosing ? 'Diagnosticando…' : 'Volver a diagnosticar'}</button>`;
 }
 
-// ---- Topología (alimentada por /api/workspace) -----------------------------
-
-export function renderTopology() {
-  const ws = state.workspace;
-  if (!ws) return;
-  $('#top-ws-name').textContent = ws.name;
-  $('#top-ws-topology').textContent = ws.topology;
-  $('#top-ws-specs').textContent = ws.specs_repository || 'openspec/';
-  const health = $('#top-ws-health');
-  if (ws.compliant) {
-    health.innerHTML = `<span class="text-ok">${icon('check', 18)} Conforme</span>`;
-  } else {
-    health.innerHTML = `<span class="text-bad">${icon('x', 18)} ${ws.is_configured ? 'No conforme' : 'Sin configurar'}</span>`;
+function banner(entry) {
+  if (!entry.data) {
+    if (entry.status === 'error') {
+      return `<div class="eco-banner is-bad" role="alert"><span class="eco-banner-icon" aria-hidden="true">${icon('x', 20)}</span><div class="eco-banner-text"><span class="eco-banner-title">No se pudo ejecutar el diagnóstico</span><span class="eco-banner-sub">${escapeHtml(entry.error)}</span></div>${bannerButton()}</div>`;
+    }
+    return `<div class="eco-banner" role="status"><span class="eco-banner-icon" aria-hidden="true"><span class="spinner"></span></span><div class="eco-banner-text"><span class="eco-banner-title">Comprobando el ecosistema…</span><span class="eco-banner-sub">Axiom Doctor está revisando agentes, herramientas y entorno.</span></div></div>`;
   }
-
-  const tbody = $('#topology-roles-tbody');
-  const roles = ws.roles ? Object.entries(ws.roles) : [];
-  if (roles.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="5" class="empty-state">No hay roles declarados.</td></tr>';
-    return;
-  }
-  tbody.innerHTML = roles.map(([id, r]) => `<tr>
-    <td><code>${escapeHtml(id)}</code></td>
-    <td><strong>${escapeHtml(r.name || id)}</strong></td>
-    <td><span class="badge badge-${escapeHtml(r.gate_policy)}">${escapeHtml(r.gate_policy || 'blocking')}</span></td>
-    <td>${escapeHtml((r.tech || []).join(', ') || 'N/D')}</td>
-    <td><code>${escapeHtml((r.repositories || []).join(', ') || '.')}</code></td>
-  </tr>`).join('');
+  const sum = healthSummary(entry.data);
+  const parts = [sum.total === 0 ? 'Sin comprobaciones' : `${sum.ok} de ${sum.total} comprobaciones correctas`];
+  if (sum.warnings > 0) parts.push(plural(sum.warnings, 'aviso', 'avisos'));
+  if (sum.errors > 0) parts.push(plural(sum.errors, 'error', 'errores'));
+  if (sum.other > 0) parts.push(plural(sum.other, 'estado desconocido', 'estados desconocidos'));
+  const when = formatDateTime(entry.data.timestamp);
+  if (when) parts.push(`diagnóstico: ${when}`);
+  const stale = entry.status === 'error' ? `<span class="eco-banner-sub text-bad" role="alert">No se pudo actualizar el diagnóstico: ${escapeHtml(entry.error)}</span>` : '';
+  return `<div class="eco-banner is-${sum.tone}" role="status"><span class="eco-banner-icon" aria-hidden="true">${icon(BANNER_ICON[sum.tone], 20)}</span><div class="eco-banner-text"><span class="eco-banner-title">${escapeHtml(sum.title)}</span><span class="eco-banner-sub">${escapeHtml(parts.join(' · '))}</span>${stale}</div>${bannerButton()}</div>`;
 }
 
-// ---- Doctor, respaldos y modelos -------------------------------------------
+function doctorRows(checks) {
+  return checks.map(c => {
+    const view = statusView(c.status);
+    return `<tr class="${c.status === 'warning' ? 'is-warn' : c.status === 'error' ? 'is-bad' : ''}">
+      <th scope="row" class="mono eco-name">${escapeHtml(c.name)}</th>
+      <td>${escapeHtml(categoryText(c.category)) || '<span class="dim">—</span>'}</td>
+      <td>${statusPill(view.tone, view.text)}</td>
+      <td class="eco-details">${escapeHtml(c.details)}</td>
+      <td>${c.recommendation ? escapeHtml(c.recommendation) : '<span class="dim">—</span>'}</td>
+    </tr>`;
+  }).join('');
+}
 
-async function loadDoctor() {
-  const tbody = $('#eco-doctor-tbody');
-  const badge = $('#eco-doctor-badge');
+function doctorBody(entry) {
+  if (!entry.data) {
+    return entry.status === 'error' ? stateError(entry.error, 'No se pudo cargar el diagnóstico') : stateLoading('Cargando el diagnóstico del sistema…');
+  }
+  const checks = sortChecks(entry.data.checks);
+  if (checks.length === 0) return stateEmpty('Sin diagnósticos', 'Axiom Doctor no devolvió ninguna comprobación.', 'pulse');
+  return tableWrap(`<table class="data-table eco-doctor"><thead><tr><th>Componente</th><th>Categoría</th><th>Estado</th><th>Detalle</th><th>Recomendación</th></tr></thead><tbody>${doctorRows(checks)}</tbody></table>`, 'Comprobaciones de Axiom Doctor');
+}
+
+function renderDoctor(force = false) {
+  const entry = state.overview.doctor;
+  if (!entry || (entry === shownDoctor && force !== true)) return;
+  shownDoctor = entry;
+  $('#eco-health').innerHTML = banner(entry);
+  $('#eco-doctor-body').innerHTML = doctorBody(entry);
+  const total = entry.data && Array.isArray(entry.data.checks) ? entry.data.checks.length : 0;
+  $('#eco-doctor-count').textContent = entry.data ? plural(total, 'comprobación', 'comprobaciones') : '';
+}
+
+async function diagnose() {
+  if (diagnosing) return;
+  diagnosing = true;
+  renderDoctor(true);
   try {
-    const data = await api('/api/ecosystem/doctor');
-    badge.innerHTML = data.healthy ? `${icon('check', 13)}Sistema saludable` : `${icon('alert', 13)}Advertencias detectadas`;
-    badge.className = `badge ${data.healthy ? 'badge-ok' : 'badge-warn'}`;
-    if (!data.checks || data.checks.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="5" class="empty-state">No se recibieron diagnósticos.</td></tr>';
+    await refreshOverview(['doctor']);
+  } finally {
+    diagnosing = false;
+    renderDoctor(true);
+  }
+}
+
+// ---- Topología ---------------------------------------------------------------------------
+
+function roleItem(id, role) {
+  const policy = role.gate_policy || 'blocking';
+  const tech = (role.tech || []).join(', ');
+  const repos = (role.repositories || []).join(', ') || '.';
+  const name = role.name && role.name !== id ? `<span class="eco-role-name">${escapeHtml(role.name)}</span>` : '';
+  return `<li class="eco-role">
+    <div class="eco-role-head"><span class="mono eco-role-id">${escapeHtml(id)}</span>${name}<span class="eco-policy is-${escapeHtml(policy)}">${escapeHtml(policy)}</span></div>
+    <div class="eco-role-meta"><span class="dim">Repositorios</span><code>${escapeHtml(repos)}</code>${tech ? `<span class="dim">Tecnologías</span><span>${escapeHtml(tech)}</span>` : ''}</div>
+  </li>`;
+}
+
+function topologyHtml(ws) {
+  const status = ws.compliant ? statusPill('ok', 'Conforme') : statusPill('warn', ws.is_configured ? 'No conforme' : 'Sin configurar');
+  const note = !ws.compliant && ws.message ? `<p class="eco-note">${escapeHtml(ws.message)}</p>` : '';
+  const roles = ws.roles ? Object.entries(ws.roles).sort(([a], [b]) => a.localeCompare(b)) : [];
+  const list = roles.length === 0
+    ? stateEmpty('No hay roles declarados', 'Declara roles en axiom.yaml para ver aquí su política y sus repositorios.', 'users')
+    : `<ul class="eco-roles" aria-label="Roles y repositorios">${roles.map(([id, r]) => roleItem(id, r)).join('')}</ul>`;
+  return `<div class="eco-pad">
+    <dl class="eco-dl">
+      <dt>Workspace</dt><dd class="mono">${escapeHtml(ws.name || '—')}</dd>
+      <dt>Topología</dt><dd class="mono">${escapeHtml(ws.topology || '—')}</dd>
+      <dt>Repo de specs</dt><dd class="mono">${escapeHtml(ws.specs_repository || 'openspec/')}</dd>
+      <dt>Estado</dt><dd>${status}</dd>
+    </dl>${note}
+    <h3 class="eco-sub">Roles</h3>${list}
+  </div>`;
+}
+
+async function loadTopology() {
+  const body = $('#eco-topology-body');
+  try {
+    body.innerHTML = topologyHtml(await api('/api/workspace'));
+  } catch (err) {
+    console.error(err);
+    body.innerHTML = `<div class="eco-pad">${stateError(err.message, 'No se pudo cargar la topología')}</div>`;
+  }
+}
+
+// ---- Modelos -----------------------------------------------------------------------------
+
+async function loadModels() {
+  const body = $('#eco-models-body');
+  try {
+    const data = (await api('/api/ecosystem/models')) || {};
+    $('#eco-persona').textContent = data.active_persona || '—';
+    const list = Array.isArray(data.assignments) ? data.assignments.slice() : [];
+    if (list.length === 0) {
+      body.innerHTML = `<div class="eco-pad">${stateEmpty('Sin asignaciones explícitas', 'No se detectaron asignaciones de modelos en opencode.json. Se usan los presets predeterminados de Axiom.', 'cube')}</div>`;
       return;
     }
-    tbody.innerHTML = data.checks.map(c => {
-      let status = `<span class="badge badge-ok">${icon('check', 13)}Saludable</span>`;
-      if (c.status === 'warning') status = `<span class="badge badge-warn">${icon('alert', 13)}Advertencia</span>`;
-      else if (c.status === 'error') status = `<span class="badge badge-bad">${icon('x', 13)}Error</span>`;
-      return `<tr>
-        <td><strong>${escapeHtml(c.name)}</strong></td>
-        <td><span class="badge badge-phase">${escapeHtml(c.category)}</span></td>
-        <td>${status}</td>
-        <td>${escapeHtml(c.details)}</td>
-        <td>${c.recommendation ? escapeHtml(c.recommendation) : '<span class="dim">—</span>'}</td>
-      </tr>`;
-    }).join('');
+    list.sort((a, b) => String(a.agent).localeCompare(String(b.agent)) || String(a.role).localeCompare(String(b.role)));
+    const rows = list.map(m => `<tr>
+      <td class="mono">${escapeHtml(m.agent)}</td>
+      <td class="mono">${escapeHtml(m.role)}</td>
+      <td class="mono">${escapeHtml(m.model)}</td>
+      <td>${m.reasoning ? escapeHtml(m.reasoning) : '<span class="dim">estándar</span>'}</td>
+    </tr>`).join('');
+    body.innerHTML = tableWrap(`<table class="data-table"><thead><tr><th>Agente</th><th>Rol</th><th>Modelo</th><th>Razonamiento</th></tr></thead><tbody>${rows}</tbody></table>`, 'Modelos asignados por agente y rol');
   } catch (err) {
-    tbody.innerHTML = `<tr><td colspan="5" class="error-banner">Error cargando el diagnóstico: ${escapeHtml(err.message)}</td></tr>`;
+    console.error(err);
+    body.innerHTML = `<div class="eco-pad">${stateError(err.message, 'No se pudieron cargar los modelos')}</div>`;
   }
+}
+
+// ---- Respaldos ---------------------------------------------------------------------------
+
+function backupItem(b) {
+  const when = formatDateTime(b.created);
+  const size = formatBytes(b.size_bytes);
+  const files = Array.isArray(b.files) && b.files.length > 0 ? plural(b.files.length, 'archivo', 'archivos') : '';
+  const meta = [when, size, files].filter(Boolean).map(escapeHtml);
+  return `<li class="eco-backup">
+    <div class="eco-backup-main">
+      <span class="eco-backup-title">${escapeHtml(b.description || 'Sin descripción')}${b.pinned ? ` ${badge('accent', 'Fijado', 'pin')}` : ''}</span>
+      <span class="eco-backup-meta">${meta.join(' · ')}${meta.length ? ' · ' : ''}<code title="Identificador del respaldo">${escapeHtml(b.name)}</code></span>
+    </div>
+    <button type="button" class="btn btn-sm" data-restore="${escapeHtml(b.name)}" data-eco-lock${busy ? ' disabled' : ''} aria-label="Restaurar el respaldo ${escapeHtml(b.name)}">Restaurar</button>
+  </li>`;
 }
 
 async function loadBackups() {
-  const tbody = $('#eco-backups-tbody');
+  const body = $('#eco-backups-body');
   try {
-    const data = (await api('/api/ecosystem/backups')) || [];
-    $('#eco-backups-count').textContent = `${data.length} respaldos`;
-    if (data.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="5" class="empty-state">No hay respaldos registrados en ~/.axiom/backups/</td></tr>';
-      return;
-    }
-    tbody.innerHTML = data.map(b => `<tr>
-      <td><code>${escapeHtml(b.name)}</code>${b.pinned ? ' <span class="badge">Fijado</span>' : ''}</td>
-      <td>${escapeHtml(b.created)}</td>
-      <td>${escapeHtml(b.description || 'Sin descripción')}</td>
-      <td><span class="badge">${(b.files || []).length} archivos</span></td>
-      <td><button type="button" class="btn btn-sm btn-restore-backup" data-id="${escapeHtml(b.name)}">Restaurar</button></td>
-    </tr>`).join('');
+    backups = ((await api('/api/ecosystem/backups')) || []).slice();
+    backups.sort((a, b) => String(b.created).localeCompare(String(a.created)));
+    $('#eco-backups-count').textContent = plural(backups.length, 'respaldo', 'respaldos');
+    body.innerHTML = backups.length === 0
+      ? `<div class="eco-pad">${stateEmpty('Sin respaldos', 'Aún no hay respaldos en ~/.axiom/backups. Crea uno antes de hacer cambios grandes.', 'archive')}</div>`
+      : `<ul class="eco-backups" aria-label="Respaldos disponibles">${backups.map(backupItem).join('')}</ul>`;
   } catch (err) {
-    tbody.innerHTML = `<tr><td colspan="5" class="error-banner">Error cargando los respaldos: ${escapeHtml(err.message)}</td></tr>`;
-  }
-}
-
-async function loadModels() {
-  const tbody = $('#eco-models-tbody');
-  try {
-    const data = await api('/api/ecosystem/models');
-    $('#eco-persona-badge').textContent = `Persona: ${data.active_persona || 'axiom'}`;
-    if (!data.assignments || data.assignments.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="4" class="empty-state">No se detectaron asignaciones explícitas de modelos en opencode.json. Se usan los presets predeterminados de Axiom.</td></tr>';
-      return;
-    }
-    tbody.innerHTML = data.assignments.map(m => `<tr>
-      <td><strong>${escapeHtml(m.agent)}</strong></td>
-      <td><span class="badge">${escapeHtml(m.role)}</span></td>
-      <td><code>${escapeHtml(m.model)}</code></td>
-      <td>${m.reasoning ? `<span class="badge">${escapeHtml(m.reasoning)}</span>` : '<span class="dim">estándar</span>'}</td>
-    </tr>`).join('');
-  } catch (err) {
-    tbody.innerHTML = `<tr><td colspan="4" class="error-banner">Error cargando los modelos: ${escapeHtml(err.message)}</td></tr>`;
+    console.error(err);
+    $('#eco-backups-count').textContent = '';
+    body.innerHTML = `<div class="eco-pad">${stateError(err.message, 'No se pudieron cargar los respaldos')}</div>`;
   }
 }
 
 export async function loadEcosystem() {
-  await Promise.all([loadDoctor(), loadBackups(), loadModels()]);
+  // El Doctor lo refresca la caché (overview.js) junto con Actualizar.
+  await Promise.all([loadTopology(), loadModels(), loadBackups()]);
 }
 
-// ---- Operaciones -------------------------------------------------------------
+// ---- Última operación ----------------------------------------------------------------------
+
+function renderLast({ kind, at, running = false, outcome = null, text = '' }) {
+  const box = $('#eco-last');
+  box.hidden = false;
+  const pill = running ? statusPill('neutral', 'en curso') : statusPill(outcome.tone, outcome.text);
+  const tone = running ? '' : outcome.tone === 'ok' ? 'ok' : outcome.tone === 'bad' ? 'error' : '';
+  box.querySelector('[data-role="summary"]').innerHTML = `<span class="eco-last-title">Última operación</span><code>${escapeHtml(OPERATION_LABEL[kind])}</code>${pill}<span class="eco-last-time">${escapeHtml(formatDateTime(at))}</span>`;
+  const out = box.querySelector('[data-role="out"]');
+  out.textContent = text;
+  if (tone) out.setAttribute('data-state', tone);
+  else out.removeAttribute('data-state');
+  box.open = true;
+}
+
+function announce(text) {
+  const live = $('#eco-announce');
+  if (live) live.textContent = text;
+}
+
+// runOperation ejecuta una operación del servidor: bloquea el resto, muestra el
+// progreso, deja el resultado en «Última operación» y refresca lo que pudo cambiar.
+async function runOperation({ kind, button, busyLabel, progress, run, present, presentError, refresh }) {
+  if (busy) return;
+  setLocked(true);
+  const restore = setBusy(button, busyLabel);
+  const at = new Date().toISOString();
+  renderLast({ kind, at, running: true, text: progress });
+  announce(`${busyLabel} ${progress}`);
+  let outcome;
+  let text;
+  try {
+    const data = await run();
+    outcome = operationOutcome(kind, data, false);
+    text = present(data);
+  } catch (err) {
+    outcome = operationOutcome(kind, err.data, true);
+    text = presentError(err);
+  }
+  restore();
+  setLocked(false);
+  renderLast({ kind, at, outcome, text });
+  announce(`Operación ${OPERATION_LABEL[kind]} terminada: ${outcome.text}.`);
+  await refresh();
+  return outcome;
+}
+
+const refreshAfterChange = () => Promise.all([loadBackups(), refreshOverview(['doctor'])]);
+
+function runSync(button) {
+  return runOperation({
+    kind: 'sync', button, busyLabel: 'Sincronizando…', progress: 'Ejecutando axiom sync --scope=workspace…',
+    run: () => api('/api/ecosystem/sync', { body: { scope: 'workspace' } }),
+    present: data => (data.output || []).join('\n') || data.message || 'Sincronización terminada.',
+    presentError: err => [((err.data && err.data.output) || []).join('\n'), err.message].filter(Boolean).join('\n'),
+    refresh: refreshAfterChange
+  });
+}
+
+function runUpgrade(button) {
+  const channel = $('#select-eco-channel').value || 'stable';
+  return runOperation({
+    kind: 'upgrade', button, busyLabel: 'Actualizando…', progress: `Comprobando y actualizando herramientas en el canal ${channel}…`,
+    run: () => api('/api/ecosystem/upgrade', { body: { channel } }),
+    present: data => formatEcosystemUpgradeSequence(data),
+    // El upgrade puede responder 500 con las fases en el cuerpo: se presentan igualmente.
+    presentError: err => (err.data && err.data.phases ? formatEcosystemUpgradeSequence(err.data) : err.message),
+    refresh: refreshAfterChange
+  });
+}
+
+async function runBackup(button) {
+  if (busy) return;
+  const description = await promptDialog({
+    title: 'Crear respaldo',
+    message: 'Se guardará un snapshot de la configuración de Axiom en ~/.axiom/backups. Descripción (opcional):',
+    confirmLabel: 'Crear respaldo',
+    placeholder: 'Antes de actualizar las herramientas'
+  });
+  if (description === null) return;
+  const outcome = await runOperation({
+    kind: 'backup', button, busyLabel: 'Creando…', progress: 'Creando el respaldo…',
+    run: () => api('/api/ecosystem/backups/create', { body: { description: description.trim() } }),
+    present: data => `Respaldo creado con el identificador ${data.name}${data.description ? `\nDescripción: ${data.description}` : ''}`,
+    presentError: err => `No se pudo crear el respaldo: ${err.message}`,
+    refresh: loadBackups
+  });
+  if (outcome) toast(outcome.tone === 'bad' ? 'No se pudo crear el respaldo' : 'Respaldo creado', outcome.tone === 'bad' ? 'bad' : 'ok');
+}
+
+// restoreMessage dice qué pasará: se sustituyen archivos y lo posterior se pierde.
+function restoreMessage(b) {
+  const when = formatDateTime(b.created);
+  const files = Array.isArray(b.files) && b.files.length > 0 ? ` (${plural(b.files.length, 'archivo', 'archivos')})` : '';
+  return `Vas a restaurar el respaldo ${b.name}${when ? `, creado el ${when}` : ''}. Los archivos actuales que cubre${files} se sustituirán por los guardados en él y se perderán los cambios hechos en ellos desde entonces. Esta acción no se deshace desde aquí: si quieres conservar el estado actual, crea antes un respaldo.`;
+}
+
+async function restoreBackup(button) {
+  const name = button.getAttribute('data-restore');
+  const b = backups.find(item => item.name === name) || { name };
+  const ok = await confirmDialog({ title: 'Restaurar respaldo', message: restoreMessage(b), confirmLabel: 'Restaurar respaldo', danger: true });
+  if (!ok) return;
+  const outcome = await runOperation({
+    kind: 'restore', button, busyLabel: 'Restaurando…', progress: `Restaurando el respaldo ${name}…`,
+    run: () => api('/api/ecosystem/backups/restore', { body: { name } }),
+    present: data => (data.output || []).join('\n') || data.message || `Respaldo ${name} restaurado.`,
+    presentError: err => `No se pudo restaurar el respaldo ${name}: ${err.message}`,
+    refresh: refreshAfterChange
+  });
+  if (outcome) toast(outcome.tone === 'bad' ? 'No se pudo restaurar el respaldo' : 'Respaldo restaurado', outcome.tone === 'bad' ? 'bad' : 'ok');
+}
 
 export function initEcosystem() {
-  $('#btn-refresh-ecosystem').addEventListener('click', () => loadEcosystem());
-
-  const sync = $('#btn-eco-sync');
-  sync.addEventListener('click', async () => {
-    const restore = setBusy(sync, 'Sincronizando…');
-    showConsoleOutput('Sincronizando workspace', 'Ejecutando axiom sync --scope=workspace…');
-    try {
-      const data = await api('/api/ecosystem/sync', { body: { scope: 'workspace' } });
-      showConsoleOutput('Resultado de la sincronización', (data.output || []).join('\n') || data.message, data.success ? 'ok' : 'error');
-    } catch (err) {
-      const data = err.data || {};
-      showConsoleOutput('Error en la sincronización', ((data.output || []).join('\n') || '') + (data.output ? '\n' : '') + err.message, 'error');
-    } finally {
-      restore();
-    }
+  $('#btn-eco-sync').addEventListener('click', event => runSync(event.currentTarget));
+  $('#btn-eco-upgrade').addEventListener('click', event => runUpgrade(event.currentTarget));
+  $('#btn-eco-create-backup').addEventListener('click', event => runBackup(event.currentTarget));
+  $('#eco-backups-body').addEventListener('click', event => {
+    const button = event.target.closest('[data-restore]');
+    if (button && !busy) restoreBackup(button);
   });
-
-  const upgrade = $('#btn-eco-upgrade');
-  upgrade.addEventListener('click', async () => {
-    const channel = $('#select-eco-channel').value || 'stable';
-    const restore = setBusy(upgrade, 'Actualizando…');
-    showConsoleOutput(`Actualizando herramientas (${channel})`, `Ejecutando la comprobación y la actualización en el canal ${channel}…`);
-    try {
-      const data = await api('/api/ecosystem/upgrade', { body: { channel } });
-      showConsoleOutput('Resultado de la actualización', formatEcosystemUpgradeSequence(data), data.success ? 'ok' : 'error');
-    } catch (err) {
-      // El upgrade puede responder 500 con las fases en el cuerpo: se presentan igualmente.
-      const text = err.data && err.data.phases ? formatEcosystemUpgradeSequence(err.data) : err.message;
-      showConsoleOutput('Error en la actualización', text, 'error');
-    } finally {
-      restore();
-    }
+  $('#eco-health').addEventListener('click', event => {
+    if (event.target.closest('#btn-eco-diagnose')) diagnose();
   });
-
-  const backup = $('#btn-eco-create-backup');
-  backup.addEventListener('click', async () => {
-    const desc = await promptDialog({
-      title: 'Crear respaldo',
-      message: 'Descripción para el nuevo respaldo (opcional):',
-      confirmLabel: 'Crear respaldo',
-      value: 'Respaldo manual desde la interfaz web'
-    });
-    if (desc === null) return;
-    const restore = setBusy(backup, 'Creando…');
-    try {
-      const data = await api('/api/ecosystem/backups/create', { body: { description: desc } });
-      showConsoleOutput('Respaldo creado', `Snapshot creado con éxito con ID: ${data.name}`, 'ok');
-      await loadBackups();
-    } catch (err) {
-      toast(`Error al crear el respaldo: ${err.message}`, 'bad');
-    } finally {
-      restore();
-    }
-  });
-
-  $('#eco-backups-tbody').addEventListener('click', async (event) => {
-    const btn = event.target.closest('.btn-restore-backup');
-    if (!btn) return;
-    const id = btn.getAttribute('data-id');
-    const ok = await confirmDialog({
-      title: 'Restaurar respaldo',
-      message: `¿Restaurar el respaldo ${id}? Los archivos actuales serán sustituidos.`,
-      confirmLabel: 'Restaurar',
-      danger: true
-    });
-    if (!ok) return;
-    const restore = setBusy(btn, 'Restaurando…');
-    try {
-      const data = await api('/api/ecosystem/backups/restore', { body: { name: id } });
-      showConsoleOutput(`Restauración de ${id}`, (data.output || []).join('\n') || data.message, 'ok');
-      toast(data.message || 'Respaldo restaurado correctamente', 'ok');
-    } catch (err) {
-      toast(`Fallo al restaurar: ${err.message}`, 'bad');
-    } finally {
-      restore();
-    }
-  });
+  on('overview', () => renderDoctor());
+  renderDoctor();
 }

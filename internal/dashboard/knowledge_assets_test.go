@@ -196,17 +196,6 @@ func TestKnowledgeScreensUseNoLegacyStyles(t *testing.T) {
 		}
 	}
 
-	// legacy.css solo conserva lo que aún usa Ecosistema (T6): las reglas de estas pantallas ya no están.
-	old := readAsset(t, "legacy.css")
-	for _, gone := range []string{".skills-grid", ".skill-card", ".inbox-", ".livingdoc-", ".semantic-status-cards", ".dep-chip", ".agent-item", ".badge-kind", ".badge-connector", ".symbols-toolbar", ".dependencies-container", "#0f172a", "#f8fafc"} {
-		if strings.Contains(old, gone) {
-			t.Errorf("legacy.css todavía contiene %q, que ya vive en style.css", gone)
-		}
-	}
-	if strings.Count(old, "{") != strings.Count(old, "}") {
-		t.Errorf("legacy.css tiene llaves sin cerrar")
-	}
-
 	css := readAsset(t, "style.css")
 	for _, marker := range []string{".kn-split", ".kn-layout-specs", ".kn-table-scroll", ".kn-search", ".spec-step", ".spec-kw", ".spec-must", ".kn-pp[aria-pressed=\"true\"]", ".kn-domain[aria-current=\"page\"]", "@media (max-width: 859px)", "@media (max-width: 480px)"} {
 		if !strings.Contains(css, marker) {
