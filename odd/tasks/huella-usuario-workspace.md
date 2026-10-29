@@ -63,16 +63,20 @@ En los equipos de cliente se trabaja en varios proyectos a la vez. Hoy, una inst
 
 ## Decisiones pendientes (producto)
 
-- **D1 · Preset por defecto.**
+Las cuatro quedaron resueltas por el usuario el 2026-10-29: acepta las recomendaciones de D1, D2 y D4, y para D3 elige solo `axiom.yaml`.
+
+- **D1 · Preset por defecto.** **Resuelta: según la recomendación.**
   - Recomendación: sacar GGA y CodeGraph del preset `full-gentleman` y dejarlos como opcionales.
   - El componente `permission` se queda, pero solo con `deny` y sin modos (lo cubre T2).
-- **D2 · Dónde vive el estado por proyecto** (selección, persona, asignación de modelos).
+- **D2 · Dónde vive el estado por proyecto** (selección, persona, asignación de modelos). **Resuelta: según la recomendación (`<ws>/.axiom/state.json` sin versionar).**
   - Recomendación: `<ws>/.axiom/state.json` sin versionar, con `~/.axiom` solo para el registro del hub y los backups globales.
   - Alternativa: `axiom.yaml`, versionado. El equipo compartiría modelos y componentes, pero mezclaría preferencias personales con configuración del proyecto.
-- **D3 · Criterio de «proyecto Axiom»** para hooks y guardas.
-  - Recomendación: solo `axiom.yaml` o `.axiom-workspace` en un ancestro.
-  - Hoy `workspace.Locate` también acepta `openspec/`, lo que activa Axiom en repositorios ajenos que usen OpenSpec.
-- **D4 · Migración de equipos con instalación global.**
+- **D3 · Criterio de «proyecto Axiom»** para hooks y guardas. **Resuelta el 2026-10-29: solo `axiom.yaml`.**
+  - Cuenta el `axiom.yaml` propio en un ancestro y también el que se alcanza mediante el puntero multirepo `.axiom-workspace`. Ese puntero no es un marcador independiente: es la vía canónica para llegar al `axiom.yaml` del repositorio de specs (`internal/workspace/loader.go:185-229`). Excluirlo rompería los workspaces multirepo.
+  - `openspec/` deja de valer como marcador para hooks y guardas.
+  - Hoy `markerAt` lo acepta como `OriginOpenSpec` (`internal/workspace/locate.go:219-229`), lo que activa Axiom en repositorios ajenos que usan OpenSpec.
+  - T3 decide si el cambio va en `markerAt` o solo en la entrada de las guardas. Antes hay que revisar qué usos legítimos tiene `OriginOpenSpec` (REQ-24.2).
+- **D4 · Migración de equipos con instalación global.** **Resuelta: según la recomendación.**
   - Recomendación: un comando o guía basados en `axiom uninstall` global seguido de `axiom setup` por proyecto, con un `doctor` que detecte restos globales.
 
 ## Tareas
@@ -173,14 +177,17 @@ En los equipos de cliente se trabaja en varios proyectos a la vez. Hoy, una inst
 - **TDD estricto: desactivado.** Fuente: `openspec/config.yaml` (`strict_tdd: false`). Runner: `go test`. Se ejecutan las pruebas funcionales de cada tarea.
 - **RDD: desactivado** (`axiom review mode status`: off, decidido por defecto).
 - **Entrega:** previsión de unas 2.300 líneas de autor en total (F1 ~400, F2 ~450, F3 ~600, F4 ~550, F5 ~300). Supera el presupuesto de ~400 líneas.
-  - Estrategia `ask-on-risk`: antes del primer commit de implementación se pregunta la estrategia de encadenado (`stacked-to-main` o `feature-branch-chain`).
-  - Rebanada prevista: una PR por fase.
+  - Estrategia `single-pr` con la etiqueta `size:exception`, elegida por el usuario el 2026-10-29. Toda la feature va en una PR desde `fix/huella-usuario-workspace`.
+  - Se mantienen los commits por unidad de trabajo (al menos uno por tarea) para que la revisión pueda seguirse commit a commit.
 - Push, PR y merge: decisión del usuario.
 
 ## Progreso
 
-- 2026-10-29: plan registrado en este documento, con 14 tareas, R1 y V1. Sin implementación.
+- 2026-10-29: plan registrado en este documento, con 14 tareas, R1 y V1 (`851c7eef`). Sin implementación.
+- 2026-10-29: D3 resuelta por el usuario: solo `axiom.yaml`, directo o mediante el puntero `.axiom-workspace`. D1, D2 y D4 aceptadas según la recomendación.
+- 2026-10-29: la migración (D4) no tiene tarea propia; queda cubierta por T13 (desinstalación global) y T9 (`doctor` con restos globales).
+- 2026-10-29: entrega elegida por el usuario: una sola PR con la etiqueta `size:exception`.
 
 ## Siguiente paso
 
-Autorización del usuario para implementar la fase 1 (T1–T3) y respuesta a D3, que condiciona T1 y T3.
+Autorización para empezar la implementación por la fase 1 (T1–T3).
