@@ -1,8 +1,8 @@
 # Catálogo Maestro de Especificaciones Vivas — Axiom
 
 > **Proyecto:** Axiom (Spec-Driven Development Platform)
-> **Última Sincronización:** 2026-10-29 08:45:56 UTC
-> **Total Dominios:** 64 | **Total Requerimientos:** 478 | **Total Escenarios BDD:** 1176
+> **Última Sincronización:** 2026-10-29 10:59:30 UTC
+> **Total Dominios:** 64 | **Total Requerimientos:** 478 | **Total Escenarios BDD:** 1177
 
 ---
 
@@ -60,7 +60,7 @@
 | `review-findings-ledger` | Bounded Review Transaction and Findings Ledger | 18 | 24 | [Ver Spec](specs/review-findings-ledger/spec.md) |
 | `sdd-archive-lifecycle` | Especificación de Requerimientos: Ciclo de Vida de Archive, Integración Formal y Sellado Inmutable (INC-21) | 7 | 34 | [Ver Spec](specs/sdd-archive-lifecycle/spec.md) |
 | `sdd-block-review-gates` | Especificación de Requerimientos: Compuertas de Revisión por Bloque (spec, design, tasks, apply) (INC-21) | 6 | 19 | [Ver Spec](specs/sdd-block-review-gates/spec.md) |
-| `sdd-lane-kickoff` | Especificación de Requerimientos: Selección Temprana y Bloqueante de Carril ODD/SDD en el Kickoff (INC-21) | 8 | 26 | [Ver Spec](specs/sdd-lane-kickoff/spec.md) |
+| `sdd-lane-kickoff` | Especificación de Requerimientos: Selección Temprana y Bloqueante de Carril ODD/SDD en el Kickoff (INC-21) | 8 | 27 | [Ver Spec](specs/sdd-lane-kickoff/spec.md) |
 | `sdd-orchestrator-assets` | SDD Orchestrator Assets Specification | 17 | 39 | [Ver Spec](specs/sdd-orchestrator-assets/spec.md) |
 | `sdd-preflight-configuration` | Especificación de Requerimientos: Cuestionario Pre-Vuelo de SDD, Modalidad de Avance y Asignación Obligatoria de Roles (INC-21) | 2 | 5 | [Ver Spec](specs/sdd-preflight-configuration/spec.md) |
 | `sdd-research` | sdd-research Specification | 3 | 9 | [Ver Spec](specs/sdd-research/spec.md) |
@@ -1641,6 +1641,7 @@ Define one explicit, content-addressed implementation-review transaction shared 
   - *Escenario BDD:* El sellado escribe la instantánea
   - *Escenario BDD:* La instantánea refleja las excepciones por cambio
   - *Escenario BDD:* La instantánea no se reescribe
+  - *Escenario BDD:* Un segundo sellado desde otra rama se rechaza
   - *Escenario BDD:* La lectura tolera la ausencia de instantánea
   - *Escenario BDD:* Un binario anterior ignora la instantánea
 - **[REQ-25.37]** Exención de Cambios Preexistentes sin Instantánea y de `seal --infer`
