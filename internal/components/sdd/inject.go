@@ -602,6 +602,7 @@ func Inject(homeDir string, adapter agents.Adapter, sddMode model.SDDModeID, opt
 				}
 
 				content := renderBoundedReviewAsset(adapter.Agent(), commandsAssetDir+"/"+entry.Name())
+				content = resolveSkillsDirPlaceholders(content, adapter, installsInWorkspace(homeDir, opts))
 				path := filepath.Join(commandsDir, entry.Name())
 				writeResult, err := filemerge.WriteFileAtomic(path, []byte(content), 0o644)
 				if err != nil {
@@ -847,6 +848,7 @@ func Inject(homeDir string, adapter agents.Adapter, sddMode model.SDDModeID, opt
 			}
 			// Copy all files (not just .md) to support Kimi's YAML-based agents
 			contentStr := renderBoundedReviewAsset(adapter.Agent(), embeddedDir+"/"+entry.Name())
+			contentStr = resolveSkillsDirPlaceholders(contentStr, adapter, installsInWorkspace(homeDir, opts))
 
 			// Resolve {{KIRO_MODEL}} placeholder for adapters that support it (e.g. Kiro).
 			// Non-Kiro adapters (Cursor, etc.) don't implement kiroModelResolver and are unaffected.
@@ -1033,11 +1035,14 @@ func prepareSessionPreflight(homeDir string, adapter agents.Adapter, opts Inject
 	if err != nil {
 		return
 	}
+	workspace := installsInWorkspace(homeDir, opts)
+	prompt = resolveSkillsDirPlaceholders(prompt, adapter, workspace)
 	if adapter.Agent() == model.AgentClaudeCode && adapter.SkillsDir(homeDir) != "" {
 		lazy, err = renderClaudeSessionPreflight()
 		if err != nil {
 			return
 		}
+		lazy = resolveSkillsDirPlaceholders(lazy, adapter, workspace)
 		if err = validateRenderedSessionPreflight(lazy, adapter.Agent()); err != nil {
 			return
 		}
@@ -3626,6 +3631,8 @@ func writeClaudeLazySDDWorkflow(homeDir string, adapter agents.Adapter, prepared
 		if err != nil {
 			return InjectionResult{}, err
 		}
+		// Sin opciones de ámbito, la copia regenerada es la global.
+		content = resolveSkillsDirPlaceholders(content, adapter, false)
 	}
 
 	path := filepath.Join(skillDir, "_shared", "sdd-orchestrator-workflow.md")

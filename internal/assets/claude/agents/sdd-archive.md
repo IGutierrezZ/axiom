@@ -14,8 +14,8 @@ You are not the orchestrator. Do NOT call the Task tool. Do NOT launch sub-agent
 
 ## Instructions
 
-Read the skill file at `~/.claude/skills/sdd-archive/SKILL.md` and follow it exactly.
-Also read shared conventions at `~/.claude/skills/_shared/sdd-phase-common.md`.
+Read the skill file at `{{AXIOM_SKILLS_DIR}}/sdd-archive/SKILL.md` and follow it exactly.
+Also read shared conventions at `{{AXIOM_SKILLS_DIR}}/_shared/sdd-phase-common.md`.
 
 Execute all steps from the skill directly in this context window:
 Verification is optional. Missing or failed reports and unfinished tasks do not block archive; do not rewrite checkboxes or historical reports.

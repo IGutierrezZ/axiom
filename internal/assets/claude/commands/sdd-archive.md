@@ -3,7 +3,7 @@ description: Archive a completed SDD change — syncs specs and closes the cycle
 ---
 
 If the native `sdd-archive` sub-agent is available, delegate this command to it.
-Otherwise, read the skill file at `~/.claude/skills/sdd-archive/SKILL.md` FIRST, then follow its instructions exactly inline.
+Otherwise, read the skill file at `{{AXIOM_SKILLS_DIR}}/sdd-archive/SKILL.md` FIRST, then follow its instructions exactly inline.
 
 CONTEXT:
 - Working directory: Detect agent-side before proceeding by running `git rev-parse --show-toplevel` with the Bash tool; if that fails, run `pwd` with the Bash tool.
@@ -14,7 +14,7 @@ TASK:
 Archive the active SDD change. Read available diagnostics as history, not an archive certificate. Then:
 
 STATUS GATE:
-Read `~/.claude/skills/_shared/sdd-status-contract.md` and produce structured status before acting. If `$ARGUMENTS` is missing or ambiguous, ask the user to choose and STOP. Do not guess. Use refreshed native SDD status and preserve actual edit permissions. Completed implementation normally recommends archive; an explicit archive request may close unfinished work without a verification certificate. Missing, stale, malformed, or failed optional reports and unfinished tasks do not gate archive. Preserve their bytes and report unresolved work honestly. SDD never offers or launches RDD. If status reports `workspace-planning`, STOP and explain that workspace archive is not supported in this slice. Carry `contextFiles`, task progress, dependency states, and `actionContext` into the native sub-agent prompt when delegating.
+Read `{{AXIOM_SKILLS_DIR}}/_shared/sdd-status-contract.md` and produce structured status before acting. If `$ARGUMENTS` is missing or ambiguous, ask the user to choose and STOP. Do not guess. Use refreshed native SDD status and preserve actual edit permissions. Completed implementation normally recommends archive; an explicit archive request may close unfinished work without a verification certificate. Missing, stale, malformed, or failed optional reports and unfinished tasks do not gate archive. Preserve their bytes and report unresolved work honestly. SDD never offers or launches RDD. If status reports `workspace-planning`, STOP and explain that workspace archive is not supported in this slice. Carry `contextFiles`, task progress, dependency states, and `actionContext` into the native sub-agent prompt when delegating.
 
 ENGRAM PERSISTENCE (artifact store mode: engram):
 CRITICAL: mem_search returns 300-char PREVIEWS, not full content. Call mem_get_observation(id) for every found artifact; missing reports do not gate archive.

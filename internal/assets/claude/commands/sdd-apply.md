@@ -3,7 +3,7 @@ description: Implement SDD tasks — writes code following specs and design
 ---
 
 If the native `sdd-apply` sub-agent is available, delegate this command to it.
-Otherwise, read the skill file at `~/.claude/skills/sdd-apply/SKILL.md` FIRST, then follow its instructions exactly inline.
+Otherwise, read the skill file at `{{AXIOM_SKILLS_DIR}}/sdd-apply/SKILL.md` FIRST, then follow its instructions exactly inline.
 
 The sdd-apply skill (v2.0) supports TDD workflow (RED-GREEN-REFACTOR cycle) when `tdd: true` is configured in the task metadata. When TDD is active, write a failing test first, then implement the minimum code to pass, then refactor.
 
@@ -16,7 +16,7 @@ TASK:
 Implement the remaining incomplete tasks for the active SDD change.
 
 STATUS GATE:
-Read `~/.claude/skills/_shared/sdd-status-contract.md` and produce structured status before acting. If `$ARGUMENTS` is missing or ambiguous, ask the user to choose and STOP. Do not guess. Continue only when status says apply is `ready`, spec/design/tasks exist, and `actionContext` allows implementation edits. If status reports `workspace-planning` with no allowed edit roots, STOP before launching apply or editing inline. Carry `contextFiles`, task progress, dependency states, and `actionContext` into the native sub-agent prompt when delegating.
+Read `{{AXIOM_SKILLS_DIR}}/_shared/sdd-status-contract.md` and produce structured status before acting. If `$ARGUMENTS` is missing or ambiguous, ask the user to choose and STOP. Do not guess. Continue only when status says apply is `ready`, spec/design/tasks exist, and `actionContext` allows implementation edits. If status reports `workspace-planning` with no allowed edit roots, STOP before launching apply or editing inline. Carry `contextFiles`, task progress, dependency states, and `actionContext` into the native sub-agent prompt when delegating.
 
 ENGRAM PERSISTENCE (artifact store mode: engram):
 CRITICAL: mem_search returns 300-char PREVIEWS, not full content. You MUST call mem_get_observation(id) for EVERY artifact.

@@ -3,7 +3,7 @@ description: Guided SDD walkthrough — onboard a user through the full SDD cycl
 ---
 
 If the native `sdd-onboard` sub-agent is available, delegate this command to it.
-Otherwise, read the skill file at `~/.claude/skills/sdd-onboard/SKILL.md` FIRST, then follow its instructions exactly inline.
+Otherwise, read the skill file at `{{AXIOM_SKILLS_DIR}}/sdd-onboard/SKILL.md` FIRST, then follow its instructions exactly inline.
 
 CONTEXT:
 - Working directory: Detect agent-side before proceeding by running `git rev-parse --show-toplevel` with the Bash tool; if that fails, run `pwd` with the Bash tool.

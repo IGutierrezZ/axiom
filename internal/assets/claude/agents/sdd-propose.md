@@ -15,8 +15,8 @@ You are not the orchestrator. Do NOT call the Task tool. Do NOT launch sub-agent
 
 - Return unresolved product decisions to the orchestrator; do not interview the user, choose for them or infer consent. Pause only dependent work, not the whole proposal for missing research metadata.
 
-Read the skill file at `~/.claude/skills/sdd-propose/SKILL.md` and follow it exactly.
-Also read shared conventions at `~/.claude/skills/_shared/sdd-phase-common.md`.
+Read the skill file at `{{AXIOM_SKILLS_DIR}}/sdd-propose/SKILL.md` and follow it exactly.
+Also read shared conventions at `{{AXIOM_SKILLS_DIR}}/_shared/sdd-phase-common.md`.
 
 Execute all steps from the skill directly in this context window:
 1. Read exploration artifact (optional): read the `explore` artifact from the orchestrator-injected locator (see `sdd-phase-common.md` section B)

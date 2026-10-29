@@ -14,8 +14,8 @@ You are not the orchestrator. Do NOT call task/delegate. Do NOT launch sub-agent
 
 ## Instructions
 
-Read the skill file at `~/.cursor/skills/sdd-tasks/SKILL.md` and follow it exactly.
-Also read shared conventions at `~/.cursor/skills/_shared/sdd-phase-common.md`.
+Read the skill file at `{{AXIOM_SKILLS_DIR}}/sdd-tasks/SKILL.md` and follow it exactly.
+Also read shared conventions at `{{AXIOM_SKILLS_DIR}}/_shared/sdd-phase-common.md`.
 
 Execute all steps from the skill directly in this context window:
 1. Read spec artifact (required): read the `spec` artifact from the orchestrator-injected locator (see `sdd-phase-common.md` section B)

@@ -3,7 +3,7 @@ description: Validate implementation matches specs, design, and tasks
 ---
 
 If the native `sdd-verify` sub-agent is available, delegate this command to it.
-Otherwise, read the skill file at `~/.claude/skills/sdd-verify/SKILL.md` FIRST, then follow its instructions exactly inline.
+Otherwise, read the skill file at `{{AXIOM_SKILLS_DIR}}/sdd-verify/SKILL.md` FIRST, then follow its instructions exactly inline.
 
 CONTEXT:
 - Working directory: Detect agent-side before proceeding by running `git rev-parse --show-toplevel` with the Bash tool; if that fails, run `pwd` with the Bash tool.
@@ -16,7 +16,7 @@ Verify the active SDD change. Read the available proposal, specs, design, and ta
 This is optional practical verification, including partial diagnostics, with no review-state prerequisite. Report findings without an automatic review/refuter/fix loop. After verify returns, rerun native SDD status and route only from its refreshed `nextRecommended`. Completed implementation normally proceeds toward archive regardless of diagnostic findings; unfinished implementation normally returns to apply. Do not offer or invoke RDD; do not call `axiom review status`.
 
 STATUS GATE:
-Read `~/.claude/skills/_shared/sdd-status-contract.md` and produce structured status before acting. If `$ARGUMENTS` is missing or ambiguous, ask the user to choose and STOP. Do not guess. Missing inputs limit conclusions, not useful partial diagnostics; report missing artifacts and unavailable checks honestly, and never invent passing checks or completed tasks. If status reports `workspace-planning`, STOP and explain that full workspace implementation verification is not supported in this slice. Carry `contextFiles`, task progress, dependency states, and `actionContext` into the native sub-agent prompt when delegating.
+Read `{{AXIOM_SKILLS_DIR}}/_shared/sdd-status-contract.md` and produce structured status before acting. If `$ARGUMENTS` is missing or ambiguous, ask the user to choose and STOP. Do not guess. Missing inputs limit conclusions, not useful partial diagnostics; report missing artifacts and unavailable checks honestly, and never invent passing checks or completed tasks. If status reports `workspace-planning`, STOP and explain that full workspace implementation verification is not supported in this slice. Carry `contextFiles`, task progress, dependency states, and `actionContext` into the native sub-agent prompt when delegating.
 
 ENGRAM PERSISTENCE (artifact store mode: engram):
 CRITICAL: mem_search returns 300-char PREVIEWS, not full content. Call mem_get_observation(id) for every found artifact; do not invent IDs for missing artifacts.
