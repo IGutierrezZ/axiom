@@ -9,6 +9,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/IGutierrezZ/axiom/v3/internal/system"
 )
 
 // DefaultSchemaVersion define la versión actual del archivo de registro global.
@@ -20,14 +22,15 @@ type Manager struct {
 	mu         sync.RWMutex
 }
 
-// NewManager crea un nuevo gestor. Si configPath es vacío, usa ~/.axiom/workspaces.json.
+// NewManager crea un nuevo gestor. Si configPath es vacío, usa workspaces.json bajo
+// system.AxiomDir: AXIOM_STATE_DIR si está definida y, si no, ~/.axiom.
 func NewManager(configPath string) (*Manager, error) {
 	if configPath == "" {
 		homeDir, err := os.UserHomeDir()
 		if err != nil {
 			return nil, fmt.Errorf("no se pudo determinar el directorio home del usuario: %w", err)
 		}
-		configPath = filepath.Join(homeDir, ".axiom", "workspaces.json")
+		configPath = filepath.Join(system.AxiomDir(homeDir), "workspaces.json")
 	}
 
 	return &Manager{
