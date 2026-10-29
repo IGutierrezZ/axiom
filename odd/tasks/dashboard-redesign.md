@@ -343,6 +343,10 @@ Ruta de cada tarea: «delegada» significa un escritor acotado, que se elige por
   - `GetBackups` rellena `size_bytes` con la suma de los ficheros regulares bajo `RootDir` del respaldo (comprimido o no). Si no se puede leer, el campo se omite y la pantalla lo oculta.
   - Ecosistema ya muestra el número de ficheros a partir de `files`; no cambia la interfaz.
   - Test Go con un respaldo de tamaño conocido en un `HOME` temporal.
+- [ ] **T11 · Integrar `main` (inc-25) en el rediseño** (delegada: varios ficheros no triviales)
+  - Motivo: al preparar el PR, `origin/main` iba 111 commits por delante y chocaba en `assets/app.js` (borrado aquí, modificado en `main`) e `index.html`. inc-25 añadió al dashboard antiguo cinco funciones que el rediseño debe conservar: avisos del listado (`X-Axiom-Notes`), política de ramas en solo lectura (workspace y por repositorio), preferencias personales de worktree (edición y guardado), modo y raíz de worktree al registrar un proyecto, y el diálogo `decision_required` al crear un cambio.
+  - Fusionar `origin/main` (sin rebase), resolver conservando el rediseño y llevar esas funciones a los módulos nuevos; adaptar los tests de `main` que apuntan a `app.js` o a los ids antiguos sin perder su intención.
+  - Checks: `go test ./internal/dashboard/... ./internal/tui/...`, `go vet ./internal/dashboard/...`, `go run ./internal/gofmtcheck`.
 
 ## Criterios de aceptación
 
