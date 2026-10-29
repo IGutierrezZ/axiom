@@ -2,7 +2,7 @@
 
 > **Documento vivo ODD.** Fichero autoritativo: `odd/tasks/pruebas-binarios-ci.md`, en el repositorio `axiom`.
 > Espejo de recuperación en Engram: topic `odd/pruebas-binarios-ci/tasks`, proyecto `axiom`.
-> **Estado: En curso (2026-10-27).** Rama `fix/pruebas-binarios-ci`, worktree `C:\repos\axiom-wt\pruebas-binarios-ci`.
+> **Estado: En curso (2026-10-29), PR abierto.** Rama `fix/pruebas-binarios-ci`, worktree `C:\repos\axiom-wt\pruebas-binarios-ci`.
 
 ## Objetivo
 
@@ -67,9 +67,11 @@ Que `go test ./...` en un equipo de desarrollo no compile ni ejecute binarios pr
 - [x] **T3 · Activar en CI y documentar** — Ruta: delegada (mismo escritor).
   - `AXIOM_TEST_BUILD_BINARIES: "1"` en los *workflows* con `go test`; nota en la documentación de pruebas.
   - **Resultado (2026-10-27):** la variable se fija a nivel de *workflow* en `ci.yml` y `windows-full-suite.yml`. La nota va en `docs/testing/windows-tests.md`, en inglés como el resto del documento.
-  - **Pendiente de decisión:** `release.yml` y `promote-stable-rc.yml` no se han tocado. `internal/releasepolicy/policy.go` (`expectedReleaseWorkflowYAML`) compara el *workflow* de release con un YAML fijo, y añadir `env:` rompe `internal/update` («release workflow key set changed»). Mientras tanto, el `go test ./...` previo a release y a promote omite estas pruebas.
+  - **Seguimiento (decisión del usuario, 2026-10-29):** `release.yml` y `promote-stable-rc.yml` no se han tocado. `internal/releasepolicy/policy.go` (`expectedReleaseWorkflowYAML`) compara el *workflow* de release con un YAML fijo, y añadir `env:` rompe `internal/update` («release workflow key set changed»). Mientras tanto, el `go test ./...` previo a release y a promote omite estas pruebas. Riesgo bajo: `ci.yml` corre en `pull_request` y en `push` a `main`, así que el commit etiquetado ya pasó la suite completa. Este PR se entrega sin tocarlos y la ampliación queda como trabajo aparte.
   - RDD: `off (decided by default)`, sin evaluación de riesgo.
 - [ ] **T4 · Entregar** — push y PR con permiso del usuario; CI en verde, con las pruebas condicionadas ejecutadas (no omitidas).
+  - 2026-10-29: rama rebasada sobre `origin/main` (`c780061a`) sin conflictos. Sobre ese árbol y sin la variable: `gofmt -l` vacío; `go vet` limpio; `go test` de `internal/testenv`, `internal/update`, `internal/opencode`, `internal/components/gga` y `e2e/organicruntime` → ok; las pruebas de `internal/app` que compilan binarios → `SKIP`. `main` no ha añadido nuevos puntos que compilen binarios.
+  - Push y PR autorizados por el usuario (2026-10-29). Falta: CI en verde con las pruebas condicionadas ejecutadas.
 
 ## Criterios de aceptación
 
@@ -80,7 +82,8 @@ Que `go test ./...` en un equipo de desarrollo no compile ni ejecute binarios pr
 
 - 2026-10-27: T1 hecha; documento abierto.
 - 2026-10-27: T2 y T3 hechas, salvo los *workflows* de release.
+- 2026-10-29: release y promote pasan a seguimiento; rebase sobre `main`, push y PR (T4 en curso).
 
 ## Siguiente paso
 
-Decidir si se amplía el alcance a `release.yml`, `promote-stable-rc.yml` y `internal/releasepolicy/policy.go`; después, T4.
+Confirmar en la CI del PR que las pruebas condicionadas se ejecutan (no `SKIP`) y pasan; cerrar T4 tras el merge. Seguimiento aparte: fijar la variable en `release.yml` y `promote-stable-rc.yml` junto con `internal/releasepolicy/policy.go`.
