@@ -334,7 +334,8 @@ Ruta de cada tarea: «delegada» significa un escritor acotado, que se elige por
   - Descargar las versiones variables (eje `wght`, subconjunto latin, que cubre el castellano) de Instrument Sans y JetBrains Mono, con su licencia OFL, desde los paquetes `@fontsource-variable` de npm (vía jsDelivr).
   - Guardarlas en `assets/fonts/` y declararlas con `@font-face` y `font-display: swap`. Precargar la sans en `index.html`.
   - Test: que los `.woff2` estén embebidos, se sirvan como `font/woff2` y que no haya peticiones a dominios externos.
-- [ ] **T9 · Carga diferida de Código** (en línea)
+- [x] **T9 · Carga diferida de Código** (en línea)
+  - **Resultado:** `core/lazy.js` (`lazyLoader`) y `enterSemantic` / `refreshSemantic` en `semantic.js`; `main.js` ya no llama a `loadSemanticData` al arrancar. Test `TestCodeScreenLoadsLazily` (estructural y en node). En el navegador, tras recargar en Inicio: 0 peticiones a `/api/semantic/symbols` y `dependencies`; al entrar en Código, 1 de cada una (17.141 símbolos). Las fuentes se sirven desde `/fonts/` y la itálica solo se descarga si se usa.
   - Al arrancar solo se pide el estado semántico, que necesita Inicio. Los símbolos y dependencias se piden la primera vez que se entra en `#/codigo`, y al refrescar solo si esa pantalla ya se cargó.
   - Test de ejecución en node sobre la lógica de carga diferida.
 
@@ -353,11 +354,11 @@ Ruta de cada tarea: «delegada» significa un escritor acotado, que se elige por
 
 ## Siguiente paso
 
-Todas las tareas están cerradas. Falta la decisión del usuario sobre push y PR (`scripts/axiom-worktree.ps1 pr dashboard-redesign`) y sobre las fuentes.
+Tareas T0–T9 cerradas. Falta decidir cómo vuelve verify a la interfaz y, después, push y PR (`scripts/axiom-worktree.ps1 pr dashboard-redesign`).
 
 ## Seguimientos
 
-- Retirar o redefinir `POST /api/increments/verify`, que queda sin uso en la interfaz (D5).
+- `POST /api/increments/verify`: el usuario no quiere retirarlo (2026-10-29). Pendiente de decidir cómo vuelve a la interfaz.
 - `GetBackups` no rellena `size_bytes`; hay que corregirlo para que se vea el tamaño de cada respaldo (hallazgo de T6).
 - Retirar Handoffs del dashboard y de la API (D4, decisión del usuario para una versión próxima).
 - Endpoints de actividad, archivar, specs afectadas e historial de dominio, si se quieren recuperar esos bloques (D3).

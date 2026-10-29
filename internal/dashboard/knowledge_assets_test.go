@@ -437,3 +437,46 @@ func TestEmbeddedModulesParse(t *testing.T) {
 		}
 	}
 }
+
+// T9: Código (símbolos y dependencias, miles de filas) se carga al entrar por primera
+// vez en #/codigo; «Actualizar» solo lo repite si ya se abrió.
+func TestCodeScreenLoadsLazily(t *testing.T) {
+	main := readAsset(t, "js/main.js")
+	if strings.Contains(main, "loadSemanticData") {
+		t.Errorf("main.js no debe pedir los datos de Código al arrancar (loadSemanticData)")
+	}
+	for _, want := range []string{"refreshSemantic()", "if (route.name === 'codigo') enterSemantic();"} {
+		if !strings.Contains(main, want) {
+			t.Errorf("main.js debe contener %q", want)
+		}
+	}
+
+	node, err := exec.LookPath("node")
+	if err != nil {
+		t.Skip("node no está disponible: se omite la prueba de ejecución de la carga diferida")
+	}
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "lazy.mjs"), []byte(readAsset(t, "js/core/lazy.js")), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	script := "import { lazyLoader } from './lazy.mjs';\n" +
+		"let calls = 0;\n" +
+		"const l = lazyLoader(async () => { calls++; });\n" +
+		"const fail = (m) => { console.error(m); process.exit(1); };\n" +
+		"await l.refresh();\n" +
+		"if (calls !== 0 || l.started) fail('refresh antes de entrar no debe cargar');\n" +
+		"await l.enter();\n" +
+		"if (calls !== 1 || !l.started) fail('la primera entrada debe cargar una vez');\n" +
+		"await l.enter();\n" +
+		"if (calls !== 1) fail('volver a entrar no debe recargar');\n" +
+		"await l.refresh();\n" +
+		"if (calls !== 2) fail('refresh tras entrar debe recargar');\n"
+	if err := os.WriteFile(filepath.Join(dir, "run.mjs"), []byte(script), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	cmd := exec.Command(node, "run.mjs")
+	cmd.Dir = dir
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("carga diferida: %v\n%s", err, out)
+	}
+}

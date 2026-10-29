@@ -6,6 +6,7 @@ import { api, escapeHtml } from '../core/api.js';
 import { $, badge, renderConsole, setBusy, stateEmpty, stateError, stateLoading, statusPill } from '../core/components.js';
 import { formatNumber, plural } from '../core/format.js';
 import { icon } from '../core/icons.js';
+import { lazyLoader } from '../core/lazy.js';
 import { refreshOverview } from '../core/overview.js';
 
 const CONNECTOR_LABEL = {
@@ -174,6 +175,12 @@ export async function loadSemanticDependencies() {
 export async function loadSemanticData() {
   await Promise.all([loadSemanticStatus(), loadSemanticSymbols(), loadSemanticDependencies()]);
 }
+
+// Símbolos y dependencias pesan (miles de filas): se piden al entrar por primera vez
+// en Código, no al arrancar. Inicio usa solo /api/semantic/status, vía overview.js.
+const loader = lazyLoader(loadSemanticData);
+export const enterSemantic = () => loader.enter();
+export const refreshSemantic = () => loader.refresh();
 
 // ---- Reindexar -------------------------------------------------------------------------------------
 

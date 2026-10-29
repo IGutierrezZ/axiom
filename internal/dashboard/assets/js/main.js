@@ -15,7 +15,7 @@ import { initEcosystem, loadEcosystem } from './screens/ecosystem.js';
 import { initIncrements, loadIncrements, renderIncrements } from './screens/incrementos.js';
 import { initInicio, renderInicio } from './screens/inicio.js';
 import { enterSpecs, initLivingDocs, loadLivingDocs } from './screens/livingdoc.js';
-import { initSemantic, loadSemanticData } from './screens/semantic.js';
+import { enterSemantic, initSemantic, refreshSemantic } from './screens/semantic.js';
 import { initSkills, loadSkills, loadSkillsInbox } from './screens/skills.js';
 
 // Cada ruta apunta a la vista (<section class="view">) que la muestra.
@@ -52,7 +52,8 @@ async function loadAllData() {
     loadIncrements(),
     loadSkills(),
     loadSkillsInbox(),
-    loadSemanticData(),
+    // Código se carga al entrar en su ruta; aquí solo se refresca si ya se abrió.
+    refreshSemantic(),
     loadLivingDocs(),
     loadEcosystem(),
     // Inicio y la barra lateral: las rutas que otras pantallas ya piden en este
@@ -76,6 +77,7 @@ function showView(route, { initial }) {
   if (route.name === 'incremento') enterDetail(route);
   // El visor de specs vivas es una ruta (#/specs/<dominio>): también con atrás y adelante.
   if (route.name === 'specs') enterSpecs(route);
+  if (route.name === 'codigo') enterSemantic();
 
   // Tras navegar (no en la carga inicial) el foco pasa al título de la vista,
   // para que los lectores de pantalla anuncien el cambio. Cambiar de dominio dentro de
