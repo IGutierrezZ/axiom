@@ -135,17 +135,28 @@ Las cuatro quedaron resueltas por el usuario el 2026-10-29: acepta las recomenda
 
 ### Fase 2 · Modo solo workspace viable en Claude Code
 
-- [ ] **T4 · Rutas de skills resolubles por ámbito en subagentes y prompts** (ruta: delegada).
-  - Sustituir `~/.claude/skills/...` por un marcador que se resuelva al inyectar: en workspace, una ruta relativa al proyecto (`.claude/skills/...`); en global, `~/.claude/skills/...`.
-  - Alcance: `internal/assets/claude/agents/*.md`, la referencia perezosa a `_shared/sdd-orchestrator-workflow.md` y los equivalentes de Cursor, Kimi y Kiro.
-- [ ] **T5 · MCP de Engram en workspace en una ruta que el agente lee** (ruta: delegada).
-  - Claude: fusionar en `<ws>/.mcp.json`, como context7.
-  - Revisar `MCPConfigPath` del resto de adaptadores con raíz en el workspace.
-- [ ] **T6 · Raíz del proyecto en lugar de la carpeta actual** (ruta: delegada).
-  - Generalizar la búsqueda de la raíz del proyecto (`findProjectRoot`) para install, setup y sync.
-  - Desde una subcarpeta no se crea `<subcarpeta>/.claude`.
-- [ ] **T7 · La TUI respeta el ámbito** (ruta: en línea; un fichero más su prueba).
-  - Eliminar `ScopeGlobal` fijo en `internal/cli/run.go:1907`. Workspace por defecto y global solo de forma explícita.
+- [x] **T4 · Rutas de skills resolubles por ámbito en subagentes y prompts** (ruta: delegada; disparador de escritura en 2+ ficheros). Commit `75faa77a`, +467/−133.
+  - Marcador `{{AXIOM_SKILLS_DIR}}` (y `{{AXIOM_SKILLS_DIR_WIN}}` para la grafía de Kiro), resuelto en `internal/components/sdd/skills_scope.go` a partir de `adapter.SkillsDir("")`: relativo al proyecto en workspace, `~/...` en global.
+  - Cubre subagentes, comandos, el prompt del orquestador de Kimi y el flujo perezoso `_shared/sdd-orchestrator-workflow.md` de Claude, Cursor, Kimi y Kiro. Las líneas que ya resolvían «workspace primero, si no home» se mantienen.
+  - Salida global idéntica salvo una frase de Kiro («Kiro skills directory»); 10 goldens de Kiro regenerados.
+  - Verificación: `go build`, `go vet`, deadcode-ratchet, `go test ./internal/components/... ./internal/assets/... ./internal/agents/...` y `internal/cli` filtrado: ok, salvo los fallos conocidos de filemerge.
+- [x] **T4b · Rutas de skills de los overlays de OpenCode y Kilo** (ruta: delegada). Hallazgo de T4: misma fuga en `internal/assets/opencode/sdd-overlay-{single,multi}.json`. Commit `869d3556`, +185/−13.
+  - Mismo marcador, resuelto con `resolveOverlaySkillsDir`, que valida que el JSON resultante sigue siendo válido.
+  - OpenCode global sin cambios. Kilo global pasa de `~/.config/opencode/skills` a `~/.config/kilo/skills`, que es su `SkillsDir` real (`internal/agents/kilocode/adapter.go:94`): la ruta anterior era un fallo latente. Huella base de Kilo rederivada.
+  - Verificación: `go test ./internal/components/... ./internal/assets/...` y `internal/cli -run 'OpenCode|Kilo|Overlay|Sync'`: ok, salvo filemerge.
+- [x] **T5 · MCP de Engram en workspace en una ruta que el agente lee** (ruta: delegada). Commit `b68c3008`, +473/−5.
+  - Claude en workspace fusiona `mcpServers.engram` en `<ws>/.mcp.json`, conservando lo del usuario. Un `.mcp.json` que no es JSON válido se rechaza sin tocarlo.
+  - `<ws>/.claude/mcp/engram.json` se retira solo si tiene exactamente la forma que genera Axiom. Verify y backup cubren la ruta nueva, como context7.
+  - Revisión de `MCPConfigPath` del resto: Kiro (`.kiro/settings/mcp.json`) es correcto; OpenCode, Kilo, Gemini, Qwen, Kimi, Cursor y Hermes no tienen evidencia de que el agente lea esa ruta en el proyecto. Pasa a R1.
+  - Verificación: `go test ./internal/components/engram/... ./internal/components/mcp/...`, `internal/app` y `internal/cli` filtrado: ok, salvo el fallo conocido de node/npm.
+- [x] **T6 · Raíz del proyecto en lugar de la carpeta actual** (ruta: delegada). Commit `f3bcc8dd`, +527/−10.
+  - `workspace.ResolveRoot(start, homeDir)`: raíz del proyecto Axiom, si no la raíz git (la del worktree enlazado, nunca la del checkout principal; un repo git en HOME no cuenta), si no la carpeta actual.
+  - Install, setup, sync y la sincronización de la TUI la usan con `--scope workspace`. Aviso en castellano por stderr cuando difiere de la carpeta actual. `findProjectRoot` no se reutiliza: busca marcadores de lenguaje.
+  - Verificación: `go test ./internal/workspace/... ./internal/gitcommon/...`, `internal/app` e `internal/cli` filtrado (`TestRunSync|TestSync`, `TestRunInstall|TestInstall|TestTui|Backup|Verify`, `Scope|Workspace`): ok, salvo node/npm.
+  - Abierto (producto): en multirepo con puntero, la raíz desde un repo de código es la carpeta maestra. Es correcto si el agente se abre en la maestra; si se abre en el repo de código, su `.claude` no se escribe.
+- [x] **T7 · La TUI respeta el ámbito** (ruta: en línea; un fichero más su prueba). Commit `df59151f`, +79/−1.
+  - `executeTUIInstallWithBackground` resuelve el ámbito con `ResolveInstallScope("")`: workspace por defecto, global solo con `AXIOM_INSTALL_SCOPE=global`. Las pruebas de transacción de compatibilidad de Windows fijan global.
+  - Verificación: `go test ./internal/cli -run 'TUIInstall|TestExecuteTUIInstall|Scope'`: ok; `internal/app`: ok salvo node/npm.
 
 ### Fase 3 · Huella de máquina mínima (depende de D1, D2)
 
@@ -160,6 +171,7 @@ Las cuatro quedaron resueltas por el usuario el 2026-10-29: acepta las recomenda
     - CodeGraph `--location global`;
     - configuración de GGA.
   - `doctor` lista esa huella.
+  - Hallazgo de T5: `engram setup claude-code` se sigue ejecutando con `--scope workspace` y escribe en home.
 - [ ] **T10 · Estado por proyecto según D2** (ruta: delegada).
   - Selección, persona y asignación de modelos por workspace, con lectura de compatibilidad del estado global.
   - `rdd_mode`: permitir activarlo por clone, además del off actual.
@@ -182,6 +194,7 @@ Las cuatro quedaron resueltas por el usuario el 2026-10-29: acepta las recomenda
 - [ ] **T13 · `axiom uninstall` con ámbito** (ruta: delegada).
   - `--scope workspace` revierte `<ws>/...`.
   - Hallazgo de T2: hoy la desinstalación borra el objeto `permissions` completo de Claude, incluida la lista `deny` del usuario. También borra `defaultApprovalMode` de Gemini y `chat.tools.autoApprove` de VS Code, que ahora son valores del usuario. Debe retirar solo lo que Axiom añadió.
+  - Hallazgos de T5 y T6: la desinstalación de Engram y context7 solo opera sobre HOME, y `uninstall` usa `os.Getwd()` en vez de `workspace.ResolveRoot`.
   - El modo global además retira las entradas de PATH gestionadas (directorio de Engram, `~/bin`, `~/.axiom/bin`) y ofrece purgar `~/.axiom`.
 - [ ] **T14 · Documentación alineada** (ruta: delegada).
   - `docs/usage.md:248`.
@@ -227,6 +240,9 @@ Las cuatro quedaron resueltas por el usuario el 2026-10-29: acepta las recomenda
 - 2026-10-29: la base real del worktree es `origin/main` `7940a5cf` (incluye #213), no `c780061a`.
 - 2026-10-29: fase 1 implementada (T1 `9941eb18`, T2 `8eb668f4`, T3 `2f05d8b3`, T3b `386e0cc0`), unas 2.400 líneas, la mayoría pruebas. V1 de la fase 1 (comprobación manual con `HOME` temporal) sigue pendiente.
 
+- 2026-10-29: fase 2 implementada (T4 `75faa77a`, T4b `869d3556`, T5 `b68c3008`, T6 `f3bcc8dd`, T7 `df59151f`), unas 1.900 líneas, la mayoría pruebas. V1 de las fases 1 y 2 sigue pendiente.
+- 2026-10-29: con `AXIOM_STATE_DIR` exportado fallan en la base `internal/agents`, `internal/components/communitytool` e `internal/components/uninstall`; se ejecutan sin esa variable.
+
 ## Siguiente paso
 
-Autorización para la fase 2 (T4–T7).
+V1 de las fases 1 y 2, y después autorización para la fase 3 (T8–T11).
