@@ -180,8 +180,9 @@ func TestLivingDocsScreenPresentsTheExternalBaseline(t *testing.T) {
 		"consulta el catálogo con api()":          "api('/api/archive/specs')",
 		"sincroniza con api()":                    "api('/api/archive/sync'",
 		"muestra el rechazo de la sincronización": "Fallo al sincronizar: ${err.message}",
-		"muestra el error del catálogo":           "Error cargando el catálogo: ${escapeHtml(err.message)}",
-		"muestra el error del detalle":            "Error: ${escapeHtml(err.message)}",
+		"muestra el error del catálogo":           "stateError(ctx.catalogError, 'Error cargando el catálogo')",
+		"muestra el error del detalle":            "stateError(d.error, 'No se pudo cargar la especificación')",
+		"explica la baseline externa en el visor": "d.external",
 	} {
 		if !strings.Contains(js, want) {
 			t.Errorf("la pantalla no %s (%q)", name, want)

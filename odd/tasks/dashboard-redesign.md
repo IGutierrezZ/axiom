@@ -242,7 +242,26 @@ Ruta de cada tarea: «delegada» significa un escritor acotado, que se elige por
   - «Axiom te ayuda»: buzón de skills, estado semántico, specs y doctor; se oculta si no hay nada relevante.
   - Insignias de la barra lateral (incrementos, skills y aviso de ecosistema) con datos cacheados y refrescados por Actualizar o el sondeo existente de 60 s, no en cada cambio de ruta.
   - Sin actividad reciente ni «Ver como» (D3).
-- [ ] **T5 · Conocimiento: Skills, Specs vivas y Código** (delegada)
+- [x] **T5 · Conocimiento: Skills, Specs vivas y Código** (delegada)
+  - **Resultado (2026-10-29):**
+    - `js/screens/{skills,livingdoc,semantic}.js` reescritos.
+    - `js/core/spec.js` (nuevo): `parseSpec` toma `### Requirement:` y `#### Scenario:`. Los pasos son DADO/CUANDO/ENTONCES/Y/PERO y sus equivalentes en inglés; lo demás pasa a `markdown.js`. DEBE/MUST se resalta solo como texto.
+    - `js/core/format.js` (nuevo): fechas reales, números, plurales y hash corto.
+    - Ruta nueva `#/specs/<dominio>`, con atrás y adelante.
+    - Aprobar y rechazar skills piden confirmación. Como la API no devuelve `warning`, se muestra el `message` con su «(aviso: …)».
+    - Los filtros de símbolos `query` y `kind` van al servidor, con 250 ms de espera tras teclear. La tabla pinta 300 filas como máximo.
+    - Se quita el botón «Recargar» de Código, porque Actualizar ya lo cubre.
+    - `legacy.css` queda reducido a lo que usa Ecosistema y tenía una llave sin cerrar, ya corregida.
+  - **Tests:**
+    - `knowledge_assets_test.go`;
+    - `TestSpecParserAndRouterRuntime` con Node;
+    - `TestEmbeddedModulesParse` (`node --check` de todos los módulos), añadido tras un error de sintaxis que los tests estructurales no vieron;
+    - en `archive_baseline_test.go`, los marcadores pasan a `stateError(...)`.
+  - **Verificación:**
+    - `go build`, `go vet`, `go test ./internal/dashboard/...` (repetido por el orquestador) y `gofmt -l`: OK.
+    - Navegador del orquestador: Specs con 63 dominios y el visor de `workspace-topology`, Código con 17.133 símbolos y Skills con el buzón vacío y las activas, sin errores de consola.
+    - El escritor probó con una raíz de prueba: aprobar con confirmación, escanear, sincronizar, reindexar, 390 px y tema claro.
+    - Sin probar en el navegador el aviso de baseline externa.
   - **Skills:**
     - buzón con lista y vista previa, mostrando `source`, `origin`, `verified`, `role`, `detected_by`, `justification` y `skill_md`;
     - Aprobar y Rechazar con confirmación;
@@ -290,7 +309,7 @@ Ruta de cada tarea: «delegada» significa un escritor acotado, que se elige por
 
 ## Siguiente paso
 
-T5: Skills, Specs vivas y Código.
+T6: Ecosistema.
 
 ## Seguimientos
 

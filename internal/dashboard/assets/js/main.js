@@ -14,7 +14,7 @@ import { initDetail, enterDetail, refreshDetail } from './screens/detalle.js';
 import { initEcosystem, loadEcosystem, renderTopology } from './screens/ecosystem.js';
 import { initIncrements, loadIncrements, renderIncrements } from './screens/incrementos.js';
 import { initInicio, renderInicio } from './screens/inicio.js';
-import { initLivingDocs, loadLivingDocs } from './screens/livingdoc.js';
+import { enterSpecs, initLivingDocs, loadLivingDocs } from './screens/livingdoc.js';
 import { initSemantic, loadSemanticData } from './screens/semantic.js';
 import { initSkills, loadSkills, loadSkillsInbox } from './screens/skills.js';
 
@@ -70,13 +70,16 @@ function showView(route, { initial }) {
   renderBreadcrumb(route);
   closeMenu();
 
-  const title = route.name === 'incremento' ? route.change : routeLabel(route);
+  const title = route.name === 'incremento' ? route.change : route.name === 'specs' && route.domain ? route.domain : routeLabel(route);
   document.title = `${title} · Axiom`;
 
   if (route.name === 'incremento') enterDetail(route);
+  // El visor de specs vivas es una ruta (#/specs/<dominio>): también con atrás y adelante.
+  if (route.name === 'specs') enterSpecs(route);
 
   // Tras navegar (no en la carga inicial) el foco pasa al título de la vista,
-  // para que los lectores de pantalla anuncien el cambio.
+  // para que los lectores de pantalla anuncien el cambio. Cambiar de dominio dentro de
+  // Specs vivas no cuenta: el foco se queda en la lista (o pasa al visor).
   const key = `${route.name}:${route.change || ''}`;
   if (!initial && key !== shownKey) {
     const heading = document.querySelector(`#${target} h1`);

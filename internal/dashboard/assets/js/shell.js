@@ -40,6 +40,9 @@ export function renderBreadcrumb(route) {
   if (route.name === 'incremento') {
     items.push(`<li><a href="${hrefFor('incrementos')}">Incrementos</a></li>`);
     items.push(`<li aria-current="page">${escapeHtml(route.change)}</li>`);
+  } else if (route.name === 'specs' && route.domain) {
+    items.push(`<li><a href="${hrefFor('specs')}">Specs vivas</a></li>`);
+    items.push(`<li aria-current="page">${escapeHtml(route.domain)}</li>`);
   } else {
     items.push(`<li aria-current="page">${escapeHtml(routeLabel(route))}</li>`);
   }

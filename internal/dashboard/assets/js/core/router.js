@@ -3,7 +3,9 @@
 //   #/incrementos
 //   #/incrementos/<name>                     (pestaña Artefactos)
 //   #/incrementos/<name>/{artefactos,roles,handoff}
-//   #/specs   #/skills   #/codigo   #/ecosistema
+//   #/specs
+//   #/specs/<dominio>                        (visor de la especificación viva)
+//   #/skills   #/codigo   #/ecosistema
 // Por defecto #/inicio. Atrás y adelante funcionan porque cada ruta es una
 // entrada del historial (location.hash).
 
@@ -11,7 +13,7 @@ export const SIMPLE_ROUTES = ['inicio', 'incrementos', 'specs', 'skills', 'codig
 export const INCREMENT_TABS = ['artefactos', 'roles', 'handoff'];
 export const DEFAULT_PATH = '#/inicio';
 
-// parseHash convierte un hash en una ruta {name, change, tab}.
+// parseHash convierte un hash en una ruta {name, change, tab} o {name:'specs', domain}.
 // name es una de SIMPLE_ROUTES o 'incremento' (detalle). Lo desconocido cae en inicio.
 export function parseHash(hash) {
   const raw = (hash || '').replace(/^#/, '');
@@ -30,6 +32,15 @@ export function parseHash(hash) {
     const canonical = parts.length <= 3 && (parts.length < 3 || INCREMENT_TABS.includes(parts[2]));
     return { name: 'incremento', change, tab, canonical };
   }
+  if (head === 'specs' && parts.length >= 2) {
+    let domain;
+    try {
+      domain = decodeURIComponent(parts[1]);
+    } catch (_) {
+      return { name: 'inicio', canonical: false };
+    }
+    return { name: 'specs', domain, canonical: parts.length === 2 };
+  }
   if (SIMPLE_ROUTES.includes(head)) {
     return { name: head, canonical: parts.length === 1 };
   }
@@ -42,6 +53,7 @@ export function hrefFor(name, params = {}) {
     const base = `#/incrementos/${encodeURIComponent(params.change)}`;
     return params.tab && params.tab !== 'artefactos' ? `${base}/${params.tab}` : base;
   }
+  if (name === 'specs' && params.domain) return `#/specs/${encodeURIComponent(params.domain)}`;
   return `#/${name}`;
 }
 
@@ -62,7 +74,7 @@ export function startRouter(onRoute) {
     const route = parseHash(window.location.hash);
     if (!route.canonical && window.location.hash) {
       // Normaliza rutas desconocidas sin añadir una entrada de historial.
-      const fixed = route.name === 'incremento' ? hrefFor('incremento', route) : hrefFor(route.name);
+      const fixed = hrefFor(route.name, route);
       window.history.replaceState(null, '', fixed);
     }
     onRoute(route, { initial: first });

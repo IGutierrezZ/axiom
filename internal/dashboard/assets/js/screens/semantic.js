@@ -1,161 +1,244 @@
-// Código y grafo: conectores semánticos, agentes, símbolos y dependencias.
-// Provisional hasta T5.
+// Código y grafo: conectores semánticos, agentes y MCPs, símbolos (con búsqueda y filtro
+// de tipo resueltos en el servidor: parámetros query y kind), dependencias entre paquetes
+// y reindexación de CodeGraph.
 
 import { api, escapeHtml } from '../core/api.js';
-import { $, setBusy } from '../core/components.js';
+import { $, badge, renderConsole, setBusy, stateEmpty, stateError, stateLoading, statusPill } from '../core/components.js';
+import { formatNumber, plural } from '../core/format.js';
 import { icon } from '../core/icons.js';
+import { refreshOverview } from '../core/overview.js';
 
-let currentKind = '';
-let searchTimeout = null;
+const CONNECTOR_LABEL = {
+  codegraph: 'CodeGraph (grafo de conocimiento)',
+  serena: 'Serena MCP (LSP y Tree-sitter)',
+  'native-ast': 'AST nativo de Go (autónomo)'
+};
+const MODE_LABEL = { auto: 'automático', codegraph: 'CodeGraph', serena: 'Serena MCP', 'native-ast': 'AST nativo de Go' };
+const KIND_LABEL = { struct: 'struct', interface: 'interface', func: 'func', method: 'method', type: 'type' };
 
-function errorBanner(prefix, err) {
-  return `<div class="error-banner">${escapeHtml(prefix)}: ${escapeHtml(err.message)}</div>`;
+// Filas de símbolos que se pintan como máximo; el recuento total va siempre en texto.
+const MAX_ROWS = 300;
+
+const ctx = { kind: '', query: '', symbolsToken: 0, symbols: null, deps: null, internalOnly: false, debounce: null };
+
+function yesNo(flag, yes, no) {
+  return flag ? statusPill('ok', yes) : badge('neutral', no, 'x');
+}
+
+// ---- Estado de conectores ------------------------------------------------------------------
+
+function connectorCard(title, installed, configured, note) {
+  return `<div class="kn-card">
+    <h3 class="kn-card-label">${escapeHtml(title)}</h3>
+    <div class="kn-pills">${yesNo(installed, 'Instalado (CLI en PATH)', 'No está en PATH')}${yesNo(configured, 'Configurado en el workspace', 'Sin configurar en el workspace')}</div>
+    ${note ? `<p class="kn-hint">${note}</p>` : ''}
+  </div>`;
+}
+
+function renderAgents(agents) {
+  const box = $('#semantic-agents-list');
+  if (!agents || agents.length === 0) {
+    box.innerHTML = stateEmpty('Sin agentes con MCP', 'No se detectaron agentes con configuración MCP.', 'users');
+    return;
+  }
+  box.innerHTML = `<ul class="kn-agents" aria-label="Agentes de desarrollo">${agents.map(ag => `<li class="kn-agent">
+    <div class="kn-agent-head">
+      <h3 class="kn-agent-name">${escapeHtml(ag.agent_name)}</h3>
+      ${badge('neutral', ag.scope === 'workspace' ? 'Workspace' : 'Global / usuario', ag.scope === 'workspace' ? 'folder' : 'globe')}
+      ${ag.configured ? statusPill('ok', 'Configurado') : badge('neutral', 'No detectado', 'x')}
+    </div>
+    ${ag.config_path ? `<p class="kn-path mono">${escapeHtml(ag.config_path)}</p>` : ''}
+    ${ag.details ? `<p class="kn-agent-details">${escapeHtml(ag.details)}</p>` : ''}
+  </li>`).join('')}</ul>`;
 }
 
 export async function loadSemanticStatus() {
-  const container = $('#semantic-status-cards');
-  const agents = $('#semantic-agents-list');
+  const box = $('#semantic-status-cards');
   try {
     const data = await api('/api/semantic/status');
-
-    let connectorClass = 'badge-connector-ast';
-    let connectorLabel = 'AST nativo Go (autónomo)';
-    if (data.active_connector === 'serena') {
-      connectorClass = 'badge-connector-serena';
-      connectorLabel = 'Serena MCP (LSP/Tree-sitter)';
-    } else if (data.active_connector === 'codegraph') {
-      connectorClass = 'badge-connector-codegraph';
-      connectorLabel = 'CodeGraph Knowledge Graph';
-    }
-
-    const installed = (flag) => flag
-      ? `<span class="badge badge-ok">${icon('check', 13)}CLI en PATH</span>`
-      : `<span class="badge badge-bad">${icon('x', 13)}No está en PATH</span>`;
-    const configured = (flag) => flag
-      ? `<span class="badge badge-ok">${icon('check', 13)}En el workspace</span>`
-      : '<span class="badge badge-neutral">No está en el workspace</span>';
-
-    container.innerHTML = `
-      <div class="stat-card"><div class="stat-label">Conector semántico activo</div><div class="stat-value" style="margin-top:6px"><span class="badge-connector ${connectorClass}">${connectorLabel}</span></div></div>
-      <div class="stat-card"><div class="stat-label">Modo configurado</div><div class="stat-value">${escapeHtml(data.configured_connector || 'auto')}</div></div>
-      <div class="stat-card"><div class="stat-label">Símbolos indexados</div><div class="stat-value">${data.total_symbols || 0}</div></div>
-      <div class="stat-card"><div class="stat-label">Paquetes analizados</div><div class="stat-value">${data.total_packages || 0}</div></div>
-      <div class="stat-card"><div class="stat-label">Diagnóstico de CodeGraph</div><div style="display:flex;flex-direction:column;gap:6px;margin-top:6px">${installed(data.codegraph_installed)}${configured(data.codegraph_configured)}</div></div>
-      <div class="stat-card"><div class="stat-label">Diagnóstico de Serena MCP</div><div style="display:flex;flex-direction:column;gap:6px;margin-top:6px">${installed(data.serena_installed)}${configured(data.serena_configured)}</div></div>`;
-
-    if (data.warnings && data.warnings.length > 0) {
-      const warn = document.createElement('div');
-      warn.className = 'alert alert-warn';
-      warn.style.gridColumn = '1 / -1';
-      warn.innerHTML = `${icon('alert', 18)}<div class="grow"><strong>Aviso de configuración</strong><br>${data.warnings.map(w => '• ' + escapeHtml(w)).join('<br>')}</div>`;
-      container.appendChild(warn);
-    }
-
-    if (!data.agents || data.agents.length === 0) {
-      agents.innerHTML = '<div class="state">No se detectaron agentes con configuración MCP.</div>';
-    } else {
-      agents.innerHTML = data.agents.map(ag => `<div class="agent-item">
-        <h4>
-          <span style="display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap">
-            <span>${escapeHtml(ag.agent_name)}</span>
-            <span class="badge badge-neutral">${ag.scope === 'workspace' ? icon('folder', 13) + 'Workspace' : icon('globe', 13) + 'Global / usuario'}</span>
-          </span>
-          ${ag.configured ? `<span class="badge badge-ok">${icon('check', 13)}Configurado</span>` : '<span class="badge badge-neutral">No detectado</span>'}
-        </h4>
-        <p><strong>Config:</strong> <code>${escapeHtml(ag.config_path)}</code></p>
-        <p style="margin-top:4px">${escapeHtml(ag.details)}</p>
-      </div>`).join('');
-    }
+    const active = data.active_connector;
+    const mode = data.configured_connector || 'auto';
+    const nativeReady = !!data.native_ast_ready;
+    const warnings = Array.isArray(data.warnings) ? data.warnings : [];
+    box.innerHTML = `
+      <div class="kn-card kn-card-main">
+        <h3 class="kn-card-label">Conector activo</h3>
+        <p class="kn-active"><span class="kn-active-dot" aria-hidden="true"></span>${escapeHtml(CONNECTOR_LABEL[active] || active || 'Sin conector')}</p>
+        <p class="kn-hint">Modo configurado: ${escapeHtml(MODE_LABEL[mode] || mode)} · ${plural(data.total_symbols || 0, 'símbolo', 'símbolos')} en ${plural(data.total_packages || 0, 'paquete', 'paquetes')}</p>
+        <div class="kn-pills">${nativeReady ? statusPill('ok', 'AST nativo listo') : badge('warn', 'AST nativo no disponible', 'alert')}</div>
+      </div>
+      ${connectorCard('CodeGraph', data.codegraph_installed, data.codegraph_configured, 'Grafo de conocimiento del código.')}
+      ${connectorCard('Serena MCP', data.serena_installed, data.serena_configured, data.serena_configured ? '' : 'Se configura con «Sincronizar workspace» en <a href="#/ecosistema">Ecosistema</a>.')}
+      ${warnings.length ? `<div class="alert alert-warn kn-status-warn">${icon('alert', 18)}<div class="grow"><strong>Avisos de configuración</strong><ul class="kn-notice-list">${warnings.map(w => `<li>${escapeHtml(w)}</li>`).join('')}</ul></div></div>` : ''}`;
+    renderAgents(data.agents);
   } catch (err) {
-    container.innerHTML = errorBanner('Error cargando el estado semántico', err);
+    box.innerHTML = stateError(err.message, 'Error cargando el estado semántico');
+    $('#semantic-agents-list').innerHTML = stateError(err.message, 'No se pudo cargar la lista de agentes');
   }
 }
 
-export async function loadSemanticSymbols(query, kind) {
-  const tbody = $('#semantic-symbols-body');
-  tbody.innerHTML = '<tr><td colspan="5" class="loading-state">Buscando símbolos en el workspace…</td></tr>';
+// ---- Símbolos ------------------------------------------------------------------------------------
+
+function renderSymbols(symbols) {
+  const box = $('#semantic-symbols-container');
+  const count = $('#semantic-symbols-count');
+  count.textContent = plural(symbols.length, 'resultado', 'resultados');
+  if (symbols.length === 0) {
+    box.innerHTML = stateEmpty('Sin símbolos', 'No se encontraron símbolos que coincidan con los filtros.', 'search');
+    return;
+  }
+  const shown = symbols.slice(0, MAX_ROWS);
+  const rows = shown.map(sym => `<tr>
+    <td class="mono kn-sym-name">${escapeHtml(sym.name)}</td>
+    <td><span class="kn-kind kn-kind-${escapeHtml(KIND_LABEL[sym.kind] ? sym.kind : 'type')}">${escapeHtml(sym.kind)}</span></td>
+    <td class="mono kn-pkg">${escapeHtml(sym.package)}</td>
+    <td class="mono kn-sig">${escapeHtml(sym.signature || '–')}</td>
+    <td class="mono kn-loc">${escapeHtml(sym.file_path)}${sym.line_number ? `:${escapeHtml(sym.line_number)}` : ''}</td>
+  </tr>`).join('');
+  const more = symbols.length > shown.length
+    ? `<p class="kn-hint" role="status">Se muestran los primeros ${formatNumber(shown.length)} de ${formatNumber(symbols.length)}. Afina la búsqueda o el tipo para verlos todos.</p>`
+    : '';
+  box.innerHTML = `<div class="table-wrap kn-table-scroll" role="region" aria-label="Símbolos" tabindex="0">
+    <table class="data-table"><thead><tr><th scope="col">Símbolo</th><th scope="col">Tipo</th><th scope="col">Paquete</th><th scope="col">Signatura</th><th scope="col">Ubicación</th></tr></thead><tbody>${rows}</tbody></table>
+  </div>${more}`;
+}
+
+export async function loadSemanticSymbols(query = ctx.query, kind = ctx.kind) {
+  const box = $('#semantic-symbols-container');
+  const token = ++ctx.symbolsToken;
+  if (ctx.symbols === null) box.innerHTML = stateLoading('Buscando símbolos en el workspace…');
+  else box.setAttribute('aria-busy', 'true');
   try {
     const params = new URLSearchParams();
     if (query) params.append('query', query);
     if (kind) params.append('kind', kind);
-    const symbols = await api(`/api/semantic/symbols?${params.toString()}`);
-    if (!symbols || symbols.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="5" class="empty-state">No se encontraron símbolos que coincidan con los filtros.</td></tr>';
-      return;
-    }
-    const kindClass = { struct: 'badge-kind-struct', interface: 'badge-kind-interface', func: 'badge-kind-func', method: 'badge-kind-method' };
-    tbody.innerHTML = symbols.map(sym => `<tr>
-      <td><strong><code>${escapeHtml(sym.name)}</code></strong></td>
-      <td><span class="badge-kind ${kindClass[sym.kind] || 'badge-kind-type'}">${escapeHtml(sym.kind)}</span></td>
-      <td><code>${escapeHtml(sym.package)}</code></td>
-      <td><code class="muted" style="font-size:12px">${escapeHtml(sym.signature || '-')}</code></td>
-      <td><span class="dim" style="font-size:12px">${escapeHtml(sym.file_path)}:${sym.line_number}</span></td>
-    </tr>`).join('');
+    const qs = params.toString();
+    const symbols = (await api(`/api/semantic/symbols${qs ? `?${qs}` : ''}`)) || [];
+    if (token !== ctx.symbolsToken) return;
+    ctx.symbols = symbols;
+    box.removeAttribute('aria-busy');
+    renderSymbols(symbols);
   } catch (err) {
-    tbody.innerHTML = `<tr><td colspan="5" class="error-banner">Error: ${escapeHtml(err.message)}</td></tr>`;
+    if (token !== ctx.symbolsToken) return;
+    box.removeAttribute('aria-busy');
+    $('#semantic-symbols-count').textContent = 'Error';
+    box.innerHTML = stateError(err.message, 'Error buscando símbolos');
   }
 }
 
+// ---- Dependencias --------------------------------------------------------------------------------
+
+// groupDeps agrupa las relaciones por paquete origen sin repetir destinos.
+export function groupDeps(deps) {
+  const map = new Map();
+  for (const d of deps || []) {
+    if (!map.has(d.source_package)) map.set(d.source_package, { internal: new Set(), external: new Set() });
+    map.get(d.source_package)[d.is_internal ? 'internal' : 'external'].add(d.target_package);
+  }
+  return Array.from(map, ([source, t]) => ({ source, internal: [...t.internal].sort(), external: [...t.external].sort() }))
+    .sort((a, b) => a.source.localeCompare(b.source));
+}
+
+function chips(list) {
+  return list.map(p => `<span class="kn-chip mono">${escapeHtml(p)}</span>`).join('');
+}
+
+function renderDeps() {
+  const box = $('#semantic-dependencies-container');
+  if (!ctx.deps) return;
+  let groups = groupDeps(ctx.deps);
+  if (ctx.internalOnly) groups = groups.filter(g => g.internal.length > 0);
+  if (groups.length === 0) {
+    box.innerHTML = stateEmpty('Sin dependencias', ctx.internalOnly ? 'No hay dependencias internas entre paquetes.' : 'No se registraron dependencias entre paquetes.', 'graph');
+    return;
+  }
+  const links = groups.reduce((n, g) => n + g.internal.length + (ctx.internalOnly ? 0 : g.external.length), 0);
+  box.innerHTML = `<p class="kn-hint" role="status">${escapeHtml(plural(groups.length, 'paquete', 'paquetes'))} · ${escapeHtml(plural(links, 'relación', 'relaciones'))}${ctx.internalOnly ? ' internas' : ''}</p>
+    <ul class="kn-deps kn-scroll" aria-label="Dependencias por paquete">${groups.map(g => `<li class="kn-dep">
+      <p class="kn-dep-src mono">${escapeHtml(g.source)}</p>
+      ${g.internal.length ? `<div class="kn-dep-row"><span class="kn-dep-label">Internas</span><span class="kn-chips">${chips(g.internal)}</span></div>` : ''}
+      ${!ctx.internalOnly && g.external.length ? `<div class="kn-dep-row"><span class="kn-dep-label">Externas</span><span class="kn-chips">${chips(g.external)}</span></div>` : ''}
+    </li>`).join('')}</ul>`;
+}
+
 export async function loadSemanticDependencies() {
-  const container = $('#semantic-dependencies-container');
+  const box = $('#semantic-dependencies-container');
   try {
-    const deps = await api('/api/semantic/dependencies');
-    if (!deps || deps.length === 0) {
-      container.innerHTML = '<div class="state">No se registraron dependencias entre paquetes.</div>';
-      return;
-    }
-    container.innerHTML = deps.map(dep => `<div class="dep-chip ${dep.is_internal ? 'internal' : ''}">
-      <strong><code>${escapeHtml(dep.source_package)}</code></strong>
-      <span class="dim-icon">${icon('arrowRight', 14)}</span>
-      <code>${escapeHtml(dep.target_package)}</code>
-      ${dep.is_internal ? '<span class="badge badge-accent">Interno</span>' : ''}
-    </div>`).join('');
+    ctx.deps = (await api('/api/semantic/dependencies')) || [];
+    renderDeps();
   } catch (err) {
-    container.innerHTML = errorBanner('Error calculando las dependencias', err);
+    box.innerHTML = stateError(err.message, 'Error calculando las dependencias');
   }
 }
 
 export async function loadSemanticData() {
-  await Promise.all([
-    loadSemanticStatus(),
-    loadSemanticSymbols($('#semantic-search-input').value.trim(), currentKind),
-    loadSemanticDependencies()
-  ]);
+  await Promise.all([loadSemanticStatus(), loadSemanticSymbols(), loadSemanticDependencies()]);
 }
 
-export function initSemantic() {
-  $('#btn-refresh-semantic').addEventListener('click', () => loadSemanticData());
+// ---- Reindexar -------------------------------------------------------------------------------------
 
-  const reindex = $('#btn-reindex-codegraph');
-  const feedback = $('#reindex-feedback');
-  reindex.addEventListener('click', async () => {
-    const restore = setBusy(reindex, 'Reindexando…');
-    feedback.classList.remove('hidden');
-    feedback.textContent = 'Ejecutando la reindexación semántica de CodeGraph en el workspace…';
-    try {
-      const data = await api('/api/semantic/reindex', { method: 'POST' });
-      feedback.innerHTML = `${icon('check', 14)} <strong>${escapeHtml(data.message || 'Reindexación completada')}</strong> (${escapeHtml(data.duration || '')})`;
-      await loadSemanticData();
-    } catch (err) {
-      console.error(err);
-      feedback.innerHTML = `<span class="text-danger">Error: ${escapeHtml(err.message)}</span>`;
-    } finally {
-      restore();
-    }
-  });
+function feedback(kind, html, busy = false) {
+  const box = $('#reindex-feedback');
+  const lead = busy ? '<span class="spinner" aria-hidden="true"></span>' : icon({ ok: 'check', warn: 'alert', bad: 'alert' }[kind] || 'info', 18);
+  box.className = `alert alert-${kind}`;
+  box.setAttribute('role', kind === 'bad' ? 'alert' : 'status');
+  box.innerHTML = `${lead}<div class="grow">${html}</div>`;
+}
+
+async function reindex() {
+  const btn = $('#btn-reindex-codegraph');
+  const consoleBox = $('#reindex-console');
+  const restore = setBusy(btn, 'Reindexando…');
+  consoleBox.hidden = true;
+  feedback('neutral', 'Ejecutando la reindexación de CodeGraph en el workspace. Puede tardar un rato; no cierres esta pestaña.', true);
+  try {
+    const data = await api('/api/semantic/reindex', { method: 'POST' });
+    const ok = data.success !== false;
+    const parts = [];
+    if (data.connector) parts.push(`Conector: ${escapeHtml(data.connector)}`);
+    if (data.duration) parts.push(`Duración: ${escapeHtml(data.duration)}`);
+    feedback(ok ? 'ok' : 'warn', `<strong>${escapeHtml(data.message || 'Reindexación completada.')}</strong>${parts.length ? ` ${parts.join(' · ')}` : ''}`);
+    if (data.output) renderConsole(consoleBox, { title: 'Salida de la reindexación', text: data.output, state: ok ? 'ok' : 'error' });
+    await Promise.all([loadSemanticData(), refreshOverview(['semantic'])]);
+  } catch (err) {
+    console.error(err);
+    feedback('bad', `<strong>La reindexación ha fallado.</strong> ${escapeHtml(err.message)}`);
+    // Con un fallo, el servidor devuelve igualmente el resultado con la salida del proceso.
+    const output = err.data && err.data.output;
+    if (output) renderConsole(consoleBox, { title: 'Salida de la reindexación', text: output, state: 'error' });
+  } finally {
+    restore();
+  }
+}
+
+// ---- Montaje -----------------------------------------------------------------------------------------
+
+export function initSemantic() {
+  $('#btn-reindex-codegraph').addEventListener('click', reindex);
 
   const search = $('#semantic-search-input');
   search.addEventListener('input', () => {
-    clearTimeout(searchTimeout);
-    searchTimeout = setTimeout(() => loadSemanticSymbols(search.value.trim(), currentKind), 250);
+    clearTimeout(ctx.debounce);
+    ctx.debounce = setTimeout(() => {
+      ctx.query = search.value.trim();
+      loadSemanticSymbols();
+    }, 250);
   });
 
   const filters = $('#semantic-kind-filters');
   filters.addEventListener('click', (event) => {
-    const btn = event.target.closest('.filter-btn');
+    const btn = event.target.closest('.chip');
     if (!btn) return;
-    filters.querySelectorAll('.filter-btn').forEach(b => b.setAttribute('aria-pressed', String(b === btn)));
-    currentKind = btn.getAttribute('data-kind') || '';
-    loadSemanticSymbols(search.value.trim(), currentKind);
+    filters.querySelectorAll('.chip').forEach(b => b.setAttribute('aria-pressed', String(b === btn)));
+    ctx.kind = btn.getAttribute('data-kind') || '';
+    ctx.query = search.value.trim();
+    loadSemanticSymbols();
+  });
+
+  const toggle = $('#deps-internal-toggle');
+  toggle.addEventListener('click', () => {
+    ctx.internalOnly = !ctx.internalOnly;
+    toggle.setAttribute('aria-pressed', String(ctx.internalOnly));
+    renderDeps();
   });
 }

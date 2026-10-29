@@ -235,35 +235,31 @@
           <div class="page-header">
             <div>
               <h1 id="specs-title" class="page-title" tabindex="-1">Specs vivas</h1>
-              <p class="page-sub">Especificaciones consolidadas en <code>openspec/specs/</code> y regeneradas tras cada archivado.</p>
+              <p class="page-sub">Cómo se comporta hoy el sistema, consolidado en <code>openspec/specs/</code> tras cada archivado.</p>
+              <p class="kn-meta" id="specs-summary" role="status">Cargando el catálogo…</p>
             </div>
             <div class="page-actions">
               <button type="button" id="btn-sync-livingdoc" class="btn btn-primary"><i data-icon="refresh"></i>Sincronizar catálogo</button>
             </div>
           </div>
 
-          <div class="livingdoc-stats-grid" id="livingdoc-metrics">
-            <div class="stat-card"><span class="stat-label">Dominios activos</span><span class="stat-value" id="metric-living-domains">0</span></div>
-            <div class="stat-card"><span class="stat-label">Total de requisitos</span><span class="stat-value" id="metric-living-reqs">0</span></div>
-            <div class="stat-card"><span class="stat-label">Última sincronización</span><span class="stat-value" id="metric-living-sync" style="font-size: 1.05rem">--</span></div>
-          </div>
+          <div id="specs-notice" role="status" aria-live="polite"></div>
 
-          <div class="livingdoc-layout">
-            <div class="card legacy-card">
-              <h2 class="subsection-title">Dominios de especificación</h2>
-              <div id="livingdoc-domains-list" class="livingdoc-list">
-                <div class="loading-state">Cargando catálogo…</div>
+          <div class="kn-layout kn-layout-specs">
+            <nav class="kn-side" aria-label="Dominios de especificación">
+              <div class="kn-search">
+                <label class="sr-only" for="specs-filter">Filtrar dominios</label>
+                <i data-icon="search" data-size="16"></i>
+                <input type="search" id="specs-filter" placeholder="Filtrar dominios" autocomplete="off">
               </div>
-            </div>
-            <div class="card legacy-card">
-              <div class="card-head" style="padding: 0 0 12px; border: 0">
-                <h2 class="subsection-title" id="livingdoc-detail-title">Visor de especificación viva</h2>
-                <span id="livingdoc-detail-version" class="badge" hidden></span>
+              <p class="kn-count" id="specs-count" role="status" aria-live="polite"></p>
+              <div id="livingdoc-domains-list" class="kn-scroll">
+                <div class="state" role="status"><div class="spinner" aria-hidden="true"></div><span>Cargando catálogo…</span></div>
               </div>
-              <div id="livingdoc-viewer" class="livingdoc-viewer-box" tabindex="0">
-                <p class="empty-state">Selecciona un dominio de la izquierda para ver su especificación viva consolidada.</p>
-              </div>
-            </div>
+            </nav>
+            <article class="kn-main" id="livingdoc-viewer" aria-labelledby="livingdoc-detail-title">
+              <div class="state"><span class="state-icon"><i data-icon="book" data-size="24"></i></span><h2 class="state-title" id="livingdoc-detail-title">Visor de especificación viva</h2><span>Elige un dominio de la lista para ver sus requisitos y escenarios.</span></div>
+            </article>
           </div>
         </section>
 
@@ -272,28 +268,43 @@
           <div class="page-header">
             <div>
               <h1 id="skills-title" class="page-title" tabindex="-1">Skills</h1>
-              <p class="page-sub">Buzón de propuestas con aprobación humana y catálogo de skills activas.</p>
+              <p class="page-sub">Conocimiento que Axiom da a los agentes. Nada entra en producción sin que una persona lo apruebe.</p>
             </div>
             <div class="page-actions">
-              <button type="button" id="btn-scan-skills" class="btn btn-primary" title="Detectar las tecnologías del stack y minar patrones locales"><i data-icon="bolt"></i>Escanear tecnologías y minar</button>
+              <button type="button" id="btn-scan-skills" class="btn btn-primary" title="Detectar las tecnologías del stack y minar patrones locales"><i data-icon="bolt"></i>Escanear stack y minar patrones</button>
             </div>
           </div>
 
-          <div class="inbox-section">
-            <div class="inbox-header">
-              <h2 class="subsection-title">Buzón de propuestas pendientes de aprobación</h2>
-              <span class="badge" id="inbox-count">0 pendientes</span>
-            </div>
-            <div id="scan-feedback" class="scan-feedback hidden" role="status"></div>
-            <div class="inbox-grid" id="inbox-container">
-              <div class="loading-state">Consultando el buzón de propuestas…</div>
-            </div>
-          </div>
+          <div id="scan-feedback" class="hidden" role="status" aria-live="polite"></div>
 
-          <h2 class="subsection-title">Skills activas (skills/)</h2>
-          <div class="skills-grid" id="skills-container">
-            <div class="loading-state">Escaneando el catálogo de skills activas…</div>
-          </div>
+          <section class="card card-flush" aria-labelledby="inbox-h">
+            <div class="card-head">
+              <div class="kn-title-row">
+                <h2 class="card-title-h" id="inbox-h">Buzón de propuestas</h2>
+                <span class="badge" id="inbox-count">0 pendientes</span>
+              </div>
+            </div>
+            <div id="inbox-container">
+              <div class="state" role="status"><div class="spinner" aria-hidden="true"></div><span>Consultando el buzón de propuestas…</span></div>
+            </div>
+          </section>
+
+          <section class="card card-flush" aria-labelledby="active-h">
+            <div class="card-head">
+              <div class="kn-title-row">
+                <h2 class="card-title-h" id="active-h">Skills activas</h2>
+                <span class="badge badge-mono" id="skills-count" role="status" aria-live="polite">skills/</span>
+              </div>
+              <div class="kn-search kn-search-inline">
+                <label class="sr-only" for="skills-filter">Filtrar skills</label>
+                <i data-icon="search" data-size="16"></i>
+                <input type="search" id="skills-filter" placeholder="Filtrar por nombre o trigger" autocomplete="off">
+              </div>
+            </div>
+            <div id="skills-container" class="kn-pad">
+              <div class="state" role="status"><div class="spinner" aria-hidden="true"></div><span>Cargando las skills activas…</span></div>
+            </div>
+          </section>
         </section>
 
         <!-- ===== Código y grafo ===== -->
@@ -301,56 +312,66 @@
           <div class="page-header">
             <div>
               <h1 id="codigo-title" class="page-title" tabindex="-1">Código y grafo</h1>
-              <p class="page-sub">Conectores Serena MCP y CodeGraph, y catálogo de símbolos, tipos y dependencias del workspace.</p>
+              <p class="page-sub">Lo que los agentes entienden de tu código: conectores semánticos, símbolos y dependencias entre paquetes.</p>
             </div>
             <div class="page-actions">
               <button type="button" class="btn btn-primary" id="btn-reindex-codegraph" title="Reindexar CodeGraph bajo demanda"><i data-icon="bolt"></i>Reindexar CodeGraph</button>
-              <button type="button" class="btn" id="btn-refresh-semantic"><i data-icon="refresh"></i>Recargar</button>
             </div>
           </div>
 
-          <div id="reindex-feedback" class="scan-feedback hidden" role="status"></div>
-
-          <div class="semantic-status-cards" id="semantic-status-cards">
-            <div class="loading-state">Evaluando el entorno semántico y los conectores…</div>
+          <div id="reindex-feedback" class="hidden" role="status" aria-live="polite"></div>
+          <div class="console" id="reindex-console" hidden>
+            <div class="console-head"><span><i data-icon="terminal" data-size="14"></i> <span data-role="title">Salida de la reindexación</span></span><button type="button" class="btn btn-ghost btn-xs" data-role="clear">Limpiar</button></div>
+            <pre class="console-out" data-role="out" tabindex="0" aria-label="Salida de la reindexación"></pre>
           </div>
 
-          <div class="card legacy-card">
-            <h2 class="subsection-title">Estado de agentes de desarrollo y MCPs</h2>
-            <div id="semantic-agents-list" class="agents-list">
-              <div class="loading-state">Detectando configuraciones de agentes…</div>
+          <section aria-label="Estado de los conectores">
+            <div class="kn-status" id="semantic-status-cards">
+              <div class="state" role="status"><div class="spinner" aria-hidden="true"></div><span>Evaluando el entorno semántico y los conectores…</span></div>
             </div>
-          </div>
+          </section>
 
-          <div class="card legacy-card">
-            <div class="symbols-toolbar">
-              <div class="search-box">
+          <section class="card card-flush" aria-labelledby="sym-h">
+            <div class="card-head">
+              <div class="kn-title-row">
+                <h2 class="card-title-h" id="sym-h">Símbolos</h2>
+                <span class="badge badge-mono" id="semantic-symbols-count" role="status" aria-live="polite">–</span>
+              </div>
+              <div class="kn-search kn-search-inline">
                 <label class="sr-only" for="semantic-search-input">Buscar símbolos</label>
-                <input type="search" id="semantic-search-input" placeholder="Buscar por struct, interface, función o signatura…" class="form-input">
-              </div>
-              <div class="kind-filters" id="semantic-kind-filters" role="group" aria-label="Filtrar por tipo de símbolo">
-                <button type="button" class="filter-btn" data-kind="" aria-pressed="true">Todos</button>
-                <button type="button" class="filter-btn" data-kind="struct" aria-pressed="false">Structs</button>
-                <button type="button" class="filter-btn" data-kind="interface" aria-pressed="false">Interfaces</button>
-                <button type="button" class="filter-btn" data-kind="func" aria-pressed="false">Funciones</button>
-                <button type="button" class="filter-btn" data-kind="method" aria-pressed="false">Métodos</button>
+                <i data-icon="search" data-size="16"></i>
+                <input type="search" id="semantic-search-input" placeholder="Struct, interfaz, función o signatura" autocomplete="off">
               </div>
             </div>
-            <div class="table-wrap" role="region" aria-label="Símbolos" tabindex="0">
-              <table class="data-table" id="semantic-symbols-table">
-                <thead><tr><th>Símbolo</th><th>Tipo</th><th>Paquete</th><th>Signatura</th><th>Ubicación</th></tr></thead>
-                <tbody id="semantic-symbols-body">
-                  <tr><td colspan="5" class="loading-state">Cargando símbolos semánticos…</td></tr>
-                </tbody>
-              </table>
+            <div class="kn-toolbar">
+              <div class="chip-group" id="semantic-kind-filters" role="group" aria-label="Filtrar por tipo de símbolo">
+                <button type="button" class="chip" data-kind="" aria-pressed="true">Todos</button>
+                <button type="button" class="chip" data-kind="struct" aria-pressed="false">Structs</button>
+                <button type="button" class="chip" data-kind="interface" aria-pressed="false">Interfaces</button>
+                <button type="button" class="chip" data-kind="func" aria-pressed="false">Funciones</button>
+                <button type="button" class="chip" data-kind="method" aria-pressed="false">Métodos</button>
+              </div>
             </div>
-          </div>
+            <div id="semantic-symbols-container" class="kn-pad kn-pad-top"></div>
+          </section>
 
-          <div class="card legacy-card">
-            <h2 class="subsection-title">Grafo de dependencias entre paquetes</h2>
-            <div id="semantic-dependencies-container" class="dependencies-container">
-              <div class="loading-state">Calculando relaciones de importación…</div>
-            </div>
+          <div class="kn-two">
+            <section class="card card-flush" aria-labelledby="dep-h">
+              <div class="card-head">
+                <h2 class="card-title-h" id="dep-h">Dependencias entre paquetes</h2>
+                <button type="button" class="chip" id="deps-internal-toggle" aria-pressed="false">Solo internas</button>
+              </div>
+              <div id="semantic-dependencies-container" class="kn-pad">
+                <div class="state" role="status"><div class="spinner" aria-hidden="true"></div><span>Calculando relaciones de importación…</span></div>
+              </div>
+            </section>
+
+            <section class="card card-flush" aria-labelledby="ag-h">
+              <div class="card-head"><h2 class="card-title-h" id="ag-h">Agentes y MCPs</h2></div>
+              <div id="semantic-agents-list" class="kn-pad">
+                <div class="state" role="status"><div class="spinner" aria-hidden="true"></div><span>Detectando configuraciones de agentes…</span></div>
+              </div>
+            </section>
           </div>
         </section>
 
@@ -469,14 +490,6 @@
   </dialog>
 
   <!-- Vista previa genérica (SKILL.md de una propuesta del buzón) -->
-  <dialog id="modal-preview" class="modal modal-wide" aria-labelledby="preview-title">
-    <div class="modal-head">
-      <div><h2 id="preview-title">Previsualización</h2><span class="modal-sub" id="preview-sub"></span></div>
-      <button type="button" class="btn btn-ghost btn-icon btn-sm" data-close aria-label="Cerrar"><i data-icon="x"></i></button>
-    </div>
-    <div class="modal-body" id="preview-content"></div>
-  </dialog>
-
   <!-- Nuevo incremento -->
   <dialog id="modal-new-increment" class="modal" aria-labelledby="new-inc-title">
     <div class="modal-head">
