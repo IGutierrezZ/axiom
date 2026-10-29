@@ -25,3 +25,9 @@ records:
       artifact_digest: f72631221e1065fe12355192399b3710ecec1a5c6eb3b4ff23ab6d5f4ea62b83
       actor: cli
       recorded_at: 2026-10-17T22:18:06.6603773Z
+    - gate: role-apply:fullstack
+      decision: approved
+      reason: '213/214 tareas (S12.26 en sdd-archive); 12 rebanadas con bateria de la regla 3 y CI verde; build, vet y gofmtcheck OK en 44dab2e4; CI de #161 verde en esa punta; cobertura no medida'
+      artifact_digest: 9ae4d1ffccb379e7baafcea2c82dbc22bd149da6ead91d3e9dfea5cf7f6cf795
+      actor: cli
+      recorded_at: 2026-10-29T08:14:47.5981754Z
