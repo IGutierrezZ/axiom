@@ -1914,7 +1914,13 @@ func ExecuteTUIInstallWithBackgroundAndOrchestrator(homeDir string, selection mo
 }
 
 func executeTUIInstallWithBackground(homeDir string, selection model.Selection, resolved planner.ResolvedPlan, profile system.PlatformProfile, background model.OpenCodeBackgroundIntent, piBackground model.PiBackgroundIntent, onProgress pipeline.ProgressFunc) (pipeline.ExecutionResult, *pipeline.Orchestrator) {
-	runtime, err := newInstallRuntime(homeDir, ScopeGlobal, ChannelStable, selection, resolved, profile)
+	// La TUI sigue la misma regla de ámbito que la CLI: workspace por defecto y
+	// global solo cuando se pide de forma explícita (AXIOM_INSTALL_SCOPE=global).
+	scope, err := ResolveInstallScope("")
+	if err != nil {
+		return pipeline.ExecutionResult{Err: err}, nil
+	}
+	runtime, err := newInstallRuntime(homeDir, scope, ChannelStable, selection, resolved, profile)
 	if err != nil {
 		return pipeline.ExecutionResult{Err: err}, nil
 	}
