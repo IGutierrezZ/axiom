@@ -4,9 +4,31 @@
    oscuro mediante data-theme en <html>); aquí solo se consumen.
 
    Tipografía: las pilas de tokens.css empiezan por "Instrument Sans" y
-   "JetBrains Mono". Las fuentes .woff2 se añadirán en assets/fonts/ junto con
-   sus @font-face en un paso posterior; mientras tanto se usan las del sistema.
+   "JetBrains Mono", embebidas en assets/fonts/ (variables en peso, subconjunto
+   latin, licencia OFL junto a cada fichero). Sin red se sirven igual.
    ========================================================================== */
+
+@font-face {
+  font-family: "Instrument Sans";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("/fonts/instrument-sans-latin-wght-normal.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Instrument Sans";
+  font-style: italic;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("/fonts/instrument-sans-latin-wght-italic.woff2") format("woff2");
+}
+@font-face {
+  font-family: "JetBrains Mono";
+  font-style: normal;
+  font-weight: 100 800;
+  font-display: swap;
+  src: url("/fonts/jetbrains-mono-latin-wght-normal.woff2") format("woff2");
+}
 
 /* -------------------------------------------------------------------------
    Base

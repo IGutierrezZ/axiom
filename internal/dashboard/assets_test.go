@@ -125,11 +125,46 @@ func TestAssetsAreServedWithTheirContentType(t *testing.T) {
 	}
 }
 
-// Las fuentes .woff2 se añadirán en assets/fonts/: el tipo MIME debe estar
-// registrado de antemano para que se sirvan como font/woff2.
-func TestWoff2MimeTypeIsRegistered(t *testing.T) {
+var fontURLPattern = regexp.MustCompile(`url\("(/fonts/[^"]+\.woff2)"\)`)
+
+// Las fuentes viven embebidas en assets/fonts/: cada @font-face apunta a un
+// .woff2 servido como font/woff2, y cada familia lleva su licencia OFL.
+func TestEmbeddedFontsAreServed(t *testing.T) {
 	if got := mime.TypeByExtension(".woff2"); got != "font/woff2" {
 		t.Errorf("mime.TypeByExtension(.woff2) = %q, se esperaba font/woff2", got)
+	}
+
+	css := readAsset(t, "style.css")
+	urls := fontURLPattern.FindAllStringSubmatch(css, -1)
+	if len(urls) < 2 {
+		t.Fatalf("style.css declara %d fuentes en @font-face; se esperaban la sans y la mono", len(urls))
+	}
+	h := assetServer(t)
+	for _, m := range urls {
+		rr := getAsset(t, h, m[1])
+		if rr.Code != http.StatusOK {
+			t.Errorf("GET %s = %d, se esperaba 200", m[1], rr.Code)
+			continue
+		}
+		if got := rr.Header().Get("Content-Type"); got != "font/woff2" {
+			t.Errorf("GET %s: Content-Type = %q, se esperaba font/woff2", m[1], got)
+		}
+		if body := rr.Body.Bytes(); len(body) < 4 || string(body[:4]) != "wOF2" {
+			t.Errorf("%s no es un WOFF2 válido", m[1])
+		}
+	}
+	for _, family := range []string{"Instrument Sans", "JetBrains Mono"} {
+		if !strings.Contains(css, `font-family: "`+family+`"`) {
+			t.Errorf("falta el @font-face de %s", family)
+		}
+	}
+	for _, lic := range []string{"fonts/LICENSE-instrument-sans.txt", "fonts/LICENSE-jetbrains-mono.txt"} {
+		if !strings.Contains(readAsset(t, lic), "SIL Open Font License") {
+			t.Errorf("%s debe contener la licencia OFL", lic)
+		}
+	}
+	if !strings.Contains(readAsset(t, "index.html"), `href="/fonts/instrument-sans-latin-wght-normal.woff2" as="font"`) {
+		t.Errorf("index.html debe precargar la fuente sans")
 	}
 }
 

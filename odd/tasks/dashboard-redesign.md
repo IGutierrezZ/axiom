@@ -329,6 +329,15 @@ Ruta de cada tarea: «delegada» significa un escritor acotado, que se elige por
   - Ningún dato de los mockups en producción.
   - `go test ./internal/dashboard/...`, `go vet ./internal/dashboard/...` y `go run ./internal/gofmtcheck`.
 
+- [x] **T8 · Fuentes embebidas** (en línea; autorizada la descarga por el usuario el 2026-10-29)
+  - **Resultado:** `@fontsource-variable/instrument-sans@5.3.0` (normal e itálica) y `jetbrains-mono@5.3.0` (normal), unos 100 KB en total, con su `LICENSE` OFL en `assets/fonts/`. `TestEmbeddedFontsAreServed` sustituye a `TestWoff2MimeTypeIsRegistered`. `go test ./internal/dashboard/...`: OK.
+  - Descargar las versiones variables (eje `wght`, subconjunto latin, que cubre el castellano) de Instrument Sans y JetBrains Mono, con su licencia OFL, desde los paquetes `@fontsource-variable` de npm (vía jsDelivr).
+  - Guardarlas en `assets/fonts/` y declararlas con `@font-face` y `font-display: swap`. Precargar la sans en `index.html`.
+  - Test: que los `.woff2` estén embebidos, se sirvan como `font/woff2` y que no haya peticiones a dominios externos.
+- [ ] **T9 · Carga diferida de Código** (en línea)
+  - Al arrancar solo se pide el estado semántico, que necesita Inicio. Los símbolos y dependencias se piden la primera vez que se entra en `#/codigo`, y al refrescar solo si esa pantalla ya se cargó.
+  - Test de ejecución en node sobre la lógica de carga diferida.
+
 ## Criterios de aceptación
 
 - Las 7 vistas actuales son accesibles con la nueva navegación. Toda acción existente sigue disponible como botón o, si es una fase de agente, como recordatorio (D5).
@@ -349,8 +358,6 @@ Todas las tareas están cerradas. Falta la decisión del usuario sobre push y PR
 ## Seguimientos
 
 - Retirar o redefinir `POST /api/increments/verify`, que queda sin uso en la interfaz (D5).
-- Carga perezosa por pantalla: hoy `loadAllData` pide símbolos y dependencias semánticas al arrancar en cualquier ruta.
-- Fuentes embebidas Instrument Sans y JetBrains Mono: pendientes de que el usuario autorice la descarga. Hoy se usan las del sistema.
 - `GetBackups` no rellena `size_bytes`; hay que corregirlo para que se vea el tamaño de cada respaldo (hallazgo de T6).
 - Retirar Handoffs del dashboard y de la API (D4, decisión del usuario para una versión próxima).
 - Endpoints de actividad, archivar, specs afectadas e historial de dominio, si se quieren recuperar esos bloques (D3).
