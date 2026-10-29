@@ -1,6 +1,7 @@
 package engram
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -333,6 +334,17 @@ func injectWithOptions(configHomeDir, promptDir string, adapter agents.Adapter, 
 			files = append(files, result.Files...)
 			break
 		}
+		if adapter.Agent() == model.AgentClaudeCode {
+			// Claude Code no lee .claude/mcp/<servidor>.json en un proyecto: los
+			// servidores MCP de proyecto se declaran en <proyecto>/.mcp.json.
+			result, err := injectClaudeWorkspaceMCPJSON(configHomeDir, adapter)
+			if err != nil {
+				return InjectionResult{}, err
+			}
+			changed = changed || result.Changed
+			files = append(files, result.Files...)
+			break
+		}
 		// Engram v1.10.3+ writes an absolute path for the command field when
 		// `engram setup <agent>` is invoked. gentle-ai's Inject() runs after
 		// engram setup, so we must preserve any absolute command path already
@@ -615,6 +627,63 @@ func injectClaudeUserConfig(homeDir string, adapter agents.Adapter) (InjectionRe
 	}
 	result.Changed = true
 	result.Files = append(result.Files, legacyPath)
+	return result, nil
+}
+
+// injectClaudeWorkspaceMCPJSON declara Engram en <proyecto>/.mcp.json, el
+// fichero del que Claude Code carga los servidores MCP de proyecto. La fusión
+// conserva los servidores y claves que el usuario ya tuviera. Si una instalación
+// anterior dejó el fichero independiente <proyecto>/.claude/mcp/engram.json con
+// la forma exacta que genera Axiom, lo retira una vez escrita la entrada nueva:
+// Claude Code nunca lo leyó. Un fichero con contenido ajeno no se toca.
+func injectClaudeWorkspaceMCPJSON(workspaceDir string, adapter agents.Adapter) (InjectionResult, error) {
+	mcpPath := filepath.Join(workspaceDir, ".mcp.json")
+	legacyPath := adapter.MCPConfigPath(workspaceDir, "engram")
+
+	current, err := osReadFile(mcpPath)
+	if err != nil {
+		return InjectionResult{}, err
+	}
+	// A diferencia del resto de fusiones, un .mcp.json con contenido que no es
+	// JSON no se sustituye por una base vacía: es un fichero de proyecto del
+	// usuario, normalmente versionado, y perderlo no tiene vuelta atrás.
+	if len(bytes.TrimSpace(current)) > 0 {
+		if _, parseErr := filemerge.UnmarshalJSONObject(current); parseErr != nil {
+			return InjectionResult{}, fmt.Errorf("refusing to modify %q: it could not be parsed as JSON: %w", mcpPath, parseErr)
+		}
+	}
+
+	command := stableEngramCommandForMergedConfig(mcpPath, model.AgentClaudeCode)
+	legacyManaged := false
+	if raw, err := os.ReadFile(legacyPath); err == nil {
+		if legacyCommand, ok := managedLegacyClaudeEngramCommand(raw); ok {
+			legacyManaged = true
+			// Un .mcp.json que ya declara Engram manda sobre el fichero heredado:
+			// solo se hereda la orden cuando todavía no hay entrada de proyecto.
+			if _, declared := existingMergedEngramCommand(current, model.AgentClaudeCode); !declared {
+				command = stableEngramCommandForExisting(legacyCommand, model.AgentClaudeCode)
+			}
+		}
+	} else if !os.IsNotExist(err) {
+		return InjectionResult{}, fmt.Errorf("read legacy Claude Engram config %q: %w", legacyPath, err)
+	}
+
+	write, err := mergeJSONFile(mcpPath, engramOverlayJSON(model.AgentClaudeCode, command))
+	if err != nil {
+		return InjectionResult{}, fmt.Errorf("merge engram into %q: %w", mcpPath, err)
+	}
+	result := InjectionResult{Changed: write.Changed, Files: []string{mcpPath}}
+	if !legacyManaged {
+		return result, nil
+	}
+	removed, err := RemoveManagedLegacyClaudeConfig(legacyPath)
+	if err != nil {
+		return InjectionResult{}, err
+	}
+	if removed {
+		result.Changed = true
+		result.Files = append(result.Files, legacyPath)
+	}
 	return result, nil
 }
 

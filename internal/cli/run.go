@@ -2172,10 +2172,13 @@ func backupTargets(homeDir, workspaceDir string, scope InstallScope, selection m
 				paths[path] = struct{}{}
 			}
 		}
-		if component == model.ComponentEngram && scope == ScopeGlobal {
+		if component == model.ComponentEngram {
+			// Injection migrates the standalone Claude Engram file of earlier
+			// installs (home or workspace) into the registry Claude Code reads,
+			// so the file must be in the snapshot to be restorable on rollback.
 			for _, adapter := range adapters {
 				if adapter.Agent() == model.AgentClaudeCode {
-					paths[adapter.MCPConfigPath(homeDir, "engram")] = struct{}{}
+					paths[adapter.MCPConfigPath(componentPathDirScoped(homeDir, workspaceDir, scope, adapter, model.ComponentEngram), "engram")] = struct{}{}
 				}
 			}
 		}
@@ -2380,6 +2383,12 @@ func componentPathsWithWorkspaceScoped(homeDir, workspaceDir string, scope Insta
 			case model.StrategySeparateMCPFiles:
 				if adapter.Agent() == model.AgentClaudeCode && scope == ScopeGlobal {
 					paths = append(paths, claude.UserConfigPath(homeDir))
+				} else if adapter.Agent() == model.AgentClaudeCode {
+					// Workspace scope declares Engram in <project-root>/.mcp.json,
+					// the file Claude Code loads project MCP servers from. The
+					// standalone .claude/mcp/engram.json it never read is only a
+					// migration source: it is backed up, not verified.
+					paths = append(paths, filepath.Join(targetDir, ".mcp.json"))
 				} else {
 					paths = append(paths, adapter.MCPConfigPath(targetDir, "engram"))
 				}

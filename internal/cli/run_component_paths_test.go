@@ -640,9 +640,15 @@ func TestComponentPathsEngramClaudeUsesUserRegistryAndPreservesWorkspaceScope(t 
 	}
 
 	workspacePaths := componentPathsWithWorkspaceScoped(home, workspace, ScopeWorkspace, model.Selection{}, adapters, model.ComponentEngram)
+	// En workspace Engram se declara en <proyecto>/.mcp.json, el fichero que
+	// Claude Code carga para los servidores MCP de proyecto. El fichero
+	// independiente .claude/mcp/engram.json no lo lee y no se verifica.
 	workspaceLegacy := filepath.Join(workspace, ".claude", "mcp", "engram.json")
-	if !containsPath(workspacePaths, workspaceLegacy) || containsPath(workspacePaths, filepath.Join(workspace, ".claude.json")) {
-		t.Fatalf("workspace Engram paths must remain unchanged; paths=%v", workspacePaths)
+	if !containsPath(workspacePaths, filepath.Join(workspace, ".mcp.json")) ||
+		containsPath(workspacePaths, workspaceLegacy) ||
+		containsPath(workspacePaths, filepath.Join(workspace, ".claude.json")) ||
+		containsPath(workspacePaths, registry) {
+		t.Fatalf("las rutas de Engram en workspace deben ser solo <proyecto>/.mcp.json; paths=%v", workspacePaths)
 	}
 }
 
