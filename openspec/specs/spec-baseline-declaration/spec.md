@@ -76,7 +76,8 @@ El bloque `baseline:` de `axiom.yaml` declara los documentos de la especificaci�
 
 ### Requirement: Bloque `baseline:` Opcional y Defecto OpenSpec (REQ-24.13)
 
-`axiom.yaml` PUEDE declarar un bloque de primer nivel `baseline:` con la lista `documents`. Sin el bloque, la baseline es la de OpenSpec por defecto y la lectura, la integración y el archivado DEBEN comportarse exactamente como antes de esta capacidad. Con el bloque, la baseline es la del proyecto: los documentos declarados, en su ubicación y formato, y Axiom NO DEBE consultar, crear ni actualizar `<planning home>/specs/` como baseline. El bloque se admite en las tres topologías. Un bloque `baseline:` sin documentos (lista ausente o vacía) NO es válido.
+`axiom.yaml` PUEDE declarar un bloque de primer nivel `baseline:` con la lista `documents`. Sin el bloque, la baseline es la de OpenSpec por defecto y la lectura, la integración y el archivado DEBEN comportarse exactamente como antes de esta capacidad. Con el bloque, la baseline es la del proyecto: los documentos declarados, en su ubicación y formato, y Axiom NO DEBE consultar, crear ni actualizar `<planning home>/specs/` como baseline. El bloque se admite en las dos topologías (`monorepo-embedded` y `multirepo`). Un bloque `baseline:` sin documentos (lista ausente o vacía) NO es válido.
+(Previously: el bloque se admitía en las tres topologías, incluida la retirada `monorepo-decoupled`)
 
 #### Scenario: Sin bloque la baseline es OpenSpec
 - **DADO** un `axiom.yaml` sin `baseline:`
@@ -90,8 +91,8 @@ El bloque `baseline:` de `axiom.yaml` declara los documentos de la especificaci�
 - **ENTONCES** la integración se aplica al documento declarado
 - **Y** no se consulta ni se crea `<planning home>/specs/`
 
-#### Scenario: El bloque se admite en las tres topologías
-- **DADO** un `axiom.yaml` con `baseline:` válido en `monorepo-embedded`, en `monorepo-decoupled` y en `multirepo`
+#### Scenario: El bloque se admite en las dos topologías
+- **DADO** un `axiom.yaml` con `baseline:` válido en `monorepo-embedded` y en `multirepo`
 - **CUANDO** se ejecuta `axiom workspace validate` en cada uno
 - **ENTONCES** ninguno reporta error por la presencia del bloque
 
@@ -100,9 +101,6 @@ El bloque `baseline:` de `axiom.yaml` declara los documentos de la especificaci�
 - **CUANDO** se ejecuta `axiom workspace validate`
 - **ENTONCES** se reporta en español que la baseline declarada requiere al menos un documento
 - **Y** el código de salida es `1`
-
----
-
 ### Requirement: Documentos por Dominio y Mapeo Dominio a Documento (REQ-24.14)
 
 Cada entrada de `baseline.documents` DEBE declarar `domain` y `path`. `domain` DEBE ser un identificador en minúsculas, dígitos y guiones (`^[a-z0-9]+(-[a-z0-9]+)*$`) y es el mismo nombre del directorio `specs/<dominio>/` de las delta specs de un cambio. `path` DEBE ser una ruta relativa a `workspaceRoot` (separadores `/` o `\`) que apunta a un fichero regular existente y permanece dentro de `workspaceRoot`. Cada dominio DEBE mapear a un único documento y cada documento a un único dominio. Una delta spec solo puede integrarse en un dominio declarado (REQ-24.48).
