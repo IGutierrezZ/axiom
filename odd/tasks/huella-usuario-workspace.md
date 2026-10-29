@@ -2,7 +2,7 @@
 
 > **Documento vivo ODD.** Fichero autoritativo: `odd/tasks/huella-usuario-workspace.md`.
 > Espejo de recuperación en Engram: topic `odd/huella-usuario-workspace/tasks`, proyecto `axiom`.
-> Worktree `C:\repos\axiom-wt\huella-usuario-workspace\axiom`, rama `fix/huella-usuario-workspace`, base `origin/main` `c780061a`.
+> Worktree `C:\repos\axiom-wt\huella-usuario-workspace\axiom`, rama `fix/huella-usuario-workspace`, base `origin/main` `7940a5cf`.
 
 ## Objetivo
 
@@ -83,19 +83,55 @@ Las cuatro quedaron resueltas por el usuario el 2026-10-29: acepta las recomenda
 
 ### Fase 1 · Inercia fuera de proyectos Axiom (sin decisiones bloqueantes salvo D3)
 
-- [ ] **T1 · Hook del registro de skills inerte fuera de proyectos Axiom** (ruta: delegada; disparador: guarda Go, plugin TS de OpenCode y Kilo, pruebas).
-  - Aplicar el criterio D3 en `internal/skillregistry/guard.go` y en los plugins `skill-registry.ts` (v1 y v2).
-  - Fuera de un proyecto Axiom no se escribe `.atl/`, no se toca `AGENTS.md` y no se guarda nada en Engram. La salida es silenciosa con código 0.
-  - Pruebas: repo git ajeno (con y sin `AGENTS.md`), carpeta sin git, proyecto Axiom (comportamiento actual intacto).
-- [ ] **T2 · Permisos con ámbito y sin modos de autoaprobación** (ruta: delegada; absorbe las tareas T1–T4 de `permission-scope-workspace`).
-  - Destino según el ámbito en install, sync, backup y verify (`componentPathDirScoped`). Un agente sin modo workspace se omite y se informa.
-  - Retirar `bypassPermissions`, `auto_edit`, `autoApprove` y `bash "*": allow` de los overlays de `internal/components/permissions/inject.go`. Un overlay vacío no tiene destino.
-  - Unión de `deny` en `filemerge`, limitada a las claves declaradas.
-  - Sustituir `TestInjectClaudeCodeUsesBypassPermissions`, `TestInjectGeminiCLIUsesAutoEditMode` y `TestInjectVSCodeCopilotUsesAutoApprove`.
-- [ ] **T3 · Detección de proyecto y guardas en repositorios ajenos** (ruta: delegada; depende de D3).
-  - Endurecer `workspace.Locate`, o el punto de entrada de las guardas, según D3.
-  - Probar que `branch guard` y `sdd-preflight-hook` no bloquean en un repo ajeno que tenga `openspec/changes/...`.
-  - Comprobar el comportamiento de los hooks de Claude cuando falta `axiom` en el PATH (código de salida no bloqueante).
+- [x] **T1 · Hook del registro de skills inerte fuera de proyectos Axiom** (ruta: delegada; disparador: guarda Go, plugin TS de OpenCode y Kilo, pruebas). Commit `9941eb18`.
+  - Nuevo `workspace.IsAxiomProject(start) (root, ok)` en `internal/workspace/project.go`. Cuenta `axiom.yaml` o un puntero `.axiom-workspace` resoluble, nunca `openspec/` solo.
+  - `RefreshSkip` en `internal/skillregistry/guard.go` añade el motivo `SkipNoAxiomProject`. Lo aplican los hooks, la CLI manual, el paso posterior a sync y `RegenerateSkillsIndex`, así que los hooks ya instalados quedan inertes sin volver a sincronizar.
+  - Fuera de un proyecto Axiom no se escribe `.atl/`, no se toca `AGENTS.md` y no se guarda nada en Engram. Termina con código 0 y, con `--quiet`, sin salida.
+  - Los plugins `skill-registry.ts` solo invocan la CLI y no cambian.
+  - Desviación aceptada: el aviso sin `--quiet` sale por stdout, no por stderr, porque el camino heredado solo tiene escritor de stdout. Los hooks usan `--quiet`.
+  - Verificación:
+    - `go test ./internal/skillregistry/... ./internal/workspace/... -count=1`: ok (repetido por el padre).
+    - `go test ./internal/app/...`: un fallo previo de la base (`TestTuiInstallOnThenSyncPreservesAndRefreshesOpenCodeActivation`, falta node/npm).
+    - `go test ./internal/cli/ -run 'SkillRegistry|SkillIndex|Sync|PostSync|Skill'`: ok.
+    - `go vet ./...`, `go build ./...` y deadcode-ratchet: ok.
+  - Tamaño: +609/−36, de ellas unas 440 líneas de pruebas. Nivel `axiom review assess`: medium. RDD desactivado.
+- [x] **T2 · Permisos con ámbito y sin modos de autoaprobación** (ruta: delegada; absorbe las tareas T1–T4 de `permission-scope-workspace`). Commit `8eb668f4`.
+  - Destino según el ámbito en install, sync, backup y verify, mediante `permissionsRoot` y `noteSkippedPermissions` en `internal/cli/run.go` y `internal/cli/sync.go`. Un agente sin modo workspace se omite con un aviso en castellano por stderr y nunca cae a home.
+  - Overlays retirados: `bypassPermissions`, `auto_edit`, `chat.tools.autoApprove`, y `bash "*": allow` y `read "*": allow` de OpenCode y Kilo.
+    - Retirar `read` amplía lo planificado, pero responde al mismo criterio de no imponer comodines.
+    - Gemini, Qwen y VS Code se quedan sin overlay y no se escribe nada para ellos.
+  - `filemerge.UnionJSONArrays` une solo las rutas declaradas (`permissions.deny` de Claude): las del usuario primero y sin duplicados. Es idempotente.
+  - Documentación de permisos actualizada: `components.md`, `agents.md`, `kiro.md`, `quickstart.md` y `manual-de-inicio.md`.
+  - Verificación:
+    - `go test ./internal/components/permissions/...`: ok (repetido por el padre).
+    - `go test ./internal/components/filemerge/...`: dos fallos previos de la base (`TestWriteFileAtomicFollows{,Relative}DirectoryJunction`, unión de directorios en Windows).
+    - `go test ./internal/cli/ -run 'Permission|ComponentPath|IncludePermissions|Scope|Backup|Verify'` y `-run 'TestRunInstall|TestRunSync|TestInstall|TestUninstall'`: ok.
+    - `go vet`, `go build`, deadcode-ratchet y `gofmt`: ok.
+  - Tamaño: +996/−147, de ellas unas 880 líneas de pruebas. Nivel: medium.
+- [x] **T3 · Detección de proyecto y guardas en repositorios ajenos** (ruta: delegada; depende de D3). Commit `2f05d8b3`.
+  - Decisión: `markerAt` y `Locate` no cambian. REQ-24.2 (`planning-home-resolution`) exige `openspec/` como marcador para los comandos explícitos, y hay 32 llamadas a `Locate`. El filtro `IsAxiomProject` se aplica en la entrada de cada hook:
+    - `branch guard`, en sus caminos pre y post de `internal/branch/engine`;
+    - `sdd-preflight-hook`, que usa el `cwd` del payload;
+    - `review stop-hook`: fuera de proyecto no lee el modo RDD ni escribe marcas en `~/.gentle-ai/review-stop-hook`.
+  - Fallo real confirmado: sin los filtros, un repo con `openspec/changes/x/` y sin `axiom.yaml` recibía un bloqueo de escritura y una denegación de preflight.
+  - Sin binario `axiom`: los comandos fallan con código 127 en bash y 1 en PowerShell. No es 2, así que Claude no bloquea, aunque muestra un error no bloqueante en cada uso.
+    - No se envuelven: la cadena del comando es la identidad de la entrada (hash de confianza de Codex, retirada por coincidencia exacta y pruebas de contrato).
+    - `branch guard` sigue devolviendo 2 en errores de uso, por contrato fijado en una prueba.
+  - Verificación:
+    - `go test ./internal/workspace/... ./internal/branch/... ./internal/components/sdd/...`: ok, con `internal/branch/engine` ejecutado sin `AXIOM_STATE_DIR`, porque una prueba escribe su propio hub.
+    - `go test ./internal/cli/ -run 'BranchGuard|Guard|Preflight|StopHook|Hook'`: ok. El padre repitió las 6 pruebas de repo ajeno: ok.
+    - `go test ./internal/assets/...`, `go vet`, `go build`, deadcode-ratchet y `gofmt`: ok.
+  - Tamaño: +263/−23. Nivel: medium.
+- [x] **T3b · Plugin `sdd-task-result-artifacts.ts` inerte fuera de proyectos Axiom** (ruta: delegada; surge de T3 porque el plugin bloquea en memoria, no invoca la CLI). Commit `386e0cc0`.
+  - Bloque `axiom-project-gate` idéntico en v1 y v2. Los cuatro hooks activos lo consultan y, fuera de un proyecto, no hacen nada. Si hay error, el resultado es inerte.
+  - Digests históricos añadidos en `opencode_plugin_digests.go` para que se refresquen las copias instaladas.
+  - Paridad con `workspace.IsAxiomProject` en 19 directorios de prueba, ejecutada con node.
+  - Verificación:
+    - `go test ./internal/assets/... ./internal/sddtaskresult/... ./internal/components/sdd/... ./internal/opencode/...`: ok. El padre repitió las pruebas `ProjectGate`: ok.
+    - `go test ./internal/cli/ -run 'Plugin|OpenCode|Digest|Managed' -skip TestOpenCodeReviewTransport`: ok.
+    - El grupo `TestOpenCodeReviewTransport*` se cuelga también en la base.
+  - Tamaño: +499/−9. Nivel: medium.
+  - Sin verificar: el host real de OpenCode v2 (`scripts/test-opencode-v2-host.py`) y el arnés v1 con bun, que no está instalado.
 
 ### Fase 2 · Modo solo workspace viable en Claude Code
 
@@ -145,6 +181,7 @@ Las cuatro quedaron resueltas por el usuario el 2026-10-29: acepta las recomenda
 
 - [ ] **T13 · `axiom uninstall` con ámbito** (ruta: delegada).
   - `--scope workspace` revierte `<ws>/...`.
+  - Hallazgo de T2: hoy la desinstalación borra el objeto `permissions` completo de Claude, incluida la lista `deny` del usuario. También borra `defaultApprovalMode` de Gemini y `chat.tools.autoApprove` de VS Code, que ahora son valores del usuario. Debe retirar solo lo que Axiom añadió.
   - El modo global además retira las entradas de PATH gestionadas (directorio de Engram, `~/bin`, `~/.axiom/bin`) y ofrece purgar `~/.axiom`.
 - [ ] **T14 · Documentación alineada** (ruta: delegada).
   - `docs/usage.md:248`.
@@ -187,7 +224,9 @@ Las cuatro quedaron resueltas por el usuario el 2026-10-29: acepta las recomenda
 - 2026-10-29: D3 resuelta por el usuario: solo `axiom.yaml`, directo o mediante el puntero `.axiom-workspace`. D1, D2 y D4 aceptadas según la recomendación.
 - 2026-10-29: la migración (D4) no tiene tarea propia; queda cubierta por T13 (desinstalación global) y T9 (`doctor` con restos globales).
 - 2026-10-29: entrega elegida por el usuario: una sola PR con la etiqueta `size:exception`.
+- 2026-10-29: la base real del worktree es `origin/main` `7940a5cf` (incluye #213), no `c780061a`.
+- 2026-10-29: fase 1 implementada (T1 `9941eb18`, T2 `8eb668f4`, T3 `2f05d8b3`, T3b `386e0cc0`), unas 2.400 líneas, la mayoría pruebas. V1 de la fase 1 (comprobación manual con `HOME` temporal) sigue pendiente.
 
 ## Siguiente paso
 
-Autorización para empezar la implementación por la fase 1 (T1–T3).
+Autorización para la fase 2 (T4–T7).
