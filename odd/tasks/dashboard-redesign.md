@@ -2,7 +2,7 @@
 
 > **Documento vivo ODD.** Fichero autoritativo: `odd/tasks/dashboard-redesign.md`, en el worktree `C:\repos\axiom-wt\dashboard-redesign` (rama `feat/dashboard-redesign`).
 > Espejo de recuperación en Engram: topic `odd/dashboard-redesign/tasks`, proyecto `axiom`.
-> **Estado: En curso (2026-10-29).** Carril ODD elegido por el usuario.
+> **Estado: Implementado (2026-10-29), pendiente de PR.** Carril ODD elegido por el usuario.
 > Referencia de diseño: `docs/redesign/` (README, `tokens.css` y 9 mockups `.dc.html` de Claude Design). **Es material de referencia, no especificación**: lo que manda es este documento.
 
 ## Objetivo
@@ -308,7 +308,19 @@ Ruta de cada tarea: «delegada» significa un escritor acotado, que se elige por
   - Topología desde `/api/workspace`.
   - Modelos, `agent` × `role`, desde `/api/ecosystem/models`.
   - Respaldos con tamaño a partir de `size_bytes` y Restaurar con confirmación.
-- [ ] **T7 · Limpieza y verificación final** (en línea y en el navegador)
+- [x] **T7 · Limpieza y verificación final** (en línea y en el navegador)
+  - La limpieza se hizo en T6.
+  - **Verificación final del orquestador (2026-10-29), con la raíz del worktree en la vista previa:**
+    - **Rutas:** las 9 cargan (Inicio, Incrementos, detalle con Artefactos, Roles y Handoff, `#/specs/workspace-topology`, Skills, Código y Ecosistema) y el título del documento cambia en cada una.
+    - **Desbordamiento:** ninguna ruta tiene desplazamiento horizontal de página, ni a 800 px ni a 390 px.
+    - **Iconos:** no queda ningún botón de solo icono sin nombre accesible.
+    - **Teclado:** el foco visible es `outline` 2 px sólido en `--accent` (`:focus-visible`), comprobado con Tab.
+    - **Tema:** Claro y Oscuro se aplican y persisten.
+    - **Consola:** el único error es el 404 esperado de `/api/handoffs` en un incremento sin `handoff.md`, que se muestra como estado vacío.
+    - **Contraste:** lo mide `tokens_test.go` en ambos temas.
+    - **Datos de los mockups:** no hay ninguno ni referencias a Google Fonts (`rg` sobre `assets/`).
+    - **Comandos:** `go test -count=1 ./internal/dashboard/...`, `go vet ./internal/dashboard/...` y `gofmt -l internal/dashboard`: OK.
+  - **Observación:** al cargar, `loadAllData` pide todas las fuentes (también `/api/semantic/symbols`, con unos 17.000 símbolos, y `dependencies`) aunque se abra Inicio. Ya pasaba antes del rediseño. Pasa a Seguimientos.
   - Eliminar el CSS y el JS muertos de la interfaz antigua.
   - Recorrer en el navegador las 7 vistas antiguas y comprobar que no se pierde ninguna acción existente salvo las convertidas en recordatorio por D5.
   - Revisar en claro y oscuro, a 1440 px y a 390 px.
@@ -332,11 +344,13 @@ Ruta de cada tarea: «delegada» significa un escritor acotado, que se elige por
 
 ## Siguiente paso
 
-T7: verificación final.
+Todas las tareas están cerradas. Falta la decisión del usuario sobre push y PR (`scripts/axiom-worktree.ps1 pr dashboard-redesign`) y sobre las fuentes.
 
 ## Seguimientos
 
 - Retirar o redefinir `POST /api/increments/verify`, que queda sin uso en la interfaz (D5).
+- Carga perezosa por pantalla: hoy `loadAllData` pide símbolos y dependencias semánticas al arrancar en cualquier ruta.
+- Fuentes embebidas Instrument Sans y JetBrains Mono: pendientes de que el usuario autorice la descarga. Hoy se usan las del sistema.
 - `GetBackups` no rellena `size_bytes`; hay que corregirlo para que se vea el tamaño de cada respaldo (hallazgo de T6).
 - Retirar Handoffs del dashboard y de la API (D4, decisión del usuario para una versión próxima).
 - Endpoints de actividad, archivar, specs afectadas e historial de dominio, si se quieren recuperar esos bloques (D3).
