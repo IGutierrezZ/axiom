@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/pathidentity"
+	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
 // SkipReason classifies why `skill-registry refresh` must not initialize a
@@ -27,10 +28,16 @@ const (
 	// even with an existing .atl, so a stray home registry never keeps
 	// startup hooks writing into $HOME.
 	SkipHomeDirectory SkipReason = "home-directory"
-	// SkipNoProjectMarker: cwd carries no project marker (no .git, no
-	// existing .atl, no project skills workspace). Refresh skips without
-	// creating anything.
+	// SkipNoProjectMarker: cwd is inside an Axiom project but carries no project
+	// marker of its own (no .git, no existing .atl, no project skills
+	// workspace). Refresh skips without creating anything.
 	SkipNoProjectMarker SkipReason = "no-project-marker"
+	// SkipNoAxiomProject: neither cwd nor any ancestor holds an axiom.yaml, and
+	// no .axiom-workspace pointer resolves to one. The refresh hooks are
+	// installed machine-wide, so they must be inert in every repository that
+	// does not belong to Axiom: nothing is written, not even in a git checkout
+	// that carries an AGENTS.md or an openspec/ directory.
+	SkipNoAxiomProject SkipReason = "no-axiom-project"
 )
 
 // CleanPathArg exposes the --cwd normalization used by RefreshSkip and
@@ -44,7 +51,10 @@ func CleanPathArg(path string) string {
 }
 
 // RefreshSkip reports whether a refresh at cwd must be skipped and why.
-// It never writes to the filesystem.
+// It never writes to the filesystem. Every entry point of the refresh (hooks,
+// the manual command, the post-sync step and the OpenCode plugin) goes through
+// it, so a hook installed on a machine long ago stops acting outside Axiom
+// projects without being re-synced.
 func RefreshSkip(cwd, home string) SkipReason {
 	cwd = cleanPathArg(cwd)
 	if reason := protectedDirectory(cwd, home); reason != SkipNone {
@@ -52,6 +62,9 @@ func RefreshSkip(cwd, home string) SkipReason {
 	}
 	if !dirExists(cwd) {
 		return SkipNoProjectMarker
+	}
+	if _, ok := workspace.IsAxiomProject(cwd); !ok {
+		return SkipNoAxiomProject
 	}
 	if hasProjectMarker(cwd) {
 		return SkipNone

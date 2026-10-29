@@ -138,3 +138,40 @@ func TestDefaultPostSyncSkillRegeneratorSkipsDifferentlySpelledHome(t *testing.T
 		t.Errorf("the refresh must not touch the home AGENTS.md: %q, %v", got, readErr)
 	}
 }
+
+// TestDefaultPostSyncSkillRegeneratorIsInertOutsideAxiomProjects: sync can run in
+// a repository that has no axiom.yaml; the post-sync refresh must leave its
+// AGENTS.md and its tree alone (the hooks and this step share one guard).
+func TestDefaultPostSyncSkillRegeneratorIsInertOutsideAxiomProjects(t *testing.T) {
+	home := t.TempDir()
+	repo := t.TempDir()
+	skillDir := filepath.Join(repo, "skills", "demo")
+	if err := os.MkdirAll(skillDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(skillDir, "SKILL.md"), []byte("---\nname: demo\ndescription: Demo\n---\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(repo, ".git"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	agentsPath := filepath.Join(repo, "AGENTS.md")
+	const agents = "# Reglas\n\n## Skills\n\n<!-- axiom:skills-index -->\n<!-- /axiom:skills-index -->\n"
+	if err := os.WriteFile(agentsPath, []byte(agents), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	count, err := defaultPostSyncSkillRegenerator(repo, home)
+	if err != nil {
+		t.Fatalf("defaultPostSyncSkillRegenerator() error = %v", err)
+	}
+	if count != 0 {
+		t.Errorf("skills indexed = %d, want 0 outside an Axiom project", count)
+	}
+	if _, statErr := os.Stat(filepath.Join(repo, ".atl")); !os.IsNotExist(statErr) {
+		t.Errorf("the refresh must not create .atl: stat err = %v", statErr)
+	}
+	if got, readErr := os.ReadFile(agentsPath); readErr != nil || string(got) != agents {
+		t.Errorf("the refresh must not touch AGENTS.md: %q, %v", got, readErr)
+	}
+}

@@ -31,10 +31,12 @@ func stubMirror(t *testing.T, fail bool) *int {
 	return &calls
 }
 
-// makeProject creates a project root with one skill and returns its path.
+// makeProject creates an Axiom project root (axiom.yaml, since the refresh is
+// inert anywhere else) with one skill and returns its path.
 func makeProject(t *testing.T) string {
 	t.Helper()
 	project := t.TempDir()
+	writeAxiomYAML(t, project)
 	if err := os.MkdirAll(filepath.Join(project, ".git"), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -123,8 +125,8 @@ func TestSkillIndexExitCodeTable(t *testing.T) {
 			t.Fatalf("exit = %d, want 0", code)
 		}
 		out := stdout.String()
-		if !strings.Contains(out, "no-project-marker") || !strings.Contains(out, fresh) {
-			t.Fatalf("notice must carry the reason and the path, got %q", out)
+		if !strings.Contains(out, "axiom.yaml") || !strings.Contains(out, fresh) {
+			t.Fatalf("notice must name the missing axiom.yaml and the path, got %q", out)
 		}
 		if strings.Count(out, "\n") != 1 {
 			t.Fatalf("notice must be one line, got %q", out)
