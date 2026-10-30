@@ -211,7 +211,20 @@ Las cuatro quedaron resueltas por el usuario el 2026-10-29: acepta las recomenda
     - Windsurf: `.windsurf/rules`.
     - Trae y Antigravity.
   - Verificar además si OpenCode carga `<ws>/.config/opencode` o solo `opencode.json` y `.opencode/`, y lo equivalente en Gemini, Qwen, Kimi y Hermes.
+  - **Hecha (2026-10-30, delegada a un investigador; documentación oficial, sin ejecutar agentes).** Tabla completa en Engram `odd/huella-usuario-workspace/fase-4`. Conclusiones:
+    - OpenCode y Kilo, que ya tienen modo workspace, escriben en `<ws>/.config/opencode` y `<ws>/.config/kilo`, que el agente **no lee**. Leen `opencode.json`, `.opencode/` y `AGENTS.md` en la raíz (OpenCode), y `.kilo/` con `kilo.jsonc` (Kilo).
+    - Gemini y Qwen escriben instrucciones en `.gemini/GEMINI.md` y `.qwen/QWEN.md`, que no se leen; leen `GEMINI.md` y `QWEN.md` en la raíz. Skills y `settings.json` sí coinciden.
+    - Kimi: las skills en `.config/agents/skills` no se leen; MCP y configuración solo globales. Hermes: MCP solo global.
+    - Cursor coincide casi entero.
+    - Codex (verificado además por el orquestador): MCP, agentes y hooks en `<ws>/.codex/`. Las instrucciones pueden ir en `developer_instructions` de `<ws>/.codex/config.toml`, que se añaden a las base. Las skills, en `<ws>/.agents/skills`. Todo exige proyecto de confianza. La configuración de proyecto gana a la de usuario clave a clave.
+    - VS Code: `.github/instructions/*.instructions.md`, `.github/skills`, `.github/agents`, `.github/prompts` y `.vscode/mcp.json`. Antigravity: `.agents/{rules,skills,workflows,mcp_config.json}`. Windsurf, ahora Devin Desktop: `.devin/` o `.windsurf/`. Trae: `.trae/`, con confianza baja.
+  - Decisión abierta con el usuario: dónde van las instrucciones ODD/SDD (del equipo, no personales) en los agentes que solo leen un fichero raíz. El usuario prioriza VS Code Copilot, Copilot CLI, Codex, Claude, OpenCode y Gemini, y pide que prevalezca lo del proyecto sobre lo del usuario. Copilot CLI no tiene adaptador en Axiom. Investigación R1b de precedencia en curso.
 - [ ] **T12 · Modo workspace por adaptador según R1** (ruta: delegada; una rebanada por grupo de adaptadores).
+  - [x] **T12a · Ningún agente sin modo workspace escribe en HOME** (ruta: delegada; disparador: escritura en 2+ ficheros). Commit `e10f6bfb`, +657/−30.
+    - `splitAgentsForScope` (`internal/cli/workspace_agents.go`) filtra en un único punto por flujo: `RunInstall`, `RunSync` tras `unique(agentIDs)`, `runSyncWithSelectionScoped` (TUI y API) y `executeTUIInstallWithBackground`. Cubre `--agent`, el estado de proyecto ya persistido y el descubrimiento por carpetas de HOME. Un aviso en castellano por agente, por stderr; en la TUI va en `SyncResult.OmittedAgents`.
+    - Sin agentes válidos: `install` falla con un error claro y `sync` termina sin escribir. `componentInjectionDirScoped` ya no devuelve HOME en workspace. La TUI no persiste los agentes omitidos; un `codex` heredado en `<raíz>/.axiom/state.json` se conserva, pero ya no escribe en HOME.
+    - Verificación: `go build`, `go vet`, `gofmt` y deadcode-ratchet: ok. `internal/cli -run '…|ComponentPath|Scope|Workspace'` y `-run 'TestRunSync|TestSync|TestRunInstall|TestInstall|Permission|TUIInstall'`: ok. `internal/app` e `internal/tui`: solo los fallos conocidos. Mutación: sin el arreglo, las 3 pruebas de HOME intacto fallan (96, 50 y 7 ficheros en HOME). El padre repitió las pruebas de HOME: ok.
+    - Hallazgos: la TUI añade `--include-permissions` si Codex está descubierto (inocuo, revisar en T14); la pantalla de selección de la TUI sigue listando los agentes omitidos; `gga.Managed` lee `%APPDATA%\gga`, así que las pruebas de sync deben aislar `APPDATA`.
 
 ### Fase 5 · Reversibilidad y documentación
 
