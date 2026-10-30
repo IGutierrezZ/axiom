@@ -226,8 +226,14 @@ func injectInternal(homeDir string, adapter agents.Adapter, persona model.Person
 		// old VSCode path (~/.github/copilot-instructions.md) that was written
 		// by an older installer version.  VS Code still reads that path for
 		// global instructions, so the two files would conflict.
-		if cleaned, cleanErr := cleanLegacyVSCodePersona(homeDir); cleanErr == nil && cleaned {
-			changed = true
+		//
+		// En un proyecto no se aplica: .github/copilot-instructions.md es del equipo
+		// y Axiom nunca escribió ahí, así que no se retira ni siquiera si su texto
+		// se parece a la persona.
+		if scoped, inProject := adapter.(agents.WorkspaceScopedProvider); !inProject || !scoped.InWorkspace(homeDir) {
+			if cleaned, cleanErr := cleanLegacyVSCodePersona(homeDir); cleanErr == nil && cleaned {
+				changed = true
+			}
 		}
 
 		// For non-Gentleman personas, preserve managed sections (same logic

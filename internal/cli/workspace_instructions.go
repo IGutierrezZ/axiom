@@ -310,11 +310,22 @@ func workspaceInstructionsSettingsPaths(workspaceDir string, scope InstallScope,
 // proyecto es de confianza, y cada hook se aprueba además por hash. Axiom no escribe
 // esa confianza en ~/.codex/config.toml (sería una escritura en la carpeta de usuario
 // que el ámbito workspace no hace): se lo pide Codex al usuario la primera vez.
+//
+// VS Code Copilot hereda Workspace Trust: en un espacio de trabajo restringido no
+// arranca los servidores MCP de .vscode/mcp.json (ni cargaría agentes o hooks de
+// .github/, que Axiom no instala). La confianza la concede el usuario en VS Code.
 func workspaceTrustNotes(scope InstallScope, agentIDs []model.AgentID) []string {
-	if scope != ScopeWorkspace || !containsAgent(agentIDs, model.AgentCodex) {
+	if scope != ScopeWorkspace {
 		return nil
 	}
-	return []string{"Codex solo carga la configuración de .codex/ (instrucciones, MCP y hooks) si el proyecto es de confianza: te lo pedirá Codex la primera vez que lo abras, y Axiom no escribe esa confianza en ~/.codex/config.toml. Además, Codex te pide aprobar cada hook de .codex/hooks.json por su hash."}
+	var notes []string
+	if containsAgent(agentIDs, model.AgentCodex) {
+		notes = append(notes, "Codex solo carga la configuración de .codex/ (instrucciones, MCP y hooks) si el proyecto es de confianza: te lo pedirá Codex la primera vez que lo abras, y Axiom no escribe esa confianza en ~/.codex/config.toml. Además, Codex te pide aprobar cada hook de .codex/hooks.json por su hash.")
+	}
+	if containsAgent(agentIDs, model.AgentVSCodeCopilot) {
+		notes = append(notes, "VS Code solo arranca los servidores MCP de .vscode/mcp.json (los que Axiom declara, como Context7 y Engram) si el espacio de trabajo es de confianza (Workspace Trust): en modo restringido no se cargan. Axiom no concede esa confianza; la concedes tú en VS Code al abrir la carpeta.")
+	}
+	return notes
 }
 
 // workspaceInstructionsStep registra el fichero de instrucciones de Axiom de
@@ -345,8 +356,8 @@ func (s workspaceInstructionsStep) Run() error {
 }
 
 // workspaceSettingsPreflightStep rechaza, antes de escribir nada, una
-// configuración de proyecto de OpenCode, Kilo, Gemini (JSON) o Codex (TOML) que no
-// se puede leer.
+// configuración de proyecto de OpenCode, Kilo, Gemini, VS Code Copilot (JSON) o
+// Codex (TOML) que no se puede leer.
 //
 // El resto de fusiones sustituyen una base ilegible por una vacía: en la
 // configuración global es aceptable (la copia de seguridad previa la conserva),
@@ -363,36 +374,67 @@ func (s workspaceSettingsPreflightStep) ID() string { return s.id }
 func (s workspaceSettingsPreflightStep) Run() error {
 	noteStaleWorkspaceConfig(s.workspaceDir, s.agents)
 	for _, adapter := range resolveAdaptersScoped(ScopeWorkspace, s.workspaceDir, s.agents) {
-		settingsPath := workspaceInstructionsSettingsFile(adapter, s.workspaceDir)
-		if settingsPath == "" {
-			continue
+		var files []string
+		if settingsPath := workspaceInstructionsSettingsFile(adapter, s.workspaceDir); settingsPath != "" {
+			files = append(files, settingsPath)
 		}
-		raw, err := os.ReadFile(settingsPath)
-		if err != nil {
-			if os.IsNotExist(err) {
-				continue
+		files = append(files, workspaceUserConfigFiles(adapter, s.workspaceDir)...)
+		for _, settingsPath := range files {
+			if err := checkWorkspaceConfigReadable(settingsPath); err != nil {
+				return err
 			}
-			return fmt.Errorf("leer %s: %w", settingsPath, err)
-		}
-		if len(bytes.TrimSpace(raw)) == 0 {
-			continue
-		}
-		format, parse := "JSON", func() error { _, err := filemerge.UnmarshalJSONObject(raw); return err }
-		if strings.EqualFold(filepath.Ext(settingsPath), ".toml") {
-			format, parse = "TOML", func() error { return filemerge.ValidateTOML(string(raw)) }
-		}
-		if err := parse(); err != nil {
-			return fmt.Errorf("%s no es %s válido y Axiom no lo sobrescribe en un proyecto: corrígelo o muévelo y vuelve a ejecutar: %w", settingsPath, format, err)
 		}
 	}
 	return nil
 }
 
+// checkWorkspaceConfigReadable rechaza un fichero de configuración de proyecto que
+// existe, tiene contenido y no es JSON (o TOML, según la extensión) válido. Uno
+// ausente o vacío se acepta: Axiom lo creará.
+func checkWorkspaceConfigReadable(settingsPath string) error {
+	raw, err := os.ReadFile(settingsPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return fmt.Errorf("leer %s: %w", settingsPath, err)
+	}
+	if len(bytes.TrimSpace(raw)) == 0 {
+		return nil
+	}
+	format, parse := "JSON", func() error { _, err := filemerge.UnmarshalJSONObject(raw); return err }
+	if strings.EqualFold(filepath.Ext(settingsPath), ".toml") {
+		format, parse = "TOML", func() error { return filemerge.ValidateTOML(string(raw)) }
+	}
+	if err := parse(); err != nil {
+		return fmt.Errorf("%s no es %s válido y Axiom no lo sobrescribe en un proyecto: corrígelo o muévelo y vuelve a ejecutar: %w", settingsPath, format, err)
+	}
+	return nil
+}
+
+// workspaceUserConfigFiles devuelve los ficheros de configuración del usuario, en la
+// raíz del proyecto, que un adaptador fusiona sin registrarlos como instrucciones
+// (.vscode/mcp.json de VS Code Copilot).
+func workspaceUserConfigFiles(adapter agents.Adapter, workspaceDir string) []string {
+	provider, ok := adapter.(agents.WorkspaceUserConfigFilesProvider)
+	if !ok {
+		return nil
+	}
+	return provider.WorkspaceUserConfigFiles(workspaceDir)
+}
+
+// needsWorkspaceSettingsPreflight indica si alguno de los agentes seleccionados tiene
+// en el proyecto una configuración del usuario que no se puede sobrescribir si es
+// ilegible: la de los que registran instrucciones y .vscode/mcp.json de VS Code Copilot.
+func needsWorkspaceSettingsPreflight(agentIDs []model.AgentID) bool {
+	return registersWorkspaceInstructions(agentIDs) || containsAgent(agentIDs, model.AgentVSCodeCopilot)
+}
+
 // withWorkspaceSettingsPreflight antepone la comprobación de la configuración de
-// proyecto a los pasos de preparación cuando hay OpenCode, Kilo, Gemini o Codex en
-// workspace.
+// proyecto a los pasos de preparación cuando hay OpenCode, Kilo, Gemini, Codex o VS
+// Code Copilot en workspace.
 func withWorkspaceSettingsPreflight(prepare []pipeline.Step, scope InstallScope, workspaceDir string, agentIDs []model.AgentID) []pipeline.Step {
-	if scope != ScopeWorkspace || !registersWorkspaceInstructions(agentIDs) {
+	if scope != ScopeWorkspace || !needsWorkspaceSettingsPreflight(agentIDs) {
 		return prepare
 	}
 	step := workspaceSettingsPreflightStep{id: "prepare:workspace-settings", workspaceDir: workspaceDir, agents: agentIDs}

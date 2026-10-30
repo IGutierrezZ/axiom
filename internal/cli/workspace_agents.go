@@ -19,7 +19,7 @@ var workspaceAgentsNoticeWriter io.Writer = os.Stderr
 // --scope workspace se omiten enteros en lugar de escribir en la carpeta de usuario.
 func agentSupportsWorkspace(id model.AgentID) bool {
 	switch id {
-	case model.AgentVSCodeCopilot, model.AgentTrae, model.AgentWindsurf, model.AgentAntigravity:
+	case model.AgentTrae, model.AgentWindsurf, model.AgentAntigravity:
 		return false
 	default:
 		return true
@@ -98,9 +98,9 @@ func errNoWorkspaceAgents(omitted []model.AgentID) error {
 }
 
 // scopedAdapter liga el adaptador a la raíz del proyecto cuando el ámbito es
-// workspace. OpenCode, Kilo, Gemini y Codex tienen en el proyecto otra distribución
-// que en la carpeta de usuario (opencode.json y .opencode, .kilo, .gemini/AXIOM.md,
-// .codex/config.toml y .agents/skills): el adaptador ligado la devuelve para la raíz
+// workspace. OpenCode, Kilo, Gemini, Codex y VS Code Copilot tienen en el proyecto otra
+// distribución que en la carpeta de usuario (opencode.json y .opencode, .kilo,
+// .gemini/AXIOM.md, .codex/config.toml y .agents/skills, .github/ y .vscode/): el adaptador ligado la devuelve para la raíz
 // del proyecto y mantiene la global para cualquier otra carpeta. Con ámbito global,
 // o para el resto de agentes, no cambia nada.
 func scopedAdapter(scope InstallScope, workspaceDir string, adapter agents.Adapter) agents.Adapter {

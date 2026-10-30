@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"path/filepath"
 	"sort"
 	"strings"
 )
@@ -35,11 +36,21 @@ func MergeJSONObjects(baseJSON []byte, overlayJSON []byte) ([]byte, error) {
 // MergeJSONObjectsForPath selects the JSON object merge mode appropriate for
 // path. JSONC files preserve comments and formatting around untouched values;
 // strict JSON files are normalized through standard JSON encoding.
+//
+// Los ficheros de una carpeta .vscode (mcp.json, settings.json) son JSONC por
+// definición aunque se llamen .json: VS Code admite comentarios en ellos, así que
+// también conservan su texto. La ruta global de VS Code no está en una carpeta
+// .vscode, de modo que su fusión no cambia.
 func MergeJSONObjectsForPath(path string, baseJSON []byte, overlayJSON []byte) ([]byte, error) {
-	if strings.HasSuffix(path, ".jsonc") {
+	if strings.HasSuffix(path, ".jsonc") || inVSCodeProjectDir(path) {
 		return MergeJSONObjectsPreserveJSONC(baseJSON, overlayJSON)
 	}
 	return MergeJSONObjects(baseJSON, overlayJSON)
+}
+
+// inVSCodeProjectDir indica si path está directamente dentro de una carpeta .vscode.
+func inVSCodeProjectDir(path string) bool {
+	return filepath.Base(filepath.Dir(path)) == ".vscode"
 }
 
 // MergeJSONObjectsPreserveJSONC merges JSON object overlays while preserving the

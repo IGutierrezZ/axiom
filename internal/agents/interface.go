@@ -107,3 +107,20 @@ type WorkspaceInlineInstructionsProvider interface {
 type WorkspaceContextFileProvider interface {
 	WorkspaceContextFile(dir string) (settingsPath, entry string, defaults []string, ok bool)
 }
+
+// WorkspaceUserConfigFilesProvider es una capacidad opcional de los adaptadores cuyo
+// agente lee en el proyecto ficheros de configuración del usuario que Axiom fusiona
+// (VS Code Copilot, .vscode/mcp.json): son del equipo, normalmente versionados, y si
+// no se pueden leer no se sustituyen por un documento vacío. Devuelve los de la raíz
+// del proyecto dir, o nada fuera de ella.
+type WorkspaceUserConfigFilesProvider interface {
+	WorkspaceUserConfigFiles(dir string) []string
+}
+
+// WorkspaceScopedProvider es una capacidad opcional de los adaptadores ligados a la
+// raíz de un proyecto: indica si dir es esa raíz. Lo usan los componentes que, con
+// una instalación de proyecto, no deben tocar rutas que solo tienen sentido en la
+// carpeta de usuario.
+type WorkspaceScopedProvider interface {
+	InWorkspace(dir string) bool
+}

@@ -124,7 +124,8 @@ func TestPermissionsRoot(t *testing.T) {
 		{"workspace claude", ScopeWorkspace, workspace, model.AgentClaudeCode, workspace, true},
 		{"workspace opencode", ScopeWorkspace, workspace, model.AgentOpenCode, workspace, true},
 		{"workspace kilocode", ScopeWorkspace, workspace, model.AgentKilocode, workspace, true},
-		{"workspace vscode skipped", ScopeWorkspace, workspace, model.AgentVSCodeCopilot, "", false},
+		// VS Code Copilot ya tiene modo workspace; sigue sin destino de permisos.
+		{"workspace vscode", ScopeWorkspace, workspace, model.AgentVSCodeCopilot, workspace, true},
 		{"workspace trae skipped", ScopeWorkspace, workspace, model.AgentTrae, "", false},
 		{"workspace windsurf skipped", ScopeWorkspace, workspace, model.AgentWindsurf, "", false},
 		{"workspace antigravity skipped", ScopeWorkspace, workspace, model.AgentAntigravity, "", false},

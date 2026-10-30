@@ -2,7 +2,9 @@ package agents
 
 import (
 	"errors"
+	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
@@ -217,5 +219,37 @@ func TestFactoryRejectsUnsupportedOpenClawLookalike(t *testing.T) {
 
 	if !errors.Is(err, ErrAgentNotSupported) {
 		t.Fatalf("NewAdapter() error = %v, want ErrAgentNotSupported", err)
+	}
+}
+
+// BindWorkspace liga VS Code Copilot a la raíz del proyecto: instrucciones y skills
+// van a .github/ y el MCP a .vscode/mcp.json, no al perfil de usuario de VS Code.
+func TestBindWorkspaceBindsVSCode(t *testing.T) {
+	root := t.TempDir()
+	vscode, err := NewAdapter(model.AgentVSCodeCopilot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	bound := BindWorkspace(vscode, root)
+	if _, ok := bound.(WorkspaceUserConfigFilesProvider); !ok {
+		t.Errorf("VS Code ligado debe indicar .vscode/mcp.json como fichero de usuario")
+	}
+	if scoped, ok := bound.(WorkspaceScopedProvider); !ok || !scoped.InWorkspace(root) {
+		t.Errorf("VS Code ligado debe saber que está ligado a la raíz")
+	}
+	for name, got := range map[string]string{
+		"SystemPromptFile": bound.SystemPromptFile(root),
+		"SkillsDir":        bound.SkillsDir(root),
+		"MCPConfigPath":    bound.MCPConfigPath(root, "engram"),
+	} {
+		if got == "" || strings.HasPrefix(got, filepath.Join(root, "AppData")) || strings.Contains(got, ".copilot") {
+			t.Errorf("%s ligado debe usar la distribución de proyecto: %s", name, got)
+		}
+	}
+	if _, ok := vscode.(WorkspaceUserConfigFilesProvider); ok {
+		t.Errorf("VS Code sin ligar no debe ofrecer ficheros de proyecto")
+	}
+	if BindWorkspace(vscode, "") != vscode {
+		t.Errorf("sin raíz no se liga nada")
 	}
 }

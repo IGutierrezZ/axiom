@@ -94,13 +94,13 @@ func assertOmittedNotices(t *testing.T, got string, omitted ...model.AgentID) {
 }
 
 func TestSplitAgentsForScope(t *testing.T) {
-	selected := []model.AgentID{model.AgentClaudeCode, model.AgentCodex, model.AgentWindsurf, model.AgentOpenCode, model.AgentVSCodeCopilot}
+	selected := []model.AgentID{model.AgentClaudeCode, model.AgentCodex, model.AgentWindsurf, model.AgentOpenCode, model.AgentVSCodeCopilot, model.AgentAntigravity}
 
 	kept, omitted := splitAgentsForScope(ScopeWorkspace, selected)
-	if want := []model.AgentID{model.AgentClaudeCode, model.AgentCodex, model.AgentOpenCode}; !slices.Equal(kept, want) {
-		t.Errorf("workspace conserva %v, want %v (Codex ya tiene modo workspace)", kept, want)
+	if want := []model.AgentID{model.AgentClaudeCode, model.AgentCodex, model.AgentOpenCode, model.AgentVSCodeCopilot}; !slices.Equal(kept, want) {
+		t.Errorf("workspace conserva %v, want %v (Codex y VS Code ya tienen modo workspace)", kept, want)
 	}
-	if want := []model.AgentID{model.AgentWindsurf, model.AgentVSCodeCopilot}; !slices.Equal(omitted, want) {
+	if want := []model.AgentID{model.AgentWindsurf, model.AgentAntigravity}; !slices.Equal(omitted, want) {
 		t.Errorf("workspace omite %v, want %v", omitted, want)
 	}
 
@@ -122,7 +122,7 @@ func TestComponentInjectionDirScopedNeverResolvesHomeInWorkspace(t *testing.T) {
 	if err != nil {
 		t.Fatalf("registry error: %v", err)
 	}
-	for _, id := range []model.AgentID{model.AgentVSCodeCopilot, model.AgentTrae, model.AgentWindsurf, model.AgentAntigravity} {
+	for _, id := range []model.AgentID{model.AgentTrae, model.AgentWindsurf, model.AgentAntigravity} {
 		adapter, ok := reg.Get(id)
 		if !ok {
 			t.Fatalf("falta el adaptador %s", id)
@@ -146,13 +146,13 @@ func TestRunInstallWorkspaceOmitsAgentsWithoutWorkspaceMode(t *testing.T) {
 	notices := captureWorkspaceAgentsNotice(t)
 	before := homeSnapshotWithoutState(t, home)
 
-	result, err := RunInstall([]string{"--scope", "workspace", "--agent", "claude-code,vscode-copilot,windsurf"}, macOSDetectionResult())
+	result, err := RunInstall([]string{"--scope", "workspace", "--agent", "claude-code,antigravity,windsurf"}, macOSDetectionResult())
 	if err != nil {
 		t.Fatalf("RunInstall() error = %v", err)
 	}
 
 	assertSameTree(t, "home", before, homeSnapshotWithoutState(t, home))
-	assertOmittedNotices(t, notices.String(), model.AgentVSCodeCopilot, model.AgentWindsurf)
+	assertOmittedNotices(t, notices.String(), model.AgentAntigravity, model.AgentWindsurf)
 	if want := []model.AgentID{model.AgentClaudeCode}; !slices.Equal(result.Resolved.Agents, want) {
 		t.Errorf("agentes del plan = %v, want %v", result.Resolved.Agents, want)
 	}
@@ -408,8 +408,8 @@ func TestRunSyncGlobalStillWritesCodexInHome(t *testing.T) {
 
 // Instalación sin agentes (TUI incluida) comparte el mismo mensaje de error.
 func TestErrNoWorkspaceAgentsNamesEveryOmittedAgent(t *testing.T) {
-	err := errNoWorkspaceAgents([]model.AgentID{model.AgentVSCodeCopilot, model.AgentWindsurf})
-	for _, want := range []string{"vscode-copilot", "windsurf", "--scope global"} {
+	err := errNoWorkspaceAgents([]model.AgentID{model.AgentAntigravity, model.AgentWindsurf})
+	for _, want := range []string{"antigravity", "windsurf", "--scope global"} {
 		if !strings.Contains(err.Error(), want) {
 			t.Errorf("el error %q debe contener %q", err, want)
 		}

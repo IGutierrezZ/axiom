@@ -147,6 +147,14 @@ Kiro usa agentes personalizados en `~/.kiro/agents/`. Axiom escribe los agentes 
 - Skills at `~/.copilot/skills/`
 - System prompt at `Code/User/prompts/axiom.instructions.md`. `axiom sync` retira el antiguo `gentle-ai.instructions.md` solo si lo escribió Axiom; si tiene contenido propio lo conserva y avisa
 - MCP config at `Code/User/mcp.json`
+- Con `--scope workspace`, Axiom escribe en la distribución de proyecto que VS Code lee, y nada en el perfil de usuario de VS Code (`%APPDATA%\Code\User`, `~/.config/Code/User`, `~/Library/Application Support/Code/User`) ni en `~/.copilot`:
+  - **Instrucciones**: persona, orquestador ODD/SDD y protocolo de memoria van en `<proyecto>/.github/instructions/axiom.instructions.md`, un fichero propio de Axiom cuya cabecera declara `applyTo: "**"` para que VS Code lo aplique a todas las peticiones (sin `applyTo` solo se adjuntaría a mano). Se suman a las instrucciones de usuario. `.github/copilot-instructions.md` y el `AGENTS.md` de la raíz son del equipo y Axiom no los toca, ni siquiera para retirar restos de instalaciones antiguas. Las rutas del orquestador que apuntaban a `.agent/skills` se resuelven a `.github/skills`.
+  - **Skills**: `<proyecto>/.github/skills/<nombre>/SKILL.md`.
+  - **MCP** (Context7 y Engram): `<proyecto>/.vscode/mcp.json`, con la clave raíz `servers` (no `mcpServers`). La fusión conserva los servidores, las `inputs` y los comentarios que el usuario ya tuviera (VS Code admite JSONC en ese fichero; los comentarios que estén dentro del bloque `servers` se pierden al reescribirlo). Un `mcp.json` que no sea JSON válido se rechaza sin modificarlo y antes de escribir nada.
+  - **Agentes, prompts y hooks**: Axiom no instala ninguno para VS Code Copilot hoy (solo skills, instrucciones y MCP), así que no se crean `.github/agents`, `.github/prompts` ni `.github/hooks`. Tampoco se escriben permisos: VS Code no tiene un `deny` de proyecto y Axiom no impone modos de autoaprobación.
+  - **Confianza**: VS Code solo arranca los servidores MCP de `.vscode/mcp.json` si el espacio de trabajo es de confianza (Workspace Trust). Axiom avisa al terminar y no concede esa confianza.
+  - Copilot CLI, que no tiene adaptador en Axiom, lee también `.github/instructions` y `.github/skills`. La carpeta `.agents/skills` (que escribe Codex en workspace) la leen igualmente VS Code y otros agentes, que pueden ver duplicadas las skills.
+  - La instalación global no cambia.
 
 ### Codex
 
