@@ -204,9 +204,14 @@ Las cuatro quedaron resueltas por el usuario el 2026-10-29: acepta las recomenda
 
 ### Fase 3b · Correcciones detectadas por V1 de la fase 3
 
-- [ ] **T11b · `doctor` reconoce el MCP de Engram del proyecto.** `checkEngramReachable` solo lee HOME (`engram.ReadPersistedStdioCommands(homeDir, …)`). En una instalación solo workspace avisa «no persisted MCP configuration found» y recomienda un `axiom sync` que no lo arregla.
-- [ ] **T11c · Rollback con `AXIOM_STATE_DIR` fuera de HOME.** `rollbackRoots` (`internal/cli/run.go:1313`) solo admite HOME y el workspace. Con T11, el lanzador de OpenCode vive en `system.BinDir`, así que un install fallido no se restaura: «manifest entry has invalid OriginalPath … must be an absolute path under an allowed root».
-- [ ] **T11d · El informe de sync no lista rutas heredadas que no escribe.** «OpenCode background launcher paths» incluye `~/.gentle-ai/bin/opencode.{cmd,ps1}`.
+- [x] **T11b · `doctor` reconoce el MCP de Engram del proyecto.** `checkEngramReachable` solo leía HOME (`engram.ReadPersistedStdioCommands(homeDir, …)`). En una instalación solo workspace avisaba «no persisted MCP configuration found» y recomendaba un `axiom sync` que no lo arreglaba. Ruta: delegada. Commit `74bc8429`, +230/−48.
+  - `ReadPersistedProjectStdioCommands` lee HOME y, si el almacén efectivo es el del proyecto (`effectiveStateStoreWithRoot`), `<raíz>/.mcp.json` para Claude y `MCPConfigPath(raíz)` para el resto, sin parsing nuevo. Una instalación global no lee el `.mcp.json` de un repo cualquiera.
+- [x] **T11c · Rollback con `AXIOM_STATE_DIR` fuera de HOME.** `rollbackRoots` (`internal/cli/run.go`) solo admitía HOME y el workspace, y desde T11 el lanzador de OpenCode vive en `system.BinDir`: un install fallido no se restauraba. Ruta: delegada. Commit `0a8e3ce7`, +184/−5.
+  - Se admite además `system.BinDir(home)` cuando queda fuera de HOME (`backup.MachineRoots`), y `RestoreService` (comando `restore` y TUI) usa la misma lista. Solo `bin`: es lo único de la raíz de estado que entra en un manifiesto. Las raíces relativas se rechazan.
+- [x] **T11d · El informe de sync no lista rutas heredadas que no escribe.** «OpenCode background launcher paths» incluía `~/.gentle-ai/bin/opencode.{cmd,ps1}`. Ruta: delegada. Commit `61558d41`, +96/−2.
+  - `ActivationPlan.managedPaths()` filtra los heredados para el informe y la guía de reinicio; la limpieza de heredados no cambia.
+- Verificación de la fase 3b: build, vet, gofmt y deadcode-ratchet ok; `internal/components/engram` ok; `internal/backup` ok salvo `TestSnapshotterSkipsUnixSockets` (base); `internal/cli` en tandas (`Doctor`, `Engram|Rollback|Restore|Backup`, `OpenCode|Background`, `Sync`): ok. `internal/opencode`: falló una vez `TestRunCatalogCommandDeadlineNotBlockedByInheritingDescendantWindows` (plazo de 300 ms superado con la máquina cargada por la otra sesión); pasa aislada dos veces y el paquete completo pasa al repetirlo. Esa prueba no toca el código cambiado.
+- Abierto: `AXIOM_STATE_DIR` con un valor patológico (p. ej. `/`) haría admitir `/bin` en el rollback; no hay guarda para eso.
 
 ### Fase 4 · Adaptadores sin modo workspace (depende de R1)
 
@@ -295,6 +300,8 @@ Las cuatro quedaron resueltas por el usuario el 2026-10-29: acepta las recomenda
 
 - 2026-10-30: V1 de la fase 3 hecha: `HOME` intacto en workspace con el preset por defecto. Tres correcciones nuevas (T11b–T11d). La fase 4 arranca en otra sesión, en `fix/huella-usuario-workspace-f4`.
 
+- 2026-10-30: fase 3b implementada (T11b `74bc8429`, T11c `0a8e3ce7`, T11d `61558d41`), unas 510 líneas.
+
 ## Siguiente paso
 
-Autorización para la fase 3b (T11b–T11d) en esta rama, en paralelo con la fase 4. Al terminar la fase 4, integrar `fix/huella-usuario-workspace-f4`.
+Esperar a la fase 4 (otra sesión) e integrar `fix/huella-usuario-workspace-f4`. Después, autorización para la fase 5 (T13, T14).
