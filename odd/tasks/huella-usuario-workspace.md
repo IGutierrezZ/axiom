@@ -250,6 +250,21 @@ Las cuatro quedaron resueltas por el usuario el 2026-10-29: acepta las recomenda
       - `context.fileName` del proyecto sustituye al del usuario, así que un nombre que solo está en `~/.gemini/settings.json` deja de cargarse en ese proyecto. Va a T14 o se decide con el usuario.
       - `internal/assets/gemini/sdd-orchestrator.md:388` cita `.agent/skills/_shared/` (debería ser `.gemini/skills/_shared/`); va a T14.
       - La fusión de `settings.json` borra los comentarios (fallo previo).
+  - [x] **T12d · Modo workspace de Codex** (ruta: delegada; disparador: escritura en 2+ ficheros). Commit `48a0185e`, +2085/−92, de ellas unas 1.300 de pruebas y documentación.
+    - `codex.WorkspaceAdapter`, devuelto por `agents.BindWorkspace`. Codex sale de la lista de `adapterSupportsWorkspace`.
+    - Las instrucciones se generan en `.codex/axiom-instructions.md` y se copian a un bloque `<!-- axiom:workspace-instructions -->` dentro de `developer_instructions` de `<ws>/.codex/config.toml`. Se conserva el texto del usuario fuera del bloque y no se usa `model_instructions_file`.
+    - MCP y hooks van en `<ws>/.codex/`; las skills, en `<ws>/.agents/skills`.
+    - No se escriben claves que Codex ignora en proyecto (`profiles` incluida): Engram en workspace omite perfiles y `model_instructions_file`.
+    - La confianza se avisa en las acciones manuales; nada en `~/.codex`. Codex no tiene destino de permisos en ningún ámbito.
+    - `filemerge.FormatTOMLString` escribe una cadena multilínea literal, o básica con escapes si hace falta. Corrige un fallo previo: los helpers TOML tomaban una línea `[...]` dentro de una cadena multilínea por una cabecera. Con TOML normal, la salida es idéntica.
+    - `.codex/AGENTS.md` de instalaciones anteriores se retira solo si es de Axiom; si no, se avisa. Las pruebas de T12a usan ahora Windsurf y VS Code en lugar de Codex.
+    - Verificación: `go build`, `go vet`, `gofmt` y deadcode-ratchet: ok. `internal/agents`, `components` y `assets`: ok salvo filemerge. `internal/cli -run 'Codex|Workspace|Scope|ComponentPath|Instructions|Hook'` y `-run 'TestRunSync|…|Verify|Backup'`: ok. `app` y `tui`: solo los fallos conocidos. El padre repitió `-run Codex`, `agents/codex` y las pruebas TOML de filemerge: ok.
+    - Riesgos y hallazgos:
+      - `.agents/skills` la leen también Gemini, OpenCode, Cursor, VS Code y Copilot CLI, que podrían ver skills duplicadas.
+      - `developer_instructions` ocupa unos 100 KB y se inyecta en cada sesión, además del duplicado en `axiom-instructions.md`.
+      - La nota de `engram setup codex` sigue sugiriendo escribir en HOME (T14).
+      - Los residuos `.codex/skills` no se limpian.
+      - T13 debe cubrir el bloque, `axiom-instructions.md` y `engram-passive-capture`.
 
 ### Fase 5 · Reversibilidad y documentación
 
