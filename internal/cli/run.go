@@ -137,6 +137,18 @@ func RunInstall(args []string, detection system.DetectionResult) (InstallResult,
 		return InstallResult{}, err
 	}
 
+	// Con --scope workspace los agentes sin modo workspace se omiten enteros, también
+	// los elegidos con --agent, antes de planificar nada: así ningún componente puede
+	// escribir por ellos en la carpeta de usuario.
+	if input.Scope == ScopeWorkspace {
+		kept, omitted := splitAgentsForScope(input.Scope, input.Selection.Agents)
+		noteOmittedWorkspaceAgents(omitted)
+		if len(omitted) > 0 && len(kept) == 0 {
+			return InstallResult{}, errNoWorkspaceAgents(omitted)
+		}
+		input.Selection.Agents = kept
+	}
+
 	resolved, err := planner.NewResolver(planner.MVPGraph()).Resolve(input.Selection)
 	if err != nil {
 		return InstallResult{}, err
@@ -1967,6 +1979,16 @@ func executeTUIInstallWithBackground(homeDir string, selection model.Selection, 
 	if err != nil {
 		return pipeline.ExecutionResult{Err: err}, nil
 	}
+	// Mismo filtro que la CLI. La TUI ocupa la terminal: el aviso no sale por stderr,
+	// se devuelve entre las acciones manuales del resultado.
+	selectionAgents, omittedAgents := splitAgentsForScope(scope, selection.Agents)
+	if len(omittedAgents) > 0 {
+		if len(selectionAgents) == 0 {
+			return pipeline.ExecutionResult{Err: errNoWorkspaceAgents(omittedAgents)}, nil
+		}
+		selection.Agents = selectionAgents
+		resolved.Agents = AgentsForScope(scope, resolved.Agents)
+	}
 	runtime, err := newInstallRuntime(homeDir, scope, ChannelStable, selection, resolved, profile)
 	if err != nil {
 		return pipeline.ExecutionResult{Err: err}, nil
@@ -1996,6 +2018,7 @@ func executeTUIInstallWithBackground(homeDir string, selection model.Selection, 
 	if runtime.state.piCodeGraph != nil {
 		result.ManualActions = append(result.ManualActions, runtime.state.piCodeGraph.ManualActions...)
 	}
+	result.ManualActions = append(result.ManualActions, omittedWorkspaceAgentNotices(omittedAgents)...)
 	result.ManualActions = append(result.ManualActions, runtime.state.retirementNotes...)
 	result.ManualActions = append(result.ManualActions, engramSetupSkippedNote(scope, resolved.OrderedComponents, resolved.Agents)...)
 	result.ManualActions = append(result.ManualActions, optInFootprintNotes(scope, homeDir, resolved.OrderedComponents, resolved.Agents, selection)...)
@@ -2747,13 +2770,13 @@ func routingGuidanceDir(homeDir, workspaceDir string, scope InstallScope, adapte
 
 // componentInjectionDirScoped returns the directory to inject component files for the given adapter,
 // taking the install scope into account. When scope is ScopeWorkspace, agent-scoped
-// components write to workspaceDir instead of the selected agent's global config root,
-// except for desktop agents that do not support workspace installation (VSCode, Trae, Windsurf),
-// which are always installed in homeDir.
+// components write to workspaceDir instead of the selected agent's global config root.
+//
+// Los agentes que no admiten el ámbito workspace (VS Code Copilot, Trae, Windsurf,
+// Antigravity, Codex) no llegan aquí: install, sync y la TUI los omiten enteros al
+// construir el plan (splitAgentsForScope). Si uno se colara, el resultado queda
+// confinado al proyecto; nunca vuelve a ser la carpeta de usuario.
 func componentInjectionDirScoped(homeDir, workspaceDir string, scope InstallScope, adapter agents.Adapter) string {
-	if scope == ScopeWorkspace && !adapterSupportsWorkspace(adapter) {
-		return homeDir
-	}
 	return ResolveAgentConfigDir(scope, homeDir, workspaceDir)
 }
 
@@ -2790,12 +2813,7 @@ func adapterSupportsWorkspace(adapter agents.Adapter) bool {
 	if adapter == nil {
 		return false
 	}
-	switch adapter.Agent() {
-	case model.AgentVSCodeCopilot, model.AgentTrae, model.AgentWindsurf, model.AgentAntigravity, model.AgentCodex:
-		return false
-	default:
-		return true
-	}
+	return agentSupportsWorkspace(adapter.Agent())
 }
 
 // piPersonaConfigRoots returns the roots whose Pi persona state is managed by

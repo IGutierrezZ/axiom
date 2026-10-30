@@ -1464,15 +1464,16 @@ func TestComponentInjectionDirScopedWorkspaceSafeguard(t *testing.T) {
 		t.Fatalf("registry error: %v", err)
 	}
 
-	// Desktop agents without workspace support must fall back to homeDir
+	// Los agentes sin modo workspace ya no vuelven a HOME: install y sync los omiten
+	// antes de planificar (TestSplitAgentsForScope) y, si uno se colara, la ruta
+	// queda confinada al proyecto (TestComponentInjectionDirScopedNeverResolvesHomeInWorkspace).
 	for _, id := range []model.AgentID{model.AgentVSCodeCopilot, model.AgentTrae, model.AgentWindsurf, model.AgentAntigravity, model.AgentCodex} {
 		adapter, ok := reg.Get(id)
 		if !ok {
 			continue
 		}
-		got := componentInjectionDirScoped(home, workspace, ScopeWorkspace, adapter)
-		if got != home {
-			t.Errorf("adapter %s in ScopeWorkspace: got %q, want homeDir %q", id, got, home)
+		if got := componentInjectionDirScoped(home, workspace, ScopeWorkspace, adapter); got == home {
+			t.Errorf("adapter %s in ScopeWorkspace must never resolve homeDir %q", id, home)
 		}
 	}
 

@@ -74,12 +74,16 @@ type SyncFlags struct {
 
 // SyncResult holds the outcome of a sync execution.
 type SyncResult struct {
-	Agents    []model.AgentID
-	Selection model.Selection
-	Plan      pipeline.StagePlan
-	Execution pipeline.ExecutionResult
-	Verify    verify.Report
-	DryRun    bool
+	Agents []model.AgentID
+	// OmittedAgents lists the selected agents skipped because they have no
+	// workspace mode (--scope workspace). Empty on the CLI path, where RunSync
+	// already warned on stderr; the TUI shows them through Warnings.
+	OmittedAgents []model.AgentID
+	Selection     model.Selection
+	Plan          pipeline.StagePlan
+	Execution     pipeline.ExecutionResult
+	Verify        verify.Report
+	DryRun        bool
 	// Scope is the effective install scope of this sync and ScopeRoot the root
 	// directory it targets (workspace root or user home, as resolved by
 	// ResolveAgentConfigDir). RenderSyncReport shows both so the report always
@@ -1762,6 +1766,12 @@ func runSyncWithSelection(homeDir string, selection model.Selection, background 
 }
 
 func runSyncWithSelectionScoped(homeDir, workspaceDir string, scope InstallScope, selection model.Selection, background OpenCodeBackgroundResolution, piBackground PiBackgroundResolution) (SyncResult, error) {
+	// Punto de entrada común de la CLI y la TUI. RunSync ya filtró y avisó por
+	// stderr, así que aquí solo llegan agentes omitidos desde la TUI o desde quien
+	// llame directamente: no se imprime nada (la TUI ocupa la terminal) y el aviso
+	// viaja en SyncResult.OmittedAgents.
+	keptAgents, omittedAgents := splitAgentsForScope(scope, selection.Agents)
+	selection.Agents = keptAgents
 	agentIDs := selection.Agents
 	// El estado se lee del almacén que corresponde al ámbito: el del proyecto con
 	// --scope workspace y el de usuario con --scope global.
@@ -1804,12 +1814,13 @@ func runSyncWithSelectionScoped(homeDir, workspaceDir string, scope InstallScope
 	}
 
 	result := SyncResult{
-		Agents:       agentIDs,
-		Selection:    selection,
-		Scope:        scope,
-		ScopeRoot:    ResolveAgentConfigDir(scope, homeDir, workspaceDir),
-		Background:   background,
-		PiBackground: piBackground,
+		Agents:        agentIDs,
+		OmittedAgents: omittedAgents,
+		Selection:     selection,
+		Scope:         scope,
+		ScopeRoot:     ResolveAgentConfigDir(scope, homeDir, workspaceDir),
+		Background:    background,
+		PiBackground:  piBackground,
 	}
 
 	result, noOp, err := zeroAgentSyncNoOp(homeDir, scope, selection, result)
@@ -2031,6 +2042,11 @@ func RunSync(args []string) (SyncResult, error) {
 		agentIDs = DiscoverAgents(syncStateStore)
 	}
 	agentIDs = unique(agentIDs)
+	// Con --scope workspace se omiten los agentes sin modo workspace, sea cual sea su
+	// origen: --agent, estado del proyecto o descubrimiento por las carpetas de HOME.
+	// Si no queda ninguno, el sync termina sin escribir (zeroAgentSyncNoOp).
+	agentIDs, omittedAgents := splitAgentsForScope(scope, agentIDs)
+	noteOmittedWorkspaceAgents(omittedAgents)
 
 	selection := BuildSyncSelection(flags, agentIDs)
 
@@ -2279,7 +2295,7 @@ func skillIndexRefreshWarning(detail string) string {
 // noteWarnings returns the manual-action notes (such as retired files that were
 // kept) followed by the warnings raised by post-sync verification.
 func (r SyncResult) noteWarnings() []string {
-	warnings := append([]string(nil), r.Execution.ManualActions...)
+	warnings := append(omittedWorkspaceAgentNotices(r.OmittedAgents), r.Execution.ManualActions...)
 	for _, check := range r.Verify.Checks {
 		if check.Status == verify.CheckStatusWarning {
 			warnings = append(warnings, check.Error)

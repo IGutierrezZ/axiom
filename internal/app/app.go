@@ -541,6 +541,11 @@ func tuiExecuteWithBackground(
 		// Persist the user's agent selection and model assignments so that future
 		// `sync` runs target only the installed agents and preserve model choices.
 		stateStore := installStateStore(homeDir)
+		// Con --scope workspace la instalación omitió los agentes sin modo workspace:
+		// el estado del proyecto no debe registrarlos como instalados.
+		if scope, scopeErr := cli.ResolveInstallScope(""); scopeErr == nil {
+			selection.Agents = cli.AgentsForScope(scope, selection.Agents)
+		}
 		persistErr := statecoord.WithStoreLock(stateStore, func() error {
 			agentIDs := make([]string, 0, len(selection.Agents))
 			for _, a := range selection.Agents {
