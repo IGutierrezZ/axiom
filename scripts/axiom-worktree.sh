@@ -8,7 +8,9 @@
 #   new  <slug> [prefijo]  axiom branch ensure --cwd <checkout principal> --change <slug> [--prefix p] --json
 #   pr   <slug>            push de la rama del cambio y PR hacia el prTarget de axiom branch status --json
 #   done <slug> [--force]  axiom branch done --cwd <checkout principal> --change <slug> y, después,
-#                          el avance rápido de main
+#                          el avance rápido de main. La rama sale del registro local que escribe
+#                          `ensure` (con su prefijo); `done` no admite prefijo. Si no ve ninguna
+#                          rama del cambio, lo avisa en lugar de dar el cambio por desmantelado
 #
 # Los worktrees viven en <carpeta del proyecto>-wt/<slug>/<repositorio> (p. ej. axiom-wt/<slug>/axiom).
 # Necesita un `axiom` con el verbo `axiom branch` en el PATH (`go install ./cmd/axiom`).
@@ -168,6 +170,19 @@ case "$VERB" in
         if [ "$FORCE" -eq 1 ]; then
             FORCE_ARGS=(--force)
         fi
+        if [ -n "$PREFIX" ]; then
+            echo "[AVISO] El prefijo no se aplica a done: el nombre de la rama sale del registro local que escribió 'ensure'."
+        fi
+
+        # Antes de desmontar, cuántas ramas del cambio existen según el plan del producto (solo
+        # lectura). Una rama creada fuera de `ensure` no está en el registro y `done` no la ve: sin
+        # esta comprobación el script daría por desmantelado un cambio que sigue montado.
+        EXISTING=""
+        if STATUS="$(axiom branch status --cwd "$MAIN_ROOT" --change "$SLUG" --json 2>/dev/null)"; then
+            EXISTING="$(printf '%s\n' "$STATUS" | grep -c '^ *"exists": true' || true)"
+        else
+            echo "[AVISO] axiom branch status falló; no se puede comprobar qué ramas existen."
+        fi
 
         # `axiom branch done` confirma la fusión y desmonta el worktree y la rama local del plan.
         if ! axiom branch done --cwd "$MAIN_ROOT" --change "$SLUG" ${FORCE_ARGS[@]+"${FORCE_ARGS[@]}"}; then
@@ -183,6 +198,11 @@ case "$VERB" in
         fi
 
         git -C "$MAIN_ROOT" worktree prune
+        if [ "$EXISTING" = "0" ]; then
+            echo "[AVISO] axiom branch done no encontró ninguna rama del cambio '$SLUG': no había nada que desmantelar."
+            echo "[AVISO] Si la rama se creó fuera de 'ensure' (sin registro local), retira a mano con git su worktree y su rama local."
+            exit 0
+        fi
         echo "[OK] Ciclo de trabajo '$SLUG' desmantelado y entorno limpio."
         ;;
 esac
