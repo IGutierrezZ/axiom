@@ -293,8 +293,8 @@ Las cuatro quedaron resueltas por el usuario el 2026-10-29: acepta las recomenda
   - **Sin cambios, con rutas que no se leen:** Qwen y Hermes, que solo leen el fichero raíz, y Kimi, cuyas skills están en `.config/agents/skills`. Abiertos.
   - **Sin modo workspace, omitidos con aviso:** Windsurf (ahora Devin Desktop), Trae (documentación no legible) y Antigravity. R1 respalda `.agents/` para Antigravity, pero no es prioritario.
   - Copilot CLI no tiene adaptador, pero lee `.github/instructions`, `.github/skills` y el `.mcp.json` de Claude.
+- Decidido por el usuario el 2026-10-30: se mantiene `default_agent: axiom-orchestrator` en el `opencode.json` del equipo. Respeta un valor previo.
 - Decisiones abiertas para el usuario:
-  - `default_agent: axiom-orchestrator` en el `opencode.json` del equipo.
   - Skills duplicadas entre `.agents/skills` (Codex) y las carpetas propias de otros agentes.
   - `context.fileName` de Gemini sustituye la lista del usuario.
   - Qwen, Hermes y Kimi.
