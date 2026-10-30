@@ -671,10 +671,13 @@ type runtimeState struct {
 	// retiredFiles and retirementNotes carry the outcome of the OpenCode
 	// telemetry plugin retirement: files removed, and non-fatal warnings for
 	// copies kept because ownership could not be proven.
-	retiredFiles             []string
-	retirementNotes          []string
-	manifest                 backup.Manifest
-	rollbackSnapshotDir      string
+	retiredFiles        []string
+	retirementNotes     []string
+	manifest            backup.Manifest
+	rollbackSnapshotDir string
+	// createdBackupDir es la copia de respaldo que esta ejecución dejó en la raíz
+	// de respaldos. Queda vacía cuando se reutilizó la última por ser idéntica.
+	createdBackupDir         string
 	piCodeGraph              *communitytool.PiCodeGraphResult
 	compatibilityTransaction compatibilityRefreshTransaction
 
@@ -697,6 +700,25 @@ func (s *runtimeState) cleanupRollbackSnapshot() {
 		return
 	}
 	s.rollbackSnapshotDir = ""
+}
+
+// discardCreatedBackup borra la copia de respaldo que esta ejecución creó en
+// backupRoot. Se usa cuando la ejecución terminó bien sin escribir nada: la copia
+// es idéntica al estado resultante y no sirve de punto de restauración, solo
+// acumularía una copia completa por cada sync sin cambios. Solo borra dentro de
+// backupRoot, y un fallo al borrar se anota sin afectar al resultado.
+func (s *runtimeState) discardCreatedBackup(backupRoot string) {
+	if s == nil || s.createdBackupDir == "" || backupRoot == "" {
+		return
+	}
+	dir := filepath.Clean(s.createdBackupDir)
+	s.createdBackupDir = ""
+	if !strings.HasPrefix(dir, filepath.Clean(backupRoot)+string(filepath.Separator)) {
+		return
+	}
+	if err := os.RemoveAll(dir); err != nil {
+		log.Printf("backup: discard unused snapshot: %v", err)
+	}
 }
 
 func (s *runtimeState) cleanupCompatibilityTransaction() {
@@ -1209,6 +1231,7 @@ func (s prepareBackupStep) Run() error {
 	}
 
 	s.state.manifest = manifest
+	s.state.createdBackupDir = s.snapshotDir
 
 	// Retention pruning: remove oldest unpinned backups beyond the limit.
 	// Non-fatal: a prune failure must not prevent the install/sync from succeeding.

@@ -1908,6 +1908,12 @@ func runSyncWithSelectionScoped(homeDir, workspaceDir string, scope InstallScope
 		return result, persistErr
 	}
 
+	// Un sync que no escribió nada no deja copia de respaldo: sería idéntica al
+	// estado actual y se acumularía una por ejecución.
+	if result.NoOp {
+		rt.state.discardCreatedBackup(rt.backupRoot)
+	}
+
 	// Auto-regeneración del índice de skills en el workspace
 	targetWorkspace := workspaceDir
 	if targetWorkspace == "" {
