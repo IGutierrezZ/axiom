@@ -50,6 +50,8 @@ jobs:
         working-directory: source
         env:
           SOURCE_SHA: ${{ steps.provenance.outputs.source_sha }}
+          # Tests that build and run Go binaries skip unless this is set.
+          AXIOM_TEST_BUILD_BINARIES: "1"
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$SOURCE_SHA"

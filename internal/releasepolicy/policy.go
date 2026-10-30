@@ -739,6 +739,8 @@ jobs:
       - name: Verify tag, main, trust anchors, and module immutability
         run: ./scripts/release-preflight.sh
       - name: Unit tests
+        env:
+          AXIOM_TEST_BUILD_BINARIES: "1"
         run: go test ./...
       - name: Go vet
         run: go vet ./...

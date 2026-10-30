@@ -86,6 +86,10 @@ jobs:
         run: ./scripts/release-preflight.sh
 
       - name: Unit tests
+        # Tests that build and run Go binaries skip unless this is set (developer
+        # EDR blocks them); the release gate runs them all.
+        env:
+          AXIOM_TEST_BUILD_BINARIES: "1"
         run: go test ./...
 
       - name: Go vet
