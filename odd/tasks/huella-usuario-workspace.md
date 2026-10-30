@@ -172,11 +172,16 @@ Las cuatro quedaron resueltas por el usuario el 2026-10-29: acepta las recomenda
     - configuración de GGA.
   - `doctor` lista esa huella.
   - Hallazgo de T5: `engram setup claude-code` se sigue ejecutando con `--scope workspace` y escribe en home.
+  - Hallazgos de V1 (fases 1 y 2): con `--scope workspace`, GGA escribe `~/bin/gga.{cmd,ps1}`, `AppData/Roaming/gga/` y `~/.local/share/gga/`, y añade `~/bin` al PATH de usuario. También se lanzan `engram setup claude-code` y `engram setup opencode`.
 - [ ] **T10 · Estado por proyecto según D2** (ruta: delegada).
   - Selección, persona y asignación de modelos por workspace, con lectura de compatibilidad del estado global.
   - `rdd_mode`: permitir activarlo por clone, además del off actual.
 - [ ] **T11 · Una única raíz de estado** (ruta: delegada).
   - Backups, `bin`, caché, dashboard y doctor resuelven `system.AxiomDir` (respetan `AXIOM_STATE_DIR`) en lugar de `~/.axiom` fijo.
+  - Hallazgos de V1:
+    - los backups caen en `~/.axiom/backups` aunque `AXIOM_STATE_DIR` esté fijado;
+    - cada `sync` crea un backup completo (~335 KB), también cuando informa de que no hay cambios;
+    - el stop-hook de review, dentro de un proyecto Axiom, escribe `~/.gentle-ai/review-stop-hook/v1/<sesión>.json`, una raíz de estado heredada.
 
 ### Fase 4 · Adaptadores sin modo workspace (depende de R1)
 
@@ -205,6 +210,12 @@ Las cuatro quedaron resueltas por el usuario el 2026-10-29: acepta las recomenda
 - [ ] **V1 · Verificación de extremo a extremo** (ruta: delegada; al cierre de cada fase).
   - Con `HOME` temporal: hash de `HOME` antes y después de `setup` y `sync` en workspace.
   - Sesión simulada de hooks en un repo ajeno: ningún fichero creado ni modificado.
+  - **Fases 1 y 2 (2026-10-30): hecha.** Arnés temporal en proceso con `go test` (sin binarios), borrado después; `git status` limpio sobre `375054ea`.
+    - Instalación: install y dos sync con `--scope workspace` para Claude Code y OpenCode desde `proyecto/src/app`. Pasan T6 (todo en la raíz; la subcarpeta, vacía), T5 (`mcpServers.engram` en `<raíz>/.mcp.json`), T4 (19 subagentes sin `~/.claude/skills` ni marcadores sin resolver), T2 (solo `permissions.deny`, 24 entradas; el `settings.json` del home, intacto) y T4b (overlays con rutas relativas, sin `"*": "allow"`). Verify: 126 ok y 0 fallos.
+    - `HOME` no queda idéntico: 23 entradas creadas (GGA y backups), 0 modificadas y 0 borradas. Lo sembrado por el usuario, intacto. No se crea nada en `~/.agents/skills`, `~/.claude` ni `~/.config/opencode`. Las escrituras quedan asignadas a T8/T9 (GGA, `engram setup`, PATH) y a T11 (backups).
+    - Hooks en dos repos ajenos con `openspec/` y `AGENTS.md`, con RDD apagado y encendido: refresco del registro de skills, `branch guard` (Claude, Codex y OpenCode, antes y después), preflight SDD y stop-hook de review. Todos salen con 0 y no escriben nada. Control positivo con `axiom.yaml`: el guard bloquea con 2, el refresco escribe `.atl/` y el preflight deniega.
+    - No verificable en proceso: autoactualización, descargas reales, `engram setup` real, hooks lanzados por shell y que Claude y OpenCode lean de verdad las rutas de proyecto (R1).
+    - Menores: `sync` dice «Skills indexed: 7 in AGENTS.md» sin `AGENTS.md` en la raíz, y quita una línea en blanco de `.claude/CLAUDE.md` respecto a install.
 
 ## Criterios de aceptación
 
@@ -243,6 +254,8 @@ Las cuatro quedaron resueltas por el usuario el 2026-10-29: acepta las recomenda
 - 2026-10-29: fase 2 implementada (T4 `75faa77a`, T4b `869d3556`, T5 `b68c3008`, T6 `f3bcc8dd`, T7 `df59151f`), unas 1.900 líneas, la mayoría pruebas. V1 de las fases 1 y 2 sigue pendiente.
 - 2026-10-29: con `AXIOM_STATE_DIR` exportado fallan en la base `internal/agents`, `internal/components/communitytool` e `internal/components/uninstall`; se ejecutan sin esa variable.
 
+- 2026-10-30: V1 de las fases 1 y 2 hecha: hooks inertes en repos ajenos y comprobaciones de T2–T6 en verde. La huella que queda en `HOME` está asignada a T8, T9 y T11.
+
 ## Siguiente paso
 
-V1 de las fases 1 y 2, y después autorización para la fase 3 (T8–T11).
+Autorización para la fase 3 (T8–T11).
