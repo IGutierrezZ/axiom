@@ -265,6 +265,13 @@ Las cuatro quedaron resueltas por el usuario el 2026-10-29: acepta las recomenda
       - La nota de `engram setup codex` sigue sugiriendo escribir en HOME (T14).
       - Los residuos `.codex/skills` no se limpian.
       - T13 debe cubrir el bloque, `axiom-instructions.md` y `engram-passive-capture`.
+  - [x] **T12e · Modo workspace de VS Code Copilot** (ruta: delegada; disparador: escritura en 2+ ficheros). Commit `0c4542b2`, +862/−44, de ellas unas 560 de pruebas y documentación.
+    - `vscode.WorkspaceAdapter`, devuelto por `agents.BindWorkspace`. Las instrucciones van en `<ws>/.github/instructions/axiom.instructions.md` con `applyTo: "**"`. Las skills, en `.github/skills`. El MCP, en `.vscode/mcp.json` (clave `servers`, fusión JSONC que conserva servidores, `inputs` y comentarios fuera de `servers`).
+    - El manifiesto de VS Code solo declara skills, instrucciones y MCP: no se crean `.github/agents`, `.github/prompts` ni `.github/hooks`. Sin permisos.
+    - Una guarda impide que la limpieza de la persona antigua borre `.github/copilot-instructions.md` del equipo. Un `.vscode/mcp.json` ilegible se rechaza en el preflight. Aviso de Workspace Trust en las acciones manuales.
+    - Las pruebas de T12a usan ahora Windsurf y Antigravity.
+    - Verificación: `go build`, `go vet`, `gofmt` y deadcode-ratchet: ok. `internal/agents`, `components` y `assets`: ok salvo filemerge. `internal/cli -run 'VSCode|Copilot|Workspace|Scope|ComponentPath|Instructions'` y `-run 'TestRunSync|…|Verify|Backup|TUIInstall'`: ok. `app` y `tui`: solo los fallos conocidos. Mutación: sin la fusión JSONC, la guarda o el preflight, fallan 1, 2 y 1 pruebas. El padre repitió `-run VSCode` y `agents/vscode`: ok.
+    - Hallazgos: posibles skills duplicadas si en el mismo proyecto están Codex (`.agents/skills`) y VS Code (`.github/skills`). T13 tiene casos de VS Code ligados al perfil de usuario.
 
 ### Fase 5 · Reversibilidad y documentación
 
