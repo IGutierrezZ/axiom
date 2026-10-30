@@ -414,6 +414,50 @@ func TestActivationCleansLegacyManagedLaunchersAndDeactivationRemovesBoth(t *tes
 	}
 }
 
+// TestDeactivationReportNamesOnlyTheManagedLaunchers: la desactivación vigila los
+// restos heredados de ~/.gentle-ai/bin para retirarlos, pero el informe lista
+// solo los lanzadores de Axiom; lo retirado consta en ChangedPaths.
+func TestDeactivationReportNamesOnlyTheManagedLaunchers(t *testing.T) {
+	for _, goos := range []string{"linux", "windows"} {
+		t.Run(goos, func(t *testing.T) {
+			home := t.TempDir()
+			legacy := LegacyManagedLauncherPaths(home, goos)
+			for _, lp := range legacy {
+				if err := os.MkdirAll(filepath.Dir(lp), 0o755); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.WriteFile(lp, []byte("#!/bin/sh\n# "+OwnershipMarker+"\nlegacy"), 0o755); err != nil {
+					t.Fatal(err)
+				}
+			}
+			plan, err := PrepareDeactivation(home, ActivationOptions{OS: goos})
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			report := plan.Report()
+			if got, want := strings.Join(report.LauncherPaths, "\n"), strings.Join(ManagedLauncherPaths(home, goos), "\n"); got != want {
+				t.Fatalf("LauncherPaths = %q, want solo los gestionados %q", got, want)
+			}
+			if guidance := plan.RestartGuidance(); strings.Contains(guidance, ".gentle-ai") {
+				t.Fatalf("RestartGuidance() = %q, no debe nombrar rutas heredadas", guidance)
+			}
+
+			if err := plan.Apply(); err != nil {
+				t.Fatal(err)
+			}
+			for _, lp := range legacy {
+				if _, err := os.Stat(lp); !os.IsNotExist(err) {
+					t.Fatalf("el resto heredado %q debe retirarse; stat = %v", lp, err)
+				}
+			}
+			if changed := strings.Join(plan.Report().ChangedPaths, "\n"); !strings.Contains(changed, ".gentle-ai") {
+				t.Fatalf("ChangedPaths = %q, want los restos retirados", changed)
+			}
+		})
+	}
+}
+
 // TestActivationRewritesLegacyMarkedLauncherWithTheCurrentMarker covers the
 // dual-read contract: a launcher written before the rebrand is recognized as
 // owned and replaced, on the next activation, by one with the current marker.

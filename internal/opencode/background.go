@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -627,8 +628,23 @@ func (p *ActivationPlan) Report() ActivationReport {
 		Action:        string(p.action),
 		Applied:       p.applied,
 		ChangedPaths:  append([]string(nil), p.changed...),
-		LauncherPaths: append([]string(nil), p.paths...),
+		LauncherPaths: p.managedPaths(),
 	}
+}
+
+// managedPaths son los lanzadores que Axiom gestiona de verdad, sin los restos
+// heredados de Gentle AI que una desactivación también vigila para retirarlos.
+// Esos restos no son lanzadores de Axiom: si se eliminan, constan en ChangedPaths,
+// pero el informe no los presenta como rutas gestionadas.
+func (p *ActivationPlan) managedPaths() []string {
+	legacy := LegacyManagedLauncherPaths(p.homeDir, p.goos)
+	managed := make([]string, 0, len(p.paths))
+	for _, path := range p.paths {
+		if !slices.Contains(legacy, path) {
+			managed = append(managed, path)
+		}
+	}
+	return managed
 }
 
 // Paths returns the exact managed launcher paths for this plan.
@@ -665,7 +681,7 @@ func (p *ActivationPlan) RestartGuidance() string {
 		return p.capability.RestartGuidance
 	}
 	if p.RestartRequired() {
-		return restartGuidance(p.paths)
+		return restartGuidance(p.managedPaths())
 	}
 	return ""
 }
