@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Sincronización local tras archivar un incremento en Axiom.
 .DESCRIPTION
