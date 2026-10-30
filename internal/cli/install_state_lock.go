@@ -35,13 +35,21 @@ func StateStoreFor(scope InstallScope, homeDir, workspaceDir string) state.Store
 // (doctor, revisión): el del proyecto de la carpeta actual si ya tiene `.axiom/state.json`
 // y, si no, el global. Nunca crea nada.
 func EffectiveStateStore(homeDir string) state.Store {
+	store, _ := effectiveStateStoreWithRoot(homeDir)
+	return store
+}
+
+// effectiveStateStoreWithRoot es EffectiveStateStore y, además, la raíz del proyecto
+// cuando el almacén efectivo es el suyo ("" si es el global): quien necesita leer
+// también la configuración del proyecto (doctor) no repite la resolución.
+func effectiveStateStoreWithRoot(homeDir string) (state.Store, string) {
 	cwd, err := os.Getwd()
 	if err != nil {
-		return state.GlobalStore(homeDir)
+		return state.GlobalStore(homeDir), ""
 	}
 	root, _ := workspace.ResolveRoot(cwd, homeDir)
 	if info, statErr := os.Stat(state.ProjectPath(root)); statErr == nil && info.Mode().IsRegular() {
-		return state.ProjectStore(homeDir, root)
+		return state.ProjectStore(homeDir, root), root
 	}
-	return state.GlobalStore(homeDir)
+	return state.GlobalStore(homeDir), ""
 }

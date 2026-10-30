@@ -687,7 +687,7 @@ func TestCheckEngramReachable_ExplicitHTTP_OK(t *testing.T) {
 	defer server.Close()
 	t.Setenv(engramHealthEnvVar, server.URL)
 
-	got := checkEngramReachable(context.Background(), "", nil)
+	got := checkEngramReachable(context.Background(), "", "", nil)
 
 	if got.Status != CheckStatusPass {
 		t.Errorf("expected pass, got %s: %s", got.Status, got.Detail)
@@ -704,7 +704,7 @@ func TestCheckEngramReachable_ExplicitHTTP_NonSuccessStatus(t *testing.T) {
 	defer server.Close()
 	t.Setenv(engramHealthEnvVar, server.URL)
 
-	got := checkEngramReachable(context.Background(), "", nil)
+	got := checkEngramReachable(context.Background(), "", "", nil)
 
 	if got.Status != CheckStatusWarn {
 		t.Errorf("expected warn for 503, got %s", got.Status)
@@ -721,7 +721,7 @@ func TestCheckEngramReachable_ExplicitHTTP_ConnectionRefused(t *testing.T) {
 	server.Close()
 	t.Setenv(engramHealthEnvVar, deadURL)
 
-	got := checkEngramReachable(context.Background(), "", nil)
+	got := checkEngramReachable(context.Background(), "", "", nil)
 
 	if got.Status != CheckStatusFail {
 		t.Errorf("expected fail, got %s", got.Status)
@@ -742,7 +742,7 @@ func TestCheckEngramReachable_StdioFailure(t *testing.T) {
 	setStdioProbeForTest(t, errors.New("engram mcp exited without answering initialize"))
 	homeDir, installedAgents := doctorStdioConfig(t)
 
-	got := checkEngramReachable(context.Background(), homeDir, installedAgents)
+	got := checkEngramReachable(context.Background(), homeDir, "", installedAgents)
 
 	if got.Status != CheckStatusFail {
 		t.Errorf("expected fail, got %s: %s", got.Status, got.Detail)
@@ -760,7 +760,7 @@ func TestCheckEngramReachable_BinaryAbsent_Warns(t *testing.T) {
 	setStdioProbeForTest(t, engram.ErrNotInstalled)
 	homeDir, installedAgents := doctorStdioConfig(t)
 
-	got := checkEngramReachable(context.Background(), homeDir, installedAgents)
+	got := checkEngramReachable(context.Background(), homeDir, "", installedAgents)
 
 	if got.Status != CheckStatusWarn {
 		t.Errorf("expected warn, got %s: %s", got.Status, got.Detail)
@@ -779,7 +779,7 @@ func TestCheckEngramReachable_MissingRelativeWindowsExecutableWarns(t *testing.T
 	homeDir := t.TempDir()
 	configPath := writeDoctorEngramConfig(t, homeDir, "engram.exe", []string{"mcp", "--tools=agent"})
 
-	got := checkEngramReachable(context.Background(), homeDir, []string{"claude-code"})
+	got := checkEngramReachable(context.Background(), homeDir, "", []string{"claude-code"})
 
 	if got.Status != CheckStatusWarn {
 		t.Fatalf("engram:reachable status = %q, detail = %q; want not-probed warning for missing relative engram.exe", got.Status, got.Detail)
@@ -809,7 +809,7 @@ func TestCheckEngramReachable_StdioDefault_NoHTTPListener(t *testing.T) {
 		return 0, fmt.Errorf("Get %q: dial tcp: connect: connection refused", url)
 	}
 
-	got := checkEngramReachable(context.Background(), homeDir, installedAgents)
+	got := checkEngramReachable(context.Background(), homeDir, "", installedAgents)
 
 	if got.Status != CheckStatusPass {
 		t.Fatalf("engram:reachable status = %q, detail = %q; want pass: stdio MCP is configured and healthy, no HTTP listener exists", got.Status, got.Detail)
@@ -834,7 +834,7 @@ func TestCheckEngramReachable_StdioUsesPersistedConfiguration(t *testing.T) {
 	}
 	t.Cleanup(func() { engramProbeStdioFn = orig })
 
-	got := checkEngramReachable(context.Background(), homeDir, []string{"claude-code"})
+	got := checkEngramReachable(context.Background(), homeDir, "", []string{"claude-code"})
 
 	if got.Status != CheckStatusPass {
 		t.Fatalf("expected pass, got %s: %s", got.Status, got.Detail)
@@ -844,6 +844,44 @@ func TestCheckEngramReachable_StdioUsesPersistedConfiguration(t *testing.T) {
 	}
 	if !strings.Contains(got.Detail, configPath) {
 		t.Fatalf("detail = %q, want persisted configuration path %q", got.Detail, configPath)
+	}
+}
+
+// TestCheckEngramReachable_WorkspaceOnlyInstallReadsProjectMCP cubre la instalación
+// solo workspace: el MCP de Engram está en <raíz>/.mcp.json y HOME no tiene nada.
+func TestCheckEngramReachable_WorkspaceOnlyInstallReadsProjectMCP(t *testing.T) {
+	t.Setenv(engramHealthEnvVar, "")
+	setStdioProbeForTest(t, nil)
+	homeDir := t.TempDir()
+	workspaceDir := t.TempDir()
+	mcpPath := filepath.Join(workspaceDir, ".mcp.json")
+	if err := os.WriteFile(mcpPath, []byte(`{"mcpServers":{"engram":{"command":"engram","args":["mcp","--tools=agent"]}}}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	got := checkEngramReachable(context.Background(), homeDir, workspaceDir, []string{"claude-code"})
+
+	if got.Status != CheckStatusPass {
+		t.Fatalf("engram:reachable status = %q, detail = %q; want pass: el MCP del proyecto está declarado", got.Status, got.Detail)
+	}
+	if !strings.Contains(got.Detail, mcpPath) {
+		t.Fatalf("detail = %q, want la configuración de proyecto %q", got.Detail, mcpPath)
+	}
+}
+
+// TestCheckEngramReachable_NoConfigurationAnywhereWarns comprueba que sin MCP ni en
+// HOME ni en el proyecto el aviso sigue siendo el de siempre.
+func TestCheckEngramReachable_NoConfigurationAnywhereWarns(t *testing.T) {
+	t.Setenv(engramHealthEnvVar, "")
+	setStdioProbeForTest(t, nil)
+
+	got := checkEngramReachable(context.Background(), t.TempDir(), t.TempDir(), []string{"claude-code"})
+
+	if got.Status != CheckStatusWarn {
+		t.Fatalf("engram:reachable status = %q, detail = %q; want warn sin configuración", got.Status, got.Detail)
+	}
+	if !strings.Contains(got.Detail, "no persisted MCP configuration found") {
+		t.Fatalf("detail = %q, want el aviso de configuración ausente", got.Detail)
 	}
 }
 
@@ -860,7 +898,7 @@ func TestCheckEngramReachable_WhitespaceBaseURLUsesStdio(t *testing.T) {
 		return 0, errors.New("HTTP must not be selected for whitespace")
 	}
 
-	got := checkEngramReachable(context.Background(), homeDir, installedAgents)
+	got := checkEngramReachable(context.Background(), homeDir, "", installedAgents)
 	if got.Status != CheckStatusPass {
 		t.Fatalf("expected stdio pass for whitespace-only %s, got %s: %s", engramHealthEnvVar, got.Status, got.Detail)
 	}
@@ -880,7 +918,7 @@ func TestCheckEngramReachable_ExplicitHTTPSurroundingWhitespace(t *testing.T) {
 	defer server.Close()
 	t.Setenv(engramHealthEnvVar, " \t"+server.URL+"\n")
 
-	got := checkEngramReachable(context.Background(), "", nil)
+	got := checkEngramReachable(context.Background(), "", "", nil)
 	if got.Status != CheckStatusPass {
 		t.Fatalf("expected pass for surrounding whitespace, got %s: %s", got.Status, got.Detail)
 	}

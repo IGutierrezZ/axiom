@@ -102,7 +102,8 @@ func RunDoctor(ctx context.Context, w io.Writer) error {
 	// checkStateJSON. Here we fall back to an empty state so the doctor only
 	// reports the always-required core tools — preserving the first-time-install
 	// behaviour where the user has not yet selected any agents (#709).
-	installedState, stateErr := EffectiveStateStore(homeDir).Read()
+	stateStore, workspaceDir := effectiveStateStoreWithRoot(homeDir)
+	installedState, stateErr := stateStore.Read()
 	if stateErr != nil {
 		installedState = state.InstallState{}
 	}
@@ -123,7 +124,9 @@ func RunDoctor(ctx context.Context, w io.Writer) error {
 	checks = append(checks,
 		doctor.Check{ID: doctor.CheckStateJSON, Run: func(context.Context) doctor.Result { return checkStateJSON(homeDir) }},
 		doctor.Check{ID: doctor.CheckInstalledAssetVersion, Run: func(context.Context) doctor.Result { return checkInstalledAssetVersion(homeDir) }},
-		doctor.Check{ID: doctor.CheckEngramReachable, Run: func(ctx context.Context) doctor.Result { return checkEngramReachable(ctx, homeDir, installedAgents) }},
+		doctor.Check{ID: doctor.CheckEngramReachable, Run: func(ctx context.Context) doctor.Result {
+			return checkEngramReachable(ctx, homeDir, workspaceDir, installedAgents)
+		}},
 		doctor.Check{ID: doctor.CheckDiskSpace, Run: func(context.Context) doctor.Result { return checkDiskSpace(homeDir) }},
 	)
 	report := (doctor.Runner{Checks: checks}).Run(ctx)
@@ -561,14 +564,18 @@ func agentConfigDir(homeDir, agentID string) string {
 // ENGRAM_BASE_URL selects HTTP; otherwise the doctor reads the stdio command
 // and arguments persisted in installed agent configurations. It never guesses
 // an HTTP address or replaces a persisted command with its current PATH.
-func checkEngramReachable(ctx context.Context, homeDir string, installedAgents []string) CheckResult {
+//
+// workspaceDir es la raíz del proyecto cuando el estado efectivo es el suyo ("" en
+// una instalación global): en una instalación solo workspace el MCP de Engram vive
+// en la configuración del proyecto (`<raíz>/.mcp.json`, etc.) y no en HOME.
+func checkEngramReachable(ctx context.Context, homeDir, workspaceDir string, installedAgents []string) CheckResult {
 	const id = doctor.CheckEngramReachable
 
 	if baseURL := strings.TrimSpace(os.Getenv(engramHealthEnvVar)); baseURL != "" {
 		return checkEngramHTTP(id, baseURL)
 	}
 
-	commands, err := engram.ReadPersistedStdioCommands(homeDir, installedAgents)
+	commands, err := engram.ReadPersistedProjectStdioCommands(homeDir, workspaceDir, installedAgents)
 	if err != nil {
 		return CheckResult{
 			Name:   id,

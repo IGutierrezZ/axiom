@@ -254,6 +254,22 @@ func TestEffectiveStateStorePrefersTheProjectOnceItHasState(t *testing.T) {
 	}
 }
 
+func TestEffectiveStateStoreWithRootNamesTheProjectOnlyWhenItHasState(t *testing.T) {
+	rootA, _, home := projectStateFixture(t)
+	t.Chdir(rootA)
+
+	if _, root := effectiveStateStoreWithRoot(home); root != "" {
+		t.Errorf("sin estado de proyecto no hay raíz de proyecto: %q", root)
+	}
+
+	if err := state.ProjectStore(home, rootA).Write(state.InstallState{InstalledAgents: []string{"claude-code"}}); err != nil {
+		t.Fatal(err)
+	}
+	if _, root := effectiveStateStoreWithRoot(home); root != rootA {
+		t.Errorf("raíz = %q, want %q", root, rootA)
+	}
+}
+
 func TestManagedAssetProvenanceReadsTheProjectState(t *testing.T) {
 	rootA, _, home := projectStateFixture(t)
 	t.Chdir(rootA)

@@ -746,6 +746,81 @@ unclosed = [
 	}
 }
 
+func writeProjectEngramConfig(t *testing.T, root, relPath, content string) string {
+	t.Helper()
+	path := filepath.Join(root, relPath)
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	return path
+}
+
+func TestReadPersistedProjectStdioCommands_ReadsTheProjectConfiguration(t *testing.T) {
+	homeDir := t.TempDir()
+	workspaceDir := t.TempDir()
+	mcpPath := writeProjectEngramConfig(t, workspaceDir, ".mcp.json",
+		`{"mcpServers":{"engram":{"command":"/project/claude-engram","args":["mcp","--tools=agent"]}}}`)
+	openCodePath := writeProjectEngramConfig(t, workspaceDir, ".config/opencode/opencode.json",
+		`{"mcp":{"engram":{"command":["/project/opencode-engram","mcp"],"type":"local"}}}`)
+
+	commands, err := ReadPersistedProjectStdioCommands(homeDir, workspaceDir, []string{"claude-code", "opencode"})
+	if err != nil {
+		t.Fatalf("ReadPersistedProjectStdioCommands() error = %v", err)
+	}
+	if len(commands) != 2 {
+		t.Fatalf("commands = %v, want the Claude and OpenCode project entries", commands)
+	}
+	sources := map[string]string{}
+	for _, command := range commands {
+		sources[command.Source] = command.Command
+	}
+	if sources[mcpPath] != "/project/claude-engram" || sources[openCodePath] != "/project/opencode-engram" {
+		t.Fatalf("sources = %v, want %q and %q", sources, mcpPath, openCodePath)
+	}
+
+	userOnly, err := ReadPersistedStdioCommands(homeDir, []string{"claude-code", "opencode"})
+	if err != nil || len(userOnly) != 0 {
+		t.Fatalf("ReadPersistedStdioCommands() = %v, %v; want nothing: el proyecto no es HOME", userOnly, err)
+	}
+}
+
+func TestReadPersistedProjectStdioCommands_ReturnsASharedCommandOnce(t *testing.T) {
+	homeDir := t.TempDir()
+	workspaceDir := t.TempDir()
+	const entry = `{"mcpServers":{"engram":{"command":"engram","args":["mcp","--tools=agent"]}}}`
+	userPath := writeProjectEngramConfig(t, homeDir, ".claude.json", entry)
+	writeProjectEngramConfig(t, workspaceDir, ".mcp.json", entry)
+
+	commands, err := ReadPersistedProjectStdioCommands(homeDir, workspaceDir, []string{"claude-code"})
+	if err != nil {
+		t.Fatalf("ReadPersistedProjectStdioCommands() error = %v", err)
+	}
+	if len(commands) != 1 || commands[0].Source != userPath {
+		t.Fatalf("commands = %v, want una sola entrada con el origen de usuario %q", commands, userPath)
+	}
+}
+
+func TestReadPersistedProjectStdioCommands_WithoutWorkspaceMatchesUserScope(t *testing.T) {
+	homeDir := t.TempDir()
+	writeProjectEngramConfig(t, homeDir, ".claude.json",
+		`{"mcpServers":{"engram":{"command":"engram","args":["mcp"]}}}`)
+
+	got, err := ReadPersistedProjectStdioCommands(homeDir, "", []string{"claude-code"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	want, err := ReadPersistedStdioCommands(homeDir, []string{"claude-code"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 1 || len(want) != 1 || got[0].Source != want[0].Source {
+		t.Fatalf("got = %v, want = %v", got, want)
+	}
+}
+
 func TestReadPersistedStdioCommands_PreservesConfiguredCommandAndArguments(t *testing.T) {
 	homeDir := t.TempDir()
 	cases := []struct {
