@@ -576,7 +576,7 @@ func newSyncRuntimeScoped(homeDir, workspaceDir string, scope InstallScope, sele
 }
 
 func (r *syncRuntime) stagePlan() pipeline.StagePlan {
-	adapters := resolveAdapters(r.agentIDs)
+	adapters := resolveAdaptersScoped(r.scope, r.workspaceDir, r.agentIDs)
 	targets, targetErr := syncBackupTargetsScoped(r.homeDir, r.workspaceDir, r.scope, r.selection, adapters)
 	r.managedPaths = targets
 
@@ -594,6 +594,7 @@ func (r *syncRuntime) stagePlan() pipeline.StagePlan {
 			appVersion:  AppVersion,
 		},
 	}
+	prepare = withWorkspaceSettingsPreflight(prepare, r.scope, r.workspaceDir, r.agentIDs)
 
 	apply := []pipeline.Step{
 		rollbackRestoreStep{id: "apply:rollback-restore", state: r.state, homeDir: r.homeDir, workspaceDir: r.workspaceDir, openCodeConfigDir: openCodeGlobalConfigDir(r.homeDir, r.workspaceDir, r.scope, r.agentIDs)},
@@ -652,6 +653,9 @@ func (r *syncRuntime) stagePlan() pipeline.StagePlan {
 			scope:        r.scope,
 			changedFiles: &r.changedFiles,
 		})
+	}
+	if r.scope == ScopeWorkspace && (containsAgent(r.agentIDs, model.AgentOpenCode) || containsAgent(r.agentIDs, model.AgentKilocode)) {
+		apply = append(apply, workspaceInstructionsStep{id: "sync:workspace-instructions", workspaceDir: r.workspaceDir, agents: r.agentIDs, changedFiles: &r.changedFiles})
 	}
 
 	// Managed OpenCode-compatible plugins are versioned runtime artifacts tied
@@ -776,6 +780,11 @@ func syncBackupTargetsScoped(homeDir, workspaceDir string, scope InstallScope, s
 	// do not cover the same file would otherwise be rewritten without a
 	// snapshot and could never be rolled back (issue #1794).
 	for _, path := range routingGuidancePaths(homeDir, workspaceDir, scope, adapters) {
+		paths[path] = struct{}{}
+	}
+	// El registro de instrucciones de OpenCode y Kilo reescribe su configuración de
+	// proyecto aunque ningún componente seleccionado la toque.
+	for _, path := range workspaceInstructionsSettingsPaths(workspaceDir, scope, adapters) {
 		paths[path] = struct{}{}
 	}
 	// The legacy prompt retirement deletes files, so they need a snapshot too.
@@ -1227,7 +1236,7 @@ func (s componentSyncStep) ID() string {
 }
 
 func (s componentSyncStep) Run() error {
-	adapters := resolveAdapters(s.agents)
+	adapters := resolveAdaptersScoped(s.scope, s.workspaceDir, s.agents)
 
 	switch s.component {
 	case model.ComponentEngram:
@@ -2198,7 +2207,7 @@ func restoreOpenCodeModelAssignmentsFromState(homeDir, workspaceDir string, scop
 		return nil
 	}
 	presence := map[string]opencodeactivation.AssignmentPresence{}
-	settingsPath := effectiveOpenCodeSettingsPath(homeDir, workspaceDir, scope, opencodeagent.NewAdapter())
+	settingsPath := effectiveOpenCodeSettingsPath(homeDir, workspaceDir, scope, scopedAdapter(scope, workspaceDir, opencodeagent.NewAdapter()))
 	if settingsPath != "" {
 		if _, err := os.Stat(settingsPath); err == nil {
 			snapshot, err := opencodeactivation.ReadConfigSnapshot(settingsPath)
@@ -2453,7 +2462,7 @@ func runPostSyncVerification(homeDir, workspaceDir string, selection model.Selec
 
 func runPostSyncVerificationScoped(homeDir, workspaceDir string, scope InstallScope, selection model.Selection) verify.Report {
 	checks := make([]verify.Check, 0)
-	adapters := resolveAdapters(selection.Agents)
+	adapters := resolveAdaptersScoped(scope, workspaceDir, selection.Agents)
 
 	for _, component := range selection.Components {
 		paths := syncComponentPathsWithWorkspaceScoped(homeDir, workspaceDir, scope, selection, adapters, component)

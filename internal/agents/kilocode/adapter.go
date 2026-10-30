@@ -23,6 +23,10 @@ type Adapter struct {
 	lookPath func(string) (string, error)
 	statPath func(string) statResult
 	resolver installcmd.Resolver
+
+	// workspaceRoot, cuando no está vacío, es la raíz del proyecto a la que se
+	// ha ligado el adaptador (WithWorkspace).
+	workspaceRoot string
 }
 
 func NewAdapter() *Adapter {
@@ -46,7 +50,7 @@ func (a *Adapter) Tier() model.SupportTier {
 // --- Detection ---
 
 func (a *Adapter) Detect(_ context.Context, homeDir string) (bool, string, string, bool, error) {
-	configPath := ConfigPath(homeDir)
+	configPath := a.configDir(homeDir)
 
 	binaryPath, err := a.lookPath("kilo")
 	installed := err == nil
@@ -80,23 +84,38 @@ func (a *Adapter) InstallCommand(profile system.PlatformProfile) ([][]string, er
 // --- Config paths ---
 
 func (a *Adapter) GlobalConfigDir(homeDir string) string {
-	return filepath.Join(homeDir, ".config", "kilo")
+	return a.configDir(homeDir)
 }
 
+// SystemPromptDir es la carpeta global de Kilo o, en el proyecto, .kilo/rules.
 func (a *Adapter) SystemPromptDir(homeDir string) string {
-	return filepath.Join(homeDir, ".config", "kilo")
+	if a.inWorkspace(homeDir) {
+		return filepath.Join(a.configDir(homeDir), "rules")
+	}
+	return a.configDir(homeDir)
 }
 
+// SystemPromptFile es AGENTS.md en la carpeta global. En el proyecto es el
+// fichero propio de Axiom (.kilo/rules/axiom.md), que se registra en la lista
+// instructions de la configuración de Kilo: el AGENTS.md de la raíz es del equipo.
 func (a *Adapter) SystemPromptFile(homeDir string) string {
-	return filepath.Join(homeDir, ".config", "kilo", "AGENTS.md")
+	if a.inWorkspace(homeDir) {
+		return filepath.Join(a.SystemPromptDir(homeDir), projectInstructionsFileName)
+	}
+	return filepath.Join(a.configDir(homeDir), "AGENTS.md")
 }
 
 func (a *Adapter) SkillsDir(homeDir string) string {
-	return filepath.Join(homeDir, ".config", "kilo", "skills")
+	return filepath.Join(a.configDir(homeDir), "skills")
 }
 
+// SettingsPath es opencode.json en la carpeta global (nombre heredado que Kilo
+// sigue leyendo) y, en el proyecto, el kilo.json de .kilo (ver projectSettingsPath).
 func (a *Adapter) SettingsPath(homeDir string) string {
-	return filepath.Join(homeDir, ".config", "kilo", "opencode.json")
+	if a.inWorkspace(homeDir) {
+		return projectSettingsPath(homeDir)
+	}
+	return filepath.Join(a.configDir(homeDir), "opencode.json")
 }
 
 // --- Config strategies ---
@@ -114,7 +133,7 @@ func (a *Adapter) MCPStrategy() model.MCPStrategy {
 func (a *Adapter) MCPConfigPath(homeDir string, serverName string) string {
 	// Kilocode merges into opencode.json, but this provides the path
 	// for components that use the separate-file strategy fallback.
-	return filepath.Join(homeDir, ".config", "kilo", "opencode.json")
+	return a.SettingsPath(homeDir)
 }
 
 // --- Optional capabilities ---
@@ -132,7 +151,7 @@ func (a *Adapter) SupportsSlashCommands() bool {
 }
 
 func (a *Adapter) CommandsDir(homeDir string) string {
-	return filepath.Join(homeDir, ".config", "kilo", "commands")
+	return filepath.Join(a.configDir(homeDir), "commands")
 }
 
 func (a *Adapter) SupportsSubAgents() bool {

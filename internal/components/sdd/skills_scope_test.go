@@ -267,7 +267,7 @@ func TestSubAgentAndCommandAssetsUseSkillsDirPlaceholder(t *testing.T) {
 
 func TestResolveSkillsDirPlaceholdersLeavesUnrelatedContentUntouched(t *testing.T) {
 	const plain = "sin marcadores: ~/.claude/skills/_shared/x.md"
-	if got := resolveSkillsDirPlaceholders(plain, claudeAdapter(), true); got != plain {
+	if got := resolveSkillsDirPlaceholders(plain, claudeAdapter(), "/ws"); got != plain {
 		t.Fatalf("contenido sin marcador modificado: %q", got)
 	}
 }
@@ -391,7 +391,7 @@ func (a adapterWithSkillsDir) SkillsDir(string) string { return a.dir }
 func TestResolveOverlaySkillsDirKeepsJSONValid(t *testing.T) {
 	const overlay = `{"agent":{"sdd-apply":{"prompt":"Read {{AXIOM_SKILLS_DIR}}/sdd-apply/SKILL.md"}}}`
 
-	resolved, err := resolveOverlaySkillsDir(overlay, opencodeAdapter(), true)
+	resolved, err := resolveOverlaySkillsDir(overlay, opencodeAdapter(), "/ws")
 	if err != nil {
 		t.Fatalf("resolveOverlaySkillsDir: %v", err)
 	}
@@ -401,13 +401,13 @@ func TestResolveOverlaySkillsDirKeepsJSONValid(t *testing.T) {
 
 	// Un overlay sin marcador se devuelve intacto.
 	const plain = `{"agent":{}}`
-	if got, err := resolveOverlaySkillsDir(plain, opencodeAdapter(), true); err != nil || got != plain {
+	if got, err := resolveOverlaySkillsDir(plain, opencodeAdapter(), "/ws"); err != nil || got != plain {
 		t.Fatalf("overlay sin marcador: got %q, err %v", got, err)
 	}
 
 	// Una ruta con comillas rompería el JSON: debe fallar en vez de escribirlo.
 	broken := adapterWithSkillsDir{Adapter: opencodeAdapter(), dir: `.config/"op"/skills`}
-	if _, err := resolveOverlaySkillsDir(overlay, broken, true); err == nil {
+	if _, err := resolveOverlaySkillsDir(overlay, broken, "/ws"); err == nil {
 		t.Fatal("se esperaba un error por JSON inválido")
 	}
 }

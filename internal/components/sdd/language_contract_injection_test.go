@@ -20,7 +20,7 @@ func TestRemoteAuthorizationSharedPrompts(t *testing.T) {
 			for _, phase := range SharedPromptPhases() {
 				capabilities[phase] = capability
 			}
-			if _, err := WriteSharedPromptFiles(home, capabilities); err != nil {
+			if _, err := WriteSharedPromptFiles(SharedPromptDir(home), capabilities); err != nil {
 				t.Fatal(err)
 			}
 			canonical := strings.TrimSpace(agentguidance.InjectRemoteAuthorization(""))
@@ -33,7 +33,7 @@ func TestRemoteAuthorizationSharedPrompts(t *testing.T) {
 					t.Errorf("%s: canonical remote authorization must occur once", phase)
 				}
 			}
-			if changed, err := WriteSharedPromptFiles(home, capabilities); err != nil || changed {
+			if changed, err := WriteSharedPromptFiles(SharedPromptDir(home), capabilities); err != nil || changed {
 				t.Fatalf("second write: changed=%v err=%v", changed, err)
 			}
 		})
@@ -172,7 +172,7 @@ func TestInjectLanguageContractIntoOpenCodeSubagentPrompts(t *testing.T) {
 // canonical contract.
 func TestWriteSharedPromptFilesCarryLanguageContract(t *testing.T) {
 	homeDir := t.TempDir()
-	if _, err := WriteSharedPromptFiles(homeDir, nil); err != nil {
+	if _, err := WriteSharedPromptFiles(SharedPromptDir(homeDir), nil); err != nil {
 		t.Fatalf("WriteSharedPromptFiles() error = %v", err)
 	}
 

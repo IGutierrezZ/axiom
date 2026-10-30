@@ -116,6 +116,7 @@ Kiro usa agentes personalizados en `~/.kiro/agents/`. Axiom escribe los agentes 
 - Axiom establece `share: disabled` como valor predeterminado de los agentes SDD de OpenCode por privacidad y conserva los valores gestionados por el usuario, como `manual` o `auto`.
 - OpenCode Desktop SDD commands resolve the project with `git rev-parse --show-toplevel || pwd` before acting, avoiding Electron current-working-directory drift.
 - Review launch runs from an ordinary already-running OpenCode session: no restart, child process, special user-visible session, or `OPENCODE_DISABLE_PROJECT_CONFIG` / `OPENCODE_DISABLE_EXTERNAL_SKILLS` variable is required (rdd-advisory-transport SKILL.md).
+- Con `--scope workspace`, Axiom escribe en la distribución de proyecto que OpenCode lee, no en `<proyecto>/.config/opencode` (que ningún agente lee): la configuración (overlay SDD, `mcp`, `permission`, `instructions`) va en `<proyecto>/opencode.json` —o en `opencode.jsonc` si ya existe, con sus comentarios—; skills, comandos y plugins, en `<proyecto>/.opencode/{skills,commands,plugins}`; y los prompts compartidos del modo multi, en `.opencode/prompts/sdd`. Las instrucciones (persona, protocolo de memoria) van en un fichero propio, `.opencode/axiom.md`, que se añade a la lista `instructions` de `opencode.json` sin duplicados y conservando las entradas del usuario; el `AGENTS.md` de la raíz es del equipo y Axiom no lo toca. Un `opencode.json` que no sea JSON válido se rechaza sin modificarlo. Los restos de instalaciones anteriores en `<proyecto>/.config/opencode` no se borran (pueden mezclar ficheros del usuario): Axiom avisa para que se revisen. La instalación global no cambia.
 
 ### Kilo Code
 
@@ -125,6 +126,7 @@ Kiro usa agentes personalizados en `~/.kiro/agents/`. Axiom escribe los agentes 
 - Kilo no expone la vía de interceptación de herramientas ejecutables gestionada por Axiom; su preflight sigue siendo un bloqueo a nivel del prompt y no declara aplicar autoridad en tiempo de ejecución.
 - MCP servers are merged into `opencode.json`; Engram uses the OpenCode-style local MCP entry with `command` as an array
 - Auto-install is supported via npm: `npm install -g @kilocode/cli`
+- Con `--scope workspace`, Axiom escribe en la distribución de proyecto de Kilo, no en `<proyecto>/.config/kilo`: la configuración en `<proyecto>/.kilo/kilo.json` (o en el `kilo.jsonc`/`kilo.json` que ya exista, respetando la precedencia de Kilo: así no se crea un segundo fichero junto al del usuario), skills, comandos y plugins en `<proyecto>/.kilo/{skills,commands,plugins}`, y las instrucciones en `.kilo/rules/axiom.md`, registrado en `instructions` de la configuración del proyecto con la ruta relativa a la raíz que documenta Kilo (`.kilo/rules/axiom.md`). El `AGENTS.md` de la raíz no se toca. La instalación global no cambia.
 
 ### Gemini CLI
 

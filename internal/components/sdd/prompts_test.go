@@ -46,7 +46,7 @@ func TestSharedPromptFileRefFallsBackToAbsolutePath(t *testing.T) {
 
 	got, err := sharedPromptFileRef(
 		filepath.Join(xdgConfigHome, "opencode", "opencode.json"),
-		home,
+		SharedPromptDir(home),
 		"sdd-apply",
 		func(string, string) (string, error) { return "", errors.New("different volume") },
 	)
@@ -80,7 +80,7 @@ func TestSharedPromptFileRef(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := SharedPromptFileRef(tt.settingsPath, home, "sdd-apply")
+			got, err := SharedPromptFileRef(tt.settingsPath, SharedPromptDir(home), "sdd-apply")
 			if err != nil {
 				t.Fatalf("SharedPromptFileRef() error = %v", err)
 			}
@@ -233,7 +233,7 @@ func withoutStrings(values []string, excluded ...string) []string {
 func TestWriteSharedPromptFilesCreates10Files(t *testing.T) {
 	home := t.TempDir()
 
-	changed, err := WriteSharedPromptFiles(home, nil)
+	changed, err := WriteSharedPromptFiles(SharedPromptDir(home), nil)
 	if err != nil {
 		t.Fatalf("WriteSharedPromptFiles() error = %v", err)
 	}
@@ -274,7 +274,7 @@ func TestWriteSharedPromptFilesCreates10Files(t *testing.T) {
 func TestWriteSharedPromptFilesIdempotent(t *testing.T) {
 	home := t.TempDir()
 
-	first, err := WriteSharedPromptFiles(home, nil)
+	first, err := WriteSharedPromptFiles(SharedPromptDir(home), nil)
 	if err != nil {
 		t.Fatalf("WriteSharedPromptFiles() first error = %v", err)
 	}
@@ -282,7 +282,7 @@ func TestWriteSharedPromptFilesIdempotent(t *testing.T) {
 		t.Fatal("WriteSharedPromptFiles() first call changed = false, want true")
 	}
 
-	second, err := WriteSharedPromptFiles(home, nil)
+	second, err := WriteSharedPromptFiles(SharedPromptDir(home), nil)
 	if err != nil {
 		t.Fatalf("WriteSharedPromptFiles() second error = %v", err)
 	}
@@ -296,7 +296,7 @@ func TestWriteSharedPromptFilesIdempotent(t *testing.T) {
 func TestWriteSharedPromptFilesContent(t *testing.T) {
 	home := t.TempDir()
 
-	if _, err := WriteSharedPromptFiles(home, nil); err != nil {
+	if _, err := WriteSharedPromptFiles(SharedPromptDir(home), nil); err != nil {
 		t.Fatalf("WriteSharedPromptFiles() error = %v", err)
 	}
 
@@ -371,7 +371,7 @@ func TestWriteSharedPromptFilesLanguageContract(t *testing.T) {
 			for _, fileName := range phases {
 				phaseCapabilities[strings.TrimSuffix(fileName, ".md")] = capability
 			}
-			if _, err := WriteSharedPromptFiles(home, phaseCapabilities); err != nil {
+			if _, err := WriteSharedPromptFiles(SharedPromptDir(home), phaseCapabilities); err != nil {
 				t.Fatalf("WriteSharedPromptFiles(%s) error = %v", capability, err)
 			}
 
@@ -403,7 +403,7 @@ func TestWriteSharedPromptFilesWithCapabilities(t *testing.T) {
 
 	// Write with "capable" for sdd-apply.
 	capableMap := map[string]string{"sdd-apply": "capable"}
-	_, err := WriteSharedPromptFiles(home, capableMap)
+	_, err := WriteSharedPromptFiles(SharedPromptDir(home), capableMap)
 	if err != nil {
 		t.Fatalf("WriteSharedPromptFiles(capable) error = %v", err)
 	}
@@ -416,7 +416,7 @@ func TestWriteSharedPromptFilesWithCapabilities(t *testing.T) {
 
 	// Now write with "small" for sdd-apply.
 	smallMap := map[string]string{"sdd-apply": "small"}
-	_, err = WriteSharedPromptFiles(home, smallMap)
+	_, err = WriteSharedPromptFiles(SharedPromptDir(home), smallMap)
 	if err != nil {
 		t.Fatalf("WriteSharedPromptFiles(small) error = %v", err)
 	}
@@ -462,7 +462,7 @@ func TestInjectOpenCodeMultiModeSubagentPromptsUseFilePaths(t *testing.T) {
 
 	text := string(content)
 	for _, phase := range []string{"sdd-init", "sdd-explore", "sdd-propose", "sdd-spec", "sdd-design", "sdd-tasks", "sdd-apply", "sdd-verify", "sdd-archive", "sdd-onboard"} {
-		expectedRef, err := SharedPromptFileRef(settingsPath, home, phase)
+		expectedRef, err := SharedPromptFileRef(settingsPath, SharedPromptDir(home), phase)
 		if err != nil {
 			t.Fatalf("SharedPromptFileRef() error = %v", err)
 		}
@@ -478,7 +478,7 @@ func TestInjectOpenCodeMultiModeSubagentPromptsUseFilePaths(t *testing.T) {
 func TestWriteSharedPromptFilesOmitCodeGraphGuidanceByDefault(t *testing.T) {
 	home := t.TempDir()
 
-	if _, err := WriteSharedPromptFiles(home, nil); err != nil {
+	if _, err := WriteSharedPromptFiles(SharedPromptDir(home), nil); err != nil {
 		t.Fatalf("WriteSharedPromptFiles() error = %v", err)
 	}
 
@@ -499,7 +499,7 @@ func TestWriteSharedPromptFilesIncludeCodeGraphGuidanceWhenEnabled(t *testing.T)
 	home := t.TempDir()
 	guidance := communitytool.CodeGraphGuidanceMarkdown()
 
-	if _, err := WriteSharedPromptFiles(home, nil, guidance); err != nil {
+	if _, err := WriteSharedPromptFiles(SharedPromptDir(home), nil, guidance); err != nil {
 		t.Fatalf("WriteSharedPromptFiles() error = %v", err)
 	}
 

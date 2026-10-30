@@ -119,3 +119,23 @@ func NewMVPRegistry() (*Registry, error) {
 
 	return registry, nil
 }
+
+// BindWorkspace devuelve el adaptador ligado a la raíz de un proyecto. Los
+// adaptadores cuya distribución de proyecto difiere de la global (OpenCode y
+// Kilo: opencode.json y .opencode, .kilo) resuelven sus rutas con esa raíz en la
+// distribución de proyecto; las rutas que se piden con otra carpeta (la de
+// usuario) siguen siendo las globales. El resto de adaptadores se devuelven sin
+// cambios: su carpeta de configuración ya es una carpeta de punto en la raíz.
+func BindWorkspace(adapter Adapter, root string) Adapter {
+	if root == "" {
+		return adapter
+	}
+	switch concrete := adapter.(type) {
+	case *opencode.Adapter:
+		return concrete.WithWorkspace(root)
+	case *kilocode.Adapter:
+		return concrete.WithWorkspace(root)
+	default:
+		return adapter
+	}
+}

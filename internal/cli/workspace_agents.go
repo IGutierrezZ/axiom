@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/IGutierrezZ/axiom/v3/internal/agents"
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
 )
 
@@ -94,4 +95,34 @@ func errNoWorkspaceAgents(omitted []model.AgentID) error {
 		names = append(names, string(id))
 	}
 	return fmt.Errorf("ningún agente seleccionado admite el ámbito workspace (%s); vuelve a ejecutar con --scope global para instalarlos en su configuración global", strings.Join(names, ", "))
+}
+
+// scopedAdapter liga el adaptador a la raíz del proyecto cuando el ámbito es
+// workspace. OpenCode y Kilo tienen en el proyecto otra distribución que en la
+// carpeta de usuario (opencode.json y .opencode, .kilo): el adaptador ligado la
+// devuelve para la raíz del proyecto y mantiene la global para cualquier otra
+// carpeta. Con ámbito global, o para el resto de agentes, no cambia nada.
+func scopedAdapter(scope InstallScope, workspaceDir string, adapter agents.Adapter) agents.Adapter {
+	if scope != ScopeWorkspace || adapter == nil {
+		return adapter
+	}
+	return agents.BindWorkspace(adapter, workspaceDir)
+}
+
+// newScopedAdapter crea el adaptador de un agente ya ligado al ámbito.
+func newScopedAdapter(scope InstallScope, workspaceDir string, id model.AgentID) (agents.Adapter, error) {
+	adapter, err := agents.NewAdapter(id)
+	if err != nil {
+		return nil, err
+	}
+	return scopedAdapter(scope, workspaceDir, adapter), nil
+}
+
+// resolveAdaptersScoped es resolveAdapters con los adaptadores ligados al ámbito.
+func resolveAdaptersScoped(scope InstallScope, workspaceDir string, agentIDs []model.AgentID) []agents.Adapter {
+	adapters := resolveAdapters(agentIDs)
+	for i, adapter := range adapters {
+		adapters[i] = scopedAdapter(scope, workspaceDir, adapter)
+	}
+	return adapters
 }

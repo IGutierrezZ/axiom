@@ -924,13 +924,20 @@ func openCodeSettingsPath(home string) string {
 // agent actually loads.
 func openCodeOrchestratorPrompt(t *testing.T, home string) string {
 	t.Helper()
+	return openCodeOrchestratorPromptAt(t, openCodeSettingsPath(home))
+}
+
+// openCodeOrchestratorPromptAt es openCodeOrchestratorPrompt para un fichero de
+// ajustes concreto: en workspace es opencode.json de la raíz del proyecto.
+func openCodeOrchestratorPromptAt(t *testing.T, settingsPath string) string {
+	t.Helper()
 
 	var settings struct {
 		Agent map[string]struct {
 			Prompt string `json:"prompt"`
 		} `json:"agent"`
 	}
-	if err := json.Unmarshal([]byte(readTextFile(t, openCodeSettingsPath(home))), &settings); err != nil {
+	if err := json.Unmarshal([]byte(readTextFile(t, settingsPath)), &settings); err != nil {
 		t.Fatalf("decode OpenCode settings error = %v", err)
 	}
 	return settings.Agent[opencodedefault.ManagedAgent].Prompt
@@ -1135,7 +1142,8 @@ func TestInstallRoutingGuidanceWorkspaceScopeDeliversOpenCodeToHome(t *testing.T
 	// Seed the workspace settings with the retired section so the strip is proven
 	// to resolve against the workspace scope the injector writes.
 	seeded := filemerge.InjectMarkdownSection("", "trigger-rules", "Retired WorkRun ceremony\n")
-	seedOpenCodeOrchestratorPrompt(t, workspace, seeded)
+	workspaceSettings := filepath.Join(workspace, "opencode.json")
+	seedOpenCodeOrchestratorPromptAt(t, workspaceSettings, seeded)
 
 	step := agentRoutingGuidanceStep{
 		id:           "agent-guidance:" + string(model.AgentOpenCode),
@@ -1148,7 +1156,7 @@ func TestInstallRoutingGuidanceWorkspaceScopeDeliversOpenCodeToHome(t *testing.T
 		t.Fatalf("Run() error = %v", err)
 	}
 
-	prompt := openCodeOrchestratorPrompt(t, workspace)
+	prompt := openCodeOrchestratorPromptAt(t, workspaceSettings)
 	if !containsRoutingMarkers(prompt) {
 		t.Fatalf("workspace-scoped install left the workspace OpenCode orchestrator prompt unrouted:\n%s", prompt)
 	}
@@ -1162,11 +1170,11 @@ func TestInstallRoutingGuidanceWorkspaceScopeDeliversOpenCodeToHome(t *testing.T
 		t.Fatalf("workspace-scoped install modified home directory: %q", homeSettings)
 	}
 
-	first := readTextFile(t, openCodeSettingsPath(workspace))
+	first := readTextFile(t, workspaceSettings)
 	if err := step.Run(); err != nil {
 		t.Fatalf("second Run() error = %v", err)
 	}
-	if second := readTextFile(t, openCodeSettingsPath(workspace)); second != first {
+	if second := readTextFile(t, workspaceSettings); second != first {
 		t.Fatalf("second workspace-scoped run rewrote the workspace settings; delivery is not idempotent")
 	}
 }
@@ -1256,8 +1264,13 @@ func TestRoutingGuidancePathsExcludesAgentsWithoutSystemPrompt(t *testing.T) {
 // managed orchestrator agent already carries the given prompt.
 func seedOpenCodeOrchestratorPrompt(t *testing.T, home, prompt string) {
 	t.Helper()
+	seedOpenCodeOrchestratorPromptAt(t, openCodeSettingsPath(home), prompt)
+}
 
-	settingsPath := openCodeSettingsPath(home)
+// seedOpenCodeOrchestratorPromptAt es seedOpenCodeOrchestratorPrompt para un
+// fichero de ajustes concreto.
+func seedOpenCodeOrchestratorPromptAt(t *testing.T, settingsPath, prompt string) {
+	t.Helper()
 	if err := os.MkdirAll(filepath.Dir(settingsPath), 0o755); err != nil {
 		t.Fatalf("MkdirAll(%q) error = %v", filepath.Dir(settingsPath), err)
 	}

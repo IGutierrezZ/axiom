@@ -37,16 +37,38 @@ func installsInWorkspace(rootDir string, opts InjectOptions) bool {
 	return filepath.Clean(opts.WorkspaceDir) == filepath.Clean(rootDir)
 }
 
+// workspaceRootFor devuelve la raíz del proyecto cuando la inyección de rootDir
+// cae en el workspace, y "" cuando es global.
+func workspaceRootFor(rootDir string, opts InjectOptions) string {
+	if installsInWorkspace(rootDir, opts) {
+		return rootDir
+	}
+	return ""
+}
+
 // resolveSkillsDirPlaceholders sustituye los marcadores de ruta de skills por
 // la ruta que corresponde al ámbito. La parte relativa sale de
 // adapter.SkillsDir, la misma función que decide dónde se escriben las skills,
 // así que la ruta que leen los subagentes no puede divergir de la instalada.
-func resolveSkillsDirPlaceholders(content string, adapter agents.Adapter, workspace bool) string {
+//
+// workspaceRoot vacío es el ámbito global: la ruta relativa a la carpeta de
+// usuario con prefijo `~/`. Con una raíz de proyecto es la ruta relativa a esa
+// raíz, tal como la resuelve el adaptador para el proyecto (OpenCode y Kilo la
+// tienen en .opencode/skills y .kilo/skills, no bajo .config).
+func resolveSkillsDirPlaceholders(content string, adapter agents.Adapter, workspaceRoot string) string {
 	if !strings.Contains(content, "{{AXIOM_SKILLS_DIR") {
 		return content
 	}
-	rel := filepath.ToSlash(adapter.SkillsDir(""))
-	rel = strings.TrimPrefix(rel, "/")
+	workspace := strings.TrimSpace(workspaceRoot) != ""
+	var rel string
+	if workspace {
+		if r, err := filepath.Rel(workspaceRoot, adapter.SkillsDir(workspaceRoot)); err == nil {
+			rel = filepath.ToSlash(r)
+		}
+	}
+	if rel == "" {
+		rel = strings.TrimPrefix(filepath.ToSlash(adapter.SkillsDir("")), "/")
+	}
 	if rel == "" {
 		return content
 	}
@@ -65,8 +87,8 @@ func resolveSkillsDirPlaceholders(content string, adapter agents.Adapter, worksp
 // resolveSkillsDirPlaceholders y comprueba después que el documento sigue siendo
 // JSON válido, de modo que una ruta con caracteres que exigieran escape nunca deje
 // un opencode.json corrupto: es preferible fallar la inyección.
-func resolveOverlaySkillsDir(content string, adapter agents.Adapter, workspace bool) (string, error) {
-	resolved := resolveSkillsDirPlaceholders(content, adapter, workspace)
+func resolveOverlaySkillsDir(content string, adapter agents.Adapter, workspaceRoot string) (string, error) {
+	resolved := resolveSkillsDirPlaceholders(content, adapter, workspaceRoot)
 	if resolved == content {
 		return content, nil
 	}

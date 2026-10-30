@@ -809,7 +809,7 @@ func TestGenerateProfileOverlay_SubAgentFileRefs(t *testing.T) {
 		key := phase + "-cheap"
 		agent := agentMap[key].(map[string]any)
 		prompt, _ := agent["prompt"].(string)
-		expectedRef, err := SharedPromptFileRef(openCodeSettingsPathForTest(home), home, phase)
+		expectedRef, err := SharedPromptFileRef(openCodeSettingsPathForTest(home), SharedPromptDir(home), phase)
 		if err != nil {
 			t.Fatalf("SharedPromptFileRef() error = %v", err)
 		}

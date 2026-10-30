@@ -30,7 +30,7 @@ func TestProfileLifecycle_FullCRUD(t *testing.T) {
 	}
 
 	// Step 2: WriteSharedPromptFiles — expect 10 files created.
-	changed, err := WriteSharedPromptFiles(home, nil)
+	changed, err := WriteSharedPromptFiles(SharedPromptDir(home), nil)
 	if err != nil {
 		t.Fatalf("WriteSharedPromptFiles(): %v", err)
 	}
@@ -216,7 +216,7 @@ func TestProfileLifecycle_TwoProfiles(t *testing.T) {
 		t.Fatalf("write initial settings: %v", err)
 	}
 
-	if _, err := WriteSharedPromptFiles(home, nil); err != nil {
+	if _, err := WriteSharedPromptFiles(SharedPromptDir(home), nil); err != nil {
 		t.Fatalf("WriteSharedPromptFiles(): %v", err)
 	}
 

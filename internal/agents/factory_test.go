@@ -8,6 +8,37 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
 )
 
+// BindWorkspace liga OpenCode y Kilo a la raíz del proyecto y deja intactos al
+// resto de adaptadores, cuya carpeta de configuración ya es una carpeta de punto
+// en la raíz.
+func TestBindWorkspaceOnlyChangesOpenCodeFamily(t *testing.T) {
+	root := t.TempDir()
+	for _, id := range []model.AgentID{model.AgentOpenCode, model.AgentKilocode} {
+		adapter, err := NewAdapter(id)
+		if err != nil {
+			t.Fatal(err)
+		}
+		bound := BindWorkspace(adapter, root)
+		if _, ok := bound.(WorkspaceInstructionsProvider); !ok {
+			t.Errorf("%s ligado debe registrar sus instrucciones", id)
+		}
+		if _, ok := bound.(WorkspacePromptsDirProvider); !ok {
+			t.Errorf("%s ligado debe indicar su carpeta de prompts", id)
+		}
+		if bound.SkillsDir(root) == adapter.SkillsDir(root) {
+			t.Errorf("%s ligado debe usar la distribución de proyecto: %s", id, bound.SkillsDir(root))
+		}
+	}
+	claude, _ := NewAdapter(model.AgentClaudeCode)
+	if BindWorkspace(claude, root) != claude {
+		t.Errorf("Claude Code no cambia con el ámbito")
+	}
+	opencode, _ := NewAdapter(model.AgentOpenCode)
+	if BindWorkspace(opencode, "") != opencode {
+		t.Errorf("sin raíz no se liga nada")
+	}
+}
+
 func TestFactoryResolvesPiAdapter(t *testing.T) {
 	adapter, err := NewAdapter(model.AgentPi)
 	if err != nil {

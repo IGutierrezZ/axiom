@@ -86,6 +86,15 @@ func (opts InjectOptions) orchestratorPolicyRenderOptions() OrchestratorRenderOp
 	}
 }
 
+// openCodeRenderOptions son las opciones de render de los overlays de OpenCode y
+// Kilo: las de política del orquestador más la carpeta de prompts compartidos del
+// adaptador, que en workspace es la del proyecto.
+func (opts InjectOptions) openCodeRenderOptions(adapter agents.Adapter, homeDir string) OrchestratorRenderOptions {
+	options := opts.orchestratorPolicyRenderOptions()
+	options.SharedPromptDir = SharedPromptDirFor(adapter, homeDir)
+	return options
+}
+
 // workflowInjector is an optional adapter capability: if an adapter
 // implements this interface, sdd.Inject will copy the embedded workflow
 // assets into the workspace directory provided via InjectOptions.WorkspaceDir.
@@ -445,7 +454,12 @@ func Inject(homeDir string, adapter agents.Adapter, sddMode model.SDDModeID, opt
 	var defaultPlan *opencodedefault.InstallPlan
 	if adapter.Agent() == model.AgentOpenCode {
 		var err error
-		defaultPlan, err = opencodedefault.PrepareInstall(settingsPath)
+		if workspaceRootFor(homeDir, opts) != "" {
+			// La configuración del proyecto es del usuario: sus comentarios se conservan.
+			defaultPlan, err = opencodedefault.PrepareInstallPreservingJSONC(settingsPath)
+		} else {
+			defaultPlan, err = opencodedefault.PrepareInstall(settingsPath)
+		}
 		if err != nil {
 			return InjectionResult{}, err
 		}
@@ -464,11 +478,11 @@ func Inject(homeDir string, adapter agents.Adapter, sddMode model.SDDModeID, opt
 		if err != nil {
 			return InjectionResult{}, err
 		}
-		content, err = resolveOverlaySkillsDir(content, adapter, installsInWorkspace(homeDir, opts))
+		content, err = resolveOverlaySkillsDir(content, adapter, workspaceRootFor(homeDir, opts))
 		if err != nil {
 			return InjectionResult{}, err
 		}
-		preparedOverlay, err = inlineOpenCodeSDDPrompts([]byte(content), homeDir, settingsPath, adapter.Agent(), opts.PreserveOpenCodeOrchestratorPrompt, opts.orchestratorPolicyRenderOptions(), opts.CodeGraphGuidanceMarkdown)
+		preparedOverlay, err = inlineOpenCodeSDDPrompts([]byte(content), homeDir, settingsPath, adapter.Agent(), opts.PreserveOpenCodeOrchestratorPrompt, opts.openCodeRenderOptions(adapter, homeDir), opts.CodeGraphGuidanceMarkdown)
 		if err != nil {
 			return InjectionResult{}, err
 		}
@@ -482,7 +496,7 @@ func Inject(homeDir string, adapter agents.Adapter, sddMode model.SDDModeID, opt
 			if profile.Name == "" || profile.Name == "default" {
 				continue
 			}
-			overlay, err := GenerateProfileOverlay(profile, homeDir, settingsPath, opts.OpenCodeModelAssignments, opts.CodeGraphGuidanceMarkdown, opts.orchestratorPolicyRenderOptions())
+			overlay, err := GenerateProfileOverlay(profile, homeDir, settingsPath, opts.OpenCodeModelAssignments, opts.CodeGraphGuidanceMarkdown, opts.openCodeRenderOptions(adapter, homeDir))
 			if err != nil {
 				return InjectionResult{}, err
 			}
@@ -606,7 +620,7 @@ func Inject(homeDir string, adapter agents.Adapter, sddMode model.SDDModeID, opt
 				}
 
 				content := renderBoundedReviewAsset(adapter.Agent(), commandsAssetDir+"/"+entry.Name())
-				content = resolveSkillsDirPlaceholders(content, adapter, installsInWorkspace(homeDir, opts))
+				content = resolveSkillsDirPlaceholders(content, adapter, workspaceRootFor(homeDir, opts))
 				path := filepath.Join(commandsDir, entry.Name())
 				writeResult, err := filemerge.WriteFileAtomic(path, []byte(content), 0o644)
 				if err != nil {
@@ -671,7 +685,7 @@ func Inject(homeDir string, adapter agents.Adapter, sddMode model.SDDModeID, opt
 						}
 					}
 				}
-				promptsChanged, promptsErr := WriteSharedPromptFiles(homeDir, phaseCapabilities, opts.CodeGraphGuidanceMarkdown)
+				promptsChanged, promptsErr := WriteSharedPromptFiles(SharedPromptDirFor(adapter, homeDir), phaseCapabilities, opts.CodeGraphGuidanceMarkdown)
 				if promptsErr != nil {
 					return InjectionResult{}, fmt.Errorf("write shared SDD prompt files: %w", promptsErr)
 				}
@@ -852,7 +866,7 @@ func Inject(homeDir string, adapter agents.Adapter, sddMode model.SDDModeID, opt
 			}
 			// Copy all files (not just .md) to support Kimi's YAML-based agents
 			contentStr := renderBoundedReviewAsset(adapter.Agent(), embeddedDir+"/"+entry.Name())
-			contentStr = resolveSkillsDirPlaceholders(contentStr, adapter, installsInWorkspace(homeDir, opts))
+			contentStr = resolveSkillsDirPlaceholders(contentStr, adapter, workspaceRootFor(homeDir, opts))
 
 			// Resolve {{KIRO_MODEL}} placeholder for adapters that support it (e.g. Kiro).
 			// Non-Kiro adapters (Cursor, etc.) don't implement kiroModelResolver and are unaffected.
@@ -1039,7 +1053,7 @@ func prepareSessionPreflight(homeDir string, adapter agents.Adapter, opts Inject
 	if err != nil {
 		return
 	}
-	workspace := installsInWorkspace(homeDir, opts)
+	workspace := workspaceRootFor(homeDir, opts)
 	prompt = resolveSkillsDirPlaceholders(prompt, adapter, workspace)
 	if adapter.Agent() == model.AgentClaudeCode && adapter.SkillsDir(homeDir) != "" {
 		lazy, err = renderClaudeSessionPreflight()
@@ -1237,7 +1251,7 @@ func inlineOpenCodeSDDPrompts(overlayBytes []byte, homeDir, settingsPath string,
 			}
 			placeholder := "__PROMPT_FILE_" + phase + "__"
 			if prompt, _ := agentMap["prompt"].(string); prompt == placeholder {
-				promptRef, err := SharedPromptFileRef(settingsPath, homeDir, phase)
+				promptRef, err := SharedPromptFileRef(settingsPath, promptDirFor(renderOptions, homeDir), phase)
 				if err != nil {
 					return nil, fmt.Errorf("build shared prompt file reference for %q: %w", phase, err)
 				}
@@ -2528,6 +2542,12 @@ func ManagedOpenCodePluginNames() []string {
 	return managedOpenCodePluginNames(model.AgentOpenCode)
 }
 
+// ManagedOpenCodePluginNamesFor devuelve los plugins gestionados de un agente de
+// la familia OpenCode (OpenCode y Kilo reciben conjuntos distintos).
+func ManagedOpenCodePluginNamesFor(agent model.AgentID) []string {
+	return managedOpenCodePluginNames(agent)
+}
+
 const LegacyOpenCodeReviewPluginName = "review-result-artifacts.ts"
 
 // OpenCodePluginLifecycleNames includes the retired plugin so transactional
@@ -3636,7 +3656,7 @@ func writeClaudeLazySDDWorkflow(homeDir string, adapter agents.Adapter, prepared
 			return InjectionResult{}, err
 		}
 		// Sin opciones de ámbito, la copia regenerada es la global.
-		content = resolveSkillsDirPlaceholders(content, adapter, false)
+		content = resolveSkillsDirPlaceholders(content, adapter, "")
 	}
 
 	path := filepath.Join(skillDir, "_shared", "sdd-orchestrator-workflow.md")

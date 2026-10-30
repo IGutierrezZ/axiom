@@ -68,3 +68,20 @@ type LegacyPromptFileProvider interface {
 type EffectiveCodeGraphWiringDetector interface {
 	EffectiveCodeGraphWiring(homeDir string) (path string, configured bool)
 }
+
+// WorkspacePromptsDirProvider es una capacidad opcional de los adaptadores cuya
+// distribución de proyecto no coincide con la global: indica dónde van los
+// prompts compartidos de SDD cuando dir es la raíz del proyecto. ok es false
+// fuera de él, y el llamante usa entonces la ruta global.
+type WorkspacePromptsDirProvider interface {
+	WorkspacePromptsDir(dir string) (path string, ok bool)
+}
+
+// WorkspaceInstructionsProvider es una capacidad opcional de los adaptadores que
+// no cargan solos el fichero propio de instrucciones de Axiom en el proyecto: hay
+// que registrarlo en la lista instructions de su fichero de configuración.
+// settingsPath es ese fichero y entry la entrada, relativa a la raíz del
+// proyecto. ok es false fuera del proyecto.
+type WorkspaceInstructionsProvider interface {
+	WorkspaceInstructions(dir string) (settingsPath, entry string, ok bool)
+}
