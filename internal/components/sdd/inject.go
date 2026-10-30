@@ -78,6 +78,13 @@ type InjectOptions struct {
 	// inject into SDD phase sub-agent prompts. Empty means disabled; normal SDD
 	// installs must leave it empty unless the Community Tool path enabled CodeGraph.
 	CodeGraphGuidanceMarkdown string
+
+	// SkillsAlreadyWritten indica que la carpeta de skills del adaptador ya la
+	// escribió otro agente en esta misma ejecución. Con --scope workspace varios
+	// agentes comparten .agents/skills: el llamante la escribe una sola vez y marca
+	// el resto, que no repiten ni la escritura ni su registro de ficheros. No
+	// afecta a nada más de la inyección.
+	SkillsAlreadyWritten bool
 }
 
 func (opts InjectOptions) orchestratorPolicyRenderOptions() OrchestratorRenderOptions {
@@ -789,10 +796,17 @@ func Inject(homeDir string, adapter agents.Adapter, sddMode model.SDDModeID, opt
 	}
 
 	// 3. Write SDD skill files (if the agent supports skills).
-	if adapter.SupportsSkills() {
+	if adapter.SupportsSkills() && !opts.SkillsAlreadyWritten {
 		skillDir := adapter.SkillsDir(homeDir)
 		if skillDir != "" {
-			skillResult, skillErr := InjectSkillDirectoryForAgent(skillDir, opts.Capability, adapter.Agent())
+			// La carpeta compartida .agents/skills sirve a varios agentes: se escribe con
+			// el hueco genérico de runtime, igual que la copia de compatibilidad, para que
+			// su contenido no dependa de qué agente la escriba ni de cuántos haya.
+			skillAgent := adapter.Agent()
+			if agents.IsSharedWorkspaceSkillsDir(opts.WorkspaceDir, skillDir) {
+				skillAgent = ""
+			}
+			skillResult, skillErr := InjectSkillDirectoryForAgent(skillDir, opts.Capability, skillAgent)
 			if skillErr != nil {
 				return InjectionResult{}, skillErr
 			}
@@ -1057,6 +1071,7 @@ func prepareSessionPreflight(homeDir string, adapter agents.Adapter, opts Inject
 	prompt = resolveSkillsDirPlaceholders(prompt, adapter, workspace)
 	prompt = adaptCodexOrchestratorForWorkspace(prompt, adapter, workspace)
 	prompt = adaptVSCodeOrchestratorForWorkspace(prompt, adapter, workspace)
+	prompt = adaptConventionsClauseForWorkspace(prompt, adapter, workspace)
 	if adapter.Agent() == model.AgentClaudeCode && adapter.SkillsDir(homeDir) != "" {
 		lazy, err = renderClaudeSessionPreflight()
 		if err != nil {

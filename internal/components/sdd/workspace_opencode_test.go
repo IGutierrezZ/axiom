@@ -11,7 +11,8 @@ import (
 )
 
 // En workspace, el marcador de skills de los overlays de OpenCode y Kilo se
-// resuelve a la carpeta de skills del proyecto (.opencode/skills, .kilo/skills),
+// resuelve a la carpeta de skills compartida del proyecto (.agents/skills), que
+// leen los dos agentes y no la de cada uno (.opencode/skills, .kilo/skills),
 // no a la carpeta global bajo .config.
 func TestResolveOverlaySkillsDirUsesProjectSkillsOfBoundAdapter(t *testing.T) {
 	const overlay = `{"agent":{"sdd-apply":{"prompt":"Read {{AXIOM_SKILLS_DIR}}/sdd-apply/SKILL.md"}}}`
@@ -21,8 +22,8 @@ func TestResolveOverlaySkillsDirUsesProjectSkillsOfBoundAdapter(t *testing.T) {
 		agent model.AgentID
 		want  string
 	}{
-		{model.AgentOpenCode, ".opencode/skills/sdd-apply/SKILL.md"},
-		{model.AgentKilocode, ".kilo/skills/sdd-apply/SKILL.md"},
+		{model.AgentOpenCode, ".agents/skills/sdd-apply/SKILL.md"},
+		{model.AgentKilocode, ".agents/skills/sdd-apply/SKILL.md"},
 	} {
 		adapter, err := agents.NewAdapter(tc.agent)
 		if err != nil {

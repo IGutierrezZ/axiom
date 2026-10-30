@@ -75,3 +75,14 @@ func (a *Adapter) WorkspaceInstructions(dir string) (settingsPath, entry string,
 	}
 	return a.SettingsPath(dir), filepath.ToSlash(filepath.Join(projectConfigDirName, projectInstructionsFileName)), true
 }
+
+// LegacyWorkspaceSkillsDirs lista la carpeta de skills que usaban las instalaciones
+// de proyecto anteriores (.opencode/skills), ahora sustituida por .agents/skills.
+// OpenCode las lee todas y vería cada skill dos veces. Solo se retira lo que se
+// prueba que es de Axiom. Fuera del proyecto no devuelve nada.
+func (a *Adapter) LegacyWorkspaceSkillsDirs(dir string) []string {
+	if !a.inWorkspace(dir) {
+		return nil
+	}
+	return []string{filepath.Join(dir, projectConfigDirName, "skills")}
+}

@@ -14,7 +14,7 @@ func TestWithWorkspaceUsesProjectLayout(t *testing.T) {
 	for name, tc := range map[string]struct{ got, want string }{
 		"SystemPromptDir":  {a.SystemPromptDir(root), filepath.Join(root, ".github", "instructions")},
 		"SystemPromptFile": {a.SystemPromptFile(root), filepath.Join(root, ".github", "instructions", "axiom.instructions.md")},
-		"SkillsDir":        {a.SkillsDir(root), filepath.Join(root, ".github", "skills")},
+		"SkillsDir":        {a.SkillsDir(root), filepath.Join(root, ".agents", "skills")},
 		"MCPConfigPath":    {a.MCPConfigPath(root, "engram"), filepath.Join(root, ".vscode", "mcp.json")},
 		"SettingsPath":     {a.SettingsPath(root), filepath.Join(root, ".vscode", "settings.json")},
 		"GlobalConfigDir":  {a.GlobalConfigDir(root), filepath.Join(root, ".github")},

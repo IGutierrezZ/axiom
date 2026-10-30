@@ -2,6 +2,8 @@ package gemini
 
 import (
 	"path/filepath"
+
+	"github.com/IGutierrezZ/axiom/v3/internal/agents/sharedskills"
 )
 
 // Distribución de proyecto de Gemini CLI (documentación oficial,
@@ -85,4 +87,24 @@ func (a *WorkspaceAdapter) WorkspaceContextFile(dir string) (settingsPath, entry
 		return "", "", nil, false
 	}
 	return a.Adapter.SettingsPath(dir), contextFileEntry, []string{defaultContextFileName}, true
+}
+
+// SkillsDir es ~/.gemini/skills en la carpeta de usuario. En el proyecto es la
+// compartida .agents/skills: Gemini CLI la lee como alias de .gemini/skills (y, en
+// el mismo nivel, gana a ella), así que una sola copia evita las skills duplicadas.
+func (a *WorkspaceAdapter) SkillsDir(dir string) string {
+	if a.inWorkspace(dir) {
+		return sharedskills.Dir(dir)
+	}
+	return a.Adapter.SkillsDir(dir)
+}
+
+// LegacyWorkspaceSkillsDirs lista la carpeta de skills que usaban las instalaciones
+// de proyecto anteriores (.gemini/skills), ahora sustituida por .agents/skills. Solo
+// se retira lo que se prueba que es de Axiom. Fuera del proyecto no devuelve nada.
+func (a *WorkspaceAdapter) LegacyWorkspaceSkillsDirs(dir string) []string {
+	if !a.inWorkspace(dir) {
+		return nil
+	}
+	return []string{filepath.Join(dir, ".gemini", "skills")}
 }

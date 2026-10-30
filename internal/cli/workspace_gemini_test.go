@@ -92,8 +92,8 @@ func TestRunInstallWorkspaceGeminiUsesOwnInstructionsFile(t *testing.T) {
 	if mcp, _ := readJSONObject(t, settingsPath)["mcpServers"].(map[string]any); mcp["engram"] == nil {
 		t.Errorf("falta mcpServers.engram en .gemini/settings.json: %v", mcp)
 	}
-	if _, err := os.Stat(filepath.Join(workspace, ".gemini", "skills", "sdd-init", "SKILL.md")); err != nil {
-		t.Errorf("faltan las skills en .gemini/skills: %v", err)
+	if _, err := os.Stat(filepath.Join(workspace, ".agents", "skills", "sdd-init", "SKILL.md")); err != nil {
+		t.Errorf("faltan las skills en .agents/skills: %v", err)
 	}
 	if after, _ := os.ReadFile(filepath.Join(workspace, "GEMINI.md")); !bytes.Equal(after, teamGemini) {
 		t.Errorf("el GEMINI.md de la raíz cambió:\n%s", after)

@@ -14,7 +14,7 @@ func TestWithWorkspaceUsesProjectLayout(t *testing.T) {
 		"GlobalConfigDir":  {a.GlobalConfigDir(root), filepath.Join(root, ".kilo")},
 		"SystemPromptDir":  {a.SystemPromptDir(root), filepath.Join(root, ".kilo", "rules")},
 		"SystemPromptFile": {a.SystemPromptFile(root), filepath.Join(root, ".kilo", "rules", "axiom.md")},
-		"SkillsDir":        {a.SkillsDir(root), filepath.Join(root, ".kilo", "skills")},
+		"SkillsDir":        {a.SkillsDir(root), filepath.Join(root, ".agents", "skills")},
 		"CommandsDir":      {a.CommandsDir(root), filepath.Join(root, ".kilo", "commands")},
 		"SettingsPath":     {a.SettingsPath(root), filepath.Join(root, ".kilo", "kilo.json")},
 		"MCPConfigPath":    {a.MCPConfigPath(root, "engram"), filepath.Join(root, ".kilo", "kilo.json")},

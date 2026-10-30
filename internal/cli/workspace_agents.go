@@ -114,9 +114,10 @@ func errNoWorkspaceAgents(omitted []model.AgentID) error {
 // scopedAdapter liga el adaptador a la raíz del proyecto cuando el ámbito es
 // workspace. OpenCode, Kilo, Gemini, Codex y VS Code Copilot tienen en el proyecto otra
 // distribución que en la carpeta de usuario (opencode.json y .opencode, .kilo,
-// .gemini/AXIOM.md, .codex/config.toml y .agents/skills, .github/ y .vscode/): el adaptador ligado la devuelve para la raíz
-// del proyecto y mantiene la global para cualquier otra carpeta. Con ámbito global,
-// o para el resto de agentes, no cambia nada.
+// .gemini/AXIOM.md, .codex/config.toml, .github/ y .vscode/). Además, las skills de proyecto de
+// todos los que leen .agents/skills (esos cinco y Cursor) van a esa carpeta compartida. El
+// adaptador ligado devuelve esas rutas para la raíz del proyecto y mantiene la global para
+// cualquier otra carpeta. Con ámbito global, o para el resto de agentes, no cambia nada.
 func scopedAdapter(scope InstallScope, workspaceDir string, adapter agents.Adapter) agents.Adapter {
 	if scope != ScopeWorkspace || adapter == nil {
 		return adapter

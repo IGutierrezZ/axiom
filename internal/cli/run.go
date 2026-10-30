@@ -918,6 +918,14 @@ func (r *installRuntime) stagePlan() pipeline.StagePlan {
 			},
 		})
 	}
+	if legacy := legacySkillsAdapters(r.scope, resolveAdaptersScoped(r.scope, r.workspaceDir, r.resolved.Agents)); len(legacy) > 0 {
+		apply = append(apply, legacySkillsRetirementStep{
+			id:           "retire-legacy-workspace-skills",
+			state:        r.state,
+			workspaceDir: r.workspaceDir,
+			adapters:     legacy,
+		})
+	}
 
 	return pipeline.StagePlan{Prepare: prepare, Apply: apply}
 }
@@ -1826,6 +1834,7 @@ func (s componentApplyStep) Run() error {
 		}
 		return nil
 	case model.ComponentSDD:
+		skillsDirs := newWorkspaceSkillsDirs(s.scope)
 		for _, adapter := range adapters {
 			targetDir := componentInjectionDirScoped(s.homeDir, s.workspaceDir, s.scope, adapter)
 			opts := sdd.InjectOptions{
@@ -1844,6 +1853,7 @@ func (s componentApplyStep) Run() error {
 			if s.scope == ScopeWorkspace {
 				opts.WorkspaceDir = s.workspaceDir
 			}
+			opts.SkillsAlreadyWritten = skillsDirs.claimSDD(adapter, targetDir)
 			opts.IncludeOpenCodeBackgroundPolicy = s.backgroundPolicy && adapter.Agent() == model.AgentOpenCode
 			if _, err := injectSDD(targetDir, adapter, s.selection.SDDMode, opts); err != nil {
 				return fmt.Errorf("inject sdd for %q: %w", adapter.Agent(), err)
@@ -1855,8 +1865,12 @@ func (s componentApplyStep) Run() error {
 		if len(skillIDs) == 0 {
 			return nil
 		}
+		skillsDirs := newWorkspaceSkillsDirs(s.scope)
 		for _, adapter := range adapters {
 			targetDir := componentInjectionDirScoped(s.homeDir, s.workspaceDir, s.scope, adapter)
+			if skillsDirs.claimSkills(adapter, targetDir) {
+				continue
+			}
 			if _, err := skills.Inject(targetDir, adapter, skillIDs); err != nil {
 				return fmt.Errorf("inject skills for %q: %w", adapter.Agent(), err)
 			}
@@ -2322,6 +2336,10 @@ func backupTargets(homeDir, workspaceDir string, scope InstallScope, selection m
 	for _, path := range legacyPromptBackupPaths(homeDir, workspaceDir, scope, adapters) {
 		paths[path] = struct{}{}
 	}
+	// La migración de skills de proyecto también borra ficheros.
+	for _, path := range legacySkillsBackupPaths(workspaceDir, scope, adapters) {
+		paths[path] = struct{}{}
+	}
 	adapterSkillPaths, err := adapterSkillBackupTargets(homeDir, workspaceDir, scope, selection, adapters)
 	if err != nil {
 		return nil, err
@@ -2382,12 +2400,16 @@ func backupTargets(homeDir, workspaceDir string, scope InstallScope, selection m
 
 func adapterSkillBackupTargets(homeDir, workspaceDir string, scope InstallScope, selection model.Selection, adapters []agents.Adapter) ([]string, error) {
 	var paths []string
+	skillsDirs := newWorkspaceSkillsDirs(scope)
 	for _, adapter := range adapters {
 		if !adapter.SupportsSkills() {
 			continue
 		}
 		skillDir := adapter.SkillsDir(componentInjectionDirScoped(homeDir, workspaceDir, scope, adapter))
 		if skillDir == "" {
+			continue
+		}
+		if skillsDirs.claim(skillDir) {
 			continue
 		}
 		if slices.Contains(selection.Components, model.ComponentSkills) {
@@ -2722,6 +2744,11 @@ func componentPathsWithWorkspaceScoped(homeDir, workspaceDir string, scope Insta
 		}
 	}
 
+	// Con el ámbito workspace varios agentes comparten .agents/skills: cada fichero se
+	// declara una sola vez.
+	if scope == ScopeWorkspace {
+		return dedupPaths(paths)
+	}
 	return paths
 }
 

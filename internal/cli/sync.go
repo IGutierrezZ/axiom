@@ -706,6 +706,14 @@ func (r *syncRuntime) stagePlan() pipeline.StagePlan {
 			},
 		})
 	}
+	if legacy := legacySkillsAdapters(r.scope, adapters); len(legacy) > 0 {
+		apply = append(apply, legacySkillsRetirementStep{
+			id:           "sync:retire-legacy-workspace-skills",
+			state:        r.state,
+			workspaceDir: r.workspaceDir,
+			adapters:     legacy,
+		})
+	}
 
 	return pipeline.StagePlan{Prepare: prepare, Apply: apply}
 }
@@ -796,6 +804,10 @@ func syncBackupTargetsScoped(homeDir, workspaceDir string, scope InstallScope, s
 	for _, path := range legacyPromptBackupPaths(homeDir, workspaceDir, scope, adapters) {
 		paths[path] = struct{}{}
 	}
+	// La migración de skills de proyecto también borra ficheros.
+	for _, path := range legacySkillsBackupPaths(workspaceDir, scope, adapters) {
+		paths[path] = struct{}{}
+	}
 	for _, adapter := range adapters {
 		if adapter.Agent() == model.AgentPi {
 			for _, rootDir := range piPersonaConfigRoots(homeDir, workspaceDir, scope) {
@@ -870,8 +882,12 @@ func syncAdapterSkillBackupTargets(homeDir, workspaceDir string, selection model
 
 func syncAdapterSkillBackupTargetsScoped(homeDir, workspaceDir string, scope InstallScope, selection model.Selection, adapters []agents.Adapter) ([]string, error) {
 	var paths []string
+	skillsDirs := newWorkspaceSkillsDirs(scope)
 	for _, adapter := range adapters {
 		if !adapter.SupportsSkills() {
+			continue
+		}
+		if skillsDirs.claim(adapter.SkillsDir(componentInjectionDirScoped(homeDir, workspaceDir, scope, adapter))) {
 			continue
 		}
 		if slices.Contains(selection.Components, model.ComponentSkills) {
@@ -1327,6 +1343,7 @@ func (s componentSyncStep) Run() error {
 			sddMode = model.SDDModeMulti
 		}
 
+		skillsDirs := newWorkspaceSkillsDirs(s.scope)
 		for _, adapter := range adapters {
 			targetDir := componentInjectionDirScoped(s.homeDir, s.workspaceDir, s.scope, adapter)
 			opts := sdd.InjectOptions{
@@ -1346,6 +1363,7 @@ func (s componentSyncStep) Run() error {
 			if s.scope == ScopeWorkspace {
 				opts.WorkspaceDir = s.workspaceDir
 			}
+			opts.SkillsAlreadyWritten = skillsDirs.claimSDD(adapter, targetDir)
 			opts.IncludeOpenCodeBackgroundPolicy = s.backgroundPolicy && adapter.Agent() == model.AgentOpenCode
 			inject := sdd.Inject
 			if s.backgroundPolicy {
@@ -1364,7 +1382,11 @@ func (s componentSyncStep) Run() error {
 		if len(skillIDs) == 0 {
 			return nil
 		}
+		skillsDirs := newWorkspaceSkillsDirs(s.scope)
 		for _, adapter := range adapters {
+			if skillsDirs.claimSkills(adapter, componentInjectionDirScoped(s.homeDir, s.workspaceDir, s.scope, adapter)) {
+				continue
+			}
 			res, err := skills.Inject(componentInjectionDirScoped(s.homeDir, s.workspaceDir, s.scope, adapter), adapter, skillIDs)
 			if err != nil {
 				return fmt.Errorf("sync skills for %q: %w", adapter.Agent(), err)

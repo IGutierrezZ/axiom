@@ -17,7 +17,7 @@ func TestWithWorkspaceUsesProjectLayout(t *testing.T) {
 		"GlobalConfigDir":  {a.GlobalConfigDir(root), filepath.Join(root, ".opencode")},
 		"SystemPromptDir":  {a.SystemPromptDir(root), filepath.Join(root, ".opencode")},
 		"SystemPromptFile": {a.SystemPromptFile(root), filepath.Join(root, ".opencode", "axiom.md")},
-		"SkillsDir":        {a.SkillsDir(root), filepath.Join(root, ".opencode", "skills")},
+		"SkillsDir":        {a.SkillsDir(root), filepath.Join(root, ".agents", "skills")},
 		"CommandsDir":      {a.CommandsDir(root), filepath.Join(root, ".opencode", "commands")},
 		"SettingsPath":     {a.SettingsPath(root), filepath.Join(root, "opencode.json")},
 		"MCPConfigPath":    {a.MCPConfigPath(root, "engram"), filepath.Join(root, "opencode.json")},

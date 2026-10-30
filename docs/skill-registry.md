@@ -83,6 +83,8 @@ The cache fingerprint includes which entries are versioned, so editing `.gitigno
 
 > **Generated agent copies.** `axiom setup` writes copies of the skills into per-agent directories such as `.claude/skills` or `.gemini/skills`. They only stay out of `AGENTS.md` when git ignores them. If your project does not ignore one of those directories, its copies are listed as versioned and the index changes with whoever ran setup last. Add the directory to `.gitignore`, or keep the canonical skills in `skills/` or in a declared root so that they win the deduplication.
 
+With `--scope workspace`, `axiom install` keeps a single shared copy in `.agents/skills` for every agent that reads it (Claude Code keeps `.claude/skills`). When a skill name exists both there and in a per-agent directory, the index points to the `.agents/skills` copy; a copy in `skills/` or in a declared root still wins over both.
+
 ## Registry Contract
 
 The registry is an **index**, not a generated summary.

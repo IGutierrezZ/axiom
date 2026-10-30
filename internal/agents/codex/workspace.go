@@ -2,6 +2,8 @@ package codex
 
 import (
 	"path/filepath"
+
+	"github.com/IGutierrezZ/axiom/v3/internal/agents/sharedskills"
 )
 
 // Distribución de proyecto de Codex (documentación oficial,
@@ -75,9 +77,20 @@ func (a *WorkspaceAdapter) SystemPromptFile(dir string) string {
 // .agents/skills, la única carpeta de skills de proyecto que documenta Codex.
 func (a *WorkspaceAdapter) SkillsDir(dir string) string {
 	if a.inWorkspace(dir) {
-		return filepath.Join(dir, ".agents", "skills")
+		return sharedskills.Dir(dir)
 	}
 	return a.Adapter.SkillsDir(dir)
+}
+
+// LegacyWorkspaceSkillsDirs lista el .codex/skills que dejaron las instalaciones de
+// proyecto anteriores a T12d. Codex no lo lee, pero Cursor sí (por compatibilidad) y
+// vería cada skill dos veces. Solo se retira lo que se prueba que es de Axiom. Fuera
+// del proyecto no devuelve nada.
+func (a *WorkspaceAdapter) LegacyWorkspaceSkillsDirs(dir string) []string {
+	if !a.inWorkspace(dir) {
+		return nil
+	}
+	return []string{filepath.Join(dir, ".codex", "skills")}
 }
 
 // LegacySystemPromptFiles lista el .codex/AGENTS.md que escribían las instalaciones

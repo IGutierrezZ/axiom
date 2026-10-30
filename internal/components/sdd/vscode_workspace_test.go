@@ -9,7 +9,7 @@ import (
 )
 
 // En un proyecto, el orquestador de VS Code sitúa los ficheros de convención en la
-// carpeta de skills del proyecto y no en .agent/skills; con la instalación global, y
+// carpeta de skills compartida del proyecto (.agents/skills) y no en .agent/skills; con la instalación global, y
 // con otro agente, el texto no cambia.
 func TestAdaptVSCodeOrchestratorForWorkspace(t *testing.T) {
 	root := t.TempDir()
@@ -24,8 +24,8 @@ func TestAdaptVSCodeOrchestratorForWorkspace(t *testing.T) {
 
 	bound := adapter.WithWorkspace(root)
 	got := adaptVSCodeOrchestratorForWorkspace(prompt, bound, root)
-	if strings.Contains(got, ".agent/skills") || !strings.Contains(got, "Convention files under the project skills directory `.github/skills/_shared/`:") {
-		t.Errorf("la ruta de convenciones no apunta a .github/skills/_shared")
+	if strings.Contains(got, ".agent/skills") || !strings.Contains(got, "Convention files under the project skills directory `.agents/skills/_shared/`:") {
+		t.Errorf("la ruta de convenciones no apunta a .agents/skills/_shared")
 	}
 
 	if same := adaptVSCodeOrchestratorForWorkspace(prompt, bound, ""); same != prompt {

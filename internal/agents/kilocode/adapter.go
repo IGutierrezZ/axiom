@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/capabilitymanifest"
+	"github.com/IGutierrezZ/axiom/v3/internal/agents/sharedskills"
 	"github.com/IGutierrezZ/axiom/v3/internal/installcmd"
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
 	"github.com/IGutierrezZ/axiom/v3/internal/system"
@@ -105,7 +106,13 @@ func (a *Adapter) SystemPromptFile(homeDir string) string {
 	return filepath.Join(a.configDir(homeDir), "AGENTS.md")
 }
 
+// SkillsDir es la carpeta de skills de la carpeta global y, en el proyecto, la
+// compartida .agents/skills: Kilo la carga por defecto, junto a .kilo/skills, y una
+// sola copia evita las skills duplicadas.
 func (a *Adapter) SkillsDir(homeDir string) string {
+	if a.inWorkspace(homeDir) {
+		return sharedskills.Dir(homeDir)
+	}
 	return filepath.Join(a.configDir(homeDir), "skills")
 }
 

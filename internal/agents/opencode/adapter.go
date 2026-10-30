@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/capabilitymanifest"
+	"github.com/IGutierrezZ/axiom/v3/internal/agents/sharedskills"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/filemerge"
 	"github.com/IGutierrezZ/axiom/v3/internal/installcmd"
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
@@ -104,7 +105,13 @@ func (a *Adapter) SystemPromptFile(homeDir string) string {
 	return filepath.Join(ConfigPath(homeDir), "AGENTS.md")
 }
 
+// SkillsDir es la carpeta de skills de la carpeta global y, en el proyecto, la
+// compartida .agents/skills: OpenCode la lee, junto a .opencode/skills y
+// .claude/skills, y una sola copia evita las skills duplicadas.
 func (a *Adapter) SkillsDir(homeDir string) string {
+	if a.inWorkspace(homeDir) {
+		return sharedskills.Dir(homeDir)
+	}
 	return filepath.Join(a.configDir(homeDir), "skills")
 }
 

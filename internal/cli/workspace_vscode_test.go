@@ -15,7 +15,7 @@ import (
 
 // Las pruebas de este fichero cubren la distribución de proyecto de VS Code Copilot
 // con --scope workspace. VS Code lee .github/instructions/*.instructions.md (con
-// `applyTo: "**"` se aplican siempre), .github/skills y .vscode/mcp.json (clave raíz
+// `applyTo: "**"` se aplican siempre), .agents/skills y .vscode/mcp.json (clave raíz
 // `servers`, con Workspace Trust). No se usan .github/copilot-instructions.md ni el
 // AGENTS.md raíz (del equipo), y el perfil de usuario de VS Code no se toca.
 
@@ -87,7 +87,7 @@ func assertTeamFilesIntact(t *testing.T, workspace string, team map[string][]byt
 	}
 }
 
-// Las instrucciones van a .github/instructions con applyTo, las skills a .github/skills
+// Las instrucciones van a .github/instructions con applyTo, las skills a .agents/skills
 // y el MCP a .vscode/mcp.json (clave servers, fusionado con lo del usuario); los
 // ficheros del equipo y el perfil de usuario de VS Code no cambian ni un byte.
 func TestRunInstallWorkspaceVSCodeUsesProjectLayout(t *testing.T) {
@@ -121,14 +121,14 @@ func TestRunInstallWorkspaceVSCodeUsesProjectLayout(t *testing.T) {
 			t.Errorf("las instrucciones de proyecto contienen %q", unwanted)
 		}
 	}
-	if !strings.Contains(instructions, "`.github/skills/_shared/`") {
-		t.Errorf("el orquestador debe apuntar a las skills del proyecto (.github/skills)")
+	if !strings.Contains(instructions, "`.agents/skills/_shared/`") {
+		t.Errorf("el orquestador debe apuntar a las skills compartidas del proyecto (.agents/skills)")
 	}
 
 	for _, rel := range []string{
-		filepath.Join(".github", "skills", "sdd-init", "SKILL.md"),
-		filepath.Join(".github", "skills", "go-testing", "SKILL.md"),
-		filepath.Join(".github", "skills", "_shared", "skill-resolver.md"),
+		filepath.Join(".agents", "skills", "sdd-init", "SKILL.md"),
+		filepath.Join(".agents", "skills", "go-testing", "SKILL.md"),
+		filepath.Join(".agents", "skills", "_shared", "skill-resolver.md"),
 	} {
 		if _, err := os.Stat(filepath.Join(workspace, rel)); err != nil {
 			t.Errorf("falta %s en el proyecto: %v", rel, err)
@@ -276,7 +276,7 @@ func TestWorkspaceVSCodeBackupAndVerifyCoverProjectFiles(t *testing.T) {
 	wanted := []string{
 		filepath.Join(workspace, ".vscode", "mcp.json"),
 		filepath.Join(workspace, ".github", "instructions", "axiom.instructions.md"),
-		filepath.Join(workspace, ".github", "skills", "sdd-init", "SKILL.md"),
+		filepath.Join(workspace, ".agents", "skills", "sdd-init", "SKILL.md"),
 	}
 
 	targets, err := syncBackupTargetsScoped(home, workspace, ScopeWorkspace, selection, resolveAdaptersScoped(ScopeWorkspace, workspace, selection.Agents))

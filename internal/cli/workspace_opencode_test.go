@@ -63,12 +63,11 @@ func TestRunInstallWorkspaceOpenCodeAndKiloUseProjectLayout(t *testing.T) {
 		"opencode.json",
 		filepath.Join(".opencode", "axiom.md"),
 		filepath.Join(".opencode", "commands", "sdd-init.md"),
-		filepath.Join(".opencode", "skills", "sdd-init", "SKILL.md"),
+		filepath.Join(".agents", "skills", "sdd-init", "SKILL.md"),
 		filepath.Join(".opencode", "plugins", "skill-registry.ts"),
 		filepath.Join(".kilo", "kilo.json"),
 		filepath.Join(".kilo", "rules", "axiom.md"),
 		filepath.Join(".kilo", "commands", "sdd-init.md"),
-		filepath.Join(".kilo", "skills", "sdd-init", "SKILL.md"),
 		filepath.Join(".kilo", "plugins", "skill-registry.ts"),
 	} {
 		if _, err := os.Stat(filepath.Join(workspace, rel)); err != nil {
@@ -81,8 +80,8 @@ func TestRunInstallWorkspaceOpenCodeAndKiloUseProjectLayout(t *testing.T) {
 	for _, tc := range []struct {
 		settings, skillsDir, instruction string
 	}{
-		{"opencode.json", ".opencode/skills", ".opencode/axiom.md"},
-		{filepath.Join(".kilo", "kilo.json"), ".kilo/skills", ".kilo/rules/axiom.md"},
+		{"opencode.json", ".agents/skills", ".opencode/axiom.md"},
+		{filepath.Join(".kilo", "kilo.json"), ".agents/skills", ".kilo/rules/axiom.md"},
 	} {
 		path := filepath.Join(workspace, tc.settings)
 		settings := readJSONObject(t, path)

@@ -17,7 +17,7 @@ func TestWithWorkspaceUsesOwnInstructionsFile(t *testing.T) {
 		"SystemPromptFile": {a.SystemPromptFile(root), filepath.Join(root, ".gemini", "AXIOM.md")},
 		"SettingsPath":     {a.SettingsPath(root), filepath.Join(root, ".gemini", "settings.json")},
 		"MCPConfigPath":    {a.MCPConfigPath(root, "engram"), filepath.Join(root, ".gemini", "settings.json")},
-		"SkillsDir":        {a.SkillsDir(root), filepath.Join(root, ".gemini", "skills")},
+		"SkillsDir":        {a.SkillsDir(root), filepath.Join(root, ".agents", "skills")},
 	} {
 		if tc.got != tc.want {
 			t.Errorf("%s = %q, quiero %q", name, tc.got, tc.want)

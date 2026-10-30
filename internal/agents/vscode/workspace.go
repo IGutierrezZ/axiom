@@ -2,6 +2,8 @@ package vscode
 
 import (
 	"path/filepath"
+
+	"github.com/IGutierrezZ/axiom/v3/internal/agents/sharedskills"
 )
 
 // Distribución de proyecto de VS Code Copilot (documentación oficial de VS Code,
@@ -10,8 +12,9 @@ import (
 //   - .github/instructions/**/*.instructions.md: instrucciones de proyecto. Con
 //     `applyTo: "**"` en la cabecera se aplican a todas las peticiones; sin ella (ni
 //     description) solo se adjuntan a mano. Se suman a las de usuario.
-//   - .github/skills/<nombre>/SKILL.md: skills de proyecto (también .claude/skills y
-//     .agents/skills).
+//   - .github/skills/<nombre>/SKILL.md: skills de proyecto. Las sesiones locales (la
+//     vista de chat) leen además .claude/skills y .agents/skills; Axiom escribe la
+//     copia compartida en .agents/skills y no en .github/skills.
 //   - .vscode/mcp.json: servidores MCP, con la clave raíz `servers` (no `mcpServers`).
 //     Hereda la confianza del espacio de trabajo (Workspace Trust).
 //   - .github/agents/*.agent.md, .github/prompts/*.prompt.md y .github/hooks/*.json:
@@ -35,8 +38,8 @@ const (
 )
 
 // WorkspaceAdapter es el adaptador de VS Code Copilot ligado a la raíz de un
-// proyecto. Para esa raíz sitúa instrucciones, skills y MCP en la distribución de
-// proyecto (.github/ y .vscode/); para cualquier otra carpeta (la de usuario) da las
+// proyecto. Para esa raíz sitúa instrucciones y MCP en la distribución de proyecto
+// (.github/ y .vscode/) y las skills en .agents/skills; para cualquier otra carpeta (la de usuario) da las
 // rutas globales de siempre. Es un tipo aparte del adaptador global para que las
 // capacidades que solo tienen sentido en el proyecto no existan en la instalación
 // global.
@@ -94,13 +97,28 @@ func (a *WorkspaceAdapter) LegacySystemPromptFiles(dir string) []string {
 	return a.Adapter.LegacySystemPromptFiles(dir)
 }
 
-// SkillsDir es ~/.copilot/skills en la carpeta de usuario y .github/skills en el
-// proyecto.
+// SkillsDir es ~/.copilot/skills en la carpeta de usuario y, en el proyecto, la
+// compartida .agents/skills: las sesiones locales de VS Code (la vista de chat) la
+// leen junto a .github/skills y .claude/skills, y una sola copia evita las skills
+// duplicadas. Las sesiones del arnés de Copilot (Copilot CLI, el agente en la nube)
+// documentan .github/skills como su carpeta de proyecto; GitHub lista además
+// .agents/skills entre las ubicaciones de proyecto de Copilot.
 func (a *WorkspaceAdapter) SkillsDir(dir string) string {
 	if a.InWorkspace(dir) {
-		return filepath.Join(dir, githubDirName, skillsDirName)
+		return sharedskills.Dir(dir)
 	}
 	return a.Adapter.SkillsDir(dir)
+}
+
+// LegacyWorkspaceSkillsDirs lista la carpeta de skills que usaban las instalaciones
+// de proyecto anteriores (.github/skills), ahora sustituida por .agents/skills. Solo se
+// retira lo que se prueba que es de Axiom, y la carpeta solo si queda vacía: .github
+// es del equipo. Fuera del proyecto no devuelve nada.
+func (a *WorkspaceAdapter) LegacyWorkspaceSkillsDirs(dir string) []string {
+	if !a.InWorkspace(dir) {
+		return nil
+	}
+	return []string{filepath.Join(dir, githubDirName, skillsDirName)}
 }
 
 // SettingsPath es el settings.json del perfil de usuario en la carpeta de usuario y
