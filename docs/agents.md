@@ -17,13 +17,22 @@
 | Codex           | `codex`          | Yes          | Yes | Native multi-agent (default; solo fallback) | No            | No             | `~/.codex`                          |
 | Windsurf        | `windsurf`       | Yes (native) | Yes | Solo-agent                       | No            | No             | `~/.codeium/windsurf`               |
 | Antigravity     | `antigravity`    | Yes (native) | Yes | Solo-agent + Mission Control     | No            | No             | `~/.gemini/antigravity`             |
-| Kimi Code       | `kimi`           | Yes          | Yes | Full (native custom agents)      | Via KIMI.md include [^kimi-output-style] | No | `~/.kimi`                           |
-| Qwen Code       | `qwen-code`      | Yes          | Yes | Full (native sub-agents)         | No            | Yes            | `~/.qwen`                           |
+| Kimi Code (no disponible de momento) | `kimi`           | Yes          | Yes | Full (native custom agents)      | Via KIMI.md include [^kimi-output-style] | No | `~/.kimi`                           |
+| Qwen Code (no disponible de momento) | `qwen-code`      | Yes          | Yes | Full (native sub-agents)         | No            | Yes            | `~/.qwen`                           |
 | Kiro IDE        | `kiro-ide`       | Yes          | Yes | Full (native subagents)          | No            | No             | `~/.kiro`                           |
 | OpenClaw        | `openclaw`       | Yes          | Yes | Solo-agent                       | No            | No             | `~/.openclaw`                       |
 | Trae            | `trae-ide`       | Yes          | Yes | Solo-agent                       | No            | No             | `~/.trae`                           |
 | Pi              | `pi`             | Yes          | Yes | Full (package-managed subagents) | No            | Yes            | `~/.pi`                             |
-| Hermes          | `hermes`         | Yes          | Yes | Full (delegate_task ephemeral)   | No            | No             | `~/.hermes`                         |
+| Hermes (no disponible de momento) | `hermes`         | Yes          | Yes | Full (delegate_task ephemeral)   | No            | No             | `~/.hermes`                         |
+
+### Agentes no disponibles de momento
+
+Kimi Code (`kimi`), Qwen Code (`qwen-code`) y Hermes (`hermes`) **no están disponibles de momento**: no se pueden elegir al instalar. No aparecen en la pantalla de selección de agentes de la TUI, no entran en las selecciones por defecto ni en el descubrimiento por carpetas, y `axiom install --agent kimi|qwen-code|hermes` falla con un error (también si va junto a otros agentes). El motivo es que hoy no son utilizables con Axiom: en el ámbito workspace escriben en rutas que el agente no lee y su MCP solo es global. Sus adaptadores se conservan en el código para retomarlos más adelante.
+
+- Una instalación global existente que ya los tiene en el estado se sigue sincronizando con `axiom sync`.
+- Con `--scope workspace` se omiten con un aviso, igual que los agentes sin modo workspace.
+- `uninstall`, `doctor` y `verify` no cambian.
+- Las secciones de Kimi Code, Qwen Code y Hermes de más abajo describen el adaptador conservado, no una integración instalable hoy.
 
 La mayoría de los agentes recibe la política completa del orquestador SDD y las skills correspondientes en su directorio de configuración. Axiom la incorpora al prompt de sistema; OpenCode y Kilo Code la reciben mediante el overlay compatible con OpenCode (`opencode.json`). Pi es la excepción: Axiom aprovisiona paquetes de Pi y `gentle-pi` —nombre del paquete externo— gestiona las skills, los prompts, los agentes SDD y las cadenas durante la ejecución. El agente usa SDD cuando el trabajo lo requiere o cuando se lo pides.
 
@@ -203,7 +212,7 @@ Kiro usa agentes personalizados en `~/.kiro/agents/`. Axiom escribe los agentes 
 - Mission Control handles built-in sub-agent delegation (Browser, Terminal) automatically
 - Settings managed via the IDE's Agent settings UI, not via `settings.json`
 
-### Kimi Code
+### Kimi Code (no disponible de momento)
 
 - Installation requires the `uv` Python package manager (`uv tool install kimi-cli`).
 - Root custom agent at `~/.kimi/agents/gentleman.yaml` with `system_prompt_path: ../KIMI.md`
@@ -222,7 +231,7 @@ Kiro usa agentes personalizados en `~/.kiro/agents/`. Axiom escribe los agentes 
 - Manual install only — download from [kiro.dev/downloads](https://kiro.dev/downloads)
 - See [docs/kiro.md](kiro.md) for full path reference and SDD behavior details
 
-### Qwen Code
+### Qwen Code (no disponible de momento)
 
 - **Detección**: Axiom detecta Qwen Code por su raíz de configuración (`~/.qwen`) y comprueba si el ejecutable `qwen` está en `PATH`.
 - **Config root**: `~/.qwen/` (cross-platform)
@@ -308,7 +317,7 @@ Hermes uses `delegate_task` to spawn ephemeral sub-agents. Each worker starts in
 
 La tabla completa de decisión de delegación está en `~/.hermes/skills/hermes-ephemeral-delegation/SKILL.md` (instalada por Axiom). El orquestador SDD de `~/.hermes/SOUL.md` remite a esa skill.
 
-### Hermes
+### Hermes (no disponible de momento)
 
 - **Detección**: Axiom informa por separado de la presencia del ejecutable `hermes` en `PATH` y de la raíz `~/.hermes`; el directorio de configuración determina si Hermes figura como configurado, aunque falte el ejecutable.
 - **Instalación**: solo detección; Axiom no instala Hermes. Instálalo manualmente y después ejecuta `axiom install --agent hermes`.

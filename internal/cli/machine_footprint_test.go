@@ -227,6 +227,7 @@ func TestRunInstallWorkspaceKimiHubStaysInWorkspace(t *testing.T) {
 	restoreKimiLookPath := kimi.LookPathOverride
 	kimi.LookPathOverride = func(string) (string, error) { return "/usr/local/bin/kimi", nil }
 	t.Cleanup(func() { kimi.LookPathOverride = restoreKimiLookPath })
+	allowUnselectableAgentsForTest(t)
 	before := homeSnapshotWithoutState(t, home)
 
 	if _, err := RunInstall([]string{"--scope", "workspace", "--agent", "kimi", "--component", "permissions"}, system.DetectionResult{}); err != nil {

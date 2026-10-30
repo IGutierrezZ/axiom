@@ -70,7 +70,7 @@ func TestNormalizeInstallFlagsDefaults(t *testing.T) {
 	}
 
 	want := model.Selection{
-		Agents:  []model.AgentID{model.AgentClaudeCode, model.AgentOpenCode, model.AgentKilocode, model.AgentGeminiCLI, model.AgentCodex, model.AgentCursor, model.AgentVSCodeCopilot, model.AgentAntigravity, model.AgentWindsurf, model.AgentKimi, model.AgentQwenCode, model.AgentKiroIDE, model.AgentOpenClaw, model.AgentPi, model.AgentTrae, model.AgentHermes},
+		Agents:  []model.AgentID{model.AgentClaudeCode, model.AgentOpenCode, model.AgentKilocode, model.AgentGeminiCLI, model.AgentCodex, model.AgentCursor, model.AgentVSCodeCopilot, model.AgentAntigravity, model.AgentWindsurf, model.AgentKiroIDE, model.AgentOpenClaw, model.AgentPi, model.AgentTrae},
 		Persona: model.PersonaAxiom,
 		Preset:  model.PresetFullGentleman,
 		Components: []model.ComponentID{
@@ -356,6 +356,8 @@ func TestDefaultAgentsFromDetection_CodexIsIncludedWhenPresent(t *testing.T) {
 // canonical agent string maps to its model.AgentID constant. This prevents
 // silent drops when new agents are added to ScanConfigs without updating the
 // consumer switch.
+// Qwen Code, Hermes y Kimi ya no se mapean: no son seleccionables (véase
+// TestDefaultAgentsFromDetectionIgnoresRetiredAgents).
 func TestDefaultAgentsFromDetection_AllAgentsMappedCorrectly(t *testing.T) {
 	tests := []struct {
 		configAgent string
@@ -370,13 +372,10 @@ func TestDefaultAgentsFromDetection_AllAgentsMappedCorrectly(t *testing.T) {
 		{"codex", model.AgentCodex},
 		{"antigravity", model.AgentAntigravity},
 		{"windsurf", model.AgentWindsurf},
-		{"kimi", model.AgentKimi},
-		{"qwen-code", model.AgentQwenCode},
 		{"kiro-ide", model.AgentKiroIDE},
 		{"openclaw", model.AgentOpenClaw},
 		{"pi", model.AgentPi},
 		{"trae-ide", model.AgentTrae},
-		{"hermes", model.AgentHermes},
 	}
 
 	for _, tt := range tests {

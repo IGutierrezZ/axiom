@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/agents"
+	"github.com/IGutierrezZ/axiom/v3/internal/catalog"
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
 )
 
@@ -14,10 +15,20 @@ import (
 // ámbito workspace. Es una variable para que las pruebas lo capturen.
 var workspaceAgentsNoticeWriter io.Writer = os.Stderr
 
+// isSelectableAgent indica si el agente se puede elegir al instalar. Es una
+// variable para que las pruebas de los adaptadores retirados (Qwen Code, Hermes y
+// Kimi) puedan seguir ejerciendo sus flujos.
+var isSelectableAgent = catalog.IsSelectableAgent
+
 // agentSupportsWorkspace indica si el agente puede alojar su configuración en la
 // raíz del proyecto. Los demás solo tienen configuración global: con
 // --scope workspace se omiten enteros en lugar de escribir en la carpeta de usuario.
+// Los agentes no seleccionables (Qwen Code, Hermes y Kimi) cuentan como sin modo
+// workspace: un estado de proyecto que los conserve no escribe nada por ellos.
 func agentSupportsWorkspace(id model.AgentID) bool {
+	if !isSelectableAgent(id) {
+		return false
+	}
 	switch id {
 	case model.AgentTrae, model.AgentWindsurf, model.AgentAntigravity:
 		return false
@@ -63,6 +74,9 @@ func AgentsForScope(scope InstallScope, agentIDs []model.AgentID) []model.AgentI
 
 // omittedWorkspaceAgentNotice es el aviso de un agente omitido en ámbito workspace.
 func omittedWorkspaceAgentNotice(id model.AgentID) string {
+	if !isSelectableAgent(id) {
+		return fmt.Sprintf("%s omitido: no está disponible de momento en Axiom; no se instala en el ámbito workspace.", id)
+	}
 	return fmt.Sprintf("%s omitido: no admite el ámbito workspace; Axiom no escribe en su configuración global si no se pide con --scope global.", id)
 }
 

@@ -830,6 +830,7 @@ func TestRunInstallFedoraQwenEngramSkipsUnsupportedSetupAndWritesSettings(t *tes
 	recorder := &commandRecorder{}
 	runCommand = recorder.record
 
+	allowUnselectableAgentsForTest(t)
 	origDownloadFn := engramDownloadFn
 	engramDownloadFn = func(profile system.PlatformProfile) (string, error) {
 		return filepath.Join(home, "bin", "engram"), nil
@@ -2471,6 +2472,7 @@ func TestRunInstallKimiBootstrapsHub(t *testing.T) {
 	restoreKimiLookPath := kimi.LookPathOverride
 	kimi.LookPathOverride = func(string) (string, error) { return "/usr/local/bin/kimi", nil }
 	t.Cleanup(func() { kimi.LookPathOverride = restoreKimiLookPath })
+	allowUnselectableAgentsForTest(t)
 
 	// Install Kimi with minimalist component (e.g., permissions only, NO persona).
 	_, err := RunInstall(
@@ -2521,6 +2523,7 @@ func TestRunInstallKimiAlreadyInstalledDoesNotRequireUV(t *testing.T) {
 		return "", exec.ErrNotFound
 	}
 	t.Cleanup(func() { kimi.LookPathOverride = originalKimiLookPath })
+	allowUnselectableAgentsForTest(t)
 
 	restoreInstallcmdLookPath := installcmd.OverrideLookPath(func(name string) (string, error) {
 		if name == "uv" {

@@ -4168,7 +4168,6 @@ func TestPreselectedAgents_AllKnownAgentsMappedCorrectly(t *testing.T) {
 		{"cursor", model.AgentCursor},
 		{"vscode-copilot", model.AgentVSCodeCopilot},
 		{"codex", model.AgentCodex},
-		{"hermes", model.AgentHermes},
 		{"kiro-ide", model.AgentKiroIDE},
 	}
 
