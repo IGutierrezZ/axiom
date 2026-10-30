@@ -505,8 +505,8 @@ func TestScriptsAxiomWorktreePowerShellDrivesAxiomBranch(t *testing.T) {
 		if strings.Contains(stdout, "desmantelado") {
 			t.Errorf("done anunció el desmontaje sin ninguna rama del cambio:\n%s", stdout)
 		}
-		// Solo texto ASCII: PowerShell 5.1 lee el script sin BOM con la página de códigos ANSI.
-		for _, want := range []string{"nada que desmantelar", "a mano con git", "-Prefix no se aplica a done"} {
+		// Con tildes a propósito: el script lleva BOM y PowerShell 5.1 debe mostrarlas bien.
+		for _, want := range []string{"no había nada que desmantelar", "a mano con git", "-Prefix no se aplica a done", "escribió 'ensure'"} {
 			if !strings.Contains(stdout, want) {
 				t.Errorf("done no avisa %q:\n%s", want, stdout)
 			}
