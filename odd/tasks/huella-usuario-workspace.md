@@ -240,6 +240,16 @@ Las cuatro quedaron resueltas por el usuario el 2026-10-29: acepta las recomenda
       - `default_agent: axiom-orchestrator` se escribe en el `opencode.json` del equipo; respeta uno existente. Pendiente de confirmar con el usuario.
       - `skillregistry` no escanea `.kilo/skills`.
       - Las fusiones JSONC reindentan en el segundo paso (fallo previo, también en global).
+  - [x] **T12c · Gemini: instrucciones en un fichero propio** (ruta: delegada; disparador: escritura en 2+ ficheros). Commit `6ee78ed2`, +722/−20, de ellas unas 400 de pruebas y documentación.
+    - `gemini.WorkspaceAdapter`, devuelto por `agents.BindWorkspace`: las instrucciones van en `<ws>/.gemini/AXIOM.md`, registradas en `context.fileName` de `.gemini/settings.json`. El valor son los nombres previos del proyecto (o `GEMINI.md`) más el propio, sin duplicados; una cadena previa se convierte en lista. Con un tipo inesperado se avisa y no se toca.
+    - `path.join` confirmado en `memoryDiscovery.ts` (`findUpwardGeminiFiles`). El `GEMINI.md` raíz no se crea ni se toca.
+    - Migración: `.gemini/GEMINI.md` se retira solo si contiene únicamente secciones de Axiom; si no, se avisa. Se corrigió además un fallo propio de la rebanada: la guía de enrutado usaba el adaptador global.
+    - Qwen tiene un adaptador independiente y no cambia (lo fija una prueba).
+    - Verificación: `go build`, `go vet`, `gofmt` y deadcode-ratchet: ok. `internal/agents`, `components` y `assets`: ok salvo filemerge; goldens de global sin regenerar. `internal/cli -run 'Gemini|Qwen|Workspace|Scope|ComponentPath|Instructions'` y `-run 'TestRunSync|…|Verify|Backup'`: ok. `app` y `tui`: solo los fallos conocidos. El padre repitió `-run Gemini` y `internal/agents/...`: ok.
+    - Hallazgos:
+      - `context.fileName` del proyecto sustituye al del usuario, así que un nombre que solo está en `~/.gemini/settings.json` deja de cargarse en ese proyecto. Va a T14 o se decide con el usuario.
+      - `internal/assets/gemini/sdd-orchestrator.md:388` cita `.agent/skills/_shared/` (debería ser `.gemini/skills/_shared/`); va a T14.
+      - La fusión de `settings.json` borra los comentarios (fallo previo).
 
 ### Fase 5 · Reversibilidad y documentación
 
