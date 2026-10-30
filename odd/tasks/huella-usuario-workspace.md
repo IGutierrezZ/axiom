@@ -202,7 +202,16 @@ Las cuatro quedaron resueltas por el usuario el 2026-10-29: acepta las recomenda
   - Abierto: el manifiesto de Pi (`~/.gentle-ai/pi-codegraph.json`) y la caché del plugin `model-variants` de OpenCode (TypeScript, con digests) siguen en rutas fijas.
   - Regresión de T1 detectada aquí: dos pruebas de `cmd/axiom` (`TestSkillRegistryCompat*`) no creaban `axiom.yaml`. Corregido en `e853c651`; `go test ./cmd/axiom/`: ok.
 
+### Fase 3b · Correcciones detectadas por V1 de la fase 3
+
+- [ ] **T11b · `doctor` reconoce el MCP de Engram del proyecto.** `checkEngramReachable` solo lee HOME (`engram.ReadPersistedStdioCommands(homeDir, …)`). En una instalación solo workspace avisa «no persisted MCP configuration found» y recomienda un `axiom sync` que no lo arregla.
+- [ ] **T11c · Rollback con `AXIOM_STATE_DIR` fuera de HOME.** `rollbackRoots` (`internal/cli/run.go:1313`) solo admite HOME y el workspace. Con T11, el lanzador de OpenCode vive en `system.BinDir`, así que un install fallido no se restaura: «manifest entry has invalid OriginalPath … must be an absolute path under an allowed root».
+- [ ] **T11d · El informe de sync no lista rutas heredadas que no escribe.** «OpenCode background launcher paths» incluye `~/.gentle-ai/bin/opencode.{cmd,ps1}`.
+
 ### Fase 4 · Adaptadores sin modo workspace (depende de R1)
+
+- Se ejecuta en otra sesión, en el worktree `C:\repos\axiom-wt\huella-usuario-workspace-f4\axiom`, rama `fix/huella-usuario-workspace-f4`, apilada sobre `5e8e3c25`. Su avance se registra en esta sección de esa rama y se integra al terminar.
+- Hallazgo de V1 de la fase 3 que la sesión de la fase 4 no recibió en su prompt: tras el primer `sync --scope workspace` sin estado de proyecto, `codex` queda persistido en `<raíz>/.axiom/state.json`, así que los sync siguientes seguirán escribiendo en `~/.codex` (76 entradas, `hooks.json` incluido, y `config.toml` modificado). La corrección del descubrimiento debe cubrir también ese estado ya persistido.
 
 - [ ] **R1 · Investigación con fuentes primarias** (ruta: delegada, solo lectura).
   - Qué configuración de proyecto carga cada agente:
@@ -235,6 +244,13 @@ Las cuatro quedaron resueltas por el usuario el 2026-10-29: acepta las recomenda
     - Hooks en dos repos ajenos con `openspec/` y `AGENTS.md`, con RDD apagado y encendido: refresco del registro de skills, `branch guard` (Claude, Codex y OpenCode, antes y después), preflight SDD y stop-hook de review. Todos salen con 0 y no escriben nada. Control positivo con `axiom.yaml`: el guard bloquea con 2, el refresco escribe `.atl/` y el preflight deniega.
     - No verificable en proceso: autoactualización, descargas reales, `engram setup` real, hooks lanzados por shell y que Claude y OpenCode lean de verdad las rutas de proyecto (R1).
     - Menores: `sync` dice «Skills indexed: 7 in AGENTS.md» sin `AGENTS.md` en la raíz, y quita una línea en blanco de `.claude/CLAUDE.md` respecto a install.
+  - **Fase 3 (2026-10-30): hecha.** Arnés temporal en proceso en `internal/cli` e `internal/app`, borrado; `git status` limpio sobre `5e8e3c25`.
+    - Instalación en workspace con el preset por defecto (CLI y TUI): `HOME` sin cambios tras install y dos sync (las fases 1 y 2 dejaban 23 entradas). Sin `engram setup` ni cambios de PATH, con el aviso de `engram setup` manual. Backups en `AXIOM_STATE_DIR/backups`; el segundo sync, sin cambios, no deja copia. GGA fuera del preset. Verify: 126 ok y 0 fallos.
+    - GGA explícito: escribe solo lo declarado en `HOME` (`~/bin/gga.*`, `AppData/Roaming/gga`, `~/.local/share/gga`, `~/bin` en el PATH) y lo avisa.
+    - Estado por proyecto: A y B independientes, sin `codex` heredado; el global con el mismo hash; `.axiom/state.json` y su cerrojo ignorados con `.git/info/exclude`, el resto de `.axiom/` no. Install global sigue escribiendo el global.
+    - `doctor`: apartado «Huella de máquina» presente, sin fallo por GGA ausente y con los restos globales marcados.
+    - Global sin `AXIOM_STATE_DIR`: `engram setup` se ejecuta y las rutas son `~/.axiom`, como antes; permisos solo con `deny`.
+    - Hallazgos nuevos: T11b, T11c y T11d (fase 3b), y el estado persistido de Codex (fase 4). Las asignaciones de modelos de la semilla global pasan al proyecto, como prevé T10.
 
 ## Criterios de aceptación
 
@@ -277,6 +293,8 @@ Las cuatro quedaron resueltas por el usuario el 2026-10-29: acepta las recomenda
 
 - 2026-10-30: fase 3 implementada (T8 `3be1d092`; T9 `1ab483fc`, `c1c5eb34`; T10 `acfff69a`, `c9cadff0`; T11 `92d1ec65`, `55c06cb8`), unas 3.770 líneas, más de la mitad pruebas. Más `e853c651`, que corrige dos pruebas de `cmd/axiom` rotas por T1. V1 de la fase 3 pendiente.
 
+- 2026-10-30: V1 de la fase 3 hecha: `HOME` intacto en workspace con el preset por defecto. Tres correcciones nuevas (T11b–T11d). La fase 4 arranca en otra sesión, en `fix/huella-usuario-workspace-f4`.
+
 ## Siguiente paso
 
-V1 de la fase 3 y, después, autorización para la fase 4 (R1, T12), que debe incluir el hallazgo de T10 sobre agentes sin modo workspace.
+Autorización para la fase 3b (T11b–T11d) en esta rama, en paralelo con la fase 4. Al terminar la fase 4, integrar `fix/huella-usuario-workspace-f4`.
