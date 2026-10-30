@@ -44,7 +44,7 @@ This appendix maps main docs and source files to responsibilities. Use it to mak
 | `internal/components/uninstall/` | Managed component cleanup services for uninstall flows. |
 | `internal/skillregistry/` | Skill registry scanning, cache behavior, and markdown generation. |
 | `internal/agents/` | Per-agent adapter strategies and paths. |
-| `internal/state/state.go` | Persisted install state in `~/.gentle-ai/state.json`. |
+| `internal/state/` | Persisted install state: `<workspace root>/.axiom/state.json` with `--scope workspace`, `~/.axiom/state.json` with `--scope global` (`Store`). |
 | `internal/update/` | Update checks and upgrade routing. |
 | `internal/update/upgrade/` | Upgrade execution and report rendering. |
 | `internal/verify/` | Post-apply readiness reporting. |

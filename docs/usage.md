@@ -54,7 +54,7 @@ Esto solo detiene la animación del indicador; las operaciones de instalación, 
 
 ### install
 
-Configuración inicial: detecta tus herramientas y configura los agentes y componentes seleccionados. Al instalar un único agente con `--agent X`, Axiom **añade** el nuevo agente a la lista `installed_agents` existente en `~/.axiom/state.json` y **conserva** los valores de `model_assignments`; no sobrescribe todo el estado. Si solo existe el estado heredado en `~/.gentle-ai/state.json`, Axiom puede migrarlo al directorio actual.
+Configuración inicial: detecta tus herramientas y configura los agentes y componentes seleccionados. Al instalar un único agente con `--agent X`, Axiom **añade** el nuevo agente a la lista `installed_agents` existente en el estado del ámbito (`~/.axiom/state.json` en global; `.axiom/state.json` en la raíz del proyecto en workspace, que parte del estado global si el proyecto aún no tiene el suyo) y **conserva** los valores de `model_assignments`; no sobrescribe todo el estado. Si solo existe el estado heredado en `~/.gentle-ai/state.json`, Axiom puede migrarlo al directorio actual.
 
 ```bash
 # Ecosistema completo para varios agentes
@@ -111,7 +111,7 @@ Managed reviewer and runtime assets are version-bound to the binary. Until sync 
 
 > **Importante:** `axiom sync` actualiza los agentes registrados como instalados por Axiom, no todos los directorios de configuración de agentes de tu equipo.
 >
-> Axiom guarda los destinos seleccionados en `~/.axiom/state.json`. Las siguientes ejecuciones de `sync` utilizan esa selección para no escribir accidentalmente en herramientas que no hayas elegido gestionar. El estado existente en `~/.gentle-ai/state.json` es una fuente de migración heredada, no la ruta actual. Si repites la instalación y seleccionas un único agente, esa selección pasa a ser el ámbito predeterminado de sincronización.
+> Axiom guarda los destinos seleccionados en `~/.axiom/state.json` con `--scope global` y en `<raíz del workspace>/.axiom/state.json` con `--scope workspace` (el ámbito predeterminado de la TUI y de `setup`). Las siguientes ejecuciones de `sync` utilizan esa selección para no escribir accidentalmente en herramientas que no hayas elegido gestionar. El estado existente en `~/.gentle-ai/state.json` es una fuente de migración heredada, no la ruta actual. Si repites la instalación y seleccionas un único agente, esa selección pasa a ser el ámbito predeterminado de sincronización.
 >
 > Antes de sincronizar, puedes previsualizar el ámbito activo con `axiom sync --dry-run`. Para sincronizar agentes que no figuran en la selección guardada, indícalos explícitamente con `--agent`.
 
@@ -119,7 +119,7 @@ Managed reviewer and runtime assets are version-bound to the binary. Until sync 
 # Previsualiza qué agentes actualizará la sincronización
 axiom sync --dry-run
 
-# Sincroniza los agentes registrados en ~/.axiom/state.json
+# Sincroniza los agentes registrados en el estado del ámbito (~/.axiom/state.json en global, .axiom/state.json del proyecto en workspace)
 axiom sync
 
 # Sincroniza solo agentes concretos
@@ -221,7 +221,7 @@ Checks performed:
 | Check | What it verifies |
 |-------|-----------------|
 | Tool binaries | Required tools (`axiom` and Engram, plus the binaries of the selected agents) present on `PATH`; shadow detection (wrong binary resolves first). GGA is only required when you selected it explicitly |
-| Validez de `state.json` | Analiza `~/.axiom/state.json` e informa de errores de esquema o corrupción; puede migrar `~/.gentle-ai/state.json` si todavía no existe estado de Axiom |
+| Validez de `state.json` | Analiza el estado del proyecto actual (`.axiom/state.json`) si existe y, si no, `~/.axiom/state.json`, e informa de errores de esquema o corrupción; puede migrar `~/.gentle-ai/state.json` si todavía no existe estado de Axiom |
 | Engram MCP reachability | Confirms the Engram MCP server responds |
 | Huella de máquina | Apartado informativo que lista lo que Axiom tiene a nivel de usuario: los binarios de `axiom` y Engram y el registro del hub (declarados) y, si existen, GGA, `~/.agents/skills`, los plugins de OpenCode en HOME, CodeGraph global, las entradas de PATH gestionadas y `~/.gentle-ai`. Marca como `resto global` lo que solo deja una instalación global. No cuenta como aviso ni como fallo |
 | Disk space | Warns when available space is critically low |
@@ -264,6 +264,19 @@ axiom -v
 | Hub de prompts de Kimi | `~/.kimi` | La raíz del proyecto |
 
 Lo que eliges de forma explícita (GGA, CodeGraph, plugins comunitarios de OpenCode) conserva su huella en HOME, porque es consentimiento expreso, pero Axiom la declara con un aviso al terminar: lista las rutas de HOME y, en Windows, la modificación del PATH de usuario. CodeGraph no tiene ubicación de proyecto en Axiom, así que se declara igual que GGA.
+
+**Estado de instalación por proyecto.** Lo que Axiom recuerda de una instalación (agentes instalados, selección de componentes y skills, persona, asignación de modelos de Claude, Kiro, Codex y OpenCode, herramientas de comunidad e intenciones de segundo plano) vive donde vive la instalación:
+
+| Ámbito | Fichero de estado |
+| ------ | ----------------- |
+| `--scope workspace` (`install`, `setup`, `sync` y la TUI) | `<raíz del workspace>/.axiom/state.json`, sin versionar |
+| `--scope global` | `~/.axiom/state.json` (o `AXIOM_STATE_DIR`) |
+
+Así, instalar o sincronizar el proyecto A no pisa la selección ni los modelos del proyecto B. El estado global conserva lo que es de la máquina: la comprobación de actualizaciones (`last_update_check`), la sincronización pendiente tras una autoactualización (`pending_sync`) y el interruptor de revisión (`rdd_mode`); el estado del proyecto nunca los guarda.
+
+- **Compatibilidad.** Mientras un proyecto no tiene `.axiom/state.json`, la primera lectura en workspace toma el estado global como semilla de solo lectura, sin los campos de máquina, y no lo modifica. La primera escritura en workspace crea el fichero del proyecto y desde entonces manda el del proyecto: un cambio posterior en el estado global ya no le afecta.
+- **Sin versionar.** Al crear el estado del proyecto, Axiom añade `/.axiom/state.json` y su cerrojo `/.axiom/state.json.lock` a `.git/info/exclude` (en un worktree enlazado, al del repositorio común). Es una exclusión local: no toca tu `.gitignore` ni deja un cambio que commitear en proyectos ajenos. Solo se excluyen esos dos ficheros, porque el resto de `.axiom/` (`inbox/skills/`, la caché y el buzón de autoskills) tiene otros usos. Si el proyecto no es un repositorio git no hay nada que excluir.
+- **Lectores sin ámbito.** `axiom doctor` y las comprobaciones de la revisión leen el estado del proyecto de la carpeta actual si ya existe y, si no, el global.
 
 ## CLI Flags (sync)
 

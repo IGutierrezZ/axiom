@@ -18,7 +18,7 @@ Axiom sync refreshes managed agent configuration. Engram sync exports/imports me
 ```text
 axiom sync
   -> parse sync flags
-  -> discover installed agents from ~/.gentle-ai/state.json or explicit flags
+  -> discover installed agents from the scope state (<workspace root>/.axiom/state.json or ~/.axiom/state.json) or explicit flags
   -> build managed selection
   -> run component injectors
   -> verify readiness
@@ -28,7 +28,7 @@ axiom sync
 Important behavior from `internal/cli/sync.go`:
 
 - Default sync scope includes SDD, Engram, Context7, GGA, skills, and persona.
-- Persona sync resolves the persisted persona from `~/.gentle-ai/state.json` when the selection does not set one explicitly; the safe fallback is neutral.
+- Persona sync resolves the persisted persona from the scope state (`<workspace root>/.axiom/state.json` in workspace scope, `~/.axiom/state.json` in global scope) when the selection does not set one explicitly; the safe fallback is neutral.
 - Permissions and theme are user-adjacent and not included by default.
 - OpenCode SDD profile flags preserve and update profile model assignments.
 - Community tool guidance/config, such as CodeGraph guidance, belongs to the managed config sync path when the tool is configured or legacy guidance needs cleanup.

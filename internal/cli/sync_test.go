@@ -429,7 +429,7 @@ func TestDiscoverAgentsReturnsAgentsWithConfigDirPresent(t *testing.T) {
 		t.Fatalf("MkdirAll() error = %v", err)
 	}
 
-	discovered := DiscoverAgents(home)
+	discovered := DiscoverAgents(state.GlobalStore(home))
 
 	found := false
 	for _, id := range discovered {
@@ -447,7 +447,7 @@ func TestDiscoverAgentsReturnsEmptyWhenNoConfigDirsPresent(t *testing.T) {
 	home := t.TempDir()
 	// Empty home dir — no agent config dirs exist.
 
-	discovered := DiscoverAgents(home)
+	discovered := DiscoverAgents(state.GlobalStore(home))
 
 	if len(discovered) != 0 {
 		t.Errorf("DiscoverAgents() expected empty, got %v", discovered)
@@ -463,7 +463,7 @@ func TestDiscoverAgentsDoesNotReturnAgentsWithMissingConfigDir(t *testing.T) {
 		t.Fatalf("MkdirAll() error = %v", err)
 	}
 
-	discovered := DiscoverAgents(home)
+	discovered := DiscoverAgents(state.GlobalStore(home))
 
 	// claude-code should NOT be returned since ~/.claude/ doesn't exist
 	for _, id := range discovered {
@@ -496,7 +496,7 @@ func TestDiscoverAgentsMultiplePresent(t *testing.T) {
 		t.Fatalf("MkdirAll() error = %v", err)
 	}
 
-	discovered := DiscoverAgents(home)
+	discovered := DiscoverAgents(state.GlobalStore(home))
 
 	if len(discovered) < 2 {
 		t.Errorf("DiscoverAgents() expected at least 2 agents when both config dirs exist, got %v", discovered)
@@ -520,7 +520,7 @@ func TestDiscoverAgentsDelegatesCanonicalDiscovery(t *testing.T) {
 		t.Fatalf("MkdirAll: %v", err)
 	}
 
-	discovered := DiscoverAgents(home)
+	discovered := DiscoverAgents(state.GlobalStore(home))
 
 	// codex MUST be discovered because its config dir exists.
 	found := false
@@ -4115,7 +4115,7 @@ func TestDiscoverAgentsUsesStateFileWhenPresent(t *testing.T) {
 		t.Fatalf("MkdirAll() error = %v", err)
 	}
 
-	discovered := DiscoverAgents(home)
+	discovered := DiscoverAgents(state.GlobalStore(home))
 
 	// Must return exactly the persisted selection: only opencode.
 	want := []model.AgentID{model.AgentOpenCode}
@@ -4137,7 +4137,7 @@ func TestDiscoverAgentsFallsBackToFSDiscoveryWhenStateMissing(t *testing.T) {
 		t.Fatalf("MkdirAll() error = %v", err)
 	}
 
-	discovered := DiscoverAgents(home)
+	discovered := DiscoverAgents(state.GlobalStore(home))
 
 	// FS discovery must return claude-code since ~/.claude/ exists.
 	found := false
@@ -4168,7 +4168,7 @@ func TestDiscoverAgentsFallsBackToFSDiscoveryWhenStateEmpty(t *testing.T) {
 		t.Fatalf("MkdirAll() error = %v", err)
 	}
 
-	discovered := DiscoverAgents(home)
+	discovered := DiscoverAgents(state.GlobalStore(home))
 
 	// FS discovery must pick up claude-code from disk.
 	found := false
@@ -4193,7 +4193,7 @@ func TestDiscoverAgentsStateMultipleAgents(t *testing.T) {
 		t.Fatalf("state.Write() error = %v", err)
 	}
 
-	discovered := DiscoverAgents(home)
+	discovered := DiscoverAgents(state.GlobalStore(home))
 
 	want := []model.AgentID{
 		model.AgentClaudeCode,

@@ -395,7 +395,7 @@ func TestPersistInstallStateFullInstallPreservesUnrelatedFields(t *testing.T) {
 		t.Fatal(err)
 	}
 	fresh := state.InstallState{InstalledAgents: []string{"opencode"}, SelectionConfigured: true, Components: []model.ComponentID{model.ComponentPermission}, Persona: "gentleman", BackgroundIntent: model.OpenCodeBackgroundOn}
-	if err := persistInstallState(home, fresh, []string{"opencode"}, InstallFlags{}, "new"); err != nil {
+	if err := persistInstallState(state.GlobalStore(home), fresh, []string{"opencode"}, InstallFlags{}, "new"); err != nil {
 		t.Fatal(err)
 	}
 	got, err := state.Read(home)

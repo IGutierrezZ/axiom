@@ -487,8 +487,13 @@ func setSelectionComponent(selection *model.Selection, component model.Component
 //
 // When --agents is provided explicitly, callers should pass those IDs directly
 // instead of calling DiscoverAgents.
-func DiscoverAgents(homeDir string) []model.AgentID {
-	scope := agents.ReadSelectionScope(homeDir)
+//
+// La selección se lee del almacén de estado indicado: con --scope workspace, la del
+// proyecto (con el estado global de semilla mientras no tenga la suya) y, con
+// --scope global, la de usuario. El descubrimiento por ficheros usa el HOME del almacén.
+func DiscoverAgents(store state.Store) []model.AgentID {
+	homeDir := store.Home()
+	scope := agents.ReadSelectionScopeFrom(store)
 	switch scope.Mode {
 	case agents.SelectionScopeConfigured:
 		return scope.AgentIDs
@@ -1679,12 +1684,12 @@ func applyResolvedPersona(selection *model.Selection, persisted string) {
 // gentleman-neutral-artifacts persona to neutral, printing the remap notice
 // once. State that predates persona persistence, explicit gentleman state,
 // and unreadable state are untouched.
-func migratePersistedPersonaAlias(homeDir string, persisted *state.InstallState, persistedErr error) error {
+func migratePersistedPersonaAlias(store state.Store, persisted *state.InstallState, persistedErr error) error {
 	if persistedErr != nil || persisted == nil || persisted.Persona != string(model.PersonaGentlemanNeutralArtifacts) {
 		return nil
 	}
 	persisted.Persona = string(model.PersonaNeutral)
-	if err := state.Write(homeDir, *persisted); err != nil {
+	if err := store.Write(*persisted); err != nil {
 		return fmt.Errorf("persist remapped persona: %w", err)
 	}
 	// Notice only after the rewrite is durably persisted: a failed write must
@@ -1729,7 +1734,10 @@ func RunSyncWithSelection(homeDir string, selection model.Selection) (SyncResult
 }
 
 func RunSyncWithSelectionScoped(homeDir, workspaceDir string, scope InstallScope, selection model.Selection) (SyncResult, error) {
-	persistedState, persistedStateErr := state.Read(homeDir)
+	if workspaceDir == "" {
+		workspaceDir, _ = resolveWorkspaceDir(scope, homeDir)
+	}
+	persistedState, persistedStateErr := StateStoreFor(scope, homeDir, workspaceDir).Read()
 	if persistedStateErr != nil && !os.IsNotExist(persistedStateErr) {
 		return SyncResult{Agents: selection.Agents, Selection: selection}, fmt.Errorf("read persisted installation state: %w", persistedStateErr)
 	}
@@ -1755,10 +1763,16 @@ func runSyncWithSelection(homeDir string, selection model.Selection, background 
 
 func runSyncWithSelectionScoped(homeDir, workspaceDir string, scope InstallScope, selection model.Selection, background OpenCodeBackgroundResolution, piBackground PiBackgroundResolution) (SyncResult, error) {
 	agentIDs := selection.Agents
+	// El estado se lee del almacén que corresponde al ámbito: el del proyecto con
+	// --scope workspace y el de usuario con --scope global.
+	if workspaceDir == "" {
+		workspaceDir, _ = resolveWorkspaceDir(scope, homeDir)
+	}
+	stateStore := StateStoreFor(scope, homeDir, workspaceDir)
 	// The read error is captured, not discarded: the persona alias migration
 	// below must not rewrite state it could not read. Managed-asset provenance
 	// re-reads under its own lock later (#2685), so this read stays advisory.
-	persistedState, persistedStateErr := state.Read(homeDir)
+	persistedState, persistedStateErr := stateStore.Read()
 	if err := validatePersistedSyncState(persistedState, persistedStateErr); err != nil {
 		return SyncResult{Agents: agentIDs, Selection: selection}, err
 	}
@@ -1775,9 +1789,6 @@ func runSyncWithSelectionScoped(homeDir, workspaceDir string, scope InstallScope
 		persistedPersona = persistedState.Persona
 		applyResolvedPersona(&selection, persistedPersona)
 	}
-	if workspaceDir == "" {
-		workspaceDir, _ = resolveWorkspaceDir(scope, homeDir)
-	}
 	if len(selection.ModelAssignments) == 0 && len(persistedState.ModelAssignments) > 0 {
 		selection.ModelAssignments = restoreOpenCodeModelAssignmentsFromState(homeDir, workspaceDir, scope, persistedState, selection.SDDMode)
 	}
@@ -1787,7 +1798,7 @@ func runSyncWithSelectionScoped(homeDir, workspaceDir string, scope InstallScope
 	// otherwise the one-time migration never fires for those users. State
 	// records intent — the next sync applies the neutral assets.
 	if scope != ScopeWorkspace {
-		if err := migratePersistedPersonaAlias(homeDir, &persistedState, persistedStateErr); err != nil {
+		if err := migratePersistedPersonaAlias(stateStore, &persistedState, persistedStateErr); err != nil {
 			return SyncResult{Agents: agentIDs, Selection: selection}, err
 		}
 	}
@@ -1882,19 +1893,19 @@ func runSyncWithSelectionScoped(homeDir, workspaceDir string, scope InstallScope
 		}
 		return result, verificationErr
 	}
-	if rt.scope != ScopeWorkspace {
-		writer, err := managedAssetDigest()
-		if err != nil {
-			return result, fmt.Errorf("derive managed asset writer identity: %w", err)
+	// El estado de instalación se persiste en el almacén del ámbito: el proyecto con
+	// --scope workspace y el de usuario con --scope global.
+	writer, err := managedAssetDigest()
+	if err != nil {
+		return result, fmt.Errorf("derive managed asset writer identity: %w", err)
+	}
+	if err := persistSyncManagedAssetStateWithBackground(stateStore, selection, writer, background.Persist, piBackground.Persist); err != nil {
+		persistErr := fmt.Errorf("persist sync managed asset state: %w", err)
+		rollback := orchestrator.Rollback(result.Execution)
+		if rollback.Err != nil {
+			persistErr = errors.Join(persistErr, rollback.Err)
 		}
-		if err := persistSyncManagedAssetStateWithBackground(homeDir, selection, writer, background.Persist, piBackground.Persist); err != nil {
-			persistErr := fmt.Errorf("persist sync managed asset state: %w", err)
-			rollback := orchestrator.Rollback(result.Execution)
-			if rollback.Err != nil {
-				persistErr = errors.Join(persistErr, rollback.Err)
-			}
-			return result, persistErr
-		}
+		return result, persistErr
 	}
 
 	// Auto-regeneración del índice de skills en el workspace
@@ -1931,15 +1942,15 @@ func defaultPostSyncSkillRegenerator(workspaceDir, homeDir string) (int, error) 
 	return res.SkillCount, nil
 }
 
-func persistSyncManagedAssetStateWithBackground(homeDir string, selection model.Selection, writer string, background model.OpenCodeBackgroundIntent, piBackground model.PiBackgroundIntent) error {
-	return withInstallStateLock(homeDir, func() error {
-		latest, err := state.Read(homeDir)
+func persistSyncManagedAssetStateWithBackground(store state.Store, selection model.Selection, writer string, background model.OpenCodeBackgroundIntent, piBackground model.PiBackgroundIntent) error {
+	return withStateStoreLock(store, func() error {
+		latest, err := store.Read()
 		if errors.Is(err, os.ErrNotExist) {
 			latest = state.InstallState{}
 		} else if err != nil {
 			return fmt.Errorf(
 				"read install state for managed asset provenance: %w; run `axiom install` to rewrite %s",
-				err, state.Path(homeDir))
+				err, store.Path())
 		}
 
 		shouldWrite := false
@@ -1970,7 +1981,7 @@ func persistSyncManagedAssetStateWithBackground(homeDir string, selection model.
 		if !shouldWrite {
 			return nil
 		}
-		if err := state.WriteReconciled(homeDir, latest); err != nil {
+		if err := store.WriteReconciled(latest); err != nil {
 			return fmt.Errorf("persist managed asset provenance: %w", err)
 		}
 		return nil
@@ -2000,6 +2011,7 @@ func RunSync(args []string) (SyncResult, error) {
 	// subcarpeta; el aviso sale por stderr para no mezclarse con el informe.
 	workspaceDir, rootNotice := resolveWorkspaceDir(scope, homeDir)
 	noteWorkspaceRoot(rootNotice)
+	syncStateStore := StateStoreFor(scope, homeDir, workspaceDir)
 
 	// Resolve agents: explicit flag takes precedence over auto-discovery.
 	var agentIDs []model.AgentID
@@ -2010,7 +2022,7 @@ func RunSync(args []string) (SyncResult, error) {
 		}
 		agentIDs = parsed
 	} else {
-		agentIDs = DiscoverAgents(homeDir)
+		agentIDs = DiscoverAgents(syncStateStore)
 	}
 	agentIDs = unique(agentIDs)
 
@@ -2019,7 +2031,7 @@ func RunSync(args []string) (SyncResult, error) {
 	// Read state once for both model-assignment restoration and persona resolution.
 	// A missing state file is treated as a fresh home; other read/validation
 	// errors stop sync before any persona mutation or asset write.
-	persistedState, persistedStateErr := state.Read(homeDir)
+	persistedState, persistedStateErr := syncStateStore.Read()
 	if err := validatePersistedSyncState(persistedState, persistedStateErr); err != nil {
 		return SyncResult{Agents: agentIDs, Selection: selection}, err
 	}

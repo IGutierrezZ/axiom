@@ -8,7 +8,6 @@ import (
 
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
 	"github.com/IGutierrezZ/axiom/v3/internal/reviewerprovider"
-	"github.com/IGutierrezZ/axiom/v3/internal/state"
 )
 
 // reviewProviderAdapter resolves a compiled runtime only after the role's
@@ -65,7 +64,7 @@ func savedCodexReviewModel(role string) string {
 	if err != nil {
 		return ""
 	}
-	installed, err := state.Read(home)
+	installed, err := EffectiveStateStore(home).Read()
 	if err != nil {
 		return ""
 	}
@@ -87,7 +86,7 @@ func savedClaudeReviewModel(role string) model.ClaudeModelAlias {
 	if err != nil {
 		return ""
 	}
-	installed, err := state.Read(home)
+	installed, err := EffectiveStateStore(home).Read()
 	if err != nil {
 		return ""
 	}

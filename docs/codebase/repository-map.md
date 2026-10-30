@@ -23,7 +23,7 @@ Use this page when you know what you need to change but not where it belongs.
 | `internal/agents/` | Adapter strategy, config paths, capability flags per agent. | Shared component behavior. |
 | `internal/assets/` | Embedded prompts, skills, personas, commands, and templates. | Runtime-generated user state. |
 | `internal/skillregistry/` | Skill registry scanning, cache behavior, and markdown generation. | Skill authoring rules or component injection. |
-| `internal/state/` | `~/.gentle-ai/state.json` persisted install selections. | Engram memory state. |
+| `internal/state/` | Persisted install selections: per project in `<workspace root>/.axiom/state.json` (workspace scope) or per user in `~/.axiom/state.json` (global scope). | Engram memory state. |
 | `internal/update/` | Update checks, self-update, and upgrade support. | Config sync semantics. |
 | `internal/update/upgrade/` | External tool upgrade execution and upgrade report rendering. | Install planning or component selection. |
 | `internal/verify/` | Readiness checks and rendered reports. | Mutation side effects. |

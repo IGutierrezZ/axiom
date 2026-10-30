@@ -11,7 +11,6 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/cli"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/engram"
 	"github.com/IGutierrezZ/axiom/v3/internal/skillregistry"
-	"github.com/IGutierrezZ/axiom/v3/internal/state"
 )
 
 func init() {
@@ -358,7 +357,7 @@ func resolveEngramProject(cwd string) string {
 // for Engram (D-11): the doctor's resolution rule, never a guessed PATH
 // binary. Every miss is an ordinary error the engine maps to `mirror failed`.
 func resolveEngramStdioCommand(home string) (string, []string, error) {
-	current, err := state.Read(home)
+	current, err := cli.EffectiveStateStore(home).Read()
 	if err != nil {
 		return "", nil, fmt.Errorf("read install state: %w", err)
 	}

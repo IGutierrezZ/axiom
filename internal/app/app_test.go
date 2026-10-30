@@ -675,7 +675,7 @@ func TestTuiSyncTargetAgentsOverridePersistedInstallState(t *testing.T) {
 		t.Fatalf("state.Write: %v", err)
 	}
 
-	got := syncAgentIDs(home, &model.SyncOverrides{
+	got := syncAgentIDs(home, state.GlobalStore(home), &model.SyncOverrides{
 		TargetAgents: []model.AgentID{model.AgentClaudeCode, model.AgentClaudeCode, ""},
 	})
 
@@ -690,7 +690,7 @@ func TestTuiSyncTargetAgentsFallsBackToDiscoveredAgents(t *testing.T) {
 		t.Fatalf("state.Write: %v", err)
 	}
 
-	got := syncAgentIDs(home, nil)
+	got := syncAgentIDs(home, state.GlobalStore(home), nil)
 
 	if len(got) != 1 || got[0] != model.AgentOpenCode {
 		t.Fatalf("syncAgentIDs(nil) = %v, want [%s]", got, model.AgentOpenCode)
@@ -703,7 +703,7 @@ func TestTuiSyncSelectionPreservesCustomPermissionExclusion(t *testing.T) {
 		t.Fatal(err)
 	}
 	selection := model.Selection{Agents: []model.AgentID{model.AgentOpenCode}, Components: []model.ComponentID{model.ComponentPermission}, Preset: model.PresetFullGentleman}
-	loadPersistedAssignments(home, &selection)
+	loadPersistedAssignments(state.GlobalStore(home), &selection)
 	if selection.HasComponent(model.ComponentPermission) || !reflect.DeepEqual(selection.Skills, []model.SkillID{model.SkillCommentWriter}) || selection.Preset != model.PresetCustom {
 		t.Fatalf("TUI sync replaced custom selection: %#v", selection)
 	}
@@ -833,10 +833,10 @@ func TestTUIExecuteWithBackgroundPreservesConcurrentCLIStateMutation(t *testing.
 	release := func() { releaseOnce.Do(func() { close(releasePublication) }) }
 	t.Cleanup(release)
 	previousWriteReconciled := appStateWriteReconciled
-	appStateWriteReconciled = func(homeDir string, installState state.InstallState) error {
+	appStateWriteReconciled = func(store state.Store, installState state.InstallState) error {
 		close(publicationReached)
 		<-releasePublication
-		return state.WriteReconciled(homeDir, installState)
+		return store.WriteReconciled(installState)
 	}
 	t.Cleanup(func() { appStateWriteReconciled = previousWriteReconciled })
 
@@ -1296,7 +1296,7 @@ func TestLoadPersistedAssignmentsPopulatesEmptySelection(t *testing.T) {
 	}
 
 	selection := model.Selection{}
-	loadPersistedAssignments(home, &selection)
+	loadPersistedAssignments(state.GlobalStore(home), &selection)
 
 	if _, exists := selection.ClaudeModelAssignments["orchestrator"]; exists {
 		t.Errorf("ClaudeModelAssignments should not load persisted orchestrator model: %v", selection.ClaudeModelAssignments)
@@ -1342,7 +1342,7 @@ func TestLoadPersistedAssignmentsDoesNotOverrideExisting(t *testing.T) {
 			"sdd-init": {ProviderID: "anthropic", ModelID: "claude-sonnet-4"},
 		},
 	}
-	loadPersistedAssignments(home, &selection)
+	loadPersistedAssignments(state.GlobalStore(home), &selection)
 
 	// Existing values must be preserved, NOT overwritten.
 	if got := selection.ClaudeModelAssignments["sdd-apply"]; got != "opus" {
@@ -1373,7 +1373,7 @@ func TestPersistAssignmentsPreservesInstalledAgents(t *testing.T) {
 			"sdd-apply":    "sonnet",
 		},
 	}
-	persistAssignments(home, selection)
+	persistAssignments(state.GlobalStore(home), selection)
 
 	// Read back and verify agents are still there.
 	got, err := state.Read(home)
@@ -1414,7 +1414,7 @@ func TestPersistAssignmentsClearsNonPhaseAssignmentMaps(t *testing.T) {
 		t.Fatalf("state.Write: %v", err)
 	}
 
-	persistAssignments(home, model.Selection{
+	persistAssignments(state.GlobalStore(home), model.Selection{
 		ClaudeModelAssignments:      map[string]model.ClaudeModelAlias{},
 		KiroModelAssignments:        map[string]model.KiroModelAlias{},
 		CodexModelAssignments:       map[string]model.CodexEffort{},
@@ -1477,7 +1477,7 @@ func TestPersistAssignmentsSkipsCorruptState(t *testing.T) {
 		t.Fatalf("WriteFile: %v", err)
 	}
 
-	persistAssignments(home, model.Selection{
+	persistAssignments(state.GlobalStore(home), model.Selection{
 		CodexPhaseModelAssignments: map[string]string{},
 	})
 
@@ -1504,7 +1504,7 @@ func TestPersistAssignmentsClearsClaudePhaseAssignments(t *testing.T) {
 		t.Fatalf("state.Write: %v", err)
 	}
 
-	persistAssignments(home, model.Selection{
+	persistAssignments(state.GlobalStore(home), model.Selection{
 		ClaudePhaseAssignments: map[string]model.ClaudePhaseAssignment{},
 	})
 
@@ -1535,10 +1535,10 @@ func TestPersistAndLoadKiroModelAssignments(t *testing.T) {
 			"default":     model.KiroModelAuto,
 		},
 	}
-	persistAssignments(home, selection)
+	persistAssignments(state.GlobalStore(home), selection)
 
 	loaded := model.Selection{}
-	loadPersistedAssignments(home, &loaded)
+	loadPersistedAssignments(state.GlobalStore(home), &loaded)
 
 	if got := loaded.KiroModelAssignments["sdd-design"]; got != model.KiroModelGLM {
 		t.Errorf("round-trip KiroModelAssignments[sdd-design] = %q, want %q", got, model.KiroModelGLM)
@@ -1568,7 +1568,7 @@ func TestPersistAssignmentsNoOpWhenEmpty(t *testing.T) {
 	infoBefore, _ := os.Stat(statePath)
 
 	selection := model.Selection{} // empty assignments
-	persistAssignments(home, selection)
+	persistAssignments(state.GlobalStore(home), selection)
 
 	infoAfter, _ := os.Stat(statePath)
 	if infoAfter.ModTime() != infoBefore.ModTime() {
@@ -1605,7 +1605,7 @@ func TestLoadPersistedAssignmentsWiresEffort(t *testing.T) {
 	}
 
 	sel := model.Selection{}
-	loadPersistedAssignments(home, &sel)
+	loadPersistedAssignments(state.GlobalStore(home), &sel)
 
 	a := sel.ModelAssignments["sdd-apply"]
 	if a.Effort != "medium" {
@@ -2021,7 +2021,7 @@ func TestLoadPersistedAssignments_Codex(t *testing.T) {
 	}
 
 	sel := model.Selection{}
-	loadPersistedAssignments(home, &sel)
+	loadPersistedAssignments(state.GlobalStore(home), &sel)
 
 	if sel.CodexModelAssignments["sdd-apply"] != model.CodexEffortMedium {
 		t.Errorf("CodexModelAssignments[sdd-apply] = %q, want medium", sel.CodexModelAssignments["sdd-apply"])
@@ -2039,7 +2039,7 @@ func TestLoadPersistedAssignments_CodexMissingKey(t *testing.T) {
 	}
 
 	sel := model.Selection{}
-	loadPersistedAssignments(home, &sel)
+	loadPersistedAssignments(state.GlobalStore(home), &sel)
 
 	if sel.CodexModelAssignments != nil {
 		t.Errorf("CodexModelAssignments = %v, want nil when key absent", sel.CodexModelAssignments)
@@ -2058,7 +2058,7 @@ func TestPersistAssignments_Codex(t *testing.T) {
 	sel := model.Selection{
 		CodexModelAssignments: model.CodexModelPresetLowCost(),
 	}
-	persistAssignments(home, sel)
+	persistAssignments(state.GlobalStore(home), sel)
 
 	s, err := state.Read(home)
 	if err != nil {
@@ -2109,7 +2109,7 @@ func TestLoadPersistedAssignments_CodexCarrilModels(t *testing.T) {
 			}
 
 			sel := model.Selection{}
-			loadPersistedAssignments(home, &sel)
+			loadPersistedAssignments(state.GlobalStore(home), &sel)
 			if !reflect.DeepEqual(sel.CodexCarrilModelAssignments, tt.want) {
 				t.Fatalf("CodexCarrilModelAssignments = %#v, want %#v", sel.CodexCarrilModelAssignments, tt.want)
 			}
@@ -2186,7 +2186,7 @@ func TestPersistAssignments_CodexCarrilModels(t *testing.T) {
 			"sdd-cheap":  "gpt-5.4-mini",
 		},
 	}
-	persistAssignments(home, sel)
+	persistAssignments(state.GlobalStore(home), sel)
 
 	s, err := state.Read(home)
 	if err != nil {
@@ -2237,9 +2237,9 @@ func TestPresetSyncClearsCodexPhaseModelAssignments(t *testing.T) {
 	}
 
 	selection := model.Selection{}
-	loadPersistedAssignments(home, &selection)
+	loadPersistedAssignments(state.GlobalStore(home), &selection)
 	applyOverrides(&selection, overrides)
-	persistAssignments(home, selection)
+	persistAssignments(state.GlobalStore(home), selection)
 
 	// Assert: state must no longer contain per-phase assignments.
 	s, err := state.Read(home)
@@ -2283,9 +2283,9 @@ func TestPartialSyncDoesNotWipeCodexPhaseModelAssignments(t *testing.T) {
 	}
 
 	selection := model.Selection{}
-	loadPersistedAssignments(home, &selection)
+	loadPersistedAssignments(state.GlobalStore(home), &selection)
 	applyOverrides(&selection, overrides)
-	persistAssignments(home, selection)
+	persistAssignments(state.GlobalStore(home), selection)
 
 	// The per-phase assignments must survive an unrelated partial sync.
 	s, err := state.Read(home)
@@ -2774,12 +2774,12 @@ func TestCustomSyncClearsPersistedCodexOrchestratorAssignment(t *testing.T) {
 	}
 
 	selection := model.Selection{}
-	loadPersistedAssignments(home, &selection)
+	loadPersistedAssignments(state.GlobalStore(home), &selection)
 	applyOverrides(&selection, &model.SyncOverrides{ClearCodexOrchestratorAssignment: true})
 	if selection.CodexOrchestratorAssignment != nil {
 		t.Fatalf("same-sync selection retained curated orchestrator: %#v", selection.CodexOrchestratorAssignment)
 	}
-	persistAssignments(home, selection)
+	persistAssignments(state.GlobalStore(home), selection)
 
 	persisted, err := state.Read(home)
 	if err != nil {
@@ -2802,12 +2802,12 @@ func TestCustomClearRoundTripLeavesFutureSyncInPreserveMode(t *testing.T) {
 	}
 
 	first := model.Selection{}
-	loadPersistedAssignments(home, &first)
+	loadPersistedAssignments(state.GlobalStore(home), &first)
 	applyOverrides(&first, &model.SyncOverrides{ClearCodexOrchestratorAssignment: true})
-	persistAssignments(home, first)
+	persistAssignments(state.GlobalStore(home), first)
 
 	future := model.Selection{}
-	loadPersistedAssignments(home, &future)
+	loadPersistedAssignments(state.GlobalStore(home), &future)
 	if future.CodexOrchestratorAssignment != nil || future.ClearCodexOrchestratorAssignment {
 		t.Fatalf("future sync did not return to preserve mode: assignment=%#v clear=%v", future.CodexOrchestratorAssignment, future.ClearCodexOrchestratorAssignment)
 	}

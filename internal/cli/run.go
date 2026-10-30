@@ -147,7 +147,11 @@ func RunInstall(args []string, detection system.DetectionResult) (InstallResult,
 	if err != nil {
 		return InstallResult{}, fmt.Errorf("resolve user home directory: %w", err)
 	}
-	persistedState, stateErr := state.Read(homeDir)
+	// El estado de instalación es del proyecto con --scope workspace (D2) y de
+	// usuario con --scope global: el ámbito decide qué documento se lee y se escribe.
+	stateWorkspaceDir, _ := resolveWorkspaceDir(input.Scope, homeDir)
+	stateStore := StateStoreFor(input.Scope, homeDir, stateWorkspaceDir)
+	persistedState, stateErr := stateStore.Read()
 	if errors.Is(stateErr, os.ErrNotExist) {
 		persistedState = state.InstallState{}
 	} else if stateErr != nil {
@@ -300,7 +304,7 @@ func RunInstall(args []string, detection system.DetectionResult) (InstallResult,
 	if err != nil {
 		return result, fmt.Errorf("derive managed asset writer identity: %w", err)
 	}
-	if err := persistInstallState(homeDir, newState, agentIDs, flags, writer); err != nil {
+	if err := persistInstallState(stateStore, newState, agentIDs, flags, writer); err != nil {
 		persistErr := fmt.Errorf("persist install state: %w", err)
 		rollback := orchestrator.Rollback(result.Execution)
 		if rollback.Err != nil {
@@ -312,16 +316,16 @@ func RunInstall(args []string, detection system.DetectionResult) (InstallResult,
 	return result, nil
 }
 
-func persistInstallState(homeDir string, newState state.InstallState, agentIDs []string, flags InstallFlags, writer string) error {
-	return withInstallStateLock(homeDir, func() error {
+func persistInstallState(store state.Store, newState state.InstallState, agentIDs []string, flags InstallFlags, writer string) error {
+	return withStateStoreLock(store, func() error {
 		if len(flags.Agents) > 0 {
-			merged, mergeErr := mergeExplicitAgentInstallState(homeDir, newState, agentIDs, flags)
+			merged, mergeErr := mergeExplicitAgentInstallState(store, newState, agentIDs, flags)
 			if mergeErr != nil {
 				return fmt.Errorf("merge explicit agent install state: %w", mergeErr)
 			}
 			newState = merged
 		} else {
-			existing, err := state.Read(homeDir)
+			existing, err := store.Read()
 			if errors.Is(err, os.ErrNotExist) {
 				existing = state.InstallState{}
 			} else if err != nil {
@@ -330,7 +334,7 @@ func persistInstallState(homeDir string, newState state.InstallState, agentIDs [
 			newState = mergeFullInstallState(existing, newState)
 		}
 		newState.ManagedAssetDigest = writer
-		return state.WriteReconciled(homeDir, newState)
+		return store.WriteReconciled(newState)
 	})
 }
 
@@ -367,8 +371,8 @@ func mergeFullInstallState(existing, fresh state.InstallState) state.InstallStat
 // data would itself be wrong, so this does not attempt best-effort recovery
 // — it fails loudly instead, matching the original conservative intent of
 // refusing to merge from data that cannot be trusted.
-func mergeExplicitAgentInstallState(homeDir string, newState state.InstallState, agentIDs []string, flags InstallFlags) (state.InstallState, error) {
-	existing, readErr := state.Read(homeDir)
+func mergeExplicitAgentInstallState(store state.Store, newState state.InstallState, agentIDs []string, flags InstallFlags) (state.InstallState, error) {
+	existing, readErr := store.Read()
 	if readErr != nil {
 		if errors.Is(readErr, os.ErrNotExist) {
 			return newState, nil

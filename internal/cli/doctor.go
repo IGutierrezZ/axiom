@@ -101,7 +101,7 @@ func RunDoctor(ctx context.Context, w io.Writer) error {
 	// checkStateJSON. Here we fall back to an empty state so the doctor only
 	// reports the always-required core tools — preserving the first-time-install
 	// behaviour where the user has not yet selected any agents (#709).
-	installedState, stateErr := state.Read(homeDir)
+	installedState, stateErr := EffectiveStateStore(homeDir).Read()
 	if stateErr != nil {
 		installedState = state.InstallState{}
 	}
@@ -399,9 +399,10 @@ func appendUniqueExt(exts []string, ext string) []string {
 // checkStateJSON validates ~/.gentle-ai/state.json and agent config dirs.
 func checkStateJSON(homeDir string) CheckResult {
 	const id = doctor.CheckStateJSON
-	statePath := state.Path(homeDir)
+	store := EffectiveStateStore(homeDir)
+	statePath := store.Path()
 
-	s, err := state.Read(homeDir)
+	s, err := store.Read()
 	if err != nil {
 		if os.IsNotExist(err) {
 			return CheckResult{
@@ -755,7 +756,7 @@ func statusIcon(s CheckStatus) string {
 }
 
 func checkInstalledAssetVersion(homeDir string) CheckResult {
-	s, err := state.Read(homeDir)
+	s, err := EffectiveStateStore(homeDir).Read()
 	if err != nil {
 		return CheckResult{
 			Status: CheckStatusPass,
