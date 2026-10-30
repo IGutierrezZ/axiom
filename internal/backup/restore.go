@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/components/filemerge"
+	"github.com/IGutierrezZ/axiom/v3/internal/system"
 )
 
 // UserHomeDirFn is the function used to resolve the user's home directory.
@@ -92,6 +93,24 @@ func invalidOriginalPathErr(originalPath string, roots []string) error {
 	return fmt.Errorf("manifest entry has invalid OriginalPath %q: must be an absolute path under an allowed root (%s)", originalPath, strings.Join(roots, ", "))
 }
 
+// MachineRoots devuelve las raíces de máquina de Axiom que reciben escrituras
+// gestionadas (hoy, el directorio de lanzadores `<system.AxiomDir>/bin`) y que
+// quedan fuera de home. Sin AXIOM_STATE_DIR, o con una raíz de estado dentro de
+// home, no devuelve nada: home ya las cubre. Con AXIOM_STATE_DIR en otro volumen o
+// directorio, el lanzador de OpenCode vive fuera de home y una restauración que
+// solo admitiera home lo rechazaría.
+//
+// Solo se admite lo que Axiom escribe de verdad, no toda la raíz de estado: copias
+// de respaldo, caché y estado no entran en ningún manifiesto, y abrirlos ampliaría
+// el alcance de una restauración sin necesidad.
+func MachineRoots(home string) []string {
+	binDir := system.BinDir(home)
+	if !filepath.IsAbs(binDir) || isPathUnderRoot(binDir, home) {
+		return nil
+	}
+	return []string{binDir}
+}
+
 // RestoreService restores a backup manifest, writing back or removing files
 // at their OriginalPath.
 //
@@ -99,13 +118,14 @@ func invalidOriginalPathErr(originalPath string, roots []string) error {
 // remove from. Every non-pre-existing manifest entry's OriginalPath must
 // resolve under at least one Roots entry, or the restore refuses it.
 //
-// When Roots is empty, Restore falls back to the single directory returned by
-// UserHomeDirFn — the historical, backward-compatible behavior. This is the
+// When Roots is empty, Restore falls back to the directory returned by
+// UserHomeDirFn plus MachineRoots(home) — the historical, backward-compatible
+// behavior extended to the Axiom machine roots outside home. This is the
 // correct default for standalone restores (`gentle-ai restore <id>` and the
 // TUI "restore from list" screen): the backup being restored may be
 // arbitrarily old, and the workspace root that was in effect when it was
 // created is not something the current process can safely rediscover on its
-// own, so it falls back to the one directory it explicitly owns.
+// own, so it falls back to the directories it explicitly owns.
 //
 // Callers that are still inside the same install/sync run that produced the
 // manifest (e.g. pipeline rollback) know their own scope roots out of band
@@ -123,7 +143,7 @@ func (s RestoreService) allowedRoots() ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	return []string{home}, nil
+	return append([]string{home}, MachineRoots(home)...), nil
 }
 
 // reconcileExistingSymlink enforces the symlink collision-detection contract

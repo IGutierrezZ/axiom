@@ -1310,12 +1310,17 @@ func (s rollbackRestoreStep) Rollback() error {
 // Both values are exactly what backupTargets/syncBackupTargets used to
 // compute what this run actually snapshotted, so allowing rollback to
 // write within them is not wider than what this run could already do.
+//
+// backup.MachineRoots añade el directorio de lanzadores de Axiom cuando
+// AXIOM_STATE_DIR lo deja fuera de home: el lanzador de OpenCode entra en el
+// manifiesto (backupTargets y syncBackupTargets lo incluyen) y, sin esa raíz, un
+// install fallido no podría restaurarlo.
 func rollbackRoots(homeDir, workspaceDir string) []string {
 	roots := []string{homeDir}
 	if workspaceDir != "" && workspaceDir != homeDir {
 		roots = append(roots, workspaceDir)
 	}
-	return roots
+	return append(roots, backup.MachineRoots(homeDir)...)
 }
 
 type agentInstallStep struct {
