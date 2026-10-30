@@ -135,10 +135,18 @@ func (s Store) Prepare() {
 //   - PendingSync: lo fija una autoactualización del binario, que es de la máquina;
 //   - RDDMode y RDDModeRecordedAt: el interruptor de revisión es del usuario.
 //
+// La semilla tampoco aporta InstalledAgents: la lista de agentes de un proyecto es la
+// de lo que se instaló en él, y el estado global es la unión de todos los proyectos
+// (y de las instalaciones globales). Heredarla haría que un sync en el proyecto
+// escribiera en HOME la configuración de agentes sin modo workspace. Con nil el
+// proyecto no ha registrado agentes (una instalación escribe siempre una lista no
+// nula, aunque vacía); véase Store.AgentsRecorded.
+//
 // El resto (agentes instalados, selección, persona, asignación de modelos,
 // herramientas de comunidad, intenciones de segundo plano, huella del binario y de
 // los activos gestionados) es del proyecto.
 func ProjectView(s InstallState) InstallState {
+	s.InstalledAgents = nil
 	s.LastUpdateCheck = nil
 	s.PendingSync = false
 	s.RDDMode = ""
@@ -155,4 +163,18 @@ func WithMachineFields(project, machine InstallState) InstallState {
 	project.RDDMode = machine.RDDMode
 	project.RDDModeRecordedAt = machine.RDDModeRecordedAt
 	return project
+}
+
+// AgentsRecorded dice si current, leído de este almacén, trae una lista de agentes
+// instalados que valga. Siempre es así en el almacén global. En el de proyecto
+// solo cuando el proyecto la ha registrado: la semilla global no la aporta
+// (ProjectView) y un estado de proyecto creado por un sync a partir de la semilla
+// tampoco, y en ambos casos InstalledAgents es nil. Una instalación escribe una
+// lista no nula, aunque esté vacía, así que nil significa «no registrada» y no
+// «ningún agente».
+func (s Store) AgentsRecorded(current InstallState) bool {
+	if !s.IsProject() || s.sharesGlobalFile() {
+		return true
+	}
+	return current.InstalledAgents != nil
 }

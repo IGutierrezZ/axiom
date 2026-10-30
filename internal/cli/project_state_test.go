@@ -96,10 +96,9 @@ func TestInstallWorkspaceDoesNotModifyTheGlobalState(t *testing.T) {
 	if !bytes.Equal(before, after) {
 		t.Errorf("el estado global ha cambiado:\n%s\n---\n%s", before, after)
 	}
-	// La primera escritura parte de la semilla global: `install --agent` conserva lo que
-	// el estado global ya conocía (codex) y añade el agente instalado ahora.
-	if got := readProjectState(t, home, rootA); !slices.Equal(got.InstalledAgents, []string{"codex", "claude-code"}) {
-		t.Errorf("agentes del proyecto = %v, want la semilla global más claude-code", got.InstalledAgents)
+	// La semilla global no aporta agentes: el proyecto solo registra lo que se instaló en él.
+	if got := readProjectState(t, home, rootA); !slices.Equal(got.InstalledAgents, []string{"claude-code"}) {
+		t.Errorf("agentes del proyecto = %v, want solo [claude-code]", got.InstalledAgents)
 	}
 }
 
@@ -290,5 +289,54 @@ func TestStateStoreForFollowsTheScope(t *testing.T) {
 	}
 	if store := StateStoreFor(ScopeWorkspace, home, ""); store.IsProject() {
 		t.Errorf("sin raíz de workspace debe caer al global: %#v", store)
+	}
+}
+
+// TestSyncWorkspaceWithoutProjectStateDoesNotInheritTheGlobalAgents fija que la semilla
+// global solo aporta preferencias: la lista de agentes del proyecto no se deriva del
+// estado global, que es la unión de todos los proyectos y de las instalaciones globales.
+// Sin lista propia, sync descubre los agentes por ficheros, como con un HOME sin estado.
+func TestSyncWorkspaceWithoutProjectStateDoesNotInheritTheGlobalAgents(t *testing.T) {
+	rootA, _, home := projectStateFixture(t)
+	t.Chdir(rootA)
+	if err := os.MkdirAll(filepath.Join(home, ".claude"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := state.Write(home, state.InstallState{
+		InstalledAgents:     []string{"codex"},
+		SelectionConfigured: true,
+		Components:          []model.ComponentID{model.ComponentEngram},
+		Persona:             "neutral",
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	result, err := RunSync([]string{"--scope", "workspace"})
+	if err != nil {
+		t.Fatalf("RunSync() error = %v", err)
+	}
+
+	if len(result.Agents) != 1 || result.Agents[0] != model.AgentClaudeCode {
+		t.Errorf("agentes sincronizados = %v, want los descubiertos por ficheros [claude-code] y no los del estado global", result.Agents)
+	}
+	if _, err := os.Stat(filepath.Join(home, ".codex")); !os.IsNotExist(err) {
+		t.Errorf("codex solo figura en el estado global y no debe sincronizarse; stat = %v", err)
+	}
+	project := readProjectState(t, home, rootA)
+	if project.InstalledAgents != nil {
+		t.Errorf("un sync no registra agentes en el proyecto: %v", project.InstalledAgents)
+	}
+	if project.Persona != "neutral" || len(project.Components) != 1 {
+		t.Errorf("las preferencias sí vienen de la semilla: %#v", project)
+	}
+
+	// Con la lista sin registrar, el siguiente sync repite el descubrimiento por ficheros
+	// en lugar de tratar el estado del proyecto como una selección vacía.
+	again, err := RunSync([]string{"--scope", "workspace"})
+	if err != nil {
+		t.Fatalf("segundo RunSync() error = %v", err)
+	}
+	if len(again.Agents) != 1 || again.Agents[0] != model.AgentClaudeCode {
+		t.Errorf("segundo sync: agentes = %v, want [claude-code]", again.Agents)
 	}
 }

@@ -111,7 +111,7 @@ func TestProjectStoreSeedsFromGlobalWithoutModifyingIt(t *testing.T) {
 		t.Fatalf("Read() = %v, want la semilla global", err)
 	}
 
-	if len(seed.InstalledAgents) != 2 || seed.Persona != "neutral" || !seed.SelectionConfigured {
+	if seed.InstalledAgents != nil || seed.Persona != "neutral" || !seed.SelectionConfigured {
 		t.Errorf("la semilla no refleja la selección global: %#v", seed)
 	}
 	if seed.RDDMode != "" || seed.RDDModeRecordedAt != nil || seed.LastUpdateCheck != nil || seed.PendingSync {
@@ -164,7 +164,7 @@ func TestProjectStoreFirstWriteDetachesFromGlobal(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if again.Persona != "gentleman" || again.InstalledAgents[0] != "claude-code" {
+	if again.Persona != "gentleman" || again.InstalledAgents != nil {
 		t.Errorf("el global ha vuelto a pisar al proyecto: %#v", again)
 	}
 }
@@ -389,5 +389,51 @@ func TestEnsureProjectStateIgnoredLinkedWorktreeUsesCommonDir(t *testing.T) {
 
 	if !gitIgnored(t, linked, ".axiom/state.json") {
 		t.Error("git no ignora el estado en el worktree enlazado")
+	}
+}
+
+func TestProjectStoreAgentsRecordedDistinguishesNilFromEmpty(t *testing.T) {
+	isolateGlobalState(t)
+	home, root := t.TempDir(), t.TempDir()
+	project := ProjectStore(home, root)
+
+	if !GlobalStore(home).AgentsRecorded(InstallState{}) {
+		t.Error("el almacén global siempre da por registrada la lista")
+	}
+	if project.AgentsRecorded(InstallState{}) {
+		t.Error("un estado de proyecto sin lista no ha registrado agentes")
+	}
+	if !project.AgentsRecorded(InstallState{InstalledAgents: []string{}}) {
+		t.Error("una lista vacía no nula es una instalación sin agentes, ya registrada")
+	}
+
+	// La distinción sobrevive al disco: nil se guarda como null y [] como [].
+	if err := project.Write(InstallState{SelectionConfigured: true}); err != nil {
+		t.Fatal(err)
+	}
+	got, err := project.Read()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if project.AgentsRecorded(got) {
+		t.Errorf("tras escribir sin lista, la lectura no debe darla por registrada: %#v", got)
+	}
+	if err := project.Write(InstallState{SelectionConfigured: true, InstalledAgents: []string{}}); err != nil {
+		t.Fatal(err)
+	}
+	got, err = project.Read()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !project.AgentsRecorded(got) {
+		t.Errorf("tras escribir una lista vacía, la lectura debe darla por registrada: %#v", got)
+	}
+}
+
+func TestProjectStoreAtHomeAlwaysRecordsAgents(t *testing.T) {
+	isolateGlobalState(t)
+	home := t.TempDir()
+	if !ProjectStore(home, home).AgentsRecorded(InstallState{}) {
+		t.Error("con la raíz en HOME el fichero es el global y la lista cuenta como registrada")
 	}
 }

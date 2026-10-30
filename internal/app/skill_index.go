@@ -11,6 +11,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/cli"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/engram"
 	"github.com/IGutierrezZ/axiom/v3/internal/skillregistry"
+	"github.com/IGutierrezZ/axiom/v3/internal/state"
 )
 
 func init() {
@@ -361,7 +362,15 @@ func resolveEngramStdioCommand(home string) (string, []string, error) {
 	if err != nil {
 		return "", nil, fmt.Errorf("read install state: %w", err)
 	}
-	commands, err := engram.ReadPersistedStdioCommands(home, current.InstalledAgents)
+	installedAgents := current.InstalledAgents
+	if installedAgents == nil {
+		// Un proyecto que aún no ha registrado agentes (solo tiene el estado de un sync)
+		// usa los del estado de usuario, que es donde se resolvió siempre este comando.
+		if global, globalErr := state.Read(home); globalErr == nil {
+			installedAgents = global.InstalledAgents
+		}
+	}
+	commands, err := engram.ReadPersistedStdioCommands(home, installedAgents)
 	if err != nil {
 		return "", nil, fmt.Errorf("read persisted engram MCP configuration: %w", err)
 	}

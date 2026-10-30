@@ -132,6 +132,11 @@ func ReadSelectionScopeFrom(store state.Store) SelectionScope {
 		}
 		return SelectionScope{Mode: SelectionScopeUnavailable}
 	}
+	if !store.AgentsRecorded(s) {
+		// El proyecto aún no ha registrado agentes (solo hereda preferencias de la
+		// semilla global): se trata como estado sin selección, no como una selección vacía.
+		return SelectionScope{Mode: SelectionScopeFilesystemFallback}
+	}
 	return SelectionScopeFromInstallState(s)
 }
 
