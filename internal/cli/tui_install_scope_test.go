@@ -88,7 +88,7 @@ func TestTUIInstallWorkspaceOmitsAgentsWithoutWorkspaceMode(t *testing.T) {
 	}
 	t.Cleanup(func() { tuiInstallStagePlan = previous })
 
-	agentsSelected := []model.AgentID{model.AgentClaudeCode, model.AgentCodex, model.AgentWindsurf}
+	agentsSelected := []model.AgentID{model.AgentClaudeCode, model.AgentVSCodeCopilot, model.AgentWindsurf}
 	result, _ := ExecuteTUIInstallWithBackgroundAndOrchestrator(home, model.Selection{Agents: agentsSelected}, planner.ResolvedPlan{Agents: agentsSelected}, system.PlatformProfile{}, model.OpenCodeBackgroundOff, model.PiBackgroundIntent(""), nil)
 	if result.Err != nil {
 		t.Fatalf("ExecuteTUIInstallWithBackgroundAndOrchestrator() error = %v", result.Err)
@@ -102,10 +102,42 @@ func TestTUIInstallWorkspaceOmitsAgentsWithoutWorkspaceMode(t *testing.T) {
 		t.Errorf("la TUI no debe escribir por stderr:\n%s", notices)
 	}
 	joined := strings.Join(result.ManualActions, "\n")
-	for _, id := range []model.AgentID{model.AgentCodex, model.AgentWindsurf} {
+	for _, id := range []model.AgentID{model.AgentVSCodeCopilot, model.AgentWindsurf} {
 		if !strings.Contains(joined, string(id)+" omitido") {
 			t.Errorf("falta el aviso de %s entre las acciones manuales:\n%s", id, joined)
 		}
+	}
+}
+
+// Codex sí tiene modo workspace: la TUI lo conserva en el plan y avisa, entre las
+// acciones manuales, de que el proyecto debe ser de confianza.
+func TestTUIInstallWorkspaceKeepsCodexAndNotesProjectTrust(t *testing.T) {
+	t.Setenv(ScopeAxiomEnvVar, string(ScopeWorkspace))
+	t.Chdir(t.TempDir())
+	notices := captureWorkspaceAgentsNotice(t)
+
+	var planned []model.AgentID
+	previous := tuiInstallStagePlan
+	tuiInstallStagePlan = func(runtime *installRuntime) pipeline.StagePlan {
+		planned = runtime.selection.Agents
+		return pipeline.StagePlan{}
+	}
+	t.Cleanup(func() { tuiInstallStagePlan = previous })
+
+	selected := []model.AgentID{model.AgentClaudeCode, model.AgentCodex}
+	result, _ := ExecuteTUIInstallWithBackgroundAndOrchestrator(t.TempDir(), model.Selection{Agents: selected}, planner.ResolvedPlan{Agents: selected}, system.PlatformProfile{}, model.OpenCodeBackgroundOff, model.PiBackgroundIntent(""), nil)
+	if result.Err != nil {
+		t.Fatalf("error = %v", result.Err)
+	}
+
+	if !slices.Equal(planned, selected) {
+		t.Errorf("agentes del plan = %v, want %v", planned, selected)
+	}
+	if notices.Len() != 0 {
+		t.Errorf("Codex no se omite y la TUI no escribe por stderr:\n%s", notices)
+	}
+	if joined := strings.Join(result.ManualActions, "\n"); !strings.Contains(joined, "de confianza") || strings.Contains(joined, "codex omitido") {
+		t.Errorf("se esperaba el aviso de confianza y ninguna omisión:\n%s", joined)
 	}
 }
 
@@ -120,7 +152,7 @@ func TestTUIInstallWorkspaceWithOnlyAgentsWithoutWorkspaceModeFails(t *testing.T
 	}
 	t.Cleanup(func() { tuiInstallStagePlan = previous })
 
-	only := []model.AgentID{model.AgentCodex}
+	only := []model.AgentID{model.AgentWindsurf}
 	result, _ := ExecuteTUIInstallWithBackgroundAndOrchestrator(t.TempDir(), model.Selection{Agents: only}, planner.ResolvedPlan{Agents: only}, system.PlatformProfile{}, model.OpenCodeBackgroundOff, model.PiBackgroundIntent(""), nil)
 	if result.Err == nil || !strings.Contains(result.Err.Error(), "ningún agente") {
 		t.Fatalf("error = %v, want el de ningún agente con modo workspace", result.Err)

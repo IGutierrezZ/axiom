@@ -47,6 +47,19 @@ func seedCodexHome(t *testing.T, home string) {
 	}
 }
 
+// seedWindsurfHome siembra la configuración global de Windsurf, un agente sin modo
+// workspace, en el HOME de la prueba: el descubrimiento por carpetas lo daría por
+// instalado.
+func seedWindsurfHome(t *testing.T, home string) {
+	t.Helper()
+	for path, content := range map[string]string{
+		filepath.Join(home, ".codeium", "windsurf", "memories", "global_rules.md"):   "instrucciones del usuario\n",
+		filepath.Join(home, ".codeium", "windsurf", "skills", "usuario", "SKILL.md"): "skill del usuario\n",
+	} {
+		mustWriteFile(t, path, []byte(content))
+	}
+}
+
 // seedClaudeHome siembra la configuración global de Claude Code, para que el
 // descubrimiento por carpetas encuentre también un agente con modo workspace.
 func seedClaudeHome(t *testing.T, home string) {
@@ -81,13 +94,13 @@ func assertOmittedNotices(t *testing.T, got string, omitted ...model.AgentID) {
 }
 
 func TestSplitAgentsForScope(t *testing.T) {
-	selected := []model.AgentID{model.AgentClaudeCode, model.AgentCodex, model.AgentWindsurf, model.AgentOpenCode}
+	selected := []model.AgentID{model.AgentClaudeCode, model.AgentCodex, model.AgentWindsurf, model.AgentOpenCode, model.AgentVSCodeCopilot}
 
 	kept, omitted := splitAgentsForScope(ScopeWorkspace, selected)
-	if want := []model.AgentID{model.AgentClaudeCode, model.AgentOpenCode}; !slices.Equal(kept, want) {
-		t.Errorf("workspace conserva %v, want %v", kept, want)
+	if want := []model.AgentID{model.AgentClaudeCode, model.AgentCodex, model.AgentOpenCode}; !slices.Equal(kept, want) {
+		t.Errorf("workspace conserva %v, want %v (Codex ya tiene modo workspace)", kept, want)
 	}
-	if want := []model.AgentID{model.AgentCodex, model.AgentWindsurf}; !slices.Equal(omitted, want) {
+	if want := []model.AgentID{model.AgentWindsurf, model.AgentVSCodeCopilot}; !slices.Equal(omitted, want) {
 		t.Errorf("workspace omite %v, want %v", omitted, want)
 	}
 
@@ -109,7 +122,7 @@ func TestComponentInjectionDirScopedNeverResolvesHomeInWorkspace(t *testing.T) {
 	if err != nil {
 		t.Fatalf("registry error: %v", err)
 	}
-	for _, id := range []model.AgentID{model.AgentVSCodeCopilot, model.AgentTrae, model.AgentWindsurf, model.AgentAntigravity, model.AgentCodex} {
+	for _, id := range []model.AgentID{model.AgentVSCodeCopilot, model.AgentTrae, model.AgentWindsurf, model.AgentAntigravity} {
 		adapter, ok := reg.Get(id)
 		if !ok {
 			t.Fatalf("falta el adaptador %s", id)
@@ -129,24 +142,24 @@ func TestRunInstallWorkspaceOmitsAgentsWithoutWorkspaceMode(t *testing.T) {
 	home, workspace, _ := footprintEnv(t)
 	t.Setenv("AXIOM_STATE_DIR", "")
 	seedFootprintHome(t, home)
-	seedCodexHome(t, home)
+	seedWindsurfHome(t, home)
 	notices := captureWorkspaceAgentsNotice(t)
 	before := homeSnapshotWithoutState(t, home)
 
-	result, err := RunInstall([]string{"--scope", "workspace", "--agent", "claude-code,codex,windsurf"}, macOSDetectionResult())
+	result, err := RunInstall([]string{"--scope", "workspace", "--agent", "claude-code,vscode-copilot,windsurf"}, macOSDetectionResult())
 	if err != nil {
 		t.Fatalf("RunInstall() error = %v", err)
 	}
 
 	assertSameTree(t, "home", before, homeSnapshotWithoutState(t, home))
-	assertOmittedNotices(t, notices.String(), model.AgentCodex, model.AgentWindsurf)
+	assertOmittedNotices(t, notices.String(), model.AgentVSCodeCopilot, model.AgentWindsurf)
 	if want := []model.AgentID{model.AgentClaudeCode}; !slices.Equal(result.Resolved.Agents, want) {
 		t.Errorf("agentes del plan = %v, want %v", result.Resolved.Agents, want)
 	}
 	if _, statErr := os.Stat(filepath.Join(workspace, ".claude")); statErr != nil {
 		t.Errorf("Claude Code sí admite workspace y debe instalarse en el proyecto: %v", statErr)
 	}
-	for _, unwanted := range []string{".codex", ".windsurf"} {
+	for _, unwanted := range []string{".windsurf", ".github", ".vscode", ".codeium"} {
 		if _, statErr := os.Stat(filepath.Join(workspace, unwanted)); !os.IsNotExist(statErr) {
 			t.Errorf("un agente omitido no debe crear %s en el proyecto; stat = %v", unwanted, statErr)
 		}
@@ -165,20 +178,20 @@ func TestRunInstallWorkspaceOmitsAgentsWithoutWorkspaceMode(t *testing.T) {
 func TestRunInstallWorkspaceWithOnlyAgentsWithoutWorkspaceModeFails(t *testing.T) {
 	home, workspace, commands := footprintEnv(t)
 	t.Setenv("AXIOM_STATE_DIR", "")
-	seedCodexHome(t, home)
+	seedWindsurfHome(t, home)
 	notices := captureWorkspaceAgentsNotice(t)
 	before := permissionsTreeSnapshot(t, home)
 
-	_, err := RunInstall([]string{"--scope", "workspace", "--agent", "codex"}, macOSDetectionResult())
+	_, err := RunInstall([]string{"--scope", "workspace", "--agent", "windsurf"}, macOSDetectionResult())
 	if err == nil {
 		t.Fatal("RunInstall() debe fallar cuando ningún agente admite workspace")
 	}
-	for _, want := range []string{"ningún agente", "workspace", "codex", "--scope global"} {
+	for _, want := range []string{"ningún agente", "workspace", "windsurf", "--scope global"} {
 		if !strings.Contains(err.Error(), want) {
 			t.Errorf("el error %q debe contener %q", err, want)
 		}
 	}
-	assertOmittedNotices(t, notices.String(), model.AgentCodex)
+	assertOmittedNotices(t, notices.String(), model.AgentWindsurf)
 	assertSameTree(t, "home", before, permissionsTreeSnapshot(t, home))
 	if len(commands.get()) != 0 {
 		t.Errorf("no debe lanzarse ningún comando, se lanzaron %v", commands.get())
@@ -211,11 +224,11 @@ func TestRunInstallGlobalStillInstallsCodexInHome(t *testing.T) {
 }
 
 // Sin estado de proyecto, sync --scope workspace descubre los agentes por las
-// carpetas de HOME: Codex (sin modo workspace) se omite y HOME queda intacto.
-func TestRunSyncWorkspaceWithoutProjectStateLeavesHomeUntouchedForDiscoveredCodex(t *testing.T) {
+// carpetas de HOME: Windsurf (sin modo workspace) se omite y HOME queda intacto.
+func TestRunSyncWorkspaceWithoutProjectStateLeavesHomeUntouchedForDiscoveredWindsurf(t *testing.T) {
 	root, _, home := workspaceAgentsFixture(t)
 	t.Chdir(root)
-	seedCodexHome(t, home)
+	seedWindsurfHome(t, home)
 	notices := captureWorkspaceAgentsNotice(t)
 	before := permissionsTreeSnapshot(t, home)
 
@@ -225,23 +238,23 @@ func TestRunSyncWorkspaceWithoutProjectStateLeavesHomeUntouchedForDiscoveredCode
 	}
 
 	assertSameTree(t, "home", before, permissionsTreeSnapshot(t, home))
-	assertOmittedNotices(t, notices.String(), model.AgentCodex)
+	assertOmittedNotices(t, notices.String(), model.AgentWindsurf)
 	if len(result.Agents) != 0 || !result.NoOp {
 		t.Errorf("sin agentes con modo workspace el sync no hace nada: agentes=%v noop=%v", result.Agents, result.NoOp)
 	}
-	if _, statErr := os.Stat(filepath.Join(root, ".codex")); !os.IsNotExist(statErr) {
-		t.Errorf("Codex omitido no debe crear .codex en el proyecto; stat = %v", statErr)
+	if _, statErr := os.Stat(filepath.Join(root, ".windsurf")); !os.IsNotExist(statErr) {
+		t.Errorf("Windsurf omitido no debe crear .windsurf en el proyecto; stat = %v", statErr)
 	}
 	if _, statErr := os.Stat(state.ProjectPath(root)); !os.IsNotExist(statErr) {
-		t.Errorf("un sync que no instala nada no debe persistir Codex en el proyecto; stat = %v", statErr)
+		t.Errorf("un sync que no instala nada no debe persistir Windsurf en el proyecto; stat = %v", statErr)
 	}
 }
 
-// Con Codex y Claude Code descubiertos, solo Claude Code se sincroniza, en el proyecto.
-func TestRunSyncWorkspaceDiscoveredCodexIsOmittedAndClaudeStillSyncs(t *testing.T) {
+// Con Windsurf y Claude Code descubiertos, solo Claude Code se sincroniza, en el proyecto.
+func TestRunSyncWorkspaceDiscoveredWindsurfIsOmittedAndClaudeStillSyncs(t *testing.T) {
 	root, _, home := workspaceAgentsFixture(t)
 	t.Chdir(root)
-	seedCodexHome(t, home)
+	seedWindsurfHome(t, home)
 	seedClaudeHome(t, home)
 	notices := captureWorkspaceAgentsNotice(t)
 	before := homeSnapshotWithoutState(t, home)
@@ -252,25 +265,25 @@ func TestRunSyncWorkspaceDiscoveredCodexIsOmittedAndClaudeStillSyncs(t *testing.
 	}
 
 	assertSameTree(t, "home", before, homeSnapshotWithoutState(t, home))
-	assertOmittedNotices(t, notices.String(), model.AgentCodex)
+	assertOmittedNotices(t, notices.String(), model.AgentWindsurf)
 	if want := []model.AgentID{model.AgentClaudeCode}; !slices.Equal(result.Agents, want) {
 		t.Errorf("agentes sincronizados = %v, want %v", result.Agents, want)
 	}
 	if _, statErr := os.Stat(filepath.Join(root, ".claude")); statErr != nil {
 		t.Errorf("Claude Code debe sincronizarse en el proyecto: %v", statErr)
 	}
-	if _, statErr := os.Stat(filepath.Join(root, ".codex")); !os.IsNotExist(statErr) {
-		t.Errorf("Codex omitido no debe crear .codex en el proyecto; stat = %v", statErr)
+	if _, statErr := os.Stat(filepath.Join(root, ".windsurf")); !os.IsNotExist(statErr) {
+		t.Errorf("Windsurf omitido no debe crear .windsurf en el proyecto; stat = %v", statErr)
 	}
 }
 
-// Un proyecto que ya tiene Codex persistido (de un sync anterior a esta corrección)
+// Un proyecto que ya tiene Windsurf persistido (de un sync anterior a esta corrección)
 // no vuelve a escribir en HOME: el agente se omite también desde el estado.
-func TestRunSyncWorkspaceWithPersistedCodexLeavesHomeUntouched(t *testing.T) {
+func TestRunSyncWorkspaceWithPersistedWindsurfLeavesHomeUntouched(t *testing.T) {
 	root, _, home := workspaceAgentsFixture(t)
 	t.Chdir(root)
-	seedCodexHome(t, home)
-	if err := state.ProjectStore(home, root).Write(persistedAgents("codex")); err != nil {
+	seedWindsurfHome(t, home)
+	if err := state.ProjectStore(home, root).Write(persistedAgents("windsurf")); err != nil {
 		t.Fatal(err)
 	}
 	notices := captureWorkspaceAgentsNotice(t)
@@ -282,7 +295,7 @@ func TestRunSyncWorkspaceWithPersistedCodexLeavesHomeUntouched(t *testing.T) {
 	}
 
 	assertSameTree(t, "home", before, permissionsTreeSnapshot(t, home))
-	assertOmittedNotices(t, notices.String(), model.AgentCodex)
+	assertOmittedNotices(t, notices.String(), model.AgentWindsurf)
 	if len(result.Agents) != 0 || !result.NoOp {
 		t.Errorf("sin agentes con modo workspace el sync no hace nada: agentes=%v noop=%v", result.Agents, result.NoOp)
 	}
@@ -290,11 +303,11 @@ func TestRunSyncWorkspaceWithPersistedCodexLeavesHomeUntouched(t *testing.T) {
 
 // El mismo estado persistido con un agente que sí admite workspace sincroniza solo
 // ese agente.
-func TestRunSyncWorkspaceWithPersistedCodexAndClaudeSyncsOnlyClaude(t *testing.T) {
+func TestRunSyncWorkspaceWithPersistedWindsurfAndClaudeSyncsOnlyClaude(t *testing.T) {
 	root, _, home := workspaceAgentsFixture(t)
 	t.Chdir(root)
-	seedCodexHome(t, home)
-	if err := state.ProjectStore(home, root).Write(persistedAgents("codex", "claude-code")); err != nil {
+	seedWindsurfHome(t, home)
+	if err := state.ProjectStore(home, root).Write(persistedAgents("windsurf", "claude-code")); err != nil {
 		t.Fatal(err)
 	}
 	notices := captureWorkspaceAgentsNotice(t)
@@ -306,7 +319,7 @@ func TestRunSyncWorkspaceWithPersistedCodexAndClaudeSyncsOnlyClaude(t *testing.T
 	}
 
 	assertSameTree(t, "home", before, homeSnapshotWithoutState(t, home))
-	assertOmittedNotices(t, notices.String(), model.AgentCodex)
+	assertOmittedNotices(t, notices.String(), model.AgentWindsurf)
 	if want := []model.AgentID{model.AgentClaudeCode}; !slices.Equal(result.Agents, want) {
 		t.Errorf("agentes sincronizados = %v, want %v", result.Agents, want)
 	}
@@ -316,17 +329,17 @@ func TestRunSyncWorkspaceWithPersistedCodexAndClaudeSyncsOnlyClaude(t *testing.T
 func TestRunSyncWorkspaceExplicitAgentWithoutWorkspaceModeIsOmitted(t *testing.T) {
 	root, _, home := workspaceAgentsFixture(t)
 	t.Chdir(root)
-	seedCodexHome(t, home)
+	seedWindsurfHome(t, home)
 	notices := captureWorkspaceAgentsNotice(t)
 	before := permissionsTreeSnapshot(t, home)
 
-	result, err := RunSync([]string{"--scope", "workspace", "--agents", "codex"})
+	result, err := RunSync([]string{"--scope", "workspace", "--agents", "windsurf"})
 	if err != nil {
 		t.Fatalf("RunSync() error = %v", err)
 	}
 
 	assertSameTree(t, "home", before, permissionsTreeSnapshot(t, home))
-	assertOmittedNotices(t, notices.String(), model.AgentCodex)
+	assertOmittedNotices(t, notices.String(), model.AgentWindsurf)
 	if len(result.Agents) != 0 || !result.NoOp {
 		t.Errorf("agentes=%v noop=%v, se esperaba un sync vacío", result.Agents, result.NoOp)
 	}
@@ -334,15 +347,15 @@ func TestRunSyncWorkspaceExplicitAgentWithoutWorkspaceModeIsOmitted(t *testing.T
 
 // La TUI y las llamadas programáticas no escriben por stderr: el agente omitido
 // viaja como aviso del resultado y HOME queda intacto.
-func TestRunSyncWithSelectionScopedWorkspaceOmitsCodexSilently(t *testing.T) {
+func TestRunSyncWithSelectionScopedWorkspaceOmitsWindsurfSilently(t *testing.T) {
 	root, _, home := workspaceAgentsFixture(t)
 	t.Chdir(root)
-	seedCodexHome(t, home)
+	seedWindsurfHome(t, home)
 	notices := captureWorkspaceAgentsNotice(t)
 	before := permissionsTreeSnapshot(t, home)
 
 	selection := model.Selection{
-		Agents:     []model.AgentID{model.AgentCodex},
+		Agents:     []model.AgentID{model.AgentWindsurf},
 		Components: []model.ComponentID{model.ComponentEngram, model.ComponentSDD, model.ComponentSkills},
 		Persona:    model.PersonaNeutral,
 	}
@@ -355,11 +368,11 @@ func TestRunSyncWithSelectionScopedWorkspaceOmitsCodexSilently(t *testing.T) {
 	if notices.Len() != 0 {
 		t.Errorf("la ruta programática no escribe por stderr:\n%s", notices)
 	}
-	if want := []model.AgentID{model.AgentCodex}; !slices.Equal(result.OmittedAgents, want) {
+	if want := []model.AgentID{model.AgentWindsurf}; !slices.Equal(result.OmittedAgents, want) {
 		t.Errorf("OmittedAgents = %v, want %v", result.OmittedAgents, want)
 	}
-	if warnings := strings.Join(result.Warnings(), "\n"); !strings.Contains(warnings, "codex omitido") {
-		t.Errorf("los avisos del resultado deben nombrar a Codex:\n%s", warnings)
+	if warnings := strings.Join(result.Warnings(), "\n"); !strings.Contains(warnings, "windsurf omitido") {
+		t.Errorf("los avisos del resultado deben nombrar a Windsurf:\n%s", warnings)
 	}
 }
 
@@ -395,8 +408,8 @@ func TestRunSyncGlobalStillWritesCodexInHome(t *testing.T) {
 
 // Instalación sin agentes (TUI incluida) comparte el mismo mensaje de error.
 func TestErrNoWorkspaceAgentsNamesEveryOmittedAgent(t *testing.T) {
-	err := errNoWorkspaceAgents([]model.AgentID{model.AgentCodex, model.AgentWindsurf})
-	for _, want := range []string{"codex", "windsurf", "--scope global"} {
+	err := errNoWorkspaceAgents([]model.AgentID{model.AgentVSCodeCopilot, model.AgentWindsurf})
+	for _, want := range []string{"vscode-copilot", "windsurf", "--scope global"} {
 		if !strings.Contains(err.Error(), want) {
 			t.Errorf("el error %q debe contener %q", err, want)
 		}

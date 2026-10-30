@@ -29,14 +29,15 @@ type LegacyPromptResult struct {
 // trigger-rules. Any other ID, even in an axiom or gentle-ai marker, is user
 // content: a user can write a block with that syntax and any name.
 var managedPromptSectionIDs = map[string]struct{}{
-	filemerge.PersonaSectionID:             {},
-	filemerge.SDDOrchestratorSectionID:     {},
-	filemerge.StrictTDDSectionID:           {},
-	filemerge.EngramProtocolSectionID:      {},
-	filemerge.CodeGraphGuidanceSectionID:   {},
-	filemerge.RemoteAuthorizationSectionID: {},
-	filemerge.LegacyTriggerRulesSectionID:  {},
-	agentguidance.RoutingSectionID:         {},
+	filemerge.PersonaSectionID:              {},
+	filemerge.SDDOrchestratorSectionID:      {},
+	filemerge.StrictTDDSectionID:            {},
+	filemerge.EngramProtocolSectionID:       {},
+	filemerge.EngramPassiveCaptureSectionID: {},
+	filemerge.CodeGraphGuidanceSectionID:    {},
+	filemerge.RemoteAuthorizationSectionID:  {},
+	filemerge.LegacyTriggerRulesSectionID:   {},
+	agentguidance.RoutingSectionID:          {},
 }
 
 // legacyInstructionsFrontmatter is the header wrapInstructionsFile wrote under

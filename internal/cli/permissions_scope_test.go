@@ -128,7 +128,9 @@ func TestPermissionsRoot(t *testing.T) {
 		{"workspace trae skipped", ScopeWorkspace, workspace, model.AgentTrae, "", false},
 		{"workspace windsurf skipped", ScopeWorkspace, workspace, model.AgentWindsurf, "", false},
 		{"workspace antigravity skipped", ScopeWorkspace, workspace, model.AgentAntigravity, "", false},
-		{"workspace codex skipped", ScopeWorkspace, workspace, model.AgentCodex, "", false},
+		// Codex ya tiene modo workspace; sigue sin destino de permisos (TargetPath
+		// vacío), así que el componente no escribe nada para él en ningún ámbito.
+		{"workspace codex", ScopeWorkspace, workspace, model.AgentCodex, workspace, true},
 		{"workspace without root never falls back to home", ScopeWorkspace, " ", model.AgentClaudeCode, "", false},
 	} {
 		t.Run(tt.name, func(t *testing.T) {

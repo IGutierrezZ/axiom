@@ -1055,6 +1055,7 @@ func prepareSessionPreflight(homeDir string, adapter agents.Adapter, opts Inject
 	}
 	workspace := workspaceRootFor(homeDir, opts)
 	prompt = resolveSkillsDirPlaceholders(prompt, adapter, workspace)
+	prompt = adaptCodexOrchestratorForWorkspace(prompt, adapter, workspace)
 	if adapter.Agent() == model.AgentClaudeCode && adapter.SkillsDir(homeDir) != "" {
 		lazy, err = renderClaudeSessionPreflight()
 		if err != nil {

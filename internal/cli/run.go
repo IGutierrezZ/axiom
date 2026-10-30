@@ -251,6 +251,7 @@ func RunInstall(args []string, detection system.DetectionResult) (InstallResult,
 	result.Execution.ManualActions = append(result.Execution.ManualActions, runtime.state.retirementNotes...)
 	result.Execution.ManualActions = append(result.Execution.ManualActions, engramSetupSkippedNote(input.Scope, resolved.OrderedComponents, resolved.Agents)...)
 	result.Execution.ManualActions = append(result.Execution.ManualActions, optInFootprintNotes(input.Scope, homeDir, resolved.OrderedComponents, resolved.Agents, input.Selection)...)
+	result.Execution.ManualActions = append(result.Execution.ManualActions, workspaceTrustNotes(input.Scope, resolved.Agents)...)
 	result.Verify = runPostApplyVerification(postApplyVerificationInput{
 		HomeDir:      homeDir,
 		WorkspaceDir: runtime.workspaceDir,
@@ -2029,6 +2030,7 @@ func executeTUIInstallWithBackground(homeDir string, selection model.Selection, 
 	result.ManualActions = append(result.ManualActions, runtime.state.retirementNotes...)
 	result.ManualActions = append(result.ManualActions, engramSetupSkippedNote(scope, resolved.OrderedComponents, resolved.Agents)...)
 	result.ManualActions = append(result.ManualActions, optInFootprintNotes(scope, homeDir, resolved.OrderedComponents, resolved.Agents, selection)...)
+	result.ManualActions = append(result.ManualActions, workspaceTrustNotes(scope, resolved.Agents)...)
 	return result, orchestrator
 }
 
@@ -2513,11 +2515,21 @@ func componentPathsWithWorkspaceScoped(homeDir, workspaceDir string, scope Insta
 					// Track the gentle-ai files written alongside the Codex config.toml
 					// so they are restored on rollback and removed on uninstall.
 					codexHomeDir := filepath.Dir(p)
-					paths = append(paths,
-						filepath.Join(codexHomeDir, "engram-instructions.md"),
-						filepath.Join(codexHomeDir, "engram-compact-prompt.md"),
-					)
-					paths = append(paths, codexagent.SddProfilePaths(codexHomeDir)...)
+					if _, inProject := adapter.(agents.WorkspaceInlineInstructionsProvider); inProject && scope == ScopeWorkspace {
+						// In a project there is no model_instructions_file and no profile
+						// files (Codex ignores `profiles` there): the memory protocol
+						// travels in the Axiom instructions file.
+						paths = append(paths,
+							filepath.Join(codexHomeDir, "engram-compact-prompt.md"),
+							adapter.SystemPromptFile(targetDir),
+						)
+					} else {
+						paths = append(paths,
+							filepath.Join(codexHomeDir, "engram-instructions.md"),
+							filepath.Join(codexHomeDir, "engram-compact-prompt.md"),
+						)
+						paths = append(paths, codexagent.SddProfilePaths(codexHomeDir)...)
+					}
 				}
 			}
 			if adapter.SystemPromptStrategy() == model.StrategyMarkdownSections {
@@ -2590,8 +2602,10 @@ func componentPathsWithWorkspaceScoped(homeDir, workspaceDir string, scope Insta
 			paths = append(paths, sddSubAgentPaths(targetDir, adapter)...)
 			if adapter.Agent() == model.AgentCodex {
 				// SDD installs the Codex skill-registry hook outside the skills
-				// directory, so it must share the component's backup contract.
-				paths = append(paths, filepath.Join(adapter.GlobalConfigDir(homeDir), "hooks.json"))
+				// directory, so it must share the component's backup contract. It
+				// lives in the scope's root: ~/.codex/hooks.json for a global install,
+				// <project>/.codex/hooks.json for a workspace one.
+				paths = append(paths, filepath.Join(adapter.GlobalConfigDir(targetDir), "hooks.json"))
 			}
 			// SDD also writes the standalone Kiro skill-registry hook outside
 			// the skills directory; it shares the component's backup and
@@ -2776,6 +2790,11 @@ func routingGuidanceOptions(homeDir, workspaceDir string, scope InstallScope, ad
 	if _, byName := adapter.(agents.WorkspaceContextFileProvider); scope == ScopeWorkspace && byName {
 		options.Adapter = adapter
 	}
+	// Codex, igual: sus instrucciones salen de un fichero propio del proyecto que se
+	// copia a developer_instructions, no del ~/.codex/AGENTS.md global.
+	if _, inline := adapter.(agents.WorkspaceInlineInstructionsProvider); scope == ScopeWorkspace && inline {
+		options.Adapter = adapter
+	}
 	if adapter.Agent() == model.AgentOpenCode {
 		options.SettingsPath = effectiveOpenCodeSettingsPath(homeDir, workspaceDir, scope, adapter)
 	}
@@ -2800,7 +2819,7 @@ func routingGuidanceDir(homeDir, workspaceDir string, scope InstallScope, adapte
 // components write to workspaceDir instead of the selected agent's global config root.
 //
 // Los agentes que no admiten el ámbito workspace (VS Code Copilot, Trae, Windsurf,
-// Antigravity, Codex) no llegan aquí: install, sync y la TUI los omiten enteros al
+// Antigravity) no llegan aquí: install, sync y la TUI los omiten enteros al
 // construir el plan (splitAgentsForScope). Si uno se colara, el resultado queda
 // confinado al proyecto; nunca vuelve a ser la carpeta de usuario.
 func componentInjectionDirScoped(homeDir, workspaceDir string, scope InstallScope, adapter agents.Adapter) string {

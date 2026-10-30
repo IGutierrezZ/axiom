@@ -8,12 +8,17 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/agents"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/filemerge"
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
 	"github.com/IGutierrezZ/axiom/v3/internal/pipeline"
 )
+
+// byteOrderMark es la marca de orden de bytes de UTF-8 que algunos editores añaden
+// al principio de un fichero.
+const byteOrderMark = "\xef\xbb\xbf"
 
 // workspaceInstructionsNoticeWriter recibe el aviso de que no se pudo registrar
 // el fichero de instrucciones. Es una variable para que las pruebas lo capturen.
@@ -35,6 +40,9 @@ var workspaceInstructionsNoticeWriter io.Writer = os.Stderr
 func registerWorkspaceInstructions(adapter agents.Adapter, root string) (changed bool, files []string, err error) {
 	if _, byName := adapter.(agents.WorkspaceContextFileProvider); byName {
 		return registerWorkspaceContextFile(adapter, root)
+	}
+	if _, inline := adapter.(agents.WorkspaceInlineInstructionsProvider); inline {
+		return registerWorkspaceInlineInstructions(adapter, root)
 	}
 	provider, ok := adapter.(agents.WorkspaceInstructionsProvider)
 	if !ok {
@@ -148,6 +156,65 @@ func registerWorkspaceContextFile(adapter agents.Adapter, root string) (changed 
 	return write.Changed, []string{settingsPath}, nil
 }
 
+// registerWorkspaceInlineInstructions copia el fichero de instrucciones de Axiom al
+// valor de developer_instructions de la configuración de proyecto de Codex.
+//
+// Codex no carga ningún fichero suelto de .codex, y las instrucciones no pueden ir
+// al AGENTS.md de la raíz (es del equipo y está versionado) ni a model_instructions_file
+// (sustituye las instrucciones base en lugar de añadirse a ellas). developer_instructions
+// sí se añade a las base, así que el contenido de .codex/axiom-instructions.md, que es
+// donde los componentes escriben, se copia a un bloque delimitado por marcadores de
+// Axiom dentro de ese valor.
+//
+// El texto que el usuario ya tuviera en developer_instructions queda fuera del bloque
+// y no se toca; repetir la operación no cambia ni un byte. Si la clave existe con un
+// tipo que no es cadena, o el documento no es TOML válido, se deja intacto y se avisa
+// (o se falla, en el segundo caso, con el mismo criterio que la comprobación previa).
+// Solo copia si el fichero fuente existe: sin él no hay nada que cargar.
+func registerWorkspaceInlineInstructions(adapter agents.Adapter, root string) (changed bool, files []string, err error) {
+	provider, ok := adapter.(agents.WorkspaceInlineInstructionsProvider)
+	if !ok {
+		return false, nil, nil
+	}
+	configPath, key, ok := provider.WorkspaceInlineInstructions(root)
+	if !ok || configPath == "" {
+		return false, nil, nil
+	}
+	source := adapter.SystemPromptFile(root)
+	if info, statErr := os.Stat(source); statErr != nil || !info.Mode().IsRegular() {
+		return false, nil, nil
+	}
+	raw, err := os.ReadFile(source)
+	if err != nil {
+		return false, nil, fmt.Errorf("leer %s: %w", source, err)
+	}
+	instructions := strings.TrimPrefix(strings.ReplaceAll(string(raw), "\r\n", "\n"), byteOrderMark)
+
+	current, err := os.ReadFile(configPath)
+	if err != nil && !os.IsNotExist(err) {
+		return false, nil, fmt.Errorf("leer %s: %w", configPath, err)
+	}
+	existing, declared, isString, err := filemerge.TopLevelTOMLString(string(current), key)
+	if err != nil {
+		return false, nil, fmt.Errorf("no se registran las instrucciones de Axiom en %s: no es TOML válido: %w", configPath, err)
+	}
+	if declared && !isString {
+		fmt.Fprintf(workspaceInstructionsNoticeWriter, "Aviso: %s declara %s y no es una cadena; Axiom no lo modifica y no registra sus instrucciones.\n", configPath, key)
+		return false, nil, nil
+	}
+
+	updated := filemerge.InjectMarkdownSection(existing, filemerge.WorkspaceInstructionsSectionID, instructions)
+	if (declared && updated == existing) || (!declared && updated == "") {
+		return false, []string{configPath}, nil
+	}
+	rendered := filemerge.UpsertTopLevelTOMLValue(string(current), key, filemerge.FormatTOMLString(updated))
+	write, err := filemerge.WriteFileAtomic(configPath, []byte(rendered), 0o644)
+	if err != nil {
+		return false, nil, err
+	}
+	return write.Changed, []string{configPath}, nil
+}
+
 // declaredContextFileNames devuelve los nombres que el documento declara en
 // context.fileName, en su orden y sin repetidos. usable es false cuando context o
 // context.fileName tienen un tipo que no se puede conservar con seguridad. Una
@@ -201,17 +268,23 @@ func workspaceInstructionsSettingsFile(adapter agents.Adapter, workspaceDir stri
 			return settingsPath
 		}
 	}
+	if provider, ok := adapter.(agents.WorkspaceInlineInstructionsProvider); ok {
+		if configPath, _, ok := provider.WorkspaceInlineInstructions(workspaceDir); ok {
+			return configPath
+		}
+	}
 	return ""
 }
 
 // registersWorkspaceInstructions indica si alguno de los agentes seleccionados
 // necesita que el fichero de instrucciones de Axiom se registre en su
 // configuración de proyecto: OpenCode y Kilo en instructions, Gemini en
-// context.fileName.
+// context.fileName y Codex en developer_instructions.
 func registersWorkspaceInstructions(agentIDs []model.AgentID) bool {
 	return containsAgent(agentIDs, model.AgentOpenCode) ||
 		containsAgent(agentIDs, model.AgentKilocode) ||
-		containsAgent(agentIDs, model.AgentGeminiCLI)
+		containsAgent(agentIDs, model.AgentGeminiCLI) ||
+		containsAgent(agentIDs, model.AgentCodex)
 }
 
 // workspaceInstructionsSettingsPaths devuelve los ficheros de configuración que
@@ -230,8 +303,22 @@ func workspaceInstructionsSettingsPaths(workspaceDir string, scope InstallScope,
 	return paths
 }
 
+// workspaceTrustNotes devuelve el aviso informativo de la confianza del proyecto.
+//
+// Codex solo carga la configuración de proyecto (.codex/config.toml, con las
+// instrucciones, el MCP y las claves de multiagente, y .codex/hooks.json) cuando el
+// proyecto es de confianza, y cada hook se aprueba además por hash. Axiom no escribe
+// esa confianza en ~/.codex/config.toml (sería una escritura en la carpeta de usuario
+// que el ámbito workspace no hace): se lo pide Codex al usuario la primera vez.
+func workspaceTrustNotes(scope InstallScope, agentIDs []model.AgentID) []string {
+	if scope != ScopeWorkspace || !containsAgent(agentIDs, model.AgentCodex) {
+		return nil
+	}
+	return []string{"Codex solo carga la configuración de .codex/ (instrucciones, MCP y hooks) si el proyecto es de confianza: te lo pedirá Codex la primera vez que lo abras, y Axiom no escribe esa confianza en ~/.codex/config.toml. Además, Codex te pide aprobar cada hook de .codex/hooks.json por su hash."}
+}
+
 // workspaceInstructionsStep registra el fichero de instrucciones de Axiom de
-// cada agente del proyecto que lo necesita (OpenCode, Kilo y Gemini). Va después de los componentes
+// cada agente del proyecto que lo necesita (OpenCode, Kilo, Gemini y Codex). Va después de los componentes
 // y de la guía de enrutado, que son quienes escriben ese fichero.
 type workspaceInstructionsStep struct {
 	id           string
@@ -258,7 +345,8 @@ func (s workspaceInstructionsStep) Run() error {
 }
 
 // workspaceSettingsPreflightStep rechaza, antes de escribir nada, una
-// configuración de proyecto de OpenCode, Kilo o Gemini que no se puede leer como JSON.
+// configuración de proyecto de OpenCode, Kilo, Gemini (JSON) o Codex (TOML) que no
+// se puede leer.
 //
 // El resto de fusiones sustituyen una base ilegible por una vacía: en la
 // configuración global es aceptable (la copia de seguridad previa la conserva),
@@ -289,15 +377,20 @@ func (s workspaceSettingsPreflightStep) Run() error {
 		if len(bytes.TrimSpace(raw)) == 0 {
 			continue
 		}
-		if _, err := filemerge.UnmarshalJSONObject(raw); err != nil {
-			return fmt.Errorf("%s no es JSON válido y Axiom no lo sobrescribe en un proyecto: corrígelo o muévelo y vuelve a ejecutar: %w", settingsPath, err)
+		format, parse := "JSON", func() error { _, err := filemerge.UnmarshalJSONObject(raw); return err }
+		if strings.EqualFold(filepath.Ext(settingsPath), ".toml") {
+			format, parse = "TOML", func() error { return filemerge.ValidateTOML(string(raw)) }
+		}
+		if err := parse(); err != nil {
+			return fmt.Errorf("%s no es %s válido y Axiom no lo sobrescribe en un proyecto: corrígelo o muévelo y vuelve a ejecutar: %w", settingsPath, format, err)
 		}
 	}
 	return nil
 }
 
 // withWorkspaceSettingsPreflight antepone la comprobación de la configuración de
-// proyecto a los pasos de preparación cuando hay OpenCode, Kilo o Gemini en workspace.
+// proyecto a los pasos de preparación cuando hay OpenCode, Kilo, Gemini o Codex en
+// workspace.
 func withWorkspaceSettingsPreflight(prepare []pipeline.Step, scope InstallScope, workspaceDir string, agentIDs []model.AgentID) []pipeline.Step {
 	if scope != ScopeWorkspace || !registersWorkspaceInstructions(agentIDs) {
 		return prepare

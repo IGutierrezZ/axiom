@@ -74,6 +74,14 @@ const (
 	EngramProtocolSectionID      = "engram-protocol"
 	CodeGraphGuidanceSectionID   = "codegraph-guidance"
 	RemoteAuthorizationSectionID = "remote-authorization"
+	// EngramPassiveCaptureSectionID es la sección de captura pasiva que Codex solo
+	// recibe junto al protocolo de Engram. En global va en su fichero de
+	// instrucciones propio; en workspace, en el fichero de instrucciones de Axiom.
+	EngramPassiveCaptureSectionID = "engram-passive-capture"
+	// WorkspaceInstructionsSectionID delimita, dentro del valor de
+	// developer_instructions de la configuración de proyecto de Codex, el bloque que
+	// gestiona Axiom. El texto del usuario fuera del bloque no se toca.
+	WorkspaceInstructionsSectionID = "workspace-instructions"
 	// LegacyTriggerRulesSectionID is a section no release writes any more;
 	// earlier ones did, so a legacy prompt file may still hold it.
 	LegacyTriggerRulesSectionID = "trigger-rules"

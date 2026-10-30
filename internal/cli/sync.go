@@ -1879,6 +1879,7 @@ func runSyncWithSelectionScoped(homeDir, workspaceDir string, scope InstallScope
 	result.ChangedFiles = dedupPaths(append(result.ChangedFiles, rt.state.retiredFiles...))
 	result.Execution.ManualActions = append(result.Execution.ManualActions, rt.state.retirementNotes...)
 	result.Execution.ManualActions = append(result.Execution.ManualActions, optInFootprintNotes(scope, homeDir, selection.Components, agentIDs, selection)...)
+	result.Execution.ManualActions = append(result.Execution.ManualActions, workspaceTrustNotes(scope, agentIDs)...)
 	if background.activationPlan != nil {
 		result.ChangedFiles = dedupPaths(append(result.ChangedFiles, background.activationPlan.ChangedPaths()...))
 	}

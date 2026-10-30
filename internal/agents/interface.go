@@ -86,6 +86,17 @@ type WorkspaceInstructionsProvider interface {
 	WorkspaceInstructions(dir string) (settingsPath, entry string, ok bool)
 }
 
+// WorkspaceInlineInstructionsProvider es una capacidad opcional de los adaptadores
+// cuyo agente no carga ningún fichero de instrucciones propio del proyecto, pero sí
+// un texto que se declara como valor de una clave de su configuración (Codex,
+// developer_instructions en config.toml, que se añade a las instrucciones base).
+// configPath es ese fichero de configuración y key la clave. El texto sale del
+// fichero que da SystemPromptFile, que hace de fuente. ok es false fuera del
+// proyecto.
+type WorkspaceInlineInstructionsProvider interface {
+	WorkspaceInlineInstructions(dir string) (configPath, key string, ok bool)
+}
+
 // WorkspaceContextFileProvider es una capacidad opcional de los adaptadores cuyo
 // agente carga los ficheros de contexto por nombre, declarado en su configuración
 // (Gemini CLI, context.fileName), y no por una lista de rutas. settingsPath es el

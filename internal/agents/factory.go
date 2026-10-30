@@ -126,8 +126,10 @@ func NewMVPRegistry() (*Registry, error) {
 // distribución de proyecto; las rutas que se piden con otra carpeta (la de
 // usuario) siguen siendo las globales. Gemini CLI se liga para que sus
 // instrucciones vayan a un fichero propio, registrado en context.fileName, y no
-// a un .gemini/GEMINI.md que no lee. El resto de adaptadores se devuelven sin
-// cambios: su carpeta de configuración ya es una carpeta de punto en la raíz.
+// a un .gemini/GEMINI.md que no lee. Codex, para que sus instrucciones vayan a
+// developer_instructions de .codex/config.toml y sus skills a .agents/skills. El
+// resto de adaptadores se devuelven sin cambios: su carpeta de configuración ya
+// es una carpeta de punto en la raíz.
 func BindWorkspace(adapter Adapter, root string) Adapter {
 	if root == "" {
 		return adapter
@@ -138,6 +140,8 @@ func BindWorkspace(adapter Adapter, root string) Adapter {
 	case *kilocode.Adapter:
 		return concrete.WithWorkspace(root)
 	case *gemini.Adapter:
+		return concrete.WithWorkspace(root)
+	case *codex.Adapter:
 		return concrete.WithWorkspace(root)
 	default:
 		return adapter

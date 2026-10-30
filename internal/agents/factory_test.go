@@ -68,6 +68,36 @@ func TestBindWorkspaceBindsGeminiAndNotQwen(t *testing.T) {
 	}
 }
 
+// BindWorkspace liga Codex a la raíz del proyecto: sus instrucciones salen de un
+// fichero propio que se copia a developer_instructions y sus skills van a
+// .agents/skills, no a ~/.codex.
+func TestBindWorkspaceBindsCodex(t *testing.T) {
+	root := t.TempDir()
+	codex, err := NewAdapter(model.AgentCodex)
+	if err != nil {
+		t.Fatal(err)
+	}
+	bound := BindWorkspace(codex, root)
+	if _, ok := bound.(WorkspaceInlineInstructionsProvider); !ok {
+		t.Errorf("Codex ligado debe registrar sus instrucciones en developer_instructions")
+	}
+	if _, ok := bound.(LegacyPromptFileProvider); !ok {
+		t.Errorf("Codex ligado debe poder retirar el .codex/AGENTS.md antiguo")
+	}
+	if bound.SystemPromptFile(root) == codex.SystemPromptFile(root) {
+		t.Errorf("Codex ligado debe usar un fichero propio: %s", bound.SystemPromptFile(root))
+	}
+	if bound.SkillsDir(root) == codex.SkillsDir(root) {
+		t.Errorf("Codex ligado debe usar .agents/skills: %s", bound.SkillsDir(root))
+	}
+	if _, ok := codex.(WorkspaceInlineInstructionsProvider); ok {
+		t.Errorf("Codex sin ligar no debe ofrecer el registro de instrucciones")
+	}
+	if BindWorkspace(codex, "") != codex {
+		t.Errorf("sin raíz no se liga nada")
+	}
+}
+
 func TestFactoryResolvesPiAdapter(t *testing.T) {
 	adapter, err := NewAdapter(model.AgentPi)
 	if err != nil {

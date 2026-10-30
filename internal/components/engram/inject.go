@@ -439,6 +439,14 @@ func injectWithOptions(configHomeDir, promptDir string, adapter agents.Adapter, 
 		// in ~/.codex/config.toml, then write instruction files.
 		// All TOML mutations are composed in a single pass before writing to
 		// ensure idempotency (no intermediate states that differ on re-run).
+		if wsChanged, wsFiles, handled, wsErr := injectCodexWorkspaceConfig(configHomeDir, adapter, opts); handled {
+			if wsErr != nil {
+				return InjectionResult{}, wsErr
+			}
+			changed = changed || wsChanged
+			files = append(files, wsFiles...)
+			break
+		}
 		configPath := adapter.MCPConfigPath(configHomeDir, "engram")
 		if configPath == "" {
 			break
@@ -584,6 +592,16 @@ func injectWithOptions(configHomeDir, promptDir string, adapter agents.Adapter, 
 			}
 			changed = changed || mdWrite.Changed
 			files = append(files, promptPath)
+
+			// Codex en un proyecto no tiene model_instructions_file: la captura pasiva,
+			// que en global viaja en él, va con el resto de instrucciones.
+			if _, inProject := codexWorkspaceConfigPath(adapter, promptDir); inProject {
+				passiveChanged, err := injectCodexWorkspacePassiveCapture(promptPath)
+				if err != nil {
+					return InjectionResult{}, err
+				}
+				changed = changed || passiveChanged
+			}
 		}
 	}
 
