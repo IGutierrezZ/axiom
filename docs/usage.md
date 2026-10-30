@@ -220,9 +220,10 @@ Checks performed:
 
 | Check | What it verifies |
 |-------|-----------------|
-| Tool binaries | Required tools present on `PATH`; shadow detection (wrong binary resolves first) |
+| Tool binaries | Required tools (`axiom` and Engram, plus the binaries of the selected agents) present on `PATH`; shadow detection (wrong binary resolves first). GGA is only required when you selected it explicitly |
 | Validez de `state.json` | Analiza `~/.axiom/state.json` e informa de errores de esquema o corrupción; puede migrar `~/.gentle-ai/state.json` si todavía no existe estado de Axiom |
 | Engram MCP reachability | Confirms the Engram MCP server responds |
+| Huella de máquina | Apartado informativo que lista lo que Axiom tiene a nivel de usuario: los binarios de `axiom` y Engram y el registro del hub (declarados) y, si existen, GGA, `~/.agents/skills`, los plugins de OpenCode en HOME, CodeGraph global, las entradas de PATH gestionadas y `~/.gentle-ai`. Marca como `resto global` lo que solo deja una instalación global. No cuenta como aviso ni como fallo |
 | Disk space | Warns when available space is critically low |
 
 Each check reports **pass**, **warn**, or **fail** with an optional remedy hint. Run `doctor` first when troubleshooting an unexpected install or sync result.

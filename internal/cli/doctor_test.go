@@ -999,6 +999,7 @@ func TestRunDoctor_IntegrationAllMocked(t *testing.T) {
 		osUserHomeDirDoctor = origHomeDir
 		osExecutableDoctor = origExecutable
 	}()
+	stubDoctorUserPath(t, nil)
 
 	homeDir := t.TempDir()
 	stateDir := filepath.Join(homeDir, ".axiom")
@@ -1042,7 +1043,6 @@ func TestRunDoctor_IntegrationAllMocked(t *testing.T) {
 =======================================
 
   [ok]  tool:axiom                     axiom found at /usr/local/bin/axiom; invoked executable: /usr/local/bin/axiom (version dev)
-  [ok]  tool:gga                       gga found at /usr/local/bin/gga
   [ok]  tool:engram                    engram found at /usr/local/bin/engram
   [ok]  tool:claude                    claude found at /usr/local/bin/claude
   [ok]  state:json                     state file OK — 1 agent(s) installed: claude-code
@@ -1050,9 +1050,15 @@ func TestRunDoctor_IntegrationAllMocked(t *testing.T) {
   [ok]  engram:reachable               engram MCP (stdio) answered the initialize handshake for persisted configuration: %s
   [ok]  disk:space                     1024 MB free on %s filesystem
 
-Summary: 8 passed, 0 failed, 0 warnings
+Huella de máquina (nivel de usuario)
+-------------------------------------
+  [declarado]    binario axiom                  /usr/local/bin/axiom
+  [declarado]    binario engram                 /usr/local/bin/engram
+  [declarado]    hub y estado de Axiom          %s (state.json)
+
+Summary: 7 passed, 0 failed, 0 warnings
 Status:  healthy
-`, configPath, filepath.Join(homeDir, ".axiom"))
+`, configPath, filepath.Join(homeDir, ".axiom"), filepath.Join(homeDir, ".axiom"))
 	// The state directory is ".axiom" since the rename; doctor.go:640 is the
 	// producer of this path.
 	if got := buf.String(); got != want {
@@ -1294,12 +1300,12 @@ func TestCheckToolBinaries_StateMissing_ChecksCoreOnly(t *testing.T) {
 	for _, r := range results {
 		required[string(r.Name)] = struct{}{}
 	}
-	for _, core := range []string{"tool:axiom", "tool:gga", "tool:engram"} {
+	for _, core := range []string{"tool:axiom", "tool:engram"} {
 		if _, ok := required[core]; !ok {
 			t.Errorf("expected %s in core-only output, got %+v", core, required)
 		}
 	}
-	for _, forbidden := range []string{"tool:claude", "tool:opencode"} {
+	for _, forbidden := range []string{"tool:claude", "tool:opencode", "tool:gga"} {
 		if _, ok := required[forbidden]; ok {
 			t.Errorf("did not expect %s when state is missing, got %+v", forbidden, required)
 		}
@@ -1471,7 +1477,7 @@ func TestRunDoctor_OnlySelectedAgentsAreRequired(t *testing.T) {
 
 func TestRenderDoctorReportDoesNotRenderRemedyMetadata(t *testing.T) {
 	var buf bytes.Buffer
-	renderDoctorReport(&buf, DoctorReport{Checks: []CheckResult{{Name: doctor.CheckDiskSpace, Status: CheckStatusFail, Detail: "cleanup needed", Remedy: doctor.NewRemedy(doctor.RemedyFreeDiskSpace, "Free disk space")}}})
+	renderDoctorReportWithFootprint(&buf, DoctorReport{Checks: []CheckResult{{Name: doctor.CheckDiskSpace, Status: CheckStatusFail, Detail: "cleanup needed", Remedy: doctor.NewRemedy(doctor.RemedyFreeDiskSpace, "Free disk space")}}}, nil)
 	want := "axiom doctor — system health check\n=======================================\n\n  [xx]  disk:space                     cleanup needed\n       Remedy: Free disk space\n\nSummary: 0 passed, 1 failed, 0 warnings\nStatus:  unhealthy\n"
 	if got := buf.String(); got != want {
 		t.Fatalf("rendered report mismatch\ngot:\n%s\nwant:\n%s", got, want)

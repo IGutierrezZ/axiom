@@ -223,8 +223,6 @@ internal/system/install_deps.go	installCommandsCurl
 internal/system/install_deps.go	installCommandsGit
 internal/system/install_deps.go	installCommandsGo
 internal/system/install_deps.go	installCommandsNode
-internal/system/user_paths.go	BinDir
-internal/system/user_paths.go	CacheDir
 internal/tui/model.go	setOSExecutableForTest
 internal/tui/model.go	setOSGetwdForTest
 internal/tui/model.go	setOSRemoveForTest

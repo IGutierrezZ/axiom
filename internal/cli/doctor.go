@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 	"time"
 
@@ -30,10 +31,12 @@ const (
 )
 
 // coreTools are ecosystem-level binaries that axiom always requires
-// regardless of which agents the user installed. Agent-specific binaries are
+// regardless of which agents the user installed. GGA is no longer one of them:
+// it is optional and only required when the persisted selection includes it
+// (see doctorGGARequired). Agent-specific binaries are
 // derived from state.json's InstalledAgents field (see #709) so the doctor
 // only reports missing agents the user actually selected.
-var coreTools = []string{"axiom", "gga", "engram"}
+var coreTools = []string{"axiom", "engram"}
 
 // agentToolBinaries maps an agent ID from state.json's InstalledAgents to the
 // CLI binary name exec.LookPath should resolve. An empty string means "no CLI
@@ -94,14 +97,21 @@ func RunDoctor(ctx context.Context, w io.Writer) error {
 		return fmt.Errorf("resolve home directory: %w", err)
 	}
 
-	installedAgents, _ := readDoctorInstalledAgents(homeDir)
 	// A state read failure (missing/malformed file) is surfaced separately by
-	// checkStateJSON. Here we fall back to an empty list so the doctor only
+	// checkStateJSON. Here we fall back to an empty state so the doctor only
 	// reports the always-required core tools — preserving the first-time-install
 	// behaviour where the user has not yet selected any agents (#709).
+	installedState, stateErr := state.Read(homeDir)
+	if stateErr != nil {
+		installedState = state.InstallState{}
+	}
+	installedAgents := installedState.InstalledAgents
 
 	pathDirs := pathDirsFn()
 	requiredTools := requiredDoctorTools(installedAgents)
+	if doctorGGARequired(installedState) && !slices.Contains(requiredTools, "gga") {
+		requiredTools = append(requiredTools, "gga")
+	}
 	checks := make([]doctor.Check, 0, len(requiredTools)+3)
 	for _, tool := range requiredTools {
 		tool := tool
@@ -117,20 +127,9 @@ func RunDoctor(ctx context.Context, w io.Writer) error {
 	)
 	report := (doctor.Runner{Checks: checks}).Run(ctx)
 
-	renderDoctorReport(w, report)
+	footprint := collectMachineFootprint(homeDir, installedState)
+	renderDoctorReportWithFootprint(w, report, &footprint)
 	return nil
-}
-
-// readDoctorInstalledAgents returns the agent IDs persisted in state.json.
-// An unreadable or absent state file yields a nil slice — callers must treat
-// nil/empty as "no agents selected" rather than a hard error so first-time
-// installs do not surface phantom agent-missing failures.
-func readDoctorInstalledAgents(homeDir string) ([]string, error) {
-	s, err := state.Read(homeDir)
-	if err != nil {
-		return nil, err
-	}
-	return s.InstalledAgents, nil
 }
 
 // checkToolBinaries checks each required tool for PATH resolution and
@@ -700,8 +699,10 @@ func checkDiskSpace(homeDir string) CheckResult {
 	}
 }
 
-// renderDoctorReport writes a human-readable report to w.
-func renderDoctorReport(w io.Writer, report DoctorReport) {
+// renderDoctorReportWithFootprint writes a human-readable report to w and, when footprint is not
+// nil, the machine-footprint section between the checks and the summary. The
+// section is informational: it never changes the pass/fail counts or the status.
+func renderDoctorReportWithFootprint(w io.Writer, report DoctorReport, footprint *[]footprintEntry) {
 	var passed, warned, failed int
 	for _, c := range report.Checks {
 		switch c.Status {
@@ -726,6 +727,9 @@ func renderDoctorReport(w io.Writer, report DoctorReport) {
 	}
 
 	fmt.Fprintln(w)
+	if footprint != nil {
+		renderMachineFootprint(w, *footprint)
+	}
 	fmt.Fprintf(w, "Summary: %d passed, %d failed, %d warnings\n", passed, failed, warned)
 
 	status := "healthy"

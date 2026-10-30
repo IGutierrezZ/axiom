@@ -32,7 +32,7 @@ GGA es opcional y no forma parte de ningún preset, ni siquiera del predetermina
 
 Las instalaciones que ya tenían GGA lo conservan: `axiom sync` sigue refrescando su configuración si figura en la selección guardada o, sin selección guardada, si Axiom ya lo aprovisionó en el HOME. Quitar GGA de los presets solo cambia lo que se instala en instalaciones nuevas.
 
-Con `--scope workspace`, GGA sigue escribiendo en tu carpeta de usuario (su configuración en `~/.config/gga`, o en `AppData\Roaming\gga` en Windows; su runtime en `~/.local/share/gga` y, en Windows, los shims de `~/bin`, que se añade al PATH de usuario). Como es una elección explícita, se permite, pero `install` y `sync` lo declaran con un aviso que lista esas rutas.
+Con `--scope workspace`, GGA sigue escribiendo en tu carpeta de usuario (su configuración en `~/.config/gga`, o en `AppData\Roaming\gga` en Windows; su runtime en `~/.local/share/gga` y, en Windows, los shims de `~/bin`, que se añade al PATH de usuario). Como es una elección explícita, se permite, pero `install` y `sync` lo declaran con un aviso que lista esas rutas, y `axiom doctor` lo muestra en su apartado de huella de máquina.
 
 No configura automáticamente hooks para cada proyecto (`gga init` o `gga install`): esa decisión corresponde al repositorio concreto.
 
