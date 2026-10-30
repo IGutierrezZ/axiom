@@ -225,6 +225,21 @@ Las cuatro quedaron resueltas por el usuario el 2026-10-29: acepta las recomenda
     - Sin agentes válidos: `install` falla con un error claro y `sync` termina sin escribir. `componentInjectionDirScoped` ya no devuelve HOME en workspace. La TUI no persiste los agentes omitidos; un `codex` heredado en `<raíz>/.axiom/state.json` se conserva, pero ya no escribe en HOME.
     - Verificación: `go build`, `go vet`, `gofmt` y deadcode-ratchet: ok. `internal/cli -run '…|ComponentPath|Scope|Workspace'` y `-run 'TestRunSync|TestSync|TestRunInstall|TestInstall|Permission|TUIInstall'`: ok. `internal/app` e `internal/tui`: solo los fallos conocidos. Mutación: sin el arreglo, las 3 pruebas de HOME intacto fallan (96, 50 y 7 ficheros en HOME). El padre repitió las pruebas de HOME: ok.
     - Hallazgos: la TUI añade `--include-permissions` si Codex está descubierto (inocuo, revisar en T14); la pantalla de selección de la TUI sigue listando los agentes omitidos; `gga.Managed` lee `%APPDATA%\gga`, así que las pruebas de sync deben aislar `APPDATA`.
+  - **R1b · Precedencia usuario/proyecto en los agentes prioritarios** (ruta: delegada, solo lectura; prioridad del usuario: VS Code Copilot, Copilot CLI, Codex, Claude, OpenCode y Gemini).
+    - Criterio acordado: las instrucciones ODD/SDD son del equipo y van en el proyecto, en un fichero propio del agente. Nunca en un fichero raíz compartido (`AGENTS.md`, `GEMINI.md`). Lo del proyecto prevalece y lo del usuario convive.
+    - Los seis lo admiten: Claude `.claude/CLAUDE.md`; Codex `developer_instructions` en `.codex/config.toml`; VS Code y Copilot CLI `.github/instructions/axiom.instructions.md` con `applyTo: "**"`; OpenCode `instructions` en `opencode.json`; Gemini `context.fileName` en `.gemini/settings.json` (sustituye la lista del usuario: hay que incluir `GEMINI.md`).
+    - Matices: en Claude gana la skill personal con el mismo nombre (migración D4); en Copilot CLI gana el agente personal; VS Code y Copilot CLI no tienen `deny` duro de proyecto. `.claude/CLAUDE.md` hace que Claude deje de leer `AGENTS.md`. Copilot CLI lee el `.mcp.json` de Claude y no tiene adaptador en Axiom.
+    - Abierto: Qwen y Hermes solo leen el fichero raíz. No son prioritarios y no se tocan.
+  - [x] **T12b · OpenCode y Kilo en las rutas de proyecto que leen** (ruta: delegada; disparador: escritura en 2+ ficheros). Commit `79870a15`, +1405/−105, de ellas unas 900 de pruebas y documentación.
+    - `agents.BindWorkspace` liga OpenCode y Kilo a la raíz. OpenCode usa `<ws>/opencode.json`, o el `opencode.jsonc` existente con sus comentarios, y `.opencode/{skills,commands,plugins,prompts/sdd}`. Kilo usa el `kilo.json(c)` existente o `.kilo/kilo.json`, y `.kilo/{skills,commands,plugins,prompts/sdd,rules}`.
+    - Las instrucciones van en `.opencode/axiom.md` y `.kilo/rules/axiom.md`, registradas en `instructions` sin duplicados y conservando las entradas del usuario. El `AGENTS.md` raíz no se toca. Global sin cambios.
+    - Un JSON de proyecto ilegible se rechaza antes de escribir. Los restos en `<ws>/.config/{opencode,kilo}` no se borran (mezclan contenido del usuario): se avisa.
+    - Verificación: `go build`, `go vet`, `gofmt` y deadcode-ratchet: ok. `internal/agents/{opencode,kilocode}`, `components`, `assets` y `opencode`: ok salvo filemerge. `internal/cli -run 'OpenCode|Kilo|Overlay|Plugin|Workspace|Scope|ComponentPath'` y `-run 'TestRunSync|…|Verify|Backup'`: ok. `app` y `tui`: solo los fallos conocidos. El padre repitió las 5 pruebas nuevas de `internal/cli` y las de los adaptadores: ok. Riesgo sin evaluar (`axiom review assess` exige ejecutar el binario); la verificación independiente queda para V1.
+    - Hallazgos:
+      - `.gentle-ai-default-agent.json` queda suelto en la raíz del proyecto (mejor en `.opencode/`).
+      - `default_agent: axiom-orchestrator` se escribe en el `opencode.json` del equipo; respeta uno existente. Pendiente de confirmar con el usuario.
+      - `skillregistry` no escanea `.kilo/skills`.
+      - Las fusiones JSONC reindentan en el segundo paso (fallo previo, también en global).
 
 ### Fase 5 · Reversibilidad y documentación
 
