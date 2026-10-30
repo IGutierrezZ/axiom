@@ -35,6 +35,10 @@ func makeSkillIndexProject(t *testing.T) (project, home string) {
 	if err := os.MkdirAll(filepath.Join(project, ".git"), 0o755); err != nil {
 		t.Fatal(err)
 	}
+	// El registro de skills solo actúa dentro de un proyecto Axiom (axiom.yaml).
+	if err := os.WriteFile(filepath.Join(project, "axiom.yaml"), []byte("workspace:\n  name: Test\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	skillDir := filepath.Join(project, "skills", "go-testing")
 	if err := os.MkdirAll(skillDir, 0o755); err != nil {
 		t.Fatal(err)
