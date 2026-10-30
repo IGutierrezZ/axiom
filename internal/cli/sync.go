@@ -543,9 +543,15 @@ func newSyncRuntimeScoped(homeDir, workspaceDir string, scope InstallScope, sele
 	if workspaceDir == "" {
 		workspaceDir, _ = resolveWorkspaceDir(scope, homeDir)
 	}
-	compatibilityTransaction, err := newCompatibilityRefreshTransaction(homeDir, selection.Components, selection)
-	if err != nil {
-		return nil, err
+	// Con el ámbito workspace no se abre la transacción de ~/.agents/skills: esa
+	// copia de compatibilidad no se refresca.
+	var compatibilityTransaction compatibilityRefreshTransaction
+	if scope != ScopeWorkspace {
+		var err error
+		compatibilityTransaction, err = newCompatibilityRefreshTransaction(homeDir, selection.Components, selection)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	runtime := &syncRuntime{
@@ -611,7 +617,7 @@ func (r *syncRuntime) stagePlan() pipeline.StagePlan {
 			backgroundPolicy: r.backgroundPolicy,
 		})
 	}
-	if needsCompatibilitySkillsRefresh(r.selection.Components) {
+	if r.scope != ScopeWorkspace && needsCompatibilitySkillsRefresh(r.selection.Components) {
 		apply = append(apply, compatibilitySkillsRefreshStep{
 			id:           "sync:compatibility-skills-refresh",
 			homeDir:      r.homeDir,
@@ -646,7 +652,10 @@ func (r *syncRuntime) stagePlan() pipeline.StagePlan {
 	// (issue #1440). Refresh installed copies explicitly; the step never
 	// installs plugins that were never present. When SDD is selected, its
 	// inject step already rewrites the plugins.
-	if anyAgentReceivesManagedOpenCodePlugins(r.agentIDs) && !r.selection.HasComponent(model.ComponentSDD) {
+	//
+	// El refresco opera sobre los plugins de la carpeta de usuario de OpenCode:
+	// con el ámbito workspace no se toca (SDD ya los escribe en el proyecto).
+	if r.scope != ScopeWorkspace && anyAgentReceivesManagedOpenCodePlugins(r.agentIDs) && !r.selection.HasComponent(model.ComponentSDD) {
 		apply = append(apply, openCodePluginRefreshSyncStep{
 			id:           "sync:opencode:managed-plugins",
 			homeDir:      r.homeDir,
@@ -1014,9 +1023,10 @@ func (s retiredSkillsCleanupStep) Run() error {
 }
 
 // retiredSkillRoots returns the skill directories to clean for the selected
-// agents: the one the current scope writes to plus the user-level one, since a
-// workspace sync must also clear copies an earlier global install left in the
-// home directory. Agents without a skills directory are skipped.
+// agents: the one the current scope writes to and, solo con el ámbito global, el
+// de la carpeta de usuario. Una sincronización workspace no toca HOME: las copias
+// retiradas que dejó una instalación global las lista `axiom doctor` como resto
+// global. Agents without a skills directory are skipped.
 func retiredSkillRoots(homeDir, workspaceDir string, scope InstallScope, adapters []agents.Adapter) []string {
 	var roots []string
 	seen := map[string]struct{}{}
@@ -1037,7 +1047,9 @@ func retiredSkillRoots(homeDir, workspaceDir string, scope InstallScope, adapter
 	}
 	for _, adapter := range adapters {
 		add(componentInjectionDirScoped(homeDir, workspaceDir, scope, adapter), adapter)
-		add(homeDir, adapter)
+		if scope != ScopeWorkspace {
+			add(homeDir, adapter)
+		}
 	}
 	return roots
 }
@@ -1789,7 +1801,7 @@ func runSyncWithSelectionScoped(homeDir, workspaceDir string, scope InstallScope
 		PiBackground: piBackground,
 	}
 
-	result, noOp, err := zeroAgentSyncNoOp(homeDir, selection, result)
+	result, noOp, err := zeroAgentSyncNoOp(homeDir, scope, selection, result)
 	if err != nil || noOp {
 		return result, err
 	}
@@ -1835,6 +1847,7 @@ func runSyncWithSelectionScoped(homeDir, workspaceDir string, scope InstallScope
 	result.ChangedFiles = dedupPaths(append(result.ChangedFiles, compatibilityChanged...))
 	result.ChangedFiles = dedupPaths(append(result.ChangedFiles, rt.state.retiredFiles...))
 	result.Execution.ManualActions = append(result.Execution.ManualActions, rt.state.retirementNotes...)
+	result.Execution.ManualActions = append(result.Execution.ManualActions, optInFootprintNotes(scope, homeDir, selection.Components, agentIDs, selection)...)
 	if background.activationPlan != nil {
 		result.ChangedFiles = dedupPaths(append(result.ChangedFiles, background.activationPlan.ChangedPaths()...))
 	}
@@ -2102,7 +2115,7 @@ func RunSync(args []string) (SyncResult, error) {
 			Background:   background,
 			PiBackground: piBackground,
 		}
-		result, noOp, err := zeroAgentSyncNoOp(homeDir, selection, result)
+		result, noOp, err := zeroAgentSyncNoOp(homeDir, scope, selection, result)
 		if err != nil || noOp {
 			return result, err
 		}
@@ -2183,10 +2196,15 @@ func restoreOpenCodeModelAssignmentsFromState(homeDir, workspaceDir string, scop
 }
 
 // zeroAgentSyncNoOp reports whether a sync without agents has no compatible
-// shared-skill work to perform.
-func zeroAgentSyncNoOp(homeDir string, selection model.Selection, result SyncResult) (SyncResult, bool, error) {
+// shared-skill work to perform. Con el ámbito workspace nunca lo hay: la copia
+// de compatibilidad de ~/.agents/skills no se refresca.
+func zeroAgentSyncNoOp(homeDir string, scope InstallScope, selection model.Selection, result SyncResult) (SyncResult, bool, error) {
 	if len(result.Agents) != 0 {
 		return result, false, nil
+	}
+	if scope == ScopeWorkspace {
+		result.NoOp = true
+		return result, true, nil
 	}
 	refreshable, err := compatibilitySkillsRefreshable(homeDir, selection)
 	if err != nil {

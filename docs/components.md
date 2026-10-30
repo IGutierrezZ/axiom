@@ -32,6 +32,8 @@ GGA es opcional y no forma parte de ningún preset, ni siquiera del predetermina
 
 Las instalaciones que ya tenían GGA lo conservan: `axiom sync` sigue refrescando su configuración si figura en la selección guardada o, sin selección guardada, si Axiom ya lo aprovisionó en el HOME. Quitar GGA de los presets solo cambia lo que se instala en instalaciones nuevas.
 
+Con `--scope workspace`, GGA sigue escribiendo en tu carpeta de usuario (su configuración en `~/.config/gga`, o en `AppData\Roaming\gga` en Windows; su runtime en `~/.local/share/gga` y, en Windows, los shims de `~/bin`, que se añade al PATH de usuario). Como es una elección explícita, se permite, pero `install` y `sync` lo declaran con un aviso que lista esas rutas.
+
 No configura automáticamente hooks para cada proyecto (`gga init` o `gga install`): esa decisión corresponde al repositorio concreto.
 
 Después de instalar GGA, habilítalo en el proyecto en el que quieras usarlo:
@@ -100,4 +102,4 @@ Para skills específicas de frameworks (React, Angular, TypeScript, Tailwind, Zo
 
 La persona se elige por separado y se aplica de forma independiente del preset. Ningún preset instala temas visuales.
 
-GGA y CodeGraph son opcionales y ningún preset los incluye. GGA se pide con `--component gga` o con el preset personalizado; CodeGraph, una herramienta de la comunidad, se elige aparte en la TUI y nunca viene marcada por defecto.
+GGA y CodeGraph son opcionales y ningún preset los incluye. GGA se pide con `--component gga` o con el preset personalizado; CodeGraph, una herramienta de la comunidad, se elige aparte en la TUI y nunca viene marcada por defecto. CodeGraph se instala como paquete global y escribe su MCP y su guía en la configuración de usuario de los agentes detectados, también con `--scope workspace`: Axiom no lo integra con ubicación de proyecto, así que declara esa huella igual que la de GGA.

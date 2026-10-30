@@ -6946,9 +6946,9 @@ func writeRetiredSkillCopy(t *testing.T, root, id, content string) string {
 }
 
 // TestRunSyncRetiresInstalledCopiesOfRetiredSkills covers both scopes: an
-// unmodified copy is removed (a workspace sync also clears the home directory,
-// where a global install left it), a modified one is kept, and a second sync
-// has nothing left to do.
+// unmodified copy is removed from the root the scope writes to, a modified one is
+// kept, and a second sync has nothing left to do. A workspace sync never touches
+// the home directory, even when a global install left an unmodified copy there.
 func TestRunSyncRetiresInstalledCopiesOfRetiredSkills(t *testing.T) {
 	const pristine = "pristine retired skill\n"
 	seedRetiredSkillFingerprints(t, pristine)
@@ -6980,16 +6980,28 @@ func TestRunSyncRetiresInstalledCopiesOfRetiredSkills(t *testing.T) {
 			t.Cleanup(func() { osUserHomeDir = restoreHome; backup.UserHomeDirFn = restoreBackupHome })
 
 			homeSkills := filepath.Join(home, ".claude", "skills")
-			owned := []string{writeRetiredSkillCopy(t, homeSkills, "branch-pr", pristine)}
+			homeOwned := writeRetiredSkillCopy(t, homeSkills, "branch-pr", pristine)
 			modified := writeRetiredSkillCopy(t, homeSkills, "gentle-ai-bench", pristine+"user edit\n")
+			owned := []string{homeOwned}
+			var untouched []string
 			if tc.inWorkdir {
-				owned = append(owned, writeRetiredSkillCopy(t, filepath.Join(workspace, ".claude", "skills"), "branch-pr", pristine))
+				// Con el ámbito workspace solo se limpia el proyecto; HOME no se toca.
+				owned = []string{writeRetiredSkillCopy(t, filepath.Join(workspace, ".claude", "skills"), "branch-pr", pristine)}
+				untouched = []string{homeOwned}
 			}
 
 			args := []string{"--agents", "claude-code", "--scope", tc.scope}
 			result, err := RunSync(args)
 			if err != nil {
 				t.Fatalf("RunSync() error = %v", err)
+			}
+			for _, path := range untouched {
+				if got, err := os.ReadFile(path); err != nil || string(got) != pristine {
+					t.Errorf("workspace sync must leave the home copy %s untouched: %q, %v", path, got, err)
+				}
+				if slices.Contains(result.ChangedFiles, path) {
+					t.Errorf("workspace sync reported the home copy %s as changed", path)
+				}
 			}
 			for _, path := range owned {
 				if _, err := os.Stat(path); !os.IsNotExist(err) {
@@ -7021,8 +7033,10 @@ func TestSyncBackupTargetsIncludeOnlyOwnedRetiredSkills(t *testing.T) {
 	seedRetiredSkillFingerprints(t, pristine)
 	home := t.TempDir()
 	workspace := t.TempDir()
-	owned := writeRetiredSkillCopy(t, filepath.Join(home, ".claude", "skills"), "branch-pr", pristine)
+	owned := writeRetiredSkillCopy(t, filepath.Join(workspace, ".claude", "skills"), "branch-pr", pristine)
 	modified := writeRetiredSkillCopy(t, filepath.Join(workspace, ".claude", "skills"), "gentle-ai-bench", pristine+"edit")
+	// Una copia propia en HOME no es objetivo de una sincronización workspace.
+	homeOwned := writeRetiredSkillCopy(t, filepath.Join(home, ".claude", "skills"), "branch-pr", pristine)
 
 	targets, err := syncBackupTargetsScoped(home, workspace, ScopeWorkspace, model.Selection{
 		Agents: []model.AgentID{model.AgentClaudeCode},
@@ -7035,6 +7049,9 @@ func TestSyncBackupTargetsIncludeOnlyOwnedRetiredSkills(t *testing.T) {
 	}
 	if containsPath(targets, modified) {
 		t.Errorf("modified copy %s must not be a backup target", modified)
+	}
+	if containsPath(targets, homeOwned) {
+		t.Errorf("home copy %s must not be a workspace backup target", homeOwned)
 	}
 	if _, err := os.Stat(owned); err != nil {
 		t.Fatalf("building targets must not remove files: %v", err)
@@ -7049,13 +7066,17 @@ func TestRunSyncWarnsOnlyAboutKeptCopiesStillNamedAfterTheRetiredSkill(t *testin
 	for _, tc := range []struct {
 		name     string
 		skill    string
+		inHome   bool
 		wantWarn bool
 	}{
 		{name: "edited copy still named branch-pr", skill: "---\nname: branch-pr\n---\nmy edits\n", wantWarn: true},
 		{name: "edited copy renamed to axiom-branch-pr", skill: "---\nname: axiom-branch-pr\n---\nmy edits\n"},
+		// Una sincronización workspace no inspecciona HOME: ahí no avisa.
+		{name: "edited home copy is not inspected by a workspace sync", skill: "---\nname: branch-pr\n---\nmy edits\n", inHome: true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			t.Chdir(t.TempDir())
+			workspace := t.TempDir()
+			t.Chdir(workspace)
 			home := t.TempDir()
 			if err := state.Write(home, state.InstallState{
 				InstalledAgents:     []string{"claude-code"},
@@ -7071,10 +7092,13 @@ func TestRunSyncWarnsOnlyAboutKeptCopiesStillNamedAfterTheRetiredSkill(t *testin
 			osUserHomeDir = func() (string, error) { return home, nil }
 			backup.UserHomeDirFn = func() (string, error) { return home, nil }
 			t.Cleanup(func() { osUserHomeDir = restoreHome; backup.UserHomeDirFn = restoreBackupHome })
-			kept := writeRetiredSkillCopy(t, filepath.Join(home, ".claude", "skills"), "branch-pr", tc.skill)
+			keptRoot := filepath.Join(workspace, ".claude", "skills")
+			if tc.inHome {
+				keptRoot = filepath.Join(home, ".claude", "skills")
+			}
+			kept := writeRetiredSkillCopy(t, keptRoot, "branch-pr", tc.skill)
 
-			// Workspace scope reaches the home directory through two roots; the
-			// warning must still fire once per copy.
+			// The warning fires once per copy kept in the root the scope writes to.
 			result, err := RunSync([]string{"--agents", "claude-code", "--scope", "workspace"})
 			if err != nil {
 				t.Fatalf("RunSync() error = %v", err)

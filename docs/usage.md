@@ -252,6 +252,18 @@ axiom -v
 
 **Raíz del workspace.** Con `--scope workspace` (y con `axiom setup` y `axiom sync` en ese ámbito), la raíz no es la carpeta desde la que lanzas el comando, sino la del proyecto: la carpeta del `axiom.yaml` (o del puntero `.axiom-workspace`) más cercano hacia arriba; si no hay ninguno, la raíz del repositorio git que contiene la carpeta actual, o la del worktree enlazado, nunca la del checkout principal; y si tampoco hay repositorio, la propia carpeta actual. La raíz de un repositorio git que sea tu directorio personal no cuenta. Cuando la raíz difiere de la carpeta actual, Axiom lo avisa por la salida de errores. Así, lanzar `axiom sync` desde `internal/pkg` no crea `internal/pkg/.claude` ni `internal/pkg/.mcp.json`.
 
+**Huella de máquina.** Con `--scope workspace`, `install`, `setup` y `sync` no escriben en tu carpeta de usuario salvo lo declarado: el binario `axiom`, el binario de Engram y el registro del hub (`~/.axiom/workspaces.json`). Estos pasos, que en el ámbito global sí se ejecutan, se omiten en workspace:
+
+| Paso | Ámbito global | Ámbito workspace |
+| ---- | ------------- | ---------------- |
+| `engram setup <agente>` | Se lanza | Se omite y se avisa con el comando manual; el MCP de Engram ya queda en el proyecto |
+| Copia de skills de compatibilidad (`~/.agents/skills`) | Se refresca si ya existe | No se toca |
+| Limpieza de skills retiradas | Proyecto y HOME | Solo el proyecto |
+| Refresco de plugins de OpenCode en HOME | Se refresca | No se toca; SDD escribe los plugins en el proyecto |
+| Hub de prompts de Kimi | `~/.kimi` | La raíz del proyecto |
+
+Lo que eliges de forma explícita (GGA, CodeGraph, plugins comunitarios de OpenCode) conserva su huella en HOME, porque es consentimiento expreso, pero Axiom la declara con un aviso al terminar: lista las rutas de HOME y, en Windows, la modificación del PATH de usuario. CodeGraph no tiene ubicación de proyecto en Axiom, así que se declara igual que GGA.
+
 ## CLI Flags (sync)
 
 | Flag                     | Description                                                                                          |

@@ -233,6 +233,8 @@ func RunInstall(args []string, detection system.DetectionResult) (InstallResult,
 	}
 	result.PiCodeGraph = runtime.state.piCodeGraph
 	result.Execution.ManualActions = append(result.Execution.ManualActions, runtime.state.retirementNotes...)
+	result.Execution.ManualActions = append(result.Execution.ManualActions, engramSetupSkippedNote(input.Scope, resolved.OrderedComponents, resolved.Agents)...)
+	result.Execution.ManualActions = append(result.Execution.ManualActions, optInFootprintNotes(input.Scope, homeDir, resolved.OrderedComponents, resolved.Agents, input.Selection)...)
 	result.Verify = runPostApplyVerification(postApplyVerificationInput{
 		HomeDir:      homeDir,
 		WorkspaceDir: runtime.workspaceDir,
@@ -713,9 +715,15 @@ func (s *runtimeState) compatibilityChangedFiles() []string {
 
 func newInstallRuntime(homeDir string, scope InstallScope, channel InstallChannel, selection model.Selection, resolved planner.ResolvedPlan, profile system.PlatformProfile) (*installRuntime, error) {
 	backupRoot := backup.BackupRootFor(homeDir)
-	compatibilityTransaction, err := newCompatibilityRefreshTransaction(homeDir, resolved.OrderedComponents, selection)
-	if err != nil {
-		return nil, err
+	// En ámbito workspace no se abre la transacción de ~/.agents/skills: esa copia
+	// de compatibilidad no se refresca y no hay nada que anclar ni capturar.
+	var compatibilityTransaction compatibilityRefreshTransaction
+	if scope != ScopeWorkspace {
+		var err error
+		compatibilityTransaction, err = newCompatibilityRefreshTransaction(homeDir, resolved.OrderedComponents, selection)
+		if err != nil {
+			return nil, err
+		}
 	}
 	state := &runtimeState{compatibilityTransaction: compatibilityTransaction}
 	if err := os.MkdirAll(backupRoot, 0o755); err != nil {
@@ -772,7 +780,10 @@ func (r *installRuntime) stagePlan() pipeline.StagePlan {
 	// This ensures that SDD or Engram can inject their modules even if Persona is skipped.
 	for _, agent := range r.resolved.Agents {
 		if agent == model.AgentKimi {
-			apply = append(apply, kimiSystemPromptHubStep{id: "agent:kimi-prompt-hub", homeDir: r.homeDir})
+			// El hub se crea en la misma raíz donde inyectan los componentes: con el
+			// ámbito workspace es el proyecto, no la carpeta de usuario.
+			rootDir := ResolveAgentConfigDir(r.scope, r.homeDir, r.workspaceDir)
+			apply = append(apply, kimiSystemPromptHubStep{id: "agent:kimi-prompt-hub", homeDir: rootDir})
 		}
 	}
 
@@ -827,7 +838,9 @@ func (r *installRuntime) stagePlan() pipeline.StagePlan {
 		})
 	}
 
-	if needsCompatibilitySkillsRefresh(r.resolved.OrderedComponents) {
+	// La copia de skills de compatibilidad vive en ~/.agents/skills: con el ámbito
+	// workspace no se toca (los skills ya quedan en el proyecto).
+	if r.scope != ScopeWorkspace && needsCompatibilitySkillsRefresh(r.resolved.OrderedComponents) {
 		apply = append(apply, compatibilitySkillsRefreshStep{
 			id:          "component:compatibility-skills-refresh",
 			homeDir:     r.homeDir,
@@ -1630,6 +1643,13 @@ func (s componentApplyStep) Run() error {
 		}
 		setupMode := engram.SetupModeFromEnv()
 		setupStrict := engram.SetupStrictFromEnv()
+		if s.scope == ScopeWorkspace {
+			// `engram setup <agente>` escribe en la carpeta de usuario del agente:
+			// con el ámbito workspace no se lanza. El MCP de Engram ya queda en el
+			// proyecto (engram.InjectWorkspaceWithOptions) y el aviso con el comando
+			// manual lo emite workspaceFootprintNotes.
+			setupMode = engram.SetupModeOff
+		}
 
 		// Resolve the installed engram version once (Decision 1 gate). Errors are
 		// intentionally ignored for gating purposes: an empty version string
@@ -1950,6 +1970,8 @@ func executeTUIInstallWithBackground(homeDir string, selection model.Selection, 
 		result.ManualActions = append(result.ManualActions, runtime.state.piCodeGraph.ManualActions...)
 	}
 	result.ManualActions = append(result.ManualActions, runtime.state.retirementNotes...)
+	result.ManualActions = append(result.ManualActions, engramSetupSkippedNote(scope, resolved.OrderedComponents, resolved.Agents)...)
+	result.ManualActions = append(result.ManualActions, optInFootprintNotes(scope, homeDir, resolved.OrderedComponents, resolved.Agents, selection)...)
 	return result, orchestrator
 }
 
@@ -2243,7 +2265,7 @@ func backupTargets(homeDir, workspaceDir string, scope InstallScope, selection m
 	for _, path := range adapterSkillPaths {
 		paths[path] = struct{}{}
 	}
-	if !usesAnchoredCompatibilityTransaction() && needsCompatibilitySkillsRefresh(resolved.OrderedComponents) {
+	if scope != ScopeWorkspace && !usesAnchoredCompatibilityTransaction() && needsCompatibilitySkillsRefresh(resolved.OrderedComponents) {
 		skillDir, ok, err := compatibilitySkillsDir(homeDir)
 		if err != nil {
 			return nil, err
@@ -2613,7 +2635,9 @@ func componentPathsWithWorkspaceScoped(homeDir, workspaceDir string, scope Insta
 	// is bootstrapped but not explicitly owned by any other component path list.
 	for _, adapter := range adapters {
 		if adapter.SystemPromptStrategy() == model.StrategyJinjaModules {
-			paths = append(paths, adapter.SystemPromptFile(homeDir))
+			// El hub se crea en la raíz del ámbito (kimiSystemPromptHubStep), no
+			// siempre en HOME.
+			paths = append(paths, adapter.SystemPromptFile(componentInjectionDirScoped(homeDir, workspaceDir, scope, adapter)))
 		}
 	}
 
