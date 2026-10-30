@@ -294,6 +294,23 @@ Las cuatro quedaron resueltas por el usuario el 2026-10-29: acepta las recomenda
   - **Sin modo workspace, omitidos con aviso:** Windsurf (ahora Devin Desktop), Trae (documentación no legible) y Antigravity. R1 respalda `.agents/` para Antigravity, pero no es prioritario.
   - Copilot CLI no tiene adaptador, pero lee `.github/instructions`, `.github/skills` y el `.mcp.json` de Claude.
 - Decidido por el usuario el 2026-10-30: se mantiene `default_agent: axiom-orchestrator` en el `opencode.json` del equipo. Respeta un valor previo.
+- Decisiones del usuario, segunda ronda (2026-10-30):
+  - **Gemini `context.fileName`:** manda el proyecto. Se documenta en T14.
+  - **Qwen, Hermes y Kimi:** se retiran de lo seleccionable al instalar y se conserva el código (T12f).
+  - **Antigravity:** se activará más adelante en workspace, con sus rutas reales en `.agents/`.
+  - **Skills duplicadas:**
+    - Gentle AI upstream no lo resuelve (`main` `9e7738a8`). Escribe una copia por agente más una copia de compatibilidad en `~/.agents/skills`.
+    - En upstream, [#3293](https://github.com/Gentleman-Programming/gentle-ai/issues/3293) (colocación por runtime) se cerró por inactividad y [#5869](https://github.com/Gentleman-Programming/gentle-ai/issues/5869) (124 avisos `duplicate skill name` en OpenCode) sigue abierto.
+    - Claude Code no lee `.agents/skills` (verificado en code.claude.com/docs/en/skills).
+    - **Decisión:** en workspace, una sola copia compartida en `.agents/skills` y `.claude/skills` solo si Claude está instalado (T12g).
+- [x] **T12f · Qwen, Hermes y Kimi fuera de la selección** (ruta: delegada; disparador: escritura en 2+ ficheros). Commit `468c1449`, +419/−29.
+  - Punto de verdad único: `catalog.IsSelectableAgent` y `SelectableAgents()` (`internal/catalog/agents.go`).
+  - `install --agent` con alguno de ellos falla con un error claro, también mezclado con otros. La TUI no los lista ni los preselecciona, y el descubrimiento por HOME no los añade.
+  - Sync en workspace: se omiten con aviso (filtro de T12a). Sync en global con estado previo: sin cambios. Uninstall, doctor y verify no cambian. Los adaptadores y sus pruebas se conservan.
+  - Verificación: `go build`, `go vet`, `gofmt` y deadcode-ratchet: ok. `internal/agents`, `model` y `components`: ok salvo filemerge. `internal/cli -run 'Qwen|Hermes|Kimi|Workspace|Scope|Discover|Agent'` y `-run 'TestRunSync|…|TUIInstall'`: ok. `app` y `tui`: solo los fallos conocidos. El padre repitió las pruebas `Unselectable` de `cli` y `tui`.
+  - Hallazgos:
+    - Reinstalar desde la TUI quita del estado un agente retirado que ya estuviera en él.
+    - `docs/usage.md:264` (hub de prompts de Kimi) y las listas «Full (sub-agents)» quedan para T14.
 - Decisiones abiertas para el usuario:
   - Skills duplicadas entre `.agents/skills` (Codex) y las carpetas propias de otros agentes.
   - `context.fileName` de Gemini sustituye la lista del usuario.
