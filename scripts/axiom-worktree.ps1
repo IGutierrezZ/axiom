@@ -11,7 +11,9 @@
     new  <slug> [-Prefix p]  axiom branch ensure --cwd <checkout principal> --change <slug> [--prefix p] --json
     pr   <slug>              push de la rama del cambio y PR hacia el prTarget de axiom branch status --json
     done <slug> [-Force]     axiom branch done --cwd <checkout principal> --change <slug> y, después,
-                             el avance rápido de main
+                             el avance rápido de main. La rama sale del registro local que escribe
+                             `ensure` (con su prefijo); `done` no admite -Prefix. Si no ve ninguna
+                             rama del cambio, lo avisa en lugar de dar el cambio por desmantelado
 
     Los worktrees viven en <carpeta del proyecto>-wt/<slug>/<repositorio> (p. ej. axiom-wt\<slug>\axiom).
     Necesita un `axiom` con el verbo `axiom branch` en el PATH (`go install ./cmd/axiom`).
@@ -198,6 +200,31 @@ switch ($Verb) {
     'done' {
         $doneArgs = @()
         if ($Force) { $doneArgs += '--force' }
+        if ($Prefix) {
+            Warn "-Prefix no se aplica a done: el nombre de la rama sale del registro local que escribió 'ensure'."
+        }
+
+        # Antes de desmontar, qué ramas del cambio existen según el plan del producto (solo lectura).
+        # Una rama creada fuera de `ensure` no está en el registro y `done` no la ve: sin esta
+        # comprobación el script daría por desmantelado un cambio que sigue montado.
+        $existing = @()
+        $statusLines = & axiom branch status --cwd $mainRoot --change $Slug --json 2>&1
+        if ($LASTEXITCODE -eq 0) {
+            try {
+                $status = (($statusLines | ForEach-Object { "$_" }) -join "`n") | ConvertFrom-Json
+                foreach ($repository in @($status.repositories)) {
+                    foreach ($b in @($repository.branches)) {
+                        if ($b.exists) { $existing += $b.name }
+                    }
+                }
+            } catch {
+                Warn "axiom branch status no devolvió un JSON legible; no se puede comprobar qué ramas existen."
+                $existing = $null
+            }
+        } else {
+            Warn "axiom branch status falló; no se puede comprobar qué ramas existen."
+            $existing = $null
+        }
 
         # `axiom branch done` confirma la fusión y desmonta el worktree y la rama local del plan.
         & axiom branch done --cwd $mainRoot --change $Slug @doneArgs
@@ -219,6 +246,11 @@ switch ($Verb) {
         }
 
         git -C $mainRoot worktree prune
+        if ($null -ne $existing -and $existing.Count -eq 0) {
+            Warn "axiom branch done no encontró ninguna rama del cambio '$Slug': no había nada que desmantelar."
+            Warn "Si la rama se creó fuera de 'ensure' (sin registro local), retira a mano con git su worktree y su rama local."
+            return
+        }
         Ok "Ciclo de trabajo '$Slug' desmantelado y entorno limpio."
     }
 }

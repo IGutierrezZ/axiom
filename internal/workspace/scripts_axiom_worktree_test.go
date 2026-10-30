@@ -347,6 +347,7 @@ func TestScriptsAxiomWorktreeShellDoneRunsAxiomBranchDone(t *testing.T) {
 	f := newWrapperFixture(t)
 	f.installBashStubs(t)
 	bash := bashPath(t)
+	f.writeJSON(t, "status.json", demoChange(f, "inc/demo", "main", true))
 
 	stdout, stderr, code := f.run(t, bash, "scripts/axiom-worktree.sh", "done", "demo")
 	if code != 0 {
@@ -368,6 +369,34 @@ func TestScriptsAxiomWorktreeShellDoneRunsAxiomBranchDone(t *testing.T) {
 	}
 	if !strings.Contains(f.logText(t), "--change demo --force") {
 		t.Errorf("done --force no pasó --force a axiom:\n%s", f.logText(t))
+	}
+}
+
+// Una rama creada fuera de `ensure` no está en el registro: `axiom branch status` no ve
+// ninguna rama del cambio y `done` no retira nada. El envoltorio no debe darlo por
+// desmantelado.
+func TestScriptsAxiomWorktreeShellDoneWarnsWhenNoBranchExists(t *testing.T) {
+	f := newWrapperFixture(t)
+	f.installBashStubs(t)
+	bash := bashPath(t)
+	absent := demoChange(f, "inc/demo", "main", false)
+	absent.Repositories[0].Branches[0].Exists = false
+	f.writeJSON(t, "status.json", absent)
+
+	stdout, stderr, code := f.run(t, bash, "scripts/axiom-worktree.sh", "done", "demo", "fix")
+	if code != 0 {
+		t.Fatalf("done salió con %d\nstdout: %s\nstderr: %s", code, stdout, stderr)
+	}
+	if !strings.Contains(f.logText(t), "axiom branch done --cwd") {
+		t.Errorf("done no lanzó `axiom branch done`:\n%s", f.logText(t))
+	}
+	if strings.Contains(stdout, "desmantelado") {
+		t.Errorf("done anunció el desmontaje sin ninguna rama del cambio:\n%s", stdout)
+	}
+	for _, want := range []string{"nada que desmantelar", "a mano con git", "no se aplica a done"} {
+		if !strings.Contains(stdout, want) {
+			t.Errorf("done no avisa %q:\n%s", want, stdout)
+		}
 	}
 }
 
@@ -457,6 +486,30 @@ func TestScriptsAxiomWorktreePowerShellDrivesAxiomBranch(t *testing.T) {
 		}
 		if !regexp.MustCompile(`(?m)^axiom branch done --cwd \S*proj --change demo --force\s*$`).MatchString(f.logText(t)) {
 			t.Errorf("done no lanzó `axiom branch done --cwd <principal> --change demo --force`:\n%s", f.logText(t))
+		}
+		if !strings.Contains(stdout, "desmantelado") {
+			t.Errorf("done no confirma el desmontaje:\n%s", stdout)
+		}
+	})
+
+	t.Run("done sin ninguna rama del cambio", func(t *testing.T) {
+		absent := demoChange(f, "inc/demo", "main", false)
+		absent.Repositories[0].Branches[0].Exists = false
+		f.writeJSON(t, "status.json", absent)
+		defer f.writeJSON(t, "status.json", demoChange(f, "inc/demo", "release", true))
+
+		stdout, stderr, code := f.run(t, powershell, powerShellArgs(script, "done", "demo", "-Prefix", "fix")...)
+		if code != 0 {
+			t.Fatalf("done salió con %d\nstdout: %s\nstderr: %s", code, stdout, stderr)
+		}
+		if strings.Contains(stdout, "desmantelado") {
+			t.Errorf("done anunció el desmontaje sin ninguna rama del cambio:\n%s", stdout)
+		}
+		// Solo texto ASCII: PowerShell 5.1 lee el script sin BOM con la página de códigos ANSI.
+		for _, want := range []string{"nada que desmantelar", "a mano con git", "-Prefix no se aplica a done"} {
+			if !strings.Contains(stdout, want) {
+				t.Errorf("done no avisa %q:\n%s", want, stdout)
+			}
 		}
 	})
 
