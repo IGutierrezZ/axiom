@@ -311,6 +311,27 @@ Las cuatro quedaron resueltas por el usuario el 2026-10-29: acepta las recomenda
   - Hallazgos:
     - Reinstalar desde la TUI quita del estado un agente retirado que ya estuviera en él.
     - `docs/usage.md:264` (hub de prompts de Kimi) y las listas «Full (sub-agents)» quedan para T14.
+- [x] **T12g · Una sola copia de las skills en workspace** (ruta: delegada; disparador: escritura en 2+ ficheros). Commit `e7e6f598`, +1705/−49.
+  - Codex, VS Code Copilot, OpenCode, Kilo, Gemini y Cursor usan `<ws>/.agents/skills`. Cada uno se verificó en su documentación oficial; en VS Code, la lectura de `.agents/skills` corresponde a las sesiones Local (vista de chat).
+  - Claude usa `.claude/skills`, solo si está instalado. Kiro se queda en `.kiro/skills`, porque no se confirmó que lea `.agents/skills`. Paquete `sharedskills`; Cursor recibe un adaptador de workspace solo para esto.
+  - `workspaceSkillsDirs` escribe cada carpeta una vez por ejecución; backup y verify salen sin rutas repetidas. `_shared` se escribe con el hueco genérico `<runtime>`, así que el contenido no depende del agente.
+  - Índice: `dedupeBySkillName` prefiere `.agents/skills`. El orden de `ProjectSkillDirs` no cambia, porque lo espeja el plugin TS.
+  - Migración (`legacySkillsRetirementStep`): una copia anterior en una carpeta propia se retira solo si es una skill de Axiom, idéntica byte a byte y con la copia compartida ya escrita. Si no, se conserva con un aviso. Las skills ajenas no se tocan.
+  - Verificación: `go build`, `go vet`, `gofmt` y deadcode-ratchet: ok. `agents`, `components`, `assets` y `skillregistry`: ok salvo filemerge. `internal/cli` en tandas: ok. `app` y `tui`: solo los fallos conocidos. El padre repitió las pruebas `SharedSkills|WorkspaceSkills`, `components/sdd` y `skillregistry`: ok.
+- **V1b de la fase 4 (2026-10-30): hecha** (ruta: delegada a un verificador independiente; arnés temporal borrado; `git status` limpio sobre `e7e6f598`).
+  - Siete agentes en workspace, todo lo seleccionable:
+    - las skills de Axiom están solo en `.agents/skills` y `.claude/skills`, con las mismas 20 entradas;
+    - las skills del equipo quedan intactas;
+    - no hay marcadores sin resolver y el índice de `AGENTS.md` apunta a `.agents/skills`;
+    - HOME no cambia;
+    - el segundo sync es `noop` y verify da 0 fallos.
+  - Migración: las copias idénticas se retiran, la modificada se conserva con aviso y la ajena queda intacta.
+  - Qwen, Hermes y Kimi: `install --agent` falla sin escribir nada, no se descubren y, si ya estaban en el estado, se omiten con aviso.
+  - Con solo Claude no se crea `.agents/skills`. El global de OpenCode sigue igual.
+  - Observaciones previas, ajenas a T12g:
+    - `.kilo/commands/sdd-apply.md` conserva `{{GENTLE_AI_AUTHORITY_FIRST_TERMINAL_PROCEDURE}}`, porque `rendersReviewLifecycle` no incluye a Kilo.
+    - `adapterSkillBackupTargets` repite dos rutas de `judgment-day`; el backup final las deduplica.
+- Commits añadidos al resumen: `468c1449` T12f (+419/−29), `e7e6f598` T12g (+1705/−49), y la documentación `a64753ae`, `d90156d4` y este cierre. Antigravity sigue pendiente de activar en workspace. La rama sigue lista para integrarse en `fix/huella-usuario-workspace`.
 - Decisiones abiertas para el usuario:
   - Skills duplicadas entre `.agents/skills` (Codex) y las carpetas propias de otros agentes.
   - `context.fileName` de Gemini sustituye la lista del usuario.
