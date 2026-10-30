@@ -34,3 +34,14 @@ func TestRenderPresetClarifiesCustomManualSelection(t *testing.T) {
 		t.Fatalf("RenderPreset still shows old custom preset wording; output:\n%s", out)
 	}
 }
+
+func TestRenderPresetStatesGGAAndCodeGraphAreOptional(t *testing.T) {
+	out := RenderPreset(model.PresetFullGentleman, 0)
+
+	if strings.Count(out, "GGA y CodeGraph") != 2 {
+		t.Fatalf("RenderPreset debe indicar en los dos presets que GGA y CodeGraph son opcionales; output:\n%s", out)
+	}
+	if strings.Contains(out, "+ GGA") {
+		t.Fatalf("RenderPreset sigue anunciando GGA como contenido del preset; output:\n%s", out)
+	}
+}

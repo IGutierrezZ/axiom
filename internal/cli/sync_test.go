@@ -299,7 +299,8 @@ func TestBuildSyncSelectionDefaultScopeIncludesManagedComponents(t *testing.T) {
 
 	sel := BuildSyncSelection(flags, agents)
 
-	// Default sync must include: SDD, Engram, Context7, GGA, Skills, Persona.
+	// Default sync must include: SDD, Engram, Context7, Skills, Persona. GGA is
+	// optional and is restored only from persisted state or detection.
 	// Persona is included because the content between <!-- gentle-ai:persona -->
 	// markers is harness-managed; sync must propagate embedded-asset changes to
 	// users who already have a persona installed. Content outside the markers
@@ -308,7 +309,6 @@ func TestBuildSyncSelectionDefaultScopeIncludesManagedComponents(t *testing.T) {
 		model.ComponentSDD,
 		model.ComponentEngram,
 		model.ComponentContext7,
-		model.ComponentGGA,
 		model.ComponentSkills,
 		model.ComponentPersona,
 	}

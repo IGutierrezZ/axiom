@@ -386,9 +386,11 @@ func BuildSyncSelection(flags SyncFlags, agentIDs []model.AgentID) model.Selecti
 		model.ComponentSDD,
 		model.ComponentEngram,
 		model.ComponentContext7,
-		model.ComponentGGA,
 		model.ComponentSkills,
 	}
+	// GGA es opcional: ya no se sincroniza por defecto. Las instalaciones que lo
+	// tenían lo conservan por el estado persistido (RestorePersistedSelection) o,
+	// sin estado, por detección (restoreDetectedGGA).
 
 	if flags.IncludePermissions {
 		components = append(components, model.ComponentPermission)
@@ -448,6 +450,18 @@ func RestorePersistedSelection(selection *model.Selection, persisted state.Insta
 	if model.CarriesSDDWork(explicit.Profiles, explicit.ModelAssignments) {
 		selection.EnsureComponent(model.ComponentSDD)
 	}
+}
+
+// RestoreDetectedGGA mantiene GGA en la selección de sync cuando no hay una
+// selección persistida (estado anterior a las selecciones o ausente) pero Axiom
+// ya aprovisionó GGA en este HOME. Con una selección persistida esa lista manda
+// y no se toca: GGA se conserva si ya figuraba en ella y no se añade si no.
+// Así, sacar GGA de los presets solo afecta a las instalaciones nuevas.
+func RestoreDetectedGGA(homeDir string, selection *model.Selection, persisted state.InstallState) {
+	if persisted.SelectionConfigured || !gga.Managed(homeDir) {
+		return
+	}
+	selection.EnsureComponent(model.ComponentGGA)
 }
 
 func setSelectionComponent(selection *model.Selection, component model.ComponentID, configured, included bool) {
@@ -1737,6 +1751,7 @@ func runSyncWithSelectionScoped(homeDir, workspaceDir string, scope InstallScope
 		return SyncResult{Agents: agentIDs, Selection: selection}, err
 	}
 	restorePersistedCommunityTools(homeDir, &selection, persistedState)
+	RestoreDetectedGGA(homeDir, &selection, persistedState)
 
 	// Resolve persona from persisted state when the caller has not provided one.
 	// RunSync already resolves persona before delegating here, so on the CLI path

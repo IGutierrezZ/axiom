@@ -14,7 +14,7 @@ Esta guía describe los componentes que Axiom puede configurar para los agentes 
 | Context7 | `context7` | Servidor MCP opcional para consultar documentación de frameworks y bibliotecas. |
 | Persona | `persona` | Inyección opcional de la persona de mentor (`gentleman`) o neutral; también puede mantenerse una persona personalizada sin gestión. |
 | Permisos | `permissions` | Valores predeterminados y guardas de seguridad. Solo escribe reglas protectoras: la lista `permissions.deny` de Claude Code, que se une a la del usuario (sus entradas primero y en su orden, sin duplicados), y las reglas `ask` y `deny` de OpenCode y Kilo Code. Axiom nunca fija modos de autoaprobación (`bypassPermissions`, `auto_edit`, `chat.tools.autoApprove` ni un `allow` general en OpenCode y Kilo Code) ni borra los que el usuario ya tenga, de modo que Gemini CLI, Qwen Code y VS Code Copilot no reciben nada. El destino sigue el ámbito de instalación: con `--scope workspace` (el predeterminado) escribe bajo la raíz del proyecto y con `--scope global`, en el HOME. Un agente sin modo workspace se omite con un aviso y nunca se escribe en el HOME. La lista de rutas sensibles incluye `~/.ssh/*`, `~/.ssh/**/*`, `**/*.pem`, `**/*.key`, `**/.env*`, `~/.credentials/*`, `~/.aws/credentials`, `~/.config/gh/hosts.yml`, `~/Library/Keychains/*`, `**/secrets/*`, `**/*.p12` y `**/*.pfx`. |
-| GGA | `gga` | Gentleman Guardian Angel, herramienta externa para cambiar de proveedor de IA. |
+| GGA | `gga` | Gentleman Guardian Angel, herramienta externa para cambiar de proveedor de IA. Opcional: ningún preset la instala, hay que pedirla de forma explícita. |
 
 ### Temas visuales
 
@@ -28,7 +28,9 @@ La primera cobertura incluye los 15 portadores principales de instrucciones dist
 
 ## GGA
 
-`axiom install --component gga` instala o aprovisiona el ejecutable `gga` en el equipo.
+GGA es opcional y no forma parte de ningún preset, ni siquiera del predeterminado. `axiom install --component gga` instala o aprovisiona el ejecutable `gga` en el equipo; también puede elegirse en la TUI con el preset personalizado.
+
+Las instalaciones que ya tenían GGA lo conservan: `axiom sync` sigue refrescando su configuración si figura en la selección guardada o, sin selección guardada, si Axiom ya lo aprovisionó en el HOME. Quitar GGA de los presets solo cambia lo que se instala en instalaciones nuevas.
 
 No configura automáticamente hooks para cada proyecto (`gga init` o `gga install`): esa decisión corresponde al repositorio concreto.
 
@@ -91,9 +93,11 @@ Para skills específicas de frameworks (React, Angular, TypeScript, Tailwind, Zo
 
 | Preset | ID | Contenido |
 |--------|----|-----------|
-| Completo | `full-gentleman` | Engram, SDD, Skills, Context7, Permisos y GGA; se añade la persona seleccionada salvo que se elija mantenerla personalizada. El ID se conserva por compatibilidad y no instala temas visuales. |
-| Ecosistema | `ecosystem-only` | Engram, SDD, Skills, Context7 y GGA; se añade la persona seleccionada salvo que se elija mantenerla personalizada. |
+| Completo | `full-gentleman` | Engram, SDD, Skills, Context7 y Permisos; se añade la persona seleccionada salvo que se elija mantenerla personalizada. El ID se conserva por compatibilidad y no instala temas visuales. |
+| Ecosistema | `ecosystem-only` | Engram, SDD, Skills y Context7; se añade la persona seleccionada salvo que se elija mantenerla personalizada. |
 | Mínimo | `minimal` | Engram y las skills SDD; la persona depende de la selección. |
 | Personalizado | `custom` | Permite elegir componentes y skills manualmente y dejar la persona existente sin gestionar. |
 
 La persona se elige por separado y se aplica de forma independiente del preset. Ningún preset instala temas visuales.
+
+GGA y CodeGraph son opcionales y ningún preset los incluye. GGA se pide con `--component gga` o con el preset personalizado; CodeGraph, una herramienta de la comunidad, se elige aparte en la TUI y nunca viene marcada por defecto.

@@ -9640,3 +9640,26 @@ func TestSDDIncrementsOnlyListsAndWritesNothing(t *testing.T) {
 		t.Errorf("la TUI no debe escribir al listar:\nantes:\n%s\ndespués:\n%s", before, after)
 	}
 }
+
+func TestNewModelDefaultsExcludeGGAAndCodeGraph(t *testing.T) {
+	m := NewModel(system.DetectionResult{}, "dev")
+
+	if slices.Contains(m.Selection.Components, model.ComponentGGA) {
+		t.Fatalf("la selección inicial de la TUI no debe incluir GGA: %v", m.Selection.Components)
+	}
+	if len(m.Selection.CommunityTools) != 0 {
+		t.Fatalf("CodeGraph no debe venir marcado por defecto: %v", m.Selection.CommunityTools)
+	}
+}
+
+func TestCustomPickerStillOffersExplicitGGA(t *testing.T) {
+	found := false
+	for _, component := range screens.AllComponents() {
+		if component.ID == model.ComponentGGA {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatal("el selector personalizado debe seguir ofreciendo GGA como opción explícita")
+	}
+}
