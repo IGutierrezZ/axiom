@@ -187,7 +187,7 @@ Las cuatro quedaron resueltas por el usuario el 2026-10-29: acepta las recomenda
   - Sin fichero de proyecto, el global se lee como semilla de solo lectura, sin campos de máquina y sin `InstalledAgents` (`c9cadff0`, decisión del orquestador: heredarlos haría que un sync escribiera en HOME la configuración de agentes sin modo workspace).
   - Ignorado con `.git/info/exclude` (solo `state.json` y su cerrojo; el resto de `.axiom/` tiene otros usos).
   - Verificación: `internal/state` (con git real y worktree enlazado), `statecoord`, `agents`, `app`, `tui` e `internal/cli` filtrado en tandas: ok, salvo los fallos conocidos.
-  - **`rdd_mode` por clone: no implementado; decisión del usuario pendiente.** El override por clone solo puede desactivar: `ErrRDDModeRepositoryForcedOn` en `internal/reviewtransaction/rdd_mode.go:761` y «any off wins» en `docs/trigger-rules.md:72`. Activarlo por clone invierte ese contrato.
+  - **`rdd_mode` por clone: descartado por el usuario el 2026-10-30.** Se mantiene el contrato actual: por clone solo se puede desactivar (`ErrRDDModeRepositoryForcedOn` en `internal/reviewtransaction/rdd_mode.go:761`, «any off wins» en `docs/trigger-rules.md:72`). `rdd_mode` sigue siendo de máquina.
   - Hallazgo para T12: sin fichero de proyecto, `sync --scope workspace` descubre agentes por las carpetas de HOME, y un agente sin modo workspace (Codex) escribe en `~/.codex` (`componentInjectionDirScoped` devuelve HOME). Ya ocurría antes de T10.
 - [x] **T11 · Una única raíz de estado** (ruta: delegada). Commits `92d1ec65` (+434/−29) y `55c06cb8` (+89/−4).
   - Backups, `bin`, caché, dashboard y doctor resuelven `system.AxiomDir` (respetan `AXIOM_STATE_DIR`) en lugar de `~/.axiom` fijo.
@@ -279,4 +279,4 @@ Las cuatro quedaron resueltas por el usuario el 2026-10-29: acepta las recomenda
 
 ## Siguiente paso
 
-Decisión del usuario sobre `rdd_mode` por clone (T10). Después, V1 de la fase 3 y autorización para la fase 4 (R1, T12), que debe incluir el hallazgo de T10 sobre agentes sin modo workspace.
+V1 de la fase 3 y, después, autorización para la fase 4 (R1, T12), que debe incluir el hallazgo de T10 sobre agentes sin modo workspace.
