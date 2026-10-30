@@ -29,6 +29,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
 	opencodeactivation "github.com/IGutierrezZ/axiom/v3/internal/opencode"
 	"github.com/IGutierrezZ/axiom/v3/internal/state"
+	"github.com/IGutierrezZ/axiom/v3/internal/system"
 )
 
 type Manager interface {
@@ -1039,10 +1040,14 @@ func (s *Service) componentOperations(adapter agents.Adapter, componentID model.
 			}
 			ops = append(ops, removeDirIfEmpty(pluginDir))
 
-			for _, cacheDir := range []string{
+			// La caché activa (AXIOM_STATE_DIR si está definida) y también las que el
+			// plugin de OpenCode o versiones anteriores pudieron dejar en la raíz por
+			// defecto y en la heredada.
+			for _, cacheDir := range uniquePaths(
+				system.CacheDir(homeDir),
 				filepath.Join(homeDir, ".axiom", "cache"),
 				filepath.Join(homeDir, ".gentle-ai", "cache"),
-			} {
+			) {
 				for _, cachePath := range modelVariantsCachePaths(cacheDir) {
 					targets = append(targets, cachePath)
 					ops = append(ops, removeFile(cachePath))
@@ -1540,6 +1545,21 @@ func rewriteTOMLFile(path string, mutate func(content string) (string, bool)) op
 			return true, false, nil
 		},
 	}
+}
+
+// uniquePaths devuelve las rutas sin repetir y en el orden recibido.
+func uniquePaths(paths ...string) []string {
+	seen := make(map[string]struct{}, len(paths))
+	unique := make([]string, 0, len(paths))
+	for _, path := range paths {
+		key := filepath.Clean(path)
+		if _, ok := seen[key]; ok {
+			continue
+		}
+		seen[key] = struct{}{}
+		unique = append(unique, path)
+	}
+	return unique
 }
 
 func modelVariantsCachePaths(cacheDir string) []string {

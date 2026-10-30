@@ -145,7 +145,20 @@ type reviewConsentStaleMarker struct {
 // reviewConsentStaleMarkerPath is the per-repository marker file path. The
 // key canonicalizes the repository root so the START refusal and the stop
 // hook agree on one file even when the caller spells the cwd differently.
+// Vive en la carpeta de estado de sesión del stop-hook, bajo la raíz de estado de
+// Axiom (system.AxiomDir).
 func reviewConsentStaleMarkerPath(home, repo string) string {
+	return filepath.Join(reviewStopHookStateDir(home), "consent-stale", reviewConsentStaleMarkerName(repo))
+}
+
+// legacyReviewConsentStaleMarkerPath es la ubicación de versiones anteriores,
+// bajo ~/.gentle-ai. Solo se lee.
+func legacyReviewConsentStaleMarkerPath(home, repo string) string {
+	return filepath.Join(legacyReviewStopHookStateDir(home), "consent-stale", reviewConsentStaleMarkerName(repo))
+}
+
+// reviewConsentStaleMarkerName es el nombre del fichero del marcador de repo.
+func reviewConsentStaleMarkerName(repo string) string {
 	canonical, err := filepath.Abs(repo)
 	if err == nil {
 		if resolved, evalErr := filepath.EvalSymlinks(canonical); evalErr == nil {
@@ -153,7 +166,7 @@ func reviewConsentStaleMarkerPath(home, repo string) string {
 		}
 	}
 	digest := sha256.Sum256([]byte(filepath.Clean(canonical)))
-	return filepath.Join(home, ".gentle-ai", "review-stop-hook", "v1", "consent-stale", hex.EncodeToString(digest[:])+".json")
+	return hex.EncodeToString(digest[:]) + ".json"
 }
 
 // recordReviewConsentStaleRefusal records that a spent consent answer was
@@ -190,6 +203,10 @@ func readReviewConsentStaleMarker(repo string) (reviewConsentStaleMarker, bool, 
 		return reviewConsentStaleMarker{}, false, err
 	}
 	payload, err := os.ReadFile(reviewConsentStaleMarkerPath(home, repo))
+	if os.IsNotExist(err) {
+		// Un marcador escrito por una versión anterior sigue valiendo dentro de su ventana.
+		payload, err = os.ReadFile(legacyReviewConsentStaleMarkerPath(home, repo))
+	}
 	if err != nil {
 		if os.IsNotExist(err) {
 			return reviewConsentStaleMarker{}, false, nil

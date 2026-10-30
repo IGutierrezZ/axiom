@@ -85,7 +85,7 @@ func decodeReviewStopHookResult(t *testing.T, stdout []byte) reviewStopHookOutpu
 }
 
 func reviewStopHookStateFile(home, sessionID string) string {
-	return filepath.Join(home, ".gentle-ai", "review-stop-hook", "v1", sessionID+".json")
+	return filepath.Join(home, ".axiom", "review-stop-hook", "v1", sessionID+".json")
 }
 
 // markReviewCLIAxiomProject makes repo an Axiom project for the hook's gate
@@ -154,7 +154,7 @@ func TestReviewStopHookIsInertOutsideAnAxiomProject(t *testing.T) {
 	if _, err := os.Stat(reviewStopHookStateFile(home, "sess-foreign")); !os.IsNotExist(err) {
 		t.Errorf("expected no session marker outside an Axiom project, stat err=%v", err)
 	}
-	if _, err := os.Stat(filepath.Join(home, ".gentle-ai", "review-stop-hook")); !os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(home, ".axiom", "review-stop-hook")); !os.IsNotExist(err) {
 		t.Errorf("expected no review-stop-hook state directory outside an Axiom project, stat err=%v", err)
 	}
 	if homeAfter := listFiles(t, home); strings.Join(homeAfter, "|") != strings.Join(homeBefore, "|") {
@@ -350,7 +350,7 @@ func TestReviewStopHookInvalidSessionIDRemindsWithoutPersisting(t *testing.T) {
 	if decodeReviewStopHookResult(t, stdout.Bytes()).Decision != "block" {
 		t.Fatalf("invalid session id should still remind: %s", stdout.String())
 	}
-	dir := filepath.Join(home, ".gentle-ai", "review-stop-hook", "v1")
+	dir := filepath.Join(home, ".axiom", "review-stop-hook", "v1")
 	entries, err := os.ReadDir(dir)
 	if err != nil && !os.IsNotExist(err) {
 		t.Fatal(err)
@@ -643,5 +643,98 @@ func TestReviewStopHookRemindsWhenConsentStaleMarkerExpired(t *testing.T) {
 	}
 	if decodeReviewStopHookResult(t, stdout.Bytes()).Decision != "block" {
 		t.Fatalf("expired consent-stale marker must restore the reminder: %s", stdout.String())
+	}
+}
+
+// moveFileForTest traslada src a dst creando el directorio de destino.
+func moveFileForTest(t *testing.T, src, dst string) {
+	t.Helper()
+	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Rename(src, dst); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// El estado de sesión del stop-hook es estado de máquina: con AXIOM_STATE_DIR va a
+// esa raíz y no deja nada ni en ~/.axiom ni en la raíz heredada ~/.gentle-ai.
+func TestReviewStopHookStateFollowsAxiomStateDir(t *testing.T) {
+	home := reviewModeHome(t)
+	stateDir := filepath.Join(t.TempDir(), "estado")
+	t.Setenv("AXIOM_STATE_DIR", stateDir)
+	repo := initReviewStopHookRepo(t)
+	stageReviewStopHookCandidate(t, repo)
+	enableReviewStopHookRDD(t, repo)
+
+	var stdout bytes.Buffer
+	stdin := strings.NewReader(reviewStopHookTestPayload(t, "sess-state-dir", repo, false, nil))
+	if err := runReviewStopHook([]string{"--agent", "claude-code"}, stdin, &stdout, io.Discard); err != nil {
+		t.Fatal(err)
+	}
+	if decodeReviewStopHookResult(t, stdout.Bytes()).Decision != "block" {
+		t.Fatalf("el primer Stop debía avisar: %s", stdout.String())
+	}
+	if _, err := os.Stat(filepath.Join(stateDir, "review-stop-hook", "v1", "sess-state-dir.json")); err != nil {
+		t.Errorf("el registro de sesión debe estar bajo AXIOM_STATE_DIR: %v", err)
+	}
+	for _, root := range []string{".axiom", ".gentle-ai"} {
+		if _, err := os.Stat(filepath.Join(home, root)); !os.IsNotExist(err) {
+			t.Errorf("no debe crearse ~/%s con AXIOM_STATE_DIR definida; stat err=%v", root, err)
+		}
+	}
+}
+
+// Una sesión que empezó con una versión anterior dejó su registro en la raíz
+// heredada: se sigue leyendo, así que la actualización a mitad de sesión no repite
+// el aviso, y no se escribe nada nuevo allí.
+func TestReviewStopHookReadsTheLegacySessionRecord(t *testing.T) {
+	home := reviewModeHome(t)
+	repo := initReviewStopHookRepo(t)
+	stageReviewStopHookCandidate(t, repo)
+	enableReviewStopHookRDD(t, repo)
+
+	payload := reviewStopHookTestPayload(t, "sess-legacy", repo, false, nil)
+	var first bytes.Buffer
+	if err := runReviewStopHook([]string{"--agent", "claude-code"}, strings.NewReader(payload), &first, io.Discard); err != nil {
+		t.Fatal(err)
+	}
+	if decodeReviewStopHookResult(t, first.Bytes()).Decision != "block" {
+		t.Fatalf("el primer Stop debía avisar: %s", first.String())
+	}
+	legacy := filepath.Join(home, ".gentle-ai", "review-stop-hook", "v1", "sess-legacy.json")
+	moveFileForTest(t, reviewStopHookStateFile(home, "sess-legacy"), legacy)
+
+	var second bytes.Buffer
+	if err := runReviewStopHook([]string{"--agent", "claude-code"}, strings.NewReader(payload), &second, io.Discard); err != nil {
+		t.Fatal(err)
+	}
+	if second.Len() != 0 {
+		t.Fatalf("el registro heredado debe seguir silenciando a la sesión: %s", second.String())
+	}
+	if _, err := os.Stat(reviewStopHookStateFile(home, "sess-legacy")); !os.IsNotExist(err) {
+		t.Errorf("leer el registro heredado no debe escribir en la raíz de Axiom; stat err=%v", err)
+	}
+}
+
+// El marcador de consentimiento caducado escrito por una versión anterior sigue
+// valiendo dentro de su ventana.
+func TestReviewStopHookReadsTheLegacyConsentStaleMarker(t *testing.T) {
+	home := reviewModeHome(t)
+	repo := initReviewStopHookRepo(t)
+	stageReviewStopHookCandidate(t, repo)
+	enableReviewStopHookRDD(t, repo)
+	if err := recordReviewConsentStaleRefusal(repo, reviewStopHookFakeIdentity(t)); err != nil {
+		t.Fatal(err)
+	}
+	moveFileForTest(t, reviewConsentStaleMarkerPath(home, repo), legacyReviewConsentStaleMarkerPath(home, repo))
+
+	var stdout bytes.Buffer
+	stdin := strings.NewReader(reviewStopHookTestPayload(t, "sess-legacy-marker", repo, false, nil))
+	if err := runReviewStopHook([]string{"--agent", "claude-code"}, stdin, &stdout, io.Discard); err != nil {
+		t.Fatal(err)
+	}
+	if stdout.Len() != 0 {
+		t.Fatalf("un marcador heredado fresco debe mantener callado al primer Stop: %s", stdout.String())
 	}
 }

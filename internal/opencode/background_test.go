@@ -136,6 +136,46 @@ func TestResolveTargetSkipsLegacyManagedBinAndPreventsRecursion(t *testing.T) {
 	}
 }
 
+// Con AXIOM_STATE_DIR el directorio de lanzadores se mueve con la raíz de estado,
+// pero un equipo que ya instaló antes conserva `~/.axiom/bin` en el PATH: ese
+// lanzador anterior nunca debe tomarse como el OpenCode real.
+func TestBinDirFollowsAxiomStateDirAndResolveTargetSkipsTheDefaultOne(t *testing.T) {
+	home := t.TempDir()
+	stateDir := filepath.Join(t.TempDir(), "estado")
+
+	t.Setenv("AXIOM_STATE_DIR", "")
+	defaultBin := BinDir(home)
+	if want := filepath.Join(home, ".axiom", "bin"); defaultBin != want {
+		t.Fatalf("sin AXIOM_STATE_DIR, BinDir() = %q, want %q", defaultBin, want)
+	}
+
+	t.Setenv("AXIOM_STATE_DIR", stateDir)
+	if got, want := BinDir(home), filepath.Join(stateDir, "bin"); got != want {
+		t.Fatalf("con AXIOM_STATE_DIR, BinDir() = %q, want %q", got, want)
+	}
+	if got, want := POSIXLauncherPath(home), filepath.Join(stateDir, "bin", "opencode"); got != want {
+		t.Errorf("POSIXLauncherPath() = %q, want %q", got, want)
+	}
+
+	real := filepath.Join(t.TempDir(), resolveTargetCandidateName())
+	if err := os.MkdirAll(defaultBin, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(defaultBin, resolveTargetCandidateName()), []byte("anterior"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(real, []byte("real"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	got, err := ResolveTarget(home, runtime.GOOS, defaultBin+string(os.PathListSeparator)+filepath.Dir(real))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != normalizedCandidatePath(t, real) {
+		t.Fatalf("ResolveTarget() = %q, want %q (el lanzador de ~/.axiom/bin no es el real)", got, real)
+	}
+}
+
 // normalizedCandidatePath resolves the fixture path exactly the way
 // ResolveTarget resolves candidates (EvalSymlinks + Abs): on Windows
 // t.TempDir() hands out 8.3 short names that production expands (#3209),

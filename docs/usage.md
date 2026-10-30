@@ -265,12 +265,30 @@ axiom -v
 
 Lo que eliges de forma explícita (GGA, CodeGraph, plugins comunitarios de OpenCode) conserva su huella en HOME, porque es consentimiento expreso, pero Axiom la declara con un aviso al terminar: lista las rutas de HOME y, en Windows, la modificación del PATH de usuario. CodeGraph no tiene ubicación de proyecto en Axiom, así que se declara igual que GGA.
 
+**Raíz de estado de máquina.** Todo lo que Axiom guarda a nivel de máquina cuelga de una única raíz, `~/.axiom` por defecto, que `AXIOM_STATE_DIR` mueve entera:
+
+| Qué | Dónde (`<raíz>` = `~/.axiom` o `AXIOM_STATE_DIR`) |
+| --- | --- |
+| Registro del hub y preferencias personales | `<raíz>/workspaces.json` |
+| Estado de usuario (`--scope global`) | `<raíz>/state.json` |
+| Copias de respaldo | `<raíz>/backups/` |
+| Caché | `<raíz>/cache/` |
+| Lanzadores gestionados de OpenCode | `<raíz>/bin/` |
+| Estado de sesión del stop-hook de revisión | `<raíz>/review-stop-hook/v1/` |
+
+Con la variable definida, `install`, `setup` y `sync` no crean nada bajo `~/.axiom` ni `~/.gentle-ai`. Sin ella las rutas son las de siempre, así que nada cambia en un equipo existente. Efectos a tener en cuenta al estrenar la variable en un equipo que ya instaló:
+
+- **PATH.** El PATH de usuario ya registrado sigue apuntando a `~/.axiom/bin`; `<raíz>/bin` se añade al activar de nuevo OpenCode en segundo plano. Los lanzadores de `~/.axiom/bin` nunca se toman como el OpenCode real.
+- **Respaldos.** Las copias hechas antes en `~/.axiom/backups/` dejan de listarse (siguen en disco).
+- **Raíz heredada `~/.gentle-ai`.** Solo se lee (estado, respaldos y marcas de sesión de versiones anteriores); no se escribe nada nuevo en ella.
+- **Fuera de alcance.** La caché que escribe el plugin de OpenCode `model-variants` la gestiona el propio plugin y sigue en `~/.axiom/cache` (v1) o `~/.gentle-ai/cache/opencode-v2` (v2).
+
 **Estado de instalación por proyecto.** Lo que Axiom recuerda de una instalación (agentes instalados, selección de componentes y skills, persona, asignación de modelos de Claude, Kiro, Codex y OpenCode, herramientas de comunidad e intenciones de segundo plano) vive donde vive la instalación:
 
 | Ámbito | Fichero de estado |
 | ------ | ----------------- |
 | `--scope workspace` (`install`, `setup`, `sync` y la TUI) | `<raíz del workspace>/.axiom/state.json`, sin versionar |
-| `--scope global` | `~/.axiom/state.json` (o `AXIOM_STATE_DIR`) |
+| `--scope global` | `~/.axiom/state.json` (o `<AXIOM_STATE_DIR>/state.json`) |
 
 Así, instalar o sincronizar el proyecto A no pisa la selección ni los modelos del proyecto B. El estado global conserva lo que es de la máquina: la comprobación de actualizaciones (`last_update_check`), la sincronización pendiente tras una autoactualización (`pending_sync`) y el interruptor de revisión (`rdd_mode`); el estado del proyecto nunca los guarda.
 

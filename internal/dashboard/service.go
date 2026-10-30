@@ -1233,7 +1233,7 @@ func (s *Service) GetDoctorDiagnostics() (*DoctorReport, error) {
 	}
 
 	// 4. Directorio base de usuario Axiom
-	axiomDir := filepath.Join(home, ".axiom")
+	axiomDir := system.AxiomDir(home)
 	if info, err := os.Stat(axiomDir); err == nil && info.IsDir() {
 		report.Checks = append(report.Checks, DoctorCheck{
 			Name:     "directorio-axiom",
@@ -1246,7 +1246,7 @@ func (s *Service) GetDoctorDiagnostics() (*DoctorReport, error) {
 			Name:           "directorio-axiom",
 			Category:       "environment",
 			Status:         "warning",
-			Details:        "Directorio ~/.axiom no existe aún",
+			Details:        fmt.Sprintf("Directorio %s no existe aún", axiomDir),
 			Recommendation: "Se creará automáticamente al ejecutar acciones de usuario",
 		})
 	}
@@ -1515,7 +1515,7 @@ func (s *Service) CreateBackup(description string) (*BackupItem, error) {
 	snapshotDir := filepath.Join(backupRoot, snapshotID)
 
 	targets := []string{}
-	axiomDir := filepath.Join(home, ".axiom")
+	axiomDir := system.AxiomDir(home)
 	if fileExists(axiomDir) || dirExists(axiomDir) {
 		targets = append(targets, axiomDir)
 	}

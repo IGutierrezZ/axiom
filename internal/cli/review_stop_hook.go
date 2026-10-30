@@ -16,6 +16,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/components/filemerge"
 	"github.com/IGutierrezZ/axiom/v3/internal/pathquote"
 	"github.com/IGutierrezZ/axiom/v3/internal/reviewtransaction"
+	"github.com/IGutierrezZ/axiom/v3/internal/system"
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
@@ -24,7 +25,8 @@ import (
 const reviewStopHookSchema = "gentle-ai.review-stop-hook/v1"
 
 // reviewStopHookReminderSchema identifies the small per-session record kept
-// under ~/.gentle-ai/review-stop-hook/v1. The schema name is unchanged from
+// under <raíz de estado de Axiom>/review-stop-hook/v1 (antes, ~/.gentle-ai; esa
+// ubicación heredada solo se lee). The schema name is unchanged from
 // its first shape; it now optionally carries baseline_target_identity
 // alongside target_identity (see reviewStopHookReminderRecord).
 const reviewStopHookReminderSchema = "gentle-ai.review-stop-hook-reminder/v1"
@@ -188,7 +190,7 @@ func runReviewStopHookStop(ctx context.Context, payload reviewStopHookPayload, r
 		if herr != nil {
 			return fmt.Errorf("resolve user home directory: %w", herr)
 		}
-		record, hadRecord, rerr := readReviewStopHookRecord(reviewStopHookRecordPath(home, payload.SessionID))
+		record, hadRecord, rerr := readReviewStopHookSessionRecord(home, payload.SessionID)
 		if rerr != nil {
 			return rerr
 		}
@@ -310,9 +312,33 @@ func reviewStopHookReasonText(targetIdentity, root, runtimeAgent, startCommand s
 	}, "\n")
 }
 
+// reviewStopHookStateDir es la carpeta del estado de sesión del stop-hook de
+// review dentro de la raíz de estado de Axiom (system.AxiomDir: ~/.axiom o
+// AXIOM_STATE_DIR). Ahí van todas las escrituras nuevas.
+func reviewStopHookStateDir(home string) string {
+	return filepath.Join(system.AxiomDir(home), "review-stop-hook", "v1")
+}
+
+// legacyReviewStopHookStateDir es la carpeta que usaban las versiones anteriores,
+// bajo la raíz heredada ~/.gentle-ai. Solo se lee: nunca se escribe en ella.
+func legacyReviewStopHookStateDir(home string) string {
+	return filepath.Join(home, ".gentle-ai", "review-stop-hook", "v1")
+}
+
 // reviewStopHookRecordPath is the per-session state file path for sessionID.
 func reviewStopHookRecordPath(home, sessionID string) string {
-	return filepath.Join(home, ".gentle-ai", "review-stop-hook", "v1", sessionID+".json")
+	return filepath.Join(reviewStopHookStateDir(home), sessionID+".json")
+}
+
+// readReviewStopHookSessionRecord lee el registro de sessionID en la raíz de
+// Axiom y, si no existe ahí, en la heredada: una sesión que empezó con una
+// versión anterior no repite su aviso al actualizar a mitad de sesión.
+func readReviewStopHookSessionRecord(home, sessionID string) (reviewStopHookReminderRecord, bool, error) {
+	record, ok, err := readReviewStopHookRecord(reviewStopHookRecordPath(home, sessionID))
+	if err != nil || ok {
+		return record, ok, err
+	}
+	return readReviewStopHookRecord(filepath.Join(legacyReviewStopHookStateDir(home), sessionID+".json"))
 }
 
 // readReviewStopHookRecord reads sessionID's existing record, if any. A
@@ -348,7 +374,7 @@ func recordReviewStopHookBaseline(sessionID, targetIdentity string) error {
 	}
 	path := reviewStopHookRecordPath(home, sessionID)
 
-	record, _, err := readReviewStopHookRecord(path)
+	record, _, err := readReviewStopHookSessionRecord(home, sessionID)
 	if err != nil {
 		return err
 	}
@@ -378,7 +404,7 @@ func recordReviewStopHookLastSeen(sessionID, targetIdentity string) error {
 		return fmt.Errorf("resolve user home directory: %w", err)
 	}
 	path := reviewStopHookRecordPath(home, sessionID)
-	record, _, err := readReviewStopHookRecord(path)
+	record, _, err := readReviewStopHookSessionRecord(home, sessionID)
 	if err != nil {
 		return err
 	}
@@ -419,7 +445,7 @@ func recordReviewStopHookReminder(sessionID, targetIdentity string) (silent bool
 	}
 	path := reviewStopHookRecordPath(home, sessionID)
 
-	record, hadRecord, err := readReviewStopHookRecord(path)
+	record, hadRecord, err := readReviewStopHookSessionRecord(home, sessionID)
 	if err != nil {
 		return false, err
 	}

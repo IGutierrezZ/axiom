@@ -981,6 +981,34 @@ func TestCheckDiskSpace_DirectoryTargeting(t *testing.T) {
 	}
 }
 
+// Con AXIOM_STATE_DIR el espacio libre se mide en la raíz de estado elegida, no en
+// ~/.axiom.
+func TestCheckDiskSpace_FollowsAxiomStateDir(t *testing.T) {
+	orig := availableBytesFn
+	defer func() { availableBytesFn = orig }()
+
+	var probedDir string
+	availableBytesFn = func(dir string) (int64, error) {
+		probedDir = dir
+		return diskWarnThreshold * 2, nil
+	}
+
+	home := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(home, ".axiom"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	stateDir := filepath.Join(t.TempDir(), "estado")
+	if err := os.MkdirAll(stateDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("AXIOM_STATE_DIR", stateDir)
+
+	checkDiskSpace(home)
+	if probedDir != stateDir {
+		t.Fatalf("expected probe of %q, got %q", stateDir, probedDir)
+	}
+}
+
 // --- RunDoctor integration test ---
 
 func TestRunDoctor_IntegrationAllMocked(t *testing.T) {

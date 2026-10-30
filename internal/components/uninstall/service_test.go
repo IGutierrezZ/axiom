@@ -2506,3 +2506,12 @@ func TestComponentOperationsSDD_RemovesManagedSectionsFromRenamedPromptFiles(t *
 		})
 	}
 }
+
+func TestUniquePathsKeepsOrderAndDropsRepeats(t *testing.T) {
+	a := filepath.Join("home", ".axiom", "cache")
+	b := filepath.Join("home", ".gentle-ai", "cache")
+	got := uniquePaths(a, b, a+string(filepath.Separator), b)
+	if len(got) != 2 || got[0] != a || got[1] != b {
+		t.Fatalf("uniquePaths() = %v, want [%s %s]", got, a, b)
+	}
+}

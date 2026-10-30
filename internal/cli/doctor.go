@@ -18,6 +18,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/doctor"
 	"github.com/IGutierrezZ/axiom/v3/internal/state"
 	"github.com/IGutierrezZ/axiom/v3/internal/storage"
+	"github.com/IGutierrezZ/axiom/v3/internal/system"
 )
 
 type CheckStatus = doctor.Status
@@ -658,10 +659,11 @@ func checkEngramHTTP(id doctor.CheckID, baseURL string) CheckResult {
 	}
 }
 
-// checkDiskSpace reports free space on the ~/.axiom filesystem.
+// checkDiskSpace reports free space on the filesystem of the Axiom state root
+// (~/.axiom, or AXIOM_STATE_DIR when set).
 func checkDiskSpace(homeDir string) CheckResult {
 	const id = doctor.CheckDiskSpace
-	dir := filepath.Join(homeDir, ".axiom")
+	dir := system.AxiomDir(homeDir)
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
 		if _, errLegacy := os.Stat(filepath.Join(homeDir, ".gentle-ai")); errLegacy == nil {
 			dir = filepath.Join(homeDir, ".gentle-ai")
