@@ -160,8 +160,16 @@ Las cuatro quedaron resueltas por el usuario el 2026-10-29: acepta las recomenda
 
 ### Fase 3 · Huella de máquina mínima (depende de D1, D2)
 
-- [ ] **T8 · Preset por defecto según D1** (ruta: en línea en `internal/model/presets.go` y sus pruebas).
-- [ ] **T9 · Inventario declarado de la huella de máquina** (ruta: delegada).
+- [x] **T8 · Preset por defecto según D1** (ruta: delegada; el cambio alcanzó sync, TUI, docs y 12 ficheros). Commit `3be1d092`, +282/−13.
+  - GGA sale de `full-gentleman` y de `ecosystem-only`; sigue disponible con `--component gga`, `custom` y la TUI. CodeGraph ya era opcional; ahora lo fijan pruebas.
+  - Instalaciones existentes: `sync` conserva GGA si está en la selección guardada o, sin selección guardada, si `gga.Managed` lo detecta (`RestoreDetectedGGA`). Nunca desinstala.
+  - Verificación: `internal/model`, `components/gga`, `tui/screens` e `internal/cli -run 'Preset|GGA|CodeGraph|CommunityTool|Sync|Install'`: ok.
+- [x] **T9 · Inventario declarado de la huella de máquina** (ruta: delegada). Commits `1ab483fc` (+661/−31) y `c1c5eb34` (+485/−31).
+  - Resultado con `--scope workspace`: `engram setup` se omite con un aviso (el MCP ya está en el proyecto). No se tocan `~/.agents/skills`, las skills retiradas en HOME ni los plugins de OpenCode en HOME. El hub de prompts de Kimi pasa al proyecto.
+  - GGA, CodeGraph y los plugins de OpenCode elegidos explícitamente siguen escribiendo en HOME, con aviso de rutas y de PATH: es consentimiento explícito (D1).
+  - `doctor`: apartado «Huella de máquina (nivel de usuario)», con cada elemento marcado `declarado`, `opcional` o `resto global`. GGA sale de `coreTools`.
+  - Verificación: `components/gga`, `communitytool`, `doctor` e `internal/cli -run 'Doctor|Engram|GGA|CodeGraph|Compat|Retired|Sync|Install|Workspace|Footprint|Kimi'`: ok. Mutación comprobada: sin las guardas, `TestRunSyncWorkspaceLeavesHomeUntouched` falla.
+  - Abierto: CodeGraph no tiene ubicación de proyecto (tarea aparte si se quiere). Los lanzadores de OpenCode en segundo plano escriben en `~/.axiom/bin` y PATH sin aviso al instalar; `doctor` los lista.
   - Dejar a nivel de usuario solo el binario `axiom`, el binario de Engram y el registro del hub.
   - El resto de pasos que escriben en home se omiten con `--scope workspace`:
     - copia de skills de compatibilidad en `~/.agents/skills`;
@@ -173,15 +181,26 @@ Las cuatro quedaron resueltas por el usuario el 2026-10-29: acepta las recomenda
   - `doctor` lista esa huella.
   - Hallazgo de T5: `engram setup claude-code` se sigue ejecutando con `--scope workspace` y escribe en home.
   - Hallazgos de V1 (fases 1 y 2): con `--scope workspace`, GGA escribe `~/bin/gga.{cmd,ps1}`, `AppData/Roaming/gga/` y `~/.local/share/gga/`, y añade `~/bin` al PATH de usuario. También se lanzan `engram setup claude-code` y `engram setup opencode`.
-- [ ] **T10 · Estado por proyecto según D2** (ruta: delegada).
-  - Selección, persona y asignación de modelos por workspace, con lectura de compatibilidad del estado global.
-  - `rdd_mode`: permitir activarlo por clone, además del off actual.
-- [ ] **T11 · Una única raíz de estado** (ruta: delegada).
+- [x] **T10 · Estado por proyecto según D2** (ruta: delegada). Commits `acfff69a` (+1408/−155) y `c9cadff0` (+138/−8).
+  - `state.Store` global o de proyecto. Con `--scope workspace`, install, setup, sync y la TUI usan `<raíz>/.axiom/state.json`, con cerrojo propio (`statecoord.WithStoreLock`).
+  - De proyecto: agentes, selección, persona, modelos, community tools, intents y huellas de binario y activos. De máquina, siempre global: `last_update_check`, `pending_sync`, `rdd_mode`.
+  - Sin fichero de proyecto, el global se lee como semilla de solo lectura, sin campos de máquina y sin `InstalledAgents` (`c9cadff0`, decisión del orquestador: heredarlos haría que un sync escribiera en HOME la configuración de agentes sin modo workspace).
+  - Ignorado con `.git/info/exclude` (solo `state.json` y su cerrojo; el resto de `.axiom/` tiene otros usos).
+  - Verificación: `internal/state` (con git real y worktree enlazado), `statecoord`, `agents`, `app`, `tui` e `internal/cli` filtrado en tandas: ok, salvo los fallos conocidos.
+  - **`rdd_mode` por clone: no implementado; decisión del usuario pendiente.** El override por clone solo puede desactivar: `ErrRDDModeRepositoryForcedOn` en `internal/reviewtransaction/rdd_mode.go:761` y «any off wins» en `docs/trigger-rules.md:72`. Activarlo por clone invierte ese contrato.
+  - Hallazgo para T12: sin fichero de proyecto, `sync --scope workspace` descubre agentes por las carpetas de HOME, y un agente sin modo workspace (Codex) escribe en `~/.codex` (`componentInjectionDirScoped` devuelve HOME). Ya ocurría antes de T10.
+- [x] **T11 · Una única raíz de estado** (ruta: delegada). Commits `92d1ec65` (+434/−29) y `55c06cb8` (+89/−4).
   - Backups, `bin`, caché, dashboard y doctor resuelven `system.AxiomDir` (respetan `AXIOM_STATE_DIR`) en lugar de `~/.axiom` fijo.
   - Hallazgos de V1:
     - los backups caen en `~/.axiom/backups` aunque `AXIOM_STATE_DIR` esté fijado;
     - cada `sync` crea un backup completo (~335 KB), también cuando informa de que no hay cambios;
     - el stop-hook de review, dentro de un proyecto Axiom, escribe `~/.gentle-ai/review-stop-hook/v1/<sesión>.json`, una raíz de estado heredada.
+  - Resultado: backups, `bin` de OpenCode, dashboard, `checkDiskSpace` de doctor, caché de uninstall, estado del stop-hook y marcador `consent-stale` resuelven `system.AxiomDir` y siguen `AXIOM_STATE_DIR`. Lo heredado en `~/.gentle-ai` queda como lectura de compatibilidad. Sin la variable, rutas idénticas.
+  - Un sync que termina sin cambios borra la copia que acaba de crear (`55c06cb8`).
+  - Verificación: `opencode`, `system`, `hub`, `components/uninstall`, `update`, `dashboard`, `tui` e `internal/cli` filtrado en tandas: ok. `internal/backup` `TestSnapshotterSkipsUnixSockets` falla también en la base (sockets Unix en Windows).
+  - `internal/reviewtransaction` completo se cuelga (30 min y 12 min) en `TestRepairClassifiedAuthorityReplayRequiresUniqueRecordAndGlobalInventory/cancelled_bounded_discovery`. Esa prueba pasa aislada en la rama (4,9 s) y la rama no toca el paquete. No se pudo comparar con la base: falló la creación de un worktree temporal en la base.
+  - Abierto: el manifiesto de Pi (`~/.gentle-ai/pi-codegraph.json`) y la caché del plugin `model-variants` de OpenCode (TypeScript, con digests) siguen en rutas fijas.
+  - Regresión de T1 detectada aquí: dos pruebas de `cmd/axiom` (`TestSkillRegistryCompat*`) no creaban `axiom.yaml`. Corregido en `e853c651`; `go test ./cmd/axiom/`: ok.
 
 ### Fase 4 · Adaptadores sin modo workspace (depende de R1)
 
@@ -256,6 +275,8 @@ Las cuatro quedaron resueltas por el usuario el 2026-10-29: acepta las recomenda
 
 - 2026-10-30: V1 de las fases 1 y 2 hecha: hooks inertes en repos ajenos y comprobaciones de T2–T6 en verde. La huella que queda en `HOME` está asignada a T8, T9 y T11.
 
+- 2026-10-30: fase 3 implementada (T8 `3be1d092`; T9 `1ab483fc`, `c1c5eb34`; T10 `acfff69a`, `c9cadff0`; T11 `92d1ec65`, `55c06cb8`), unas 3.770 líneas, más de la mitad pruebas. Más `e853c651`, que corrige dos pruebas de `cmd/axiom` rotas por T1. V1 de la fase 3 pendiente.
+
 ## Siguiente paso
 
-Autorización para la fase 3 (T8–T11).
+Decisión del usuario sobre `rdd_mode` por clone (T10). Después, V1 de la fase 3 y autorización para la fase 4 (R1, T12), que debe incluir el hallazgo de T10 sobre agentes sin modo workspace.
