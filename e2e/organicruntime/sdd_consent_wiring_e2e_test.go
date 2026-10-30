@@ -152,6 +152,7 @@ func consentInstanceToken(t *testing.T, invocation string) string {
 // pathquote-quoted shell tokens, not pre-split argv).
 func consentShellEnvironment(t *testing.T, home string) []string {
 	t.Helper()
+	requireOrganicBinary(t)
 	binDir := t.TempDir()
 	createShim := func(targetName string) {
 		names := []string{targetName}
@@ -356,6 +357,7 @@ func TestSDDSameParentRepositoryConsentGrantLoop(t *testing.T) {
 }
 
 func TestSDDSingleRepoStatusStaysByteIdenticalWithZeroConsentFootprint(t *testing.T) {
+	requireOrganicBinary(t)
 	t.Parallel()
 	home := t.TempDir()
 	environment := organicEnvironment(home)

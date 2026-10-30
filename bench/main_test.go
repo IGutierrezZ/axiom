@@ -157,8 +157,22 @@ func TestCommandRunSelection(t *testing.T) {
 	}
 }
 
+// requireBinaryBuilds replicates testenv.RequireBinaryBuilds: bench is its own
+// Go module, so it cannot import the root module's internal/testenv. Keep the
+// variable name and the accepted values ("1" or "true") in sync with it.
+func requireBinaryBuilds(t *testing.T) {
+	t.Helper()
+	switch strings.ToLower(strings.TrimSpace(os.Getenv("AXIOM_TEST_BUILD_BINARIES"))) {
+	case "1", "true":
+		return
+	}
+	t.Skip("this test builds and runs a Go binary, which endpoint security tools " +
+		"may block on developer machines; set AXIOM_TEST_BUILD_BINARIES=1 to run it (CI does)")
+}
+
 func benchmarkTestBinary(t *testing.T) (string, string) {
 	t.Helper()
+	requireBinaryBuilds(t)
 	dir := t.TempDir()
 	invocations := filepath.Join(dir, "invocations.log")
 	source := filepath.Join(dir, "main.go")

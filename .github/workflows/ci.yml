@@ -20,6 +20,12 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: true
 
+# Las pruebas que compilan y ejecutan binarios propios se omiten por defecto
+# porque el EDR de los equipos de desarrollo los bloquea. La CI las ejecuta
+# todas, así que lo activa de forma explícita.
+env:
+  AXIOM_TEST_BUILD_BINARIES: "1"
+
 jobs:
   opencode-v2-contracts:
     name: OpenCode V2 Released SDK Contracts

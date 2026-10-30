@@ -13,6 +13,7 @@ import (
 
 	"github.com/IGutierrezZ/axiom/v3/internal/state"
 	"github.com/IGutierrezZ/axiom/v3/internal/system"
+	"github.com/IGutierrezZ/axiom/v3/internal/testenv"
 )
 
 func TestCheckAllWithCooldown_ConcurrentReviewModeDisablePreservesMode(t *testing.T) {
@@ -242,6 +243,7 @@ func awaitSignal(t *testing.T, ctx context.Context, signal <-chan struct{}, mess
 
 func buildCandidateBinary(t *testing.T) string {
 	t.Helper()
+	testenv.RequireBinaryBuilds(t)
 	binaryName := "axiom"
 	if runtime.GOOS == "windows" {
 		binaryName += ".exe"

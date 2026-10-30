@@ -154,6 +154,17 @@ func organicDialectContract(dialect string) string {
 	return "gentle-ai.review-integration/v2"
 }
 
+// requireOrganicBinary skips the journey when TestMain did not build the
+// product binary because testenv.BuildBinariesEnv is not set. A binary supplied
+// through organicTestBinaryEnvironment needs no compilation and always runs.
+func requireOrganicBinary(t testing.TB) {
+	t.Helper()
+	if organicBinary == "" {
+		testenv.RequireBinaryBuilds(t)
+		t.Fatal("the organic product binary was not built although binary builds are enabled")
+	}
+}
+
 func TestMain(m *testing.M) {
 	// The journeys run the real built binary (install, sync), which is not a test
 	// binary and would otherwise write the developer's persistent Windows PATH.
@@ -180,6 +191,11 @@ func TestMain(m *testing.M) {
 			os.Exit(1)
 		}
 		organicBinary = resolvedBinary
+		os.Exit(m.Run())
+	}
+	if !testenv.BinaryBuildsEnabled() {
+		// Nothing is compiled without the opt-in: organicBinary stays empty and
+		// every journey that needs it skips itself (requireOrganicBinary).
 		os.Exit(m.Run())
 	}
 	workspace, err := os.MkdirTemp("", "organic-e2e-binary")
@@ -3012,6 +3028,7 @@ type organicHarness struct {
 // journeys with a real `on` to switch off.
 func newOrganicHarness(t *testing.T) *organicHarness {
 	t.Helper()
+	requireOrganicBinary(t)
 	harness := &organicHarness{t: t, repo: initOrganicRepository(t), home: t.TempDir()}
 	harness.enableReviewGlobally()
 	return harness
@@ -3023,6 +3040,7 @@ func newOrganicHarness(t *testing.T) *organicHarness {
 // but they still need the isolated HOME and the same global opt-in.
 func newOrganicHarnessForWorktree(t *testing.T, worktree string) *organicHarness {
 	t.Helper()
+	requireOrganicBinary(t)
 	harness := &organicHarness{t: t, repo: organicRepository{worktree: worktree}, home: t.TempDir()}
 	harness.enableReviewGlobally()
 	return harness
@@ -3095,6 +3113,7 @@ func (harness *organicHarness) gentleAllowFailure(arguments ...string) (string, 
 
 func runOrganicCommand(t *testing.T, binary, dir string, environment []string, arguments ...string) (string, string, error) {
 	t.Helper()
+	requireOrganicBinary(t)
 	ctx, cancel := context.WithTimeout(context.Background(), organicLocalTimeout)
 	defer cancel()
 	command := organicCommandContext(ctx, binary, arguments...)
@@ -5002,6 +5021,7 @@ func openCodeTraceCommand(ctx context.Context, tracer, binary, traceBase string,
 // model runtime. Keep this fixture scoped away from the real-host tests.
 func installPolicyTestOpenCodeVersion(t *testing.T) {
 	t.Helper()
+	testenv.RequireBinaryBuilds(t)
 	dir := t.TempDir()
 	source := filepath.Join(dir, "version.go")
 	body := `package main

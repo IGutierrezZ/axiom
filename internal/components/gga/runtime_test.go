@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/assets"
+	"github.com/IGutierrezZ/axiom/v3/internal/testenv"
 )
 
 func TestEnsureRuntimeAssetsCreatesPRModeWhenMissing(t *testing.T) {
@@ -414,6 +415,7 @@ func TestPowerShellShimResolvesGitBash(t *testing.T) {
 
 func buildWindowsShimHelper(t *testing.T) string {
 	t.Helper()
+	testenv.RequireBinaryBuilds(t)
 	dir := t.TempDir()
 	source := filepath.Join(dir, "main.go")
 	program := `package main

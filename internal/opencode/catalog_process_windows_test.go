@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/IGutierrezZ/axiom/v3/internal/testenv"
 )
 
 // TestRunCatalogCommandDeadlineNotBlockedByInheritingDescendantWindows proves
@@ -17,6 +19,7 @@ import (
 // pipes close as soon as the deadline fires instead of staying open for the
 // grandchild's 30s sleep.
 func TestRunCatalogCommandDeadlineNotBlockedByInheritingDescendantWindows(t *testing.T) {
+	testenv.RequireBinaryBuilds(t)
 	dir := t.TempDir()
 	helper := filepath.Join(dir, "descendant-helper.exe")
 	source := filepath.Join(dir, "main.go")

@@ -27,6 +27,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/planner"
 	"github.com/IGutierrezZ/axiom/v3/internal/state"
 	"github.com/IGutierrezZ/axiom/v3/internal/system"
+	"github.com/IGutierrezZ/axiom/v3/internal/testenv"
 	"github.com/IGutierrezZ/axiom/v3/internal/tui"
 	"github.com/IGutierrezZ/axiom/v3/internal/update"
 	"github.com/IGutierrezZ/axiom/v3/internal/update/upgrade"
@@ -900,6 +901,7 @@ func TestTUIExecuteWithBackgroundPreservesConcurrentCLIStateMutation(t *testing.
 
 func buildAppCandidateBinary(t *testing.T) string {
 	t.Helper()
+	testenv.RequireBinaryBuilds(t)
 	binary := filepath.Join(t.TempDir(), "axiom")
 	if runtime.GOOS == "windows" {
 		binary += ".exe"

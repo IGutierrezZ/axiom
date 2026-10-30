@@ -55,6 +55,12 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}-${{ (github.event.action == 'labeled' && github.event.label.name != 'ci:windows') && github.run_id || '' }}
   cancel-in-progress: true
 
+# Las pruebas que compilan y ejecutan binarios propios se omiten por defecto
+# porque el EDR de los equipos de desarrollo los bloquea. La CI las ejecuta
+# todas, así que lo activa de forma explícita.
+env:
+  AXIOM_TEST_BUILD_BINARIES: "1"
+
 jobs:
   # Puerta barata en Linux: decide si hay que gastar minutos de Windows. Aplica
   # a todos los disparadores, pero solo `schedule` consulta el historial.
