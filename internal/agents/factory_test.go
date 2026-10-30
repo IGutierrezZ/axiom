@@ -39,6 +39,35 @@ func TestBindWorkspaceOnlyChangesOpenCodeFamily(t *testing.T) {
 	}
 }
 
+// BindWorkspace liga Gemini CLI a la raíz del proyecto (sus instrucciones van a
+// .gemini/AXIOM.md, registrado en context.fileName) y deja Qwen Code como está:
+// su decisión de producto sigue abierta.
+func TestBindWorkspaceBindsGeminiAndNotQwen(t *testing.T) {
+	root := t.TempDir()
+	gemini, err := NewAdapter(model.AgentGeminiCLI)
+	if err != nil {
+		t.Fatal(err)
+	}
+	bound := BindWorkspace(gemini, root)
+	if _, ok := bound.(WorkspaceContextFileProvider); !ok {
+		t.Errorf("Gemini ligado debe registrar su fichero en context.fileName")
+	}
+	if _, ok := bound.(LegacyPromptFileProvider); !ok {
+		t.Errorf("Gemini ligado debe poder retirar el .gemini/GEMINI.md antiguo")
+	}
+	if bound.SystemPromptFile(root) == gemini.SystemPromptFile(root) {
+		t.Errorf("Gemini ligado debe usar un fichero propio: %s", bound.SystemPromptFile(root))
+	}
+
+	qwen, err := NewAdapter(model.AgentQwenCode)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if BindWorkspace(qwen, root) != qwen {
+		t.Errorf("Qwen Code no cambia con el ámbito")
+	}
+}
+
 func TestFactoryResolvesPiAdapter(t *testing.T) {
 	adapter, err := NewAdapter(model.AgentPi)
 	if err != nil {

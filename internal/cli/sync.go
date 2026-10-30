@@ -654,7 +654,7 @@ func (r *syncRuntime) stagePlan() pipeline.StagePlan {
 			changedFiles: &r.changedFiles,
 		})
 	}
-	if r.scope == ScopeWorkspace && (containsAgent(r.agentIDs, model.AgentOpenCode) || containsAgent(r.agentIDs, model.AgentKilocode)) {
+	if r.scope == ScopeWorkspace && registersWorkspaceInstructions(r.agentIDs) {
 		apply = append(apply, workspaceInstructionsStep{id: "sync:workspace-instructions", workspaceDir: r.workspaceDir, agents: r.agentIDs, changedFiles: &r.changedFiles})
 	}
 

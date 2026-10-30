@@ -124,7 +124,9 @@ func NewMVPRegistry() (*Registry, error) {
 // adaptadores cuya distribución de proyecto difiere de la global (OpenCode y
 // Kilo: opencode.json y .opencode, .kilo) resuelven sus rutas con esa raíz en la
 // distribución de proyecto; las rutas que se piden con otra carpeta (la de
-// usuario) siguen siendo las globales. El resto de adaptadores se devuelven sin
+// usuario) siguen siendo las globales. Gemini CLI se liga para que sus
+// instrucciones vayan a un fichero propio, registrado en context.fileName, y no
+// a un .gemini/GEMINI.md que no lee. El resto de adaptadores se devuelven sin
 // cambios: su carpeta de configuración ya es una carpeta de punto en la raíz.
 func BindWorkspace(adapter Adapter, root string) Adapter {
 	if root == "" {
@@ -134,6 +136,8 @@ func BindWorkspace(adapter Adapter, root string) Adapter {
 	case *opencode.Adapter:
 		return concrete.WithWorkspace(root)
 	case *kilocode.Adapter:
+		return concrete.WithWorkspace(root)
+	case *gemini.Adapter:
 		return concrete.WithWorkspace(root)
 	default:
 		return adapter

@@ -2,10 +2,12 @@ package cli
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
+	"slices"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/agents"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/filemerge"
@@ -31,6 +33,9 @@ var workspaceInstructionsNoticeWriter io.Writer = os.Stderr
 // documento que no es JSON, o cuyo instructions no es una lista, se deja intacto
 // y se avisa: es un fichero del usuario, normalmente versionado.
 func registerWorkspaceInstructions(adapter agents.Adapter, root string) (changed bool, files []string, err error) {
+	if _, byName := adapter.(agents.WorkspaceContextFileProvider); byName {
+		return registerWorkspaceContextFile(adapter, root)
+	}
 	provider, ok := adapter.(agents.WorkspaceInstructionsProvider)
 	if !ok {
 		return false, nil, nil
@@ -76,6 +81,139 @@ func registerWorkspaceInstructions(adapter agents.Adapter, root string) (changed
 	return write.Changed, []string{settingsPath}, nil
 }
 
+// registerWorkspaceContextFile declara el fichero de instrucciones propio de Axiom
+// en context.fileName de la configuración de proyecto de Gemini CLI.
+//
+// Gemini no carga solo un fichero suelto de .gemini: lee los nombres que enumera
+// context.fileName (por defecto GEMINI.md) en cada carpeta de la raíz del proyecto
+// hacia arriba, uniéndolos con path.join. Un nombre con separador, como
+// .gemini/AXIOM.md, carga el fichero propio de Axiom sin tocar el GEMINI.md de la
+// raíz, que es del equipo.
+//
+// El context.fileName del proyecto sustituye al del usuario, no se fusiona. Por eso
+// el valor escrito conserva los nombres que el proyecto ya declaraba (o GEMINI.md si
+// no declaraba ninguno): sin él, el GEMINI.md de la raíz y el global dejarían de
+// cargarse. Una cadena existente se convierte en lista conservándola. Si context o
+// context.fileName tienen un tipo inesperado, el documento se deja intacto y se avisa.
+//
+// Solo registra el fichero si existe, por la misma razón que registerWorkspaceInstructions.
+func registerWorkspaceContextFile(adapter agents.Adapter, root string) (changed bool, files []string, err error) {
+	provider, ok := adapter.(agents.WorkspaceContextFileProvider)
+	if !ok {
+		return false, nil, nil
+	}
+	settingsPath, entry, defaults, ok := provider.WorkspaceContextFile(root)
+	if !ok || settingsPath == "" {
+		return false, nil, nil
+	}
+	if info, statErr := os.Stat(adapter.SystemPromptFile(root)); statErr != nil || !info.Mode().IsRegular() {
+		return false, nil, nil
+	}
+
+	current, err := os.ReadFile(settingsPath)
+	if err != nil && !os.IsNotExist(err) {
+		return false, nil, fmt.Errorf("leer %s: %w", settingsPath, err)
+	}
+	names := append([]string(nil), defaults...)
+	if len(bytes.TrimSpace(current)) > 0 {
+		parsed, parseErr := filemerge.UnmarshalJSONObject(current)
+		if parseErr != nil {
+			return false, nil, fmt.Errorf("no se registran las instrucciones de Axiom en %s: no es JSON válido: %w", settingsPath, parseErr)
+		}
+		declared, usable := declaredContextFileNames(parsed)
+		if !usable {
+			fmt.Fprintf(workspaceInstructionsNoticeWriter, "Aviso: %s declara context o context.fileName con un tipo que Axiom no reconoce (se espera un objeto y una cadena o una lista de cadenas); Axiom no lo modifica y no registra %s.\n", settingsPath, entry)
+			return false, nil, nil
+		}
+		if len(declared) > 0 {
+			names = declared
+		}
+	}
+	if !slices.Contains(names, entry) {
+		names = append(names, entry)
+	}
+
+	encoded, err := json.Marshal(map[string]any{"context": map[string]any{"fileName": names}})
+	if err != nil {
+		return false, nil, fmt.Errorf("registrar %s en %s: %w", entry, settingsPath, err)
+	}
+	merged, err := filemerge.MergeJSONObjectsForPath(settingsPath, current, encoded)
+	if err != nil {
+		return false, nil, fmt.Errorf("registrar %s en %s: %w", entry, settingsPath, err)
+	}
+	write, err := filemerge.WriteFileAtomic(settingsPath, merged, 0o644)
+	if err != nil {
+		return false, nil, err
+	}
+	return write.Changed, []string{settingsPath}, nil
+}
+
+// declaredContextFileNames devuelve los nombres que el documento declara en
+// context.fileName, en su orden y sin repetidos. usable es false cuando context o
+// context.fileName tienen un tipo que no se puede conservar con seguridad. Una
+// cadena o una lista vacías cuentan como no declarado.
+func declaredContextFileNames(settings map[string]any) (names []string, usable bool) {
+	rawContext, declared := settings["context"]
+	if !declared {
+		return nil, true
+	}
+	contextObject, isObject := rawContext.(map[string]any)
+	if !isObject {
+		return nil, false
+	}
+	rawName, declared := contextObject["fileName"]
+	if !declared {
+		return nil, true
+	}
+	add := func(name string) {
+		if name != "" && !slices.Contains(names, name) {
+			names = append(names, name)
+		}
+	}
+	switch value := rawName.(type) {
+	case string:
+		add(value)
+	case []any:
+		for _, item := range value {
+			name, isString := item.(string)
+			if !isString {
+				return nil, false
+			}
+			add(name)
+		}
+	default:
+		return nil, false
+	}
+	return names, true
+}
+
+// workspaceInstructionsSettingsFile devuelve el fichero de configuración de
+// proyecto donde un adaptador registra el fichero de instrucciones de Axiom, o ""
+// si no lo registra.
+func workspaceInstructionsSettingsFile(adapter agents.Adapter, workspaceDir string) string {
+	if provider, ok := adapter.(agents.WorkspaceInstructionsProvider); ok {
+		if settingsPath, _, ok := provider.WorkspaceInstructions(workspaceDir); ok {
+			return settingsPath
+		}
+	}
+	if provider, ok := adapter.(agents.WorkspaceContextFileProvider); ok {
+		if settingsPath, _, _, ok := provider.WorkspaceContextFile(workspaceDir); ok {
+			return settingsPath
+		}
+	}
+	return ""
+}
+
+// registersWorkspaceInstructions indica si alguno de los agentes seleccionados
+// necesita que el fichero de instrucciones de Axiom se registre en su
+// configuración de proyecto: OpenCode y Kilo en instructions, Gemini en
+// context.fileName.
+func registersWorkspaceInstructions(agentIDs []model.AgentID) bool {
+	return containsAgent(agentIDs, model.AgentOpenCode) ||
+		containsAgent(agentIDs, model.AgentKilocode) ||
+		containsAgent(agentIDs, model.AgentGeminiCLI)
+}
+
 // workspaceInstructionsSettingsPaths devuelve los ficheros de configuración que
 // registerWorkspaceInstructions puede reescribir: son objetivo de copia de
 // seguridad aunque ningún componente seleccionado los toque.
@@ -85,17 +223,15 @@ func workspaceInstructionsSettingsPaths(workspaceDir string, scope InstallScope,
 	}
 	var paths []string
 	for _, adapter := range adapters {
-		if provider, ok := adapter.(agents.WorkspaceInstructionsProvider); ok {
-			if settingsPath, _, ok := provider.WorkspaceInstructions(workspaceDir); ok && settingsPath != "" {
-				paths = append(paths, settingsPath)
-			}
+		if settingsPath := workspaceInstructionsSettingsFile(adapter, workspaceDir); settingsPath != "" {
+			paths = append(paths, settingsPath)
 		}
 	}
 	return paths
 }
 
 // workspaceInstructionsStep registra el fichero de instrucciones de Axiom de
-// cada agente de la familia OpenCode del proyecto. Va después de los componentes
+// cada agente del proyecto que lo necesita (OpenCode, Kilo y Gemini). Va después de los componentes
 // y de la guía de enrutado, que son quienes escriben ese fichero.
 type workspaceInstructionsStep struct {
 	id           string
@@ -122,11 +258,11 @@ func (s workspaceInstructionsStep) Run() error {
 }
 
 // workspaceSettingsPreflightStep rechaza, antes de escribir nada, una
-// configuración de proyecto de OpenCode o Kilo que no se puede leer como JSON.
+// configuración de proyecto de OpenCode, Kilo o Gemini que no se puede leer como JSON.
 //
 // El resto de fusiones sustituyen una base ilegible por una vacía: en la
 // configuración global es aceptable (la copia de seguridad previa la conserva),
-// pero opencode.json de un proyecto es un fichero del usuario, normalmente
+// pero opencode.json (o .gemini/settings.json) de un proyecto es un fichero del usuario, normalmente
 // versionado, y reescribirlo desde cero perdería su contenido sin vuelta atrás.
 type workspaceSettingsPreflightStep struct {
 	id           string
@@ -139,12 +275,8 @@ func (s workspaceSettingsPreflightStep) ID() string { return s.id }
 func (s workspaceSettingsPreflightStep) Run() error {
 	noteStaleWorkspaceConfig(s.workspaceDir, s.agents)
 	for _, adapter := range resolveAdaptersScoped(ScopeWorkspace, s.workspaceDir, s.agents) {
-		provider, ok := adapter.(agents.WorkspaceInstructionsProvider)
-		if !ok {
-			continue
-		}
-		settingsPath, _, ok := provider.WorkspaceInstructions(s.workspaceDir)
-		if !ok || settingsPath == "" {
+		settingsPath := workspaceInstructionsSettingsFile(adapter, s.workspaceDir)
+		if settingsPath == "" {
 			continue
 		}
 		raw, err := os.ReadFile(settingsPath)
@@ -165,9 +297,9 @@ func (s workspaceSettingsPreflightStep) Run() error {
 }
 
 // withWorkspaceSettingsPreflight antepone la comprobación de la configuración de
-// proyecto a los pasos de preparación cuando hay OpenCode o Kilo en workspace.
+// proyecto a los pasos de preparación cuando hay OpenCode, Kilo o Gemini en workspace.
 func withWorkspaceSettingsPreflight(prepare []pipeline.Step, scope InstallScope, workspaceDir string, agentIDs []model.AgentID) []pipeline.Step {
-	if scope != ScopeWorkspace || (!containsAgent(agentIDs, model.AgentOpenCode) && !containsAgent(agentIDs, model.AgentKilocode)) {
+	if scope != ScopeWorkspace || !registersWorkspaceInstructions(agentIDs) {
 		return prepare
 	}
 	step := workspaceSettingsPreflightStep{id: "prepare:workspace-settings", workspaceDir: workspaceDir, agents: agentIDs}

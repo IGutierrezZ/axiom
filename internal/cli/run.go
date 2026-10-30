@@ -876,9 +876,10 @@ func (r *installRuntime) stagePlan() pipeline.StagePlan {
 			scope:        r.scope,
 		})
 	}
-	// En workspace, OpenCode y Kilo solo cargan el fichero de instrucciones de Axiom
-	// si está en la lista instructions de su configuración de proyecto.
-	if r.scope == ScopeWorkspace && (containsAgent(r.resolved.Agents, model.AgentOpenCode) || containsAgent(r.resolved.Agents, model.AgentKilocode)) {
+	// En workspace, OpenCode, Kilo y Gemini solo cargan el fichero de instrucciones
+	// de Axiom si está registrado en su configuración de proyecto (instructions o
+	// context.fileName).
+	if r.scope == ScopeWorkspace && registersWorkspaceInstructions(r.resolved.Agents) {
 		apply = append(apply, workspaceInstructionsStep{id: "workspace-instructions", workspaceDir: r.workspaceDir, agents: r.resolved.Agents})
 	}
 
@@ -2769,6 +2770,11 @@ func routingGuidanceOptions(homeDir, workspaceDir string, scope InstallScope, ad
 	if scope == ScopeWorkspace && agentguidance.DeliversThroughOrchestratorPrompt(adapter.Agent()) {
 		options.Adapter = adapter
 		options.PreserveJSONC = true
+	}
+	// Gemini, igual: sus instrucciones van a un fichero propio del proyecto, no al
+	// GEMINI.md que el inyector resolvería con un adaptador global.
+	if _, byName := adapter.(agents.WorkspaceContextFileProvider); scope == ScopeWorkspace && byName {
+		options.Adapter = adapter
 	}
 	if adapter.Agent() == model.AgentOpenCode {
 		options.SettingsPath = effectiveOpenCodeSettingsPath(homeDir, workspaceDir, scope, adapter)

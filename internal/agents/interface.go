@@ -85,3 +85,14 @@ type WorkspacePromptsDirProvider interface {
 type WorkspaceInstructionsProvider interface {
 	WorkspaceInstructions(dir string) (settingsPath, entry string, ok bool)
 }
+
+// WorkspaceContextFileProvider es una capacidad opcional de los adaptadores cuyo
+// agente carga los ficheros de contexto por nombre, declarado en su configuración
+// (Gemini CLI, context.fileName), y no por una lista de rutas. settingsPath es el
+// fichero de configuración, entry el nombre que se añade (relativo a la carpeta de
+// búsqueda) y defaults los nombres que carga el agente cuando el proyecto no
+// declara ninguno: la lista del proyecto sustituye a la del usuario, así que hay que
+// conservarlos. ok es false fuera del proyecto.
+type WorkspaceContextFileProvider interface {
+	WorkspaceContextFile(dir string) (settingsPath, entry string, defaults []string, ok bool)
+}
