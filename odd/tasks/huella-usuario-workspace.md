@@ -215,10 +215,10 @@ Las cuatro quedaron resueltas por el usuario el 2026-10-29: acepta las recomenda
 
 ### Fase 4 · Adaptadores sin modo workspace (depende de R1)
 
-- Se ejecuta en otra sesión, en el worktree `C:\repos\axiom-wt\huella-usuario-workspace-f4\axiom`, rama `fix/huella-usuario-workspace-f4`, apilada sobre `5e8e3c25`. Su avance se registra en esta sección de esa rama y se integra al terminar.
-- Hallazgo de V1 de la fase 3 que la sesión de la fase 4 no recibió en su prompt: tras el primer `sync --scope workspace` sin estado de proyecto, `codex` queda persistido en `<raíz>/.axiom/state.json`, así que los sync siguientes seguirán escribiendo en `~/.codex` (76 entradas, `hooks.json` incluido, y `config.toml` modificado). La corrección del descubrimiento debe cubrir también ese estado ya persistido.
+- Ejecutada en otra sesión, en el worktree `C:\repos\axiom-wt\huella-usuario-workspace-f4\axiom` (rama `fix/huella-usuario-workspace-f4`, apilada sobre `5e8e3c25`). Integrada en esta rama el 2026-11-01 con `7689cd4c`, sin conflictos.
+- El hallazgo de V1 de la fase 3 sobre `codex` persistido en `<raíz>/.axiom/state.json` queda cubierto por T12a: el estado heredado se conserva, pero ya no escribe en HOME.
 
-- [ ] **R1 · Investigación con fuentes primarias** (ruta: delegada, solo lectura).
+- [x] **R1 · Investigación con fuentes primarias** (ruta: delegada, solo lectura).
   - Qué configuración de proyecto carga cada agente:
     - Codex: `.codex/` y `AGENTS.md` en la raíz.
     - VS Code Copilot: `.github/copilot-instructions.md`, `.github/prompts`, `.vscode/mcp.json`.
@@ -233,7 +233,7 @@ Las cuatro quedaron resueltas por el usuario el 2026-10-29: acepta las recomenda
     - Codex (verificado además por el orquestador): MCP, agentes y hooks en `<ws>/.codex/`. Las instrucciones pueden ir en `developer_instructions` de `<ws>/.codex/config.toml`, que se añaden a las base. Las skills, en `<ws>/.agents/skills`. Todo exige proyecto de confianza. La configuración de proyecto gana a la de usuario clave a clave.
     - VS Code: `.github/instructions/*.instructions.md`, `.github/skills`, `.github/agents`, `.github/prompts` y `.vscode/mcp.json`. Antigravity: `.agents/{rules,skills,workflows,mcp_config.json}`. Windsurf, ahora Devin Desktop: `.devin/` o `.windsurf/`. Trae: `.trae/`, con confianza baja.
   - Decisión abierta con el usuario: dónde van las instrucciones ODD/SDD (del equipo, no personales) en los agentes que solo leen un fichero raíz. El usuario prioriza VS Code Copilot, Copilot CLI, Codex, Claude, OpenCode y Gemini, y pide que prevalezca lo del proyecto sobre lo del usuario. Copilot CLI no tiene adaptador en Axiom. Investigación R1b de precedencia en curso.
-- [ ] **T12 · Modo workspace por adaptador según R1** (ruta: delegada; una rebanada por grupo de adaptadores).
+- [x] **T12 · Modo workspace por adaptador según R1** (ruta: delegada; una rebanada por grupo de adaptadores). Hechas T12a–T12g; T12h (Antigravity) queda aplazada por decisión del usuario.
   - [x] **T12a · Ningún agente sin modo workspace escribe en HOME** (ruta: delegada; disparador: escritura en 2+ ficheros). Commit `e10f6bfb`, +657/−30.
     - `splitAgentsForScope` (`internal/cli/workspace_agents.go`) filtra en un único punto por flujo: `RunInstall`, `RunSync` tras `unique(agentIDs)`, `runSyncWithSelectionScoped` (TUI y API) y `executeTUIInstallWithBackground`. Cubre `--agent`, el estado de proyecto ya persistido y el descubrimiento por carpetas de HOME. Un aviso en castellano por agente, por stderr; en la TUI va en `SyncResult.OmittedAgents`.
     - Sin agentes válidos: `install` falla con un error claro y `sync` termina sin escribir. `componentInjectionDirScoped` ya no devuelve HOME en workspace. La TUI no persiste los agentes omitidos; un `codex` heredado en `<raíz>/.axiom/state.json` se conserva, pero ya no escribe en HOME.
@@ -438,6 +438,8 @@ Las cuatro quedaron resueltas por el usuario el 2026-10-29: acepta las recomenda
 
 - 2026-10-30: fase 3b implementada (T11b `74bc8429`, T11c `0a8e3ce7`, T11d `61558d41`), unas 510 líneas.
 
+- 2026-11-01: fase 4 integrada (`7689cd4c`, sin conflictos; +7.821/−199 en 93 ficheros). Verificación del resultado combinado con la fase 3b: build, vet, gofmt y deadcode-ratchet ok; `internal/cli` en cinco tandas (`Workspace|Scope|ComponentPath|TUIInstall`, `TestRunSync|TestSync`, `TestRunInstall|TestInstall|Permission`, `Doctor|Engram|Rollback|Restore|Backup`, `OpenCode|Kilo|Codex|Gemini|VSCode|Skills|Background`) ok; `internal/app` ok entero; `agents`, `state`, `components`, `skillregistry`, `backup`, `opencode`, `workspace`, `cmd/axiom` y `tui` ok salvo los fallos conocidos de la base (filemerge, sockets de backup y la prueba de la TUI dependiente del orden).
+
 ## Siguiente paso
 
-Esperar a la fase 4 (otra sesión) e integrar `fix/huella-usuario-workspace-f4`. Después, autorización para la fase 5 (T13, T14).
+Autorización para la fase 5 (T13, T14). Abiertos para decidir: Antigravity en workspace (T12h, aplazado), Qwen y Hermes con fichero raíz, y los temas sueltos de la fase 3 (manifiesto de Pi, caché `model-variants`, CodeGraph sin ubicación de proyecto, lanzadores de OpenCode sin aviso).
