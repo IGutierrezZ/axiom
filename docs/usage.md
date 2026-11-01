@@ -231,7 +231,7 @@ Revierte lo que Axiom escribió en tu carpeta de usuario con la misma regla de �
 Si tu equipo instaló Axiom en global y quiere pasar a instalar por proyecto:
 
 1. `axiom doctor` lista en «Huella de máquina» lo que Axiom tiene a nivel de usuario y marca como `[resto global]` lo que sobra si solo vas a trabajar con workspaces.
-2. `axiom uninstall --all --scope global` retira esa configuración global y las entradas de PATH gestionadas (añade `--purge-state` si además quieres borrar `~/.axiom`).
+2. `axiom uninstall --all --scope global` retira esa configuración global (también los restos de Kilo, Kiro y Codex que solo tienen la forma de Axiom: lo que hayas editado se conserva con aviso, y un `mcp.json` solo se borra si no tenía nada más que servidores de Axiom) y las entradas de PATH gestionadas (añade `--purge-state` si además quieres borrar `~/.axiom`).
 3. En cada proyecto, `axiom setup` (o `axiom install`) con el ámbito workspace, que es el predeterminado.
 4. Cuando quieras volver a dejar un proyecto como estaba, `axiom uninstall --all` desde él.
 
@@ -287,7 +287,7 @@ Checks performed:
 | Tool binaries | Required tools (`axiom` and Engram, plus the binaries of the selected agents) present on `PATH`; shadow detection (wrong binary resolves first). GGA is only required when you selected it explicitly |
 | Validez de `state.json` | Analiza el estado del proyecto actual (`.axiom/state.json`) si existe y, si no, `~/.axiom/state.json`, e informa de errores de esquema o corrupción; puede migrar `~/.gentle-ai/state.json` si todavía no existe estado de Axiom |
 | Engram MCP reachability | Confirms the Engram MCP server responds |
-| Huella de máquina | Apartado informativo que lista lo que Axiom tiene a nivel de usuario: los binarios de `axiom` y Engram y el registro del hub (declarados) y, si existen, GGA, `~/.agents/skills`, los plugins de OpenCode en HOME, CodeGraph global, las entradas de PATH gestionadas y `~/.gentle-ai`. Marca como `resto global` lo que solo deja una instalación global. No cuenta como aviso ni como fallo |
+| Huella de máquina | Apartado informativo que lista lo que Axiom tiene a nivel de usuario: los binarios de `axiom` y Engram y el registro del hub (declarados) y, si existen, GGA, `~/.agents/skills`, los plugins de OpenCode en HOME, los restos de Kilo (`opencode.json` y plugins), de Kiro (steering `axiom.md`) y de Codex (`context7`, `features.multi_agent` y `agents.max_*` de `config.toml`), cada uno con su agente, CodeGraph global, las entradas de PATH gestionadas y `~/.gentle-ai`. Marca como `resto global` lo que solo deja una instalación global. No cuenta como aviso ni como fallo |
 | Disk space | Warns when available space is critically low |
 
 Each check reports **pass**, **warn**, or **fail** with an optional remedy hint. Run `doctor` first when troubleshooting an unexpected install or sync result.
