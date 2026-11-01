@@ -365,11 +365,15 @@ Las cuatro quedaron resueltas por el usuario el 2026-10-29: acepta las recomenda
 
 ### Fase 5 · Reversibilidad y documentación
 
-- [ ] **T13 · `axiom uninstall` con ámbito** (ruta: delegada).
-  - `--scope workspace` revierte `<ws>/...`.
-  - Hallazgo de T2: hoy la desinstalación borra el objeto `permissions` completo de Claude, incluida la lista `deny` del usuario. También borra `defaultApprovalMode` de Gemini y `chat.tools.autoApprove` de VS Code, que ahora son valores del usuario. Debe retirar solo lo que Axiom añadió.
-  - Hallazgos de T5 y T6: la desinstalación de Engram y context7 solo opera sobre HOME, y `uninstall` usa `os.Getwd()` en vez de `workspace.ResolveRoot`.
-  - El modo global además retira las entradas de PATH gestionadas (directorio de Engram, `~/bin`, `~/.axiom/bin`) y ofrece purgar `~/.axiom`.
+- [x] **T13 · `axiom uninstall` con ámbito** (ruta: delegada; disparador: 2+ ficheros no triviales). Commits `f8038ac8`, `3c678572`, `56c937b6`, `ea5bcde6`, `886721c6`, `172d4288` (+3.557/−140 en 27 ficheros).
+  - `--scope workspace|global` con `ResolveInstallScope`; en workspace, raíz con `resolveWorkspaceDir` en CLI y TUI, y `--all` solo recorre agentes con modo workspace.
+  - Reversión por adaptador (Claude, OpenCode, Kilo, Gemini, Codex, VS Code, Cursor, Kiro y skills compartidas). Solo se retira lo que tiene la forma de Axiom; lo editado por el usuario se conserva con aviso.
+  - Permisos: solo las entradas del overlay de Axiom; no toca `defaultMode`, `defaultApprovalMode` ni `chat.tools.autoApprove`.
+  - Estado: sin agentes restantes se borran `.axiom/state.json`, su cerrojo y las líneas de `.git/info/exclude` (`state.RemoveProjectStateIgnored`).
+  - Global: con `--all` retira las entradas de PATH gestionadas (Engram solo en Windows, `~/bin` solo con GGA de Axiom, `<estado>/bin`). `--purge-state` (y `--purge-hub`) purga la raíz de estado con guardas contra HOME, el proyecto y la raíz del disco. `doctor` sin restos tras desinstalar.
+  - Comprobación: build, vet, gofmt y deadcode ok; `uninstall`, `permissions`, `persona`, `engram`, `state` ok; `internal/cli` en tandas (`Uninstall|Restore|Doctor|Footprint|Path|OpenCode`, `TestUninstallWorkspace|TestUninstallGlobal`) ok. Repetido por el orquestador: `uninstall` y `TestUninstallWorkspace|TestUninstallGlobal` ok.
+  - Hallazgos: la guía de enrutado de VS Code en workspace escribe `<raíz>/AppData/Roaming/Code/User/prompts/axiom.instructions.md` (bug de install, T13b); `share:"disabled"` de `opencode.json` se retira aunque lo pusiera el usuario; los JSON se reescriben sin comentarios; no se retiran copias de migración en `.opencode/skills` o `.codex/skills`. Una prueba intermedia dejó `C:\backups\<marca>\manifest.json` fuera del worktree, pendiente de borrar a mano.
+- [x] **T13b · Guía de enrutado de VS Code en workspace** (ruta: inline; un fichero de código y su prueba). La instalación en workspace ya no escribe la ruta de usuario de VS Code dentro del proyecto: `routingGuidanceOptions` pasa el adaptador ligado de cualquier agente con modo workspace (`boundToWorkspace`), y la guía va a `.github/instructions/axiom.instructions.md`. Prueba en rojo sin la corrección (faltaba `agent-routing` y aparecía `AppData` en el proyecto) y en verde con ella; `internal/cli -run 'VSCode|Workspace|Codex|Gemini|Uninstall'` ok. La limpieza de ese resto en uninstall se mantiene para instalaciones anteriores.
 - [ ] **T14 · Documentación alineada** (ruta: delegada).
   - `docs/usage.md:248`.
   - `docs/manual-de-inicio.md:204,239`.
