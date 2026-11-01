@@ -54,7 +54,15 @@ Esto solo detiene la animación del indicador; las operaciones de instalación, 
 
 ### install
 
-Configuración inicial: detecta tus herramientas y configura los agentes y componentes seleccionados. Al instalar un único agente con `--agent X`, Axiom **añade** el nuevo agente a la lista `installed_agents` existente en el estado del ámbito (`~/.axiom/state.json` en global; `.axiom/state.json` en la raíz del proyecto en workspace, que parte del estado global si el proyecto aún no tiene el suyo) y **conserva** los valores de `model_assignments`; no sobrescribe todo el estado. Si solo existe el estado heredado en `~/.gentle-ai/state.json`, Axiom puede migrarlo al directorio actual.
+Configuración inicial: detecta tus herramientas y configura los agentes y componentes seleccionados. Al instalar un único agente con `--agent X`, Axiom **añade** el nuevo agente a la lista `installed_agents` existente en el estado del ámbito (`~/.axiom/state.json` en global; `.axiom/state.json` en la raíz del proyecto en workspace; si el proyecto aún no tiene el suyo, las preferencias parten del estado global como semilla de solo lectura, sin los agentes, véase [Estado de instalación por proyecto](#cli-flags-install)) y **conserva** los valores de `model_assignments`; no sobrescribe todo el estado. Si solo existe el estado heredado en `~/.gentle-ai/state.json`, Axiom puede migrarlo al directorio actual.
+
+**Ámbito predeterminado: el proyecto.** `install`, `setup`, `sync` y `uninstall`, y también la TUI, trabajan por defecto con `--scope workspace`: escriben en la raíz del proyecto y no en tu carpeta de usuario. El ámbito global sigue disponible, pero hay que pedirlo (`--scope global` o `AXIOM_INSTALL_SCOPE=global`) y `install` lo avisa antes de escribir. Con el ámbito workspace:
+
+- Axiom no escribe en tu HOME salvo lo declarado: el binario `axiom`, el binario de Engram y el registro del hub (`~/.axiom/workspaces.json`). `~/.axiom` (o `AXIOM_STATE_DIR`) solo guarda el hub, las copias de seguridad, `bin` y la caché; el estado de cada proyecto vive en `<raíz>/.axiom/state.json`, sin versionar.
+- Lo opcional es opt-in. GGA y CodeGraph no entran en ningún preset y hay que pedirlos expresamente; si los eliges, conservan su huella en HOME y Axiom la avisa.
+- El componente de permisos solo añade reglas de denegación (`deny`) y nunca fija modos de autoaprobación. Detalle en [Componentes](components.md).
+- Un directorio cuenta como proyecto de Axiom solo si tiene un `axiom.yaml` propio, o el que se alcanza mediante el puntero `.axiom-workspace` de un multirepo, en él o en un ancestro. Un `openspec/` suelto no basta. Los hooks que Axiom instala (registro de skills, guarda de rama, preflight SDD y stop-hook de revisión) no hacen nada fuera de un proyecto así.
+- Cada agente recibe su configuración en las rutas de proyecto que lee (véase [Agentes](agents.md#modo-workspace-por-agente)). Windsurf, Trae y Antigravity no tienen modo workspace y se omiten con un aviso; Kimi Code, Qwen Code y Hermes ya no se pueden elegir ([agentes no disponibles](agents.md#agentes-no-disponibles-de-momento)).
 
 ```bash
 # Ecosistema completo para varios agentes
@@ -101,6 +109,8 @@ The command writes `.atl/skill-registry.md` and `.atl/.skill-registry.cache.json
 
 Codex, Claude Code, and OpenCode installs wire this command into startup/plugin hooks. Pi gets the equivalent behavior from `gentle-pi`; keep those hook/plugin scan roots in sync when changing these discovery rules.
 
+El registro es inerte fuera de los proyectos de Axiom, es decir, donde ni el directorio ni ninguno de sus ancestros tiene un `axiom.yaml` (propio o alcanzado por un puntero `.axiom-workspace`). Allí el comando, tanto lanzado a mano como por un hook, termina con código 0 sin crear `.atl/`, sin tocar el `AGENTS.md` del repositorio y sin guardar nada en Engram; con `--quiet` no imprime nada. Así los hooks instalados en tu equipo no ensucian repositorios ajenos. Dentro de un proyecto, la sección `## Skills` de `AGENTS.md` apunta cada skill a una sola carpeta: si una skill existe en `.agents/skills` y en la carpeta propia de un agente, el índice usa la compartida `.agents/skills`; una copia en `skills/` o en una raíz declarada en `axiom.yaml` sigue ganando a ambas.
+
 See [Skill Registry](skill-registry.md) for the full index-first flow and diagrams.
 
 ### sync
@@ -131,7 +141,7 @@ axiom sync --agent openclaw
 
 Sync is safe and idempotent — running it twice produces no changes the second time. When files change, the summary reports the changed file count and lists the changed file paths. Every report (changes, no-op and `--dry-run`) also names the effective scope and its root right after the header, for example `Scope: workspace (C:\repos\axiom)` or `Scope: global (C:\Users\me)`. The default scope is `workspace`, so use `axiom sync --scope global` to refresh the user-wide installation.
 
-`sync` actualiza el conjunto de componentes gestionados para los agentes seleccionados. No admite `--component`; usa `--include-permissions` para incluir voluntariamente el componente de permisos. La opción heredada `--include-theme` aún se interpreta por compatibilidad, pero no instala ni sincroniza temas.
+`sync` actualiza el conjunto de componentes gestionados para los agentes seleccionados. No admite `--component`; usa `--include-permissions` para incluir voluntariamente el componente de permisos (solo añade reglas de denegación y sigue el ámbito). La TUI, y el `axiom sync` diferido que Axiom lanza tras una autoactualización, añaden `--include-permissions` por su cuenta cuando descubren Codex; es inocuo, porque Codex no tiene overlay de permisos en ningún ámbito y no se escribe nada para él. La opción heredada `--include-theme` aún se interpreta por compatibilidad, pero no instala ni sincroniza temas.
 
 GGA y CodeGraph son opcionales: ningún preset los instala y `sync` no los añade por su cuenta. Si ya los tenías, `sync` los mantiene: GGA, por la selección guardada o por el aprovisionamiento previo de Axiom en el HOME; CodeGraph, por la selección guardada o por la guía gestionada que Axiom ya escribió.
 
@@ -302,7 +312,7 @@ axiom -v
 | `--persona`                   | Persona mode: `gentleman`, `neutral`, `custom` (`custom` keeps your existing persona unmanaged)                   |
 | `--preset`                    | Preset: `full-gentleman`, `ecosystem-only`, `minimal`, `custom` (`custom` means manual component/skill selection) |
 | `--sdd-mode`                  | SDD orchestrator mode: `single` or `multi`                                                                        |
-| `--scope`                     | Ámbito de instalación: `global` (predeterminado, escribe en la configuración global de cada agente seleccionado) o `workspace` (escribe en la raíz del proyecto actual). También admite `AXIOM_INSTALL_SCOPE`; `GENTLE_AI_INSTALL_SCOPE` es la alternativa heredada para CI y usos no interactivos. |
+| `--scope`                     | Ámbito de instalación: `workspace` (predeterminado, escribe en la raíz del proyecto actual) o `global` (escribe en la configuración global de cada agente seleccionado y afecta a todos los proyectos de la máquina; hay que pedirlo y se avisa). También admite `AXIOM_INSTALL_SCOPE`; `GENTLE_AI_INSTALL_SCOPE` es la alternativa heredada para CI y usos no interactivos. |
 | `--dry-run`                   | Preview the install plan without applying changes                                                                 |
 
 **Raíz del workspace.** Con `--scope workspace` (y con `axiom setup` y `axiom sync` en ese ámbito), la raíz no es la carpeta desde la que lanzas el comando, sino la del proyecto: la carpeta del `axiom.yaml` (o del puntero `.axiom-workspace`) más cercano hacia arriba; si no hay ninguno, la raíz del repositorio git que contiene la carpeta actual, o la del worktree enlazado, nunca la del checkout principal; y si tampoco hay repositorio, la propia carpeta actual. La raíz de un repositorio git que sea tu directorio personal no cuenta. Cuando la raíz difiere de la carpeta actual, Axiom lo avisa por la salida de errores. Así, lanzar `axiom sync` desde `internal/pkg` no crea `internal/pkg/.claude` ni `internal/pkg/.mcp.json`.
@@ -315,7 +325,6 @@ axiom -v
 | Copia de skills de compatibilidad (`~/.agents/skills`) | Se refresca si ya existe | No se toca |
 | Limpieza de skills retiradas | Proyecto y HOME | Solo el proyecto |
 | Refresco de plugins de OpenCode en HOME | Se refresca | No se toca; SDD escribe los plugins en el proyecto |
-| Hub de prompts de Kimi | `~/.kimi` | La raíz del proyecto |
 
 Lo que eliges de forma explícita (GGA, CodeGraph, plugins comunitarios de OpenCode) conserva su huella en HOME, porque es consentimiento expreso, pero Axiom la declara con un aviso al terminar: lista las rutas de HOME y, en Windows, la modificación del PATH de usuario. CodeGraph no tiene ubicación de proyecto en Axiom, así que se declara igual que GGA.
 
@@ -415,8 +424,8 @@ axiom sync
 # Retira solo la configuración SDD y de persona gestionada para un agente
 axiom uninstall --agent claude-code --component sdd,persona
 
-# Añade otro agente más adelante
-axiom install --agent windsurf --preset full-gentleman
+# Añade otro agente más adelante (en el ámbito workspace, que es el predeterminado)
+axiom install --agent gemini-cli --preset full-gentleman
 ```
 
 ### Install and update troubleshooting

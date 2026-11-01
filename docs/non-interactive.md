@@ -16,7 +16,7 @@ go run ./cmd/axiom install [flags]
 - `--persona`: explicit persona id.
 - `--preset`: explicit preset id.
 - `--sdd-mode`: `single` or `multi`.
-- `--scope`: `workspace` (default, writes agent-scoped files to the current project root `./`) or `global` (writes to each selected agent's global config directory).
+- `--scope`: `workspace` (default, writes agent-scoped files to the project root: the nearest `axiom.yaml`, else the git repository root, else the current directory) or `global` (writes to each selected agent's global config directory).
 - `--dry-run`: render plan without executing.
 
 ## Environment variables
