@@ -191,11 +191,13 @@ func (s *Service) rewriteManagedMCPServer(path string, parent jsonPath, name str
 	})
 }
 
-// workspaceMCPOperations devuelve las operaciones que retiran el servidor MCP name
-// (context7 o engram) de la configuración del proyecto de un agente. Solo se
-// retiran las entradas con la forma de Axiom; el resto del fichero es del equipo.
-func (s *Service) workspaceMCPOperations(adapter agents.Adapter, name string) (targets []string, ops []operation) {
-	root := s.workspaceDir
+// managedMCPOperations devuelve las operaciones que retiran el servidor MCP name
+// (context7 o engram) de la configuración de un agente, sobre la raíz del ámbito
+// (el proyecto en workspace; la carpeta de usuario en global, donde solo la usa Kilo).
+// Solo se retiran las entradas con la forma de Axiom; el resto del fichero es del
+// usuario o del equipo.
+func (s *Service) managedMCPOperations(adapter agents.Adapter, name string) (targets []string, ops []operation) {
+	root := s.root()
 	switch adapter.MCPStrategy() {
 	case model.StrategySeparateMCPFiles:
 		if adapter.Agent() != model.AgentClaudeCode {
@@ -359,9 +361,7 @@ func cleanCodexWorkspaceTOML(content, name string) (string, bool) {
 
 	switch name {
 	case "context7":
-		if body, found := tomlTableBody(updated, "mcp_servers.context7"); found && strings.Contains(body, context7RemoteURL) {
-			updated = filemerge.RemoveTOMLTable(updated, "mcp_servers.context7")
-		}
+		updated = removeCodexContext7Table(updated)
 	case "engram":
 		if body, found := tomlTableBody(updated, "mcp_servers.engram"); found && strings.Contains(body, "--tools=agent") {
 			updated = filemerge.RemoveTOMLTable(updated, "mcp_servers.engram")
@@ -369,16 +369,7 @@ func cleanCodexWorkspaceTOML(content, name string) (string, bool) {
 		if value, declared, isString, err := filemerge.TopLevelTOMLString(updated, "experimental_compact_prompt_file"); err == nil && declared && isString && value == codexCompactPromptValue {
 			updated = filemerge.RemoveTopLevelTOMLKey(updated, "experimental_compact_prompt_file")
 		}
-		for _, entry := range []struct{ table, key, value string }{
-			{"features", "multi_agent", "true"},
-			{"agents", "max_threads", "4"},
-			{"agents", "max_depth", "2"},
-		} {
-			if value, declared := tomlTableKeyValue(updated, entry.table, entry.key); declared && value == entry.value {
-				updated = filemerge.RemoveTOMLTableKeys(updated, entry.table, []string{entry.key})
-			}
-		}
-		updated = removeEmptyTOMLTable(removeEmptyTOMLTable(updated, "features"), "agents")
+		updated = removeCodexMultiAgentKeys(updated)
 	}
 
 	updated = strings.TrimSpace(updated)
@@ -386,6 +377,36 @@ func cleanCodexWorkspaceTOML(content, name string) (string, bool) {
 		updated += "\n"
 	}
 	return updated, updated != normalized
+}
+
+// codexMultiAgentKeys son las claves que Axiom escribe en config.toml de Codex para
+// habilitar la delegación de SDD, con los valores exactos del instalador.
+var codexMultiAgentKeys = []struct{ table, key, value string }{
+	{"features", "multi_agent", "true"},
+	{"agents", "max_threads", "4"},
+	{"agents", "max_depth", "2"},
+}
+
+// removeCodexMultiAgentKeys retira de un config.toml de Codex las claves de
+// codexMultiAgentKeys que valen lo que escribe Axiom y las tablas que quedan vacías.
+// Un valor distinto es del usuario y se conserva.
+func removeCodexMultiAgentKeys(content string) string {
+	updated := content
+	for _, entry := range codexMultiAgentKeys {
+		if value, declared := tomlTableKeyValue(updated, entry.table, entry.key); declared && value == entry.value {
+			updated = filemerge.RemoveTOMLTableKeys(updated, entry.table, []string{entry.key})
+		}
+	}
+	return removeEmptyTOMLTable(removeEmptyTOMLTable(updated, "features"), "agents")
+}
+
+// removeCodexContext7Table retira la tabla [mcp_servers.context7] de un config.toml de
+// Codex solo si apunta al servidor remoto que declara Axiom.
+func removeCodexContext7Table(content string) string {
+	if body, found := tomlTableBody(content, "mcp_servers.context7"); found && strings.Contains(body, context7RemoteURL) {
+		return filemerge.RemoveTOMLTable(content, "mcp_servers.context7")
+	}
+	return content
 }
 
 // removeCodexDeveloperInstructionsBlock quita de developer_instructions el bloque

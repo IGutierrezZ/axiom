@@ -611,6 +611,24 @@ func (s *Service) buildPlan(agentIDs []model.AgentID, componentIDs []model.Compo
 			}
 		}
 		backupTargets[state.Path(s.homeDir)] = struct{}{}
+		if removesAllAgentComponents(componentIDs) {
+			// El steering de Kiro lleva la persona entera, sin marcadores: tras retirar
+			// las secciones con marcadores, solo se borra si lo que queda es de Axiom.
+			for _, agentID := range agentIDs {
+				adapter, ok := s.adapter(agentID)
+				if !ok {
+					continue
+				}
+				for _, path := range s.globalSteeringFiles(adapter) {
+					backupTargets[path] = struct{}{}
+					addPlanOperation(operationsByKey, agentID, s.sweepInstructionsFile(path, true))
+					// Las carpetas que se quedan vacías (steering y la de Kiro), sin
+					// aviso si conservan algo del usuario.
+					addPlanOperation(operationsByKey, agentID, quietDirIfEmpty(filepath.Dir(path)))
+					addPlanOperation(operationsByKey, agentID, quietDirIfEmpty(adapter.GlobalConfigDir(s.homeDir)))
+				}
+			}
+		}
 		if s.completeRun {
 			targets, compatOps, err := s.compatibilitySkillsOperations()
 			if err != nil {
@@ -1032,8 +1050,8 @@ func (s *Service) componentOperations(adapter agents.Adapter, componentID model.
 			ops = append(ops, rewriteJSONFile(path, jsonPaths...))
 		}
 	case model.ComponentContext7:
-		if s.workspace {
-			workspaceTargets, workspaceOps := s.workspaceMCPOperations(adapter, "context7")
+		if s.workspace || usesManagedMCPShape(adapter) {
+			workspaceTargets, workspaceOps := s.managedMCPOperations(adapter, "context7")
 			targets = append(targets, workspaceTargets...)
 			ops = append(ops, workspaceOps...)
 			break
@@ -1050,8 +1068,8 @@ func (s *Service) componentOperations(adapter agents.Adapter, componentID model.
 			break
 		}
 
-		if s.workspace {
-			workspaceTargets, workspaceOps := s.workspaceMCPOperations(adapter, "engram")
+		if s.workspace || usesManagedMCPShape(adapter) {
+			workspaceTargets, workspaceOps := s.managedMCPOperations(adapter, "engram")
 			targets = append(targets, workspaceTargets...)
 			ops = append(ops, workspaceOps...)
 		} else {
@@ -1177,9 +1195,11 @@ func (s *Service) componentOperations(adapter agents.Adapter, componentID model.
 			targets = append(targets, path)
 			ops = append(ops, removeFile(path), removeDirIfEmpty(filepath.Dir(path)))
 		}
-		// Kilo solo recibe en el proyecto la misma distribución que OpenCode; en la
-		// carpeta de usuario la desinstalación nunca lo trató como tal.
-		if adapter.Agent() == model.AgentOpenCode || (s.workspace && adapter.Agent() == model.AgentKilocode) {
+		// Kilo usa el mismo formato de configuración que OpenCode (agentes con la marca
+		// de Axiom, plugins y share), así que se retira con el mismo código en el
+		// proyecto y en la carpeta de usuario. Antes la desinstalación global no lo
+		// trataba como tal y dejaba su opencode.json y sus plugins.
+		if adapter.Agent() == model.AgentOpenCode || adapter.Agent() == model.AgentKilocode {
 			for _, path := range s.settingsTargets(adapter) {
 				var defaultPlan *opencodedefault.UninstallPlan
 				if adapter.Agent() == model.AgentOpenCode {
@@ -1237,6 +1257,10 @@ func (s *Service) componentOperations(adapter agents.Adapter, componentID model.
 				ops = append(ops, removeFile(pluginPath))
 			}
 			ops = append(ops, removeDirIfEmpty(pluginDir))
+			if adapter.Agent() == model.AgentKilocode {
+				// La carpeta de Kilo (~/.config/kilo) también se quita si queda vacía.
+				ops = append(ops, quietDirIfEmpty(adapter.GlobalConfigDir(homeDir)))
+			}
 
 			if s.workspace {
 				// Los prompts compartidos de las fases (<proyecto>/.opencode/prompts/sdd).
@@ -1247,7 +1271,8 @@ func (s *Service) componentOperations(adapter agents.Adapter, componentID model.
 					ops = append(ops, removeFile(promptPath))
 				}
 				ops = append(ops, removeDirIfEmpty(promptDir), removeDirIfEmpty(filepath.Dir(promptDir)))
-			} else {
+			} else if adapter.Agent() == model.AgentOpenCode {
+				// La caché y la dependencia son de OpenCode: Kilo no las usa.
 				// La caché activa (AXIOM_STATE_DIR si está definida) y también las que el
 				// plugin de OpenCode o versiones anteriores pudieron dejar en la raíz por
 				// defecto y en la heredada.
@@ -1348,6 +1373,8 @@ func context7Targets(adapter agents.Adapter, homeDir string) []string {
 			return settingsTargets(homeDir, adapter)
 		}
 		return []string{adapter.MCPConfigPath(homeDir, "context7")}
+	case model.StrategyTOMLFile:
+		return []string{adapter.MCPConfigPath(homeDir, "context7")}
 	default:
 		return nil
 	}
@@ -1371,17 +1398,19 @@ func context7Operations(adapter agents.Adapter, homeDir string) []operation {
 			return ops
 		}
 		path := adapter.SettingsPath(homeDir)
-		return []operation{rewriteJSONFile(path, jsonPath{"mcpServers", "context7"})}
+		return []operation{rewriteMCPServerEntry(path, jsonPath{"mcpServers"}, "context7")}
 	case model.StrategyMCPConfigFile:
 		path := adapter.MCPConfigPath(homeDir, "context7")
-		switch adapter.Agent() {
-		case model.AgentVSCodeCopilot:
-			return []operation{rewriteJSONFile(path, jsonPath{"servers", "context7"})}
-		case model.AgentAntigravity:
-			return []operation{rewriteJSONFile(path, jsonPath{"mcpServers", "context7"})}
-		default:
-			return []operation{rewriteJSONFile(path, jsonPath{"mcpServers", "context7"})}
+		if adapter.Agent() == model.AgentVSCodeCopilot {
+			return []operation{rewriteMCPServerEntry(path, jsonPath{"servers"}, "context7")}
 		}
+		return []operation{rewriteMCPServerEntry(path, jsonPath{"mcpServers"}, "context7")}
+	case model.StrategyTOMLFile:
+		// Codex: la tabla [mcp_servers.context7], solo si es la del servidor remoto de
+		// Axiom.
+		return []operation{rewriteTOMLFile(adapter.MCPConfigPath(homeDir, "context7"), func(content string) (string, bool) {
+			return cleanCodexWorkspaceTOML(content, "context7")
+		})}
 	default:
 		return nil
 	}
@@ -1426,13 +1455,13 @@ func engramOperations(adapter agents.Adapter, homeDir string) []operation {
 			return ops
 		}
 		path := adapter.SettingsPath(homeDir)
-		return []operation{rewriteJSONFile(path, jsonPath{"mcpServers", "engram"})}
+		return []operation{rewriteMCPServerEntry(path, jsonPath{"mcpServers"}, "engram")}
 	case model.StrategyMCPConfigFile:
 		path := adapter.MCPConfigPath(homeDir, "engram")
 		if adapter.Agent() == model.AgentVSCodeCopilot {
-			return []operation{rewriteJSONFile(path, jsonPath{"servers", "engram"})}
+			return []operation{rewriteMCPServerEntry(path, jsonPath{"servers"}, "engram")}
 		}
-		return []operation{rewriteJSONFile(path, jsonPath{"mcpServers", "engram"})}
+		return []operation{rewriteMCPServerEntry(path, jsonPath{"mcpServers"}, "engram")}
 	case model.StrategyTOMLFile:
 		configPath := adapter.MCPConfigPath(homeDir, "engram")
 		instructionsPath := filepath.Join(homeDir, ".codex", "engram-instructions.md")
@@ -1501,6 +1530,13 @@ func rewriteManagedPermissions(path string, agentID model.AgentID) operation {
 // rewriteJSONWith lee un documento JSON de Axiom, le aplica transform y lo
 // reescribe conservando el modo del fichero. Si transform lo deja vacío, lo borra.
 func rewriteJSONWith(path string, transform func(raw []byte) ([]byte, bool, error)) operation {
+	return rewriteJSONGuarded(path, transform, nil)
+}
+
+// rewriteJSONGuarded es rewriteJSONWith con un criterio para borrar el fichero que
+// queda vacío: si mayDeleteEmpty no es nil y devuelve false sobre el contenido
+// original, el documento vacío ({}) se escribe de vuelta en lugar de borrarse.
+func rewriteJSONGuarded(path string, transform func(raw []byte) ([]byte, bool, error), mayDeleteEmpty func(raw []byte) bool) operation {
 	return operation{
 		typeID: opRewriteFile,
 		path:   path,
@@ -1519,7 +1555,7 @@ func rewriteJSONWith(path string, transform func(raw []byte) ([]byte, bool, erro
 			if !changed {
 				return false, false, nil
 			}
-			if jsonIsEmptyObject(updated) {
+			if jsonIsEmptyObject(updated) && (mayDeleteEmpty == nil || mayDeleteEmpty(raw)) {
 				if err := removeFileIfExists(path); err != nil {
 					return false, false, err
 				}

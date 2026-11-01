@@ -176,10 +176,15 @@ func jsonIsEmptyObject(raw []byte) bool {
 	return len(root) == 0
 }
 
+// cleanCodexTOML retira de ~/.codex/config.toml lo que escribe el componente Engram:
+// su tabla de MCP, las claves de los ficheros de instrucciones y, si valen lo que
+// escribe el instalador, features.multi_agent y agents.max_threads/max_depth (los
+// valores distintos son del usuario).
 func cleanCodexTOML(content string) (string, bool) {
 	normalized := strings.ReplaceAll(content, "\r\n", "\n")
 	updated := filemerge.RemoveTOMLTable(normalized, "mcp_servers.engram")
 	updated = removeTopLevelTOMLKeys(updated, "model_instructions_file", "experimental_compact_prompt_file")
+	updated = removeCodexMultiAgentKeys(updated)
 	updated = strings.TrimSpace(updated)
 	if updated != "" {
 		updated += "\n"

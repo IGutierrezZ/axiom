@@ -77,7 +77,7 @@ func TestWorkspaceMCPRemovalKeepsAUserServerWithTheSameNameAndWarns(t *testing.T
 	adapter, _ := svc.adapter(model.AgentClaudeCode)
 
 	for _, name := range []string{"context7", "engram"} {
-		_, ops := svc.workspaceMCPOperations(adapter, name)
+		_, ops := svc.managedMCPOperations(adapter, name)
 		for _, op := range ops {
 			if _, _, err := op.apply(op.path); err != nil {
 				t.Fatalf("operation on %q error = %v", op.path, err)
