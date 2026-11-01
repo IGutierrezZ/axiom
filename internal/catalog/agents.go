@@ -56,6 +56,48 @@ func IsMVPAgent(agent model.AgentID) bool {
 	return false
 }
 
+// unselectableAgents son agentes cuyo adaptador sigue en el código pero que no se
+// pueden elegir al instalar: no aparecen en la TUI, ni en las selecciones por
+// defecto ni en el descubrimiento por carpetas, y `--agent` los rechaza.
+//
+// Motivo (decisión de producto, 2026-10-30): hoy no son utilizables con Axiom. En el
+// ámbito workspace escriben en rutas que el agente no lee (Qwen Code solo lee
+// QWEN.md en la raíz, Kimi no lee las skills de .config/agents/skills) y su MCP
+// solo es global (Kimi y Hermes).
+//
+// Para reactivar uno basta con quitarlo de este mapa: el adaptador, sus
+// componentes y sus pruebas siguen ahí. Una instalación global existente que ya
+// los tiene en el estado se sigue sincronizando; uninstall, doctor y verify no
+// cambian.
+var unselectableAgents = map[model.AgentID]struct{}{
+	model.AgentQwenCode: {},
+	model.AgentHermes:   {},
+	model.AgentKimi:     {},
+}
+
+// IsSelectableAgent indica si el agente se puede elegir al instalar. Es el único
+// punto de verdad de lo seleccionable: un agente no seleccionable sigue siendo
+// conocido (IsSupportedAgent, AllAgents).
+func IsSelectableAgent(agent model.AgentID) bool {
+	if !IsSupportedAgent(agent) {
+		return false
+	}
+	_, hidden := unselectableAgents[agent]
+	return !hidden
+}
+
+// SelectableAgents devuelve los agentes que se pueden elegir al instalar, en el
+// orden del catálogo. AllAgents devuelve además los no seleccionables.
+func SelectableAgents() []Agent {
+	agents := make([]Agent, 0, len(allAgents))
+	for _, agent := range allAgents {
+		if IsSelectableAgent(agent.ID) {
+			agents = append(agents, agent)
+		}
+	}
+	return agents
+}
+
 func IsSupportedAgent(agent model.AgentID) bool {
 	for _, current := range allAgents {
 		if current.ID == agent {

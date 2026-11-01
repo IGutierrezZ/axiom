@@ -2,6 +2,7 @@ package filemerge
 
 import (
 	"encoding/json"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -596,4 +597,28 @@ func TestMergeJSONObjects_Issue278_ReplaceSentinelFixesWildcard(t *testing.T) {
 	}
 
 	t.Logf("CONFIRMED: __replace__ produces exactly %d task keys (no wildcard)", len(task))
+}
+
+// Los ficheros de una carpeta .vscode son JSONC aunque se llamen .json: la fusión
+// conserva los comentarios y el resto del documento. Fuera de .vscode, un .json se
+// normaliza como siempre.
+func TestMergeJSONObjectsForPathPreservesCommentsInVSCodeDir(t *testing.T) {
+	base := []byte("// del equipo\n{\n  \"inputs\": [],\n  \"servers\": {}\n}\n")
+	overlay := []byte(`{"servers":{"engram":{"command":"engram"}}}`)
+
+	got, err := MergeJSONObjectsForPath(filepath.Join("proyecto", ".vscode", "mcp.json"), base, overlay)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(got), "// del equipo") || !strings.Contains(string(got), `"engram"`) {
+		t.Fatalf(".vscode/mcp.json debe conservar el comentario y recibir el servidor:\n%s", got)
+	}
+
+	plain, err := MergeJSONObjectsForPath(filepath.Join("usuario", "Code", "User", "mcp.json"), base, overlay)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(plain), "// del equipo") {
+		t.Fatalf("fuera de .vscode la fusión sigue normalizando el JSON:\n%s", plain)
+	}
 }

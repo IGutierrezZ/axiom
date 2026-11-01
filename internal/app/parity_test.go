@@ -41,8 +41,12 @@ func TestInstallDefaultsMatchTUIModelDefaults(t *testing.T) {
 func TestInstallPlannerParityWithTUISelection(t *testing.T) {
 	detection := system.DetectionResult{}
 	model := tui.NewModel(detection, "dev")
+	// El ámbito por defecto es workspace: la instalación omite los agentes sin modo
+	// workspace (la TUI los filtra igual al ejecutar), así que la selección que la
+	// CLI planifica es la de la TUI sin ellos.
+	model.Selection.Agents = cli.AgentsForScope(cli.ScopeWorkspace, model.Selection.Agents)
 
-	result, err := cli.RunInstall([]string{"--dry-run"}, detection)
+	result, err := cli.RunInstall([]string{"--dry-run", "--scope", "workspace"}, detection)
 	if err != nil {
 		t.Fatalf("RunInstall() error = %v", err)
 	}

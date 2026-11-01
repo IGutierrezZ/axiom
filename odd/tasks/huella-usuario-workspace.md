@@ -225,7 +225,143 @@ Las cuatro quedaron resueltas por el usuario el 2026-10-29: acepta las recomenda
     - Windsurf: `.windsurf/rules`.
     - Trae y Antigravity.
   - Verificar además si OpenCode carga `<ws>/.config/opencode` o solo `opencode.json` y `.opencode/`, y lo equivalente en Gemini, Qwen, Kimi y Hermes.
+  - **Hecha (2026-10-30, delegada a un investigador; documentación oficial, sin ejecutar agentes).** Tabla completa en Engram `odd/huella-usuario-workspace/fase-4`. Conclusiones:
+    - OpenCode y Kilo, que ya tienen modo workspace, escriben en `<ws>/.config/opencode` y `<ws>/.config/kilo`, que el agente **no lee**. Leen `opencode.json`, `.opencode/` y `AGENTS.md` en la raíz (OpenCode), y `.kilo/` con `kilo.jsonc` (Kilo).
+    - Gemini y Qwen escriben instrucciones en `.gemini/GEMINI.md` y `.qwen/QWEN.md`, que no se leen; leen `GEMINI.md` y `QWEN.md` en la raíz. Skills y `settings.json` sí coinciden.
+    - Kimi: las skills en `.config/agents/skills` no se leen; MCP y configuración solo globales. Hermes: MCP solo global.
+    - Cursor coincide casi entero.
+    - Codex (verificado además por el orquestador): MCP, agentes y hooks en `<ws>/.codex/`. Las instrucciones pueden ir en `developer_instructions` de `<ws>/.codex/config.toml`, que se añaden a las base. Las skills, en `<ws>/.agents/skills`. Todo exige proyecto de confianza. La configuración de proyecto gana a la de usuario clave a clave.
+    - VS Code: `.github/instructions/*.instructions.md`, `.github/skills`, `.github/agents`, `.github/prompts` y `.vscode/mcp.json`. Antigravity: `.agents/{rules,skills,workflows,mcp_config.json}`. Windsurf, ahora Devin Desktop: `.devin/` o `.windsurf/`. Trae: `.trae/`, con confianza baja.
+  - Decisión abierta con el usuario: dónde van las instrucciones ODD/SDD (del equipo, no personales) en los agentes que solo leen un fichero raíz. El usuario prioriza VS Code Copilot, Copilot CLI, Codex, Claude, OpenCode y Gemini, y pide que prevalezca lo del proyecto sobre lo del usuario. Copilot CLI no tiene adaptador en Axiom. Investigación R1b de precedencia en curso.
 - [ ] **T12 · Modo workspace por adaptador según R1** (ruta: delegada; una rebanada por grupo de adaptadores).
+  - [x] **T12a · Ningún agente sin modo workspace escribe en HOME** (ruta: delegada; disparador: escritura en 2+ ficheros). Commit `e10f6bfb`, +657/−30.
+    - `splitAgentsForScope` (`internal/cli/workspace_agents.go`) filtra en un único punto por flujo: `RunInstall`, `RunSync` tras `unique(agentIDs)`, `runSyncWithSelectionScoped` (TUI y API) y `executeTUIInstallWithBackground`. Cubre `--agent`, el estado de proyecto ya persistido y el descubrimiento por carpetas de HOME. Un aviso en castellano por agente, por stderr; en la TUI va en `SyncResult.OmittedAgents`.
+    - Sin agentes válidos: `install` falla con un error claro y `sync` termina sin escribir. `componentInjectionDirScoped` ya no devuelve HOME en workspace. La TUI no persiste los agentes omitidos; un `codex` heredado en `<raíz>/.axiom/state.json` se conserva, pero ya no escribe en HOME.
+    - Verificación: `go build`, `go vet`, `gofmt` y deadcode-ratchet: ok. `internal/cli -run '…|ComponentPath|Scope|Workspace'` y `-run 'TestRunSync|TestSync|TestRunInstall|TestInstall|Permission|TUIInstall'`: ok. `internal/app` e `internal/tui`: solo los fallos conocidos. Mutación: sin el arreglo, las 3 pruebas de HOME intacto fallan (96, 50 y 7 ficheros en HOME). El padre repitió las pruebas de HOME: ok.
+    - Hallazgos: la TUI añade `--include-permissions` si Codex está descubierto (inocuo, revisar en T14); la pantalla de selección de la TUI sigue listando los agentes omitidos; `gga.Managed` lee `%APPDATA%\gga`, así que las pruebas de sync deben aislar `APPDATA`.
+  - **R1b · Precedencia usuario/proyecto en los agentes prioritarios** (ruta: delegada, solo lectura; prioridad del usuario: VS Code Copilot, Copilot CLI, Codex, Claude, OpenCode y Gemini).
+    - Criterio acordado: las instrucciones ODD/SDD son del equipo y van en el proyecto, en un fichero propio del agente. Nunca en un fichero raíz compartido (`AGENTS.md`, `GEMINI.md`). Lo del proyecto prevalece y lo del usuario convive.
+    - Los seis lo admiten: Claude `.claude/CLAUDE.md`; Codex `developer_instructions` en `.codex/config.toml`; VS Code y Copilot CLI `.github/instructions/axiom.instructions.md` con `applyTo: "**"`; OpenCode `instructions` en `opencode.json`; Gemini `context.fileName` en `.gemini/settings.json` (sustituye la lista del usuario: hay que incluir `GEMINI.md`).
+    - Matices: en Claude gana la skill personal con el mismo nombre (migración D4); en Copilot CLI gana el agente personal; VS Code y Copilot CLI no tienen `deny` duro de proyecto. `.claude/CLAUDE.md` hace que Claude deje de leer `AGENTS.md`. Copilot CLI lee el `.mcp.json` de Claude y no tiene adaptador en Axiom.
+    - Abierto: Qwen y Hermes solo leen el fichero raíz. No son prioritarios y no se tocan.
+  - [x] **T12b · OpenCode y Kilo en las rutas de proyecto que leen** (ruta: delegada; disparador: escritura en 2+ ficheros). Commit `79870a15`, +1405/−105, de ellas unas 900 de pruebas y documentación.
+    - `agents.BindWorkspace` liga OpenCode y Kilo a la raíz. OpenCode usa `<ws>/opencode.json`, o el `opencode.jsonc` existente con sus comentarios, y `.opencode/{skills,commands,plugins,prompts/sdd}`. Kilo usa el `kilo.json(c)` existente o `.kilo/kilo.json`, y `.kilo/{skills,commands,plugins,prompts/sdd,rules}`.
+    - Las instrucciones van en `.opencode/axiom.md` y `.kilo/rules/axiom.md`, registradas en `instructions` sin duplicados y conservando las entradas del usuario. El `AGENTS.md` raíz no se toca. Global sin cambios.
+    - Un JSON de proyecto ilegible se rechaza antes de escribir. Los restos en `<ws>/.config/{opencode,kilo}` no se borran (mezclan contenido del usuario): se avisa.
+    - Verificación: `go build`, `go vet`, `gofmt` y deadcode-ratchet: ok. `internal/agents/{opencode,kilocode}`, `components`, `assets` y `opencode`: ok salvo filemerge. `internal/cli -run 'OpenCode|Kilo|Overlay|Plugin|Workspace|Scope|ComponentPath'` y `-run 'TestRunSync|…|Verify|Backup'`: ok. `app` y `tui`: solo los fallos conocidos. El padre repitió las 5 pruebas nuevas de `internal/cli` y las de los adaptadores: ok. Riesgo sin evaluar (`axiom review assess` exige ejecutar el binario); la verificación independiente queda para V1.
+    - Hallazgos:
+      - `.gentle-ai-default-agent.json` queda suelto en la raíz del proyecto (mejor en `.opencode/`).
+      - `default_agent: axiom-orchestrator` se escribe en el `opencode.json` del equipo; respeta uno existente. Pendiente de confirmar con el usuario.
+      - `skillregistry` no escanea `.kilo/skills`.
+      - Las fusiones JSONC reindentan en el segundo paso (fallo previo, también en global).
+  - [x] **T12c · Gemini: instrucciones en un fichero propio** (ruta: delegada; disparador: escritura en 2+ ficheros). Commit `6ee78ed2`, +722/−20, de ellas unas 400 de pruebas y documentación.
+    - `gemini.WorkspaceAdapter`, devuelto por `agents.BindWorkspace`: las instrucciones van en `<ws>/.gemini/AXIOM.md`, registradas en `context.fileName` de `.gemini/settings.json`. El valor son los nombres previos del proyecto (o `GEMINI.md`) más el propio, sin duplicados; una cadena previa se convierte en lista. Con un tipo inesperado se avisa y no se toca.
+    - `path.join` confirmado en `memoryDiscovery.ts` (`findUpwardGeminiFiles`). El `GEMINI.md` raíz no se crea ni se toca.
+    - Migración: `.gemini/GEMINI.md` se retira solo si contiene únicamente secciones de Axiom; si no, se avisa. Se corrigió además un fallo propio de la rebanada: la guía de enrutado usaba el adaptador global.
+    - Qwen tiene un adaptador independiente y no cambia (lo fija una prueba).
+    - Verificación: `go build`, `go vet`, `gofmt` y deadcode-ratchet: ok. `internal/agents`, `components` y `assets`: ok salvo filemerge; goldens de global sin regenerar. `internal/cli -run 'Gemini|Qwen|Workspace|Scope|ComponentPath|Instructions'` y `-run 'TestRunSync|…|Verify|Backup'`: ok. `app` y `tui`: solo los fallos conocidos. El padre repitió `-run Gemini` y `internal/agents/...`: ok.
+    - Hallazgos:
+      - `context.fileName` del proyecto sustituye al del usuario, así que un nombre que solo está en `~/.gemini/settings.json` deja de cargarse en ese proyecto. Va a T14 o se decide con el usuario.
+      - `internal/assets/gemini/sdd-orchestrator.md:388` cita `.agent/skills/_shared/` (debería ser `.gemini/skills/_shared/`); va a T14.
+      - La fusión de `settings.json` borra los comentarios (fallo previo).
+  - [x] **T12d · Modo workspace de Codex** (ruta: delegada; disparador: escritura en 2+ ficheros). Commit `48a0185e`, +2085/−92, de ellas unas 1.300 de pruebas y documentación.
+    - `codex.WorkspaceAdapter`, devuelto por `agents.BindWorkspace`. Codex sale de la lista de `adapterSupportsWorkspace`.
+    - Las instrucciones se generan en `.codex/axiom-instructions.md` y se copian a un bloque `<!-- axiom:workspace-instructions -->` dentro de `developer_instructions` de `<ws>/.codex/config.toml`. Se conserva el texto del usuario fuera del bloque y no se usa `model_instructions_file`.
+    - MCP y hooks van en `<ws>/.codex/`; las skills, en `<ws>/.agents/skills`.
+    - No se escriben claves que Codex ignora en proyecto (`profiles` incluida): Engram en workspace omite perfiles y `model_instructions_file`.
+    - La confianza se avisa en las acciones manuales; nada en `~/.codex`. Codex no tiene destino de permisos en ningún ámbito.
+    - `filemerge.FormatTOMLString` escribe una cadena multilínea literal, o básica con escapes si hace falta. Corrige un fallo previo: los helpers TOML tomaban una línea `[...]` dentro de una cadena multilínea por una cabecera. Con TOML normal, la salida es idéntica.
+    - `.codex/AGENTS.md` de instalaciones anteriores se retira solo si es de Axiom; si no, se avisa. Las pruebas de T12a usan ahora Windsurf y VS Code en lugar de Codex.
+    - Verificación: `go build`, `go vet`, `gofmt` y deadcode-ratchet: ok. `internal/agents`, `components` y `assets`: ok salvo filemerge. `internal/cli -run 'Codex|Workspace|Scope|ComponentPath|Instructions|Hook'` y `-run 'TestRunSync|…|Verify|Backup'`: ok. `app` y `tui`: solo los fallos conocidos. El padre repitió `-run Codex`, `agents/codex` y las pruebas TOML de filemerge: ok.
+    - Riesgos y hallazgos:
+      - `.agents/skills` la leen también Gemini, OpenCode, Cursor, VS Code y Copilot CLI, que podrían ver skills duplicadas.
+      - `developer_instructions` ocupa unos 100 KB y se inyecta en cada sesión, además del duplicado en `axiom-instructions.md`.
+      - La nota de `engram setup codex` sigue sugiriendo escribir en HOME (T14).
+      - Los residuos `.codex/skills` no se limpian.
+      - T13 debe cubrir el bloque, `axiom-instructions.md` y `engram-passive-capture`.
+  - [x] **T12e · Modo workspace de VS Code Copilot** (ruta: delegada; disparador: escritura en 2+ ficheros). Commit `0c4542b2`, +862/−44, de ellas unas 560 de pruebas y documentación.
+    - `vscode.WorkspaceAdapter`, devuelto por `agents.BindWorkspace`. Las instrucciones van en `<ws>/.github/instructions/axiom.instructions.md` con `applyTo: "**"`. Las skills, en `.github/skills`. El MCP, en `.vscode/mcp.json` (clave `servers`, fusión JSONC que conserva servidores, `inputs` y comentarios fuera de `servers`).
+    - El manifiesto de VS Code solo declara skills, instrucciones y MCP: no se crean `.github/agents`, `.github/prompts` ni `.github/hooks`. Sin permisos.
+    - Una guarda impide que la limpieza de la persona antigua borre `.github/copilot-instructions.md` del equipo. Un `.vscode/mcp.json` ilegible se rechaza en el preflight. Aviso de Workspace Trust en las acciones manuales.
+    - Las pruebas de T12a usan ahora Windsurf y Antigravity.
+    - Verificación: `go build`, `go vet`, `gofmt` y deadcode-ratchet: ok. `internal/agents`, `components` y `assets`: ok salvo filemerge. `internal/cli -run 'VSCode|Copilot|Workspace|Scope|ComponentPath|Instructions'` y `-run 'TestRunSync|…|Verify|Backup|TUIInstall'`: ok. `app` y `tui`: solo los fallos conocidos. Mutación: sin la fusión JSONC, la guarda o el preflight, fallan 1, 2 y 1 pruebas. El padre repitió `-run VSCode` y `agents/vscode`: ok.
+    - Hallazgos: posibles skills duplicadas si en el mismo proyecto están Codex (`.agents/skills`) y VS Code (`.github/skills`). T13 tiene casos de VS Code ligados al perfil de usuario.
+  - **V1 de la fase 4 (2026-10-30): hecha** (ruta: delegada a un verificador independiente). Arnés temporal en proceso con `go test`, sin binarios, borrado después; `git status` limpio sobre `709cbd58`.
+    - Preparación: `HOME`, `APPDATA`, `LOCALAPPDATA` y `AXIOM_STATE_DIR` temporales. HOME sembrado con configuración de usuario de Codex, OpenCode, Kilo, Gemini, Claude, Windsurf y VS Code. El proyecto tiene `AGENTS.md`, `GEMINI.md`, `.github/copilot-instructions.md`, `opencode.json`, `.vscode/mcp.json` y `.gemini/settings.json` del equipo.
+    - Install con codex, opencode, kilocode, gemini-cli, vscode-copilot, claude-code y windsurf, seguido de dos sync. Después, un sync en un segundo proyecto sin estado, con descubrimiento por HOME.
+    - HOME, APPDATA y LOCALAPPDATA: 0 creados, 0 modificados y 0 borrados en todos los pasos. Windsurf se omite con aviso. Nada bajo `<ws>/.config`, ni `.codex/AGENTS.md`, `.gemini/GEMINI.md` o `.qwen`.
+    - Cada agente queda en sus rutas de R1. El TOML de Codex parsea, sin claves ignoradas. `instructions`, `context.fileName` y `.vscode/mcp.json` conservan lo del equipo. `GEMINI.md` y `.github/copilot-instructions.md` quedan idénticos.
+    - El segundo sync no cambia nada (`noop`). Verify: 265 ok en install, 281 ok en sync y 0 fallos. Global de Codex sin regresión: sigue escribiendo en HOME.
+    - Cambios esperados:
+      - El primer sync añade a `AGENTS.md` el bloque `axiom:skills-index` (T1, proyecto Axiom).
+      - `.codex/config.toml` reordena las tablas `[mcp_servers.*]` una vez.
+      - `.claude/CLAUDE.md` pierde una línea en blanco (ya conocido).
+    - Hallazgo nuevo: con varios agentes, las rutas del índice de skills de `AGENTS.md` apuntan solo a `.opencode/skills/...`.
+    - No verificable en proceso: `engram setup` real, que cada agente lea de verdad las rutas (R1 es documental), hooks lanzados por shell y un perfil real de VS Code.
+
+#### Resumen de la fase 4 (2026-10-30)
+
+- Commits: `e10f6bfb` T12a (+657/−30), `79870a15` T12b (+1405/−105), `6ee78ed2` T12c (+722/−20), `48a0185e` T12d (+2085/−92), `0c4542b2` T12e (+862/−44). Documentación: `24b5981c`, `3219c47c`, `d7de4e01`, `90cd262b`, `709cbd58` y el commit de este cierre. Unas 5.700 líneas en total, más de la mitad de pruebas y documentación.
+- Modo workspace por adaptador:
+  - **Sí:** Claude, OpenCode y Kilo (rutas corregidas), Gemini (instrucciones corregidas), Codex y VS Code Copilot (nuevos), y Cursor y Kiro (sin cambios).
+  - **Sin cambios, con rutas que no se leen:** Qwen y Hermes, que solo leen el fichero raíz, y Kimi, cuyas skills están en `.config/agents/skills`. Abiertos.
+  - **Sin modo workspace, omitidos con aviso:** Windsurf (ahora Devin Desktop), Trae (documentación no legible) y Antigravity. R1 respalda `.agents/` para Antigravity, pero no es prioritario.
+  - Copilot CLI no tiene adaptador, pero lee `.github/instructions`, `.github/skills` y el `.mcp.json` de Claude.
+- Decidido por el usuario el 2026-10-30: se mantiene `default_agent: axiom-orchestrator` en el `opencode.json` del equipo. Respeta un valor previo.
+- Decisiones del usuario, segunda ronda (2026-10-30):
+  - **Gemini `context.fileName`:** manda el proyecto. Se documenta en T14.
+  - **Qwen, Hermes y Kimi:** se retiran de lo seleccionable al instalar y se conserva el código (T12f).
+  - **Antigravity:** se activará más adelante en workspace, con sus rutas reales en `.agents/`.
+  - **Skills duplicadas:**
+    - Gentle AI upstream no lo resuelve (`main` `9e7738a8`). Escribe una copia por agente más una copia de compatibilidad en `~/.agents/skills`.
+    - En upstream, [#3293](https://github.com/Gentleman-Programming/gentle-ai/issues/3293) (colocación por runtime) se cerró por inactividad y [#5869](https://github.com/Gentleman-Programming/gentle-ai/issues/5869) (124 avisos `duplicate skill name` en OpenCode) sigue abierto.
+    - Claude Code no lee `.agents/skills` (verificado en code.claude.com/docs/en/skills).
+    - **Decisión:** en workspace, una sola copia compartida en `.agents/skills` y `.claude/skills` solo si Claude está instalado (T12g).
+- [x] **T12f · Qwen, Hermes y Kimi fuera de la selección** (ruta: delegada; disparador: escritura en 2+ ficheros). Commit `468c1449`, +419/−29.
+  - Punto de verdad único: `catalog.IsSelectableAgent` y `SelectableAgents()` (`internal/catalog/agents.go`).
+  - `install --agent` con alguno de ellos falla con un error claro, también mezclado con otros. La TUI no los lista ni los preselecciona, y el descubrimiento por HOME no los añade.
+  - Sync en workspace: se omiten con aviso (filtro de T12a). Sync en global con estado previo: sin cambios. Uninstall, doctor y verify no cambian. Los adaptadores y sus pruebas se conservan.
+  - Verificación: `go build`, `go vet`, `gofmt` y deadcode-ratchet: ok. `internal/agents`, `model` y `components`: ok salvo filemerge. `internal/cli -run 'Qwen|Hermes|Kimi|Workspace|Scope|Discover|Agent'` y `-run 'TestRunSync|…|TUIInstall'`: ok. `app` y `tui`: solo los fallos conocidos. El padre repitió las pruebas `Unselectable` de `cli` y `tui`.
+  - Hallazgos:
+    - Reinstalar desde la TUI quita del estado un agente retirado que ya estuviera en él.
+    - `docs/usage.md:264` (hub de prompts de Kimi) y las listas «Full (sub-agents)» quedan para T14.
+- [x] **T12g · Una sola copia de las skills en workspace** (ruta: delegada; disparador: escritura en 2+ ficheros). Commit `e7e6f598`, +1705/−49.
+  - Codex, VS Code Copilot, OpenCode, Kilo, Gemini y Cursor usan `<ws>/.agents/skills`. Cada uno se verificó en su documentación oficial; en VS Code, la lectura de `.agents/skills` corresponde a las sesiones Local (vista de chat).
+  - Claude usa `.claude/skills`, solo si está instalado. Kiro se queda en `.kiro/skills`, porque no se confirmó que lea `.agents/skills`. Paquete `sharedskills`; Cursor recibe un adaptador de workspace solo para esto.
+  - `workspaceSkillsDirs` escribe cada carpeta una vez por ejecución; backup y verify salen sin rutas repetidas. `_shared` se escribe con el hueco genérico `<runtime>`, así que el contenido no depende del agente.
+  - Índice: `dedupeBySkillName` prefiere `.agents/skills`. El orden de `ProjectSkillDirs` no cambia, porque lo espeja el plugin TS.
+  - Migración (`legacySkillsRetirementStep`): una copia anterior en una carpeta propia se retira solo si es una skill de Axiom, idéntica byte a byte y con la copia compartida ya escrita. Si no, se conserva con un aviso. Las skills ajenas no se tocan.
+  - Verificación: `go build`, `go vet`, `gofmt` y deadcode-ratchet: ok. `agents`, `components`, `assets` y `skillregistry`: ok salvo filemerge. `internal/cli` en tandas: ok. `app` y `tui`: solo los fallos conocidos. El padre repitió las pruebas `SharedSkills|WorkspaceSkills`, `components/sdd` y `skillregistry`: ok.
+- **V1b de la fase 4 (2026-10-30): hecha** (ruta: delegada a un verificador independiente; arnés temporal borrado; `git status` limpio sobre `e7e6f598`).
+  - Siete agentes en workspace, todo lo seleccionable:
+    - las skills de Axiom están solo en `.agents/skills` y `.claude/skills`, con las mismas 20 entradas;
+    - las skills del equipo quedan intactas;
+    - no hay marcadores sin resolver y el índice de `AGENTS.md` apunta a `.agents/skills`;
+    - HOME no cambia;
+    - el segundo sync es `noop` y verify da 0 fallos.
+  - Migración: las copias idénticas se retiran, la modificada se conserva con aviso y la ajena queda intacta.
+  - Qwen, Hermes y Kimi: `install --agent` falla sin escribir nada, no se descubren y, si ya estaban en el estado, se omiten con aviso.
+  - Con solo Claude no se crea `.agents/skills`. El global de OpenCode sigue igual.
+  - Observaciones previas, ajenas a T12g:
+    - `.kilo/commands/sdd-apply.md` conserva `{{GENTLE_AI_AUTHORITY_FIRST_TERMINAL_PROCEDURE}}`, porque `rendersReviewLifecycle` no incluye a Kilo.
+    - `adapterSkillBackupTargets` repite dos rutas de `judgment-day`; el backup final las deduplica.
+- [ ] **T12h · Antigravity en workspace: descartado por ahora, a revisar en el futuro** (ruta: delegada; el writer paró antes de escribir código, sin commit).
+  - La [documentación de reglas](https://antigravity.google/docs/rules) (verificada por el orquestador el 2026-11-01) fija tres restricciones:
+    - corta cada fichero de regla a 24.000 bytes, tras expandir `@[label](path)`;
+    - las reglas globales y `always_on` comparten 20.000 tokens, y al pasarse los ficheros más grandes se degradan a punteros;
+    - cada `.agents/rules/*.md` exige el frontmatter `trigger`, o se descarta en silencio.
+  - El orquestador de Axiom ronda los 100 KB (el asset de Antigravity pesa 40.300 bytes), así que no cabe en una regla. Probablemente ya se trunca o degrada hoy en global (`~/.gemini/GEMINI.md` cuenta en el presupuesto); no se ha comprobado ejecutando Antigravity.
+  - MCP de proyecto, según la [documentación de MCP](https://antigravity.google/docs/mcp): `.agents/mcp_config.json`, con raíz `mcpServers`.
+  - **Decisión del usuario (2026-11-01):** Antigravity sigue omitido en workspace con aviso, como hasta ahora. Se revisará cuando esté el plugin de Antigravity que el usuario tiene pendiente de subir a gentle-ai. Al retomarlo queda por decidir cómo repartir el orquestador en `.agents/rules`: trozos de menos de 24 KB, o un núcleo `always_on` y el resto `model_decision`.
+- Commits añadidos al resumen: `468c1449` T12f (+419/−29), `e7e6f598` T12g (+1705/−49), y la documentación `a64753ae`, `d90156d4` y este cierre. Antigravity queda descartado en workspace por ahora (T12h). La rama sigue lista para integrarse en `fix/huella-usuario-workspace`.
+- Decisiones abiertas para el usuario:
+  - Skills duplicadas entre `.agents/skills` (Codex) y las carpetas propias de otros agentes.
+  - `context.fileName` de Gemini sustituye la lista del usuario.
+  - Qwen, Hermes y Kimi.
+  - Antigravity: aplazado hasta el plugin de gentle-ai (T12h).
+- Para T13: el bloque de `developer_instructions`, `axiom-instructions.md`, `.opencode/axiom.md`, `.gemini/AXIOM.md`, `.github/instructions/axiom.instructions.md` y las entradas de `instructions` y `context.fileName`.
+- Para T14: el asset de Gemini con `.agent/skills`, la nota de `engram setup codex` y el índice de skills que apunta a una sola carpeta.
+- Rama lista para integrarse en `fix/huella-usuario-workspace`.
 
 ### Fase 5 · Reversibilidad y documentación
 

@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/components/filemerge"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/mutationjournal"
@@ -31,9 +32,10 @@ type fieldValue struct {
 	value   string
 }
 type InstallPlan struct {
-	settingsPath string
-	owned        *ownership
-	recapture    bool
+	settingsPath  string
+	owned         *ownership
+	recapture     bool
+	preserveJSONC bool
 }
 type UninstallPlan struct {
 	settingsPath  string
@@ -45,7 +47,21 @@ type UninstallPlan struct {
 func OwnershipPath(settingsPath string) string {
 	return filepath.Join(filepath.Dir(settingsPath), ".gentle-ai-default-agent.json")
 }
+
+// PrepareInstall prepara la escritura de default_agent en la configuración global:
+// el documento se vuelve a codificar entero.
 func PrepareInstall(settingsPath string) (*InstallPlan, error) {
+	return prepareInstall(settingsPath, false)
+}
+
+// PrepareInstallPreservingJSONC es PrepareInstall para la configuración de un
+// proyecto: si es un .jsonc con contenido, conserva sus comentarios y su formato
+// y solo reescribe default_agent.
+func PrepareInstallPreservingJSONC(settingsPath string) (*InstallPlan, error) {
+	return prepareInstall(settingsPath, true)
+}
+
+func prepareInstall(settingsPath string, preserveJSONC bool) (*InstallPlan, error) {
 	root, _, exists, _, err := readSettings(settingsPath)
 	if err != nil {
 		return nil, err
@@ -59,7 +75,7 @@ func PrepareInstall(settingsPath string) (*InstallPlan, error) {
 	if !managedAgentPresent {
 		_, managedAgentPresent = agents[LegacyManagedAgent]
 	}
-	return &InstallPlan{settingsPath: settingsPath, owned: owned, recapture: !exists || !managedAgentPresent}, nil
+	return &InstallPlan{settingsPath: settingsPath, owned: owned, recapture: !exists || !managedAgentPresent, preserveJSONC: preserveJSONC}, nil
 }
 func (p *InstallPlan) Apply() (bool, error) {
 	root, raw, _, current, err := readSettings(p.settingsPath)
@@ -72,6 +88,15 @@ func (p *InstallPlan) Apply() (bool, error) {
 	}
 	root["default_agent"] = ManagedAgent
 	settings := encode(root)
+	// Un opencode.jsonc con contenido conserva sus comentarios y su formato: solo
+	// se reescribe default_agent. Volver a codificar el objeto entero los perdería.
+	if p.preserveJSONC && strings.HasSuffix(p.settingsPath, ".jsonc") && len(bytes.TrimSpace(raw)) > 0 {
+		preserved, mergeErr := filemerge.MergeJSONObjectsPreserveJSONC(raw, encode(map[string]any{"default_agent": ManagedAgent}))
+		if mergeErr != nil {
+			return false, fmt.Errorf("set default_agent in %q: %w", p.settingsPath, mergeErr)
+		}
+		settings = preserved
+	}
 	metadata := encode(owned)
 	ownerPath := OwnershipPath(p.settingsPath)
 	ownerRaw, _ := os.ReadFile(ownerPath)

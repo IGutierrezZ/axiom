@@ -268,6 +268,11 @@ func GenerateProfileOverlay(profile model.Profile, homeDir, settingsPath string,
 
 	suffix := "-" + profile.Name
 	orchestratorKey := "sdd-orchestrator" + suffix
+	var renderOptions OrchestratorRenderOptions
+	if len(options) > 0 {
+		renderOptions = options[0]
+	}
+	promptDir := promptDirFor(renderOptions, homeDir)
 
 	// Build the orchestrator prompt: start with the base asset, inject model
 	// assignments table, then suffix sub-agent references.
@@ -357,7 +362,7 @@ func GenerateProfileOverlay(profile model.Profile, homeDir, settingsPath string,
 
 	for _, phase := range profilePhaseOrder {
 		key := phase + suffix
-		prompt, err := SharedPromptFileRef(settingsPath, homeDir, phase)
+		prompt, err := SharedPromptFileRef(settingsPath, promptDir, phase)
 		if err != nil {
 			return nil, fmt.Errorf("build shared prompt file reference for %q: %w", phase, err)
 		}

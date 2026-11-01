@@ -518,8 +518,18 @@ func dedupeBySkillName(entries []SkillEntry, cwd string) []SkillEntry {
 	for _, list := range buckets {
 		chosen := list[0]
 		for _, entry := range list {
-			if _, inside := projectRelativePath(cwd, entry.Path); inside {
+			if rel, inside := projectRelativePath(cwd, entry.Path); inside {
 				chosen = entry
+				// Con varios agentes, `axiom install --scope workspace` deja una sola
+				// copia en .agents/skills, y las instalaciones anteriores dejaron otras
+				// en la carpeta de cada agente. Si la primera copia del proyecto es de
+				// una de esas carpetas, el índice apunta a la compartida, que leen más
+				// agentes. Una copia en skills/ o en una raíz declarada sigue ganando.
+				if isPerAgentSkillsPath(rel) {
+					if shared, ok := sharedProjectCopy(list, cwd); ok {
+						chosen = shared
+					}
+				}
 				break
 			}
 		}
@@ -572,4 +582,46 @@ func fileExists(path string) bool {
 func dirExists(path string) bool {
 	info, err := os.Stat(path)
 	return err == nil && info.IsDir()
+}
+
+// perAgentSkillsPrefixes son las carpetas de skills de proyecto propias de un agente,
+// relativas a la raíz del proyecto y con barras normales. .agents/skills no está: es la
+// copia compartida.
+var perAgentSkillsPrefixes = []string{
+	".opencode/skills/",
+	".claude/skills/",
+	".gemini/skills/",
+	".cursor/skills/",
+	".github/skills/",
+	".codex/skills/",
+	".qwen/skills/",
+	".kiro/skills/",
+	".openclaw/skills/",
+	".pi/skills/",
+	".hermes/skills/",
+}
+
+const sharedSkillsPrefix = ".agents/skills/"
+
+// isPerAgentSkillsPath indica si rel (relativa a la raíz del proyecto) está en la
+// carpeta de skills propia de un agente.
+func isPerAgentSkillsPath(rel string) bool {
+	rel = filepath.ToSlash(rel)
+	for _, prefix := range perAgentSkillsPrefixes {
+		if strings.HasPrefix(rel, prefix) {
+			return true
+		}
+	}
+	return false
+}
+
+// sharedProjectCopy devuelve la primera copia de la lista que está en la carpeta
+// compartida .agents/skills del proyecto.
+func sharedProjectCopy(list []SkillEntry, cwd string) (SkillEntry, bool) {
+	for _, entry := range list {
+		if rel, inside := projectRelativePath(cwd, entry.Path); inside && strings.HasPrefix(filepath.ToSlash(rel), sharedSkillsPrefix) {
+			return entry, true
+		}
+	}
+	return SkillEntry{}, false
 }

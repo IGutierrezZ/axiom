@@ -93,6 +93,16 @@ func permissionTargets(root string) []string {
 	}
 }
 
+// workspacePermissionTargets son los ficheros que escribe una ejecución de permisos con
+// el ámbito workspace: OpenCode lee opencode.json de la raíz y Kilo su kilo.json de .kilo.
+func workspacePermissionTargets(root string) []string {
+	return []string{
+		filepath.Join(root, ".claude", "settings.json"),
+		filepath.Join(root, "opencode.json"),
+		filepath.Join(root, ".kilo", "kilo.json"),
+	}
+}
+
 func isolatePermissionEnv(t *testing.T, home string) {
 	t.Helper()
 	t.Setenv("XDG_CONFIG_HOME", "")
@@ -114,11 +124,14 @@ func TestPermissionsRoot(t *testing.T) {
 		{"workspace claude", ScopeWorkspace, workspace, model.AgentClaudeCode, workspace, true},
 		{"workspace opencode", ScopeWorkspace, workspace, model.AgentOpenCode, workspace, true},
 		{"workspace kilocode", ScopeWorkspace, workspace, model.AgentKilocode, workspace, true},
-		{"workspace vscode skipped", ScopeWorkspace, workspace, model.AgentVSCodeCopilot, "", false},
+		// VS Code Copilot ya tiene modo workspace; sigue sin destino de permisos.
+		{"workspace vscode", ScopeWorkspace, workspace, model.AgentVSCodeCopilot, workspace, true},
 		{"workspace trae skipped", ScopeWorkspace, workspace, model.AgentTrae, "", false},
 		{"workspace windsurf skipped", ScopeWorkspace, workspace, model.AgentWindsurf, "", false},
 		{"workspace antigravity skipped", ScopeWorkspace, workspace, model.AgentAntigravity, "", false},
-		{"workspace codex skipped", ScopeWorkspace, workspace, model.AgentCodex, "", false},
+		// Codex ya tiene modo workspace; sigue sin destino de permisos (TargetPath
+		// vacío), así que el componente no escribe nada para él en ningún ámbito.
+		{"workspace codex", ScopeWorkspace, workspace, model.AgentCodex, workspace, true},
 		{"workspace without root never falls back to home", ScopeWorkspace, " ", model.AgentClaudeCode, "", false},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -138,20 +151,20 @@ func TestComponentPathsPermissionsFollowScope(t *testing.T) {
 	home := t.TempDir()
 	workspace := t.TempDir()
 	isolatePermissionEnv(t, home)
-	adapters := resolveAdapters(permissionScopeAgents)
-
 	for _, tt := range []struct {
 		name  string
 		scope InstallScope
 		root  string
+		want  []string
 	}{
-		{"global", ScopeGlobal, home},
-		{"workspace", ScopeWorkspace, workspace},
+		{"global", ScopeGlobal, home, permissionTargets(home)},
+		{"workspace", ScopeWorkspace, workspace, workspacePermissionTargets(workspace)},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			adapters := resolveAdaptersScoped(tt.scope, workspace, permissionScopeAgents)
 			paths := componentPathsWithWorkspaceScoped(home, workspace, tt.scope, model.Selection{}, adapters, model.ComponentPermission)
 
-			want := permissionTargets(tt.root)
+			want := tt.want
 			if len(paths) != len(want) {
 				t.Fatalf("paths = %v, want exactly %v (agents without overlay contribute none)", paths, want)
 			}
@@ -279,7 +292,11 @@ func TestPermissionSyncStepFollowsScope(t *testing.T) {
 			}
 			assertSameTree(t, "the root outside the selected scope", otherBefore, permissionsTreeSnapshot(t, other))
 
-			for _, path := range permissionTargets(root) {
+			targets := permissionTargets(root)
+			if tt.scope == ScopeWorkspace {
+				targets = workspacePermissionTargets(root)
+			}
+			for _, path := range targets {
 				if _, err := os.Stat(path); err != nil {
 					t.Errorf("sync did not write %q: %v", path, err)
 				}

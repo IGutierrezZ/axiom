@@ -5110,7 +5110,7 @@ func agentsToManage(installState state.InstallState, detectedIDs []model.AgentID
 	if len(detectedIDs) > 0 {
 		return detectedIDs
 	}
-	catalogAgents := catalog.AllAgents()
+	catalogAgents := catalog.SelectableAgents()
 	all := make([]model.AgentID, 0, len(catalogAgents))
 	for _, agent := range catalogAgents {
 		all = append(all, agent.ID)
@@ -5157,8 +5157,26 @@ func detectedAgentIDs(detection system.DetectionResult) []model.AgentID {
 
 // preselectedAgents returns the agents that should be pre-selected in the TUI.
 // It delegates to agentsToManage so that persisted state always wins over filesystem detection.
+//
+// Los agentes no seleccionables (Qwen Code, Hermes y Kimi; véase
+// catalog.IsSelectableAgent) no se preseleccionan aunque estén detectados o en el
+// estado: la pantalla no los lista y no deben instalarse sin que se vean. La
+// detección para desinstalar (detectedAgentIDs) no se filtra.
 func preselectedAgents(detection system.DetectionResult, installState state.InstallState) []model.AgentID {
-	return agentsToManage(installState, detectedAgentIDs(detection))
+	// Se filtra antes de decidir: si solo hay detectados agentes retirados, se cae al
+	// catálogo seleccionable igual que si no hubiera detectado nada.
+	return selectableAgentIDs(agentsToManage(installState, selectableAgentIDs(detectedAgentIDs(detection))))
+}
+
+// selectableAgentIDs conserva, en orden, los agentes que se pueden elegir al instalar.
+func selectableAgentIDs(ids []model.AgentID) []model.AgentID {
+	selectable := make([]model.AgentID, 0, len(ids))
+	for _, id := range ids {
+		if catalog.IsSelectableAgent(id) {
+			selectable = append(selectable, id)
+		}
+	}
+	return selectable
 }
 
 func isPiOnlyAgents(agents []model.AgentID) bool {

@@ -137,6 +137,18 @@ func RunInstall(args []string, detection system.DetectionResult) (InstallResult,
 		return InstallResult{}, err
 	}
 
+	// Con --scope workspace los agentes sin modo workspace se omiten enteros, también
+	// los elegidos con --agent, antes de planificar nada: así ningún componente puede
+	// escribir por ellos en la carpeta de usuario.
+	if input.Scope == ScopeWorkspace {
+		kept, omitted := splitAgentsForScope(input.Scope, input.Selection.Agents)
+		noteOmittedWorkspaceAgents(omitted)
+		if len(omitted) > 0 && len(kept) == 0 {
+			return InstallResult{}, errNoWorkspaceAgents(omitted)
+		}
+		input.Selection.Agents = kept
+	}
+
 	resolved, err := planner.NewResolver(planner.MVPGraph()).Resolve(input.Selection)
 	if err != nil {
 		return InstallResult{}, err
@@ -239,6 +251,7 @@ func RunInstall(args []string, detection system.DetectionResult) (InstallResult,
 	result.Execution.ManualActions = append(result.Execution.ManualActions, runtime.state.retirementNotes...)
 	result.Execution.ManualActions = append(result.Execution.ManualActions, engramSetupSkippedNote(input.Scope, resolved.OrderedComponents, resolved.Agents)...)
 	result.Execution.ManualActions = append(result.Execution.ManualActions, optInFootprintNotes(input.Scope, homeDir, resolved.OrderedComponents, resolved.Agents, input.Selection)...)
+	result.Execution.ManualActions = append(result.Execution.ManualActions, workspaceTrustNotes(input.Scope, resolved.Agents)...)
 	result.Verify = runPostApplyVerification(postApplyVerificationInput{
 		HomeDir:      homeDir,
 		WorkspaceDir: runtime.workspaceDir,
@@ -791,6 +804,7 @@ func (r *installRuntime) stagePlan() pipeline.StagePlan {
 			appVersion:  AppVersion,
 		},
 	}
+	prepare = withWorkspaceSettingsPreflight(prepare, r.scope, r.workspaceDir, r.resolved.Agents)
 
 	apply := make([]pipeline.Step, 0, len(r.resolved.Agents)+len(r.selection.CommunityTools)+len(r.resolved.OrderedComponents)+1)
 	openCodeDir := openCodeGlobalConfigDir(r.homeDir, r.workspaceDir, r.scope, r.resolved.Agents)
@@ -863,6 +877,12 @@ func (r *installRuntime) stagePlan() pipeline.StagePlan {
 			scope:        r.scope,
 		})
 	}
+	// En workspace, OpenCode, Kilo y Gemini solo cargan el fichero de instrucciones
+	// de Axiom si está registrado en su configuración de proyecto (instructions o
+	// context.fileName).
+	if r.scope == ScopeWorkspace && registersWorkspaceInstructions(r.resolved.Agents) {
+		apply = append(apply, workspaceInstructionsStep{id: "workspace-instructions", workspaceDir: r.workspaceDir, agents: r.resolved.Agents})
+	}
 
 	// La copia de skills de compatibilidad vive en ~/.agents/skills: con el ámbito
 	// workspace no se toca (los skills ya quedan en el proyecto).
@@ -888,7 +908,7 @@ func (r *installRuntime) stagePlan() pipeline.StagePlan {
 	if telemetryDir := openCodeGlobalConfigDir(r.homeDir, r.workspaceDir, r.scope, r.resolved.Agents); telemetryDir != "" {
 		apply = append(apply, openCodeTelemetryRetirementStep{id: "opencode:retire-telemetry-plugin", configDir: telemetryDir, state: r.state})
 	}
-	if legacy := legacyPromptAdapters(resolveAdapters(r.resolved.Agents)); len(legacy) > 0 {
+	if legacy := legacyPromptAdapters(resolveAdaptersScoped(r.scope, r.workspaceDir, r.resolved.Agents)); len(legacy) > 0 {
 		apply = append(apply, legacyPromptRetirementStep{
 			id:       "retire-legacy-prompt-files",
 			state:    r.state,
@@ -896,6 +916,14 @@ func (r *installRuntime) stagePlan() pipeline.StagePlan {
 			targetDir: func(adapter agents.Adapter) string {
 				return componentInjectionDirScoped(r.homeDir, r.workspaceDir, r.scope, adapter)
 			},
+		})
+	}
+	if legacy := legacySkillsAdapters(r.scope, resolveAdaptersScoped(r.scope, r.workspaceDir, r.resolved.Agents)); len(legacy) > 0 {
+		apply = append(apply, legacySkillsRetirementStep{
+			id:           "retire-legacy-workspace-skills",
+			state:        r.state,
+			workspaceDir: r.workspaceDir,
+			adapters:     legacy,
 		})
 	}
 
@@ -929,7 +957,7 @@ type agentRoutingGuidanceStep struct {
 func (s agentRoutingGuidanceStep) ID() string { return s.id }
 
 func (s agentRoutingGuidanceStep) Run() error {
-	adapter, err := agents.NewAdapter(s.agent)
+	adapter, err := newScopedAdapter(s.scope, s.workspaceDir, s.agent)
 	if err != nil {
 		return fmt.Errorf("create adapter for %q: %w", s.agent, err)
 	}
@@ -963,7 +991,7 @@ func (s agentRoutingGuidanceStep) Run() error {
 
 	options := routingGuidanceOptions(s.homeDir, s.workspaceDir, s.scope, adapter)
 	var injected agentguidance.Result
-	if options.SettingsPath == "" {
+	if options.SettingsPath == "" && options.Adapter == nil {
 		injected, err = agentguidance.InjectRouting(targetDir, s.agent)
 	} else {
 		injected, err = agentguidance.InjectRoutingWithOptions(targetDir, s.agent, options)
@@ -1338,7 +1366,7 @@ func openCodeGlobalConfigDir(home, workspace string, scope InstallScope, agentID
 	if !containsAgent(agentIDs, model.AgentOpenCode) {
 		return ""
 	}
-	adapter := opencodeagent.NewAdapter()
+	adapter := scopedAdapter(scope, workspace, opencodeagent.NewAdapter())
 	return adapter.GlobalConfigDir(componentInjectionDirScoped(home, workspace, scope, adapter))
 }
 
@@ -1598,7 +1626,7 @@ func splitPathForOS(value, goos string) []string {
 }
 
 func (s componentApplyStep) Run() error {
-	adapters := resolveAdapters(s.agents)
+	adapters := resolveAdaptersScoped(s.scope, s.workspaceDir, s.agents)
 
 	switch s.component {
 	case model.ComponentEngram:
@@ -1811,6 +1839,7 @@ func (s componentApplyStep) Run() error {
 		}
 		return nil
 	case model.ComponentSDD:
+		skillsDirs := newWorkspaceSkillsDirs(s.scope)
 		for _, adapter := range adapters {
 			targetDir := componentInjectionDirScoped(s.homeDir, s.workspaceDir, s.scope, adapter)
 			opts := sdd.InjectOptions{
@@ -1829,6 +1858,7 @@ func (s componentApplyStep) Run() error {
 			if s.scope == ScopeWorkspace {
 				opts.WorkspaceDir = s.workspaceDir
 			}
+			opts.SkillsAlreadyWritten = skillsDirs.claimSDD(adapter, targetDir)
 			opts.IncludeOpenCodeBackgroundPolicy = s.backgroundPolicy && adapter.Agent() == model.AgentOpenCode
 			if _, err := injectSDD(targetDir, adapter, s.selection.SDDMode, opts); err != nil {
 				return fmt.Errorf("inject sdd for %q: %w", adapter.Agent(), err)
@@ -1840,8 +1870,12 @@ func (s componentApplyStep) Run() error {
 		if len(skillIDs) == 0 {
 			return nil
 		}
+		skillsDirs := newWorkspaceSkillsDirs(s.scope)
 		for _, adapter := range adapters {
 			targetDir := componentInjectionDirScoped(s.homeDir, s.workspaceDir, s.scope, adapter)
+			if skillsDirs.claimSkills(adapter, targetDir) {
+				continue
+			}
 			if _, err := skills.Inject(targetDir, adapter, skillIDs); err != nil {
 				return fmt.Errorf("inject skills for %q: %w", adapter.Agent(), err)
 			}
@@ -1972,6 +2006,16 @@ func executeTUIInstallWithBackground(homeDir string, selection model.Selection, 
 	if err != nil {
 		return pipeline.ExecutionResult{Err: err}, nil
 	}
+	// Mismo filtro que la CLI. La TUI ocupa la terminal: el aviso no sale por stderr,
+	// se devuelve entre las acciones manuales del resultado.
+	selectionAgents, omittedAgents := splitAgentsForScope(scope, selection.Agents)
+	if len(omittedAgents) > 0 {
+		if len(selectionAgents) == 0 {
+			return pipeline.ExecutionResult{Err: errNoWorkspaceAgents(omittedAgents)}, nil
+		}
+		selection.Agents = selectionAgents
+		resolved.Agents = AgentsForScope(scope, resolved.Agents)
+	}
 	runtime, err := newInstallRuntime(homeDir, scope, ChannelStable, selection, resolved, profile)
 	if err != nil {
 		return pipeline.ExecutionResult{Err: err}, nil
@@ -2001,9 +2045,11 @@ func executeTUIInstallWithBackground(homeDir string, selection model.Selection, 
 	if runtime.state.piCodeGraph != nil {
 		result.ManualActions = append(result.ManualActions, runtime.state.piCodeGraph.ManualActions...)
 	}
+	result.ManualActions = append(result.ManualActions, omittedWorkspaceAgentNotices(omittedAgents)...)
 	result.ManualActions = append(result.ManualActions, runtime.state.retirementNotes...)
 	result.ManualActions = append(result.ManualActions, engramSetupSkippedNote(scope, resolved.OrderedComponents, resolved.Agents)...)
 	result.ManualActions = append(result.ManualActions, optInFootprintNotes(scope, homeDir, resolved.OrderedComponents, resolved.Agents, selection)...)
+	result.ManualActions = append(result.ManualActions, workspaceTrustNotes(scope, resolved.Agents)...)
 	return result, orchestrator
 }
 
@@ -2224,7 +2270,7 @@ func selectedSkillIDs(selection model.Selection) []model.SkillID {
 
 func backupTargets(homeDir, workspaceDir string, scope InstallScope, selection model.Selection, resolved planner.ResolvedPlan) ([]string, error) {
 	paths := map[string]struct{}{}
-	adapters := resolveAdapters(resolved.Agents)
+	adapters := resolveAdaptersScoped(scope, workspaceDir, resolved.Agents)
 	managesSDDPlugins := false
 	for _, component := range resolved.OrderedComponents {
 		managesSDDPlugins = managesSDDPlugins || component == model.ComponentSDD
@@ -2286,8 +2332,17 @@ func backupTargets(homeDir, workspaceDir string, scope InstallScope, selection m
 	for _, path := range routingGuidancePaths(homeDir, workspaceDir, scope, adapters) {
 		paths[path] = struct{}{}
 	}
+	// El registro de instrucciones de OpenCode y Kilo reescribe su configuración de
+	// proyecto aunque ningún componente seleccionado la toque.
+	for _, path := range workspaceInstructionsSettingsPaths(workspaceDir, scope, adapters) {
+		paths[path] = struct{}{}
+	}
 	// The legacy prompt retirement deletes files, so they need a snapshot too.
 	for _, path := range legacyPromptBackupPaths(homeDir, workspaceDir, scope, adapters) {
+		paths[path] = struct{}{}
+	}
+	// La migración de skills de proyecto también borra ficheros.
+	for _, path := range legacySkillsBackupPaths(workspaceDir, scope, adapters) {
 		paths[path] = struct{}{}
 	}
 	adapterSkillPaths, err := adapterSkillBackupTargets(homeDir, workspaceDir, scope, selection, adapters)
@@ -2350,12 +2405,16 @@ func backupTargets(homeDir, workspaceDir string, scope InstallScope, selection m
 
 func adapterSkillBackupTargets(homeDir, workspaceDir string, scope InstallScope, selection model.Selection, adapters []agents.Adapter) ([]string, error) {
 	var paths []string
+	skillsDirs := newWorkspaceSkillsDirs(scope)
 	for _, adapter := range adapters {
 		if !adapter.SupportsSkills() {
 			continue
 		}
 		skillDir := adapter.SkillsDir(componentInjectionDirScoped(homeDir, workspaceDir, scope, adapter))
 		if skillDir == "" {
+			continue
+		}
+		if skillsDirs.claim(skillDir) {
 			continue
 		}
 		if slices.Contains(selection.Components, model.ComponentSkills) {
@@ -2413,7 +2472,7 @@ func routingGuidancePaths(homeDir, workspaceDir string, scope InstallScope, adap
 		options := routingGuidanceOptions(homeDir, workspaceDir, scope, adapter)
 		var routing []string
 		var err error
-		if options.SettingsPath == "" {
+		if options.SettingsPath == "" && options.Adapter == nil {
 			routing, err = agentguidance.RoutingPaths(targetDir, adapter.Agent())
 		} else {
 			routing, err = agentguidance.RoutingPathsWithOptions(targetDir, adapter.Agent(), options)
@@ -2483,11 +2542,21 @@ func componentPathsWithWorkspaceScoped(homeDir, workspaceDir string, scope Insta
 					// Track the gentle-ai files written alongside the Codex config.toml
 					// so they are restored on rollback and removed on uninstall.
 					codexHomeDir := filepath.Dir(p)
-					paths = append(paths,
-						filepath.Join(codexHomeDir, "engram-instructions.md"),
-						filepath.Join(codexHomeDir, "engram-compact-prompt.md"),
-					)
-					paths = append(paths, codexagent.SddProfilePaths(codexHomeDir)...)
+					if _, inProject := adapter.(agents.WorkspaceInlineInstructionsProvider); inProject && scope == ScopeWorkspace {
+						// In a project there is no model_instructions_file and no profile
+						// files (Codex ignores `profiles` there): the memory protocol
+						// travels in the Axiom instructions file.
+						paths = append(paths,
+							filepath.Join(codexHomeDir, "engram-compact-prompt.md"),
+							adapter.SystemPromptFile(targetDir),
+						)
+					} else {
+						paths = append(paths,
+							filepath.Join(codexHomeDir, "engram-instructions.md"),
+							filepath.Join(codexHomeDir, "engram-compact-prompt.md"),
+						)
+						paths = append(paths, codexagent.SddProfilePaths(codexHomeDir)...)
+					}
 				}
 			}
 			if adapter.SystemPromptStrategy() == model.StrategyMarkdownSections {
@@ -2505,9 +2574,14 @@ func componentPathsWithWorkspaceScoped(homeDir, workspaceDir string, scope Insta
 			if adapter.SupportsSlashCommands() {
 				paths = append(paths, sdd.SlashCommandPaths(adapter.Agent(), adapter.CommandsDir(targetDir))...)
 			}
-			if adapter.Agent() == model.AgentOpenCode {
+			// Kilo solo declara sus ficheros SDD en workspace: en global esa lista nunca
+			// los incluyó y ampliarla cambiaría lo que se verifica y respalda hoy.
+			if adapter.Agent() == model.AgentOpenCode || (adapter.Agent() == model.AgentKilocode && scope == ScopeWorkspace) {
 				if p := effectiveOpenCodeSettingsPath(homeDir, workspaceDir, scope, adapter); p != "" {
-					paths = append(paths, p, opencodedefault.OwnershipPath(p))
+					paths = append(paths, p)
+					if adapter.Agent() == model.AgentOpenCode {
+						paths = append(paths, opencodedefault.OwnershipPath(p))
+					}
 				}
 				paths = append(paths, openCodeSDDPluginPaths(adapter, targetDir)...)
 				// Shared prompt files in the selected OpenCode config scope — back these up
@@ -2516,7 +2590,7 @@ func componentPathsWithWorkspaceScoped(homeDir, workspaceDir string, scope Insta
 				// include them in the path list when that mode is active. This prevents
 				// false-negative verification failures in single/empty mode syncs.
 				if selection.SDDMode == model.SDDModeMulti {
-					promptDir := sdd.SharedPromptDir(targetDir)
+					promptDir := sdd.SharedPromptDirFor(adapter, targetDir)
 					for _, phase := range sdd.SharedPromptPhases() {
 						paths = append(paths, filepath.Join(promptDir, phase+".md"))
 					}
@@ -2555,8 +2629,10 @@ func componentPathsWithWorkspaceScoped(homeDir, workspaceDir string, scope Insta
 			paths = append(paths, sddSubAgentPaths(targetDir, adapter)...)
 			if adapter.Agent() == model.AgentCodex {
 				// SDD installs the Codex skill-registry hook outside the skills
-				// directory, so it must share the component's backup contract.
-				paths = append(paths, filepath.Join(adapter.GlobalConfigDir(homeDir), "hooks.json"))
+				// directory, so it must share the component's backup contract. It
+				// lives in the scope's root: ~/.codex/hooks.json for a global install,
+				// <project>/.codex/hooks.json for a workspace one.
+				paths = append(paths, filepath.Join(adapter.GlobalConfigDir(targetDir), "hooks.json"))
 			}
 			// SDD also writes the standalone Kiro skill-registry hook outside
 			// the skills directory; it shares the component's backup and
@@ -2673,6 +2749,11 @@ func componentPathsWithWorkspaceScoped(homeDir, workspaceDir string, scope Insta
 		}
 	}
 
+	// Con el ámbito workspace varios agentes comparten .agents/skills: cada fichero se
+	// declara una sola vez.
+	if scope == ScopeWorkspace {
+		return dedupPaths(paths)
+	}
 	return paths
 }
 
@@ -2729,12 +2810,27 @@ func effectiveOpenCodeSettingsPath(homeDir, workspaceDir string, scope InstallSc
 // authority into the routing-guidance adapter. In workspace scope, guidance
 // targets the workspace settings; global install/sync targets effective global settings.
 func routingGuidanceOptions(homeDir, workspaceDir string, scope InstallScope, adapter agents.Adapter) agentguidance.RoutingOptions {
-	if adapter.Agent() != model.AgentOpenCode {
-		return agentguidance.RoutingOptions{}
+	var options agentguidance.RoutingOptions
+	// En workspace, OpenCode y Kilo resuelven sus rutas en la distribución del
+	// proyecto: el inyector debe usar el adaptador ligado, no crear uno global.
+	if scope == ScopeWorkspace && agentguidance.DeliversThroughOrchestratorPrompt(adapter.Agent()) {
+		options.Adapter = adapter
+		options.PreserveJSONC = true
 	}
-	return agentguidance.RoutingOptions{
-		SettingsPath: effectiveOpenCodeSettingsPath(homeDir, workspaceDir, scope, adapter),
+	// Gemini, igual: sus instrucciones van a un fichero propio del proyecto, no al
+	// GEMINI.md que el inyector resolvería con un adaptador global.
+	if _, byName := adapter.(agents.WorkspaceContextFileProvider); scope == ScopeWorkspace && byName {
+		options.Adapter = adapter
 	}
+	// Codex, igual: sus instrucciones salen de un fichero propio del proyecto que se
+	// copia a developer_instructions, no del ~/.codex/AGENTS.md global.
+	if _, inline := adapter.(agents.WorkspaceInlineInstructionsProvider); scope == ScopeWorkspace && inline {
+		options.Adapter = adapter
+	}
+	if adapter.Agent() == model.AgentOpenCode {
+		options.SettingsPath = effectiveOpenCodeSettingsPath(homeDir, workspaceDir, scope, adapter)
+	}
+	return options
 }
 
 func componentInjectionDir(homeDir, workspaceDir string, adapter agents.Adapter) string {
@@ -2752,13 +2848,13 @@ func routingGuidanceDir(homeDir, workspaceDir string, scope InstallScope, adapte
 
 // componentInjectionDirScoped returns the directory to inject component files for the given adapter,
 // taking the install scope into account. When scope is ScopeWorkspace, agent-scoped
-// components write to workspaceDir instead of the selected agent's global config root,
-// except for desktop agents that do not support workspace installation (VSCode, Trae, Windsurf),
-// which are always installed in homeDir.
+// components write to workspaceDir instead of the selected agent's global config root.
+//
+// Los agentes que no admiten el ámbito workspace (VS Code Copilot, Trae, Windsurf,
+// Antigravity) no llegan aquí: install, sync y la TUI los omiten enteros al
+// construir el plan (splitAgentsForScope). Si uno se colara, el resultado queda
+// confinado al proyecto; nunca vuelve a ser la carpeta de usuario.
 func componentInjectionDirScoped(homeDir, workspaceDir string, scope InstallScope, adapter agents.Adapter) string {
-	if scope == ScopeWorkspace && !adapterSupportsWorkspace(adapter) {
-		return homeDir
-	}
 	return ResolveAgentConfigDir(scope, homeDir, workspaceDir)
 }
 
@@ -2795,12 +2891,7 @@ func adapterSupportsWorkspace(adapter agents.Adapter) bool {
 	if adapter == nil {
 		return false
 	}
-	switch adapter.Agent() {
-	case model.AgentVSCodeCopilot, model.AgentTrae, model.AgentWindsurf, model.AgentAntigravity, model.AgentCodex:
-		return false
-	default:
-		return true
-	}
+	return agentSupportsWorkspace(adapter.Agent())
 }
 
 // piPersonaConfigRoots returns the roots whose Pi persona state is managed by
@@ -2890,7 +2981,7 @@ func openCodeSDDPluginPaths(adapter agents.Adapter, targetDir string) []string {
 	// verification must ask the same resolver (#3219).
 	pluginsDir := filepath.Join(adapter.GlobalConfigDir(targetDir), "plugins")
 	paths := []string{filepath.Join(pluginsDir, "background-agents.ts")}
-	for _, name := range sdd.ManagedOpenCodePluginNames() {
+	for _, name := range sdd.ManagedOpenCodePluginNamesFor(adapter.Agent()) {
 		paths = append(paths, filepath.Join(pluginsDir, name))
 	}
 	return paths
@@ -2907,7 +2998,7 @@ type postApplyVerificationInput struct {
 
 func runPostApplyVerification(input postApplyVerificationInput) verify.Report {
 	checks := make([]verify.Check, 0)
-	adapters := resolveAdapters(input.Resolved.Agents)
+	adapters := resolveAdaptersScoped(input.Scope, input.WorkspaceDir, input.Resolved.Agents)
 
 	seenPath := make(map[string]struct{})
 	var uniqueFilePaths []string
@@ -3000,7 +3091,14 @@ func isLegacyOpenCodeBackgroundAgentsPlugin(path string) bool {
 	path = filepath.Clean(path)
 	pluginsDir := filepath.Dir(path)
 	opencodeDir := filepath.Dir(pluginsDir)
-	if filepath.Base(path) != "background-agents.ts" || filepath.Base(pluginsDir) != "plugins" || filepath.Base(opencodeDir) != "opencode" {
+	if filepath.Base(path) != "background-agents.ts" || filepath.Base(pluginsDir) != "plugins" {
+		return false
+	}
+	// En un proyecto (ámbito workspace) la carpeta de recursos es .opencode o .kilo.
+	if base := filepath.Base(opencodeDir); base == ".opencode" || base == ".kilo" {
+		return true
+	}
+	if filepath.Base(opencodeDir) != "opencode" {
 		return false
 	}
 	if filepath.Base(filepath.Dir(opencodeDir)) == ".config" {

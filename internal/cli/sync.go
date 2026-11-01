@@ -74,12 +74,16 @@ type SyncFlags struct {
 
 // SyncResult holds the outcome of a sync execution.
 type SyncResult struct {
-	Agents    []model.AgentID
-	Selection model.Selection
-	Plan      pipeline.StagePlan
-	Execution pipeline.ExecutionResult
-	Verify    verify.Report
-	DryRun    bool
+	Agents []model.AgentID
+	// OmittedAgents lists the selected agents skipped because they have no
+	// workspace mode (--scope workspace). Empty on the CLI path, where RunSync
+	// already warned on stderr; the TUI shows them through Warnings.
+	OmittedAgents []model.AgentID
+	Selection     model.Selection
+	Plan          pipeline.StagePlan
+	Execution     pipeline.ExecutionResult
+	Verify        verify.Report
+	DryRun        bool
 	// Scope is the effective install scope of this sync and ScopeRoot the root
 	// directory it targets (workspace root or user home, as resolved by
 	// ResolveAgentConfigDir). RenderSyncReport shows both so the report always
@@ -514,6 +518,11 @@ func DiscoverAgents(store state.Store) []model.AgentID {
 	installed := agents.DiscoverInstalled(reg, homeDir)
 	ids := make([]model.AgentID, 0, len(installed))
 	for _, a := range installed {
+		// Los agentes no seleccionables (Qwen Code, Hermes y Kimi) no se adoptan
+		// por tener carpeta en HOME: solo se sincronizan si ya están en el estado.
+		if !isSelectableAgent(a.ID) {
+			continue
+		}
 		ids = append(ids, a.ID)
 	}
 	return ids
@@ -572,7 +581,7 @@ func newSyncRuntimeScoped(homeDir, workspaceDir string, scope InstallScope, sele
 }
 
 func (r *syncRuntime) stagePlan() pipeline.StagePlan {
-	adapters := resolveAdapters(r.agentIDs)
+	adapters := resolveAdaptersScoped(r.scope, r.workspaceDir, r.agentIDs)
 	targets, targetErr := syncBackupTargetsScoped(r.homeDir, r.workspaceDir, r.scope, r.selection, adapters)
 	r.managedPaths = targets
 
@@ -590,6 +599,7 @@ func (r *syncRuntime) stagePlan() pipeline.StagePlan {
 			appVersion:  AppVersion,
 		},
 	}
+	prepare = withWorkspaceSettingsPreflight(prepare, r.scope, r.workspaceDir, r.agentIDs)
 
 	apply := []pipeline.Step{
 		rollbackRestoreStep{id: "apply:rollback-restore", state: r.state, homeDir: r.homeDir, workspaceDir: r.workspaceDir, openCodeConfigDir: openCodeGlobalConfigDir(r.homeDir, r.workspaceDir, r.scope, r.agentIDs)},
@@ -649,6 +659,9 @@ func (r *syncRuntime) stagePlan() pipeline.StagePlan {
 			changedFiles: &r.changedFiles,
 		})
 	}
+	if r.scope == ScopeWorkspace && registersWorkspaceInstructions(r.agentIDs) {
+		apply = append(apply, workspaceInstructionsStep{id: "sync:workspace-instructions", workspaceDir: r.workspaceDir, agents: r.agentIDs, changedFiles: &r.changedFiles})
+	}
 
 	// Managed OpenCode-compatible plugins are versioned runtime artifacts tied
 	// to the installed binary (OpenCode and Kilocode receive them). When the
@@ -691,6 +704,14 @@ func (r *syncRuntime) stagePlan() pipeline.StagePlan {
 			targetDir: func(adapter agents.Adapter) string {
 				return componentInjectionDirScoped(r.homeDir, r.workspaceDir, r.scope, adapter)
 			},
+		})
+	}
+	if legacy := legacySkillsAdapters(r.scope, adapters); len(legacy) > 0 {
+		apply = append(apply, legacySkillsRetirementStep{
+			id:           "sync:retire-legacy-workspace-skills",
+			state:        r.state,
+			workspaceDir: r.workspaceDir,
+			adapters:     legacy,
 		})
 	}
 
@@ -774,8 +795,17 @@ func syncBackupTargetsScoped(homeDir, workspaceDir string, scope InstallScope, s
 	for _, path := range routingGuidancePaths(homeDir, workspaceDir, scope, adapters) {
 		paths[path] = struct{}{}
 	}
+	// El registro de instrucciones de OpenCode y Kilo reescribe su configuración de
+	// proyecto aunque ningún componente seleccionado la toque.
+	for _, path := range workspaceInstructionsSettingsPaths(workspaceDir, scope, adapters) {
+		paths[path] = struct{}{}
+	}
 	// The legacy prompt retirement deletes files, so they need a snapshot too.
 	for _, path := range legacyPromptBackupPaths(homeDir, workspaceDir, scope, adapters) {
+		paths[path] = struct{}{}
+	}
+	// La migración de skills de proyecto también borra ficheros.
+	for _, path := range legacySkillsBackupPaths(workspaceDir, scope, adapters) {
 		paths[path] = struct{}{}
 	}
 	for _, adapter := range adapters {
@@ -852,8 +882,12 @@ func syncAdapterSkillBackupTargets(homeDir, workspaceDir string, selection model
 
 func syncAdapterSkillBackupTargetsScoped(homeDir, workspaceDir string, scope InstallScope, selection model.Selection, adapters []agents.Adapter) ([]string, error) {
 	var paths []string
+	skillsDirs := newWorkspaceSkillsDirs(scope)
 	for _, adapter := range adapters {
 		if !adapter.SupportsSkills() {
+			continue
+		}
+		if skillsDirs.claim(adapter.SkillsDir(componentInjectionDirScoped(homeDir, workspaceDir, scope, adapter))) {
 			continue
 		}
 		if slices.Contains(selection.Components, model.ComponentSkills) {
@@ -1223,7 +1257,7 @@ func (s componentSyncStep) ID() string {
 }
 
 func (s componentSyncStep) Run() error {
-	adapters := resolveAdapters(s.agents)
+	adapters := resolveAdaptersScoped(s.scope, s.workspaceDir, s.agents)
 
 	switch s.component {
 	case model.ComponentEngram:
@@ -1309,6 +1343,7 @@ func (s componentSyncStep) Run() error {
 			sddMode = model.SDDModeMulti
 		}
 
+		skillsDirs := newWorkspaceSkillsDirs(s.scope)
 		for _, adapter := range adapters {
 			targetDir := componentInjectionDirScoped(s.homeDir, s.workspaceDir, s.scope, adapter)
 			opts := sdd.InjectOptions{
@@ -1328,6 +1363,7 @@ func (s componentSyncStep) Run() error {
 			if s.scope == ScopeWorkspace {
 				opts.WorkspaceDir = s.workspaceDir
 			}
+			opts.SkillsAlreadyWritten = skillsDirs.claimSDD(adapter, targetDir)
 			opts.IncludeOpenCodeBackgroundPolicy = s.backgroundPolicy && adapter.Agent() == model.AgentOpenCode
 			inject := sdd.Inject
 			if s.backgroundPolicy {
@@ -1346,7 +1382,11 @@ func (s componentSyncStep) Run() error {
 		if len(skillIDs) == 0 {
 			return nil
 		}
+		skillsDirs := newWorkspaceSkillsDirs(s.scope)
 		for _, adapter := range adapters {
+			if skillsDirs.claimSkills(adapter, componentInjectionDirScoped(s.homeDir, s.workspaceDir, s.scope, adapter)) {
+				continue
+			}
 			res, err := skills.Inject(componentInjectionDirScoped(s.homeDir, s.workspaceDir, s.scope, adapter), adapter, skillIDs)
 			if err != nil {
 				return fmt.Errorf("sync skills for %q: %w", adapter.Agent(), err)
@@ -1762,6 +1802,12 @@ func runSyncWithSelection(homeDir string, selection model.Selection, background 
 }
 
 func runSyncWithSelectionScoped(homeDir, workspaceDir string, scope InstallScope, selection model.Selection, background OpenCodeBackgroundResolution, piBackground PiBackgroundResolution) (SyncResult, error) {
+	// Punto de entrada común de la CLI y la TUI. RunSync ya filtró y avisó por
+	// stderr, así que aquí solo llegan agentes omitidos desde la TUI o desde quien
+	// llame directamente: no se imprime nada (la TUI ocupa la terminal) y el aviso
+	// viaja en SyncResult.OmittedAgents.
+	keptAgents, omittedAgents := splitAgentsForScope(scope, selection.Agents)
+	selection.Agents = keptAgents
 	agentIDs := selection.Agents
 	// El estado se lee del almacén que corresponde al ámbito: el del proyecto con
 	// --scope workspace y el de usuario con --scope global.
@@ -1804,12 +1850,13 @@ func runSyncWithSelectionScoped(homeDir, workspaceDir string, scope InstallScope
 	}
 
 	result := SyncResult{
-		Agents:       agentIDs,
-		Selection:    selection,
-		Scope:        scope,
-		ScopeRoot:    ResolveAgentConfigDir(scope, homeDir, workspaceDir),
-		Background:   background,
-		PiBackground: piBackground,
+		Agents:        agentIDs,
+		OmittedAgents: omittedAgents,
+		Selection:     selection,
+		Scope:         scope,
+		ScopeRoot:     ResolveAgentConfigDir(scope, homeDir, workspaceDir),
+		Background:    background,
+		PiBackground:  piBackground,
 	}
 
 	result, noOp, err := zeroAgentSyncNoOp(homeDir, scope, selection, result)
@@ -1859,6 +1906,7 @@ func runSyncWithSelectionScoped(homeDir, workspaceDir string, scope InstallScope
 	result.ChangedFiles = dedupPaths(append(result.ChangedFiles, rt.state.retiredFiles...))
 	result.Execution.ManualActions = append(result.Execution.ManualActions, rt.state.retirementNotes...)
 	result.Execution.ManualActions = append(result.Execution.ManualActions, optInFootprintNotes(scope, homeDir, selection.Components, agentIDs, selection)...)
+	result.Execution.ManualActions = append(result.Execution.ManualActions, workspaceTrustNotes(scope, agentIDs)...)
 	if background.activationPlan != nil {
 		result.ChangedFiles = dedupPaths(append(result.ChangedFiles, background.activationPlan.ChangedPaths()...))
 	}
@@ -2031,6 +2079,11 @@ func RunSync(args []string) (SyncResult, error) {
 		agentIDs = DiscoverAgents(syncStateStore)
 	}
 	agentIDs = unique(agentIDs)
+	// Con --scope workspace se omiten los agentes sin modo workspace, sea cual sea su
+	// origen: --agent, estado del proyecto o descubrimiento por las carpetas de HOME.
+	// Si no queda ninguno, el sync termina sin escribir (zeroAgentSyncNoOp).
+	agentIDs, omittedAgents := splitAgentsForScope(scope, agentIDs)
+	noteOmittedWorkspaceAgents(omittedAgents)
 
 	selection := BuildSyncSelection(flags, agentIDs)
 
@@ -2182,7 +2235,7 @@ func restoreOpenCodeModelAssignmentsFromState(homeDir, workspaceDir string, scop
 		return nil
 	}
 	presence := map[string]opencodeactivation.AssignmentPresence{}
-	settingsPath := effectiveOpenCodeSettingsPath(homeDir, workspaceDir, scope, opencodeagent.NewAdapter())
+	settingsPath := effectiveOpenCodeSettingsPath(homeDir, workspaceDir, scope, scopedAdapter(scope, workspaceDir, opencodeagent.NewAdapter()))
 	if settingsPath != "" {
 		if _, err := os.Stat(settingsPath); err == nil {
 			snapshot, err := opencodeactivation.ReadConfigSnapshot(settingsPath)
@@ -2279,7 +2332,7 @@ func skillIndexRefreshWarning(detail string) string {
 // noteWarnings returns the manual-action notes (such as retired files that were
 // kept) followed by the warnings raised by post-sync verification.
 func (r SyncResult) noteWarnings() []string {
-	warnings := append([]string(nil), r.Execution.ManualActions...)
+	warnings := append(omittedWorkspaceAgentNotices(r.OmittedAgents), r.Execution.ManualActions...)
 	for _, check := range r.Verify.Checks {
 		if check.Status == verify.CheckStatusWarning {
 			warnings = append(warnings, check.Error)
@@ -2437,7 +2490,7 @@ func runPostSyncVerification(homeDir, workspaceDir string, selection model.Selec
 
 func runPostSyncVerificationScoped(homeDir, workspaceDir string, scope InstallScope, selection model.Selection) verify.Report {
 	checks := make([]verify.Check, 0)
-	adapters := resolveAdapters(selection.Agents)
+	adapters := resolveAdaptersScoped(scope, workspaceDir, selection.Agents)
 
 	for _, component := range selection.Components {
 		paths := syncComponentPathsWithWorkspaceScoped(homeDir, workspaceDir, scope, selection, adapters, component)
