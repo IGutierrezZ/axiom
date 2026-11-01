@@ -331,12 +331,20 @@ Las cuatro quedaron resueltas por el usuario el 2026-10-29: acepta las recomenda
   - Observaciones previas, ajenas a T12g:
     - `.kilo/commands/sdd-apply.md` conserva `{{GENTLE_AI_AUTHORITY_FIRST_TERMINAL_PROCEDURE}}`, porque `rendersReviewLifecycle` no incluye a Kilo.
     - `adapterSkillBackupTargets` repite dos rutas de `judgment-day`; el backup final las deduplica.
-- Commits añadidos al resumen: `468c1449` T12f (+419/−29), `e7e6f598` T12g (+1705/−49), y la documentación `a64753ae`, `d90156d4` y este cierre. Antigravity sigue pendiente de activar en workspace. La rama sigue lista para integrarse en `fix/huella-usuario-workspace`.
+- [ ] **T12h · Antigravity en workspace: descartado por ahora, a revisar en el futuro** (ruta: delegada; el writer paró antes de escribir código, sin commit).
+  - La [documentación de reglas](https://antigravity.google/docs/rules) (verificada por el orquestador el 2026-11-01) fija tres restricciones:
+    - corta cada fichero de regla a 24.000 bytes, tras expandir `@[label](path)`;
+    - las reglas globales y `always_on` comparten 20.000 tokens, y al pasarse los ficheros más grandes se degradan a punteros;
+    - cada `.agents/rules/*.md` exige el frontmatter `trigger`, o se descarta en silencio.
+  - El orquestador de Axiom ronda los 100 KB (el asset de Antigravity pesa 40.300 bytes), así que no cabe en una regla. Probablemente ya se trunca o degrada hoy en global (`~/.gemini/GEMINI.md` cuenta en el presupuesto); no se ha comprobado ejecutando Antigravity.
+  - MCP de proyecto, según la [documentación de MCP](https://antigravity.google/docs/mcp): `.agents/mcp_config.json`, con raíz `mcpServers`.
+  - **Decisión del usuario (2026-11-01):** Antigravity sigue omitido en workspace con aviso, como hasta ahora. Se revisará cuando esté el plugin de Antigravity que el usuario tiene pendiente de subir a gentle-ai. Al retomarlo queda por decidir cómo repartir el orquestador en `.agents/rules`: trozos de menos de 24 KB, o un núcleo `always_on` y el resto `model_decision`.
+- Commits añadidos al resumen: `468c1449` T12f (+419/−29), `e7e6f598` T12g (+1705/−49), y la documentación `a64753ae`, `d90156d4` y este cierre. Antigravity queda descartado en workspace por ahora (T12h). La rama sigue lista para integrarse en `fix/huella-usuario-workspace`.
 - Decisiones abiertas para el usuario:
   - Skills duplicadas entre `.agents/skills` (Codex) y las carpetas propias de otros agentes.
   - `context.fileName` de Gemini sustituye la lista del usuario.
   - Qwen, Hermes y Kimi.
-  - Antigravity con `.agents/`.
+  - Antigravity: aplazado hasta el plugin de gentle-ai (T12h).
 - Para T13: el bloque de `developer_instructions`, `axiom-instructions.md`, `.opencode/axiom.md`, `.gemini/AXIOM.md`, `.github/instructions/axiom.instructions.md` y las entradas de `instructions` y `context.fileName`.
 - Para T14: el asset de Gemini con `.agent/skills`, la nota de `engram setup codex` y el índice de skills que apunta a una sola carpeta.
 - Rama lista para integrarse en `fix/huella-usuario-workspace`.
