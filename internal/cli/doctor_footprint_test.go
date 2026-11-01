@@ -132,6 +132,21 @@ func TestRunDoctor_FootprintListsOnlyDeclaredOnCleanHome(t *testing.T) {
 	}
 }
 
+// ~/.agents/skills es del usuario y de otras herramientas: sin ninguna skill de
+// Axiom dentro no es un resto de Axiom.
+func TestRunDoctor_FootprintIgnoresAnAgentsSkillsDirWithoutAxiomSkills(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("APPDATA", filepath.Join(home, "AppData", "Roaming"))
+	writeDoctorState(t, home, `{"installed_agents":["claude-code"]}`)
+	writeFootprintFile(t, filepath.Join(home, ".agents", "skills", "mi-skill", "SKILL.md"))
+
+	out := runDoctorOutput(t, home)
+
+	if strings.Contains(out, "~/.agents/skills") {
+		t.Errorf("una carpeta de skills sin skills de Axiom no es un resto:\n%s", out)
+	}
+}
+
 // Restos de una instalación global: se listan y se marcan como tales sin afectar
 // al estado de salud.
 func TestRunDoctor_FootprintMarksGlobalLeftovers(t *testing.T) {
@@ -139,7 +154,7 @@ func TestRunDoctor_FootprintMarksGlobalLeftovers(t *testing.T) {
 	t.Setenv("APPDATA", filepath.Join(home, "AppData", "Roaming"))
 	writeDoctorState(t, home, `{"installed_agents":["claude-code"]}`)
 
-	skills := filepath.Join(home, ".agents", "skills")
+	skills := filepath.Join(home, ".agents", "skills", "sdd-init")
 	if err := os.MkdirAll(skills, 0o755); err != nil {
 		t.Fatal(err)
 	}

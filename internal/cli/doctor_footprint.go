@@ -3,12 +3,14 @@ package cli
 import (
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"slices"
 	"strings"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/agents"
+	"github.com/IGutierrezZ/axiom/v3/internal/assets"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/communitytool"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/gga"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/sdd"
@@ -92,7 +94,9 @@ func collectMachineFootprint(homeDir string, installed state.InstallState) []foo
 		add(optionalKind(ggaSelected), "GGA", strings.Join(paths, ", "))
 	}
 
-	if skillDir := filepath.Join(homeDir, ".agents", "skills"); isDir(skillDir) {
+	// La carpeta suele ser del usuario (otras herramientas escriben ahí): solo cuenta
+	// como resto de Axiom si contiene alguna de las skills que Axiom instala.
+	if skillDir := filepath.Join(homeDir, ".agents", "skills"); containsAxiomSkills(skillDir) {
 		add(footprintGlobalLeftover, "~/.agents/skills", skillDir+" (copia de skills de compatibilidad)")
 	}
 
@@ -168,6 +172,24 @@ func existingPaths(paths ...string) []string {
 		}
 	}
 	return existing
+}
+
+// containsAxiomSkills dice si dir tiene alguna de las skills que Axiom incrusta (las
+// de SDD, las ordinarias o la carpeta compartida _shared).
+func containsAxiomSkills(dir string) bool {
+	embedded, err := fs.ReadDir(assets.FS, "skills")
+	if err != nil {
+		return false
+	}
+	for _, entry := range embedded {
+		if !entry.IsDir() {
+			continue
+		}
+		if isDir(filepath.Join(dir, entry.Name())) {
+			return true
+		}
+	}
+	return false
 }
 
 func isDir(path string) bool {
