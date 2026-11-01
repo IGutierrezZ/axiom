@@ -426,3 +426,50 @@ func TestUninstallWorkspaceKiloCursorAndKiroKeepTheTeamsContent(t *testing.T) {
 		}
 	}
 }
+
+// Un `## Skills` del equipo en AGENTS.md no es el índice de Axiom: el sync no lo
+// adopta, añade su bloque con marcadores aparte, un segundo sync no lo duplica y
+// la desinstalación solo retira ese bloque. AGENTS.md queda byte a byte como estaba.
+func TestWorkspaceInstallSyncUninstallKeepsTheTeamsSkillsSectionByteIdentical(t *testing.T) {
+	teamAgents := map[string]string{
+		"prosa":        "# Reglas del equipo\n\n## Skills\n\nAntes de tocar el backend, lee la guía de Go del equipo.\n\n## Otra sección\n\nNo tocar.\n",
+		"tabla propia": "# Reglas del equipo\n\n## Skills\n\n| Área | Responsable |\n| --- | --- |\n| Backend | Ana |\n",
+	}
+	for name, content := range teamAgents {
+		t.Run(name, func(t *testing.T) {
+			t.Setenv("AXIOM_STATE_DIR", t.TempDir())
+			home, workspace, _ := footprintEnv(t)
+			seedFootprintHome(t, home)
+			agentsPath := filepath.Join(workspace, "AGENTS.md")
+			mustWriteFile(t, agentsPath, []byte(content))
+			mustWriteFile(t, filepath.Join(workspace, "axiom.yaml"), []byte("workspace:\n  name: equipo\n  topology: monorepo-embedded\n"))
+
+			if _, err := RunInstall([]string{"--scope", "workspace", "--agent", "claude-code,opencode"}, macOSDetectionResult()); err != nil {
+				t.Fatalf("RunInstall() error = %v", err)
+			}
+			if _, err := RunSync([]string{"--scope", "workspace"}); err != nil {
+				t.Fatalf("RunSync() error = %v", err)
+			}
+			installed, err := os.ReadFile(agentsPath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !strings.Contains(string(installed), "<!-- axiom:skills-index -->") {
+				t.Fatalf("el sync debe añadir el bloque gestionado del índice:\n%s", installed)
+			}
+			if !strings.HasPrefix(string(installed), content) {
+				t.Fatalf("lo del equipo debe conservarse intacto al principio:\n%s", installed)
+			}
+			if strings.Count(string(installed), "<!-- axiom:skills-index -->") != 1 {
+				t.Fatalf("el bloque gestionado debe aparecer una sola vez:\n%s", installed)
+			}
+
+			runWorkspaceUninstall(t, "--all", "--scope", "workspace")
+
+			got, err := os.ReadFile(agentsPath)
+			if err != nil || string(got) != content {
+				t.Fatalf("AGENTS.md debe quedar byte a byte como antes de instalar: %v\ngot  %q\nwant %q", err, got, content)
+			}
+		})
+	}
+}
