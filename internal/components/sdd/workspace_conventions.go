@@ -8,8 +8,8 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/agents"
 )
 
-// workspaceConventionsClause reconoce, en los orquestadores genéricos y de Gemini,
-// Cursor, Kiro y otros, la frase que sitúa los ficheros de convención en la carpeta
+// workspaceConventionsClause reconoce, en los orquestadores genéricos y de
+// Cursor, Kiro y otros (el de Gemini usa el marcador {{AXIOM_SKILLS_DIR}}), la frase que sitúa los ficheros de convención en la carpeta
 // de skills global del agente o, en el proyecto, en `.agent/skills/_shared/`: una
 // carpeta que ningún agente usa. Admite las dos formas que traen los orquestadores:
 // una ruta entre comillas (`~/.gemini/skills/_shared/`) o «the [agent's] global skills

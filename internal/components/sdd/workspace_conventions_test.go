@@ -21,7 +21,6 @@ func TestAdaptConventionsClauseForWorkspace(t *testing.T) {
 		agent model.AgentID
 		want  string
 	}{
-		{model.AgentGeminiCLI, "Convention files under `.agents/skills/_shared/`:"},
 		{model.AgentCursor, "Convention files under `.agents/skills/_shared/`:"},
 		{model.AgentKiroIDE, "Convention files under `.kiro/skills/_shared/`:"},
 	} {
@@ -48,6 +47,38 @@ func TestAdaptConventionsClauseForWorkspace(t *testing.T) {
 	claudeAdapter := claude.NewAdapter()
 	if got := adaptConventionsClauseForWorkspace("sin frase", claudeAdapter, root); got != "sin frase" {
 		t.Errorf("un texto sin la frase no debe cambiar: %q", got)
+	}
+}
+
+// El orquestador de Gemini resuelve la ruta de convenciones con el marcador de skills:
+// `~/.gemini/skills` en global y la carpeta compartida `.agents/skills` en el proyecto,
+// sin restos de `.agent/skills` ni del marcador.
+func TestGeminiOrchestratorConventionsPathFollowsScope(t *testing.T) {
+	root := t.TempDir()
+	adapter, err := agents.NewAdapter(model.AgentGeminiCLI)
+	if err != nil {
+		t.Fatal(err)
+	}
+	prompt, err := renderSessionPreflightPrompt(adapter, InjectOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, tc := range []struct {
+		name      string
+		adapter   agents.Adapter
+		workspace string
+		want      string
+	}{
+		{"global", adapter, "", "Convention files under `~/.gemini/skills/_shared/`:"},
+		{"workspace", agents.BindWorkspace(adapter, root), root, "Convention files under `.agents/skills/_shared/`:"},
+	} {
+		got := resolveSkillsDirPlaceholders(prompt, tc.adapter, tc.workspace)
+		if !strings.Contains(got, tc.want) {
+			t.Errorf("%s: el orquestador no contiene %q", tc.name, tc.want)
+		}
+		if strings.Contains(got, ".agent/skills") || strings.Contains(got, "{{AXIOM_SKILLS_DIR") {
+			t.Errorf("%s: quedan restos de .agent/skills o del marcador sin resolver", tc.name)
+		}
 	}
 }
 
