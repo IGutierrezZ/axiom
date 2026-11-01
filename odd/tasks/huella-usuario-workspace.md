@@ -412,6 +412,19 @@ Las cuatro quedaron resueltas por el usuario el 2026-10-29: acepta las recomenda
       - H4 (media): si `AGENTS.md` tenía un `## Skills` del equipo, el sync lo adopta como índice gestionado y uninstall lo borra sin restaurarlo.
       - Menores: `.gentle-ai-default-agent.json` en la raíz del proyecto (OpenCode); uninstall global borra `mcp.json` vacíos que eran del usuario.
 
+### Fase 5b · Correcciones detectadas por V1 de la fase 5 (autorizada el 2026-11-01)
+
+- [ ] **T15 · Pi en workspace sin escribir en HOME (H2)** (ruta: delegada; disparador: lectura que prepara la escritura y comprobación de la documentación oficial de Pi). Con `--scope workspace`, los paquetes se instalan en el proyecto (`pi install -l`) y el MCP de Engram no se declara a nivel de usuario. Si la documentación oficial no permite dejarlo todo en el proyecto, Pi se omite en workspace con el aviso común, como Trae y Windsurf.
+- [ ] **T16 · OpenClaw en workspace (H1)** (ruta: delegada, mismo escritor que T15). Si OpenClaw no tiene configuración de proyecto según su documentación oficial, se omite en workspace con el aviso común. Así no se escribe `~/.openclaw/openclaw.json` ni `SOUL.md` en el proyecto. Prueba de que el plan de workspace no lo incluye.
+- [ ] **T17 · `## Skills` del equipo en `AGENTS.md` (H4)** (ruta: delegada, mismo escritor). El sync solo adopta una sección `## Skills` sin marcadores cuando tiene la forma del índice que generaba Axiom. Si es del equipo, la conserva y añade el bloque gestionado aparte. Uninstall solo retira el bloque con marcadores. Prueba de ida y vuelta: `AGENTS.md` idéntico tras install, sync y uninstall.
+- [ ] **T18 · Restos de `uninstall --scope global` y `doctor` (H3)** (ruta: delegada; disparador: 2+ ficheros no triviales). Primero se compara con la base `7940a5cf` para separar lo heredado de lo nuevo. Después, uninstall global retira lo que tenga la forma de Axiom en:
+  - `~/.config/kilo/opencode.json` y `~/.config/kilo/plugins/*.ts`;
+  - `~/.kiro/steering/axiom.md`;
+  - `~/.codex/config.toml` (`mcp_servers.context7`, `features.multi_agent` y `agents.*`).
+
+  `doctor` detecta esos restos con el agente correcto (Kilo, no OpenCode). De paso: no borrar `mcp.json` del usuario que ya existían antes, aunque queden vacíos.
+- [ ] **V1 · Fase 5b**: repetir el ciclo de V1 de la fase 5. Install y uninstall en workspace y en global con HOME temporal. Con OpenClaw y Pi seleccionados en workspace, HOME queda intacto.
+
 ## Criterios de aceptación
 
 - `axiom setup` y `axiom sync` en workspace dejan `HOME` idéntico byte a byte, salvo la huella declarada en T9.
@@ -461,6 +474,8 @@ Las cuatro quedaron resueltas por el usuario el 2026-10-29: acepta las recomenda
 
 - 2026-11-01: fase 5 implementada (T13, T13b `825ee3c0`, T14) y V1 de las fases 4 y 5 hecha, con cuatro hallazgos (H1–H4).
 
+- 2026-11-01: el usuario autoriza la fase 5b; T15–T18 registradas.
+
 ## Siguiente paso
 
-Autorización para una fase 5b que corrija H1–H4, o abrir la PR con ellos anotados como conocidos. Abiertos para decidir: Antigravity en workspace (T12h, aplazado), Qwen y Hermes con fichero raíz, y los temas sueltos de la fase 3 (manifiesto de Pi, caché `model-variants`, CodeGraph sin ubicación de proyecto, lanzadores de OpenCode sin aviso).
+Fase 5b (T15–T18 y su V1), autorizada el 2026-11-01. Después, la PR con la etiqueta `size:exception`, cuando el usuario lo decida. Abiertos para decidir: Antigravity en workspace (T12h, aplazado), Qwen y Hermes con fichero raíz, y los temas sueltos de la fase 3 (manifiesto de Pi, caché `model-variants`, CodeGraph sin ubicación de proyecto, lanzadores de OpenCode sin aviso).
