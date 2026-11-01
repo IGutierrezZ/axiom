@@ -149,12 +149,14 @@ Hermes no está disponible de momento: no se puede elegir al instalar y `axiom i
 
 ### uninstall
 
-Elimina únicamente la configuración de Axiom de uno o más agentes. No desinstala paquetes ni binarios externos: retira secciones gestionadas de prompts, entradas MCP, skills, fragmentos de configuración y otros ficheros gestionados; después actualiza `~/.axiom/state.json`.
+Elimina únicamente la configuración de Axiom de uno o más agentes. No desinstala paquetes ni binarios externos: retira secciones gestionadas de prompts, entradas MCP, skills, fragmentos de configuración y otros ficheros gestionados; después actualiza el estado de instalación del ámbito.
 
 Antes de aplicar cualquier cambio, Axiom crea una copia de seguridad de los ficheros afectados.
 
+`uninstall` tiene el mismo ámbito que `install` y `sync`: `--scope workspace` (el valor por defecto) o `--scope global`, o la variable `AXIOM_INSTALL_SCOPE`. Cada ámbito revierte lo suyo y no toca el otro.
+
 ```bash
-# Desinstalación parcial para agentes concretos
+# Desinstalación parcial para agentes concretos (ámbito workspace, el predeterminado)
 axiom uninstall \
   --agent claude-code \
   --agent opencode
@@ -164,14 +166,66 @@ axiom uninstall \
   --agent claude-code \
   --component sdd,persona,context7
 
-# Desinstalación completa de la configuración gestionada en todos los agentes compatibles
+# Desinstalación completa del proyecto: todo lo que Axiom gestiona en este workspace
 axiom uninstall --all
+
+# Desinstalación completa de lo que Axiom tiene en tu carpeta de usuario
+axiom uninstall --all --scope global
+
+# Además, borra la raíz de estado de Axiom (~/.axiom o AXIOM_STATE_DIR)
+axiom uninstall --all --scope global --purge-state
 
 # Omite la solicitud de confirmación
 axiom uninstall --agent cursor --component skills --yes
 ```
 
 En una desinstalación parcial sin `--component`, Axiom retira todos los componentes desinstalables que gestiona para los agentes seleccionados.
+
+#### Ámbito workspace
+
+La raíz del proyecto es la misma que usa `install` (el `axiom.yaml` más cercano o, si no hay, la raíz git), así que lanzar el comando desde una subcarpeta revierte el proyecto entero y avisa de ello. `HOME` no se toca. Por agente, `uninstall` retira lo que `install` y `sync` escriben en el proyecto:
+
+| Agente | Se retira del proyecto | Se conserva |
+| --- | --- | --- |
+| Claude Code | `.claude/` gestionado (agentes, comandos, skills, `output-styles/axiom.md`), las secciones de `.claude/CLAUDE.md`, los hooks de Axiom y las reglas `permissions.deny` de Axiom en `.claude/settings.json`, y las entradas `engram` y `context7` de `.mcp.json` | Tu `deny`, tu `defaultMode`, tus servidores MCP y tus agentes y skills propios |
+| OpenCode | Las claves gestionadas de `opencode.json(c)` (agentes con la marca de Axiom, `mcp.engram`, `mcp.context7`, reglas `permission` de Axiom, `default_agent` solo si lo puso Axiom), la entrada de `instructions` que apunta a `.opencode/axiom.md`, ese fichero y `.opencode/{commands,plugins,prompts/sdd}` | El resto de `opencode.json`, tus `instructions` y tus servidores MCP |
+| Kilo | Lo mismo en `kilo.json(c)` y `.kilo/` (incluida `.kilo/rules/axiom.md` y su entrada de `instructions`) | Lo del equipo |
+| Gemini CLI | `.gemini/AXIOM.md`, su nombre en `context.fileName` (la clave entera si solo quedan los nombres por defecto) y `mcpServers.engram` y `mcpServers.context7` de `.gemini/settings.json` | Los demás nombres de `context.fileName`, `GEMINI.md` y tu configuración |
+| Codex | El bloque `<!-- axiom:workspace-instructions -->` de `developer_instructions` en `.codex/config.toml`, `.codex/axiom-instructions.md`, `.codex/engram-compact-prompt.md`, `.codex/hooks.json` (solo los hooks de Axiom), `[mcp_servers.engram]`, `[mcp_servers.context7]` y las claves que Axiom escribe con su valor (`experimental_compact_prompt_file`, `features.multi_agent = true`, `agents.max_threads = 4`, `agents.max_depth = 2`) | El texto tuyo de `developer_instructions`, tus servidores y cualquier otra clave o valor |
+| VS Code Copilot | `.github/instructions/axiom.instructions.md` y los servidores `engram` y `context7` de `.vscode/mcp.json` | `.github/copilot-instructions.md`, tus servidores y tus `inputs` |
+| Cursor, Kiro | Sus carpetas de proyecto gestionadas (`.cursor/`, `.kiro/`) con el mismo criterio | Lo del equipo |
+| Skills compartidas | Las skills de Axiom de `.agents/skills` y `.claude/skills` (solo mientras ningún otro agente instalado en el proyecto use esa carpeta) | Tus skills |
+| Estado del proyecto | `.axiom/state.json` y su cerrojo cuando ya no queda ningún agente instalado, y las líneas que Axiom añadió a `.git/info/exclude` | El resto de `.axiom/` |
+
+Reglas generales:
+
+- Solo se retira lo que Axiom escribió. Una entrada MCP con el nombre `engram` o `context7` pero otra definición, una clave con otro valor o un fichero de instrucciones que editaste se conservan y se avisa.
+- Los ficheros que Axiom escribe enteros (`axiom.md`, `AXIOM.md`, `axiom-instructions.md`, `axiom.instructions.md`) se borran solo si, tras quitar las secciones de Axiom, no queda nada tuyo. Si lo editaste, se conserva sin las secciones de Axiom y con un aviso.
+- Las carpetas que quedan vacías se quitan; las que tienen contenido del equipo, nunca.
+- Los JSON que se reescriben pierden los comentarios y se reindentan, igual que cuando `install` los fusiona.
+- El `AGENTS.md` del equipo no se toca, salvo el bloque `axiom:skills-index` que mantiene el registro de skills.
+- Repetir la desinstalación no falla ni cambia nada más.
+
+#### Ámbito global
+
+Revierte lo que Axiom escribió en tu carpeta de usuario con la misma regla de «solo lo de Axiom» (por ejemplo, de `~/.claude/settings.json` solo salen las reglas `deny` de Axiom: tu `deny` y tu `defaultMode` se quedan). Con `--all` retira además:
+
+- **Entradas de PATH gestionadas**, con las funciones que ya usa `install`: el directorio del binario de Engram (solo donde Axiom lo registra en el PATH, es decir, `%LOCALAPPDATA%\engram\bin` en Windows; en Linux y macOS el binario está en carpetas compartidas como `/usr/local/bin` y no se toca), `~/bin` solo si la configuración de GGA es de Axiom, y la carpeta de lanzadores `<estado>/bin`. Las demás entradas del PATH se quedan como estaban y en su orden.
+- **La copia de skills de compatibilidad** de `~/.agents/skills` (solo las skills de Axiom) y los shims y el script del modo PR que Axiom escribe para GGA. El binario y el runtime de GGA no son de Axiom y se quedan.
+- Con **`--purge-state`**, la raíz de estado de Axiom (`~/.axiom` o `AXIOM_STATE_DIR`): estado, caché, lanzadores y copias de seguridad, incluida la de esta desinstalación. Nunca se purga por defecto y solo se admite con `--all` y el ámbito global. Si el registro del hub (`workspaces.json`) lista proyectos, el hub se conserva y se borra todo lo demás; para borrarlo también hay que añadir **`--purge-hub`**. Una raíz de estado que contiene `HOME` o el proyecto, o la raíz del disco, no se purga nunca.
+
+`~/.gentle-ai`, el estado de versiones anteriores, no se borra aunque exista (comparte nombre con la herramienta original): el informe te avisa para que lo quites a mano.
+
+#### Migrar de una instalación global a una por proyecto
+
+Si tu equipo instaló Axiom en global y quiere pasar a instalar por proyecto:
+
+1. `axiom doctor` lista en «Huella de máquina» lo que Axiom tiene a nivel de usuario y marca como `[resto global]` lo que sobra si solo vas a trabajar con workspaces.
+2. `axiom uninstall --all --scope global` retira esa configuración global y las entradas de PATH gestionadas (añade `--purge-state` si además quieres borrar `~/.axiom`).
+3. En cada proyecto, `axiom setup` (o `axiom install`) con el ámbito workspace, que es el predeterminado.
+4. Cuando quieras volver a dejar un proyecto como estaba, `axiom uninstall --all` desde él.
+
+Una skill personal con el mismo nombre que una skill de proyecto prevalece sobre esta en Claude Code: si usabas una copia global de las skills de Axiom, retírala en el paso 2 antes de instalar en el proyecto.
 
 ### update / upgrade
 
@@ -338,6 +392,9 @@ See [OpenCode SDD Profiles](opencode-profiles.md) for the full guide.
 | `--agent`, `--agents`         | Agents to uninstall managed config from (required unless using `--all`) |
 | `--component`, `--components` | Managed components to remove only from the selected agents              |
 | `--all`                       | Remove managed configuration from all supported agents                  |
+| `--scope`                     | `workspace` (default, reverts the project) or `global` (reverts the user configuration and managed PATH entries); also `AXIOM_INSTALL_SCOPE` |
+| `--purge-state`               | With `--all --scope global`: also delete the Axiom state directory (`~/.axiom` or `AXIOM_STATE_DIR`) |
+| `--purge-hub`                 | With `--purge-state`: also delete the hub registry when it lists other projects |
 | `--yes`, `-y`                 | Skip the confirmation prompt                                            |
 
 ---

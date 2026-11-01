@@ -108,7 +108,7 @@ axiom doctor
 * Agentes de IA detectados en el sistema.
 * Disponibilidad de servidores MCP y memoria Engram.
 * Integridad de herramientas semánticas (Serena, CodeGraph).
-* Huella de máquina: lo que Axiom tiene a nivel de usuario (binarios, registro del hub, GGA, CodeGraph global, entradas de PATH gestionadas) y qué elementos son restos de una instalación global.
+* Huella de máquina: lo que Axiom tiene a nivel de usuario (binarios, registro del hub, GGA, CodeGraph global, entradas de PATH gestionadas) y qué elementos son restos de una instalación global. Para retirarlos, `axiom uninstall --all --scope global`; la guía de migración está en [Uso: migrar de una instalación global a una por proyecto](usage.md#migrar-de-una-instalación-global-a-una-por-proyecto).
 
 ---
 
