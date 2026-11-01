@@ -214,7 +214,7 @@ func RunInstall(args []string, detection system.DetectionResult) (InstallResult,
 
 	if input.Scope == ScopeGlobal {
 		fmt.Fprintf(os.Stderr,
-			"WARNING: installing with --scope=global (default). Agent config files (system prompts, skills/, agents/, etc.)\n"+
+			"WARNING: installing with --scope=global. Agent config files (system prompts, skills/, agents/, etc.)\n"+
 				"will be written to each selected agent's global config directory and will affect ALL workspaces for those agents on this machine.\n"+
 				"To install only into the current workspace, rerun with --scope=workspace.\n\n")
 	}
