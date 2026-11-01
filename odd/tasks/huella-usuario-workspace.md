@@ -447,7 +447,18 @@ Las cuatro quedaron resueltas por el usuario el 2026-10-29: acepta las recomenda
   - Abierto:
     - Un `mcp.json` vacío que ya existía antes es indistinguible del que crea Axiom; habría que registrar en el estado qué ficheros crea el install.
     - Siguen sin retirarse `~/.codex/sdd-*.config.toml`, `model`/`model_reasoning_effort` de Codex y `~/.claude.json`, fuera del alcance de H3.
-- [ ] **V1 · Fase 5b**: repetir el ciclo de V1 de la fase 5. Install y uninstall en workspace y en global con HOME temporal. Con OpenClaw y Pi seleccionados en workspace, HOME queda intacto.
+- [x] **V1 · Fase 5b**: repetir el ciclo de V1 de la fase 5. Install y uninstall en workspace y en global con HOME temporal. Con OpenClaw y Pi seleccionados en workspace, HOME queda intacto.
+  - **Hecha el 2026-11-02, sin hallazgos nuevos relevantes.** Arnés temporal en proceso en `internal/cli`, borrado después; `git status` limpio sobre `b6e6c6d1`.
+    - **Workspace con los 10 agentes:** install y tres sync. HOME, APPDATA, LOCALAPPDATA y XDG sin cambios. Pi y OpenClaw salen con su aviso y no se lanza ningún comando. No aparecen `SOUL.md`, `.pi/` ni `.openclaw/`, y el segundo sync no cambia nada.
+    - **`AGENTS.md` del equipo** (lista y tabla propia): la sección se conserva y el índice va aparte. Tras el uninstall, el fichero queda byte a byte igual.
+    - **Uninstall en workspace:** 0 ficheros creados y 0 borrados, 6 solo reformateados. `.git/info/exclude` queda restaurado y la operación es idempotente.
+    - **Global:**
+      - Install, `doctor`, uninstall y `doctor`: no quedan restos de Kilo, Kiro ni Codex, y el contenido del usuario se conserva.
+      - `doctor` informa de 6 restos antes del uninstall y de 0 después.
+      - Quedan `~/.claude.json` con `{}` (abierto en T18) y cinco carpetas vacías (cosmético).
+    - **Hooks en un repo ajeno:** salen con 0 y no cambian nada; el control positivo con `axiom.yaml` bloquea.
+    - **Paquetes:** build, vet y deadcode ok; `agents`, `components` (salvo filemerge), `skillregistry` y `state` ok; `internal/cli` en cinco tandas ok; `internal/app` solo con el fallo de entorno conocido.
+    - **Tiempo:** la tanda `Workspace|Scope` con las pruebas de review supera los 8 minutos, así que esas pruebas se ejecutan aparte.
 
 ## Criterios de aceptación
 
@@ -500,6 +511,8 @@ Las cuatro quedaron resueltas por el usuario el 2026-10-29: acepta las recomenda
 
 - 2026-11-01: el usuario autoriza la fase 5b; T15–T18 registradas.
 
+- 2026-11-02: fase 5b implementada (T15 y T16 `22478be0`, T17 `851d1f22`, golden de Gemini `c0d57454`, T18 `bfe3d6a7`, `a95fe9bf` y `f1fd692b`). La V1 de la fase 5b se hizo sin hallazgos nuevos relevantes.
+
 ## Siguiente paso
 
-Fase 5b (T15–T18 y su V1), autorizada el 2026-11-01. Después, la PR con la etiqueta `size:exception`, cuando el usuario lo decida. Abiertos para decidir: Antigravity en workspace (T12h, aplazado), Qwen y Hermes con fichero raíz, y los temas sueltos de la fase 3 (manifiesto de Pi, caché `model-variants`, CodeGraph sin ubicación de proyecto, lanzadores de OpenCode sin aviso).
+Abrir la PR desde `fix/huella-usuario-workspace` con la etiqueta `size:exception`, cuando el usuario lo decida. Abiertos de la fase 5b: el `mcp.json` vacío que ya tenía el usuario y que uninstall borra; y los restos globales fuera de H3 (`~/.codex/sdd-*.config.toml`, `model` de Codex, `~/.claude.json` y carpetas vacías). Abiertos para decidir: Antigravity en workspace (T12h, aplazado), Qwen y Hermes con fichero raíz, y los temas sueltos de la fase 3 (manifiesto de Pi, caché `model-variants`, CodeGraph sin ubicación de proyecto, lanzadores de OpenCode sin aviso).
