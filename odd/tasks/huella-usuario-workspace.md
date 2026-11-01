@@ -400,6 +400,17 @@ Las cuatro quedaron resueltas por el usuario el 2026-10-29: acepta las recomenda
     - `doctor`: apartado «Huella de máquina» presente, sin fallo por GGA ausente y con los restos globales marcados.
     - Global sin `AXIOM_STATE_DIR`: `engram setup` se ejecuta y las rutas son `~/.axiom`, como antes; permisos solo con `deny`.
     - Hallazgos nuevos: T11b, T11c y T11d (fase 3b), y el estado persistido de Codex (fase 4). Las asignaciones de modelos de la semilla global pasan al proyecto, como prevé T10.
+  - **Fases 4 y 5 (2026-11-01): hecha, con hallazgos.** Arnés temporal en proceso en `internal/cli`, borrado; `git status` limpio sobre `7d620117`.
+    - Workspace por agente (Claude, OpenCode, Kilo, Gemini, Codex, VS Code, Cursor, Kiro; por separado y juntos): HOME, APPDATA y LOCALAPPDATA sin cambios; cada agente solo en sus rutas de proyecto; sin `AppData`, `Library` ni `.config` en el proyecto; el segundo sync no cambia nada.
+    - Uninstall workspace con contenido del usuario sembrado: 0 creados y 0 borrados frente al estado previo; 8 ficheros solo reformateados; estado y `.git/info/exclude` restaurados; idempotente; HOME intacto.
+    - Hooks en repo ajeno: todo sale con 0 y sin cambios.
+    - Paquetes: build, vet, gofmt y deadcode ok; `uninstall`, `agents`, `state` ok; `internal/cli` en tandas ok; `internal/app` solo con el fallo de entorno conocido (runtime de OpenCode).
+    - Hallazgos (fase 5b):
+      - H1 (media): OpenClaw pasa el filtro de workspace y escribe `~/.openclaw/openclaw.json` (MCP de Engram) en HOME; uninstall no lo retira y deja `SOUL.md` en el proyecto.
+      - H2 (media): Pi lanza `pi install` sin `-l` en workspace (`internal/agents/pi/adapter.go:266`): en real instalaría paquetes a nivel de usuario. No verificable en proceso.
+      - H3 (media-alta): tras install y `uninstall --scope global --all` quedan `~/.config/kilo/opencode.json`, `~/.config/kilo/plugins/*.ts`, `~/.kiro/steering/axiom.md` y en `~/.codex/config.toml` `mcp_servers.context7`, `features.multi_agent` y `agents.*`. `doctor` solo detecta los plugins de Kilo (y los rotula como de OpenCode). Sin comparar con la base.
+      - H4 (media): si `AGENTS.md` tenía un `## Skills` del equipo, el sync lo adopta como índice gestionado y uninstall lo borra sin restaurarlo.
+      - Menores: `.gentle-ai-default-agent.json` en la raíz del proyecto (OpenCode); uninstall global borra `mcp.json` vacíos que eran del usuario.
 
 ## Criterios de aceptación
 
@@ -448,6 +459,8 @@ Las cuatro quedaron resueltas por el usuario el 2026-10-29: acepta las recomenda
 
 - 2026-11-01: fase 4 integrada (`7689cd4c`, sin conflictos; +7.821/−199 en 93 ficheros). Verificación del resultado combinado con la fase 3b: build, vet, gofmt y deadcode-ratchet ok; `internal/cli` en cinco tandas (`Workspace|Scope|ComponentPath|TUIInstall`, `TestRunSync|TestSync`, `TestRunInstall|TestInstall|Permission`, `Doctor|Engram|Rollback|Restore|Backup`, `OpenCode|Kilo|Codex|Gemini|VSCode|Skills|Background`) ok; `internal/app` ok entero; `agents`, `state`, `components`, `skillregistry`, `backup`, `opencode`, `workspace`, `cmd/axiom` y `tui` ok salvo los fallos conocidos de la base (filemerge, sockets de backup y la prueba de la TUI dependiente del orden).
 
+- 2026-11-01: fase 5 implementada (T13, T13b `825ee3c0`, T14) y V1 de las fases 4 y 5 hecha, con cuatro hallazgos (H1–H4).
+
 ## Siguiente paso
 
-Autorización para la fase 5 (T13, T14). Abiertos para decidir: Antigravity en workspace (T12h, aplazado), Qwen y Hermes con fichero raíz, y los temas sueltos de la fase 3 (manifiesto de Pi, caché `model-variants`, CodeGraph sin ubicación de proyecto, lanzadores de OpenCode sin aviso).
+Autorización para una fase 5b que corrija H1–H4, o abrir la PR con ellos anotados como conocidos. Abiertos para decidir: Antigravity en workspace (T12h, aplazado), Qwen y Hermes con fichero raíz, y los temas sueltos de la fase 3 (manifiesto de Pi, caché `model-variants`, CodeGraph sin ubicación de proyecto, lanzadores de OpenCode sin aviso).
