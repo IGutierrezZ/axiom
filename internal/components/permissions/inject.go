@@ -115,6 +115,18 @@ var unionPaths = map[model.AgentID][][]string{
 	model.AgentClaudeCode: {{"permissions", "deny"}},
 }
 
+// Overlay devuelve una copia del JSON de reglas protectoras que Axiom fusiona en
+// la configuración del agente, o nil si no escribe ninguna. Lo usa la
+// desinstalación para retirar exactamente esas entradas y ninguna otra: ni el
+// resto de la lista deny del usuario ni modos que Axiom ya no impone.
+func Overlay(id model.AgentID) []byte {
+	overlay := agentOverlay(id)
+	if overlay == nil {
+		return nil
+	}
+	return append([]byte(nil), overlay...)
+}
+
 // agentOverlay returns the correct permission overlay for the given agent,
 // or nil if the agent has nothing protective to inject.
 func agentOverlay(id model.AgentID) []byte {

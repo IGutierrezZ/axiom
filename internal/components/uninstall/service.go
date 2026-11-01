@@ -22,6 +22,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/components/filemerge"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/gga"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/opencodedefault"
+	"github.com/IGutierrezZ/axiom/v3/internal/components/permissions"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/sdd"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/skills"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/telemetryruntime"
@@ -894,15 +895,13 @@ func (s *Service) componentOperations(adapter agents.Adapter, componentID model.
 	case model.ComponentPermission:
 		for _, path := range settingsTargets(homeDir, adapter) {
 			targets = append(targets, path)
+			// Solo se retiran las reglas que Axiom escribe (permissions.Overlay).
+			// Los modos de autoaprobación (defaultMode, defaultApprovalMode,
+			// chat.tools.autoApprove) ya no los escribe Axiom: si están, son del
+			// usuario y se quedan.
 			switch adapter.Agent() {
-			case model.AgentClaudeCode:
-				ops = append(ops, rewriteJSONFile(path, jsonPath{"permissions"}))
-			case model.AgentOpenCode:
-				ops = append(ops, rewriteJSONFile(path, jsonPath{"permission"}))
-			case model.AgentGeminiCLI:
-				ops = append(ops, rewriteJSONFile(path, jsonPath{"general", "defaultApprovalMode"}))
-			case model.AgentVSCodeCopilot:
-				ops = append(ops, rewriteJSONFile(path, jsonPath{"chat.tools.autoApprove"}))
+			case model.AgentClaudeCode, model.AgentOpenCode, model.AgentKilocode:
+				ops = append(ops, rewriteManagedPermissions(path, adapter.Agent()))
 			}
 		}
 	case model.ComponentTheme:
@@ -1258,6 +1257,28 @@ func rewriteMarkdownFile(path string, mutate func(content string) (string, bool)
 }
 
 func rewriteJSONFile(path string, jsonPaths ...jsonPath) operation {
+	return rewriteJSONWith(path, func(raw []byte) ([]byte, bool, error) {
+		return removeJSONPaths(raw, jsonPaths...)
+	})
+}
+
+// rewriteManagedPermissions retira de un fichero de configuración las reglas de
+// permisos que Axiom añadió (permissions.overlay de su agente) y deja las del
+// usuario: una lista deny con sus propias entradas, o una clave con otro valor,
+// sobrevive a la desinstalación.
+func rewriteManagedPermissions(path string, agentID model.AgentID) operation {
+	overlay := permissions.Overlay(agentID)
+	return rewriteJSONWith(path, func(raw []byte) ([]byte, bool, error) {
+		if overlay == nil {
+			return raw, false, nil
+		}
+		return removeOverlayEntries(raw, overlay)
+	})
+}
+
+// rewriteJSONWith lee un documento JSON de Axiom, le aplica transform y lo
+// reescribe conservando el modo del fichero. Si transform lo deja vacío, lo borra.
+func rewriteJSONWith(path string, transform func(raw []byte) ([]byte, bool, error)) operation {
 	return operation{
 		typeID: opRewriteFile,
 		path:   path,
@@ -1269,7 +1290,7 @@ func rewriteJSONFile(path string, jsonPaths ...jsonPath) operation {
 				}
 				return false, false, fmt.Errorf("read json file %q: %w", path, err)
 			}
-			updated, changed, err := removeJSONPaths(raw, jsonPaths...)
+			updated, changed, err := transform(raw)
 			if err != nil {
 				return false, false, fmt.Errorf("clean json file %q: %w", path, err)
 			}

@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"reflect"
+	"slices"
 	"strings"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/components/filemerge"
@@ -386,4 +388,80 @@ func stripTrailingCommas(raw []byte) []byte {
 	}
 
 	return out
+}
+
+// removeOverlayEntries retira de raw las entradas que declara overlay y solo
+// ellas: las cadenas de una lista (permissions.deny) y las claves cuyo valor
+// coincide exactamente con el que escribe Axiom. El resto de la lista, las claves
+// con otro valor y las que Axiom no escribe se conservan tal cual, y un objeto
+// que Axiom dejó vacío al retirar sus entradas desaparece con ellas.
+func removeOverlayEntries(raw []byte, overlay []byte) ([]byte, bool, error) {
+	root, err := unmarshalJSONObject(raw)
+	if err != nil {
+		return nil, false, err
+	}
+	var declared map[string]any
+	if err := json.Unmarshal(overlay, &declared); err != nil {
+		return nil, false, fmt.Errorf("decode overlay: %w", err)
+	}
+	if !removeOverlayFrom(root, declared) {
+		return raw, false, nil
+	}
+	encoded, err := json.MarshalIndent(root, "", "  ")
+	if err != nil {
+		return nil, false, fmt.Errorf("marshal json after cleanup: %w", err)
+	}
+	eol := detectEOL(string(raw))
+	encoded = bytes.ReplaceAll(encoded, []byte("\n"), []byte(eol))
+	return append(encoded, []byte(eol)...), true, nil
+}
+
+// removeOverlayFrom aplica removeOverlayEntries sobre un objeto ya decodificado.
+func removeOverlayFrom(root, overlay map[string]any) bool {
+	changed := false
+	for key, declared := range overlay {
+		current, ok := root[key]
+		if !ok {
+			continue
+		}
+		switch want := declared.(type) {
+		case map[string]any:
+			child, ok := current.(map[string]any)
+			if !ok {
+				continue
+			}
+			if removeOverlayFrom(child, want) {
+				changed = true
+				if len(child) == 0 {
+					delete(root, key)
+				}
+			}
+		case []any:
+			list, ok := current.([]any)
+			if !ok {
+				continue
+			}
+			kept := make([]any, 0, len(list))
+			for _, item := range list {
+				if !slices.ContainsFunc(want, func(candidate any) bool { return reflect.DeepEqual(candidate, item) }) {
+					kept = append(kept, item)
+				}
+			}
+			if len(kept) == len(list) {
+				continue
+			}
+			changed = true
+			if len(kept) == 0 {
+				delete(root, key)
+			} else {
+				root[key] = kept
+			}
+		default:
+			if reflect.DeepEqual(want, current) {
+				delete(root, key)
+				changed = true
+			}
+		}
+	}
+	return changed
 }
