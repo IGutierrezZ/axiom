@@ -63,7 +63,9 @@ Restart OpenCode after enabling managed activation. Restart the shell if the lau
 
 ---
 
-## Windows Config Paths
+## Windows Config Paths (ámbito global)
+
+Estas son las rutas que usa `--scope global`. El ámbito predeterminado es `workspace`: en él Axiom escribe en la raíz del proyecto (por ejemplo `.claude/`, `.codex/`, `.gemini/`, `.cursor/`, `.kiro/`, `opencode.json` y `.opencode/`, `.vscode/mcp.json` y `.github/instructions/`), con las skills compartidas en `.agents/skills/`, y no toca estas carpetas de usuario. Windsurf, Trae y Antigravity solo tienen configuración global y se omiten en workspace con un aviso. El detalle por agente está en [Agentes](agents.md#modo-workspace-por-agente).
 
 | Agent | Windows Config Path |
 |-------|-------------------|
@@ -73,11 +75,11 @@ Restart OpenCode after enabling managed activation. Restart the shell if the lau
 | Cursor | `%USERPROFILE%\.cursor\` |
 | VS Code Copilot | `%APPDATA%\Code\User\` (settings, MCP, prompts) + `%USERPROFILE%\.copilot\` (skills) |
 | Codex | `%USERPROFILE%\.codex\` |
-| Windsurf | `%USERPROFILE%\.codeium\windsurf\` (skills, MCP, rules) + `%APPDATA%\Windsurf\User\` (settings) |
+| Windsurf (solo global) | `%USERPROFILE%\.codeium\windsurf\` (skills, MCP, rules) + `%APPDATA%\Windsurf\User\` (settings) |
 | Kimi (no disponible de momento) | `%USERPROFILE%\.kimi\` (includes `config.toml`, system prompt, agents, MCP) |
-| Antigravity | `%USERPROFILE%\.gemini\antigravity\` |
+| Antigravity (solo global) | `%USERPROFILE%\.gemini\antigravity\` |
 | Kiro IDE | `%USERPROFILE%\.kiro\steering\` (prompts) + `%USERPROFILE%\.kiro\skills\` (skills) + `%USERPROFILE%\.kiro\agents\` (SDD agents) + `%APPDATA%\kiro\User\settings.json` (settings) + `%USERPROFILE%\.kiro\settings\mcp.json` (MCP) |
 | OpenClaw | `%USERPROFILE%\.openclaw\openclaw.json` (global MCP/settings) + active workspace from `agents.defaults.workspace` for `AGENTS.md` / `SOUL.md` / workspace-scoped SDD skills |
-| Trae | `%USERPROFILE%\.trae\` (skills) + `%APPDATA%\Trae\User\user_rules.md` (rules) + `%APPDATA%\Trae\User\mcp.json` (MCP) |
+| Trae (solo global) | `%USERPROFILE%\.trae\` (skills) + `%APPDATA%\Trae\User\user_rules.md` (rules) + `%APPDATA%\Trae\User\mcp.json` (MCP) |
 | Pi | `%USERPROFILE%\.pi\` (Pi config, project agents/chains, Gentle AI support assets) |
 | Hermes (no disponible de momento) | `%USERPROFILE%\.hermes\` (config.yaml, SOUL.md, skills/) |
