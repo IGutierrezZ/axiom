@@ -111,7 +111,7 @@ func TestRunInstallWorkspaceVSCodeUsesProjectLayout(t *testing.T) {
 	if !strings.HasPrefix(instructions, "---\n") || !strings.Contains(strings.SplitN(instructions, "\n---\n", 2)[0], `applyTo: "**"`) {
 		t.Errorf("la cabecera debe declarar applyTo: \"**\":\n%.300s", instructions)
 	}
-	for _, section := range []string{"<!-- axiom:sdd-orchestrator -->", "<!-- axiom:engram-protocol -->"} {
+	for _, section := range []string{"<!-- axiom:sdd-orchestrator -->", "<!-- axiom:engram-protocol -->", "<!-- axiom:agent-routing -->"} {
 		if !strings.Contains(instructions, section) {
 			t.Errorf("las instrucciones no contienen %s", section)
 		}
@@ -151,6 +151,9 @@ func TestRunInstallWorkspaceVSCodeUsesProjectLayout(t *testing.T) {
 
 	// Agentes, prompts y hooks: Axiom no instala ninguno para VS Code.
 	assertNothingUnder(t, workspace, filepath.Join(".github", "agents"), filepath.Join(".github", "prompts"), filepath.Join(".github", "hooks"), filepath.Join(".github", "AGENTS.md"))
+	// La guía de enrutado va al fichero de proyecto: ninguna distribución del perfil
+	// de usuario de VS Code (macOS, Windows o Linux) aparece dentro del proyecto.
+	assertNothingUnder(t, workspace, "Library", "AppData", ".config")
 	assertTeamFilesIntact(t, workspace, team)
 	assertSameTree(t, "home y APPDATA", before, userSnapshot())
 

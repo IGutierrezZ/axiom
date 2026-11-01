@@ -2811,26 +2811,34 @@ func effectiveOpenCodeSettingsPath(homeDir, workspaceDir string, scope InstallSc
 // targets the workspace settings; global install/sync targets effective global settings.
 func routingGuidanceOptions(homeDir, workspaceDir string, scope InstallScope, adapter agents.Adapter) agentguidance.RoutingOptions {
 	var options agentguidance.RoutingOptions
-	// En workspace, OpenCode y Kilo resuelven sus rutas en la distribución del
-	// proyecto: el inyector debe usar el adaptador ligado, no crear uno global.
+	// En workspace, todo adaptador ligado a la raíz del proyecto resuelve sus rutas
+	// en la distribución del proyecto (opencode.json, .gemini/AXIOM.md,
+	// .codex/axiom-instructions.md, .github/instructions/...): el inyector debe
+	// usarlo, no crear uno global que aplicaría la distribución de usuario dentro
+	// del proyecto.
+	if scope == ScopeWorkspace && boundToWorkspace(adapter) {
+		options.Adapter = adapter
+	}
+	// OpenCode y Kilo guardan la guía en su configuración, que en el proyecto es
+	// del equipo y está versionada: se conservan sus comentarios.
 	if scope == ScopeWorkspace && agentguidance.DeliversThroughOrchestratorPrompt(adapter.Agent()) {
 		options.Adapter = adapter
 		options.PreserveJSONC = true
-	}
-	// Gemini, igual: sus instrucciones van a un fichero propio del proyecto, no al
-	// GEMINI.md que el inyector resolvería con un adaptador global.
-	if _, byName := adapter.(agents.WorkspaceContextFileProvider); scope == ScopeWorkspace && byName {
-		options.Adapter = adapter
-	}
-	// Codex, igual: sus instrucciones salen de un fichero propio del proyecto que se
-	// copia a developer_instructions, no del ~/.codex/AGENTS.md global.
-	if _, inline := adapter.(agents.WorkspaceInlineInstructionsProvider); scope == ScopeWorkspace && inline {
-		options.Adapter = adapter
 	}
 	if adapter.Agent() == model.AgentOpenCode {
 		options.SettingsPath = effectiveOpenCodeSettingsPath(homeDir, workspaceDir, scope, adapter)
 	}
 	return options
+}
+
+// boundToWorkspace reconoce un adaptador ligado a la raíz del proyecto por
+// cualquiera de las capacidades con las que lo declaran los adaptadores.
+func boundToWorkspace(adapter agents.Adapter) bool {
+	switch adapter.(type) {
+	case agents.WorkspaceScopedProvider, agents.WorkspaceContextFileProvider, agents.WorkspaceInlineInstructionsProvider:
+		return true
+	}
+	return false
 }
 
 func componentInjectionDir(homeDir, workspaceDir string, adapter agents.Adapter) string {
