@@ -114,6 +114,84 @@ func TestSplitAgentsForScope(t *testing.T) {
 	}
 }
 
+// Pi y OpenClaw no tienen configuración de proyecto que Axiom pueda respaldar con la
+// documentación oficial: en workspace se omiten enteros, sin plan ni escritura.
+func TestSplitAgentsForScopeOmitsPiAndOpenClawInWorkspace(t *testing.T) {
+	selected := []model.AgentID{model.AgentClaudeCode, model.AgentPi, model.AgentOpenClaw, model.AgentCodex}
+
+	kept, omitted := splitAgentsForScope(ScopeWorkspace, selected)
+	if want := []model.AgentID{model.AgentClaudeCode, model.AgentCodex}; !slices.Equal(kept, want) {
+		t.Errorf("workspace conserva %v, want %v", kept, want)
+	}
+	if want := []model.AgentID{model.AgentPi, model.AgentOpenClaw}; !slices.Equal(omitted, want) {
+		t.Errorf("workspace omite %v, want %v", omitted, want)
+	}
+	for _, id := range []model.AgentID{model.AgentPi, model.AgentOpenClaw} {
+		if agentSupportsWorkspace(id) {
+			t.Errorf("%s no debe declarar modo workspace", id)
+		}
+	}
+
+	kept, omitted = splitAgentsForScope(ScopeGlobal, selected)
+	if !slices.Equal(kept, selected) || omitted != nil {
+		t.Errorf("global no filtra: kept=%v omitted=%v", kept, omitted)
+	}
+}
+
+// install --scope workspace con Pi y OpenClaw seleccionados los omite con el aviso
+// común, no lanza ningún comando de Pi (`pi install`, `pi-engram init`) y deja HOME y
+// el proyecto sin tocar, también sin ficheros de OpenClaw como SOUL.md.
+func TestRunInstallWorkspaceOmitsPiAndOpenClawWithoutTouchingHome(t *testing.T) {
+	home, workspace, commands := footprintEnv(t)
+	t.Setenv("AXIOM_STATE_DIR", "")
+	seedFootprintHome(t, home)
+	mustWriteFile(t, filepath.Join(home, ".openclaw", "openclaw.json"), []byte(`{"agents":{"defaults":{"workspace":"`+filepath.ToSlash(workspace)+`"}}}`))
+	mustWriteFile(t, filepath.Join(home, ".pi", "agent", "settings.json"), []byte("{}\n"))
+	notices := captureWorkspaceAgentsNotice(t)
+	before := homeSnapshotWithoutState(t, home)
+
+	_, err := RunInstall([]string{"--scope", "workspace", "--agent", "pi,openclaw"}, macOSDetectionResult())
+	if err == nil {
+		t.Fatal("RunInstall() debe fallar cuando ningún agente admite workspace")
+	}
+	assertOmittedNotices(t, notices.String(), model.AgentPi, model.AgentOpenClaw)
+	assertSameTree(t, "home", before, homeSnapshotWithoutState(t, home))
+	if recorded := commands.get(); len(recorded) != 0 {
+		t.Errorf("no debe lanzarse ningún comando, se lanzaron %v", recorded)
+	}
+	assertNothingUnder(t, workspace, "SOUL.md", "AGENTS.md", ".pi", ".openclaw", ".mcp.json")
+	if entries, _ := os.ReadDir(workspace); len(entries) != 0 {
+		t.Errorf("el proyecto debe quedar vacío, contiene %v", entries)
+	}
+}
+
+// Con Claude Code además de Pi y OpenClaw, solo Claude Code se instala en el proyecto.
+func TestRunInstallWorkspaceKeepsClaudeAndOmitsPiAndOpenClaw(t *testing.T) {
+	home, workspace, commands := footprintEnv(t)
+	t.Setenv("AXIOM_STATE_DIR", "")
+	seedFootprintHome(t, home)
+	notices := captureWorkspaceAgentsNotice(t)
+	before := homeSnapshotWithoutState(t, home)
+
+	result, err := RunInstall([]string{"--scope", "workspace", "--agent", "claude-code,pi,openclaw"}, macOSDetectionResult())
+	if err != nil {
+		t.Fatalf("RunInstall() error = %v", err)
+	}
+
+	assertSameTree(t, "home", before, homeSnapshotWithoutState(t, home))
+	assertOmittedNotices(t, notices.String(), model.AgentPi, model.AgentOpenClaw)
+	if want := []model.AgentID{model.AgentClaudeCode}; !slices.Equal(result.Resolved.Agents, want) {
+		t.Errorf("agentes del plan = %v, want %v", result.Resolved.Agents, want)
+	}
+	for _, command := range commands.get() {
+		joined := command
+		if strings.Contains(joined, "pi-engram") || strings.HasPrefix(joined, "pi ") || strings.Contains(joined, "openclaw") {
+			t.Errorf("no debe lanzarse un comando de Pi u OpenClaw: %q", joined)
+		}
+	}
+	assertNothingUnder(t, workspace, "SOUL.md", ".pi", ".openclaw")
+}
+
 // Ningún adaptador sin modo workspace puede resolver una ruta en HOME con el
 // ámbito workspace: la salvaguarda queda confinada al proyecto.
 func TestComponentInjectionDirScopedNeverResolvesHomeInWorkspace(t *testing.T) {

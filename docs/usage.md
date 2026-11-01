@@ -62,7 +62,7 @@ Configuración inicial: detecta tus herramientas y configura los agentes y compo
 - Lo opcional es opt-in. GGA y CodeGraph no entran en ningún preset y hay que pedirlos expresamente; si los eliges, conservan su huella en HOME y Axiom la avisa.
 - El componente de permisos solo añade reglas de denegación (`deny`) y nunca fija modos de autoaprobación. Detalle en [Componentes](components.md).
 - Un directorio cuenta como proyecto de Axiom solo si tiene un `axiom.yaml` propio, o el que se alcanza mediante el puntero `.axiom-workspace` de un multirepo, en él o en un ancestro. Un `openspec/` suelto no basta. Los hooks que Axiom instala (registro de skills, guarda de rama, preflight SDD y stop-hook de revisión) no hacen nada fuera de un proyecto así.
-- Cada agente recibe su configuración en las rutas de proyecto que lee (véase [Agentes](agents.md#modo-workspace-por-agente)). Windsurf, Trae y Antigravity no tienen modo workspace y se omiten con un aviso; Kimi Code, Qwen Code y Hermes ya no se pueden elegir ([agentes no disponibles](agents.md#agentes-no-disponibles-de-momento)).
+- Cada agente recibe su configuración en las rutas de proyecto que lee (véase [Agentes](agents.md#modo-workspace-por-agente)). Windsurf, Trae, Antigravity, Pi y OpenClaw no tienen modo workspace y se omiten con un aviso; Kimi Code, Qwen Code y Hermes ya no se pueden elegir ([agentes no disponibles](agents.md#agentes-no-disponibles-de-momento)).
 
 ```bash
 # Ecosistema completo para varios agentes

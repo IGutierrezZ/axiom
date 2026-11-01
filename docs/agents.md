@@ -55,9 +55,8 @@ El ámbito workspace es el predeterminado de la CLI y de la TUI. Axiom escribe e
 | Cursor | `.cursor/rules/axiom.mdc` | `.cursor/` (`agents/`, `mcp.json`) | `.agents/skills` |
 | Kiro IDE | `.kiro/steering/axiom.md` | `.kiro/` (`agents/`, `settings/mcp.json`, `hooks/`) | `.kiro/skills` |
 
-- **Sin modo workspace.** Windsurf, Trae y Antigravity solo tienen configuración global: con `--scope workspace` se omiten con un aviso en castellano y Axiom nunca cae a escribir en su configuración de usuario. Para instalarlos hay que pedir `--scope global` de forma expresa. Antigravity queda aplazado: sus reglas de proyecto limitan el tamaño de cada fichero y el orquestador de Axiom no cabe en una sola regla.
+- **Sin modo workspace.** Windsurf, Trae, Antigravity, Pi y OpenClaw solo tienen configuración global: con `--scope workspace` se omiten con un aviso en castellano y Axiom nunca cae a escribir en su configuración de usuario. Para instalarlos hay que pedir `--scope global` de forma expresa. Pi se omite porque `pi install -l` solo cubre los paquetes (`.pi/settings.json`), mientras que `pi-engram init`, `~/.pi/npm/package.json` y el prompt de sistema solo tienen ruta de usuario. OpenClaw se omite porque su configuración, incluido el MCP de Engram, vive en `~/.openclaw/openclaw.json` y no documenta configuración por proyecto. Antigravity queda aplazado: sus reglas de proyecto limitan el tamaño de cada fichero y el orquestador de Axiom no cabe en una sola regla.
 - **No seleccionables.** Kimi Code, Qwen Code y Hermes ya no se pueden elegir (véase [Agentes no disponibles de momento](#agentes-no-disponibles-de-momento)).
-- **Sin tratamiento propio.** OpenClaw y Pi no se omiten en workspace, pero no tienen un adaptador ligado al proyecto: Axiom aplica su disposición de siempre relativa a la raíz del proyecto, sin haber comprobado qué rutas lee cada uno en ese ámbito. Pi gestiona sus paquetes mediante `gentle-pi`.
 - **Precedencia.** Lo del proyecto prevalece sobre lo del usuario y ambos conviven, con dos matices. En Claude Code, una skill personal con el mismo nombre que una de proyecto gana a esta. En Gemini CLI, el `context.fileName` del proyecto sustituye al del usuario y no se fusiona: Axiom escribe una lista que conserva los nombres que el proyecto ya declaraba (o `GEMINI.md`) y añade `.gemini/AXIOM.md`, de modo que un nombre que solo figure en `~/.gemini/settings.json` deja de cargarse en ese proyecto.
 - **Copilot CLI.** No tiene adaptador en Axiom, pero lee `.github/instructions`, `.github/skills` y el `.mcp.json` de Claude Code, así que se beneficia de lo que Axiom escribe para VS Code Copilot y Claude Code.
 - **Lo que no escribe en `~/`.** `engram setup <agente>` se omite con un aviso, porque escribe en la carpeta de usuario del agente; el MCP de Engram ya queda en el proyecto. Con Codex, el aviso sugiere `engram setup codex` como acción manual opcional: ejecútalo solo si quieres además el registro de usuario, porque escribe en `~/.codex`, fuera del proyecto.
@@ -293,6 +292,7 @@ Kiro usa agentes personalizados en `~/.kiro/agents/`. Axiom escribe los agentes 
 ### OpenClaw
 
 - **Detección**: Axiom detecta OpenClaw mediante el ejecutable `openclaw` en `PATH` y la raíz `~/.openclaw`.
+- **Ámbito**: solo con `--scope global`. Con `--scope workspace` se omite con un aviso y no se escribe nada (ni `~/.openclaw/openclaw.json` ni `SOUL.md` en el proyecto).
 - **Instalación**: manual; instala primero OpenClaw y después ejecuta `axiom install --agent openclaw`.
 - **Workspace activo**: Axiom lee `agents.defaults.workspace` de `~/.openclaw/openclaw.json` y escribe allí los ficheros de instrucciones.
 - **Instructions**: Engram and SDD protocols are injected into workspace `AGENTS.md`; persona is injected into workspace `SOUL.md`.
@@ -316,6 +316,7 @@ Kiro usa agentes personalizados en `~/.kiro/agents/`. Axiom escribe los agentes 
 For the full Pi command and package reference, see [Pi Agent](pi.md).
 
 - **Detección**: Axiom detecta Pi mediante el ejecutable `pi` en `PATH` y la raíz `~/.pi`.
+- **Ámbito**: solo con `--scope global`. Con `--scope workspace` se omite con un aviso y Axiom no lanza ningún comando de Pi.
 - **Instalación**: Pi debe estar instalado antes. Axiom aprovisiona entonces el conjunto de integración de Pi con:
   - `pi install npm:gentle-pi`
   - `pi install npm:gentle-engram`
