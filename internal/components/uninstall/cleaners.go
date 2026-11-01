@@ -5,11 +5,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"reflect"
 	"slices"
 	"strings"
+	"sync"
 
+	"github.com/IGutierrezZ/axiom/v3/internal/assets"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/filemerge"
 )
 
@@ -62,8 +65,43 @@ func removeManagedPersonaPreamble(content string) (string, bool) {
 	return suffix, true
 }
 
+var (
+	embeddedPersonasOnce     sync.Once
+	embeddedPersonasContents []string
+)
+
+// embeddedPersonas devuelve el contenido, sin espacios en los extremos y con saltos
+// de línea LF, de cada persona que Axiom incrusta (persona-*.md de cualquier agente).
+func embeddedPersonas() []string {
+	embeddedPersonasOnce.Do(func() {
+		_ = fs.WalkDir(assets.FS, ".", func(path string, entry fs.DirEntry, err error) error {
+			if err != nil || entry.IsDir() {
+				return nil
+			}
+			name := entry.Name()
+			if !strings.HasPrefix(name, "persona-") || !strings.HasSuffix(name, ".md") {
+				return nil
+			}
+			content, readErr := assets.FS.ReadFile(path)
+			if readErr != nil {
+				return nil
+			}
+			embeddedPersonasContents = append(embeddedPersonasContents,
+				strings.TrimSpace(strings.ReplaceAll(string(content), "\r\n", "\n")))
+			return nil
+		})
+	})
+	return embeddedPersonasContents
+}
+
 func looksLikeManagedPersonaPrefix(prefix string) bool {
 	if (strings.Contains(prefix, "name: Gentle AI Persona") || strings.Contains(prefix, "name: Axiom Persona")) && strings.Contains(prefix, "description: Teaching-oriented persona") {
+		return true
+	}
+	// El agente con estrategia de sustitución de fichero (Codex, Gemini) recibe la
+	// persona entera al principio del fichero, sin marcadores: es de Axiom si es
+	// byte a byte una de las que Axiom incrusta.
+	if trimmed := strings.TrimSpace(strings.ReplaceAll(prefix, "\r\n", "\n")); trimmed != "" && slices.Contains(embeddedPersonas(), trimmed) {
 		return true
 	}
 

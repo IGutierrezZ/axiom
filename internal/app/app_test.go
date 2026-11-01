@@ -356,7 +356,7 @@ func TestRunArgsUninstallReportsBackupOnFailure(t *testing.T) {
 	}
 
 	var output bytes.Buffer
-	err := RunArgs([]string{"uninstall", "--agent", "codex", "--yes"}, &output)
+	err := RunArgs([]string{"uninstall", "--agent", "codex", "--scope", "global", "--yes"}, &output)
 	if err == nil || !strings.Contains(err.Error(), "read install state") {
 		t.Fatalf("RunArgs(uninstall) error = %v, want install state read failure", err)
 	}

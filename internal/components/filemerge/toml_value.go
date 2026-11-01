@@ -177,6 +177,20 @@ func UpsertTopLevelTOMLValue(content, key, rawValue string) string {
 	return strings.TrimSpace(strings.Join(out, "\n")) + "\n"
 }
 
+// RemoveTopLevelTOMLKey quita la asignación de key del ámbito raíz del documento,
+// aunque su valor ocupe varias líneas, y deja el resto como estaba. Si la clave no
+// existe devuelve el documento sin cambios.
+func RemoveTopLevelTOMLKey(content, key string) string {
+	normalized := strings.ReplaceAll(content, "\r\n", "\n")
+	lines := strings.Split(normalized, "\n")
+	start, end, found := topLevelTOMLAssignmentSpan(lines, key)
+	if !found {
+		return content
+	}
+	out := append(append([]string{}, lines[:start]...), lines[end+1:]...)
+	return strings.TrimSpace(strings.Join(out, "\n")) + "\n"
+}
+
 // topLevelTOMLAssignmentSpan devuelve las líneas, de start a end ambas incluidas,
 // que ocupa la asignación de key en el ámbito raíz. Sigue las cadenas multilínea y
 // las listas para no confundir una línea de su contenido con una clave o una tabla.

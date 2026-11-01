@@ -676,22 +676,39 @@ func tuiSync(homeDir string) tui.SyncFunc {
 // for selected agents/components, but without interactive flag parsing.
 func tuiUninstall(homeDir string) tui.UninstallFunc {
 	return func(agentIDs []model.AgentID, componentIDs []model.ComponentID) (componentuninstall.Result, error) {
-		workspaceDir, err := os.Getwd()
+		scope, workspaceDir, err := tuiUninstallRoots(homeDir)
 		if err != nil {
-			return componentuninstall.Result{}, fmt.Errorf("resolve workspace directory: %w", err)
+			return componentuninstall.Result{}, err
 		}
-		return cli.RunUninstallWithSelection(homeDir, workspaceDir, agentIDs, componentIDs)
+		return cli.RunUninstallWithSelection(scope, homeDir, workspaceDir, agentIDs, componentIDs)
 	}
 }
 
 func tuiUninstallWithProfiles(homeDir string) tui.UninstallWithProfilesFunc {
 	return func(agentIDs []model.AgentID, componentIDs []model.ComponentID, profileNames []string, engramScope model.EngramUninstallScope) (componentuninstall.Result, error) {
-		workspaceDir, err := os.Getwd()
+		scope, workspaceDir, err := tuiUninstallRoots(homeDir)
 		if err != nil {
-			return componentuninstall.Result{}, fmt.Errorf("resolve workspace directory: %w", err)
+			return componentuninstall.Result{}, err
 		}
-		return cli.RunUninstallWithSelectionAndProfiles(homeDir, workspaceDir, agentIDs, componentIDs, profileNames, engramScope)
+		return cli.RunUninstallWithSelectionAndProfiles(scope, homeDir, workspaceDir, agentIDs, componentIDs, profileNames, engramScope)
 	}
+}
+
+// tuiUninstallRoots resuelve el ámbito de la desinstalación de la TUI igual que el
+// comando: workspace por defecto (o lo que fije AXIOM_INSTALL_SCOPE) y, en
+// workspace, la raíz del proyecto aunque la TUI se haya abierto en una subcarpeta.
+// Se descarta el aviso de la raíz: la TUI ocupa la terminal y no debe recibir texto
+// suelto.
+func tuiUninstallRoots(homeDir string) (scope cli.InstallScope, workspaceDir string, err error) {
+	scope, err = cli.ResolveInstallScope("")
+	if err != nil {
+		return "", "", err
+	}
+	workspaceDir, _ = cli.ResolveWorkspaceDir(scope, homeDir)
+	if workspaceDir == "" {
+		return "", "", fmt.Errorf("resolve workspace directory")
+	}
+	return scope, workspaceDir, nil
 }
 
 func syncAgentIDs(homeDir string, store state.Store, overrides *model.SyncOverrides) []model.AgentID {

@@ -23,6 +23,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/components/gga"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/opencodedefault"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/permissions"
+	"github.com/IGutierrezZ/axiom/v3/internal/components/persona"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/sdd"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/skills"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/telemetryruntime"
@@ -57,6 +58,38 @@ type Result struct {
 	// disk, and each one is named in ManualActions with the command that
 	// retries it.
 	FailedAgents []model.AgentID
+	// RemovedPathEntries son las entradas de PATH de usuario que una desinstalación
+	// global completa retiró (carpeta de Engram, shims de GGA, lanzadores).
+	RemovedPathEntries []string
+	// PurgedPaths es lo que borró --purge-state de la raíz de estado de Axiom.
+	PurgedPaths []string
+}
+
+// Scope es el ámbito sobre el que opera la desinstalación, el mismo que eligió la
+// instalación: global revierte lo que hay en la carpeta de usuario y workspace, lo
+// que hay en la raíz del proyecto.
+type Scope string
+
+const (
+	ScopeGlobal    Scope = "global"
+	ScopeWorkspace Scope = "workspace"
+)
+
+// Options son los ajustes de una desinstalación con ámbito. El valor cero equivale
+// a la desinstalación global de siempre.
+type Options struct {
+	Scope Scope
+	// AgentSupportsWorkspace dice si un agente tiene modo workspace. Solo se usa con
+	// --all en el ámbito workspace: se revierten únicamente los agentes que pudieron
+	// instalarse en el proyecto. Con nil se consideran todos los agentes.
+	AgentSupportsWorkspace func(model.AgentID) bool
+	// PurgeState borra además la raíz de estado de Axiom (system.AxiomDir) en una
+	// desinstalación global completa. Sin ella nunca se toca. Si el registro del hub
+	// tiene proyectos registrados, el hub se conserva salvo PurgeHub.
+	PurgeState bool
+	// PurgeHub permite que PurgeState borre también el registro del hub aunque
+	// tenga otros proyectos registrados.
+	PurgeHub bool
 }
 
 type Service struct {
@@ -67,6 +100,21 @@ type Service struct {
 	snapshotter  Snapshotter
 	registry     *agents.Registry
 	now          func() time.Time
+
+	// workspace indica que la desinstalación opera sobre la raíz del proyecto
+	// (workspaceDir) y no sobre la carpeta de usuario.
+	workspace bool
+	options   Options
+	// removing son los agentes que retira la desinstalación en curso; en el
+	// workspace sirve para saber qué agentes siguen usando una carpeta compartida.
+	removing []model.AgentID
+	// completeRun marca la desinstalación global completa (--all), la única que
+	// retira lo que es de todos los agentes: la copia de skills de compatibilidad.
+	completeRun bool
+	// notices recoge los avisos que generan las operaciones al aplicarse (un fichero
+	// que Axiom no retira porque el usuario lo editó). executePlan los vuelca a
+	// Result.ManualActions.
+	notices []string
 
 	// profileNamesToRemove scopes SDD profile cleanup for this uninstall run.
 	// When profileSelectionScoped=false, SDD cleanup removes all detected profiles
@@ -161,6 +209,10 @@ type operation struct {
 	// cleanup it was.
 	agents []model.AgentID
 	apply  func(path string) (changed bool, removed bool, err error)
+	// quiet evita el aviso «retirar a mano» cuando un directorio que solo se
+	// intentaba vaciar sigue teniendo contenido (la carpeta de configuración de un
+	// agente en el proyecto, que casi siempre tiene ficheros del equipo).
+	quiet bool
 }
 
 // operationFailure records one operation that did not complete, so the run can
@@ -171,7 +223,16 @@ type operationFailure struct {
 	err    error
 }
 
-func NewService(homeDir, workspaceDir, appVersion string) (*Service, error) {
+// NewScopedService crea el servicio de desinstalación del ámbito de opts. En el
+// ámbito workspace, workspaceDir es la raíz del proyecto (la que resuelve
+// workspace.ResolveRoot) y debe venir informada.
+func NewScopedService(homeDir, workspaceDir, appVersion string, opts Options) (*Service, error) {
+	if opts.Scope == "" {
+		opts.Scope = ScopeGlobal
+	}
+	if opts.Scope == ScopeWorkspace && strings.TrimSpace(workspaceDir) == "" {
+		return nil, fmt.Errorf("la desinstalación con ámbito workspace necesita la raíz del proyecto")
+	}
 	registry, err := agents.NewDefaultRegistry()
 	if err != nil {
 		return nil, fmt.Errorf("create adapter registry: %w", err)
@@ -190,12 +251,39 @@ func NewService(homeDir, workspaceDir, appVersion string) (*Service, error) {
 		snapshotter:          backup.NewSnapshotter(),
 		registry:             registry,
 		now:                  time.Now,
+		workspace:            opts.Scope == ScopeWorkspace,
+		options:              opts,
 		engramUninstallScope: model.EngramUninstallScopeGlobal,
 	}, nil
 }
 
-func PartialUninstall(homeDir, workspaceDir, appVersion string, agentIDs []string, componentIDs []string) (Result, error) {
-	svc, err := NewService(homeDir, workspaceDir, appVersion)
+// root es la raíz sobre la que se resuelven las rutas de cada agente: la del
+// proyecto en el ámbito workspace y la carpeta de usuario en el global.
+func (s *Service) root() string {
+	if s.workspace {
+		return s.workspaceDir
+	}
+	return s.homeDir
+}
+
+// adapter devuelve el adaptador del agente ligado al ámbito. En workspace, los que
+// tienen otra distribución de proyecto (OpenCode, Kilo, Gemini, Codex, VS Code y
+// Cursor) resuelven sus rutas con la raíz del proyecto, igual que la instalación.
+func (s *Service) adapter(agentID model.AgentID) (agents.Adapter, bool) {
+	adapter, ok := s.registry.Get(agentID)
+	if !ok {
+		return nil, false
+	}
+	if s.workspace {
+		adapter = agents.BindWorkspace(adapter, s.workspaceDir)
+	}
+	return adapter, true
+}
+
+// PartialUninstallScoped desinstala los agentes y componentes elegidos en el ámbito
+// de opts.
+func PartialUninstallScoped(homeDir, workspaceDir, appVersion string, opts Options, agentIDs []string, componentIDs []string) (Result, error) {
+	svc, err := NewScopedService(homeDir, workspaceDir, appVersion, opts)
 	if err != nil {
 		return Result{}, err
 	}
@@ -213,8 +301,10 @@ func PartialUninstall(homeDir, workspaceDir, appVersion string, agentIDs []strin
 	return svc.PartialUninstall(agentsTyped, componentsTyped)
 }
 
-func PartialUninstallWithProfileSelection(homeDir, workspaceDir, appVersion string, agentIDs []string, componentIDs []string, profileNames []string, engramScope model.EngramUninstallScope) (Result, error) {
-	svc, err := NewService(homeDir, workspaceDir, appVersion)
+// PartialUninstallWithProfileSelectionScoped es PartialUninstallScoped con la
+// selección de perfiles de SDD y el ámbito de los datos de Engram.
+func PartialUninstallWithProfileSelectionScoped(homeDir, workspaceDir, appVersion string, opts Options, agentIDs []string, componentIDs []string, profileNames []string, engramScope model.EngramUninstallScope) (Result, error) {
+	svc, err := NewScopedService(homeDir, workspaceDir, appVersion, opts)
 	if err != nil {
 		return Result{}, err
 	}
@@ -232,8 +322,10 @@ func PartialUninstallWithProfileSelection(homeDir, workspaceDir, appVersion stri
 	return svc.PartialUninstallWithProfiles(agentsTyped, componentsTyped, profileNames, engramScope)
 }
 
-func CompleteUninstall(homeDir, workspaceDir, appVersion string) (Result, error) {
-	svc, err := NewService(homeDir, workspaceDir, appVersion)
+// CompleteUninstallScoped retira todo lo gestionado de todos los agentes del ámbito
+// de opts.
+func CompleteUninstallScoped(homeDir, workspaceDir, appVersion string, opts Options) (Result, error) {
+	svc, err := NewScopedService(homeDir, workspaceDir, appVersion, opts)
 	if err != nil {
 		return Result{}, err
 	}
@@ -316,7 +408,9 @@ func (s *Service) partialUninstall(agentIDs []model.AgentID, componentIDs []mode
 // "--components gga", in which case there is nothing safe left to do for
 // that explicit request and the error is returned instead.
 func (s *Service) reconcileSharedComponents(agentIDs []model.AgentID, componentIDs []model.ComponentID, explicitGGA bool) ([]model.ComponentID, string, error) {
-	if !slices.Contains(componentIDs, model.ComponentGGA) {
+	// GGA es un componente de máquina: el ámbito workspace nunca lo instala ni lo
+	// retira.
+	if s.workspace || !slices.Contains(componentIDs, model.ComponentGGA) {
 		return componentIDs, "", nil
 	}
 
@@ -432,6 +526,19 @@ func (s *Service) CompleteUninstall() (Result, error) {
 	s.engramUninstallScope = model.EngramUninstallScopeGlobal
 
 	allAgents := s.registry.SupportedAgents()
+	if s.workspace && s.options.AgentSupportsWorkspace != nil {
+		// Solo los agentes que pudieron instalarse en el proyecto: el resto no tiene
+		// modo workspace y aplicarles sus rutas de usuario a la raíz del proyecto
+		// buscaría ficheros que Axiom nunca escribió allí.
+		allAgents = slices.DeleteFunc(slices.Clone(allAgents), func(id model.AgentID) bool {
+			return !s.options.AgentSupportsWorkspace(id)
+		})
+	}
+	// Se evalúa antes de retirar la configuración de GGA: es lo que dice si `~/bin`
+	// en el PATH lo añadió Axiom.
+	ggaManaged := !s.workspace && s.ggaManagedByAxiom()
+	s.completeRun = true
+	defer func() { s.completeRun = false }()
 	plan, err := s.buildPlan(allAgents, allManagedComponents)
 	if err != nil {
 		return Result{}, err
@@ -441,7 +548,10 @@ func (s *Service) CompleteUninstall() (Result, error) {
 		return result, err
 	}
 
-	result.ManualActions = append(result.ManualActions, "To completely remove axiom from your system, delete the executable (e.g., rm -f $(which axiom))")
+	if !s.workspace {
+		s.finishGlobalUninstall(ggaManaged, &result)
+		result.ManualActions = append(result.ManualActions, "To completely remove axiom from your system, delete the executable (e.g., rm -f $(which axiom))")
+	}
 	return result, nil
 }
 
@@ -451,11 +561,12 @@ type plan struct {
 }
 
 func (s *Service) buildPlan(agentIDs []model.AgentID, componentIDs []model.ComponentID) (plan, error) {
+	s.removing = slices.Clone(agentIDs)
 	backupTargets := map[string]struct{}{}
 	operationsByKey := map[string]operation{}
 
 	for _, agentID := range agentIDs {
-		adapter, ok := s.registry.Get(agentID)
+		adapter, ok := s.adapter(agentID)
 		if !ok {
 			return plan{}, fmt.Errorf("unsupported agent %q", agentID)
 		}
@@ -475,39 +586,53 @@ func (s *Service) buildPlan(agentIDs []model.AgentID, componentIDs []model.Compo
 				}
 			}
 			for _, op := range ops {
-				op.agents = []model.AgentID{agentID}
-				key := operationKey(op)
-				existing, ok := operationsByKey[key]
-				if !ok {
-					operationsByKey[key] = op
-					continue
+				if s.workspace && op.typeID == opRemoveIfEmpty {
+					// En el proyecto, una carpeta que sigue teniendo contenido es del
+					// equipo: no es un aviso.
+					op.quiet = true
 				}
-				if op.typeID == opRewriteFile {
-					// Merge rewrite operations on the same file so both
-					// mutations apply (e.g. persona + engram on system prompt).
-					operationsByKey[key] = mergeRewriteOps(existing, op)
-					continue
-				}
-				// Deduplicated non-rewrite operation: one apply still stands
-				// for every agent that asked for it, so ownership widens.
-				existing.agents = appendUniqueAgents(existing.agents, op.agents...)
-				operationsByKey[key] = existing
+				addPlanOperation(operationsByKey, agentID, op)
 			}
 		}
 	}
 
-	for _, target := range globalBackupTargets(s.homeDir) {
-		files, err := expandBackupTarget(target)
-		if err != nil {
-			return plan{}, fmt.Errorf("expand backup target %q: %w", target, err)
+	if s.workspace {
+		if err := s.addWorkspaceOperations(agentIDs, componentIDs, backupTargets, operationsByKey); err != nil {
+			return plan{}, err
 		}
-		for _, file := range files {
-			backupTargets[file] = struct{}{}
+	} else {
+		for _, target := range globalBackupTargets(s.homeDir) {
+			files, err := expandBackupTarget(target)
+			if err != nil {
+				return plan{}, fmt.Errorf("expand backup target %q: %w", target, err)
+			}
+			for _, file := range files {
+				backupTargets[file] = struct{}{}
+			}
+		}
+		backupTargets[state.Path(s.homeDir)] = struct{}{}
+		if s.completeRun {
+			targets, compatOps, err := s.compatibilitySkillsOperations()
+			if err != nil {
+				return plan{}, err
+			}
+			for _, target := range targets {
+				files, err := expandBackupTarget(target)
+				if err != nil {
+					return plan{}, fmt.Errorf("expand backup target %q: %w", target, err)
+				}
+				for _, file := range files {
+					backupTargets[file] = struct{}{}
+				}
+			}
+			for _, op := range compatOps {
+				// Sin dueño: la copia es de todos los agentes, y un fallo suyo
+				// impide dar por desinstalado a cualquiera de ellos.
+				operationsByKey[operationKey(op)] = op
+			}
 		}
 	}
-
-	backupTargets[state.Path(s.homeDir)] = struct{}{}
-	if slices.Contains(agentIDs, model.AgentPi) {
+	if !s.workspace && slices.Contains(agentIDs, model.AgentPi) {
 		for _, target := range communitytool.PiCodeGraphPaths(s.homeDir, s.workspaceDir) {
 			backupTargets[target] = struct{}{}
 		}
@@ -515,7 +640,7 @@ func (s *Service) buildPlan(agentIDs []model.AgentID, componentIDs []model.Compo
 			backupTargets[piAdapter.SystemPromptFile(s.homeDir)] = struct{}{}
 		}
 	}
-	if slices.Contains(agentIDs, model.AgentOpenCode) && removesAllAgentComponents(componentIDs) {
+	if !s.workspace && slices.Contains(agentIDs, model.AgentOpenCode) && removesAllAgentComponents(componentIDs) {
 		adapter, _ := s.registry.Get(model.AgentOpenCode)
 		configDir := adapter.GlobalConfigDir(s.homeDir)
 		if err := telemetryruntime.CheckManaged(configDir); err != nil {
@@ -547,6 +672,29 @@ func (s *Service) buildPlan(agentIDs []model.AgentID, componentIDs []model.Compo
 	return plan{backupTargets: orderedTargets, operations: operations}, nil
 }
 
+// addPlanOperation registra op como operación del agente. Dos operaciones de
+// reescritura sobre el mismo fichero se componen; el resto se deduplica y la
+// propiedad se amplía a todos los agentes que la pidieron.
+func addPlanOperation(operationsByKey map[string]operation, agentID model.AgentID, op operation) {
+	op.agents = []model.AgentID{agentID}
+	key := operationKey(op)
+	existing, ok := operationsByKey[key]
+	if !ok {
+		operationsByKey[key] = op
+		return
+	}
+	if op.typeID == opRewriteFile {
+		// Merge rewrite operations on the same file so both
+		// mutations apply (e.g. persona + engram on system prompt).
+		operationsByKey[key] = mergeRewriteOps(existing, op)
+		return
+	}
+	// Deduplicated non-rewrite operation: one apply still stands
+	// for every agent that asked for it, so ownership widens.
+	existing.agents = appendUniqueAgents(existing.agents, op.agents...)
+	operationsByKey[key] = existing
+}
+
 func (s *Service) executePlan(p plan, agentsToRemove []model.AgentID) (Result, error) {
 	snapshotDir := filepath.Join(s.backupRoot, s.now().UTC().Format("20060102150405.000000000"))
 	manifest, err := s.snapshotter.Create(snapshotDir, p.backupTargets)
@@ -575,7 +723,7 @@ func (s *Service) executePlan(p plan, agentsToRemove []model.AgentID) (Result, e
 	// Pi ownership hashes include the shared MCP file. Remove its managed entry
 	// before other component cleanup (notably Engram) mutates that file, otherwise
 	// an unrelated mutation is indistinguishable from user drift.
-	if slices.Contains(agentsToRemove, model.AgentPi) {
+	if !s.workspace && slices.Contains(agentsToRemove, model.AgentPi) {
 		piResult, piErr := communitytool.UninstallPiCodeGraph(s.homeDir)
 		if piErr != nil {
 			failures = append(failures, operationFailure{
@@ -617,7 +765,7 @@ func (s *Service) executePlan(p plan, agentsToRemove []model.AgentID) (Result, e
 			failures = append(failures, operationFailure{path: op.path, agents: op.agents, err: err})
 			continue
 		}
-		if op.typeID == opRemoveIfEmpty && !removed {
+		if op.typeID == opRemoveIfEmpty && !removed && !op.quiet {
 			if note, ok := manualActionForNonEmptyDirectory(op.path); ok {
 				result.ManualActions = append(result.ManualActions, note)
 			}
@@ -639,13 +787,15 @@ func (s *Service) executePlan(p plan, agentsToRemove []model.AgentID) (Result, e
 		}
 	}
 
-	if slices.Contains(agentsToRemove, model.AgentPi) {
+	if !s.workspace && slices.Contains(agentsToRemove, model.AgentPi) {
 		result.RetainedPiResources = retainedPiResources(s.homeDir, s.workspaceDir)
 		result.OptionalPiPackageCleanupCommands = optionalPiPackageCleanupCommands()
 	}
 
 	result.FailedAgents = failedAgents(failures, agentsToRemove)
-	result.ManualActions = append(result.ManualActions, failureManualActions(failures, agentsToRemove, s.homeDir)...)
+	result.ManualActions = append(result.ManualActions, failureManualActions(failures, agentsToRemove, s.statePath(), "--scope "+string(s.options.Scope))...)
+	result.ManualActions = append(result.ManualActions, s.notices...)
+	s.notices = nil
 
 	committable := make([]model.AgentID, 0, len(agentsToRemove))
 	for _, agentID := range agentsToRemove {
@@ -654,7 +804,7 @@ func (s *Service) executePlan(p plan, agentsToRemove []model.AgentID) (Result, e
 		}
 	}
 
-	removed, stateErr := updateStateAfterUninstall(s.homeDir, committable)
+	removed, stateErr := s.updateState(committable, &result)
 	result.AgentsRemovedFromState = removed
 	result.ManualActions = dedupeSortedStrings(result.ManualActions)
 
@@ -702,7 +852,7 @@ func failedAgents(failures []operationFailure, batch []model.AgentID) []model.Ag
 	return appendUniqueAgents(ordered, blocked...)
 }
 
-func failureManualActions(failures []operationFailure, batch []model.AgentID, homeDir string) []string {
+func failureManualActions(failures []operationFailure, batch []model.AgentID, statePath, scopeFlag string) []string {
 	actions := make([]string, 0, len(failures))
 	for _, failure := range failures {
 		owners := failure.agents
@@ -721,15 +871,15 @@ func failureManualActions(failures []operationFailure, batch []model.AgentID, ho
 		}
 		location := failure.path
 		if location == "" {
-			location = homeDir
+			location = statePath
 		}
-		command := "axiom uninstall --all --yes"
+		command := "axiom uninstall --all " + scopeFlag + " --yes"
 		if len(retry) > 0 {
-			command = "axiom uninstall " + strings.Join(retry, " ") + " --yes"
+			command = "axiom uninstall " + strings.Join(retry, " ") + " " + scopeFlag + " --yes"
 		}
 		actions = append(actions, fmt.Sprintf(
 			"Uninstall did not complete for %s at %s: %v. Those agents are still recorded in %s. Resolve the file, then rerun `%s`.",
-			scope, location, failure.err, state.Path(homeDir), command))
+			scope, location, failure.err, statePath, command))
 	}
 	return actions
 }
@@ -841,7 +991,9 @@ func systemPromptFiles(adapter agents.Adapter, homeDir string) []string {
 func (s *Service) componentOperations(adapter agents.Adapter, componentID model.ComponentID) ([]operation, []string, error) {
 	ops := make([]operation, 0)
 	targets := make([]string, 0)
-	homeDir := s.homeDir
+	// homeDir es la raíz sobre la que el adaptador resuelve sus rutas: la carpeta de
+	// usuario en el ámbito global y la raíz del proyecto en el workspace.
+	homeDir := s.root()
 
 	switch componentID {
 	case model.ComponentPersona:
@@ -856,12 +1008,22 @@ func (s *Service) componentOperations(adapter agents.Adapter, componentID model.
 			}
 		}
 		if adapter.SupportsOutputStyles() {
-			path := filepath.Join(adapter.OutputStyleDir(homeDir), "gentleman.md")
-			targets = append(targets, path)
-			ops = append(ops, removeFile(path))
-			ops = append(ops, removeDirIfEmpty(adapter.OutputStyleDir(homeDir)))
+			styleDir := adapter.OutputStyleDir(homeDir)
+			for _, style := range persona.ManagedOutputStyles() {
+				path := filepath.Join(styleDir, style.File)
+				targets = append(targets, path)
+				if style.File == "gentleman.md" && !s.workspace {
+					// Comportamiento de siempre en la carpeta de usuario.
+					ops = append(ops, removeFile(path))
+					continue
+				}
+				// Los estilos axiom.md y neutral.md, y todos en el proyecto, solo se
+				// retiran si su contenido sigue siendo el que Axiom incrusta.
+				ops = append(ops, s.removeManagedOutputStyle(path, style.AssetPath))
+			}
+			ops = append(ops, removeDirIfEmpty(styleDir))
 		}
-		for _, path := range settingsTargets(homeDir, adapter) {
+		for _, path := range s.settingsTargets(adapter) {
 			targets = append(targets, path)
 			jsonPaths := []jsonPath{{"outputStyle"}}
 			if adapter.Agent() == model.AgentOpenCode {
@@ -870,6 +1032,12 @@ func (s *Service) componentOperations(adapter agents.Adapter, componentID model.
 			ops = append(ops, rewriteJSONFile(path, jsonPaths...))
 		}
 	case model.ComponentContext7:
+		if s.workspace {
+			workspaceTargets, workspaceOps := s.workspaceMCPOperations(adapter, "context7")
+			targets = append(targets, workspaceTargets...)
+			ops = append(ops, workspaceOps...)
+			break
+		}
 		targets = append(targets, context7Targets(adapter, homeDir)...)
 		ops = append(ops, context7Operations(adapter, homeDir)...)
 	case model.ComponentEngram:
@@ -882,18 +1050,24 @@ func (s *Service) componentOperations(adapter agents.Adapter, componentID model.
 			break
 		}
 
-		targets = append(targets, engramTargets(adapter, homeDir)...)
-		ops = append(ops, engramOperations(adapter, homeDir)...)
+		if s.workspace {
+			workspaceTargets, workspaceOps := s.workspaceMCPOperations(adapter, "engram")
+			targets = append(targets, workspaceTargets...)
+			ops = append(ops, workspaceOps...)
+		} else {
+			targets = append(targets, engramTargets(adapter, homeDir)...)
+			ops = append(ops, engramOperations(adapter, homeDir)...)
+		}
 		if adapter.SupportsSystemPrompt() {
 			for _, path := range systemPromptFiles(adapter, homeDir) {
 				targets = append(targets, path)
 				ops = append(ops, rewriteMarkdownFile(path, func(content string) (string, bool) {
-					return removeMarkdownSections(content, "engram-protocol")
+					return removeMarkdownSections(content, "engram-protocol", filemerge.EngramPassiveCaptureSectionID)
 				}))
 			}
 		}
 	case model.ComponentPermission:
-		for _, path := range settingsTargets(homeDir, adapter) {
+		for _, path := range s.settingsTargets(adapter) {
 			targets = append(targets, path)
 			// Solo se retiran las reglas que Axiom escribe (permissions.Overlay).
 			// Los modos de autoaprobación (defaultMode, defaultApprovalMode,
@@ -907,6 +1081,11 @@ func (s *Service) componentOperations(adapter agents.Adapter, componentID model.
 	case model.ComponentTheme:
 		// Legacy component: Axiom does not own the user's theme setting.
 	case model.ComponentClaudeTheme:
+		if s.workspace {
+			// Los recursos visuales ya no se instalan y nunca se instalaron en el
+			// proyecto.
+			break
+		}
 		managedPaths, err := theme.ManagedVisualThemePaths(homeDir, adapter)
 		if err != nil {
 			return nil, nil, err
@@ -918,7 +1097,9 @@ func (s *Service) componentOperations(adapter agents.Adapter, componentID model.
 		// Legacy Gentleman-named assets have no verifiable byte identity here.
 		// Preserve them rather than deleting a possibly user-authored file.
 	case model.ComponentOpenCodeGentleLogo:
-		if adapter.Agent() != model.AgentOpenCode {
+		// El logo es un plugin de la TUI de OpenCode en la carpeta de usuario; el
+		// ámbito workspace no lo instala.
+		if adapter.Agent() != model.AgentOpenCode || s.workspace {
 			break
 		}
 		pluginPath := filepath.Join(homeDir, ".config", "opencode", "tui-plugins", "gentle-logo.tsx")
@@ -932,7 +1113,7 @@ func (s *Service) componentOperations(adapter agents.Adapter, componentID model.
 			break
 		}
 		skillDir := adapter.SkillsDir(homeDir)
-		if skillDir == "" {
+		if skillDir == "" || s.skillsDirStaysInUse(skillDir) {
 			break
 		}
 		// Copies of skills that no longer ship are Axiom's leftovers too. They
@@ -957,7 +1138,7 @@ func (s *Service) componentOperations(adapter agents.Adapter, componentID model.
 			for _, path := range systemPromptFiles(adapter, homeDir) {
 				targets = append(targets, path)
 				ops = append(ops, rewriteMarkdownFile(path, func(content string) (string, bool) {
-					return removeMarkdownSections(content, "sdd-orchestrator", "strict-tdd-mode")
+					return removeMarkdownSections(content, sddMarkdownSectionIDs...)
 				}))
 			}
 		}
@@ -996,13 +1177,21 @@ func (s *Service) componentOperations(adapter agents.Adapter, componentID model.
 			targets = append(targets, path)
 			ops = append(ops, removeFile(path), removeDirIfEmpty(filepath.Dir(path)))
 		}
-		if adapter.Agent() == model.AgentOpenCode {
-			for _, path := range settingsTargets(homeDir, adapter) {
-				defaultPlan, err := opencodedefault.PrepareUninstall(path)
-				if err != nil {
-					return nil, nil, err
+		// Kilo solo recibe en el proyecto la misma distribución que OpenCode; en la
+		// carpeta de usuario la desinstalación nunca lo trató como tal.
+		if adapter.Agent() == model.AgentOpenCode || (s.workspace && adapter.Agent() == model.AgentKilocode) {
+			for _, path := range s.settingsTargets(adapter) {
+				var defaultPlan *opencodedefault.UninstallPlan
+				if adapter.Agent() == model.AgentOpenCode {
+					var err error
+					defaultPlan, err = opencodedefault.PrepareUninstall(path)
+					if err != nil {
+						return nil, nil, err
+					}
+					targets = append(targets, path, opencodedefault.OwnershipPath(path))
+				} else {
+					targets = append(targets, path)
 				}
-				targets = append(targets, path, opencodedefault.OwnershipPath(path))
 				paths := make([]jsonPath, 0, len(configuredAgents)+1)
 				for _, agentKey := range configuredAgents {
 					paths = append(paths, jsonPath{"agent", agentKey})
@@ -1026,7 +1215,17 @@ func (s *Service) componentOperations(adapter agents.Adapter, componentID model.
 					}
 				}
 
-				ops = append(ops, rewriteOpenCodeSDDSettings(path, defaultPlan, paths...))
+				// Las definiciones con la marca de Axiom (orquestador, jueces,
+				// revisores...) se retiran antes que las enumeradas.
+				ops = append(ops, rewriteJSONWith(path, removeManagedAgentEntries))
+				if defaultPlan == nil {
+					ops = append(ops, rewriteJSONFile(path, paths...))
+				} else {
+					ops = append(ops, rewriteOpenCodeSDDSettings(path, defaultPlan, paths...))
+				}
+				// Después del plan de default_agent: si el fichero se queda vacío, ya
+				// se ha liberado su fichero de propiedad.
+				ops = append(ops, rewriteJSONWith(path, removeDefaultOpenCodeShare))
 			}
 
 			// The SDD plugin writer resolves the config directory through the
@@ -1039,25 +1238,36 @@ func (s *Service) componentOperations(adapter agents.Adapter, componentID model.
 			}
 			ops = append(ops, removeDirIfEmpty(pluginDir))
 
-			// La caché activa (AXIOM_STATE_DIR si está definida) y también las que el
-			// plugin de OpenCode o versiones anteriores pudieron dejar en la raíz por
-			// defecto y en la heredada.
-			for _, cacheDir := range uniquePaths(
-				system.CacheDir(homeDir),
-				filepath.Join(homeDir, ".axiom", "cache"),
-				filepath.Join(homeDir, ".gentle-ai", "cache"),
-			) {
-				for _, cachePath := range modelVariantsCachePaths(cacheDir) {
-					targets = append(targets, cachePath)
-					ops = append(ops, removeFile(cachePath))
+			if s.workspace {
+				// Los prompts compartidos de las fases (<proyecto>/.opencode/prompts/sdd).
+				promptDir := sdd.SharedPromptDirFor(adapter, homeDir)
+				for _, phase := range sdd.SharedPromptPhases() {
+					promptPath := filepath.Join(promptDir, phase+".md")
+					targets = append(targets, promptPath)
+					ops = append(ops, removeFile(promptPath))
 				}
-			}
+				ops = append(ops, removeDirIfEmpty(promptDir), removeDirIfEmpty(filepath.Dir(promptDir)))
+			} else {
+				// La caché activa (AXIOM_STATE_DIR si está definida) y también las que el
+				// plugin de OpenCode o versiones anteriores pudieron dejar en la raíz por
+				// defecto y en la heredada.
+				for _, cacheDir := range uniquePaths(
+					system.CacheDir(homeDir),
+					filepath.Join(homeDir, ".axiom", "cache"),
+					filepath.Join(homeDir, ".gentle-ai", "cache"),
+				) {
+					for _, cachePath := range modelVariantsCachePaths(cacheDir) {
+						targets = append(targets, cachePath)
+						ops = append(ops, removeFile(cachePath))
+					}
+				}
 
-			depDir := filepath.Join(homeDir, ".config", "opencode", "node_modules", "unique-names-generator")
-			targets = append(targets, depDir)
-			ops = append(ops, removeTree(depDir), removeDirIfEmpty(filepath.Dir(depDir)))
+				depDir := filepath.Join(homeDir, ".config", "opencode", "node_modules", "unique-names-generator")
+				targets = append(targets, depDir)
+				ops = append(ops, removeTree(depDir), removeDirIfEmpty(filepath.Dir(depDir)))
+			}
 		}
-		if adapter.SupportsSkills() {
+		if adapter.SupportsSkills() && !s.skillsDirStaysInUse(adapter.SkillsDir(homeDir)) {
 			skillDir := adapter.SkillsDir(homeDir)
 			sharedDir := filepath.Join(skillDir, "_shared")
 			targets = append(targets, sharedDir)
@@ -1102,11 +1312,23 @@ func (s *Service) componentOperations(adapter agents.Adapter, componentID model.
 			ops = append(ops, removeDirIfEmpty(agentsDir))
 		}
 	case model.ComponentGGA:
+		// GGA es de máquina: el ámbito workspace nunca lo instala.
+		if s.workspace {
+			break
+		}
 		for _, path := range globalBackupTargets(homeDir) {
 			targets = append(targets, path)
 			ops = append(ops, removeFile(path))
 		}
 		ops = append(ops, removeDirIfEmpty(filepath.Dir(gga.ConfigPath(homeDir))))
+		// Lo que Axiom escribe para GGA además de su configuración: los shims de
+		// PowerShell y de cmd, y el script del modo PR. El resto de GGA (su binario y
+		// su runtime) es de la herramienta, no de Axiom, y se queda.
+		for _, path := range []string{gga.RuntimeCMDPath(homeDir), gga.RuntimePS1Path(homeDir), gga.RuntimePRModePath(homeDir)} {
+			targets = append(targets, path)
+			ops = append(ops, removeFile(path))
+		}
+		ops = append(ops, removeDirIfEmpty(filepath.Dir(gga.RuntimeCMDPath(homeDir))), removeDirIfEmpty(filepath.Dir(gga.RuntimePRModePath(homeDir))))
 	default:
 		return nil, nil, fmt.Errorf("unsupported component ID %q", componentID)
 	}
@@ -1899,6 +2121,11 @@ func mergeRewriteOps(a, b operation) operation {
 func compareOperations(a, b operation) int {
 	if a.typeID != b.typeID {
 		return int(a.typeID) - int(b.typeID)
+	}
+	if a.typeID == opRemoveIfEmpty {
+		// Del más profundo al más superficial: al vaciar un hijo, su padre ya puede
+		// quedarse vacío cuando le toque.
+		return strings.Compare(b.path, a.path)
 	}
 	return strings.Compare(a.path, b.path)
 }

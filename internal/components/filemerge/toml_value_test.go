@@ -102,6 +102,34 @@ func TestValidateTOML(t *testing.T) {
 	}
 }
 
+func TestRemoveTopLevelTOMLKey(t *testing.T) {
+	t.Run("quita una clave simple y conserva el resto", func(t *testing.T) {
+		got := RemoveTopLevelTOMLKey("model = \"x\"\nclave = \"y\"\n\n[tabla]\nclave = \"de la tabla\"\n", "clave")
+		if strings.Contains(got, "clave = \"y\"") || !strings.Contains(got, "clave = \"de la tabla\"") || !strings.Contains(got, "model = \"x\"") {
+			t.Fatalf("resultado inesperado:\n%s", got)
+		}
+	})
+
+	t.Run("quita un valor multilínea entero aunque tenga líneas entre corchetes", func(t *testing.T) {
+		document := "texto = '''\nuna línea\n[no es una tabla]\notra\n'''\nmodel = \"x\"\n\n[tabla]\na = 1\n"
+		got := RemoveTopLevelTOMLKey(document, "texto")
+		if strings.Contains(got, "no es una tabla") || strings.Contains(got, "texto") {
+			t.Fatalf("el valor multilínea debe quitarse entero:\n%s", got)
+		}
+		var parsed map[string]any
+		if _, err := toml.Decode(got, &parsed); err != nil || parsed["model"] != "x" {
+			t.Fatalf("el documento resultante debe seguir siendo válido y conservar model: %v\n%s", err, got)
+		}
+	})
+
+	t.Run("sin la clave devuelve el documento tal cual", func(t *testing.T) {
+		document := "model = \"x\"\n"
+		if got := RemoveTopLevelTOMLKey(document, "otra"); got != document {
+			t.Fatalf("got %q", got)
+		}
+	})
+}
+
 func TestUpsertTopLevelTOMLValueInsertsBeforeFirstTable(t *testing.T) {
 	existing := "# comentario del usuario\nmodel = \"gpt\"\n\n[features]\nmulti_agent = true\n"
 	got := UpsertTopLevelTOMLValue(existing, "developer_instructions", FormatTOMLString("uno\ndos\n"))
