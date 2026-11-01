@@ -48,6 +48,10 @@ func allAxiomSectionIDs() []string {
 	return append(ids, sddMarkdownSectionIDs...)
 }
 
+// skillRegistryGeneratedFiles son los ficheros que el registro de skills genera en
+// .atl del proyecto.
+var skillRegistryGeneratedFiles = []string{"skill-registry.md", ".skill-registry.cache.json"}
+
 // managedInstructionFileNames son los ficheros de instrucciones que Axiom escribe
 // enteros en el proyecto (no comparte con el usuario): si el usuario los editó, se
 // conservan con aviso.
@@ -749,6 +753,18 @@ func (s *Service) addWorkspaceOperations(agentIDs []model.AgentID, componentIDs 
 		})
 		if len(agentIDs) > 0 {
 			addPlanOperation(operationsByKey, agentIDs[0], op)
+		}
+
+		// El registro de skills que genera `skill-registry refresh` (en sync y en los
+		// hooks) vive en .atl; sus skills propias (.atl/skills) son del usuario.
+		if len(agentIDs) > 0 {
+			atlDir := filepath.Join(s.workspaceDir, ".atl")
+			for _, name := range skillRegistryGeneratedFiles {
+				path := filepath.Join(atlDir, name)
+				backupTargets[path] = struct{}{}
+				addPlanOperation(operationsByKey, agentIDs[0], removeFile(path))
+			}
+			addPlanOperation(operationsByKey, agentIDs[0], quietDirIfEmpty(atlDir))
 		}
 	}
 	return nil

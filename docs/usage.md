@@ -203,7 +203,7 @@ Reglas generales:
 - Los ficheros que Axiom escribe enteros (`axiom.md`, `AXIOM.md`, `axiom-instructions.md`, `axiom.instructions.md`) se borran solo si, tras quitar las secciones de Axiom, no queda nada tuyo. Si lo editaste, se conserva sin las secciones de Axiom y con un aviso.
 - Las carpetas que quedan vacías se quitan; las que tienen contenido del equipo, nunca.
 - Los JSON que se reescriben pierden los comentarios y se reindentan, igual que cuando `install` los fusiona.
-- El `AGENTS.md` del equipo no se toca, salvo el bloque `axiom:skills-index` que mantiene el registro de skills.
+- El `AGENTS.md` del equipo no se toca, salvo el bloque `axiom:skills-index` que mantiene el registro de skills. De `.atl/` solo salen los ficheros que genera ese registro (`skill-registry.md` y su caché); `.atl/skills` es tuyo.
 - Repetir la desinstalación no falla ni cambia nada más.
 
 #### Ámbito global

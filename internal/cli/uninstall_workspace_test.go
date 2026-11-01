@@ -181,6 +181,24 @@ func TestUninstallWorkspaceRevertsTheProjectAndKeepsTheTeamsContent(t *testing.T
 	}
 }
 
+// En un proyecto donde Axiom nunca se instaló, desinstalar no falla ni cambia nada.
+func TestUninstallWorkspaceInAProjectWithoutAxiomChangesNothing(t *testing.T) {
+	t.Setenv("AXIOM_STATE_DIR", t.TempDir())
+	home, workspace, _ := footprintEnv(t)
+	seedFootprintHome(t, home)
+	seedUserWorkspace(t, workspace)
+	before := permissionsTreeSnapshot(t, workspace)
+	homeBefore := homeSnapshotWithoutState(t, home)
+
+	result := runWorkspaceUninstall(t, "--all", "--scope", "workspace")
+
+	assertSameTree(t, "proyecto", before, permissionsTreeSnapshot(t, workspace))
+	assertSameTree(t, "home", homeBefore, homeSnapshotWithoutState(t, home))
+	if len(result.RemovedFiles) != 0 || len(result.ChangedFiles) != 0 {
+		t.Errorf("no debe cambiar nada: %+v", result)
+	}
+}
+
 // Un segundo uninstall no falla y no cambia nada más.
 func TestUninstallWorkspaceIsIdempotent(t *testing.T) {
 	t.Setenv("AXIOM_STATE_DIR", t.TempDir())

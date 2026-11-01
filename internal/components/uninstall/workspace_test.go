@@ -323,6 +323,45 @@ func TestWorkspaceDirectoriesThatKeepTeamContentAreNotReported(t *testing.T) {
 	}
 }
 
+func TestWorkspaceUninstallRemovesTheGeneratedSkillRegistryAndKeepsTheUsersAtlSkills(t *testing.T) {
+	workspace := t.TempDir()
+	for rel, content := range map[string]string{
+		filepath.Join(".atl", "skill-registry.md"):            "registro\n",
+		filepath.Join(".atl", ".skill-registry.cache.json"):   "{}",
+		filepath.Join(".atl", "skills", "propia", "SKILL.md"): "skill propia\n",
+		"AGENTS.md": "# Equipo\n\n<!-- axiom:skills-index -->\n## Skills\n<!-- /axiom:skills-index -->\n",
+	} {
+		path := filepath.Join(workspace, rel)
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	svc, err := NewScopedService(t.TempDir(), workspace, "dev", Options{Scope: ScopeWorkspace})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := svc.PartialUninstall([]model.AgentID{model.AgentClaudeCode}, nil); err != nil {
+		t.Fatalf("PartialUninstall() error = %v", err)
+	}
+
+	for _, gone := range []string{".skill-registry.cache.json", "skill-registry.md"} {
+		if _, err := os.Stat(filepath.Join(workspace, ".atl", gone)); !os.IsNotExist(err) {
+			t.Errorf(".atl/%s debe retirarse; stat = %v", gone, err)
+		}
+	}
+	if _, err := os.Stat(filepath.Join(workspace, ".atl", "skills", "propia", "SKILL.md")); err != nil {
+		t.Errorf("la skill propia de .atl/skills debe conservarse: %v", err)
+	}
+	agentsMD, err := os.ReadFile(filepath.Join(workspace, "AGENTS.md"))
+	if err != nil || strings.Contains(string(agentsMD), "axiom:") || !strings.Contains(string(agentsMD), "# Equipo") {
+		t.Errorf("AGENTS.md debe conservar lo del equipo sin el índice de Axiom: %v\n%s", err, agentsMD)
+	}
+}
+
 func TestWorkspaceUninstallRefusesToRunWithoutAProjectRoot(t *testing.T) {
 	if _, err := NewScopedService(t.TempDir(), "", "dev", Options{Scope: ScopeWorkspace}); err == nil {
 		t.Fatal("el ámbito workspace sin raíz debe fallar")
