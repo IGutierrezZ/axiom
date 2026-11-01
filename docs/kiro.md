@@ -61,10 +61,10 @@ Para aplicar cada paso, repite el mismo comando sin `--dry-run`.
 
 Advertencias:
 
-- El estado y los backups de Axiom se guardan en el HOME (`~/.axiom`), no en el repositorio.
+- En el ámbito workspace, el estado de la instalación vive en `<raíz>/.axiom/state.json`, sin versionar (Axiom lo excluye en `.git/info/exclude`). Las copias de seguridad se guardan en `~/.axiom/backups/` (o en `AXIOM_STATE_DIR`), no en el repositorio.
 - Sin `--scope`, el ámbito sale de `AXIOM_INSTALL_SCOPE` y, si no está definida, es `workspace`. Con `--scope global` o `AXIOM_INSTALL_SCOPE=global`, `sync` escribe en `~/.kiro`. Pasa siempre `--scope workspace` explícitamente.
 - Con `--scope workspace`, `sync` usa como raíz del workspace la del proyecto (el `axiom.yaml` más cercano o, si no hay, la raíz del repositorio git) aunque lo lances desde una subcarpeta, y avisa cuando difiere de la carpeta actual. Fuera de un proyecto y de un repositorio usa la carpeta actual.
-- `sync` no admite `--component`. Siempre refresca GGA en el HOME. Con `--include-permissions` también sincroniza el componente de permisos, que sigue el ámbito pero no tiene overlay para Kiro: no escribe nada para él.
+- `sync` no admite `--component` y no añade GGA, que es opcional: solo lo refresca si ya figuraba en la selección guardada o Axiom lo había aprovisionado en el HOME. Con `--include-permissions` también sincroniza el componente de permisos, que sigue el ámbito pero no tiene overlay para Kiro: no escribe nada para él.
 - Las skills propias del repositorio (`skills/*`) no se copian a `.kiro/skills/`: Kiro las ve a través de `AGENTS.md`, que carga como steering y cuyo índice lista cada skill con su ruta.
 
 ### Hook de skill-registry
