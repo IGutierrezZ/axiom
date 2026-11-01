@@ -426,12 +426,27 @@ Las cuatro quedaron resueltas por el usuario el 2026-10-29: acepta las recomenda
   - Límites conocidos: la retirada deja el fichero con un único salto de línea final, y una tabla del equipo con la cabecera exacta de Axiom se sigue adoptando.
   - De paso, `c0d57454` regenera la golden de Gemini, desfasada desde `2f4aed89` (T14).
   - Comprobación: build, vet, gofmt y deadcode ok; `agents`, `components` (salvo filemerge, fallo conocido) y `skillregistry` ok; `internal/cli` en tandas (`Workspace|Scope|Uninstall|Skills|Index|Registry|Agents`, `Pi|OpenClaw`) ok. El orquestador repitió `components`, `skillregistry` y las pruebas nuevas de `internal/cli`: ok.
-- [ ] **T18 · Restos de `uninstall --scope global` y `doctor` (H3)** (ruta: delegada; disparador: 2+ ficheros no triviales). Primero se compara con la base `7940a5cf` para separar lo heredado de lo nuevo. Después, uninstall global retira lo que tenga la forma de Axiom en:
+- [x] **T18 · Restos de `uninstall --scope global` y `doctor` (H3)** (ruta: delegada; disparador: 2+ ficheros no triviales). Primero se compara con la base `7940a5cf` para separar lo heredado de lo nuevo. Después, uninstall global retira lo que tenga la forma de Axiom en:
   - `~/.config/kilo/opencode.json` y `~/.config/kilo/plugins/*.ts`;
   - `~/.kiro/steering/axiom.md`;
   - `~/.codex/config.toml` (`mcp_servers.context7`, `features.multi_agent` y `agents.*`).
 
   `doctor` detecta esos restos con el agente correcto (Kilo, no OpenCode). De paso: no borrar `mcp.json` del usuario que ya existían antes, aunque queden vacíos.
+  - Hecho: `bfe3d6a7` (uninstall), `a95fe9bf` (doctor) y `f1fd692b` (docs); +745/−54 en 9 ficheros.
+  - Heredado de la base `7940a5cf`, no introducido por la rama:
+    - En global, el bloque SDD solo se aplicaba a OpenCode, no a Kilo, y Kilo usa `mcp`, no `mcpServers`.
+    - El steering de Kiro solo perdía sus secciones con marcadores.
+    - De Codex solo se retiraba `mcp_servers.engram`.
+  - Criterio: se retira solo lo que tiene la forma y los valores de Axiom.
+    - Kilo: agentes con `__managed_by`, MCP `engram` y `context7`, overlay, `share` y plugins con nombre gestionado. El fichero se borra si queda vacío.
+    - Kiro: `axiom.md` se borra si solo queda la cabecera o la persona. Si no, se conserva con aviso.
+    - Codex: `context7` con su URL, `features.multi_agent=true`, `agents.max_threads=4` y `agents.max_depth=2`.
+    - `mcp.json`: si queda vacío, solo se borra cuando el servidor retirado tenía la forma de Axiom; si no, queda `{}`.
+  - `doctor` delega en `uninstall.GlobalAgentLeftovers` y rotula cada resto con su agente.
+  - Comprobación: build, vet, gofmt y deadcode ok; `uninstall` y `agents` ok; `internal/cli` `Uninstall|Doctor|Footprint` ok. `Workspace|Scope` agota los 8 minutos por las pruebas de review; sin ellas, ok (142 pruebas). Repetido por el orquestador: `TestUninstallGlobal|Doctor` y `uninstall` ok.
+  - Abierto:
+    - Un `mcp.json` vacío que ya existía antes es indistinguible del que crea Axiom; habría que registrar en el estado qué ficheros crea el install.
+    - Siguen sin retirarse `~/.codex/sdd-*.config.toml`, `model`/`model_reasoning_effort` de Codex y `~/.claude.json`, fuera del alcance de H3.
 - [ ] **V1 · Fase 5b**: repetir el ciclo de V1 de la fase 5. Install y uninstall en workspace y en global con HOME temporal. Con OpenClaw y Pi seleccionados en workspace, HOME queda intacto.
 
 ## Criterios de aceptación
