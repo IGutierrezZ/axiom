@@ -14,6 +14,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/components/communitytool"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/gga"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/sdd"
+	componentuninstall "github.com/IGutierrezZ/axiom/v3/internal/components/uninstall"
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
 	"github.com/IGutierrezZ/axiom/v3/internal/state"
 	"github.com/IGutierrezZ/axiom/v3/internal/system"
@@ -104,6 +105,12 @@ func collectMachineFootprint(homeDir string, installed state.InstallState) []foo
 		add(footprintGlobalLeftover, "plugins de OpenCode en HOME", strings.Join(plugins, ", "))
 	}
 
+	// Kilo, Kiro y Codex: cada resto con su agente. Los detecta el mismo código que
+	// los retira en `uninstall --scope global`.
+	for _, leftover := range componentuninstall.GlobalAgentLeftovers(homeDir) {
+		add(footprintGlobalLeftover, leftover.Label, strings.Join(leftover.Paths, ", "))
+	}
+
 	if files := communitytool.ManagedCodeGraphGuidanceFiles(homeDir); len(files) > 0 {
 		add(optionalKind(codeGraphSelected), "CodeGraph global", strings.Join(files, ", "))
 	}
@@ -144,21 +151,20 @@ func managedPathFootprint(homeDir string, ggaSelected bool) []footprintEntry {
 }
 
 // openCodeUserPlugins devuelve los plugins gestionados por Axiom que existen en
-// la carpeta de usuario de OpenCode y de Kilo. Con el ámbito workspace SDD los
-// escribe en el proyecto: los de HOME son de una instalación global.
+// la carpeta de usuario de OpenCode. Con el ámbito workspace SDD los escribe en el
+// proyecto: los de HOME son de una instalación global. Los de Kilo los informa
+// GlobalAgentLeftovers con su propio rótulo.
 func openCodeUserPlugins(homeDir string) []string {
 	var found []string
-	for _, id := range []model.AgentID{model.AgentOpenCode, model.AgentKilocode} {
-		adapter, err := agents.NewAdapter(id)
-		if err != nil {
-			continue
-		}
-		pluginsDir := filepath.Join(adapter.GlobalConfigDir(homeDir), "plugins")
-		for _, name := range sdd.OpenCodePluginLifecycleNames(id) {
-			path := filepath.Join(pluginsDir, name)
-			if info, err := os.Lstat(path); err == nil && !info.IsDir() && !slices.Contains(found, path) {
-				found = append(found, path)
-			}
+	adapter, err := agents.NewAdapter(model.AgentOpenCode)
+	if err != nil {
+		return nil
+	}
+	pluginsDir := filepath.Join(adapter.GlobalConfigDir(homeDir), "plugins")
+	for _, name := range sdd.OpenCodePluginLifecycleNames(model.AgentOpenCode) {
+		path := filepath.Join(pluginsDir, name)
+		if info, err := os.Lstat(path); err == nil && !info.IsDir() && !slices.Contains(found, path) {
+			found = append(found, path)
 		}
 	}
 	return found
