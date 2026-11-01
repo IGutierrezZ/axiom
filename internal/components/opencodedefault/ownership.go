@@ -117,6 +117,17 @@ func PrepareUninstall(settingsPath string) (*UninstallPlan, error) {
 	}
 	return &UninstallPlan{settingsPath: settingsPath, settingsExist: exists, current: current, owned: owned}, nil
 }
+
+// HasWork indica si la desinstalación tiene algo propio que hacer: devolver o
+// quitar el default_agent que puso Axiom, o borrar su fichero de propiedad. Sin
+// nada de eso, Apply no tiene por qué reescribir un documento que no cambió.
+func (p *UninstallPlan) HasWork() bool {
+	if p.owned != nil {
+		return true
+	}
+	return p.settingsExist && p.current.present && (p.current.value == ManagedAgent || p.current.value == LegacyManagedAgent)
+}
+
 func (p *UninstallPlan) Apply(cleaned []byte, settingsExist bool) (changed, removed bool, err error) {
 	root := map[string]any{}
 	if settingsExist {

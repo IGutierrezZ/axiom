@@ -1585,11 +1585,17 @@ func rewriteOpenCodeSDDSettings(path string, plan *opencodedefault.UninstallPlan
 			return false, false, err
 		}
 		updated := raw
+		cleaned := false
 		if exists {
-			updated, _, err = removeJSONPaths(raw, jsonPaths...)
+			updated, cleaned, err = removeJSONPaths(raw, jsonPaths...)
 			if err != nil {
 				return false, false, err
 			}
+		}
+		// Un documento sin nada de Axiom (un proyecto donde nunca se instaló) no se
+		// reescribe: Apply lo recodificaría entero.
+		if !cleaned && !plan.HasWork() {
+			return false, false, nil
 		}
 		return plan.Apply(updated, exists)
 	}}
