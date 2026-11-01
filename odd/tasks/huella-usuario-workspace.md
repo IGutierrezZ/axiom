@@ -458,7 +458,7 @@ Las cuatro quedaron resueltas por el usuario el 2026-10-29: acepta las recomenda
       - Quedan `~/.claude.json` con `{}` (abierto en T18) y cinco carpetas vacías (cosmético).
     - **Hooks en un repo ajeno:** salen con 0 y no cambian nada; el control positivo con `axiom.yaml` bloquea.
     - **Paquetes:** build, vet y deadcode ok; `agents`, `components` (salvo filemerge), `skillregistry` y `state` ok; `internal/cli` en cinco tandas ok; `internal/app` solo con el fallo de entorno conocido.
-    - **Tiempo:** la tanda `Workspace|Scope` con las pruebas de review supera los 8 minutos, así que esas pruebas se ejecutan aparte.
+    - **Tiempo:** la tanda `Workspace|Scope` con las pruebas de review supera los 8 minutos. El orquestador la repitió entera en segundo plano, con un límite de 25 minutos: ok (580 s).
 
 ## Criterios de aceptación
 
