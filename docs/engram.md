@@ -110,6 +110,12 @@ If you're working outside a git repo, engram falls back to the directory name.
 
 ---
 
+## Engram y el ámbito workspace
+
+Con `axiom install --scope workspace` (el ámbito predeterminado), Axiom declara el servidor MCP de Engram en el proyecto: `.mcp.json` para Claude Code, `.codex/config.toml` para Codex, `.vscode/mcp.json` para VS Code Copilot, `opencode.json` para OpenCode, etc. No ejecuta `engram setup <agente>`, porque ese comando escribe en la carpeta de usuario del agente. Axiom lo avisa al terminar como acción manual opcional (por ejemplo, `engram setup codex`): ejecútalo solo si quieres además el registro a nivel de usuario, sabiendo que escribe fuera del proyecto. Con `--scope global` se ejecuta como siempre. El binario de Engram sí es una dependencia de máquina y sigue instalándose.
+
+---
+
 ## Full Documentation
 
 For the complete source, configuration options, and contribution guide: [github.com/Gentleman-Programming/engram](https://github.com/Gentleman-Programming/engram)

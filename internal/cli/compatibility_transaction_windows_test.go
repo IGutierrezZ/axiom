@@ -157,6 +157,8 @@ func TestExecuteTUIInstallClosesWindowsCompatibilityTransactionAfterSuccess(t *t
 		closedAfterApply = readErr == nil && string(content) != "stale"
 		closeCount++
 	})
+	// Estas pruebas ejercitan la transacción de compatibilidad sobre el home.
+	t.Setenv(ScopeAxiomEnvVar, string(ScopeGlobal))
 	selection, resolved, profile := windowsTUICompatibilityPlan()
 	result, _ := ExecuteTUIInstallWithBackgroundAndOrchestrator(home, selection, resolved, profile, model.OpenCodeBackgroundAuto, model.PiBackgroundIntent(""), nil)
 	if result.Err != nil {
@@ -190,6 +192,8 @@ func TestExecuteTUIInstallClosesWindowsCompatibilityTransactionAfterRollback(t *
 		return plan
 	})
 
+	// Estas pruebas ejercitan la transacción de compatibilidad sobre el home.
+	t.Setenv(ScopeAxiomEnvVar, string(ScopeGlobal))
 	selection, resolved, profile := windowsTUICompatibilityPlan()
 	result, _ := ExecuteTUIInstallWithBackgroundAndOrchestrator(home, selection, resolved, profile, model.OpenCodeBackgroundAuto, model.PiBackgroundIntent(""), nil)
 	if result.Err == nil {

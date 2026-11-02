@@ -14,7 +14,7 @@ You are not the orchestrator. Do NOT call task/delegate. Do NOT launch sub-agent
 
 ## Instructions
 
-Read the skill file from the user's Kiro home skills directory and follow it exactly:
+Read the skill file from the Kiro skills directory and follow it exactly:
 - macOS/Linux: `~/.kiro/skills/sdd-archive/SKILL.md`
 - Windows: `%USERPROFILE%\\.kiro\\skills\\sdd-archive\\SKILL.md`
 

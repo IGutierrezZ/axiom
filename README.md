@@ -44,16 +44,14 @@ Tus agentes de IA generan código, pero pierden contexto en cada sesión y carec
 <strong><a href="docs/agents.md#vs-code-copilot">VS Code Copilot</a></strong> ·
 <strong><a href="docs/agents.md#gemini-cli">Gemini CLI</a></strong> ·
 <strong><a href="docs/agents.md#kilo-code">Kilo Code</a></strong><br/>
-<strong><a href="docs/agents.md#kimi-code">Kimi Code</a></strong> ·
 <strong><a href="docs/agents.md#kiro-ide">Kiro IDE</a></strong> ·
-<strong><a href="docs/agents.md#qwen-code">Qwen Code</a></strong> ·
-<strong><a href="docs/agents.md#hermes">Hermes</a></strong> ·
 <strong><a href="docs/agents.md#antigravity">Antigravity</a></strong> ·
 <strong><a href="docs/agents.md#windsurf">Windsurf</a></strong> ·
 <strong><a href="docs/agents.md#openclaw">OpenClaw</a></strong> ·
 <strong><a href="docs/agents.md#trae">Trae</a></strong>
 
-<sub>16 integraciones · configuración no-intrusiva · <a href="docs/agents.md">comparar capacidades →</a></sub>
+<sub>13 integraciones · configuración no-intrusiva · <a href="docs/agents.md">comparar capacidades →</a></sub><br/>
+<sub>Kimi Code, Qwen Code y Hermes: no disponibles de momento (<a href="docs/agents.md#agentes-no-disponibles-de-momento">detalle</a>).</sub>
 
 </div>
 

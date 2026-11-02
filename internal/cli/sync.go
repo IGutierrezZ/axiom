@@ -74,12 +74,16 @@ type SyncFlags struct {
 
 // SyncResult holds the outcome of a sync execution.
 type SyncResult struct {
-	Agents    []model.AgentID
-	Selection model.Selection
-	Plan      pipeline.StagePlan
-	Execution pipeline.ExecutionResult
-	Verify    verify.Report
-	DryRun    bool
+	Agents []model.AgentID
+	// OmittedAgents lists the selected agents skipped because they have no
+	// workspace mode (--scope workspace). Empty on the CLI path, where RunSync
+	// already warned on stderr; the TUI shows them through Warnings.
+	OmittedAgents []model.AgentID
+	Selection     model.Selection
+	Plan          pipeline.StagePlan
+	Execution     pipeline.ExecutionResult
+	Verify        verify.Report
+	DryRun        bool
 	// Scope is the effective install scope of this sync and ScopeRoot the root
 	// directory it targets (workspace root or user home, as resolved by
 	// ResolveAgentConfigDir). RenderSyncReport shows both so the report always
@@ -386,9 +390,11 @@ func BuildSyncSelection(flags SyncFlags, agentIDs []model.AgentID) model.Selecti
 		model.ComponentSDD,
 		model.ComponentEngram,
 		model.ComponentContext7,
-		model.ComponentGGA,
 		model.ComponentSkills,
 	}
+	// GGA es opcional: ya no se sincroniza por defecto. Las instalaciones que lo
+	// tenían lo conservan por el estado persistido (RestorePersistedSelection) o,
+	// sin estado, por detección (restoreDetectedGGA).
 
 	if flags.IncludePermissions {
 		components = append(components, model.ComponentPermission)
@@ -450,6 +456,18 @@ func RestorePersistedSelection(selection *model.Selection, persisted state.Insta
 	}
 }
 
+// RestoreDetectedGGA mantiene GGA en la selección de sync cuando no hay una
+// selección persistida (estado anterior a las selecciones o ausente) pero Axiom
+// ya aprovisionó GGA en este HOME. Con una selección persistida esa lista manda
+// y no se toca: GGA se conserva si ya figuraba en ella y no se añade si no.
+// Así, sacar GGA de los presets solo afecta a las instalaciones nuevas.
+func RestoreDetectedGGA(homeDir string, selection *model.Selection, persisted state.InstallState) {
+	if persisted.SelectionConfigured || !gga.Managed(homeDir) {
+		return
+	}
+	selection.EnsureComponent(model.ComponentGGA)
+}
+
 func setSelectionComponent(selection *model.Selection, component model.ComponentID, configured, included bool) {
 	if !configured {
 		return
@@ -473,8 +491,13 @@ func setSelectionComponent(selection *model.Selection, component model.Component
 //
 // When --agents is provided explicitly, callers should pass those IDs directly
 // instead of calling DiscoverAgents.
-func DiscoverAgents(homeDir string) []model.AgentID {
-	scope := agents.ReadSelectionScope(homeDir)
+//
+// La selección se lee del almacén de estado indicado: con --scope workspace, la del
+// proyecto (con el estado global de semilla mientras no tenga la suya) y, con
+// --scope global, la de usuario. El descubrimiento por ficheros usa el HOME del almacén.
+func DiscoverAgents(store state.Store) []model.AgentID {
+	homeDir := store.Home()
+	scope := agents.ReadSelectionScopeFrom(store)
 	switch scope.Mode {
 	case agents.SelectionScopeConfigured:
 		return scope.AgentIDs
@@ -495,6 +518,11 @@ func DiscoverAgents(homeDir string) []model.AgentID {
 	installed := agents.DiscoverInstalled(reg, homeDir)
 	ids := make([]model.AgentID, 0, len(installed))
 	for _, a := range installed {
+		// Los agentes no seleccionables (Qwen Code, Hermes y Kimi) no se adoptan
+		// por tener carpeta en HOME: solo se sincronizan si ya están en el estado.
+		if !isSelectableAgent(a.ID) {
+			continue
+		}
 		ids = append(ids, a.ID)
 	}
 	return ids
@@ -527,11 +555,17 @@ func newSyncRuntime(homeDir string, selection model.Selection) (*syncRuntime, er
 func newSyncRuntimeScoped(homeDir, workspaceDir string, scope InstallScope, selection model.Selection) (*syncRuntime, error) {
 	backupRoot := backup.BackupRootFor(homeDir)
 	if workspaceDir == "" {
-		workspaceDir, _ = os.Getwd()
+		workspaceDir, _ = resolveWorkspaceDir(scope, homeDir)
 	}
-	compatibilityTransaction, err := newCompatibilityRefreshTransaction(homeDir, selection.Components, selection)
-	if err != nil {
-		return nil, err
+	// Con el ámbito workspace no se abre la transacción de ~/.agents/skills: esa
+	// copia de compatibilidad no se refresca.
+	var compatibilityTransaction compatibilityRefreshTransaction
+	if scope != ScopeWorkspace {
+		var err error
+		compatibilityTransaction, err = newCompatibilityRefreshTransaction(homeDir, selection.Components, selection)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	runtime := &syncRuntime{
@@ -547,7 +581,7 @@ func newSyncRuntimeScoped(homeDir, workspaceDir string, scope InstallScope, sele
 }
 
 func (r *syncRuntime) stagePlan() pipeline.StagePlan {
-	adapters := resolveAdapters(r.agentIDs)
+	adapters := resolveAdaptersScoped(r.scope, r.workspaceDir, r.agentIDs)
 	targets, targetErr := syncBackupTargetsScoped(r.homeDir, r.workspaceDir, r.scope, r.selection, adapters)
 	r.managedPaths = targets
 
@@ -565,6 +599,7 @@ func (r *syncRuntime) stagePlan() pipeline.StagePlan {
 			appVersion:  AppVersion,
 		},
 	}
+	prepare = withWorkspaceSettingsPreflight(prepare, r.scope, r.workspaceDir, r.agentIDs)
 
 	apply := []pipeline.Step{
 		rollbackRestoreStep{id: "apply:rollback-restore", state: r.state, homeDir: r.homeDir, workspaceDir: r.workspaceDir, openCodeConfigDir: openCodeGlobalConfigDir(r.homeDir, r.workspaceDir, r.scope, r.agentIDs)},
@@ -597,7 +632,7 @@ func (r *syncRuntime) stagePlan() pipeline.StagePlan {
 			backgroundPolicy: r.backgroundPolicy,
 		})
 	}
-	if needsCompatibilitySkillsRefresh(r.selection.Components) {
+	if r.scope != ScopeWorkspace && needsCompatibilitySkillsRefresh(r.selection.Components) {
 		apply = append(apply, compatibilitySkillsRefreshStep{
 			id:           "sync:compatibility-skills-refresh",
 			homeDir:      r.homeDir,
@@ -624,6 +659,9 @@ func (r *syncRuntime) stagePlan() pipeline.StagePlan {
 			changedFiles: &r.changedFiles,
 		})
 	}
+	if r.scope == ScopeWorkspace && registersWorkspaceInstructions(r.agentIDs) {
+		apply = append(apply, workspaceInstructionsStep{id: "sync:workspace-instructions", workspaceDir: r.workspaceDir, agents: r.agentIDs, changedFiles: &r.changedFiles})
+	}
 
 	// Managed OpenCode-compatible plugins are versioned runtime artifacts tied
 	// to the installed binary (OpenCode and Kilocode receive them). When the
@@ -632,7 +670,10 @@ func (r *syncRuntime) stagePlan() pipeline.StagePlan {
 	// (issue #1440). Refresh installed copies explicitly; the step never
 	// installs plugins that were never present. When SDD is selected, its
 	// inject step already rewrites the plugins.
-	if anyAgentReceivesManagedOpenCodePlugins(r.agentIDs) && !r.selection.HasComponent(model.ComponentSDD) {
+	//
+	// El refresco opera sobre los plugins de la carpeta de usuario de OpenCode:
+	// con el ámbito workspace no se toca (SDD ya los escribe en el proyecto).
+	if r.scope != ScopeWorkspace && anyAgentReceivesManagedOpenCodePlugins(r.agentIDs) && !r.selection.HasComponent(model.ComponentSDD) {
 		apply = append(apply, openCodePluginRefreshSyncStep{
 			id:           "sync:opencode:managed-plugins",
 			homeDir:      r.homeDir,
@@ -663,6 +704,14 @@ func (r *syncRuntime) stagePlan() pipeline.StagePlan {
 			targetDir: func(adapter agents.Adapter) string {
 				return componentInjectionDirScoped(r.homeDir, r.workspaceDir, r.scope, adapter)
 			},
+		})
+	}
+	if legacy := legacySkillsAdapters(r.scope, adapters); len(legacy) > 0 {
+		apply = append(apply, legacySkillsRetirementStep{
+			id:           "sync:retire-legacy-workspace-skills",
+			state:        r.state,
+			workspaceDir: r.workspaceDir,
+			adapters:     legacy,
 		})
 	}
 
@@ -746,8 +795,17 @@ func syncBackupTargetsScoped(homeDir, workspaceDir string, scope InstallScope, s
 	for _, path := range routingGuidancePaths(homeDir, workspaceDir, scope, adapters) {
 		paths[path] = struct{}{}
 	}
+	// El registro de instrucciones de OpenCode y Kilo reescribe su configuración de
+	// proyecto aunque ningún componente seleccionado la toque.
+	for _, path := range workspaceInstructionsSettingsPaths(workspaceDir, scope, adapters) {
+		paths[path] = struct{}{}
+	}
 	// The legacy prompt retirement deletes files, so they need a snapshot too.
 	for _, path := range legacyPromptBackupPaths(homeDir, workspaceDir, scope, adapters) {
+		paths[path] = struct{}{}
+	}
+	// La migración de skills de proyecto también borra ficheros.
+	for _, path := range legacySkillsBackupPaths(workspaceDir, scope, adapters) {
 		paths[path] = struct{}{}
 	}
 	for _, adapter := range adapters {
@@ -824,8 +882,12 @@ func syncAdapterSkillBackupTargets(homeDir, workspaceDir string, selection model
 
 func syncAdapterSkillBackupTargetsScoped(homeDir, workspaceDir string, scope InstallScope, selection model.Selection, adapters []agents.Adapter) ([]string, error) {
 	var paths []string
+	skillsDirs := newWorkspaceSkillsDirs(scope)
 	for _, adapter := range adapters {
 		if !adapter.SupportsSkills() {
+			continue
+		}
+		if skillsDirs.claim(adapter.SkillsDir(componentInjectionDirScoped(homeDir, workspaceDir, scope, adapter))) {
 			continue
 		}
 		if slices.Contains(selection.Components, model.ComponentSkills) {
@@ -1000,9 +1062,10 @@ func (s retiredSkillsCleanupStep) Run() error {
 }
 
 // retiredSkillRoots returns the skill directories to clean for the selected
-// agents: the one the current scope writes to plus the user-level one, since a
-// workspace sync must also clear copies an earlier global install left in the
-// home directory. Agents without a skills directory are skipped.
+// agents: the one the current scope writes to and, solo con el ámbito global, el
+// de la carpeta de usuario. Una sincronización workspace no toca HOME: las copias
+// retiradas que dejó una instalación global las lista `axiom doctor` como resto
+// global. Agents without a skills directory are skipped.
 func retiredSkillRoots(homeDir, workspaceDir string, scope InstallScope, adapters []agents.Adapter) []string {
 	var roots []string
 	seen := map[string]struct{}{}
@@ -1023,7 +1086,9 @@ func retiredSkillRoots(homeDir, workspaceDir string, scope InstallScope, adapter
 	}
 	for _, adapter := range adapters {
 		add(componentInjectionDirScoped(homeDir, workspaceDir, scope, adapter), adapter)
-		add(homeDir, adapter)
+		if scope != ScopeWorkspace {
+			add(homeDir, adapter)
+		}
 	}
 	return roots
 }
@@ -1192,7 +1257,7 @@ func (s componentSyncStep) ID() string {
 }
 
 func (s componentSyncStep) Run() error {
-	adapters := resolveAdapters(s.agents)
+	adapters := resolveAdaptersScoped(s.scope, s.workspaceDir, s.agents)
 
 	switch s.component {
 	case model.ComponentEngram:
@@ -1205,7 +1270,14 @@ func (s componentSyncStep) Run() error {
 		// silently re-inflated the slim Claude Code engram-protocol section
 		// back to the full one. Errors are intentionally ignored — an empty
 		// version safely falls back to the full section.
-		engramVersion, _ := resolveEngramVersion("engram")
+		//
+		// "Exactly like install" includes the command that is probed: install
+		// asks the binary resolveEngramInstalledPath found, so sync asks that
+		// same one (resolveSyncEngramCommand) instead of the bare name. With the
+		// bare name, a machine where the binary resolved at install time answers
+		// a version but the bare probe does not (or the reverse) flipped the
+		// Claude Code section between slim and full on every sync.
+		engramVersion, _ := resolveEngramVersion(resolveSyncEngramCommand())
 		engramOpts := engram.InjectOptions{
 			CodexOrchestratorAssignment: s.selection.CodexOrchestratorAssignment,
 			CodexCarrilModelAssignments: s.selection.CodexCarrilModelAssignments,
@@ -1278,6 +1350,7 @@ func (s componentSyncStep) Run() error {
 			sddMode = model.SDDModeMulti
 		}
 
+		skillsDirs := newWorkspaceSkillsDirs(s.scope)
 		for _, adapter := range adapters {
 			targetDir := componentInjectionDirScoped(s.homeDir, s.workspaceDir, s.scope, adapter)
 			opts := sdd.InjectOptions{
@@ -1297,6 +1370,7 @@ func (s componentSyncStep) Run() error {
 			if s.scope == ScopeWorkspace {
 				opts.WorkspaceDir = s.workspaceDir
 			}
+			opts.SkillsAlreadyWritten = skillsDirs.claimSDD(adapter, targetDir)
 			opts.IncludeOpenCodeBackgroundPolicy = s.backgroundPolicy && adapter.Agent() == model.AgentOpenCode
 			inject := sdd.Inject
 			if s.backgroundPolicy {
@@ -1315,7 +1389,11 @@ func (s componentSyncStep) Run() error {
 		if len(skillIDs) == 0 {
 			return nil
 		}
+		skillsDirs := newWorkspaceSkillsDirs(s.scope)
 		for _, adapter := range adapters {
+			if skillsDirs.claimSkills(adapter, componentInjectionDirScoped(s.homeDir, s.workspaceDir, s.scope, adapter)) {
+				continue
+			}
 			res, err := skills.Inject(componentInjectionDirScoped(s.homeDir, s.workspaceDir, s.scope, adapter), adapter, skillIDs)
 			if err != nil {
 				return fmt.Errorf("sync skills for %q: %w", adapter.Agent(), err)
@@ -1354,7 +1432,12 @@ func (s componentSyncStep) Run() error {
 	case model.ComponentPermission:
 		// Opt-in only — reached when --include-permissions is set.
 		for _, adapter := range adapters {
-			res, err := permissions.Inject(s.homeDir, adapter)
+			root, ok := permissionsRoot(s.homeDir, s.workspaceDir, s.scope, adapter)
+			if !ok {
+				noteSkippedPermissions(s.homeDir, adapter)
+				continue
+			}
+			res, err := permissions.Inject(root, adapter)
 			if err != nil {
 				return fmt.Errorf("sync permissions for %q: %w", adapter.Agent(), err)
 			}
@@ -1648,12 +1731,12 @@ func applyResolvedPersona(selection *model.Selection, persisted string) {
 // gentleman-neutral-artifacts persona to neutral, printing the remap notice
 // once. State that predates persona persistence, explicit gentleman state,
 // and unreadable state are untouched.
-func migratePersistedPersonaAlias(homeDir string, persisted *state.InstallState, persistedErr error) error {
+func migratePersistedPersonaAlias(store state.Store, persisted *state.InstallState, persistedErr error) error {
 	if persistedErr != nil || persisted == nil || persisted.Persona != string(model.PersonaGentlemanNeutralArtifacts) {
 		return nil
 	}
 	persisted.Persona = string(model.PersonaNeutral)
-	if err := state.Write(homeDir, *persisted); err != nil {
+	if err := store.Write(*persisted); err != nil {
 		return fmt.Errorf("persist remapped persona: %w", err)
 	}
 	// Notice only after the rewrite is durably persisted: a failed write must
@@ -1698,7 +1781,10 @@ func RunSyncWithSelection(homeDir string, selection model.Selection) (SyncResult
 }
 
 func RunSyncWithSelectionScoped(homeDir, workspaceDir string, scope InstallScope, selection model.Selection) (SyncResult, error) {
-	persistedState, persistedStateErr := state.Read(homeDir)
+	if workspaceDir == "" {
+		workspaceDir, _ = resolveWorkspaceDir(scope, homeDir)
+	}
+	persistedState, persistedStateErr := StateStoreFor(scope, homeDir, workspaceDir).Read()
 	if persistedStateErr != nil && !os.IsNotExist(persistedStateErr) {
 		return SyncResult{Agents: selection.Agents, Selection: selection}, fmt.Errorf("read persisted installation state: %w", persistedStateErr)
 	}
@@ -1723,15 +1809,28 @@ func runSyncWithSelection(homeDir string, selection model.Selection, background 
 }
 
 func runSyncWithSelectionScoped(homeDir, workspaceDir string, scope InstallScope, selection model.Selection, background OpenCodeBackgroundResolution, piBackground PiBackgroundResolution) (SyncResult, error) {
+	// Punto de entrada común de la CLI y la TUI. RunSync ya filtró y avisó por
+	// stderr, así que aquí solo llegan agentes omitidos desde la TUI o desde quien
+	// llame directamente: no se imprime nada (la TUI ocupa la terminal) y el aviso
+	// viaja en SyncResult.OmittedAgents.
+	keptAgents, omittedAgents := splitAgentsForScope(scope, selection.Agents)
+	selection.Agents = keptAgents
 	agentIDs := selection.Agents
+	// El estado se lee del almacén que corresponde al ámbito: el del proyecto con
+	// --scope workspace y el de usuario con --scope global.
+	if workspaceDir == "" {
+		workspaceDir, _ = resolveWorkspaceDir(scope, homeDir)
+	}
+	stateStore := StateStoreFor(scope, homeDir, workspaceDir)
 	// The read error is captured, not discarded: the persona alias migration
 	// below must not rewrite state it could not read. Managed-asset provenance
 	// re-reads under its own lock later (#2685), so this read stays advisory.
-	persistedState, persistedStateErr := state.Read(homeDir)
+	persistedState, persistedStateErr := stateStore.Read()
 	if err := validatePersistedSyncState(persistedState, persistedStateErr); err != nil {
 		return SyncResult{Agents: agentIDs, Selection: selection}, err
 	}
 	restorePersistedCommunityTools(homeDir, &selection, persistedState)
+	RestoreDetectedGGA(homeDir, &selection, persistedState)
 
 	// Resolve persona from persisted state when the caller has not provided one.
 	// RunSync already resolves persona before delegating here, so on the CLI path
@@ -1743,9 +1842,6 @@ func runSyncWithSelectionScoped(homeDir, workspaceDir string, scope InstallScope
 		persistedPersona = persistedState.Persona
 		applyResolvedPersona(&selection, persistedPersona)
 	}
-	if workspaceDir == "" {
-		workspaceDir, _ = os.Getwd()
-	}
 	if len(selection.ModelAssignments) == 0 && len(persistedState.ModelAssignments) > 0 {
 		selection.ModelAssignments = restoreOpenCodeModelAssignmentsFromState(homeDir, workspaceDir, scope, persistedState, selection.SDDMode)
 	}
@@ -1755,21 +1851,22 @@ func runSyncWithSelectionScoped(homeDir, workspaceDir string, scope InstallScope
 	// otherwise the one-time migration never fires for those users. State
 	// records intent — the next sync applies the neutral assets.
 	if scope != ScopeWorkspace {
-		if err := migratePersistedPersonaAlias(homeDir, &persistedState, persistedStateErr); err != nil {
+		if err := migratePersistedPersonaAlias(stateStore, &persistedState, persistedStateErr); err != nil {
 			return SyncResult{Agents: agentIDs, Selection: selection}, err
 		}
 	}
 
 	result := SyncResult{
-		Agents:       agentIDs,
-		Selection:    selection,
-		Scope:        scope,
-		ScopeRoot:    ResolveAgentConfigDir(scope, homeDir, workspaceDir),
-		Background:   background,
-		PiBackground: piBackground,
+		Agents:        agentIDs,
+		OmittedAgents: omittedAgents,
+		Selection:     selection,
+		Scope:         scope,
+		ScopeRoot:     ResolveAgentConfigDir(scope, homeDir, workspaceDir),
+		Background:    background,
+		PiBackground:  piBackground,
 	}
 
-	result, noOp, err := zeroAgentSyncNoOp(homeDir, selection, result)
+	result, noOp, err := zeroAgentSyncNoOp(homeDir, scope, selection, result)
 	if err != nil || noOp {
 		return result, err
 	}
@@ -1815,6 +1912,8 @@ func runSyncWithSelectionScoped(homeDir, workspaceDir string, scope InstallScope
 	result.ChangedFiles = dedupPaths(append(result.ChangedFiles, compatibilityChanged...))
 	result.ChangedFiles = dedupPaths(append(result.ChangedFiles, rt.state.retiredFiles...))
 	result.Execution.ManualActions = append(result.Execution.ManualActions, rt.state.retirementNotes...)
+	result.Execution.ManualActions = append(result.Execution.ManualActions, optInFootprintNotes(scope, homeDir, selection.Components, agentIDs, selection)...)
+	result.Execution.ManualActions = append(result.Execution.ManualActions, workspaceTrustNotes(scope, agentIDs)...)
 	if background.activationPlan != nil {
 		result.ChangedFiles = dedupPaths(append(result.ChangedFiles, background.activationPlan.ChangedPaths()...))
 	}
@@ -1849,25 +1948,31 @@ func runSyncWithSelectionScoped(homeDir, workspaceDir string, scope InstallScope
 		}
 		return result, verificationErr
 	}
-	if rt.scope != ScopeWorkspace {
-		writer, err := managedAssetDigest()
-		if err != nil {
-			return result, fmt.Errorf("derive managed asset writer identity: %w", err)
+	// El estado de instalación se persiste en el almacén del ámbito: el proyecto con
+	// --scope workspace y el de usuario con --scope global.
+	writer, err := managedAssetDigest()
+	if err != nil {
+		return result, fmt.Errorf("derive managed asset writer identity: %w", err)
+	}
+	if err := persistSyncManagedAssetStateWithBackground(stateStore, selection, writer, background.Persist, piBackground.Persist); err != nil {
+		persistErr := fmt.Errorf("persist sync managed asset state: %w", err)
+		rollback := orchestrator.Rollback(result.Execution)
+		if rollback.Err != nil {
+			persistErr = errors.Join(persistErr, rollback.Err)
 		}
-		if err := persistSyncManagedAssetStateWithBackground(homeDir, selection, writer, background.Persist, piBackground.Persist); err != nil {
-			persistErr := fmt.Errorf("persist sync managed asset state: %w", err)
-			rollback := orchestrator.Rollback(result.Execution)
-			if rollback.Err != nil {
-				persistErr = errors.Join(persistErr, rollback.Err)
-			}
-			return result, persistErr
-		}
+		return result, persistErr
+	}
+
+	// Un sync que no escribió nada no deja copia de respaldo: sería idéntica al
+	// estado actual y se acumularía una por ejecución.
+	if result.NoOp {
+		rt.state.discardCreatedBackup(rt.backupRoot)
 	}
 
 	// Auto-regeneración del índice de skills en el workspace
 	targetWorkspace := workspaceDir
 	if targetWorkspace == "" {
-		targetWorkspace, _ = os.Getwd()
+		targetWorkspace, _ = resolveWorkspaceDir(scope, homeDir)
 	}
 	if PostSyncSkillRegenerator != nil {
 		count, regErr := PostSyncSkillRegenerator(targetWorkspace, homeDir)
@@ -1898,15 +2003,15 @@ func defaultPostSyncSkillRegenerator(workspaceDir, homeDir string) (int, error) 
 	return res.SkillCount, nil
 }
 
-func persistSyncManagedAssetStateWithBackground(homeDir string, selection model.Selection, writer string, background model.OpenCodeBackgroundIntent, piBackground model.PiBackgroundIntent) error {
-	return withInstallStateLock(homeDir, func() error {
-		latest, err := state.Read(homeDir)
+func persistSyncManagedAssetStateWithBackground(store state.Store, selection model.Selection, writer string, background model.OpenCodeBackgroundIntent, piBackground model.PiBackgroundIntent) error {
+	return withStateStoreLock(store, func() error {
+		latest, err := store.Read()
 		if errors.Is(err, os.ErrNotExist) {
 			latest = state.InstallState{}
 		} else if err != nil {
 			return fmt.Errorf(
 				"read install state for managed asset provenance: %w; run `axiom install` to rewrite %s",
-				err, state.Path(homeDir))
+				err, store.Path())
 		}
 
 		shouldWrite := false
@@ -1937,7 +2042,7 @@ func persistSyncManagedAssetStateWithBackground(homeDir string, selection model.
 		if !shouldWrite {
 			return nil
 		}
-		if err := state.WriteReconciled(homeDir, latest); err != nil {
+		if err := store.WriteReconciled(latest); err != nil {
 			return fmt.Errorf("persist managed asset provenance: %w", err)
 		}
 		return nil
@@ -1958,12 +2063,16 @@ func RunSync(args []string) (SyncResult, error) {
 		return SyncResult{}, err
 	}
 
-	workspaceDir, _ := os.Getwd()
-
 	homeDir, err := osUserHomeDir()
 	if err != nil {
 		return SyncResult{}, fmt.Errorf("resolve user home directory: %w", err)
 	}
+
+	// En ámbito workspace la raíz es la del proyecto aunque se lance desde una
+	// subcarpeta; el aviso sale por stderr para no mezclarse con el informe.
+	workspaceDir, rootNotice := resolveWorkspaceDir(scope, homeDir)
+	noteWorkspaceRoot(rootNotice)
+	syncStateStore := StateStoreFor(scope, homeDir, workspaceDir)
 
 	// Resolve agents: explicit flag takes precedence over auto-discovery.
 	var agentIDs []model.AgentID
@@ -1974,16 +2083,21 @@ func RunSync(args []string) (SyncResult, error) {
 		}
 		agentIDs = parsed
 	} else {
-		agentIDs = DiscoverAgents(homeDir)
+		agentIDs = DiscoverAgents(syncStateStore)
 	}
 	agentIDs = unique(agentIDs)
+	// Con --scope workspace se omiten los agentes sin modo workspace, sea cual sea su
+	// origen: --agent, estado del proyecto o descubrimiento por las carpetas de HOME.
+	// Si no queda ninguno, el sync termina sin escribir (zeroAgentSyncNoOp).
+	agentIDs, omittedAgents := splitAgentsForScope(scope, agentIDs)
+	noteOmittedWorkspaceAgents(omittedAgents)
 
 	selection := BuildSyncSelection(flags, agentIDs)
 
 	// Read state once for both model-assignment restoration and persona resolution.
 	// A missing state file is treated as a fresh home; other read/validation
 	// errors stop sync before any persona mutation or asset write.
-	persistedState, persistedStateErr := state.Read(homeDir)
+	persistedState, persistedStateErr := syncStateStore.Read()
 	if err := validatePersistedSyncState(persistedState, persistedStateErr); err != nil {
 		return SyncResult{Agents: agentIDs, Selection: selection}, err
 	}
@@ -2079,7 +2193,7 @@ func RunSync(args []string) (SyncResult, error) {
 			Background:   background,
 			PiBackground: piBackground,
 		}
-		result, noOp, err := zeroAgentSyncNoOp(homeDir, selection, result)
+		result, noOp, err := zeroAgentSyncNoOp(homeDir, scope, selection, result)
 		if err != nil || noOp {
 			return result, err
 		}
@@ -2128,7 +2242,7 @@ func restoreOpenCodeModelAssignmentsFromState(homeDir, workspaceDir string, scop
 		return nil
 	}
 	presence := map[string]opencodeactivation.AssignmentPresence{}
-	settingsPath := effectiveOpenCodeSettingsPath(homeDir, workspaceDir, scope, opencodeagent.NewAdapter())
+	settingsPath := effectiveOpenCodeSettingsPath(homeDir, workspaceDir, scope, scopedAdapter(scope, workspaceDir, opencodeagent.NewAdapter()))
 	if settingsPath != "" {
 		if _, err := os.Stat(settingsPath); err == nil {
 			snapshot, err := opencodeactivation.ReadConfigSnapshot(settingsPath)
@@ -2160,10 +2274,15 @@ func restoreOpenCodeModelAssignmentsFromState(homeDir, workspaceDir string, scop
 }
 
 // zeroAgentSyncNoOp reports whether a sync without agents has no compatible
-// shared-skill work to perform.
-func zeroAgentSyncNoOp(homeDir string, selection model.Selection, result SyncResult) (SyncResult, bool, error) {
+// shared-skill work to perform. Con el ámbito workspace nunca lo hay: la copia
+// de compatibilidad de ~/.agents/skills no se refresca.
+func zeroAgentSyncNoOp(homeDir string, scope InstallScope, selection model.Selection, result SyncResult) (SyncResult, bool, error) {
 	if len(result.Agents) != 0 {
 		return result, false, nil
+	}
+	if scope == ScopeWorkspace {
+		result.NoOp = true
+		return result, true, nil
 	}
 	refreshable, err := compatibilitySkillsRefreshable(homeDir, selection)
 	if err != nil {
@@ -2220,7 +2339,7 @@ func skillIndexRefreshWarning(detail string) string {
 // noteWarnings returns the manual-action notes (such as retired files that were
 // kept) followed by the warnings raised by post-sync verification.
 func (r SyncResult) noteWarnings() []string {
-	warnings := append([]string(nil), r.Execution.ManualActions...)
+	warnings := append(omittedWorkspaceAgentNotices(r.OmittedAgents), r.Execution.ManualActions...)
 	for _, check := range r.Verify.Checks {
 		if check.Status == verify.CheckStatusWarning {
 			warnings = append(warnings, check.Error)
@@ -2378,7 +2497,7 @@ func runPostSyncVerification(homeDir, workspaceDir string, selection model.Selec
 
 func runPostSyncVerificationScoped(homeDir, workspaceDir string, scope InstallScope, selection model.Selection) verify.Report {
 	checks := make([]verify.Check, 0)
-	adapters := resolveAdapters(selection.Agents)
+	adapters := resolveAdaptersScoped(scope, workspaceDir, selection.Agents)
 
 	for _, component := range selection.Components {
 		paths := syncComponentPathsWithWorkspaceScoped(homeDir, workspaceDir, scope, selection, adapters, component)

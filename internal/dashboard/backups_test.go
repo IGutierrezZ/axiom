@@ -68,3 +68,39 @@ func TestBackupSizeBytesToleratesMissingRoot(t *testing.T) {
 		t.Errorf("backupSizeBytes(carpeta inexistente) = %d, se esperaba 0", got)
 	}
 }
+
+// TestCreateBackupFollowsAxiomStateDir comprueba que el respaldo bajo demanda va a
+// la raíz de estado de Axiom y que, con AXIOM_STATE_DIR, el listado lo encuentra
+// ahí y no deja nada en ~/.axiom.
+func TestCreateBackupFollowsAxiomStateDir(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
+	stateDir := filepath.Join(t.TempDir(), "estado")
+	if err := os.MkdirAll(stateDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(stateDir, "state.json"), []byte(`{}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("AXIOM_STATE_DIR", stateDir)
+
+	svc := NewService(t.TempDir())
+	item, err := svc.CreateBackup("prueba")
+	if err != nil {
+		t.Fatalf("CreateBackup: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(stateDir, "backups", item.Name, backup.ManifestFilename)); err != nil {
+		t.Errorf("el respaldo debe estar bajo AXIOM_STATE_DIR: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(home, ".axiom")); !os.IsNotExist(err) {
+		t.Errorf("no debe crearse ~/.axiom con AXIOM_STATE_DIR definida; stat err=%v", err)
+	}
+	items, err := svc.GetBackups()
+	if err != nil {
+		t.Fatalf("GetBackups: %v", err)
+	}
+	if len(items) != 1 || items[0].Name != item.Name {
+		t.Errorf("GetBackups() = %v, se esperaba el respaldo recién creado", items)
+	}
+}

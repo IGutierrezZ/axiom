@@ -15,7 +15,7 @@ USAGE
 COMMANDS
   install      Configure AI coding agents on this machine
   setup        Provision AI coding agents isolated to this workspace (--scope workspace)
-  uninstall    Remove Axiom managed files from this machine
+  uninstall    Remove Axiom managed files (--scope workspace|global; --all, --purge-state)
   sync         Sync agent configs and skills to current version (--scope global|workspace)
   odd          Organic Driven Development task lifecycle (create, status, promote)
   sdd          Spec-Driven Development orchestration (kickoff, gate, status, continue, archive-compose)

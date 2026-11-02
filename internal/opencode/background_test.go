@@ -136,6 +136,46 @@ func TestResolveTargetSkipsLegacyManagedBinAndPreventsRecursion(t *testing.T) {
 	}
 }
 
+// Con AXIOM_STATE_DIR el directorio de lanzadores se mueve con la raíz de estado,
+// pero un equipo que ya instaló antes conserva `~/.axiom/bin` en el PATH: ese
+// lanzador anterior nunca debe tomarse como el OpenCode real.
+func TestBinDirFollowsAxiomStateDirAndResolveTargetSkipsTheDefaultOne(t *testing.T) {
+	home := t.TempDir()
+	stateDir := filepath.Join(t.TempDir(), "estado")
+
+	t.Setenv("AXIOM_STATE_DIR", "")
+	defaultBin := BinDir(home)
+	if want := filepath.Join(home, ".axiom", "bin"); defaultBin != want {
+		t.Fatalf("sin AXIOM_STATE_DIR, BinDir() = %q, want %q", defaultBin, want)
+	}
+
+	t.Setenv("AXIOM_STATE_DIR", stateDir)
+	if got, want := BinDir(home), filepath.Join(stateDir, "bin"); got != want {
+		t.Fatalf("con AXIOM_STATE_DIR, BinDir() = %q, want %q", got, want)
+	}
+	if got, want := POSIXLauncherPath(home), filepath.Join(stateDir, "bin", "opencode"); got != want {
+		t.Errorf("POSIXLauncherPath() = %q, want %q", got, want)
+	}
+
+	real := filepath.Join(t.TempDir(), resolveTargetCandidateName())
+	if err := os.MkdirAll(defaultBin, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(defaultBin, resolveTargetCandidateName()), []byte("anterior"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(real, []byte("real"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	got, err := ResolveTarget(home, runtime.GOOS, defaultBin+string(os.PathListSeparator)+filepath.Dir(real))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != normalizedCandidatePath(t, real) {
+		t.Fatalf("ResolveTarget() = %q, want %q (el lanzador de ~/.axiom/bin no es el real)", got, real)
+	}
+}
+
 // normalizedCandidatePath resolves the fixture path exactly the way
 // ResolveTarget resolves candidates (EvalSymlinks + Abs): on Windows
 // t.TempDir() hands out 8.3 short names that production expands (#3209),
@@ -371,6 +411,50 @@ func TestActivationCleansLegacyManagedLaunchersAndDeactivationRemovesBoth(t *tes
 		if _, err := os.Stat(lp); !os.IsNotExist(err) {
 			t.Fatalf("legacy launcher stat error = %v, want absent after deactivate", err)
 		}
+	}
+}
+
+// TestDeactivationReportNamesOnlyTheManagedLaunchers: la desactivación vigila los
+// restos heredados de ~/.gentle-ai/bin para retirarlos, pero el informe lista
+// solo los lanzadores de Axiom; lo retirado consta en ChangedPaths.
+func TestDeactivationReportNamesOnlyTheManagedLaunchers(t *testing.T) {
+	for _, goos := range []string{"linux", "windows"} {
+		t.Run(goos, func(t *testing.T) {
+			home := t.TempDir()
+			legacy := LegacyManagedLauncherPaths(home, goos)
+			for _, lp := range legacy {
+				if err := os.MkdirAll(filepath.Dir(lp), 0o755); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.WriteFile(lp, []byte("#!/bin/sh\n# "+OwnershipMarker+"\nlegacy"), 0o755); err != nil {
+					t.Fatal(err)
+				}
+			}
+			plan, err := PrepareDeactivation(home, ActivationOptions{OS: goos})
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			report := plan.Report()
+			if got, want := strings.Join(report.LauncherPaths, "\n"), strings.Join(ManagedLauncherPaths(home, goos), "\n"); got != want {
+				t.Fatalf("LauncherPaths = %q, want solo los gestionados %q", got, want)
+			}
+			if guidance := plan.RestartGuidance(); strings.Contains(guidance, ".gentle-ai") {
+				t.Fatalf("RestartGuidance() = %q, no debe nombrar rutas heredadas", guidance)
+			}
+
+			if err := plan.Apply(); err != nil {
+				t.Fatal(err)
+			}
+			for _, lp := range legacy {
+				if _, err := os.Stat(lp); !os.IsNotExist(err) {
+					t.Fatalf("el resto heredado %q debe retirarse; stat = %v", lp, err)
+				}
+			}
+			if changed := strings.Join(plan.Report().ChangedPaths, "\n"); !strings.Contains(changed, ".gentle-ai") {
+				t.Fatalf("ChangedPaths = %q, want los restos retirados", changed)
+			}
+		})
 	}
 }
 

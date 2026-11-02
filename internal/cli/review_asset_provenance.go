@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/assets"
-	"github.com/IGutierrezZ/axiom/v3/internal/state"
 )
 
 const managedAssetProvenanceRefusal = "managed reviewer assets are outdated; run `axiom sync`"
@@ -68,7 +67,7 @@ func checkManagedReviewerAssets() managedAssetProvenance {
 	if err != nil {
 		return managedAssetProvenance{}
 	}
-	persisted, err := state.Read(homeDir)
+	persisted, err := EffectiveStateStore(homeDir).Read()
 	if err != nil || persisted.ManagedAssetDigest == "" {
 		return managedAssetProvenance{}
 	}

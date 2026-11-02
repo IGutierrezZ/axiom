@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"path/filepath"
 	"strings"
 )
 
@@ -26,6 +27,7 @@ func stopHookJourneys() []Journey {
 		Source: "#4064: the hook hands the agent the STATUS preflight route instead of letting it report completion silently",
 		Steps: []Step{
 			{Name: "fixture: repo", Fixture: baseRepo},
+			{Name: "fixture: axiom project", Fixture: axiomProjectMarker},
 			{
 				Name:  "SessionStart baselines the clean repository silently",
 				Args:  productArgs("review", "stop-hook", "--agent", "claude-code"),
@@ -90,4 +92,17 @@ func stopHookJourneys() []Journey {
 			},
 		},
 	}}
+}
+
+// axiomProjectMarker commits an axiom.yaml, the marker that makes the fixture
+// repository an Axiom project: the hook is installed machine-wide and acts only
+// inside one.
+func axiomProjectMarker(sandbox *Sandbox) error {
+	if err := sandbox.write(filepath.Join(sandbox.Repo, "axiom.yaml"), "workspace:\n  name: demo\n"); err != nil {
+		return err
+	}
+	if err := sandbox.git(sandbox.Repo, "add", "-A"); err != nil {
+		return err
+	}
+	return sandbox.git(sandbox.Repo, "commit", "-qm", "axiom project")
 }

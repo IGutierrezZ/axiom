@@ -3124,3 +3124,36 @@ func TestHermesPersonaAssetsContainIdentitySection(t *testing.T) {
 		})
 	}
 }
+
+// En un proyecto de VS Code (adaptador ligado a la raíz), .github/copilot-instructions.md
+// es del equipo: no se retira como resto de una instalación antigua ni siquiera si su
+// texto se parece a la persona.
+func TestInjectVSCodeWorkspaceKeepsTeamCopilotInstructions(t *testing.T) {
+	root := t.TempDir()
+	teamPath := filepath.Join(root, ".github", "copilot-instructions.md")
+	if err := os.MkdirAll(filepath.Dir(teamPath), 0o755); err != nil {
+		t.Fatalf("MkdirAll error = %v", err)
+	}
+	teamContent := "## Personality\n\nSenior Architect, texto del equipo.\n"
+	if err := os.WriteFile(teamPath, []byte(teamContent), 0o644); err != nil {
+		t.Fatalf("WriteFile error = %v", err)
+	}
+
+	global, err := agents.NewAdapter("vscode-copilot")
+	if err != nil {
+		t.Fatalf("NewAdapter(vscode-copilot) error = %v", err)
+	}
+	adapter := agents.BindWorkspace(global, root)
+
+	if _, err := Inject(root, adapter, model.PersonaGentleman); err != nil {
+		t.Fatalf("Inject(vscode, workspace) error = %v", err)
+	}
+
+	if got, err := os.ReadFile(teamPath); err != nil || string(got) != teamContent {
+		t.Fatalf("copilot-instructions.md del equipo cambió (err=%v):\n%s", err, got)
+	}
+	instructions, err := os.ReadFile(filepath.Join(root, ".github", "instructions", "axiom.instructions.md"))
+	if err != nil || !strings.Contains(string(instructions), "applyTo: \"**\"") {
+		t.Fatalf("falta .github/instructions/axiom.instructions.md con applyTo (err=%v)", err)
+	}
+}

@@ -29,6 +29,34 @@ func TestBackupRootFor(t *testing.T) {
 	}
 }
 
+// TestBackupRootForFollowsAxiomStateDir verifica que AXIOM_STATE_DIR mueve los
+// respaldos junto con el resto del estado de máquina, que la raíz heredada sigue
+// siendo solo de lectura y que, sin la variable, la ruta por defecto no cambia.
+func TestBackupRootForFollowsAxiomStateDir(t *testing.T) {
+	home := t.TempDir()
+	stateDir := filepath.Join(t.TempDir(), "estado")
+
+	t.Setenv("AXIOM_STATE_DIR", "")
+	if got, want := BackupRootFor(home), filepath.Join(home, ".axiom", "backups"); got != want {
+		t.Errorf("sin AXIOM_STATE_DIR, BackupRootFor() = %q, want %q", got, want)
+	}
+
+	t.Setenv("AXIOM_STATE_DIR", stateDir)
+	if got, want := BackupRootFor(home), filepath.Join(stateDir, "backups"); got != want {
+		t.Errorf("con AXIOM_STATE_DIR, BackupRootFor() = %q, want %q", got, want)
+	}
+	if got, want := LegacyBackupRootFor(home), filepath.Join(home, ".gentle-ai", "backups"); got != want {
+		t.Errorf("la raíz heredada no debe moverse: LegacyBackupRootFor() = %q, want %q", got, want)
+	}
+	roots := BackupRoots(home)
+	if len(roots) != 2 || roots[0] != BackupRootFor(home) || roots[1] != LegacyBackupRootFor(home) {
+		t.Errorf("BackupRoots() = %v, want la canónica primero y la heredada después", roots)
+	}
+	if got := BackupOriginForRoot(home, BackupRootFor(home)); got != BackupOriginAxiom {
+		t.Errorf("origen de la raíz canónica = %v, want %v", got, BackupOriginAxiom)
+	}
+}
+
 // TestLegacyBackupRootFor verifies that LegacyBackupRootFor resolves the
 // legacy backup root (~/.gentle-ai/backups) for the same variety of home
 // directory shapes as TestBackupRootFor.

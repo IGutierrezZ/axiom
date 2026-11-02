@@ -677,6 +677,19 @@ func engramInstallDir(goos string) string {
 	return filepath.Join(home, ".local", "bin")
 }
 
+// ManagedBinaryDir devuelve la carpeta del binario de Engram que Axiom añade al PATH
+// de usuario de forma persistente, o "" si en esa plataforma no añade ninguna. Solo
+// Windows: ahí el binario se descarga a %LOCALAPPDATA%\engram\bin y esa carpeta se
+// registra en el PATH. En Linux y macOS el binario va a /usr/local/bin o a
+// ~/.local/bin, carpetas compartidas con otras herramientas que Axiom no añadió ni
+// debe quitar del PATH.
+func ManagedBinaryDir(goos string) string {
+	if goos != "windows" {
+		return ""
+	}
+	return engramInstallDir("windows")
+}
+
 // isWritableDir reports whether the directory exists and the process can write to it.
 func isWritableDir(dir string) bool {
 	info, err := os.Stat(dir)

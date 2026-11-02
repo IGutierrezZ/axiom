@@ -279,7 +279,7 @@ This prevents duplicate agent invocations that cause "File X has been modified s
 
 ### Sub-Agent Launch Pattern
 
-ALL Kimi sub-agent launches that involve reading, writing, or reviewing code MUST include pre-resolved **skill paths** from the skill registry. Follow the **Skill Resolver Protocol** in `~/.config/agents/skills/_shared/skill-resolver.md`.
+ALL Kimi sub-agent launches that involve reading, writing, or reviewing code MUST include pre-resolved **skill paths** from the skill registry. Follow the **Skill Resolver Protocol** in `{{AXIOM_SKILLS_DIR}}/_shared/skill-resolver.md`.
 
 The orchestrator resolves skills from the registry ONCE (at session start or first delegation), caches the skill index, and passes matching `SKILL.md` paths into each sub-agent prompt.
 

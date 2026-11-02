@@ -119,12 +119,23 @@ func SelectionScopeFromInstallState(s state.InstallState) SelectionScope {
 // the scope unavailable so callers fail closed instead of managing detected
 // agents that were never selected.
 func ReadSelectionScope(homeDir string) SelectionScope {
-	s, err := state.Read(homeDir)
+	return ReadSelectionScopeFrom(state.GlobalStore(homeDir))
+}
+
+// ReadSelectionScopeFrom es ReadSelectionScope sobre el almacén de estado indicado
+// (global o de proyecto).
+func ReadSelectionScopeFrom(store state.Store) SelectionScope {
+	s, err := store.Read()
 	if err != nil {
 		if os.IsNotExist(err) {
 			return SelectionScope{Mode: SelectionScopeFilesystemFallback}
 		}
 		return SelectionScope{Mode: SelectionScopeUnavailable}
+	}
+	if !store.AgentsRecorded(s) {
+		// El proyecto aún no ha registrado agentes (solo hereda preferencias de la
+		// semilla global): se trata como estado sin selección, no como una selección vacía.
+		return SelectionScope{Mode: SelectionScopeFilesystemFallback}
 	}
 	return SelectionScopeFromInstallState(s)
 }

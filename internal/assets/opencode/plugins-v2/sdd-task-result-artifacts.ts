@@ -1,5 +1,7 @@
 // gentle-ai:managed sdd-task-result-artifacts/v2
 import { Plugin } from "@opencode/plugin"
+import { readFile, stat } from "node:fs/promises"
+import { dirname, isAbsolute, join, resolve } from "node:path"
 
 const SDD_PHASES = ["sdd-init", "sdd-explore", "sdd-research", "sdd-propose", "sdd-spec", "sdd-design", "sdd-tasks", "sdd-apply", "sdd-verify", "sdd-archive", "sdd-onboard"]
 const SDD_TASK_FAILURE_PREFIX = "AXIOM_SDD_FAILURE "
@@ -104,6 +106,70 @@ function canonicalizeSDDPreflightQuestions(args: unknown): void {
 function normalizeSDDPreflightAnswer(value: string): string {
   return value.trim().toLowerCase()
 }
+
+// axiom-project-gate:begin
+// Axiom project gate (D3). This plugin lives in the user's OpenCode configuration, so it also loads
+// in projects that have nothing to do with Axiom. Outside an Axiom project it stays inert: no
+// preflight canonicalization, no SDD dispatch refusal and no task-result validation. It mirrors
+// workspace.IsAxiomProject (internal/workspace/project.go): an `axiom.yaml` in the directory or an
+// ancestor, or an `.axiom-workspace` pointer that resolves to an existing file. A bare `openspec/`
+// does not count. Any error answers "not a project", so the gate fails open. A Go parity test pins
+// this block against the Go criterion; change both together.
+const AXIOM_CONFIG_FILE = "axiom.yaml"
+const AXIOM_WORKSPACE_POINTER = ".axiom-workspace"
+
+async function isRegularFile(path: string): Promise<boolean> {
+  try { return (await stat(path)).isFile() } catch { return false }
+}
+
+// The pointer is a flat YAML with two optional scalar keys (`config`, `specs`), so a line match is
+// enough here and no YAML parser is needed.
+function pointerScalar(text: string, key: "config" | "specs"): string | undefined {
+  const match = new RegExp(`^${key}[ \t]*:(.*)$`, "m").exec(text)
+  if (!match) return undefined
+  let value = match[1].trim()
+  const quote = value.charAt(0)
+  if (quote === '"' || quote === "'") {
+    const end = value.indexOf(quote, 1)
+    value = end > 0 ? value.slice(1, end) : value.slice(1)
+  } else {
+    value = value.replace(/\s+#.*$/, "")
+  }
+  value = value.trim()
+  return value === "" ? undefined : value
+}
+
+async function pointerResolvesToConfig(pointer: string): Promise<boolean> {
+  try {
+    const text = await readFile(pointer, "utf8")
+    const base = dirname(pointer)
+    const config = pointerScalar(text, "config")
+    if (config !== undefined) return await isRegularFile(isAbsolute(config) ? config : join(base, config))
+    const specs = pointerScalar(text, "specs")
+    return specs !== undefined && await isRegularFile(join(base, specs, AXIOM_CONFIG_FILE))
+  } catch {
+    return false
+  }
+}
+
+async function isAxiomProject(start: string): Promise<boolean> {
+  try {
+    if (!start) return false
+    let dir = resolve(start)
+    if (!(await stat(dir)).isDirectory() || dirname(dir) === dir) return false
+    for (;;) {
+      if (await isRegularFile(join(dir, AXIOM_CONFIG_FILE))) return true
+      const pointer = join(dir, AXIOM_WORKSPACE_POINTER)
+      if (await isRegularFile(pointer) && await pointerResolvesToConfig(pointer)) return true
+      const parent = dirname(dir)
+      if (parent === dir) return false
+      dir = parent
+    }
+  } catch {
+    return false
+  }
+}
+// axiom-project-gate:end
 
 function isSDDPhase(agent: string): boolean {
   return SDD_PHASES.some((phase) => agent === phase || agent.startsWith(phase + "-"))
@@ -215,6 +281,8 @@ function record(value: unknown): Record<string, unknown> {
 export default Plugin.define({
   id: "gentle-ai.sdd-task-result-artifacts",
   async setup(ctx) {
+    // Same session directory the branch guard plugin uses.
+    const cwd = ctx.location.directory
     const failures = new Map<string, SDDTaskFailure>()
     const preflights = new Map<string, string>()
     const registrations: Array<{ dispose(): Promise<void> }> = []
@@ -224,8 +292,13 @@ export default Plugin.define({
       registrations.push(await ctx.tool.hook("execute.before", async (call) => {
         if (disposed) throw new Error("SDD adapter disposed")
         const args = record(call.input)
-        if (call.tool === "question") { canonicalizeSDDPreflightQuestions(args); return }
+        if (call.tool === "question") {
+          if (!(await isAxiomProject(cwd))) return
+          canonicalizeSDDPreflightQuestions(args)
+          return
+        }
         if (call.tool !== "subagent" || typeof args.agent !== "string" || !isSDDPhase(args.agent)) return
+        if (!(await isAxiomProject(cwd))) return
         if (!(await isRootSession(ctx, call.sessionID))) throw new Error("SDD child dispatch refused: only the interactive root session may carry parent-confirmed SDD preflight authority")
         const failure = failures.get(call.sessionID)
         if (failure) throw sddDispatchLatched(args.agent, failure)
@@ -238,6 +311,7 @@ export default Plugin.define({
         if (disposed) return
         const args = record(call.input)
         if (call.tool === "question") {
+          if (!(await isAxiomProject(cwd))) return
           if (!(await isRootSession(ctx, call.sessionID))) return
           if (call.status !== "completed") {
             if (Array.isArray(args.questions) && args.questions.some(isSDDPreflightQuestion)) preflights.delete(call.sessionID)
@@ -250,6 +324,7 @@ export default Plugin.define({
           return
         }
         if (call.tool !== "subagent" || typeof args.agent !== "string" || !isSDDPhase(args.agent)) return
+        if (!(await isAxiomProject(cwd))) return
         try {
           if (call.status !== "completed") throw new Error("SDD child tool failed")
           const result = record(call.result.output)

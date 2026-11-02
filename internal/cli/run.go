@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"os/exec"
@@ -136,6 +137,18 @@ func RunInstall(args []string, detection system.DetectionResult) (InstallResult,
 		return InstallResult{}, err
 	}
 
+	// Con --scope workspace los agentes sin modo workspace se omiten enteros, también
+	// los elegidos con --agent, antes de planificar nada: así ningún componente puede
+	// escribir por ellos en la carpeta de usuario.
+	if input.Scope == ScopeWorkspace {
+		kept, omitted := splitAgentsForScope(input.Scope, input.Selection.Agents)
+		noteOmittedWorkspaceAgents(omitted)
+		if len(omitted) > 0 && len(kept) == 0 {
+			return InstallResult{}, errNoWorkspaceAgents(omitted)
+		}
+		input.Selection.Agents = kept
+	}
+
 	resolved, err := planner.NewResolver(planner.MVPGraph()).Resolve(input.Selection)
 	if err != nil {
 		return InstallResult{}, err
@@ -146,7 +159,11 @@ func RunInstall(args []string, detection system.DetectionResult) (InstallResult,
 	if err != nil {
 		return InstallResult{}, fmt.Errorf("resolve user home directory: %w", err)
 	}
-	persistedState, stateErr := state.Read(homeDir)
+	// El estado de instalación es del proyecto con --scope workspace (D2) y de
+	// usuario con --scope global: el ámbito decide qué documento se lee y se escribe.
+	stateWorkspaceDir, _ := resolveWorkspaceDir(input.Scope, homeDir)
+	stateStore := StateStoreFor(input.Scope, homeDir, stateWorkspaceDir)
+	persistedState, stateErr := stateStore.Read()
 	if errors.Is(stateErr, os.ErrNotExist) {
 		persistedState = state.InstallState{}
 	} else if stateErr != nil {
@@ -197,10 +214,12 @@ func RunInstall(args []string, detection system.DetectionResult) (InstallResult,
 
 	if input.Scope == ScopeGlobal {
 		fmt.Fprintf(os.Stderr,
-			"WARNING: installing with --scope=global (default). Agent config files (system prompts, skills/, agents/, etc.)\n"+
+			"WARNING: installing with --scope=global. Agent config files (system prompts, skills/, agents/, etc.)\n"+
 				"will be written to each selected agent's global config directory and will affect ALL workspaces for those agents on this machine.\n"+
 				"To install only into the current workspace, rerun with --scope=workspace.\n\n")
 	}
+	_, rootNotice := resolveWorkspaceDir(input.Scope, homeDir)
+	noteWorkspaceRoot(rootNotice)
 	runtime, err := newInstallRuntime(homeDir, input.Scope, input.Channel, input.Selection, resolved, profile)
 	if err != nil {
 		return result, err
@@ -230,6 +249,9 @@ func RunInstall(args []string, detection system.DetectionResult) (InstallResult,
 	}
 	result.PiCodeGraph = runtime.state.piCodeGraph
 	result.Execution.ManualActions = append(result.Execution.ManualActions, runtime.state.retirementNotes...)
+	result.Execution.ManualActions = append(result.Execution.ManualActions, engramSetupSkippedNote(input.Scope, resolved.OrderedComponents, resolved.Agents)...)
+	result.Execution.ManualActions = append(result.Execution.ManualActions, optInFootprintNotes(input.Scope, homeDir, resolved.OrderedComponents, resolved.Agents, input.Selection)...)
+	result.Execution.ManualActions = append(result.Execution.ManualActions, workspaceTrustNotes(input.Scope, resolved.Agents)...)
 	result.Verify = runPostApplyVerification(postApplyVerificationInput{
 		HomeDir:      homeDir,
 		WorkspaceDir: runtime.workspaceDir,
@@ -295,7 +317,7 @@ func RunInstall(args []string, detection system.DetectionResult) (InstallResult,
 	if err != nil {
 		return result, fmt.Errorf("derive managed asset writer identity: %w", err)
 	}
-	if err := persistInstallState(homeDir, newState, agentIDs, flags, writer); err != nil {
+	if err := persistInstallState(stateStore, newState, agentIDs, flags, writer); err != nil {
 		persistErr := fmt.Errorf("persist install state: %w", err)
 		rollback := orchestrator.Rollback(result.Execution)
 		if rollback.Err != nil {
@@ -307,16 +329,16 @@ func RunInstall(args []string, detection system.DetectionResult) (InstallResult,
 	return result, nil
 }
 
-func persistInstallState(homeDir string, newState state.InstallState, agentIDs []string, flags InstallFlags, writer string) error {
-	return withInstallStateLock(homeDir, func() error {
+func persistInstallState(store state.Store, newState state.InstallState, agentIDs []string, flags InstallFlags, writer string) error {
+	return withStateStoreLock(store, func() error {
 		if len(flags.Agents) > 0 {
-			merged, mergeErr := mergeExplicitAgentInstallState(homeDir, newState, agentIDs, flags)
+			merged, mergeErr := mergeExplicitAgentInstallState(store, newState, agentIDs, flags)
 			if mergeErr != nil {
 				return fmt.Errorf("merge explicit agent install state: %w", mergeErr)
 			}
 			newState = merged
 		} else {
-			existing, err := state.Read(homeDir)
+			existing, err := store.Read()
 			if errors.Is(err, os.ErrNotExist) {
 				existing = state.InstallState{}
 			} else if err != nil {
@@ -325,7 +347,7 @@ func persistInstallState(homeDir string, newState state.InstallState, agentIDs [
 			newState = mergeFullInstallState(existing, newState)
 		}
 		newState.ManagedAssetDigest = writer
-		return state.WriteReconciled(homeDir, newState)
+		return store.WriteReconciled(newState)
 	})
 }
 
@@ -362,8 +384,8 @@ func mergeFullInstallState(existing, fresh state.InstallState) state.InstallStat
 // data would itself be wrong, so this does not attempt best-effort recovery
 // — it fails loudly instead, matching the original conservative intent of
 // refusing to merge from data that cannot be trusted.
-func mergeExplicitAgentInstallState(homeDir string, newState state.InstallState, agentIDs []string, flags InstallFlags) (state.InstallState, error) {
-	existing, readErr := state.Read(homeDir)
+func mergeExplicitAgentInstallState(store state.Store, newState state.InstallState, agentIDs []string, flags InstallFlags) (state.InstallState, error) {
+	existing, readErr := store.Read()
 	if readErr != nil {
 		if errors.Is(readErr, os.ErrNotExist) {
 			return newState, nil
@@ -662,10 +684,13 @@ type runtimeState struct {
 	// retiredFiles and retirementNotes carry the outcome of the OpenCode
 	// telemetry plugin retirement: files removed, and non-fatal warnings for
 	// copies kept because ownership could not be proven.
-	retiredFiles             []string
-	retirementNotes          []string
-	manifest                 backup.Manifest
-	rollbackSnapshotDir      string
+	retiredFiles        []string
+	retirementNotes     []string
+	manifest            backup.Manifest
+	rollbackSnapshotDir string
+	// createdBackupDir es la copia de respaldo que esta ejecución dejó en la raíz
+	// de respaldos. Queda vacía cuando se reutilizó la última por ser idéntica.
+	createdBackupDir         string
 	piCodeGraph              *communitytool.PiCodeGraphResult
 	compatibilityTransaction compatibilityRefreshTransaction
 
@@ -690,6 +715,25 @@ func (s *runtimeState) cleanupRollbackSnapshot() {
 	s.rollbackSnapshotDir = ""
 }
 
+// discardCreatedBackup borra la copia de respaldo que esta ejecución creó en
+// backupRoot. Se usa cuando la ejecución terminó bien sin escribir nada: la copia
+// es idéntica al estado resultante y no sirve de punto de restauración, solo
+// acumularía una copia completa por cada sync sin cambios. Solo borra dentro de
+// backupRoot, y un fallo al borrar se anota sin afectar al resultado.
+func (s *runtimeState) discardCreatedBackup(backupRoot string) {
+	if s == nil || s.createdBackupDir == "" || backupRoot == "" {
+		return
+	}
+	dir := filepath.Clean(s.createdBackupDir)
+	s.createdBackupDir = ""
+	if !strings.HasPrefix(dir, filepath.Clean(backupRoot)+string(filepath.Separator)) {
+		return
+	}
+	if err := os.RemoveAll(dir); err != nil {
+		log.Printf("backup: discard unused snapshot: %v", err)
+	}
+}
+
 func (s *runtimeState) cleanupCompatibilityTransaction() {
 	if s == nil || s.compatibilityTransaction == nil {
 		return
@@ -710,9 +754,15 @@ func (s *runtimeState) compatibilityChangedFiles() []string {
 
 func newInstallRuntime(homeDir string, scope InstallScope, channel InstallChannel, selection model.Selection, resolved planner.ResolvedPlan, profile system.PlatformProfile) (*installRuntime, error) {
 	backupRoot := backup.BackupRootFor(homeDir)
-	compatibilityTransaction, err := newCompatibilityRefreshTransaction(homeDir, resolved.OrderedComponents, selection)
-	if err != nil {
-		return nil, err
+	// En ámbito workspace no se abre la transacción de ~/.agents/skills: esa copia
+	// de compatibilidad no se refresca y no hay nada que anclar ni capturar.
+	var compatibilityTransaction compatibilityRefreshTransaction
+	if scope != ScopeWorkspace {
+		var err error
+		compatibilityTransaction, err = newCompatibilityRefreshTransaction(homeDir, resolved.OrderedComponents, selection)
+		if err != nil {
+			return nil, err
+		}
 	}
 	state := &runtimeState{compatibilityTransaction: compatibilityTransaction}
 	if err := os.MkdirAll(backupRoot, 0o755); err != nil {
@@ -720,7 +770,9 @@ func newInstallRuntime(homeDir string, scope InstallScope, channel InstallChanne
 		return nil, fmt.Errorf("create backup root directory %q: %w", backupRoot, err)
 	}
 
-	workspaceDir, _ := os.Getwd()
+	// En ámbito workspace la raíz es la del proyecto, no la carpeta desde la que
+	// se lanzó el comando. El aviso al usuario lo emite RunInstall.
+	workspaceDir, _ := resolveWorkspaceDir(scope, homeDir)
 
 	return &installRuntime{
 		homeDir:      homeDir,
@@ -752,6 +804,7 @@ func (r *installRuntime) stagePlan() pipeline.StagePlan {
 			appVersion:  AppVersion,
 		},
 	}
+	prepare = withWorkspaceSettingsPreflight(prepare, r.scope, r.workspaceDir, r.resolved.Agents)
 
 	apply := make([]pipeline.Step, 0, len(r.resolved.Agents)+len(r.selection.CommunityTools)+len(r.resolved.OrderedComponents)+1)
 	openCodeDir := openCodeGlobalConfigDir(r.homeDir, r.workspaceDir, r.scope, r.resolved.Agents)
@@ -767,7 +820,10 @@ func (r *installRuntime) stagePlan() pipeline.StagePlan {
 	// This ensures that SDD or Engram can inject their modules even if Persona is skipped.
 	for _, agent := range r.resolved.Agents {
 		if agent == model.AgentKimi {
-			apply = append(apply, kimiSystemPromptHubStep{id: "agent:kimi-prompt-hub", homeDir: r.homeDir})
+			// El hub se crea en la misma raíz donde inyectan los componentes: con el
+			// ámbito workspace es el proyecto, no la carpeta de usuario.
+			rootDir := ResolveAgentConfigDir(r.scope, r.homeDir, r.workspaceDir)
+			apply = append(apply, kimiSystemPromptHubStep{id: "agent:kimi-prompt-hub", homeDir: rootDir})
 		}
 	}
 
@@ -821,8 +877,16 @@ func (r *installRuntime) stagePlan() pipeline.StagePlan {
 			scope:        r.scope,
 		})
 	}
+	// En workspace, OpenCode, Kilo y Gemini solo cargan el fichero de instrucciones
+	// de Axiom si está registrado en su configuración de proyecto (instructions o
+	// context.fileName).
+	if r.scope == ScopeWorkspace && registersWorkspaceInstructions(r.resolved.Agents) {
+		apply = append(apply, workspaceInstructionsStep{id: "workspace-instructions", workspaceDir: r.workspaceDir, agents: r.resolved.Agents})
+	}
 
-	if needsCompatibilitySkillsRefresh(r.resolved.OrderedComponents) {
+	// La copia de skills de compatibilidad vive en ~/.agents/skills: con el ámbito
+	// workspace no se toca (los skills ya quedan en el proyecto).
+	if r.scope != ScopeWorkspace && needsCompatibilitySkillsRefresh(r.resolved.OrderedComponents) {
 		apply = append(apply, compatibilitySkillsRefreshStep{
 			id:          "component:compatibility-skills-refresh",
 			homeDir:     r.homeDir,
@@ -844,7 +908,7 @@ func (r *installRuntime) stagePlan() pipeline.StagePlan {
 	if telemetryDir := openCodeGlobalConfigDir(r.homeDir, r.workspaceDir, r.scope, r.resolved.Agents); telemetryDir != "" {
 		apply = append(apply, openCodeTelemetryRetirementStep{id: "opencode:retire-telemetry-plugin", configDir: telemetryDir, state: r.state})
 	}
-	if legacy := legacyPromptAdapters(resolveAdapters(r.resolved.Agents)); len(legacy) > 0 {
+	if legacy := legacyPromptAdapters(resolveAdaptersScoped(r.scope, r.workspaceDir, r.resolved.Agents)); len(legacy) > 0 {
 		apply = append(apply, legacyPromptRetirementStep{
 			id:       "retire-legacy-prompt-files",
 			state:    r.state,
@@ -852,6 +916,14 @@ func (r *installRuntime) stagePlan() pipeline.StagePlan {
 			targetDir: func(adapter agents.Adapter) string {
 				return componentInjectionDirScoped(r.homeDir, r.workspaceDir, r.scope, adapter)
 			},
+		})
+	}
+	if legacy := legacySkillsAdapters(r.scope, resolveAdaptersScoped(r.scope, r.workspaceDir, r.resolved.Agents)); len(legacy) > 0 {
+		apply = append(apply, legacySkillsRetirementStep{
+			id:           "retire-legacy-workspace-skills",
+			state:        r.state,
+			workspaceDir: r.workspaceDir,
+			adapters:     legacy,
 		})
 	}
 
@@ -885,7 +957,7 @@ type agentRoutingGuidanceStep struct {
 func (s agentRoutingGuidanceStep) ID() string { return s.id }
 
 func (s agentRoutingGuidanceStep) Run() error {
-	adapter, err := agents.NewAdapter(s.agent)
+	adapter, err := newScopedAdapter(s.scope, s.workspaceDir, s.agent)
 	if err != nil {
 		return fmt.Errorf("create adapter for %q: %w", s.agent, err)
 	}
@@ -919,7 +991,7 @@ func (s agentRoutingGuidanceStep) Run() error {
 
 	options := routingGuidanceOptions(s.homeDir, s.workspaceDir, s.scope, adapter)
 	var injected agentguidance.Result
-	if options.SettingsPath == "" {
+	if options.SettingsPath == "" && options.Adapter == nil {
 		injected, err = agentguidance.InjectRouting(targetDir, s.agent)
 	} else {
 		injected, err = agentguidance.InjectRoutingWithOptions(targetDir, s.agent, options)
@@ -1187,6 +1259,7 @@ func (s prepareBackupStep) Run() error {
 	}
 
 	s.state.manifest = manifest
+	s.state.createdBackupDir = s.snapshotDir
 
 	// Retention pruning: remove oldest unpinned backups beyond the limit.
 	// Non-fatal: a prune failure must not prevent the install/sync from succeeding.
@@ -1265,12 +1338,17 @@ func (s rollbackRestoreStep) Rollback() error {
 // Both values are exactly what backupTargets/syncBackupTargets used to
 // compute what this run actually snapshotted, so allowing rollback to
 // write within them is not wider than what this run could already do.
+//
+// backup.MachineRoots añade el directorio de lanzadores de Axiom cuando
+// AXIOM_STATE_DIR lo deja fuera de home: el lanzador de OpenCode entra en el
+// manifiesto (backupTargets y syncBackupTargets lo incluyen) y, sin esa raíz, un
+// install fallido no podría restaurarlo.
 func rollbackRoots(homeDir, workspaceDir string) []string {
 	roots := []string{homeDir}
 	if workspaceDir != "" && workspaceDir != homeDir {
 		roots = append(roots, workspaceDir)
 	}
-	return roots
+	return append(roots, backup.MachineRoots(homeDir)...)
 }
 
 type agentInstallStep struct {
@@ -1288,7 +1366,7 @@ func openCodeGlobalConfigDir(home, workspace string, scope InstallScope, agentID
 	if !containsAgent(agentIDs, model.AgentOpenCode) {
 		return ""
 	}
-	adapter := opencodeagent.NewAdapter()
+	adapter := scopedAdapter(scope, workspace, opencodeagent.NewAdapter())
 	return adapter.GlobalConfigDir(componentInjectionDirScoped(home, workspace, scope, adapter))
 }
 
@@ -1522,6 +1600,18 @@ func engramBinaryDirsOnPath(pathEntries []string, goos string) []string {
 	return dirs
 }
 
+// resolveSyncEngramCommand devuelve la orden con la que sync sondea la versión
+// de Engram: la misma que install resolvió con resolveEngramInstalledPath (el
+// binario que encuentra PATH) y, si no hay ninguno, el nombre a secas. En
+// producción son el mismo binario; la diferencia es que ambos caminos
+// comparten el sondeo y por tanto la sección slim o full de CLAUDE.md.
+func resolveSyncEngramCommand() string {
+	if path, err := cmdLookPath("engram"); err == nil && strings.TrimSpace(path) != "" {
+		return path
+	}
+	return "engram"
+}
+
 func resolveEngramVersion(command string) (string, error) {
 	if strings.TrimSpace(command) == "" || command == "engram" {
 		return verifyEngramVersion()
@@ -1548,7 +1638,7 @@ func splitPathForOS(value, goos string) []string {
 }
 
 func (s componentApplyStep) Run() error {
-	adapters := resolveAdapters(s.agents)
+	adapters := resolveAdaptersScoped(s.scope, s.workspaceDir, s.agents)
 
 	switch s.component {
 	case model.ComponentEngram:
@@ -1625,6 +1715,13 @@ func (s componentApplyStep) Run() error {
 		}
 		setupMode := engram.SetupModeFromEnv()
 		setupStrict := engram.SetupStrictFromEnv()
+		if s.scope == ScopeWorkspace {
+			// `engram setup <agente>` escribe en la carpeta de usuario del agente:
+			// con el ámbito workspace no se lanza. El MCP de Engram ya queda en el
+			// proyecto (engram.InjectWorkspaceWithOptions) y el aviso con el comando
+			// manual lo emite workspaceFootprintNotes.
+			setupMode = engram.SetupModeOff
+		}
 
 		// Resolve the installed engram version once (Decision 1 gate). Errors are
 		// intentionally ignored for gating purposes: an empty version string
@@ -1743,12 +1840,18 @@ func (s componentApplyStep) Run() error {
 		return nil
 	case model.ComponentPermission:
 		for _, adapter := range adapters {
-			if _, err := permissions.Inject(s.homeDir, adapter); err != nil {
+			root, ok := permissionsRoot(s.homeDir, s.workspaceDir, s.scope, adapter)
+			if !ok {
+				noteSkippedPermissions(s.homeDir, adapter)
+				continue
+			}
+			if _, err := permissions.Inject(root, adapter); err != nil {
 				return fmt.Errorf("inject permissions for %q: %w", adapter.Agent(), err)
 			}
 		}
 		return nil
 	case model.ComponentSDD:
+		skillsDirs := newWorkspaceSkillsDirs(s.scope)
 		for _, adapter := range adapters {
 			targetDir := componentInjectionDirScoped(s.homeDir, s.workspaceDir, s.scope, adapter)
 			opts := sdd.InjectOptions{
@@ -1767,6 +1870,7 @@ func (s componentApplyStep) Run() error {
 			if s.scope == ScopeWorkspace {
 				opts.WorkspaceDir = s.workspaceDir
 			}
+			opts.SkillsAlreadyWritten = skillsDirs.claimSDD(adapter, targetDir)
 			opts.IncludeOpenCodeBackgroundPolicy = s.backgroundPolicy && adapter.Agent() == model.AgentOpenCode
 			if _, err := injectSDD(targetDir, adapter, s.selection.SDDMode, opts); err != nil {
 				return fmt.Errorf("inject sdd for %q: %w", adapter.Agent(), err)
@@ -1778,8 +1882,12 @@ func (s componentApplyStep) Run() error {
 		if len(skillIDs) == 0 {
 			return nil
 		}
+		skillsDirs := newWorkspaceSkillsDirs(s.scope)
 		for _, adapter := range adapters {
 			targetDir := componentInjectionDirScoped(s.homeDir, s.workspaceDir, s.scope, adapter)
+			if skillsDirs.claimSkills(adapter, targetDir) {
+				continue
+			}
 			if _, err := skills.Inject(targetDir, adapter, skillIDs); err != nil {
 				return fmt.Errorf("inject skills for %q: %w", adapter.Agent(), err)
 			}
@@ -1904,7 +2012,23 @@ func ExecuteTUIInstallWithBackgroundAndOrchestrator(homeDir string, selection mo
 }
 
 func executeTUIInstallWithBackground(homeDir string, selection model.Selection, resolved planner.ResolvedPlan, profile system.PlatformProfile, background model.OpenCodeBackgroundIntent, piBackground model.PiBackgroundIntent, onProgress pipeline.ProgressFunc) (pipeline.ExecutionResult, *pipeline.Orchestrator) {
-	runtime, err := newInstallRuntime(homeDir, ScopeGlobal, ChannelStable, selection, resolved, profile)
+	// La TUI sigue la misma regla de ámbito que la CLI: workspace por defecto y
+	// global solo cuando se pide de forma explícita (AXIOM_INSTALL_SCOPE=global).
+	scope, err := ResolveInstallScope("")
+	if err != nil {
+		return pipeline.ExecutionResult{Err: err}, nil
+	}
+	// Mismo filtro que la CLI. La TUI ocupa la terminal: el aviso no sale por stderr,
+	// se devuelve entre las acciones manuales del resultado.
+	selectionAgents, omittedAgents := splitAgentsForScope(scope, selection.Agents)
+	if len(omittedAgents) > 0 {
+		if len(selectionAgents) == 0 {
+			return pipeline.ExecutionResult{Err: errNoWorkspaceAgents(omittedAgents)}, nil
+		}
+		selection.Agents = selectionAgents
+		resolved.Agents = AgentsForScope(scope, resolved.Agents)
+	}
+	runtime, err := newInstallRuntime(homeDir, scope, ChannelStable, selection, resolved, profile)
 	if err != nil {
 		return pipeline.ExecutionResult{Err: err}, nil
 	}
@@ -1933,7 +2057,11 @@ func executeTUIInstallWithBackground(homeDir string, selection model.Selection, 
 	if runtime.state.piCodeGraph != nil {
 		result.ManualActions = append(result.ManualActions, runtime.state.piCodeGraph.ManualActions...)
 	}
+	result.ManualActions = append(result.ManualActions, omittedWorkspaceAgentNotices(omittedAgents)...)
 	result.ManualActions = append(result.ManualActions, runtime.state.retirementNotes...)
+	result.ManualActions = append(result.ManualActions, engramSetupSkippedNote(scope, resolved.OrderedComponents, resolved.Agents)...)
+	result.ManualActions = append(result.ManualActions, optInFootprintNotes(scope, homeDir, resolved.OrderedComponents, resolved.Agents, selection)...)
+	result.ManualActions = append(result.ManualActions, workspaceTrustNotes(scope, resolved.Agents)...)
 	return result, orchestrator
 }
 
@@ -2154,7 +2282,7 @@ func selectedSkillIDs(selection model.Selection) []model.SkillID {
 
 func backupTargets(homeDir, workspaceDir string, scope InstallScope, selection model.Selection, resolved planner.ResolvedPlan) ([]string, error) {
 	paths := map[string]struct{}{}
-	adapters := resolveAdapters(resolved.Agents)
+	adapters := resolveAdaptersScoped(scope, workspaceDir, resolved.Agents)
 	managesSDDPlugins := false
 	for _, component := range resolved.OrderedComponents {
 		managesSDDPlugins = managesSDDPlugins || component == model.ComponentSDD
@@ -2166,10 +2294,13 @@ func backupTargets(homeDir, workspaceDir string, scope InstallScope, selection m
 				paths[path] = struct{}{}
 			}
 		}
-		if component == model.ComponentEngram && scope == ScopeGlobal {
+		if component == model.ComponentEngram {
+			// Injection migrates the standalone Claude Engram file of earlier
+			// installs (home or workspace) into the registry Claude Code reads,
+			// so the file must be in the snapshot to be restorable on rollback.
 			for _, adapter := range adapters {
 				if adapter.Agent() == model.AgentClaudeCode {
-					paths[adapter.MCPConfigPath(homeDir, "engram")] = struct{}{}
+					paths[adapter.MCPConfigPath(componentPathDirScoped(homeDir, workspaceDir, scope, adapter, model.ComponentEngram), "engram")] = struct{}{}
 				}
 			}
 		}
@@ -2213,8 +2344,17 @@ func backupTargets(homeDir, workspaceDir string, scope InstallScope, selection m
 	for _, path := range routingGuidancePaths(homeDir, workspaceDir, scope, adapters) {
 		paths[path] = struct{}{}
 	}
+	// El registro de instrucciones de OpenCode y Kilo reescribe su configuración de
+	// proyecto aunque ningún componente seleccionado la toque.
+	for _, path := range workspaceInstructionsSettingsPaths(workspaceDir, scope, adapters) {
+		paths[path] = struct{}{}
+	}
 	// The legacy prompt retirement deletes files, so they need a snapshot too.
 	for _, path := range legacyPromptBackupPaths(homeDir, workspaceDir, scope, adapters) {
+		paths[path] = struct{}{}
+	}
+	// La migración de skills de proyecto también borra ficheros.
+	for _, path := range legacySkillsBackupPaths(workspaceDir, scope, adapters) {
 		paths[path] = struct{}{}
 	}
 	adapterSkillPaths, err := adapterSkillBackupTargets(homeDir, workspaceDir, scope, selection, adapters)
@@ -2224,7 +2364,7 @@ func backupTargets(homeDir, workspaceDir string, scope InstallScope, selection m
 	for _, path := range adapterSkillPaths {
 		paths[path] = struct{}{}
 	}
-	if !usesAnchoredCompatibilityTransaction() && needsCompatibilitySkillsRefresh(resolved.OrderedComponents) {
+	if scope != ScopeWorkspace && !usesAnchoredCompatibilityTransaction() && needsCompatibilitySkillsRefresh(resolved.OrderedComponents) {
 		skillDir, ok, err := compatibilitySkillsDir(homeDir)
 		if err != nil {
 			return nil, err
@@ -2277,12 +2417,16 @@ func backupTargets(homeDir, workspaceDir string, scope InstallScope, selection m
 
 func adapterSkillBackupTargets(homeDir, workspaceDir string, scope InstallScope, selection model.Selection, adapters []agents.Adapter) ([]string, error) {
 	var paths []string
+	skillsDirs := newWorkspaceSkillsDirs(scope)
 	for _, adapter := range adapters {
 		if !adapter.SupportsSkills() {
 			continue
 		}
 		skillDir := adapter.SkillsDir(componentInjectionDirScoped(homeDir, workspaceDir, scope, adapter))
 		if skillDir == "" {
+			continue
+		}
+		if skillsDirs.claim(skillDir) {
 			continue
 		}
 		if slices.Contains(selection.Components, model.ComponentSkills) {
@@ -2340,7 +2484,7 @@ func routingGuidancePaths(homeDir, workspaceDir string, scope InstallScope, adap
 		options := routingGuidanceOptions(homeDir, workspaceDir, scope, adapter)
 		var routing []string
 		var err error
-		if options.SettingsPath == "" {
+		if options.SettingsPath == "" && options.Adapter == nil {
 			routing, err = agentguidance.RoutingPaths(targetDir, adapter.Agent())
 		} else {
 			routing, err = agentguidance.RoutingPathsWithOptions(targetDir, adapter.Agent(), options)
@@ -2374,6 +2518,12 @@ func componentPathsWithWorkspaceScoped(homeDir, workspaceDir string, scope Insta
 			case model.StrategySeparateMCPFiles:
 				if adapter.Agent() == model.AgentClaudeCode && scope == ScopeGlobal {
 					paths = append(paths, claude.UserConfigPath(homeDir))
+				} else if adapter.Agent() == model.AgentClaudeCode {
+					// Workspace scope declares Engram in <project-root>/.mcp.json,
+					// the file Claude Code loads project MCP servers from. The
+					// standalone .claude/mcp/engram.json it never read is only a
+					// migration source: it is backed up, not verified.
+					paths = append(paths, filepath.Join(targetDir, ".mcp.json"))
 				} else {
 					paths = append(paths, adapter.MCPConfigPath(targetDir, "engram"))
 				}
@@ -2404,11 +2554,21 @@ func componentPathsWithWorkspaceScoped(homeDir, workspaceDir string, scope Insta
 					// Track the gentle-ai files written alongside the Codex config.toml
 					// so they are restored on rollback and removed on uninstall.
 					codexHomeDir := filepath.Dir(p)
-					paths = append(paths,
-						filepath.Join(codexHomeDir, "engram-instructions.md"),
-						filepath.Join(codexHomeDir, "engram-compact-prompt.md"),
-					)
-					paths = append(paths, codexagent.SddProfilePaths(codexHomeDir)...)
+					if _, inProject := adapter.(agents.WorkspaceInlineInstructionsProvider); inProject && scope == ScopeWorkspace {
+						// In a project there is no model_instructions_file and no profile
+						// files (Codex ignores `profiles` there): the memory protocol
+						// travels in the Axiom instructions file.
+						paths = append(paths,
+							filepath.Join(codexHomeDir, "engram-compact-prompt.md"),
+							adapter.SystemPromptFile(targetDir),
+						)
+					} else {
+						paths = append(paths,
+							filepath.Join(codexHomeDir, "engram-instructions.md"),
+							filepath.Join(codexHomeDir, "engram-compact-prompt.md"),
+						)
+						paths = append(paths, codexagent.SddProfilePaths(codexHomeDir)...)
+					}
 				}
 			}
 			if adapter.SystemPromptStrategy() == model.StrategyMarkdownSections {
@@ -2426,9 +2586,14 @@ func componentPathsWithWorkspaceScoped(homeDir, workspaceDir string, scope Insta
 			if adapter.SupportsSlashCommands() {
 				paths = append(paths, sdd.SlashCommandPaths(adapter.Agent(), adapter.CommandsDir(targetDir))...)
 			}
-			if adapter.Agent() == model.AgentOpenCode {
+			// Kilo solo declara sus ficheros SDD en workspace: en global esa lista nunca
+			// los incluyó y ampliarla cambiaría lo que se verifica y respalda hoy.
+			if adapter.Agent() == model.AgentOpenCode || (adapter.Agent() == model.AgentKilocode && scope == ScopeWorkspace) {
 				if p := effectiveOpenCodeSettingsPath(homeDir, workspaceDir, scope, adapter); p != "" {
-					paths = append(paths, p, opencodedefault.OwnershipPath(p))
+					paths = append(paths, p)
+					if adapter.Agent() == model.AgentOpenCode {
+						paths = append(paths, opencodedefault.OwnershipPath(p))
+					}
 				}
 				paths = append(paths, openCodeSDDPluginPaths(adapter, targetDir)...)
 				// Shared prompt files in the selected OpenCode config scope — back these up
@@ -2437,7 +2602,7 @@ func componentPathsWithWorkspaceScoped(homeDir, workspaceDir string, scope Insta
 				// include them in the path list when that mode is active. This prevents
 				// false-negative verification failures in single/empty mode syncs.
 				if selection.SDDMode == model.SDDModeMulti {
-					promptDir := sdd.SharedPromptDir(targetDir)
+					promptDir := sdd.SharedPromptDirFor(adapter, targetDir)
 					for _, phase := range sdd.SharedPromptPhases() {
 						paths = append(paths, filepath.Join(promptDir, phase+".md"))
 					}
@@ -2476,8 +2641,10 @@ func componentPathsWithWorkspaceScoped(homeDir, workspaceDir string, scope Insta
 			paths = append(paths, sddSubAgentPaths(targetDir, adapter)...)
 			if adapter.Agent() == model.AgentCodex {
 				// SDD installs the Codex skill-registry hook outside the skills
-				// directory, so it must share the component's backup contract.
-				paths = append(paths, filepath.Join(adapter.GlobalConfigDir(homeDir), "hooks.json"))
+				// directory, so it must share the component's backup contract. It
+				// lives in the scope's root: ~/.codex/hooks.json for a global install,
+				// <project>/.codex/hooks.json for a workspace one.
+				paths = append(paths, filepath.Join(adapter.GlobalConfigDir(targetDir), "hooks.json"))
 			}
 			// SDD also writes the standalone Kiro skill-registry hook outside
 			// the skills directory; it shares the component's backup and
@@ -2555,8 +2722,12 @@ func componentPathsWithWorkspaceScoped(homeDir, workspaceDir string, scope Insta
 				}
 			}
 		case model.ComponentPermission:
-			if p := permissions.TargetPath(homeDir, adapter); p != "" {
-				paths = append(paths, p)
+			// Permissions follow the install scope; an agent skipped in
+			// workspace scope has no path to back up or verify.
+			if root, ok := permissionsRoot(homeDir, workspaceDir, scope, adapter); ok {
+				if p := permissions.TargetPath(root, adapter); p != "" {
+					paths = append(paths, p)
+				}
 			}
 		case model.ComponentGGA:
 			if scope == ScopeWorkspace {
@@ -2584,10 +2755,17 @@ func componentPathsWithWorkspaceScoped(homeDir, workspaceDir string, scope Insta
 	// is bootstrapped but not explicitly owned by any other component path list.
 	for _, adapter := range adapters {
 		if adapter.SystemPromptStrategy() == model.StrategyJinjaModules {
-			paths = append(paths, adapter.SystemPromptFile(homeDir))
+			// El hub se crea en la raíz del ámbito (kimiSystemPromptHubStep), no
+			// siempre en HOME.
+			paths = append(paths, adapter.SystemPromptFile(componentInjectionDirScoped(homeDir, workspaceDir, scope, adapter)))
 		}
 	}
 
+	// Con el ámbito workspace varios agentes comparten .agents/skills: cada fichero se
+	// declara una sola vez.
+	if scope == ScopeWorkspace {
+		return dedupPaths(paths)
+	}
 	return paths
 }
 
@@ -2644,12 +2822,35 @@ func effectiveOpenCodeSettingsPath(homeDir, workspaceDir string, scope InstallSc
 // authority into the routing-guidance adapter. In workspace scope, guidance
 // targets the workspace settings; global install/sync targets effective global settings.
 func routingGuidanceOptions(homeDir, workspaceDir string, scope InstallScope, adapter agents.Adapter) agentguidance.RoutingOptions {
-	if adapter.Agent() != model.AgentOpenCode {
-		return agentguidance.RoutingOptions{}
+	var options agentguidance.RoutingOptions
+	// En workspace, todo adaptador ligado a la raíz del proyecto resuelve sus rutas
+	// en la distribución del proyecto (opencode.json, .gemini/AXIOM.md,
+	// .codex/axiom-instructions.md, .github/instructions/...): el inyector debe
+	// usarlo, no crear uno global que aplicaría la distribución de usuario dentro
+	// del proyecto.
+	if scope == ScopeWorkspace && boundToWorkspace(adapter) {
+		options.Adapter = adapter
 	}
-	return agentguidance.RoutingOptions{
-		SettingsPath: effectiveOpenCodeSettingsPath(homeDir, workspaceDir, scope, adapter),
+	// OpenCode y Kilo guardan la guía en su configuración, que en el proyecto es
+	// del equipo y está versionada: se conservan sus comentarios.
+	if scope == ScopeWorkspace && agentguidance.DeliversThroughOrchestratorPrompt(adapter.Agent()) {
+		options.Adapter = adapter
+		options.PreserveJSONC = true
 	}
+	if adapter.Agent() == model.AgentOpenCode {
+		options.SettingsPath = effectiveOpenCodeSettingsPath(homeDir, workspaceDir, scope, adapter)
+	}
+	return options
+}
+
+// boundToWorkspace reconoce un adaptador ligado a la raíz del proyecto por
+// cualquiera de las capacidades con las que lo declaran los adaptadores.
+func boundToWorkspace(adapter agents.Adapter) bool {
+	switch adapter.(type) {
+	case agents.WorkspaceScopedProvider, agents.WorkspaceContextFileProvider, agents.WorkspaceInlineInstructionsProvider:
+		return true
+	}
+	return false
 }
 
 func componentInjectionDir(homeDir, workspaceDir string, adapter agents.Adapter) string {
@@ -2667,26 +2868,50 @@ func routingGuidanceDir(homeDir, workspaceDir string, scope InstallScope, adapte
 
 // componentInjectionDirScoped returns the directory to inject component files for the given adapter,
 // taking the install scope into account. When scope is ScopeWorkspace, agent-scoped
-// components write to workspaceDir instead of the selected agent's global config root,
-// except for desktop agents that do not support workspace installation (VSCode, Trae, Windsurf),
-// which are always installed in homeDir.
+// components write to workspaceDir instead of the selected agent's global config root.
+//
+// Los agentes que no admiten el ámbito workspace (VS Code Copilot, Trae, Windsurf,
+// Antigravity) no llegan aquí: install, sync y la TUI los omiten enteros al
+// construir el plan (splitAgentsForScope). Si uno se colara, el resultado queda
+// confinado al proyecto; nunca vuelve a ser la carpeta de usuario.
 func componentInjectionDirScoped(homeDir, workspaceDir string, scope InstallScope, adapter agents.Adapter) string {
-	if scope == ScopeWorkspace && !adapterSupportsWorkspace(adapter) {
-		return homeDir
-	}
 	return ResolveAgentConfigDir(scope, homeDir, workspaceDir)
+}
+
+// permissionsNoticeWriter receives the informational line printed when the
+// permission component skips an agent in workspace scope.
+var permissionsNoticeWriter io.Writer = os.Stderr
+
+// permissionsRoot returns the root the permission component injects under for
+// the adapter. Permissions follow the install scope: the user's home for a
+// global install, the workspace root for a workspace install. ok is false when
+// the agent cannot hold workspace-scoped configuration (or no workspace root is
+// known): the agent is then skipped, never written under the user's home.
+func permissionsRoot(homeDir, workspaceDir string, scope InstallScope, adapter agents.Adapter) (root string, ok bool) {
+	if scope != ScopeWorkspace {
+		return homeDir, true
+	}
+	if strings.TrimSpace(workspaceDir) == "" || !adapterSupportsWorkspace(adapter) {
+		return "", false
+	}
+	return workspaceDir, true
+}
+
+// noteSkippedPermissions tells the user that an agent that would have received
+// permissions was skipped because it has no workspace mode. Agents with no
+// permission target at all stay silent: there was nothing to skip.
+func noteSkippedPermissions(homeDir string, adapter agents.Adapter) {
+	if permissions.TargetPath(homeDir, adapter) == "" {
+		return
+	}
+	fmt.Fprintf(permissionsNoticeWriter, "Permisos omitidos para %s: no admite el ámbito workspace y Axiom no escribe en la configuración global si no se pide con --scope global.\n", adapter.Agent())
 }
 
 func adapterSupportsWorkspace(adapter agents.Adapter) bool {
 	if adapter == nil {
 		return false
 	}
-	switch adapter.Agent() {
-	case model.AgentVSCodeCopilot, model.AgentTrae, model.AgentWindsurf, model.AgentAntigravity, model.AgentCodex:
-		return false
-	default:
-		return true
-	}
+	return agentSupportsWorkspace(adapter.Agent())
 }
 
 // piPersonaConfigRoots returns the roots whose Pi persona state is managed by
@@ -2740,6 +2965,9 @@ func componentPathDirScoped(homeDir, workspaceDir string, scope InstallScope, ad
 	case model.ComponentEngram, model.ComponentSDD, model.ComponentPersona, model.ComponentSkills, model.ComponentContext7:
 		return componentInjectionDirScoped(homeDir, workspaceDir, scope, adapter)
 	default:
+		// ComponentPermission is deliberately absent: an agent skipped in
+		// workspace scope has no root, which a single directory cannot express.
+		// Its callers resolve the root with permissionsRoot.
 		return homeDir
 	}
 }
@@ -2773,7 +3001,7 @@ func openCodeSDDPluginPaths(adapter agents.Adapter, targetDir string) []string {
 	// verification must ask the same resolver (#3219).
 	pluginsDir := filepath.Join(adapter.GlobalConfigDir(targetDir), "plugins")
 	paths := []string{filepath.Join(pluginsDir, "background-agents.ts")}
-	for _, name := range sdd.ManagedOpenCodePluginNames() {
+	for _, name := range sdd.ManagedOpenCodePluginNamesFor(adapter.Agent()) {
 		paths = append(paths, filepath.Join(pluginsDir, name))
 	}
 	return paths
@@ -2790,7 +3018,7 @@ type postApplyVerificationInput struct {
 
 func runPostApplyVerification(input postApplyVerificationInput) verify.Report {
 	checks := make([]verify.Check, 0)
-	adapters := resolveAdapters(input.Resolved.Agents)
+	adapters := resolveAdaptersScoped(input.Scope, input.WorkspaceDir, input.Resolved.Agents)
 
 	seenPath := make(map[string]struct{})
 	var uniqueFilePaths []string
@@ -2883,7 +3111,14 @@ func isLegacyOpenCodeBackgroundAgentsPlugin(path string) bool {
 	path = filepath.Clean(path)
 	pluginsDir := filepath.Dir(path)
 	opencodeDir := filepath.Dir(pluginsDir)
-	if filepath.Base(path) != "background-agents.ts" || filepath.Base(pluginsDir) != "plugins" || filepath.Base(opencodeDir) != "opencode" {
+	if filepath.Base(path) != "background-agents.ts" || filepath.Base(pluginsDir) != "plugins" {
+		return false
+	}
+	// En un proyecto (ámbito workspace) la carpeta de recursos es .opencode o .kilo.
+	if base := filepath.Base(opencodeDir); base == ".opencode" || base == ".kilo" {
+		return true
+	}
+	if filepath.Base(opencodeDir) != "opencode" {
 		return false
 	}
 	if filepath.Base(filepath.Dir(opencodeDir)) == ".config" {

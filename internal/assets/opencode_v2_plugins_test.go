@@ -29,7 +29,7 @@ func runV2Plugin(t *testing.T, name, harness string) {
 		t.Skip("node unavailable")
 	}
 	cmd := exec.Command(node, "--experimental-strip-types", filepath.Join(dir, "harness.mjs"))
-	cmd.Env = append(os.Environ(), "CI=0", "GITHUB_ACTIONS=0", "HOME="+dir, "XDG_CONFIG_HOME="+dir, "XDG_DATA_HOME="+dir)
+	cmd.Env = append(os.Environ(), "CI=0", "GITHUB_ACTIONS=0", "HOME="+dir, "XDG_CONFIG_HOME="+dir, "XDG_DATA_HOME="+dir, "TMPDIR="+dir, "TEMP="+dir, "TMP="+dir)
 	if out, err := cmd.CombinedOutput(); err != nil || strings.Contains(string(out), "SECRET") {
 		t.Fatalf("V2 harness: %v\n%s", err, out)
 	}

@@ -1137,7 +1137,7 @@ DEBE leer la rama actual leyendo `HEAD` del repositorio, sin lanzar git ni ning�
 - **ENTONCES** el hook no bloquea ni avisa
 
 #### Scenario: Inerte fuera de un proyecto Axiom
-- **DADO** un directorio sin `axiom.yaml`, `.axiom-workspace` ni `openspec/` en él ni en sus ancestros
+- **DADO** un directorio sin `axiom.yaml` ni `.axiom-workspace` que resuelva a uno, en él o en sus ancestros (aunque tenga un `openspec/`)
 - **CUANDO** el runtime invoca el hook para cualquier escritura
 - **ENTONCES** termina sin bloquear ni avisar
 - **Y** no escribe ningún fichero
@@ -1167,8 +1167,9 @@ DEBE leer la rama actual leyendo `HEAD` del repositorio, sin lanzar git ni ning�
 
 ### Requirement: Instalación del Hook por `axiom sync` y Prohibición de Hooks de Git (REQ-25.22)
 
-`axiom sync` DEBE instalar `axiom branch guard` como hook en los runtimes donde existan hooks demostrados (Claude Code, Codex y OpenCode) de forma idempotente y determinista (misma entrada, mismo resultado), sin duplicar entradas en ejecuciones repetidas y sin alterar las entradas de hooks ajenas. Una ejecución posterior de `axiom sync` que ya no deba instalarlo DEBE retirarlo. NO DEBE instalar hooks de git (`pre-commit`, `pre-push`, ni otros) en ningún repositorio, propio o de terceros. NO DEBE instalarse en Pi, que no tiene canal demostrado. Dado que la configuración de Claude Code es global y corre en todo repositorio, la inercia de REQ-25.21 fuera de proyectos Axiom y fuera de repositorios con un cambio activo registrado es condición de esta instalación: el hook no hace nada, no lanza procesos y no escribe en ellos. El formato del hook de Codex se verifica en su documentación oficial al implementar (A-2).
+`axiom sync` DEBE instalar `axiom branch guard` como hook en los runtimes donde existan hooks demostrados (Claude Code, Codex y OpenCode) de forma idempotente y determinista (misma entrada, mismo resultado), sin duplicar entradas en ejecuciones repetidas y sin alterar las entradas de hooks ajenas. Una ejecución posterior de `axiom sync` que ya no deba instalarlo DEBE retirarlo. NO DEBE instalar hooks de git (`pre-commit`, `pre-push`, ni otros) en ningún repositorio, propio o de terceros. NO DEBE instalarse en Pi, que no tiene canal demostrado. Con el ámbito de instalación `workspace` (el predeterminado) el hook queda en la configuración del proyecto; con `--scope global` queda en la de usuario, que corre en todo repositorio. En ambos casos la inercia de REQ-25.21 fuera de proyectos Axiom y fuera de repositorios con un cambio activo registrado es condición de esta instalación: el hook no hace nada, no lanza procesos y no escribe en ellos. Un proyecto Axiom es el que tiene un `axiom.yaml` propio o el que se alcanza mediante un puntero `.axiom-workspace`, en el directorio o en un ancestro; un `openspec/` suelto no basta. El formato del hook de Codex se verifica en su documentación oficial al implementar (A-2).
 (Previously: la inercia exigida era solo fuera de proyectos Axiom)
+(Previously: la inercia se justificaba solo por la configuración global de Claude Code y un `openspec/` suelto valía como marcador de proyecto Axiom)
 
 #### Scenario: Instalación en los tres runtimes
 - **DADO** una máquina con Claude Code, Codex y OpenCode configurados
@@ -1196,7 +1197,7 @@ DEBE leer la rama actual leyendo `HEAD` del repositorio, sin lanzar git ni ning�
 - **ENTONCES** no se instala el hook en Pi y la ejecución termina con normalidad
 
 #### Scenario: En un repositorio ajeno la instalación global es inerte
-- **DADO** el hook instalado en la configuración global de Claude Code y un repositorio de terceros sin marcadores de Axiom
+- **DADO** el hook instalado en la configuración global de Claude Code y un repositorio de terceros sin `axiom.yaml` ni puntero `.axiom-workspace` resoluble (aunque tenga un `openspec/`)
 - **CUANDO** el runtime invoca el hook para escribir en ese repositorio
 - **ENTONCES** el hook no bloquea, no avisa, no lanza procesos y no escribe nada
 

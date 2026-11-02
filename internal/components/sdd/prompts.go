@@ -4,6 +4,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/IGutierrezZ/axiom/v3/internal/agents"
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/opencode"
 	"github.com/IGutierrezZ/axiom/v3/internal/assets"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/agentguidance"
@@ -27,20 +28,34 @@ func SharedPromptDir(homeDir string) string {
 	return filepath.Join(opencode.ConfigPath(homeDir), "prompts", "sdd")
 }
 
-// SharedPromptFileRef returns a prompt file reference relative to the settings
-// file that will contain it.
-func SharedPromptFileRef(settingsPath, homeDir, phase string) (string, error) {
-	return sharedPromptFileRef(settingsPath, homeDir, phase, filepath.Rel)
+// SharedPromptDirFor devuelve la carpeta de los prompts compartidos para el
+// adaptador. En el proyecto de OpenCode y Kilo está dentro de su carpeta de
+// recursos (.opencode/prompts/sdd, .kilo/prompts/sdd); en cualquier otro caso es
+// SharedPromptDir.
+func SharedPromptDirFor(adapter agents.Adapter, dir string) string {
+	if provider, ok := adapter.(agents.WorkspacePromptsDirProvider); ok {
+		if promptDir, ok := provider.WorkspacePromptsDir(dir); ok {
+			return promptDir
+		}
+	}
+	return SharedPromptDir(dir)
 }
 
-func sharedPromptFileRef(settingsPath, homeDir, phase string, rel func(string, string) (string, error)) (string, error) {
-	promptPath := filepath.Join(SharedPromptDir(homeDir), phase+".md")
+// SharedPromptFileRef returns a prompt file reference relative to the settings
+// file that will contain it. promptDir is the directory that holds the shared
+// prompts (SharedPromptDir or SharedPromptDirFor).
+func SharedPromptFileRef(settingsPath, promptDir, phase string) (string, error) {
+	return sharedPromptFileRef(settingsPath, promptDir, phase, filepath.Rel)
+}
+
+func sharedPromptFileRef(settingsPath, promptDir, phase string, rel func(string, string) (string, error)) (string, error) {
+	promptPath := filepath.Join(promptDir, phase+".md")
 	relativePath, err := rel(filepath.Dir(settingsPath), promptPath)
 	if err != nil {
 		return "{file:" + filepath.ToSlash(promptPath) + "}", nil
 	}
 	relativePath = filepath.ToSlash(relativePath)
-	if !strings.HasPrefix(relativePath, ".") {
+	if !strings.HasPrefix(relativePath, "./") && !strings.HasPrefix(relativePath, "../") {
 		relativePath = "./" + relativePath
 	}
 	return "{file:" + relativePath + "}", nil
@@ -58,8 +73,9 @@ func SharedPromptPhases() []string {
 	return ProfilePhaseOrder()
 }
 
-// WriteSharedPromptFiles writes the 10 SDD sub-agent prompt files to
-// {homeDir}/.config/opencode/prompts/sdd/. The content for each phase is extracted
+// WriteSharedPromptFiles writes the 10 SDD sub-agent prompt files to promptDir
+// (SharedPromptDir or SharedPromptDirFor; by default
+// {homeDir}/.config/opencode/prompts/sdd/). The content for each phase is extracted
 // from the embedded skill file, filtered to the section matching the phase's
 // model capability ("capable" or "small").
 //
@@ -71,8 +87,7 @@ func SharedPromptPhases() []string {
 // Returns (true, nil) if any file was created or changed, (false, nil) if all
 // files already match (idempotent). Uses WriteFileAtomic so the operation is
 // safe to repeat.
-func WriteSharedPromptFiles(homeDir string, phaseCapabilities map[string]string, codeGraphGuidance ...string) (bool, error) {
-	promptDir := SharedPromptDir(homeDir)
+func WriteSharedPromptFiles(promptDir string, phaseCapabilities map[string]string, codeGraphGuidance ...string) (bool, error) {
 	anyChanged := false
 	guidance := ""
 	if len(codeGraphGuidance) > 0 {
@@ -252,4 +267,13 @@ func injectLanguageContractIntoOpenCodeSubagentPrompts(agentMap map[string]any) 
 		}
 		agent["prompt"] = injectLanguageContractIntoPrompt(prompt)
 	}
+}
+
+// promptDirFor devuelve la carpeta de prompts compartidos de las opciones de
+// render, o la global de homeDir cuando las opciones no la fijan.
+func promptDirFor(options OrchestratorRenderOptions, homeDir string) string {
+	if options.SharedPromptDir != "" {
+		return options.SharedPromptDir
+	}
+	return SharedPromptDir(homeDir)
 }

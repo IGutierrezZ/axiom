@@ -59,6 +59,17 @@ type templateBootstrapper interface {
 // retains its normal targetDir-derived path when SettingsPath is empty.
 type RoutingOptions struct {
 	SettingsPath string
+
+	// Adapter, si no es nil, sustituye al adaptador que se crearía por defecto.
+	// Lo usa el ámbito workspace, donde OpenCode y Kilo resuelven sus rutas en la
+	// distribución del proyecto (adaptador ligado a la raíz).
+	Adapter agents.Adapter
+
+	// PreserveJSONC conserva los comentarios y el formato de una configuración
+	// .jsonc existente en lugar de volver a codificarla entera. Lo activa el ámbito
+	// workspace, donde el fichero es del usuario y está versionado; en global se
+	// mantiene la codificación de siempre.
+	PreserveJSONC bool
 }
 
 // InjectRouting installs the organic routing guidance for one supported agent
@@ -151,6 +162,8 @@ type routingDelivery struct {
 	// template must be restored before the module is worth writing.
 	bootstrapper templateBootstrapper
 	paths        []string
+	// preserveJSONC viene de RoutingOptions.PreserveJSONC.
+	preserveJSONC bool
 }
 
 // resolveRoutingDelivery selects the delivery strategy and its target paths.
@@ -164,7 +177,11 @@ func resolveRoutingDelivery(targetDir string, agent model.AgentID, options Routi
 		return routingDelivery{}, fmt.Errorf("%w: %q", ErrInvalidTarget, targetDir)
 	}
 
-	adapter, err := agents.NewAdapter(agent)
+	adapter := options.Adapter
+	var err error
+	if adapter == nil {
+		adapter, err = agents.NewAdapter(agent)
+	}
 	if err != nil {
 		return routingDelivery{}, fmt.Errorf("resolve routing guidance adapter for %q: %w", agent, err)
 	}
@@ -178,7 +195,7 @@ func resolveRoutingDelivery(targetDir string, agent model.AgentID, options Routi
 		if strings.TrimSpace(settingsPath) == "" {
 			return routingDelivery{}, fmt.Errorf("%w: adapter %q exposes no settings path", ErrInvalidTarget, agent)
 		}
-		return routingDelivery{kind: deliveryOrchestratorPrompt, adapter: adapter, paths: []string{settingsPath}}, nil
+		return routingDelivery{kind: deliveryOrchestratorPrompt, adapter: adapter, paths: []string{settingsPath}, preserveJSONC: options.PreserveJSONC}, nil
 
 	case adapter.SystemPromptStrategy() == model.StrategyJinjaModules:
 		bootstrapper, ok := adapter.(templateBootstrapper)
@@ -324,7 +341,13 @@ func injectOrchestratorPrompt(delivery routingDelivery, agent model.AgentID, ren
 		return Result{}, fmt.Errorf("encode routing guidance overlay for %q: %w", agent, err)
 	}
 
-	merged, err := filemerge.MergeJSONObjects(raw, overlay)
+	merge := filemerge.MergeJSONObjects
+	if delivery.preserveJSONC {
+		merge = func(base, overlay []byte) ([]byte, error) {
+			return filemerge.MergeJSONObjectsForPath(settingsPath, base, overlay)
+		}
+	}
+	merged, err := merge(raw, overlay)
 	if err != nil {
 		return Result{}, fmt.Errorf("merge routing guidance into %q: %w", settingsPath, err)
 	}

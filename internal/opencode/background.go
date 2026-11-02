@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -333,8 +334,24 @@ func (o ActivationOptions) normalized() ActivationOptions {
 	return o
 }
 
-// BinDir returns the Axiom-owned launcher directory.
-func BinDir(homeDir string) string { return filepath.Join(homeDir, ".axiom", "bin") }
+// BinDir returns the Axiom-owned launcher directory: <system.AxiomDir>/bin, that is
+// ~/.axiom/bin por defecto y <AXIOM_STATE_DIR>/bin cuando esa variable está definida.
+func BinDir(homeDir string) string { return system.BinDir(homeDir) }
+
+// defaultBinDir es el directorio de lanzadores de la raíz de estado por defecto
+// (~/.axiom/bin), con independencia de AXIOM_STATE_DIR.
+func defaultBinDir(homeDir string) string { return filepath.Join(homeDir, ".axiom", "bin") }
+
+// pathInList indica si entry coincide con alguno de dirs según las reglas de
+// comparación de rutas de la plataforma.
+func pathInList(entry string, dirs []string, goos string) bool {
+	for _, dir := range dirs {
+		if dir != "" && samePath(entry, dir, goos) {
+			return true
+		}
+	}
+	return false
+}
 
 // LegacyBinDir returns the legacy Gentle-owned launcher directory.
 func LegacyBinDir(homeDir string) string { return filepath.Join(homeDir, ".gentle-ai", "bin") }
@@ -381,7 +398,16 @@ func ResolveTarget(homeDir, goos, pathValue string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("resolve managed OpenCode bin directory: %w", err)
 	}
-	legacyDir, _ := filepath.Abs(LegacyBinDir(homeDir))
+	// Además del directorio activo se excluyen el heredado y el de la raíz por
+	// defecto (~/.axiom/bin): con AXIOM_STATE_DIR definida el activo se mueve, pero
+	// el PATH de un equipo que ya instaló antes puede seguir con el lanzador
+	// anterior, que nunca debe tomarse como el OpenCode real.
+	excluded := []string{managedDir}
+	for _, dir := range []string{LegacyBinDir(homeDir), defaultBinDir(homeDir)} {
+		if abs, absErr := filepath.Abs(dir); absErr == nil {
+			excluded = append(excluded, abs)
+		}
+	}
 	for _, entry := range splitPath(pathValue, goos) {
 		entry = strings.Trim(strings.TrimSpace(entry), `"`)
 		if entry == "" || !filepath.IsAbs(entry) {
@@ -391,7 +417,7 @@ func ResolveTarget(homeDir, goos, pathValue string) (string, error) {
 		if err != nil {
 			continue
 		}
-		if samePath(entry, managedDir, goos) || (legacyDir != "" && samePath(entry, legacyDir, goos)) {
+		if pathInList(entry, excluded, goos) {
 			continue
 		}
 		for _, name := range targetNames(goos) {
@@ -408,7 +434,7 @@ func ResolveTarget(homeDir, goos, pathValue string) (string, error) {
 			if absErr != nil {
 				continue
 			}
-			if pathUnder(realPath, managedDir, goos) || (legacyDir != "" && pathUnder(realPath, legacyDir, goos)) {
+			if pathUnderAny(realPath, excluded, goos) {
 				continue
 			}
 			return realPath, nil
@@ -442,6 +468,15 @@ func samePath(a, b, goos string) bool {
 		return strings.EqualFold(a, b)
 	}
 	return a == b
+}
+
+func pathUnderAny(path string, roots []string, goos string) bool {
+	for _, root := range roots {
+		if root != "" && pathUnder(path, root, goos) {
+			return true
+		}
+	}
+	return false
 }
 
 func pathUnder(path, root, goos string) bool {
@@ -593,8 +628,23 @@ func (p *ActivationPlan) Report() ActivationReport {
 		Action:        string(p.action),
 		Applied:       p.applied,
 		ChangedPaths:  append([]string(nil), p.changed...),
-		LauncherPaths: append([]string(nil), p.paths...),
+		LauncherPaths: p.managedPaths(),
 	}
+}
+
+// managedPaths son los lanzadores que Axiom gestiona de verdad, sin los restos
+// heredados de Gentle AI que una desactivación también vigila para retirarlos.
+// Esos restos no son lanzadores de Axiom: si se eliminan, constan en ChangedPaths,
+// pero el informe no los presenta como rutas gestionadas.
+func (p *ActivationPlan) managedPaths() []string {
+	legacy := LegacyManagedLauncherPaths(p.homeDir, p.goos)
+	managed := make([]string, 0, len(p.paths))
+	for _, path := range p.paths {
+		if !slices.Contains(legacy, path) {
+			managed = append(managed, path)
+		}
+	}
+	return managed
 }
 
 // Paths returns the exact managed launcher paths for this plan.
@@ -631,7 +681,7 @@ func (p *ActivationPlan) RestartGuidance() string {
 		return p.capability.RestartGuidance
 	}
 	if p.RestartRequired() {
-		return restartGuidance(p.paths)
+		return restartGuidance(p.managedPaths())
 	}
 	return ""
 }

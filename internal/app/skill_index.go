@@ -231,7 +231,7 @@ func runSharedRefresh(parsed skillIndexRefreshArgs, notice io.Writer) (skillregi
 	// (a startup hook must not scream) and with a one-line notice otherwise.
 	if reason := skillregistry.RefreshSkip(cwd, home); reason != skillregistry.SkipNone {
 		if !parsed.quiet {
-			_, _ = fmt.Fprintf(notice, "Skill registry refresh skipped (%s): %s is not a project root; run it from a project directory (one containing .git or .atl), or create the project first.\n", reason, cwd)
+			_, _ = fmt.Fprint(notice, skipNotice(reason, cwd))
 		}
 		return skillregistry.Result{}, true, nil
 	}
@@ -245,6 +245,16 @@ func runSharedRefresh(parsed skillIndexRefreshArgs, notice io.Writer) (skillregi
 		Mirror: productionMirrorFn(cwd, home),
 	})
 	return result, false, err
+}
+
+// skipNotice is the one-line explanation of a skipped refresh. Outside an Axiom
+// project the registry is inert by design (the hooks live on the machine, not in
+// the project), so the line says so in Spanish and names the missing marker.
+func skipNotice(reason skillregistry.SkipReason, cwd string) string {
+	if reason == skillregistry.SkipNoAxiomProject {
+		return fmt.Sprintf("Registro de skills omitido: no se ha encontrado un axiom.yaml en %s ni en sus directorios superiores; Axiom solo actúa dentro de sus proyectos.\n", cwd)
+	}
+	return fmt.Sprintf("Skill registry refresh skipped (%s): %s is not a project root; run it from a project directory (one containing .git or .atl), or create the project first.\n", reason, cwd)
 }
 
 // writePrimaryRefreshLine prints the primary line shared by both surfaces.
@@ -348,11 +358,19 @@ func resolveEngramProject(cwd string) string {
 // for Engram (D-11): the doctor's resolution rule, never a guessed PATH
 // binary. Every miss is an ordinary error the engine maps to `mirror failed`.
 func resolveEngramStdioCommand(home string) (string, []string, error) {
-	current, err := state.Read(home)
+	current, err := cli.EffectiveStateStore(home).Read()
 	if err != nil {
 		return "", nil, fmt.Errorf("read install state: %w", err)
 	}
-	commands, err := engram.ReadPersistedStdioCommands(home, current.InstalledAgents)
+	installedAgents := current.InstalledAgents
+	if installedAgents == nil {
+		// Un proyecto que aún no ha registrado agentes (solo tiene el estado de un sync)
+		// usa los del estado de usuario, que es donde se resolvió siempre este comando.
+		if global, globalErr := state.Read(home); globalErr == nil {
+			installedAgents = global.InstalledAgents
+		}
+	}
+	commands, err := engram.ReadPersistedStdioCommands(home, installedAgents)
 	if err != nil {
 		return "", nil, fmt.Errorf("read persisted engram MCP configuration: %w", err)
 	}

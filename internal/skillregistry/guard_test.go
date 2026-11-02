@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/pathidentity"
+	"github.com/IGutierrezZ/axiom/v3/internal/workspace/workspacetest"
 )
 
 // homeAgentsContent is the AGENTS.md a fake home carries, so a test can prove a
@@ -101,52 +102,129 @@ func TestRefreshSkipHomeDirectoryEvenWithMarkers(t *testing.T) {
 	}
 }
 
+// markAxiomProject marks dir as an Axiom project root. The refresh is inert
+// outside Axiom projects, so every fixture that expects a registry needs it.
+func markAxiomProject(t *testing.T, dir string) {
+	t.Helper()
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "axiom.yaml"), []byte("workspace:\n  name: Test\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestRefreshSkipNoProjectMarker(t *testing.T) {
-	dir := t.TempDir()
+	// Inside an Axiom project but with no marker of its own (no .git, .atl or
+	// skills directory): the refresh still skips it, as it always did.
+	project := t.TempDir()
+	markAxiomProject(t, project)
+	dir := filepath.Join(project, "docs")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
 	if got := RefreshSkip(dir, t.TempDir()); got != SkipNoProjectMarker {
-		t.Fatalf("RefreshSkip(markerless dir) = %q, want %q", got, SkipNoProjectMarker)
+		t.Fatalf("RefreshSkip(markerless dir in an Axiom project) = %q, want %q", got, SkipNoProjectMarker)
+	}
+}
+
+// TestRefreshSkipOutsideAxiomProject is the footprint contract: the hooks are
+// installed machine-wide, so a repository that merely looks like a project (git,
+// skills, a registry, openspec/, an AGENTS.md) is not one for Axiom.
+func TestRefreshSkipOutsideAxiomProject(t *testing.T) {
+	cases := map[string]func(t *testing.T, dir string){
+		"plain folder": func(t *testing.T, dir string) {},
+		"git repository with AGENTS.md": func(t *testing.T, dir string) {
+			mustMkdir(t, filepath.Join(dir, ".git"))
+			writeSkill(t, filepath.Join(dir, AgentsRelPath), "# Notes\n")
+		},
+		"only openspec": func(t *testing.T, dir string) {
+			mustMkdir(t, filepath.Join(dir, ".git"))
+			mustMkdir(t, filepath.Join(dir, "openspec", "changes", "x"))
+		},
+		"existing registry and project skills": func(t *testing.T, dir string) {
+			mustMkdir(t, filepath.Join(dir, ".atl"))
+			mustMkdir(t, filepath.Join(dir, ".claude", "skills"))
+		},
+		"pointer to a missing axiom.yaml": func(t *testing.T, dir string) {
+			mustMkdir(t, filepath.Join(dir, ".git"))
+			writeSkill(t, filepath.Join(dir, ".axiom-workspace"), "config: repo-specs/axiom.yaml\n")
+		},
+	}
+	for name, setup := range cases {
+		t.Run(name, func(t *testing.T) {
+			dir := t.TempDir()
+			setup(t, dir)
+			if got := RefreshSkip(dir, t.TempDir()); got != SkipNoAxiomProject {
+				t.Fatalf("RefreshSkip(%s) = %q, want %q", name, got, SkipNoAxiomProject)
+			}
+		})
+	}
+}
+
+func TestRefreshSkipInsideAnAxiomProjectSubdirectory(t *testing.T) {
+	project := t.TempDir()
+	markAxiomProject(t, project)
+	sub := filepath.Join(project, "services", "api")
+	mustMkdir(t, filepath.Join(sub, ".git"))
+	if got := RefreshSkip(sub, t.TempDir()); got != SkipNone {
+		t.Fatalf("RefreshSkip(subdirectory of an Axiom project) = %q, want SkipNone", got)
+	}
+}
+
+func TestRefreshSkipFollowsTheMultirepoPointer(t *testing.T) {
+	ws := workspacetest.Canonical(t)
+	// The code repository carries no axiom.yaml: only the .axiom-workspace
+	// pointer of the master folder above it leads to one.
+	mustMkdir(t, filepath.Join(ws.Backend, ".git"))
+	if got := RefreshSkip(ws.Backend, t.TempDir()); got != SkipNone {
+		t.Fatalf("RefreshSkip(code repository of a multirepo) = %q, want SkipNone", got)
+	}
+}
+
+func mustMkdir(t *testing.T, dir string) {
+	t.Helper()
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
 	}
 }
 
 func TestRefreshSkipAcceptsProjectMarkers(t *testing.T) {
 	cases := []struct {
-		name  string
-		setup func(t *testing.T, dir string)
+		name string
+		// ownsAxiom is true when the case writes its own axiom.yaml or pointer;
+		// the others get an axiom.yaml in the parent so only the marker varies.
+		ownsAxiom bool
+		setup     func(t *testing.T, dir string)
 	}{
-		{"git directory", func(t *testing.T, dir string) {
-			if err := os.MkdirAll(filepath.Join(dir, ".git"), 0o755); err != nil {
-				t.Fatal(err)
-			}
+		{"git directory", false, func(t *testing.T, dir string) {
+			mustMkdir(t, filepath.Join(dir, ".git"))
 		}},
-		{"git worktree file", func(t *testing.T, dir string) {
-			if err := os.WriteFile(filepath.Join(dir, ".git"), []byte("gitdir: /elsewhere\n"), 0o644); err != nil {
-				t.Fatal(err)
-			}
+		{"git worktree file", false, func(t *testing.T, dir string) {
+			writeSkill(t, filepath.Join(dir, ".git"), "gitdir: /elsewhere\n")
 		}},
-		{"existing atl registry", func(t *testing.T, dir string) {
-			if err := os.MkdirAll(filepath.Join(dir, ".atl"), 0o755); err != nil {
-				t.Fatal(err)
-			}
+		{"existing atl registry", false, func(t *testing.T, dir string) {
+			mustMkdir(t, filepath.Join(dir, ".atl"))
 		}},
-		{"project skills workspace", func(t *testing.T, dir string) {
-			if err := os.MkdirAll(filepath.Join(dir, ".opencode", "skills"), 0o755); err != nil {
-				t.Fatal(err)
-			}
+		{"project skills workspace", false, func(t *testing.T, dir string) {
+			mustMkdir(t, filepath.Join(dir, ".opencode", "skills"))
 		}},
-		{"axiom.yaml file", func(t *testing.T, dir string) {
-			if err := os.WriteFile(filepath.Join(dir, "axiom.yaml"), []byte("workspace:\n  name: Test\n"), 0o644); err != nil {
-				t.Fatal(err)
-			}
+		{"axiom.yaml file", true, func(t *testing.T, dir string) {
+			markAxiomProject(t, dir)
 		}},
-		{".axiom-workspace pointer file", func(t *testing.T, dir string) {
-			if err := os.WriteFile(filepath.Join(dir, ".axiom-workspace"), []byte("config: repo-specs/axiom.yaml\n"), 0o644); err != nil {
-				t.Fatal(err)
-			}
+		{".axiom-workspace pointer file", true, func(t *testing.T, dir string) {
+			writeSkill(t, filepath.Join(dir, "repo-specs", "axiom.yaml"), "workspace:\n  name: Test\n")
+			writeSkill(t, filepath.Join(dir, ".axiom-workspace"), "config: repo-specs/axiom.yaml\n")
 		}},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			dir := t.TempDir()
+			if !tc.ownsAxiom {
+				markAxiomProject(t, dir)
+				dir = filepath.Join(dir, "proj")
+				mustMkdir(t, dir)
+			}
 			tc.setup(t, dir)
 			if got := RefreshSkip(dir, t.TempDir()); got != SkipNone {
 				t.Fatalf("RefreshSkip(%s) = %q, want SkipNone", tc.name, got)
@@ -261,6 +339,7 @@ func TestDirectoriesNearHomeAreStillProjects(t *testing.T) {
 			if err := os.MkdirAll(filepath.Join(cwd, ".git"), 0o755); err != nil {
 				t.Fatal(err)
 			}
+			markAxiomProject(t, cwd)
 			if got := RefreshSkip(cwd, homeArg); got != SkipNone {
 				t.Fatalf("RefreshSkip(%q, %q) = %q, want SkipNone", cwd, homeArg, got)
 			}

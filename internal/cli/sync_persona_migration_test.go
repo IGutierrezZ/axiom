@@ -24,7 +24,7 @@ func TestMigratePersistedPersonaAliasRewritesStateOnce(t *testing.T) {
 		t.Fatalf("seed state: %v", err)
 	}
 
-	if err := migratePersistedPersonaAlias(homeDir, &persisted, nil); err != nil {
+	if err := migratePersistedPersonaAlias(state.GlobalStore(homeDir), &persisted, nil); err != nil {
 		t.Fatalf("migratePersistedPersonaAlias() error = %v", err)
 	}
 
@@ -41,7 +41,7 @@ func TestMigratePersistedPersonaAliasRewritesStateOnce(t *testing.T) {
 
 	// Second run: state already neutral — no notice, no rewrite.
 	buf.Reset()
-	if err := migratePersistedPersonaAlias(homeDir, &reread, nil); err != nil {
+	if err := migratePersistedPersonaAlias(state.GlobalStore(homeDir), &reread, nil); err != nil {
 		t.Fatalf("second migrate: %v", err)
 	}
 	if buf.Len() != 0 {
@@ -51,7 +51,7 @@ func TestMigratePersistedPersonaAliasRewritesStateOnce(t *testing.T) {
 
 func TestMigratePersistedPersonaAliasSkipsUnreadableState(t *testing.T) {
 	persisted := state.InstallState{Persona: string(model.PersonaGentlemanNeutralArtifacts)}
-	if err := migratePersistedPersonaAlias(t.TempDir(), &persisted, errStateUnreadableForTest); err != nil {
+	if err := migratePersistedPersonaAlias(state.GlobalStore(t.TempDir()), &persisted, errStateUnreadableForTest); err != nil {
 		t.Fatalf("migrate with read error must be a no-op, got %v", err)
 	}
 }

@@ -123,16 +123,24 @@ func HasAnyCodeGraphGuidance(homeDir string) bool {
 }
 
 func HasManagedCodeGraphGuidance(homeDir string) bool {
+	return len(ManagedCodeGraphGuidanceFiles(homeDir)) > 0
+}
+
+// ManagedCodeGraphGuidanceFiles lista los ficheros de la carpeta de usuario que
+// llevan la sección de guía de CodeGraph gestionada por Axiom. Solo lee: lo usa
+// `axiom doctor` para declarar la huella global de CodeGraph.
+func ManagedCodeGraphGuidanceFiles(homeDir string) []string {
+	var files []string
 	for _, path := range CodeGraphGuidancePaths(homeDir) {
 		data, err := os.ReadFile(path)
 		if err != nil {
 			continue
 		}
 		if strings.Contains(string(data), "<!-- gentle-ai:"+codeGraphGuidanceSectionID+" -->") {
-			return true
+			files = append(files, path)
 		}
 	}
-	return false
+	return files
 }
 
 func CleanLegacyCodeGraphGuidance(homeDir string) (GuidanceInjectionResult, error) {

@@ -5,9 +5,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
+	"reflect"
+	"slices"
 	"strings"
+	"sync"
 
+	"github.com/IGutierrezZ/axiom/v3/internal/assets"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/filemerge"
 )
 
@@ -60,8 +65,43 @@ func removeManagedPersonaPreamble(content string) (string, bool) {
 	return suffix, true
 }
 
+var (
+	embeddedPersonasOnce     sync.Once
+	embeddedPersonasContents []string
+)
+
+// embeddedPersonas devuelve el contenido, sin espacios en los extremos y con saltos
+// de línea LF, de cada persona que Axiom incrusta (persona-*.md de cualquier agente).
+func embeddedPersonas() []string {
+	embeddedPersonasOnce.Do(func() {
+		_ = fs.WalkDir(assets.FS, ".", func(path string, entry fs.DirEntry, err error) error {
+			if err != nil || entry.IsDir() {
+				return nil
+			}
+			name := entry.Name()
+			if !strings.HasPrefix(name, "persona-") || !strings.HasSuffix(name, ".md") {
+				return nil
+			}
+			content, readErr := assets.FS.ReadFile(path)
+			if readErr != nil {
+				return nil
+			}
+			embeddedPersonasContents = append(embeddedPersonasContents,
+				strings.TrimSpace(strings.ReplaceAll(string(content), "\r\n", "\n")))
+			return nil
+		})
+	})
+	return embeddedPersonasContents
+}
+
 func looksLikeManagedPersonaPrefix(prefix string) bool {
 	if (strings.Contains(prefix, "name: Gentle AI Persona") || strings.Contains(prefix, "name: Axiom Persona")) && strings.Contains(prefix, "description: Teaching-oriented persona") {
+		return true
+	}
+	// El agente con estrategia de sustitución de fichero (Codex, Gemini) recibe la
+	// persona entera al principio del fichero, sin marcadores: es de Axiom si es
+	// byte a byte una de las que Axiom incrusta.
+	if trimmed := strings.TrimSpace(strings.ReplaceAll(prefix, "\r\n", "\n")); trimmed != "" && slices.Contains(embeddedPersonas(), trimmed) {
 		return true
 	}
 
@@ -136,10 +176,15 @@ func jsonIsEmptyObject(raw []byte) bool {
 	return len(root) == 0
 }
 
+// cleanCodexTOML retira de ~/.codex/config.toml lo que escribe el componente Engram:
+// su tabla de MCP, las claves de los ficheros de instrucciones y, si valen lo que
+// escribe el instalador, features.multi_agent y agents.max_threads/max_depth (los
+// valores distintos son del usuario).
 func cleanCodexTOML(content string) (string, bool) {
 	normalized := strings.ReplaceAll(content, "\r\n", "\n")
 	updated := filemerge.RemoveTOMLTable(normalized, "mcp_servers.engram")
 	updated = removeTopLevelTOMLKeys(updated, "model_instructions_file", "experimental_compact_prompt_file")
+	updated = removeCodexMultiAgentKeys(updated)
 	updated = strings.TrimSpace(updated)
 	if updated != "" {
 		updated += "\n"
@@ -386,4 +431,80 @@ func stripTrailingCommas(raw []byte) []byte {
 	}
 
 	return out
+}
+
+// removeOverlayEntries retira de raw las entradas que declara overlay y solo
+// ellas: las cadenas de una lista (permissions.deny) y las claves cuyo valor
+// coincide exactamente con el que escribe Axiom. El resto de la lista, las claves
+// con otro valor y las que Axiom no escribe se conservan tal cual, y un objeto
+// que Axiom dejó vacío al retirar sus entradas desaparece con ellas.
+func removeOverlayEntries(raw []byte, overlay []byte) ([]byte, bool, error) {
+	root, err := unmarshalJSONObject(raw)
+	if err != nil {
+		return nil, false, err
+	}
+	var declared map[string]any
+	if err := json.Unmarshal(overlay, &declared); err != nil {
+		return nil, false, fmt.Errorf("decode overlay: %w", err)
+	}
+	if !removeOverlayFrom(root, declared) {
+		return raw, false, nil
+	}
+	encoded, err := json.MarshalIndent(root, "", "  ")
+	if err != nil {
+		return nil, false, fmt.Errorf("marshal json after cleanup: %w", err)
+	}
+	eol := detectEOL(string(raw))
+	encoded = bytes.ReplaceAll(encoded, []byte("\n"), []byte(eol))
+	return append(encoded, []byte(eol)...), true, nil
+}
+
+// removeOverlayFrom aplica removeOverlayEntries sobre un objeto ya decodificado.
+func removeOverlayFrom(root, overlay map[string]any) bool {
+	changed := false
+	for key, declared := range overlay {
+		current, ok := root[key]
+		if !ok {
+			continue
+		}
+		switch want := declared.(type) {
+		case map[string]any:
+			child, ok := current.(map[string]any)
+			if !ok {
+				continue
+			}
+			if removeOverlayFrom(child, want) {
+				changed = true
+				if len(child) == 0 {
+					delete(root, key)
+				}
+			}
+		case []any:
+			list, ok := current.([]any)
+			if !ok {
+				continue
+			}
+			kept := make([]any, 0, len(list))
+			for _, item := range list {
+				if !slices.ContainsFunc(want, func(candidate any) bool { return reflect.DeepEqual(candidate, item) }) {
+					kept = append(kept, item)
+				}
+			}
+			if len(kept) == len(list) {
+				continue
+			}
+			changed = true
+			if len(kept) == 0 {
+				delete(root, key)
+			} else {
+				root[key] = kept
+			}
+		default:
+			if reflect.DeepEqual(want, current) {
+				delete(root, key)
+				changed = true
+			}
+		}
+	}
+	return changed
 }

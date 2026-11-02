@@ -640,9 +640,15 @@ func TestComponentPathsEngramClaudeUsesUserRegistryAndPreservesWorkspaceScope(t 
 	}
 
 	workspacePaths := componentPathsWithWorkspaceScoped(home, workspace, ScopeWorkspace, model.Selection{}, adapters, model.ComponentEngram)
+	// En workspace Engram se declara en <proyecto>/.mcp.json, el fichero que
+	// Claude Code carga para los servidores MCP de proyecto. El fichero
+	// independiente .claude/mcp/engram.json no lo lee y no se verifica.
 	workspaceLegacy := filepath.Join(workspace, ".claude", "mcp", "engram.json")
-	if !containsPath(workspacePaths, workspaceLegacy) || containsPath(workspacePaths, filepath.Join(workspace, ".claude.json")) {
-		t.Fatalf("workspace Engram paths must remain unchanged; paths=%v", workspacePaths)
+	if !containsPath(workspacePaths, filepath.Join(workspace, ".mcp.json")) ||
+		containsPath(workspacePaths, workspaceLegacy) ||
+		containsPath(workspacePaths, filepath.Join(workspace, ".claude.json")) ||
+		containsPath(workspacePaths, registry) {
+		t.Fatalf("las rutas de Engram en workspace deben ser solo <proyecto>/.mcp.json; paths=%v", workspacePaths)
 	}
 }
 
@@ -759,9 +765,6 @@ func TestComponentPathsPermissionsIncludesAgentsWithInjectionTarget(t *testing.T
 		model.AgentClaudeCode,
 		model.AgentOpenCode,
 		model.AgentKilocode,
-		model.AgentGeminiCLI,
-		model.AgentQwenCode,
-		model.AgentVSCodeCopilot,
 	})
 
 	paths := componentPaths(home, model.Selection{}, adapters, model.ComponentPermission)
@@ -771,6 +774,21 @@ func TestComponentPathsPermissionsIncludesAgentsWithInjectionTarget(t *testing.T
 		if !containsPath(paths, want) {
 			t.Fatalf("componentPaths(permissions) missing supported injection path %q\npaths=%v", want, paths)
 		}
+	}
+}
+
+// Gemini, Qwen and VS Code only ever received an auto-approval mode, which
+// Axiom no longer writes: they have no permission target to back up or verify.
+func TestComponentPathsPermissionsSkipsAgentsWithoutOverlay(t *testing.T) {
+	home := t.TempDir()
+	adapters := resolveAdapters([]model.AgentID{
+		model.AgentGeminiCLI,
+		model.AgentQwenCode,
+		model.AgentVSCodeCopilot,
+	})
+
+	if paths := componentPaths(home, model.Selection{}, adapters, model.ComponentPermission); len(paths) != 0 {
+		t.Fatalf("componentPaths(permissions) = %v, want none", paths)
 	}
 }
 
@@ -906,13 +924,20 @@ func openCodeSettingsPath(home string) string {
 // agent actually loads.
 func openCodeOrchestratorPrompt(t *testing.T, home string) string {
 	t.Helper()
+	return openCodeOrchestratorPromptAt(t, openCodeSettingsPath(home))
+}
+
+// openCodeOrchestratorPromptAt es openCodeOrchestratorPrompt para un fichero de
+// ajustes concreto: en workspace es opencode.json de la raíz del proyecto.
+func openCodeOrchestratorPromptAt(t *testing.T, settingsPath string) string {
+	t.Helper()
 
 	var settings struct {
 		Agent map[string]struct {
 			Prompt string `json:"prompt"`
 		} `json:"agent"`
 	}
-	if err := json.Unmarshal([]byte(readTextFile(t, openCodeSettingsPath(home))), &settings); err != nil {
+	if err := json.Unmarshal([]byte(readTextFile(t, settingsPath)), &settings); err != nil {
 		t.Fatalf("decode OpenCode settings error = %v", err)
 	}
 	return settings.Agent[opencodedefault.ManagedAgent].Prompt
@@ -1117,7 +1142,8 @@ func TestInstallRoutingGuidanceWorkspaceScopeDeliversOpenCodeToHome(t *testing.T
 	// Seed the workspace settings with the retired section so the strip is proven
 	// to resolve against the workspace scope the injector writes.
 	seeded := filemerge.InjectMarkdownSection("", "trigger-rules", "Retired WorkRun ceremony\n")
-	seedOpenCodeOrchestratorPrompt(t, workspace, seeded)
+	workspaceSettings := filepath.Join(workspace, "opencode.json")
+	seedOpenCodeOrchestratorPromptAt(t, workspaceSettings, seeded)
 
 	step := agentRoutingGuidanceStep{
 		id:           "agent-guidance:" + string(model.AgentOpenCode),
@@ -1130,7 +1156,7 @@ func TestInstallRoutingGuidanceWorkspaceScopeDeliversOpenCodeToHome(t *testing.T
 		t.Fatalf("Run() error = %v", err)
 	}
 
-	prompt := openCodeOrchestratorPrompt(t, workspace)
+	prompt := openCodeOrchestratorPromptAt(t, workspaceSettings)
 	if !containsRoutingMarkers(prompt) {
 		t.Fatalf("workspace-scoped install left the workspace OpenCode orchestrator prompt unrouted:\n%s", prompt)
 	}
@@ -1144,11 +1170,11 @@ func TestInstallRoutingGuidanceWorkspaceScopeDeliversOpenCodeToHome(t *testing.T
 		t.Fatalf("workspace-scoped install modified home directory: %q", homeSettings)
 	}
 
-	first := readTextFile(t, openCodeSettingsPath(workspace))
+	first := readTextFile(t, workspaceSettings)
 	if err := step.Run(); err != nil {
 		t.Fatalf("second Run() error = %v", err)
 	}
-	if second := readTextFile(t, openCodeSettingsPath(workspace)); second != first {
+	if second := readTextFile(t, workspaceSettings); second != first {
 		t.Fatalf("second workspace-scoped run rewrote the workspace settings; delivery is not idempotent")
 	}
 }
@@ -1238,8 +1264,13 @@ func TestRoutingGuidancePathsExcludesAgentsWithoutSystemPrompt(t *testing.T) {
 // managed orchestrator agent already carries the given prompt.
 func seedOpenCodeOrchestratorPrompt(t *testing.T, home, prompt string) {
 	t.Helper()
+	seedOpenCodeOrchestratorPromptAt(t, openCodeSettingsPath(home), prompt)
+}
 
-	settingsPath := openCodeSettingsPath(home)
+// seedOpenCodeOrchestratorPromptAt es seedOpenCodeOrchestratorPrompt para un
+// fichero de ajustes concreto.
+func seedOpenCodeOrchestratorPromptAt(t *testing.T, settingsPath, prompt string) {
+	t.Helper()
 	if err := os.MkdirAll(filepath.Dir(settingsPath), 0o755); err != nil {
 		t.Fatalf("MkdirAll(%q) error = %v", filepath.Dir(settingsPath), err)
 	}
@@ -1446,15 +1477,16 @@ func TestComponentInjectionDirScopedWorkspaceSafeguard(t *testing.T) {
 		t.Fatalf("registry error: %v", err)
 	}
 
-	// Desktop agents without workspace support must fall back to homeDir
+	// Los agentes sin modo workspace ya no vuelven a HOME: install y sync los omiten
+	// antes de planificar (TestSplitAgentsForScope) y, si uno se colara, la ruta
+	// queda confinada al proyecto (TestComponentInjectionDirScopedNeverResolvesHomeInWorkspace).
 	for _, id := range []model.AgentID{model.AgentVSCodeCopilot, model.AgentTrae, model.AgentWindsurf, model.AgentAntigravity, model.AgentCodex} {
 		adapter, ok := reg.Get(id)
 		if !ok {
 			continue
 		}
-		got := componentInjectionDirScoped(home, workspace, ScopeWorkspace, adapter)
-		if got != home {
-			t.Errorf("adapter %s in ScopeWorkspace: got %q, want homeDir %q", id, got, home)
+		if got := componentInjectionDirScoped(home, workspace, ScopeWorkspace, adapter); got == home {
+			t.Errorf("adapter %s in ScopeWorkspace must never resolve homeDir %q", id, home)
 		}
 	}
 

@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/IGutierrezZ/axiom/v3/internal/system"
 )
 
 // BackupSource identifies what operation created a backup.
@@ -196,13 +198,15 @@ func ReadManifest(path string) (Manifest, error) {
 }
 
 // BackupRootFor returns the canonical backup root directory
-// (<home>/.axiom/backups) for the given home directory. It is the single
+// (<system.AxiomDir(home)>/backups) for the given home directory: por defecto
+// <home>/.axiom/backups y, con AXIOM_STATE_DIR definida, <AXIOM_STATE_DIR>/backups,
+// de modo que esa variable mueve también los respaldos. It is the single
 // owning accessor for the canonical backup root literal: production code
 // outside this package MUST resolve the backup root through this function
 // (or BackupRootFn) instead of constructing the path with its own
 // filepath.Join literal.
 func BackupRootFor(home string) string {
-	return filepath.Join(home, ".axiom", "backups")
+	return filepath.Join(system.AxiomDir(home), "backups")
 }
 
 // backupRoot returns the expected parent directory for all backups (~/.axiom/backups).

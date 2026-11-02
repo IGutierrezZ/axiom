@@ -233,6 +233,18 @@ func RunArgs(args []string, stdout io.Writer) error {
 		if err != nil && !os.IsNotExist(err) {
 			return fmt.Errorf("read install state: %w", err)
 		}
+		// Con el ámbito workspace la selección que se preselecciona es la del proyecto
+		// (D2); los campos de máquina, como PendingSync, siguen siendo los del estado
+		// global.
+		if store := installStateStore(homeDir); store.IsProject() {
+			projectState, projectErr := store.Read()
+			if projectErr != nil && !os.IsNotExist(projectErr) {
+				return fmt.Errorf("read install state: %w", projectErr)
+			}
+			if projectErr == nil {
+				installedState = state.WithMachineFields(projectState, installedState)
+			}
+		}
 
 		// Deferred sync: if a previous gentle-ai self-upgrade set PendingSync=true,
 		// run sync now with the new binary before entering the TUI. On success,
@@ -499,7 +511,9 @@ func updateCheckError(results []update.UpdateResult) error {
 
 // tuiExecute creates a real install runtime and runs the pipeline with progress reporting.
 var appUserHomeDir = os.UserHomeDir
-var appStateWriteReconciled = state.WriteReconciled
+var appStateWriteReconciled = func(store state.Store, installState state.InstallState) error {
+	return store.WriteReconciled(installState)
+}
 
 func tuiExecuteWithBackground(
 	selection model.Selection,
@@ -526,13 +540,19 @@ func tuiExecuteWithBackground(
 	if execResult.Err == nil {
 		// Persist the user's agent selection and model assignments so that future
 		// `sync` runs target only the installed agents and preserve model choices.
-		persistErr := statecoord.WithLock(homeDir, func() error {
+		stateStore := installStateStore(homeDir)
+		// Con --scope workspace la instalación omitió los agentes sin modo workspace:
+		// el estado del proyecto no debe registrarlos como instalados.
+		if scope, scopeErr := cli.ResolveInstallScope(""); scopeErr == nil {
+			selection.Agents = cli.AgentsForScope(scope, selection.Agents)
+		}
+		persistErr := statecoord.WithStoreLock(stateStore, func() error {
 			agentIDs := make([]string, 0, len(selection.Agents))
 			for _, a := range selection.Agents {
 				agentIDs = append(agentIDs, string(a))
 			}
 			claudePhaseState := claudePhaseAssignmentsToState(selection.ClaudePhaseAssignments)
-			installState, readErr := state.Read(homeDir)
+			installState, readErr := stateStore.Read()
 			if errors.Is(readErr, os.ErrNotExist) {
 				installState = state.NewInstallState()
 			} else if readErr != nil {
@@ -557,7 +577,7 @@ func tuiExecuteWithBackground(
 			if piBackgroundPersist != "" {
 				installState.PiBackgroundIntent = piBackgroundPersist
 			}
-			if writeErr := appStateWriteReconciled(homeDir, installState); writeErr != nil {
+			if writeErr := appStateWriteReconciled(stateStore, installState); writeErr != nil {
 				return fmt.Errorf("persist install state: %w", writeErr)
 			}
 			return nil
@@ -610,24 +630,31 @@ func tuiUpgrade(profile system.PlatformProfile, homeDir string) tui.UpgradeFunc 
 // so that the "Configure Models" TUI flow persists its choices to disk.
 func tuiSync(homeDir string) tui.SyncFunc {
 	return func(overrides *model.SyncOverrides) (tui.SyncOutcome, error) {
-		agentIDs := syncAgentIDs(homeDir, overrides)
+		// El ámbito se resuelve antes de leer nada: decide qué estado de instalación
+		// (el del proyecto o el de usuario) alimenta la sincronización y dónde se
+		// persisten después las asignaciones.
+		cwd, _ := os.Getwd()
+		scope, _ := cli.ResolveInstallScope("")
+		if scope != cli.ScopeGlobal {
+			if _, statErr := os.Stat(filepath.Join(cwd, "axiom.yaml")); statErr == nil || scope == cli.ScopeWorkspace {
+				scope = cli.ScopeWorkspace
+			}
+		}
+		// En ámbito workspace la raíz es la del proyecto, no la carpeta actual. Se
+		// descarta el aviso: la TUI ocupa la terminal y no debe recibir texto suelto.
+		workspaceDir, _ := cli.ResolveWorkspaceDir(scope, homeDir)
+		stateStore := cli.StateStoreFor(scope, homeDir, workspaceDir)
+
+		agentIDs := syncAgentIDs(homeDir, stateStore, overrides)
 		syncFlags := cli.SyncFlags{IncludePermissions: syncShouldIncludePermissions(agentIDs)}
 		selection := cli.BuildSyncSelection(syncFlags, agentIDs)
 
 		// Load persisted model assignments so a plain sync (no overrides)
 		// preserves the user's previous choices instead of falling back
 		// to the "balanced" preset.
-		loadPersistedAssignments(homeDir, &selection)
+		loadPersistedAssignments(stateStore, &selection)
 
 		applyOverrides(&selection, overrides)
-
-		workspaceDir, _ := os.Getwd()
-		scope, _ := cli.ResolveInstallScope("")
-		if scope != cli.ScopeGlobal {
-			if _, statErr := os.Stat(filepath.Join(workspaceDir, "axiom.yaml")); statErr == nil || scope == cli.ScopeWorkspace {
-				scope = cli.ScopeWorkspace
-			}
-		}
 
 		result, err := cli.RunSyncWithSelectionScoped(homeDir, workspaceDir, scope, selection)
 		if err != nil {
@@ -635,11 +662,10 @@ func tuiSync(homeDir string) tui.SyncFunc {
 		}
 
 		// Persist model assignments that were actually used (from overrides
-		// or loaded from state) so the next sync preserves them too.
-		if scope != cli.ScopeWorkspace {
-			if err := persistAssignments(homeDir, selection); err != nil {
-				return tui.SyncOutcome{}, fmt.Errorf("persist model assignments: %w", err)
-			}
+		// or loaded from state) so the next sync preserves them too. Con workspace
+		// van al estado del proyecto; con global, al de usuario.
+		if err := persistAssignments(stateStore, selection); err != nil {
+			return tui.SyncOutcome{}, fmt.Errorf("persist model assignments: %w", err)
 		}
 
 		return tui.SyncOutcome{Files: result.ChangedFiles, Warnings: result.Warnings()}, nil
@@ -650,27 +676,44 @@ func tuiSync(homeDir string) tui.SyncFunc {
 // for selected agents/components, but without interactive flag parsing.
 func tuiUninstall(homeDir string) tui.UninstallFunc {
 	return func(agentIDs []model.AgentID, componentIDs []model.ComponentID) (componentuninstall.Result, error) {
-		workspaceDir, err := os.Getwd()
+		scope, workspaceDir, err := tuiUninstallRoots(homeDir)
 		if err != nil {
-			return componentuninstall.Result{}, fmt.Errorf("resolve workspace directory: %w", err)
+			return componentuninstall.Result{}, err
 		}
-		return cli.RunUninstallWithSelection(homeDir, workspaceDir, agentIDs, componentIDs)
+		return cli.RunUninstallWithSelection(scope, homeDir, workspaceDir, agentIDs, componentIDs)
 	}
 }
 
 func tuiUninstallWithProfiles(homeDir string) tui.UninstallWithProfilesFunc {
 	return func(agentIDs []model.AgentID, componentIDs []model.ComponentID, profileNames []string, engramScope model.EngramUninstallScope) (componentuninstall.Result, error) {
-		workspaceDir, err := os.Getwd()
+		scope, workspaceDir, err := tuiUninstallRoots(homeDir)
 		if err != nil {
-			return componentuninstall.Result{}, fmt.Errorf("resolve workspace directory: %w", err)
+			return componentuninstall.Result{}, err
 		}
-		return cli.RunUninstallWithSelectionAndProfiles(homeDir, workspaceDir, agentIDs, componentIDs, profileNames, engramScope)
+		return cli.RunUninstallWithSelectionAndProfiles(scope, homeDir, workspaceDir, agentIDs, componentIDs, profileNames, engramScope)
 	}
 }
 
-func syncAgentIDs(homeDir string, overrides *model.SyncOverrides) []model.AgentID {
+// tuiUninstallRoots resuelve el ámbito de la desinstalación de la TUI igual que el
+// comando: workspace por defecto (o lo que fije AXIOM_INSTALL_SCOPE) y, en
+// workspace, la raíz del proyecto aunque la TUI se haya abierto en una subcarpeta.
+// Se descarta el aviso de la raíz: la TUI ocupa la terminal y no debe recibir texto
+// suelto.
+func tuiUninstallRoots(homeDir string) (scope cli.InstallScope, workspaceDir string, err error) {
+	scope, err = cli.ResolveInstallScope("")
+	if err != nil {
+		return "", "", err
+	}
+	workspaceDir, _ = cli.ResolveWorkspaceDir(scope, homeDir)
+	if workspaceDir == "" {
+		return "", "", fmt.Errorf("resolve workspace directory")
+	}
+	return scope, workspaceDir, nil
+}
+
+func syncAgentIDs(homeDir string, store state.Store, overrides *model.SyncOverrides) []model.AgentID {
 	if overrides == nil || len(overrides.TargetAgents) == 0 {
-		return cli.DiscoverAgents(homeDir)
+		return cli.DiscoverAgents(store)
 	}
 
 	seen := make(map[model.AgentID]bool, len(overrides.TargetAgents))
@@ -695,13 +738,14 @@ func syncShouldIncludePermissions(agentIDs []model.AgentID) bool {
 }
 
 func syncArgsForDiscoveredAgents(homeDir string) []string {
-	if persisted, err := state.Read(homeDir); err == nil && persisted.SelectionConfigured {
+	store := cli.EffectiveStateStore(homeDir)
+	if persisted, err := store.Read(); err == nil && persisted.SelectionConfigured {
 		if (model.Selection{Components: persisted.Components}).HasComponent(model.ComponentPermission) {
 			return []string{"--include-permissions"}
 		}
 		return nil
 	}
-	if syncShouldIncludePermissions(cli.DiscoverAgents(homeDir)) {
+	if syncShouldIncludePermissions(cli.DiscoverAgents(store)) {
 		return []string{"--include-permissions"}
 	}
 	return nil
@@ -773,8 +817,8 @@ func applyOverrides(selection *model.Selection, overrides *model.SyncOverrides) 
 // state.json and populates the selection when the corresponding maps are empty.
 // This ensures a plain `sync` (no TUI overrides, no CLI flags) preserves the
 // user's last-known model choices.
-func loadPersistedAssignments(homeDir string, selection *model.Selection) {
-	s, err := state.Read(homeDir)
+func loadPersistedAssignments(store state.Store, selection *model.Selection) {
+	s, err := store.Read()
 	if err != nil {
 		return
 	}
@@ -848,7 +892,7 @@ func loadPersistedAssignments(homeDir string, selection *model.Selection) {
 //   - nil: not provided (partial sync) — leave the existing state value untouched.
 //   - non-nil, len > 0: new per-phase assignments — write them.
 //   - non-nil, len == 0: explicit clear signal (preset selected) — delete the key.
-func persistAssignments(homeDir string, selection model.Selection) error {
+func persistAssignments(store state.Store, selection model.Selection) error {
 	hasAssignmentSignal := selection.ClaudeModelAssignments != nil ||
 		selection.ClaudePhaseAssignments != nil ||
 		selection.KiroModelAssignments != nil ||
@@ -864,8 +908,8 @@ func persistAssignments(homeDir string, selection model.Selection) error {
 	// The whole read-modify-write runs under the canonical install-state lock:
 	// the written value derives from the read below, so the read must happen
 	// inside the lock or a concurrent writer's changes would be lost.
-	return statecoord.WithLock(homeDir, func() error {
-		current, err := state.Read(homeDir)
+	return statecoord.WithStoreLock(store, func() error {
+		current, err := store.Read()
 		if err != nil {
 			// State file may not exist yet (e.g. pre-state users). Other read
 			// failures, such as invalid JSON, must not overwrite existing state.
@@ -930,7 +974,7 @@ func persistAssignments(homeDir string, selection model.Selection) error {
 				current.ModelAssignments = nil
 			}
 		}
-		return state.Write(homeDir, current)
+		return store.Write(current)
 	})
 }
 
@@ -1104,4 +1148,17 @@ func tuiReviewStoreReset() (reviewtransaction.StoreResetReport, error) {
 		return reviewtransaction.StoreResetReport{}, err
 	}
 	return reviewtransaction.ResetReviewStore(context.Background(), cwd, reviewtransaction.StoreResetRequest{})
+}
+
+// installStateStore elige el almacén del estado de instalación para la TUI según el
+// ámbito de instalación (workspace por defecto, global solo con
+// AXIOM_INSTALL_SCOPE=global): el estado del proyecto con workspace (D2) y el de
+// usuario con global. Se descarta el aviso de raíz: la TUI ocupa la terminal.
+func installStateStore(homeDir string) state.Store {
+	scope, err := cli.ResolveInstallScope("")
+	if err != nil {
+		return state.GlobalStore(homeDir)
+	}
+	workspaceDir, _ := cli.ResolveWorkspaceDir(scope, homeDir)
+	return cli.StateStoreFor(scope, homeDir, workspaceDir)
 }

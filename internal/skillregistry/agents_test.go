@@ -1,6 +1,7 @@
 package skillregistry
 
 import (
+	"github.com/IGutierrezZ/axiom/v3/internal/components/filemerge"
 	"os"
 	"path/filepath"
 	"strings"
@@ -80,7 +81,7 @@ func TestAdoptSkillsIndexMarkersContract(t *testing.T) {
 	}{
 		{
 			name:  "no pair with Skills heading wraps the region in place",
-			input: "# Doc\n## Skills\n| old |\n## How to Use\nx\n",
+			input: "# Doc\n## Skills\n\n| Skill | Trigger | Path |\n| --- | --- | --- |\n| old |\n## How to Use\nx\n",
 			checks: func(t *testing.T, got string) {
 				if !strings.Contains(got, skillsIndexOpen+"\n"+skillsIndexClose) {
 					t.Fatalf("region not wrapped in the canonical pair:\n%q", got)
@@ -143,7 +144,7 @@ func TestAdoptSkillsIndexMarkersContract(t *testing.T) {
 		},
 		{
 			name:  "only the first of two Skills headings is wrapped",
-			input: "# Doc\n## Skills\n| first |\n## Middle\n## Skills\n| second |\n",
+			input: "# Doc\n## Skills\n\n| Skill | Trigger / description | Scope | Path |\n| --- | --- | --- | --- |\n| first |\n## Middle\n## Skills\n| second |\n",
 			checks: func(t *testing.T, got string) {
 				if strings.Contains(got, "| first |") || !strings.Contains(got, "| second |") {
 					t.Fatalf("only the first region must be replaced:\n%q", got)
@@ -270,7 +271,7 @@ func TestAgentsRepairsOrphansAndDuplicates(t *testing.T) {
 	entries := []SkillEntry{{Name: "go-testing", Path: filepath.Join(cwd, "skills", "go-testing", "SKILL.md"), Description: "Go tests"}}
 
 	t.Run("orphan closer does not append a duplicate block", func(t *testing.T) {
-		corrupt := "# Doc\n## Skills\n| stale |\n" + skillsIndexClose + "\n## How to Use\nx\n"
+		corrupt := "# Doc\n## Skills\n\n| Skill | Trigger | Path |\n| --- | --- | --- |\n| stale |\n" + skillsIndexClose + "\n## How to Use\nx\n"
 		merged := applyAgentsUpdate(corrupt, cwd, entries)
 		if count := countSkillsHeadings(merged); count != 1 {
 			t.Fatalf("`## Skills` heading count = %d, want 1:\n%s", count, merged)
@@ -335,5 +336,77 @@ func TestWriteAgentsIndexUsesAdoptionComposition(t *testing.T) {
 	}
 	if !strings.Contains(written, "skills/go-testing/SKILL.md") {
 		t.Fatalf("O-2 relative Path missing from the managed table:\n%s", written)
+	}
+}
+
+// teamSkillsFixtures son secciones `## Skills` sin marcadores que son del equipo,
+// no un índice que generara Axiom: ninguna debe adoptarse.
+var teamSkillsFixtures = map[string]string{
+	"prosa":                "# Equipo\n\n## Skills\n\nAntes de tocar el backend, lee la guía de Go del equipo.\n\n## Otra\nx\n",
+	"lista":                "# Equipo\n\n## Skills\n\n- go-testing: pruebas\n- sdd: specs\n",
+	"tabla con otras cols": "# Equipo\n\n## Skills\n\n| Área | Quién |\n| --- | --- |\n| Backend | Ana |\n",
+	"tabla con prosa":      "# Equipo\n\n## Skills\n\n| Skill | Trigger | Path |\n| --- | --- | --- |\n| `go` | Go | skills/go |\n\nNota: la mantiene el equipo.\n",
+	"tabla sin separador":  "# Equipo\n\n## Skills\n\n| Skill | Trigger | Path |\n| `go` | Go | skills/go |\n",
+	"solo el título":       "# Equipo\n\n## Skills\n",
+}
+
+func TestAdoptSkillsIndexMarkersKeepsTheTeamsOwnSkillsSection(t *testing.T) {
+	for name, doc := range teamSkillsFixtures {
+		t.Run(name, func(t *testing.T) {
+			if got := AdoptSkillsIndexMarkers(doc); got != doc {
+				t.Fatalf("una sección del equipo no se adopta:\ngot  %q\nwant %q", got, doc)
+			}
+		})
+	}
+}
+
+// Las formas que Axiom generaba (cuatro columnas actuales, tres columnas antiguas, con
+// CRLF y con celdas con `|` escapado) siguen adoptándose.
+func TestAdoptSkillsIndexMarkersStillAdoptsAxiomGeneratedShapes(t *testing.T) {
+	cwd := t.TempDir()
+	entries := []SkillEntry{{Name: "go-testing", Path: filepath.Join(cwd, "skills", "go-testing", "SKILL.md"), Description: "Go | tests"}}
+	generated := "# Doc\n\n" + skillsIndexBody(cwd, entries) + "\n## Final\nx\n"
+	shapes := map[string]string{
+		"generada hoy":          generated,
+		"tres columnas":         agentsFixture,
+		"generada con CRLF":     strings.ReplaceAll(generated, "\n", "\r\n"),
+		"separador con colons":  "# Doc\n\n## Skills\n\n| Skill | Trigger | Path |\n|:--|:-:|--:|\n| `a` | b | c |\n",
+		"cabecera sin espacios": "# Doc\n\n## Skills\n\n|Skill|Trigger|Path|\n|---|---|---|\n|`a`|b|c|\n",
+		"sin filas":             "# Doc\n\n## Skills\n\n| Skill | Trigger / description | Scope | Path |\n| --- | --- | --- | --- |\n",
+	}
+	for name, doc := range shapes {
+		t.Run(name, func(t *testing.T) {
+			got := AdoptSkillsIndexMarkers(doc)
+			if !strings.Contains(got, skillsIndexOpen+"\n"+skillsIndexClose) {
+				t.Fatalf("la forma de Axiom debe adoptarse:\n%q", got)
+			}
+			if count := countSkillsHeadings(got); count != 0 {
+				t.Fatalf("la adopción no debe dejar un `## Skills` suelto, hay %d:\n%q", count, got)
+			}
+		})
+	}
+}
+
+// Ida y vuelta: el `## Skills` del equipo queda byte a byte igual tras el refresco y
+// tras retirar el bloque gestionado, que se añade aparte con sus marcadores.
+func TestTeamSkillsSectionSurvivesRefreshAndRemovalByteIdentical(t *testing.T) {
+	cwd := t.TempDir()
+	entries := []SkillEntry{{Name: "go-testing", Path: filepath.Join(cwd, "skills", "go-testing", "SKILL.md"), Description: "Go tests"}}
+	for name, doc := range teamSkillsFixtures {
+		t.Run(name, func(t *testing.T) {
+			first := applyAgentsUpdate(doc, cwd, entries)
+			if !strings.HasPrefix(first, doc) {
+				t.Fatalf("lo del equipo debe conservarse intacto al principio:\n%q", first)
+			}
+			if strings.Count(first, skillsIndexOpen) != 1 || !strings.Contains(first, "| Skill | Trigger / description | Scope | Path |") {
+				t.Fatalf("el bloque gestionado debe añadirse aparte con sus marcadores:\n%s", first)
+			}
+			if second := applyAgentsUpdate(first, cwd, entries); second != first {
+				t.Fatalf("el segundo refresco no es idempotente:\n%q\n%q", first, second)
+			}
+			if removed := filemerge.InjectMarkdownSection(first, skillsIndexSectionID, ""); removed != doc {
+				t.Fatalf("retirar el bloque gestionado debe devolver el original:\ngot  %q\nwant %q", removed, doc)
+			}
+		})
 	}
 }

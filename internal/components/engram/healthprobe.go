@@ -361,45 +361,83 @@ func isNonEmptyJSONString(raw json.RawMessage) bool {
 // agents currently persist for Engram. The doctor probes these values verbatim,
 // rather than deriving a fresh command from its own environment.
 func ReadPersistedStdioCommands(homeDir string, installedAgentIDs []string) ([]StdioCommand, error) {
+	return readPersistedStdioCommands(installedAgentIDs, userScopeConfigPaths(homeDir))
+}
+
+// ReadPersistedProjectStdioCommands amplía ReadPersistedStdioCommands con la
+// configuración de proyecto: en una instalación solo workspace, Engram no está en
+// HOME sino en la raíz del proyecto (`<raíz>/.mcp.json` para Claude Code, la ruta
+// propia de cada adaptador para el resto). Con workspaceDir vacío equivale a
+// ReadPersistedStdioCommands. Un mismo comando declarado en HOME y en el proyecto
+// se devuelve una sola vez, con el primer origen que lo declara.
+func ReadPersistedProjectStdioCommands(homeDir, workspaceDir string, installedAgentIDs []string) ([]StdioCommand, error) {
+	scopes := []configPathsFunc{userScopeConfigPaths(homeDir)}
+	if strings.TrimSpace(workspaceDir) != "" {
+		scopes = append(scopes, workspaceScopeConfigPaths(workspaceDir))
+	}
+	return readPersistedStdioCommands(installedAgentIDs, scopes...)
+}
+
+// configPathsFunc devuelve los ficheros donde un agente puede persistir el MCP de
+// Engram en un ámbito concreto (usuario o proyecto).
+type configPathsFunc func(adapter agents.Adapter) []string
+
+func userScopeConfigPaths(homeDir string) configPathsFunc {
+	return func(adapter agents.Adapter) []string {
+		if adapter.Agent() == model.AgentClaudeCode {
+			// Claude Code reads user-scope MCP entries from ~/.claude.json.
+			return []string{claude.UserConfigPath(homeDir)}
+		}
+		return []string{adapter.MCPConfigPath(homeDir, "engram")}
+	}
+}
+
+func workspaceScopeConfigPaths(workspaceDir string) configPathsFunc {
+	return func(adapter agents.Adapter) []string {
+		if adapter.Agent() == model.AgentClaudeCode {
+			// Claude Code carga los servidores MCP de proyecto de <proyecto>/.mcp.json.
+			return []string{filepath.Join(workspaceDir, ".mcp.json")}
+		}
+		return []string{adapter.MCPConfigPath(workspaceDir, "engram")}
+	}
+}
+
+func readPersistedStdioCommands(installedAgentIDs []string, scopes ...configPathsFunc) ([]StdioCommand, error) {
 	commands := make([]StdioCommand, 0, len(installedAgentIDs))
 	seenPaths := make(map[string]struct{}, len(installedAgentIDs))
 	seenCommands := make(map[string]struct{}, len(installedAgentIDs))
 
-	for _, agentID := range installedAgentIDs {
-		adapter, err := agents.NewAdapter(model.AgentID(agentID))
-		if err != nil || !adapter.SupportsMCP() {
-			continue
-		}
+	for _, scope := range scopes {
+		for _, agentID := range installedAgentIDs {
+			adapter, err := agents.NewAdapter(model.AgentID(agentID))
+			if err != nil || !adapter.SupportsMCP() {
+				continue
+			}
 
-		paths := []string{adapter.MCPConfigPath(homeDir, "engram")}
-		if adapter.Agent() == model.AgentClaudeCode {
-			// Claude Code reads user-scope MCP entries from ~/.claude.json.
-			paths = []string{claude.UserConfigPath(homeDir)}
-		}
+			for _, path := range scope(adapter) {
+				if path == "" {
+					continue
+				}
+				if _, seen := seenPaths[path]; seen {
+					continue
+				}
+				seenPaths[path] = struct{}{}
 
-		for _, path := range paths {
-			if path == "" {
-				continue
+				command, found, err := readPersistedStdioCommand(path, adapter.Agent())
+				if err != nil {
+					return nil, err
+				}
+				if !found {
+					continue
+				}
+				command.Source = path
+				key := command.Command + "\x00" + strings.Join(command.Args, "\x00")
+				if _, seen := seenCommands[key]; seen {
+					continue
+				}
+				seenCommands[key] = struct{}{}
+				commands = append(commands, command)
 			}
-			if _, seen := seenPaths[path]; seen {
-				continue
-			}
-			seenPaths[path] = struct{}{}
-
-			command, found, err := readPersistedStdioCommand(path, adapter.Agent())
-			if err != nil {
-				return nil, err
-			}
-			if !found {
-				continue
-			}
-			command.Source = path
-			key := command.Command + "\x00" + strings.Join(command.Args, "\x00")
-			if _, seen := seenCommands[key]; seen {
-				continue
-			}
-			seenCommands[key] = struct{}{}
-			commands = append(commands, command)
 		}
 	}
 

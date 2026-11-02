@@ -687,7 +687,7 @@ func TestCheckEngramReachable_ExplicitHTTP_OK(t *testing.T) {
 	defer server.Close()
 	t.Setenv(engramHealthEnvVar, server.URL)
 
-	got := checkEngramReachable(context.Background(), "", nil)
+	got := checkEngramReachable(context.Background(), "", "", nil)
 
 	if got.Status != CheckStatusPass {
 		t.Errorf("expected pass, got %s: %s", got.Status, got.Detail)
@@ -704,7 +704,7 @@ func TestCheckEngramReachable_ExplicitHTTP_NonSuccessStatus(t *testing.T) {
 	defer server.Close()
 	t.Setenv(engramHealthEnvVar, server.URL)
 
-	got := checkEngramReachable(context.Background(), "", nil)
+	got := checkEngramReachable(context.Background(), "", "", nil)
 
 	if got.Status != CheckStatusWarn {
 		t.Errorf("expected warn for 503, got %s", got.Status)
@@ -721,7 +721,7 @@ func TestCheckEngramReachable_ExplicitHTTP_ConnectionRefused(t *testing.T) {
 	server.Close()
 	t.Setenv(engramHealthEnvVar, deadURL)
 
-	got := checkEngramReachable(context.Background(), "", nil)
+	got := checkEngramReachable(context.Background(), "", "", nil)
 
 	if got.Status != CheckStatusFail {
 		t.Errorf("expected fail, got %s", got.Status)
@@ -742,7 +742,7 @@ func TestCheckEngramReachable_StdioFailure(t *testing.T) {
 	setStdioProbeForTest(t, errors.New("engram mcp exited without answering initialize"))
 	homeDir, installedAgents := doctorStdioConfig(t)
 
-	got := checkEngramReachable(context.Background(), homeDir, installedAgents)
+	got := checkEngramReachable(context.Background(), homeDir, "", installedAgents)
 
 	if got.Status != CheckStatusFail {
 		t.Errorf("expected fail, got %s: %s", got.Status, got.Detail)
@@ -760,7 +760,7 @@ func TestCheckEngramReachable_BinaryAbsent_Warns(t *testing.T) {
 	setStdioProbeForTest(t, engram.ErrNotInstalled)
 	homeDir, installedAgents := doctorStdioConfig(t)
 
-	got := checkEngramReachable(context.Background(), homeDir, installedAgents)
+	got := checkEngramReachable(context.Background(), homeDir, "", installedAgents)
 
 	if got.Status != CheckStatusWarn {
 		t.Errorf("expected warn, got %s: %s", got.Status, got.Detail)
@@ -779,7 +779,7 @@ func TestCheckEngramReachable_MissingRelativeWindowsExecutableWarns(t *testing.T
 	homeDir := t.TempDir()
 	configPath := writeDoctorEngramConfig(t, homeDir, "engram.exe", []string{"mcp", "--tools=agent"})
 
-	got := checkEngramReachable(context.Background(), homeDir, []string{"claude-code"})
+	got := checkEngramReachable(context.Background(), homeDir, "", []string{"claude-code"})
 
 	if got.Status != CheckStatusWarn {
 		t.Fatalf("engram:reachable status = %q, detail = %q; want not-probed warning for missing relative engram.exe", got.Status, got.Detail)
@@ -809,7 +809,7 @@ func TestCheckEngramReachable_StdioDefault_NoHTTPListener(t *testing.T) {
 		return 0, fmt.Errorf("Get %q: dial tcp: connect: connection refused", url)
 	}
 
-	got := checkEngramReachable(context.Background(), homeDir, installedAgents)
+	got := checkEngramReachable(context.Background(), homeDir, "", installedAgents)
 
 	if got.Status != CheckStatusPass {
 		t.Fatalf("engram:reachable status = %q, detail = %q; want pass: stdio MCP is configured and healthy, no HTTP listener exists", got.Status, got.Detail)
@@ -834,7 +834,7 @@ func TestCheckEngramReachable_StdioUsesPersistedConfiguration(t *testing.T) {
 	}
 	t.Cleanup(func() { engramProbeStdioFn = orig })
 
-	got := checkEngramReachable(context.Background(), homeDir, []string{"claude-code"})
+	got := checkEngramReachable(context.Background(), homeDir, "", []string{"claude-code"})
 
 	if got.Status != CheckStatusPass {
 		t.Fatalf("expected pass, got %s: %s", got.Status, got.Detail)
@@ -844,6 +844,44 @@ func TestCheckEngramReachable_StdioUsesPersistedConfiguration(t *testing.T) {
 	}
 	if !strings.Contains(got.Detail, configPath) {
 		t.Fatalf("detail = %q, want persisted configuration path %q", got.Detail, configPath)
+	}
+}
+
+// TestCheckEngramReachable_WorkspaceOnlyInstallReadsProjectMCP cubre la instalación
+// solo workspace: el MCP de Engram está en <raíz>/.mcp.json y HOME no tiene nada.
+func TestCheckEngramReachable_WorkspaceOnlyInstallReadsProjectMCP(t *testing.T) {
+	t.Setenv(engramHealthEnvVar, "")
+	setStdioProbeForTest(t, nil)
+	homeDir := t.TempDir()
+	workspaceDir := t.TempDir()
+	mcpPath := filepath.Join(workspaceDir, ".mcp.json")
+	if err := os.WriteFile(mcpPath, []byte(`{"mcpServers":{"engram":{"command":"engram","args":["mcp","--tools=agent"]}}}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	got := checkEngramReachable(context.Background(), homeDir, workspaceDir, []string{"claude-code"})
+
+	if got.Status != CheckStatusPass {
+		t.Fatalf("engram:reachable status = %q, detail = %q; want pass: el MCP del proyecto está declarado", got.Status, got.Detail)
+	}
+	if !strings.Contains(got.Detail, mcpPath) {
+		t.Fatalf("detail = %q, want la configuración de proyecto %q", got.Detail, mcpPath)
+	}
+}
+
+// TestCheckEngramReachable_NoConfigurationAnywhereWarns comprueba que sin MCP ni en
+// HOME ni en el proyecto el aviso sigue siendo el de siempre.
+func TestCheckEngramReachable_NoConfigurationAnywhereWarns(t *testing.T) {
+	t.Setenv(engramHealthEnvVar, "")
+	setStdioProbeForTest(t, nil)
+
+	got := checkEngramReachable(context.Background(), t.TempDir(), t.TempDir(), []string{"claude-code"})
+
+	if got.Status != CheckStatusWarn {
+		t.Fatalf("engram:reachable status = %q, detail = %q; want warn sin configuración", got.Status, got.Detail)
+	}
+	if !strings.Contains(got.Detail, "no persisted MCP configuration found") {
+		t.Fatalf("detail = %q, want el aviso de configuración ausente", got.Detail)
 	}
 }
 
@@ -860,7 +898,7 @@ func TestCheckEngramReachable_WhitespaceBaseURLUsesStdio(t *testing.T) {
 		return 0, errors.New("HTTP must not be selected for whitespace")
 	}
 
-	got := checkEngramReachable(context.Background(), homeDir, installedAgents)
+	got := checkEngramReachable(context.Background(), homeDir, "", installedAgents)
 	if got.Status != CheckStatusPass {
 		t.Fatalf("expected stdio pass for whitespace-only %s, got %s: %s", engramHealthEnvVar, got.Status, got.Detail)
 	}
@@ -880,7 +918,7 @@ func TestCheckEngramReachable_ExplicitHTTPSurroundingWhitespace(t *testing.T) {
 	defer server.Close()
 	t.Setenv(engramHealthEnvVar, " \t"+server.URL+"\n")
 
-	got := checkEngramReachable(context.Background(), "", nil)
+	got := checkEngramReachable(context.Background(), "", "", nil)
 	if got.Status != CheckStatusPass {
 		t.Fatalf("expected pass for surrounding whitespace, got %s: %s", got.Status, got.Detail)
 	}
@@ -981,6 +1019,34 @@ func TestCheckDiskSpace_DirectoryTargeting(t *testing.T) {
 	}
 }
 
+// Con AXIOM_STATE_DIR el espacio libre se mide en la raíz de estado elegida, no en
+// ~/.axiom.
+func TestCheckDiskSpace_FollowsAxiomStateDir(t *testing.T) {
+	orig := availableBytesFn
+	defer func() { availableBytesFn = orig }()
+
+	var probedDir string
+	availableBytesFn = func(dir string) (int64, error) {
+		probedDir = dir
+		return diskWarnThreshold * 2, nil
+	}
+
+	home := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(home, ".axiom"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	stateDir := filepath.Join(t.TempDir(), "estado")
+	if err := os.MkdirAll(stateDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("AXIOM_STATE_DIR", stateDir)
+
+	checkDiskSpace(home)
+	if probedDir != stateDir {
+		t.Fatalf("expected probe of %q, got %q", stateDir, probedDir)
+	}
+}
+
 // --- RunDoctor integration test ---
 
 func TestRunDoctor_IntegrationAllMocked(t *testing.T) {
@@ -999,6 +1065,7 @@ func TestRunDoctor_IntegrationAllMocked(t *testing.T) {
 		osUserHomeDirDoctor = origHomeDir
 		osExecutableDoctor = origExecutable
 	}()
+	stubDoctorUserPath(t, nil)
 
 	homeDir := t.TempDir()
 	stateDir := filepath.Join(homeDir, ".axiom")
@@ -1042,7 +1109,6 @@ func TestRunDoctor_IntegrationAllMocked(t *testing.T) {
 =======================================
 
   [ok]  tool:axiom                     axiom found at /usr/local/bin/axiom; invoked executable: /usr/local/bin/axiom (version dev)
-  [ok]  tool:gga                       gga found at /usr/local/bin/gga
   [ok]  tool:engram                    engram found at /usr/local/bin/engram
   [ok]  tool:claude                    claude found at /usr/local/bin/claude
   [ok]  state:json                     state file OK — 1 agent(s) installed: claude-code
@@ -1050,9 +1116,15 @@ func TestRunDoctor_IntegrationAllMocked(t *testing.T) {
   [ok]  engram:reachable               engram MCP (stdio) answered the initialize handshake for persisted configuration: %s
   [ok]  disk:space                     1024 MB free on %s filesystem
 
-Summary: 8 passed, 0 failed, 0 warnings
+Huella de máquina (nivel de usuario)
+-------------------------------------
+  [declarado]    binario axiom                  /usr/local/bin/axiom
+  [declarado]    binario engram                 /usr/local/bin/engram
+  [declarado]    hub y estado de Axiom          %s (state.json)
+
+Summary: 7 passed, 0 failed, 0 warnings
 Status:  healthy
-`, configPath, filepath.Join(homeDir, ".axiom"))
+`, configPath, filepath.Join(homeDir, ".axiom"), filepath.Join(homeDir, ".axiom"))
 	// The state directory is ".axiom" since the rename; doctor.go:640 is the
 	// producer of this path.
 	if got := buf.String(); got != want {
@@ -1294,12 +1366,12 @@ func TestCheckToolBinaries_StateMissing_ChecksCoreOnly(t *testing.T) {
 	for _, r := range results {
 		required[string(r.Name)] = struct{}{}
 	}
-	for _, core := range []string{"tool:axiom", "tool:gga", "tool:engram"} {
+	for _, core := range []string{"tool:axiom", "tool:engram"} {
 		if _, ok := required[core]; !ok {
 			t.Errorf("expected %s in core-only output, got %+v", core, required)
 		}
 	}
-	for _, forbidden := range []string{"tool:claude", "tool:opencode"} {
+	for _, forbidden := range []string{"tool:claude", "tool:opencode", "tool:gga"} {
 		if _, ok := required[forbidden]; ok {
 			t.Errorf("did not expect %s when state is missing, got %+v", forbidden, required)
 		}
@@ -1471,7 +1543,7 @@ func TestRunDoctor_OnlySelectedAgentsAreRequired(t *testing.T) {
 
 func TestRenderDoctorReportDoesNotRenderRemedyMetadata(t *testing.T) {
 	var buf bytes.Buffer
-	renderDoctorReport(&buf, DoctorReport{Checks: []CheckResult{{Name: doctor.CheckDiskSpace, Status: CheckStatusFail, Detail: "cleanup needed", Remedy: doctor.NewRemedy(doctor.RemedyFreeDiskSpace, "Free disk space")}}})
+	renderDoctorReportWithFootprint(&buf, DoctorReport{Checks: []CheckResult{{Name: doctor.CheckDiskSpace, Status: CheckStatusFail, Detail: "cleanup needed", Remedy: doctor.NewRemedy(doctor.RemedyFreeDiskSpace, "Free disk space")}}}, nil)
 	want := "axiom doctor — system health check\n=======================================\n\n  [xx]  disk:space                     cleanup needed\n       Remedy: Free disk space\n\nSummary: 0 passed, 1 failed, 0 warnings\nStatus:  unhealthy\n"
 	if got := buf.String(); got != want {
 		t.Fatalf("rendered report mismatch\ngot:\n%s\nwant:\n%s", got, want)

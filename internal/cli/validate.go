@@ -24,7 +24,7 @@ func NormalizeInstallFlags(flags InstallFlags, detection system.DetectionResult)
 
 	agents := defaultAgentsFromDetection(detection)
 	if len(flags.Agents) > 0 {
-		parsed, err := asAgentIDs(flags.Agents)
+		parsed, err := asInstallAgentIDs(flags.Agents)
 		if err != nil {
 			return InstallInput{}, err
 		}
@@ -208,10 +208,6 @@ func defaultAgentsFromDetection(detection system.DetectionResult) []model.AgentI
 			agents = append(agents, model.AgentAntigravity)
 		case string(model.AgentWindsurf):
 			agents = append(agents, model.AgentWindsurf)
-		case string(model.AgentKimi):
-			agents = append(agents, model.AgentKimi)
-		case string(model.AgentQwenCode):
-			agents = append(agents, model.AgentQwenCode)
 		case string(model.AgentKiroIDE):
 			agents = append(agents, model.AgentKiroIDE)
 		case string(model.AgentOpenClaw):
@@ -220,16 +216,16 @@ func defaultAgentsFromDetection(detection system.DetectionResult) []model.AgentI
 			agents = append(agents, model.AgentPi)
 		case string(model.AgentTrae):
 			agents = append(agents, model.AgentTrae)
-		case string(model.AgentHermes):
-			agents = append(agents, model.AgentHermes)
 		}
 	}
 
+	// Qwen Code, Hermes y Kimi no se detectan aquí: no son seleccionables (véase
+	// catalog.IsSelectableAgent), aunque tengan carpeta en HOME.
 	if len(agents) > 0 {
 		return agents
 	}
 
-	catalogAgents := catalog.AllAgents()
+	catalogAgents := catalog.SelectableAgents()
 	agents = make([]model.AgentID, 0, len(catalogAgents))
 	for _, agent := range catalogAgents {
 		agents = append(agents, agent.ID)
@@ -265,6 +261,24 @@ func asAgentIDs(values []string) ([]model.AgentID, error) {
 		agents = append(agents, id)
 	}
 
+	return agents, nil
+}
+
+// asInstallAgentIDs es asAgentIDs para install: además rechaza los agentes que
+// existen pero no se pueden elegir de momento (Qwen Code, Hermes y Kimi; véase
+// catalog.IsSelectableAgent). Si la lista mezcla uno de ellos con otros agentes, la
+// instalación entera falla igualmente: un --agent explícito no se recorta en
+// silencio. sync sigue usando asAgentIDs para no romper instalaciones existentes.
+func asInstallAgentIDs(values []string) ([]model.AgentID, error) {
+	agents, err := asAgentIDs(values)
+	if err != nil {
+		return nil, err
+	}
+	for _, id := range agents {
+		if !isSelectableAgent(id) {
+			return nil, fmt.Errorf("el agente %q no está disponible de momento en Axiom y no se puede instalar; elige otro agente, por ejemplo `axiom install --agent <agente>`", id)
+		}
+	}
 	return agents, nil
 }
 

@@ -176,6 +176,42 @@ func TestBranchGuardFailsOpenAndWritesNothing(t *testing.T) {
 	}
 }
 
+// El hook está instalado en toda la máquina: en un repositorio ajeno con `openspec/changes/x/` y sin
+// `axiom.yaml` no bloquea ni avisa en ningún runtime, sale con 0 y no escribe nada. En el mismo
+// repositorio, con `axiom.yaml`, sí bloquea: solo cambia el criterio de proyecto.
+func TestBranchGuardIsInertInAForeignRepositoryWithABareOpenSpec(t *testing.T) {
+	foreign := newBranchRepository(t)
+	if err := os.MkdirAll(filepath.Join(foreign, "openspec", "changes", "x"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	before := listFiles(t, foreign)
+	payloads := guardPayloads(t, foreign)
+
+	for _, agent := range []string{"claude-code", "codex", "opencode"} {
+		t.Run(agent, func(t *testing.T) {
+			code, stdout, stderr := runBranchGuardCLI(t, payloads[agent], "--agent", agent)
+			if code != 0 || stderr != "" {
+				t.Fatalf("código %d, stderr %q; se esperaba 0 y stderr vacío", code, stderr)
+			}
+			if agent == "opencode" && stdout != `{"action":"none","message":""}`+"\n" {
+				t.Errorf("stdout %q, se esperaba la acción none", stdout)
+			}
+			if agent != "opencode" && stdout != "" {
+				t.Errorf("stdout %q, se esperaba vacío", stdout)
+			}
+		})
+	}
+	if after := listFiles(t, foreign); strings.Join(after, "|") != strings.Join(before, "|") {
+		t.Errorf("la guarda no debe escribir ficheros: antes %v, después %v", before, after)
+	}
+
+	writeBranchConfig(t, foreign, "")
+	code, _, stderr := runBranchGuardCLI(t, payloads["claude-code"], "--agent", "claude-code")
+	if code != 2 || !strings.Contains(stderr, "axiom branch ensure --cwd ") {
+		t.Errorf("con axiom.yaml: código %d, stderr %q; se esperaba el bloqueo con la continuación de ensure", code, stderr)
+	}
+}
+
 func jsonString(t *testing.T, value string) string {
 	t.Helper()
 	data, err := json.Marshal(value)

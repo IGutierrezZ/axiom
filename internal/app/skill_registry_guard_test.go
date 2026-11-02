@@ -118,6 +118,7 @@ func TestSkillRegistryRefreshProceedsInGitProject(t *testing.T) {
 	home := t.TempDir()
 	setFakeHome(t, home)
 	project := t.TempDir()
+	writeAxiomYAML(t, project)
 	if err := os.MkdirAll(filepath.Join(project, ".git"), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -138,6 +139,7 @@ func TestSkillRegistryRefreshProceedsWithRelativeCwdDot(t *testing.T) {
 	home := t.TempDir()
 	setFakeHome(t, home)
 	project := t.TempDir()
+	writeAxiomYAML(t, project)
 	if err := os.MkdirAll(filepath.Join(project, ".git"), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -157,6 +159,7 @@ func TestSkillRegistryRefreshProceedsWithGitWorktreeFile(t *testing.T) {
 	home := t.TempDir()
 	setFakeHome(t, home)
 	project := t.TempDir()
+	writeAxiomYAML(t, project)
 	// Git worktrees and submodules use a .git file, not a directory.
 	if err := os.WriteFile(filepath.Join(project, ".git"), []byte("gitdir: /elsewhere\n"), 0o644); err != nil {
 		t.Fatal(err)
@@ -176,6 +179,7 @@ func TestSkillRegistryRefreshProceedsWithExistingRegistry(t *testing.T) {
 	home := t.TempDir()
 	setFakeHome(t, home)
 	project := t.TempDir()
+	writeAxiomYAML(t, project)
 	if err := os.MkdirAll(filepath.Join(project, ".atl"), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -194,6 +198,7 @@ func TestSkillRegistryRefreshProceedsWithProjectSkillDir(t *testing.T) {
 	home := t.TempDir()
 	setFakeHome(t, home)
 	project := t.TempDir()
+	writeAxiomYAML(t, project)
 	if err := os.MkdirAll(filepath.Join(project, ".claude", "skills"), 0o755); err != nil {
 		t.Fatal(err)
 	}

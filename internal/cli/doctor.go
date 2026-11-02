@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 	"time"
 
@@ -17,6 +18,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/doctor"
 	"github.com/IGutierrezZ/axiom/v3/internal/state"
 	"github.com/IGutierrezZ/axiom/v3/internal/storage"
+	"github.com/IGutierrezZ/axiom/v3/internal/system"
 )
 
 type CheckStatus = doctor.Status
@@ -30,10 +32,12 @@ const (
 )
 
 // coreTools are ecosystem-level binaries that axiom always requires
-// regardless of which agents the user installed. Agent-specific binaries are
+// regardless of which agents the user installed. GGA is no longer one of them:
+// it is optional and only required when the persisted selection includes it
+// (see doctorGGARequired). Agent-specific binaries are
 // derived from state.json's InstalledAgents field (see #709) so the doctor
 // only reports missing agents the user actually selected.
-var coreTools = []string{"axiom", "gga", "engram"}
+var coreTools = []string{"axiom", "engram"}
 
 // agentToolBinaries maps an agent ID from state.json's InstalledAgents to the
 // CLI binary name exec.LookPath should resolve. An empty string means "no CLI
@@ -94,14 +98,22 @@ func RunDoctor(ctx context.Context, w io.Writer) error {
 		return fmt.Errorf("resolve home directory: %w", err)
 	}
 
-	installedAgents, _ := readDoctorInstalledAgents(homeDir)
 	// A state read failure (missing/malformed file) is surfaced separately by
-	// checkStateJSON. Here we fall back to an empty list so the doctor only
+	// checkStateJSON. Here we fall back to an empty state so the doctor only
 	// reports the always-required core tools — preserving the first-time-install
 	// behaviour where the user has not yet selected any agents (#709).
+	stateStore, workspaceDir := effectiveStateStoreWithRoot(homeDir)
+	installedState, stateErr := stateStore.Read()
+	if stateErr != nil {
+		installedState = state.InstallState{}
+	}
+	installedAgents := installedState.InstalledAgents
 
 	pathDirs := pathDirsFn()
 	requiredTools := requiredDoctorTools(installedAgents)
+	if doctorGGARequired(installedState) && !slices.Contains(requiredTools, "gga") {
+		requiredTools = append(requiredTools, "gga")
+	}
 	checks := make([]doctor.Check, 0, len(requiredTools)+3)
 	for _, tool := range requiredTools {
 		tool := tool
@@ -112,25 +124,16 @@ func RunDoctor(ctx context.Context, w io.Writer) error {
 	checks = append(checks,
 		doctor.Check{ID: doctor.CheckStateJSON, Run: func(context.Context) doctor.Result { return checkStateJSON(homeDir) }},
 		doctor.Check{ID: doctor.CheckInstalledAssetVersion, Run: func(context.Context) doctor.Result { return checkInstalledAssetVersion(homeDir) }},
-		doctor.Check{ID: doctor.CheckEngramReachable, Run: func(ctx context.Context) doctor.Result { return checkEngramReachable(ctx, homeDir, installedAgents) }},
+		doctor.Check{ID: doctor.CheckEngramReachable, Run: func(ctx context.Context) doctor.Result {
+			return checkEngramReachable(ctx, homeDir, workspaceDir, installedAgents)
+		}},
 		doctor.Check{ID: doctor.CheckDiskSpace, Run: func(context.Context) doctor.Result { return checkDiskSpace(homeDir) }},
 	)
 	report := (doctor.Runner{Checks: checks}).Run(ctx)
 
-	renderDoctorReport(w, report)
+	footprint := collectMachineFootprint(homeDir, installedState)
+	renderDoctorReportWithFootprint(w, report, &footprint)
 	return nil
-}
-
-// readDoctorInstalledAgents returns the agent IDs persisted in state.json.
-// An unreadable or absent state file yields a nil slice — callers must treat
-// nil/empty as "no agents selected" rather than a hard error so first-time
-// installs do not surface phantom agent-missing failures.
-func readDoctorInstalledAgents(homeDir string) ([]string, error) {
-	s, err := state.Read(homeDir)
-	if err != nil {
-		return nil, err
-	}
-	return s.InstalledAgents, nil
 }
 
 // checkToolBinaries checks each required tool for PATH resolution and
@@ -400,9 +403,10 @@ func appendUniqueExt(exts []string, ext string) []string {
 // checkStateJSON validates ~/.gentle-ai/state.json and agent config dirs.
 func checkStateJSON(homeDir string) CheckResult {
 	const id = doctor.CheckStateJSON
-	statePath := state.Path(homeDir)
+	store := EffectiveStateStore(homeDir)
+	statePath := store.Path()
 
-	s, err := state.Read(homeDir)
+	s, err := store.Read()
 	if err != nil {
 		if os.IsNotExist(err) {
 			return CheckResult{
@@ -560,14 +564,18 @@ func agentConfigDir(homeDir, agentID string) string {
 // ENGRAM_BASE_URL selects HTTP; otherwise the doctor reads the stdio command
 // and arguments persisted in installed agent configurations. It never guesses
 // an HTTP address or replaces a persisted command with its current PATH.
-func checkEngramReachable(ctx context.Context, homeDir string, installedAgents []string) CheckResult {
+//
+// workspaceDir es la raíz del proyecto cuando el estado efectivo es el suyo ("" en
+// una instalación global): en una instalación solo workspace el MCP de Engram vive
+// en la configuración del proyecto (`<raíz>/.mcp.json`, etc.) y no en HOME.
+func checkEngramReachable(ctx context.Context, homeDir, workspaceDir string, installedAgents []string) CheckResult {
 	const id = doctor.CheckEngramReachable
 
 	if baseURL := strings.TrimSpace(os.Getenv(engramHealthEnvVar)); baseURL != "" {
 		return checkEngramHTTP(id, baseURL)
 	}
 
-	commands, err := engram.ReadPersistedStdioCommands(homeDir, installedAgents)
+	commands, err := engram.ReadPersistedProjectStdioCommands(homeDir, workspaceDir, installedAgents)
 	if err != nil {
 		return CheckResult{
 			Name:   id,
@@ -658,10 +666,11 @@ func checkEngramHTTP(id doctor.CheckID, baseURL string) CheckResult {
 	}
 }
 
-// checkDiskSpace reports free space on the ~/.axiom filesystem.
+// checkDiskSpace reports free space on the filesystem of the Axiom state root
+// (~/.axiom, or AXIOM_STATE_DIR when set).
 func checkDiskSpace(homeDir string) CheckResult {
 	const id = doctor.CheckDiskSpace
-	dir := filepath.Join(homeDir, ".axiom")
+	dir := system.AxiomDir(homeDir)
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
 		if _, errLegacy := os.Stat(filepath.Join(homeDir, ".gentle-ai")); errLegacy == nil {
 			dir = filepath.Join(homeDir, ".gentle-ai")
@@ -700,8 +709,10 @@ func checkDiskSpace(homeDir string) CheckResult {
 	}
 }
 
-// renderDoctorReport writes a human-readable report to w.
-func renderDoctorReport(w io.Writer, report DoctorReport) {
+// renderDoctorReportWithFootprint writes a human-readable report to w and, when footprint is not
+// nil, the machine-footprint section between the checks and the summary. The
+// section is informational: it never changes the pass/fail counts or the status.
+func renderDoctorReportWithFootprint(w io.Writer, report DoctorReport, footprint *[]footprintEntry) {
 	var passed, warned, failed int
 	for _, c := range report.Checks {
 		switch c.Status {
@@ -726,6 +737,9 @@ func renderDoctorReport(w io.Writer, report DoctorReport) {
 	}
 
 	fmt.Fprintln(w)
+	if footprint != nil {
+		renderMachineFootprint(w, *footprint)
+	}
 	fmt.Fprintf(w, "Summary: %d passed, %d failed, %d warnings\n", passed, failed, warned)
 
 	status := "healthy"
@@ -751,7 +765,7 @@ func statusIcon(s CheckStatus) string {
 }
 
 func checkInstalledAssetVersion(homeDir string) CheckResult {
-	s, err := state.Read(homeDir)
+	s, err := EffectiveStateStore(homeDir).Read()
 	if err != nil {
 		return CheckResult{
 			Status: CheckStatusPass,

@@ -35,6 +35,13 @@ var managedOutputStyles = []OutputStyle{
 	{Name: "Neutral", File: "neutral.md", AssetPath: "claude/output-style-neutral.md"},
 }
 
+// ManagedOutputStyles lists every output style Axiom has written, including the
+// retired ones. Uninstall removes a copy only when its content is still the one
+// embedded here.
+func ManagedOutputStyles() []OutputStyle {
+	return append([]OutputStyle(nil), managedOutputStyles...)
+}
+
 func canonicalPersona(persona model.PersonaID) model.PersonaID {
 	if persona == model.PersonaGentlemanNeutralArtifacts {
 		return model.PersonaNeutral

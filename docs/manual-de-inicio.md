@@ -108,6 +108,7 @@ axiom doctor
 * Agentes de IA detectados en el sistema.
 * Disponibilidad de servidores MCP y memoria Engram.
 * Integridad de herramientas semánticas (Serena, CodeGraph).
+* Huella de máquina: lo que Axiom tiene a nivel de usuario (binarios, registro del hub, GGA, CodeGraph global, entradas de PATH gestionadas) y qué elementos son restos de una instalación global. Para retirarlos, `axiom uninstall --all --scope global`; la guía de migración está en [Uso: migrar de una instalación global a una por proyecto](usage.md#migrar-de-una-instalación-global-a-una-por-proyecto).
 
 ---
 
@@ -201,9 +202,15 @@ axiom setup
 ```
 
 **¿Qué hace `axiom setup`?**
-* Ejecuta la instalación con **ámbito de workspace (`--scope=workspace`)**.
+* Ejecuta la instalación con **ámbito de workspace (`--scope=workspace`)**. La raíz del workspace es la del proyecto (el `axiom.yaml` más cercano o, si no hay, la raíz del repositorio git), no la subcarpeta desde la que lances el comando; Axiom avisa cuando son distintas.
 * Crea o actualiza la configuración local del proyecto (por ejemplo `opencode.json` con `"default_agent": "axiom-orchestrator"`).
-* **Garantía de Aislamiento:** No altera ni sobreescribe los archivos globales de usuario en `~/.config/opencode/` ni `~/.claude/`. Cada proyecto mantiene sus agentes, plugins y prompts de forma estrictamente local.
+* **Garantía de Aislamiento:** No altera ni sobreescribe los archivos globales de usuario en `~/.config/opencode/` ni `~/.claude/`, ni ninguna otra carpeta de configuración de usuario de los agentes. Cada proyecto mantiene sus agentes, plugins, prompts, skills y configuración MCP de forma estrictamente local, en las rutas de proyecto que lee cada agente (por ejemplo `.claude/` y `.mcp.json` en Claude Code; `opencode.json` y `.opencode/` en OpenCode; `.kilo/` en Kilo Code; `.gemini/AXIOM.md` registrado en `context.fileName` en Gemini CLI; `.codex/config.toml` y `.codex/axiom-instructions.md` en Codex; `.github/instructions/axiom.instructions.md` y `.vscode/mcp.json` en VS Code Copilot). Las skills se escriben una sola vez en `.agents/skills`, y en `.claude/skills` si Claude Code es uno de los agentes. La tabla completa está en [Agentes: modo workspace por agente](agents.md#modo-workspace-por-agente).
+* **Agentes sin modo workspace:** Windsurf, Trae, Antigravity, Pi y OpenClaw se omiten con un aviso; Kimi Code, Qwen Code y Hermes ya no se pueden elegir.
+* **Estado por proyecto:** lo que Axiom recuerda de la instalación (agentes, selección, persona y modelos) vive en `<raíz>/.axiom/state.json`, que no se versiona (Axiom lo excluye en `.git/info/exclude`). `~/.axiom` (o `AXIOM_STATE_DIR`) solo guarda el registro del hub, las copias de seguridad, `bin` y la caché.
+* **Opcionales:** GGA y CodeGraph no se instalan por defecto; hay que pedirlos expresamente, y si los eliges conservan su huella en tu HOME, que Axiom avisa.
+* **Permisos:** el componente `permissions` escribe sus reglas de denegación en el proyecto (por ejemplo `.claude/settings.json`) y nunca en tu HOME. Solo añade `deny`: no activa modos de autoaprobación como `bypassPermissions` y respeta el `deny` que ya tengas.
+* **Inercia fuera del proyecto:** un directorio solo cuenta como proyecto de Axiom si tiene un `axiom.yaml` (propio o alcanzado por el puntero `.axiom-workspace`). Los hooks instalados no hacen nada en repositorios que no lo tienen, aunque lleven un `openspec/`.
+* **Reversible:** `axiom uninstall --all` desde el proyecto retira lo que `setup` escribió ([Uso: uninstall](usage.md#uninstall)).
 
 ---
 
@@ -236,7 +243,7 @@ Mientras no se archiva, un cambio ya fusionado figura como pendiente de archivar
 
 #### Hook de guarda (capa D) e instalación
 
-`axiom sync` instala `axiom branch guard` como hook en Claude Code, Codex y OpenCode (no en Pi) de forma idempotente, y no instala hooks de git en ningún repositorio. El hook bloquea la escritura de documentos de Axiom (la carpeta de un cambio u `odd/tasks/<cambio>.md`) cuando el repositorio no está en la rama que corresponde, con la orden `axiom branch ensure` que lo corrige, y avisa sin bloquear en el resto de ficheros de un cambio registrado. Es inerte fuera de un proyecto Axiom, falla en abierto y solo afecta a las escrituras del agente, nunca a un editor humano.
+`axiom sync` instala `axiom branch guard` como hook en Claude Code, Codex y OpenCode (no en Pi) de forma idempotente, y no instala hooks de git en ningún repositorio. El hook bloquea la escritura de documentos de Axiom (la carpeta de un cambio u `odd/tasks/<cambio>.md`) cuando el repositorio no está en la rama que corresponde, con la orden `axiom branch ensure` que lo corrige, y avisa sin bloquear en el resto de ficheros de un cambio registrado. Con el ámbito workspace, que es el predeterminado, se instala en la configuración del proyecto (`.claude/settings.json`, `.codex/hooks.json`, `.opencode/plugins/`), no en la de tu usuario. Es inerte fuera de un proyecto Axiom (el que tiene un `axiom.yaml`; un `openspec/` suelto no cuenta), falla en abierto y solo afecta a las escrituras del agente, nunca a un editor humano.
 
 #### En este repositorio (política local)
 
@@ -578,13 +585,13 @@ Puntos de fricción, dependencias pendientes de terceros o dudas que requieren r
    ```
 
 ### Sincronizar Agentes en el Repositorio Local (Workspace-Scoped)
-En Axiom, la sincronización por defecto debe acotarse al ámbito del proyecto para aislar configuraciones y evitar colisiones:
+En Axiom, la sincronización se acota por defecto al ámbito del proyecto (`--scope workspace` es el valor predeterminado) para aislar configuraciones y evitar colisiones:
 
 ```bash
 axiom sync --scope=workspace
 ```
 
-Este comando asegura que los prompts, agentes locales (`opencode.json`) y herramientas del proyecto reflejen las últimas directivas sin tocar tu configuración global de usuario en `~/.config/opencode/`.
+Este comando asegura que los prompts, agentes locales (`opencode.json`) y herramientas del proyecto reflejen las últimas directivas sin tocar tu configuración global de usuario en `~/.config/opencode/`. Usa la raíz del proyecto aunque lo lances desde una subcarpeta y actualiza el estado de `<raíz>/.axiom/state.json`.
 
 ### Mantenimiento Semántico del CodeGraph (`axiom semantic reindex`)
 

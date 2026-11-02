@@ -52,6 +52,9 @@ func (e *Engine) warnFile(path string) (root, message string, ok bool) {
 	if !inGit {
 		return "", "", false
 	}
+	if _, isProject := workspace.IsAxiomProject(start); !isProject {
+		return "", "", false
+	}
 	loc, err := workspace.Locate(start)
 	if err != nil || loc.Origin == workspace.OriginStart || branch.ConfigRefusal(loc) != nil {
 		return "", "", false

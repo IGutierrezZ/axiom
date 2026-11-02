@@ -8,13 +8,13 @@ Esta guía describe los componentes que Axiom puede configurar para los agentes 
 
 | Componente | ID | Descripción |
 |------------|----|-------------|
-| Engram™ | `engram` | Memoria persistente entre sesiones mediante MCP: detección del proyecto, búsqueda de texto, sincronización Git y consolidación de proyectos. Consulta el [repositorio de Engram](https://github.com/Gentleman-Programming/engram). |
+| Engram™ | `engram` | Memoria persistente entre sesiones mediante MCP: detección del proyecto, búsqueda de texto, sincronización Git y consolidación de proyectos. Consulta el [repositorio de Engram](https://github.com/Gentleman-Programming/engram). Con `--scope workspace` el MCP se declara en el proyecto y `engram setup <agente>` no se ejecuta (véase [Engram y el ámbito workspace](engram.md#engram-y-el-ámbito-workspace)). |
 | SDD | `sdd` | Flujo Spec-Driven Development. El agente puede usarlo cuando el trabajo lo requiera o cuando se lo pidas; no necesitas memorizar los comandos. |
-| Skills | `skills` | Catálogo de skills de desarrollo que Axiom instala en la configuración de los agentes seleccionados. |
+| Skills | `skills` | Catálogo de skills de desarrollo que Axiom instala en la configuración de los agentes seleccionados. Con `--scope workspace` escribe una sola copia compartida en `.agents/skills` (y `.claude/skills` si Claude Code está entre los agentes); véase [Agentes](agents.md#skills-en---scope-workspace-una-sola-copia-compartida). |
 | Context7 | `context7` | Servidor MCP opcional para consultar documentación de frameworks y bibliotecas. |
 | Persona | `persona` | Inyección opcional de la persona de mentor (`gentleman`) o neutral; también puede mantenerse una persona personalizada sin gestión. |
-| Permisos | `permissions` | Valores predeterminados y guardas de seguridad. El overlay de permisos se aplica a Claude Code y OpenCode. La lista de rutas sensibles incluye `~/.ssh/*`, `~/.ssh/**/*`, `**/*.pem`, `**/*.key`, `**/.env*`, `~/.credentials/*`, `~/.aws/credentials`, `~/.config/gh/hosts.yml`, `~/Library/Keychains/*`, `**/secrets/*`, `**/*.p12` y `**/*.pfx`. |
-| GGA | `gga` | Gentleman Guardian Angel, herramienta externa para cambiar de proveedor de IA. |
+| Permisos | `permissions` | Valores predeterminados y guardas de seguridad. Solo escribe reglas protectoras: la lista `permissions.deny` de Claude Code, que se une a la del usuario (sus entradas primero y en su orden, sin duplicados), y las reglas `ask` y `deny` de OpenCode y Kilo Code. Axiom nunca fija modos de autoaprobación (`bypassPermissions`, `auto_edit`, `chat.tools.autoApprove` ni un `allow` general en OpenCode y Kilo Code) ni borra los que el usuario ya tenga, de modo que Gemini CLI, Qwen Code y VS Code Copilot no reciben nada. El destino sigue el ámbito de instalación: con `--scope workspace` (el predeterminado) escribe bajo la raíz del proyecto y con `--scope global`, en el HOME. Un agente sin modo workspace se omite con un aviso y nunca se escribe en el HOME. `axiom sync` lo incluye si figura en la selección guardada o con `--include-permissions`; la TUI añade esa opción por su cuenta al descubrir Codex, sin efecto, porque Codex no tiene overlay de permisos en ningún ámbito. La lista de rutas sensibles incluye `~/.ssh/*`, `~/.ssh/**/*`, `**/*.pem`, `**/*.key`, `**/.env*`, `~/.credentials/*`, `~/.aws/credentials`, `~/.config/gh/hosts.yml`, `~/Library/Keychains/*`, `**/secrets/*`, `**/*.p12` y `**/*.pfx`. |
+| GGA | `gga` | Gentleman Guardian Angel, herramienta externa para cambiar de proveedor de IA. Opcional: ningún preset la instala, hay que pedirla de forma explícita. |
 
 ### Temas visuales
 
@@ -28,7 +28,11 @@ La primera cobertura incluye los 15 portadores principales de instrucciones dist
 
 ## GGA
 
-`axiom install --component gga` instala o aprovisiona el ejecutable `gga` en el equipo.
+GGA es opcional y no forma parte de ningún preset, ni siquiera del predeterminado. `axiom install --component gga` instala o aprovisiona el ejecutable `gga` en el equipo; también puede elegirse en la TUI con el preset personalizado.
+
+Las instalaciones que ya tenían GGA lo conservan: `axiom sync` sigue refrescando su configuración si figura en la selección guardada o, sin selección guardada, si Axiom ya lo aprovisionó en el HOME. Quitar GGA de los presets solo cambia lo que se instala en instalaciones nuevas.
+
+Con `--scope workspace`, GGA sigue escribiendo en tu carpeta de usuario (su configuración en `~/.config/gga`, o en `AppData\Roaming\gga` en Windows; su runtime en `~/.local/share/gga` y, en Windows, los shims de `~/bin`, que se añade al PATH de usuario). Como es una elección explícita, se permite, pero `install` y `sync` lo declaran con un aviso que lista esas rutas, y `axiom doctor` lo muestra en su apartado de huella de máquina.
 
 No configura automáticamente hooks para cada proyecto (`gga init` o `gga install`): esa decisión corresponde al repositorio concreto.
 
@@ -69,7 +73,7 @@ Axiom incorpora skills y las inyecta en la configuración de los agentes selecci
 | Go Testing | `go-testing` | Patrones de pruebas Go, incluidas pruebas TUI de Bubble Tea. |
 | Skill Creator | `skill-creator` | Crea skills para agentes siguiendo el formato Agent Skills. |
 | Skill Improver | `skill-improver` | Audita y mejora skills frente a las convenciones del repositorio. |
-| Skill Registry | `skill-registry` | Genera el índice de skills con sus activadores y rutas `SKILL.md`. |
+| Skill Registry | `skill-registry` | Genera el índice de skills con sus activadores y rutas `SKILL.md`; cada skill apunta a una sola carpeta (la compartida `.agents/skills` si existe). Solo actúa dentro de un proyecto de Axiom (con `axiom.yaml`). |
 | Chained PR | `chained-pr` | Planifica PR encadenadas revisables cuando se necesitan. |
 | Cognitive Doc Design | `cognitive-doc-design` | Diseña documentación clara y fácil de revisar. |
 | Work Unit Commits | `work-unit-commits` | Divide la implementación en unidades de trabajo revisables. |
@@ -91,9 +95,11 @@ Para skills específicas de frameworks (React, Angular, TypeScript, Tailwind, Zo
 
 | Preset | ID | Contenido |
 |--------|----|-----------|
-| Completo | `full-gentleman` | Engram, SDD, Skills, Context7, Permisos y GGA; se añade la persona seleccionada salvo que se elija mantenerla personalizada. El ID se conserva por compatibilidad y no instala temas visuales. |
-| Ecosistema | `ecosystem-only` | Engram, SDD, Skills, Context7 y GGA; se añade la persona seleccionada salvo que se elija mantenerla personalizada. |
+| Completo | `full-gentleman` | Engram, SDD, Skills, Context7 y Permisos; se añade la persona seleccionada salvo que se elija mantenerla personalizada. El ID se conserva por compatibilidad y no instala temas visuales. |
+| Ecosistema | `ecosystem-only` | Engram, SDD, Skills y Context7; se añade la persona seleccionada salvo que se elija mantenerla personalizada. |
 | Mínimo | `minimal` | Engram y las skills SDD; la persona depende de la selección. |
 | Personalizado | `custom` | Permite elegir componentes y skills manualmente y dejar la persona existente sin gestionar. |
 
 La persona se elige por separado y se aplica de forma independiente del preset. Ningún preset instala temas visuales.
+
+GGA y CodeGraph son opcionales y ningún preset los incluye. GGA se pide con `--component gga` o con el preset personalizado; CodeGraph, una herramienta de la comunidad, se elige aparte en la TUI y nunca viene marcada por defecto. CodeGraph se instala como paquete global y escribe su MCP y su guía en la configuración de usuario de los agentes detectados, también con `--scope workspace`: Axiom no lo integra con ubicación de proyecto, así que declara esa huella igual que la de GGA.

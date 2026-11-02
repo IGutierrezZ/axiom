@@ -588,6 +588,82 @@ func TestRestoreScope_RefusalNamesTheValidatedRoots(t *testing.T) {
 	})
 }
 
+// TestMachineRoots fija cuándo hay raíz de máquina propia: solo con AXIOM_STATE_DIR
+// fuera de home, y solo para el directorio de lanzadores.
+func TestMachineRoots(t *testing.T) {
+	home := t.TempDir()
+
+	t.Run("sin AXIOM_STATE_DIR home ya cubre los lanzadores", func(t *testing.T) {
+		t.Setenv("AXIOM_STATE_DIR", "")
+		if got := MachineRoots(home); len(got) != 0 {
+			t.Fatalf("MachineRoots() = %v, want ninguna", got)
+		}
+	})
+
+	t.Run("AXIOM_STATE_DIR dentro de home no añade nada", func(t *testing.T) {
+		t.Setenv("AXIOM_STATE_DIR", filepath.Join(home, "estado"))
+		if got := MachineRoots(home); len(got) != 0 {
+			t.Fatalf("MachineRoots() = %v, want ninguna", got)
+		}
+	})
+
+	t.Run("AXIOM_STATE_DIR fuera de home añade solo bin", func(t *testing.T) {
+		stateDir := t.TempDir()
+		t.Setenv("AXIOM_STATE_DIR", stateDir)
+		want := filepath.Join(stateDir, "bin")
+		if got := MachineRoots(home); len(got) != 1 || got[0] != want {
+			t.Fatalf("MachineRoots() = %v, want [%s]", got, want)
+		}
+	})
+
+	t.Run("una raíz de estado relativa no se admite", func(t *testing.T) {
+		t.Setenv("AXIOM_STATE_DIR", "estado-relativo")
+		if got := MachineRoots(home); len(got) != 0 {
+			t.Fatalf("MachineRoots() = %v, want ninguna", got)
+		}
+	})
+}
+
+// TestRestoreDefaultRootsIncludeTheAxiomLauncherDirOutsideHome cubre la restauración
+// independiente (`axiom restore`, TUI): un manifiesto con el lanzador de OpenCode en
+// <AXIOM_STATE_DIR>/bin se restaura, y el resto de la raíz de estado sigue vedado.
+func TestRestoreDefaultRootsIncludeTheAxiomLauncherDirOutsideHome(t *testing.T) {
+	home := t.TempDir()
+	stateDir := t.TempDir()
+	t.Setenv("AXIOM_STATE_DIR", stateDir)
+	origUserHomeDirFn := UserHomeDirFn
+	t.Cleanup(func() { UserHomeDirFn = origUserHomeDirFn })
+	UserHomeDirFn = func() (string, error) { return home, nil }
+
+	launcher := filepath.Join(stateDir, "bin", "opencode.cmd")
+	if err := os.MkdirAll(filepath.Dir(launcher), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(launcher, []byte("original\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	manifest, err := NewSnapshotter().Create(filepath.Join(t.TempDir(), "snapshot"), []string{launcher})
+	if err != nil {
+		t.Fatalf("Create() error = %v", err)
+	}
+	if err := os.WriteFile(launcher, []byte("cambiado\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := (RestoreService{}).Restore(manifest); err != nil {
+		t.Fatalf("Restore() error = %v", err)
+	}
+	if got, err := os.ReadFile(launcher); err != nil || string(got) != "original\n" {
+		t.Fatalf("lanzador tras restaurar = %q, %v; want el original", got, err)
+	}
+
+	elsewhere := filepath.Join(stateDir, "cache", "otro.json")
+	err = RestoreService{}.Restore(Manifest{Entries: []ManifestEntry{{OriginalPath: elsewhere, Existed: false}}})
+	if err == nil || !strings.Contains(err.Error(), "allowed root") {
+		t.Fatalf("Restore() fuera de bin error = %v, want rechazo por raíz no permitida", err)
+	}
+}
+
 // TestIsPathUnderRoot_FailsClosedOnAncestorSymlink pins decode2's
 // 2026-08-18 review concern: a leaf path that does not exist yet but
 // has an in-root ancestor symlink to outside must refuse. The pre-fix

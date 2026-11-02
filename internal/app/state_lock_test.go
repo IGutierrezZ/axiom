@@ -68,7 +68,7 @@ func TestPersistAssignmentsReReadsLatestStateUnderLock(t *testing.T) {
 	selection := model.Selection{
 		CodexCarrilModelAssignments: map[string]string{"sdd-strong": "test-model"},
 	}
-	if err := persistAssignments(home, selection); err == nil || !strings.Contains(err.Error(), "acquire install state lock") {
+	if err := persistAssignments(state.GlobalStore(home), selection); err == nil || !strings.Contains(err.Error(), "acquire install state lock") {
 		t.Fatalf("contended persistAssignments error = %v, want lock acquisition failure", err)
 	}
 	if err := state.Write(home, state.InstallState{RDDMode: "on", Persona: "concurrent"}); err != nil {
@@ -78,7 +78,7 @@ func TestPersistAssignmentsReReadsLatestStateUnderLock(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := persistAssignments(home, selection); err != nil {
+	if err := persistAssignments(state.GlobalStore(home), selection); err != nil {
 		t.Fatalf("persistAssignments() error = %v", err)
 	}
 	got, err := state.Read(home)

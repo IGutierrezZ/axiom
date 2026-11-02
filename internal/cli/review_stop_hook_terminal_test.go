@@ -12,6 +12,7 @@ import (
 
 func TestReviewStopHookSilentAfterAcknowledgementWithoutPostBurnStatus(t *testing.T) {
 	repo, _, _, pending := startZeroLensPendingAcknowledgement(t)
+	markReviewCLIAxiomProject(t, repo)
 	if err := reviewtransaction.AcknowledgeApprovedCompactAuthority(context.Background(), repo, pending.LineageID,
 		pending.TargetIdentity, pending.ExpectedRevision, pending.Token); err != nil {
 		t.Fatal(err)

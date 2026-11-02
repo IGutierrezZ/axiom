@@ -25,16 +25,17 @@ func UpsertCodexEngramBlock(content, engramCmd string) string {
 	codexEngramBlock := "[mcp_servers.engram]\ncommand = \"" + escapedCmd + "\"\nargs = [\"mcp\", \"--tools=agent\"]"
 	content = strings.ReplaceAll(content, "\r\n", "\n")
 	lines := strings.Split(content, "\n")
+	inside := tomlContinuationLines(lines)
 
 	var kept []string
 	for i := 0; i < len(lines); {
 		trimmed := strings.TrimSpace(lines[i])
-		if trimmed == "[mcp_servers.engram]" {
+		if trimmed == "[mcp_servers.engram]" && !inside[i] {
 			// Skip the old block header and all its key-value lines.
 			i++
 			for i < len(lines) {
 				next := strings.TrimSpace(lines[i])
-				if strings.HasPrefix(next, "[") && strings.HasSuffix(next, "]") {
+				if !inside[i] && strings.HasPrefix(next, "[") && strings.HasSuffix(next, "]") {
 					break
 				}
 				i++
@@ -79,16 +80,17 @@ func UpsertCodexMCPServerBlock(content, serverID, command string, args []string)
 
 	content = strings.ReplaceAll(content, "\r\n", "\n")
 	lines := strings.Split(content, "\n")
+	inside := tomlContinuationLines(lines)
 
 	var kept []string
 	for i := 0; i < len(lines); {
 		trimmed := strings.TrimSpace(lines[i])
-		if trimmed == header {
+		if trimmed == header && !inside[i] {
 			// Skip the old block header and all its key-value lines.
 			i++
 			for i < len(lines) {
 				next := strings.TrimSpace(lines[i])
-				if strings.HasPrefix(next, "[") && strings.HasSuffix(next, "]") {
+				if !inside[i] && strings.HasPrefix(next, "[") && strings.HasSuffix(next, "]") {
 					break
 				}
 				i++
@@ -120,15 +122,16 @@ func UpsertCodexRemoteMCPServerBlock(content, serverID, url string) string {
 
 	content = strings.ReplaceAll(content, "\r\n", "\n")
 	lines := strings.Split(content, "\n")
+	inside := tomlContinuationLines(lines)
 
 	var kept []string
 	for i := 0; i < len(lines); {
 		trimmed := strings.TrimSpace(lines[i])
-		if trimmed == header {
+		if trimmed == header && !inside[i] {
 			i++
 			for i < len(lines) {
 				next := strings.TrimSpace(lines[i])
-				if strings.HasPrefix(next, "[") && strings.HasSuffix(next, "]") {
+				if !inside[i] && strings.HasPrefix(next, "[") && strings.HasSuffix(next, "]") {
 					break
 				}
 				i++
@@ -174,8 +177,15 @@ func UpsertTOMLTableKey(content, section, key, rawValue string) string {
 	sectionLine := -1  // line index of the [section] header
 	var keyLines []int // indices of lines matching key= or key = inside the section
 
+	// Las líneas de una cadena multilínea o de una lista abierta no son claves ni
+	// cabeceras, aunque lo parezcan.
+	inside := tomlContinuationLines(lines)
+
 	inSection := false
 	for i, line := range lines {
+		if inside[i] {
+			continue
+		}
 		trimmed := strings.TrimSpace(line)
 		if trimmed == header {
 			sectionLine = i
@@ -257,10 +267,17 @@ func RemoveTOMLTableKeys(content, section string, keys []string) string {
 
 	header := "[" + section + "]"
 	lines := strings.Split(content, "\n")
+	inside := tomlContinuationLines(lines)
 	inSection := false
 	var out []string
 
-	for _, line := range lines {
+	for i, line := range lines {
+		if inside[i] {
+			// Una línea de una cadena multilínea o de una lista abierta no es una
+			// clave ni una cabecera: se conserva tal cual.
+			out = append(out, line)
+			continue
+		}
 		trimmed := strings.TrimSpace(line)
 		if trimmed == header {
 			inSection = true
@@ -297,16 +314,17 @@ func RemoveTOMLTableKeys(content, section string, keys []string) string {
 func RemoveTOMLTable(content, tableName string) string {
 	content = strings.ReplaceAll(content, "\r\n", "\n")
 	lines := strings.Split(content, "\n")
+	inside := tomlContinuationLines(lines)
 	header := "[" + tableName + "]"
 
 	kept := make([]string, 0, len(lines))
 	for i := 0; i < len(lines); {
 		trimmed := strings.TrimSpace(lines[i])
-		if trimmed == header {
+		if trimmed == header && !inside[i] {
 			i++
 			for i < len(lines) {
 				next := strings.TrimSpace(lines[i])
-				if strings.HasPrefix(next, "[") && strings.HasSuffix(next, "]") {
+				if !inside[i] && strings.HasPrefix(next, "[") && strings.HasSuffix(next, "]") {
 					break
 				}
 				i++
@@ -375,6 +393,21 @@ func UpsertTopLevelTOMLString(content, key, value string) string {
 	out = append(out, cleaned[insertAt:]...)
 
 	return strings.TrimSpace(strings.Join(out, "\n")) + "\n"
+}
+
+// tomlContinuationLines marca las líneas que empiezan dentro de una cadena
+// multilínea o de una lista abierta: son el contenido de un valor y no pueden ser
+// una cabecera de tabla ni una clave, por mucho que lo parezcan (el texto de un
+// developer_instructions puede traer una línea "[features]").
+func tomlContinuationLines(lines []string) []bool {
+	inside := make([]bool, len(lines))
+	arrayDepth := 0
+	var multilineQuote byte
+	for i, line := range lines {
+		inside[i] = arrayDepth != 0 || multilineQuote != 0
+		multilineQuote = updateTOMLMultilineString(line, multilineQuote, &arrayDepth)
+	}
+	return inside
 }
 
 func isTOMLKeyAssignment(line, key string) bool {

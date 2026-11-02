@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/capabilitymanifest"
+	"github.com/IGutierrezZ/axiom/v3/internal/agents/sharedskills"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/filemerge"
 	"github.com/IGutierrezZ/axiom/v3/internal/installcmd"
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
@@ -26,6 +27,10 @@ type Adapter struct {
 	lookPath func(string) (string, error)
 	statPath func(string) statResult
 	resolver installcmd.Resolver
+
+	// workspaceRoot, cuando no está vacío, es la raíz del proyecto a la que se
+	// ha ligado el adaptador (WithWorkspace).
+	workspaceRoot string
 }
 
 func NewAdapter() *Adapter {
@@ -49,7 +54,7 @@ func (a *Adapter) Tier() model.SupportTier {
 // --- Detection ---
 
 func (a *Adapter) Detect(_ context.Context, homeDir string) (bool, string, string, bool, error) {
-	configPath := ConfigPath(homeDir)
+	configPath := a.configDir(homeDir)
 
 	binaryPath, err := a.lookPath("opencode")
 	installed := err == nil
@@ -83,23 +88,38 @@ func (a *Adapter) InstallCommand(profile system.PlatformProfile) ([][]string, er
 // --- Config paths ---
 
 func (a *Adapter) GlobalConfigDir(homeDir string) string {
-	return ConfigPath(homeDir)
+	return a.configDir(homeDir)
 }
 
 func (a *Adapter) SystemPromptDir(homeDir string) string {
-	return ConfigPath(homeDir)
+	return a.configDir(homeDir)
 }
 
+// SystemPromptFile es AGENTS.md en la carpeta global. En el proyecto es el
+// fichero propio de Axiom (.opencode/axiom.md), que se registra en la lista
+// instructions de opencode.json: el AGENTS.md de la raíz es del equipo.
 func (a *Adapter) SystemPromptFile(homeDir string) string {
+	if a.inWorkspace(homeDir) {
+		return filepath.Join(a.configDir(homeDir), projectInstructionsFileName)
+	}
 	return filepath.Join(ConfigPath(homeDir), "AGENTS.md")
 }
 
+// SkillsDir es la carpeta de skills de la carpeta global y, en el proyecto, la
+// compartida .agents/skills: OpenCode la lee, junto a .opencode/skills y
+// .claude/skills, y una sola copia evita las skills duplicadas.
 func (a *Adapter) SkillsDir(homeDir string) string {
-	return filepath.Join(ConfigPath(homeDir), "skills")
+	if a.inWorkspace(homeDir) {
+		return sharedskills.Dir(homeDir)
+	}
+	return filepath.Join(a.configDir(homeDir), "skills")
 }
 
+// SettingsPath prefiere opencode.jsonc si ya existe como fichero regular y, en
+// otro caso, opencode.json. En el proyecto el fichero está en la raíz, no dentro
+// de .opencode.
 func (a *Adapter) SettingsPath(homeDir string) string {
-	configDir := ConfigPath(homeDir)
+	configDir := a.settingsDir(homeDir)
 	jsoncPath := filepath.Join(configDir, "opencode.jsonc")
 	if regularFileExists(jsoncPath) {
 		return jsoncPath
@@ -190,7 +210,7 @@ func (a *Adapter) SupportsSlashCommands() bool {
 }
 
 func (a *Adapter) CommandsDir(homeDir string) string {
-	return filepath.Join(ConfigPath(homeDir), "commands")
+	return filepath.Join(a.configDir(homeDir), "commands")
 }
 
 func (a *Adapter) SupportsSubAgents() bool {

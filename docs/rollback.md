@@ -11,6 +11,10 @@ Cada operación de escritura:
 3. Crea una instantánea comprimida (`snapshot.tar.gz`).
 4. Aplica la política de retención a las copias no fijadas.
 
+Un `sync` que termina bien sin escribir ningún fichero («no changes needed») descarta la copia que acababa de crear: sería idéntica al estado actual y no sirve de punto de restauración, así que las sincronizaciones sin cambios no acumulan copias. Un `sync` que sí escribe conserva su copia previa.
+
+Las copias de Axiom viven en `<raíz de estado>/backups/`, donde la raíz de estado es `~/.axiom` o, si defines `AXIOM_STATE_DIR`, esa carpeta. Con la variable definida, las copias hechas antes en `~/.axiom/backups/` dejan de listarse (siguen en disco); las históricas de Gentle AI en `~/.gentle-ai/backups/` se siguen leyendo.
+
 El manifiesto registra el origen, la fecha, el número de ficheros, la huella y si una ruta existía antes de la operación. Las copias antiguas, anteriores al formato comprimido, conservan un directorio `files/`; Axiom también las admite al restaurar.
 
 El alcance de un respaldo de sincronización depende de los agentes registrados como instalados por Axiom. No presupongas que incluye los directorios de agentes configurados manualmente fuera de Axiom. Las copias de Axiom (`~/.axiom/backups/`) y las históricas de Gentle AI (`~/.gentle-ai/backups/`) mantienen su procedencia, aunque tengan identificadores repetidos.

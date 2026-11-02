@@ -58,8 +58,10 @@ var guardNone = GuardDecision{Action: GuardActionNone}
 // Guard decide qué hace el hook con la carga (design D-18, §4.2). Nunca falla ni lanza procesos:
 // con cualquier error o pánico recuperado devuelve `none`.
 //
-// Bloqueo (solo evento `pre` y documento de Axiom): `Locate` sobre ficheros —con `OriginStart`,
-// fuera de un proyecto Axiom, nada—, contención de la ruta bajo `<planning home>/changes` o
+// Bloqueo (solo evento `pre` y documento de Axiom): `IsAxiomProject` —un `axiom.yaml` propio o el
+// alcanzado por el puntero `.axiom-workspace`; un `openspec/` suelto no basta, lo usan repositorios
+// ajenos y la guarda está instalada en toda la máquina—, `Locate` sobre ficheros —con
+// `OriginStart`, nada—, contención de la ruta bajo `<planning home>/changes` o
 // `<raíz del proyecto>/odd/tasks` y `VerdictFor` con el consultante `guard` evaluado en los dos
 // contextos: bloquea solo si es `wrong_branch` en ambos (G-11: la guarda no conoce la fase, así que
 // da por buena la rama que lo sea en cualquiera de los dos contextos; la exactitud por fase la
@@ -98,7 +100,11 @@ func (e *Engine) Guard(ctx context.Context, payload GuardPayload) (decision Guar
 // guardDocument evalúa un documento de Axiom y devuelve el bloqueo si lo hay. Un fallo en
 // cualquier paso —proyecto ilegible, veredicto con error— no bloquea (falla en abierto).
 func (e *Engine) guardDocument(ctx context.Context, document axiomDocument) (GuardDecision, bool) {
-	loc, err := workspace.Locate(existingDirectory(document.Path))
+	start := existingDirectory(document.Path)
+	if _, isProject := workspace.IsAxiomProject(start); !isProject {
+		return guardNone, false
+	}
+	loc, err := workspace.Locate(start)
 	if err != nil || loc.Origin == workspace.OriginStart || !containsDocument(loc, document) {
 		return guardNone, false
 	}

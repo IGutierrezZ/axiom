@@ -3525,7 +3525,7 @@ func TestInjectOpenCodeSubagentPromptsStayExecutorScoped(t *testing.T) {
 		}
 
 		prompt, _ := agentDef["prompt"].(string)
-		expectedRef, err := SharedPromptFileRef(settingsPath, home, phase)
+		expectedRef, err := SharedPromptFileRef(settingsPath, SharedPromptDir(home), phase)
 		if err != nil {
 			t.Fatalf("SharedPromptFileRef() error = %v", err)
 		}
@@ -3566,7 +3566,7 @@ func TestInjectKilocodeSubagentPromptUsesSharedRelativePath(t *testing.T) {
 	}
 
 	prompt := agentPrompt(t, readOpenCodeAgents(t, adapter.SettingsPath(home)), "sdd-apply")
-	want, err := SharedPromptFileRef(adapter.SettingsPath(home), home, "sdd-apply")
+	want, err := SharedPromptFileRef(adapter.SettingsPath(home), SharedPromptDir(home), "sdd-apply")
 	if err != nil {
 		t.Fatalf("SharedPromptFileRef() error = %v", err)
 	}

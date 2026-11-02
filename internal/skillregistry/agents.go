@@ -36,9 +36,14 @@ const AgentsRelPath = agentsRelPath
 //
 //   - canonical OR legacy pair already present -> returned unchanged
 //     (InjectMarkdownSection replaces the managed body and elevates legacy)
-//   - no pair + `## Skills` at line start -> that region (from the header up to
-//     the line before the next `## ` at line start, or EOF) is replaced in situ
-//     by an empty canonical pair
+//   - no pair + `## Skills` at line start AND the region has the shape of the
+//     index Axiom generated (see isAxiomSkillsIndexRegion) -> that region (from
+//     the header up to the line before the next `## ` at line start, or EOF) is
+//     replaced in situ by an empty canonical pair
+//   - no pair + `## Skills` that is the team's own (any other shape) -> returned
+//     unchanged: the team's section stays byte-identical and
+//     InjectMarkdownSection appends the managed block apart, with its markers,
+//     so uninstall can remove exactly that block and nothing else
 //   - no pair + no `## Skills` header -> returned unchanged
 //     (InjectMarkdownSection then appends)
 //
@@ -51,7 +56,7 @@ func AdoptSkillsIndexMarkers(existing string) string {
 		return existing
 	}
 	start, end, ok := skillsHeadingRegion(existing)
-	if !ok {
+	if !ok || !isAxiomSkillsIndexRegion(existing[start:end]) {
 		return existing
 	}
 	// The region's final line terminator stays outside the replacement, so
@@ -119,6 +124,118 @@ func skillsHeadingRegion(s string) (start, end int, ok bool) {
 func isSkillsHeading(line string) bool {
 	trimmed := strings.TrimRight(line, " \t\r")
 	return trimmed == "## Skills"
+}
+
+// Headers of the unmarked `## Skills` indexes Axiom itself used to generate: the
+// current four-column table and the obsolete three-column one that the project's
+// own AGENTS.md carried before the markers existed (spec §3.4).
+var (
+	axiomSkillsIndexHeaders = [][]string{
+		{"Skill", "Trigger / description", "Scope", "Path"},
+		{"Skill", "Trigger", "Path"},
+	}
+)
+
+// isAxiomSkillsIndexRegion reports whether an unmarked `## Skills` region (from
+// the heading line to the next `## ` heading or EOF) has the shape of the index
+// Axiom generated, and so may be adopted as the managed section. The criterion is
+// deliberately strict, because adopting replaces the whole region:
+//
+//   - the first line is the `## Skills` heading;
+//   - the first non-blank line after it is a table header whose cells are exactly
+//     one of axiomSkillsIndexHeaders (after trimming spaces);
+//   - the next line is the table's separator row (`| --- | --- |`, optional
+//     colons and spaces) with the same number of cells;
+//   - every remaining non-blank line is a table row (starts and ends with `|`).
+//
+// Any prose, list, extra heading level or different column set marks the section
+// as the team's own: it is kept untouched. A team table that happens to use
+// exactly Axiom's header is indistinguishable and is adopted.
+func isAxiomSkillsIndexRegion(region string) bool {
+	lines := strings.Split(strings.ReplaceAll(region, "\r\n", "\n"), "\n")
+	if len(lines) == 0 || !isSkillsHeading(lines[0]) {
+		return false
+	}
+	var table []string
+	for _, line := range lines[1:] {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "" || isSkillsIndexMarkerLine(trimmed) {
+			// A stray managed marker (orphan left by an interrupted run) is Axiom's
+			// own residue, not team content.
+			continue
+		}
+		table = append(table, trimmed)
+	}
+	if len(table) < 2 {
+		return false
+	}
+	header := tableCells(table[0])
+	if !matchesAxiomSkillsHeader(header) {
+		return false
+	}
+	separator := tableCells(table[1])
+	if len(separator) != len(header) {
+		return false
+	}
+	for _, cell := range separator {
+		if !isSeparatorCell(cell) {
+			return false
+		}
+	}
+	for _, row := range table[2:] {
+		if !strings.HasPrefix(row, "|") || !strings.HasSuffix(row, "|") {
+			return false
+		}
+	}
+	return true
+}
+
+func isSkillsIndexMarkerLine(line string) bool {
+	switch line {
+	case skillsIndexOpen, skillsIndexClose, skillsIndexLegacyOpen, skillsIndexLegacyClose:
+		return true
+	}
+	return false
+}
+
+// tableCells splits a `| a | b |` row into its trimmed cells; it returns nil
+// when the line is not a table row.
+func tableCells(line string) []string {
+	if len(line) < 2 || !strings.HasPrefix(line, "|") || !strings.HasSuffix(line, "|") {
+		return nil
+	}
+	parts := strings.Split(line[1:len(line)-1], "|")
+	cells := make([]string, len(parts))
+	for i, part := range parts {
+		cells[i] = strings.TrimSpace(part)
+	}
+	return cells
+}
+
+func matchesAxiomSkillsHeader(cells []string) bool {
+	for _, want := range axiomSkillsIndexHeaders {
+		if len(cells) != len(want) {
+			continue
+		}
+		match := true
+		for i := range want {
+			if cells[i] != want[i] {
+				match = false
+				break
+			}
+		}
+		if match {
+			return true
+		}
+	}
+	return false
+}
+
+// isSeparatorCell reports whether a table cell is a markdown separator (`---`,
+// `:--`, `--:`, `:-:`).
+func isSeparatorCell(cell string) bool {
+	trimmed := strings.Trim(cell, ":")
+	return trimmed != "" && strings.Trim(trimmed, "-") == "" && len(cell)-len(trimmed) <= 2
 }
 
 // skillsIndexBody is the managed content between the skills-index markers

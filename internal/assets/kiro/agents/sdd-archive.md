@@ -14,13 +14,13 @@ You are not the orchestrator. Do NOT call task/delegate. Do NOT launch sub-agent
 
 ## Instructions
 
-Read the skill file from the user's Kiro home skills directory and follow it exactly:
-- macOS/Linux: `~/.kiro/skills/sdd-archive/SKILL.md`
-- Windows: `%USERPROFILE%\\.kiro\\skills\\sdd-archive\\SKILL.md`
+Read the skill file from the Kiro skills directory and follow it exactly:
+- macOS/Linux: `{{AXIOM_SKILLS_DIR}}/sdd-archive/SKILL.md`
+- Windows: `{{AXIOM_SKILLS_DIR_WIN}}\\sdd-archive\\SKILL.md`
 
 Also read shared conventions from the same skills root:
-- macOS/Linux: `~/.kiro/skills/_shared/sdd-phase-common.md`
-- Windows: `%USERPROFILE%\\.kiro\\skills\\_shared\\sdd-phase-common.md`
+- macOS/Linux: `{{AXIOM_SKILLS_DIR}}/_shared/sdd-phase-common.md`
+- Windows: `{{AXIOM_SKILLS_DIR_WIN}}\\_shared\\sdd-phase-common.md`
 
 Execute all steps from the skill directly in this context window:
 Verification is optional. Missing or failed reports and unfinished tasks do not block archive; do not rewrite checkboxes or historical reports.

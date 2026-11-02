@@ -47,3 +47,19 @@ func TestExistingPresetsDoNotImplyCommunityTools(t *testing.T) {
 		})
 	}
 }
+
+func TestPresetsDoNotInstallGGAByDefault(t *testing.T) {
+	for _, preset := range []PresetID{PresetFullGentleman, PresetEcosystemOnly, PresetMinimal, PresetCustom} {
+		for _, persona := range []PersonaID{PersonaAxiom, PersonaCustom} {
+			if got := ComponentsForPreset(preset, persona); slices.Contains(got, ComponentGGA) {
+				t.Fatalf("ComponentsForPreset(%q, %q) = %v, GGA es opcional y no debe venir por defecto", preset, persona, got)
+			}
+		}
+	}
+}
+
+func TestFullGentlemanKeepsPermissionComponent(t *testing.T) {
+	if got := ComponentsForPreset(PresetFullGentleman, PersonaAxiom); !slices.Contains(got, ComponentPermission) {
+		t.Fatalf("full-gentleman debe conservar el componente de permisos (solo deny): %v", got)
+	}
+}

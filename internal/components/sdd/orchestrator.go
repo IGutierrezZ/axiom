@@ -30,6 +30,11 @@ const (
 // that work; the zero value preserves the historical prompt bytes.
 type OrchestratorRenderOptions struct {
 	IncludeOpenCodeBackgroundPolicy bool
+
+	// SharedPromptDir sustituye a SharedPromptDir(homeDir) como carpeta de los
+	// prompts compartidos de las fases (SharedPromptDirFor). Vacío usa la ruta
+	// global. En workspace apunta a .opencode/prompts/sdd (o .kilo/prompts/sdd).
+	SharedPromptDir string
 }
 
 // sharedOrchestratorSection returns the canonical body for one shared section,

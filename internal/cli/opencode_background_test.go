@@ -395,7 +395,7 @@ func TestPersistInstallStateFullInstallPreservesUnrelatedFields(t *testing.T) {
 		t.Fatal(err)
 	}
 	fresh := state.InstallState{InstalledAgents: []string{"opencode"}, SelectionConfigured: true, Components: []model.ComponentID{model.ComponentPermission}, Persona: "gentleman", BackgroundIntent: model.OpenCodeBackgroundOn}
-	if err := persistInstallState(home, fresh, []string{"opencode"}, InstallFlags{}, "new"); err != nil {
+	if err := persistInstallState(state.GlobalStore(home), fresh, []string{"opencode"}, InstallFlags{}, "new"); err != nil {
 		t.Fatal(err)
 	}
 	got, err := state.Read(home)
@@ -736,6 +736,40 @@ func TestSyncReportsManagedLauncherChanges(t *testing.T) {
 	for _, launcher := range opencodeactivation.ManagedLauncherPaths(home, runtime.GOOS) {
 		if !contains(result.ChangedFiles, launcher) {
 			t.Fatalf("sync ChangedFiles %v missing managed launcher %q", result.ChangedFiles, launcher)
+		}
+	}
+}
+
+// TestBackgroundReportDoesNotListLegacyLaunchersItDoesNotWrite: con la política en
+// off la desactivación vigila ~/.gentle-ai/bin para retirar restos, pero el informe
+// de sync no debe presentarlos como lanzadores gestionados.
+func TestBackgroundReportDoesNotListLegacyLaunchersItDoesNotWrite(t *testing.T) {
+	home := t.TempDir()
+	for _, effective := range []model.OpenCodeBackgroundIntent{model.OpenCodeBackgroundOff, model.OpenCodeBackgroundOn} {
+		background := OpenCodeBackgroundResolution{Intent: effective, Effective: effective}
+		if effective == model.OpenCodeBackgroundOn {
+			target := filepath.Join(home, "opencode-real")
+			if err := os.WriteFile(target, []byte("real"), 0o755); err != nil {
+				t.Fatal(err)
+			}
+			oldVersion, oldTarget := runOpenCodeVersion, resolveOpenCodeTarget
+			runOpenCodeVersion = func(string) (string, error) { return "1.15.11", nil }
+			resolveOpenCodeTarget = func(string, string, string) (string, error) { return target, nil }
+			t.Cleanup(func() { runOpenCodeVersion, resolveOpenCodeTarget = oldVersion, oldTarget })
+		}
+		if _, err := prepareOpenCodeBackgroundActivation(home, &background, true); err != nil {
+			t.Fatal(err)
+		}
+
+		rendered := renderOpenCodeBackgroundActivation(background)
+
+		if strings.Contains(rendered, ".gentle-ai") {
+			t.Errorf("política %s: el informe nombra una ruta heredada que no escribe:\n%s", effective, rendered)
+		}
+		for _, launcher := range opencodeactivation.ManagedLauncherPaths(home, runtime.GOOS) {
+			if !strings.Contains(rendered, launcher) {
+				t.Errorf("política %s: el informe no nombra el lanzador gestionado %q:\n%s", effective, launcher, rendered)
+			}
 		}
 	}
 }

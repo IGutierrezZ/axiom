@@ -41,6 +41,8 @@ Si el plan es correcto, aplica la configuración de los agentes y componentes se
 axiom install
 ```
 
+Por defecto, `axiom install` escribe en el proyecto (`--scope workspace`) y no en tu carpeta de usuario; para instalar en la configuración global de los agentes hay que pedir `--scope global`. Detalle en [Uso](usage.md#install).
+
 Axiom configura los agentes detectados o seleccionados. Algunas integraciones admiten aprovisionar su runtime, mientras que otras requieren instalación manual; los detalles por agente figuran en [Agentes compatibles](agents.md). La selección de agentes no instala ni sincroniza temas visuales.
 
 Los agentes seleccionados durante la instalación se convierten en el ámbito predeterminado de `axiom sync`. Para comprobar los cambios previstos antes de sincronizar:
@@ -75,7 +77,7 @@ El comando `axiom` también abre la TUI cuando se ejecuta en una terminal intera
 
 ## Protecciones integradas
 
-Al seleccionar `permissions`, Axiom aplica a Claude Code y OpenCode una lista de rutas sensibles que incluye `~/.ssh/*`, `**/*.pem`, `**/*.key`, `**/.env*` y `~/.aws/credentials`. Consulta el detalle en [Componentes](components.md).
+Al seleccionar `permissions`, Axiom aplica a Claude Code, OpenCode y Kilo Code una lista de rutas sensibles que incluye `~/.ssh/*`, `**/*.pem`, `**/*.key`, `**/.env*` y `~/.aws/credentials`. Solo añade reglas de denegación y de confirmación: no activa ningún modo de autoaprobación y, con `--scope workspace`, escribe en el proyecto y no en tu HOME. Consulta el detalle en [Componentes](components.md).
 
 ## Plataformas no compatibles
 

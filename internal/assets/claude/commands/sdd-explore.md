@@ -3,7 +3,7 @@ description: Explore and investigate an idea or feature — reads codebase and c
 ---
 
 If the native `sdd-explore` sub-agent is available, delegate this command to it.
-Otherwise, read the skill file at `~/.claude/skills/sdd-explore/SKILL.md` FIRST, then follow its instructions exactly inline.
+Otherwise, read the skill file at `{{AXIOM_SKILLS_DIR}}/sdd-explore/SKILL.md` FIRST, then follow its instructions exactly inline.
 
 CONTEXT:
 - Working directory: Detect agent-side before proceeding by running `git rev-parse --show-toplevel` with the Bash tool; if that fails, run `pwd` with the Bash tool.

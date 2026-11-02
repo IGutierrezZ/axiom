@@ -98,7 +98,7 @@ func TestHistoricalOpenCodePluginDigestTable(t *testing.T) {
 		"skill-registry.ts":            {"v1": 5, "v2": 1},
 		"opencode-review-transport.ts": {"v1": 7, "v2": 1},
 		"model-variants.ts":            {"v1": 6},
-		"sdd-task-result-artifacts.ts": {"v1": 6, "v2": 1},
+		"sdd-task-result-artifacts.ts": {"v1": 8, "v2": 3},
 		// Plugin nuevo (inc-25): sin revisiones anteriores que reconocer; la entrada existe porque
 		// la tabla se indexa por plugin gestionado.
 		"axiom-branch-guard.ts": {},

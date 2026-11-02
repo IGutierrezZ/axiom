@@ -38,7 +38,7 @@ func TestMergeExplicitAgentInstallStatePreservesExistingAssignmentsWhenFreshStat
 		t.Fatalf("state.Write: %v", err)
 	}
 
-	merged, err := mergeExplicitAgentInstallState(home, state.InstallState{InstalledAgents: []string{"codex"}, Persona: "gentleman"}, []string{"codex"}, InstallFlags{})
+	merged, err := mergeExplicitAgentInstallState(state.GlobalStore(home), state.InstallState{InstalledAgents: []string{"codex"}, Persona: "gentleman"}, []string{"codex"}, InstallFlags{})
 	if err != nil {
 		t.Fatalf("mergeExplicitAgentInstallState() error = %v, want nil", err)
 	}
@@ -78,7 +78,7 @@ func TestMergeExplicitAgentInstallStateMergesOnlyExplicitSelectionField(t *testi
 		if err := state.Write(home, original); err != nil {
 			t.Fatal(err)
 		}
-		got, err := mergeExplicitAgentInstallState(home, fresh, []string{"codex"}, flags)
+		got, err := mergeExplicitAgentInstallState(state.GlobalStore(home), fresh, []string{"codex"}, flags)
 		if key := fmt.Sprintf("%v|%v|%s|%s|%t|%s", got.Components, got.Skills, got.Preset, got.SDDMode, got.StrictTDD, got.Persona); err != nil || key != wants[i] {
 			t.Errorf("flags %#v merged selection %s, err %v", flags, key, err)
 		}
@@ -138,7 +138,7 @@ func TestMergeExplicitAgentInstallStatePreservesFreshAssignments(t *testing.T) {
 		Persona: "gentleman",
 	}
 
-	merged, err := mergeExplicitAgentInstallState(home, fresh, []string{"codex"}, InstallFlags{})
+	merged, err := mergeExplicitAgentInstallState(state.GlobalStore(home), fresh, []string{"codex"}, InstallFlags{})
 	if err != nil {
 		t.Fatalf("mergeExplicitAgentInstallState() error = %v, want nil", err)
 	}
@@ -177,7 +177,7 @@ func TestMergeExplicitAgentInstallStateFailsHonestlyOnCorruptState(t *testing.T)
 		t.Fatalf("WriteFile: %v", err)
 	}
 
-	_, err := mergeExplicitAgentInstallState(home, state.InstallState{InstalledAgents: []string{"codex"}}, []string{"codex"}, InstallFlags{})
+	_, err := mergeExplicitAgentInstallState(state.GlobalStore(home), state.InstallState{InstalledAgents: []string{"codex"}}, []string{"codex"}, InstallFlags{})
 	if err == nil {
 		t.Fatal("mergeExplicitAgentInstallState() error = nil for corrupt state, want a non-nil error")
 	}

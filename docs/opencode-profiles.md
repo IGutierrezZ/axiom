@@ -36,7 +36,7 @@ The environment equivalent is `AXIOM_OPENCODE_BACKGROUND_SUBAGENTS=auto|on|off` 
 
 In the interactive installer, OpenCode + SDD with no prior, CLI, or environment decision shows a real choice between **Enable managed background subagents** and **Keep foreground**. Prior `on` or `off` choices skip that prompt. The choice is committed only after the install succeeds; going back or cancelling leaves state unchanged.
 
-When managed activation is enabled, Axiom owns launchers under `~/.gentle-ai/bin/` (`opencode` on POSIX, `opencode.cmd` and `opencode.ps1` on Windows). The launcher sets `OPENCODE_EXPERIMENTAL_BACKGROUND_SUBAGENTS=true` only when the variable is absent, so an explicit `OPENCODE_EXPERIMENTAL_BACKGROUND_SUBAGENTS=false` remains foreground. Restart OpenCode, and restart the shell if PATH has not refreshed, after activation.
+When managed activation is enabled, Axiom owns launchers under `~/.axiom/bin/` (`<AXIOM_STATE_DIR>/bin/` when that variable is set) (`opencode` on POSIX, `opencode.cmd` and `opencode.ps1` on Windows). The launcher sets `OPENCODE_EXPERIMENTAL_BACKGROUND_SUBAGENTS=true` only when the variable is absent, so an explicit `OPENCODE_EXPERIMENTAL_BACKGROUND_SUBAGENTS=false` remains foreground. Restart OpenCode, and restart the shell if PATH has not refreshed, after activation.
 
 Sessions started through `opencode serve`, `opencode attach`, or OpenCode Desktop may not inherit the managed launcher environment. Those entry points deliberately fall back to foreground execution; Axiom does not rewrite server, attach, or Desktop session configuration.
 
@@ -58,15 +58,18 @@ Open OpenCode and press **Tab** -- your new orchestrator appears alongside `axio
 
 For models that expose reasoning effort variants (e.g. OpenAI `gpt-5` with `low`/`medium`/`high`/`xhigh`), the picker shows an extra **Select reasoning effort level** step right after you choose the model. Pick `default` to use the provider's default, or pick a specific level to lock the assignment to that effort.
 
-The effort options are populated from a cache file written by the bundled `model-variants` OpenCode plugin at `~/.gentle-ai/cache/model-variants.json`. The plugin runs the first time OpenCode starts after `axiom sync` and refreshes the cache on every subsequent start.
+The effort options come from OpenCode's own model catalog: when the picker discovers the project's providers and models with `opencode models --verbose`, each model reports its `variants`, and Axiom offers them as effort levels. Nothing has to be generated beforehand, so there is no first-run order to follow.
 
-**First-run order matters:**
+The bundled `model-variants` OpenCode plugin also writes a cache of those variants, but Axiom does not read it. The plugin writes it outside the Axiom state root (it ignores `AXIOM_STATE_DIR`):
 
-1. Run `axiom` (installs the plugin into `~/.config/opencode/plugins/`).
-2. Run `opencode` once -- on startup the plugin queries the provider list and writes `~/.gentle-ai/cache/model-variants.json`.
-3. Re-run `axiom` and open the model picker. Reasoning models now show the effort selector.
+| Plugin | Cache path |
+| --- | --- |
+| v1 | `~/.axiom/cache/model-variants.json` (earlier versions used `~/.gentle-ai/cache/model-variants.json`) |
+| v2 | `~/.gentle-ai/cache/opencode-v2/<hash>.json`, one file per project location |
 
-If the JSON does not exist yet (plugin has not run, no providers expose variants, or the request failed silently), reasoning models still work -- the picker simply skips the effort step and saves the assignment with the provider default. You will not see the `[effort]` annotation next to those rows in the phase list.
+Removing the OpenCode `sdd` component with `axiom uninstall --scope global` deletes the v1 cache file (`model-variants.json`); a workspace uninstall and the v2 files are left alone. With `--scope workspace`, the plugin itself lives in the project (`.opencode/plugins/`), not in `~/.config/opencode/plugins/`.
+
+If the catalog does not expose variants for a model (or the discovery fails), the picker simply skips the effort step and saves the assignment with the provider default. You will not see the `[effort]` annotation next to those rows in the phase list.
 
 ## Key Names To Remember
 
@@ -187,7 +190,7 @@ The `default` profile (`axiom-orchestrator`) can be edited but not deleted -- it
 
 In generated multi-profile mode, each named profile generates 12 agent entries in `opencode.json`: one orchestrator (`sdd-orchestrator-{name}`, mode `primary`) and 11 SDD phase sub-agents (`sdd-{phase}-{name}`, mode `subagent`, hidden). The base/default conductor remains `axiom-orchestrator`. Each named profile orchestrator's permissions are scoped so it can only delegate to its own suffixed sub-agents.
 
-Sub-agent prompts are shared across all profiles as files under `~/.config/opencode/prompts/sdd/` (e.g., `sdd-apply.md`). Each agent entry references the shared file via `{file:~/.config/opencode/prompts/sdd/sdd-apply.md}` -- only the `model` field differs between profiles. Orchestrator prompts are inlined per-profile because they contain profile-specific model assignment tables and sub-agent references.
+Sub-agent prompts are shared across all profiles as files under `~/.config/opencode/prompts/sdd/` (e.g., `sdd-apply.md`). Each agent entry references the shared file via `{file:~/.config/opencode/prompts/sdd/sdd-apply.md}` -- only the `model` field differs between profiles. With `--scope workspace` the shared prompts live in the project, under `.opencode/prompts/sdd/`, and the configuration in `opencode.json` at the project root. Orchestrator prompts are inlined per-profile because they contain profile-specific model assignment tables and sub-agent references.
 
 During sync or update, Axiom now uses one of two strategies:
 

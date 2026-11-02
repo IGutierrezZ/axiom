@@ -204,17 +204,23 @@ func Bootstrap(homeDir string) error {
 // Returns an error if the file does not exist or cannot be decoded.
 func Read(homeDir string) (InstallState, error) {
 	canonicalPath := Path(homeDir)
-	data, err := os.ReadFile(canonicalPath)
-	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			legacyPath := filepath.Join(homeDir, legacyStateDir, stateFile)
-			if legacyData, legacyErr := os.ReadFile(legacyPath); legacyErr == nil {
-				var s InstallState
-				if err := json.Unmarshal(legacyData, &s); err == nil {
-					return s, nil
-				}
+	s, err := readStateFile(canonicalPath)
+	if err != nil && errors.Is(err, os.ErrNotExist) {
+		legacyPath := filepath.Join(homeDir, legacyStateDir, stateFile)
+		if legacyData, legacyErr := os.ReadFile(legacyPath); legacyErr == nil {
+			var legacy InstallState
+			if err := json.Unmarshal(legacyData, &legacy); err == nil {
+				return legacy, nil
 			}
 		}
+	}
+	return s, err
+}
+
+// readStateFile lee y decodifica el documento de estado de una ruta concreta.
+func readStateFile(path string) (InstallState, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
 		return InstallState{}, err
 	}
 	var s InstallState
@@ -302,7 +308,12 @@ func MergeAgents(existing InstallState, newAgents []string) InstallState {
 // Write persists the full install state to disk under the given home directory.
 // It creates the canonical state directory if it does not already exist.
 func Write(homeDir string, s InstallState) error {
-	targetPath := Path(homeDir)
+	return writeStateFile(Path(homeDir), s)
+}
+
+// writeStateFile persiste el documento de estado en una ruta concreta y crea su
+// directorio si hace falta.
+func writeStateFile(targetPath string, s InstallState) error {
 	dir := filepath.Dir(targetPath)
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return err
@@ -318,14 +329,18 @@ func Write(homeDir string, s InstallState) error {
 // WriteReconciled persists install state and treats an atomic-write error as
 // successful when the requested bytes are visible on disk after the error.
 func WriteReconciled(homeDir string, s InstallState) error {
-	err := Write(homeDir, s)
+	return writeStateFileReconciled(Path(homeDir), s)
+}
+
+func writeStateFileReconciled(targetPath string, s InstallState) error {
+	err := writeStateFile(targetPath, s)
 	if err == nil {
 		return nil
 	}
 
 	data, marshalErr := marshal(s)
 	if marshalErr == nil {
-		if visible, readErr := os.ReadFile(Path(homeDir)); readErr == nil && bytes.Equal(visible, data) {
+		if visible, readErr := os.ReadFile(targetPath); readErr == nil && bytes.Equal(visible, data) {
 			log.Printf("state: write returned %v but requested state is visible; treating persistence as successful", err)
 			return nil
 		}

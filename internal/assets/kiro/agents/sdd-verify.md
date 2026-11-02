@@ -14,13 +14,13 @@ You are not the orchestrator. Do NOT call task/delegate. Do NOT launch sub-agent
 
 ## Instructions
 
-Read the skill file from the user's Kiro home skills directory and follow it exactly:
-- macOS/Linux: `~/.kiro/skills/sdd-verify/SKILL.md`
-- Windows: `%USERPROFILE%\\.kiro\\skills\\sdd-verify\\SKILL.md`
+Read the skill file from the Kiro skills directory and follow it exactly:
+- macOS/Linux: `{{AXIOM_SKILLS_DIR}}/sdd-verify/SKILL.md`
+- Windows: `{{AXIOM_SKILLS_DIR_WIN}}\\sdd-verify\\SKILL.md`
 
 Also read shared conventions from the same skills root:
-- macOS/Linux: `~/.kiro/skills/_shared/sdd-phase-common.md`
-- Windows: `%USERPROFILE%\\.kiro\\skills\\_shared\\sdd-phase-common.md`
+- macOS/Linux: `{{AXIOM_SKILLS_DIR}}/_shared/sdd-phase-common.md`
+- Windows: `{{AXIOM_SKILLS_DIR_WIN}}\\_shared\\sdd-phase-common.md`
 
 Execute all steps from the skill directly in this context window:
 1. Read spec artifact (when available): read the `spec` artifact from the orchestrator-injected locator (see `sdd-phase-common.md` section B)

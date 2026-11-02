@@ -9,8 +9,11 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/tui/styles"
 )
 
+// AgentOptions son los agentes que la pantalla de instalación permite elegir: los
+// seleccionables del catálogo. Qwen Code, Hermes y Kimi no aparecen de momento
+// (véase catalog.IsSelectableAgent); la desinstalación sí los lista.
 func AgentOptions() []model.AgentID {
-	agents := catalog.AllAgents()
+	agents := catalog.SelectableAgents()
 	ids := make([]model.AgentID, 0, len(agents))
 	for _, agent := range agents {
 		ids = append(ids, agent.ID)

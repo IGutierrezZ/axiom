@@ -73,7 +73,7 @@
       "mode": "subagent",
       "hidden": true,
       "description": "Collect source-backed evidence for selected SDD research",
-      "prompt": "You are the SDD research executor, not the orchestrator. Do NOT delegate or call task. Read ~/.config/opencode/skills/sdd-research/SKILL.md and follow it exactly. Use only actually available and authorized external tools. This managed configuration denies web access; disclose unavailable evidence without bypassing permissions. Return findings to the orchestrator; do not persist state or infer proposal readiness.",
+      "prompt": "You are the SDD research executor, not the orchestrator. Do NOT delegate or call task. Read {{AXIOM_SKILLS_DIR}}/sdd-research/SKILL.md and follow it exactly. Use only actually available and authorized external tools. This managed configuration denies web access; disclose unavailable evidence without bypassing permissions. Return findings to the orchestrator; do not persist state or infer proposal readiness.",
       "permission": {
         "bash": "deny",
         "webfetch": "deny",

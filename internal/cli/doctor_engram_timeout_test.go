@@ -23,7 +23,7 @@ func TestEngramDeadlineIsReportedAsADeadline(t *testing.T) {
 	setStdioProbeForTest(t, context.DeadlineExceeded)
 	homeDir, installedAgents := doctorStdioConfig(t)
 
-	got := checkEngramReachable(context.Background(), homeDir, installedAgents)
+	got := checkEngramReachable(context.Background(), homeDir, "", installedAgents)
 
 	if got.Status != CheckStatusFail {
 		t.Fatalf("status = %s, want fail: a probe that never answered is not a pass", got.Status)
@@ -54,7 +54,7 @@ func TestEngramNonDeadlineFailureKeepsItsRemedy(t *testing.T) {
 	setStdioProbeForTest(t, errStdioProbeTest)
 	homeDir, installedAgents := doctorStdioConfig(t)
 
-	got := checkEngramReachable(context.Background(), homeDir, installedAgents)
+	got := checkEngramReachable(context.Background(), homeDir, "", installedAgents)
 
 	if got.Status != CheckStatusFail {
 		t.Fatalf("status = %s, want fail", got.Status)

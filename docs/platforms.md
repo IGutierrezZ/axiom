@@ -19,9 +19,9 @@ Release archives are currently produced for macOS and Linux only. Windows source
 
 ## OpenCode Managed Launcher
 
-When OpenCode background subagents are enabled through `axiom install` or `axiom sync`, Axiom writes only its own launcher files under `~/.gentle-ai/bin/`. POSIX systems use `~/.gentle-ai/bin/opencode`; Windows uses `opencode.cmd` and `opencode.ps1`. The launcher sets `OPENCODE_EXPERIMENTAL_BACKGROUND_SUBAGENTS=true` only when the variable is not already defined, so an explicit `false` always selects foreground execution.
+When OpenCode background subagents are enabled through `axiom install` or `axiom sync`, Axiom writes only its own launcher files under `~/.axiom/bin/` (or `<AXIOM_STATE_DIR>/bin/` when that variable is set). POSIX systems use `~/.axiom/bin/opencode`; Windows uses `opencode.cmd` and `opencode.ps1`. The launcher sets `OPENCODE_EXPERIMENTAL_BACKGROUND_SUBAGENTS=true` only when the variable is not already defined, so an explicit `false` always selects foreground execution.
 
-Deactivation removes managed launcher files but may leave `~/.gentle-ai/bin/` in `PATH`; Axiom does not clean up shell profiles.
+Deactivation removes managed launcher files but may leave `~/.axiom/bin/` in `PATH`; Axiom does not clean up shell profiles.
 
 Restart OpenCode after enabling managed activation. Restart the shell if the launcher directory has not entered PATH. OpenCode `serve`, `attach`, Desktop, or any session started outside the managed launcher uses foreground fallback rather than receiving an unsafe partial activation.
 
@@ -63,7 +63,9 @@ Restart OpenCode after enabling managed activation. Restart the shell if the lau
 
 ---
 
-## Windows Config Paths
+## Windows Config Paths (ámbito global)
+
+Estas son las rutas que usa `--scope global`. El ámbito predeterminado es `workspace`: en él Axiom escribe en la raíz del proyecto (por ejemplo `.claude/`, `.codex/`, `.gemini/`, `.cursor/`, `.kiro/`, `opencode.json` y `.opencode/`, `.vscode/mcp.json` y `.github/instructions/`), con las skills compartidas en `.agents/skills/`, y no toca estas carpetas de usuario. Windsurf, Trae, Antigravity, Pi y OpenClaw solo tienen configuración global y se omiten en workspace con un aviso. El detalle por agente está en [Agentes](agents.md#modo-workspace-por-agente).
 
 | Agent | Windows Config Path |
 |-------|-------------------|
@@ -73,11 +75,11 @@ Restart OpenCode after enabling managed activation. Restart the shell if the lau
 | Cursor | `%USERPROFILE%\.cursor\` |
 | VS Code Copilot | `%APPDATA%\Code\User\` (settings, MCP, prompts) + `%USERPROFILE%\.copilot\` (skills) |
 | Codex | `%USERPROFILE%\.codex\` |
-| Windsurf | `%USERPROFILE%\.codeium\windsurf\` (skills, MCP, rules) + `%APPDATA%\Windsurf\User\` (settings) |
-| Kimi | `%USERPROFILE%\.kimi\` (includes `config.toml`, system prompt, agents, MCP) |
-| Antigravity | `%USERPROFILE%\.gemini\antigravity\` |
+| Windsurf (solo global) | `%USERPROFILE%\.codeium\windsurf\` (skills, MCP, rules) + `%APPDATA%\Windsurf\User\` (settings) |
+| Kimi (no disponible de momento) | `%USERPROFILE%\.kimi\` (includes `config.toml`, system prompt, agents, MCP) |
+| Antigravity (solo global) | `%USERPROFILE%\.gemini\antigravity\` |
 | Kiro IDE | `%USERPROFILE%\.kiro\steering\` (prompts) + `%USERPROFILE%\.kiro\skills\` (skills) + `%USERPROFILE%\.kiro\agents\` (SDD agents) + `%APPDATA%\kiro\User\settings.json` (settings) + `%USERPROFILE%\.kiro\settings\mcp.json` (MCP) |
 | OpenClaw | `%USERPROFILE%\.openclaw\openclaw.json` (global MCP/settings) + active workspace from `agents.defaults.workspace` for `AGENTS.md` / `SOUL.md` / workspace-scoped SDD skills |
-| Trae | `%USERPROFILE%\.trae\` (skills) + `%APPDATA%\Trae\User\user_rules.md` (rules) + `%APPDATA%\Trae\User\mcp.json` (MCP) |
+| Trae (solo global) | `%USERPROFILE%\.trae\` (skills) + `%APPDATA%\Trae\User\user_rules.md` (rules) + `%APPDATA%\Trae\User\mcp.json` (MCP) |
 | Pi | `%USERPROFILE%\.pi\` (Pi config, project agents/chains, Gentle AI support assets) |
-| Hermes | `%USERPROFILE%\.hermes\` (config.yaml, SOUL.md, skills/) |
+| Hermes (no disponible de momento) | `%USERPROFILE%\.hermes\` (config.yaml, SOUL.md, skills/) |

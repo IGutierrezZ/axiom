@@ -2,6 +2,7 @@ package gga
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/assets"
@@ -90,4 +91,18 @@ func EnsureCommandShim(homeDir string) error {
 	}
 
 	return nil
+}
+
+// Managed informa de si Axiom ya aprovisionó GGA en este HOME: existe la
+// configuración global que escribe Inject o el recurso de ejecución que deja
+// EnsureRuntimeAssets. Sync lo usa para no dejar de gestionar GGA a quien ya lo
+// tenía cuando GGA dejó de formar parte de los presets por defecto. No consulta
+// el PATH ni lanza procesos.
+func Managed(homeDir string) bool {
+	for _, path := range []string{ConfigPath(homeDir), RuntimePRModePath(homeDir)} {
+		if info, err := os.Stat(path); err == nil && info.Mode().IsRegular() {
+			return true
+		}
+	}
+	return false
 }

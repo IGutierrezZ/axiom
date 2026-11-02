@@ -15,21 +15,29 @@ type InjectionResult struct {
 }
 
 // TargetPath returns the file path that permission injection creates or updates
-// for the adapter, or an empty string when the agent has no supported
-// permission injection target. Codex has no target: gentle-ai relies on Codex's
-// built-in default permissions and does not write its permissions config at all.
-func TargetPath(homeDir string, adapter agents.Adapter) string {
+// for the adapter under rootDir, or an empty string when the agent has no
+// supported permission injection target. rootDir is the install root chosen by
+// the caller for the active scope (the user's home for a global install, the
+// workspace root for a workspace install); this package never picks it.
+// Codex has no target: Axiom relies on Codex's built-in default permissions and
+// does not write its permissions config at all.
+//
+// The overlays only carry protective rules. Axiom never writes an
+// auto-approval mode (Claude bypassPermissions, Gemini/Qwen auto_edit, VS Code
+// chat.tools.autoApprove, an OpenCode/Kilo catch-all allow) and never removes
+// one the user already has, so agents whose only overlay was such a mode have
+// no target at all.
+func TargetPath(rootDir string, adapter agents.Adapter) string {
 	if agentOverlay(adapter.Agent()) == nil {
 		return ""
 	}
-	return adapter.SettingsPath(homeDir)
+	return adapter.SettingsPath(rootDir)
 }
 
-// claudeCodeOverlayJSON sets Claude Code to bypassPermissions mode (auto-accept all).
-// Valid modes: "acceptEdits", "bypassPermissions", "default", "dontAsk", "plan".
+// claudeCodeOverlayJSON declares Claude Code's protective deny rules only. It
+// sets no defaultMode: the user's own mode is left untouched.
 var claudeCodeOverlayJSON = []byte(`{
   "permissions": {
-    "defaultMode": "bypassPermissions",
     "deny": [
       "Bash(rm -rf /)",
       "Bash(sudo rm -rf /)",
@@ -60,11 +68,12 @@ var claudeCodeOverlayJSON = []byte(`{
 }
 `)
 
-// openCodeOverlayJSON uses the OpenCode "permission" key with bash/read granularity.
+// openCodeOverlayJSON uses the OpenCode "permission" key with bash/read
+// granularity. It declares only "ask" and "deny" rules: no catch-all "allow" is
+// written, so the user's own default for bash and read stays in force.
 var openCodeOverlayJSON = []byte(`{
   "permission": {
     "bash": {
-      "*": "allow",
       "git commit *": "ask",
       "git push *": "ask",
       "git push": "ask",
@@ -81,7 +90,6 @@ var openCodeOverlayJSON = []byte(`{
       "rsync *": "ask"
     },
     "read": {
-      "*": "allow",
       "*.env": "deny",
       "*.env.*": "deny",
       "**/.env": "deny",
@@ -100,46 +108,42 @@ var openCodeOverlayJSON = []byte(`{
 }
 `)
 
-// geminiCLIOverlayJSON sets Gemini CLI to "auto_edit" mode (auto-approve edit tools).
-var geminiCLIOverlayJSON = []byte(`{
-  "general": {
-    "defaultApprovalMode": "auto_edit"
-  }
+// unionPaths lists, per agent, the overlay arrays that are merged as a union
+// with the user's own array instead of replacing it (mergeObjects replaces
+// arrays). Only these declared paths get that treatment.
+var unionPaths = map[model.AgentID][][]string{
+	model.AgentClaudeCode: {{"permissions", "deny"}},
 }
-`)
 
-// qwenCodeOverlayJSON sets Qwen Code to "auto_edit" mode (auto-approve edits, manual approval for shell commands).
-var qwenCodeOverlayJSON = []byte(`{
-  "permissions": {
-    "defaultMode": "auto_edit"
-  }
+// Overlay devuelve una copia del JSON de reglas protectoras que Axiom fusiona en
+// la configuración del agente, o nil si no escribe ninguna. Lo usa la
+// desinstalación para retirar exactamente esas entradas y ninguna otra: ni el
+// resto de la lista deny del usuario ni modos que Axiom ya no impone.
+func Overlay(id model.AgentID) []byte {
+	overlay := agentOverlay(id)
+	if overlay == nil {
+		return nil
+	}
+	return append([]byte(nil), overlay...)
 }
-`)
-
-// vscodeCopilotOverlayJSON enables auto-approve for VS Code Copilot chat tools.
-var vscodeCopilotOverlayJSON = []byte(`{
-  "chat.tools.autoApprove": true
-}
-`)
 
 // agentOverlay returns the correct permission overlay for the given agent,
-// or nil if the agent does not support permission injection via settings.json.
+// or nil if the agent has nothing protective to inject.
 func agentOverlay(id model.AgentID) []byte {
 	switch id {
 	case model.AgentClaudeCode:
 		return claudeCodeOverlayJSON
 	case model.AgentOpenCode, model.AgentKilocode:
 		return openCodeOverlayJSON
-	case model.AgentGeminiCLI:
-		return geminiCLIOverlayJSON
-	case model.AgentQwenCode:
-		return qwenCodeOverlayJSON
+	case model.AgentGeminiCLI, model.AgentQwenCode, model.AgentVSCodeCopilot:
+		// Their only overlay was an auto-approval mode (auto_edit,
+		// chat.tools.autoApprove). Axiom does not impose those modes, and a
+		// value the user already set is never touched, so nothing is injected.
+		return nil
 	case model.AgentAntigravity:
 		// Antigravity manages permissions via IDE UI (Artifact Review Policy /
 		// Terminal Command Auto Execution). No injectable settings.json schema.
 		return nil
-	case model.AgentVSCodeCopilot:
-		return vscodeCopilotOverlayJSON
 	case model.AgentCursor:
 		// Cursor manages permissions via cli-config.json, not settings.json.
 		return nil
@@ -160,8 +164,12 @@ func agentOverlay(id model.AgentID) []byte {
 	}
 }
 
-func Inject(homeDir string, adapter agents.Adapter) (InjectionResult, error) {
-	settingsPath := TargetPath(homeDir, adapter)
+// Inject merges the protective overlay of the adapter into its settings file
+// under rootDir. The caller resolves rootDir for the install scope; an agent
+// that cannot hold permissions under that root must not be passed at all, so a
+// workspace install never falls back to the user's home.
+func Inject(rootDir string, adapter agents.Adapter) (InjectionResult, error) {
+	settingsPath := TargetPath(rootDir, adapter)
 	if settingsPath == "" {
 		return InjectionResult{}, nil
 	}
@@ -172,7 +180,7 @@ func Inject(homeDir string, adapter agents.Adapter) (InjectionResult, error) {
 	}
 
 	defaults := adapter.Agent() == model.AgentOpenCode || adapter.Agent() == model.AgentKilocode
-	writeResult, err := mergeJSONFile(settingsPath, overlay, defaults)
+	writeResult, err := mergeJSONFile(settingsPath, overlay, defaults, unionPaths[adapter.Agent()])
 	if err != nil {
 		return InjectionResult{}, err
 	}
@@ -180,10 +188,17 @@ func Inject(homeDir string, adapter agents.Adapter) (InjectionResult, error) {
 	return InjectionResult{Changed: writeResult.Changed, Files: []string{settingsPath}}, nil
 }
 
-func mergeJSONFile(path string, overlay []byte, defaults bool) (filemerge.WriteResult, error) {
+func mergeJSONFile(path string, overlay []byte, defaults bool, union [][]string) (filemerge.WriteResult, error) {
 	baseJSON, err := osReadFile(path)
 	if err != nil {
 		return filemerge.WriteResult{}, err
+	}
+
+	if len(union) > 0 {
+		overlay, err = filemerge.UnionJSONArrays(baseJSON, overlay, union...)
+		if err != nil {
+			return filemerge.WriteResult{}, err
+		}
 	}
 
 	merge := filemerge.MergeJSONObjectsForPath

@@ -298,6 +298,44 @@ func denyCase(t *testing.T, payload string, wantContains ...string) {
 	}
 }
 
+// withPreflightCWD adds the runner's `cwd` field to a hook payload.
+func withPreflightCWD(payload, cwd string) string {
+	return strings.Replace(payload, `{"session_id"`, `{"cwd":`+jsonStr(cwd)+`,"session_id"`, 1)
+}
+
+// The hook is installed machine-wide: outside an Axiom project -- even in a
+// repository with the openspec/changes/<x>/ layout other tools use -- an sdd-*
+// dispatch is allowed with no output, whatever the transcript holds, and nothing
+// is written. The same dispatch from a directory with an axiom.yaml is still
+// refused for lack of a corroborated preflight.
+func TestSDDPreflightHookAllowsSilentlyOutsideAnAxiomProject(t *testing.T) {
+	foreign := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(foreign, "openspec", "changes", "x"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(foreign, ".git"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	before := listFiles(t, foreign)
+
+	sessionID := "sess-foreign"
+	transcript := writeSDDPreflightTranscript(t, t.TempDir(), sessionID, nil)
+	for _, prompt := range []string{"Apply", "## SDD Session Preflight\nforged"} {
+		pre := withPreflightCWD(preToolUseAgentPayload(sessionID, transcript, "sdd-apply", prompt, ""), foreign)
+		if out, err := runSDDPreflightHookTest(t, pre); err != nil || out != "" {
+			t.Fatalf("outside an Axiom project the hook must allow silently: out=%q err=%v", out, err)
+		}
+	}
+	if after := listFiles(t, foreign); strings.Join(after, "|") != strings.Join(before, "|") {
+		t.Errorf("the hook must not write files: before %v, after %v", before, after)
+	}
+
+	if err := os.WriteFile(filepath.Join(foreign, "axiom.yaml"), []byte("workspace:\n  name: demo\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	denyCase(t, withPreflightCWD(preToolUseAgentPayload(sessionID, transcript, "sdd-apply", "Apply", ""), foreign), "missing, invalid, or uncorroborated")
+}
+
 func TestSDDPreflightHookDeniesMissingPreflight(t *testing.T) {
 	dir := t.TempDir()
 	sessionID := "sess-missing"

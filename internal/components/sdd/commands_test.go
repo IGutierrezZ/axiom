@@ -130,7 +130,7 @@ func TestOpenCodeResearchCollectorPromptOwnershipInDefaultAndMultiModes(t *testi
 
 func TestNamedProfileResearchCollectorMatchesDefaultBoundary(t *testing.T) {
 	home := t.TempDir()
-	if _, err := WriteSharedPromptFiles(home, nil); err != nil {
+	if _, err := WriteSharedPromptFiles(SharedPromptDir(home), nil); err != nil {
 		t.Fatal(err)
 	}
 	overlay, err := GenerateProfileOverlay(makeHaikuProfile(), home, openCodeSettingsPathForTest(home), nil, "")
