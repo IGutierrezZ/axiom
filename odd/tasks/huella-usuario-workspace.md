@@ -460,6 +460,19 @@ Las cuatro quedaron resueltas por el usuario el 2026-10-29: acepta las recomenda
     - **Paquetes:** build, vet y deadcode ok; `agents`, `components` (salvo filemerge), `skillregistry` y `state` ok; `internal/cli` en cinco tandas ok; `internal/app` solo con el fallo de entorno conocido.
     - **Tiempo:** la tanda `Workspace|Scope` con las pruebas de review supera los 8 minutos. El orquestador la repitió entera en segundo plano, con un límite de 25 minutos: ok (580 s).
 
+## Fase 5c · CI de la PR #217
+
+La CI de Linux (`ubuntu-latest`, `go test ./...`) de la PR IGutierrezZ/axiom#217 falla en `internal/cli` con dos pruebas, ambas por esta rama. Evidencia: log de la CI (`TestEveryProductionRefusalNamesResolutionOrDeclaresByDesign` y `TestSyncWithoutChangesLeavesNoNewBackup`, `FAIL internal/cli 289.566s`).
+
+- [x] **T19 · Rechazos nuevos sin salida nombrada** (ruta: delegada; disparador: 2+ ficheros y lectura previa del ratchet). La prueba `TestEveryProductionRefusalNamesResolutionOrDeclaresByDesign` marcaba cinco rechazos introducidos por la rama: `uninstall.go` (`--purge-hub requiere --purge-state`, `--purge-state solo se admite con --all`, `resolve workspace directory`), `validate.go` (agente no disponible) y `workspace_agents.go` (ningún agente admite workspace). El ratchet solo reconoce como resolución un `axiom <verbo>` en el texto (o una anotación `refusal:by-design`); los cinco tienen salida real, así que cada mensaje la nombra con su comando (`axiom uninstall --all --purge-state --purge-hub`, `axiom uninstall --all --purge-state`, `axiom uninstall`, `axiom install --agent claude-code`, `axiom install --scope global`). Sin anotaciones, sin tocar la línea base ni techos.
+  - Hecho: `3c32d523`, +5/−5 en 3 ficheros. Los textos antiguos no los asertaba ninguna prueba con su literal (las pruebas existentes buscan `--scope global` y `no está disponible de momento`, que se conservan).
+  - Comprobación: `TestEveryProductionRefusalNamesResolutionOrDeclaresByDesign` y `TestRefusalRatchet*`, `TestErrNoWorkspaceAgents*`, `TestAsInstallAgentIDs*` ok.
+- [x] **T20 · `sync` no idempotente en Linux** (ruta: delegada; disparador: diagnóstico con reproducción en WSL). `TestSyncWithoutChangesLeavesNoNewBackup` devolvía `ChangedFiles = [<raíz>/.claude/CLAUDE.md]` en el sync #1.
+  - Causa raíz: install sondea la versión de Engram con el binario que resolvió (`resolveEngramInstalledPath`, en la prueba `/usr/local/bin/engram`) y la pasa a `engram.InjectOptions.Version`; sync sondeaba el nombre a secas (`resolveEngramVersion("engram")`). Si el binario resuelto responde con una versión ≥ 1.4.0 y el nombre a secas no (en las pruebas, `TestMain` lo fija a error), install escribe la sección slim del protocolo de Engram en `CLAUDE.md` y el primer sync la reinflaba a la full. Es el mismo defecto del bug #1824 por otra vía.
+  - Reproducción en Linux (WSL Ubuntu-24.04, sin Go: pruebas compiladas con `GOOS=linux go test -exec` y ejecutadas en WSL): la prueba pasa sin engram y falla con el mismo mensaje de la CI al poner un `/usr/local/bin/engram` que imprime `engram 1.18.0`. No se pudo comprobar qué `engram` había en el runner de la CI; la reproducción demuestra el mecanismo, no su origen en el runner.
+  - Corrección: `resolveSyncEngramCommand` (`run.go`) devuelve el binario que resuelve PATH (`cmdLookPath("engram")`) y, si no hay, `engram`; sync lo usa para la versión. En producción es el mismo binario que el nombre a secas, así que solo cambia que install y sync comparten sondeo. La prueba `TestSyncProbesTheSameEngramCommandAsInstall` (rojo antes, verde después, también en Windows) fija la regla sin depender de ningún binario real. La prueba original no era incorrecta y no se tocó.
+  - Hecho: `12a3f30a`, +80/−1 en 3 ficheros. Con la corrección, en WSL: la prueba pasa con y sin el `engram` falso.
+
 ## Criterios de aceptación
 
 - `axiom setup` y `axiom sync` en workspace dejan `HOME` idéntico byte a byte, salvo la huella declarada en T9.
@@ -513,6 +526,8 @@ Las cuatro quedaron resueltas por el usuario el 2026-10-29: acepta las recomenda
 
 - 2026-11-02: fase 5b implementada (T15 y T16 `22478be0`, T17 `851d1f22`, golden de Gemini `c0d57454`, T18 `bfe3d6a7`, `a95fe9bf` y `f1fd692b`). La V1 de la fase 5b se hizo sin hallazgos nuevos relevantes.
 
+- 2026-11-02: fase 5c implementada tras el fallo de la CI de la PR #217: T19 `3c32d523` (rechazos de uninstall y workspace con su comando) y T20 `12a3f30a` (sync sondea la versión de Engram como install). Pendiente de que la CI de la PR lo confirme.
+
 ## Siguiente paso
 
-Abrir la PR desde `fix/huella-usuario-workspace` con la etiqueta `size:exception`, cuando el usuario lo decida. Abiertos de la fase 5b: el `mcp.json` vacío que ya tenía el usuario y que uninstall borra; y los restos globales fuera de H3 (`~/.codex/sdd-*.config.toml`, `model` de Codex, `~/.claude.json` y carpetas vacías). Abiertos para decidir: Antigravity en workspace (T12h, aplazado), Qwen y Hermes con fichero raíz, y los temas sueltos de la fase 3 (manifiesto de Pi, caché `model-variants`, CodeGraph sin ubicación de proyecto, lanzadores de OpenCode sin aviso).
+Subir la fase 5c y comprobar la CI de la PR #217 (decisión del usuario). Después, abrir/actualizar la PR desde `fix/huella-usuario-workspace` con la etiqueta `size:exception`, cuando el usuario lo decida. Abiertos de la fase 5b: el `mcp.json` vacío que ya tenía el usuario y que uninstall borra; y los restos globales fuera de H3 (`~/.codex/sdd-*.config.toml`, `model` de Codex, `~/.claude.json` y carpetas vacías). Abiertos para decidir: Antigravity en workspace (T12h, aplazado), Qwen y Hermes con fichero raíz, y los temas sueltos de la fase 3 (manifiesto de Pi, caché `model-variants`, CodeGraph sin ubicación de proyecto, lanzadores de OpenCode sin aviso).
