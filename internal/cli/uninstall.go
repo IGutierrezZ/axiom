@@ -61,10 +61,10 @@ func ParseUninstallFlags(args []string) (UninstallFlags, error) {
 		return UninstallFlags{}, err
 	}
 	if opts.PurgeHub && !opts.PurgeState {
-		return UninstallFlags{}, fmt.Errorf("--purge-hub requiere --purge-state")
+		return UninstallFlags{}, fmt.Errorf("--purge-hub requiere --purge-state: añádelo, por ejemplo `axiom uninstall --all --purge-state --purge-hub`")
 	}
 	if opts.PurgeState && !opts.All {
-		return UninstallFlags{}, fmt.Errorf("--purge-state solo se admite con --all: borra el estado de toda la máquina")
+		return UninstallFlags{}, fmt.Errorf("--purge-state solo se admite con --all: borra el estado de toda la máquina; usa `axiom uninstall --all --purge-state`")
 	}
 
 	return opts, nil
@@ -101,7 +101,7 @@ func resolveUninstallRoots(scopeFlag string) (scope InstallScope, homeDir, works
 	}
 	workspaceDir, notice := resolveWorkspaceDir(scope, homeDir)
 	if workspaceDir == "" {
-		return "", "", "", fmt.Errorf("resolve workspace directory")
+		return "", "", "", fmt.Errorf("no se pudo resolver la carpeta del proyecto (la carpeta actual no se puede leer); vuelve a lanzar `axiom uninstall` desde una carpeta que exista")
 	}
 	noteWorkspaceRoot(notice)
 	return scope, homeDir, workspaceDir, nil

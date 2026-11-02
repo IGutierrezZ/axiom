@@ -119,7 +119,7 @@ func errNoWorkspaceAgents(omitted []model.AgentID) error {
 	for _, id := range omitted {
 		names = append(names, string(id))
 	}
-	return fmt.Errorf("ningún agente seleccionado admite el ámbito workspace (%s); vuelve a ejecutar con --scope global para instalarlos en su configuración global", strings.Join(names, ", "))
+	return fmt.Errorf("ningún agente seleccionado admite el ámbito workspace (%s); vuelve a ejecutar con `axiom install --scope global` para instalarlos en su configuración global", strings.Join(names, ", "))
 }
 
 // scopedAdapter liga el adaptador a la raíz del proyecto cuando el ámbito es

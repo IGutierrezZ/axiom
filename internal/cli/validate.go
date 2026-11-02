@@ -276,7 +276,7 @@ func asInstallAgentIDs(values []string) ([]model.AgentID, error) {
 	}
 	for _, id := range agents {
 		if !isSelectableAgent(id) {
-			return nil, fmt.Errorf("el agente %q no está disponible de momento en Axiom y no se puede instalar; elige otro agente con --agent", id)
+			return nil, fmt.Errorf("el agente %q no está disponible de momento en Axiom y no se puede instalar; elige otro agente, por ejemplo `axiom install --agent claude-code`", id)
 		}
 	}
 	return agents, nil
