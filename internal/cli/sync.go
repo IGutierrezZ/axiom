@@ -1270,7 +1270,14 @@ func (s componentSyncStep) Run() error {
 		// silently re-inflated the slim Claude Code engram-protocol section
 		// back to the full one. Errors are intentionally ignored — an empty
 		// version safely falls back to the full section.
-		engramVersion, _ := resolveEngramVersion("engram")
+		//
+		// "Exactly like install" includes the command that is probed: install
+		// asks the binary resolveEngramInstalledPath found, so sync asks that
+		// same one (resolveSyncEngramCommand) instead of the bare name. With the
+		// bare name, a machine where the binary resolved at install time answers
+		// a version but the bare probe does not (or the reverse) flipped the
+		// Claude Code section between slim and full on every sync.
+		engramVersion, _ := resolveEngramVersion(resolveSyncEngramCommand())
 		engramOpts := engram.InjectOptions{
 			CodexOrchestratorAssignment: s.selection.CodexOrchestratorAssignment,
 			CodexCarrilModelAssignments: s.selection.CodexCarrilModelAssignments,

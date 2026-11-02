@@ -1600,6 +1600,18 @@ func engramBinaryDirsOnPath(pathEntries []string, goos string) []string {
 	return dirs
 }
 
+// resolveSyncEngramCommand devuelve la orden con la que sync sondea la versión
+// de Engram: la misma que install resolvió con resolveEngramInstalledPath (el
+// binario que encuentra PATH) y, si no hay ninguno, el nombre a secas. En
+// producción son el mismo binario; la diferencia es que ambos caminos
+// comparten el sondeo y por tanto la sección slim o full de CLAUDE.md.
+func resolveSyncEngramCommand() string {
+	if path, err := cmdLookPath("engram"); err == nil && strings.TrimSpace(path) != "" {
+		return path
+	}
+	return "engram"
+}
+
 func resolveEngramVersion(command string) (string, error) {
 	if strings.TrimSpace(command) == "" || command == "engram" {
 		return verifyEngramVersion()
