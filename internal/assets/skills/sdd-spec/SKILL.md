@@ -236,17 +236,12 @@ Return to the orchestrator:
 - Edge cases: {covered/missing}
 - Error states: {covered/missing}
 
-### Next Step & Bifurcación Post-Spec (ODD-1.2)
+### Next Step
 Ready for design (sdd-design). If design already exists, ready for tasks (sdd-tasks).
 
-**Pregunta de Transición al Usuario:**
-Al validar la especificación funcional, formula explícitamente la siguiente pregunta al usuario:
-> *«¿Deseas generar un relevo formal (`handoff.md`) para el Arquitecto o continuar directamente hacia `design.md`?»*
+Listo para la fase siguiente; en `checkpointed`, el orquestador presenta la parada de la puerta con sus tres salidas. No preguntes tú por un relevo ni generes un `handoff.md`.
 
-Si el usuario elige generar `handoff.md`:
-1. La rama la prepara `axiom branch ensure` (el orquestador la ejecuta antes de la fase): escribe `spec.md` y `handoff.md` bajo `workspaceRoot` del status, con las rutas absolutas y el `--cwd` que da su JSON, y nunca crees una rama ni un worktree por tu cuenta.
-2. Verifica que los cambios en `spec.md` estén confirmados con `git commit` en la rama del cambio antes de emitir y entregar formalmente el `handoff.md` al siguiente rol.
-3. Publicar la rama (`push`) y abrir el pull request es decisión de la persona: no lo hagas tú.
+La rama la prepara `axiom branch ensure` (el orquestador la ejecuta antes de la fase): escribe `spec.md` bajo `workspaceRoot` del status, con las rutas absolutas y el `--cwd` que da su JSON, y nunca crees una rama ni un worktree por tu cuenta. Publicar la rama (`push`) y abrir el pull request es decisión de la persona: no lo hagas tú.
 ```
 
 ## Rules
@@ -266,7 +261,7 @@ Si el usuario elige generar `handoff.md`:
 - RENAMED requirements MUST state both old and new names explicitly and SHOULD include Migration guidance for references/tests/docs
 - Apply any `rules.specs` from `openspec/config.yaml`
 - **Sufficient detail**: Preserve complete requirements and testable Given/When/Then scenarios, including relevant edge cases. Use the detail each scenario needs to make its expected behavior unambiguous. Do not truncate required detail to meet a word or line cap.
-- Rama del cambio: la prepara `axiom branch ensure`; escribe bajo `workspaceRoot` del status y usa `--cwd` y las rutas absolutas de su JSON. Antes de ceder el testigo en handoff.md, confirma que las especificaciones están confirmadas en la rama del cambio; publicarla es decisión de la persona.
+- Rama del cambio: la prepara `axiom branch ensure`; escribe bajo `workspaceRoot` del status y usa `--cwd` y las rutas absolutas de su JSON. Antes de la salida 2 de la parada, los artefactos quedan confirmados en la rama del cambio; publicarla es decisión de la persona.
 - Never create, modify, or delete files under `technicalContext.reference` paths.
 - Return envelope per **Section D** from `skills/_shared/sdd-phase-common.md`.
 

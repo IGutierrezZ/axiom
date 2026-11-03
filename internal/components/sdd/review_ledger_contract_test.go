@@ -582,7 +582,13 @@ func TestKilocodeReviewSettingsMatchCurrentMainBaseline(t *testing.T) {
 	// resuelve con adapter.SkillsDir. Para Kilo la ruta global pasa a ser
 	// `~/.config/kilo/skills`, donde se instalan sus skills, en lugar de la de OpenCode;
 	// la de OpenCode queda byte a byte igual. Deliberate, not drift.
-	const want = "e1cde5f2d6ec634d1afe7034ea99ef5cc5623db5ea699e3c431bfa40360c3a56"
+	// paradas-tres-salidas (REQ-26.8, DD-12): the same shared "SDD Change Kickoff and
+	// Block Gates" section drops `--handoff-policy` from the seal example, describes
+	// the three exits recorded with `axiom sdd gate record`, and carries the
+	// {{AXIOM_STOP_EXITS}} marker that the composer resolves with the single
+	// three-exit text. Kilocode composes it through the OpenCode orchestrator, so the
+	// hash moves. Deliberate, not drift.
+	const want = "674432538e9cb4a1eeec57134839531bc252b34f096585829d7af4eddb95cce2"
 	if got != want {
 		t.Fatalf("Kilocode settings SHA-256 = %s, want current-main baseline %s", got, want)
 	}
