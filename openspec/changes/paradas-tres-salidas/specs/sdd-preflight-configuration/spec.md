@@ -6,7 +6,7 @@
 Cambios de este delta:
 
 - REQ-21.5: el pre-vuelo ya no sella ni pregunta la política de relevos; solo la modalidad de avance (los roles siguen en REQ-21.6).
-- REQ-26.9 (nuevo): `handoff_policy` queda deprecado. El flag `--handoff-policy` se acepta y se ignora, deja de ser obligatorio, no se escribe en los kickoffs nuevos y los kickoffs antiguos se siguen leyendo. La retirada completa del campo queda para un cambio posterior.
+- REQ-26.9 (nuevo): `handoff_policy` queda deprecado. El flag `--handoff-policy` se acepta y se ignora, deja de ser obligatorio, los kickoffs nuevos escriben siempre `handoff_policy: none` como valor de compatibilidad con binarios anteriores y los kickoffs antiguos se siguen leyendo. La retirada completa del campo queda para un cambio posterior.
 
 Nota no normativa: la sección «Propósito» de la capacidad menciona «la política de relevos (sin o con handoffs intermedios)»; queda desfasada y puede corregirse al archivar, porque un delta no modifica esa sección.
 
@@ -40,15 +40,15 @@ Al entrar en el carril SDD, el orquestador DEBE bloquear la creación de `propos
 
 ## ADDED Requirements
 
-### Requirement: `handoff_policy` Deprecado: se Acepta, se Ignora y no se Escribe (REQ-26.9)
+### Requirement: `handoff_policy` Deprecado: se Acepta, se Ignora y se Fija a `none` (REQ-26.9)
 
 El campo `handoff_policy` de `kickoff.yaml` y el flag `--handoff-policy` de `axiom sdd kickoff seal` quedan deprecados y SIN efecto:
 
-- `axiom sdd kickoff seal` NO DEBE exigir `--handoff-policy`. Si se pasa con `none` o `per_checkpoint`, DEBE aceptarse sin error, ignorarse y NO escribirse en `kickoff.yaml`. Un valor fuera de esos dos (supuesto A-6) sigue rechazándose.
-- Un `kickoff.yaml` nuevo NO DEBE contener la clave `handoff_policy`; tampoco el retro-sello `seal --infer`.
+- `axiom sdd kickoff seal` NO DEBE exigir `--handoff-policy`. Si se pasa con `none` o `per_checkpoint`, DEBE aceptarse sin error e ignorarse: su valor NO DEBE llegar a `kickoff.yaml`. Un valor fuera de esos dos (supuesto A-6) sigue rechazándose.
+- Un `kickoff.yaml` nuevo, del sellado o del retro-sello `seal --infer`, DEBE contener `handoff_policy: none`, con independencia del flag. Es un valor de compatibilidad: los binarios anteriores a este cambio rechazan un kickoff sin la clave, y con `none` su `verify` no consulta `handoff.md`. La retirada de la clave queda para un cambio posterior.
 - Un `kickoff.yaml` existente con `handoff_policy: none` o `per_checkpoint` DEBE leerse y validarse sin error; un `kickoff.yaml` sin la clave, también (la validación acepta el valor vacío).
 - Ningún comportamiento DEBE depender del valor del campo: en particular, `per_checkpoint` NO DEBE hacer que `verify` consulte `handoff.md` ni que se genere ningún relevo intermedio.
-- La salida de `kickoff seal` y `kickoff show` (texto y JSON) y el JSON de `axiom sdd status` (`governance.kickoff`) NO DEBEN emitir el campo cuando está vacío; cuando está presente en un kickoff antiguo, PUEDEN mostrarlo marcado como obsoleto.
+- El texto de `kickoff seal` y `kickoff show` NO DEBE mencionar la política de relevos. El JSON de `kickoff seal`, `kickoff show` y `axiom sdd status` (`governance.kickoff`) PUEDE emitir el valor leído y NO DEBE emitir el campo cuando está vacío.
 - El texto de ayuda y los mensajes de error NO DEBEN sugerir `--handoff-policy`.
 
 Supuesto A-6 (a confirmar en design): un valor fuera de `none|per_checkpoint` se rechaza como hoy, porque los orquestadores sincronizados solo pasan esos dos y el rechazo protege de erratas sin riesgo de compatibilidad.
@@ -58,14 +58,21 @@ Supuesto A-6 (a confirmar en design): un valor fuera de `none|per_checkpoint` se
 - **DADO** un cambio SDD sin `kickoff.yaml`
 - **CUANDO** se ejecuta `axiom sdd kickoff seal --execution-style checkpointed` con los roles y sin `--handoff-policy`
 - **ENTONCES** el sellado se completa
-- **Y** `kickoff.yaml` no contiene `handoff_policy`
+- **Y** `kickoff.yaml` contiene `handoff_policy: none`
 
 #### Scenario: Un orquestador antiguo que pasa el flag sigue funcionando
 
 - **DADO** un orquestador con instrucciones sincronizadas antes de este cambio
 - **CUANDO** ejecuta `axiom sdd kickoff seal ... --handoff-policy per_checkpoint`
 - **ENTONCES** el sellado se completa sin error
-- **Y** `kickoff.yaml` no contiene `handoff_policy` y el flag no tiene ningún efecto
+- **Y** `kickoff.yaml` contiene `handoff_policy: none`, no `per_checkpoint`, y el flag no tiene ningún efecto
+
+#### Scenario: Un binario anterior lee un kickoff nuevo
+
+- **DADO** un `kickoff.yaml` sellado por esta versión, con o sin `seal --infer`
+- **CUANDO** un binario anterior a este cambio lo carga y lo valida
+- **ENTONCES** la validación tiene éxito, porque la clave está presente con un valor que ese binario reconoce
+- **Y** su `verify` no consulta `handoff.md`, porque el valor es `none`
 
 #### Scenario: Un valor desconocido del flag se rechaza
 
@@ -94,10 +101,15 @@ Supuesto A-6 (a confirmar en design): un valor fuera de `none|per_checkpoint` se
 
 #### Scenario: La salida de kickoff y status no emite el campo vacío
 
-- **DADO** un cambio sellado sin `handoff_policy`
+- **DADO** un `kickoff.yaml` sin la clave `handoff_policy`
 - **CUANDO** se ejecuta `axiom sdd kickoff show --json` y `axiom sdd status --json`
 - **ENTONCES** ni `handoffPolicy` ni su equivalente aparecen en el JSON
-- **Y** el texto de `kickoff seal` y `kickoff show` no menciona la política de relevos
+
+#### Scenario: El texto de kickoff no menciona la política de relevos
+
+- **DADO** un cambio sellado por esta versión, con `handoff_policy: none`
+- **CUANDO** se ejecuta `axiom sdd kickoff seal` o `axiom sdd kickoff show` sin `--json`
+- **ENTONCES** el texto no menciona la política de relevos
 
 #### Scenario: Ningún asset nombra el flag como obligatorio
 

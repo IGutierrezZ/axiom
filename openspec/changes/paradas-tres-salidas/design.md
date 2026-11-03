@@ -17,7 +17,7 @@ El cambio se construye sobre siete piezas, todas sobre código que ya existe:
 3. **`gate record --hand-off`.** Comprueba, en este orden: guarda de rama, kickoff sellado `checkpointed`, puerta distinta de `integration`, almacén con ficheros, puerta aún no aprobada, artefacto presente, y que la carpeta del cambio (y, en `role-apply`, el árbol de cada repositorio del rol) está confirmada. Solo entonces escribe `gates.yaml`. Después devuelve las órdenes de commit de `gates.yaml`, push y los datos de la PR, calculados por el motor de ramas sin ninguna operación remota.
 4. **`status` muestra la cesión** como dato (`handedOff`, `handedOffTo`) y como nota informativa. La ruta no cambia.
 5. **`verify` multirrol sin `handoff.md`:** se sustituye `verifyDependencyFromHandoff` por una regla sobre `kickoff.LastRoleClosed` que solo estrecha `ready` a `blocked`. Se retiran `writeIntegrationHandoff`, `kickoff.IntegrationHandoff` y `closure.go`.
-6. **`handoff_policy` deprecado:** se acepta y se ignora, no se exige ni se escribe, y `Validate` admite el valor vacío.
+6. **`handoff_policy` deprecado:** el flag se acepta y se ignora y no se exige; los kickoffs nuevos escriben siempre `handoff_policy: none` para que los binarios anteriores los validen, y `Validate` admite además el valor vacío.
 7. **Fusión intermedia y texto único.**
    - El motor de ramas lee `gates.yaml` y `kickoff.yaml` del árbol de la integración para distinguir una fusión intermedia de un cambio integrado.
    - El texto de las tres salidas vive en un asset neutro, `internal/assets/generic/stop-exits.md`. Lo proyectan la doctrina ODD (`routing.go`) y la sección compartida de puertas SDD, a través de un marcador que resuelve el compositor de orquestadores.
@@ -36,7 +36,7 @@ El cambio se construye sobre siete piezas, todas sobre código que ya existe:
 | DD-08 | Sin orden de plataforma (`gh`, `glab`): push exacto y datos `head`/`base` de la PR | Detectar la plataforma por la URL del remoto |
 | DD-09 | Fusión intermedia = `gates.yaml` integrado con algún `approved` + `handed_off` y no todos los `role-apply` del roster integrado aprobados | Marcador en un fichero aparte; «cualquier puerta pendiente» |
 | DD-10 | `verifyDependencyFromRoleGates`: solo estrecha `ready` a `blocked` | Bloquear siempre que falte un rol (cambiaría la salida de `status` en `spec`/`design`) |
-| DD-11 | `handoff_policy` deprecado: flag aceptado y validado, nunca escrito; `Validate` acepta `""` | Eliminar el campo (rompe orquestadores ya sincronizados) |
+| DD-11 | `handoff_policy` deprecado: flag aceptado, validado e ignorado; el kickoff nuevo escribe siempre `none`; `Validate` acepta `""` | Eliminar el campo (rompe orquestadores ya sincronizados); no escribir la clave (rompe binarios anteriores, R-1) |
 | DD-12 | Fuente única `generic/stop-exits.md` + marcador `{{AXIOM_STOP_EXITS}}` en la sección compartida de puertas | Sección en `sdd-orchestrator-sections.md` leída por `agentguidance`; copiar el texto en doce plantillas |
 | DD-13 | Parada ODD: línea `Plan stop:` en el documento de feature; commit solo de `odd/tasks/<feature>.md` | Ledger ODD; parada a petición |
 | DD-14 | Cambios nuevos en ficheros nuevos y ediciones mínimas en los ficheros que también toca la rama r2 | Refactorizar `governance.go` y `status.go` de paso |
@@ -302,10 +302,10 @@ La ruta (`resolveNextRecommended`, `status.go:1723`) no cambia: una puerta `appr
 | `kickoff/schema.go:89-91` | `if k.Config.HandoffPolicy != "" && !validHandoffPolicies[...]`: acepta vacío, `none` y `per_checkpoint`; rechaza el resto |
 | `kickoff/args.go:197-207` | `--handoff-policy` sigue parseándose y validándose. Un valor desconocido se rechaza (**A-6 confirmado**: `args.go:203-205` ya lo hace). `SealArgs.HandoffPolicy` se conserva con `Deprecated:` y no se usa |
 | `kickoff/args.go:257-259` | se elimina el «requiere --handoff-policy» |
-| `kickoff/args.go:296` | `ToKickoff` deja de copiar el campo |
-| `kickoff/infer.go:22,89` | el retro-sello deja de escribirlo y se actualiza el comentario |
+| `kickoff/args.go:296` | `ToKickoff` deja de copiar el valor del flag y fija siempre `HandoffNone` |
+| `kickoff/infer.go:22,89` | el retro-sello fija siempre `HandoffNone` y se actualiza el comentario |
 | `cli/sdd_kickoff.go:36` | la ayuda deja de nombrar el flag |
-| `cli/sdd_kickoff.go:131-132` | el texto solo añade `handoff_policy=<v> (obsoleto)` cuando el kickoff lo trae |
+| `cli/sdd_kickoff.go:131-132` | el texto deja de mostrar `handoff_policy` |
 | `cli/sdd_kickoff.go:160` | `json:"handoffPolicy,omitempty"` |
 | `sddstatus/status_v2.go:125` | `json:"handoffPolicy,omitempty"` |
 | `cli/sdd_gate.go:89` | el ejemplo de sellado pierde `--handoff-policy none` |
@@ -316,7 +316,8 @@ Las fixtures que pasan `--handoff-policy` (`e2e/organicruntime/sdd_consent_wirin
 **Alternativas descartadas.**
 
 - Eliminar el campo y el flag ya. `args.go:229-230` rechazaría el flag como desconocido y rompería el sellado de los orquestadores ya sincronizados (D6).
-- Seguir escribiendo `handoff_policy: none`. Contradice REQ-26.9 («Un kickoff.yaml nuevo NO DEBE contener la clave»). Ver R-1.
+- No escribir la clave en los kickoffs nuevos (redacción original de REQ-26.9). Un binario anterior rechaza el kickoff sin ella (`schema.go:89-91`), justo en el caso del relevo con otra versión. El usuario eligió escribir `none` (R-1, resuelto).
+- Copiar el valor del flag (`per_checkpoint`). Un binario anterior lo leería y su `verify` multirrol volvería a exigir `handoff.md`.
 
 ### 2.12 DD-12 — Texto único de las tres salidas y su proyección (REQ-26.8, REQ-26.10)
 
@@ -470,7 +471,7 @@ type GateState struct {
 	HandedOff bool // del registro approved que cierra la puerta
 }
 
-// Deprecated: handoff_policy ya no tiene efecto (REQ-26.9); se lee y no se escribe.
+// Deprecated: handoff_policy ya no tiene efecto (REQ-26.9); se lee y los kickoffs nuevos escriben siempre none.
 HandoffPolicy HandoffPolicy `yaml:"handoff_policy,omitempty"`
 
 // handed_off.go
@@ -710,8 +711,9 @@ El cambio presenta órdenes de VCS y PR y añade lecturas git en proceso, así q
 |---|---|---|
 | `gates.yaml` con `handed_off: true` | Decodifica sin error (no estricto, `schema.go:110`); puerta `approved`; no muestra la cesión (degradación esperada) | Muestra la cesión |
 | `gates.yaml` de las salidas 1 y 3 | Idéntico a hoy | Idéntico |
-| `kickoff.yaml` nuevo **sin** `handoff_policy` | **Falla** `Validate` («handoff_policy desconocido ""», `schema.go:89-91`): `status` y `gate` de ese cambio dan error (R-1) | Válido |
-| `kickoff.yaml` antiguo con `none`/`per_checkpoint` | Como hoy | Válido; sin efecto; JSON y texto lo muestran como obsoleto |
+| `kickoff.yaml` nuevo (`handoff_policy: none`) | Válido; `verify` sin `handoff.md` | Válido; sin efecto |
+| `kickoff.yaml` sin la clave (editado a mano) | Falla `Validate` («handoff_policy desconocido ""», `schema.go:89-91`) | Válido |
+| `kickoff.yaml` antiguo con `none`/`per_checkpoint` | Como hoy | Válido; sin efecto; el JSON emite el valor y el texto no lo menciona |
 | Orquestador antiguo pasa `--handoff-policy` | — | Aceptado e ignorado |
 | Orquestador nuevo pasa `--hand-off` a un binario antiguo | «bandera desconocida» (`args.go:444-446`): falla cerrada, sin escribir | — |
 | `handoff.md` ya generados | `verify` multirrol los consulta | Se ignoran en `verify`; legibles con `axiom handoff` |
@@ -724,7 +726,7 @@ No hay migración de datos. Los kickoffs y ledgers existentes se leen sin cambio
 ### 10.3 Reversión
 
 - **Código**: `git revert` de la PR.
-- **Datos**: los `gates.yaml` con `handed_off` siguen siendo legibles por el binario revertido. A los `kickoff.yaml` sellados sin la clave basta con añadirles `handoff_policy: none`; `seal` revertido vuelve a escribirla.
+- **Datos**: los `gates.yaml` con `handed_off` siguen siendo legibles por el binario revertido, y los `kickoff.yaml` sellados con esta versión llevan `handoff_policy: none`, que ese binario acepta.
 - **Doctrina**: `axiom sync` con el binario revertido.
 - **Señales para revertir** (`proposal.md` §9): sobre de autoridad de edición rechazado por la validación nueva; `verify` multirrol bloqueado con todos los roles aprobados o desbloqueado sin ellos; `kickoff seal` que falle con instrucciones antiguas; un `gates.yaml` con la marca que un binario anterior no lea.
 
@@ -732,7 +734,7 @@ No hay migración de datos. Los kickoffs y ledgers existentes se leen sin cambio
 
 | ID | Riesgo | Prob. | Mitigación |
 |---|---|---|---|
-| R-1 | Equipos con versiones mezcladas: un `kickoff.yaml` nuevo, sin `handoff_policy`, no lo valida un binario anterior. Afecta justo al caso de uso (quien recoge con otra versión) | Media | Lo impone REQ-26.9. Mitigación documental en el manual («actualiza Axiom antes de recoger un relevo»); alternativa para la compuerta de producto: escribir `handoff_policy: none` durante una versión de transición (requiere enmendar REQ-26.9). **Decisión del usuario** |
+| R-1 | Equipos con versiones mezcladas: un `kickoff.yaml` sin `handoff_policy` no lo valida un binario anterior. Afecta justo al caso de uso (quien recoge con otra versión) | Baja | **Resuelto por el usuario**: los kickoffs nuevos escriben siempre `handoff_policy: none` (REQ-26.9 enmendado). Queda solo el kickoff editado a mano sin la clave |
 | R-2 | La r2 se fusiona antes y edita `verifyDependencyFromHandoff`/`newGovernanceGateQuestion` | Media | DD-14; rebase; goldens regenerados al final |
 | R-3 | DD-03 es más estricto que la letra de REQ-26.4 (toda la carpeta, no solo lo juzgado) | Baja | Cumple todos los escenarios; motivo explícito; si se prefiere la letra, el filtro se reduce a las rutas del digest sin tocar el resto del diseño |
 | R-4 | Generalizar `ValidateCompleteness` debilita otro sobre | Baja | Llamadores sin cambios; pruebas de no regresión de autoridad de edición, RDD y `blocking_prompt_contract_test.go` |
@@ -742,6 +744,6 @@ No hay migración de datos. Los kickoffs y ledgers existentes se leen sin cambio
 
 ## 12. Puntos abiertos (no bloquean)
 
-1. R-1: ¿se acepta la incompatibilidad de `kickoff.yaml` con binarios anteriores tal como fija REQ-26.9, o se enmienda para una versión de transición que siga escribiendo `handoff_policy: none`?
+1. R-1 (resuelto): los kickoffs nuevos siguen escribiendo `handoff_policy: none` durante la deprecación.
 2. R-5: la recogida en otra máquina de un cambio multirrol con rama de seguimiento queda como limitación conocida. ¿Hace falta un cambio posterior en `ensure` para partir de `origin/<seguimiento>`?
 3. R-3: ¿se acepta el criterio estricto de DD-03 o se prefiere la lectura literal de REQ-26.4?

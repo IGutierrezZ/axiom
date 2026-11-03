@@ -72,7 +72,7 @@ El orquestador NO DEBE volver a formular la pregunta de selección de carril (RE
 - **CUANDO** el orquestador retoma ese cambio
 - **ENTONCES** infiere y sella la configuración por defecto documentada (modalidad continua y el rol que la detección de roles ya vigente infiere para ese cambio —hoy, `core`, cuando existe un `design.md` sin roles explícitos—) sin bloquear el trabajo ni interrogar retroactivamente al usuario
 - **Y** el retro-sello no introduce la identidad `fullstack` ni ningún rol nuevo: es conservador por definición y se limita a congelar el rol y el comportamiento que la detección de roles ya aplica hoy para ese cambio, sin redefinirlo
-- **Y** el retro-sello no escribe ninguna política de relevos
+- **Y** el retro-sello no infiere ninguna política de relevos: escribe `handoff_policy: none` solo como valor de compatibilidad (REQ-26.9 de `sdd-preflight-configuration`)
 - **Y** dicha configuración inferida queda registrada para no volver a inferirse en la siguiente reanudación
 
 #### Scenario: El retro-sello no altera qué `tasks.<rol>.md` consulta la barrera
