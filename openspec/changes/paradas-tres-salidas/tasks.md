@@ -263,20 +263,21 @@ Commit: `feat(sdd): proyectar las tres salidas a los orquestadores y retirar la 
 
 Commit: `docs: describir las paradas con tres salidas y regenerar las copias versionadas`
 
-- [ ] T-22 Documentación versionada a mano (≈120 l)
+- [x] T-22 Documentación versionada a mano (≈120 l)
   - Ficheros: `AGENTS.md` (`:16`), `GEMINI.md` (`:47`), `docs/manual-de-inicio.md` (`:230` sobre las paradas y `:515-566`, que pasa a describir `handoff.md` como utilidad general fuera del flujo SDD).
   - Cubre: REQ-26.8, REQ-21.14 (retirado; migración) · DD-12.
   - Aceptación: los tres documentos describen las tres salidas y la regla de «PR fusionada» sin contradecir la doctrina generada; el manual no presenta `handoff.md` como paso del flujo SDD; los pines de `internal/workspace/docs_contract_test.go` siguen en verde.
   - Comprobación: `go test ./internal/workspace/ -count=1`
 
-- [ ] T-23 Regenerar goldens y `.codex/AGENTS.md` (autoría ≈40 l; el resto es generado y se excluye del recuento)
+- [x] T-23 Regenerar goldens y `.codex/AGENTS.md` (autoría ≈40 l; el resto es generado y se excluye del recuento)
   - Ficheros: `testdata/golden/*.golden` (regenerados con `-update`), `.codex/AGENTS.md` (edición manual acotada).
   - Cambio: ejecutar `go test ./internal/components/ -run Golden -update -count=1` y, después, sin `-update`. Los goldens nunca se concilian a mano. `.codex/AGENTS.md` se edita a mano solo en los párrafos afectados (paradas, compuertas, `handoff_policy`, `handoff.md`), copiando literalmente el texto que proyectan los assets, como en el precedente `9f4bd977`; no se ejecuta `axiom sync` porque está prohibido ejecutar binarios (G-1, resuelto).
   - Cubre: REQ-26.8 (paridad: texto de las tres salidas idéntico en todos los runtimes) · DD-12, DD-14.
   - Aceptación: los goldens pasan sin `-update`; `.codex/AGENTS.md` contiene «### Stops and exits» y los cinco textos de ramas que pinta `internal/workspace/docs_contract_test.go`; el texto de las tres salidas es idéntico al de `StopExits()`.
   - Comprobación: `go test ./internal/components/ -run Golden -count=1` y `go test ./internal/workspace/ -count=1`
 
-- [ ] T-24 Verificación final del cambio (≈60 l de ajustes si aparecen)
+- [x] T-24 Verificación final del cambio (≈60 l de ajustes si aparecen)
+  - Evidencia: `go vet ./...` limpio; `go test` de los paquetes tocados en verde, incluido el ratchet de rechazos de `cli` (`-run 'Refusal|Ratchet|Continuation'`). `scripts/deadcode-ratchet.sh` no se ejecutó: compila un binario suelto (EDR) y la retirada de `closure.go` y `writeIntegrationHandoff` ya dejó `go vet` sin avisos. `internal/components/filemerge` (`TestWriteFileAtomicFollowsDirectoryJunction` y `...RelativeDirectoryJunction`) falla en este equipo por un error de `createtemp` en uniones de directorio de Windows; el paquete no está tocado por este cambio.
   - Ficheros: ninguno de partida; cualquier ajuste mínimo que surja de las pruebas.
   - Cambio: `go vet ./...`; `go test` de todos los paquetes tocados (`./internal/kickoff/ ./internal/consentenvelope/ ./internal/sddstatus/ ./internal/branch/... ./internal/cli/ ./internal/components/... ./internal/assets/ ./internal/workspace/ ./internal/dashboard/`); ratchets de rechazos (cada rechazo nuevo con continuación ejecutable o anotación `refusal:by-design` justificada) y de deadcode (la retirada de `closure.go` y `writeIntegrationHandoff` no deja código muerto).
   - Cubre: criterios de éxito de `proposal.md` §11 («CI verde», «Paridad y goldens»).

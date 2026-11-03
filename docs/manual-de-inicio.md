@@ -227,7 +227,8 @@ Modelo de ramas por topología:
 
 - **Monorepo embebido:** el cambio vive en `<prefijo>/<cambio>`, con su worktree en `<carpeta del proyecto>-wt/<cambio>/<repositorio>`. Si varios roles tocan el mismo repositorio, `<prefijo>/<cambio>` es la rama de seguimiento y cada rol saca `<prefijo>/<cambio>-<rol>` desde ella. Los artefactos de `openspec/` van en la rama del cambio desde la primera escritura.
 - **Multirepo:** el repositorio de especificaciones se trabaja in situ en su rama de integración, sin ramas ni worktrees; cada repositorio de código con un rol recibe `<prefijo>/<cambio>` desde su propia rama de integración.
-- La persona publica (`push`) y abre los PR; `axiom branch` nunca lo hace. Antes de ceder el testigo en un `handoff.md`, los artefactos quedan confirmados en la rama del cambio.
+- La persona publica (`push`) y abre los PR; `axiom branch` nunca lo hace.
+- Cada parada de un cambio SDD con paradas y la parada única del plan de ODD ofrecen tres salidas (véase «Compuertas de Bloque Formales»). Con la salida 2, «aprobar, subir y parar», los artefactos quedan confirmados en la rama del cambio y la fase siguiente solo empieza cuando la PR esté fusionada en el `prTarget`: `axiom branch ensure` en otra máquina crea la rama desde la base y no recupera trabajo sin fusionar. En el repositorio de specs de un multirepo no hay PR: es commit en la rama de integración y push a cargo de la persona.
 
 El modo de trabajo (`worktree` por defecto, `in_place` o `ask`) y la raíz de los worktrees no se declaran en `axiom.yaml`: son preferencias personales del hub. Se fijan al registrar el proyecto (`axiom project add --worktree-mode in_place --worktree-root <ruta absoluta> <proyecto>`, o los dos campos del modal de registro de `axiom ui`) y `axiom branch ensure --mode` las sustituye para un cambio concreto.
 
@@ -496,11 +497,17 @@ Para cambios estructurales profundos, refactorizaciones de arquitectura o requer
 ```
 [ sdd-explore ] ➔ [ sdd-propose ] ➔ [ sdd-spec ] ➔ [ sdd-design ] ➔ [ sdd-tasks ] ➔ [ sdd-apply ] ➔ [ sdd-verify ] ➔ [ sdd-archive ]
 ```
-* **Determinación Temprana y Sello (`kickoff`):** Antes de crear la propuesta, `axiom sdd kickoff seal` fija de forma inmutable la modalidad de avance (continua o con paradas), la política de relevos y el roster de roles.
-* **Compuertas de Bloque Formales:** En modalidad con paradas, cada hito exige aprobación explícita antes de avanzar:
+* **Determinación Temprana y Sello (`kickoff`):** Antes de crear la propuesta, `axiom sdd kickoff seal` fija de forma inmutable la modalidad de avance (continua o con paradas) y el roster de roles. La política de relevos (`handoff_policy`, `--handoff-policy`) está deprecada: el flag se acepta y se ignora, y los kickoffs nuevos escriben `handoff_policy: none` solo como valor de compatibilidad con versiones anteriores.
+* **Compuertas de Bloque Formales:** En modalidad con paradas, cada hito (`spec`, `design`, `tasks` y el `role-apply` de cada rol) es una parada con tres salidas, y `axiom sdd gate record` es el único modo de registrar la decisión:
   ```bash
-  axiom sdd gate record --gate spec|design|tasks|apply --decision approved|rejected --reason "<motivo>"
+  # 1. Iterar: sigues trabajando sobre el artefacto y la parada se vuelve a presentar
+  axiom sdd gate record --gate spec|design|tasks|role-apply:<rol> --decision rejected --reason "<motivo>"
+  # 2. Aprobar, subir y parar: cede la fase siguiente a otra persona (solo con almacén openspec o hybrid)
+  axiom sdd gate record --gate spec|design|tasks|role-apply:<rol> --decision approved --hand-off [--reason "<motivo>"]
+  # 3. Aprobar y seguir: el orquestador continúa con la fase siguiente
+  axiom sdd gate record --gate spec|design|tasks|role-apply:<rol> --decision approved [--reason "<motivo>"]
   ```
+  La salida 2 se rechaza sin escribir nada si la carpeta del cambio (y, en `role-apply`, el árbol de trabajo del rol) tiene cambios sin confirmar. Si procede, registra la aprobación con la marca de cesión y devuelve el commit de `gates.yaml`, el push y los datos de la PR (`head` y `base`): Axiom no ejecuta ninguna de esas órdenes. La fase siguiente solo empieza cuando la PR esté fusionada en el `prTarget`; `axiom sdd status` muestra la cesión (`handedOff`, `handedOffTo`) sin bloquear ninguna fase. La compuerta `integration` conserva sus dos salidas (aprobar con evidencia o rechazar).
 * **Verificación Formal y Precondición de Integración:**
   1. `verify` valida el código mediante tests automatizados y genera `verify-report.md`.
   2. **`archive` no procede inmediatamente tras verificar:** exige registrar previamente evidencia formal de integración o despliegue en la compuerta de integración:
@@ -514,7 +521,7 @@ Para cambios estructurales profundos, refactorizaciones de arquitectura o requer
 
 ## 10. Relevos Estructurados entre Roles y Fases (Handoffs)
 
-Cuando un proyecto cuenta con múltiples roles (por ejemplo `core`, `frontend`, `qa`) o transita entre fases de arquitectura e implementación, el traspaso de contexto no puede depender de mensajes informales en un chat. Axiom formaliza este paso mediante el documento canónico **`handoff.md`**.
+El documento **`handoff.md`** es una utilidad general de Axiom para dejar por escrito un traspaso de contexto entre roles o fases (por ejemplo `core`, `frontend`, `qa`) cuando no quieres que dependa de mensajes informales en un chat. **No es un paso del flujo SDD**: el flujo SDD no lo escribe, no lo exige y no lo consulta. La cesión de una fase a otra persona se hace con la salida 2 de las paradas (véase «Compuertas de Bloque Formales»), que la registra en `gates.yaml`, y `verify` en un cambio multirrol se habilita cuando todos los `role-apply` están aprobados. Los `handoff.md` que generaron versiones anteriores siguen siendo legibles con `axiom handoff`.
 
 ### Estructura Canónica del Relevo (`handoff.md`)
 Cada relevo se redacta en castellano peninsular y se divide en 5 secciones obligatorias y un Frontmatter YAML con metadatos:
