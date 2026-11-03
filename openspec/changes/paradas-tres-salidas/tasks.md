@@ -77,14 +77,14 @@ Commit: `feat(kickoff): marcar la cesión de la fase siguiente en el registro de
 
 Commit: `feat(branch): calcular la entrega de la salida 2 por topología sin operaciones remotas`
 
-- [ ] T-03 Tipos, rechazo y constructores de órdenes de entrega (≈250 l)
+- [x] T-03 Tipos, rechazo y constructores de órdenes de entrega (≈250 l)
   - Ficheros: `internal/branch/types.go`, `internal/branch/labels.go`, `internal/branch/handoff.go` (nuevo), `internal/branch/handoff_test.go` (nuevo).
   - Cambio: `CodeUncommittedArtifacts Code = "uncommitted_artifacts"` con etiqueta «artefactos sin confirmar»; `HandOffRequest`, `HandOffPR`, `HandOffDelivery`, `HandOffPlan` (design §4.3); constructor `UncommittedArtifacts(change, repo, paths)` que devuelve `*Refusal` con las rutas y la continuación de commit; constructores de los pasos exactos (`git -C <gitRoot> add -- <rel>/gates.yaml`, `git -C <gitRoot> commit -m "chore(sdd): aprobar <puerta> de <cambio> y ceder <handedOffTo>" -- <rel>/gates.yaml`, `git -C <gitRoot> push -u origin <rama>`; in situ `git -C <gitRoot> push origin <integración>`) con rutas citadas por `pathquote.Quote`; el texto «la fase siguiente solo empieza cuando la PR esté fusionada en `<prTarget>`…».
   - Cubre: REQ-26.4, REQ-26.5 · DD-07, DD-08 · matriz de amenazas «Selección de repositorio git», «Estado del commit», «Estado del push», «Órdenes de PR».
   - Aceptación (casos de prueba de design §9): (1) ruta con espacios citada; (2) cada orden usa `-C <gitRoot>` absoluto, nunca el cwd; (3) el commit usa pathspec explícito y nunca `-a`; (4) el push nombra la rama concreta, nunca `HEAD`; (5) ningún paso contiene `&&`, `gh ` ni `glab `; (6) `pr.head` y `pr.base` en campos separados; (7) el rechazo lleva continuación ejecutable (ratchet de rechazos).
   - Comprobación: `go test ./internal/branch/ -count=1`
 
-- [ ] T-04 `Engine.HandOff`: comprobación de «confirmado» y entregas por repositorio (≈350 l)
+- [x] T-04 `Engine.HandOff`: comprobación de «confirmado» y entregas por repositorio (≈350 l)
   - Ficheros: `internal/branch/engine/handoff.go` (nuevo), `internal/branch/engine/handoff_test.go` (nuevo).
   - Cambio: `func (e *Engine) HandOff(ctx, req branch.HandOffRequest) (branch.HandOffPlan, *branch.Refusal)` sobre `gather` + `describe`, sin cerrojo, sin escribir el ledger y sin `Fetch`. Resuelve el plan del cambio (carril SDD; un rechazo de plan se devuelve tal cual), localiza el repositorio del planning home (el cuyo `GitRoot` contiene `ChangeRoot`), aplica DD-03 con `DirtyPaths` y compone una `HandOffDelivery` por repositorio (monorepo con rama de cambio o de rol → `PRTarget`; multirepo, repositorio de specs in situ → sin PR; `role-apply` en otros repositorios del rol).
   - DD-03: en `spec`, `design` y `tasks`, nada sucio bajo `<planning home>/changes/<cambio>/`, con exención de `gates.yaml` y de las entradas de la raíz cuyo nombre empieza por punto (`.gates.lock`, `.axiom-instance` y su variante heredada, `.gates-*.yaml`, `.kickoff-*.yaml`); una carpeta entera sin seguimiento aparece como una sola entrada con «/» final y se rechaza. En `role-apply:<rol>`, además, el árbol de trabajo entero de cada repositorio cuyo `Roles` contiene el rol.
