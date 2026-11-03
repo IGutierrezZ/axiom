@@ -51,7 +51,7 @@ Fuera: GoReleaser, políticas de release, `scripts/verify-release-distribution-p
   - Sin Go: mensaje accionable (`winget install GoLang.Go`, reabrir la terminal y repetir el comando).
   - Mantener el mensaje de retención de Windows y `go install github.com/IGutierrezZ/axiom/v3/cmd/axiom@latest` literal (lo exige `windows_distribution_policy_test.go`); ASCII sin BOM.
   - Comprobación: `go test ./internal/update/... ./internal/workspace/...`.
-- [ ] **T2 · `install.sh` sin Homebrew ajeno ni `git`**
+- [x] **T2 · `install.sh` sin Homebrew ajeno ni `git`**
   - Quitar `BREW_TAP`, `BREW_FORMULA_REF`, `install_brew`, la autodetección de `brew` y su ayuda; el método por defecto es `binary`.
   - Quitar el requisito de `git`; `curl -fsSL` en cabecera y ayuda.
   - Misma corrección de mayúsculas en `--method go`.
@@ -77,7 +77,8 @@ Fuera: GoReleaser, políticas de release, `scripts/verify-release-distribution-p
 ## Progreso y evidencias
 
 - 2026-11-04: mapa de cambios hecho (delegado, solo lectura). Verificado con `go get` en un módulo temporal: minúsculas falla, mayúsculas resuelve `v3.5.1`.
-- 2026-11-04 T1 (`87fd049d`): `install.ps1` construye el paquete con `IGutierrezZ` sin `ToLower()`, mensaje de Go ausente con `winget install --id GoLang.Go -e`, cabecera con el uso `irm | iex`; prueba de paquete actualizada con aserción contra `ToLower()` en el .ps1. `go test ./internal/update/ -run "TestInstallScript|TestWindows"`: ok.
+- 2026-11-04 T1 (`4ad88d6f`): `install.ps1` construye el paquete con `IGutierrezZ` sin `ToLower()`, mensaje de Go ausente con `winget install --id GoLang.Go -e`, cabecera con el uso `irm | iex`; prueba de paquete actualizada con aserción contra `ToLower()` en el .ps1. `go test ./internal/update/ -run "TestInstallScript|TestWindows"`: ok.
+- 2026-11-04 T2 (`@@T2@@`): `install.sh` sin `BREW_TAP`/`install_brew`/autodetección de brew (método por defecto `binary`, `--method brew` rechazado), sin requisito de `git`, `curl -fsSL`, paquete Go con el propietario sin minúsculas y comprobación de `go` solo en `--method go`; la prueba fija también la ausencia de `owner_lc`. `bash -n scripts/install.sh`: ok; `go test ./internal/update/ -run "TestInstallScript|TestWindows"`: ok.
 
 ## Seguimientos fuera de alcance
 
