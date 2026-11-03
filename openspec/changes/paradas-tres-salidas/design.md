@@ -346,7 +346,7 @@ Las fixtures que pasan `--handoff-policy` (`e2e/organicruntime/sdd_consent_wirin
   - `sdd-spec/SKILL.md:269` y `sdd-design/SKILL.md:208`: «Antes de ceder el testigo en handoff.md…» pasa a «Antes de la salida 2 de la parada, los artefactos quedan confirmados en la rama del cambio; publicarla es decisión de la persona».
   - `sdd-status-contract.md:127-135` (kickoff sin `handoffPolicy`; gates con `handedOff?`/`handedOffTo?`; `gateQuestion` con tres opciones o dos más `handOffUnavailable`; `verify` multirrol por `role-apply`) y `openspec-convention.md:26,47`: la fila de `handoff.md` pasa a «legado: lo escribían versiones anteriores; hoy solo `axiom handoff create`».
 - **Copias versionadas.**
-  - Se regeneran al final: los goldens con `-update` (`internal/components/golden_test.go:32`) y `.codex/AGENTS.md`.
+  - Se regeneran al final: los goldens con `-update` (`internal/components/golden_test.go:32`). `.codex/AGENTS.md` se edita a mano en los párrafos afectados copiando el texto proyectado (precedente `9f4bd977`), porque `axiom sync` exigiría ejecutar un binario.
   - Se editan a mano: `AGENTS.md:16`, `GEMINI.md:47` y `docs/manual-de-inicio.md:230`, sobre las paradas, y `:515-566`, que pasa a describir `handoff.md` como utilidad general fuera del flujo SDD.
 
 **Alternativas descartadas.**
@@ -396,7 +396,7 @@ Las fixtures que pasan `--handoff-policy` (`e2e/organicruntime/sdd_consent_wirin
   - `governance.go`: la pregunta y su `Validate` en el sitio, y el borrado de `verifyDependencyFromHandoff`, sin mover funciones;
   - `sdd_kickoff.go` y `args.go`: trozos puntuales del flag.
 - En la sección compartida, el texto nuevo va en el tercer párrafo y en la línea del marcador, sin reescribir los demás párrafos.
-- Los goldens y `.codex/AGENTS.md` se regeneran **siempre** en la última tarea y nunca se concilian a mano.
+- Los goldens se regeneran **siempre** en la última tarea y nunca se concilian a mano; `.codex/AGENTS.md` se actualiza en esa misma tarea copiando literalmente el texto proyectado.
 - Si la r2 se fusiona antes, este cambio se rebasa sobre ella. Los conflictos previsibles son el borrado de `verifyDependencyFromHandoff` (si la r2 lo edita) y el cuerpo de `newGovernanceGateQuestion`; ambos se resuelven a favor de la forma de este diseño.
 
 ## 3. Flujo de datos
@@ -636,7 +636,8 @@ notes: ["La compuerta \"spec\" se aprobó cediendo `design` a otra persona: …"
 | `internal/assets/skills/_shared/sdd-status-contract.md`, `openspec-convention.md` | Modificar | Contrato y convención (DD-12) |
 | `internal/assets/skills/sdd-spec/SKILL.md`, `sdd-design/SKILL.md` | Modificar | Sin la «Pregunta de Transición»; remisión a la parada |
 | `internal/assets/assets_test.go` | Modificar | Pines `:2422-2470` y `:3798-3840` ampliados; pin «ningún asset ofrece generar `handoff.md` o continuar» y «ningún asset prescribe `--handoff-policy`» |
-| `testdata/golden/*.golden`, `.codex/AGENTS.md` | Regenerar | Última tarea, con `-update` |
+| `testdata/golden/*.golden` | Regenerar | Última tarea, con `-update` |
+| `.codex/AGENTS.md` | Modificar | Última tarea; copia literal del texto proyectado en los párrafos afectados |
 | `AGENTS.md`, `GEMINI.md`, `docs/manual-de-inicio.md` | Modificar | Paradas y relevo; `handoff.md` como utilidad general |
 
 Fuera del mapa: `internal/handoff`, `cmd/axiom` (`axiom handoff`), `internal/dashboard`, `internal/tui` (heredan DD-09 sin cambios), `e2e/`, `bench/` y `openspec/INDEX.md`.

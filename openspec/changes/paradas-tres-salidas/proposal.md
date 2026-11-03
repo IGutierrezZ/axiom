@@ -151,7 +151,7 @@ Chained PRs recommended: No
 ## 9. Plan de reversión (Rollback Plan)
 
 - **Por código.** `git revert` de los commits del cambio (o de la PR fusionada). No hay migraciones.
-- **Por datos.** `gates.yaml` no cambia de vocabulario: lo escrito con el binario nuevo lo lee el anterior, que ignora el campo opcional de cesión y trata esas puertas como `approved`; no hace falta limpiarlo. Los kickoffs nuevos sin `handoff_policy` fallarían en `Validate` de un binario anterior: tras revertir, `axiom sdd kickoff seal` vuelve a escribir el campo, y para un kickoff ya escrito basta añadir `handoff_policy: none`. Los `handoff.md` ya generados se conservan y siguen siendo legibles por `axiom handoff`.
+- **Por datos.** `gates.yaml` no cambia de vocabulario: lo escrito con el binario nuevo lo lee el anterior, que ignora el campo opcional de cesión y trata esas puertas como `approved`; no hace falta limpiarlo. Los kickoffs nuevos llevan `handoff_policy: none`, que el binario anterior acepta. Los `handoff.md` ya generados se conservan y siguen siendo legibles por `axiom handoff`.
 - **Por doctrina.** `axiom sync` reproyecta las instrucciones del binario revertido; el flag `--handoff-policy` vuelve a ser obligatorio, y las instrucciones revertidas ya lo pasan.
 - **Señal para revertir.** Un sobre de autoridad de edición rechazado por la validación generalizada; un `verify` multirrol bloqueado con todos los `role-apply` aprobados, o desbloqueado sin ellos; un `axiom sdd kickoff seal` que falle con instrucciones antiguas; un `gates.yaml` con el campo de cesión que un binario anterior no consiga leer.
 
