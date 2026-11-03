@@ -6,7 +6,10 @@
 .DESCRIPTION
     Installs Axiom from source with Go. Official Windows binary distribution
     and Scoop are temporarily unavailable until public-trust Authenticode signing
-    is enforced. Accepted channels: stable (default), beta, nightly.
+    is enforced. Accepted channels: stable (default), beta, nightly. Needs Go
+    1.25.10 or newer. It also runs piped (irm <raw script URL> | iex), the
+    one-line install documented in the README; parameters live inside Main so no
+    top-level param block breaks that form.
 
 .EXAMPLE
     .\install.ps1
@@ -67,7 +70,7 @@ function Get-Platform {
 function Test-Prerequisites {
     Write-Step "Checking prerequisites"
     if (-not (Get-Command "go" -ErrorAction SilentlyContinue)) {
-        Stop-WithError "$WINDOWS_DISTRIBUTION_HOLD Install Go 1.25.10 or newer, then run: $STABLE_SOURCE_COMMAND"
+        Stop-WithError "$WINDOWS_DISTRIBUTION_HOLD Go 1.25.10 or newer is required to install from source. Install it with: winget install --id GoLang.Go -e (or from https://go.dev/dl/), open a new terminal so PATH is refreshed, then run this installer again or run: $STABLE_SOURCE_COMMAND"
     }
     Write-Success "Go is available"
 }
@@ -93,8 +96,10 @@ function Install-ViaGo {
     $version = if ($Channel -eq "beta") { "main" } else { "latest" }
     # /v3 is part of the module path, not decoration: Go refuses to resolve a
     # module whose tags are v3.x unless the import path carries the major
-    # version suffix.
-    $goPackage = "github.com/$($GITHUB_OWNER.ToLower())/$GITHUB_REPO/v3/cmd/$BINARY_NAME@$version"
+    # version suffix. The owner keeps its exact case (IGutierrezZ): Go compares the
+    # module path declared in go.mod case-sensitively, so a lowercased owner fails
+    # with "module declares its path as ... but was required as ...".
+    $goPackage = "github.com/$GITHUB_OWNER/$GITHUB_REPO/v3/cmd/$BINARY_NAME@$version"
     Write-Info "Running: go install $goPackage"
 
     if ($Channel -eq "beta") {

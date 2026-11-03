@@ -46,7 +46,7 @@ Fuera: GoReleaser, políticas de release, `scripts/verify-release-distribution-p
 
 ## Tareas
 
-- [ ] **T1 · `install.ps1` instalable con `irm | iex`** (ruta: delegada, escritor único T1–T4; disparador: 2+ ficheros no triviales).
+- [x] **T1 · `install.ps1` instalable con `irm | iex`** (ruta: delegada, escritor único T1–T4; disparador: 2+ ficheros no triviales).
   - Paquete con el propietario tal cual (`IGutierrezZ`), sin `ToLower()`; actualizar la prueba que fija el patrón y añadir una que impida volver a minúsculas.
   - Sin Go: mensaje accionable (`winget install GoLang.Go`, reabrir la terminal y repetir el comando).
   - Mantener el mensaje de retención de Windows y `go install github.com/IGutierrezZ/axiom/v3/cmd/axiom@latest` literal (lo exige `windows_distribution_policy_test.go`); ASCII sin BOM.
@@ -77,6 +77,7 @@ Fuera: GoReleaser, políticas de release, `scripts/verify-release-distribution-p
 ## Progreso y evidencias
 
 - 2026-11-04: mapa de cambios hecho (delegado, solo lectura). Verificado con `go get` en un módulo temporal: minúsculas falla, mayúsculas resuelve `v3.5.1`.
+- 2026-11-04 T1 (`87fd049d`): `install.ps1` construye el paquete con `IGutierrezZ` sin `ToLower()`, mensaje de Go ausente con `winget install --id GoLang.Go -e`, cabecera con el uso `irm | iex`; prueba de paquete actualizada con aserción contra `ToLower()` en el .ps1. `go test ./internal/update/ -run "TestInstallScript|TestWindows"`: ok.
 
 ## Seguimientos fuera de alcance
 
