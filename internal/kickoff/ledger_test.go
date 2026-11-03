@@ -222,6 +222,63 @@ func TestLegacyBinaryReadsAGatesFileWithHandedOff(t *testing.T) {
 	}
 }
 
+// TestHandedOffToIsPersistedWithTheMarkAndReadByTheFrozenSchema fija que la fase
+// cedida se escribe como handed_off_to junto a handed_off, vuelve en
+// GateState.HandedOffTo y que el struct congelado anterior la ignora (REQ-26.3).
+func TestHandedOffToIsPersistedWithTheMarkAndReadByTheFrozenSchema(t *testing.T) {
+	changeRoot := t.TempDir()
+	if err := AppendGate(changeRoot, GateRecord{Gate: GateSpec, Decision: DecisionApproved, ArtifactDigest: "d1", HandedOff: true, HandedOffTo: "design", Actor: "maintainer"}); err != nil {
+		t.Fatalf("AppendGate() error = %v", err)
+	}
+	data, err := os.ReadFile(filepath.Join(changeRoot, GatesFileName))
+	if err != nil {
+		t.Fatalf("leer gates.yaml: %v", err)
+	}
+	if !strings.Contains(string(data), "handed_off_to: design") {
+		t.Fatalf("gates.yaml = %s, se esperaba handed_off_to: design", data)
+	}
+
+	var legacy legacyGateLedger
+	if err := yaml.Unmarshal(data, &legacy); err != nil {
+		t.Fatalf("el struct anterior no decodifica la clave nueva: %v", err)
+	}
+	if len(legacy.Records) != 1 || legacy.Records[0].Decision != DecisionApproved {
+		t.Fatalf("legacy = %+v, se esperaba un approved", legacy)
+	}
+
+	ledger, err := LoadGates(changeRoot)
+	if err != nil {
+		t.Fatalf("LoadGates() error = %v", err)
+	}
+	states, err := EvaluateGates(Inputs{Execution: ExecutionCheckpointed, Artifacts: map[string]string{"spec": "d1"}, Ledger: ledger})
+	if err != nil {
+		t.Fatalf("EvaluateGates() error = %v", err)
+	}
+	if state := findGateState(t, states, GateSpec); !state.HandedOff || state.HandedOffTo != "design" {
+		t.Fatalf("estado = %+v, se esperaba la cesion persistida design", state)
+	}
+}
+
+// Las salidas 1 y 3 no escriben ni handed_off ni handed_off_to.
+func TestExitsOneAndThreeWriteNeitherHandOffKey(t *testing.T) {
+	changeRoot := t.TempDir()
+	for _, record := range []GateRecord{
+		{Gate: GateSpec, Decision: DecisionRejected, Reason: "falta", ArtifactDigest: "d1", Actor: "maintainer"},
+		{Gate: GateDesign, Decision: DecisionApproved, ArtifactDigest: "d2", Actor: "maintainer"},
+	} {
+		if err := AppendGate(changeRoot, record); err != nil {
+			t.Fatalf("AppendGate() error = %v", err)
+		}
+	}
+	data, err := os.ReadFile(filepath.Join(changeRoot, GatesFileName))
+	if err != nil {
+		t.Fatalf("leer gates.yaml: %v", err)
+	}
+	if strings.Contains(string(data), "handed_off") {
+		t.Fatalf("gates.yaml no debe llevar ninguna clave de cesion:\n%s", data)
+	}
+}
+
 func TestParseGateLedgerStillRejectsAnUnknownDecision(t *testing.T) {
 	data := []byte("schema: axiom.sdd-gate-ledger/v1\n" +
 		"change: x\n" +

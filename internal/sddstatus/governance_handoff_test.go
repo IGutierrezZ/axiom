@@ -355,6 +355,59 @@ func TestHandedOffToNamesTheNextRoleOrVerify(t *testing.T) {
 	}
 }
 
+// W-01: the note reflects the phase handed over when the record was written. core
+// handed off apply:web while web was pending; web was approved afterwards without
+// a mark, and the roster is now closed, but core still says apply:web.
+func TestHandedOffToKeepsThePhaseHandedOverAtRecordingTime(t *testing.T) {
+	closed := twoRoleGovernance(true, true, true, false)
+	closed.Gates[0].HandedOffTo = "apply:web"
+	if got := governanceHandedOffTo(closed, closed.Gates[0]); got != "apply:web" {
+		t.Fatalf("core handed off apply:web before web closed: handedOffTo = %q, want apply:web", got)
+	}
+	notes := handedOffNotes(closed)
+	if len(notes) != 1 || !strings.Contains(notes[0], `"role-apply:core"`) || !strings.Contains(notes[0], "`apply:web`") || strings.Contains(notes[0], "verify") {
+		t.Fatalf("notes = %v, want one note naming role-apply:core and apply:web", notes)
+	}
+}
+
+// A record written before handed_off_to existed has no persisted phase: it is
+// still resolved by calculation against the current roster.
+func TestHandedOffToFallsBackToTheCalculationWithoutAPersistedPhase(t *testing.T) {
+	closed := twoRoleGovernance(true, true, true, false)
+	if closed.Gates[0].HandedOffTo != "" {
+		t.Fatalf("fixture carries a persisted phase: %+v", closed.Gates[0])
+	}
+	if got := governanceHandedOffTo(closed, closed.Gates[0]); got != "verify" {
+		t.Fatalf("record without handed_off_to: handedOffTo = %q, want the calculated verify", got)
+	}
+}
+
+// End to end through the ledger: the persisted phase survives a later approval
+// of the other role.
+func TestStatusProjectsThePersistedPhaseAfterTheRosterCloses(t *testing.T) {
+	root := t.TempDir()
+	changeName := "governed-persisted-handoff"
+	changeRoot := seedReadyChange(t, root, changeName, "- [x] 1.1 Wire routes\n")
+	sealFullstackKickoff(t, changeRoot, changeName, kickoff.ExecutionCheckpointed)
+	if err := kickoff.AppendGate(changeRoot, kickoff.GateRecord{
+		Gate: kickoff.GateSpec, Decision: kickoff.DecisionApproved, Reason: "cubre la intencion",
+		HandedOff: true, HandedOffTo: "tasks", Actor: "reviewer",
+	}); err != nil {
+		t.Fatalf("kickoff.AppendGate() error = %v", err)
+	}
+	status, err := Resolve(ResolveOptions{CWD: root, ChangeName: changeName})
+	if err != nil {
+		t.Fatalf("Resolve() error = %v", err)
+	}
+	projection, err := ProjectStatusV2(status)
+	if err != nil {
+		t.Fatalf("ProjectStatusV2() error = %v", err)
+	}
+	if gate := gateV2ByKey(t, projection, kickoff.GateSpec); !gate.HandedOff || gate.HandedOffTo != "tasks" {
+		t.Fatalf("spec gate = %+v, want the persisted phase tasks", gate)
+	}
+}
+
 func TestHandedOffNotesAreEmptyWithoutGatesOrMarks(t *testing.T) {
 	if got := handedOffNotes(nil); got != nil {
 		t.Fatalf("nil governance: notes = %v", got)

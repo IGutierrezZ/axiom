@@ -122,6 +122,10 @@ func runSDDGateRecord(args []string, stdout io.Writer) error {
 		Actor:          actor,
 		RecordedAt:     time.Now().UTC(),
 	}
+	if handOff != nil {
+		// The phase handed over is persisted as computed NOW: the roster moves on afterwards.
+		record.HandedOffTo = handOff.handedOffTo
+	}
 	// Evidence verification runs, and can refuse, BEFORE kickoff.AppendGate:
 	// an unconfirmed pr_merged ancestor must append nothing to gates.yaml
 	// (task 21.1's second case), which is only guaranteed by checking first.

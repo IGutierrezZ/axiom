@@ -150,10 +150,15 @@ func governanceRoleAssignments(governance *Governance) []multirole.RoleAssignmen
 
 // governanceHandedOffTo names what an approved gate handed over (REQ-26.7). It
 // answers "" for a gate that carries no hand-off mark, so a change that only
-// ever used exits 1 and 3 projects exactly what it projected before.
+// ever used exits 1 and 3 projects exactly what it projected before. The phase
+// the record persisted wins; only a record written before that field existed
+// falls back to the calculation against the current roster.
 func governanceHandedOffTo(governance *Governance, gate kickoff.GateState) string {
 	if governance == nil || !gate.HandedOff {
 		return ""
+	}
+	if gate.HandedOffTo != "" {
+		return gate.HandedOffTo
 	}
 	return kickoff.HandedOffTo(gate, governanceRoleAssignments(governance), governance.Gates)
 }

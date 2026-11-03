@@ -61,7 +61,7 @@ La retirada del `handoff.md` del flujo SDD reutiliza `kickoff.LastRoleClosed` (`
 
 **Elección.**
 
-- `internal/kickoff/types.go`, `GateRecord`: campo nuevo `HandedOff bool \`yaml:"handed_off,omitempty"\``, situado tras `Verified`. Significa «esta aprobación cede la fase siguiente a otra persona».
+- `internal/kickoff/types.go`, `GateRecord`: campo nuevo `HandedOff bool \`yaml:"handed_off,omitempty"\``, situado tras `Verified`. Significa «esta aprobación cede la fase siguiente a otra persona». Junto a él, `HandedOffTo string \`yaml:"handed_off_to,omitempty"\``: la fase cedida se persiste al registrar la salida 2 (el mismo valor del mensaje de commit) y las salidas 1 y 3 no lo escriben.
 - `GateState` (`types.go:169-175`): campo nuevo `HandedOff bool`, copiado del registro `approved` que cierra la puerta.
 - `axiom sdd gate record`: flag booleano `--hand-off` (sin valor), en `kickoff.ParseGateRecordArgs` (`internal/kickoff/args.go:352-470`) y en `GateRecordArgs.HandOff bool`.
 - Token de respuesta de la salida 2 en el sobre: `hand_off` (constante `gateAnswerHandOff` junto a `gateAnswerApproved`/`gateAnswerRejected` en `internal/sddstatus/governance.go:42-43`).
@@ -190,6 +190,7 @@ La comprobación propia de cada consumidor se queda en el consumidor. La pregunt
 - **Función pura nueva** `kickoff.HandedOffTo(gate GateState, roster []multirole.RoleAssignment, states []GateState) string`:
   - en puertas fijas devuelve `gate.Blocks` (`design`, `tasks`, `apply`);
   - en `role-apply:<rol>` devuelve `verify` si `LastRoleClosed(roster, states)` y, si no, `apply:<r1>,<r2>` con los roles del roster sin `role-apply` aprobado, en orden alfabético.
+- **La fase cedida se persiste en `handed_off_to` al registrar**: `status` (`gates[].handedOffTo` y la nota) lee ese valor, copiado a `GateState.HandedOffTo`, y solo un registro sin él (ledger anterior a este campo) cae al cálculo de `HandedOffTo` contra el estado actual del roster.
 - **JSON v2** (`internal/sddstatus/status_v2.go:130-136`): `gateV2` gana `HandedOff bool \`json:"handedOff,omitempty"\`` y `HandedOffTo string \`json:"handedOffTo,omitempty"\``.
 - **Texto.** Una nota en `status.Notes` (bloque «Informational only», `status.go:1177-1182`) por cada puerta con cesión, en castellano: «La compuerta "spec" se aprobó cediendo `design` a otra persona: quien recoge el cambio empieza esa fase sin revisar la anterior.» La construye `handedOffNotes(governance)` en el fichero nuevo `internal/sddstatus/governance_handoff.go`. `status.go` añade una línea tras `loadGovernance`.
 

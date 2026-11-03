@@ -151,9 +151,13 @@ type GateRecord struct {
 	// (salida 2 de la parada). Solo la escribe `gate record --hand-off`;
 	// omitempty deja los registros de las salidas 1 y 3 identicos a los de antes,
 	// y un binario anterior que lea la clave la ignora y ve `approved`.
-	HandedOff  bool      `yaml:"handed_off,omitempty"`
-	Actor      string    `yaml:"actor"`
-	RecordedAt time.Time `yaml:"recorded_at"`
+	HandedOff bool `yaml:"handed_off,omitempty"`
+	// HandedOffTo es la fase que cedio esa aprobacion en el momento de registrarla
+	// (por ejemplo "design" o "apply:web"). Solo la escribe la salida 2 junto a
+	// HandedOff: el roster cambia despues y la cesion no debe cambiar con el.
+	HandedOffTo string    `yaml:"handed_off_to,omitempty"`
+	Actor       string    `yaml:"actor"`
+	RecordedAt  time.Time `yaml:"recorded_at"`
 }
 
 // GateLedger is the full append-only content of gates.yaml: every decision
@@ -185,6 +189,9 @@ type GateState struct {
 	Blocks    string
 	Reopened  bool
 	HandedOff bool // del registro approved que cierra la puerta (salida 2)
+	// HandedOffTo es la fase cedida que persistio ese mismo registro; vacia en un
+	// ledger anterior a este campo, y entonces se calcula (HandedOffTo).
+	HandedOffTo string
 }
 
 // defaultRoleArtifactFiles derives the tasks/verify file names a role uses

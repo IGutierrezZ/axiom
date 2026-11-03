@@ -274,6 +274,39 @@ func TestGateRecordHandOffOfARoleApplyNamesWhatIsHandedOver(t *testing.T) {
 	if strings.Count(out, lastRoleNoticeMarker) != 1 {
 		t.Errorf("la salida 2 del último rol emite el aviso exactamente una vez:\n%s", out)
 	}
+
+	// W-01: cada registro persiste la fase que cedió al escribirse, no la que resulte después.
+	ledger := handOffLedger(t, ws)
+	if len(ledger.Records) != 2 || ledger.Records[0].HandedOffTo != "apply:qa" || ledger.Records[1].HandedOffTo != "verify" {
+		t.Errorf("registros = %+v, se esperaba handed_off_to apply:qa y verify", ledger.Records)
+	}
+}
+
+// W-01: tras ceder core con la salida 2 (apply:qa) y aprobar qa con la salida 3, el ledger
+// conserva apply:qa en el registro de core y el de qa no lleva ninguna clave de cesión.
+func TestGateRecordHandOffPhaseSurvivesALaterApprovalOfTheOtherRole(t *testing.T) {
+	ws := handOffProject(t, guardSealArgs)
+	if _, err := gateRecord(t, ws, "--gate", "role-apply:core", "--decision", "approved", "--hand-off"); err != nil {
+		t.Fatalf("role-apply:core --hand-off: %v", err)
+	}
+	if _, err := gateRecord(t, ws, "--gate", "role-apply:qa", "--decision", "approved"); err != nil {
+		t.Fatalf("role-apply:qa salida 3: %v", err)
+	}
+
+	ledger := handOffLedger(t, ws)
+	if len(ledger.Records) != 2 {
+		t.Fatalf("registros = %+v", ledger.Records)
+	}
+	if core := ledger.Records[0]; !core.HandedOff || core.HandedOffTo != "apply:qa" {
+		t.Errorf("registro de core = %+v, se esperaba la cesión apply:qa", core)
+	}
+	if qa := ledger.Records[1]; qa.HandedOff || qa.HandedOffTo != "" {
+		t.Errorf("registro de qa = %+v, la salida 3 no cede nada", qa)
+	}
+	data, err := os.ReadFile(filepath.Join(guardChangeRoot(ws), "gates.yaml"))
+	if err != nil || strings.Count(string(data), "handed_off_to:") != 1 {
+		t.Errorf("gates.yaml debe llevar handed_off_to una sola vez (%v):\n%s", err, data)
+	}
 }
 
 func TestGateRecordHandOffOfARoleApplyRequiresTheWholeWorkingTreeCommitted(t *testing.T) {
