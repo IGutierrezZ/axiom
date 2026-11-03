@@ -751,7 +751,7 @@ func resolveByPreferenceOrder(options ResolveOptions) (Status, error) {
 	var gateQuestion *SDDGovernanceGateResult
 	if nextRecommended == "await-gate" {
 		if gate, ok := firstOpenGate(governance); ok {
-			envelope, err := newGovernanceGateQuestion(changeName, workspaceRoot, gate, artifactPaths)
+			envelope, err := newGovernanceGateQuestion(changeName, workspaceRoot, gate, artifactPaths, gateQuestionStore(workspaceRoot, ArtifactStoreOpenSpec))
 			if err != nil {
 				return Status{}, err
 			}

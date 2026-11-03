@@ -125,14 +125,14 @@ Commit: `feat(sdd): salida 2 de la parada con gate record --hand-off`
 
 Commit: `feat(sddstatus): pregunta de puerta con tres salidas sobre gate record`
 
-- [ ] T-08 `ValidateCompleteness` con la lista exacta de respuestas (≈110 l)
+- [x] T-08 `ValidateCompleteness` con la lista exacta de respuestas (≈110 l)
   - Ficheros: `internal/consentenvelope/envelope.go`, `internal/consentenvelope/envelope_test.go`.
   - Cambio: `func (core Core) ValidateCompleteness(answers ...string) error`: exige al menos dos respuestas distintas entre sí (error de construcción en caso contrario), `len(core.Choices) == len(answers)` y `core.Choices[i].Answer == answers[i]`; el resto de comprobaciones no cambia. Se actualiza el comentario de cabecera («exactly two token choices» → «the exact token choices each consumer declares»). Los tres llamadores (`internal/sddstatus/consent_contract.go`, `internal/cli/review_consent_contract.go`, `internal/sddstatus/governance.go`) compilan sin tocarse y siguen pasando dos tokens.
   - Cubre: REQ-26.2 (el sobre de autoridad de edición sigue exigiendo exactamente dos) · DD-04.
   - Aceptación: casos válidos con tres respuestas; longitud u orden distintos, duplicados y menos de dos se rechazan; el caso existente «three choices» con `("granted", "declined")` sigue rechazando sin cambiar su expectativa.
   - Comprobación: `go test ./internal/consentenvelope/ -count=1` y `go test ./internal/sddstatus/ ./internal/cli/ -run 'Consent|Envelope' -count=1`
 
-- [ ] T-09 Pregunta de puerta con tres opciones, o dos con `handOffUnavailable` (≈210 l)
+- [x] T-09 Pregunta de puerta con tres opciones, o dos con `handOffUnavailable` (≈210 l)
   - Ficheros: `internal/sddstatus/governance.go` (la pregunta y su `Validate` en el sitio, sin mover funciones), `internal/sddstatus/governance_handoff.go` (nuevo; almacén efectivo de la pregunta), `internal/sddstatus/status.go` (tres líneas: pasar el almacén en `:754`), `internal/sddstatus/governance_test.go`, `internal/sddstatus/governance_continuous_test.go`, `internal/sddstatus/status_v2_test.go`.
   - Cambio: constante `gateAnswerHandOff = "hand_off"`; `SDDGovernanceGateResult.HandOffUnavailable string` (`json:"handOffUnavailable,omitempty"`); `newGovernanceGateQuestion` recibe `store ArtifactStore` (declarado o, sin declaración, el efectivo de `status`). Opciones: `spec`/`design`/`tasks`/`role-apply:<rol>` con `openspec` o `hybrid` ⇒ `[rejected, hand_off, approved]` con las invocaciones `--decision rejected --reason <your-reason>`, `--decision approved --hand-off --reason <your-reason>`, `--decision approved --reason <your-reason>`; con `none` (único caso en que se construye con dos opciones) ⇒ `[rejected, approved]` más `handOffUnavailable`; `integration` ⇒ `[approved, rejected]` como hoy. `Validate` deriva la lista esperada, exige invocaciones distintas y con prefijo `axiom sdd gate record `, y que solo `hand_off` contenga ` --hand-off`.
   - Cubre: REQ-26.1, REQ-26.2, REQ-26.6 (A-3 corregido) · DD-05.
