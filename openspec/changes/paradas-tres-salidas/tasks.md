@@ -224,14 +224,14 @@ Commit: `refactor(kickoff): deprecar handoff_policy; aceptar el flag e ignorarlo
 
 Commit: `feat(agentguidance): texto único de las tres salidas y parada única de ODD tras el plan`
 
-- [ ] T-18 Asset `stop-exits.md` y lector `StopExits()` (≈170 l)
+- [x] T-18 Asset `stop-exits.md` y lector `StopExits()` (≈170 l)
   - Ficheros: `internal/assets/generic/stop-exits.md` (nuevo), `internal/components/agentguidance/stop_exits.go` (nuevo, con la constante `stopExitsAsset = "generic/stop-exits.md"` y el precedente de `remote_authorization.go`), `internal/components/agentguidance/stop_exits_test.go` (nuevo).
   - Cambio: texto en inglés que empieza por el párrafo en negrita **Stops and exits.** y define: qué es una parada; las tres salidas en orden, con iterar sin límite; «subir» = PR **fusionada** en `prTarget` antes de empezar la fase siguiente, con el motivo de `ensure`; en el repositorio de specs de un `multirepo`, commit en la integración y push humano sin PR; `push`, `fetch`, PR y merge son del humano y el agente nunca los ejecuta; con almacén `engram` o `none` la salida 2 no está disponible; quien recoge empieza la fase siguiente sin revisar la anterior. No nombra `gateQuestion`, `gateCriteria` ni `gateEvidence`.
   - Cubre: REQ-26.8, REQ-26.10 · DD-12.
   - Aceptación: pines de las tres salidas y su orden, del significado de «subir» (PR fusionada), del caso `multirepo`, de que push/PR/merge son del humano, de la no disponibilidad con `engram`/`none`; ausencia de los tres nombres prohibidos; salida determinista (mismo texto en cada llamada).
   - Comprobación: `go test ./internal/components/agentguidance/ -count=1`
 
-- [ ] T-19 Parada ODD en la doctrina generada (≈260 l)
+- [x] T-19 Parada ODD en la doctrina generada (≈260 l)
   - Ficheros: `internal/components/agentguidance/routing.go`, `internal/components/agentguidance/routing_test.go`.
   - Cambio: sección nueva `### Stops and exits` con `StopExits()` tras *Branches and worktrees* y antes de *Receipt-driven development*; paso 0 conserva literalmente «do not ask any further governance question» y añade que la parada única tras el paso 5 no es una pregunta de gobernanza; paso 5 añade la parada del plan sin nombrar `axiom branch` (el pin de `routing_test.go:364` lo reserva al paso 6); línea de reanudación que parte del fichero y tolera la ausencia del espejo de Engram, no revisa el plan aprobado y sigue por la primera tarea sin completar; viñeta nueva en *Organic Driven Development* con la parada (solo con documento de feature; no es pregunta de gobernanza ni crea artefactos SDD ni `handoff.md`; no se repite al reanudar; línea `Plan stop: approved <YYYY-MM-DD>; implementation continues` o `...; implementation handed off`; iterar ajusta fichero y espejo y vuelve a presentar; salida 2 confirma **solo** `odd/tasks/<feature-name>.md` con `git -C <path> add -- ...` y `git -C <path> commit -m "<msg>" -- ...`, lee `axiom branch status --lane odd --change <feature-name> --json`, presenta rama, `prTarget`, push y datos de la PR y se detiene sin escribir código; en `multirepo`, commit en la integración y push humano, sin PR).
   - Cubre: REQ-26.10, REQ-21.2, REQ-25.40 (escenario «El resto del protocolo no cambia») · DD-13.
