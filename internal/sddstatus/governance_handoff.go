@@ -179,3 +179,42 @@ func handedOffNotes(governance *Governance) []string {
 	}
 	return notes
 }
+
+// verifyDependencyFromRoleGates is DD-10's rule: REQ-21.15 forbids starting the
+// global "verify" phase while a role of a multi-role roster has no approved
+// role-apply gate. It replaces the rule that consulted an integration handoff.md,
+// which is no longer part of the SDD flow: the ledger already says which roles
+// closed, so no second document has to agree with it.
+//
+// It only ever NARROWS baseline, from ready to blocked (the same shape as
+// archiveDependencyFromGovernance), so it never adds a blocking reason to a
+// change in spec, design or tasks, whose verify is already blocked for its own
+// cause. A single-role roster, a continuous seal and an unsealed change keep
+// baseline untouched, and handoff_policy has no effect on any of them
+// (REQ-26.9).
+//
+// It returns the adjusted state and a non-empty genuine reason exactly when it
+// blocks verify; an unchanged baseline always pairs with an empty reason.
+func verifyDependencyFromRoleGates(governance *Governance, baseline DependencyState) (DependencyState, string) {
+	if !governanceGated(governance) || len(governance.Roster.Roles) <= 1 || baseline != DependencyReady {
+		return baseline, ""
+	}
+	if lastRoleClosedForGovernance(governance) {
+		return baseline, ""
+	}
+	approved := make(map[kickoff.GateKey]bool, len(governance.Gates))
+	for _, gate := range governance.Gates {
+		if gate.Status == "approved" {
+			approved[gate.Key] = true
+		}
+	}
+	var open []string
+	for _, role := range governance.Roster.Roles {
+		if !approved[kickoff.RoleApplyGate(role)] {
+			open = append(open, role)
+		}
+	}
+	return DependencyBlocked, fmt.Sprintf(
+		"La fase verify global no puede iniciarse: faltan roles sin la compuerta role-apply aprobada (%s) (REQ-21.15).",
+		strings.Join(open, ", "))
+}

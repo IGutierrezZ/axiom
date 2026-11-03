@@ -174,7 +174,7 @@ func TestKickoffImportAllowlistTable(t *testing.T) {
 		{name: "allowed multirole", path: "github.com/IGutierrezZ/axiom/v3/internal/multirole", want: true},
 		{name: "allowed reviewtransaction", path: "github.com/IGutierrezZ/axiom/v3/internal/reviewtransaction", want: true},
 		{name: "allowed workspace", path: "github.com/IGutierrezZ/axiom/v3/internal/workspace", want: true},
-		{name: "allowed handoff", path: "github.com/IGutierrezZ/axiom/v3/internal/handoff", want: true},
+		{name: "disallowed handoff: the integration relay left the SDD flow", path: "github.com/IGutierrezZ/axiom/v3/internal/handoff", want: false},
 		{name: "allowed gitref leaf", path: "github.com/IGutierrezZ/axiom/v3/internal/gitref", want: true},
 		{name: "allowed yaml", path: "gopkg.in/yaml.v3", want: true},
 		{name: "disallowed branch planner", path: "github.com/IGutierrezZ/axiom/v3/internal/branch", want: false},
@@ -193,8 +193,8 @@ func TestKickoffImportAllowlistTable(t *testing.T) {
 // TestKickoffPackageImportsStayInsideAllowlist runs the import allowlist
 // against every real production file in internal/kickoff: this package
 // may depend only on internal/multirole, internal/reviewtransaction,
-// internal/workspace, internal/handoff, the standard library, and
-// gopkg.in/yaml.v3 (design.md S4.1, extended by S4.5 for handoff) —
+// internal/workspace, the standard library, and
+// gopkg.in/yaml.v3 (design.md S4.1) —
 // nothing else, and in particular nothing that would let it reach
 // sddstatus, cli, or any review-authority package transitively.
 func TestKickoffPackageImportsStayInsideAllowlist(t *testing.T) {
@@ -223,7 +223,7 @@ func TestKickoffPackageImportsStayInsideAllowlist(t *testing.T) {
 // paths internal/kickoff's production files may reference: internal/
 // multirole for RoleAssignment/GatePolicy/DetectRoles, internal/
 // reviewtransaction for the atomic publish/lock primitives, gopkg.in/
-// yaml.v3 for (de)serialization, internal/workspace, and internal/handoff.
+// yaml.v3 for (de)serialization, and internal/workspace.
 //
 // internal/workspace is a correction on top of design.md S4.1's literal
 // list, found by this very guard: InferKickoff's signature (Phase 3, task
@@ -234,20 +234,14 @@ func TestKickoffPackageImportsStayInsideAllowlist(t *testing.T) {
 // signature without this import, and workspace defines nothing but
 // configuration types — it carries no path back to review authority.
 //
-// internal/handoff is a deliberate, DESIGNED addition (Phase 17, design.md
-// S4.5: "internal/kickoff/closure.go importa internal/handoff. Arista
-// nueva kickoff -> handoff, segura"), not a guard correction like
-// workspace above: IntegrationHandoff (closure.go) reuses handoff.Handoff/
-// handoff.WriteFile as the canonical relay schema instead of inventing a
-// second one (D-11). handoff imports only internal/workspace and, since
-// Phase 15, internal/multirole (for IsReservedRole) — neither carries a
-// path back to review authority, so this edge stays inside the same safe
-// leaf-package graph the rest of this allowlist already describes.
+// internal/handoff used to be on this list for closure.go's integration relay
+// (Phase 17, design.md S4.5). REQ-21.14 was retired, so the edge
+// kickoff -> handoff is gone and a new import of it is a violation again:
+// the integration handoff.md is no longer part of the SDD flow.
 var kickoffAllowedImportPrefixes = []string{
 	"github.com/IGutierrezZ/axiom/v3/internal/multirole",
 	"github.com/IGutierrezZ/axiom/v3/internal/reviewtransaction",
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace",
-	"github.com/IGutierrezZ/axiom/v3/internal/handoff",
 	// gitref is a pure leaf (standard library only) that INC-25 shares between workspace,
 	// kickoff and the branch planner: the git snapshot of kickoff.yaml validates its names
 	// with it (design INC-25 D-12, gitsnapshot.go).

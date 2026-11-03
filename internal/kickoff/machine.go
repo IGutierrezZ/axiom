@@ -154,8 +154,8 @@ func groupGateRecordsByKey(records []GateRecord) map[GateKey][]GateRecord {
 // role-apply gate approved in gates (REQ-21.13). A role whose gate is
 // missing, still pending, or rejected keeps this false — including when
 // every other role is already approved: a single rejected or not-yet-open
-// role-apply gate must never let the last-role notice or the integration
-// handoff fire (REQ-21.13, third scenario). A single-role roster (the
+// role-apply gate must never let the last-role notice fire, nor open the
+// global verify phase (REQ-21.13, third scenario; REQ-21.15). A single-role roster (the
 // fullstack default included) satisfies this the moment that one gate is
 // approved, with no other role to wait for.
 //

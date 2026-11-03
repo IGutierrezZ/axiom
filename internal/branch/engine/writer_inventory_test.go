@@ -110,8 +110,7 @@ type writerEntry struct {
 var guardedWriters = map[string]writerEntry{
 	// --- CLI: la guarda A con el contexto de la tabla del diseño §2.11 (S8-c1 y S8-c3) ---
 	"internal/cli.runSDDKickoffSeal":              {status: statusGuarded, reason: "kickoff seal: guarda A y después la instantánea (applySealBranchPolicy); `--infer` y el kickoff sin instantánea quedan exentos dentro de la guarda (R15)"},
-	"internal/cli.runSDDGateRecord":               {status: statusGuarded, reason: "gate record: contexto ordinary, archive con --gate integration (G-10); cubre AppendGate y el handoff de integración"},
-	"internal/cli.writeIntegrationHandoff":        {status: statusVia, via: "internal/cli.runSDDGateRecord", reason: "relevo de integración de la última compuerta de rol: lo cubre la guarda de gate record"},
+	"internal/cli.runSDDGateRecord":               {status: statusGuarded, reason: "gate record: contexto ordinary, archive con --gate integration (G-10); cubre AppendGate"},
 	"internal/cli.RunSDDContinue":                 {status: statusGuarded, reason: "marcador de instancia: guarda solo si el marcador se va a escribir (ChangeInstanceMarkerPending)"},
 	"internal/cli.runSDDIntegratePrepare":         {status: statusGuarded, reason: "integration.yaml: contexto archive"},
 	"internal/cli.runSDDIntegrateVerify":          {status: statusGuarded, reason: "integration.yaml: contexto archive"},

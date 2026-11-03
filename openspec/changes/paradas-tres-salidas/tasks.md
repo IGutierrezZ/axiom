@@ -158,14 +158,14 @@ Commit: `feat(sddstatus): mostrar en status la cesión de la fase siguiente`
 
 Commit: `refactor(sdd): habilitar verify por los role-apply aprobados y retirar el handoff.md de integración`
 
-- [ ] T-11 `verifyDependencyFromRoleGates` sustituye a `verifyDependencyFromHandoff` (≈260 l)
+- [x] T-11 `verifyDependencyFromRoleGates` sustituye a `verifyDependencyFromHandoff` (≈260 l)
   - Ficheros: `internal/sddstatus/governance_handoff.go`, `internal/sddstatus/governance.go` (solo el borrado de `verifyDependencyFromHandoff` y del import de `internal/handoff`), `internal/sddstatus/status.go` (la llamada de `:730`), `internal/sddstatus/handoff_dependency_test.go` (eliminar), `internal/sddstatus/role_gates_dependency_test.go` (nuevo).
   - Cambio: `func verifyDependencyFromRoleGates(governance *Governance, baseline DependencyState) (DependencyState, string)` devuelve `baseline, ""` si no hay gobierno con puertas, si el roster tiene uno o ningún rol, si `baseline != DependencyReady` o si el último rol está cerrado; en otro caso `DependencyBlocked` con un motivo que nombra los roles sin `role-apply` aprobado. Solo estrecha `ready` a `blocked` (DD-10); no cambia `blockedReasons` en `spec`, `design` ni `tasks`.
   - Cubre: REQ-21.15, REQ-26.9 (`per_checkpoint` sin efecto) · DD-10.
   - Aceptación: (1) `core` aprobado y `web` pendiente ⇒ `verify` bloqueado con motivo que nombra `web`; (2) ambos aprobados y sin `handoff.md` ⇒ `verify` desbloqueado y siguiente fase proyectada; (3) un `handoff.md` `blocked` o `needs_clarification` presente no altera el resultado; (4) un `role-apply` rechazado mantiene el bloqueo; (5) rol único o modalidad continua ⇒ igual que antes; (6) `per_checkpoint` y `none` producen el mismo resultado.
   - Comprobación: `go test ./internal/sddstatus/ -count=1`
 
-- [ ] T-12 Retirar `writeIntegrationHandoff`, `kickoff.IntegrationHandoff` y `closure.go` (≈440 l, casi todo eliminaciones)
+- [x] T-12 Retirar `writeIntegrationHandoff`, `kickoff.IntegrationHandoff` y `closure.go` (≈440 l, casi todo eliminaciones)
   - Ficheros: `internal/cli/sdd_gate.go` (eliminar `writeIntegrationHandoff` y `buildIntegrationArtifactInventory`, el import de `internal/handoff`; `lastRoleJustClosed` devuelve `(bool, error)`; se conserva `fileHasContent`; aviso nuevo), `internal/kickoff/closure.go` (eliminar), `internal/kickoff/closure_test.go` (eliminar), `internal/kickoff/rdd_boundary_test.go` (sin la arista `kickoff → handoff`), `internal/kickoff/machine.go` (comentario), `internal/branch/engine/writer_inventory_test.go` (quitar la entrada `writeIntegrationHandoff` y su motivo; conservar `{"internal/handoff", "WriteFile"}`), `internal/cli/sdd_gate_test.go`.
   - Cambio: el aviso conserva `lastRoleNoticeMarker` y pasa a decir «Aviso: se ha concluido la implementacion del ultimo rol activo del cambio %q; queda abierta la verificacion global de la solucion (REQ-21.13, REQ-21.15).»; se emite con la salida 2 y con la salida 3.
   - Cubre: REQ-21.13, REQ-21.14 (retirado), REQ-21.15 · DD-10.

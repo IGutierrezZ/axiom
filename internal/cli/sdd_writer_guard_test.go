@@ -173,10 +173,10 @@ func TestGuardGateRecordIntegrationUsesTheArchiveContext(t *testing.T) {
 	}
 }
 
-// REQ-25.19: una sola guarda cubre `AppendGate` y el handoff de integración que escribe la última
-// compuerta de rol: fuera de rama no se escribe ni la compuerta ni `handoff.md`; en la rama del
-// cambio se escriben las dos.
-func TestGuardGateRecordOfTheLastRoleGuardsTheIntegrationHandoffToo(t *testing.T) {
+// REQ-25.19: la guarda cubre la última compuerta de rol: fuera de rama no se escribe nada y en la
+// rama del cambio se escribe la compuerta y se avisa; el `handoff.md` de integración ya no existe
+// (REQ-21.14 retirado), así que no se escribe en ningún caso.
+func TestGuardGateRecordOfTheLastRoleGuardsTheLedgerAndWritesNoHandoff(t *testing.T) {
 	ws := guardProject(t)
 	handoffPath := filepath.Join(guardChangeRoot(ws), "handoff.md")
 	firstRole := []string{"--gate", "role-apply:core", "--decision", "approved", "--reason", "ok"}
@@ -196,6 +196,10 @@ func TestGuardGateRecordOfTheLastRoleGuardsTheIntegrationHandoffToo(t *testing.T
 	if _, statErr := os.Stat(handoffPath); !errors.Is(statErr, os.ErrNotExist) {
 		t.Errorf("fuera de rama no se escribe el handoff de integración (%v)", statErr)
 	}
+	ledger, loadErr := kickoff.LoadGates(guardChangeRoot(ws))
+	if loadErr != nil || len(ledger.Records) != 1 {
+		t.Fatalf("fuera de rama el registro del último rol no debe anexarse (registros=%d, err=%v)", len(ledger.Records), loadErr)
+	}
 
 	integrateGit(t, ws.Master, "switch", "-q", "feat/x")
 	out, err := gateRecord(t, ws, lastRole...)
@@ -205,8 +209,12 @@ func TestGuardGateRecordOfTheLastRoleGuardsTheIntegrationHandoffToo(t *testing.T
 	if !strings.Contains(out, lastRoleNoticeMarker) {
 		t.Errorf("la salida debe avisar del último rol:\n%s", out)
 	}
-	if _, statErr := os.Stat(filepath.Join(guardChangeRoot(ws), "handoff.md")); statErr != nil {
-		t.Errorf("en la rama del cambio se escribe el handoff de integración: %v", statErr)
+	if _, statErr := os.Stat(handoffPath); !errors.Is(statErr, os.ErrNotExist) {
+		t.Errorf("en la rama del cambio tampoco se escribe un handoff.md de integración (%v)", statErr)
+	}
+	ledger, loadErr = kickoff.LoadGates(guardChangeRoot(ws))
+	if loadErr != nil || len(ledger.Records) != 2 {
+		t.Errorf("en la rama del cambio el registro del último rol se anexa (registros=%d, err=%v)", len(ledger.Records), loadErr)
 	}
 }
 

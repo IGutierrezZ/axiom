@@ -727,7 +727,7 @@ func resolveByPreferenceOrder(options ResolveOptions) (Status, error) {
 		}
 	}
 	dependencies := resolveDependencies(artifacts, applyState, coreReady)
-	verifyState, verifyReason := verifyDependencyFromHandoff(governance, changeRoot, dependencies.Verify)
+	verifyState, verifyReason := verifyDependencyFromRoleGates(governance, dependencies.Verify)
 	dependencies.Verify = verifyState
 	if verifyReason != "" {
 		blockedReasons.genuine = append(blockedReasons.genuine, verifyReason)

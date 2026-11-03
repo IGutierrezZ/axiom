@@ -8,7 +8,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/IGutierrezZ/axiom/v3/internal/handoff"
 	"github.com/IGutierrezZ/axiom/v3/internal/kickoff"
 )
 
@@ -189,8 +188,8 @@ func TestRunSDDGateShowOnEmptyLedger(t *testing.T) {
 // TestRunSDDGateRecordEmitsLastRoleNoticeExactlyOnceForSingleFullstackRole
 // is task 18.1's base case (routing already confirmed in task 10.1):
 // approving the sole fullstack role's role-apply gate emits the last-role
-// notice exactly once AND writes handoff.md with status ready (REQ-21.13,
-// REQ-21.14).
+// notice exactly once and writes NO handoff.md (REQ-21.13; REQ-21.14 was
+// retired, the ledger alone opens verify, REQ-21.15).
 func TestRunSDDGateRecordEmitsLastRoleNoticeExactlyOnceForSingleFullstackRole(t *testing.T) {
 	root, changeRoot := newGovernanceWorkspace(t, "inc-99-example")
 	sealForGateTest(t, root, "inc-99-example")
@@ -208,15 +207,44 @@ func TestRunSDDGateRecordEmitsLastRoleNoticeExactlyOnceForSingleFullstackRole(t 
 		t.Fatalf("el aviso de ultimo rol aparecio %d veces, se esperaba exactamente 1:\n%s", occurrences, out.String())
 	}
 
-	h, parseErr := handoff.ParseFile(filepath.Join(changeRoot, "handoff.md"))
-	if parseErr != nil {
-		t.Fatalf("handoff.ParseFile() error = %v, se esperaba que gate record escribiese handoff.md", parseErr)
+	if !strings.Contains(out.String(), "verificacion global") {
+		t.Fatalf("el aviso debe decir que queda abierta la verificacion global:\n%s", out.String())
 	}
-	if h.Metadata.Status != handoff.StatusReady {
-		t.Fatalf("handoff.md Status = %q, se esperaba ready", h.Metadata.Status)
+	if _, statErr := os.Stat(filepath.Join(changeRoot, "handoff.md")); statErr == nil {
+		t.Fatal("handoff.md fue escrito al aprobar el ultimo rol; el relevo de integracion se retiro (REQ-21.14)")
 	}
-	if h.Metadata.FromPhase != handoff.PhaseApply || h.Metadata.ToPhase != handoff.PhaseVerify {
-		t.Fatalf("handoff.md transicion = %s -> %s, se esperaba apply -> verify", h.Metadata.FromPhase, h.Metadata.ToPhase)
+}
+
+// TestRunSDDGateRecordLastRoleOfSeveralEmitsNoticeWithoutHandoffFile covers the
+// multi-role closure: approving the second and last role emits the notice and
+// still writes no handoff.md, with or without exit 2.
+func TestRunSDDGateRecordLastRoleOfSeveralEmitsNoticeWithoutHandoffFile(t *testing.T) {
+	root, changeRoot := newGovernanceWorkspace(t, "inc-99-example")
+	sealForGateTest(t, root, "inc-99-example", "--role", "core", "--role", "web")
+
+	var first bytes.Buffer
+	if err := RunSDDGate([]string{
+		"record", "--cwd", root, "--change", "inc-99-example",
+		"--gate", "role-apply:core", "--decision", "approved", "--reason", "listo",
+	}, &first); err != nil {
+		t.Fatalf("RunSDDGate() primer rol error = %v", err)
+	}
+	if strings.Contains(first.String(), lastRoleNoticeMarker) {
+		t.Fatalf("aviso de ultimo rol con web pendiente:\n%s", first.String())
+	}
+
+	var last bytes.Buffer
+	if err := RunSDDGate([]string{
+		"record", "--cwd", root, "--change", "inc-99-example",
+		"--gate", "role-apply:web", "--decision", "approved", "--reason", "listo",
+	}, &last); err != nil {
+		t.Fatalf("RunSDDGate() ultimo rol error = %v", err)
+	}
+	if got := strings.Count(last.String(), lastRoleNoticeMarker); got != 1 {
+		t.Fatalf("el aviso aparecio %d veces, se esperaba 1:\n%s", got, last.String())
+	}
+	if _, statErr := os.Stat(filepath.Join(changeRoot, "handoff.md")); statErr == nil {
+		t.Fatal("handoff.md fue escrito al cerrar el ultimo de varios roles")
 	}
 }
 
