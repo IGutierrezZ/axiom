@@ -46,7 +46,9 @@ func useArchivePlan(facts *changeFacts, r EnsureRequest) *branch.Refusal {
 
 // checkIntegrated es la comprobación de integración de D-25 (paso 5): la base evaluada debe
 // contener la carpeta `changes/<cambio>/` del planning home, que se lee del árbol del commit de la
-// base con `git ls-tree`, sin cambiar de rama ni usar la red. Si no la contiene, es
+// base con `git ls-tree`, sin cambiar de rama ni usar la red. Si la contiene como fusión intermedia
+// de planificación (REQ-26.11), es `change_not_integrated` con el detalle `intermediate`, sin
+// sugerir `--fetch`. Si no la contiene, es
 // `change_not_integrated`, sin crear nada, nombrando la base y sugiriendo `--fetch`; si en su
 // lugar contiene `changes/archive/<fecha>-<cambio>/`, el cambio ya está archivado y el mensaje
 // nombra esa entrada y dice que no hay nada que archivar (G-13). fetched dice si esta ejecución
@@ -68,6 +70,11 @@ func (e *Engine) checkIntegrated(ctx context.Context, command, cwd string, repo 
 		return gitRefusal(command, cwd, fmt.Sprintf("leer %s en %s", changePath, base.ref), err)
 	}
 	if integrated {
+		// Una fusión intermedia de planificación deja la carpeta en la base sin que el cambio esté
+		// terminado: no se archiva (REQ-26.11). Lo que no se pueda leer cuenta como un cambio normal.
+		if intermediate, _ := e.intermediateMerge(ctx, repo.GitRoot, base.sha, changesPath, change); intermediate {
+			return branch.ChangeIntermediateMerge(change, facts.input.Master, facts.input.Exceptions.Prefix, repo, base.ref, changePath+"/")
+		}
 		return nil
 	}
 	archivePath := path.Join(changesPath, "archive")

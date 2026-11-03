@@ -178,21 +178,21 @@ Commit: `refactor(sdd): habilitar verify por los role-apply aprobados y retirar 
 
 Commit: `feat(branch): no tratar una fusión intermedia de planificación como cambio integrado`
 
-- [ ] T-13 Lectura de ficheros de un árbol de git: `Git.FileAt` (≈170 l)
+- [x] T-13 Lectura de ficheros de un árbol de git: `Git.FileAt` (≈170 l)
   - Ficheros: `internal/branch/ports.go`, `internal/branch/gitcli/ops.go`, `internal/branch/gitcli/ops_test.go`, `internal/branch/engine/engine.go` (`gitReader`), y los dobles de prueba de `branch.Git` que ya existan en los paquetes `branch` y `engine`.
   - Cambio: `FileAt(ctx, dir, rev, relPath string) (content []byte, exists bool, err error)` implementado con `ls-tree -z --full-tree <rev> -- <relPath>` seguido de `cat-file blob <objeto>`; valida argumentos con `plainArgument` y `pathspecArgument` como `TreeDirs`; `cat-file` se añade a la lista cerrada de lecturas del comentario de paquete (`gitcli/ops.go`).
   - Cubre: REQ-26.11 (evaluación sobre la referencia local, sin red) · DD-09.
   - Aceptación: fichero existente devuelve contenido; ausente devuelve `exists == false` sin error; revisión o ruta con argumentos no válidos se rechazan; el observador no registra operaciones remotas.
   - Comprobación: `go test ./internal/branch/... -count=1`
 
-- [ ] T-14 Criterio de fusión intermedia y exclusión de `PendingArchive` (≈200 l)
+- [x] T-14 Criterio de fusión intermedia y exclusión de `PendingArchive` (≈200 l)
   - Ficheros: `internal/branch/engine/intermediate.go` (nuevo), `internal/branch/engine/pending.go`, `internal/branch/engine/pending_test.go`.
   - Cambio: `func (e *Engine) intermediateMerge(ctx, root, sha, changesRel, change string) (bool, string)`: lee `<changesRel>/<change>/gates.yaml` (ausente o ilegible ⇒ `false`), si ninguna marca `handed_off` ⇒ `false` sin leer más, lee `kickoff.yaml` (ausente o ilegible ⇒ `false`) y aplica `kickoff.IntermediateMerge`; un error de git (no de contenido) ⇒ `false` y un aviso añadido a los existentes. `PendingArchive` salta los cambios intermedios; dashboard y TUI lo heredan sin cambios.
   - Cubre: REQ-26.11, REQ-25.20 (A-7, A-8) · DD-09.
   - Aceptación (escenarios de REQ-26.11): (1) `x` con solo `spec` cedida ⇒ no figura y código de salida 0; (2) `design` cedida con `core`/`web` sin aprobar ⇒ intermedio y sin la continuación de archivado; (3) `role-apply:core` cedido con `web` pendiente ⇒ intermedio; (4) todos los `role-apply` aprobados ⇒ figura como pendiente con `axiom branch ensure --change x --archive`; (5) `y` sin marca o sin `gates.yaml` ⇒ figura como antes; (6) `gates.yaml` o `kickoff.yaml` ilegibles ⇒ como antes, sin error; (7) la evaluación no usa la red; (8) la fusión intermedia no bloquea `axiom branch status`, `axiom sdd status` ni un escritor guardado de otro cambio.
   - Comprobación: `go test ./internal/branch/engine/ ./internal/dashboard/ -count=1`
 
-- [ ] T-15 `ensure --archive` rechaza una fusión intermedia (≈150 l)
+- [x] T-15 `ensure --archive` rechaza una fusión intermedia (≈150 l)
   - Ficheros: `internal/branch/archive_refusal.go`, `internal/branch/engine/archive.go`, `internal/branch/engine/archive_test.go`.
   - Cambio: `branch.ChangeIntermediateMerge(change, master, prefix, repo, base, changePath)` con código `change_not_integrated`, detalle `intermediate: "true"`, mensaje que lo dice, sin sugerencia de `--fetch` y continuación «termina el cambio (todos los `role-apply` aprobados), fusiona su PR y repite `axiom branch ensure --change <c> --archive`»; `checkIntegrated` lo devuelve cuando la carpeta existe y el cambio es intermedio. En el repositorio de specs de un `multirepo` sigue rechazando con `archive_branch_not_applicable`.
   - Cubre: REQ-26.11, REQ-25.45 (S-16 enmendado) · DD-09.

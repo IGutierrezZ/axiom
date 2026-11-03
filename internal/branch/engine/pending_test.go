@@ -529,6 +529,7 @@ type fakeGit struct {
 	topLevel    func(dir string) (string, error)
 	resolve     func(ref string) (string, bool, error)
 	treeDirs    func(rev, relPath string) ([]string, bool, error)
+	fileAt      func(rev, relPath string) ([]byte, bool, error)
 	treeDirArgs [][2]string
 }
 
@@ -554,6 +555,12 @@ func (f *fakeGit) AheadBehind(context.Context, string, string, string) (int, int
 func (f *fakeGit) TreeDirs(_ context.Context, _, rev, relPath string) ([]string, bool, error) {
 	f.treeDirArgs = append(f.treeDirArgs, [2]string{rev, relPath})
 	return f.treeDirs(rev, relPath)
+}
+func (f *fakeGit) FileAt(_ context.Context, _, rev, relPath string) ([]byte, bool, error) {
+	if f.fileAt == nil {
+		return nil, false, nil
+	}
+	return f.fileAt(rev, relPath)
 }
 func (f *fakeGit) IsAncestor(context.Context, string, string, string) (bool, error) {
 	return false, errors.New("no se usa")

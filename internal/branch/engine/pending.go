@@ -34,7 +34,10 @@ func isPendingChange(name string) bool {
 // La evaluación se hace sobre la referencia de integración local de REQ-25.10
 // (`origin/<integración>` si existe en local y, si no, la rama local), leyendo su árbol
 // con `git ls-tree` sin cambiar de rama ni usar la red. Los pendientes salen ordenados
-// por nombre, cada uno con la orden para archivarlo.
+// por nombre, cada uno con la orden para archivarlo. Una carpeta que es una fusión intermedia de
+// planificación (aprobaciones con la marca de cesión y algún rol sin su `role-apply` aprobado,
+// REQ-26.11) no cuenta: el cambio no está terminado y aún no hay nada que archivar. El dashboard
+// y la TUI heredan el criterio porque leen esta lista.
 //
 // El resultado distingue tres casos: no nil y vacío, se evaluó y no hay pendientes (también
 // el repositorio de specs de un `multirepo`, donde los cambios activos viven en la rama de
@@ -74,13 +77,25 @@ func (e *Engine) PendingArchive(ctx context.Context, loc workspace.Location) ([]
 		return omitted("no se pudo leer %s en %s: %v", changesPath, base.ref, err)
 	}
 	pending := []branch.PendingChange{}
+	var warnings []string
 	for _, dir := range dirs {
-		if isPendingChange(dir) {
-			pending = append(pending, branch.NewPendingChange(dir))
+		if !isPendingChange(dir) {
+			continue
 		}
+		// Una fusión intermedia de planificación (salida 2 de una parada) deja la carpeta en
+		// la integración sin que el cambio esté terminado: no está pendiente de archivar
+		// (REQ-26.11).
+		intermediate, warning := e.intermediateMerge(ctx, root, base.sha, changesPath, dir)
+		if warning != "" {
+			warnings = append(warnings, warning)
+		}
+		if intermediate {
+			continue
+		}
+		pending = append(pending, branch.NewPendingChange(dir))
 	}
 	slices.SortFunc(pending, func(a, b branch.PendingChange) int { return strings.Compare(a.Change, b.Change) })
-	return pending, nil
+	return pending, warnings
 }
 
 // integrationBranchOf es la rama de integración del repositorio de raíz git root según la

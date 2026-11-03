@@ -90,6 +90,30 @@ func ChangeNotIntegrated(change, master, prefix string, repo RepoPlan, base, cha
 	return &Refusal{Code: CodeChangeNotIntegrated, Message: message, Continuation: continuation, Details: details}
 }
 
+// ChangeIntermediateMerge es el rechazo `change_not_integrated` de `ensure --archive` sobre un
+// cambio que ya está en el árbol de la base, pero como fusión intermedia de planificación
+// (REQ-26.11, REQ-25.45): la PR de una salida 2 de una parada publicó parte del cambio, con la
+// marca de cesión en su `gates.yaml` y algún rol sin su `role-apply` aprobado, así que la carpeta
+// existe y el cambio no está terminado. Lo dice el mensaje y el detalle `intermediate: "true"`.
+// No se ha creado ninguna rama ni worktree. A diferencia de ChangeNotIntegrated, no sugiere
+// `--fetch`: la base ya tiene la carpeta y traer el remoto no la completa; lo que falta es
+// terminar el cambio y fusionar su PR. base es la base evaluada (como `origin/main` o `main`) y
+// changePath la carpeta del cambio, relativa a la raíz del repositorio y con «/». prefix es el
+// `--prefix` de la invocación, que la continuación conserva.
+func ChangeIntermediateMerge(change, master, prefix string, repo RepoPlan, base, changePath string) *Refusal {
+	retry := fmt.Sprintf("axiom branch ensure --cwd %s --change %s --archive", pathquote.Quote(master), change)
+	if prefix != "" {
+		retry += " --prefix " + prefix
+	}
+	return &Refusal{
+		Code: CodeChangeNotIntegrated,
+		Message: fmt.Sprintf("el cambio %s no está terminado en la base %s del repositorio %s: su carpeta %s existe en ese árbol, pero es una fusión intermedia de planificación (aprobaciones cedidas a otra persona y algún rol sin su `role-apply` aprobado); no se ha creado ninguna rama ni worktree",
+			change, base, repo.Name, changePath),
+		Continuation: fmt.Sprintf("termina el cambio (todos los `role-apply` aprobados), fusiona su PR en %s y repite `%s`", repo.IntegrationBranch, retry),
+		Details:      map[string]string{"change": change, "base": base, "path": changePath, "repository": repo.GitRoot, "intermediate": "true"},
+	}
+}
+
 // ArchiveBranchConflict es el rechazo `plan_conflict` de un `--prefix` que daría a la rama de
 // archivado un nombre distinto del de la que el registro ya guarda para el cambio (REQ-25.12):
 // una rama de archivado no cambia de nombre y la repetición idéntica es idempotente. No se ha

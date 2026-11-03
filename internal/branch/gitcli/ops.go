@@ -1,8 +1,8 @@
 // Package gitcli son las operaciones tipadas de git del motor de ramas (INC-25, design
 // D-01): el adaptador de los puertos de `internal/branch` sobre gitcommon.Run, el único
 // punto que ejecuta git (REQ-25.1, G-7). Las lecturas usan una lista cerrada de
-// subcomandos (`rev-parse`, `worktree list`, `status`, `rev-list`, `ls-tree` y `merge-base
-// --is-ancestor`) y las escrituras son solo `branch` (crear y eliminar), `worktree add`,
+// subcomandos (`rev-parse`, `worktree list`, `status`, `rev-list`, `ls-tree`, `cat-file blob` y
+// `merge-base --is-ancestor`) y las escrituras son solo `branch` (crear y eliminar), `worktree add`,
 // `worktree remove` y `switch` (modo `in_place`); ninguna es remota. La única
 // operación remota es Fetch (`git fetch origin`, `ensure --fetch` y `done --fetch`, REQ-25.10):
 // el puerto no tiene ningún método que publique. La capa de árbol equivalente de `done`
@@ -17,6 +17,7 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -243,6 +244,63 @@ func (*Git) TreeDirs(ctx context.Context, dir, rev, relPath string) (dirs []stri
 	}
 	return dirs, exists, nil
 }
+
+// FileAt lee el contenido del fichero relPath en el árbol de rev, sin tocar el árbol de
+// trabajo (`git ls-tree -z --full-tree <rev> -- <relPath>` para localizar el objeto, seguido
+// de `git cat-file blob <objeto>`). exists dice si relPath es un fichero regular de rev: una
+// ruta que no existe, una carpeta, un submódulo o un enlace simbólico no son un error, y
+// devuelven exists = false, porque quien lee un fichero de un árbol ajeno solo puede usar
+// lo que es contenido. relPath es relativa a la raíz del repositorio, con «/», y se toma
+// literalmente; dir es cualquier directorio del repositorio. Es una lectura local: ni
+// `ls-tree` ni `cat-file` usan la red.
+func (*Git) FileAt(ctx context.Context, dir, rev, relPath string) (content []byte, exists bool, err error) {
+	if err := plainArgument(rev); err != nil {
+		return nil, false, err
+	}
+	if err := pathspecArgument(relPath); err != nil {
+		return nil, false, err
+	}
+	args := []string{"ls-tree", "-z", "--full-tree", rev, "--", relPath}
+	result, err := gitcommon.Run(ctx, dir, args...)
+	if err != nil {
+		return nil, false, err
+	}
+	if result.ExitCode != 0 {
+		return nil, false, commandFailed(dir, result, args...)
+	}
+	for _, record := range strings.Split(string(result.Stdout), "\x00") {
+		if record == "" {
+			continue
+		}
+		// `<modo> <tipo> <objeto>\t<ruta>`: la ruta va tras el único tabulador.
+		meta, entry, found := strings.Cut(record, "\t")
+		fields := strings.Fields(meta)
+		if !found || len(fields) != 3 || entry != relPath {
+			return nil, false, fmt.Errorf("git %s en %s devolvió una entrada que no se entiende: %q", strings.Join(args, " "), dir, record)
+		}
+		mode, kind, object := fields[0], fields[1], fields[2]
+		if kind != "blob" || mode == "120000" {
+			return nil, false, nil
+		}
+		if !objectName.MatchString(object) {
+			return nil, false, fmt.Errorf("git %s en %s devolvió un objeto que no se entiende: %q", strings.Join(args, " "), dir, record)
+		}
+		blob := []string{"cat-file", "blob", object}
+		read, err := gitcommon.Run(ctx, dir, blob...)
+		if err != nil {
+			return nil, false, err
+		}
+		if read.ExitCode != 0 {
+			return nil, false, commandFailed(dir, read, blob...)
+		}
+		return read.Stdout, true, nil
+	}
+	return nil, false, nil
+}
+
+// objectName reconoce el nombre de un objeto de git que `ls-tree` devuelve: hexadecimal, de 40
+// (SHA-1) o 64 (SHA-256) dígitos. Así `cat-file` nunca recibe algo que git leería como una opción.
+var objectName = regexp.MustCompile(`^[0-9a-f]{40}([0-9a-f]{24})?$`)
 
 // CreateBranch crea la rama local name apuntando a startPoint (`git branch --no-track
 // <name> <startPoint>`). Nunca mueve ni reinicia una rama existente: si name ya existe,
