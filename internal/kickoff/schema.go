@@ -86,7 +86,9 @@ func (k Kickoff) Validate() error {
 	if !validExecutionStyles[k.Config.ExecutionStyle] {
 		return fmt.Errorf("kickoff: execution_style desconocido %q", k.Config.ExecutionStyle)
 	}
-	if !validHandoffPolicies[k.Config.HandoffPolicy] {
+	// handoff_policy is deprecated (REQ-26.9): an empty value is valid, a
+	// value outside the closed vocabulary is still rejected.
+	if k.Config.HandoffPolicy != "" && !validHandoffPolicies[k.Config.HandoffPolicy] {
 		return fmt.Errorf("kickoff: handoff_policy desconocido %q", k.Config.HandoffPolicy)
 	}
 	for _, role := range k.Config.Roles {

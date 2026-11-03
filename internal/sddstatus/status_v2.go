@@ -122,9 +122,11 @@ type kickoffV2 struct {
 	Schema         string `json:"schema"`
 	FlowMode       string `json:"flowMode"`
 	ExecutionStyle string `json:"executionStyle"`
-	HandoffPolicy  string `json:"handoffPolicy"`
-	SealedAt       string `json:"sealedAt"`
-	SealedBy       string `json:"sealedBy"`
+	// HandoffPolicy is deprecated (REQ-26.9): it is projected only when an older
+	// kickoff.yaml carries it, and never influences any projection.
+	HandoffPolicy string `json:"handoffPolicy,omitempty"`
+	SealedAt      string `json:"sealedAt"`
+	SealedBy      string `json:"sealedBy"`
 }
 
 type gateV2 struct {

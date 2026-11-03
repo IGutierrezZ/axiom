@@ -205,14 +205,14 @@ Commit: `feat(branch): no tratar una fusión intermedia de planificación como c
 
 Commit: `refactor(kickoff): deprecar handoff_policy; aceptar el flag e ignorarlo`
 
-- [ ] T-16 Paquete `kickoff`: campo opcional, flag ignorado y valor siempre `none` (≈150 l)
+- [x] T-16 Paquete `kickoff`: campo opcional, flag ignorado y valor siempre `none` (≈150 l)
   - Ficheros: `internal/kickoff/types.go`, `internal/kickoff/schema.go`, `internal/kickoff/args.go` (trozos puntuales), `internal/kickoff/infer.go`, y sus pruebas (`schema_test.go`, `args_test.go`, `infer_test.go`).
   - Cambio: `HandoffPolicy` con comentario `Deprecated:` y etiqueta `yaml:"handoff_policy,omitempty"` (se conservan `HandoffNone` y `HandoffPerCheckpoint`); `Validate` acepta vacío, `none` y `per_checkpoint` y rechaza el resto; `--handoff-policy` se sigue parseando y validando (valor desconocido rechazado, A-6) pero `SealArgs.HandoffPolicy` queda `Deprecated:` y sin uso; se elimina «kickoff seal requiere --handoff-policy»; `ToKickoff` y el retro-sello (`seal --infer`) fijan siempre `HandoffNone`.
   - Cubre: REQ-26.9, REQ-21.4 (retro-sello sin política), REQ-21.5 · DD-11.
   - Aceptación: (1) sellar sin `--handoff-policy` escribe `handoff_policy: none`; (2) con `--handoff-policy per_checkpoint` sella y escribe `none`; (3) `--handoff-policy otra` se rechaza y no escribe `kickoff.yaml`; (4) `Validate` acepta `""`, `none`, `per_checkpoint` y rechaza `otra`; (5) un kickoff antiguo con `per_checkpoint` se lee y valida sin error; (6) `seal --infer` escribe `none` sin inferir política.
   - Comprobación: `go test ./internal/kickoff/ -count=1`
 
-- [ ] T-17 CLI y JSON sin la política en el texto; mensaje de sellado sin el flag (≈130 l)
+- [x] T-17 CLI y JSON sin la política en el texto; mensaje de sellado sin el flag (≈130 l)
   - Ficheros: `internal/cli/sdd_kickoff.go` (ayuda de `:36`, texto de `:131-132`, JSON de `:160`), `internal/sddstatus/status_v2.go` (`json:"handoffPolicy,omitempty"`), `internal/cli/sdd_gate.go` (mensaje de `:89` sin `--handoff-policy none`), `internal/cli/sdd_kickoff_test.go`, `internal/sddstatus/status_v2_test.go`.
   - Cubre: REQ-26.9 (texto, JSON y mensajes de error) · DD-11.
   - Aceptación: (1) la ayuda de `kickoff seal` y los mensajes de error no nombran `--handoff-policy`; (2) el texto de `kickoff seal` y de `kickoff show` no menciona la política de relevos; (3) `kickoff show --json`, `kickoff seal --json` y `axiom sdd status --json` no emiten `handoffPolicy` cuando el campo está vacío y sí el valor leído cuando existe; (4) un kickoff antiguo con `per_checkpoint` no altera ninguna proyección de `status`.

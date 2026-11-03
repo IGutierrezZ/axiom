@@ -247,3 +247,158 @@ func TestRunSDDKickoffSealOnNonexistentChangeNamesResolvedPath(t *testing.T) {
 		t.Fatalf("error = %v, se esperaba que nombrase la ruta resuelta", err)
 	}
 }
+
+// --- REQ-26.9: handoff_policy is deprecated. The flag is accepted and ignored,
+// never required, never named by help, errors or text, and the JSON echoes the
+// value only when the file carries one.
+
+const deprecatedPolicyKickoffYAML = `schema: axiom.sdd-kickoff/v1
+change: inc-99-example
+sealed_at: 2026-09-21T15:25:00Z
+sealed_by: cli
+kickoff:
+  flow_mode: sdd
+  execution_style: checkpointed
+  execution_style_source: explicit
+%s  roles:
+    - role: fullstack
+      gate_policy: blocking
+      tasks_file: tasks.md
+      verify_file: verify-report.md
+lifecycle:
+  deployment_target: local
+  post_archive_policy: bug_only
+`
+
+// TestRunSDDKickoffSealWithoutHandoffPolicyWritesNoneAndNeverMentionsIt seals
+// with no --handoff-policy: it succeeds, kickoff.yaml carries the compatibility
+// value none, and neither the text summary nor show mentions the policy.
+func TestRunSDDKickoffSealWithoutHandoffPolicyWritesNoneAndNeverMentionsIt(t *testing.T) {
+	root, changeRoot := newGovernanceWorkspace(t, "inc-99-example")
+
+	var sealOut bytes.Buffer
+	if err := RunSDDKickoff([]string{"seal", "--cwd", root, "--change", "inc-99-example", "--execution-style", "checkpointed"}, &sealOut); err != nil {
+		t.Fatalf("seal sin --handoff-policy error = %v", err)
+	}
+	raw, err := os.ReadFile(filepath.Join(changeRoot, "kickoff.yaml"))
+	if err != nil {
+		t.Fatalf("leer kickoff.yaml: %v", err)
+	}
+	if !strings.Contains(string(raw), "handoff_policy: none") {
+		t.Fatalf("kickoff.yaml sin handoff_policy: none:\n%s", raw)
+	}
+
+	var showOut bytes.Buffer
+	if err := RunSDDKickoff([]string{"show", "--cwd", root, "--change", "inc-99-example"}, &showOut); err != nil {
+		t.Fatalf("show error = %v", err)
+	}
+	for name, text := range map[string]string{"seal": sealOut.String(), "show": showOut.String()} {
+		if strings.Contains(strings.ToLower(text), "handoff") {
+			t.Fatalf("la salida de texto de %s menciona la politica de relevos:\n%s", name, text)
+		}
+	}
+}
+
+// TestRunSDDKickoffSealIgnoresDeprecatedFlagAndRejectsUnknownValue covers the
+// flag as an accepted no-op: per_checkpoint never reaches kickoff.yaml and an
+// unknown value is still refused without writing anything (A-6).
+func TestRunSDDKickoffSealIgnoresDeprecatedFlagAndRejectsUnknownValue(t *testing.T) {
+	root, changeRoot := newGovernanceWorkspace(t, "inc-99-example")
+
+	err := RunSDDKickoff([]string{"seal", "--cwd", root, "--change", "inc-99-example", "--execution-style", "checkpointed", "--handoff-policy", "otra"}, &bytes.Buffer{})
+	if err == nil {
+		t.Fatal("seal --handoff-policy otra = nil error, se esperaba rechazo")
+	}
+	if _, statErr := os.Stat(filepath.Join(changeRoot, "kickoff.yaml")); !os.IsNotExist(statErr) {
+		t.Fatalf("kickoff.yaml se escribio pese al rechazo del valor desconocido: statErr = %v", statErr)
+	}
+
+	if err := RunSDDKickoff([]string{"seal", "--cwd", root, "--change", "inc-99-example", "--execution-style", "checkpointed", "--handoff-policy", "per_checkpoint"}, &bytes.Buffer{}); err != nil {
+		t.Fatalf("seal --handoff-policy per_checkpoint error = %v", err)
+	}
+	raw, err := os.ReadFile(filepath.Join(changeRoot, "kickoff.yaml"))
+	if err != nil {
+		t.Fatalf("leer kickoff.yaml: %v", err)
+	}
+	if strings.Contains(string(raw), "per_checkpoint") || !strings.Contains(string(raw), "handoff_policy: none") {
+		t.Fatalf("el flag deprecado llego a kickoff.yaml:\n%s", raw)
+	}
+}
+
+// TestRunSDDKickoffSealInferWritesNoneAsCompatibilityValue is REQ-21.4's
+// retro-seal without any policy inference: none is only the compatibility value.
+func TestRunSDDKickoffSealInferWritesNoneAsCompatibilityValue(t *testing.T) {
+	root, changeRoot := newGovernanceWorkspace(t, "inc-99-example")
+
+	var out bytes.Buffer
+	if err := RunSDDKickoff([]string{"seal", "--infer", "--cwd", root, "--change", "inc-99-example"}, &out); err != nil {
+		t.Fatalf("seal --infer error = %v", err)
+	}
+	raw, err := os.ReadFile(filepath.Join(changeRoot, "kickoff.yaml"))
+	if err != nil {
+		t.Fatalf("leer kickoff.yaml: %v", err)
+	}
+	if !strings.Contains(string(raw), "handoff_policy: none") {
+		t.Fatalf("el retro-sello no escribio handoff_policy: none:\n%s", raw)
+	}
+	if strings.Contains(strings.ToLower(out.String()), "handoff") {
+		t.Fatalf("la salida del retro-sello menciona la politica de relevos:\n%s", out.String())
+	}
+}
+
+// TestRunSDDKickoffHelpAndGateErrorDoNotNameHandoffPolicy covers the help and
+// the sealing hint of `gate record`: neither suggests --handoff-policy.
+func TestRunSDDKickoffHelpAndGateErrorDoNotNameHandoffPolicy(t *testing.T) {
+	var help bytes.Buffer
+	if err := RunSDDKickoff([]string{"--help"}, &help); err != nil {
+		t.Fatalf("--help error = %v", err)
+	}
+	if strings.Contains(help.String(), "handoff-policy") {
+		t.Fatalf("la ayuda de kickoff nombra --handoff-policy:\n%s", help.String())
+	}
+
+	root, _ := newGovernanceWorkspace(t, "inc-99-example")
+	err := RunSDDGate([]string{"record", "--cwd", root, "--change", "inc-99-example", "--gate", "role-apply:core", "--decision", "approved"}, &bytes.Buffer{})
+	if err == nil {
+		t.Fatal("gate record role-apply sin kickoff = nil error, se esperaba rechazo")
+	}
+	if strings.Contains(err.Error(), "handoff-policy") {
+		t.Fatalf("el mensaje de error sugiere --handoff-policy: %v", err)
+	}
+}
+
+// TestRunSDDKickoffJSONEmitsHandoffPolicyOnlyWhenTheFileCarriesIt covers
+// `kickoff show --json` and `kickoff seal --json`: handoffPolicy is omitted
+// when empty and echoed as read otherwise.
+func TestRunSDDKickoffJSONEmitsHandoffPolicyOnlyWhenTheFileCarriesIt(t *testing.T) {
+	writeKickoff := func(t *testing.T, policyLine string) string {
+		t.Helper()
+		root, changeRoot := newGovernanceWorkspace(t, "inc-99-example")
+		writeCLIFixture(t, filepath.Join(changeRoot, "kickoff.yaml"), strings.Replace(deprecatedPolicyKickoffYAML, "%s", policyLine, 1))
+		return root
+	}
+	show := func(t *testing.T, root string) string {
+		t.Helper()
+		var out bytes.Buffer
+		if err := RunSDDKickoff([]string{"show", "--cwd", root, "--change", "inc-99-example", "--json"}, &out); err != nil {
+			t.Fatalf("show --json error = %v", err)
+		}
+		return out.String()
+	}
+
+	if out := show(t, writeKickoff(t, "")); strings.Contains(out, "handoffPolicy") {
+		t.Fatalf("show --json emite handoffPolicy con la clave ausente:\n%s", out)
+	}
+	if out := show(t, writeKickoff(t, "  handoff_policy: per_checkpoint\n")); !strings.Contains(out, `"handoffPolicy": "per_checkpoint"`) {
+		t.Fatalf("show --json no devuelve el valor leido:\n%s", out)
+	}
+
+	root, _ := newGovernanceWorkspace(t, "inc-99-example")
+	var sealOut bytes.Buffer
+	if err := RunSDDKickoff([]string{"seal", "--cwd", root, "--change", "inc-99-example", "--execution-style", "checkpointed", "--json"}, &sealOut); err != nil {
+		t.Fatalf("seal --json error = %v", err)
+	}
+	if !strings.Contains(sealOut.String(), `"handoffPolicy": "none"`) {
+		t.Fatalf("seal --json no refleja el valor de compatibilidad escrito:\n%s", sealOut.String())
+	}
+}

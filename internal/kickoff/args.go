@@ -120,6 +120,10 @@ type SealArgs struct {
 	// (D-03).
 	ExecutionStyleOverride bool
 
+	// HandoffPolicy is the parsed --handoff-policy value.
+	//
+	// Deprecated: the flag is accepted, validated and ignored (REQ-26.9);
+	// ToKickoff never copies it, so a sealed kickoff always carries HandoffNone.
 	HandoffPolicy    HandoffPolicy
 	Roles            []RoleFlag
 	DeploymentTarget string
@@ -127,9 +131,9 @@ type SealArgs struct {
 }
 
 // ParseSealArgs parses and validates `axiom sdd kickoff seal` arguments
-// (design.md S5.7). With --infer, none of execution-style, handoff-policy,
-// or role is required: InferKickoff derives all three from the existing
-// tree (REQ-21.4, S8.1).
+// (design.md S5.7). With --infer, none of execution-style or role is
+// required: InferKickoff derives both from the existing tree (REQ-21.4,
+// S8.1). --handoff-policy is deprecated and never required (REQ-26.9).
 func ParseSealArgs(args []string) (SealArgs, error) {
 	parsed := SealArgs{FlowMode: FlowSDD}
 	var executionStyleExplicit, sessionPaceGiven bool
@@ -254,9 +258,6 @@ func ParseSealArgs(args []string) (SealArgs, error) {
 			parsed.ExecutionStyleSource = "session_pace"
 		}
 	}
-	if parsed.HandoffPolicy == "" {
-		return SealArgs{}, fmt.Errorf("kickoff seal requiere --handoff-policy")
-	}
 	if len(parsed.Roles) == 0 {
 		parsed.Roles = []RoleFlag{{Role: "fullstack", GatePolicy: multirole.PolicyBlocking}}
 	}
@@ -293,7 +294,7 @@ func (a SealArgs) ToKickoff(change string) Kickoff {
 			FlowMode:             a.FlowMode,
 			ExecutionStyle:       a.ExecutionStyle,
 			ExecutionStyleSource: a.ExecutionStyleSource,
-			HandoffPolicy:        a.HandoffPolicy,
+			HandoffPolicy:        HandoffNone, // compatibility value, never the deprecated flag (REQ-26.9)
 			Roles:                roles,
 		},
 		Lifecycle: Lifecycle{DeploymentTarget: a.DeploymentTarget, PostArchivePolicy: "bug_only"},

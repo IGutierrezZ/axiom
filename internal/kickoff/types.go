@@ -23,8 +23,13 @@ type FlowMode string
 // (continuous) or stops at every block review gate (checkpointed).
 type ExecutionStyle string
 
-// HandoffPolicy determines whether the change produces intermediate
-// handoff.md documents in addition to the final integration handoff.
+// HandoffPolicy was the sealed choice of whether the change produced
+// intermediate handoff.md documents.
+//
+// Deprecated: handoff_policy has no effect any more (REQ-26.9). It is still
+// read so that kickoff.yaml files sealed before the three-exit stops keep
+// validating, and new kickoffs always write HandoffNone as a compatibility
+// value for older binaries, which reject a kickoff without the key.
 type HandoffPolicy string
 
 // GateKey identifies one block review gate. The four fixed keys (spec,
@@ -102,8 +107,10 @@ type FlowConfig struct {
 	FlowMode             FlowMode       `yaml:"flow_mode"`
 	ExecutionStyle       ExecutionStyle `yaml:"execution_style"`
 	ExecutionStyleSource string         `yaml:"execution_style_source"`
-	HandoffPolicy        HandoffPolicy  `yaml:"handoff_policy"`
-	Roles                []KickoffRole  `yaml:"roles"`
+	// Deprecated: handoff_policy has no effect (REQ-26.9). New kickoffs write
+	// HandoffNone; an empty value from a hand-edited file is accepted.
+	HandoffPolicy HandoffPolicy `yaml:"handoff_policy,omitempty"`
+	Roles         []KickoffRole `yaml:"roles"`
 }
 
 // Lifecycle is the "lifecycle:" block of the sealed document.

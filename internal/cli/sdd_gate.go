@@ -88,7 +88,7 @@ func runSDDGateRecord(args []string, stdout io.Writer) error {
 	isRoleApply := isRoleApplyGate(parsed.Gate)
 	if isRoleApply {
 		if sealed == nil {
-			return fmt.Errorf("no se puede registrar %q: el cambio %q no tiene un kickoff sellado con roster de roles; sella el kickoff primero, por ejemplo con `axiom sdd kickoff seal --cwd %s --change %s --execution-style checkpointed --handoff-policy none`",
+			return fmt.Errorf("no se puede registrar %q: el cambio %q no tiene un kickoff sellado con roster de roles; sella el kickoff primero, por ejemplo con `axiom sdd kickoff seal --cwd %s --change %s --execution-style checkpointed`",
 				parsed.Gate, parsed.Change, pathquote.Quote(workspaceRoot), pathquote.Quote(parsed.Change))
 		}
 		if !gateKeyInRoster(parsed.Gate, roster) {
