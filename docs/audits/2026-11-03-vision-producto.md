@@ -105,11 +105,12 @@ Cada una bloquea solo el paso que la cita.
 
 | Id | Pregunta | Paso |
 |---|---|---|
-| D1 | Windows: ¿firmar con Authenticode y publicar binario, o asumir `go install` como canal oficial en Windows? | P1 |
+| D1 | Windows: ¿firmar con Authenticode y publicar binario, o asumir `go install` como canal oficial en Windows? Las condiciones para restaurar el binario ya están fijadas en `docs/release-signing.md` («Windows distribution restoration gate»). | P1 |
 | D2 | ¿La review (RDD) pasa a ser configuración por proyecto en `axiom.yaml`, o sigue siendo un interruptor de máquina? (El ODD `huella-usuario-workspace` descartó el RDD por clon el 2026-10-30.) | P4 |
 | D3 | ¿Hay que distinguir extensión de VS Code, Desktop y CLI de Claude Code, o basta con un adaptador común bien detectado? | P5 |
 | D4 | ¿Los bugs e incrementos ODD integran en la spec viva? Si sí, ¿con delta, solo registro, o exclusión explícita? | P6 |
 | D5 | ¿Qué formatos de spec viva se admiten como destino además de Markdown por dominio (carpeta por requisito, otros)? | P6 |
+| D6 | La spec viva debe cumplir **ISO/IEC 33000**. Por concretar: la familia 330xx evalúa la **capacidad de procesos**, no el formato de un documento. Hay que fijar qué modelo de referencia de procesos se evalúa, qué nivel de capacidad se persigue y qué evidencias deben dejar spec, cambios y archivado (trazabilidad, productos de trabajo, revisiones). Si lo que se busca es la calidad de la especificación de requisitos en sí, la norma de referencia sería ISO/IEC/IEEE 29148. | P6 |
 
 ## 5. Hoja de ruta paso a paso
 
@@ -125,6 +126,6 @@ aquí su estado con la PR que lo cerró.
 | P3 Doctor por proyecto | O3 | G3.1–G3.5 | Doctor estructurado y parametrizado por raíz; la UI muestra sus checks reales al abrir y al cambiar de proyecto; añade checks de assets, adaptadores, topología, repos de rol y repo de specs. | — | Pendiente |
 | P4 Alta de proyecto en la UI | O4 | G4.1–G4.7 | Alta validada con `workspace.Validate` antes de escribir; campos de multirepo; roles y repos validados; elección e instalación de adaptadores en workspace; review según D2; corregido G4.4. | P3, D2 | Pendiente |
 | P5 Adaptadores y modelos | O5 | G5.1–G5.4 | Adaptador de Copilot CLI; custom agents de VS Code Copilot con `model`; detección de Claude sin CLI; selección de proveedor, modelo y razonamiento por fase desde la UI para cada adaptador que lo soporte. | P4, D3 | Pendiente |
-| P6 Spec viva existente | O6 | G6.1–G6.7 | Comando y flujo de UI de intake que analiza el repo de specs y propone `baseline` y `technical_context`; `axiom.example.yaml` documentado; formatos según D5; ODD según D4 con localizador de contexto. | P4, D4, D5 | Pendiente |
+| P6 Spec viva existente | O6 | G6.1–G6.7 | Comando y flujo de UI de intake que analiza el repo de specs y propone `baseline` y `technical_context`; `axiom.example.yaml` documentado; formatos según D5; ODD según D4 con localizador de contexto; la spec viva y su ciclo dejan las evidencias que exija ISO/IEC 33000 según D6. | P4, D4, D5, D6 | Pendiente |
 
 P3 y P6 no dependen entre sí y pueden avanzar en paralelo si hace falta.
