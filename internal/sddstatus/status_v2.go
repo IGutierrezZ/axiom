@@ -133,6 +133,11 @@ type gateV2 struct {
 	Blocks   string `json:"blocks"`
 	Reason   string `json:"reason,omitempty"`
 	Reopened bool   `json:"reopened,omitempty"`
+	// HandedOff marks a gate approved with exit 2 of the stop (REQ-26.7);
+	// HandedOffTo names the phase it handed over. Both are omitted for exits 1
+	// and 3, so a change that never used exit 2 projects what it always did.
+	HandedOff   bool   `json:"handedOff,omitempty"`
+	HandedOffTo string `json:"handedOffTo,omitempty"`
 }
 
 // rosterV2 projects GovernanceRoster. Conflict stays nil (omitempty) in
@@ -158,6 +163,7 @@ func projectGovernanceV2(governance *Governance) *governanceV2 {
 		gates = append(gates, gateV2{
 			Key: string(gate.Key), Status: gate.Status, Blocks: gate.Blocks,
 			Reason: gate.Reason, Reopened: gate.Reopened,
+			HandedOff: gate.HandedOff, HandedOffTo: governanceHandedOffTo(governance, gate),
 		})
 	}
 	sealedAt := ""

@@ -1,6 +1,7 @@
 package sddstatus
 
 import (
+	"encoding/json"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -209,5 +210,161 @@ func TestResolveGateQuestionCarriesTheThreeExits(t *testing.T) {
 	}
 	if got := strings.Join(gateAnswers(*status.GateQuestion), ","); got != "rejected,approved" || status.GateQuestion.HandOffUnavailable != "none" {
 		t.Fatalf("answers = %s handOffUnavailable = %q, want rejected,approved / none", got, status.GateQuestion.HandOffUnavailable)
+	}
+}
+
+// --- REQ-26.7: the hand-off is visible in `status` and never changes the route.
+
+func approveSpecGate(t *testing.T, changeRoot string, handedOff ...bool) {
+	t.Helper()
+	for _, mark := range handedOff {
+		if err := kickoff.AppendGate(changeRoot, kickoff.GateRecord{
+			Gate: kickoff.GateSpec, Decision: kickoff.DecisionApproved, Reason: "cubre la intencion",
+			HandedOff: mark, Actor: "reviewer",
+		}); err != nil {
+			t.Fatalf("kickoff.AppendGate() error = %v", err)
+		}
+	}
+}
+
+func handedOffFixture(t *testing.T, marks ...bool) (Status, StatusV2Projection) {
+	t.Helper()
+	root := t.TempDir()
+	changeName := "governed-handed-off"
+	changeRoot := seedReadyChange(t, root, changeName, "- [ ] 1.1 Wire routes\n")
+	sealFullstackKickoff(t, changeRoot, changeName, kickoff.ExecutionCheckpointed)
+	approveSpecGate(t, changeRoot, marks...)
+	status, err := Resolve(ResolveOptions{CWD: root, ChangeName: changeName})
+	if err != nil {
+		t.Fatalf("Resolve() error = %v", err)
+	}
+	projection, err := ProjectStatusV2(status)
+	if err != nil {
+		t.Fatalf("ProjectStatusV2() error = %v", err)
+	}
+	return status, projection
+}
+
+func gateV2ByKey(t *testing.T, projection StatusV2Projection, key kickoff.GateKey) gateV2 {
+	t.Helper()
+	if projection.Governance == nil {
+		t.Fatal("projection.Governance = nil")
+	}
+	for _, gate := range projection.Governance.Gates {
+		if gate.Key == string(key) {
+			return gate
+		}
+	}
+	t.Fatalf("gate %s not projected", key)
+	return gateV2{}
+}
+
+func TestStatusShowsTheHandOffOfSpecWithoutChangingTheRoute(t *testing.T) {
+	normal, _ := handedOffFixture(t, false)
+	status, projection := handedOffFixture(t, true)
+
+	spec := gateV2ByKey(t, projection, kickoff.GateSpec)
+	if spec.Status != "approved" || !spec.HandedOff || spec.HandedOffTo != "design" {
+		t.Fatalf("spec gate = %+v, want approved, handedOff, handedOffTo design", spec)
+	}
+	if status.NextRecommended != normal.NextRecommended {
+		t.Fatalf("NextRecommended = %q after a hand-off, %q after a normal approval; the route must not change", status.NextRecommended, normal.NextRecommended)
+	}
+	joined := strings.Join(status.Notes, "\n")
+	if !strings.Contains(joined, `La compuerta "spec" se aprobó cediendo `+"`design`"+` a otra persona`) {
+		t.Fatalf("Notes = %v, want the hand-off note for spec", status.Notes)
+	}
+	if strings.Join(normal.Notes, "") != "" {
+		t.Fatalf("a normal approval carries notes: %v", normal.Notes)
+	}
+	// The hand-off never blocks anything.
+	if strings.Join(status.BlockedReasons, "\n") != strings.Join(normal.BlockedReasons, "\n") {
+		t.Fatalf("BlockedReasons = %v after a hand-off, %v after a normal approval", status.BlockedReasons, normal.BlockedReasons)
+	}
+	if status.Dependencies != normal.Dependencies {
+		t.Fatalf("Dependencies = %+v after a hand-off, %+v after a normal approval", status.Dependencies, normal.Dependencies)
+	}
+}
+
+func TestStatusProjectsNoHandOffForExits1And3(t *testing.T) {
+	status, projection := handedOffFixture(t, false)
+	spec := gateV2ByKey(t, projection, kickoff.GateSpec)
+	if spec.HandedOff || spec.HandedOffTo != "" {
+		t.Fatalf("spec gate = %+v, want no hand-off", spec)
+	}
+	if len(status.Notes) != 0 {
+		t.Fatalf("Notes = %v, want none", status.Notes)
+	}
+	encoded, err := json.Marshal(projection.Governance.Gates)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(encoded), "handedOff") {
+		t.Fatalf("a change without the mark serializes a hand-off key: %s", encoded)
+	}
+}
+
+// REQ-26.7 (last scenario): the mark is the one of the FIRST approved record.
+func TestStatusHandOffMarkIsTheOneOfTheRecordThatClosedTheGate(t *testing.T) {
+	_, withMarkFirst := handedOffFixture(t, true, false)
+	if gate := gateV2ByKey(t, withMarkFirst, kickoff.GateSpec); !gate.HandedOff || gate.HandedOffTo != "design" {
+		t.Fatalf("mark then plain approval: gate = %+v, want the hand-off kept", gate)
+	}
+	_, plainFirst := handedOffFixture(t, false, true)
+	if gate := gateV2ByKey(t, plainFirst, kickoff.GateSpec); gate.HandedOff || gate.HandedOffTo != "" {
+		t.Fatalf("plain approval then mark: gate = %+v, want no hand-off", gate)
+	}
+}
+
+func twoRoleGovernance(coreApproved, webApproved, coreHandedOff, webHandedOff bool) *Governance {
+	state := func(role string, approved, handedOff bool) kickoff.GateState {
+		status := "pending"
+		if approved {
+			status = "approved"
+		}
+		return kickoff.GateState{Key: kickoff.RoleApplyGate(role), Status: status, Blocks: role, HandedOff: handedOff}
+	}
+	return &Governance{
+		Kickoff: kickoff.Kickoff{Config: kickoff.FlowConfig{ExecutionStyle: kickoff.ExecutionCheckpointed}},
+		Gates: []kickoff.GateState{
+			state("core", coreApproved, coreHandedOff),
+			state("web", webApproved, webHandedOff),
+		},
+		Roster: GovernanceRoster{Source: governanceRosterSourceKickoff, Roles: []string{"core", "web"}},
+	}
+}
+
+func TestHandedOffToNamesTheNextRoleOrVerify(t *testing.T) {
+	pendingWeb := twoRoleGovernance(true, false, true, false)
+	if got := governanceHandedOffTo(pendingWeb, pendingWeb.Gates[0]); got != "apply:web" {
+		t.Fatalf("core handed off with web pending: handedOffTo = %q, want apply:web", got)
+	}
+	closed := twoRoleGovernance(true, true, false, true)
+	if got := governanceHandedOffTo(closed, closed.Gates[1]); got != "verify" {
+		t.Fatalf("last role handed off: handedOffTo = %q, want verify", got)
+	}
+	if got := governanceHandedOffTo(closed, closed.Gates[0]); got != "" {
+		t.Fatalf("a role without the mark reports handedOffTo = %q", got)
+	}
+	notes := handedOffNotes(closed)
+	if len(notes) != 1 || !strings.Contains(notes[0], `"role-apply:web"`) || !strings.Contains(notes[0], "`verify`") {
+		t.Fatalf("notes = %v, want one note naming role-apply:web and verify", notes)
+	}
+	if got := handedOffNotes(pendingWeb); len(got) != 1 || !strings.Contains(got[0], "`apply:web`") {
+		t.Fatalf("notes = %v, want one note naming apply:web", got)
+	}
+}
+
+func TestHandedOffNotesAreEmptyWithoutGatesOrMarks(t *testing.T) {
+	if got := handedOffNotes(nil); got != nil {
+		t.Fatalf("nil governance: notes = %v", got)
+	}
+	continuous := twoRoleGovernance(true, true, true, true)
+	continuous.Kickoff.Config.ExecutionStyle = kickoff.ExecutionContinuous
+	if got := handedOffNotes(continuous); got != nil {
+		t.Fatalf("continuous governance: notes = %v", got)
+	}
+	if got := handedOffNotes(twoRoleGovernance(true, true, false, false)); got != nil {
+		t.Fatalf("no marks: notes = %v", got)
 	}
 }

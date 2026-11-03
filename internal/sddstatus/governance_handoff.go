@@ -6,6 +6,7 @@ import (
 
 	"github.com/IGutierrezZ/axiom/v3/internal/consentenvelope"
 	"github.com/IGutierrezZ/axiom/v3/internal/kickoff"
+	"github.com/IGutierrezZ/axiom/v3/internal/multirole"
 )
 
 // gateHandOffFlag is the flag only the hand_off choice may carry (REQ-26.2):
@@ -134,4 +135,47 @@ func gateQuestionChoices(cwd, change, gateKey string, answers []string) []consen
 		choices = append(choices, byAnswer[answer])
 	}
 	return choices
+}
+
+// governanceRoleAssignments is the roster of the sealed kickoff in the shape
+// kickoff.HandedOffTo reads. The roster of a Governance only carries role
+// names, which is all that function needs.
+func governanceRoleAssignments(governance *Governance) []multirole.RoleAssignment {
+	roster := make([]multirole.RoleAssignment, 0, len(governance.Roster.Roles))
+	for _, role := range governance.Roster.Roles {
+		roster = append(roster, multirole.RoleAssignment{Role: role})
+	}
+	return roster
+}
+
+// governanceHandedOffTo names what an approved gate handed over (REQ-26.7). It
+// answers "" for a gate that carries no hand-off mark, so a change that only
+// ever used exits 1 and 3 projects exactly what it projected before.
+func governanceHandedOffTo(governance *Governance, gate kickoff.GateState) string {
+	if governance == nil || !gate.HandedOff {
+		return ""
+	}
+	return kickoff.HandedOffTo(gate, governanceRoleAssignments(governance), governance.Gates)
+}
+
+// handedOffNotes reports, as informational notes, every gate approved with exit
+// 2 (REQ-26.7). The hand-off never blocks and never changes the route: a gate
+// approved with the mark is approved like any other, so these notes are the
+// only text that tells whoever picks the change up that the previous phase was
+// not reviewed by them.
+func handedOffNotes(governance *Governance) []string {
+	if !governanceGated(governance) {
+		return nil
+	}
+	var notes []string
+	for _, gate := range governance.Gates {
+		handedOffTo := governanceHandedOffTo(governance, gate)
+		if gate.Status != "approved" || handedOffTo == "" {
+			continue
+		}
+		notes = append(notes, fmt.Sprintf(
+			"La compuerta %q se aprobó cediendo `%s` a otra persona: quien recoge el cambio empieza esa fase sin revisar la anterior.",
+			string(gate.Key), handedOffTo))
+	}
+	return notes
 }

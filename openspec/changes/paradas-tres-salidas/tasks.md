@@ -145,7 +145,7 @@ Commit: `feat(sddstatus): pregunta de puerta con tres salidas sobre gate record`
 
 Commit: `feat(sddstatus): mostrar en status la cesión de la fase siguiente`
 
-- [ ] T-10 `handedOff` y `handedOffTo` en el JSON v2 y nota informativa (≈230 l)
+- [x] T-10 `handedOff` y `handedOffTo` en el JSON v2 y nota informativa (≈230 l)
   - Ficheros: `internal/sddstatus/governance_handoff.go`, `internal/sddstatus/status_v2.go`, `internal/sddstatus/status.go` (una línea tras `loadGovernance`), `internal/sddstatus/status_v2_test.go`, `internal/sddstatus/governance_handoff_test.go` (nuevo).
   - Cambio: `gateV2.HandedOff bool` (`json:"handedOff,omitempty"`) y `gateV2.HandedOffTo string` (`json:"handedOffTo,omitempty"`) rellenados con `kickoff.HandedOffTo`; `handedOffNotes(governance)` añade a `status.Notes` (bloque «Informational only») una nota por puerta con cesión: «La compuerta "spec" se aprobó cediendo `design` a otra persona: quien recoge el cambio empieza esa fase sin revisar la anterior.». La ruta (`resolveNextRecommended`) no cambia.
   - Cubre: REQ-26.7 · DD-06.

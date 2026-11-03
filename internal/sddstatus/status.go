@@ -776,6 +776,7 @@ func resolveByPreferenceOrder(options ResolveOptions) (Status, error) {
 		status.BlockedReasons = append([]string{wrongBranchReason(*bctx.wrongBranch)}, status.BlockedReasons...)
 	}
 	status.Notes = append(status.Notes, blockedReasons.notes...)
+	status.Notes = append(status.Notes, handedOffNotes(governance)...)
 	if options.IncludeInstructions {
 		instructions := renderPhaseInstructions(status)
 		status.PhaseInstructions = &instructions
