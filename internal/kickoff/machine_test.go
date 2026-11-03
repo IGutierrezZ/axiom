@@ -432,3 +432,74 @@ func findGateState(t *testing.T, states []GateState, key GateKey) GateState {
 	t.Fatalf("no se encontro la compuerta %q en %+v", key, states)
 	return GateState{}
 }
+
+// TestEvaluateGatesHandedOffMarkComesFromTheFirstApproval fija REQ-26.7: la
+// marca de cesion es la del primer registro approved, el que cierra la puerta.
+// Un approved posterior no la anade ni la quita, y un rejected posterior deja
+// la puerta approved con su marca (REQ-26.3).
+func TestEvaluateGatesHandedOffMarkComesFromTheFirstApproval(t *testing.T) {
+	cases := []struct {
+		name    string
+		records []GateRecord
+		want    bool
+	}{
+		{
+			name:    "approved sin marca",
+			records: []GateRecord{{Gate: GateSpec, Decision: DecisionApproved, ArtifactDigest: "d1", Actor: "maintainer"}},
+			want:    false,
+		},
+		{
+			name:    "approved con marca",
+			records: []GateRecord{{Gate: GateSpec, Decision: DecisionApproved, ArtifactDigest: "d1", HandedOff: true, Actor: "maintainer"}},
+			want:    true,
+		},
+		{
+			name: "approved con marca seguido de approved sin marca conserva la marca",
+			records: []GateRecord{
+				{Gate: GateSpec, Decision: DecisionApproved, ArtifactDigest: "d1", HandedOff: true, Actor: "maintainer"},
+				{Gate: GateSpec, Decision: DecisionApproved, ArtifactDigest: "d1", Actor: "maintainer"},
+			},
+			want: true,
+		},
+		{
+			name: "approved sin marca seguido de approved con marca no la anade",
+			records: []GateRecord{
+				{Gate: GateSpec, Decision: DecisionApproved, ArtifactDigest: "d1", Actor: "maintainer"},
+				{Gate: GateSpec, Decision: DecisionApproved, ArtifactDigest: "d1", HandedOff: true, Actor: "maintainer"},
+			},
+			want: false,
+		},
+		{
+			name: "un rejected posterior deja la puerta approved con la marca",
+			records: []GateRecord{
+				{Gate: GateSpec, Decision: DecisionApproved, ArtifactDigest: "d1", HandedOff: true, Actor: "maintainer"},
+				{Gate: GateSpec, Decision: DecisionRejected, Reason: "anomalia", ArtifactDigest: "d1", Actor: "maintainer"},
+			},
+			want: true,
+		},
+		{
+			name:    "un rejected previo nunca lleva marca",
+			records: []GateRecord{{Gate: GateSpec, Decision: DecisionRejected, Reason: "falta", ArtifactDigest: "d1", HandedOff: true, Actor: "maintainer"}},
+			want:    false,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			states, err := EvaluateGates(Inputs{
+				Execution: ExecutionCheckpointed,
+				Artifacts: map[string]string{"spec": "d1"},
+				Ledger:    GateLedger{Schema: GateLedgerSchemaV1, Records: tc.records},
+			})
+			if err != nil {
+				t.Fatalf("EvaluateGates() error = %v", err)
+			}
+			state := findGateState(t, states, GateSpec)
+			if state.HandedOff != tc.want {
+				t.Errorf("HandedOff = %v, se esperaba %v (estado %+v)", state.HandedOff, tc.want, state)
+			}
+			if tc.want && state.Status != "approved" {
+				t.Errorf("Status = %q, una puerta con cesion es approved", state.Status)
+			}
+		})
+	}
+}

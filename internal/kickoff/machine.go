@@ -60,13 +60,14 @@ func EvaluateGates(in Inputs) ([]GateState, error) {
 		if !open {
 			return
 		}
-		status, reason, reopened := resolveGateStatus(digest, recordsByGate[gate.Key])
+		status, reason, reopened, handedOff := resolveGateStatus(digest, recordsByGate[gate.Key])
 		states = append(states, GateState{
-			Key:      gate.Key,
-			Status:   status,
-			Reason:   reason,
-			Blocks:   gate.Blocks,
-			Reopened: reopened,
+			Key:       gate.Key,
+			Status:    status,
+			Reason:    reason,
+			Blocks:    gate.Blocks,
+			Reopened:  reopened,
+			HandedOff: handedOff,
 		})
 	}
 
@@ -195,18 +196,22 @@ func LastRoleClosed(roster []multirole.RoleAssignment, gates []GateState) bool {
 //     Reason is empty in pending) — this is REQ-21.12 satisfied without a
 //     manual "reopen" verb.
 //   - No record at all yet: freshly pending.
-func resolveGateStatus(digest string, records []GateRecord) (status, reason string, reopened bool) {
+//
+// handedOff is the HandedOff mark of the FIRST approved record, the one that
+// closes the gate (REQ-26.7): a later approved record neither adds nor removes
+// it, and a later rejection leaves the gate approved with its mark intact.
+func resolveGateStatus(digest string, records []GateRecord) (status, reason string, reopened, handedOff bool) {
 	for _, r := range records {
 		if r.Decision == DecisionApproved {
-			return "approved", r.Reason, false
+			return "approved", r.Reason, false, r.HandedOff
 		}
 	}
 	if len(records) == 0 {
-		return "pending", "", false
+		return "pending", "", false, false
 	}
 	last := records[len(records)-1]
 	if last.ArtifactDigest == digest {
-		return "rejected", last.Reason, false
+		return "rejected", last.Reason, false, false
 	}
-	return "pending", "", true
+	return "pending", "", true, false
 }

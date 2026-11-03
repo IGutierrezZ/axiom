@@ -140,8 +140,13 @@ type GateRecord struct {
 	EvidenceRef     string       `yaml:"evidence_ref,omitempty"`
 	EvidenceBaseRef string       `yaml:"evidence_base_ref,omitempty"`
 	Verified        bool         `yaml:"verified,omitempty"`
-	Actor           string       `yaml:"actor"`
-	RecordedAt      time.Time    `yaml:"recorded_at"`
+	// HandedOff marca que esta aprobacion cede la fase siguiente a otra persona
+	// (salida 2 de la parada). Solo la escribe `gate record --hand-off`;
+	// omitempty deja los registros de las salidas 1 y 3 identicos a los de antes,
+	// y un binario anterior que lea la clave la ignora y ve `approved`.
+	HandedOff  bool      `yaml:"handed_off,omitempty"`
+	Actor      string    `yaml:"actor"`
+	RecordedAt time.Time `yaml:"recorded_at"`
 }
 
 // GateLedger is the full append-only content of gates.yaml: every decision
@@ -167,11 +172,12 @@ type Gate struct {
 // reopening rule of D-08: its current decision, why, what it blocks, and
 // whether a prior rejection was reopened by a changed artifact digest.
 type GateState struct {
-	Key      GateKey
-	Status   string // "pending" | "approved" | "rejected"
-	Reason   string
-	Blocks   string
-	Reopened bool
+	Key       GateKey
+	Status    string // "pending" | "approved" | "rejected"
+	Reason    string
+	Blocks    string
+	Reopened  bool
+	HandedOff bool // del registro approved que cierra la puerta (salida 2)
 }
 
 // defaultRoleArtifactFiles derives the tasks/verify file names a role uses

@@ -57,14 +57,14 @@ Orden de dependencias: WU-1 → WU-2 → WU-3 (usa 1 y 2) → WU-4 (invoca el fl
 
 Commit: `feat(kickoff): marcar la cesión de la fase siguiente en el registro de puertas`
 
-- [ ] T-01 Añadir la marca de cesión al registro y al estado de la puerta (≈120 l)
+- [x] T-01 Añadir la marca de cesión al registro y al estado de la puerta (≈120 l)
   - Ficheros: `internal/kickoff/types.go`, `internal/kickoff/machine.go`, `internal/kickoff/machine_test.go` (o el fichero de pruebas de puertas existente del paquete).
   - Cambio: `GateRecord.HandedOff bool` con etiqueta `yaml:"handed_off,omitempty"` tras `Verified`; `GateState.HandedOff bool`; `resolveGateStatus` pasa a devolver `(status, reason string, reopened, handedOff bool)` con la marca del **primer** registro `approved`; `EvaluateGates` la copia a `GateState`; se ajusta el comentario de `machine.go:157` (la arista con `internal/handoff` desaparece en T-12).
   - Cubre: REQ-26.3 (vocabulario sin cambios; un rechazo posterior no reabre), REQ-26.7 (la marca es la del registro que cierra la puerta) · DD-01, DD-06.
   - Aceptación: (1) un registro `approved` sin marca serializa **byte a byte** igual que antes (`omitempty`); (2) un `gates.yaml` con `handed_off: true` se decodifica con un struct `legacyGateRecord` congelado (el anterior al cambio) sin error y la puerta resulta `approved`; (3) una decisión distinta de `approved|rejected` se sigue rechazando; (4) `approved` con marca seguido de `approved` sin marca conserva la marca y al revés no la añade; (5) un `rejected` posterior a un `approved` con marca deja la puerta `approved` con la marca.
   - Comprobación: `go test ./internal/kickoff/ -count=1`
 
-- [ ] T-02 Primitivas `Approval`, `HandedOffTo`, `IntermediateMerge` y escritura condicionada bajo cerrojo (≈180 l)
+- [x] T-02 Primitivas `Approval`, `HandedOffTo`, `IntermediateMerge` y escritura condicionada bajo cerrojo (≈180 l)
   - Ficheros: `internal/kickoff/handed_off.go` (nuevo), `internal/kickoff/handed_off_test.go` (nuevo), `internal/kickoff/ledger.go`, `internal/kickoff/ledger_test.go`.
   - Cambio: `GateLedger.Approval(gate GateKey) (GateRecord, bool)` (primer `approved`); `HandedOffTo(gate GateState, roster []multirole.RoleAssignment, states []GateState) string` (fijas → `gate.Blocks`; en `role-apply:<rol>` → `verify` si `LastRoleClosed(...)` y, si no, `apply:<r1>,<r2>` con los roles sin `role-apply` aprobado, en orden alfabético); `IntermediateMerge(k Kickoff, l GateLedger) bool` (algún `approved` con `HandedOff` y no todos los roles del roster con `RoleApplyGate` aprobado; roster vacío ⇒ verdadero en (b)); `AppendGateChecked(changeRoot string, rec GateRecord, check func(GateLedger) error) error` que ejecuta `check` bajo el cerrojo (`.gates.lock`) antes de anexar, y `AppendGate` delega con `check == nil`.
   - Cubre: REQ-26.3 (puerta ya aprobada, comprobada también bajo el cerrojo; A-1), REQ-26.7, REQ-26.11 (A-7), REQ-21.13 (la condición de último rol se apoya en `LastRoleClosed`) · DD-02 paso 10, DD-06, DD-09.
