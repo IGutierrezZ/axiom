@@ -75,6 +75,20 @@ func LoadGates(changeRoot string) (GateLedger, error) {
 // never edits or removes an existing record (REQ-21.12): rejection history
 // is evidence, and this is the only writer of gates.yaml.
 func AppendGate(changeRoot string, rec GateRecord) error {
+	return AppendGateChecked(changeRoot, rec, nil)
+}
+
+// AppendGateChecked is AppendGate with one extra step: when check is not nil it
+// runs against the ledger exactly as it stands UNDER the exclusive lock, right
+// before the record is appended, and a non-nil error aborts the append with
+// nothing written. The error is returned as check produced it, so the caller
+// can tell its own refusal apart from an I/O failure.
+//
+// It exists for the decisions that depend on the ledger's current content, such
+// as handing off a gate that must still be pending (REQ-26.3): a check made
+// before taking the lock would let two concurrent recorders both pass it, and
+// the second approval, hidden behind the first one, would be invisible.
+func AppendGateChecked(changeRoot string, rec GateRecord, check func(GateLedger) error) error {
 	if err := rec.Validate(); err != nil {
 		return err
 	}
@@ -89,6 +103,11 @@ func AppendGate(changeRoot string, rec GateRecord) error {
 	ledger, err := LoadGates(changeRoot)
 	if err != nil {
 		return err
+	}
+	if check != nil {
+		if err := check(ledger); err != nil {
+			return err
+		}
 	}
 	if ledger.Schema == "" {
 		ledger.Schema = GateLedgerSchemaV1

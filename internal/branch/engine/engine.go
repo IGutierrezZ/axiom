@@ -46,6 +46,7 @@ type gitReader interface {
 	DirtyPaths(ctx context.Context, dir string) ([]string, error)
 	AheadBehind(ctx context.Context, dir, base, branch string) (ahead, behind int, err error)
 	TreeDirs(ctx context.Context, dir, rev, relPath string) (dirs []string, exists bool, err error)
+	FileAt(ctx context.Context, dir, rev, relPath string) (content []byte, exists bool, err error)
 	IsAncestor(ctx context.Context, dir, ancestor, descendant string) (bool, error)
 	MergeTreeEquivalent(ctx context.Context, dir, target, branch string) (equivalent, supported bool, err error)
 }

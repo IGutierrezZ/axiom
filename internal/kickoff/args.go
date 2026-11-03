@@ -120,6 +120,10 @@ type SealArgs struct {
 	// (D-03).
 	ExecutionStyleOverride bool
 
+	// HandoffPolicy is the parsed --handoff-policy value.
+	//
+	// Deprecated: the flag is accepted, validated and ignored (REQ-26.9);
+	// ToKickoff never copies it, so a sealed kickoff always carries HandoffNone.
 	HandoffPolicy    HandoffPolicy
 	Roles            []RoleFlag
 	DeploymentTarget string
@@ -127,9 +131,9 @@ type SealArgs struct {
 }
 
 // ParseSealArgs parses and validates `axiom sdd kickoff seal` arguments
-// (design.md S5.7). With --infer, none of execution-style, handoff-policy,
-// or role is required: InferKickoff derives all three from the existing
-// tree (REQ-21.4, S8.1).
+// (design.md S5.7). With --infer, none of execution-style or role is
+// required: InferKickoff derives both from the existing tree (REQ-21.4,
+// S8.1). --handoff-policy is deprecated and never required (REQ-26.9).
 func ParseSealArgs(args []string) (SealArgs, error) {
 	parsed := SealArgs{FlowMode: FlowSDD}
 	var executionStyleExplicit, sessionPaceGiven bool
@@ -254,9 +258,6 @@ func ParseSealArgs(args []string) (SealArgs, error) {
 			parsed.ExecutionStyleSource = "session_pace"
 		}
 	}
-	if parsed.HandoffPolicy == "" {
-		return SealArgs{}, fmt.Errorf("kickoff seal requiere --handoff-policy")
-	}
 	if len(parsed.Roles) == 0 {
 		parsed.Roles = []RoleFlag{{Role: "fullstack", GatePolicy: multirole.PolicyBlocking}}
 	}
@@ -293,7 +294,7 @@ func (a SealArgs) ToKickoff(change string) Kickoff {
 			FlowMode:             a.FlowMode,
 			ExecutionStyle:       a.ExecutionStyle,
 			ExecutionStyleSource: a.ExecutionStyleSource,
-			HandoffPolicy:        a.HandoffPolicy,
+			HandoffPolicy:        HandoffNone, // compatibility value, never the deprecated flag (REQ-26.9)
 			Roles:                roles,
 		},
 		Lifecycle: Lifecycle{DeploymentTarget: a.DeploymentTarget, PostArchivePolicy: "bug_only"},
@@ -313,6 +314,10 @@ type GateRecordArgs struct {
 	Reason   string
 	Actor    string
 	JSON     bool
+	// HandOff is exit 2 of a stop ("approve, push and stop", REQ-26.1): the approval hands the
+	// next phase to another person. It only goes with an approval, never with integration or
+	// evidence, and --reason stays optional with it (REQ-26.3).
+	HandOff bool
 
 	// EvidenceKind classifies the integration evidence this decision
 	// attaches, when any. Commit feeds the local ancestry check for
@@ -356,6 +361,8 @@ func ParseGateRecordArgs(args []string) (GateRecordArgs, error) {
 		switch arg {
 		case "--json":
 			parsed.JSON = true
+		case "--hand-off":
+			parsed.HandOff = true
 		case "--cwd":
 			value, next, err := requireFlagValue(args, i, "--cwd")
 			if err != nil {
@@ -455,6 +462,11 @@ func ParseGateRecordArgs(args []string) (GateRecordArgs, error) {
 	if parsed.Decision == "" {
 		return GateRecordArgs{}, fmt.Errorf("gate record requiere --decision")
 	}
+	if parsed.HandOff {
+		if err := validateHandOffShape(parsed); err != nil {
+			return GateRecordArgs{}, err
+		}
+	}
 	if parsed.Decision == DecisionRejected && strings.TrimSpace(parsed.Reason) == "" {
 		return GateRecordArgs{}, fmt.Errorf("gate record --decision rejected requiere --reason (REQ-21.12 exige registrar el motivo)")
 	}
@@ -467,6 +479,23 @@ func ParseGateRecordArgs(args []string) (GateRecordArgs, error) {
 	}
 
 	return parsed, nil
+}
+
+// validateHandOffShape is the pure, shape-only validation of --hand-off (DD-01): it runs before
+// anything touches the disk. Every refusal names the executable way out, so the caller can
+// repeat the order without guessing. Whether the change is checkpointed, the store has files
+// or the gate is still open are stateful checks the CLI adapter makes afterwards.
+func validateHandOffShape(parsed GateRecordArgs) error {
+	if parsed.Decision != DecisionApproved {
+		return fmt.Errorf("`--hand-off` solo acompaña a `--decision approved`; para iterar usa `axiom sdd gate record --change %s --gate %s --decision rejected --reason <motivo>` sin `--hand-off`", parsed.Change, parsed.Gate)
+	}
+	if parsed.Gate == GateIntegration {
+		return fmt.Errorf("`--hand-off` no está disponible para la compuerta integration: su aprobación lleva evidencia y cierra el cambio; usa `axiom sdd gate record --change %s --gate integration --decision approved --evidence-kind <pr_merged|deployment|attestation>` sin `--hand-off`", parsed.Change)
+	}
+	if parsed.EvidenceKind != "" {
+		return fmt.Errorf("`--hand-off` no admite `--evidence-kind`: la evidencia de fusión es solo de la compuerta integration; repite `axiom sdd gate record --change %s --gate %s --decision approved --hand-off` sin evidencia", parsed.Change, parsed.Gate)
+	}
+	return nil
 }
 
 // ShowArgs is the parsed, validated result shared by `axiom sdd kickoff

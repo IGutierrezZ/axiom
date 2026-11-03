@@ -19,8 +19,9 @@ import (
 //
 //  1. design.md exists and multirole.DetectRoles resolves roles without
 //     error: freeze EXACTLY those roles, with execution_style: continuous,
-//     handoff_policy: none, execution_style_source: inferred, sealed_by:
-//     inferred. This NEVER introduces the "fullstack" identity — doing so
+//     execution_style_source: inferred, sealed_by: inferred. It infers no
+//     handoff policy: handoff_policy is deprecated (REQ-26.9) and is written
+//     as none only as a compatibility value for older binaries. This NEVER introduces the "fullstack" identity — doing so
 //     would silently change which tasks.<role>.md file the existing
 //     multirole barrier consults for that change.
 //  2. design.md does not exist: nothing reads roles yet, so there is no
@@ -86,7 +87,7 @@ func inferredKickoff(roles []multirole.RoleAssignment) Kickoff {
 			FlowMode:             FlowSDD,
 			ExecutionStyle:       ExecutionContinuous,
 			ExecutionStyleSource: "inferred",
-			HandoffPolicy:        HandoffNone,
+			HandoffPolicy:        HandoffNone, // compatibility value (REQ-26.9)
 			Roles:                kickoffRoles,
 		},
 		Lifecycle: Lifecycle{DeploymentTarget: "local", PostArchivePolicy: "bug_only"},

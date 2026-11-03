@@ -23,8 +23,13 @@ type FlowMode string
 // (continuous) or stops at every block review gate (checkpointed).
 type ExecutionStyle string
 
-// HandoffPolicy determines whether the change produces intermediate
-// handoff.md documents in addition to the final integration handoff.
+// HandoffPolicy was the sealed choice of whether the change produced
+// intermediate handoff.md documents.
+//
+// Deprecated: handoff_policy has no effect any more (REQ-26.9). It is still
+// read so that kickoff.yaml files sealed before the three-exit stops keep
+// validating, and new kickoffs always write HandoffNone as a compatibility
+// value for older binaries, which reject a kickoff without the key.
 type HandoffPolicy string
 
 // GateKey identifies one block review gate. The four fixed keys (spec,
@@ -102,8 +107,10 @@ type FlowConfig struct {
 	FlowMode             FlowMode       `yaml:"flow_mode"`
 	ExecutionStyle       ExecutionStyle `yaml:"execution_style"`
 	ExecutionStyleSource string         `yaml:"execution_style_source"`
-	HandoffPolicy        HandoffPolicy  `yaml:"handoff_policy"`
-	Roles                []KickoffRole  `yaml:"roles"`
+	// Deprecated: handoff_policy has no effect (REQ-26.9). New kickoffs write
+	// HandoffNone; an empty value from a hand-edited file is accepted.
+	HandoffPolicy HandoffPolicy `yaml:"handoff_policy,omitempty"`
+	Roles         []KickoffRole `yaml:"roles"`
 }
 
 // Lifecycle is the "lifecycle:" block of the sealed document.
@@ -140,8 +147,17 @@ type GateRecord struct {
 	EvidenceRef     string       `yaml:"evidence_ref,omitempty"`
 	EvidenceBaseRef string       `yaml:"evidence_base_ref,omitempty"`
 	Verified        bool         `yaml:"verified,omitempty"`
-	Actor           string       `yaml:"actor"`
-	RecordedAt      time.Time    `yaml:"recorded_at"`
+	// HandedOff marca que esta aprobacion cede la fase siguiente a otra persona
+	// (salida 2 de la parada). Solo la escribe `gate record --hand-off`;
+	// omitempty deja los registros de las salidas 1 y 3 identicos a los de antes,
+	// y un binario anterior que lea la clave la ignora y ve `approved`.
+	HandedOff bool `yaml:"handed_off,omitempty"`
+	// HandedOffTo es la fase que cedio esa aprobacion en el momento de registrarla
+	// (por ejemplo "design" o "apply:web"). Solo la escribe la salida 2 junto a
+	// HandedOff: el roster cambia despues y la cesion no debe cambiar con el.
+	HandedOffTo string    `yaml:"handed_off_to,omitempty"`
+	Actor       string    `yaml:"actor"`
+	RecordedAt  time.Time `yaml:"recorded_at"`
 }
 
 // GateLedger is the full append-only content of gates.yaml: every decision
@@ -167,11 +183,15 @@ type Gate struct {
 // reopening rule of D-08: its current decision, why, what it blocks, and
 // whether a prior rejection was reopened by a changed artifact digest.
 type GateState struct {
-	Key      GateKey
-	Status   string // "pending" | "approved" | "rejected"
-	Reason   string
-	Blocks   string
-	Reopened bool
+	Key       GateKey
+	Status    string // "pending" | "approved" | "rejected"
+	Reason    string
+	Blocks    string
+	Reopened  bool
+	HandedOff bool // del registro approved que cierra la puerta (salida 2)
+	// HandedOffTo es la fase cedida que persistio ese mismo registro; vacia en un
+	// ledger anterior a este campo, y entonces se calcula (HandedOffTo).
+	HandedOffTo string
 }
 
 // defaultRoleArtifactFiles derives the tasks/verify file names a role uses

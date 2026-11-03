@@ -158,8 +158,8 @@ func TestGateConsumersAreInertForContinuousGovernance(t *testing.T) {
 	if state, reason := archiveDependencyFromGovernance(continuous, "c", DependencyReady); state != DependencyReady || reason != "" {
 		t.Fatalf("archiveDependencyFromGovernance() = (%q, %q), want ready without a reason", state, reason)
 	}
-	if state, reason := verifyDependencyFromHandoff(continuous, t.TempDir(), DependencyReady); state != DependencyReady || reason != "" {
-		t.Fatalf("verifyDependencyFromHandoff() = (%q, %q), want the baseline without a reason", state, reason)
+	if state, reason := verifyDependencyFromRoleGates(continuous, DependencyReady); state != DependencyReady || reason != "" {
+		t.Fatalf("verifyDependencyFromRoleGates() = (%q, %q), want the baseline without a reason", state, reason)
 	}
 	reasons := artifactBlockedReasons(map[string]ArtifactState{}, TaskProgress{}, "c", continuous)
 	baseline := artifactBlockedReasons(map[string]ArtifactState{}, TaskProgress{}, "c", nil)

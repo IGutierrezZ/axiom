@@ -2447,10 +2447,28 @@ func TestSharedGateSectionPresentsAndRemediatesTheContextDelta(t *testing.T) {
 		// Las compuertas existentes y la frontera con RDD siguen intactas.
 		"re-present the SAME gate afterward, never skip ahead to the next one",
 		"a gate approval is never a receipt",
+		// Las tres salidas de cada parada (REQ-26.1, REQ-26.8): una sola orden, tres
+		// invocaciones, y el marcador del texto único.
+		"Every gate except `integration` is a stop with three exits",
+		"`axiom sdd gate record --cwd <repo> --change <name> --gate spec|design|tasks|role-apply:<role>` is the only way to record the decision",
+		"Iterate is `--decision rejected --reason \"<text>\"`",
+		"Approve, push and stop is `--decision approved --hand-off`",
+		"it refuses without writing anything when the artifacts are not committed",
+		"returns the commit of `gates.yaml`, the push, and the pull request data for you to present before you stop",
+		"Approve and continue is `--decision approved`.",
+		"The `integration` gate keeps its two exits: approve with the merge evidence it requires, or reject.",
+		"{{AXIOM_STOP_EXITS}}",
+		"is one of the exact `axiom sdd gate record` invocations above",
 	} {
 		if !strings.Contains(section, want) {
 			t.Errorf("shared gates section missing %q", want)
 		}
+	}
+	if got := strings.Count(section, "{{AXIOM_STOP_EXITS}}"); got != 1 {
+		t.Errorf("the stop-exits marker appears %d times in the shared gates section, want exactly once", got)
+	}
+	if strings.Contains(section, "--handoff-policy") {
+		t.Error("the shared gates section must not name --handoff-policy: it is deprecated (REQ-26.9)")
 	}
 	for _, forbidden := range []string{"gateQuestion", "gateCriteria", "gateEvidence"} {
 		if strings.Contains(section, forbidden) {
@@ -2466,6 +2484,76 @@ func TestSharedGateSectionPresentsAndRemediatesTheContextDelta(t *testing.T) {
 		if strings.Contains(MustRead(path), "never look for a reopen command: there is none") {
 			t.Errorf("%s duplicates the shared gates body", path)
 		}
+	}
+}
+
+// REQ-26.8 y REQ-26.9: ningún asset del producto ofrece generar un relevo
+// `handoff.md` o continuar como pregunta de transición, ni prescribe
+// `--handoff-policy`, y `sdd-spec` y `sdd-design` remiten a las tres salidas de la
+// parada de la puerta.
+func TestNoAssetOffersTheHandoffTransitionNorPrescribesHandoffPolicy(t *testing.T) {
+	forbidden := []string{
+		"--handoff-policy",
+		"Pregunta de Transición",
+		"generar un relevo",
+		"generar relevo formal",
+		"Bifurcación Post-Spec",
+		"Bifurcación Post-Design",
+		"ceder el testigo en handoff.md",
+	}
+	checked := 0
+	err := fs.WalkDir(FS, ".", func(path string, entry fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if entry.IsDir() {
+			return nil
+		}
+		data, err := FS.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		checked++
+		for _, text := range forbidden {
+			if strings.Contains(string(data), text) {
+				t.Errorf("embedded asset %s contains %q", path, text)
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("walk embedded assets: %v", err)
+	}
+	if checked == 0 {
+		t.Fatal("no embedded asset was inspected")
+	}
+
+	for _, skill := range []string{"skills/sdd-spec/SKILL.md", "skills/sdd-design/SKILL.md"} {
+		content := MustRead(skill)
+		for _, want := range []string{
+			"Listo para la fase siguiente; en `checkpointed`, el orquestador presenta la parada de la puerta con sus tres salidas.",
+			"Antes de la salida 2 de la parada, los artefactos quedan confirmados en la rama del cambio; publicarla es decisión de la persona.",
+		} {
+			if !strings.Contains(content, want) {
+				t.Errorf("%s missing %q", skill, want)
+			}
+		}
+	}
+
+	contract := MustRead("skills/_shared/sdd-status-contract.md")
+	for _, want := range []string{
+		"gates: [{ key, status, blocks, reason?, reopened?, handedOff?, handedOffTo? }]",
+		"in the order `rejected`, `hand_off`, `approved`",
+		"`handOffUnavailable`",
+		"`verify` is blocked until every active role has its `role-apply` gate approved",
+	} {
+		if !strings.Contains(contract, want) {
+			t.Errorf("sdd-status-contract missing %q", want)
+		}
+	}
+	convention := MustRead("skills/_shared/openspec-convention.md")
+	if strings.Count(convention, "legacy") < 2 || strings.Contains(convention, "Creates when the last active role's role-apply gate is approved") {
+		t.Error("openspec-convention must describe handoff.md as legacy, not as a step of the SDD flow")
 	}
 }
 

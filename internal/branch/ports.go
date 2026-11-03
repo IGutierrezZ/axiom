@@ -28,6 +28,7 @@ type Git interface {
 	MergeTreeEquivalent(ctx context.Context, dir, target, branch string) (equivalent, supported bool, err error)
 	AheadBehind(ctx context.Context, dir, base, branch string) (ahead, behind int, err error)
 	TreeDirs(ctx context.Context, dir, rev, relPath string) ([]string, bool, error) // dirs, exists, err
+	FileAt(ctx context.Context, dir, rev, relPath string) ([]byte, bool, error)     // contenido, exists, err
 	Fetch(ctx context.Context, dir, remote string) error                            // la única operación remota
 }
 

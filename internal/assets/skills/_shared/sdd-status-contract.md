@@ -124,15 +124,17 @@ SDD status never reads review mode, offers RDD, or exposes review state. After c
 
 ```yaml
 governance:
-  kickoff: { schema, flowMode, executionStyle: continuous | checkpointed, handoffPolicy, sealedAt, sealedBy }
+  kickoff: { schema, flowMode, executionStyle: continuous | checkpointed, sealedAt, sealedBy } # handoffPolicy? appears only when an older kickoff.yaml carries it; it is deprecated and changes nothing
   roster: { source: kickoff, roles: [<role>, ...] } # in the order the kickoff names them
-  gates: [{ key, status, blocks, reason?, reopened? }]
+  gates: [{ key, status, blocks, reason?, reopened?, handedOff?, handedOffTo? }]
 ```
 
 - `roster` is present for every sealed change, in both execution styles, so a multi-role change (for example `backend` and `frontend`) is visible even when it runs `continuous`. Task progress per role is not a separate field: `taskProgress` is the aggregate over every role's `tasks.<role>.md`, and `artifactPaths.tasks` lists those files in roster order.
 - `gates` is populated only when `kickoff.executionStyle` is `checkpointed`. Under `continuous` it is always `[]`: no gate is evaluated or presented, and the orchestrator chains phases without stopping.
-- `gateQuestion` (the typed gate-decision envelope) appears only while `nextRecommended` is `await-gate`, which only a `checkpointed` change with an open gate can reach. Never expect it under `continuous`.
-- Gate-only preconditions never apply to `continuous`: archive is not blocked by a missing `integration` gate, and verify is not blocked by a missing `handoff.md`.
+- `handedOff` and `handedOffTo` appear on a gate approved with exit 2 of its stop (approve, push and stop): `handedOffTo` names the phase handed to another person (`design`, `tasks`, `apply`, `apply:<role>,<role>` for the roles still pending, or `verify` after the last role). Both are absent on exits 1 and 3. They are information only: the route (`nextRecommended`) is the one an ordinary approval yields, and nothing is blocked by them.
+- `gateQuestion` (the typed gate-decision envelope) appears only while `nextRecommended` is `await-gate`, which only a `checkpointed` change with an open gate can reach. Never expect it under `continuous`. For `spec`, `design`, `tasks` and `role-apply:<role>` it offers three choices in the order `rejected`, `hand_off`, `approved`, every one resolved with `axiom sdd gate record`; with the `none` artifact store it offers two (`rejected`, `approved`) plus `handOffUnavailable`, which names the store that makes exit 2 unavailable. The `integration` gate keeps its two choices.
+- Gate-only preconditions never apply to `continuous`: archive is not blocked by a missing `integration` gate.
+- In a `checkpointed` multi-role change, `verify` is blocked until every active role has its `role-apply` gate approved (the reason names the roles still pending). `handoff.md` plays no part in it: a `handoff.md` that exists is ignored.
 
 ## Apply State
 

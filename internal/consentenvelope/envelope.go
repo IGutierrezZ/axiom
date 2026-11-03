@@ -1,8 +1,10 @@
 // Package consentenvelope carries the generic core of a typed blocking
 // consent question: the headline/reason/value triple that states WHY input is
-// required, the evidence list, exactly two token choices each carrying a
-// human label, the effect of choosing it, and one runnable follow-up
-// invocation, plus the documented off path outside the choice set.
+// required, the evidence list, the exact token choices each consumer declares
+// (two for the edit-authority and review consent questions, two or three for
+// the gate question), each carrying a human label, the effect of choosing it,
+// and one runnable follow-up invocation, plus the documented off path outside
+// the choice set.
 //
 // It was extracted from the review consent contract (#2554, S4a of #2540) so
 // the SDD edit-authority consent question reuses the same discipline instead
@@ -52,16 +54,32 @@ type Core struct {
 
 // ValidateCompleteness enforces the generic half of the consent-envelope
 // contract: the envelope states why input is required, offers exactly the
-// grant and decline tokens in that order, and every choice is answerable and
-// runnable. Identity validation stays with each consumer.
-func (core Core) ValidateCompleteness(grantedAnswer, declinedAnswer string) error {
+// answer tokens its consumer declares, in that order, and every choice is
+// answerable and runnable. Each consumer names its own tokens, so an envelope
+// that must carry exactly the grant and decline pair keeps passing exactly
+// those two and can never silently accept a third. Identity validation stays
+// with each consumer.
+func (core Core) ValidateCompleteness(answers ...string) error {
+	if len(answers) < 2 {
+		return errors.New("consent envelope construction requires at least two declared answer tokens") // refusal:by-design world-action: the envelope is built and validated by its producer; the exit is a code fix, not a command
+	}
+	for i, answer := range answers {
+		for _, earlier := range answers[:i] {
+			if answer == earlier {
+				return fmt.Errorf("consent envelope construction declares the answer token %q twice", answer) // refusal:by-design world-action: the envelope is built and validated by its producer; the exit is a code fix, not a command
+			}
+		}
+	}
 	if core.Headline == "" || core.Reason == "" || core.Value == "" || core.Evidence == nil {
 		return errors.New("consent question must state why input is required") // refusal:by-design world-action: the envelope is built and validated by its producer; the exit is a code fix, not a command
 	}
-	if len(core.Choices) != 2 ||
-		core.Choices[0].Answer != grantedAnswer ||
-		core.Choices[1].Answer != declinedAnswer {
-		return errors.New("consent question requires exactly the granted and declined choices") // refusal:by-design world-action: the envelope is built and validated by its producer; the exit is a code fix, not a command
+	if len(core.Choices) != len(answers) {
+		return fmt.Errorf("consent question requires exactly the %d declared choices", len(answers)) // refusal:by-design world-action: the envelope is built and validated by its producer; the exit is a code fix, not a command
+	}
+	for i, answer := range answers {
+		if core.Choices[i].Answer != answer {
+			return fmt.Errorf("consent question requires the declared choices in order: choice %d must be %q", i+1, answer) // refusal:by-design world-action: the envelope is built and validated by its producer; the exit is a code fix, not a command
+		}
 	}
 	for _, choice := range core.Choices {
 		if choice.Label == "" || choice.Effect == "" {

@@ -727,7 +727,7 @@ func resolveByPreferenceOrder(options ResolveOptions) (Status, error) {
 		}
 	}
 	dependencies := resolveDependencies(artifacts, applyState, coreReady)
-	verifyState, verifyReason := verifyDependencyFromHandoff(governance, changeRoot, dependencies.Verify)
+	verifyState, verifyReason := verifyDependencyFromRoleGates(governance, dependencies.Verify)
 	dependencies.Verify = verifyState
 	if verifyReason != "" {
 		blockedReasons.genuine = append(blockedReasons.genuine, verifyReason)
@@ -751,7 +751,7 @@ func resolveByPreferenceOrder(options ResolveOptions) (Status, error) {
 	var gateQuestion *SDDGovernanceGateResult
 	if nextRecommended == "await-gate" {
 		if gate, ok := firstOpenGate(governance); ok {
-			envelope, err := newGovernanceGateQuestion(changeName, workspaceRoot, gate, artifactPaths)
+			envelope, err := newGovernanceGateQuestion(changeName, workspaceRoot, gate, artifactPaths, gateQuestionStore(workspaceRoot, ArtifactStoreOpenSpec))
 			if err != nil {
 				return Status{}, err
 			}
@@ -776,6 +776,7 @@ func resolveByPreferenceOrder(options ResolveOptions) (Status, error) {
 		status.BlockedReasons = append([]string{wrongBranchReason(*bctx.wrongBranch)}, status.BlockedReasons...)
 	}
 	status.Notes = append(status.Notes, blockedReasons.notes...)
+	status.Notes = append(status.Notes, handedOffNotes(governance)...)
 	if options.IncludeInstructions {
 		instructions := renderPhaseInstructions(status)
 		status.PhaseInstructions = &instructions

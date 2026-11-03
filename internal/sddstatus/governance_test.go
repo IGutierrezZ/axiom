@@ -30,14 +30,19 @@ func validGovernanceGateResult() SDDGovernanceGateResult {
 		Evidence:  []string{"openspec/changes/inc-99-governance-example/specs/example/spec.md"},
 		Choices: []consentenvelope.Choice{
 			{
-				Answer: gateAnswerApproved, Label: "Aprobar",
-				Effect:     "Habilita el inicio de design",
-				Invocation: "axiom sdd gate record --cwd . --change inc-99-governance-example --gate spec --decision approved --reason cubre-la-intencion",
-			},
-			{
-				Answer: gateAnswerRejected, Label: "Rechazar",
+				Answer: gateAnswerRejected, Label: "Iterar",
 				Effect:     "Mantiene spec abierto a remediacion",
 				Invocation: "axiom sdd gate record --cwd . --change inc-99-governance-example --gate spec --decision rejected --reason falta-caso-borde",
+			},
+			{
+				Answer: gateAnswerHandOff, Label: "Aprobar, subir y parar",
+				Effect:     "Aprueba spec y cede design a otra persona",
+				Invocation: "axiom sdd gate record --cwd . --change inc-99-governance-example --gate spec --decision approved --hand-off --reason cubre-la-intencion",
+			},
+			{
+				Answer: gateAnswerApproved, Label: "Aprobar y seguir",
+				Effect:     "Habilita el inicio de design",
+				Invocation: "axiom sdd gate record --cwd . --change inc-99-governance-example --gate spec --decision approved --reason cubre-la-intencion",
 			},
 		},
 		OffPath: consentenvelope.OffPath{
@@ -45,6 +50,27 @@ func validGovernanceGateResult() SDDGovernanceGateResult {
 			Command: "axiom sdd status --cwd . --change inc-99-governance-example",
 		},
 	}
+}
+
+// validIntegrationGateResult is the well-formed envelope for the integration
+// gate, which keeps its two-way [approved, rejected] choice (REQ-26.2).
+func validIntegrationGateResult() SDDGovernanceGateResult {
+	result := validGovernanceGateResult()
+	result.Gate = string(kickoff.GateIntegration)
+	result.Criteria = gateCriteria(kickoff.GateState{Key: kickoff.GateIntegration})
+	result.Choices = []consentenvelope.Choice{
+		{
+			Answer: gateAnswerApproved, Label: "Aprobar",
+			Effect:     "Habilita el archivado",
+			Invocation: "axiom sdd gate record --cwd . --change inc-99-governance-example --gate integration --decision approved --evidence-kind merged --evidence-ref abc",
+		},
+		{
+			Answer: gateAnswerRejected, Label: "Rechazar",
+			Effect:     "Mantiene integration abierto",
+			Invocation: "axiom sdd gate record --cwd . --change inc-99-governance-example --gate integration --decision rejected --reason falta-evidencia",
+		},
+	}
+	return result
 }
 
 func TestSDDGovernanceGateResultValidateAcceptsWellFormedEnvelope(t *testing.T) {
@@ -78,9 +104,8 @@ func TestSDDGovernanceGateResultValidateRejectsUnknownSchema(t *testing.T) {
 }
 
 // TestSDDGovernanceGateResultValidateRejectsChoiceSetsOtherThanApprovedRejected
-// is task 12.1's second required case, calcado de
-// internal/consentenvelope/envelope.go:61-65 (ValidateCompleteness): exactly
-// two choices, "approved" then "rejected", in that order.
+// is task 12.1's second required case, extended by REQ-26.2: a planning gate
+// carries exactly "rejected", "hand_off", "approved", in that order.
 func TestSDDGovernanceGateResultValidateRejectsChoiceSetsOtherThanApprovedRejected(t *testing.T) {
 	tests := []struct {
 		name   string
@@ -162,6 +187,9 @@ func TestSDDGovernanceGateResultValidateAcceptsEachDesignCriteriaRow(t *testing.
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := validGovernanceGateResult()
+			if tt.state.Key == kickoff.GateIntegration {
+				result = validIntegrationGateResult()
+			}
 			result.Gate = string(tt.state.Key)
 			result.Criteria = gateCriteria(tt.state)
 			if len(result.Criteria) == 0 {
@@ -318,7 +346,7 @@ func TestNewGovernanceGateQuestionBuildsValidEnvelopeCarryingGateCriteria(t *tes
 	gate := kickoff.GateState{Key: kickoff.GateSpec, Status: "pending"}
 	artifactPaths := ArtifactPaths{Specs: []string{"openspec/changes/inc-99/specs/example/spec.md"}}
 
-	result, err := newGovernanceGateQuestion("inc-99-example", "/repo", gate, artifactPaths)
+	result, err := newGovernanceGateQuestion("inc-99-example", "/repo", gate, artifactPaths, ArtifactStoreOpenSpec)
 	if err != nil {
 		t.Fatalf("newGovernanceGateQuestion() error = %v, want a valid envelope for a recognised gate key", err)
 	}
@@ -349,14 +377,14 @@ func TestNewGovernanceGateQuestionBuildsValidEnvelopeCarryingGateCriteria(t *tes
 // against.
 func TestNewGovernanceGateQuestionChoicesCarryRunnableGateRecordInvocations(t *testing.T) {
 	gate := kickoff.GateState{Key: kickoff.GateDesign, Status: "pending"}
-	result, err := newGovernanceGateQuestion("inc-99-example", "/repo", gate, ArtifactPaths{})
+	result, err := newGovernanceGateQuestion("inc-99-example", "/repo", gate, ArtifactPaths{}, ArtifactStoreOpenSpec)
 	if err != nil {
 		t.Fatalf("newGovernanceGateQuestion() error = %v", err)
 	}
-	if len(result.Choices) != 2 {
-		t.Fatalf("len(result.Choices) = %d, want exactly 2 (approved, rejected)", len(result.Choices))
+	if len(result.Choices) != 3 {
+		t.Fatalf("len(result.Choices) = %d, want exactly 3 (rejected, hand_off, approved)", len(result.Choices))
 	}
-	approved, rejected := result.Choices[0], result.Choices[1]
+	rejected, approved := result.Choices[0], result.Choices[2]
 	if approved.Answer != gateAnswerApproved || !strings.HasPrefix(approved.Invocation, gateRecordInvocationPrefix) ||
 		!strings.Contains(approved.Invocation, "--decision approved") || !strings.Contains(approved.Invocation, "--gate design") {
 		t.Fatalf("approved choice = %+v, want a runnable %q invocation with --decision approved --gate design", approved, gateRecordInvocationPrefix)
@@ -375,7 +403,7 @@ func TestNewGovernanceGateQuestionChoicesCarryRunnableGateRecordInvocations(t *t
 // it only re-enters through native SDD status.
 func TestNewGovernanceGateQuestionOffPathReentersNativeStatus(t *testing.T) {
 	gate := kickoff.GateState{Key: kickoff.GateTasks, Status: "pending"}
-	result, err := newGovernanceGateQuestion("inc-99-example", "/repo", gate, ArtifactPaths{})
+	result, err := newGovernanceGateQuestion("inc-99-example", "/repo", gate, ArtifactPaths{}, ArtifactStoreOpenSpec)
 	if err != nil {
 		t.Fatalf("newGovernanceGateQuestion() error = %v", err)
 	}
@@ -392,7 +420,7 @@ func TestNewGovernanceGateQuestionOffPathReentersNativeStatus(t *testing.T) {
 // gateCriteria does, rather than only the four fixed keys.
 func TestNewGovernanceGateQuestionUsesRoleApplyCriteriaForRoleApplyGate(t *testing.T) {
 	gate := kickoff.GateState{Key: kickoff.RoleApplyGate("backend"), Blocks: "backend", Status: "pending"}
-	result, err := newGovernanceGateQuestion("inc-99-example", "/repo", gate, ArtifactPaths{Tasks: []string{"openspec/changes/inc-99/tasks.backend.md"}})
+	result, err := newGovernanceGateQuestion("inc-99-example", "/repo", gate, ArtifactPaths{Tasks: []string{"openspec/changes/inc-99/tasks.backend.md"}}, ArtifactStoreHybrid)
 	if err != nil {
 		t.Fatalf("newGovernanceGateQuestion() error = %v", err)
 	}
@@ -410,7 +438,7 @@ func TestNewGovernanceGateQuestionUsesRoleApplyCriteriaForRoleApplyGate(t *testi
 // malformed envelope with empty Criteria -- it must fail loudly instead.
 func TestNewGovernanceGateQuestionRejectsUnrecognisedGateKey(t *testing.T) {
 	gate := kickoff.GateState{Key: kickoff.GateKey("unrecognised-gate"), Status: "pending"}
-	if _, err := newGovernanceGateQuestion("inc-99-example", "/repo", gate, ArtifactPaths{}); err == nil {
+	if _, err := newGovernanceGateQuestion("inc-99-example", "/repo", gate, ArtifactPaths{}, ArtifactStoreOpenSpec); err == nil {
 		t.Fatal("newGovernanceGateQuestion() error = nil, want a named error for a gate key gateCriteria cannot resolve")
 	}
 }

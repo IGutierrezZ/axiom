@@ -190,6 +190,77 @@ func TestProjectStatusV2GovernanceProjectsRosterWithoutGatesForContinuousSeal(t 
 	}
 }
 
+// sealKickoffWithHandoffPolicy seals a fullstack checkpointed kickoff that
+// carries exactly the given (deprecated) handoff_policy value, empty included.
+func sealKickoffWithHandoffPolicy(t *testing.T, changeRoot, changeName string, policy kickoff.HandoffPolicy) {
+	t.Helper()
+	_, ok, err := kickoff.Seal(changeRoot, kickoff.Kickoff{
+		Schema: kickoff.KickoffSchemaV1, Change: changeName, SealedBy: "test",
+		Config: kickoff.FlowConfig{
+			FlowMode: kickoff.FlowSDD, ExecutionStyle: kickoff.ExecutionCheckpointed, ExecutionStyleSource: "explicit",
+			HandoffPolicy: policy,
+			Roles:         []kickoff.KickoffRole{{Role: "fullstack", GatePolicy: "blocking", TasksFile: "tasks.md", VerifyFile: "verify-report.md"}},
+		},
+		Lifecycle: kickoff.Lifecycle{DeploymentTarget: "local", PostArchivePolicy: "bug_only"},
+	})
+	if err != nil || !ok {
+		t.Fatalf("kickoff.Seal() = (ok=%v, err=%v)", ok, err)
+	}
+}
+
+// TestProjectStatusV2HandoffPolicyIsDeprecatedAndNeverAltersTheRoute covers
+// REQ-26.9 at the v2 boundary: an empty handoff_policy is omitted from the
+// JSON, an old value is echoed only as data, and none of the values changes
+// the route or the gate question.
+func TestProjectStatusV2HandoffPolicyIsDeprecatedAndNeverAltersTheRoute(t *testing.T) {
+	project := func(t *testing.T, policy kickoff.HandoffPolicy) (StatusV2Projection, string) {
+		t.Helper()
+		root := t.TempDir()
+		changeName := "governed-v2-policy"
+		changeRoot := seedReadyChange(t, root, changeName, "- [ ] 1.1 Wire routes\n")
+		sealKickoffWithHandoffPolicy(t, changeRoot, changeName, policy)
+		status, err := Resolve(ResolveOptions{CWD: root, ChangeName: changeName})
+		if err != nil {
+			t.Fatalf("Resolve() error = %v", err)
+		}
+		projection, err := ProjectStatusV2(status)
+		if err != nil {
+			t.Fatalf("ProjectStatusV2() error = %v", err)
+		}
+		encoded, err := json.Marshal(projection.Governance)
+		if err != nil {
+			t.Fatalf("json.Marshal() error = %v", err)
+		}
+		return projection, string(encoded)
+	}
+
+	empty, emptyJSON := project(t, "")
+	if strings.Contains(emptyJSON, "handoffPolicy") {
+		t.Fatalf("serialized governance = %s, want no handoffPolicy for an empty value", emptyJSON)
+	}
+	none, noneJSON := project(t, kickoff.HandoffNone)
+	legacy, legacyJSON := project(t, kickoff.HandoffPerCheckpoint)
+	if !strings.Contains(noneJSON, `"handoffPolicy":"none"`) || !strings.Contains(legacyJSON, `"handoffPolicy":"per_checkpoint"`) {
+		t.Fatalf("handoffPolicy not echoed as read: none=%s legacy=%s", noneJSON, legacyJSON)
+	}
+	answers := func(p StatusV2Projection) []string {
+		if p.GateQuestion == nil {
+			return nil
+		}
+		var out []string
+		for _, choice := range p.GateQuestion.Choices {
+			out = append(out, choice.Answer)
+		}
+		return out
+	}
+	for name, other := range map[string]StatusV2Projection{"none": none, "per_checkpoint": legacy} {
+		if other.NextRecommended != empty.NextRecommended || !reflect.DeepEqual(answers(other), answers(empty)) ||
+			!reflect.DeepEqual(other.Dependencies, empty.Dependencies) {
+			t.Fatalf("handoff_policy %s altered the projection: next=%q vs %q", name, other.NextRecommended, empty.NextRecommended)
+		}
+	}
+}
+
 // TestProjectStatusV2GovernanceSurfacesRejectedGateReason proves the wire
 // shape carries D-09's exact registered rejection reason, not a paraphrase,
 // through the v2 gateV2 projection.

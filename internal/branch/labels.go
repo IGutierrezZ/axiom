@@ -40,6 +40,9 @@ var labels = map[string]string{
 	string(KindRole):         "rama de rol",
 	string(KindArchive):      "rama de archivado",
 
+	// Código de la salida 2 de una parada (REQ-26.4).
+	string(CodeUncommittedArtifacts): "artefactos sin confirmar",
+
 	// Modo de trabajo materializado y su origen (REQ-25.15, design §4.4).
 	string(ModeWorktree): "un worktree por rama",
 	string(ModeInPlace):  "en la carpeta del proyecto",

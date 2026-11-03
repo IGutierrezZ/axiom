@@ -16,6 +16,49 @@ func validCore() Core {
 	}
 }
 
+// threeChoiceCore is a valid envelope declaring three tokens, the shape the
+// planning-gate question uses.
+func threeChoiceCore() Core {
+	core := validCore()
+	core.Choices = []Choice{
+		{Answer: "rejected", Label: "Iterate", Effect: "Keeps the gate open.", Invocation: "example --decision rejected"},
+		{Answer: "hand_off", Label: "Hand off", Effect: "Approves and hands off.", Invocation: "example --decision approved --hand-off"},
+		{Answer: "approved", Label: "Continue", Effect: "Approves and continues.", Invocation: "example --decision approved"},
+	}
+	return core
+}
+
+func TestValidateCompletenessDeclaredAnswers(t *testing.T) {
+	if err := threeChoiceCore().ValidateCompleteness("rejected", "hand_off", "approved"); err != nil {
+		t.Fatalf("valid three-choice core: %v", err)
+	}
+	tests := []struct {
+		name    string
+		core    Core
+		answers []string
+	}{
+		{name: "fewer choices than declared", core: validCore(), answers: []string{"granted", "declined", "maybe"}},
+		{name: "more choices than declared", core: threeChoiceCore(), answers: []string{"rejected", "approved"}},
+		{name: "declared order differs", core: threeChoiceCore(), answers: []string{"approved", "hand_off", "rejected"}},
+		{name: "declared token differs", core: threeChoiceCore(), answers: []string{"rejected", "handoff", "approved"}},
+		{name: "duplicate declared tokens", core: threeChoiceCore(), answers: []string{"rejected", "rejected", "approved"}},
+		{name: "a single declared token", core: validCore(), answers: []string{"granted"}},
+		{name: "no declared tokens", core: validCore(), answers: nil},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := tt.core.ValidateCompleteness(tt.answers...); err == nil {
+				t.Fatal("ValidateCompleteness() accepted a mismatched answer list")
+			}
+		})
+	}
+	// The two-token consumers (edit authority, RDD) keep rejecting a third
+	// choice: the arity lives in each caller's own list.
+	if err := threeChoiceCore().ValidateCompleteness("granted", "declined"); err == nil {
+		t.Fatal("a three-choice envelope validated against the grant/decline pair")
+	}
+}
+
 func TestValidateCompleteness(t *testing.T) {
 	if err := validCore().ValidateCompleteness("granted", "declined"); err != nil {
 		t.Fatalf("valid core: %v", err)

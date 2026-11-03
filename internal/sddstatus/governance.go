@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/consentenvelope"
-	"github.com/IGutierrezZ/axiom/v3/internal/handoff"
 	"github.com/IGutierrezZ/axiom/v3/internal/kickoff"
 	"github.com/IGutierrezZ/axiom/v3/internal/multirole"
 	"github.com/IGutierrezZ/axiom/v3/internal/pathquote"
@@ -41,6 +40,10 @@ const (
 	// "granted"/"declined" pair.
 	gateAnswerApproved = "approved"
 	gateAnswerRejected = "rejected"
+	// gateAnswerHandOff is the third exit of a planning gate (REQ-26.1): approve,
+	// push and stop. It is a token of this question only, never a decision the
+	// ledger records: the record is `approved` plus --hand-off.
+	gateAnswerHandOff = "hand_off"
 
 	// gateRecordInvocationPrefix is the ONLY prefix a gate choice's
 	// invocation may start with. Both choices share it (unlike the
@@ -91,9 +94,16 @@ type SDDGovernanceGateResult struct {
 	Reason   string   `json:"reason"`
 	Value    string   `json:"value"`
 	Evidence []string `json:"evidence"`
-	// Choices carries exactly the approved and rejected tokens, in that
-	// order; both invocations share the gateRecordInvocationPrefix verb.
+	// Choices carries the tokens expectedGateAnswers derives for the gate:
+	// [rejected, hand_off, approved] for a planning gate, [rejected, approved]
+	// when HandOffUnavailable explains the missing exit, and [approved,
+	// rejected] for integration. Every invocation shares the
+	// gateRecordInvocationPrefix verb.
 	Choices []consentenvelope.Choice `json:"choices"`
+	// HandOffUnavailable names the declared artifact store (engram or none)
+	// that rules the hand-off exit out (REQ-26.6). Empty means the exit is
+	// available, or the gate is integration, which never offers it.
+	HandOffUnavailable string `json:"handOffUnavailable,omitempty"`
 	// OffPath documents the deliberate alternative outside the choice set:
 	// inspect the change without deciding yet, then re-enter through
 	// native status.
@@ -125,7 +135,11 @@ func (r SDDGovernanceGateResult) Validate() error {
 		Headline: r.Headline, Reason: r.Reason, Value: r.Value,
 		Evidence: r.Evidence, Choices: r.Choices, OffPath: r.OffPath,
 	}
-	if err := core.ValidateCompleteness(gateAnswerApproved, gateAnswerRejected); err != nil {
+	answers, err := expectedGateAnswers(r.Gate, r.HandOffUnavailable)
+	if err != nil {
+		return err
+	}
+	if err := core.ValidateCompleteness(answers...); err != nil {
 		return err
 	}
 
@@ -133,6 +147,9 @@ func (r SDDGovernanceGateResult) Validate() error {
 		if !strings.HasPrefix(choice.Invocation, gateRecordInvocationPrefix) {
 			return fmt.Errorf("SDD governance gate choice %q does not start with the gate record invocation: %q", choice.Answer, choice.Invocation) // refusal:by-design world-action: this envelope is built and validated by the same package; the exit is a code fix, not a command
 		}
+	}
+	if err := validateGateChoiceInvocations(r.Choices); err != nil {
+		return err
 	}
 	if !strings.HasPrefix(r.OffPath.Command, gateStatusInvocationPrefix) {
 		return errors.New("SDD governance gate off path must re-enter through native status") // refusal:by-design world-action: this envelope is built and validated by the same package; the exit is a code fix, not a command
@@ -223,16 +240,18 @@ func gateEvidence(state kickoff.GateState, artifactPaths ArtifactPaths) []string
 
 // newGovernanceGateQuestion builds the typed blocking question for one open
 // block review gate (design.md S5.5): design.md S5.5's review lenses for
-// the gate key become Criteria via the existing gateCriteria, both choices
-// share gateRecordInvocationPrefix and differ only by --decision, and the
-// off path re-enters through native status without deciding
-// (gateStatusInvocationPrefix) -- the same shape newEditAuthorityConsent
-// already established for its own sibling schema. Unlike that sibling,
-// Criteria depends on gateCriteria recognising the gate key, so this
-// constructor validates its own output and returns an error rather than
-// ever handing a malformed envelope to a caller: there is no human input
-// left to sanity-check once Validate() has run.
-func newGovernanceGateQuestion(change, workspaceRoot string, gate kickoff.GateState, artifactPaths ArtifactPaths) (SDDGovernanceGateResult, error) {
+// the gate key become Criteria via the existing gateCriteria, every choice
+// shares gateRecordInvocationPrefix and differs only by --decision and
+// --hand-off, and the off path re-enters through native status without
+// deciding (gateStatusInvocationPrefix) -- the same shape
+// newEditAuthorityConsent already established for its own sibling schema.
+// A planning gate offers three exits, or two plus HandOffUnavailable when
+// the artifact store keeps no files (store, REQ-26.6); integration keeps its
+// two. Unlike that sibling, Criteria depends on gateCriteria recognising the
+// gate key, so this constructor validates its own output and returns an error
+// rather than ever handing a malformed envelope to a caller: there is no
+// human input left to sanity-check once Validate() has run.
+func newGovernanceGateQuestion(change, workspaceRoot string, gate kickoff.GateState, artifactPaths ArtifactPaths, store ArtifactStore) (SDDGovernanceGateResult, error) {
 	criteria := gateCriteria(gate)
 	if len(criteria) == 0 {
 		return SDDGovernanceGateResult{}, fmt.Errorf("no design.md S5.5 review criteria recognised for gate %q", gate.Key) // refusal:by-design world-action: this envelope is built and validated by the same package; the exit is a code fix, not a command
@@ -243,33 +262,31 @@ func newGovernanceGateQuestion(change, workspaceRoot string, gate kickoff.GateSt
 	showInvocation := fmt.Sprintf("%s--cwd %s --change %s --gate %s", gateShowInvocationPrefix, cwd, change, gateKey)
 	statusInvocation := fmt.Sprintf("%s--cwd %s --change %s", gateStatusInvocationPrefix, cwd, change)
 
+	handOffUnavailable := ""
+	if gateKey != string(kickoff.GateIntegration) {
+		handOffUnavailable = handOffUnavailableFor(store)
+	}
+	answers, err := expectedGateAnswers(gateKey, handOffUnavailable)
+	if err != nil {
+		return SDDGovernanceGateResult{}, err
+	}
+	headline, reason, value := gateQuestionNarrative(change, gateKey, handOffUnavailable)
+
 	result := SDDGovernanceGateResult{
-		Schema:    SDDGovernanceGateSchema,
-		Contract:  SDDGovernanceContractV1,
-		Operation: gateOperation,
-		Action:    gateActionRequired,
-		Blocking:  true,
-		Change:    change,
-		Gate:      gateKey,
-		Criteria:  criteria,
-		Headline:  fmt.Sprintf("Block review gate %q is awaiting your decision.", gateKey),
-		Reason:    fmt.Sprintf("change %q has not approved or rejected this gate yet, and design.md's block-review policy blocks every later phase or role until it is (design.md S5.5).", change),
-		Value:     "Approving unblocks the next phase or role; rejecting keeps this gate open to remediation. Either decision, and its reason, is recorded in the change's gate ledger for later audit.",
-		Evidence:  gateEvidence(gate, artifactPaths),
-		Choices: []consentenvelope.Choice{
-			{
-				Answer:     gateAnswerApproved,
-				Label:      "Approve this gate",
-				Effect:     fmt.Sprintf("Records an approved decision for gate %q and unblocks the next phase or role.", gateKey),
-				Invocation: fmt.Sprintf("%s--cwd %s --change %s --gate %s --decision approved --reason <your-reason>", gateRecordInvocationPrefix, cwd, change, gateKey),
-			},
-			{
-				Answer:     gateAnswerRejected,
-				Label:      "Reject this gate",
-				Effect:     fmt.Sprintf("Keeps gate %q open to remediation; nothing later starts until it is re-approved.", gateKey),
-				Invocation: fmt.Sprintf("%s--cwd %s --change %s --gate %s --decision rejected --reason <your-reason>", gateRecordInvocationPrefix, cwd, change, gateKey),
-			},
-		},
+		Schema:             SDDGovernanceGateSchema,
+		Contract:           SDDGovernanceContractV1,
+		Operation:          gateOperation,
+		Action:             gateActionRequired,
+		Blocking:           true,
+		Change:             change,
+		Gate:               gateKey,
+		Criteria:           criteria,
+		Headline:           headline,
+		Reason:             reason,
+		Value:              value,
+		Evidence:           gateEvidence(gate, artifactPaths),
+		Choices:            gateQuestionChoices(cwd, change, gateKey, answers),
+		HandOffUnavailable: handOffUnavailable,
 		OffPath: consentenvelope.OffPath{
 			Note:    fmt.Sprintf("To inspect this gate without deciding yet, run '%s', then re-enter through '%s'.", showInvocation, statusInvocation),
 			Command: statusInvocation,
@@ -486,63 +503,6 @@ func setGovernanceArtifactDigest(key string, paths []string, artifacts map[strin
 	}
 	artifacts[key] = digest
 	return nil
-}
-
-// verifyDependencyFromHandoff is D-12's rule: REQ-21.15 forbids starting
-// the global "verify" phase before the integration handoff says it is
-// ready. It only ever CONSULTS openspec/changes/<change>/handoff.md when
-// the sealed kickoff's roster is multi-role or its handoff_policy is
-// per_checkpoint; every other sealed change (a single role with the
-// fullstack default's handoff_policy: none) keeps baseline exactly as
-// resolveDependencies already computed it — this is a deliberate,
-// documented cost boundary (design.md S4.5/D-12), not an oversight: a
-// single-role, no-intermediate-handoff change never produces a handoff.md
-// to read until the very last (and only) role closes, at which point
-// coreReady/applyState already govern Verify through the existing logic.
-//
-// It returns the adjusted DependencyState and a non-empty genuine reason
-// exactly when it blocks Verify for a cause the caller must surface in
-// BlockedReasons; an unchanged baseline always pairs with an empty reason.
-func verifyDependencyFromHandoff(governance *Governance, changeRoot string, baseline DependencyState) (DependencyState, string) {
-	// A continuous seal never produces handoff.md (it is written on the last
-	// role-apply gate approval, and continuous has no gates), so requiring it
-	// there would block verify forever.
-	if !governanceGated(governance) {
-		return baseline, ""
-	}
-	multiRole := len(governance.Roster.Roles) > 1
-	perCheckpoint := governance.Kickoff.Config.HandoffPolicy == kickoff.HandoffPerCheckpoint
-	if !multiRole && !perCheckpoint {
-		return baseline, ""
-	}
-
-	h, err := handoff.ParseFile(filepath.Join(changeRoot, "handoff.md"))
-	if err != nil {
-		// Absent or unreadable handoff.md is "no relay produced yet", not a
-		// block -- UNLESS every role already closed (LastRoleClosed): the
-		// relay SHOULD exist by then, and reporting Verify "ready" anyway
-		// would let it start without the consolidated instructions REQ-21.14
-		// promises it.
-		if lastRoleClosedForGovernance(governance) {
-			return DependencyBlocked, "El relevo de integracion openspec/changes/.../handoff.md no existe o no se pudo leer, pese a que todos los roles del roster ya estan cerrados; genera el relevo antes de iniciar la fase verify global (REQ-21.14, REQ-21.15)."
-		}
-		return baseline, ""
-	}
-
-	switch h.Metadata.Status {
-	case handoff.StatusReady:
-		if h.Metadata.ToPhase == handoff.PhaseVerify {
-			return DependencyReady, ""
-		}
-		return baseline, ""
-	case handoff.StatusBlocked, handoff.StatusNeedsClarification:
-		return DependencyBlocked, fmt.Sprintf(
-			"El relevo de integracion tiene status %q; la fase verify global no puede iniciarse hasta resolver ese bloqueo (REQ-21.15).",
-			h.Metadata.Status,
-		)
-	default:
-		return baseline, ""
-	}
 }
 
 // archiveDependencyFromGovernance is D-13's rule: REQ-21.16 forbids

@@ -140,6 +140,9 @@ const (
 	CodeMergeNotConfirmed          Code = "merge_not_confirmed"
 	CodeChangeNotIntegrated        Code = "change_not_integrated"
 	CodeArchiveBranchNotApplicable Code = "archive_branch_not_applicable"
+	// CodeUncommittedArtifacts es el rechazo de la salida 2 de una parada con artefactos del cambio
+	// sin confirmar (REQ-26.4): lo que no está en un commit no viaja en la PR.
+	CodeUncommittedArtifacts Code = "uncommitted_artifacts"
 )
 
 // Exceptions son las excepciones por cambio de `ensure` (`--prefix`, `--branch`,

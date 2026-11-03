@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/assets"
+	"github.com/IGutierrezZ/axiom/v3/internal/components/agentguidance"
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
 )
 
@@ -18,6 +19,10 @@ const (
 	// runtime asset; only the ones measured as non-drifted moved here.
 	sharedOrchestratorSectionsAsset = "skills/_shared/sdd-orchestrator-sections.md"
 	sharedOrchestratorSectionOpen   = "{{GENTLE_AI_SDD_SECTION:"
+	// stopExitsMarker stands for the single text of the three-exit stops. The
+	// shared gates section carries it and substituteSharedOrchestratorSections
+	// resolves it with agentguidance.StopExits (DD-12).
+	stopExitsMarker = "{{AXIOM_STOP_EXITS}}"
 
 	openCodeBackgroundPolicyAsset  = "opencode/background-subagents.md"
 	openCodeBackgroundPolicyMarker = "<!-- gentle-ai:opencode-background-subagents -->"
@@ -62,8 +67,13 @@ var sharedOrchestratorSectionPlaceholder = regexp.MustCompile(`\{\{GENTLE_AI_SDD
 // appearing inside one is not a nested reference to expand. The earlier
 // implementation rescanned from the start after each substitution, which would
 // not terminate if a body ever contained a placeholder.
+//
+// The stop-exits marker is the one token a canonical body does carry. It is not
+// a nested section reference: it is a distinct token that a second, explicit
+// step resolves after the section pass, so the three-exit text has a single
+// source (agentguidance.StopExits) shared with the ODD doctrine (REQ-26.8).
 func substituteSharedOrchestratorSections(content string) string {
-	return sharedOrchestratorSectionPlaceholder.ReplaceAllStringFunc(content, func(match string) string {
+	content = sharedOrchestratorSectionPlaceholder.ReplaceAllStringFunc(content, func(match string) string {
 		name := sharedOrchestratorSectionPlaceholder.FindStringSubmatch(match)[1]
 		body := sharedOrchestratorSection(name)
 		if body == "" {
@@ -71,6 +81,7 @@ func substituteSharedOrchestratorSections(content string) string {
 		}
 		return body
 	})
+	return strings.ReplaceAll(content, stopExitsMarker, agentguidance.StopExits())
 }
 
 // composeOrchestratorPrompt is the renderer-owned source seam for every SDD

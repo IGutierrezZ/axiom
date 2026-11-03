@@ -454,10 +454,12 @@ func TestReadsLaunchOnlyTheClosedListOfReadSubcommands(t *testing.T) {
 	_, _ = git.DirtyPaths(ctx, repo)
 	_, _, _ = git.AheadBehind(ctx, repo, "refs/heads/main", "refs/heads/feat/x")
 	_, _, _ = git.TreeDirs(ctx, repo, "refs/heads/main", "openspec/changes")
+	_, _, _ = git.FileAt(ctx, repo, "refs/heads/main", "README.md")
 
-	allowed := map[string]bool{"rev-parse": true, "worktree": true, "status": true, "rev-list": true, "ls-tree": true}
-	if len(*seen) != 8 {
-		t.Fatalf("el observador vio %d invocaciones, se esperaban 8: %v", len(*seen), *seen)
+	allowed := map[string]bool{"rev-parse": true, "worktree": true, "status": true, "rev-list": true, "ls-tree": true, "cat-file": true}
+	// FileAt lanza dos invocaciones (`ls-tree` y `cat-file blob`) cuando el fichero existe y una cuando no.
+	if len(*seen) != 9 {
+		t.Fatalf("el observador vio %d invocaciones, se esperaban 9: %v", len(*seen), *seen)
 	}
 	for _, invocation := range *seen {
 		if !allowed[invocation[1]] {
@@ -465,6 +467,9 @@ func TestReadsLaunchOnlyTheClosedListOfReadSubcommands(t *testing.T) {
 		}
 		if invocation[1] == "worktree" && invocation[2] != "list" {
 			t.Errorf("la lectura de worktrees solo usa `worktree list`: %v", invocation)
+		}
+		if invocation[1] == "cat-file" && invocation[2] != "blob" {
+			t.Errorf("la lectura de ficheros solo usa `cat-file blob`: %v", invocation)
 		}
 	}
 }
@@ -637,4 +642,112 @@ func TestTreeDirsKeepsUnusualNamesIntact(t *testing.T) {
 			t.Errorf("TreeDirs(raro[dir]/changes) = %q, %v, %v; se esperaba solo [uno]", dirs, exists, err)
 		}
 	})
+}
+
+// REQ-26.11 y DD-09: `FileAt` lee un fichero del árbol de una referencia (`git ls-tree` y
+// `git cat-file blob`), sin leer el árbol de trabajo y sin red; lo que no es un fichero
+// regular de la referencia (ausente, carpeta, submódulo, enlace simbólico) no es un error.
+func TestFileAtReadsARegularFileFromTheTreeOfARevision(t *testing.T) {
+	ctx := context.Background()
+	repo := changesTree(t)
+	// Un enlace simbólico, creado en el índice para no depender de que el sistema los permita.
+	target := filepath.Join(t.TempDir(), "destino")
+	writeFile(t, target, "x/proposal.md")
+	blob := runGit(t, repo, "hash-object", "-w", target)
+	runGit(t, repo, "update-index", "--add", "--cacheinfo", "120000,"+blob+",openspec/changes/enlace")
+	commit(t, repo, "enlace")
+	head := runGit(t, repo, "rev-parse", "HEAD")
+	git := New()
+
+	t.Run("un fichero existente devuelve su contenido exacto", func(t *testing.T) {
+		for _, rev := range []string{"refs/heads/main", head} {
+			content, exists, err := git.FileAt(ctx, repo, rev, "openspec/changes/x/proposal.md")
+			if err != nil || !exists || string(content) != "contenido\n" {
+				t.Fatalf("FileAt(%s) = %q, %v, %v; se esperaba el contenido confirmado", rev, content, exists, err)
+			}
+		}
+	})
+	t.Run("un nombre con espacios y no ASCII se toma literalmente", func(t *testing.T) {
+		for _, name := range []string{"mi cambio", "ñandú"} {
+			content, exists, err := git.FileAt(ctx, repo, head, "openspec/changes/"+name+"/proposal.md")
+			if err != nil || !exists || string(content) != "contenido\n" {
+				t.Errorf("FileAt(%q) = %q, %v, %v", name, content, exists, err)
+			}
+		}
+	})
+	t.Run("desde una subcarpeta la ruta sigue siendo la de la raíz", func(t *testing.T) {
+		content, exists, err := git.FileAt(ctx, filepath.Join(repo, "openspec"), head, "openspec/changes/x/proposal.md")
+		if err != nil || !exists || string(content) != "contenido\n" {
+			t.Errorf("FileAt desde openspec/ = %q, %v, %v", content, exists, err)
+		}
+	})
+	t.Run("lo que no es un fichero regular no existe y no es un error", func(t *testing.T) {
+		for _, missing := range []string{
+			"openspec/changes/x/gates.yaml",   // ausente
+			"openspec/changes/no-existe/a.md", // carpeta ausente
+			"openspec/changes/x",              // una carpeta
+			"openspec/changes/submodulo",      // un submódulo
+			"openspec/changes/enlace",         // un enlace simbólico
+			"openspec/changes/x/proposal",     // prefijo de un nombre, no un nombre
+		} {
+			content, exists, err := git.FileAt(ctx, repo, head, missing)
+			if err != nil || exists || len(content) != 0 {
+				t.Errorf("FileAt(%q) = %q, %v, %v; se esperaba inexistente sin error", missing, content, exists, err)
+			}
+		}
+	})
+	t.Run("no lee el árbol de trabajo", func(t *testing.T) {
+		writeFile(t, filepath.Join(repo, "openspec", "changes", "x", "proposal.md"), "editado sin confirmar\n")
+		writeFile(t, filepath.Join(repo, "openspec", "changes", "x", "gates.yaml"), "nuevo\n")
+		content, exists, err := git.FileAt(ctx, repo, head, "openspec/changes/x/proposal.md")
+		if err != nil || !exists || string(content) != "contenido\n" {
+			t.Errorf("FileAt = %q, %v, %v; debía devolver lo confirmado", content, exists, err)
+		}
+		if _, exists, err := git.FileAt(ctx, repo, head, "openspec/changes/x/gates.yaml"); err != nil || exists {
+			t.Errorf("un fichero sin confirmar no está en el árbol de la referencia (exists=%v, err=%v)", exists, err)
+		}
+	})
+}
+
+func TestFileAtRejectsArgumentsThatGitWouldReadAsOptionsOrMagic(t *testing.T) {
+	ctx := context.Background()
+	repo := changesTree(t)
+	seen := observe(t)
+	git := New()
+
+	for _, relPath := range []string{"", ".", "/openspec", "../fuera", "openspec/../x", "-openspec", ":(top)openspec", "openspec\x00x"} {
+		if _, _, err := git.FileAt(ctx, repo, "refs/heads/main", relPath); err == nil {
+			t.Errorf("FileAt con la ruta %q debía fallar", relPath)
+		}
+	}
+	for _, rev := range []string{"", "-r"} {
+		if _, _, err := git.FileAt(ctx, repo, rev, "openspec/changes/x/proposal.md"); err == nil {
+			t.Errorf("FileAt con la referencia %q debía fallar", rev)
+		}
+	}
+	if len(*seen) != 0 {
+		t.Errorf("un argumento no válido no debía lanzar git: %v", *seen)
+	}
+	if _, _, err := git.FileAt(ctx, repo, "refs/heads/no-existe", "openspec/changes/x/proposal.md"); err == nil {
+		t.Error("una referencia que no existe debía fallar")
+	}
+}
+
+func TestFileAtUsesNoRemoteOperation(t *testing.T) {
+	ctx := context.Background()
+	repo := changesTree(t)
+	runGit(t, repo, "remote", "add", "origin", "https://ejemplo.invalid/repo.git")
+	seen := observe(t)
+	git := New()
+
+	_, _, _ = git.FileAt(ctx, repo, "refs/heads/main", "openspec/changes/x/proposal.md")
+	_, _, _ = git.FileAt(ctx, repo, "refs/heads/main", "openspec/changes/x/gates.yaml")
+
+	for _, invocation := range *seen {
+		switch invocation[1] {
+		case "ls-tree", "cat-file":
+		default:
+			t.Errorf("FileAt lanzó %q, fuera de `ls-tree` y `cat-file`: %v", invocation[1], invocation)
+		}
+	}
 }
