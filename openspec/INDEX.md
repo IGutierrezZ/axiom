@@ -1,8 +1,8 @@
 # Catálogo Maestro de Especificaciones Vivas — Axiom
 
 > **Proyecto:** Axiom (Spec-Driven Development Platform)
-> **Última Sincronización:** 2026-10-29 11:16:46 UTC
-> **Total Dominios:** 67 | **Total Requerimientos:** 494 | **Total Escenarios BDD:** 1195
+> **Última Sincronización:** 2026-11-03 12:19:42 UTC
+> **Total Dominios:** 67 | **Total Requerimientos:** 505 | **Total Escenarios BDD:** 1285
 
 ---
 
@@ -19,7 +19,7 @@
 | `axiom-tui-branding` | Especificación de Requerimientos: Unificación de TUI Bubbletea, Comandos de Ecosistema en CLI axiom y Pasarela de gentle-ai (INC-14) | 4 | 9 | [Ver Spec](specs/axiom-tui-branding/spec.md) |
 | `axiom-updater-resilience` | Especificación Viva: Resiliencia y Gobernanza del Actualizador Autónomo de Axiom | 9 | 10 | [Ver Spec](specs/axiom-updater-resilience/spec.md) |
 | `axiom-user-state-and-env` | Especificación de Requerimientos: Unificación de Estado en ~/.axiom y Variables AXIOM_* (INC-12) | 3 | 5 | [Ver Spec](specs/axiom-user-state-and-env/spec.md) |
-| `change-branch-lifecycle` | Especificación de Requerimientos: Ciclo de Vida de las Ramas y Worktrees de un Cambio por Topología (INC-25) | 25 | 168 | [Ver Spec](specs/change-branch-lifecycle/spec.md) |
+| `change-branch-lifecycle` | Especificación de Requerimientos: Ciclo de Vida de las Ramas y Worktrees de un Cambio por Topología (INC-25) | 26 | 179 | [Ver Spec](specs/change-branch-lifecycle/spec.md) |
 | `dashboard-sdd-orchestration` | Especificación de Requerimientos: Orquestación Interactiva SDD y Creación de Cambios en Dashboard Web y CLI (INC-15) | 5 | 10 | [Ver Spec](specs/dashboard-sdd-orchestration/spec.md) |
 | `engram-protocol-injection` | Engram protocol injection Specification | 5 | 12 | [Ver Spec](specs/engram-protocol-injection/spec.md) |
 | `gga` | GGA Specification | 3 | 8 | [Ver Spec](specs/gga/spec.md) |
@@ -36,7 +36,7 @@
 | `odd-sdd-promotion` | Especificación de Requerimientos: Promoción de Documentos ODD a Propuestas SDD (INC-19) | 4 | 0 | [Ver Spec](specs/odd-sdd-promotion/spec.md) |
 | `odd-ui-integration` | Especificación de Requerimientos: Integración de ODD en Dashboard Web y TUI (INC-19) | 3 | 0 | [Ver Spec](specs/odd-ui-integration/spec.md) |
 | `orchestrator-commands-markers` | Especificación de Requerimientos: axiom-orchestrator y Comandos Slash Canónicos (INC-11) | 4 | 5 | [Ver Spec](specs/orchestrator-commands-markers/spec.md) |
-| `organic-agent-trigger-rules` | Organic Agent Routing Projection | 16 | 32 | [Ver Spec](specs/organic-agent-trigger-rules/spec.md) |
+| `organic-agent-trigger-rules` | Organic Agent Routing Projection | 17 | 45 | [Ver Spec](specs/organic-agent-trigger-rules/spec.md) |
 | `persona-behavior-contract` | persona-behavior-contract Specification | 17 | 32 | [Ver Spec](specs/persona-behavior-contract/spec.md) |
 | `planning-home-resolution` | Especificación de Requerimientos: Resolución del Planning Home desde Cualquier Directorio (INC-24) | 13 | 58 | [Ver Spec](specs/planning-home-resolution/spec.md) |
 | `project-technical-context` | Especificación de Requerimientos: Contexto Técnico del Proyecto: Declaración, Lectura y Mantenimiento (INC-24) | 12 | 45 | [Ver Spec](specs/project-technical-context/spec.md) |
@@ -62,12 +62,12 @@
 | `rdd-transport-capability` | RDD Transport Capability Specification | 4 | 8 | [Ver Spec](specs/rdd-transport-capability/spec.md) |
 | `review-findings-ledger` | Bounded Review Transaction and Findings Ledger | 18 | 24 | [Ver Spec](specs/review-findings-ledger/spec.md) |
 | `sdd-archive-lifecycle` | Especificación de Requerimientos: Ciclo de Vida de Archive, Integración Formal y Sellado Inmutable (INC-21) | 7 | 34 | [Ver Spec](specs/sdd-archive-lifecycle/spec.md) |
-| `sdd-block-review-gates` | Especificación de Requerimientos: Compuertas de Revisión por Bloque (spec, design, tasks, apply) (INC-21) | 6 | 19 | [Ver Spec](specs/sdd-block-review-gates/spec.md) |
-| `sdd-lane-kickoff` | Especificación de Requerimientos: Selección Temprana y Bloqueante de Carril ODD/SDD en el Kickoff (INC-21) | 8 | 27 | [Ver Spec](specs/sdd-lane-kickoff/spec.md) |
+| `sdd-block-review-gates` | Especificación de Requerimientos: Compuertas de Revisión por Bloque (spec, design, tasks, apply) (INC-21) | 14 | 66 | [Ver Spec](specs/sdd-block-review-gates/spec.md) |
+| `sdd-lane-kickoff` | Especificación de Requerimientos: Selección Temprana y Bloqueante de Carril ODD/SDD en el Kickoff (INC-21) | 8 | 30 | [Ver Spec](specs/sdd-lane-kickoff/spec.md) |
 | `sdd-orchestrator-assets` | SDD Orchestrator Assets Specification | 17 | 39 | [Ver Spec](specs/sdd-orchestrator-assets/spec.md) |
-| `sdd-preflight-configuration` | Especificación de Requerimientos: Cuestionario Pre-Vuelo de SDD, Modalidad de Avance y Asignación Obligatoria de Roles (INC-21) | 2 | 5 | [Ver Spec](specs/sdd-preflight-configuration/spec.md) |
+| `sdd-preflight-configuration` | Especificación de Requerimientos: Cuestionario Pre-Vuelo de SDD, Modalidad de Avance y Asignación Obligatoria de Roles (INC-21) | 3 | 16 | [Ver Spec](specs/sdd-preflight-configuration/spec.md) |
 | `sdd-research` | sdd-research Specification | 3 | 9 | [Ver Spec](specs/sdd-research/spec.md) |
-| `sdd-role-closure-handoff` | Especificación de Requerimientos: Cierre de Último Rol, Aviso Formal y Relevo de Integración (INC-21) | 3 | 6 | [Ver Spec](specs/sdd-role-closure-handoff/spec.md) |
+| `sdd-role-closure-handoff` | Especificación de Requerimientos: Cierre de Último Rol, Aviso Formal y Relevo de Integración (INC-21) | 3 | 11 | [Ver Spec](specs/sdd-role-closure-handoff/spec.md) |
 | `semantic-code` | Especificación de Requerimientos: Conector Semántico de Código (Serena MCP & CodeGraph) (INC-06) | 11 | 14 | [Ver Spec](specs/semantic-code/spec.md) |
 | `spec-baseline-declaration` | Especificación de Requerimientos: Declaración de la Baseline del Proyecto y Guarda contra una Segunda Baseline (INC-24) | 15 | 71 | [Ver Spec](specs/spec-baseline-declaration/spec.md) |
 | `spec-baseline-integration` | Especificación de Requerimientos: Integración de los Cambios en la Baseline del Proyecto (INC-24) | 19 | 91 | [Ver Spec](specs/spec-baseline-integration/spec.md) |
@@ -390,6 +390,8 @@ Definir cómo crea, consulta, cierra y protege Axiom las ramas (y, opcionalmente
 - **[REQ-25.45]** Rama de Archivado y `ensure --archive`
   - *Escenario BDD:* Crea la rama de archivado desde la integración con el cambio fusionado
   - *Escenario BDD:* La base local sin el cambio fusionado se rechaza y sugiere `--fetch`
+  - *Escenario BDD:* Una fusión intermedia se rechaza con `change_not_integrated`
+  - *Escenario BDD:* Con todos los role-apply aprobados e integrados, `--archive` procede
   - *Escenario BDD:* `--fetch` explícito permite alcanzar el cambio fusionado
   - *Escenario BDD:* Multirepo no tiene rama de archivado
   - *Escenario BDD:* El carril ODD no tiene rama de archivado
@@ -465,6 +467,7 @@ Definir cómo crea, consulta, cierra y protege Axiom las ramas (y, opcionalmente
   - *Escenario BDD:* El repositorio de specs de un multirepo no tiene pendientes
   - *Escenario BDD:* Sin referencia de integración la lista se omite con aviso
   - *Escenario BDD:* La evaluación no usa la red
+  - *Escenario BDD:* Una fusión intermedia no figura como pendiente
 - **[REQ-25.21]** `guard`: Hook Opcional que Bloquea los Documentos de Axiom y Avisa en el Resto
   - *Escenario BDD:* Bloquea un documento de Axiom en rama equivocada
   - *Escenario BDD:* Permite un documento de Axiom en la rama correcta
@@ -497,6 +500,15 @@ Definir cómo crea, consulta, cierra y protege Axiom las ramas (y, opcionalmente
   - *Escenario BDD:* `axiom.yaml` de este repositorio declara `git:`
   - *Escenario BDD:* La documentación remite al verbo
   - *Escenario BDD:* Un cambio preexistente ya fusionado figura como pendiente de archivar
+- **[REQ-26.11]** Fusión Intermedia de un Cambio no es Integración ni Pendiente de Archivar
+  - *Escenario BDD:* Un cambio con solo spec cedida y fusionada no figura como pendiente de archivar
+  - *Escenario BDD:* Un cambio con design cedido y roles sin aprobar sigue siendo intermedio
+  - *Escenario BDD:* Un rol cedido con otro rol pendiente sigue siendo intermedio
+  - *Escenario BDD:* Al aprobarse todos los role-apply el cambio deja de ser intermedio
+  - *Escenario BDD:* Un cambio fusionado sin ninguna marca de cesión se comporta como hasta ahora
+  - *Escenario BDD:* Un registro integrado ilegible se trata como hasta ahora
+  - *Escenario BDD:* La fusión intermedia no bloquea nada
+  - *Escenario BDD:* Quien recoge la cesión crea su rama desde la base fusionada
 
 ### Dominio: `dashboard-sdd-orchestration` — Especificación de Requerimientos: Orquestación Interactiva SDD y Creación de Cambios en Dashboard Web y CLI (INC-15)
 
@@ -920,6 +932,20 @@ Define the managed, provider-neutral instructions that project Gentle AI's
   - *Escenario BDD:* Ningún otro asset contiene los nombres
   - *Escenario BDD:* La doctrina es idéntica en todos los adaptadores
   - *Escenario BDD:* Los goldens fijan el texto
+- **[REQ-26.10]** El Protocolo ODD Incluye una Parada Única con Tres Salidas tras Crear el Documento de Feature
+  - *Escenario BDD:* La doctrina contiene una única parada tras el plan y antes del primer código
+  - *Escenario BDD:* El texto de las tres salidas coincide con el de SDD
+  - *Escenario BDD:* La salida 2 aprueba el plan, lo confirma, presenta la PR y deja la implementación a otra persona
+  - *Escenario BDD:* La salida 3 continúa con la implementación
+  - *Escenario BDD:* La salida 1 vuelve a presentar la parada tras ajustar el plan
+  - *Escenario BDD:* El trabajo pequeño no tiene parada
+  - *Escenario BDD:* Reanudar una feature con el plan ya aprobado no repite la parada
+  - *Escenario BDD:* Otra persona recoge el plan desde el fichero sin espejo de Engram
+  - *Escenario BDD:* Multirepo confirma en la integración y no hay PR
+  - *Escenario BDD:* Solo se confirma el documento de feature
+  - *Escenario BDD:* La doctrina no ordena operaciones remotas
+  - *Escenario BDD:* La doctrina cita la parada como excepción a las preguntas de gobernanza
+  - *Escenario BDD:* El renderizado sigue siendo determinista
 
 ### Dominio: `persona-behavior-contract` — persona-behavior-contract Specification
 
@@ -1648,20 +1674,25 @@ Define one explicit, content-addressed implementation-review transaction shared 
   - *Escenario BDD:* Modalidad con paradas detiene el flujo entre spec y design
   - *Escenario BDD:* Modalidad continua encadena las fases sin compuertas
 - **[REQ-21.8]** Compuerta de `spec`
-  - *Escenario BDD:* Spec completo aprobado habilita design
+  - *Escenario BDD:* Spec completo aprobado con la salida 3 habilita design
+  - *Escenario BDD:* Spec aprobado con la salida 2 cede design y para
   - *Escenario BDD:* Huecos detectados se enumeran explícitamente en la compuerta
 - **[REQ-21.9]** Compuerta de `design`
-  - *Escenario BDD:* Diseño conforme aprobado habilita tasks
+  - *Escenario BDD:* Diseño conforme aprobado con la salida 3 habilita tasks
+  - *Escenario BDD:* Diseño aprobado con la salida 2 cede tasks y para
   - *Escenario BDD:* Desviación arquitectónica se señala explícitamente en la compuerta
   - *Escenario BDD:* El impacto previsto en el contexto mantenido se presenta en la compuerta
   - *Escenario BDD:* La ausencia del delta de contexto se señala en la compuerta
   - *Escenario BDD:* Sin contexto mantenido la compuerta no cambia
   - *Escenario BDD:* Las plantillas del orquestador prescriben la presentación del delta en la compuerta de diseño
 - **[REQ-21.10]** Compuerta de `tasks`
-  - *Escenario BDD:* Tasks de un único rol aprobadas habilitan apply
+  - *Escenario BDD:* Tasks de un único rol aprobadas con la salida 3 habilitan apply
+  - *Escenario BDD:* Tasks aprobadas con la salida 2 ceden apply y paran
   - *Escenario BDD:* Tasks multi-rol se presentan juntas antes de iniciar cualquier apply
 - **[REQ-21.11]** Compuerta de `apply` por Rol
-  - *Escenario BDD:* Rol concluido y aprobado habilita el siguiente rol pendiente
+  - *Escenario BDD:* Rol concluido y aprobado con la salida 3 habilita el siguiente rol pendiente
+  - *Escenario BDD:* Rol concluido y aprobado con la salida 2 cede el siguiente rol
+  - *Escenario BDD:* Último rol aprobado con la salida 2 cede verify
   - *Escenario BDD:* Incumplimiento de calidad bloquea la conclusión del rol
   - *Escenario BDD:* El impacto final en el contexto mantenido se presenta en la compuerta
   - *Escenario BDD:* Un impacto final no reflejado en el delta puede rechazarse
@@ -1669,6 +1700,56 @@ Define one explicit, content-addressed implementation-review transaction shared 
 - **[REQ-21.12]** Rechazo de una Compuerta Bloquea el Avance y Exige Remediación
   - *Escenario BDD:* Rechazo de la compuerta de spec exige remediación antes de reintentar
   - *Escenario BDD:* Rechazo de la compuerta de apply de un rol impide el cierre de ese rol
+  - *Escenario BDD:* Iterar exige un motivo
+  - *Escenario BDD:* La remediación reabre la puerta por digest sin vocabulario nuevo
+- **[REQ-26.1]** Tres Salidas en Cada Parada de Planificación y de `role-apply`
+  - *Escenario BDD:* Cada puerta de planificación ofrece las tres salidas
+  - *Escenario BDD:* La puerta `integration` conserva dos salidas
+  - *Escenario BDD:* Modalidad continua no tiene paradas ni salidas
+  - *Escenario BDD:* Registrar la salida 2 en un cambio continuo se rechaza
+  - *Escenario BDD:* Aprobar y seguir no cede nada
+- **[REQ-26.2]** Pregunta Tipada de la Puerta con Tres Opciones sobre `axiom sdd gate record`
+  - *Escenario BDD:* La pregunta tiene tres opciones sobre el mismo verbo
+  - *Escenario BDD:* Una pregunta de compuerta con dos opciones o con una opción de otro verbo se rechaza
+  - *Escenario BDD:* Dos opciones con el mismo token se rechazan
+  - *Escenario BDD:* El sobre de autoridad de edición sigue exigiendo dos opciones
+  - *Escenario BDD:* El contrato de Lossless Blocking Prompt se cumple con tres opciones
+- **[REQ-26.3]** La Salida 2 Registra `approved` con la Marca de Cesión, Compatible con Binarios Anteriores
+  - *Escenario BDD:* La salida 2 escribe un registro approved con la marca
+  - *Escenario BDD:* Un binario anterior lee el registro con marca como approved
+  - *Escenario BDD:* Las salidas 1 y 3 no escriben la marca
+  - *Escenario BDD:* El vocabulario del registro no cambia
+  - *Escenario BDD:* Un rechazo posterior no reabre una puerta aprobada con la salida 2
+  - *Escenario BDD:* La salida 2 sobre una puerta ya aprobada se rechaza
+- **[REQ-26.4]** La Salida 2 Comprueba que los Artefactos Están Confirmados antes de Registrar
+  - *Escenario BDD:* Artefactos confirmados permiten registrar
+  - *Escenario BDD:* Un artefacto modificado sin confirmar rechaza la salida 2
+  - *Escenario BDD:* Un artefacto nuevo sin añadir a git rechaza la salida 2
+  - *Escenario BDD:* El propio `gates.yaml` no cuenta como pendiente
+  - *Escenario BDD:* La salida 2 de un rol exige el trabajo del rol confirmado
+  - *Escenario BDD:* Fuera de la rama que corresponde se rechaza con la guarda de rama
+- **[REQ-26.5]** La Salida 2 Devuelve el Destino y la Orden de PR sin Ejecutar Git Remoto
+  - *Escenario BDD:* Monorepo devuelve rama, destino y órdenes
+  - *Escenario BDD:* Multirepo en el repositorio de specs indica commit y push sobre la integración
+  - *Escenario BDD:* No se ejecuta ninguna operación remota ni commit
+  - *Escenario BDD:* El orquestador para y no inicia la fase siguiente
+  - *Escenario BDD:* La salida `--json` contiene los datos de la entrega
+- **[REQ-26.6]** Disponibilidad de la Salida 2 según el Almacén, el Estilo y la Puerta
+  - *Escenario BDD:* Almacén engram rechaza la salida 2
+  - *Escenario BDD:* Almacén none rechaza la salida 2
+  - *Escenario BDD:* La pregunta con almacén engram o none no ofrece la salida 2
+  - *Escenario BDD:* Almacén hybrid y openspec ofrecen la salida 2
+- **[REQ-26.7]** La Cesión es Visible en `axiom sdd status` y Quien la Recoge Empieza la Fase Siguiente
+  - *Escenario BDD:* Status muestra la cesión de spec
+  - *Escenario BDD:* Status muestra la cesión de un rol hacia verify
+  - *Escenario BDD:* Status muestra la cesión de un rol hacia otro rol
+  - *Escenario BDD:* Sin marca no hay cesión
+  - *Escenario BDD:* La cesión no bloquea
+  - *Escenario BDD:* La marca es la del registro que cierra la puerta
+- **[REQ-26.8]** Texto Único de las Tres Salidas Proyectado a Todos los Runtimes
+  - *Escenario BDD:* El texto de las tres salidas es idéntico en todos los runtimes
+  - *Escenario BDD:* Ningún asset ofrece el relevo `handoff.md` como transición
+  - *Escenario BDD:* El texto prescribe el significado de «subir»
 
 ### Dominio: `sdd-lane-kickoff` — Especificación de Requerimientos: Selección Temprana y Bloqueante de Carril ODD/SDD en el Kickoff (INC-21)
 
@@ -1682,10 +1763,13 @@ Define one explicit, content-addressed implementation-review transaction shared 
 - **[REQ-21.2]** Carril ODD sin Fricción Adicional
   - *Escenario BDD:* Elección de ODD sin preguntas adicionales
   - *Escenario BDD:* Trabajo ODD multi-área sigue sin roles ni handoff
+  - *Escenario BDD:* La parada única de ODD no cuenta como pregunta de gobernanza
+  - *Escenario BDD:* La parada de ODD no genera handoff.md
 - **[REQ-21.3]** Entrada al Cuestionario de Pre-Vuelo de SDD
   - *Escenario BDD:* Entrada al pre-vuelo tras elección explícita o alcance ya determinado
 - **[REQ-21.4]** Idempotencia del Kickoff ante un Cambio con Artefactos o Configuración Ya Sellada
   - *Escenario BDD:* Reanudación de un cambio con kickoff ya sellado
+  - *Escenario BDD:* Reanudación de un cambio sellado con la política de relevos antigua
   - *Escenario BDD:* Cambio preexistente con artefactos pero sin kickoff sellado infiere un valor por defecto sin bloquear
   - *Escenario BDD:* El retro-sello no altera qué `tasks.<rol>.md` consulta la barrera
 - **[REQ-25.35]** `ensure` al Nombrar el Cambio, antes de Escribir en su Carpeta
@@ -1781,13 +1865,25 @@ Defines required behavior for agent-specific SDD orchestrator guidance assets so
 
 **Archivo:** [`specs/sdd-preflight-configuration/spec.md`](specs/sdd-preflight-configuration/spec.md)
 
-- **[REQ-21.5]** Bloqueo de Avance sin Modalidad y Política de Relevos Selladas
-  - *Escenario BDD:* Modalidad y política de relevos selladas antes de crear la propuesta
+- **[REQ-21.5]** Bloqueo de Avance sin Modalidad Sellada
+  - *Escenario BDD:* Modalidad de avance sellada antes de crear la propuesta
   - *Escenario BDD:* Respuesta ambigua o ausente no crea la propuesta ni asume un valor por defecto
+  - *Escenario BDD:* El sellado funciona sin política de relevos
 - **[REQ-21.6]** Asignación Obligatoria del Rol `fullstack` sin Subdivisión Especializada
   - *Escenario BDD:* Sin roles declarados, se asigna fullstack por defecto
   - *Escenario BDD:* Un único rol especializado declarado no se combina con fullstack
   - *Escenario BDD:* Varios roles especializados declarados tampoco activan fullstack
+- **[REQ-26.9]** `handoff_policy` Deprecado: se Acepta, se Ignora y se Fija a `none`
+  - *Escenario BDD:* Sellar sin la política de relevos funciona
+  - *Escenario BDD:* Un orquestador antiguo que pasa el flag sigue funcionando
+  - *Escenario BDD:* Un binario anterior lee un kickoff nuevo
+  - *Escenario BDD:* Un valor desconocido del flag se rechaza
+  - *Escenario BDD:* Un kickoff antiguo con la clave se lee sin error
+  - *Escenario BDD:* Un kickoff sin la clave valida
+  - *Escenario BDD:* per_checkpoint no hace que verify consulte handoff.md
+  - *Escenario BDD:* La salida de kickoff y status no emite el campo vacío
+  - *Escenario BDD:* El texto de kickoff no menciona la política de relevos
+  - *Escenario BDD:* Ningún asset nombra el flag como obligatorio
 
 ### Dominio: `sdd-research` — sdd-research Specification
 
@@ -1815,14 +1911,19 @@ Selected research is optional. When the orchestrator decides to invoke it, it ru
 **Archivo:** [`specs/sdd-role-closure-handoff/spec.md`](specs/sdd-role-closure-handoff/spec.md)
 
 - **[REQ-21.13]** Aviso Formal de Conclusión del Último Rol Activo
-  - *Escenario BDD:* Último de varios roles activa el aviso y el relevo
+  - *Escenario BDD:* Último de varios roles activa el aviso sin relevo
   - *Escenario BDD:* Rol único fullstack satisface la condición de último rol de inmediato
   - *Escenario BDD:* Compuerta rechazada no dispara el cierre aunque sea el único rol pendiente
-- **[REQ-21.14]** Generación del `handoff.md` de Integración
+  - *Escenario BDD:* Aprobar el último rol con la salida 2 emite el aviso y cede verify
+- **[REQ-sdd-role-closure-handoff-2]** Generación del `handoff.md` de Integración (REQ-21.14) [SUPERSEDED / DEPRECADO]
   - *Escenario BDD:* Handoff de integración consolida todos los roles participantes
-- **[REQ-21.15]** Ejecución de la Fase `verify` Global tras el Handoff
+- **[REQ-21.15]** Ejecución de la Fase `verify` Global tras Aprobarse Todos los `role-apply`
   - *Escenario BDD:* Verify global emite un informe consolidado distinto de los informes por rol
-  - *Escenario BDD:* Handoff bloqueado impide iniciar el verify global
+  - *Escenario BDD:* Verify multirrol bloqueado mientras falte algún role-apply aprobado
+  - *Escenario BDD:* Verify multirrol se desbloquea con todos los role-apply aprobados sin handoff.md
+  - *Escenario BDD:* Un handoff.md bloqueado ya no impide verify
+  - *Escenario BDD:* Un role-apply rechazado mantiene verify bloqueado
+  - *Escenario BDD:* Un cambio de un solo rol o continuo no cambia
 
 ### Dominio: `semantic-code` — Especificación de Requerimientos: Conector Semántico de Código (Serena MCP & CodeGraph) (INC-06)
 

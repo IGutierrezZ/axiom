@@ -33,7 +33,8 @@ El orquestador DEBE evaluar el alcance de toda solicitud de trabajo nueva antes 
 
 ### Requirement: Carril ODD sin Fricción Adicional (REQ-21.2)
 
-Si el usuario elige el carril ODD, el orquestador NO DEBE formular ninguna pregunta adicional de gobernanza, DEBE ejecutar el trabajo "del tirón" sin dividirlo en roles ni generar ningún `handoff.md`, y DEBE mantener el trabajo exclusivamente en `odd/tasks/<feature>.md`.
+Si el usuario elige el carril ODD, el orquestador NO DEBE formular ninguna pregunta adicional de gobernanza (modalidad de avance, roles, política de relevos), DEBE ejecutar el trabajo "del tirón" sin dividirlo en roles ni generar ningún `handoff.md`, y DEBE mantener el trabajo exclusivamente en `odd/tasks/<feature>.md`. La única interrupción prevista por defecto es la parada única de ODD tras crear el documento de feature y antes de la primera escritura de código, con las tres salidas de REQ-26.1 (REQ-26.10 de `organic-agent-trigger-rules`); esa parada NO es una pregunta de gobernanza y NO contraviene este requisito.
+(Previously: no admitía ninguna interrupción del trabajo ODD distinta de las preguntas de producto o de entorno)
 
 #### Scenario: Elección de ODD sin preguntas adicionales
 
@@ -48,6 +49,19 @@ Si el usuario elige el carril ODD, el orquestador NO DEBE formular ninguna pregu
 - **CUANDO** se ejecuta el trabajo hasta su cierre
 - **ENTONCES** el orquestador no genera ningún artefacto `handoff.md`
 - **Y** no introduce una división de roles aunque el trabajo abarque varias áreas
+
+#### Scenario: La parada única de ODD no cuenta como pregunta de gobernanza
+
+- **DADO** que el usuario eligió el carril ODD y el orquestador acaba de crear `odd/tasks/<feature>.md`
+- **CUANDO** el orquestador se detiene antes de la primera escritura de código para ofrecer las tres salidas
+- **ENTONCES** no ha formulado ninguna pregunta de modalidad, roles ni política de relevos
+- **Y** la parada se rige por REQ-26.10 de `organic-agent-trigger-rules`
+
+#### Scenario: La parada de ODD no genera handoff.md
+
+- **DADO** un trabajo ODD cuya parada se resuelve con la salida 2 (aprobar, subir y parar)
+- **CUANDO** el orquestador deja el plan para otra persona
+- **ENTONCES** no genera ningún `handoff.md`: el relevo es el propio `odd/tasks/<feature>.md` confirmado en la rama
 
 ---
 
@@ -68,20 +82,29 @@ Si el usuario elige el carril SDD en respuesta a la pregunta de REQ-21.1, o si e
 El orquestador NO DEBE volver a formular la pregunta de selección de carril (REQ-21.1) ni el cuestionario de pre-vuelo de SDD (capacidad `sdd-preflight-configuration`) para un cambio que ya tiene al menos un artefacto persistido (`proposal.md`, un `spec.md` bajo `specs/`, `design.md` o `tasks.md`) o cuya configuración de kickoff ya está sellada. En ese caso, el orquestador DEBE continuar respetando el carril y la configuración ya selladas en el primer kickoff, sin interrogar de nuevo al usuario.
 
 (Previamente: esta especificación indicaba que, al retro-sellar un cambio preexistente sin kickoff sellado, el rol por defecto congelado era el rol único `fullstack`. Se corrige tras la pregunta abierta O-1 planteada en `sdd-design` y resuelta explícitamente por el usuario con evidencia de código —`internal/multirole/detector.go:35-55` cae siempre a `core`, nunca a `fullstack`; `internal/multirole/detector.go:58-64` rechaza cualquier rol ausente de `axiom.yaml`; y `axiom.yaml:7-28` no declara `fullstack`—: el retro-sello DEBE congelar el rol que la detección de roles ya vigente infiere para ese cambio, nunca introducir la identidad `fullstack`.)
+(Previously: la configuración sellada incluía la política de relevos y el retro-sello inferido nombraba «sin `handoff.md` intermedios»; la política de relevos ya no forma parte de la configuración sellada)
 
 #### Scenario: Reanudación de un cambio con kickoff ya sellado
 
-- **DADO** un cambio SDD activo con `proposal.md` existente y su configuración de kickoff ya sellada (carril `sdd`, modalidad y política de relevos definidas)
+- **DADO** un cambio SDD activo con `proposal.md` existente y su configuración de kickoff ya sellada (carril `sdd` y modalidad definida)
 - **CUANDO** se reanuda el trabajo sobre ese cambio en una sesión posterior
 - **ENTONCES** el orquestador no repite la pregunta de selección de carril ni el cuestionario de pre-vuelo
-- **Y** continúa el flujo respetando la modalidad y la política de relevos ya selladas
+- **Y** continúa el flujo respetando la modalidad ya sellada
+
+#### Scenario: Reanudación de un cambio sellado con la política de relevos antigua
+
+- **DADO** un cambio SDD activo cuyo `kickoff.yaml` conserva `handoff_policy: per_checkpoint` o `none` de antes de este cambio
+- **CUANDO** se reanuda el trabajo sobre ese cambio
+- **ENTONCES** el orquestador no pregunta nada sobre la política de relevos
+- **Y** el valor antiguo no altera el flujo ni se vuelve a escribir
 
 #### Scenario: Cambio preexistente con artefactos pero sin kickoff sellado infiere un valor por defecto sin bloquear
 
 - **DADO** un cambio SDD activo con artefactos existentes (por ejemplo `proposal.md` y `design.md`) pero sin ninguna configuración de kickoff sellada previamente
 - **CUANDO** el orquestador retoma ese cambio
-- **ENTONCES** infiere y sella la configuración por defecto documentada (modalidad continua, sin `handoff.md` intermedios, y el rol que la detección de roles ya vigente infiere para ese cambio —hoy, `core`, cuando existe un `design.md` sin roles explícitos—) sin bloquear el trabajo ni interrogar retroactivamente al usuario
+- **ENTONCES** infiere y sella la configuración por defecto documentada (modalidad continua y el rol que la detección de roles ya vigente infiere para ese cambio —hoy, `core`, cuando existe un `design.md` sin roles explícitos—) sin bloquear el trabajo ni interrogar retroactivamente al usuario
 - **Y** el retro-sello no introduce la identidad `fullstack` ni ningún rol nuevo: es conservador por definición y se limita a congelar el rol y el comportamiento que la detección de roles ya aplica hoy para ese cambio, sin redefinirlo
+- **Y** el retro-sello no infiere ninguna política de relevos: escribe `handoff_policy: none` solo como valor de compatibilidad (REQ-26.9 de `sdd-preflight-configuration`)
 - **Y** dicha configuración inferida queda registrada para no volver a inferirse en la siguiente reanudación
 
 #### Scenario: El retro-sello no altera qué `tasks.<rol>.md` consulta la barrera

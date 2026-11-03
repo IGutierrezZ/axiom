@@ -28,7 +28,7 @@ Definir cómo crea, consulta, cierra y protege Axiom las ramas (y, opcionalmente
 | Rama de rol | `<prefijo>/<cambio>-<rol>`. Solo existe cuando dos o más roles del cambio tocan el mismo repositorio (REQ-25.4). |
 | Rama de seguimiento | La rama del cambio cuando existen ramas de rol sobre ese repositorio: los PR de rol se dirigen contra ella. |
 | Rama de archivado | `<prefijo>/<cambio>-archive`. Solo existe en los repositorios con rama de cambio (`monorepo-embedded`), la crea `axiom branch ensure --change <c> --archive` desde la rama de integración una vez fusionado el PR del cambio, y en ella se ejecuta `archive` (REQ-25.45). No existe en `multirepo`. |
-| Cambio pendiente de archivar | Cambio activo presente en el árbol de la rama de integración de un repositorio con rama de cambio, es decir, ya fusionado y aún sin archivar. Se excluyen por nombre los sumideros `e2e-cumulative` y `cumulative-<rol>` (REQ-25.20). |
+| Cambio pendiente de archivar | Cambio activo presente en el árbol de la rama de integración de un repositorio con rama de cambio, es decir, ya fusionado y aún sin archivar. Se excluyen por nombre los sumideros `e2e-cumulative` y `cumulative-<rol>` (REQ-25.20) y las fusiones intermedias, es decir, los cambios en fusión intermedia (REQ-26.11). |
 | Raíz git | Directorio de nivel superior del repositorio git que contiene una ruta (`git rev-parse --show-toplevel`), con su git common dir (`git rev-parse --git-common-dir`). |
 | Repositorio con rama de cambio | En `monorepo-embedded`, cada repositorio git tocado por el cambio (incluido el del planning home). En `multirepo`, cada repositorio de código tocado por algún rol del cambio. |
 | Repositorio de specs en multirepo | En `multirepo`, el repositorio que contiene el planning home (`planning-home-resolution`). Se trabaja siempre in situ, en su rama de integración. |
@@ -103,7 +103,7 @@ Los resultados que no son «listo» se identifican por un código estable, nunca
 | REQ-25.17 | `done`: seguridad y eliminación de worktree y rama local | Elimina worktree y rama local tras fusión confirmada; rechazo con árbol sucio o fusión no confirmada salvo `--force`; nunca toca ramas remotas |
 | REQ-25.18 | Veredicto único de rama | Una sola consulta, por papel del repositorio y contexto (ordinario o de archivado) |
 | REQ-25.19 | Guarda A: escritores Go | Todo escritor de la carpeta del cambio se niega fuera de rama |
-| REQ-25.20 | Cambios pendientes de archivar | Visibles en `status` y en el dashboard; sin código de fallo ni integración con la CI |
+| REQ-25.20 | Cambios pendientes de archivar | Visibles en `status` y en el dashboard, sin fusiones intermedias (REQ-26.11); sin código de fallo ni integración con la CI |
 | REQ-25.21 | `guard`: hook opcional | Bloquea documentos de Axiom y avisa sin bloquear en el resto; lee HEAD sin lanzar git; fail-open |
 | REQ-25.22 | Instalación del hook por `axiom sync` | Claude Code, Codex y OpenCode; sin hooks de git |
 | REQ-25.23 | Skills y doctrina delegan en el verbo | Retirada de ODD-5.x y del Paso 2c |
@@ -627,7 +627,8 @@ La ruta del worktree de cada rama DEBE ser `<raíz de worktrees>/<cambio>[-<rol>
 
 En los repositorios con rama de cambio (`monorepo-embedded`), el archivado de un cambio DEBE hacerse en una rama propia, la rama de archivado `<prefijo>/<cambio>-archive`, y entregarse en un PR documental aparte, **después** de fusionar el PR del cambio (REQ-25.39). `axiom branch ensure --change <c> --archive` DEBE crearla en el repositorio del planning home, saliendo de la rama de integración con la base de REQ-25.10 (`origin/<integración>` si existe en local y, si no, la rama de integración local), y aplicando el modo de trabajo personal de REQ-25.8 (en modo `worktree`, un worktree en `<raíz de worktrees>/<cambio>-archive/<repo>`; en `in_place`, el checkout de la rama en el propio repositorio, sujeto a REQ-25.9). `--archive` admite `--prefix` (REQ-25.12).
 
-Si la base resuelta no contiene ya el cambio fusionado, es decir, si su árbol no incluye la carpeta `changes/<cambio>/` del planning home, `ensure --archive` DEBE rechazar con `change_not_integrated`, sin crear nada, nombrando la base evaluada y sugiriendo `--fetch`. NO hay `fetch` implícito: solo con `--fetch` explícito se actualiza la referencia remota local antes de evaluar (REQ-25.10). `ensure --archive` es idempotente: reutiliza la rama y el worktree existentes sin moverlos, y NO publica la rama. En `multirepo` NO existe rama de archivado: `--archive` DEBE rechazarse con `archive_branch_not_applicable` porque el archive se hace in situ en la rama de integración del repositorio de specs (REQ-25.5); tampoco existe en el carril ODD (`--lane odd`), que no tiene archive. `done` también cubre la rama de archivado (REQ-25.16 y REQ-25.17) y `status` la incluye en el plan (REQ-25.15).
+Si la base resuelta no contiene ya el cambio fusionado, es decir, si su árbol no incluye la carpeta `changes/<cambio>/` del planning home, o si la incluye pero el cambio está en fusión intermedia (REQ-26.11), `ensure --archive` DEBE rechazar con `change_not_integrated`, sin crear nada, nombrando la base evaluada y sugiriendo `--fetch` cuando la carpeta falta; cuando el rechazo se debe a una fusión intermedia, el mensaje DEBE indicarlo y NO DEBE sugerir `--fetch` como remedio, porque la base ya contiene la versión integrada. NO hay `fetch` implícito: solo con `--fetch` explícito se actualiza la referencia remota local antes de evaluar (REQ-25.10). `ensure --archive` es idempotente: reutiliza la rama y el worktree existentes sin moverlos, y NO publica la rama. En `multirepo` NO existe rama de archivado: `--archive` DEBE rechazarse con `archive_branch_not_applicable` porque el archive se hace in situ en la rama de integración del repositorio de specs (REQ-25.5); tampoco existe en el carril ODD (`--lane odd`), que no tiene archive. `done` también cubre la rama de archivado (REQ-25.16 y REQ-25.17) y `status` la incluye en el plan (REQ-25.15).
+(Previously: bastaba con que el árbol de la base incluyera `changes/<cambio>/` para considerar el cambio fusionado, aunque fuera una fusión intermedia de planificación)
 
 #### Scenario: Crea la rama de archivado desde la integración con el cambio fusionado
 - **DADO** un monorepo en modo `worktree`, el cambio `x` fusionado en `origin/main` (referencia local) y la política por defecto
@@ -643,6 +644,19 @@ Si la base resuelta no contiene ya el cambio fusionado, es decir, si su árbol n
 - **Y** el mensaje sugiere `--fetch`
 - **Y** no se crea ninguna rama ni worktree
 - **Y** no consta ninguna operación remota
+
+#### Scenario: Una fusión intermedia se rechaza con `change_not_integrated`
+- **DADO** un monorepo cuya base contiene `openspec/changes/x/` en fusión intermedia (por ejemplo, solo `spec` y `design` aprobadas y cedidas)
+- **CUANDO** se ejecuta `ensure --change x --archive`
+- **ENTONCES** se rechaza con `change_not_integrated` nombrando la base evaluada
+- **Y** el mensaje indica que la versión integrada es una fusión intermedia y no sugiere `--fetch` como remedio
+- **Y** no se crea ninguna rama ni worktree
+- **Y** no consta ninguna operación remota
+
+#### Scenario: Con todos los role-apply aprobados e integrados, `--archive` procede
+- **DADO** un monorepo cuya base contiene `openspec/changes/x/` con todos los `role-apply` aprobados, aunque alguna puerta anterior lleve marca de cesión
+- **CUANDO** se ejecuta `ensure --change x --archive`
+- **ENTONCES** se crea la rama de archivado como en el primer escenario
 
 #### Scenario: `--fetch` explícito permite alcanzar el cambio fusionado
 - **DADO** el mismo monorepo, con el cambio fusionado ya en el remoto pero no en las referencias locales
@@ -676,9 +690,6 @@ Si la base resuelta no contiene ya el cambio fusionado, es decir, si su árbol n
 - **DADO** la rama de archivado ya creada por `ensure --archive`
 - **CUANDO** se repite `ensure --change x --archive`
 - **ENTONCES** el JSON es idéntico, el commit de la rama no cambia y no se ejecuta ningún `git push`
-
----
-
 ### Requirement: Carril ODD con la Misma Política (REQ-25.13)
 
 `ensure --lane odd --change <feature>` DEBE aplicar la misma política que SDD, con estas particularidades: el documento ODD es `<workspaceRoot>/odd/tasks/<feature>.md`, en el repositorio del planning home. En `monorepo-embedded`, la rama es `<prefijo>/<feature>` con worktree según el modo; en `multirepo`, el repositorio de specs se trabaja in situ en su rama de integración (REQ-25.5) y los repositorios de código se incluyen solo bajo demanda con `--repo <ruta>`, porque ODD no divide en roles y cada repositorio incluido recibe solo la rama `<prefijo>/<feature>`. En el carril ODD no existe `kickoff.yaml` ni instantánea ni rama de archivado: las únicas protecciones que se aplican son la propia política de `ensure` y la guarda D (REQ-25.21), que bloquea las escrituras del agente en `odd/tasks/` fuera de la rama que corresponde, porque no hay escritor Go del documento ODD.
@@ -1032,8 +1043,8 @@ Todo escritor Go que cree o modifique ficheros dentro de la carpeta de un cambio
 
 ### Requirement: Cambios Pendientes de Archivar Visibles en `status` y en el Dashboard (REQ-25.20)
 
-Los cambios pendientes de archivar de un repositorio con rama de cambio, es decir, los cambios activos presentes en el árbol de la rama de integración (directorios bajo `changes/` del planning home distintos de `archive/` y de los sumideros `e2e-cumulative` y `cumulative-<rol>`, excluidos por nombre), DEBEN mostrarse en `axiom branch status` (REQ-25.15) y en el dashboard (REQ-25.34 de `local-web-dashboard`). Es información, no una comprobación: NO existe ningún código de fallo por su presencia, NO hay integración con la CI y NO DEBE bloquear ninguna orden ni guarda. La evaluación DEBE hacerse sobre la referencia de integración local de REQ-25.10 (`origin/<integración>` si existe en local y, si no, la rama local), sin cambiar de rama y sin operaciones remotas; si esa referencia no puede resolverse, la lista se omite con un aviso y sin error. Solo los directorios cuentan como cambios; los ficheros sueltos de `changes/` no lo son. En el repositorio de specs de un multirepo no aplica: allí los cambios activos viven en la rama de integración de forma normal. Cada cambio pendiente DEBE indicar la continuación para archivarlo (`axiom branch ensure --change <c> --archive`, REQ-25.45).
-(Previously: `axiom branch check` exigía en CI que la rama de integración no tuviera cambios activos y fallaba con código distinto de cero; el invariante se elimina porque, con el archive en un PR documental aparte, es normal que la integración los tenga temporalmente)
+Los cambios pendientes de archivar de un repositorio con rama de cambio, es decir, los cambios activos presentes en el árbol de la rama de integración (directorios bajo `changes/` del planning home distintos de `archive/` y de los sumideros `e2e-cumulative` y `cumulative-<rol>`, excluidos por nombre) que no están en fusión intermedia (REQ-26.11), DEBEN mostrarse en `axiom branch status` (REQ-25.15) y en el dashboard (REQ-25.34 de `local-web-dashboard`). Es información, no una comprobación: NO existe ningún código de fallo por su presencia, NO hay integración con la CI y NO DEBE bloquear ninguna orden ni guarda. La evaluación DEBE hacerse sobre la referencia de integración local de REQ-25.10 (`origin/<integración>` si existe en local y, si no, la rama local), sin cambiar de rama y sin operaciones remotas; si esa referencia no puede resolverse, la lista se omite con un aviso y sin error. Solo los directorios cuentan como cambios; los ficheros sueltos de `changes/` no lo son. En el repositorio de specs de un multirepo no aplica: allí los cambios activos viven en la rama de integración de forma normal. Cada cambio pendiente DEBE indicar la continuación para archivarlo (`axiom branch ensure --change <c> --archive`, REQ-25.45).
+(Previously: todo cambio activo presente en el árbol de la rama de integración contaba como pendiente de archivar; ahora se excluye el que está en fusión intermedia (REQ-26.11))
 
 #### Scenario: Un cambio fusionado y sin archivar figura como pendiente
 - **DADO** un repositorio con rama de cambio cuya referencia de integración local contiene `openspec/changes/inc-99-ejemplo/`
@@ -1080,6 +1091,12 @@ Los cambios pendientes de archivar de un repositorio con rama de cambio, es deci
 - **DADO** un observador instalado en el único punto del motor que ejecuta git
 - **CUANDO** se ejecuta `axiom branch status --json`
 - **ENTONCES** el observador no registra ninguna operación remota
+
+#### Scenario: Una fusión intermedia no figura como pendiente
+- **DADO** la referencia de integración que contiene `openspec/changes/x/` en fusión intermedia (REQ-26.11) y `openspec/changes/y/` fusionado sin marca de cesión
+- **CUANDO** se ejecuta `axiom branch status --json`
+- **ENTONCES** la lista de pendientes de archivar contiene `y` y no contiene `x`
+- **Y** el código de salida es `0`
 
 ---
 
@@ -1266,6 +1283,67 @@ El repositorio de Axiom DEBE declarar en su `axiom.yaml` el bloque `git:` con `i
 
 ---
 
+### Requirement: Fusión Intermedia de un Cambio no es Integración ni Pendiente de Archivar (REQ-26.11)
+
+Una **fusión intermedia** es el estado de un cambio cuya carpeta `changes/<cambio>/` está presente en el árbol de la rama de integración porque se fusionó una PR de la salida 2 de una parada (REQ-26.5 de `sdd-block-review-gates`) y el trabajo del cambio aún no está completo. El criterio observable es: el registro de puertas integrado (`gates.yaml`) contiene al menos una compuerta aprobada con la marca de cesión y NO están aprobadas todas las compuertas `role-apply:<rol>` del roster sellado (supuesto A-7). Un cambio en fusión intermedia:
+
+- NO DEBE figurar entre los cambios pendientes de archivar de `axiom branch status` ni del dashboard (REQ-25.20), ni ofrecer la continuación de archivado;
+- NO DEBE ser aceptado por `ensure --archive` como base que contiene el cambio fusionado (REQ-25.45), que rechaza con `change_not_integrated`;
+- NO DEBE bloquear ninguna orden ni guarda, y la evaluación sigue haciéndose sobre la referencia de integración local de REQ-25.10, sin cambiar de rama y sin operaciones remotas;
+- PUEDE mostrarse como «en curso (fusión intermedia)», sin código de fallo y sin continuación de archivado.
+
+Si el registro de puertas o el kickoff integrados no pueden leerse, el cambio DEBE tratarse como hasta ahora (supuesto A-8), sin error. Un cambio fusionado sin ninguna marca de cesión NO es una fusión intermedia.
+
+#### Scenario: Un cambio con solo spec cedida y fusionada no figura como pendiente de archivar
+
+- **DADO** un monorepo cuya referencia de integración contiene `openspec/changes/x/` con un `gates.yaml` en el que `spec` está aprobada con la marca de cesión y sin ningún `role-apply` aprobado
+- **CUANDO** se ejecuta `axiom branch status --json`
+- **ENTONCES** `x` no figura entre los cambios pendientes de archivar
+- **Y** el código de salida es `0`
+
+#### Scenario: Un cambio con design cedido y roles sin aprobar sigue siendo intermedio
+
+- **DADO** la referencia de integración con el cambio `x`, con `spec` aprobada con la salida 3, `design` aprobada con la marca de cesión y los roles `core` y `web` sin `role-apply` aprobado
+- **CUANDO** se ejecuta `axiom branch status --change x --json`
+- **ENTONCES** `x` no se indica como pendiente de archivar y no se ofrece la continuación `axiom branch ensure --change x --archive`
+
+#### Scenario: Un rol cedido con otro rol pendiente sigue siendo intermedio
+
+- **DADO** la referencia de integración con el cambio `x`, con `role-apply:core` aprobado con la marca de cesión y `role-apply:web` sin aprobar
+- **CUANDO** se ejecuta `axiom branch status --json`
+- **ENTONCES** `x` no figura entre los pendientes de archivar
+
+#### Scenario: Al aprobarse todos los role-apply el cambio deja de ser intermedio
+
+- **DADO** la referencia de integración con el cambio `x` cuyo `gates.yaml` conserva la marca de cesión de `design` y donde todos los `role-apply:<rol>` del roster están aprobados
+- **CUANDO** se ejecuta `axiom branch status --json`
+- **ENTONCES** `x` figura entre los cambios pendientes de archivar con la continuación `axiom branch ensure --change x --archive`
+
+#### Scenario: Un cambio fusionado sin ninguna marca de cesión se comporta como hasta ahora
+
+- **DADO** la referencia de integración con el cambio `y` cuyo `gates.yaml` no contiene ninguna marca de cesión (o que no tiene `gates.yaml`)
+- **CUANDO** se ejecuta `axiom branch status --json`
+- **ENTONCES** `y` figura entre los cambios pendientes de archivar, como antes de este cambio
+
+#### Scenario: Un registro integrado ilegible se trata como hasta ahora
+
+- **DADO** la referencia de integración con el cambio `z` cuyo `gates.yaml` o `kickoff.yaml` no se puede leer
+- **CUANDO** se ejecuta `axiom branch status --json`
+- **ENTONCES** el código de salida es `0` y `z` se trata como hasta ahora, sin error
+
+#### Scenario: La fusión intermedia no bloquea nada
+
+- **DADO** un repositorio con un cambio en fusión intermedia
+- **CUANDO** se ejecutan `axiom branch status`, `axiom sdd status` y un escritor guardado en la rama correcta de otro cambio
+- **ENTONCES** todas terminan con normalidad y ninguna se bloquea por la fusión intermedia
+
+#### Scenario: Quien recoge la cesión crea su rama desde la base fusionada
+
+- **DADO** un cambio en fusión intermedia fusionado en la integración
+- **CUANDO** otra persona ejecuta `axiom branch ensure --change x`
+- **ENTONCES** `ensure` crea la rama del cambio desde la base y la carpeta `changes/x/` con los artefactos aprobados está disponible
+- **Y** no se ejecuta ninguna operación remota
+
 ## Supuestos confirmados en la compuerta de spec (2026-10-15)
 
 Los supuestos son decisiones mínimas tomadas para que los requerimientos sean comprobables. El usuario los confirmó en la compuerta de spec del 2026-10-15; S-6 se corrigió según D3. Q1, Q2 y Q6 de la propuesta pertenecen a `sdd-design` y se citan como dependencias.
@@ -1289,9 +1367,11 @@ Los supuestos son decisiones mínimas tomadas para que los requerimientos sean c
 | S-13 | `repositories:` identifica cada entrada por `path` y admite `integration_branch` y `branch_prefix` como ajustes propios por repositorio. | Confirmado (incluye `branch_prefix` por repositorio) | `workspace-topology` |
 | S-14 | La TUI se cubre como escenario de paridad en `local-web-dashboard`; `tui-ui-parity` no figura en las capacidades modificadas de la propuesta. | Confirmado | `local-web-dashboard` |
 | S-15 | Un rol llamado `archive` colisionaría con la rama de archivado `<prefijo>/<cambio>-archive` y se rechaza con `invalid_name` al planificar las ramas de rol. | Propuesto en la reapertura (2026-10-17) | REQ-25.4 |
-| S-16 | Con `--archive` solo se admite `--prefix`; `--branch` y `--base` se rechazan con `plan_conflict`; sin `--prefix` la rama de archivado deriva de la rama del cambio registrada como `<rama del cambio>-archive`. Una base «contiene el cambio fusionado» cuando su árbol incluye `changes/<cambio>/` del planning home. | Propuesto en la reapertura (2026-10-17) | REQ-25.12, REQ-25.45 |
+| S-16 | Con `--archive` solo se admite `--prefix`; `--branch` y `--base` se rechazan con `plan_conflict`; sin `--prefix` la rama de archivado deriva de la rama del cambio registrada como `<rama del cambio>-archive`. Una base «contiene el cambio fusionado» cuando su árbol incluye `changes/<cambio>/` del planning home y el cambio no está en fusión intermedia (REQ-26.11). | Propuesto en la reapertura (2026-10-17); enmendado por REQ-25.45 y REQ-26.11 (paradas-tres-salidas) | REQ-25.12, REQ-25.45 |
 | S-17 | Para el repositorio cuya ruta es `.`, `<repo>` es el nombre del directorio de su raíz git; dos repositorios del plan con el mismo último segmento se rechazan con `invalid_name`. | Propuesto en la reapertura (2026-10-17) | REQ-25.11 |
 | S-18 | D19: el bloqueo de documentos de Axiom (carpeta del cambio y `odd/tasks/`) rige en todo proyecto Axiom aunque no haya cambio registrado, para cubrir el carril ODD antes de `ensure`; el aviso en otros ficheros solo rige en repositorios con un cambio activo registrado; el repositorio de specs de un multirepo queda exento del aviso pero no del bloqueo de documentos. | Propuesto en la reapertura (2026-10-17) | REQ-25.21 |
+| A-7 | Un cambio con todos los `role-apply` aprobados deja de ser fusión intermedia aunque la última puerta lleve marca de cesión (la fase `verify` cedida no hace intermedia la fusión del trabajo ya implementado). | Confirmado (paradas-tres-salidas) | REQ-26.11 |
+| A-8 | Un cambio fusionado sin ninguna marca de cesión en su registro de puertas (incluidos los cambios preexistentes y los sellados en modalidad continua) se comporta exactamente como hasta ahora. | Confirmado (paradas-tres-salidas) | REQ-26.11 |
 
 ### Dependencias de diseño
 
