@@ -105,7 +105,7 @@ Cada una bloquea solo el paso que la cita.
 
 | Id | Pregunta | Paso |
 |---|---|---|
-| D1 | Windows: ¿firmar con Authenticode y publicar binario, o asumir `go install` como canal oficial en Windows? Las condiciones para restaurar el binario ya están fijadas en `docs/release-signing.md` («Windows distribution restoration gate»). | P1 |
+| D1 | Windows: ¿firmar con Authenticode y publicar binario, o asumir `go install` como canal oficial en Windows? Las condiciones para restaurar el binario ya están fijadas en `docs/release-signing.md` («Windows distribution restoration gate»). **Resuelta (2026-11-04):** `go install` es el canal oficial provisional en Windows; la firma con Azure Artifact Signing a nombre de Hiberus queda como trabajo posterior que restaurará el binario. | P1 |
 | D2 | ¿La review (RDD) pasa a ser configuración por proyecto en `axiom.yaml`, o sigue siendo un interruptor de máquina? (El ODD `huella-usuario-workspace` descartó el RDD por clon el 2026-10-30.) | P4 |
 | D3 | ¿Hay que distinguir extensión de VS Code, Desktop y CLI de Claude Code, o basta con un adaptador común bien detectado? | P5 |
 | D4 | ¿Los bugs e incrementos ODD integran en la spec viva? Si sí, ¿con delta, solo registro, o exclusión explícita? | P6 |
@@ -121,7 +121,7 @@ aquí su estado con la PR que lo cerró.
 
 | Paso | Objetivo | Huecos | Criterio de aceptación | Depende de | Estado |
 |---|---|---|---|---|---|
-| P1 Distribución | O1 | G1.1–G1.7 | Release al día desde `main`; una línea documentada por sistema (`curl … \| bash`, `irm … \| iex`) que instala sin clonar; sin tap ajeno ni `git` innecesario; Windows según D1. | D1 | Pendiente |
+| P1 Distribución | O1 | G1.1–G1.7 | Release al día desde `main`; una línea documentada por sistema (`curl … \| bash`, `irm … \| iex`) que instala sin clonar; sin tap ajeno ni `git` innecesario; en Windows, `irm … \| iex` instala con `go install` del módulo público y explica cómo obtener Go si falta (D1). | — | Pendiente |
 | P2 Actualización desde la UI | O2 | G2.1–G2.3 | La UI muestra «hay una versión nueva»; un clic actualiza, relanza el dashboard con el binario nuevo y ejecuta la sync del workspace; funciona en Windows con el exe en uso. | P1 | Pendiente |
 | P3 Doctor por proyecto | O3 | G3.1–G3.5 | Doctor estructurado y parametrizado por raíz; la UI muestra sus checks reales al abrir y al cambiar de proyecto; añade checks de assets, adaptadores, topología, repos de rol y repo de specs. | — | Pendiente |
 | P4 Alta de proyecto en la UI | O4 | G4.1–G4.7 | Alta validada con `workspace.Validate` antes de escribir; campos de multirepo; roles y repos validados; elección e instalación de adaptadores en workspace; review según D2; corregido G4.4. | P3, D2 | Pendiente |
