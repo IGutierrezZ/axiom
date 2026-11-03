@@ -48,7 +48,7 @@ func RunSDDGate(args []string, stdout io.Writer) error {
 
 func renderSDDGateHelp(stdout io.Writer) error {
 	_, _ = fmt.Fprintln(stdout, "Uso: axiom sdd gate <record|show> [argumentos]")
-	_, _ = fmt.Fprintln(stdout, "  record --cwd <ruta> --change <nombre> --gate spec|design|tasks|role-apply:<rol>|integration --decision approved|rejected [--reason \"<texto>\"] [--evidence-kind pr_merged|deployment|attestation] [--commit <sha>] [--base-ref <ref>] [--evidence \"<texto>\"] [--actor <id>] [--json]")
+	_, _ = fmt.Fprintln(stdout, "  record --cwd <ruta> --change <nombre> --gate spec|design|tasks|role-apply:<rol>|integration --decision approved|rejected [--hand-off] [--reason \"<texto>\"] [--evidence-kind pr_merged|deployment|attestation] [--commit <sha>] [--base-ref <ref>] [--evidence \"<texto>\"] [--actor <id>] [--json]")
 	_, _ = fmt.Fprintln(stdout, "  show --cwd <ruta> --change <nombre> [--json]")
 	return nil
 }
@@ -78,6 +78,11 @@ func runSDDGateRecord(args []string, stdout io.Writer) error {
 	if err != nil {
 		return err
 	}
+	if parsed.HandOff {
+		if err := requireHandOffStops(parsed, sealed, workspaceRoot); err != nil {
+			return err
+		}
+	}
 
 	var roster []multirole.RoleAssignment
 	if sealed != nil {
@@ -103,11 +108,20 @@ func runSDDGateRecord(args []string, stdout io.Writer) error {
 	if err != nil {
 		return err
 	}
+	// Exit 2 of a stop: every check is a read and runs BEFORE gates.yaml is written (DD-02).
+	var handOff *handOffPrepared
+	if parsed.HandOff {
+		handOff, err = prepareHandOff(parsed, loc, changeRoot, roster, digest)
+		if err != nil {
+			return err
+		}
+	}
 	record := kickoff.GateRecord{
 		Gate:           parsed.Gate,
 		Decision:       parsed.Decision,
 		Reason:         parsed.Reason,
 		ArtifactDigest: digest,
+		HandedOff:      handOff != nil,
 		Actor:          actor,
 		RecordedAt:     time.Now().UTC(),
 	}
@@ -124,29 +138,54 @@ func runSDDGateRecord(args []string, stdout io.Writer) error {
 		record.EvidenceBaseRef = evidence.BaseRef
 		record.Verified = evidence.Verified
 	}
-	if err := kickoff.AppendGate(changeRoot, record); err != nil {
+	if handOff != nil {
+		// The "still pending" check is repeated under the ledger lock: two recorders (exit 2 and
+		// exit 3) racing on the same pending gate must leave a single approved record.
+		err = kickoff.AppendGateChecked(changeRoot, record, handOff.notApprovedCheck)
+	} else {
+		err = kickoff.AppendGate(changeRoot, record)
+	}
+	if err != nil {
 		return err
 	}
 
-	if _, err := fmt.Fprintf(stdout, "Compuerta %q registrada (%s) para %q.\n", parsed.Gate, parsed.Decision, parsed.Change); err != nil {
-		return err
-	}
-
-	if isRoleApply && parsed.Decision == kickoff.DecisionApproved && sealed != nil {
-		closed, ledger, evalErr := lastRoleJustClosed(changeRoot, roster)
-		if evalErr != nil {
-			return evalErr
+	if !parsed.JSON {
+		if err := writeGateRecordHeader(stdout, parsed, handOff); err != nil {
+			return err
 		}
-		if closed {
-			if err := writeIntegrationHandoff(changeRoot, parsed.Change, roster, ledger, sealed.Config.Roles); err != nil {
-				return err
-			}
-			if _, err := fmt.Fprintf(stdout, "Aviso: se ha concluido la implementacion del %s del cambio %q; se genera el relevo de integracion para la verificacion global de la solucion (REQ-21.13).\n", lastRoleNoticeMarker, parsed.Change); err != nil {
+		if handOff != nil {
+			if err := writeHandOffDelivery(stdout, handOff); err != nil {
 				return err
 			}
 		}
 	}
 
+	var lastRoleClosed *bool
+	if isRoleApply && sealed != nil {
+		closedValue := false
+		lastRoleClosed = &closedValue
+		if parsed.Decision == kickoff.DecisionApproved {
+			closed, ledger, evalErr := lastRoleJustClosed(changeRoot, roster)
+			if evalErr != nil {
+				return evalErr
+			}
+			closedValue = closed
+			if closed {
+				if err := writeIntegrationHandoff(changeRoot, parsed.Change, roster, ledger, sealed.Config.Roles); err != nil {
+					return err
+				}
+				if !parsed.JSON {
+					if _, err := fmt.Fprintf(stdout, "Aviso: se ha concluido la implementacion del %s del cambio %q; se genera el relevo de integracion para la verificacion global de la solucion (REQ-21.13).\n", lastRoleNoticeMarker, parsed.Change); err != nil {
+						return err
+					}
+				}
+			}
+		}
+	}
+
+	if parsed.JSON {
+		return writeGateRecordJSON(stdout, parsed, handOff, lastRoleClosed)
+	}
 	return nil
 }
 

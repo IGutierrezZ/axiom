@@ -296,6 +296,74 @@ func TestParseGateRecordArgsApprovedDoesNotRequireReason(t *testing.T) {
 	}
 }
 
+// TestParseGateRecordArgsHandOff fija la validación de forma de --hand-off (REQ-26.1, REQ-26.3,
+// DD-01): solo acompaña a approved, no con integration ni con evidencia, y no exige --reason. Los
+// registros sin la bandera se siguen leyendo con HandOff == false.
+func TestParseGateRecordArgsHandOff(t *testing.T) {
+	base := []string{"--change", "inc-99-example"}
+	with := func(extra ...string) []string { return append(append([]string{}, base...), extra...) }
+
+	t.Run("approved con --hand-off sin motivo", func(t *testing.T) {
+		parsed, err := ParseGateRecordArgs(with("--gate", "spec", "--decision", "approved", "--hand-off"))
+		if err != nil {
+			t.Fatalf("ParseGateRecordArgs() error = %v", err)
+		}
+		if !parsed.HandOff || parsed.Decision != DecisionApproved || parsed.Gate != GateSpec {
+			t.Fatalf("parsed = %+v, se esperaba HandOff con approved sobre spec", parsed)
+		}
+	})
+	t.Run("approved con --hand-off y motivo en un role-apply", func(t *testing.T) {
+		parsed, err := ParseGateRecordArgs(with("--gate", "role-apply:core", "--decision", "approved", "--hand-off", "--reason", "listo"))
+		if err != nil || !parsed.HandOff || parsed.Reason != "listo" {
+			t.Fatalf("parsed = %+v, error = %v", parsed, err)
+		}
+	})
+	t.Run("sin la bandera no hay cesion", func(t *testing.T) {
+		for _, args := range [][]string{
+			with("--gate", "spec", "--decision", "approved"),
+			with("--gate", "spec", "--decision", "rejected", "--reason", "x"),
+		} {
+			parsed, err := ParseGateRecordArgs(args)
+			if err != nil || parsed.HandOff {
+				t.Errorf("args %v: parsed = %+v, error = %v; se esperaba HandOff == false", args, parsed, err)
+			}
+		}
+	})
+
+	for name, tc := range map[string]struct {
+		args []string
+		want []string
+	}{
+		"con rejected": {
+			args: with("--gate", "spec", "--decision", "rejected", "--reason", "x", "--hand-off"),
+			want: []string{"solo acompaña a `--decision approved`", "--decision rejected --reason"},
+		},
+		"con integration": {
+			args: with("--gate", "integration", "--decision", "approved", "--hand-off"),
+			want: []string{"no está disponible para la compuerta integration", "--evidence-kind"},
+		},
+		"con evidencia": {
+			args: with("--gate", "spec", "--decision", "approved", "--evidence-kind", "attestation", "--evidence", "x", "--hand-off"),
+			want: []string{"no admite `--evidence-kind`", "--decision approved --hand-off"},
+		},
+	} {
+		t.Run("rechaza "+name, func(t *testing.T) {
+			_, err := ParseGateRecordArgs(tc.args)
+			if err == nil {
+				t.Fatal("ParseGateRecordArgs() = nil, se esperaba un error de uso")
+			}
+			for _, fragment := range tc.want {
+				if !strings.Contains(err.Error(), fragment) {
+					t.Errorf("el error %q debe contener %q", err, fragment)
+				}
+			}
+			if !strings.Contains(err.Error(), "axiom sdd gate record") {
+				t.Errorf("el error %q debe llevar una continuación ejecutable", err)
+			}
+		})
+	}
+}
+
 // TestParseGateRecordArgsLeavesBaseRefToTheCaller fija D-22 (REQ-25.23, escenario 5): el parseo
 // de argumentos no conoce la rama de integración del proyecto, así que ya no inventa `main` ante
 // un --base-ref vacío; lo completa quien conoce el repositorio (runSDDGateRecord). Un --base-ref

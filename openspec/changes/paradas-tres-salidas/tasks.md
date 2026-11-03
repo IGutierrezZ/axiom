@@ -98,21 +98,21 @@ Commit: `feat(branch): calcular la entrega de la salida 2 por topología sin ope
 
 Commit: `feat(sdd): salida 2 de la parada con gate record --hand-off`
 
-- [ ] T-05 Flag `--hand-off` y su validación de forma (≈120 l)
+- [x] T-05 Flag `--hand-off` y su validación de forma (≈120 l)
   - Ficheros: `internal/kickoff/args.go` (edición puntual), `internal/kickoff/args_test.go`.
   - Cambio: `GateRecordArgs.HandOff bool` y parseo de `--hand-off` (sin valor) en `ParseGateRecordArgs`. Rechazos puros antes de tocar disco: sin `--decision approved` («`--hand-off` solo acompaña a `--decision approved`»); con `--gate integration` (no disponible para esa puerta); con `--evidence-kind`. `--reason` sigue siendo opcional con `--hand-off`.
   - Cubre: REQ-26.1 (escenario de `integration`), REQ-26.3 (motivo opcional) · DD-01.
   - Aceptación: cada rechazo devuelve un error de uso con continuación; `--hand-off` con `--decision approved --gate spec` parsea con `HandOff == true`; `--decision rejected --reason x` y `--decision approved` siguen parseando con `HandOff == false`.
   - Comprobación: `go test ./internal/kickoff/ -run 'GateRecord' -count=1`
 
-- [ ] T-06 Comprobaciones de la salida 2 en fichero nuevo (≈230 l)
+- [x] T-06 Comprobaciones de la salida 2 en fichero nuevo (≈230 l)
   - Ficheros: `internal/cli/sdd_gate_handoff.go` (nuevo), `internal/cli/sdd_gate_handoff_test.go` (nuevo).
   - Cambio: funciones que `runSDDGateRecord` llamará en dos puntos y que implementan los pasos 4, 6, 7 y 8 de DD-02: kickoff sellado y `execution_style: checkpointed` («el cambio no tiene paradas», con continuación `--decision approved` sin `--hand-off`); almacén declarado (`workspace.DeclaredArtifactStore`; con `engram` o `none`, rechazo que nombra el almacén y ofrece las salidas 1 y 3; sin declaración cuenta como `openspec`); digest no vacío (`gateArtifactDigest`; un artefacto inexistente o vacío se rechaza con la continuación «produce el artefacto»); puerta ya aprobada (`LoadGates` + `Approval(gate)` ⇒ «la puerta ya está resuelta», continuación `axiom sdd status`); y la llamada a `engine.Default().HandOff` con la exención de `gates.yaml`.
   - Cubre: REQ-26.1 (continuo e `integration`), REQ-26.3 (A-1), REQ-26.4, REQ-26.6 · DD-02, DD-03 · REQ-26.4 «último escenario» (`wrong_branch` primero se comprueba en T-07).
   - Aceptación: cada rechazo (continuo, `engram`, `none`, digest vacío, ya aprobada, artefactos sin confirmar) devuelve error distinto de cero con continuación ejecutable y deja `gates.yaml` byte a byte intacto; `uncommitted_artifacts` nombra las rutas pendientes y la continuación de commit.
   - Comprobación: `go test ./internal/cli/ -run 'Gate' -count=1`
 
-- [ ] T-07 Integrar la salida 2 en `runSDDGateRecord`, texto de entrega y `--json` (≈300 l)
+- [x] T-07 Integrar la salida 2 en `runSDDGateRecord`, texto de entrega y `--json` (≈300 l)
   - Ficheros: `internal/cli/sdd_gate.go` (ediciones mínimas en los puntos de llamada y en la salida), `internal/cli/sdd_gate_handoff.go`, `internal/cli/sdd_gate_test.go`, `internal/cli/sdd_writer_guard_test.go`.
   - Cambio: orden de DD-02 (forma → raíz del cambio → guarda A `wrong_branch` antes que cualquier otra → kickoff → pertenencia al roster → almacén → digest → ya aprobada → `engine.HandOff` → `kickoff.AppendGateChecked(..., notApproved(gate))` bajo cerrojo → salida). Salida de texto de la salida 2 en castellano: «Compuerta "<g>" registrada (approved, fase siguiente cedida: <handedOffTo>) para "<c>".», los pasos numerados por repositorio, la advertencia de fusión previa y «Axiom no ejecuta ninguna de estas órdenes». `--json` (hoy aceptado e ignorado) emite `axiom.sdd-gate-record/v1` en **todas** las salidas (design §4.4); `delivery`, `handedOff` y `handedOffTo` solo en la salida 2; `lastRoleClosed` solo en `role-apply`. Los rechazos siguen siendo errores de la orden. Con `--hand-off` también se emite el aviso de último rol (REQ-21.13).
   - Cubre: REQ-26.3, REQ-26.4 (`wrong_branch` antes de comprobar artefactos), REQ-26.5, REQ-26.6, REQ-21.13 (cuarto escenario) · DD-02, DD-07, DD-08.

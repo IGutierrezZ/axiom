@@ -34,7 +34,17 @@ func (l GateLedger) Approval(gate GateKey) (GateRecord, bool) {
 // same result.
 func HandedOffTo(gate GateState, roster []multirole.RoleAssignment, states []GateState) string {
 	if !strings.HasPrefix(string(gate.Key), roleApplyGatePrefix) {
-		return gate.Blocks
+		if gate.Blocks != "" {
+			return gate.Blocks
+		}
+		// A caller that only knows the gate key (the recorder, before the gate has a state)
+		// gets the same wording EvaluateGates would put in Blocks.
+		for _, fixed := range fixedGateOrder {
+			if fixed.Key == gate.Key {
+				return fixed.Blocks
+			}
+		}
+		return ""
 	}
 
 	withGate := make([]GateState, 0, len(states)+1)

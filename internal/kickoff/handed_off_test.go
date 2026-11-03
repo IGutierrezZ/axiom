@@ -43,6 +43,14 @@ func TestHandedOffToFixedGatesNamesWhatTheyBlock(t *testing.T) {
 	}
 }
 
+func TestHandedOffToFixedGateWithoutStateResolvesTheBlocksWording(t *testing.T) {
+	for key, want := range map[GateKey]string{GateSpec: "design", GateDesign: "tasks", GateTasks: "apply"} {
+		if got := HandedOffTo(GateState{Key: key}, nil, nil); got != want {
+			t.Errorf("HandedOffTo(%s) = %q, se esperaba %q", key, got, want)
+		}
+	}
+}
+
 func TestHandedOffToRoleApply(t *testing.T) {
 	roster := []multirole.RoleAssignment{
 		{Role: "web", GatePolicy: multirole.PolicyBlocking},
