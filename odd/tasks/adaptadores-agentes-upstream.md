@@ -130,6 +130,30 @@ Fuente: `docs/audits/2026-11-03-vision-producto.md`, en la rama `inc/auditoria-v
   - la documentación `README.md`, `docs/platforms.md`, `docs/quickstart.md` y `docs/usage.md`.
   - **T5 bloqueada en parte hasta que P1 esté en `main`**: el comando de instalación npm de Copilot CLI va en `internal/installcmd/resolver.go`, que es donde se resuelve hoy cada agente (`resolver.go:43-49`), y su documentación toca `docs/usage.md` y `docs/platforms.md`. El resto del adaptador puede avanzar, pero no se fusiona antes que P1.
   - **T1, T2, T3, T4 y T6 no tocan esos paquetes.** `internal/components/uninstall/workspace.go` no es `internal/workspace`.
+  - **Actualización del 2026-11-05: P1 ya está fusionado (PR #220).** La rama se ha rebasado sobre `origin/main`. Con eso desaparece el bloqueo de T5 por P1, pero T5 sigue sujeta al orden entre bloques de la sección siguiente.
+
+## Orden de ejecución entre bloques de la absorción
+
+Lo fija el cruce de ficheros entre las sesiones de la absorción upstream, enviado el 2026-11-05 por la sesión coordinadora. **No se implementa nada hasta que el usuario lo autorice.**
+
+- **Se pueden hacer ya, en paralelo:** T2 y T6. T4 también, si T3 confirma que el equipo usa OpenCode V2.
+- **T1 es el eslabón 1 de la cadena en serie de goldens del orquestador.** Toca `internal/components/sdd/inject.go` y `testdata/golden/sdd-opencode-multi-settings.golden`.
+  - Va junto a la T9 del bloque de arreglos.
+  - La cadena sigue este orden: T1 de adaptadores y T9 de arreglos → T6 de revisión → T1 de guía → T2/T3 de guía → carril SDD versátil.
+  - Coincide con la T4 de arreglos en las entradas de agente de OpenCode (`variant` frente a `__managed_by`). La propuesta es que **T1 entre antes**.
+- **T5 (Copilot CLI) va la última de todas**, porque comparte ficheros con muchos bloques:
+
+  | Fichero | Lo toca también |
+  |---|---|
+  | `internal/components/sdd/orchestrator.go:114,189` | guía T1, que lo cambia por D3 |
+  | `internal/agents/capabilitymanifest/manifest.go:334` | guía T2/T3 (cambia los digests) |
+  | `internal/components/permissions/inject.go:138` | seguridad T3/T4 |
+  | `internal/components/uninstall/service.go` | seguridad T3/T5 y arreglos T3 |
+  | `internal/installcmd/resolver.go` | arreglos T5 |
+  | `internal/components/mcp/inject.go` y `internal/components/engram/healthprobe.go` | seguridad T1/T5 |
+
+  Además, T5 heredará la nueva semántica de modo de fichero de `WriteFileAtomic` (seguridad T5). Los ficheros que escriba en `~/.copilot` deben seguirla.
+- **Consecuencia para el PR único (`exception-ok`):** T2, T6 (y T4) pueden ir pronto. T1 y T5 dependen del avance de otros bloques. Si el PR se abre antes de que T5 pueda entrar, T5 sale del PR y se entrega aparte, como primera rebanada de P5.
 
 ## Criterios de aceptación
 
@@ -157,7 +181,13 @@ Fuente: `docs/audits/2026-11-03-vision-producto.md`, en la rama `inc/auditoria-v
 - 2026-11-04: exploración y veredictos completados. Documento creado en `inc/adaptadores-agentes-upstream`. Pendiente: validación del alcance por el usuario.
 - 2026-11-04: se añade la relación con la hoja de ruta. T5 se propone como primera rebanada de P5 y depende en parte de P1 (`installcmd`, docs). D3 no condiciona ninguna tarea.
 - 2026-11-04: el usuario valida el alcance y la fusión de T5 en P5.
+- 2026-11-05:
+  - Rebase sobre `origin/main`, que ya incluye P1 (PR #220).
+  - Se anota el orden entre bloques: T2, T6 y T4 primero; T1 en la cadena de goldens; T5 la última.
 
 ## Siguiente paso
 
-Empezar por T1, sin TDD y en un único PR con excepción de tamaño. T5 no se fusiona antes que P1.
+Esperar la autorización del usuario. Después:
+1. T2 y T6 (y T3/T4), sin TDD y en un único PR con excepción de tamaño.
+2. T1, cuando le toque en la cadena de goldens.
+3. T5, la última.
