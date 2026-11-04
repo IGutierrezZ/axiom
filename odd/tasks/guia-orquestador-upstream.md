@@ -6,7 +6,7 @@
 
 ## Estado
 
-**Formalización.** Pendiente de que el usuario valide el alcance. No se implementa nada hasta entonces.
+**Alcance validado (2026-11-04).** El usuario valida T1–T5 con las dependencias D3 y D4 anotadas. Antes de empezar T1 hay que resolver las decisiones abiertas P1–P3. Todavía no se ha implementado nada.
 
 ## Objetivo
 
@@ -173,3 +173,4 @@ Divergencias de Axiom que se conservan:
 ## Registro
 
 - 2026-11-04: exploración y veredictos. Las notas están en la carpeta compartida de sesiones (`guia-orquestador-veredictos.md`) y en Engram (`upstream/gentle-ai-review-2026-11/guia-orquestador`). El usuario elige el carril ODD.
+- 2026-11-04: se anotan las dependencias D3 / P5 y D4 / P6. Se comprueba que `inc/distribucion-un-comando` no se solapa con este bloque. El usuario valida el alcance T1–T5.
