@@ -6,7 +6,7 @@
 
 ## Estado
 
-**Formalización.** Pendiente de que el usuario valide el alcance y las decisiones abiertas. No se implementa nada hasta entonces.
+**Alcance validado** por el usuario el 2026-11-04, con D-RN1 aplazada, D-RN2 como deuda aceptada y D-RN3 descartada. La implementación no ha empezado: requiere una petición explícita y antes se pregunta la estrategia de cadena de PR.
 
 ## Objetivo
 
@@ -53,7 +53,7 @@ Detalle completo por candidato en las notas de la sesión de formalización (lot
 | #4963 linaje escalado terminal | `c2ed12a5` | `internal/reviewtransaction/target_status.go:399-402`, `:445-470`; `internal/cli/review_facade.go:1096-1111` | Defecto | ADOPTAR | ~195 |
 | #5146 recuperación desde STATUS (recover) | `f15c855d` | `internal/cli/review_facade.go` ~1730-1745 | Falta la función | ADAPTAR (mensajes `axiom`) | ~240 |
 | #5151 recuperación desde STATUS (status) | `b31cc497` | `internal/cli/review_next_transition.go:1156-1170`, `:1228-1234`; `internal/cli/review_status_contract.go:275` | A medias: RECOVER ya autoderiva (`review_facade.go:1604`, `:1747`) | ADAPTAR: fixture **nuevo** de recover con 4 `required_inputs`; los fixtures v1 existentes están fijados por hash (`internal/cli/review_provider_artifact_contract_test.go:30`) y no se editan | ~340 |
-| #5872 selector en untracked | `bee71745` | `internal/cli/review_intended_untracked.go:146-147`; `internal/cli/review_status_contract.go:1503-1509` | Defecto | **DECISIÓN ABIERTA D-RN1** | ~135 + esquema |
+| #5872 selector en untracked | `bee71745` | `internal/cli/review_intended_untracked.go:146-147`; `internal/cli/review_status_contract.go:1503-1509` | Defecto | **APLAZADO (D-RN1)** | ~135 + esquema |
 
 ### Plataforma y arreglos pequeños
 
@@ -87,8 +87,8 @@ Detalle completo por candidato en las notas de la sesión de formalización (lot
 | #4822 `review assess` falla cerrado | `27d8cf5f` | `internal/cli/review_assess.go:110-205` (hoy no escribe nada en stdout al fallar) | Falta el sobre | ADOPTAR solo la mitad de assess; `assess.schema.json` ya valida el sobre, compatible con D6. La mitad del esquema de fallo v2 es código muerto en upstream (`contract == V2` nunca se cumple en esas ramas): no se porta | ~120 |
 | #5351 verificar por nivel de riesgo | `4c69c0ef` | `internal/assets/skills/_shared/sdd-orchestrator-sections.md:46-69` (RDD on en :53, off en :54) | Prosa | ADAPTAR: se adopta verificar por nivel con RDD encendido o apagado; **no** se adopta «medium nunca dispara revisión»: se conserva la revisión diferida del trozo de PR (`internal/components/agentguidance/routing.go:123`) | ~30 + golden |
 | #5522/#5250 «Risk line» y verificador solo por ítem de riesgo nombrado (remitido por la sesión de la guía del orquestador) | — | — | — | DESCARTAR: contradice verificar por nivel de riesgo (decisión del usuario sobre #5351) | — |
-| #5677 `rctx2` en START v1 | `b6778c22` | esquemas `v1/start-v2.schema.json:116`, `v1/start.schema.json:108`, `v1/status.schema.json:107`, `v1/transition-execution.schema.json:31`; emisión `review_facade.go:2298-2307` | Desfase solo en v1 (v2 ya acepta `rctx[12]`) | **DECISIÓN ABIERTA D-RN2** | ~850 si se corrige |
-| #5459 timings de fase | `2caac62d` | flag nuevo de STATUS en `review_facade.go` | No existe | **DECISIÓN ABIERTA D-RN3** | ~490 |
+| #5677 `rctx2` en START v1 | `b6778c22` | esquemas `v1/start-v2.schema.json:116`, `v1/start.schema.json:108`, `v1/status.schema.json:107`, `v1/transition-execution.schema.json:31`; emisión `review_facade.go:2298-2307` | Desfase solo en v1 (v2 ya acepta `rctx[12]`) | **DEUDA ACEPTADA (D-RN2)** | ~850 si se corrige |
+| #5459 timings de fase | `2caac62d` | flag nuevo de STATUS en `review_facade.go` | No existe | **DESCARTADO (D-RN3)** | ~490 |
 | 874719ae `review_due` en assess | — | — | — | DESCARTADO (D6, ya en el ledger) | — |
 
 **Clasificación de las 32 diferencias de esquema con upstream:** 17 son solo marca o ids; 15 son semánticas (#5677: 4 de v1; #5345/#5348: 5 de capacidades y START; #4272: 1; 874719ae: 1; #5300 `rctx3` de OpenCode, que no aplica: 3; el resto, divergencia propia de Axiom). Upstream tiene además `review-acknowledged.schema.json`, que Axiom no tiene. `contracts/telemetry/**` se ignora.
@@ -103,15 +103,15 @@ Ningún esquema existente se modifica. No hay `go:embed`: los esquemas los carga
 | `contracts/review-integration/v2/schemas/capabilities-v2.7.schema.json` | `capabilities-v2.6` | `start/v4` → `start/v5` en la lista cerrada; protocolo 2.7 | Anunciar `start-v5` | `internal/cli/review_capabilities.go:46-47`, `:324-346`; tests `review_capabilities_test.go:119-171`, `dual_contract_integration_test.go:257`, `review_dialect_test.go:362` |
 | `contracts/review-integration/v2/schemas/last-event-closure-v2.schema.json` | `last-event-closure` | Declara `targeted_validator_evidence` y sus definiciones | #4272 | Emitir v2 solo cuando haya evidencia del validador; el resto de cierres sigue en v1 |
 | `contracts/review-integration/v2/schemas/review-acknowledged.schema.json` | upstream | Publica el sobre ya emitido (id con el dialecto que Axiom emite hoy) | #5395 | Test de conformidad y alta en la lista de `review_provider_artifact_contract_test.go:508-539` |
-| `contracts/review-integration/v2/schemas/status-v10.schema.json` | `status-v9` | `intended_untracked_submission` con 5 o 6 tokens y `substitution_location` en {4, 5} | #5872 | **Solo si D-RN1 = adoptar**; constante en `internal/reviewtransaction/contract.go` y negociación en capacidades |
+| `contracts/review-integration/v2/schemas/status-v10.schema.json` | `status-v9` | `intended_untracked_submission` con 5 o 6 tokens y `substitution_location` en {4, 5} | #5872 | **No se publica: D-RN1 aplazada**; constante en `internal/reviewtransaction/contract.go` y negociación en capacidades |
 
 Descartado: `assess-v2.schema.json` (`review_due`, descartado por D6).
 
-## Decisiones abiertas (las valida el usuario)
+## Decisiones (validadas el 2026-11-04)
 
-- **D-RN1 · #5872 selector en untracked.** Cambia `collect.inputs[0].submission` en targets base-diff y overlay: `argument_tokens` pasa de 5 a 6 y `substitution_location` de 4 a 5. Rompe `status-v6.schema.json:65-83`, heredado por v7, v8 y v9. Upstream no actualizó su propio esquema y el PR depende de un decodificador del host (gentle-shell#2657) que Axiom no tiene. **Recomendación: aplazar** fuera de este bloque.
-- **D-RN2 · `rctx2` en el contrato v1 (#5677).** Corregirlo sin tocar esquemas obliga a tres esquemas v1 nuevos (START, STATUS, `transition-execution`). **Recomendación: deuda aceptada**, documentada en este fichero (no en el ledger, que no se edita), salvo que exista un consumidor real del contrato v1.
-- **D-RN3 · #5459 timings de fase.** Opcional; no toca esquemas (stderr y campo `cause`); útil para diagnosticar retrasos del antivirus. **Recomendación: descartar** en este bloque.
+- **D-RN1 · #5872 selector en untracked: aplazada** fuera de este bloque. Cambia `collect.inputs[0].submission` en targets base-diff y overlay: `argument_tokens` pasa de 5 a 6 y `substitution_location` de 4 a 5. Rompe `status-v6.schema.json:65-83`, heredado por v7, v8 y v9. Upstream no actualizó su propio esquema y el PR depende de un decodificador del host (gentle-shell#2657) que Axiom no tiene. Por tanto, `status-v10` no se publica en este bloque.
+- **D-RN2 · `rctx2` en el contrato v1 (#5677): deuda aceptada.** Los esquemas v1 (`v1/start-v2.schema.json:116`, `v1/start.schema.json:108`, `v1/status.schema.json:107`, `v1/transition-execution.schema.json:31`) siguen exigiendo `rctx1_` mientras el runtime emite `rctx2_` (`review_facade.go:2298-2307`); v2 ya acepta `rctx[12]`. Se documenta aquí y no en el ledger, que no se edita. Se reabre si aparece un consumidor real del contrato v1; corregirlo exigiría tres esquemas v1 nuevos (START, STATUS, `transition-execution`).
+- **D-RN3 · #5459 timings de fase: descartada** en este bloque. No toca esquemas (stderr y campo `cause`); su valor era diagnosticar retrasos del antivirus.
 
 ## Alcance propuesto (tareas)
 
@@ -172,7 +172,9 @@ Cada tarea es una entrega de unas 400 líneas como máximo (heurística orientat
 ## Progreso
 
 - 2026-11-04: verificados los candidatos en tres lotes (corrección/recuperación, plataforma/arreglos pequeños, esquemas/riesgo). Comprobado en persona el fallo de `dangerous_sink` (`review_start_contract.go:395`) y el patrón `rctx1_` de `v1/start-v2.schema.json:116`. Carril elegido por el usuario: ODD.
+- 2026-11-04: comprobado que no hay solape con `inc/distribucion-un-comando` y anotada la dependencia del Bloque 4 con D2 (commit `dfd389f8`).
+- 2026-11-04: el usuario valida el alcance (T1–T20) y las recomendaciones: D-RN1 aplazada, D-RN2 deuda aceptada, D-RN3 descartada.
 
 ## Siguiente paso
 
-El usuario valida el alcance y las decisiones D-RN1, D-RN2 y D-RN3. Después se pregunta la estrategia de cadena de PR y se empieza por T1.
+Cuando el usuario pida implementar, preguntar la estrategia de cadena de PR (`stacked-to-main` o `feature-branch-chain`), porque la previsión de unas 6.000 líneas supera el presupuesto de entrega, y empezar por T1. El Bloque 4 espera a D2.
