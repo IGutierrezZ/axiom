@@ -1171,7 +1171,7 @@ func resolveHandoffFile(workspaceRoot, change string) (string, error) {
 
 func runUI(args []string) {
 	fs := flag.NewFlagSet("ui", flag.ExitOnError)
-	portFlag := fs.Int("port", 8080, "Puerto de escucha para el servidor web (default: 8080)")
+	portFlag := fs.Int("port", dashboard.DefaultPort, fmt.Sprintf("Puerto de escucha para el servidor web (default: %d)", dashboard.DefaultPort))
 	noBrowserFlag := fs.Bool("no-browser", false, "No abrir automáticamente el navegador")
 	pathFlag := fs.String("path", ".", "Ruta base del espacio de trabajo")
 
@@ -1201,12 +1201,29 @@ func runUI(args []string) {
 	}
 	_ = os.Chdir(baseDir)
 
+	// Idempotencia: si ya hay un Axiom en el puerto, solo se abre la ventana.
+	if running, _ := dashboard.ProbeAxiom(context.Background(), *portFlag); running {
+		existingURL := fmt.Sprintf("http://127.0.0.1:%d", *portFlag)
+		fmt.Printf("Axiom ya está activo en %s\n", existingURL)
+		if !*noBrowserFlag {
+			if err := openBrowser(existingURL); err != nil {
+				fmt.Printf("  (Aviso: No se pudo abrir el navegador automáticamente: %v)\n", err)
+			}
+		}
+		return
+	}
+
 	svc := dashboard.NewServiceWithHub(baseDir, hubMgr)
 	server := dashboard.NewServer(svc)
+	server.SetVersion(Version)
 
 	actualPort, err := server.ListenAndServe(*portFlag)
 	if err != nil {
-		fmt.Printf("[ERROR] No se pudo iniciar el servidor web: %v\n", err)
+		if errors.Is(err, dashboard.ErrPortInUse) {
+			fmt.Printf("[ERROR] El puerto %d está ocupado por otra aplicación. Usa `axiom ui --port <otro>`.\n", *portFlag)
+		} else {
+			fmt.Printf("[ERROR] No se pudo iniciar el servidor web: %v\n", err)
+		}
 		os.Exit(1)
 	}
 
@@ -1217,9 +1234,6 @@ func runUI(args []string) {
 	fmt.Println("================================================================================")
 	fmt.Printf("  Servidor HTTP activo en: %s\n", url)
 	fmt.Println("  Espacio de Trabajo:     ", baseDir)
-	if actualPort != *portFlag {
-		fmt.Printf("  (Aviso: Puerto %d ocupado, reasignado a %d)\n", *portFlag, actualPort)
-	}
 	fmt.Println("  Presiona Ctrl+C para detener el servidor.")
 	fmt.Println("================================================================================")
 
