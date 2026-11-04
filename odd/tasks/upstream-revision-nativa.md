@@ -149,6 +149,10 @@ Cada tarea es una entrega de unas 400 líneas como máximo (heurística orientat
 - [ ] **T19 · RDD en SMB/UNC (#4670)** (~575). Supera la heurística porque el arreglo toca a la vez la resolución del modo, la seguridad de rutas de Windows y el hook de parada; partirlo dejaría un estado intermedio incoherente. Depende de T18.
 - [ ] **T20 · Rutas `\\?\` (#5533)** (~200). Depende de T19.
 
+**Dependencia con la hoja de ruta de producto (D2).** T18, T19 y T20 tocan la resolución del modo RDD (`internal/reviewtransaction/rdd_mode.go`, `internal/cli/review_mode.go`). La decisión D2 de `docs/audits/2026-11-03-vision-producto.md` (rama `inc/auditoria-vision-producto`) decide si RDD pasa a configuración por proyecto en `axiom.yaml` o sigue siendo un interruptor de máquina, y bloquea P4. Si D2 cambia el origen del modo, la regla de T19 («si el global no es `on`, se ignora el fallo del override») y el indicador explícito de T20 deben revisarse. El Bloque 4 se ejecuta después de resolver D2 o con esa revisión anotada en la tarea.
+
+**Sin solape con distribución.** Comprobado el 2026-11-04 con `git diff origin/main...inc/distribucion-un-comando --stat`: esa rama toca `scripts/install.*`, `internal/update/**`, `cmd/axiom/main.go` y documentación de uso, y ninguna tarea de este documento edita esos ficheros.
+
 **Previsión total:** unas 6.000 líneas en 20 tareas (sin D-RN1, D-RN2 ni D-RN3).
 
 ## Criterios de aceptación
