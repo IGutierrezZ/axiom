@@ -43,7 +43,9 @@ function Write-Step    { param([string]$Message) Write-Host "`n==> $Message" -Fo
 function Stop-WithError {
     param([string]$Message)
     Write-Err $Message
-    exit 1
+    # throw, not exit: under "irm | iex" the script runs in the caller's session
+    # and exit would close the terminal before the error can be read.
+    throw $Message
 }
 
 function Show-Banner {
