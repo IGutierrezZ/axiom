@@ -36,7 +36,7 @@ func TestEffectiveMethodWindowsPrecedenceIsUnchanged(t *testing.T) {
 		},
 		{
 			name:          "brew-owned package wins over go-install on Windows",
-			tool:          update.ToolInfo{Name: "gentle-ai", InstallMethod: update.InstallBinary, GoImportPath: "github.com/IGutierrezZ/axiom/v3/cmd/axiom"},
+			tool:          update.ToolInfo{Name: "engram", InstallMethod: update.InstallBinary, GoImportPath: "github.com/Gentleman-Programming/engram/cmd/engram"},
 			profile:       system.PlatformProfile{OS: "windows", PackageManager: "brew", GoAvailable: true},
 			brewInstalled: true,
 			want:          update.InstallBrew,

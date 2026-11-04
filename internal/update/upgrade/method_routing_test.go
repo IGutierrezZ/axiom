@@ -83,3 +83,26 @@ func TestEffectiveMethodSelfToolRouting(t *testing.T) {
 		})
 	}
 }
+
+// TestSelfToolNeverRoutesToHomebrew pins that a same-named upstream formula,
+// reported as installed by Homebrew, never captures Axiom's own upgrade: it
+// is Gentleman-Programming's formula, not ours.
+func TestSelfToolNeverRoutesToHomebrew(t *testing.T) {
+	origInstalled := homebrewPackageInstalled
+	origOwnership := homebrewOwnershipDetector
+	t.Cleanup(func() {
+		homebrewPackageInstalled = origInstalled
+		homebrewOwnershipDetector = origOwnership
+	})
+	homebrewPackageInstalled = func(string) bool { return true }
+	homebrewOwnershipDetector = func(string) (update.HomebrewOwnership, error) {
+		return update.HomebrewFormula, nil
+	}
+
+	tool := update.ToolInfo{Name: "gentle-ai", Owner: "IGutierrezZ", Repo: "axiom", InstallMethod: update.InstallBinary}
+	profile := system.PlatformProfile{OS: "darwin", PackageManager: "brew"}
+
+	if got := effectiveMethod(tool, profile); got == update.InstallBrew {
+		t.Fatalf("effectiveMethod(self tool) = %q, must not be brew", got)
+	}
+}

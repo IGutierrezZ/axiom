@@ -432,8 +432,8 @@ func brewUpgrade(ctx context.Context, r update.UpdateResult, ownership update.Ho
 	toolName := r.Tool.Name
 	flag := "--" + string(ownership)
 	// Ensure the Gentleman-Programming homebrew tap is present before upgrading
-	// engram and gga, whose formulas really live there. Axiom itself never reaches
-	// this point (runStrategy does not route it to brew) and is skipped here too:
+	// engram and gga, whose formulas really live there. Axiom itself is not routed here
+	// (effectiveMethod/runStrategy exclude it) and is skipped here as defense in depth:
 	// trusting a foreign tap for our own tool would be wrong.
 	// Non-fatal: brew tap is a no-op when already present; if it fails for any other
 	// reason, the subsequent brew upgrade will surface the real error. See issue #455:
