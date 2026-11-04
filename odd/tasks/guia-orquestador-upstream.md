@@ -134,6 +134,10 @@ Divergencias de Axiom que se conservan:
   - #5218 y #5215 quedan para esa sesión.
 - **Revisión nativa (lote C, #5351 parcial).** Edita `internal/assets/skills/_shared/sdd-orchestrator-sections.md:46-58` (Delegated Verification Gate), el mismo fichero que T1. Hay que ordenar los PRs para evitar conflictos.
 - **Adaptadores de agentes.** El equipo usa Claude Code (`claude/`), OpenCode (`opencode/`) y Copilot CLI y VS Code Copilot (`generic/`) (Engram #1928).
+- **Hoja de ruta de producto** (`docs/audits/2026-11-03-vision-producto.md` en la rama `inc/auditoria-vision-producto`, Engram `planning/vision-producto-hoja-de-ruta`):
+  - **D3 / P5.** ¿Hay que distinguir la extensión de VS Code, Desktop y CLI de Claude Code? Si se distinguen, podría hacer falta una variante de plantilla o de entrega del orquestador por entorno de Claude. Eso afecta a T1: qué secciones son propias de cada runtime y cómo se seleccionan en `sddOrchestratorAsset`.
+  - **D4 / P6.** ¿El trabajo ODD integra en la spec viva? Afecta a T2 (bloque ODD de `routing.go`) y a #5215 (formato del documento ODD). Lo explora ahora la sesión del carril SDD versátil.
+  - **P1, distribución** (rama `inc/distribucion-un-comando`, sin PR): no se solapa. Comprobado con `git diff origin/main...inc/distribucion-un-comando --stat`, que no toca plantillas del orquestador, `agentguidance`, `_shared`, el protocolo de Engram ni `issue-creation`.
 
 ## Decisiones abiertas para validar
 
