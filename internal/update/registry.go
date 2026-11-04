@@ -17,11 +17,11 @@ import (
 var Tools = []ToolInfo{
 	{
 		Name:          "gentle-ai",
-		Owner:         "Gentleman-Programming",
-		Repo:          "gentle-ai",
+		Owner:         "IGutierrezZ",
+		Repo:          "axiom",
 		DetectCmd:     nil, // version comes from build-time ldflags (app.Version)
 		VersionPrefix: "v",
-		// gentle-ai: Homebrew when the package is brew-owned, authenticated binary
+		// gentle-ai (the Axiom CLI; the registry name is kept, see selfToolNames): authenticated binary
 		// release download on Linux/macOS, and `go install` on Windows, where no
 		// official signed binary is published.
 		InstallMethod: InstallBinary,

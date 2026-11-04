@@ -347,7 +347,7 @@ func TestCheckSingleToolGentleAIBetaComparesMainHead(t *testing.T) {
 	httpClient = server.Client()
 	httpClient.Transport = &testTransport{server: server}
 
-	result := checkSingleTool(context.Background(), Tools[0], "1.40.3-0.20260614151827-6eff4a1ba110", system.PlatformProfile{})
+	result := checkSingleTool(context.Background(), upstreamSourceTool, "1.40.3-0.20260614151827-6eff4a1ba110", system.PlatformProfile{})
 
 	if result.Status != UpdateAvailable {
 		t.Fatalf("status = %q, want %q", result.Status, UpdateAvailable)
@@ -383,7 +383,7 @@ func TestCheckSingleToolGentleAIPseudoVersionComparesMainHeadWithoutChannel(t *t
 	httpClient = server.Client()
 	httpClient.Transport = &testTransport{server: server}
 
-	result := checkSingleTool(context.Background(), Tools[0], "1.40.3-0.20260614211459-6eff4a1ba110", system.PlatformProfile{})
+	result := checkSingleTool(context.Background(), upstreamSourceTool, "1.40.3-0.20260614211459-6eff4a1ba110", system.PlatformProfile{})
 
 	if result.Status != UpdateAvailable {
 		t.Fatalf("status = %q, want %q", result.Status, UpdateAvailable)
@@ -490,7 +490,7 @@ func TestCheckSingleToolGentleAIStableVersionWithoutChannelComparesLatestRelease
 
 	simulateStrayForeignRequest(t, server)
 
-	result := checkSingleTool(context.Background(), Tools[0], "1.40.3", system.PlatformProfile{})
+	result := checkSingleTool(context.Background(), upstreamSourceTool, "1.40.3", system.PlatformProfile{})
 
 	if mainHeadRequested.Load() {
 		t.Fatal("stable channel must not request main HEAD")
@@ -529,7 +529,7 @@ func TestCheckSingleToolGentleAIBetaAcceptsLocalCommitPrefix(t *testing.T) {
 	httpClient = server.Client()
 	httpClient.Transport = &testTransport{server: server}
 
-	result := checkSingleTool(context.Background(), Tools[0], "1.40.3-0.20260614151827-6eff4a1ba110", system.PlatformProfile{})
+	result := checkSingleTool(context.Background(), upstreamSourceTool, "1.40.3-0.20260614151827-6eff4a1ba110", system.PlatformProfile{})
 
 	if result.Status != UpToDate {
 		t.Fatalf("status = %q, want %q", result.Status, UpToDate)
@@ -575,7 +575,7 @@ func TestCheckSingleToolBrewOwnedGentleAIAdvertisesStableChannel(t *testing.T) {
 	httpClient.Transport = &testTransport{server: server}
 
 	profile := system.PlatformProfile{OS: "darwin", PackageManager: "brew"}
-	result := checkSingleTool(context.Background(), Tools[0], "1.40.3-0.20260614151827-6eff4a1ba110", profile)
+	result := checkSingleTool(context.Background(), upstreamSourceTool, "1.40.3-0.20260614151827-6eff4a1ba110", profile)
 
 	if mainHeadRequested.Load() {
 		t.Fatal("brew-owned gentle-ai must not request main HEAD: brew cannot deliver a main@sha target")
@@ -621,7 +621,7 @@ func TestCheckSingleToolGentleAIBetaHintNamesAdvertisedTarget(t *testing.T) {
 	httpClient.Transport = &testTransport{server: server}
 
 	profile := system.PlatformProfile{OS: "linux", PackageManager: "apt"}
-	result := checkSingleTool(context.Background(), Tools[0], "1.40.3-0.20260614151827-6eff4a1ba110", profile)
+	result := checkSingleTool(context.Background(), upstreamSourceTool, "1.40.3-0.20260614151827-6eff4a1ba110", profile)
 
 	if result.Status != UpdateAvailable {
 		t.Fatalf("status = %q, want %q", result.Status, UpdateAvailable)
@@ -668,7 +668,7 @@ func TestCheckSingleToolGentleAIBetaNewerLocalPseudoVersionIsNotOffered(t *testi
 
 	// Local pseudo-version timestamp 2026-08-01 15:26:09 UTC is newer than the
 	// remote commit date 2026-07-25.
-	result := checkSingleTool(context.Background(), Tools[0], "1.40.3-0.20260801152609-6eff4a1ba110", system.PlatformProfile{})
+	result := checkSingleTool(context.Background(), upstreamSourceTool, "1.40.3-0.20260801152609-6eff4a1ba110", system.PlatformProfile{})
 
 	if result.Status != UpToDate {
 		t.Fatalf("status = %q, want %q: local build is newer than remote main HEAD", result.Status, UpToDate)
@@ -701,7 +701,7 @@ func TestCheckSingleToolGentleAIBetaOlderLocalPseudoVersionStillOffered(t *testi
 	httpClient.Transport = &testTransport{server: server}
 
 	// Local pseudo-version timestamp 2026-06-14 predates the remote commit.
-	result := checkSingleTool(context.Background(), Tools[0], "1.40.3-0.20260614151827-6eff4a1ba110", system.PlatformProfile{})
+	result := checkSingleTool(context.Background(), upstreamSourceTool, "1.40.3-0.20260614151827-6eff4a1ba110", system.PlatformProfile{})
 
 	if result.Status != UpdateAvailable {
 		t.Fatalf("status = %q, want %q", result.Status, UpdateAvailable)
@@ -980,7 +980,7 @@ func TestCheckAll(t *testing.T) {
 		path := r.URL.Path
 		var release githubRelease
 		switch {
-		case contains(path, "gentle-ai"):
+		case contains(path, "gentle-ai") || contains(path, "IGutierrezZ/axiom"):
 			release = githubRelease{TagName: "v1.5.0", HTMLURL: "https://github.com/Gentleman-Programming/gentle-ai/releases/tag/v1.5.0"}
 		case contains(path, "gentleman-guardian-angel"):
 			release = githubRelease{TagName: "v2.0.0", HTMLURL: "https://github.com/Gentleman-Programming/gentleman-guardian-angel/releases/tag/v2.0.0"}
@@ -1197,11 +1197,11 @@ func TestUpdateHint(t *testing.T) {
 		want          string
 	}{
 		{
-			name:          "gentle-ai macOS brew-owned",
+			name:          "gentle-ai macOS brew-owned (no Axiom formula)",
 			tool:          upstreamSourceTool,
 			profile:       system.PlatformProfile{OS: "darwin", PackageManager: "brew"},
 			brewInstalled: true,
-			want:          "brew upgrade gentle-ai",
+			want:          "gentle-ai upgrade (downloads pre-built binary)",
 		},
 		{
 			name:    "gentle-ai macOS non-brew",
@@ -1456,7 +1456,7 @@ func TestRegistryContents(t *testing.T) {
 		owner string
 		repo  string
 	}{
-		"gentle-ai":                    {owner: "Gentleman-Programming", repo: "gentle-ai"},
+		"gentle-ai":                    {owner: "IGutierrezZ", repo: "axiom"},
 		"engram":                       {owner: "Gentleman-Programming", repo: "engram"},
 		"gga":                          {owner: "Gentleman-Programming", repo: "gentleman-guardian-angel"},
 		"opencode-subagent-statusline": {owner: "Joaquinvesapa", repo: "sub-agent-statusline"},
