@@ -141,11 +141,19 @@ Axiom lleva sus flujos a Pi, OpenCode, Claude Code, Codex y otras integraciones.
 
 ## Get started
 
+Un solo comando, sin clonar el repositorio:
+
 ```bash
-git clone https://github.com/IGutierrezZ/axiom.git
-cd axiom
-go install ./cmd/axiom
+# Linux / macOS: descarga el archivo de la release publicada
+curl -fsSL https://raw.githubusercontent.com/IGutierrezZ/axiom/main/scripts/install.sh | bash
 ```
+
+```powershell
+# Windows (PowerShell): instala con go install; necesita Go 1.25.10 o posterior
+irm https://raw.githubusercontent.com/IGutierrezZ/axiom/main/scripts/install.ps1 | iex
+```
+
+En Windows el binario oficial sigue retenido hasta que se firme con Authenticode ([`docs/release-signing.md`](docs/release-signing.md)); mientras tanto el instalador compila desde el código con Go. Si falta Go, el propio instalador indica cómo obtenerlo (`winget install --id GoLang.Go -e`).
 
 ```bash
 axiom              # abre la TUI en una terminal interactiva
@@ -153,6 +161,8 @@ axiom doctor       # diagnóstico de solo lectura
 ```
 
 Después, usa el agente con normalidad. Axiom crea respaldos antes de modificar ficheros de configuración; algunas integraciones también pueden aprovisionar runtimes si se selecciona esa acción. Axiom ya no instala ni sincroniza temas visuales.
+
+**Contribuir / desarrollo.** Solo si vas a modificar Axiom necesitas Git y Go: `git clone https://github.com/IGutierrezZ/axiom.git && cd axiom && go install ./cmd/axiom`.
 
 > **Beta channel, signature verification and per-distro prerequisites: [Quickstart →](docs/quickstart.md)**
 

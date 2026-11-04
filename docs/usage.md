@@ -253,7 +253,7 @@ Después de una actualización o de sustituir manualmente el binario, ejecuta `a
 
 Si GitHub limita las comprobaciones de actualización, define `GITHUB_TOKEN` o `GH_TOKEN` antes de ejecutar `axiom update` o `axiom upgrade`.
 
-Para instalar o actualizar Axiom, sigue el [Inicio rápido](quickstart.md), que documenta la instalación desde el código fuente. Los comandos Homebrew de Gentle AI no forman parte del método actual de instalación de Axiom.
+Para instalar o actualizar Axiom, sigue el [Inicio rápido](quickstart.md), que documenta la instalación. El método habitual son los dos comandos de una línea (`install.sh` en Linux/macOS, `install.ps1` en Windows); Axiom no se distribuye por Homebrew.
 
 **Self-update prompt behavior** (changed in v1.x slice 5 — `GENTLE_AI_CONFIRM_UPDATE` removed):
 
@@ -430,7 +430,7 @@ axiom install --agent gemini-cli --preset full-gentleman
 
 ### Install and update troubleshooting
 
-La ruta vigente de instalación de Axiom figura en el [Inicio rápido](quickstart.md). Los comandos `brew install`/`brew upgrade` de Gentle AI no instalan Axiom. Si falla una configuración o sincronización, ejecuta `axiom doctor` y revisa el informe de verificación antes de volver a intentarlo.
+La ruta vigente de instalación de Axiom (un comando por plataforma, con `go install` en Windows) figura en el [Inicio rápido](quickstart.md). Los comandos `brew install`/`brew upgrade` de Gentle AI no instalan Axiom. Si falla una configuración o sincronización, ejecuta `axiom doctor` y revisa el informe de verificación antes de volver a intentarlo.
 
 
 ---

@@ -13,6 +13,8 @@
 | Linux (Fedora Silverblue) | rpm-ostree | Supported |
 | Windows 10/11 | `go install` (Go toolchain) | Supported (binary distribution held) |
 
+The "Package Manager" column is the system manager Axiom uses for dependencies. Axiom itself is not distributed through Homebrew: on Linux/macOS it comes from the signed release archive (`curl -fsSL .../scripts/install.sh | bash`) and on Windows from `go install` (`irm .../scripts/install.ps1 | iex`). The Homebrew tap of Gentleman Programming only serves `engram` and `gga`.
+
 Derivatives are detected via `ID_LIKE` in `/etc/os-release` (Linux Mint, Pop!_OS, Manjaro, EndeavourOS, CentOS Stream, Rocky Linux, AlmaLinux, etc.).
 
 Release archives are currently produced for macOS and Linux only. Windows source compatibility remains supported, but official Windows executable/archive assets and Scoop publication are temporarily unavailable pending the [Authenticode restoration gate](release-signing.md#windows-distribution-restoration-gate).

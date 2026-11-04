@@ -56,11 +56,11 @@ Fuera: GoReleaser, políticas de release, `scripts/verify-release-distribution-p
   - Quitar el requisito de `git`; `curl -fsSL` en cabecera y ayuda.
   - Misma corrección de mayúsculas en `--method go`.
   - Comprobación: `bash -n scripts/install.sh`; `go test ./internal/update/...`.
-- [ ] **T3 · Actualización del propio Axiom sin tap ajeno**
+- [x] **T3 · Actualización del propio Axiom sin tap ajeno**
   - `strategy.go`: no hacer `brew tap`/trust de Gentleman-Programming para la herramienta propia (sí para `engram` y `gga`); retirar la rama muerta `brew upgrade` del propio Axiom en `strategy.go` e `instructions.go`.
   - `registry.go`: `Owner`/`Repo` a `IGutierrezZ`/`axiom` (el `Name` se mantiene); comentarios de `cmd/axiom/main.go`.
   - Comprobación: `go test ./internal/update/... ./internal/app/... ./internal/installcmd/...`.
-- [ ] **T4 · Documentación de instalación**
+- [x] **T4 · Documentación de instalación**
   - README y quickstart: las dos líneas como camino principal; `git clone` solo en «Contribuir / desarrollo».
   - Alinear `docs/platforms.md` y `docs/usage.md` (Homebrew, `go install`).
   - Comprobación: lectura estructural.
@@ -78,7 +78,9 @@ Fuera: GoReleaser, políticas de release, `scripts/verify-release-distribution-p
 
 - 2026-11-04: mapa de cambios hecho (delegado, solo lectura). Verificado con `go get` en un módulo temporal: minúsculas falla, mayúsculas resuelve `v3.5.1`.
 - 2026-11-04 T1 (`4ad88d6f`): `install.ps1` construye el paquete con `IGutierrezZ` sin `ToLower()`, mensaje de Go ausente con `winget install --id GoLang.Go -e`, cabecera con el uso `irm | iex`; prueba de paquete actualizada con aserción contra `ToLower()` en el .ps1. `go test ./internal/update/ -run "TestInstallScript|TestWindows"`: ok.
-- 2026-11-04 T2 (`@@T2@@`): `install.sh` sin `BREW_TAP`/`install_brew`/autodetección de brew (método por defecto `binary`, `--method brew` rechazado), sin requisito de `git`, `curl -fsSL`, paquete Go con el propietario sin minúsculas y comprobación de `go` solo en `--method go`; la prueba fija también la ausencia de `owner_lc`. `bash -n scripts/install.sh`: ok; `go test ./internal/update/ -run "TestInstallScript|TestWindows"`: ok.
+- 2026-11-04 T2 (`b3d0ad0d`): `install.sh` sin `BREW_TAP`/`install_brew`/autodetección de brew (método por defecto `binary`, `--method brew` rechazado), sin requisito de `git`, `curl -fsSL`, paquete Go con el propietario sin minúsculas y comprobación de `go` solo en `--method go`; la prueba fija también la ausencia de `owner_lc`. `bash -n scripts/install.sh`: ok; `go test ./internal/update/ -run "TestInstallScript|TestWindows"`: ok.
+- 2026-11-04 T3 (`33c1430e`): `registry.go` apunta a `IGutierrezZ/axiom` (Name se mantiene); `runStrategy` no detecta propiedad Homebrew para la herramienta propia y `brewUpgrade` no hace tap/trust del tap ajeno para ella (engram/gga siguen igual); `gentleAIHint` sin rama `brew upgrade`; pruebas y comentarios de `cmd/axiom/main.go` ajustados. `go vet ./internal/update/... ./cmd/axiom/...`: ok; `go test ./internal/update/... ./internal/workspace/... ./internal/app/... ./internal/installcmd/...`: ok salvo `TestTuiInstallOnThenSyncPreservesAndRefreshesOpenCodeActivation` (falla igual en main: falta runtime de OpenCode, entorno).
+- 2026-11-04 T4 (commit `docs(install)`): README y quickstart con las dos líneas como camino principal y «Contribuir / desarrollo» para `git clone`; `docs/platforms.md` y `docs/usage.md` alineados. Comprobación: lectura estructural.
 
 ## Seguimientos fuera de alcance
 
