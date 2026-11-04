@@ -139,11 +139,27 @@ Divergencias de Axiom que se conservan:
   - **D4 / P6.** ¿El trabajo ODD integra en la spec viva? Afecta a T2 (bloque ODD de `routing.go`) y a #5215 (formato del documento ODD). Lo explora ahora la sesión del carril SDD versátil.
   - **P1, distribución** (rama `inc/distribucion-un-comando`, sin PR): no se solapa. Comprobado con `git diff origin/main...inc/distribucion-un-comando --stat`, que no toca plantillas del orquestador, `agentguidance`, `_shared`, el protocolo de Engram ni `issue-creation`.
 
+## Orden de ejecución entre bloques
+
+Lo fija la sesión coordinadora a partir del cruce de ficheros entre bloques (2026-11-05). No se implementa nada hasta que el usuario lo autorice y estén resueltas P1–P3.
+
+- **T4 y T5:** en paralelo, ya. No comparten ficheros con los demás bloques.
+- **T1** es el eslabón 3 de la cadena en serie de goldens del orquestador:
+  1. Arreglos T9 + adaptadores T1.
+  2. Revisión T6. Edita la sección «Delegated Verification Gate» de `internal/assets/skills/_shared/sdd-orchestrator-sections.md:46-69`, así que debe entrar antes de que T1 mueva esas secciones como bloques opacos.
+  3. **T1 de este bloque.**
+  4. T2 y T3 de este bloque.
+  5. Carril SDD versátil. Reescribirá las secciones de kickoff y compuertas, por eso T1 las mueve sin tocar su texto.
+- **Techos de tamaño.** T1 y las tareas T14, T16 y T17 de revisión pueden mover los techos de `review_ledger_contract_test.go`. Hay que recalcularlos en el PR que entre segundo.
+- **T2 y T3** (`internal/components/agentguidance/routing.go`, digests de `internal/agents/capabilitymanifest/manifest.go` y `internal/components/sdd/inject.go:1661-1700`) van antes que adaptadores T5 (Copilot CLI). Adaptadores T5 añade una entrada en `manifest.go:334` y toca `internal/components/sdd/orchestrator.go:114,189`, la misma función (`sddOrchestratorAsset`) que T1 cambia si se adopta D3.
+- **Con P6 (carril SDD versátil)** se comparte el bloque ODD de `routing.go`.
+- Con este orden, P3 queda resuelta: el PR de revisión nativa (T6) entra antes que T1.
+
 ## Decisiones abiertas para validar
 
 - **P1.** ¿T1 cubre las 12 plantillas o solo `claude`, `opencode` y `generic`, que son las que usa el equipo?
 - **P2.** ¿Dónde vive la fuente única de la delegación: en `RenderRouting` (Go, ya unificado y con el manifiesto) o en el markdown compartido?
-- **P3.** ¿En qué orden se hace T1 frente al cambio de `sdd-orchestrator-sections.md` de la sesión de revisión nativa?
+- **P3 (resuelta, 2026-11-05).** ¿En qué orden se hace T1 frente al cambio de `sdd-orchestrator-sections.md` de la sesión de revisión nativa? Primero revisión T6, luego T1 (véase «Orden de ejecución entre bloques»).
 
 ## Restricciones
 
@@ -174,3 +190,4 @@ Divergencias de Axiom que se conservan:
 
 - 2026-11-04: exploración y veredictos. Las notas están en la carpeta compartida de sesiones (`guia-orquestador-veredictos.md`) y en Engram (`upstream/gentle-ai-review-2026-11/guia-orquestador`). El usuario elige el carril ODD.
 - 2026-11-04: se anotan las dependencias D3 / P5 y D4 / P6. Se comprueba que `inc/distribucion-un-comando` no se solapa con este bloque. El usuario valida el alcance T1–T5.
+- 2026-11-05: se anota el orden de ejecución entre bloques que fija la sesión coordinadora. T4 y T5 van ya en paralelo; T1 es el eslabón 3 de la cadena de goldens y T2/T3 el 4. P3 queda resuelta por ese orden.
