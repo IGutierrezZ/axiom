@@ -6,7 +6,7 @@
 
 ## Estado
 
-**Alcance validado** por el usuario el 2026-11-04, con D-RN1 aplazada, D-RN2 como deuda aceptada y D-RN3 descartada. La implementación no ha empezado: requiere una petición explícita y antes se pregunta la estrategia de cadena de PR.
+**Alcance validado** por el usuario el 2026-11-04, con D-RN1 aplazada, D-RN2 como deuda aceptada y D-RN3 descartada. **Implementación en curso** desde el 2026-11-05, autorizada por el usuario («me gustaria que arranquen las que pueden empezar», relayed por la sesión coordinadora) para T1–T17. T18–T20 siguen bloqueadas por D2. Commit por tarea en esta rama; push y PR los decide el usuario. La estrategia de cadena de PR (`stacked-to-main` o `feature-branch-chain`) se pregunta antes del primer PR: los commits por tarea son lineales y admiten cualquiera de las dos. RDD apagado (`axiom review mode status`: off por defecto); cada tarea se verifica con `axiom review assess` según su nivel.
 
 ## Objetivo
 
