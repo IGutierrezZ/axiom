@@ -121,7 +121,7 @@ aquí su estado con la PR que lo cerró.
 
 | Paso | Objetivo | Huecos | Criterio de aceptación | Depende de | Estado |
 |---|---|---|---|---|---|
-| P1 Distribución | O1 | G1.1–G1.7 | Release al día desde `main`; una línea documentada por sistema (`curl … \| bash`, `irm … \| iex`) que instala sin clonar; sin tap ajeno ni `git` innecesario; en Windows, `irm … \| iex` instala con `go install` del módulo público y explica cómo obtener Go si falta (D1). | — | Pendiente |
+| P1 Distribución | O1 | G1.1–G1.7 | Release al día desde `main`; una línea documentada por sistema (`curl … \| bash`, `irm … \| iex`) que instala sin clonar; sin tap ajeno ni `git` innecesario; en Windows, `irm … \| iex` instala con `go install` del módulo público y explica cómo obtener Go si falta (D1). | — | **Hecho (2026-11-04):** PR #220 y release `v3.6.0`. De G1.7 se corrigió el registro de actualización; los nombres `gentle-ai-*` de assets y `GENTLE_AI_*` se conservan porque son contratos. |
 | P2 Actualización desde la UI | O2 | G2.1–G2.3 | La UI muestra «hay una versión nueva»; un clic actualiza, relanza el dashboard con el binario nuevo y ejecuta la sync del workspace; funciona en Windows con el exe en uso. | P1 | Pendiente |
 | P3 Doctor por proyecto | O3 | G3.1–G3.5 | Doctor estructurado y parametrizado por raíz; la UI muestra sus checks reales al abrir y al cambiar de proyecto; añade checks de assets, adaptadores, topología, repos de rol y repo de specs. | — | Pendiente |
 | P4 Alta de proyecto en la UI | O4 | G4.1–G4.7 | Alta validada con `workspace.Validate` antes de escribir; campos de multirepo; roles y repos validados; elección e instalación de adaptadores en workspace; review según D2; corregido G4.4. | P3, D2 | Pendiente |
