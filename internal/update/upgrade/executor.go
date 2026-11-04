@@ -674,11 +674,12 @@ func executeOne(ctx context.Context, r update.UpdateResult, profile system.Platf
 }
 
 // effectiveMethod resolves the actual upgrade strategy for a tool on a given platform.
-// Priority order: plugin → brew-owned package → gentle-ai self-upgrade policy →
+// Priority order: plugin → gentle-ai self-upgrade policy → brew-owned package →
 // go-install → declared method.
 //
 //  1. OpenCode plugins are always handled by their own method — never overridden.
-//  2. Homebrew is used only when Homebrew confirms it owns this specific tool.
+//  2. gentle-ai (Axiom) never uses Homebrew: it has no formula of its own.
+//     For every other tool, Homebrew is used only when it confirms it owns it.
 //  3. gentle-ai's own upgrade never falls through to the generic rules below; it
 //     is resolved entirely by gentleAISelfUpgradeMethod, which is what keeps
 //     Linux and macOS on the signed release download.
@@ -689,11 +690,13 @@ func effectiveMethod(tool update.ToolInfo, profile system.PlatformProfile) updat
 	if tool.InstallMethod == update.InstallOpenCodePlugin {
 		return update.InstallOpenCodePlugin
 	}
-	if profile.PackageManager == "brew" && homebrewPackageInstalled(tool.Name) {
-		return update.InstallBrew
-	}
+	// Axiom has no Homebrew formula (a same-named one belongs to Gentleman-Programming),
+	// so the self tool is resolved before any Homebrew ownership check.
 	if update.IsSelfTool(tool) {
 		return gentleAISelfUpgradeMethod(tool, profile)
+	}
+	if profile.PackageManager == "brew" && homebrewPackageInstalled(tool.Name) {
+		return update.InstallBrew
 	}
 	if profile.GoAvailable && tool.GoImportPath != "" {
 		return update.InstallGoInstall

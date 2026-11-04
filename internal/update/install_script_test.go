@@ -208,8 +208,8 @@ func TestInstallScriptsGoInstallPackageMatchesModuleMajor(t *testing.T) {
 		script  string
 		pattern string
 	}{
-		{"install.sh", `local go_package="github.com/${owner_lc}/${GITHUB_REPO}/` + major + `/cmd/${BINARY_NAME}@${version}"`},
-		{"install.ps1", `$goPackage = "github.com/$($GITHUB_OWNER.ToLower())/$GITHUB_REPO/` + major + `/cmd/$BINARY_NAME@$version"`},
+		{"install.sh", `local go_package="github.com/${GITHUB_OWNER}/${GITHUB_REPO}/` + major + `/cmd/${BINARY_NAME}@${version}"`},
+		{"install.ps1", `$goPackage = "github.com/$GITHUB_OWNER/$GITHUB_REPO/` + major + `/cmd/$BINARY_NAME@$version"`},
 	}
 	stale := regexp.MustCompile(`/v[0-9]+/cmd/`)
 	for _, tc := range cases {
@@ -225,6 +225,11 @@ func TestInstallScriptsGoInstallPackageMatchesModuleMajor(t *testing.T) {
 			if hit != "/"+major+"/cmd/" {
 				t.Errorf("scripts/%s still references %s in a go install package path; go.mod is %s", tc.script, hit, major)
 			}
+		}
+		// Go compares the module path case-sensitively: lowercasing the owner makes
+		// `go get` fail with "module declares its path as ... but was required as ...".
+		if strings.Contains(text, "ToLower()") || strings.Contains(text, "owner_lc") {
+			t.Errorf("scripts/%s must not lowercase the owner when building the go install package", tc.script)
 		}
 		if strings.Contains(text, "tags are v2.x") {
 			t.Errorf("scripts/%s comment still describes v2.x tags", tc.script)

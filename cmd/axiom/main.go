@@ -34,7 +34,8 @@ import (
 )
 
 func init() {
-	// Decouple the update checker from upstream Gentle AI:
+	// Safety net: the registry already points at IGutierrezZ/axiom. Re-assert the
+	// coordinates so a future registry edit can never compare against upstream:
 	// Axiom is an independent fork (IGutierrezZ/axiom) and must not compare
 	// its version against Gentleman-Programming/gentle-ai nor force foreign upgrades.
 	//

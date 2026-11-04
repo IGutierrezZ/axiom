@@ -63,7 +63,9 @@ func CheckFiltered(ctx context.Context, currentVersion string, profile system.Pl
 func checkSingleTool(ctx context.Context, tool ToolInfo, currentBuildVersion string, profile system.PlatformProfile) UpdateResult {
 	result := UpdateResult{Tool: tool}
 	homebrewOwnership := HomebrewNone
-	if profile.PackageManager == "brew" && strings.TrimSpace(tool.NpmPackage) == "" {
+	// Axiom itself has no Homebrew formula: never probe ownership for it, so no
+	// brew hint can name Gentleman-Programming's same-named formula.
+	if profile.PackageManager == "brew" && strings.TrimSpace(tool.NpmPackage) == "" && !IsSelfToolName(tool.Name) {
 		var err error
 		homebrewOwnership, err = homebrewOwnershipDetector(tool.Name)
 		if err != nil {

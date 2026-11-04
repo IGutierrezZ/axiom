@@ -1,18 +1,39 @@
 # Inicio rápido
 
-Axiom es el producto de este repositorio. Esta guía cubre la instalación desde el código fuente, la configuración de los agentes que ya utilizas y las comprobaciones iniciales. La integración de Axiom no instala los runtimes de los agentes ni aplica temas visuales.
+Axiom es el producto de este repositorio. Esta guía cubre la instalación con un solo comando, la configuración de los agentes que ya utilizas y las comprobaciones iniciales. La integración de Axiom no instala los runtimes de los agentes ni aplica temas visuales.
 
 ## Requisitos
 
-- Go 1.25.10 o posterior para compilar Axiom.
-- Git 2.38 o posterior.
+- Linux y macOS: solo `curl`; el instalador descarga el archivo firmado de la última release. No hacen falta Go ni Git.
+- Windows: Go 1.25.10 o posterior (el binario oficial está retenido hasta la firma Authenticode, ver [`release-signing.md`](release-signing.md)). Si falta, `winget install --id GoLang.Go -e` y abre una terminal nueva.
+- Go 1.25.10 o posterior y Git 2.38 o posterior solo si vas a contribuir o compilar desde el checkout (sección «Contribuir / desarrollo»).
 - Node.js 18 y npm. Axiom los comprueba y muestra una advertencia con una sugerencia si faltan; no los instala. Son necesarios para CodeGraph y para las integraciones que usan paquetes npm.
 - Pi disponible como `pi` en `PATH` si vas a seleccionar esa integración.
 - Axiom admite macOS, Linux y Windows. En Linux, la compatibilidad de instalación se limita a Ubuntu/Debian, Arch y Fedora/RHEL y sus derivados indicados por el diagnóstico.
 
-## Instalar Axiom desde el repositorio
+## Instalar Axiom
 
-Clona este repositorio y compila el ejecutable `axiom`:
+Un solo comando, sin clonar el repositorio.
+
+Linux y macOS:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/IGutierrezZ/axiom/main/scripts/install.sh | bash
+axiom version
+```
+
+Windows (PowerShell):
+
+```powershell
+irm https://raw.githubusercontent.com/IGutierrezZ/axiom/main/scripts/install.ps1 | iex
+axiom version
+```
+
+El script de Windows ejecuta `go install github.com/IGutierrezZ/axiom/v3/cmd/axiom@latest`; el ejecutable queda en el directorio `bin` de Go (`GOBIN` o, si no está definido, `GOPATH/bin`), que debe estar en `PATH`. Para instalar desde `main` (canal beta): en Linux y macOS, `curl -fsSL https://raw.githubusercontent.com/IGutierrezZ/axiom/main/scripts/install.sh | AXIOM_CHANNEL=beta bash` (la variable debe aplicarse a `bash`, no a `curl`); en PowerShell, `$env:AXIOM_CHANNEL = "beta"` antes del comando `irm ... | iex`.
+
+## Contribuir / desarrollo
+
+Solo si vas a modificar Axiom: clona el repositorio y compila el ejecutable `axiom`.
 
 ```sh
 git clone https://github.com/IGutierrezZ/axiom.git
@@ -21,7 +42,7 @@ go install ./cmd/axiom
 axiom version
 ```
 
-`go install` coloca el ejecutable en el directorio `bin` de Go (`GOBIN` o, si no está definido, `GOPATH/bin`). Asegúrate de que ese directorio está en `PATH`. Para probar la versión del checkout sin instalarla:
+Para probar la versión del checkout sin instalarla:
 
 ```sh
 go run ./cmd/axiom version
