@@ -153,6 +153,20 @@ Cada tarea es una entrega de unas 400 líneas como máximo (heurística orientat
 
 **Sin solape con distribución.** Comprobado el 2026-11-04 con `git diff origin/main...inc/distribucion-un-comando --stat`: esa rama toca `scripts/install.*`, `internal/update/**`, `cmd/axiom/main.go` y documentación de uso, y ninguna tarea de este documento edita esos ficheros.
 
+**Orden frente a los otros bloques (2026-11-05).** Sale del cruce de ficheros que hizo la sesión coordinadora:
+
+- **Pueden ir en paralelo ya:** T1–T5 y T7–T15. No comparten ficheros con otros bloques mientras no toquen la prosa compartida de instrucciones.
+- **T6 es el eslabón 2 de una cadena en serie.** T6 edita «Delegated Verification Gate» en `internal/assets/skills/_shared/sdd-orchestrator-sections.md:46-69`. La cadena es:
+  1. arreglos T9 y adaptadores T1;
+  2. revisión nativa T6;
+  3. guía del orquestador T1, que mueve esas secciones como bloques opacos;
+  4. guía del orquestador T2 y T3;
+  5. carril SDD versátil.
+
+  T6 entra después del eslabón 1 y antes de guía T1, o los dos chocarían en la misma región. Cada eslabón regenera unos 13 goldens de orquestador, entre ellos `sdd-claude-claudemd`, `combined-claude-claudemd` y `sdd-opencode-multi-settings`.
+- **T14, T16 y T17:** guía T1 también puede mover los techos de tamaño de `internal/components/sdd/review_ledger_contract_test.go`. Al rebasar, se regeneran o se ajustan.
+- **T18–T20:** esperan a D2, que también bloquea P4.
+
 **Previsión total:** unas 6.000 líneas en 20 tareas (sin D-RN1, D-RN2 ni D-RN3).
 
 ## Criterios de aceptación
