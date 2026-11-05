@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"testing"
@@ -468,5 +469,40 @@ func TestAssetGGAPS1IsEmbeddedAndReadable(t *testing.T) {
 	}
 	if !strings.Contains(content, "Get-Command git") {
 		t.Fatalf("embedded gga.ps1 missing expected content, got: %s", content)
+	}
+}
+
+// TestEnsureRuntimeAssetsForcesExecutableModeWhenContentAlreadyMatches: pr_mode.sh
+// must stay executable even when its content already matches the embedded asset
+// but its mode drifted to non-executable (for example extracted by a tool that
+// does not preserve exec bits).
+func TestEnsureRuntimeAssetsForcesExecutableModeWhenContentAlreadyMatches(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("POSIX permission bits are not meaningful on Windows")
+	}
+	home := t.TempDir()
+	path := RuntimePRModePath(home)
+	if err := os.MkdirAll(RuntimeLibDir(home), 0o755); err != nil {
+		t.Fatalf("MkdirAll() error = %v", err)
+	}
+
+	content, err := assets.Read("gga/pr_mode.sh")
+	if err != nil {
+		t.Fatalf("assets.Read() error = %v", err)
+	}
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatalf("WriteFile() error = %v", err)
+	}
+
+	if err := EnsureRuntimeAssets(home); err != nil {
+		t.Fatalf("EnsureRuntimeAssets() error = %v", err)
+	}
+
+	info, err := os.Stat(path)
+	if err != nil {
+		t.Fatalf("Stat() error = %v", err)
+	}
+	if got := info.Mode().Perm(); got != 0o755 {
+		t.Fatalf("pr_mode.sh mode = %v, want 0755 enforced despite matching content", got)
 	}
 }

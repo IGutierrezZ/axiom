@@ -108,13 +108,28 @@ Orden de ejecución: **T1 → T4 → T2 → T3 → T5**, que sigue los cortes de
   - **Invariante:** como upstream, el overlay filtrado se vuelve a serializar con `json.Marshal`, que ordena las claves. Hoy es inocuo porque cada mapa del overlay tiene una sola acción (`bash` todo `ask`, `read` todo `deny`). Si un mapa llegara a mezclar acciones, el orden importaría, porque en OpenCode gana la última coincidencia.
   - **Riesgo previo, no agravado:** `removeOverlayEntries`, en la desinstalación, retira una regla del usuario que coincida exactamente en patrón y valor con una del overlay. Corregirlo exigiría registrar qué se escribió. Queda como seguimiento.
   - Evidencia: `go test ./internal/components/permissions/...` ok (repetido por el orquestador); `go test ./internal/components/uninstall/...` ok; `go test ./internal/cli/... -run "Permission|Uninstall"` ok; `go vet` y `gofmt -l` limpios. El paquete `internal/cli` completo agotó los 10 minutos con un pánico en `runReviewCommandContext` (revisión nativa), ajeno a esta tarea y no comprobado sobre `main`. `axiom review assess`: medium.
-- [ ] **T5 · Escritura atómica que preserva el modo (#5014 y `enforceFileMode` de #5024)**
+- [x] **T5 · Escritura atómica que preserva el modo (#5014 y `enforceFileMode` de #5024)**
   - `filemerge/writer.go`: `ExistingFileMode` (de upstream `209d8867`); `WriteFileAtomic` preserva el modo de un fichero existente y aplica `perm` solo al crear; nueva `WriteFileAtomicMode` que fuerza `perm` también con contenido idéntico (`perm == 0` → 0600); `enforceFileMode` informa `Changed=true` solo si el modo en disco cambia.
   - Reclasificar llamadores que deben **forzar** el modo y pasarlos a `WriteFileAtomicMode`: `backup/restore.go:440`, `mutationjournal/journal.go:46`, `cli/sync.go:1535`, `communitytool/pi_codegraph.go:32`, `gga/runtime.go:54,72,89`, `opencode/background.go:327` (comparar también el modo antes de saltar), `agents/claude/adapter.go:119` (eliminar el `os.Chmod` manual de `:122-129`), `uninstall/service.go:1571,1608`. El resto (configuraciones MCP, settings, `opencode.json`, limpiezas de desinstalación) pasa a preservar el modo, que es lo deseado.
   - `WriteStreamAtomic` no cambia.
   - Coordinación: el bloque de adaptadores (#5053, diferido) necesita `ExistingFileMode`; esta tarea lo deja disponible.
   - Pruebas (salto en Windows): `TestWriteFileAtomicPreservesExistingModeByDefault`, `…NewFileUsesRequestedPerm`, `…IdenticalContentNeverTouchesMode`, `TestWriteFileAtomicModeForcesRequestedPermOnExistingFile`, `…EnforcesPermOnIdenticalContent`, `…ZeroNeverWidens`, `…IdenticalContentAndModeIsNoOp`, `TestMergeJSONFilePreservesExistingModeOnRewrite`, las de lanzadores de `opencode/background.go` y la del 0600 de Claude. Prueba portable: contenido idéntico devuelve `Changed=false`. Reescribir los *fixtures* de `writer_test.go` que asumen 0644 forzado.
   - Ruta: delegada (unos 12 llamadores).
+  - **Hecho (2026-11-05)**: 15 ficheros de código y pruebas, unas 500 líneas.
+    - `writer.go`: `WriteFileAtomic` conserva el modo de un fichero existente; añade `WriteFileAtomicMode` (`perm == 0` → 0600), `ExistingFileMode` y `enforceFileMode`.
+    - Migrados a `WriteFileAtomicMode`: `backup/restore.go`, `mutationjournal/journal.go` (escritura y `Restore`), `cli/sync.go` (`writeSyncFileAtomic`), `communitytool/pi_codegraph.go`, `gga/runtime.go` (3 scripts 0755), `opencode/background.go` (lanzadores), `agents/claude/adapter.go` (0600, sin el `os.Chmod` manual) y `uninstall/service.go` (2 restauraciones). Los llamadores con `0o644` no cambian y pasan a conservar el modo. `opencodeplugin/plugin.go` ya usaba `WriteFileAtomicMode`.
+    - Adaptación propia de Axiom: en `opencode/background.go` el salto por contenido idéntico compara también el modo, salvo en un host Windows (`runtime.GOOS == "windows"`), para no reescribir el lanzador en cada ejecución.
+    - `components/engram/inject.go` no se toca: `upsertCodexTableKeyBeforeMCPServers` sigue intacta.
+  - Pruebas: las 7 de modo de `filemerge`, una portable (`TestWriteFileAtomicVariantsReportNoChangeOnIdenticalContent`), `TestMergeJSONFilePreservesExistingModeOnRewrite`, las dos del 0600 de Claude, gga, dos de lanzadores de opencode y una comprobación de modo en `backup/restore_test.go`.
+  - Evidencia del escritor:
+    - `go test` de `backup`, `components/...`, `agents`, `opencode`, `state` y `skillregistry` en verde, salvo fallos ambientales previos.
+    - `go test ./internal/cli/ -run "Sync|Restore|Backup|Uninstall|Permission"` ok (130 s); `go vet ./internal/...` y `gofmt -l internal` limpios.
+    - Fallos ambientales, que también ocurren en `main`: las dos pruebas de uniones de `filemerge` (mismo mensaje) y `backup` `TestSnapshotterSkipsUnixSockets`.
+  - `axiom review assess`: **high** (`process_boundary`, 510 líneas). Con RDD apagado, verificación independiente de solo lectura: **PASS WITH ISSUES**, sin hallazgos altos ni medios; `writer.go` es equivalente a upstream y ningún llamador está mal clasificado.
+    - El comentario obsoleto de `gga/runtime.go` se corrigió.
+    - Quedan dos seguimientos de severidad baja: casi todas las pruebas de modo se saltan en Windows, así que el contraste «conservar vs forzar» solo lo cubre la CI de Linux/macOS (como en upstream); y `TestWriteFileAtomicModeZeroNeverWidens` acepta también 0000 y 0400.
+  - Comprobación del orquestador: `go test ./internal/components/filemerge/ ./internal/agents/claude/ ./internal/opencode/` ok, salvo las dos uniones.
+  - CI de la PR #232 (Linux): falló `TestInjectClaudeWritesUserConfigAndIsIdempotent` (`mcp`). La prueba afloja `~/.claude.json` a 0644 y esperaba `Changed=false` en la segunda inyección, pero con `enforceFileMode` la reparación solo de modo cuenta como cambio. Se porta el ajuste de upstream (#5014): la segunda ejecución informa `Changed` si se aflojó y una tercera debe ser un no-op. En Windows no se detectó porque el aflojado del modo se salta.
 
 ## Criterios de aceptación
 
@@ -147,6 +162,12 @@ Orden de ejecución: **T1 → T4 → T2 → T3 → T5**, que sigue los cortes de
 
 - 2026-11-05: por decisión del usuario, una sola PR con `size:exception` (la misma preferencia que en P2). Rama rebasada sobre `origin/main` 8bf0fb8f; pruebas repetidas tras el rebase, todas en verde salvo el fallo ambiental de uniones de `filemerge`. **PR #228** con T1–T4. T5 irá en otra PR.
 
+- 2026-11-05: PR #228 fusionada (merge `fbf96dcb`). Las tareas T3 y T4 del bloque de arreglos se fusionaron en las PR #229 y #231 (merge `3ad77567`). T5 queda desbloqueada; la arranca la misma autorización del usuario. Nueva rama `inc/seguridad-datos-upstream` desde `origin/main` 3ad77567.
+
+- 2026-11-05: T5 con commit `579b9224`; el usuario autoriza el push y la PR: **PR #232** (`size:exception`, `type:bug`).
+
+Plan stop: approved 2026-11-04; implementation continues
+
 ## Siguiente paso
 
-T5 espera a que se fusionen las tareas T3 y T4 del bloque de arreglos, que tocan `cli/sync.go` y `uninstall/service.go`. Antes, el usuario decide el push y la estrategia de PRs. Los cortes propuestos siguen valiendo: PR 1 = T1+T4, PR 2 = T2, PR 3 = T3 (+T5 cuando entre).
+T5 en esta rama. Aviso del bloque de arreglos: su T4 tocó `cli/sync.go`, `cli/run.go`, `components/sdd/inject.go` y `components/engram/inject.go`; esta última incluye `upstreamCodexTableKeyBeforeMCPServers` (`d290c8b0`), que no debe perderse.

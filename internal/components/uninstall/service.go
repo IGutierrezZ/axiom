@@ -1576,7 +1576,7 @@ func rewriteJSONGuarded(path string, transform func(raw []byte) ([]byte, bool, e
 			if info, statErr := os.Lstat(path); statErr == nil {
 				perm = info.Mode().Perm()
 			}
-			_, err = filemerge.WriteFileAtomic(path, updated, perm)
+			_, err = filemerge.WriteFileAtomicMode(path, updated, perm)
 			if err != nil {
 				return false, false, err
 			}
@@ -1613,7 +1613,7 @@ func rewriteClaudeUserConfig(homeDir string, jsonPaths ...jsonPath) operation {
 			if info, statErr := os.Lstat(path); statErr == nil {
 				perm = info.Mode().Perm()
 			}
-			if _, err := filemerge.WriteFileAtomic(path, updated, perm); err != nil {
+			if _, err := filemerge.WriteFileAtomicMode(path, updated, perm); err != nil {
 				return false, false, err
 			}
 			return true, false, nil
