@@ -204,3 +204,54 @@ func TestReviewAssessDispatchedFromReviewCommand(t *testing.T) {
 		t.Fatal("review assess is not dispatched by review_facade.go")
 	}
 }
+
+// TestReviewAssessJSONFailsClosedOnCandidateErrors proves that a --json caller
+// whose candidate cannot be assessed still receives a valid assess/v1 envelope
+// (risk "high", reason "unassessable") before the error, instead of zero bytes
+// on stdout. The envelope validates against the existing published schema, so
+// no new schema is involved.
+func TestReviewAssessJSONFailsClosedOnCandidateErrors(t *testing.T) {
+	reviewAssessSchema := compileWholePublishedReviewSchema(t, "v2", "assess.schema.json")
+	repo := initReviewCLIRepo(t)
+
+	// An empty candidate fails; the envelope names the current-changes kind.
+	var output bytes.Buffer
+	if err := RunReview([]string{"assess", "--cwd", repo, "--json"}, &output); err == nil {
+		t.Fatal("review assess on an empty candidate unexpectedly succeeded")
+	}
+	if output.Len() == 0 {
+		t.Fatal("review assess --json wrote nothing to stdout on error")
+	}
+	validatePublishedReviewSchema(t, reviewAssessSchema, output.Bytes())
+	var result ReviewAssessmentResult
+	if err := json.Unmarshal(output.Bytes(), &result); err != nil {
+		t.Fatalf("decode fail-closed envelope: %v", err)
+	}
+	if result.Risk != "high" || result.Candidate.Kind != string(reviewtransaction.TargetCurrentChanges) ||
+		len(result.Reasons) != 1 || result.Reasons[0].Code != "unassessable" || result.Reasons[0].Detail == "" {
+		t.Fatalf("fail-closed envelope = %#v", result)
+	}
+
+	// An unresolvable base ref fails; the envelope names the base-diff kind and the ref.
+	output.Reset()
+	if err := RunReview([]string{"assess", "--cwd", repo, "--base-ref", "nonexistent-ref", "--json"}, &output); err == nil {
+		t.Fatal("review assess on an unbuildable ref unexpectedly succeeded")
+	}
+	validatePublishedReviewSchema(t, reviewAssessSchema, output.Bytes())
+	result = ReviewAssessmentResult{}
+	if err := json.Unmarshal(output.Bytes(), &result); err != nil {
+		t.Fatalf("decode fail-closed envelope: %v", err)
+	}
+	if result.Risk != "high" || result.Candidate.Kind != string(reviewtransaction.TargetBaseDiff) || result.Candidate.BaseRef != "nonexistent-ref" {
+		t.Fatalf("base-diff fail-closed envelope = %#v", result)
+	}
+
+	// Without --json (or with --json=false) an error writes nothing to stdout.
+	output.Reset()
+	if err := RunReview([]string{"assess", "--cwd", repo, "--json=false", "unexpected"}, &output); err == nil {
+		t.Fatal("review assess with a stray argument unexpectedly succeeded")
+	}
+	if output.Len() != 0 {
+		t.Fatalf("review assess without --json wrote to stdout on error: %q", output.String())
+	}
+}

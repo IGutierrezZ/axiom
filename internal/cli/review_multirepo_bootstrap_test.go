@@ -2,6 +2,7 @@ package cli
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
@@ -154,8 +155,13 @@ func TestReviewAssessNeverInitializesGit(t *testing.T) {
 			if err == nil {
 				t.Fatalf("review assess accepted a directory outside Git:\n%s", output.String())
 			}
-			if output.Len() != 0 {
-				t.Fatalf("review assess printed output before refusing: %q", output.String())
+			// A --json caller still gets the fail-closed assess/v1 envelope
+			// (risk "high") before the refusal, so a host never reads zero bytes.
+			validatePublishedReviewSchema(t, compileWholePublishedReviewSchema(t, "v2", "assess.schema.json"), output.Bytes())
+			var envelope ReviewAssessmentResult
+			if decodeErr := json.Unmarshal(output.Bytes(), &envelope); decodeErr != nil || envelope.Risk != "high" ||
+				len(envelope.Reasons) != 1 || envelope.Reasons[0].Code != "unassessable" {
+				t.Fatalf("review assess refusal envelope = %q (%v), want a fail-closed high assessment", output.String(), decodeErr)
 			}
 			if _, statErr := os.Lstat(filepath.Join(dir, ".git")); !errors.Is(statErr, os.ErrNotExist) {
 				t.Fatalf("review assess initialized Git: %v", statErr)

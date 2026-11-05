@@ -591,7 +591,10 @@ func TestKilocodeReviewSettingsMatchCurrentMainBaseline(t *testing.T) {
 	// upstream-revision-nativa T4 (#5345): los cuerpos de revisor renderizados
 	// llevan reviewerprovider.SeverityRules, de modo que el hash de la
 	// configuración se mueve. Deliberate, not drift.
-	const want = "d1a6c09eca625a838f197a0e12897e04f0662ee6314d0e4913c0e9b2b90591eb"
+	// upstream-revision-nativa T6 (#5351, parcial): la sección compartida «Delegated
+	// Verification Gate» verifica por nivel de riesgo con RDD encendido o apagado, así
+	// que el hash de la configuración se mueve. Deliberate, not drift.
+	const want = "f4a61a9a4c7529c0ff684eec77f5ec2fbff45936bee037a988cb3dbba1fade47"
 	if got != want {
 		t.Fatalf("Kilocode settings SHA-256 = %s, want current-main baseline %s", got, want)
 	}

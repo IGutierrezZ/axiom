@@ -205,11 +205,11 @@ func TestEveryRuntimeRendersTheSharedSections(t *testing.T) {
 }
 
 // TestDelegatedVerificationGateDeclinedReviewFallbackRenders pins #4304: the
-// canonical body (full and reduced forms) must state that the RDD-on
-// shortcut holds only while the native review reaches a terminal outcome for
-// this candidate, and that a declined consent envelope, clone-local RDD
-// disable, or a START/STATUS refusal fall back to the risk-gated tier table
-// exactly like the RDD-off path -- never to a lower bar than RDD off.
+// canonical body (full and reduced forms) must state that verification follows
+// the risk-gated tier table whether or not the native review reaches a
+// terminal outcome for this candidate, so a declined consent envelope,
+// clone-local RDD disable, or a START/STATUS refusal never lowers the bar
+// below the one RDD off applies.
 func TestDelegatedVerificationGateDeclinedReviewFallbackRenders(t *testing.T) {
 	const fallbackPhrase = "the native review reaches a terminal outcome for this candidate"
 	const sddBoundary = "SDD never offers or launches RDD"
