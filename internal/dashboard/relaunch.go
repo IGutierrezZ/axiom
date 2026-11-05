@@ -94,7 +94,7 @@ func (s *Server) relaunchAfterUpdate(sync *UpdateSyncSummary) {
 	}
 
 	time.Sleep(relaunchDelay)
-	exited, err := startProcessFn(exe, relaunchArgs(root, s.port), root)
+	exited, err := startProcessFn(exe, relaunchArgs(root, s.port), ServerWorkDir(root))
 	if err != nil {
 		j.finish(updatePhaseFailed, "Axiom se ha actualizado, pero no se pudo lanzar la versión nueva del dashboard: "+err.Error(), hint, sync)
 		return

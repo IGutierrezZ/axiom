@@ -143,7 +143,7 @@ func TestUpdateJob_SelfUpgradeRelaunchesWithTheNewBinaryAndExits(t *testing.T) {
 	}
 	got := seams.started[0]
 	wantArgs := []string{"ui", "--path", svc.getRootPath(), "--port", "8123", "--no-browser", "--post-update-sync"}
-	if got.exe != "/instalado/axiom" || !reflect.DeepEqual(got.args, wantArgs) || got.dir != svc.getRootPath() {
+	if got.exe != "/instalado/axiom" || !reflect.DeepEqual(got.args, wantArgs) || got.dir != ServerWorkDir(svc.getRootPath()) {
 		t.Fatalf("proceso lanzado = %+v, quiero %v", got, wantArgs)
 	}
 	if !reflect.DeepEqual(seams.order, []string{"start", "exit"}) || !reflect.DeepEqual(seams.exits, []int{0}) {

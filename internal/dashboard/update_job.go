@@ -265,11 +265,12 @@ const manualSyncHint = "axiom sync --scope workspace"
 // binario NUEVO, que es lo que el proceso viejo no podía hacer (ResolveSyncSkip).
 //
 // Deja el estado en `syncing` de forma síncrona (la UI que recarga lo ve ya) y
-// ejecuta la sincronización en segundo plano. Como el servidor ya atiende peticiones
-// mientras sincroniza, se cuida la única interferencia posible: RunSync cambia de
-// directorio (os.Chdir), pero aquí la raíz es la misma carpeta en la que runUI ya
-// dejó el proceso, así que el cambio no altera el directorio de trabajo de otras
-// acciones. Un POST /api/system/update durante la sincronización devuelve este mismo
+// ejecuta la sincronización en segundo plano. El proceso NO tiene el workspace como
+// directorio de trabajo (runUI lo deja en un directorio neutro, ServerWorkDir): la raíz
+// sincronizada es la de --path (getRootPath), porque RunSync entra en ella con un
+// os.Chdir temporal y restaura el directorio anterior al terminar. Ese cambio es del
+// proceso entero: mientras dura, otras acciones que dependan del cwd lo verían en el
+// workspace (riesgo previo de RunSync, anotado como seguimiento). Un POST /api/system/update durante la sincronización devuelve este mismo
 // trabajo en lugar de lanzar otro. Si ya hay un trabajo en curso no hace nada.
 func (s *Service) StartPostUpdateSync() {
 	j := &s.update

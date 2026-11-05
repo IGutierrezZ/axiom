@@ -89,6 +89,9 @@ Fuera: GoReleaser, políticas de release, contratos `gentle-ai.*` / `GENTLE_AI_*
   - Un único enlace exacto de puerto (`ListenAndServeWithRetry`), con reintentos solo en la ruta posterior a la actualización y `ErrPortInUse` en ambas.
   - El hijo escribe en `ui.log` (añadir); los atributos de desacoplado y la ruta del log viven en `internal/dashboard` y los usa `cmd/axiom`.
   - `docs/usage.md` coherente con la PWA (puerto 47700, `ui.log`, acceso directo y tarea programada).
+- [x] **T8 · Ajustar el relanzamiento al directorio neutro de `axiom ui` (#223).**
+  - El hijo relanzado se lanza con `cmd.Dir = ServerWorkDir(raíz)` (nunca el workspace) y sigue recibiendo `--path <raíz>`.
+  - La sincronización posterior apunta a la raíz de `--path` aunque el cwd del proceso sea otro.
 - [ ] **T6 · Documentación y cierre.**
   - [x] `docs/usage.md` (actualizar desde el dashboard y caso de Windows).
   - [x] Coherencia con `openspec/specs/axiom-updater-resilience/spec.md`: el proceso viejo sigue saltando la sincronización.
@@ -123,6 +126,8 @@ Fuera: GoReleaser, políticas de release, contratos `gentle-ai.*` / `GENTLE_AI_*
   - Pendiente: la PR, la prueba manual en Windows y marcar P2 en la auditoría al fusionar.
 - 2026-11-05: merge de `origin/main` (#222, PWA y puerto fijo) en `6ab4f57f`. Conflictos en `cmd/axiom/main.go` (banderas: se conservan `--detach` y `--post-update-sync`, puerto por defecto `DefaultPort`) y `internal/dashboard/server.go` (se conserva el `ListenAndServe` exacto de #222 y nuestro enlace con reintento); `index.html`, `main.js` y `usage.md` se fusionaron solos. Dos pruebas nuestras (`TestParseUIFlags`, sondeo de otro puerto) dejaban de ser válidas con el puerto fijo y se adaptaron en el propio merge.
 - 2026-11-05: T7 hecha. (1) `dashboardAlreadyRunning` + costura `probeAxiomFn`: con `--post-update-sync` no se sondea (prueba `TestPostUpdateSyncSkipsTheIdempotencyProbe`). (2) `ListenAndServeWithRetry` sustituye a `ListenAndServeExact`; `ListenAndServe` la llama sin reintento. (3) `startDetachedProcess` añade stdout/stderr a `ui.log` (`OpenUILog`) y el fallo «hijo muerto» cita su ruta. (4) `ApplyDetachAttrs` (CREATE_NO_WINDOW, el de #222) y `UILogPath` movidos a `internal/dashboard`; borrados `relaunch_windows.go`/`relaunch_unix.go` y los `detach_*` de `cmd/axiom`. (5) La UI sigue esperando con `/api/system/version` (`current`): ya funciona y `/api/health` solo aporta la versión si `SetVersion` se llamó. (7) Caso de la PWA (`127.0.0.1:47700` y `localhost:47700`) en `update_guard_test.go`.
+- 2026-11-05: merge de `origin/main` (#223, #224) en `133020e5`. Único conflicto: `cmd/axiom/ui_launch.go` (#222 nos había movido `uiLogPath`/`applyDetachAttrs` a `internal/dashboard`; #223 añadía `serverWorkDir`). Se movió `serverWorkDir` y sus ayudas a `internal/dashboard/workdir.go` (`ServerWorkDir`, con sus pruebas) y `cmd/axiom` lo usa; `service.go`, `index.html` y `style.css` se fusionaron solos.
+- 2026-11-05: T8 hecha. `relaunch.go` lanza el hijo con `cmd.Dir = ServerWorkDir(raíz)`. CORRECCIÓN a la nota de T5 («Sin carrera de `os.Chdir`: la raíz es la carpeta donde `runUI` ya dejó el proceso»): con #223 el cwd del proceso es un directorio neutro, no el workspace. La sincronización sigue apuntando a la raíz de `--path` porque `RunSync` hace su propio `os.Chdir` temporal a `getRootPath()` y restaura el anterior (comprobado con `TestPostUpdateSync_TargetsThePathRootWhileTheProcessCwdIsElsewhere`). El `Chdir` es del proceso entero: mientras dura, otras acciones que dependan del cwd lo verían en el workspace; es el riesgo previo de `RunSync` ya anotado como seguimiento, no uno nuevo de esta tarea. Comentario de `StartPostUpdateSync` corregido.
 
 ## Seguimientos fuera de alcance
 
