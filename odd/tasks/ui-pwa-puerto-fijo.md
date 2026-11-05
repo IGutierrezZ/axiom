@@ -47,7 +47,7 @@ Que el dashboard de `axiom ui` se pueda instalar como aplicación (PWA) desde Ed
   - Iconos PNG 192/512 y maskable generados en Go; favicon.
   - `sw.js` en la raíz, solo red; registro desde `main.js`.
   - Botón "Instalar aplicación" con `beforeinstallprompt` cuando el navegador lo ofrezca.
-- [ ] **T3 · Ventana de aplicación y arranque desacoplado** — ruta: delegada.
+- [x] **T3 · Ventana de aplicación y arranque desacoplado** — ruta: delegada.
   - `axiom ui --app`: abre Edge o Chrome con `--app=<url>`; si no hay ninguno, navegador por defecto.
   - `axiom ui --detach`: lanza el servidor en segundo plano sin consola, espera a `/api/health`, abre la ventana y sale.
 - [ ] **T4 · Instalador de Windows y documentación** — ruta: delegada.
@@ -81,8 +81,16 @@ Que el dashboard de `axiom ui` se pueda instalar como aplicación (PWA) desde Ed
 - Nuevos: `assets/manifest.webmanifest`, `assets/icons/icon.svg`, `assets/sw.js` (solo red: `fetch` vacío sin `respondWith`), `assets/js/core/pwa.js` (registro del SW y botón `#btn-install-app` con `beforeinstallprompt`), `pwa_icons.go` (PNG 192/512/maskable rasterizados en Go con supersampling 4x4, generados una vez), `pwa_test.go`. Cambios en `index.html`, `main.js` y `server.go` (MIME `.webmanifest` y rutas `/icons/*.png`).
 - Verificación del escritor: `go test ./internal/dashboard/... -count=1` → ok; `go vet` → limpio; `gofmt -l` → vacío.
 - Comprobación del orquestador con el arnés `TestDashboardPreview` en el puerto 47711 y el navegador integrado: `/api/health` → 200; manifiesto `standalone`; los 4 iconos → 200 con su tipo; icono 512 revisado visualmente; `/sw.js` → 200 `text/javascript`.
+- Commit: `b4baca95`.
 - **Pendiente**: el navegador integrado no registra service workers (devuelve el mismo "unknown error" con un script inexistente), así que la instalabilidad real en Edge/Chrome queda para la prueba manual final.
+
+### T3
+
+- Nuevos en `cmd/axiom`: `ui_launch.go` (`resolveAppBrowser`, `openAppWindow`, `openUIWindow`, `detachedChildArgs`, `waitForAxiom`, `portIsFree`, `uiLogPath`, `startDetachedServer`, `runUIDetached`), `detach_windows.go` (`CREATE_NO_WINDOW | CREATE_NEW_PROCESS_GROUP`, `HideWindow`; se prefiere a `DETACHED_PROCESS` porque los descendientes heredan la consola oculta y ninguno abre una visible), `detach_other.go` (`Setsid`), `ui_launch_test.go`. `runUI` gana `--app` y `--detach`.
+- `--detach` comprueba antes el puerto con `net.Listen` (error inmediato si lo ocupa otra aplicación), lanza el hijo con `ui --no-browser --port --path`, registra en `<UserCacheDir>/axiom/ui.log` y espera `/api/health` hasta 10 s.
+- Verificación del escritor: `go test ./cmd/axiom/... -count=1` → ok; `go vet` (windows, `GOOS=linux`, `GOOS=darwin`) → limpio; `gofmt -l` → vacío. Comprobación del orquestador: `go test ./cmd/axiom/ -run 'ResolveAppBrowser|DetachedChildArgs|WaitForAxiom'` → 4 PASS.
+- **Pendiente**: el lanzamiento real del hijo y de la ventana no se puede ejecutar aquí (prohibido ejecutar `axiom.exe` recién compilado por el antivirus); queda para la prueba manual. `ui.log` se abre en modo *append* sin rotación: aceptable por ahora.
 
 ## Siguiente paso
 
-T3.
+T4.
