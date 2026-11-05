@@ -109,14 +109,14 @@ Divergencias de Axiom que se conservan:
   - Interpretar «sí», «adelante» o «eso mismo» contra la propuesta inmediatamente anterior.
   - Nunca sustituye el consentimiento nativo, los tokens exactos ni los permisos de publicación o destructivos.
   - Resolver una subdecisión no cancela el objetivo autorizado.
-- [ ] **T4 · Protocolo de Engram** (#2022, #5663)
+- [x] **T4 · Protocolo de Engram** (#2022, #5663). Commit `0a118489`, ruta delegada (writer, más de 4 ficheros), upstream `1c76e86a` y `4bae61e2`.
   - En `internal/assets/engram/protocol.md`:
     - Resolver el proyecto con `mem_current_project` antes del primer `mem_context`, `mem_search` o `mem_review`.
     - Esperar el resultado, nunca en paralelo.
     - Ramas: ambiguo, único o sin proyecto.
     - `content` como un único string JSON.
   - Regenerar `internal/components/engram/testdata/protocol-full.md` y `protocol_test.go`.
-- [ ] **T5 · `issue-creation` sigue la política del repositorio destino** (#5907)
+- [x] **T5 · `issue-creation` sigue la política del repositorio destino** (#5907). Commit `48117e8b`, ruta delegada (mismo writer), upstream `6e02c6ed`, solo la skill y sus tests.
   - En `internal/assets/skills/issue-creation/SKILL.md`, la política del destino manda: formulario, plantilla Markdown o ruta sin plantilla.
   - Actualizar las referencias y los tests de autoridad (`internal/assets/issue_creation_authority_test.go`).
 
@@ -191,3 +191,14 @@ Lo fija la sesión coordinadora a partir del cruce de ficheros entre bloques (20
 - 2026-11-04: exploración y veredictos. Las notas están en la carpeta compartida de sesiones (`guia-orquestador-veredictos.md`) y en Engram (`upstream/gentle-ai-review-2026-11/guia-orquestador`). El usuario elige el carril ODD.
 - 2026-11-04: se anotan las dependencias D3 / P5 y D4 / P6. Se comprueba que `inc/distribucion-un-comando` no se solapa con este bloque. El usuario valida el alcance T1–T5.
 - 2026-11-05: se anota el orden de ejecución entre bloques que fija la sesión coordinadora. T4 y T5 van ya en paralelo; T1 es el eslabón 3 de la cadena de goldens y T2/T3 el 4. P3 queda resuelta por ese orden.
+- 2026-11-05: la coordinadora autoriza arrancar T4 y T5. Ninguna de las dos depende de P1 ni de P2.
+  - **T4** (`0a118489`, +133/−35):
+    - `protocol.md` resuelve el proyecto con `mem_current_project` antes del primer acceso, espera el resultado y aplica las ramas por orden: comprobación del workspace, ambiguo, único y sin proyecto.
+    - La recuperación entre proyectos solo se hace si el usuario la pide.
+    - `content` pasa a ser un único string.
+    - Se regeneran los fixtures `protocol-full.md` y `protocol-slim.md` y 5 goldens.
+  - **T5** (`48117e8b`, +49/−16): la skill sigue la política del repositorio destino, que puede ser formulario, plantilla Markdown o ninguna plantilla. Se añade el test `TestIssueCreationFollowsDestinationRepositoryPolicy`.
+  - **Verificación del writer** (todo ok): `go test ./internal/components/engram/...`, `go test ./internal/assets/...`, `go test ./internal/components/` (tras `-update`) y `go vet`.
+  - **Comprobación puntual del padre:** `go test ./internal/components/engram/... ./internal/assets/ -run "IssueCreation|Protocol"`, ok.
+  - **RDD apagado:** no se abre revisión nativa.
+  - **Seguimiento fuera de alcance:** `.codex/AGENTS.md` sigue con el texto antiguo del protocolo de Engram.
