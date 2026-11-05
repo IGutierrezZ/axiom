@@ -224,6 +224,22 @@ install_go() {
     success "Installed ${BINARY_NAME} via go install"
 }
 
+# ============================================================================
+# Install cleanup
+# ============================================================================
+
+INSTALL_TMPDIR=""
+INSTALL_STAGING=""
+
+cleanup_install() {
+    if [ -n "${INSTALL_STAGING:-}" ]; then
+        rm -f -- "$INSTALL_STAGING" 2>/dev/null || true
+    fi
+    if [ -n "${INSTALL_TMPDIR:-}" ]; then
+        rm -rf -- "$INSTALL_TMPDIR" 2>/dev/null || true
+    fi
+}
+
 prepend_go_env_pattern() {
     local name="$1"
     local pattern="$2"
@@ -286,7 +302,11 @@ install_binary() {
     # Create temp directory — clean up on exit
     local tmpdir
     tmpdir="$(mktemp -d)"
-    trap '[ -n "${tmpdir:-}" ] && rm -rf "$tmpdir"' EXIT
+    INSTALL_TMPDIR="$tmpdir"
+    # TERM/INT exit explicitly so the EXIT trap always runs the cleanup.
+    trap cleanup_install EXIT
+    trap 'exit 143' TERM
+    trap 'exit 130' INT
 
     # Download archive
     info "Downloading ${archive_name}..."
@@ -369,19 +389,32 @@ install_binary() {
     # Create install dir if needed
     mkdir -p "$install_dir"
 
-    # Install binary
-    info "Installing to ${install_dir}/${BINARY_NAME}..."
-    if cp "${tmpdir}/${BINARY_NAME}" "${install_dir}/${BINARY_NAME}" 2>/dev/null; then
-        chmod +x "${install_dir}/${BINARY_NAME}"
+    # Atomic install: stage next to the destination and rename in place. A
+    # rename within one filesystem is atomic, so the previous binary either
+    # survives intact or is fully replaced, never half-written. `install -m 0755`
+    # fixes the mode regardless of the caller's umask. Paths are always passed as
+    # arguments (also under sudo), never interpolated into a shell string.
+    local final="${install_dir}/${BINARY_NAME}"
+    local staging="${install_dir}/${BINARY_NAME}.staging.$$"
+    INSTALL_STAGING="$staging"
+
+    info "Installing to ${final}..."
+    if install -m 0755 -- "${tmpdir}/${BINARY_NAME}" "$staging" 2>/dev/null \
+        && mv -f -- "$staging" "$final"; then
+        :
     elif command -v sudo &>/dev/null; then
         warn "Permission denied. Trying with sudo..."
-        sudo cp "${tmpdir}/${BINARY_NAME}" "${install_dir}/${BINARY_NAME}"
-        sudo chmod +x "${install_dir}/${BINARY_NAME}"
+        if ! sudo -- install -m 0755 -- "${tmpdir}/${BINARY_NAME}" "$staging" \
+            || ! sudo -- mv -f -- "$staging" "$final"; then
+            sudo -- rm -f -- "$staging" 2>/dev/null || true
+            fatal "Could not install ${final} with sudo."
+        fi
     else
         fatal "Cannot write to ${install_dir}. Run with sudo or use --dir to specify a writable directory."
     fi
+    INSTALL_STAGING=""
 
-    success "Installed ${BINARY_NAME} to ${install_dir}/${BINARY_NAME}"
+    success "Installed ${BINARY_NAME} to ${final}"
 
     # Check if install dir is in PATH
     if [[ ":$PATH:" != *":${install_dir}:"* ]]; then
