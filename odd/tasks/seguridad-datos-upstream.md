@@ -85,7 +85,7 @@ Orden de ejecución: **T1 → T4 → T2 → T3 → T5**, que sigue los cortes de
   - Evidencia del escritor: `go test ./internal/system/...` ok (50 subtests de registro reales, 0 saltados); `go test -short ./internal/system/...` ok; `go test ./internal/update/...` ok; `go vet` limpio; sin claves `Axiom-PathTest` residuales en HKCU.
   - Comprobación del orquestador: `go test ./internal/system/ -run "TestUserPath|TestPrioritizeUserPath" -count=1` ok. `axiom review assess`: medium (`executable_change`); con RDD apagado basta la verificación del escritor más esta comprobación.
   - Nota: `rg GentleAI internal/system` solo encuentra `env.go:10` (`EnvChannelGentleAI`), anterior a esta tarea.
-- [ ] **T3 · Deny de secretos de Claude anclado al HOME (#5867)**
+- [x] **T3 · Deny de secretos de Claude anclado al HOME (#5867)**
   - `permissions/inject.go`: reglas `Read/Edit(~/.ssh/**)`, `~/.credentials/**`, `~/Library/Keychains/**`, `~/.aws/credentials`, `~/.config/gh/hosts.yml`.
   - Migración: tabla `staleClaudeCodeDenyRules` y `anchorStaleClaudeCodeDenyRules`, aplicadas en `mergeJSONFile` (`inject.go:191`) antes de `filemerge.UnionJSONArrays`; reescribe en su sitio solo las coincidencias exactas, sin duplicar, sin tocar el resto ni su orden.
   - **Adaptación propia de Axiom:** `uninstall/service.go` (`rewriteManagedPermissions`) debe retirar también las reglas antiguas de instalaciones previas.
@@ -93,6 +93,13 @@ Orden de ejecución: **T1 → T4 → T2 → T3 → T5**, que sigue los cortes de
   - Cambio de comportamiento aceptado: un `.ssh/` dentro del proyecto deja de estar denegado.
   - Pruebas: `TestInjectClaudeCodeAnchorsStaleHomeDenyRules` (orden, sin duplicados, `Read(custom/**)` intacta, segunda inyección `Changed=false`); actualizar `TestInjectClaudeCodeSensitivePathsDenied` y `TestInjectClaudeCodeUnionsUserDenyList`; prueba de desinstalación que retire reglas antiguas y nuevas y conserve las del usuario.
   - Ruta: delegada (código, desinstalación y documentación).
+  - **Hecho (2026-11-05)**: 6 ficheros, +208/−26.
+  - Código: `staleClaudeCodeDenyRules` y `anchorStaleClaudeCodeDenyRules`, como en upstream. `withAnchoredClaudeCodeDeny` reescribe la lista del usuario solo como entrada de `UnionJSONArrays` (rama `union`, solo Claude Code). La fusión sustituye la lista entera, así que en el fichero final no quedan reglas antiguas.
+  - Desinstalación: nueva `permissions.LegacyOverlay(agentID)` (solo Claude Code); `rewriteManagedPermissions` retira el overlay actual y después las reglas antiguas.
+  - Documentación: `docs/components.md:16` y `docs/quickstart.md:101` describen las rutas reales por agente. Desaparecen las que Axiom no escribía (`~/.ssh/**/*`, `**/*.p12`, `**/*.pfx`).
+  - Pruebas: `TestInjectClaudeCodeAnchorsStaleHomeDenyRules`, `TestLegacyOverlayOnlyForClaudeCode` y una prueba de desinstalación con reglas antiguas, nuevas y del usuario. Actualizadas `TestInjectClaudeCodeSensitivePathsDenied`, `TestInjectClaudeCodeUnionsUserDenyList` y otra comprobación de `Read(.ssh/*)`.
+  - Evidencia: `go test` de permissions y uninstall ok (repetido por el orquestador); `go test ./internal/cli/ -run "Permission|Uninstall|Sync" -timeout 40m` ok en 136,7 s (ejecutado por el orquestador); `go vet` y `gofmt -l` limpios; `rg "Read\(\.ssh|Edit\(\.ssh"` solo encuentra la tabla de reglas antiguas y las semillas de las pruebas.
+  - `go test ./internal/components/...`: además del fallo ambiental de uniones de `filemerge`, falló una vez `communitytool` `TestPiCodeGraphPendingProbePreservesConfiguredFiles` por timeout de la sonda MCP con la máquina saturada por otras sesiones; en solitario pasa con y sin el cambio. `axiom review assess`: medium.
 - [x] **T4 · El overlay de OpenCode/Kilo no relaja el deny por defecto del usuario (#5311)**
   - `permissions/inject.go`: `withoutRulesLooserThanUserDefault(base, overlay)` lee `permission."*"` (cadena o mapa `{"*": ...}`), ordena `allow < ask < deny` y elimina del overlay los patrones menos estrictos; envuelve el merge de OpenCode/Kilo. Usa `filemerge.UnmarshalJSONObject` (`json_merge.go:216`), que ya devuelve números exactos tras T1.
   - Pruebas: `TestInjectKeepsUserDenyByDefault` (OpenCode y Kilocode), `TestInjectKeepsUserAskByDefault`, `TestInjectToleratesPatternMapRootDefault`. Comprobar antes que el helper `remoteAction` de upstream tiene equivalente en `inject_test.go`.

@@ -98,7 +98,7 @@ El comando `axiom` también abre la TUI cuando se ejecuta en una terminal intera
 
 ## Protecciones integradas
 
-Al seleccionar `permissions`, Axiom aplica a Claude Code, OpenCode y Kilo Code una lista de rutas sensibles que incluye `~/.ssh/*`, `**/*.pem`, `**/*.key`, `**/.env*` y `~/.aws/credentials`. Solo añade reglas de denegación y de confirmación: no activa ningún modo de autoaprobación y, con `--scope workspace`, escribe en el proyecto y no en tu HOME. Consulta el detalle en [Componentes](components.md).
+Al seleccionar `permissions`, Axiom aplica a Claude Code, OpenCode y Kilo Code una lista de rutas sensibles que incluye `~/.ssh/**` y `~/.aws/credentials` (en Claude Code, ancladas al HOME; en OpenCode y Kilo Code, `**/.ssh/**` y `**/.aws/credentials`), `**/*.pem`, `**/*.key` y `.env`. Solo añade reglas de denegación y de confirmación: no activa ningún modo de autoaprobación y, con `--scope workspace`, escribe en el proyecto y no en tu HOME. Consulta el detalle en [Componentes](components.md).
 
 ## Plataformas no compatibles
 

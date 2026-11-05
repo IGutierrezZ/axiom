@@ -539,7 +539,7 @@ func TestInjectClaudeCodeUnionsUserDenyList(t *testing.T) {
 			t.Errorf("deny entry %q duplicated in %v", entry, deny)
 		}
 	}
-	for _, axiomEntry := range []string{"Bash(rm -rf /)", "Read(.ssh/*)", "Edit(**/secrets/*)"} {
+	for _, axiomEntry := range []string{"Bash(rm -rf /)", "Read(~/.ssh/**)", "Edit(**/secrets/*)"} {
 		if seen[axiomEntry] != 1 {
 			t.Errorf("Axiom deny entry %q missing from %v", axiomEntry, deny)
 		}
@@ -752,16 +752,16 @@ func TestTargetPathCodexHasNoInjectionTarget(t *testing.T) {
 // deny list is present in the Claude Code permissions block.
 func TestInjectClaudeCodeSensitivePathsDenied(t *testing.T) {
 	sensitivePatterns := []string{
-		"Read(.ssh/*)",
-		"Edit(.ssh/*)",
-		"Read(.credentials/*)",
-		"Edit(.credentials/*)",
-		"Read(Library/Keychains/*)",
-		"Edit(Library/Keychains/*)",
-		"Read(.aws/credentials)",
-		"Edit(.aws/credentials)",
-		"Read(.config/gh/hosts.yml)",
-		"Edit(.config/gh/hosts.yml)",
+		"Read(~/.ssh/**)",
+		"Edit(~/.ssh/**)",
+		"Read(~/.credentials/**)",
+		"Edit(~/.credentials/**)",
+		"Read(~/Library/Keychains/**)",
+		"Edit(~/Library/Keychains/**)",
+		"Read(~/.aws/credentials)",
+		"Edit(~/.aws/credentials)",
+		"Read(~/.config/gh/hosts.yml)",
+		"Edit(~/.config/gh/hosts.yml)",
 		"Read(**/*.pem)",
 		"Edit(**/*.pem)",
 		"Read(**/*.key)",
@@ -928,7 +928,7 @@ func TestInjectClaudeCodeDefaultDenyRulesApplied(t *testing.T) {
 	}
 
 	// Sensitive-path rules must be present after overlay application.
-	for _, rule := range []string{"Read(.ssh/*)", "Read(**/*.pem)", "Read(**/*.key)"} {
+	for _, rule := range []string{"Read(~/.ssh/**)", "Read(**/*.pem)", "Read(**/*.key)"} {
 		if !denySet[rule] {
 			t.Errorf("default deny rule %q was not present; got: %v", rule, denyList)
 		}
@@ -1112,5 +1112,72 @@ func TestInjectKeepsOverlayIntactUnderUserAllowByDefault(t *testing.T) {
 	}
 	if got := remoteAction(t, raw, "git reset --hard HEAD"); got != "ask" {
 		t.Errorf("overlay ask dropped under allow default: got %s", got)
+	}
+}
+
+// TestInjectClaudeCodeAnchorsStaleHomeDenyRules verifica que las reglas antiguas
+// de Axiom, relativas al proyecto, se reescriben en su sitio como reglas ancladas
+// al HOME, sin duplicados y sin tocar las reglas del usuario.
+func TestInjectClaudeCodeAnchorsStaleHomeDenyRules(t *testing.T) {
+	home := t.TempDir()
+	settingsPath := filepath.Join(home, ".claude", "settings.json")
+	if err := os.MkdirAll(filepath.Dir(settingsPath), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	// Read(~/.aws/credentials) ya está anclada: la antigua debe descartarse.
+	seed := `{"permissions":{"deny":["Bash(curl *)","Read(.ssh/*)","Read(custom/**)","Edit(.config/gh/hosts.yml)","Read(~/.aws/credentials)","Read(.aws/credentials)"]}}`
+	if err := os.WriteFile(settingsPath, []byte(seed), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	first, err := Inject(home, claudeAdapter())
+	if err != nil || !first.Changed {
+		t.Fatalf("first Inject() = %+v, %v; want changed", first, err)
+	}
+
+	deny := claudeDenyFromFile(t, settingsPath)
+	wantHead := []string{"Bash(curl *)", "Read(~/.ssh/**)", "Read(custom/**)", "Edit(~/.config/gh/hosts.yml)", "Read(~/.aws/credentials)"}
+	if len(deny) < len(wantHead) || strings.Join(deny[:len(wantHead)], "|") != strings.Join(wantHead, "|") {
+		t.Fatalf("deny list must start with %v, got %v", wantHead, deny)
+	}
+	seen := map[string]int{}
+	for _, entry := range deny {
+		seen[entry]++
+		if seen[entry] > 1 {
+			t.Errorf("deny entry %q duplicated in %v", entry, deny)
+		}
+	}
+	for stale := range staleClaudeCodeDenyRules {
+		if seen[stale] != 0 {
+			t.Errorf("stale deny rule %q still present in %v", stale, deny)
+		}
+	}
+	if seen["Read(custom/**)"] != 1 {
+		t.Errorf("user rule Read(custom/**) lost from %v", deny)
+	}
+
+	second, err := Inject(home, claudeAdapter())
+	if err != nil {
+		t.Fatalf("second Inject() error = %v", err)
+	}
+	if second.Changed {
+		t.Fatalf("second Inject() Changed = true, want false (idempotent)")
+	}
+}
+
+func TestLegacyOverlayOnlyForClaudeCode(t *testing.T) {
+	if LegacyOverlay(model.AgentOpenCode) != nil {
+		t.Fatal("LegacyOverlay(opencode) must be nil")
+	}
+	var legacy struct {
+		Permissions struct {
+			Deny []string `json:"deny"`
+		} `json:"permissions"`
+	}
+	if err := json.Unmarshal(LegacyOverlay(model.AgentClaudeCode), &legacy); err != nil {
+		t.Fatal(err)
+	}
+	if len(legacy.Permissions.Deny) != len(staleClaudeCodeDenyRules) {
+		t.Fatalf("LegacyOverlay deny = %v, want %d stale rules", legacy.Permissions.Deny, len(staleClaudeCodeDenyRules))
 	}
 }

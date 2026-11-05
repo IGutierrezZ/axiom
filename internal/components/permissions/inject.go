@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"sort"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/agents"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/filemerge"
@@ -48,16 +49,16 @@ var claudeCodeOverlayJSON = []byte(`{
       "Read(.env.*)",
       "Edit(.env)",
       "Edit(.env.*)",
-      "Read(.ssh/*)",
-      "Edit(.ssh/*)",
-      "Read(.credentials/*)",
-      "Edit(.credentials/*)",
-      "Read(Library/Keychains/*)",
-      "Edit(Library/Keychains/*)",
-      "Read(.aws/credentials)",
-      "Edit(.aws/credentials)",
-      "Read(.config/gh/hosts.yml)",
-      "Edit(.config/gh/hosts.yml)",
+      "Read(~/.ssh/**)",
+      "Edit(~/.ssh/**)",
+      "Read(~/.credentials/**)",
+      "Edit(~/.credentials/**)",
+      "Read(~/Library/Keychains/**)",
+      "Edit(~/Library/Keychains/**)",
+      "Read(~/.aws/credentials)",
+      "Edit(~/.aws/credentials)",
+      "Read(~/.config/gh/hosts.yml)",
+      "Edit(~/.config/gh/hosts.yml)",
       "Read(**/*.pem)",
       "Edit(**/*.pem)",
       "Read(**/*.key)",
@@ -196,7 +197,9 @@ func mergeJSONFile(path string, overlay []byte, defaults bool, union [][]string)
 	}
 
 	if len(union) > 0 {
-		overlay, err = filemerge.UnionJSONArrays(baseJSON, overlay, union...)
+		// La unión sustituye la lista deny del usuario: se reescriben antes sus
+		// reglas antiguas de Axiom para que no convivan con las ancladas al HOME.
+		overlay, err = filemerge.UnionJSONArrays(withAnchoredClaudeCodeDeny(baseJSON), overlay, union...)
 		if err != nil {
 			return filemerge.WriteResult{}, err
 		}
@@ -226,6 +229,90 @@ var osReadFile = func(path string) ([]byte, error) {
 	}
 
 	return content, nil
+}
+
+// staleClaudeCodeDenyRules asocia las reglas relativas al proyecto que escribían
+// versiones anteriores de Axiom con su equivalente anclado al HOME. Claude Code
+// resuelve una ruta sin "~/" respecto al proyecto, así que aquellas reglas no
+// protegían los secretos del HOME.
+var staleClaudeCodeDenyRules = map[string]string{
+	"Read(.ssh/*)":               "Read(~/.ssh/**)",
+	"Edit(.ssh/*)":               "Edit(~/.ssh/**)",
+	"Read(.credentials/*)":       "Read(~/.credentials/**)",
+	"Edit(.credentials/*)":       "Edit(~/.credentials/**)",
+	"Read(Library/Keychains/*)":  "Read(~/Library/Keychains/**)",
+	"Edit(Library/Keychains/*)":  "Edit(~/Library/Keychains/**)",
+	"Read(.aws/credentials)":     "Read(~/.aws/credentials)",
+	"Edit(.aws/credentials)":     "Edit(~/.aws/credentials)",
+	"Read(.config/gh/hosts.yml)": "Read(~/.config/gh/hosts.yml)",
+	"Edit(.config/gh/hosts.yml)": "Edit(~/.config/gh/hosts.yml)",
+}
+
+// LegacyOverlay devuelve el JSON con las reglas que versiones anteriores de
+// Axiom escribían y que ya no forman parte del Overlay, o nil si el agente no
+// tiene ninguna. La desinstalación las retira junto a las actuales para no dejar
+// reglas propias de Axiom en instalaciones antiguas.
+func LegacyOverlay(id model.AgentID) []byte {
+	if id != model.AgentClaudeCode {
+		return nil
+	}
+	stale := make([]string, 0, len(staleClaudeCodeDenyRules))
+	for rule := range staleClaudeCodeDenyRules {
+		stale = append(stale, rule)
+	}
+	sort.Strings(stale)
+	encoded, err := json.Marshal(map[string]any{"permissions": map[string]any{"deny": stale}})
+	if err != nil {
+		return nil
+	}
+	return encoded
+}
+
+// withAnchoredClaudeCodeDeny devuelve base con las reglas antiguas de su lista
+// permissions.deny ancladas al HOME. Solo se usa como entrada de la unión: el
+// documento que se escribe sale de la fusión sobre el original. Si base no es un
+// objeto JSON o no tiene la lista, la devuelve intacta.
+func withAnchoredClaudeCodeDeny(base []byte) []byte {
+	root, err := filemerge.UnmarshalJSONObject(base)
+	if err != nil {
+		return base
+	}
+	permissions, _ := root["permissions"].(map[string]any)
+	deny, ok := permissions["deny"].([]any)
+	if !ok {
+		return base
+	}
+	permissions["deny"] = anchorStaleClaudeCodeDenyRules(deny)
+	encoded, err := json.Marshal(root)
+	if err != nil {
+		return base
+	}
+	return encoded
+}
+
+// anchorStaleClaudeCodeDenyRules reescribe en su sitio cada coincidencia exacta
+// de las reglas antiguas de Axiom. Si la regla anclada ya figura, descarta la
+// antigua. No toca ninguna otra entrada ni su orden.
+func anchorStaleClaudeCodeDenyRules(deny []any) []any {
+	present := map[string]bool{}
+	for _, rule := range deny {
+		if name, ok := rule.(string); ok {
+			present[name] = true
+		}
+	}
+	anchored := make([]any, 0, len(deny))
+	for _, rule := range deny {
+		name, _ := rule.(string)
+		if replacement, stale := staleClaudeCodeDenyRules[name]; stale {
+			if present[replacement] {
+				continue
+			}
+			present[replacement] = true
+			rule = replacement
+		}
+		anchored = append(anchored, rule)
+	}
+	return anchored
 }
 
 // withoutRulesLooserThanUserDefault descarta del overlay las reglas de
