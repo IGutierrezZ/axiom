@@ -2,6 +2,7 @@ package screens
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"regexp"
 	"sort"
@@ -84,8 +85,12 @@ type ModelPickerState struct {
 	SDDModels           map[string][]opencode.Model // provider ID -> SDD-capable models
 	ConfigWarning       string
 	CatalogStatus       RuntimeCatalogStatus
-	CatalogRequestID    uint64
-	CatalogProjectDir   string
+	// CatalogError conserva el fallo tipado del último descubrimiento en tiempo de
+	// ejecución para explicar la causa real y avisar del catálogo degradado. Se
+	// limpia en cuanto un descubrimiento posterior termina bien.
+	CatalogError      error
+	CatalogRequestID  uint64
+	CatalogProjectDir string
 
 	Mode             ModelPickerMode
 	SelectedPhaseIdx int    // which phase row was selected (0 = "Set all")
@@ -162,12 +167,14 @@ func (state ModelPickerState) Update(msg tea.Msg) ModelPickerState {
 		state.Providers = opencode.MergeConfiguredCatalog(discovery.Providers, state.ConfiguredProviders)
 		state.refreshRuntimeModels()
 		if discovery.Err != nil {
+			state.CatalogError = discovery.Err
 			state.CatalogStatus = RuntimeCatalogReady
 			if !state.hasSelectableConfiguredModels() {
 				state.CatalogStatus = RuntimeCatalogFailed
 			}
 			return state
 		}
+		state.CatalogError = nil
 		state.CatalogStatus = RuntimeCatalogReady
 		if len(state.AvailableIDs) == 0 {
 			state.CatalogStatus = RuntimeCatalogEmpty
@@ -820,6 +827,10 @@ func renderPhaseList(
 		b.WriteString(styles.WarningStyle.Render(state.ConfigWarning))
 		b.WriteString("\n\n")
 	}
+	if warning := modelPickerDegradedCatalogWarning(state); warning != "" && len(state.AvailableIDs) > 0 {
+		b.WriteString(styles.WarningStyle.Render(warning))
+		b.WriteString("\n\n")
+	}
 
 	if len(state.AvailableIDs) == 0 {
 		message := "OpenCode reported no tool-capable models for this project."
@@ -829,8 +840,7 @@ func renderPhaseList(
 			message = "Discovering models from OpenCode..."
 			subtext = "You can continue with default assignments while discovery runs."
 		case RuntimeCatalogFailed:
-			message = "Could not discover models from OpenCode."
-			subtext = "Verify OpenCode is installed and can run in this project, then return to this picker."
+			message, subtext = modelPickerCatalogFailureExplanation(state.CatalogError)
 		}
 		b.WriteString(styles.WarningStyle.Render(message))
 		b.WriteString("\n")
@@ -940,6 +950,10 @@ func renderProviderSelect(state ModelPickerState) string {
 
 	b.WriteString(styles.TitleStyle.Render("Select provider:"))
 	b.WriteString("\n\n")
+	if warning := modelPickerDegradedCatalogWarning(state); warning != "" {
+		b.WriteString(styles.WarningStyle.Render(warning))
+		b.WriteString("\n\n")
+	}
 
 	entries := ProviderEntries(state)
 
@@ -1063,4 +1077,41 @@ func resolveNames(assignment model.ModelAssignment, state ModelPickerState) (pro
 	}
 
 	return provName, modelName
+}
+
+// modelPickerDegradedCatalogWarning devuelve el aviso para un selector que
+// siguió funcionando con los modelos configurados porque el descubrimiento de
+// OpenCode falló. Sin él, el subconjunto configurado se presentaría como si
+// fuera el catálogo completo. Es cadena vacía si el descubrimiento terminó bien
+// o no llegó a ejecutarse.
+func modelPickerDegradedCatalogWarning(state ModelPickerState) string {
+	if state.CatalogError == nil {
+		return ""
+	}
+	headline, nextStep := modelPickerCatalogFailureExplanation(state.CatalogError)
+	return headline + " " + nextStep + "\nSe muestran solo los modelos configurados; pueden faltar proveedores y modelos de OpenCode."
+}
+
+// modelPickerCatalogFailureExplanation traduce un fallo del descubrimiento a un
+// titular y un siguiente paso. Cada categoría de CatalogError dice solo lo que
+// se sabe de ella: no se culpa a un binario ausente de un fallo de tamaño, de
+// plazo o de formato, y nunca se vuelca salida del comando ni pilas. Un error
+// sin tipo recibe la orientación genérica.
+func modelPickerCatalogFailureExplanation(err error) (string, string) {
+	var catalogErr *opencode.CatalogError
+	if errors.As(err, &catalogErr) {
+		switch catalogErr.Kind {
+		case opencode.CatalogErrorMissingBinary:
+			return "No se encontró el ejecutable de OpenCode.", "Comprueba que OpenCode está instalado y accesible desde el PATH, y vuelve a este selector."
+		case opencode.CatalogErrorTimeout:
+			return "OpenCode no devolvió el catálogo de modelos a tiempo.", "Comprueba la configuración de OpenCode para este proyecto y vuelve a este selector."
+		case opencode.CatalogErrorCommandFailed:
+			return "El comando de OpenCode que lista los modelos terminó con error.", "Comprueba que OpenCode puede ejecutarse en este proyecto y vuelve a este selector."
+		case opencode.CatalogErrorOutputTooLarge:
+			return "El catálogo de modelos de OpenCode supera el tamaño máximo que se procesa.", "Revisa los proveedores configurados en OpenCode y vuelve a este selector."
+		case opencode.CatalogErrorMalformed, opencode.CatalogErrorUnsupportedSchema:
+			return "No se pudo interpretar el catálogo de modelos de OpenCode.", "El formato recibido no es el esperado; comprueba la versión de OpenCode."
+		}
+	}
+	return "No se pudo descubrir el catálogo de modelos de OpenCode.", "Comprueba que OpenCode está instalado y puede ejecutarse en este proyecto, y vuelve a este selector."
 }

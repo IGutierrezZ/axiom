@@ -3,6 +3,7 @@ package opencode
 import (
 	"context"
 	"errors"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -29,9 +30,9 @@ other/plain
 
 func TestDiscoverCatalogMapsVerboseOutputAndProjectDirectory(t *testing.T) {
 	var got Command
-	runner := func(_ context.Context, command Command) (CommandOutput, error) {
+	runner := func(_ context.Context, command Command) (io.Reader, error) {
 		got = command
-		return CommandOutput{Stdout: []byte(verboseCatalog)}, nil
+		return strings.NewReader(verboseCatalog), nil
 	}
 
 	providers, err := DiscoverCatalogWithRunner(context.Background(), `C:\work\project`, runner)
@@ -56,8 +57,8 @@ func TestDiscoverCatalogToleratesLogNoiseAroundRecords(t *testing.T) {
 	noisy := "[skill-registry] skipping refresh: not a project root: /Users/someone/Desktop\n" +
 		verboseCatalog +
 		"[skill-registry] refresh done\n"
-	providers, err := DiscoverCatalogWithRunner(context.Background(), "project", func(context.Context, Command) (CommandOutput, error) {
-		return CommandOutput{Stdout: []byte(noisy)}, nil
+	providers, err := DiscoverCatalogWithRunner(context.Background(), "project", func(context.Context, Command) (io.Reader, error) {
+		return strings.NewReader(noisy), nil
 	})
 	if err != nil {
 		t.Fatalf("DiscoverCatalogWithRunner() error = %v, want tolerated log preamble", err)
@@ -75,8 +76,8 @@ func TestDiscoverCatalogOrdersKnownEffortVariantsSemantically(t *testing.T) {
 		`{"id":"model","name":"Model","capabilities":{"toolcall":true},"variants":{"medium":{},"high":{},"low":{}}}` + "\n" +
 		"custom/other\n" +
 		`{"id":"other","name":"Other","capabilities":{"toolcall":true},"variants":{"zeta":{},"alpha":{}}}` + "\n"
-	providers, err := DiscoverCatalogWithRunner(context.Background(), "project", func(context.Context, Command) (CommandOutput, error) {
-		return CommandOutput{Stdout: []byte(out)}, nil
+	providers, err := DiscoverCatalogWithRunner(context.Background(), "project", func(context.Context, Command) (io.Reader, error) {
+		return strings.NewReader(out), nil
 	})
 	if err != nil {
 		t.Fatalf("DiscoverCatalogWithRunner() error = %v", err)
@@ -106,8 +107,8 @@ func TestDiscoverCatalogRejectsInvalidOutput(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := DiscoverCatalogWithRunner(context.Background(), "project", func(context.Context, Command) (CommandOutput, error) {
-				return CommandOutput{Stdout: []byte(tt.out)}, nil
+			_, err := DiscoverCatalogWithRunner(context.Background(), "project", func(context.Context, Command) (io.Reader, error) {
+				return strings.NewReader(tt.out), nil
 			})
 			var catalogErr *CatalogError
 			if !errors.As(err, &catalogErr) || catalogErr.Kind != tt.kind {
@@ -171,8 +172,8 @@ func TestDiscoverCatalogClassifiesCommandFailuresAndEmptyCatalog(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := DiscoverCatalogWithRunner(context.Background(), "project", func(context.Context, Command) (CommandOutput, error) {
-				return CommandOutput{}, tt.err
+			_, err := DiscoverCatalogWithRunner(context.Background(), "project", func(context.Context, Command) (io.Reader, error) {
+				return nil, tt.err
 			})
 			var catalogErr *CatalogError
 			if !errors.As(err, &catalogErr) || catalogErr.Kind != tt.kind {
@@ -180,8 +181,8 @@ func TestDiscoverCatalogClassifiesCommandFailuresAndEmptyCatalog(t *testing.T) {
 			}
 		})
 	}
-	providers, err := DiscoverCatalogWithRunner(context.Background(), "project", func(context.Context, Command) (CommandOutput, error) {
-		return CommandOutput{}, nil
+	providers, err := DiscoverCatalogWithRunner(context.Background(), "project", func(context.Context, Command) (io.Reader, error) {
+		return strings.NewReader(""), nil
 	})
 	if err != nil || len(providers) != 0 {
 		t.Fatalf("empty catalog = %v, %v; want empty successful catalog", providers, err)

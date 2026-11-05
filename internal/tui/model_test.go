@@ -8238,7 +8238,7 @@ func TestModelUpdateAppliesRuntimeCatalogDiscovery(t *testing.T) {
 	state.ModelPicker.StartRuntimeCatalogDiscovery(1, "project")
 	updated, _ = state.Update(screens.RuntimeCatalogDiscoveryMsg{RequestID: 1, ProjectDir: "project", Err: errors.New("unavailable")})
 	state = updated.(Model)
-	if !strings.Contains(screens.RenderModelPicker(nil, state.ModelPicker, 0), "Could not discover models from OpenCode") {
+	if !strings.Contains(screens.RenderModelPicker(nil, state.ModelPicker, 0), "No se pudo descubrir el catálogo de modelos de OpenCode") {
 		t.Fatal("runtime discovery failure did not preserve the default-assignment fallback")
 	}
 }
@@ -8305,7 +8305,7 @@ func TestInitializeModelPickerWorkingDirectoryFailureShowsDiscoveryFallback(t *t
 
 	updated, _ := m.Update(message)
 	state := updated.(Model)
-	if state.ModelPicker.CatalogStatus != screens.RuntimeCatalogFailed || !strings.Contains(screens.RenderModelPicker(nil, state.ModelPicker, 0), "Could not discover models from OpenCode") {
+	if state.ModelPicker.CatalogStatus != screens.RuntimeCatalogFailed || !strings.Contains(screens.RenderModelPicker(nil, state.ModelPicker, 0), "No se pudo descubrir el catálogo de modelos de OpenCode") {
 		t.Fatalf("working-directory failure did not show discovery fallback: %+v", state.ModelPicker)
 	}
 }
