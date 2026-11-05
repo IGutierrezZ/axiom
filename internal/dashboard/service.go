@@ -43,6 +43,9 @@ type Service struct {
 	autoskillManager *autoskill.Manager
 	semanticService  *semantic.Service
 	livingdocService *livingdoc.Service
+
+	// versions comprueba la última versión publicada de Axiom (caché con TTL).
+	versions *versionChecker
 }
 
 // NewService crea una nueva instancia del servicio para el workspace dado.
@@ -65,6 +68,7 @@ func NewService(rootPath string) *Service {
 		autoskillManager: newAutoskillManager(rootPath),
 		semanticService:  semantic.NewService(rootPath, nil, nil),
 		livingdocService: livingdoc.NewService(rootPath, nil, nil),
+		versions:         newVersionChecker(),
 	}
 
 	// Si el directorio tiene axiom.yaml y tenemos hubManager, auto-registrarlo (solo si no es un worktree)
@@ -93,6 +97,7 @@ func NewServiceWithHub(rootPath string, hubMgr *hub.Manager) *Service {
 		autoskillManager: newAutoskillManager(rootPath),
 		semanticService:  semantic.NewService(rootPath, nil, nil),
 		livingdocService: livingdoc.NewService(rootPath, nil, nil),
+		versions:         newVersionChecker(),
 	}
 }
 

@@ -52,7 +52,7 @@ Fuera: GoReleaser, políticas de release, contratos `gentle-ai.*` / `GENTLE_AI_*
 
 ## Tareas
 
-- [ ] **T1 · Servicio y endpoint de versión.**
+- [x] **T1 · Servicio y endpoint de versión.**
   - `GET /api/system/version` devuelve `{current, latest, update_available, status, release_url}`.
   - Caché en memoria con TTL; reloj y comprobador inyectables.
   - Un fallo de red da `status: check_failed` sin romper el dashboard.
@@ -99,3 +99,4 @@ Fuera: GoReleaser, políticas de release, contratos `gentle-ai.*` / `GENTLE_AI_*
 ## Progreso y evidencias
 
 - 2026-11-05: mapa hecho (delegado, solo lectura).
+- 2026-11-05: T1 hecha. `GET /api/system/version` (`internal/dashboard/version_check.go`) con caché en memoria de 6 h, reloj y comprobador inyectables, `?refresh=1`; fallo de red = `check_failed` con HTTP 200 (no se cachea). `go test ./internal/dashboard/... ./internal/update/... ./cmd/axiom/...`: ok; `internal/app`: solo falla el fallo ambiental conocido de OpenCode; `go vet`: ok; `gofmt -l`: vacío.
