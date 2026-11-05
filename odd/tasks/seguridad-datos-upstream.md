@@ -145,6 +145,8 @@ Orden de ejecución: **T1 → T4 → T2 → T3 → T5**, que sigue los cortes de
 
 - 2026-11-05: hechas T2 (`ddcea220`), T1 (`dc047508`), T4 (`7e74d2aa`) y T3 (`2835415e`), todas en local y sin push. Acumulado: unas 1.040 líneas autoradas en 4 commits de código. T5 queda en espera.
 
+- 2026-11-05: por decisión del usuario, una sola PR con `size:exception` (la misma preferencia que en P2). Rama rebasada sobre `origin/main` 8bf0fb8f; pruebas repetidas tras el rebase, todas en verde salvo el fallo ambiental de uniones de `filemerge`. **PR #228** con T1–T4. T5 irá en otra PR.
+
 ## Siguiente paso
 
 T5 espera a que se fusionen las tareas T3 y T4 del bloque de arreglos, que tocan `cli/sync.go` y `uninstall/service.go`. Antes, el usuario decide el push y la estrategia de PRs. Los cortes propuestos siguen valiendo: PR 1 = T1+T4, PR 2 = T2, PR 3 = T3 (+T5 cuando entre).
