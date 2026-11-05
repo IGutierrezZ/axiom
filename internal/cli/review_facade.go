@@ -1950,7 +1950,7 @@ func RunReviewRecover(args []string, stdout io.Writer) error {
 		}
 		liveLenses, lensErr := facadeSelectedLenses(assessment, frozenFocus)
 		if lensErr != nil || risk != prior.RiskLevel || !slices.Equal(liveLenses, prior.SelectedLenses) {
-			return errors.New("frozen recovery review shape is incompatible with current repository risk; evidence reuse cannot preserve that shape, and changing --focus or --policy cannot make it compatible")
+			return errors.New("frozen recovery review shape is incompatible with current repository risk; evidence reuse cannot preserve that shape, and changing --focus or --policy cannot make it compatible") // refusal:by-design world-action: repository risk classification drift requires a provider code fix before frozen-shape evidence reuse can be safe
 		}
 		policyHash, frozenPolicy = prior.PolicyHash, prior.FrozenPolicyContent
 		lenses = append([]string{}, prior.SelectedLenses...)
