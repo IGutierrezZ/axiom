@@ -42,6 +42,11 @@ func TestTUIListsTheSameChangesAsGetIncrements(t *testing.T) {
 
 	var fromAPI, fromTUI, pendingAPI, pendingTUI []string
 	for _, increment := range listing.list {
+		// La TUI solo lista cambios SDD; las features ODD (`change_type: "odd"`) son exclusivas del
+		// tablero web y se prueban en odd_listing_test.go.
+		if increment.ChangeType == "odd" {
+			continue
+		}
 		fromAPI = append(fromAPI, increment.Type+":"+increment.Name)
 		if increment.PendingArchive {
 			pendingAPI = append(pendingAPI, increment.Name)

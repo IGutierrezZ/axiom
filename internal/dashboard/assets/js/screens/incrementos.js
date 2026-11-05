@@ -23,6 +23,7 @@ const ALWAYS_OPEN = new Set(['verify']);
 const FILTERS = [
   { id: 'all', label: 'Activos', test: () => true },
   { id: 'bug', label: 'Bugs', test: inc => typeInfo(inc).id === 'bug' },
+  { id: 'odd', label: 'ODD', test: inc => typeInfo(inc).id === 'odd' },
   { id: 'spec', label: 'Pendiente spec', test: inc => inc.pending_spec },
   { id: 'design', label: 'Listo para design', test: inc => inc.ready_for_design },
   { id: 'waiting', label: 'Esperando roles', test: inc => inc.waiting_roles },
@@ -129,6 +130,16 @@ function dateHtml(inc) {
   return text ? `<time class="ix-date" datetime="${escapeHtml(inc.date)}">${escapeHtml(text)}</time>` : '';
 }
 
+// nameHtml: el nombre de un cambio SDD enlaza a su detalle; una feature ODD no tiene detalle (no es
+// un cambio de openspec/changes), así que se muestra como texto, con su título como ayuda.
+function nameHtml(inc, link, cls) {
+  if (inc.change_type === 'odd') {
+    const title = inc.title ? ` title="${escapeHtml(inc.title)}"` : '';
+    return `<span${cls ? ` class="${cls}"` : ''}${title}>${escapeHtml(inc.name)}</span>`;
+  }
+  return `<a${cls ? ` class="${cls}"` : ''} href="${link}">${escapeHtml(inc.name)}</a>`;
+}
+
 function cardHtml(inc) {
   const archived = isArchived(inc);
   const link = hrefFor('incremento', { change: inc.name });
@@ -139,7 +150,7 @@ function cardHtml(inc) {
   const footer = [flag, pendingArchiveBadge(inc), branchBadge(inc), dateHtml(inc)].filter(Boolean).join('');
   return `<article class="ix-card${archived ? ' is-archived' : ''}">
     <div class="ix-card-top">${typeChip(inc)}</div>
-    <h4 class="ix-name"><a href="${link}">${escapeHtml(inc.name)}</a></h4>
+    <h4 class="ix-name">${nameHtml(inc, link)}</h4>
     ${progress}
     ${footer ? `<div class="ix-card-foot">${footer}</div>` : ''}
   </article>`;
@@ -166,7 +177,7 @@ function listHtml(items) {
   const rows = items.map(inc => {
     const progress = inc.tasks_total > 0 ? `${inc.tasks_completed}/${inc.tasks_total} · ${inc.progress_pct}%` : 'Sin tareas';
     return `<tr>
-      <td><a class="ix-name-link" href="${hrefFor('incremento', { change: inc.name })}">${escapeHtml(inc.name)}</a></td>
+      <td>${nameHtml(inc, hrefFor('incremento', { change: inc.name }), 'ix-name-link')}</td>
       <td>${typeChip(inc)}</td>
       <td><span class="ix-phase-cell">${miniStepper(inc)}</span></td>
       <td class="mono">${escapeHtml(progress)}</td>
@@ -240,7 +251,9 @@ function paint() {
   const items = visibleItems();
   const archivedAll = state.increments.filter(isArchived);
   const showArchived = prefs.filter === 'all' && !effectiveRole() && prefs.view === 'board';
-  const archivedExtra = showArchived ? archivedAll.slice(0, RECENT_ARCHIVED) : [];
+  // La columna de archivo del tablero muestra los últimos cambios SDD archivados; los documentos ODD
+  // integrados (sin fecha) solo salen con el filtro «Archivados».
+  const archivedExtra = showArchived ? archivedAll.filter(inc => inc.change_type !== 'odd').slice(0, RECENT_ARCHIVED) : [];
 
   let body;
   if (items.length === 0) {
