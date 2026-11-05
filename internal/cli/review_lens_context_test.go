@@ -1173,3 +1173,30 @@ func TestLensContextBlockOnTheCapStaysWithinTheCap(t *testing.T) {
 			len(block), len(block)-budget, budget, len(reviewLensContextTerminator)+1)
 	}
 }
+
+// TestReviewLensContextInstructionAppliesSeverityRules fija que un lente sin
+// cuerpo de agente instalado aprende la misma disciplina de severidad desde el
+// propio bloque.
+func TestReviewLensContextInstructionAppliesSeverityRules(t *testing.T) {
+	instruction, err := reviewLensContextInstructionText(reviewLensContextBinding{
+		Lineage: "lineage", Target: "sha256:target", Lens: "review-risk", Order: 0,
+		Revision: "sha256:revision", RepositoryContext: "rctx2_handle", SubjectHash: "sha256:subject",
+	}, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, required := range []string{
+		"must be caused by this change", "does not already happen at the baseline", "reachable with realistic input",
+		"was not asked to change", "out-of-domain values", "at most WARNING",
+		"ignoring an explicit option or argument while reporting success",
+		"unrequested changes to existing command output or messages",
+		"must also name its observable harm", "a concrete violation of the requested behavior",
+		"a regression on input or state that was valid at the baseline", "is not harm by itself and is at most WARNING",
+		"is a regression even when nothing prohibited it",
+		"is not a regression merely because its results differ from the baseline",
+	} {
+		if !strings.Contains(instruction, required) {
+			t.Fatalf("instruction omits severity rule %q:\n%s", required, instruction)
+		}
+	}
+}

@@ -588,7 +588,10 @@ func TestKilocodeReviewSettingsMatchCurrentMainBaseline(t *testing.T) {
 	// {{AXIOM_STOP_EXITS}} marker that the composer resolves with the single
 	// three-exit text. Kilocode composes it through the OpenCode orchestrator, so the
 	// hash moves. Deliberate, not drift.
-	const want = "674432538e9cb4a1eeec57134839531bc252b34f096585829d7af4eddb95cce2"
+	// upstream-revision-nativa T4 (#5345): los cuerpos de revisor renderizados
+	// llevan reviewerprovider.SeverityRules, de modo que el hash de la
+	// configuración se mueve. Deliberate, not drift.
+	const want = "d1a6c09eca625a838f197a0e12897e04f0662ee6314d0e4913c0e9b2b90591eb"
 	if got != want {
 		t.Fatalf("Kilocode settings SHA-256 = %s, want current-main baseline %s", got, want)
 	}
@@ -898,8 +901,12 @@ func TestOpenCodeRenderedReviewProtocolCost(t *testing.T) {
 		// The STATUS preflight negotiates axiom.review-integration/v2 instead of
 		// gentle-ai.review-integration/v2 (-4 characters per row). Deliberate, not
 		// drift; the ceilings move by the same amount to preserve each margin.
-		{name: "standard", agents: []string{"review-reliability"}, beforeChars: 42_301, wantChars: 19_047, maxCharacters: 19_066},
-		{name: "full-4R", agents: []string{"review-risk", "review-resilience", "review-readability", "review-reliability"}, beforeChars: 106_998, wantChars: 35_406, maxCharacters: 37_003},
+		// upstream-revision-nativa T4 (#5345, reglas de severidad compartidas): cada
+		// cuerpo de revisor renderizado suma reviewerprovider.SeverityRules (+1.224
+		// caracteres por lente). Deliberate, not drift; los techos suben lo mismo
+		// para conservar el margen absoluto de cada fila.
+		{name: "standard", agents: []string{"review-reliability"}, beforeChars: 42_301, wantChars: 20_271, maxCharacters: 20_290},
+		{name: "full-4R", agents: []string{"review-risk", "review-resilience", "review-readability", "review-reliability"}, beforeChars: 106_998, wantChars: 40_302, maxCharacters: 41_899},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

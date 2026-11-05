@@ -843,3 +843,22 @@ func TestSDDPhaseCommandsNeverInviteReview(t *testing.T) {
 		}
 	}
 }
+
+// TestRenderedReviewerSeveritySectionCarriesSharedRules fija que la sección
+// Severity de cada cuerpo de revisor instalado lleva el texto compartido
+// reviewerprovider.SeverityRules, no una copia propia.
+func TestRenderedReviewerSeveritySectionCarriesSharedRules(t *testing.T) {
+	for _, path := range []string{"claude/agents/review-risk.md", "kiro/agents/review-resilience.md"} {
+		t.Run(path, func(t *testing.T) {
+			content := renderBoundedReviewAsset(agentForAssetPath(t, path), path)
+			_, severity, found := strings.Cut(content, "## Severity\n")
+			if !found {
+				t.Fatal("rendered lens has no severity section")
+			}
+			severity, _, _ = strings.Cut(severity, "\n## ")
+			if !strings.Contains(severity, reviewerprovider.SeverityRules) {
+				t.Fatalf("severity section omits the shared rules:\n%s", severity)
+			}
+		})
+	}
+}
