@@ -3973,10 +3973,14 @@ func injectModelAssignments(overlayBytes []byte, assignments map[string]model.Mo
 		if _, managed := agents[agent]; managed {
 			continue
 		}
-		agents[agent] = map[string]any{
-			"model":   assignment.FullID(),
-			"variant": assignment.Effort,
+		// With an empty effort the "variant" key is omitted so the deep merge
+		// keeps the variant the user already set on their own agent. Managed
+		// definitions (cases 1 and 3 above) still clear it explicitly.
+		customOverlay := map[string]any{"model": assignment.FullID()}
+		if assignment.Effort != "" {
+			customOverlay["variant"] = assignment.Effort
 		}
+		agents[agent] = customOverlay
 	}
 
 	result, err := json.MarshalIndent(overlay, "", "  ")

@@ -4467,8 +4467,8 @@ func TestInjectOpenCodeMultiModeWithCustomAgentModelAssignment(t *testing.T) {
 	if custom["description"] != "preserve me" || custom["mode"] != "subagent" {
 		t.Fatalf("custom-refactor settings were not preserved: %v", custom)
 	}
-	if variant, ok := custom["variant"].(string); !ok || variant != "" {
-		t.Fatalf("custom-refactor variant = %v, want empty string", custom["variant"])
+	if variant, _ := custom["variant"].(string); variant != "high" {
+		t.Fatalf("custom-refactor variant = %v, want the user variant \"high\" preserved", custom["variant"])
 	}
 	if _, exists := agents["missing-custom"]; exists {
 		t.Fatal("inject must not create a missing custom agent definition")
@@ -5920,6 +5920,45 @@ func TestInjectModelAssignments_RootModelFallbackClearsVariant(t *testing.T) {
 	}
 	if v != "" {
 		t.Errorf("variant = %q, want empty string (case 3 must clear stale variant)", v)
+	}
+}
+
+// A custom agent owned by the user keeps its variant when the assignment has no
+// effort, and receives the variant only when an effort is assigned.
+func TestInjectModelAssignments_CustomAgentVariantFollowsEffort(t *testing.T) {
+	overlayJSON := []byte(`{"agent":{"sdd-apply":{"mode":"subagent","prompt":"test"}}}`)
+	existing := map[string]bool{"my-researcher": true}
+
+	for _, tc := range []struct {
+		name        string
+		effort      string
+		wantKey     bool
+		wantVariant string
+	}{
+		{"empty effort omits variant", "", false, ""},
+		{"assigned effort writes variant", "high", true, "high"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			assignments := map[string]model.ModelAssignment{
+				"my-researcher": {ProviderID: "anthropic", ModelID: "claude-opus-4", Effort: tc.effort},
+			}
+			result, err := injectModelAssignments(overlayJSON, assignments, "", existing)
+			if err != nil {
+				t.Fatalf("injectModelAssignments() error = %v", err)
+			}
+			var parsed map[string]any
+			if err := json.Unmarshal(result, &parsed); err != nil {
+				t.Fatalf("Unmarshal error = %v", err)
+			}
+			custom, ok := parsed["agent"].(map[string]any)["my-researcher"].(map[string]any)
+			if !ok {
+				t.Fatal("custom agent entry missing from overlay")
+			}
+			v, hasKey := custom["variant"].(string)
+			if hasKey != tc.wantKey || v != tc.wantVariant {
+				t.Fatalf("variant = %q (present=%t), want %q (present=%t)", v, hasKey, tc.wantVariant, tc.wantKey)
+			}
+		})
 	}
 }
 

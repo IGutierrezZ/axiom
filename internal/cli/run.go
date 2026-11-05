@@ -855,10 +855,6 @@ func (r *installRuntime) stagePlan() pipeline.StagePlan {
 		})
 	}
 
-	for _, tool := range r.selection.CommunityTools {
-		apply = append(apply, communityToolInstallStep{id: "community-tool:" + string(tool), tool: tool, workspaceDir: r.workspaceDir, homeDir: r.homeDir, state: r.state})
-	}
-
 	if containsAgent(r.resolved.Agents, model.AgentOpenCode) {
 		for _, plugin := range r.selection.OpenCodePlugins {
 			apply = append(apply, openCodePluginInstallStep{id: "opencode-plugin:" + string(plugin), plugin: plugin, homeDir: r.homeDir})
@@ -894,6 +890,12 @@ func (r *installRuntime) stagePlan() pipeline.StagePlan {
 			workspaceDir: r.workspaceDir,
 			scope:        r.scope,
 		})
+	}
+	// Community tools run after persona and routing guidance, matching sync:
+	// persona replaces whole prompt files for some agents, so CodeGraph guidance
+	// injected before it would be dropped and re-added by the first sync.
+	for _, tool := range r.selection.CommunityTools {
+		apply = append(apply, communityToolInstallStep{id: "community-tool:" + string(tool), tool: tool, workspaceDir: r.workspaceDir, homeDir: r.homeDir, state: r.state})
 	}
 	// En workspace, OpenCode, Kilo y Gemini solo cargan el fichero de instrucciones
 	// de Axiom si está registrado en su configuración de proyecto (instructions o
