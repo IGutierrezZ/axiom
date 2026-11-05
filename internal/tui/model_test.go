@@ -29,6 +29,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/planner"
 	"github.com/IGutierrezZ/axiom/v3/internal/reviewtransaction"
 	"github.com/IGutierrezZ/axiom/v3/internal/state"
+	"github.com/IGutierrezZ/axiom/v3/internal/statecoord"
 	"github.com/IGutierrezZ/axiom/v3/internal/system"
 	"github.com/IGutierrezZ/axiom/v3/internal/tui/screens"
 	"github.com/IGutierrezZ/axiom/v3/internal/tui/styles"
@@ -9660,5 +9661,50 @@ func TestCustomPickerStillOffersExplicitGGA(t *testing.T) {
 	}
 	if !found {
 		t.Fatal("el selector personalizado debe seguir ofreciendo GGA como opción explícita")
+	}
+}
+
+// TestMarkPendingSyncUnderLockReReadsLatestStateAfterLockContention comprueba que
+// el indicador PendingSync del sync diferido se escribe bajo el cerrojo canónico
+// del estado y releyendo el último estado: el campo de un escritor concurrente
+// sobrevive, y con el cerrojo ocupado falla rápido sin escribir nada.
+func TestMarkPendingSyncUnderLockReReadsLatestStateAfterLockContention(t *testing.T) {
+	home := t.TempDir()
+	lockPath, err := statecoord.LockPath(home)
+	if err != nil {
+		t.Fatalf("install state lock path: %v", err)
+	}
+	held, err := reviewtransaction.AcquireAuthorityFileLock(lockPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := state.Write(home, state.InstallState{
+		InstalledAgents: []string{"opencode"},
+		RDDMode:         string(reviewtransaction.RDDModeOn),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	markPendingSyncUnderLock(home)
+	contended, err := state.Read(home)
+	if err != nil || contended.PendingSync || contended.RDDMode != string(reviewtransaction.RDDModeOn) {
+		t.Fatalf("estado tras la ejecución con cerrojo ocupado = %#v, err = %v", contended, err)
+	}
+	if err := held.Release(); err != nil {
+		t.Fatal(err)
+	}
+
+	markPendingSyncUnderLock(home)
+	got, err := state.Read(home)
+	if err != nil {
+		t.Fatalf("releer estado: %v", err)
+	}
+	if !got.PendingSync {
+		t.Fatal("PendingSync = false tras markPendingSyncUnderLock, want true")
+	}
+	if len(got.InstalledAgents) != 1 || got.InstalledAgents[0] != "opencode" {
+		t.Fatalf("InstalledAgents = %v, want [opencode]", got.InstalledAgents)
+	}
+	if got.RDDMode != string(reviewtransaction.RDDModeOn) {
+		t.Fatalf("RDDMode pisado: %q, want %q", got.RDDMode, reviewtransaction.RDDModeOn)
 	}
 }

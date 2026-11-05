@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
+	"github.com/IGutierrezZ/axiom/v3/internal/reviewtransaction"
 	"github.com/IGutierrezZ/axiom/v3/internal/state"
 )
 
@@ -122,5 +123,60 @@ func TestRunSyncWithSelectionMigratesAliasOnNoOpSync(t *testing.T) {
 	}
 	if !strings.Contains(buf.String(), personaAliasRemapNotice) {
 		t.Fatalf("notice not printed on no-op sync; got %q", buf.String())
+	}
+}
+
+// La instantánea orientativa se lee antes del cerrojo: la migración debe releer
+// el último estado dentro del cerrojo en vez de reescribir la instantánea
+// caducada. El RDDMode de un escritor concurrente sobrevive al remapeo y, con el
+// cerrojo ocupado, falla rápido sin escribir ni avisar.
+func TestMigratePersistedPersonaAliasReReadsLatestStateAfterLockContention(t *testing.T) {
+	var buf bytes.Buffer
+	previous := personaNoticeWriter
+	personaNoticeWriter = &buf
+	defer func() { personaNoticeWriter = previous }()
+
+	home := t.TempDir()
+	persisted := state.InstallState{Persona: string(model.PersonaGentlemanNeutralArtifacts)}
+
+	held, err := reviewtransaction.AcquireAuthorityFileLock(mustInstallStateLockPath(t, home))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := state.Write(home, state.InstallState{
+		Persona: string(model.PersonaGentlemanNeutralArtifacts),
+		RDDMode: string(reviewtransaction.RDDModeOn),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := migratePersistedPersonaAlias(state.GlobalStore(home), &persisted, nil); err == nil || !strings.Contains(err.Error(), "acquire install state lock") {
+		t.Fatalf("error de migración con cerrojo ocupado = %v", err)
+	}
+	if buf.Len() != 0 {
+		t.Fatalf("la ejecución con cerrojo ocupado imprimió %q, want silencio", buf.String())
+	}
+	contended, err := state.Read(home)
+	if err != nil || contended.Persona != string(model.PersonaGentlemanNeutralArtifacts) || contended.RDDMode != string(reviewtransaction.RDDModeOn) {
+		t.Fatalf("estado tras la ejecución con cerrojo ocupado = %#v, err = %v", contended, err)
+	}
+	if err := held.Release(); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := migratePersistedPersonaAlias(state.GlobalStore(home), &persisted, nil); err != nil {
+		t.Fatalf("migratePersistedPersonaAlias() error = %v", err)
+	}
+	got, err := state.Read(home)
+	if err != nil {
+		t.Fatalf("releer estado: %v", err)
+	}
+	if got.Persona != string(model.PersonaNeutral) {
+		t.Fatalf("persona = %q, want %q", got.Persona, model.PersonaNeutral)
+	}
+	if got.RDDMode != string(reviewtransaction.RDDModeOn) {
+		t.Fatalf("RDDMode pisado: %q, want %q", got.RDDMode, reviewtransaction.RDDModeOn)
+	}
+	if !strings.Contains(buf.String(), personaAliasRemapNotice) {
+		t.Fatalf("no se imprimió el aviso; got %q", buf.String())
 	}
 }
