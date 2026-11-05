@@ -231,3 +231,24 @@ func TestPermissionUninstallDoesNotTouchApprovalModesAxiomNoLongerWrites(t *test
 		})
 	}
 }
+
+// Las instalaciones anteriores escribieron reglas deny relativas al proyecto: la
+// desinstalación debe retirarlas junto a las ancladas al HOME y conservar las del usuario.
+func TestPermissionUninstallClaudeRemovesLegacyHomeDenyRules(t *testing.T) {
+	homeDir := t.TempDir()
+	settingsPath := filepath.Join(homeDir, ".claude", "settings.json")
+	seed := `{"permissions":{"deny":["Bash(curl *)","Read(.ssh/*)","Edit(.config/gh/hosts.yml)","Read(~/.ssh/**)","Read(custom/**)"]}}`
+	if err := os.MkdirAll(filepath.Dir(settingsPath), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(settingsPath, []byte(seed), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	applyPermissionOperations(t, homeDir, model.AgentClaudeCode)
+
+	got := readJSONFileForTest(t, settingsPath)
+	if gotDeny := stringsAt(t, got, "permissions", "deny"); !slices.Equal(gotDeny, []string{"Bash(curl *)", "Read(custom/**)"}) {
+		t.Fatalf("permissions.deny = %v, want solo las entradas del usuario", gotDeny)
+	}
+}

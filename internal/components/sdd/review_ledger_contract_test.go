@@ -594,7 +594,12 @@ func TestKilocodeReviewSettingsMatchCurrentMainBaseline(t *testing.T) {
 	// upstream-revision-nativa T6 (#5351, parcial): la sección compartida «Delegated
 	// Verification Gate» verifica por nivel de riesgo con RDD encendido o apagado, así
 	// que el hash de la configuración se mueve. Deliberate, not drift.
-	const want = "f4a61a9a4c7529c0ff684eec77f5ec2fbff45936bee037a988cb3dbba1fade47"
+	// adaptadores-agentes-upstream T1 (upstream #4998/#4471): el overlay compartido de
+	// OpenCode deja de escribir `__managed_by` en cada agente, porque los proveedores con
+	// validación estricta del esquema lo rechazan. Kilocode hereda el overlay, así que el
+	// hash cambia solo por esa clave. Deliberate, not drift.
+	// Fusión de main en upstream-revision-nativa: el hash combina los dos cambios anteriores.
+	const want = "ec83f406e9bde635683cc3e0fea99a059ac061e75228ef20cf1a556c48b72ddb"
 	if got != want {
 		t.Fatalf("Kilocode settings SHA-256 = %s, want current-main baseline %s", got, want)
 	}

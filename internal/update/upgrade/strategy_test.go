@@ -1100,7 +1100,7 @@ func TestBrewUpgrade_RunsUpdateBeforeUpgrade(t *testing.T) {
 		return mockCmd("echo", "ok")
 	}
 
-	err := brewUpgrade(context.Background(), update.UpdateResult{Tool: update.ToolInfo{Name: "gentle-ai"}}, update.HomebrewFormula)
+	err := brewUpgrade(context.Background(), update.UpdateResult{Tool: update.ToolInfo{Name: "engram"}}, update.HomebrewFormula)
 	if err != nil {
 		t.Fatalf("brewUpgrade: unexpected error: %v", err)
 	}
@@ -1141,7 +1141,7 @@ func TestBrewUpgrade_UpdateFailureIsNonFatal(t *testing.T) {
 		return mockCmd("echo", "Upgraded gentle-ai")
 	}
 
-	err := brewUpgrade(context.Background(), update.UpdateResult{Tool: update.ToolInfo{Name: "gentle-ai"}}, update.HomebrewFormula)
+	err := brewUpgrade(context.Background(), update.UpdateResult{Tool: update.ToolInfo{Name: "engram"}}, update.HomebrewFormula)
 	// brew update failed but brew upgrade succeeded → overall success.
 	if err != nil {
 		t.Errorf("expected success when brew update fails but brew upgrade succeeds, got: %v", err)
@@ -1227,15 +1227,39 @@ func TestBrewUpgrade_FormulaToolUsesFormulaTrust(t *testing.T) {
 		return mockCmd("echo", "ok")
 	}
 
-	if err := brewUpgrade(context.Background(), update.UpdateResult{Tool: update.ToolInfo{Name: "gentle-ai"}}, update.HomebrewFormula); err != nil {
+	if err := brewUpgrade(context.Background(), update.UpdateResult{Tool: update.ToolInfo{Name: "engram"}}, update.HomebrewFormula); err != nil {
 		t.Fatalf("brewUpgrade: unexpected error: %v", err)
 	}
 
-	if len(trustArgs) != 2 || trustArgs[0] != "--formula" || trustArgs[1] != "gentleman-programming/tap/gentle-ai" {
-		t.Fatalf("brew trust args = %v, want [--formula gentleman-programming/tap/gentle-ai]", trustArgs)
+	if len(trustArgs) != 2 || trustArgs[0] != "--formula" || trustArgs[1] != "gentleman-programming/tap/engram" {
+		t.Fatalf("brew trust args = %v, want [--formula gentleman-programming/tap/engram]", trustArgs)
 	}
 }
 
+// TestBrewUpgrade_SelfToolSkipsForeignTap pins that Axiom's own upgrade never
+// taps nor trusts Gentleman-Programming's Homebrew tap: only engram and gga,
+// whose formulas live there, do.
+func TestBrewUpgrade_SelfToolSkipsForeignTap(t *testing.T) {
+	origExecCommand := execCommand
+	t.Cleanup(func() { execCommand = origExecCommand })
+
+	var subcommands []string
+	execCommand = func(name string, args ...string) *exec.Cmd {
+		if name == "brew" && len(args) > 0 {
+			subcommands = append(subcommands, args[0])
+		}
+		return mockCmd("echo", "ok")
+	}
+
+	if err := brewUpgrade(context.Background(), update.UpdateResult{Tool: update.ToolInfo{Name: "gentle-ai"}}, update.HomebrewFormula); err != nil {
+		t.Fatalf("brewUpgrade: unexpected error: %v", err)
+	}
+	for _, sub := range subcommands {
+		if sub == "tap" || sub == "trust" {
+			t.Fatalf("brew %s must not run for the self tool; calls = %v", sub, subcommands)
+		}
+	}
+}
 func TestHomebrewFailureAdviceTapTrust(t *testing.T) {
 	output := `Error: Refusing to load formula gentleman-programming/tap/gentle-ai from untrusted tap.
 Run brew trust --formula gentleman-programming/tap/gentle-ai to trust it.`

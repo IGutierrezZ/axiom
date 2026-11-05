@@ -341,6 +341,8 @@ func TestPowerShellShimResolvesGitBash(t *testing.T) {
 		{name: "cmd Git uses root bin Bash", gitPath: `Git\cmd\git.exe`, bashPaths: []string{`Git\bin\bash.exe`}, wantBash: `Git\bin\bash.exe`},
 		{name: "bin Git uses root bin Bash", gitPath: `Git\bin\git.exe`, bashPaths: []string{`Git\bin\bash.exe`}, wantBash: `Git\bin\bash.exe`},
 		{name: "mingw64 bin Git uses root bin Bash case insensitively", gitPath: `Git\MINGW64\BIN\git.exe`, bashPaths: []string{`Git\bin\bash.exe`}, wantBash: `Git\bin\bash.exe`},
+		{name: "ucrt64 bin Git uses root bin Bash", gitPath: `Git\UCRT64\bin\git.exe`, bashPaths: []string{`Git\bin\bash.exe`}, wantBash: `Git\bin\bash.exe`},
+		{name: "clang64 bin Git uses root bin Bash", gitPath: `Git\clang64\bin\git.exe`, bashPaths: []string{`Git\bin\bash.exe`}, wantBash: `Git\bin\bash.exe`},
 		{name: "root bin is preferred", gitPath: `Git\cmd\git.exe`, bashPaths: []string{`Git\bin\bash.exe`, `Git\usr\bin\bash.exe`}, wantBash: `Git\bin\bash.exe`},
 		{name: "usr bin is fallback", gitPath: `Git\cmd\git.exe`, bashPaths: []string{`Git\usr\bin\bash.exe`}, wantBash: `Git\usr\bin\bash.exe`},
 		{name: "installation path may contain spaces", gitPath: `Git Install\cmd\git.exe`, bashPaths: []string{`Git Install\bin\bash.exe`}, wantBash: `Git Install\bin\bash.exe`},

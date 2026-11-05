@@ -13,6 +13,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/components/agentguidance"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/filemerge"
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
+	opencodeactivation "github.com/IGutierrezZ/axiom/v3/internal/opencode"
 	"github.com/IGutierrezZ/axiom/v3/internal/state"
 )
 
@@ -506,9 +507,10 @@ func contextFileNameRemoval(entry string, defaults []string) func(raw []byte) ([
 }
 
 // removeManagedAgentEntries retira de agent.* las definiciones que llevan la marca
-// de Axiom (__managed_by) y deja las del usuario. El overlay de OpenCode y Kilo
-// declara el orquestador, las fases de SDD, los jueces y los revisores con esa
-// marca, de modo que no hace falta enumerarlos.
+// de Axiom y deja las del usuario. El overlay de OpenCode y Kilo ya no escribe el
+// marcador __managed_by, así que se identifican por nombre y forma (orquestador,
+// fases de SDD, jueces, revisores y perfiles), y el marcador heredado de las
+// instalaciones previas sigue valiendo.
 func removeManagedAgentEntries(raw []byte) ([]byte, bool, error) {
 	root, err := unmarshalJSONObject(raw)
 	if err != nil {
@@ -524,7 +526,7 @@ func removeManagedAgentEntries(raw []byte) ([]byte, bool, error) {
 		if !isObject {
 			continue
 		}
-		if marker, _ := definition["__managed_by"].(string); marker == "axiom/sdd" || marker == "gentle-ai/sdd" {
+		if opencodeactivation.IsManagedAgent(name, definition) {
 			delete(agentsObject, name)
 			changed = true
 		}

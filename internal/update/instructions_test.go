@@ -25,11 +25,11 @@ func TestSelfHintDerivedFromToolInfo(t *testing.T) {
 		want          string
 	}{
 		{
-			name:          "fork macOS brew-owned derives brew upgrade from Name",
+			name:          "fork macOS brew-owned still gets the binary hint (no Axiom formula)",
 			tool:          forkSourceTool,
 			profile:       system.PlatformProfile{OS: "darwin", PackageManager: "brew"},
 			brewInstalled: true,
-			want:          "brew upgrade axiom",
+			want:          "axiom upgrade (downloads pre-built binary)",
 		},
 		{
 			name:    "fork macOS non-brew names the fork binary",
@@ -50,11 +50,11 @@ func TestSelfHintDerivedFromToolInfo(t *testing.T) {
 			want:    WindowsDistributionHoldMessage + " Install/update from source with Go 1.25.10+: " + forkCloneBuild,
 		},
 		{
-			name:          "upstream macOS brew-owned derives brew upgrade from Name",
+			name:          "upstream macOS brew-owned still gets the binary hint (no Axiom formula)",
 			tool:          upstreamSourceTool,
 			profile:       system.PlatformProfile{OS: "darwin", PackageManager: "brew"},
 			brewInstalled: true,
-			want:          "brew upgrade gentle-ai",
+			want:          "gentle-ai upgrade (downloads pre-built binary)",
 		},
 		{
 			name:    "upstream macOS non-brew names the upstream binary",

@@ -218,4 +218,17 @@ Cada tarea es una entrega de unas 400 líneas como máximo (heurística orientat
 
 ## Siguiente paso
 
-T1–T17 están hechas y verificadas. Antes del primer PR hay que preguntar la estrategia de cadena (`stacked-to-main` o `feature-branch-chain`): la rama supera con creces el presupuesto de entrega. T6 debe fusionarse antes de la guía del orquestador T1. T18–T20 esperan a D2. Push y PR los decide el usuario.
+T1–T17 están hechas y verificadas.
+
+**Estrategia de entrega:** `exception-ok`, decidida por el usuario el 2026-11-05 («unico pr con size expection»). Todo va en un único PR con excepción de tamaño, sin cadena.
+
+**Integración de `main` (105 commits, entre ellos #226 a #231):**
+- La guía del orquestador T1 (#226) se fusionó antes que T6, así que el orden previsto no se cumplió.
+- Aun así, la fusión no tuvo conflicto en `sdd-orchestrator-sections.md`.
+- Hubo un único conflicto, en el hash de Kilocode de `review_ledger_contract_test.go`. Se resolvió con el hash combinado `ec83f406…` y se regeneraron los goldens.
+- Comprobaciones:
+  - `go vet ./...`: OK.
+  - `go test ./internal/components/... ./internal/assets/... -count=1`: OK, salvo los 2 tests de junction de `filemerge` (fallo de entorno conocido).
+  - `go test ./internal/cli/ -run 'TestEveryRegisteredGuardPopulation|TestEveryProductionRefusal|TestGuardPopulation|TestRctx2|TestRejectedValidatorDispositionThroughReviewCLI'`: OK.
+
+**Pendiente:** T18–T20 esperan a D2. El push y el PR los decide el usuario.

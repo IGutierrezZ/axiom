@@ -88,10 +88,6 @@ func openCodeRegisteredNotMaterializedHint(tool ToolInfo) string {
 // the advertised target instead of the latest stable release. Every value is
 // derived from tool; no upstream coordinate is hardcoded (D-04).
 func gentleAIHint(tool ToolInfo, profile system.PlatformProfile) string {
-	if profile.PackageManager == "brew" && homebrewPackageInstalled(tool.Name) {
-		return "brew upgrade " + tool.Name
-	}
-
 	switch profile.OS {
 	case "linux":
 		return "curl -fsSL https://raw.githubusercontent.com/" + tool.Owner + "/" + tool.Repo + "/main/scripts/install.sh | bash"

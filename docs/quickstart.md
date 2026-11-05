@@ -1,18 +1,41 @@
 # Inicio rápido
 
-Axiom es el producto de este repositorio. Esta guía cubre la instalación desde el código fuente, la configuración de los agentes que ya utilizas y las comprobaciones iniciales. La integración de Axiom no instala los runtimes de los agentes ni aplica temas visuales.
+Axiom es el producto de este repositorio. Esta guía cubre la instalación con un solo comando, la configuración de los agentes que ya utilizas y las comprobaciones iniciales. La integración de Axiom no instala los runtimes de los agentes ni aplica temas visuales.
 
 ## Requisitos
 
-- Go 1.25.10 o posterior para compilar Axiom.
-- Git 2.38 o posterior.
+- Linux y macOS: solo `curl`; el instalador descarga el archivo firmado de la última release. No hacen falta Go ni Git.
+- Windows: Go 1.25.10 o posterior (el binario oficial está retenido hasta la firma Authenticode, ver [`release-signing.md`](release-signing.md)). Si falta, `winget install --id GoLang.Go -e` y abre una terminal nueva.
+- Go 1.25.10 o posterior y Git 2.38 o posterior solo si vas a contribuir o compilar desde el checkout (sección «Contribuir / desarrollo»).
 - Node.js 18 y npm. Axiom los comprueba y muestra una advertencia con una sugerencia si faltan; no los instala. Son necesarios para CodeGraph y para las integraciones que usan paquetes npm.
 - Pi disponible como `pi` en `PATH` si vas a seleccionar esa integración.
 - Axiom admite macOS, Linux y Windows. En Linux, la compatibilidad de instalación se limita a Ubuntu/Debian, Arch y Fedora/RHEL y sus derivados indicados por el diagnóstico.
 
-## Instalar Axiom desde el repositorio
+## Instalar Axiom
 
-Clona este repositorio y compila el ejecutable `axiom`:
+Un solo comando, sin clonar el repositorio.
+
+Linux y macOS:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/IGutierrezZ/axiom/main/scripts/install.sh | bash
+axiom version
+```
+
+Windows (PowerShell):
+
+```powershell
+irm https://raw.githubusercontent.com/IGutierrezZ/axiom/main/scripts/install.ps1 | iex
+axiom version
+```
+
+El script de Windows ejecuta `go install github.com/IGutierrezZ/axiom/v3/cmd/axiom@latest`; el ejecutable queda en el directorio `bin` de Go (`GOBIN` o, si no está definido, `GOPATH/bin`), que debe estar en `PATH`. Para instalar desde `main` (canal beta): en Linux y macOS, `curl -fsSL https://raw.githubusercontent.com/IGutierrezZ/axiom/main/scripts/install.sh | AXIOM_CHANNEL=beta bash` (la variable debe aplicarse a `bash`, no a `curl`); en PowerShell, `$env:AXIOM_CHANNEL = "beta"` antes del comando `irm ... | iex`.
+
+Si ese directorio no está en el `PATH`, los instaladores lo añaden por ti. `install.ps1` lo añade al `PATH` de usuario (`HKCU\Environment`) sin duplicarlo y conservando el tipo `REG_EXPAND_SZ` y las variables sin expandir. `install.sh` añade al fichero de arranque de tu shell (`~/.bashrc`, o `~/.bash_profile` en macOS; `~/.zshrc`; `~/.config/fish/config.fish`) una línea marcada con `# axiom: PATH` que no se repite. Si la shell no se reconoce, solo avisa y muestra la línea que debes añadir. Abre una terminal nueva para que surta efecto. Con `AXIOM_NO_PERSISTENT_PATH=1` los instaladores no tocan el `PATH` y solo avisan.
+
+## Contribuir / desarrollo
+
+Solo si vas a modificar Axiom: clona el repositorio y compila el ejecutable `axiom`.
 
 ```sh
 git clone https://github.com/IGutierrezZ/axiom.git
@@ -21,7 +44,7 @@ go install ./cmd/axiom
 axiom version
 ```
 
-`go install` coloca el ejecutable en el directorio `bin` de Go (`GOBIN` o, si no está definido, `GOPATH/bin`). Asegúrate de que ese directorio está en `PATH`. Para probar la versión del checkout sin instalarla:
+Para probar la versión del checkout sin instalarla:
 
 ```sh
 go run ./cmd/axiom version
@@ -73,11 +96,11 @@ Para abrir la interfaz de terminal de forma explícita:
 axiom tui
 ```
 
-El comando `axiom` también abre la TUI cuando se ejecuta en una terminal interactiva. `axiom ui` inicia el panel web local.
+El comando `axiom` también abre la TUI cuando se ejecuta en una terminal interactiva. `axiom ui` inicia el panel web local en `http://127.0.0.1:47700`; en Windows el instalador añade el acceso directo `Axiom` al menú Inicio y una tarea programada que arranca el servidor al iniciar sesión (véase [uso](usage.md#ui)).
 
 ## Protecciones integradas
 
-Al seleccionar `permissions`, Axiom aplica a Claude Code, OpenCode y Kilo Code una lista de rutas sensibles que incluye `~/.ssh/*`, `**/*.pem`, `**/*.key`, `**/.env*` y `~/.aws/credentials`. Solo añade reglas de denegación y de confirmación: no activa ningún modo de autoaprobación y, con `--scope workspace`, escribe en el proyecto y no en tu HOME. Consulta el detalle en [Componentes](components.md).
+Al seleccionar `permissions`, Axiom aplica a Claude Code, OpenCode y Kilo Code una lista de rutas sensibles que incluye `~/.ssh/**` y `~/.aws/credentials` (en Claude Code, ancladas al HOME; en OpenCode y Kilo Code, `**/.ssh/**` y `**/.aws/credentials`), `**/*.pem`, `**/*.key` y `.env`. Solo añade reglas de denegación y de confirmación: no activa ningún modo de autoaprobación y, con `--scope workspace`, escribe en el proyecto y no en tu HOME. Consulta el detalle en [Componentes](components.md).
 
 ## Plataformas no compatibles
 

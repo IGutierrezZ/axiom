@@ -422,3 +422,57 @@ func TestManagedConfigPriorityRecognizesBothManagedByMarkers(t *testing.T) {
 		})
 	}
 }
+
+// Sin marcador, la detección por nombre y forma sigue puntuando: el overlay actual no
+// escribe `__managed_by`, y el orquestador (que no es hidden) también cuenta.
+func TestManagedConfigPriorityDetectsManagedAgentsWithoutMarker(t *testing.T) {
+	tests := []struct {
+		name    string
+		content string
+		want    int
+	}{
+		{name: "orquestador gestionado", content: `{"agent":{"axiom-orchestrator":{"mode":"primary","prompt":"p","permission":{}}}}`, want: 1},
+		{name: "perfil gestionado", content: `{"agent":{"sdd-orchestrator-fast":{"mode":"primary","prompt":"p","permission":{}}}}`, want: 1},
+		{name: "fase gestionada", content: `{"agent":{"sdd-apply":{"mode":"subagent","hidden":true,"prompt":"p","permission":{}}}}`, want: 1},
+		{name: "nombre de usuario con la misma forma", content: `{"agent":{"mio":{"mode":"primary","hidden":true,"prompt":"p","permission":{}}}}`, want: 0},
+		{name: "general del usuario sin hidden", content: `{"agent":{"general":{"prompt":"p","permission":{}}}}`, want: 0},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "opencode.json")
+			if err := os.WriteFile(path, []byte(tt.content), 0o600); err != nil {
+				t.Fatalf("write fixture: %v", err)
+			}
+			if got := managedConfigPriority(path); got != tt.want {
+				t.Fatalf("managedConfigPriority() = %d, want %d", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestIsManagedAgent(t *testing.T) {
+	shaped := map[string]any{"prompt": "p", "permission": map[string]any{}}
+	tests := []struct {
+		name string
+		def  map[string]any
+		want bool
+	}{
+		{"axiom-orchestrator", shaped, true},
+		{"sdd-orchestrator-fast", shaped, true},
+		{"jd-judge-a-fast", shaped, true},
+		{"review-validator", shaped, true},
+		{"sdd-apply", map[string]any{"mode": "subagent"}, false},
+		{"sdd-orchestrator-", shaped, false},
+		{"mio", shaped, false},
+		{"general", shaped, false},
+		{"general", map[string]any{"hidden": true, "prompt": "p", "permission": map[string]any{}}, true},
+		{"mio", map[string]any{"__managed_by": "axiom/sdd"}, true},
+		{"mio", map[string]any{"__managed_by": "gentle-ai/sdd"}, true},
+		{"sdd-apply", map[string]any{"__managed_by": "otra"}, false},
+	}
+	for _, tt := range tests {
+		if got := IsManagedAgent(tt.name, tt.def); got != tt.want {
+			t.Errorf("IsManagedAgent(%q, %v) = %v, want %v", tt.name, tt.def, got, tt.want)
+		}
+	}
+}

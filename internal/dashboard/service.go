@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -43,6 +44,15 @@ type Service struct {
 	autoskillManager *autoskill.Manager
 	semanticService  *semantic.Service
 	livingdocService *livingdoc.Service
+
+	// versions comprueba la última versión publicada de Axiom (caché con TTL).
+	versions *versionChecker
+
+	// update es el único trabajo de actualización del proceso (update_job.go).
+	update updateJobState
+
+	// restartFn lo registra el Server: relanza el dashboard tras autoactualizarse.
+	restartFn func(sync *UpdateSyncSummary)
 }
 
 // NewService crea una nueva instancia del servicio para el workspace dado.
@@ -65,6 +75,7 @@ func NewService(rootPath string) *Service {
 		autoskillManager: newAutoskillManager(rootPath),
 		semanticService:  semantic.NewService(rootPath, nil, nil),
 		livingdocService: livingdoc.NewService(rootPath, nil, nil),
+		versions:         newVersionChecker(),
 	}
 
 	// Si el directorio tiene axiom.yaml y tenemos hubManager, auto-registrarlo (solo si no es un worktree)
@@ -93,6 +104,7 @@ func NewServiceWithHub(rootPath string, hubMgr *hub.Manager) *Service {
 		autoskillManager: newAutoskillManager(rootPath),
 		semanticService:  semantic.NewService(rootPath, nil, nil),
 		livingdocService: livingdoc.NewService(rootPath, nil, nil),
+		versions:         newVersionChecker(),
 	}
 }
 
@@ -245,6 +257,16 @@ func (s *Service) GetIncrements() ([]IncrementSummaryDTO, []string, error) {
 	}
 	notes = append(notes, registryNotes...)
 	notes = append(notes, pendingNotes...)
+
+	// Features ODD: las activas de los worktrees (detectadas por contenido) y, como archivadas, las
+	// del checkout principal. El aviso de «worktree ya integrado» viaja con los demás.
+	oddList, oddNotes := oddIncrements(loc)
+	list = append(list, oddList...)
+	for _, note := range oddNotes {
+		if !slices.Contains(notes, note) {
+			notes = append(notes, note)
+		}
+	}
 
 	// 2. Escanear cambios archivados en <planning home>/changes/archive/
 	archiveDir := filepath.Join(root, "changes", "archive")

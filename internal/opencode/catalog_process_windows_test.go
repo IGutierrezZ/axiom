@@ -4,11 +4,15 @@ package opencode
 
 import (
 	"context"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"testing"
 	"time"
+
+	"golang.org/x/sys/windows"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/testenv"
 )
@@ -63,5 +67,101 @@ func main() {
 
 	if elapsed > 10*time.Second {
 		t.Fatalf("discovery stayed blocked for %v; want bounded by the 300ms deadline", elapsed)
+	}
+}
+
+// TestCatalogDescendantHelperProcess no es una prueba: es el cuerpo del hijo
+// (parent) y del nieto (grandchild) que lanzan las pruebas siguientes, sin
+// compilar ningún ejecutable: se relanza el propio binario de test.
+func TestCatalogDescendantHelperProcess(t *testing.T) {
+	switch os.Getenv("AXIOM_CATALOG_DESCENDANT") {
+	case "parent":
+		// Margen para que el padre asigne este proceso al Job Object antes de
+		// que nazca el nieto, que hereda la pertenencia al job.
+		time.Sleep(300 * time.Millisecond)
+		grandchild := exec.Command(os.Args[0], "-test.run=^TestCatalogDescendantHelperProcess$")
+		grandchild.Env = append(os.Environ(), "AXIOM_CATALOG_DESCENDANT=grandchild")
+		grandchild.Stdout, grandchild.Stderr = os.Stdout, os.Stderr
+		_ = grandchild.Start()
+		time.Sleep(time.Minute)
+	case "grandchild":
+		_ = os.WriteFile(os.Getenv("AXIOM_CATALOG_PIDFILE"), []byte(strconv.Itoa(os.Getpid())), 0o600)
+		time.Sleep(time.Minute)
+	}
+}
+
+// grandchildPID espera a que el nieto publique su PID.
+func grandchildPID(t *testing.T, pidFile string) uint32 {
+	t.Helper()
+	deadline := time.Now().Add(10 * time.Second)
+	for time.Now().Before(deadline) {
+		if data, err := os.ReadFile(pidFile); err == nil {
+			if pid, err := strconv.Atoi(string(data)); err == nil && pid > 0 {
+				return uint32(pid)
+			}
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+	t.Fatal("el nieto no llegó a arrancar")
+	return 0
+}
+
+func processExited(pid uint32) bool {
+	h, err := windows.OpenProcess(windows.SYNCHRONIZE, false, pid)
+	if err != nil {
+		return true
+	}
+	defer windows.CloseHandle(h)
+	event, _ := windows.WaitForSingleObject(h, 0)
+	return event == windows.WAIT_OBJECT_0
+}
+
+// TestCatalogCancellationLeavesNoOrphanGrandchildWindows prueba, con las rutas
+// reales de DiscoverCatalog (tubería y fichero), que cancelar un hijo que lanzó
+// un nieto no deja al nieto vivo.
+func TestCatalogCancellationLeavesNoOrphanGrandchildWindows(t *testing.T) {
+	for _, tt := range []struct {
+		name   string
+		major  RuntimeMajor
+		runner CatalogRunner
+	}{
+		{"streamCatalogCommand", RuntimeV1, streamCatalogCommand},
+		{"fileCatalogCommand", RuntimeV2, fileCatalogCommand},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			pidFile := filepath.Join(t.TempDir(), "grandchild.pid")
+			runner := func(ctx context.Context, _ Command) (io.Reader, error) {
+				return tt.runner(ctx, Command{
+					Path: os.Args[0],
+					Args: []string{"-test.run=^TestCatalogDescendantHelperProcess$"},
+					Env:  []string{"AXIOM_CATALOG_DESCENDANT=parent", "AXIOM_CATALOG_PIDFILE=" + pidFile},
+				})
+			}
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+			result := make(chan error, 1)
+			go func() {
+				_, err := discoverCatalogForMajor(ctx, "project", tt.major, runner)
+				result <- err
+			}()
+
+			pid := grandchildPID(t, pidFile)
+			if processExited(pid) {
+				t.Fatal("el nieto debía estar vivo antes de cancelar")
+			}
+			cancel()
+			select {
+			case err := <-result:
+				wantCatalogKind(t, err, CatalogErrorTimeout)
+			case <-time.After(15 * time.Second):
+				t.Fatal("el descubrimiento siguió bloqueado tras cancelar")
+			}
+			for deadline := time.Now().Add(5 * time.Second); !processExited(pid); {
+				if time.Now().After(deadline) {
+					t.Fatalf("el nieto %d sigue vivo tras cancelar el descubrimiento", pid)
+				}
+				time.Sleep(20 * time.Millisecond)
+			}
+		})
 	}
 }

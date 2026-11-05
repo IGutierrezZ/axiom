@@ -21,6 +21,10 @@
       document.documentElement.dataset.theme = theme;
     })();
   </script>
+  <link rel="manifest" href="/manifest.webmanifest">
+  <meta name="theme-color" content="#0E0F12">
+  <link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/icons/icon-192.png">
   <link rel="preload" href="/fonts/instrument-sans-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/tokens.css">
   <link rel="stylesheet" href="/style.css">
@@ -112,10 +116,14 @@
         </nav>
         <div class="topbar-spacer"></div>
         <div class="topbar-actions">
+          <button type="button" id="btn-install-app" class="btn" title="Instalar Axiom como aplicación de escritorio" hidden><i data-icon="download"></i>Instalar aplicación</button>
           <button type="button" id="btn-refresh" class="btn btn-icon" aria-label="Actualizar datos" title="Actualizar datos"><i data-icon="refresh"></i></button>
           <button type="button" id="btn-new-increment" class="btn btn-primary" title="Crear un nuevo incremento SDD"><i data-icon="plus"></i>Nuevo incremento</button>
         </div>
       </header>
+
+      <!-- Aviso de versión nueva de Axiom; oculto salvo que haya una release más reciente -->
+      <div id="update-banner" class="alert alert-warn update-banner" role="status" hidden></div>
 
       <main id="main" class="main" tabindex="-1">
         <!-- ===== Inicio ===== -->
@@ -183,7 +191,7 @@
           <div class="page-header">
             <div>
               <h1 id="incrementos-title" class="page-title" tabindex="-1">Incrementos</h1>
-              <p class="page-sub">Ciclo de vida SDD de cada cambio, de la propuesta al archivo.</p>
+              <p class="page-sub">Ciclo de vida de cada cambio SDD y de cada feature ODD, de la propuesta al archivo.</p>
             </div>
             <div class="seg-group seg-inline" role="group" aria-label="Vista" id="inc-view-toggle">
               <button type="button" class="seg seg-wide" data-view="board" aria-pressed="true"><i data-icon="board" data-size="15"></i>Tablero</button>

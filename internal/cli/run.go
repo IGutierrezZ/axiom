@@ -248,6 +248,7 @@ func RunInstall(args []string, detection system.DetectionResult) (InstallResult,
 		return result, fmt.Errorf("execute install pipeline: %w", result.Execution.Err)
 	}
 	result.PiCodeGraph = runtime.state.piCodeGraph
+	result.Execution.ManualActions = append(result.Execution.ManualActions, runtime.state.ggaManualActions()...)
 	result.Execution.ManualActions = append(result.Execution.ManualActions, runtime.state.retirementNotes...)
 	result.Execution.ManualActions = append(result.Execution.ManualActions, engramSetupSkippedNote(input.Scope, resolved.OrderedComponents, resolved.Agents)...)
 	result.Execution.ManualActions = append(result.Execution.ManualActions, optInFootprintNotes(input.Scope, homeDir, resolved.OrderedComponents, resolved.Agents, input.Selection)...)
@@ -260,7 +261,7 @@ func RunInstall(args []string, detection system.DetectionResult) (InstallResult,
 		Resolved:     resolved,
 		State:        runtime.state,
 	})
-	result.Verify = withPostInstallNotes(result.Verify, resolved)
+	result.Verify = withPostInstallNotes(result.Verify, resolved, runtime.state.ggaInstallDeferred)
 	result.Verify = withOpenCodeBackgroundPending(result.Verify, background, runtime.runtimeReady, resolved.Agents)
 	result.Verify = withOpenCodeBackgroundActivationNote(result.Verify, background, resolved.Agents)
 	if plan := piBackground.projectionPlan; plan != nil && plan.skipReason != "" {
@@ -445,10 +446,10 @@ func mergeExplicitAgentInstallState(store state.Store, newState state.InstallSta
 	return merged, nil
 }
 
-func withPostInstallNotes(report verify.Report, resolved planner.ResolvedPlan) verify.Report {
+func withPostInstallNotes(report verify.Report, resolved planner.ResolvedPlan, ggaInstallDeferred bool) verify.Report {
 	report = withReadyAgentRunNote(report, resolved)
 	report = withFailedVerificationNote(report, resolved)
-	if hasComponent(resolved.OrderedComponents, model.ComponentGGA) && report.Ready {
+	if hasComponent(resolved.OrderedComponents, model.ComponentGGA) && report.Ready && !ggaInstallDeferred {
 		report.FinalNote = report.FinalNote + "\n\nGGA is now installed globally. To enable project hooks, run in each repo:\n- gga init\n- gga install"
 	}
 	report = withGoInstallPathNote(report, resolved)
@@ -693,6 +694,9 @@ type runtimeState struct {
 	createdBackupDir         string
 	piCodeGraph              *communitytool.PiCodeGraphResult
 	compatibilityTransaction compatibilityRefreshTransaction
+	// ggaInstallDeferred indica que la instalación del binario de GGA se pospuso
+	// porque falta Homebrew en macOS; la configuración de GGA sí se aplicó.
+	ggaInstallDeferred bool
 
 	// engramVersionResolved, engramVersion, and engramVersionErr cache the
 	// single `engram version` invocation performed by componentApplyStep.Run
@@ -702,6 +706,20 @@ type runtimeState struct {
 	engramVersionResolved bool
 	engramVersion         string
 	engramVersionErr      error
+}
+
+func (s *runtimeState) recordGGAInstallDeferred() {
+	if s != nil {
+		s.ggaInstallDeferred = true
+	}
+}
+
+// ggaManualActions devuelve las acciones de cierre que deben los pasos de GGA.
+func (s *runtimeState) ggaManualActions() []string {
+	if s == nil || !s.ggaInstallDeferred {
+		return nil
+	}
+	return []string{GGAHomebrewDeferredAction}
 }
 
 func (s *runtimeState) cleanupRollbackSnapshot() {
@@ -837,10 +855,6 @@ func (r *installRuntime) stagePlan() pipeline.StagePlan {
 		})
 	}
 
-	for _, tool := range r.selection.CommunityTools {
-		apply = append(apply, communityToolInstallStep{id: "community-tool:" + string(tool), tool: tool, workspaceDir: r.workspaceDir, homeDir: r.homeDir, state: r.state})
-	}
-
 	if containsAgent(r.resolved.Agents, model.AgentOpenCode) {
 		for _, plugin := range r.selection.OpenCodePlugins {
 			apply = append(apply, openCodePluginInstallStep{id: "opencode-plugin:" + string(plugin), plugin: plugin, homeDir: r.homeDir})
@@ -876,6 +890,12 @@ func (r *installRuntime) stagePlan() pipeline.StagePlan {
 			workspaceDir: r.workspaceDir,
 			scope:        r.scope,
 		})
+	}
+	// Community tools run after persona and routing guidance, matching sync:
+	// persona replaces whole prompt files for some agents, so CodeGraph guidance
+	// injected before it would be dropped and re-added by the first sync.
+	for _, tool := range r.selection.CommunityTools {
+		apply = append(apply, communityToolInstallStep{id: "community-tool:" + string(tool), tool: tool, workspaceDir: r.workspaceDir, homeDir: r.homeDir, state: r.state})
 	}
 	// En workspace, OpenCode, Kilo y Gemini solo cargan el fichero de instrucciones
 	// de Axiom si está registrado en su configuración de proyecto (instructions o
@@ -984,12 +1004,11 @@ func (s agentRoutingGuidanceStep) Run() error {
 	// Strip first: an installation upgraded from an older release still carries
 	// the retired block, and leaving it beside fresh guidance would hand the
 	// agent two conflicting sets of instructions.
-	stripped, err := stripLegacyTriggerRules(targetDir, adapter)
+	options := routingGuidanceOptions(s.homeDir, s.workspaceDir, s.scope, adapter)
+	stripped, err := stripLegacyTriggerRules(targetDir, adapter, options.SettingsPath)
 	if err != nil {
 		return err
 	}
-
-	options := routingGuidanceOptions(s.homeDir, s.workspaceDir, s.scope, adapter)
 	var injected agentguidance.Result
 	if options.SettingsPath == "" && options.Adapter == nil {
 		injected, err = agentguidance.InjectRouting(targetDir, s.agent)
@@ -1018,10 +1037,18 @@ func (s agentRoutingGuidanceStep) recordChanged(result agentguidance.Result) {
 // Removal reuses filemerge.InjectMarkdownSection with empty content, which is
 // already the defined "delete this section" operation, so no second merge
 // implementation exists that could drift from the injector.
-func stripLegacyTriggerRules(targetDir string, adapter agents.Adapter) (agentguidance.Result, error) {
+//
+// effectiveSettingsPath, cuando no está vacío, es el fichero de settings que el
+// inyector de guía va a escribir (en OpenCode, `opencode.jsonc` del proyecto
+// frente a `opencode.json` global): la limpieza debe actuar sobre ese mismo.
+func stripLegacyTriggerRules(targetDir string, adapter agents.Adapter, effectiveSettingsPath string) (agentguidance.Result, error) {
 	switch {
 	case adapter.Agent() == model.AgentOpenCode || adapter.Agent() == model.AgentKilocode:
-		return stripLegacyTriggerRulesFromOrchestrator(adapter.SettingsPath(targetDir))
+		settingsPath := adapter.SettingsPath(targetDir)
+		if strings.TrimSpace(effectiveSettingsPath) != "" {
+			settingsPath = effectiveSettingsPath
+		}
+		return stripLegacyTriggerRulesFromOrchestrator(settingsPath)
 	case adapter.SystemPromptStrategy() == model.StrategyJinjaModules:
 		return removeLegacyTriggerRulesModule(filepath.Join(adapter.GlobalConfigDir(targetDir), legacyTriggerRulesSection+".md"))
 	default:
@@ -1109,8 +1136,15 @@ func stripLegacyTriggerRulesFromOrchestrator(settingsPath string) (agentguidance
 		return agentguidance.Result{}, fmt.Errorf("encode legacy %q removal for %q: %w", legacyTriggerRulesSection, settingsPath, err)
 	}
 
-	merged, err := filemerge.MergeJSONObjects(raw, overlay)
+	merged, err := filemerge.MergeJSONObjectsForPath(settingsPath, raw, overlay)
 	if err != nil {
+		if strings.HasSuffix(settingsPath, ".jsonc") {
+			// Un JSONC que la fusión conservadora rechaza (claves duplicadas,
+			// comentarios dentro del valor tocado...) queda intacto: la limpieza
+			// es de mejor esfuerzo y el inyector de guía, que corre justo después,
+			// falla cerrado con las mismas condiciones.
+			return agentguidance.Result{}, nil
+		}
 		return agentguidance.Result{}, fmt.Errorf("merge legacy %q removal into %q: %w", legacyTriggerRulesSection, settingsPath, err)
 	}
 
@@ -1894,7 +1928,15 @@ func (s componentApplyStep) Run() error {
 		}
 		return nil
 	case model.ComponentGGA:
-		if !ggaAvailable(s.profile) {
+		installGGA := !ggaAvailable(s.profile)
+		if installGGA && s.profile.PackageManager == "brew" && !homebrewAvailable() {
+			// Sin Homebrew el binario de GGA es un prerrequisito opcional que falta, no
+			// una instalación fallida: se anota una acción manual y se sigue aplicando
+			// la configuración de GGA. Un Homebrew presente que falle sí falla el paso.
+			s.state.recordGGAInstallDeferred()
+			installGGA = false
+		}
+		if installGGA {
 			// GGA not found on any known PATH — install it.
 			if s.profile.OS == "windows" {
 				if err := cleanupGGAInstallDir(); err != nil {
@@ -1905,7 +1947,7 @@ func (s componentApplyStep) Run() error {
 			if err != nil {
 				return fmt.Errorf("resolve install command for component %q: %w", s.component, err)
 			}
-			installErr := runCommandSequence(commands)
+			installErr := runCommandSequence(withResolvedBrewCommand(commands))
 			if installErr != nil {
 				if ggaAvailable(s.profile) {
 					// The GGA install script uses `set -e` and `read -p` for
@@ -2058,6 +2100,7 @@ func executeTUIInstallWithBackground(homeDir string, selection model.Selection, 
 		result.ManualActions = append(result.ManualActions, runtime.state.piCodeGraph.ManualActions...)
 	}
 	result.ManualActions = append(result.ManualActions, omittedWorkspaceAgentNotices(omittedAgents)...)
+	result.ManualActions = append(result.ManualActions, runtime.state.ggaManualActions()...)
 	result.ManualActions = append(result.ManualActions, runtime.state.retirementNotes...)
 	result.ManualActions = append(result.ManualActions, engramSetupSkippedNote(scope, resolved.OrderedComponents, resolved.Agents)...)
 	result.ManualActions = append(result.ManualActions, optInFootprintNotes(scope, homeDir, resolved.OrderedComponents, resolved.Agents, selection)...)
@@ -2174,6 +2217,21 @@ func resolveEngramInstalledPath(profile system.PlatformProfile) (string, bool) {
 	return "", false
 }
 
+// GGAHomebrewDeferredAction es la acción manual que se registra cuando se
+// pospone la instalación de GGA por falta de Homebrew. Los renderizadores de
+// cierre la usan para no afirmar que GGA quedó instalado.
+const GGAHomebrewDeferredAction = "gga was not installed because Homebrew is not available. Install Homebrew (https://brew.sh), then run `axiom install --component gga`."
+
+// homebrewAvailable indica si brew está en el PATH o en un prefijo estándar de
+// Homebrew, las mismas ubicaciones que usa resolveBrewCommand.
+func homebrewAvailable() bool {
+	if _, err := cmdLookPath("brew"); err == nil {
+		return true
+	}
+	_, found := standardHomebrewExecutable("brew")
+	return found
+}
+
 // resolveBrewCommand avoids environment-sensitive shell profile probing. The
 // inherited PATH and Homebrew's documented standard prefixes are sufficient.
 func resolveBrewCommand() string {
@@ -2245,8 +2303,53 @@ func runCommandSequenceWithProgress(commands [][]string, progress pipeline.Progr
 	return nil
 }
 
+// homebrewNoSideEffectEnv son las variables que executeCommand añade a una
+// invocación de brew para que los pasos de tap/install/reinstall de Axiom no
+// disparen el auto-update de Homebrew (lento y dependiente de red) ni su
+// limpieza de caché como efecto secundario de una instalación ajena.
+var homebrewNoSideEffectEnv = []string{
+	"HOMEBREW_NO_AUTO_UPDATE=1",
+	"HOMEBREW_NO_INSTALL_CLEANUP=1",
+}
+
+// commandEnv devuelve el entorno con el que executeCommand lanza name, a partir
+// de base (normalmente os.Environ()). Si name es brew (el literal o la ruta
+// absoluta que resuelve resolveBrewCommand) y no es "brew update" ni "brew
+// upgrade", añade homebrewNoSideEffectEnv sin pisar un valor que ya esté en
+// base: un valor explícito del usuario siempre gana.
+func commandEnv(name string, args []string, base []string) []string {
+	if filepath.Base(name) != "brew" {
+		return base
+	}
+	if len(args) > 0 && (args[0] == "update" || args[0] == "upgrade") {
+		return base
+	}
+
+	// Copia para no escribir en el array subyacente del llamador.
+	env := append([]string(nil), base...)
+	for _, kv := range homebrewNoSideEffectEnv {
+		key := strings.SplitN(kv, "=", 2)[0]
+		if !envHasKey(env, key) {
+			env = append(env, kv)
+		}
+	}
+	return env
+}
+
+// envHasKey indica si env ya define key, sea cual sea su valor.
+func envHasKey(env []string, key string) bool {
+	prefix := key + "="
+	for _, kv := range env {
+		if strings.HasPrefix(kv, prefix) {
+			return true
+		}
+	}
+	return false
+}
+
 func executeCommand(name string, args ...string) error {
 	cmd := exec.Command(name, args...)
+	cmd.Env = commandEnv(name, args, os.Environ())
 	system.EnsureCommandDir(cmd)
 
 	if streamCommandOutput {

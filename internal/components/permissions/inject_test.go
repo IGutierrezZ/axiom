@@ -539,7 +539,7 @@ func TestInjectClaudeCodeUnionsUserDenyList(t *testing.T) {
 			t.Errorf("deny entry %q duplicated in %v", entry, deny)
 		}
 	}
-	for _, axiomEntry := range []string{"Bash(rm -rf /)", "Read(.ssh/*)", "Edit(**/secrets/*)"} {
+	for _, axiomEntry := range []string{"Bash(rm -rf /)", "Read(~/.ssh/**)", "Edit(**/secrets/*)"} {
 		if seen[axiomEntry] != 1 {
 			t.Errorf("Axiom deny entry %q missing from %v", axiomEntry, deny)
 		}
@@ -752,16 +752,16 @@ func TestTargetPathCodexHasNoInjectionTarget(t *testing.T) {
 // deny list is present in the Claude Code permissions block.
 func TestInjectClaudeCodeSensitivePathsDenied(t *testing.T) {
 	sensitivePatterns := []string{
-		"Read(.ssh/*)",
-		"Edit(.ssh/*)",
-		"Read(.credentials/*)",
-		"Edit(.credentials/*)",
-		"Read(Library/Keychains/*)",
-		"Edit(Library/Keychains/*)",
-		"Read(.aws/credentials)",
-		"Edit(.aws/credentials)",
-		"Read(.config/gh/hosts.yml)",
-		"Edit(.config/gh/hosts.yml)",
+		"Read(~/.ssh/**)",
+		"Edit(~/.ssh/**)",
+		"Read(~/.credentials/**)",
+		"Edit(~/.credentials/**)",
+		"Read(~/Library/Keychains/**)",
+		"Edit(~/Library/Keychains/**)",
+		"Read(~/.aws/credentials)",
+		"Edit(~/.aws/credentials)",
+		"Read(~/.config/gh/hosts.yml)",
+		"Edit(~/.config/gh/hosts.yml)",
 		"Read(**/*.pem)",
 		"Edit(**/*.pem)",
 		"Read(**/*.key)",
@@ -928,7 +928,7 @@ func TestInjectClaudeCodeDefaultDenyRulesApplied(t *testing.T) {
 	}
 
 	// Sensitive-path rules must be present after overlay application.
-	for _, rule := range []string{"Read(.ssh/*)", "Read(**/*.pem)", "Read(**/*.key)"} {
+	for _, rule := range []string{"Read(~/.ssh/**)", "Read(**/*.pem)", "Read(**/*.key)"} {
 		if !denySet[rule] {
 			t.Errorf("default deny rule %q was not present; got: %v", rule, denyList)
 		}
@@ -993,5 +993,191 @@ func TestInjectOpenCodePreservesExistingDenyRules(t *testing.T) {
 	// New sensitive-path rules must also be present
 	if readNode["**/.ssh/**"] != "deny" {
 		t.Errorf("default read deny rule '**/.ssh/**' was not added; got: %v", readNode)
+	}
+}
+
+// injectSeeded siembra el fichero de ajustes del agente con seed, inyecta el
+// overlay y devuelve el contenido resultante.
+func injectSeeded(t *testing.T, id model.AgentID, seed string) (string, string, agents.Adapter, []byte) {
+	t.Helper()
+	home := t.TempDir()
+	adapter, _ := agents.NewAdapter(id)
+	path := adapter.SettingsPath(home)
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, []byte(seed), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Inject(home, adapter); err != nil {
+		t.Fatal(err)
+	}
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return home, path, adapter, raw
+}
+
+// Un usuario con deny por defecto lo conserva: ninguna regla del overlay más
+// laxa que el "*" raíz entra en un mapa de herramienta que el usuario acotó,
+// donde seguiría a la regla raíz y ganaría como última coincidencia.
+func TestInjectKeepsUserDenyByDefault(t *testing.T) {
+	for _, id := range []model.AgentID{model.AgentOpenCode, model.AgentKilocode} {
+		t.Run(string(id), func(t *testing.T) {
+			home, path, adapter, raw := injectSeeded(t, id, `{"permission":{"*":"deny","bash":{"git status":"allow"}}}`)
+			var root struct {
+				Permission map[string]json.RawMessage `json:"permission"`
+			}
+			if err := json.Unmarshal(raw, &root); err != nil {
+				t.Fatal(err)
+			}
+			if string(root.Permission["*"]) != `"deny"` {
+				t.Errorf("root deny changed: %s", root.Permission["*"])
+			}
+			for tool, value := range root.Permission {
+				var patterns map[string]string
+				if json.Unmarshal(value, &patterns) != nil {
+					continue
+				}
+				if action, ok := patterns["*"]; ok {
+					t.Errorf("%s gained \"*\": %q over the user's deny-by-default", tool, action)
+				}
+				for pattern, action := range patterns {
+					if action != "deny" && !(tool == "bash" && pattern == "git status") {
+						t.Errorf("%s %q: %s loosens the user's deny-by-default", tool, pattern, action)
+					}
+				}
+			}
+			if got := remoteAction(t, raw, "git push"); got == "ask" {
+				t.Errorf("overlay ask turned a denied command into a prompt: %s", got)
+			}
+			if got := remoteAction(t, raw, "git status"); got != "allow" {
+				t.Errorf("user's own allow: got %s, want allow", got)
+			}
+			if result, err := Inject(home, adapter); err != nil || result.Changed {
+				t.Fatalf("repeat injection = %+v, %v (%s)", result, err, path)
+			}
+		})
+	}
+}
+
+// Con un "*" raíz de ask, el overlay conserva sus ask y deny pero no añade
+// ningún allow que siguiera a la regla raíz.
+func TestInjectKeepsUserAskByDefault(t *testing.T) {
+	_, _, _, raw := injectSeeded(t, model.AgentOpenCode, `{"permission":{"*":"ask","bash":{"ls":"allow"}}}`)
+	var root struct {
+		Permission map[string]map[string]string `json:"permission"`
+	}
+	_ = json.Unmarshal(raw, &root)
+	for pattern, action := range root.Permission["bash"] {
+		if action == "allow" && pattern != "ls" {
+			t.Errorf("bash %q: allow loosens the user's ask-by-default", pattern)
+		}
+	}
+	if got := remoteAction(t, raw, "git push"); got != "ask" {
+		t.Errorf("overlay ask lost: got %s", got)
+	}
+}
+
+// Un "*" raíz en forma de mapa de patrones con deny también es deny por
+// defecto: el overlay no añade reglas más laxas y el filtro tolera esa forma.
+func TestInjectToleratesPatternMapRootDefault(t *testing.T) {
+	_, _, _, raw := injectSeeded(t, model.AgentKilocode, `{"permission":{"*":{"*":"deny"}}}`)
+	var root struct {
+		Permission map[string]json.RawMessage `json:"permission"`
+	}
+	if err := json.Unmarshal(raw, &root); err != nil {
+		t.Fatal(err)
+	}
+	for tool, value := range root.Permission {
+		var patterns map[string]string
+		if tool == "*" || json.Unmarshal(value, &patterns) != nil {
+			continue
+		}
+		for pattern, action := range patterns {
+			if action != "deny" {
+				t.Errorf("%s %q: %s loosens the user's deny-by-default", tool, pattern, action)
+			}
+		}
+	}
+}
+
+// Un "*": "allow" del usuario no es un valor por defecto estricto: el overlay
+// se aplica intacto, con sus ask de bash.
+func TestInjectKeepsOverlayIntactUnderUserAllowByDefault(t *testing.T) {
+	_, _, _, raw := injectSeeded(t, model.AgentOpenCode, `{"permission":{"*":"allow"}}`)
+	if got := remoteAction(t, raw, "git push"); got != "ask" {
+		t.Errorf("overlay ask dropped under allow default: got %s", got)
+	}
+	if got := remoteAction(t, raw, "git reset --hard HEAD"); got != "ask" {
+		t.Errorf("overlay ask dropped under allow default: got %s", got)
+	}
+}
+
+// TestInjectClaudeCodeAnchorsStaleHomeDenyRules verifica que las reglas antiguas
+// de Axiom, relativas al proyecto, se reescriben en su sitio como reglas ancladas
+// al HOME, sin duplicados y sin tocar las reglas del usuario.
+func TestInjectClaudeCodeAnchorsStaleHomeDenyRules(t *testing.T) {
+	home := t.TempDir()
+	settingsPath := filepath.Join(home, ".claude", "settings.json")
+	if err := os.MkdirAll(filepath.Dir(settingsPath), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	// Read(~/.aws/credentials) ya está anclada: la antigua debe descartarse.
+	seed := `{"permissions":{"deny":["Bash(curl *)","Read(.ssh/*)","Read(custom/**)","Edit(.config/gh/hosts.yml)","Read(~/.aws/credentials)","Read(.aws/credentials)"]}}`
+	if err := os.WriteFile(settingsPath, []byte(seed), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	first, err := Inject(home, claudeAdapter())
+	if err != nil || !first.Changed {
+		t.Fatalf("first Inject() = %+v, %v; want changed", first, err)
+	}
+
+	deny := claudeDenyFromFile(t, settingsPath)
+	wantHead := []string{"Bash(curl *)", "Read(~/.ssh/**)", "Read(custom/**)", "Edit(~/.config/gh/hosts.yml)", "Read(~/.aws/credentials)"}
+	if len(deny) < len(wantHead) || strings.Join(deny[:len(wantHead)], "|") != strings.Join(wantHead, "|") {
+		t.Fatalf("deny list must start with %v, got %v", wantHead, deny)
+	}
+	seen := map[string]int{}
+	for _, entry := range deny {
+		seen[entry]++
+		if seen[entry] > 1 {
+			t.Errorf("deny entry %q duplicated in %v", entry, deny)
+		}
+	}
+	for stale := range staleClaudeCodeDenyRules {
+		if seen[stale] != 0 {
+			t.Errorf("stale deny rule %q still present in %v", stale, deny)
+		}
+	}
+	if seen["Read(custom/**)"] != 1 {
+		t.Errorf("user rule Read(custom/**) lost from %v", deny)
+	}
+
+	second, err := Inject(home, claudeAdapter())
+	if err != nil {
+		t.Fatalf("second Inject() error = %v", err)
+	}
+	if second.Changed {
+		t.Fatalf("second Inject() Changed = true, want false (idempotent)")
+	}
+}
+
+func TestLegacyOverlayOnlyForClaudeCode(t *testing.T) {
+	if LegacyOverlay(model.AgentOpenCode) != nil {
+		t.Fatal("LegacyOverlay(opencode) must be nil")
+	}
+	var legacy struct {
+		Permissions struct {
+			Deny []string `json:"deny"`
+		} `json:"permissions"`
+	}
+	if err := json.Unmarshal(LegacyOverlay(model.AgentClaudeCode), &legacy); err != nil {
+		t.Fatal(err)
+	}
+	if len(legacy.Permissions.Deny) != len(staleClaudeCodeDenyRules) {
+		t.Fatalf("LegacyOverlay deny = %v, want %d stale rules", legacy.Permissions.Deny, len(staleClaudeCodeDenyRules))
 	}
 }

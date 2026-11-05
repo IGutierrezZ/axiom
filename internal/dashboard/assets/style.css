@@ -507,6 +507,7 @@ dialog.modal::backdrop { background: rgba(10, 10, 14, .55); }
 .type-bug { background: var(--bad-soft); color: var(--bad); }
 .type-refactor { background: var(--hover); color: var(--text-2); }
 .type-architecture { background: var(--warn-soft); color: var(--warn); }
+.type-odd { background: var(--ok-soft); color: var(--ok); }
 
 .ix-filters { display: flex; flex-direction: column; gap: 10px; }
 .ix-label { font-size: 13px; color: var(--text-3); margin-right: 4px; }
@@ -1043,3 +1044,7 @@ h5.md-h, h6.md-h { font-size: 13px; }
   .eco-dl { grid-template-columns: minmax(0, 1fr); gap: 2px; }
   .eco-dl dd { margin-bottom: 8px; }
 }
+
+/* Aviso de versión nueva (P2): bajo la barra superior, ocupa el ancho del contenido */
+.update-banner { margin: 12px 32px 0; }
+@media (max-width: 859px) { .update-banner { margin: 12px 16px 0; } }

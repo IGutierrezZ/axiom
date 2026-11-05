@@ -29,6 +29,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/planner"
 	"github.com/IGutierrezZ/axiom/v3/internal/reviewtransaction"
 	"github.com/IGutierrezZ/axiom/v3/internal/state"
+	"github.com/IGutierrezZ/axiom/v3/internal/statecoord"
 	"github.com/IGutierrezZ/axiom/v3/internal/system"
 	"github.com/IGutierrezZ/axiom/v3/internal/tui/screens"
 	"github.com/IGutierrezZ/axiom/v3/internal/tui/styles"
@@ -8238,7 +8239,7 @@ func TestModelUpdateAppliesRuntimeCatalogDiscovery(t *testing.T) {
 	state.ModelPicker.StartRuntimeCatalogDiscovery(1, "project")
 	updated, _ = state.Update(screens.RuntimeCatalogDiscoveryMsg{RequestID: 1, ProjectDir: "project", Err: errors.New("unavailable")})
 	state = updated.(Model)
-	if !strings.Contains(screens.RenderModelPicker(nil, state.ModelPicker, 0), "Could not discover models from OpenCode") {
+	if !strings.Contains(screens.RenderModelPicker(nil, state.ModelPicker, 0), "No se pudo descubrir el catálogo de modelos de OpenCode") {
 		t.Fatal("runtime discovery failure did not preserve the default-assignment fallback")
 	}
 }
@@ -8305,7 +8306,7 @@ func TestInitializeModelPickerWorkingDirectoryFailureShowsDiscoveryFallback(t *t
 
 	updated, _ := m.Update(message)
 	state := updated.(Model)
-	if state.ModelPicker.CatalogStatus != screens.RuntimeCatalogFailed || !strings.Contains(screens.RenderModelPicker(nil, state.ModelPicker, 0), "Could not discover models from OpenCode") {
+	if state.ModelPicker.CatalogStatus != screens.RuntimeCatalogFailed || !strings.Contains(screens.RenderModelPicker(nil, state.ModelPicker, 0), "No se pudo descubrir el catálogo de modelos de OpenCode") {
 		t.Fatalf("working-directory failure did not show discovery fallback: %+v", state.ModelPicker)
 	}
 }
@@ -9660,5 +9661,50 @@ func TestCustomPickerStillOffersExplicitGGA(t *testing.T) {
 	}
 	if !found {
 		t.Fatal("el selector personalizado debe seguir ofreciendo GGA como opción explícita")
+	}
+}
+
+// TestMarkPendingSyncUnderLockReReadsLatestStateAfterLockContention comprueba que
+// el indicador PendingSync del sync diferido se escribe bajo el cerrojo canónico
+// del estado y releyendo el último estado: el campo de un escritor concurrente
+// sobrevive, y con el cerrojo ocupado falla rápido sin escribir nada.
+func TestMarkPendingSyncUnderLockReReadsLatestStateAfterLockContention(t *testing.T) {
+	home := t.TempDir()
+	lockPath, err := statecoord.LockPath(home)
+	if err != nil {
+		t.Fatalf("install state lock path: %v", err)
+	}
+	held, err := reviewtransaction.AcquireAuthorityFileLock(lockPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := state.Write(home, state.InstallState{
+		InstalledAgents: []string{"opencode"},
+		RDDMode:         string(reviewtransaction.RDDModeOn),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	markPendingSyncUnderLock(home)
+	contended, err := state.Read(home)
+	if err != nil || contended.PendingSync || contended.RDDMode != string(reviewtransaction.RDDModeOn) {
+		t.Fatalf("estado tras la ejecución con cerrojo ocupado = %#v, err = %v", contended, err)
+	}
+	if err := held.Release(); err != nil {
+		t.Fatal(err)
+	}
+
+	markPendingSyncUnderLock(home)
+	got, err := state.Read(home)
+	if err != nil {
+		t.Fatalf("releer estado: %v", err)
+	}
+	if !got.PendingSync {
+		t.Fatal("PendingSync = false tras markPendingSyncUnderLock, want true")
+	}
+	if len(got.InstalledAgents) != 1 || got.InstalledAgents[0] != "opencode" {
+		t.Fatalf("InstalledAgents = %v, want [opencode]", got.InstalledAgents)
+	}
+	if got.RDDMode != string(reviewtransaction.RDDModeOn) {
+		t.Fatalf("RDDMode pisado: %q, want %q", got.RDDMode, reviewtransaction.RDDModeOn)
 	}
 }

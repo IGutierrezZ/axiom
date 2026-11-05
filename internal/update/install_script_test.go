@@ -184,6 +184,50 @@ func TestWindowsInstallScriptBetaGoInstallPreservesGoProxyBypassEnv(t *testing.T
 	}
 }
 
+// TestWindowsInstallScriptCreatesDashboardShortcuts pins the dashboard launcher
+// contract: Start menu shortcut, sign-in scheduled task on by default, opt-out
+// switches and a non-fatal failure path.
+func TestWindowsInstallScriptCreatesDashboardShortcuts(t *testing.T) {
+	content, err := os.ReadFile(filepath.Join("..", "..", "scripts", "install.ps1"))
+	if err != nil {
+		t.Fatalf("ReadFile install.ps1 error = %v", err)
+	}
+	script := string(content)
+	for _, want := range []string{
+		"[switch]$NoAutostart",
+		"[switch]$NoShortcut",
+		"New-Object -ComObject WScript.Shell",
+		`[Environment]::GetFolderPath("Programs")`,
+		`-Arguments "ui --detach"`,
+		"-WindowStyle 7",
+		"if (-not $NoShortcut)",
+		"if (-not $NoAutostart)",
+		"Register-ScheduledTask",
+		"New-ScheduledTaskTrigger -AtLogOn",
+		"-MultipleInstances IgnoreNew",
+		`-Argument "ui --detach --no-browser"`,
+	} {
+		if !strings.Contains(script, want) {
+			t.Errorf("scripts/install.ps1 is missing %q in the shortcut/autostart flow", want)
+		}
+	}
+	for _, banned := range []string{"[switch]$Autostart", "--app", `GetFolderPath("Startup")`} {
+		if strings.Contains(script, banned) {
+			t.Errorf("scripts/install.ps1 must not contain %q", banned)
+		}
+	}
+	for _, fn := range []string{"function New-AxiomShortcuts {", "function Register-AxiomLogonTask {"} {
+		start := strings.Index(script, fn)
+		end := strings.Index(script[start+1:], "\nfunction ")
+		if start == -1 || end == -1 {
+			t.Fatalf("could not locate %s", fn)
+		}
+		if strings.Contains(script[start:start+1+end], "Stop-WithError") {
+			t.Errorf("%s must warn, never abort the installation", fn)
+		}
+	}
+}
+
 // TestInstallScriptsGoInstallPackageMatchesModuleMajor guards the install
 // scripts against the regression upstream shipped in v3.0.1 and fixed in
 // 9bf454d4: both scripts build the `go install` package by interpolation, so
@@ -208,8 +252,8 @@ func TestInstallScriptsGoInstallPackageMatchesModuleMajor(t *testing.T) {
 		script  string
 		pattern string
 	}{
-		{"install.sh", `local go_package="github.com/${owner_lc}/${GITHUB_REPO}/` + major + `/cmd/${BINARY_NAME}@${version}"`},
-		{"install.ps1", `$goPackage = "github.com/$($GITHUB_OWNER.ToLower())/$GITHUB_REPO/` + major + `/cmd/$BINARY_NAME@$version"`},
+		{"install.sh", `local go_package="github.com/${GITHUB_OWNER}/${GITHUB_REPO}/` + major + `/cmd/${BINARY_NAME}@${version}"`},
+		{"install.ps1", `$goPackage = "github.com/$GITHUB_OWNER/$GITHUB_REPO/` + major + `/cmd/$BINARY_NAME@$version"`},
 	}
 	stale := regexp.MustCompile(`/v[0-9]+/cmd/`)
 	for _, tc := range cases {
@@ -225,6 +269,11 @@ func TestInstallScriptsGoInstallPackageMatchesModuleMajor(t *testing.T) {
 			if hit != "/"+major+"/cmd/" {
 				t.Errorf("scripts/%s still references %s in a go install package path; go.mod is %s", tc.script, hit, major)
 			}
+		}
+		// Go compares the module path case-sensitively: lowercasing the owner makes
+		// `go get` fail with "module declares its path as ... but was required as ...".
+		if strings.Contains(text, "ToLower()") || strings.Contains(text, "owner_lc") {
+			t.Errorf("scripts/%s must not lowercase the owner when building the go install package", tc.script)
 		}
 		if strings.Contains(text, "tags are v2.x") {
 			t.Errorf("scripts/%s comment still describes v2.x tags", tc.script)

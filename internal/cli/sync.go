@@ -34,6 +34,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
 	opencodeactivation "github.com/IGutierrezZ/axiom/v3/internal/opencode"
 	"github.com/IGutierrezZ/axiom/v3/internal/pipeline"
+	"github.com/IGutierrezZ/axiom/v3/internal/planner"
 	"github.com/IGutierrezZ/axiom/v3/internal/skillregistry"
 	"github.com/IGutierrezZ/axiom/v3/internal/state"
 	"github.com/IGutierrezZ/axiom/v3/internal/system"
@@ -425,6 +426,38 @@ func BuildSyncSelection(flags SyncFlags, agentIDs []model.AgentID) model.Selecti
 	}
 }
 
+// installOrderedComponents returns the selected components in the order the
+// install planner applies them. Persisted state records components in selection
+// order, but components write the same files (persona replaces the whole prompt
+// for some agents), so sync must apply them in the install order or the first
+// sync rewrites what install just wrote. Components unknown to the planner keep
+// their relative order at the end.
+func installOrderedComponents(components []model.ComponentID) []model.ComponentID {
+	graph := planner.MVPGraph()
+	known := make([]model.ComponentID, 0, len(components))
+	for _, component := range components {
+		if graph.Has(component) {
+			known = append(known, component)
+		}
+	}
+	resolved, err := planner.NewResolver(graph).Resolve(model.Selection{Components: known})
+	if err != nil {
+		return components
+	}
+	ordered := make([]model.ComponentID, 0, len(components))
+	for _, component := range resolved.OrderedComponents {
+		if slices.Contains(components, component) && !slices.Contains(ordered, component) {
+			ordered = append(ordered, component)
+		}
+	}
+	for _, component := range components {
+		if !slices.Contains(ordered, component) {
+			ordered = append(ordered, component)
+		}
+	}
+	return ordered
+}
+
 func RestorePersistedSelection(selection *model.Selection, persisted state.InstallState, flags SyncFlags) {
 	if !persisted.SelectionConfigured {
 		return
@@ -619,7 +652,7 @@ func (r *syncRuntime) stagePlan() pipeline.StagePlan {
 		apply = append(apply, piBackgroundProjectionStep{id: "sync:pi:background-projection", plan: r.piBackgroundProjection})
 	}
 
-	for _, component := range r.selection.Components {
+	for _, component := range installOrderedComponents(r.selection.Components) {
 		apply = append(apply, componentSyncStep{
 			id:               "sync:component:" + string(component),
 			component:        component,
@@ -684,10 +717,11 @@ func (r *syncRuntime) stagePlan() pipeline.StagePlan {
 
 	if r.selection.HasCommunityTool(model.CommunityToolCodeGraph) {
 		apply = append(apply, &codeGraphGuidanceSyncStep{
-			id:           "sync:community-tool:codegraph-guidance",
-			homeDir:      r.homeDir,
-			runner:       codeGraphHomeRunner{homeDir: r.homeDir},
-			changedFiles: &r.changedFiles,
+			id:                 "sync:community-tool:codegraph-guidance",
+			homeDir:            r.homeDir,
+			runner:             codeGraphHomeRunner{homeDir: r.homeDir},
+			changedFiles:       &r.changedFiles,
+			guidanceBeforeSync: communitytool.HasAnyCodeGraphGuidance(r.homeDir),
 		})
 		apply = append(apply, piCodeGraphSyncStep{id: "sync:community-tool:pi-codegraph", homeDir: r.homeDir, workspaceDir: r.workspaceDir, changedFiles: &r.changedFiles})
 	}
@@ -1099,6 +1133,10 @@ type codeGraphGuidanceSyncStep struct {
 	runner       communitytool.Runner
 	changedFiles *[]string
 	before       map[string]syncFileSnapshot
+	// guidanceBeforeSync records whether CodeGraph guidance existed before the
+	// sync pipeline ran: persona may replace whole prompt files earlier in the
+	// same sync, so detecting it at Run time would miss it and drop it.
+	guidanceBeforeSync bool
 }
 
 type piCodeGraphSyncStep struct {
@@ -1188,6 +1226,10 @@ func (s *codeGraphGuidanceSyncStep) Run() (runErr error) {
 	}
 
 	res, configured, err := communitytool.RefreshCodeGraphGuidanceIfConfigured(s.homeDir, communitytool.DetectorFunc(cmdLookPath))
+	if err == nil && !configured && s.guidanceBeforeSync && status.CLI == communitytool.AvailabilityAvailable {
+		res, err = communitytool.InjectCodeGraphGuidance(s.homeDir)
+		configured = true
+	}
 	if err != nil {
 		return fmt.Errorf("sync CodeGraph guidance: %w", err)
 	}
@@ -1731,17 +1773,43 @@ func applyResolvedPersona(selection *model.Selection, persisted string) {
 // gentleman-neutral-artifacts persona to neutral, printing the remap notice
 // once. State that predates persona persistence, explicit gentleman state,
 // and unreadable state are untouched.
+//
+// El parámetro persisted es solo una instantánea orientativa: la reescritura
+// relee el estado más reciente dentro del cerrojo del almacén y vuelve a
+// comprobar el alias allí, de modo que el cambio de un escritor concurrente
+// entre la lectura orientativa y la escritura nunca se pisa.
 func migratePersistedPersonaAlias(store state.Store, persisted *state.InstallState, persistedErr error) error {
 	if persistedErr != nil || persisted == nil || persisted.Persona != string(model.PersonaGentlemanNeutralArtifacts) {
 		return nil
 	}
-	persisted.Persona = string(model.PersonaNeutral)
-	if err := store.Write(*persisted); err != nil {
-		return fmt.Errorf("persist remapped persona: %w", err)
+	remapped := false
+	if err := withStateStoreLock(store, func() error {
+		latest, readErr := store.Read()
+		if readErr != nil {
+			// La lectura orientativa tuvo éxito: si ahora falta el fichero, una
+			// eliminación concurrente lo quitó y no queda nada que migrar.
+			if errors.Is(readErr, os.ErrNotExist) {
+				return nil
+			}
+			return fmt.Errorf("read persisted installation state: %w", readErr)
+		}
+		if latest.Persona != string(model.PersonaGentlemanNeutralArtifacts) {
+			return nil
+		}
+		latest.Persona = string(model.PersonaNeutral)
+		if err := store.Write(latest); err != nil {
+			return fmt.Errorf("persist remapped persona: %w", err)
+		}
+		remapped = true
+		return nil
+	}); err != nil {
+		return err
 	}
 	// Notice only after the rewrite is durably persisted: a failed write must
 	// not tell the user the remap happened.
-	fmt.Fprintln(personaNoticeWriter, personaAliasRemapNotice)
+	if remapped {
+		fmt.Fprintln(personaNoticeWriter, personaAliasRemapNotice)
+	}
 	return nil
 }
 

@@ -2833,6 +2833,10 @@ func mergeOpenCodeJSONFile(path string, overlay []byte) (mergeJSONResult, error)
 			if err != nil {
 				return mergeJSONResult{}, err
 			}
+			data, err = purgeLegacyManagedByMarker(data)
+			if err != nil {
+				return mergeJSONResult{}, fmt.Errorf("purge legacy OpenCode managed-by marker: %w", err)
+			}
 			return mergeJSONFileContents(path, data, converted)
 		}
 	}
@@ -2873,7 +2877,53 @@ func readAndMigrateOpenCodeCompatibleJSON(path string) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("retire obsolete OpenCode-compatible permission keys: %w", err)
 	}
+	baseJSON, err = purgeLegacyManagedByMarker(baseJSON)
+	if err != nil {
+		return nil, fmt.Errorf("purge legacy OpenCode-compatible managed-by marker: %w", err)
+	}
 	return baseJSON, nil
+}
+
+// purgeLegacyManagedByMarker borra el `__managed_by` que versiones anteriores
+// escribían en los agentes gestionados. Los proveedores con validación estricta del
+// esquema (opencode-go, Fireworks, NIM) rechazan la clave, y el merge profundo no
+// borra claves de la base, así que hay que retirarla explícitamente.
+//
+// Solo se toca un agente con nombre gestionado (incluidos los perfiles
+// `sdd-orchestrator-<perfil>`) cuyo marcador tenga un valor que Axiom escribió
+// ("axiom/sdd" o "gentle-ai/sdd"). Un agente del usuario con otro nombre, o con
+// otro valor en la clave, queda intacto. Cubre `agent` (V1) y `agents` (V2).
+func purgeLegacyManagedByMarker(baseJSON []byte) ([]byte, error) {
+	if len(strings.TrimSpace(string(baseJSON))) == 0 {
+		return baseJSON, nil
+	}
+	root, err := filemerge.UnmarshalJSONObject(baseJSON)
+	if err != nil {
+		// Preserve prior behavior for non-JSON/non-parseable inputs.
+		return baseJSON, nil
+	}
+
+	changed := false
+	for _, section := range []string{"agent", "agents"} {
+		agents, _ := root[section].(map[string]any)
+		for name, raw := range agents {
+			def, _ := raw.(map[string]any)
+			if !opencode.IsManagedAgentName(name) || !opencode.HasLegacyManagedMarker(def) {
+				continue
+			}
+			delete(def, opencode.LegacyManagedByKey)
+			changed = true
+		}
+	}
+	if !changed {
+		return baseJSON, nil
+	}
+
+	encoded, err := filemerge.MarshalJSONPreservingPermissions(baseJSON, root)
+	if err != nil {
+		return nil, err
+	}
+	return append(encoded, '\n'), nil
 }
 
 // obsoleteOpenCodePermissionKeys enumerates the managed permission keys that a
@@ -3923,10 +3973,14 @@ func injectModelAssignments(overlayBytes []byte, assignments map[string]model.Mo
 		if _, managed := agents[agent]; managed {
 			continue
 		}
-		agents[agent] = map[string]any{
-			"model":   assignment.FullID(),
-			"variant": assignment.Effort,
+		// With an empty effort the "variant" key is omitted so the deep merge
+		// keeps the variant the user already set on their own agent. Managed
+		// definitions (cases 1 and 3 above) still clear it explicitly.
+		customOverlay := map[string]any{"model": assignment.FullID()}
+		if assignment.Effort != "" {
+			customOverlay["variant"] = assignment.Effort
 		}
+		agents[agent] = customOverlay
 	}
 
 	result, err := json.MarshalIndent(overlay, "", "  ")

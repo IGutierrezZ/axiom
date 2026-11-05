@@ -6,10 +6,10 @@ set -euo pipefail
 # Ecosystem, Frameworks, Workflows for AI coding agents.
 #
 # Usage:
-#   curl -sL https://raw.githubusercontent.com/IGutierrezZ/axiom/main/scripts/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/IGutierrezZ/axiom/main/scripts/install.sh | bash
 #
 # Or download and run:
-#   curl -sLO https://raw.githubusercontent.com/IGutierrezZ/axiom/main/scripts/install.sh
+#   curl -fsSLO https://raw.githubusercontent.com/IGutierrezZ/axiom/main/scripts/install.sh
 #   chmod +x install.sh
 #   ./install.sh
 # ============================================================================
@@ -17,8 +17,6 @@ set -euo pipefail
 GITHUB_OWNER="IGutierrezZ"
 GITHUB_REPO="axiom"
 BINARY_NAME="axiom"
-BREW_TAP="Gentleman-Programming/homebrew-tap"
-BREW_FORMULA_REF="gentleman-programming/tap/${BINARY_NAME}"
 
 # ============================================================================
 # Color support
@@ -50,38 +48,6 @@ error()   { echo -e "${RED}[error]${NC}   $*" >&2; }
 fatal()   { error "$@"; exit 1; }
 step()    { echo -e "\n${CYAN}${BOLD}==>${NC} ${BOLD}$*${NC}"; }
 
-homebrew_trust_gentle_ai_formula() {
-    if brew help trust &>/dev/null; then
-        info "Trusting ${BREW_FORMULA_REF} for Homebrew tap-trust enforcement"
-        brew trust --formula "$BREW_FORMULA_REF" &>/dev/null || true
-    fi
-}
-
-print_homebrew_failure_help() {
-    local output="$1"
-    local lower
-    lower="$(printf '%s' "$output" | tr '[:upper:]' '[:lower:]')"
-
-    if [[ "$lower" == *"untrusted tap"* || "$lower" == *"tap trust is required"* || "$lower" == *"homebrew_require_tap_trust"* ]]; then
-        warn "Homebrew requires explicit trust for external taps."
-        echo "Trust only the Axiom formula, then retry:" >&2
-        echo "  brew trust --formula ${BREW_FORMULA_REF}" >&2
-        echo "  brew upgrade ${BINARY_NAME}" >&2
-    fi
-
-    if [[ "$lower" == *"bubblewrap is installed but cannot create a rootless sandbox"* || "$lower" == *"rootless sandbox"* || "$lower" == *"homebrew_no_sandbox_linux"* ]]; then
-        warn "Homebrew on Linux could not create its Bubblewrap rootless sandbox."
-        echo "This requires an explicit admin/security decision: enabling unprivileged user namespaces lets Homebrew use its sandbox but changes host kernel/AppArmor policy." >&2
-        echo "If acceptable, run:" >&2
-        echo "  sudo sysctl -w kernel.unprivileged_userns_clone=1" >&2
-        echo "  sudo sysctl -w user.max_user_namespaces=28633" >&2
-        echo "  sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true" >&2
-        echo >&2
-        echo "Final workaround if your distro policy forbids this sandbox:" >&2
-        echo "  HOMEBREW_NO_SANDBOX_LINUX=1 brew upgrade ${BINARY_NAME}" >&2
-    fi
-}
-
 # ============================================================================
 # Help
 # ============================================================================
@@ -93,19 +59,18 @@ ${BOLD}Axiom installer${NC}
 Usage: install.sh [OPTIONS]
 
 Options:
-  --method METHOD   Force install method: brew, go, binary (default: auto-detect)
+  --method METHOD   Force install method: go, binary (default: binary)
   --channel CHANNEL Axiom channel: stable (default), beta, or nightly (env: AXIOM_CHANNEL, fallback: GENTLE_AI_CHANNEL)
   --dir DIR         Custom install directory for binary method
   --insecure        Skip checksum verification (not recommended)
   -h, --help        Show this help
 
-Install methods (auto-detected in priority order):
-  1. brew    — Homebrew tap (recommended)
-  2. go      — go install from source
-  3. binary  — Pre-built binary from GitHub Releases
+Install methods:
+  1. binary  — Pre-built binary from GitHub Releases (default)
+  2. go      — go install from source (needs Go)
 
 Examples:
-  curl -sL https://raw.githubusercontent.com/${GITHUB_OWNER}/${GITHUB_REPO}/main/scripts/install.sh | bash
+  curl -fsSL https://raw.githubusercontent.com/${GITHUB_OWNER}/${GITHUB_REPO}/main/scripts/install.sh | bash
   ./install.sh --method binary
   ./install.sh --channel beta
   ./install.sh --method binary --dir \$HOME/.local/bin
@@ -170,15 +135,11 @@ check_prerequisites() {
         missing+=("curl")
     fi
 
-    if ! command -v git &>/dev/null; then
-        missing+=("git")
-    fi
-
     if [ ${#missing[@]} -gt 0 ]; then
         fatal "Missing required tools: ${missing[*]}. Please install them and try again."
     fi
 
-    success "curl and git are available"
+    success "curl is available"
 }
 
 # ============================================================================
@@ -197,8 +158,8 @@ detect_install_method() {
 
     if [ -n "${FORCE_METHOD:-}" ]; then
         case "$FORCE_METHOD" in
-            brew|go|binary) INSTALL_METHOD="$FORCE_METHOD" ;;
-            *) fatal "Unknown install method: $FORCE_METHOD. Use: brew, go, or binary" ;;
+            go|binary) INSTALL_METHOD="$FORCE_METHOD" ;;
+            *) fatal "Unknown install method: $FORCE_METHOD. Use: go or binary" ;;
         esac
         info "Using forced method: $INSTALL_METHOD"
         return
@@ -206,60 +167,11 @@ detect_install_method() {
 
     step "Detecting best install method"
 
-    # Priority: brew > binary > go
-    # Brew handles upgrades natively and is instant.
-    # Binary download from GitHub Releases is always up-to-date.
-    # go install is last resort because the Go module proxy can lag
-    # behind new tags for up to 30 minutes, causing @latest to install
-    # a stale version.
-    if command -v brew &>/dev/null; then
-        INSTALL_METHOD="brew"
-        success "Homebrew found — will install via brew tap"
-    else
-        INSTALL_METHOD="binary"
-        info "Will download pre-built binary from GitHub Releases"
-    fi
-}
-
-# ============================================================================
-# Install via Homebrew
-# ============================================================================
-
-install_brew() {
-    step "Installing via Homebrew"
-
-    # Always refresh the tap to pick up new releases
-    info "Refreshing ${BREW_TAP}..."
-    brew untap "$BREW_TAP" 2>/dev/null || true
-    if ! brew tap "$BREW_TAP"; then
-        fatal "Failed to tap $BREW_TAP"
-    fi
-
-    homebrew_trust_gentle_ai_formula
-
-    if brew list "$BINARY_NAME" &>/dev/null; then
-        info "Already installed, upgrading ${BINARY_NAME}..."
-        local output
-        if output="$(brew upgrade "$BINARY_NAME" 2>&1)"; then
-            success "Upgraded ${BINARY_NAME} via Homebrew"
-        elif printf '%s' "$output" | grep -Eiq 'already.*(up-to-date|installed)|not outdated'; then
-            success "${BINARY_NAME} is already at the latest version"
-        else
-            printf '%s\n' "$output" >&2
-            print_homebrew_failure_help "$output"
-            fatal "Failed to upgrade ${BINARY_NAME} via Homebrew"
-        fi
-    else
-        info "Installing ${BINARY_NAME}..."
-        local output
-        if output="$(brew install "$BINARY_NAME" 2>&1)"; then
-            success "Installed ${BINARY_NAME} via Homebrew"
-        else
-            printf '%s\n' "$output" >&2
-            print_homebrew_failure_help "$output"
-            fatal "Failed to install ${BINARY_NAME} via Homebrew"
-        fi
-    fi
+    # Default: pre-built release archive from GitHub Releases, always up to
+    # date. go install stays opt-in (--method go) because the Go module proxy
+    # can lag behind new tags for up to 30 minutes, installing a stale version.
+    INSTALL_METHOD="binary"
+    info "Will download pre-built binary from GitHub Releases"
 }
 
 # ============================================================================
@@ -269,18 +181,19 @@ install_brew() {
 install_go() {
     step "Installing via go install"
 
+    if ! command -v go &>/dev/null; then
+        fatal "Go 1.25.10 or newer is required for --method go. Install it from https://go.dev/dl/ or use the default binary method."
+    fi
+
     local version="latest"
     if [ "${CHANNEL}" = "beta" ]; then
         version="main"
     fi
-    # Lowercase the owner portably: ${var,,} needs bash 4+, but macOS ships
-    # bash 3.2, so piping `| bash` would fail with "bad substitution".
-    local owner_lc
-    owner_lc="$(printf '%s' "$GITHUB_OWNER" | tr '[:upper:]' '[:lower:]')"
     # /v3 is part of the module path, not decoration: Go refuses to resolve a
     # module whose tags are v3.x unless the import path carries the major
-    # version suffix.
-    local go_package="github.com/${owner_lc}/${GITHUB_REPO}/v3/cmd/${BINARY_NAME}@${version}"
+    # version suffix. Keep the owner's exact case (IGutierrezZ): Go compares the
+    # module path case-sensitively, so a lowercased owner makes go install fail.
+    local go_package="github.com/${GITHUB_OWNER}/${GITHUB_REPO}/v3/cmd/${BINARY_NAME}@${version}"
 
     info "Running: go install ${go_package}"
     if [ "${CHANNEL}" = "beta" ]; then
@@ -303,12 +216,100 @@ install_go() {
         gobin="$(go env GOPATH)/bin"
     fi
 
-    if [[ ":$PATH:" != *":$gobin:"* ]]; then
-        warn "${gobin} is not in your PATH"
-        warn "Add this to your shell profile: export PATH=\"\$PATH:${gobin}\""
-    fi
+    ensure_dir_in_path "$gobin"
 
     success "Installed ${BINARY_NAME} via go install"
+}
+
+# ============================================================================
+# PATH handling
+# ============================================================================
+
+PATH_MARKER="# axiom: PATH"
+INSTALL_TMPDIR=""
+INSTALL_STAGING=""
+
+cleanup_install() {
+    if [ -n "${INSTALL_STAGING:-}" ]; then
+        rm -f -- "$INSTALL_STAGING" 2>/dev/null || true
+    fi
+    if [ -n "${INSTALL_TMPDIR:-}" ]; then
+        rm -rf -- "$INSTALL_TMPDIR" 2>/dev/null || true
+    fi
+}
+
+# path_rc_file SHELL_NAME OS -> prints the rc file of a recognized shell.
+path_rc_file() {
+    case "$1" in
+        bash)
+            if [ "$2" = "Darwin" ]; then
+                printf '%s\n' "${HOME}/.bash_profile"
+            else
+                printf '%s\n' "${HOME}/.bashrc"
+            fi
+            ;;
+        zsh)  printf '%s\n' "${HOME}/.zshrc" ;;
+        fish) printf '%s\n' "${HOME}/.config/fish/config.fish" ;;
+        *)    return 1 ;;
+    esac
+}
+
+# path_rc_line SHELL_NAME DIR -> prints the marked line that adds DIR to PATH.
+# DIR is quoted for the target shell so it cannot inject commands.
+path_rc_line() {
+    local shell_name="$1" dir="$2" quoted
+    if [ "$shell_name" = "fish" ]; then
+        quoted="${dir//\\/\\\\}"
+        quoted="${quoted//\'/\\\'}"
+        printf "fish_add_path '%s' %s\n" "$quoted" "$PATH_MARKER"
+    else
+        printf -v quoted '%q' "$dir"
+        printf 'export PATH="$PATH":%s %s\n' "$quoted" "$PATH_MARKER"
+    fi
+}
+
+# add_dir_to_shell_rc DIR SHELL_NAME OS: appends the marked line to the rc file
+# unless a marked line for DIR already exists. Prints the rc file path only when
+# it writes. Returns 1 when the shell is not recognized or the file cannot be
+# written.
+add_dir_to_shell_rc() {
+    local dir="$1" shell_name="$2" os="$3" rc line
+    case "$dir" in
+        *$'\n'*) return 1 ;;
+    esac
+    rc="$(path_rc_file "$shell_name" "$os")" || return 1
+    if [ -f "$rc" ] && grep -F -- "$PATH_MARKER" "$rc" | grep -qF -- "$dir"; then
+        return 0
+    fi
+    line="$(path_rc_line "$shell_name" "$dir")"
+    mkdir -p -- "$(dirname -- "$rc")" 2>/dev/null || return 1
+    printf '\n%s\n' "$line" >> "$rc" 2>/dev/null || return 1
+    printf '%s\n' "$rc"
+}
+
+# ensure_dir_in_path DIR: does nothing when DIR is already in PATH or
+# AXIOM_NO_PERSISTENT_PATH=1. Otherwise it appends one marked line to the rc
+# file of the detected shell, and falls back to the manual instruction when the
+# shell is not recognized or the file cannot be written.
+ensure_dir_in_path() {
+    local dir="$1" shell_name rc
+    if [[ ":$PATH:" == *":${dir}:"* ]]; then
+        return 0
+    fi
+    shell_name="$(basename -- "${SHELL:-}")"
+    if [ "${AXIOM_NO_PERSISTENT_PATH:-}" != "1" ] \
+        && rc="$(add_dir_to_shell_rc "$dir" "$shell_name" "$(uname -s 2>/dev/null || true)")"; then
+        if [ -n "$rc" ]; then
+            success "Added ${dir} to PATH in ${rc}"
+        fi
+        warn "Open a new terminal (or reload your shell profile) to use '${BINARY_NAME}'"
+        return 0
+    fi
+    warn "${dir} is not in your PATH"
+    echo ""
+    warn "Add this to your shell profile (~/.bashrc, ~/.zshrc, etc.):"
+    echo -e "  ${DIM}export PATH=\"\$PATH:${dir}\"${NC}"
+    echo ""
 }
 
 prepend_go_env_pattern() {
@@ -337,14 +338,14 @@ get_latest_version() {
     info "Fetching latest release from GitHub..."
 
     local response
-    response="$(curl -sL -w "\n%{http_code}" "$url")" || fatal "Failed to fetch latest release"
+    response="$(curl -fsSL -w "\n%{http_code}" "$url")" || fatal "Failed to fetch latest release"
 
     local http_code body
     http_code="$(echo "$response" | tail -n1)"
     body="$(echo "$response" | sed '$d')"
 
     if [ "$http_code" != "200" ]; then
-        fatal "GitHub API returned HTTP $http_code. Rate limited? Try again later or use --method brew/go"
+        fatal "GitHub API returned HTTP $http_code. Rate limited? Try again later or use --method go"
     fi
 
     # Extract tag_name — works without jq
@@ -373,7 +374,11 @@ install_binary() {
     # Create temp directory — clean up on exit
     local tmpdir
     tmpdir="$(mktemp -d)"
-    trap '[ -n "${tmpdir:-}" ] && rm -rf "$tmpdir"' EXIT
+    INSTALL_TMPDIR="$tmpdir"
+    # TERM/INT exit explicitly so the EXIT trap always runs the cleanup.
+    trap cleanup_install EXIT
+    trap 'exit 143' TERM
+    trap 'exit 130' INT
 
     # Download archive
     info "Downloading ${archive_name}..."
@@ -392,7 +397,7 @@ install_binary() {
 
     # Download and verify checksum — fail closed unless --insecure is set
     info "Verifying checksum..."
-    if curl -sL -o "${tmpdir}/checksums.txt" "$checksums_url"; then
+    if curl -fsSL -o "${tmpdir}/checksums.txt" "$checksums_url"; then
         local expected_checksum
         expected_checksum="$(grep "${archive_name}" "${tmpdir}/checksums.txt" 2>/dev/null | awk '{print $1}' || true)"
 
@@ -456,28 +461,34 @@ install_binary() {
     # Create install dir if needed
     mkdir -p "$install_dir"
 
-    # Install binary
-    info "Installing to ${install_dir}/${BINARY_NAME}..."
-    if cp "${tmpdir}/${BINARY_NAME}" "${install_dir}/${BINARY_NAME}" 2>/dev/null; then
-        chmod +x "${install_dir}/${BINARY_NAME}"
+    # Atomic install: stage next to the destination and rename in place. A
+    # rename within one filesystem is atomic, so the previous binary either
+    # survives intact or is fully replaced, never half-written. `install -m 0755`
+    # fixes the mode regardless of the caller's umask. Paths are always passed as
+    # arguments (also under sudo), never interpolated into a shell string.
+    local final="${install_dir}/${BINARY_NAME}"
+    local staging="${install_dir}/${BINARY_NAME}.staging.$$"
+    INSTALL_STAGING="$staging"
+
+    info "Installing to ${final}..."
+    if install -m 0755 -- "${tmpdir}/${BINARY_NAME}" "$staging" 2>/dev/null \
+        && mv -f -- "$staging" "$final"; then
+        :
     elif command -v sudo &>/dev/null; then
         warn "Permission denied. Trying with sudo..."
-        sudo cp "${tmpdir}/${BINARY_NAME}" "${install_dir}/${BINARY_NAME}"
-        sudo chmod +x "${install_dir}/${BINARY_NAME}"
+        if ! sudo -- install -m 0755 -- "${tmpdir}/${BINARY_NAME}" "$staging" \
+            || ! sudo -- mv -f -- "$staging" "$final"; then
+            sudo -- rm -f -- "$staging" 2>/dev/null || true
+            fatal "Could not install ${final} with sudo."
+        fi
     else
         fatal "Cannot write to ${install_dir}. Run with sudo or use --dir to specify a writable directory."
     fi
+    INSTALL_STAGING=""
 
-    success "Installed ${BINARY_NAME} to ${install_dir}/${BINARY_NAME}"
+    success "Installed ${BINARY_NAME} to ${final}"
 
-    # Check if install dir is in PATH
-    if [[ ":$PATH:" != *":${install_dir}:"* ]]; then
-        warn "${install_dir} is not in your PATH"
-        echo ""
-        warn "Add this to your shell profile (~/.bashrc, ~/.zshrc, etc.):"
-        echo -e "  ${DIM}export PATH=\"\$PATH:${install_dir}\"${NC}"
-        echo ""
-    fi
+    ensure_dir_in_path "$install_dir"
 }
 
 # ============================================================================
@@ -611,7 +622,6 @@ main() {
     detect_install_method
 
     case "$INSTALL_METHOD" in
-        brew)   install_brew ;;
         go)     install_go ;;
         binary) install_binary ;;
     esac

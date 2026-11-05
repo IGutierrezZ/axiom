@@ -8,7 +8,9 @@ import { startRouter } from './core/router.js';
 import { refreshOverview } from './core/overview.js';
 import { set, on } from './core/state.js';
 import { initTheme } from './core/theme.js';
+import { initInstallButton, registerServiceWorker } from './core/pwa.js';
 import { initProjects, loadProjects } from './projects.js';
+import { initUpdate } from './update.js';
 import { initShell, setActiveNav, renderBreadcrumb, routeLabel, closeMenu } from './shell.js';
 import { initDetail, enterDetail, refreshDetail } from './screens/detalle.js';
 import { initEcosystem, loadEcosystem } from './screens/ecosystem.js';
@@ -93,6 +95,8 @@ function showView(route, { initial }) {
 function boot() {
   initTheme();
   hydrateIcons();
+  initInstallButton();
+  registerServiceWorker();
   bindCopyButtons(document);
 
   initShell({ onRefresh: loadAllData, reloadWorkspace: loadWorkspace });
@@ -104,6 +108,7 @@ function boot() {
   initSemantic();
   initLivingDocs();
   initEcosystem();
+  initUpdate();
 
   // Las pantallas que dependen del workspace se repintan cuando llega.
   on('workspace', renderInicio);

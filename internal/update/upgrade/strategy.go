@@ -62,7 +62,7 @@ type strategyOutcome struct {
 // for the given platform profile.
 //
 // Strategy routing:
-//   - brew profile → brewUpgrade (regardless of tool's declared method)
+//   - brew profile → brewUpgrade for tools Homebrew owns (never Axiom itself)
 //   - go-install method + apt/pacman/other → goInstallUpgrade
 //   - binary method + linux/darwin → binaryUpgrade
 //   - binary method + windows → manualFallback (gentle-ai explains the signed-distribution hold)
@@ -73,7 +73,9 @@ type strategyOutcome struct {
 //   - unknown method → manualFallback with explicit message
 func runStrategy(ctx context.Context, r update.UpdateResult, profile system.PlatformProfile, preflightDestination ...string) (bool, error) {
 	ownership := update.HomebrewNone
-	if profile.PackageManager == "brew" && r.Tool.InstallMethod != update.InstallOpenCodePlugin {
+	// Axiom itself has no Homebrew formula: its tap would be Gentleman-Programming's,
+	// not ours, so it is never routed to brew even when a same-named package exists.
+	if profile.PackageManager == "brew" && r.Tool.InstallMethod != update.InstallOpenCodePlugin && !update.IsSelfToolName(r.Tool.Name) {
 		var err error
 		ownership, err = homebrewOwnershipDetector(r.Tool.Name)
 		if err != nil {
@@ -429,23 +431,28 @@ func openCodePluginRegisteredPendingHint(pkg string) string {
 func brewUpgrade(ctx context.Context, r update.UpdateResult, ownership update.HomebrewOwnership) error {
 	toolName := r.Tool.Name
 	flag := "--" + string(ownership)
-	// Ensure the Gentleman-Programming homebrew tap is present before upgrading.
+	// Ensure the Gentleman-Programming homebrew tap is present before upgrading
+	// engram and gga, whose formulas really live there. Axiom itself is not routed here
+	// (effectiveMethod/runStrategy exclude it) and is skipped here as defense in depth:
+	// trusting a foreign tap for our own tool would be wrong.
 	// Non-fatal: brew tap is a no-op when already present; if it fails for any other
 	// reason, the subsequent brew upgrade will surface the real error. See issue #455:
 	// without this, a lost tap (untap, machine swap, brew cleanup) makes upgrades fail
-	// with "No available formula" for engram/gga/gentle-ai.
-	tapCmd := execCommand("brew", "tap", "Gentleman-Programming/homebrew-tap")
-	tapCmd.Stdin = nil
-	_ = tapCmd.Run()
+	// with "No available formula" for engram/gga.
+	if !update.IsSelfToolName(toolName) {
+		tapCmd := execCommand("brew", "tap", "Gentleman-Programming/homebrew-tap")
+		tapCmd.Stdin = nil
+		_ = tapCmd.Run()
 
-	// Trust only the Gentleman Programming artifact being upgraded. Homebrew 6 can
-	// require explicit trust for non-official taps; this is intentionally scoped to
-	// our formula/cask, not the whole tap or third-party taps. Older Homebrew versions
-	// may not support `brew trust`, so this is non-fatal and the upgrade output
-	// below remains the source of truth.
-	trustCmd := execCommand("brew", "trust", flag, gentlemanProgrammingTapRef(toolName))
-	trustCmd.Stdin = nil
-	_ = trustCmd.Run()
+		// Trust only the Gentleman Programming artifact being upgraded. Homebrew 6 can
+		// require explicit trust for non-official taps; this is intentionally scoped to
+		// the formula/cask, not the whole tap or third-party taps. Older Homebrew versions
+		// may not support `brew trust`, so this is non-fatal and the upgrade output
+		// below remains the source of truth.
+		trustCmd := execCommand("brew", "trust", flag, gentlemanProgrammingTapRef(toolName))
+		trustCmd.Stdin = nil
+		_ = trustCmd.Run()
+	}
 
 	// Update Homebrew formula cache before upgrading.
 	// Non-fatal: if update fails (e.g. no network), attempt upgrade with existing cache.

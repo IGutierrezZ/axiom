@@ -37,6 +37,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/planner"
 	"github.com/IGutierrezZ/axiom/v3/internal/reviewtransaction"
 	"github.com/IGutierrezZ/axiom/v3/internal/state"
+	"github.com/IGutierrezZ/axiom/v3/internal/statecoord"
 	"github.com/IGutierrezZ/axiom/v3/internal/system"
 	"github.com/IGutierrezZ/axiom/v3/internal/tui/screens"
 	"github.com/IGutierrezZ/axiom/v3/internal/update"
@@ -113,6 +114,13 @@ var osRemoveFn = os.Remove
 var execCommandFn = exec.Command
 var communityToolInstallFn = communitytool.Install
 var communityToolStatusFn = communitytool.DetectStatus
+
+// agentBuilderEngineAvailableFn reports whether an agent-builder engine binary
+// is on PATH. Tests may override it to count or fake PATH probes.
+var agentBuilderEngineAvailableFn = func(id model.AgentID) bool {
+	engine := agentbuilder.NewEngine(id)
+	return engine != nil && engine.Available()
+}
 
 // readCurrentAssignmentsFn is a package-level variable so tests can override
 // how current model assignments are read from opencode.json. It wraps
@@ -610,6 +618,9 @@ const (
 )
 
 type Model struct {
+	// agentBuilderEngines se detecta una vez en NewModel para que View y
+	// optionCount no consulten el PATH en cada fotograma ni pulsación.
+	agentBuilderEngines       []model.AgentID
 	openCodePresentationMajor opencode.RuntimeMajor
 	Screen                    Screen
 	PreviousScreen            Screen
@@ -953,6 +964,7 @@ func NewModel(detection system.DetectionResult, version string, installState ...
 	}
 
 	return Model{
+		agentBuilderEngines:   detectAgentBuilderEngines(),
 		Screen:                ScreenWelcome,
 		Version:               version,
 		Selection:             selection,
@@ -2162,11 +2174,14 @@ func (m Model) confirmSelection() (tea.Model, tea.Cmd) {
 			m.setScreen(ScreenModelConfig)
 		case 5:
 			// "Create your own Agent" — blocked when no engines are available.
+			// Crear un agente es una acción explícita: se vuelve a detectar para
+			// ver un motor instalado después de arrancar la TUI.
+			m.agentBuilderEngines = detectAgentBuilderEngines()
 			if !m.hasAgentBuilderEngines() {
 				return m, nil
 			}
 			m.AgentBuilder = AgentBuilderState{}
-			m.AgentBuilder.AvailableEngines = m.detectAgentBuilderEngines()
+			m.AgentBuilder.AvailableEngines = m.agentBuilderEngines
 			ta := textarea.New()
 			ta.Placeholder = "Describe what you want your agent to do..."
 			ta.Focus()
@@ -3895,13 +3910,7 @@ func (m Model) startUpgradeSync() tea.Cmd {
 			// present — skip writing to avoid dropping installed_agents, model
 			// assignments, and other persisted fields.
 			if h := homeDir(); h != "" {
-				s, readErr := state.Read(h)
-				if readErr != nil && !errors.Is(readErr, os.ErrNotExist) {
-					// File exists but unreadable/corrupt — skip to avoid clobber.
-				} else {
-					s.PendingSync = true
-					_ = state.Write(h, s)
-				}
+				markPendingSyncUnderLock(h)
 			}
 			return SyncDoneMsg{}
 		}
@@ -3916,6 +3925,23 @@ func (m Model) startUpgradeSync() tea.Cmd {
 	}
 
 	return tea.Sequence(upgradeCmd, syncCmd)
+}
+
+// markPendingSyncUnderLock marca PendingSync bajo el cerrojo canónico del
+// estado. Relee el estado más reciente dentro del cerrojo para no pisar el
+// cambio de otro escritor y conserva la guarda anti-clobber: si la lectura falla
+// por algo distinto de os.ErrNotExist, no escribe. Los fallos de cerrojo o de
+// escritura siguen siendo no fatales.
+func markPendingSyncUnderLock(h string) {
+	_ = statecoord.WithLock(h, func() error {
+		s, readErr := state.Read(h)
+		if readErr != nil && !errors.Is(readErr, os.ErrNotExist) {
+			// El fichero existe pero está ilegible o corrupto: no se escribe.
+			return nil
+		}
+		s.PendingSync = true
+		return state.Write(h, s)
+	})
 }
 
 func reportUpgradedGentleAI(report upgrade.UpgradeReport) bool {
@@ -5676,7 +5702,7 @@ func (m Model) confirmProfileCreate() (tea.Model, tea.Cmd) {
 
 // detectAgentBuilderEngines scans for supported AI agent binaries on PATH and
 // returns the list of available AgentIDs.
-func (m Model) detectAgentBuilderEngines() []model.AgentID {
+func detectAgentBuilderEngines() []model.AgentID {
 	candidateIDs := []model.AgentID{
 		model.AgentClaudeCode,
 		model.AgentOpenCode,
@@ -5685,17 +5711,17 @@ func (m Model) detectAgentBuilderEngines() []model.AgentID {
 	}
 	var available []model.AgentID
 	for _, id := range candidateIDs {
-		engine := agentbuilder.NewEngine(id)
-		if engine != nil && engine.Available() {
+		if agentBuilderEngineAvailableFn(id) {
 			available = append(available, id)
 		}
 	}
 	return available
 }
 
-// hasAgentBuilderEngines reports whether any supported AI agent binary is installed.
+// hasAgentBuilderEngines reports whether any supported AI agent binary was
+// detected; it reads the stored result and never probes PATH.
 func (m Model) hasAgentBuilderEngines() bool {
-	return len(m.detectAgentBuilderEngines()) > 0
+	return len(m.agentBuilderEngines) > 0
 }
 
 // agentBuilderInstallTargets returns the list of install target paths for the preview screen.

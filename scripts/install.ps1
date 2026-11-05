@@ -6,7 +6,10 @@
 .DESCRIPTION
     Installs Axiom from source with Go. Official Windows binary distribution
     and Scoop are temporarily unavailable until public-trust Authenticode signing
-    is enforced. Accepted channels: stable (default), beta, nightly.
+    is enforced. Accepted channels: stable (default), beta, nightly. Needs Go
+    1.25.10 or newer. It also runs piped (irm <raw script URL> | iex), the
+    one-line install documented in the README; parameters live inside Main so no
+    top-level param block breaks that form.
 
 .EXAMPLE
     .\install.ps1
@@ -17,6 +20,25 @@
 .EXAMPLE
     # The legacy binary method fails closed with source-install guidance.
     .\install.ps1 -Method binary
+
+.EXAMPLE
+    # Do not start the dashboard server when you sign in to Windows.
+    .\install.ps1 -NoAutostart
+
+.EXAMPLE
+    # Install without creating the Start menu shortcut.
+    .\install.ps1 -NoShortcut
+
+.NOTES
+    After a verified install on Windows the script (1) creates an "Axiom" shortcut
+    in the Start menu that runs "axiom ui --detach" (starts the local dashboard
+    server in the background and opens it in the browser) and (2) registers a
+    per-user scheduled task named "Axiom" that runs "axiom ui --detach --no-browser"
+    at sign-in (no elevation needed) and starts it once. Install the dashboard as an
+    app from Chrome or Edge and pin that icon; the task keeps the server running.
+    -NoShortcut skips the shortcut, -NoAutostart skips the task. Failures only warn.
+    To remove the task: Unregister-ScheduledTask -TaskName Axiom -Confirm:$false
+    (there is no uninstall script; delete the Start menu shortcut by hand).
 #>
 
 $ErrorActionPreference = "Stop"
@@ -30,6 +52,7 @@ $GITHUB_REPO = "axiom"
 $BINARY_NAME = "axiom"
 $WINDOWS_DISTRIBUTION_HOLD = "Windows binary distribution and Scoop are temporarily unavailable until publicly trusted Authenticode signing is enforced."
 $STABLE_SOURCE_COMMAND = "go install github.com/IGutierrezZ/axiom/v3/cmd/axiom@latest"
+$AUTOSTART_TASK_NAME = "Axiom"
 
 function Write-Info    { param([string]$Message) Write-Host "[info]    $Message" -ForegroundColor Blue }
 function Write-Success { param([string]$Message) Write-Host "[ok]      $Message" -ForegroundColor Green }
@@ -40,7 +63,9 @@ function Write-Step    { param([string]$Message) Write-Host "`n==> $Message" -Fo
 function Stop-WithError {
     param([string]$Message)
     Write-Err $Message
-    exit 1
+    # throw, not exit: under "irm | iex" the script runs in the caller's session
+    # and exit would close the terminal before the error can be read.
+    throw $Message
 }
 
 function Show-Banner {
@@ -67,7 +92,7 @@ function Get-Platform {
 function Test-Prerequisites {
     Write-Step "Checking prerequisites"
     if (-not (Get-Command "go" -ErrorAction SilentlyContinue)) {
-        Stop-WithError "$WINDOWS_DISTRIBUTION_HOLD Install Go 1.25.10 or newer, then run: $STABLE_SOURCE_COMMAND"
+        Stop-WithError "$WINDOWS_DISTRIBUTION_HOLD Go 1.25.10 or newer is required to install from source. Install it with: winget install --id GoLang.Go -e (or from https://go.dev/dl/), open a new terminal so PATH is refreshed, then run this installer again or run: $STABLE_SOURCE_COMMAND"
     }
     Write-Success "Go is available"
 }
@@ -93,8 +118,10 @@ function Install-ViaGo {
     $version = if ($Channel -eq "beta") { "main" } else { "latest" }
     # /v3 is part of the module path, not decoration: Go refuses to resolve a
     # module whose tags are v3.x unless the import path carries the major
-    # version suffix.
-    $goPackage = "github.com/$($GITHUB_OWNER.ToLower())/$GITHUB_REPO/v3/cmd/$BINARY_NAME@$version"
+    # version suffix. The owner keeps its exact case (IGutierrezZ): Go compares the
+    # module path declared in go.mod case-sensitively, so a lowercased owner fails
+    # with "module declares its path as ... but was required as ...".
+    $goPackage = "github.com/$GITHUB_OWNER/$GITHUB_REPO/v3/cmd/$BINARY_NAME@$version"
     Write-Info "Running: go install $goPackage"
 
     if ($Channel -eq "beta") {
@@ -113,11 +140,88 @@ function Install-ViaGo {
         $gopath = & go env GOPATH 2>$null
         $gobin = Join-Path $gopath "bin"
     }
-    if ($env:PATH -notlike "*$gobin*") {
-        Write-Warn "$gobin is not in your PATH"
-        Write-Warn "Add it to your PATH environment variable."
-    }
+    Confirm-UserPath -Dir $gobin
     Write-Success "Installed $BINARY_NAME from source via go install"
+}
+
+function ConvertTo-PathKey {
+    param([string]$Value)
+
+    $text = $Value.Trim().Trim('"')
+    # Keep a drive root such as C:\ intact; drop the trailing separator otherwise.
+    if ($text.Length -gt 3) { $text = $text.TrimEnd('\', '/') }
+    return $text
+}
+
+function Test-PathListContains {
+    param([string]$List, [string]$Dir)
+
+    $target = ConvertTo-PathKey $Dir
+    foreach ($entry in $List.Split(';')) {
+        if (-not $entry.Trim()) { continue }
+        $literal = ConvertTo-PathKey $entry
+        $expanded = ConvertTo-PathKey ([Environment]::ExpandEnvironmentVariables($literal))
+        if ($literal -ieq $target -or $expanded -ieq $target) { return $true }
+    }
+    return $false
+}
+
+# Adds $Dir to the user PATH (HKCU\Environment) without touching anything else.
+# Same criterion as internal/system/path.go: the raw value is read without
+# expanding %VARS%, the registry value kind is kept (REG_EXPAND_SZ when the
+# value does not exist), and the entry is not added twice. Returns "added" or
+# "present". $SubKey only exists so a test can use a scratch key; the
+# environment-change broadcast is sent for the real Environment key only.
+function Add-ToUserPath {
+    param([string]$Dir, [string]$SubKey = "Environment")
+
+    $Dir = $Dir.Trim().Trim('"')
+    $key = [Microsoft.Win32.Registry]::CurrentUser.CreateSubKey($SubKey)
+    $changed = $false
+    try {
+        $current = [string]$key.GetValue("Path", "", [Microsoft.Win32.RegistryValueOptions]::DoNotExpandEnvironmentNames)
+        $kind = [Microsoft.Win32.RegistryValueKind]::ExpandString
+        if ($key.GetValueNames() -contains "Path") { $kind = $key.GetValueKind("Path") }
+        if (Test-PathListContains -List $current -Dir $Dir) { return "present" }
+        $updated = $Dir
+        if ($current.Trim()) { $updated = "{0};{1}" -f $Dir, $current }
+        $key.SetValue("Path", $updated, $kind)
+        $changed = $true
+    } finally {
+        $key.Close()
+    }
+    if ($changed -and $SubKey -eq "Environment") {
+        try {
+            Add-Type -TypeDefinition 'using System; using System.Runtime.InteropServices; public static class AxiomPathNotification { [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)] public static extern IntPtr SendMessageTimeout(IntPtr hWnd, uint msg, UIntPtr wParam, string lParam, uint flags, uint timeout, out UIntPtr result); }' -ErrorAction Stop
+            $result = [UIntPtr]::Zero
+            [void][AxiomPathNotification]::SendMessageTimeout([IntPtr]0xffff, 0x1a, [UIntPtr]::Zero, "Environment", 2, 1000, [ref]$result)
+        } catch { }
+    }
+    return "added"
+}
+
+# Makes sure $Dir is reachable from new terminals: nothing when it is already in
+# this session's PATH or AXIOM_NO_PERSISTENT_PATH=1; otherwise it is added to
+# the user PATH and to $env:Path, and a manual hint is shown if that fails.
+function Confirm-UserPath {
+    param([string]$Dir)
+
+    if (Test-PathListContains -List $env:Path -Dir $Dir) { return }
+    if ($env:AXIOM_NO_PERSISTENT_PATH -ne "1" -and $env:OS -eq "Windows_NT") {
+        try {
+            $result = Add-ToUserPath -Dir $Dir
+            $env:Path = "{0};{1}" -f $Dir, $env:Path
+            if ($result -eq "added") {
+                Write-Success "Added $Dir to your user PATH"
+            }
+            Write-Warn "Open a new terminal so the PATH change takes effect everywhere."
+            return
+        } catch {
+            Write-Warn ("Could not update the user PATH: {0}" -f $_.Exception.Message)
+        }
+    }
+    Write-Warn "$Dir is not in your PATH"
+    Write-Warn "Add it to your PATH environment variable."
 }
 
 function Add-GoEnvPattern {
@@ -156,10 +260,104 @@ function Test-Installation {
     $versionOutput = & $binaryPath --version 2>&1
     Remove-Item Env:GENTLE_AI_NO_SELF_UPDATE -ErrorAction SilentlyContinue
     Write-Success "$BINARY_NAME installed at $binaryPath`: $versionOutput"
+    return $binaryPath
+}
+
+function New-AxiomShortcut {
+    param(
+        [string]$Path,
+        [string]$Target,
+        [string]$Arguments,
+        [string]$Description,
+        [int]$WindowStyle = 1
+    )
+
+    $dir = Split-Path -Parent $Path
+    if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
+    $shell = New-Object -ComObject WScript.Shell
+    $link = $shell.CreateShortcut($Path)
+    $link.TargetPath = $Target
+    $link.Arguments = $Arguments
+    $link.WorkingDirectory = $HOME
+    $link.WindowStyle = $WindowStyle
+    $link.Description = $Description
+    $link.IconLocation = "$Target,0"
+    $link.Save()
+}
+
+function New-AxiomShortcuts {
+    param([string]$BinaryPath)
+
+    Write-Step "Creating shortcut"
+    # The shortcut is optional: any failure here warns and lets the install finish.
+    if ($env:OS -ne "Windows_NT") {
+        Write-Warn "Shortcuts are only created on Windows. Skipping."
+        return $false
+    }
+    if (-not $BinaryPath) {
+        Write-Warn "Axiom binary not verified; skipping shortcut."
+        return $false
+    }
+    try {
+        $startMenu = Join-Path ([Environment]::GetFolderPath("Programs")) "Axiom.lnk"
+        New-AxiomShortcut -Path $startMenu -Target $BinaryPath -Arguments "ui --detach" -Description "Abre el panel local de Axiom" -WindowStyle 7
+        Write-Success "Start menu shortcut: $startMenu"
+        return $true
+    } catch {
+        Write-Warn ("Could not create the shortcut: {0}" -f $_.Exception.Message)
+        return $false
+    }
+}
+
+function Register-AxiomLogonTask {
+    param([string]$BinaryPath)
+
+    Write-Step "Registering sign-in autostart"
+    # Optional: any failure here warns and lets the install finish. A per-user
+    # task needs no elevation.
+    if ($env:OS -ne "Windows_NT") {
+        Write-Warn "The scheduled task is only created on Windows. Skipping."
+        return $false
+    }
+    if (-not $BinaryPath) {
+        Write-Warn "Axiom binary not verified; skipping the scheduled task."
+        return $false
+    }
+    try {
+        $user = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
+        $action = New-ScheduledTaskAction -Execute $BinaryPath -Argument "ui --detach --no-browser" -WorkingDirectory $HOME
+        $trigger = New-ScheduledTaskTrigger -AtLogOn -User $user
+        $trigger.Delay = "PT30S"
+        $principal = New-ScheduledTaskPrincipal -UserId $user -LogonType Interactive -RunLevel Limited
+        $settings = New-ScheduledTaskSettingsSet `
+            -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries `
+            -ExecutionTimeLimit ([TimeSpan]::Zero) `
+            -RestartCount 5 -RestartInterval (New-TimeSpan -Minutes 1) `
+            -MultipleInstances IgnoreNew
+        Register-ScheduledTask -TaskName $AUTOSTART_TASK_NAME -Action $action -Trigger $trigger `
+            -Principal $principal -Settings $settings `
+            -Description "Starts the local Axiom dashboard server when you sign in." -Force | Out-Null
+        Write-Success "Scheduled task: $AUTOSTART_TASK_NAME (runs at sign-in)"
+    } catch {
+        Write-Warn ("Could not register the scheduled task: {0}" -f $_.Exception.Message)
+        return $false
+    }
+    # Start it once so the server is up without signing out; failure only warns.
+    try {
+        Start-ScheduledTask -TaskName $AUTOSTART_TASK_NAME
+        Write-Success "Dashboard server started"
+    } catch {
+        Write-Warn ("Could not start the scheduled task now: {0}" -f $_.Exception.Message)
+    }
+    return $true
 }
 
 function Show-NextSteps {
-    param([string]$Channel = "stable")
+    param(
+        [string]$Channel = "stable",
+        [bool]$Shortcuts = $false,
+        [bool]$ServerTask = $false
+    )
 
     Write-Host ""
     Write-Host "Installation complete!" -ForegroundColor Green
@@ -168,6 +366,23 @@ function Show-NextSteps {
         Write-Host ('  Run ''$env:AXIOM_CHANNEL = "beta"; {0} install'' to keep using the beta channel' -f $BINARY_NAME) -ForegroundColor Cyan
     } else {
         Write-Host "  Run '$BINARY_NAME' to start the TUI installer" -ForegroundColor Cyan
+    }
+    if ($Shortcuts -or $ServerTask) {
+        Write-Host ""
+        Write-Host "  Dashboard as a desktop app:" -ForegroundColor Cyan
+        if ($Shortcuts) {
+            Write-Host "  1. Open the 'Axiom' shortcut in the Start menu (or http://127.0.0.1:47700)." -ForegroundColor Cyan
+        } else {
+            Write-Host "  1. Open http://127.0.0.1:47700 in Edge or Chrome." -ForegroundColor Cyan
+        }
+        Write-Host "  2. Install it as an app from Chrome or Edge: install icon in the address bar," -ForegroundColor Cyan
+        Write-Host "     or the 'Instalar aplicacion' button of the dashboard." -ForegroundColor Cyan
+        Write-Host "  3. Pin the installed app's icon to the taskbar." -ForegroundColor Cyan
+        if ($ServerTask) {
+            Write-Host "  4. The server starts by itself when you sign in to Windows (task '$AUTOSTART_TASK_NAME')." -ForegroundColor Cyan
+        } else {
+            Write-Host "  4. The server does not start at sign-in: run 'axiom ui --detach' to start it." -ForegroundColor Cyan
+        }
     }
     Write-Host "Docs: https://github.com/$GITHUB_OWNER/$GITHUB_REPO" -ForegroundColor DarkGray
     Write-Host ""
@@ -184,7 +399,11 @@ function Main {
 
         [string]$InstallDir = "",
 
-        [switch]$Insecure
+        [switch]$Insecure,
+
+        [switch]$NoAutostart,
+
+        [switch]$NoShortcut
     )
 
     Show-Banner
@@ -202,8 +421,16 @@ function Main {
     if ($installMethod -eq "go") {
         Install-ViaGo -Channel $Channel
     }
-    Test-Installation
-    Show-NextSteps -Channel $Channel
+    $binaryPath = Test-Installation
+    $shortcuts = $false
+    if (-not $NoShortcut) {
+        $shortcuts = New-AxiomShortcuts -BinaryPath $binaryPath
+    }
+    $serverTask = $false
+    if (-not $NoAutostart) {
+        $serverTask = Register-AxiomLogonTask -BinaryPath $binaryPath
+    }
+    Show-NextSteps -Channel $Channel -Shortcuts $shortcuts -ServerTask $serverTask
 }
 
 Main @args
