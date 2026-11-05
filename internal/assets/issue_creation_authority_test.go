@@ -168,3 +168,32 @@ func TestDelegatedWorkflowMutationContract(t *testing.T) {
 		}
 	}
 }
+
+// La política de formato del repositorio destino manda: formulario YAML,
+// plantilla Markdown o ruta sin plantilla. La skill no impone un único formato
+// ni añade reglas propias para el repositorio de Axiom, que no recibe issues.
+func TestIssueCreationFollowsDestinationRepositoryPolicy(t *testing.T) {
+	text := MustRead("skills/issue-creation/SKILL.md")
+	for _, scenario := range []struct {
+		name  string
+		terms []string
+	}{
+		{"formulario YAML requerido", []string{"When the target uses YAML Issue Forms", "Never bypass a required form", "omit `markdown` guidance"}},
+		{"plantilla Markdown", []string{"When the target uses a Markdown template", "preserve its required structure"}},
+		{"sin plantilla", []string{"When the target has no issue template", "do not block publication solely because YAML forms are absent", "labels permitted by repository policy"}},
+		{"detección en el destino", []string{"`.github/ISSUE_TEMPLATE/`"}},
+	} {
+		t.Run(scenario.name, func(t *testing.T) {
+			for _, term := range scenario.terms {
+				if !strings.Contains(text, term) {
+					t.Errorf("issue-creation skill is missing destination-policy marker %q", term)
+				}
+			}
+		})
+	}
+	for _, stale := range []string{"Never use Markdown, a blank body", "single format authority", "IGutierrezZ/axiom", "branch-pr"} {
+		if strings.Contains(text, stale) {
+			t.Errorf("issue-creation skill must not contain %q", stale)
+		}
+	}
+}

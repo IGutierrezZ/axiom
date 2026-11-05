@@ -15,7 +15,7 @@ func TestIssueCreationSkillPublicationContract(t *testing.T) {
 	}{
 		{"proportional discovery", []string{"Fast path", "Minimal discovery", "missing or stale facts"}},
 		{"exact target", []string{"[HOST/]OWNER/REPO", "Never assume the current repository", "TARGET=$HOST/$REPO"}},
-		{"single format authority", []string{"YAML Issue Forms are the single format authority", "omit `markdown` guidance"}},
+		{"repository format authority", []string{"repository's issue format policy", ".github/ISSUE_TEMPLATE/", "When the target uses YAML Issue Forms", "When the target uses a Markdown template", "When the target has no issue template", "omit `markdown` guidance"}},
 		{"current duplicate search", []string{"open-and-closed duplicate search", "Reuse that result while it remains current", "--state all"}},
 		{"evidence-based duplicate handling", []string{"read from the target host", "Compare each candidate's body controls and required answers with the selected YAML form", "Unavailable body, target mismatch, incomplete data, or ambiguous classification is `unknown`", "Comment there instead", "repair it in place", "never auto-rewrite or approve"}},
 		{"semantic form translation", []string{"declared order", "`input` / `textarea`", "`dropdown`", "`checkboxes`", "`validations.required`", "first-person", "textarea.attributes.render", "`attributes.multiple` selection mode", "`dropdown.attributes.multiple: true`", "otherwise treat it as single-select", "every dropdown selection to exactly match a declared option", "A required dropdown must have at least one valid selection", "preserve every valid reviewed selection in declared options order"}},
@@ -24,7 +24,7 @@ func TestIssueCreationSkillPublicationContract(t *testing.T) {
 		{"private body-bearing read-back", []string{"read it back from that host into `READBACK_FILE`", "Redirect stdout from both body-bearing read-back commands", "Validate and compare only from `READBACK_FILE`"}},
 		{"bounded outcomes", []string{"confirmed | no_write | unknown", "one create or comment attempt with no blind retry", "stop all mutations and retries"}},
 		{"target-host verification", []string{"target-host read-back", "CRLF-to-LF", "trailing-final-newline normalization"}},
-		{"create-time label policy", []string{"Create-time labels are limited to labels declared by the selected form", "discovered to exist", "permitted for the actor"}},
+		{"create-time label policy", []string{"Create-time labels are limited to labels declared by the selected form or template", "labels permitted by repository policy when no template exists", "discovered to exist", "permitted for the actor"}},
 		{"delegated workflow mutation", []string{"Before ANY post-publication workflow mutation", "current direct human instruction", "read `references/delegated-workflow-actions.md` completely and follow it"}},
 		{"comment parent identity", []string{"returned comment's `issue_url`", "issue `$NUMBER` in `$REPO` on `$HOST`", "absent or mismatched parent identity is `unknown`", "Clean up and stop all mutations and retries"}},
 		{"candidate target identity", []string{"returned candidate number and URL in `DISCOVERY_FILE`", "`$CANDIDATE_NUMBER` in `$REPO` on `$HOST` before classification", "a mismatch is `unknown`"}},
@@ -51,7 +51,6 @@ func TestIssueCreationSkillPublicationContract(t *testing.T) {
 		"curl ",
 		"hosted publisher",
 		"Go publisher",
-		"Markdown template",
 		`--body "$BODY"`,
 		`${LABEL_ARGS[@]}`,
 	}
@@ -86,7 +85,7 @@ func TestIssueCreationSkillPublicationContract(t *testing.T) {
 	commentCommand := expectedCommands[4]
 	targetIndex := strings.Index(executionSteps, "derive and verify `HOST`, `REPO=OWNER/REPO`, and `TARGET=$HOST/$REPO`")
 	discoveryIndex := strings.Index(executionSteps, "Authenticate to `HOST`; discover only missing")
-	selectedFormIndex := strings.Index(executionSteps, "Select the one YAML form whose declared purpose matches")
+	selectedFormIndex := strings.Index(executionSteps, "Resolve the repository's issue format policy")
 	duplicateSearchIndex := strings.Index(executionSteps, expectedCommands[1])
 	classificationIndex := strings.Index(executionSteps, "Compare each candidate's body controls and required answers with the selected YAML form")
 	materializationIndex := strings.Index(executionSteps, "Only when classification selects the new-issue path, process reviewed answers and materialize the body")
