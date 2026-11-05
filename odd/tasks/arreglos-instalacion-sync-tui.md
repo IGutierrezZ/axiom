@@ -100,9 +100,10 @@ Cada tarea es una rebanada de PR de unas 400 líneas como máximo y cierra con u
   - El revisor en proceso pasa `--effort` con el esfuerzo asignado, leído desde `EffectiveStateStore`.
   - Hecho: `e8af9f56` (+117/−54; ruta: escritor delegado). `go test ./internal/model/... ./internal/reviewerprovider/... ./internal/tui/screens/...` ok; `go vet` y `gofmt -l` limpios. Sin esfuerzo asignado no se pasa `--effort`.
   - Pendiente común a T1 y T2: `go test ./internal/cli/...` completo agota el timeout en esta máquina (503 tests ok, 0 fallos antes del corte; los lentos son del ciclo de revisión, no tocados). Repetir en CI o en una máquina descargada antes del PR.
-- [ ] **T3 · TUI y estado** — #5868 + #4838 (~300)
+- [x] **T3 · TUI y estado** — #5868 + #4838 (~300)
   - La detección de motores se cachea en `NewModel` y se refresca al pulsar «Crear agente».
   - Los read-modify-write del estado en sync, desinstalación y TUI pasan por `statecoord`.
+  - Hecho: `b1a10670` y `536f4be0` (~350; ruta: escritor delegado). `b1a10670` incluye también `markPendingSyncUnderLock` de la TUI, porque `model.go` no se pudo partir sin `git add -p`. `go test ./internal/tui/... ./internal/statecoord/... ./internal/components/uninstall/...` ok; `go test ./internal/cli/ -run 'MigratePersisted|ApplyResolvedPersona|InstallStateLock'` ok; `go vet` y `gofmt -l` limpios. Cinco pruebas de regresión nuevas (no se observó el RED: stash y reset están vetados). Fuera del encargo, sin portar: el preflight descartado de `run.go` que upstream quita en #4838.
 - [ ] **T4 · Sync** — #4078 + #5017 sin Codex (~250)
   - Un `variant` vacío conserva el del usuario.
   - El sync usa el orden de install, con CodeGraph después de la persona.
@@ -197,4 +198,4 @@ T9 no se mezcla con los demás eslabones.
 
 ## Siguiente paso
 
-T3, T5, T6 y T9, en ese orden. T4 espera a adaptadores T1 y T7 a seguridad T2.
+T5, T6 y T9, en ese orden. T4 espera a adaptadores T1 y T7 a seguridad T2.
