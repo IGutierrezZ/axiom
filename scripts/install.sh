@@ -216,18 +216,16 @@ install_go() {
         gobin="$(go env GOPATH)/bin"
     fi
 
-    if [[ ":$PATH:" != *":$gobin:"* ]]; then
-        warn "${gobin} is not in your PATH"
-        warn "Add this to your shell profile: export PATH=\"\$PATH:${gobin}\""
-    fi
+    ensure_dir_in_path "$gobin"
 
     success "Installed ${BINARY_NAME} via go install"
 }
 
 # ============================================================================
-# Install cleanup
+# PATH handling
 # ============================================================================
 
+PATH_MARKER="# axiom: PATH"
 INSTALL_TMPDIR=""
 INSTALL_STAGING=""
 
@@ -238,6 +236,80 @@ cleanup_install() {
     if [ -n "${INSTALL_TMPDIR:-}" ]; then
         rm -rf -- "$INSTALL_TMPDIR" 2>/dev/null || true
     fi
+}
+
+# path_rc_file SHELL_NAME OS -> prints the rc file of a recognized shell.
+path_rc_file() {
+    case "$1" in
+        bash)
+            if [ "$2" = "Darwin" ]; then
+                printf '%s\n' "${HOME}/.bash_profile"
+            else
+                printf '%s\n' "${HOME}/.bashrc"
+            fi
+            ;;
+        zsh)  printf '%s\n' "${HOME}/.zshrc" ;;
+        fish) printf '%s\n' "${HOME}/.config/fish/config.fish" ;;
+        *)    return 1 ;;
+    esac
+}
+
+# path_rc_line SHELL_NAME DIR -> prints the marked line that adds DIR to PATH.
+# DIR is quoted for the target shell so it cannot inject commands.
+path_rc_line() {
+    local shell_name="$1" dir="$2" quoted
+    if [ "$shell_name" = "fish" ]; then
+        quoted="${dir//\\/\\\\}"
+        quoted="${quoted//\'/\\\'}"
+        printf "fish_add_path '%s' %s\n" "$quoted" "$PATH_MARKER"
+    else
+        printf -v quoted '%q' "$dir"
+        printf 'export PATH="$PATH":%s %s\n' "$quoted" "$PATH_MARKER"
+    fi
+}
+
+# add_dir_to_shell_rc DIR SHELL_NAME OS: appends the marked line to the rc file
+# unless a marked line for DIR already exists. Prints the rc file path only when
+# it writes. Returns 1 when the shell is not recognized or the file cannot be
+# written.
+add_dir_to_shell_rc() {
+    local dir="$1" shell_name="$2" os="$3" rc line
+    case "$dir" in
+        *$'\n'*) return 1 ;;
+    esac
+    rc="$(path_rc_file "$shell_name" "$os")" || return 1
+    if [ -f "$rc" ] && grep -F -- "$PATH_MARKER" "$rc" | grep -qF -- "$dir"; then
+        return 0
+    fi
+    line="$(path_rc_line "$shell_name" "$dir")"
+    mkdir -p -- "$(dirname -- "$rc")" 2>/dev/null || return 1
+    printf '\n%s\n' "$line" >> "$rc" 2>/dev/null || return 1
+    printf '%s\n' "$rc"
+}
+
+# ensure_dir_in_path DIR: does nothing when DIR is already in PATH or
+# AXIOM_NO_PERSISTENT_PATH=1. Otherwise it appends one marked line to the rc
+# file of the detected shell, and falls back to the manual instruction when the
+# shell is not recognized or the file cannot be written.
+ensure_dir_in_path() {
+    local dir="$1" shell_name rc
+    if [[ ":$PATH:" == *":${dir}:"* ]]; then
+        return 0
+    fi
+    shell_name="$(basename -- "${SHELL:-}")"
+    if [ "${AXIOM_NO_PERSISTENT_PATH:-}" != "1" ] \
+        && rc="$(add_dir_to_shell_rc "$dir" "$shell_name" "$(uname -s 2>/dev/null || true)")"; then
+        if [ -n "$rc" ]; then
+            success "Added ${dir} to PATH in ${rc}"
+        fi
+        warn "Open a new terminal (or reload your shell profile) to use '${BINARY_NAME}'"
+        return 0
+    fi
+    warn "${dir} is not in your PATH"
+    echo ""
+    warn "Add this to your shell profile (~/.bashrc, ~/.zshrc, etc.):"
+    echo -e "  ${DIM}export PATH=\"\$PATH:${dir}\"${NC}"
+    echo ""
 }
 
 prepend_go_env_pattern() {
@@ -416,14 +488,7 @@ install_binary() {
 
     success "Installed ${BINARY_NAME} to ${final}"
 
-    # Check if install dir is in PATH
-    if [[ ":$PATH:" != *":${install_dir}:"* ]]; then
-        warn "${install_dir} is not in your PATH"
-        echo ""
-        warn "Add this to your shell profile (~/.bashrc, ~/.zshrc, etc.):"
-        echo -e "  ${DIM}export PATH=\"\$PATH:${install_dir}\"${NC}"
-        echo ""
-    fi
+    ensure_dir_in_path "$install_dir"
 }
 
 # ============================================================================

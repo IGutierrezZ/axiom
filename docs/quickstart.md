@@ -31,6 +31,8 @@ axiom version
 
 El script de Windows ejecuta `go install github.com/IGutierrezZ/axiom/v3/cmd/axiom@latest`; el ejecutable queda en el directorio `bin` de Go (`GOBIN` o, si no está definido, `GOPATH/bin`), que debe estar en `PATH`. Para instalar desde `main` (canal beta): en Linux y macOS, `curl -fsSL https://raw.githubusercontent.com/IGutierrezZ/axiom/main/scripts/install.sh | AXIOM_CHANNEL=beta bash` (la variable debe aplicarse a `bash`, no a `curl`); en PowerShell, `$env:AXIOM_CHANNEL = "beta"` antes del comando `irm ... | iex`.
 
+Si ese directorio no está en el `PATH`, los instaladores lo añaden por ti. `install.ps1` lo añade al `PATH` de usuario (`HKCU\Environment`) sin duplicarlo y conservando el tipo `REG_EXPAND_SZ` y las variables sin expandir. `install.sh` añade al fichero de arranque de tu shell (`~/.bashrc`, o `~/.bash_profile` en macOS; `~/.zshrc`; `~/.config/fish/config.fish`) una línea marcada con `# axiom: PATH` que no se repite. Si la shell no se reconoce, solo avisa y muestra la línea que debes añadir. Abre una terminal nueva para que surta efecto. Con `AXIOM_NO_PERSISTENT_PATH=1` los instaladores no tocan el `PATH` y solo avisan.
+
 ## Contribuir / desarrollo
 
 Solo si vas a modificar Axiom: clona el repositorio y compila el ejecutable `axiom`.
