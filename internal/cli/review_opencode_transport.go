@@ -432,7 +432,7 @@ func openCodeTransportComplete(ctx context.Context, session openCodeTransportSes
 	if session.binding.Role != "" {
 		closure, err := openCodeTransportCaptureRole(ctx, session.dialect(), session.root, store, record, session.binding.Role, hostOutput)
 		if err != nil {
-			return openCodeTransportEnvelope{}, openCodeTransportFailure("opencode_provider_role_result_refused")
+			return openCodeTransportEnvelope{}, openCodeTransportCaptureRefusal(err)
 		}
 		if closure != nil {
 			if session.binding.Role == reviewerprovider.RoleRefuter {
@@ -440,7 +440,7 @@ func openCodeTransportComplete(ctx context.Context, session openCodeTransportSes
 			}
 			payload, err := json.Marshal(closure)
 			if err != nil {
-				return openCodeTransportEnvelope{}, openCodeTransportFailure("opencode_provider_role_result_refused")
+				return openCodeTransportEnvelope{}, openCodeTransportCaptureRefusal(err)
 			}
 			output := string(payload)
 			return openCodeTransportEnvelope{Schema: openCodeReviewTransportSchema, Operation: "result", Output: &output}, nil
@@ -795,6 +795,30 @@ func boundedOpenCodeTaskPayload(payload []byte) ([]byte, error) {
 
 func openCodeTransportFailure(code string) error {
 	return fmt.Errorf("%s: OpenCode Task transport did not produce a capturable reviewer result; run `axiom review status --cwd <repo> --contract axiom.review-integration/v2 --next-transition` before retrying", code)
+}
+
+// openCodeTransportCaptureRefusalCause clasifica un fallo de captura de rol del
+// proveedor en un código de causa acotado. El rechazo nunca vuelve a mostrar el
+// texto crudo de la admisión ni bytes de la carga del revisor: cada causa es un
+// miembro fijo del enum (upstream #4599). Un veredicto inconcluyente conserva su
+// escalera de reintento nativa, de modo que el operador distingue «reintenta el
+// hueco que STATUS reofrece» de «esta carga no se podrá admitir tal cual».
+func openCodeTransportCaptureRefusalCause(err error) string {
+	if errors.Is(err, errReviewTargetedValidationInconclusive) {
+		return "targeted_validation_inconclusive"
+	}
+	var admission *reviewProviderAdmissionError
+	if errors.As(err, &admission) {
+		return "validator_result_not_admissible"
+	}
+	return "role_capture_failed"
+}
+
+// openCodeTransportCaptureRefusal añade la causa tipada al rechazo. El texto fijo
+// es más corto que el de openCodeTransportFailure a propósito: con los nombres de
+// Axiom la variante larga superaba los 240 caracteres que admite failure.message.
+func openCodeTransportCaptureRefusal(err error) error {
+	return fmt.Errorf("opencode_provider_role_result_refused (cause: %s): no capturable reviewer result; run `axiom review status --cwd <repo> --contract axiom.review-integration/v2 --next-transition` before retrying", openCodeTransportCaptureRefusalCause(err))
 }
 
 func openCodeTransportAuthorityUnavailable(cause error) error {
