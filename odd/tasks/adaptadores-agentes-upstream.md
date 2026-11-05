@@ -261,4 +261,24 @@ Lo fija el cruce de ficheros entre las sesiones de la absorción upstream, envia
 
 1. **T5 (Copilot CLI)**: parada, a la espera de que se fusionen guía T1/T2, seguridad T3/T4/T5 y arreglos T3. Cuando estén en `main`, rebasar y retomarla.
 2. **T1 libera arreglos T4**, que esperaba a que se fusionara. La decisión de push y PR es del usuario.
-3. Seguimientos menores anotados en T2, T4 y T6, para decidir si entran en este PR.
+3. Seguimientos menores de T2 y T4: hechos el 2026-11-05 (ver más abajo). El de marca de T6 (`gentle-ai:managed` en el plugin V2) queda para el bloque de marca.
+
+## Seguimientos de verificación (T2/T4)
+
+- [x] **S1 · Seguimientos menores del catálogo** — Ruta: escritor delegado. Commits `18037897` y `76ce8751`, 5 ficheros, +230/−1.
+  - Se hizo:
+    - **Nieto huérfano en Windows**: `TestCatalogCancellationLeavesNoOrphanGrandchildWindows` cubre `streamCatalogCommand` y `fileCatalogCommand`. Usa el binario de test relanzado, sin `go build`.
+    - **Tests de T2 en V1 y V2**:
+      - cancelación con el hijo vivo → `timeout`;
+      - salida válida con código ≠ 0 → `command_failed`;
+      - límite exacto de 16 MiB.
+    - **Ruta no ASCII en V2** (`ñ`, `é`, espacio): mismo resultado que `url.QueryEscape` de upstream.
+    - **Plazo**: la detección de versión comparte ahora el plazo único de 15 s del catálogo, y `DetectRuntimeMajor` conserva su tope de 3 s.
+  - No se hizo: registrar el fallo de `os.Remove`. El paquete no tiene mecanismo de log; queda un comentario que lo explica.
+  - Evidencia:
+    - `go test ./internal/opencode/... ./internal/tui/...`: ok.
+    - `-run 'Catalog|V2|Process' -count=3`: ok.
+    - Comprobación puntual del orquestador (`-run 'Catalog|V2'`): ok.
+    - `go vet` limpio y `gofmt` vacío.
+  - `axiom review assess`: `medium`. Con RDD apagado basta la verificación del escritor.
+  - Riesgo: el test del nieto espera 300 ms a que el hijo quede asignado al Job Object.
