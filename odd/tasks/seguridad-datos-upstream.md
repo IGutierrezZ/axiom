@@ -129,6 +129,7 @@ Orden de ejecución: **T1 → T4 → T2 → T3 → T5**, que sigue los cortes de
     - El comentario obsoleto de `gga/runtime.go` se corrigió.
     - Quedan dos seguimientos de severidad baja: casi todas las pruebas de modo se saltan en Windows, así que el contraste «conservar vs forzar» solo lo cubre la CI de Linux/macOS (como en upstream); y `TestWriteFileAtomicModeZeroNeverWidens` acepta también 0000 y 0400.
   - Comprobación del orquestador: `go test ./internal/components/filemerge/ ./internal/agents/claude/ ./internal/opencode/` ok, salvo las dos uniones.
+  - CI de la PR #232 (Linux): falló `TestInjectClaudeWritesUserConfigAndIsIdempotent` (`mcp`). La prueba afloja `~/.claude.json` a 0644 y esperaba `Changed=false` en la segunda inyección, pero con `enforceFileMode` la reparación solo de modo cuenta como cambio. Se porta el ajuste de upstream (#5014): la segunda ejecución informa `Changed` si se aflojó y una tercera debe ser un no-op. En Windows no se detectó porque el aflojado del modo se salta.
 
 ## Criterios de aceptación
 
