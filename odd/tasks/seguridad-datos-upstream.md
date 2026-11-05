@@ -64,12 +64,17 @@ Consecuencia sobre el orden interno: T1 y T4 pueden ir a la vez (mismo PR 1), T2
 
 Orden de ejecución: **T1 → T4 → T2 → T3 → T5**, que sigue los cortes de PR de «Entrega». T4 va tras T1 porque reutiliza `UnmarshalJSONObject` ya con números exactos; T5 va el último por ser el de más llamadores. T1 y T5 tocan `filemerge` en ficheros distintos; T3 y T4 tocan `permissions/inject.go` en ramas distintas (Claude y OpenCode/Kilo).
 
-- [ ] **T1 · Números JSON exactos al fusionar (#5240)**
+- [x] **T1 · Números JSON exactos al fusionar (#5240)**
   - `filemerge`: nueva `DecodeStrictJSONObject` con `UseNumber`; `unmarshalJSONObject` la usa **conservando el respaldo `normalizeJSON` (JSONC) de Axiom**, que upstream no tiene; `rejectDuplicateJSONKeys` con `UseNumber` si existe en Axiom.
   - Llamadores: `uninstall/cleaners.go:232`, `agents/pi/adapter.go:137,404`.
   - Consumidores de `float64`: `engram/healthprobe.go` (`stdioTimeoutFromConfig`, ~`:71`) acepta `json.Number`. Auditar con `rg` cualquier otro *type switch* numérico tras decodificar settings.
   - Pruebas: `TestJSONRewritesPreserveExactNumberTokens` (`9007199254740993`, `1.10`, `1E+2`), `TestUnmarshalJSONObjectKeepsStrictSingleDocument`, un caso JSONC con números, `TestProvisionEngramMCPPreservesExactNumberTokens`, `TestPersistedJSONTimeoutIsRead`.
   - Ruta: delegada (escritor único; 4+ ficheros).
+  - **Hecho (2026-11-05)**: 6 ficheros, +243/−12. `DecodeStrictJSONObject` con `UseNumber`; `unmarshalJSONObject` conserva el respaldo `normalizeJSON` y también decodifica con `UseNumber`. `readPiJSONObject` (`pi/adapter.go:~404`) migrado. `stdioTimeoutFromConfig` acepta `json.Number`.
+  - Sin cambios donde ya era correcto o no aplica: `uninstall/cleaners.go` ya usaba `UseNumber`; `pi/adapter.go:137` solo localiza rutas; Axiom no tiene `rejectDuplicateJSONKeys` en `filemerge`.
+  - Auditoría de *type switches* numéricos: solo había que adaptar `healthprobe.go:73`; `pi_codegraph.go:615` (JSON-RPC) y `dashboard_test.go:692` quedan fuera.
+  - Pruebas: `TestJSONRewritesPreserveExactNumberTokens`, `TestUnmarshalJSONObjectKeepsStrictSingleDocument`, `TestUnmarshalJSONObjectJSONCKeepsExactNumbers` (propia de Axiom), `TestProvisionEngramMCPPreservesExactNumberTokens` (Pi: `settings.json` y `npm/package.json`), `TestPersistedJSONTimeoutIsRead`.
+  - Evidencia: `go test` ok en uninstall, agents, engram, mcp, permissions y update; `go vet` y `gofmt -l` limpios. En `filemerge` fallan `TestWriteFileAtomicFollowsDirectoryJunction` y `TestWriteFileAtomicFollowsRelativeDirectoryJunction` (`createtemp ... file already exists`): **fallo ambiental previo**, reproducido por el orquestador en `main` 7235e6b6 sin este cambio. El resto de `filemerge` pasa. Comprobación del orquestador: `go test ./internal/components/filemerge/ -run "Number|StrictSingle|JSONC"` ok. `axiom review assess`: medium; con RDD apagado basta la verificación del escritor más esta comprobación.
 - [x] **T2 · PATH de usuario en Windows sin aplanar (#5625, #5632)**
   - `internal/system/path.go`: envoltorio `persistentUserPathScript` que abre `HKCU\Environment`, lee con `DoNotExpandEnvironmentNames`, conserva `GetValueKind` (por defecto `ExpandString`), escribe con `SetValue` y emite `WM_SETTINGCHANGE` solo si hubo cambio; `Test-UserPathEntry` compara literal o expandido en añadir, quitar y priorizar (priorizar conserva la forma literal).
   - Conservar `skipPersistentUserPathWrite` y `NoPersistentPathEnvVar`. Nombre de la notificación con marca Axiom.
