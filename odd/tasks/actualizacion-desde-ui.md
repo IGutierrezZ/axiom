@@ -84,6 +84,11 @@ Fuera: GoReleaser, políticas de release, contratos `gentle-ai.*` / `GENTLE_AI_*
   - El proceso viejo comprueba que el hijo sigue vivo (ventana de 1,5 s, inyectable) antes de cerrar su servidor; si murió, falla con el comando manual y sigue sirviendo.
   - La sincronización posterior se arranca solo tras enlazar el puerto (antes se anuncia como `syncing` pendiente).
   - Comandos manuales copiables: `axiom ui --path "<ruta>"` con comillas dobles simples; el tope de 90 s de la UI reutiliza ese comando.
+- [x] **T7 · Adaptar el relanzamiento a la PWA y al puerto fijo (#222).**
+  - Con `--post-update-sync`, `runUI` omite el retorno por idempotencia (`ProbeAxiom`): el hijo relanzado se encuentra al viejo aún sirviendo.
+  - Un único enlace exacto de puerto (`ListenAndServeWithRetry`), con reintentos solo en la ruta posterior a la actualización y `ErrPortInUse` en ambas.
+  - El hijo escribe en `ui.log` (añadir); los atributos de desacoplado y la ruta del log viven en `internal/dashboard` y los usa `cmd/axiom`.
+  - `docs/usage.md` coherente con la PWA (puerto 47700, `ui.log`, acceso directo y tarea programada).
 - [ ] **T6 · Documentación y cierre.**
   - [x] `docs/usage.md` (actualizar desde el dashboard y caso de Windows).
   - [x] Coherencia con `openspec/specs/axiom-updater-resilience/spec.md`: el proceso viejo sigue saltando la sincronización.
@@ -116,6 +121,8 @@ Fuera: GoReleaser, políticas de release, contratos `gentle-ai.*` / `GENTLE_AI_*
   - El flujo nuevo no está en la spec viva (véase seguimientos).
   - Comprobación: lectura estructural.
   - Pendiente: la PR, la prueba manual en Windows y marcar P2 en la auditoría al fusionar.
+- 2026-11-05: merge de `origin/main` (#222, PWA y puerto fijo) en `6ab4f57f`. Conflictos en `cmd/axiom/main.go` (banderas: se conservan `--detach` y `--post-update-sync`, puerto por defecto `DefaultPort`) y `internal/dashboard/server.go` (se conserva el `ListenAndServe` exacto de #222 y nuestro enlace con reintento); `index.html`, `main.js` y `usage.md` se fusionaron solos. Dos pruebas nuestras (`TestParseUIFlags`, sondeo de otro puerto) dejaban de ser válidas con el puerto fijo y se adaptaron en el propio merge.
+- 2026-11-05: T7 hecha. (1) `dashboardAlreadyRunning` + costura `probeAxiomFn`: con `--post-update-sync` no se sondea (prueba `TestPostUpdateSyncSkipsTheIdempotencyProbe`). (2) `ListenAndServeWithRetry` sustituye a `ListenAndServeExact`; `ListenAndServe` la llama sin reintento. (3) `startDetachedProcess` añade stdout/stderr a `ui.log` (`OpenUILog`) y el fallo «hijo muerto» cita su ruta. (4) `ApplyDetachAttrs` (CREATE_NO_WINDOW, el de #222) y `UILogPath` movidos a `internal/dashboard`; borrados `relaunch_windows.go`/`relaunch_unix.go` y los `detach_*` de `cmd/axiom`. (5) La UI sigue esperando con `/api/system/version` (`current`): ya funciona y `/api/health` solo aporta la versión si `SetVersion` se llamó. (7) Caso de la PWA (`127.0.0.1:47700` y `localhost:47700`) en `update_guard_test.go`.
 
 ## Seguimientos fuera de alcance
 

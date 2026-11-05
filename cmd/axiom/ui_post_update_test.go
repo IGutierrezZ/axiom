@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"net"
 	"strconv"
@@ -69,5 +70,29 @@ func TestStartDashboardServerPostUpdateKeepsTheSamePort(t *testing.T) {
 	t.Cleanup(func() { _ = srv.Shutdown(t.Context()) })
 	if got != port {
 		t.Fatalf("puerto = %d, quiero el mismo %d", got, port)
+	}
+}
+
+// Con --post-update-sync el proceso relanzado NO toma el dashboard viejo (aún
+// sirviendo) por «ya activo»: no sondea y sigue hasta enlazar el puerto.
+func TestPostUpdateSyncSkipsTheIdempotencyProbe(t *testing.T) {
+	var probes int
+	orig := probeAxiomFn
+	t.Cleanup(func() { probeAxiomFn = orig })
+	probeAxiomFn = func(context.Context, int) (bool, error) {
+		probes++
+		return true, nil // «hay un Axiom en el puerto»
+	}
+
+	if dashboardAlreadyRunning(context.Background(), uiOptions{port: 47700, postUpdateSync: true}) {
+		t.Fatal("con --post-update-sync no debe darse por activo un Axiom ya existente")
+	}
+	if probes != 0 {
+		t.Fatalf("con --post-update-sync no debe sondear /api/health: %d sondeos", probes)
+	}
+
+	// El arranque normal sí es idempotente.
+	if !dashboardAlreadyRunning(context.Background(), uiOptions{port: 47700}) || probes != 1 {
+		t.Fatalf("el arranque normal debe sondear y reutilizar el Axiom activo (sondeos=%d)", probes)
 	}
 }

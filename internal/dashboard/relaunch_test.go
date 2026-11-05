@@ -251,7 +251,7 @@ func freePort(t *testing.T) int {
 
 // El proceso relanzado debe quedarse con el MISMO puerto aunque el viejo tarde unos
 // instantes en liberarlo; no sondea otro.
-func TestListenAndServeExact_WaitsForTheSamePort(t *testing.T) {
+func TestListenAndServeWithRetry_WaitsForTheSamePort(t *testing.T) {
 	port := freePort(t)
 	held, err := net.Listen("tcp", "127.0.0.1:"+strconv.Itoa(port))
 	if err != nil {
@@ -263,9 +263,9 @@ func TestListenAndServeExact_WaitsForTheSamePort(t *testing.T) {
 	}()
 
 	srv := NewServer(NewService(t.TempDir()))
-	got, err := srv.ListenAndServeExact(port, 5*time.Second)
+	got, err := srv.ListenAndServeWithRetry(port, 5*time.Second)
 	if err != nil {
-		t.Fatalf("ListenAndServeExact: %v", err)
+		t.Fatalf("ListenAndServeWithRetry: %v", err)
 	}
 	t.Cleanup(func() { _ = srv.Shutdown(t.Context()) })
 	if got != port || srv.Port() != port {
@@ -273,7 +273,7 @@ func TestListenAndServeExact_WaitsForTheSamePort(t *testing.T) {
 	}
 }
 
-func TestListenAndServeExact_FailsWhenThePortStaysBusy(t *testing.T) {
+func TestListenAndServeWithRetry_FailsWhenThePortStaysBusy(t *testing.T) {
 	port := freePort(t)
 	held, err := net.Listen("tcp", "127.0.0.1:"+strconv.Itoa(port))
 	if err != nil {
@@ -283,8 +283,8 @@ func TestListenAndServeExact_FailsWhenThePortStaysBusy(t *testing.T) {
 
 	srv := NewServer(NewService(t.TempDir()))
 	start := time.Now()
-	if _, err := srv.ListenAndServeExact(port, 300*time.Millisecond); err == nil {
-		t.Fatal("con el puerto ocupado debe fallar en lugar de sondear otro")
+	if _, err := srv.ListenAndServeWithRetry(port, 300*time.Millisecond); !errors.Is(err, ErrPortInUse) {
+		t.Fatalf("con el puerto ocupado debe fallar con ErrPortInUse en lugar de sondear otro: %v", err)
 	}
 	if elapsed := time.Since(start); elapsed < 300*time.Millisecond {
 		t.Fatalf("dejó de reintentar antes de tiempo: %v", elapsed)

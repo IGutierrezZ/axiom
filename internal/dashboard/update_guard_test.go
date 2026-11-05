@@ -21,6 +21,8 @@ func TestUpdateEndpoint_RejectsForeignOriginAndHost(t *testing.T) {
 	}{
 		{"mismo origen 127.0.0.1", "127.0.0.1:8123", "http://127.0.0.1:8123", http.StatusAccepted},
 		{"mismo origen localhost", "localhost:8123", "http://localhost:8123", http.StatusAccepted},
+		{"PWA instalada 127.0.0.1:47700", "127.0.0.1:47700", "http://127.0.0.1:47700", http.StatusAccepted},
+		{"PWA instalada localhost:47700", "localhost:47700", "http://localhost:47700", http.StatusAccepted},
 		{"sin Origin", "127.0.0.1:8123", "", http.StatusAccepted},
 		{"Origin ajeno", "127.0.0.1:8123", "https://evil.example", http.StatusForbidden},
 		{"Origin local de otro puerto", "127.0.0.1:8123", "http://127.0.0.1:9999", http.StatusForbidden},
@@ -34,6 +36,9 @@ func TestUpdateEndpoint_RejectsForeignOriginAndHost(t *testing.T) {
 			svc := updateTestService(t, availableVersion)
 			srv := NewServer(svc)
 			srv.port = 8123 // puerto realmente enlazado
+			if tc.host == "127.0.0.1:47700" || tc.host == "localhost:47700" {
+				srv.port = 47700 // puerto fijo de la PWA (dashboard.DefaultPort)
+			}
 			req := httptest.NewRequest(http.MethodPost, "/api/system/update", nil)
 			req.Host = tc.host
 			if tc.origin != "" {

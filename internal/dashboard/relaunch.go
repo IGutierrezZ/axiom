@@ -105,7 +105,7 @@ func (s *Server) relaunchAfterUpdate(sync *UpdateSyncSummary) {
 		if werr != nil {
 			reason = "terminó nada más arrancar: " + werr.Error()
 		}
-		j.finish(updatePhaseFailed, "Axiom se ha actualizado, pero la versión nueva del dashboard "+reason+". Este dashboard sigue activo.", hint, sync)
+		j.finish(updatePhaseFailed, "Axiom se ha actualizado, pero la versión nueva del dashboard "+reason+". Este dashboard sigue activo. Registro: "+UILogPath(), hint, sync)
 		return
 	case <-time.After(relaunchLiveCheck):
 	}

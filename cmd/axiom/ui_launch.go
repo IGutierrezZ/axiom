@@ -6,7 +6,6 @@ import (
 	"net"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strconv"
 	"time"
 
@@ -66,20 +65,6 @@ func portIsFree(port int) bool {
 	return true
 }
 
-// uiLogPath devuelve la ruta de ui.log en el directorio de caché del usuario,
-// creando el directorio. Si no se puede, devuelve os.DevNull.
-func uiLogPath() string {
-	cache, err := os.UserCacheDir()
-	if err != nil {
-		return os.DevNull
-	}
-	dir := filepath.Join(cache, "axiom")
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return os.DevNull
-	}
-	return filepath.Join(dir, "ui.log")
-}
-
 // startDetachedServer relanza este ejecutable como servidor sin consola y sin
 // vínculo con el proceso actual. Devuelve la ruta del log donde escribe.
 func startDetachedServer(port int, baseDir string) (string, error) {
@@ -87,13 +72,9 @@ func startDetachedServer(port int, baseDir string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("no se pudo localizar el ejecutable: %w", err)
 	}
-	logPath := uiLogPath()
-	logFile, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
+	logFile, logPath, err := dashboard.OpenUILog()
 	if err != nil {
-		logPath = os.DevNull
-		if logFile, err = os.OpenFile(os.DevNull, os.O_WRONLY, 0); err != nil {
-			return "", err
-		}
+		return "", err
 	}
 	defer logFile.Close()
 
@@ -102,7 +83,7 @@ func startDetachedServer(port int, baseDir string) (string, error) {
 	cmd.Stdin = nil // os/exec lo conecta a os.DevNull
 	cmd.Stdout = logFile
 	cmd.Stderr = logFile
-	applyDetachAttrs(cmd)
+	dashboard.ApplyDetachAttrs(cmd)
 	if err := cmd.Start(); err != nil {
 		return logPath, fmt.Errorf("no se pudo lanzar el servidor en segundo plano: %w", err)
 	}

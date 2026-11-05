@@ -1198,12 +1198,28 @@ func parseUIFlags(args []string) (uiOptions, error) {
 	return opts, nil
 }
 
+// probeAxiomFn es la costura del sondeo de /api/health; las pruebas la sustituyen.
+var probeAxiomFn = dashboard.ProbeAxiom
+
+// dashboardAlreadyRunning dice si ya hay un Axiom sirviendo en el puerto pedido. Con
+// --post-update-sync NUNCA se sondea: el proceso relanzado se encuentra al dashboard
+// viejo aún sirviendo (hasta que este confirma que el hijo sigue vivo y cierra), y
+// tomarlo por «ya activo» haría salir al hijo y fallar la actualización. En ese caso
+// el hijo debe esperar a que el puerto quede libre (ListenAndServeWithRetry).
+func dashboardAlreadyRunning(ctx context.Context, opts uiOptions) bool {
+	if opts.postUpdateSync {
+		return false
+	}
+	running, _ := probeAxiomFn(ctx, opts.port)
+	return running
+}
+
 // startDashboardServer enlaza el servidor. Tras una actualización exige el mismo
 // puerto (reintentando mientras el proceso viejo lo libera); en el arranque normal
 // escucha exactamente en el puerto pedido (ErrPortInUse si está ocupado).
 func startDashboardServer(server *dashboard.Server, opts uiOptions) (int, error) {
 	if opts.postUpdateSync {
-		return server.ListenAndServeExact(opts.port, postUpdatePortWait)
+		return server.ListenAndServeWithRetry(opts.port, postUpdatePortWait)
 	}
 	return server.ListenAndServe(opts.port)
 }
@@ -1241,7 +1257,7 @@ func runUI(args []string) {
 	_ = os.Chdir(baseDir)
 
 	// Idempotencia: si ya hay un Axiom en el puerto, solo se abre la ventana.
-	if running, _ := dashboard.ProbeAxiom(context.Background(), *portFlag); running {
+	if dashboardAlreadyRunning(context.Background(), opts) {
 		existingURL := fmt.Sprintf("http://127.0.0.1:%d", *portFlag)
 		fmt.Printf("Axiom ya está activo en %s\n", existingURL)
 		openUIWindow(existingURL, *noBrowserFlag)

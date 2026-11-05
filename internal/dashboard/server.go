@@ -131,22 +131,16 @@ func (s *Server) registerRoutes() {
 // ListenAndServe escucha exactamente en 127.0.0.1:port. No reasigna el puerto:
 // si está ocupado devuelve un error que envuelve ErrPortInUse.
 func (s *Server) ListenAndServe(port int) (int, error) {
-	listener, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", port))
-	if err != nil {
-		if isAddrInUse(err) {
-			return 0, fmt.Errorf("puerto %d: %w", port, ErrPortInUse)
-		}
-		return 0, err
-	}
-	s.serve(listener, port)
-	return port, nil
+	return s.ListenAndServeWithRetry(port, 0)
 }
 
-// ListenAndServeExact sirve en exactamente el puerto indicado, reintentando el enlace
-// hasta retryFor. Lo usa el proceso que se relanza tras una actualización: el viejo
-// aún está liberando el puerto, y sondear otro rompería la URL que el navegador ya
-// tiene abierta. Si el puerto no queda libre a tiempo, devuelve error.
-func (s *Server) ListenAndServeExact(port int, retryFor time.Duration) (int, error) {
+// ListenAndServeWithRetry es ListenAndServe con reintentos mientras el puerto siga
+// ocupado, hasta retryFor. Lo usa solo el proceso que se relanza tras una
+// actualización (--post-update-sync): el dashboard viejo aún está liberando el puerto
+// y sondear otro rompería la URL que el navegador (o la PWA instalada) ya tiene. Con
+// retryFor <= 0 no reintenta. Un fallo distinto de «puerto ocupado» no se reintenta.
+// Si el puerto no queda libre a tiempo, el error envuelve ErrPortInUse.
+func (s *Server) ListenAndServeWithRetry(port int, retryFor time.Duration) (int, error) {
 	addr := fmt.Sprintf("127.0.0.1:%d", port)
 	deadline := time.Now().Add(retryFor)
 	for {
@@ -155,15 +149,18 @@ func (s *Server) ListenAndServeExact(port int, retryFor time.Duration) (int, err
 			s.serve(listener, port)
 			return port, nil
 		}
-		if time.Now().After(deadline) {
-			return 0, fmt.Errorf("el puerto %d no quedó libre en %s: %w", port, retryFor, err)
+		if !isAddrInUse(err) {
+			return 0, err
 		}
-		time.Sleep(exactListenRetryInterval)
+		if !time.Now().Before(deadline) {
+			return 0, fmt.Errorf("puerto %d: %w", port, ErrPortInUse)
+		}
+		time.Sleep(listenRetryInterval)
 	}
 }
 
-// exactListenRetryInterval es la pausa entre reintentos de ListenAndServeExact.
-const exactListenRetryInterval = 100 * time.Millisecond
+// listenRetryInterval es la pausa entre reintentos de ListenAndServeWithRetry.
+const listenRetryInterval = 100 * time.Millisecond
 
 // serve arranca el servidor HTTP sobre un listener ya enlazado.
 func (s *Server) serve(listener net.Listener, port int) {
