@@ -952,14 +952,23 @@ func runReviewStatus(ctx context.Context, args []string, stdout io.Writer) error
 					// plain re-entry dead-ended the correction lineage and bound the
 					// resulting collect input to a different (live, declaration-less)
 					// target identity than the one the authority is bound to (issue
-					// #3849 and #4435). A frozen EXCLUDE declaration (empty selection)
-					// is left alone here because it is indistinguishable on its own from
+					// #3849 and #4435). For a workspace-scoped (current-changes or
+					// overlay) target a frozen EXCLUDE declaration (empty selection) is
+					// left alone here because it is indistinguishable on its own from
 					// "nothing was ever declared"; that path still requires a fresh live
-					// declaration when eligible untracked files exist.
+					// declaration when eligible untracked files exist. A committed-range
+					// (base-diff) target has no such ambiguity: its candidate is the
+					// frozen commit range plus the frozen selection, so even an empty
+					// selection is the immutable decision and resumes as-is
+					// (upstream #5424).
 					_, pendingApproval := reviewtransaction.PendingApprovedCompactAcknowledgement(record)
 					resumeCorrectionUntracked := false
 					declaredUntracked := record.State.InitialSnapshot.IntendedUntracked
-					if record.State.State == reviewtransaction.StateCorrectionRequired && len(declaredUntracked) != 0 {
+					if record.State.State == reviewtransaction.StateCorrectionRequired && len(declaredUntracked) == 0 &&
+						record.State.CurrentSnapshot.Kind == reviewtransaction.TargetBaseDiff &&
+						selectedBaseRef == "" && !*workspaceOverlay {
+						resumeCorrectionUntracked = true
+					} else if record.State.State == reviewtransaction.StateCorrectionRequired && len(declaredUntracked) != 0 {
 						inventory, _, inventoryErr := builder.IntendedUntrackedInventory(ctx)
 						if inventoryErr != nil {
 							return reviewPreflightError(inventoryErr)
@@ -1658,7 +1667,7 @@ func RunReviewRecover(args []string, stdout io.Writer) error {
 	// overrides inheritance, so the successor target derives from the exact
 	// selection STATUS authorized rather than from the predecessor alone.
 	declaredSelection := reviewIntendedUntrackedDeclared(untrackedScope, intendedUntracked, expectedUntrackedInventory)
-	currentChangesSuccessor := !*releaseScope && !*committedOnly && !stagedScopeOverlay && !overlay
+	currentChangesSuccessor := !*releaseScope && !*committedOnly && !stagedScopeOverlay && !overlay && !baseDiff
 	if declaredSelection && !currentChangesSuccessor {
 		return errors.New("intended-untracked selection requires a current-changes recovery; rerun `axiom review recover` without --untracked-scope, --intended-untracked, and --expected-untracked-inventory")
 	}
@@ -1693,6 +1702,10 @@ func RunReviewRecover(args []string, stdout io.Writer) error {
 		if target.BaseRef == "" {
 			target.BaseRef = predecessorRecord.State.InitialSnapshot.BaseTree
 		}
+	} else if baseDiff {
+		// Un predecesor base-diff recuperado sin selector de base conserva su
+		// árbol base congelado, igual que uno overlay (upstream #5038/#5420).
+		target.Kind, target.BaseRef = reviewtransaction.TargetBaseDiff, predecessorRecord.State.InitialSnapshot.BaseTree
 	}
 	var snapshot reviewtransaction.Snapshot
 	if *releaseScope {
