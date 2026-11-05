@@ -163,6 +163,8 @@ Orden de ejecución: **T1 → T4 → T2 → T3 → T5**, que sigue los cortes de
 
 - 2026-11-05: PR #228 fusionada (merge `fbf96dcb`). Las tareas T3 y T4 del bloque de arreglos se fusionaron en las PR #229 y #231 (merge `3ad77567`). T5 queda desbloqueada; la arranca la misma autorización del usuario. Nueva rama `inc/seguridad-datos-upstream` desde `origin/main` 3ad77567.
 
+- 2026-11-05: T5 con commit `579b9224`; el usuario autoriza el push y la PR: **PR #232** (`size:exception`, `type:bug`).
+
 Plan stop: approved 2026-11-04; implementation continues
 
 ## Siguiente paso
