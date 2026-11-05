@@ -2,7 +2,7 @@
 
 > **Documento vivo ODD.** Fichero autoritativo: `odd/tasks/arreglos-instalacion-sync-tui.md`.
 > Espejo de recuperación en Engram: topic `odd/arreglos-instalacion-sync-tui/tasks`, proyecto `axiom`.
-> Estado: **en implementación desde el 2026-11-05**: el usuario autorizó arrancar las tareas desbloqueadas (T1, T2, T3, T5, T6 y T9). T4 y T7 siguen bloqueadas.
+> Estado: **en implementación desde el 2026-11-05**. Hechas T1, T2, T3, T5, T6, T7 y T9. T4 sigue bloqueada: espera a adaptadores T1.
 
 ## Objetivo
 
@@ -119,7 +119,11 @@ Cada tarea es una rebanada de PR de unas 400 líneas como máximo y cierra con u
   - Install y sync respetan el proveedor que ya hay en el config de GGA.
   - Hecho: `88991051` (+285/−12; ruta: escritor delegado). `go test ./internal/components/gga/...` ok; `go test ./internal/cli/ -run 'TestComponentSyncStepGGA…|TestRunSync…GGA…|TestRunInstallMacOSWithoutHomebrewDefersGGA|TestRunInstallGGASkipsInstallWhenAlreadyOnPath'` ok; `go vet` y `gofmt -l` limpios.
   - Divergencia con upstream, a revisar en el PR: con proveedor existente, Axiom deja el config intacto; upstream lo regenera desde la plantilla y solo conserva el proveedor. Efecto: los cambios futuros de la plantilla no llegan a configs ya existentes. Un config ininterpretable tampoco se toca, pero sin aviso. Sin portar: `ProviderForAgents` vacío por defecto, `Notices` y `ConfigCreationSkipped`.
-- [ ] **T7 · Instaladores: binario atómico y PATH** — #3629 + #5759, según D-2 (~290). P1 ya está fusionado (PR #220, v3.6.0) y el worktree está rebasado sobre él. **Entra después de seguridad T2**, para aplicar su mismo criterio de `REG_EXPAND_SZ` al escribir el PATH.
+- [x] **T7 · Instaladores: binario atómico y PATH** — #3629 + #5759, según D-2 (~290). P1 ya está fusionado (PR #220, v3.6.0) y el worktree está rebasado sobre él. **Entra después de seguridad T2**, para aplicar su mismo criterio de `REG_EXPAND_SZ` al escribir el PATH.
+  - Hecho tras rebasar sobre `origin/main` fbf96dcb (PR #228 de seguridad fusionada): `2398fbec` (binario atómico, +156/−8) y `362229bf` (PATH de usuario y rc, +455/−17). Ruta: escritor delegado.
+  - Comprobaciones: `bash -n scripts/install.sh` ok; parser de PowerShell sobre `install.ps1` sin errores; 11 tests nuevos en `internal/update` (`install_script_{atomic,path,userpath}_test.go`) en verde, también al repetirlos. El de `install.ps1` usa una clave temporal en `HKCU\Software` que se borra (comprobado que no queda). `go test ./internal/update ./internal/workspace` ok.
+  - Sin probar: los instaladores de extremo a extremo, la rama `sudo` con un destino protegido (solo comprobación estática), el broadcast `WM_SETTINGCHANGE` real y macOS fuera de la elección del rc.
+  - Añadido fuera de upstream: `AXIOM_NO_PERSISTENT_PATH=1` desactiva la escritura del PATH en ambos scripts, como en Go. Corrige también el trap de limpieza del tmpdir, que nunca limpiaba porque `tmpdir` era `local`. Documentación: `docs/quickstart.md`.
   - `install.sh` deja el binario en una ruta temporal, aplica `install -m 0755` y hace `mv` atómico, sin interpolar en `sudo`.
   - `install.ps1` añade el directorio al PATH de usuario y respeta `REG_EXPAND_SZ`, con el mismo criterio que #5625 del bloque seguridad.
   - `install.sh` añade al rc de la shell detectada (bash, zsh o fish) una línea idempotente con marcador `axiom`.
@@ -202,11 +206,10 @@ T9 no se mezcla con los demás eslabones.
   - T8 (#5359) se traslada a P3.
 - 2026-11-05: T1 (`dcc15ea4`) y T2 (`e8af9f56`) hechas. Fallo ambiental conocido: `TestTuiInstallOnThenSyncPreservesAndRefreshesOpenCodeActivation` en `internal/app`.
 - 2026-11-05: T3, T5, T6 y T9 hechas. Líneas acumuladas en la rama sin el documento ODD: +1350/−157, unas 1500 (más que la previsión de unas 1100 para estas seis tareas, sobre todo por tests). Supera el presupuesto de unas 400: la estrategia de cadena se pregunta antes del primer PR.
+- 2026-11-05: rama rebasada sin conflictos sobre `origin/main` fbf96dcb (PR #228). Los paquetes tocados siguen en verde. En la base fallan `TestWriteFileAtomicFollowsDirectoryJunction` y `TestWriteFileAtomicFollowsRelativeDirectoryJunction` (`internal/components/filemerge`, que esta rama no toca). T7 hecha. Acumulado sin el documento ODD: +1960/−181.
 
 ## Siguiente paso
 
-Bloqueadas, sin empezar:
-- T4 espera a que se fusione adaptadores T1; después se rebasa sobre ella.
-- T7 espera a seguridad T2 (criterio de `REG_EXPAND_SZ`).
+Bloqueada, sin empezar: T4 espera a que se fusione adaptadores T1 (PR #227, abierta); después se rebasa sobre ella.
 
 Antes del PR: `go test ./...` completo en CI (la suite de `internal/cli` agota el tiempo en esta máquina), los casos de PowerShell de T5 con `AXIOM_TEST_BUILD_BINARIES=1`, y elegir la estrategia de cadena. Push y PR los decide el usuario.
