@@ -253,6 +253,18 @@ Después de una actualización o de sustituir manualmente el binario, ejecuta `a
 
 Si GitHub limita las comprobaciones de actualización, define `GITHUB_TOKEN` o `GH_TOKEN` antes de ejecutar `axiom update` o `axiom upgrade`.
 
+#### Actualizar desde el dashboard
+
+Al abrirse, `axiom ui` comprueba si hay una versión publicada más nueva. Guarda el resultado unas 6 horas y ofrece un botón para volver a comprobar. Si la hay, muestra un aviso con la versión actual, la nueva y el botón **Actualizar**, que hace lo siguiente:
+
+1. Actualiza Axiom. Muestra en el aviso cada fase (comprobación, actualización, reinicio, sincronización).
+2. Relanza el dashboard con el binario nuevo, en el mismo puerto, y la página se recarga sola.
+3. El binario nuevo sincroniza el workspace abierto (`axiom sync --scope workspace`). El proceso viejo nunca sincroniza, porque lo haría con los recursos de la versión anterior. Si la carpeta abierta no tiene `axiom.yaml`, no se sincroniza.
+
+Si falla alguna fase, el dashboard sigue funcionando y el aviso muestra el comando para hacerlo a mano. En Windows la actualización usa `go install`. Para que funcione, Go tiene que estar instalado y el `axiom` del `PATH` tiene que ser el de `GOBIN`. Si no es así, el aviso muestra el comando manual.
+
+La acción solo se acepta desde el propio dashboard (`127.0.0.1` o `localhost` en su puerto); una página web externa no puede lanzarla.
+
 Para instalar o actualizar Axiom, sigue el [Inicio rápido](quickstart.md), que documenta la instalación. El método habitual son los dos comandos de una línea (`install.sh` en Linux/macOS, `install.ps1` en Windows); Axiom no se distribuye por Homebrew.
 
 **Self-update prompt behavior** (changed in v1.x slice 5 — `GENTLE_AI_CONFIRM_UPDATE` removed):
