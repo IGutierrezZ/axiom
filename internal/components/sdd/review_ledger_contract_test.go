@@ -919,8 +919,11 @@ func TestOpenCodeRenderedReviewProtocolCost(t *testing.T) {
 		// contrato compartido suma la fila acknowledged_predecessor_passive_delta
 		// (+293 caracteres por fila). Deliberate, not drift; los techos suben lo
 		// mismo para conservar el margen absoluto de cada fila.
-		{name: "standard", agents: []string{"review-reliability"}, beforeChars: 42_301, wantChars: 20_712, maxCharacters: 20_731},
-		{name: "full-4R", agents: []string{"review-risk", "review-resilience", "review-readability", "review-reliability"}, beforeChars: 106_998, wantChars: 40_743, maxCharacters: 42_340},
+		// upstream-revision-nativa T17 (#5654, frontera revisada): el contrato
+		// compartido suma la fila acknowledged_boundary_reaches_head (+156
+		// caracteres por fila). Deliberate, not drift; los techos suben lo mismo.
+		{name: "standard", agents: []string{"review-reliability"}, beforeChars: 42_301, wantChars: 20_868, maxCharacters: 20_887},
+		{name: "full-4R", agents: []string{"review-risk", "review-resilience", "review-readability", "review-reliability"}, beforeChars: 106_998, wantChars: 40_899, maxCharacters: 42_496},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

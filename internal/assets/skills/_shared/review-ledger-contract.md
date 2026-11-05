@@ -87,6 +87,7 @@ A `stop` ends its transition, never approves delivery. Complete atomic inventory
 | `unachievable_lens_slot` | A host reported a selected reviewer slot unachievable. If transient, re-run `axiom review capture-unachievable` with the same binding and `--withdraw=true` so B re-offers the slot. If not, reduce B scope and start a new `axiom review start`, or `D`. |
 | `target_already_acknowledged` | Terminal: this exact target was already acknowledged and its review authority burned. No further review action is required; delivery follows ordinary repository policy. Changed targets remain eligible for review. Only when deliberately requesting a new independent review, use `axiom review start`; do not automatically restart this consumed target. |
 | `acknowledged_predecessor_passive_delta` | Terminal: this committed range only adds passive content to an acknowledged candidate. No review is required and no authority was created; non-passive changes are offered again. Only for a deliberate independent review, use `axiom review start`. |
+| `acknowledged_boundary_reaches_head` | The reviewed boundary reaches HEAD (#5638): nothing unreviewed remains; any new commit is offered again via `S`. |
 | `rdd_disabled` | `--scope clone` only clears a clone-local off; `axiom review mode enable --scope global`, then `S`. |
 
 ## Delivery follows ordinary repository policy

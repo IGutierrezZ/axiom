@@ -223,6 +223,14 @@ func resolveReviewNextTransition(status ReviewTargetStatusResult, selectedLenses
 				if status.passiveDeltaAfterAcknowledgement {
 					return reviewStopTransition("acknowledged_predecessor_passive_delta")
 				}
+				if status.acknowledgedBoundaryReachesHead {
+					// Issue #5638: the reviewed boundary advances on
+					// acknowledgement, and here it reaches HEAD -- every commit
+					// since the boundary was empty, so nothing unreviewed
+					// remains and the stale-span offer is replaced by the
+					// truthful stop.
+					return reviewStopTransition("acknowledged_boundary_reaches_head")
+				}
 				return reviewStopTransition("target_already_acknowledged")
 			}
 			if input.Selector != nil && input.Selector.Kind == reviewtransaction.TargetBaseWorkspaceOverlay &&
@@ -1453,6 +1461,8 @@ func reviewReasonDescription(reason string) string {
 		return "Staged workspace overlay recovery is unavailable"
 	case "empty_base_diff_bootstrap_required":
 		return "Committed base-diff has no paths; empty-root bootstrap is required"
+	case "acknowledged_boundary_reaches_head":
+		return "The reviewed boundary advances on acknowledgement and reaches HEAD: every commit since the acknowledged boundary was empty, so nothing unreviewed remains between the boundary and the live candidate"
 	case "lens_context_budget_exceeded":
 		return "Frozen reviewer context exceeds the native evidence budget"
 	case reviewCorrectionContextBudgetCode:
