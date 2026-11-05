@@ -263,6 +263,12 @@ Lo fija el cruce de ficheros entre las sesiones de la absorción upstream, envia
 2. **T1 libera arreglos T4**, que esperaba a que se fusionara. La decisión de push y PR es del usuario.
 3. Seguimientos menores de T2 y T4: hechos el 2026-11-05 (ver más abajo). El de marca de T6 (`gentle-ai:managed` en el plugin V2) queda para el bloque de marca.
 
+## Entrega
+
+- 2026-11-05: el usuario lo autoriza y se abre el PR [#227](https://github.com/IGutierrezZ/axiom/pull/227) hacia `main`, con las etiquetas `type:feature` y `size:exception`.
+  - Contiene T1–T4, T6 y S1, rebasados sobre `origin/main` (8bf0fb8f).
+  - T5 queda fuera y se entregará en un PR propio, como primera rebanada de P5.
+
 ## Seguimientos de verificación (T2/T4)
 
 - [x] **S1 · Seguimientos menores del catálogo** — Ruta: escritor delegado. Commits `18037897` y `76ce8751`, 5 ficheros, +230/−1.
