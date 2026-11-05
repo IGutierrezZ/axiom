@@ -2245,8 +2245,53 @@ func runCommandSequenceWithProgress(commands [][]string, progress pipeline.Progr
 	return nil
 }
 
+// homebrewNoSideEffectEnv son las variables que executeCommand añade a una
+// invocación de brew para que los pasos de tap/install/reinstall de Axiom no
+// disparen el auto-update de Homebrew (lento y dependiente de red) ni su
+// limpieza de caché como efecto secundario de una instalación ajena.
+var homebrewNoSideEffectEnv = []string{
+	"HOMEBREW_NO_AUTO_UPDATE=1",
+	"HOMEBREW_NO_INSTALL_CLEANUP=1",
+}
+
+// commandEnv devuelve el entorno con el que executeCommand lanza name, a partir
+// de base (normalmente os.Environ()). Si name es brew (el literal o la ruta
+// absoluta que resuelve resolveBrewCommand) y no es "brew update" ni "brew
+// upgrade", añade homebrewNoSideEffectEnv sin pisar un valor que ya esté en
+// base: un valor explícito del usuario siempre gana.
+func commandEnv(name string, args []string, base []string) []string {
+	if filepath.Base(name) != "brew" {
+		return base
+	}
+	if len(args) > 0 && (args[0] == "update" || args[0] == "upgrade") {
+		return base
+	}
+
+	// Copia para no escribir en el array subyacente del llamador.
+	env := append([]string(nil), base...)
+	for _, kv := range homebrewNoSideEffectEnv {
+		key := strings.SplitN(kv, "=", 2)[0]
+		if !envHasKey(env, key) {
+			env = append(env, kv)
+		}
+	}
+	return env
+}
+
+// envHasKey indica si env ya define key, sea cual sea su valor.
+func envHasKey(env []string, key string) bool {
+	prefix := key + "="
+	for _, kv := range env {
+		if strings.HasPrefix(kv, prefix) {
+			return true
+		}
+	}
+	return false
+}
+
 func executeCommand(name string, args ...string) error {
 	cmd := exec.Command(name, args...)
+	cmd.Env = commandEnv(name, args, os.Environ())
 	system.EnsureCommandDir(cmd)
 
 	if streamCommandOutput {
