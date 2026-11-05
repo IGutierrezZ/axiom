@@ -147,9 +147,81 @@ func TestCatalogHelperProcess(t *testing.T) {
 				os.Exit(2)
 			}
 		}
+	case "sleep":
+		time.Sleep(time.Minute)
+	case "valid-exit-3":
+		// Salida completa y válida, pero el hijo termina con código distinto de cero.
+		_, _ = os.Stdout.WriteString(verboseCatalog[:strings.Index(verboseCatalog, "other/plain")])
+		os.Exit(3)
 	case "crash-mid-record":
 		_, _ = os.Stdout.WriteString("custom/model\n{\"id\":")
 		os.Exit(3)
 	}
 	os.Exit(0)
+}
+
+// paddedTo devuelve data seguido de blancos hasta alcanzar exactamente size bytes.
+func paddedTo(data string, size int, pad string) string {
+	return data + strings.Repeat(pad, size-len(data))
+}
+
+func TestDiscoverCatalogCeilingIsExactlySixteenMiB(t *testing.T) {
+	v2Sample := v2ModelAPISample
+	for _, tt := range []struct {
+		name  string
+		major RuntimeMajor
+		data  string
+		pad   string
+	}{
+		{"V1", RuntimeV1, verboseCatalog, "\n"},
+		{"V2", RuntimeV2, v2Sample, " "},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			if maxCatalogOutput != 16<<20 {
+				t.Fatalf("maxCatalogOutput = %d, want 16 MiB", maxCatalogOutput)
+			}
+			exact := paddedTo(tt.data, maxCatalogOutput, tt.pad)
+			if _, err := discoverCatalogForMajor(context.Background(), "project", tt.major, readerRunner(strings.NewReader(exact))); err != nil {
+				t.Fatalf("exactly 16 MiB: error = %v, want accepted", err)
+			}
+			over := paddedTo(tt.data, maxCatalogOutput+1, tt.pad)
+			_, err := discoverCatalogForMajor(context.Background(), "project", tt.major, readerRunner(strings.NewReader(over)))
+			wantCatalogKind(t, err, CatalogErrorOutputTooLarge)
+		})
+	}
+}
+
+func TestDiscoverCatalogCancelledContextWithLiveChildIsTimeout(t *testing.T) {
+	for _, tt := range []struct {
+		name   string
+		major  RuntimeMajor
+		runner func(context.Context) (io.Reader, error)
+	}{
+		{"V1 tubería", RuntimeV1, func(ctx context.Context) (io.Reader, error) { return helperStream(ctx, "sleep") }},
+		{"V2 fichero", RuntimeV2, func(ctx context.Context) (io.Reader, error) { return v2HelperStream(ctx, "sleep") }},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx, cancel := context.WithTimeout(context.Background(), 750*time.Millisecond)
+			defer cancel()
+			started := time.Now()
+			_, err := discoverCatalogForMajor(ctx, "project", tt.major, func(ctx context.Context, _ Command) (io.Reader, error) {
+				return tt.runner(ctx)
+			})
+			wantCatalogKind(t, err, CatalogErrorTimeout)
+			if elapsed := time.Since(started); elapsed > catalogTimeout {
+				t.Fatalf("cancelled discovery took %v, want it bounded by the context", elapsed)
+			}
+		})
+	}
+}
+
+func TestDiscoverCatalogCompleteValidOutputWithNonZeroExitIsCommandFailed(t *testing.T) {
+	_, err := DiscoverCatalogWithRunner(context.Background(), "project", func(ctx context.Context, _ Command) (io.Reader, error) {
+		return helperStream(ctx, "valid-exit-3")
+	})
+	wantCatalogKind(t, err, CatalogErrorCommandFailed)
+	_, err = discoverCatalogForMajor(context.Background(), "project", RuntimeV2, func(ctx context.Context, _ Command) (io.Reader, error) {
+		return v2HelperStream(ctx, "valid-exit-3")
+	})
+	wantCatalogKind(t, err, CatalogErrorCommandFailed)
 }

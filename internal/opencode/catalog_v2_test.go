@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/url"
 	"os"
 	"strings"
 	"testing"
@@ -195,6 +196,9 @@ func TestCatalogV2HelperProcess(t *testing.T) {
 		os.Exit(3)
 	case "sleep":
 		time.Sleep(time.Minute)
+	case "valid-exit-3":
+		_, _ = os.Stdout.WriteString(v2ModelAPISample)
+		os.Exit(3)
 	}
 	os.Exit(0)
 }
@@ -289,4 +293,46 @@ func TestFileCatalogCommandReportsMissingBinary(t *testing.T) {
 		return fileCatalogCommand(ctx, Command{Path: "axiom-no-such-opencode-binary"})
 	})
 	wantCatalogKind(t, err, CatalogErrorMissingBinary)
+}
+
+func TestCatalogCommandV2EncodesNonASCIIDirectoryLikeUpstream(t *testing.T) {
+	dir := `C:\Users\IñigoGutiérrez Zufia\proyecto`
+	got := catalogCommand(RuntimeV2, dir)
+	want := "/api/model?location%5Bdirectory%5D=" + url.QueryEscape(dir)
+	if len(got.Args) != 3 || got.Args[2] != want {
+		t.Fatalf("args = %q, want the url.QueryEscape encoding %q", got.Args, want)
+	}
+	// Codificación literal: ñ y é en UTF-8 porcentual, espacio como + y \ como %5C.
+	if literal := "/api/model?location%5Bdirectory%5D=C%3A%5CUsers%5CI%C3%B1igoGuti%C3%A9rrez+Zufia%5Cproyecto"; got.Args[2] != literal {
+		t.Fatalf("arg = %q, want %q", got.Args[2], literal)
+	}
+	if got.Dir != dir {
+		t.Fatalf("Dir = %q, want the raw directory", got.Dir)
+	}
+}
+
+func TestDiscoverCatalogSharesOneDeadlineBetweenDetectionAndCatalog(t *testing.T) {
+	var detectDeadline, runnerDeadline time.Time
+	detect := func(ctx context.Context) (RuntimeMajor, error) {
+		detectDeadline, _ = ctx.Deadline()
+		time.Sleep(300 * time.Millisecond) // la detección consume parte del plazo
+		return RuntimeV1, nil
+	}
+	v1 := func(ctx context.Context, _ Command) (io.Reader, error) {
+		runnerDeadline, _ = ctx.Deadline()
+		return strings.NewReader(verboseCatalog), nil
+	}
+	started := time.Now()
+	if _, err := discoverCatalog(context.Background(), "project", detect, v1, nil); err != nil {
+		t.Fatalf("discoverCatalog() error = %v", err)
+	}
+	if detectDeadline.IsZero() || runnerDeadline.IsZero() {
+		t.Fatal("detección y catálogo deben tener plazo")
+	}
+	if !runnerDeadline.Equal(detectDeadline) && runnerDeadline.After(detectDeadline) {
+		t.Fatalf("el catálogo tiene plazo propio (%v) posterior al de la detección (%v)", runnerDeadline, detectDeadline)
+	}
+	if limit := started.Add(catalogTimeout + time.Second); detectDeadline.After(limit) {
+		t.Fatalf("plazo total %v excede catalogTimeout", detectDeadline.Sub(started))
+	}
 }
