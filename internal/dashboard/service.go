@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -256,6 +257,16 @@ func (s *Service) GetIncrements() ([]IncrementSummaryDTO, []string, error) {
 	}
 	notes = append(notes, registryNotes...)
 	notes = append(notes, pendingNotes...)
+
+	// Features ODD: las activas de los worktrees (detectadas por contenido) y, como archivadas, las
+	// del checkout principal. El aviso de «worktree ya integrado» viaja con los demás.
+	oddList, oddNotes := oddIncrements(loc)
+	list = append(list, oddList...)
+	for _, note := range oddNotes {
+		if !slices.Contains(notes, note) {
+			notes = append(notes, note)
+		}
+	}
 
 	// 2. Escanear cambios archivados en <planning home>/changes/archive/
 	archiveDir := filepath.Join(root, "changes", "archive")

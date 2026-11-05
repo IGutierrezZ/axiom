@@ -62,6 +62,8 @@ type IncrementSummaryDTO struct {
 	ReadyForArchive      bool     `json:"ready_for_archive"`
 	ChangeType           string   `json:"change_type,omitempty"`
 	IsBug                bool     `json:"is_bug"`
+	// Title es el título legible de una feature ODD (el encabezado de su documento); vacío en SDD.
+	Title string `json:"title,omitempty"`
 	// WorktreePath y Branch indican dónde vive un cambio que se lee de un worktree registrado
 	// (REQ-25.34): la ruta absoluta del worktree y su rama. Ausentes, el cambio está en el checkout
 	// principal. Los campos de INC-25 van en camelCase (design D-20), a diferencia del resto del DTO.

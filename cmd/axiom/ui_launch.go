@@ -65,6 +65,14 @@ func portIsFree(port int) bool {
 	return true
 }
 
+// newDetachedServerCommand construye el comando del servidor desacoplado. El
+// workspace llega por --path; el cwd del hijo queda fuera de él.
+func newDetachedServerCommand(exe string, port int, baseDir string) *exec.Cmd {
+	cmd := exec.Command(exe, detachedChildArgs(port, baseDir)...)
+	cmd.Dir = dashboard.ServerWorkDir(baseDir)
+	return cmd
+}
+
 // startDetachedServer relanza este ejecutable como servidor sin consola y sin
 // vínculo con el proceso actual. Devuelve la ruta del log donde escribe.
 func startDetachedServer(port int, baseDir string) (string, error) {
@@ -78,8 +86,7 @@ func startDetachedServer(port int, baseDir string) (string, error) {
 	}
 	defer logFile.Close()
 
-	cmd := exec.Command(exe, detachedChildArgs(port, baseDir)...)
-	cmd.Dir = baseDir
+	cmd := newDetachedServerCommand(exe, port, baseDir)
 	cmd.Stdin = nil // os/exec lo conecta a os.DevNull
 	cmd.Stdout = logFile
 	cmd.Stderr = logFile

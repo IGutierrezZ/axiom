@@ -1254,7 +1254,9 @@ func runUI(args []string) {
 			}
 		}
 	}
-	_ = os.Chdir(baseDir)
+	// El servicio recibe baseDir absoluto; el proceso no retiene el workspace
+	// como cwd para no bloquear su borrado en Windows (worktrees).
+	_ = os.Chdir(dashboard.ServerWorkDir(baseDir))
 
 	// Idempotencia: si ya hay un Axiom en el puerto, solo se abre la ventana.
 	if dashboardAlreadyRunning(context.Background(), opts) {
