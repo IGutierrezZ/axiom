@@ -21,6 +21,10 @@
       document.documentElement.dataset.theme = theme;
     })();
   </script>
+  <link rel="manifest" href="/manifest.webmanifest">
+  <meta name="theme-color" content="#0E0F12">
+  <link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/icons/icon-192.png">
   <link rel="preload" href="/fonts/instrument-sans-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/tokens.css">
   <link rel="stylesheet" href="/style.css">
@@ -112,6 +116,7 @@
         </nav>
         <div class="topbar-spacer"></div>
         <div class="topbar-actions">
+          <button type="button" id="btn-install-app" class="btn" title="Instalar Axiom como aplicación de escritorio" hidden><i data-icon="download"></i>Instalar aplicación</button>
           <button type="button" id="btn-refresh" class="btn btn-icon" aria-label="Actualizar datos" title="Actualizar datos"><i data-icon="refresh"></i></button>
           <button type="button" id="btn-new-increment" class="btn btn-primary" title="Crear un nuevo incremento SDD"><i data-icon="plus"></i>Nuevo incremento</button>
         </div>
