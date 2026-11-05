@@ -45,6 +45,17 @@ This lifecycle is available only to Claude Code, Codex, OpenCode, and Pi. Unsupp
 
 `axiom review status` and `axiom review start` initialize local Git only for a genuinely unversioned directory. They never do it for the master folder of a multirepo workspace: a directory that carries `.axiom-workspace` (itself or in an ancestor) or whose direct children hold `.git` metadata is refused before anything is written. The refusal is the typed `invalid_request` preflight failure with `next_action: correct_request`; its message names the workspace, lists up to five of its repositories, and names the continuation `axiom review status --cwd <repo>`. Point `--cwd` at one of those repositories and rerun. The refusal applies whether or not receipt-driven development is enabled.
 
+### Opaque repository-context refusals
+
+An `rctx2_` handle is an opaque hexadecimal digest, not a path or proof of active authority. Resolution checks the supplied repository and binding against current authority without mutating it.
+
+| Code | Meaning and next action |
+| --- | --- |
+| `rctx2_binding_unusable` | Structurally invalid handle or binding tuple, or a tuple that does not match the supplied repository and handle. Verify `--cwd` names the intended repository, then obtain the exact native `next_transition`; do not reconstruct tokens. A digest mismatch cannot identify which field differs. |
+| `rctx2_resolution_failed` | An underlying repository or authority check failed. Inspect the scrubbed cause and verify the repository and active binding; refreshing alone may not repair missing, unreadable, or mismatched authority. This does not prove the binding was valid when issued. |
+
+Git ownership refusals retain `git_repository_untrusted`; authority from a newer release retains `review_authority_newer_release`. Neither is repaired by refreshing a transition. Unrelated, non-V2 errors retain their existing generic classification (`repository_context_unavailable`).
+
 ## Atomic lifecycle
 
 ### 1. Selectorless STATUS preflights only
