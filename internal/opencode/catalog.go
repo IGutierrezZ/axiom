@@ -104,16 +104,11 @@ func discoverCatalog(ctx context.Context, projectDir string, detect func(context
 	return discoverCatalogForMajor(ctx, projectDir, RuntimeV1, v1)
 }
 
-// DiscoverCatalogWithRunner analiza el catálogo V1 (`models --verbose`) en
-// streaming y clasifica el resultado. Se aplican por este orden: el
-// desbordamiento del techo, el vencimiento del plazo, el estado de salida del
-// hijo (cuando su salida llegó a su fin) y, por último, el error de análisis.
-// Así un hijo que muere con código distinto de cero no se disfraza de JSON
-// inválido.
-func DiscoverCatalogWithRunner(ctx context.Context, projectDir string, runner CatalogRunner) (map[string]Provider, error) {
-	return discoverCatalogForMajor(ctx, projectDir, RuntimeV1, runner)
-}
-
+// discoverCatalogForMajor lee en streaming el catálogo de la versión mayor dada
+// y clasifica el resultado. Se aplican por este orden: el desbordamiento del
+// techo, el vencimiento del plazo, el estado de salida del hijo (cuando su
+// salida llegó a su fin) y, por último, el error de análisis. Así un hijo que
+// muere con código distinto de cero no se disfraza de JSON inválido.
 func discoverCatalogForMajor(ctx context.Context, projectDir string, major RuntimeMajor, runner CatalogRunner) (map[string]Provider, error) {
 	ctx, cancel := context.WithTimeout(ctx, catalogTimeout)
 	defer cancel()

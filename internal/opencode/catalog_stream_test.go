@@ -37,9 +37,9 @@ func TestDiscoverCatalogAcceptsOutputAboveOneMiBBelowCeiling(t *testing.T) {
 	if len(data) <= 1<<20 || len(data) >= maxCatalogOutput {
 		t.Fatalf("fixture size = %d, want between 1 MiB and %d", len(data), maxCatalogOutput)
 	}
-	providers, err := DiscoverCatalogWithRunner(context.Background(), "project", readerRunner(strings.NewReader(data)))
+	providers, err := discoverV1CatalogWithRunner(context.Background(), "project", readerRunner(strings.NewReader(data)))
 	if err != nil {
-		t.Fatalf("DiscoverCatalogWithRunner() error = %v, want output between 1 MiB and 16 MiB accepted", err)
+		t.Fatalf("discoverV1CatalogWithRunner() error = %v, want output between 1 MiB and 16 MiB accepted", err)
 	}
 	if len(providers["bulk"].Models) < 1000 {
 		t.Fatalf("models = %d, want the whole streamed catalog", len(providers["bulk"].Models))
@@ -48,19 +48,19 @@ func TestDiscoverCatalogAcceptsOutputAboveOneMiBBelowCeiling(t *testing.T) {
 
 func TestDiscoverCatalogRejectsOutputAboveCeilingWithTypedError(t *testing.T) {
 	data := catalogOfSize(maxCatalogOutput + 1)
-	_, err := DiscoverCatalogWithRunner(context.Background(), "project", readerRunner(strings.NewReader(data)))
+	_, err := discoverV1CatalogWithRunner(context.Background(), "project", readerRunner(strings.NewReader(data)))
 	wantCatalogKind(t, err, CatalogErrorOutputTooLarge)
 }
 
 func TestDiscoverCatalogRejectsOverflowCarriedByNoiseAfterValidRecords(t *testing.T) {
 	r := io.MultiReader(strings.NewReader(verboseCatalog), strings.NewReader(strings.Repeat("ruido de plugin\n", maxCatalogOutput/16+1)))
-	_, err := DiscoverCatalogWithRunner(context.Background(), "project", readerRunner(r))
+	_, err := discoverV1CatalogWithRunner(context.Background(), "project", readerRunner(r))
 	wantCatalogKind(t, err, CatalogErrorOutputTooLarge)
 }
 
 func TestDiscoverCatalogInvalidJSONInTheMiddleOfAStream(t *testing.T) {
 	data := "ok/one\n{\"id\":\"one\",\"capabilities\":{\"toolcall\":true}}\nbad/two\n{\"id\": nope}\n"
-	_, err := DiscoverCatalogWithRunner(context.Background(), "project", readerRunner(strings.NewReader(data)))
+	_, err := discoverV1CatalogWithRunner(context.Background(), "project", readerRunner(strings.NewReader(data)))
 	wantCatalogKind(t, err, CatalogErrorMalformed)
 }
 
@@ -68,7 +68,7 @@ func TestDiscoverCatalogKeepsRecordsPackedInOneChunk(t *testing.T) {
 	// Los registros pegados sin separación extra obligan al lector a devolver
 	// al búfer lo que el decodificador leyó de más.
 	data := "a/one\n{\"id\":\"one\",\"capabilities\":{\"toolcall\":true}}\nb/two\n{\"id\":\"two\",\"capabilities\":{\"toolcall\":false}}\n"
-	providers, err := DiscoverCatalogWithRunner(context.Background(), "project", readerRunner(io.MultiReader(strings.NewReader(data))))
+	providers, err := discoverV1CatalogWithRunner(context.Background(), "project", readerRunner(io.MultiReader(strings.NewReader(data))))
 	if err != nil || len(providers) != 2 {
 		t.Fatalf("providers = %v, err = %v; want both records", providers, err)
 	}
@@ -80,7 +80,7 @@ func TestDiscoverCatalogHonorsChildExitStatusOverParseError(t *testing.T) {
 	runner := func(ctx context.Context, command Command) (io.Reader, error) {
 		return helperStream(ctx, "crash-mid-record")
 	}
-	_, err := DiscoverCatalogWithRunner(context.Background(), "project", runner)
+	_, err := discoverV1CatalogWithRunner(context.Background(), "project", runner)
 	wantCatalogKind(t, err, CatalogErrorCommandFailed)
 }
 
@@ -92,7 +92,7 @@ func TestDiscoverCatalogDoesNotBlockOnAbundantStderr(t *testing.T) {
 	var providers map[string]Provider
 	go func() {
 		var err error
-		providers, err = DiscoverCatalogWithRunner(context.Background(), "project", runner)
+		providers, err = discoverV1CatalogWithRunner(context.Background(), "project", runner)
 		done <- err
 	}()
 	select {
@@ -110,7 +110,7 @@ func TestDiscoverCatalogCancelsChildThatOverflowsStdout(t *testing.T) {
 		return helperStream(ctx, "stdout-forever")
 	}
 	started := time.Now()
-	_, err := DiscoverCatalogWithRunner(context.Background(), "project", runner)
+	_, err := discoverV1CatalogWithRunner(context.Background(), "project", runner)
 	wantCatalogKind(t, err, CatalogErrorOutputTooLarge)
 	if elapsed := time.Since(started); elapsed > catalogTimeout {
 		t.Fatalf("overflowing child ran for %v, want cancellation well before the discovery timeout", elapsed)
@@ -216,7 +216,7 @@ func TestDiscoverCatalogCancelledContextWithLiveChildIsTimeout(t *testing.T) {
 }
 
 func TestDiscoverCatalogCompleteValidOutputWithNonZeroExitIsCommandFailed(t *testing.T) {
-	_, err := DiscoverCatalogWithRunner(context.Background(), "project", func(ctx context.Context, _ Command) (io.Reader, error) {
+	_, err := discoverV1CatalogWithRunner(context.Background(), "project", func(ctx context.Context, _ Command) (io.Reader, error) {
 		return helperStream(ctx, "valid-exit-3")
 	})
 	wantCatalogKind(t, err, CatalogErrorCommandFailed)

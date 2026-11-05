@@ -35,9 +35,9 @@ func TestDiscoverCatalogMapsVerboseOutputAndProjectDirectory(t *testing.T) {
 		return strings.NewReader(verboseCatalog), nil
 	}
 
-	providers, err := DiscoverCatalogWithRunner(context.Background(), `C:\work\project`, runner)
+	providers, err := discoverV1CatalogWithRunner(context.Background(), `C:\work\project`, runner)
 	if err != nil {
-		t.Fatalf("DiscoverCatalogWithRunner() error = %v", err)
+		t.Fatalf("discoverV1CatalogWithRunner() error = %v", err)
 	}
 	if got.Path != "opencode" || got.Dir != `C:\work\project` || strings.Join(got.Args, " ") != "models --verbose" {
 		t.Fatalf("command = %+v, want opencode models --verbose in project directory", got)
@@ -57,11 +57,11 @@ func TestDiscoverCatalogToleratesLogNoiseAroundRecords(t *testing.T) {
 	noisy := "[skill-registry] skipping refresh: not a project root: /Users/someone/Desktop\n" +
 		verboseCatalog +
 		"[skill-registry] refresh done\n"
-	providers, err := DiscoverCatalogWithRunner(context.Background(), "project", func(context.Context, Command) (io.Reader, error) {
+	providers, err := discoverV1CatalogWithRunner(context.Background(), "project", func(context.Context, Command) (io.Reader, error) {
 		return strings.NewReader(noisy), nil
 	})
 	if err != nil {
-		t.Fatalf("DiscoverCatalogWithRunner() error = %v, want tolerated log preamble", err)
+		t.Fatalf("discoverV1CatalogWithRunner() error = %v, want tolerated log preamble", err)
 	}
 	if _, ok := providers["custom"].Models["qwen/qwen3"]; !ok {
 		t.Fatal("missing model after log preamble")
@@ -76,11 +76,11 @@ func TestDiscoverCatalogOrdersKnownEffortVariantsSemantically(t *testing.T) {
 		`{"id":"model","name":"Model","capabilities":{"toolcall":true},"variants":{"medium":{},"high":{},"low":{}}}` + "\n" +
 		"custom/other\n" +
 		`{"id":"other","name":"Other","capabilities":{"toolcall":true},"variants":{"zeta":{},"alpha":{}}}` + "\n"
-	providers, err := DiscoverCatalogWithRunner(context.Background(), "project", func(context.Context, Command) (io.Reader, error) {
+	providers, err := discoverV1CatalogWithRunner(context.Background(), "project", func(context.Context, Command) (io.Reader, error) {
 		return strings.NewReader(out), nil
 	})
 	if err != nil {
-		t.Fatalf("DiscoverCatalogWithRunner() error = %v", err)
+		t.Fatalf("discoverV1CatalogWithRunner() error = %v", err)
 	}
 	if got := strings.Join(providers["custom"].Models["model"].Variants, ","); got != "low,medium,high" {
 		t.Fatalf("effort variants = %q, want semantic low,medium,high order", got)
@@ -107,7 +107,7 @@ func TestDiscoverCatalogRejectsInvalidOutput(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := DiscoverCatalogWithRunner(context.Background(), "project", func(context.Context, Command) (io.Reader, error) {
+			_, err := discoverV1CatalogWithRunner(context.Background(), "project", func(context.Context, Command) (io.Reader, error) {
 				return strings.NewReader(tt.out), nil
 			})
 			var catalogErr *CatalogError
@@ -172,7 +172,7 @@ func TestDiscoverCatalogClassifiesCommandFailuresAndEmptyCatalog(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := DiscoverCatalogWithRunner(context.Background(), "project", func(context.Context, Command) (io.Reader, error) {
+			_, err := discoverV1CatalogWithRunner(context.Background(), "project", func(context.Context, Command) (io.Reader, error) {
 				return nil, tt.err
 			})
 			var catalogErr *CatalogError
@@ -181,7 +181,7 @@ func TestDiscoverCatalogClassifiesCommandFailuresAndEmptyCatalog(t *testing.T) {
 			}
 		})
 	}
-	providers, err := DiscoverCatalogWithRunner(context.Background(), "project", func(context.Context, Command) (io.Reader, error) {
+	providers, err := discoverV1CatalogWithRunner(context.Background(), "project", func(context.Context, Command) (io.Reader, error) {
 		return strings.NewReader(""), nil
 	})
 	if err != nil || len(providers) != 0 {
@@ -250,4 +250,10 @@ func TestMergeConfiguredCatalogFillsMissingRuntimeURL(t *testing.T) {
 	if got := merged["lmstudio"].URL; got != "http://localhost:1234/v1" {
 		t.Fatalf("merged URL = %q, want configured URL filling missing runtime metadata", got)
 	}
+}
+
+// discoverV1CatalogWithRunner ejercita el camino V1 (`models --verbose`) con un
+// runner inyectado, sin detección de versión.
+func discoverV1CatalogWithRunner(ctx context.Context, projectDir string, runner CatalogRunner) (map[string]Provider, error) {
+	return discoverCatalogForMajor(ctx, projectDir, RuntimeV1, runner)
 }
