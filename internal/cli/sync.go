@@ -1731,17 +1731,43 @@ func applyResolvedPersona(selection *model.Selection, persisted string) {
 // gentleman-neutral-artifacts persona to neutral, printing the remap notice
 // once. State that predates persona persistence, explicit gentleman state,
 // and unreadable state are untouched.
+//
+// El parámetro persisted es solo una instantánea orientativa: la reescritura
+// relee el estado más reciente dentro del cerrojo del almacén y vuelve a
+// comprobar el alias allí, de modo que el cambio de un escritor concurrente
+// entre la lectura orientativa y la escritura nunca se pisa.
 func migratePersistedPersonaAlias(store state.Store, persisted *state.InstallState, persistedErr error) error {
 	if persistedErr != nil || persisted == nil || persisted.Persona != string(model.PersonaGentlemanNeutralArtifacts) {
 		return nil
 	}
-	persisted.Persona = string(model.PersonaNeutral)
-	if err := store.Write(*persisted); err != nil {
-		return fmt.Errorf("persist remapped persona: %w", err)
+	remapped := false
+	if err := withStateStoreLock(store, func() error {
+		latest, readErr := store.Read()
+		if readErr != nil {
+			// La lectura orientativa tuvo éxito: si ahora falta el fichero, una
+			// eliminación concurrente lo quitó y no queda nada que migrar.
+			if errors.Is(readErr, os.ErrNotExist) {
+				return nil
+			}
+			return fmt.Errorf("read persisted installation state: %w", readErr)
+		}
+		if latest.Persona != string(model.PersonaGentlemanNeutralArtifacts) {
+			return nil
+		}
+		latest.Persona = string(model.PersonaNeutral)
+		if err := store.Write(latest); err != nil {
+			return fmt.Errorf("persist remapped persona: %w", err)
+		}
+		remapped = true
+		return nil
+	}); err != nil {
+		return err
 	}
 	// Notice only after the rewrite is durably persisted: a failed write must
 	// not tell the user the remap happened.
-	fmt.Fprintln(personaNoticeWriter, personaAliasRemapNotice)
+	if remapped {
+		fmt.Fprintln(personaNoticeWriter, personaAliasRemapNotice)
+	}
 	return nil
 }
 

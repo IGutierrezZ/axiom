@@ -15,7 +15,9 @@ import (
 type ClaudeAdapter struct {
 	LookPath func(string) (string, error)
 	// Model is optional; an absent or invalid assignment preserves Claude's default.
-	Model          model.ClaudeModelAlias
+	Model model.ClaudeModelAlias
+	// Effort is optional and must be supported by Model.
+	Effort         model.ClaudeEffort
 	commandContext func(context.Context, string, ...string) *exec.Cmd
 }
 
@@ -65,6 +67,12 @@ func (adapter *ClaudeAdapter) Review(ctx context.Context, invocation Invocation)
 	arguments := append([]string(nil), claudeReviewerArguments...)
 	if adapter.Model.Valid() {
 		arguments = append(arguments, "--model", adapter.Model.String())
+		// Igual que los subagentes de Claude generados: el esfuerzo por defecto
+		// se hereda y una combinación modelo/esfuerzo no admitida nunca llega a
+		// la CLI.
+		if adapter.Effort != model.ClaudeEffortDefault && model.ClaudeEffortAllowedForModel(adapter.Model, adapter.Effort) {
+			arguments = append(arguments, "--effort", string(adapter.Effort))
+		}
 	}
 	command := commandContext(ctx, binary, arguments...)
 	command.Dir = scratch

@@ -140,11 +140,88 @@ function Install-ViaGo {
         $gopath = & go env GOPATH 2>$null
         $gobin = Join-Path $gopath "bin"
     }
-    if ($env:PATH -notlike "*$gobin*") {
-        Write-Warn "$gobin is not in your PATH"
-        Write-Warn "Add it to your PATH environment variable."
-    }
+    Confirm-UserPath -Dir $gobin
     Write-Success "Installed $BINARY_NAME from source via go install"
+}
+
+function ConvertTo-PathKey {
+    param([string]$Value)
+
+    $text = $Value.Trim().Trim('"')
+    # Keep a drive root such as C:\ intact; drop the trailing separator otherwise.
+    if ($text.Length -gt 3) { $text = $text.TrimEnd('\', '/') }
+    return $text
+}
+
+function Test-PathListContains {
+    param([string]$List, [string]$Dir)
+
+    $target = ConvertTo-PathKey $Dir
+    foreach ($entry in $List.Split(';')) {
+        if (-not $entry.Trim()) { continue }
+        $literal = ConvertTo-PathKey $entry
+        $expanded = ConvertTo-PathKey ([Environment]::ExpandEnvironmentVariables($literal))
+        if ($literal -ieq $target -or $expanded -ieq $target) { return $true }
+    }
+    return $false
+}
+
+# Adds $Dir to the user PATH (HKCU\Environment) without touching anything else.
+# Same criterion as internal/system/path.go: the raw value is read without
+# expanding %VARS%, the registry value kind is kept (REG_EXPAND_SZ when the
+# value does not exist), and the entry is not added twice. Returns "added" or
+# "present". $SubKey only exists so a test can use a scratch key; the
+# environment-change broadcast is sent for the real Environment key only.
+function Add-ToUserPath {
+    param([string]$Dir, [string]$SubKey = "Environment")
+
+    $Dir = $Dir.Trim().Trim('"')
+    $key = [Microsoft.Win32.Registry]::CurrentUser.CreateSubKey($SubKey)
+    $changed = $false
+    try {
+        $current = [string]$key.GetValue("Path", "", [Microsoft.Win32.RegistryValueOptions]::DoNotExpandEnvironmentNames)
+        $kind = [Microsoft.Win32.RegistryValueKind]::ExpandString
+        if ($key.GetValueNames() -contains "Path") { $kind = $key.GetValueKind("Path") }
+        if (Test-PathListContains -List $current -Dir $Dir) { return "present" }
+        $updated = $Dir
+        if ($current.Trim()) { $updated = "{0};{1}" -f $Dir, $current }
+        $key.SetValue("Path", $updated, $kind)
+        $changed = $true
+    } finally {
+        $key.Close()
+    }
+    if ($changed -and $SubKey -eq "Environment") {
+        try {
+            Add-Type -TypeDefinition 'using System; using System.Runtime.InteropServices; public static class AxiomPathNotification { [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)] public static extern IntPtr SendMessageTimeout(IntPtr hWnd, uint msg, UIntPtr wParam, string lParam, uint flags, uint timeout, out UIntPtr result); }' -ErrorAction Stop
+            $result = [UIntPtr]::Zero
+            [void][AxiomPathNotification]::SendMessageTimeout([IntPtr]0xffff, 0x1a, [UIntPtr]::Zero, "Environment", 2, 1000, [ref]$result)
+        } catch { }
+    }
+    return "added"
+}
+
+# Makes sure $Dir is reachable from new terminals: nothing when it is already in
+# this session's PATH or AXIOM_NO_PERSISTENT_PATH=1; otherwise it is added to
+# the user PATH and to $env:Path, and a manual hint is shown if that fails.
+function Confirm-UserPath {
+    param([string]$Dir)
+
+    if (Test-PathListContains -List $env:Path -Dir $Dir) { return }
+    if ($env:AXIOM_NO_PERSISTENT_PATH -ne "1" -and $env:OS -eq "Windows_NT") {
+        try {
+            $result = Add-ToUserPath -Dir $Dir
+            $env:Path = "{0};{1}" -f $Dir, $env:Path
+            if ($result -eq "added") {
+                Write-Success "Added $Dir to your user PATH"
+            }
+            Write-Warn "Open a new terminal so the PATH change takes effect everywhere."
+            return
+        } catch {
+            Write-Warn ("Could not update the user PATH: {0}" -f $_.Exception.Message)
+        }
+    }
+    Write-Warn "$Dir is not in your PATH"
+    Write-Warn "Add it to your PATH environment variable."
 }
 
 function Add-GoEnvPattern {

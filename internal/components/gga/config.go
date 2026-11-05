@@ -128,15 +128,28 @@ func AgentsTemplatePath(homeDir string) string {
 }
 
 // Inject writes the GGA global config and starter AGENTS.md template.
-// The provider is auto-detected from the selected agents.
+// Un proveedor ya configurado siempre gana: en ese caso el config se deja
+// intacto (con el resto de claves y el formato del usuario). Solo si no hay
+// config o no define proveedor se autodetecta a partir de los agentes.
+// Un config que no se puede interpretar con seguridad también se conserva.
 func Inject(homeDir string, agentIDs []model.AgentID) (InjectionResult, error) {
-	provider := ProviderForAgents(agentIDs)
-	configContent := BuildConfig(provider)
 	configPath := ConfigPath(homeDir)
+	result := InjectionResult{}
 
-	configResult, err := filemerge.WriteFileAtomic(configPath, configContent, 0o644)
-	if err != nil {
-		return InjectionResult{}, fmt.Errorf("write gga config: %w", err)
+	existing, err := os.ReadFile(configPath)
+	if err != nil && !os.IsNotExist(err) {
+		return InjectionResult{}, fmt.Errorf("read gga config: %w", err)
+	}
+	if word, safe := existingProvider(existing); !safe || word != "" {
+		// Config del usuario con proveedor, o ininterpretable: no se reescribe.
+	} else {
+		configContent := BuildConfig(ProviderForAgents(agentIDs))
+		configResult, err := filemerge.WriteFileAtomic(configPath, configContent, 0o644)
+		if err != nil {
+			return InjectionResult{}, fmt.Errorf("write gga config: %w", err)
+		}
+		result.ConfigFile = configPath
+		result.ConfigChanged = configResult.Changed
 	}
 
 	agentsContent, err := assets.Read("gga/AGENTS.md")
@@ -150,10 +163,7 @@ func Inject(homeDir string, agentIDs []model.AgentID) (InjectionResult, error) {
 		return InjectionResult{}, fmt.Errorf("write gga AGENTS.md template: %w", err)
 	}
 
-	return InjectionResult{
-		ConfigFile:    configPath,
-		AgentsFile:    agentsPath,
-		ConfigChanged: configResult.Changed,
-		AgentsChanged: agentsResult.Changed,
-	}, nil
+	result.AgentsFile = agentsPath
+	result.AgentsChanged = agentsResult.Changed
+	return result, nil
 }
