@@ -52,8 +52,8 @@ func TestIncrementsScreenBoardListAndFilters(t *testing.T) {
 	if got, want := strings.Count(inc, "window.localStorage"), strings.Count(inc, "try {"); got > want {
 		t.Errorf("incrementos.js: %d accesos a localStorage para %d bloques try", got, want)
 	}
-	// Los ocho filtros pedidos.
-	for _, id := range []string{"'all'", "'bug'", "'spec'", "'design'", "'waiting'", "'gverify'", "'archive'", "'archived'"} {
+	// Los nueve filtros (los ocho de SDD y el de las features ODD).
+	for _, id := range []string{"'all'", "'bug'", "'odd'", "'spec'", "'design'", "'waiting'", "'gverify'", "'archive'", "'archived'"} {
 		if !strings.Contains(inc, "id: "+id) {
 			t.Errorf("incrementos.js no define el filtro %s", id)
 		}
@@ -77,7 +77,7 @@ func TestIncrementsScreenBoardListAndFilters(t *testing.T) {
 		last = idx
 	}
 	// El tipo lleva texto además de icono, y no se inventan edades relativas.
-	for _, marker := range []string{"'Bug'", "'Feature'", "'Arquitectura'", "'Refactor'", "type-chip", "role=\"progressbar\"", "is-done"} {
+	for _, marker := range []string{"'Bug'", "'Feature'", "'Arquitectura'", "'Refactor'", "'ODD'", "type-chip", "role=\"progressbar\"", "is-done"} {
 		if !strings.Contains(shared, marker) {
 			t.Errorf("increment.js no contiene %q", marker)
 		}
@@ -298,5 +298,65 @@ console.log(JSON.stringify({
 	}
 	if res.First != "Primer párrafo con código." {
 		t.Errorf("firstParagraph = %q", res.First)
+	}
+}
+
+// Las features ODD llevan su propio chip «ODD», no enlazan a un detalle SDD y no cuentan en el flujo
+// SDD de Inicio; el subtítulo del tablero ya no habla solo de SDD.
+func TestIncrementsODDChipAndHomeStatsRuntime(t *testing.T) {
+	out := runNodeModules(t, []string{"api", "icons", "increment"},
+		"import { typeInfo, typeChip, incrementStats, statusFlag } from './increment.mjs';\n"+
+			"const odd = { name: 'mi-feature', type: 'active', phase: 'apply', change_type: 'odd', tasks_total: 4, tasks_completed: 1 };\n"+
+			"const oddDone = { name: 'viejo', type: 'archived', phase: 'archive', change_type: 'odd', tasks_total: 2, tasks_completed: 2 };\n"+
+			"const sdd = { name: 'x', type: 'active', phase: 'spec', pending_spec: true, change_type: 'feature', tasks_total: 2, tasks_completed: 1 };\n"+
+			"const withOdd = incrementStats([odd, oddDone, sdd]);\n"+
+			"const withoutOdd = incrementStats([sdd]);\n"+
+			"console.log(JSON.stringify({\n"+
+			"  info: typeInfo(odd), chip: typeChip(odd), feature: typeInfo(sdd).id,\n"+
+			"  flag: statusFlag(odd),\n"+
+			"  same: JSON.stringify(withOdd) === JSON.stringify(withoutOdd), active: withOdd.active, archived: withOdd.archived, tasks: withOdd.tasksTotal,\n"+
+			"  empty: incrementStats(null).active,\n"+
+			"}));\n")
+	var res struct {
+		Info struct {
+			ID    string `json:"id"`
+			Label string `json:"label"`
+		} `json:"info"`
+		Chip    string `json:"chip"`
+		Feature string `json:"feature"`
+		Flag    any    `json:"flag"`
+		Same    bool   `json:"same"`
+		Active  int    `json:"active"`
+		Archive int    `json:"archived"`
+		Tasks   int    `json:"tasks"`
+		Empty   int    `json:"empty"`
+	}
+	if err := json.Unmarshal(out, &res); err != nil {
+		t.Fatalf("salida de node ilegible: %v\n%s", err, out)
+	}
+	if res.Info.ID != "odd" || res.Info.Label != "ODD" || res.Feature != "feature" {
+		t.Errorf("typeInfo: %+v / %s", res.Info, res.Feature)
+	}
+	if !strings.Contains(res.Chip, "type-odd") || !strings.Contains(res.Chip, ">ODD<") && !strings.Contains(res.Chip, "ODD</span>") {
+		t.Errorf("el chip debía ser type-odd con el texto ODD: %s", res.Chip)
+	}
+	if res.Flag != nil {
+		t.Errorf("una feature ODD no tiene bandera de estado SDD: %v", res.Flag)
+	}
+	if !res.Same || res.Active != 1 || res.Archive != 0 || res.Tasks != 2 || res.Empty != 0 {
+		t.Errorf("las features ODD no deben alterar los indicadores SDD de Inicio: %+v", res)
+	}
+
+	inc := readAsset(t, "js/screens/incrementos.js")
+	for _, marker := range []string{"id: 'odd', label: 'ODD'", "nameHtml(", "change_type === 'odd'"} {
+		if !strings.Contains(inc, marker) {
+			t.Errorf("incrementos.js no contiene %q", marker)
+		}
+	}
+	if html := readAsset(t, "index.html"); !strings.Contains(html, "cada feature ODD") || strings.Contains(html, "Ciclo de vida SDD de cada cambio") {
+		t.Errorf("el subtítulo del tablero debía mencionar las features ODD")
+	}
+	if css := readAsset(t, "style.css"); !strings.Contains(css, ".type-odd") {
+		t.Errorf("style.css no define .type-odd")
 	}
 }

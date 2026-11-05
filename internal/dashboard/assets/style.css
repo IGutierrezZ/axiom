@@ -507,6 +507,7 @@ dialog.modal::backdrop { background: rgba(10, 10, 14, .55); }
 .type-bug { background: var(--bad-soft); color: var(--bad); }
 .type-refactor { background: var(--hover); color: var(--text-2); }
 .type-architecture { background: var(--warn-soft); color: var(--warn); }
+.type-odd { background: var(--ok-soft); color: var(--ok); }
 
 .ix-filters { display: flex; flex-direction: column; gap: 10px; }
 .ix-label { font-size: 13px; color: var(--text-3); margin-right: 4px; }

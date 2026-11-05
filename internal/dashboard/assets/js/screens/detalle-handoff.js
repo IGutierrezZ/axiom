@@ -85,7 +85,7 @@ export async function renderHandoff(panel, change, { archived, isCurrent }) {
 function fillChangeOptions(selected) {
   const select = $('#handoff-modal-change');
   select.innerHTML = state.increments
-    .filter(inc => inc.type === 'active')
+    .filter(inc => inc.type === 'active' && inc.change_type !== 'odd')
     .map(inc => `<option value="${escapeHtml(inc.name)}">${escapeHtml(inc.name)} (fase: ${escapeHtml(inc.phase)})</option>`)
     .join('');
   if (selected) select.value = selected;

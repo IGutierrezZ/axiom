@@ -28,12 +28,14 @@ export function isArchived(inc) {
 
 // typeInfo: feature → Feature (acento), fix o is_bug → Bug (--bad), refactor →
 // neutro, architecture → Arquitectura (--warn). La API hoy solo devuelve
-// feature y fix; los otros dos ya están previstos en el diseño.
+// feature y fix (SDD) y odd (las features ODD de los worktrees); los otros dos ya
+// están previstos en el diseño.
 export function typeInfo(inc) {
   if (inc && (inc.is_bug || inc.change_type === 'fix')) return { id: 'bug', label: 'Bug', iconName: 'bug' };
   switch (inc && inc.change_type) {
     case 'refactor': return { id: 'refactor', label: 'Refactor', iconName: 'refresh' };
     case 'architecture': return { id: 'architecture', label: 'Arquitectura', iconName: 'cube' };
+    case 'odd': return { id: 'odd', label: 'ODD', iconName: 'list' };
     default: return { id: 'feature', label: 'Feature', iconName: 'sparkles' };
   }
 }
@@ -227,10 +229,11 @@ export function attentionItems(increments) {
 }
 
 // incrementStats resume la lista para los indicadores y el flujo SDD de Inicio.
+// Las features ODD (change_type: 'odd') no entran: Inicio resume el flujo SDD.
 // byPhase cuenta solo activos (explore…verify); archived suma los archivados y
 // los activos que ya están en la fase archive.
 export function incrementStats(increments) {
-  const all = increments || [];
+  const all = (increments || []).filter(inc => !inc || inc.change_type !== 'odd');
   const active = all.filter(inc => !isArchived(inc));
   const archivedList = all.filter(isArchived);
   const byPhase = PHASES.filter(p => p.id !== 'archive').map(p => ({ id: p.id, label: p.label, count: 0, bugs: 0 }));

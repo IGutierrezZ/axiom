@@ -33,7 +33,7 @@ Que el tablero de Incrementos del dashboard (`GET /api/increments`) muestre tamb
 ## Tareas
 
 - [x] **T1 · Backend: detección de *features* ODD y de worktrees ya integrados** (`internal/dashboard`, `internal/branch/engine`). Parser de `odd/tasks/*.md` (título `# ODD…`, línea `Estado`, casillas `- [ ]`/`- [x]` y `### [x]`), listado por worktree, fase, aviso de integrado y documentos del checkout principal como integrados. Tests Go con repos temporales. Ruta: delegada (writer único; toca 2+ ficheros no triviales).
-- [ ] **T2 · Frontend: chip y filtro ODD** (`internal/dashboard/assets`). Chip «ODD» en tarjeta y lista, filtro «ODD» con contador, subtítulo que no diga solo SDD. Tests de assets existentes ampliados. Ruta: delegada (mismo writer).
+- [x] **T2 · Frontend: chip y filtro ODD** (`internal/dashboard/assets`). Chip «ODD» en tarjeta y lista, filtro «ODD» con contador, subtítulo que no diga solo SDD. Tests de assets existentes ampliados. Ruta: delegada (mismo writer).
 - [ ] **T3 · Verificación manual** contra el repositorio real: el listado muestra los 8 worktrees ODD activos, `carril-sdd-versatil` como SDD y avisa de `bloqueos-prueba-multirepo-r2` como integrado. Ruta: inline.
 
 ## Criterios de aceptación
@@ -59,6 +59,10 @@ Que el tablero de Incrementos del dashboard (`GET /api/increments`) muestre tamb
   - Paridad TUI: la prueba `TestTUIListsTheSameChangesAsGetIncrements` compara solo los cambios SDD (se ignora `change_type: "odd"`).
   - Comprobaciones: `go test ./internal/dashboard/... ./internal/branch/... -count=1` → ok (dashboard, branch, engine, gitcli, registry); `go vet ./internal/dashboard/... ./internal/branch/...` → sin salida; `gofmt -l internal/` → sin salida.
 
+- 2026-11-05 · T2 hecha (ruta: delegada, mismo writer). Chip «ODD» (`typeInfo`/`typeChip`, estilo `.type-odd`), filtro «ODD» con contador entre los de `incrementos.js`, subtítulo «Ciclo de vida de cada cambio SDD y de cada feature ODD, de la propuesta al archivo.».
+  - Decisiones de interfaz derivadas (no estaban en el documento, a revisar): las features ODD no enlazan al detalle (el detalle solo conoce cambios de `openspec/changes`, daría «no encontrado») y se muestran como texto con el título como ayuda; `incrementStats` de Inicio las excluye (Inicio resume el flujo SDD, sus cifras no cambian); la columna de archivo del tablero solo muestra SDD archivados recientes (los ODD integrados no tienen fecha y la desplazarían) y los ODD integrados salen con el filtro «Archivados»; el selector de handoff las omite.
+  - Comprobaciones: `go test ./internal/dashboard/... ./internal/branch/... -count=1` → ok (dashboard, branch, engine, gitcli, registry), incluida la prueba Node nueva `TestIncrementsODDChipAndHomeStatsRuntime`; `go vet` → sin salida; `gofmt -l internal/` → sin salida.
+
 ## Siguiente paso
 
-T2 (frontend: chip y filtro ODD) y después T3.
+T3: verificación manual contra el repositorio real (inline, en el padre).
