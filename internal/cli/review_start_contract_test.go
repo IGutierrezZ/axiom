@@ -1236,3 +1236,146 @@ func isReviewCLITrackedPath(t *testing.T, repo, path string) bool {
 	command := exec.Command("git", "-C", repo, "ls-files", "--error-unmatch", "--", path)
 	return command.Run() == nil
 }
+
+// TestReviewStartContractValidatesDangerousSinkReason fija la forma del motivo
+// dangerous_sink que emite el clasificador (señal propia, ruta obligatoria, sin
+// modos) y que solo start/v5 puede representar.
+func TestReviewStartContractValidatesDangerousSinkReason(t *testing.T) {
+	valid := reviewtransaction.RiskReason{
+		Code: reviewtransaction.RiskReasonDangerousSink, Signal: reviewtransaction.SignalDangerousSink, Path: "client/tls.go",
+	}
+	if err := validateReviewStartRiskReasons([]reviewtransaction.RiskReason{valid}, true); err != nil {
+		t.Fatalf("validateReviewStartRiskReasons(valid dangerous sink, start/v5) = %v", err)
+	}
+	if got := reviewStartRiskLevel([]reviewtransaction.RiskReason{valid}); got != reviewtransaction.RiskHigh {
+		t.Fatalf("reviewStartRiskLevel(dangerous sink) = %q, want %q", got, reviewtransaction.RiskHigh)
+	}
+	if err := validateReviewStartRiskReasons([]reviewtransaction.RiskReason{valid}, false); err == nil {
+		t.Fatal("a schema older than start/v5 accepted the dangerous_sink reason")
+	}
+	for name, malformed := range map[string]reviewtransaction.RiskReason{
+		"wrong signal": {Code: valid.Code, Signal: reviewtransaction.SignalShellProcess, Path: valid.Path},
+		"no signal":    {Code: valid.Code, Path: valid.Path},
+		"missing path": {Code: valid.Code, Signal: valid.Signal},
+		"stray modes":  {Code: valid.Code, Signal: valid.Signal, Path: valid.Path, OldMode: "100644", NewMode: "100755"},
+	} {
+		if err := validateReviewStartRiskReasons([]reviewtransaction.RiskReason{malformed}, true); err == nil {
+			t.Fatalf("validateReviewStartRiskReasons accepted malformed %s reason", name)
+		}
+	}
+}
+
+// TestReviewStartResultAdmitsDangerousSinkOnlyUnderStartV5 comprueba que el
+// sobre START valida el motivo solo con la identidad start/v5 y que los
+// esquemas publicados anteriores (start/v3 y start/v4) siguen sin admitirlo.
+func TestReviewStartResultAdmitsDangerousSinkOnlyUnderStartV5(t *testing.T) {
+	payload, err := os.ReadFile(filepath.Join("..", "..", "contracts", "review-integration", "v2", "fixtures", "start-v4.fixture.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	result := decodeNegotiatedReviewStart(t, payload)
+	result.RiskReasons = []reviewtransaction.RiskReason{{
+		Code: reviewtransaction.RiskReasonDangerousSink, Signal: reviewtransaction.SignalDangerousSink, Path: "client/tls.go",
+	}}
+	for schema, wantValid := range map[string]bool{
+		ReviewIntegrationStartSchemaV5: true,
+		ReviewIntegrationStartSchemaV4: false,
+		ReviewIntegrationStartSchemaV3: false,
+	} {
+		candidate := result
+		candidate.Schema = schema
+		if candidate.Schema == ReviewIntegrationStartSchemaV3 {
+			candidate.NextTransition = nil
+		}
+		if err := candidate.Validate(); (err == nil) != wantValid {
+			t.Fatalf("Validate() under %s = %v, want valid=%v", schema, err, wantValid)
+		}
+	}
+
+	encoded, err := json.Marshal(result)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var document map[string]any
+	if err := json.Unmarshal(encoded, &document); err != nil {
+		t.Fatal(err)
+	}
+	for schemaFile, wantValid := range map[string]bool{"start-v5.schema.json": true, "start-v4.schema.json": false} {
+		document["schema"] = strings.TrimSuffix(ReviewIntegrationStartSchemaV5, "v5") + strings.TrimSuffix(strings.TrimPrefix(schemaFile, "start-"), ".schema.json")
+		body, err := json.Marshal(document)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var instance any
+		if err := json.Unmarshal(body, &instance); err != nil {
+			t.Fatal(err)
+		}
+		err = compileWholePublishedReviewSchema(t, "v2", schemaFile).Validate(instance)
+		if (err == nil) != wantValid {
+			t.Fatalf("%s validation of a dangerous_sink START = %v, want valid=%v", schemaFile, err, wantValid)
+		}
+	}
+}
+
+const dangerousSinkStartCandidate = "package client\n\nimport \"crypto/tls\"\n\nvar config = tls.Config{InsecureSkipVerify: true}\n"
+
+// TestNegotiatedReviewStartEmitsDangerousSinkAgainstStartV5 es la regresión del
+// fallo real: un candidato con un sumidero peligroso hacía fallar su propio
+// Validate() porque el motivo que emite el clasificador no tenía caso.
+func TestNegotiatedReviewStartEmitsDangerousSinkAgainstStartV5(t *testing.T) {
+	reviewEnabledHome(t)
+	repo := initReviewCLIRepo(t)
+	writeReviewStartCandidate(t, repo, "client/tls.go", dangerousSinkStartCandidate, 0o644)
+
+	var output bytes.Buffer
+	if err := RunReview(boundNegotiatedStartArgs(t, []string{
+		"start", "--contract", ReviewIntegrationContractV2, "--cwd", repo, "--lineage", "dangerous-sink-start",
+	}), &output); err != nil {
+		t.Fatal(negotiatedReviewStartFailure(err, output.String()))
+	}
+	validatePublishedReviewSchema(t, compileWholePublishedReviewSchema(t, "v2", "start-v5.schema.json"), output.Bytes())
+	started := decodeNegotiatedReviewStart(t, output.Bytes())
+	if err := started.Validate(); err != nil {
+		t.Fatal(err)
+	}
+	if started.Schema != ReviewIntegrationStartSchemaV5 || started.RiskLevel != reviewtransaction.RiskHigh {
+		t.Fatalf("dangerous-sink START schema/tier = %q/%q", started.Schema, started.RiskLevel)
+	}
+	want := []reviewtransaction.RiskReason{{
+		Code: reviewtransaction.RiskReasonDangerousSink, Signal: reviewtransaction.SignalDangerousSink, Path: "client/tls.go",
+	}}
+	if !reflect.DeepEqual(started.RiskReasons, want) {
+		t.Fatalf("dangerous-sink START risk reasons = %#v, want %#v", started.RiskReasons, want)
+	}
+}
+
+// TestNegotiatedReviewStartV1RefusesDangerousSinkBeforeAuthority documenta la
+// decisión para el contrato v1: su esquema start/v2 está congelado y no admite
+// el motivo, así que START se rechaza antes de crear autoridad en lugar de
+// emitir un sobre inválido o degradar el motivo a otro inexacto.
+func TestNegotiatedReviewStartV1RefusesDangerousSinkBeforeAuthority(t *testing.T) {
+	reviewEnabledHome(t)
+	repo := initReviewCLIRepo(t)
+	writeReviewStartCandidate(t, repo, "client/tls.go", dangerousSinkStartCandidate, 0o644)
+
+	var output bytes.Buffer
+	err := RunReview(boundNegotiatedStartArgs(t, []string{
+		"start", "--contract", ReviewIntegrationContractV1, "--cwd", repo, "--lineage", "dangerous-sink-v1",
+	}), &output)
+	if err == nil {
+		t.Fatalf("v1 START on a dangerous-sink candidate succeeded:\n%s", output.String())
+	}
+	// Es un rechazo de petición (invalid_request), no un fallo del proveedor: no
+	// debe generar un informe de defecto ni un resultado de START.
+	for _, want := range []string{`"code": "invalid_request"`, "dangerous_sink", "v2 review integration contract"} {
+		if !strings.Contains(err.Error()+output.String(), want) {
+			t.Fatalf("v1 START refusal lacks %q:\n%v\n%s", want, err, output.String())
+		}
+	}
+	if strings.Contains(err.Error(), "defect report") || strings.Contains(output.String(), `"operation": "review.start"`) && strings.Contains(output.String(), `"state"`) {
+		t.Fatalf("v1 START refusal looks like a defect or a START envelope:\n%v\n%s", err, output.String())
+	}
+	if _, err := atomicCompactStartStore(t, repo, "dangerous-sink-v1").Load(); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("v1 START refusal left compact authority behind: %v", err)
+	}
+}

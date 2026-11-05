@@ -513,6 +513,7 @@ func TestReviewProviderArtifactSchemasAreStrictAndBound(t *testing.T) {
 		{name: "admitted-result.schema.json", id: "https://gentle-ai.dev/contracts/review-integration/v2/schemas/admitted-result.schema.json"},
 		{name: "start.schema.json", id: ReviewIntegrationStartSchemaIDV3},
 		{name: "start-v4.schema.json", id: ReviewIntegrationStartSchemaIDV4},
+		{name: "start-v5.schema.json", id: ReviewIntegrationStartSchemaIDV5},
 		{name: "status.schema.json", id: ReviewIntegrationStatusSchemaIDV3},
 		{name: "status-v4.schema.json", id: ReviewIntegrationStatusSchemaIDV4},
 		{name: "status-v5.schema.json", id: ReviewIntegrationStatusSchemaIDV5},

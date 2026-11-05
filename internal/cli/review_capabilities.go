@@ -340,7 +340,8 @@ func reviewCapabilitiesStaticSurface(contracts ...string) ReviewCapabilitiesResu
 			case ReviewIntegrationRepairSchema:
 				result.Schemas[index] = ReviewIntegrationRepairSchemaV2
 			case ReviewIntegrationStartSchemaV2:
-				result.Schemas[index] = ReviewIntegrationStartSchema
+				// start/v5 se anuncia desde capabilities/v2.7; v2.6 conserva su lista cerrada.
+				result.Schemas[index] = ReviewIntegrationStartSchemaV4
 			case ReviewIntegrationStatusSchemaV2:
 				result.Schemas[index] = ReviewIntegrationStatusSchemaV5
 			}

@@ -2149,6 +2149,13 @@ func runReviewFacadeStart(ctx context.Context, args []string, stdout io.Writer) 
 	if err != nil {
 		return err
 	}
+	// El esquema START del contrato v1 (start/v2) está congelado y no admite el
+	// motivo dangerous_sink. Se rechaza aquí, antes del consentimiento y de crear
+	// autoridad alguna, en lugar de emitir un sobre que su propio esquema no
+	// valida ni degradar el motivo a otro inexacto.
+	if negotiated && *contract == ReviewIntegrationContractV1 && reviewStartRiskReasonsContainDangerousSink(assessment.Reasons) {
+		return reviewPreflightError(errors.New("the candidate carries the dangerous_sink risk reason, which the frozen v1 START schema cannot represent; negotiate the v2 review integration contract instead")) // refusal:by-design world-action: the frozen v1 contract cannot represent this reason; the exit is negotiating the v2 contract
+	}
 	// Issue #2447. The direct route's own response type
 	// (ReviewFacadeStartResult) never carries repository_context -- only the
 	// negotiated ReviewIntegrationStartResult does -- so no reviewer lens can

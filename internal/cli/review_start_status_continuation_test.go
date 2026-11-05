@@ -18,8 +18,8 @@ import (
 // scope rows, and whose command is exactly the tokens it publishes.
 func startStatusContinuationExecution(t *testing.T, started ReviewIntegrationStartResult, wantSelectors []ReviewTransitionArgument) *ReviewTransitionExecution {
 	t.Helper()
-	if started.Schema != ReviewIntegrationStartSchemaV4 || started.State != reviewtransaction.StateReviewing {
-		t.Fatalf("reviewing start/v4 identity = %q state %q", started.Schema, started.State)
+	if started.Schema != ReviewIntegrationStartSchemaV5 || started.State != reviewtransaction.StateReviewing {
+		t.Fatalf("reviewing start/v5 identity = %q state %q", started.Schema, started.State)
 	}
 	transition := started.NextTransition
 	if transition == nil || transition.Kind != "execute" || transition.ReasonCode != "review_status_required" ||
