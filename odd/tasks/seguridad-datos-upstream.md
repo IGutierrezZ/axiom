@@ -70,12 +70,16 @@ Orden de ejecución: **T1 → T4 → T2 → T3 → T5**, que sigue los cortes de
   - Consumidores de `float64`: `engram/healthprobe.go` (`stdioTimeoutFromConfig`, ~`:71`) acepta `json.Number`. Auditar con `rg` cualquier otro *type switch* numérico tras decodificar settings.
   - Pruebas: `TestJSONRewritesPreserveExactNumberTokens` (`9007199254740993`, `1.10`, `1E+2`), `TestUnmarshalJSONObjectKeepsStrictSingleDocument`, un caso JSONC con números, `TestProvisionEngramMCPPreservesExactNumberTokens`, `TestPersistedJSONTimeoutIsRead`.
   - Ruta: delegada (escritor único; 4+ ficheros).
-- [ ] **T2 · PATH de usuario en Windows sin aplanar (#5625, #5632)**
+- [x] **T2 · PATH de usuario en Windows sin aplanar (#5625, #5632)**
   - `internal/system/path.go`: envoltorio `persistentUserPathScript` que abre `HKCU\Environment`, lee con `DoNotExpandEnvironmentNames`, conserva `GetValueKind` (por defecto `ExpandString`), escribe con `SetValue` y emite `WM_SETTINGCHANGE` solo si hubo cambio; `Test-UserPathEntry` compara literal o expandido en añadir, quitar y priorizar (priorizar conserva la forma literal).
   - Conservar `skipPersistentUserPathWrite` y `NoPersistentPathEnvVar`. Nombre de la notificación con marca Axiom.
   - Pruebas en `internal/system/path_registry_test.go` con el *seam* `useWindowsUserPathSeam` existente y una clave temporal `HKCU\Software\Axiom-PathTest-<pid>-<ns>` borrada en `finally`; salto si `GOOS != "windows"` o `testing.Short()`; aserción de que ningún script toca `SubKey('Environment'`: `TestUserPathPreservesRegistryValue`, `TestUserPathMatchesExpandedEntries`, `TestPrioritizeUserPathPreservesLiteralSemantics`, `TestUserPathScriptInjectionRequiresAnchor`, `TestUserPathNotificationFailureRetainsRollbackOwnership`. Ajustar las pruebas de `path_test.go` que comparan el texto del script.
   - Seguimiento fuera de alcance: `UserPathEntries` (`path.go:182`) sigue leyendo valores expandidos, igual que upstream.
   - Ruta: inline (un fichero de código y sus pruebas) o delegada si el ajuste de `path_test.go` crece.
+  - **Hecho (2026-11-05)**, ruta delegada (disparador de escritor: 3 ficheros). `path.go` +44/−20, `path_test.go` +5/−2, `path_registry_test.go` nuevo (332 líneas). Tipo C# `AxiomPathNotification`, clave de prueba `Software\Axiom-PathTest-<pid>-<ns>`.
+  - Evidencia del escritor: `go test ./internal/system/...` ok (50 subtests de registro reales, 0 saltados); `go test -short ./internal/system/...` ok; `go test ./internal/update/...` ok; `go vet` limpio; sin claves `Axiom-PathTest` residuales en HKCU.
+  - Comprobación del orquestador: `go test ./internal/system/ -run "TestUserPath|TestPrioritizeUserPath" -count=1` ok. `axiom review assess`: medium (`executable_change`); con RDD apagado basta la verificación del escritor más esta comprobación.
+  - Nota: `rg GentleAI internal/system` solo encuentra `env.go:10` (`EnvChannelGentleAI`), anterior a esta tarea.
 - [ ] **T3 · Deny de secretos de Claude anclado al HOME (#5867)**
   - `permissions/inject.go`: reglas `Read/Edit(~/.ssh/**)`, `~/.credentials/**`, `~/Library/Keychains/**`, `~/.aws/credentials`, `~/.config/gh/hosts.yml`.
   - Migración: tabla `staleClaudeCodeDenyRules` y `anchorStaleClaudeCodeDenyRules`, aplicadas en `mergeJSONFile` (`inject.go:191`) antes de `filemerge.UnionJSONArrays`; reescribe en su sitio solo las coincidencias exactas, sin duplicar, sin tocar el resto ni su orden.
