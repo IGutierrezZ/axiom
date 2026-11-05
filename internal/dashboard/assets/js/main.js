@@ -9,6 +9,7 @@ import { refreshOverview } from './core/overview.js';
 import { set, on } from './core/state.js';
 import { initTheme } from './core/theme.js';
 import { initProjects, loadProjects } from './projects.js';
+import { initUpdate } from './update.js';
 import { initShell, setActiveNav, renderBreadcrumb, routeLabel, closeMenu } from './shell.js';
 import { initDetail, enterDetail, refreshDetail } from './screens/detalle.js';
 import { initEcosystem, loadEcosystem } from './screens/ecosystem.js';
@@ -104,6 +105,7 @@ function boot() {
   initSemantic();
   initLivingDocs();
   initEcosystem();
+  initUpdate();
 
   // Las pantallas que dependen del workspace se repintan cuando llega.
   on('workspace', renderInicio);
