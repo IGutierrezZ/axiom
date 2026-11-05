@@ -243,6 +243,11 @@ func (f *fileStream) Close() error {
 		if f.file != nil {
 			_ = f.file.Close()
 		}
+		// El borrado puede fallar en Windows si un antivirus u otro proceso aún
+		// tiene abierto el fichero. El paquete no tiene mecanismo de log ni de
+		// aviso y un fallo aquí no altera el resultado del descubrimiento (el
+		// fichero solo contiene la lista de modelos y vive en el directorio
+		// temporal), así que se ignora a propósito.
 		_ = os.Remove(f.path)
 	})
 	return nil

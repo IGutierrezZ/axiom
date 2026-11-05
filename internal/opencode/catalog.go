@@ -86,8 +86,14 @@ func DiscoverCatalog(ctx context.Context, projectDir string) (map[string]Provide
 // propio `models --verbose` devuelve el error tipado honesto (missing_binary)
 // en lugar de enmascararlo con un fallo de detección. Una V2 mal reconocida
 // como V1 acaba en un CatalogError visible, nunca en un catálogo falso. La
-// detección va fuera del plazo del catálogo y tiene el suyo propio.
+// detección consume el mismo plazo que el catálogo, que se aplica aquí antes de
+// detectar.
 func discoverCatalog(ctx context.Context, projectDir string, detect func(context.Context) (RuntimeMajor, error), v1, v2 CatalogRunner) (map[string]Provider, error) {
+	// Un único plazo cubre la detección de versión y el catálogo: la detección
+	// conserva su tope propio de 3 s (DetectRuntimeMajor) dentro de este plazo,
+	// de modo que el peor caso total sigue siendo catalogTimeout.
+	ctx, cancel := context.WithTimeout(ctx, catalogTimeout)
+	defer cancel()
 	major, err := detect(ctx)
 	if err != nil {
 		major = RuntimeV1
