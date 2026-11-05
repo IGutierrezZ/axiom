@@ -20,9 +20,8 @@ import (
 //	AXIOM_DASHBOARD_PREVIEW_PORT=4317 go test ./internal/dashboard -run TestDashboardPreview -count=1 -timeout 0 -v
 //
 // Variables:
-//   - AXIOM_DASHBOARD_PREVIEW_PORT: puerto de partida (obligatorio para activarlo).
-//     ListenAndServe prueba hasta 10 puertos siguientes si está ocupado; la URL
-//     real se imprime en la salida estándar.
+//   - AXIOM_DASHBOARD_PREVIEW_PORT: puerto de escucha (obligatorio para activarlo).
+//     Si está ocupado, el arnés falla: ListenAndServe no reasigna puertos.
 //   - AXIOM_DASHBOARD_PREVIEW_ROOT: raíz del proyecto a servir. Por defecto, la
 //     raíz del repositorio de este árbol de trabajo.
 //

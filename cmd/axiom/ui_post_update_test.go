@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"net"
 	"strconv"
 	"testing"
@@ -23,7 +24,7 @@ func TestParseUIFlags(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parseUIFlags(nil): %v", err)
 	}
-	if defaults.port != 8080 || defaults.noBrowser || defaults.path != "." || defaults.postUpdateSync {
+	if defaults.port != dashboard.DefaultPort || defaults.noBrowser || defaults.path != "." || defaults.postUpdateSync {
 		t.Fatalf("valores por defecto = %+v", defaults)
 	}
 
@@ -42,17 +43,12 @@ func busyPort(t *testing.T) (int, net.Listener) {
 	return l.Addr().(*net.TCPAddr).Port, l
 }
 
-// En el arranque normal, un puerto ocupado se sortea con el siguiente libre.
-func TestStartDashboardServerProbesAnotherPortNormally(t *testing.T) {
+// En el arranque normal (#222) un puerto ocupado no se sortea: da ErrPortInUse.
+func TestStartDashboardServerFailsOnBusyPortNormally(t *testing.T) {
 	port, _ := busyPort(t)
 	srv := dashboard.NewServer(dashboard.NewService(t.TempDir()))
-	got, err := startDashboardServer(srv, uiOptions{port: port})
-	if err != nil {
-		t.Fatalf("startDashboardServer: %v", err)
-	}
-	t.Cleanup(func() { _ = srv.Shutdown(t.Context()) })
-	if got == port {
-		t.Fatalf("con el puerto %d ocupado debió elegir otro", port)
+	if _, err := startDashboardServer(srv, uiOptions{port: port}); !errors.Is(err, dashboard.ErrPortInUse) {
+		t.Fatalf("startDashboardServer con el puerto ocupado = %v, quiero ErrPortInUse", err)
 	}
 }
 

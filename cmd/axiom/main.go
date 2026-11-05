@@ -1173,6 +1173,7 @@ func resolveHandoffFile(workspaceRoot, change string) (string, error) {
 type uiOptions struct {
 	port      int
 	noBrowser bool
+	detach    bool
 	path      string
 	// postUpdateSync la pone el dashboard viejo al relanzarse tras actualizarse a sí
 	// mismo: el proceso nuevo debe quedarse con el MISMO puerto y sincronizar el
@@ -1186,8 +1187,9 @@ const postUpdatePortWait = 10 * time.Second
 func parseUIFlags(args []string) (uiOptions, error) {
 	fs := flag.NewFlagSet("ui", flag.ContinueOnError)
 	var opts uiOptions
-	fs.IntVar(&opts.port, "port", 8080, "Puerto de escucha para el servidor web (default: 8080)")
+	fs.IntVar(&opts.port, "port", dashboard.DefaultPort, fmt.Sprintf("Puerto de escucha para el servidor web (default: %d)", dashboard.DefaultPort))
 	fs.BoolVar(&opts.noBrowser, "no-browser", false, "No abrir automáticamente el navegador")
+	fs.BoolVar(&opts.detach, "detach", false, "Lanzar el servidor en segundo plano sin consola, abrir la ventana y salir")
 	fs.StringVar(&opts.path, "path", ".", "Ruta base del espacio de trabajo")
 	fs.BoolVar(&opts.postUpdateSync, "post-update-sync", false, "Uso interno: arranque tras una actualización desde el dashboard (mismo puerto y sincronización del workspace)")
 	if err := fs.Parse(args); err != nil {
@@ -1198,7 +1200,7 @@ func parseUIFlags(args []string) (uiOptions, error) {
 
 // startDashboardServer enlaza el servidor. Tras una actualización exige el mismo
 // puerto (reintentando mientras el proceso viejo lo libera); en el arranque normal
-// sondea hasta 10 puertos libres a partir del pedido.
+// escucha exactamente en el puerto pedido (ErrPortInUse si está ocupado).
 func startDashboardServer(server *dashboard.Server, opts uiOptions) (int, error) {
 	if opts.postUpdateSync {
 		return server.ListenAndServeExact(opts.port, postUpdatePortWait)
@@ -1215,7 +1217,7 @@ func runUI(args []string) {
 		fmt.Printf("Error al analizar banderas: %v\n", err)
 		os.Exit(1)
 	}
-	portFlag, noBrowserFlag, pathFlag := &opts.port, &opts.noBrowser, &opts.path
+	portFlag, noBrowserFlag, detachFlag, pathFlag := &opts.port, &opts.noBrowser, &opts.detach, &opts.path
 
 	baseDir, err := filepath.Abs(*pathFlag)
 	if err != nil {
@@ -1238,8 +1240,22 @@ func runUI(args []string) {
 	}
 	_ = os.Chdir(baseDir)
 
+	// Idempotencia: si ya hay un Axiom en el puerto, solo se abre la ventana.
+	if running, _ := dashboard.ProbeAxiom(context.Background(), *portFlag); running {
+		existingURL := fmt.Sprintf("http://127.0.0.1:%d", *portFlag)
+		fmt.Printf("Axiom ya está activo en %s\n", existingURL)
+		openUIWindow(existingURL, *noBrowserFlag)
+		return
+	}
+
+	// Arranque desacoplado: el servidor vive en un proceso hijo sin consola.
+	if *detachFlag {
+		os.Exit(runUIDetached(*portFlag, baseDir, *noBrowserFlag))
+	}
+
 	svc := dashboard.NewServiceWithHub(baseDir, hubMgr)
 	server := dashboard.NewServer(svc)
+	server.SetVersion(Version)
 
 	// Tras actualizarse desde el dashboard, este proceso (ya con el binario nuevo)
 	// sincroniza el workspace abierto; el estado queda consultable desde el primer
@@ -1250,7 +1266,11 @@ func runUI(args []string) {
 
 	actualPort, err := startDashboardServer(server, opts)
 	if err != nil {
-		fmt.Printf("[ERROR] No se pudo iniciar el servidor web: %v\n", err)
+		if errors.Is(err, dashboard.ErrPortInUse) {
+			fmt.Println(errPortBusyMessage(*portFlag))
+		} else {
+			fmt.Printf("[ERROR] No se pudo iniciar el servidor web: %v\n", err)
+		}
 		os.Exit(1)
 	}
 	// La sincronización arranca solo tras enlazar: un fallo de enlace termina el
@@ -1266,18 +1286,13 @@ func runUI(args []string) {
 	fmt.Println("================================================================================")
 	fmt.Printf("  Servidor HTTP activo en: %s\n", url)
 	fmt.Println("  Espacio de Trabajo:     ", baseDir)
-	if actualPort != *portFlag {
-		fmt.Printf("  (Aviso: Puerto %d ocupado, reasignado a %d)\n", *portFlag, actualPort)
-	}
 	fmt.Println("  Presiona Ctrl+C para detener el servidor.")
 	fmt.Println("================================================================================")
 
 	if !*noBrowserFlag {
 		go func() {
 			time.Sleep(150 * time.Millisecond)
-			if err := openBrowser(url); err != nil {
-				fmt.Printf("  (Aviso: No se pudo abrir el navegador automáticamente: %v)\n", err)
-			}
+			openUIWindow(url, false)
 		}()
 	}
 
