@@ -2,7 +2,9 @@
 
 > **Documento vivo ODD.** Fichero autoritativo: `odd/tasks/arreglos-instalacion-sync-tui.md`.
 > Espejo de recuperación en Engram: topic `odd/arreglos-instalacion-sync-tui/tasks`, proyecto `axiom`.
-> Estado: **en implementación desde el 2026-11-05**. Hechas T1, T2, T3, T5, T6, T7 y T9. T4 sigue bloqueada: espera a adaptadores T1.
+> Estado: **implementado el 2026-11-05**. T1, T2, T3, T5, T6, T7 y T9 están fusionadas en la PR #229. T4 va en una segunda PR desde la misma rama, rehecha sobre `main` (worktree `axiom-wt/arreglos-sync-t4`). T8 pasa a P3.
+>
+> Plan stop: approved 2026-11-04; implementation continues
 
 ## Objetivo
 
@@ -104,7 +106,12 @@ Cada tarea es una rebanada de PR de unas 400 líneas como máximo y cierra con u
   - La detección de motores se cachea en `NewModel` y se refresca al pulsar «Crear agente».
   - Los read-modify-write del estado en sync, desinstalación y TUI pasan por `statecoord`.
   - Hecho: `b1a10670` y `536f4be0` (~350; ruta: escritor delegado). `b1a10670` incluye también `markPendingSyncUnderLock` de la TUI, porque `model.go` no se pudo partir sin `git add -p`. `go test ./internal/tui/... ./internal/statecoord/... ./internal/components/uninstall/...` ok; `go test ./internal/cli/ -run 'MigratePersisted|ApplyResolvedPersona|InstallStateLock'` ok; `go vet` y `gofmt -l` limpios. Cinco pruebas de regresión nuevas (no se observó el RED: stash y reset están vetados). Fuera del encargo, sin portar: el preflight descartado de `run.go` que upstream quita en #4838.
-- [ ] **T4 · Sync** — #4078 + #5017 sin Codex (~250)
+- [x] **T4 · Sync** — #4078 + #5017 sin Codex (~250)
+  - Hecho tras fusionarse adaptadores T1 (PR #227, d34b5321), desde `origin/main` 05572274: `e832449a` (`variant`, +49/−6) y `32e730a9` (orden de install, +151/−9). Ruta: escritor delegado.
+  - `variant`: sin esfuerzo, el overlay de agentes del usuario (o `general` y `explore` nativos) omite la clave y el merge conserva la del usuario. Las definiciones gestionadas por Axiom siguen escribiendo `variant: ""`, y la purga por `__managed_by` de #227 no cambia. Se ajusta la aserción de `TestInjectOpenCodeMultiModeWithCustomAgentModelAssignment`, que fijaba el comportamiento antiguo.
+  - Orden: `installOrderedComponents` ordena el sync con el resolver de `planner` que usa install, y deja al final los componentes desconocidos. En install, CodeGraph va después de la persona. Si la persona reemplaza el prompt en el mismo sync, la guía de CodeGraph se vuelve a inyectar.
+  - Comprobaciones: `go test ./internal/components/sdd/... ./internal/components/` ok; `go test ./internal/cli/ -run 'TestInstallRuntimeStagePlan|TestCodeGraphGuidanceSyncStep|…|TestInstallOrdered|TestSyncAndInstallRunCodeGraph'` ok; `go vet` y `gofmt -l` limpios.
+  - Sin portar: la parte de Codex, `componentPathsWithWorkspaceScoped` para `StrategyMergeIntoYAML` e `install_sync_convergence_test.go`. No hay prueba de convergencia install+sync de extremo a extremo.
   - Un `variant` vacío conserva el del usuario.
   - El sync usa el orden de install, con CodeGraph después de la persona.
 - [x] **T5 · GGA y Homebrew** — #5012 → #5724 + #5783 (~210)
@@ -211,5 +218,5 @@ T9 no se mezcla con los demás eslabones.
 
 ## Siguiente paso
 
-- PR #229: esperar la CI. Debe cubrir el `go test ./...` completo y los casos de PowerShell de T5, que en esta máquina no se pueden ejecutar. Fusionar lo decide el usuario.
-- T4: espera a que se fusione adaptadores T1 (PR #227, abierta). Después se rebasa sobre ella y va en su propia PR.
+- PR #229 fusionada el 2026-11-05 (merge 606536b3), con la CI en verde. La suite completa de Windows se saltó, así que no consta que se ejecutaran los casos `ucrt64` y `clang64` de T5.
+- T4: va en su propia PR. Seguridad T5 espera a que se fusione.
