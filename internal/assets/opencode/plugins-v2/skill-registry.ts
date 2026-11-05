@@ -9,7 +9,10 @@ const PROJECT_MARKERS = [".git", ".atl", "skills", ".opencode/skills", ".claude/
 
 // One single line, no stack. ENOENT from spawn does not identify the missing
 // resource, so neither PATH absence nor the binary is asserted.
-function describeRefreshFailure(err: NodeJS.ErrnoException, cwd: string): string {
+// execFile reports ExecFileException, whose code may be a number or null.
+type RefreshFailure = { code?: string | number | null; syscall?: string; message: string }
+
+function describeRefreshFailure(err: RefreshFailure, cwd: string): string {
   const where = JSON.stringify(cwd)
   const syscall = err.syscall
   const text = err.code === "ENOENT" && (!syscall || syscall.startsWith("spawn"))
@@ -39,6 +42,6 @@ export default Plugin.define({
           if (err) console.error(describeRefreshFailure(err, cwd))
         })
       return () => { child?.kill("SIGKILL"); child = undefined }
-    } catch (err) { console.error(describeRefreshFailure(err as NodeJS.ErrnoException, cwd)) }
+    } catch (err) { console.error(describeRefreshFailure(err as RefreshFailure, cwd)) }
   },
 })
