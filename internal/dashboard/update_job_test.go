@@ -189,7 +189,9 @@ func TestUpdateJob_SingleJobAndPostReturnsImmediately(t *testing.T) {
 
 	post := func() (int, UpdateJobStatus) {
 		rec := httptest.NewRecorder()
-		router.ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/api/system/update", nil))
+		req := httptest.NewRequest(http.MethodPost, "/api/system/update", nil)
+		req.Host = "127.0.0.1:8080"
+		router.ServeHTTP(rec, req)
 		var st UpdateJobStatus
 		if err := json.Unmarshal(rec.Body.Bytes(), &st); err != nil {
 			t.Fatalf("JSON inválido: %v (%s)", err, rec.Body.String())

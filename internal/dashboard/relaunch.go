@@ -26,6 +26,12 @@ var (
 	// relaunchDelay deja que la interfaz vea la fase «restarting» antes de que el
 	// servidor viejo deje de responder.
 	relaunchDelay = 800 * time.Millisecond
+	// relaunchLiveCheck es lo que se espera tras lanzar el proceso nuevo para comprobar
+	// que no ha muerto al instante (ejecutable borrado o dañado, banderas rechazadas).
+	// Se mira antes de cerrar el servidor viejo: si el hijo ya murió, el dashboard
+	// viejo sigue sirviendo y la UI recibe el comando manual. El hijo reintenta enlazar
+	// el puerto durante 10 s, así que esta ventana no lo mata por el puerto.
+	relaunchLiveCheck = 1500 * time.Millisecond
 	// shutdownTimeout acota el cierre ordenado del servidor viejo.
 	shutdownTimeout = 3 * time.Second
 )
@@ -63,7 +69,9 @@ func relaunchArgs(root string, port int) []string {
 
 // manualRelaunchHint es el comando para volver a abrir el dashboard a mano.
 func manualRelaunchHint(root string) string {
-	return fmt.Sprintf("axiom ui --path %q", root)
+	// Comillas dobles simples (no %q): en Windows %q duplicaría las barras invertidas
+	// y la orden dejaría de ser copiable.
+	return "axiom ui --path \"" + root + "\""
 }
 
 // relaunchAfterUpdate se ejecuta cuando la autoactualización terminó bien: lanza el
@@ -86,9 +94,20 @@ func (s *Server) relaunchAfterUpdate(sync *UpdateSyncSummary) {
 	}
 
 	time.Sleep(relaunchDelay)
-	if err := startProcessFn(exe, relaunchArgs(root, s.port), root); err != nil {
+	exited, err := startProcessFn(exe, relaunchArgs(root, s.port), root)
+	if err != nil {
 		j.finish(updatePhaseFailed, "Axiom se ha actualizado, pero no se pudo lanzar la versión nueva del dashboard: "+err.Error(), hint, sync)
 		return
+	}
+	select {
+	case werr := <-exited:
+		reason := "terminó nada más arrancar"
+		if werr != nil {
+			reason = "terminó nada más arrancar: " + werr.Error()
+		}
+		j.finish(updatePhaseFailed, "Axiom se ha actualizado, pero la versión nueva del dashboard "+reason+". Este dashboard sigue activo.", hint, sync)
+		return
+	case <-time.After(relaunchLiveCheck):
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)

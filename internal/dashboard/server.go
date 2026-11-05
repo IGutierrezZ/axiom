@@ -9,6 +9,7 @@ import (
 	"mime"
 	"net"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 	"unicode/utf16"
@@ -930,6 +931,34 @@ func conflictBody(refusal *branch.RefusalError) any {
 		}
 	}
 	return refusalBody{Code: refusal.Code, Error: refusal.Message, Continuation: refusal.Continuation}
+}
+
+// isLocalRequest protege las rutas que cambian estado frente a CSRF y DNS rebinding:
+// withHeaders permite cualquier origen para lectura, así que aquí se exige que Host y,
+// si viene, Origin sean el propio dashboard (127.0.0.1 o localhost en el puerto
+// realmente enlazado). Sin servidor escuchando (puerto 0, pruebas con httptest) se
+// acepta cualquier puerto, pero solo con esos nombres de host.
+func (s *Server) isLocalRequest(r *http.Request) bool {
+	allowed := func(hostport string) bool {
+		host, port, err := net.SplitHostPort(hostport)
+		if err != nil {
+			host, port = hostport, ""
+		}
+		if host != "127.0.0.1" && host != "localhost" {
+			return false
+		}
+		return s.port == 0 || port == strconv.Itoa(s.port)
+	}
+	if !allowed(r.Host) {
+		return false
+	}
+	if origin := r.Header.Get("Origin"); origin != "" {
+		rest, ok := strings.CutPrefix(origin, "http://")
+		if !ok || !allowed(rest) {
+			return false
+		}
+	}
+	return true
 }
 
 func (s *Server) respondJSON(w http.ResponseWriter, code int, data interface{}) {

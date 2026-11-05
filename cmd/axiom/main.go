@@ -1245,13 +1245,18 @@ func runUI(args []string) {
 	// sincroniza el workspace abierto; el estado queda consultable desde el primer
 	// instante en GET /api/system/update/status.
 	if opts.postUpdateSync {
-		svc.StartPostUpdateSync()
+		svc.MarkPostUpdateSyncPending()
 	}
 
 	actualPort, err := startDashboardServer(server, opts)
 	if err != nil {
 		fmt.Printf("[ERROR] No se pudo iniciar el servidor web: %v\n", err)
 		os.Exit(1)
+	}
+	// La sincronización arranca solo tras enlazar: un fallo de enlace termina el
+	// proceso con os.Exit y no debe cortar una sincronización a medias.
+	if opts.postUpdateSync {
+		svc.StartPostUpdateSync()
 	}
 
 	url := fmt.Sprintf("http://127.0.0.1:%d", actualPort)

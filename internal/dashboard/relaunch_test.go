@@ -20,6 +20,8 @@ type relaunchSeams struct {
 	order   []string // «start» y «exit», en el orden en que ocurrieron
 	exited  chan struct{}
 	startFn func(exe string, args []string, dir string) error
+	// childExit simula la muerte del proceso lanzado; sin escribirle, el hijo «vive».
+	childExit chan error
 }
 
 type startedProcess struct {
@@ -34,8 +36,9 @@ func stubRelaunch(t *testing.T) *relaunchSeams {
 
 	origExe, origLook, origExists := executablePathFn, lookPathFn, fileExistsFn
 	origStart, origExit := startProcessFn, exitProcessFn
-	origDelay, origShutdown := relaunchDelay, shutdownTimeout
+	origDelay, origShutdown, origLive := relaunchDelay, shutdownTimeout, relaunchLiveCheck
 	t.Cleanup(func() {
+		relaunchLiveCheck = origLive
 		executablePathFn, lookPathFn, fileExistsFn = origExe, origLook, origExists
 		startProcessFn, exitProcessFn = origStart, origExit
 		relaunchDelay, shutdownTimeout = origDelay, origShutdown
@@ -45,13 +48,17 @@ func stubRelaunch(t *testing.T) *relaunchSeams {
 	lookPathFn = func(string) (string, error) { return "", errors.New("no está en el PATH") }
 	fileExistsFn = func(string) bool { return true }
 	relaunchDelay = 0
-	startProcessFn = func(exe string, args []string, dir string) error {
+	relaunchLiveCheck = 50 * time.Millisecond
+	seams.childExit = make(chan error, 1)
+	startProcessFn = func(exe string, args []string, dir string) (<-chan error, error) {
 		seams.order = append(seams.order, "start")
 		seams.started = append(seams.started, startedProcess{exe, append([]string(nil), args...), dir})
 		if seams.startFn != nil {
-			return seams.startFn(exe, args, dir)
+			if err := seams.startFn(exe, args, dir); err != nil {
+				return nil, err
+			}
 		}
-		return nil
+		return seams.childExit, nil
 	}
 	exitProcessFn = func(code int) {
 		seams.order = append(seams.order, "exit")
@@ -147,6 +154,54 @@ func TestUpdateJob_SelfUpgradeRelaunchesWithTheNewBinaryAndExits(t *testing.T) {
 	st := svc.UpdateStatus()
 	if st.Phase != "restarting" || !st.Running || !strings.HasPrefix(st.ManualHint, "axiom ui --path") || st.FromVersion != "v3.6.0" {
 		t.Fatalf("estado = %+v", st)
+	}
+}
+
+// Si el hijo muere nada más lanzarse (ejecutable dañado o borrado, banderas
+// rechazadas), el viejo no cierra su servidor ni sale: sigue sirviendo.
+func TestUpdateJob_ChildDyingRightAfterSpawnKeepsTheOldDashboardServing(t *testing.T) {
+	seams := stubRelaunch(t)
+	seams.childExit <- errors.New("exit status 1")
+	stubUpgradeSequence(t, selfUpgradeReport(), nil, nil, nil)
+	svc := NewService(t.TempDir())
+	svc.versions, _, _ = newTestVersionChecker("v3.6.0", []VersionInfo{availableVersion})
+	NewServer(svc)
+
+	svc.StartUpdate()
+	st := waitUpdateFinished(t, svc)
+	if st.Phase != "failed" || !strings.HasPrefix(st.ManualHint, "axiom ui --path") || !strings.Contains(st.Message, "terminó nada más arrancar") {
+		t.Fatalf("estado = %+v, quiero failed con el comando manual", st)
+	}
+	if len(seams.exits) != 0 {
+		t.Fatal("si el hijo murió, el dashboard viejo no debe salir")
+	}
+}
+
+// Con el hijo vivo, el viejo espera la ventana de comprobación antes de salir.
+func TestUpdateJob_ExitsOnlyAfterTheLiveCheckWindow(t *testing.T) {
+	seams := stubRelaunch(t)
+	relaunchLiveCheck = 200 * time.Millisecond
+	stubUpgradeSequence(t, selfUpgradeReport(), nil, nil, nil)
+	svc := NewService(t.TempDir())
+	svc.versions, _, _ = newTestVersionChecker("v3.6.0", []VersionInfo{availableVersion})
+	NewServer(svc)
+
+	start := time.Now()
+	svc.StartUpdate()
+	select {
+	case <-seams.exited:
+	case <-time.After(5 * time.Second):
+		t.Fatal("el proceso viejo no salió")
+	}
+	if elapsed := time.Since(start); elapsed < 200*time.Millisecond {
+		t.Fatalf("salió a los %v, antes de la ventana de comprobación", elapsed)
+	}
+}
+
+func TestManualRelaunchHintKeepsWindowsPathsCopyable(t *testing.T) {
+	got := manualRelaunchHint(`C:\Users\yo\mi proyecto`)
+	if want := `axiom ui --path "C:\Users\yo\mi proyecto"`; got != want {
+		t.Fatalf("hint = %s, quiero %s", got, want)
 	}
 }
 

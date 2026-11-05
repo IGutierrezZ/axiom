@@ -55,6 +55,9 @@ type updateJobState struct {
 	status  UpdateJobStatus
 	running bool
 	done    chan struct{} // se cierra al terminar el trabajo en curso
+	// pendingSync: la sincronización posterior a la actualización está anunciada
+	// (MarkPostUpdateSyncPending) pero aún no arrancada (StartPostUpdateSync).
+	pendingSync bool
 }
 
 func (j *updateJobState) snapshot() UpdateJobStatus {
@@ -237,6 +240,10 @@ func (s *Server) handleSystemUpdate(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Método no permitido", http.StatusMethodNotAllowed)
 		return
 	}
+	if !s.isLocalRequest(r) {
+		s.respondJSON(w, http.StatusForbidden, map[string]string{"error": "Petición rechazada: solo se admiten peticiones del propio dashboard"})
+		return
+	}
 	st, _ := s.service.StartUpdate()
 	s.respondJSON(w, http.StatusAccepted, st)
 }
@@ -267,6 +274,12 @@ const manualSyncHint = "axiom sync --scope workspace"
 func (s *Service) StartPostUpdateSync() {
 	j := &s.update
 	j.mu.Lock()
+	if j.pendingSync {
+		j.pendingSync = false
+		j.mu.Unlock()
+		go s.runPostUpdateSync()
+		return
+	}
 	if j.running {
 		j.mu.Unlock()
 		return
@@ -277,6 +290,23 @@ func (s *Service) StartPostUpdateSync() {
 	j.mu.Unlock()
 
 	go s.runPostUpdateSync()
+}
+
+// MarkPostUpdateSyncPending anuncia la sincronización posterior a la actualización
+// (estado `syncing`) sin ejecutarla todavía. Se llama antes de enlazar el puerto para
+// que la UI nunca vea «idle»; la sincronización real la arranca StartPostUpdateSync
+// una vez enlazado, de modo que un fallo de enlace (os.Exit) no la corte a medias.
+func (s *Service) MarkPostUpdateSyncPending() {
+	j := &s.update
+	j.mu.Lock()
+	defer j.mu.Unlock()
+	if j.running {
+		return
+	}
+	j.running = true
+	j.pendingSync = true
+	j.done = make(chan struct{})
+	j.status = UpdateJobStatus{Phase: updatePhaseSyncing, Message: "Sincronizando el workspace con la versión nueva de Axiom…"}
 }
 
 func (s *Service) runPostUpdateSync() {

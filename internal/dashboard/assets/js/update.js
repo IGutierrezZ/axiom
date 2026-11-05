@@ -161,6 +161,25 @@ let restartStarted = 0;
 // usa si no se conoce la versión anterior (entonces basta con que vuelva a contestar).
 let sawDown = false;
 const RESTART_TIMEOUT_MS = 90000;
+// Una vez lanzada una actualización desde esta página, el reinicio puede pasar sin que
+// ningún sondeo vea la fase «restarting» (dura menos que el intervalo de sondeo). Por
+// eso la recarga no depende solo de verla: se recarga también cuando responde un
+// proceso distinto, es decir, cuando el estado trae otro from_version (el proceso
+// relanzado no lo conoce) o cuando hubo fallos de red antes de volver a contestar.
+let updateStarted = false;
+let startedFrom = '';
+let downSeen = false;
+let restartHint = '';
+
+function trackUpdate(job) {
+  updateStarted = true;
+  startedFrom = job.from_version || '';
+  downSeen = false;
+}
+
+function newProcessAnswered(job) {
+  return updateStarted && (downSeen || (job.from_version || '') !== startedFrom);
+}
 const MANUAL_RELAUNCH = 'axiom ui';
 
 function failRestart(hint) {
@@ -170,7 +189,7 @@ function failRestart(hint) {
   set('updateJob', {
     phase: 'failed', running: false, sync: null,
     message: 'El dashboard no volvió a arrancar con la versión nueva.',
-    manual_hint: hint || MANUAL_RELAUNCH
+    manual_hint: hint || restartHint || MANUAL_RELAUNCH
   });
 }
 
@@ -186,6 +205,7 @@ async function pollRestart() {
   } catch (err) {
     // el servidor está reiniciándose: se sigue esperando
     sawDown = true;
+    downSeen = true;
   }
   if (Date.now() - restartStarted > RESTART_TIMEOUT_MS) {
     failRestart(state.updateJob && state.updateJob.manual_hint);
@@ -199,6 +219,7 @@ function beginRestartWait(job) {
   if (restartFrom !== null) return;
   restartFrom = job.from_version || (state.version && state.version.current) || '';
   restartStarted = Date.now();
+  restartHint = job.manual_hint || '';
   sawDown = false;
   pollTimer = setTimeout(pollRestart, POLL_MS);
 }
@@ -211,6 +232,10 @@ async function pollUpdate() {
   try {
     const job = await api('/api/system/update/status');
     pollErrors = 0;
+    if (newProcessAnswered(job)) {
+      window.location.reload();
+      return;
+    }
     set('updateJob', job);
     if (job.running && job.phase === 'restarting') {
       beginRestartWait(job);
@@ -218,6 +243,7 @@ async function pollUpdate() {
       pollTimer = setTimeout(pollUpdate, POLL_MS);
     }
   } catch (err) {
+    downSeen = true;
     pollErrors += 1;
     if (pollErrors >= MAX_POLL_ERRORS) {
       set('updateJob', {
@@ -236,6 +262,7 @@ async function startUpdate(btn) {
   try {
     const job = await api('/api/system/update', { method: 'POST' });
     pollErrors = 0;
+    trackUpdate(job);
     set('updateJob', job);
     if (job.running) pollTimer = setTimeout(pollUpdate, POLL_MS);
   } catch (err) {
@@ -255,6 +282,7 @@ function dismiss() {
 async function resumeUpdate() {
   try {
     const job = await api('/api/system/update/status');
+    if (job.running) trackUpdate(job);
     set('updateJob', job);
     if (job.running) pollTimer = setTimeout(pollUpdate, POLL_MS);
   } catch (err) {
