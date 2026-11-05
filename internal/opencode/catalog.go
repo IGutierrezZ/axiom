@@ -73,19 +73,45 @@ type CatalogError struct{ Kind CatalogErrorKind }
 func (e *CatalogError) Error() string { return string(e.Kind) }
 
 // DiscoverCatalog reads OpenCode's effective provider catalog for projectDir.
+// La versión mayor de OpenCode decide el origen: V2 consulta la API de modelos
+// y captura su salida en un fichero temporal; V1 lee `models --verbose` por
+// tubería. Ver discoverCatalog para la política ante una versión no detectable.
 func DiscoverCatalog(ctx context.Context, projectDir string) (map[string]Provider, error) {
-	return DiscoverCatalogWithRunner(ctx, projectDir, streamCatalogCommand)
+	return discoverCatalog(ctx, projectDir, DetectRuntimeMajor, streamCatalogCommand, fileCatalogCommand)
 }
 
-// DiscoverCatalogWithRunner analiza el catálogo en streaming y clasifica el
-// resultado. Se aplican por este orden: el desbordamiento del techo, el
-// vencimiento del plazo, el estado de salida del hijo (cuando su salida llegó a
-// su fin) y, por último, el error de análisis. Así un hijo que muere con código
-// distinto de cero no se disfraza de JSON inválido.
+// discoverCatalog elige el transporte según la versión mayor detectada. Si la
+// detección falla (binario ausente, versión ilegible o prerrelease) se usa V1 de
+// forma conservadora: es el comportamiento previo y, si el binario falta, el
+// propio `models --verbose` devuelve el error tipado honesto (missing_binary)
+// en lugar de enmascararlo con un fallo de detección. Una V2 mal reconocida
+// como V1 acaba en un CatalogError visible, nunca en un catálogo falso. La
+// detección va fuera del plazo del catálogo y tiene el suyo propio.
+func discoverCatalog(ctx context.Context, projectDir string, detect func(context.Context) (RuntimeMajor, error), v1, v2 CatalogRunner) (map[string]Provider, error) {
+	major, err := detect(ctx)
+	if err != nil {
+		major = RuntimeV1
+	}
+	if major == RuntimeV2 {
+		return discoverCatalogForMajor(ctx, projectDir, RuntimeV2, v2)
+	}
+	return discoverCatalogForMajor(ctx, projectDir, RuntimeV1, v1)
+}
+
+// DiscoverCatalogWithRunner analiza el catálogo V1 (`models --verbose`) en
+// streaming y clasifica el resultado. Se aplican por este orden: el
+// desbordamiento del techo, el vencimiento del plazo, el estado de salida del
+// hijo (cuando su salida llegó a su fin) y, por último, el error de análisis.
+// Así un hijo que muere con código distinto de cero no se disfraza de JSON
+// inválido.
 func DiscoverCatalogWithRunner(ctx context.Context, projectDir string, runner CatalogRunner) (map[string]Provider, error) {
+	return discoverCatalogForMajor(ctx, projectDir, RuntimeV1, runner)
+}
+
+func discoverCatalogForMajor(ctx context.Context, projectDir string, major RuntimeMajor, runner CatalogRunner) (map[string]Provider, error) {
 	ctx, cancel := context.WithTimeout(ctx, catalogTimeout)
 	defer cancel()
-	reader, err := runner(ctx, Command{Path: "opencode", Args: []string{"models", "--verbose"}, Dir: projectDir})
+	reader, err := runner(ctx, catalogCommand(major, projectDir))
 	if err != nil {
 		return nil, catalogCommandError(ctx, err)
 	}
@@ -93,7 +119,13 @@ func DiscoverCatalogWithRunner(ctx context.Context, projectDir string, runner Ca
 		defer closer.Close()
 	}
 	limited := &ceilingReader{r: reader, limit: maxCatalogOutput, cancel: cancel}
-	providers, parseErr := parseVerboseCatalog(limited)
+	var providers map[string]Provider
+	var parseErr error
+	if major == RuntimeV2 {
+		providers, parseErr = parseV2ModelAPI(limited)
+	} else {
+		providers, parseErr = parseVerboseCatalog(limited)
+	}
 	if limited.exceeded {
 		return nil, &CatalogError{Kind: CatalogErrorOutputTooLarge}
 	}
