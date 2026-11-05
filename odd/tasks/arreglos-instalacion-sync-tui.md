@@ -207,9 +207,9 @@ T9 no se mezcla con los demás eslabones.
 - 2026-11-05: T1 (`dcc15ea4`) y T2 (`e8af9f56`) hechas. Fallo ambiental conocido: `TestTuiInstallOnThenSyncPreservesAndRefreshesOpenCodeActivation` en `internal/app`.
 - 2026-11-05: T3, T5, T6 y T9 hechas. Líneas acumuladas en la rama sin el documento ODD: +1350/−157, unas 1500 (más que la previsión de unas 1100 para estas seis tareas, sobre todo por tests). Supera el presupuesto de unas 400: la estrategia de cadena se pregunta antes del primer PR.
 - 2026-11-05: rama rebasada sin conflictos sobre `origin/main` fbf96dcb (PR #228). Los paquetes tocados siguen en verde. En la base fallan `TestWriteFileAtomicFollowsDirectoryJunction` y `TestWriteFileAtomicFollowsRelativeDirectoryJunction` (`internal/components/filemerge`, que esta rama no toca). T7 hecha. Acumulado sin el documento ODD: +1960/−181.
+- 2026-11-05: el usuario eligió una sola PR con `size:exception` (como en P2). Rama rebasada sobre `origin/main` b52ea675 (#226), sin conflictos; los paquetes tocados, de nuevo en verde. Abierta la PR #229 (https://github.com/IGutierrezZ/axiom/pull/229) con T1, T2, T3, T5, T6, T7 y T9, etiquetas `type:bug` y `size:exception`. Commits uno por arreglo upstream, no uno por tarea.
 
 ## Siguiente paso
 
-Bloqueada, sin empezar: T4 espera a que se fusione adaptadores T1 (PR #227, abierta); después se rebasa sobre ella.
-
-Antes del PR: `go test ./...` completo en CI (la suite de `internal/cli` agota el tiempo en esta máquina), los casos de PowerShell de T5 con `AXIOM_TEST_BUILD_BINARIES=1`, y elegir la estrategia de cadena. Push y PR los decide el usuario.
+- PR #229: esperar la CI. Debe cubrir el `go test ./...` completo y los casos de PowerShell de T5, que en esta máquina no se pueden ejecutar. Fusionar lo decide el usuario.
+- T4: espera a que se fusione adaptadores T1 (PR #227, abierta). Después se rebasa sobre ella y va en su propia PR.
