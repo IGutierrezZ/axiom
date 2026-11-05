@@ -153,7 +153,7 @@ Si prefieres una experiencia visual:
    ```bash
    axiom ui
    ```
-2. Axiom abrirá automáticamente tu navegador en el servidor local (ej. `http://localhost:4040`).
+2. Axiom abrirá automáticamente tu navegador en el servidor local, siempre en `http://127.0.0.1:47700` (cámbialo con `--port`). Puedes instalarlo como aplicación de escritorio: acceso directo `Axiom` del instalador, `--detach` o PWA de Edge/Chrome con el servidor arrancado por la tarea `Axiom` ([guía](usage.md#ui)).
 3. En la barra superior o sección **Workspace / Proyectos**:
    * Pulsa en **"Agregar Proyecto"** o **"Inicializar Proyecto con Axiom (1 Clic)"**.
    * Introduce la ruta física (`path`), el nombre del proyecto y selecciona la topología (`monorepo-embedded` o `multirepo`).

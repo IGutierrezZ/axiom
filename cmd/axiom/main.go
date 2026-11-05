@@ -1171,8 +1171,9 @@ func resolveHandoffFile(workspaceRoot, change string) (string, error) {
 
 func runUI(args []string) {
 	fs := flag.NewFlagSet("ui", flag.ExitOnError)
-	portFlag := fs.Int("port", 8080, "Puerto de escucha para el servidor web (default: 8080)")
+	portFlag := fs.Int("port", dashboard.DefaultPort, fmt.Sprintf("Puerto de escucha para el servidor web (default: %d)", dashboard.DefaultPort))
 	noBrowserFlag := fs.Bool("no-browser", false, "No abrir automáticamente el navegador")
+	detachFlag := fs.Bool("detach", false, "Lanzar el servidor en segundo plano sin consola, abrir la ventana y salir")
 	pathFlag := fs.String("path", ".", "Ruta base del espacio de trabajo")
 
 	if err := fs.Parse(args); err != nil {
@@ -1201,12 +1202,30 @@ func runUI(args []string) {
 	}
 	_ = os.Chdir(baseDir)
 
+	// Idempotencia: si ya hay un Axiom en el puerto, solo se abre la ventana.
+	if running, _ := dashboard.ProbeAxiom(context.Background(), *portFlag); running {
+		existingURL := fmt.Sprintf("http://127.0.0.1:%d", *portFlag)
+		fmt.Printf("Axiom ya está activo en %s\n", existingURL)
+		openUIWindow(existingURL, *noBrowserFlag)
+		return
+	}
+
+	// Arranque desacoplado: el servidor vive en un proceso hijo sin consola.
+	if *detachFlag {
+		os.Exit(runUIDetached(*portFlag, baseDir, *noBrowserFlag))
+	}
+
 	svc := dashboard.NewServiceWithHub(baseDir, hubMgr)
 	server := dashboard.NewServer(svc)
+	server.SetVersion(Version)
 
 	actualPort, err := server.ListenAndServe(*portFlag)
 	if err != nil {
-		fmt.Printf("[ERROR] No se pudo iniciar el servidor web: %v\n", err)
+		if errors.Is(err, dashboard.ErrPortInUse) {
+			fmt.Println(errPortBusyMessage(*portFlag))
+		} else {
+			fmt.Printf("[ERROR] No se pudo iniciar el servidor web: %v\n", err)
+		}
 		os.Exit(1)
 	}
 
@@ -1217,18 +1236,13 @@ func runUI(args []string) {
 	fmt.Println("================================================================================")
 	fmt.Printf("  Servidor HTTP activo en: %s\n", url)
 	fmt.Println("  Espacio de Trabajo:     ", baseDir)
-	if actualPort != *portFlag {
-		fmt.Printf("  (Aviso: Puerto %d ocupado, reasignado a %d)\n", *portFlag, actualPort)
-	}
 	fmt.Println("  Presiona Ctrl+C para detener el servidor.")
 	fmt.Println("================================================================================")
 
 	if !*noBrowserFlag {
 		go func() {
 			time.Sleep(150 * time.Millisecond)
-			if err := openBrowser(url); err != nil {
-				fmt.Printf("  (Aviso: No se pudo abrir el navegador automáticamente: %v)\n", err)
-			}
+			openUIWindow(url, false)
 		}()
 	}
 

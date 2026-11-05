@@ -300,6 +300,30 @@ axiom --version
 axiom -v
 ```
 
+### ui
+
+Inicia el panel web local en `http://127.0.0.1:47700` (puerto fijo). Si el directorio actual no tiene `axiom.yaml`, usa el workspace activo del hub.
+
+```bash
+axiom ui                 # abre el panel en el navegador por defecto
+axiom ui --detach        # servidor en segundo plano, sin consola, y abre el navegador
+axiom ui --port 47800    # otro puerto (la PWA instalada queda ligada al puerto original)
+axiom ui --no-browser    # solo el servidor, sin abrir ventana
+```
+
+Es idempotente: si ya hay un Axiom escuchando en el puerto, solo abre la ventana. Si lo ocupa otra aplicación, falla con un error que sugiere `--port`.
+
+#### Usar `axiom ui` como aplicación de escritorio
+
+El flujo recomendado es instalar el panel como aplicación (PWA) desde el navegador y anclar ese icono; el servidor arranca solo con Windows.
+
+1. **Abre el panel.** El instalador (`scripts/install.ps1`) crea el acceso directo `Axiom` en el menú Inicio (`axiom ui --detach`, minimizado). Con `-NoShortcut` no se crea. También puedes entrar en `http://127.0.0.1:47700`.
+2. **Instálalo como aplicación.** En Chrome o Edge, usa el icono de instalar de la barra de direcciones o el botón **Instalar aplicación** del panel.
+3. **Ancla el icono.** Ancla a la barra de tareas el icono de la aplicación instalada (no el del navegador).
+4. **Servidor con Windows.** El instalador registra la tarea programada de usuario `Axiom` (al iniciar sesión, con 30 s de retraso, sin elevación) que ejecuta `axiom ui --detach --no-browser`, y la arranca una vez al instalar. Con `-NoAutostart` no se registra; entonces, arranca el servidor con `axiom ui --detach` o con el acceso directo. Para quitarla: `Unregister-ScheduledTask -TaskName Axiom -Confirm:$false`. No hay desinstalador del acceso directo: bórralo a mano del menú Inicio.
+5. **Origen exacto.** La instalación queda ligada a `http://127.0.0.1:47700`: `localhost` u otro puerto serían otra aplicación distinta, con su propia instalación.
+6. **Registro y parada.** `--detach` escribe el registro en `%LOCALAPPDATA%\axiom\ui.log`. No hay comando de apagado, por seguridad: el servidor vive hasta cerrar sesión; para pararlo antes, termina el proceso `axiom.exe` desde el Administrador de tareas (la tarea `Axiom` no lo relanza hasta el próximo inicio de sesión, salvo que falle).
+
 ---
 
 ## CLI Flags (install)

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"net"
 	"net/http"
@@ -186,30 +187,86 @@ func TestHTTPEndpoints(t *testing.T) {
 	}
 }
 
-func TestPortFallback(t *testing.T) {
-	// Ocupar puerto dinámico
+func TestListenAndServeNoReassign(t *testing.T) {
 	l, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatalf("Error abriendo listener de prueba: %v", err)
 	}
 	defer l.Close()
-
 	occupiedPort := l.Addr().(*net.TCPAddr).Port
 
-	svc := NewService("../..")
-	server := NewServer(svc)
+	server := NewServer(NewService(t.TempDir()))
+	port, err := server.ListenAndServe(occupiedPort)
+	if err == nil {
+		_ = server.Shutdown(context.Background())
+		t.Fatalf("se esperaba error de puerto ocupado, se escuchó en %d", port)
+	}
+	if !errors.Is(err, ErrPortInUse) {
+		t.Fatalf("error = %v, se esperaba ErrPortInUse", err)
+	}
+	if port != 0 {
+		t.Errorf("puerto devuelto = %d, se esperaba 0", port)
+	}
+}
 
-	nextListener, chosenPort, err := server.findAvailablePort(occupiedPort)
+func TestHealthEndpoint(t *testing.T) {
+	s := NewServer(NewService(t.TempDir()))
+	s.SetVersion("v9.9.9")
+	router := s.Router()
+
+	rr := httptest.NewRecorder()
+	router.ServeHTTP(rr, httptest.NewRequest(http.MethodGet, "/api/health", nil))
+	if rr.Code != http.StatusOK {
+		t.Fatalf("GET /api/health = %d", rr.Code)
+	}
+	var body map[string]string
+	if err := json.Unmarshal(rr.Body.Bytes(), &body); err != nil {
+		t.Fatalf("JSON inválido: %v", err)
+	}
+	if body["service"] != ServiceID || body["version"] != "v9.9.9" {
+		t.Errorf("cuerpo inesperado: %v", body)
+	}
+
+	rr = httptest.NewRecorder()
+	router.ServeHTTP(rr, httptest.NewRequest(http.MethodPost, "/api/health", nil))
+	if rr.Code != http.StatusMethodNotAllowed {
+		t.Errorf("POST /api/health = %d, se esperaba 405", rr.Code)
+	}
+}
+
+func TestDefaultPort(t *testing.T) {
+	if DefaultPort != 47700 {
+		t.Errorf("DefaultPort = %d, se esperaba 47700", DefaultPort)
+	}
+}
+
+func TestProbeAxiom(t *testing.T) {
+	ctx := context.Background()
+	portOf := func(srv *httptest.Server) int { return srv.Listener.Addr().(*net.TCPAddr).Port }
+
+	axiom := httptest.NewServer(NewServer(NewService(t.TempDir())).Router())
+	defer axiom.Close()
+	if ok, err := ProbeAxiom(ctx, portOf(axiom)); err != nil || !ok {
+		t.Errorf("ProbeAxiom(axiom) = %v, %v; se esperaba true", ok, err)
+	}
+
+	other := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(`{"service":"otra-cosa"}`))
+	}))
+	defer other.Close()
+	if ok, err := ProbeAxiom(ctx, portOf(other)); err != nil || ok {
+		t.Errorf("ProbeAxiom(otra app) = %v, %v; se esperaba false", ok, err)
+	}
+
+	// Puerto sin nada escuchando: se abre y se cierra un listener para obtener uno libre.
+	l, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
-		t.Fatalf("findAvailablePort falló: %v", err)
+		t.Fatalf("listener de prueba: %v", err)
 	}
-	defer nextListener.Close()
-
-	if chosenPort == occupiedPort {
-		t.Errorf("chosenPort (%d) no debería ser igual al puerto ocupado (%d)", chosenPort, occupiedPort)
-	}
-	if chosenPort < occupiedPort {
-		t.Errorf("chosenPort (%d) debería ser mayor que el inicial (%d)", chosenPort, occupiedPort)
+	free := l.Addr().(*net.TCPAddr).Port
+	_ = l.Close()
+	if ok, err := ProbeAxiom(ctx, free); err != nil || ok {
+		t.Errorf("ProbeAxiom(sin servidor) = %v, %v; se esperaba false", ok, err)
 	}
 }
 

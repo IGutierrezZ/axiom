@@ -10,6 +10,7 @@ import (
 	"net"
 	"net/http"
 	"strings"
+	"syscall"
 	"time"
 	"unicode/utf16"
 
@@ -33,6 +34,8 @@ func init() {
 		".css":   "text/css; charset=utf-8",
 		".svg":   "image/svg+xml",
 		".woff2": "font/woff2",
+
+		".webmanifest": "application/manifest+json",
 	} {
 		_ = mime.AddExtensionType(ext, typ)
 	}
@@ -45,6 +48,7 @@ type Server struct {
 	httpServer *http.Server
 	listener   net.Listener
 	port       int
+	version    string
 }
 
 // NewServer inicializa el servidor HTTP y configura las rutas de la API y assets estáticos.
@@ -64,6 +68,7 @@ func (s *Server) Router() http.Handler {
 
 func (s *Server) registerRoutes() {
 	// 1. Endpoints de la API REST
+	s.mux.HandleFunc("/api/health", s.handleHealth)
 	s.mux.HandleFunc("/api/projects", s.handleProjects)
 	s.mux.HandleFunc("/api/projects/switch", s.handleProjectsSwitch)
 	s.mux.HandleFunc("/api/projects/add", s.handleProjectsAdd)
@@ -101,6 +106,11 @@ func (s *Server) registerRoutes() {
 	s.mux.HandleFunc("/api/ecosystem/backups/restore", s.handleEcosystemBackupRestore)
 	s.mux.HandleFunc("/api/ecosystem/models", s.handleEcosystemModels)
 
+	// Iconos PNG de la aplicación, rasterizados en Go (sin binarios en el repo).
+	s.mux.HandleFunc("/icons/icon-192.png", iconHandler(192, false))
+	s.mux.HandleFunc("/icons/icon-512.png", iconHandler(512, false))
+	s.mux.HandleFunc("/icons/icon-maskable-512.png", iconHandler(512, true))
+
 	// 2. Servidor de Archivos Estáticos Embebidos
 	subFS, err := fs.Sub(AssetsFS, "assets")
 	if err == nil {
@@ -113,14 +123,18 @@ func (s *Server) registerRoutes() {
 	}
 }
 
-// ListenAndServe inicia el servidor buscando un puerto libre a partir del puerto sugerido.
-func (s *Server) ListenAndServe(initialPort int) (int, error) {
-	listener, port, err := s.findAvailablePort(initialPort)
+// ListenAndServe escucha exactamente en 127.0.0.1:port. No reasigna el puerto:
+// si está ocupado devuelve un error que envuelve ErrPortInUse.
+func (s *Server) ListenAndServe(port int) (int, error) {
+	listener, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", port))
 	if err != nil {
+		if isAddrInUse(err) {
+			return 0, fmt.Errorf("puerto %d: %w", port, ErrPortInUse)
+		}
 		return 0, err
 	}
 	s.listener = listener
-	s.port = port
+	s.port = listener.Addr().(*net.TCPAddr).Port
 
 	s.httpServer = &http.Server{
 		Handler:      s.withHeaders(s.mux),
@@ -132,7 +146,7 @@ func (s *Server) ListenAndServe(initialPort int) (int, error) {
 		_ = s.httpServer.Serve(listener)
 	}()
 
-	return port, nil
+	return s.port, nil
 }
 
 // Shutdown detiene el servidor de forma ordenada.
@@ -148,15 +162,23 @@ func (s *Server) Port() int {
 	return s.port
 }
 
-func (s *Server) findAvailablePort(startPort int) (net.Listener, int, error) {
-	for p := startPort; p <= startPort+10; p++ {
-		addr := fmt.Sprintf("127.0.0.1:%d", p)
-		l, err := net.Listen("tcp", addr)
-		if err == nil {
-			return l, p, nil
-		}
+// Códigos de Winsock para un puerto ocupado (WSAEADDRINUSE) o reservado
+// (WSAEACCES). Windows no los traduce a syscall.EADDRINUSE y su texto va
+// localizado, así que se comparan por número.
+const (
+	wsaEAddrInUse = syscall.Errno(10048)
+	wsaEAccess    = syscall.Errno(10013)
+)
+
+// isAddrInUse distingue «puerto ocupado» de otros fallos de escucha.
+func isAddrInUse(err error) bool {
+	if errors.Is(err, syscall.EADDRINUSE) || errors.Is(err, wsaEAddrInUse) || errors.Is(err, wsaEAccess) {
+		return true
 	}
-	return nil, 0, fmt.Errorf("no se encontró ningún puerto disponible entre %d y %d", startPort, startPort+10)
+	msg := strings.ToLower(err.Error())
+	return strings.Contains(msg, "address already in use") ||
+		strings.Contains(msg, "only one usage of each socket address") ||
+		strings.Contains(msg, "forbidden by its access permissions")
 }
 
 func (s *Server) withHeaders(next http.Handler) http.Handler {
