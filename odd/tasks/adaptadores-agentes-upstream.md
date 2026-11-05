@@ -268,6 +268,14 @@ Lo fija el cruce de ficheros entre las sesiones de la absorción upstream, envia
 - 2026-11-05: el usuario lo autoriza y se abre el PR [#227](https://github.com/IGutierrezZ/axiom/pull/227) hacia `main`, con las etiquetas `type:feature` y `size:exception`.
   - Contiene T1–T4, T6 y S1, rebasados sobre `origin/main` (8bf0fb8f).
   - T5 queda fuera y se entregará en un PR propio, como primera rebanada de P5.
+- 2026-11-05: correcciones por la CI del PR #227.
+  - `79e44f43`:
+    - El uninstall reconoce también las lentes `review-*` (`ReviewLensPhases`) y los agentes de Kilo que declaran `tools` en lugar de `permission`. Antes solo los identificaba `__managed_by`.
+    - El plugin V2 tipa el error de `execFile` (`code` puede ser `number | null`).
+    - Evidencia local: `go test ./internal/cli/ -run TestUninstall`: ok.
+  - `061c1364`: se retira `DiscoverCatalogWithRunner`, que había quedado sin llamadores fuera de los tests y fallaba el deadcode ratchet. Los tests usan el helper `discoverV1CatalogWithRunner`.
+    - Evidencia: `go test ./internal/opencode/`: ok. `go build ./...`: ok.
+  - El typecheck del SDK V2 (`scripts/test-opencode-v2-contracts.sh`) no se puede ejecutar en Windows, así que solo lo cubre la CI.
 
 ## Seguimientos de verificación (T2/T4)
 
