@@ -92,11 +92,14 @@ Hoy Axiom tiene estos defectos, verificados contra `main` f7158af0:
 
 Cada tarea es una rebanada de PR de unas 400 líneas como máximo y cierra con un commit de unidad de trabajo que incluye sus tests.
 
-- [ ] **T1 · `--help` en la CLI** — #4881 (~120)
+- [x] **T1 · `--help` en la CLI** — #4881 (~120)
   - `uninstall -h` y `restore -h` imprimen el uso y salen con 0.
-- [ ] **T2 · Esfuerzo de modelos** — #5639 → #5360 (~175)
+  - Hecho: `dcc15ea4` (+266/−28; ruta: escritor delegado). `go test ./internal/cli/ -run 'TestHelpRequest|TestRestore|TestUnknownFlag|Uninstall'` ok; `go vet` y `gofmt -l` limpios. `app.go` no se toca: el flujo ya funciona sin él.
+- [x] **T2 · Esfuerzo de modelos** — #5639 → #5360 (~175)
   - Sonnet acepta `xhigh`.
   - El revisor en proceso pasa `--effort` con el esfuerzo asignado, leído desde `EffectiveStateStore`.
+  - Hecho: `e8af9f56` (+117/−54; ruta: escritor delegado). `go test ./internal/model/... ./internal/reviewerprovider/... ./internal/tui/screens/...` ok; `go vet` y `gofmt -l` limpios. Sin esfuerzo asignado no se pasa `--effort`.
+  - Pendiente común a T1 y T2: `go test ./internal/cli/...` completo agota el timeout en esta máquina (503 tests ok, 0 fallos antes del corte; los lentos son del ciclo de revisión, no tocados). Repetir en CI o en una máquina descargada antes del PR.
 - [ ] **T3 · TUI y estado** — #5868 + #4838 (~300)
   - La detección de motores se cachea en `NewModel` y se refresca al pulsar «Crear agente».
   - Los read-modify-write del estado en sync, desinstalación y TUI pasan por `statecoord`.
@@ -190,11 +193,8 @@ T9 no se mezcla con los demás eslabones.
   - #3629 pasa de T1 a T7, que depende de P1;
   - T5 queda limitada a `internal/cli` e `internal/installcmd`;
   - T8 (#5359) se traslada a P3.
+- 2026-11-05: T1 (`dcc15ea4`) y T2 (`e8af9f56`) hechas. Fallo ambiental conocido: `TestTuiInstallOnThenSyncPreservesAndRefreshesOpenCodeActivation` en `internal/app`.
 
 ## Siguiente paso
 
-El usuario validó el alcance el 2026-11-04. Al implementar:
-1. Resolver el modo TDD.
-2. Empezar por T1.
-
-El orden entre bloques está en «Orden de ejecución entre bloques». No se implementa nada sin autorización del usuario.
+T3, T5, T6 y T9, en ese orden. T4 espera a adaptadores T1 y T7 a seguridad T2.
