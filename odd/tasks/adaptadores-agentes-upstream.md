@@ -74,7 +74,22 @@ Decisión: **adaptador nuevo y delgado** (`github-copilot-cli`), no una variante
 
 Las tareas son unidades de trabajo de unas 400 líneas y van todas en un único PR (`exception-ok`). Cada tarea cierra con un commit de unidad de trabajo, con sus tests.
 
-- [ ] **T1 · E1 — Overlay de OpenCode sin `__managed_by` (#4998/#4471 adaptado)** (~250-350 líneas)
+- [x] **T1 · E1 — Overlay de OpenCode sin `__managed_by` (#4998/#4471 adaptado)** (~250-350 líneas)
+  - **Hecho**, commit `098ec1ea`: 11 ficheros, +319/−90. Ruta: escritor delegado, por el disparador de 2 o más ficheros no triviales.
+  - Purga en sync con `purgeLegacyManagedByMarker` (`internal/components/sdd/inject.go`): solo los valores `axiom/sdd` y `gentle-ai/sdd`, y solo en agentes con nombre gestionado, perfiles incluidos. También se aplica en V2 y en Kilo.
+  - Detección por nombre y forma con `IsManagedAgent` (`internal/opencode/config.go`), que usan la elección json/jsonc y el uninstall. `general` y `explore` exigen además `hidden`.
+  - Hash baseline de Kilocode actualizado en `review_ledger_contract_test.go`. Golden regenerado: el único cambio son las 23 líneas del marcador.
+  - Evidencia:
+    - `go test ./internal/opencode/... ./internal/components/sdd/... ./internal/components/uninstall/... ./internal/tui/...`: ok.
+    - `go test ./internal/components/`: ok.
+    - `go vet`: limpio. `gofmt -l`: vacío.
+    - `go test ./internal/cli/` completo: **pendiente, sin resultado concluyente en Windows.**
+      - Con el tiempo límite por defecto (10 min) agotó el tiempo en `review_artifact_test.go:99`.
+      - Con `-timeout 45m` volvió a agotarlo (2704 s), esta vez en `reviewtransaction.runGitIsolated`, a través de `review_disabled_mutation_test.go:40` y `review_context_entrypoints_test.go:12`.
+      - Cuelgues en tests distintos, ambos de revisión que lanzan git. T1 no toca ese código. Coincidieron con las pruebas de los escritores de T2, T4 y T6. Ya consta (Engram #503) que esos tests agotan el tiempo bajo carga en Windows.
+      - Queda para la CI del PR o para una ejecución aislada sin carga.
+  - RDD apagado. `axiom review assess`: riesgo `medium` (`configuration_change`), sin revisión, porque RDD está apagado.
+  - Riesgo aceptado: un agente del usuario con nombre de Axiom (p. ej. `sdd-apply`) que tenga `prompt` y `permission` se retira en el uninstall.
   - Quitar el marcador de `sdd-overlay-single.json` y `sdd-overlay-multi.json` y regenerar `testdata/golden/sdd-opencode-multi-settings.golden`.
   - En sync, purgar el `__managed_by` residual de los agentes gestionados:
     - los de `managedOpenCodeAgentKeys` (`internal/opencode/config.go:335-340`);
@@ -84,13 +99,50 @@ Las tareas son unidades de trabajo de unas 400 líneas y van todas en un único 
   - En uninstall (`internal/components/uninstall/workspace.go:527`), identificar por nombre y forma (`looksLikeManagedOpenCodeAgent`, `config.go:296-306`) además del marcador legacy, incluidos los perfiles.
   - Revisar `GenerateProfileOverlay` y Kilo, que comparten el overlay.
   - Tests: `internal/components/sdd/inject_test.go` (casos de `__managed_by`), `internal/components/uninstall/global_agents_test.go`, `internal/opencode/config_test.go`.
-- [ ] **T2 · E2 — Catálogo de OpenCode en streaming (#4043 + #5842)** (~400 líneas)
+- [x] **T2 · E2 — Catálogo de OpenCode en streaming (#4043 + #5842)** (~400 líneas)
+  - **Verificador independiente (2026-11-05): PASS con observaciones, sin hallazgos bloqueantes ni importantes.**
+    - Comprobado con sondas: el límite exacto de 16 MiB, salida completa con código ≠ 0 da `command_failed`, la cancelación da `timeout`.
+    - `-race` no se pudo ejecutar porque falta cgo.
+    - Observaciones menores, que quedan como seguimiento:
+      - la prueba de nieto huérfano en Windows (`catalog_process_windows_test.go:61`) aún ejercita `runCatalogCommand` y no `streamCatalogCommand`;
+      - faltan tests explícitos de cancelación con el hijo vivo, de salida completa con código ≠ 0 y del límite exacto;
+      - `readLine` reescanea el búfer, con coste cuadrático acotado por el techo.
+  - **Commit `6647d70b`**: 7 ficheros, +643/−53. Ruta: escritor delegado.
+  - Diseño:
+    - `CatalogRunner` devuelve un `io.Reader`, que se envuelve en un `ceilingReader` de 16 MiB.
+    - `parseVerboseCatalog` usa `json.Decoder`.
+    - Stderr se descarta.
+    - Se conservan el grupo de procesos y el Job Object.
+    - El selector muestra `CatalogError` con mensajes por tipo y el aviso de catálogo degradado.
+  - Evidencia:
+    - `go test ./internal/opencode/... ./internal/tui/...`: ok.
+    - `go test ./internal/dashboard/...`: ok.
+    - `go test ./internal/cli/ -run 'Catalog|ModelPicker|OpenCode'`: ok (933 s).
+    - `go vet`: limpio. `gofmt`: vacío.
+  - `axiom review assess`: riesgo `high` (`process_boundary`). Como RDD está apagado, la tabla de niveles pide un verificador independiente; está en curso. La tarea se marca cuando lo cierre.
+  - Nota: los mensajes nuevos del selector van en castellano. La TUI ya mezcla idiomas: las pantallas recientes están en castellano.
   - Lectura con `json.Decoder` en streaming, techo de 16 MiB con cancelación y stderr concurrente. Hay que conservar `catalog_process_unix.go` y `catalog_process_windows.go`.
   - Añadir `CatalogError` y mensajes veraces en `model_picker.go`, más el aviso de catálogo degradado de #5842.
   - Tests en `internal/opencode` e `internal/tui/screens`.
-- [ ] **T3 · Comprobación previa a E3: versión de OpenCode del equipo**
+- [x] **T3 · Comprobación previa a E3: versión de OpenCode del equipo** — Respuesta del usuario (2026-11-05): **el equipo mezcla V1 y V2**. T4 se implementa manteniendo `models --verbose` para V1. Ruta: en línea, una pregunta al usuario. No hay commit propio: se registra en el commit de documentación de la feature.
   - Confirmar con el usuario la salida de `opencode --version` del equipo. Si todos usan V1, T4 queda aparcada.
-- [ ] **T4 · E3 — Catálogo de OpenCode V2 (#5115-catálogo + #5841)** (~400 líneas, condicionada a T3, depende de T2)
+- [x] **T4 · E3 — Catálogo de OpenCode V2 (#5115-catálogo + #5841)** (~400 líneas, condicionada a T3, depende de T2)
+  - **Verificador independiente (2026-11-05): PASS con observaciones.** No hay hallazgos bloqueantes ni importantes. `parseV2ModelAPI` es idéntico al de upstream, la codificación del comando también, y el ciclo de vida del fichero temporal es correcto en Windows. `-race` no se pudo ejecutar (sin cgo) ni se probó contra un `opencode` real.
+  - Observaciones menores, que quedan como seguimiento:
+    - Una V2 prerrelease cae a `models --verbose`.
+    - El `--version` extra va fuera del plazo de 15 s, con un peor caso de unos 18 s.
+    - Falta un test con una ruta no ASCII (`ñ`, `é`).
+    - El monitor de tamaño muestrea cada 100 ms.
+    - Un `os.Remove` fallido en Windows no se registra.
+  - **Commit `a5bff229`**: 3 ficheros, +581/−8, de los que unas 290 líneas son tests. Ruta: escritor delegado.
+  - Selección de versión con `DetectRuntimeMajor`. V1, una versión desconocida o un fallo de detección usan `models --verbose`.
+  - V2 ejecuta `opencode api get /api/model?location%5Bdirectory%5D=<dir>`. Su salida se captura en un fichero temporal, que siempre se borra, y se lee con el techo de 16 MiB.
+  - `parseV2ModelAPI` falla de forma cerrada con `unsupported_schema`.
+  - Evidencia:
+    - `go test ./internal/opencode/... ./internal/tui/...`: ok.
+    - Tests V2 con `-count=3`: ok.
+    - `go vet` limpio y `gofmt` sin cambios.
+  - `axiom review assess` da `high` (`process_boundary`). Hay un verificador independiente en curso.
   - Sondear `opencode --version`.
   - En V2, ejecutar `opencode api get /api/model?location[directory]=<dir>` y parsear con `parseV2ModelAPI` (exige `capabilities.tools` y `enabled`).
   - Capturar la salida en un fichero temporal regular para evitar el truncado a 256 KiB.
@@ -106,7 +158,22 @@ Las tareas son unidades de trabajo de unas 400 líneas y van todas en un único 
     - `engram setup`.
   - Las skills se comparten con VS Code en `~/.copilot/skills`. Hay que probar la idempotencia con los dos adaptadores seleccionados y que el uninstall de uno no borre las skills del otro.
   - Si pasa de unas 400 líneas, dividir en registro y adaptador por un lado, y ajustes de SDD, Engram y MCP por otro.
-- [ ] **T6 · E5 — Pequeños de OpenCode (#4896 + parte de #5052)** (~170 líneas)
+- [x] **T6 · E5 — Pequeños de OpenCode (#4896 + parte de #5052)** (~170 líneas)
+  - Ruta: escritor delegado.
+  - **Commit `21493fff`** (3 ficheros, +122/−4), que porta #4896:
+    - `describeRefreshFailure` en los plugins V1 y V2. Antes, V2 ignoraba el error en silencio.
+    - Los textos nombran `axiom` y no `gentle-ai`.
+    - Guarda estática `TestSkillRegistryPluginsDiagnoseSpawnFailures`.
+  - **Commit `2eaabf66`** (2 ficheros, +113/−6), que porta parte de #5052:
+    - `stripLegacyTriggerRules` limpia el fichero de settings efectivo (`.jsonc` de proyecto antes que el `.json` global) con `MergeJSONObjectsForPath`.
+    - Tests en `internal/cli/run_legacy_trigger_settings_test.go`.
+  - Evidencia:
+    - `go test ./internal/assets/...`: ok; repetido por el orquestador, ok en 28,9 s.
+    - `go test ./internal/cli/ -run 'LegacyTrigger|StripLegacy|TriggerRules|OpenCodeSettings|RoutingGuidance'`: ok.
+    - `go vet`: limpio. `gofmt`: vacío.
+  - `axiom review assess` sobre los dos commits: `medium` (`executable_change`). Con RDD apagado, basta la verificación del escritor y la comprobación puntual.
+  - Las guardas que ejecutan el plugin con node se saltan en Windows. La salida de V1 se comprobó a mano con node.
+  - Seguimiento fuera de alcance: el plugin V2 conserva el marcador `// gentle-ai:managed skill-registry/v2` y el id `gentle-ai.skill-registry`, que dependen del instalador y de tests. Es un resto de marca para el bloque de marca.
   - Portar `describeRefreshFailure` a `plugins/skill-registry.ts` con el texto `axiom skill-registry refresh`, y su variante V2. Guarda en `internal/assets/skill_registry_plugin_guard_test.go`.
   - En `stripLegacyTriggerRulesFromOrchestrator` (`internal/cli/run.go:1024`), usar el fichero de settings efectivo (`effectiveOpenCodeSettingsPath`) y `MergeJSONObjectsForPath`.
 
@@ -185,9 +252,13 @@ Lo fija el cruce de ficheros entre las sesiones de la absorción upstream, envia
   - Rebase sobre `origin/main`, que ya incluye P1 (PR #220).
   - Se anota el orden entre bloques: T2, T6 y T4 primero; T1 en la cadena de goldens; T5 la última.
 
+- 2026-11-05: el usuario autoriza arrancar las tareas desbloqueadas, a través de la sesión coordinadora («me gustaria que arranquen las que pueden empezar»).
+  - T1, T2, T3, T4 y T6 hechas: 6 commits, unas +1778/−161 líneas.
+  - Los verificadores independientes de T2 y T4 dan PASS con observaciones menores.
+  - Pendiente: la suite completa de `internal/cli` en Windows (ver T1).
+
 ## Siguiente paso
 
-Esperar la autorización del usuario. Después:
-1. T2 y T6 (y T3/T4), sin TDD y en un único PR con excepción de tamaño.
-2. T1, cuando le toque en la cadena de goldens.
-3. T5, la última.
+1. **T5 (Copilot CLI)**: parada, a la espera de que se fusionen guía T1/T2, seguridad T3/T4/T5 y arreglos T3. Cuando estén en `main`, rebasar y retomarla.
+2. **T1 libera arreglos T4**, que esperaba a que se fusionara. La decisión de push y PR es del usuario.
+3. Seguimientos menores anotados en T2, T4 y T6, para decidir si entran en este PR.
