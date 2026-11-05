@@ -143,6 +143,8 @@ Orden de ejecución: **T1 → T4 → T2 → T3 → T5**, que sigue los cortes de
 - 2026-11-05: P1 fusionado (PR #220); rama rebasada sobre `origin/main` 7235e6b6; añadido el orden entre bloques. T5 espera además a las tareas T3 y T4 del bloque de arreglos. No se implementa nada hasta que lo autorice el usuario.
 - 2026-11-05: el usuario autoriza arrancar las tareas desbloqueadas («me gustaria que arranquen las que pueden empezar»). Orden de ejecución ajustado: **T2 → T1 → T4 → T3**, con T2 primero porque P2 (actualización desde la UI) ya está en marcha y pasa por `strategy.go:776`. T5 no empieza hasta que se fusionen las tareas T3 y T4 del bloque de arreglos. Commits locales por tarea; push y PR los decide el usuario. La estrategia de cadena de PRs se decidirá al abrir el primer PR; un commit por tarea permite cualquiera de los cortes propuestos.
 
+- 2026-11-05: hechas T2 (`ddcea220`), T1 (`dc047508`), T4 (`7e74d2aa`) y T3 (`2835415e`), todas en local y sin push. Acumulado: unas 1.040 líneas autoradas en 4 commits de código. T5 queda en espera.
+
 ## Siguiente paso
 
-T1 (#5240), cuando se autorice la implementación.
+T5 espera a que se fusionen las tareas T3 y T4 del bloque de arreglos, que tocan `cli/sync.go` y `uninstall/service.go`. Antes, el usuario decide el push y la estrategia de PRs. Los cortes propuestos siguen valiendo: PR 1 = T1+T4, PR 2 = T2, PR 3 = T3 (+T5 cuando entre).
