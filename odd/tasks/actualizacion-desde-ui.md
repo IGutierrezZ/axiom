@@ -63,7 +63,7 @@ Fuera: GoReleaser, políticas de release, contratos `gentle-ai.*` / `GENTLE_AI_*
   - Sin banner si está al día, en compilación de desarrollo o si la comprobación falla.
   - Botón para volver a comprobar.
   - Comprobación: pruebas de assets de `internal/dashboard`.
-- [ ] **T3 · Actualización como trabajo asíncrono.**
+- [x] **T3 · Actualización como trabajo asíncrono.**
   - `POST /api/system/update` arranca un único trabajo; si ya hay uno, devuelve el existente.
   - `GET /api/system/update/status` devuelve la fase (`checking`, `upgrading`, `restarting`, `syncing`, `done`, `failed`), el mensaje y la sugerencia manual si falla.
   - La UI consulta el estado periódicamente; así la petición no depende del `WriteTimeout`.
@@ -101,3 +101,4 @@ Fuera: GoReleaser, políticas de release, contratos `gentle-ai.*` / `GENTLE_AI_*
 - 2026-11-05: mapa hecho (delegado, solo lectura).
 - 2026-11-05: T1 hecha. `GET /api/system/version` (`internal/dashboard/version_check.go`) con caché en memoria de 6 h, reloj y comprobador inyectables, `?refresh=1`; fallo de red = `check_failed` con HTTP 200 (no se cachea). `go test ./internal/dashboard/... ./internal/update/... ./cmd/axiom/...`: ok; `internal/app`: solo falla el fallo ambiental conocido de OpenCode; `go vet`: ok; `gofmt -l`: vacío.
 - 2026-11-05: T2 hecha. Módulo `assets/js/update.js` + contenedor `#update-banner` en `index.html`: aviso «Hay una versión nueva de Axiom: actual → última» con «Actualizar», «Ver la release» (solo https) y «Comprobar de nuevo» (`?refresh=1`); sin aviso si está al día, en dev_build o si falla. Pruebas de assets en `update_assets_test.go`. `go test ./internal/dashboard/... ./cmd/axiom/...`: ok; `go vet`: ok; `gofmt -l`: vacío. El botón «Actualizar» solo hace POST a `/api/system/update` (la ruta llega en T3).
+- 2026-11-05: T3 hecha. `internal/dashboard/update_job.go`: trabajo único en memoria (mutex) lanzado en una goroutine independiente de la petición; `POST /api/system/update` (202, devuelve el existente si ya hay uno) y `GET /api/system/update/status` (`{phase, running, message, manual_hint, sync}`, fases checking|upgrading|restarting|syncing|done|failed, más `idle`). Reutiliza `RunUpgradeSequence`; el proceso viejo sigue saltando el sync (restart-required). UI: `update.js` consulta cada 1,5 s y muestra fases, resultado y comando manual. Provisional hasta T4: tras autoactualizarse la fase `restarting` pasa enseguida a `done` con «reinicia el dashboard». `go test ./internal/dashboard/... ./cmd/axiom/...`: ok; `go vet`: ok; `gofmt -l`: vacío.

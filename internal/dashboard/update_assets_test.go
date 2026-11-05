@@ -54,3 +54,29 @@ func TestUpdateBannerOnlyShowsForAvailableUpdate(t *testing.T) {
 		}
 	}
 }
+
+// El botón «Actualizar» lanza un trabajo asíncrono y la UI consulta su estado: la
+// petición no depende del tiempo de espera del servidor y cada fase se ve.
+func TestUpdateJobUIPollsStatusAndShowsEveryPhase(t *testing.T) {
+	src := readAsset(t, "js/update.js")
+	for _, marker := range []string{
+		"/api/system/update/status",
+		"/api/system/update'",
+		"POLL_MS",
+		"setTimeout(pollUpdate, POLL_MS)",
+		// Fases en castellano.
+		"Comprobando", "Actualizando", "Reiniciando", "Sincronizando",
+		"checking", "upgrading", "restarting", "syncing", "failed",
+		// Un fallo muestra el motivo y el comando manual, con copiar y reintentar.
+		"La actualización ha fallado", "job.manual_hint", "Copiar orden", "Reintentar",
+		"escapeHtml(job.manual_hint)", "escapeHtml(job.message)",
+		// Al recargar se recupera el trabajo en curso; el almacenamiento va protegido.
+		"resumeUpdate()", "try {",
+		// Los fallos de red al consultar se toleran un margen antes de rendirse.
+		"MAX_POLL_ERRORS",
+	} {
+		if !strings.Contains(src, marker) {
+			t.Errorf("js/update.js no contiene %q", marker)
+		}
+	}
+}

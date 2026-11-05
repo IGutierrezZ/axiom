@@ -46,6 +46,9 @@ type Service struct {
 
 	// versions comprueba la última versión publicada de Axiom (caché con TTL).
 	versions *versionChecker
+
+	// update es el único trabajo de actualización del proceso (update_job.go).
+	update updateJobState
 }
 
 // NewService crea una nueva instancia del servicio para el workspace dado.
