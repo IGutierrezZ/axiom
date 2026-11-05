@@ -189,8 +189,19 @@ func committedCorrectionStatusAfterCommit(t *testing.T, evidence reviewtransacti
 	if contraction {
 		if committed.Action != reviewtransaction.TargetStatusActionRecover || committed.ValidationRequest != nil || committed.RepositoryContext == nil ||
 			committed.RepositoryContext.TargetIdentity != reviewAuthorityTargetIdentity(committed) ||
-			transition == nil || transition.Kind != reviewNextTransitionCollect || !strings.HasPrefix(transition.ReasonCode, "recovery_") {
-			t.Fatalf("bound STATUS after the over-budget contraction = action=%q validation=%#v context=%#v transition=%#v, want the recovery collect bound to the authority target", committed.Action, committed.ValidationRequest, committed.RepositoryContext, transition)
+			transition == nil || transition.Kind != reviewNextTransitionExecute || transition.Execute == nil || transition.Execute.Operation != "review.recover" ||
+			transition.Execute.Binding.LineageID != lineage || transition.Execute.Binding.TargetIdentity != committed.TargetIdentity {
+			t.Fatalf("bound STATUS after the over-budget contraction = action=%q validation=%#v context=%#v transition=%#v, want native recovery with the selected target and unchanged authority context", committed.Action, committed.ValidationRequest, committed.RepositoryContext, transition)
+		}
+		var recovered ReviewRecoverResult
+		decodeStrictReviewJSON(t, executeSelectorTransition(t, repo, committed), &recovered)
+		store, err := reviewtransaction.CompactAuthoritativeStore(context.Background(), repo, lineage)
+		if err != nil {
+			t.Fatal(err)
+		}
+		after, err := store.Load()
+		if err != nil || after.Revision != committed.Authority.Revision || recovered.TargetIdentity != committed.TargetIdentity || recovered.LineageID != selectorTransitionArguments(t, committed)["successor-lineage"] {
+			t.Fatalf("printed contraction recovery lost its binding or changed predecessor: %#v, %v", recovered, err)
 		}
 		return
 	}

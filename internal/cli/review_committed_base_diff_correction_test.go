@@ -139,12 +139,10 @@ func TestSelectorlessStatusResumesCommittedRangeCorrectionRequired(t *testing.T)
 		}
 		// Same fail-closed routing as current-changes drift outside the frozen
 		// manifest (#4094): recovery, never a forced-current correction.
-		// Axiom aún pide la autorización de recuperación como colecta
-		// (recovery_authorization_required); upstream ya ejecuta review.recover
-		// directo (#5151). Ambas formas encaminan a recover; cualquiera vale.
-		recoverRouted := status.NextTransition != nil &&
-			((status.NextTransition.Execute != nil && status.NextTransition.Execute.Operation == "review.recover") ||
-				(status.NextTransition.Kind == reviewNextTransitionCollect && status.NextTransition.ReasonCode == "recovery_authorization_required"))
+		// STATUS ejecuta review.recover de forma nativa (upstream #5151): ya no
+		// pide la colecta recovery_authorization_required.
+		recoverRouted := status.NextTransition != nil && status.NextTransition.Kind == reviewNextTransitionExecute &&
+			status.NextTransition.Execute != nil && status.NextTransition.Execute.Operation == "review.recover"
 		if status.Action != reviewtransaction.TargetStatusActionRecover || status.ActionDisposition != reviewtransaction.RecoveryScopeChanged ||
 			status.Authority == nil || status.Authority.LineageID != lineage || !recoverRouted {
 			t.Fatalf("drifted committed range status = %#v, want review.recover for scope_changed", status)

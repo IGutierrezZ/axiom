@@ -74,13 +74,10 @@ func TestNegotiatedRecoverTransitionRunsVerbatimForStagedPredecessorAfterRebase(
 	if status.Action != reviewtransaction.TargetStatusActionRecover {
 		t.Skipf("status routed the rebased staged candidate to %q/%q rather than recover; this leg pins only the rendered-recover contract", status.Action, transition.ReasonCode)
 	}
-	if transition.Kind != reviewNextTransitionCollect || transition.ReasonCode != "recovery_authorization_required" {
-		t.Fatalf("next transition is not the recovery collection: %s %s\n%s", transition.Kind, transition.ReasonCode, statusOut.String())
+	if transition.Kind != reviewNextTransitionExecute || transition.Execute == nil || transition.Execute.Operation != "review.recover" {
+		t.Fatalf("next transition is not native recovery: %s %s\n%s", transition.Kind, transition.ReasonCode, statusOut.String())
 	}
-	bound := map[string]string{}
-	for _, argument := range transition.Collect.Inputs[0].Arguments {
-		bound[argument.Name] = argument.Value
-	}
+	bound := map[string]string{"lineage": transition.Execute.Binding.LineageID, "expected-revision": transition.Execute.Binding.Revision, "target": transition.Execute.Binding.TargetIdentity}
 	authorization := strings.Join([]string{
 		"gentle-ai.review-recovery-authorization/v1",
 		"predecessor_lineage=" + bound["lineage"],

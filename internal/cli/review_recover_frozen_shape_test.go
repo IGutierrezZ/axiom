@@ -3,6 +3,8 @@ package cli
 import (
 	"bytes"
 	"context"
+	"encoding/json"
+	"io"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -151,5 +153,49 @@ func TestRecoverEscalatedRefusesConflictingFrozenShape(t *testing.T) {
 				t.Fatalf("la continuación mutó el predecesor: %v", err)
 			}
 		})
+	}
+}
+
+// TestAccountingOnlyRecoveryWithoutFrozenPolicyContentIsRefused comprueba que
+// STATUS no anuncia una recuperación accounting-only imposible (política solo
+// con hash) y que RECOVER la rechaza sin mutar.
+func TestAccountingOnlyRecoveryWithoutFrozenPolicyContentIsRefused(t *testing.T) {
+	reviewEnabledHome(t)
+	repo := initReviewCLIRepo(t)
+	started, predecessor, store := setupAccountingOnlyEscalation(t, repo, nil)
+	predecessor.State.FrozenPolicyContent = nil
+	revision, err := reviewtransaction.CompactRevisionForState(predecessor.State)
+	if err != nil {
+		t.Fatal(err)
+	}
+	persisted, err := json.MarshalIndent(reviewtransaction.CompactRecord{
+		Schema: "gentle-ai.review-state-record/v2", Revision: revision, State: predecessor.State,
+	}, "", "  ")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(store.StatePath(), append(persisted, '\n'), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	before, err := os.ReadFile(store.StatePath())
+	if err != nil {
+		t.Fatal(err)
+	}
+	var output bytes.Buffer
+	err = RunReview([]string{"status", "--cwd", repo, "--contract", ReviewIntegrationContractV2, "--next-transition", "--lineage", started.LineageID}, &output)
+	var failure ReviewIntegrationFailure
+	decodeStrictReviewJSON(t, output.Bytes(), &failure)
+	if err == nil || !strings.Contains(failure.Cause, "no frozen policy content") {
+		t.Fatalf("se anunció una recuperación accounting-only imposible: %v, %#v", err, failure)
+	}
+	err = RunReviewRecover([]string{"--cwd", repo, "--predecessor-lineage", started.LineageID, "--expected-predecessor-revision", revision,
+		"--successor-lineage", "hash-only-successor", "--disposition", "escalated"}, io.Discard)
+	if err == nil || !strings.Contains(err.Error(), "no frozen policy content") {
+		t.Fatalf("recuperación nativa con política solo hash = %v", err)
+	}
+	after, _ := os.ReadFile(store.StatePath())
+	stores, _ := reviewtransaction.DiscoverCompactStores(context.Background(), repo)
+	if !bytes.Equal(before, after) || len(stores) != 1 {
+		t.Fatal("el rechazo de política solo hash mutó la autoridad")
 	}
 }
