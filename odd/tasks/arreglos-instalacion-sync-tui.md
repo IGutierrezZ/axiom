@@ -115,8 +115,10 @@ Cada tarea es una rebanada de PR de unas 400 líneas como máximo y cierra con u
   - `brew` se ejecuta sin auto-update.
   - Sin `brew` en macOS, GGA queda pospuesto con aviso y no aborta.
   - `gga.ps1` acepta `ucrt64` y `clang64`.
-- [ ] **T6 · GGA conserva el proveedor** — #5626 (~250)
+- [x] **T6 · GGA conserva el proveedor** — #5626 (~250)
   - Install y sync respetan el proveedor que ya hay en el config de GGA.
+  - Hecho: `88991051` (+285/−12; ruta: escritor delegado). `go test ./internal/components/gga/...` ok; `go test ./internal/cli/ -run 'TestComponentSyncStepGGA…|TestRunSync…GGA…|TestRunInstallMacOSWithoutHomebrewDefersGGA|TestRunInstallGGASkipsInstallWhenAlreadyOnPath'` ok; `go vet` y `gofmt -l` limpios.
+  - Divergencia con upstream, a revisar en el PR: con proveedor existente, Axiom deja el config intacto; upstream lo regenera desde la plantilla y solo conserva el proveedor. Efecto: los cambios futuros de la plantilla no llegan a configs ya existentes. Un config ininterpretable tampoco se toca, pero sin aviso. Sin portar: `ProviderForAgents` vacío por defecto, `Notices` y `ConfigCreationSkipped`.
 - [ ] **T7 · Instaladores: binario atómico y PATH** — #3629 + #5759, según D-2 (~290). P1 ya está fusionado (PR #220, v3.6.0) y el worktree está rebasado sobre él. **Entra después de seguridad T2**, para aplicar su mismo criterio de `REG_EXPAND_SZ` al escribir el PATH.
   - `install.sh` deja el binario en una ruta temporal, aplica `install -m 0755` y hace `mv` atómico, sin interpolar en `sudo`.
   - `install.ps1` añade el directorio al PATH de usuario y respeta `REG_EXPAND_SZ`, con el mismo criterio que #5625 del bloque seguridad.
@@ -201,4 +203,4 @@ T9 no se mezcla con los demás eslabones.
 
 ## Siguiente paso
 
-T6 y T9, en ese orden. T4 espera a adaptadores T1 y T7 a seguridad T2.
+T9. T4 espera a adaptadores T1 y T7 a seguridad T2.
