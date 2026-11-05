@@ -9651,10 +9651,33 @@ func TestInjectRefreshesStaleArchiveSkillWithFinalStateAuthority(t *testing.T) {
 	}
 }
 
-// An install written before the ownership marker rename carries
-// `__managed_by: "gentle-ai/sdd"` on every managed agent. Sync must keep
-// recognizing that install and rewrite its markers to the current `axiom/sdd`.
-func TestInjectOpenCodeRewritesLegacyManagedByMarker(t *testing.T) {
+// El overlay SDD ya no escribe `__managed_by`: los proveedores con validación
+// estricta del esquema (opencode-go, Fireworks, NIM) rechazan la clave.
+func TestInjectOpenCodeOverlayDoesNotWriteManagedByMarker(t *testing.T) {
+	for _, mode := range []model.SDDModeID{model.SDDModeSingle, model.SDDModeMulti} {
+		t.Run(string(mode), func(t *testing.T) {
+			home := t.TempDir()
+			mockNoPackageManager(t)
+
+			if _, err := Inject(home, opencodeAdapter(), mode); err != nil {
+				t.Fatalf("Inject() error = %v", err)
+			}
+			settingsBytes, err := os.ReadFile(filepath.Join(home, ".config", "opencode", "opencode.json"))
+			if err != nil {
+				t.Fatalf("ReadFile(opencode.json) error = %v", err)
+			}
+			if strings.Contains(string(settingsBytes), "__managed_by") {
+				t.Fatalf("opencode.json carries __managed_by after a fresh install:\n%s", settingsBytes)
+			}
+		})
+	}
+}
+
+// Una instalación previa lleva `__managed_by` ("gentle-ai/sdd" o "axiom/sdd") en
+// cada agente gestionado. El merge profundo no borra claves, así que sync debe
+// purgarlo de los gestionados (incluidos los perfiles) y dejar intactos los
+// agentes del usuario, también el que usa la misma clave con otro valor.
+func TestInjectOpenCodePurgesLegacyManagedByMarker(t *testing.T) {
 	home := t.TempDir()
 	mockNoPackageManager(t)
 
@@ -9664,8 +9687,12 @@ func TestInjectOpenCodeRewritesLegacyManagedByMarker(t *testing.T) {
 	}
 	seed := `{
   "agent": {
-    "axiom-orchestrator": {"mode": "primary", "hidden": true, "prompt": "old", "permission": {}, "__managed_by": "gentle-ai/sdd"},
-    "sdd-apply": {"mode": "subagent", "hidden": true, "prompt": "old", "permission": {}, "__managed_by": "gentle-ai/sdd"}
+    "axiom-orchestrator": {"mode": "primary", "prompt": "old", "permission": {}, "__managed_by": "axiom/sdd"},
+    "sdd-apply": {"mode": "subagent", "hidden": true, "prompt": "old", "permission": {}, "__managed_by": "gentle-ai/sdd"},
+    "sdd-orchestrator-fast": {"mode": "primary", "prompt": "old", "permission": {}, "__managed_by": "axiom/sdd"},
+    "mi-agente": {"mode": "subagent", "__managed_by": "axiom/sdd"},
+    "otro-agente": {"mode": "subagent", "__managed_by": "otra-herramienta"},
+    "sdd-spec": {"mode": "subagent", "__managed_by": "otra-herramienta"}
   }
 }`
 	if err := os.WriteFile(settingsPath, []byte(seed), 0o644); err != nil {
@@ -9680,19 +9707,53 @@ func TestInjectOpenCodeRewritesLegacyManagedByMarker(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ReadFile(opencode.json) error = %v", err)
 	}
-	if strings.Contains(string(settingsBytes), "gentle-ai/sdd") {
-		t.Fatalf("opencode.json still carries the legacy managed-by marker after sync:\n%s", settingsBytes)
-	}
 	root := map[string]any{}
 	if err := json.Unmarshal(settingsBytes, &root); err != nil {
 		t.Fatalf("Unmarshal(opencode.json) error = %v", err)
 	}
 	agentMap, _ := root["agent"].(map[string]any)
-	for _, key := range []string{"axiom-orchestrator", "sdd-apply"} {
+	for _, key := range []string{"axiom-orchestrator", "sdd-apply", "sdd-orchestrator-fast"} {
 		def, _ := agentMap[key].(map[string]any)
-		if def["__managed_by"] != "axiom/sdd" {
-			t.Fatalf("agent %q __managed_by = %v, want %q", key, def["__managed_by"], "axiom/sdd")
+		if def == nil {
+			t.Fatalf("managed agent %q missing after sync", key)
 		}
+		if _, exists := def["__managed_by"]; exists {
+			t.Fatalf("managed agent %q keeps __managed_by after sync: %v", key, def["__managed_by"])
+		}
+	}
+	// Agentes que no son de Axiom conservan su clave, aunque el valor coincida.
+	if def, _ := agentMap["mi-agente"].(map[string]any); def["__managed_by"] != "axiom/sdd" {
+		t.Fatalf("user agent mi-agente lost its key: %v", def)
+	}
+	if def, _ := agentMap["otro-agente"].(map[string]any); def["__managed_by"] != "otra-herramienta" {
+		t.Fatalf("user agent otro-agente lost its key: %v", def)
+	}
+	// Con nombre gestionado pero valor ajeno a Axiom, la clave no es nuestra.
+	if def, _ := agentMap["sdd-spec"].(map[string]any); def["__managed_by"] != "otra-herramienta" {
+		t.Fatalf("sdd-spec with a foreign marker value lost its key: %v", def)
+	}
+}
+
+// El formato nativo (V2) guarda los agentes en `agents`; la purga lo cubre.
+func TestPurgeLegacyManagedByMarkerCoversNativeAgents(t *testing.T) {
+	in := `{"agents":{"sdd-apply":{"system":"x","__managed_by":"axiom/sdd"},"mio":{"__managed_by":"axiom/sdd"}}}`
+	out, err := purgeLegacyManagedByMarker([]byte(in))
+	if err != nil {
+		t.Fatalf("purgeLegacyManagedByMarker() error = %v", err)
+	}
+	root, err := filemerge.UnmarshalJSONObject(out)
+	if err != nil {
+		t.Fatalf("UnmarshalJSONObject() error = %v", err)
+	}
+	agents, _ := root["agents"].(map[string]any)
+	if def, _ := agents["sdd-apply"].(map[string]any); def["system"] != "x" || def["__managed_by"] != nil {
+		t.Fatalf("sdd-apply = %v, want marker purged and fields kept", def)
+	}
+	if def, _ := agents["mio"].(map[string]any); def["__managed_by"] != "axiom/sdd" {
+		t.Fatalf("mio = %v, want untouched", def)
+	}
+	if again, _ := purgeLegacyManagedByMarker(out); string(again) != string(out) {
+		t.Fatal("purge must be idempotent")
 	}
 }
 

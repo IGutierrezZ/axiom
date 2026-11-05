@@ -399,3 +399,35 @@ func TestSkillsDirStaysInUseWhileAnotherAgentOfTheProjectUsesIt(t *testing.T) {
 		t.Errorf("otherAgentsInProject() = %v, want claude-code", svc.otherAgentsInProject())
 	}
 }
+
+// Los agentes de Axiom ya no llevan `__managed_by`: se retiran por nombre y forma,
+// con los perfiles incluidos. Un agente del usuario con otro nombre, o con nombre de
+// Axiom pero sin la forma del overlay, se conserva.
+func TestRemoveManagedAgentEntriesIdentifiesAgentsByNameAndShape(t *testing.T) {
+	seed := `{"agent":{
+	  "axiom-orchestrator":{"mode":"primary","prompt":"{file:./AGENTS.md}","permission":{}},
+	  "sdd-apply":{"mode":"subagent","hidden":true,"prompt":"p","permission":{}},
+	  "sdd-orchestrator-fast":{"mode":"primary","prompt":"p","permission":{}},
+	  "sdd-apply-fast":{"mode":"subagent","hidden":true,"prompt":"p","permission":{}},
+	  "general":{"mode":"subagent","hidden":true,"prompt":"p","permission":{}},
+	  "viejo":{"__managed_by":"gentle-ai/sdd"},
+	  "mio":{"mode":"subagent","hidden":true,"prompt":"p","permission":{}},
+	  "explore":{"prompt":"mi explorador","permission":{}},
+	  "sdd-spec":{"mode":"subagent","description":"personalizado"},
+	  "otro":{"mode":"subagent","__managed_by":"otra-herramienta"}
+	},"share":"disabled"}`
+	got, changed, err := removeManagedAgentEntries([]byte(seed))
+	if err != nil || !changed {
+		t.Fatalf("changed=%v err=%v", changed, err)
+	}
+	assertJSONEqual(t, string(got), `{"agent":{
+	  "mio":{"mode":"subagent","hidden":true,"prompt":"p","permission":{}},
+	  "explore":{"prompt":"mi explorador","permission":{}},
+	  "sdd-spec":{"mode":"subagent","description":"personalizado"},
+	  "otro":{"mode":"subagent","__managed_by":"otra-herramienta"}
+	},"share":"disabled"}`)
+
+	if _, changed, _ := removeManagedAgentEntries([]byte(`{"agent":{"mio":{"prompt":"p","permission":{}}}}`)); changed {
+		t.Fatal("sin agentes de Axiom no debe cambiar")
+	}
+}

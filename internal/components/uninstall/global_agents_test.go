@@ -306,3 +306,35 @@ func TestGlobalAgentLeftoversIsEmptyWithoutAxiom(t *testing.T) {
 		t.Fatal("mi-plugin.ts no es un plugin de Axiom")
 	}
 }
+
+// El overlay actual no escribe `__managed_by`: la desinstalación global de Kilo
+// identifica los agentes de Axiom por nombre y forma (también los perfiles) y deja
+// los del usuario, incluso uno con nombre propio y la misma forma.
+func TestCompleteUninstallGlobalRetiresKiloManagedAgentsWithoutMarker(t *testing.T) {
+	home := t.TempDir()
+	configPath := filepath.Join(home, ".config", "kilo", "opencode.json")
+	writeGlobalFile(t, configPath, `{
+  "agent": {
+    "axiom-orchestrator": {"mode": "primary", "prompt": "{file:./AGENTS.md}", "permission": {}},
+    "sdd-apply": {"mode": "subagent", "hidden": true, "prompt": "p", "permission": {}},
+    "sdd-orchestrator-fast": {"mode": "primary", "prompt": "p", "permission": {}},
+    "mi-agente": {"mode": "subagent", "hidden": true, "prompt": "p", "permission": {}}
+  },
+  "theme": "mi-tema"
+}`)
+
+	if leftovers := GlobalAgentLeftovers(home); len(leftovers) == 0 {
+		t.Fatal("los agentes gestionados sin marcador deben contar como restos de Axiom")
+	}
+
+	globalCompleteUninstall(t, home)
+
+	got := readJSONFileForTest(t, configPath)
+	agentsObject, _ := got["agent"].(map[string]any)
+	if _, kept := agentsObject["mi-agente"]; !kept || len(agentsObject) != 1 {
+		t.Errorf("solo debe quedar el agente del usuario: %#v", agentsObject)
+	}
+	if got["theme"] != "mi-tema" {
+		t.Errorf("el tema del usuario debe conservarse: %#v", got)
+	}
+}
