@@ -48,6 +48,17 @@ func effectiveStateStoreWithRoot(homeDir string) (state.Store, string) {
 		return state.GlobalStore(homeDir), ""
 	}
 	root, _ := workspace.ResolveRoot(cwd, homeDir)
+	return effectiveStateStoreAt(homeDir, root)
+}
+
+// effectiveStateStoreAt es effectiveStateStoreWithRoot con la raíz del proyecto ya
+// resuelta por quien llama, sin tocar el directorio actual del proceso: el del
+// proyecto si `<raíz>/.axiom/state.json` existe y, si no (o con la raíz vacía), el
+// global.
+func effectiveStateStoreAt(homeDir, root string) (state.Store, string) {
+	if strings.TrimSpace(root) == "" {
+		return state.GlobalStore(homeDir), ""
+	}
 	if info, statErr := os.Stat(state.ProjectPath(root)); statErr == nil && info.Mode().IsRegular() {
 		return state.ProjectStore(homeDir, root), root
 	}

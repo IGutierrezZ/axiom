@@ -66,7 +66,7 @@ Fuera: el comportamiento de `axiom sync`, el `os.Chdir` de `RunSync` (seguimient
 
 ## Tareas
 
-- [ ] **T1 · Núcleo del doctor con raíz explícita.**
+- [x] **T1 · Núcleo del doctor con raíz explícita.**
   - `doctor.Options{Home, Root}` y `cli.BuildDoctorChecks(opts)`.
   - `RunDoctor` resuelve la raíz desde el cwd y delega en el núcleo, de modo que la CLI no cambia.
   - Los checks usan `StateStoreFor(...)` con la raíz dada, sin `os.Getwd`.
@@ -106,5 +106,6 @@ Fuera: el comportamiento de `axiom sync`, el `os.Chdir` de `RunSync` (seguimient
 ## Progreso y evidencias
 
 - 2026-11-05: mapa hecho (delegado, solo lectura).
+- 2026-11-05: T1 hecha (ruta: escritor delegado). `doctor.Options{Home,Root}`, `Scope` global/proyecto y etiquetas JSON en `Report`/`Result`/`Remedy`, `Report.Failed()`; `cli.BuildDoctorChecks(opts)` sin `os.Getwd` (`RunDoctor` resuelve el cwd una vez y delega; `effectiveStateStoreAt`). Pruebas con cwd en otra carpeta. Observado: `go test ./internal/doctor/... ./internal/dashboard/...` ok; `go test ./internal/cli/ -run 'Doctor|StateStore|InstallState'` ok; `go test ./internal/app/ -run Doctor` ok; `go vet` y `gofmt -l` limpios.
 
 Plan stop: approved 2026-11-05; implementation continues
