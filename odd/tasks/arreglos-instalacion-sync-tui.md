@@ -107,7 +107,10 @@ Cada tarea es una rebanada de PR de unas 400 líneas como máximo y cierra con u
 - [ ] **T4 · Sync** — #4078 + #5017 sin Codex (~250)
   - Un `variant` vacío conserva el del usuario.
   - El sync usa el orden de install, con CodeGraph después de la persona.
-- [ ] **T5 · GGA y Homebrew** — #5012 → #5724 + #5783 (~210)
+- [x] **T5 · GGA y Homebrew** — #5012 → #5724 + #5783 (~210)
+  - Hecho: `cad99f6e` (brew sin auto-update, en `commandEnv` de `run.go`), `55b50699` (GGA pospuesto sin brew en macOS) y `eb558af6` (`ucrt64` y `clang64`). Ruta: escritor delegado. `go test ./internal/installcmd/... ./internal/assets/... ./internal/components/gga/...` ok; `go test ./internal/cli/ -run 'TestCommandEnv|TestRunInstallMacOS|TestGGA|PostInstallNote|ReadyAgent|FailedVerification|TestRepro4020'` ok; `go vet` y `gofmt -l` limpios.
+  - Sin verificar en local: los casos nuevos de `TestPowerShellShimResolvesGitBash` necesitan `AXIOM_TEST_BUILD_BINARIES=1` (compilan un binario); quedan para CI.
+  - Pendiente fuera de alcance (`internal/tui`, `internal/pipeline`): la pantalla final de la TUI puede contar GGA como instalado cuando se pospone; upstream lo resuelve con `DeferredComponents`. El aviso sí llega por `ManualActions`.
   - **Limitada a `internal/cli` e `internal/installcmd`.** No toca `internal/update` (`strategy.go`) hasta que P1 se fusione; véase «Coordinación con P1 y P3».
   - `brew` se ejecuta sin auto-update.
   - Sin `brew` en macOS, GGA queda pospuesto con aviso y no aborta.
@@ -198,4 +201,4 @@ T9 no se mezcla con los demás eslabones.
 
 ## Siguiente paso
 
-T5, T6 y T9, en ese orden. T4 espera a adaptadores T1 y T7 a seguridad T2.
+T6 y T9, en ese orden. T4 espera a adaptadores T1 y T7 a seguridad T2.
