@@ -34,7 +34,7 @@ Que el tablero de Incrementos del dashboard (`GET /api/increments`) muestre tamb
 
 - [x] **T1 · Backend: detección de *features* ODD y de worktrees ya integrados** (`internal/dashboard`, `internal/branch/engine`). Parser de `odd/tasks/*.md` (título `# ODD…`, línea `Estado`, casillas `- [ ]`/`- [x]` y `### [x]`), listado por worktree, fase, aviso de integrado y documentos del checkout principal como integrados. Tests Go con repos temporales. Ruta: delegada (writer único; toca 2+ ficheros no triviales).
 - [x] **T2 · Frontend: chip y filtro ODD** (`internal/dashboard/assets`). Chip «ODD» en tarjeta y lista, filtro «ODD» con contador, subtítulo que no diga solo SDD. Tests de assets existentes ampliados. Ruta: delegada (mismo writer).
-- [ ] **T3 · Verificación manual** contra el repositorio real: el listado muestra los 8 worktrees ODD activos, `carril-sdd-versatil` como SDD y avisa de `bloqueos-prueba-multirepo-r2` como integrado. Ruta: inline.
+- [x] **T3 · Verificación manual** contra el repositorio real: el listado muestra los 8 worktrees ODD activos, `carril-sdd-versatil` como SDD y avisa de `bloqueos-prueba-multirepo-r2` como integrado. Ruta: inline.
 
 ## Criterios de aceptación
 
@@ -63,6 +63,12 @@ Que el tablero de Incrementos del dashboard (`GET /api/increments`) muestre tamb
   - Decisiones de interfaz derivadas (no estaban en el documento, a revisar): las features ODD no enlazan al detalle (el detalle solo conoce cambios de `openspec/changes`, daría «no encontrado») y se muestran como texto con el título como ayuda; `incrementStats` de Inicio las excluye (Inicio resume el flujo SDD, sus cifras no cambian); la columna de archivo del tablero solo muestra SDD archivados recientes (los ODD integrados no tienen fecha y la desplazarían) y los ODD integrados salen con el filtro «Archivados»; el selector de handoff las omite.
   - Comprobaciones: `go test ./internal/dashboard/... ./internal/branch/... -count=1` → ok (dashboard, branch, engine, gitcli, registry), incluida la prueba Node nueva `TestIncrementsODDChipAndHomeStatsRuntime`; `go vet` → sin salida; `gofmt -l internal/` → sin salida.
 
+- 2026-11-05 · T3 hecha (ruta: inline, en el padre). `GetIncrements` ejecutado en proceso contra `C:\repos\axiom` con un test temporal no versionado, que se borró tras ejecutarlo.
+  - Resultado: 8 *features* ODD activas: `actualizacion-desde-ui` 6/7, `adaptadores-agentes-upstream` 5/6, `arreglos-instalacion-sync-tui` 0/9, `guia-orquestador-upstream` 2/5, `seguridad-datos-upstream` 4/5, `tablero-trabajo-odd` 2/3, `ui-pwa-puerto-fijo` 5/5 (en `verify`) y `upstream-revision-nativa` 1/20. `carril-sdd-versatil` sale como SDD en `spec`. Hay 50 ODD y 46 SDD archivados, y sale el aviso «El worktree bloqueos-prueba-multirepo-r2 … ya está integrado en origin/main».
+  - Comprobación del padre: `go test ./internal/dashboard/... ./internal/branch/... -count=1` → ok en los 5 paquetes.
+  - RDD desactivado (por defecto). `axiom review assess --base-ref 7235e6b6 --committed-only` → `medium` (`executable_change`): basta la autoverificación del writer más la comprobación del padre.
+- Entrega: una sola PR con `size:exception` (~950 líneas) y un commit por tarea, según la preferencia del usuario. `origin/main` ha avanzado (`9d5bbe88`), así que hay que sincronizar la rama antes de abrir la PR.
+
 ## Siguiente paso
 
-T3: verificación manual contra el repositorio real (inline, en el padre).
+Sincronizar con `origin/main` y abrir la PR (`scripts/axiom-worktree.ps1 pr tablero-trabajo-odd`) cuando lo decida el usuario.
