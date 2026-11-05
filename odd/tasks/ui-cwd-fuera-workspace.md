@@ -39,7 +39,7 @@ Que el proceso servidor de `axiom ui` (en primer plano o desacoplado con `--deta
 - [x] **T1 · Directorio de trabajo neutro para el servidor** — ruta: en línea (1 fichero de código y su test, ya entendidos).
   - `neutralWorkDir(baseDir, candidatos...)` y su uso en `startDetachedServer` y `runUI`.
   - Tests: elección del candidato, exclusión de candidatos dentro del workspace, raíz como último recurso y `cmd.Dir` del hijo fuera del workspace.
-- [ ] **T2 · PR contra `main`** con etiqueta `type:bug`.
+- [x] **T2 · PR contra `main`** con etiqueta `type:bug`.
 
 ## Criterios de aceptación
 
@@ -49,7 +49,9 @@ Que el proceso servidor de `axiom ui` (en primer plano o desacoplado con `--deta
 ## Progreso y evidencias
 
 - T1: `go test ./cmd/axiom/... ./internal/dashboard/...` → `ok` en ambos paquetes; `go vet ./...` sin hallazgos; `gofmt -l cmd/axiom` vacío. Tests nuevos: `TestNeutralWorkDir`, `TestServerWorkDirOutsideWorkspace`, `TestDetachedServerCommandWorkDir`. Commit: `fix(ui): servidor de axiom ui con cwd fuera del workspace`.
+- T2: PR IGutierrezZ/axiom#223 abierta contra `main` con `type:bug`; CI en verde (9 correctos, 5 omitidos, 0 fallidos).
 - RDD: desactivada; sin evaluación de riesgo.
+- Siguiente paso: fusión (decisión del usuario) y `scripts/axiom-worktree.ps1 done ui-cwd-fuera-workspace`.
 
 ## Seguimiento fuera de alcance
 
