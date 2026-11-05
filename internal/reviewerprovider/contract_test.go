@@ -133,3 +133,16 @@ func TestRefuterPromptAppliesSeverityRules(t *testing.T) {
 		}
 	}
 }
+
+// TestRefuterPromptEchoesRequestHash fija #5597: la petición lleva request_hash,
+// el esquema de resultado exige refuter_request_hash y la admisión los compara,
+// así que el prompt debe nombrar la correspondencia.
+func TestRefuterPromptEchoesRequestHash(t *testing.T) {
+	contract, err := ContractFor(RoleRefuter)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := "Echo the input request_hash as refuter_request_hash."; !strings.Contains(contract.PromptInstruction, want) {
+		t.Fatalf("refuter prompt omits %q:\n%s", want, contract.PromptInstruction)
+	}
+}
