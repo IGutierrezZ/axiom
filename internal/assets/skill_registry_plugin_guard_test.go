@@ -98,3 +98,31 @@ func TestSkillRegistryPluginMarkersMatchCLIGuard(t *testing.T) {
 		t.Fatalf("plugin PROJECT_MARKERS = %v, want the CLI guard's markers %v", got, want)
 	}
 }
+
+// TestSkillRegistryPluginsDiagnoseSpawnFailures fija, de forma estática y sin
+// depender de node, que ambos plugins (V1 y V2) diagnostican el fallo del
+// refresco con una sola línea y nombran el binario real, `axiom`.
+func TestSkillRegistryPluginsDiagnoseSpawnFailures(t *testing.T) {
+	for _, path := range []string{"opencode/plugins/skill-registry.ts", "opencode/plugins-v2/skill-registry.ts"} {
+		source := MustRead(path)
+		for _, want := range []string{
+			"describeRefreshFailure",
+			"axiom skill-registry refresh",
+			"the missing resource was not identified",
+			`syscall.startsWith("spawn")`,
+		} {
+			if !strings.Contains(source, want) {
+				t.Errorf("%s no contiene %q", path, want)
+			}
+		}
+		for _, banned := range []string{"gentle-ai skill-registry", "PATH is missing", "not on PATH"} {
+			if strings.Contains(source, banned) {
+				t.Errorf("%s contiene %q: el diagnóstico debe nombrar axiom y no afirmar PATH ausente", path, banned)
+			}
+		}
+	}
+	// V1 ya no vuelca el objeto de error crudo (con su pila) en el log.
+	if v1 := MustRead("opencode/plugins/skill-registry.ts"); strings.Contains(v1, `"refresh failed:", err`) {
+		t.Error("el plugin V1 no debe volcar el error crudo con su pila")
+	}
+}

@@ -588,7 +588,11 @@ func TestKilocodeReviewSettingsMatchCurrentMainBaseline(t *testing.T) {
 	// {{AXIOM_STOP_EXITS}} marker that the composer resolves with the single
 	// three-exit text. Kilocode composes it through the OpenCode orchestrator, so the
 	// hash moves. Deliberate, not drift.
-	const want = "674432538e9cb4a1eeec57134839531bc252b34f096585829d7af4eddb95cce2"
+	// adaptadores-agentes-upstream T1 (upstream #4998/#4471): el overlay compartido de
+	// OpenCode deja de escribir `__managed_by` en cada agente, porque los proveedores con
+	// validación estricta del esquema lo rechazan. Kilocode hereda el overlay, así que el
+	// hash cambia solo por esa clave. Deliberate, not drift.
+	const want = "54596803148e8276d60dae857dbb00f34d0354755c53f179412d7a758df90d74"
 	if got != want {
 		t.Fatalf("Kilocode settings SHA-256 = %s, want current-main baseline %s", got, want)
 	}

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/components/filemerge"
@@ -319,21 +320,91 @@ func managedConfigPriority(path string) int {
 	agents, _ := root["agent"].(map[string]any)
 	for _, raw := range agents {
 		def, _ := raw.(map[string]any)
-		if def["__managed_by"] == "axiom/sdd" || def["__managed_by"] == "gentle-ai/sdd" {
+		if HasLegacyManagedMarker(def) {
 			return 2
 		}
 	}
-	for _, key := range managedOpenCodeAgentKeys() {
-		def, _ := agents[key].(map[string]any)
-		if looksLikeManagedOpenCodeAgent(def) {
+	for name, raw := range agents {
+		def, _ := raw.(map[string]any)
+		if IsManagedAgentShape(name, def) {
 			return 1
 		}
 	}
 	return 0
 }
 
+// LegacyManagedByKey es la clave que versiones anteriores escribían en cada agente
+// gestionado del overlay SDD. Los proveedores con validación estricta del esquema
+// (opencode-go, Fireworks, NIM) rechazan la clave, así que ya no se escribe: solo
+// se reconoce y se purga en las instalaciones previas.
+const LegacyManagedByKey = "__managed_by"
+
+// legacyManagedByValues son los únicos valores que Axiom (y Gentle AI antes) escribió.
+var legacyManagedByValues = []string{"axiom/sdd", "gentle-ai/sdd"}
+
+// HasLegacyManagedMarker dice si def conserva el marcador heredado con uno de los
+// valores que Axiom escribió. Un valor distinto es de otra herramienta o del usuario.
+func HasLegacyManagedMarker(def map[string]any) bool {
+	marker, _ := def[LegacyManagedByKey].(string)
+	return slices.Contains(legacyManagedByValues, marker)
+}
+
+// IsManagedAgentName dice si name pertenece al espacio de nombres que Axiom genera
+// en OpenCode: el orquestador, las fases de SDD, los jueces, los revisores, los
+// agentes que el overlay sobrescribe (general y explore) y los perfiles
+// `<agente>-<perfil>` de SDD y Judgment Day.
+func IsManagedAgentName(name string) bool {
+	if slices.Contains(managedOpenCodeAgentKeys(), name) || overridesBuiltinAgent(name) {
+		return true
+	}
+	prefixes := append([]string{"sdd-orchestrator"}, SDDPhases()...)
+	prefixes = append(prefixes, JDPhases()...)
+	for _, prefix := range prefixes {
+		if rest, ok := strings.CutPrefix(name, prefix+"-"); ok && rest != "" {
+			return true
+		}
+	}
+	return false
+}
+
+func overridesBuiltinAgent(name string) bool {
+	return name == "general" || name == "explore"
+}
+
+// IsManagedAgentShape identifica por nombre y forma, sin marcador, un agente que
+// Axiom generó: un nombre gestionado con prompt y permission como los del overlay.
+// general y explore son nombres de OpenCode que el usuario también personaliza, de
+// modo que además exigen hidden, que el overlay fija y el usuario rara vez.
+func IsManagedAgentShape(name string, def map[string]any) bool {
+	if def == nil || !IsManagedAgentName(name) {
+		return false
+	}
+	if overridesBuiltinAgent(name) {
+		return looksLikeManagedOpenCodeAgent(def)
+	}
+	if _, ok := def["prompt"].(string); !ok {
+		return false
+	}
+	// Kilo declara tools en lugar de permission en algunos agentes (p. ej.
+	// review-refuter), así que cualquiera de los dos mapas cuenta como forma del overlay.
+	if _, ok := def["permission"].(map[string]any); ok {
+		return true
+	}
+	_, ok := def["tools"].(map[string]any)
+	return ok
+}
+
+// IsManagedAgent dice si la definición la escribió Axiom: lleva el marcador heredado
+// o tiene nombre y forma de agente gestionado.
+func IsManagedAgent(name string, def map[string]any) bool {
+	return HasLegacyManagedMarker(def) || IsManagedAgentShape(name, def)
+}
+
 func managedOpenCodeAgentKeys() []string {
 	keys := []string{"axiom-orchestrator", "gentle-orchestrator", "sdd-orchestrator", ReviewRefuterAgent, ReviewValidatorAgent}
+	// Las lentes de revisión nativa también las escribe el overlay SDD; sin
+	// __managed_by, solo su nombre las identifica al desinstalar.
+	keys = append(keys, ReviewLensPhases()...)
 	keys = append(keys, SDDPhases()...)
 	keys = append(keys, JDPhases()...)
 	return keys

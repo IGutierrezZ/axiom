@@ -1297,7 +1297,7 @@ func TestRuntimeCatalogDiscoveryUpdatesPickerWithoutPrivateFixtures(t *testing.T
 		t.Fatal("picker did not distinguish an empty catalog")
 	}
 	state = state.Update(RuntimeCatalogDiscoveryMsg{RequestID: 1, ProjectDir: "active-project", Err: errors.New("unavailable")})
-	if !strings.Contains(RenderModelPicker(nil, state, 0), "Could not discover models from OpenCode") {
+	if !strings.Contains(RenderModelPicker(nil, state, 0), "No se pudo descubrir el catálogo de modelos de OpenCode") {
 		t.Fatal("picker did not show discovery fallback")
 	}
 }

@@ -984,12 +984,11 @@ func (s agentRoutingGuidanceStep) Run() error {
 	// Strip first: an installation upgraded from an older release still carries
 	// the retired block, and leaving it beside fresh guidance would hand the
 	// agent two conflicting sets of instructions.
-	stripped, err := stripLegacyTriggerRules(targetDir, adapter)
+	options := routingGuidanceOptions(s.homeDir, s.workspaceDir, s.scope, adapter)
+	stripped, err := stripLegacyTriggerRules(targetDir, adapter, options.SettingsPath)
 	if err != nil {
 		return err
 	}
-
-	options := routingGuidanceOptions(s.homeDir, s.workspaceDir, s.scope, adapter)
 	var injected agentguidance.Result
 	if options.SettingsPath == "" && options.Adapter == nil {
 		injected, err = agentguidance.InjectRouting(targetDir, s.agent)
@@ -1018,10 +1017,18 @@ func (s agentRoutingGuidanceStep) recordChanged(result agentguidance.Result) {
 // Removal reuses filemerge.InjectMarkdownSection with empty content, which is
 // already the defined "delete this section" operation, so no second merge
 // implementation exists that could drift from the injector.
-func stripLegacyTriggerRules(targetDir string, adapter agents.Adapter) (agentguidance.Result, error) {
+//
+// effectiveSettingsPath, cuando no está vacío, es el fichero de settings que el
+// inyector de guía va a escribir (en OpenCode, `opencode.jsonc` del proyecto
+// frente a `opencode.json` global): la limpieza debe actuar sobre ese mismo.
+func stripLegacyTriggerRules(targetDir string, adapter agents.Adapter, effectiveSettingsPath string) (agentguidance.Result, error) {
 	switch {
 	case adapter.Agent() == model.AgentOpenCode || adapter.Agent() == model.AgentKilocode:
-		return stripLegacyTriggerRulesFromOrchestrator(adapter.SettingsPath(targetDir))
+		settingsPath := adapter.SettingsPath(targetDir)
+		if strings.TrimSpace(effectiveSettingsPath) != "" {
+			settingsPath = effectiveSettingsPath
+		}
+		return stripLegacyTriggerRulesFromOrchestrator(settingsPath)
 	case adapter.SystemPromptStrategy() == model.StrategyJinjaModules:
 		return removeLegacyTriggerRulesModule(filepath.Join(adapter.GlobalConfigDir(targetDir), legacyTriggerRulesSection+".md"))
 	default:
@@ -1109,8 +1116,15 @@ func stripLegacyTriggerRulesFromOrchestrator(settingsPath string) (agentguidance
 		return agentguidance.Result{}, fmt.Errorf("encode legacy %q removal for %q: %w", legacyTriggerRulesSection, settingsPath, err)
 	}
 
-	merged, err := filemerge.MergeJSONObjects(raw, overlay)
+	merged, err := filemerge.MergeJSONObjectsForPath(settingsPath, raw, overlay)
 	if err != nil {
+		if strings.HasSuffix(settingsPath, ".jsonc") {
+			// Un JSONC que la fusión conservadora rechaza (claves duplicadas,
+			// comentarios dentro del valor tocado...) queda intacto: la limpieza
+			// es de mejor esfuerzo y el inyector de guía, que corre justo después,
+			// falla cerrado con las mismas condiciones.
+			return agentguidance.Result{}, nil
+		}
 		return agentguidance.Result{}, fmt.Errorf("merge legacy %q removal into %q: %w", legacyTriggerRulesSection, settingsPath, err)
 	}
 
