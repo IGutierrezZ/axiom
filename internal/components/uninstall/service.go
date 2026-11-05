@@ -1519,11 +1519,18 @@ func rewriteJSONFile(path string, jsonPaths ...jsonPath) operation {
 // sobrevive a la desinstalación.
 func rewriteManagedPermissions(path string, agentID model.AgentID) operation {
 	overlay := permissions.Overlay(agentID)
+	legacy := permissions.LegacyOverlay(agentID)
 	return rewriteJSONWith(path, func(raw []byte) ([]byte, bool, error) {
 		if overlay == nil {
 			return raw, false, nil
 		}
-		return removeOverlayEntries(raw, overlay)
+		updated, changed, err := removeOverlayEntries(raw, overlay)
+		if err != nil || legacy == nil {
+			return updated, changed, err
+		}
+		// Reglas que versiones anteriores de Axiom escribían sin anclar al HOME.
+		updated, legacyChanged, err := removeOverlayEntries(updated, legacy)
+		return updated, changed || legacyChanged, err
 	})
 }
 

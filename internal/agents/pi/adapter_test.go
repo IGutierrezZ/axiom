@@ -420,3 +420,72 @@ func TestMergePiSettingsFileRemovesLegacySubagentPackages(t *testing.T) {
 		t.Fatalf("packages = %#v", settings.Packages)
 	}
 }
+
+// TestProvisionEngramMCPPreservesExactNumberTokens keeps unrelated number
+// tokens verbatim in every Pi file it rewrites.
+func TestProvisionEngramMCPPreservesExactNumberTokens(t *testing.T) {
+	a := NewAdapter()
+	home := t.TempDir()
+	numbers := `"big":9007199254740993,"neg":-9007199254740995,"max":9223372036854775807,` +
+		`"nested":{"list":[1.10,6.02214076e23,1E+2,{"min":-9223372036854775808}]},"huge":1e999`
+	files := map[string]string{
+		a.SettingsPath(home): `{"packages":["npm:pi-mcp-adapter"],` + numbers + `}`,
+		filepath.Join(ConfigPath(home), "npm", "package.json"): `{"dependencies":{"other":"^1.0.0"},` + numbers + `}`,
+	}
+	for path, body := range files {
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	if _, _, err := a.ProvisionEngramMCP(home); err != nil {
+		t.Fatalf("ProvisionEngramMCP() error = %v", err)
+	}
+	for path, original := range files {
+		body, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatalf("ReadFile(%q) error = %v", path, err)
+		}
+		if string(body) == original {
+			t.Fatalf("%s was not rewritten; the test must exercise a re-encode", path)
+		}
+		var root map[string]any
+		decoder := json.NewDecoder(strings.NewReader(string(body)))
+		decoder.UseNumber()
+		if err := decoder.Decode(&root); err != nil {
+			t.Fatalf("decode %s error = %v", path, err)
+		}
+		assertExactPiNumbers(t, path, root)
+	}
+
+	// Strict single-document JSON stays required: no trailing documents.
+	settingsPath := a.SettingsPath(home)
+	if err := os.WriteFile(settingsPath, []byte(`{"packages":[]}{"x":1}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := a.ProvisionEngramMCP(home); err == nil || !strings.Contains(err.Error(), "unmarshal pi json file") {
+		t.Fatalf("ProvisionEngramMCP() error = %v, want trailing document rejected", err)
+	}
+}
+
+// assertExactPiNumbers checks each number of the fixture at its own path.
+func assertExactPiNumbers(t *testing.T, name string, object map[string]any) {
+	t.Helper()
+	nested, _ := object["nested"].(map[string]any)
+	list, _ := nested["list"].([]any)
+	if len(list) != 4 {
+		t.Fatalf("%s nested.list = %#v, want 4 entries", name, nested["list"])
+	}
+	last, _ := list[3].(map[string]any)
+	got := []any{object["big"], object["neg"], object["max"], list[0], list[1], list[2], last["min"], object["huge"]}
+	want := []string{"9007199254740993", "-9007199254740995", "9223372036854775807",
+		"1.10", "6.02214076e23", "1E+2", "-9223372036854775808", "1e999"}
+	for i := range want {
+		if number, ok := got[i].(json.Number); !ok || number.String() != want[i] {
+			t.Fatalf("%s number %d = %#v, want exact %s", name, i, got[i], want[i])
+		}
+	}
+}
