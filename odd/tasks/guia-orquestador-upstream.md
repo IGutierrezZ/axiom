@@ -157,8 +157,8 @@ Lo fija la sesión coordinadora a partir del cruce de ficheros entre bloques (20
 
 ## Decisiones abiertas para validar
 
-- **P1.** ¿T1 cubre las 12 plantillas o solo `claude`, `opencode` y `generic`, que son las que usa el equipo?
-- **P2.** ¿Dónde vive la fuente única de la delegación: en `RenderRouting` (Go, ya unificado y con el manifiesto) o en el markdown compartido?
+- **P1 (resuelta, 2026-11-05).** ¿T1 cubre las 12 plantillas o solo `claude`, `opencode` y `generic`, que son las que usa el equipo? **Las 12.** Dejar plantillas fuera mantendría la deriva que T1 quiere eliminar.
+- **P2 (resuelta, 2026-11-05).** ¿Dónde vive la fuente única de la delegación: en `RenderRouting` (Go, ya unificado y con el manifiesto) o en el markdown compartido? **En `RenderRouting`.** Ya concentra la regla junto con el manifiesto y sus digests; el markdown compartido se limita a referenciarla.
 - **P3 (resuelta, 2026-11-05).** ¿En qué orden se hace T1 frente al cambio de `sdd-orchestrator-sections.md` de la sesión de revisión nativa? Primero revisión T6, luego T1 (véase «Orden de ejecución entre bloques»).
 
 ## Restricciones
@@ -202,3 +202,4 @@ Lo fija la sesión coordinadora a partir del cruce de ficheros entre bloques (20
   - **Comprobación puntual del padre:** `go test ./internal/components/engram/... ./internal/assets/ -run "IssueCreation|Protocol"`, ok.
   - **RDD apagado:** no se abre revisión nativa.
   - **Seguimiento fuera de alcance:** `.codex/AGENTS.md` sigue con el texto antiguo del protocolo de Engram.
+- 2026-11-05: el usuario resuelve P1 (las 12 plantillas) y P2 (fuente única en `RenderRouting`) según la recomendación, y autoriza el push y el PR de T4 y T5. T1 sigue esperando a que se fusione revisión T6.
