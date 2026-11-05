@@ -2,49 +2,45 @@
 
 [Back to Codebase Guide](../CODEBASE-GUIDE.md)
 
-Axiom does not currently contain dashboard source code. This page exists to prevent accidental invention of dashboard, HTMX, auth, or admin behavior while documenting the codebase.
+El panel web local (`axiom ui`) vive en `internal/dashboard/` (servidor HTTP, API y assets embebidos) y se lanza desde `runUI` en `cmd/axiom/main.go`. Esta página documenta solo el arranque, el puerto y la instalación como PWA; el contrato de cada endpoint está en `internal/dashboard/server.go`.
 
-## Source validation result
+## Servidor y puerto
 
-| Expected dashboard area | Status in this repository |
+- Escucha siempre en `127.0.0.1:47700` (`dashboard.DefaultPort`). `--port` lo cambia.
+- No hay reasignación silenciosa: si el puerto está ocupado por otra aplicación, `axiom ui` falla con un error que sugiere `--port`.
+- `GET /api/health` devuelve `{"service":"axiom-dashboard", ...}` (`internal/dashboard/health.go`). `ProbeAxiom` lo usa para decidir si ya hay un Axiom activo: en ese caso `axiom ui` solo abre la ventana, de modo que ejecutarlo varias veces nunca levanta dos servidores.
+- No existe endpoint de apagado: la API acepta CORS `*` y permitiría a cualquier web local parar el servidor.
+
+## PWA
+
+El dashboard es instalable desde Edge o Chrome:
+
+| Pieza | Ubicación |
 |---|---|
-| Dashboard package | Not found. |
-| HTMX templates or handlers | Not found. |
-| Local HTTP server routes | Not found. |
-| Auth/session/admin boundary | Not implemented here. |
-| Dashboard tests | Not found. |
+| Manifiesto (`display: standalone`, `start_url: /`) | `internal/dashboard/assets/manifest.webmanifest` (MIME `application/manifest+json`) |
+| Service worker, solo red (sin caché, para no servir assets obsoletos tras actualizar) | `internal/dashboard/assets/sw.js`, servido en la raíz |
+| Registro del SW y botón "Instalar aplicación" (`beforeinstallprompt`) | `internal/dashboard/assets/js/core/pwa.js` |
+| Iconos PNG 192/512 y maskable, generados en Go a partir del logo | `internal/dashboard/pwa_icons.go` (rutas `/icons/*.png`) |
 
-## What exists instead
+Una PWA instalada queda ligada a su origen exacto, por eso el puerto es fijo. Tampoco arranca procesos: el servidor debe estar activo.
 
-| User surface | Source owner |
-|---|---|
-| Interactive terminal UI | `internal/tui/` |
-| CLI commands | `internal/app/`, `internal/cli/` |
-| Engram memory browser command mention | `docs/engram.md` documents `engram tui`; implementation is external. |
-| OpenCode community plugin registration | `internal/components/opencodeplugin/` updates `~/.config/opencode/tui.json`. |
+## Ventana de aplicación y arranque desacoplado
 
-## HTMX/server-rendered flow boundary
+En `cmd/axiom/ui_launch.go`:
 
-No HTMX or server-rendered dashboard flow is present. If a future dashboard is added, document the actual request flow here instead of guessing. A minimal future shape should answer:
+- `--app`: abre Edge o Chrome con `--app=<url>`; sin ninguno de los dos, usa el navegador por defecto.
+- `--detach`: relanza `axiom ui --no-browser` como proceso hijo sin consola (`detach_windows.go`: `CREATE_NO_WINDOW`; `detach_other.go`: `Setsid`), registra en `<UserCacheDir>/axiom/ui.log`, espera a `/api/health` (hasta 10 s) y sale. Sin `axiom.yaml` en el directorio actual, usa el workspace activo del hub.
+- `scripts/install.ps1` crea el acceso directo `Axiom` del menú Inicio (`ui --detach --app`) y, con `-Autostart`, otro en la carpeta de inicio (`ui --detach --no-browser`).
 
-- [ ] Which package owns HTTP routing?
-- [ ] Which templates are server-rendered?
-- [ ] Which state is read-only vs mutable?
-- [ ] Which auth/session layer protects admin actions?
-- [ ] Which tests prove route and auth behavior?
+Guía de usuario: [usage.md](../usage.md#ui).
 
-## Dashboard invariants for future work
+## Dashboard invariants
 
-- **No unauthenticated admin actions**: dashboard writes must have an explicit auth/session boundary.
-- **No full API duplication**: link to the endpoint/schema source of truth when one exists.
-- **No direct local DB assumptions**: do not read `.engram/engram.db` from Axiom dashboard code unless the architecture explicitly chooses that boundary.
-- **No silent cloud coupling**: remote state must be isolated behind a transport/client interface.
-
-## Contributor checklist
-
-- [ ] Search the source tree before documenting dashboard behavior.
-- [ ] Mark absent functionality as absent instead of filling gaps with assumptions.
-- [ ] Keep terminal TUI docs separate from web dashboard docs.
+- **No unauthenticated admin actions** más allá del bucle local: el servidor solo escucha en `127.0.0.1`.
+- **No full API duplication**: enlaza al código del endpoint cuando exista.
+- **No direct local DB assumptions**: no leer `.engram/engram.db` desde el dashboard salvo decisión explícita de arquitectura.
+- **No silent cloud coupling**: el estado remoto va detrás de una interfaz de transporte/cliente.
+- **Assets sin recursos externos** ni emojis (lo vigilan los tests de `internal/dashboard`).
 
 ## Navigation
 

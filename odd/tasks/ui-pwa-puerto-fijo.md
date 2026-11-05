@@ -50,7 +50,7 @@ Que el dashboard de `axiom ui` se pueda instalar como aplicación (PWA) desde Ed
 - [x] **T3 · Ventana de aplicación y arranque desacoplado** — ruta: delegada.
   - `axiom ui --app`: abre Edge o Chrome con `--app=<url>`; si no hay ninguno, navegador por defecto.
   - `axiom ui --detach`: lanza el servidor en segundo plano sin consola, espera a `/api/health`, abre la ventana y sale.
-- [ ] **T4 · Instalador de Windows y documentación** — ruta: delegada.
+- [x] **T4 · Instalador de Windows y documentación** — ruta: delegada.
   - `install.ps1`: acceso directo en el menú Inicio "Axiom" → `axiom.exe ui --detach --app` (minimizado); opción `-Autostart` que lo copia a la carpeta de inicio con `--no-browser`.
   - Actualizar README, `docs/quickstart.md`, `docs/manual-de-inicio.md` (corrige la mención obsoleta a `4040`), `docs/usage.md`, `docs/codebase/dashboard.md`.
 
@@ -89,8 +89,21 @@ Que el dashboard de `axiom ui` se pueda instalar como aplicación (PWA) desde Ed
 - Nuevos en `cmd/axiom`: `ui_launch.go` (`resolveAppBrowser`, `openAppWindow`, `openUIWindow`, `detachedChildArgs`, `waitForAxiom`, `portIsFree`, `uiLogPath`, `startDetachedServer`, `runUIDetached`), `detach_windows.go` (`CREATE_NO_WINDOW | CREATE_NEW_PROCESS_GROUP`, `HideWindow`; se prefiere a `DETACHED_PROCESS` porque los descendientes heredan la consola oculta y ninguno abre una visible), `detach_other.go` (`Setsid`), `ui_launch_test.go`. `runUI` gana `--app` y `--detach`.
 - `--detach` comprueba antes el puerto con `net.Listen` (error inmediato si lo ocupa otra aplicación), lanza el hijo con `ui --no-browser --port --path`, registra en `<UserCacheDir>/axiom/ui.log` y espera `/api/health` hasta 10 s.
 - Verificación del escritor: `go test ./cmd/axiom/... -count=1` → ok; `go vet` (windows, `GOOS=linux`, `GOOS=darwin`) → limpio; `gofmt -l` → vacío. Comprobación del orquestador: `go test ./cmd/axiom/ -run 'ResolveAppBrowser|DetachedChildArgs|WaitForAxiom'` → 4 PASS.
-- **Pendiente**: el lanzamiento real del hijo y de la ventana no se puede ejecutar aquí (prohibido ejecutar `axiom.exe` recién compilado por el antivirus); queda para la prueba manual. `ui.log` se abre en modo *append* sin rotación: aceptable por ahora.
+- **Pendiente**: el lanzamiento real del hijo y de la ventana no se puede ejecutar aquí (prohibido ejecutar `axiom.exe` recién compilado por el antivirus); queda para la prueba manual. Commit: `b3ca5636`. `ui.log` se abre en modo *append* sin rotación: aceptable por ahora.
+
+### T4
+
+- `scripts/install.ps1`: `-Autostart` y `-NoShortcut`; `Test-Installation` devuelve la ruta del binario; `New-AxiomShortcuts` crea `Axiom.lnk` en el menú Inicio (`ui --detach --app`, minimizado) y, con `-Autostart`, en la carpeta de inicio (`ui --detach --no-browser`). Cualquier fallo de accesos directos solo avisa. `Show-NextSteps` explica anclar a la barra e instalar como app.
+- Test nuevo: `internal/update/install_script_test.go` `TestWindowsInstallScriptCreatesDashboardShortcuts`.
+- Docs: `docs/usage.md` (sección `ui` y "Usar `axiom ui` como aplicación de escritorio"), `docs/manual-de-inicio.md` (corrige `localhost:4040` → `127.0.0.1:47700`), `README.md`, `docs/quickstart.md`, `docs/codebase/dashboard.md` (reescrito: decía que no había dashboard). `GEMINI.md` sin menciones de puerto: sin cambios.
+- Verificación: parseo de `install.ps1` sin errores; revisión del orquestador de fugas de salida en funciones PowerShell (ninguna).
+
+## Verificación final (orquestador)
+
+- `go test ./internal/update/ ./internal/workspace/ ./internal/dashboard/... ./cmd/axiom/... -count=1` → ok en los cuatro paquetes.
+- `go vet ./...` → limpio.
+- **Prueba manual pendiente (no ejecutable aquí por el antivirus y el navegador integrado)**: instalar desde la rama, abrir el acceso directo con el servidor parado y activo, instalar como app en Edge y anclar a la barra.
 
 ## Siguiente paso
 
-T4.
+Prueba manual del usuario y PR (`scripts/axiom-worktree.ps1 pr ui-pwa-puerto-fijo`).

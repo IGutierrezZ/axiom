@@ -184,6 +184,40 @@ func TestWindowsInstallScriptBetaGoInstallPreservesGoProxyBypassEnv(t *testing.T
 	}
 }
 
+// TestWindowsInstallScriptCreatesDashboardShortcuts pins the shortcut contract
+// of the dashboard launcher: Start menu entry, opt-in Startup entry, opt-out
+// switch and a non-fatal failure path.
+func TestWindowsInstallScriptCreatesDashboardShortcuts(t *testing.T) {
+	content, err := os.ReadFile(filepath.Join("..", "..", "scripts", "install.ps1"))
+	if err != nil {
+		t.Fatalf("ReadFile install.ps1 error = %v", err)
+	}
+	script := string(content)
+	for _, want := range []string{
+		"[switch]$Autostart",
+		"[switch]$NoShortcut",
+		"New-Object -ComObject WScript.Shell",
+		`[Environment]::GetFolderPath("Programs")`,
+		`[Environment]::GetFolderPath("Startup")`,
+		`-Arguments "ui --detach --app"`,
+		`-Arguments "ui --detach --no-browser"`,
+		"-WindowStyle 7",
+		"if (-not $NoShortcut)",
+	} {
+		if !strings.Contains(script, want) {
+			t.Errorf("scripts/install.ps1 is missing %q in the shortcut flow", want)
+		}
+	}
+	start := strings.Index(script, "function New-AxiomShortcuts {")
+	end := strings.Index(script, "function Show-NextSteps")
+	if start == -1 || end == -1 || end < start {
+		t.Fatal("could not locate New-AxiomShortcuts function")
+	}
+	if strings.Contains(script[start:end], "Stop-WithError") {
+		t.Error("shortcut creation must warn, never abort the installation")
+	}
+}
+
 // TestInstallScriptsGoInstallPackageMatchesModuleMajor guards the install
 // scripts against the regression upstream shipped in v3.0.1 and fixed in
 // 9bf454d4: both scripts build the `go install` package by interpolation, so

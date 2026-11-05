@@ -20,6 +20,21 @@
 .EXAMPLE
     # The legacy binary method fails closed with source-install guidance.
     .\install.ps1 -Method binary
+
+.EXAMPLE
+    # Also start the Axiom dashboard server when you sign in to Windows.
+    .\install.ps1 -Autostart
+
+.EXAMPLE
+    # Install without creating any shortcut.
+    .\install.ps1 -NoShortcut
+
+.NOTES
+    After a verified install on Windows the script creates an "Axiom" shortcut in
+    the Start menu that runs "axiom ui --detach --app" (starts the local dashboard
+    server in the background and opens it in an application window).
+    -Autostart also adds a shortcut to the Startup folder ("axiom ui --detach
+    --no-browser"). -NoShortcut skips both. Shortcut failures only warn.
 #>
 
 $ErrorActionPreference = "Stop"
@@ -163,10 +178,69 @@ function Test-Installation {
     $versionOutput = & $binaryPath --version 2>&1
     Remove-Item Env:GENTLE_AI_NO_SELF_UPDATE -ErrorAction SilentlyContinue
     Write-Success "$BINARY_NAME installed at $binaryPath`: $versionOutput"
+    return $binaryPath
+}
+
+function New-AxiomShortcut {
+    param(
+        [string]$Path,
+        [string]$Target,
+        [string]$Arguments,
+        [string]$Description,
+        [int]$WindowStyle = 1
+    )
+
+    $dir = Split-Path -Parent $Path
+    if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
+    $shell = New-Object -ComObject WScript.Shell
+    $link = $shell.CreateShortcut($Path)
+    $link.TargetPath = $Target
+    $link.Arguments = $Arguments
+    $link.WorkingDirectory = $HOME
+    $link.WindowStyle = $WindowStyle
+    $link.Description = $Description
+    $link.IconLocation = "$Target,0"
+    $link.Save()
+}
+
+function New-AxiomShortcuts {
+    param(
+        [string]$BinaryPath,
+        [bool]$Autostart
+    )
+
+    Write-Step "Creating shortcuts"
+    # Shortcuts are optional: any failure here warns and lets the install finish.
+    if ($env:OS -ne "Windows_NT") {
+        Write-Warn "Shortcuts are only created on Windows. Skipping."
+        return $false
+    }
+    if (-not $BinaryPath) {
+        Write-Warn "Axiom binary not verified; skipping shortcuts."
+        return $false
+    }
+    try {
+        $startMenu = Join-Path ([Environment]::GetFolderPath("Programs")) "Axiom.lnk"
+        New-AxiomShortcut -Path $startMenu -Target $BinaryPath -Arguments "ui --detach --app" -Description "Abre el panel local de Axiom" -WindowStyle 7
+        Write-Success "Start menu shortcut: $startMenu"
+        if ($Autostart) {
+            $startup = Join-Path ([Environment]::GetFolderPath("Startup")) "Axiom.lnk"
+            New-AxiomShortcut -Path $startup -Target $BinaryPath -Arguments "ui --detach --no-browser" -Description "Inicia el servidor del panel local de Axiom" -WindowStyle 7
+            Write-Success "Startup shortcut: $startup"
+        }
+        return $true
+    } catch {
+        Write-Warn ("Could not create shortcuts: {0}" -f $_.Exception.Message)
+        return $false
+    }
 }
 
 function Show-NextSteps {
-    param([string]$Channel = "stable")
+    param(
+        [string]$Channel = "stable",
+        [bool]$Shortcuts = $false,
+        [bool]$Autostart = $false
+    )
 
     Write-Host ""
     Write-Host "Installation complete!" -ForegroundColor Green
@@ -175,6 +249,14 @@ function Show-NextSteps {
         Write-Host ('  Run ''$env:AXIOM_CHANNEL = "beta"; {0} install'' to keep using the beta channel' -f $BINARY_NAME) -ForegroundColor Cyan
     } else {
         Write-Host "  Run '$BINARY_NAME' to start the TUI installer" -ForegroundColor Cyan
+    }
+    if ($Shortcuts) {
+        Write-Host "  Open the 'Axiom' shortcut in the Start menu to launch the dashboard" -ForegroundColor Cyan
+        Write-Host "  (right-click it to pin it to the taskbar). In Edge or Chrome you can also" -ForegroundColor Cyan
+        Write-Host "  install it as an app from the browser menu." -ForegroundColor Cyan
+        if ($Autostart) {
+            Write-Host "  The dashboard server will also start when you sign in to Windows." -ForegroundColor Cyan
+        }
     }
     Write-Host "Docs: https://github.com/$GITHUB_OWNER/$GITHUB_REPO" -ForegroundColor DarkGray
     Write-Host ""
@@ -191,7 +273,11 @@ function Main {
 
         [string]$InstallDir = "",
 
-        [switch]$Insecure
+        [switch]$Insecure,
+
+        [switch]$Autostart,
+
+        [switch]$NoShortcut
     )
 
     Show-Banner
@@ -209,8 +295,12 @@ function Main {
     if ($installMethod -eq "go") {
         Install-ViaGo -Channel $Channel
     }
-    Test-Installation
-    Show-NextSteps -Channel $Channel
+    $binaryPath = Test-Installation
+    $shortcuts = $false
+    if (-not $NoShortcut) {
+        $shortcuts = New-AxiomShortcuts -BinaryPath $binaryPath -Autostart ([bool]$Autostart)
+    }
+    Show-NextSteps -Channel $Channel -Shortcuts $shortcuts -Autostart ($shortcuts -and [bool]$Autostart)
 }
 
 Main @args

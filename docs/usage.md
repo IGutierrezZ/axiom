@@ -300,6 +300,27 @@ axiom --version
 axiom -v
 ```
 
+### ui
+
+Inicia el panel web local en `http://127.0.0.1:47700` (puerto fijo). Si el directorio actual no tiene `axiom.yaml`, usa el workspace activo del hub.
+
+```bash
+axiom ui                 # abre el panel en el navegador por defecto
+axiom ui --app           # abre una ventana de aplicación de Edge o Chrome
+axiom ui --detach --app  # servidor en segundo plano, sin consola, y ventana de aplicación
+axiom ui --port 47800    # otro puerto (la PWA instalada queda ligada al puerto original)
+axiom ui --no-browser    # solo el servidor, sin abrir ventana
+```
+
+Es idempotente: si ya hay un Axiom escuchando en el puerto, solo abre la ventana. Si lo ocupa otra aplicación, falla con un error que sugiere `--port`.
+
+#### Usar `axiom ui` como aplicación de escritorio
+
+1. **Acceso directo del instalador.** `scripts/install.ps1` crea `Axiom` en el menú Inicio (ejecuta `axiom ui --detach --app`, minimizado). Clic derecho, **Anclar a la barra de tareas**. Con `-NoShortcut` no se crea.
+2. **Arranque con Windows.** `.\install.ps1 -Autostart` añade además un acceso directo en la carpeta de inicio (`axiom ui --detach --no-browser`): el servidor ya está activo al iniciar sesión.
+3. **Instalar como PWA.** Con el panel abierto en Edge o Chrome, usa **Instalar aplicación** (botón de la cabecera del panel o menú del navegador). El icono instalado también se ancla a la barra de tareas. Una PWA no arranca procesos: el servidor debe estar activo (acceso directo o `-Autostart`).
+4. **Registro y parada.** `--detach` escribe el registro en `<UserCacheDir>\axiom\ui.log` (en Windows, `%LOCALAPPDATA%\axiom\ui.log`). No hay comando de apagado, por seguridad: el servidor vive hasta cerrar sesión; para pararlo antes, termina el proceso `axiom.exe` desde el Administrador de tareas.
+
 ---
 
 ## CLI Flags (install)
