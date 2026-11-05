@@ -72,6 +72,64 @@ const compactContentMismatchedRecoveryAuthorizationClass = "content_mismatched_r
 
 const compactHistoricalSnapshotIdentityClass = "retired_compact_snapshot_identity"
 
+// RejectedValidatorDispositionClass names a canonical rejected targeted-validator
+// verdict. It is valid authority, not corruption: this disposition releases only
+// the active claim, retaining the verdict and its consumed correction in the
+// existing audit residue. It never produces approval or starts a review.
+const RejectedValidatorDispositionClass = "rejected_targeted_validator_terminal"
+
+// isSuccessorOnlyDispositionSelector reports a selector that names one
+// standalone authority entry: it carries no predecessor side at all.
+func isSuccessorOnlyDispositionSelector(selector AuthorityDispositionSelector) bool {
+	return selector.PredecessorLineageID == "" && selector.PredecessorExpectedRevision == ""
+}
+
+// rejectedValidatorDispositionPlanForSelector derives the disposition plan for
+// one isolated terminal whose correction was consumed by a canonical rejected
+// targeted-validator verdict. Every precondition is re-derived from the loaded
+// records, so a stale, forged or unrelated selector fails closed.
+func rejectedValidatorDispositionPlanForSelector(report CompactRecoveryInspectionReport, records map[string]CompactRecord, binding, actor, reason string, selector AuthorityDispositionSelector) (AuthorityDispositionPlan, error) {
+	lineage := selector.SuccessorLineageID
+	record, found := records[lineage]
+	if !found || !report.Complete || len(report.EntryDiagnostics) != 0 {
+		return AuthorityDispositionPlan{}, fmt.Errorf("%w: rejected-validator disposition of %q requires complete canonical authority", errAuthorityDispositionPlanNotDerivable, lineage)
+	}
+	if record.Revision != selector.SuccessorExpectedRevision {
+		return AuthorityDispositionPlan{}, fmt.Errorf("%w: exact rejected-validator selector no longer matches %q", ErrConcurrentUpdate, lineage)
+	}
+	state := record.State
+	if state.State != StateEscalated || !state.CorrectionAttemptConsumed() || state.Recovery != nil {
+		return AuthorityDispositionPlan{}, fmt.Errorf("%w: selected authority %q is not an isolated consumed rejected-validator terminal", errAuthorityDispositionPlanNotDerivable, lineage)
+	}
+	for _, edge := range report.Edges {
+		if edge.PredecessorLineageID == lineage || edge.SuccessorLineageID == lineage {
+			return AuthorityDispositionPlan{}, fmt.Errorf("%w: rejected-validator authority %q has a retained recovery dependency", errAuthorityDispositionPlanNotDerivable, lineage)
+		}
+	}
+	request, err := RebuildAdmittedTargetedValidationRequest(state, state.CapturePhaseRevision)
+	if err != nil {
+		return AuthorityDispositionPlan{}, fmt.Errorf("%w: rejected-validator request of %q is not canonical: %v", errAuthorityDispositionPlanNotDerivable, lineage, err)
+	}
+	value, admitted := state.AdmittedRoleResult(CompactRoleTargetedValidator, state.CapturePhaseRevision, request.CorrectionTargetIdentity, request.RequestHash)
+	validator, err := decodeCompactAdmittedTargetedValidatorValue(value)
+	if !admitted || err != nil || validator.Outcome != "failed" {
+		return AuthorityDispositionPlan{}, fmt.Errorf("%w: selected authority %q has no canonical rejected-validator verdict", errAuthorityDispositionPlanNotDerivable, lineage)
+	}
+	inventory, err := authorityInventoryRevision(records, report.historical)
+	if err != nil {
+		return AuthorityDispositionPlan{}, err
+	}
+	plan := AuthorityDispositionPlan{
+		Schema: AuthorityDispositionPlanSchema, RepositoryBinding: binding,
+		AuthorityInventoryRevision: inventory, AnomalyClass: RejectedValidatorDispositionClass,
+		Selector: &selector, SeedSet: []string{lineage}, Closure: []string{lineage},
+		ExpectedRevisions: map[string]string{lineage: record.Revision},
+		Actor:             strings.TrimSpace(actor), Reason: strings.TrimSpace(reason),
+	}
+	plan.PlanDigest, err = authorityDispositionPlanDigest(plan)
+	return plan, err
+}
+
 // errAuthorityDispositionPlanNotDerivable is returned, always wrapped with a
 // specific cause, whenever derivation refuses to produce a plan: an
 // unclassifiable shape, a mixed/ambiguous set of eligible edges, or a
@@ -130,6 +188,12 @@ func historicalAuthorityDispositionPlanRecord(report CompactRecoveryInspectionRe
 func deriveAuthorityDispositionPlan(report CompactRecoveryInspectionReport, records map[string]CompactRecord, binding, actor, reason string, requested ...AuthorityDispositionSelector) (AuthorityDispositionPlan, error) {
 	if len(requested) > 1 {
 		return AuthorityDispositionPlan{}, fmt.Errorf("%w: multiple exact content-mismatch selectors supplied", errAuthorityDispositionPlanNotDerivable)
+	}
+	// A successor-only selector names one standalone entry, never a
+	// content-mismatch edge. A valid rejected terminal needs this explicit
+	// selector: a selectorless derivation never releases its claim.
+	if len(requested) == 1 && isSuccessorOnlyDispositionSelector(requested[0]) {
+		return rejectedValidatorDispositionPlanForSelector(report, records, binding, actor, reason, requested[0])
 	}
 	selectors, err := authorityDispositionSelectors(report, records)
 	if err != nil {
@@ -393,7 +457,9 @@ func DeriveAuthorityDispositionPlanAtRepo(ctx context.Context, repo, actor, reas
 	return deriveAuthorityDispositionPlanAtRepo(ctx, repo, actor, reason, requested...)
 }
 
-// ListAuthorityDispositionSelectorsAtRepo exposes exact choices for multi-edge content mismatch.
+// ListAuthorityDispositionSelectorsAtRepo exposes exact choices: one edge
+// selector per content-mismatched recovery edge, and one successor-only
+// selector per isolated canonical rejected-validator terminal.
 func ListAuthorityDispositionSelectorsAtRepo(ctx context.Context, repo string) ([]AuthorityDispositionSelector, error) {
 	root, err := (SnapshotBuilder{Repo: repo}).ResolveRepositoryRoot(ctx)
 	if err != nil {
@@ -403,5 +469,22 @@ func ListAuthorityDispositionSelectorsAtRepo(ctx context.Context, repo string) (
 	if err != nil {
 		return nil, err
 	}
-	return authorityDispositionSelectors(report, records)
+	selectors, err := authorityDispositionSelectors(report, records)
+	if err != nil {
+		return nil, err
+	}
+	_, binding, err := authorityRepairRoot(root)
+	if err != nil {
+		return nil, err
+	}
+	for lineage, record := range records {
+		selector := AuthorityDispositionSelector{SuccessorLineageID: lineage, SuccessorExpectedRevision: record.Revision}
+		if _, err := rejectedValidatorDispositionPlanForSelector(report, records, binding, "", "", selector); err == nil {
+			selectors = append(selectors, selector)
+		}
+	}
+	slices.SortFunc(selectors, func(left, right AuthorityDispositionSelector) int {
+		return cmp.Or(cmp.Compare(left.PredecessorLineageID, right.PredecessorLineageID), cmp.Compare(left.SuccessorLineageID, right.SuccessorLineageID))
+	})
+	return selectors, nil
 }
