@@ -145,8 +145,8 @@ func TestStatusRecoverTransitionExecutesAccountingOnlyRecoveryWithoutSelectors(t
 
 // TestStatusRecoverCarriesEvidenceFromALegacyPolicyLineage proves the
 // upgrade path end to end: a predecessor frozen with the legacy default policy
-// text recovers into a successor built with the current default policy, and
-// the recovered evidence is still carried forward.
+// text recovers into a successor que conserva esa política congelada (forma
+// congelada, upstream #5146) y la evidencia recuperada se sigue arrastrando.
 func TestStatusRecoverCarriesEvidenceFromALegacyPolicyLineage(t *testing.T) {
 	reviewEnabledHome(t)
 	repo := initReviewCLIRepo(t)
@@ -158,8 +158,8 @@ func TestStatusRecoverCarriesEvidenceFromALegacyPolicyLineage(t *testing.T) {
 	if want := facadePayloadHash([]byte(reviewtransaction.LegacyFacadeReviewPolicy)); predecessor.PolicyHash != want {
 		t.Fatalf("predecessor policy hash = %q, want the legacy default %q", predecessor.PolicyHash, want)
 	}
-	if want := facadePayloadHash([]byte(reviewtransaction.FacadeReviewPolicy)); successor.PolicyHash != want {
-		t.Fatalf("successor policy hash = %q, want the current default %q", successor.PolicyHash, want)
+	if successor.PolicyHash != predecessor.PolicyHash {
+		t.Fatalf("successor policy hash = %q, want the frozen predecessor policy %q", successor.PolicyHash, predecessor.PolicyHash)
 	}
 }
 
@@ -168,6 +168,15 @@ func TestStatusRecoverCarriesEvidenceFromALegacyPolicyLineage(t *testing.T) {
 // predecessor and successor states. startExtra is appended to the
 // predecessor's START arguments.
 func runAccountingOnlyRecoveryThroughStatus(t *testing.T, repo string, startExtra []string) (reviewtransaction.CompactState, reviewtransaction.CompactState) {
+	t.Helper()
+	started, predecessor, store := setupAccountingOnlyEscalation(t, repo, startExtra)
+	return recoverAccountingOnlyThroughStatus(t, repo, started, predecessor, store)
+}
+
+// setupAccountingOnlyEscalation deja un predecesor escalado cuya corrección
+// solo desbordó el presupuesto de líneas (escalada accounting-only) y devuelve
+// su START, su estado y su almacén. startExtra se añade al START.
+func setupAccountingOnlyEscalation(t *testing.T, repo string, startExtra []string) (ReviewFacadeStartResult, reviewtransaction.CompactRecord, reviewtransaction.CompactStore) {
 	t.Helper()
 	writeReviewStartCandidate(t, repo, "candidate.go", "package candidate\n\nfunc value() int { return 1 }\n", 0o644)
 	startedBytes, err := runLegacyFacadeStartForTestBytes(t, append([]string{
@@ -267,7 +276,14 @@ func runAccountingOnlyRecoveryThroughStatus(t *testing.T, repo string, startExtr
 	}); err != nil {
 		t.Fatalf("native accounting-only status: %v", err)
 	}
+	return started, predecessor, store
+}
 
+// recoverAccountingOnlyThroughStatus recupera ese predecesor por STATUS
+// negociado y devuelve el predecesor y el sucesor.
+func recoverAccountingOnlyThroughStatus(t *testing.T, repo string, started ReviewFacadeStartResult, predecessorRecord reviewtransaction.CompactRecord, store reviewtransaction.CompactStore) (reviewtransaction.CompactState, reviewtransaction.CompactState) {
+	t.Helper()
+	predecessor := predecessorRecord
 	probe := selectorTransitionStatus(t, repo, "--lineage", started.LineageID)
 	if probe.Action != reviewtransaction.TargetStatusActionRecover || probe.ActionDisposition != reviewtransaction.RecoveryEscalated {
 		t.Fatalf("accounting-only status = %#v", probe)

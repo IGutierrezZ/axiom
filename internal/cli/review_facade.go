@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"slices"
 	"strings"
 	"time"
 
@@ -1754,8 +1755,19 @@ func RunReviewRecover(args []string, stdout io.Writer) error {
 		return err
 	}
 	risk, changedLines := assessment.Level, assessment.ChangedLines
+	// Se prepara la forma congelada de la revisión para una posible reutilización
+	// de evidencia, no su elegibilidad: el núcleo sigue probando cada predicado
+	// accounting-only. CURRENT lleva el candidato corregido como fix-diff; este
+	// sucesor es current-changes, así que se comparan árboles candidatos y no
+	// identidades ligadas al tipo (upstream #5146).
+	prior := predecessorRecord.State
+	prepareFrozenShape := reviewtransaction.RecoveryDisposition(*disposition) == reviewtransaction.RecoveryEscalated &&
+		prior.State == reviewtransaction.StateEscalated && snapshot.CandidateTree == prior.CurrentSnapshot.CandidateTree
 	lenses, err := facadeSelectedLenses(assessment, *focus)
 	if err != nil {
+		if prepareFrozenShape && reviewFlagWasProvided(flags, "focus") {
+			return reviewFrozenShapeConflictRefusal(flags, "--focus", *cwd, *predecessor, *expected, *successor, *disposition)
+		}
 		return err
 	}
 	policy, err := facadePolicyBytes(*policySource)
@@ -1763,9 +1775,29 @@ func RunReviewRecover(args []string, stdout io.Writer) error {
 		return err
 	}
 	policyContent := string(policy)
+	policyHash, frozenPolicy := facadePayloadHash(policy), &policyContent
+	if prepareFrozenShape {
+		if reviewFlagWasProvided(flags, "policy") && (policyHash != prior.PolicyHash ||
+			prior.FrozenPolicyContent != nil && policyContent != *prior.FrozenPolicyContent) {
+			return reviewFrozenShapeConflictRefusal(flags, "--policy", *cwd, *predecessor, *expected, *successor, *disposition)
+		}
+		if reviewFlagWasProvided(flags, "focus") && !slices.Equal(lenses, prior.SelectedLenses) {
+			return reviewFrozenShapeConflictRefusal(flags, "--focus", *cwd, *predecessor, *expected, *successor, *disposition)
+		}
+		frozenFocus := "reliability"
+		if len(prior.SelectedLenses) == 1 {
+			frozenFocus = strings.TrimPrefix(prior.SelectedLenses[0], "review-")
+		}
+		liveLenses, lensErr := facadeSelectedLenses(assessment, frozenFocus)
+		if lensErr != nil || risk != prior.RiskLevel || !slices.Equal(liveLenses, prior.SelectedLenses) {
+			return errors.New("frozen recovery review shape is incompatible with current repository risk; evidence reuse cannot preserve that shape, and changing --focus or --policy cannot make it compatible")
+		}
+		policyHash, frozenPolicy = prior.PolicyHash, prior.FrozenPolicyContent
+		lenses = append([]string{}, prior.SelectedLenses...)
+	}
 	state, err := reviewtransaction.NewCompactState(reviewtransaction.Start{
-		LineageID: *successor, Mode: reviewtransaction.ModeOrdinaryBounded, Generation: predecessorRecord.State.Generation + 1,
-		Snapshot: snapshot, PolicyHash: facadePayloadHash(policy), PolicyContent: &policyContent,
+		LineageID: *successor, Mode: reviewtransaction.ModeOrdinaryBounded, Generation: prior.Generation + 1,
+		Snapshot: snapshot, PolicyHash: policyHash, PolicyContent: frozenPolicy,
 		RiskLevel: risk, SelectedLenses: lenses, OriginalChangedLines: &changedLines,
 	})
 	if err != nil {
@@ -1825,6 +1857,22 @@ func RunReviewRecover(args []string, stdout io.Writer) error {
 	}
 	return encodeReviewJSON(stdout, ReviewRecoverResult{Operation: "review/recover", LineageID: record.State.LineageID, State: record.State.State,
 		StoreRevision: record.Revision, Projection: facadeProjection(snapshot.Projection), TargetIdentity: snapshot.Identity, Recovery: *record.State.Recovery})
+}
+
+// reviewFrozenShapeConflictRefusal conserva el target exacto de la
+// recuperación y descarta las sobrescrituras de la forma de revisión y la tupla
+// de autorización explícita. La recuperación nativa deriva esa tupla; el núcleo
+// sigue decidiendo si la reutilización es legal.
+func reviewFrozenShapeConflictRefusal(flags *flag.FlagSet, conflict, cwd, predecessor, expected, successor, disposition string) error {
+	explicitCwd := ""
+	if reviewFlagWasProvided(flags, "cwd") {
+		explicitCwd = strings.TrimSpace(cwd)
+	}
+	command := []string{reviewRecoverCommand(explicitCwd, predecessor, expected, successor, disposition)}
+	for _, selector := range reviewRecoverSelectorTokens(flags) {
+		command = append(command, reviewTransitionShellWord(selector))
+	}
+	return fmt.Errorf("%s conflicts with the frozen recovery review shape; omit --focus and --policy and use the bound axiom review recover command in the same repository context; re-run: %s", conflict, strings.Join(command, " "))
 }
 
 // reviewUnchangedRecoveryRefusal explains the unchanged-target escalated
