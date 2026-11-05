@@ -1,6 +1,7 @@
 package permissions
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 
@@ -203,6 +204,8 @@ func mergeJSONFile(path string, overlay []byte, defaults bool, union [][]string)
 
 	merge := filemerge.MergeJSONObjectsForPath
 	if defaults {
+		// Solo OpenCode/Kilo Code: el overlay no relaja el valor por defecto del usuario.
+		overlay = withoutRulesLooserThanUserDefault(baseJSON, overlay)
 		merge = filemerge.MergeJSONDefaultsForPath
 	}
 	merged, err := merge(path, baseJSON, overlay)
@@ -223,4 +226,45 @@ var osReadFile = func(path string) ([]byte, error) {
 	}
 
 	return content, nil
+}
+
+// withoutRulesLooserThanUserDefault descarta del overlay las reglas de
+// herramienta menos estrictas que el permission "*" raíz del usuario (deny es
+// más estricto que ask, y ask que allow). Fusionada en un mapa de herramienta
+// que el usuario acotó, una regla más laxa sigue a la raíz y, como última
+// coincidencia, relajaría su valor por defecto. Sin "*" raíz, o con allow, el
+// overlay queda intacto.
+func withoutRulesLooserThanUserDefault(base, overlay []byte) []byte {
+	strictness := map[string]int{"allow": 0, "ask": 1, "deny": 2}
+	root, err := filemerge.UnmarshalJSONObject(base)
+	if err != nil {
+		return overlay
+	}
+	permission, _ := root["permission"].(map[string]any)
+	rootAction, _ := permission["*"].(string)
+	if patterns, ok := permission["*"].(map[string]any); ok {
+		rootAction, _ = patterns["*"].(string)
+	}
+	floor, ok := strictness[rootAction]
+	if !ok || floor == 0 {
+		return overlay
+	}
+	defaults, err := filemerge.UnmarshalJSONObject(overlay)
+	if err != nil {
+		return overlay
+	}
+	rules, _ := defaults["permission"].(map[string]any)
+	for _, value := range rules {
+		patterns, _ := value.(map[string]any)
+		for pattern, action := range patterns {
+			if name, _ := action.(string); strictness[name] < floor {
+				delete(patterns, pattern)
+			}
+		}
+	}
+	encoded, err := json.Marshal(defaults)
+	if err != nil {
+		return overlay
+	}
+	return encoded
 }
