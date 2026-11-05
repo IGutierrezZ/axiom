@@ -254,7 +254,7 @@ func captureIssue3065FailedValidationFor(r *journeyRun, lineage string, selector
 			State     string `json:"state"`
 		}
 		if json.Unmarshal([]byte(line), &frame) == nil && frame.Operation == "result" && json.Unmarshal([]byte(frame.Output), &closure) == nil &&
-			closure.Schema == "gentle-ai.review-last-event-closure/v1" && closure.Operation == "review/capture-validation" && closure.State == "escalated" {
+			(closure.Schema == "gentle-ai.review-last-event-closure/v1" || closure.Schema == "gentle-ai.review-last-event-closure/v2") && closure.Operation == "review/capture-validation" && closure.State == "escalated" {
 			return nil
 		}
 	}

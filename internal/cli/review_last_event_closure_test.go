@@ -912,7 +912,7 @@ func TestTargetedValidatorCaptureEscalatesRejectedCorrectionWithoutFinalize(t *t
 	if err := json.Compact(&canonicalEvidence, terminal.Evidence); err != nil {
 		t.Fatal(err)
 	}
-	if replay.Schema != reviewLastEventClosureSchema || replay.Operation != terminal.Operation || replay.State != terminal.State || replay.Action != terminal.Action || !bytes.Equal(replayEvidence, canonicalEvidence.Bytes()) {
+	if replay.Schema != reviewLastEventClosureSchemaV2 || replay.Operation != terminal.Operation || replay.State != terminal.State || replay.Action != terminal.Action || !bytes.Equal(replayEvidence, canonicalEvidence.Bytes()) {
 		t.Fatalf("replayed rejected validator closure = %#v, want %#v", replay, terminal)
 	}
 	afterReplay, err := store.Load()

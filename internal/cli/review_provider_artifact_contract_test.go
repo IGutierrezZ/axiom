@@ -537,6 +537,8 @@ func TestReviewProviderArtifactSchemasAreStrictAndBound(t *testing.T) {
 		{name: "repair.schema.json", id: ReviewIntegrationRepairSchemaIDV2},
 		{name: "gate-result.schema.json", id: "https://gentle-ai.dev/contracts/review-integration/v2/schemas/gate-result.schema.json"},
 		{name: "last-event-closure.schema.json", id: "https://gentle-ai.dev/contracts/review-integration/v2/schemas/last-event-closure.schema.json"},
+		{name: "last-event-closure-v2.schema.json", id: "https://gentle-ai.dev/contracts/review-integration/v2/schemas/last-event-closure-v2.schema.json"},
+		{name: "review-acknowledged.schema.json", id: "https://gentle-ai.dev/contracts/review-integration/v2/schemas/review-acknowledged.schema.json"},
 		{name: "opencode-provider-role.schema.json", id: "https://gentle-ai.dev/contracts/review-integration/v2/schemas/opencode-provider-role.schema.json"},
 	}
 	v2Documents := make(map[string]map[string]any, len(v2Schemas))

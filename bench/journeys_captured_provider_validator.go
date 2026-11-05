@@ -248,7 +248,7 @@ func capturedProviderSlotReported(stdout string, passed bool) bool {
 			} `json:"acknowledgement"`
 		}
 		if json.Unmarshal([]byte(frame.Output), &closure) == nil &&
-			closure.Schema == "gentle-ai.review-last-event-closure/v1" && closure.Operation == "review/capture-validation" &&
+			(closure.Schema == "gentle-ai.review-last-event-closure/v1" || closure.Schema == "gentle-ai.review-last-event-closure/v2") && closure.Operation == "review/capture-validation" &&
 			(closure.State == "escalated" && !passed || closure.State == "approved" && passed &&
 				closure.Acknowledgement.Operation == "review.acknowledge-approved") {
 			return true
