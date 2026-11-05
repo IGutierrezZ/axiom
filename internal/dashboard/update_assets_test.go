@@ -101,3 +101,23 @@ func TestUpdateJobUIReloadsWhenTheNewVersionAnswers(t *testing.T) {
 		}
 	}
 }
+
+// Tras recargar, la UI recupera el estado del trabajo y muestra el resultado de la
+// sincronización posterior a la actualización.
+func TestUpdateJobUIShowsThePostUpdateSyncResult(t *testing.T) {
+	src := readAsset(t, "js/update.js")
+	for _, marker := range []string{
+		"function syncSummary(sync)",
+		"!sync.executed",
+		"Sincronización del workspace completada.",
+		"La sincronización del workspace falló",
+		"Ver el detalle de la sincronización",
+		"escapeHtml(lines.join(",
+		"resumeUpdate()",
+		"syncSummary(job.sync)",
+	} {
+		if !strings.Contains(src, marker) {
+			t.Errorf("js/update.js no contiene %q", marker)
+		}
+	}
+}

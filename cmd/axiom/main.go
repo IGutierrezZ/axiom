@@ -1241,6 +1241,13 @@ func runUI(args []string) {
 	svc := dashboard.NewServiceWithHub(baseDir, hubMgr)
 	server := dashboard.NewServer(svc)
 
+	// Tras actualizarse desde el dashboard, este proceso (ya con el binario nuevo)
+	// sincroniza el workspace abierto; el estado queda consultable desde el primer
+	// instante en GET /api/system/update/status.
+	if opts.postUpdateSync {
+		svc.StartPostUpdateSync()
+	}
+
 	actualPort, err := startDashboardServer(server, opts)
 	if err != nil {
 		fmt.Printf("[ERROR] No se pudo iniciar el servidor web: %v\n", err)

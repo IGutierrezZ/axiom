@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"path/filepath"
 	"sync"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/app"
@@ -247,4 +248,68 @@ func (s *Server) handleSystemUpdateStatus(w http.ResponseWriter, r *http.Request
 		return
 	}
 	s.respondJSON(w, http.StatusOK, s.service.UpdateStatus())
+}
+
+// manualSyncHint es el comando manual cuando la sincronización posterior falla.
+const manualSyncHint = "axiom sync --scope workspace"
+
+// StartPostUpdateSync lo llama el proceso relanzado tras una actualización
+// (`axiom ui --post-update-sync`): sincroniza el workspace abierto con los assets del
+// binario NUEVO, que es lo que el proceso viejo no podía hacer (ResolveSyncSkip).
+//
+// Deja el estado en `syncing` de forma síncrona (la UI que recarga lo ve ya) y
+// ejecuta la sincronización en segundo plano. Como el servidor ya atiende peticiones
+// mientras sincroniza, se cuida la única interferencia posible: RunSync cambia de
+// directorio (os.Chdir), pero aquí la raíz es la misma carpeta en la que runUI ya
+// dejó el proceso, así que el cambio no altera el directorio de trabajo de otras
+// acciones. Un POST /api/system/update durante la sincronización devuelve este mismo
+// trabajo en lugar de lanzar otro. Si ya hay un trabajo en curso no hace nada.
+func (s *Service) StartPostUpdateSync() {
+	j := &s.update
+	j.mu.Lock()
+	if j.running {
+		j.mu.Unlock()
+		return
+	}
+	j.running = true
+	j.done = make(chan struct{})
+	j.status = UpdateJobStatus{Phase: updatePhaseSyncing, Message: "Sincronizando el workspace con la versión nueva de Axiom…"}
+	j.mu.Unlock()
+
+	go s.runPostUpdateSync()
+}
+
+func (s *Service) runPostUpdateSync() {
+	j := &s.update
+	defer func() {
+		if r := recover(); r != nil {
+			j.finish(updatePhaseFailed, fmt.Sprintf("La sincronización se interrumpió: %v", r), manualSyncHint, nil)
+		}
+	}()
+
+	version := s.versions.current()
+	// Sin axiom.yaml no hay workspace de Axiom que sincronizar: el ámbito workspace
+	// escribe en la carpeta, y no se hace en un directorio cualquiera.
+	if !fileExists(filepath.Join(s.getRootPath(), "axiom.yaml")) {
+		j.finish(updatePhaseDone, fmt.Sprintf("Axiom se ha actualizado a %s. La carpeta abierta no es un workspace de Axiom: no hay nada que sincronizar.", version), "",
+			&UpdateSyncSummary{SkippedReason: "no-workspace"})
+		return
+	}
+
+	resp, err := s.RunSync("workspace")
+	if err != nil || resp == nil {
+		msg := "La sincronización no produjo resultado."
+		if err != nil {
+			msg = err.Error()
+		}
+		j.finish(updatePhaseFailed, "Axiom se ha actualizado, pero la sincronización del workspace falló: "+msg, manualSyncHint,
+			&UpdateSyncSummary{Executed: true, Error: msg})
+		return
+	}
+	sync := &UpdateSyncSummary{Executed: true, Success: resp.Success, Output: resp.Output, Error: resp.Error}
+	if !resp.Success {
+		j.finish(updatePhaseFailed, "Axiom se ha actualizado, pero la sincronización del workspace falló: "+resp.Error, manualSyncHint, sync)
+		return
+	}
+	j.finish(updatePhaseDone, fmt.Sprintf("Axiom se ha actualizado a %s y el workspace está sincronizado.", version), "", sync)
 }

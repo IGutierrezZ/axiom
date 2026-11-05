@@ -61,12 +61,17 @@ function rememberDismissed(job) {
   }
 }
 
+// syncSummary resume la sincronización del workspace que acompaña a la actualización;
+// la salida del comando va plegada. Si no se ejecutó (omitida) no se dice nada.
 function syncSummary(sync) {
-  if (!sync) return '';
-  if (!sync.executed) return '';
-  if (sync.success) return '<p>Sincronización del workspace completada.</p>';
+  if (!sync || !sync.executed) return '';
+  const lines = Array.isArray(sync.output) ? sync.output.filter(Boolean) : [];
+  const detail = lines.length
+    ? `<details><summary>Ver el detalle de la sincronización</summary><pre class="mono">${escapeHtml(lines.join('\n'))}</pre></details>`
+    : '';
+  if (sync.success) return `<p>Sincronización del workspace completada.</p>${detail}`;
   const reason = sync.error ? `: ${escapeHtml(sync.error)}` : '';
-  return `<p>La sincronización del workspace falló${reason}</p>`;
+  return `<p>La sincronización del workspace falló${reason}</p>${detail}`;
 }
 
 function manualHint(job) {
@@ -87,7 +92,7 @@ function renderJob(banner, job) {
   banner.setAttribute('role', failed ? 'alert' : 'status');
   const copy = failed && job.manual_hint ? button({ label: 'Copiar orden', iconName: 'copy', size: 'sm', attrs: `data-copy="${escapeHtml(job.manual_hint)}"` }) : '';
   const retry = failed ? button({ label: 'Reintentar', iconName: 'refresh', size: 'sm', attrs: 'data-action="update-now"' }) : '';
-  banner.innerHTML = `${icon(failed ? 'alert' : 'check', 18)}<div class="grow"><p><strong>${failed ? 'La actualización ha fallado' : 'Actualización terminada'}</strong> · ${escapeHtml(job.message)}</p>${failed ? manualHint(job) : syncSummary(job.sync)}</div>`
+  banner.innerHTML = `${icon(failed ? 'alert' : 'check', 18)}<div class="grow"><p><strong>${failed ? 'La actualización ha fallado' : 'Actualización terminada'}</strong> · ${escapeHtml(job.message)}</p>${failed ? manualHint(job) : ''}${syncSummary(job.sync)}</div>`
     + copy + retry
     + button({ label: 'Cerrar', size: 'sm', attrs: 'data-action="update-dismiss"' });
 }
