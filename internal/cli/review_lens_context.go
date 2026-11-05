@@ -18,8 +18,8 @@ import (
 )
 
 // reviewLensContextTimeout bounds the whole assembly, not one read. The surface
-// performs two discovery reads plus one patch read per authored path; generated
-// paths use immutable metadata from discovery. A reviewer that never launches
+// performs two discovery reads plus one patch read per authored or dependency
+// lock path; other generated paths use immutable metadata from discovery. A reviewer that never launches
 // is the correct outcome when the repository stops
 // answering partway through.
 const reviewLensContextTimeout = 120 * time.Second
@@ -594,6 +594,14 @@ func reviewLensContextParseNumstat(payload []byte, manifest []reviewtransaction.
 	return stats, nil
 }
 
+// La clasificación contable (generado) y la política de evidencia semántica son
+// independientes: los lockfiles de dependencias cuentan como generados pero
+// conservan su parche completo. Los roles de lente y los demás roles deben
+// tomar la misma decisión de omisión.
+func reviewLensContextOmitsContent(entry reviewtransaction.ChangedPathManifestEntry) bool {
+	return entry.Generated && !reviewtransaction.IsDependencyLockCandidatePath(entry.Path)
+}
+
 func reviewLensContextGeneratedSummaryFor(index int, entry reviewtransaction.ChangedPathManifestEntry, frozen reviewtransaction.FrozenCandidateContext, stats map[string]reviewLensContextNumstatEntry) ([]byte, error) {
 	oldObjectID, newObjectID, ok := frozen.CandidatePathObjectIDs(index)
 	if !ok {
@@ -697,7 +705,7 @@ func reviewLensContextBlock(
 		}
 	}
 	for index, entry := range frozen.ChangedPathManifest {
-		if entry.Generated {
+		if reviewLensContextOmitsContent(entry) {
 			payload, err := reviewLensContextGeneratedSummaryFor(index, entry, frozen, numstats)
 			if err != nil {
 				return nil, reviewLensContextInspectionFailure(ctx, err)
@@ -745,7 +753,7 @@ func reviewLensContextInstructionText(binding reviewLensContextBinding, paths in
 	}
 	return fmt.Sprintf(`You are the %s lens of one bounded Axiom review. %s
 
-Scope. The %s sections below are the complete and only view of this candidate: all %d changed paths are represented in the canonical manifest order carried by %s. Authored paths carry full immutable patches; generated paths carry immutable metadata summaries without content hunks. Do not read the working tree, the index, HEAD, or any other file, and do not run any command. Nothing outside these sections is part of this candidate, and anything you cannot see here is not evidence.
+Scope. The %s sections below are the complete and only view of this candidate: all %d changed paths are represented in the canonical manifest order carried by %s. Authored paths and dependency lockfiles carry full immutable patches; other generated paths carry immutable metadata summaries without content hunks. Do not read the working tree, the index, HEAD, or any other file, and do not run any command. Nothing outside these sections is part of this candidate, and anything you cannot see here is not evidence.
 
 Causality. Report only what this candidate caused. Give every BLOCKER or CRITICAL finding an evidence_class and a causal_disposition, and mark what the base already contained as pre-existing or base-only rather than as a blocker.
 

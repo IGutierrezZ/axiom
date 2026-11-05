@@ -908,8 +908,15 @@ func TestOpenCodeRenderedReviewProtocolCost(t *testing.T) {
 		// cuerpo de revisor renderizado suma reviewerprovider.SeverityRules (+1.224
 		// caracteres por lente). Deliberate, not drift; los techos suben lo mismo
 		// para conservar el margen absoluto de cada fila.
-		{name: "standard", agents: []string{"review-reliability"}, beforeChars: 42_301, wantChars: 20_271, maxCharacters: 20_290},
-		{name: "full-4R", agents: []string{"review-risk", "review-resilience", "review-readability", "review-reliability"}, beforeChars: 106_998, wantChars: 40_302, maxCharacters: 41_899},
+		// upstream-revision-nativa T14 (#4772, validar correcciones contra HEAD): la
+		// fila corrected_candidate_unavailable del contrato compartido nombra ahora
+		// que, en una revisión solo-committed, la corrección se confirma o se
+		// enmienda, que las ediciones ajenas sin confirmar se ignoran y que el
+		// pronóstico aceptado no se vuelve a capturar (+148 caracteres por fila).
+		// Deliberate, not drift; los techos suben lo mismo para conservar el margen
+		// absoluto de cada fila (19 y 1.597 caracteres).
+		{name: "standard", agents: []string{"review-reliability"}, beforeChars: 42_301, wantChars: 20_419, maxCharacters: 20_438},
+		{name: "full-4R", agents: []string{"review-risk", "review-resilience", "review-readability", "review-reliability"}, beforeChars: 106_998, wantChars: 40_450, maxCharacters: 42_047},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

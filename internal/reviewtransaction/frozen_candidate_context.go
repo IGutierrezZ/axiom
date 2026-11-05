@@ -429,9 +429,14 @@ func (inspector *PreparedCandidateInspector) Inspect(ctx context.Context, operat
 }
 
 func isGeneratedCandidatePath(logicalPath string) bool {
-	if isGeneratedGoldenPath(logicalPath) {
-		return true
-	}
+	return isGeneratedGoldenPath(logicalPath) || IsDependencyLockCandidatePath(logicalPath)
+}
+
+// IsDependencyLockCandidatePath identifica los manifiestos de dependencias
+// generados cuyos parches siguen siendo evidencia semántica de la revisión. Que
+// la contabilidad de líneas los cuente como generados no implica que un grafo de
+// dependencias se pueda revisar solo con metadatos.
+func IsDependencyLockCandidatePath(logicalPath string) bool {
 	base := filepath.Base(filepath.FromSlash(strings.TrimPrefix(filepath.ToSlash(logicalPath), "./")))
 	switch base {
 	case "package-lock.json", "npm-shrinkwrap.json", "pnpm-lock.yaml", "yarn.lock", "go.sum", "Cargo.lock":

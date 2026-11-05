@@ -203,7 +203,7 @@ func TestBoundedReviewStopInventoryIsCompleteWithoutRepeatingStatus(t *testing.T
 	for _, want := range []string{
 		"`D` means `axiom review mode disable --scope clone --cwd <B>`",
 		"`S` means re-query the exact captured target-root STATUS command with lineage and target.",
-		"then `S`; do not reuse the pre-correction target",
+		"then `S`. For committed-only review, commit or amend the bounded correction; unrelated tracked worktree edits are ignored. Do not recapture the accepted forecast or reuse the pre-correction target",
 		"then `S`.",
 	} {
 		if !strings.Contains(inventory, want) {
