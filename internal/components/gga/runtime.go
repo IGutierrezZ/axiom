@@ -51,7 +51,7 @@ func EnsureRuntimeAssets(homeDir string) error {
 		return fmt.Errorf("read embedded gga runtime asset pr_mode.sh: %w", err)
 	}
 
-	if _, err := filemerge.WriteFileAtomic(prModePath, []byte(content), 0o755); err != nil {
+	if _, err := filemerge.WriteFileAtomicMode(prModePath, []byte(content), 0o755); err != nil {
 		return fmt.Errorf("write gga runtime file %q: %w", prModePath, err)
 	}
 
@@ -59,7 +59,8 @@ func EnsureRuntimeAssets(homeDir string) error {
 }
 
 // EnsurePowerShellShim writes gga.ps1 to the GGA bin directory.
-// Uses WriteFileAtomic: no-op when content matches, atomic replace otherwise.
+// Uses WriteFileAtomicMode: atomic replace when content differs, and a
+// mode-only repair to 0755 when the content already matches.
 // Must only be called on Windows (caller is responsible for the OS guard).
 func EnsurePowerShellShim(homeDir string) error {
 	ps1Path := RuntimePS1Path(homeDir)
@@ -69,7 +70,7 @@ func EnsurePowerShellShim(homeDir string) error {
 		return fmt.Errorf("read embedded gga runtime asset gga.ps1: %w", err)
 	}
 
-	if _, err := filemerge.WriteFileAtomic(ps1Path, []byte(content), 0o755); err != nil {
+	if _, err := filemerge.WriteFileAtomicMode(ps1Path, []byte(content), 0o755); err != nil {
 		return fmt.Errorf("write gga runtime file %q: %w", ps1Path, err)
 	}
 
@@ -86,7 +87,7 @@ func EnsureCommandShim(homeDir string) error {
 		return fmt.Errorf("read embedded gga runtime asset gga.cmd: %w", err)
 	}
 
-	if _, err := filemerge.WriteFileAtomic(cmdPath, []byte(content), 0o755); err != nil {
+	if _, err := filemerge.WriteFileAtomicMode(cmdPath, []byte(content), 0o755); err != nil {
 		return fmt.Errorf("write gga runtime file %q: %w", cmdPath, err)
 	}
 
