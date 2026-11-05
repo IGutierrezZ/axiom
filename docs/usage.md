@@ -286,6 +286,8 @@ Para instalar o actualizar Axiom, sigue el [Inicio rápido](quickstart.md), que 
 
 The TUI **Configure Models** screen can assign different models to SDD phases, `sdd-onboard`, and Judgment Day agents (`jd-judge-a`, `jd-judge-b`, `jd-fix-agent`) when the selected agent supports those slots. This lets you keep review or apply phases on stronger models while routing cheaper phases to faster models.
 
+For Claude Code, the Custom picker offers `default`, `low`, `medium`, `high`, `xhigh`, and `max` for Sonnet, Opus, and Fable. An explicit effort is passed to the in-process reviewer with `--effort` and written to generated agent frontmatter; `default` inherits the runtime default. Haiku offers only `default`.
+
 ### doctor
 
 Diagnóstico de solo lectura del estado del ecosistema; no modifica la configuración:
