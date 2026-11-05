@@ -49,6 +49,9 @@ type Service struct {
 
 	// update es el único trabajo de actualización del proceso (update_job.go).
 	update updateJobState
+
+	// restartFn lo registra el Server: relanza el dashboard tras autoactualizarse.
+	restartFn func(sync *UpdateSyncSummary)
 }
 
 // NewService crea una nueva instancia del servicio para el workspace dado.

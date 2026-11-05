@@ -53,6 +53,7 @@ func NewServer(svc *Service) *Server {
 		service: svc,
 		mux:     http.NewServeMux(),
 	}
+	svc.restartFn = s.relaunchAfterUpdate
 	s.registerRoutes()
 	return s
 }
@@ -122,6 +123,35 @@ func (s *Server) ListenAndServe(initialPort int) (int, error) {
 	if err != nil {
 		return 0, err
 	}
+	s.serve(listener, port)
+	return port, nil
+}
+
+// ListenAndServeExact sirve en exactamente el puerto indicado, reintentando el enlace
+// hasta retryFor. Lo usa el proceso que se relanza tras una actualización: el viejo
+// aún está liberando el puerto, y sondear otro rompería la URL que el navegador ya
+// tiene abierta. Si el puerto no queda libre a tiempo, devuelve error.
+func (s *Server) ListenAndServeExact(port int, retryFor time.Duration) (int, error) {
+	addr := fmt.Sprintf("127.0.0.1:%d", port)
+	deadline := time.Now().Add(retryFor)
+	for {
+		listener, err := net.Listen("tcp", addr)
+		if err == nil {
+			s.serve(listener, port)
+			return port, nil
+		}
+		if time.Now().After(deadline) {
+			return 0, fmt.Errorf("el puerto %d no quedó libre en %s: %w", port, retryFor, err)
+		}
+		time.Sleep(exactListenRetryInterval)
+	}
+}
+
+// exactListenRetryInterval es la pausa entre reintentos de ListenAndServeExact.
+const exactListenRetryInterval = 100 * time.Millisecond
+
+// serve arranca el servidor HTTP sobre un listener ya enlazado.
+func (s *Server) serve(listener net.Listener, port int) {
 	s.listener = listener
 	s.port = port
 
@@ -134,8 +164,6 @@ func (s *Server) ListenAndServe(initialPort int) (int, error) {
 	go func() {
 		_ = s.httpServer.Serve(listener)
 	}()
-
-	return port, nil
 }
 
 // Shutdown detiene el servidor de forma ordenada.

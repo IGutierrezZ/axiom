@@ -80,3 +80,24 @@ func TestUpdateJobUIPollsStatusAndShowsEveryPhase(t *testing.T) {
 		}
 	}
 }
+
+// Durante el reinicio la UI sigue consultando la versión hasta que el servidor
+// responde con otra distinta y entonces recarga; si no vuelve, muestra el comando.
+func TestUpdateJobUIReloadsWhenTheNewVersionAnswers(t *testing.T) {
+	src := readAsset(t, "js/update.js")
+	for _, marker := range []string{
+		"job.phase === 'restarting'",
+		"beginRestartWait(job)",
+		"job.from_version",
+		"pollRestart",
+		"info.current !== restartFrom",
+		"window.location.reload()",
+		"RESTART_TIMEOUT_MS",
+		"El dashboard no volvió a arrancar con la versión nueva.",
+		"axiom ui",
+	} {
+		if !strings.Contains(src, marker) {
+			t.Errorf("js/update.js no contiene %q", marker)
+		}
+	}
+}

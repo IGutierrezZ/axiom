@@ -36,11 +36,14 @@ type UpdateSyncSummary struct {
 
 // UpdateJobStatus es la respuesta de GET /api/system/update/status.
 type UpdateJobStatus struct {
-	Phase      string             `json:"phase"`
-	Running    bool               `json:"running"`
-	Message    string             `json:"message"`
-	ManualHint string             `json:"manual_hint"`
-	Sync       *UpdateSyncSummary `json:"sync"`
+	Phase      string `json:"phase"`
+	Running    bool   `json:"running"`
+	Message    string `json:"message"`
+	ManualHint string `json:"manual_hint"`
+	// FromVersion es la versión que servía el dashboard al lanzar el trabajo: la UI
+	// espera a que el servidor responda con otra distinta para recargar.
+	FromVersion string             `json:"from_version"`
+	Sync        *UpdateSyncSummary `json:"sync"`
 }
 
 // updateJobState guarda el único trabajo de actualización del proceso. Vive en el
@@ -81,6 +84,16 @@ func (j *updateJobState) setPhase(phase, message string) {
 	j.status.Message = message
 }
 
+// setRestarting entra en la fase de reinicio y deja el comando manual a la vista por
+// si la versión nueva no llega a arrancar.
+func (j *updateJobState) setRestarting(message, manualHint string) {
+	j.mu.Lock()
+	defer j.mu.Unlock()
+	j.status.Phase = updatePhaseRestarting
+	j.status.Message = message
+	j.status.ManualHint = manualHint
+}
+
 // finish cierra el trabajo: fase terminal (done o failed) y fin de «en curso».
 func (j *updateJobState) finish(phase, message, manualHint string, sync *UpdateSyncSummary) {
 	j.mu.Lock()
@@ -111,7 +124,7 @@ func (s *Service) StartUpdate() (UpdateJobStatus, bool) {
 	}
 	j.running = true
 	j.done = make(chan struct{})
-	j.status = UpdateJobStatus{Phase: updatePhaseChecking, Message: "Comprobando la última versión de Axiom…"}
+	j.status = UpdateJobStatus{Phase: updatePhaseChecking, Message: "Comprobando la última versión de Axiom…", FromVersion: s.versions.current()}
 	st := j.snapshotLocked()
 	j.mu.Unlock()
 
@@ -179,16 +192,23 @@ func (s *Service) runUpdateJob() {
 	sync := summarizeUpdateSync(resp.Phases.Sync)
 	if upgrade.RestartRequired {
 		// El binario en disco ya es el nuevo; este proceso sigue siendo el viejo y no
-		// sincroniza (ResolveSyncSkip). El relanzamiento lo gestiona la fase siguiente.
-		j.setPhase(updatePhaseRestarting, "Axiom se ha actualizado. Reiniciando el dashboard con la versión nueva…")
+		// sincroniza (ResolveSyncSkip): lo hará el proceso nuevo tras relanzarse.
+		// Si el relanzamiento falla, la UI ya tiene el comando manual.
+		j.setRestarting("Axiom se ha actualizado. Reiniciando el dashboard con la versión nueva…", manualRelaunchHint(s.getRootPath()))
 		s.afterSelfUpgrade(sync)
 		return
 	}
 	j.finish(updatePhaseDone, resp.Message, "", sync)
 }
 
-// afterSelfUpgrade se ejecuta cuando el binario propio ya se ha reemplazado.
+// afterSelfUpgrade se ejecuta cuando el binario propio ya se ha reemplazado. El
+// servidor registra restartFn (relaunchAfterUpdate); sin servidor no hay a quién
+// relanzar y se pide el reinicio manual.
 func (s *Service) afterSelfUpgrade(sync *UpdateSyncSummary) {
+	if s.restartFn != nil {
+		s.restartFn(sync)
+		return
+	}
 	s.update.finish(updatePhaseDone, "Axiom se ha actualizado. Reinicia el dashboard para usar la versión nueva.", "", sync)
 }
 

@@ -147,6 +147,57 @@ function stopPolling() {
   pollTimer = null;
 }
 
+// Tras actualizarse, el servidor viejo se apaga y el nuevo vuelve a servir en el mismo
+// puerto: mientras tanto no responde. restartFrom guarda la versión que servía el
+// dashboard viejo; cuando el servidor contesta con otra, se recarga la página.
+let restartFrom = null;
+let restartStarted = 0;
+// sawDown: el servidor dejó de responder al menos una vez durante el reinicio. Solo se
+// usa si no se conoce la versión anterior (entonces basta con que vuelva a contestar).
+let sawDown = false;
+const RESTART_TIMEOUT_MS = 90000;
+const MANUAL_RELAUNCH = 'axiom ui';
+
+function failRestart(hint) {
+  restartFrom = null;
+  sawDown = false;
+  stopPolling();
+  set('updateJob', {
+    phase: 'failed', running: false, sync: null,
+    message: 'El dashboard no volvió a arrancar con la versión nueva.',
+    manual_hint: hint || MANUAL_RELAUNCH
+  });
+}
+
+// pollRestart espera a que responda una versión distinta de la que se sustituyó.
+async function pollRestart() {
+  stopPolling();
+  try {
+    const info = await api('/api/system/version');
+    if (info && info.current && (restartFrom ? info.current !== restartFrom : sawDown)) {
+      window.location.reload();
+      return;
+    }
+  } catch (err) {
+    // el servidor está reiniciándose: se sigue esperando
+    sawDown = true;
+  }
+  if (Date.now() - restartStarted > RESTART_TIMEOUT_MS) {
+    failRestart(state.updateJob && state.updateJob.manual_hint);
+    return;
+  }
+  // Mientras el servidor viejo aún responde, la versión no cambia: se sigue esperando.
+  pollTimer = setTimeout(pollRestart, POLL_MS);
+}
+
+function beginRestartWait(job) {
+  if (restartFrom !== null) return;
+  restartFrom = job.from_version || (state.version && state.version.current) || '';
+  restartStarted = Date.now();
+  sawDown = false;
+  pollTimer = setTimeout(pollRestart, POLL_MS);
+}
+
 // pollUpdate consulta el estado del trabajo hasta que termina. Los fallos de red se
 // toleran un rato (el servidor se reinicia al actualizarse); pasado ese margen se
 // muestra un fallo local con el comando manual.
@@ -156,7 +207,11 @@ async function pollUpdate() {
     const job = await api('/api/system/update/status');
     pollErrors = 0;
     set('updateJob', job);
-    if (job.running) pollTimer = setTimeout(pollUpdate, POLL_MS);
+    if (job.running && job.phase === 'restarting') {
+      beginRestartWait(job);
+    } else if (job.running) {
+      pollTimer = setTimeout(pollUpdate, POLL_MS);
+    }
   } catch (err) {
     pollErrors += 1;
     if (pollErrors >= MAX_POLL_ERRORS) {

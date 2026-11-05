@@ -1169,16 +1169,53 @@ func resolveHandoffFile(workspaceRoot, change string) (string, error) {
 	return foundPaths[0], nil
 }
 
-func runUI(args []string) {
-	fs := flag.NewFlagSet("ui", flag.ExitOnError)
-	portFlag := fs.Int("port", 8080, "Puerto de escucha para el servidor web (default: 8080)")
-	noBrowserFlag := fs.Bool("no-browser", false, "No abrir automáticamente el navegador")
-	pathFlag := fs.String("path", ".", "Ruta base del espacio de trabajo")
+// uiOptions son las banderas de `axiom ui`.
+type uiOptions struct {
+	port      int
+	noBrowser bool
+	path      string
+	// postUpdateSync la pone el dashboard viejo al relanzarse tras actualizarse a sí
+	// mismo: el proceso nuevo debe quedarse con el MISMO puerto y sincronizar el
+	// workspace con los assets de la versión nueva.
+	postUpdateSync bool
+}
 
+// postUpdatePortWait es lo que el proceso relanzado espera a que el viejo libere el puerto.
+const postUpdatePortWait = 10 * time.Second
+
+func parseUIFlags(args []string) (uiOptions, error) {
+	fs := flag.NewFlagSet("ui", flag.ContinueOnError)
+	var opts uiOptions
+	fs.IntVar(&opts.port, "port", 8080, "Puerto de escucha para el servidor web (default: 8080)")
+	fs.BoolVar(&opts.noBrowser, "no-browser", false, "No abrir automáticamente el navegador")
+	fs.StringVar(&opts.path, "path", ".", "Ruta base del espacio de trabajo")
+	fs.BoolVar(&opts.postUpdateSync, "post-update-sync", false, "Uso interno: arranque tras una actualización desde el dashboard (mismo puerto y sincronización del workspace)")
 	if err := fs.Parse(args); err != nil {
+		return uiOptions{}, err
+	}
+	return opts, nil
+}
+
+// startDashboardServer enlaza el servidor. Tras una actualización exige el mismo
+// puerto (reintentando mientras el proceso viejo lo libera); en el arranque normal
+// sondea hasta 10 puertos libres a partir del pedido.
+func startDashboardServer(server *dashboard.Server, opts uiOptions) (int, error) {
+	if opts.postUpdateSync {
+		return server.ListenAndServeExact(opts.port, postUpdatePortWait)
+	}
+	return server.ListenAndServe(opts.port)
+}
+
+func runUI(args []string) {
+	opts, err := parseUIFlags(args)
+	if err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			os.Exit(0)
+		}
 		fmt.Printf("Error al analizar banderas: %v\n", err)
 		os.Exit(1)
 	}
+	portFlag, noBrowserFlag, pathFlag := &opts.port, &opts.noBrowser, &opts.path
 
 	baseDir, err := filepath.Abs(*pathFlag)
 	if err != nil {
@@ -1204,7 +1241,7 @@ func runUI(args []string) {
 	svc := dashboard.NewServiceWithHub(baseDir, hubMgr)
 	server := dashboard.NewServer(svc)
 
-	actualPort, err := server.ListenAndServe(*portFlag)
+	actualPort, err := startDashboardServer(server, opts)
 	if err != nil {
 		fmt.Printf("[ERROR] No se pudo iniciar el servidor web: %v\n", err)
 		os.Exit(1)
