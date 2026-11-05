@@ -42,7 +42,7 @@ Que el dashboard de `axiom ui` se pueda instalar como aplicación (PWA) desde Ed
   - `GET /api/health` → `{"service":"axiom-dashboard", ...}`.
   - Puerto por defecto `47700`; retirar la reasignación silenciosa y adaptar `TestPortFallback`.
   - `runUI`: sondeo previo de health; Axiom ya activo → abrir navegador y salir 0; puerto ajeno → error claro.
-- [ ] **T2 · PWA: manifiesto, iconos, service worker y botón de instalar** — ruta: delegada.
+- [x] **T2 · PWA: manifiesto, iconos, service worker y botón de instalar** — ruta: delegada.
   - `manifest.webmanifest` (`display: standalone`, `start_url: /`, colores del tema), tipo MIME `application/manifest+json`.
   - Iconos PNG 192/512 y maskable generados en Go; favicon.
   - `sw.js` en la raíz, solo red; registro desde `main.js`.
@@ -74,7 +74,15 @@ Que el dashboard de `axiom ui` se pueda instalar como aplicación (PWA) desde Ed
 - Tests: `TestListenAndServeNoReassign` (sustituye a `TestPortFallback`), `TestHealthEndpoint`, `TestDefaultPort`, `TestProbeAxiom`.
 - Verificación del escritor: `go test ./internal/dashboard/... ./cmd/axiom/...` → ok; `go vet` → limpio; `gofmt -l` → vacío. Comprobación del orquestador: `go test ./internal/dashboard/... -run 'TestHealth|TestProbe|TestListenAndServeNoReassign|TestDefaultPort' -count=1` → ok.
 - Riesgo (`axiom review assess`): `medium`; RDD desactivado → autoverificación del escritor más comprobación del orquestador.
+- Commit: `ab5c582a`.
+
+### T2
+
+- Nuevos: `assets/manifest.webmanifest`, `assets/icons/icon.svg`, `assets/sw.js` (solo red: `fetch` vacío sin `respondWith`), `assets/js/core/pwa.js` (registro del SW y botón `#btn-install-app` con `beforeinstallprompt`), `pwa_icons.go` (PNG 192/512/maskable rasterizados en Go con supersampling 4x4, generados una vez), `pwa_test.go`. Cambios en `index.html`, `main.js` y `server.go` (MIME `.webmanifest` y rutas `/icons/*.png`).
+- Verificación del escritor: `go test ./internal/dashboard/... -count=1` → ok; `go vet` → limpio; `gofmt -l` → vacío.
+- Comprobación del orquestador con el arnés `TestDashboardPreview` en el puerto 47711 y el navegador integrado: `/api/health` → 200; manifiesto `standalone`; los 4 iconos → 200 con su tipo; icono 512 revisado visualmente; `/sw.js` → 200 `text/javascript`.
+- **Pendiente**: el navegador integrado no registra service workers (devuelve el mismo "unknown error" con un script inexistente), así que la instalabilidad real en Edge/Chrome queda para la prueba manual final.
 
 ## Siguiente paso
 
-T2.
+T3.

@@ -34,6 +34,8 @@ func init() {
 		".css":   "text/css; charset=utf-8",
 		".svg":   "image/svg+xml",
 		".woff2": "font/woff2",
+
+		".webmanifest": "application/manifest+json",
 	} {
 		_ = mime.AddExtensionType(ext, typ)
 	}
@@ -103,6 +105,11 @@ func (s *Server) registerRoutes() {
 	s.mux.HandleFunc("/api/ecosystem/backups/create", s.handleEcosystemBackupCreate)
 	s.mux.HandleFunc("/api/ecosystem/backups/restore", s.handleEcosystemBackupRestore)
 	s.mux.HandleFunc("/api/ecosystem/models", s.handleEcosystemModels)
+
+	// Iconos PNG de la aplicación, rasterizados en Go (sin binarios en el repo).
+	s.mux.HandleFunc("/icons/icon-192.png", iconHandler(192, false))
+	s.mux.HandleFunc("/icons/icon-512.png", iconHandler(512, false))
+	s.mux.HandleFunc("/icons/icon-maskable-512.png", iconHandler(512, true))
 
 	// 2. Servidor de Archivos Estáticos Embebidos
 	subFS, err := fs.Sub(AssetsFS, "assets")
