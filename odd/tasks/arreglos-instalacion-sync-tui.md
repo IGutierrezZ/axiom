@@ -124,7 +124,8 @@ Cada tarea es una rebanada de PR de unas 400 líneas como máximo y cierra con u
   - `install.ps1` añade el directorio al PATH de usuario y respeta `REG_EXPAND_SZ`, con el mismo criterio que #5625 del bloque seguridad.
   - `install.sh` añade al rc de la shell detectada (bash, zsh o fish) una línea idempotente con marcador `axiom`.
 - [ ] ~~**T8 · `doctor` con sondas acotadas**~~ — **se traslada a P3 (doctor por proyecto).** #5359, con el alcance de D-4: `--version` con timeout mediante `exec.CommandContext`, sin código específico de Windows. Se entrega allí, porque P3 reestructura `doctor` con informe estructurado y parametrizado por raíz.
-- [ ] **T9 · Persona de Claude** — #4173, aprobada en D-1 (~6 + goldens). Afecta a `persona-axiom.md:4`, `persona-gentleman.md:4` y sus goldens.
+- [x] **T9 · Persona de Claude** — #4173, aprobada en D-1 (~6 + goldens). Afecta a `persona-axiom.md:4`, `persona-gentleman.md:4` y sus goldens.
+  - Hecho: `1fcc7a7b` (4 ficheros, +4/−4; ruta: inline, cambio mecánico). Goldens actualizados: `combined-claude-claudemd.golden` y `persona-claude-gentleman.golden` (no hay golden con la línea de `persona-axiom`). `go test ./internal/components/ ./internal/assets/... ./internal/components/persona/...` ok. El diseño archivado de `openspec/changes/archive/2026-07-08-persona-canonical-channel` conserva el texto antiguo: es histórico y no se toca.
 
 ## Coordinación con P1 y P3
 
@@ -200,7 +201,12 @@ T9 no se mezcla con los demás eslabones.
   - T5 queda limitada a `internal/cli` e `internal/installcmd`;
   - T8 (#5359) se traslada a P3.
 - 2026-11-05: T1 (`dcc15ea4`) y T2 (`e8af9f56`) hechas. Fallo ambiental conocido: `TestTuiInstallOnThenSyncPreservesAndRefreshesOpenCodeActivation` en `internal/app`.
+- 2026-11-05: T3, T5, T6 y T9 hechas. Líneas acumuladas en la rama sin el documento ODD: +1350/−157, unas 1500 (más que la previsión de unas 1100 para estas seis tareas, sobre todo por tests). Supera el presupuesto de unas 400: la estrategia de cadena se pregunta antes del primer PR.
 
 ## Siguiente paso
 
-T9. T4 espera a adaptadores T1 y T7 a seguridad T2.
+Bloqueadas, sin empezar:
+- T4 espera a que se fusione adaptadores T1; después se rebasa sobre ella.
+- T7 espera a seguridad T2 (criterio de `REG_EXPAND_SZ`).
+
+Antes del PR: `go test ./...` completo en CI (la suite de `internal/cli` agota el tiempo en esta máquina), los casos de PowerShell de T5 con `AXIOM_TEST_BUILD_BINARIES=1`, y elegir la estrategia de cadena. Push y PR los decide el usuario.
