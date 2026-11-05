@@ -528,6 +528,7 @@ func TestReviewProviderArtifactSchemasAreStrictAndBound(t *testing.T) {
 		{name: "capabilities-v2.4.schema.json", id: ReviewIntegrationCapabilitiesSchemaIDV24},
 		{name: "capabilities-v2.5.schema.json", id: ReviewIntegrationCapabilitiesSchemaIDV25},
 		{name: "capabilities-v2.6.schema.json", id: ReviewIntegrationCapabilitiesSchemaIDV26},
+		{name: "capabilities-v2.7.schema.json", id: ReviewIntegrationCapabilitiesSchemaIDV27},
 		{name: "intended-untracked-selection.schema.json", id: reviewIntendedUntrackedSelectionSchema},
 		{name: "consent.schema.json", id: ReviewIntegrationConsentSchemaIDV2},
 		{name: "consent-v3.schema.json", id: ReviewIntegrationConsentSchemaIDV3},

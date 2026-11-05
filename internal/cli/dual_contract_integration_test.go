@@ -24,7 +24,7 @@ func TestDualContract_ReviewCapabilitiesNegotiation(t *testing.T) {
 			contract:     reviewtransaction.AxiomReviewIntegrationV2Contract,
 			wantContract: reviewtransaction.AxiomReviewIntegrationV2Contract,
 			wantMajor:    2,
-			wantMinor:    6,
+			wantMinor:    7,
 			wantErr:      false,
 		},
 		{
@@ -32,7 +32,7 @@ func TestDualContract_ReviewCapabilitiesNegotiation(t *testing.T) {
 			contract:     ReviewIntegrationContractV2,
 			wantContract: ReviewIntegrationContractV2,
 			wantMajor:    2,
-			wantMinor:    6,
+			wantMinor:    7,
 			wantErr:      false,
 		},
 		{
@@ -254,7 +254,7 @@ func TestDualContract_ReviewPreflightFailureRejection(t *testing.T) {
 func TestDualContract_SchemaValidationWithCompiledSchemas(t *testing.T) {
 	opSchema := compileWholePublishedReviewSchema(t, "v2", "operation.schema.json")
 	failureSchema := compileWholePublishedReviewSchema(t, "v2", "failure.schema.json")
-	capSchema := compileWholePublishedReviewSchema(t, "v2", "capabilities-v2.6.schema.json")
+	capSchema := compileWholePublishedReviewSchema(t, "v2", "capabilities-v2.7.schema.json")
 
 	validResultBytes, err := json.Marshal(ReviewValidateResult{
 		Schema:  ReviewValidateSchema,
@@ -317,7 +317,7 @@ func TestDualContract_SchemaValidationWithCompiledSchemas(t *testing.T) {
 	}
 	validatePublishedReviewSchema(t, failureSchema, axiomFailureBytes)
 
-	// 4. Validar capacidades v2.6 negociadas con Axiom
+	// 4. Validar capacidades v2.7 negociadas con Axiom
 	surface := reviewCapabilitiesStaticSurface(AxiomReviewIntegrationContractV2)
 	surface.Package = ReviewCapabilitiesPackage{Name: "axiom", Version: "3.1.0", ReleaseChannel: "stable"}
 	surface.Build = ReviewCapabilitiesBuild{
