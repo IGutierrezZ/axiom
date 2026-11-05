@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
 	"strconv"
 	"time"
 
@@ -22,71 +21,18 @@ const (
 	detachPollInterval = 200 * time.Millisecond
 )
 
-// resolveAppBrowser localiza un navegador Chromium capaz de abrir una URL en
-// modo aplicación (--app). Las dependencias se inyectan para poder probarlo sin
-// tocar el sistema: getenv lee variables de entorno, exists comprueba ficheros y
-// lookPath resuelve ejecutables en PATH.
-func resolveAppBrowser(goos string, getenv func(string) string, exists func(string) bool, lookPath func(string) (string, error)) (string, bool) {
-	if goos == "windows" {
-		type candidate struct{ envVar, rel string }
-		candidates := []candidate{
-			{"ProgramFiles(x86)", `Microsoft\Edge\Application\msedge.exe`},
-			{"ProgramFiles", `Microsoft\Edge\Application\msedge.exe`},
-			{"LOCALAPPDATA", `Google\Chrome\Application\chrome.exe`},
-			{"ProgramFiles", `Google\Chrome\Application\chrome.exe`},
-			{"ProgramFiles(x86)", `Google\Chrome\Application\chrome.exe`},
-		}
-		for _, c := range candidates {
-			root := getenv(c.envVar)
-			if root == "" {
-				continue
-			}
-			path := filepath.Join(root, c.rel)
-			if exists(path) {
-				return path, true
-			}
-		}
-		return "", false
-	}
-	for _, name := range []string{"google-chrome", "chromium", "chromium-browser", "microsoft-edge"} {
-		if path, err := lookPath(name); err == nil && path != "" {
-			return path, true
-		}
-	}
-	return "", false
-}
-
-// openAppWindow abre url en una ventana de aplicación sin barra de navegador.
-// Si no hay un navegador compatible, cae al navegador por defecto con un aviso.
-func openAppWindow(url string) error {
-	exists := func(p string) bool {
-		info, err := os.Stat(p)
-		return err == nil && !info.IsDir()
-	}
-	if path, ok := resolveAppBrowser(runtime.GOOS, os.Getenv, exists, exec.LookPath); ok {
-		return exec.Command(path, "--app="+url).Start()
-	}
-	fmt.Println("  (Aviso: no se encontró Edge ni Chrome; se abre el navegador por defecto)")
-	return openBrowser(url)
-}
-
-// openUIWindow abre la interfaz según las banderas: nada con --no-browser,
-// ventana de aplicación con --app y navegador por defecto en otro caso.
-func openUIWindow(url string, app, noBrowser bool) {
+// openUIWindow abre el navegador por defecto en url, salvo con --no-browser.
+func openUIWindow(url string, noBrowser bool) {
 	if noBrowser {
 		return
 	}
-	open := openBrowser
-	if app {
-		open = openAppWindow
-	}
-	if err := open(url); err != nil {
+	if err := openBrowser(url); err != nil {
 		fmt.Printf("  (Aviso: No se pudo abrir el navegador automáticamente: %v)\n", err)
 	}
 }
 
 // detachedChildArgs construye los argumentos del servidor desacoplado: nunca
-// lleva --detach (evita un bucle de relanzamientos) ni --app (el servidor no abre ventanas).
+// lleva --detach (evita un bucle de relanzamientos) y nunca abre el navegador.
 func detachedChildArgs(port int, baseDir string) []string {
 	return []string{"ui", "--no-browser", "--port", strconv.Itoa(port), "--path", baseDir}
 }
@@ -167,7 +113,7 @@ func startDetachedServer(port int, baseDir string) (string, error) {
 
 // runUIDetached lanza el servidor en segundo plano, espera a que responda y
 // abre la ventana. Devuelve el código de salida del proceso lanzador.
-func runUIDetached(port int, baseDir string, app, noBrowser bool) int {
+func runUIDetached(port int, baseDir string, noBrowser bool) int {
 	if !portIsFree(port) {
 		fmt.Println(errPortBusyMessage(port))
 		return 1
@@ -187,7 +133,7 @@ func runUIDetached(port int, baseDir string, app, noBrowser bool) int {
 	}
 	url := fmt.Sprintf("http://127.0.0.1:%d", port)
 	fmt.Printf("Axiom activo en %s\n", url)
-	openUIWindow(url, app, noBrowser)
+	openUIWindow(url, noBrowser)
 	return 0
 }
 

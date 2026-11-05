@@ -306,8 +306,7 @@ Inicia el panel web local en `http://127.0.0.1:47700` (puerto fijo). Si el direc
 
 ```bash
 axiom ui                 # abre el panel en el navegador por defecto
-axiom ui --app           # abre una ventana de aplicación de Edge o Chrome
-axiom ui --detach --app  # servidor en segundo plano, sin consola, y ventana de aplicación
+axiom ui --detach        # servidor en segundo plano, sin consola, y abre el navegador
 axiom ui --port 47800    # otro puerto (la PWA instalada queda ligada al puerto original)
 axiom ui --no-browser    # solo el servidor, sin abrir ventana
 ```
@@ -316,10 +315,14 @@ Es idempotente: si ya hay un Axiom escuchando en el puerto, solo abre la ventana
 
 #### Usar `axiom ui` como aplicación de escritorio
 
-1. **Acceso directo del instalador.** `scripts/install.ps1` crea `Axiom` en el menú Inicio (ejecuta `axiom ui --detach --app`, minimizado). Clic derecho, **Anclar a la barra de tareas**. Con `-NoShortcut` no se crea.
-2. **Arranque con Windows.** `.\install.ps1 -Autostart` añade además un acceso directo en la carpeta de inicio (`axiom ui --detach --no-browser`): el servidor ya está activo al iniciar sesión.
-3. **Instalar como PWA.** Con el panel abierto en Edge o Chrome, usa **Instalar aplicación** (botón de la cabecera del panel o menú del navegador). El icono instalado también se ancla a la barra de tareas. Una PWA no arranca procesos: el servidor debe estar activo (acceso directo o `-Autostart`).
-4. **Registro y parada.** `--detach` escribe el registro en `<UserCacheDir>\axiom\ui.log` (en Windows, `%LOCALAPPDATA%\axiom\ui.log`). No hay comando de apagado, por seguridad: el servidor vive hasta cerrar sesión; para pararlo antes, termina el proceso `axiom.exe` desde el Administrador de tareas.
+El flujo recomendado es instalar el panel como aplicación (PWA) desde el navegador y anclar ese icono; el servidor arranca solo con Windows.
+
+1. **Abre el panel.** El instalador (`scripts/install.ps1`) crea el acceso directo `Axiom` en el menú Inicio (`axiom ui --detach`, minimizado). Con `-NoShortcut` no se crea. También puedes entrar en `http://127.0.0.1:47700`.
+2. **Instálalo como aplicación.** En Chrome o Edge, usa el icono de instalar de la barra de direcciones o el botón **Instalar aplicación** del panel.
+3. **Ancla el icono.** Ancla a la barra de tareas el icono de la aplicación instalada (no el del navegador).
+4. **Servidor con Windows.** El instalador registra la tarea programada de usuario `Axiom` (al iniciar sesión, con 30 s de retraso, sin elevación) que ejecuta `axiom ui --detach --no-browser`, y la arranca una vez al instalar. Con `-NoAutostart` no se registra; entonces, arranca el servidor con `axiom ui --detach` o con el acceso directo. Para quitarla: `Unregister-ScheduledTask -TaskName Axiom -Confirm:$false`. No hay desinstalador del acceso directo: bórralo a mano del menú Inicio.
+5. **Origen exacto.** La instalación queda ligada a `http://127.0.0.1:47700`: `localhost` u otro puerto serían otra aplicación distinta, con su propia instalación.
+6. **Registro y parada.** `--detach` escribe el registro en `%LOCALAPPDATA%\axiom\ui.log`. No hay comando de apagado, por seguridad: el servidor vive hasta cerrar sesión; para pararlo antes, termina el proceso `axiom.exe` desde el Administrador de tareas (la tarea `Axiom` no lo relanza hasta el próximo inicio de sesión, salvo que falle).
 
 ---
 

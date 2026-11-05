@@ -103,7 +103,7 @@ Si el modelo tiene que adivinar el siguiente paso, mañana puede proponer uno di
 
 ### Interfaz de Axiom — Operación local del proyecto
 
-**Axiom incluye interfaces locales para trabajar con el proyecto.** `axiom tui` abre la interfaz de terminal; `axiom ui` inicia el panel web local. Ambas forman parte del producto Axiom y no requieren instalar un tema visual. El panel escucha siempre en `http://127.0.0.1:47700`, se puede instalar como aplicación (PWA) desde Edge o Chrome y, en Windows, el instalador crea el acceso directo `Axiom` en el menú Inicio ([guía](docs/usage.md#ui)).
+**Axiom incluye interfaces locales para trabajar con el proyecto.** `axiom tui` abre la interfaz de terminal; `axiom ui` inicia el panel web local. Ambas forman parte del producto Axiom y no requieren instalar un tema visual. El panel escucha siempre en `http://127.0.0.1:47700`, se puede instalar como aplicación (PWA) desde Edge o Chrome y, en Windows, el instalador crea el acceso directo `Axiom` en el menú Inicio y una tarea programada que arranca el servidor al iniciar sesión ([guía](docs/usage.md#ui)).
 
 **[Docs →](docs/pi.md)**
 

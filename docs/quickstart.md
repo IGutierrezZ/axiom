@@ -94,7 +94,7 @@ Para abrir la interfaz de terminal de forma explícita:
 axiom tui
 ```
 
-El comando `axiom` también abre la TUI cuando se ejecuta en una terminal interactiva. `axiom ui` inicia el panel web local en `http://127.0.0.1:47700`; en Windows el instalador añade el acceso directo `Axiom` al menú Inicio (véase [uso](usage.md#ui)).
+El comando `axiom` también abre la TUI cuando se ejecuta en una terminal interactiva. `axiom ui` inicia el panel web local en `http://127.0.0.1:47700`; en Windows el instalador añade el acceso directo `Axiom` al menú Inicio y una tarea programada que arranca el servidor al iniciar sesión (véase [uso](usage.md#ui)).
 
 ## Protecciones integradas
 

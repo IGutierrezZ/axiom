@@ -24,13 +24,12 @@ El dashboard es instalable desde Edge o Chrome:
 
 Una PWA instalada queda ligada a su origen exacto, por eso el puerto es fijo. Tampoco arranca procesos: el servidor debe estar activo.
 
-## Ventana de aplicación y arranque desacoplado
+## Arranque desacoplado
 
 En `cmd/axiom/ui_launch.go`:
 
-- `--app`: abre Edge o Chrome con `--app=<url>`; sin ninguno de los dos, usa el navegador por defecto.
 - `--detach`: relanza `axiom ui --no-browser` como proceso hijo sin consola (`detach_windows.go`: `CREATE_NO_WINDOW`; `detach_other.go`: `Setsid`), registra en `<UserCacheDir>/axiom/ui.log`, espera a `/api/health` (hasta 10 s) y sale. Sin `axiom.yaml` en el directorio actual, usa el workspace activo del hub.
-- `scripts/install.ps1` crea el acceso directo `Axiom` del menú Inicio (`ui --detach --app`) y, con `-Autostart`, otro en la carpeta de inicio (`ui --detach --no-browser`).
+- `scripts/install.ps1` crea el acceso directo `Axiom` del menú Inicio (`ui --detach`) y registra la tarea programada de usuario `Axiom` (al iniciar sesión, `ui --detach --no-browser`); `-NoAutostart` y `-NoShortcut` los omiten.
 
 Guía de usuario: [usage.md](../usage.md#ui).
 

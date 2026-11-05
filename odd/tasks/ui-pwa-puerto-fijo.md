@@ -54,6 +54,13 @@ Que el dashboard de `axiom ui` se pueda instalar como aplicación (PWA) desde Ed
   - `install.ps1`: acceso directo en el menú Inicio "Axiom" → `axiom.exe ui --detach --app` (minimizado); opción `-Autostart` que lo copia a la carpeta de inicio con `--no-browser`.
   - Actualizar README, `docs/quickstart.md`, `docs/manual-de-inicio.md` (corrige la mención obsoleta a `4040`), `docs/usage.md`, `docs/codebase/dashboard.md`.
 
+- [x] **T5 · Alinear con el modelo de work-copilot: PWA instalada + servidor al iniciar sesión** — ruta: delegada (toca `cmd/axiom`, `install.ps1`, tests y docs). Reabre parte de T3 y T4 tras la prueba manual del usuario.
+  - Motivo: `axiom ui --detach --app` abre `msedge --app=<url>`, que es una ventana de Edge y Windows le asigna el icono de Edge en la barra. La PWA instalada desde Chrome sí mantiene su icono (comprobado por el usuario el 2026-11-05). work-copilot no lanza el navegador: el usuario instala la PWA y una tarea programada al iniciar sesión mantiene el servidor arriba.
+  - Retirar `--app` (`resolveAppBrowser`, `openAppWindow` y sus tests).
+  - `install.ps1`: arranque al iniciar sesión **por defecto** con una tarea programada de usuario (`AtLogOn`, `RunLevel Limited`, reintentos, `MultipleInstances IgnoreNew`) que ejecuta `axiom ui --detach --no-browser`; `-NoAutostart` lo desactiva; se retira `-Autostart` y el acceso directo de la carpeta de inicio.
+  - Acceso directo del menú Inicio: `axiom ui --detach` (pestaña normal, desde donde se instala la PWA la primera vez).
+  - Docs: el camino recomendado es instalar la PWA desde el navegador, anclar ese icono y dejar el servidor arrancando con Windows; cómo quitar la tarea.
+
 ## Criterios de aceptación
 
 - Con el servidor parado, el acceso directo levanta el servidor y abre la ventana; con el servidor activo, solo abre la ventana.
@@ -104,6 +111,19 @@ Que el dashboard de `axiom ui` se pueda instalar como aplicación (PWA) desde Ed
 - `go vet ./...` → limpio.
 - **Prueba manual pendiente (no ejecutable aquí por el antivirus y el navegador integrado)**: instalar desde la rama, abrir el acceso directo con el servidor parado y activo, instalar como app en Edge y anclar a la barra.
 
+### Prueba manual del usuario (2026-11-05)
+
+- PWA instalada desde Chrome en `http://127.0.0.1:47700`: funciona y mantiene su icono en la barra.
+- `axiom ui --detach --app`: abre la ventana, pero la barra muestra el icono de Edge. Origina T5.
+
+### T5
+
+- `cmd/axiom`: retirado `--app` (`resolveAppBrowser`, `openAppWindow` y sus tests); `openUIWindow(url, noBrowser)` abre el navegador por defecto.
+- `install.ps1`: `Register-AxiomLogonTask` registra por defecto la tarea de usuario `Axiom` (`AtLogOn` +30 s, `Interactive`, `Limited`, sin límite de tiempo, 5 reintentos, `IgnoreNew`, `ui --detach --no-browser`) y la arranca una vez; `-NoAutostart` la omite; retirados `-Autostart` y el acceso directo de inicio; `Axiom.lnk` del menú Inicio → `ui --detach`. No hay desinstalador en el repo: la retirada está documentada (`Unregister-ScheduledTask -TaskName Axiom -Confirm:$false`).
+- Test adaptado en `internal/update/install_script_test.go`; docs actualizadas (`usage.md`, `codebase/dashboard.md`, `manual-de-inicio.md`, `quickstart.md`, `README.md`).
+- Verificación del escritor: `go test ./cmd/axiom/... ./internal/update/ ./internal/workspace/ -count=1` → ok (`update` en una segunda ejecución; la primera falló porque se lanzó durante un renombrado); `go vet` (windows y `GOOS=linux`) → limpio; `gofmt -l` → vacío; parseo de `install.ps1` → 0 errores. Comprobación del orquestador: `go test ./cmd/axiom/ -run 'DetachedChildArgs|WaitForAxiom'` → ok; revisión de `Register-AxiomLogonTask`.
+- **Pendiente de prueba manual**: que el proceso hijo de `--detach` sobreviva al terminar la acción de la tarea programada, y el destello de consola al iniciar sesión (la acción es un ejecutable de consola).
+
 ## Siguiente paso
 
-Prueba manual del usuario y PR (`scripts/axiom-worktree.ps1 pr ui-pwa-puerto-fijo`).
+Prueba manual de la tarea programada y PR (`scripts/axiom-worktree.ps1 pr ui-pwa-puerto-fijo`).

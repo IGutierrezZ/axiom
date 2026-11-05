@@ -184,9 +184,9 @@ func TestWindowsInstallScriptBetaGoInstallPreservesGoProxyBypassEnv(t *testing.T
 	}
 }
 
-// TestWindowsInstallScriptCreatesDashboardShortcuts pins the shortcut contract
-// of the dashboard launcher: Start menu entry, opt-in Startup entry, opt-out
-// switch and a non-fatal failure path.
+// TestWindowsInstallScriptCreatesDashboardShortcuts pins the dashboard launcher
+// contract: Start menu shortcut, sign-in scheduled task on by default, opt-out
+// switches and a non-fatal failure path.
 func TestWindowsInstallScriptCreatesDashboardShortcuts(t *testing.T) {
 	content, err := os.ReadFile(filepath.Join("..", "..", "scripts", "install.ps1"))
 	if err != nil {
@@ -194,27 +194,37 @@ func TestWindowsInstallScriptCreatesDashboardShortcuts(t *testing.T) {
 	}
 	script := string(content)
 	for _, want := range []string{
-		"[switch]$Autostart",
+		"[switch]$NoAutostart",
 		"[switch]$NoShortcut",
 		"New-Object -ComObject WScript.Shell",
 		`[Environment]::GetFolderPath("Programs")`,
-		`[Environment]::GetFolderPath("Startup")`,
-		`-Arguments "ui --detach --app"`,
-		`-Arguments "ui --detach --no-browser"`,
+		`-Arguments "ui --detach"`,
 		"-WindowStyle 7",
 		"if (-not $NoShortcut)",
+		"if (-not $NoAutostart)",
+		"Register-ScheduledTask",
+		"New-ScheduledTaskTrigger -AtLogOn",
+		"-MultipleInstances IgnoreNew",
+		`-Argument "ui --detach --no-browser"`,
 	} {
 		if !strings.Contains(script, want) {
-			t.Errorf("scripts/install.ps1 is missing %q in the shortcut flow", want)
+			t.Errorf("scripts/install.ps1 is missing %q in the shortcut/autostart flow", want)
 		}
 	}
-	start := strings.Index(script, "function New-AxiomShortcuts {")
-	end := strings.Index(script, "function Show-NextSteps")
-	if start == -1 || end == -1 || end < start {
-		t.Fatal("could not locate New-AxiomShortcuts function")
+	for _, banned := range []string{"[switch]$Autostart", "--app", `GetFolderPath("Startup")`} {
+		if strings.Contains(script, banned) {
+			t.Errorf("scripts/install.ps1 must not contain %q", banned)
+		}
 	}
-	if strings.Contains(script[start:end], "Stop-WithError") {
-		t.Error("shortcut creation must warn, never abort the installation")
+	for _, fn := range []string{"function New-AxiomShortcuts {", "function Register-AxiomLogonTask {"} {
+		start := strings.Index(script, fn)
+		end := strings.Index(script[start+1:], "\nfunction ")
+		if start == -1 || end == -1 {
+			t.Fatalf("could not locate %s", fn)
+		}
+		if strings.Contains(script[start:start+1+end], "Stop-WithError") {
+			t.Errorf("%s must warn, never abort the installation", fn)
+		}
 	}
 }
 

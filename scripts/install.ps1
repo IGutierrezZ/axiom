@@ -22,19 +22,23 @@
     .\install.ps1 -Method binary
 
 .EXAMPLE
-    # Also start the Axiom dashboard server when you sign in to Windows.
-    .\install.ps1 -Autostart
+    # Do not start the dashboard server when you sign in to Windows.
+    .\install.ps1 -NoAutostart
 
 .EXAMPLE
-    # Install without creating any shortcut.
+    # Install without creating the Start menu shortcut.
     .\install.ps1 -NoShortcut
 
 .NOTES
-    After a verified install on Windows the script creates an "Axiom" shortcut in
-    the Start menu that runs "axiom ui --detach --app" (starts the local dashboard
-    server in the background and opens it in an application window).
-    -Autostart also adds a shortcut to the Startup folder ("axiom ui --detach
-    --no-browser"). -NoShortcut skips both. Shortcut failures only warn.
+    After a verified install on Windows the script (1) creates an "Axiom" shortcut
+    in the Start menu that runs "axiom ui --detach" (starts the local dashboard
+    server in the background and opens it in the browser) and (2) registers a
+    per-user scheduled task named "Axiom" that runs "axiom ui --detach --no-browser"
+    at sign-in (no elevation needed) and starts it once. Install the dashboard as an
+    app from Chrome or Edge and pin that icon; the task keeps the server running.
+    -NoShortcut skips the shortcut, -NoAutostart skips the task. Failures only warn.
+    To remove the task: Unregister-ScheduledTask -TaskName Axiom -Confirm:$false
+    (there is no uninstall script; delete the Start menu shortcut by hand).
 #>
 
 $ErrorActionPreference = "Stop"
@@ -48,6 +52,7 @@ $GITHUB_REPO = "axiom"
 $BINARY_NAME = "axiom"
 $WINDOWS_DISTRIBUTION_HOLD = "Windows binary distribution and Scoop are temporarily unavailable until publicly trusted Authenticode signing is enforced."
 $STABLE_SOURCE_COMMAND = "go install github.com/IGutierrezZ/axiom/v3/cmd/axiom@latest"
+$AUTOSTART_TASK_NAME = "Axiom"
 
 function Write-Info    { param([string]$Message) Write-Host "[info]    $Message" -ForegroundColor Blue }
 function Write-Success { param([string]$Message) Write-Host "[ok]      $Message" -ForegroundColor Green }
@@ -204,42 +209,77 @@ function New-AxiomShortcut {
 }
 
 function New-AxiomShortcuts {
-    param(
-        [string]$BinaryPath,
-        [bool]$Autostart
-    )
+    param([string]$BinaryPath)
 
-    Write-Step "Creating shortcuts"
-    # Shortcuts are optional: any failure here warns and lets the install finish.
+    Write-Step "Creating shortcut"
+    # The shortcut is optional: any failure here warns and lets the install finish.
     if ($env:OS -ne "Windows_NT") {
         Write-Warn "Shortcuts are only created on Windows. Skipping."
         return $false
     }
     if (-not $BinaryPath) {
-        Write-Warn "Axiom binary not verified; skipping shortcuts."
+        Write-Warn "Axiom binary not verified; skipping shortcut."
         return $false
     }
     try {
         $startMenu = Join-Path ([Environment]::GetFolderPath("Programs")) "Axiom.lnk"
-        New-AxiomShortcut -Path $startMenu -Target $BinaryPath -Arguments "ui --detach --app" -Description "Abre el panel local de Axiom" -WindowStyle 7
+        New-AxiomShortcut -Path $startMenu -Target $BinaryPath -Arguments "ui --detach" -Description "Abre el panel local de Axiom" -WindowStyle 7
         Write-Success "Start menu shortcut: $startMenu"
-        if ($Autostart) {
-            $startup = Join-Path ([Environment]::GetFolderPath("Startup")) "Axiom.lnk"
-            New-AxiomShortcut -Path $startup -Target $BinaryPath -Arguments "ui --detach --no-browser" -Description "Inicia el servidor del panel local de Axiom" -WindowStyle 7
-            Write-Success "Startup shortcut: $startup"
-        }
         return $true
     } catch {
-        Write-Warn ("Could not create shortcuts: {0}" -f $_.Exception.Message)
+        Write-Warn ("Could not create the shortcut: {0}" -f $_.Exception.Message)
         return $false
     }
+}
+
+function Register-AxiomLogonTask {
+    param([string]$BinaryPath)
+
+    Write-Step "Registering sign-in autostart"
+    # Optional: any failure here warns and lets the install finish. A per-user
+    # task needs no elevation.
+    if ($env:OS -ne "Windows_NT") {
+        Write-Warn "The scheduled task is only created on Windows. Skipping."
+        return $false
+    }
+    if (-not $BinaryPath) {
+        Write-Warn "Axiom binary not verified; skipping the scheduled task."
+        return $false
+    }
+    try {
+        $user = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
+        $action = New-ScheduledTaskAction -Execute $BinaryPath -Argument "ui --detach --no-browser" -WorkingDirectory $HOME
+        $trigger = New-ScheduledTaskTrigger -AtLogOn -User $user
+        $trigger.Delay = "PT30S"
+        $principal = New-ScheduledTaskPrincipal -UserId $user -LogonType Interactive -RunLevel Limited
+        $settings = New-ScheduledTaskSettingsSet `
+            -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries `
+            -ExecutionTimeLimit ([TimeSpan]::Zero) `
+            -RestartCount 5 -RestartInterval (New-TimeSpan -Minutes 1) `
+            -MultipleInstances IgnoreNew
+        Register-ScheduledTask -TaskName $AUTOSTART_TASK_NAME -Action $action -Trigger $trigger `
+            -Principal $principal -Settings $settings `
+            -Description "Starts the local Axiom dashboard server when you sign in." -Force | Out-Null
+        Write-Success "Scheduled task: $AUTOSTART_TASK_NAME (runs at sign-in)"
+    } catch {
+        Write-Warn ("Could not register the scheduled task: {0}" -f $_.Exception.Message)
+        return $false
+    }
+    # Start it once so the server is up without signing out; failure only warns.
+    try {
+        Start-ScheduledTask -TaskName $AUTOSTART_TASK_NAME
+        Write-Success "Dashboard server started"
+    } catch {
+        Write-Warn ("Could not start the scheduled task now: {0}" -f $_.Exception.Message)
+    }
+    return $true
 }
 
 function Show-NextSteps {
     param(
         [string]$Channel = "stable",
         [bool]$Shortcuts = $false,
-        [bool]$Autostart = $false
+        [bool]$ServerTask = $false
     )
 
     Write-Host ""
@@ -250,12 +290,21 @@ function Show-NextSteps {
     } else {
         Write-Host "  Run '$BINARY_NAME' to start the TUI installer" -ForegroundColor Cyan
     }
-    if ($Shortcuts) {
-        Write-Host "  Open the 'Axiom' shortcut in the Start menu to launch the dashboard" -ForegroundColor Cyan
-        Write-Host "  (right-click it to pin it to the taskbar). In Edge or Chrome you can also" -ForegroundColor Cyan
-        Write-Host "  install it as an app from the browser menu." -ForegroundColor Cyan
-        if ($Autostart) {
-            Write-Host "  The dashboard server will also start when you sign in to Windows." -ForegroundColor Cyan
+    if ($Shortcuts -or $ServerTask) {
+        Write-Host ""
+        Write-Host "  Dashboard as a desktop app:" -ForegroundColor Cyan
+        if ($Shortcuts) {
+            Write-Host "  1. Open the 'Axiom' shortcut in the Start menu (or http://127.0.0.1:47700)." -ForegroundColor Cyan
+        } else {
+            Write-Host "  1. Open http://127.0.0.1:47700 in Edge or Chrome." -ForegroundColor Cyan
+        }
+        Write-Host "  2. Install it as an app from Chrome or Edge: install icon in the address bar," -ForegroundColor Cyan
+        Write-Host "     or the 'Instalar aplicacion' button of the dashboard." -ForegroundColor Cyan
+        Write-Host "  3. Pin the installed app's icon to the taskbar." -ForegroundColor Cyan
+        if ($ServerTask) {
+            Write-Host "  4. The server starts by itself when you sign in to Windows (task '$AUTOSTART_TASK_NAME')." -ForegroundColor Cyan
+        } else {
+            Write-Host "  4. The server does not start at sign-in: run 'axiom ui --detach' to start it." -ForegroundColor Cyan
         }
     }
     Write-Host "Docs: https://github.com/$GITHUB_OWNER/$GITHUB_REPO" -ForegroundColor DarkGray
@@ -275,7 +324,7 @@ function Main {
 
         [switch]$Insecure,
 
-        [switch]$Autostart,
+        [switch]$NoAutostart,
 
         [switch]$NoShortcut
     )
@@ -298,9 +347,13 @@ function Main {
     $binaryPath = Test-Installation
     $shortcuts = $false
     if (-not $NoShortcut) {
-        $shortcuts = New-AxiomShortcuts -BinaryPath $binaryPath -Autostart ([bool]$Autostart)
+        $shortcuts = New-AxiomShortcuts -BinaryPath $binaryPath
     }
-    Show-NextSteps -Channel $Channel -Shortcuts $shortcuts -Autostart ($shortcuts -and [bool]$Autostart)
+    $serverTask = $false
+    if (-not $NoAutostart) {
+        $serverTask = Register-AxiomLogonTask -BinaryPath $binaryPath
+    }
+    Show-NextSteps -Channel $Channel -Shortcuts $shortcuts -ServerTask $serverTask
 }
 
 Main @args
