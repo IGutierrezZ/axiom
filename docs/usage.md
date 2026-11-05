@@ -253,6 +253,20 @@ Después de una actualización o de sustituir manualmente el binario, ejecuta `a
 
 Si GitHub limita las comprobaciones de actualización, define `GITHUB_TOKEN` o `GH_TOKEN` antes de ejecutar `axiom update` o `axiom upgrade`.
 
+#### Actualizar desde el dashboard
+
+Al abrirse, `axiom ui` comprueba si hay una versión publicada más nueva. Guarda el resultado unas 6 horas y ofrece un botón para volver a comprobar. Si la hay, muestra un aviso con la versión actual, la nueva y el botón **Actualizar**, que hace lo siguiente:
+
+1. Actualiza Axiom. Muestra en el aviso cada fase (comprobación, actualización, reinicio, sincronización).
+2. Relanza el dashboard con el binario nuevo, sin consola y en el mismo puerto (el fijo `47700`, o el que hayas pasado con `--port`), de modo que la URL y la aplicación instalada (PWA) siguen siendo las mismas. La página se recarga sola cuando responde la versión nueva. Lo que escriba el proceso relanzado queda en `ui.log` (`%LOCALAPPDATA%\axiom\ui.log` en Windows; el directorio de caché del usuario en otros sistemas).
+3. El binario nuevo sincroniza el workspace abierto (`axiom sync --scope workspace`). El proceso viejo nunca sincroniza, porque lo haría con los recursos de la versión anterior. Si la carpeta abierta no tiene `axiom.yaml`, no se sincroniza.
+
+Si falla alguna fase, o si el proceso nuevo muere nada más arrancar, el dashboard viejo sigue funcionando y el aviso muestra el comando para hacerlo a mano (`axiom ui --path "<carpeta>"`) y, en el segundo caso, la ruta de `ui.log`. En Windows la actualización usa `go install`. Para que funcione, Go tiene que estar instalado y el `axiom` del `PATH` tiene que ser el de `GOBIN`. Si no es así, el aviso muestra el comando manual.
+
+El acceso directo del menú Inicio y la tarea programada `Axiom` (`axiom ui --detach`) apuntan al ejecutable que instaló `install.ps1`. La actualización en Windows exige que ese sea el `axiom` del `PATH` donde se escribe la versión nueva, así que siguen funcionando tras actualizar.
+
+La acción solo se acepta desde el propio dashboard (`127.0.0.1` o `localhost` en su puerto); una página web externa no puede lanzarla.
+
 Para instalar o actualizar Axiom, sigue el [Inicio rápido](quickstart.md), que documenta la instalación. El método habitual son los dos comandos de una línea (`install.sh` en Linux/macOS, `install.ps1` en Windows); Axiom no se distribuye por Homebrew.
 
 **Self-update prompt behavior** (changed in v1.x slice 5 — `GENTLE_AI_CONFIRM_UPDATE` removed):
