@@ -6,7 +6,23 @@
 
 // Los valores que la API declara; cualquier otro se muestra tal cual llega.
 export const STATUS_TEXT = { ok: 'Correcto', warning: 'Aviso', error: 'Error' };
-export const CATEGORY_TEXT = { agent: 'agente', tool: 'herramienta', environment: 'entorno' };
+export const CATEGORY_TEXT = { agent: 'agente', tool: 'herramienta', environment: 'entorno', global: 'global', project: 'proyecto' };
+
+// Secciones del Doctor: las comprobaciones de la máquina y las del proyecto abierto.
+export const DOCTOR_SECTIONS = [
+  { key: 'global', title: 'Comprobaciones globales', hint: 'Herramientas, Engram, disco y estado de usuario.' },
+  { key: 'project', title: 'Comprobaciones del proyecto', hint: 'Lo que depende del proyecto abierto.' }
+];
+
+// doctorSections reparte las comprobaciones (ya ordenadas) por sección; lo que no
+// declara categoría de proyecto se cuenta como global.
+export function doctorSections(checks) {
+  const list = Array.isArray(checks) ? checks : [];
+  return DOCTOR_SECTIONS.map(section => ({
+    ...section,
+    checks: list.filter(c => (c && c.category === 'project' ? 'project' : 'global') === section.key)
+  }));
+}
 
 // statusView devuelve el texto, el tono (ok | warn | bad | neutral) y el icono de un estado.
 export function statusView(status) {

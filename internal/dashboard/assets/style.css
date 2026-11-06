@@ -999,7 +999,8 @@ h5.md-h, h6.md-h { font-size: 13px; }
 .eco-doctor th[scope="row"] { font-size: 12px; font-weight: 600; letter-spacing: 0; text-transform: none; color: var(--text); background: transparent; white-space: normal; }
 .eco-doctor tr.is-warn td, .eco-doctor tr.is-warn th[scope="row"] { background: var(--warn-soft); }
 .eco-doctor tr.is-bad td, .eco-doctor tr.is-bad th[scope="row"] { background: var(--bad-soft); }
-.eco-doctor td:nth-child(2), .eco-doctor td:nth-child(3) { white-space: nowrap; }
+.eco-doctor td:nth-child(2) { white-space: nowrap; }
+.eco-doctor-section { margin: 0; padding: 14px 20px 8px; font-size: 13px; font-weight: 600; color: var(--text); overflow-wrap: anywhere; }
 .eco-details { color: var(--text-2); }
 
 .eco-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(420px, 100%), 1fr)); gap: 20px; align-items: start; }

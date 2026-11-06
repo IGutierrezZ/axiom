@@ -15,7 +15,7 @@ import { api, escapeHtml } from '../core/api.js';
 import { branchPolicyRows, effectivePrefsText, repoPolicyHtml } from '../core/branches.js';
 import { $, badge, confirmDialog, promptDialog, setBusy, stateEmpty, stateError, stateLoading, statusPill, tableWrap, toast } from '../core/components.js';
 import {
-  OPERATION_LABEL, categoryText, formatBytes, formatEcosystemUpgradeSequence, healthSummary, operationOutcome, sortChecks, statusView
+  OPERATION_LABEL, doctorSections, formatBytes, formatEcosystemUpgradeSequence, healthSummary, operationOutcome, sortChecks, statusView
 } from '../core/ecosystem.js';
 import { formatDateTime, plural } from '../core/format.js';
 import { icon } from '../core/icons.js';
@@ -66,7 +66,6 @@ function doctorRows(checks) {
     const view = statusView(c.status);
     return `<tr class="${c.status === 'warning' ? 'is-warn' : c.status === 'error' ? 'is-bad' : ''}">
       <th scope="row" class="mono eco-name">${escapeHtml(c.name)}</th>
-      <td>${escapeHtml(categoryText(c.category)) || '<span class="dim">—</span>'}</td>
       <td>${statusPill(view.tone, view.text)}</td>
       <td class="eco-details">${escapeHtml(c.details)}</td>
       <td>${c.recommendation ? escapeHtml(c.recommendation) : '<span class="dim">—</span>'}</td>
@@ -80,7 +79,12 @@ function doctorBody(entry) {
   }
   const checks = sortChecks(entry.data.checks);
   if (checks.length === 0) return stateEmpty('Sin diagnósticos', 'Axiom Doctor no devolvió ninguna comprobación.', 'pulse');
-  return tableWrap(`<table class="data-table eco-doctor"><thead><tr><th>Componente</th><th>Categoría</th><th>Estado</th><th>Detalle</th><th>Recomendación</th></tr></thead><tbody>${doctorRows(checks)}</tbody></table>`, 'Comprobaciones de Axiom Doctor');
+  return doctorSections(checks).map(section => {
+    const where = section.key === 'project' && entry.data.project ? ` · ${escapeHtml(entry.data.project)}` : '';
+    const head = `<h3 class="eco-doctor-section">${escapeHtml(section.title)}${where}</h3>`;
+    if (section.checks.length === 0) return head + stateEmpty('Sin comprobaciones', section.hint, 'pulse');
+    return head + tableWrap(`<table class="data-table eco-doctor"><thead><tr><th>Componente</th><th>Estado</th><th>Detalle</th><th>Recomendación</th></tr></thead><tbody>${doctorRows(section.checks)}</tbody></table>`, section.title);
+  }).join('');
 }
 
 function renderDoctor(force = false) {

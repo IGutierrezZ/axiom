@@ -77,7 +77,7 @@ Fuera: el comportamiento de `axiom sync`, el `os.Chdir` de `RunSync` (seguimient
   - Devuelve `project` y dos secciones (global y proyecto).
   - `Healthy` se calcula de los resultados.
   - Pruebas de contenido, de `Healthy` y de que mira la raíz abierta y no el cwd.
-- [ ] **T3 · UI por proyecto.**
+- [x] **T3 · UI por proyecto.**
   - Se pide el doctor al abrir y al cambiar de proyecto.
   - Al cambiar, el informe anterior se invalida y se descartan las respuestas de otro proyecto (clave `project`).
   - Se muestran las secciones global y de proyecto.
@@ -108,5 +108,6 @@ Fuera: el comportamiento de `axiom sync`, el `os.Chdir` de `RunSync` (seguimient
 - 2026-11-05: mapa hecho (delegado, solo lectura).
 - 2026-11-05: T1 hecha (ruta: escritor delegado). `doctor.Options{Home,Root}`, `Scope` global/proyecto y etiquetas JSON en `Report`/`Result`/`Remedy`, `Report.Failed()`; `cli.BuildDoctorChecks(opts)` sin `os.Getwd` (`RunDoctor` resuelve el cwd una vez y delega; `effectiveStateStoreAt`). Pruebas con cwd en otra carpeta. Observado: `go test ./internal/doctor/... ./internal/dashboard/...` ok; `go test ./internal/cli/ -run 'Doctor|StateStore|InstallState'` ok; `go test ./internal/app/ -run Doctor` ok; `go vet` y `gofmt -l` limpios.
 - 2026-11-05: T2 hecha (ruta: escritor delegado). `GetDoctorDiagnostics` ejecuta `cli.BuildDoctorChecks` con `getRootPath()`; devuelve `project`, categoría global/project por chequeo, remedio como recomendación y `Healthy` = sin fallos. Pruebas: lee la raíz abierta y no el cwd, y `Healthy` falso con estado corrupto. Observado: `go test ./internal/doctor/... ./internal/dashboard/...` ok; `go test ./internal/cli/ -run 'Doctor|StateStore|InstallState'` ok; `go test ./internal/app/ -run Doctor` ok; `go vet` y `gofmt -l` limpios.
+- 2026-11-05: T3 hecha (ruta: escritor delegado). El doctor se pide al abrir (`loadAllData`) y al cambiar de proyecto: `resetProjectData()` invalida el informe (vuelve a «cargando») y sube una época; las respuestas anteriores al cambio se descartan y las de otro `project` se repiten una vez (la petición GET compartida puede ser la vieja). Ecosistema muestra las secciones global y de proyecto (la categoría `global`/`project` sustituye a agente/herramienta/entorno). Corregido un fallo de `refreshOverview` (`map` pasaba el índice como segundo argumento). Prueba Node nueva (`doctor_project_assets_test.go`); el marcador de `platform_assets_test.go` pasa de `categoryText(` a `doctorSections(`. Sin verificar: aspecto visual. Observado: `go test ./internal/doctor/... ./internal/dashboard/...` ok; `go test ./internal/cli/ -run 'Doctor|StateStore|InstallState'` ok; `go test ./internal/app/ -run Doctor` ok; `node --check` de los JS cambiados, `go vet` y `gofmt -l` limpios.
 
 Plan stop: approved 2026-11-05; implementation continues

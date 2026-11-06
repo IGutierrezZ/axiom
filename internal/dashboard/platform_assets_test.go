@@ -107,7 +107,7 @@ func TestEcosystemUsesTheSharedDoctorCache(t *testing.T) {
 	if strings.Contains(js, "api('/api/ecosystem/doctor')") {
 		t.Errorf("ecosystem.js consulta el Doctor directamente; debe usar la caché de overview.js")
 	}
-	for _, marker := range []string{"state.overview.doctor", "refreshOverview(['doctor'])", "on('overview'", "sortChecks(", "statusView(", "categoryText("} {
+	for _, marker := range []string{"state.overview.doctor", "refreshOverview(['doctor'])", "on('overview'", "sortChecks(", "statusView(", "doctorSections("} {
 		if !strings.Contains(js, marker) {
 			t.Errorf("ecosystem.js no contiene %q", marker)
 		}
