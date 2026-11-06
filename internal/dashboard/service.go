@@ -24,6 +24,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/branch/engine"
 	"github.com/IGutierrezZ/axiom/v3/internal/cli"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/sdd"
+	"github.com/IGutierrezZ/axiom/v3/internal/doctor"
 	"github.com/IGutierrezZ/axiom/v3/internal/handoff"
 	"github.com/IGutierrezZ/axiom/v3/internal/hub"
 	"github.com/IGutierrezZ/axiom/v3/internal/kickoff"
@@ -1220,82 +1221,50 @@ func humanizeName(name string) string {
 	return strings.Join(words, " ")
 }
 
-// GetDoctorDiagnostics recopila diagnósticos de salud del ecosistema Axiom.
+// GetDoctorDiagnostics ejecuta el doctor sobre el proyecto abierto y devuelve su
+// resultado real: las comprobaciones globales (herramientas, Engram, disco) y las
+// del proyecto, cada una con su categoría. La raíz sale de la ruta registrada en
+// el servicio, no del directorio actual del proceso. Healthy es false si alguna
+// comprobación falla; los avisos no cuentan.
 func (s *Service) GetDoctorDiagnostics() (*DoctorReport, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return nil, fmt.Errorf("resolver el directorio de usuario: %w", err)
+	}
+	root := s.getRootPath()
+	result := (doctor.Runner{Checks: cli.BuildDoctorChecks(doctor.Options{Home: home, Root: root})}).Run(context.Background())
+
 	report := &DoctorReport{
 		Timestamp: time.Now().UTC().Format(time.RFC3339),
-		Healthy:   true,
-		Checks:    make([]DoctorCheck, 0),
+		Project:   root,
+		Healthy:   !result.Failed(),
+		Checks:    make([]DoctorCheck, 0, len(result.Checks)),
 	}
-
-	// 1. Ejecutar cli.RunDoctor en un buffer para comprobar la verificación global
-	var buf bytes.Buffer
-	docErr := cli.RunDoctor(context.Background(), &buf)
-
-	// 2. Detección de herramientas y agentes del ecosistema
-	home, _ := os.UserHomeDir()
-	det, _ := system.Detect(context.Background())
-	for name, t := range det.Tools {
-		status := "warning"
-		details := "No detectado en el sistema"
-		if t.Installed {
-			status = "ok"
-			details = fmt.Sprintf("Instalado en %s", t.Path)
+	for _, c := range result.Checks {
+		check := DoctorCheck{
+			Name:     string(c.Name),
+			Category: string(c.Scope),
+			Status:   doctorStatusView(c.Status),
+			Details:  c.Detail,
 		}
-		cat := "agent"
-		if name == "git" || name == "node" || name == "npm" || name == "brew" || name == "go" {
-			cat = "tool"
+		if c.Remedy != nil {
+			check.Recommendation = c.Remedy.Description
 		}
-		report.Checks = append(report.Checks, DoctorCheck{
-			Name:     name,
-			Category: cat,
-			Status:   status,
-			Details:  details,
-		})
-	}
-
-	// 4. Directorio base de usuario Axiom
-	axiomDir := system.AxiomDir(home)
-	if info, err := os.Stat(axiomDir); err == nil && info.IsDir() {
-		report.Checks = append(report.Checks, DoctorCheck{
-			Name:     "directorio-axiom",
-			Category: "environment",
-			Status:   "ok",
-			Details:  fmt.Sprintf("Directorio base activo: %s", axiomDir),
-		})
-	} else {
-		report.Checks = append(report.Checks, DoctorCheck{
-			Name:           "directorio-axiom",
-			Category:       "environment",
-			Status:         "warning",
-			Details:        fmt.Sprintf("Directorio %s no existe aún", axiomDir),
-			Recommendation: "Se creará automáticamente al ejecutar acciones de usuario",
-		})
-	}
-
-	// 5. Workspace actual
-	ws, err := s.GetWorkspace()
-	if err == nil && ws.Compliant {
-		report.Checks = append(report.Checks, DoctorCheck{
-			Name:     "workspace-axiom.yaml",
-			Category: "environment",
-			Status:   "ok",
-			Details:  fmt.Sprintf("Topología: %s, Repositorio specs: %s", ws.Topology, ws.SpecsRepository),
-		})
-	} else {
-		report.Checks = append(report.Checks, DoctorCheck{
-			Name:           "workspace-axiom.yaml",
-			Category:       "environment",
-			Status:         "warning",
-			Details:        "axiom.yaml no configurado o no conforme",
-			Recommendation: "Usa 'axiom init' o el botón de inicialización",
-		})
-	}
-
-	if docErr != nil {
-		report.Healthy = false
+		report.Checks = append(report.Checks, check)
 	}
 	return report, nil
+}
+
+// doctorStatusView traduce el estado del doctor al vocabulario de la interfaz.
+func doctorStatusView(status doctor.Status) string {
+	switch status {
+	case doctor.StatusPass:
+		return "ok"
+	case doctor.StatusWarn:
+		return "warning"
+	default:
+		return "error"
+	}
 }
 
 // runAppArgsFn executes an `axiom` command line in process. It is a

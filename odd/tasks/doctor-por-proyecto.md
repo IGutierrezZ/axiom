@@ -72,7 +72,7 @@ Fuera: el comportamiento de `axiom sync`, el `os.Chdir` de `RunSync` (seguimient
   - Los checks usan `StateStoreFor(...)` con la raíz dada, sin `os.Getwd`.
   - Etiquetas JSON en `Report`/`Result`.
   - Pruebas con `t.TempDir` y el cwd en otra carpeta.
-- [ ] **T2 · Endpoint con el resultado real.**
+- [x] **T2 · Endpoint con el resultado real.**
   - `GetDoctorDiagnostics` usa el núcleo con `getRootPath()`.
   - Devuelve `project` y dos secciones (global y proyecto).
   - `Healthy` se calcula de los resultados.
@@ -107,5 +107,6 @@ Fuera: el comportamiento de `axiom sync`, el `os.Chdir` de `RunSync` (seguimient
 
 - 2026-11-05: mapa hecho (delegado, solo lectura).
 - 2026-11-05: T1 hecha (ruta: escritor delegado). `doctor.Options{Home,Root}`, `Scope` global/proyecto y etiquetas JSON en `Report`/`Result`/`Remedy`, `Report.Failed()`; `cli.BuildDoctorChecks(opts)` sin `os.Getwd` (`RunDoctor` resuelve el cwd una vez y delega; `effectiveStateStoreAt`). Pruebas con cwd en otra carpeta. Observado: `go test ./internal/doctor/... ./internal/dashboard/...` ok; `go test ./internal/cli/ -run 'Doctor|StateStore|InstallState'` ok; `go test ./internal/app/ -run Doctor` ok; `go vet` y `gofmt -l` limpios.
+- 2026-11-05: T2 hecha (ruta: escritor delegado). `GetDoctorDiagnostics` ejecuta `cli.BuildDoctorChecks` con `getRootPath()`; devuelve `project`, categoría global/project por chequeo, remedio como recomendación y `Healthy` = sin fallos. Pruebas: lee la raíz abierta y no el cwd, y `Healthy` falso con estado corrupto. Observado: `go test ./internal/doctor/... ./internal/dashboard/...` ok; `go test ./internal/cli/ -run 'Doctor|StateStore|InstallState'` ok; `go test ./internal/app/ -run Doctor` ok; `go vet` y `gofmt -l` limpios.
 
 Plan stop: approved 2026-11-05; implementation continues
