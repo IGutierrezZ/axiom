@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"encoding/json"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -74,7 +75,7 @@ func TestBranchEnsureCreatesTheBranchAndTheWorktreeAndExitsWithZero(t *testing.T
 	}
 }
 
-// REQ-25.7: dos ejecuciones dan el mismo JSON byte a byte y el mismo
+// REQ-25.7: dos ejecuciones dan el mismo JSON byte a byte (salvo `createdFrom` y `createdFromRef`, REQ-27.15, que solo describen la ejecución que crea la rama) y el mismo
 // `git worktree list --porcelain`; el resultado de texto también es estable.
 func TestBranchEnsureIsIdempotent(t *testing.T) {
 	repo := newBranchRepository(t)
@@ -84,8 +85,8 @@ func TestBranchEnsureIsIdempotent(t *testing.T) {
 	branches := branchGitOutput(t, repo, "branch", "--list")
 	code, second, _ := runBranchCLI(t, "ensure", "--change", "x", "--json", "--cwd", repo)
 
-	if code != 0 || first == "" || first != second {
-		t.Errorf("código %d; la salida cambió entre ejecuciones:\n%s\n---\n%s", code, first, second)
+	if code != 0 || first == "" || withoutCreatedFrom(t, first) != withoutCreatedFrom(t, second) || strings.Contains(second, "createdFrom") {
+		t.Errorf("código %d; la salida cambió entre ejecuciones (createdFrom solo sale al crear la rama):\n%s\n---\n%s", code, first, second)
 	}
 	if got := branchGitOutput(t, repo, "worktree", "list", "--porcelain"); got != worktrees {
 		t.Errorf("git worktree list cambió:\n%s\n---\n%s", worktrees, got)
@@ -373,4 +374,81 @@ func TestBranchEnsureFetchFailedExitsWithCode1AndCreatesNothing(t *testing.T) {
 	if _, err := os.Stat(record); err == nil {
 		t.Errorf("no debía escribirse el registro %s", record)
 	}
+}
+
+// withoutCreatedFrom quita `createdFrom` y `createdFromRef`, que solo salen en la ejecución que
+// crea la rama (REQ-27.15), para comparar el estado final entre ejecuciones.
+func withoutCreatedFrom(t *testing.T, stdout string) string {
+	t.Helper()
+	var decoded any
+	if err := json.Unmarshal([]byte(stdout), &decoded); err != nil {
+		t.Fatalf("la salida no es JSON: %v\n%s", err, stdout)
+	}
+	var drop func(value any)
+	drop = func(value any) {
+		switch typed := value.(type) {
+		case map[string]any:
+			delete(typed, "createdFrom")
+			delete(typed, "createdFromRef")
+			for _, inner := range typed {
+				drop(inner)
+			}
+		case []any:
+			for _, inner := range typed {
+				drop(inner)
+			}
+		}
+	}
+	drop(decoded)
+	out, err := json.Marshal(decoded)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(out)
+}
+
+// REQ-27.15: con la rama publicada ya traída a local, `ensure` la adopta; el JSON informa
+// `createdFrom: remote` y el texto, «adoptada desde origin/<rama> (seguimiento configurado)».
+// Sin ella, crea desde la base y el texto sugiere `git fetch origin`.
+func TestBranchEnsureAdoptsThePublishedBranchAndTextSaysSo(t *testing.T) {
+	repo := newBranchRepository(t)
+	remote := newBranchRemote(t, repo)
+	scratch := t.TempDir()
+	clone := filepath.Join(scratch, "clon")
+	branchGitOutput(t, scratch, "clone", "-q", remote, clone)
+	branchGitOutput(t, clone, "switch", "-q", "-c", "feat/x")
+	branchGitOutput(t, clone, "commit", "-q", "--allow-empty", "-m", "publicado")
+	branchGitOutput(t, clone, "push", "-q", "origin", "feat/x")
+	published := branchGitOutput(t, clone, "rev-parse", "HEAD")
+	branchGitOutput(t, repo, "fetch", "-q", "origin")
+
+	t.Run("rama publicada", func(t *testing.T) {
+		code, stdout, stderr := runBranchCLI(t, "ensure", "--change", "x", "--cwd", repo)
+
+		if code != 0 || stderr != "" {
+			t.Fatalf("código %d, stderr %q\n%s", code, stderr, stdout)
+		}
+		if !strings.Contains(stdout, "adoptada desde origin/feat/x (seguimiento configurado)") || strings.Contains(stdout, "creada desde la base") {
+			t.Errorf("el texto debe informar de la adopción y no de la base:\n%s", stdout)
+		}
+		if got := branchGitOutput(t, repo, "rev-parse", "refs/heads/feat/x"); got != published {
+			t.Errorf("feat/x apunta a %s, se esperaba %s", got, published)
+		}
+	})
+	t.Run("sin rama publicada", func(t *testing.T) {
+		other := newBranchRepository(t)
+		newBranchRemote(t, other)
+
+		code, stdout, stderr := runBranchCLI(t, "ensure", "--change", "x", "--cwd", other)
+		if code != 0 || stderr != "" {
+			t.Fatalf("código %d, stderr %q\n%s", code, stderr, stdout)
+		}
+		if !strings.Contains(stdout, "Rama feat/x creada desde la base: no había `origin/feat/x` en local") || strings.Contains(stdout, "adoptada") {
+			t.Errorf("el texto debe sugerir `git fetch origin` y no hablar de adopción:\n%s", stdout)
+		}
+		_, again, _ := runBranchCLI(t, "ensure", "--change", "x", "--cwd", other)
+		if strings.Contains(again, "creada desde la base") {
+			t.Errorf("la repetición no tiene nada creado que avisar:\n%s", again)
+		}
+	})
 }

@@ -218,6 +218,12 @@ type BranchResult struct {
 	Behind             *int   `json:"behind,omitempty"`
 	PRTarget           string `json:"prTarget"`
 
+	// Lo que añade `ensure` (REQ-27.15), solo para las ramas que creó esa ejecución:
+	// CreatedFrom es el origen de la rama (CreatedFromBase, CreatedFromChangeBranch o
+	// CreatedFromRemote) y CreatedFromRef, la referencia de partida.
+	CreatedFrom    string `json:"createdFrom,omitempty"`
+	CreatedFromRef string `json:"createdFromRef,omitempty"`
+
 	// Lo que añade `done` por rama (design §4.3, REQ-25.16, REQ-25.17). Outcome es lo que hizo y
 	// ConfirmedBy, la capa que confirmó su fusión (`forced` con `--force`; vacía si no se
 	// confirmó), cada token con su etiqueta. En `done`, Worktree es el que tenía la rama (retirado
@@ -234,6 +240,13 @@ type BranchResult struct {
 	Message          string      `json:"message,omitempty"`
 	Continuation     string      `json:"continuation,omitempty"`
 }
+
+// Valores de BranchResult.CreatedFrom.
+const (
+	CreatedFromBase         = "base"
+	CreatedFromChangeBranch = "change_branch"
+	CreatedFromRemote       = "remote"
+)
 
 // SetOutcome fija lo que `done` hizo con la rama, con su etiqueta en castellano.
 func (b *BranchResult) SetOutcome(outcome DoneOutcome) {
@@ -392,8 +405,26 @@ func (r Result) WriteText(stdout, stderr io.Writer) {
 	for _, warning := range r.Warnings {
 		fmt.Fprintf(stdout, "Aviso: %s\n", warning)
 	}
+	r.writeCreatedFromBase(stdout)
 	if failed {
 		fmt.Fprintf(stderr, "Error [%s]: %s\nContinuación: %s\n", r.Code, r.Message, r.Continuation)
+	}
+}
+
+// writeCreatedFromBase escribe, por cada rama de cambio o de archivado que `ensure` creó desde
+// la base sin `--fetch` en ese repositorio, la línea informativa de que otra persona pudo haberla
+// publicado sin que esté traída a local (REQ-27.15). REQ-25.7 prohíbe mover una rama existente:
+// la reparación es manual. Solo es texto: el JSON no lleva avisos nuevos.
+func (r Result) writeCreatedFromBase(stdout io.Writer) {
+	for _, repository := range r.Repositories {
+		if repository.Base != nil && repository.Base.Fetched {
+			continue
+		}
+		for _, created := range repository.Branches {
+			if created.CreatedFrom == CreatedFromBase && created.Kind != KindRole {
+				fmt.Fprintf(stdout, "Nota: Rama %[1]s creada desde la base: no había `origin/%[1]s` en local; si otra persona ya la publicó, borra esta rama local, ejecuta `git fetch origin` (o `--fetch` con autorización) y repite `ensure`\n", created.Name)
+			}
+		}
 	}
 }
 
@@ -470,6 +501,9 @@ func (b BranchResult) textParts() []string {
 		return b.doneParts()
 	}
 	var parts []string
+	if b.CreatedFrom == CreatedFromRemote {
+		parts = append(parts, fmt.Sprintf("adoptada desde %s (seguimiento configurado)", strings.TrimPrefix(b.CreatedFromRef, "refs/remotes/")))
+	}
 	switch {
 	case !b.Exists:
 		parts = append(parts, "sin crear")

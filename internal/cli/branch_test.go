@@ -178,6 +178,8 @@ type branchBranchJSON struct {
 	Ahead              *int   `json:"ahead"`
 	Behind             *int   `json:"behind"`
 	PRTarget           string `json:"prTarget"`
+	CreatedFrom        string `json:"createdFrom"`
+	CreatedFromRef     string `json:"createdFromRef"`
 }
 
 type branchRepositoryJSON struct {

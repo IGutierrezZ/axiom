@@ -170,28 +170,28 @@ Commit: `feat(sdd-publish): publicar con axiom sdd publish solo la documentació
 
 Commit: `feat(branch): adoptar en ensure la rama publicada como rama de seguimiento remoto`
 
-- [ ] T-16 `CreateTrackingBranch` en `gitcli` y `gitWriter` (≈110 l)
+- [x] T-16 `CreateTrackingBranch` en `gitcli` y `gitWriter` (≈110 l)
   - Ficheros: `internal/branch/gitcli/ops.go`, `internal/branch/gitcli/ops_test.go`, `internal/branch/engine/engine.go` (`gitWriter`), y los dobles de `branch.Git` que ya existan en `internal/branch` y `internal/branch/engine`.
   - Cambio (DD-13): `CreateTrackingBranch(ctx, dir, name, remoteRef string) error` con `git branch --track <name> <remoteRef>`; exige `remoteRef == "refs/remotes/origin/" + name` y `plainArgument` en ambos; el comentario del puerto pasa a «Fetch sigue siendo la única operación remota; ningún método publica».
   - Cubre: REQ-27.15, REQ-25.1 · DD-13.
   - Aceptación: con una referencia remota local la rama se crea con *upstream* configurado; `remoteRef` que no coincide, nombre con guion inicial o argumento no plano → rechazo sin escribir; el observador no registra operaciones remotas.
   - Comprobación: `go test ./internal/branch/gitcli/ ./internal/branch/engine/ -run 'Tracking|Ops' -count=1`
 
-- [ ] T-17 Adopción en `checkRepository` y `checkInPlaceRepository` (≈180 l)
+- [x] T-17 Adopción en `checkRepository` y `checkInPlaceRepository` (≈180 l)
   - Ficheros: `internal/branch/engine/ensure.go`, `internal/branch/result.go`, `internal/branch/engine/ensure_adopt_test.go` (nuevo).
   - Cambio (DD-13): para ramas `change`, `role` y `archive` ausentes en local, resolver `refs/remotes/origin/<nombre>` con `ResolveCommit`: si existe, `step.createFrom` y `step.adopt = true`; si no, la regla actual. `BranchResult` gana `CreatedFrom` (`base|change_branch|remote`) y `CreatedFromRef` (`omitempty`, solo en `ensure` y solo para las ramas que creó esa ejecución). `BaseResult.Source` no cambia. `checkIntegrated` no cambia y se sigue ejecutando antes. Con `--fetch` autorizado el `fetch` va antes de la comprobación (adopta en la misma ejecución); sin `--fetch` no hay red.
   - Cubre: REQ-27.15, REQ-25.7, REQ-25.10, REQ-26.11 (una rama publicada no es una rama integrada) · DD-13.
   - Aceptación: sobre remoto bare y segundo clon, con `git fetch` previo: rama de cambio, de rol y de archivado (`<x>-archive`) y repositorio `in_place` adoptan con `createdFrom: remote` y `createdFromRef`; sin referencia remota, `createdFrom: base` y comportamiento actual; `ensure --archive` con la base que no contiene el cambio rechaza igual que hoy aunque exista la rama remota; `ensure` repetido es idempotente (sin `createdFrom` la segunda vez); no mueve nunca una rama local existente; con `--fetch` adopta en una sola ejecución; un observador confirma que sin `--fetch` no hay `fetch`, `pull` ni `ls-remote`.
   - Comprobación: `go test ./internal/branch/... -count=1`
 
-- [ ] T-18 Texto de `ensure` y aviso de rama creada desde la base (≈90 l)
+- [x] T-18 Texto de `ensure` y aviso de rama creada desde la base (≈90 l)
   - Ficheros: `internal/cli/branch_ensure_text.go` (o el fichero que escribe el texto de `ensure`; verificar con `rg 'ensure' internal/cli`), su prueba, `internal/branch/engine/ensure_adopt_test.go`.
   - Cambio (DD-13): líneas «Rama <b> adoptada desde origin/<b> (seguimiento configurado)» y, al crear una rama de cambio desde la base sin `--fetch`, la línea informativa «Rama <b> creada desde la base: no había `origin/<b>` en local; si otra persona ya la publicó, borra esta rama local, ejecuta `git fetch origin` (o `--fetch` con autorización) y repite `ensure`». Sin cambios de comportamiento.
   - Cubre: REQ-27.15, REQ-25.10 · DD-13.
   - Aceptación: el texto sale solo en los casos descritos; el JSON de design §5.5 es el de `--json`; los refusals nuevos (si los hay) llevan continuación ejecutable (ratchet de rechazos).
   - Comprobación: `go test ./internal/cli/ -run 'BranchEnsure|Ensure' -count=1`
 
-- [ ] T-19 Cierre de WU-4: verificación y commit (≈70 l de ajustes si aparecen)
+- [x] T-19 Cierre de WU-4: verificación y commit (≈70 l de ajustes si aparecen)
   - Ficheros: ninguno de partida; ajustes mínimos de las pruebas anteriores.
   - Cambio: comprobar que la regresión completa del motor de ramas sigue en verde y que `TestEnsureArchiveNeverPublishes` pasa sin cambios; commit de WU-4.
   - Cubre: REQ-27.15, REQ-27.11 · DD-13, DD-16.
