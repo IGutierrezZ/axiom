@@ -595,7 +595,11 @@ func TestKilocodeReviewSettingsMatchCurrentMainBaseline(t *testing.T) {
 	// carril-proyecto-publicacion-docs T-06: stop-exits.md deja de nombrar la parada de plan
 	// de ODD y el compartido de kickoff gana el párrafo «SDD lane selected»; Kilocode los
 	// compone en el orquestador de OpenCode, así que el hash cambia. Deliberate, not drift.
-	const want = "98a32ed89a99e4a2178bc6a2a61dec9793a021e25c86a3dbf4d57aeadad1e43c"
+	// carril-proyecto-publicacion-docs T-26: stop-exits.md pasa a «aprobar, publicar y parar/seguir» y el
+	// compartido de kickoff gana el encadenado de `gate record` con `axiom sdd publish`, `--docs-publication
+	// auto` y los momentos de publicación; Kilocode los compone en el orquestador de OpenCode, así que el
+	// hash cambia. Deliberate, not drift.
+	const want = "6de2d11c16c579b5a60fbe243be1999afb4b462fe3387bcfc5a138817f212ea2"
 	if got != want {
 		t.Fatalf("Kilocode settings SHA-256 = %s, want current-main baseline %s", got, want)
 	}

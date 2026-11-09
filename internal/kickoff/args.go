@@ -127,7 +127,10 @@ type SealArgs struct {
 	HandoffPolicy    HandoffPolicy
 	Roles            []RoleFlag
 	DeploymentTarget string
-	JSON             bool
+	// DocsPublication es el valor de --docs-publication (REQ-27.4): solo `auto`, solo con
+	// continuous y nunca con --infer.
+	DocsPublication DocsPublication
+	JSON            bool
 }
 
 // ParseSealArgs parses and validates `axiom sdd kickoff seal` arguments
@@ -220,6 +223,17 @@ func ParseSealArgs(args []string) (SealArgs, error) {
 			}
 			parsed.Roles = append(parsed.Roles, roleFlag)
 			i = next
+		case "--docs-publication":
+			value, next, err := requireFlagValue(args, i, "--docs-publication")
+			if err != nil {
+				return SealArgs{}, err
+			}
+			publication := DocsPublication(value)
+			if !validDocsPublications[publication] {
+				return SealArgs{}, fmt.Errorf("--docs-publication desconocido %q; opciones: auto", value)
+			}
+			parsed.DocsPublication = publication
+			i = next
 		case "--deployment-target":
 			value, next, err := requireFlagValue(args, i, "--deployment-target")
 			if err != nil {
@@ -240,6 +254,9 @@ func ParseSealArgs(args []string) (SealArgs, error) {
 	}
 
 	if parsed.Infer {
+		if parsed.DocsPublication != "" {
+			return SealArgs{}, fmt.Errorf("--docs-publication no se puede combinar con --infer: la autorización de publicar nunca se infiere")
+		}
 		return parsed, nil
 	}
 
@@ -257,6 +274,9 @@ func ParseSealArgs(args []string) (SealArgs, error) {
 			parsed.ExecutionStyle = derived
 			parsed.ExecutionStyleSource = "session_pace"
 		}
+	}
+	if parsed.DocsPublication != "" && parsed.ExecutionStyle != ExecutionContinuous {
+		return SealArgs{}, fmt.Errorf("--docs-publication solo acompaña a --execution-style continuous")
 	}
 	if len(parsed.Roles) == 0 {
 		parsed.Roles = []RoleFlag{{Role: "fullstack", GatePolicy: multirole.PolicyBlocking}}
@@ -296,6 +316,7 @@ func (a SealArgs) ToKickoff(change string) Kickoff {
 			ExecutionStyleSource: a.ExecutionStyleSource,
 			HandoffPolicy:        HandoffNone, // compatibility value, never the deprecated flag (REQ-26.9)
 			Roles:                roles,
+			DocsPublication:      a.DocsPublication,
 		},
 		Lifecycle: Lifecycle{DeploymentTarget: a.DeploymentTarget, PostArchivePolicy: "bug_only"},
 	}

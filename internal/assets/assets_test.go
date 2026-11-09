@@ -2472,10 +2472,19 @@ func TestSharedGateSectionPresentsAndRemediatesTheContextDelta(t *testing.T) {
 		"Every gate except `integration` is a stop with three exits",
 		"`axiom sdd gate record --cwd <repo> --change <name> --gate spec|design|tasks|role-apply:<role>` is the only way to record the decision",
 		"Iterate is `--decision rejected --reason \"<text>\"`",
-		"Approve, push and stop is `--decision approved --hand-off`",
-		"it refuses without writing anything when the artifacts are not committed",
-		"returns the commit of `gates.yaml`, the push, and the pull request data for you to present before you stop",
-		"Approve and continue is `--decision approved`.",
+		"Approve, publish and stop is `--decision approved --hand-off`",
+		"does not inspect what is committed; the documents are committed and pushed afterwards by `axiom sdd publish`",
+		"Approve, publish and continue is `--decision approved`.",
+		"run the `publish.invocation` the record returns",
+		"bound to the authorized branch with `--branch`) exactly once",
+		"A refused publication never undoes the recorded approval: present its label, message and continuation as information",
+		"`gate record` itself never runs git.",
+		"--docs-publication auto",
+		"seal with `--docs-publication auto` only when the person chooses that option",
+		"pushes the change documents to `origin/<branch>` when `tasks` closes and after archive",
+		"`docsPublication: auto`",
+		"axiom sdd publish --cwd <archive-root> --change <name> --archive --json",
+		"The phase skills never commit or push",
 		"The `integration` gate keeps its two exits: approve with the merge evidence it requires, or reject.",
 		"{{AXIOM_STOP_EXITS}}",
 		"is one of the exact `axiom sdd gate record` invocations above",
@@ -2552,7 +2561,7 @@ func TestNoAssetOffersTheHandoffTransitionNorPrescribesHandoffPolicy(t *testing.
 		content := MustRead(skill)
 		for _, want := range []string{
 			"Listo para la fase siguiente; en `checkpointed`, el orquestador presenta la parada de la puerta con sus tres salidas.",
-			"Antes de la salida 2 de la parada, los artefactos quedan confirmados en la rama del cambio; publicarla es decisión de la persona.",
+			"La fase no hace commit ni push: tras la aprobación de la parada el orquestador publica los documentos con `axiom sdd publish`; el push de código y la PR son de la persona.",
 		} {
 			if !strings.Contains(content, want) {
 				t.Errorf("%s missing %q", skill, want)
@@ -4101,7 +4110,7 @@ func TestSDDSpecAndDesignRemitToEnsureInsteadOfMain(t *testing.T) {
 			"`axiom branch ensure`",
 			"`workspaceRoot`",
 			"rama del cambio",
-			"decisión de la persona",
+			"`axiom sdd publish`",
 			"`--cwd`",
 		} {
 			if !strings.Contains(content, want) {
@@ -4243,6 +4252,56 @@ func TestSDDSkillsNameTheIntegrationBranchNotALiteral(t *testing.T) {
 	for _, path := range []string{"skills/sdd-apply/SKILL.md", "skills/sdd-archive/SKILL.md"} {
 		if !strings.Contains(MustRead(path), "integration branch (`git.integration_branch`)") {
 			t.Errorf("%s does not name the integration branch as `git.integration_branch`", path)
+		}
+	}
+}
+
+// TestStopsDoctrineRetiresTheMergedPullRequestAndPublishesOnApproval pins REQ-26.8 and REQ-27.12:
+// the doctrine assets no longer ask for a merged pull request nor print commit and push commands for
+// the human, they describe the publication with `axiom sdd publish` and its non-undoing refusals, and
+// the three exits of every text use the "publish" wording.
+func TestStopsDoctrineRetiresTheMergedPullRequestAndPublishesOnApproval(t *testing.T) {
+	files := []string{
+		"generic/stop-exits.md",
+		"skills/_shared/sdd-orchestrator-sections.md",
+		"skills/_shared/sdd-status-contract.md",
+		"skills/sdd-spec/SKILL.md",
+		"skills/sdd-design/SKILL.md",
+	}
+	for _, name := range files {
+		content := MustRead(name)
+		for _, retired := range []string{
+			"Approve, push and stop",
+			"PR fusionada",
+			"pull request merged into its target",
+			"creates the branch from the merged base",
+			"it refuses without writing anything when the artifacts are not committed",
+			"returns the commit of `gates.yaml`, the push, and the pull request data",
+			"uncommitted_artifacts",
+		} {
+			if strings.Contains(content, retired) {
+				t.Errorf("%s keeps the retired wording %q", name, retired)
+			}
+		}
+	}
+	exits := MustRead("generic/stop-exits.md")
+	if got := strings.Count(exits, "Code pushes, pull requests and merges remain yours."); got != 2 {
+		t.Errorf("stop-exits.md closes exits 2 and 3 with the code-push sentence %d times, want 2", got)
+	}
+	sections := MustRead("skills/_shared/sdd-orchestrator-sections.md")
+	for _, want := range []string{
+		"`--docs-publication auto`",
+		"axiom sdd publish --cwd <root> --change <name> --json",
+		"axiom sdd publish --cwd <archive-root> --change <name> --archive --json",
+	} {
+		if !strings.Contains(sections, want) {
+			t.Errorf("shared gates section missing %q", want)
+		}
+	}
+	contract := MustRead("skills/_shared/sdd-status-contract.md")
+	for _, want := range []string{"`publication: { remote, branch, prTarget?, invocation }`", "`publicationUnavailable: \"<code>\"`", "`kickoff.docsPublication`"} {
+		if !strings.Contains(contract, want) {
+			t.Errorf("status contract missing %q", want)
 		}
 	}
 }

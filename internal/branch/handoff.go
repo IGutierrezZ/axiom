@@ -8,78 +8,78 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
-// Entrega de la salida 2 de una parada («aprobar, subir y parar», REQ-26.4, REQ-26.5, DD-07 y
-// DD-08). El dominio solo calcula y describe: nunca ejecuta `commit`, `push` ni abre una PR (el
-// puerto Git no tiene método que publique, REQ-25.1). Cada paso es una orden exacta, un solo
-// comando sin `&&` ni órdenes de plataforma (`gh`, `glab`), con `git -C <raíz git absoluta>` y
-// las rutas citadas por pathquote.Quote, para que la persona la copie tal cual en Windows y en
-// POSIX.
+// Entrega de la salida 2 de una parada («aprobar, publicar y parar», REQ-26.4, REQ-26.5, REQ-27.12,
+// DD-12). El dominio solo calcula y describe: nunca ejecuta `commit`, `push` ni abre una PR (el
+// puerto Git no tiene método que publique, REQ-25.1). Los documentos del cambio los sube
+// `axiom sdd publish` con la invocación que lleva el plan; lo que sigue siendo de la persona es el
+// push del código de los repositorios del rol, con una orden exacta, un solo comando sin `&&` ni
+// órdenes de plataforma (`gh`, `glab`), con `git -C <raíz git absoluta>` y las rutas citadas por
+// pathquote.Quote, para que la persona la copie tal cual en Windows y en POSIX.
 
-// HandOffRequest es lo que `engine.HandOff` necesita de la orden `gate record --hand-off`.
+// HandOffRequest es lo que `engine.HandOff` necesita de la orden `gate record --hand-off`. La
+// cesión no inspecciona el trabajo del rol ni lo que está confirmado (REQ-26.4): el código sin subir
+// lo informa después `axiom sdd publish`.
 type HandOffRequest struct {
 	CWD        string // workspaceRoot resuelto por la CLI, nunca el directorio del proceso
 	Change     string
 	ChangeRoot string // carpeta del cambio, absoluta
 	Role       string // vacío en spec, design y tasks; el rol en role-apply
-	// Gate y HandedOffTo componen el mensaje de commit propuesto: la puerta que se aprueba y la
-	// fase (o fase de rol) que se cede.
+	// Gate y HandedOffTo identifican la puerta que se aprueba y la fase (o fase de rol) que se cede.
 	Gate        string
 	HandedOffTo string
-	// Exempt son rutas, relativas a ChangeRoot, que no cuentan como «sin confirmar»: `gates.yaml`,
-	// que la orden modifica y se confirma después. Las entradas de la raíz de la carpeta cuyo
-	// nombre empieza por punto (estado local que nunca se versiona) están exentas siempre.
-	Exempt []string
 }
 
-// HandOffPR son los datos de la PR de una entrega, sin orden de plataforma (DD-08): la rama que
-// se publica y la rama destino.
-type HandOffPR struct {
-	Head string `json:"head"`
-	Base string `json:"base"`
+// HandOffPublish es el destino de los documentos de la cesión: lo sube `axiom sdd publish` con
+// Invocation. PRTarget es el `prTarget` del plan para Branch (informativo: la PR es decisión de la
+// persona) y queda vacío en el repositorio de specs de un multirepo, que se trabaja in situ en la
+// rama de integración y no lleva PR.
+type HandOffPublish struct {
+	Remote     string `json:"remote"`
+	Branch     string `json:"branch"`
+	PRTarget   string `json:"prTarget,omitempty"`
+	InPlace    bool   `json:"inPlace,omitempty"`
+	Invocation string `json:"invocation"`
 }
 
-// HandOffDelivery es la entrega de un repositorio: los pasos exactos, en orden, que la persona
-// ejecuta con su propia herramienta. GitRoot es la raíz git absoluta que usan sus órdenes
-// (`git -C`). InPlace marca el repositorio de specs de un multirepo, que se trabaja in situ en la
-// rama de integración y por eso no lleva PR ni PRTarget.
+// HandOffDelivery es la entrega de código de un repositorio del rol distinto del planning home: los
+// pasos exactos, en orden, que la persona ejecuta con su propia herramienta. GitRoot es la raíz git
+// absoluta que usan sus órdenes (`git -C`). PRTarget es informativo: Axiom no abre la PR.
 type HandOffDelivery struct {
-	Repository string     `json:"repository"`
-	GitRoot    string     `json:"gitRoot"`
-	Branch     string     `json:"branch"`
-	PRTarget   string     `json:"prTarget,omitempty"`
-	InPlace    bool       `json:"inPlace,omitempty"`
-	Steps      []string   `json:"steps"`
-	PR         *HandOffPR `json:"pr,omitempty"`
+	Repository string   `json:"repository"`
+	GitRoot    string   `json:"gitRoot"`
+	Branch     string   `json:"branch"`
+	PRTarget   string   `json:"prTarget,omitempty"`
+	Steps      []string `json:"steps"`
 }
 
-// HandOffPlan es la entrega completa de la salida 2. MergeRequired es siempre verdadero: la fase
-// siguiente solo empieza cuando lo entregado está integrado (REQ-26.5).
+// HandOffPlan es la entrega completa de la salida 2: dónde se publican los documentos, el push de
+// código que sigue siendo de la persona y lo que ejecuta quien recoja el cambio.
 type HandOffPlan struct {
-	Topology      workspace.TopologyType `json:"topology"`
-	MergeRequired bool                   `json:"mergeRequired"`
-	Deliveries    []HandOffDelivery      `json:"deliveries"`
+	Topology   workspace.TopologyType `json:"topology"`
+	Publish    HandOffPublish         `json:"publish"`
+	Deliveries []HandOffDelivery      `json:"deliveries,omitempty"`
+	Resume     []string               `json:"resume"`
 }
 
-// HandOffCommitMessage es el mensaje de commit Conventional, en castellano, que se propone para
-// el `gates.yaml` de la puerta aprobada.
-func HandOffCommitMessage(gate, change, handedOffTo string) string {
-	return fmt.Sprintf("chore(sdd): aprobar %s de %s y ceder %s", gate, change, handedOffTo)
+// PublishRemote es el único remoto al que publica `axiom sdd publish`.
+const PublishRemote = "origin"
+
+// PublishInvocation es la orden exacta, atada a la rama con `--branch`, que publica los documentos
+// del cambio (REQ-27.7). La comparten la pregunta de la puerta, `gate record` y la cesión, de modo
+// que la rama que se nombra es exactamente la que se sube.
+func PublishInvocation(workspaceRoot, change, branchName string) string {
+	return fmt.Sprintf("axiom sdd publish --cwd %s --change %s --branch %s",
+		pathquote.Quote(workspaceRoot), pathquote.ShellWord(change), pathquote.ShellWord(branchName))
 }
 
-// HandOffAddStep es el paso que prepara solo la ruta dada (pathspec explícito, nunca `-A`).
-func HandOffAddStep(gitRoot, relPath string) string {
-	return fmt.Sprintf("git -C %s add -- %s", pathquote.Quote(gitRoot), pathspecWord(relPath))
-}
-
-// HandOffCommitStep es el paso que confirma solo la ruta dada: pathspec explícito tras `--` y
-// nunca `-a`, de modo que no arrastra nada más del árbol de trabajo.
-func HandOffCommitStep(gitRoot, message, relPath string) string {
-	return fmt.Sprintf("git -C %s commit -m %s -- %s", pathquote.Quote(gitRoot), pathquote.Quote(message), pathspecWord(relPath))
+// HandOffResume son las órdenes que ejecuta quien recoja el cambio: traer lo publicado y dejar que
+// `ensure` adopte la rama (REQ-27.15). No llevan `-C`, porque la ruta de quien siga no se conoce.
+func HandOffResume(change string) []string {
+	return []string{"git fetch origin", fmt.Sprintf("axiom branch ensure --change %s --json", pathquote.ShellWord(change))}
 }
 
 // HandOffPushStep es el paso que publica la rama concreta, nunca `HEAD`. Con setUpstream usa `-u
-// origin`, como el primer push de una rama del cambio; sin él, `push origin <rama>`, como el de la
-// rama de integración del repositorio de specs in situ.
+// origin`, como el primer push de una rama del cambio; sin él, `push origin <rama>`.
 func HandOffPushStep(gitRoot, branchName string, setUpstream bool) string {
 	flag := ""
 	if setUpstream {
@@ -88,48 +88,9 @@ func HandOffPushStep(gitRoot, branchName string, setUpstream bool) string {
 	return fmt.Sprintf("git -C %s push %sorigin %s", pathquote.Quote(gitRoot), flag, pathquote.ShellWord(branchName))
 }
 
-// MergeNotice es la advertencia de fusión previa de la salida 2 (REQ-26.5): quien recoge el
-// cambio no puede empezar la fase siguiente hasta que la PR esté fusionada en prTarget, porque
-// `axiom branch ensure` crea la rama desde la base y no recupera trabajo sin fusionar.
-func MergeNotice(prTarget string) string {
-	return fmt.Sprintf("la fase siguiente solo empieza cuando la PR esté fusionada en %s: `axiom branch ensure` en otra máquina crea la rama desde la base y no recupera trabajo sin fusionar", prTarget)
-}
-
-// InPlaceNotice es la advertencia del repositorio de specs de un multirepo, que se trabaja in situ
-// y no tiene PR: quien recoge el cambio necesita el push de la rama de integración.
-func InPlaceNotice(integration string) string {
-	return fmt.Sprintf("la fase siguiente solo empieza cuando la rama de integración %s esté publicada con este commit: este repositorio se trabaja in situ y no tiene PR", integration)
-}
-
-// UncommittedArtifacts es el rechazo `uncommitted_artifacts` de la salida 2 (REQ-26.4): hay
-// artefactos del cambio sin confirmar y lo que no está en un commit no viaja en la PR. Nombra las
-// rutas pendientes (relativas a la raíz git del repositorio) y no ha escrito nada; la
-// continuación es confirmarlas con pathspec explícito y repetir la orden.
-func UncommittedArtifacts(change string, repo RepoPlan, paths []string) *Refusal {
-	const shown = 10
-	listed := paths
-	more := ""
-	if len(paths) > shown {
-		listed, more = paths[:shown], fmt.Sprintf(" y %d más", len(paths)-shown)
-	}
-	specs := make([]string, 0, len(paths))
-	for _, path := range paths {
-		specs = append(specs, pathspecWord(path))
-	}
-	return &Refusal{
-		Code: CodeUncommittedArtifacts,
-		Message: fmt.Sprintf("hay artefactos del cambio %s sin confirmar en el repositorio %s: %s%s; lo que no está en un commit no viaja en la PR y no se ha escrito nada",
-			change, repo.Name, strings.Join(listed, ", "), more),
-		Continuation: fmt.Sprintf("confirma esas rutas con `git -C %s add -- %s` y `git -C %s commit -m %s -- %s`, y repite la orden",
-			pathquote.Quote(repo.GitRoot), strings.Join(specs, " "),
-			pathquote.Quote(repo.GitRoot), pathquote.Quote("docs(sdd): confirmar los artefactos de "+change), strings.Join(specs, " ")),
-		Details: map[string]string{"change": change, "repository": repo.GitRoot, "paths": strings.Join(paths, ",")},
-	}
-}
-
 // HandOffWrongBranch es el rechazo `wrong_branch` que la entrega devuelve si la rama actual del
 // repositorio no es ninguna de las que el plan espera para el cambio. La guarda de escritura de la
-// CLI lo detecta antes; esto cierra el caso en falso para no presentar un push de la rama
+// CLI lo detecta antes; esto cierra el caso en falso para no presentar la publicación de la rama
 // equivocada. current vacío significa HEAD desacoplado.
 func HandOffWrongBranch(change, master string, repo RepoPlan, current string, expected []string) *Refusal {
 	shown := current
@@ -143,13 +104,4 @@ func HandOffWrongBranch(change, master string, repo RepoPlan, current string, ex
 		Continuation: fmt.Sprintf("pon el repositorio en la rama que corresponde con `%s` y repite la orden", ensureInvocation("ensure", change, master, LaneSDD, Exceptions{})),
 		Details:      map[string]string{"change": change, "repository": repo.GitRoot, "current": current, "expected": strings.Join(expected, ", ")},
 	}
-}
-
-// pathspecWord deja una ruta relativa tal cual cuando el intérprete la lee como una palabra y, si
-// lleva espacios u otros caracteres que lo parten, la cita como el resto de rutas.
-func pathspecWord(path string) string {
-	if pathquote.ShellWord(path) == path {
-		return path
-	}
-	return pathquote.Quote(path)
 }

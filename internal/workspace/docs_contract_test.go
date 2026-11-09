@@ -535,3 +535,44 @@ func TestDocsEnterpriseVisionRemitsToAxiomBranch(t *testing.T) {
 		}
 	}
 }
+
+// sdd-block-review-gates REQ-27.12, change-branch-lifecycle REQ-27.15 y sdd-lane-kickoff REQ-27.4: el
+// manual documenta que aprobar una parada publica los documentos con `axiom sdd publish`, que quien
+// continúa adopta la rama con `git fetch` y `ensure` sin PR fusionada, la autorización
+// `docs_publication: auto` del kickoff y la nota del CI ajeno; ni el manual ni AGENTS.md ni GEMINI.md
+// conservan la exigencia retirada de una PR fusionada.
+func TestDocsDocumentThePublicationOfTheChangeDocuments(t *testing.T) {
+	doc := readManualDeInicio(t)
+	assertDocContains(t, doc,
+		"«aprobar, publicar y parar» y «aprobar, publicar y seguir»",
+		"la aprobación es la autorización explícita de subir los documentos del cambio a `origin/<rama>`",
+		"el push de código, la PR y el merge siguen siendo de la persona",
+		"`git fetch origin` (o `axiom branch ensure --fetch`, con autorización) y `axiom branch ensure --change <cambio>`, que adopta la rama publicada",
+		"`gate record` solo registra",
+		"`publish.invocation`",
+		"`publishUnavailable`",
+		"Una publicación rechazada no deshace la aprobación ya registrada",
+		"`--docs-publication auto`",
+		"`docs_publication: auto` en `kickoff.yaml`",
+		"el push de la rama puede disparar su CI, que queda fuera del control de Axiom",
+	)
+	for _, retired := range []string{
+		"solo empieza cuando la PR esté fusionada",
+		"no recupera trabajo sin fusionar",
+		"aprobar, subir y parar",
+		"se rechaza sin escribir nada si la carpeta del cambio",
+	} {
+		if strings.Contains(doc, retired) {
+			t.Errorf("docs/manual-de-inicio.md conserva la redacción retirada %q", retired)
+		}
+	}
+	for _, file := range []string{"AGENTS.md", "GEMINI.md"} {
+		text := readRepoFile(t, file)
+		if !strings.Contains(text, "aprobar-publicar-y-parar") || !strings.Contains(text, "`axiom sdd publish`") {
+			t.Errorf("%s no describe la publicación de los documentos en las salidas de la parada", file)
+		}
+		if strings.Contains(text, "«Subir» significa una PR fusionada") {
+			t.Errorf("%s conserva la exigencia retirada de una PR fusionada", file)
+		}
+	}
+}

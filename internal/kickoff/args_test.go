@@ -485,3 +485,43 @@ func TestParseShowArgsRejectsChangeContainmentVector(t *testing.T) {
 		t.Fatal("ParseShowArgs() = nil error, se esperaba rechazo por contencion de --change")
 	}
 }
+
+// TestParseSealArgsDocsPublication cubre REQ-27.4: --docs-publication solo admite `auto`, solo
+// acompaña a continuous (también el derivado de --from-session-pace) y nunca a --infer.
+func TestParseSealArgsDocsPublication(t *testing.T) {
+	tests := []struct {
+		name    string
+		args    []string
+		want    DocsPublication
+		wantErr string
+	}{
+		{name: "continuous con auto", args: []string{"--change", "x", "--execution-style", "continuous", "--docs-publication", "auto"}, want: DocsPublicationAuto},
+		{name: "pace auto con auto", args: []string{"--change", "x", "--from-session-pace", "auto", "--docs-publication", "auto"}, want: DocsPublicationAuto},
+		{name: "sin el flag no se escribe", args: []string{"--change", "x", "--execution-style", "continuous"}, want: ""},
+		{name: "checkpointed se rechaza", args: []string{"--change", "x", "--execution-style", "checkpointed", "--docs-publication", "auto"}, wantErr: "continuous"},
+		{name: "pace interactive se rechaza", args: []string{"--change", "x", "--from-session-pace", "interactive", "--docs-publication", "auto"}, wantErr: "continuous"},
+		{name: "infer se rechaza", args: []string{"--change", "x", "--infer", "--docs-publication", "auto"}, wantErr: "--infer"},
+		{name: "otro valor se rechaza", args: []string{"--change", "x", "--execution-style", "continuous", "--docs-publication", "otro"}, wantErr: "desconocido"},
+		{name: "valor ausente se rechaza", args: []string{"--change", "x", "--execution-style", "continuous", "--docs-publication"}, wantErr: "--docs-publication"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			parsed, err := ParseSealArgs(tt.args)
+			if tt.wantErr != "" {
+				if err == nil || !strings.Contains(err.Error(), tt.wantErr) {
+					t.Fatalf("ParseSealArgs() error = %v, se esperaba que mencionara %q", err, tt.wantErr)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("ParseSealArgs() error = %v", err)
+			}
+			if parsed.DocsPublication != tt.want {
+				t.Fatalf("DocsPublication = %q, want %q", parsed.DocsPublication, tt.want)
+			}
+			if got := parsed.ToKickoff("x").Config.DocsPublication; got != tt.want {
+				t.Fatalf("ToKickoff().Config.DocsPublication = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}

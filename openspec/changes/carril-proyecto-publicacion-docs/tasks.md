@@ -204,63 +204,63 @@ Commit: `feat(branch): adoptar en ensure la rama publicada como rama de seguimie
 
 Commit: `feat(sdd-gates): aprobar una parada publica los documentos del cambio`
 
-- [ ] T-20 `docs_publication` en el kickoff y flag `--docs-publication` (≈220 l)
+- [x] T-20 `docs_publication` en el kickoff y flag `--docs-publication` (≈220 l)
   - Ficheros: `internal/kickoff/types.go`, `internal/kickoff/args.go` (edición puntual), `internal/kickoff/schema.go`, `internal/kickoff/types_test.go`, `internal/kickoff/args_test.go`, `internal/kickoff/schema_test.go`, `internal/cli/sdd_kickoff.go` (ayuda y texto), `internal/cli/sdd_kickoff_test.go`.
   - Cambio (DD-05): `DocsPublication` y `DocsPublicationAuto`, `FlowConfig.DocsPublication` (`docs_publication,omitempty`), `SealArgs.DocsPublication`; `ParseSealArgs` rechaza cualquier valor distinto de `auto`; tras resolver el estilo efectivo (también con `--from-session-pace`) rechaza si no es `continuous`, y rechaza siempre con `--infer`; `Kickoff.Validate` admite `""` y `auto` y rechaza `auto` con `checkpointed`; el sellado único no reescribe el campo.
   - Cubre: REQ-27.4 · DD-05.
   - Aceptación: `seal --execution-style continuous --docs-publication auto` escribe el campo; con `checkpointed`, `--infer` o `otro` se rechaza sin escribir `kickoff.yaml`; sellar sin el flag no escribe el campo (serialización idéntica a la anterior); un segundo `seal` devuelve «Kickoff ya estaba sellado» y no lo reescribe; un `kickoff.yaml` con el campo se lee con un struct congelado anterior sin error.
   - Comprobación: `go test ./internal/kickoff/ -count=1` y `go test ./internal/cli/ -run 'Kickoff' -count=1`
 
-- [ ] T-21 Proyección `governance.kickoff.docsPublication` (≈70 l)
+- [x] T-21 Proyección `governance.kickoff.docsPublication` (≈70 l)
   - Ficheros: `internal/sddstatus/status_v2.go` (`kickoffV2.DocsPublication`, `json:"docsPublication,omitempty"`), `internal/sddstatus/status_v2_test.go`, `internal/assets/skills/_shared/sdd-status-contract.md`.
   - Cambio (DD-05): en v1 el campo aparece por reflexión; en v2 se copia; el contrato lo documenta en `governance.kickoff`.
   - Cubre: REQ-27.4, REQ-27.13 · DD-05.
   - Aceptación: con el campo sellado aparece `docsPublication: "auto"` en v1 y v2; sin él, ausente; un kickoff antiguo no altera ninguna proyección.
   - Comprobación: `go test ./internal/sddstatus/ -count=1`
 
-- [ ] T-22 `HandOffPlan` nuevo y retirada de `uncommitted_artifacts` (≈380 l, casi todo reescritura y eliminaciones)
+- [x] T-22 `HandOffPlan` nuevo y retirada de `uncommitted_artifacts` (≈380 l, casi todo reescritura y eliminaciones)
   - Ficheros: `internal/branch/handoff.go`, `internal/branch/handoff_test.go`, `internal/branch/types.go`, `internal/branch/labels.go`, `internal/branch/engine/handoff.go`, `internal/branch/engine/handoff_test.go`.
   - Cambio (DD-12): `Engine.HandOff` deja de comprobar «confirmado» en todas las puertas y de leer `DirtyPaths`; se retiran `UncommittedArtifacts`, `CodeUncommittedArtifacts` y su etiqueta, `uncommittedArtifacts`, `exemptEntry`, `HandOffRequest.Exempt`, `MergeRequired`, `MergeNotice`, `InPlaceNotice`, `HandOffAddStep`, `HandOffCommitStep` y `HandOffCommitMessage`; `HandOffPlan{Topology, Publish HandOffPublish, Deliveries, Resume}` con `Publish.Invocation`, `PRTarget` e `InPlace`; `HandOffDelivery` pierde `PR` y conserva `PRTarget`; `Resume = ["git fetch origin", "axiom branch ensure --change <x> --json"]`; se conservan `HandOffPushStep` y `HandOffWrongBranch`. Verificar con `rg` que ningún otro consumidor usa lo retirado.
   - Cubre: REQ-26.4, REQ-26.5, REQ-26.11, REQ-27.12 · DD-12.
   - Aceptación: monorepo con rama de cambio → `Publish.PRTarget` = integración; con rama de rol → `prTarget` de la rama de seguimiento; repositorio de specs de un multirepo → `InPlace` sin `prTarget`; `role-apply` con código sin confirmar ya no rechaza (lo informa después `publish`); `Deliveries` solo lista repositorios de código del rol con su `prTarget`; ningún paso contiene `&&`, `gh ` ni `glab `; el observador de `gitcommon` no registra `push`, `fetch`, `pull`, `ls-remote` ni `commit`.
   - Comprobación: `go test ./internal/branch/... -count=1`
 
-- [ ] T-23 Sobre de la puerta con `publication` y etiquetas «publish» (≈300 l)
+- [x] T-23 Sobre de la puerta con `publication` y etiquetas «publish» (≈300 l)
   - Ficheros: `internal/sddstatus/governance.go`, `internal/sddstatus/governance_handoff.go`, `internal/sddstatus/governance_test.go`, `internal/sddstatus/status_v2_test.go`.
   - Cambio (DD-11): `GatePublication{Remote, Branch, PRTarget, Invocation}` y `SDDGovernanceGateResult.Publication`/`PublicationUnavailable`; `newGovernanceGateQuestion` consulta `engine.Default().PublicationTarget` y, con motor nulo, omite `publication`; etiquetas «Approve, publish and stop» y «Approve, publish and continue» con los efectos de design §2.11; con `engram` o `none`, `approved` mantiene «Approve and continue» y `hand_off` no existe; `Validate` exige `Invocation` con prefijo `axiom sdd publish ` y `--branch <Branch>`; `gateQuestionNarrative` nombra el remoto y la rama; `integration` sin cambios.
   - Cubre: REQ-27.12, REQ-27.7 (rama atada), REQ-26.1, REQ-26.6 · DD-11.
   - Aceptación: en `spec`, `design`, `tasks` y `role-apply:<rol>` con almacén de ficheros, el sobre lleva `publication` con la rama real y la invocación con `--branch`; con `wrong_branch` lleva `publicationUnavailable: "wrong_branch"` y las opciones de `gate record`; efectos con la frase «A refused publication keeps the approval. Code pushes, pull requests and merges remain yours.»; invocaciones de las opciones siguen con prefijo `axiom sdd gate record `; el contrato de *Lossless Blocking Prompt* se cumple con las etiquetas nuevas.
   - Comprobación: `go test ./internal/sddstatus/ -count=1` y `go test ./internal/assets/ -run 'BlockingPrompt' -count=1`
 
-- [ ] T-24 `gate record`: `publish` en el JSON, entrega nueva y `--hand-off` sin comprobación de confirmado (≈330 l)
+- [x] T-24 `gate record`: `publish` en el JSON, entrega nueva y `--hand-off` sin comprobación de confirmado (≈330 l)
   - Ficheros: `internal/cli/sdd_gate.go` (ediciones mínimas), `internal/cli/sdd_gate_handoff.go`, `internal/cli/sdd_gate_test.go`, `internal/cli/sdd_gate_handoff_test.go`, `internal/cli/sdd_writer_guard_test.go`.
   - Cambio (DD-11, DD-12): `gateRecordJSON` gana `Publish *gatePublishJSON` y `PublishUnavailable` en toda aprobación distinta de `integration` (se calcula la orden, no se ejecuta); `writeHandOffDelivery` con el texto de design §2.12 (incluida la variante «se trabaja in situ en la integración, sin PR» y las órdenes de push de código numeradas con «Axiom no sube código ni abre PR: ejecútalo tú»); se retira `delivery.mergeRequired` del JSON `axiom.sdd-gate-record/v1`; se elimina el rechazo `uncommitted_artifacts` y se conservan guarda `wrong_branch`, estilo, almacén, digest y puerta ya aprobada.
   - Cubre: REQ-26.3, REQ-26.4, REQ-26.5, REQ-26.6, REQ-27.12 · DD-11, DD-12 · matriz «Estado del push».
   - Aceptación: salidas 2 y 3 devuelven `publish.invocation` (con `prTarget`, vacío en specs in situ de multirepo); `--hand-off` con artefactos sin confirmar y con `role-apply` con código sucio **no** rechaza; las salidas 1 y 3 siguen escribiendo registros sin `handed_off`; `gate record` no ejecuta `commit` ni `push` (observador); `gates.yaml` queda intacto en cada rechazo restante; con `integration` sin cambios; salida de texto sin PR fusionada.
   - Comprobación: `go test ./internal/cli/ -run 'Gate|HandOff|WriterGuard' -count=1`
 
-- [ ] T-25 Pruebas de integración de `publish` encadenado tras `gate record` (≈220 l)
+- [x] T-25 Pruebas de integración de `publish` encadenado tras `gate record` (≈220 l)
   - Ficheros: `internal/cli/sdd_publish_gate_test.go` (nuevo), `internal/cli/sdd_publish_isolation_test.go`.
   - Cambio: pruebas en proceso sobre remoto bare: `RunSDDGate record --decision approved --hand-off --json` seguido de `RunSDDPublish` con la `invocation` devuelta publica `gates.yaml` y los documentos y no sube código; un `role-apply` con commit de código sin subir devuelve `code_commits_unpublished` y la aprobación registrada se conserva; el observador de aislamiento se actualiza al comportamiento nuevo de `--hand-off`.
   - Cubre: REQ-27.8, REQ-27.12, REQ-27.15 (quien sigue adopta la rama con `ensure`), REQ-27.11 · DD-11, DD-14.
   - Aceptación: de extremo a extremo en proceso, una segunda copia del repositorio hace `git fetch origin` y `RunBranch ensure` adopta la rama con `createdFrom: remote`; la negativa por código no deshace la aprobación; ningún comando de `axiom branch` ni `gate record` ejecuta `push` o `commit`.
   - Comprobación: `go test ./internal/cli/ -run 'SDDPublishGate|PublishIsolation' -count=1`
 
-- [ ] T-26 Doctrina de puertas, `stop-exits.md` final, skills y pines de assets (≈330 l)
+- [x] T-26 Doctrina de puertas, `stop-exits.md` final, skills y pines de assets (≈330 l)
   - Ficheros: `internal/assets/generic/stop-exits.md` (texto final de design §2.11, solo SDD), `internal/assets/skills/_shared/sdd-orchestrator-sections.md` (encadenado `gate record` + `publish`, `--docs-publication auto` en la opción `continuous` de la pregunta de estilo, momentos de publicación de DD-15 y archivado con `publish --archive`; se elimina «it refuses without writing anything when the artifacts are not committed»), `internal/assets/skills/sdd-spec/SKILL.md`, `internal/assets/skills/sdd-design/SKILL.md` (regla «La fase no hace commit ni push…»), `internal/assets/skills/_shared/sdd-status-contract.md` (`publication`, `publicationUnavailable`), `internal/assets/assets_test.go`, `internal/components/sdd/orchestrator_stop_exits_test.go`, `internal/components/agentguidance/stop_exits_test.go`.
   - Cambio (DD-11, DD-15): el texto de las tres salidas pasa a «Approve, publish and stop / continue»; la sección de puertas pide ejecutar `publish.invocation` una vez tras el registro y tratar la negativa como informativa; `continuous` con `docs_publication: auto` publica al cerrar `tasks` y tras archivar (`--archive` en el worktree de `ensure --archive`), sin él ofrece las órdenes; las skills de fase no publican.
   - Cubre: REQ-27.12, REQ-27.13, REQ-27.14, REQ-27.4, REQ-26.8, REQ-26.1, REQ-21.7 · DD-11, DD-15.
   - Aceptación: los doce orquestadores compuestos y Pi incluyen `StopExits()` idéntico; `{{AXIOM_STOP_EXITS}}` resuelto; pines de `publish.invocation`, de «A refused publication never undoes the recorded approval», de `--docs-publication auto` y de `publish --archive`; ningún asset conserva «commit` y `push` impresos para el humano» ni «PR fusionada»; `StopExits()` sigue sin nombrar `gateQuestion`, `gateCriteria` ni `gateEvidence`; el pin de `sdd-spec`/`sdd-design` coincide con design §2.15.
   - Comprobación: `go test ./internal/assets/ ./internal/components/sdd/ ./internal/components/agentguidance/ -count=1`
 
-- [ ] T-27 Documentación, regeneración de goldens y `.codex/AGENTS.md` (≈90 l de autoría; resto generado)
+- [x] T-27 Documentación, regeneración de goldens y `.codex/AGENTS.md` (≈90 l de autoría; resto generado)
   - Ficheros: `docs/manual-de-inicio.md` (publicación con `axiom sdd publish`, adopción con `fetch` + `ensure`, retirada de «PR fusionada», `docs_publication`, nota de que el CI de otros proyectos puede ejecutarse con el push de rama y queda fuera del control de Axiom), `AGENTS.md`, `GEMINI.md` (solo si el texto cambia), `internal/workspace/docs_contract_test.go`, `testdata/golden/*.golden` (13), `.codex/AGENTS.md`.
   - Cambio: regenerar con `go test ./internal/components/ -run Golden -update -count=1` y volver a pasar sin `-update`; copiar el bloque gestionado de `sdd-codex-agentsmd.golden` a `.codex/AGENTS.md`.
   - Cubre: REQ-27.12, REQ-27.15, REQ-26.8 (paridad: texto de las tres salidas idéntico en todos los runtimes) · DD-16.
   - Aceptación: goldens en verde sin `-update`; `.codex/AGENTS.md` coincide con el golden; el texto de las tres salidas es idéntico al de `StopExits()`; el manual no contradice la doctrina generada; pines de `docs_contract_test.go` en verde.
   - Comprobación: `go test ./internal/components/ -run Golden -count=1` y `go test ./internal/workspace/ -count=1`
 
-- [ ] T-28 Verificación final del cambio y commit de WU-3 (≈60 l de ajustes si aparecen)
+- [x] T-28 Verificación final del cambio y commit de WU-3 (≈60 l de ajustes si aparecen)
   - Ficheros: ninguno de partida; ajustes mínimos que surjan de las pruebas.
   - Cambio: `go vet ./...`; `go test` paquete a paquete de todos los tocados; ratchets de rechazos de `cli` con `-run` acotado (`'Refusal|Ratchet|Continuation'`); comprobar `rg` de importaciones: solo `internal/cli/sdd_publish.go` usa `sddpublish`; `gates.yaml` y `kickoff.yaml` de este cambio sin tocar. `scripts/deadcode-ratchet.sh` no se ejecuta si compila un binario suelto (se anota igual que en `paradas-tres-salidas`).
   - Cubre: criterios de éxito de `proposal.md` §12 («CI verde», «Aislamiento», «Paridad y goldens») · DD-14, DD-16.

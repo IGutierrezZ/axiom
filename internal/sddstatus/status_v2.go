@@ -130,6 +130,9 @@ type kickoffV2 struct {
 	HandoffPolicy string `json:"handoffPolicy,omitempty"`
 	SealedAt      string `json:"sealedAt"`
 	SealedBy      string `json:"sealedBy"`
+	// DocsPublication es la autorizacion sellada de publicar los documentos sin preguntar (REQ-27.4);
+	// ausente cuando el kickoff no la lleva.
+	DocsPublication string `json:"docsPublication,omitempty"`
 }
 
 type gateV2 struct {
@@ -177,12 +180,13 @@ func projectGovernanceV2(governance *Governance) *governanceV2 {
 	}
 	return &governanceV2{
 		Kickoff: kickoffV2{
-			Schema:         governance.Kickoff.Schema,
-			FlowMode:       string(governance.Kickoff.Config.FlowMode),
-			ExecutionStyle: string(governance.Kickoff.Config.ExecutionStyle),
-			HandoffPolicy:  string(governance.Kickoff.Config.HandoffPolicy),
-			SealedAt:       sealedAt,
-			SealedBy:       governance.Kickoff.SealedBy,
+			Schema:          governance.Kickoff.Schema,
+			FlowMode:        string(governance.Kickoff.Config.FlowMode),
+			ExecutionStyle:  string(governance.Kickoff.Config.ExecutionStyle),
+			HandoffPolicy:   string(governance.Kickoff.Config.HandoffPolicy),
+			DocsPublication: string(governance.Kickoff.Config.DocsPublication),
+			SealedAt:        sealedAt,
+			SealedBy:        governance.Kickoff.SealedBy,
 		},
 		Gates:  gates,
 		Roster: rosterV2{Source: governance.Roster.Source, Roles: governance.Roster.Roles},

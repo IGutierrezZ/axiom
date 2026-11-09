@@ -111,7 +111,18 @@ type FlowConfig struct {
 	// HandoffNone; an empty value from a hand-edited file is accepted.
 	HandoffPolicy HandoffPolicy `yaml:"handoff_policy,omitempty"`
 	Roles         []KickoffRole `yaml:"roles"`
+	// DocsPublication es la autorizacion sellada de publicar los documentos del cambio sin
+	// preguntar en el estilo continuous (REQ-27.4, REQ-27.13). Vacia significa que no se publica
+	// automaticamente; un binario anterior ignora la clave.
+	DocsPublication DocsPublication `yaml:"docs_publication,omitempty"`
 }
+
+// DocsPublication es la autorizacion, sellada, de publicar los documentos del cambio sin preguntar
+// en el estilo continuous (REQ-27.4). Vacia significa «no se publica automaticamente».
+type DocsPublication string
+
+// DocsPublicationAuto autoriza publicar al cerrar `tasks` y tras archivar, sin preguntar.
+const DocsPublicationAuto DocsPublication = "auto"
 
 // Lifecycle is the "lifecycle:" block of the sealed document.
 type Lifecycle struct {

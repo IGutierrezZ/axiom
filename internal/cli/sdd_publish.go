@@ -20,7 +20,7 @@ import (
 
 // errPublishRefused es lo que devuelve RunSDDPublish cuando la publicación se rechaza: el resultado ya
 // está escrito (texto o JSON) y el error lleva la línea resumen para que `axiom sdd` salga con 1.
-var errPublishRefused = errors.New("publicación rechazada")
+var errPublishRefused = errors.New("publicación rechazada") // refusal:by-design world-action: the typed refusal (code, label, message and continuation) is already written to the output; this error only carries the exit code 1
 
 const sddPublishHelp = `Uso: axiom sdd publish --cwd <ruta> --change <nombre> [--archive] [--branch <rama>] [--json]
 
@@ -63,7 +63,7 @@ func RunSDDPublish(args []string, stdout io.Writer) error {
 		return errors.New("falta --change: indica el cambio que se publica, por ejemplo `axiom sdd publish --change <nombre>`; ejecuta `axiom sdd publish --help`")
 	}
 	if err := gitref.ValidBranchComponent(*change); err != nil {
-		return fmt.Errorf("--change %q no es un nombre de cambio válido: %v; usa letras, dígitos, «.», «_» y «-»", *change, err)
+		return fmt.Errorf("--change %q no es un nombre de cambio válido: %v; usa letras, dígitos, «.», «_» y «-», por ejemplo `axiom sdd publish --change <nombre>`; ejecuta `axiom sdd publish --help`", *change, err)
 	}
 	blank := false
 	flags.Visit(func(given *flag.Flag) {
@@ -72,7 +72,7 @@ func RunSDDPublish(args []string, stdout io.Writer) error {
 		}
 	})
 	if blank {
-		return errors.New("--branch no puede estar vacío: indica la rama autorizada o quita la bandera")
+		return errors.New("--branch no puede estar vacío: indica la rama autorizada con `axiom sdd publish --change <nombre> --branch <rama>` o quita la bandera; ejecuta `axiom sdd publish --help`")
 	}
 
 	dir, err := filepath.Abs(*cwd)

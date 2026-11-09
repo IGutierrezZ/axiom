@@ -140,9 +140,6 @@ const (
 	CodeMergeNotConfirmed          Code = "merge_not_confirmed"
 	CodeChangeNotIntegrated        Code = "change_not_integrated"
 	CodeArchiveBranchNotApplicable Code = "archive_branch_not_applicable"
-	// CodeUncommittedArtifacts es el rechazo de la salida 2 de una parada con artefactos del cambio
-	// sin confirmar (REQ-26.4): lo que no está en un commit no viaja en la PR.
-	CodeUncommittedArtifacts Code = "uncommitted_artifacts"
 	// CodeDetachedHead e CodeIntegrationBranch son los rechazos de la publicación de documentos
 	// (REQ-27.7): el repositorio no está en ninguna rama, o está en la de integración de un
 	// repositorio donde no se publica. Los devuelve `Engine.PublicationTarget`.

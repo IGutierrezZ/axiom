@@ -27,6 +27,10 @@ var (
 		HandoffPerCheckpoint: true,
 	}
 
+	validDocsPublications = map[DocsPublication]bool{
+		DocsPublicationAuto: true,
+	}
+
 	validGatePolicies = map[multirole.GatePolicy]bool{
 		multirole.PolicyBlocking: true,
 		multirole.PolicyDeferred: true,
@@ -90,6 +94,15 @@ func (k Kickoff) Validate() error {
 	// value outside the closed vocabulary is still rejected.
 	if k.Config.HandoffPolicy != "" && !validHandoffPolicies[k.Config.HandoffPolicy] {
 		return fmt.Errorf("kickoff: handoff_policy desconocido %q", k.Config.HandoffPolicy)
+	}
+	// docs_publication (REQ-27.4): vacio o auto, y auto solo acompana a continuous.
+	if k.Config.DocsPublication != "" {
+		if !validDocsPublications[k.Config.DocsPublication] {
+			return fmt.Errorf("kickoff: docs_publication desconocido %q", k.Config.DocsPublication)
+		}
+		if k.Config.ExecutionStyle != ExecutionContinuous {
+			return fmt.Errorf("kickoff: docs_publication %q solo es valido con execution_style continuous", k.Config.DocsPublication)
+		}
 	}
 	for _, role := range k.Config.Roles {
 		if !validGatePolicies[role.GatePolicy] {

@@ -71,8 +71,9 @@ func wantRefusedWithoutWriting(t *testing.T, ws workspacetest.Workspace, args []
 	}
 }
 
-// REQ-26.3 y REQ-26.5: la salida 2 en un monorepo escribe `approved` con la marca y devuelve la
-// rama, el destino, el commit de gates.yaml, el push y los datos de la PR, y advierte de la fusión.
+// REQ-26.3, REQ-26.5 y REQ-27.12: la salida 2 en un monorepo escribe `approved` con la marca y
+// devuelve la orden de publicación atada a la rama, el destino de su PR y la reanudación (`git
+// fetch origin` y `axiom branch ensure`), sin exigir una PR fusionada ni órdenes de commit o push.
 func TestGateRecordHandOffInAMonorepoWritesTheMarkAndReturnsTheDelivery(t *testing.T) {
 	ws := handOffProject(t, guardSealArgs)
 
@@ -83,17 +84,20 @@ func TestGateRecordHandOffInAMonorepoWritesTheMarkAndReturnsTheDelivery(t *testi
 	}
 	for _, want := range []string{
 		`Compuerta "spec" registrada (approved, fase siguiente cedida: design) para "x".`,
-		" add -- " + handOffGatesRel,
-		` commit -m "chore(sdd): aprobar spec de x y ceder design" -- ` + handOffGatesRel,
-		" push -u origin feat/x",
-		"rama feat/x hacia main",
-		"la rama feat/x como cabecera y main como base",
-		"fusionada en main",
-		"no recupera trabajo sin fusionar",
-		"Axiom no ejecuta ninguna de estas órdenes",
+		"axiom sdd publish --cwd ",
+		" --change x --branch feat/x",
+		"rama feat/x en origin; destino de su PR: main",
+		"`git fetch origin` y `axiom branch ensure --change x --json`",
+		"no hace falta una PR fusionada",
+		"Axiom no ejecuta ninguna orden de git ni de plataforma",
 	} {
 		if !strings.Contains(out, want) {
 			t.Errorf("la salida debe contener %q:\n%s", want, out)
+		}
+	}
+	for _, forbidden := range []string{" add -- ", " commit -m ", " push ", "fusionada en", "no recupera trabajo", "Aviso:"} {
+		if strings.Contains(out, forbidden) {
+			t.Errorf("la cesión ya no entrega órdenes de documentación ni exige fusionar; la salida no puede contener %q:\n%s", forbidden, out)
 		}
 	}
 	for _, forbidden := range []string{"&&", "gh ", "glab ", " -a "} {
@@ -214,16 +218,26 @@ func TestGateRecordHandOffRefusals(t *testing.T) {
 		}
 	})
 
-	t.Run("un artefacto modificado sin confirmar se rechaza nombrándolo", func(t *testing.T) {
+	// REQ-26.4 y DD-12: la cesión ya no comprueba qué está confirmado. Los documentos pendientes los
+	// confirma `axiom sdd publish`, y `uncommitted_artifacts` deja de existir.
+	t.Run("un artefacto modificado sin confirmar ya no se rechaza", func(t *testing.T) {
 		ws := handOffProject(t, guardSealArgs)
 		workspacetest.WriteFile(t, filepath.Join(guardChangeRoot(ws), "spec.md"), "# spec editado\n")
-		wantRefusedWithoutWriting(t, ws, withGate("spec"), "openspec/changes/x/spec.md", "git -C", "commit")
+		out, err := gateRecord(t, ws, withGate("spec")...)
+		if err != nil {
+			t.Fatalf("la salida 2 no comprueba lo confirmado: %v", err)
+		}
+		if strings.Contains(out, "uncommitted_artifacts") || !strings.Contains(out, "axiom sdd publish") {
+			t.Errorf("la cesión debe entregar la orden de publicación:\n%s", out)
+		}
 	})
 
-	t.Run("un fichero sin seguimiento se rechaza nombrándolo", func(t *testing.T) {
+	t.Run("un fichero sin seguimiento ya no se rechaza", func(t *testing.T) {
 		ws := handOffProject(t, guardSealArgs)
 		workspacetest.WriteFile(t, filepath.Join(guardChangeRoot(ws), "specs", "demo", "spec.md"), "# delta\n")
-		wantRefusedWithoutWriting(t, ws, withGate("spec"), "openspec/changes/x/specs/")
+		if _, err := gateRecord(t, ws, withGate("spec")...); err != nil {
+			t.Fatalf("la salida 2 no comprueba lo confirmado: %v", err)
+		}
 	})
 
 	t.Run("el propio gates.yaml sin confirmar no cuenta", func(t *testing.T) {
@@ -231,7 +245,6 @@ func TestGateRecordHandOffRefusals(t *testing.T) {
 		if _, err := gateRecord(t, ws, "--gate", "spec", "--decision", "approved"); err != nil {
 			t.Fatalf("salida 3 previa: %v", err)
 		}
-		// gates.yaml queda sin confirmar: la salida 2 de otra puerta no se rechaza por él.
 		if _, err := gateRecord(t, ws, withGate("design")...); err != nil {
 			t.Fatalf("gates.yaml sin confirmar no impide la salida 2: %v", err)
 		}
@@ -309,11 +322,23 @@ func TestGateRecordHandOffPhaseSurvivesALaterApprovalOfTheOtherRole(t *testing.T
 	}
 }
 
-func TestGateRecordHandOffOfARoleApplyRequiresTheWholeWorkingTreeCommitted(t *testing.T) {
+// REQ-26.4 y DD-12: con código del rol sin confirmar la cesión de un role-apply ya no se rechaza.
+// `gate record` no inspecciona el trabajo del rol; el código sin subir lo informa después
+// `axiom sdd publish`.
+func TestGateRecordHandOffOfARoleApplyDoesNotInspectTheRoleWork(t *testing.T) {
 	ws := handOffProject(t, guardSealArgs)
 	workspacetest.WriteFile(t, filepath.Join(ws.Master, "internal", "core.go"), "package core\n")
 
-	wantRefusedWithoutWriting(t, ws, []string{"--gate", "role-apply:core", "--decision", "approved", "--hand-off"}, "internal/")
+	out, err := gateRecord(t, ws, "--gate", "role-apply:core", "--decision", "approved", "--hand-off")
+	if err != nil {
+		t.Fatalf("la cesión de un role-apply no inspecciona el trabajo del rol: %v", err)
+	}
+	if !strings.Contains(out, "axiom sdd publish") {
+		t.Errorf("la cesión debe entregar la orden de publicación:\n%s", out)
+	}
+	if ledger := handOffLedger(t, ws); len(ledger.Records) != 1 || !ledger.Records[0].HandedOff {
+		t.Errorf("registros = %+v, se esperaba el approved con la marca", ledger.Records)
+	}
 }
 
 // REQ-26.1 y REQ-26.3: las salidas 1 y 3 no escriben la marca.
@@ -358,7 +383,7 @@ func TestGateRecordJSONInEveryExit(t *testing.T) {
 			t.Fatal(err)
 		}
 		document := decode(t, out)
-		for _, key := range []string{"delivery", "handedOff", "handedOffTo", "lastRoleClosed"} {
+		for _, key := range []string{"delivery", "handedOff", "handedOffTo", "lastRoleClosed", "publish", "publishUnavailable"} {
 			if _, present := document[key]; present {
 				t.Errorf("la salida 1 no lleva %q: %v", key, document)
 			}
@@ -378,6 +403,11 @@ func TestGateRecordJSONInEveryExit(t *testing.T) {
 				t.Errorf("la salida 3 no lleva %q: %v", key, document)
 			}
 		}
+		// REQ-27.12: toda aprobaciÃ³n calcula la orden de publicaciÃ³n y no la ejecuta.
+		publish, _ := document["publish"].(map[string]any)
+		if publish["branch"] != "feat/x" || publish["prTarget"] != "main" || !strings.Contains(publish["invocation"].(string), "--branch feat/x") {
+			t.Errorf("la salida 3 lleva publish con la rama real: %v", document)
+		}
 	})
 	t.Run("salida 2", func(t *testing.T) {
 		out, err := gateRecord(t, ws, "--gate", "tasks", "--decision", "approved", "--hand-off", "--json")
@@ -389,27 +419,33 @@ func TestGateRecordJSONInEveryExit(t *testing.T) {
 			t.Errorf("documento = %v", document)
 		}
 		delivery, ok := document["delivery"].(map[string]any)
-		if !ok || delivery["mergeRequired"] != true || delivery["topology"] != "monorepo-embedded" {
+		if !ok || delivery["topology"] != "monorepo-embedded" {
 			t.Fatalf("delivery = %v", document["delivery"])
 		}
-		deliveries, _ := delivery["deliveries"].([]any)
-		if len(deliveries) != 1 {
-			t.Fatalf("deliveries = %v", delivery["deliveries"])
+		// REQ-27.12: se retira mergeRequired y la cesión no exige PR fusionada.
+		if _, present := delivery["mergeRequired"]; present {
+			t.Errorf("delivery ya no lleva mergeRequired: %v", delivery)
 		}
-		first, _ := deliveries[0].(map[string]any)
-		pr, _ := first["pr"].(map[string]any)
-		if first["branch"] != "feat/x" || first["prTarget"] != "main" || pr["head"] != "feat/x" || pr["base"] != "main" {
-			t.Errorf("entrega = %v", first)
+		if _, present := delivery["deliveries"]; present {
+			t.Errorf("sin repositorios de código del rol no hay deliveries: %v", delivery)
 		}
-		steps, _ := first["steps"].([]any)
-		if len(steps) != 3 {
-			t.Errorf("pasos = %v", first["steps"])
+		publish, _ := delivery["publish"].(map[string]any)
+		if publish["remote"] != "origin" || publish["branch"] != "feat/x" || publish["prTarget"] != "main" {
+			t.Errorf("delivery.publish = %v", publish)
 		}
-		for _, step := range steps {
-			text, _ := step.(string)
-			if strings.Contains(text, "&&") || strings.Contains(text, "gh ") || strings.Contains(text, "glab ") {
-				t.Errorf("paso no admisible: %q", text)
-			}
+		invocation, _ := publish["invocation"].(string)
+		if !strings.HasPrefix(invocation, "axiom sdd publish --cwd ") || !strings.HasSuffix(invocation, " --change x --branch feat/x") {
+			t.Errorf("la invocación debe estar atada a la rama con --branch: %q", invocation)
+		}
+		if topLevel, _ := document["publish"].(map[string]any); topLevel["invocation"] != invocation || topLevel["prTarget"] != "main" {
+			t.Errorf("publish de nivel superior = %v", document["publish"])
+		}
+		resume, _ := delivery["resume"].([]any)
+		if len(resume) != 2 || resume[0] != "git fetch origin" || resume[1] != "axiom branch ensure --change x --json" {
+			t.Errorf("resume = %v", delivery["resume"])
+		}
+		if strings.Contains(invocation, "&&") || strings.Contains(invocation, "gh ") || strings.Contains(invocation, "glab ") {
+			t.Errorf("invocación no admisible: %q", invocation)
 		}
 	})
 	t.Run("compuerta de rol", func(t *testing.T) {
@@ -479,8 +515,8 @@ func TestGateRecordConcurrentHandOffAndPlainApprovalNeverHideTheMark(t *testing.
 }
 
 // REQ-26.5, segundo escenario: en el repositorio de specs de un multirepo, que se trabaja in situ en
-// la integración, la salida 2 indica confirmar `gates.yaml` y hacer push de `main`, sin rama de
-// cambio ni PR.
+// la integración, la salida 2 entrega la publicaciÃ³n de la rama `main`, sin rama de cambio
+// ni destino de PR (REQ-27.12).
 func TestGateRecordHandOffInTheSpecsRepositoryOfAMultirepoIsInPlace(t *testing.T) {
 	captureSealWarnings(t)
 	captureWriterWarnings(t)
@@ -502,17 +538,17 @@ func TestGateRecordHandOffInTheSpecsRepositoryOfAMultirepoIsInPlace(t *testing.T
 	text := out.String()
 	for _, want := range []string{
 		"fase siguiente cedida: design",
-		" add -- openspec/changes/" + change + "/gates.yaml",
-		" commit -m ",
-		" push origin main",
-		"rama de integración main",
-		"se trabaja in situ y no lleva PR",
+		"axiom sdd publish --cwd ",
+		" --change " + change + " --branch main",
+		"rama de integración main en origin",
+		"se trabaja in situ en la integración, sin PR",
+		"no hace falta una PR fusionada",
 	} {
 		if !strings.Contains(text, want) {
 			t.Errorf("la salida debe contener %q:\n%s", want, text)
 		}
 	}
-	for _, forbidden := range []string{"feat/", "cabecera", "push -u", "gh ", "glab "} {
+	for _, forbidden := range []string{"feat/", "cabecera", "push -u", "destino de su PR", "gh ", "glab "} {
 		if strings.Contains(text, forbidden) {
 			t.Errorf("el repositorio de specs no tiene rama de cambio ni PR; la salida no puede contener %q:\n%s", forbidden, text)
 		}
