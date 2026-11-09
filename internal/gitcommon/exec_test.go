@@ -281,6 +281,33 @@ func TestObserveReceivesEveryInvocation(t *testing.T) {
 	}
 }
 
+// DD-08: RunWithTimeout fija el límite por llamada, lo distingue con ErrTimeout, deja
+// intacto el de Run y el observador ve las invocaciones de ambas funciones.
+func TestRunWithTimeoutBoundsEachCallAndIsObserved(t *testing.T) {
+	requireGit(t)
+	ctx := context.Background()
+	repo := newRepository(t)
+	seen := observe(t)
+
+	if _, err := RunWithTimeout(ctx, repo, time.Nanosecond, "rev-parse", "--show-toplevel"); !errors.Is(err, ErrTimeout) {
+		t.Fatalf("RunWithTimeout con el tiempo agotado = %v, se esperaba ErrTimeout", err)
+	}
+	result, err := RunWithTimeout(ctx, repo, time.Minute, "rev-parse", "--show-toplevel")
+	if err != nil || result.ExitCode != 0 {
+		t.Fatalf("RunWithTimeout con margen = %+v, %v", result, err)
+	}
+	// Run conserva su comportamiento: su límite sigue siendo runTimeout.
+	previous := runTimeout
+	runTimeout = time.Nanosecond
+	t.Cleanup(func() { runTimeout = previous })
+	if _, err := Run(ctx, repo, "rev-parse", "--show-toplevel"); !errors.Is(err, ErrTimeout) {
+		t.Fatalf("Run con runTimeout agotado = %v, se esperaba ErrTimeout", err)
+	}
+	if len(*seen) != 3 {
+		t.Errorf("el observador vio %d invocaciones, se esperaban 3: %v", len(*seen), *seen)
+	}
+}
+
 // El observador no puede alterar los argumentos que se ejecutan: recibe una copia.
 func TestObserveCannotChangeTheArguments(t *testing.T) {
 	requireGit(t)

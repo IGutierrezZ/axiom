@@ -43,6 +43,10 @@ var labels = map[string]string{
 	// Código de la salida 2 de una parada (REQ-26.4).
 	string(CodeUncommittedArtifacts): "artefactos sin confirmar",
 
+	// Códigos de la publicación de documentos (REQ-27.7).
+	string(CodeDetachedHead):      "HEAD desacoplado",
+	string(CodeIntegrationBranch): "rama de integración no publicable",
+
 	// Modo de trabajo materializado y su origen (REQ-25.15, design §4.4).
 	string(ModeWorktree): "un worktree por rama",
 	string(ModeInPlace):  "en la carpeta del proyecto",

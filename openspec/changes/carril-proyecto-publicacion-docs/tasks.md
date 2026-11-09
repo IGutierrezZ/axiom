@@ -108,56 +108,56 @@ Commit: `feat(workflow): declarar el carril del proyecto en axiom.yaml y retirar
 
 Commit: `feat(sdd-publish): publicar con axiom sdd publish solo la documentación del cambio`
 
-- [ ] T-08 Paquete puro `internal/docpaths` (≈220 l)
+- [x] T-08 Paquete puro `internal/docpaths` (≈220 l)
   - Ficheros: `internal/docpaths/docpaths.go` (nuevo), `internal/docpaths/docpaths_test.go` (nuevo).
   - Cambio (DD-06): `Set`, `New(planningRel, change, baseline, maintained, reference)`, `Contains`, `Root`, `LocalState` con la tabla de raíces de design §2.6 (carpeta del cambio, carpeta archivada con nombre escapado, `<p>/specs`, `<p>/INDEX.md`, documentos de baseline, rutas mantenidas; `reference` y `odd/tasks/**` nunca).
   - Cubre: REQ-27.5 (lista cerrada), REQ-27.6 · DD-06 · matriz «Rutas que parecen documentación».
   - Aceptación: `TestDocPathsClassifiesByRootNotExtension` (`requirements.txt`, `CMakeLists.txt`, `docs/x.mdx` sin declarar y `README.sh` en la raíz son código; `README.sh` bajo `openspec/changes/<x>/` es documentación); `foo-x` no coincide con la carpeta archivada de `x`; `reference` gana sobre otra regla; `odd/tasks/**` es código; `LocalState` marca `.gates.lock`, `.axiom-instance` y temporales de la raíz del cambio; `planningRel` vacío (multirepo); comparaciones sensibles a mayúsculas.
   - Comprobación: `go test ./internal/docpaths/ -count=1`
 
-- [ ] T-09 `Engine.PublicationTarget` y códigos nuevos de `branch` (≈420 l)
+- [x] T-09 `Engine.PublicationTarget` y códigos nuevos de `branch` (≈420 l)
   - Ficheros: `internal/branch/publication.go` (nuevo), `internal/branch/engine/publication.go` (nuevo), `internal/branch/engine/publication_test.go` (nuevo), `internal/branch/types.go`, `internal/branch/labels.go`.
   - Cambio (DD-07): `PublicationRequest`, `PublicationTarget`, `Engine.PublicationTarget` sobre `gather` + `Plan` (y `useArchivePlan` con `Archive`), solo lecturas (sin cerrojo, registro ni `fetch`); códigos `detached_head` e `integration_branch` con su etiqueta; reglas de rama 1 a 4 de design §2.7, con `wrong_branch` y la continuación de `HandOffWrongBranch` (que nombra `--archive` cuando falta).
   - Cubre: REQ-27.7, REQ-27.14 (rama de archivado), REQ-25.19 · DD-07 · matriz «Estado del push».
   - Aceptación: `monorepo-embedded` con rama de cambio, de rol y de archivado; multirepo con repositorio de specs in situ en `main` → rama permitida = integración; rama de integración de un repositorio de código → `integration_branch`; HEAD desacoplado → `detached_head`; rama de archivado sin `--archive` y rama de cambio con `--archive` → `wrong_branch`; `Branch` distinto de la rama permitida → `wrong_branch`; `PRTarget` igual al de `axiom branch status` y vacío en integración in situ; el observador de `gitcommon` no registra `push`, `commit` ni `fetch`.
   - Comprobación: `go test ./internal/branch/... -count=1`
 
-- [ ] T-10 `gitcommon.RunWithTimeout` (≈90 l)
+- [x] T-10 `gitcommon.RunWithTimeout` (≈90 l)
   - Ficheros: `internal/gitcommon/exec.go`, `internal/gitcommon/exec_test.go`.
   - Cambio (DD-08): `RunWithTimeout(ctx, dir, timeout, args...)`; `Run` delega con `runTimeout`; `Observe` sigue viendo todas las invocaciones.
   - Cubre: REQ-27.9 (tiempo de espera → `remote_unavailable`), REQ-27.11 (único punto de ejecución) · DD-08.
   - Aceptación: un comando que supera el límite devuelve error de tiempo de espera distinguible; `Run` conserva su comportamiento; el observador registra las invocaciones de ambas funciones.
   - Comprobación: `go test ./internal/gitcommon/ -run 'Exec|Observe|Timeout' -count=1`
 
-- [ ] T-11 Puerto `sddpublish.Git` y adaptador sobre `gitcommon` (≈380 l)
+- [x] T-11 Puerto `sddpublish.Git` y adaptador sobre `gitcommon` (≈380 l)
   - Ficheros: `internal/sddpublish/ports.go` (nuevo), `internal/sddpublish/gitport.go` (nuevo), `internal/sddpublish/gitport_test.go` (nuevo).
   - Cambio (DD-08): interfaz `Git` con las nueve operaciones de design §2.8 y `PushOutcome`; adaptador con `gitcommon.Run` (y `RunWithTimeout` con `pushTimeout = 120 * time.Second`, variable de paquete); referencias validadas con `gitref.ValidRefName`, rutas con `:(top,literal)`, `--end-of-options` en `rev-list` y `rev-parse`; `Commit` en dos pasos (`git add --all -- <ps>` y `git commit --only -m <msg> -- <ps>`).
   - Cubre: REQ-27.6, REQ-27.9, REQ-27.11 · DD-08 · matriz «Selección del repositorio git» y «Estado del commit».
   - Aceptación: sobre un repositorio y un remoto bare temporales, cada operación devuelve lo esperado; ningún argumento empieza por `-`; `DirtyPaths` incluye borrados y no sigue renombrados; `UnpublishedCommits` respeta el límite; `CommitPaths` con `--cc` deja solo lo resuelto por una fusión; el adaptador ignora `GIT_DIR` y variables que redirigen el repositorio (`TestPublishIgnoresGitDirEnvironment`).
   - Comprobación: `go test ./internal/sddpublish/ -run 'GitPort|Adapter' -count=1`
 
-- [ ] T-12 Resultado, JSON `axiom.sdd-publish/v1` y clasificación de negativas (≈230 l)
+- [x] T-12 Resultado, JSON `axiom.sdd-publish/v1` y clasificación de negativas (≈230 l)
   - Ficheros: `internal/sddpublish/result.go` (nuevo), `internal/sddpublish/classify.go` (nuevo), `internal/sddpublish/classify_test.go` (nuevo).
   - Cambio (DD-09, DD-10): tipos `Request`, `Result`, `Refusal{code,label,message,continuation,details}`, los 17 códigos de design §5.3 con su etiqueta en castellano; `classifyPush` y `classifyCommit` con la tabla de design §2.9 (paso 10).
   - Cubre: REQ-27.9, REQ-27.8 (forma de la negativa) · DD-09.
   - Aceptación: tabla con entradas `--porcelain` y `stderr` fijas (`LC_ALL=C`) para `push_non_fast_forward` (`non-fast-forward` y `fetch first`), `push_hook_rejected` (`remote rejected`, hook `pre-push` local), `remote_unavailable` (las cinco señales y el tiempo de espera, con `details.timeout`), `push_failed`; `commit_hook_rejected` frente a `commit_failed`; serialización JSON estable con `commit` y `push` omitidos cuando no ocurrieron.
   - Comprobación: `go test ./internal/sddpublish/ -run 'Classify|Result' -count=1`
 
-- [ ] T-13 Algoritmo `Publisher.Run` y matriz de pruebas con remoto bare (≈650 l)
+- [x] T-13 Algoritmo `Publisher.Run` y matriz de pruebas con remoto bare (≈650 l)
   - Ficheros: `internal/sddpublish/publish.go` (nuevo), `internal/sddpublish/publish_test.go` (nuevo).
   - Cambio (DD-09): los diez pasos en orden (almacén → cambio → destino → remoto → rango sin subir → conjunto de documentación → commit `--only` por raíces con exclusión del estado local → commits sin subir → `up_to_date` → push `refs/heads/<b>:refs/heads/<b>` sin `+`, `--force*` ni `--no-verify`, con `--set-upstream` solo fuera de `InPlace`); mensajes `docs(sdd): publicar los documentos de <x>` / `publicar el archivado de <x>`; límite de 500 commits.
   - Cubre: REQ-27.5, REQ-27.6, REQ-27.7, REQ-27.8, REQ-27.9, REQ-27.10, REQ-27.14 · DD-09 · matriz «Rutas que parecen documentación», «Estado del commit» y «Estado del push».
   - Aceptación (nombres de design §7): `TestPublishKeepsStagedCodeStaged`, `TestPublishNeverCommitsUnstagedCode`, `TestPublishNoDocChangesMakesNoCommit`, `TestPublishExcludesLocalStateFiles`, `TestPublishCommitsArchiveDeletions`, `TestPublishFirstPushCreatesRemoteBranch`, `TestPublishTrackedBranchFastForward`, `TestPublishNonFastForwardRefusedWithoutRetry`, `TestPublishRefusesIntegrationBranchInCodeRepo`, `TestPublishMultirepoSpecsPushesIntegration`, `TestPublishBranchFlagMismatchIsWrongBranch`, `TestPublishNeverRunsFetchOrForce` (observador), `TestPublishRefusesUnpushedCommitTouchingReadmeSh`, `TestPublishIgnoresPublishedIntegrationCommits`, `TestPublishRunsInTargetRootFromLinkedWorktree`; además `store_without_files` (`engram`, `none`), `change_not_found`, `remote_missing` sin commit previo, `unpublished_range_unknown`, `identity_missing`, hooks `pre-commit` y `pre-push` locales y `pre-receive` remoto, remoto con URL inexistente, HEAD desacoplado, `up_to_date` y `unpublished_range_too_large`; todo con `t.Setenv` para la identidad y hooks `#!/bin/sh\nexit 1`. En cada negativa posterior al commit, el commit local se conserva y se informa. Comprobar durante esta tarea el supuesto abierto de design §9 (`git rev-parse --git-path hooks/<hook>` y `core.hooksPath`); si no se respeta, degradar a `commit_failed`/`push_failed` con la cola de `stderr`.
   - Comprobación: `go test ./internal/sddpublish/ -count=1`
 
-- [ ] T-14 Verbo `axiom sdd publish` en la CLI y registro en `cmd/axiom` (≈320 l)
+- [x] T-14 Verbo `axiom sdd publish` en la CLI y registro en `cmd/axiom` (≈320 l)
   - Ficheros: `internal/cli/sdd_publish.go` (nuevo), `internal/cli/sdd_publish_test.go` (nuevo), `cmd/axiom/main.go` (registro en `runSDD`, ayuda y lista de opciones).
   - Cambio (DD-10): `RunSDDPublish(args []string, stdout io.Writer) error` con `--cwd`, `--change` (obligatorio), `--archive`, `--branch`, `--json`; `--cwd` por `workspace.Locate`; `guardChangeWriter` con `ContextOrdinary`/`ContextArchive`; salida de texto en castellano; JSON también en una negativa; `errPublishRefused` para el código de salida 1; `PublicationTarget` y `sddpublish.Publisher` cableados con el adaptador real.
   - Cubre: REQ-27.5, REQ-27.2b, REQ-27.7, REQ-27.9 · DD-10 · matriz «Selección del repositorio git».
   - Aceptación: sin `--change`, vacío o inválido → error de uso sin efectos; `published` y `up_to_date` → salida 0 y `refused` → 1; `--json` escribe `axiom.sdd-publish/v1` también en la negativa; `TestPublishRelativeCwdResolvesToWorkspace`; con `--archive` ausente la rama de archivado es `wrong_branch` y la continuación nombra el flag; el texto incluye commit, push y «Quien siga: `git fetch origin` y `axiom branch ensure --change <x> --json`»; la ayuda de `cmd/axiom` lista `publish`.
   - Comprobación: `go test ./internal/cli/ -run 'SDDPublish' -count=1` y `go test ./cmd/axiom/ -run 'Help|Usage|SDDDispatch' -count=1` (solo pruebas en proceso; si el paquete `cmd/axiom` no tiene pruebas de ayuda acotables, se omite y se anota en el commit)
 
-- [ ] T-15 Pruebas de aislamiento de la operación remota (≈260 l)
+- [x] T-15 Pruebas de aislamiento de la operación remota (≈260 l)
   - Ficheros: `internal/gitcommon/architecture_test.go`, `internal/sddpublish/isolation_test.go` (nuevo), `internal/cli/sdd_publish_isolation_test.go` (nuevo).
   - Cambio (DD-14): `TestArchitectureOnlyExecGoLaunchesProcesses` recorre también `internal/sddpublish` y `internal/docpaths`; `isolation_test.go` recorre con `go/parser` los `.go` de producción de `internal/` y `cmd/`: solo `internal/cli` importa `sddpublish` y solo `sdd_publish.go` usa el selector `sddpublish.`; `internal/branch/**` y `internal/docpaths` no lo importan; ningún fichero de `internal/branch/**` pasa `"push"` ni `"commit"` a `gitcommon.Run`/`RunWithTimeout`/`runWrite`/`runRead` (`ast.CallExpr`); el observador dinámico ejecuta `RunBranch ensure|status|done` (con y sin `--archive`), `RunSDDGate record` (`approved`, `--hand-off`, `rejected`) y `RunSDDStatus` con la puerta abierta sobre un proyecto con remoto bare y comprueba que no hay `push`, `commit` ni `fetch` sin `--fetch`.
   - Cubre: REQ-27.11, REQ-25.1 (invariante acotado a `axiom branch`) · DD-14.
