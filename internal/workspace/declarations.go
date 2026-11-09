@@ -88,6 +88,8 @@ type Declarations struct {
 	TechnicalContextErr error
 	Git                 *GitConfig // lo declarado en `git:`, sin defectos; nil sin bloque o con bloque inválido (REQ-25.26)
 	GitErr              error
+	Workflow            *WorkflowConfig // lo declarado en `workflow:`, sin defectos; nil sin bloque o con bloque inválido (REQ-27.1)
+	WorkflowErr         error
 	Repositories        []RepositoryPolicy // lo declarado en `repositories:`; nil sin bloque, sin entradas o con bloque inválido (REQ-25.27)
 	RepositoriesErr     error
 }
@@ -185,6 +187,9 @@ func readDeclarationBlocks(document *yaml.Node, displacement string) Declaration
 	}
 	if node, ok := mappingValue(root, "git"); ok {
 		declarations.Git, declarations.GitErr = decodeGit(node)
+	}
+	if node, ok := mappingValue(root, "workflow"); ok {
+		declarations.Workflow, declarations.WorkflowErr = decodeWorkflow(node)
 	}
 	if node, ok := mappingValue(root, "repositories"); ok {
 		declarations.Repositories, declarations.RepositoriesErr = decodeRepositories(node)

@@ -2070,6 +2070,26 @@ func TestSDDStatusContractDocumentsBaselineAndTechnicalContext(t *testing.T) {
 	}
 }
 
+// REQ-27.2 y REQ-27.2b: el contrato compartido documenta el campo `workflow`, sus
+// valores y la regla de fallo cerrado hacia preguntar.
+func TestSDDStatusContractDocumentsWorkflowLane(t *testing.T) {
+	content := MustRead("skills/_shared/sdd-status-contract.md")
+
+	for _, want := range []string{
+		"workflow: # always present, with or without a selected change",
+		"lane: odd | sdd | ask",
+		"source: declared | default | no_workspace | invalid",
+		"## Project Workflow Lane",
+		"`no_workspace` and `invalid` always project `ask`",
+		"If the status does not answer, the orchestrator acts as `ask`.",
+		"The field is informational",
+	} {
+		if !strings.Contains(content, want) {
+			t.Errorf("sdd-status-contract missing workflow rule %q", want)
+		}
+	}
+}
+
 // REQ-24.19, REQ-24.24, REQ-24.29 y REQ-24.30: la convención compartida fija de
 // dónde se leen los localizadores de la baseline y del contexto técnico, qué se
 // lee y qué está prohibido, para que cada skill la cite en lugar de repetirla.
@@ -3896,6 +3916,9 @@ func TestSharedKickoffSectionRunsBranchEnsureBeforeThePreflight(t *testing.T) {
 
 	for _, want := range []string{
 		"run `axiom branch ensure --change <name> --json`",
+		"**SDD lane selected.**",
+		"by the project lane (`workflow.lane: sdd` in the `workflow` field of `axiom sdd status`)",
+		"The lane-selection question is asked only when the project lane is `ask`",
 		"After the user chooses the SDD lane and the change is named",
 		"before the pre-flight questionnaire",
 		"use the absolute paths of its JSON as `--cwd` of every later command",

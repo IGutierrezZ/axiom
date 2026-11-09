@@ -26,7 +26,7 @@ Para el trabajo habitual, refactorizaciones y funcionalidades directas sin sobre
 4. **Comandos canónicos ya operativos:** `axiom odd create <nombre>`, `axiom odd status [--json] [--check-mirror]` y `axiom odd promote <feature> [--dry-run] [--name <nombre>]`, con superficie reactiva en `axiom ui` (pestaña ODD) y `axiom tui` (Gobernanza → Carril Ágil ODD).
 
 ### B. SDD (Spec-Driven Development) — Vía Formal de Arquitectura
-Reservado para grandes incrementos del sistema, cambios estructurales profundos o cuando el usuario pida explícitamente *"usa SDD"*:
+Reservado para grandes incrementos del sistema, cambios estructurales profundos o cuando el usuario pida explícitamente *"usa SDD"* o lo fije el carril del proyecto (`workflow.lane` de `axiom.yaml`):
 ```
 [ sdd-explore ] ➔ [ sdd-propose ] ➔ [ sdd-spec ] ➔ [ sdd-design ] ➔ [ sdd-tasks ] ➔ [ sdd-apply ] ➔ [ sdd-verify ] ➔ [ sdd-archive ]
 ```

@@ -169,6 +169,10 @@ const kickoffAbsenceRegressionGolden = `{
     "conflictsWith": [],
     "sameDomainActiveChanges": []
   },
+  "workflow": {
+    "lane": "ask",
+    "source": "no_workspace"
+  },
   "phaseInstructions": {
     "apply": [
       "Change: regression-no-kickoff",

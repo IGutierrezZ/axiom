@@ -1,4 +1,4 @@
-**Stops and exits.** A stop is a point where the orchestrator presents what it just produced and waits for a human decision before any further work: every SDD block-review gate except integration (spec, design, tasks, and each role-apply) of a `checkpointed` change, and the single ODD plan stop after the feature document exists and before the first code write. A `continuous` change has no stops. Every stop offers exactly three exits, always in this order:
+**Stops and exits.** A stop is a point where the orchestrator presents what it just produced and waits for a human decision before any further work: every SDD block-review gate except integration (spec, design, tasks, and each role-apply) of a `checkpointed` change. A `continuous` change has no stops. Every stop offers exactly three exits, always in this order:
 
 1. **Iterate:** keep working on the current artifact and present the stop again. There is no limit to the iterations.
 2. **Approve, push and stop:** approve the artifact, hand the next phase to another person, present what must be pushed, and stop. The session never starts the next phase.

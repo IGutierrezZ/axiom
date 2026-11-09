@@ -21,6 +21,7 @@
 6. [El Archivo de Configuración Maestro (`axiom.yaml`)](#6-el-archivo-de-configuración-maestro-axiomyaml)
    - [Política de Ramas (`git:`)](#política-de-ramas-git)
    - [Ajustes por Repositorio (`repositories:`)](#ajustes-por-repositorio-repositories)
+   - [Carril de Trabajo (`workflow:`)](#carril-de-trabajo-workflow)
 7. [Gobernanza de Skills y Autoskills](#7-gobernanza-de-skills-y-autoskills)
    - [Flujo Human-in-the-Loop](#flujo-human-in-the-loop)
    - [Uso por CLI y por Web UI](#uso-por-cli-y-por-web-ui)
@@ -228,7 +229,7 @@ Modelo de ramas por topología:
 - **Monorepo embebido:** el cambio vive en `<prefijo>/<cambio>`, con su worktree en `<carpeta del proyecto>-wt/<cambio>/<repositorio>`. Si varios roles tocan el mismo repositorio, `<prefijo>/<cambio>` es la rama de seguimiento y cada rol saca `<prefijo>/<cambio>-<rol>` desde ella. Los artefactos de `openspec/` van en la rama del cambio desde la primera escritura.
 - **Multirepo:** el repositorio de especificaciones se trabaja in situ en su rama de integración, sin ramas ni worktrees; cada repositorio de código con un rol recibe `<prefijo>/<cambio>` desde su propia rama de integración.
 - La persona publica (`push`) y abre los PR; `axiom branch` nunca lo hace.
-- Cada parada de un cambio SDD con paradas y la parada única del plan de ODD ofrecen tres salidas (véase «Compuertas de Bloque Formales»). Con la salida 2, «aprobar, subir y parar», los artefactos quedan confirmados en la rama del cambio y la fase siguiente solo empieza cuando la PR esté fusionada en el `prTarget`: `axiom branch ensure` en otra máquina crea la rama desde la base y no recupera trabajo sin fusionar. En el repositorio de specs de un multirepo no hay PR: es commit en la rama de integración y push a cargo de la persona.
+- Cada parada de un cambio SDD con paradas ofrece tres salidas (véase «Compuertas de Bloque Formales»); ODD no tiene paradas propias (véase «Carril de Trabajo (`workflow:`)»). Con la salida 2, «aprobar, subir y parar», los artefactos quedan confirmados en la rama del cambio y la fase siguiente solo empieza cuando la PR esté fusionada en el `prTarget`: `axiom branch ensure` en otra máquina crea la rama desde la base y no recupera trabajo sin fusionar. En el repositorio de specs de un multirepo no hay PR: es commit en la rama de integración y push a cargo de la persona.
 
 El modo de trabajo (`worktree` por defecto, `in_place` o `ask`) y la raíz de los worktrees no se declaran en `axiom.yaml`: son preferencias personales del hub. Se fijan al registrar el proyecto (`axiom project add --worktree-mode in_place --worktree-root <ruta absoluta> <proyecto>`, o los dos campos del modal de registro de `axiom ui`) y `axiom branch ensure --mode` las sustituye para un cambio concreto.
 
@@ -345,6 +346,25 @@ repositories:
 - Los binarios anteriores ignoran el bloque, como el de `git:`.
 
 Los bloques `git:` y `repositories:` los aplica el verbo `axiom branch` (rama de integración y prefijo de cada repositorio): véase [Ramas y Worktrees (`axiom branch`)](#ramas-y-worktrees-axiom-branch).
+
+### Carril de Trabajo (`workflow:`)
+
+`axiom.yaml` puede declarar un bloque opcional `workflow:` con el carril por el que el agente aborda el trabajo sustancial del proyecto. Como la política de ramas, es política versionada que comparte todo el equipo:
+
+```yaml
+workflow:
+  lane: ask        # odd | sdd | ask (por defecto: sdd)
+```
+
+- `odd`: carril ágil. El agente no pregunta el carril ni siquiera ante un alcance arquitectónico; solo entra en SDD si la persona lo pide de forma explícita en esa petición.
+- `sdd`: carril formal. El agente entra directamente en el cuestionario de pre-vuelo de SDD, sin preguntar el carril.
+- `ask`: conserva la pregunta bloqueante «¿ODD ágil o SDD formal?» en cada trabajo sustancial. Este repositorio declara `ask`.
+- Sin el bloque, o sin la clave `lane`, rige `sdd`. **Cambio de comportamiento por defecto:** los proyectos con `axiom.yaml` que no declaran `workflow:` dejan de recibir la pregunta de carril y pasan a SDD; para conservar la pregunta se declara `workflow: {lane: ask}`.
+- El trabajo pequeño y entendido no abre ningún carril: no crea documento de trabajo en ninguno.
+- El valor distingue mayúsculas (`SDD` es inválido) y una clave desconocida es un error. `axiom workspace validate` rechaza un bloque inválido nombrando `workflow.lane`, con código de salida `1`; un `workflow:` inválido no impide planificar ramas ni resolver el espacio de trabajo.
+- `axiom sdd status --json` proyecta el carril efectivo en el campo `workflow` (`lane` y `source`: `declared`, `default`, `no_workspace` o `invalid`), con o sin cambio seleccionado. Sin `axiom.yaml`, o con uno inválido, proyecta `ask`: el agente pregunta antes que entrar en SDD por su cuenta.
+- ODD no tiene paradas propias: el agente crea el documento de la tarea y empieza a implementar. Las paradas con tres salidas son de las compuertas de SDD.
+- Los binarios anteriores ignoran el bloque, como el de `git:`.
 
 ---
 
@@ -482,6 +502,8 @@ Los documentos `integration: directed` y el contexto mantenido los edita el prop
 ## 9. Flujo Dual de Desarrollo: ODD Cotidiano vs. SDD Formal
 
 Axiom respeta la naturaleza del trabajo de ingeniería ofreciendo dos carriles complementarios:
+
+El carril por el que el agente aborda el trabajo sustancial lo fija el bloque `workflow:` de `axiom.yaml` (`odd`, `sdd` o `ask`; por defecto `sdd`): véase [Carril de Trabajo (`workflow:`)](#carril-de-trabajo-workflow). ODD no tiene paradas propias; las paradas con tres salidas pertenecen a las compuertas de SDD.
 
 ### A. Carril Cotidiano: ODD (Organic-Driven Development)
 Para el 90% del trabajo diario: tareas concretas, correcciones de errores y refactorizaciones sin burocracia de fases:

@@ -202,6 +202,52 @@ func TestDocsDocumentTheGitBranchPolicyBlock(t *testing.T) {
 	}
 }
 
+// workspace-topology REQ-27.1 y organic-agent-trigger-rules REQ-27.17: el manual
+// documenta el bloque `workflow:` (valores, defecto `sdd`, cambio de comportamiento
+// para proyectos sin la clave, proyección en `axiom sdd status`) y que ODD no tiene
+// paradas propias; la plantilla muestra el bloque comentado y ninguna documentación
+// vigente conserva la parada única del plan de ODD.
+func TestDocsDocumentTheWorkflowLaneBlock(t *testing.T) {
+	doc := readManualDeInicio(t)
+	assertDocContains(t, doc,
+		"[Carril de Trabajo (`workflow:`)](#carril-de-trabajo-workflow)",
+		"### Carril de Trabajo (`workflow:`)",
+		"workflow:\n  lane: ask",
+		"`odd`: carril ágil",
+		"`sdd`: carril formal",
+		"`ask`: conserva la pregunta bloqueante",
+		"Este repositorio declara `ask`",
+		"Sin el bloque, o sin la clave `lane`, rige `sdd`",
+		"**Cambio de comportamiento por defecto:**",
+		"`workflow: {lane: ask}`",
+		"El valor distingue mayúsculas (`SDD` es inválido)",
+		"`axiom workspace validate` rechaza un bloque inválido nombrando `workflow.lane`",
+		"`axiom sdd status --json` proyecta el carril efectivo en el campo `workflow`",
+		"Sin `axiom.yaml`, o con uno inválido, proyecta `ask`",
+		"ODD no tiene paradas propias",
+		"Los binarios anteriores ignoran el bloque, como el de `git:`",
+	)
+	if strings.Contains(doc, "parada única del plan de ODD") {
+		t.Error("docs/manual-de-inicio.md conserva la parada única del plan de ODD, retirada por REQ-27.17")
+	}
+
+	example := readRepoFile(t, "axiom.example.yaml")
+	for _, want := range []string{"# workflow:", "#   lane: ask"} {
+		if !strings.Contains(example, want) {
+			t.Errorf("axiom.example.yaml no contiene %q", want)
+		}
+	}
+	for _, file := range []string{"AGENTS.md", "GEMINI.md"} {
+		text := readRepoFile(t, file)
+		if !strings.Contains(text, "`workflow.lane`") {
+			t.Errorf("%s no menciona el carril del proyecto (`workflow.lane`)", file)
+		}
+		if strings.Contains(text, "parada de plan") || strings.Contains(text, "Plan stop") {
+			t.Errorf("%s conserva la parada de plan de ODD", file)
+		}
+	}
+}
+
 // REQ-21.17 (4): `INDEX.md` lo produce `axiom archive sync`, no `archive-compose`.
 func TestManualDeInicioAttributesIndexMdToArchiveSync(t *testing.T) {
 	doc := readManualDeInicio(t)

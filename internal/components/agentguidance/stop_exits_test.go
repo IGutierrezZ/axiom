@@ -59,20 +59,18 @@ func TestStopExitsDefinesWhatPushMeansAndWhoRunsIt(t *testing.T) {
 	}
 }
 
-// TestStopExitsNamesNoGateInternals keeps the shared text usable from the ODD
-// doctrine, which has no ledger and no gate question: the typed-question field
-// names stay out of it (the SDD gates section forbids them too).
+// TestStopExitsNamesNoGateInternals keeps the shared text SDD-only (REQ-27.17):
+// ODD has no stops, so the text names neither ODD, its plan stop nor its feature
+// document, and the typed-question field names stay out of it (the SDD gates
+// section forbids them too).
 func TestStopExitsNamesNoGateInternals(t *testing.T) {
 	t.Parallel()
 
 	text := StopExits()
-	for _, forbidden := range []string{"gateQuestion", "gateCriteria", "gateEvidence"} {
+	for _, forbidden := range []string{"ODD", "plan stop", "odd/tasks", "gateQuestion", "gateCriteria", "gateEvidence"} {
 		if strings.Contains(text, forbidden) {
-			t.Fatalf("StopExits() names %q, which belongs to the SDD status contract only", forbidden)
+			t.Fatalf("StopExits() names %q, which does not belong to the SDD-only stops text", forbidden)
 		}
-	}
-	if strings.Contains(text, "gate record") {
-		t.Fatalf("StopExits() names the SDD ledger command, but ODD shares this text and has no ledger:\n%s", text)
 	}
 }
 

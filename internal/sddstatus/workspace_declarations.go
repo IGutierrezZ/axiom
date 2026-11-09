@@ -18,7 +18,8 @@ import (
 // (un axiom.yaml directo que no se pudo cargar y un planning home divergente de
 // <maestra>/openspec) y las declaraciones válidas de axiom.yaml, `baseline:` y
 // `technical_context:`, como campos aditivos y opcionales (D-05, REQ-24.19,
-// REQ-24.28). Es un decorador que actúa fuera de baseStatus, de modo que la
+// REQ-24.28), más el carril efectivo `workflow` (REQ-27.2), que se proyecta
+// siempre. Es un decorador que actúa fuera de baseStatus, de modo que la
 // firma que usa status_v2_clean_break_test no cambia.
 //
 // Un bloque inválido no se proyecta, ni parcial ni por defecto (REQ-24.18), y sin
@@ -31,6 +32,7 @@ import (
 func decorateWorkspaceDeclarations(status *Status, location workspace.Location) {
 	status.Baseline = projectBaseline(location)
 	status.TechnicalContext = projectTechnicalContext(location)
+	status.Workflow = projectWorkflow(location)
 
 	changed := len(location.Notes) > 0
 	status.Notes = append(status.Notes, location.Notes...)
@@ -95,6 +97,31 @@ func projectTechnicalContext(location workspace.Location) *TechnicalContextProje
 		Maintained: projectMode(declarations.TechnicalContext.Maintained),
 		Reference:  projectMode(declarations.TechnicalContext.Reference),
 	}
+}
+
+// projectWorkflow devuelve el carril efectivo del proyecto (REQ-27.2). Siempre
+// responde, con o sin cambio seleccionado, y falla cerrado hacia preguntar: sin
+// axiom.yaml o con uno que no se puede leer proyecta ask. Las reglas se evalúan en
+// este orden:
+//
+//  1. sin axiom.yaml: ask / no_workspace;
+//  2. axiom.yaml ilegible, base que no carga o bloque `workflow:` inválido (aunque
+//     el bloque fuera válido y la base no): ask / invalid;
+//  3. bloque con `lane` declarado: el declarado / declared;
+//  4. el resto: sdd / default.
+//
+// Es informativo: no añade notas ni bloqueos y no cambia la ruta recomendada.
+func projectWorkflow(location workspace.Location) *WorkflowProjection {
+	declarations := location.Declarations
+	switch {
+	case location.ConfigPath == "":
+		return &WorkflowProjection{Lane: string(workspace.WorkflowLaneAsk), Source: "no_workspace"}
+	case location.ConfigErr != nil, declarations.ParseErr != nil, declarations.WorkflowErr != nil:
+		return &WorkflowProjection{Lane: string(workspace.WorkflowLaneAsk), Source: "invalid"}
+	case declarations.Workflow != nil && declarations.Workflow.Lane != "":
+		return &WorkflowProjection{Lane: string(declarations.Workflow.Lane), Source: "declared"}
+	}
+	return &WorkflowProjection{Lane: string(workspace.DefaultWorkflowLane), Source: "default"}
 }
 
 // absoluteDeclaredPath resuelve una ruta declarada, relativa a workspaceRoot y

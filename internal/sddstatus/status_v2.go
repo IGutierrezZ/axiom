@@ -44,6 +44,9 @@ type StatusV2Projection struct {
 	// already matches the public contract 1:1.
 	Baseline         *BaselineProjection         `json:"baseline,omitempty"`
 	TechnicalContext *TechnicalContextProjection `json:"technicalContext,omitempty"`
+	// Workflow projects Status.Workflow unchanged (REQ-27.2): the wire type
+	// already matches the public contract 1:1.
+	Workflow *WorkflowProjection `json:"workflow,omitempty"`
 	// GateQuestion projects Status.GateQuestion unchanged: like Consent, the
 	// wire type already matches the public contract 1:1, so no *V2
 	// translation type is needed (design.md S5.5 defines the wire shape
@@ -232,6 +235,7 @@ func ProjectStatusV2(status Status) (StatusV2Projection, error) {
 	}
 	projected.Baseline = status.Baseline
 	projected.TechnicalContext = status.TechnicalContext
+	projected.Workflow = status.Workflow
 	if status.PhaseInstructions != nil {
 		projected.PhaseInstructions = &phaseInstructionsV2{
 			Apply: status.PhaseInstructions.Apply, Verify: status.PhaseInstructions.Verify,

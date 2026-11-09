@@ -59,6 +59,11 @@ type GovernanceConfig struct {
 // solo en una configuración construida a mano o cuando el bloque `git:` es
 // inválido (el motivo queda en Declarations.GitErr).
 //
+// Workflow es el carril de trabajo ya resuelto (REQ-27.1): tras una carga correcta
+// nunca es nil y Lane siempre está relleno (`sdd` sin declaración). Es nil solo en
+// una configuración construida a mano o cuando el bloque `workflow:` es inválido
+// (el motivo queda en Declarations.WorkflowErr).
+//
 // Repositories, en cambio, conserva lo declarado en `repositories:` (REQ-25.27),
 // sin resolver la herencia de Git: es nil sin bloque o sin entradas, y también
 // cuando el bloque es inválido (el motivo queda en Declarations.RepositoriesErr).
@@ -69,6 +74,7 @@ type WorkspaceConfig struct {
 	Baseline         *BaselineConfig         `yaml:"-"`
 	TechnicalContext *TechnicalContextConfig `yaml:"-"`
 	Git              *GitConfig              `yaml:"-"`
+	Workflow         *WorkflowConfig         `yaml:"-"`
 	Repositories     []RepositoryPolicy      `yaml:"-"`
 }
 

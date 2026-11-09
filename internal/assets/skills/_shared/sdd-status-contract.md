@@ -95,6 +95,9 @@ technicalContext: # optional; present only with a valid `technical_context:` dec
     entry: <absolute path, optional>
   reference: # optional mode, same shape
     paths: [<absolute paths>]
+workflow: # always present, with or without a selected change
+  lane: odd | sdd | ask
+  source: declared | default | no_workspace | invalid
 phaseInstructions:
   apply: [<instruction strings>]
   verify: [<instruction strings>]
@@ -117,6 +120,14 @@ SDD status never reads review mode, offers RDD, or exposes review state. After c
 - An invalid declaration is never projected, not even partially. The status stays operational: planning and `apply` are never blocked by it.
 - Only archive is gated by a declaration cause: `dependencies.archive` is `blocked` when `axiom.yaml` is unreadable or a declared block is invalid, when `technicalContext.maintained` is declared and the change has no `context-impact.md`, or when a project baseline or maintained context is declared with an artifact store that has no files (`engram` or `none`). The cause always appears in `notes`; it appears in `blockedReasons` (and `nextRecommended` becomes `resolve-blockers`) only when the route would otherwise be `archive`.
 - The context delta (`context-impact.md`) is not projected: `artifacts`, `artifactPaths`, and `contextFiles` are unchanged by it.
+
+## Project Workflow Lane
+
+`workflow` is an additive field of the status, always present (with or without a selected change). It projects the effective project lane declared in the `workflow:` block of `axiom.yaml`, so orchestrators never read that file themselves.
+
+- `lane` is `odd`, `sdd` or `ask`. `source` says where it comes from: `declared` (the block sets `lane`), `default` (a valid `axiom.yaml` without the block or without `workflow.lane`; the lane is `sdd`), `no_workspace` (there is no `axiom.yaml`) or `invalid` (`axiom.yaml` or its `workflow:` block cannot be read or is invalid, even when the block itself is valid but the rest of the file is not).
+- `no_workspace` and `invalid` always project `ask`: the rule fails closed toward asking the lane question. If the status does not answer, the orchestrator acts as `ask`.
+- The field is informational: it adds no note and no blocking reason, and the recommended route does not depend on it.
 
 ## Governance (sealed kickoff)
 

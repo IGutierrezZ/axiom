@@ -53,49 +53,49 @@ Total: **28 tareas** (WU-1: 7 · WU-2: 8 · WU-4: 4 · WU-3: 9). Dependencias: W
 
 Commit: `feat(workflow): declarar el carril del proyecto en axiom.yaml y retirar la parada de ODD`
 
-- [ ] T-01 Decodificador y tipos del bloque `workflow` (≈220 l)
+- [x] T-01 Decodificador y tipos del bloque `workflow` (≈220 l)
   - Ficheros: `internal/workspace/workflow.go` (nuevo), `internal/workspace/workflow_test.go` (nuevo).
   - Cambio (DD-01): `WorkflowLane` y constantes `odd|sdd|ask`, `DefaultWorkflowLane = sdd`, `WorkflowConfig`, `workflowKeys`, `decodeWorkflow` sobre `decodeStringKeys(node, "workflow", workflowKeys, workflowValidator)` con los mensajes de design §2.1 y `resolveWorkflow`.
   - Cubre: REQ-27.1 · DD-01.
   - Aceptación: tablas con `odd`, `sdd`, `ask` válidos; `SDD` (mayúsculas), `agil`, `null`, lista, `workflow:` vacío, clave duplicada y clave desconocida rechazados con un error que nombra `workflow.lane`/`workflow`; `resolveWorkflow(nil)` y bloque sin `lane` resultan `sdd`; un decodificador congelado sin el bloque carga el mismo `axiom.yaml` ignorando la clave (compatibilidad REQ-24.17).
   - Comprobación: `go test ./internal/workspace/ -run 'Workflow' -count=1`
 
-- [ ] T-02 Integración en declaraciones, carga y `init`; plantilla y `axiom.yaml` de este repositorio (≈160 l)
+- [x] T-02 Integración en declaraciones, carga y `init`; plantilla y `axiom.yaml` de este repositorio (≈160 l)
   - Ficheros: `internal/workspace/declarations.go`, `internal/workspace/loader.go`, `internal/workspace/types.go`, `internal/hub/init.go` (`ownMarkers.declares`), `internal/hub/init_test.go` (o el fichero de pruebas existente del paquete), `axiom.example.yaml`, `axiom.yaml`, `internal/workspace/workflow_test.go`.
   - Cambio: `Declarations.Workflow`/`WorkflowErr`; lectura en `readDeclarationBlocks`; `joinLoadErrors` añade `WorkflowErr`; `WorkspaceConfig.Workflow` (`yaml:"-"`) proyectado en `parseLayered` con `resolveWorkflow`; `declares()` cuenta `workflow`; plantilla con el bloque comentado; **este repositorio declara `workflow: {lane: ask}` (S8)**. `branch.ConfigRefusal` y `blockArchiveOnDeclarations` no leen `WorkflowErr` (design §2.1).
   - Cubre: REQ-27.1, REQ-2.1 (estructura del esquema), S8 · DD-01.
   - Aceptación: `axiom workspace validate`/`LoadConfig` informan un `lane` inválido con la clave; `WorkspaceConfig.Workflow.Lane` siempre relleno; un `lane` inválido no impide planificar ramas; `init --force` no sobrescribe un bloque `workflow` declarado; el `axiom.yaml` del repositorio carga con `lane: ask`; la plantilla carga sin error.
   - Comprobación: `go test ./internal/workspace/ ./internal/hub/ -count=1`
 
-- [ ] T-03 Proyección `workflow` en `axiom sdd status` v1 y v2 y contrato (≈230 l)
+- [x] T-03 Proyección `workflow` en `axiom sdd status` v1 y v2 y contrato (≈230 l)
   - Ficheros: `internal/sddstatus/status.go`, `internal/sddstatus/status_v2.go`, `internal/sddstatus/workspace_declarations.go`, `internal/sddstatus/workflow_status_test.go` (nuevo), `internal/assets/skills/_shared/sdd-status-contract.md`.
   - Cambio (DD-02): `WorkflowProjection{Lane, Source}`, `Status.Workflow` y `statusV2.Workflow` (`omitempty`, tras `TechnicalContext`), `projectWorkflow(location)` con las cuatro filas de design §2.2 en ese orden, rellenado siempre en `decorateWorkspaceDeclarations` (con y sin cambio). El contrato documenta el campo, sus valores y la regla «`no_workspace` e `invalid` proyectan `ask`; si el status no responde, el orquestador actúa como `ask`».
   - Cubre: REQ-27.2, REQ-27.2b (parte de contrato) · DD-02.
   - Aceptación: v1 y v2, con y sin cambio seleccionado, proyectan `lane`/`source`; sin `axiom.yaml` → `ask`/`no_workspace`; `ConfigErr`, `ParseErr` o `WorkflowErr` → `ask`/`invalid` (incluido un bloque `workflow` válido con base rota); bloque declarado → `declared`; válido sin bloque o sin `lane` → `sdd`/`default`; ninguna nota ni bloqueo nuevos; la ruta recomendada no cambia (comparación contra un status existente).
   - Comprobación: `go test ./internal/sddstatus/ -count=1` y `go test ./internal/assets/ -run 'StatusContract' -count=1`
 
-- [ ] T-04 Política de selección del manifiesto (≈90 l)
+- [x] T-04 Política de selección del manifiesto (≈90 l)
   - Ficheros: `internal/agents/capabilitymanifest/manifest.go`, `internal/agents/capabilitymanifest/manifest_test.go`, y los nombres o pines que citen el literal en `internal/cli/run_component_paths_test.go` y `internal/cli/sync_test.go`.
   - Cambio (DD-03): `SDDSelectionExplicitRequestProjectLaneOrAcceptedProposal = "explicit_request_project_lane_or_accepted_proposal"`; `ForAgent` lo usa en todos los adaptadores; se retira la constante anterior.
   - Cubre: REQ-27.16 (política), REQ-27.3 · DD-03.
   - Aceptación: todos los adaptadores devuelven el valor nuevo; ningún texto fuera de pruebas conserva el literal retirado (`rg explicit_request_or_accepted_proposal` sin resultados en producción).
   - Comprobación: `go test ./internal/agents/capabilitymanifest/ -count=1` y `go test ./internal/cli/ -run 'RunComponentPaths|SyncRouting|Manifest' -count=1`
 
-- [ ] T-05 Paso 0 con carril y retirada de la parada ODD en `routing.go` (≈260 l)
+- [x] T-05 Paso 0 con carril y retirada de la parada ODD en `routing.go` (≈260 l)
   - Ficheros: `internal/components/agentguidance/routing.go`, `routing_test.go`, `routing_stops_test.go`.
   - Cambio (DD-04, puntos 1 a 7): frase introductoria, paso 0 con el texto de design §2.4, paso 5 sin «Then present the plan stop…», párrafo de reanudación sin «handed off»/«approved plan», viñeta «Optional SDD», retirada de la viñeta `Plan stop:` y de `### Stops and exits` (incluida la llamada a `StopExits()`), comentarios Go con REQ-27.16 y REQ-27.17. `RenderRouting` compara contra la constante nueva y devuelve `ErrUnknownRoutingPolicy` ante cualquier otra, incluido el literal retirado.
   - Cubre: REQ-27.16, REQ-27.17, REQ-27.3, REQ-21.1 a REQ-21.3, REQ-25.40 (escenario) · DD-03, DD-04.
   - Aceptación: pines del paso 0 (`workflow`, `lane`, `source`, `no_workspace`, `invalid`, «cannot be read», las tres ramas `sdd`/`odd`/`ask`, la pregunta bloqueante conservada); `TestRenderRoutingKeepsSDDSelectionExplicit` conserva sus tres pines y añade `project lane` y `workflow`; `routing_stops_test.go` pasa a prueba negativa (ningún texto contiene `Plan stop`, `plan stop`, `### Stops and exits`, `three exits`, `handed off`); política desconocida y literal retirado → `ErrUnknownRoutingPolicy`; salida idéntica en todos los adaptadores.
   - Comprobación: `go test ./internal/components/agentguidance/ -count=1`
 
-- [ ] T-06 `stop-exits.md` solo SDD y sección «SDD lane selected» (≈120 l)
+- [x] T-06 `stop-exits.md` solo SDD y sección «SDD lane selected» (≈120 l)
   - Ficheros: `internal/assets/generic/stop-exits.md`, `internal/components/agentguidance/stop_exits.go` (comentario), `internal/components/agentguidance/stop_exits_test.go`, `internal/assets/skills/_shared/sdd-orchestrator-sections.md`, `internal/components/sdd/orchestrator_stop_exits_test.go`, `internal/assets/assets_test.go` (solo los pines que citen la parada ODD).
   - Cambio (DD-04, última parte): se retiran del texto la mención de ODD y la «single ODD plan stop» (la reescritura con «publish» llega en T-26); `sdd-orchestrator-sections.md` refleja «SDD lane selected» (la pregunta de carril solo con `ask` o sin `axiom.yaml`).
   - Cubre: REQ-27.17, REQ-27.3, REQ-21.1, REQ-25.35 · DD-04.
   - Aceptación: `TestStopExitsNamesNoGateInternals` pasa a prohibir `ODD`, `plan stop` y `odd/tasks` y sigue prohibiendo `gateQuestion`, `gateCriteria` y `gateEvidence`; `agentguidance.StopExits()` sigue disponible para el compositor de orquestadores SDD; los doce orquestadores y Pi compuestos siguen incluyendo `StopExits()`.
   - Comprobación: `go test ./internal/components/agentguidance/ ./internal/components/sdd/ ./internal/assets/ -count=1`
 
-- [ ] T-07 Documentación, regeneración de goldens y commit de WU-1 (≈20 l de autoría; resto generado)
+- [x] T-07 Documentación, regeneración de goldens y commit de WU-1 (≈20 l de autoría; resto generado)
   - Ficheros: `AGENTS.md`, `GEMINI.md` (sin la parada de plan), `docs/manual-de-inicio.md` (sección del carril: `workflow.lane`, `ask` para conservar la pregunta, nota de cambio de comportamiento por defecto a `sdd`), `internal/workspace/docs_contract_test.go`, `testdata/golden/*.golden` (13), `.codex/AGENTS.md`.
   - Cambio: regenerar con `go test ./internal/components/ -run Golden -update -count=1` y luego sin `-update`; copiar el bloque gestionado de `sdd-codex-agentsmd.golden` a `.codex/AGENTS.md`; pin del manual y de la plantilla en `docs_contract_test.go`. Cierra con el commit de WU-1.
   - Cubre: REQ-27.1 (documentación), REQ-27.17 (paridad de doctrina) · DD-16.
