@@ -231,4 +231,8 @@ T1–T17 están hechas y verificadas.
   - `go test ./internal/components/... ./internal/assets/... -count=1`: OK, salvo los 2 tests de junction de `filemerge` (fallo de entorno conocido).
   - `go test ./internal/cli/ -run 'TestEveryRegisteredGuardPopulation|TestEveryProductionRefusal|TestGuardPopulation|TestRctx2|TestRejectedValidatorDispositionThroughReviewCLI'`: OK.
 
-**Pendiente:** T18–T20 esperan a D2. El push y el PR los decide el usuario.
+**PR:** [#233](https://github.com/IGutierrezZ/axiom/pull/233). La abrió el orquestador el 2026-11-09 por autorización del usuario («Sí, ábrelo»), con las etiquetas `size:exception` y `type:feature`.
+
+**Pendiente:**
+- La fusión del PR la decide el usuario.
+- T18–T20 esperan a D2.
