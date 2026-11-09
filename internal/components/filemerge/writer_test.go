@@ -293,3 +293,181 @@ func TestWriteFileAtomicPreservesOriginalOnRenameFailure(t *testing.T) {
 		}
 	}
 }
+
+func skipWithoutPOSIXModes(t *testing.T) {
+	t.Helper()
+	if runtime.GOOS == "windows" {
+		t.Skip("POSIX permission bits are not meaningful on Windows")
+	}
+}
+
+func modeOf(t *testing.T, path string) os.FileMode {
+	t.Helper()
+	info, err := os.Stat(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return info.Mode().Perm()
+}
+
+// TestWriteFileAtomicPreservesExistingModeByDefault: rewriting an existing file
+// must never widen its permissions, even when the caller passes a wider perm
+// literal (the common case: most call sites pass a literal 0o644).
+func TestWriteFileAtomicPreservesExistingModeByDefault(t *testing.T) {
+	skipWithoutPOSIXModes(t)
+	path := filepath.Join(t.TempDir(), "settings.json")
+	if err := os.WriteFile(path, []byte("{}"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := WriteFileAtomic(path, []byte(`{"share":"disabled"}`), 0o644); err != nil {
+		t.Fatalf("WriteFileAtomic() error = %v", err)
+	}
+	if got := modeOf(t, path); got != 0o600 {
+		t.Fatalf("mode after rewrite = %v, want 0600 preserved (not widened to the requested 0644)", got)
+	}
+}
+
+// TestWriteFileAtomicNewFileUsesRequestedPerm confirms perm still applies when
+// there is no existing file whose mode could be preserved.
+func TestWriteFileAtomicNewFileUsesRequestedPerm(t *testing.T) {
+	skipWithoutPOSIXModes(t)
+	path := filepath.Join(t.TempDir(), "fresh.json")
+
+	if _, err := WriteFileAtomic(path, []byte("{}"), 0o640); err != nil {
+		t.Fatalf("WriteFileAtomic() error = %v", err)
+	}
+	if got := modeOf(t, path); got != 0o640 {
+		t.Fatalf("mode of new file = %v, want the requested 0640", got)
+	}
+}
+
+// TestWriteFileAtomicIdenticalContentNeverTouchesMode pins the no-op contract: a
+// byte-identical rewrite through the default API must not touch the file's mode.
+func TestWriteFileAtomicIdenticalContentNeverTouchesMode(t *testing.T) {
+	skipWithoutPOSIXModes(t)
+	path := filepath.Join(t.TempDir(), "settings.json")
+	content := []byte("{}")
+	if err := os.WriteFile(path, content, 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := WriteFileAtomic(path, content, 0o644); err != nil {
+		t.Fatalf("WriteFileAtomic() error = %v", err)
+	}
+	if got := modeOf(t, path); got != 0o600 {
+		t.Fatalf("mode after identical-content no-op = %v, want 0600 untouched", got)
+	}
+}
+
+// TestWriteFileAtomicModeForcesRequestedPermOnExistingFile pins the contrasting
+// contract of WriteFileAtomicMode: it always applies perm, even widening an
+// existing file, for callers that own the target mode outright.
+func TestWriteFileAtomicModeForcesRequestedPermOnExistingFile(t *testing.T) {
+	skipWithoutPOSIXModes(t)
+	path := filepath.Join(t.TempDir(), "script.sh")
+	if err := os.WriteFile(path, []byte("old\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := WriteFileAtomicMode(path, []byte("new\n"), 0o755); err != nil {
+		t.Fatalf("WriteFileAtomicMode() error = %v", err)
+	}
+	if got := modeOf(t, path); got != 0o755 {
+		t.Fatalf("mode after forced rewrite = %v, want 0755", got)
+	}
+}
+
+// TestWriteFileAtomicModeEnforcesPermOnIdenticalContent: an existing script whose
+// content already matches but whose mode drifted must still be forced to the
+// intended mode. That mode-only repair mutates the file, so it reports
+// Changed=true.
+func TestWriteFileAtomicModeEnforcesPermOnIdenticalContent(t *testing.T) {
+	skipWithoutPOSIXModes(t)
+	path := filepath.Join(t.TempDir(), "script.sh")
+	content := []byte("#!/bin/sh\necho hi\n")
+	if err := os.WriteFile(path, content, 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	result, err := WriteFileAtomicMode(path, content, 0o755)
+	if err != nil {
+		t.Fatalf("WriteFileAtomicMode() error = %v", err)
+	}
+	if !result.Changed || result.Created {
+		t.Fatalf("WriteFileAtomicMode() result = %+v, want Changed=true Created=false: the mode was repaired", result)
+	}
+	if got := modeOf(t, path); got != 0o755 {
+		t.Fatalf("mode after identical-content forced write = %v, want 0755 enforced", got)
+	}
+}
+
+// TestWriteFileAtomicModeIdenticalContentAndModeIsNoOp: same bytes and same mode
+// touch nothing and report Changed=false.
+func TestWriteFileAtomicModeIdenticalContentAndModeIsNoOp(t *testing.T) {
+	skipWithoutPOSIXModes(t)
+	path := filepath.Join(t.TempDir(), "script.sh")
+	content := []byte("#!/bin/sh\necho hi\n")
+	if err := os.WriteFile(path, content, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(path, 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	result, err := WriteFileAtomicMode(path, content, 0o755)
+	if err != nil {
+		t.Fatalf("WriteFileAtomicMode() error = %v", err)
+	}
+	if result.Changed || result.Created {
+		t.Fatalf("WriteFileAtomicMode() result = %+v, want Changed=false Created=false: nothing changed", result)
+	}
+	if got := modeOf(t, path); got != 0o755 {
+		t.Fatalf("mode after no-op forced write = %v, want 0755", got)
+	}
+}
+
+// TestWriteFileAtomicModeZeroNeverWidens: a forced zero mode, as passed by
+// restore paths for a recorded 0000 mode, lands as owner-only instead of the
+// 0644 default used for omitted modes on new files.
+func TestWriteFileAtomicModeZeroNeverWidens(t *testing.T) {
+	skipWithoutPOSIXModes(t)
+	path := filepath.Join(t.TempDir(), "restored")
+	if err := os.WriteFile(path, []byte("before"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := WriteFileAtomicMode(path, []byte("after"), 0); err != nil {
+		t.Fatal(err)
+	}
+	if got := modeOf(t, path); got&^0o600 != 0 {
+		t.Fatalf("mode = %v, want no wider than 0600", got)
+	}
+}
+
+// TestWriteFileAtomicVariantsReportNoChangeOnIdenticalContent is the portable
+// check: byte-identical content reports Changed=false with both variants on
+// every platform, whatever the platform does with permission bits.
+func TestWriteFileAtomicVariantsReportNoChangeOnIdenticalContent(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "same.txt")
+	content := []byte("same\n")
+	if _, err := WriteFileAtomic(path, content, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	// Align the on-disk mode with the one requested, so that even a platform
+	// that ignores most permission bits has nothing to repair.
+	if err := os.Chmod(path, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	for name, write := range map[string]func(string, []byte, os.FileMode) (WriteResult, error){
+		"WriteFileAtomic":     WriteFileAtomic,
+		"WriteFileAtomicMode": WriteFileAtomicMode,
+	} {
+		result, err := write(path, content, 0o644)
+		if err != nil {
+			t.Fatalf("%s() error = %v", name, err)
+		}
+		if result.Changed || result.Created {
+			t.Fatalf("%s() result = %+v, want Changed=false Created=false", name, result)
+		}
+	}
+}
