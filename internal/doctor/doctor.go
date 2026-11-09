@@ -13,6 +13,10 @@ const (
 	CheckDiskSpace             CheckID = "disk:space"
 	CheckProjectAssets         CheckID = "project:assets"
 	CheckProjectAdapters       CheckID = "project:adapters"
+	CheckProjectWorkspace      CheckID = "project:workspace"
+	CheckProjectTopology       CheckID = "project:topology"
+	CheckProjectRoleRepos      CheckID = "project:role_repos"
+	CheckProjectSpecsRepo      CheckID = "project:specs_repo"
 )
 
 // ToolCheckID returns the stable check identifier for a tool binary.
@@ -40,6 +44,7 @@ const (
 	RemedyStartEngram      RemedyID = "start-engram"
 	RemedyInspectEngram    RemedyID = "inspect-engram"
 	RemedyFreeDiskSpace    RemedyID = "free-disk-space"
+	RemedyFixWorkspace     RemedyID = "fix-workspace"
 )
 
 // RemedyCategory groups remedies by the resource they concern.
@@ -100,6 +105,8 @@ func NewRemedy(id RemedyID, description string) *Remedy {
 		r.EligibilityReason = "requires managed state and existing sync safeguards"
 	case RemedyStartEngram, RemedyInspectEngram:
 		r.Category, r.EligibilityReason = RemedyCategoryService, "external process and log ownership is unknown"
+	case RemedyFixWorkspace:
+		r.Category, r.EligibilityReason = RemedyCategoryConfiguration, "the workspace layout is user-owned"
 	case RemedyFreeDiskSpace:
 		r.Category, r.EligibilityReason = RemedyCategoryStorage, "disk cleanup is user-owned"
 	default:

@@ -1067,6 +1067,8 @@ func TestRunDoctor_IntegrationAllMocked(t *testing.T) {
 	}()
 	stubDoctorUserPath(t, nil)
 
+	// El proyecto de la carpeta actual aporta sus propias comprobaciones: se aísla en una carpeta sin axiom.yaml.
+	t.Chdir(t.TempDir())
 	homeDir := t.TempDir()
 	stateDir := filepath.Join(homeDir, ".axiom")
 	if err := os.MkdirAll(stateDir, 0o755); err != nil {
