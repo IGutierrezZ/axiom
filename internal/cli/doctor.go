@@ -161,6 +161,7 @@ func buildDoctorChecks(opts doctor.Options) ([]doctor.Check, state.InstallState)
 		}},
 		doctor.Check{ID: doctor.CheckDiskSpace, Run: func(context.Context) doctor.Result { return checkDiskSpace(homeDir) }},
 	)
+	checks = append(checks, projectDoctorChecks(opts, stateStore)...)
 	return checks, installedState
 }
 
