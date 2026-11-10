@@ -185,6 +185,7 @@ func (e *Engine) Ensure(ctx context.Context, r EnsureRequest) branch.Result {
 	if refusal != nil {
 		return refused(refusal)
 	}
+	reportCreated(&result, pending)
 	result.Operation = operation
 	// `fetched` dice qué repositorios se trajeron en esta ejecución: describe solo lee
 	// referencias locales y deja `base.fetched` en falso.
@@ -209,6 +210,12 @@ type ensureStep struct {
 	branch string
 	// createFrom es el punto de partida de la rama, o vacío si la rama ya existe.
 	createFrom string
+	// adopt dice que createFrom es la referencia remota local `refs/remotes/origin/<rama>` de una
+	// rama ya publicada (REQ-27.15): se crea con seguimiento, sin red. createdFrom y createdRef
+	// son lo que `ensure` informa de la rama que crea (BranchResult.CreatedFrom y CreatedFromRef).
+	adopt       bool
+	createdFrom string
+	createdRef  string
 	// worktree es la ruta del worktree que falta, o vacía si la rama ya está desplegada.
 	worktree string
 	// switchTo dice que, en `in_place`, la rama aún no está desplegada en el propio
@@ -220,6 +227,7 @@ type ensureStep struct {
 // principal: toda creación se lanza desde él, también cuando cwd era un worktree enlazado
 // (matriz de amenazas, «Selección de repositorio git»).
 type repositorySteps struct {
+	gitRoot      string
 	name         string
 	mainCheckout string
 	steps        []ensureStep
@@ -266,7 +274,7 @@ func (e *Engine) checkRepository(ctx context.Context, operation, cwd string, rep
 	if len(listed) == 0 {
 		return repositorySteps{}, gitRefusal(operation, cwd, "listar los worktrees de "+repo.GitRoot, errors.New("git no devolvió ningún worktree"))
 	}
-	pending := repositorySteps{name: repo.Name, mainCheckout: listed[0].Path}
+	pending := repositorySteps{name: repo.Name, gitRoot: repo.GitRoot, mainCheckout: listed[0].Path}
 
 	// El fetch va antes de resolver la base (D-06): es lo único que cambia el resultado de
 	// resolveBase. Solo trae referencias remotas locales; no crea ramas ni worktrees.
@@ -310,11 +318,8 @@ func (e *Engine) checkRepository(ctx context.Context, operation, cwd string, rep
 		}
 		step := ensureStep{branch: planned.Name}
 		if !exists {
-			// La rama del cambio sale de la base; las de rol, de la de seguimiento, que el
-			// plan crea antes (va la primera de la lista).
-			step.createFrom = base.sha
-			if planned.Kind == branch.KindRole {
-				step.createFrom = "refs/heads/" + planned.From
+			if refusal := e.startPoint(ctx, operation, cwd, repo, planned, base, &step); refusal != nil {
+				return repositorySteps{}, refusal
 			}
 		}
 
@@ -374,9 +379,8 @@ func (e *Engine) checkInPlaceRepository(ctx context.Context, operation, cwd stri
 		}
 		step := ensureStep{branch: planned.Name}
 		if !exists {
-			step.createFrom = base.sha
-			if planned.Kind == branch.KindRole {
-				step.createFrom = "refs/heads/" + planned.From
+			if refusal := e.startPoint(ctx, operation, cwd, repo, planned, base, &step); refusal != nil {
+				return repositorySteps{}, refusal
 			}
 		}
 		if i == 0 {
@@ -414,7 +418,11 @@ func (e *Engine) apply(ctx context.Context, operation, cwd string, pending []rep
 	for _, repo := range pending {
 		for _, step := range repo.steps {
 			if step.createFrom != "" {
-				if err := e.writer.CreateBranch(ctx, repo.mainCheckout, step.branch, step.createFrom); err != nil {
+				create := e.writer.CreateBranch
+				if step.adopt {
+					create = e.writer.CreateTrackingBranch
+				}
+				if err := create(ctx, repo.mainCheckout, step.branch, step.createFrom); err != nil {
 					return branch.GitFailed(operation, cwd, fmt.Sprintf("crear la rama %s en %s", step.branch, repo.name), err)
 				}
 			}
@@ -482,4 +490,55 @@ func occupied(path string) string {
 		return "ya existe y es un directorio con contenido que no es un worktree"
 	}
 	return ""
+}
+
+// startPoint fija de dónde sale una rama del plan que aún no existe en local (DD-13,
+// REQ-27.15). Si `refs/remotes/origin/<rama>` ya está traída a local, la rama (de cambio, de
+// rol o de archivado) la adopta con seguimiento; si no, la regla de siempre: la del cambio y la
+// de archivado salen de la base, y las de rol, de la de seguimiento, que el plan crea antes (va
+// la primera de la lista). Solo lee referencias locales: nunca hay red.
+func (e *Engine) startPoint(ctx context.Context, operation, cwd string, repo branch.RepoPlan, planned branch.BranchPlan, base baseReference, step *ensureStep) *branch.Refusal {
+	remote := "refs/remotes/" + originRemote + "/" + planned.Name
+	_, published, err := e.git.ResolveCommit(ctx, repo.GitRoot, remote)
+	if err != nil {
+		return gitRefusal(operation, cwd, "resolver la rama publicada "+originRemote+"/"+planned.Name, err)
+	}
+	switch {
+	case published:
+		step.createFrom, step.adopt = remote, true
+		step.createdFrom, step.createdRef = branch.CreatedFromRemote, remote
+	case planned.Kind == branch.KindRole:
+		step.createFrom = "refs/heads/" + planned.From
+		step.createdFrom, step.createdRef = branch.CreatedFromChangeBranch, step.createFrom
+	default:
+		step.createFrom = base.sha
+		step.createdFrom, step.createdRef = branch.CreatedFromBase, base.ref
+	}
+	return nil
+}
+
+// reportCreated anota en el resultado de `ensure` el origen de las ramas que creó esa
+// ejecución (CreatedFrom y CreatedFromRef). El texto de `ensure` deriva de ellos la línea de
+// adopción y la de rama creada desde la base (branch.Result.WriteText).
+func reportCreated(result *branch.Result, pending []repositorySteps) {
+	for _, repo := range pending {
+		for i := range result.Repositories {
+			described := &result.Repositories[i]
+			if described.GitRoot != repo.gitRoot {
+				continue
+			}
+			for _, step := range repo.steps {
+				if step.createFrom == "" {
+					continue
+				}
+				for j := range described.Branches {
+					created := &described.Branches[j]
+					if created.Name != step.branch {
+						continue
+					}
+					created.CreatedFrom, created.CreatedFromRef = step.createdFrom, step.createdRef
+				}
+			}
+		}
+	}
 }

@@ -32,7 +32,7 @@ func TestCanonicalImplementationRoutingBoundaries(t *testing.T) {
 		SDD: SDDProposalFacts{
 			ProposeWhenSubstantialOrAmbiguous:     true,
 			DurableArtifactsMustReduceUncertainty: true,
-			SelectionPolicy:                       SDDSelectionExplicitRequestOrAcceptedProposal,
+			SelectionPolicy:                       SDDSelectionExplicitRequestProjectLaneOrAcceptedProposal,
 		},
 	}
 
@@ -102,6 +102,12 @@ func TestManifestRejectsWeakenedRoutingFacts(t *testing.T) {
 				manifest.ImplementationRouting.SDD.SelectionPolicy = "automatic"
 			},
 		},
+		{
+			name: "retired selection literal is no longer canonical (REQ-27.16)",
+			weaken: func(manifest *AgentCapabilityManifest) {
+				manifest.ImplementationRouting.SDD.SelectionPolicy = "explicit_request_or_accepted_proposal"
+			},
+		},
 	}
 
 	for _, test := range tests {
@@ -121,7 +127,7 @@ func TestManifestRejectsWeakenedRoutingFacts(t *testing.T) {
 func TestEveryManifestKeepsWorkRoutingDormantAndHashesCanonically(t *testing.T) {
 	t.Parallel()
 
-	const wantRoutingDigest = "sha256:ed03b86f20c9449a6e4c018f51d1e05619e1070b1076287a0792a74c458762b2"
+	const wantRoutingDigest = "sha256:e114fbf7265d24cd5db30409b99d5bda6025d91871246762d612e097c0ea0754"
 	// Digests pin the four providers with an enforceable fresh-reviewer
 	// boundary: Claude Code's generated reviewer has no live tools, OpenCode
 	// relays one ordinary task through Go-owned admission, Codex's provider
@@ -129,22 +135,22 @@ func TestEveryManifestKeepsWorkRoutingDormantAndHashesCanonically(t *testing.T) 
 	// forwards the Go-issued opaque task to a fresh locked-down pi
 	// subprocess (gentle-pi#311, gentle-ai#3249).
 	wantManifestDigests := map[model.AgentID]string{
-		model.AgentAntigravity:   "sha256:8e09945cd860b793c59f73db19827bcb4dcfd75c9ecc7f876167ab52fe77ccc2",
-		model.AgentClaudeCode:    "sha256:132b9219b222d35b0e4eafce3dae965c56eb8d79f07dff6d45c42c137e36fd9b",
-		model.AgentCodex:         "sha256:dbf94a3b7815cf68ccd6299c634f3e17be9abc305b3849adee382c65055c5ed9",
-		model.AgentCursor:        "sha256:08e32b28b4cde7ffaf67210354fb95df2aaf424016ec6093190fb38c5f7226cb",
-		model.AgentGeminiCLI:     "sha256:5738280648925ebc011e6564b59bd6108bb573b5615771286fbcba97876a61dc",
-		model.AgentHermes:        "sha256:25a9583f4b1fe58dbc64a33a016e9a1d88acb545d3d6f6648bbf08dc29cb5656",
-		model.AgentKilocode:      "sha256:9cd93b70fee7da43b7dffdd4f0a7a949886b24c97bef163ef99f4d04d21dc06d",
-		model.AgentKimi:          "sha256:6cc52c4b6e00d15a91b76259f2e594001904b8dd0eabb0b41c4d3b72669d9964",
-		model.AgentKiroIDE:       "sha256:ac77662bea712a283a44e7985257ec68f4d1217cf311dbb9322966f9e5c8423a",
-		model.AgentOpenClaw:      "sha256:f83aee743181528688a9555639f1b573c8273d0cfc28b7b499bffa21c406deb2",
-		model.AgentOpenCode:      "sha256:3df2c0ee0a61774b7b7f0d547abed55721cc37ecc332c131935ce72fb142103f",
-		model.AgentPi:            "sha256:0332851d2286a97ab824a1d656b94f02651bfbf85bdf0f6cc47fe8f7d09765ad",
-		model.AgentQwenCode:      "sha256:11e49bee9741be99ae23257471e78258b1429d74ac491e79395bcfe46774614c",
-		model.AgentTrae:          "sha256:fbbc5ae0a54d31aee4322a89a4d95f854a564d6ea16438c30d0de01b34f7bb8e",
-		model.AgentVSCodeCopilot: "sha256:d982315762ac70ed1a855aec32bc75547b02ba16ae87a330af14366e0e8facee",
-		model.AgentWindsurf:      "sha256:0b70f983ef8d5154f1d13c9d377d70d04cae1eaa460f280ee96db6a43f84fa28",
+		model.AgentAntigravity:   "sha256:b965a31aec2a39433a987f93dd9fb9ae84ebc756bbb1277dc43dcfaa5fa0cd09",
+		model.AgentClaudeCode:    "sha256:3784060e708364dc6263dc01cd2bbdd92ca0bbe55382a12a55155df1ec2fa239",
+		model.AgentCodex:         "sha256:52ac15f7d2f077e85d07e70965d000072441254afe5c7e3c756dfeacb2b38e55",
+		model.AgentCursor:        "sha256:fe3dafc89ca71df79166b483e2726062e9b12f0585462401f88ae4da2b1409b8",
+		model.AgentGeminiCLI:     "sha256:2fe3db0e9d8726c16b7aea8101c7a8a41377c8c41aef2acb89095a125d90da9d",
+		model.AgentHermes:        "sha256:092b369652cdaf22233910bc4c11afebab7ec889f6526d9d44e2b0920f70c0f2",
+		model.AgentKilocode:      "sha256:31a32cd9c79a8cc8a6594e735e3c2cab7a39ef4a1bf5e344d97a140b3e9af0b7",
+		model.AgentKimi:          "sha256:1f06502934b765f22b97e52ce2150f0877f62e0eb598b3350cfe2886554681e6",
+		model.AgentKiroIDE:       "sha256:ce6d1b33d122c0002bc9fd0d63405d749c514f15daec8ba59af392b74836c498",
+		model.AgentOpenClaw:      "sha256:c62c5e827f25bed8f96570c9efeb5aaffafd1f939a8c4c0c9e6cddf7479a1384",
+		model.AgentOpenCode:      "sha256:2ff5e0860b2657daefabae78de531b0e4bc620a9e64191fddf45a371b3b7fb9b",
+		model.AgentPi:            "sha256:6022f66d1415fde731951e5ab024f60cdca213a8cbaed97e65652a8a18efa4f1",
+		model.AgentQwenCode:      "sha256:9c79d3e8c331d2211586e57b62c28ac6e3880c330be29891cdacacb8a1ba66d5",
+		model.AgentTrae:          "sha256:8c4dffe4d6d5f4e80e4ebddd95456dfaaa6e3723a2553a94762aeeaf364eb57b",
+		model.AgentVSCodeCopilot: "sha256:06f7cc118863d1c28939e0715c8989cb2854b078ea3e9d13da6ac44f1994acbc",
+		model.AgentWindsurf:      "sha256:86b8246b107505971caa296ffb4f24eb634d14ff4606e188003398bb20caa8c7",
 	}
 
 	for agent, wantDigest := range wantManifestDigests {
@@ -213,21 +219,21 @@ func TestEveryManifestDigestStaysByteStable(t *testing.T) {
 	t.Parallel()
 
 	wantNonPiDigests := map[model.AgentID]string{
-		model.AgentAntigravity:   "sha256:8e09945cd860b793c59f73db19827bcb4dcfd75c9ecc7f876167ab52fe77ccc2",
-		model.AgentClaudeCode:    "sha256:132b9219b222d35b0e4eafce3dae965c56eb8d79f07dff6d45c42c137e36fd9b",
-		model.AgentCodex:         "sha256:dbf94a3b7815cf68ccd6299c634f3e17be9abc305b3849adee382c65055c5ed9",
-		model.AgentCursor:        "sha256:08e32b28b4cde7ffaf67210354fb95df2aaf424016ec6093190fb38c5f7226cb",
-		model.AgentGeminiCLI:     "sha256:5738280648925ebc011e6564b59bd6108bb573b5615771286fbcba97876a61dc",
-		model.AgentHermes:        "sha256:25a9583f4b1fe58dbc64a33a016e9a1d88acb545d3d6f6648bbf08dc29cb5656",
-		model.AgentKilocode:      "sha256:9cd93b70fee7da43b7dffdd4f0a7a949886b24c97bef163ef99f4d04d21dc06d",
-		model.AgentKimi:          "sha256:6cc52c4b6e00d15a91b76259f2e594001904b8dd0eabb0b41c4d3b72669d9964",
-		model.AgentKiroIDE:       "sha256:ac77662bea712a283a44e7985257ec68f4d1217cf311dbb9322966f9e5c8423a",
-		model.AgentOpenClaw:      "sha256:f83aee743181528688a9555639f1b573c8273d0cfc28b7b499bffa21c406deb2",
-		model.AgentOpenCode:      "sha256:3df2c0ee0a61774b7b7f0d547abed55721cc37ecc332c131935ce72fb142103f",
-		model.AgentQwenCode:      "sha256:11e49bee9741be99ae23257471e78258b1429d74ac491e79395bcfe46774614c",
-		model.AgentTrae:          "sha256:fbbc5ae0a54d31aee4322a89a4d95f854a564d6ea16438c30d0de01b34f7bb8e",
-		model.AgentVSCodeCopilot: "sha256:d982315762ac70ed1a855aec32bc75547b02ba16ae87a330af14366e0e8facee",
-		model.AgentWindsurf:      "sha256:0b70f983ef8d5154f1d13c9d377d70d04cae1eaa460f280ee96db6a43f84fa28",
+		model.AgentAntigravity:   "sha256:b965a31aec2a39433a987f93dd9fb9ae84ebc756bbb1277dc43dcfaa5fa0cd09",
+		model.AgentClaudeCode:    "sha256:3784060e708364dc6263dc01cd2bbdd92ca0bbe55382a12a55155df1ec2fa239",
+		model.AgentCodex:         "sha256:52ac15f7d2f077e85d07e70965d000072441254afe5c7e3c756dfeacb2b38e55",
+		model.AgentCursor:        "sha256:fe3dafc89ca71df79166b483e2726062e9b12f0585462401f88ae4da2b1409b8",
+		model.AgentGeminiCLI:     "sha256:2fe3db0e9d8726c16b7aea8101c7a8a41377c8c41aef2acb89095a125d90da9d",
+		model.AgentHermes:        "sha256:092b369652cdaf22233910bc4c11afebab7ec889f6526d9d44e2b0920f70c0f2",
+		model.AgentKilocode:      "sha256:31a32cd9c79a8cc8a6594e735e3c2cab7a39ef4a1bf5e344d97a140b3e9af0b7",
+		model.AgentKimi:          "sha256:1f06502934b765f22b97e52ce2150f0877f62e0eb598b3350cfe2886554681e6",
+		model.AgentKiroIDE:       "sha256:ce6d1b33d122c0002bc9fd0d63405d749c514f15daec8ba59af392b74836c498",
+		model.AgentOpenClaw:      "sha256:c62c5e827f25bed8f96570c9efeb5aaffafd1f939a8c4c0c9e6cddf7479a1384",
+		model.AgentOpenCode:      "sha256:2ff5e0860b2657daefabae78de531b0e4bc620a9e64191fddf45a371b3b7fb9b",
+		model.AgentQwenCode:      "sha256:9c79d3e8c331d2211586e57b62c28ac6e3880c330be29891cdacacb8a1ba66d5",
+		model.AgentTrae:          "sha256:8c4dffe4d6d5f4e80e4ebddd95456dfaaa6e3723a2553a94762aeeaf364eb57b",
+		model.AgentVSCodeCopilot: "sha256:06f7cc118863d1c28939e0715c8989cb2854b078ea3e9d13da6ac44f1994acbc",
+		model.AgentWindsurf:      "sha256:86b8246b107505971caa296ffb4f24eb634d14ff4606e188003398bb20caa8c7",
 	}
 
 	nonPiAgents := make([]model.AgentID, 0, len(wantNonPiDigests))

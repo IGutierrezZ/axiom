@@ -1,6 +1,7 @@
 package agentguidance
 
 import (
+	"errors"
 	"strings"
 	"testing"
 
@@ -8,17 +9,11 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
 )
 
-// planStopLinePrefix opens the ODD detail bullet that defines the plan stop.
-const planStopLinePrefix = "- Plan stop: "
-
-// TestRenderRoutingProjectsStopsAndExitsFromTheSingleSource guards REQ-26.8 and
-// REQ-26.10: every adapter renders the "Stops and exits" section exactly once,
-// after "Branches and worktrees" and before the receipt-driven switch, and its
-// body is the very text StopExits returns.
-func TestRenderRoutingProjectsStopsAndExitsFromTheSingleSource(t *testing.T) {
+// TestRenderRoutingHasNoOddStops guards REQ-27.17: ODD has no stop of its own.
+// No adapter renders the plan stop, the three-exit section, or the hand-off of a
+// feature document; the stops and exits belong to the SDD gates only.
+func TestRenderRoutingHasNoOddStops(t *testing.T) {
 	t.Parallel()
-
-	want := StopExits()
 
 	for _, agent := range catalog.AllAgents() {
 		t.Run(string(agent.ID), func(t *testing.T) {
@@ -28,32 +23,29 @@ func TestRenderRoutingProjectsStopsAndExitsFromTheSingleSource(t *testing.T) {
 			if err != nil {
 				t.Fatalf("RenderRouting(%q) error = %v", agent.ID, err)
 			}
-
-			if got := strings.Count(rendered, "### Stops and exits\n"); got != 1 {
-				t.Fatalf("RenderRouting(%q) renders the section %d times, want exactly once", agent.ID, got)
+			for _, forbidden := range []string{
+				"Plan stop",
+				"plan stop",
+				"### Stops and exits",
+				"three exits",
+				"handed off",
+				"approved plan",
+			} {
+				if strings.Contains(rendered, forbidden) {
+					t.Fatalf("RenderRouting(%q) still carries %q; ODD has no stops (REQ-27.17)", agent.ID, forbidden)
+				}
 			}
-			if got := strings.TrimSpace(routingSection(t, rendered, "Stops and exits")); got != want {
-				t.Fatalf("RenderRouting(%q) section differs from StopExits():\n got: %q\nwant: %q", agent.ID, got, want)
-			}
-			if !strings.Contains(rendered, want) {
-				t.Fatalf("RenderRouting(%q) does not contain StopExits() verbatim", agent.ID)
-			}
-
-			branches := strings.Index(rendered, "### Branches and worktrees\n")
-			stops := strings.Index(rendered, "### Stops and exits\n")
-			review := strings.Index(rendered, "### Receipt-driven development is user-owned\n")
-			if branches < 0 || stops < branches || review < stops {
-				t.Fatalf("RenderRouting(%q) section order is wrong (branches=%d stops=%d review=%d)", agent.ID, branches, stops, review)
+			if strings.Contains(rendered, StopExits()) {
+				t.Fatalf("RenderRouting(%q) projects StopExits(), which belongs to the SDD orchestrators only", agent.ID)
 			}
 		})
 	}
 }
 
-// TestRenderRoutingCitesThePlanStopAsAnException guards the step 0 and step 5
-// scenarios of REQ-26.10: step 0 keeps "do not ask any further governance
-// question" and says the single plan stop is not one; step 5 presents the plan
-// stop without naming axiom branch, which belongs to step 6 alone.
-func TestRenderRoutingCitesThePlanStopAsAnException(t *testing.T) {
+// TestRenderRoutingStepFiveCreatesTheFeatureDocumentWithoutStopping pins step 5:
+// the feature document and its mirror are created, the user is told in one line,
+// and the next step is implementation, not a stop.
+func TestRenderRoutingStepFiveCreatesTheFeatureDocumentWithoutStopping(t *testing.T) {
 	t.Parallel()
 
 	for _, agent := range catalog.AllAgents() {
@@ -64,25 +56,12 @@ func TestRenderRoutingCitesThePlanStopAsAnException(t *testing.T) {
 			if err != nil {
 				t.Fatalf("RenderRouting(%q) error = %v", agent.ID, err)
 			}
-
-			step0 := routingLineStartingWith(t, rendered, "0. **Evaluate scope and lane.**")
-			for _, want := range []string{
-				"do not ask any further governance question",
-				"The single plan stop after step 5 (see *Stops and exits*) is not a governance question.",
-			} {
-				if !strings.Contains(step0, want) {
-					t.Fatalf("RenderRouting(%q) step 0 is missing %q:\n%s", agent.ID, want, step0)
-				}
-			}
-
 			step5 := routingLineStartingWith(t, rendered, "5. **Track before the first write.**")
-			for _, want := range []string{
-				"Then present the plan stop: the single ODD stop, after the feature document exists and before the first code write, with the three exits of *Stops and exits*.",
-				"Tell the user in one line which feature document was created and how many tasks it holds.",
-			} {
-				if !strings.Contains(step5, want) {
-					t.Fatalf("RenderRouting(%q) step 5 is missing %q:\n%s", agent.ID, want, step5)
-				}
+			if !strings.Contains(step5, "Tell the user in one line which feature document was created and how many tasks it holds.") {
+				t.Fatalf("RenderRouting(%q) step 5 lost the one-line notice:\n%s", agent.ID, step5)
+			}
+			if !strings.HasSuffix(strings.TrimSpace(step5), "how many tasks it holds.") {
+				t.Fatalf("RenderRouting(%q) step 5 must end after the notice, with no stop:\n%s", agent.ID, step5)
 			}
 			if strings.Contains(step5, "axiom branch") {
 				t.Fatalf("RenderRouting(%q) step 5 names axiom branch, which only step 6 may do:\n%s", agent.ID, step5)
@@ -91,59 +70,9 @@ func TestRenderRoutingCitesThePlanStopAsAnException(t *testing.T) {
 	}
 }
 
-// TestRenderRoutingDefinesThePlanStopInTheOrganicDetail pins the plan stop
-// bullet: one stop with a feature document only, no SDD artifact, the
-// `Plan stop:` line, the commit of the feature document alone, and the
-// multirepo case.
-func TestRenderRoutingDefinesThePlanStopInTheOrganicDetail(t *testing.T) {
-	t.Parallel()
-
-	for _, agent := range catalog.AllAgents() {
-		t.Run(string(agent.ID), func(t *testing.T) {
-			t.Parallel()
-
-			rendered, err := RenderRouting(agent.ID)
-			if err != nil {
-				t.Fatalf("RenderRouting(%q) error = %v", agent.ID, err)
-			}
-			if got := strings.Count(rendered, planStopLinePrefix); got != 1 {
-				t.Fatalf("RenderRouting(%q) renders the plan stop bullet %d times, want exactly once", agent.ID, got)
-			}
-			bullet := routingLineStartingWith(t, rendered, planStopLinePrefix)
-
-			detail := strings.Index(rendered, "### Organic Driven Development\n")
-			branches := strings.Index(rendered, "### Branches and worktrees\n")
-			at := strings.Index(rendered, bullet)
-			if detail < 0 || at < detail || branches < at {
-				t.Fatalf("RenderRouting(%q) plan stop bullet sits outside the organic detail (detail=%d bullet=%d branches=%d)", agent.ID, detail, at, branches)
-			}
-
-			for _, want := range []string{
-				"small, understood work has no stop",
-				"It is not a governance question, creates no SDD artifact, and never creates `handoff.md`.",
-				"`Plan stop: approved <YYYY-MM-DD>; implementation continues`",
-				"`Plan stop: approved <YYYY-MM-DD>; implementation handed off`",
-				"never present the stop again when the document already records it, for example on resume",
-				"Iterate adjusts the file and the Engram mirror and presents the stop again.",
-				"commits only `odd/tasks/<feature-name>.md`",
-				"`git -C <path> add -- odd/tasks/<feature-name>.md`",
-				"`git -C <path> commit -m \"<message>\" -- odd/tasks/<feature-name>.md`",
-				"`axiom branch status --lane odd --change <feature-name> --json`",
-				"presents the branch, the `prTarget`, the exact push command, and the pull request data (`head` and `base`) for the human to run, and stops without writing code",
-				"In a `multirepo` the feature document lives in the specs repository on its integration branch: commit there and present the push for the human, with no pull request.",
-			} {
-				if !strings.Contains(bullet, want) {
-					t.Fatalf("RenderRouting(%q) plan stop bullet is missing %q:\n%s", agent.ID, want, bullet)
-				}
-			}
-		})
-	}
-}
-
-// TestRenderRoutingResumesWithoutTheEngramMirror pins the pick-up scenario of
-// REQ-26.10: the resume line starts from the task file, tolerates a missing
-// mirror, never reviews an approved plan, and continues with the first
-// unfinished task.
+// TestRenderRoutingResumesWithoutTheEngramMirror pins the resume line: it starts
+// from the task file, tolerates a missing mirror and continues with the first
+// unfinished task, without any reference to a handed-off plan.
 func TestRenderRoutingResumesWithoutTheEngramMirror(t *testing.T) {
 	t.Parallel()
 
@@ -158,7 +87,7 @@ func TestRenderRoutingResumesWithoutTheEngramMirror(t *testing.T) {
 			resume := routingLineStartingWith(t, rendered, "Resume an interrupted feature with")
 			for _, want := range []string{
 				"then the task file itself; reconcile before continuing the next unfinished task.",
-				"When the Engram mirror does not exist (for example, the feature was handed off to you), start from the task file alone, never fail for the missing mirror, never review an approved plan again, and continue with the first unfinished task.",
+				"When the Engram mirror does not exist, start from the task file alone, never fail for the missing mirror, and continue with the first unfinished task.",
 			} {
 				if !strings.Contains(resume, want) {
 					t.Fatalf("RenderRouting(%q) resume line is missing %q:\n%s", agent.ID, want, resume)
@@ -168,47 +97,56 @@ func TestRenderRoutingResumesWithoutTheEngramMirror(t *testing.T) {
 	}
 }
 
-// TestRenderRoutingNeverOrdersRemoteOperationsAtTheStop guards the last
-// scenario of REQ-26.10: neither the stops section nor the plan stop bullet
-// orders push, fetch, opening the pull request, or merging; they present them
-// as the human's.
-func TestRenderRoutingNeverOrdersRemoteOperationsAtTheStop(t *testing.T) {
+// TestRenderRoutingStepZeroReadsTheProjectLane pins REQ-27.16: step 0 reads the
+// lane from the `workflow` field of the SDD status, covers the three lanes and
+// the fail-closed sources, and keeps the blocking lane question for `ask`.
+func TestRenderRoutingStepZeroReadsTheProjectLane(t *testing.T) {
 	t.Parallel()
 
-	rendered, err := RenderRouting(model.AgentClaudeCode)
-	if err != nil {
-		t.Fatalf("RenderRouting(%q) error = %v", model.AgentClaudeCode, err)
-	}
-	stop := routingSection(t, rendered, "Stops and exits") + "\n" + routingLineStartingWith(t, rendered, planStopLinePrefix)
+	for _, agent := range catalog.AllAgents() {
+		t.Run(string(agent.ID), func(t *testing.T) {
+			t.Parallel()
 
-	for _, forbidden := range []string{"git push", "git fetch", "git pull", "git merge", "gh pr", "glab ", "&&"} {
-		if strings.Contains(stop, forbidden) {
-			t.Fatalf("the stop text carries the executable remote command %q:\n%s", forbidden, stop)
-		}
-	}
-	for _, want := range []string{
-		"`push`, `fetch`, opening the pull request, and merging belong to the human",
-		"never run them yourself",
-		"for the human to run",
-	} {
-		if !strings.Contains(stop, want) {
-			t.Fatalf("the stop text does not present the remote operations as the human's, missing %q:\n%s", want, stop)
-		}
+			rendered, err := RenderRouting(agent.ID)
+			if err != nil {
+				t.Fatalf("RenderRouting(%q) error = %v", agent.ID, err)
+			}
+			step0 := routingLineStartingWith(t, rendered, "0. **Evaluate scope and lane.**")
+			for _, want := range []string{
+				"axiom sdd status --cwd <repo> --json",
+				"`workflow` field",
+				"`lane` (`odd`, `sdd` or `ask`) and `source`",
+				"with or without a selected change",
+				"Small, understood work stays small in every lane and creates no work artifact.",
+				"with `lane: sdd`, enter the SDD pre-flight questionnaire directly, without asking the lane question",
+				"with `lane: odd`, work through ODD without asking, even for an architectural scope, unless the user explicitly asks for SDD in this request",
+				"with `lane: ask`, when `source` is `no_workspace` or `invalid`, or when the status cannot be read, ask the blocking lane-selection question",
+				"do you want to approach this through the agile ODD lane or the formal SDD lane?",
+				"creating no work artifact while it is pending",
+				"under `ask`, a scope that is unambiguously architectural or large skips that binary question",
+				"Whenever the work goes through ODD, do not ask any further governance question",
+			} {
+				if !strings.Contains(step0, want) {
+					t.Fatalf("RenderRouting(%q) step 0 is missing %q:\n%s", agent.ID, want, step0)
+				}
+			}
+			if strings.Contains(step0, "plan stop") {
+				t.Fatalf("RenderRouting(%q) step 0 still mentions the plan stop:\n%s", agent.ID, step0)
+			}
+		})
 	}
 }
 
-// TestRenderRoutingStopsTextIsIdenticalAcrossAgentsAndRenders guards the
-// determinism of the new text: the section and the plan stop bullet are the same
-// for every adapter and on a second render.
-func TestRenderRoutingStopsTextIsIdenticalAcrossAgentsAndRenders(t *testing.T) {
+// TestRenderRoutingLaneTextIsIdenticalAcrossAgentsAndRenders guards determinism:
+// step 0 is the same for every adapter and on a second render.
+func TestRenderRoutingLaneTextIsIdenticalAcrossAgentsAndRenders(t *testing.T) {
 	t.Parallel()
 
 	reference, err := RenderRouting(model.AgentClaudeCode)
 	if err != nil {
 		t.Fatalf("RenderRouting(%q) error = %v", model.AgentClaudeCode, err)
 	}
-	referenceSection := routingSection(t, reference, "Stops and exits")
-	referenceBullet := routingLineStartingWith(t, reference, planStopLinePrefix)
+	referenceStep := routingLineStartingWith(t, reference, "0. **Evaluate scope and lane.**")
 
 	for _, agent := range catalog.AllAgents() {
 		for render := 0; render < 2; render++ {
@@ -216,12 +154,26 @@ func TestRenderRoutingStopsTextIsIdenticalAcrossAgentsAndRenders(t *testing.T) {
 			if err != nil {
 				t.Fatalf("RenderRouting(%q) error = %v", agent.ID, err)
 			}
-			if routingSection(t, rendered, "Stops and exits") != referenceSection {
-				t.Fatalf("RenderRouting(%q) render %d differs in the stops section", agent.ID, render)
-			}
-			if routingLineStartingWith(t, rendered, planStopLinePrefix) != referenceBullet {
-				t.Fatalf("RenderRouting(%q) render %d differs in the plan stop bullet", agent.ID, render)
+			if routingLineStartingWith(t, rendered, "0. **Evaluate scope and lane.**") != referenceStep {
+				t.Fatalf("RenderRouting(%q) render %d differs in step 0", agent.ID, render)
 			}
 		}
+	}
+}
+
+// TestUnknownRoutingPolicyFailsClosed guards DD-03: the renderer compares the
+// manifest policy against the current literal and rejects any other, including the
+// retired one, instead of rendering stale prose over a changed policy.
+func TestUnknownRoutingPolicyFailsClosed(t *testing.T) {
+	t.Parallel()
+
+	for _, policy := range []string{"explicit_request_or_accepted_proposal", "automatic", ""} {
+		err := checkRoutingPolicy(policy)
+		if !errors.Is(err, ErrUnknownRoutingPolicy) {
+			t.Fatalf("checkRoutingPolicy(%q) = %v, want ErrUnknownRoutingPolicy", policy, err)
+		}
+	}
+	if err := checkRoutingPolicy("explicit_request_project_lane_or_accepted_proposal"); err != nil {
+		t.Fatalf("checkRoutingPolicy(current) = %v, want nil", err)
 	}
 }

@@ -200,6 +200,10 @@ type Status struct {
 	// invalid: an invalid block is never projected, not even partially.
 	Baseline         *BaselineProjection         `json:"baseline,omitempty"`
 	TechnicalContext *TechnicalContextProjection `json:"technicalContext,omitempty"`
+	// Workflow is the project lane declared in the `workflow:` block of axiom.yaml
+	// (REQ-27.2): always filled by decorateWorkspaceDeclarations, with or without a
+	// selected change. `omitempty` only protects hand-built statuses in tests.
+	Workflow *WorkflowProjection `json:"workflow,omitempty"`
 	// GateQuestion is the typed blocking question for the one gate
 	// firstOpenGate names when NextRecommended is "await-gate" (design.md
 	// S5.5): the same Lossless Blocking Prompt shape as Consent, scoped to
@@ -233,6 +237,17 @@ type BaselineDocumentProjection struct {
 	Domain      string `json:"domain"`
 	Path        string `json:"path"`
 	Integration string `json:"integration"`
+}
+
+// WorkflowProjection is the effective project lane (REQ-27.2). Lane is odd, sdd
+// or ask; Source says where it comes from: declared (the block sets `lane`),
+// default (a valid axiom.yaml without `workflow.lane`), no_workspace (there is
+// no axiom.yaml) or invalid (axiom.yaml or its `workflow:` block cannot be
+// read). no_workspace and invalid always project ask: the rule fails closed
+// toward asking.
+type WorkflowProjection struct {
+	Lane   string `json:"lane"`
+	Source string `json:"source"`
 }
 
 // TechnicalContextProjection carries, per declared mode, the absolute paths

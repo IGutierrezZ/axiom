@@ -95,6 +95,9 @@ technicalContext: # optional; present only with a valid `technical_context:` dec
     entry: <absolute path, optional>
   reference: # optional mode, same shape
     paths: [<absolute paths>]
+workflow: # always present, with or without a selected change
+  lane: odd | sdd | ask
+  source: declared | default | no_workspace | invalid
 phaseInstructions:
   apply: [<instruction strings>]
   verify: [<instruction strings>]
@@ -118,21 +121,30 @@ SDD status never reads review mode, offers RDD, or exposes review state. After c
 - Only archive is gated by a declaration cause: `dependencies.archive` is `blocked` when `axiom.yaml` is unreadable or a declared block is invalid, when `technicalContext.maintained` is declared and the change has no `context-impact.md`, or when a project baseline or maintained context is declared with an artifact store that has no files (`engram` or `none`). The cause always appears in `notes`; it appears in `blockedReasons` (and `nextRecommended` becomes `resolve-blockers`) only when the route would otherwise be `archive`.
 - The context delta (`context-impact.md`) is not projected: `artifacts`, `artifactPaths`, and `contextFiles` are unchanged by it.
 
+## Project Workflow Lane
+
+`workflow` is an additive field of the status, always present (with or without a selected change). It projects the effective project lane declared in the `workflow:` block of `axiom.yaml`, so orchestrators never read that file themselves.
+
+- `lane` is `odd`, `sdd` or `ask`. `source` says where it comes from: `declared` (the block sets `lane`), `default` (a valid `axiom.yaml` without the block or without `workflow.lane`; the lane is `sdd`), `no_workspace` (there is no `axiom.yaml`) or `invalid` (`axiom.yaml` or its `workflow:` block cannot be read or is invalid, even when the block itself is valid but the rest of the file is not).
+- `no_workspace` and `invalid` always project `ask`: the rule fails closed toward asking the lane question. If the status does not answer, the orchestrator acts as `ask`.
+- The field is informational: it adds no note and no blocking reason, and the recommended route does not depend on it.
+
 ## Governance (sealed kickoff)
 
 `governance` is an additive, optional field. It is omitted entirely (never `null`) for a change with no sealed `kickoff.yaml`; every sealed change carries it:
 
 ```yaml
 governance:
-  kickoff: { schema, flowMode, executionStyle: continuous | checkpointed, sealedAt, sealedBy } # handoffPolicy? appears only when an older kickoff.yaml carries it; it is deprecated and changes nothing
+  kickoff: { schema, flowMode, executionStyle: continuous | checkpointed, docsPublication?, sealedAt, sealedBy } # handoffPolicy? appears only when an older kickoff.yaml carries it; it is deprecated and changes nothing; docsPublication? is `auto` only when the person authorized it at sealing
   roster: { source: kickoff, roles: [<role>, ...] } # in the order the kickoff names them
   gates: [{ key, status, blocks, reason?, reopened?, handedOff?, handedOffTo? }]
 ```
 
 - `roster` is present for every sealed change, in both execution styles, so a multi-role change (for example `backend` and `frontend`) is visible even when it runs `continuous`. Task progress per role is not a separate field: `taskProgress` is the aggregate over every role's `tasks.<role>.md`, and `artifactPaths.tasks` lists those files in roster order.
+- `kickoff.docsPublication` is `auto` only in a `continuous` change whose kickoff was sealed with `--docs-publication auto`: the orchestrator then runs `axiom sdd publish` without asking when `tasks` closes and after archive. It is absent otherwise, and a kickoff sealed before this field never publishes automatically.
 - `gates` is populated only when `kickoff.executionStyle` is `checkpointed`. Under `continuous` it is always `[]`: no gate is evaluated or presented, and the orchestrator chains phases without stopping.
-- `handedOff` and `handedOffTo` appear on a gate approved with exit 2 of its stop (approve, push and stop): `handedOffTo` names the phase handed to another person (`design`, `tasks`, `apply`, `apply:<role>,<role>` for the roles still pending, or `verify` after the last role). Both are absent on exits 1 and 3. They are information only: the route (`nextRecommended`) is the one an ordinary approval yields, and nothing is blocked by them.
-- `gateQuestion` (the typed gate-decision envelope) appears only while `nextRecommended` is `await-gate`, which only a `checkpointed` change with an open gate can reach. Never expect it under `continuous`. For `spec`, `design`, `tasks` and `role-apply:<role>` it offers three choices in the order `rejected`, `hand_off`, `approved`, every one resolved with `axiom sdd gate record`; with the `none` artifact store it offers two (`rejected`, `approved`) plus `handOffUnavailable`, which names the store that makes exit 2 unavailable. The `integration` gate keeps its two choices.
+- `handedOff` and `handedOffTo` appear on a gate approved with exit 2 of its stop (approve, publish and stop): `handedOffTo` names the phase handed to another person (`design`, `tasks`, `apply`, `apply:<role>,<role>` for the roles still pending, or `verify` after the last role). Both are absent on exits 1 and 3. They are information only: the route (`nextRecommended`) is the one an ordinary approval yields, and nothing is blocked by them.
+- `gateQuestion` (the typed gate-decision envelope) appears only while `nextRecommended` is `await-gate`, which only a `checkpointed` change with an open gate can reach. Never expect it under `continuous`. For `spec`, `design`, `tasks` and `role-apply:<role>` it offers three choices in the order `rejected`, `hand_off`, `approved`, every one resolved with `axiom sdd gate record`; with the `none` artifact store it offers two (`rejected`, `approved`) plus `handOffUnavailable`, which names the store that makes exit 2 unavailable. The `integration` gate keeps its two choices. On a planning gate whose store keeps files, the question also carries `publication: { remote, branch, prTarget?, invocation }` (the remote is always `origin`, `branch` is the branch that is pushed, `prTarget` is informative and absent in the in-place integration of a `multirepo` specs repository, and `invocation` is an `axiom sdd publish` bound to that branch with `--branch`), or `publicationUnavailable: "<code>"` (for example `wrong_branch`) when the target cannot be resolved; the choices are then still the `gate record` ones. Approving with exit 2 or 3 is the authorization of that push of documents and of nothing else. `axiom sdd gate record --json` returns the same `publish` (or `publishUnavailable`) on every approval except `integration`: it only calculates the invocation, and the orchestrator runs it once afterwards.
 - Gate-only preconditions never apply to `continuous`: archive is not blocked by a missing `integration` gate.
 - In a `checkpointed` multi-role change, `verify` is blocked until every active role has its `role-apply` gate approved (the reason names the roles still pending). `handoff.md` plays no part in it: a `handoff.md` that exists is ignored.
 

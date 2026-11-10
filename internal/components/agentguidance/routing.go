@@ -19,6 +19,16 @@ import (
 // over a changed policy would silently misinform every installed agent.
 var ErrUnknownRoutingPolicy = errors.New("unknown sdd selection policy")
 
+// checkRoutingPolicy admits only the current selection policy (REQ-27.16): the
+// retired `explicit_request_or_accepted_proposal` literal and any other value
+// fail closed with ErrUnknownRoutingPolicy.
+func checkRoutingPolicy(policy string) error {
+	if capabilitymanifest.SDDSelectionPolicy(policy) != capabilitymanifest.SDDSelectionExplicitRequestProjectLaneOrAcceptedProposal {
+		return fmt.Errorf("%w: %q", ErrUnknownRoutingPolicy, policy)
+	}
+	return nil
+}
+
 // RenderRouting projects the canonical implementation-routing facts of one
 // supported adapter into its guidance block.
 //
@@ -32,8 +42,8 @@ func RenderRouting(agent model.AgentID) (string, error) {
 	}
 
 	routing := manifest.ImplementationRouting
-	if routing.SDD.SelectionPolicy != capabilitymanifest.SDDSelectionExplicitRequestOrAcceptedProposal {
-		return "", fmt.Errorf("%w: %q", ErrUnknownRoutingPolicy, routing.SDD.SelectionPolicy)
+	if err := checkRoutingPolicy(string(routing.SDD.SelectionPolicy)); err != nil {
+		return "", err
 	}
 
 	var output strings.Builder
@@ -42,26 +52,30 @@ func RenderRouting(agent model.AgentID) (string, error) {
 	// ODD protocol: absorbed from upstream (1b202d77, 70c774f8, cfc415ce,
 	// dcd2fa07 — INC-20 F6.1). Organic Driven Development becomes the
 	// orchestrator's predefined, mandatory-by-default workflow; SDD remains a
-	// branch inside it, selected only by explicit request or an accepted
+	// branch inside it, selected only by explicit request, by the project lane or an accepted
 	// proposal, never a substitute, predecessor, or postponement of this
 	// projection (organic-agent-trigger-rules, ADDED requirement).
-	output.WriteString("Organic Driven Development (ODD) is the predefined workflow of this orchestrator. Every request enters it, on every runtime, without the user asking for a workflow, a plan, or task tracking. SDD is a branch inside ODD, entered only by an explicit request or an accepted proposal. Never describe this workflow only when asked about it: run it.\n\n")
+	output.WriteString("Organic Driven Development (ODD) is the predefined workflow of this orchestrator. Every request enters it, on every runtime, without the user asking for a workflow, a plan, or task tracking. SDD is a branch inside ODD, entered only by an explicit request, by the project lane declared in `axiom.yaml`, or by an accepted proposal. Never describe this workflow only when asked about it: run it.\n\n")
 	output.WriteString("### ODD protocol (MANDATORY, in this order, on every request)\n\n")
 	// Step 0: absorbed from INC-21 (design.md S1.2/S4.7, H-2; REQ-21.1-21.3).
 	// It stays numbered zero, ahead of the seven-step protocol below, instead
 	// of renumbering steps 1-7: those numbers are already cross-referenced
 	// verbatim elsewhere in this doctrine and in SDD's own shared sections.
-	output.WriteString("0. **Evaluate scope and lane.** Before creating any work artifact — `odd/tasks/<feature-name>.md` or `openspec/changes/<change>/proposal.md` — evaluate the scope of the request. For a bounded scope that reasonably admits both lanes, ask the blocking lane-selection question — do you want to approach this through the agile ODD lane or the formal SDD lane? — and STOP to wait for the answer; create no work artifact while it is pending. For a scope that is unambiguously architectural or large, skip that binary question and enter the SDD pre-flight questionnaire directly, without asking it. If the user chooses ODD, do not ask any further governance question: proceed straight into step 1 below, work it through without dividing it into roles, and keep it exclusively in `odd/tasks/<feature-name>.md`. The single plan stop after step 5 (see *Stops and exits*) is not a governance question.\n")
+	// The lane comes from the `workflow` field of `axiom sdd status` (REQ-27.16):
+	// the binary projects it and fails closed toward `ask`, so this identical text
+	// serves every project. ODD has no stop of its own (REQ-27.17): the plan stop
+	// and the three-exit section belong to the SDD gates only.
+	output.WriteString("0. **Evaluate scope and lane.** Before creating any work artifact — `odd/tasks/<feature-name>.md` or `openspec/changes/<change>/proposal.md` — read the project lane from `axiom sdd status --cwd <repo> --json`: its `workflow` field carries `lane` (`odd`, `sdd` or `ask`) and `source`, with or without a selected change. Small, understood work stays small in every lane and creates no work artifact. For substantial work: with `lane: sdd`, enter the SDD pre-flight questionnaire directly, without asking the lane question; with `lane: odd`, work through ODD without asking, even for an architectural scope, unless the user explicitly asks for SDD in this request; with `lane: ask`, when `source` is `no_workspace` or `invalid`, or when the status cannot be read, ask the blocking lane-selection question — do you want to approach this through the agile ODD lane or the formal SDD lane? — and STOP to wait for the answer, creating no work artifact while it is pending; under `ask`, a scope that is unambiguously architectural or large skips that binary question and enters the SDD pre-flight questionnaire directly. Whenever the work goes through ODD, do not ask any further governance question: proceed straight into step 1 below, work it through without dividing it into roles, and keep it exclusively in `odd/tasks/<feature-name>.md`.\n")
 	output.WriteString("1. **Authorize.** First establish whether the requested outcome explicitly authorizes a change. Investigation, explanation, review, audit, comparison, and solution-proposal or planning-only requests are read-only unless the user explicitly requests implementation or another mutation.\n")
 	output.WriteString("   - Read-only work may inspect, explain, compare, and recommend, but must not write or edit files, delegate a writer, invoke apply, or create implementation artifacts.\n")
 	output.WriteString("   - If change intent is ambiguous or conditional, ask one clarification and remain read-only until answered.\n")
 	output.WriteString("2. **Explore.** Explore the existing code and requirements first, proportionately to the request, before proposing or writing anything.\n")
 	output.WriteString("3. **Resolve uncertainty.** Recommend optional research only for a named uncertainty; ask one focused user question only for a real unresolved product decision, then stop and wait; use at most one scoped read-only assumption challenge for a high-consequence unproven premise.\n")
 	output.WriteString("4. **Classify.** The work is substantial when exploration yields two or more meaningful implementation steps, or progress worth recovering after an interruption. Small, understood work stays small and creates no durable task artifacts.\n")
-	output.WriteString("5. **Track before the first write.** For substantial authorized implementation, create `odd/tasks/<feature-name>.md` and its Engram mirror `odd/<feature-name>/tasks` automatically, before the first source write, without asking permission for tasks or storage. Tell the user in one line which feature document was created and how many tasks it holds. Then present the plan stop: the single ODD stop, after the feature document exists and before the first code write, with the three exits of *Stops and exits*.\n")
+	output.WriteString("5. **Track before the first write.** For substantial authorized implementation, create `odd/tasks/<feature-name>.md` and its Engram mirror `odd/<feature-name>/tasks` automatically, before the first source write, without asking permission for tasks or storage. Tell the user in one line which feature document was created and how many tasks it holds.\n")
 	output.WriteString("6. **Implement task by task.** Route each task through the smallest useful topology below, honoring its mandatory delegation triggers, with the configured TDD mode and applicable checks. Check an item off only after its outcome and checks were observed; update the file and the mirror after each task. Every task closes with at least one work-unit commit on the branch that `axiom branch ensure --lane odd --change <feature-name>` prepared before the first write of `odd/tasks/<feature-name>.md` (see *Branches and worktrees*), with tests and docs alongside the behavior, using a Conventional Commit message; record the commit identity in the feature document as evidence. Work-unit commits on the feature branch are part of authorized substantial ODD implementation; push, pull request creation, and merge remain the user's decisions under ordinary repository policy.\n")
 	output.WriteString("7. **Close.** Report the verified outcome, every failed, skipped, or pending check, and the next step. The native review candidate is a work-unit commit or a PR slice, never a TODO checkbox and never the accumulated feature branch; native review runs only under the user-owned receipt-driven development switch. When the project declares a maintained technical context (`technical_context.maintained` in `axiom.yaml`), a work unit that changes something that context documents updates the affected documentation in that same work-unit commit; documentation declared as reference (`technical_context.reference`) is never modified, and without a maintained context this adds no requirement.\n\n")
-	output.WriteString("Resume an interrupted feature with `mem_context`, then project- and feature-scoped `mem_search`, then `mem_get_observation` for the full document, then the task file itself; reconcile before continuing the next unfinished task. When the Engram mirror does not exist (for example, the feature was handed off to you), start from the task file alone, never fail for the missing mirror, never review an approved plan again, and continue with the first unfinished task.\n\n")
+	output.WriteString("Resume an interrupted feature with `mem_context`, then project- and feature-scoped `mem_search`, then `mem_get_observation` for the full document, then the task file itself; reconcile before continuing the next unfinished task. When the Engram mirror does not exist, start from the task file alone, never fail for the missing mirror, and continue with the first unfinished task.\n\n")
 	output.WriteString("After explicit change intent is established, route work for the requested outcome with the smallest useful topology. Every authorized change takes exactly one implementation route: direct inline, delegated direct, or optional SDD.\n\n")
 
 	_, _ = fmt.Fprintf(
@@ -76,7 +90,7 @@ func RenderRouting(agent model.AgentID) (string, error) {
 		routing.DelegatedDirect.MappingMinUnderstandingFiles,
 		routing.DelegatedDirect.WriterMinNonTrivialFiles,
 	)
-	output.WriteString("- **Optional SDD:** propose SDD only when durable proposal, spec, design, and tasks would materially reduce substantial ambiguity. SDD is selected only by an explicit request or an accepted proposal.\n")
+	output.WriteString("- **Optional SDD:** propose SDD only when durable proposal, spec, design, and tasks would materially reduce substantial ambiguity. SDD is selected only by an explicit request, by the project lane `workflow.lane: sdd` for substantial work, or by an accepted proposal.\n")
 	output.WriteString("- File count, changed lines, size, or perceived risk alone never selects SDD and never forces a heavier route.\n")
 	output.WriteString("- Automatic SDD pace is not mutation authorization; once implementation is explicitly authorized, it continues under the selected route.\n")
 	output.WriteString("- These are implementation routes, not a ban on per-action delegation. Tests, builds, installs, and review actors may still use fresh workers without changing the selected route.\n")
@@ -111,10 +125,6 @@ func RenderRouting(agent model.AgentID) (string, error) {
 	output.WriteString("- Small, understood work creates no durable task artifacts. Substantial means coordinated steps or progress worth recovering, not a line-count threshold. For substantial authorized implementation, automatically create the feature document after exploration, without a task or storage permission prompt.\n")
 	output.WriteString("- Use about 400 authored changed lines per ODD task only as a planning heuristic, counting additions plus deletions; prefer the smallest coherent behavior with its tests and docs. This is not a task acceptance criterion, hard cap, counter-trigger, automatic stop, forced split, or RDD trigger. If the correct, clear solution naturally exceeds it, briefly explain why and continue without size-only rework loops. Never delete spaces, blank lines, or comments for cosmetic line savings; never omit tests, minify, add gratuitous abstractions, or split artificially to fit the heuristic. Forward this same advisory-only instruction when delegating tasks to subagents. The delivery budget below reads the accumulated branch, not this per-task heuristic. Existing PR size gates remain unchanged; continue under existing repository policy.\n")
 	output.WriteString("- Keep `odd/tasks/<feature-name>.md` and an Engram recovery copy under topic `odd/<feature-name>/tasks`, scoped to the current project. Use a descriptive filename-safe feature name. Reuse the same feature identity; never overwrite another feature. Keep one feature document, not a separate plan file or topic: objective, problem, why, scope, constraints, actionable checklist with stable task IDs, authorized scope, acceptance criteria, and applicable checks. Include progress, verification evidence, and next step, plus concise rationale for meaningful accepted changes. Routine corrections stay with their tasks; no exhaustive decision journal. Mirror the full current document and repository-relative file locator, not just a summary or completion notice.\n")
-	// Plan stop (REQ-26.10, DD-13): the one stop ODD has. It is documented here
-	// as the exception to step 0's "no further governance question" rule and
-	// shares the text of *Stops and exits* with the SDD gates.
-	output.WriteString("- Plan stop: it exists only when a feature document is created, so small, understood work has no stop. It is not a governance question, creates no SDD artifact, and never creates `handoff.md`. Record the decision in the feature document with one line, `Plan stop: approved <YYYY-MM-DD>; implementation continues` or `Plan stop: approved <YYYY-MM-DD>; implementation handed off`, and never present the stop again when the document already records it, for example on resume. Iterate adjusts the file and the Engram mirror and presents the stop again. Approve, push and stop writes the handed-off line, commits only `odd/tasks/<feature-name>.md` (`git -C <path> add -- odd/tasks/<feature-name>.md`, then `git -C <path> commit -m \"<message>\" -- odd/tasks/<feature-name>.md`, with `<path>` the absolute path returned by `axiom branch ensure`), reads `axiom branch status --lane odd --change <feature-name> --json`, presents the branch, the `prTarget`, the exact push command, and the pull request data (`head` and `base`) for the human to run, and stops without writing code. In a `multirepo` the feature document lives in the specs repository on its integration branch: commit there and present the push for the human, with no pull request.\n")
 	output.WriteString("- Accepted user, review, or verification changes automatically update affected intent and TODOs: preserve valid completed and unrelated work; add genuinely new tasks or reopen invalidated items with a reason, and revise their checks. Findings alone never authorize scope expansion or automatic acceptance. Business scope changes still require user authorization. Check off only observed outcomes with applicable proof; record failed, unavailable, skipped, or pending checks honestly. Checkboxes grant no approval or receipt.\n")
 	output.WriteString("- Read back both writes; they are not atomic. If Engram is unavailable, preserve local progress and explicitly mark the mirror pending; do not claim success or block unrelated safe work. Resynchronize when available. If a file write is unsafe or unavailable, preserve existing state and report the limitation. Preserve both versions on irreconcilable edits and ask only about the real conflict.\n")
 	output.WriteString("- On resume, use `mem_context`, then `mem_search` scoped to the current project and feature, and `mem_get_observation` for the full saved document; read the actual task file. Do not infer active work from the newest global memory. Reconcile current requirements, code, and proof before resuming the next unfinished task; preserve pending mirrors and conflicting edits.\n")
@@ -137,12 +147,6 @@ func RenderRouting(agent model.AgentID) (string, error) {
 	output.WriteString("- `decision_required` is the only interaction this rule can add: present the decision it returns, then repeat the same command with the answer; do not add a governance question of your own.\n")
 	output.WriteString("- Never pass `--fetch` without the explicit authorization of the user.\n")
 	output.WriteString("- Never use `EnterWorktree` or `ExitWorktree`; work in another worktree only through the absolute paths that `axiom branch ensure` returns, with `--cwd`, `git -C`, and absolute paths.\n")
-
-	// Stops and exits (REQ-26.8, REQ-26.10, DD-12): the text comes from one
-	// asset through StopExits so the SDD orchestrators project the same bytes.
-	output.WriteString("\n### Stops and exits\n\n")
-	output.WriteString(StopExits())
-	output.WriteString("\n")
 
 	// The kill switch ships in the routing block, not in the optional SDD
 	// assets, for the same reason routing itself is unconditional: it is

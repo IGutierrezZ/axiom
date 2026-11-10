@@ -49,7 +49,7 @@ func TestRunSDDHelp(t *testing.T) {
 			if !strings.Contains(out, "Uso: axiom sdd <subcomando>") {
 				t.Fatalf("la salida no contiene el uso esperado:\n%s", out)
 			}
-			expectedSubcmds := []string{"status", "continue", "attempt", "archive-compose", "integrate", "task-result", "preflight-hook"}
+			expectedSubcmds := []string{"status", "continue", "attempt", "archive-compose", "integrate", "task-result", "preflight-hook", "publish"}
 			for _, sub := range expectedSubcmds {
 				if !strings.Contains(out, sub) {
 					t.Fatalf("la ayuda de sdd no documenta el subcomando %q:\n%s", sub, out)
@@ -417,4 +417,36 @@ func TestRunChangeCreate_ValidationAndCollision(t *testing.T) {
 	if !strings.Contains(stderr3.String(), "ya existe") {
 		t.Errorf("stderr no contiene advertencia de cambio existente: %s", stderr3.String())
 	}
+}
+
+// DD-10: `axiom sdd publish` está registrado en el despachador de `sdd`: sin `--change` es un error de
+// uso con salida 1 y sin efectos, y su ayuda se imprime con salida 0.
+func TestRunSDDPublishDispatch(t *testing.T) {
+	t.Run("sin --change es un error de uso", func(t *testing.T) {
+		var stdout, stderr bytes.Buffer
+		if exitCode := runSDD([]string{"publish"}, &stdout, &stderr); exitCode != 1 {
+			t.Fatalf("se esperaba código 1, se obtuvo %d", exitCode)
+		}
+		if !strings.Contains(stderr.String(), "falta --change") || stdout.Len() != 0 {
+			t.Errorf("stderr = %q, stdout = %q; se esperaba el error de uso sin salida", stderr.String(), stdout.String())
+		}
+	})
+	t.Run("la ayuda documenta el verbo", func(t *testing.T) {
+		var stdout, stderr bytes.Buffer
+		if exitCode := runSDD([]string{"publish", "--help"}, &stdout, &stderr); exitCode != 0 {
+			t.Fatalf("se esperaba código 0, se obtuvo %d (%s)", exitCode, stderr.String())
+		}
+		for _, want := range []string{"axiom sdd publish", "--change", "--archive", "--branch", "--json"} {
+			if !strings.Contains(stdout.String(), want) {
+				t.Errorf("la ayuda no menciona %q:\n%s", want, stdout.String())
+			}
+		}
+	})
+	t.Run("la lista de subcomandos de un nombre desconocido lo incluye", func(t *testing.T) {
+		var stdout, stderr bytes.Buffer
+		runSDD([]string{"subcomando-inexistente"}, &stdout, &stderr)
+		if !strings.Contains(stderr.String(), "gate, publish") {
+			t.Errorf("la lista de opciones debe incluir publish: %q", stderr.String())
+		}
+	})
 }

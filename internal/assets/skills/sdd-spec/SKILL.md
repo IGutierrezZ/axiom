@@ -261,7 +261,7 @@ La rama la prepara `axiom branch ensure` (el orquestador la ejecuta antes de la 
 - RENAMED requirements MUST state both old and new names explicitly and SHOULD include Migration guidance for references/tests/docs
 - Apply any `rules.specs` from `openspec/config.yaml`
 - **Sufficient detail**: Preserve complete requirements and testable Given/When/Then scenarios, including relevant edge cases. Use the detail each scenario needs to make its expected behavior unambiguous. Do not truncate required detail to meet a word or line cap.
-- Rama del cambio: la prepara `axiom branch ensure`; escribe bajo `workspaceRoot` del status y usa `--cwd` y las rutas absolutas de su JSON. Antes de la salida 2 de la parada, los artefactos quedan confirmados en la rama del cambio; publicarla es decisión de la persona.
+- Rama del cambio: la prepara `axiom branch ensure`; escribe en la rama del cambio, bajo `workspaceRoot` del status, y usa `--cwd` y las rutas absolutas de su JSON. La fase no hace commit ni push: tras la aprobación de la parada el orquestador publica los documentos con `axiom sdd publish`; el push de código y la PR son de la persona.
 - Never create, modify, or delete files under `technicalContext.reference` paths.
 - Return envelope per **Section D** from `skills/_shared/sdd-phase-common.md`.
 

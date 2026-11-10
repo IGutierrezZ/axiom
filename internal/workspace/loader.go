@@ -27,7 +27,7 @@ func ParseConfig(data []byte) (*WorkspaceConfig, error) {
 // mensajes de la configuración base de siempre.
 func joinLoadErrors(baseErr error, declarations Declarations) error {
 	var errs []error
-	for _, err := range []error{baseErr, declarations.BaselineErr, declarations.TechnicalContextErr, declarations.GitErr, declarations.RepositoriesErr} {
+	for _, err := range []error{baseErr, declarations.BaselineErr, declarations.TechnicalContextErr, declarations.GitErr, declarations.WorkflowErr, declarations.RepositoriesErr} {
 		if err != nil {
 			errs = append(errs, err)
 		}
@@ -95,6 +95,10 @@ func parseLayered(data []byte) (*WorkspaceConfig, error, Declarations) {
 	// La política de ramas se proyecta ya resuelta, también sin bloque (REQ-25.26).
 	if declarations.GitErr == nil {
 		cfg.Git = resolveGit(declarations.Git)
+	}
+	// El carril de trabajo se proyecta ya resuelto, también sin bloque (REQ-27.1).
+	if declarations.WorkflowErr == nil {
+		cfg.Workflow = resolveWorkflow(declarations.Workflow)
 	}
 	// Las entradas de `repositories:` se proyectan tal como se declararon: la
 	// herencia de `git:` la resuelve quien consume la política (REQ-25.27).

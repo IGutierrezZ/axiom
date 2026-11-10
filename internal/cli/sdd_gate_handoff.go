@@ -20,7 +20,7 @@ import (
 const gateRecordSchema = "axiom.sdd-gate-record/v1"
 
 // Comprobaciones de la salida 2 de una parada, `gate record --hand-off` (REQ-26.1, REQ-26.3,
-// REQ-26.4, REQ-26.6; DD-02). runSDDGateRecord las llama en dos puntos, siempre ANTES de escribir
+// REQ-26.6; DD-02, DD-12). runSDDGateRecord las llama en dos puntos, siempre ANTES de escribir
 // gates.yaml: requireHandOffStops tras cargar el kickoff (paso 4) y prepareHandOff una vez
 // resuelto el digest de la puerta (pasos 6 a 9). Todas son lecturas y cada rechazo nombra la orden
 // ejecutable que sigue siendo válida; ninguna deja rastro en el disco.
@@ -45,7 +45,8 @@ type handOffPrepared struct {
 }
 
 // prepareHandOff implementa los pasos 6 a 9 de DD-02: almacén con ficheros, artefacto presente,
-// puerta aún sin aprobar y artefactos confirmados con sus datos de entrega.
+// puerta aún sin aprobar y los datos de entrega. Ya no comprueba qué está confirmado (REQ-26.4,
+// DD-12): los documentos pendientes los confirma `axiom sdd publish`, que informa del código sin subir.
 func prepareHandOff(parsed kickoff.GateRecordArgs, loc workspace.Location, changeRoot string, roster []multirole.RoleAssignment, digest string) (*handOffPrepared, error) {
 	workspaceRoot := loc.WorkspaceRoot
 
@@ -87,7 +88,6 @@ func prepareHandOff(parsed kickoff.GateRecordArgs, loc workspace.Location, chang
 		Role:        role,
 		Gate:        string(parsed.Gate),
 		HandedOffTo: handedOffTo,
-		Exempt:      []string{kickoff.GatesFileName},
 	})
 	if refusal != nil {
 		return nil, &branch.RefusalError{Refusal: *refusal}
@@ -143,28 +143,79 @@ func gateRejectedInvocation(parsed kickoff.GateRecordArgs, workspaceRoot string)
 		pathquote.Quote(workspaceRoot), pathquote.ShellWord(parsed.Change), pathquote.ShellWord(string(parsed.Gate)))
 }
 
+// gatePublishJSON es el destino de la publicación de los documentos que `gate record` calcula y no
+// ejecuta (REQ-27.12, DD-11): la misma forma que `gateQuestion.publication`. Invocation es la orden
+// de `axiom sdd publish` atada a la rama con `--branch`, que el orquestador ejecuta una vez tras el
+// registro. PRTarget es informativo y se omite en la integración in situ de un multirepo.
+type gatePublishJSON struct {
+	Remote     string `json:"remote"`
+	Branch     string `json:"branch"`
+	PRTarget   string `json:"prTarget,omitempty"`
+	Invocation string `json:"invocation"`
+}
+
+// gatePublish es el resultado del cálculo del destino de la publicación de una aprobación: el
+// destino, o el código de la negativa del motor de ramas cuando no se puede calcular. Ambos vacíos
+// significan que la decisión no publica (rechazo, integración o almacén sin ficheros).
+type gatePublish struct {
+	target      *gatePublishJSON
+	unavailable string
+}
+
+// resolveGatePublish calcula, solo con lecturas, dónde publica una aprobación (REQ-27.12): en toda
+// aprobación distinta de `integration` con un almacén que guarda ficheros. En la cesión usa el plan
+// que ya calculó el motor, y en las demás aprobaciones el destino de `PublicationTarget`. Nunca
+// ejecuta `commit` ni `push`: `gate record` solo registra (REQ-26.5).
+func resolveGatePublish(parsed kickoff.GateRecordArgs, workspaceRoot string, handOff *handOffPrepared) gatePublish {
+	if parsed.Decision != kickoff.DecisionApproved || parsed.Gate == kickoff.GateIntegration {
+		return gatePublish{}
+	}
+	if handOff != nil {
+		publish := handOff.plan.Publish
+		return gatePublish{target: &gatePublishJSON{Remote: publish.Remote, Branch: publish.Branch, PRTarget: publish.PRTarget, Invocation: publish.Invocation}}
+	}
+	if store, declared := workspace.DeclaredArtifactStore(workspaceRoot); declared && (store == "engram" || store == "none") {
+		return gatePublish{}
+	}
+	target, refusal := engine.Default().PublicationTarget(context.Background(), branch.PublicationRequest{CWD: workspaceRoot, Change: parsed.Change})
+	if refusal != nil {
+		return gatePublish{unavailable: string(refusal.Code)}
+	}
+	return gatePublish{target: &gatePublishJSON{
+		Remote:     branch.PublishRemote,
+		Branch:     target.Branch,
+		PRTarget:   target.PRTarget,
+		Invocation: branch.PublishInvocation(workspaceRoot, parsed.Change, target.Branch),
+	}}
+}
+
 // gateRecordJSON es el `--json` de `gate record` (§4.4). delivery, handedOff y handedOffTo solo
-// salen con la salida 2; lastRoleClosed solo en una compuerta de rol.
+// salen con la salida 2; publish y publishUnavailable, en toda aprobación distinta de integration;
+// lastRoleClosed solo en una compuerta de rol.
 type gateRecordJSON struct {
-	Schema         string              `json:"schema"`
-	Change         string              `json:"change"`
-	Gate           string              `json:"gate"`
-	Decision       string              `json:"decision"`
-	HandedOff      bool                `json:"handedOff,omitempty"`
-	HandedOffTo    string              `json:"handedOffTo,omitempty"`
-	LastRoleClosed *bool               `json:"lastRoleClosed,omitempty"`
-	Delivery       *branch.HandOffPlan `json:"delivery,omitempty"`
+	Schema             string              `json:"schema"`
+	Change             string              `json:"change"`
+	Gate               string              `json:"gate"`
+	Decision           string              `json:"decision"`
+	HandedOff          bool                `json:"handedOff,omitempty"`
+	HandedOffTo        string              `json:"handedOffTo,omitempty"`
+	LastRoleClosed     *bool               `json:"lastRoleClosed,omitempty"`
+	Publish            *gatePublishJSON    `json:"publish,omitempty"`
+	PublishUnavailable string              `json:"publishUnavailable,omitempty"`
+	Delivery           *branch.HandOffPlan `json:"delivery,omitempty"`
 }
 
 // writeGateRecordJSON emite el `--json` de una compuerta registrada. lastRoleClosed es nil fuera de
 // una compuerta de rol.
-func writeGateRecordJSON(stdout io.Writer, parsed kickoff.GateRecordArgs, handOff *handOffPrepared, lastRoleClosed *bool) error {
+func writeGateRecordJSON(stdout io.Writer, parsed kickoff.GateRecordArgs, handOff *handOffPrepared, publish gatePublish, lastRoleClosed *bool) error {
 	document := gateRecordJSON{
-		Schema:         gateRecordSchema,
-		Change:         parsed.Change,
-		Gate:           string(parsed.Gate),
-		Decision:       string(parsed.Decision),
-		LastRoleClosed: lastRoleClosed,
+		Schema:             gateRecordSchema,
+		Change:             parsed.Change,
+		Gate:               string(parsed.Gate),
+		Decision:           string(parsed.Decision),
+		LastRoleClosed:     lastRoleClosed,
+		Publish:            publish.target,
+		PublishUnavailable: publish.unavailable,
 	}
 	if handOff != nil {
 		document.HandedOff = true
@@ -189,58 +240,44 @@ func writeGateRecordHeader(stdout io.Writer, parsed kickoff.GateRecordArgs, hand
 	return err
 }
 
-// writeHandOffDelivery presenta la entrega de la salida 2 en castellano: los pasos numerados por
-// repositorio, la advertencia de fusión previa y la aclaración de que Axiom no ejecuta ninguno. No
-// emite ninguna orden de plataforma: la PR se abre con los datos `head` y `base`, con la
-// herramienta de cada persona (DD-08).
-func writeHandOffDelivery(stdout io.Writer, handOff *handOffPrepared) error {
-	var out strings.Builder
-	out.WriteString("Entrega de la cesión (ejecútala tú; la fase siguiente no empieza hasta que esté integrada):\n")
-	for _, delivery := range handOff.plan.Deliveries {
-		switch {
-		case delivery.InPlace:
-			fmt.Fprintf(&out, "Repositorio %s (rama de integración %s, se trabaja in situ y no lleva PR):\n", delivery.Repository, delivery.Branch)
-		default:
-			fmt.Fprintf(&out, "Repositorio %s (rama %s hacia %s):\n", delivery.Repository, delivery.Branch, delivery.PRTarget)
-		}
-		number := 0
-		for _, step := range delivery.Steps {
-			number++
-			fmt.Fprintf(&out, "  %d. %s\n", number, step)
-		}
-		if delivery.PR != nil {
-			number++
-			fmt.Fprintf(&out, "  %d. Abre la PR con la rama %s como cabecera y %s como base, con tu herramienta.\n", number, delivery.PR.Head, delivery.PR.Base)
-		}
+// writePublishNext presenta, en las salidas 2 y 3, la orden de publicación que sigue al registro
+// (REQ-27.12): Axiom solo la calcula. Sin destino calculable no escribe nada; el código de la
+// negativa va en el JSON.
+func writePublishNext(stdout io.Writer, publish gatePublish) error {
+	if publish.target == nil {
+		return nil
 	}
-	if handOff.plan.MergeRequired {
-		for _, notice := range mergeNoticesOf(handOff.plan) {
-			fmt.Fprintf(&out, "Aviso: %s.\n", notice)
-		}
-	}
-	out.WriteString("Axiom no ejecuta ninguna de estas órdenes (ni push, ni fetch, ni PR): ejecútalas tú y detente aquí, sin empezar la fase siguiente en esta sesión.\n")
-	_, err := io.WriteString(stdout, out.String())
+	_, err := fmt.Fprintf(stdout, "Siguiente paso: publica los documentos del cambio con `%s` (rama %s en origin); `gate record` solo registra la decisión y no ejecuta ni commit ni push.\n",
+		publish.target.Invocation, publish.target.Branch)
 	return err
 }
 
-// mergeNoticesOf compone las advertencias de fusión previa del plan, sin repetir: la de cada PR
-// hacia su destino y, para el repositorio de specs in situ, la del push de la integración.
-func mergeNoticesOf(plan branch.HandOffPlan) []string {
-	var notices []string
-	add := func(notice string) {
-		for _, existing := range notices {
-			if existing == notice {
-				return
+// writeHandOffDelivery presenta la entrega de la salida 2 en castellano: la orden de publicación de
+// los documentos, la reanudación de quien siga y, solo si el rol tiene repositorios de código, sus
+// órdenes de push numeradas con la aclaración de que Axiom no sube código ni abre PR. No exige una PR
+// fusionada y no emite ninguna orden de plataforma (REQ-26.5, REQ-27.12, DD-12).
+func writeHandOffDelivery(stdout io.Writer, handOff *handOffPrepared) error {
+	plan := handOff.plan
+	var out strings.Builder
+	switch {
+	case plan.Publish.InPlace:
+		fmt.Fprintf(&out, "Cesión registrada. Siguiente paso: publica los documentos con `%s` (rama de integración %s en %s; se trabaja in situ en la integración, sin PR).\n",
+			plan.Publish.Invocation, plan.Publish.Branch, plan.Publish.Remote)
+	default:
+		fmt.Fprintf(&out, "Cesión registrada. Siguiente paso: publica los documentos con `%s` (rama %s en %s; destino de su PR: %s).\n",
+			plan.Publish.Invocation, plan.Publish.Branch, plan.Publish.Remote, plan.Publish.PRTarget)
+	}
+	fmt.Fprintf(&out, "Quien siga ejecuta `%s` y `%s`: `ensure` adopta la rama publicada; no hace falta una PR fusionada.\n", plan.Resume[0], plan.Resume[1])
+	if len(plan.Deliveries) > 0 {
+		out.WriteString("Código del rol (Axiom no sube código ni abre PR: ejecútalo tú):\n")
+		for _, delivery := range plan.Deliveries {
+			fmt.Fprintf(&out, "Repositorio %s (rama %s hacia %s):\n", delivery.Repository, delivery.Branch, delivery.PRTarget)
+			for i, step := range delivery.Steps {
+				fmt.Fprintf(&out, "  %d. %s\n", i+1, step)
 			}
 		}
-		notices = append(notices, notice)
 	}
-	for _, delivery := range plan.Deliveries {
-		if delivery.InPlace {
-			add(branch.InPlaceNotice(delivery.Branch))
-		} else if delivery.PRTarget != "" {
-			add(branch.MergeNotice(delivery.PRTarget))
-		}
-	}
-	return notices
+	out.WriteString("Axiom no ejecuta ninguna orden de git ni de plataforma en este paso: detente aquí tras publicar, sin empezar la fase siguiente en esta sesión.\n")
+	_, err := io.WriteString(stdout, out.String())
+	return err
 }

@@ -592,7 +592,14 @@ func TestKilocodeReviewSettingsMatchCurrentMainBaseline(t *testing.T) {
 	// OpenCode deja de escribir `__managed_by` en cada agente, porque los proveedores con
 	// validación estricta del esquema lo rechazan. Kilocode hereda el overlay, así que el
 	// hash cambia solo por esa clave. Deliberate, not drift.
-	const want = "54596803148e8276d60dae857dbb00f34d0354755c53f179412d7a758df90d74"
+	// carril-proyecto-publicacion-docs T-06: stop-exits.md deja de nombrar la parada de plan
+	// de ODD y el compartido de kickoff gana el párrafo «SDD lane selected»; Kilocode los
+	// compone en el orquestador de OpenCode, así que el hash cambia. Deliberate, not drift.
+	// carril-proyecto-publicacion-docs T-26: stop-exits.md pasa a «aprobar, publicar y parar/seguir» y el
+	// compartido de kickoff gana el encadenado de `gate record` con `axiom sdd publish`, `--docs-publication
+	// auto` y los momentos de publicación; Kilocode los compone en el orquestador de OpenCode, así que el
+	// hash cambia. Deliberate, not drift.
+	const want = "6de2d11c16c579b5a60fbe243be1999afb4b462fe3387bcfc5a138817f212ea2"
 	if got != want {
 		t.Fatalf("Kilocode settings SHA-256 = %s, want current-main baseline %s", got, want)
 	}

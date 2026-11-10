@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/multirole"
+	"gopkg.in/yaml.v3"
 )
 
 func validKickoffYAML() string {
@@ -207,5 +208,73 @@ func TestParseGateLedgerUnknownSchema(t *testing.T) {
 	_, err := ParseGateLedger([]byte("schema: axiom.sdd-gate-ledger/v99\nchange: inc-99\nrecords: []\n"))
 	if err == nil || !strings.Contains(err.Error(), "esquema desconocido") {
 		t.Fatalf("ParseGateLedger() error = %v, se esperaba rechazo por esquema desconocido", err)
+	}
+}
+
+// TestKickoffDocsPublicationValidation cubre REQ-27.4: el campo admite vacío y `auto`, `auto` solo
+// con continuous, y un fichero con el campo lo lee un struct congelado anterior sin error.
+func TestKickoffDocsPublicationValidation(t *testing.T) {
+	doc := func(style, publication string) string {
+		extra := ""
+		if publication != "" {
+			extra = "\n  docs_publication: " + publication
+		}
+		return strings.Replace(strings.Replace(validKickoffYAML(), "execution_style: checkpointed", "execution_style: "+style, 1),
+			"  handoff_policy: per_checkpoint", "  handoff_policy: per_checkpoint"+extra, 1)
+	}
+	tests := []struct {
+		name    string
+		yaml    string
+		wantErr string
+	}{
+		{name: "continuous con auto", yaml: doc("continuous", "auto")},
+		{name: "sin campo", yaml: doc("continuous", "")},
+		{name: "checkpointed con auto", yaml: doc("checkpointed", "auto"), wantErr: "docs_publication"},
+		{name: "valor desconocido", yaml: doc("continuous", "manual"), wantErr: "docs_publication desconocido"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			k, err := ParseKickoff([]byte(tt.yaml))
+			if tt.wantErr != "" {
+				if err == nil || !strings.Contains(err.Error(), tt.wantErr) {
+					t.Fatalf("ParseKickoff() error = %v, se esperaba %q", err, tt.wantErr)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("ParseKickoff() error = %v", err)
+			}
+			_ = k
+		})
+	}
+}
+
+// TestKickoffSerializationOmitsEmptyDocsPublication fija que un kickoff sellado sin el flag se
+// serializa igual que antes (omitempty) y que uno con el campo lo conserva.
+func TestKickoffSerializationOmitsEmptyDocsPublication(t *testing.T) {
+	without := Kickoff{Schema: KickoffSchemaV1, Config: FlowConfig{FlowMode: FlowSDD, ExecutionStyle: ExecutionContinuous}}
+	data, err := yaml.Marshal(without)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(data), "docs_publication") {
+		t.Fatalf("la serializacion sin autorizacion no debe escribir docs_publication:\n%s", data)
+	}
+	with := without
+	with.Config.DocsPublication = DocsPublicationAuto
+	data, err = yaml.Marshal(with)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(data), "docs_publication: auto") {
+		t.Fatalf("la serializacion con autorizacion debe escribir docs_publication: auto:\n%s", data)
+	}
+	var frozen struct {
+		Config struct {
+			ExecutionStyle string `yaml:"execution_style"`
+		} `yaml:"kickoff"`
+	}
+	if err := yaml.Unmarshal(data, &frozen); err != nil {
+		t.Fatalf("un struct congelado anterior no debe fallar con la clave nueva: %v", err)
 	}
 }

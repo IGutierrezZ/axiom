@@ -58,10 +58,12 @@ var _ gitReader = (*gitcli.Git)(nil)
 // propio repositorio con `Switch` (modo `in_place`), retirar el worktree y borrar la rama local en
 // `done`, siempre con dir en el checkout principal, y `Fetch`, la única operación remota
 // (`--fetch`, REQ-25.10). Es un subconjunto del puerto branch.Git y, como las lecturas, crece con
-// el primer llamador. No tiene ningún método que publique: `axiom branch` nunca ejecuta `push`
-// (REQ-25.1).
+// el primer llamador. Fetch sigue siendo la única operación remota; ningún método publica:
+// `axiom branch` nunca ejecuta `push` (REQ-25.1). CreateTrackingBranch adopta una referencia
+// remota ya traída a local (REQ-27.15).
 type gitWriter interface {
 	CreateBranch(ctx context.Context, dir, name, startPoint string) error
+	CreateTrackingBranch(ctx context.Context, dir, name, remoteRef string) error
 	AddWorktree(ctx context.Context, dir, path, branch string) error
 	Switch(ctx context.Context, dir, branch string) error
 	RemoveWorktree(ctx context.Context, dir, path string, force bool) error

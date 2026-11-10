@@ -518,3 +518,54 @@ func TestProjectStatusV2GateQuestionAbsentWithoutSealOmitsJSONKey(t *testing.T) 
 		t.Fatalf("serialized StatusV2Projection names \"gateQuestion\" for an unsealed change: %s", encoded)
 	}
 }
+
+// TestProjectStatusV2ProjectsDocsPublication cubre REQ-27.4 y REQ-27.13: `docsPublication: auto`
+// aparece en `governance.kickoff` (v2) y en la reflexión de v1 cuando el kickoff lo lleva, y está
+// ausente cuando no.
+func TestProjectStatusV2ProjectsDocsPublication(t *testing.T) {
+	seal := func(t *testing.T, publication kickoff.DocsPublication) StatusV2Projection {
+		t.Helper()
+		root := t.TempDir()
+		changeName := "docs-publication-v2"
+		changeRoot := seedReadyChange(t, root, changeName, "- [ ] 1.1 Wire routes\n")
+		_, ok, err := kickoff.Seal(changeRoot, kickoff.Kickoff{
+			Schema: kickoff.KickoffSchemaV1, Change: changeName, SealedBy: "test",
+			Config: kickoff.FlowConfig{
+				FlowMode: kickoff.FlowSDD, ExecutionStyle: kickoff.ExecutionContinuous, ExecutionStyleSource: "explicit",
+				HandoffPolicy: kickoff.HandoffNone, DocsPublication: publication,
+				Roles: []kickoff.KickoffRole{{Role: "fullstack", GatePolicy: "blocking", TasksFile: "tasks.md", VerifyFile: "verify-report.md"}},
+			},
+			Lifecycle: kickoff.Lifecycle{DeploymentTarget: "local", PostArchivePolicy: "bug_only"},
+		})
+		if err != nil || !ok {
+			t.Fatalf("kickoff.Seal() = (ok=%v, err=%v)", ok, err)
+		}
+		status, err := Resolve(ResolveOptions{CWD: root, ChangeName: changeName})
+		if err != nil {
+			t.Fatalf("Resolve() error = %v", err)
+		}
+		if got := status.Governance.Kickoff.Config.DocsPublication; got != publication {
+			t.Fatalf("v1 Governance.Kickoff.Config.DocsPublication = %q, want %q", got, publication)
+		}
+		projection, err := ProjectStatusV2(status)
+		if err != nil {
+			t.Fatalf("ProjectStatusV2() error = %v", err)
+		}
+		return projection
+	}
+
+	with := seal(t, kickoff.DocsPublicationAuto)
+	if with.Governance.Kickoff.DocsPublication != "auto" {
+		t.Fatalf("Kickoff.DocsPublication = %q, want auto", with.Governance.Kickoff.DocsPublication)
+	}
+	encoded, err := json.Marshal(with.Governance.Kickoff)
+	if err != nil || !strings.Contains(string(encoded), `"docsPublication":"auto"`) {
+		t.Fatalf("serialized kickoff = %s (err %v), want docsPublication auto", encoded, err)
+	}
+
+	without := seal(t, "")
+	encoded, err = json.Marshal(without.Governance.Kickoff)
+	if err != nil || strings.Contains(string(encoded), "docsPublication") {
+		t.Fatalf("serialized kickoff = %s (err %v), want no docsPublication", encoded, err)
+	}
+}

@@ -44,6 +44,9 @@ type StatusV2Projection struct {
 	// already matches the public contract 1:1.
 	Baseline         *BaselineProjection         `json:"baseline,omitempty"`
 	TechnicalContext *TechnicalContextProjection `json:"technicalContext,omitempty"`
+	// Workflow projects Status.Workflow unchanged (REQ-27.2): the wire type
+	// already matches the public contract 1:1.
+	Workflow *WorkflowProjection `json:"workflow,omitempty"`
 	// GateQuestion projects Status.GateQuestion unchanged: like Consent, the
 	// wire type already matches the public contract 1:1, so no *V2
 	// translation type is needed (design.md S5.5 defines the wire shape
@@ -127,6 +130,9 @@ type kickoffV2 struct {
 	HandoffPolicy string `json:"handoffPolicy,omitempty"`
 	SealedAt      string `json:"sealedAt"`
 	SealedBy      string `json:"sealedBy"`
+	// DocsPublication es la autorizacion sellada de publicar los documentos sin preguntar (REQ-27.4);
+	// ausente cuando el kickoff no la lleva.
+	DocsPublication string `json:"docsPublication,omitempty"`
 }
 
 type gateV2 struct {
@@ -174,12 +180,13 @@ func projectGovernanceV2(governance *Governance) *governanceV2 {
 	}
 	return &governanceV2{
 		Kickoff: kickoffV2{
-			Schema:         governance.Kickoff.Schema,
-			FlowMode:       string(governance.Kickoff.Config.FlowMode),
-			ExecutionStyle: string(governance.Kickoff.Config.ExecutionStyle),
-			HandoffPolicy:  string(governance.Kickoff.Config.HandoffPolicy),
-			SealedAt:       sealedAt,
-			SealedBy:       governance.Kickoff.SealedBy,
+			Schema:          governance.Kickoff.Schema,
+			FlowMode:        string(governance.Kickoff.Config.FlowMode),
+			ExecutionStyle:  string(governance.Kickoff.Config.ExecutionStyle),
+			HandoffPolicy:   string(governance.Kickoff.Config.HandoffPolicy),
+			DocsPublication: string(governance.Kickoff.Config.DocsPublication),
+			SealedAt:        sealedAt,
+			SealedBy:        governance.Kickoff.SealedBy,
 		},
 		Gates:  gates,
 		Roster: rosterV2{Source: governance.Roster.Source, Roles: governance.Roster.Roles},
@@ -232,6 +239,7 @@ func ProjectStatusV2(status Status) (StatusV2Projection, error) {
 	}
 	projected.Baseline = status.Baseline
 	projected.TechnicalContext = status.TechnicalContext
+	projected.Workflow = status.Workflow
 	if status.PhaseInstructions != nil {
 		projected.PhaseInstructions = &phaseInstructionsV2{
 			Apply: status.PhaseInstructions.Apply, Verify: status.PhaseInstructions.Verify,

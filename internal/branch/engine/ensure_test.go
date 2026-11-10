@@ -3,6 +3,7 @@ package engine
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
@@ -27,7 +28,40 @@ func ensureOf(t *testing.T, cwd, change string) branch.Result {
 	return Default().Ensure(context.Background(), EnsureRequest{CWD: cwd, Change: change, Lane: branch.LaneSDD})
 }
 
+// resultJSON es el JSON del resultado sin `createdFrom` ni `createdFromRef` (REQ-27.15): esos
+// dos campos describen una acción, no el estado final, y solo salen en la ejecución que crea la
+// rama; con ellos fuera, las pruebas de idempotencia comparan el estado final byte a byte.
+// rawResultJSON los conserva.
 func resultJSON(t *testing.T, result branch.Result) string {
+	t.Helper()
+	var decoded any
+	if err := json.Unmarshal([]byte(rawResultJSON(t, result)), &decoded); err != nil {
+		t.Fatal(err)
+	}
+	var drop func(value any)
+	drop = func(value any) {
+		switch typed := value.(type) {
+		case map[string]any:
+			delete(typed, "createdFrom")
+			delete(typed, "createdFromRef")
+			for _, inner := range typed {
+				drop(inner)
+			}
+		case []any:
+			for _, inner := range typed {
+				drop(inner)
+			}
+		}
+	}
+	drop(decoded)
+	out, err := json.MarshalIndent(decoded, "", "  ")
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(out) + "\n"
+}
+
+func rawResultJSON(t *testing.T, result branch.Result) string {
 	t.Helper()
 	var out bytes.Buffer
 	if err := result.WriteJSON(&out); err != nil {
@@ -421,6 +455,13 @@ func (f failingWriter) CreateBranch(ctx context.Context, dir, name, startPoint s
 		return errors.New("fallo simulado de git al crear la rama")
 	}
 	return f.real.CreateBranch(ctx, dir, name, startPoint)
+}
+
+func (f failingWriter) CreateTrackingBranch(ctx context.Context, dir, name, remoteRef string) error {
+	if f.failBranch {
+		return errors.New("fallo simulado de git al crear la rama")
+	}
+	return f.real.CreateTrackingBranch(ctx, dir, name, remoteRef)
 }
 
 func (f failingWriter) AddWorktree(ctx context.Context, dir, path, branchName string) error {

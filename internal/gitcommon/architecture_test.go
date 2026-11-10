@@ -100,12 +100,16 @@ func architectureViolations(label string, source []byte) ([]string, error) {
 	return violations, nil
 }
 
-// REQ-25.1, escenario «Una prueba de arquitectura fija el único punto de ejecución
-// de git»: ningún fichero de `internal/branch/**` ni de este paquete lanza procesos
+// REQ-25.1 y REQ-27.11 (DD-14), escenario «Una prueba de arquitectura fija el único punto de ejecución
+// de git»: ningún fichero de `internal/branch/**`, `internal/sddpublish`, `internal/docpaths` ni de este paquete lanza procesos
 // ni abre la red, salvo exec.go.
 func TestArchitectureOnlyExecGoLaunchesProcesses(t *testing.T) {
 	sources := collectSources(t, ".", "internal/gitcommon")
 	sources = append(sources, collectSources(t, filepath.Join("..", "branch"), "internal/branch")...)
+	// La publicación de documentos (DD-14, REQ-27.11) tampoco lanza procesos por su cuenta: ejecuta
+	// git a través de gitcommon.Run y gitcommon.RunWithTimeout, y la lista de rutas es pura.
+	sources = append(sources, collectSources(t, filepath.Join("..", "sddpublish"), "internal/sddpublish")...)
+	sources = append(sources, collectSources(t, filepath.Join("..", "docpaths"), "internal/docpaths")...)
 
 	labels := map[string]bool{}
 	for _, source := range sources {
@@ -133,6 +137,7 @@ func TestArchitectureOnlyExecGoLaunchesProcesses(t *testing.T) {
 		"internal/branch/engine/engine.go", "internal/branch/engine/status.go", "internal/branch/engine/pending.go",
 		"internal/branch/gitcli/ops.go",
 		"internal/branch/registry/registry.go",
+		"internal/sddpublish/publish.go", "internal/sddpublish/gitport.go", "internal/docpaths/docpaths.go",
 	} {
 		if !labels[want] {
 			t.Errorf("el recorrido no vio %s; ve %v", want, labels)

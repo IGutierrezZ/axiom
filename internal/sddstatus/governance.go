@@ -104,11 +104,32 @@ type SDDGovernanceGateResult struct {
 	// that rules the hand-off exit out (REQ-26.6). Empty means the exit is
 	// available, or the gate is integration, which never offers it.
 	HandOffUnavailable string `json:"handOffUnavailable,omitempty"`
+	// Publication is where approving this gate publishes the change documents (REQ-27.12): the
+	// remote and the branch the choices name, and the exact `axiom sdd publish` invocation bound to
+	// that branch. It is present on a planning gate whose store keeps files when the publication
+	// target resolves; it is a calculation, never an execution.
+	Publication *GatePublication `json:"publication,omitempty"`
+	// PublicationUnavailable carries the refusal code of the publication target (for example
+	// wrong_branch) when it cannot resolve; the choices stay the gate record ones.
+	PublicationUnavailable string `json:"publicationUnavailable,omitempty"`
 	// OffPath documents the deliberate alternative outside the choice set:
 	// inspect the change without deciding yet, then re-enter through
 	// native status.
 	OffPath consentenvelope.OffPath `json:"off_path"`
 }
+
+// GatePublication is the publication data of a planning gate question (REQ-27.12, DD-11). Remote
+// is always "origin"; PRTarget is informative (the pull request stays a human decision) and empty
+// in the in-place integration of a multirepo specs repository.
+type GatePublication struct {
+	Remote     string `json:"remote"`
+	Branch     string `json:"branch"`
+	PRTarget   string `json:"prTarget,omitempty"`
+	Invocation string `json:"invocation"`
+}
+
+// gatePublishInvocationPrefix is the ONLY prefix a publication invocation may start with.
+const gatePublishInvocationPrefix = "axiom sdd publish "
 
 // Validate enforces the envelope's SDD governance identity and delegates
 // the generic completeness half to the shared consent-envelope core
@@ -153,6 +174,18 @@ func (r SDDGovernanceGateResult) Validate() error {
 	}
 	if !strings.HasPrefix(r.OffPath.Command, gateStatusInvocationPrefix) {
 		return errors.New("SDD governance gate off path must re-enter through native status") // refusal:by-design world-action: this envelope is built and validated by the same package; the exit is a code fix, not a command
+	}
+	if r.Publication != nil {
+		if r.Gate == string(kickoff.GateIntegration) || r.HandOffUnavailable != "" {
+			return fmt.Errorf("SDD governance gate %q carries no publication", r.Gate) // refusal:by-design world-action: this envelope is built and validated by the same package; the exit is a code fix, not a command
+		}
+		if !strings.HasPrefix(r.Publication.Invocation, gatePublishInvocationPrefix) ||
+			!strings.Contains(r.Publication.Invocation, " --branch "+r.Publication.Branch) {
+			return fmt.Errorf("SDD governance gate publication invocation must be a publish invocation bound to its branch with --branch: %q", r.Publication.Invocation) // refusal:by-design world-action: this envelope is built and validated by the same package; the exit is a code fix, not a command
+		}
+		if r.PublicationUnavailable != "" {
+			return errors.New("SDD governance gate cannot carry both publication and publicationUnavailable") // refusal:by-design world-action: this envelope is built and validated by the same package; the exit is a code fix, not a command
+		}
 	}
 	return nil
 }
@@ -270,23 +303,30 @@ func newGovernanceGateQuestion(change, workspaceRoot string, gate kickoff.GateSt
 	if err != nil {
 		return SDDGovernanceGateResult{}, err
 	}
-	headline, reason, value := gateQuestionNarrative(change, gateKey, handOffUnavailable)
+	var gatePublication *GatePublication
+	publicationUnavailable := ""
+	if gateKey != string(kickoff.GateIntegration) && handOffUnavailable == "" {
+		gatePublication, publicationUnavailable = resolveGatePublication(change, workspaceRoot)
+	}
+	headline, reason, value := gateQuestionNarrative(change, gateKey, handOffUnavailable, gatePublication)
 
 	result := SDDGovernanceGateResult{
-		Schema:             SDDGovernanceGateSchema,
-		Contract:           SDDGovernanceContractV1,
-		Operation:          gateOperation,
-		Action:             gateActionRequired,
-		Blocking:           true,
-		Change:             change,
-		Gate:               gateKey,
-		Criteria:           criteria,
-		Headline:           headline,
-		Reason:             reason,
-		Value:              value,
-		Evidence:           gateEvidence(gate, artifactPaths),
-		Choices:            gateQuestionChoices(cwd, change, gateKey, answers),
-		HandOffUnavailable: handOffUnavailable,
+		Schema:                 SDDGovernanceGateSchema,
+		Contract:               SDDGovernanceContractV1,
+		Operation:              gateOperation,
+		Action:                 gateActionRequired,
+		Blocking:               true,
+		Change:                 change,
+		Gate:                   gateKey,
+		Criteria:               criteria,
+		Headline:               headline,
+		Reason:                 reason,
+		Value:                  value,
+		Evidence:               gateEvidence(gate, artifactPaths),
+		Choices:                gateQuestionChoices(cwd, change, gateKey, answers, gatePublication),
+		HandOffUnavailable:     handOffUnavailable,
+		Publication:            gatePublication,
+		PublicationUnavailable: publicationUnavailable,
 		OffPath: consentenvelope.OffPath{
 			Note:    fmt.Sprintf("To inspect this gate without deciding yet, run '%s', then re-enter through '%s'.", showInvocation, statusInvocation),
 			Command: statusInvocation,

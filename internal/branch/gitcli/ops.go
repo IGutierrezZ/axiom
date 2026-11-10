@@ -317,6 +317,25 @@ func (*Git) CreateBranch(ctx context.Context, dir, name, startPoint string) erro
 	return runWrite(ctx, dir, "branch", "--no-track", name, startPoint)
 }
 
+// CreateTrackingBranch crea la rama local name a partir de la referencia remota local
+// remoteRef y configura su upstream (`git branch --track <name> <remoteRef>`). Solo admite
+// remoteRef == "refs/remotes/origin/" + name: es la adopción de una rama que otra persona ya
+// publicó y que ya está traída a local. Configurar el upstream es una escritura local de
+// `.git/config`, no una operación remota; nunca mueve una rama existente (git falla) ni toca
+// la red. dir es el checkout principal.
+func (*Git) CreateTrackingBranch(ctx context.Context, dir, name, remoteRef string) error {
+	if err := plainArgument(name); err != nil {
+		return err
+	}
+	if err := plainArgument(remoteRef); err != nil {
+		return err
+	}
+	if remoteRef != "refs/remotes/origin/"+name {
+		return errors.New("la referencia " + strconv.Quote(remoteRef) + " no es refs/remotes/origin/" + name + ": solo se adopta la rama remota del mismo nombre")
+	}
+	return runWrite(ctx, dir, "branch", "--track", name, remoteRef)
+}
+
 // AddWorktree despliega la rama local existente branch en un worktree nuevo en path
 // (`git worktree add <path> <branch>`). Nunca crea la rama: si no existe, git falla y no
 // deja nada. path debe ser absoluta (los worktrees nunca se colocan por una ruta relativa

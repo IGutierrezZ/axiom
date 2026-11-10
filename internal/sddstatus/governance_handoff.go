@@ -1,9 +1,13 @@
 package sddstatus
 
 import (
+	"context"
 	"fmt"
+	"slices"
 	"strings"
 
+	"github.com/IGutierrezZ/axiom/v3/internal/branch"
+	"github.com/IGutierrezZ/axiom/v3/internal/branch/engine"
 	"github.com/IGutierrezZ/axiom/v3/internal/consentenvelope"
 	"github.com/IGutierrezZ/axiom/v3/internal/kickoff"
 	"github.com/IGutierrezZ/axiom/v3/internal/multirole"
@@ -80,19 +84,68 @@ func validateGateChoiceInvocations(choices []consentenvelope.Choice) error {
 	return nil
 }
 
+// publicationKeepsApprovalNote is the closing sentence every publishing effect and the value carry
+// (REQ-27.12): a refused publication never undoes the recorded approval, and Axiom publishes
+// documents only.
+const publicationKeepsApprovalNote = "A refused publication keeps the approval. Code pushes, pull requests and merges remain yours."
+
+// resolveGatePublication asks the branch engine, with reads only, where approving a planning gate
+// publishes the change documents (REQ-27.7, REQ-27.12). It returns the publication when the target
+// resolves, the refusal code when it does not (for example wrong_branch), and neither when no
+// engine is wired (tests that disable the branch guard): the question then names no remote or
+// branch and its choices stay the gate record ones.
+func resolveGatePublication(change, workspaceRoot string) (*GatePublication, string) {
+	eng := engine.Default()
+	if branchEngine != nil {
+		eng = branchEngine()
+	}
+	if eng == nil {
+		return nil, ""
+	}
+	target, refusal := eng.PublicationTarget(context.Background(), branch.PublicationRequest{CWD: workspaceRoot, Change: change})
+	if refusal != nil {
+		return nil, string(refusal.Code)
+	}
+	return &GatePublication{
+		Remote:     branch.PublishRemote,
+		Branch:     target.Branch,
+		PRTarget:   target.PRTarget,
+		Invocation: branch.PublishInvocation(workspaceRoot, change, target.Branch),
+	}, ""
+}
+
+// publicationBranchLabel names the branch that is pushed: the one the target resolved, or the change
+// branch when it did not.
+func publicationBranchLabel(publication *GatePublication) string {
+	if publication == nil {
+		return "the change branch"
+	}
+	return "`" + publication.Branch + "`"
+}
+
+// publicationDestination names where the documents go for the effects and the value: the remote
+// branch when the target resolved, and the change branch on origin otherwise.
+func publicationDestination(publication *GatePublication) string {
+	if publication == nil {
+		return "the change branch on `origin`"
+	}
+	return fmt.Sprintf("`%s/%s`", publication.Remote, publication.Branch)
+}
+
 // gateQuestionNarrative writes the headline, reason and value of the question.
 // Integration keeps its two-way wording; every other gate describes the three
 // exits, or the two that remain when the store rules the hand-off out.
-func gateQuestionNarrative(change, gateKey, handOffUnavailable string) (headline, reason, value string) {
+func gateQuestionNarrative(change, gateKey, handOffUnavailable string, publication *GatePublication) (headline, reason, value string) {
 	headline = fmt.Sprintf("Block review gate %q is awaiting your decision.", gateKey)
 	reason = fmt.Sprintf("change %q has not approved or rejected this gate yet, and design.md's block-review policy blocks every later phase or role until it is (design.md S5.5).", change)
 	if gateKey == string(kickoff.GateIntegration) {
 		value = "Approving unblocks the next phase or role; rejecting keeps this gate open to remediation. Either decision, and its reason, is recorded in the change's gate ledger for later audit."
 		return headline, reason, value
 	}
-	value = "Iterate keeps this gate open to remediation as many times as needed; approve, push and stop records the approval, marks the next phase as handed off and returns what to commit and push; approve and continue records the approval and starts the next phase in this session. Every decision, and its reason, is recorded in the change's gate ledger for later audit."
+	value = fmt.Sprintf("Iterate keeps this gate open to remediation as many times as needed; approve, publish and stop records the approval, marks the next phase as handed off and publishes the change documents to %s without forcing; approve, publish and continue records the approval, publishes the same documents and starts the next phase in this session. Choosing either publishing exit authorizes that push with the git credentials already configured, and nothing else. %s Every decision, and its reason, is recorded in the change's gate ledger for later audit.",
+		publicationDestination(publication), publicationKeepsApprovalNote)
 	if handOffUnavailable != "" {
-		value = fmt.Sprintf("Iterate keeps this gate open to remediation as many times as needed; approve and continue records the approval and starts the next phase in this session. Approve, push and stop is not available: the declared artifact store %q keeps no files to commit and push. Every decision, and its reason, is recorded in the change's gate ledger for later audit.", handOffUnavailable)
+		value = fmt.Sprintf("Iterate keeps this gate open to remediation as many times as needed; approve and continue records the approval and starts the next phase in this session. Approve, publish and stop is not available: the declared artifact store %q keeps no files to commit and push, and nothing is published. Every decision, and its reason, is recorded in the change's gate ledger for later audit.", handOffUnavailable)
 	}
 	return headline, reason, value
 }
@@ -100,7 +153,7 @@ func gateQuestionNarrative(change, gateKey, handOffUnavailable string) (headline
 // gateQuestionChoices builds the choices in the order expectedGateAnswers
 // declares. All of them share the gate record verb and differ only by
 // --decision and --hand-off.
-func gateQuestionChoices(cwd, change, gateKey string, answers []string) []consentenvelope.Choice {
+func gateQuestionChoices(cwd, change, gateKey string, answers []string, publication *GatePublication) []consentenvelope.Choice {
 	base := fmt.Sprintf("%s--cwd %s --change %s --gate %s", gateRecordInvocationPrefix, cwd, change, gateKey)
 	approved := consentenvelope.Choice{
 		Answer:     gateAnswerApproved,
@@ -114,9 +167,16 @@ func gateQuestionChoices(cwd, change, gateKey string, answers []string) []consen
 		Effect:     fmt.Sprintf("Keeps gate %q open to remediation; nothing later starts until it is re-approved.", gateKey),
 		Invocation: base + " --decision rejected --reason <your-reason>",
 	}
+	destination := publicationDestination(publication)
 	if gateKey != string(kickoff.GateIntegration) {
 		approved.Label = "Approve and continue"
 		approved.Effect = fmt.Sprintf("Records an approved decision for gate %q and unblocks the next phase or role in this session.", gateKey)
+		if slices.Contains(answers, gateAnswerHandOff) {
+			// A store that keeps files publishes on approval (REQ-27.12); one that keeps none publishes
+			// nothing, so exit 3 keeps its plain wording and exit 2 is not offered (REQ-26.6).
+			approved.Label = "Approve, publish and continue"
+			approved.Effect = fmt.Sprintf("Records an approved decision for gate %q, publishes the change documents to %s with `axiom sdd publish`, and starts the next phase in this session. %s", gateKey, destination, publicationKeepsApprovalNote)
+		}
 		rejected.Label = "Iterate on this artifact"
 		rejected.Effect = fmt.Sprintf("Keeps gate %q open to remediation; nothing later starts until it is re-approved, and the same gate is presented again afterwards.", gateKey)
 	}
@@ -125,8 +185,8 @@ func gateQuestionChoices(cwd, change, gateKey string, answers []string) []consen
 		gateAnswerRejected: rejected,
 		gateAnswerHandOff: {
 			Answer:     gateAnswerHandOff,
-			Label:      "Approve, push and stop",
-			Effect:     fmt.Sprintf("Records an approved decision for gate %q marked as handed off, refusing without writing anything while the artifacts are not committed, and returns the commit, push and pull request data to present before stopping; the next phase starts only after that pull request is merged.", gateKey),
+			Label:      "Approve, publish and stop",
+			Effect:     fmt.Sprintf("Records an approved decision for gate %q marked as handed off, then publishes the change documents: `axiom sdd publish` commits only the documentation paths of the change and pushes %s to `origin` without forcing, using the git credentials already configured. Whoever continues runs `git fetch origin` and `axiom branch ensure`; no merged pull request is needed. %s", gateKey, publicationBranchLabel(publication), publicationKeepsApprovalNote),
 			Invocation: base + " --decision approved" + gateHandOffFlag + " --reason <your-reason>",
 		},
 	}
