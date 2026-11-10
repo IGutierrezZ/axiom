@@ -2,11 +2,17 @@
 
 > **Documento vivo ODD.** Fichero autoritativo: `odd/tasks/guia-orquestador-upstream.md`.
 > Espejo de recuperación en Engram: topic `odd/guia-orquestador-upstream/tasks`, proyecto `axiom`.
-> Rama: `feat/guia-orquestador-upstream` (worktree `C:\repos\axiom-wt\guia-orquestador-upstream\axiom`).
+> Ramas: `feat/guia-orquestador-upstream` (T4 y T5, fusionada en el PR #226) e `inc/guia-orquestador-upstream` (T1, worktree `C:\repos\axiom-wt\guia-orquestador-upstream\axiom`).
+
+Plan stop: approved 2026-11-04; implementation continues
 
 ## Estado
 
-**Alcance validado (2026-11-04).** El usuario valida T1–T5 con las dependencias D3 y D4 anotadas. Antes de empezar T1 hay que resolver las decisiones abiertas P1–P3. Todavía no se ha implementado nada.
+**En curso (2026-11-10).**
+- T4 y T5 están fusionadas (PR #226).
+- T1 está implementada en `inc/guia-orquestador-upstream`, pendiente de PR.
+- T2 y T3 van después de que se fusione T1.
+- Las decisiones P1–P3 están resueltas.
 
 ## Objetivo
 
@@ -76,7 +82,7 @@ Divergencias de Axiom que se conservan:
 
 ## Alcance propuesto (tareas)
 
-- [ ] **T1 · Contrato compartido de la guía del orquestador** (talla L)
+- [x] **T1 · Contrato compartido de la guía del orquestador** (talla L). Commit `999e6172`, ruta delegada (writer; más de 4 ficheros y más de 2 no triviales). Véase el registro del 2026-11-10.
   - Ampliar la fuente única: llevar a secciones compartidas lo que hoy se duplica en las 12 plantillas:
     - Delegation Rules (tabla) y Mandatory Delegation Triggers.
     - Lossless Blocking Prompts.
@@ -203,3 +209,32 @@ Lo fija la sesión coordinadora a partir del cruce de ficheros entre bloques (20
   - **RDD apagado:** no se abre revisión nativa.
   - **Seguimiento fuera de alcance:** `.codex/AGENTS.md` sigue con el texto antiguo del protocolo de Engram.
 - 2026-11-05: el usuario resuelve P1 (las 12 plantillas) y P2 (fuente única en `RenderRouting`) según la recomendación, y autoriza el push y el PR de T4 y T5. T1 sigue esperando a que se fusione revisión T6.
+- 2026-11-10: revisión T6 entra con el PR #233. Se retira el worktree fusionado con `done`. T1 se implementa sobre `origin/main` b7ddbf51, que ya incluye #233, #234, #235 y #236.
+  - **Rama:** el commit nació en `feat/guia-orquestador-t1`, pero la guarda de ramas exige que el documento de este cambio viva en `inc/guia-orquestador-upstream`. Se recrea el worktree con esa identidad y se trae el commit con cherry-pick; el árbol es idéntico.
+  - **T1** (`999e6172`, 31 ficheros, +956/−1781):
+    - Las 12 plantillas pasan de unas 4750 a unas 3375 líneas.
+    - `_shared/sdd-orchestrator-sections.md` gana 37 secciones compartidas. Entre ellas están Delegation Rules y Mandatory Delegation Triggers, en dos secciones; T2 las sustituirá desde `RenderRouting`.
+    - Las secciones SDD (kickoff, compuertas, Dispatcher Guard y Delegated Verification Gate) se quedan como bloques opacos, sin cambiar ni un byte.
+    - Se quedan propias de cada runtime: la frase de la herramienta de delegación, Kiro steering, Windsurf Plan/Code, Codex capability check, Hermes native delegation y OpenCode entry routing.
+  - **Deriva unificada:**
+    - Native Checking Contract: «and the terminal receipt» en claude, codex, generic y opencode.
+    - Regla 5 de los disparadores en generic: «native review actors».
+    - Execution Mode en qwen: «¿Continuamos?».
+    - Espacios en hermes.
+    - Cambian 7 goldens, y solo por las dos primeras unificaciones.
+  - **Consumidores:** todos pasan por `composeOrchestratorPrompt`, que ahora resuelve las secciones antes de `composeFallbackSessionPreflight`. Los tests que leían la plantilla en crudo leen la versión resuelta.
+  - **Test de no deriva** (`internal/components/sdd/orchestrator_no_drift_test.go`) en las 12 plantillas:
+    - No quedan marcadores sin resolver.
+    - Cada sección se expande una vez por referencia.
+    - Ninguna plantilla copia el cuerpo de una sección compartida.
+    - Toda sección compartida se usa.
+  - **Ajustes en tests:**
+    - Se bajan los techos del ratchet de deriva.
+    - Cambia el SHA de `TestKilocodeReviewSettingsMatchCurrentMainBaseline`.
+    - `TestSDDSkillsNameTheIntegrationBranchNotALiteral` admite 4 patrones nuevos de prosa de canales de release.
+    - No cambian los techos de `review_ledger_contract_test.go`.
+  - **Verificación del writer:** `go test` de `./internal/components/...`, `./internal/assets/...` y `./internal/agents/capabilitymanifest/...`, todo ok salvo `filemerge`. `go vet` limpio.
+  - **Fallo preexistente:** `TestWriteFileAtomicFollowsDirectoryJunction` y `…RelativeDirectoryJunction`, en `filemerge`, por junctions de Windows («file already exists»). Falla igual en `main`, comprobado por el padre.
+  - **Comprobación puntual del padre:** `go test ./internal/components/sdd/ ./internal/components/ ./internal/assets/ -count=1`, ok. Con word-diff, los goldens solo cambian en «+the» ×7 y «checking»→«review».
+  - **Riesgo:** `axiom review assess` da `medium` y RDD está apagado. Basta la autoverificación del writer (sonnet, no es perfil pequeño) y la comprobación puntual.
+  - **Entrega:** 2737 líneas, por encima de 400 → un solo PR con `size:exception` (preferencia del usuario).

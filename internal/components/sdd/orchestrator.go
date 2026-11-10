@@ -89,11 +89,13 @@ func substituteSharedOrchestratorSections(content string) string {
 // bounded-review and runtime-identity substitutions.
 func composeOrchestratorPrompt(agent model.AgentID, options ...OrchestratorRenderOptions) string {
 	path := sddOrchestratorAsset(agent)
-	content := assets.MustRead(path)
+	// Shared sections resolve first: the fallback session preflight matches
+	// exact clauses (init lookup, execution-mode producers) that now live in
+	// shared bodies, so it has to see the expanded text, not the placeholder.
+	content := substituteSharedOrchestratorSections(assets.MustRead(path))
 	if usesFallbackSessionPreflight(agent) {
 		content = composeFallbackSessionPreflight(content, agent)
 	}
-	content = substituteSharedOrchestratorSections(content)
 	var renderOptions OrchestratorRenderOptions
 	if len(options) > 0 {
 		renderOptions = options[0]

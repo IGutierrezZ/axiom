@@ -272,6 +272,9 @@ func reviewWorkloadGuardSections(t *testing.T) map[string]string {
 			return walkErr
 		}
 		content := assets.MustRead(path)
+		if strings.HasSuffix(path, "/sdd-orchestrator.md") {
+			content = substituteSharedOrchestratorSections(content)
+		}
 		start := strings.Index(content, heading)
 		if start < 0 {
 			return nil

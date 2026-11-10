@@ -15,7 +15,7 @@ import (
 func TestSDDOrchestratorsRequireSafeFormatterOrdering(t *testing.T) {
 	for _, path := range allSDDOrchestratorAssetPaths(t) {
 		t.Run(path, func(t *testing.T) {
-			content := MustRead(path)
+			content := mustReadResolved(path)
 			for _, required := range []string{
 				"Normalization ordering rule",
 				"before review START and its identity freeze",

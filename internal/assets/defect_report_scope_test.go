@@ -30,7 +30,7 @@ import (
 func TestDefectHandoffAdmitsOnlyFailuresGentleAIProduced(t *testing.T) {
 	for _, path := range allSDDOrchestratorAssetPaths(t) {
 		t.Run(path, func(t *testing.T) {
-			content := MustRead(path)
+			content := mustReadResolved(path)
 
 			// The gate itself: production, not context.
 			for _, required := range []string{

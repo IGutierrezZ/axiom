@@ -165,7 +165,7 @@ func TestCoordinatorOrchestratorsCarryClosedSingleSelectDomainContract(t *testin
 }
 
 func TestBlockingPromptFallbackCoversWindsurfToolResults(t *testing.T) {
-	content := MustRead("windsurf/sdd-orchestrator.md")
+	content := mustReadResolved("windsurf/sdd-orchestrator.md")
 	if !strings.Contains(content, "There are no sub-agents") {
 		t.Fatal("Windsurf must still identify its solo-agent execution model")
 	}
@@ -468,7 +468,7 @@ func TestCoordinatorOrchestratorsCarrySDDEditAuthorityConsentRelay(t *testing.T)
 func sddConsentRelaySection(t *testing.T, path string) string {
 	t.Helper()
 	const heading = "#### SDD Edit-Authority Consent Relay (MANDATORY)"
-	content := MustRead(path)
+	content := mustReadResolved(path)
 	start := strings.Index(content, heading)
 	if start == -1 {
 		t.Fatalf("%s missing %q", path, heading)
@@ -485,7 +485,7 @@ func sddConsentRelaySection(t *testing.T, path string) string {
 func providerDefectHandoffSection(t *testing.T, path string) string {
 	t.Helper()
 	const heading = "#### Axiom Provider Defect Handoff (MANDATORY)"
-	content := MustRead(path)
+	content := mustReadResolved(path)
 	start := strings.Index(content, heading)
 	if start == -1 {
 		t.Fatalf("%s missing %q", path, heading)
@@ -502,7 +502,7 @@ func providerDefectHandoffSection(t *testing.T, path string) string {
 func blockingPromptContractSection(t *testing.T, path string) string {
 	t.Helper()
 	const heading = "### Lossless Blocking Prompts (MANDATORY)"
-	content := MustRead(path)
+	content := mustReadResolved(path)
 	start := strings.Index(content, heading)
 	if start == -1 {
 		t.Fatalf("%s missing %q", path, heading)
