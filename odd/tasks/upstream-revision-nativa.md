@@ -6,7 +6,7 @@
 
 ## Estado
 
-**Alcance validado** por el usuario el 2026-11-04, con D-RN1 aplazada, D-RN2 como deuda aceptada y D-RN3 descartada. **T1–T17 implementadas y verificadas** el 2026-11-05, autorizada por el usuario («me gustaria que arranquen las que pueden empezar», relayed por la sesión coordinadora) para T1–T17. T18–T20 siguen bloqueadas por D2. Commit por tarea en esta rama; push y PR los decide el usuario. La estrategia de cadena de PR (`stacked-to-main` o `feature-branch-chain`) se pregunta antes del primer PR: los commits por tarea son lineales y admiten cualquiera de las dos. RDD apagado (`axiom review mode status`: off por defecto); cada tarea se verifica con `axiom review assess` según su nivel.
+**Alcance validado** por el usuario el 2026-11-04, con D-RN1 aplazada, D-RN2 como deuda aceptada y D-RN3 descartada. **T1–T17 implementadas y verificadas** el 2026-11-05, autorizada por el usuario («me gustaria que arranquen las que pueden empezar», relayed por la sesión coordinadora) para T1–T17. PR #233 fusionado el 2026-11-10 (`8c520295`). D2 resuelta el 2026-11-10; el Bloque 4 se replantea con la nueva T21 por delante (ver «Bloque 4»). Commit por tarea en esta rama; push y PR los decide el usuario. La estrategia de cadena de PR (`stacked-to-main` o `feature-branch-chain`) se pregunta antes del primer PR: los commits por tarea son lineales y admiten cualquiera de las dos. RDD apagado (`axiom review mode status`: off por defecto); cada tarea se verifica con `axiom review assess` según su nivel.
 
 ## Objetivo
 
@@ -145,11 +145,21 @@ Cada tarea es una entrega de unas 400 líneas como máximo (heurística orientat
 
 ### Bloque 4 · Plataforma
 
-- [ ] **T18 · Montajes sin modos POSIX (#5138)** (~400).
-- [ ] **T19 · RDD en SMB/UNC (#4670)** (~575). Supera la heurística porque el arreglo toca a la vez la resolución del modo, la seguridad de rutas de Windows y el hook de parada; partirlo dejaría un estado intermedio incoherente. Depende de T18.
-- [ ] **T20 · Rutas `\\?\` (#5533)** (~200). Depende de T19.
+**D2 resuelta (2026-11-10).** El RDD es una preferencia de cada usuario en cada proyecto, sin versionar. No va en `axiom.yaml` ni se queda como interruptor de máquina. El usuario revoca la decisión del 2026-10-30 de `huella-usuario-workspace` («`rdd_mode` sigue siendo de máquina»). Las tres tareas de upstream tocan la resolución del modo (`internal/reviewtransaction/rdd_mode.go`, `internal/cli/review_mode.go`), así que la T21 va primero: así T19 y T20 se portan sobre el modelo definitivo y no sobre un mecanismo que va a cambiar.
 
-**Dependencia con la hoja de ruta de producto (D2).** T18, T19 y T20 tocan la resolución del modo RDD (`internal/reviewtransaction/rdd_mode.go`, `internal/cli/review_mode.go`). La decisión D2 de `docs/audits/2026-11-03-vision-producto.md` (rama `inc/auditoria-vision-producto`) decide si RDD pasa a configuración por proyecto en `axiom.yaml` o sigue siendo un interruptor de máquina, y bloquea P4. Si D2 cambia el origen del modo, la regla de T19 («si el global no es `on`, se ignora el fallo del override») y el indicador explícito de T20 deben revisarse. El Bloque 4 se ejecuta después de resolver D2 o con esa revisión anotada en la tarea.
+Alcance aclarado con el usuario:
+- El RDD no se cruza con los roles: SDD no ofrece, no lanza ni consume RDD (`docs/intended-usage.md:208`).
+- El TDD por rol es una política de equipo y no entra aquí. Lo mismo vale para la limpieza de otros campos versionados que podrían ser de usuario (`strict_tdd` duplicado, `artifact_store`, `workflow.lane`, `governance.semantic_analysis`, `.codex/` y `GEMINI.md`): va en un trabajo aparte.
+
+- [ ] **T21 · RDD por usuario y proyecto (D2)** (~400). Va antes de T18.
+  - **Fuente:** `rdd_mode` en el estado de proyecto `<raíz>/.axiom/state.json`. Es el mismo almacén de `huella-usuario-workspace` (`internal/state/store.go`, ignorado en `.git/info/exclude`) y admite `on` y `off`. Solo lo escribe el usuario y nunca se versiona, así que no reabre el riesgo que justificaba el comentario de `internal/state/state.go:142`.
+  - **Precedencia (recomendada):** valor del proyecto si existe; si no, el global de `~/.axiom/state.json`; si no, `off`. El override del clon en `.git/` se sigue leyendo durante la transición y «gana cualquier `off`» se mantiene para él. Las escrituras nuevas van al estado de proyecto.
+  - **CLI:** `axiom review mode enable|disable` escribe en el proyecto cuando hay raíz de workspace. `--scope global` sigue fijando el valor por defecto de la máquina. `status` informa de la fuente decisiva (`project`, `global`, `clone` o `default`).
+  - **A comprobar antes de escribir:** `workspace.ResolveRoot` (que usa `effectiveStateStoreAt` en `internal/cli/install_state_lock.go:58`) puede devolver la raíz de cada worktree y no la del proyecto. Si es así, el RDD quedaría por worktree y cada cambio nuevo empezaría sin la preferencia. Hay que resolverlo desde la raíz del proyecto (git common dir) para que todos los worktrees de un mismo proyecto compartan valor.
+  - **Documentación:** contrato «RDD is user-owned» en `docs/trigger-rules.md`, `docs/intended-usage.md` y las instrucciones de orquestador que describen `axiom review mode` (con sus goldens), y la nota de `odd/tasks/huella-usuario-workspace.md:190`.
+- [ ] **T18 · Montajes sin modos POSIX (#5138)** (~400). Depende de T21. Gana importancia porque el estado de proyecto vive en la raíz del repo, y ahí es donde suelen fallar los modos POSIX (`/mnt/c`, SMB).
+- [ ] **T19 · RDD en SMB/UNC (#4670)** (~575). Depende de T18. Supera la heurística porque el arreglo toca a la vez la resolución del modo, la seguridad de rutas de Windows y el hook de parada; partirlo dejaría un estado intermedio incoherente. La regla prevista («si el global no es `on`, se ignora el fallo del override») pasa a ser «si la fuente decisiva no es `on`, se ignora el fallo al leer el override del clon». Se revisa contra la precedencia final de T21.
+- [ ] **T20 · Rutas `\\?\` (#5533)** (~200). Depende de T19. El indicador explícito sigue haciendo falta con independencia de D2: en Axiom, el estado por defecto resuelto es idéntico al de fallo cerrado.
 
 **Sin solape con distribución.** Comprobado el 2026-11-04 con `git diff origin/main...inc/distribucion-un-comando --stat`: esa rama toca `scripts/install.*`, `internal/update/**`, `cmd/axiom/main.go` y documentación de uso, y ninguna tarea de este documento edita esos ficheros.
 
@@ -165,7 +175,7 @@ Cada tarea es una entrega de unas 400 líneas como máximo (heurística orientat
 
   T6 entra después del eslabón 1 y antes de guía T1, o los dos chocarían en la misma región. Cada eslabón regenera unos 13 goldens de orquestador, entre ellos `sdd-claude-claudemd`, `combined-claude-claudemd` y `sdd-opencode-multi-settings`.
 - **T14, T16 y T17:** guía T1 también puede mover los techos de tamaño de `internal/components/sdd/review_ledger_contract_test.go`. Al rebasar, se regeneran o se ajustan.
-- **T18–T20:** esperan a D2, que también bloquea P4.
+- **T21 y T18–T20:** D2 resuelta el 2026-11-10; van en serie (T21 → T18 → T19 → T20).
 
 **Previsión total:** unas 6.000 líneas en 20 tareas (sin D-RN1, D-RN2 ni D-RN3).
 
@@ -241,6 +251,10 @@ T1–T17 están hechas y verificadas.
 - `Organic Runtime E2E` falla también en `main` (`5fd91b40`) con el mismo test, `TestOrganicConfiguredAgentReceivesRoutingGuidanceRealAgents/orchestrator_prompt`: falta `opencode.json`. Es ajeno a este PR.
 - Los E2E en Docker fallan por ficheros de OpenCode ausentes y por las instalaciones de Windsurf, Antigravity y Qwen. Está pendiente compararlos con `main`.
 
-**Pendiente:**
-- La fusión automática está activada por petición del usuario («si sale verde fusiona»). GitHub fusionará con *merge commit* cuando pasen los checks obligatorios.
-- T18–T20 esperan a D2.
+**Fusión:** PR #233 fusionado el 2026-11-10 a las 09:32 UTC (`8c520295`) con la fusión automática.
+
+**Bloque 4 (2026-11-10):**
+- Rama `inc/upstream-revision-nativa` reutilizada y avanzada por *fast-forward* a `origin/main` (`53b36b19`).
+- D2 resuelta y registrada en `docs/audits/2026-11-03-vision-producto.md`.
+- Siguiente: parada del plan con T21 → T18 → T19 → T20; tras aprobarla, la T21 empieza por comprobar la raíz que devuelve `workspace.ResolveRoot` en un worktree.
+- Previsión: unas 1.575 líneas en cuatro tareas, por encima del presupuesto de unas 400. Se aplica la estrategia `exception-ok` (un único PR con excepción de tamaño), ya decidida por el usuario.
