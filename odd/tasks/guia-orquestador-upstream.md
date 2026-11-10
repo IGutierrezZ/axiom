@@ -10,8 +10,9 @@ Plan stop: approved 2026-11-04; implementation continues
 
 **En curso (2026-11-10).**
 - T4 y T5 están fusionadas (PR #226).
-- T1 está implementada en `inc/guia-orquestador-upstream`, pendiente de PR.
-- T2 y T3 van después de que se fusione T1.
+- T1 está fusionada (PR #238).
+- T2 está implementada en `inc/guia-orquestador-upstream`, pendiente de PR.
+- T3 va después de que se fusione T2.
 - Las decisiones P1–P3 están resueltas.
 
 ## Objetivo
@@ -93,7 +94,7 @@ Divergencias de Axiom que se conservan:
   - Test de no deriva: cada sección compartida aparece una sola vez por plantilla y no quedan marcadores sin resolver.
   - Se conservan la autorización remota (`internal/assets/generic/remote-authorization-contract.md`, que se inyecta aparte) y RDD opcional.
   - Decisión de diseño abierta (P2): ¿la fuente única de la tabla y los disparadores es `RenderRouting` en Go o el markdown compartido?
-- [ ] **T2 · Delegación por presupuesto de evidencia y por razón** (depende de T1)
+- [x] **T2 · Delegación por presupuesto de evidencia y por razón** (depende de T1). Commits `5c4cc78c` (código y plantillas) y `9ddd1495` (docs). Ruta delegada (writer; muchos ficheros no triviales). Véase el registro del 2026-11-10.
   - Sustituir 1–3/4+ por el presupuesto de evidencia:
     - Inline, un lote paralelo de ≤3 llamadas y unos 10k tokens.
     - Si no cabe, explorador con traspaso de ≤2k tokens con `path:line` y una comprobación puntual del padre.
@@ -238,3 +239,32 @@ Lo fija la sesión coordinadora a partir del cruce de ficheros entre bloques (20
   - **Comprobación puntual del padre:** `go test ./internal/components/sdd/ ./internal/components/ ./internal/assets/ -count=1`, ok. Con word-diff, los goldens solo cambian en «+the» ×7 y «checking»→«review».
   - **Riesgo:** `axiom review assess` da `medium` y RDD está apagado. Basta la autoverificación del writer (sonnet, no es perfil pequeño) y la comprobación puntual.
   - **Entrega:** 2737 líneas, por encima de 400 → un solo PR con `size:exception` (preferencia del usuario).
+- 2026-11-10: T1 se fusiona (PR #238, merge 53b36b19). Se avisa a la coordinadora, que ordena T2 y luego T3 en serie, con un aviso por cada fusión. El usuario autoriza arrancarlas. D4/P6 ya estaba resuelta (ODD nunca integra en la spec viva), así que T2 no toca el bloque ODD de `routing.go` por ese motivo. Se recrea el worktree desde 53b36b19.
+  - **T2** (`5c4cc78c`, 31 ficheros, +763/−430):
+    - **Fuente única:** `internal/components/agentguidance/delegation.go` expone `DelegationRules()` y `DelegationTriggers()`, ambas leídas de `CanonicalImplementationRouting()`. `RenderRouting` las incluye. En `_shared` quedan los marcadores `{{AXIOM_DELEGATION_RULES}}` y `{{AXIOM_DELEGATION_TRIGGERS}}`, que `substituteSharedOrchestratorSections` resuelve en un segundo paso.
+    - **Texto nuevo:**
+      - Presupuesto de evidencia: un lote de hasta 3 llamadas y unos 10k tokens; si no cabe, un explorador entrega un traspaso de hasta 2k tokens con `path:line` y el padre hace una comprobación puntual.
+      - Disparadores condicionales: ante la duda, inline.
+      - Writer solo por razón nombrada (paralelismo o contexto).
+      - Las unidades de ≤100 líneas van siempre inline.
+      - Proporcionalidad (#4900).
+      - Backstop orientativo a unos 150k tokens.
+    - **Manifiesto:** desaparecen los campos de recuento de ficheros. `DirectInline` gana `MaxEvidenceBatches`, `MaxEvidenceCalls`, `ApproxEvidenceTokens`, `EvidenceMustUseBoundedRanges` y `MaxInlineUnitLines`. `DelegatedDirect` gana `ApproxHandoffTokens`, `MaxParentSpotChecks`, `ApproxParentContextTokens`, `ContextBackstopIsAdvisory` y `WriterRequiresNamedReason`. Se regeneran los digests.
+    - **Migración:** en `sdd/inject.go` se conservan los marcadores, el bloque se genera desde `DelegationTriggers()` con el heading «(Conditional)», y la firma `delegationBlockSignature` reescribe los bloques antiguos.
+    - **Tests y skill:** dos tests nuevos, `TestEveryOrchestratorRendersTheSingleSourceDelegationDoctrine` y `TestSmallModelDelegationRulesMatchTheManifest`. Se actualiza `hermes-ephemeral-delegation/SKILL.md`.
+    - **Goldens:** cambian 12 de 13 goldens, solo por la delegación. Codex pierde su tabla propia y pasa a usar la compartida.
+  - **Docs** (`9ddd1495`, 5 ficheros, +11/−11): `agents.md`, `architecture/organic-rdd.md`, `intended-usage.md`, `pi.md` y `trigger-rules.md`.
+    - Los planes históricos de `docs/audits/2026-07-2*` no se tocan.
+    - **Limitación:** no se ha podido comprobar si el arnés de `gentle-pi` sigue contando ficheros.
+  - **Decisiones autónomas del writer, revisables:** se mantiene el heading «Mandatory Delegation Triggers» y se eliminan los campos de ficheros del manifiesto en lugar de dejarlos como obsoletos.
+  - **Verificación del writer:**
+    - `go test ./internal/components/... ./internal/assets/... ./internal/agents/... -count=1`: ok salvo `filemerge`.
+    - `go test ./internal/cli/ -run "TestAuthorizeReviewTransportCapabilityMatrix|TestImmutableReviewRuntimeMatrix|TestRegisteredRuntimeIdentitiesMatchCompiledTransportBoundary"`: ok.
+    - `go vet`: limpio.
+    - La búsqueda de reglas por ficheros solo encuentra fixtures de migración y regex de detección en tests.
+  - **Fallos preexistentes:**
+    - `filemerge`: junctions de Windows.
+    - `internal/app`: `TestTuiInstallOnThenSyncPreservesAndRefreshesOpenCodeActivation`, porque no está el runtime de OpenCode. El padre comprobó que también falla en `main`.
+  - **Comprobación puntual del padre:** `go test ./internal/components/agentguidance/ ./internal/components/sdd/ ./internal/agents/capabilitymanifest/ -count=1`, ok. Leído el texto nuevo en los goldens.
+  - **Riesgo:** `medium`, con RDD apagado.
+  - **Entrega:** 1215 líneas, por encima de 400 → un solo PR con `size:exception`.
