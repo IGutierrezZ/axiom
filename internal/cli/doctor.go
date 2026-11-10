@@ -19,6 +19,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/state"
 	"github.com/IGutierrezZ/axiom/v3/internal/storage"
 	"github.com/IGutierrezZ/axiom/v3/internal/system"
+	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
 type CheckStatus = doctor.Status
@@ -91,30 +92,61 @@ var (
 	}
 )
 
-// RunDoctor runs all ecosystem health checks and renders a report to w.
+// RunDoctor runs all ecosystem health checks and renders a report to w. The
+// project is the one that contains the current directory: it is resolved here,
+// once, and the core only ever sees the resulting root.
 func RunDoctor(ctx context.Context, w io.Writer) error {
 	homeDir, err := osUserHomeDirDoctor()
 	if err != nil {
 		return fmt.Errorf("resolve home directory: %w", err)
 	}
+	var root string
+	if cwd, cwdErr := os.Getwd(); cwdErr == nil {
+		root, _ = workspace.ResolveRoot(cwd, homeDir)
+	}
+	checks, installedState := buildDoctorChecks(doctor.Options{Home: homeDir, Root: root})
+	report := (doctor.Runner{Checks: checks}).Run(ctx)
+
+	footprint := collectMachineFootprint(homeDir, installedState)
+	renderDoctorReportWithFootprint(w, report, &footprint)
+	return nil
+}
+
+// BuildDoctorChecks devuelve las comprobaciones del doctor para la raíz de proyecto
+// indicada. Es el núcleo de `axiom doctor` y del dashboard: no lee el directorio
+// actual del proceso, de modo que el resultado depende solo de opts.
+func BuildDoctorChecks(opts doctor.Options) []doctor.Check {
+	checks, _ := buildDoctorChecks(opts)
+	return checks
+}
+
+func buildDoctorChecks(opts doctor.Options) ([]doctor.Check, state.InstallState) {
+	homeDir := opts.Home
 
 	// A state read failure (missing/malformed file) is surfaced separately by
 	// checkStateJSON. Here we fall back to an empty state so the doctor only
 	// reports the always-required core tools — preserving the first-time-install
 	// behaviour where the user has not yet selected any agents (#709).
-	stateStore, workspaceDir := effectiveStateStoreWithRoot(homeDir)
+	stateStore, workspaceDir := effectiveStateStoreAt(homeDir, opts.Root)
 	installedState, stateErr := stateStore.Read()
 	if stateErr != nil {
 		installedState = state.InstallState{}
 	}
 	installedAgents := installedState.InstalledAgents
 
+	// The state checks read whichever store is effective, so they belong to the
+	// project exactly when that store is the project's.
+	stateScope := doctor.ScopeGlobal
+	if stateStore.IsProject() {
+		stateScope = doctor.ScopeProject
+	}
+
 	pathDirs := pathDirsFn()
 	requiredTools := requiredDoctorTools(installedAgents)
 	if doctorGGARequired(installedState) && !slices.Contains(requiredTools, "gga") {
 		requiredTools = append(requiredTools, "gga")
 	}
-	checks := make([]doctor.Check, 0, len(requiredTools)+3)
+	checks := make([]doctor.Check, 0, len(requiredTools)+4)
 	for _, tool := range requiredTools {
 		tool := tool
 		checks = append(checks, doctor.Check{ID: doctor.ToolCheckID(tool), Run: func(context.Context) doctor.Result {
@@ -122,18 +154,16 @@ func RunDoctor(ctx context.Context, w io.Writer) error {
 		}})
 	}
 	checks = append(checks,
-		doctor.Check{ID: doctor.CheckStateJSON, Run: func(context.Context) doctor.Result { return checkStateJSON(homeDir) }},
-		doctor.Check{ID: doctor.CheckInstalledAssetVersion, Run: func(context.Context) doctor.Result { return checkInstalledAssetVersion(homeDir) }},
+		doctor.Check{ID: doctor.CheckStateJSON, Scope: stateScope, Run: func(context.Context) doctor.Result { return checkStateJSON(homeDir, stateStore) }},
+		doctor.Check{ID: doctor.CheckInstalledAssetVersion, Scope: stateScope, Run: func(context.Context) doctor.Result { return checkInstalledAssetVersion(stateStore) }},
 		doctor.Check{ID: doctor.CheckEngramReachable, Run: func(ctx context.Context) doctor.Result {
 			return checkEngramReachable(ctx, homeDir, workspaceDir, installedAgents)
 		}},
 		doctor.Check{ID: doctor.CheckDiskSpace, Run: func(context.Context) doctor.Result { return checkDiskSpace(homeDir) }},
 	)
-	report := (doctor.Runner{Checks: checks}).Run(ctx)
-
-	footprint := collectMachineFootprint(homeDir, installedState)
-	renderDoctorReportWithFootprint(w, report, &footprint)
-	return nil
+	checks = append(checks, projectDoctorChecks(opts, stateStore)...)
+	checks = append(checks, workspaceDoctorChecks(opts)...)
+	return checks, installedState
 }
 
 // checkToolBinaries checks each required tool for PATH resolution and
@@ -401,9 +431,8 @@ func appendUniqueExt(exts []string, ext string) []string {
 }
 
 // checkStateJSON validates ~/.gentle-ai/state.json and agent config dirs.
-func checkStateJSON(homeDir string) CheckResult {
+func checkStateJSON(homeDir string, store state.Store) CheckResult {
 	const id = doctor.CheckStateJSON
-	store := EffectiveStateStore(homeDir)
 	statePath := store.Path()
 
 	s, err := store.Read()
@@ -764,8 +793,8 @@ func statusIcon(s CheckStatus) string {
 	}
 }
 
-func checkInstalledAssetVersion(homeDir string) CheckResult {
-	s, err := EffectiveStateStore(homeDir).Read()
+func checkInstalledAssetVersion(store state.Store) CheckResult {
+	s, err := store.Read()
 	if err != nil {
 		return CheckResult{
 			Status: CheckStatusPass,

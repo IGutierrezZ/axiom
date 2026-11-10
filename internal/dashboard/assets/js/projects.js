@@ -5,6 +5,7 @@ import { api, escapeHtml } from './core/api.js';
 import { defaultWorktreeRoot, registrationPrefs } from './core/branches.js';
 import { $, openDialog, closeDialog, toast, setBusy } from './core/components.js';
 import { icon } from './core/icons.js';
+import { resetProjectData } from './core/overview.js';
 import { state, set } from './core/state.js';
 
 let onSwitched = async () => {};
@@ -64,6 +65,8 @@ export async function loadProjects() {
 async function switchProject(id) {
   try {
     await api('/api/projects/switch', { body: { id } });
+    // El informe del proyecto anterior deja de verse ya, sin esperar a la recarga.
+    resetProjectData();
     closePopover({ restoreFocus: true });
     await loadProjects();
     await onSwitched();

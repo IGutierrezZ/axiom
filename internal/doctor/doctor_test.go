@@ -2,6 +2,7 @@ package doctor
 
 import (
 	"context"
+	"encoding/json"
 	"reflect"
 	"strings"
 	"testing"
@@ -31,7 +32,7 @@ func TestRunnerPreservesDeclarationOrderAndStableIDs(t *testing.T) {
 		{ID: CheckEngramReachable, Run: func(context.Context) Result { order = append(order, CheckEngramReachable); panic("secret panic value") }},
 		{ID: CheckDiskSpace, Run: recordingCheck(&order, CheckDiskSpace, Result{Status: StatusWarn})},
 	}
-	want := []Result{{Name: CheckStateJSON, Status: StatusPass}, {Name: CheckEngramReachable, Status: StatusFail, Detail: "check failed unexpectedly"}, {Name: CheckDiskSpace, Status: StatusWarn}}
+	want := []Result{{Name: CheckStateJSON, Scope: ScopeGlobal, Status: StatusPass}, {Name: CheckEngramReachable, Scope: ScopeGlobal, Status: StatusFail, Detail: "check failed unexpectedly"}, {Name: CheckDiskSpace, Scope: ScopeGlobal, Status: StatusWarn}}
 	got := (Runner{Checks: checks}).Run(context.Background())
 	if !reflect.DeepEqual(got.Checks, want) || !reflect.DeepEqual(order, []CheckID{CheckStateJSON, CheckEngramReachable, CheckDiskSpace}) {
 		t.Fatalf("checks/order = %#v/%v, want %#v", got.Checks, order, want)
@@ -71,4 +72,38 @@ func TestNewRemedyClassifiesCurrentRemedies(t *testing.T) {
 
 func recordingCheck(order *[]CheckID, id CheckID, result Result) func(context.Context) Result {
 	return func(context.Context) Result { *order = append(*order, id); return result }
+}
+
+func TestRunnerStampsScopeAndReportFailed(t *testing.T) {
+	checks := []Check{
+		{ID: "a", Scope: ScopeProject, Run: func(context.Context) Result { return Result{Status: StatusWarn} }},
+		{ID: "b", Run: func(context.Context) Result { return Result{Status: StatusPass} }},
+	}
+	got := (Runner{Checks: checks}).Run(context.Background())
+	if got.Checks[0].Scope != ScopeProject || got.Checks[1].Scope != ScopeGlobal {
+		t.Fatalf("scopes = %q/%q, want project/global", got.Checks[0].Scope, got.Checks[1].Scope)
+	}
+	if got.Failed() {
+		t.Fatalf("Failed() = true with only pass/warn results")
+	}
+	got.Checks = append(got.Checks, Result{Status: StatusFail})
+	if !got.Failed() {
+		t.Fatalf("Failed() = false with a failing result")
+	}
+}
+
+func TestReportMarshalsStableJSON(t *testing.T) {
+	report := Report{Checks: []Result{{
+		Name: "x", Scope: ScopeProject, Status: StatusWarn, Detail: "d",
+		Remedy: NewRemedy(RemedySync, "Run sync"),
+	}}}
+	raw, err := json.Marshal(report)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{`"name":"x"`, `"scope":"project"`, `"status":"warn"`, `"detail":"d"`, `"id":"sync"`, `"action_mode":"confirmation"`} {
+		if !strings.Contains(string(raw), want) {
+			t.Fatalf("JSON %s lacks %s", raw, want)
+		}
+	}
 }

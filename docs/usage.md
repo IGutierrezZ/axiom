@@ -305,8 +305,17 @@ Checks performed:
 | Engram MCP reachability | Confirms the Engram MCP server responds |
 | Huella de máquina | Apartado informativo que lista lo que Axiom tiene a nivel de usuario: los binarios de `axiom` y Engram y el registro del hub (declarados) y, si existen, GGA, `~/.agents/skills`, los plugins de OpenCode en HOME, los restos de Kilo (`opencode.json` y plugins), de Kiro (steering `axiom.md`) y de Codex (`context7`, `features.multi_agent` y `agents.max_*` de `config.toml`), cada uno con su agente, CodeGraph global, las entradas de PATH gestionadas y `~/.gentle-ai`. Marca como `resto global` lo que solo deja una instalación global. No cuenta como aviso ni como fallo |
 | Disk space | Warns when available space is critically low |
+| Assets del proyecto (`project:assets`) | Solo si existe `.axiom/state.json` en el proyecto. Compara el digest de los assets gestionados del binario con el que registró la última instalación o sincronización del proyecto. Si difieren, avisa y propone `axiom sync --scope workspace` |
+| Adaptadores del proyecto (`project:adapters`) | Solo si existe `.axiom/state.json`. Comprueba que los agentes registrados en el proyecto siguen presentes en el workspace |
+| Workspace y topología (`project:workspace`, `project:topology`) | Solo si existe `axiom.yaml`. Valida la configuración e informa de la topología (`monorepo-embedded` o `multirepo`, con su ruta global) |
+| Repos de rol (`project:role_repos`) | Cada repositorio de rol declarado existe (si falta, es un fallo) y es un repositorio git (si no lo es, es un aviso). No se comprueba la rama |
+| Repo de specs (`project:specs_repo`) | El repositorio de specs declarado existe y es un repositorio git |
 
 Each check reports **pass**, **warn**, or **fail** with an optional remedy hint. Run `doctor` first when troubleshooting an unexpected install or sync result.
+
+Las comprobaciones de proyecto se hacen sobre la raíz del proyecto: en la CLI, la que contiene la carpeta actual; en el dashboard, el proyecto abierto. Ninguna usa la red.
+
+En el dashboard (`axiom ui`), el doctor se ejecuta al abrirlo y cada vez que cambias de proyecto. El informe del proyecto anterior desaparece en cuanto cambias. La pantalla Ecosistema muestra dos secciones, **Global** y **Proyecto**, y el estado general es correcto solo si ninguna comprobación falla.
 
 ### version
 
