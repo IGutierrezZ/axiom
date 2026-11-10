@@ -345,7 +345,7 @@ Hermes uses `delegate_task` to spawn ephemeral sub-agents. Each worker starts in
 
 **Delegation rules:**
 
-- Delegate when work needs broad exploration (4+ files), multi-file implementation, test/build execution, or fresh adversarial review.
+- Delegate by what the evidence costs, never by how many files it touches: inline evidence is one parallel batch of at most 3 calls and about 10k tokens; when it does not fit, one read-only explorer returns a handoff of at most about 2k tokens with `path:line` evidence. A writer is delegated only for a named reason (independent units in parallel, or protecting the parent context), and a unit of about 100 changed lines or less always runs inline. Test/build execution and fresh adversarial review may use fresh workers per action. Each trigger holds only when its condition truly holds; when in doubt, work inline.
 - Each worker mission must be self-contained: include the exact goal, file paths or targets, relevant prior context, constraints, expected evidence, and the toolsets/MCP/skills the worker is allowed to use.
 - Toolsets, MCP servers, and skills are NOT automatically inherited from the parent; pass them explicitly in the mission when `inherit_mcp_toolsets` is false (the default).
 - Prefer parallel workers only for truly independent workstreams. Dependencies must run sequentially.
