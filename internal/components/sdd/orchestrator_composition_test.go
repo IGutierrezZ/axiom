@@ -54,7 +54,7 @@ func TestCanonicalCompositionAddsOnlyItsKnownSteps(t *testing.T) {
 
 func TestFallbackSessionPreflightRejectsAmbiguousSource(t *testing.T) {
 	for _, agent := range []model.AgentID{model.AgentVSCodeCopilot, model.AgentCursor, model.AgentGeminiCLI, model.AgentAntigravity, model.AgentQwenCode, model.AgentHermes, model.AgentKimi, model.AgentKiroIDE, model.AgentCodex, model.AgentWindsurf} {
-		source := assets.MustRead(sddOrchestratorAsset(agent))
+		source := resolvedOrchestratorSource(sddOrchestratorAsset(agent))
 		initStart := strings.Index(source, "1. Search Engram:")
 		initEnd := strings.Index(source[initStart:], "\n\n") + initStart
 		initLookup := source[initStart:initEnd]
@@ -93,7 +93,7 @@ func TestFallbackSessionPreflightRejectsAmbiguousSource(t *testing.T) {
 						t.Fatal("drifted or duplicate replacement clause did not fail closed")
 					}
 				}()
-				source := assets.MustRead(sddOrchestratorAsset(tc.agent))
+				source := resolvedOrchestratorSource(sddOrchestratorAsset(tc.agent))
 				composeFallbackSessionPreflight(strings.Replace(source, tc.clause, mutation, 1), tc.agent)
 			})
 		}
@@ -109,7 +109,8 @@ func TestPiClosedChoiceRouteReplacesTheGenericFallback(t *testing.T) {
 		t.Fatalf("Pi composition contains %d closed-choice route clauses, want 1", got)
 	}
 
-	generic := renderBoundedReviewAsset(model.AgentPi, sddOrchestratorAsset(model.AgentPi))
+	genericPath := sddOrchestratorAsset(model.AgentPi)
+	generic := renderBoundedReviewAssetBodyFromContent(model.AgentPi, genericPath, resolvedOrchestratorSource(genericPath))
 	if got := strings.Count(generic, testGenericFallbackOnlyNativeRoute); got != 1 {
 		t.Fatalf("generic source contains %d fallback-only route clauses, want 1", got)
 	}
@@ -199,7 +200,7 @@ func assertOpenCodeConsentQuestionContract(t *testing.T, prompt string) {
 }
 
 func TestOpenCodeConsentV3ExceptionPreservesSDDEditAuthorityFallback(t *testing.T) {
-	source := assets.MustRead("opencode/sdd-orchestrator.md")
+	source := resolvedOrchestratorSource("opencode/sdd-orchestrator.md")
 	const scope = "For envelopes other than `gentle-ai.review-integration.consent/v3` (including `axiom.sdd-integration.consent/v1`), "
 	wantFallback := strings.Replace(testOpenCodeFallbackClause, "- Fallback: If ", "- Fallback: "+scope+"if ", 1)
 	wantNative := strings.Replace(openCodeNativeQuestionSourceRoute, "- Native route: The ", scope+"the ", 1)
@@ -316,7 +317,7 @@ func TestOpenCodeConsentV3QuestionRouteFailsClosedWhenSharedSourceClauseIsNotUni
 }
 
 func TestOpenCodeConsentV3QuestionRouteIsolatedToOpenCode(t *testing.T) {
-	sharedSource := assets.MustRead("opencode/sdd-orchestrator.md")
+	sharedSource := resolvedOrchestratorSource("opencode/sdd-orchestrator.md")
 	if !strings.Contains(sharedSource, testOpenCodeFallbackClause) {
 		t.Fatal("shared OpenCode/Kilocode source changed its non-consent fallback")
 	}

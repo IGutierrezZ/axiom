@@ -607,7 +607,10 @@ func TestKilocodeReviewSettingsMatchCurrentMainBaseline(t *testing.T) {
 	// auto` y los momentos de publicación; Kilocode los compone en el orquestador de OpenCode, así que el
 	// hash cambia. Deliberate, not drift.
 	// Fusión de main (#234, #235) en upstream-revision-nativa: el hash combina los dos lados.
-	const want = "657447ca694cffcd45d2e265c62ad56814211645ac6a8f9b87867253c725d38e"
+	// guia-orquestador-upstream T1: las secciones duplicadas pasan al compartido y «Native Checking
+	// Contract» unifica «and the terminal receipt» (OpenCode decía «and terminal receipt»); Kilocode lo
+	// compone, así que el hash cambia. Deliberate, not drift.
+	const want = "0e1d162d6aa5ca4adb88f72db27fbf0ccbba3cfaf7dcc28e8ba2bde40099b4d6"
 	if got != want {
 		t.Fatalf("Kilocode settings SHA-256 = %s, want current-main baseline %s", got, want)
 	}

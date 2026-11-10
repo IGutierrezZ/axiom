@@ -33,3 +33,15 @@ func resolveSharedOrchestratorSections(content string) string {
 		content = content[:start] + body + rest[stop+len("}}"):]
 	}
 }
+
+// mustReadResolved reads an embedded asset the way a runtime receives it: a
+// runtime orchestrator template comes back with its shared sections expanded,
+// because most of the text those tests assert over now lives once in the
+// shared asset. Every other asset is returned untouched.
+func mustReadResolved(assetPath string) string {
+	content := MustRead(assetPath)
+	if strings.HasSuffix(assetPath, "/sdd-orchestrator.md") {
+		return resolveSharedOrchestratorSections(content)
+	}
+	return content
+}

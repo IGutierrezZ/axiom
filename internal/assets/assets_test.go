@@ -42,7 +42,7 @@ func TestSDDOrchestratorsCarryNoRetiredWorkRunCeremony(t *testing.T) {
 	for _, path := range paths {
 		// Fold case so a re-cased reintroduction ("workrun", "WORK-START")
 		// cannot slip past the guard.
-		content := strings.ToLower(MustRead(path))
+		content := strings.ToLower(mustReadResolved(path))
 		for _, token := range retiredWorkRunCeremonyTokens {
 			t.Run(path+"#"+token, func(t *testing.T) {
 				if strings.Contains(content, strings.ToLower(token)) {
@@ -60,7 +60,7 @@ func TestOrchestratorsProjectOrganicRouting(t *testing.T) {
 	}
 
 	for _, path := range paths {
-		content := MustRead(path)
+		content := mustReadResolved(path)
 		for _, required := range []string{
 			"Mandatory Delegation Triggers",
 			"Bounded read rule", "read 1–3 files inline",
@@ -141,7 +141,7 @@ func TestAllShippedOrchestratorsKeepDeliveryUnmanaged(t *testing.T) {
 	const receiptValidation = "Commit, push, PR, direct-main, emergency, and release gates validate the same exact owner-issued receipt/authorization"
 
 	for _, path := range allSDDOrchestratorAssetPaths(t) {
-		content := MustRead(path)
+		content := mustReadResolved(path)
 		if !strings.Contains(content, ordinaryDelivery) {
 			t.Fatalf("%s does not leave delivery to ordinary repository policy", path)
 		}
@@ -153,9 +153,9 @@ func TestAllShippedOrchestratorsKeepDeliveryUnmanaged(t *testing.T) {
 
 func TestOrchestratorsRejectDelegationBypassLanguage(t *testing.T) {
 	contents := map[string]string{
-		"claude/sdd-orchestrator.md":   MustRead("claude/sdd-orchestrator.md"),
-		"opencode/sdd-orchestrator.md": MustRead("opencode/sdd-orchestrator.md"),
-		"codex/sdd-orchestrator.md":    MustRead("codex/sdd-orchestrator.md"),
+		"claude/sdd-orchestrator.md":   mustReadResolved("claude/sdd-orchestrator.md"),
+		"opencode/sdd-orchestrator.md": mustReadResolved("opencode/sdd-orchestrator.md"),
+		"codex/sdd-orchestrator.md":    mustReadResolved("codex/sdd-orchestrator.md"),
 	}
 	for path, content := range contents {
 		for _, forbidden := range []string{
@@ -421,7 +421,7 @@ func TestAllEmbeddedAssetsAreReadable(t *testing.T) {
 }
 
 func TestSDDInitRequiresBoundedWorkspaceProjectDiscovery(t *testing.T) {
-	skill := MustRead("skills/sdd-init/SKILL.md")
+	skill := mustReadResolved("skills/sdd-init/SKILL.md")
 	for _, required := range []string{
 		"authoritative workspace root",
 		"Before classifying a stack or applying any no-runner fallback",
@@ -437,7 +437,7 @@ func TestSDDInitRequiresBoundedWorkspaceProjectDiscovery(t *testing.T) {
 		}
 	}
 
-	details := MustRead("skills/sdd-init/references/init-details.md")
+	details := mustReadResolved("skills/sdd-init/references/init-details.md")
 	for _, required := range []string{
 		"explicit workspace membership",
 		"at most two directory levels",
@@ -472,7 +472,7 @@ func TestSDDInitRequiresBoundedWorkspaceProjectDiscovery(t *testing.T) {
 
 func TestSDDVerificationAndArchiveContractsIgnoreReviewContext(t *testing.T) {
 	for _, path := range []string{"skills/sdd-verify/SKILL.md", "skills/_shared/sdd-status-contract.md", "skills/sdd-archive/SKILL.md"} {
-		content := MustRead(path)
+		content := mustReadResolved(path)
 		for _, forbidden := range []string{"sdd-verify-validate", "gentle-ai.verify-result/v1", "Task Completion Gate", "remediationState:", "before settlement"} {
 			if strings.Contains(content, forbidden) {
 				t.Errorf("%s retains %q", path, forbidden)
@@ -482,7 +482,7 @@ func TestSDDVerificationAndArchiveContractsIgnoreReviewContext(t *testing.T) {
 			t.Errorf("%s omits optional verification/RDD boundary", path)
 		}
 	}
-	skill := MustRead("skills/sdd-verify/SKILL.md")
+	skill := mustReadResolved("skills/sdd-verify/SKILL.md")
 	for _, want := range []string{"including partial work", "strict_tdd", "strict-tdd-verify.md", "never fabricate historical RED or GREEN", "command results and limitations", "do not fix code or tasks", "model/provider/profile/effort", "Findings do not start automatic review", "do not gate archive"} {
 		if !strings.Contains(skill, want) {
 			t.Errorf("verify skill missing %q", want)
@@ -500,7 +500,7 @@ func TestSDDVerifyAndArchiveCommandsRouteOnlyFromRefreshedStatus(t *testing.T) {
 		"opencode/commands/sdd-verify.md",
 	} {
 		t.Run(path, func(t *testing.T) {
-			if content := MustRead(path); !strings.Contains(content, verifyRoute) {
+			if content := mustReadResolved(path); !strings.Contains(content, verifyRoute) {
 				t.Fatalf("%s must route post-verify work only from refreshed status", path)
 			}
 		})
@@ -513,7 +513,7 @@ func TestSDDVerifyAndArchiveCommandsRouteOnlyFromRefreshedStatus(t *testing.T) {
 		"skills/sdd-archive/SKILL.md",
 	} {
 		t.Run(path, func(t *testing.T) {
-			if content := MustRead(path); !strings.Contains(content, archiveRoute) {
+			if content := mustReadResolved(path); !strings.Contains(content, archiveRoute) {
 				t.Fatalf("%s must require refreshed archive readiness and route", path)
 			}
 		})
@@ -522,7 +522,7 @@ func TestSDDVerifyAndArchiveCommandsRouteOnlyFromRefreshedStatus(t *testing.T) {
 
 func TestSDDOptionalReportsNeedNoAdmissionCertificate(t *testing.T) {
 	for _, path := range []string{"skills/sdd-verify/SKILL.md", "skills/sdd-verify/references/report-format.md", "skills/_shared/sdd-phase-common.md", "skills/_shared/persistence-contract.md"} {
-		content := MustRead(path)
+		content := mustReadResolved(path)
 		for _, forbidden := range []string{"sdd-verify-validate", "gentle-ai.verify-result/v1", "same admitted bytes", "before settlement"} {
 			if strings.Contains(content, forbidden) {
 				t.Errorf("%s retains admission %q", path, forbidden)
@@ -582,7 +582,7 @@ func TestOpenCodeEmbeddedAssetLayout(t *testing.T) {
 }
 
 func TestOpenCodeBackgroundPolicyMarkersAreBalanced(t *testing.T) {
-	content := MustRead("opencode/background-subagents.md")
+	content := mustReadResolved("opencode/background-subagents.md")
 	const (
 		start = "<!-- gentle-ai:opencode-background-subagents -->"
 		end   = "<!-- /gentle-ai:opencode-background-subagents -->"
@@ -908,7 +908,7 @@ func TestSDDResearchRuntimeAssetsDeclareExactEvidenceGrants(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.path, func(t *testing.T) {
-			content := MustRead(tt.path)
+			content := mustReadResolved(tt.path)
 			for _, required := range []string{
 				tt.declaration,
 				"never bypass configured permissions.",
@@ -1008,7 +1008,7 @@ func TestFourRReviewAgentAssets(t *testing.T) {
 
 	for _, dir := range nativeDirs {
 		for _, agent := range reviewAgents {
-			content := MustRead(dir + "/" + agent + ".md")
+			content := mustReadResolved(dir + "/" + agent + ".md")
 			for _, want := range []string{"read-only reviewer", "severity: BLOCKER | CRITICAL | WARNING | SUGGESTION", "No findings."} {
 				if !strings.Contains(content, want) {
 					t.Fatalf("%s/%s.md missing %q", dir, agent, want)
@@ -1023,8 +1023,8 @@ func TestFourRReviewAgentAssets(t *testing.T) {
 	}
 
 	for _, agent := range reviewAgents {
-		md := MustRead("kimi/agents/" + agent + ".md")
-		yaml := MustRead("kimi/agents/" + agent + ".yaml")
+		md := mustReadResolved("kimi/agents/" + agent + ".md")
+		yaml := mustReadResolved("kimi/agents/" + agent + ".yaml")
 		if !strings.Contains(md, "No findings.") || !strings.Contains(yaml, "system_prompt_path: ./"+agent+".md") {
 			t.Fatalf("kimi review agent %s missing prompt or YAML binding", agent)
 		}
@@ -1036,7 +1036,7 @@ func TestFourRReviewAgentAssets(t *testing.T) {
 	}
 
 	for _, overlay := range []string{"opencode/sdd-overlay-single.json", "opencode/sdd-overlay-multi.json"} {
-		content := MustRead(overlay)
+		content := mustReadResolved(overlay)
 		for _, agent := range reviewAgents {
 			if !strings.Contains(content, `"`+agent+`"`) || !strings.Contains(content, "No findings.") {
 				t.Fatalf("%s missing OpenCode review agent %s", overlay, agent)
@@ -1052,7 +1052,7 @@ func TestFourRReviewAgentAssets(t *testing.T) {
 }
 
 func TestOpenCodeSDDOrchestratorDoesNotOwnSessionPreflight(t *testing.T) {
-	content := MustRead("opencode/sdd-orchestrator.md")
+	content := mustReadResolved("opencode/sdd-orchestrator.md")
 	for _, retired := range []string{
 		"### SDD Session Preflight (HARD GATE)", "Before executing ANY SDD command or natural-language SDD request",
 		"Use the `question` tool for SDD Session Preflight", "all four preflight groups in one single `question` tool call",
@@ -1067,7 +1067,7 @@ func TestOpenCodeSDDOrchestratorDoesNotOwnSessionPreflight(t *testing.T) {
 }
 
 func TestOpenCodeSDDOrchestratorDelegationVisibility(t *testing.T) {
-	content := MustRead("opencode/sdd-orchestrator.md")
+	content := mustReadResolved("opencode/sdd-orchestrator.md")
 
 	for _, required := range []string{
 		"<!-- gentle-ai:opencode-desktop-delegation-progress -->",
@@ -1096,7 +1096,7 @@ func TestOpenCodeSDDOrchestratorDelegationVisibility(t *testing.T) {
 }
 
 func TestOpenCodeSDDOrchestratorPreflightDoesNotUseVisibleCodesOrCanonicalUIValues(t *testing.T) {
-	content := MustRead("opencode/sdd-orchestrator.md")
+	content := mustReadResolved("opencode/sdd-orchestrator.md")
 	if start := strings.Index(content, "User-facing preflight question format:"); start >= 0 {
 		t.Fatalf("raw opencode/sdd-orchestrator.md still owns preflight UI at %d", start)
 	}
@@ -1111,7 +1111,7 @@ func TestOpenCodeSDDOrchestratorPreflightDoesNotUseVisibleCodesOrCanonicalUIValu
 }
 
 func TestClaudeSDDStatusUsesNativeForEveryDeclaredStore(t *testing.T) {
-	content := MustRead("claude/commands/sdd-status.md")
+	content := mustReadResolved("claude/commands/sdd-status.md")
 	hasStatusCmd := strings.Contains(content, "axiom sdd status [change] --cwd <repo> --json --instructions") ||
 		strings.Contains(content, "gentle-ai sdd-status [change] --cwd <repo> --json --instructions")
 	if !hasStatusCmd {
@@ -1139,7 +1139,7 @@ func TestClaudeSDDStatusUsesNativeForEveryDeclaredStore(t *testing.T) {
 }
 
 func TestClaudeSDDWorkflowRequiresSessionPreflight(t *testing.T) {
-	content := MustRead("claude/sdd-orchestrator-workflow.md")
+	content := mustReadResolved("claude/sdd-orchestrator-workflow.md")
 
 	for _, required := range []string{
 		"Session preflight is projected here by the installer from the shared canonical authority",
@@ -1222,7 +1222,7 @@ const sddOrchestratorPromptBudgetSentence = "After scope approval, expect zero f
 func TestSDDOrchestratorAssetsDefaultToAutomatic(t *testing.T) {
 	for _, path := range sddOrchestratorAutomaticDefaultRuntimes {
 		t.Run(path, func(t *testing.T) {
-			content := MustRead(path)
+			content := mustReadResolved(path)
 			if !strings.Contains(content, sddOrchestratorAutomaticDefaultSentence) {
 				t.Fatalf("%s missing byte-identical default sentence %q", path, sddOrchestratorAutomaticDefaultSentence)
 			}
@@ -1244,7 +1244,7 @@ func TestSDDFFCommandsHonorInteractiveMode(t *testing.T) {
 		"opencode/commands/sdd-ff.md",
 	} {
 		t.Run(path, func(t *testing.T) {
-			content := MustRead(path)
+			content := mustReadResolved(path)
 
 			for _, forbidden := range []string{
 				"Present a combined summary after ALL phases complete (not between each one).",
@@ -1279,7 +1279,7 @@ func TestOpenCodeSDDCommandsAreOrchestratorGuarded(t *testing.T) {
 			continue
 		}
 		path := "opencode/commands/" + entry.Name()
-		content := MustRead(path)
+		content := mustReadResolved(path)
 
 		for _, forbidden := range []string{
 			"You are an SDD sub-agent",
@@ -1310,7 +1310,7 @@ func TestOpenCodeSDDCommandsAreOrchestratorGuarded(t *testing.T) {
 		}
 	}
 
-	applyContent := MustRead("opencode/commands/sdd-apply.md")
+	applyContent := mustReadResolved("opencode/commands/sdd-apply.md")
 	for _, required := range []string{
 		"You are the `axiom-orchestrator`, not an SDD executor",
 		"If spec, design, or tasks are missing, do NOT implement",
@@ -1323,7 +1323,7 @@ func TestOpenCodeSDDCommandsAreOrchestratorGuarded(t *testing.T) {
 }
 
 func TestClaudeSDDOrchestratorChainStrategy(t *testing.T) {
-	content := MustRead("claude/sdd-orchestrator.md") + "\n" + MustRead("claude/sdd-orchestrator-workflow.md")
+	content := mustReadResolved("claude/sdd-orchestrator.md") + "\n" + mustReadResolved("claude/sdd-orchestrator-workflow.md")
 
 	for _, required := range []string{
 		"### Chain Strategy",
@@ -1371,7 +1371,7 @@ func TestNonClaudeSDDOrchestratorChainStrategyParity(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.path, func(t *testing.T) {
-			content := MustRead(tc.path)
+			content := mustReadResolved(tc.path)
 
 			for _, required := range []string{
 				"### Chain Strategy",
@@ -1426,7 +1426,7 @@ func TestDelegatedSDDProvidersForwardApplyVerifyContext(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			content := MustRead(tc.path)
+			content := mustReadResolved(tc.path)
 			section := markdownSection(content, "### Apply/Verify Context Forwarding (MANDATORY)")
 			if section == "" {
 				t.Fatalf("%s missing apply/verify context forwarding section", tc.path)
@@ -1516,7 +1516,7 @@ func TestPlatformNativeSDDOrchestratorsAvoidOpenCodePersistenceClaims(t *testing
 
 	for _, tc := range tests {
 		t.Run(tc.path, func(t *testing.T) {
-			content := MustRead(tc.path)
+			content := mustReadResolved(tc.path)
 
 			for _, required := range tc.required {
 				if !strings.Contains(content, required) {
@@ -1563,9 +1563,9 @@ func TestGentlemanLanguageInstructionsDoNotBiasEnglishSessions(t *testing.T) {
 
 	for _, tc := range personaPaths {
 		t.Run(tc.path, func(t *testing.T) {
-			content := MustRead(tc.path)
+			content := mustReadResolved(tc.path)
 			if tc.combineWith != "" {
-				content += "\n" + MustRead(tc.combineWith)
+				content += "\n" + mustReadResolved(tc.combineWith)
 			}
 
 			for _, banned := range []string{
@@ -1595,7 +1595,7 @@ func TestGentlemanLanguageInstructionsDoNotBiasEnglishSessions(t *testing.T) {
 		"kimi/output-style-gentleman.md",
 	} {
 		t.Run(path, func(t *testing.T) {
-			content := MustRead(path)
+			content := mustReadResolved(path)
 
 			for _, banned := range []string{
 				"### Spanish Input → Rioplatense Spanish (voseo)",
@@ -1629,7 +1629,7 @@ func TestGentlemanLanguageInstructionsDoNotBiasEnglishSessions(t *testing.T) {
 	}
 	for _, path := range orchestratorPaths {
 		t.Run(path, func(t *testing.T) {
-			if strings.Contains(MustRead(path), "haceme un SDD para X") {
+			if strings.Contains(mustReadResolved(path), "haceme un SDD para X") {
 				t.Fatalf("%s still contains a Spanish example that biases English sessions", path)
 			}
 		})
@@ -1644,7 +1644,7 @@ func TestGentlemanLanguageInstructionsDoNotBiasEnglishSessions(t *testing.T) {
 		"engram/protocol.md",
 	} {
 		t.Run(path, func(t *testing.T) {
-			content := MustRead(path)
+			content := mustReadResolved(path)
 
 			for _, banned := range []string{
 				`"recordar"`,
@@ -1664,7 +1664,7 @@ func TestGentlemanLanguageInstructionsDoNotBiasEnglishSessions(t *testing.T) {
 		"skills/_shared/engram-convention.md",
 	} {
 		t.Run(path+"/lifecycle", func(t *testing.T) {
-			content := MustRead(path)
+			content := mustReadResolved(path)
 
 			required := []string{
 				"when Engram exposes lifecycle metadata/tooling",
@@ -1725,7 +1725,7 @@ func TestClaudeManagedOutputStylesAnchorReplyLanguageToLatestUserRequest(t *test
 
 	for _, tc := range tests {
 		t.Run(tc.path, func(t *testing.T) {
-			content := MustRead(tc.path)
+			content := mustReadResolved(tc.path)
 
 			for _, required := range languageGuardrails {
 				if !strings.Contains(content, required) {
@@ -1746,7 +1746,7 @@ func TestClaudeGentlemanPersonaPreventsEnglishGreetingCodeSwitching(t *testing.T
 	// Claude's persona section is a residual (Decision 1) — the code-switching
 	// guardrail contract now lives in the output style; evaluate the combined
 	// channel, not the persona file in isolation.
-	content := MustRead("claude/persona-gentleman.md") + "\n" + MustRead("claude/output-style-gentleman.md")
+	content := mustReadResolved("claude/persona-gentleman.md") + "\n" + mustReadResolved("claude/output-style-gentleman.md")
 
 	for _, required := range []string{
 		"If the selected reply language is English, every part of the direct reply must be English: greetings, interjections, acknowledgements, transition phrases, and the first sentence.",
@@ -1785,7 +1785,7 @@ func TestPersonasContainContextualSkillLoadingDirective(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.path, func(t *testing.T) {
-			content := MustRead(tc.path)
+			content := mustReadResolved(tc.path)
 
 			// The competing hardcoded table MUST be gone.
 			if strings.Contains(content, "## Skills (Auto-load based on context)") {
@@ -1883,7 +1883,7 @@ func TestEmbeddedAssetCount(t *testing.T) {
 }
 
 func TestSDDPhaseCommonEnforcesExecutorBoundary(t *testing.T) {
-	content := MustRead("skills/_shared/sdd-phase-common.md")
+	content := mustReadResolved("skills/_shared/sdd-phase-common.md")
 
 	// Must enforce executor boundary — no delegation allowed.
 	for _, want := range []string{
@@ -1919,7 +1919,7 @@ func TestSDDPhaseCommonEnforcesExecutorBoundary(t *testing.T) {
 // the same invocation because the working directory does not persist between
 // calls.
 func TestSDDPhaseCommonResolvesOpenSpecPathsAgainstWorkspaceRoot(t *testing.T) {
-	content := MustRead("skills/_shared/sdd-phase-common.md")
+	content := mustReadResolved("skills/_shared/sdd-phase-common.md")
 
 	for _, want := range []string{
 		"## G. Working Directory and `openspec/...` Paths",
@@ -1939,7 +1939,7 @@ func TestSDDPhaseCommonResolvesOpenSpecPathsAgainstWorkspaceRoot(t *testing.T) {
 }
 
 func TestSDDStatusContractPreservesFrozenExternalV2Projection(t *testing.T) {
-	content := MustRead("skills/_shared/sdd-status-contract.md")
+	content := mustReadResolved("skills/_shared/sdd-status-contract.md")
 
 	for _, want := range []string{
 		"exact frozen external `StatusV2Projection`",
@@ -2043,7 +2043,7 @@ func TestSDDStatusContractPreservesFrozenExternalV2Projection(t *testing.T) {
 // technicalContext como campos opcionales y la regla de leer sus localizadores del
 // status en lugar de interpretar axiom.yaml.
 func TestSDDStatusContractDocumentsBaselineAndTechnicalContext(t *testing.T) {
-	content := MustRead("skills/_shared/sdd-status-contract.md")
+	content := mustReadResolved("skills/_shared/sdd-status-contract.md")
 
 	for _, want := range []string{
 		// El esquema los lista como opcionales, con su forma.
@@ -2073,7 +2073,7 @@ func TestSDDStatusContractDocumentsBaselineAndTechnicalContext(t *testing.T) {
 // REQ-27.2 y REQ-27.2b: el contrato compartido documenta el campo `workflow`, sus
 // valores y la regla de fallo cerrado hacia preguntar.
 func TestSDDStatusContractDocumentsWorkflowLane(t *testing.T) {
-	content := MustRead("skills/_shared/sdd-status-contract.md")
+	content := mustReadResolved("skills/_shared/sdd-status-contract.md")
 
 	for _, want := range []string{
 		"workflow: # always present, with or without a selected change",
@@ -2094,7 +2094,7 @@ func TestSDDStatusContractDocumentsWorkflowLane(t *testing.T) {
 // dónde se leen los localizadores de la baseline y del contexto técnico, qué se
 // lee y qué está prohibido, para que cada skill la cite en lugar de repetirla.
 func TestProjectBaselineConventionStatesLocatorsReadingAndProhibitions(t *testing.T) {
-	content := MustRead("skills/_shared/project-baseline-convention.md")
+	content := mustReadResolved("skills/_shared/project-baseline-convention.md")
 
 	for _, want := range []string{
 		// 1. Localizadores del status; nunca axiom.yaml.
@@ -2123,7 +2123,7 @@ func TestProjectBaselineConventionStatesLocatorsReadingAndProhibitions(t *testin
 // status proyecta baseline, en la skill, en su referencia y en la convención de
 // OpenSpec compartida.
 func TestSDDInitDoesNotPrescribeSpecsWithAProjectBaseline(t *testing.T) {
-	skill := MustRead("skills/sdd-init/SKILL.md")
+	skill := mustReadResolved("skills/sdd-init/SKILL.md")
 	for _, want := range []string{
 		"If the status projects `baseline`, do not create `openspec/specs/` or `openspec/INDEX.md`",
 		"`../_shared/project-baseline-convention.md`",
@@ -2133,7 +2133,7 @@ func TestSDDInitDoesNotPrescribeSpecsWithAProjectBaseline(t *testing.T) {
 		}
 	}
 
-	details := MustRead("skills/sdd-init/references/init-details.md")
+	details := mustReadResolved("skills/sdd-init/references/init-details.md")
 	for _, want := range []string{
 		"If the status projects `baseline`, do not create `openspec/specs/` or `openspec/INDEX.md`",
 		"create only `config.yaml` and `changes/archive/`",
@@ -2143,7 +2143,7 @@ func TestSDDInitDoesNotPrescribeSpecsWithAProjectBaseline(t *testing.T) {
 		}
 	}
 
-	convention := MustRead("skills/_shared/openspec-convention.md")
+	convention := mustReadResolved("skills/_shared/openspec-convention.md")
 	for _, want := range []string{
 		"`openspec/specs/` (only when the status does not project `baseline`)",
 		"no skill creates `openspec/specs/` or `openspec/INDEX.md`",
@@ -2161,7 +2161,7 @@ func TestReadingPhaseSkillsReadTheTechnicalContextEntry(t *testing.T) {
 	const want = "When the status projects `technicalContext`, read the `entry` file of each mode and consult the remaining `paths` only on demand"
 	for _, phase := range []string{"sdd-explore", "sdd-design", "sdd-apply", "sdd-verify"} {
 		t.Run(phase, func(t *testing.T) {
-			content := MustRead("skills/" + phase + "/SKILL.md")
+			content := mustReadResolved("skills/" + phase + "/SKILL.md")
 			if !strings.Contains(content, want) {
 				t.Fatalf("%s must read the technicalContext entry and consult the rest on demand: missing %q", phase, want)
 			}
@@ -2190,7 +2190,7 @@ func TestPlanningSkillsReadTheBaselineFromTheStatus(t *testing.T) {
 	)
 	for _, phase := range []string{"sdd-explore", "sdd-propose", "sdd-spec", "sdd-onboard"} {
 		t.Run(phase, func(t *testing.T) {
-			content := MustRead("skills/" + phase + "/SKILL.md")
+			content := mustReadResolved("skills/" + phase + "/SKILL.md")
 			for _, want := range []string{readBaseline, onlyDefault, "`../_shared/project-baseline-convention.md`"} {
 				if !strings.Contains(content, want) {
 					t.Errorf("%s missing baseline reading wording %q", phase, want)
@@ -2214,7 +2214,7 @@ func TestPlanningSkillsReadTheBaselineFromTheStatus(t *testing.T) {
 			"Read existing openspec/specs/<capability-name>/spec.md first",
 		},
 	} {
-		content := MustRead(path)
+		content := mustReadResolved(path)
 		for _, old := range retired {
 			if strings.Contains(content, old) {
 				t.Errorf("%s still reads openspec/specs/ unconditionally: %q", path, old)
@@ -2223,7 +2223,7 @@ func TestPlanningSkillsReadTheBaselineFromTheStatus(t *testing.T) {
 	}
 
 	t.Run("sdd-propose names only declared domains", func(t *testing.T) {
-		content := MustRead("skills/sdd-propose/SKILL.md")
+		content := mustReadResolved("skills/sdd-propose/SKILL.md")
 		if want := "name only domains that `baseline.documents` declares"; !strings.Contains(content, want) {
 			t.Errorf("sdd-propose missing %q", want)
 		}
@@ -2236,7 +2236,7 @@ func TestPlanningSkillsReadTheBaselineFromTheStatus(t *testing.T) {
 func TestSDDSpecWritesProfileDeltasAndRunsTheCheck(t *testing.T) {
 	const checkSentence = "Before you finish the spec phase with such a baseline, run `axiom sdd integrate check --cwd \"<workspaceRoot>\" --change <cambio>` and correct every violation it reports."
 
-	skill := MustRead("skills/sdd-spec/SKILL.md")
+	skill := mustReadResolved("skills/sdd-spec/SKILL.md")
 	for _, want := range []string{
 		"#### Deltas for a Project Baseline with a Requirement Profile",
 		"`integration: compose`",
@@ -2261,7 +2261,7 @@ func TestSDDSpecWritesProfileDeltasAndRunsTheCheck(t *testing.T) {
 		t.Errorf("the profile delta rules and the check sentence are out of order: %d %d %d", rules, check, fresh)
 	}
 
-	convention := MustRead("skills/_shared/project-baseline-convention.md")
+	convention := mustReadResolved("skills/_shared/project-baseline-convention.md")
 	for _, want := range []string{
 		"## 4. Deltas for a baseline with a requirement profile",
 		"a document with a requirement profile",
@@ -2283,7 +2283,7 @@ func TestSDDSpecWritesProfileDeltasAndRunsTheCheck(t *testing.T) {
 // D-16 y D-13: la convención de OpenSpec lista el delta de contexto y el plan de
 // integración en el árbol y en la tabla de rutas.
 func TestOpenSpecConventionListsTheContextDeltaAndTheIntegrationPlan(t *testing.T) {
-	convention := MustRead("skills/_shared/openspec-convention.md")
+	convention := mustReadResolved("skills/_shared/openspec-convention.md")
 	for _, want := range []string{
 		"├── context-impact.md <- context delta, only when the status projects `technicalContext.maintained`",
 		"└── integration.yaml <- integration plan and trace, written by `axiom sdd integrate prepare`",
@@ -2301,7 +2301,7 @@ func TestOpenSpecConventionListsTheContextDeltaAndTheIntegrationPlan(t *testing.
 // la clasificación es solo por ruta y el aviso nunca toca nextRecommended ni las
 // dependencias.
 func TestSDDVerifyWarnsWithoutBlockingOnADoubtfulNoImpact(t *testing.T) {
-	skill := MustRead("skills/sdd-verify/SKILL.md")
+	skill := mustReadResolved("skills/sdd-verify/SKILL.md")
 	for _, want := range []string{
 		"## Context Warning (non-blocking)",
 		"`technicalContext.maintained` declared and a context delta (`context-impact.md`) that says `Sin impacto`",
@@ -2329,7 +2329,7 @@ func TestSDDVerifyWarnsWithoutBlockingOnADoubtfulNoImpact(t *testing.T) {
 		}
 	}
 
-	report := MustRead("skills/sdd-verify/references/report-format.md")
+	report := mustReadResolved("skills/sdd-verify/references/report-format.md")
 	for _, want := range []string{
 		"**Avisos de contexto:**",
 		"the closed pattern list in `SKILL.md`",
@@ -2346,7 +2346,7 @@ func TestSDDVerifyWarnsWithoutBlockingOnADoubtfulNoImpact(t *testing.T) {
 // el contexto y remedia una compuerta `design` rechazada por el delta con una línea
 // fechada en el registro de remediación de design.md.
 func TestSDDDesignDraftsTheContextDeltaAndRemediatesTheGate(t *testing.T) {
-	skill := MustRead("skills/sdd-design/SKILL.md")
+	skill := mustReadResolved("skills/sdd-design/SKILL.md")
 	for _, want := range []string{
 		"### Step 2b: Context Delta (only with `technicalContext.maintained`)",
 		"draft `openspec/changes/{change-name}/context-impact.md`",
@@ -2370,7 +2370,7 @@ func TestSDDDesignDraftsTheContextDeltaAndRemediatesTheGate(t *testing.T) {
 // reabrir design.md, con un solo delta por cambio, y remedia una compuerta
 // `role-apply`. sdd-apply renderiza dos niveles de modelo: ambos llevan las reglas.
 func TestSDDApplyKeepsTheContextDeltaCurrentInBothModelTiers(t *testing.T) {
-	content := MustRead("skills/sdd-apply/SKILL.md")
+	content := mustReadResolved("skills/sdd-apply/SKILL.md")
 	for _, tier := range []string{"capable", "small"} {
 		t.Run(tier, func(t *testing.T) {
 			section := extractModelSectionForTest(content, tier)
@@ -2396,7 +2396,7 @@ func TestSDDApplyKeepsTheContextDeltaCurrentInBothModelTiers(t *testing.T) {
 // context-impact.md, la remediación de las compuertas por el delta (D-18) y la
 // regla de modelo de D-14 para los runtimes sin modelo por llamada.
 func TestProjectBaselineConventionCoversTheContextDeltaGatesAndModel(t *testing.T) {
-	content := MustRead("skills/_shared/project-baseline-convention.md")
+	content := mustReadResolved("skills/_shared/project-baseline-convention.md")
 	for _, want := range []string{
 		// 5. Formato del delta de contexto.
 		"## 5. The context delta (`context-impact.md`)",
@@ -2440,7 +2440,7 @@ func TestProjectBaselineConventionCoversTheContextDeltaGatesAndModel(t *testing.
 // las compuertas `design` y `role-apply` y documenta la remediación con la línea
 // fechada. El sobre nativo `gateQuestion` no cambia: la sección no nombra sus campos.
 func TestSharedGateSectionPresentsAndRemediatesTheContextDelta(t *testing.T) {
-	shared := MustRead("skills/_shared/sdd-orchestrator-sections.md")
+	shared := mustReadResolved("skills/_shared/sdd-orchestrator-sections.md")
 	const start = "<!-- sdd-orchestrator-section:SDD Change Kickoff and Block Gates:start -->"
 	const end = "<!-- sdd-orchestrator-section:SDD Change Kickoff and Block Gates:end -->"
 	from := strings.Index(shared, start)
@@ -2558,7 +2558,7 @@ func TestNoAssetOffersTheHandoffTransitionNorPrescribesHandoffPolicy(t *testing.
 	}
 
 	for _, skill := range []string{"skills/sdd-spec/SKILL.md", "skills/sdd-design/SKILL.md"} {
-		content := MustRead(skill)
+		content := mustReadResolved(skill)
 		for _, want := range []string{
 			"Listo para la fase siguiente; en `checkpointed`, el orquestador presenta la parada de la puerta con sus tres salidas.",
 			"La fase no hace commit ni push: tras la aprobación de la parada el orquestador publica los documentos con `axiom sdd publish`; el push de código y la PR son de la persona.",
@@ -2569,7 +2569,7 @@ func TestNoAssetOffersTheHandoffTransitionNorPrescribesHandoffPolicy(t *testing.
 		}
 	}
 
-	contract := MustRead("skills/_shared/sdd-status-contract.md")
+	contract := mustReadResolved("skills/_shared/sdd-status-contract.md")
 	for _, want := range []string{
 		"gates: [{ key, status, blocks, reason?, reopened?, handedOff?, handedOffTo? }]",
 		"in the order `rejected`, `hand_off`, `approved`",
@@ -2580,7 +2580,7 @@ func TestNoAssetOffersTheHandoffTransitionNorPrescribesHandoffPolicy(t *testing.
 			t.Errorf("sdd-status-contract missing %q", want)
 		}
 	}
-	convention := MustRead("skills/_shared/openspec-convention.md")
+	convention := mustReadResolved("skills/_shared/openspec-convention.md")
 	if strings.Count(convention, "legacy") < 2 || strings.Contains(convention, "Creates when the last active role's role-apply gate is approved") {
 		t.Error("openspec-convention must describe handoff.md as legacy, not as a step of the SDD flow")
 	}
@@ -2590,7 +2590,7 @@ func TestNoAssetOffersTheHandoffTransitionNorPrescribesHandoffPolicy(t *testing.
 // del archivado con integración dirigida; la convención compartida la nombra igual.
 func TestClaudeWorkflowCarriesTheArchiveDirectedIntegrationModelRule(t *testing.T) {
 	const name = "Archive Directed Integration Model (MANDATORY)"
-	content := MustRead("claude/sdd-orchestrator-workflow.md")
+	content := mustReadResolved("claude/sdd-orchestrator-workflow.md")
 	rule := markdownSection(content, "### "+name)
 	if rule == "" {
 		t.Fatalf("claude/sdd-orchestrator-workflow.md missing the %q rule", name)
@@ -2610,7 +2610,7 @@ func TestClaudeWorkflowCarriesTheArchiveDirectedIntegrationModelRule(t *testing.
 			t.Errorf("rule %q missing %q", name, want)
 		}
 	}
-	if !strings.Contains(MustRead("skills/_shared/project-baseline-convention.md"), `"`+name+`"`) {
+	if !strings.Contains(mustReadResolved("skills/_shared/project-baseline-convention.md"), `"`+name+`"`) {
 		t.Errorf("project-baseline-convention.md does not name the rule %q", name)
 	}
 	// Solo existe en la plantilla de Claude Code: los demás runtimes dependen de la
@@ -2619,7 +2619,7 @@ func TestClaudeWorkflowCarriesTheArchiveDirectedIntegrationModelRule(t *testing.
 		if path == "claude/sdd-orchestrator-workflow.md" {
 			continue
 		}
-		if strings.Contains(MustRead(path), name) {
+		if strings.Contains(mustReadResolved(path), name) {
 			t.Errorf("%s must not carry the Claude-only rule %q", path, name)
 		}
 	}
@@ -2639,7 +2639,7 @@ func TestEveryPhaseSkillForbidsWritingTheReferenceContext(t *testing.T) {
 	const want = "Never create, modify, or delete files under `technicalContext.reference` paths."
 	for _, phase := range []string{"sdd-explore", "sdd-propose", "sdd-spec", "sdd-design", "sdd-tasks", "sdd-apply", "sdd-verify", "sdd-archive"} {
 		t.Run(phase, func(t *testing.T) {
-			content := MustRead("skills/" + phase + "/SKILL.md")
+			content := mustReadResolved("skills/" + phase + "/SKILL.md")
 			if !strings.Contains(content, want) {
 				t.Fatalf("%s must forbid writing under the technicalContext.reference paths: missing %q", phase, want)
 			}
@@ -2654,7 +2654,7 @@ func TestEveryPhaseSkillForbidsWritingTheReferenceContext(t *testing.T) {
 	}
 
 	t.Run("sdd-tasks gana solo la prohibicion", func(t *testing.T) {
-		content := MustRead("skills/sdd-tasks/SKILL.md")
+		content := mustReadResolved("skills/sdd-tasks/SKILL.md")
 		if got := strings.Count(content, "technicalContext"); got != 1 {
 			t.Fatalf("sdd-tasks mentions technicalContext %d times, want only the reference prohibition (1)", got)
 		}
@@ -2665,7 +2665,7 @@ func TestOpenCodeSDDOverlaySubagentsAreExplicitExecutors(t *testing.T) {
 	for _, assetPath := range []string{"opencode/sdd-overlay-single.json", "opencode/sdd-overlay-multi.json"} {
 		t.Run(assetPath, func(t *testing.T) {
 			var root map[string]any
-			if err := json.Unmarshal([]byte(MustRead(assetPath)), &root); err != nil {
+			if err := json.Unmarshal([]byte(mustReadResolved(assetPath)), &root); err != nil {
 				t.Fatalf("Unmarshal(%q) error = %v", assetPath, err)
 			}
 
@@ -2736,7 +2736,7 @@ func TestCommandsDoNotUseEchoNPwd(t *testing.T) {
 				continue
 			}
 			path := dir + "/" + entry.Name()
-			content := MustRead(path)
+			content := mustReadResolved(path)
 			if strings.Contains(content, forbidden) {
 				t.Errorf("%s contains banned pattern %q — use a safer detection mechanism instead", path, forbidden)
 			}
@@ -2767,7 +2767,7 @@ func TestOpenCodeCommandsDetectWorkspaceAgentSide(t *testing.T) {
 			continue
 		}
 		path := "opencode/commands/" + entry.Name()
-		content := MustRead(path)
+		content := mustReadResolved(path)
 		for _, pat := range forbiddenPatterns {
 			if strings.Contains(content, pat) {
 				t.Errorf("%s contains banned shell interpolation %q — detect the workspace via the agent's bash tool instead (see #74)", path, pat)
@@ -2808,7 +2808,7 @@ func TestClaudeCommandsDetectWorkspaceAgentSide(t *testing.T) {
 			continue
 		}
 		path := "claude/commands/" + entry.Name()
-		content := MustRead(path)
+		content := mustReadResolved(path)
 		for _, pat := range forbiddenPatterns {
 			if strings.Contains(content, pat) {
 				t.Errorf("%s contains banned Claude parse-time shell interpolation %q — detect workspace/project context agent-side instead (see #837)", path, pat)
@@ -2852,9 +2852,9 @@ func TestOrchestratorsRequireAutomaticGatekeeper(t *testing.T) {
 		"STOP the automatic chain",
 	}
 	for _, path := range paths {
-		content := MustRead(path)
+		content := mustReadResolved(path)
 		if path == "claude/sdd-orchestrator.md" {
-			content += "\n" + MustRead("claude/sdd-orchestrator-workflow.md")
+			content += "\n" + mustReadResolved("claude/sdd-orchestrator-workflow.md")
 		}
 		for _, anchor := range anchors {
 			if !strings.Contains(content, anchor) {
@@ -2897,7 +2897,7 @@ func TestSDDOrchestratorsDoNotRequireRuntimeAttempts(t *testing.T) {
 
 func TestSDDOrchestratorsProjectNativeCheckingWithoutPromptOwnedLenses(t *testing.T) {
 	for _, path := range allSDDOrchestratorAssetPaths(t) {
-		content := MustRead(path)
+		content := mustReadResolved(path)
 		section := markdownSection(content, "#### Native Checking Contract")
 		if section == "" {
 			t.Fatalf("%s missing Native Checking Contract", path)
@@ -2993,7 +2993,7 @@ func TestSDDOrchestratorAssetsScopedToDedicatedAgent(t *testing.T) {
 		"kimi/sdd-orchestrator.md",
 	} {
 		t.Run(assetPath, func(t *testing.T) {
-			content := MustRead(assetPath)
+			content := mustReadResolved(assetPath)
 			dedicatedAgent := "sdd-orchestrator"
 			if assetPath == "opencode/sdd-orchestrator.md" {
 				dedicatedAgent = "gentle-orchestrator"
@@ -3020,7 +3020,7 @@ func TestSDDOrchestratorAssetsScopedToDedicatedAgent(t *testing.T) {
 // only — whether the model obeys them can be verified solely by community
 // runtime behavior.
 func TestSDDArchiveFinalStateAuthorityContract(t *testing.T) {
-	skill := MustRead("skills/sdd-archive/SKILL.md")
+	skill := mustReadResolved("skills/sdd-archive/SKILL.md")
 	for _, required := range []string{
 		"## Final-State Authority",
 		"state of the change AT CLOSE",
@@ -3061,7 +3061,7 @@ func TestSDDArchiveFinalStateAuthorityContract(t *testing.T) {
 		"windsurf/sdd-orchestrator.md",
 	}
 	for _, path := range orchestratorSurfaces {
-		content := MustRead(path)
+		content := mustReadResolved(path)
 		for _, required := range []string{
 			"Archive Final-State Handoff (MANDATORY)",
 			"forward explicit final-state facts",
@@ -3084,7 +3084,7 @@ func TestSDDArchiveFinalStateAuthorityContract(t *testing.T) {
 		"claude/commands/sdd-archive.md",
 		"opencode/commands/sdd-archive.md",
 	} {
-		content := MustRead(path)
+		content := mustReadResolved(path)
 		for _, required := range []string{
 			"intermediate snapshots",
 			"outrank stale snapshot claims",
@@ -3097,7 +3097,7 @@ func TestSDDArchiveFinalStateAuthorityContract(t *testing.T) {
 }
 
 func TestSDDArchiveStoreSpecificFilesystemContract(t *testing.T) {
-	command := MustRead("opencode/commands/sdd-archive.md")
+	command := mustReadResolved("opencode/commands/sdd-archive.md")
 	for _, required := range []string{
 		"For `openspec` or `hybrid` stores only",
 		"For `engram`, do not perform filesystem synchronization or archive moves",
@@ -3109,7 +3109,7 @@ func TestSDDArchiveStoreSpecificFilesystemContract(t *testing.T) {
 		}
 	}
 
-	skill := MustRead("skills/sdd-archive/SKILL.md")
+	skill := mustReadResolved("skills/sdd-archive/SKILL.md")
 	for _, required := range []string{
 		"target_dir=\"openspec/specs/{domain}\"",
 		"target_path=\"$target_dir/spec.md\"",
@@ -3227,7 +3227,7 @@ func TestSDDArchiveStoreSpecificFilesystemContract(t *testing.T) {
 // causa literal sin deducir el almacén y refresca el catálogo maestro solo en la
 // rama por defecto, sin tocar los bloques fijados.
 func TestSDDArchiveProjectBaselineBranch(t *testing.T) {
-	skill := MustRead("skills/sdd-archive/SKILL.md")
+	skill := mustReadResolved("skills/sdd-archive/SKILL.md")
 
 	const invocation = `axiom sdd archive-compose --cwd "<workspaceRoot>" --change "{change-name}" --document "<dominio>" [--document ...] --in-place`
 	for _, want := range []string{
@@ -3304,7 +3304,7 @@ func TestSDDArchiveProjectBaselineBranch(t *testing.T) {
 // describe los tres flujos paso a paso, las causas de parada y los límites de la
 // edición dirigida.
 func TestSDDArchiveProjectBaselineReferenceDescribesTheFlows(t *testing.T) {
-	reference := MustRead("skills/sdd-archive/references/project-baseline-integration.md")
+	reference := mustReadResolved("skills/sdd-archive/references/project-baseline-integration.md")
 
 	for _, want := range []string{
 		"## Which flow applies",
@@ -3517,7 +3517,7 @@ func runArchiveMoveTransaction(shell, root string) (string, error) {
 }
 
 func archiveFencedShellBlock(heading string) string {
-	skill := MustRead("skills/sdd-archive/SKILL.md")
+	skill := mustReadResolved("skills/sdd-archive/SKILL.md")
 	start := strings.Index(skill, heading)
 	if start < 0 {
 		panic("sdd-archive shell section is missing")
@@ -3657,7 +3657,7 @@ func isolatedGitEnvironment() []string {
 // Initial and latched failures must offer guidance, never a guessed command
 // (including the old root/empty-cwd placeholder from #3516).
 func TestSDDTaskResultArtifactsPluginUsesCoordinatorGuidanceWithoutIdentity(t *testing.T) {
-	source := MustRead("opencode/plugins/sdd-task-result-artifacts.ts")
+	source := mustReadResolved("opencode/plugins/sdd-task-result-artifacts.ts")
 	if got := strings.Count(source, "continuation: SDD_TASK_CONTINUATION_GUIDANCE"); got != 2 {
 		t.Fatalf("initial and latched failures must share safe guidance; got %d uses", got)
 	}
@@ -3667,7 +3667,7 @@ func TestSDDTaskResultArtifactsPluginUsesCoordinatorGuidanceWithoutIdentity(t *t
 		}
 	}
 	for _, path := range []string{"opencode/sdd-orchestrator.md", "skills/_shared/sdd-phase-common.md"} {
-		consumer := MustRead(path)
+		consumer := mustReadResolved(path)
 		for _, want := range []string{
 			"follow its `continuation` exactly once",
 			"execute it only when supplied as a command",
@@ -3685,7 +3685,7 @@ func TestSDDTaskResultArtifactsPluginUsesCoordinatorGuidanceWithoutIdentity(t *t
 // root the dispatcher never reads, so the actor could follow the skill and
 // still get nextRecommended: spec forever.
 func TestSDDSpecAndProposeNameTheChangeLocalSpecLocation(t *testing.T) {
-	spec := MustRead("skills/sdd-spec/SKILL.md")
+	spec := mustReadResolved("skills/sdd-spec/SKILL.md")
 	for _, required := range []string{
 		"This becomes a NEW FULL spec: openspec/changes/{change-name}/specs/<capability-name>/spec.md",
 		"never write to `openspec/specs/` during the spec phase",
@@ -3700,7 +3700,7 @@ func TestSDDSpecAndProposeNameTheChangeLocalSpecLocation(t *testing.T) {
 		t.Fatalf("skills/sdd-spec/SKILL.md still sends new capabilities to the canonical openspec/specs/ root")
 	}
 
-	propose := MustRead("skills/sdd-propose/SKILL.md")
+	propose := mustReadResolved("skills/sdd-propose/SKILL.md")
 	required := "gets a full spec at `openspec/changes/{change-name}/specs/<name>/spec.md` during the spec phase and becomes `openspec/specs/<name>/spec.md` at archive"
 	if got := strings.Count(propose, required); got != 2 {
 		t.Fatalf("skills/sdd-propose/SKILL.md contains %d copies of %q, want 2 (template comment and checklist)", got, required)
@@ -3802,7 +3802,7 @@ func TestPersonaAxiomAssetsDescribeODDWorkflowDeterministically(t *testing.T) {
 // Native task-progress routing must not be overridden by a stale executor brief.
 func TestSDDOptionalVerificationConsumersPreserveDiagnosticSemantics(t *testing.T) {
 	t.Run("apply has no retired remediation obligations", func(t *testing.T) {
-		content := MustRead("skills/sdd-apply/SKILL.md")
+		content := mustReadResolved("skills/sdd-apply/SKILL.md")
 		for _, forbidden := range []string{"failed_evidence_revision", "exhausted attempt budget", "Focused remediation is the sole"} {
 			if strings.Contains(content, forbidden) {
 				t.Errorf("apply retains retired obligation %q", forbidden)
@@ -3811,7 +3811,7 @@ func TestSDDOptionalVerificationConsumersPreserveDiagnosticSemantics(t *testing.
 	})
 	for _, runtime := range []string{"cursor", "kimi", "kiro"} {
 		t.Run(runtime, func(t *testing.T) {
-			content := MustRead(runtime + "/agents/sdd-verify.md")
+			content := mustReadResolved(runtime + "/agents/sdd-verify.md")
 			for _, want := range []string{"Read design artifact (when available)", "Missing inputs limit conclusions", "never invent passing checks or completed tasks", "refreshed native task-progress routing", "independent of diagnostic findings"} {
 				if !strings.Contains(content, want) {
 					t.Errorf("%s verify missing %q", runtime, want)
@@ -3825,7 +3825,7 @@ func TestSDDOptionalVerificationConsumersPreserveDiagnosticSemantics(t *testing.
 		})
 	}
 	t.Run("Claude command retrieves only available artifacts", func(t *testing.T) {
-		content := MustRead("claude/commands/sdd-verify.md")
+		content := mustReadResolved("claude/commands/sdd-verify.md")
 		for _, want := range []string{"Missing inputs limit conclusions", "never invent passing checks or completed tasks", "if spec_id exists:", "if design_id exists:", "if tasks_id exists:"} {
 			if !strings.Contains(content, want) {
 				t.Errorf("Claude verify missing %q", want)
@@ -3913,7 +3913,7 @@ func TestWorktreePrimitiveNamesLiveOnlyInTheRoutingDoctrineLine(t *testing.T) {
 // before the pre-flight questionnaire and `kickoff seal`. It stays in the shared
 // source, so the twelve orchestrators pick it up through their marker.
 func TestSharedKickoffSectionRunsBranchEnsureBeforeThePreflight(t *testing.T) {
-	shared := MustRead("skills/_shared/sdd-orchestrator-sections.md")
+	shared := mustReadResolved("skills/_shared/sdd-orchestrator-sections.md")
 	const start = "<!-- sdd-orchestrator-section:SDD Change Kickoff and Block Gates:start -->"
 	const end = "<!-- sdd-orchestrator-section:SDD Change Kickoff and Block Gates:end -->"
 	from := strings.Index(shared, start)
@@ -3964,7 +3964,7 @@ func TestSharedKickoffSectionRunsBranchEnsureBeforeThePreflight(t *testing.T) {
 // precedence over `edit_authority_missing`, and the archive branch in the
 // archive phase.
 func TestSDDStatusContractDocumentsBlockedWrongBranch(t *testing.T) {
-	content := MustRead("skills/_shared/sdd-status-contract.md")
+	content := mustReadResolved("skills/_shared/sdd-status-contract.md")
 	section := markdownSection(content, "## Branch Guard (`blocked(wrong_branch)`)")
 	if strings.TrimSpace(section) == "" {
 		t.Fatal("sdd-status-contract has no Branch Guard section")
@@ -4000,7 +4000,7 @@ func TestSDDStatusContractDocumentsBlockedWrongBranch(t *testing.T) {
 // tells phase agents to work in the repositories and worktrees `ensure` returned
 // by absolute path, with `--cwd` and `git -C`, instead of changing directory.
 func TestSDDPhaseCommonUsesTheAbsolutePathsOfEnsure(t *testing.T) {
-	content := MustRead("skills/_shared/sdd-phase-common.md")
+	content := mustReadResolved("skills/_shared/sdd-phase-common.md")
 	section := markdownSection(content, "## G. Working Directory and `openspec/...` Paths")
 	for _, want := range []string{
 		"`axiom branch ensure --change <c> --json`",
@@ -4019,7 +4019,7 @@ func TestSDDPhaseCommonUsesTheAbsolutePathsOfEnsure(t *testing.T) {
 // branchSkillTier returns one rendered tier of a two-tier skill, or the whole
 // file for a single-tier one.
 func branchSkillTier(path, tier string) string {
-	return extractModelSectionForTest(MustRead(path), tier)
+	return extractModelSectionForTest(mustReadResolved(path), tier)
 }
 
 // inc-25 (REQ-25.23 escenarios 1 y 3, D-19): sdd-apply no pregunta por worktrees
@@ -4027,7 +4027,7 @@ func branchSkillTier(path, tier string) string {
 // `axiom branch ensure`, `status` y `done`.
 func TestSDDApplyDelegatesBranchesAndWorktreesToAxiomBranch(t *testing.T) {
 	const path = "skills/sdd-apply/SKILL.md"
-	content := MustRead(path)
+	content := mustReadResolved(path)
 
 	for _, forbidden := range []string{
 		"Pre-vuelo de Aislamiento",
@@ -4089,7 +4089,7 @@ func TestSDDApplyDelegatesBranchesAndWorktreesToAxiomBranch(t *testing.T) {
 // operar en main ni prohíben ramas o worktrees.
 func TestSDDSpecAndDesignRemitToEnsureInsteadOfMain(t *testing.T) {
 	for _, path := range []string{"skills/sdd-spec/SKILL.md", "skills/sdd-design/SKILL.md"} {
-		content := MustRead(path)
+		content := mustReadResolved(path)
 		for _, forbidden := range []string{
 			"ODD-5.1",
 			"ODD-5.2",
@@ -4124,7 +4124,7 @@ func TestSDDSpecAndDesignRemitToEnsureInsteadOfMain(t *testing.T) {
 // que remite a la rama preparada por `ensure` y a las rutas del status.
 func TestSDDProposeAndExploreCarryTheBranchLine(t *testing.T) {
 	for _, path := range []string{"skills/sdd-propose/SKILL.md", "skills/sdd-explore/SKILL.md"} {
-		content := MustRead(path)
+		content := mustReadResolved(path)
 		for _, want := range []string{
 			"the branch that `axiom branch ensure` prepared",
 			"`workspaceRoot`",
@@ -4142,7 +4142,7 @@ func TestSDDProposeAndExploreCarryTheBranchLine(t *testing.T) {
 // en monorepo, la rama de archivado y el PR documental, y en multirepo el
 // archive in situ con la evidencia de REQ-21.16.
 func TestSDDArchiveFollowsTheArchiveBranchFlow(t *testing.T) {
-	content := MustRead("skills/sdd-archive/SKILL.md")
+	content := mustReadResolved("skills/sdd-archive/SKILL.md")
 	section := markdownSection(content, "### Archive Branch Flow")
 	if strings.TrimSpace(section) == "" {
 		t.Fatal("sdd-archive has no Archive Branch Flow section")
@@ -4205,6 +4205,13 @@ func TestSDDSkillsNameTheIntegrationBranchNotALiteral(t *testing.T) {
 		regexp.MustCompile(`(?i)\bStacked PRs to main\b`),
 		regexp.MustCompile(`(?i)\beach PR merges to main in order\b`),
 		regexp.MustCompile(`(?i)\bOnly the tracker merges to main\b`),
+		// Shared orchestrator sections carry release-channel and delivery-gate
+		// prose that says "main" without naming an integration branch: the
+		// `-main.` prerelease tag, a "main-only" commit, and the direct-main gate.
+		regexp.MustCompile("`-main\\.`"),
+		regexp.MustCompile(`(?i)\bmain-only commit\b`),
+		regexp.MustCompile(`(?i)\bprerelease or main builds\b`),
+		regexp.MustCompile(`(?i)\bdirect-main\b`),
 	}
 
 	var roots []string
@@ -4228,7 +4235,7 @@ func TestSDDSkillsNameTheIntegrationBranchNotALiteral(t *testing.T) {
 				return err
 			}
 			scanned++
-			for number, line := range strings.Split(MustRead(path), "\n") {
+			for number, line := range strings.Split(mustReadResolved(path), "\n") {
 				rest := line
 				for _, pattern := range allowed {
 					rest = pattern.ReplaceAllString(rest, "")
@@ -4250,7 +4257,7 @@ func TestSDDSkillsNameTheIntegrationBranchNotALiteral(t *testing.T) {
 	// The skills that decide the destination of a pull request say so in terms of
 	// the resolved integration branch.
 	for _, path := range []string{"skills/sdd-apply/SKILL.md", "skills/sdd-archive/SKILL.md"} {
-		if !strings.Contains(MustRead(path), "integration branch (`git.integration_branch`)") {
+		if !strings.Contains(mustReadResolved(path), "integration branch (`git.integration_branch`)") {
 			t.Errorf("%s does not name the integration branch as `git.integration_branch`", path)
 		}
 	}
@@ -4269,7 +4276,7 @@ func TestStopsDoctrineRetiresTheMergedPullRequestAndPublishesOnApproval(t *testi
 		"skills/sdd-design/SKILL.md",
 	}
 	for _, name := range files {
-		content := MustRead(name)
+		content := mustReadResolved(name)
 		for _, retired := range []string{
 			"Approve, push and stop",
 			"PR fusionada",
@@ -4284,11 +4291,11 @@ func TestStopsDoctrineRetiresTheMergedPullRequestAndPublishesOnApproval(t *testi
 			}
 		}
 	}
-	exits := MustRead("generic/stop-exits.md")
+	exits := mustReadResolved("generic/stop-exits.md")
 	if got := strings.Count(exits, "Code pushes, pull requests and merges remain yours."); got != 2 {
 		t.Errorf("stop-exits.md closes exits 2 and 3 with the code-push sentence %d times, want 2", got)
 	}
-	sections := MustRead("skills/_shared/sdd-orchestrator-sections.md")
+	sections := mustReadResolved("skills/_shared/sdd-orchestrator-sections.md")
 	for _, want := range []string{
 		"`--docs-publication auto`",
 		"axiom sdd publish --cwd <root> --change <name> --json",
@@ -4298,7 +4305,7 @@ func TestStopsDoctrineRetiresTheMergedPullRequestAndPublishesOnApproval(t *testi
 			t.Errorf("shared gates section missing %q", want)
 		}
 	}
-	contract := MustRead("skills/_shared/sdd-status-contract.md")
+	contract := mustReadResolved("skills/_shared/sdd-status-contract.md")
 	for _, want := range []string{"`publication: { remote, branch, prTarget?, invocation }`", "`publicationUnavailable: \"<code>\"`", "`kickoff.docsPublication`"} {
 		if !strings.Contains(contract, want) {
 			t.Errorf("status contract missing %q", want)

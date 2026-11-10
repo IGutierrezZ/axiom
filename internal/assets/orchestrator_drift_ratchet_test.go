@@ -24,14 +24,14 @@ var orchestratorSectionDriftRatchet = []struct {
 	maxVariants int
 }{
 	{"Delegation Rules", 11},
-	{"Execution Mode", 10},
+	{"Execution Mode", 9},
 	{"Review Workload Guard (MANDATORY)", 10},
 	{"State and Conventions", 10},
-	{"Automatic Mode Gatekeeper (MANDATORY)", 9},
-	{"Commands", 9},
+	{"Automatic Mode Gatekeeper (MANDATORY)", 8},
+	{"Commands", 8},
 	{"Skill Resolution Feedback", 8},
 	{"Artifact Store Mode", 7},
-	{"SDD Init Guard (MANDATORY)", 7},
+	{"SDD Init Guard (MANDATORY)", 6},
 	{"Agent Teams Orchestrator", 6},
 	{"Chain Strategy", 6},
 	{"Delivery Strategy", 4},
@@ -40,7 +40,7 @@ var orchestratorSectionDriftRatchet = []struct {
 	{"Result Contract", 3},
 	{"Dependency Graph", 2},
 	{"Language Domain Contract", 2},
-	{"Recovery Rule", 2},
+	{"Recovery Rule", 1},
 	{"SDD Workflow (Spec-Driven Development)", 2},
 	{"Native SDD Dispatcher Guard", 1},
 }
