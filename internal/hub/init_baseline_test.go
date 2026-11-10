@@ -529,6 +529,8 @@ func TestInitForceKeepsAConfigWithGitOrRepositoriesDeclarations(t *testing.T) {
 		{"repositories invalido", initEmbeddedConfig + initInvalidRepositories},
 		{"repositories que no es una lista", initEmbeddedConfig + "repositories: repo-backend\n"},
 		{"git y repositories", initEmbeddedConfig + initValidGit + initValidRepositories},
+		{"workflow valido", initEmbeddedConfig + "workflow:\n  lane: ask\n"},
+		{"workflow invalido", initEmbeddedConfig + "workflow:\n  lane: SDD\n"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -549,7 +551,7 @@ func TestInitForceKeepsAConfigWithGitOrRepositoriesDeclarations(t *testing.T) {
 			}
 			requireNote(t, res.Notes, "Se conserva")
 			requireNote(t, res.Notes, "--force")
-			for _, block := range []string{"`baseline:`", "`technical_context:`", "`git:`", "`repositories:`"} {
+			for _, block := range []string{"`baseline:`", "`technical_context:`", "`git:`", "`workflow:`", "`repositories:`"} {
 				requireNote(t, res.Notes, block)
 			}
 			if !exists(filepath.Join(dir, "openspec", "specs")) {

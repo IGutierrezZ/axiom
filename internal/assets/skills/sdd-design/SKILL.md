@@ -200,7 +200,7 @@ La rama la prepara `axiom branch ensure` (el orquestador la ejecuta antes de la 
 - If you have open questions that BLOCK the design, say so clearly — don't guess
 - **Sufficient detail**: Include enough detail to explain decisions, alternatives, rationale, interfaces and testing. Use tables or code snippets where they clarify non-obvious behavior. Do not truncate required detail to meet a word or line cap.
 - Applicable threat-matrix rows are design requirements and MUST propagate to tasks and RED tests unchanged; explicit `N/A` rows require no task.
-- Rama del cambio: la prepara `axiom branch ensure`; escribe bajo `workspaceRoot` del status y usa `--cwd` y las rutas absolutas de su JSON. Antes de la salida 2 de la parada, los artefactos quedan confirmados en la rama del cambio; publicarla es decisión de la persona.
+- Rama del cambio: la prepara `axiom branch ensure`; escribe en la rama del cambio, bajo `workspaceRoot` del status, y usa `--cwd` y las rutas absolutas de su JSON. La fase no hace commit ni push: tras la aprobación de la parada el orquestador publica los documentos con `axiom sdd publish`; el push de código y la PR son de la persona.
 - With a maintained technical context, draft the context delta in Step 2b and leave every maintained document untouched.
 - Never create, modify, or delete files under `technicalContext.reference` paths.
 - Return envelope per **Section D** from `skills/_shared/sdd-phase-common.md`.

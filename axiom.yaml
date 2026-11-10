@@ -12,6 +12,11 @@ git:
   integration_branch: "main"
   branch_prefix: "inc"
 
+# Carril de trabajo del proyecto (REQ-27.1): este repositorio conserva la pregunta
+# «ODD o SDD» en cada trabajo sustancial.
+workflow:
+  lane: "ask"
+
 roles:
   fullstack:
     name: "Axiom Fullstack Engine"

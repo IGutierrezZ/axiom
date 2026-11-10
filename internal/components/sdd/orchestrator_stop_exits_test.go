@@ -64,8 +64,8 @@ func TestEveryOrchestratorRecordsTheThreeExitsWithGateRecordOnly(t *testing.T) {
 			for _, want := range []string{
 				"`axiom sdd gate record --cwd <repo> --change <name> --gate spec|design|tasks|role-apply:<role>` is the only way to record the decision",
 				"Iterate is `--decision rejected --reason \"<text>\"`",
-				"Approve, push and stop is `--decision approved --hand-off`",
-				"Approve and continue is `--decision approved`.",
+				"Approve, publish and stop is `--decision approved --hand-off`",
+				"Approve, publish and continue is `--decision approved`.",
 				"re-present the SAME gate afterward, never skip ahead to the next one",
 				"The `integration` gate keeps its two exits",
 			} {

@@ -92,7 +92,7 @@ func TestBranchEnsureInPlaceRefusesADirtyTreeAndSwitchesACleanOne(t *testing.T) 
 	}
 
 	code, again, _ := runBranchCLI(t, "ensure", "--change", "x", "--mode", "in_place", "--json", "--cwd", repo)
-	if code != 0 || again != stdout {
+	if code != 0 || withoutCreatedFrom(t, again) != withoutCreatedFrom(t, stdout) {
 		t.Errorf("repetir debe dar el mismo JSON byte a byte: código %d\n%s\n---\n%s", code, stdout, again)
 	}
 }

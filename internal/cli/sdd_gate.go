@@ -150,6 +150,10 @@ func runSDDGateRecord(args []string, stdout io.Writer) error {
 		return err
 	}
 
+	// REQ-27.12: aprobar publica, pero `gate record` solo registra. Calcula (sin ejecutar) la orden de
+	// `axiom sdd publish` que sigue al registro, para que el orquestador la ejecute una vez.
+	publish := resolveGatePublish(parsed, workspaceRoot, handOff)
+
 	if !parsed.JSON {
 		if err := writeGateRecordHeader(stdout, parsed, handOff); err != nil {
 			return err
@@ -158,6 +162,8 @@ func runSDDGateRecord(args []string, stdout io.Writer) error {
 			if err := writeHandOffDelivery(stdout, handOff); err != nil {
 				return err
 			}
+		} else if err := writePublishNext(stdout, publish); err != nil {
+			return err
 		}
 	}
 
@@ -184,7 +190,7 @@ func runSDDGateRecord(args []string, stdout io.Writer) error {
 	}
 
 	if parsed.JSON {
-		return writeGateRecordJSON(stdout, parsed, handOff, lastRoleClosed)
+		return writeGateRecordJSON(stdout, parsed, handOff, publish, lastRoleClosed)
 	}
 	return nil
 }

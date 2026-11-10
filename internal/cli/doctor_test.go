@@ -298,7 +298,7 @@ func TestExecutableExtensionsFor(t *testing.T) {
 func TestCheckStateJSON_Missing(t *testing.T) {
 	homeDir := t.TempDir()
 
-	got := checkStateJSON(homeDir)
+	got := checkStateJSON(homeDir, EffectiveStateStore(homeDir))
 
 	if got.Status != CheckStatusWarn {
 		t.Errorf("expected warn for missing state, got %s", got.Status)
@@ -318,7 +318,7 @@ func TestCheckStateJSON_Malformed(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	got := checkStateJSON(homeDir)
+	got := checkStateJSON(homeDir, EffectiveStateStore(homeDir))
 
 	if got.Status != CheckStatusFail {
 		t.Errorf("expected fail for malformed state, got %s", got.Status)
@@ -339,7 +339,7 @@ func TestCheckStateJSON_AgentConfigDirMissing(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(stateDir, "state.json"), []byte(payload), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	got := checkStateJSON(homeDir)
+	got := checkStateJSON(homeDir, EffectiveStateStore(homeDir))
 
 	if got.Status != CheckStatusWarn {
 		t.Errorf("expected warn for missing config dir, got %s", got.Status)
@@ -371,7 +371,7 @@ func TestCheckStateJSON_ManagedConfigPathUnreadable(t *testing.T) {
 		t.Fatal("unreadable managed config path unexpectedly exists")
 	}
 
-	got := checkStateJSON(homeDir)
+	got := checkStateJSON(homeDir, EffectiveStateStore(homeDir))
 
 	if got.Status != CheckStatusWarn {
 		t.Fatalf("expected warn for unreadable managed config path, got %s: %s", got.Status, got.Detail)
@@ -421,7 +421,7 @@ func setupDanglingOpenCodeFixture(t *testing.T, statePayload, symlinkTarget stri
 func TestCheckStateJSON_AgentConfigDirDanglingSymlink(t *testing.T) {
 	homeDir, configDir, _ := setupDanglingOpenCodeFixture(t, `{"installed_agents":["opencode"]}`, "")
 
-	got := checkStateJSON(homeDir)
+	got := checkStateJSON(homeDir, EffectiveStateStore(homeDir))
 
 	if got.Status != CheckStatusWarn {
 		t.Fatalf("expected warn for dangling config symlink, got %s: %s", got.Status, got.Detail)
@@ -449,7 +449,7 @@ func TestCheckStateJSON_AgentConfigDirDanglingSymlink(t *testing.T) {
 
 func TestCheckStateJSON_AgentConfigDirSymlinkLoop(t *testing.T) {
 	homeDir, _, _ := setupDanglingOpenCodeFixture(t, `{"installed_agents":["opencode"]}`, "opencode")
-	if got := checkStateJSON(homeDir); got.Status != CheckStatusWarn || !strings.Contains(got.Detail, "could not be inspected") || strings.Contains(got.Detail, "dangling symlinks") {
+	if got := checkStateJSON(homeDir, EffectiveStateStore(homeDir)); got.Status != CheckStatusWarn || !strings.Contains(got.Detail, "could not be inspected") || strings.Contains(got.Detail, "dangling symlinks") {
 		t.Fatalf("expected inspection warning for config symlink loop, got %s: %s", got.Status, got.Detail)
 	}
 }
@@ -457,7 +457,7 @@ func TestCheckStateJSON_AgentConfigDirSymlinkLoop(t *testing.T) {
 func TestCheckStateJSON_DanglingAndAbsentConfigDirsSuppressSync(t *testing.T) {
 	homeDir, configDir, _ := setupDanglingOpenCodeFixture(t, `{"installed_agents":["opencode","claude-code"]}`, "")
 
-	got := checkStateJSON(homeDir)
+	got := checkStateJSON(homeDir, EffectiveStateStore(homeDir))
 
 	if got.Status != CheckStatusWarn {
 		t.Fatalf("expected warn for mixed dangling/absent config dirs, got %s: %s", got.Status, got.Detail)
@@ -493,7 +493,7 @@ func TestCheckStateJSON_DanglingAncestorSymlinkSuppressesSync(t *testing.T) {
 		t.Fatalf("managed path under dangling ancestor: lstat err = %v, want not-exist", err)
 	}
 
-	got := checkStateJSON(homeDir)
+	got := checkStateJSON(homeDir, EffectiveStateStore(homeDir))
 
 	if got.Status != CheckStatusWarn {
 		t.Fatalf("expected warn for dangling ancestor symlink, got %s: %s", got.Status, got.Detail)
@@ -532,7 +532,7 @@ func TestCheckStateJSON_AbsentAncestorChainKeepsSyncRemedy(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	got := checkStateJSON(homeDir)
+	got := checkStateJSON(homeDir, EffectiveStateStore(homeDir))
 
 	if got.Status != CheckStatusWarn {
 		t.Fatalf("expected warn for absent config dir, got %s: %s", got.Status, got.Detail)
@@ -562,7 +562,7 @@ func TestCheckStateJSON_HealthySymlinkAncestorKeepsSyncRemedy(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	got := checkStateJSON(homeDir)
+	got := checkStateJSON(homeDir, EffectiveStateStore(homeDir))
 
 	if got.Status != CheckStatusWarn {
 		t.Fatalf("expected warn for absent config dir, got %s: %s", got.Status, got.Detail)
@@ -591,7 +591,7 @@ func TestCheckStateJSON_OK(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	got := checkStateJSON(homeDir)
+	got := checkStateJSON(homeDir, EffectiveStateStore(homeDir))
 
 	if got.Status != CheckStatusPass {
 		t.Errorf("expected pass, got %s: %s", got.Status, got.Detail)
@@ -612,7 +612,7 @@ func TestCheckInstalledAssetVersion_MatchingPass(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	got := checkInstalledAssetVersion(homeDir)
+	got := checkInstalledAssetVersion(EffectiveStateStore(homeDir))
 	if got.Status != CheckStatusPass {
 		t.Errorf("expected pass, got %s: %s", got.Status, got.Detail)
 	}
@@ -629,7 +629,7 @@ func TestCheckInstalledAssetVersion_SkewWarning(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	got := checkInstalledAssetVersion(homeDir)
+	got := checkInstalledAssetVersion(EffectiveStateStore(homeDir))
 	if got.Status != CheckStatusWarn {
 		t.Errorf("expected warn for version skew, got %s: %s", got.Status, got.Detail)
 	}
@@ -1067,6 +1067,8 @@ func TestRunDoctor_IntegrationAllMocked(t *testing.T) {
 	}()
 	stubDoctorUserPath(t, nil)
 
+	// El proyecto de la carpeta actual aporta sus propias comprobaciones: se aísla en una carpeta sin axiom.yaml.
+	t.Chdir(t.TempDir())
 	homeDir := t.TempDir()
 	stateDir := filepath.Join(homeDir, ".axiom")
 	if err := os.MkdirAll(stateDir, 0o755); err != nil {
@@ -1221,7 +1223,7 @@ func TestDoctorSyncDisagreement_RealCLIBoundary(t *testing.T) {
 	if _, err := os.Stat(configDir); !os.IsNotExist(err) {
 		t.Fatalf("dangling managed path stat error = %v, want not-exist", err)
 	}
-	doctorResult := checkStateJSON(homeDir)
+	doctorResult := checkStateJSON(homeDir, EffectiveStateStore(homeDir))
 	if doctorResult.Status != CheckStatusWarn {
 		t.Fatalf("Doctor result = %s, want warn: %s", doctorResult.Status, doctorResult.Detail)
 	}

@@ -20,6 +20,7 @@ type Git interface {
 	Worktrees(ctx context.Context, dir string) ([]WorktreeEntry, error)
 	DirtyPaths(ctx context.Context, dir string) ([]string, error)
 	CreateBranch(ctx context.Context, dir, name, startPoint string) error
+	CreateTrackingBranch(ctx context.Context, dir, name, remoteRef string) error // adopta refs/remotes/origin/<name>, sin red
 	AddWorktree(ctx context.Context, dir, path, branch string) error
 	Switch(ctx context.Context, dir, branch string) error
 	RemoveWorktree(ctx context.Context, dir, path string, force bool) error

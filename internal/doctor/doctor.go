@@ -11,6 +11,12 @@ const (
 	CheckInstalledAssetVersion CheckID = "installed:asset_version"
 	CheckEngramReachable       CheckID = "engram:reachable"
 	CheckDiskSpace             CheckID = "disk:space"
+	CheckProjectAssets         CheckID = "project:assets"
+	CheckProjectAdapters       CheckID = "project:adapters"
+	CheckProjectWorkspace      CheckID = "project:workspace"
+	CheckProjectTopology       CheckID = "project:topology"
+	CheckProjectRoleRepos      CheckID = "project:role_repos"
+	CheckProjectSpecsRepo      CheckID = "project:specs_repo"
 )
 
 // ToolCheckID returns the stable check identifier for a tool binary.
@@ -38,6 +44,7 @@ const (
 	RemedyStartEngram      RemedyID = "start-engram"
 	RemedyInspectEngram    RemedyID = "inspect-engram"
 	RemedyFreeDiskSpace    RemedyID = "free-disk-space"
+	RemedyFixWorkspace     RemedyID = "fix-workspace"
 )
 
 // RemedyCategory groups remedies by the resource they concern.
@@ -72,13 +79,13 @@ const (
 
 // Remedy describes a possible response without performing it.
 type Remedy struct {
-	ID                 RemedyID
-	Description        string
-	Category           RemedyCategory
-	ActionMode         ActionMode
-	Eligible           bool
-	EligibilityReason  string
-	SupportedPlatforms []Platform
+	ID                 RemedyID       `json:"id"`
+	Description        string         `json:"description"`
+	Category           RemedyCategory `json:"category"`
+	ActionMode         ActionMode     `json:"action_mode"`
+	Eligible           bool           `json:"eligible"`
+	EligibilityReason  string         `json:"eligibility_reason,omitempty"`
+	SupportedPlatforms []Platform     `json:"supported_platforms,omitempty"`
 }
 
 // NewRemedy classifies a remedy without making it executable.
@@ -98,6 +105,8 @@ func NewRemedy(id RemedyID, description string) *Remedy {
 		r.EligibilityReason = "requires managed state and existing sync safeguards"
 	case RemedyStartEngram, RemedyInspectEngram:
 		r.Category, r.EligibilityReason = RemedyCategoryService, "external process and log ownership is unknown"
+	case RemedyFixWorkspace:
+		r.Category, r.EligibilityReason = RemedyCategoryConfiguration, "the workspace layout is user-owned"
 	case RemedyFreeDiskSpace:
 		r.Category, r.EligibilityReason = RemedyCategoryStorage, "disk cleanup is user-owned"
 	default:
@@ -110,23 +119,55 @@ func supportedPlatforms() []Platform {
 	return []Platform{PlatformWindows, PlatformMacOS, PlatformLinux, PlatformWSL}
 }
 
+// Scope tells whether a check looks at the machine or at one project.
+type Scope string
+
+const (
+	// ScopeGlobal groups the checks that do not depend on the open project:
+	// tools, Engram, disk and the user-level state.
+	ScopeGlobal Scope = "global"
+	// ScopeProject groups the checks that read the project root.
+	ScopeProject Scope = "project"
+)
+
+// Options say what a doctor run looks at, so that it never depends on the
+// working directory of the process.
+type Options struct {
+	// Home is the user's home directory.
+	Home string
+	// Root is the project root; empty means "no project".
+	Root string
+}
+
 // Result contains evidence produced by one check.
 type Result struct {
-	Name   CheckID
-	Status Status
-	Detail string
-	Remedy *Remedy
+	Name   CheckID `json:"name"`
+	Scope  Scope   `json:"scope"`
+	Status Status  `json:"status"`
+	Detail string  `json:"detail"`
+	Remedy *Remedy `json:"remedy,omitempty"`
 }
 
 // Report preserves checks in execution order.
 type Report struct {
-	Checks []Result
+	Checks []Result `json:"checks"`
 }
 
-// Check is a read-only diagnostic operation.
+// Failed reports whether any check ended in StatusFail.
+func (r Report) Failed() bool {
+	for _, c := range r.Checks {
+		if c.Status == StatusFail {
+			return true
+		}
+	}
+	return false
+}
+
+// Check is a read-only diagnostic operation. An empty Scope means ScopeGlobal.
 type Check struct {
-	ID  CheckID
-	Run func(context.Context) Result
+	ID    CheckID
+	Scope Scope
+	Run   func(context.Context) Result
 }
 
 // Runner executes checks deterministically in declaration order.
@@ -140,6 +181,10 @@ func (r Runner) Run(ctx context.Context) Report {
 	for _, check := range r.Checks {
 		result := runCheck(ctx, check)
 		result.Name = check.ID
+		result.Scope = check.Scope
+		if result.Scope == "" {
+			result.Scope = ScopeGlobal
+		}
 		report.Checks = append(report.Checks, result)
 	}
 	return report

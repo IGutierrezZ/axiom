@@ -53,7 +53,7 @@ type ownMarkers struct {
 }
 
 // declares informa de si el axiom.yaml existente declara `baseline:`,
-// `technical_context:`, `git:` o `repositories:`, válidos o no, o no se puede
+// `technical_context:`, `git:`, `workflow:` o `repositories:`, válidos o no, o no se puede
 // leer: con --force no se sobrescribe un fichero cuyas declaraciones la
 // regeneración perdería (m13). Un bloque inválido cuenta igual que uno válido,
 // porque lo que se pierde es lo que el usuario escribió.
@@ -66,6 +66,7 @@ func (m ownMarkers) declares() bool {
 		d.Baseline != nil || d.BaselineErr != nil ||
 		d.TechnicalContext != nil || d.TechnicalContextErr != nil ||
 		d.Git != nil || d.GitErr != nil ||
+		d.Workflow != nil || d.WorkflowErr != nil ||
 		len(d.Repositories) > 0 || d.RepositoriesErr != nil
 }
 
@@ -187,7 +188,7 @@ func (ini *Initializer) Init(opts InitOptions) (*InitResult, error) {
 	// declaración (m13).
 	preserveConfig := alreadyExisted && opts.Force && markers.declares()
 	if preserveConfig {
-		notes = append(notes, fmt.Sprintf("Se conserva %s sin sobrescribirlo aunque se pidió --force: declara `baseline:`, `technical_context:`, `git:` o `repositories:`, o no se puede leer, y regenerarlo perdería esa declaración. Edítalo a mano o retira esos bloques antes de volver a ejecutar `axiom init --force`.", pathquote.Quote(configPath)))
+		notes = append(notes, fmt.Sprintf("Se conserva %s sin sobrescribirlo aunque se pidió --force: declara `baseline:`, `technical_context:`, `git:`, `workflow:` o `repositories:`, o no se puede leer, y regenerarlo perdería esa declaración. Edítalo a mano o retira esos bloques antes de volver a ejecutar `axiom init --force`.", pathquote.Quote(configPath)))
 	}
 
 	writeBaseline := ownership == workspace.BaselineDefault

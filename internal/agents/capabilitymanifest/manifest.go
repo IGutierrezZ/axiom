@@ -42,7 +42,7 @@ const (
 
 type SDDSelectionPolicy string
 
-const SDDSelectionExplicitRequestOrAcceptedProposal SDDSelectionPolicy = "explicit_request_or_accepted_proposal"
+const SDDSelectionExplicitRequestProjectLaneOrAcceptedProposal SDDSelectionPolicy = "explicit_request_project_lane_or_accepted_proposal"
 
 var ErrUnsupportedAgent = errors.New("unsupported agent capability manifest")
 
@@ -217,7 +217,7 @@ func CanonicalImplementationRouting() ImplementationRoutingFacts {
 		SDD: SDDProposalFacts{
 			ProposeWhenSubstantialOrAmbiguous:     true,
 			DurableArtifactsMustReduceUncertainty: true,
-			SelectionPolicy:                       SDDSelectionExplicitRequestOrAcceptedProposal,
+			SelectionPolicy:                       SDDSelectionExplicitRequestProjectLaneOrAcceptedProposal,
 		},
 	}
 }

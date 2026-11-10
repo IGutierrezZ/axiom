@@ -33,7 +33,7 @@ func RunSDDKickoff(args []string, stdout io.Writer) error {
 
 func renderSDDKickoffHelp(stdout io.Writer) error {
 	_, _ = fmt.Fprintln(stdout, "Uso: axiom sdd kickoff <seal|show> [argumentos]")
-	_, _ = fmt.Fprintln(stdout, "  seal --cwd <ruta> --change <nombre> (--execution-style continuous|checkpointed | --from-session-pace interactive|auto) [--role <id>[:blocking|deferred|optional] ...] [--deployment-target local|staging|production] [--json]")
+	_, _ = fmt.Fprintln(stdout, "  seal --cwd <ruta> --change <nombre> (--execution-style continuous|checkpointed | --from-session-pace interactive|auto) [--docs-publication auto (solo con continuous)] [--role <id>[:blocking|deferred|optional] ...] [--deployment-target local|staging|production] [--json]")
 	_, _ = fmt.Fprintln(stdout, "  seal --infer --cwd <ruta> --change <nombre> [--json]   (retro-sellado conservador, REQ-21.4)")
 	_, _ = fmt.Fprintln(stdout, "  show --cwd <ruta> --change <nombre> [--json]")
 	return nil
@@ -128,8 +128,12 @@ func renderKickoffSummaryText(k kickoff.Kickoff, wrote bool) string {
 	for _, r := range k.Config.Roles {
 		roles = append(roles, fmt.Sprintf("%s:%s", r.Role, r.GatePolicy))
 	}
-	return fmt.Sprintf("%s para %q: flow_mode=%s execution_style=%s roles=%v deployment_target=%s sealed_by=%s",
+	text := fmt.Sprintf("%s para %q: flow_mode=%s execution_style=%s roles=%v deployment_target=%s sealed_by=%s",
 		prefix, k.Change, k.Config.FlowMode, k.Config.ExecutionStyle, roles, k.Lifecycle.DeploymentTarget, k.SealedBy)
+	if k.Config.DocsPublication != "" {
+		text += fmt.Sprintf(" docs_publication=%s", k.Config.DocsPublication)
+	}
+	return text
 }
 
 func encodeJSON(stdout io.Writer, value any) error {
@@ -160,6 +164,7 @@ type kickoffJSON struct {
 	HandoffPolicy    string            `json:"handoffPolicy,omitempty"` // deprecated (REQ-26.9): only what the file carries
 	Roles            []kickoffRoleJSON `json:"roles"`
 	DeploymentTarget string            `json:"deploymentTarget"`
+	DocsPublication  string            `json:"docsPublication,omitempty"`
 }
 
 func toKickoffJSON(k kickoff.Kickoff) kickoffJSON {
@@ -182,6 +187,7 @@ func toKickoffJSON(k kickoff.Kickoff) kickoffJSON {
 		HandoffPolicy:    string(k.Config.HandoffPolicy),
 		Roles:            roles,
 		DeploymentTarget: k.Lifecycle.DeploymentTarget,
+		DocsPublication:  string(k.Config.DocsPublication),
 	}
 }
 

@@ -402,3 +402,66 @@ func TestRunSDDKickoffJSONEmitsHandoffPolicyOnlyWhenTheFileCarriesIt(t *testing.
 		t.Fatalf("seal --json no refleja el valor de compatibilidad escrito:\n%s", sealOut.String())
 	}
 }
+
+// TestRunSDDKickoffSealDocsPublication cubre REQ-27.4 de extremo a extremo: `continuous` con
+// `--docs-publication auto` escribe el campo; con checkpointed o --infer se rechaza sin escribir
+// kickoff.yaml; sellar sin el flag no escribe el campo; un segundo seal no lo reescribe.
+func TestRunSDDKickoffSealDocsPublication(t *testing.T) {
+	t.Run("continuous con auto escribe el campo", func(t *testing.T) {
+		root, changeRoot := newGovernanceWorkspace(t, "inc-99-example")
+		var out bytes.Buffer
+		if err := RunSDDKickoff([]string{"seal", "--cwd", root, "--change", "inc-99-example", "--execution-style", "continuous", "--docs-publication", "auto"}, &out); err != nil {
+			t.Fatalf("RunSDDKickoff() error = %v", err)
+		}
+		data, err := os.ReadFile(filepath.Join(changeRoot, "kickoff.yaml"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !strings.Contains(string(data), "docs_publication: auto") {
+			t.Fatalf("kickoff.yaml sin docs_publication: auto:\n%s", data)
+		}
+		if !strings.Contains(out.String(), "docs_publication=auto") {
+			t.Fatalf("el resumen no muestra la autorizacion:\n%s", out.String())
+		}
+	})
+	t.Run("sin el flag no se escribe el campo", func(t *testing.T) {
+		root, changeRoot := newGovernanceWorkspace(t, "inc-99-example")
+		if err := RunSDDKickoff([]string{"seal", "--cwd", root, "--change", "inc-99-example", "--execution-style", "continuous"}, &bytes.Buffer{}); err != nil {
+			t.Fatalf("RunSDDKickoff() error = %v", err)
+		}
+		data, _ := os.ReadFile(filepath.Join(changeRoot, "kickoff.yaml"))
+		if strings.Contains(string(data), "docs_publication") {
+			t.Fatalf("kickoff.yaml no debe llevar docs_publication:\n%s", data)
+		}
+	})
+	for name, args := range map[string][]string{
+		"checkpointed": {"--execution-style", "checkpointed", "--docs-publication", "auto"},
+		"infer":        {"--infer", "--docs-publication", "auto"},
+		"otro valor":   {"--execution-style", "continuous", "--docs-publication", "otro"},
+	} {
+		t.Run("rechazo con "+name, func(t *testing.T) {
+			root, changeRoot := newGovernanceWorkspace(t, "inc-99-example")
+			full := append([]string{"seal", "--cwd", root, "--change", "inc-99-example"}, args...)
+			if err := RunSDDKickoff(full, &bytes.Buffer{}); err == nil {
+				t.Fatal("se esperaba un rechazo")
+			}
+			if _, err := os.Stat(filepath.Join(changeRoot, "kickoff.yaml")); err == nil {
+				t.Fatal("un rechazo no debe escribir kickoff.yaml")
+			}
+		})
+	}
+	t.Run("el segundo seal no reescribe", func(t *testing.T) {
+		root, changeRoot := newGovernanceWorkspace(t, "inc-99-example")
+		if err := RunSDDKickoff([]string{"seal", "--cwd", root, "--change", "inc-99-example", "--execution-style", "continuous"}, &bytes.Buffer{}); err != nil {
+			t.Fatal(err)
+		}
+		var second bytes.Buffer
+		if err := RunSDDKickoff([]string{"seal", "--cwd", root, "--change", "inc-99-example", "--execution-style", "continuous", "--docs-publication", "auto"}, &second); err != nil {
+			t.Fatal(err)
+		}
+		data, _ := os.ReadFile(filepath.Join(changeRoot, "kickoff.yaml"))
+		if strings.Contains(string(data), "docs_publication") || !strings.Contains(second.String(), "Kickoff ya estaba sellado") {
+			t.Fatalf("el segundo seal no debe reescribir:\n%s\n%s", data, second.String())
+		}
+	})
+}

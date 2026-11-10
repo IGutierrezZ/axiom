@@ -599,7 +599,15 @@ func TestKilocodeReviewSettingsMatchCurrentMainBaseline(t *testing.T) {
 	// validación estricta del esquema lo rechazan. Kilocode hereda el overlay, así que el
 	// hash cambia solo por esa clave. Deliberate, not drift.
 	// Fusión de main en upstream-revision-nativa: el hash combina los dos cambios anteriores.
-	const want = "ec83f406e9bde635683cc3e0fea99a059ac061e75228ef20cf1a556c48b72ddb"
+	// carril-proyecto-publicacion-docs T-06: stop-exits.md deja de nombrar la parada de plan
+	// de ODD y el compartido de kickoff gana el párrafo «SDD lane selected»; Kilocode los
+	// compone en el orquestador de OpenCode, así que el hash cambia. Deliberate, not drift.
+	// carril-proyecto-publicacion-docs T-26: stop-exits.md pasa a «aprobar, publicar y parar/seguir» y el
+	// compartido de kickoff gana el encadenado de `gate record` con `axiom sdd publish`, `--docs-publication
+	// auto` y los momentos de publicación; Kilocode los compone en el orquestador de OpenCode, así que el
+	// hash cambia. Deliberate, not drift.
+	// Fusión de main (#234, #235) en upstream-revision-nativa: el hash combina los dos lados.
+	const want = "657447ca694cffcd45d2e265c62ad56814211645ac6a8f9b87867253c725d38e"
 	if got != want {
 		t.Fatalf("Kilocode settings SHA-256 = %s, want current-main baseline %s", got, want)
 	}

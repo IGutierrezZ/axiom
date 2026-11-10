@@ -34,19 +34,65 @@ function publish(key, entry) {
   set('overview', { ...state.overview, [key]: entry });
 }
 
-async function refreshSource(key) {
+// ---- Fuentes que dependen del proyecto abierto -------------------------------------------
+//
+// El Doctor mira el proyecto abierto. Al cambiar de proyecto el informe anterior se
+// invalida (resetProjectData) y lo que llegue de una petición lanzada antes del cambio
+// no se publica: la época sube con cada cambio, y el informe lleva además la raíz que
+// examinó (`project`), que debe ser la del proyecto abierto.
+
+const PROJECT_SOURCES = ['doctor'];
+let projectEpoch = 0;
+
+function normalizePath(path) {
+  return String(path || '').split('\\').join('/').replace(/\/+$/, '').toLowerCase();
+}
+
+// activeProjectPath devuelve la ruta del proyecto abierto según la lista de proyectos, o ''.
+export function activeProjectPath() {
+  const data = state.projects;
+  if (!data || !Array.isArray(data.projects)) return '';
+  const project = data.projects.find(p => p && (p.id === data.active_workspace || p.path === data.active_workspace));
+  return project && project.path ? String(project.path) : '';
+}
+
+// isReportForProject: un informe sin `project`, o sin proyecto abierto conocido con el
+// que compararlo, se acepta; si ambos existen, tienen que ser el mismo.
+export function isReportForProject(report, expected) {
+  if (!report || !report.project || !expected) return true;
+  return normalizePath(report.project) === normalizePath(expected);
+}
+
+// resetProjectData olvida lo que se sabía del proyecto anterior (el Doctor vuelve a
+// «cargando») e ignora las respuestas que sigan en vuelo.
+export function resetProjectData() {
+  projectEpoch += 1;
+  for (const key of PROJECT_SOURCES) publish(key, { status: 'loading', data: null, error: '' });
+}
+
+async function refreshSource(key, retry = true) {
+  const epoch = projectEpoch;
+  const expected = PROJECT_SOURCES.includes(key) ? activeProjectPath() : '';
   try {
     const data = await api(SOURCES[key]);
+    if (epoch !== projectEpoch) return; // llegó tarde: el proyecto cambió y otra petición publicará
+    if (!isReportForProject(data, expected)) {
+      // Pudo compartirse una petición lanzada antes del cambio: se repite una vez.
+      if (retry) return refreshSource(key, false);
+      publish(key, { status: 'error', data: state.overview[key].data, error: 'El diagnóstico recibido no corresponde al proyecto abierto.' });
+      return;
+    }
     publish(key, { status: 'ready', data: LIST_SOURCES.has(key) ? data || [] : data, error: '' });
   } catch (err) {
     console.debug(`Error cargando ${SOURCES[key]}:`, err);
+    if (epoch !== projectEpoch) return;
     publish(key, { status: 'error', data: state.overview[key].data, error: err.message });
   }
 }
 
 // refreshOverview vuelve a consultar las fuentes indicadas (todas por defecto).
 export function refreshOverview(keys = Object.keys(SOURCES)) {
-  return Promise.all(keys.filter(key => SOURCES[key]).map(refreshSource));
+  return Promise.all(keys.filter(key => SOURCES[key]).map(key => refreshSource(key)));
 }
 
 // Cuando la pantalla de Incrementos recarga la lista (Continuar, Nuevo incremento…),

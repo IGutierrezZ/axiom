@@ -42,6 +42,19 @@ workspace:
 #   branch_prefix: feat
 
 # ------------------------------------------------------------------------------
+# Carril de Trabajo (opcional)
+# ------------------------------------------------------------------------------
+# Carril por el que el agente aborda el trabajo sustancial del proyecto:
+#   odd: carril ágil; no se pregunta el carril (SDD solo si la persona lo pide).
+#   sdd: carril formal; no se pregunta el carril. Es el valor por defecto.
+#   ask: se conserva la pregunta bloqueante «ODD o SDD» en cada trabajo.
+# Sin este bloque, o sin la clave 'lane', rige 'sdd'. El valor distingue
+# mayúsculas y una clave desconocida es un error. El trabajo pequeño y entendido
+# no abre ningún carril.
+# workflow:
+#   lane: ask
+
+# ------------------------------------------------------------------------------
 # Ajustes de Ramas por Repositorio (opcional)
 # ------------------------------------------------------------------------------
 # Un repositorio puede sustituir la rama de integración o el prefijo del bloque

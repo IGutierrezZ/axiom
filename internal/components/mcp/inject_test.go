@@ -529,18 +529,30 @@ func TestInjectClaudeWritesUserConfigAndIsIdempotent(t *testing.T) {
 		t.Fatalf("ReadFile(user config after first) error = %v", err)
 	}
 
-	// Loosen the mode: the no-op run must still re-tighten 0600.
+	// Loosen the mode: the byte-identical run must still re-tighten 0600, and
+	// that mode-only repair is a change (gentle-ai #5014).
+	loosened := false
 	if runtime.GOOS != "windows" {
 		if err := os.Chmod(userConfigPath, 0o644); err != nil {
 			t.Fatalf("Chmod(loosen) error = %v", err)
 		}
+		loosened = true
 	}
 	second, err := Inject(home, home, claudeAdapter())
 	if err != nil {
 		t.Fatalf("Inject() second error = %v", err)
 	}
-	if second.Changed {
-		t.Fatalf("Inject() second changed = true")
+	if second.Changed != loosened {
+		t.Fatalf("Inject() second changed = %v; want %v (mode-only repair)", second.Changed, loosened)
+	}
+
+	// Same bytes and same mode: a true no-op.
+	third, err := Inject(home, home, claudeAdapter())
+	if err != nil {
+		t.Fatalf("Inject() third error = %v", err)
+	}
+	if third.Changed {
+		t.Fatalf("Inject() third changed = true")
 	}
 
 	raw, err := os.ReadFile(userConfigPath)
@@ -1519,5 +1531,31 @@ func TestInjectHermesPreservesExistingTopLevelKeys(t *testing.T) {
 	text2 := string(content2)
 	if !strings.Contains(text2, "model: claude") {
 		t.Fatalf("config.yaml lost pre-existing key on second Inject:\n%s", text2)
+	}
+}
+
+// TestMergeJSONFilePreservesExistingModeOnRewrite is the representative
+// end-to-end regression test: mergeJSONFile is the settings-merge codepath
+// shared by most MCP injections, and rewriting a pre-seeded private settings
+// file must never widen it.
+func TestMergeJSONFilePreservesExistingModeOnRewrite(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("POSIX permission bits are not meaningful on Windows")
+	}
+	path := filepath.Join(t.TempDir(), "settings.json")
+	if err := os.WriteFile(path, []byte(`{"already":"set"}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := mergeJSONFile(path, DefaultContext7OverlayJSON()); err != nil {
+		t.Fatalf("mergeJSONFile() error = %v", err)
+	}
+
+	info, err := os.Stat(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := info.Mode().Perm(); got != 0o600 {
+		t.Fatalf("mode after mergeJSONFile = %v, want 0600 preserved", got)
 	}
 }

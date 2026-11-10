@@ -262,3 +262,62 @@ func TestFetchRejectsARemoteThatLooksLikeAnOption(t *testing.T) {
 		t.Errorf("el rechazo es previo a lanzar git, pero el observador vio %v", *seen)
 	}
 }
+
+// CreateTrackingBranch adopta la referencia remota local del mismo nombre con su upstream
+// configurado y sin lanzar ninguna operación remota (REQ-27.15, DD-13).
+func TestCreateTrackingBranchAdoptsTheRemoteReferenceWithUpstream(t *testing.T) {
+	ctx := context.Background()
+	repo := newRepository(t)
+	remote := t.TempDir()
+	runGit(t, remote, "init", "-q", "--bare", "-b", "main")
+	runGit(t, repo, "remote", "add", "origin", remote)
+	runGit(t, repo, "switch", "-q", "-c", "feat/x")
+	commit(t, repo, "publicado")
+	published := runGit(t, repo, "rev-parse", "HEAD")
+	runGit(t, repo, "push", "-q", "origin", "main", "feat/x")
+	runGit(t, repo, "switch", "-q", "main")
+	runGit(t, repo, "branch", "-q", "-D", "feat/x")
+	seen := observe(t)
+
+	if err := New().CreateTrackingBranch(ctx, repo, "feat/x", "refs/remotes/origin/feat/x"); err != nil {
+		t.Fatalf("CreateTrackingBranch: %v", err)
+	}
+
+	if got := runGit(t, repo, "rev-parse", "refs/heads/feat/x"); got != published {
+		t.Errorf("feat/x apunta a %s, se esperaba %s", got, published)
+	}
+	if upstream := runGit(t, repo, "for-each-ref", "--format=%(upstream)", "refs/heads/feat/x"); upstream != "refs/remotes/origin/feat/x" {
+		t.Errorf("upstream = %q, se esperaba refs/remotes/origin/feat/x", upstream)
+	}
+	for _, invocation := range *seen {
+		if remoteOperationFor(invocation) {
+			t.Errorf("adoptar no es una operación remota: %v", invocation)
+		}
+	}
+}
+
+// Una referencia que no es la remota del mismo nombre, un nombre con guion inicial o un
+// argumento vacío se rechazan antes de lanzar git, sin escribir nada.
+func TestCreateTrackingBranchRejectsMismatchedOrUnplainArguments(t *testing.T) {
+	ctx := context.Background()
+	repo := newRepository(t)
+	seen := observe(t)
+	git := New()
+
+	for name, err := range map[string]error{
+		"referencia de otra rama": git.CreateTrackingBranch(ctx, repo, "feat/x", "refs/remotes/origin/feat/y"),
+		"referencia local":        git.CreateTrackingBranch(ctx, repo, "feat/x", "refs/heads/feat/x"),
+		"otro remoto":             git.CreateTrackingBranch(ctx, repo, "feat/x", "refs/remotes/upstream/feat/x"),
+		"nombre con guion":        git.CreateTrackingBranch(ctx, repo, "-D", "refs/remotes/origin/-D"),
+		"nombre vacío":            git.CreateTrackingBranch(ctx, repo, "", "refs/remotes/origin/"),
+		"referencia con guion":    git.CreateTrackingBranch(ctx, repo, "feat/x", "--all"),
+		"referencia vacía":        git.CreateTrackingBranch(ctx, repo, "feat/x", ""),
+	} {
+		if err == nil {
+			t.Errorf("%s: debía rechazarse", name)
+		}
+	}
+	if len(*seen) != 0 {
+		t.Errorf("el rechazo es previo a lanzar git, pero el observador vio %v", *seen)
+	}
+}

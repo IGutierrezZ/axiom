@@ -162,7 +162,7 @@ func TestBranchEnsureArchiveRefusesWithoutFetchAndCreatesTheBranchWithIt(t *test
 
 	state := branchGitOutput(t, repo, "worktree", "list", "--porcelain") + branchGitOutput(t, repo, "branch", "--list")
 	code, second, _ := runBranchCLI(t, "ensure", "--change", "x", "--archive", "--fetch", "--json", "--cwd", repo)
-	if code != 0 || second != first {
+	if code != 0 || withoutCreatedFrom(t, second) != withoutCreatedFrom(t, first) {
 		t.Errorf("código %d; la repetición cambió la salida:\n%s\n---\n%s", code, first, second)
 	}
 	if got := branchGitOutput(t, repo, "worktree", "list", "--porcelain") + branchGitOutput(t, repo, "branch", "--list"); got != state {

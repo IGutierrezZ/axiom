@@ -81,7 +81,7 @@ func TestBranchEnsureExceptionBranchIsIdempotentAndAContradictionExitsWithCode1(
 	}
 
 	code, again, _ := runBranchCLI(t, "ensure", "--change", "x", "--branch", "inc/x", "--json", "--cwd", repo)
-	if code != 0 || again != first {
+	if code != 0 || withoutCreatedFrom(t, again) != withoutCreatedFrom(t, first) {
 		t.Errorf("repetir la excepción debe dar el mismo JSON byte a byte: código %d\n%s\n---\n%s", code, first, again)
 	}
 

@@ -21,6 +21,7 @@
 6. [El Archivo de Configuración Maestro (`axiom.yaml`)](#6-el-archivo-de-configuración-maestro-axiomyaml)
    - [Política de Ramas (`git:`)](#política-de-ramas-git)
    - [Ajustes por Repositorio (`repositories:`)](#ajustes-por-repositorio-repositories)
+   - [Carril de Trabajo (`workflow:`)](#carril-de-trabajo-workflow)
 7. [Gobernanza de Skills y Autoskills](#7-gobernanza-de-skills-y-autoskills)
    - [Flujo Human-in-the-Loop](#flujo-human-in-the-loop)
    - [Uso por CLI y por Web UI](#uso-por-cli-y-por-web-ui)
@@ -218,7 +219,7 @@ axiom setup
 
 Axiom prepara y retira las ramas y los worktrees de cada cambio con la familia `axiom branch`. Los orquestadores y las skills la invocan por ti (`axiom branch ensure` antes de la primera escritura de un cambio SDD o de un documento ODD); los mismos verbos están disponibles en la CLI. La política (rama de integración y prefijo) sale de `axiom.yaml` ([Política de Ramas (`git:`)](#política-de-ramas-git)); el modo de trabajo es una preferencia personal.
 
-- `axiom branch ensure --change <cambio> [--lane sdd|odd] [--mode worktree|in_place] [--archive] [--fetch] [--json]`: crea solo lo que falta (rama del cambio, ramas de rol y sus worktrees) y devuelve las rutas absolutas con las que trabajar (`--cwd`, `git -C`). Es idempotente y no usa la red salvo con `--fetch`. Con el modo `ask` y sin respuesta registrada devuelve `decision_required` (código de salida `1`) sin crear nada; se repite con `--mode`.
+- `axiom branch ensure --change <cambio> [--lane sdd|odd] [--mode worktree|in_place] [--archive] [--fetch] [--json]`: crea solo lo que falta (rama del cambio, ramas de rol y sus worktrees) y devuelve las rutas absolutas con las que trabajar (`--cwd`, `git -C`). Es idempotente y no usa la red salvo con `--fetch`. Si una rama del cambio (de cambio, de rol o de archivado) no existe en local pero su referencia `refs/remotes/origin/<rama>` ya está traída (porque otra persona la publicó y hiciste `git fetch`, o con `--fetch`), `ensure` la adopta: la crea desde esa referencia con `origin/<rama>` como rama de seguimiento, sin red, e informa `createdFrom: remote` y `createdFromRef` en `branches[]` (`base.source` sigue describiendo solo la base de integración). Si no está traída y la rama se crea desde la base, el texto sugiere borrarla, hacer `git fetch origin` y repetir `ensure`; `ensure` nunca mueve una rama local existente. Con el modo `ask` y sin respuesta registrada devuelve `decision_required` (código de salida `1`) sin crear nada; se repite con `--mode`.
 - `axiom branch status [--change <cambio>] [--json]`: solo lectura. Muestra el estado de las ramas y los worktrees del cambio, la rama destino propuesta para su PR (`prTarget`) y los cambios pendientes de archivar.
 - `axiom branch done --change <cambio> [--force]`: tras fusionar, confirma la fusión por capas (ascendencia, árbol equivalente o PR fusionado con evidencia) y elimina el worktree y la rama local. Nunca toca una rama remota y repetirlo es idempotente.
 - `axiom branch guard --agent <runtime>`: hook de la capa D (véase más abajo); no se invoca a mano.
@@ -228,7 +229,7 @@ Modelo de ramas por topología:
 - **Monorepo embebido:** el cambio vive en `<prefijo>/<cambio>`, con su worktree en `<carpeta del proyecto>-wt/<cambio>/<repositorio>`. Si varios roles tocan el mismo repositorio, `<prefijo>/<cambio>` es la rama de seguimiento y cada rol saca `<prefijo>/<cambio>-<rol>` desde ella. Los artefactos de `openspec/` van en la rama del cambio desde la primera escritura.
 - **Multirepo:** el repositorio de especificaciones se trabaja in situ en su rama de integración, sin ramas ni worktrees; cada repositorio de código con un rol recibe `<prefijo>/<cambio>` desde su propia rama de integración.
 - La persona publica (`push`) y abre los PR; `axiom branch` nunca lo hace.
-- Cada parada de un cambio SDD con paradas y la parada única del plan de ODD ofrecen tres salidas (véase «Compuertas de Bloque Formales»). Con la salida 2, «aprobar, subir y parar», los artefactos quedan confirmados en la rama del cambio y la fase siguiente solo empieza cuando la PR esté fusionada en el `prTarget`: `axiom branch ensure` en otra máquina crea la rama desde la base y no recupera trabajo sin fusionar. En el repositorio de specs de un multirepo no hay PR: es commit en la rama de integración y push a cargo de la persona.
+- Cada parada de un cambio SDD con paradas ofrece tres salidas (véase «Compuertas de Bloque Formales»); ODD no tiene paradas propias (véase «Carril de Trabajo (`workflow:`)»). Con las salidas 2 y 3, «aprobar, publicar y parar» y «aprobar, publicar y seguir», el orquestador encadena `axiom sdd gate record` y `axiom sdd publish`: la aprobación es la autorización explícita de subir los documentos del cambio a `origin/<rama>` con las credenciales de git ya configuradas, y de nada más; el push de código, la PR y el merge siguen siendo de la persona. Quien continúa en otra máquina no necesita una PR fusionada: en un monorepo-embedded basta `git fetch origin` (o `axiom branch ensure --fetch`, con autorización) y `axiom branch ensure --change <cambio>`, que adopta la rama publicada. En el repositorio de specs de un multirepo se publica la rama de integración, sin PR.
 
 El modo de trabajo (`worktree` por defecto, `in_place` o `ask`) y la raíz de los worktrees no se declaran en `axiom.yaml`: son preferencias personales del hub. Se fijan al registrar el proyecto (`axiom project add --worktree-mode in_place --worktree-root <ruta absoluta> <proyecto>`, o los dos campos del modal de registro de `axiom ui`) y `axiom branch ensure --mode` las sustituye para un cambio concreto.
 
@@ -345,6 +346,25 @@ repositories:
 - Los binarios anteriores ignoran el bloque, como el de `git:`.
 
 Los bloques `git:` y `repositories:` los aplica el verbo `axiom branch` (rama de integración y prefijo de cada repositorio): véase [Ramas y Worktrees (`axiom branch`)](#ramas-y-worktrees-axiom-branch).
+
+### Carril de Trabajo (`workflow:`)
+
+`axiom.yaml` puede declarar un bloque opcional `workflow:` con el carril por el que el agente aborda el trabajo sustancial del proyecto. Como la política de ramas, es política versionada que comparte todo el equipo:
+
+```yaml
+workflow:
+  lane: ask        # odd | sdd | ask (por defecto: sdd)
+```
+
+- `odd`: carril ágil. El agente no pregunta el carril ni siquiera ante un alcance arquitectónico; solo entra en SDD si la persona lo pide de forma explícita en esa petición.
+- `sdd`: carril formal. El agente entra directamente en el cuestionario de pre-vuelo de SDD, sin preguntar el carril.
+- `ask`: conserva la pregunta bloqueante «¿ODD ágil o SDD formal?» en cada trabajo sustancial. Este repositorio declara `ask`.
+- Sin el bloque, o sin la clave `lane`, rige `sdd`. **Cambio de comportamiento por defecto:** los proyectos con `axiom.yaml` que no declaran `workflow:` dejan de recibir la pregunta de carril y pasan a SDD; para conservar la pregunta se declara `workflow: {lane: ask}`.
+- El trabajo pequeño y entendido no abre ningún carril: no crea documento de trabajo en ninguno.
+- El valor distingue mayúsculas (`SDD` es inválido) y una clave desconocida es un error. `axiom workspace validate` rechaza un bloque inválido nombrando `workflow.lane`, con código de salida `1`; un `workflow:` inválido no impide planificar ramas ni resolver el espacio de trabajo.
+- `axiom sdd status --json` proyecta el carril efectivo en el campo `workflow` (`lane` y `source`: `declared`, `default`, `no_workspace` o `invalid`), con o sin cambio seleccionado. Sin `axiom.yaml`, o con uno inválido, proyecta `ask`: el agente pregunta antes que entrar en SDD por su cuenta.
+- ODD no tiene paradas propias: el agente crea el documento de la tarea y empieza a implementar. Las paradas con tres salidas son de las compuertas de SDD.
+- Los binarios anteriores ignoran el bloque, como el de `git:`.
 
 ---
 
@@ -483,6 +503,8 @@ Los documentos `integration: directed` y el contexto mantenido los edita el prop
 
 Axiom respeta la naturaleza del trabajo de ingeniería ofreciendo dos carriles complementarios:
 
+El carril por el que el agente aborda el trabajo sustancial lo fija el bloque `workflow:` de `axiom.yaml` (`odd`, `sdd` o `ask`; por defecto `sdd`): véase [Carril de Trabajo (`workflow:`)](#carril-de-trabajo-workflow). ODD no tiene paradas propias; las paradas con tres salidas pertenecen a las compuertas de SDD.
+
 ### A. Carril Cotidiano: ODD (Organic-Driven Development)
 Para el 90% del trabajo diario: tareas concretas, correcciones de errores y refactorizaciones sin burocracia de fases:
 * **Comando:** Se gestiona mediante `axiom odd create <nombre>` o creando el documento vivo `odd/tasks/<nombre>.md`.
@@ -497,17 +519,18 @@ Para cambios estructurales profundos, refactorizaciones de arquitectura o requer
 ```
 [ sdd-explore ] ➔ [ sdd-propose ] ➔ [ sdd-spec ] ➔ [ sdd-design ] ➔ [ sdd-tasks ] ➔ [ sdd-apply ] ➔ [ sdd-verify ] ➔ [ sdd-archive ]
 ```
-* **Determinación Temprana y Sello (`kickoff`):** Antes de crear la propuesta, `axiom sdd kickoff seal` fija de forma inmutable la modalidad de avance (continua o con paradas) y el roster de roles. La política de relevos (`handoff_policy`, `--handoff-policy`) está deprecada: el flag se acepta y se ignora, y los kickoffs nuevos escriben `handoff_policy: none` solo como valor de compatibilidad con versiones anteriores.
+* **Determinación Temprana y Sello (`kickoff`):** Antes de crear la propuesta, `axiom sdd kickoff seal` fija de forma inmutable la modalidad de avance (continua o con paradas) y el roster de roles. `--docs-publication auto` (solo con `--execution-style continuous`, nunca inferido) autoriza además publicar los documentos sin preguntar al cerrar `tasks` y tras archivar (`docs_publication: auto` en `kickoff.yaml`); sin él, un cambio continuo ofrece esas órdenes y espera. La política de relevos (`handoff_policy`, `--handoff-policy`) está deprecada: el flag se acepta y se ignora, y los kickoffs nuevos escriben `handoff_policy: none` solo como valor de compatibilidad con versiones anteriores.
 * **Compuertas de Bloque Formales:** En modalidad con paradas, cada hito (`spec`, `design`, `tasks` y el `role-apply` de cada rol) es una parada con tres salidas, y `axiom sdd gate record` es el único modo de registrar la decisión:
   ```bash
   # 1. Iterar: sigues trabajando sobre el artefacto y la parada se vuelve a presentar
   axiom sdd gate record --gate spec|design|tasks|role-apply:<rol> --decision rejected --reason "<motivo>"
-  # 2. Aprobar, subir y parar: cede la fase siguiente a otra persona (solo con almacén openspec o hybrid)
+  # 2. Aprobar, publicar y parar: cede la fase siguiente a otra persona y se publican los documentos (solo con almacén openspec o hybrid)
   axiom sdd gate record --gate spec|design|tasks|role-apply:<rol> --decision approved --hand-off [--reason "<motivo>"]
-  # 3. Aprobar y seguir: el orquestador continúa con la fase siguiente
+  # 3. Aprobar, publicar y seguir: se publican los documentos y el orquestador continúa con la fase siguiente (con almacén engram o none no se publica nada)
   axiom sdd gate record --gate spec|design|tasks|role-apply:<rol> --decision approved [--reason "<motivo>"]
   ```
-  La salida 2 se rechaza sin escribir nada si la carpeta del cambio (y, en `role-apply`, el árbol de trabajo del rol) tiene cambios sin confirmar. Si procede, registra la aprobación con la marca de cesión y devuelve el commit de `gates.yaml`, el push y los datos de la PR (`head` y `base`): Axiom no ejecuta ninguna de esas órdenes. La fase siguiente solo empieza cuando la PR esté fusionada en el `prTarget`; `axiom sdd status` muestra la cesión (`handedOff`, `handedOffTo`) sin bloquear ninguna fase. La compuerta `integration` conserva sus dos salidas (aprobar con evidencia o rechazar).
+  `gate record` solo registra: no comprueba qué está confirmado (tampoco el trabajo de un rol), no ejecuta git y, tras escribir `gates.yaml`, devuelve en `--json` la orden `publish.invocation` (`axiom sdd publish --cwd <ruta> --change <cambio> --branch <rama>`, atada a la rama con `--branch`) con el `prTarget` informativo, o `publishUnavailable` si el destino no se puede calcular. La salida 2 añade la marca de cesión y la reanudación (`git fetch origin` y `axiom branch ensure`), sin exigir una PR fusionada. La pregunta tipada de la parada (`gateQuestion`) nombra el remoto y la rama (`publication`) antes de decidir. Una publicación rechazada no deshace la aprobación ya registrada: se informa con su código y su continuación. `axiom sdd status` muestra la cesión (`handedOff`, `handedOffTo`) sin bloquear ninguna fase. La compuerta `integration` conserva sus dos salidas (aprobar con evidencia o rechazar).
+* **Publicación de los documentos (`axiom sdd publish`):** `axiom sdd publish --change <nombre> [--archive] [--branch <rama>] [--json]` confirma solo las rutas de documentación del cambio (su carpeta en `openspec/changes/<nombre>/`, `openspec/specs/`, `openspec/INDEX.md` y las rutas de `baseline` y de `technical_context.maintained` declaradas en `axiom.yaml`; nunca `reference` ni `odd/tasks/`) y sube solo la rama del cambio a `origin` con `refs/heads/<rama>:refs/heads/<rama>`, sin forzar y sin saltarse hooks. El commit usa `git commit --only` sobre esas rutas: el código preparado sigue preparado y el no preparado, intacto. No hace `fetch`, no sube código ni abre PR: si la rama tiene commits de código sin subir, los informa (`code_commits_unpublished`) y los sube la persona. En el repositorio de specs de un `multirepo` sube su rama de integración; en un monorepo o en un repositorio de código nunca sube `main` (`integration_branch`). Con `--archive` publica la rama de archivado, que sin el flag es `wrong_branch`. La salida es 0 con `published` y `up_to_date`, y 1 con una negativa tipada; `--json` escribe `axiom.sdd-publish/v1` también cuando se rechaza. Solo existe con el almacén `openspec` o `hybrid` (`store_without_files` con `engram` o `none`). Lo encadena el orquestador tras cada aprobación de una parada (véase «Compuertas de Bloque Formales») y, en continuo con `docs_publication: auto`, al cerrar `tasks` y tras archivar con `--archive`. Nota para otros proyectos: el push de la rama puede disparar su CI, que queda fuera del control de Axiom.
 * **Verificación Formal y Precondición de Integración:**
   1. `verify` valida el código mediante tests automatizados y genera `verify-report.md`.
   2. **`archive` no procede inmediatamente tras verificar:** exige registrar previamente evidencia formal de integración o despliegue en la compuerta de integración:

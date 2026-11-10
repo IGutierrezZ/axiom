@@ -313,20 +313,27 @@ type CreateHandoffResponse struct {
 	Message  string `json:"message"`
 }
 
-// DoctorCheck representa el resultado de un chequeo individual de salud del sistema.
+// DoctorCheck representa el resultado de un chequeo individual del doctor. Es el
+// resultado estructurado de internal/doctor con los estados que ya entiende la
+// interfaz (pass/warn/fail se traducen a ok/warning/error).
 type DoctorCheck struct {
-	Name           string `json:"name"`
-	Category       string `json:"category"` // "agent", "tool", "environment"
-	Status         string `json:"status"`   // "ok", "warning", "error"
-	Details        string `json:"details"`
+	Name     string `json:"name"`
+	Category string `json:"category"` // sección: "global" (la máquina) o "project" (el proyecto abierto)
+	Status   string `json:"status"`   // "ok", "warning", "error"
+	Details  string `json:"details"`
+	// Recommendation es el remedio que propone el doctor, si lo hay.
 	Recommendation string `json:"recommendation,omitempty"`
 }
 
-// DoctorReport agrupa los diagnósticos de salud del ecosistema Axiom.
+// DoctorReport agrupa los diagnósticos del doctor para un proyecto concreto.
 type DoctorReport struct {
-	Timestamp string        `json:"timestamp"`
-	Healthy   bool          `json:"healthy"`
-	Checks    []DoctorCheck `json:"checks"`
+	Timestamp string `json:"timestamp"`
+	// Project es la raíz del proyecto que se ha examinado; quien consume el
+	// informe lo compara con el proyecto abierto para descartar respuestas viejas.
+	Project string `json:"project"`
+	// Healthy es false si alguna comprobación, global o del proyecto, ha fallado.
+	Healthy bool          `json:"healthy"`
+	Checks  []DoctorCheck `json:"checks"`
 }
 
 // BackupItem describe un snapshot o respaldo gestionado en ~/.axiom/backups/.

@@ -107,6 +107,21 @@ type Result struct {
 // de salida, o quien llama canceló el contexto; un código de salida distinto de cero
 // llega en Result.ExitCode con el mensaje de git en Result.Stderr.
 func Run(ctx context.Context, dir string, args ...string) (Result, error) {
+	return RunWithTimeout(ctx, dir, runTimeout, args...)
+}
+
+// ErrTimeout lo envuelve el error que devuelven Run y RunWithTimeout cuando git
+// supera el tiempo máximo: quien llama lo distingue con errors.Is, sin analizar el
+// texto del mensaje.
+var ErrTimeout = errors.New("git superó el tiempo máximo")
+
+// RunWithTimeout es Run con un tiempo máximo propio: la misma ejecución y las mismas
+// garantías (directorio absoluto, entorno sin variables que redirigen el repositorio,
+// límites de salida y observador), con el límite fijado por quien llama. Existe para
+// las operaciones de red de la publicación, que necesitan más margen que una lectura
+// local (REQ-27.9, REQ-27.11), y sigue siendo el único punto de ejecución de git del
+// producto. Un tiempo agotado devuelve un error que envuelve ErrTimeout.
+func RunWithTimeout(ctx context.Context, dir string, timeout time.Duration, args ...string) (Result, error) {
 	if len(args) == 0 {
 		return Result{}, errors.New("git sin argumentos: indica el subcomando de git que se ejecuta")
 	}
@@ -132,7 +147,7 @@ func Run(ctx context.Context, dir string, args ...string) (Result, error) {
 		return Result{}, fmt.Errorf("git no está disponible en el PATH: instala git para ejecutar %s: %w", operation, err)
 	}
 
-	runCtx, cancel := context.WithTimeout(ctx, runTimeout)
+	runCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 	cmd := exec.CommandContext(runCtx, binary, args...)
 	cmd.Dir = dir
@@ -148,7 +163,7 @@ func Run(ctx context.Context, dir string, args ...string) (Result, error) {
 	case runErr != nil && ctx.Err() != nil:
 		return result, fmt.Errorf("%s en %s se interrumpió: %w", operation, dir, ctx.Err())
 	case runErr != nil && runCtx.Err() != nil:
-		return result, fmt.Errorf("%s en %s superó el tiempo máximo de %s", operation, dir, runTimeout)
+		return result, fmt.Errorf("%s en %s superó el tiempo máximo de %s: %w", operation, dir, timeout, ErrTimeout)
 	case errors.As(runErr, &exit):
 		result.ExitCode = exit.ExitCode()
 	case runErr != nil:

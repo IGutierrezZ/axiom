@@ -1574,7 +1574,7 @@ type syncFileSnapshot struct {
 	targetExists bool
 }
 
-var writeSyncFileAtomic = filemerge.WriteFileAtomic
+var writeSyncFileAtomic = filemerge.WriteFileAtomicMode
 
 func syncRestoreWriteMode(mode os.FileMode) os.FileMode {
 	if mode.Perm() == 0 {
