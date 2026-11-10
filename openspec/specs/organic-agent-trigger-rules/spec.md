@@ -14,7 +14,9 @@ delivery, or lifecycle transitions.
 
 Managed routing instructions MUST render from the canonical typed capability
 manifest. They MUST NOT maintain an independent prompt event catalog, risk
-router, or implementation-route selector.
+router, or implementation-route selector. The SDD selection policy fact of the
+manifest MUST state that SDD is selected only by an explicit request, by a
+lane declared by the project, or by an accepted proposal (REQ-27.16).
 
 #### Scenario: Adapter routing is rendered
 
@@ -22,6 +24,12 @@ router, or implementation-route selector.
 - WHEN its managed routing instructions are rendered
 - THEN direct, delegated-direct, and optional-SDD facts equal the canonical manifest
 - AND the rendered prose does not become runtime authority
+
+#### Scenario: The SDD selection policy includes the project lane
+
+- GIVEN the canonical capability manifest
+- WHEN the SDD selection policy fact is read
+- THEN it names explicit request, project-declared lane, and accepted proposal as the only ways to select SDD
 
 ### Requirement: Direct-inline boundary
 
@@ -84,12 +92,15 @@ workers without changing a direct implementation route or creating an SDD run.
 The routing projection MUST propose SDD only when work is genuinely substantial
 or ambiguous and durable proposal, specification, design, or task artifacts
 would materially reduce uncertainty. SDD MUST be selected only after an
-explicit request or an accepted proposal. Risk alone MUST NOT force SDD.
+explicit request, an accepted proposal, or a lane declared by the project
+(`workflow.lane: sdd`, REQ-27.3 of `sdd-lane-kickoff`), which counts as an
+explicit request. Risk alone MUST NOT force SDD.
 
 #### Scenario: User accepts an SDD proposal
 
 - GIVEN substantial ambiguity would benefit from durable planning artifacts
 - AND the user did not explicitly request SDD
+- AND the project lane is `ask`
 - WHEN the orchestrator proposes SDD
 - THEN the proposal remains a pending decision until accepted
 - AND only acceptance may bind the `sdd` implementation route
@@ -100,6 +111,20 @@ explicit request or an accepted proposal. Risk alone MUST NOT force SDD.
 - WHEN a safe smaller topology exists
 - THEN work continues through a justified direct or delegated-direct route
 - AND no SDD artifacts are fabricated
+
+#### Scenario: The project lane counts as explicit selection
+
+- GIVEN the project declares `workflow.lane: sdd` and the work is substantial
+- WHEN the orchestrator routes the work
+- THEN SDD is selected without a separate proposal
+- AND small, understood work still creates no durable artifacts
+
+#### Scenario: A declared `odd` lane keeps SDD out unless requested
+
+- GIVEN the project declares `workflow.lane: odd`
+- AND the user did not explicitly request SDD for this request
+- WHEN the orchestrator routes substantial work
+- THEN routing toward `optional-SDD` remains unactivated
 
 ### Requirement: Capability manifests describe facts, not outcomes
 
@@ -222,9 +247,10 @@ planning or task tracking, per the upstream absorption (commits `70c774f8`,
 commit-per-work-unit, configured TDD, and feature continuity on resume.
 Routing instructions toward SDD (`direct_inline`, `delegated-direct`,
 `optional-SDD`) MUST NOT replace, precede, or defer the ODD projection; SDD
-activates only after an explicit user selection or an accepted SDD proposal,
-exactly as the "SDD remains optional" requirement of this same capability
-already governs.
+activates only after an explicit user selection, a lane declared by the
+project (`workflow.lane: sdd`, which counts as an explicit selection) or an
+accepted SDD proposal, exactly as the "SDD remains optional" requirement of
+this same capability already governs.
 
 #### Scenario: ODD is projected before any routing decision
 
@@ -238,11 +264,12 @@ already governs.
 #### Scenario: SDD still requires explicit selection even with ODD as default
 
 - GIVEN ODD is projected as the orchestrator's default protocol
-- WHEN work has not received an explicit SDD request nor an accepted SDD
+- WHEN work has not received an explicit SDD request, a project-declared `sdd` lane, nor an accepted SDD
   proposal
 - THEN routing toward `optional-SDD` remains unactivated
 - AND work continues under the ODD projection or another direct
   implementation route
+
 ### Requirement: El cierre de ODD mantiene al día el contexto técnico mantenido (REQ-24.58)
 
 Las instrucciones de enrutamiento gestionadas que proyectan el protocolo ODD DEBEN incluir, en su paso de cierre, una regla mínima: si el proyecto declara un contexto técnico mantenido (`technical_context.maintained` en `axiom.yaml`) y una unidad de trabajo cambia algo que ese contexto documenta, la documentación afectada se actualiza en el mismo commit de esa unidad de trabajo. La regla NO DEBE exigir nada cuando el proyecto no declara contexto mantenido, NO DEBE autorizar la modificación de documentación declarada como de referencia (`technical_context.reference`) y NO DEBE alterar los demás pasos del protocolo ODD ni el carril SDD. La proyección DEBE seguir siendo determinista: el mismo texto en cada renderizado. Esta regla es la extensión mínima de `project-technical-context` al carril ODD, que no tiene archive.
@@ -276,7 +303,6 @@ Las instrucciones de enrutamiento gestionadas que proyectan el protocolo ODD DEB
 ### Requirement: El Protocolo ODD Prepara la Rama con `axiom branch ensure` (REQ-25.40)
 
 Las instrucciones de enrutamiento gestionadas que proyectan el protocolo ODD DEBEN sustituir la regla «branch first when on the default branch» por la ejecución de `axiom branch ensure --lane odd --change <feature>` antes de la primera escritura del documento vivo `odd/tasks/<feature>.md` y de cualquier escritura de código, y DEBEN indicar que las órdenes posteriores usan como `--cwd` las rutas absolutas que devuelve su JSON. El cierre de cada tarea mantiene el commit por unidad de trabajo, ahora en la rama que `ensure` preparó. La regla NO DEBE alterar los demás pasos del protocolo ODD ni el carril SDD, NO DEBE exigir interacción con el usuario salvo el resultado `decision_required` del modo `ask`, y la proyección DEBE seguir siendo determinista: el mismo texto en cada renderizado. Esta regla no activa SDD ni crea artefactos SDD.
-(Previously: el escenario «El resto del protocolo no cambia» no tenía en cuenta la parada única tras el plan que añade REQ-26.10)
 
 #### Scenario: El paso de implementación invoca `ensure`
 - **DADO** un adaptador registrado con un manifiesto de capacidades válido
@@ -292,7 +318,7 @@ Las instrucciones de enrutamiento gestionadas que proyectan el protocolo ODD DEB
 #### Scenario: El resto del protocolo no cambia
 - **DADO** las instrucciones renderizadas antes y después de la regla de rama de este requisito
 - **CUANDO** se comparan los demás pasos del protocolo ODD (autorizar, explorar, resolver incertidumbre, clasificar, registrar, implementar, cerrar) y el carril SDD
-- **ENTONCES** son idénticos salvo la sustitución de la regla de rama y la parada única tras el plan de REQ-26.10
+- **ENTONCES** son idénticos salvo la sustitución de la regla de rama
 
 #### Scenario: El renderizado sigue siendo determinista
 - **DADO** una sincronización de adaptador
@@ -303,6 +329,7 @@ Las instrucciones de enrutamiento gestionadas que proyectan el protocolo ODD DEB
 - **DADO** las instrucciones renderizadas
 - **CUANDO** se inspecciona (pin de texto) la regla
 - **ENTONCES** la única interacción que prevé es presentar el resultado `decision_required` y repetir `ensure` con la respuesta
+
 ### Requirement: Prohibición de `EnterWorktree` y `ExitWorktree` en los Assets del Producto (REQ-25.41)
 
 La doctrina de enrutamiento generada (punto único de generación) DEBE prohibir expresamente el uso de las primitivas `EnterWorktree` y `ExitWorktree` y DEBE prescribir el mecanismo común para todos los runtimes: el JSON de `axiom branch ensure` con rutas absolutas, y el uso de `--cwd`, `git -C` y rutas absolutas en lugar de cambiar el directorio de trabajo. Esa línea de prohibición es la **única** aparición permitida de los dos nombres en los assets del producto: ningún otro asset (skills, orquestadores por runtime, comandos, guías) DEBE contenerlos ni prescribir cualquier primitiva propia de un runtime para crear o cambiar de worktree. El texto generado DEBE ser idéntico para todos los adaptadores, de modo que el comportamiento no dependa de primitivas propias de uno de ellos.
@@ -326,96 +353,77 @@ La doctrina de enrutamiento generada (punto único de generación) DEBE prohibir
 - **DADO** los goldens de doctrina y de assets regenerados
 - **CUANDO** se ejecuta la batería de pruebas
 - **ENTONCES** una modificación de la línea de prohibición falla por diferencia con el golden
-### Requirement: El Protocolo ODD Incluye una Parada Única con Tres Salidas tras Crear el Documento de Feature (REQ-26.10)
+### Requirement: El Paso 0 de la Doctrina Proyecta el Carril del Proyecto (REQ-27.16)
 
-Las instrucciones de enrutamiento gestionadas que proyectan el protocolo ODD DEBEN incluir **una única parada por defecto**, situada tras crear el documento de feature `odd/tasks/<feature>.md` (el plan) y antes de la primera escritura de código. La parada DEBE ofrecer las mismas tres salidas, con la misma redacción, que las paradas de SDD (REQ-26.1 y REQ-26.8 de `sdd-block-review-gates`):
+Las instrucciones de enrutamiento gestionadas DEBEN proyectar un paso 0 que instruya al orquestador a leer el campo `workflow` de `axiom sdd status` (REQ-27.2 de `axiom-sdd-cli-integration`) antes de decidir el carril de un trabajo sustancial, y que defina: con `sdd`, entrada directa al pre-vuelo de SDD sin preguntar el carril; con `odd`, trabajo en ODD sin preguntar el carril; con `ask`, la pregunta bloqueante actual (REQ-21.1 de `sdd-lane-kickoff`); y con `no_workspace`, `invalid` o sin proyección disponible, el comportamiento de `ask`. El texto es el mismo para todos los proyectos y adaptadores: NO DEBE contener el valor del carril de ningún proyecto, porque la doctrina no recibe datos del proyecto. El valor de la política de selección de SDD del manifiesto canónico de capacidades DEBE describir que SDD se selecciona por petición explícita, por carril declarado en el proyecto o por propuesta aceptada, y la proyección DEBE fallar cerrado (`ErrUnknownRoutingPolicy`) ante cualquier otro valor de la política. El riesgo, el tamaño o el número de ficheros NO DEBEN forzar SDD. La proyección DEBE seguir siendo determinista.
 
-1. **Iterar:** ajustar el plan en el propio documento de feature (fichero y espejo) y volver a presentar la parada. No hay límite de iteraciones.
-2. **Aprobar, subir y parar:** el plan queda aprobado; la cesión se anota en el propio documento de feature (ODD no tiene registro de compuertas; forma en design); `odd/tasks/<feature>.md` se confirma (commit) en la rama que preparó `ensure`; el orquestador lee `axiom branch status --json` y presenta la rama, el `prTarget`, la orden de push exacta y los datos de la PR; y se detiene sin escribir código. La implementación la hace otra persona, que recoge el plan una vez fusionada la PR.
-3. **Aprobar y seguir:** el plan queda aprobado y el orquestador continúa con la implementación tarea a tarea.
-
-La parada: (a) solo existe cuando el trabajo es sustancial y se crea el documento de feature; el trabajo pequeño y comprendido, que no crea artefactos duraderos, NO DEBE tener parada; (b) NO es una pregunta de gobernanza y NO contraviene REQ-21.2 ni la regla del paso 0 contra las preguntas de gobernanza, que la doctrina DEBE citar como excepción documentada; (c) NO se repite al reanudar una feature cuyo plan ya está aprobado; (d) NO activa SDD ni crea artefactos SDD; (e) NO genera `handoff.md`. En `monorepo-embedded` la salida 2 significa PR fusionada en el destino indicado; en `multirepo`, donde el documento ODD vive en el repositorio de specs en su rama de integración, es commit en esa rama y push a cargo del humano, sin PR. La doctrina NO DEBE ordenar ni ejecutar `push`, `fetch`, apertura de PR ni merge: son del humano. Quien recoge la cesión DEBE partir del fichero `odd/tasks/<feature>.md` y la doctrina de reanudación DEBE tolerar la ausencia del espejo de Engram (que es local a cada persona), empezar por la primera tarea sin completar y NO revisar de nuevo el plan aprobado. La proyección DEBE seguir siendo determinista: el mismo texto en cada renderizado.
-
-#### Scenario: La doctrina contiene una única parada tras el plan y antes del primer código
+#### Scenario: El paso 0 instruye a leer la proyección
 
 - **DADO** un adaptador registrado con un manifiesto de capacidades válido
 - **CUANDO** se renderizan sus instrucciones de enrutamiento gestionadas
-- **ENTONCES** el protocolo ODD contiene una única parada, después de crear el documento de feature y antes de la primera escritura de código
-- **Y** la parada ofrece las tres salidas: iterar, aprobar-subir-y-parar y aprobar-y-seguir
+- **ENTONCES** el paso 0 instruye a leer `workflow` de `axiom sdd status`
+- **Y** define el comportamiento de `sdd`, `odd` y `ask` y el de `no_workspace`, `invalid` o ausencia de proyección
 
-#### Scenario: El texto de las tres salidas coincide con el de SDD
+#### Scenario: La doctrina es idéntica para todos los proyectos
 
-- **DADO** la doctrina ODD generada y las plantillas de orquestador SDD
+- **DADO** dos proyectos con `workflow.lane` distinto y el mismo adaptador
+- **CUANDO** se renderizan las instrucciones de enrutamiento
+- **ENTONCES** el texto es idéntico byte a byte
+- **Y** no contiene el valor del carril de ninguno de los dos
+
+#### Scenario: La política del manifiesto admite el carril declarado
+
+- **DADO** el manifiesto canónico de capacidades
+- **CUANDO** se inspecciona (prueba) la política de selección de SDD
+- **ENTONCES** su valor describe petición explícita, carril declarado en el proyecto o propuesta aceptada
+- **Y** el valor anterior (`explicit_request_or_accepted_proposal`) ya no es aceptado
+
+#### Scenario: Una política desconocida falla cerrado
+
+- **DADO** un manifiesto con un valor de la política de selección de SDD distinto del vigente
+- **CUANDO** se renderizan las instrucciones de enrutamiento
+- **ENTONCES** el renderizado falla con `ErrUnknownRoutingPolicy`
+- **Y** no se emite ningún texto parcial
+
+#### Scenario: El riesgo no fuerza SDD
+
+- **DADO** un proyecto con carril proyectado `ask` y un trabajo de alto riesgo
+- **CUANDO** el orquestador sigue la doctrina
+- **ENTONCES** no selecciona SDD por el riesgo, el tamaño o el número de ficheros
+- **Y** solo lo selecciona por petición explícita, carril declarado o propuesta aceptada
+
+---
+
+### Requirement: La Doctrina ODD Generada no Contiene Ninguna Parada (REQ-27.17)
+
+Las instrucciones de enrutamiento gestionadas que proyectan el protocolo ODD NO DEBEN contener ninguna parada: ni tras crear el documento de feature, ni la viñeta `Plan stop:`, ni el párrafo de reanudación con cesión del plan, ni la sección de salidas de las paradas (`Stops and exits`). El texto de las tres salidas (fuente única `stop-exits.md`) DEBE ser exclusivo de las paradas de SDD (REQ-26.8 de `sdd-block-review-gates`) y NO DEBE mencionar ODD. El orquestador NO DEBE detenerse en ODD tras crear `odd/tasks/<feature>.md`: tras registrar el documento y su espejo continúa con la implementación tarea a tarea. La regla de reanudación DEBE conservarse: parte del fichero `odd/tasks/<feature>.md` y tolera la ausencia del espejo de Engram. El paso 0 DEBE seguir sin formular ninguna pregunta de gobernanza una vez elegido el carril ODD. La proyección DEBE seguir siendo determinista.
+
+#### Scenario: Ningún texto ODD generado contiene una parada
+
+- **DADO** un adaptador registrado con un manifiesto de capacidades válido
+- **CUANDO** se renderizan sus instrucciones de enrutamiento gestionadas
+- **ENTONCES** el texto no contiene `Plan stop`, `Stops and exits` ni la mención de una parada del protocolo ODD
+- **Y** el paso de registro del protocolo no ordena presentar ninguna parada
+
+#### Scenario: El texto de las salidas es exclusivo de SDD
+
+- **DADO** el recurso `stop-exits.md` y la doctrina ODD generada
 - **CUANDO** se inspeccionan (pin de texto)
-- **ENTONCES** el texto de las tres salidas es el mismo en ambas, procedente de la misma fuente (REQ-26.8)
+- **ENTONCES** `stop-exits.md` no menciona ODD
+- **Y** la doctrina ODD generada no incluye el texto de las tres salidas
 
-#### Scenario: La salida 2 aprueba el plan, lo confirma, presenta la PR y deja la implementación a otra persona
+#### Scenario: Los orquestadores SDD conservan el texto de las salidas
 
-- **DADO** una feature ODD en un monorepo con el documento `odd/tasks/mi-feature.md` recién creado en la rama `inc/mi-feature`
-- **CUANDO** el usuario elige aprobar, subir y parar (salida 2)
-- **ENTONCES** el documento anota la cesión del plan, queda confirmado en `inc/mi-feature` y el orquestador presenta la rama, el `prTarget`, la orden de push y los datos de la PR
-- **Y** no se ha escrito código ni se ha creado ningún commit de implementación
-- **Y** el orquestador se detiene
+- **DADO** las plantillas de orquestador SDD de todos los runtimes
+- **CUANDO** se inspeccionan (pin de texto)
+- **ENTONCES** todas contienen el mismo texto de las tres salidas procedente de `stop-exits.md`
 
-#### Scenario: La salida 3 continúa con la implementación
+#### Scenario: La reanudación sin espejo de Engram se conserva
 
-- **DADO** el plan recién creado y la parada presentada
-- **CUANDO** el usuario elige aprobar y seguir (salida 3)
-- **ENTONCES** el orquestador continúa con la primera tarea del plan
-- **Y** el documento no anota ninguna cesión
-
-#### Scenario: La salida 1 vuelve a presentar la parada tras ajustar el plan
-
-- **DADO** el plan recién creado y la parada presentada
-- **CUANDO** el usuario elige iterar y pide cambios
-- **ENTONCES** el orquestador ajusta `odd/tasks/<feature>.md` y su espejo
-- **Y** vuelve a presentar la parada con sus tres salidas antes de escribir código
-
-#### Scenario: El trabajo pequeño no tiene parada
-
-- **DADO** una petición pequeña y comprendida bajo ODD que no crea documento de feature
-- **CUANDO** el orquestador la ejecuta
-- **ENTONCES** no presenta la parada y el trabajo procede como antes
-
-#### Scenario: Reanudar una feature con el plan ya aprobado no repite la parada
-
-- **DADO** una feature cuyo documento anota el plan aprobado, con la cesión o sin ella
-- **CUANDO** el orquestador la reanuda
-- **ENTONCES** no vuelve a presentar la parada
+- **DADO** una feature ODD con `odd/tasks/<feature>.md` y sin espejo de Engram en esa máquina
+- **CUANDO** el orquestador la reanuda según la doctrina
+- **ENTONCES** parte del fichero y no falla por la ausencia del espejo
 - **Y** continúa por la primera tarea sin completar
-
-#### Scenario: Otra persona recoge el plan desde el fichero sin espejo de Engram
-
-- **DADO** una feature cedida con la salida 2, fusionada en la rama de integración, y una máquina sin espejo de Engram para esa feature
-- **CUANDO** la otra persona reanuda la feature
-- **ENTONCES** la doctrina de reanudación parte del fichero `odd/tasks/<feature>.md` y no falla por la ausencia del espejo
-- **Y** no revisa de nuevo el plan aprobado y empieza por la primera tarea sin completar
-
-#### Scenario: Multirepo confirma en la integración y no hay PR
-
-- **DADO** un multirepo con el documento ODD en el repositorio de specs, en su rama de integración
-- **CUANDO** el usuario elige la salida 2
-- **ENTONCES** el orquestador confirma el documento en esa rama y presenta el push a cargo del humano
-- **Y** no presenta ninguna rama de feature ni PR en el repositorio de specs
-
-#### Scenario: Solo se confirma el documento de feature
-
-- **DADO** un árbol con el documento de feature y otros cambios sin confirmar ajenos al plan
-- **CUANDO** el usuario elige la salida 2
-- **ENTONCES** el commit contiene solo `odd/tasks/<feature>.md`
-
-#### Scenario: La doctrina no ordena operaciones remotas
-
-- **DADO** la doctrina ODD generada
-- **CUANDO** se inspecciona (pin de texto) la parada
-- **ENTONCES** no ordena ejecutar `push`, `fetch`, abrir la PR ni fusionar: los presenta como decisiones del humano
-
-#### Scenario: La doctrina cita la parada como excepción a las preguntas de gobernanza
-
-- **DADO** la doctrina ODD generada
-- **CUANDO** se inspecciona (pin de texto) el paso 0
-- **ENTONCES** mantiene que elegir ODD no añade preguntas de gobernanza
-- **Y** indica que la parada única tras el plan no es una pregunta de gobernanza
 
 #### Scenario: El renderizado sigue siendo determinista
 
