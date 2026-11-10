@@ -129,8 +129,7 @@ El motor de ramas planifica de forma pura (topología, política, roles y prefer
 
 ### Requirement: Familia de Comandos `axiom branch` (REQ-25.1)
 
-La CLI DEBE exponer la familia de primer nivel `axiom branch` con exactamente los subcomandos `ensure`, `status`, `done` y `guard`. La familia DEBE ser neutral respecto al carril: `ensure`, `status` y `done` DEBEN aceptar `--change <nombre>` y `--lane sdd|odd` (por defecto `sdd`) y NO DEBEN depender de que exista un cambio SDD. Ningún subcomando DEBE ejecutar `git push`, crear un PR ni realizar operaciones remotas salvo la solicitada por `--fetch` (REQ-25.10). La familia NO DEBE exponer subcomandos `pr`, `push` ni ningún comprobador para la CI. Toda ejecución de git del motor DEBE pasar por un único punto, de modo que la ausencia de operaciones remotas sea verificable con un observador instalado en ese punto y con una prueba de arquitectura que cubra el código de `internal/branch/**` y de `internal/gitcommon`.
-(Previously: cinco verbos, incluido un comprobador de CI, y la ausencia de operaciones remotas se verificaba con un envoltorio externo de `git`)
+La CLI DEBE exponer la familia de primer nivel `axiom branch` con exactamente los subcomandos `ensure`, `status`, `done` y `guard`. La familia DEBE ser neutral respecto al carril: `ensure`, `status` y `done` DEBEN aceptar `--change <nombre>` y `--lane sdd|odd` (por defecto `sdd`) y NO DEBEN depender de que exista un cambio SDD. Ningún subcomando de `axiom branch` DEBE ejecutar `git push` ni `git commit`, crear un PR ni realizar operaciones remotas salvo la solicitada por `--fetch` (REQ-25.10). La familia NO DEBE exponer subcomandos `pr`, `push` ni ningún comprobador para la CI. Toda ejecución de git del motor DEBE pasar por un único punto, de modo que la ausencia de operaciones remotas sea verificable con un observador instalado en ese punto y con una prueba de arquitectura que cubra el código de `internal/branch/**` y de `internal/gitcommon`. La operación de subir documentación del cambio es el verbo `axiom sdd publish`, que NO pertenece a esta familia, usa un puerto de publicación propio al que `axiom branch` no puede llegar y no altera este invariante (REQ-27.11 de `sdd-docs-publication`).
 
 #### Scenario: La ayuda lista los cuatro verbos
 - **DADO** el binario `axiom`
@@ -146,7 +145,7 @@ La CLI DEBE exponer la familia de primer nivel `axiom branch` con exactamente lo
 #### Scenario: Ningún subcomando publica ni abre PR
 - **DADO** un repositorio con un remoto configurado y un observador instalado en el único punto del motor que ejecuta git
 - **CUANDO** se ejecutan `ensure`, `status` y `done` sin `--fetch`
-- **ENTONCES** el observador no registra ninguna invocación de `git push`, `git fetch`, `git pull` ni `git ls-remote`
+- **ENTONCES** el observador no registra ninguna invocación de `git push`, `git commit`, `git fetch`, `git pull` ni `git ls-remote`
 
 #### Scenario: Una prueba de arquitectura fija el único punto de ejecución de git
 - **DADO** el código fuente de los paquetes bajo `internal/branch/**` y de `internal/gitcommon`
@@ -158,6 +157,12 @@ La CLI DEBE exponer la familia de primer nivel `axiom branch` con exactamente lo
 - **DADO** un proyecto sin ningún cambio bajo `openspec/changes/`
 - **CUANDO** se ejecuta `axiom branch ensure --lane odd --change mi-feature`
 - **ENTONCES** la orden se ejecuta sin requerir `kickoff.yaml` ni `proposal.md`
+
+#### Scenario: El verbo de publicación no pertenece a la familia
+- **DADO** el binario `axiom`
+- **CUANDO** se comparan `axiom branch --help` y `axiom sdd --help`
+- **ENTONCES** `publish` figura solo en la ayuda de `axiom sdd`
+- **Y** el puerto de publicación no es importado por `internal/branch/**`
 
 ---
 
@@ -363,13 +368,12 @@ El motor DEBE obtener la raíz git de cada repositorio declarado en `roles.<rol>
 
 ### Requirement: `ensure` Planifica de Forma Determinista y es Idempotente (REQ-25.7)
 
-`axiom branch ensure` DEBE producir un plan determinista a partir de la topología, `git:`, `repositories:`, los roles del kickoff y las preferencias personales, y ejecutarlo con git. Una segunda ejecución con los mismos argumentos y el mismo estado DEBE no cambiar nada (ni ramas, ni worktrees, ni registro) y devolver el mismo JSON. El comando DEBE crear solo lo que falta: si la rama ya existe, DEBE reutilizarla sin moverla ni reiniciarla; si ya existe su worktree registrado, DEBE devolver su ruta. Si la rama ya está desplegada en un worktree que el registro local no conoce, DEBE rechazar con `branch_checked_out_elsewhere` nombrando la ruta. Cuando todavía no hay kickoff sellado (el cambio se nombra antes del sellado), `ensure` DEBE planificar solo para el repositorio del planning home la rama `<prefijo>/<cambio>`, que es idéntica en ambos modelos de REQ-25.4, y una ejecución posterior, ya con el kickoff sellado, DEBE completar de forma incremental las ramas de rol y los repositorios de código que correspondan sin alterar lo ya creado (supuesto S-1). `ensure --change <c> --archive` (REQ-25.45) es un plan aparte con las mismas garantías de determinismo e idempotencia: no altera las ramas del cambio ya creadas.
-(Previously: no contemplaba el plan de la rama de archivado)
+`axiom branch ensure` DEBE producir un plan determinista a partir de la topología, `git:`, `repositories:`, los roles del kickoff y las preferencias personales, y ejecutarlo con git. Una segunda ejecución con los mismos argumentos y el mismo estado DEBE no cambiar nada (ni ramas, ni worktrees, ni registro) y devolver el mismo JSON, salvo `branches[].createdFrom` y `branches[].createdFromRef` (REQ-27.15), que se emiten solo en la ejecuciÃ³n que crea la rama y no en las siguientes. El comando DEBE crear solo lo que falta: si la rama ya existe, DEBE reutilizarla sin moverla ni reiniciarla; si no existe en local pero existe su referencia remota local, DEBE adoptarla (REQ-27.15); si ya existe su worktree registrado, DEBE devolver su ruta. Si la rama ya está desplegada en un worktree que el registro local no conoce, DEBE rechazar con `branch_checked_out_elsewhere` nombrando la ruta. Cuando todavía no hay kickoff sellado (el cambio se nombra antes del sellado), `ensure` DEBE planificar solo para el repositorio del planning home la rama `<prefijo>/<cambio>`, que es idéntica en ambos modelos de REQ-25.4, y una ejecución posterior, ya con el kickoff sellado, DEBE completar de forma incremental las ramas de rol y los repositorios de código que correspondan sin alterar lo ya creado (supuesto S-1). `ensure --change <c> --archive` (REQ-25.45) es un plan aparte con las mismas garantías de determinismo e idempotencia: no altera las ramas del cambio ya creadas.
 
 #### Scenario: Segunda ejecución sin cambios
 - **DADO** un cambio ya preparado por `ensure`
 - **CUANDO** se ejecuta de nuevo `ensure --change x --json` con los mismos argumentos
-- **ENTONCES** el JSON es idéntico al de la primera ejecución
+- **ENTONCES** el JSON es idéntico al de la primera ejecución, salvo `createdFrom` y `createdFromRef`, que solo aparecen en la ejecución que creó la rama
 - **Y** `git worktree list` y `git branch --list` no han cambiado
 
 #### Scenario: La rama existente se reutiliza sin moverla
@@ -400,6 +404,12 @@ El motor DEBE obtener la raíz git de cada repositorio declarado en `roles.<rol>
 - **DADO** un cambio con las ramas `feat/x` y `feat/x-core` ya creadas y su PR fusionado
 - **CUANDO** se ejecuta `ensure --change x --archive`
 - **ENTONCES** se crea `feat/x-archive` y el commit al que apunta cada una de las ramas anteriores no cambia
+
+#### Scenario: La rama publicada se adopta en lugar de crearse desde la base
+- **DADO** una rama `feat/x` inexistente en local y `refs/remotes/origin/feat/x` presente
+- **CUANDO** se ejecuta `ensure --change x`
+- **ENTONCES** `feat/x` se crea desde `origin/feat/x`
+- **Y** una segunda ejecución con los mismos argumentos devuelve el mismo JSON sin cambiar nada
 
 ---
 
@@ -480,7 +490,7 @@ En modo `in_place`, `ensure` DEBE rechazar con `dirty_worktree` cuando el reposi
 
 ### Requirement: Base sin Red y `--fetch` Explícito (REQ-25.10)
 
-`ensure` NO DEBE realizar ninguna operación remota por defecto. La base de cada rama DEBE ser `origin/<integración>` si esa referencia existe en local y, si no, la rama de integración local. El JSON DEBE devolver, para cada repositorio, `base.ref`, `base.sha`, `base.source` (que indica si procede de la referencia remota local o de la rama local) y `fetched: false`. Solo con `--fetch` el comando PUEDE ejecutar un `fetch` previo, y entonces `fetched` DEBE ser `true`. Si `--fetch` falla, `ensure` DEBE terminar con `fetch_failed` sin crear nada (supuesto S-8). Si no existe la rama de integración ni local ni como referencia remota local, DEBE rechazar con `base_not_found`, nombrando la rama esperada. `--base <ref>` sustituye la base (REQ-25.12).
+`ensure` NO DEBE realizar ninguna operación remota por defecto. La base de cada rama DEBE ser `origin/<integración>` si esa referencia existe en local y, si no, la rama de integración local; si la propia rama del cambio no existe en local pero existe su referencia remota local, la rama se adopta desde ella (REQ-27.15). El JSON DEBE devolver, para cada repositorio, `base.ref`, `base.sha`, `base.source` (que indica si la base de integración procede de la referencia remota local o de la rama local; la rama del cambio adoptada desde el remoto se indica aparte, en `branches[].createdFrom: remote` y `createdFromRef`, REQ-27.15) y `fetched: false`. Solo con `--fetch` el comando PUEDE ejecutar un `fetch` previo, y entonces `fetched` DEBE ser `true`. Si `--fetch` falla, `ensure` DEBE terminar con `fetch_failed` sin crear nada (supuesto S-8). Si no existe la rama de integración ni local ni como referencia remota local, DEBE rechazar con `base_not_found`, nombrando la rama esperada. `--base <ref>` sustituye la base (REQ-25.12). El `--fetch` sigue exigiendo la autorización de la persona.
 
 #### Scenario: Sin `--fetch` no hay operaciones remotas
 - **DADO** un repositorio con remoto y un observador instalado en el único punto del motor que ejecuta git
@@ -514,6 +524,13 @@ En modo `in_place`, `ensure` DEBE rechazar con `dirty_worktree` cuando el reposi
 - **DADO** un `axiom.yaml` con `git.integration_branch: develop` y un repositorio sin `develop` ni `origin/develop`
 - **CUANDO** se ejecuta `ensure --change x`
 - **ENTONCES** se rechaza con `base_not_found` nombrando `develop`
+
+#### Scenario: La rama del cambio publicada se indica con `createdFrom: remote`
+- **DADO** un repositorio con `refs/remotes/origin/inc/x` y sin rama local `inc/x`
+- **CUANDO** se ejecuta `ensure --change x --json`
+- **ENTONCES** la entrada de `inc/x` en `branches[]` tiene `createdFrom: remote` y `createdFromRef: refs/remotes/origin/inc/x`
+- **Y** `base.source` y `base.ref` siguen describiendo la base de integración
+- **Y** `fetched` es `false`
 
 ---
 
@@ -1285,7 +1302,7 @@ El repositorio de Axiom DEBE declarar en su `axiom.yaml` el bloque `git:` con `i
 
 ### Requirement: Fusión Intermedia de un Cambio no es Integración ni Pendiente de Archivar (REQ-26.11)
 
-Una **fusión intermedia** es el estado de un cambio cuya carpeta `changes/<cambio>/` está presente en el árbol de la rama de integración porque se fusionó una PR de la salida 2 de una parada (REQ-26.5 de `sdd-block-review-gates`) y el trabajo del cambio aún no está completo. El criterio observable es: el registro de puertas integrado (`gates.yaml`) contiene al menos una compuerta aprobada con la marca de cesión y NO están aprobadas todas las compuertas `role-apply:<rol>` del roster sellado (supuesto A-7). Un cambio en fusión intermedia:
+Una **fusión intermedia** es el estado de un cambio cuya carpeta `changes/<cambio>/` está presente en el árbol de la rama de integración porque se fusionó una PR que llevaba una aprobación con cesión de una parada (REQ-26.5 de `sdd-block-review-gates`) y el trabajo del cambio aún no está completo. El criterio observable es: el registro de puertas integrado (`gates.yaml`) contiene al menos una compuerta aprobada con la marca de cesión y NO están aprobadas todas las compuertas `role-apply:<rol>` del roster sellado (supuesto A-7). Una rama del cambio **publicada** en `origin` (REQ-27.7 de `sdd-docs-publication`) que aún no se ha fusionado NO es una fusión intermedia ni una rama integrada: la evaluación sigue haciéndose únicamente sobre la referencia de integración local de REQ-25.10. Un cambio en fusión intermedia:
 
 - NO DEBE figurar entre los cambios pendientes de archivar de `axiom branch status` ni del dashboard (REQ-25.20), ni ofrecer la continuación de archivado;
 - NO DEBE ser aceptado por `ensure --archive` como base que contiene el cambio fusionado (REQ-25.45), que rechaza con `change_not_integrated`;
@@ -1343,6 +1360,80 @@ Si el registro de puertas o el kickoff integrados no pueden leerse, el cambio DE
 - **CUANDO** otra persona ejecuta `axiom branch ensure --change x`
 - **ENTONCES** `ensure` crea la rama del cambio desde la base y la carpeta `changes/x/` con los artefactos aprobados está disponible
 - **Y** no se ejecuta ninguna operación remota
+
+#### Scenario: Una rama publicada sin fusionar no es una fusión intermedia
+
+- **DADO** un cambio `x` cuya rama `inc/x` está publicada en `origin` con una compuerta aprobada con cesión, y cuya carpeta `changes/x/` no está en la referencia de integración local
+- **CUANDO** se ejecuta `axiom branch status --json`
+- **ENTONCES** `x` no se clasifica como fusión intermedia ni como pendiente de archivar
+- **Y** el código de salida es `0` y no se ejecuta ninguna operación remota
+### Requirement: `ensure` Adopta la Rama Publicada si Existe como Referencia Remota Local (REQ-27.15)
+
+Si la rama de un cambio (rama del cambio, rama de rol o rama de archivado) NO existe como rama local y SÍ existe la referencia local `refs/remotes/origin/<rama>`, `axiom branch ensure` DEBE crear la rama local desde esa referencia, con `origin/<rama>` como rama de seguimiento (upstream), en lugar de crearla desde la base de integración, y DEBE materializar su worktree o hacer su checkout según el modo de trabajo (REQ-25.8). El JSON DEBE indicarlo en la entrada de esa rama de `branches[]` con `createdFrom: remote` y `createdFromRef: refs/remotes/origin/<rama>` (tokens estables en inglés, con su etiqueta legible en castellano); `base.ref`, `base.sha` y `base.source` NO cambian de semántica y siguen describiendo la base de integración. La adopción solo usa lecturas locales: NO DEBE ejecutar `fetch`, `pull` ni `ls-remote` por defecto; solo con `--fetch` explícito y autorizado (REQ-25.10) se ejecuta el `fetch` previo, y entonces la adopción usa la referencia ya actualizada. Si la rama local ya existe, se reutiliza sin moverla (REQ-25.7), aunque exista la referencia remota. Si no existe la referencia remota, `ensure` DEBE comportarse como hasta ahora (crear desde la base) y el resultado DEBE sugerir `--fetch` (con la salvedad de que requiere autorización de la persona). La adopción NO DEBE alterar el kickoff sellado ni modificar la referencia remota. En `monorepo-embedded`, una cesión publicada (REQ-26.5 de `sdd-block-review-gates`) ya NO exige una PR fusionada para que otra persona continúe: basta `git fetch` (o `ensure --fetch`) y `ensure`.
+
+#### Scenario: Adopta la rama publicada sin rama local
+
+- **DADO** un monorepo cuyo remoto `origin` tiene `inc/x` con documentos del cambio, la persona ha hecho `git fetch` y no existe la rama local `inc/x`
+- **CUANDO** ejecuta `axiom branch ensure --change x --json`
+- **ENTONCES** la rama local `inc/x` apunta al SHA de `origin/inc/x`
+- **Y** su upstream es `origin/inc/x`
+- **Y** la entrada de `inc/x` en `branches[]` indica `createdFrom: remote` y `createdFromRef: refs/remotes/origin/inc/x`
+- **Y** `base.source` sigue describiendo la base de integración
+- **Y** los artefactos publicados están disponibles en el worktree
+
+#### Scenario: Sin referencia remota se comporta como hasta ahora
+
+- **DADO** un repositorio sin `refs/remotes/origin/inc/x` ni rama local `inc/x`
+- **CUANDO** se ejecuta `ensure --change x --json`
+- **ENTONCES** `inc/x` se crea desde la base de integración
+- **Y** el resultado sugiere `--fetch` indicando que requiere autorización de la persona
+
+#### Scenario: Ningún fetch implícito
+
+- **DADO** un observador instalado en el único punto del producto que ejecuta git
+- **CUANDO** se ejecuta `ensure --change x` sin `--fetch`, con y sin referencia remota de la rama
+- **ENTONCES** el observador no registra `fetch`, `pull`, `push` ni `ls-remote`
+- **Y** el JSON devuelve `fetched: false`
+
+#### Scenario: Con `--fetch` se adopta la referencia actualizada
+
+- **DADO** un remoto con `inc/x` que la persona aún no ha traído y la orden `ensure --change x --fetch` autorizada
+- **CUANDO** se ejecuta
+- **ENTONCES** se ejecuta el `fetch`, `fetched` es `true` y la rama local se crea desde `origin/inc/x`
+- **Y** la entrada de `inc/x` en `branches[]` indica `createdFrom: remote`
+
+#### Scenario: Una rama local existente no se mueve
+
+- **DADO** una rama local `inc/x` con commits propios y una referencia `origin/inc/x` distinta
+- **CUANDO** se ejecuta `ensure --change x`
+- **ENTONCES** la rama local no cambia de commit
+- **Y** la entrada de `inc/x` en `branches[]` no indica `createdFrom: remote`
+
+#### Scenario: Adopta también la rama de rol y la de archivado
+
+- **DADO** referencias remotas locales para `inc/x-core` y `inc/x-archive` sin ramas locales
+- **CUANDO** se ejecutan `ensure --change x` y `ensure --change x --archive`
+- **ENTONCES** cada rama local se crea desde su referencia remota respectiva
+- **Y** la entrada de cada una en `branches[]` indica `createdFrom: remote` con su `createdFromRef`
+
+#### Scenario: En modo `in_place` se adopta y se hace checkout
+
+- **DADO** un proyecto en modo `in_place`, árbol limpio y `origin/inc/x` presente sin rama local
+- **CUANDO** se ejecuta `ensure --change x`
+- **ENTONCES** se crea `inc/x` desde `origin/inc/x` y se hace su checkout en el propio repositorio
+
+#### Scenario: Idempotencia tras adoptar
+
+- **DADO** un cambio ya adoptado
+- **CUANDO** se ejecuta de nuevo `ensure --change x --json`
+- **ENTONCES** el JSON es idéntico y no cambia ninguna rama ni worktree
+
+#### Scenario: Quien continúa un relevo no necesita una PR fusionada
+
+- **DADO** una compuerta `spec` aprobada con la salida 2 y publicada en `origin/inc/x`, sin PR fusionada
+- **CUANDO** otra persona ejecuta `git fetch` y `axiom branch ensure --change x`
+- **ENTONCES** obtiene la rama `inc/x` con los documentos aprobados
+- **Y** `axiom sdd status` proyecta la fase siguiente cedida
 
 ## Supuestos confirmados en la compuerta de spec (2026-10-15)
 
