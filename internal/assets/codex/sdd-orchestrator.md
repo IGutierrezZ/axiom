@@ -13,11 +13,7 @@ Bind this to the dedicated `sdd-orchestrator` agent or rule only. Do NOT apply i
 
 ## General Delegation Rules (Always Active)
 
-These rules apply to **all non-trivial work**, not only SDD phases. Delegation is context compression: keep the main conversation thin, delegate heavy reading/writing/testing/review work, and synthesize results for the user.
-
-Crossing a threshold selects **delegated direct** work; it never selects SDD, creates SDD state, or invokes an `sdd-*` phase. Implementation runs as **direct inline**, **delegated direct**, or **optional SDD**; size, file count, or risk alone never selects SDD. Reserve SDD phase workers for an explicit SDD request or a proposal the user accepted.
-
-Core principle: **does this inflate my context without need?** If yes -> delegate. If no -> do it inline.
+These rules apply to **all non-trivial work**, not only SDD phases. Delegation is context compression: keep the main conversation thin, delegate only the work whose trigger condition truly holds, and synthesize results for the user.
 
 ### Lossless Blocking Prompts (MANDATORY)
 
@@ -34,22 +30,9 @@ Core principle: **does this inflate my context without need?** If yes -> delegat
 
 {{GENTLE_AI_SDD_SECTION:SDD Edit-Authority Consent Relay (MANDATORY)}}
 
-| Action | Inline | Delegate |
-|--------|--------|----------|
-| Read to decide/verify (1-3 files) | Yes | No |
-| Read to explore/understand (4+ files) | No | Yes |
-| Read as preparation for writing | No | Yes, together with the write |
-| Write atomic (one file, mechanical, already understood) | Yes | No |
-| Write with analysis (multiple files, new logic) | No | Yes |
-| Bash for state (`git`, `gh`) | Yes | No |
-| Bash for execution (`test`, `build`, `install`, external tooling) | No | Yes |
+#### Delegation Rules
 
-Anti-patterns that always inflate context without need:
-
-- Reading 4+ files to understand the codebase inline -> delegate a narrow exploration.
-- Writing a feature across multiple files inline -> delegate a writer.
-- Running tests/builds/installers inline -> delegate verification when tooling permits.
-- Reading files as preparation for edits, then editing -> delegate the whole thing together.
+{{GENTLE_AI_SDD_SECTION:Delegation Rules}}
 
 #### Mandatory Delegation Triggers
 

@@ -1207,19 +1207,16 @@ func TestInjectOpenCodePreservesExistingOrchestratorPromptWhenRequested(t *testi
 	}
 	for _, wanted := range []string{
 		"### SDD Session Preflight (HARD GATE)",
-		"### Mandatory Delegation Triggers (Non-Skippable)",
-		"fully mandatory",
+		"### Mandatory Delegation Triggers (Conditional)",
+		"holds only when its condition truly holds",
 		"Semantic guard",
 		"execution, not delegation",
-		"Bounded read rule",
-		"read 1–3 files inline",
-		"4-file rule",
-		"Write rule",
-		"2+ non-trivial files",
-		"Context rule",
-		"Optional SDD rule",
-		"explicit request or accepted proposal",
-		"Per-action rule",
+		"Mapping trigger",
+		"Writer trigger",
+		"only for a named reason",
+		"Preparation trigger",
+		"Optional SDD trigger",
+		"Per-action trigger",
 		"Authority rule",
 		"selectorless `axiom review status`",
 		"exact START",
@@ -1435,17 +1432,14 @@ func TestInjectOpenCodeMigratesPreservedLegacyOrchestratorPromptReferences(t *te
 		"fixed at 400 changed lines",
 		"### Optional Research and Product Discovery",
 		"unresolved product decision",
-		"### Mandatory Delegation Triggers (Non-Skippable)",
-		"fully mandatory",
-		"Bounded read rule",
-		"read 1–3 files inline",
-		"4-file rule",
-		"Write rule",
-		"2+ non-trivial files",
-		"Context rule",
-		"Optional SDD rule",
-		"explicit request or accepted proposal",
-		"Per-action rule",
+		"### Mandatory Delegation Triggers (Conditional)",
+		"holds only when its condition truly holds",
+		"Mapping trigger",
+		"Writer trigger",
+		"only for a named reason",
+		"Preparation trigger",
+		"Optional SDD trigger",
+		"Per-action trigger",
 		"Authority rule",
 		"Semantic guard",
 		"execution, not delegation",
@@ -1534,14 +1528,12 @@ func TestInjectOpenCodeUpgradesPromptOwnedLensRouter(t *testing.T) {
 		t.Fatalf("user-authored content outside the migration block changed:\n%s", prompt)
 	}
 	for _, wanted := range []string{
-		"fully mandatory",
-		"Bounded read rule",
-		"read 1–3 files inline",
-		"4-file rule",
-		"Write rule",
-		"2+ non-trivial files",
-		"Optional SDD rule",
-		"explicit request or accepted proposal",
+		"holds only when its condition truly holds",
+		"Mapping trigger",
+		"Writer trigger",
+		"only for a named reason",
+		"Optional SDD trigger",
+		"Per-action trigger",
 		"Authority rule",
 		"selectorless `axiom review status`",
 		"exact START",
@@ -1574,8 +1566,8 @@ func TestInjectOpenCodeUpgradesPromptOwnedLensRouter(t *testing.T) {
 	if strings.Contains(managedBlock, legacyMandatoryWording) {
 		t.Fatalf("managed delegation block retained legacy wording %q", legacyMandatoryWording)
 	}
-	if !strings.Contains(managedBlock, "fully mandatory") {
-		t.Fatal("managed delegation block missing migrated wording \"fully mandatory\"")
+	if !strings.Contains(managedBlock, delegationBlockSignature) {
+		t.Fatal("managed delegation block missing the conditional delegation wording")
 	}
 	if strings.Contains(managedBlock, "Review Lens Selection") {
 		t.Fatal("managed delegation block retained prompt-owned review selection")
@@ -1641,7 +1633,7 @@ const retiredWorkRoutingAuthorityRule = "7. **Authority rule**: when a WorkRun e
 
 // The replacement rule 7 retains one current-worktree transaction binding and
 // never lets compatibility gates decide delivery.
-const nativeReviewAuthorityRuleText = "7. **Authority rule**: use selectorless `axiom review status` only to preflight the current worktree" +
+const nativeReviewAuthorityRuleText = "- **Authority rule**: use selectorless `axiom review status` only to preflight the current worktree" +
 	" and execute its exact START; retain that transaction's lineage, revision, and target for every later lifecycle call." +
 	" Gates are informational only. Never select lenses, synthesize transitions, infer PASS, or authorize delivery from prose."
 

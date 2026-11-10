@@ -63,16 +63,11 @@ func TestOrchestratorsProjectOrganicRouting(t *testing.T) {
 		content := mustReadResolved(path)
 		for _, required := range []string{
 			"Mandatory Delegation Triggers",
-			"Bounded read rule", "read 1–3 files inline",
-			"4-file rule", "understanding requires 4+ files",
-			"Write rule", "2+ non-trivial files",
-			"Context rule", "reading that prepares a write", "broad research",
-			"Per-action rule", "Optional SDD rule",
-			"explicit request or accepted proposal", "risk alone never forces SDD",
-			// The three implementation routes must stay nameable without any
-			// control-plane handshake in front of them.
-			"**direct inline**", "**delegated direct**", "**optional SDD**",
-			"size, file count, or risk alone never selects SDD",
+			// The delegation doctrine has one source in Go
+			// (agentguidance.DelegationRules / DelegationTriggers); the shared
+			// sections only reference it by marker. The sdd package resolves the
+			// markers and pins the rendered text for every runtime.
+			"{{AXIOM_DELEGATION_RULES}}", "{{AXIOM_DELEGATION_TRIGGERS}}",
 		} {
 			if !strings.Contains(content, required) {
 				t.Fatalf("%s missing organic routing/native authority contract %q", path, required)
@@ -97,9 +92,9 @@ func TestOrchestratorsProjectOrganicRouting(t *testing.T) {
 			t.Fatalf("%s missing bounded general delegation section", path)
 		}
 		delegation := content[start:end]
-		for _, required := range []string{"delegated direct", "never selects SDD", "creates SDD state", "`sdd-*`"} {
+		for _, required := range []string{"{{AXIOM_DELEGATION_RULES}}"} {
 			if !strings.Contains(delegation, required) {
-				t.Fatalf("%s general delegation section missing route-neutral clause %q", path, required)
+				t.Fatalf("%s general delegation section missing the delegation rules marker %q", path, required)
 			}
 		}
 		for _, forbidden := range []string{

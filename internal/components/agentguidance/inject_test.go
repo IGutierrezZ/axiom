@@ -632,9 +632,9 @@ func TestInjectRoutingDeliversNoRetiredControlPlaneVocabulary(t *testing.T) {
 			if strings.TrimSpace(block) == "" {
 				t.Fatalf("InjectRouting(%q) delivered no managed routing block", agent.ID)
 			}
-			lowered := strings.ToLower(block)
+			lowered := block
 			for _, forbidden := range retiredRemoteControlPlaneVocabulary {
-				if strings.Contains(lowered, strings.ToLower(forbidden)) {
+				if strings.Contains(strings.ToLower(routingVocabularyForGuard(lowered, forbidden)), strings.ToLower(forbidden)) {
 					t.Fatalf("InjectRouting(%q) delivered retired vocabulary %q:\n%s", agent.ID, forbidden, block)
 				}
 			}
