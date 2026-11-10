@@ -588,10 +588,17 @@ func TestKilocodeReviewSettingsMatchCurrentMainBaseline(t *testing.T) {
 	// {{AXIOM_STOP_EXITS}} marker that the composer resolves with the single
 	// three-exit text. Kilocode composes it through the OpenCode orchestrator, so the
 	// hash moves. Deliberate, not drift.
+	// upstream-revision-nativa T4 (#5345): los cuerpos de revisor renderizados
+	// llevan reviewerprovider.SeverityRules, de modo que el hash de la
+	// configuración se mueve. Deliberate, not drift.
+	// upstream-revision-nativa T6 (#5351, parcial): la sección compartida «Delegated
+	// Verification Gate» verifica por nivel de riesgo con RDD encendido o apagado, así
+	// que el hash de la configuración se mueve. Deliberate, not drift.
 	// adaptadores-agentes-upstream T1 (upstream #4998/#4471): el overlay compartido de
 	// OpenCode deja de escribir `__managed_by` en cada agente, porque los proveedores con
 	// validación estricta del esquema lo rechazan. Kilocode hereda el overlay, así que el
 	// hash cambia solo por esa clave. Deliberate, not drift.
+	// Fusión de main en upstream-revision-nativa: el hash combina los dos cambios anteriores.
 	// carril-proyecto-publicacion-docs T-06: stop-exits.md deja de nombrar la parada de plan
 	// de ODD y el compartido de kickoff gana el párrafo «SDD lane selected»; Kilocode los
 	// compone en el orquestador de OpenCode, así que el hash cambia. Deliberate, not drift.
@@ -599,7 +606,8 @@ func TestKilocodeReviewSettingsMatchCurrentMainBaseline(t *testing.T) {
 	// compartido de kickoff gana el encadenado de `gate record` con `axiom sdd publish`, `--docs-publication
 	// auto` y los momentos de publicación; Kilocode los compone en el orquestador de OpenCode, así que el
 	// hash cambia. Deliberate, not drift.
-	const want = "6de2d11c16c579b5a60fbe243be1999afb4b462fe3387bcfc5a138817f212ea2"
+	// Fusión de main (#234, #235) en upstream-revision-nativa: el hash combina los dos lados.
+	const want = "657447ca694cffcd45d2e265c62ad56814211645ac6a8f9b87867253c725d38e"
 	if got != want {
 		t.Fatalf("Kilocode settings SHA-256 = %s, want current-main baseline %s", got, want)
 	}
@@ -909,8 +917,26 @@ func TestOpenCodeRenderedReviewProtocolCost(t *testing.T) {
 		// The STATUS preflight negotiates axiom.review-integration/v2 instead of
 		// gentle-ai.review-integration/v2 (-4 characters per row). Deliberate, not
 		// drift; the ceilings move by the same amount to preserve each margin.
-		{name: "standard", agents: []string{"review-reliability"}, beforeChars: 42_301, wantChars: 19_047, maxCharacters: 19_066},
-		{name: "full-4R", agents: []string{"review-risk", "review-resilience", "review-readability", "review-reliability"}, beforeChars: 106_998, wantChars: 35_406, maxCharacters: 37_003},
+		// upstream-revision-nativa T4 (#5345, reglas de severidad compartidas): cada
+		// cuerpo de revisor renderizado suma reviewerprovider.SeverityRules (+1.224
+		// caracteres por lente). Deliberate, not drift; los techos suben lo mismo
+		// para conservar el margen absoluto de cada fila.
+		// upstream-revision-nativa T14 (#4772, validar correcciones contra HEAD): la
+		// fila corrected_candidate_unavailable del contrato compartido nombra ahora
+		// que, en una revisión solo-committed, la corrección se confirma o se
+		// enmienda, que las ediciones ajenas sin confirmar se ignoran y que el
+		// pronóstico aceptado no se vuelve a capturar (+148 caracteres por fila).
+		// Deliberate, not drift; los techos suben lo mismo para conservar el margen
+		// absoluto de cada fila (19 y 1.597 caracteres).
+		// upstream-revision-nativa T16 (#5322, delta pasivo tras el acknowledgement): el
+		// contrato compartido suma la fila acknowledged_predecessor_passive_delta
+		// (+293 caracteres por fila). Deliberate, not drift; los techos suben lo
+		// mismo para conservar el margen absoluto de cada fila.
+		// upstream-revision-nativa T17 (#5654, frontera revisada): el contrato
+		// compartido suma la fila acknowledged_boundary_reaches_head (+156
+		// caracteres por fila). Deliberate, not drift; los techos suben lo mismo.
+		{name: "standard", agents: []string{"review-reliability"}, beforeChars: 42_301, wantChars: 20_868, maxCharacters: 20_887},
+		{name: "full-4R", agents: []string{"review-risk", "review-resilience", "review-readability", "review-reliability"}, beforeChars: 106_998, wantChars: 40_899, maxCharacters: 42_496},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

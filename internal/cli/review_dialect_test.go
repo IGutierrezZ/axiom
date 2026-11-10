@@ -331,7 +331,7 @@ func TestDualContract_CapabilitiesBootstrapEchoesTheDialect(t *testing.T) {
 	for _, tt := range []struct{ contract, want, packageName string }{
 		{contract: ReviewIntegrationContractV2, want: "gentle-ai review status --cwd <repo> --contract gentle-ai.review-integration/v2 --next-transition", packageName: "gentle-ai"},
 		{contract: AxiomReviewIntegrationContractV2, want: axiomBootstrap, packageName: "axiom"},
-		// v2.6 admits both package names, so the axiom contract still accepts the
+		// v2.7 admits both package names, so the axiom contract still accepts the
 		// legacy name: the schema is the published surface, the emitter picks one.
 		{contract: AxiomReviewIntegrationContractV2, want: axiomBootstrap, packageName: "gentle-ai"},
 	} {
@@ -359,7 +359,7 @@ func TestDualContract_CapabilitiesBootstrapEchoesTheDialect(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			validatePublishedReviewSchema(t, compileWholePublishedReviewSchema(t, "v2", "capabilities-v2.6.schema.json"), payload)
+			validatePublishedReviewSchema(t, compileWholePublishedReviewSchema(t, "v2", "capabilities-v2.7.schema.json"), payload)
 		})
 	}
 }

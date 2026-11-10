@@ -75,6 +75,7 @@ expected_contract = [
 	current_contract_root / "fixtures/start-v4.fixture.json",
 	current_contract_root / "fixtures/start.fixture.json",
 	current_contract_root / "fixtures/status-v5.fixture.json",
+	current_contract_root / "fixtures/status-v9-recover-native.fixture.json",
 	current_contract_root / "fixtures/status.fixture.json",
 	current_contract_root / "schemas/admitted-result.schema.json",
 	current_contract_root / "schemas/artifact-subject.schema.json",

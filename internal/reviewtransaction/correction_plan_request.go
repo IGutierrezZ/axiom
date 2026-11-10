@@ -68,7 +68,10 @@ func BuildCorrectionPlanRequest(state CompactState, revision string) (Correction
 	for index, id := range fixFindingIDs {
 		finding, ok := byID[id]
 		classification, classified := view.Classifications[id]
-		if !ok || !classified || view.Outcomes[id] != OutcomeCorroborated {
+		// Un hallazgo inconcluyente abre corrección igual que uno corroborado
+		// (compact.go lo incluye en FixFindingIDs); el resultado original no se reescribe.
+		outcome := view.Outcomes[id]
+		if !ok || !classified || (outcome != OutcomeCorroborated && outcome != OutcomeInconclusive) {
 			return CorrectionPlanRequest{}, errors.New("correction plan request finding is not accepted by compact authority") // refusal:by-design world-action: provider authority must be repaired before projecting findings
 		}
 		findings[index] = CorrectionPlanFinding{

@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -1034,4 +1035,75 @@ func TestOpenCodeReviewTransportBoundsCompletionWaitForSilentlyDeadHost(t *testi
 		t.Fatalf("completion safety bound fired after %s, want a bounded wait", elapsed)
 	}
 	assertOpenCodeRelayLensUncaptured(t, repo, store, record, lens)
+}
+
+func TestOpenCodeReviewTransportRefusalNamesTypedValidatorCause(t *testing.T) {
+	if testing.Short() {
+		t.Skip("requires git worktrees and relay subprocesses")
+	}
+	reviewEnabledHome(t)
+	repo, lineage, _ := providerCorrectionReadyWithoutVerificationEvidence(t)
+	task := openCodeTargetedValidatorTask(t, repo, lineage)
+	issued, err := openCodeTransportStart(t.Context(), openCodeTransportEnvelope{
+		Schema: openCodeReviewTransportSchema, Operation: "start", Prompt: task.Prompt,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Una envoltura de Task válida cuyo contenido no es un resultado admisible
+	// del validador dirigido: el rechazo debe nombrar la causa tipada en vez de
+	// quedarse en el código primario opaco.
+	output := "<task id=\"t1\" state=\"completed\">\n<task_result>\n{\"hello\":\"world\"}\n</task_result>\n</task>"
+	_, err = openCodeTransportComplete(t.Context(), issued, openCodeTransportEnvelope{
+		Schema: openCodeReviewTransportSchema, Operation: "complete", Nonce: issued.nonce, Output: &output,
+	})
+	assertOpenCodeTransportRefusal(t, err, []string{
+		"opencode_provider_role_result_refused",
+		"cause: validator_result_not_admissible",
+	})
+}
+
+func TestOpenCodeTransportCaptureRefusalCause(t *testing.T) {
+	for _, test := range []struct {
+		name string
+		err  error
+		want string
+	}{
+		{name: "inconclusive verdict keeps its retry ladder", err: fmt.Errorf("wrapped: %w", errReviewTargetedValidationInconclusive), want: "targeted_validation_inconclusive"},
+		// Anidamiento real: reviewProviderCloseTargetedValidatorRaw registra el
+		// intento inconcluyente y envuelve el centinela en la marca de admisión,
+		// así que el orden errors.Is antes de errors.As es esencial.
+		{name: "admission-wrapped inconclusive still classifies inconclusive", err: &reviewProviderAdmissionError{err: fmt.Errorf("wrapped: %w", errReviewTargetedValidationInconclusive)}, want: "targeted_validation_inconclusive"},
+		{name: "admission contract refusal", err: &reviewProviderAdmissionError{err: errors.New("provider targeted validator result requires passed checks and an explicit follow_ups array")}, want: "validator_result_not_admissible"},
+		{name: "store layer failure", err: errors.New("compact store write failed"), want: "role_capture_failed"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			if got := openCodeTransportCaptureRefusalCause(test.err); got != test.want {
+				t.Fatalf("cause = %q, want %q", got, test.want)
+			}
+			refusal := openCodeTransportCaptureRefusal(test.err)
+			for _, fragment := range []string{"opencode_provider_role_result_refused", "cause: " + test.want, "--next-transition"} {
+				if !strings.Contains(refusal.Error(), fragment) {
+					t.Fatalf("refusal = %v, want fragment %q", refusal, fragment)
+				}
+			}
+		})
+	}
+}
+
+// failure.message admite 240 caracteres: con los nombres de Axiom la variante
+// larga del texto de upstream medía 261, así que el texto fijo se acortó. Este
+// test fija todas las causas por debajo del límite.
+func TestOpenCodeTransportCaptureRefusalFitsFailureMessageLimit(t *testing.T) {
+	const failureMessageLimit = 240
+	for _, cause := range []error{
+		fmt.Errorf("wrapped: %w", errReviewTargetedValidationInconclusive),
+		&reviewProviderAdmissionError{err: errors.New("not admissible")},
+		errors.New("compact store write failed"),
+	} {
+		message := openCodeTransportCaptureRefusal(cause).Error()
+		if len(message) > failureMessageLimit {
+			t.Fatalf("refusal is %d characters, limit %d: %q", len(message), failureMessageLimit, message)
+		}
+	}
 }

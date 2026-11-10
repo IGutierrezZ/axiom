@@ -238,21 +238,33 @@ func selectorlessCommittedBaseDiffAncestors(ctx context.Context, repo string) ([
 	return ancestors, nil
 }
 
-// ResolveCommittedRangeBase returns the single merge-base commit between HEAD
-// and the remote default branch, but only when that committed range is
-// unambiguous (issue #4412). STATUS derives the committed-range START a
-// selectorless empty workspace candidate needs from exactly this base, so an
-// ambiguous repository must fall back to today's base_ref collect rather than
-// silently pick a scope the caller never named.
+// ResolveCommittedRangeBase devuelve el único merge-base que nombra el rango
+// committed que revisa la derivación sin selector, prefiriendo el upstream de
+// la propia rama y recurriendo a la rama por defecto remota, pero solo cuando
+// ese rango es inequívoco (issue #4412). STATUS deriva de esta base el START de
+// rango committed que necesita un candidato de workspace vacío sin selector,
+// así que un repositorio ambiguo debe volver a la colecta de base_ref actual en
+// lugar de elegir en silencio un alcance que nadie nombró.
 //
-// The base is deliberately the remote default branch (refs/remotes/origin/HEAD)
-// and never the local branch upstream: for a fully pushed branch `@{upstream}`
-// names the last pushed commit, whose range is empty, which is precisely the
-// state that produces the zero-path candidate this derivation serves. Every
-// other outcome -- no origin/HEAD, a criss-cross history, an empty range, or any
-// Git fault -- is returned as an error so the caller keeps the truthful
-// fallback.
+// La base es deliberadamente el upstream de la rama (issues #4639, #4628)
+// cuando esa ref existe, tiene exactamente un merge-base con HEAD y HEAD va
+// estrictamente por delante: en una topología trunk/integración la ref de
+// seguimiento es el punto real de integración de la rama, mientras que la rama
+// por defecto remota puede ir versiones por detrás y el candidato derivado
+// abarcaría trabajo ajeno hasta que el preflight lo rechazase. Cualquier otro
+// resultado del upstream (sin upstream, historia criss-cross, rama al día,
+// rango vacío o fallo de git) conserva la derivación por rama por defecto
+// remota: en una rama totalmente publicada `@{upstream}` nombra el último commit
+// subido, cuyo rango es vacío, y esa derivación es la que sustituye a la
+// colecta de candidato de cero rutas (issue #4412). La derivación por rama por
+// defecto solo responde cuando refs/remotes/origin/HEAD nombra un rango
+// inequívoco y no vacío; todo lo demás (sin origin/HEAD, criss-cross, rango
+// vacío o fallo de git) se devuelve como error para que el llamador conserve la
+// alternativa veraz.
 func ResolveCommittedRangeBase(ctx context.Context, repo string) (string, error) {
+	if base, ok := resolveCommittedRangeBaseFromUpstream(ctx, repo); ok {
+		return base, nil
+	}
 	refOutput, err := runGit(ctx, repo, nil, nil, "symbolic-ref", "--quiet", "refs/remotes/origin/HEAD")
 	if err != nil {
 		return "", err
@@ -286,6 +298,46 @@ func ResolveCommittedRangeBase(ctx context.Context, repo string) (string, error)
 		return "", fmt.Errorf("committed range between the merge-base and HEAD is empty") // refusal:by-design world-action: an empty committed range has no candidate to review, so the caller falls back to collecting a base_ref
 	}
 	return base, nil
+}
+
+// resolveCommittedRangeBaseFromUpstream acepta el @{upstream} de la rama solo si
+// hay un único merge-base con HEAD y HEAD va estrictamente por delante con un
+// rango no vacío; en cualquier otro caso devuelve false y el llamador conserva
+// la derivación por rama por defecto remota.
+func resolveCommittedRangeBaseFromUpstream(ctx context.Context, repo string) (string, bool) {
+	refOutput, err := runGit(ctx, repo, nil, nil, "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}")
+	if err != nil {
+		return "", false // sin upstream configurado: responde la derivación por rama por defecto
+	}
+	upstream := strings.TrimSpace(string(refOutput))
+	if upstream == "" || upstream == "@{upstream}" {
+		return "", false
+	}
+	head, err := resolveCommit(ctx, repo, "HEAD")
+	if err != nil {
+		return "", false
+	}
+	bases, err := runGit(ctx, repo, nil, nil, "merge-base", "--all", head, upstream)
+	if err != nil {
+		return "", false // historia criss-cross o upstream sin relación: se conserva la derivación por rama por defecto
+	}
+	merges := strings.Fields(string(bases))
+	if len(merges) != 1 {
+		return "", false
+	}
+	base := merges[0]
+	if base == head {
+		return "", false // al día con el upstream: la rama no nombra rango sin publicar (issue #4412)
+	}
+	countOutput, err := runGit(ctx, repo, nil, nil, "rev-list", "--count", base+".."+head)
+	if err != nil {
+		return "", false
+	}
+	count, err := strconv.Atoi(strings.TrimSpace(string(countOutput)))
+	if err != nil || count <= 0 {
+		return "", false // rango vacío entre el merge-base del upstream y HEAD
+	}
+	return base, true
 }
 
 // selectorlessCommittedBaseDiffMatchedPredecessor finds the lineage's frozen
@@ -396,7 +448,7 @@ func assessTargetStatusSnapshot(ctx context.Context, repo string, request Target
 			continue
 		}
 		state := candidate.compact.State
-		if request.LineageID == "" && (compactRejectedTargetedValidatorTerminalForChangedTarget(state, live) ||
+		if request.LineageID == "" && (compactRejectedTargetedValidatorTerminalForChangedTarget(state, live) && !compactEscalatedOriginalTargetMatches(state, live) ||
 			compactHistoricalFailedValidator(state) && compactEscalatedRecoveryTargetChanged(state.CurrentSnapshot, live)) {
 			continue
 		}
@@ -443,6 +495,15 @@ func assessTargetStatusSnapshot(ctx context.Context, repo string, request Target
 			}
 		}
 		if state.State == StateEscalated {
+			// El target original congelado sigue poseyendo su linaje terminal
+			// aunque una corrección haya cambiado CurrentSnapshot. Un fallo de
+			// validación no debe convertirse en un START nuevo (ni en una
+			// recuperación de target cambiado) solo porque el operador restauró
+			// esos bytes originales.
+			if compactEscalatedOriginalTargetMatches(state, live) && !compactAccountingOnlyEscalation(state) {
+				candidates = append(candidates, candidate)
+				continue
+			}
 			if compactEscalatedRecoveryTargetChanged(state.CurrentSnapshot, live) {
 				candidate.correctionRecovery = true
 				candidate.recoveryDisposition = RecoveryEscalated
@@ -585,6 +646,19 @@ func assessTargetStatusSnapshot(ctx context.Context, repo string, request Target
 		}
 		return base, nil
 	}
+}
+
+// compactEscalatedOriginalTargetMatches liga el alcance de entrega original,
+// incluida la prueba de untracked previstos, en lugar de comparar dominios de
+// identidad que pueden diferir entre selectores current-changes y base-diff.
+func compactEscalatedOriginalTargetMatches(state CompactState, live Snapshot) bool {
+	if state.State != StateEscalated {
+		return false
+	}
+	requested := state
+	requested.InitialSnapshot = live
+	return compactStartDeliveryScopeMatches(state, requested) &&
+		state.InitialSnapshot.CandidateTree == live.CandidateTree
 }
 
 // compactRejectedTargetedValidatorTerminalForChangedTarget recognizes only a

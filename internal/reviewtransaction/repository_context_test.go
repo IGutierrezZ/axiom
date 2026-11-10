@@ -331,6 +331,48 @@ func TestRctx2HandleRejectsMovedWorktree(t *testing.T) {
 	}
 }
 
+// Un host suele llevar worktrees registrados que ya no abren como repositorios
+// Git: un editor o un agente recreó el directorio, o un sandbox podó el
+// checkout dejando el registro. Ese candidato no es un match y se omite;
+// abortar toda la resolución por él deniega cada revisión que el host podría
+// resolver.
+func TestRctx2HostResolutionSkipsADeadRegisteredWorktree(t *testing.T) {
+	host, target, store, binding, handle := registeredRctx2HostFixture(t, "rctx2-dead-worktree")
+	dead := deadRegisteredWorktree(t, host)
+
+	before, err := os.ReadFile(store.StatePath())
+	if err != nil {
+		t.Fatal(err)
+	}
+	root, resolved, err := ResolveReviewRepositoryContextBindingFromHost(t.Context(), host, handle, binding)
+	if err != nil || root != target || resolved != binding {
+		t.Fatalf("rctx2 host resolution with dead worktree %q = root %q, binding %#v, error %v; want root %q", dead, root, resolved, err, target)
+	}
+	after, err := os.ReadFile(store.StatePath())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(after) != string(before) {
+		t.Fatal("dead-worktree host resolution mutated compact authority")
+	}
+}
+
+// deadRegisteredWorktree deja un worktree registrado en el host y le quita el
+// fichero de control de Git: sigue en `git worktree list` pero ya no abre. Se
+// añade el primero para que el resolvedor lo encuentre antes que el objetivo.
+func deadRegisteredWorktree(t *testing.T, host string) string {
+	t.Helper()
+	dead := filepath.Join(canonicalTempDir(t), "aaa-dead-worktree")
+	if err := runSnapshotGit(host, "worktree", "add", "-q", "-b", "dead-worktree-branch", dead, "HEAD"); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = runSnapshotGit(host, "worktree", "remove", "--force", dead) })
+	if err := os.RemoveAll(filepath.Join(dead, ".git")); err != nil {
+		t.Fatal(err)
+	}
+	return dead
+}
+
 func historicalReviewRepositoryContextFixture(t *testing.T, lineage string) (string, ReviewRepositoryContextBinding) {
 	t.Helper()
 	home := t.TempDir()

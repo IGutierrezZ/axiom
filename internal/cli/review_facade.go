@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"slices"
 	"strings"
 	"time"
 
@@ -952,14 +953,23 @@ func runReviewStatus(ctx context.Context, args []string, stdout io.Writer) error
 					// plain re-entry dead-ended the correction lineage and bound the
 					// resulting collect input to a different (live, declaration-less)
 					// target identity than the one the authority is bound to (issue
-					// #3849 and #4435). A frozen EXCLUDE declaration (empty selection)
-					// is left alone here because it is indistinguishable on its own from
+					// #3849 and #4435). For a workspace-scoped (current-changes or
+					// overlay) target a frozen EXCLUDE declaration (empty selection) is
+					// left alone here because it is indistinguishable on its own from
 					// "nothing was ever declared"; that path still requires a fresh live
-					// declaration when eligible untracked files exist.
+					// declaration when eligible untracked files exist. A committed-range
+					// (base-diff) target has no such ambiguity: its candidate is the
+					// frozen commit range plus the frozen selection, so even an empty
+					// selection is the immutable decision and resumes as-is
+					// (upstream #5424).
 					_, pendingApproval := reviewtransaction.PendingApprovedCompactAcknowledgement(record)
 					resumeCorrectionUntracked := false
 					declaredUntracked := record.State.InitialSnapshot.IntendedUntracked
-					if record.State.State == reviewtransaction.StateCorrectionRequired && len(declaredUntracked) != 0 {
+					if record.State.State == reviewtransaction.StateCorrectionRequired && len(declaredUntracked) == 0 &&
+						record.State.CurrentSnapshot.Kind == reviewtransaction.TargetBaseDiff &&
+						selectedBaseRef == "" && !*workspaceOverlay {
+						resumeCorrectionUntracked = true
+					} else if record.State.State == reviewtransaction.StateCorrectionRequired && len(declaredUntracked) != 0 {
 						inventory, _, inventoryErr := builder.IntendedUntrackedInventory(ctx)
 						if inventoryErr != nil {
 							return reviewPreflightError(inventoryErr)
@@ -1033,6 +1043,13 @@ func runReviewStatus(ctx context.Context, args []string, stdout io.Writer) error
 		var native reviewtransaction.TargetStatusResult
 		var liveSnapshot reviewtransaction.Snapshot
 		derivedBaseRef := ""
+		// passiveDeltaIdentity names the fresh target whose START was withheld
+		// because it only adds passive content to an acknowledged candidate.
+		passiveDeltaIdentity := ""
+		// boundaryReachesHead marks the #5638 outcome where every commit since
+		// the acknowledged boundary was empty: nothing unreviewed remains, and
+		// the fresh offer becomes the acknowledged_boundary_reaches_head stop.
+		boundaryReachesHead := false
 		// Issue #3932: a continuation START issued carries the opaque
 		// repository context, so it is a resume of an existing lineage, never
 		// a pre-named fresh START. A process cwd that does not hold that
@@ -1070,10 +1087,19 @@ func runReviewStatus(ctx context.Context, args []string, stdout io.Writer) error
 			// Resolve the effective candidate before acknowledgement discovery or
 			// consumption lookup, so STATUS and START share one identity.
 			if requestedLineage == "" && selectedBaseRef == "" && !*workspaceOverlay {
-				if derived, derivedTarget, ok := reviewDerivedCommittedRangeSnapshot(ctx, root, builder, liveSnapshot, target); ok {
-					liveSnapshot, target = derived, derivedTarget
-					derivedBaseRef = derivedTarget.BaseRef
-					selector = &reviewTransitionSelector{Kind: target.Kind, Projection: liveSnapshot.Projection, BaseRef: derivedBaseRef, PrePRRepresentable: true}
+				if derived, derivedTarget, outcome := reviewDerivedCommittedRangeSnapshot(ctx, root, builder, liveSnapshot, target); outcome != derivedRangeNone {
+					if outcome == derivedRangeCandidate {
+						liveSnapshot, target = derived, derivedTarget
+						derivedBaseRef = derivedTarget.BaseRef
+						selector = &reviewTransitionSelector{Kind: target.Kind, Projection: liveSnapshot.Projection, BaseRef: derivedBaseRef, PrePRRepresentable: true}
+					}
+					if outcome == derivedRangeBoundaryReachesHead {
+						// Issue #5638: nothing unreviewed remains between the
+						// acknowledged boundary and HEAD. The guards below still
+						// evaluate the full-range candidate truthfully; only the
+						// final fresh offer becomes the boundary stop.
+						boundaryReachesHead = true
+					}
 				}
 			}
 			// #3900: a zero-lens START closes approved with a pending
@@ -1098,12 +1124,56 @@ func runReviewStatus(ctx context.Context, args []string, stdout io.Writer) error
 				}
 			} else {
 				native = reviewFreshAtomicTargetStatus(target, liveSnapshot)
+				// A lineage already holding this exact START is live authority.
+				startOccupied := false
+				if requestedLineage == "" {
+					// Solo el linaje derivado de este START congelado exacto puede
+					// bloquearlo. Se evitan los escaneos de autoridad sin selector
+					// (y las lecturas de ascendencia de HEAD) para objetivos nuevos
+					// ajenos, incluidos los repositorios sin nacer.
+					startLineage, lineageErr := reviewAtomicStartLineage(ctx, root, liveSnapshot.Identity)
+					if lineageErr != nil {
+						return fmt.Errorf("derive negotiated START lineage: %w", lineageErr)
+					}
+					occupied, occupancyErr := reviewtransaction.ExactReviewLineageOccupied(ctx, root, startLineage)
+					if occupancyErr != nil {
+						return fmt.Errorf("inspect negotiated START lineage occupancy: %w", occupancyErr)
+					}
+					startOccupied = occupied
+					if occupied {
+						assessed, _, assessErr := reviewtransaction.AssessTargetStatusWithSnapshot(ctx, root, reviewtransaction.TargetStatusRequest{Target: target, LineageID: startLineage, PrePR: prePR})
+						if assessErr != nil {
+							return fmt.Errorf("assess terminal review target: %w", assessErr)
+						}
+						if assessed.Applicability == reviewtransaction.TargetApplicabilityCurrent &&
+							assessed.State == reviewtransaction.StateEscalated && assessed.Action == reviewtransaction.TargetStatusActionStop {
+							native = assessed
+						}
+					}
+				}
 				consumed, consumptionErr := reviewtransaction.CompactTargetConsumed(ctx, root, liveSnapshot.Identity)
 				if consumptionErr != nil {
 					return fmt.Errorf("read terminal consumption evidence: %w", consumptionErr)
 				}
 				if consumed {
 					native.Action, native.Replayability = reviewtransaction.TargetStatusActionStop, reviewtransaction.ReplayabilityNotReplayable
+				} else if requestedLineage == "" && !startOccupied && native.Action == reviewtransaction.TargetStatusActionStart {
+					// #4739: a committed range that only adds passive content to
+					// an approved, acknowledged candidate has nothing new to
+					// review. This only withholds a fresh offer: it grants no
+					// authority, never hides a lineage already holding this
+					// START, and any lookup failure keeps the offer.
+					if passive, passiveErr := reviewtransaction.AcknowledgedPassivePredecessor(ctx, root, liveSnapshot); passiveErr == nil && passive {
+						native.Action, native.Replayability = reviewtransaction.TargetStatusActionStop, reviewtransaction.ReplayabilityNotReplayable
+						passiveDeltaIdentity = liveSnapshot.Identity
+					} else if passiveErr == nil && boundaryReachesHead {
+						// Issue #5638: the acknowledged boundary reaches HEAD --
+						// every commit since it was empty, so nothing unreviewed
+						// remains. Same withholding contract as the passive
+						// sibling: no authority, live lineages stay visible, and
+						// any earlier failure kept the offer.
+						native.Action, native.Replayability = reviewtransaction.TargetStatusActionStop, reviewtransaction.ReplayabilityNotReplayable
+					}
 				}
 			}
 		} else {
@@ -1133,6 +1203,10 @@ func runReviewStatus(ctx context.Context, args []string, stdout io.Writer) error
 		result := newReviewTargetStatusResultForContract(native, *contract)
 		result.intendedUntracked = intendedScope
 		result.committedRangeBaseRef = derivedBaseRef
+		result.passiveDeltaAfterAcknowledgement = passiveDeltaIdentity != "" && native.TargetIdentity == passiveDeltaIdentity &&
+			native.Action == reviewtransaction.TargetStatusActionStop
+		result.acknowledgedBoundaryReachesHead = boundaryReachesHead &&
+			native.Action == reviewtransaction.TargetStatusActionStop
 		// Issue #4040: publish the digest once, here, before every path that
 		// could suppress it — the compact-reviewing replacement immediately
 		// below (which deliberately zeros Digest for the #1972 fail-closed
@@ -1232,6 +1306,9 @@ func runReviewStatus(ctx context.Context, args []string, stdout io.Writer) error
 							OriginalChangedLines:   record.State.OriginalChangedLines,
 							CorrectionBudget:       record.State.CorrectionBudget,
 							CorrectionBudgetPolicy: record.State.CorrectionBudgetPolicy,
+						}
+						if selector.SelectorFreeAccountingOnlyRecovery && record.State.FrozenPolicyContent == nil {
+							return reviewRecoveryStatusRefusal("accounting-only recovery has no frozen policy content")
 						}
 						if result.Authority != nil {
 							result.Authority.CapturePhaseRevision = record.State.CapturePhaseRevision
@@ -1426,7 +1503,23 @@ func runReviewStatus(ctx context.Context, args []string, stdout io.Writer) error
 			}
 			input := reviewNextTransitionInput{Gate: reviewtransaction.GateKind(*gate), Successor: *recoverySuccessor, Reason: *recoveryReason, Actor: *recoveryActor, Authorization: *recoveryAuthorization, RepairActor: *repairActor, RepairReason: *repairReason, RepairAuthorization: *repairAuthorization, StartLineage: startLineage, RuntimeAgent: runtime, ProviderRole: providerRole, CapturedProviderTargetedValidator: capturedProviderTargetedValidator, CapturedProviderTargetedValidatorInconclusive: capturedProviderTargetedValidatorInconclusive, Contract: *contract, RepositoryContext: repositoryContext, Acknowledgement: acknowledgement, ValidationRequest: validationRequest, CorrectionRequest: correctionRequest, CorrectionForecasted: correctionForecasted, CaptureContext: captureContext, Selector: selector, IntendedUntracked: intendedScope, RDDMode: result.rddMode, RDDModeResolved: result.rddModeResolved, LensContextBudgetExceeded: lensContextBudgetExceeded, CorrectionContextBudgetExceeded: correctionContextBudgetExceeded, CorrectionReleaseEligibility: correctionReleaseEligibility, UnachievableLensAttempts: unachievableLensAttempts}
 			var transition ReviewNextTransition
+			input.RecoveryInputsProvided = reviewFlagWasProvided(flags, "recovery-authorization") || reviewFlagWasProvided(flags, "recovery-actor") || reviewFlagWasProvided(flags, "recovery-reason")
 			transition = newReviewNextTransition(result, native.SelectedLenses, artifacts, artifactErr, input)
+			// Se resuelve solo una recuperación legal y representable de forma
+			// nativa; la colecta y el stop por selectores de target ausentes
+			// conservan su precedencia (upstream #5151).
+			if native.Action == reviewtransaction.TargetStatusActionRecover &&
+				(transition.ReasonCode == "recovery_authorization_required" || transition.Execute != nil && transition.Execute.Operation == "review.recover") {
+				binding := ReviewTransitionBinding{LineageID: native.LineageID, Revision: native.Revision, TargetIdentity: result.TargetIdentity}
+				if input.RecoveryInputsProvided && !input.recoveryAuthorized(binding) {
+					return reviewRecoveryStatusRefusal("explicit recovery authorization requires the complete exact successor, actor, reason, and authorization binding")
+				}
+				input.Successor, err = reviewStatusRecoverySuccessor(ctx, root, binding, input.Successor)
+				if err != nil {
+					return err
+				}
+				transition = newReviewNextTransition(result, native.SelectedLenses, artifacts, artifactErr, input)
+			}
 			result.NextTransition = &transition
 			providerTargetedValidation := (transition.ReasonCode == "targeted_validation_required" || transition.ReasonCode == reviewInconclusiveTargetedValidationReason) &&
 				transition.Collect != nil && len(transition.Collect.Inputs) == 1 && transition.Collect.Inputs[0].ProviderTask != nil
@@ -1523,22 +1616,74 @@ func reviewFreshAtomicTargetStatus(target reviewtransaction.Target, snapshot rev
 // to the remote default branch's unique committed range before classification.
 // The result is the effective STATUS candidate, not a second transition-only
 // identity. Ambiguous or empty ranges retain the existing base-selection fallback.
-func reviewDerivedCommittedRangeSnapshot(ctx context.Context, root string, builder reviewtransaction.SnapshotBuilder, live reviewtransaction.Snapshot, target reviewtransaction.Target) (reviewtransaction.Snapshot, reviewtransaction.Target, bool) {
+//
+// When the acknowledged-boundary walk (issue #5638) finds a consumed
+// first-parent ancestor with a non-passive delta, the effective candidate is
+// the delta since that boundary -- its --base-ref names the boundary commit --
+// and every walk failure, passive delta, or beyond-window boundary keeps the
+// full-range candidate exactly as before.
+func reviewDerivedCommittedRangeSnapshot(ctx context.Context, root string, builder reviewtransaction.SnapshotBuilder, live reviewtransaction.Snapshot, target reviewtransaction.Target) (reviewtransaction.Snapshot, reviewtransaction.Target, reviewDerivedRangeOutcome) {
 	if live.Kind != reviewtransaction.TargetCurrentChanges || len(live.Paths) != 0 {
-		return reviewtransaction.Snapshot{}, reviewtransaction.Target{}, false
+		return reviewtransaction.Snapshot{}, reviewtransaction.Target{}, derivedRangeNone
 	}
 	base, err := reviewtransaction.ResolveCommittedRangeBase(ctx, root)
 	if err != nil || base == "" {
-		return reviewtransaction.Snapshot{}, reviewtransaction.Target{}, false
+		return reviewtransaction.Snapshot{}, reviewtransaction.Target{}, derivedRangeNone
 	}
 	derivedTarget := reviewtransaction.Target{
 		Kind: reviewtransaction.TargetBaseDiff, BaseRef: base,
 		IntendedUntracked: append([]string{}, target.IntendedUntracked...),
 	}
 	snapshot, err := builder.BuildStoredSnapshot(ctx, derivedTarget)
-	// Empty commits and ambiguous ranges retain the base-selection fallback.
-	return snapshot, derivedTarget, err == nil && len(snapshot.Paths) > 0
+	if err != nil || len(snapshot.Paths) == 0 {
+		// Empty commits and ambiguous ranges retain the base-selection fallback.
+		return reviewtransaction.Snapshot{}, reviewtransaction.Target{}, derivedRangeNone
+	}
+	// Issue #5638: the reviewed boundary advances on acknowledgement. A
+	// non-passive delta from the nearest acknowledged ancestor is the whole
+	// change actually attributable to the session; everything else -- walk
+	// failure, no boundary, passive delta, or beyond-window -- keeps the
+	// full-range candidate and its existing suppression paths.
+	if boundary, ok, boundaryErr := reviewtransaction.AcknowledgedBoundaryCommit(ctx, root, snapshot); boundaryErr == nil && ok {
+		if len(boundary.DeltaPaths) == 0 {
+			return snapshot, derivedTarget, derivedRangeBoundaryReachesHead
+		}
+		if !boundary.Passive {
+			deltaTarget := reviewtransaction.Target{
+				Kind: reviewtransaction.TargetBaseDiff, BaseRef: boundary.Commit,
+				IntendedUntracked: append([]string{}, target.IntendedUntracked...),
+			}
+			deltaSnapshot, deltaErr := builder.BuildStoredSnapshot(ctx, deltaTarget)
+			if deltaErr == nil && len(deltaSnapshot.Paths) > 0 {
+				return deltaSnapshot, deltaTarget, derivedRangeCandidate
+			}
+			// A delta rebuild failure keeps the full-range offer; START's own
+			// gates still decide on it.
+		}
+	}
+	return snapshot, derivedTarget, derivedRangeCandidate
 }
+
+// reviewDerivedRangeOutcome says what the selectorless committed-range
+// derivation resolved for this fresh workspace.
+type reviewDerivedRangeOutcome int
+
+const (
+	// derivedRangeNone: no derivation happened; the caller keeps the live
+	// current-changes candidate and its base-selection fallback.
+	derivedRangeNone reviewDerivedRangeOutcome = iota
+	// derivedRangeCandidate: snapshot/target hold the effective candidate --
+	// the full committed range, or the delta since the acknowledged boundary
+	// when the boundary walk found one with a non-passive delta (issue #5638).
+	derivedRangeCandidate
+	// derivedRangeBoundaryReachesHead: every commit since the acknowledged
+	// boundary was empty, so nothing unreviewed remains between the boundary
+	// and HEAD. snapshot/target still hold the full-range candidate so the
+	// pending-lineage and occupancy guards keep evaluating truthfully; the
+	// caller turns the fresh offer into the acknowledged_boundary_reaches_head
+	// stop and never hides a live lineage.
+	derivedRangeBoundaryReachesHead
+)
 
 // reviewFreshStatusPreflight makes the fresh, store-free STATUS classification
 // agree with START before a review.start transition is emitted. The transition
@@ -1556,6 +1701,55 @@ func reviewFreshStatusPreflight(snapshot reviewtransaction.Snapshot) (reviewtran
 func reviewStartEmptyCandidateScope(snapshot reviewtransaction.Snapshot) bool {
 	return len(snapshot.Paths) == 0 &&
 		(snapshot.Kind == reviewtransaction.TargetCurrentChanges || snapshot.Kind == reviewtransaction.TargetBaseDiff)
+}
+
+// reviewStatusRecoverySuccessor elige un nombre exacto, nunca un sufijo libre.
+// El descubrimiento compacto del núcleo diagnostica la propiedad; solo él
+// decide la igualdad del reintento y confirma la arista bajo su cerrojo. Un
+// conflicto no es permiso para bifurcar.
+func reviewStatusRecoverySuccessor(ctx context.Context, root string, binding ReviewTransitionBinding, requested string) (string, error) {
+	successor := strings.TrimSpace(requested)
+	if successor == "" {
+		var err error
+		successor, err = reviewAtomicStartLineage(ctx, root, binding.TargetIdentity)
+		if err != nil {
+			return "", err
+		}
+	}
+	if !validReviewIntegrationLineage(successor) || successor == binding.LineageID {
+		return "", reviewRecoveryStatusRefusal("recovery successor must be a distinct canonical lineage")
+	}
+	stores, err := reviewtransaction.DiscoverCompactStores(ctx, root)
+	if err != nil {
+		return "", err
+	}
+	for _, store := range stores {
+		record, loadErr := store.LoadContext(ctx)
+		if loadErr != nil {
+			// Igual que scanCompactAuthority: un contenido ilegible en una rama
+			// ajena cuenta como ausente, pero no poder observar la autoridad se
+			// propaga.
+			if reviewtransaction.IsCompactAuthorityOperationalFailure(loadErr) {
+				return "", loadErr
+			}
+			continue
+		}
+		if record.State.Recovery != nil && record.State.Recovery.PredecessorLineageID == binding.LineageID {
+			return "", reviewRecoveryStatusRefusal(fmt.Sprintf("recovery predecessor already has successor %s", record.State.LineageID))
+		}
+	}
+	occupied, err := reviewtransaction.ExactReviewLineageOccupied(ctx, root, successor)
+	if err != nil {
+		return "", err
+	}
+	if occupied {
+		return "", reviewRecoveryStatusRefusal(fmt.Sprintf("recovery successor %s is occupied", successor))
+	}
+	return successor, nil
+}
+
+func reviewRecoveryStatusRefusal(detail string) error {
+	return reviewPreflightError(fmt.Errorf("%s; inspect the existing authority with the requested repository as the working directory; re-run: axiom review inspect-authority", detail))
 }
 
 func RunReviewRecover(args []string, stdout io.Writer) error {
@@ -1658,7 +1852,7 @@ func RunReviewRecover(args []string, stdout io.Writer) error {
 	// overrides inheritance, so the successor target derives from the exact
 	// selection STATUS authorized rather than from the predecessor alone.
 	declaredSelection := reviewIntendedUntrackedDeclared(untrackedScope, intendedUntracked, expectedUntrackedInventory)
-	currentChangesSuccessor := !*releaseScope && !*committedOnly && !stagedScopeOverlay && !overlay
+	currentChangesSuccessor := !*releaseScope && !*committedOnly && !stagedScopeOverlay && !overlay && !baseDiff
 	if declaredSelection && !currentChangesSuccessor {
 		return errors.New("intended-untracked selection requires a current-changes recovery; rerun `axiom review recover` without --untracked-scope, --intended-untracked, and --expected-untracked-inventory")
 	}
@@ -1693,6 +1887,10 @@ func RunReviewRecover(args []string, stdout io.Writer) error {
 		if target.BaseRef == "" {
 			target.BaseRef = predecessorRecord.State.InitialSnapshot.BaseTree
 		}
+	} else if baseDiff {
+		// Un predecesor base-diff recuperado sin selector de base conserva su
+		// árbol base congelado, igual que uno overlay (upstream #5038/#5420).
+		target.Kind, target.BaseRef = reviewtransaction.TargetBaseDiff, predecessorRecord.State.InitialSnapshot.BaseTree
 	}
 	var snapshot reviewtransaction.Snapshot
 	if *releaseScope {
@@ -1717,8 +1915,19 @@ func RunReviewRecover(args []string, stdout io.Writer) error {
 		return err
 	}
 	risk, changedLines := assessment.Level, assessment.ChangedLines
+	// Se prepara la forma congelada de la revisión para una posible reutilización
+	// de evidencia, no su elegibilidad: el núcleo sigue probando cada predicado
+	// accounting-only. CURRENT lleva el candidato corregido como fix-diff; este
+	// sucesor es current-changes, así que se comparan árboles candidatos y no
+	// identidades ligadas al tipo (upstream #5146).
+	prior := predecessorRecord.State
+	prepareFrozenShape := reviewtransaction.RecoveryDisposition(*disposition) == reviewtransaction.RecoveryEscalated &&
+		prior.State == reviewtransaction.StateEscalated && snapshot.CandidateTree == prior.CurrentSnapshot.CandidateTree
 	lenses, err := facadeSelectedLenses(assessment, *focus)
 	if err != nil {
+		if prepareFrozenShape && reviewFlagWasProvided(flags, "focus") {
+			return reviewFrozenShapeConflictRefusal(flags, "--focus", *cwd, *predecessor, *expected, *successor, *disposition)
+		}
 		return err
 	}
 	policy, err := facadePolicyBytes(*policySource)
@@ -1726,9 +1935,29 @@ func RunReviewRecover(args []string, stdout io.Writer) error {
 		return err
 	}
 	policyContent := string(policy)
+	policyHash, frozenPolicy := facadePayloadHash(policy), &policyContent
+	if prepareFrozenShape {
+		if reviewFlagWasProvided(flags, "policy") && (policyHash != prior.PolicyHash ||
+			prior.FrozenPolicyContent != nil && policyContent != *prior.FrozenPolicyContent) {
+			return reviewFrozenShapeConflictRefusal(flags, "--policy", *cwd, *predecessor, *expected, *successor, *disposition)
+		}
+		if reviewFlagWasProvided(flags, "focus") && !slices.Equal(lenses, prior.SelectedLenses) {
+			return reviewFrozenShapeConflictRefusal(flags, "--focus", *cwd, *predecessor, *expected, *successor, *disposition)
+		}
+		frozenFocus := "reliability"
+		if len(prior.SelectedLenses) == 1 {
+			frozenFocus = strings.TrimPrefix(prior.SelectedLenses[0], "review-")
+		}
+		liveLenses, lensErr := facadeSelectedLenses(assessment, frozenFocus)
+		if lensErr != nil || risk != prior.RiskLevel || !slices.Equal(liveLenses, prior.SelectedLenses) {
+			return errors.New("frozen recovery review shape is incompatible with current repository risk; evidence reuse cannot preserve that shape, and changing --focus or --policy cannot make it compatible") // refusal:by-design world-action: repository risk classification drift requires a provider code fix before frozen-shape evidence reuse can be safe
+		}
+		policyHash, frozenPolicy = prior.PolicyHash, prior.FrozenPolicyContent
+		lenses = append([]string{}, prior.SelectedLenses...)
+	}
 	state, err := reviewtransaction.NewCompactState(reviewtransaction.Start{
-		LineageID: *successor, Mode: reviewtransaction.ModeOrdinaryBounded, Generation: predecessorRecord.State.Generation + 1,
-		Snapshot: snapshot, PolicyHash: facadePayloadHash(policy), PolicyContent: &policyContent,
+		LineageID: *successor, Mode: reviewtransaction.ModeOrdinaryBounded, Generation: prior.Generation + 1,
+		Snapshot: snapshot, PolicyHash: policyHash, PolicyContent: frozenPolicy,
 		RiskLevel: risk, SelectedLenses: lenses, OriginalChangedLines: &changedLines,
 	})
 	if err != nil {
@@ -1788,6 +2017,22 @@ func RunReviewRecover(args []string, stdout io.Writer) error {
 	}
 	return encodeReviewJSON(stdout, ReviewRecoverResult{Operation: "review/recover", LineageID: record.State.LineageID, State: record.State.State,
 		StoreRevision: record.Revision, Projection: facadeProjection(snapshot.Projection), TargetIdentity: snapshot.Identity, Recovery: *record.State.Recovery})
+}
+
+// reviewFrozenShapeConflictRefusal conserva el target exacto de la
+// recuperación y descarta las sobrescrituras de la forma de revisión y la tupla
+// de autorización explícita. La recuperación nativa deriva esa tupla; el núcleo
+// sigue decidiendo si la reutilización es legal.
+func reviewFrozenShapeConflictRefusal(flags *flag.FlagSet, conflict, cwd, predecessor, expected, successor, disposition string) error {
+	explicitCwd := ""
+	if reviewFlagWasProvided(flags, "cwd") {
+		explicitCwd = strings.TrimSpace(cwd)
+	}
+	command := []string{reviewRecoverCommand(explicitCwd, predecessor, expected, successor, disposition)}
+	for _, selector := range reviewRecoverSelectorTokens(flags) {
+		command = append(command, reviewTransitionShellWord(selector))
+	}
+	return fmt.Errorf("%s conflicts with the frozen recovery review shape; omit --focus and --policy and use the bound axiom review recover command in the same repository context; re-run: %s", conflict, strings.Join(command, " "))
 }
 
 // reviewUnchangedRecoveryRefusal explains the unchanged-target escalated
@@ -2148,6 +2393,13 @@ func runReviewFacadeStart(ctx context.Context, args []string, stdout io.Writer) 
 	lenses, err := facadeSelectedLenses(assessment, *focus)
 	if err != nil {
 		return err
+	}
+	// El esquema START del contrato v1 (start/v2) está congelado y no admite el
+	// motivo dangerous_sink. Se rechaza aquí, antes del consentimiento y de crear
+	// autoridad alguna, en lugar de emitir un sobre que su propio esquema no
+	// valida ni degradar el motivo a otro inexacto.
+	if negotiated && *contract == ReviewIntegrationContractV1 && reviewStartRiskReasonsContainDangerousSink(assessment.Reasons) {
+		return reviewPreflightError(errors.New("the candidate carries the dangerous_sink risk reason, which the frozen v1 START schema cannot represent; negotiate the v2 review integration contract instead")) // refusal:by-design world-action: the frozen v1 contract cannot represent this reason; the exit is negotiating the v2 contract
 	}
 	// Issue #2447. The direct route's own response type
 	// (ReviewFacadeStartResult) never carries repository_context -- only the

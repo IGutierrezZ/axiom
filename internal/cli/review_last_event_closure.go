@@ -13,6 +13,12 @@ import (
 
 const reviewLastEventClosureSchema = "gentle-ai.review-last-event-closure/v1"
 
+// reviewLastEventClosureSchemaV2 is the closure that declares
+// targeted_validator_evidence. It is emitted only when that evidence is present
+// (the replay of a rejected validator capture); every other closure stays on v1
+// so existing consumers see no change.
+const reviewLastEventClosureSchemaV2 = "gentle-ai.review-last-event-closure/v2"
+
 const reviewApprovedLastEventAcknowledgementAction = "the approved review completed on the last admitted event and awaits its exact acknowledgement"
 
 // reviewLastEventClosureResult is the answer of the capture-* verbs. Their
@@ -194,7 +200,7 @@ func newCorrectionCapturedValidatorClosure(repo string, state reviewtransaction.
 		return nil, errors.New("targeted validator closure evidence does not match its rejected verdict") // refusal:by-design human-authority: inconsistent rejection evidence requires authority inspection
 	}
 	return &reviewLastEventClosureResult{
-		Schema: reviewLastEventClosureSchema, Operation: "review/capture-validation", LineageID: state.LineageID,
+		Schema: reviewLastEventClosureSchemaV2, Operation: "review/capture-validation", LineageID: state.LineageID,
 		State: state.State, Action: "the targeted validator rejected the correction; maintainer action is informational",
 		TargetedValidatorEvidence: &evidence, Escalation: state.EscalationEvidence(), AdvisoryFindings: reviewtransaction.AdvisoryFindingSetFor(state), StoreRevision: revision,
 	}, nil

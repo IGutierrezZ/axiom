@@ -322,8 +322,8 @@ func reviewProviderNewTargetedValidatorRequest(ctx context.Context, repo string,
 
 // reviewProviderMaterializeEvidence materializes the frozen tree-to-tree
 // evidence per changed path for one provider role request, in exactly the
-// representation a lens receives: authored paths carry their complete patch
-// and generated paths carry their immutable metadata summary. The aggregate
+// representation a lens receives: authored paths and dependency locks carry
+// their complete patch; other generated paths carry immutable metadata. The aggregate
 // budget is the effective runtime-context budget for the runtime START froze
 // this authority to, not the raw Git ceiling: the refuter and validator hold
 // the same evidence as a lens, so the same approved runtime cap bounds what
@@ -356,7 +356,7 @@ func reviewProviderMaterializeEvidence(ctx context.Context, repo, runtime string
 	}
 	evidence := make([]reviewProviderEvidence, 0, len(frozen.ChangedPathManifest))
 	for index, entry := range frozen.ChangedPathManifest {
-		if entry.Generated {
+		if reviewLensContextOmitsContent(entry) {
 			summary, err := reviewLensContextGeneratedSummaryFor(index, entry, frozen, numstats)
 			if err != nil {
 				return nil, reviewLensContextInspectionFailure(ctx, err)
@@ -621,6 +621,17 @@ func reviewProviderAdmitTargetedValidatorRaw(request reviewProviderTargetedValid
 	return result, native, nil
 }
 
+// reviewProviderAdmissionError marca un error producido al admitir los bytes de
+// un rol del proveedor contra el contrato nativo de resultado. Es transparente:
+// Error() devuelve el texto envuelto sin cambios y Unwrap conserva errors.Is/As,
+// así que los llamadores y tests existentes ven el mismo comportamiento. Los
+// bordes de transporte usan la marca para clasificar rechazos en códigos de
+// causa acotados sin volver a mostrar texto de admisión ni bytes del revisor.
+type reviewProviderAdmissionError struct{ err error }
+
+func (e *reviewProviderAdmissionError) Error() string { return e.err.Error() }
+func (e *reviewProviderAdmissionError) Unwrap() error { return e.err }
+
 func reviewProviderCloseTargetedValidatorRaw(ctx context.Context, dialect reviewDialect, repo string, store reviewtransaction.CompactStore, state reviewtransaction.CompactState, revision string, raw []byte) (facadeValidationResult, reviewtransaction.ScopedValidationResult, *reviewLastEventClosureResult, error) {
 	correction, err := reviewProviderTargetedValidatorCorrection(ctx, repo, state)
 	if err != nil {
@@ -640,7 +651,7 @@ func reviewProviderCloseTargetedValidatorRaw(ctx context.Context, dialect review
 				return facadeValidationResult{}, reviewtransaction.ScopedValidationResult{}, nil, ledgerErr
 			}
 		}
-		return facadeValidationResult{}, reviewtransaction.ScopedValidationResult{}, nil, err
+		return facadeValidationResult{}, reviewtransaction.ScopedValidationResult{}, nil, &reviewProviderAdmissionError{err}
 	}
 	closure, err := reviewProviderCaptureAdmittedTargetedValidatorResult(ctx, dialect, repo, store, state, correction, request, result, native)
 	return result, native, closure, err
@@ -768,14 +779,10 @@ func reviewProviderTargetedValidatorCorrection(ctx context.Context, repo string,
 	if state.State != reviewtransaction.StateCorrectionRequired || state.ProposedCorrectionLines == nil || state.CorrectionAttemptConsumed() {
 		return reviewtransaction.Snapshot{}, errors.New("provider targeted validator request requires an open correction") // refusal:by-design world-action: validator evidence applies only to one open forecasted correction
 	}
-	view, err := state.CompactReviewView()
-	if err != nil {
+	if _, err := state.CompactReviewView(); err != nil {
 		return reviewtransaction.Snapshot{}, fmt.Errorf("derive provider targeted validator scope from admitted authority: %w", err)
 	}
-	return (reviewtransaction.SnapshotBuilder{Repo: repo}).Build(ctx, reviewtransaction.Target{
-		Kind: reviewtransaction.TargetFixDiff, Projection: state.InitialSnapshot.Projection, BaseRef: state.CurrentSnapshot.CandidateTree,
-		IntendedUntracked: state.InitialSnapshot.IntendedUntracked, LedgerIDs: view.FixFindingIDs,
-	})
+	return reviewtransaction.BuildTargetedValidationCorrection(ctx, repo, state)
 }
 
 func canonicalProviderRoleResult(result any) ([]byte, error) {

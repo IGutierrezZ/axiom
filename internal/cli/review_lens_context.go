@@ -18,8 +18,8 @@ import (
 )
 
 // reviewLensContextTimeout bounds the whole assembly, not one read. The surface
-// performs two discovery reads plus one patch read per authored path; generated
-// paths use immutable metadata from discovery. A reviewer that never launches
+// performs two discovery reads plus one patch read per authored or dependency
+// lock path; other generated paths use immutable metadata from discovery. A reviewer that never launches
 // is the correct outcome when the repository stops
 // answering partway through.
 const reviewLensContextTimeout = 120 * time.Second
@@ -594,6 +594,14 @@ func reviewLensContextParseNumstat(payload []byte, manifest []reviewtransaction.
 	return stats, nil
 }
 
+// La clasificación contable (generado) y la política de evidencia semántica son
+// independientes: los lockfiles de dependencias cuentan como generados pero
+// conservan su parche completo. Los roles de lente y los demás roles deben
+// tomar la misma decisión de omisión.
+func reviewLensContextOmitsContent(entry reviewtransaction.ChangedPathManifestEntry) bool {
+	return entry.Generated && !reviewtransaction.IsDependencyLockCandidatePath(entry.Path)
+}
+
 func reviewLensContextGeneratedSummaryFor(index int, entry reviewtransaction.ChangedPathManifestEntry, frozen reviewtransaction.FrozenCandidateContext, stats map[string]reviewLensContextNumstatEntry) ([]byte, error) {
 	oldObjectID, newObjectID, ok := frozen.CandidatePathObjectIDs(index)
 	if !ok {
@@ -697,7 +705,7 @@ func reviewLensContextBlock(
 		}
 	}
 	for index, entry := range frozen.ChangedPathManifest {
-		if entry.Generated {
+		if reviewLensContextOmitsContent(entry) {
 			payload, err := reviewLensContextGeneratedSummaryFor(index, entry, frozen, numstats)
 			if err != nil {
 				return nil, reviewLensContextInspectionFailure(ctx, err)
@@ -745,16 +753,18 @@ func reviewLensContextInstructionText(binding reviewLensContextBinding, paths in
 	}
 	return fmt.Sprintf(`You are the %s lens of one bounded Axiom review. %s
 
-Scope. The %s sections below are the complete and only view of this candidate: all %d changed paths are represented in the canonical manifest order carried by %s. Authored paths carry full immutable patches; generated paths carry immutable metadata summaries without content hunks. Do not read the working tree, the index, HEAD, or any other file, and do not run any command. Nothing outside these sections is part of this candidate, and anything you cannot see here is not evidence.
+Scope. The %s sections below are the complete and only view of this candidate: all %d changed paths are represented in the canonical manifest order carried by %s. Authored paths and dependency lockfiles carry full immutable patches; other generated paths carry immutable metadata summaries without content hunks. Do not read the working tree, the index, HEAD, or any other file, and do not run any command. Nothing outside these sections is part of this candidate, and anything you cannot see here is not evidence.
 
 Causality. Report only what this candidate caused. Give every BLOCKER or CRITICAL finding an evidence_class and a causal_disposition, and mark what the base already contained as pre-existing or base-only rather than as a blocker.
+
+%s
 
 Return. Emit exactly one JSON object and nothing else: no prose before or after it, no markdown fence, no task envelope. It must validate against the schema in %s. Set subject_hash to exactly %s -- this is the %s section's own subject_hash field above, and only that field; never echo a target or target_identity value carried elsewhere in this context, even though it is also a sha256: string. When you inspected the complete candidate, set inspection.status to "completed" and inspection.paths to the complete unique unordered set of every manifest path. When you could not inspect the candidate, set inspection.status to "unavailable", leave inspection.paths empty, and set inspection.reason to a non-empty explanation -- inspection.status and inspection.reason are the typed signal admission reads for this decision; evidence prose is not a substitute for them. Each finding location is one path:line or path:start-end inclusive span. findings and evidence must both be present, and evidence must be non-empty.
 
 Citations. Every finding location, and every path cited inside an evidence string or a proof_refs entry, must be a repository-relative path exactly as it appears in the changed-path manifest, optionally with :line or :start-end. Never cite absolute paths, bare file basenames without their directory, or non-path colon-number shapes such as host:port. Any token shaped like path:line is validated against the frozen repository, and one unknown path rejects the entire result. A finding whose causal_disposition is introduced, behavior-activated, or worsened must anchor its location entirely within lines this candidate changed: every line of a path:start-end span is validated as candidate-changed, one unchanged context line in the span rejects the entire result, and observations about unchanged code belong under pre-existing or base-only instead. When the candidate's own content contains a path-shaped literal that is not a real repository path (for example a traversal or fixture token inside a test), never reproduce that token in evidence or proof_refs: describe it in words and cite the manifest file and line that contain it.
 
 Honesty. If you could not inspect the candidate, set inspection.status to "unavailable" with a non-empty inspection.reason explaining why, and do not return a clean result: an access failure is not a completed inspection. Describing the failure only in evidence while leaving inspection.status as "completed" is a false completion: admission refuses it when the prose reports an inaccessible candidate, and otherwise cannot recover from it.`,
-		title, focus, reviewLensContextPatch, paths, reviewLensContextContextHeader,
+		title, focus, reviewLensContextPatch, paths, reviewLensContextContextHeader, reviewerprovider.SeverityRules,
 		reviewLensContextResultSchema, binding.SubjectHash, reviewLensContextBindingHeader), nil
 }
 

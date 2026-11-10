@@ -45,6 +45,17 @@ This lifecycle is available only to Claude Code, Codex, OpenCode, and Pi. Unsupp
 
 `axiom review status` and `axiom review start` initialize local Git only for a genuinely unversioned directory. They never do it for the master folder of a multirepo workspace: a directory that carries `.axiom-workspace` (itself or in an ancestor) or whose direct children hold `.git` metadata is refused before anything is written. The refusal is the typed `invalid_request` preflight failure with `next_action: correct_request`; its message names the workspace, lists up to five of its repositories, and names the continuation `axiom review status --cwd <repo>`. Point `--cwd` at one of those repositories and rerun. The refusal applies whether or not receipt-driven development is enabled.
 
+### Opaque repository-context refusals
+
+An `rctx2_` handle is an opaque hexadecimal digest, not a path or proof of active authority. Resolution checks the supplied repository and binding against current authority without mutating it.
+
+| Code | Meaning and next action |
+| --- | --- |
+| `rctx2_binding_unusable` | Structurally invalid handle or binding tuple, or a tuple that does not match the supplied repository and handle. Verify `--cwd` names the intended repository, then obtain the exact native `next_transition`; do not reconstruct tokens. A digest mismatch cannot identify which field differs. |
+| `rctx2_resolution_failed` | An underlying repository or authority check failed. Inspect the scrubbed cause and verify the repository and active binding; refreshing alone may not repair missing, unreadable, or mismatched authority. This does not prove the binding was valid when issued. |
+
+Git ownership refusals retain `git_repository_untrusted`; authority from a newer release retains `review_authority_newer_release`. Neither is repaired by refreshing a transition. Unrelated, non-V2 errors retain their existing generic classification (`repository_context_unavailable`).
+
 ## Atomic lifecycle
 
 ### 1. Selectorless STATUS preflights only
@@ -68,6 +79,31 @@ A reviewing START carries `next_transition.execute(review.status)` — the provi
 | `stop` | Run no lifecycle operation. Do not infer a recovery from prose. |
 
 A forecast is descriptive, not a route. Relay every forecast step and horizon losslessly, but execute only `next_transition`.
+
+#### Native recovery for an explicitly selected lineage
+
+When native STATUS selects legal, representable recovery, its returned
+`review.recover` invocation carries four core arguments: predecessor lineage,
+exact predecessor revision, successor lineage, and disposition. Replay every
+returned target selector unchanged, including declared untracked scope and its
+inventory digest. Native RECOVER derives actor, reason, and the exact audit
+binding; consumers must not manufacture an external authorization collection.
+This does not supply missing runtime consent or authorize delivery.
+
+STATUS preserves an explicit `--recovery-successor-lineage`; otherwise it derives
+one name from the existing worktree-and-target identity. It never searches for
+an available suffix. An occupied name, the predecessor's own name, or an already
+recorded successor fails closed with a read-only `axiom review inspect-authority`
+diagnostic. Run that diagnostic with the requested repository as process cwd;
+do not invent a new successor to bypass the conflict.
+
+Explicit compatibility remains available through the complete successor,
+`--recovery-actor`, `--recovery-reason`, and `--recovery-authorization` binding.
+STATUS renders the existing seven-argument RECOVER form only for an exact binding.
+Explicit empty/wrong authorization or a partial tuple refuses without mutation;
+it never falls back to self-derivation. Core recovery legality remains unchanged,
+including failed-criteria and accounting-only evidence checks. The
+`status-v9-recover-native.fixture.json` fixture shows the four-input eligibility.
 
 ### 4. Approved authority awaits acknowledgement, then burns
 
@@ -103,6 +139,8 @@ The in-process Claude Code reviewer uses the saved model and effort for each rol
 Each provider-issued capture input is one slot. Its reviewer prompt starts with `GENTLE_AI_REVIEW_BINDING ` followed by one-line binding JSON. A result echoes the exact `subject_hash`, reports completed inspection of the full manifest, and supplies structured findings/evidence. On malformed, incomplete, or unavailable inspection, query bound STATUS again; relaunch only when it reoffers the exact same slot.
 
 Reviewers inspect only provider-bound immutable trees. They never inspect the live worktree, index, `HEAD`, or another revision, and candidate bytes must not move through `/tmp`, a repository scratch file, or `GENTLE_AI_FROZEN_CANDIDATE_CONTEXT`.
+
+Dependency locks (`package-lock.json`, `npm-shrinkwrap.json`, `pnpm-lock.yaml`, `yarn.lock`, `go.sum`, and `Cargo.lock`, including nested paths) retain their generated classification in the changed-path manifest and carry complete frozen patches as semantic evidence. Existing changed-line accounting is unchanged: text lockfile additions and deletions are still counted. Lenses, refuters, and targeted validators use the same evidence policy; other generated outputs retain metadata-only summaries. The existing 4 MiB native ceiling and any smaller runtime-context budget still apply: oversized evidence is refused, never truncated, and tool-free reviewers receive no additional tools.
 
 ## Corrections and consent
 
@@ -158,7 +196,7 @@ A `stop` carries one reason code and no executable transition. The table below i
 | --- | --- |
 | `captured_artifacts_unverifiable` | Terminal — a captured reviewer artifact failed local verification. Ask a maintainer to inspect the B authority, or run `axiom review mode disable --scope clone --cwd <repo>`. |
 | `captured_result_selection_unavailable` | Terminal — an internal result-selection invariant failed. Ask a maintainer to inspect the lineage, or run `axiom review mode disable --scope clone --cwd <repo>`. |
-| `corrected_candidate_unavailable` | Change the correction candidate in B, then re-query `axiom review status --cwd <repo> --contract gentle-ai.review-integration/v2 --agent {{GENTLE_AI_RUNTIME_AGENT_ID}} --next-transition` with the captured lineage and target. Do not reuse the pre-correction target. |
+| `corrected_candidate_unavailable` | Change the correction candidate in B, then re-query `axiom review status --cwd <repo> --contract gentle-ai.review-integration/v2 --agent {{GENTLE_AI_RUNTIME_AGENT_ID}} --next-transition` with the captured lineage and target. For a committed-only review, commit the bounded correction (or amend its commit); uncommitted tracked changes do not change that candidate, and unrelated tracked worktree edits are ignored. The accepted correction forecast is one-shot: do not capture it again. Do not reuse the pre-correction target. |
 | `empty_base_diff_bootstrap_required` | Terminal — the committed base has no reviewable paths. Use the separately authorized empty-root bootstrap for a new target, or run `axiom review mode disable --scope clone --cwd <repo>`. |
 | `lens_context_budget_exceeded` | Terminal — immutable reviewer context cannot be truncated. Reduce the B candidate scope and start a new transaction, or run `axiom review mode disable --scope clone --cwd <repo>`. |
 | `correction_context_budget_exceeded` | Release this review authority: the corrected candidate's evidence plus its recorded findings cannot fit the runtime context budget, so no targeted validation can ever be assembled and `axiom review invalidate` refuses once lens results are admitted. Run `axiom review abandon --cwd <repo> --lineage <id> --expected-revision <revision> --reason operator_disposition --actor <actor> --maintainer-authorization <binding>` (run `axiom review abandon` with no flags to print the binding template). The STATUS stop carries that release as `next_transition.continuation` with `operation: "abandon"` whenever the authority is eligible, and omits it entirely when it is not, rather than naming a command the live operation would refuse. Then review the change as smaller candidates, or run `axiom review mode disable --scope clone --cwd <repo>`. |
@@ -171,6 +209,8 @@ A `stop` carries one reason code and no executable transition. The table below i
 | `staged_workspace_overlay_recovery_unavailable` | Terminal — pass `--lineage <id>` to recover an existing lineage, or drop `--workspace-overlay` and start a fresh target; otherwise run `axiom review mode disable --scope clone --cwd <repo>`. |
 | `unachievable_lens_slot` | A host reported a selected reviewer slot unachievable under current conditions. If that was transient, re-run `axiom review capture-unachievable` with the same binding and `--withdraw=true` so B re-offers the same slot. If it is not transient, reduce the B candidate scope and start a new `axiom review start`, or run `axiom review mode disable --scope clone --cwd <repo>`. |
 | `target_already_acknowledged` | Terminal: this exact target was already acknowledged and its review authority burned. No further review action is required; delivery follows ordinary repository policy. Changed targets remain eligible for review. Only when deliberately requesting a new independent review, use `axiom review start`; do not automatically restart this consumed target. |
+| `acknowledged_predecessor_passive_delta` | Terminal: this committed range only adds passive content (documentation or notes) to a candidate that was already approved and acknowledged, so there is nothing new to review and no review authority was created. No further review action is required; delivery follows ordinary repository policy. Any non-passive change is offered for review again. Only when deliberately requesting a new independent review, use `axiom review start`. |
+| `acknowledged_boundary_reaches_head` | The reviewed boundary advances on acknowledgement (#5638) and reaches HEAD: every commit since the acknowledged boundary was empty, so nothing unreviewed remains between the boundary and the live candidate and no review authority was created. Continue working; any new commit re-derives a fresh candidate and `axiom review status --cwd <repo> --contract axiom.review-integration/v2 --agent <agent> --next-transition` offers it. |
 | `rdd_disabled` | Run the exact source-scoped `axiom review mode enable` command rendered by STATUS, then re-run its exact repository-bound STATUS command. |
 
 ## Published v1 compatibility reference

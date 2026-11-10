@@ -18,6 +18,7 @@ const (
 	AxiomReviewFailureV2Contract                   = "axiom.review-integration.failure/v2"
 	AxiomReviewStartV3Contract                     = "axiom.review-integration.start/v3"
 	AxiomReviewStartV4Contract                     = "axiom.review-integration.start/v4"
+	AxiomReviewStartV5Contract                     = "axiom.review-integration.start/v5"
 	AxiomReviewStatusV9Contract                    = "axiom.review-integration.status/v9"
 	AxiomReviewRepairV2Contract                    = "axiom.review-integration.repair/v2"
 	AxiomReviewTransactionV1Contract               = "axiom.review-transaction/v1"
@@ -37,6 +38,7 @@ const (
 	LegacyReviewFailureV2Contract                   = "gentle-ai.review-integration.failure/v2"
 	LegacyReviewStartV3Contract                     = "gentle-ai.review-integration.start/v3"
 	LegacyReviewStartV4Contract                     = "gentle-ai.review-integration.start/v4"
+	LegacyReviewStartV5Contract                     = "gentle-ai.review-integration.start/v5"
 	LegacyReviewStatusV9Contract                    = "gentle-ai.review-integration.status/v9"
 	LegacyReviewRepairV2Contract                    = "gentle-ai.review-integration.repair/v2"
 	LegacyReviewTransactionV1Contract               = "gentle-ai.review-transaction/v1"
@@ -104,6 +106,11 @@ func ResolveReviewContract(requested string) (canonical string, isLegacy bool, e
 		return AxiomReviewStartV4Contract, false, nil
 	case LegacyReviewStartV4Contract:
 		return AxiomReviewStartV4Contract, true, nil
+
+	case AxiomReviewStartV5Contract:
+		return AxiomReviewStartV5Contract, false, nil
+	case LegacyReviewStartV5Contract:
+		return AxiomReviewStartV5Contract, true, nil
 
 	case AxiomReviewStatusV9Contract:
 		return AxiomReviewStatusV9Contract, false, nil

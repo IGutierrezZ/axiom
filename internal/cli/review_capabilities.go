@@ -45,6 +45,8 @@ const ReviewIntegrationCapabilitiesSchemaV25 = "gentle-ai.review-integration.cap
 const ReviewIntegrationCapabilitiesSchemaIDV25 = "https://gentle-ai.dev/contracts/review-integration/v2/schemas/capabilities-v2.5.schema.json"
 const ReviewIntegrationCapabilitiesSchemaV26 = "gentle-ai.review-integration.capabilities/v2.6"
 const ReviewIntegrationCapabilitiesSchemaIDV26 = "https://gentle-ai.dev/contracts/review-integration/v2/schemas/capabilities-v2.6.schema.json"
+const ReviewIntegrationCapabilitiesSchemaV27 = "gentle-ai.review-integration.capabilities/v2.7"
+const ReviewIntegrationCapabilitiesSchemaIDV27 = "https://gentle-ai.dev/contracts/review-integration/v2/schemas/capabilities-v2.7.schema.json"
 
 const (
 	reviewRefuterSchemaID   = "https://gentle-ai.dev/schema/review/refuter/v1"
@@ -321,8 +323,8 @@ func reviewCapabilitiesStaticSurface(contracts ...string) ReviewCapabilitiesResu
 		},
 	}
 	if contract == ReviewIntegrationContractV2 || contract == AxiomReviewIntegrationContractV2 {
-		result.Schema, result.Contract = ReviewIntegrationCapabilitiesSchemaV26, contract
-		result.Protocol = ReviewCapabilitiesProtocol{Major: 2, Minor: 6}
+		result.Schema, result.Contract = ReviewIntegrationCapabilitiesSchemaV27, contract
+		result.Protocol = ReviewCapabilitiesProtocol{Major: 2, Minor: 7}
 		for index, schema := range result.Schemas {
 			switch schema {
 			case reviewtransaction.AdmittedReviewerResultSchemaV1:
@@ -330,7 +332,7 @@ func reviewCapabilitiesStaticSurface(contracts ...string) ReviewCapabilitiesResu
 			case reviewtransaction.ArtifactSubjectSchemaV1:
 				result.Schemas[index] = reviewtransaction.ArtifactSubjectSchema
 			case ReviewIntegrationCapabilitiesSchema:
-				result.Schemas[index] = ReviewIntegrationCapabilitiesSchemaV26
+				result.Schemas[index] = ReviewIntegrationCapabilitiesSchemaV27
 			case ReviewIntegrationFailureSchema:
 				result.Schemas[index] = ReviewIntegrationFailureSchemaV2
 			case ReviewIntegrationConsentSchema:
@@ -347,7 +349,7 @@ func reviewCapabilitiesStaticSurface(contracts ...string) ReviewCapabilitiesResu
 		}
 		// issue #4040: status/v7 publishes eligible_untracked_inventory
 		// unconditionally at the STATUS top level (design decision 5).
-		// The published capabilities-v2.6.schema.json advertisement is a
+		// The published capabilities-v2.7.schema.json advertisement is a
 		// closed enum (issue #4765's shipped surface); status/v9 (#4611) is
 		// additive to the status contract but is not yet advertised through
 		// capabilities, which stays its own separately versioned contract.

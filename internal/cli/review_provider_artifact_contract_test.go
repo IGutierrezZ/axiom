@@ -513,6 +513,7 @@ func TestReviewProviderArtifactSchemasAreStrictAndBound(t *testing.T) {
 		{name: "admitted-result.schema.json", id: "https://gentle-ai.dev/contracts/review-integration/v2/schemas/admitted-result.schema.json"},
 		{name: "start.schema.json", id: ReviewIntegrationStartSchemaIDV3},
 		{name: "start-v4.schema.json", id: ReviewIntegrationStartSchemaIDV4},
+		{name: "start-v5.schema.json", id: ReviewIntegrationStartSchemaIDV5},
 		{name: "status.schema.json", id: ReviewIntegrationStatusSchemaIDV3},
 		{name: "status-v4.schema.json", id: ReviewIntegrationStatusSchemaIDV4},
 		{name: "status-v5.schema.json", id: ReviewIntegrationStatusSchemaIDV5},
@@ -527,6 +528,7 @@ func TestReviewProviderArtifactSchemasAreStrictAndBound(t *testing.T) {
 		{name: "capabilities-v2.4.schema.json", id: ReviewIntegrationCapabilitiesSchemaIDV24},
 		{name: "capabilities-v2.5.schema.json", id: ReviewIntegrationCapabilitiesSchemaIDV25},
 		{name: "capabilities-v2.6.schema.json", id: ReviewIntegrationCapabilitiesSchemaIDV26},
+		{name: "capabilities-v2.7.schema.json", id: ReviewIntegrationCapabilitiesSchemaIDV27},
 		{name: "intended-untracked-selection.schema.json", id: reviewIntendedUntrackedSelectionSchema},
 		{name: "consent.schema.json", id: ReviewIntegrationConsentSchemaIDV2},
 		{name: "consent-v3.schema.json", id: ReviewIntegrationConsentSchemaIDV3},
@@ -535,6 +537,8 @@ func TestReviewProviderArtifactSchemasAreStrictAndBound(t *testing.T) {
 		{name: "repair.schema.json", id: ReviewIntegrationRepairSchemaIDV2},
 		{name: "gate-result.schema.json", id: "https://gentle-ai.dev/contracts/review-integration/v2/schemas/gate-result.schema.json"},
 		{name: "last-event-closure.schema.json", id: "https://gentle-ai.dev/contracts/review-integration/v2/schemas/last-event-closure.schema.json"},
+		{name: "last-event-closure-v2.schema.json", id: "https://gentle-ai.dev/contracts/review-integration/v2/schemas/last-event-closure-v2.schema.json"},
+		{name: "review-acknowledged.schema.json", id: "https://gentle-ai.dev/contracts/review-integration/v2/schemas/review-acknowledged.schema.json"},
 		{name: "opencode-provider-role.schema.json", id: "https://gentle-ai.dev/contracts/review-integration/v2/schemas/opencode-provider-role.schema.json"},
 	}
 	v2Documents := make(map[string]map[string]any, len(v2Schemas))

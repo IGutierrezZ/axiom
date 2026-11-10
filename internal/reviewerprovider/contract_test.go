@@ -65,11 +65,84 @@ func TestTargetedValidatorContractDoesNotPromiseOmittedGeneratedContent(t *testi
 	for _, required := range []string{
 		`"content_omitted": true`,
 		"Its content hunks are not in this input, so the summary alone never verifies a claim about what those hunks say.",
-		"Use it whenever a check turns on a generated path's content, because that content reaches you no other way.",
+		"Use it whenever a check turns on a generated path's omitted content, because that content reaches you no other way.",
 		"When a check turns on a generated path's omitted content and you cannot run that command, that check carries no verdict: mark it unavailable rather than reading one out of the summary.",
 	} {
 		if !strings.Contains(contract.PromptInstruction, required) {
 			t.Fatalf("targeted validator briefing omits the generated-path route: missing %q", required)
 		}
+	}
+}
+
+// severityRulePhrases son las reglas concretas de severidad que toda superficie
+// de revisor debe llevar. Las reglas concretas se mantienen estables entre
+// modelos; las abstractas derivan.
+var severityRulePhrases = []string{
+	"must be caused by this change",
+	"does not already happen at the baseline",
+	"reachable with realistic input",
+	"was not asked to change",
+	"out-of-domain values",
+	"at most WARNING",
+	"ignoring an explicit option or argument while reporting success",
+	"unrequested changes to existing command output or messages",
+}
+
+// observableHarmRulePhrases fijan la cualificación del daño observable: un
+// hallazgo grave nombra su daño, el alcance por sí solo no es daño, una
+// regresión no pedida sigue siendo grave sin una prohibición y un cambio pedido
+// no es una regresión.
+var observableHarmRulePhrases = []string{
+	"must also name its observable harm",
+	"a concrete violation of the requested behavior",
+	"a regression on input or state that was valid at the baseline",
+	"is not harm by itself and is at most WARNING",
+	"at most WARNING unless the finding also shows a concrete violation of the requested behavior or a regression on input or state that was valid at the baseline.",
+	"is a regression even when nothing prohibited it",
+	"is not a regression merely because its results differ from the baseline",
+}
+
+// refuterHarmDecisionPhrases fijan la regla de decisión del refutador: refutar
+// una afirmación sin daño observable y reservar inconclusive para la evidencia
+// indecidible, porque abre una corrección en lugar de rebajar la severidad.
+var refuterHarmDecisionPhrases = []string{
+	"it demonstrates no observable harm",
+	"Inconclusive is not a severity downgrade: it still opens a correction",
+	"only when the supplied evidence cannot decide",
+}
+
+func TestSeverityRulesRequireObservableHarm(t *testing.T) {
+	for _, required := range append(append([]string{}, severityRulePhrases...), observableHarmRulePhrases...) {
+		if !strings.Contains(SeverityRules, required) {
+			t.Fatalf("severity rules omit %q:\n%s", required, SeverityRules)
+		}
+	}
+}
+
+func TestRefuterPromptAppliesSeverityRules(t *testing.T) {
+	contract, err := ContractFor(RoleRefuter)
+	if err != nil {
+		t.Fatal(err)
+	}
+	required := append(append([]string{}, severityRulePhrases...), observableHarmRulePhrases...)
+	required = append(required, refuterHarmDecisionPhrases...)
+	required = append(required, "Refute a BLOCKER or CRITICAL claim that fails these conditions", "inferential batch")
+	for _, phrase := range required {
+		if !strings.Contains(contract.PromptInstruction, phrase) {
+			t.Fatalf("refuter prompt omits severity rule %q:\n%s", phrase, contract.PromptInstruction)
+		}
+	}
+}
+
+// TestRefuterPromptEchoesRequestHash fija #5597: la petición lleva request_hash,
+// el esquema de resultado exige refuter_request_hash y la admisión los compara,
+// así que el prompt debe nombrar la correspondencia.
+func TestRefuterPromptEchoesRequestHash(t *testing.T) {
+	contract, err := ContractFor(RoleRefuter)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := "Echo the input request_hash as refuter_request_hash."; !strings.Contains(contract.PromptInstruction, want) {
+		t.Fatalf("refuter prompt omits %q:\n%s", want, contract.PromptInstruction)
 	}
 }

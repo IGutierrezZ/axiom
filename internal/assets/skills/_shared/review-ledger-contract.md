@@ -82,10 +82,12 @@ A `stop` ends its transition, never approves delivery. Complete atomic inventory
 | `correction_context_budget_exceeded` | Release B authority with `axiom review abandon` (run it with no flags for the binding template); `axiom review invalidate` refuses here. Then review B as smaller candidates, or `D`. |
 | `managed_assets_outdated` | Run the `axiom sync` command from the stop's `continuation`, then `S`. |
 | `staged_workspace_overlay_recovery_unavailable` | Terminal — pass `--lineage <id>` to recover, or drop `--workspace-overlay` and start fresh; otherwise `D`. |
-| `corrected_candidate_unavailable` | Change B correction candidate, then `S`; do not reuse the pre-correction target. |
+| `corrected_candidate_unavailable` | Change B correction candidate, then `S`. For committed-only review, commit or amend the bounded correction; unrelated tracked worktree edits are ignored. Do not recapture the accepted forecast or reuse the pre-correction target. |
 | `recovery_scope_unchanged` | Change B target identity, then retry the exact returned `axiom review recover`. |
 | `unachievable_lens_slot` | A host reported a selected reviewer slot unachievable. If transient, re-run `axiom review capture-unachievable` with the same binding and `--withdraw=true` so B re-offers the slot. If not, reduce B scope and start a new `axiom review start`, or `D`. |
 | `target_already_acknowledged` | Terminal: this exact target was already acknowledged and its review authority burned. No further review action is required; delivery follows ordinary repository policy. Changed targets remain eligible for review. Only when deliberately requesting a new independent review, use `axiom review start`; do not automatically restart this consumed target. |
+| `acknowledged_predecessor_passive_delta` | Terminal: this committed range only adds passive content to an acknowledged candidate. No review is required and no authority was created; non-passive changes are offered again. Only for a deliberate independent review, use `axiom review start`. |
+| `acknowledged_boundary_reaches_head` | The reviewed boundary reaches HEAD (#5638): nothing unreviewed remains; any new commit is offered again via `S`. |
 | `rdd_disabled` | `--scope clone` only clears a clone-local off; `axiom review mode enable --scope global`, then `S`. |
 
 ## Delivery follows ordinary repository policy

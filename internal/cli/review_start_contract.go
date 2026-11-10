@@ -17,8 +17,10 @@ const ReviewIntegrationStartSchemaV3 = "gentle-ai.review-integration.start/v3"
 const ReviewIntegrationStartSchemaIDV3 = "https://gentle-ai.dev/contracts/review-integration/v2/schemas/start.schema.json"
 const ReviewIntegrationStartSchemaV4 = "gentle-ai.review-integration.start/v4"
 const ReviewIntegrationStartSchemaIDV4 = "https://gentle-ai.dev/contracts/review-integration/v2/schemas/start-v4.schema.json"
-const ReviewIntegrationStartSchema = ReviewIntegrationStartSchemaV4
-const ReviewIntegrationStartSchemaID = ReviewIntegrationStartSchemaIDV4
+const ReviewIntegrationStartSchemaV5 = "gentle-ai.review-integration.start/v5"
+const ReviewIntegrationStartSchemaIDV5 = "https://gentle-ai.dev/contracts/review-integration/v2/schemas/start-v5.schema.json"
+const ReviewIntegrationStartSchema = ReviewIntegrationStartSchemaV5
+const ReviewIntegrationStartSchemaID = ReviewIntegrationStartSchemaIDV5
 
 // ReviewIntegrationStartResult is the explicitly negotiated START response.
 // The legacy ReviewFacadeStartResult remains byte- and schema-compatible.
@@ -187,9 +189,10 @@ func reviewStartAssessmentForFrozenAuthority(legacy ReviewFacadeStartResult, ass
 func (result ReviewIntegrationStartResult) Validate() error {
 	legacyTransport := result.Schema == ReviewIntegrationStartSchemaV2 && result.Contract == ReviewIntegrationContractV1
 	// Frozen start/v3 payloads (the pinned contract fixture and historical
-	// captures) remain decodable; only the live start/v4 identity carries the
-	// provider-issued status continuation.
-	nativeGitTransport := (result.Schema == ReviewIntegrationStartSchemaV4 || result.Schema == ReviewIntegrationStartSchemaV3) && (result.Contract == ReviewIntegrationContractV2 || result.Contract == AxiomReviewIntegrationContractV2)
+	// captures) remain decodable; only the live start/v5 identity (and the
+	// start/v4 one it derives from) carries the provider-issued status
+	// continuation.
+	nativeGitTransport := (result.Schema == ReviewIntegrationStartSchemaV5 || result.Schema == ReviewIntegrationStartSchemaV4 || result.Schema == ReviewIntegrationStartSchemaV3) && (result.Contract == ReviewIntegrationContractV2 || result.Contract == AxiomReviewIntegrationContractV2)
 	if (!legacyTransport && !nativeGitTransport) || result.Operation != "review.start" {
 		return errors.New("invalid negotiated START identity")
 	}
@@ -229,7 +232,9 @@ func (result ReviewIntegrationStartResult) Validate() error {
 	if !reviewContractCorrectionBudgetValid(result.ChangedLines, result.CorrectionBudget) {
 		return errors.New("negotiated START correction budget is inconsistent")
 	}
-	if err := validateReviewStartRiskReasons(result.RiskReasons); err != nil {
+	// Solo start/v5 admite dangerous_sink: los esquemas v1, start/v3 y start/v4
+	// están publicados sin ese motivo y no se modifican (D6).
+	if err := validateReviewStartRiskReasons(result.RiskReasons, result.Schema == ReviewIntegrationStartSchemaV5); err != nil {
 		return err
 	}
 	if reviewStartRiskLevel(result.RiskReasons) != result.RiskLevel {
@@ -256,7 +261,7 @@ func (result ReviewIntegrationStartResult) Validate() error {
 	if needsRepositoryContext != (result.RepositoryContext != nil) {
 		return errors.New("negotiated START repository context does not match the active reviewing authority")
 	}
-	needsNextTransition := result.Schema == ReviewIntegrationStartSchemaV4 && needsRepositoryContext
+	needsNextTransition := (result.Schema == ReviewIntegrationStartSchemaV5 || result.Schema == ReviewIntegrationStartSchemaV4) && needsRepositoryContext
 	if needsNextTransition != (result.NextTransition != nil) {
 		return errors.New("negotiated START status continuation does not match the active reviewing authority") // refusal:by-design world-action: a reviewing start/v4 must publish its exact provider-issued re-entry and no other START may carry one
 	}
@@ -351,7 +356,18 @@ func reviewContractCorrectionBudgetValid(originalChangedLines, correctionBudget 
 	return err == nil && correctionBudget == legacyBudget
 }
 
-func validateReviewStartRiskReasons(reasons []reviewtransaction.RiskReason) error {
+// reviewStartRiskReasonsContainDangerousSink indica si alguno de los motivos es
+// dangerous_sink, que solo el esquema start/v5 puede representar.
+func reviewStartRiskReasonsContainDangerousSink(reasons []reviewtransaction.RiskReason) bool {
+	for _, reason := range reasons {
+		if reason.Code == reviewtransaction.RiskReasonDangerousSink {
+			return true
+		}
+	}
+	return false
+}
+
+func validateReviewStartRiskReasons(reasons []reviewtransaction.RiskReason, allowDangerousSink bool) error {
 	if len(reasons) == 0 {
 		return errors.New("negotiated START requires at least one risk reason")
 	}
@@ -373,6 +389,13 @@ func validateReviewStartRiskReasons(reasons []reviewtransaction.RiskReason) erro
 		case reviewtransaction.RiskReasonShellSource, reviewtransaction.RiskReasonProcessBoundary, reviewtransaction.RiskReasonProcessScanLimit:
 			if reason.Signal != reviewtransaction.SignalShellProcess || reason.Path == "" || reason.OldMode != "" || reason.NewMode != "" {
 				return fmt.Errorf("invalid shell/process risk reason %#v", reason)
+			}
+		case reviewtransaction.RiskReasonDangerousSink:
+			if !allowDangerousSink {
+				return fmt.Errorf("risk reason %q requires the start/v5 schema", reason.Code) // refusal:by-design world-action: provider-built START carried a reason its published schema cannot represent and requires a code fix
+			}
+			if reason.Signal != reviewtransaction.SignalDangerousSink || reason.Path == "" || reason.OldMode != "" || reason.NewMode != "" {
+				return fmt.Errorf("invalid dangerous-sink risk reason %#v", reason) // refusal:by-design world-action: provider-built START published a malformed classifier reason and requires a code fix
 			}
 		case reviewtransaction.RiskReasonExecutableMode:
 			if reason.Signal != reviewtransaction.SignalPermissions || reason.Path == "" || reason.OldMode == "" || reason.NewMode == "" || reason.OldMode == reason.NewMode {

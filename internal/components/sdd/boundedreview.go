@@ -406,6 +406,8 @@ Report real user-impacting defects only. BLOCKER/CRITICAL need changed-hunk, cre
 - WARNING: proven non-blocking defect or follow-up risk.
 - SUGGESTION: optional concrete improvement.
 
+%s
+
 ## Evidence
 
 Each finding needs path:line or contiguous path:start-end, neutral claim, evidence class, causal disposition, and concrete proof. Never invent evidence or placeholders.
@@ -425,7 +427,7 @@ Required top-level fields: %s. Finding fields: location, severity, claim, eviden
 When clean, return the bound subject, completed inspection, "findings":[], and one evidence entry.`,
 		role.title,
 		input,
-		role.focus, providerReviewerResultSchema,
+		role.focus, reviewerprovider.SeverityRules, providerReviewerResultSchema,
 		reviewerBindingEnvironmentVariable,
 		envelope.CompletedInspectionStatus, strings.Join(envelope.RequiredTopLevelFields, ", "))
 	return prompt, true

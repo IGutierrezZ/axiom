@@ -544,7 +544,7 @@ func admittedCapture(doc map[string]any) bool {
 	switch getString(doc, "schema") {
 	case "gentle-ai.review-result-artifact/v2":
 		return getString(doc, "admission_decision") == "completed"
-	case "gentle-ai.review-last-event-closure/v1":
+	case "gentle-ai.review-last-event-closure/v1", "gentle-ai.review-last-event-closure/v2":
 		switch operationState(doc) {
 		case "approved", "correction_required", "escalated":
 			return true

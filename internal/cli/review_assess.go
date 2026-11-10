@@ -109,6 +109,23 @@ func reviewAssessmentReasons(reasons []reviewtransaction.RiskReason) []ReviewAss
 // failure exactly as they would treat a "high" result.
 func RunReviewAssess(args []string, stdout io.Writer) error {
 	ctx := context.Background()
+	jsonRequested := reviewFlagProvided(args, "--json")
+	failClosedCandidate := ReviewAssessmentCandidate{Kind: string(reviewtransaction.TargetCurrentChanges)}
+	// failClosed answers a --json caller with a valid envelope before returning
+	// the error, so a host that reads stdout never sees zero bytes. The envelope
+	// is the existing assess/v1 shape with risk "high": a caller that cannot
+	// assess a candidate must treat it as high (#4332).
+	failClosed := func(err error) error {
+		if !jsonRequested {
+			return err
+		}
+		reason := ReviewAssessmentReason{Code: "unassessable", Detail: reviewScrubDefectReportField(err.Error())}
+		_ = encodeReviewJSON(stdout, ReviewAssessmentResult{
+			Schema: ReviewAssessmentSchema, Risk: "high", Reasons: []ReviewAssessmentReason{reason},
+			Candidate: failClosedCandidate,
+		})
+		return err
+	}
 	flags := newReviewFlagSet("review assess", stdout,
 		"Print the read-only candidate risk assessment review start would use to select lenses, without creating any review authority or initializing Git.")
 	cwd := flags.String("cwd", ".", "repository path")
@@ -122,13 +139,17 @@ func RunReviewAssess(args []string, stdout io.Writer) error {
 	flags.Var(&intendedUntracked, "intended-untracked", "repo-relative untracked path to include; repeat for each path")
 	flags.Var(&expectedUntrackedInventory, "expected-untracked-inventory", "sha256 inventory digest from review status")
 	if err := parseReviewFlags(flags, args); err != nil {
-		return err
+		return failClosed(err)
 	}
 	if reviewHelpRequested(args) {
 		return nil
 	}
 	if flags.NArg() != 0 {
-		return reviewPreflightError(fmt.Errorf("unexpected review assess argument %q; run `axiom review assess --help` for the closed command form", flags.Arg(0)))
+		return failClosed(reviewPreflightError(fmt.Errorf("unexpected review assess argument %q; run `axiom review assess --help` for the closed command form", flags.Arg(0))))
+	}
+	if trimmed := strings.TrimSpace(*baseRef); trimmed != "" {
+		failClosedCandidate.Kind = string(reviewtransaction.TargetBaseDiff)
+		failClosedCandidate.BaseRef = trimmed
 	}
 
 	// Read-only by contract: unlike status and start, assess never prepares the
@@ -137,11 +158,11 @@ func RunReviewAssess(args []string, stdout io.Writer) error {
 	root, err := (reviewtransaction.SnapshotBuilder{Repo: *cwd}).ResolveRepositoryRoot(ctx)
 	if err != nil {
 		if reviewtransaction.ReviewRootResolutionReportsNoRepository(err) {
-			return reviewPreflightError(fmt.Errorf(
+			return failClosed(reviewPreflightError(fmt.Errorf(
 				"review assess is read-only and never initializes Git: %s is not inside a Git repository; rerun `axiom review assess --cwd <repo>` with --cwd naming a repository",
-				pathquote.Quote(*cwd)))
+				pathquote.Quote(*cwd))))
 		}
-		return fmt.Errorf("review assess: resolve repository root: %w", err)
+		return failClosed(fmt.Errorf("review assess: resolve repository root: %w", err))
 	}
 	builder := reviewtransaction.SnapshotBuilder{Repo: root}
 
@@ -155,41 +176,41 @@ func RunReviewAssess(args []string, stdout io.Writer) error {
 		target.BaseRef = trimmedBaseRef
 		dirtyTracked, dirtyErr := builder.HasDirtyTrackedChanges(ctx)
 		if dirtyErr != nil {
-			return fmt.Errorf("review assess: detect dirty tracked changes: %w", dirtyErr)
+			return failClosed(fmt.Errorf("review assess: detect dirty tracked changes: %w", dirtyErr))
 		}
 		if dirtyTracked && !*committedOnly {
-			return reviewPreflightError(fmt.Errorf(
+			return failClosed(reviewPreflightError(fmt.Errorf(
 				"review assess with --base-ref omits dirty tracked changes; rerun `axiom review assess --base-ref %s --committed-only` to acknowledge committed-only scope",
-				trimmedBaseRef))
+				trimmedBaseRef)))
 		}
 	}
 
 	intendedScope, err := intendedUntrackedScopeForTarget(ctx, builder, untrackedScope, intendedUntracked, expectedUntrackedInventory,
 		reviewIntendedUntrackedInventoryCommand, "axiom review assess")
 	if err != nil {
-		return reviewPreflightError(err)
+		return failClosed(reviewPreflightError(err))
 	}
 	if intendedScope.NeedsSelection {
-		return reviewPreflightError(intendedUntrackedSelectionRequired(intendedScope, reviewIntendedUntrackedInventoryCommand, "axiom review assess"))
+		return failClosed(reviewPreflightError(intendedUntrackedSelectionRequired(intendedScope, reviewIntendedUntrackedInventoryCommand, "axiom review assess")))
 	}
 	target.IntendedUntracked = intendedScope.Intended
 
 	snapshot, err := builder.Build(ctx, target)
 	if err != nil {
-		return fmt.Errorf("review assess could not build the candidate; correct --cwd or --base-ref and retry with `axiom review assess --help`: %w", err)
+		return failClosed(fmt.Errorf("review assess could not build the candidate; correct --cwd or --base-ref and retry with `axiom review assess --help`: %w", err))
 	}
 	if reviewStartEmptyCandidateScope(snapshot) {
-		return reviewPreflightError(errors.New(
-			"the review assess candidate has no pending changes; already-committed work can be assessed by rerunning `axiom review assess --base-ref <commit>` naming the base to compare against"))
+		return failClosed(reviewPreflightError(errors.New(
+			"the review assess candidate has no pending changes; already-committed work can be assessed by rerunning `axiom review assess --base-ref <commit>` naming the base to compare against")))
 	}
 
 	assessment, err := builder.AssessSnapshotRisk(ctx, snapshot)
 	if err != nil {
-		return fmt.Errorf("review assess could not classify the candidate; retry with `axiom review assess --help` or a narrower --base-ref: %w", err)
+		return failClosed(fmt.Errorf("review assess could not classify the candidate; retry with `axiom review assess --help` or a narrower --base-ref: %w", err))
 	}
 	publicRisk, err := reviewAssessPublicRisk(assessment.Level)
 	if err != nil {
-		return err
+		return failClosed(err)
 	}
 
 	result := ReviewAssessmentResult{
@@ -202,6 +223,21 @@ func RunReviewAssess(args []string, stdout io.Writer) error {
 		return encodeReviewJSON(stdout, result)
 	}
 	return writeReviewAssessmentHuman(stdout, result)
+}
+
+// reviewFlagProvided reports whether a boolean flag was passed on the raw
+// command line, so the fail-closed envelope can honour --json even when flag
+// parsing itself is what failed. An explicit false or 0 value counts as absent.
+func reviewFlagProvided(args []string, flag string) bool {
+	for _, arg := range args {
+		if arg == flag {
+			return true
+		}
+		if value, ok := strings.CutPrefix(arg, flag+"="); ok {
+			return value != "false" && value != "0"
+		}
+	}
+	return false
 }
 
 // writeReviewAssessmentHuman renders the same assessment as readable text,

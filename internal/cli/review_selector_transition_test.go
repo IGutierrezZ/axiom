@@ -57,7 +57,7 @@ func TestStatusRecoverTransitionExecutesExactBaseDiffSelectors(t *testing.T) {
 	runReviewCLIGit(t, repo, "commit", "-qm", "expand candidate scope")
 	probe := selectorTransitionStatus(t, repo, "--lineage", started.LineageID, "--base-ref", base)
 	reason, actor := "approved scope expansion", "maintainer"
-	authorization := recoveryAuthorizationFromCollection(t, probe, "selector-recovered", actor, reason)
+	authorization := recoveryAuthorizationFromStatus(t, probe, "selector-recovered", actor, reason)
 	status := selectorTransitionStatus(t, repo, "--lineage", started.LineageID, "--base-ref", "  "+base+"  ",
 		"--recovery-successor-lineage", "selector-recovered", "--recovery-reason", reason,
 		"--recovery-actor", actor, "--recovery-authorization", authorization)
@@ -121,7 +121,11 @@ func TestStatusRecoverTransitionExecutesExactBaseDiffSelectors(t *testing.T) {
 	if len(storesAfterMixedAlias) != len(storesBefore) || !bytes.Equal(before, afterMixedAlias) {
 		t.Fatal("mixed-alias RECOVER mutated authority")
 	}
-	payload := executeSelectorTransition(t, repo, status)
+	nativeStatus := selectorTransitionStatus(t, repo, "--lineage", started.LineageID, "--base-ref", base, "--recovery-successor-lineage", "selector-recovered")
+	if len(nativeStatus.NextTransition.Execute.Arguments) != 6 {
+		t.Fatal("base-diff recovery did not omit the authorization tuple")
+	}
+	payload := executeSelectorTransition(t, repo, nativeStatus)
 	var recovered ReviewRecoverResult
 	decodeStrictReviewJSON(t, payload, &recovered)
 	if recovered.LineageID != "selector-recovered" || recovered.TargetIdentity != status.TargetIdentity {
@@ -145,8 +149,8 @@ func TestStatusRecoverTransitionExecutesAccountingOnlyRecoveryWithoutSelectors(t
 
 // TestStatusRecoverCarriesEvidenceFromALegacyPolicyLineage proves the
 // upgrade path end to end: a predecessor frozen with the legacy default policy
-// text recovers into a successor built with the current default policy, and
-// the recovered evidence is still carried forward.
+// text recovers into a successor que conserva esa política congelada (forma
+// congelada, upstream #5146) y la evidencia recuperada se sigue arrastrando.
 func TestStatusRecoverCarriesEvidenceFromALegacyPolicyLineage(t *testing.T) {
 	reviewEnabledHome(t)
 	repo := initReviewCLIRepo(t)
@@ -158,8 +162,8 @@ func TestStatusRecoverCarriesEvidenceFromALegacyPolicyLineage(t *testing.T) {
 	if want := facadePayloadHash([]byte(reviewtransaction.LegacyFacadeReviewPolicy)); predecessor.PolicyHash != want {
 		t.Fatalf("predecessor policy hash = %q, want the legacy default %q", predecessor.PolicyHash, want)
 	}
-	if want := facadePayloadHash([]byte(reviewtransaction.FacadeReviewPolicy)); successor.PolicyHash != want {
-		t.Fatalf("successor policy hash = %q, want the current default %q", successor.PolicyHash, want)
+	if successor.PolicyHash != predecessor.PolicyHash {
+		t.Fatalf("successor policy hash = %q, want the frozen predecessor policy %q", successor.PolicyHash, predecessor.PolicyHash)
 	}
 }
 
@@ -168,6 +172,15 @@ func TestStatusRecoverCarriesEvidenceFromALegacyPolicyLineage(t *testing.T) {
 // predecessor and successor states. startExtra is appended to the
 // predecessor's START arguments.
 func runAccountingOnlyRecoveryThroughStatus(t *testing.T, repo string, startExtra []string) (reviewtransaction.CompactState, reviewtransaction.CompactState) {
+	t.Helper()
+	started, predecessor, store := setupAccountingOnlyEscalation(t, repo, startExtra)
+	return recoverAccountingOnlyThroughStatus(t, repo, started, predecessor, store)
+}
+
+// setupAccountingOnlyEscalation deja un predecesor escalado cuya corrección
+// solo desbordó el presupuesto de líneas (escalada accounting-only) y devuelve
+// su START, su estado y su almacén. startExtra se añade al START.
+func setupAccountingOnlyEscalation(t *testing.T, repo string, startExtra []string) (ReviewFacadeStartResult, reviewtransaction.CompactRecord, reviewtransaction.CompactStore) {
 	t.Helper()
 	writeReviewStartCandidate(t, repo, "candidate.go", "package candidate\n\nfunc value() int { return 1 }\n", 0o644)
 	startedBytes, err := runLegacyFacadeStartForTestBytes(t, append([]string{
@@ -267,7 +280,14 @@ func runAccountingOnlyRecoveryThroughStatus(t *testing.T, repo string, startExtr
 	}); err != nil {
 		t.Fatalf("native accounting-only status: %v", err)
 	}
+	return started, predecessor, store
+}
 
+// recoverAccountingOnlyThroughStatus recupera ese predecesor por STATUS
+// negociado y devuelve el predecesor y el sucesor.
+func recoverAccountingOnlyThroughStatus(t *testing.T, repo string, started ReviewFacadeStartResult, predecessorRecord reviewtransaction.CompactRecord, store reviewtransaction.CompactStore) (reviewtransaction.CompactState, reviewtransaction.CompactState) {
+	t.Helper()
+	predecessor := predecessorRecord
 	probe := selectorTransitionStatus(t, repo, "--lineage", started.LineageID)
 	if probe.Action != reviewtransaction.TargetStatusActionRecover || probe.ActionDisposition != reviewtransaction.RecoveryEscalated {
 		t.Fatalf("accounting-only status = %#v", probe)
@@ -403,11 +423,11 @@ func TestStatusRecoverTransitionExecutesCorrectionRequiredStagedScopeExpansion(t
 	}
 	probe := selectorTransitionStatus(t, repo, selectors...)
 	if probe.Action != reviewtransaction.TargetStatusActionRecover || probe.ActionDisposition != reviewtransaction.RecoveryScopeChanged ||
-		probe.NextTransition == nil || probe.NextTransition.Collect == nil {
+		probe.NextTransition == nil || probe.NextTransition.Execute == nil {
 		t.Fatalf("correction-required staged scope probe = %#v", probe)
 	}
 	const successor, actor, reason = "correction-staged-successor", "maintainer", "authorize staged correction scope expansion"
-	authorization := recoveryAuthorizationFromCollection(t, probe, successor, actor, reason)
+	authorization := recoveryAuthorizationFromStatus(t, probe, successor, actor, reason)
 	status := selectorTransitionStatus(t, repo, append(selectors,
 		"--recovery-successor-lineage", successor, "--recovery-reason", reason,
 		"--recovery-actor", actor, "--recovery-authorization", authorization)...)
@@ -421,7 +441,11 @@ func TestStatusRecoverTransitionExecutesCorrectionRequiredStagedScopeExpansion(t
 		arguments["workspace-overlay"] != "true" || arguments["committed-only"] != "" {
 		t.Fatalf("staged correction RECOVER selectors = %#v", arguments)
 	}
-	payload := executeSelectorTransition(t, repo, status)
+	nativeStatus := selectorTransitionStatus(t, repo, append(selectors, "--recovery-successor-lineage", successor)...)
+	if len(nativeStatus.NextTransition.Execute.Arguments) != 7 {
+		t.Fatal("staged recovery did not retain exactly four core arguments and three selectors")
+	}
+	payload := executeSelectorTransition(t, repo, nativeStatus)
 	var recoveredResult ReviewRecoverResult
 	decodeStrictReviewJSON(t, payload, &recoveredResult)
 	if recoveredResult.TargetIdentity != status.TargetIdentity {
@@ -544,7 +568,7 @@ func TestCurrentChangesRecoverSelectorPresenceSurvivesJSONRoundTrip(t *testing.T
 	}
 }
 
-func TestStatusCollectsInvalidatedSameTargetCurrentChangesRecoveryAuthorization(t *testing.T) {
+func TestStatusExecutesInvalidatedSameTargetCurrentChangesRecovery(t *testing.T) {
 	reviewEnabledHome(t)
 	repo := initReviewCLIRepo(t)
 	writeReviewStartCandidate(t, repo, "candidate.go", "package candidate\n\nfunc value() int { return 1 }\n", 0o644)
@@ -581,14 +605,29 @@ func TestStatusCollectsInvalidatedSameTargetCurrentChangesRecoveryAuthorization(
 		status.TargetIdentity != reviewAuthorityTargetIdentity(status) {
 		t.Fatalf("invalidated current-changes status = %#v", status)
 	}
-	if status.NextTransition == nil || status.NextTransition.Kind != reviewNextTransitionCollect ||
-		status.NextTransition.ReasonCode != "recovery_authorization_required" {
+	if status.NextTransition == nil || status.NextTransition.Kind != reviewNextTransitionExecute ||
+		status.NextTransition.Execute == nil || status.NextTransition.Execute.Operation != "review.recover" {
 		t.Fatalf("invalidated same-target current-changes transition = %#v", status.NextTransition)
+	}
+	arguments := selectorTransitionArguments(t, status)
+	if len(arguments) != 4 || arguments["actor"] != "" || arguments["reason"] != "" || arguments["maintainer-authorization"] != "" {
+		t.Fatalf("self-derived recovery arguments = %#v", arguments)
+	}
+	repeated := selectorTransitionStatus(t, repo, "--lineage", started.LineageID)
+	if !reflect.DeepEqual(status.NextTransition, repeated.NextTransition) {
+		t.Fatal("repeated STATUS changed the bound recovery")
 	}
 	after, _ := os.ReadFile(store.StatePath())
 	storesAfter, _ := reviewtransaction.DiscoverCompactStores(context.Background(), repo)
 	if !bytes.Equal(before, after) || len(storesAfter) != len(storesBefore) {
 		t.Fatalf("invalidated same-target STATUS mutated authority: stores before=%d after=%d", len(storesBefore), len(storesAfter))
+	}
+	payload := executeSelectorTransition(t, repo, status)
+	var recovered ReviewRecoverResult
+	decodeStrictReviewJSON(t, payload, &recovered)
+	after, _ = os.ReadFile(store.StatePath())
+	if recovered.LineageID != arguments["successor-lineage"] || recovered.TargetIdentity != status.TargetIdentity || !bytes.Equal(before, after) {
+		t.Fatalf("printed recovery did not preserve its binding/predecessor: %#v", recovered)
 	}
 }
 
@@ -778,32 +817,22 @@ func selectorTransitionCommandArguments(repo string, status ReviewTargetStatusRe
 	return args, nil
 }
 
-func recoveryAuthorizationFromCollection(t *testing.T, status ReviewTargetStatusResult, successor, actor, reason string) string {
+// Quien llama con compatibilidad explícita liga el mismo target que el comando
+// nativo; ya no tiene que fabricar una colecta de autorización externa.
+func recoveryAuthorizationFromStatus(t *testing.T, status ReviewTargetStatusResult, successor, actor, reason string) string {
 	t.Helper()
+	arguments := selectorTransitionArguments(t, status)
+	binding := status.NextTransition.Execute.Binding
 	if status.Action != reviewtransaction.TargetStatusActionRecover || status.Authority == nil ||
-		status.NextTransition == nil || status.NextTransition.Kind != reviewNextTransitionCollect ||
-		status.NextTransition.ReasonCode != "recovery_authorization_required" ||
-		status.NextTransition.Collect == nil || len(status.NextTransition.Collect.Inputs) != 1 {
-		t.Fatalf("recovery authorization collection = %#v", status)
-	}
-	input := status.NextTransition.Collect.Inputs[0]
-	arguments, err := reviewTransitionArgumentMap(input.Arguments)
-	if err != nil {
-		t.Fatal(err)
-	}
-	want := map[string]string{
-		"lineage": status.Authority.LineageID, "expected-revision": status.Authority.Revision,
-		"target": status.TargetIdentity, "disposition": string(status.ActionDisposition),
-	}
-	if input.Name != "recovery_authorization" || input.Schema != "gentle-ai.review-recovery-authorization/v1" ||
-		input.CaptureOperation != "external.authorize_recovery" || !reflect.DeepEqual(arguments, want) {
-		t.Fatalf("recovery authorization provider binding = %#v, want %#v", input, want)
+		binding.LineageID != status.Authority.LineageID || binding.Revision != status.Authority.Revision ||
+		binding.TargetIdentity != status.TargetIdentity || arguments["disposition"] != string(status.ActionDisposition) {
+		t.Fatalf("recovery provider binding = %#v", status)
 	}
 	return strings.Join([]string{
-		input.Schema,
-		"predecessor_lineage=" + arguments["lineage"],
-		"predecessor_revision=" + arguments["expected-revision"],
-		"target_identity=" + arguments["target"],
+		"gentle-ai.review-recovery-authorization/v1",
+		"predecessor_lineage=" + binding.LineageID,
+		"predecessor_revision=" + binding.Revision,
+		"target_identity=" + binding.TargetIdentity,
 		"successor_lineage=" + successor,
 		"actor=" + actor,
 		"reason=" + reason,

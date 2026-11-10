@@ -123,21 +123,30 @@ type reviewRepositoryContextV2Token struct {
 	CapturePhaseRevision string `json:"capture_phase_revision"`
 }
 
-var errInvalidReviewRepositoryContextV2 = errors.New("invalid rctx2 repository context") // refusal:by-design operator-knowledge: callers must refresh the provider-issued repository context instead of attempting to repair an untrusted token
+// ErrReviewRepositoryContextV2BindingUnusable informa de un handle inválido o de
+// una tupla repositorio/binding que no coincide. Un digest opaco no puede decir
+// qué campo del preimage difiere ni probar que el binding estuvo activo alguna
+// vez.
+var ErrReviewRepositoryContextV2BindingUnusable = errors.New("invalid rctx2 repository context") // refusal:by-design operator-knowledge: verify the repository and refresh the exact provider-issued binding
 
-type reviewRepositoryContextV2ResolutionError struct{ cause error }
+var errInvalidReviewRepositoryContextV2 = ErrReviewRepositoryContextV2BindingUnusable
 
-func (err *reviewRepositoryContextV2ResolutionError) Error() string {
+// ReviewRepositoryContextV2ResolutionError conserva un fallo subyacente del
+// repositorio o de la autoridad tras un mensaje público sin rutas. No establece
+// que el binding aportado fuese válido cuando se emitió.
+type ReviewRepositoryContextV2ResolutionError struct{ cause error }
+
+func (err *ReviewRepositoryContextV2ResolutionError) Error() string {
 	return errInvalidReviewRepositoryContextV2.Error()
 }
 
-func (err *reviewRepositoryContextV2ResolutionError) Unwrap() error { return err.cause }
+func (err *ReviewRepositoryContextV2ResolutionError) Unwrap() error { return err.cause }
 
 func invalidReviewRepositoryContextV2Resolution(cause error) error {
 	if cause == nil {
 		return errInvalidReviewRepositoryContextV2
 	}
-	return &reviewRepositoryContextV2ResolutionError{cause: cause}
+	return &ReviewRepositoryContextV2ResolutionError{cause: cause}
 }
 
 // OpenRepositoryIdentityLease resolves and captures one exact Git worktree
@@ -262,7 +271,7 @@ func resolveReviewRepositoryContextV2Token(ctx context.Context, repo, handle str
 		return "", ReviewRepositoryContextBinding{}, invalidReviewRepositoryContextV2Resolution(err)
 	}
 	if err := validateReviewRepositoryContextRecord(ctx, identity.RepositoryRoot, binding, record); err != nil {
-		return "", ReviewRepositoryContextBinding{}, errInvalidReviewRepositoryContextV2
+		return "", ReviewRepositoryContextBinding{}, invalidReviewRepositoryContextV2Resolution(err)
 	}
 	if err := lease.Validate(ctx); err != nil {
 		return "", ReviewRepositoryContextBinding{}, invalidReviewRepositoryContextV2Resolution(err)
@@ -400,6 +409,14 @@ func ValidateReviewRepositoryContextHandle(handle string) error {
 // process cwd, then revalidates its repository and current compact authority.
 func ResolveReviewRepositoryContext(ctx context.Context, repo, handle string, binding ReviewRepositoryContextBinding) (string, error) {
 	if err := validateReviewRepositoryContextBinding(binding); err != nil {
+		// Un binding rctx2 estructuralmente inválido es el mismo fallo que el
+		// resolvedor del paquete notifica como ErrReviewRepositoryContextV2BindingUnusable:
+		// este precheck externo no debe degradarlo al código genérico. Un handle
+		// que no es V2 conserva el error genérico histórico, porque solo el
+		// resolvedor rctx2 es dueño de esa clasificación.
+		if strings.HasPrefix(handle, reviewRepositoryContextV2HandlePrefix) {
+			return "", errInvalidReviewRepositoryContextV2
+		}
 		return "", err
 	}
 	root, resolved, err := ResolveReviewRepositoryContextBinding(ctx, repo, handle, binding)
@@ -453,8 +470,17 @@ func ResolveReviewRepositoryContextBindingFromHost(ctx context.Context, host, ha
 	var matches []match
 	for _, worktree := range worktrees {
 		lease, err := OpenRepositoryIdentityLease(ctx, worktree)
+		// Un worktree registrado que ya no abre como repositorio Git no es un
+		// candidato, así que se omite. Abortar toda la resolución por él deja
+		// que un solo registro obsoleto (un editor o un agente que recreó o
+		// podó el checkout mientras `git worktree list` lo sigue nombrando)
+		// deniegue cada revisión que el host podría resolver. Omitirlo no
+		// admite nada: el lease del host y la revalidación final siguen
+		// mandando, todo candidato superviviente debe compartir el directorio
+		// común del host y casar con el digest rctx2 y una autoridad viva, y la
+		// regla de un único match sigue fallando cerrado.
 		if err != nil || lease.Validate(ctx) != nil {
-			return "", ReviewRepositoryContextBinding{}, errInvalidReviewRepositoryContextV2
+			continue
 		}
 		identity := lease.Identity()
 		if identity.GitCommonDir != hostIdentity.GitCommonDir {

@@ -86,7 +86,7 @@ func TestReviewStartContractValidatesProcessBoundaryReason(t *testing.T) {
 		Code: reviewtransaction.RiskReasonCode("process_boundary"), Signal: reviewtransaction.SignalShellProcess,
 		Path: "tools/runner.py",
 	}
-	if err := validateReviewStartRiskReasons([]reviewtransaction.RiskReason{valid}); err != nil {
+	if err := validateReviewStartRiskReasons([]reviewtransaction.RiskReason{valid}, false); err != nil {
 		t.Fatalf("validateReviewStartRiskReasons(valid process boundary) = %v", err)
 	}
 	if got := reviewStartRiskLevel([]reviewtransaction.RiskReason{valid}); got != reviewtransaction.RiskHigh {
@@ -97,7 +97,7 @@ func TestReviewStartContractValidatesProcessBoundaryReason(t *testing.T) {
 		"missing path": {Code: valid.Code, Signal: reviewtransaction.SignalShellProcess},
 		"stray modes":  {Code: valid.Code, Signal: reviewtransaction.SignalShellProcess, Path: valid.Path, OldMode: "100644", NewMode: "100755"},
 	} {
-		if err := validateReviewStartRiskReasons([]reviewtransaction.RiskReason{malformed}); err == nil {
+		if err := validateReviewStartRiskReasons([]reviewtransaction.RiskReason{malformed}, false); err == nil {
 			t.Fatalf("validateReviewStartRiskReasons accepted malformed %s reason", name)
 		}
 	}

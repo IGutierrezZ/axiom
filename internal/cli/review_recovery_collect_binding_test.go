@@ -15,7 +15,7 @@ import (
 // lineage frozen with two selected untracked paths, a changed candidate, and a
 // negotiated STATUS that selected the exclude scope. It returns the repository,
 // the exclude selectors STATUS used, and the binding a maintainer assembles
-// from the recovery_authorization_required collect alone.
+// a partir del recover nativo que emite STATUS.
 func recoveryCollectBindingFixture(t *testing.T, lineage string) (string, []string, map[string]string, string) {
 	t.Helper()
 	repo := initReviewCLIRepo(t)
@@ -61,18 +61,14 @@ func recoveryCollectBindingFixture(t *testing.T, lineage string) (string, []stri
 	}
 	var status ReviewTargetStatusResult
 	decodeStrictReviewJSON(t, output.Bytes(), &status)
-	if status.NextTransition == nil || status.NextTransition.Kind != reviewNextTransitionCollect ||
-		status.NextTransition.ReasonCode != "recovery_authorization_required" ||
-		status.NextTransition.Collect == nil || len(status.NextTransition.Collect.Inputs) != 1 {
+	if status.NextTransition == nil || status.NextTransition.Kind != reviewNextTransitionExecute ||
+		status.NextTransition.Execute == nil || status.NextTransition.Execute.Operation != "review.recover" {
 		t.Fatalf("STATUS transition = %#v", status.NextTransition)
 	}
-	input := status.NextTransition.Collect.Inputs[0]
-	bound, err := reviewTransitionArgumentMap(input.Arguments)
-	if err != nil {
-		t.Fatal(err)
-	}
+	binding := status.NextTransition.Execute.Binding
+	bound := map[string]string{"lineage": binding.LineageID, "expected-revision": binding.Revision, "target": binding.TargetIdentity, "disposition": string(status.ActionDisposition)}
 	return repo, selectors, bound, strings.Join([]string{
-		input.Schema,
+		"gentle-ai.review-recovery-authorization/v1",
 		"predecessor_lineage=" + bound["lineage"],
 		"predecessor_revision=" + bound["expected-revision"],
 		"target_identity=" + bound["target"],

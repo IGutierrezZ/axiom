@@ -203,7 +203,7 @@ func TestBoundedReviewStopInventoryIsCompleteWithoutRepeatingStatus(t *testing.T
 	for _, want := range []string{
 		"`D` means `axiom review mode disable --scope clone --cwd <B>`",
 		"`S` means re-query the exact captured target-root STATUS command with lineage and target.",
-		"then `S`; do not reuse the pre-correction target",
+		"then `S`. For committed-only review, commit or amend the bounded correction; unrelated tracked worktree edits are ignored. Do not recapture the accepted forecast or reuse the pre-correction target",
 		"then `S`.",
 	} {
 		if !strings.Contains(inventory, want) {
@@ -841,5 +841,24 @@ func TestSDDPhaseCommandsNeverInviteReview(t *testing.T) {
 				t.Errorf("%s retains review invitation %q", path, forbidden)
 			}
 		}
+	}
+}
+
+// TestRenderedReviewerSeveritySectionCarriesSharedRules fija que la sección
+// Severity de cada cuerpo de revisor instalado lleva el texto compartido
+// reviewerprovider.SeverityRules, no una copia propia.
+func TestRenderedReviewerSeveritySectionCarriesSharedRules(t *testing.T) {
+	for _, path := range []string{"claude/agents/review-risk.md", "kiro/agents/review-resilience.md"} {
+		t.Run(path, func(t *testing.T) {
+			content := renderBoundedReviewAsset(agentForAssetPath(t, path), path)
+			_, severity, found := strings.Cut(content, "## Severity\n")
+			if !found {
+				t.Fatal("rendered lens has no severity section")
+			}
+			severity, _, _ = strings.Cut(severity, "\n## ")
+			if !strings.Contains(severity, reviewerprovider.SeverityRules) {
+				t.Fatalf("severity section omits the shared rules:\n%s", severity)
+			}
+		})
 	}
 }

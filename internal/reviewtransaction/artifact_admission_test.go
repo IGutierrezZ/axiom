@@ -924,3 +924,46 @@ func TestEvidenceReportsUnavailableInspectionPhrases(t *testing.T) {
 		}
 	}
 }
+
+// Un literal host:port citado como evidencia (un punto de conexión) no es una
+// ruta con número de línea y no debe rechazar al revisor por «ruta desconocida».
+func TestArtifactRepositoryPathReferenceSkipsHostPortLiterals(t *testing.T) {
+	for _, tc := range []struct {
+		name      string
+		token     artifactReferenceToken
+		wantPath  string
+		wantAdmit bool // true cuando se espera una ruta o un rechazo
+	}{
+		{name: "ipv4", token: artifactReferenceToken{value: "127.0.0.1:8000"}},
+		{name: "ipv4 quoted", token: artifactReferenceToken{value: "10.0.0.5:443", quoted: true}},
+		{name: "localhost", token: artifactReferenceToken{value: "localhost:8000"}},
+		{name: "localhost quoted", token: artifactReferenceToken{value: "localhost:8000", quoted: true}},
+		{name: "localhost mixed case", token: artifactReferenceToken{value: "LocalHost:8000", quoted: true}},
+		{name: "bare name without dots", token: artifactReferenceToken{value: "dominio:443"}},
+		{name: "bare digits", token: artifactReferenceToken{value: "123:5"}},
+		{name: "path with line", token: artifactReferenceToken{value: "internal/a.go:7"}, wantPath: "internal/a.go", wantAdmit: true},
+		{name: "quoted extensionless file keeps being a path", token: artifactReferenceToken{value: "Makefile:12", quoted: true}, wantPath: "Makefile", wantAdmit: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			path, malformed := artifactRepositoryPathReference(tc.token)
+			if tc.wantAdmit {
+				if path != tc.wantPath || malformed {
+					t.Fatalf("artifactRepositoryPathReference(%q) = %q, %v; want %q, false", tc.token.value, path, malformed, tc.wantPath)
+				}
+				return
+			}
+			if path != "" || malformed {
+				t.Fatalf("artifactRepositoryPathReference(%q) = %q, %v; want it skipped", tc.token.value, path, malformed)
+			}
+		})
+	}
+}
+
+func TestAdmitArtifactAcceptsHostPortCitationInEvidence(t *testing.T) {
+	_, _, request := admittedArtifactFixture(t)
+	request.Result.Evidence = append(request.Result.Evidence,
+		"service listens on 127.0.0.1:8000", "probe hit localhost:8000 and dominio:443")
+	if _, admission, err := AdmitArtifact(t.Context(), request); err != nil {
+		t.Fatalf("AdmitArtifact() = %q, %v; host:port citations must not be treated as paths", admission.Decision, err)
+	}
+}

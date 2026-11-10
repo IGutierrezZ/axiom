@@ -116,9 +116,9 @@ func TestReviewCapabilitiesV23ArtifactRemainsReadable(t *testing.T) {
 	}
 }
 
-// TestReviewCapabilitiesV26AdvertisementIsCurrent pins the additive v2.6
+// TestReviewCapabilitiesV27AdvertisementIsCurrent pins the additive v2.7 (v2.6 plus start/v5)
 // surface that advertises provider-owned OpenCode lens tasks through status/v8.
-func TestReviewCapabilitiesV26AdvertisementIsCurrent(t *testing.T) {
+func TestReviewCapabilitiesV27AdvertisementIsCurrent(t *testing.T) {
 	var output bytes.Buffer
 	if err := RunReview([]string{"capabilities", "--contract", ReviewIntegrationContractV2}, &output); err != nil {
 		t.Fatal(err)
@@ -127,14 +127,59 @@ func TestReviewCapabilitiesV26AdvertisementIsCurrent(t *testing.T) {
 	if err := json.Unmarshal(output.Bytes(), &got); err != nil {
 		t.Fatal(err)
 	}
-	if got.Schema != ReviewIntegrationCapabilitiesSchemaV26 || got.Protocol != (ReviewCapabilitiesProtocol{Major: 2, Minor: 6}) ||
+	if got.Schema != ReviewIntegrationCapabilitiesSchemaV27 || got.Protocol != (ReviewCapabilitiesProtocol{Major: 2, Minor: 7}) ||
 		!slices.Contains(got.Schemas, ReviewIntegrationStatusSchemaV5) || !slices.Contains(got.Schemas, ReviewIntegrationStatusSchemaV6) ||
 		!slices.Contains(got.Schemas, ReviewIntegrationStatusSchemaV7) || !slices.Contains(got.Schemas, ReviewIntegrationStatusSchemaV8) ||
 		!slices.Contains(got.Schemas, "gentle-ai.review-intended-untracked-selection/v1") || !slices.Contains(got.Schemas, ReviewIntegrationStartSchema) || !slices.Contains(got.Schemas, ReviewIntegrationConsentSchemaV3) ||
 		slices.Contains(got.Schemas, ReviewIntegrationCapabilitiesSchemaV23) || slices.Contains(got.Schemas, ReviewIntegrationCapabilitiesSchemaV24) || slices.Contains(got.Schemas, ReviewIntegrationCapabilitiesSchemaV25) {
 		t.Fatalf("current v2 capabilities advertisement = %#v", got)
 	}
-	validateReviewCapabilitiesSchema(t, "capabilities-v2.6.schema.json", ReviewIntegrationCapabilitiesSchemaIDV26, output.Bytes())
+	validateReviewCapabilitiesSchema(t, "capabilities-v2.7.schema.json", ReviewIntegrationCapabilitiesSchemaIDV27, output.Bytes())
+}
+
+// TestReviewCapabilitiesV27ListsStartV5OnlyInItsClosedSchemaList documenta por
+// qué existe capabilities-v2.7: la lista de esquemas de v2.6 es cerrada y no
+// admite start/v5, y la de v2.7 sustituye start/v4 por start/v5 sin admitir ambos.
+func TestReviewCapabilitiesV27ListsStartV5OnlyInItsClosedSchemaList(t *testing.T) {
+	var output bytes.Buffer
+	if err := RunReview([]string{"capabilities", "--contract", ReviewIntegrationContractV2}, &output); err != nil {
+		t.Fatal(err)
+	}
+	var got ReviewCapabilitiesResult
+	if err := json.Unmarshal(output.Bytes(), &got); err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Contains(got.Schemas, ReviewIntegrationStartSchemaV5) ||
+		slices.Contains(got.Schemas, ReviewIntegrationStartSchemaV4) || slices.Contains(got.Schemas, ReviewIntegrationStartSchemaV3) ||
+		slices.Contains(got.Schemas, ReviewIntegrationCapabilitiesSchemaV26) {
+		t.Fatalf("v2.7 capabilities schema list = %v", got.Schemas)
+	}
+	validatePublishedReviewSchema(t, compileWholePublishedReviewSchema(t, "v2", "capabilities-v2.7.schema.json"), output.Bytes())
+	if err := compileWholePublishedReviewSchema(t, "v2", "capabilities-v2.6.schema.json").Validate(decodeJSONAnyForCapabilities(t, output.Bytes())); err == nil {
+		t.Fatal("the closed v2.6 schema list accepted a v2.7 advertisement")
+	}
+	var document map[string]any
+	if err := json.Unmarshal(output.Bytes(), &document); err != nil {
+		t.Fatal(err)
+	}
+	schemas := document["schemas"].([]any)
+	for index, value := range schemas {
+		if value == ReviewIntegrationStartSchemaV5 {
+			schemas[index] = ReviewIntegrationStartSchemaV4
+		}
+	}
+	if err := compileWholePublishedReviewSchema(t, "v2", "capabilities-v2.7.schema.json").Validate(document); err == nil {
+		t.Fatal("capabilities v2.7 schema accepted start/v4 in place of start/v5")
+	}
+}
+
+func decodeJSONAnyForCapabilities(t *testing.T, payload []byte) any {
+	t.Helper()
+	var document any
+	if err := json.Unmarshal(payload, &document); err != nil {
+		t.Fatal(err)
+	}
+	return document
 }
 
 // TestReviewCapabilitiesPackageNameFollowsDialect pins D5: package.name is
@@ -168,14 +213,14 @@ func TestReviewCapabilitiesPackageNameFollowsDialect(t *testing.T) {
 			if !tt.v26 {
 				return
 			}
-			schema := validateReviewCapabilitiesSchema(t, "capabilities-v2.6.schema.json", ReviewIntegrationCapabilitiesSchemaIDV26, output.Bytes())
+			schema := validateReviewCapabilitiesSchema(t, "capabilities-v2.7.schema.json", ReviewIntegrationCapabilitiesSchemaIDV27, output.Bytes())
 			var document map[string]any
 			if err := json.Unmarshal(output.Bytes(), &document); err != nil {
 				t.Fatal(err)
 			}
 			document["package"].(map[string]any)["name"] = "other"
 			if err := schema.Validate(document); err == nil {
-				t.Fatal("capabilities v2.6 schema accepted an unknown package.name")
+				t.Fatal("capabilities v2.7 schema accepted an unknown package.name")
 			}
 		})
 	}
@@ -286,7 +331,7 @@ func TestReviewCapabilitiesContractValidationIsExactAndReadOnly(t *testing.T) {
 		t.Fatal(err)
 	}
 	var nativeGit ReviewCapabilitiesResult
-	if err := json.Unmarshal(output.Bytes(), &nativeGit); err != nil || nativeGit.Contract != ReviewIntegrationContractV2 || nativeGit.Schema != ReviewIntegrationCapabilitiesSchemaV26 {
+	if err := json.Unmarshal(output.Bytes(), &nativeGit); err != nil || nativeGit.Contract != ReviewIntegrationContractV2 || nativeGit.Schema != ReviewIntegrationCapabilitiesSchemaV27 {
 		t.Fatalf("native Git capabilities = %#v, %v", nativeGit, err)
 	}
 	entries, readErr := os.ReadDir(outside)

@@ -999,6 +999,14 @@ func artifactRepositoryPathReference(token artifactReferenceToken) (string, bool
 	if !nonzero {
 		return "", false
 	}
+	// Un literal host:port (por ejemplo 127.0.0.1:8000 o localhost:8000) es
+	// evidencia sobre un punto de conexión, no una ruta con número de línea:
+	// un nombre de host nunca lleva separador de ruta. Solo se reconocen las
+	// formas inequívocas (IPv4 y localhost); un dominio con punto como
+	// ejemplo.com:443 es indistinguible de un fichero, así que sigue siendo ruta.
+	if isHostPortLiteralHost(value[:separator]) {
+		return "", false
+	}
 	logicalPath := value[:separator]
 	if strings.Contains(logicalPath, "://") {
 		return "", false
@@ -1012,6 +1020,17 @@ func artifactRepositoryPathReference(token artifactReferenceToken) (string, bool
 		return "", true
 	}
 	return canonical, false
+}
+
+// isHostPortLiteralHost reconoce la parte de host de un literal host:port que
+// no puede ser una ruta del repositorio: una dirección IPv4 (solo dígitos y
+// puntos, con al menos un punto, para no descartar ficheros sin extensión
+// como 123:5) o el nombre localhost.
+func isHostPortLiteralHost(host string) bool {
+	if strings.EqualFold(host, "localhost") {
+		return true
+	}
+	return strings.Contains(host, ".") && strings.Trim(host, "0123456789.") == ""
 }
 
 func artifactReferenceTokens(value string) []artifactReferenceToken {
