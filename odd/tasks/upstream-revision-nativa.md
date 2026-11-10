@@ -233,6 +233,14 @@ T1–T17 están hechas y verificadas.
 
 **PR:** [#233](https://github.com/IGutierrezZ/axiom/pull/233). La abrió el orquestador el 2026-11-09 por autorización del usuario («Sí, ábrelo»), con las etiquetas `size:exception` y `type:feature`.
 
+**CI del PR (2026-11-10):**
+- GitHub había desactivado Actions en el fork desde el 2026-11-05. El usuario lo reactivó y añadió `Go Format`, `Unit Tests` y `Claude Network-None Runtime (Required)` a los checks obligatorios de `main`.
+- Unit Tests fallaba en el journey de bench `j115-recovery-selector-is-collected-before-authorization`. T11 no portó el ajuste de bench de upstream (`b31cc497`, `bench/journeys_issue_3065.go`).
+- Corregido en `a15f3f5c`: con `execute`, el journey reproduce el STATUS nativo; con `collect`, mantiene la autorización de siete argumentos.
+- En local (Windows), el módulo bench tiene los mismos 13 fallos de entorno en la rama que en `main`.
+- `Organic Runtime E2E` falla también en `main` (`5fd91b40`) con el mismo test, `TestOrganicConfiguredAgentReceivesRoutingGuidanceRealAgents/orchestrator_prompt`: falta `opencode.json`. Es ajeno a este PR.
+- Los E2E en Docker fallan por ficheros de OpenCode ausentes y por las instalaciones de Windsurf, Antigravity y Qwen. Está pendiente compararlos con `main`.
+
 **Pendiente:**
-- La fusión del PR la decide el usuario.
+- La fusión automática está activada por petición del usuario («si sale verde fusiona»). GitHub fusionará con *merge commit* cuando pasen los checks obligatorios.
 - T18–T20 esperan a D2.
