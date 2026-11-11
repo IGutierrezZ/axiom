@@ -47,7 +47,7 @@ pi install npm:pi-btw
 
 Discovering and running SDD agents from `.pi/agents/` is provided by `gentle-pi`'s Gentle Agents, which ships the same `subagent_*` tools that the retired `npm:pi-subagents-j0k3r` package used to provide. Axiom no longer installs `pi-subagents-j0k3r`, and an existing entry is dropped from `settings.json` on the next install or update so Pi uninstalls it on its next package sync.
 
-`gentle-pi` owns Pi's runtime behavior. Its current harness enforces parent-only delegation triggers: delegate exploration after 4+ files, use one writer for multi-file changes, require fresh review before PRs, run fresh audits after incidents, and pause long monolithic sessions before they drift.
+`gentle-pi` owns Pi's runtime behavior. Pi receives the shared delegation doctrine of the Axiom orchestrator: an inline evidence budget (one parallel batch, at most 3 calls, about 10k tokens), one read-only explorer when it does not fit, a writer only for a named reason (parallelism or protecting the parent context), units of about 100 changed lines or less always inline, and an advisory long-session backstop. The harness additionally requires fresh audits after incidents; review never authorizes delivery.
 
 The real Engram component is provisioned separately by Axiom so `gentle-engram` has an Engram runtime to talk to.
 During that Engram provisioning step, Axiom declares `npm:pi-mcp-adapter` in Pi's agent settings and adds the npm dependency. Existing unrelated Pi settings, package entries, and npm dependencies are preserved.

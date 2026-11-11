@@ -23,6 +23,11 @@ const (
 	// shared gates section carries it and substituteSharedOrchestratorSections
 	// resolves it with agentguidance.StopExits (DD-12).
 	stopExitsMarker = "{{AXIOM_STOP_EXITS}}"
+	// delegationRulesMarker and delegationTriggersMarker stand for the delegation
+	// rules table and the conditional delegation triggers, whose single source is
+	// agentguidance.DelegationRules / DelegationTriggers (decision P2).
+	delegationRulesMarker    = "{{AXIOM_DELEGATION_RULES}}"
+	delegationTriggersMarker = "{{AXIOM_DELEGATION_TRIGGERS}}"
 
 	openCodeBackgroundPolicyAsset  = "opencode/background-subagents.md"
 	openCodeBackgroundPolicyMarker = "<!-- gentle-ai:opencode-background-subagents -->"
@@ -81,7 +86,11 @@ func substituteSharedOrchestratorSections(content string) string {
 		}
 		return body
 	})
-	return strings.ReplaceAll(content, stopExitsMarker, agentguidance.StopExits())
+	content = strings.ReplaceAll(content, stopExitsMarker, agentguidance.StopExits())
+	// The delegation doctrine has one source too (agentguidance/delegation.go),
+	// shared with the routing block and the migrated OpenCode prompt.
+	content = strings.ReplaceAll(content, delegationRulesMarker, agentguidance.DelegationRules())
+	return strings.ReplaceAll(content, delegationTriggersMarker, agentguidance.DelegationTriggers())
 }
 
 // composeOrchestratorPrompt is the renderer-owned source seam for every SDD

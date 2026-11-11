@@ -82,7 +82,7 @@ func TestRegistryRejectsWeakenedRoutingManifest(t *testing.T) {
 	t.Parallel()
 
 	manifest := capabilitymanifest.MustForAgent(model.AgentClaudeCode)
-	manifest.ImplementationRouting.DelegatedDirect.MappingMinUnderstandingFiles = 5
+	manifest.ImplementationRouting.DelegatedDirect.WriterRequiresNamedReason = false
 	adapter := tamperedManifestAdapter{
 		mockAdapter: mockAdapter{agent: model.AgentClaudeCode},
 		manifest:    manifest,

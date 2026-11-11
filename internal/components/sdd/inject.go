@@ -20,6 +20,10 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/opencode"
 )
 
+// delegationBlockSignature is a sentence of the current delegation triggers that
+// no earlier managed block carries, so its absence marks a block to rewrite.
+const delegationBlockSignature = "holds only when its condition truly holds"
+
 const legacyMandatoryWording = "TOTALMENTE " + "obligatorio"
 
 type InjectionResult struct {
@@ -1627,11 +1631,11 @@ func removeLegacyOpenCodePlainChatPreflightLines(prompt string) string {
 	return strings.Join(kept, "\n")
 }
 
-// nativeReviewAuthorityRule is rule 7 of the managed delegation block. It
+// nativeReviewAuthorityRule is the authority bullet of the managed delegation block. It
 // replaces a rule that pointed at retired work-routing contracts. The current
 // lifecycle starts only from current-worktree preflight, retains the explicit
 // transaction binding, and leaves delivery to the user rather than a gate.
-const nativeReviewAuthorityRule = "7. **Authority rule**: use selectorless `axiom review status` only to preflight the current worktree" +
+const nativeReviewAuthorityRule = "- **Authority rule**: use selectorless `axiom review status` only to preflight the current worktree" +
 	" and execute its exact START; retain that transaction's lineage, revision, and target for every later lifecycle call." +
 	" Gates are informational only. Never select lenses, synthesize transitions, infer PASS, or authorize delivery from prose."
 
@@ -1655,35 +1659,30 @@ func ensurePreservedOpenCodeDelegationHardGates(prompt string) string {
 		nativeReviewAuthorityRule,
 	).Replace(prompt)
 
+	// The managed block is generated from the delegation single source
+	// (agentguidance.DelegationTriggers), so a preserved OpenCode prompt receives
+	// the same conditional triggers as every other consumer. A block written by an
+	// earlier install carries the retired file-count rules and no
+	// delegationBlockSignature, so it is rewritten between its markers.
 	delegation := `
 
 <!-- gentle-ai:delegation-hard-gates-migration -->
-### Mandatory Delegation Triggers (Non-Skippable)
-
-These routing boundaries are fully mandatory. They protect context quality without making SDD the universal implementation workflow.
+### Mandatory Delegation Triggers (Conditional)
 
 Semantic guard: **delegate** means using OpenCode's native Task tool to invoke a configured sub-agent. Running local scripts, Python, or Bash inline is execution, not delegation.
 
-Do not pass these rules to child agents as permission to spawn more agents; children receive concrete role work and must not orchestrate.
-
-1. **Bounded read rule**: read 1–3 files inline to decide or verify.
-2. **4-file rule**: if understanding requires 4+ files, delegate one narrow exploration/mapping task.
-3. **Write rule**: keep one mechanical, already-understood file inline; delegate one writer for 2+ non-trivial files.
-4. **Context rule**: delegate reading that prepares a write and broad research.
-5. **Optional SDD rule**: propose SDD only when durable proposal/spec/design/tasks materially reduce substantial ambiguity. Select it only after explicit request or accepted proposal.
-6. **Per-action rule**: tests, builds, installs, and native review actors may use fresh workers without changing the implementation route or creating SDD state.
+` + agentguidance.DelegationTriggers() + `
 ` + nativeReviewAuthorityRule + `
 <!-- /gentle-ai:delegation-hard-gates-migration -->
 `
 
 	if strings.Contains(prompt, "<!-- gentle-ai:delegation-hard-gates-migration -->") &&
-		strings.Contains(prompt, "fully mandatory") &&
-		strings.Contains(prompt, "Bounded read rule") &&
-		strings.Contains(prompt, "4-file rule") &&
-		strings.Contains(prompt, "Write rule") &&
-		strings.Contains(prompt, "Context rule") &&
-		strings.Contains(prompt, "Optional SDD rule") &&
-		strings.Contains(prompt, "Per-action rule") &&
+		strings.Contains(prompt, delegationBlockSignature) &&
+		strings.Contains(prompt, "Mapping trigger") &&
+		strings.Contains(prompt, "Writer trigger") &&
+		strings.Contains(prompt, "Preparation trigger") &&
+		strings.Contains(prompt, "Per-action trigger") &&
+		strings.Contains(prompt, "Optional SDD trigger") &&
 		strings.Contains(prompt, "Authority rule") &&
 		strings.Contains(prompt, "Semantic guard") &&
 		strings.Contains(prompt, "execution, not delegation") &&

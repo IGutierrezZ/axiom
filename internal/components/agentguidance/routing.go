@@ -73,22 +73,22 @@ func RenderRouting(agent model.AgentID) (string, error) {
 	output.WriteString("3. **Resolve uncertainty.** Recommend optional research only for a named uncertainty; ask one focused user question only for a real unresolved product decision, then stop and wait; use at most one scoped read-only assumption challenge for a high-consequence unproven premise.\n")
 	output.WriteString("4. **Classify.** The work is substantial when exploration yields two or more meaningful implementation steps, or progress worth recovering after an interruption. Small, understood work stays small and creates no durable task artifacts.\n")
 	output.WriteString("5. **Track before the first write.** For substantial authorized implementation, create `odd/tasks/<feature-name>.md` and its Engram mirror `odd/<feature-name>/tasks` automatically, before the first source write, without asking permission for tasks or storage. Tell the user in one line which feature document was created and how many tasks it holds.\n")
-	output.WriteString("6. **Implement task by task.** Route each task through the smallest useful topology below, honoring its mandatory delegation triggers, with the configured TDD mode and applicable checks. Check an item off only after its outcome and checks were observed; update the file and the mirror after each task. Every task closes with at least one work-unit commit on the branch that `axiom branch ensure --lane odd --change <feature-name>` prepared before the first write of `odd/tasks/<feature-name>.md` (see *Branches and worktrees*), with tests and docs alongside the behavior, using a Conventional Commit message; record the commit identity in the feature document as evidence. Work-unit commits on the feature branch are part of authorized substantial ODD implementation; push, pull request creation, and merge remain the user's decisions under ordinary repository policy.\n")
+	output.WriteString("6. **Implement task by task.** Route each task through the smallest useful topology below, honoring its delegation triggers when their conditions truly hold, with the configured TDD mode and applicable checks. Check an item off only after its outcome and checks were observed; update the file and the mirror after each task. Every task closes with at least one work-unit commit on the branch that `axiom branch ensure --lane odd --change <feature-name>` prepared before the first write of `odd/tasks/<feature-name>.md` (see *Branches and worktrees*), with tests and docs alongside the behavior, using a Conventional Commit message; record the commit identity in the feature document as evidence. Work-unit commits on the feature branch are part of authorized substantial ODD implementation; push, pull request creation, and merge remain the user's decisions under ordinary repository policy.\n")
 	output.WriteString("7. **Close.** Report the verified outcome, every failed, skipped, or pending check, and the next step. The native review candidate is a work-unit commit or a PR slice, never a TODO checkbox and never the accumulated feature branch; native review runs only under the user-owned receipt-driven development switch. When the project declares a maintained technical context (`technical_context.maintained` in `axiom.yaml`), a work unit that changes something that context documents updates the affected documentation in that same work-unit commit; documentation declared as reference (`technical_context.reference`) is never modified, and without a maintained context this adds no requirement.\n\n")
 	output.WriteString("Resume an interrupted feature with `mem_context`, then project- and feature-scoped `mem_search`, then `mem_get_observation` for the full document, then the task file itself; reconcile before continuing the next unfinished task. When the Engram mirror does not exist, start from the task file alone, never fail for the missing mirror, and continue with the first unfinished task.\n\n")
 	output.WriteString("After explicit change intent is established, route work for the requested outcome with the smallest useful topology. Every authorized change takes exactly one implementation route: direct inline, delegated direct, or optional SDD.\n\n")
 
 	_, _ = fmt.Fprintf(
 		&output,
-		"- **Direct inline:** decide or verify from %d–%d files inline. Keep one mechanical, already-understood file change inline only when it needs no research and has no unresolved design decision.\n",
-		routing.DirectInline.MinUnderstandingFiles,
-		routing.DirectInline.MaxUnderstandingFiles,
+		"- **Direct inline:** decide or verify within the evidence budget: one parallel batch of at most %d calls and approximately %dk tokens, using bounded searches or line ranges. A unit of about %d changed lines or less is always written inline, and a mechanical, already-understood change stays inline when it needs no research and has no unresolved design decision. The number of files never decides.\n",
+		routing.DirectInline.MaxEvidenceCalls,
+		routing.DirectInline.ApproxEvidenceTokens/1000,
+		routing.DirectInline.MaxInlineUnitLines,
 	)
 	_, _ = fmt.Fprintf(
 		&output,
-		"- **Delegated direct:** delegate one narrow exploration when understanding needs %d+ files; delegate one writer for %d+ non-trivial files. Reading that prepares a write and broad research also delegate.\n",
-		routing.DelegatedDirect.MappingMinUnderstandingFiles,
-		routing.DelegatedDirect.WriterMinNonTrivialFiles,
+		"- **Delegated direct:** understanding that exceeds the evidence budget takes one read-only explorer that returns a handoff of at most approximately %dk tokens; a writer is delegated only for a named reason (parallelism or protecting the parent context), never by file count. Reading that prepares a delegated write and broad research also delegate.\n",
+		routing.DelegatedDirect.ApproxHandoffTokens/1000,
 	)
 	output.WriteString("- **Optional SDD:** propose SDD only when durable proposal, spec, design, and tasks would materially reduce substantial ambiguity. SDD is selected only by an explicit request, by the project lane `workflow.lane: sdd` for substantial work, or by an accepted proposal.\n")
 	output.WriteString("- File count, changed lines, size, or perceived risk alone never selects SDD and never forces a heavier route.\n")
@@ -96,18 +96,14 @@ func RenderRouting(agent model.AgentID) (string, error) {
 	output.WriteString("- These are implementation routes, not a ban on per-action delegation. Tests, builds, installs, and review actors may still use fresh workers without changing the selected route.\n")
 	output.WriteString("- Direct and delegated work never create SDD artifacts, prompts, phase attempts, or synthetic SDD runs.\n")
 
-	// Mandatory delegation triggers: absorbed from upstream dcd2fa07 (INC-20
-	// F6.1). Delegation must be behavioral, not advisory, so it is rendered
-	// immediately after the route descriptions instead of being buried pages
-	// away from the permissive "smallest useful topology" framing above.
+	// Delegation triggers: conditional, rendered from the single source in
+	// delegation.go and shared with the SDD orchestrators. Each trigger is
+	// mandatory only while its condition truly holds; when in doubt, inline. They
+	// follow the route descriptions so they compete with the permissive "smallest
+	// useful topology" framing instead of being buried pages away from it.
 	output.WriteString("\n### Mandatory Delegation Triggers\n\n")
-	output.WriteString("These triggers are mandatory, not advisory. When one fires, stop and delegate through the runtime's subagent mechanism before continuing; executing past a fired trigger inline is a routing defect even if the work succeeds. Delegation keeps the parent context thin enough to orchestrate; it does not slow the work down.\n\n")
-	_, _ = fmt.Fprintf(&output, "- **Mapping trigger:** when understanding the work requires %d or more files, delegate one narrow exploration or mapping task before deciding or writing anything.\n", routing.DelegatedDirect.MappingMinUnderstandingFiles)
-	_, _ = fmt.Fprintf(&output, "- **Writer trigger:** when implementation touches %d or more non-trivial files, delegate one bounded writer instead of editing them inline.\n", routing.DelegatedDirect.WriterMinNonTrivialFiles)
-	output.WriteString("- **Preparation trigger:** reading that prepares a write, and broad research or context compression, delegate together with or ahead of the write instead of filling the parent context.\n")
-	output.WriteString("- **Long-session backstop:** after about 20 tool calls, 5 exploratory reads, or 2 non-mechanical edits without any delegation, pause and delegate the next bounded unit of work.\n")
-	output.WriteString("- **Route declaration:** for substantial work, record the chosen route per task (inline or delegated) and the trigger evidence in the feature document, so skipped delegation is observable instead of silent.\n")
-	output.WriteString("- These triggers never select SDD and never create SDD artifacts; they only choose between direct inline and delegated direct inside the organic flow.\n")
+	output.WriteString(renderDelegationTriggers(routing))
+	output.WriteString("\n")
 
 	// Organic Driven Development detail: absorbed from upstream 1b202d77,
 	// amended by cfc415ce (INC-20 F6.1). This is the reference detail for the

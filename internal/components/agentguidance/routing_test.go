@@ -3,6 +3,7 @@ package agentguidance
 import (
 	"errors"
 	"fmt"
+	"regexp"
 	"strings"
 	"testing"
 	"unicode"
@@ -80,9 +81,9 @@ func TestRenderRoutingSucceedsForEverySupportedAgent(t *testing.T) {
 			// The rendered thresholds must come from the canonical manifest, not
 			// from prose invented by the renderer.
 			for _, want := range []string{
-				fmt.Sprintf("%d–%d files", routing.DirectInline.MinUnderstandingFiles, routing.DirectInline.MaxUnderstandingFiles),
-				fmt.Sprintf("%d+ files", routing.DelegatedDirect.MappingMinUnderstandingFiles),
-				fmt.Sprintf("%d+ non-trivial files", routing.DelegatedDirect.WriterMinNonTrivialFiles),
+				fmt.Sprintf("at most %d calls and approximately %dk tokens", routing.DirectInline.MaxEvidenceCalls, routing.DirectInline.ApproxEvidenceTokens/1000),
+				fmt.Sprintf("about %d changed lines or less", routing.DirectInline.MaxInlineUnitLines),
+				fmt.Sprintf("at most approximately %dk tokens", routing.DelegatedDirect.ApproxHandoffTokens/1000),
 			} {
 				if !strings.Contains(rendered, want) {
 					t.Fatalf("RenderRouting(%q) is missing canonical threshold %q:\n%s", agent.ID, want, rendered)
@@ -353,7 +354,7 @@ func TestRenderRoutingPreparesTheBranchWithAxiomBranchEnsure(t *testing.T) {
 			}
 			// The rest of the step keeps its existing text around the clause.
 			for _, kept := range []string{
-				"Route each task through the smallest useful topology below, honoring its mandatory delegation triggers, with the configured TDD mode and applicable checks.",
+				"Route each task through the smallest useful topology below, honoring its delegation triggers when their conditions truly hold, with the configured TDD mode and applicable checks.",
 				"Every task closes with at least one work-unit commit " + newClause + ", with tests and docs alongside the behavior, using a Conventional Commit message;",
 				"push, pull request creation, and merge remain the user's decisions under ordinary repository policy.",
 			} {
@@ -517,8 +518,6 @@ func TestRenderRoutingAsksLaneSelectionBeforeAuthorize(t *testing.T) {
 func TestRenderRoutingRendersMandatoryDelegationTriggers(t *testing.T) {
 	t.Parallel()
 
-	routing := capabilitymanifest.CanonicalImplementationRouting()
-
 	for _, agent := range catalog.AllAgents() {
 		t.Run(string(agent.ID), func(t *testing.T) {
 			t.Parallel()
@@ -530,9 +529,15 @@ func TestRenderRoutingRendersMandatoryDelegationTriggers(t *testing.T) {
 
 			for _, want := range []string{
 				"### Mandatory Delegation Triggers",
-				"These triggers are mandatory, not advisory.",
-				fmt.Sprintf("%d or more files", routing.DelegatedDirect.MappingMinUnderstandingFiles),
-				fmt.Sprintf("%d or more non-trivial files", routing.DelegatedDirect.WriterMinNonTrivialFiles),
+				"holds only when its condition truly holds, and only then is it mandatory, not advisory",
+				"when in doubt work inline",
+				"**Mapping trigger:**",
+				"**Writer trigger:**",
+				"only for a named reason",
+				"Never delegate a writer for size, file count, or because the task is large",
+				"**Proportionality:**",
+				"**Long-session backstop:**",
+				"advisory guidance, not a mechanically observed or enforced limit",
 				"Long-session backstop",
 				"Route declaration",
 			} {
@@ -617,7 +622,7 @@ func TestRenderRoutingOmitsRetiredRemoteControlPlaneVocabulary(t *testing.T) {
 				if err != nil {
 					t.Fatalf("RenderRouting(%q) error = %v", agent.ID, err)
 				}
-				if strings.Contains(strings.ToLower(rendered), needle) {
+				if strings.Contains(strings.ToLower(routingVocabularyForGuard(rendered, forbidden)), needle) {
 					t.Fatalf("RenderRouting(%q) leaks retired vocabulary %q:\n%s", agent.ID, forbidden, rendered)
 				}
 			}
@@ -713,4 +718,24 @@ func routingSemantics(rendered string) []string {
 		}
 	}
 	return facts
+}
+
+// evidenceSize matches the token sizes of the evidence budget ("10k tokens").
+// They are sizes, not the authorization tokens the retired-vocabulary guard
+// exists to keep out of the routing block.
+var evidenceSize = regexp.MustCompile(`\d+k (?:parent-context )?tokens`)
+
+// routingBlockWithoutEvidenceSizes drops the evidence-budget sizes so the
+// guard for the word "token" keeps meaning authorization tokens only.
+func routingBlockWithoutEvidenceSizes(block string) string {
+	return evidenceSize.ReplaceAllString(block, "")
+}
+
+// routingVocabularyForGuard returns the text a retired-vocabulary needle is
+// matched against.
+func routingVocabularyForGuard(block, forbidden string) string {
+	if forbidden == "token" {
+		return routingBlockWithoutEvidenceSizes(block)
+	}
+	return block
 }

@@ -24,13 +24,13 @@ verification cost or external side effects, accepted residual risk, or delivery.
 
 | Route | Use it when | What happens |
 |---|---|---|
-| **Direct inline** | Deciding or verifying requires **1–3 files**; or the change is **one mechanical, already-understood file** with no research or unresolved design decision. | Keep the bounded action inline. |
-| **Delegated direct** | Understanding requires **4+ files**; reading prepares a write; broad research is needed; or a writer must change **2+ non-trivial files**. | Delegate the narrow exploration and/or one writer needed for that action. |
+| **Direct inline** | Deciding or verifying fits the **evidence budget** (one parallel batch, at most 3 calls, about 10k tokens); or the unit is **about 100 changed lines or less**; or the change is mechanical and already understood, with no research or unresolved design decision. | Keep the bounded action inline. |
+| **Delegated direct** | Understanding exceeds the evidence budget; or a writer has a **named reason** (independent units in parallel, or protecting the parent context); or reading prepares a delegated write, or broad research is needed. | Delegate one read-only explorer (handoff of at most about 2k tokens with `path:line` evidence, one parent spot check) and/or one bounded writer per unit. |
 | **Optional SDD** | The work has substantial ambiguity, or durable proposal, spec, design, or task artifacts would materially reduce uncertainty. | Propose SDD. Select it only after an explicit request or an accepted proposal. |
 
-The file counts describe the context needed for the current action, not a risk
+The evidence budget describes the context needed for the current action, not a risk
 score and not an SDD threshold. Risk may strengthen native verification or
-review, but it never forces SDD.
+review, but it never forces SDD. Each trigger holds only when its condition truly holds, and when in doubt the work stays inline; the number of files never fires delegation.
 
 Delegation also applies per action. Tests, builds, installs, and native review
 actors may use fresh workers without changing the implementation route or
