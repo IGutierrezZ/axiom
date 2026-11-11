@@ -122,8 +122,12 @@ func RunReviewMode(args []string, stdout io.Writer) error {
 	}
 	// #4670: a status that could not be resolved carries the fail-closed
 	// projection, not a decision, so the human surface must not render it as
-	// one.
-	unavailable := operation == "status" && err != nil
+	// one. #5533: a failed enable or disable carries the same projection. The
+	// decision reads the explicit Resolved indicator, never the error or the
+	// field values: a refusal such as a clone write that applied only for this
+	// build still returns what was resolved, and the resolved default is
+	// byte-identical to the fail-closed projection.
+	unavailable := err != nil && !result.Status.Resolved()
 	if emitErr := emitReviewMode(stdout, result, *emitJSON, unavailable); emitErr != nil && err == nil {
 		return emitErr
 	}

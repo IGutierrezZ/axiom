@@ -202,7 +202,22 @@ type RDDModeStatus struct {
 	Source     RDDModeSource `json:"source"`
 	Revision   string        `json:"revision,omitempty"`
 	Reach      RDDModeReach  `json:"reach,omitempty"`
+
+	// resolved marks a status that came out of resolving the sources, as
+	// opposed to the fail-closed projection returned beside an error. It is an
+	// explicit indicator on purpose (#5533): in Axiom the resolved default
+	// (off, source default, nothing set) is byte-identical to the fail-closed
+	// projection, so no combination of the exported fields can tell them apart.
+	// Unexported, it never reaches the JSON contract.
+	resolved bool
 }
+
+// Resolved reports whether the status is the outcome of a resolution rather
+// than the fail-closed projection that accompanies an error. A refusal can
+// still return a resolved status (a clone write that applied only for this
+// build), so callers must read this instead of inferring it from the error or
+// from the field values.
+func (status RDDModeStatus) Resolved() bool { return status.resolved }
 
 // Enabled reports whether new receipt-driven development may start.
 func (status RDDModeStatus) Enabled() bool { return status.Effective == RDDModeOn }
@@ -754,6 +769,7 @@ func rddModeStatus(
 		CloneLocal: RDDModeUnset,
 		Effective:  RDDModeOff,
 		Source:     RDDModeSourceDefault,
+		resolved:   true,
 	}
 	if present {
 		status.Revision = override.Revision

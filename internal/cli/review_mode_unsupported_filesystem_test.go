@@ -3,6 +3,7 @@ package cli
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -74,6 +75,78 @@ func TestReviewModeStatusReportsAFailedResolutionAsUnavailable(t *testing.T) {
 	}
 	if !strings.Contains(output.String(), "receipt-driven development: unavailable") {
 		t.Fatalf("status output = %q, want the mode marked unavailable", output.String())
+	}
+}
+
+// #5533: a mutation that cannot resolve the clone's mode carries the same
+// fail-closed projection status does, so it is reported the same way rather
+// than as an "off (decided by default)" beside "clone-local: unset". The JSON
+// result keeps the projection unchanged.
+func TestReviewModeFailedMutationReportsTheModeAsUnavailable(t *testing.T) {
+	for _, operation := range []string{"enable", "disable"} {
+		t.Run(operation, func(t *testing.T) {
+			reviewModeHome(t)
+			repo := initReviewCLIRepo(t)
+			unvalidatableReviewModeSwitchRoot(t, repo)
+
+			var output bytes.Buffer
+			if err := RunReviewMode([]string{operation, "--scope", "clone", "--cwd", repo}, &output); err == nil {
+				t.Fatalf("%s resolved an unvalidatable override without an error:\n%s", operation, output.String())
+			}
+			if got := output.String(); got != "receipt-driven development: unavailable (the review mode could not be resolved)\n" {
+				t.Fatalf("failed %s output = %q, want only the unavailable line", operation, got)
+			}
+
+			output.Reset()
+			if err := RunReviewMode([]string{operation, "--scope", "clone", "--cwd", repo, "--json"}, &output); err == nil {
+				t.Fatalf("%s --json resolved an unvalidatable override without an error", operation)
+			}
+			var result ReviewModeResult
+			if err := json.Unmarshal(output.Bytes(), &result); err != nil {
+				t.Fatalf("failed %s --json output is not a result: %v\n%s", operation, err, output.String())
+			}
+			if result.Status.Effective != reviewtransaction.RDDModeOff {
+				t.Fatalf("failed %s --json status = %#v, want the unchanged fail-closed off projection", operation, result.Status)
+			}
+			if strings.Contains(output.String(), "resolved") {
+				t.Fatalf("the resolved indicator leaked into the JSON contract:\n%s", output.String())
+			}
+		})
+	}
+}
+
+// #5533: the resolved default is byte-identical to the fail-closed projection
+// in every exported field, so a refusal returned beside a resolved status must
+// be told apart by the explicit indicator. A clone write that applied here but
+// could not be published for pre-relocation installs keeps its resolved state
+// and the this-build note instead of reading as unavailable.
+func TestReviewModePartiallyAppliedMutationKeepsItsResolvedState(t *testing.T) {
+	reviewModeHome(t)
+	repo := initReviewCLIRepo(t)
+	if err := RunReviewMode([]string{"disable", "--scope", "clone", "--cwd", repo}, io.Discard); err != nil {
+		t.Fatal(err)
+	}
+	// A directory in the pre-relocation location's next slot makes its
+	// immutable publish refuse after this build's own root has advanced.
+	blocked := filepath.Join(repo, ".git", "gentle-ai", "review-transactions", "rar-authority", "v1", "rdd-mode", "gen-0000000002.json")
+	if err := os.MkdirAll(blocked, 0o700); err != nil {
+		t.Fatal(err)
+	}
+
+	var output bytes.Buffer
+	err := RunReviewMode([]string{"enable", "--scope", "clone", "--cwd", repo}, &output)
+	if !errors.Is(err, reviewtransaction.ErrRDDModePartiallyApplied) {
+		t.Fatalf("enable error = %v, want ErrRDDModePartiallyApplied", err)
+	}
+	if strings.Contains(output.String(), "unavailable") {
+		t.Fatalf("a resolved status was reported as unavailable: %q", output.String())
+	}
+	want := "receipt-driven development: off (decided by default)\n" +
+		"  global:      unset\n" +
+		"  clone-local: unset\n" +
+		"  note:        applied for this axiom only; a gentle-ai installed before the switch moved reads a location this command could not open, and keeps enforcing the value it holds there\n"
+	if got := output.String(); !strings.HasPrefix(got, "receipt-driven development: off (decided by default)\n") || !strings.Contains(got, "applied for this axiom only") {
+		t.Fatalf("partially applied enable output = %q, want %q", got, want)
 	}
 }
 

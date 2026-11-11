@@ -210,6 +210,9 @@ func TestCloneScopeWriteRefusesToClaimSuccessOnAPartialPublish(t *testing.T) {
 	}
 	// The decision is real for this build; reporting it as reached-nowhere
 	// would be its own lie, and it must not claim the machine either.
+	if !partial.Resolved() {
+		t.Fatalf("a refusal returned beside a resolved status lost the resolved indicator: %#v", partial)
+	}
 	if partial.CloneLocal != RDDModeUnset || !partial.Enabled() || partial.Reach != RDDModeReachThisBuild {
 		t.Fatalf("partial publish status = %#v; want this build's decision with this_build reach", partial)
 	}

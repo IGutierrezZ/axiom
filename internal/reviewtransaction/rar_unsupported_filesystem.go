@@ -2,6 +2,7 @@ package reviewtransaction
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/pathquote"
 )
@@ -62,4 +63,22 @@ func asUnsupportedAuthorityFilesystem(target any, refusal *UnsupportedAuthorityF
 	}
 	*typed = refusal
 	return true
+}
+
+// windowsNetworkPath reports whether a Win32 path names a server share: the
+// `\\server\share` form or its `\\?\UNC\` and `\\.\UNC\` namespace spellings.
+//
+// #5533: the Windows authority checks refuse every path in the `\\` family,
+// and that refusal stays exactly as it is. Only its wording depends on this:
+// the long-path and device forms of a drive letter or volume, such as
+// `\\?\C:\repo\.git`, are on this machine and must not be reported as an
+// SMB/UNC share. It is pure so tests execute it on every platform.
+func windowsNetworkPath(path string) bool {
+	for _, prefix := range []string{`\\?\UNC\`, `\\.\UNC\`} {
+		if len(path) >= len(prefix) && strings.EqualFold(path[:len(prefix)], prefix) {
+			return true
+		}
+	}
+	return strings.HasPrefix(path, `\\`) &&
+		!strings.HasPrefix(path, `\\?\`) && !strings.HasPrefix(path, `\\.\`)
 }
