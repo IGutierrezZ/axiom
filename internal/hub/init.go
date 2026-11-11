@@ -155,10 +155,6 @@ func (ini *Initializer) Init(opts InitOptions) (*InitResult, error) {
 	}
 	ownership, ownershipCause := markers.declarations.Ownership()
 
-	if err := os.MkdirAll(absPath, 0755); err != nil {
-		return nil, fmt.Errorf("no se pudo asegurar la existencia del directorio destino: %w", err)
-	}
-
 	if opts.Name == "" {
 		opts.Name = filepath.Base(absPath)
 	}
@@ -201,61 +197,30 @@ func (ini *Initializer) Init(opts InitOptions) (*InitResult, error) {
 			ownershipCause, pathquote.Quote(absPath), pathquote.Quote(configPath)))
 	}
 
-	// 1. Si no existe axiom.yaml o se fuerza la recreación
-	if !alreadyExisted || (opts.Force && !preserveConfig) {
-		tech, err := ini.detector.Detect(absPath)
+	// 1. Si no existe axiom.yaml o se fuerza la recreación. El axiom.yaml que se va
+	// a escribir se planifica y se valida antes de crear ni escribir nada: una
+	// configuración inválida se rechaza con todas sus violaciones y el disco queda
+	// como estaba.
+	var plan configPlan
+	writeConfig := !alreadyExisted || (opts.Force && !preserveConfig)
+	if writeConfig {
+		plan, err = ini.checkPlan(absPath, opts)
 		if err != nil {
-			tech = &TechDetection{
-				PrimaryLanguage:  "generic",
-				RecommendedRoles: map[string][]string{"core": {"generic"}, "qa": {"verification"}},
-			}
+			return nil, err
 		}
+		opts.Topology = plan.Topology
+	}
 
-		// Determinar roles efectivos y topología según perfil
-		var effectiveRoles []RoleInput
-		if opts.Profile == "knowledge" || opts.Profile == "spec-only" {
-			opts.Topology = "multirepo"
-			effectiveRoles = []RoleInput{
-				{
-					Key:          "knowledge",
-					Name:         "Knowledge Explorer",
-					Repositories: []string{"."},
-					NonBlocking:  true,
-					Tech:         []string{"markdown", "openspec"},
-				},
-			}
-		} else if len(opts.Roles) > 0 {
-			effectiveRoles = opts.Roles
-		} else if len(tech.ConfiguredRoles) > 0 {
-			effectiveRoles = tech.ConfiguredRoles
-		} else {
-			// Regla de negocio: Si no se proveen ni detectan roles, rol único 'fullstack'
-			primaryTech := tech.Frameworks
-			if len(primaryTech) == 0 && tech.PrimaryLanguage != "" {
-				primaryTech = []string{tech.PrimaryLanguage}
-			}
-			effectiveRoles = []RoleInput{
-				{
-					Key:          "fullstack",
-					Name:         opts.Name + " Fullstack",
-					Repositories: []string{"."},
-					NonBlocking:  false,
-					Tech:         primaryTech,
-				},
-			}
-		}
+	if err := os.MkdirAll(absPath, 0755); err != nil {
+		return nil, fmt.Errorf("no se pudo asegurar la existencia del directorio destino: %w", err)
+	}
 
-		specsRepo := "openspec"
-		if tech.SpecsRepository != "" {
-			specsRepo = tech.SpecsRepository
-		}
-
-		yamlContent := buildAxiomYamlWithRoles(opts.Name, opts.Topology, specsRepo, tech.DomainContext, effectiveRoles)
-		if err := os.WriteFile(configPath, []byte(yamlContent), 0644); err != nil {
+	if writeConfig {
+		if err := os.WriteFile(configPath, []byte(plan.render()), 0644); err != nil {
 			return nil, fmt.Errorf("fallo al escribir %s: %w", configPath, err)
 		}
 		createdFiles = append(createdFiles, configPath)
-		adoptedSkillsCount = len(tech.AdoptedSkills)
+		adoptedSkillsCount = plan.AdoptedSkills
 	}
 
 	// 2. Crear carpetas canónicas del arnés SDD. Con una baseline que no es la de
@@ -375,7 +340,7 @@ func buildAxiomYamlWithRoles(name, topology, specsRepo, domainContext string, ro
 		if roleKey == "" {
 			roleKey = slugify(r.Name)
 		}
-		sb.WriteString(fmt.Sprintf("  %s:\n", roleKey))
+		sb.WriteString(fmt.Sprintf("  %s:\n", yamlKey(roleKey)))
 		roleName := strings.TrimSpace(r.Name)
 		if roleName == "" {
 			roleName = strings.Title(roleKey)

@@ -88,7 +88,7 @@ Fuera de alcance:
   - `GetWorkspace` devuelve el `GatePolicy` real del rol, con `blocking` por defecto.
   - El alta escribe `deferred` en lugar de `advisory`.
   - Pruebas en el dashboard y en `hub`.
-- [ ] **T2 · Validación previa en `hub` (G4.1, G4.3).**
+- [x] **T2 · Validación previa en `hub` (G4.1, G4.3).**
   - `hub.ValidateInit(opts)` genera la configuración y la pasa por `workspace.ParseConfig` y por `workspace.Validate`, con un FS superpuesto que da por creadas las carpetas que el alta va a crear.
   - Repos relativos y dentro del proyecto. Claves de rol entre comillas.
   - `gate_policy` con el vocabulario de `multirole`.
@@ -140,5 +140,6 @@ T18–T20 de `odd/tasks/upstream-revision-nativa.md` tocan `rdd_mode.go` y `revi
 - 2026-11-10: mapa hecho (delegado, solo lectura).
 - 2026-11-11: el usuario elige el registro del hub para el RDD por proyecto.
 - 2026-11-11: T1 hecha (ruta: escritor delegado). GetWorkspace devuelve el gate_policy real del rol (blocking por defecto); el alta escribe deferred en lugar de advisory; la etiqueta del modal ya no habla de advisory. Observado: go test ./internal/hub/... ./internal/workspace/... ./internal/dashboard/... -count=1: ok; go test ./internal/multirole/... : ok; go test ./cmd/axiom/ -run Init : ok; go vet y gofmt -l: limpios.
+- 2026-11-11: T2 hecha (ruta: escritor delegado). Nuevo hub.ValidateInit (internal/hub/init_validate.go): planifica el axiom.yaml, lo pasa por workspace.ParseConfig y workspace.Validate con un FS superpuesto (proyecto, openspec/ y repos de rol dados por existentes) y aplica reglas de claves repetidas (también por mayúsculas), repos absolutos o fuera del proyecto y vocabulario de gate_policy de multirole; devuelve *InitValidationError con todas las violaciones. Init lo llama antes de MkdirAll y de cualquier escritura (también axiom init); las claves de rol se escriben entre comillas cuando hace falta. Decisión: el alta no exige que existan los repos de rol (los traen las configuraciones adoptadas y los proyectos nuevos). Observado: go test ./internal/hub/... ./internal/workspace/... ./internal/dashboard/... -count=1: ok; go test ./internal/multirole/... : ok; go test ./cmd/axiom/ -run Init : ok; go vet y gofmt -l: limpios.
 
 Plan stop: approved 2026-11-11; implementation continues
