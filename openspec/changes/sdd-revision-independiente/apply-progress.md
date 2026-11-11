@@ -10,8 +10,8 @@
 | U1 — regla de sellado en Go | hecho (1.1–1.10) | `99d439d2` feat(kickoff): exigir el rol fullstack al sellar continuous |
 | U2 — verify por rol y cumplimiento técnico | hecho (2.1–2.6) | `65047e2f` feat(sdd-verify): añadir cumplimiento técnico y estado limpio al verify por rol |
 | U3 — juicio por rol y revisión de cobertura | hecho (3.1–3.7) | `74c12aa8` feat(judgment-day): admitir el diff de un rol SDD y la revisión de cobertura |
-| U4 — sección compartida y proyección | hecho (4.1–4.9) | ver U5 |
-| U5 — pins finales, documentación y verificación global | pendiente | — |
+| U4 — sección compartida y proyección | hecho (4.1–4.9) | `ad2b2ae0` feat(sdd): proyectar la sección SDD Independent Review a los orquestadores |
+| U5 — pins finales, documentación y verificación global | hecho (5.1–5.4) | commit `docs(sdd): documentar la revisión independiente y fijar su frontera` (ver `git log`) |
 
 ## Work Unit Evidence
 
@@ -58,3 +58,25 @@
 | RED observado | El pin de paridad y de la sección compartida se escribió antes de la proyección; la regeneración de goldens (`go test ./internal/components/ -run TestGolden -update`, 13 ficheros) se repitió sin `-update` en verde. `TestKilocodeReviewSettingsMatchCurrentMainBaseline` falló al proyectar la sección (el hash de Kilocode cambia) y se actualizó con comentario «Deliberate, not drift», como manda la convención del propio test. |
 | Harness de ejecución | Los goldens regenerados y revisados por diff son la prueba de proyección en los doce runtimes (solo aparece la sección nueva y las ediciones de 4.3). |
 | Límite de reversión | Sección compartida, doce plantillas, `claude/sdd-orchestrator-workflow.md`, registros, caso del hook, hash de Kilocode y `testdata/golden/*.golden`. |
+
+### U5
+
+| Evidencia | Valor |
+|-----------|-------|
+| Comando focalizado | `go test ./internal/assets/ -run IndependentReview -count=1 -v`: 6 pruebas PASS (verify, juicio y cobertura, orquestador, paridad de plantillas, mutación en memoria, no-barrido de ficheros completos). |
+| RED por mutación | `TestIndependentReviewBoundaryPinDetectsMutations` retira en memoria cada frase fijada y comprueba que el contenido mutado ya no la contiene, e inyecta `receipt`, `lineage`, `axiom review`, `burn`, `RDD`, `sdd-attempt` y `acknowledged` en un pasaje limpio: el pin los detecta en todos los casos; con el contenido real pasa. Ningún fichero se modificó. |
+| Documentación | `docs/manual-de-inicio.md` (commit de U4): regla `continuous` solo con `fullstack`, rechazo del `seal` repetido, preferencia, verify por rol, juicio y cobertura. `axiom.yaml` no declara `technical_context`. |
+| Límite de reversión | Tramo final de `independent_review_boundary_test.go`, `docs/manual-de-inicio.md`, `tasks.md`, `apply-progress.md`. |
+
+## Verificación global (5.3)
+
+- `go vet ./...`: sin salida (limpio).
+- `go test` de todos los paquetes salvo cli (60 min de tope; en la práctica la lista incluyó `internal/cli`): 91 paquetes ok, entre ellos `internal/assets`, `internal/kickoff`, `internal/components/sdd`, `internal/sddstatus`, `internal/multirole`, `internal/branch/engine`, `cmd/axiom`, `e2e/organicruntime`.
+- Fallos ambientales, idénticos en `main` salvo el último: `internal/app` `TestTuiInstallOnThenSyncPreservesAndRefreshesOpenCodeActivation` (runtime de OpenCode no disponible; reproducido en `C:\repos\axiom` sobre `main`), `internal/backup` `TestSnapshotterSkipsUnixSockets` (sockets Unix en Windows; reproducido en `main`), `internal/components/filemerge` `TestWriteFileAtomicFollowsDirectoryJunction` y `...RelativeDirectoryJunction` (uniones de directorio en Windows; el paquete no tiene diff frente a `main`).
+- `internal/cli` y `internal/reviewtransaction` no terminan: se cortaron a los 60 min (`Test killed: ran too long`) sin ningún `--- FAIL`; las pruebas lentas son las de revisión nativa ajenas a este cambio. En `internal/cli` se ejecutaron acotadas: `-run 'Kickoff|HandOff|SealBranch|GuardProject' -v` ok (44 pruebas de primer nivel) y `-run TestSDDPreflightHook` ok.
+- `TestKilocodeReviewSettingsMatchCurrentMainBaseline` se actualizó deliberadamente (U4).
+- No se compiló ningún binario suelto.
+
+## Comparación con las specs (REQ-28.1 a REQ-28.14, REQ-21.4)
+
+Sin discrepancias de comportamiento observadas. Notas: REQ-28.1 a REQ-28.3, REQ-28.10 y REQ-28.14 son prosa del orquestador, comprobada por pins de texto y goldens, no por ejecución de un runtime; la política de `fullstack:deferred` no se comprueba (DD-02) y tiene prueba; los escenarios de `axiom sdd status` sobre `continuous` con roles preexistentes se apoyan en la lectura tolerante (`ParseKickoff`), cubierta por prueba. `.codex/AGENTS.md` sin cambios.

@@ -302,3 +302,75 @@ func TestIndependentReviewBoundaryTemplateParity(t *testing.T) {
 		}
 	}
 }
+
+// pinnedReviewPhrases agrupa todas las frases nuevas o reescritas que el pin fija, con el fichero
+// donde deben estar (REQ-28.11, DD-10).
+var pinnedReviewPhrases = []struct{ file, phrase string }{
+	{"skills/sdd-verify/SKILL.md", verifySkillDescription},
+	{"skills/sdd-verify/SKILL.md", verifySkillActivation},
+	{"skills/sdd-verify/SKILL.md", verifySkillRoleRule},
+	{"skills/sdd-verify/SKILL.md", verifySkillRoleGate},
+	{"skills/judgment-day/SKILL.md", judgmentSkillActivation},
+	{"skills/judgment-day/SKILL.md", judgmentSkillGate},
+	{"skills/sdd-spec/SKILL.md", coverageOwnTableRule},
+	{"skills/sdd-design/SKILL.md", coverageOwnTableRule},
+	{"skills/_shared/sdd-orchestrator-sections.md", gatesContinuousFullstackPhrase},
+	{"skills/_shared/sdd-orchestrator-sections.md", gatesStopResultsPhrase},
+	{"skills/_shared/sdd-orchestrator-sections.md", dependencyGraphPhrase},
+	{"claude/sdd-orchestrator-workflow.md", dependencyGraphPhrase},
+}
+
+// TestIndependentReviewBoundaryPinDetectsMutations comprueba, solo en memoria y sin modificar
+// ficheros, que el pin falla si una frase fijada se retira o si un pasaje adopta el vocabulario
+// de la otra frontera, y que con el contenido real pasa.
+func TestIndependentReviewBoundaryPinDetectsMutations(t *testing.T) {
+	for _, pinned := range pinnedReviewPhrases {
+		content := MustRead(pinned.file)
+		if !strings.Contains(content, pinned.phrase) {
+			t.Errorf("%s: la frase fijada no está: %q", pinned.file, pinned.phrase)
+			continue
+		}
+		retired := strings.Replace(content, pinned.phrase, "", 1)
+		// La mutación retira la frase del contenido en memoria: la comprobación de presencia
+		// de las pruebas de pasajes fallaría con ese contenido.
+		if strings.Contains(retired, pinned.phrase) {
+			t.Errorf("%s: la frase %q aparece más de una vez o la mutación no la retiró", pinned.file, pinned.phrase)
+		}
+	}
+
+	clean := reviewPassage{"pasaje", "mutacion.md", "Run the per-role verify and present the result."}
+	if got := reviewBoundaryViolations([]reviewPassage{clean}); len(got) != 0 {
+		t.Fatalf("un pasaje limpio no debe tener violaciones: %v", got)
+	}
+	for _, injected := range []string{"issue a receipt", "keep the lineage", "run axiom review start", "burn the candidate", "RDD enabled", "see sdd-attempt", "acknowledged"} {
+		mutated := clean
+		mutated.text += " " + injected
+		if got := reviewBoundaryViolations([]reviewPassage{mutated}); len(got) == 0 {
+			t.Errorf("el pin no detecta %q", injected)
+		}
+	}
+}
+
+// TestIndependentReviewBoundaryIsNotAWholeFileSweep: los ficheros preexistentes nombran la frontera a propósito, de modo que
+// un barrido de fichero completo fallaría; el pin inspecciona solo los pasajes nuevos o modificados (REQ-28.11).
+func TestIndependentReviewBoundaryIsNotAWholeFileSweep(t *testing.T) {
+	deliberate := []struct{ file, mention string }{
+		{"skills/sdd-verify/SKILL.md", "SDD never offers, launches, or consumes RDD."},
+		{"skills/judgment-day/SKILL.md", "issues no receipt"},
+		{"skills/_shared/sdd-orchestrator-sections.md", "receipt-driven development (RDD)"},
+	}
+	for _, d := range deliberate {
+		content := MustRead(d.file)
+		if !strings.Contains(content, d.mention) {
+			t.Errorf("%s: falta la mención preexistente que declara la frontera: %q", d.file, d.mention)
+		}
+		if len(reviewBoundaryViolations([]reviewPassage{{"fichero completo", d.file, content}})) == 0 {
+			t.Errorf("%s: se esperaba que el fichero completo incumpliera el vocabulario (mención deliberada de la frontera)", d.file)
+		}
+		for _, pinned := range pinnedReviewPhrases {
+			if pinned.file == d.file && len(pinned.phrase) >= len(content) {
+				t.Errorf("%s: un pasaje pineado cubre el fichero completo", d.file)
+			}
+		}
+	}
+}
