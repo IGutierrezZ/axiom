@@ -76,6 +76,7 @@ func (s *Server) registerRoutes() {
 	s.mux.HandleFunc("/api/projects/switch", s.handleProjectsSwitch)
 	s.mux.HandleFunc("/api/projects/add", s.handleProjectsAdd)
 	s.mux.HandleFunc("/api/projects/init", s.handleProjectsInit)
+	s.mux.HandleFunc("/api/adapters", s.handleAdapters)
 	s.mux.HandleFunc("/api/projects/active/worktree-prefs", s.handleActiveWorktreePrefs)
 	s.mux.HandleFunc("/api/fs/directories", s.handleFSDirectories)
 	s.mux.HandleFunc("/api/fs/native-picker", s.handleFSNativePicker)
@@ -337,6 +338,16 @@ func (s *Server) handleProjectsInit(w http.ResponseWriter, r *http.Request) {
 	}
 
 	s.respondJSON(w, http.StatusOK, res)
+}
+
+// handleAdapters devuelve el catálogo de adaptadores que se pueden elegir al dar de
+// alta un proyecto, con si admiten el modo workspace.
+func (s *Server) handleAdapters(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Método no permitido", http.StatusMethodNotAllowed)
+		return
+	}
+	s.respondJSON(w, http.StatusOK, map[string]any{"adapters": s.service.ListAdapters()})
 }
 
 func (s *Server) handleFSDirectories(w http.ResponseWriter, r *http.Request) {

@@ -222,8 +222,11 @@ type ProjectInitRequest struct {
 	// (ruta relativa a la carpeta del proyecto).
 	SpecsRepository string          `json:"specs_repository,omitempty"`
 	Roles           []hub.RoleInput `json:"roles,omitempty"`
-	WorktreeMode    string          `json:"worktree_mode,omitempty"`
-	WorktreeRoot    string          `json:"worktree_root,omitempty"`
+	// Adapters son los adaptadores (agentes) que se instalan en el proyecto, en modo
+	// workspace, una vez escrito. Opcional: sin ninguno el proyecto queda sin adaptadores.
+	Adapters     []string `json:"adapters,omitempty"`
+	WorktreeMode string   `json:"worktree_mode,omitempty"`
+	WorktreeRoot string   `json:"worktree_root,omitempty"`
 }
 
 // WorktreePrefsDTO son unas preferencias personales de worktree (REQ-25.29): el modo y la

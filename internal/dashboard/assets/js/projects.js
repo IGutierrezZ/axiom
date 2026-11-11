@@ -3,7 +3,7 @@
 
 import { api, escapeHtml } from './core/api.js';
 import { defaultWorktreeRoot, registrationPrefs } from './core/branches.js';
-import { validateProjectForm, violationsFromError } from './core/projectform.js';
+import { adapterOptions, adapterWarning, validateProjectForm, violationsFromError } from './core/projectform.js';
 import { $, openDialog, closeDialog, toast, setBusy } from './core/components.js';
 import { icon } from './core/icons.js';
 import { resetProjectData } from './core/overview.js';
@@ -448,6 +448,37 @@ function addRoleRow(key = '', name = '', repos = '', nonBlocking = false, tech =
   container.appendChild(card);
 }
 
+// loadAdapters pinta el catálogo de adaptadores como casillas; los que no admiten el
+// modo workspace salen deshabilitados con su motivo. Si el catálogo no carga, el
+// alta sigue siendo posible sin adaptadores.
+async function loadAdapters() {
+  const container = $('#adapters-container');
+  container.textContent = '';
+  let options = [];
+  try {
+    options = adapterOptions((await api('/api/adapters'))?.adapters);
+  } catch (err) {
+    const note = document.createElement('p');
+    note.className = 'field-hint';
+    note.textContent = `No se pudo cargar el catálogo de adaptadores (${err.message}). Puedes dar de alta el proyecto sin ellos.`;
+    container.append(note);
+    return;
+  }
+  for (const option of options) {
+    const label = document.createElement('label');
+    label.className = 'check';
+    const box = document.createElement('input');
+    box.type = 'checkbox';
+    box.className = 'adapter-input';
+    box.value = option.id;
+    box.disabled = option.disabled;
+    const text = document.createElement('span');
+    text.textContent = option.disabled ? `${option.name}: ${option.reason}` : option.name;
+    label.append(box, text);
+    container.append(label);
+  }
+}
+
 function showError(id, message) {
   const box = document.getElementById(id);
   if (!box) return;
@@ -523,6 +554,7 @@ function initAddProject() {
     updateWorktreeRootPlaceholder();
     $('#roles-builder-container').innerHTML = '';
     showError('add-project-error', '');
+    loadAdapters();
     openDialog(dialog, '#input-project-path');
   };
 
@@ -568,12 +600,14 @@ function initAddProject() {
     const restore = setBusy(submit, 'Procesando…');
     try {
       // Preferencias personales de worktree: el servidor las guarda en el Hub, no en axiom.yaml.
-      await api('/api/projects/init', {
+      const adapters = Array.from(document.querySelectorAll('#adapters-container .adapter-input:checked')).map(box => box.value);
+      const response = await api('/api/projects/init', {
         body: {
           path: pathVal,
           name: inputName.value.trim(),
           topology,
           ...(specsRepository ? { specs_repository: specsRepository } : {}),
+          ...(adapters.length ? { adapters } : {}),
           roles,
           ...registrationPrefs(selectWorktreeMode.value, inputWorktreeRoot.value)
         }
@@ -581,6 +615,9 @@ function initAddProject() {
       closeDialog(dialog);
       await loadProjects();
       await onSwitched();
+      // Fallo parcial: el proyecto existe, pero los adaptadores no se instalaron.
+      const warning = adapterWarning(response);
+      if (warning) toast(warning, 'warn');
     } catch (err) {
       showViolations('add-project-error', violationsFromError(err));
     } finally {

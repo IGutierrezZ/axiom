@@ -3,6 +3,7 @@ package dashboard
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"io/fs"
 	"net/http"
 	"net/http/httptest"
@@ -706,5 +707,152 @@ func TestProjectsInitRejectsBadSpecsRepositoryWith400(t *testing.T) {
 	}
 	if _, err := os.Stat(master); !os.IsNotExist(err) {
 		t.Errorf("el alta rechazada no debe crear %s (err=%v)", master, err)
+	}
+}
+
+// stubInstallAdapters sustituye la instalación real y devuelve lo que se pidió.
+func stubInstallAdapters(t *testing.T, fn func(dir string, ids []string) ([]string, error)) {
+	t.Helper()
+	restore := installAdapters
+	installAdapters = fn
+	t.Cleanup(func() { installAdapters = restore })
+}
+
+// G4.6: el catálogo lista los adaptadores seleccionables y dice cuáles admiten workspace.
+func TestAdaptersCatalogListsSelectableAgentsWithWorkspaceSupport(t *testing.T) {
+	router, _, _ := newPrefsServer(t, t.TempDir())
+	rr := request(router, http.MethodGet, "/api/adapters", "")
+	if rr.Code != http.StatusOK {
+		t.Fatalf("GET /api/adapters = %d: %s", rr.Code, rr.Body.String())
+	}
+	var got struct {
+		Adapters []AdapterDTO `json:"adapters"`
+	}
+	if err := json.Unmarshal(rr.Body.Bytes(), &got); err != nil {
+		t.Fatalf("JSON inválido: %v", err)
+	}
+	byID := map[string]AdapterDTO{}
+	for _, a := range got.Adapters {
+		byID[a.ID] = a
+	}
+	if a := byID["claude-code"]; a.Name != "Claude Code" || !a.Workspace || a.Reason != "" {
+		t.Errorf("claude-code = %+v", a)
+	}
+	for _, id := range []string{"pi", "openclaw", "windsurf", "antigravity", "trae-ide"} {
+		if a, ok := byID[id]; !ok || a.Workspace || a.Reason == "" {
+			t.Errorf("%s debe aparecer sin modo workspace y con motivo: %+v (ok=%v)", id, a, ok)
+		}
+	}
+	for _, id := range []string{"kimi", "qwen-code", "hermes"} {
+		if _, ok := byID[id]; ok {
+			t.Errorf("%s no es seleccionable y no debe listarse", id)
+		}
+	}
+	if rr := request(router, http.MethodPost, "/api/adapters", "{}"); rr.Code != http.StatusMethodNotAllowed {
+		t.Errorf("POST /api/adapters = %d, quiero 405", rr.Code)
+	}
+}
+
+func TestProjectsInitRejectsInvalidAdaptersBeforeWriting(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), "proyecto-nuevo")
+	router, _, hubPath := newPrefsServer(t, t.TempDir())
+	called := false
+	stubInstallAdapters(t, func(string, []string) ([]string, error) { called = true; return nil, nil })
+
+	body := `{"path":` + quoteJSON(dir) + `,"adapters":["claude-code","no-existe","kimi","pi"],"roles":[{"key":"a","name":"A","repositories":["../fuera"]}]}`
+	rr := request(router, http.MethodPost, "/api/projects/init", body)
+	if rr.Code != http.StatusBadRequest {
+		t.Fatalf("POST /api/projects/init = %d, quiero 400: %s", rr.Code, rr.Body.String())
+	}
+	var got struct {
+		Violations []string `json:"violations"`
+	}
+	if err := json.Unmarshal(rr.Body.Bytes(), &got); err != nil {
+		t.Fatal(err)
+	}
+	joined := strings.Join(got.Violations, "\n")
+	for _, want := range []string{`"no-existe" no existe`, `"kimi" no está disponible`, `"pi" no se puede instalar`, "sale de la carpeta del proyecto"} {
+		if !strings.Contains(joined, want) {
+			t.Errorf("falta la violación %q en:\n%s", want, joined)
+		}
+	}
+	if strings.Contains(joined, `"claude-code"`) {
+		t.Errorf("claude-code es válido y no debe aparecer:\n%s", joined)
+	}
+	if called {
+		t.Error("no debe instalarse nada con adaptadores inválidos")
+	}
+	if _, err := os.Stat(dir); !os.IsNotExist(err) {
+		t.Errorf("el alta rechazada no debe crear %s (err=%v)", dir, err)
+	}
+	if strings.Contains(string(readOrEmpty(t, hubPath)), "proyecto-nuevo") {
+		t.Error("el alta rechazada no debe registrar el proyecto")
+	}
+}
+
+func TestProjectsInitInstallsTheChosenAdaptersInTheNewProject(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), "proyecto-nuevo")
+	router, _, _ := newPrefsServer(t, t.TempDir())
+	var gotDir string
+	var gotIDs []string
+	stubInstallAdapters(t, func(d string, ids []string) ([]string, error) {
+		gotDir, gotIDs = d, ids
+		return ids, nil
+	})
+
+	rr := request(router, http.MethodPost, "/api/projects/init", `{"path":`+quoteJSON(dir)+`,"adapters":["claude-code","cursor","claude-code"]}`)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("POST /api/projects/init = %d: %s", rr.Code, rr.Body.String())
+	}
+	if gotDir != dir || strings.Join(gotIDs, ",") != "claude-code,cursor" {
+		t.Errorf("instalación en %q con %v, quiero %q con [claude-code cursor]", gotDir, gotIDs, dir)
+	}
+	var body struct {
+		ConfigPath string          `json:"ConfigPath"`
+		Adapters   AdaptersOutcome `json:"adapters"`
+	}
+	if err := json.Unmarshal(rr.Body.Bytes(), &body); err != nil {
+		t.Fatal(err)
+	}
+	if body.ConfigPath == "" || body.Adapters.Error != "" || strings.Join(body.Adapters.Installed, ",") != "claude-code,cursor" {
+		t.Errorf("respuesta inesperada: %s", rr.Body.String())
+	}
+}
+
+// Un fallo de la instalación después de escribir el proyecto es parcial: el proyecto
+// queda creado, la respuesta es 200 y lleva el error.
+func TestProjectsInitKeepsTheProjectWhenAdapterInstallFails(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), "proyecto-nuevo")
+	router, _, _ := newPrefsServer(t, t.TempDir())
+	stubInstallAdapters(t, func(string, []string) ([]string, error) { return nil, errors.New("sin red") })
+
+	rr := request(router, http.MethodPost, "/api/projects/init", `{"path":`+quoteJSON(dir)+`,"adapters":["claude-code"]}`)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("POST /api/projects/init = %d, quiero 200 con fallo parcial: %s", rr.Code, rr.Body.String())
+	}
+	var body struct {
+		Adapters AdaptersOutcome `json:"adapters"`
+	}
+	if err := json.Unmarshal(rr.Body.Bytes(), &body); err != nil {
+		t.Fatal(err)
+	}
+	if body.Adapters.Error != "sin red" || len(body.Adapters.Installed) != 0 || len(body.Adapters.Requested) != 1 {
+		t.Errorf("fallo parcial mal informado: %+v", body.Adapters)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "axiom.yaml")); err != nil {
+		t.Errorf("el proyecto debe quedar creado: %v", err)
+	}
+}
+
+func TestProjectsInitWithoutAdaptersInstallsNothing(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), "proyecto-nuevo")
+	router, _, _ := newPrefsServer(t, t.TempDir())
+	stubInstallAdapters(t, func(string, []string) ([]string, error) {
+		t.Error("sin adaptadores no debe instalarse nada")
+		return nil, nil
+	})
+	rr := request(router, http.MethodPost, "/api/projects/init", `{"path":`+quoteJSON(dir)+`}`)
+	if rr.Code != http.StatusOK || strings.Contains(rr.Body.String(), `"adapters"`) {
+		t.Fatalf("POST /api/projects/init = %d: %s", rr.Code, rr.Body.String())
 	}
 }

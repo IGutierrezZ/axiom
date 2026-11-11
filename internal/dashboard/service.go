@@ -885,21 +885,27 @@ func (s *Service) AddProject(req ProjectAddRequest) (*hub.WorkspaceRecord, error
 }
 
 // InitProject inicializa un proyecto con axiom.yaml y lo registra.
-func (s *Service) InitProject(req ProjectInitRequest) (*hub.InitResult, error) {
+func (s *Service) InitProject(req ProjectInitRequest) (*ProjectInitResponse, error) {
 	targetPath := req.Path
 	if targetPath == "" {
 		targetPath = s.getRootPath()
 	}
 
 	ini := hub.NewInitializer(s.hubManager, s.hubDetector)
-	res, err := ini.Init(hub.InitOptions{
+	opts := hub.InitOptions{
 		Path:            targetPath,
 		Name:            req.Name,
 		Topology:        req.Topology,
 		SpecsRepository: req.SpecsRepository,
 		Roles:           req.Roles,
 		WorktreePrefs:   hub.WorktreePrefs{Mode: req.WorktreeMode, Root: req.WorktreeRoot},
-	})
+	}
+	adapters := uniqueAdapterIDs(req.Adapters)
+	// Los adaptadores inválidos se rechazan antes de escribir nada.
+	if err := checkAdapters(ini, opts, req.Adapters); err != nil {
+		return nil, err
+	}
+	res, err := ini.Init(opts)
 	if err != nil {
 		return nil, err
 	}
@@ -907,7 +913,20 @@ func (s *Service) InitProject(req ProjectInitRequest) (*hub.InitResult, error) {
 	// Conmutar automáticamente el workspace activo al inicializado
 	_, _ = s.SwitchWorkspace(targetPath)
 
-	return res, nil
+	response := &ProjectInitResponse{InitResult: res}
+	if len(adapters) > 0 {
+		// El proyecto ya está creado: un fallo de la instalación se informa como
+		// fallo parcial y no lo deshace.
+		outcome := &AdaptersOutcome{Requested: adapters, Installed: []string{}}
+		installed, installErr := installAdapters(res.Record.Path, adapters)
+		if installErr != nil {
+			outcome.Error = installErr.Error()
+		} else {
+			outcome.Installed = installed
+		}
+		response.Adapters = outcome
+	}
+	return response, nil
 }
 
 // MigrateIncompleteTasksToCumulative transfiere tareas pendientes de un rol no bloqueante a su incremento acumulativo correspondiente.

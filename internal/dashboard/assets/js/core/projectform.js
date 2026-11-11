@@ -130,3 +130,22 @@ export function violationsFromError(err) {
   if (Array.isArray(list) && list.length) return list.map(String);
   return [`Error: ${err?.message ?? 'fallo desconocido'}`];
 }
+
+// adapterOptions normaliza el catálogo de /api/adapters para pintarlo: los que no
+// admiten el modo workspace salen deshabilitados, con el motivo.
+export function adapterOptions(list) {
+  return (Array.isArray(list) ? list : []).map(item => ({
+    id: String(item.id),
+    name: String(item.name || item.id),
+    disabled: !item.workspace,
+    reason: item.workspace ? '' : String(item.reason || 'no admite el modo workspace')
+  }));
+}
+
+// adapterWarning devuelve el aviso a mostrar tras el alta cuando el proyecto se creó
+// pero la instalación de los adaptadores falló (fallo parcial), o '' si todo fue bien.
+export function adapterWarning(response) {
+  const outcome = response?.adapters;
+  if (!outcome?.error) return '';
+  return `El proyecto se ha creado, pero no se pudieron instalar los adaptadores (${outcome.error}). Puedes instalarlos más tarde con «axiom install --scope workspace».`;
+}

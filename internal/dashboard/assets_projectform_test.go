@@ -2,6 +2,7 @@ package dashboard
 
 import (
 	"encoding/json"
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -178,5 +179,69 @@ func TestAddProjectModalShowsSpecsRepositoryOnlyForMultirepo(t *testing.T) {
 		if !strings.Contains(projects, marker) {
 			t.Errorf("projects.js debe contener %q", marker)
 		}
+	}
+}
+
+// G4.6: el catálogo de adaptadores deshabilita los que no admiten workspace y el
+// fallo parcial de la instalación se convierte en un aviso.
+func TestProjectFormAdaptersRuntime(t *testing.T) {
+	out := runNodeModules(t, []string{"projectform"},
+		"import { adapterOptions, adapterWarning } from './projectform.mjs';\n"+
+			"console.log(JSON.stringify({\n"+
+			"  options: adapterOptions([{ id: 'claude-code', name: 'Claude Code', workspace: true }, { id: 'pi', name: 'Pi', workspace: false, reason: 'solo usuario' }, { id: 'x', workspace: false }]),\n"+
+			"  none: adapterOptions(undefined),\n"+
+			"  ok: adapterWarning({ adapters: { requested: ['a'], installed: ['a'] } }),\n"+
+			"  noAdapters: adapterWarning({}),\n"+
+			"  nullResponse: adapterWarning(null),\n"+
+			"  partial: adapterWarning({ adapters: { requested: ['a'], installed: [], error: 'sin red' } }),\n"+
+			"}));\n")
+	var res struct {
+		Options []struct {
+			ID       string `json:"id"`
+			Name     string `json:"name"`
+			Disabled bool   `json:"disabled"`
+			Reason   string `json:"reason"`
+		} `json:"options"`
+		None         []any  `json:"none"`
+		OK           string `json:"ok"`
+		NoAdapters   string `json:"noAdapters"`
+		NullResponse string `json:"nullResponse"`
+		Partial      string `json:"partial"`
+	}
+	if err := json.Unmarshal(out, &res); err != nil {
+		t.Fatalf("salida de node ilegible: %v\n%s", err, out)
+	}
+	if len(res.Options) != 3 || res.Options[0].Disabled || res.Options[0].Reason != "" {
+		t.Fatalf("opciones inesperadas: %+v", res.Options)
+	}
+	if !res.Options[1].Disabled || res.Options[1].Reason != "solo usuario" {
+		t.Errorf("un adaptador sin workspace sale deshabilitado con su motivo: %+v", res.Options[1])
+	}
+	if !res.Options[2].Disabled || res.Options[2].Name != "x" || res.Options[2].Reason == "" {
+		t.Errorf("sin nombre ni motivo se usan valores por defecto: %+v", res.Options[2])
+	}
+	if len(res.None) != 0 || res.OK != "" || res.NoAdapters != "" || res.NullResponse != "" {
+		t.Errorf("sin catálogo o sin fallo no hay opciones ni aviso: %+v", res)
+	}
+	if !strings.Contains(res.Partial, "sin red") || !strings.Contains(res.Partial, "se ha creado") {
+		t.Errorf("el fallo parcial debe avisar de que el proyecto se creó y del motivo: %q", res.Partial)
+	}
+}
+
+func TestAddProjectModalOffersAdapters(t *testing.T) {
+	html, projects := readAsset(t, "index.html"), readAsset(t, "js/projects.js")
+	modal := html[strings.Index(html, `id="modal-add-project"`):]
+	modal = modal[:strings.Index(modal, "</dialog>")]
+	if !strings.Contains(modal, `id="adapters-container"`) {
+		t.Error("el modal de alta debe tener el contenedor de adaptadores")
+	}
+	for _, marker := range []string{"/api/adapters", "adapterOptions(", "adapterWarning(", "adapter-input", "adapters"} {
+		if !strings.Contains(projects, marker) {
+			t.Errorf("projects.js debe contener %q", marker)
+		}
+	}
+	submit := regexp.MustCompile(`(?s)api\('/api/projects/init',.*?\}\);`).FindString(projects)
+	if !strings.Contains(submit, "...registrationPrefs(") || !strings.Contains(submit, "adapters") {
+		t.Errorf("la petición de alta debe seguir enviando las preferencias y los adaptadores:\n%s", submit)
 	}
 }
