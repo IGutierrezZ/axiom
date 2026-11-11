@@ -151,7 +151,19 @@ Alcance aclarado con el usuario:
 - El RDD no se cruza con los roles: SDD no ofrece, no lanza ni consume RDD (`docs/intended-usage.md:208`).
 - El TDD por rol es una política de equipo y no entra aquí. Lo mismo vale para la limpieza de otros campos versionados que podrían ser de usuario (`strict_tdd` duplicado, `artifact_store`, `workflow.lane`, `governance.semantic_analysis`, `.codex/` y `GEMINI.md`): va en un trabajo aparte.
 
-- [ ] **T21 · RDD por usuario y proyecto (D2)** (~400). Va antes de T18.
+- [x] **T21 · RDD por usuario y proyecto (D2)** (~400). Va antes de T18. **Hecha el 2026-11-11 en `9a71ceff`.**
+  - **Ruta:** writer delegado; el disparador fue que tocaba más de 2 ficheros no triviales en 4 paquetes. Tamaño real: +849/−58 líneas, unas 700 de autor, de las que unas 490 son tests.
+  - **Precedencia implementada:** gana el `off` del clon; después el hub del proyecto, luego el global y por último `off`.
+  - **Proyecto sin registrar:** `enable`/`disable` sin ámbito se rechazan y remiten a `axiom project add` o `--scope global`. La lectura cae al global.
+  - **Compatibilidad:** en `status`, el campo `project` es `omitempty` y la fuente del clon sigue llamándose `clone_local`.
+  - **Riesgo:** `axiom review assess` dio `medium`. El RDD está apagado, así que valen la verificación del writer y la comprobación del padre.
+  - **Verificación:**
+    - `go vet ./...` y `gofmt -l`: limpios.
+    - `hub`, `workspace` y `state`: OK.
+    - `go test ./internal/cli/ -run 'ReviewMode|RDD|Rdd|StopHook|KillSwitch'`: OK (216 s).
+    - `components` y `assets`: OK, salvo los 2 de junction conocidos. Los NoDrift pasan.
+    - `reviewtransaction`, en las tres tandas de `windows-full-suite.yml` (el paquete entero no cabe en 30 min en Windows): D-K OK. A-C y L-Z fallan solo en `TestAuthoritativeStorePathsAreCanonicalUnderAnAliasedRepository`, `TestResolveRepositoryRootAcceptsBothSpellingsOfOneRepository`, `TestResolveRepositoryRootStillRejectsAForeignPath` y `TestSnapshotBuilderStagedProjectionPreservesExactIndexFidelity`, que fallan igual en `main` (`53b36b19`) por entorno.
+  - **Goldens:** no ha cambiado ninguno. La prosa «user-owned» se genera en `agentguidance/routing.go`, no en `_shared`.
   - **Fuente:** `rdd_mode` en la entrada del proyecto de `~/.axiom/workspaces.json`, el hub. Admite `on` y `off`. Solo lo escribe el usuario y nunca se versiona, así que no reabre el riesgo que justificaba el comentario de `internal/state/state.go:142`.
     - **Por qué el hub (2026-11-11).** Se comprobó la raíz de proyecto. Dentro de un worktree enlazado, `workspace.ResolveRoot` devuelve la raíz de ese worktree (`internal/workspace/root.go:52-54`), así que `<raíz>/.axiom/state.json` sería un fichero por worktree y cada cambio empezaría sin la preferencia.
     - El hub busca el proyecto por su carpeta maestra, y por eso lo comparten todos los worktrees. Ahí ya viven las preferencias personales `worktree_mode` y `worktree_root` (REQ-25.29, `internal/hub/prefs.go`). Un proyecto sin registrar cae al global.
