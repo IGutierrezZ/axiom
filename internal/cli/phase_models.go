@@ -168,8 +168,7 @@ func SaveProjectPhaseModels(projectDir string, agents []model.AgentID, overrides
 		return SyncResult{}, err
 	}
 
-	// Sin ningún adaptador que se pueda regenerar en el proyecto (Copilot CLI solo tiene
-	// ámbito global) queda guardado el estado y no hay nada que escribir.
+	// Sin ningún adaptador que regenerar queda guardado el estado y no hay nada que escribir.
 	if len(agents) == 0 {
 		return SyncResult{NoOp: true, Scope: ScopeWorkspace}, nil
 	}

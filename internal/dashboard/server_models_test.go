@@ -143,7 +143,7 @@ func TestEcosystemModelsGetReturnsOneBlockPerInstalledAdapter(t *testing.T) {
 	if !cp.Options.FreeText || len(cp.Options.Suggestions) == 0 {
 		t.Errorf("Copilot debe admitir texto libre con sugerencias: %+v", cp.Options)
 	}
-	if len(cp.Destinations) != 1 || cp.Destinations[0] != ".github/agents" || len(cp.Notes) != 2 {
+	if len(cp.Destinations) != 1 || cp.Destinations[0] != ".github/agents" || len(cp.Notes) != 1 {
 		t.Errorf("destino y avisos de Copilot = %v %v", cp.Destinations, cp.Notes)
 	}
 }
@@ -271,8 +271,8 @@ func TestEcosystemModelsPostCopilotWritesTheSharedAgentFiles(t *testing.T) {
 	}
 	var notes []string
 	_ = json.Unmarshal(body["notes"], &notes)
-	if len(notes) != 1 || !strings.Contains(notes[0], "~/.copilot/agents") {
-		t.Errorf("debe avisar de que Copilot CLI no se regenera desde aquí: %v", notes)
+	if len(notes) != 0 {
+		t.Errorf("con VS Code Copilot y Copilot CLI no hay nada que avisar: los agentes viven solo en el proyecto: %v", notes)
 	}
 
 	// Quitar la asignación es explícito y la elimina del estado y del fichero.
@@ -289,7 +289,7 @@ func TestEcosystemModelsPostCopilotWritesTheSharedAgentFiles(t *testing.T) {
 	}
 }
 
-func TestEcosystemModelsPostCopilotCLIOnlySavesStateAndSaysItRegeneratedNothing(t *testing.T) {
+func TestEcosystemModelsPostCopilotCLIOnlyRegeneratesTheProjectAgents(t *testing.T) {
 	router, root, home := modelsProject(t, state.InstallState{InstalledAgents: []string{"github-copilot-cli"}})
 	code, body := postModels(router, `{"adapter":"copilot","assignments":{"sdd-spec":{"model":"GPT-5.2 (copilot)"}}}`)
 	if code != http.StatusOK {
@@ -298,11 +298,20 @@ func TestEcosystemModelsPostCopilotCLIOnlySavesStateAndSaysItRegeneratedNothing(
 	if got := readProjectState(t, home, root).CopilotPhaseAssignments["sdd-spec"].Model; got != "GPT-5.2 (copilot)" {
 		t.Errorf("el estado debe guardarse: %q", got)
 	}
-	if string(body["regenerated"]) != "[]" {
-		t.Errorf("no debe regenerarse nada en el proyecto: %s", body["regenerated"])
+	// Copilot CLI lee .github/agents del proyecto y no tiene modo workspace: el sync del
+	// proyecto los escribe igualmente, y no se toca la carpeta de usuario.
+	agent, err := os.ReadFile(filepath.Join(root, ".github", "agents", "sdd-spec.agent.md"))
+	if err != nil {
+		t.Fatalf("con solo Copilot CLI debe regenerarse .github/agents: %v", err)
 	}
-	if _, err := os.Stat(filepath.Join(root, ".github", "agents")); !os.IsNotExist(err) {
-		t.Errorf("Copilot CLI no escribe en el proyecto (err=%v)", err)
+	if !strings.Contains(string(agent), "model: GPT-5.2 (copilot)") {
+		t.Errorf("sdd-spec.agent.md sin el modelo elegido:\n%s", agent)
+	}
+	if !strings.Contains(string(body["regenerated"]), ".github/agents/sdd-spec.agent.md") {
+		t.Errorf("la respuesta debe listar los agentes regenerados: %s", body["regenerated"])
+	}
+	if _, err := os.Stat(filepath.Join(home, ".copilot", "agents")); !os.IsNotExist(err) {
+		t.Errorf("no se debe escribir en ~/.copilot/agents (err=%v)", err)
 	}
 }
 

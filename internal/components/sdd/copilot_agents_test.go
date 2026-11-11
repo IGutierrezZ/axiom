@@ -153,18 +153,29 @@ func TestInjectCopilotModelFrontmatter(t *testing.T) {
 	}
 }
 
+// copilotProjectInject escribe los agentes por fase con el adaptador de VS Code Copilot
+// ligado a un proyecto, que es quien los escribe cuando el proyecto lo tiene instalado.
+func copilotProjectInject(t *testing.T, root string, opts InjectOptions) InjectionResult {
+	t.Helper()
+	opts.WorkspaceDir = root
+	adapter := agents.BindWorkspace(copilotAdapter(t, model.AgentVSCodeCopilot), root)
+	result, err := Inject(root, adapter, "", opts)
+	if err != nil {
+		t.Fatalf("Inject: %v", err)
+	}
+	return result
+}
+
 func TestInjectWritesOneCopilotAgentPerPhaseWithItsAssignment(t *testing.T) {
 	home := copilotAgentsHome(t)
-	adapter := copilotAdapter(t, model.AgentVSCodeCopilot)
+	root := t.TempDir()
 	opts := InjectOptions{CopilotPhaseAssignments: map[string]model.CopilotPhaseAssignment{
 		"sdd-apply":   {Model: "Claude Sonnet 4.6 (copilot)", Effort: "medium"},
 		"sdd-explore": {Model: "GPT-5.2 (copilot)"},
 	}}
-	if _, err := Inject(home, adapter, "", opts); err != nil {
-		t.Fatalf("Inject: %v", err)
-	}
+	copilotProjectInject(t, root, opts)
 
-	dir := filepath.Join(home, ".copilot", "agents")
+	dir := filepath.Join(root, ".github", "agents")
 	for _, phase := range model.CopilotPhaseNames() {
 		fm := frontmatterOf(t, readAgent(t, dir, phase))
 		assignment, assigned := opts.CopilotPhaseAssignments[phase]
@@ -182,25 +193,23 @@ func TestInjectWritesOneCopilotAgentPerPhaseWithItsAssignment(t *testing.T) {
 	if strings.Contains(apply, "{{") {
 		t.Errorf("quedan marcadores sin resolver:\n%s", apply)
 	}
-	if !strings.Contains(apply, "~/.copilot/skills/sdd-apply/SKILL.md") {
-		t.Errorf("el agente no apunta a las skills de Copilot:\n%s", apply)
+	if !strings.Contains(apply, ".agents/skills/sdd-apply/SKILL.md") {
+		t.Errorf("el agente no apunta a las skills del proyecto:\n%s", apply)
+	}
+	if _, err := os.Stat(filepath.Join(home, ".copilot", "agents")); !os.IsNotExist(err) {
+		t.Errorf("la instalación de proyecto no escribe en la carpeta de usuario: %v", err)
 	}
 }
 
 func TestInjectCopilotAgentsAreIdempotent(t *testing.T) {
-	home := copilotAgentsHome(t)
-	adapter := copilotAdapter(t, model.AgentVSCodeCopilot)
+	copilotAgentsHome(t)
+	root := t.TempDir()
 	opts := InjectOptions{CopilotPhaseAssignments: map[string]model.CopilotPhaseAssignment{"sdd-apply": {Model: "GPT-5.2 (copilot)", Effort: "high"}}}
-	if _, err := Inject(home, adapter, "", opts); err != nil {
-		t.Fatal(err)
-	}
-	dir := filepath.Join(home, ".copilot", "agents")
+	copilotProjectInject(t, root, opts)
+	dir := filepath.Join(root, ".github", "agents")
 	before := readAgent(t, dir, "sdd-apply")
 
-	second, err := Inject(home, adapter, "", opts)
-	if err != nil {
-		t.Fatal(err)
-	}
+	second := copilotProjectInject(t, root, opts)
 	for _, file := range second.Files {
 		if filepath.Dir(file) == dir {
 			t.Errorf("la segunda inyección reescribió %s", file)
@@ -211,100 +220,136 @@ func TestInjectCopilotAgentsAreIdempotent(t *testing.T) {
 	}
 
 	changed := InjectOptions{CopilotPhaseAssignments: map[string]model.CopilotPhaseAssignment{"sdd-apply": {Model: "GPT-5.2 (copilot)"}}}
-	if _, err := Inject(home, adapter, "", changed); err != nil {
-		t.Fatal(err)
-	}
+	copilotProjectInject(t, root, changed)
 	if fm := frontmatterOf(t, readAgent(t, dir, "sdd-apply")); fm["reasoning-effort"] != nil {
 		t.Errorf("quitar el esfuerzo debe regenerar el agente sin él: %v", fm)
 	}
 }
 
-// VS Code y Copilot CLI comparten ~/.copilot/agents: el segundo adaptador encuentra
-// los ficheros ya escritos, idénticos byte a byte, y no los reescribe.
-func TestInjectCopilotAgentsAreSharedByVSCodeAndCopilotCLI(t *testing.T) {
-	home := copilotAgentsHome(t)
+// Con solo Copilot CLI en el proyecto escribe InjectCopilotProjectAgents: el resultado es
+// byte a byte el que escribe el adaptador de VS Code, así que da igual quién los escriba
+// primero y el segundo no los reescribe.
+func TestInjectCopilotProjectAgentsMatchVSCodeAndAreWrittenOnce(t *testing.T) {
+	copilotAgentsHome(t)
 	opts := InjectOptions{CopilotPhaseAssignments: map[string]model.CopilotPhaseAssignment{"sdd-design": {Model: "Claude Opus 4.6 (copilot)", Effort: "high"}}}
-	dir := filepath.Join(home, ".copilot", "agents")
 
-	if _, err := Inject(home, copilotAdapter(t, model.AgentVSCodeCopilot), "", opts); err != nil {
-		t.Fatal(err)
-	}
-	snapshot := map[string]string{}
-	entries, err := os.ReadDir(dir)
+	viaVSCode := t.TempDir()
+	copilotProjectInject(t, viaVSCode, opts)
+
+	viaCLI := t.TempDir()
+	adapter := agents.BindWorkspace(copilotAdapter(t, model.AgentVSCodeCopilot), viaCLI)
+	first, err := InjectCopilotProjectAgents(viaCLI, adapter, opts)
 	if err != nil {
 		t.Fatal(err)
+	}
+	if !first.Changed || len(first.Files) != len(model.CopilotPhaseNames()) {
+		t.Fatalf("la primera escritura debe crear un agente por fase: %+v", first)
+	}
+	second, err := InjectCopilotProjectAgents(viaCLI, adapter, opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if second.Changed || len(second.Files) != 0 {
+		t.Errorf("la segunda escritura no debe reescribir nada: %+v", second)
+	}
+
+	want := filepath.Join(viaVSCode, ".github", "agents")
+	got := filepath.Join(viaCLI, ".github", "agents")
+	entries, err := os.ReadDir(want)
+	if err != nil || len(entries) != len(model.CopilotPhaseNames()) {
+		t.Fatalf("agentes de VS Code: %d, %v", len(entries), err)
 	}
 	for _, entry := range entries {
-		snapshot[entry.Name()] = readAgent(t, dir, copilotAgentPhase(entry.Name()))
-	}
-
-	cli := copilotAdapter(t, model.AgentGitHubCopilotCLI)
-	if got := cli.SubAgentsDir(home); got != dir {
-		t.Fatalf("Copilot CLI escribe en %s, VS Code en %s", got, dir)
-	}
-	result, err := Inject(home, cli, "", opts)
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, file := range result.Files {
-		if filepath.Dir(file) == dir {
-			t.Errorf("Copilot CLI reescribió %s, que ya había dejado VS Code", file)
-		}
-	}
-	after, _ := os.ReadDir(dir)
-	if len(after) != len(snapshot) || len(snapshot) != len(model.CopilotPhaseNames()) {
-		t.Fatalf("%d agentes tras VS Code, %d tras Copilot CLI, %d fases", len(snapshot), len(after), len(model.CopilotPhaseNames()))
-	}
-	for name, want := range snapshot {
-		if got := readAgent(t, dir, copilotAgentPhase(name)); got != want {
-			t.Errorf("%s difiere según el adaptador que lo escribió", name)
+		phase := copilotAgentPhase(entry.Name())
+		if readAgent(t, got, phase) != readAgent(t, want, phase) {
+			t.Errorf("%s difiere según quién lo escribió", entry.Name())
 		}
 	}
 }
 
-func TestInjectCopilotAgentsFollowCopilotHomeForTheCLI(t *testing.T) {
+// En la carpeta de usuario ningún adaptador de Copilot escribe agentes por fase: el
+// agente personal de ~/.copilot/agents gana al del proyecto en Copilot CLI y taparía el
+// modelo elegido en el proyecto.
+func TestInjectCopilotGlobalWritesNoPhaseAgents(t *testing.T) {
 	home := copilotAgentsHome(t)
 	custom := filepath.Join(t.TempDir(), "copilot-cli")
 	t.Setenv("COPILOT_HOME", custom)
 
-	if _, err := Inject(home, copilotAdapter(t, model.AgentGitHubCopilotCLI), ""); err != nil {
-		t.Fatal(err)
+	for _, id := range []model.AgentID{model.AgentVSCodeCopilot, model.AgentGitHubCopilotCLI} {
+		adapter := copilotAdapter(t, id)
+		if got := adapter.SubAgentsDir(home); got != "" {
+			t.Errorf("%s: SubAgentsDir global = %q, quiero vacío", id, got)
+		}
+		if _, err := Inject(home, adapter, ""); err != nil {
+			t.Fatalf("%s: %v", id, err)
+		}
 	}
-	if _, err := os.Stat(filepath.Join(custom, "agents", "sdd-apply.agent.md")); err != nil {
-		t.Errorf("Copilot CLI debe escribir en COPILOT_HOME: %v", err)
-	}
-	if _, err := os.Stat(filepath.Join(home, ".copilot", "agents")); !os.IsNotExist(err) {
-		t.Errorf("con COPILOT_HOME no se escribe en ~/.copilot/agents: %v", err)
+	for _, dir := range []string{filepath.Join(home, ".copilot", "agents"), filepath.Join(custom, "agents")} {
+		if _, err := os.Stat(dir); !os.IsNotExist(err) {
+			t.Errorf("no se debe crear %s: %v", dir, err)
+		}
 	}
 }
 
-func TestInjectCopilotAgentsInWorkspaceGoToGithubAgents(t *testing.T) {
-	home := copilotAgentsHome(t)
+// Una versión anterior escribió los agentes por fase en la carpeta de usuario. El sync
+// global los retira, también bajo COPILOT_HOME, y conserva los agentes del usuario.
+func TestInjectCopilotGlobalRetiresLegacyManagedAgentsAndKeepsUserOnes(t *testing.T) {
+	for _, id := range []model.AgentID{model.AgentVSCodeCopilot, model.AgentGitHubCopilotCLI} {
+		t.Run(string(id), func(t *testing.T) {
+			home := copilotAgentsHome(t)
+			custom := filepath.Join(t.TempDir(), "copilot-cli")
+			t.Setenv("COPILOT_HOME", custom)
+			legacy := []string{filepath.Join(home, ".copilot", "agents"), filepath.Join(custom, "agents")}
+			const own = "---\nname: mi-agente\n---\npropio\n"
+			for _, dir := range legacy {
+				if err := os.MkdirAll(dir, 0o755); err != nil {
+					t.Fatal(err)
+				}
+				for _, phase := range model.CopilotPhaseNames() {
+					if err := os.WriteFile(filepath.Join(dir, phase+copilotAgentFileSuffix), []byte("---\nname: "+phase+"\n---\n"), 0o644); err != nil {
+						t.Fatal(err)
+					}
+				}
+			}
+			// Solo la carpeta de COPILOT_HOME tiene un agente del usuario: la otra se queda vacía.
+			userAgent := filepath.Join(custom, "agents", "mi-agente.agent.md")
+			if err := os.WriteFile(userAgent, []byte(own), 0o644); err != nil {
+				t.Fatal(err)
+			}
+
+			adapter := copilotAdapter(t, id)
+			if _, err := Inject(home, adapter, ""); err != nil {
+				t.Fatal(err)
+			}
+			for _, dir := range legacy {
+				for _, phase := range model.CopilotPhaseNames() {
+					if _, err := os.Stat(filepath.Join(dir, phase+copilotAgentFileSuffix)); !os.IsNotExist(err) {
+						t.Errorf("el agente gestionado %s/%s debe retirarse: %v", dir, phase, err)
+					}
+				}
+			}
+			if data, err := os.ReadFile(userAgent); err != nil || string(data) != own {
+				t.Errorf("el agente del usuario cambió: %v %q", err, data)
+			}
+			if _, err := os.Stat(legacy[0]); !os.IsNotExist(err) {
+				t.Errorf("la carpeta vacía debe quitarse: %v", err)
+			}
+
+			// Idempotente: sin nada que retirar no hace nada ni falla.
+			if _, err := Inject(home, adapter, ""); err != nil {
+				t.Fatalf("segunda ejecución: %v", err)
+			}
+			if data, err := os.ReadFile(userAgent); err != nil || string(data) != own {
+				t.Errorf("el agente del usuario cambió en la segunda ejecución: %v %q", err, data)
+			}
+		})
+	}
+}
+
+func TestInjectCopilotProjectAgentsKeepUserAuthoredAgents(t *testing.T) {
+	copilotAgentsHome(t)
 	root := t.TempDir()
-	adapter := agents.BindWorkspace(copilotAdapter(t, model.AgentVSCodeCopilot), root)
-	opts := InjectOptions{
-		WorkspaceDir:            root,
-		CopilotPhaseAssignments: map[string]model.CopilotPhaseAssignment{"sdd-verify": {Model: "GPT-5.2 (copilot)"}},
-	}
-	if _, err := Inject(root, adapter, "", opts); err != nil {
-		t.Fatalf("Inject: %v", err)
-	}
-
 	dir := filepath.Join(root, ".github", "agents")
-	if fm := frontmatterOf(t, readAgent(t, dir, "sdd-verify")); fm["model"] != "GPT-5.2 (copilot)" {
-		t.Errorf("sdd-verify del proyecto: %v", fm)
-	}
-	if body := readAgent(t, dir, "sdd-apply"); !strings.Contains(body, ".agents/skills/sdd-apply/SKILL.md") || strings.Contains(body, "~/") {
-		t.Errorf("en el proyecto las skills se leen de .agents/skills:\n%s", body)
-	}
-	if _, err := os.Stat(filepath.Join(home, ".copilot", "agents")); !os.IsNotExist(err) {
-		t.Errorf("la instalación de proyecto no escribe en la carpeta de usuario: %v", err)
-	}
-}
-
-func TestInjectCopilotAgentsKeepUserAuthoredAgents(t *testing.T) {
-	home := copilotAgentsHome(t)
-	dir := filepath.Join(home, ".copilot", "agents")
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -313,9 +358,7 @@ func TestInjectCopilotAgentsKeepUserAuthoredAgents(t *testing.T) {
 	if err := os.WriteFile(path, []byte(own), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := Inject(home, copilotAdapter(t, model.AgentVSCodeCopilot), ""); err != nil {
-		t.Fatal(err)
-	}
+	copilotProjectInject(t, root, InjectOptions{})
 	if data, err := os.ReadFile(path); err != nil || string(data) != own {
 		t.Errorf("el agente del usuario cambió: %v %q", err, data)
 	}

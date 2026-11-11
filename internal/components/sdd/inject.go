@@ -871,106 +871,22 @@ func Inject(homeDir string, adapter agents.Adapter, sddMode model.SDDModeID, opt
 	}
 
 	// 3c. Write native sub-agent files for adapters that support them. Sub-agent files are
-	// written to the user's home directory (e.g. ~/.cursor/agents/), not to the
-	// workspace, so no project-root detection is needed here.
-	var agentsDir string
-	if adapter.SupportsSubAgents() {
-		agentsDir = adapter.SubAgentsDir(homeDir)
-		if err := os.MkdirAll(agentsDir, 0o755); err != nil {
-			return InjectionResult{}, fmt.Errorf("create agents dir: %w", err)
-		}
-
-		embeddedDir := adapter.EmbeddedSubAgentsDir()
-		entries, err := assets.FS.ReadDir(embeddedDir)
-		if err != nil {
-			return InjectionResult{}, fmt.Errorf("read embedded agents dir: %w", err)
-		}
-
-		for _, entry := range entries {
-			if entry.IsDir() {
-				continue
-			}
-			// Copy all files (not just .md) to support Kimi's YAML-based agents
-			contentStr := renderBoundedReviewAsset(adapter.Agent(), embeddedDir+"/"+entry.Name())
-			contentStr = resolveSkillsDirPlaceholders(contentStr, adapter, workspaceRootFor(homeDir, opts))
-
-			// Resolve {{KIRO_MODEL}} placeholder for adapters that support it (e.g. Kiro).
-			// Non-Kiro adapters (Cursor, etc.) don't implement kiroModelResolver and are unaffected.
-			if kmr, ok := adapter.(kiroModelResolver); ok {
-				phase := strings.TrimSuffix(entry.Name(), ".md")
-				alias := model.KiroModelAuto // safe default
-				if opts.KiroModelAssignments != nil {
-					if a, hasAlias := opts.KiroModelAssignments[phase]; hasAlias {
-						alias = a
-					} else if d, hasDefault := opts.KiroModelAssignments["default"]; hasDefault {
-						alias = d
-					}
-				} else if opts.ClaudeModelAssignments != nil {
-					// Backward-compatible fallback when Kiro-specific assignments are not provided.
-					if a, hasAlias := opts.ClaudeModelAssignments[phase]; hasAlias {
-						alias = model.KiroModelAlias(a)
-					} else if d, hasDefault := opts.ClaudeModelAssignments["default"]; hasDefault {
-						alias = model.KiroModelAlias(d)
-					}
-				}
-				contentStr = strings.ReplaceAll(contentStr, "{{KIRO_MODEL}}", kmr.KiroModelID(alias))
-			}
-
-			// Resolve {{CLAUDE_MODEL}} placeholder for adapters that support it (e.g. Claude Code).
-			// Non-Claude adapters don't implement claudeModelResolver and are unaffected.
-			if cmr, ok := adapter.(claudeModelResolver); ok {
-				phase := strings.TrimSuffix(entry.Name(), ".md")
-				// Native review roles are stored without the installed agent's
-				// review- prefix. Leave SDD and JD phase keys unchanged.
-				switch phase {
-				case "review-risk", "review-readability", "review-reliability", "review-resilience", "review-refuter":
-					phase = strings.TrimPrefix(phase, "review-")
-				}
-				assignment := resolveClaudePhaseAssignment(opts.ClaudeModelAssignments, opts.ClaudePhaseAssignments, phase)
-				contentStr = strings.ReplaceAll(contentStr, "{{CLAUDE_MODEL}}", cmr.ClaudeModelID(assignment.Model))
-				contentStr = injectClaudeEffortFrontmatter(contentStr, assignment)
-			}
-
-			// Los agentes de Copilot son los únicos con este marcador, así que no hace
-			// falta que el adaptador implemente ningún resolver.
-			if strings.Contains(contentStr, copilotModelFrontmatterPlaceholder) {
-				contentStr = injectCopilotModelFrontmatter(contentStr, opts.CopilotPhaseAssignments[copilotAgentPhase(entry.Name())])
-			}
-
-			contentStr = expandEngramToolNames(contentStr)
-
-			if isMarkdownSubAgentPromptFile(entry.Name()) {
-				contentStr = injectCodeGraphToolGrantIntoPrompt(contentStr, adapter.Agent(), opts.CodeGraphGuidanceMarkdown)
-				contentStr = injectCodeGraphGuidanceIntoPrompt(contentStr, opts.CodeGraphGuidanceMarkdown)
-				contentStr = injectLanguageContractIntoPrompt(contentStr)
-				contentStr = agentguidance.InjectRemoteAuthorization(contentStr)
-			}
-			outPath := filepath.Join(agentsDir, entry.Name())
-			writeResult, err := filemerge.WriteFileAtomic(outPath, []byte(contentStr), 0o644)
-			if err != nil {
-				return InjectionResult{}, fmt.Errorf("write agent %s: %w", entry.Name(), err)
-			}
-			changed = changed || writeResult.Changed
-			if writeResult.Changed {
-				files = append(files, outPath)
-			}
-		}
-
-		// Post-check: verify critical agent files exist (either .md or .yaml)
-		for _, phase := range []string{"sdd-apply", "sdd-verify"} {
-			found := false
-			for _, ext := range []string{".md", ".yaml", copilotAgentFileSuffix} {
-				checkPath := filepath.Join(agentsDir, phase+ext)
-				if info, err := os.Stat(checkPath); err == nil && info.Size() >= 10 {
-					found = true
-					break
-				}
-			}
-			if !found {
-				return InjectionResult{}, fmt.Errorf("post-check: sub-agent %q not written correctly (missing or truncated)", phase)
-			}
-		}
+	// written to the user's home directory (e.g. ~/.cursor/agents/) or, for the adapters that
+	// have a project layout bound to the workspace, to that project (.github/agents/).
+	subAgents, err := writeSubAgents(homeDir, adapter, opts)
+	if err != nil {
+		return InjectionResult{}, err
 	}
+	changed = changed || subAgents.Changed
+	files = append(files, subAgents.Files...)
+	// Los agentes por fase de Copilot ya no se escriben en ~/.copilot/agents: solo en el
+	// proyecto. Lo que una versión anterior dejó ahí se retira.
+	legacy, err := retireLegacyCopilotUserAgents(homeDir, adapter)
+	if err != nil {
+		return InjectionResult{}, err
+	}
+	changed = changed || legacy.Changed
+	files = append(files, legacy.Files...)
 
 	// 4. Install skill-registry startup automation for agents with runtime hooks.
 	// This keeps `.atl/skill-registry.md` fresh without making the orchestrator
@@ -4094,4 +4010,118 @@ func readFileOrEmpty(path string) (string, error) {
 		return "", fmt.Errorf("read file %q: %w", path, err)
 	}
 	return string(data), nil
+}
+
+// writeSubAgents escribe los agentes nativos que el adaptador declara en la carpeta que
+// SubAgentsDir devuelve para rootDir. Una carpeta vacía significa que el adaptador no
+// tiene agentes en ese ámbito (VS Code Copilot en la carpeta de usuario), y no se
+// escribe nada.
+func writeSubAgents(homeDir string, adapter agents.Adapter, opts InjectOptions) (InjectionResult, error) {
+	var result InjectionResult
+	if !adapter.SupportsSubAgents() {
+		return result, nil
+	}
+	agentsDir := adapter.SubAgentsDir(homeDir)
+	if agentsDir == "" {
+		return result, nil
+	}
+	changed := false
+	var files []string
+	if err := os.MkdirAll(agentsDir, 0o755); err != nil {
+		return InjectionResult{}, fmt.Errorf("create agents dir: %w", err)
+	}
+
+	embeddedDir := adapter.EmbeddedSubAgentsDir()
+	entries, err := assets.FS.ReadDir(embeddedDir)
+	if err != nil {
+		return InjectionResult{}, fmt.Errorf("read embedded agents dir: %w", err)
+	}
+
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+		// Copy all files (not just .md) to support Kimi's YAML-based agents
+		contentStr := renderBoundedReviewAsset(adapter.Agent(), embeddedDir+"/"+entry.Name())
+		contentStr = resolveSkillsDirPlaceholders(contentStr, adapter, workspaceRootFor(homeDir, opts))
+
+		// Resolve {{KIRO_MODEL}} placeholder for adapters that support it (e.g. Kiro).
+		// Non-Kiro adapters (Cursor, etc.) don't implement kiroModelResolver and are unaffected.
+		if kmr, ok := adapter.(kiroModelResolver); ok {
+			phase := strings.TrimSuffix(entry.Name(), ".md")
+			alias := model.KiroModelAuto // safe default
+			if opts.KiroModelAssignments != nil {
+				if a, hasAlias := opts.KiroModelAssignments[phase]; hasAlias {
+					alias = a
+				} else if d, hasDefault := opts.KiroModelAssignments["default"]; hasDefault {
+					alias = d
+				}
+			} else if opts.ClaudeModelAssignments != nil {
+				// Backward-compatible fallback when Kiro-specific assignments are not provided.
+				if a, hasAlias := opts.ClaudeModelAssignments[phase]; hasAlias {
+					alias = model.KiroModelAlias(a)
+				} else if d, hasDefault := opts.ClaudeModelAssignments["default"]; hasDefault {
+					alias = model.KiroModelAlias(d)
+				}
+			}
+			contentStr = strings.ReplaceAll(contentStr, "{{KIRO_MODEL}}", kmr.KiroModelID(alias))
+		}
+
+		// Resolve {{CLAUDE_MODEL}} placeholder for adapters that support it (e.g. Claude Code).
+		// Non-Claude adapters don't implement claudeModelResolver and are unaffected.
+		if cmr, ok := adapter.(claudeModelResolver); ok {
+			phase := strings.TrimSuffix(entry.Name(), ".md")
+			// Native review roles are stored without the installed agent's
+			// review- prefix. Leave SDD and JD phase keys unchanged.
+			switch phase {
+			case "review-risk", "review-readability", "review-reliability", "review-resilience", "review-refuter":
+				phase = strings.TrimPrefix(phase, "review-")
+			}
+			assignment := resolveClaudePhaseAssignment(opts.ClaudeModelAssignments, opts.ClaudePhaseAssignments, phase)
+			contentStr = strings.ReplaceAll(contentStr, "{{CLAUDE_MODEL}}", cmr.ClaudeModelID(assignment.Model))
+			contentStr = injectClaudeEffortFrontmatter(contentStr, assignment)
+		}
+
+		// Los agentes de Copilot son los únicos con este marcador, así que no hace
+		// falta que el adaptador implemente ningún resolver.
+		if strings.Contains(contentStr, copilotModelFrontmatterPlaceholder) {
+			contentStr = injectCopilotModelFrontmatter(contentStr, opts.CopilotPhaseAssignments[copilotAgentPhase(entry.Name())])
+		}
+
+		contentStr = expandEngramToolNames(contentStr)
+
+		if isMarkdownSubAgentPromptFile(entry.Name()) {
+			contentStr = injectCodeGraphToolGrantIntoPrompt(contentStr, adapter.Agent(), opts.CodeGraphGuidanceMarkdown)
+			contentStr = injectCodeGraphGuidanceIntoPrompt(contentStr, opts.CodeGraphGuidanceMarkdown)
+			contentStr = injectLanguageContractIntoPrompt(contentStr)
+			contentStr = agentguidance.InjectRemoteAuthorization(contentStr)
+		}
+		outPath := filepath.Join(agentsDir, entry.Name())
+		writeResult, err := filemerge.WriteFileAtomic(outPath, []byte(contentStr), 0o644)
+		if err != nil {
+			return InjectionResult{}, fmt.Errorf("write agent %s: %w", entry.Name(), err)
+		}
+		changed = changed || writeResult.Changed
+		if writeResult.Changed {
+			files = append(files, outPath)
+		}
+	}
+
+	// Post-check: verify critical agent files exist (either .md or .yaml)
+	for _, phase := range []string{"sdd-apply", "sdd-verify"} {
+		found := false
+		for _, ext := range []string{".md", ".yaml", copilotAgentFileSuffix} {
+			checkPath := filepath.Join(agentsDir, phase+ext)
+			if info, err := os.Stat(checkPath); err == nil && info.Size() >= 10 {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return InjectionResult{}, fmt.Errorf("post-check: sub-agent %q not written correctly (missing or truncated)", phase)
+		}
+	}
+	result.Changed = changed
+	result.Files = files
+	return result, nil
 }

@@ -1321,7 +1321,17 @@ func (s *Service) componentOperations(adapter agents.Adapter, componentID model.
 			}
 			ops = append(ops, removeDirIfEmpty(workflowsDir), removeDirIfEmpty(filepath.Dir(workflowsDir)))
 		}
-		if adapter.SupportsSubAgents() && !s.subAgentsDirStaysInUse(adapter.SubAgentsDir(homeDir)) {
+		// Copilot CLI no tiene modo workspace, pero si consta en el estado del proyecto los
+		// agentes de .github/agents son también suyos: los retira si VS Code no los necesita.
+		if s.workspace && adapter.Agent() == model.AgentGitHubCopilotCLI && !s.copilotProjectAgentsStayInUse(adapter.Agent()) {
+			agentOps, agentTargets, err := s.copilotProjectAgentOperations()
+			if err != nil {
+				return nil, nil, err
+			}
+			ops = append(ops, agentOps...)
+			targets = append(targets, agentTargets...)
+		}
+		if adapter.SupportsSubAgents() && adapter.SubAgentsDir(homeDir) != "" && !s.subAgentsDirStaysInUse(adapter.SubAgentsDir(homeDir)) && !(s.workspace && adapter.Agent() == model.AgentVSCodeCopilot && s.copilotProjectAgentsStayInUse(adapter.Agent())) {
 			agentsDir := adapter.SubAgentsDir(homeDir)
 			entries, err := fs.ReadDir(assets.FS, adapter.EmbeddedSubAgentsDir())
 			if err != nil {

@@ -45,7 +45,7 @@ func TestWithWorkspaceKeepsGlobalLayoutElsewhere(t *testing.T) {
 	for name, tc := range map[string]struct{ got, want string }{
 		"SystemPromptFile": {a.SystemPromptFile(home), global.SystemPromptFile(home)},
 		"SkillsDir":        {a.SkillsDir(home), filepath.Join(home, ".copilot", "skills")},
-		"SubAgentsDir":     {a.SubAgentsDir(home), filepath.Join(home, ".copilot", "agents")},
+		"SubAgentsDir":     {a.SubAgentsDir(home), ""},
 		"MCPConfigPath":    {a.MCPConfigPath(home, "engram"), global.MCPConfigPath(home, "engram")},
 		"SettingsPath":     {a.SettingsPath(home), global.SettingsPath(home)},
 		"GlobalConfigDir":  {a.GlobalConfigDir(home), filepath.Join(home, ".copilot")},

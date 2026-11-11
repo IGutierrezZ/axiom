@@ -16,7 +16,7 @@ import (
 
 // Identificadores de los bloques de /api/ecosystem/models y del campo `adapter` del POST.
 // Copilot es un solo bloque que cubre VS Code Copilot y Copilot CLI: comparten el mismo
-// `.agent.md` por fase.
+// `.agent.md` por fase, que vive solo en .github/agents del proyecto.
 const (
 	modelsAdapterOpenCode = "opencode"
 	modelsAdapterClaude   = "claude-code"
@@ -212,12 +212,9 @@ func copilotBlock(project cli.ProjectPhaseModels) AdapterModelsDTO {
 			"El nombre del modelo es texto libre con el formato de VS Code, por ejemplo «Claude Sonnet 4.6 (copilot)». Una fase sin asignación hereda el modelo de la conversación.",
 		},
 	}
-	if hasAgent(project.Agents, model.AgentVSCodeCopilot) {
-		block.Destinations = []string{".github/agents"}
-	}
-	if hasAgent(project.Agents, model.AgentGitHubCopilotCLI) {
-		block.Notes = append(block.Notes, "Copilot CLI lee los agentes de ~/.copilot/agents (ámbito global): guardar desde aquí no los regenera.")
-	}
+	// Los agentes por fase de Copilot viven solo en .github/agents del proyecto: los lee VS
+	// Code Copilot y también Copilot CLI, así que basta con que haya uno de los dos.
+	block.Destinations = []string{".github/agents"}
 	return block
 }
 
@@ -260,12 +257,12 @@ func (s *Service) SaveModelAssignments(ctx context.Context, req ModelsSaveReques
 			violations = append(violations, "GitHub Copilot no está instalado en este proyecto")
 		}
 		overrides.Copilot, result, violations = mergeCopilot(project, req.Assignments, violations)
-		// Copilot CLI solo tiene ámbito global: solo VS Code Copilot se regenera en el proyecto.
+		// Con VS Code Copilot en el proyecto, su adaptador escribe .github/agents. Con solo
+		// Copilot CLI (que no tiene modo workspace) los escribe el sync del proyecto.
 		if hasAgent(project.Agents, model.AgentVSCodeCopilot) {
 			agents = []model.AgentID{model.AgentVSCodeCopilot}
-		}
-		if hasAgent(project.Agents, model.AgentGitHubCopilotCLI) {
-			notes = append(notes, "Copilot CLI lee los agentes de ~/.copilot/agents (ámbito global): no se han regenerado desde aquí.")
+		} else if hasAgent(project.Agents, model.AgentGitHubCopilotCLI) {
+			agents = []model.AgentID{model.AgentGitHubCopilotCLI}
 		}
 	default:
 		violations = append(violations, fmt.Sprintf("el adaptador %q no existe: usa %s, %s o %s", req.Adapter, modelsAdapterOpenCode, modelsAdapterClaude, modelsAdapterCopilot))

@@ -425,7 +425,7 @@ Para quitar una fase, vacía su modelo y guarda: la fase vuelve a heredar el mod
 Salvedades:
 
 - **OpenCode**: el modelo por fase solo tiene efecto en el modo SDD multi. Quitar una fase solo la olvida en el estado: el modelo ya escrito en `opencode.json` se conserva, porque la sincronización respeta lo que existe. La pantalla avisa de ambas cosas.
-- **Copilot CLI**: solo tiene ámbito global. El guardado persiste la asignación en el estado del proyecto y regenera `.github/agents` si VS Code Copilot está instalado, pero no regenera `~/.copilot/agents`; la pantalla lo avisa. Para actualizarlo, ejecuta `axiom sync --scope global`.
+- **Copilot** (VS Code Copilot y Copilot CLI): los agentes por fase viven solo en `.github/agents` del proyecto, que leen los dos. El guardado persiste la asignación en el estado del proyecto y regenera esa carpeta tanto si el proyecto tiene VS Code Copilot como si solo tiene Copilot CLI. No se escribe nada en `~/.copilot/agents`: Copilot CLI da prioridad al agente personal frente al del proyecto cuando coinciden los identificadores, y taparía el modelo elegido. Si una versión anterior dejó agentes de Axiom ahí, un `axiom sync`, `axiom install` o `axiom upgrade` global los retira y conserva los tuyos.
 - El adaptador debe estar instalado en el proyecto; si no, el guardado se rechaza con `400`.
 
 `GET /api/ecosystem/models` devuelve las asignaciones y las opciones de cada adaptador instalado, y `POST /api/ecosystem/models` guarda un parche por adaptador. Solo el `POST` modifica algo, y, como los demás de este panel, solo acepta peticiones locales (`127.0.0.1` o `localhost` en su puerto): con un `Origin` o `Host` ajenos responde `403` sin hacer nada. Sin proyecto abierto responde `409`.

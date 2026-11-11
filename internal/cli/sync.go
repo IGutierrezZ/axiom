@@ -1425,6 +1425,14 @@ func (s componentSyncStep) Run() error {
 			}
 			s.countChanged(boolToInt(res.Changed), res.Files...)
 		}
+		// Proyecto con Copilot CLI y sin VS Code Copilot: nadie más escribe .github/agents.
+		if copilotProjectAgentsFromCLI(s.homeDir, s.workspaceDir, s.scope, adapters) {
+			res, err := injectCopilotProjectAgents(s.homeDir, s.workspaceDir, s.selection)
+			if err != nil {
+				return fmt.Errorf("sync copilot project agents: %w", err)
+			}
+			s.countChanged(boolToInt(res.Changed), res.Files...)
+		}
 		return nil
 
 	case model.ComponentSkills:
@@ -1936,8 +1944,11 @@ func runSyncWithSelectionScoped(homeDir, workspaceDir string, scope InstallScope
 	}
 
 	result, noOp, err := zeroAgentSyncNoOp(homeDir, scope, selection, result)
-	if err != nil || noOp {
+	if err != nil {
 		return result, err
+	}
+	if noOp {
+		return syncCopilotProjectAgentsOnly(homeDir, workspaceDir, scope, selection, result)
 	}
 
 	rt, err := newSyncRuntimeScoped(homeDir, workspaceDir, scope, selection)

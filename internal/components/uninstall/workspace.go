@@ -716,7 +716,7 @@ func (s *Service) workspaceEmptyDirOperations(adapter agents.Adapter) []operatio
 	if adapter.SupportsSlashCommands() {
 		candidates = append(candidates, adapter.CommandsDir(root))
 	}
-	if adapter.SupportsSubAgents() {
+	if adapter.SupportsSubAgents() && adapter.SubAgentsDir(root) != "" {
 		candidates = append(candidates, adapter.SubAgentsDir(root))
 	}
 	if adapter.SupportsOutputStyles() {

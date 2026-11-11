@@ -1971,6 +1971,12 @@ func (s componentApplyStep) Run() error {
 				return fmt.Errorf("inject sdd for %q: %w", adapter.Agent(), err)
 			}
 		}
+		// Proyecto con Copilot CLI y sin VS Code Copilot: nadie más escribe .github/agents.
+		if copilotProjectAgentsFromCLI(s.homeDir, s.workspaceDir, s.scope, adapters) {
+			if _, err := injectCopilotProjectAgents(s.homeDir, s.workspaceDir, s.selection); err != nil {
+				return fmt.Errorf("inject copilot project agents: %w", err)
+			}
+		}
 		return nil
 	case model.ComponentSkills:
 		skillIDs := selectedSkillIDs(s.selection)
@@ -3137,7 +3143,7 @@ func componentPathDirScoped(homeDir, workspaceDir string, scope InstallScope, ad
 }
 
 func sddSubAgentPaths(homeDir string, adapter agents.Adapter) []string {
-	if !adapter.SupportsSubAgents() {
+	if !adapter.SupportsSubAgents() || adapter.SubAgentsDir(homeDir) == "" {
 		return nil
 	}
 
