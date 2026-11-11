@@ -500,6 +500,34 @@
               </div>
             </section>
 
+            <section class="card card-flush eco-wide" aria-labelledby="eco-rdd-h">
+              <div class="card-head">
+                <h2 class="card-title-h" id="eco-rdd-h">Revisión (RDD) de este proyecto</h2>
+                <span class="badge badge-mono">~/.axiom</span>
+              </div>
+              <div id="eco-review-body" class="eco-pad">
+                <p class="eco-note">Si la revisión por recibos está encendida en este proyecto. Es una preferencia tuya: se guarda en tu Hub (<code>~/.axiom/workspaces.json</code>), no modifica <code>axiom.yaml</code> ni ningún fichero del proyecto y ningún repositorio puede imponerla. Un «apagar» del clon siempre gana; si no hay preferencia de proyecto, manda tu interruptor global.</p>
+                <div id="eco-review-state">
+                  <div class="state" role="status"><div class="spinner" aria-hidden="true"></div><span>Consultando el modo de revisión…</span></div>
+                </div>
+                <form id="form-review-mode" class="eco-wt-form" hidden novalidate>
+                  <div class="field">
+                    <label for="select-review-mode">Preferencia para este proyecto</label>
+                    <select id="select-review-mode" class="form-select">
+                      <option value="inherit">heredar el interruptor global</option>
+                      <option value="on">encendida en este proyecto</option>
+                      <option value="off">apagada en este proyecto</option>
+                    </select>
+                  </div>
+                  <div class="eco-wt-actions">
+                    <button type="submit" id="btn-save-review-mode" class="btn btn-primary">Guardar preferencia</button>
+                    <span id="review-mode-effective" class="eco-note"></span>
+                  </div>
+                  <p id="review-mode-status" class="field-hint" role="status"></p>
+                </form>
+              </div>
+            </section>
+
             <section class="card card-flush eco-wide" aria-labelledby="eco-models-h">
               <div class="card-head">
                 <h2 class="card-title-h" id="eco-models-h">Modelos</h2>
@@ -608,6 +636,22 @@
           </select>
         </div>
       </div>
+      <!-- Preferencia personal de revisión (RDD): se guarda en el Hub, no en axiom.yaml -->
+      <div class="field">
+        <label for="select-project-review-mode">Revisión (RDD) en este proyecto</label>
+        <select id="select-project-review-mode" class="form-select">
+          <option value="inherit" selected>heredar el interruptor global</option>
+          <option value="on">encendida para mí en este proyecto</option>
+          <option value="off">apagada para mí en este proyecto</option>
+        </select>
+        <p class="field-hint">Preferencia personal: se guarda en tu Hub, no en <code>axiom.yaml</code>.</p>
+      </div>
+      <!-- Solo en multirepo: el axiom.yaml vive en un repositorio de specs propio y la carpeta del proyecto lleva el puntero -->
+      <div class="field" id="field-project-specs-repository" hidden>
+        <label for="input-project-specs-repository">Repositorio de especificaciones (ruta relativa a la carpeta del proyecto)</label>
+        <input type="text" id="input-project-specs-repository" class="form-input" placeholder="repo-specs" autocomplete="off">
+        <p class="field-hint">Se crea si no existe (sin <code>git init</code>). Ahí se guardan <code>axiom.yaml</code> y <code>openspec/</code>; la carpeta del proyecto solo lleva el puntero <code>.axiom-workspace</code>.</p>
+      </div>
       <!-- Preferencias personales de worktree: se guardan en el Hub, no en axiom.yaml -->
       <div class="field-grid">
         <div class="field">
@@ -631,6 +675,11 @@
         </div>
         <p class="field-hint">Si no configuras roles específicos, Axiom creará un único rol <strong>fullstack</strong> que gobernará todo el repositorio.</p>
         <div id="roles-builder-container" class="form-stack"></div>
+      </div>
+      <div class="form-stack" style="border-top: 1px solid var(--border); padding-top: 14px">
+        <span class="field-label">Adaptadores (opcional)</span>
+        <p class="field-hint">Se instalan en el proyecto, en modo workspace. Si no eliges ninguno, el proyecto queda sin adaptadores y puedes instalarlos después. Los que solo tienen configuración global aparecen deshabilitados.</p>
+        <div id="adapters-container" class="form-stack"></div>
       </div>
       <div class="alert alert-bad" id="add-project-error" role="alert" hidden></div>
     </div>

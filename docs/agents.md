@@ -14,6 +14,7 @@
 | Gemini CLI      | `gemini-cli`     | Yes          | Yes | Full (experimental)              | No            | No             | `~/.gemini`                         |
 | Cursor          | `cursor`         | Yes          | Yes | Full (native subagents)          | No            | No             | `~/.cursor`                         |
 | VS Code Copilot | `vscode-copilot` | Yes          | Yes | Full (runSubagent)               | No            | No             | `~/.copilot` + VS Code User profile |
+| GitHub Copilot CLI | `github-copilot-cli` | Yes      | Yes | Orquestador SDD genérico (worker nativo) | No            | No             | `~/.copilot` o `$COPILOT_HOME` (solo global) |
 | Codex           | `codex`          | Yes          | Yes | Native multi-agent (default; solo fallback) | No            | No             | `~/.codex`                          |
 | Windsurf        | `windsurf`       | Yes (native) | Yes | Solo-agent                       | No            | No             | `~/.codeium/windsurf`               |
 | Antigravity     | `antigravity`    | Yes (native) | Yes | Solo-agent + Mission Control     | No            | No             | `~/.gemini/antigravity`             |
@@ -55,10 +56,10 @@ El ámbito workspace es el predeterminado de la CLI y de la TUI. Axiom escribe e
 | Cursor | `.cursor/rules/axiom.mdc` | `.cursor/` (`agents/`, `mcp.json`) | `.agents/skills` |
 | Kiro IDE | `.kiro/steering/axiom.md` | `.kiro/` (`agents/`, `settings/mcp.json`, `hooks/`) | `.kiro/skills` |
 
-- **Sin modo workspace.** Windsurf, Trae, Antigravity, Pi y OpenClaw solo tienen configuración global: con `--scope workspace` se omiten con un aviso en castellano y Axiom nunca cae a escribir en su configuración de usuario. Para instalarlos hay que pedir `--scope global` de forma expresa. Pi se omite porque `pi install -l` solo cubre los paquetes (`.pi/settings.json`), mientras que `pi-engram init`, `~/.pi/npm/package.json` y el prompt de sistema solo tienen ruta de usuario. OpenClaw se omite porque su configuración, incluido el MCP de Engram, vive en `~/.openclaw/openclaw.json` y no documenta configuración por proyecto. Antigravity queda aplazado: sus reglas de proyecto limitan el tamaño de cada fichero y el orquestador de Axiom no cabe en una sola regla.
+- **Sin modo workspace.** Windsurf, Trae, Antigravity, Pi, OpenClaw y GitHub Copilot CLI solo tienen configuración global: con `--scope workspace` se omiten con un aviso en castellano y Axiom nunca cae a escribir en su configuración de usuario. Para instalarlos hay que pedir `--scope global` de forma expresa. Pi se omite porque `pi install -l` solo cubre los paquetes (`.pi/settings.json`), mientras que `pi-engram init`, `~/.pi/npm/package.json` y el prompt de sistema solo tienen ruta de usuario. OpenClaw se omite porque su configuración, incluido el MCP de Engram, vive en `~/.openclaw/openclaw.json` y no documenta configuración por proyecto. Antigravity queda aplazado: sus reglas de proyecto limitan el tamaño de cada fichero y el orquestador de Axiom no cabe en una sola regla.
 - **No seleccionables.** Kimi Code, Qwen Code y Hermes ya no se pueden elegir (véase [Agentes no disponibles de momento](#agentes-no-disponibles-de-momento)).
 - **Precedencia.** Lo del proyecto prevalece sobre lo del usuario y ambos conviven, con dos matices. En Claude Code, una skill personal con el mismo nombre que una de proyecto gana a esta. En Gemini CLI, el `context.fileName` del proyecto sustituye al del usuario y no se fusiona: Axiom escribe una lista que conserva los nombres que el proyecto ya declaraba (o `GEMINI.md`) y añade `.gemini/AXIOM.md`, de modo que un nombre que solo figure en `~/.gemini/settings.json` deja de cargarse en ese proyecto.
-- **Copilot CLI.** No tiene adaptador en Axiom, pero lee `.github/instructions`, `.github/skills` y el `.mcp.json` de Claude Code, así que se beneficia de lo que Axiom escribe para VS Code Copilot y Claude Code.
+- **GitHub Copilot CLI.** Tiene adaptador (`github-copilot-cli`), pero solo global: lo que Axiom le escribe vive en `~/.copilot` (o `$COPILOT_HOME`) y no hay una ruta de proyecto documentada para ello, así que se omite en workspace. El CLI sí lee del proyecto `.github/instructions`, `.github/skills` y el `.mcp.json` de Claude Code, así que se beneficia de lo que Axiom escribe en workspace para VS Code Copilot y Claude Code.
 - **Lo que no escribe en `~/`.** `engram setup <agente>` se omite con un aviso, porque escribe en la carpeta de usuario del agente; el MCP de Engram ya queda en el proyecto. Con Codex, el aviso sugiere `engram setup codex` como acción manual opcional: ejecútalo solo si quieres además el registro de usuario, porque escribe en `~/.codex`, fuera del proyecto.
 
 #### Skills en `--scope workspace`: una sola copia compartida
@@ -206,8 +207,22 @@ Kiro usa agentes personalizados en `~/.kiro/agents/`. Axiom escribe los agentes 
   - **MCP** (Context7 y Engram): `<proyecto>/.vscode/mcp.json`, con la clave raíz `servers` (no `mcpServers`). La fusión conserva los servidores, las `inputs` y los comentarios que el usuario ya tuviera (VS Code admite JSONC en ese fichero; los comentarios que estén dentro del bloque `servers` se pierden al reescribirlo). Un `mcp.json` que no sea JSON válido se rechaza sin modificarlo y antes de escribir nada.
   - **Agentes, prompts y hooks**: Axiom no instala ninguno para VS Code Copilot hoy (solo skills, instrucciones y MCP), así que no se crean `.github/agents`, `.github/prompts` ni `.github/hooks`. Tampoco se escriben permisos: VS Code no tiene un `deny` de proyecto y Axiom no impone modos de autoaprobación.
   - **Confianza**: VS Code solo arranca los servidores MCP de `.vscode/mcp.json` si el espacio de trabajo es de confianza (Workspace Trust). Axiom avisa al terminar y no concede esa confianza.
-  - Copilot CLI, que no tiene adaptador en Axiom, lee también `.github/instructions` y `.github/skills`. La carpeta `.agents/skills` es la compartida que escribe Axiom en workspace.
+  - GitHub Copilot CLI, que solo tiene ámbito global en Axiom (véase [su sección](#github-copilot-cli)), lee también `.github/instructions` y `.github/skills`. La carpeta `.agents/skills` es la compartida que escribe Axiom en workspace.
   - La instalación global no cambia.
+
+### GitHub Copilot CLI
+
+Agente de terminal de GitHub (binario `copilot`). Es un adaptador propio (`github-copilot-cli`), distinto del de VS Code Copilot: solo comparten la carpeta de skills.
+
+- **Raíz**: `$COPILOT_HOME` si está definida y es una ruta absoluta, o `~/.copilot`. `COPILOT_HOME` solo se respeta con el directorio personal real del usuario: una instalación aislada (otra raíz de instalación) se queda dentro de ella.
+- **Instrucciones**: `<raíz>/copilot-instructions.md` (persona, orquestador ODD/SDD y protocolo de memoria). El SDD es el mismo orquestador genérico de VS Code Copilot, con la elección de almacén de artefactos en la preflight de sesión.
+- **Skills**: `<raíz>/skills/`. Sin `COPILOT_HOME` es la misma carpeta que usa VS Code Copilot. La copia no depende de qué agente la escribe (lleva el hueco genérico de runtime), y desinstalar uno de los dos no retira las skills mientras el otro siga instalado.
+- **MCP** (Context7 y Engram): `<raíz>/mcp-config.json`, con la clave raíz `mcpServers` (no `servers`, la de VS Code) y entradas con `type` (`http` para Context7, `local` para Engram) y `tools: ["*"]`. Se conservan los servidores del usuario. Engram se inyecta directamente, sin `engram setup`. CodeGraph tiene un destino nativo `copilot-cli` que escribe en el mismo fichero.
+- **Ajustes y permisos**: `<raíz>/settings.json`. Axiom no escribe permisos ni modos de autoaprobación: lo que decidas queda intacto.
+- **Hooks, comandos y subagentes de fichero**: ninguno.
+- **Detección**: el binario `copilot` en el `PATH` o estado propio de Copilot CLI en la raíz. Una carpeta `~/.copilot` que solo tiene `skills` es de VS Code Copilot y no cuenta como Copilot CLI; y VS Code Copilot se detecta en el escaneo por su extensión `github.copilot`, no por `~/.copilot`.
+- **Instalación** (solo se muestra, Axiom no la ejecuta): `npm install -g --ignore-scripts @github/copilot@latest`, con `sudo` en Linux si el npm es del sistema. `axiom doctor` comprueba el binario `copilot`.
+- **Ámbito workspace**: no tiene. Con `--scope workspace` se omite con un aviso.
 
 ### Codex
 

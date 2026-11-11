@@ -152,6 +152,7 @@ Alcance aclarado con el usuario:
 - El TDD por rol es una política de equipo y no entra aquí. Lo mismo vale para la limpieza de otros campos versionados que podrían ser de usuario (`strict_tdd` duplicado, `artifact_store`, `workflow.lane`, `governance.semantic_analysis`, `.codex/` y `GEMINI.md`): va en un trabajo aparte.
 
 - [x] **T21 · RDD por usuario y proyecto (D2)** (~400). Va antes de T18. **Hecha el 2026-11-11 en `9a71ceff`.**
+  - **Sustituida por la T6 de `alta-proyecto-ui` (PR #243), 2026-11-11.** Al fusionar `main` se descartó este duplicado (`hub/prefs.go`, `workspace/projectmaster.go`, sus tests y los párrafos de docs/guía) y rige la implementación de `main` (`hub/rddpref.go`, `--scope project`). Se conservó la misma precedencia (clon off, proyecto, global, defecto). Se mantiene el historial de abajo.
   - **Ruta:** writer delegado; el disparador fue que tocaba más de 2 ficheros no triviales en 4 paquetes. Tamaño real: +849/−58 líneas, unas 700 de autor, de las que unas 490 son tests.
   - **Precedencia implementada:** gana el `off` del clon; después el hub del proyecto, luego el global y por último `off`.
   - **Proyecto sin registrar:** `enable`/`disable` sin ámbito se rechazan y remiten a `axiom project add` o `--scope global`. La lectura cae al global.

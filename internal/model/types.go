@@ -73,6 +73,11 @@ const (
 	AgentHermes        AgentID = "hermes"
 )
 
+// AgentGitHubCopilotCLI es el agente de terminal de GitHub (binario `copilot`).
+// No es AgentVSCodeCopilot: la extensión de VS Code y el CLI solo comparten la
+// carpeta de skills.
+const AgentGitHubCopilotCLI AgentID = "github-copilot-cli"
+
 // SupportTier indicates how fully an agent supports the Gentleman AI ecosystem.
 // All current agents receive the full SDD orchestrator, skill files, MCP config,
 // and system prompt injection. The tier is kept as metadata for display purposes.

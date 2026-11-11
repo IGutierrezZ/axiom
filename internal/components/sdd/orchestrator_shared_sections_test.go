@@ -67,7 +67,7 @@ func TestRegisteredAgentsRenderStatusContinuationContract(t *testing.T) {
 		t.Fatal(err)
 	}
 	ids := registry.SupportedAgents()
-	if len(ids) != 16 {
+	if len(ids) != 17 {
 		t.Fatalf("registered cohort changed: %v", ids)
 	}
 	templates := map[string]bool{}
@@ -188,7 +188,7 @@ func TestEveryRuntimeRendersTheSharedSections(t *testing.T) {
 	for _, agent := range []model.AgentID{
 		model.AgentOpenCode, model.AgentCursor, model.AgentGeminiCLI, model.AgentQwenCode,
 		model.AgentHermes, model.AgentKimi, model.AgentWindsurf, model.AgentCodex,
-		model.AgentClaudeCode, model.AgentKiroIDE, model.AgentAntigravity, model.AgentVSCodeCopilot,
+		model.AgentClaudeCode, model.AgentKiroIDE, model.AgentAntigravity, model.AgentVSCodeCopilot, model.AgentGitHubCopilotCLI,
 	} {
 		rendered := renderSDDOrchestratorAsset(agent)
 		for _, name := range sharedOrchestratorSectionNames {
@@ -241,7 +241,7 @@ func TestNoRawSharedSectionPlaceholderSurvivesRendering(t *testing.T) {
 	for _, agent := range []model.AgentID{
 		model.AgentOpenCode, model.AgentCursor, model.AgentGeminiCLI, model.AgentQwenCode,
 		model.AgentHermes, model.AgentKimi, model.AgentWindsurf, model.AgentCodex,
-		model.AgentKiroIDE, model.AgentAntigravity, model.AgentClaudeCode, model.AgentVSCodeCopilot,
+		model.AgentKiroIDE, model.AgentAntigravity, model.AgentClaudeCode, model.AgentVSCodeCopilot, model.AgentGitHubCopilotCLI,
 	} {
 		if rendered := renderSDDOrchestratorAsset(agent); strings.Contains(rendered, "{{GENTLE_AI_SDD_SECTION:") {
 			t.Errorf("%s kept a raw shared-section placeholder", agent)

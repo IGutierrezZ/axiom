@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"reflect"
 	"runtime"
@@ -12,8 +13,33 @@ import (
 	"testing"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/agents"
+	"github.com/IGutierrezZ/axiom/v3/internal/agents/copilotcli"
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
 )
+
+// Copilot CLI es un destino nativo de CodeGraph (`copilot-cli`) y comparte
+// ~/.copilot con VS Code Copilot, que sigue excluido.
+func TestCopilotCLIIsANativeCodeGraphTarget(t *testing.T) {
+	got := codeGraphCompatibilityTable[model.AgentGitHubCopilotCLI]
+	if got.Strategy != codeGraphNative || got.Target != "copilot-cli" {
+		t.Fatalf("Copilot CLI compatibility = %+v, want native target copilot-cli", got)
+	}
+	if codeGraphCompatibilityTable[model.AgentVSCodeCopilot].Strategy != codeGraphExcluded {
+		t.Fatal("VS Code Copilot debe seguir excluido de CodeGraph")
+	}
+	reg, err := agents.NewDefaultRegistry()
+	if err != nil {
+		t.Fatal(err)
+	}
+	adapter, _ := reg.Get(model.AgentGitHubCopilotCLI)
+	home := t.TempDir()
+	paths := got.OwnedPaths(home, adapter)
+	for _, want := range []string{adapter.MCPConfigPath(home, "codegraph"), adapter.SettingsPath(home)} {
+		if !slices.Contains(paths, want) {
+			t.Errorf("OwnedPaths = %v, want it to include %q", paths, want)
+		}
+	}
+}
 
 func TestCodeGraphCompatibilityTableIsExhaustive(t *testing.T) {
 	reg, err := agents.NewDefaultRegistry()
@@ -50,7 +76,7 @@ func TestCodeGraphCompatibilityStrategies(t *testing.T) {
 		strategy codeGraphStrategy
 		agents   []model.AgentID
 	}{
-		{codeGraphNative, []model.AgentID{model.AgentClaudeCode, model.AgentCursor, model.AgentCodex, model.AgentGeminiCLI, model.AgentHermes, model.AgentAntigravity, model.AgentKiroIDE}},
+		{codeGraphNative, []model.AgentID{model.AgentClaudeCode, model.AgentCursor, model.AgentCodex, model.AgentGeminiCLI, model.AgentHermes, model.AgentAntigravity, model.AgentKiroIDE, model.AgentGitHubCopilotCLI}},
 		{codeGraphReconciled, []model.AgentID{model.AgentOpenCode, model.AgentPi}},
 		{codeGraphExcluded, []model.AgentID{model.AgentKilocode, model.AgentVSCodeCopilot, model.AgentWindsurf, model.AgentKimi, model.AgentQwenCode, model.AgentOpenClaw, model.AgentTrae}},
 	}
@@ -64,6 +90,13 @@ func TestCodeGraphCompatibilityStrategies(t *testing.T) {
 }
 
 func TestExcludedAgentsNeverEnterCodeGraphSurfaces(t *testing.T) {
+	// VS Code Copilot comparte ~/.copilot con Copilot CLI. Sin este stub, el
+	// binario `copilot` de la máquina que ejecuta el test descubriría el CLI en esa
+	// misma carpeta y le inyectaría la guía, aunque el excluido sea VS Code.
+	previousLookPath := copilotcli.LookPathOverride
+	copilotcli.LookPathOverride = func(string) (string, error) { return "", exec.ErrNotFound }
+	t.Cleanup(func() { copilotcli.LookPathOverride = previousLookPath })
+
 	reg, err := agents.NewDefaultRegistry()
 	if err != nil {
 		t.Fatal(err)

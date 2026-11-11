@@ -182,9 +182,14 @@ func (s *Service) GetWorkspace() (*WorkspaceDTO, error) {
 			repoPaths = append(repoPaths, repo.Path)
 		}
 
+		// El rol sin gate_policy declarado es bloqueante (valor por defecto de multirole).
+		gatePolicy := strings.TrimSpace(r.GatePolicy)
+		if gatePolicy == "" {
+			gatePolicy = "blocking"
+		}
 		rolesMap[id] = RoleMeta{
 			Name:         r.Name,
-			GatePolicy:   "blocking",
+			GatePolicy:   gatePolicy,
 			Repositories: repoPaths,
 			Tech:         r.Tech,
 		}
@@ -880,20 +885,27 @@ func (s *Service) AddProject(req ProjectAddRequest) (*hub.WorkspaceRecord, error
 }
 
 // InitProject inicializa un proyecto con axiom.yaml y lo registra.
-func (s *Service) InitProject(req ProjectInitRequest) (*hub.InitResult, error) {
+func (s *Service) InitProject(req ProjectInitRequest) (*ProjectInitResponse, error) {
 	targetPath := req.Path
 	if targetPath == "" {
 		targetPath = s.getRootPath()
 	}
 
 	ini := hub.NewInitializer(s.hubManager, s.hubDetector)
-	res, err := ini.Init(hub.InitOptions{
-		Path:          targetPath,
-		Name:          req.Name,
-		Topology:      req.Topology,
-		Roles:         req.Roles,
-		WorktreePrefs: hub.WorktreePrefs{Mode: req.WorktreeMode, Root: req.WorktreeRoot},
-	})
+	opts := hub.InitOptions{
+		Path:            targetPath,
+		Name:            req.Name,
+		Topology:        req.Topology,
+		SpecsRepository: req.SpecsRepository,
+		Roles:           req.Roles,
+		WorktreePrefs:   hub.WorktreePrefs{Mode: req.WorktreeMode, Root: req.WorktreeRoot},
+	}
+	adapters := uniqueAdapterIDs(req.Adapters)
+	// Los adaptadores inválidos se rechazan antes de escribir nada.
+	if err := checkRequest(ini, opts, req.Adapters, req.ReviewMode); err != nil {
+		return nil, err
+	}
+	res, err := ini.Init(opts)
 	if err != nil {
 		return nil, err
 	}
@@ -901,7 +913,29 @@ func (s *Service) InitProject(req ProjectInitRequest) (*hub.InitResult, error) {
 	// Conmutar automáticamente el workspace activo al inicializado
 	_, _ = s.SwitchWorkspace(targetPath)
 
-	return res, nil
+	response := &ProjectInitResponse{InitResult: res}
+	// La preferencia de revisión es del usuario y vive en el registro del hub: se guarda
+	// cuando el proyecto ya está escrito y registrado. Un fallo no deshace el proyecto.
+	if reviewMode, _ := normalizeReviewModeInput(req.ReviewMode); reviewMode != "" {
+		if s.hubManager == nil {
+			response.ReviewModeError = "el proyecto no se registró en el hub, así que no hay dónde guardar la preferencia de revisión"
+		} else if _, err := s.hubManager.SetProjectRDD(res.Record.ID, reviewMode); err != nil {
+			response.ReviewModeError = err.Error()
+		}
+	}
+	if len(adapters) > 0 {
+		// El proyecto ya está creado: un fallo de la instalación se informa como
+		// fallo parcial y no lo deshace.
+		outcome := &AdaptersOutcome{Requested: adapters, Installed: []string{}}
+		installed, installErr := installAdapters(res.Record.Path, adapters)
+		if installErr != nil {
+			outcome.Error = installErr.Error()
+		} else {
+			outcome.Installed = installed
+		}
+		response.Adapters = outcome
+	}
+	return response, nil
 }
 
 // MigrateIncompleteTasksToCumulative transfiere tareas pendientes de un rol no bloqueante a su incremento acumulativo correspondiente.

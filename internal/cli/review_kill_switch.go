@@ -83,7 +83,7 @@ func authorizeReviewAuthorityMutation(ctx context.Context, repo string) error {
 }
 
 func authorizeReviewRDDOperation(ctx context.Context, repo string, operation reviewtransaction.RDDOperation) error {
-	global, err := readRDDModeInputs(repo)
+	global, err := readUserRDDMode(repo, nil)
 	if err != nil {
 		return err
 	}

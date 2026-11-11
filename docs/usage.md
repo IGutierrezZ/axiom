@@ -38,6 +38,37 @@ Before the final installation confirmation, the customizable installer explains 
 
 La elección es opcional y, si no existe una preferencia global, el valor predeterminado es OFF. Puedes volver desde la pantalla de confirmación para cambiarla. Axiom guarda la preferencia global seleccionada solo cuando la instalación termina correctamente; una instalación interrumpida o fallida no la modifica. Los ajustes locales existentes de cada clon se conservan, por lo que el modo efectivo de un clon puede diferir del global. La evidencia de RDD no autoriza commits, pushes, pull requests ni releases: la entrega sigue sujeta a las normas habituales del repositorio.
 
+### RDD por usuario y proyecto
+
+Además del interruptor global y del «apagar» de cada clon, puedes fijar tu propia preferencia de RDD para un proyecto registrado en tu hub:
+
+```bash
+# Encendido para ti en este proyecto
+axiom review mode enable --scope project
+
+# Apagado para ti en este proyecto
+axiom review mode disable --scope project
+
+# Retira la preferencia: vuelve a mandar el global
+axiom review mode inherit --scope project
+
+# Muestra cada fuente y cuál decide
+axiom review mode status
+```
+
+La preferencia es tuya y de esta máquina: se guarda en el registro del hub (`~/.axiom/workspaces.json`, junto a las preferencias de worktree), nunca en `axiom.yaml` ni en `.axiom/state.json`, así que no se versiona y ningún repositorio puede imponerla. El proyecto es el registrado que contiene el repositorio; en multirepo, los repositorios de los roles y el de especificaciones pertenecen al proyecto de la carpeta maestra. Fuera de un proyecto registrado, `--scope project` falla con un mensaje que lo dice.
+
+Precedencia, de mayor a menor:
+
+1. El «apagar» del clon (`--scope clone`) gana siempre.
+2. Tu preferencia de proyecto, en ambos sentidos: puede encender un proyecto aunque el global esté apagado, o apagarlo aunque esté encendido.
+3. El interruptor global.
+4. Si nadie ha expresado una opinión, apagado.
+
+`axiom review mode status` informa del modo efectivo y de la fuente que decide (`clone_local`, `project`, `global` o `default`), además del valor de cada fuente. Quitar el «apagar» del clon mientras tu preferencia de proyecto esté en `off` se rechaza, porque no encendería nada; el mensaje nombra el comando del origen que decide.
+
+El dashboard muestra lo mismo en la tarjeta **Revisión (RDD) de este proyecto** de la pantalla Ecosistema: el modo efectivo, la fuente que decide y un selector para heredar, encender o apagar el proyecto abierto. El mismo selector está en el alta de proyecto.
+
 ### Disable TUI spinner animation
 
 Define `AXIOM_NO_ANIMATION=1` para detener la animación del indicador de la TUI. El nombre anterior `GENTLE_AI_NO_ANIMATION` se mantiene como alternativa de compatibilidad:
@@ -317,6 +348,31 @@ Las comprobaciones de proyecto se hacen sobre la raíz del proyecto: en la CLI, 
 
 En el dashboard (`axiom ui`), el doctor se ejecuta al abrirlo y cada vez que cambias de proyecto. El informe del proyecto anterior desaparece en cuanto cambias. La pantalla Ecosistema muestra dos secciones, **Global** y **Proyecto**, y el estado general es correcto solo si ninguna comprobación falla.
 
+### init
+
+Crea el `axiom.yaml` de un proyecto, sus carpetas canónicas (`openspec/` y `.axiom/inbox/skills/`) y lo registra en el hub:
+
+```bash
+# El directorio actual, monorepo-embedded
+axiom init
+
+# Otra carpeta, con nombre
+axiom init --path ../mi-proyecto --name "Mi proyecto"
+
+# Multirepo, con la carpeta maestra indicada
+axiom init --topology multirepo --path ../maestra
+```
+
+Antes de escribir nada, `axiom init` valida la configuración que va a generar con las mismas reglas que `axiom workspace validate` y rechaza, con la lista completa de errores y sin tocar el disco, estos casos:
+
+- claves de rol repetidas (también si solo se distinguen por las mayúsculas) o roles sin clave ni nombre;
+- repositorios de rol con ruta absoluta o que salen de la carpeta del proyecto (`..`); los repositorios de rol deben ser relativos, pero no tienen que existir todavía;
+- un `gate_policy` fuera de `blocking`, `deferred` y `optional`.
+
+Las claves de rol se escriben entre comillas cuando hace falta (con `:`, espacios o palabras como `yes`). Un rol no bloqueante se escribe con `gate_policy: "deferred"` (antes se escribía `advisory`, que el detector de roles no admite; los `axiom.yaml` que ya lo tengan no se migran solos). El dashboard muestra el `gate_policy` real de cada rol.
+
+Si ya existe un `axiom.yaml` y no se pasa `--force`, se conserva y no se valida nada generado.
+
 ### version
 
 ```bash
@@ -337,6 +393,22 @@ axiom ui --no-browser    # solo el servidor, sin abrir ventana
 ```
 
 Es idempotente: si ya hay un Axiom escuchando en el puerto, solo abre la ventana. Si lo ocupa otra aplicación, falla con un error que sugiere `--port`.
+
+#### Alta de proyecto desde el dashboard
+
+El botón de añadir proyecto abre un modal que da de alta un proyecto con su configuración completa. Pide:
+
+- **Ruta y nombre** del proyecto.
+- **Topología**, `monorepo-embedded` o `multirepo`. Con multirepo aparece el **repositorio de especificaciones**, una ruta relativa a la carpeta del proyecto (obligatoria, distinta de la propia carpeta y dentro de ella). Si no existe, el alta lo crea (sin `git init`), escribe en él `axiom.yaml` y `openspec/` y deja en la carpeta del proyecto el puntero `.axiom-workspace` (`config: <repo>/axiom.yaml`). Después comprueba el resultado con el mismo localizador que usan los demás comandos.
+- **Roles**, opcionales: identificador, nombre, repositorios (rutas relativas separadas por comas), tecnologías y si es no bloqueante, que se escribe como `deferred`. Sin roles se crea uno `fullstack`.
+- **Adaptadores**, opcionales, que se instalan en el proyecto en modo workspace. Los que solo tienen configuración global (Pi, OpenClaw, Windsurf, Antigravity y Trae) aparecen deshabilitados con el motivo. No elegir ninguno es válido: el proyecto queda sin adaptadores y se pueden instalar después con `axiom install --scope workspace`.
+- **Preferencias personales**: modo de trabajo y raíz de worktrees, y la preferencia de RDD del proyecto (heredar, encendida o apagada). Se guardan en tu hub, no en `axiom.yaml`.
+
+Todo se valida antes de escribir nada. Los errores de formulario (ruta vacía, claves repetidas, repositorios absolutos o fuera del proyecto, repositorio de specs inválido) se avisan en el propio modal, y el servidor repite la validación y responde con `400` y la lista completa de violaciones, que el modal muestra una por línea; no se crea ni registra nada. Un adaptador que no existe o no admite workspace también se rechaza antes de escribir.
+
+Los adaptadores se instalan después de escribir el proyecto, en su carpeta y con el mismo código que `axiom install --scope workspace`, sin depender del directorio desde el que se lanzó el dashboard. Si la instalación falla, el proyecto queda creado y registrado, y el modal se cierra con un aviso que explica el fallo; no se deshace nada. Lo mismo ocurre si no se puede guardar la preferencia de RDD.
+
+`POST /api/projects/init` y `POST /api/project/review-mode` solo aceptan peticiones del propio dashboard (`127.0.0.1` o `localhost` en su puerto): con un `Origin` o `Host` ajenos responden `403` sin hacer nada.
 
 #### Usar `axiom ui` como aplicación de escritorio
 

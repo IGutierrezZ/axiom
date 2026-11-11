@@ -2,7 +2,6 @@ package reviewtransaction
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/pathquote"
 )
@@ -48,37 +47,7 @@ func (err *UnsupportedAuthorityFilesystemError) Unwrap() error { return errUnsaf
 
 // UnsupportedAuthorityFilesystemContinuation is the documented way forward
 // from an UnsupportedAuthorityFilesystemError, shared by every surface that
-// reports one so the continuation cannot drift between them. Disabling the
-// project preference (or the global mode outside an Axiom project) is what
-// matters: a project value of on would still win over a global off.
-const UnsupportedAuthorityFilesystemContinuation = "run `axiom review mode disable` (inside an Axiom project it records the preference for that project; add `--scope global` to turn receipt-driven development off on this machine) or move the repository to a local NTFS or ReFS volume, then rerun the original command"
-
-// asUnsupportedAuthorityFilesystem projects a platform refusal onto the
-// exported type for errors.As, so a caller outside this package can name the
-// continuation without matching platform internals.
-func asUnsupportedAuthorityFilesystem(target any, refusal *UnsupportedAuthorityFilesystemError) bool {
-	typed, ok := target.(**UnsupportedAuthorityFilesystemError)
-	if !ok {
-		return false
-	}
-	*typed = refusal
-	return true
-}
-
-// windowsNetworkPath reports whether a Win32 path names a server share: the
-// `\\server\share` form or its `\\?\UNC\` and `\\.\UNC\` namespace spellings.
-//
-// #5533: the Windows authority checks refuse every path in the `\\` family,
-// and that refusal stays exactly as it is. Only its wording depends on this:
-// the long-path and device forms of a drive letter or volume, such as
-// `\\?\C:\repo\.git`, are on this machine and must not be reported as an
-// SMB/UNC share. It is pure so tests execute it on every platform.
-func windowsNetworkPath(path string) bool {
-	for _, prefix := range []string{`\\?\UNC\`, `\\.\UNC\`} {
-		if len(path) >= len(prefix) && strings.EqualFold(path[:len(prefix)], prefix) {
-			return true
-		}
-	}
-	return strings.HasPrefix(path, `\\`) &&
-		!strings.HasPrefix(path, `\\?\`) && !strings.HasPrefix(path, `\\.\`)
-}
+// reports one so the continuation cannot drift between them. Plain `disable`
+// writes the global mode; a project preference of on would still win over it,
+// which is why the project scope is named too.
+const UnsupportedAuthorityFilesystemContinuation = "run `axiom review mode disable` (add `--scope global` to be explicit; use `--scope project` instead when this project has your own preference of on, since that wins over the global mode) or move the repository to a local NTFS or ReFS volume, then rerun the original command"

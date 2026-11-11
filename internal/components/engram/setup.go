@@ -147,6 +147,10 @@ func SetupAgentSlug(agent model.AgentID) (string, bool) {
 		// config is injected directly by the engram component. Returning false
 		// here is intentional, not an omission.
 		return "", false
+	case model.AgentGitHubCopilotCLI:
+		// Copilot CLI recibe el MCP de Engram directamente en mcp-config.json. El
+		// binario de Engram no expone un destino `setup` para él.
+		return "", false
 	case model.AgentQwenCode:
 		// Qwen uses direct settings.json injection only. The engram binary does
 		// not currently expose a native `qwen-code` setup target.

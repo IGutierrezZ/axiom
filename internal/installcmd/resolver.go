@@ -48,6 +48,8 @@ func (profileResolver) ResolveAgentInstall(profile system.PlatformProfile, agent
 		return resolveKilocodeInstall(profile), nil
 	case model.AgentKimi:
 		return resolveKimiInstall(profile)
+	case model.AgentGitHubCopilotCLI:
+		return resolveCopilotCLIInstall(profile), nil
 	default:
 		return nil, fmt.Errorf("install command is not supported for agent %q", agent)
 	}
@@ -85,6 +87,22 @@ func resolveKilocodeInstall(profile system.PlatformProfile) CommandSequence {
 	return CommandSequence{{"npm", "install", "-g", "--ignore-scripts", pkg}}
 }
 
+// resolveCopilotCLIInstall devuelve el comando npm que se muestra para GitHub
+// Copilot CLI; es solo texto, Axiom no lo ejecuta. En Linux con npm del sistema
+// hace falta sudo; con nvm/fnm/volta, no. En Windows y macOS nunca.
+//
+// --ignore-scripts bloquea los scripts de instalación, el vector habitual de los
+// ataques a la cadena de suministro. @github/copilot no declara ninguno (sus
+// binarios por plataforma llegan como optionalDependencies), así que no se pierde
+// nada. La versión es "latest" porque lo lee y lo ejecuta una persona.
+func resolveCopilotCLIInstall(profile system.PlatformProfile) CommandSequence {
+	const pkg = "@github/copilot@latest"
+	if profile.OS == "linux" && !profile.NpmWritable {
+		return CommandSequence{{"sudo", "npm", "install", "-g", "--ignore-scripts", pkg}}
+	}
+	return CommandSequence{{"npm", "install", "-g", "--ignore-scripts", pkg}}
+}
+
 // resolveKimiInstall returns the official Kimi install command sequence.
 // To avoid the security risks of pipe-to-shell patterns (curl | bash),
 // we execute the underlying command that the scripts alias: `uv tool install`.
@@ -114,6 +132,8 @@ var npmBasedAgents = map[model.AgentID]struct{}{
 	model.AgentCodex:      {},
 	model.AgentQwenCode:   {},
 	model.AgentPi:         {},
+
+	model.AgentGitHubCopilotCLI: {},
 }
 
 // ValidateAgentInstallPreflight validates agent-specific prerequisites that must

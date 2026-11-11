@@ -18,16 +18,17 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/pathquote"
 	"github.com/IGutierrezZ/axiom/v3/internal/reviewtransaction"
 	"github.com/IGutierrezZ/axiom/v3/internal/state"
-	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
 // ReviewModeSchema identifies the user-facing kill-switch projection.
 const ReviewModeSchema = "gentle-ai.review-mode/v1"
 
 const (
+	reviewModeScopeGlobal = "global"
+	reviewModeScopeClone  = "clone"
+	// reviewModeScopeProject es la preferencia personal del usuario para el proyecto
+	// registrado en el hub que contiene el repositorio (D2): nunca se versiona.
 	reviewModeScopeProject = "project"
-	reviewModeScopeGlobal  = "global"
-	reviewModeScopeClone   = "clone"
 	reviewModeScopeBoth    = "both"
 )
 
@@ -42,28 +43,28 @@ type ReviewModeResult struct {
 
 // RunReviewMode is the user-controlled receipt-driven-development switch.
 // Receipt-driven development is opt-in: with no source expressing an opinion it
-// resolves to off, and only an explicit user choice turns it on. The user's
-// personal preference for a project lives in the hub (unversioned, shared by
-// every linked worktree of the project) and decides first; below it the global
-// mode lives in uncommitted user state. The clone-local override lives under
-// this clone's Git common directory and can only disable: a clone off always
-// wins. Status never mutates, and enabling applies to future candidates only.
+// resolves to off, and only an explicit global enable turns it on. The global
+// mode lives in uncommitted user state; the clone-local override lives under
+// this clone's Git common directory and can only disable. Any off wins, status
+// never mutates, and enabling applies to future candidates only.
 func RunReviewMode(args []string, stdout io.Writer) error {
 	if len(args) == 0 || args[0] == "help" || args[0] == "-h" || args[0] == "--help" {
-		_, _ = fmt.Fprintln(stdout, "Usage: axiom review mode <enable|disable|status> [--cwd <repo>] [--scope <project|global|clone>] [--expected-revision <revision>] [--json]")
-		_, _ = fmt.Fprintln(stdout, "User-owned switch. Receipt-driven development is off until you enable it: inside a project, 'axiom review mode enable' records your personal preference for that project (shared by its worktrees, never versioned); '--scope global' sets the machine default instead. The project preference decides first, then the global mode. A clone off always wins: a repository may disable it for this clone but can never require it, and no other clone inherits the override. status is read-only and reports every source plus the effective mode and the one that decided. Enabling applies to future candidates only.")
+		_, _ = fmt.Fprintln(stdout, "Usage: axiom review mode <enable|disable|status> [--cwd <repo>] [--scope <global|clone|project>] [--expected-revision <revision>] [--json]")
+		_, _ = fmt.Fprintln(stdout, "       axiom review mode inherit --scope project [--cwd <repo>] [--json]")
+		_, _ = fmt.Fprintln(stdout, "--scope project is your own preference for the registered project that contains the repository, kept in your hub (~/.axiom/workspaces.json), never in the repository. Precedence: a clone-local off wins, then the project preference, then the global switch. inherit clears the project preference.")
+		_, _ = fmt.Fprintln(stdout, "User-owned switch. Receipt-driven development is off until you enable it: run 'axiom review mode enable --scope global' to opt in. Any off wins: a repository may disable it for this clone but can never require it, and no other clone inherits the override. status is read-only and reports both sources plus the effective mode. Enabling applies to future candidates only.")
 		return nil
 	}
 	operation := args[0]
 	switch operation {
-	case "enable", "disable", "status":
+	case "enable", "disable", "status", "inherit":
 	default:
 		return fmt.Errorf("unknown review mode command %q", operation)
 	}
 
 	flags := newReviewFlagSet("review mode "+operation, stdout, "Read or set the user-controlled receipt-driven-development kill switch.")
 	cwd := flags.String("cwd", ".", "repository path")
-	scope := flags.String("scope", "", "mode source to write: project (default inside an Axiom project), global (default elsewhere) or clone")
+	scope := flags.String("scope", reviewModeScopeGlobal, "mode source to write: global, clone or project")
 	expectedRevision := flags.String("expected-revision", "", "exact clone-local revision this write replaces")
 	emitJSON := flags.Bool("json", false, "emit the machine-readable review mode result")
 	if err := parseReviewFlags(flags, args[1:]); err != nil {
@@ -76,29 +77,13 @@ func RunReviewMode(args []string, stdout io.Writer) error {
 		return fmt.Errorf("unexpected review mode argument %q", flags.Arg(0))
 	}
 	selectedScope := strings.TrimSpace(*scope)
-	scopeProvided := false
-	flags.Visit(func(current *flag.Flag) {
-		if current.Name == "scope" {
-			scopeProvided = true
-		}
-	})
 	switch selectedScope {
-	case reviewModeScopeProject, reviewModeScopeGlobal, reviewModeScopeClone:
-	case "":
-		if scopeProvided {
-			return fmt.Errorf("unknown review mode scope %q", *scope)
-		}
-		// Without --scope, writing inside an Axiom project records the user's
-		// preference for that project; elsewhere there is no project to name, so
-		// the machine default keeps its historical meaning.
-		selectedScope = reviewModeScopeGlobal
-		if operation != "status" {
-			if _, inProject := workspace.ProjectMaster(*cwd); inProject {
-				selectedScope = reviewModeScopeProject
-			}
-		}
+	case reviewModeScopeGlobal, reviewModeScopeClone, reviewModeScopeProject:
 	default:
 		return fmt.Errorf("unknown review mode scope %q", *scope)
+	}
+	if operation == "inherit" && selectedScope != reviewModeScopeProject {
+		return fmt.Errorf("review mode inherit only applies to --scope project: run axiom review mode inherit --scope project")
 	}
 	revisionProvided := false
 	flags.Visit(func(current *flag.Flag) {
@@ -114,7 +99,7 @@ func RunReviewMode(args []string, stdout io.Writer) error {
 		result.Scope = reviewModeScopeBoth
 		result.Status, err = ReviewModeStatus(ctx, *cwd)
 	} else if selectedScope == reviewModeScopeProject {
-		result.Status, err = SetProjectReviewMode(ctx, *cwd, operation == "enable")
+		result.Status, err = SetProjectReviewMode(ctx, *cwd, projectModeForOperation(operation), nil)
 	} else if selectedScope == reviewModeScopeGlobal {
 		result.Status, err = SetGlobalReviewMode(ctx, *cwd, operation == "enable")
 	} else {
@@ -151,45 +136,89 @@ func SetGlobalReviewMode(ctx context.Context, repo string, enabled bool) (review
 	return applyReviewMode(ctx, repo, operation, reviewModeScopeGlobal, "", false)
 }
 
-// SetProjectReviewMode records the user's personal review-mode preference for the
-// Axiom project that contains repo, in its hub entry, and returns the resolved
-// status. The hub is keyed by the project's master folder, so every linked
-// worktree of the project shares the value. A project the hub does not know is
-// refused instead of silently writing the machine default the user did not ask
-// for: the refusal names the command that registers it and the explicit global
-// alternative.
-func SetProjectReviewMode(ctx context.Context, repo string, enabled bool) (reviewtransaction.RDDModeStatus, error) {
+// ReviewModeStatusFor es ReviewModeStatus leyendo la preferencia de proyecto del
+// registro del hub que se indica (el del dashboard) en vez del de la máquina.
+func ReviewModeStatusFor(ctx context.Context, repo string, hubManager *hub.Manager) (reviewtransaction.RDDModeStatus, error) {
+	return reviewModeStatusWith(ctx, repo, hubManager)
+}
+
+// projectModeForOperation traduce la operación del comando a la preferencia de
+// proyecto: enable es «on», disable es «off» e inherit la retira.
+func projectModeForOperation(operation string) string {
+	switch operation {
+	case "enable":
+		return hub.RDDModeOn
+	case "disable":
+		return hub.RDDModeOff
+	default:
+		return ""
+	}
+}
+
+// SetProjectReviewMode guarda la preferencia personal de revisión («on», «off» o ""
+// para heredar el global) del proyecto registrado que contiene repo, y devuelve el
+// estado resuelto. La preferencia vive en el registro del hub (hubManager, o el de la
+// máquina si es nil): nunca en axiom.yaml ni en el estado del proyecto. Un repo que no
+// está en ningún proyecto registrado es un error que dice cómo registrarlo.
+func SetProjectReviewMode(ctx context.Context, repo, mode string, hubManager *hub.Manager) (reviewtransaction.RDDModeStatus, error) {
 	disabled := reviewtransaction.RDDModeStatus{Schema: reviewtransaction.RDDModeStatusSchema, Effective: reviewtransaction.RDDModeOff}
-	master, inProject := workspace.ProjectMaster(repo)
-	if !inProject {
-		return disabled, fmt.Errorf("%s is not inside an Axiom project, so there is no project preference to write; use `axiom review mode enable --scope global` or `axiom review mode disable --scope global` for the machine default", pathquote.Quote(repo))
+	manager, err := reviewModeHub(hubManager)
+	if err != nil {
+		return disabled, err
+	}
+	record, err := manager.ProjectForRepo(repo)
+	if err != nil {
+		return disabled, err
+	}
+	if record == nil {
+		return disabled, fmt.Errorf("%s no está en ningún proyecto registrado en %s: la preferencia de proyecto solo se guarda para proyectos registrados; regístralo desde el dashboard o con `axiom init --path %s`",
+			repo, manager.GetConfigPath(), pathquote.Quote(repo))
+	}
+	if _, err := manager.SetProjectRDD(record.ID, mode); err != nil {
+		return disabled, err
+	}
+	return reviewModeStatusWith(ctx, repo, manager)
+}
+
+// reviewModeHub devuelve el gestor del hub indicado o el de la máquina.
+func reviewModeHub(hubManager *hub.Manager) (*hub.Manager, error) {
+	if hubManager != nil {
+		return hubManager, nil
 	}
 	manager, err := hub.NewManager("")
 	if err != nil {
-		return disabled, fmt.Errorf("open the hub for the project review mode: %w", err)
+		return nil, fmt.Errorf("abrir el registro del hub: %w", err)
 	}
-	_, registered, err := manager.LookupRDDMode(master)
+	return manager, nil
+}
+
+// readUserRDDMode lee las dos fuentes del usuario: el interruptor global (estado de
+// usuario) y su preferencia para el proyecto que contiene repo (registro del hub). Un
+// hub que no se puede leer es un error, no un «sin preferencia»: ignorarlo podría
+// relajar un «off» guardado.
+func readUserRDDMode(repo string, hubManager *hub.Manager) (reviewtransaction.RDDGlobalMode, error) {
+	global, err := readGlobalRDDMode()
 	if err != nil {
-		// An unreadable stored value is exactly what this write replaces, but an
-		// unreadable hub file is not: only the first may continue.
-		if !registered {
-			return disabled, err
-		}
-	} else if !registered {
-		return disabled, fmt.Errorf("the project %s is not registered in the hub, so its review mode preference has nowhere to live; register it with `axiom project add %s`, or use `--scope global` to set the machine default", pathquote.Quote(master), pathquote.Quote(master))
+		return global, err
 	}
-	mode := hub.RDDModeOff
-	if enabled {
-		mode = hub.RDDModeOn
+	manager, err := reviewModeHub(hubManager)
+	if err != nil {
+		return global, err
 	}
-	if _, err := manager.SetRDDMode(master, mode); err != nil {
-		return disabled, fmt.Errorf("persist project review mode: %w", err)
+	project, _, err := manager.LookupProjectRDD(repo)
+	if err != nil {
+		return reviewtransaction.RDDGlobalMode{}, fmt.Errorf("read project review mode: %w", err)
 	}
-	return reviewModeStatus(ctx, repo)
+	global.Project = project
+	return global, nil
 }
 
 func reviewModeStatus(ctx context.Context, repo string) (reviewtransaction.RDDModeStatus, error) {
-	global, err := readRDDModeInputs(repo)
+	return reviewModeStatusWith(ctx, repo, nil)
+}
+
+func reviewModeStatusWith(ctx context.Context, repo string, hubManager *hub.Manager) (reviewtransaction.RDDModeStatus, error) {
+	global, err := readUserRDDMode(repo, hubManager)
 	if err != nil {
 		return reviewtransaction.RDDModeStatus{Schema: reviewtransaction.RDDModeStatusSchema, Effective: reviewtransaction.RDDModeOff}, err
 	}
@@ -208,20 +237,27 @@ func globalOnlyReviewModeStatus(global reviewtransaction.RDDGlobalMode) reviewtr
 		Effective:  reviewtransaction.RDDModeOff,
 		Source:     reviewtransaction.RDDModeSourceDefault,
 	}
-	project := reviewtransaction.RDDMode(strings.TrimSpace(global.Project))
-	machine := reviewtransaction.RDDMode(strings.TrimSpace(global.Value))
-	if project == reviewtransaction.RDDModeOn || project == reviewtransaction.RDDModeOff {
-		status.Project = project
+	switch strings.TrimSpace(global.Value) {
+	case string(reviewtransaction.RDDModeOn):
+		status.Global = reviewtransaction.RDDModeOn
+		status.Effective = reviewtransaction.RDDModeOn
+		status.Source = reviewtransaction.RDDModeSourceGlobal
+	case string(reviewtransaction.RDDModeOff):
+		status.Global = reviewtransaction.RDDModeOff
+		status.Effective = reviewtransaction.RDDModeOff
+		status.Source = reviewtransaction.RDDModeSourceGlobal
 	}
-	if machine == reviewtransaction.RDDModeOn || machine == reviewtransaction.RDDModeOff {
-		status.Global = machine
-	}
-	// Same precedence as ResolveRDDMode without a clone: project, then global.
-	switch {
-	case status.Project != reviewtransaction.RDDModeUnset:
-		status.Effective, status.Source = status.Project, reviewtransaction.RDDModeSourceProject
-	case status.Global != reviewtransaction.RDDModeUnset:
-		status.Effective, status.Source = status.Global, reviewtransaction.RDDModeSourceGlobal
+	// Sin repositorio no hay override de clon, pero la preferencia de proyecto sigue
+	// valiendo: manda sobre el global en ambos sentidos.
+	switch strings.TrimSpace(global.Project) {
+	case string(reviewtransaction.RDDModeOn):
+		status.Project = reviewtransaction.RDDModeOn
+		status.Effective = reviewtransaction.RDDModeOn
+		status.Source = reviewtransaction.RDDModeSourceProject
+	case string(reviewtransaction.RDDModeOff):
+		status.Project = reviewtransaction.RDDModeOff
+		status.Effective = reviewtransaction.RDDModeOff
+		status.Source = reviewtransaction.RDDModeSourceProject
 	}
 	return status
 }
@@ -510,7 +546,7 @@ func applyReviewMode(
 		}
 		return reviewModeStatus(ctx, repo)
 	}
-	global, err := readRDDModeInputs(repo)
+	global, err := readUserRDDMode(repo, nil)
 	if err != nil {
 		return disabled, err
 	}
@@ -602,37 +638,15 @@ func emitReviewMode(stdout io.Writer, result ReviewModeResult, emitJSON bool, un
 	}
 	_, err := fmt.Fprintf(
 		stdout,
-		"receipt-driven development: %s (decided by %s)\n",
+		"receipt-driven development: %s (decided by %s)\n  global:     %s\n  project:     %s\n  clone-local: %s\n",
 		reviewModeLabel(result.Status.Effective),
 		result.Status.Source,
+		reviewModeLabel(result.Status.Global),
+		reviewModeLabel(result.Status.Project),
+		reviewModeLabel(result.Status.CloneLocal),
 	)
 	if err != nil {
 		return err
-	}
-	// The project line appears only when the user recorded a preference, so the
-	// human surface of an install without one stays exactly as it was.
-	if result.Status.Project != reviewtransaction.RDDModeUnset {
-		if _, err = fmt.Fprintf(stdout, "  project:     %s\n", reviewModeLabel(result.Status.Project)); err != nil {
-			return err
-		}
-	}
-	if _, err = fmt.Fprintf(
-		stdout,
-		"  global:      %s\n  clone-local: %s\n",
-		reviewModeLabel(result.Status.Global),
-		reviewModeLabel(result.Status.CloneLocal),
-	); err != nil {
-		return err
-	}
-	if result.Operation == "enable" && result.Scope == reviewModeScopeProject &&
-		result.Status.Effective == reviewtransaction.RDDModeOff && result.Status.Source == reviewtransaction.RDDModeSourceCloneLocal {
-		// A clone off always wins over the project preference.
-		if _, err = fmt.Fprint(
-			stdout,
-			"  note:        this clone has its own off override, which wins over the project preference; run `axiom review mode enable --scope clone` to clear it\n",
-		); err != nil {
-			return err
-		}
 	}
 	if result.Operation == "enable" && result.Scope == reviewModeScopeClone &&
 		result.Status.Effective == reviewtransaction.RDDModeOff && result.Status.Source == reviewtransaction.RDDModeSourceDefault {
@@ -863,7 +877,7 @@ func reviewConsoleTerminal(file *os.File) bool {
 // undeclared plain START keeps the one-time console behavior unchanged; an
 // undeclared negotiated START authorizes silently (see below).
 func authorizeReviewStart(ctx context.Context, repo string, assessment reviewtransaction.RiskAssessment, consent reviewStartConsentMode, negotiated bool, runtimeAgent string) error {
-	global, err := readRDDModeInputs(repo)
+	global, err := readUserRDDMode(repo, nil)
 	if err != nil {
 		return err
 	}
@@ -1148,32 +1162,4 @@ func reviewConsentSignalSubject(signal reviewtransaction.RiskSignal) string {
 	default:
 		return "a sensitive area"
 	}
-}
-
-// readRDDModeInputs reads every user-owned mode source that does not depend on
-// the clone: the machine default and the user's preference for the Axiom project
-// that contains repo. A repo outside any project, or a project the hub does not
-// know, has no project preference and falls back to the global mode without
-// error. An unreadable hub or a stored value that is not a mode fails closed the
-// same way an unreadable global state does: the caller gets the error and a
-// disabled projection.
-func readRDDModeInputs(repo string) (reviewtransaction.RDDGlobalMode, error) {
-	global, err := readGlobalRDDMode()
-	if err != nil {
-		return global, err
-	}
-	master, inProject := workspace.ProjectMaster(repo)
-	if !inProject {
-		return global, nil
-	}
-	manager, err := hub.NewManager("")
-	if err != nil {
-		return global, fmt.Errorf("read project review mode: %w", err)
-	}
-	project, _, err := manager.LookupRDDMode(master)
-	if err != nil {
-		return global, fmt.Errorf("read project review mode: %w; overwrite it with `axiom review mode enable --cwd %s` or `axiom review mode disable --cwd %s`", err, pathquote.Quote(master), pathquote.Quote(master))
-	}
-	global.Project = project
-	return global, nil
 }

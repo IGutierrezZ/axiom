@@ -3,6 +3,7 @@ package sdd
 import (
 	"fmt"
 	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/assets"
@@ -122,7 +123,7 @@ func composeOrchestratorPrompt(agent model.AgentID, options ...OrchestratorRende
 // not asset path, so this cohort cannot change deferred runtime prompts.
 func usesFallbackSessionPreflight(agent model.AgentID) bool {
 	switch agent {
-	case model.AgentVSCodeCopilot, model.AgentCursor, model.AgentGeminiCLI,
+	case model.AgentVSCodeCopilot, model.AgentGitHubCopilotCLI, model.AgentCursor, model.AgentGeminiCLI,
 		model.AgentAntigravity, model.AgentQwenCode, model.AgentHermes, model.AgentKimi, model.AgentKiroIDE, model.AgentCodex, model.AgentWindsurf:
 		return true
 	default:
@@ -178,14 +179,16 @@ func composeFallbackSessionPreflight(content string, agent model.AgentID) string
 		content = content[:start] + "Use the execution mode cached by SDD Session Preflight.\n\n" + content[end:]
 	}
 	for _, replacement := range []struct {
-		agent    model.AgentID
+		agents   []model.AgentID
 		old, new string
 	}{
-		{model.AgentCursor, "**Interactive** is the default behavior", "**Interactive** uses the preflight choice"},
-		{model.AgentVSCodeCopilot, "Artifact store: default `engram` when available.", "Artifact store: use the SDD Session Preflight choice."},
+		{[]model.AgentID{model.AgentCursor}, "**Interactive** is the default behavior", "**Interactive** uses the preflight choice"},
+		// Copilot CLI usa la misma plantilla genérica que VS Code Copilot, así que
+		// lleva la misma cláusula de origen.
+		{[]model.AgentID{model.AgentVSCodeCopilot, model.AgentGitHubCopilotCLI}, "Artifact store: default `engram` when available.", "Artifact store: use the SDD Session Preflight choice."},
 	} {
 		want := 0
-		if agent == replacement.agent {
+		if slices.Contains(replacement.agents, agent) {
 			want = 1
 		}
 		if strings.Count(content, replacement.old) != want {
@@ -197,7 +200,7 @@ func composeFallbackSessionPreflight(content string, agent model.AgentID) string
 	legacyInitAction := "run `sdd-init` FIRST (delegate to sdd-init sub-agent)"
 	initAction := "delegate to `sdd-init`"
 	switch agent {
-	case model.AgentVSCodeCopilot, model.AgentCursor, model.AgentGeminiCLI, model.AgentQwenCode, model.AgentHermes, model.AgentCodex:
+	case model.AgentVSCodeCopilot, model.AgentGitHubCopilotCLI, model.AgentCursor, model.AgentGeminiCLI, model.AgentQwenCode, model.AgentHermes, model.AgentCodex:
 	case model.AgentWindsurf:
 		legacyInitAction = "run the `sdd-init` phase inline FIRST"
 		initAction = "run the `sdd-init` phase inline"

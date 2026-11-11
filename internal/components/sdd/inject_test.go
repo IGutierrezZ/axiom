@@ -216,7 +216,7 @@ func TestInjectMaterializesStatusContinuationContract(t *testing.T) {
 }
 
 func TestInjectFallbackSessionPreflight(t *testing.T) {
-	for _, agent := range []model.AgentID{model.AgentVSCodeCopilot, model.AgentCursor, model.AgentGeminiCLI, model.AgentAntigravity, model.AgentQwenCode, model.AgentHermes, model.AgentKimi, model.AgentKiroIDE, model.AgentCodex, model.AgentWindsurf} {
+	for _, agent := range []model.AgentID{model.AgentVSCodeCopilot, model.AgentGitHubCopilotCLI, model.AgentCursor, model.AgentGeminiCLI, model.AgentAntigravity, model.AgentQwenCode, model.AgentHermes, model.AgentKimi, model.AgentKiroIDE, model.AgentCodex, model.AgentWindsurf} {
 		t.Run(string(agent), func(t *testing.T) {
 			home := t.TempDir()
 			t.Setenv("XDG_CONFIG_HOME", filepath.Join(home, ".config"))
@@ -257,6 +257,7 @@ func TestSDDOrchestratorAssetSelectionCoversSupportedAgents(t *testing.T) {
 		{model.AgentGeminiCLI, "gemini/sdd-orchestrator.md"},
 		{model.AgentCursor, "cursor/sdd-orchestrator.md"},
 		{model.AgentVSCodeCopilot, "generic/sdd-orchestrator.md"},
+		{model.AgentGitHubCopilotCLI, "generic/sdd-orchestrator.md"},
 		{model.AgentCodex, "codex/sdd-orchestrator.md"},
 		{model.AgentAntigravity, "antigravity/sdd-orchestrator.md"},
 		{model.AgentWindsurf, "windsurf/sdd-orchestrator.md"},
@@ -6155,6 +6156,7 @@ func TestSDDOrchestratorAssetSelection(t *testing.T) {
 		{agent: model.AgentOpenCode, want: "opencode/sdd-orchestrator.md"},
 		{agent: model.AgentKilocode, want: "opencode/sdd-orchestrator.md"},
 		{agent: model.AgentVSCodeCopilot, want: "generic/sdd-orchestrator.md"},
+		{agent: model.AgentGitHubCopilotCLI, want: "generic/sdd-orchestrator.md"},
 	}
 
 	for _, tt := range tests {

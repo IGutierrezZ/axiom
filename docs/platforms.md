@@ -67,7 +67,7 @@ Restart OpenCode after enabling managed activation. Restart the shell if the lau
 
 ## Windows Config Paths (ámbito global)
 
-Estas son las rutas que usa `--scope global`. El ámbito predeterminado es `workspace`: en él Axiom escribe en la raíz del proyecto (por ejemplo `.claude/`, `.codex/`, `.gemini/`, `.cursor/`, `.kiro/`, `opencode.json` y `.opencode/`, `.vscode/mcp.json` y `.github/instructions/`), con las skills compartidas en `.agents/skills/`, y no toca estas carpetas de usuario. Windsurf, Trae, Antigravity, Pi y OpenClaw solo tienen configuración global y se omiten en workspace con un aviso. El detalle por agente está en [Agentes](agents.md#modo-workspace-por-agente).
+Estas son las rutas que usa `--scope global`. El ámbito predeterminado es `workspace`: en él Axiom escribe en la raíz del proyecto (por ejemplo `.claude/`, `.codex/`, `.gemini/`, `.cursor/`, `.kiro/`, `opencode.json` y `.opencode/`, `.vscode/mcp.json` y `.github/instructions/`), con las skills compartidas en `.agents/skills/`, y no toca estas carpetas de usuario. Windsurf, Trae, Antigravity, Pi, OpenClaw y GitHub Copilot CLI solo tienen configuración global y se omiten en workspace con un aviso. El detalle por agente está en [Agentes](agents.md#modo-workspace-por-agente).
 
 | Agent | Windows Config Path |
 |-------|-------------------|
@@ -76,6 +76,7 @@ Estas son las rutas que usa `--scope global`. El ámbito predeterminado es `work
 | Gemini CLI | `%USERPROFILE%\.gemini\` |
 | Cursor | `%USERPROFILE%\.cursor\` |
 | VS Code Copilot | `%APPDATA%\Code\User\` (settings, MCP, prompts) + `%USERPROFILE%\.copilot\` (skills) |
+| GitHub Copilot CLI (solo global) | `%COPILOT_HOME%` o `%USERPROFILE%\.copilot\` (instrucciones, `settings.json`, `mcp-config.json` y skills) |
 | Codex | `%USERPROFILE%\.codex\` |
 | Windsurf (solo global) | `%USERPROFILE%\.codeium\windsurf\` (skills, MCP, rules) + `%APPDATA%\Windsurf\User\` (settings) |
 | Kimi (no disponible de momento) | `%USERPROFILE%\.kimi\` (includes `config.toml`, system prompt, agents, MCP) |

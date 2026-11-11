@@ -149,7 +149,43 @@ Las tareas son unidades de trabajo de unas 400 líneas y van todas en un único 
   - Mantener `models --verbose` para V1.
   - Portar la intención del **estado final** del `internal/opencode/catalog.go` de upstream, no los PR uno a uno.
   - Riesgo: `api get` es una API interna de OpenCode V2.
-- [ ] **T5 · E4 — Adaptador de Copilot CLI (#5656 adaptado, sin telemetría)** (~300-400 líneas)
+- [x] **T5 · E4 — Adaptador de Copilot CLI (#5656 adaptado, sin telemetría)** (~300-400 líneas)
+  - **Verificador independiente (2026-11-11): PASS con observaciones**, sin hallazgos bloqueantes ni importantes. Repetidos sobre `75f6dbd8`:
+    - `go test` de `agents`, `copilotconfig`, `mcp`, `engram`, `uninstall`, `sdd` e `installcmd`: ok.
+    - `go test ./internal/cli/ -run 'Copilot|Uninstall'`: ok.
+    - Sin telemetría, sin `init()`, sin `/v4` y sin marca `gentle-ai` en las líneas añadidas.
+  - Observaciones menores, que quedan como seguimiento:
+    - `HasCLIState` (`internal/copilotconfig/root.go:41-52`) da por instalado Copilot CLI si `~/.copilot` tiene cualquier entrada distinta de `skills`.
+    - Quien solo usa VS Code Copilot verá en el siguiente sync que `_shared` pasa a `<runtime>`. Es inocuo, porque no es un runtime con revisión nativa.
+    - El destino `copilot-cli` de CodeGraph no se ha contrastado de forma independiente.
+  - **Reanudada el 2026-11-11** en el mismo worktree, recreado con `axiom branch ensure --lane odd` desde `origin/main` 65eb17dc. El PR #227 (T1–T4, T6) se fusionó el 2026-11-05 como d34b5321.
+  - Dependencias ya fusionadas en `main`:
+    - guía T1 (#238) y T2 (#239);
+    - seguridad T3–T5 (#228, #232);
+    - arreglos T3/T4 (#229, #231).
+  - Cambios de `main` que condicionan T5:
+    - la regla de delegación se genera en Go (`internal/components/agentguidance/delegation.go`), y las plantillas de orquestador referencian `_shared/sdd-orchestrator-sections.md`, sin copiar cuerpos (`orchestrator_no_drift_test.go`);
+    - el manifiesto ya no tiene campos por número de ficheros, y hay que regenerar los digests;
+    - `filemerge.WriteFileAtomic` conserva el modo del fichero existente.
+  - Guía T3 corre en paralelo sobre la prosa del orquestador. Si chocamos en `_shared`, se rebasa sobre la que entre primero.
+  - **Implementación** (escritor delegado): 4 commits, 51 ficheros, +1814/−98.
+    - `a29b473b`: adaptador `internal/agents/copilotcli`, `internal/copilotconfig`, registro, catálogo, manifiesto, doctor, validate, TUI, installcmd y CodeGraph (`copilot-cli` nativo).
+    - `2de90554`: MCP y Engram en `mcp-config.json` (`mcpServers`, `type`, `tools`), SDD, permisos sin efecto, skills compartidas y uninstall.
+    - `fbd131fc`: documentación.
+    - `75f6dbd8`: test de selección por defecto.
+  - Decisiones:
+    - `COPILOT_HOME` se respeta solo si es una ruta absoluta y el home es el real del usuario, igual que VS Code.
+    - Una `~/.copilot` que solo contiene `skills` no cuenta como Copilot CLI. VS Code se detecta por su extensión.
+    - Para SDD sigue a VS Code: plantilla genérica y preflight de sesión, sin plantilla nueva.
+    - Solo ámbito global, sin modo workspace.
+    - Con las skills compartidas, `_shared/review-ledger-contract.md` lleva `<runtime>` genérico (`agents.SharesSkillsDirWithAnotherAdapter`). Además, el uninstall global no borra la carpeta mientras otro agente instalado la use.
+  - Evidencia:
+    - `go build ./...`: ok.
+    - Suite de paquetes: ok, salvo `filemerge` `TestWriteFileAtomicFollowsDirectoryJunction`, que el orquestador reprodujo también en `main` 65eb17dc. Es preexistente.
+    - `go test ./internal/cli/ -run 'Doctor|Validate|Copilot|VSCode|Uninstall|Workspace|Install'`: ok (334 s).
+    - `go vet` y `gofmtcheck`: limpios.
+  - `axiom review assess`: `high` (`process_boundary`). Verificador independiente en curso.
+  - Preguntas abiertas de producto: si Copilot CLI recibe la cohorte SDD (se eligió la opción conservadora, igual que VS Code) y si necesita modo workspace (queda fuera).
   - Adaptador `internal/agents/copilotcli`, raíz `COPILOT_HOME` o `~/.copilot`, registro directo sin `init()`, catálogo, factory, doctor (binario `copilot`), validate, TUI y contrato de CodeGraph.
   - Decidir y probar:
     - la cohorte SDD (`internal/components/sdd/orchestrator.go:114,189`, `sddOrchestratorAsset`);
@@ -236,6 +272,8 @@ Lo fija el cruce de ficheros entre las sesiones de la absorción upstream, envia
 - `go vet` de los paquetes tocados.
 - No se compila `cmd/axiom`.
 
+Plan stop: approved 2026-11-04; implementation continues
+
 ## Configuración de trabajo
 
 - **TDD:** desactivado. Lo decidió el usuario el 2026-11-04. Se ejecutan las comprobaciones funcionales ordinarias con `go test` en proceso.
@@ -259,7 +297,7 @@ Lo fija el cruce de ficheros entre las sesiones de la absorción upstream, envia
 
 ## Siguiente paso
 
-1. **T5 (Copilot CLI)**: parada, a la espera de que se fusionen guía T1/T2, seguridad T3/T4/T5 y arreglos T3. Cuando estén en `main`, rebasar y retomarla.
+1. **T5 (Copilot CLI)**: hecha el 2026-11-11 en la rama `inc/adaptadores-agentes-upstream`, sobre 65eb17dc. Pendiente de un PR propio (primera rebanada de P5, `size:exception`), que decide el usuario.
 2. **T1 libera arreglos T4**, que esperaba a que se fusionara. La decisión de push y PR es del usuario.
 3. Seguimientos menores de T2 y T4: hechos el 2026-11-05 (ver más abajo). El de marca de T6 (`gentle-ai:managed` en el plugin V2) queda para el bloque de marca.
 

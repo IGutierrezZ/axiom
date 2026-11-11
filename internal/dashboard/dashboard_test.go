@@ -688,6 +688,7 @@ func TestProjectsEndpoints(t *testing.T) {
 		Name: "Proyecto 2",
 	})
 	reqInit := httptest.NewRequest(http.MethodPost, "/api/projects/init", bytes.NewReader(initBody))
+	reqInit.Host = "127.0.0.1"
 	rrInit := httptest.NewRecorder()
 	router.ServeHTTP(rrInit, reqInit)
 
@@ -1298,5 +1299,50 @@ func TestSpecsSyncStatusFallsBackToTheResolvedIntegration(t *testing.T) {
 	}
 	if status.Branch != "develop" {
 		t.Fatalf("rama = %q, se esperaba la integración resuelta develop (git no tiene HEAD que leer)", status.Branch)
+	}
+}
+
+// TestServiceWorkspaceReportsRealGatePolicy fija G4.4: GetWorkspace devuelve el
+// gate_policy real de cada rol y `blocking` cuando el rol no lo declara.
+func TestServiceWorkspaceReportsRealGatePolicy(t *testing.T) {
+	root := t.TempDir()
+	for _, dir := range []string{"openspec", "app", "docs", "e2e"} {
+		if err := os.MkdirAll(filepath.Join(root, dir), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	config := `workspace:
+  name: "Prueba"
+  topology: "monorepo-embedded"
+  specs_repository: "openspec"
+roles:
+  app:
+    name: "App"
+    repositories:
+      - path: "app"
+  docs:
+    name: "Docs"
+    gate_policy: "deferred"
+    repositories:
+      - path: "docs"
+  e2e:
+    name: "E2E"
+    gate_policy: "optional"
+    repositories:
+      - path: "e2e"
+`
+	if err := os.WriteFile(filepath.Join(root, "axiom.yaml"), []byte(config), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	ws, err := NewService(root).GetWorkspace()
+	if err != nil {
+		t.Fatalf("GetWorkspace falló: %v", err)
+	}
+	want := map[string]string{"app": "blocking", "docs": "deferred", "e2e": "optional"}
+	for role, policy := range want {
+		if got := ws.Roles[role].GatePolicy; got != policy {
+			t.Errorf("rol %q: gate_policy = %q, se esperaba %q", role, got, policy)
+		}
 	}
 }

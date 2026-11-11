@@ -3,245 +3,245 @@ package cli
 import (
 	"bytes"
 	"context"
+	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/hub"
-	"github.com/IGutierrezZ/axiom/v3/internal/pathidentity"
 	"github.com/IGutierrezZ/axiom/v3/internal/reviewtransaction"
-	"github.com/IGutierrezZ/axiom/v3/internal/state"
 )
 
-// D2: el modo RDD es una preferencia del usuario en cada proyecto, guardada en el hub y
-// compartida por los worktrees del proyecto. Estas pruebas recorren la CLI en proceso.
-
-// reviewModeProject prepara un hogar aislado (con su hub) y un repositorio que es un proyecto
-// Axiom con el marcador versionado. Si register, el proyecto queda registrado en el hub.
-func reviewModeProject(t *testing.T, register bool) (repo string, manager *hub.Manager) {
+// projectModeFixture aísla el HOME y el registro del hub, crea un repositorio y lo
+// registra como proyecto del hub.
+func projectModeFixture(t *testing.T) (home, repo string, mgr *hub.Manager) {
 	t.Helper()
-	reviewModeHome(t)
-	t.Setenv("AXIOM_STATE_DIR", t.TempDir())
+	home = reviewModeHome(t)
+	t.Setenv("AXIOM_STATE_DIR", "")
 	repo = initReviewCLIRepo(t)
-	if err := os.WriteFile(filepath.Join(repo, "axiom.yaml"), []byte("workspace:\n  name: p\n"), 0o644); err != nil {
+	var err error
+	if mgr, err = hub.NewManager(""); err != nil {
 		t.Fatal(err)
 	}
-	runReviewCLIGit(t, repo, "add", "axiom.yaml")
-	runReviewCLIGit(t, repo, "commit", "-qm", "project marker")
-	manager, err := hub.NewManager("")
-	if err != nil {
+	if _, err := mgr.Register(repo, "proyecto", ""); err != nil {
 		t.Fatal(err)
 	}
-	if register {
-		if _, err := manager.Register(repo, "p", ""); err != nil {
-			t.Fatal(err)
-		}
-	}
-	return repo, manager
+	return home, repo, mgr
 }
 
-func runReviewMode(t *testing.T, args ...string) (ReviewModeResult, error) {
+func runProjectMode(t *testing.T, repo string, args ...string) (ReviewModeResult, error) {
 	t.Helper()
-	var output bytes.Buffer
-	err := RunReviewMode(append(args, "--json"), &output)
-	if output.Len() == 0 {
+	var out bytes.Buffer
+	err := RunReviewMode(append(args, "--cwd", repo, "--json"), &out)
+	if out.Len() == 0 {
 		return ReviewModeResult{}, err
 	}
-	return decodeReviewModeResult(t, output.Bytes()), err
+	return decodeReviewModeResult(t, out.Bytes()), err
 }
 
-func TestReviewModeStatusResolvesProjectBeforeGlobalBeforeDefault(t *testing.T) {
-	for _, test := range []struct {
-		name      string
-		project   string
-		global    string
+// D2: la precedencia completa. Un «off» del clon gana; si no, manda la preferencia
+// del proyecto en ambos sentidos; si tampoco la hay, el interruptor global; sin
+// ninguna opinión, apagado por defecto.
+func TestReviewModePrecedenceMatrix(t *testing.T) {
+	type want struct {
 		effective reviewtransaction.RDDMode
 		source    reviewtransaction.RDDModeSource
-	}{
-		{name: "project on over global off", project: "on", global: "off", effective: reviewtransaction.RDDModeOn, source: reviewtransaction.RDDModeSourceProject},
-		{name: "project off over global on", project: "off", global: "on", effective: reviewtransaction.RDDModeOff, source: reviewtransaction.RDDModeSourceProject},
-		{name: "global on without project value", global: "on", effective: reviewtransaction.RDDModeOn, source: reviewtransaction.RDDModeSourceGlobal},
-		{name: "global off without project value", global: "off", effective: reviewtransaction.RDDModeOff, source: reviewtransaction.RDDModeSourceGlobal},
-		{name: "default when nothing is set", effective: reviewtransaction.RDDModeOff, source: reviewtransaction.RDDModeSourceDefault},
-	} {
-		t.Run(test.name, func(t *testing.T) {
-			repo, manager := reviewModeProject(t, true)
-			if test.project != "" {
-				if _, err := manager.SetRDDMode(repo, test.project); err != nil {
-					t.Fatal(err)
-				}
+	}
+	expected := func(global, project string, cloneOff bool) want {
+		switch {
+		case cloneOff:
+			return want{reviewtransaction.RDDModeOff, reviewtransaction.RDDModeSourceCloneLocal}
+		case project == "on":
+			return want{reviewtransaction.RDDModeOn, reviewtransaction.RDDModeSourceProject}
+		case project == "off":
+			return want{reviewtransaction.RDDModeOff, reviewtransaction.RDDModeSourceProject}
+		case global == "on":
+			return want{reviewtransaction.RDDModeOn, reviewtransaction.RDDModeSourceGlobal}
+		case global == "off":
+			return want{reviewtransaction.RDDModeOff, reviewtransaction.RDDModeSourceGlobal}
+		default:
+			return want{reviewtransaction.RDDModeOff, reviewtransaction.RDDModeSourceDefault}
+		}
+	}
+	for _, global := range []string{"", "on", "off"} {
+		for _, project := range []string{"", "on", "off"} {
+			for _, cloneOff := range []bool{false, true} {
+				name := fmt.Sprintf("global=%s/project=%s/clone_off=%v", global, project, cloneOff)
+				t.Run(name, func(t *testing.T) {
+					_, repo, mgr := projectModeFixture(t)
+					ctx := context.Background()
+					switch global {
+					case "on":
+						if _, err := SetGlobalReviewMode(ctx, repo, true); err != nil {
+							t.Fatal(err)
+						}
+					case "off":
+						if _, err := SetGlobalReviewMode(ctx, repo, false); err != nil {
+							t.Fatal(err)
+						}
+					}
+					if _, err := mgr.SetProjectRDD("proyecto", project); err != nil {
+						t.Fatal(err)
+					}
+					if cloneOff {
+						if _, err := runProjectMode(t, repo, "disable", "--scope", "clone"); err != nil {
+							t.Fatal(err)
+						}
+					}
+
+					status, err := ReviewModeStatus(ctx, repo)
+					if err != nil {
+						t.Fatalf("ReviewModeStatus() error = %v", err)
+					}
+					w := expected(global, project, cloneOff)
+					if status.Effective != w.effective || status.Source != w.source {
+						t.Fatalf("efectivo/origen = %s/%s, se esperaba %s/%s (estado %+v)", status.Effective, status.Source, w.effective, w.source, status)
+					}
+					if string(status.Project) != project {
+						t.Errorf("status.Project = %q, se esperaba %q", status.Project, project)
+					}
+					// La puerta de las operaciones usa la misma resolución.
+					err = authorizeReviewRDDOperation(ctx, repo, reviewtransaction.RDDOperationStart)
+					if (err == nil) != (w.effective == reviewtransaction.RDDModeOn) {
+						t.Errorf("authorize start err = %v con efectivo %s", err, w.effective)
+					}
+				})
 			}
-			if test.global != "" {
-				if err := state.Write(os.Getenv("HOME"), state.InstallState{RDDMode: test.global}); err != nil {
-					t.Fatal(err)
-				}
-			}
-			result, err := runReviewMode(t, "status", "--cwd", repo)
-			if err != nil {
-				t.Fatalf("status error = %v", err)
-			}
-			if result.Status.Effective != test.effective || result.Status.Source != test.source {
-				t.Fatalf("status = %#v, want effective=%s source=%s", result.Status, test.effective, test.source)
-			}
-		})
-	}
-}
-
-func TestReviewModeCloneOffStillWinsOverAProjectOn(t *testing.T) {
-	repo, manager := reviewModeProject(t, true)
-	if _, err := manager.SetRDDMode(repo, "on"); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := runReviewMode(t, "disable", "--cwd", repo, "--scope", "clone"); err != nil {
-		t.Fatalf("clone disable error = %v", err)
-	}
-	result, err := runReviewMode(t, "status", "--cwd", repo)
-	if err != nil {
-		t.Fatalf("status error = %v", err)
-	}
-	if result.Status.Effective != reviewtransaction.RDDModeOff || result.Status.Source != reviewtransaction.RDDModeSourceCloneLocal ||
-		result.Status.Project != reviewtransaction.RDDModeOn {
-		t.Fatalf("a clone off must win and still report the project value: %#v", result.Status)
-	}
-}
-
-func TestReviewModeEnableAndDisableDefaultToTheProjectInsideARegisteredProject(t *testing.T) {
-	repo, manager := reviewModeProject(t, true)
-
-	result, err := runReviewMode(t, "enable", "--cwd", repo)
-	if err != nil {
-		t.Fatalf("enable error = %v", err)
-	}
-	if result.Scope != reviewModeScopeProject || result.Status.Effective != reviewtransaction.RDDModeOn ||
-		result.Status.Source != reviewtransaction.RDDModeSourceProject {
-		t.Fatalf("enable result = %#v", result)
-	}
-	if mode, _, err := manager.LookupRDDMode(repo); err != nil || mode != hub.RDDModeOn {
-		t.Fatalf("el hub guarda %q, %v; se esperaba on", mode, err)
-	}
-	if _, err := os.Stat(state.Path(os.Getenv("HOME"))); err == nil {
-		t.Fatal("un enable de proyecto no debe escribir el estado global")
-	}
-
-	result, err = runReviewMode(t, "disable", "--cwd", repo)
-	if err != nil {
-		t.Fatalf("disable error = %v", err)
-	}
-	if result.Status.Effective != reviewtransaction.RDDModeOff || result.Status.Source != reviewtransaction.RDDModeSourceProject {
-		t.Fatalf("disable result = %#v", result)
-	}
-}
-
-func TestReviewModeGlobalScopeInsideAProjectKeepsSettingTheMachineDefault(t *testing.T) {
-	repo, manager := reviewModeProject(t, true)
-
-	result, err := runReviewMode(t, "enable", "--cwd", repo, "--scope", "global")
-	if err != nil {
-		t.Fatalf("enable --scope global error = %v", err)
-	}
-	if result.Scope != reviewModeScopeGlobal || result.Status.Source != reviewtransaction.RDDModeSourceGlobal || !result.Status.Enabled() {
-		t.Fatalf("result = %#v", result)
-	}
-	if mode, _, err := manager.LookupRDDMode(repo); err != nil || mode != "" {
-		t.Fatalf("--scope global no debe tocar el hub: %q, %v", mode, err)
-	}
-}
-
-func TestReviewModeProjectScopeRefusesAnUnregisteredProjectNamingTheGlobalExit(t *testing.T) {
-	repo, manager := reviewModeProject(t, false)
-
-	_, err := runReviewMode(t, "enable", "--cwd", repo)
-	if err == nil || !strings.Contains(err.Error(), "--scope global") || !strings.Contains(err.Error(), "axiom project add") {
-		t.Fatalf("error = %v, se esperaba un rechazo que nombre `axiom project add` y `--scope global`", err)
-	}
-	if _, statErr := os.Stat(state.Path(os.Getenv("HOME"))); statErr == nil {
-		t.Fatal("el rechazo no debe escribir el estado global en silencio")
-	}
-	if cfg, loadErr := manager.Load(); loadErr != nil || len(cfg.Workspaces) != 0 {
-		t.Fatalf("el rechazo no debe registrar el proyecto: %+v, %v", cfg, loadErr)
-	}
-}
-
-func TestReviewModeOutsideAProjectKeepsTheGlobalDefaultScope(t *testing.T) {
-	reviewModeHome(t)
-	t.Setenv("AXIOM_STATE_DIR", t.TempDir())
-	repo := initReviewCLIRepo(t)
-
-	result, err := runReviewMode(t, "enable", "--cwd", repo)
-	if err != nil {
-		t.Fatalf("enable error = %v", err)
-	}
-	if result.Scope != reviewModeScopeGlobal || result.Status.Source != reviewtransaction.RDDModeSourceGlobal || !result.Status.Enabled() {
-		t.Fatalf("fuera de un proyecto el enable debía fijar el global: %#v", result)
-	}
-}
-
-func TestReviewModeProjectPreferenceIsSharedByLinkedWorktrees(t *testing.T) {
-	repo, manager := reviewModeProject(t, true)
-	linked := filepath.Join(filepath.Dir(repo), filepath.Base(repo)+"-wt")
-	runReviewCLIGit(t, repo, "worktree", "add", "-q", "-b", "rama", linked)
-
-	if _, err := runReviewMode(t, "enable", "--cwd", linked); err != nil {
-		t.Fatalf("enable desde el worktree enlazado error = %v", err)
-	}
-	if mode, _, err := manager.LookupRDDMode(repo); err != nil || mode != hub.RDDModeOn {
-		t.Fatalf("el hub debía guardar on para la carpeta maestra: %q, %v", mode, err)
-	}
-	cfg, err := manager.Load()
-	if err != nil || len(cfg.Workspaces) != 1 || !pathidentity.SameDirectory(cfg.Workspaces[0].Path, repo) {
-		t.Fatalf("el hub no debe ganar una entrada por worktree: %+v, %v", cfg, err)
-	}
-	for name, start := range map[string]string{"checkout principal": repo, "worktree enlazado": linked} {
-		result, err := runReviewMode(t, "status", "--cwd", start)
-		if err != nil || !result.Status.Enabled() || result.Status.Source != reviewtransaction.RDDModeSourceProject {
-			t.Errorf("%s: status = %#v, %v; se esperaba on decidido por el proyecto", name, result.Status, err)
 		}
 	}
 }
 
-func TestReviewModeFailsClosedOnAnInvalidStoredProjectValue(t *testing.T) {
-	repo, manager := reviewModeProject(t, true)
-	cfg, err := manager.Load()
+func TestReviewModeProjectScopeEnableDisableInherit(t *testing.T) {
+	_, repo, mgr := projectModeFixture(t)
+	axiomYAML := []byte("workspace:\n  name: p\n  topology: monorepo-embedded\n  specs_repository: openspec\nroles:\n  core:\n    name: Core\n    repositories:\n      - path: .\n")
+	if err := os.WriteFile(filepath.Join(repo, "axiom.yaml"), axiomYAML, 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	result, err := runProjectMode(t, repo, "enable", "--scope", "project")
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("enable --scope project: %v", err)
 	}
-	cfg.Workspaces[0].RDDMode = "sometimes"
-	if err := manager.Save(cfg); err != nil {
-		t.Fatal(err)
+	if result.Scope != "project" || result.Status.Effective != reviewtransaction.RDDModeOn ||
+		result.Status.Source != reviewtransaction.RDDModeSourceProject || result.Status.Global != reviewtransaction.RDDModeUnset {
+		t.Fatalf("enable: %+v", result)
 	}
-	if err := state.Write(os.Getenv("HOME"), state.InstallState{RDDMode: "on"}); err != nil {
-		t.Fatal(err)
-	}
-
-	result, err := runReviewMode(t, "status", "--cwd", repo)
-	if err == nil || !strings.Contains(err.Error(), "axiom review mode enable") {
-		t.Fatalf("error = %v, se esperaba un fallo que nombre el comando que lo repara", err)
-	}
-	if result.Status.Enabled() {
-		t.Fatalf("un valor inválido no puede dejar el RDD activo: %#v", result.Status)
-	}
-	// Un interruptor ilegible no es un interruptor apagado: los puntos de aplicación lo tratan
-	// como activo (reviewDrivenDevelopmentDisabled falla cerrado a «no desactivado»).
-	if disabled, _ := reviewDrivenDevelopmentDisabled(context.Background(), repo); disabled {
-		t.Fatal("un valor de proyecto ilegible no puede contar como RDD desactivado")
+	if mode, _, err := mgr.LookupProjectRDD(repo); err != nil || mode != "on" {
+		t.Errorf("el hub debe guardar on: %q (err=%v)", mode, err)
 	}
 
-	// Sobrescribirlo con un enable de proyecto es la reparación que el mensaje promete.
-	if _, err := runReviewMode(t, "enable", "--cwd", repo); err != nil {
-		t.Fatalf("la reparación con enable falló: %v", err)
+	result, err = runProjectMode(t, repo, "disable", "--scope", "project")
+	if err != nil || result.Status.Effective != reviewtransaction.RDDModeOff || result.Status.Source != reviewtransaction.RDDModeSourceProject {
+		t.Fatalf("disable: %+v (err=%v)", result, err)
 	}
-	if mode, _, err := manager.LookupRDDMode(repo); err != nil || mode != hub.RDDModeOn {
-		t.Fatalf("tras la reparación el hub guarda %q, %v", mode, err)
+
+	result, err = runProjectMode(t, repo, "inherit", "--scope", "project")
+	if err != nil || result.Status.Source != reviewtransaction.RDDModeSourceDefault || result.Status.Project != reviewtransaction.RDDModeUnset {
+		t.Fatalf("inherit: %+v (err=%v)", result, err)
+	}
+	if record, _, err := mgr.LookupProjectRDD(repo); err != nil || record != "" {
+		t.Errorf("inherit debe retirar la preferencia: %q (err=%v)", record, err)
+	}
+	raw, _ := os.ReadFile(mgr.GetConfigPath())
+	if strings.Contains(string(raw), "rdd_mode") {
+		t.Errorf("sin preferencia el campo se retira del JSON:\n%s", raw)
+	}
+
+	// Nada de esto toca el repositorio: ni axiom.yaml ni el estado del proyecto.
+	if _, err := runProjectMode(t, repo, "enable", "--scope", "project"); err != nil {
+		t.Fatal(err)
+	}
+	after, err := os.ReadFile(filepath.Join(repo, "axiom.yaml"))
+	if err != nil || !bytes.Equal(after, axiomYAML) {
+		t.Errorf("axiom.yaml cambió: err=%v\n%s", err, after)
+	}
+	if _, err := os.Stat(filepath.Join(repo, ".axiom", "state.json")); !errors.Is(err, os.ErrNotExist) {
+		t.Errorf("la preferencia no debe escribir .axiom/state.json (err=%v)", err)
+	}
+	if _, err := os.Lstat(filepath.Join(repo, ".git", "gentle-ai")); !errors.Is(err, os.ErrNotExist) {
+		t.Errorf("la preferencia no debe crear estado del repositorio (err=%v)", err)
 	}
 }
 
-func TestReviewModeProjectScopeOutsideAProjectIsRefused(t *testing.T) {
+func TestReviewModeProjectScopeOutsideARegisteredProjectFails(t *testing.T) {
 	reviewModeHome(t)
-	t.Setenv("AXIOM_STATE_DIR", t.TempDir())
-	repo := initReviewCLIRepo(t)
-	_, err := runReviewMode(t, "enable", "--cwd", repo, "--scope", "project")
-	if err == nil || !strings.Contains(err.Error(), "--scope global") {
-		t.Fatalf("error = %v, se esperaba un rechazo que nombre --scope global", err)
+	t.Setenv("AXIOM_STATE_DIR", "")
+	repo := initReviewCLIRepo(t) // no registrado en el hub
+
+	for _, op := range []string{"enable", "disable", "inherit"} {
+		_, err := runProjectMode(t, repo, op, "--scope", "project")
+		if err == nil || !strings.Contains(err.Error(), "no está en ningún proyecto registrado") {
+			t.Errorf("%s fuera de un proyecto registrado debe fallar con un mensaje claro: %v", op, err)
+		}
+	}
+	if _, err := runProjectMode(t, repo, "inherit", "--scope", "global"); err == nil {
+		t.Error("inherit solo admite --scope project")
+	}
+	// status sigue funcionando y no inventa preferencia.
+	result, err := runProjectMode(t, repo, "status")
+	if err != nil || result.Status.Project != reviewtransaction.RDDModeUnset {
+		t.Errorf("status sin proyecto: %+v (err=%v)", result, err)
+	}
+}
+
+// Un repositorio sigue sin poder forzar el encendido: el override de clon solo
+// admite apagar, también cuando hay una preferencia de proyecto encendida.
+func TestReviewModeRepositoryStillCannotForceOnWithAProjectPreference(t *testing.T) {
+	_, repo, mgr := projectModeFixture(t)
+	if _, err := mgr.SetProjectRDD("proyecto", "on"); err != nil {
+		t.Fatal(err)
+	}
+	global, err := readUserRDDMode(repo, mgr)
+	if err != nil || global.Project != "on" {
+		t.Fatalf("readUserRDDMode = %+v (err=%v)", global, err)
+	}
+	_, err = reviewtransaction.SetCloneLocalRDDMode(context.Background(), repo, reviewtransaction.RDDModeOn, "", global)
+	if !errors.Is(err, reviewtransaction.ErrRDDModeRepositoryForcedOn) {
+		t.Fatalf("el clon no puede forzar on: %v", err)
+	}
+}
+
+// Limpiar el override de clon no enciende nada mientras la preferencia de proyecto
+// esté apagada, y el rechazo nombra el origen que manda.
+func TestReviewModeClearingCloneOverrideRefusesWhileProjectIsOff(t *testing.T) {
+	_, repo, mgr := projectModeFixture(t)
+	if _, err := mgr.SetProjectRDD("proyecto", "off"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := runProjectMode(t, repo, "disable", "--scope", "clone"); err != nil {
+		t.Fatal(err)
+	}
+	_, err := runProjectMode(t, repo, "enable", "--scope", "clone")
+	var disabled *reviewtransaction.RDDDisabledError
+	if !errors.As(err, &disabled) || disabled.Source != reviewtransaction.RDDModeSourceProject {
+		t.Fatalf("se esperaba RDDDisabledError con origen project: %v", err)
+	}
+	if !strings.Contains(err.Error(), "axiom review mode enable --scope=project") {
+		t.Errorf("el rechazo debe nombrar el comando del origen que decide: %v", err)
+	}
+}
+
+func TestReviewModeUnreadableProjectPreferenceFailsClosedNamingTheFile(t *testing.T) {
+	_, repo, mgr := projectModeFixture(t)
+	raw, err := os.ReadFile(mgr.GetConfigPath())
+	if err != nil {
+		t.Fatal(err)
+	}
+	broken := strings.Replace(string(raw), `"is_configured"`, `"rdd_mode": "quizás", "is_configured"`, 1)
+	if broken == string(raw) {
+		t.Fatalf("no se pudo corromper el hub:\n%s", raw)
+	}
+	if err := os.WriteFile(mgr.GetConfigPath(), []byte(broken), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = ReviewModeStatus(context.Background(), repo)
+	if err == nil || !strings.Contains(err.Error(), mgr.GetConfigPath()) {
+		t.Fatalf("un valor inválido debe fallar cerrado y nombrar el fichero: %v", err)
+	}
+	if authErr := authorizeReviewRDDOperation(context.Background(), repo, reviewtransaction.RDDOperationStart); authErr == nil {
+		t.Error("con la preferencia ilegible no se debe autorizar el inicio")
 	}
 }
