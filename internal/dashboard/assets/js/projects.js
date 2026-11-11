@@ -484,6 +484,9 @@ function initAddProject() {
   const dialog = $('#modal-add-project');
   const inputPath = $('#input-project-path');
   const inputName = $('#input-project-name');
+  const selectTopology = $('#select-project-topology');
+  const fieldSpecs = $('#field-project-specs-repository');
+  const inputSpecs = $('#input-project-specs-repository');
   const selectWorktreeMode = $('#select-project-worktree-mode');
   const inputWorktreeRoot = $('#input-project-worktree-root');
   const rootPlaceholder = inputWorktreeRoot.placeholder;
@@ -505,7 +508,14 @@ function initAddProject() {
     updateWorktreeRootPlaceholder();
   };
 
+  // El repositorio de especificaciones solo existe en multirepo.
+  const updateTopologyFields = () => { fieldSpecs.hidden = selectTopology.value !== 'multirepo'; };
+  selectTopology.addEventListener('change', updateTopologyFields);
+
   const openAdd = () => {
+    selectTopology.value = 'monorepo-embedded';
+    inputSpecs.value = '';
+    updateTopologyFields();
     inputPath.value = '';
     inputName.value = '';
     selectWorktreeMode.value = 'worktree';
@@ -547,7 +557,8 @@ function initAddProject() {
       tech: card.querySelector('.role-tech-input').value,
       nonBlocking: card.querySelector('.role-nonblocking-input').checked
     }));
-    const { roles, violations } = validateProjectForm({ path: pathVal, cards });
+    const topology = selectTopology.value || 'monorepo-embedded';
+    const { roles, specsRepository, violations } = validateProjectForm({ path: pathVal, cards, topology, specsRepository: inputSpecs.value });
     if (violations.length) {
       showViolations('add-project-error', violations);
       if (!pathVal) inputPath.focus();
@@ -561,7 +572,8 @@ function initAddProject() {
         body: {
           path: pathVal,
           name: inputName.value.trim(),
-          topology: $('#select-project-topology').value || 'monorepo-embedded',
+          topology,
+          ...(specsRepository ? { specs_repository: specsRepository } : {}),
           roles,
           ...registrationPrefs(selectWorktreeMode.value, inputWorktreeRoot.value)
         }

@@ -48,6 +48,7 @@ func (e *ForeignPlanningHomeError) Error() string {
 // el destino pasa a ser el suyo.
 type ownMarkers struct {
 	configPath   string                 // axiom.yaml existente que Init considera suyo; "" si no hay
+	pointer      bool                   // el destino tiene un .axiom-workspace propio
 	declarations workspace.Declarations // declaraciones de ese axiom.yaml
 	violations   []string               // violaciones de la validación de carga, una por línea
 }
@@ -85,14 +86,18 @@ func (m ownMarkers) declares() bool {
 //
 // El axiom.yaml que encuentra se valida con el mismo validador de carga que
 // LoadConfig, Locate y workspace validate (REQ-2.2, punto 4).
-func inspectOwnMarkers(absPath string) (ownMarkers, error) {
+//
+// expectedHome es el planning home que el alta va a usar: <absPath>/openspec, o el
+// del repositorio de especificaciones propio en un alta multirepo. Un puntero que
+// resuelve otro distinto se sigue rechazando.
+func inspectOwnMarkers(absPath, expectedHome string) (ownMarkers, error) {
 	var markers ownMarkers
 	loc, found, err := workspace.ResolveOwnPointer(absPath)
 	if err != nil {
 		return ownMarkers{}, err
 	}
 	if found {
-		if !workspace.SamePlanningHome(loc.PlanningHome, filepath.Join(absPath, "openspec")) {
+		if !workspace.SamePlanningHome(loc.PlanningHome, expectedHome) {
 			return ownMarkers{}, &ForeignPlanningHomeError{
 				PointerPath:   filepath.Join(absPath, workspace.WorkspacePointerFilename),
 				PlanningHome:  loc.PlanningHome,
@@ -101,6 +106,7 @@ func inspectOwnMarkers(absPath string) (ownMarkers, error) {
 		}
 		markers.configPath = loc.ConfigPath
 		markers.declarations = loc.Declarations
+		markers.pointer = true
 	} else if configPath := filepath.Join(absPath, workspace.DefaultConfigFilename); fileExists(configPath) {
 		markers.configPath = configPath
 		markers.declarations = workspace.ReadDeclarations(configPath)
@@ -149,18 +155,19 @@ func (ini *Initializer) Init(opts InitOptions) (*InitResult, error) {
 		return nil, fmt.Errorf("ruta de inicialización inválida: %w", err)
 	}
 
-	markers, err := inspectOwnMarkers(absPath)
-	if err != nil {
-		return nil, err
-	}
-	ownership, ownershipCause := markers.declarations.Ownership()
-
 	if opts.Name == "" {
 		opts.Name = filepath.Base(absPath)
 	}
 	if opts.Topology == "" {
 		opts.Topology = "monorepo-embedded"
 	}
+	layout := layoutFor(opts)
+
+	markers, err := inspectOwnMarkers(absPath, layout.home(absPath))
+	if err != nil {
+		return nil, err
+	}
+	ownership, ownershipCause := markers.declarations.Ownership()
 
 	// El axiom.yaml existente es el que indica el puntero propio, si lo hay, y no
 	// <ruta>/axiom.yaml.
@@ -201,18 +208,32 @@ func (ini *Initializer) Init(opts InitOptions) (*InitResult, error) {
 	// a escribir se planifica y se valida antes de crear ni escribir nada: una
 	// configuración inválida se rechaza con todas sus violaciones y el disco queda
 	// como estaba.
-	var plan configPlan
-	writeConfig := !alreadyExisted || (opts.Force && !preserveConfig)
+	writeConfig := willWriteConfig(markers, opts)
+	plan, err := ini.validateAll(absPath, opts, markers)
+	if err != nil {
+		return nil, err
+	}
 	if writeConfig {
-		plan, err = ini.checkPlan(absPath, opts)
-		if err != nil {
-			return nil, err
-		}
 		opts.Topology = plan.Topology
+	}
+
+	// En un alta multirepo con repositorio de specs propio el axiom.yaml vive en
+	// ese repositorio y la carpeta maestra solo lleva el puntero.
+	home := layout.home(absPath)
+	workspaceRoot := filepath.Dir(home)
+	writePointer := layout.valid() && !markers.pointer
+	if layout.valid() && !alreadyExisted {
+		configPath = filepath.Join(workspaceRoot, workspace.DefaultConfigFilename)
 	}
 
 	if err := os.MkdirAll(absPath, 0755); err != nil {
 		return nil, fmt.Errorf("no se pudo asegurar la existencia del directorio destino: %w", err)
+	}
+	if layout.valid() {
+		// El repositorio de specs se crea si no existe, sin git init.
+		if err := os.MkdirAll(workspaceRoot, 0755); err != nil {
+			return nil, fmt.Errorf("no se pudo crear el repositorio de especificaciones %s: %w", workspaceRoot, err)
+		}
 	}
 
 	if writeConfig {
@@ -223,17 +244,29 @@ func (ini *Initializer) Init(opts InitOptions) (*InitResult, error) {
 		adoptedSkillsCount = plan.AdoptedSkills
 	}
 
+	if writePointer {
+		pointerPath := filepath.Join(absPath, workspace.WorkspacePointerFilename)
+		rel, relErr := filepath.Rel(absPath, configPath)
+		if relErr != nil {
+			return nil, fmt.Errorf("no se pudo calcular la ruta del axiom.yaml respecto a %s: %w", absPath, relErr)
+		}
+		if err := os.WriteFile(pointerPath, []byte("config: "+filepath.ToSlash(rel)+"\n"), 0644); err != nil {
+			return nil, fmt.Errorf("fallo al escribir %s: %w", pointerPath, err)
+		}
+		createdFiles = append(createdFiles, pointerPath)
+	}
+
 	// 2. Crear carpetas canónicas del arnés SDD. Con una baseline que no es la de
 	// OpenSpec por defecto se omite openspec/specs/ y se conserva el resto del
 	// andamiaje del perfil.
 	var standardDirs []string
 	if opts.Profile != "knowledge" && opts.Profile != "spec-only" {
-		standardDirs = append(standardDirs, filepath.Join(absPath, ".axiom", "inbox", "skills"))
+		standardDirs = append(standardDirs, filepath.Join(workspaceRoot, ".axiom", "inbox", "skills"))
 	}
 	if writeBaseline {
-		standardDirs = append(standardDirs, filepath.Join(absPath, "openspec", "specs"))
+		standardDirs = append(standardDirs, filepath.Join(home, "specs"))
 	}
-	standardDirs = append(standardDirs, filepath.Join(absPath, "openspec", "changes"))
+	standardDirs = append(standardDirs, filepath.Join(home, "changes"))
 
 	for _, d := range standardDirs {
 		if err := os.MkdirAll(d, 0755); err != nil {
@@ -256,6 +289,18 @@ func (ini *Initializer) Init(opts InitOptions) (*InitResult, error) {
 			return nil, fmt.Errorf("inyectar servidores MCP en .mcp.json: %w", err)
 		}
 		createdFiles = append(createdFiles, filepath.Join(absPath, ".mcp.json"))
+	}
+
+	// El alta multirepo se comprueba con el mismo localizador que usan los demás
+	// verbos: un fallo aquí es un defecto del alta y se informa, no se ignora.
+	if layout.valid() {
+		loc, locErr := workspace.LocateAt(absPath)
+		if locErr != nil {
+			return nil, fmt.Errorf("el alta multirepo dejó un espacio que workspace.LocateAt no resuelve: %w", locErr)
+		}
+		if !workspace.SamePlanningHome(loc.PlanningHome, home) {
+			return nil, fmt.Errorf("el alta multirepo esperaba el planning home %s y workspace.LocateAt resuelve %s", home, loc.PlanningHome)
+		}
 	}
 
 	// 3. Registrar en el catálogo global si el gestor está provisto
@@ -320,10 +365,10 @@ func buildAxiomYaml(name, topology string, tech *TechDetection) string {
 		domainContext = tech.DomainContext
 	}
 
-	return buildAxiomYamlWithRoles(name, topology, specsRepo, domainContext, roles)
+	return buildAxiomYamlWithRoles(name, topology, specsRepo, ".", domainContext, roles)
 }
 
-func buildAxiomYamlWithRoles(name, topology, specsRepo, domainContext string, roles []RoleInput) string {
+func buildAxiomYamlWithRoles(name, topology, specsRepo, root, domainContext string, roles []RoleInput) string {
 	var sb strings.Builder
 	sb.WriteString("workspace:\n")
 	sb.WriteString(fmt.Sprintf("  name: %q\n", name))
@@ -332,7 +377,12 @@ func buildAxiomYamlWithRoles(name, topology, specsRepo, domainContext string, ro
 		specsRepo = "openspec"
 	}
 	sb.WriteString(fmt.Sprintf("  specs_repository: %q\n", specsRepo))
-	sb.WriteString("  root: \".\"\n\n")
+	// root solo se escribe cuando se indica: el alta multirepo con repositorio de
+	// specs propio no lo declara, como el espacio canónico.
+	if root != "" {
+		sb.WriteString(fmt.Sprintf("  root: %q\n", root))
+	}
+	sb.WriteString("\n")
 
 	sb.WriteString("roles:\n")
 	for _, r := range roles {

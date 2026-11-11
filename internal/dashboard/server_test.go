@@ -671,3 +671,40 @@ func TestProjectsInitWritesRoleTech(t *testing.T) {
 		t.Errorf("tech del rol web = %v, quiero [go react]", tech)
 	}
 }
+
+// G4.2: el alta multirepo desde la API deja el axiom.yaml en el repositorio de specs
+// y el puntero en la carpeta del proyecto, y el dashboard lo carga a través del puntero.
+func TestProjectsInitMultirepoCreatesSpecsRepoAndPointer(t *testing.T) {
+	master := filepath.Join(t.TempDir(), "maestra")
+	router, _, _ := newPrefsServer(t, t.TempDir())
+	body := `{"path":` + quoteJSON(master) + `,"name":"Multi","topology":"multirepo","specs_repository":"repo-specs","roles":[{"key":"api","name":"API","repositories":["repo-api"]}]}`
+
+	rr := request(router, http.MethodPost, "/api/projects/init", body)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("POST /api/projects/init = %d: %s", rr.Code, rr.Body.String())
+	}
+	if _, err := os.Stat(filepath.Join(master, "repo-specs", "axiom.yaml")); err != nil {
+		t.Errorf("falta el axiom.yaml en el repositorio de specs: %v", err)
+	}
+	if pointer := readOrEmpty(t, filepath.Join(master, ".axiom-workspace")); !strings.Contains(string(pointer), "repo-specs/axiom.yaml") {
+		t.Errorf("puntero = %q", pointer)
+	}
+	loc, err := workspace.LocateAt(master)
+	if err != nil || loc.Config.Workspace.SpecsRepository != "repo-specs" {
+		t.Fatalf("LocateAt = %+v (err=%v)", loc, err)
+	}
+}
+
+func TestProjectsInitRejectsBadSpecsRepositoryWith400(t *testing.T) {
+	master := filepath.Join(t.TempDir(), "maestra")
+	router, _, _ := newPrefsServer(t, t.TempDir())
+	body := `{"path":` + quoteJSON(master) + `,"topology":"multirepo","specs_repository":"../fuera"}`
+
+	rr := request(router, http.MethodPost, "/api/projects/init", body)
+	if rr.Code != http.StatusBadRequest || !strings.Contains(rr.Body.String(), "violations") || !strings.Contains(rr.Body.String(), "sale de la carpeta del proyecto") {
+		t.Fatalf("POST /api/projects/init = %d, quiero 400 con violations: %s", rr.Code, rr.Body.String())
+	}
+	if _, err := os.Stat(master); !os.IsNotExist(err) {
+		t.Errorf("el alta rechazada no debe crear %s (err=%v)", master, err)
+	}
+}

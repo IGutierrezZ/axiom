@@ -215,12 +215,15 @@ type ProjectAddRequest struct {
 
 // ProjectInitRequest representa la solicitud para inicializar un proyecto.
 type ProjectInitRequest struct {
-	Path         string          `json:"path,omitempty"`
-	Name         string          `json:"name,omitempty"`
-	Topology     string          `json:"topology,omitempty"`
-	Roles        []hub.RoleInput `json:"roles,omitempty"`
-	WorktreeMode string          `json:"worktree_mode,omitempty"`
-	WorktreeRoot string          `json:"worktree_root,omitempty"`
+	Path     string `json:"path,omitempty"`
+	Name     string `json:"name,omitempty"`
+	Topology string `json:"topology,omitempty"`
+	// SpecsRepository es, solo en multirepo, el repositorio de especificaciones propio
+	// (ruta relativa a la carpeta del proyecto).
+	SpecsRepository string          `json:"specs_repository,omitempty"`
+	Roles           []hub.RoleInput `json:"roles,omitempty"`
+	WorktreeMode    string          `json:"worktree_mode,omitempty"`
+	WorktreeRoot    string          `json:"worktree_root,omitempty"`
 }
 
 // WorktreePrefsDTO son unas preferencias personales de worktree (REQ-25.29): el modo y la

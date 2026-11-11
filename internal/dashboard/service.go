@@ -893,11 +893,12 @@ func (s *Service) InitProject(req ProjectInitRequest) (*hub.InitResult, error) {
 
 	ini := hub.NewInitializer(s.hubManager, s.hubDetector)
 	res, err := ini.Init(hub.InitOptions{
-		Path:          targetPath,
-		Name:          req.Name,
-		Topology:      req.Topology,
-		Roles:         req.Roles,
-		WorktreePrefs: hub.WorktreePrefs{Mode: req.WorktreeMode, Root: req.WorktreeRoot},
+		Path:            targetPath,
+		Name:            req.Name,
+		Topology:        req.Topology,
+		SpecsRepository: req.SpecsRepository,
+		Roles:           req.Roles,
+		WorktreePrefs:   hub.WorktreePrefs{Mode: req.WorktreeMode, Root: req.WorktreeRoot},
 	})
 	if err != nil {
 		return nil, err

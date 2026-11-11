@@ -36,6 +36,8 @@ type configPlan struct {
 	Name          string
 	Topology      string
 	SpecsRepo     string
+	Root          string
+	Layout        specsLayout
 	DomainContext string
 	Roles         []RoleInput
 	AdoptedSkills int
@@ -43,7 +45,7 @@ type configPlan struct {
 
 // render genera el contenido del axiom.yaml del plan.
 func (p configPlan) render() string {
-	return buildAxiomYamlWithRoles(p.Name, p.Topology, p.SpecsRepo, p.DomainContext, p.Roles)
+	return buildAxiomYamlWithRoles(p.Name, p.Topology, p.SpecsRepo, p.Root, p.DomainContext, p.Roles)
 }
 
 // ValidateInit comprueba, sin escribir nada, que la configuración que Init
@@ -65,21 +67,93 @@ func (ini *Initializer) ValidateInit(opts InitOptions) error {
 	if err != nil {
 		return fmt.Errorf("ruta de inicialización inválida: %w", err)
 	}
-	markers, err := inspectOwnMarkers(absPath)
-	if err != nil {
-		return err
-	}
 	if opts.Name == "" {
 		opts.Name = filepath.Base(absPath)
 	}
 	if opts.Topology == "" {
 		opts.Topology = "monorepo-embedded"
 	}
-	if !willWriteConfig(markers, opts) {
+	markers, err := inspectOwnMarkers(absPath, layoutFor(opts).home(absPath))
+	if err != nil {
+		return err
+	}
+	_, err = ini.validateAll(absPath, opts, markers)
+	return err
+}
+
+// validateAll reúne las violaciones del alta: las de la disposición de las
+// especificaciones (siempre) y, si Init va a generar un axiom.yaml, las de ese
+// axiom.yaml. Devuelve el plan generado (vacío si no se genera ninguno).
+func (ini *Initializer) validateAll(absPath string, opts InitOptions, markers ownMarkers) (configPlan, error) {
+	violations := layoutViolations(opts, markers)
+	var plan configPlan
+	if willWriteConfig(markers, opts) {
+		plan = ini.planConfig(absPath, opts)
+		violations = append(violations, validatePlan(absPath, plan)...)
+	}
+	if len(violations) > 0 {
+		return plan, &InitValidationError{Violations: violations}
+	}
+	return plan, nil
+}
+
+// specsLayout es la disposición de las especificaciones de un alta multirepo con
+// repositorio de specs propio: el axiom.yaml en ese repositorio, el planning home
+// en <repositorio>/openspec y el puntero en la carpeta maestra. El valor cero es
+// la disposición de siempre (todo en la carpeta maestra, specs en openspec/).
+type specsLayout struct {
+	separate bool
+	rel      string // specs_repository tal como se escribe, con "/"
+}
+
+// layoutFor decide la disposición de opts. Necesita la topología ya resuelta. Con
+// los perfiles knowledge y spec-only, o con "openspec" (que ya es la disposición de
+// siempre), no hay repositorio de specs propio.
+func layoutFor(opts InitOptions) specsLayout {
+	spec := strings.TrimSpace(opts.SpecsRepository)
+	if spec == "" || opts.Topology != "multirepo" || opts.Profile == "knowledge" || opts.Profile == "spec-only" {
+		return specsLayout{}
+	}
+	rel := filepath.ToSlash(filepath.Clean(spec))
+	if rel == "openspec" {
+		return specsLayout{}
+	}
+	return specsLayout{separate: true, rel: rel}
+}
+
+// valid dice si hay repositorio de specs propio y su ruta es admisible.
+func (l specsLayout) valid() bool {
+	return l.separate && l.rel != "." && repositoryPathProblem(l.rel) == ""
+}
+
+// home es el planning home del alta en absPath.
+func (l specsLayout) home(absPath string) string {
+	if !l.valid() {
+		return filepath.Join(absPath, "openspec")
+	}
+	specs := filepath.Join(absPath, filepath.FromSlash(l.rel))
+	if strings.EqualFold(filepath.Base(specs), "openspec") {
+		return specs
+	}
+	return filepath.Join(specs, "openspec")
+}
+
+// layoutViolations son las reglas de SpecsRepository que no dependen del
+// axiom.yaml que se genere: solo se admite en multirepo y no puede añadirse a un
+// axiom.yaml directo que ya existe en la carpeta maestra (el puntero lo
+// ocultaría).
+func layoutViolations(opts InitOptions, markers ownMarkers) []string {
+	spec := strings.TrimSpace(opts.SpecsRepository)
+	if spec == "" {
 		return nil
 	}
-	_, err = ini.checkPlan(absPath, opts)
-	return err
+	if opts.Topology != "multirepo" {
+		return []string{"el repositorio de especificaciones propio solo se admite en la topología multirepo"}
+	}
+	if layoutFor(opts).separate && markers.configPath != "" && !markers.pointer {
+		return []string{fmt.Sprintf("la carpeta ya tiene un axiom.yaml propio (%s): el repositorio de especificaciones solo se puede indicar en un alta nueva", filepath.Base(markers.configPath))}
+	}
+	return nil
 }
 
 // willWriteConfig dice si Init generará un axiom.yaml nuevo: no hay uno, o se
@@ -138,24 +212,21 @@ func (ini *Initializer) planConfig(absPath string, opts InitOptions) configPlan 
 	if tech.SpecsRepository != "" {
 		specsRepo = tech.SpecsRepository
 	}
+	root := "."
+	layout := layoutFor(opts)
+	if layout.separate {
+		specsRepo, root = layout.rel, ""
+	}
 	return configPlan{
 		Name:          opts.Name,
 		Topology:      opts.Topology,
 		SpecsRepo:     specsRepo,
+		Root:          root,
+		Layout:        layout,
 		DomainContext: tech.DomainContext,
 		Roles:         effectiveRoles,
 		AdoptedSkills: len(tech.AdoptedSkills),
 	}
-}
-
-// checkPlan planifica el axiom.yaml de opts y lo valida antes de escribir nada.
-// Devuelve el plan, o un *InitValidationError con todas las violaciones.
-func (ini *Initializer) checkPlan(absPath string, opts InitOptions) (configPlan, error) {
-	plan := ini.planConfig(absPath, opts)
-	if violations := validatePlan(absPath, plan); len(violations) > 0 {
-		return plan, &InitValidationError{Violations: violations}
-	}
-	return plan, nil
 }
 
 // validatePlan reúne las violaciones del plan. Primero las reglas propias de los
@@ -168,6 +239,13 @@ func validatePlan(absPath string, plan configPlan) []string {
 
 	cleaned := plan
 	cleaned.Roles = cleanRoles
+	if plan.Layout.separate {
+		if problem := specsPathProblem(plan.Layout.rel); problem != "" {
+			violations = append(violations, fmt.Sprintf("el repositorio de especificaciones %q %s", plan.Layout.rel, problem))
+			// Se sigue validando con la disposición de siempre para no repetir el error.
+			cleaned.SpecsRepo, cleaned.Root, cleaned.Layout = "openspec", ".", specsLayout{}
+		}
+	}
 	cfg, err := workspace.ParseConfig([]byte(cleaned.render()))
 	if err != nil {
 		violations = append(violations, loadViolations(err)...)
@@ -180,7 +258,7 @@ func validatePlan(absPath string, plan configPlan) []string {
 	// existan todavía (un proyecto nuevo puede declarar roles sobre carpetas que
 	// llegarán después, y la adopción de una configuración previa los trae tal
 	// cual). Lo que sí se exige es que sean relativos y estén dentro del proyecto.
-	fsys := newPlannedFS(absPath)
+	fsys := newPlannedFS(absPath, cleaned.Layout)
 	for _, role := range cfg.Roles {
 		for _, repo := range role.Repositories {
 			fsys.planned = append(fsys.planned, filepath.Join(absPath, filepath.FromSlash(strings.TrimSpace(repo.Path))))
@@ -289,11 +367,23 @@ type plannedFS struct {
 	planned []string
 }
 
-func newPlannedFS(absPath string) plannedFS {
-	return plannedFS{
-		base:    workspace.DefaultFS(),
-		planned: []string{filepath.Clean(absPath), filepath.Join(absPath, "openspec")},
+func newPlannedFS(absPath string, layout specsLayout) plannedFS {
+	planned := []string{filepath.Clean(absPath), filepath.Join(absPath, "openspec")}
+	if layout.valid() {
+		planned = append(planned, filepath.Join(absPath, filepath.FromSlash(layout.rel)), layout.home(absPath))
 	}
+	return plannedFS{base: workspace.DefaultFS(), planned: planned}
+}
+
+// specsPathProblem explica por qué la ruta del repositorio de especificaciones de
+// un alta multirepo no es admisible, o devuelve "" si lo es: relativa a la carpeta
+// maestra, dentro de ella y distinta de ella (workspace.Validate exige un
+// repositorio aparte).
+func specsPathProblem(rel string) string {
+	if rel == "." {
+		return "no puede ser la propia carpeta maestra: en multirepo debe ser un repositorio aparte dentro de ella"
+	}
+	return repositoryPathProblem(rel)
 }
 
 func (p plannedFS) isPlanned(name string) bool {

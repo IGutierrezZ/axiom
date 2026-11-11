@@ -117,3 +117,66 @@ func TestAddProjectModalWiresTechAndViolations(t *testing.T) {
 		t.Errorf("cada tarjeta de rol debe tener el campo de tecnologías:\n%s", row)
 	}
 }
+
+// G4.2: el repositorio de specs es obligatorio y admisible solo en multirepo.
+func TestProjectFormMultirepoSpecsRuntime(t *testing.T) {
+	out := runNodeModules(t, []string{"projectform"},
+		"import { validateProjectForm, specsRepositoryProblem } from './projectform.mjs';\n"+
+			"const v = (o) => validateProjectForm({ path: '/p', cards: [], ...o });\n"+
+			"console.log(JSON.stringify({\n"+
+			"  mono: v({ topology: 'monorepo-embedded', specsRepository: '' }),\n"+
+			"  monoIgnoresSpecs: v({ topology: 'monorepo-embedded', specsRepository: '../x' }),\n"+
+			"  multiOk: v({ topology: 'multirepo', specsRepository: ' repo-specs ' }),\n"+
+			"  multiEmpty: v({ topology: 'multirepo', specsRepository: '  ' }).violations,\n"+
+			"  problems: ['.', './', '/abs', 'C:\\\\x', '../fuera', 'a/../../b', 'repo-specs', 'repos/specs'].map(specsRepositoryProblem),\n"+
+			"}));\n")
+	var res struct {
+		Mono struct {
+			SpecsRepository string   `json:"specsRepository"`
+			Violations      []string `json:"violations"`
+		} `json:"mono"`
+		MonoIgnoresSpecs struct {
+			SpecsRepository string   `json:"specsRepository"`
+			Violations      []string `json:"violations"`
+		} `json:"monoIgnoresSpecs"`
+		MultiOk struct {
+			SpecsRepository string   `json:"specsRepository"`
+			Violations      []string `json:"violations"`
+		} `json:"multiOk"`
+		MultiEmpty []string `json:"multiEmpty"`
+		Problems   []string `json:"problems"`
+	}
+	if err := json.Unmarshal(out, &res); err != nil {
+		t.Fatalf("salida de node ilegible: %v\n%s", err, out)
+	}
+	if len(res.Mono.Violations) != 0 || res.Mono.SpecsRepository != "" || len(res.MonoIgnoresSpecs.Violations) != 0 || res.MonoIgnoresSpecs.SpecsRepository != "" {
+		t.Errorf("en monorepo-embedded no se pide ni se envía repositorio de specs: %+v %+v", res.Mono, res.MonoIgnoresSpecs)
+	}
+	if len(res.MultiOk.Violations) != 0 || res.MultiOk.SpecsRepository != "repo-specs" {
+		t.Errorf("multirepo con repositorio válido: %+v", res.MultiOk)
+	}
+	if len(res.MultiEmpty) != 1 || !strings.Contains(res.MultiEmpty[0], "obligatorio") {
+		t.Errorf("multirepo sin repositorio debe dar un error de obligatorio: %q", res.MultiEmpty)
+	}
+	wantBad := []bool{true, true, true, true, true, true, false, false}
+	for i, want := range wantBad {
+		if got := res.Problems[i] != ""; got != want {
+			t.Errorf("specsRepositoryProblem caso %d: problema=%v, quiero %v (%q)", i, got, want, res.Problems[i])
+		}
+	}
+}
+
+// El campo del repositorio de specs está en el modal, oculto salvo en multirepo.
+func TestAddProjectModalShowsSpecsRepositoryOnlyForMultirepo(t *testing.T) {
+	html, projects := readAsset(t, "index.html"), readAsset(t, "js/projects.js")
+	modal := html[strings.Index(html, `id="modal-add-project"`):]
+	modal = modal[:strings.Index(modal, "</dialog>")]
+	if !strings.Contains(modal, `id="field-project-specs-repository" hidden`) || !strings.Contains(modal, `id="input-project-specs-repository"`) {
+		t.Error("el campo del repositorio de specs debe estar en el modal de alta y oculto por defecto")
+	}
+	for _, marker := range []string{"updateTopologyFields", "'multirepo'", "specs_repository"} {
+		if !strings.Contains(projects, marker) {
+			t.Errorf("projects.js debe contener %q", marker)
+		}
+	}
+}

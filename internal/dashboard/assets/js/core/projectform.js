@@ -89,16 +89,37 @@ export function buildRoles(cards) {
   return { roles, violations };
 }
 
+// specsRepositoryProblem explica por qué el repositorio de especificaciones de un
+// alta multirepo no es admisible, o devuelve '' si lo es: obligatorio, relativo a
+// la carpeta del proyecto, dentro de ella y distinto de ella.
+export function specsRepositoryProblem(specs) {
+  const value = String(specs ?? '').trim();
+  if (!value) return 'Indica el repositorio de especificaciones: en multirepo es obligatorio.';
+  const normalized = value.split(/[\\/]+/).filter(part => part && part !== '.');
+  if (!normalized.length) {
+    return 'El repositorio de especificaciones no puede ser la propia carpeta del proyecto: debe ser un repositorio aparte dentro de ella.';
+  }
+  const problem = repoPathProblem(value);
+  return problem ? `El repositorio de especificaciones «${value}» ${problem}.` : '';
+}
+
 // validateProjectForm valida el formulario completo antes de enviarlo y devuelve
-// { roles, violations }; con violaciones no debe hacerse la petición.
-export function validateProjectForm({ path, cards }) {
+// { roles, specsRepository, violations }; con violaciones no debe hacerse la
+// petición. specsRepository solo se rellena en multirepo.
+export function validateProjectForm({ path, cards, topology, specsRepository }) {
   const violations = [];
   if (!String(path ?? '').trim()) {
     violations.push('Debes indicar la ruta del proyecto en disco.');
   }
+  let specs = '';
+  if (topology === 'multirepo') {
+    const problem = specsRepositoryProblem(specsRepository);
+    if (problem) violations.push(problem);
+    else specs = String(specsRepository).trim();
+  }
   const built = buildRoles(cards);
   violations.push(...built.violations);
-  return { roles: built.roles, violations };
+  return { roles: built.roles, specsRepository: specs, violations };
 }
 
 // violationsFromError extrae la lista de violaciones de un error de la API. El

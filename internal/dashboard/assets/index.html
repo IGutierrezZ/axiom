@@ -608,6 +608,12 @@
           </select>
         </div>
       </div>
+      <!-- Solo en multirepo: el axiom.yaml vive en un repositorio de specs propio y la carpeta del proyecto lleva el puntero -->
+      <div class="field" id="field-project-specs-repository" hidden>
+        <label for="input-project-specs-repository">Repositorio de especificaciones (ruta relativa a la carpeta del proyecto)</label>
+        <input type="text" id="input-project-specs-repository" class="form-input" placeholder="repo-specs" autocomplete="off">
+        <p class="field-hint">Se crea si no existe (sin <code>git init</code>). Ahí se guardan <code>axiom.yaml</code> y <code>openspec/</code>; la carpeta del proyecto solo lleva el puntero <code>.axiom-workspace</code>.</p>
+      </div>
       <!-- Preferencias personales de worktree: se guardan en el Hub, no en axiom.yaml -->
       <div class="field-grid">
         <div class="field">

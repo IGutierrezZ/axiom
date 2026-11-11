@@ -79,6 +79,11 @@ type InitOptions struct {
 	Force    bool
 	Roles    []RoleInput
 	Profile  string // "knowledge", "spec-only", "full"
+	// SpecsRepository es, solo en multirepo, la ruta relativa a la carpeta maestra (Path)
+	// del repositorio de especificaciones propio. El alta lo crea si no existe, escribe en él
+	// el axiom.yaml y deja en la carpeta maestra el puntero .axiom-workspace. Vacío, el
+	// alta es la de siempre: axiom.yaml en la carpeta maestra y specs en openspec/.
+	SpecsRepository string
 	// WorktreePrefs son las preferencias personales de worktree que se guardan en la entrada
 	// del hub al registrar el proyecto (REQ-25.30); vacías, no se guarda ninguna.
 	WorktreePrefs WorktreePrefs
