@@ -2208,6 +2208,16 @@ func RunSync(args []string) (SyncResult, error) {
 		}
 		selection.ClaudeModelAssignments = m
 	}
+	// Las asignaciones de Copilot son texto libre: a diferencia de las de Claude no
+	// se descartan en silencio las inválidas, porque un cambio manual erróneo en el
+	// estado dejaría el agente sin el modelo que el usuario creía haber elegido.
+	if len(selection.CopilotPhaseAssignments) == 0 && len(persistedState.CopilotPhaseAssignments) > 0 {
+		assignments := persistedState.CopilotAssignments()
+		if err := model.ValidateCopilotPhaseAssignments(assignments); err != nil {
+			return SyncResult{Agents: agentIDs, Selection: selection}, fmt.Errorf("copilot_phase_assignments del estado del proyecto: %w; corrígelo en .axiom/state.json o bórralo y vuelve a ejecutar `axiom sync`", err)
+		}
+		selection.CopilotPhaseAssignments = assignments
+	}
 	if len(selection.KiroModelAssignments) == 0 && len(persistedState.KiroModelAssignments) > 0 {
 		m := make(map[string]model.KiroModelAlias, len(persistedState.KiroModelAssignments))
 		for k, v := range persistedState.KiroModelAssignments {

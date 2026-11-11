@@ -556,6 +556,72 @@ func TestClaudePhaseAssignmentsRoundTrip(t *testing.T) {
 	}
 }
 
+func TestCopilotPhaseAssignmentsRoundTrip(t *testing.T) {
+	home := t.TempDir()
+
+	selection := map[string]model.CopilotPhaseAssignment{
+		"sdd-apply":  {Model: "Claude Sonnet 4.6 (copilot)", Effort: "high"},
+		"sdd-design": {Model: "GPT-5.2 (copilot)"},
+	}
+	want := InstallState{
+		InstalledAgents:         []string{"vscode-copilot"},
+		CopilotPhaseAssignments: CopilotAssignmentsToState(selection),
+	}
+
+	if err := Write(home, want); err != nil {
+		t.Fatalf("Write() error = %v", err)
+	}
+	raw, err := os.ReadFile(Path(home))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(raw), `"copilot_phase_assignments"`) {
+		t.Fatalf("la clave copilot_phase_assignments no se serializó: %s", raw)
+	}
+
+	got, err := Read(home)
+	if err != nil {
+		t.Fatalf("Read() error = %v", err)
+	}
+	if !reflect.DeepEqual(got.CopilotPhaseAssignments, want.CopilotPhaseAssignments) {
+		t.Errorf("CopilotPhaseAssignments = %v, want %v", got.CopilotPhaseAssignments, want.CopilotPhaseAssignments)
+	}
+	if !reflect.DeepEqual(got.CopilotAssignments(), selection) {
+		t.Errorf("CopilotAssignments() = %v, want %v", got.CopilotAssignments(), selection)
+	}
+}
+
+func TestCopilotPhaseAssignmentsAbsentStayOutOfState(t *testing.T) {
+	if got := CopilotAssignmentsToState(nil); got != nil {
+		t.Errorf("CopilotAssignmentsToState(nil) = %v, want nil", got)
+	}
+	if got := (InstallState{}).CopilotAssignments(); got != nil {
+		t.Errorf("CopilotAssignments() sin estado = %v, want nil", got)
+	}
+	home := t.TempDir()
+	if err := Write(home, InstallState{InstalledAgents: []string{"opencode"}}); err != nil {
+		t.Fatal(err)
+	}
+	raw, err := os.ReadFile(Path(home))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(raw), "copilot_phase_assignments") {
+		t.Errorf("sin asignaciones no debe escribirse la clave: %s", raw)
+	}
+}
+
+func TestMergeAgentsPreservesCopilotPhaseAssignments(t *testing.T) {
+	existing := InstallState{
+		InstalledAgents:         []string{"vscode-copilot"},
+		CopilotPhaseAssignments: map[string]CopilotPhaseAssignmentState{"sdd-apply": {Model: "GPT-5.2 (copilot)"}},
+	}
+	merged := MergeAgents(existing, []string{"opencode"})
+	if !reflect.DeepEqual(merged.CopilotPhaseAssignments, existing.CopilotPhaseAssignments) {
+		t.Errorf("MergeAgents perdió las asignaciones de Copilot: %v", merged.CopilotPhaseAssignments)
+	}
+}
+
 // TestModelAssignmentStateEffortRoundTrip verifies that Effort field survives
 // a JSON serialization round-trip.
 func TestModelAssignmentStateEffortRoundTrip(t *testing.T) {

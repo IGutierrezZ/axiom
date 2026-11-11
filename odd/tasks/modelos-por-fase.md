@@ -63,13 +63,13 @@ Fuera de alcance:
 
 ## Tareas
 
-- [ ] **T1 · Detección de Claude sin CLI (G5.3).** Ruta: escritor delegado.
+- [x] **T1 · Detección de Claude sin CLI (G5.3).** Ruta: escritor delegado.
   - `claude.Adapter.Detect` da Claude por instalado si encuentra el CLI, Claude Desktop o la extensión `anthropic.claude-code` de VS Code.
     - Claude Desktop: Windows `%APPDATA%\Claude` o `%LOCALAPPDATA%\AnthropicClaude`; macOS `/Applications/Claude.app` o `~/Library/Application Support/Claude`.
     - Extensión: `~/.vscode/extensions/anthropic.claude-code-*`, reutilizando el patrón de `vscode/adapter.go:47-58`.
   - Pruebas con un HOME temporal para cada señal.
   - `docs/agents.md` cuenta que el adaptador cubre los tres entornos.
-- [ ] **T2 · Asignaciones por fase de Copilot en el modelo y el estado.** Ruta: escritor delegado.
+- [x] **T2 · Asignaciones por fase de Copilot en el modelo y el estado.** Ruta: escritor delegado.
   - `model.Selection.CopilotPhaseAssignments` (modelo y esfuerzo por fase) y su persistencia en `.axiom/state.json`.
   - `sync` las restaura, igual que `ClaudePhaseAssignments` (`internal/cli/sync.go:2186-2200`).
   - Sin asignación, el agente se genera sin `model`, así que hereda el modelo de la conversación.
@@ -106,6 +106,8 @@ Fuera de alcance:
 ## Progreso y evidencias
 
 - 2026-11-11: exploración delegada y consulta de fuentes primarias. D3 y el formato compartido los decidió el usuario. Worktree `inc/modelos-por-fase` desde `0546f993`.
+- 2026-11-11: T1 hecha (ruta: escritor delegado, commit 65008239). `claude.Adapter.Detect` da `claude-code` por instalado con el CLI, la extensión `anthropic.claude-code-*` o Claude Desktop (Windows `%APPDATA%\Claude` / `%LOCALAPPDATA%\AnthropicClaude`, macOS `/Applications/Claude.app` / `~/Library/Application Support/Claude`). Las variables de entorno solo se respetan con el HOME real, como en el adaptador de VS Code. `binaryPath` queda vacío sin CLI y ningún llamador lo ejecuta. Observado: `go test ./internal/agents/...`: ok; `go vet`: limpio; `gofmt -l`: vacío. Desviación: el commit de T1 no incluyó la actualización de este documento; va en el commit de T2.
+- 2026-11-11: T2 hecha (ruta: escritor delegado; el hash consta en el informe del escritor, no puede constar en su propio commit). `model.CopilotPhaseAssignment` (modelo en texto libre y esfuerzo opcional) en `Selection` y `SyncOverrides`, con validación (fases desconocidas, modelo vacío, caracteres de control que inyectarían claves en el frontmatter). Persistencia en `copilot_phase_assignments` (`state.go`, `MergeAgents`, `run.go`, `app.go`). `axiom sync` las restaura y rechaza las inválidas con un error que nombra `axiom sync`; sin asignación no cambia nada. Una instalación sin asignaciones de Copilot conserva las del estado (desviación respecto a Claude, que las sobrescribe). Observado: `go test ./internal/agents/... ./internal/model/... ./internal/state/...`: ok; `go test ./internal/cli/ -run 'Sync|Install|Detect|Claude|Copilot|TestEveryProductionRefusal...'`: ok; `go test ./internal/dashboard/`: ok; `go test ./internal/app/`: falla solo `TestTuiInstallOnThenSyncPreservesAndRefreshesOpenCodeActivation` (versión de OpenCode no disponible en esta máquina; entorno); `go vet` y `gofmt -l`: limpios.
 
 ## Seguimientos fuera de alcance
 

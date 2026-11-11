@@ -346,6 +346,7 @@ func runInstall(flags InstallFlags, input InstallInput, detection system.Detecti
 		CommunityToolsConfigured:    true,
 		ClaudeModelAssignments:      claudeLegacyAssignmentsForState(input.Selection.ClaudeModelAssignments, claudePhaseState),
 		ClaudePhaseAssignments:      claudePhaseState,
+		CopilotPhaseAssignments:     state.CopilotAssignmentsToState(input.Selection.CopilotPhaseAssignments),
 		KiroModelAssignments:        kiroAliasesToStrings(input.Selection.KiroModelAssignments),
 		CodexModelAssignments:       codexEffortsToStrings(input.Selection.CodexModelAssignments),
 		CodexOrchestratorAssignment: codexOrchestratorToState(input.Selection.CodexOrchestratorAssignment),
@@ -407,6 +408,11 @@ func mergeFullInstallState(existing, fresh state.InstallState) state.InstallStat
 	merged.CommunityTools, merged.CommunityToolsConfigured = fresh.CommunityTools, fresh.CommunityToolsConfigured
 	merged.ClaudeModelAssignments, merged.ClaudePhaseAssignments = fresh.ClaudeModelAssignments, fresh.ClaudePhaseAssignments
 	merged.KiroModelAssignments, merged.CodexModelAssignments = fresh.KiroModelAssignments, fresh.CodexModelAssignments
+	// Una instalación sin asignaciones de Copilot no las borra: se conservan las que
+	// ya hubiera en el estado del proyecto.
+	if fresh.CopilotPhaseAssignments != nil {
+		merged.CopilotPhaseAssignments = fresh.CopilotPhaseAssignments
+	}
 	merged.CodexOrchestratorAssignment = fresh.CodexOrchestratorAssignment
 	merged.CodexCarrilModelAssignments, merged.CodexPhaseModelAssignments = fresh.CodexCarrilModelAssignments, fresh.CodexPhaseModelAssignments
 	merged.ModelAssignments, merged.Persona = fresh.ModelAssignments, fresh.Persona
@@ -451,6 +457,9 @@ func mergeExplicitAgentInstallState(store state.Store, newState state.InstallSta
 	if newState.ClaudePhaseAssignments != nil {
 		merged.ClaudePhaseAssignments = newState.ClaudePhaseAssignments
 		merged.ClaudeModelAssignments = nil
+	}
+	if newState.CopilotPhaseAssignments != nil {
+		merged.CopilotPhaseAssignments = newState.CopilotPhaseAssignments
 	}
 	if newState.KiroModelAssignments != nil {
 		merged.KiroModelAssignments = newState.KiroModelAssignments
