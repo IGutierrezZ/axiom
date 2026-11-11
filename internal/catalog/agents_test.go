@@ -95,3 +95,28 @@ func TestIsSupportedAgentAcceptsHermes(t *testing.T) {
 		t.Fatalf("IsSupportedAgent(%q) = false, want true", model.AgentHermes)
 	}
 }
+
+func TestAllAgentsIncludesGitHubCopilotCLIAsDistinctFromVSCode(t *testing.T) {
+	var cli, vscode *Agent
+	for _, agent := range AllAgents() {
+		agent := agent
+		switch agent.ID {
+		case model.AgentGitHubCopilotCLI:
+			cli = &agent
+		case model.AgentVSCodeCopilot:
+			vscode = &agent
+		}
+	}
+	if cli == nil || vscode == nil {
+		t.Fatalf("AllAgents() missing Copilot entries: cli=%v vscode=%v", cli, vscode)
+	}
+	if cli.Name != "GitHub Copilot CLI" || cli.Tier != model.TierFull || cli.ConfigPath != "~/.copilot" {
+		t.Fatalf("Copilot CLI entry = %+v", *cli)
+	}
+	if cli.ID == vscode.ID || cli.Name == vscode.Name {
+		t.Fatalf("Copilot CLI and VS Code Copilot must be distinct entries: %+v / %+v", *cli, *vscode)
+	}
+	if !IsSupportedAgent(model.AgentGitHubCopilotCLI) {
+		t.Fatal("IsSupportedAgent(github-copilot-cli) = false, want true")
+	}
+}

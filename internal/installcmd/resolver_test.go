@@ -919,3 +919,49 @@ func TestUVInstallHint(t *testing.T) {
 		})
 	}
 }
+
+func TestResolveCopilotCLIInstall(t *testing.T) {
+	r := NewResolver()
+	npm := []string{"npm", "install", "-g", "--ignore-scripts", "@github/copilot@latest"}
+	tests := []struct {
+		name    string
+		profile system.PlatformProfile
+		want    CommandSequence
+	}{
+		{"darwin sin sudo", system.PlatformProfile{OS: "darwin", PackageManager: "brew"}, CommandSequence{npm}},
+		{"windows sin sudo", system.PlatformProfile{OS: "windows", PackageManager: "winget"}, CommandSequence{npm}},
+		{"linux con npm del sistema usa sudo", system.PlatformProfile{OS: "linux", LinuxDistro: system.LinuxDistroUbuntu, PackageManager: "apt"}, CommandSequence{append([]string{"sudo"}, npm...)}},
+		{"linux con nvm no usa sudo", system.PlatformProfile{OS: "linux", LinuxDistro: system.LinuxDistroUbuntu, PackageManager: "apt", NpmWritable: true}, CommandSequence{npm}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := r.ResolveAgentInstall(tt.profile, model.AgentGitHubCopilotCLI)
+			if err != nil {
+				t.Fatalf("ResolveAgentInstall() error = %v", err)
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Fatalf("ResolveAgentInstall() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+// Copilot CLI se instala con npm: sin npm, el preflight falla con la receta de Node.
+func TestCopilotCLIInstallRequiresNpmPreflight(t *testing.T) {
+	if _, ok := npmBasedAgents[model.AgentGitHubCopilotCLI]; !ok {
+		t.Fatal("Copilot CLI debe estar en npmBasedAgents")
+	}
+	original := cmdLookPath
+	t.Cleanup(func() { cmdLookPath = original })
+	cmdLookPath = func(string) (string, error) { return "", fmt.Errorf("not found") }
+
+	err := ValidateAgentInstallPreflight(system.PlatformProfile{OS: "linux", PackageManager: "apt", Supported: true}, model.AgentGitHubCopilotCLI)
+	if err == nil || !strings.Contains(err.Error(), "npm") {
+		t.Fatalf("ValidateAgentInstallPreflight() = %v, want npm remediation", err)
+	}
+
+	cmdLookPath = func(file string) (string, error) { return "/usr/bin/" + file, nil }
+	if err := ValidateAgentInstallPreflight(system.PlatformProfile{OS: "linux", PackageManager: "apt", Supported: true}, model.AgentGitHubCopilotCLI); err != nil {
+		t.Fatalf("ValidateAgentInstallPreflight() con npm = %v, want nil", err)
+	}
+}

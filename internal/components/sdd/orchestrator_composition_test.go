@@ -33,7 +33,7 @@ func TestCanonicalCompositionAddsOnlyItsKnownSteps(t *testing.T) {
 			// invariant is unchanged in spirit: composition is bounded review
 			// plus the shared sections plus the Pi route, and nothing else.
 			content := assets.MustRead(path)
-			if agent.ID == model.AgentVSCodeCopilot || agent.ID == model.AgentCursor || agent.ID == model.AgentGeminiCLI ||
+			if agent.ID == model.AgentVSCodeCopilot || agent.ID == model.AgentGitHubCopilotCLI || agent.ID == model.AgentCursor || agent.ID == model.AgentGeminiCLI ||
 				agent.ID == model.AgentAntigravity || agent.ID == model.AgentQwenCode || agent.ID == model.AgentHermes || agent.ID == model.AgentKimi || agent.ID == model.AgentKiroIDE || agent.ID == model.AgentCodex || agent.ID == model.AgentWindsurf {
 				assertFallbackSessionPreflight(t, composeOrchestratorPrompt(agent.ID))
 				return
@@ -53,7 +53,7 @@ func TestCanonicalCompositionAddsOnlyItsKnownSteps(t *testing.T) {
 }
 
 func TestFallbackSessionPreflightRejectsAmbiguousSource(t *testing.T) {
-	for _, agent := range []model.AgentID{model.AgentVSCodeCopilot, model.AgentCursor, model.AgentGeminiCLI, model.AgentAntigravity, model.AgentQwenCode, model.AgentHermes, model.AgentKimi, model.AgentKiroIDE, model.AgentCodex, model.AgentWindsurf} {
+	for _, agent := range []model.AgentID{model.AgentVSCodeCopilot, model.AgentGitHubCopilotCLI, model.AgentCursor, model.AgentGeminiCLI, model.AgentAntigravity, model.AgentQwenCode, model.AgentHermes, model.AgentKimi, model.AgentKiroIDE, model.AgentCodex, model.AgentWindsurf} {
 		source := resolvedOrchestratorSource(sddOrchestratorAsset(agent))
 		initStart := strings.Index(source, "1. Search Engram:")
 		initEnd := strings.Index(source[initStart:], "\n\n") + initStart
@@ -85,6 +85,7 @@ func TestFallbackSessionPreflightRejectsAmbiguousSource(t *testing.T) {
 	}{
 		{model.AgentCursor, "**Interactive** is the default behavior"},
 		{model.AgentVSCodeCopilot, "Artifact store: default `engram` when available."},
+		{model.AgentGitHubCopilotCLI, "Artifact store: default `engram` when available."},
 	} {
 		for _, mutation := range []string{"drifted default", tc.clause + "\n" + tc.clause} {
 			t.Run(string(tc.agent)+"/"+mutation, func(t *testing.T) {

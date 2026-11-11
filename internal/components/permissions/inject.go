@@ -142,6 +142,12 @@ func agentOverlay(id model.AgentID) []byte {
 		// chat.tools.autoApprove). Axiom does not impose those modes, and a
 		// value the user already set is never touched, so nothing is injected.
 		return nil
+	case model.AgentGitHubCopilotCLI:
+		// Copilot CLI gestiona los permisos por herramienta con sus propias opciones
+		// y con lo que el usuario apruebe en la sesión. Axiom no tiene un formato de
+		// reglas que escribir en su settings.json, así que no inyecta nada: lo que el
+		// usuario haya decidido queda intacto.
+		return nil
 	case model.AgentAntigravity:
 		// Antigravity manages permissions via IDE UI (Artifact Review Policy /
 		// Terminal Command Auto Execution). No injectable settings.json schema.

@@ -69,22 +69,23 @@ func TestScanConfigs_AgentFieldMatchesModelAgentID(t *testing.T) {
 
 	// These are the AgentID string values the TUI switch statements check.
 	knownAgents := map[string]bool{
-		"claude-code":    false,
-		"opencode":       false,
-		"kilocode":       false,
-		"gemini-cli":     false,
-		"cursor":         false,
-		"vscode-copilot": false,
-		"codex":          false,
-		"antigravity":    false,
-		"windsurf":       false,
-		"kimi":           false,
-		"qwen-code":      false,
-		"kiro-ide":       false,
-		"openclaw":       false,
-		"pi":             false,
-		"trae-ide":       false,
-		"hermes":         false,
+		"claude-code":        false,
+		"opencode":           false,
+		"kilocode":           false,
+		"gemini-cli":         false,
+		"cursor":             false,
+		"vscode-copilot":     false,
+		"codex":              false,
+		"antigravity":        false,
+		"windsurf":           false,
+		"kimi":               false,
+		"qwen-code":          false,
+		"kiro-ide":           false,
+		"openclaw":           false,
+		"pi":                 false,
+		"trae-ide":           false,
+		"hermes":             false,
+		"github-copilot-cli": false,
 	}
 
 	for _, c := range configs {
@@ -174,4 +175,95 @@ func agentNames(configs []ConfigState) []string {
 		names[i] = c.Agent
 	}
 	return names
+}
+
+// useRealHome hace que os.UserHomeDir devuelva home: solo entonces se respeta
+// COPILOT_HOME.
+func useRealHome(t *testing.T, home string) {
+	t.Helper()
+	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
+}
+
+func scanStateFor(t *testing.T, configs []ConfigState, agent string) ConfigState {
+	t.Helper()
+	for _, c := range configs {
+		if c.Agent == agent {
+			return c
+		}
+	}
+	t.Fatalf("ScanConfigs() missing %s entry", agent)
+	return ConfigState{}
+}
+
+// Copilot CLI y VS Code Copilot comparten ~/.copilot, pero ninguno se da por
+// presente solo porque la carpeta exista.
+func TestScanConfigs_CopilotCLIAndVSCodeDoNotCollide(t *testing.T) {
+	home := t.TempDir()
+	useRealHome(t, home)
+	t.Setenv("COPILOT_HOME", "")
+	root := filepath.Join(home, ".copilot")
+
+	// Solo las skills compartidas: ni uno ni otro.
+	if err := os.MkdirAll(filepath.Join(root, "skills"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	configs := ScanConfigs(home)
+	if cli := scanStateFor(t, configs, "github-copilot-cli"); cli.Exists || cli.Path != root {
+		t.Fatalf("github-copilot-cli = %+v, want ausente en %s", cli, root)
+	}
+	if vs := scanStateFor(t, configs, "vscode-copilot"); vs.Exists {
+		t.Fatalf("vscode-copilot = %+v, want ausente sin extensión", vs)
+	}
+
+	// Estado propio del CLI: solo el CLI.
+	if err := os.WriteFile(filepath.Join(root, "settings.json"), []byte("{}"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	configs = ScanConfigs(home)
+	if !scanStateFor(t, configs, "github-copilot-cli").Exists {
+		t.Fatal("github-copilot-cli debe detectarse con settings.json")
+	}
+	if scanStateFor(t, configs, "vscode-copilot").Exists {
+		t.Fatal("vscode-copilot no debe detectarse por la carpeta del CLI")
+	}
+
+	// La extensión de VS Code activa VS Code Copilot.
+	for _, ext := range []string{"github.copilot-chat-0.12.0", "github.copilot-1.2.3"} {
+		if err := os.MkdirAll(filepath.Join(home, ".vscode", "extensions", ext), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if !scanStateFor(t, ScanConfigs(home), "vscode-copilot").Exists {
+			t.Errorf("vscode-copilot Exists = false, want true con %s", ext)
+		}
+	}
+}
+
+func TestScanConfigs_UsesCopilotHome(t *testing.T) {
+	home := t.TempDir()
+	useRealHome(t, home)
+	root := filepath.Join(t.TempDir(), "custom-copilot")
+	t.Setenv("COPILOT_HOME", root)
+	if err := os.MkdirAll(root, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "mcp-config.json"), []byte("{}"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	c := scanStateFor(t, ScanConfigs(home), "github-copilot-cli")
+	if c.Path != root || !c.Exists || !c.IsDirectory {
+		t.Fatalf("github-copilot-cli = %+v, want directorio %q", c, root)
+	}
+}
+
+func TestIsCopilotExtensionDir(t *testing.T) {
+	for name, want := range map[string]bool{
+		"github.copilot": true, "github.copilot-1.2.3": true, "github.copilot-chat-0.12.0": true,
+		"github.copilot-nightly": true, "github.copilot_other": false,
+		"github.other": false, "copilot": false, "": false,
+	} {
+		if got := IsCopilotExtensionDir(name); got != want {
+			t.Errorf("IsCopilotExtensionDir(%q) = %v, want %v", name, got, want)
+		}
+	}
 }

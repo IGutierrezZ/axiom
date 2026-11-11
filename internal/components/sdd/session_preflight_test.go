@@ -44,7 +44,7 @@ func TestSessionPreflightActualProjectionInventory(t *testing.T) {
 		t.Fatal(err)
 	}
 	covered := map[string]bool{}
-	for _, agent := range []model.AgentID{model.AgentVSCodeCopilot, model.AgentCursor, model.AgentGeminiCLI, model.AgentAntigravity, model.AgentQwenCode, model.AgentHermes, model.AgentKimi, model.AgentKiroIDE, model.AgentCodex, model.AgentWindsurf, model.AgentOpenCode, model.AgentKilocode, model.AgentClaudeCode} {
+	for _, agent := range []model.AgentID{model.AgentVSCodeCopilot, model.AgentGitHubCopilotCLI, model.AgentCursor, model.AgentGeminiCLI, model.AgentAntigravity, model.AgentQwenCode, model.AgentHermes, model.AgentKimi, model.AgentKiroIDE, model.AgentCodex, model.AgentWindsurf, model.AgentOpenCode, model.AgentKilocode, model.AgentClaudeCode} {
 		t.Run(string(agent), func(t *testing.T) {
 			// OpenCode/Kilo share a template. Claude's full projection is lazy;
 			// its always-on bootstrap and Windsurf's native entry are consumers.
@@ -94,7 +94,7 @@ func TestSessionPreflightActualProjectionInventory(t *testing.T) {
 }
 
 func TestFallbackSessionPreflightCohort(t *testing.T) {
-	for _, agent := range []model.AgentID{model.AgentVSCodeCopilot, model.AgentCursor, model.AgentGeminiCLI, model.AgentAntigravity, model.AgentQwenCode, model.AgentHermes, model.AgentKimi, model.AgentKiroIDE, model.AgentCodex, model.AgentWindsurf} {
+	for _, agent := range []model.AgentID{model.AgentVSCodeCopilot, model.AgentGitHubCopilotCLI, model.AgentCursor, model.AgentGeminiCLI, model.AgentAntigravity, model.AgentQwenCode, model.AgentHermes, model.AgentKimi, model.AgentKiroIDE, model.AgentCodex, model.AgentWindsurf} {
 		t.Run(string(agent), func(t *testing.T) {
 			got := composeOrchestratorPrompt(agent)
 			if agent == model.AgentCodex {

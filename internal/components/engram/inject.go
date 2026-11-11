@@ -168,6 +168,24 @@ func vsCodeEngramOverlayJSON(cmd string) []byte {
 	return append(b, '\n')
 }
 
+// copilotCLIEngramOverlayJSON es la entrada de Engram en mcp-config.json de
+// Copilot CLI: raíz `mcpServers`, `type: "local"` (proceso hijo por stdio) y
+// `tools: ["*"]`. Lleva el mismo comando y argumentos que el resto de agentes.
+func copilotCLIEngramOverlayJSON(cmd string) []byte {
+	cfg := map[string]any{
+		"mcpServers": map[string]any{
+			"engram": map[string]any{
+				"type":    "local",
+				"command": cmd,
+				"args":    []string{"mcp", "--tools=agent"},
+				"tools":   []string{"*"},
+			},
+		},
+	}
+	b, _ := json.MarshalIndent(cfg, "", "  ")
+	return append(b, '\n')
+}
+
 // InjectOptions carries optional configuration for an Inject call.
 // Zero value is always safe — all fields have documented defaults.
 type InjectOptions struct {
@@ -389,6 +407,8 @@ func injectWithOptions(configHomeDir, promptDir string, adapter agents.Adapter, 
 		var overlay []byte
 		if adapter.Agent() == model.AgentVSCodeCopilot {
 			overlay = vsCodeEngramOverlayJSON(engramCommand)
+		} else if adapter.Agent() == model.AgentGitHubCopilotCLI {
+			overlay = copilotCLIEngramOverlayJSON(engramCommand)
 		} else {
 			overlay = engramOverlayJSON(adapter.Agent(), engramCommand)
 		}
@@ -968,7 +988,11 @@ func executableFromCommandValue(command any) (string, bool) {
 
 func isStandardAgent(id model.AgentID) bool {
 	switch id {
-	case model.AgentOpenCode, model.AgentQwenCode, model.AgentCodex, model.AgentGeminiCLI, model.AgentAntigravity, model.AgentClaudeCode, model.AgentOpenClaw, model.AgentHermes:
+	case model.AgentOpenCode, model.AgentQwenCode, model.AgentCodex, model.AgentGeminiCLI, model.AgentAntigravity, model.AgentClaudeCode, model.AgentOpenClaw, model.AgentHermes,
+		// Copilot CLI arranca el servidor desde la terminal y hereda su PATH, como Gemini
+		// o Claude: basta el nombre del binario. VS Code, al ser una aplicación gráfica,
+		// puede no verlo y por eso guarda la ruta absoluta.
+		model.AgentGitHubCopilotCLI:
 		return true
 	default:
 		return false
