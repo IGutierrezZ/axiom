@@ -1,6 +1,7 @@
 package kickoff
 
 import (
+	"errors"
 	"strings"
 	"testing"
 
@@ -141,7 +142,7 @@ func TestParseSealArgsRoleFlagPolicyParsing(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			parsed, err := ParseSealArgs([]string{
-				"--change", "inc-99-example", "--execution-style", "continuous", "--handoff-policy", "none", "--role", tt.value,
+				"--change", "inc-99-example", "--execution-style", "checkpointed", "--handoff-policy", "none", "--role", tt.value,
 			})
 			if (err != nil) != tt.wantErr {
 				t.Fatalf("ParseSealArgs() error = %v, wantErr %v", err, tt.wantErr)
@@ -523,5 +524,65 @@ func TestParseSealArgsDocsPublication(t *testing.T) {
 				t.Fatalf("ToKickoff().Config.DocsPublication = %q, want %q", got, tt.want)
 			}
 		})
+	}
+}
+
+// TestParseSealArgsContinuousRosterRule fija REQ-28.12 y REQ-28.13: continuous
+// solo se sella con el rol único fullstack, también cuando el estilo se deriva
+// de --from-session-pace auto, y la regla se aplica sin resolver --change.
+func TestParseSealArgsContinuousRosterRule(t *testing.T) {
+	base := []string{"--change", "inc-99-example"}
+	with := func(extra ...string) []string { return append(append([]string{}, base...), extra...) }
+	tests := []struct {
+		name      string
+		args      []string
+		wantStyle ExecutionStyle
+		wantRoles []string
+		wantErr   string
+	}{
+		{name: "continuous sin roles sella fullstack", args: with("--execution-style", "continuous"), wantStyle: ExecutionContinuous, wantRoles: []string{"fullstack"}},
+		{name: "continuous con fullstack explicito", args: with("--execution-style", "continuous", "--role", "fullstack"), wantStyle: ExecutionContinuous, wantRoles: []string{"fullstack"}},
+		{name: "la politica de fullstack no se comprueba", args: with("--execution-style", "continuous", "--role", "fullstack:deferred"), wantStyle: ExecutionContinuous, wantRoles: []string{"fullstack"}},
+		{name: "continuous con roles se rechaza", args: with("--execution-style", "continuous", "--role", "core", "--role", "web"), wantErr: "--execution-style checkpointed"},
+		{name: "auto con roles se rechaza sin derivar checkpointed", args: with("--from-session-pace", "auto", "--role", "core"), wantErr: "--from-session-pace auto deriva continuous"},
+		{name: "interactive con roles deriva checkpointed", args: with("--from-session-pace", "interactive", "--role", "core", "--role", "web"), wantStyle: ExecutionCheckpointed, wantRoles: []string{"core", "web"}},
+		{name: "checkpointed explicito sobre auto con roles sella", args: with("--from-session-pace", "auto", "--execution-style", "checkpointed", "--role", "core"), wantStyle: ExecutionCheckpointed, wantRoles: []string{"core"}},
+		{name: "continuous explicito sobre auto con roles se rechaza", args: with("--from-session-pace", "auto", "--execution-style", "continuous", "--role", "core"), wantErr: "--role"},
+		{name: "fullstack repetido se rechaza", args: with("--execution-style", "continuous", "--role", "fullstack", "--role", "fullstack"), wantErr: "fullstack, fullstack"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			parsed, err := ParseSealArgs(tt.args)
+			if tt.wantErr != "" {
+				if err == nil || !strings.Contains(err.Error(), tt.wantErr) {
+					t.Fatalf("ParseSealArgs() error = %v, se esperaba un mensaje con %q", err, tt.wantErr)
+				}
+				if !errors.Is(err, ErrContinuousRequiresFullstack) {
+					t.Errorf("error = %v, se esperaba ErrContinuousRequiresFullstack", err)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("ParseSealArgs() error = %v", err)
+			}
+			if parsed.ExecutionStyle != tt.wantStyle {
+				t.Errorf("ExecutionStyle = %q, want %q", parsed.ExecutionStyle, tt.wantStyle)
+			}
+			var got []string
+			for _, r := range parsed.Roles {
+				got = append(got, r.Role)
+			}
+			if strings.Join(got, ",") != strings.Join(tt.wantRoles, ",") {
+				t.Errorf("Roles = %v, want %v", got, tt.wantRoles)
+			}
+		})
+	}
+}
+
+// TestParseSealArgsContinuousRosterRuleSkipsInfer: --infer no pasa por la regla
+// (P2, REQ-21.4).
+func TestParseSealArgsContinuousRosterRuleSkipsInfer(t *testing.T) {
+	if _, err := ParseSealArgs([]string{"--change", "inc-99-example", "--infer"}); err != nil {
+		t.Fatalf("ParseSealArgs(--infer) error = %v", err)
 	}
 }

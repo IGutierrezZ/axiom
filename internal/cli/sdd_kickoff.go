@@ -34,6 +34,7 @@ func RunSDDKickoff(args []string, stdout io.Writer) error {
 func renderSDDKickoffHelp(stdout io.Writer) error {
 	_, _ = fmt.Fprintln(stdout, "Uso: axiom sdd kickoff <seal|show> [argumentos]")
 	_, _ = fmt.Fprintln(stdout, "  seal --cwd <ruta> --change <nombre> (--execution-style continuous|checkpointed | --from-session-pace interactive|auto) [--docs-publication auto (solo con continuous)] [--role <id>[:blocking|deferred|optional] ...] [--deployment-target local|staging|production] [--json]")
+	_, _ = fmt.Fprintln(stdout, "    continuous solo con el rol fullstack: con roles especializados se sella --execution-style checkpointed")
 	_, _ = fmt.Fprintln(stdout, "  seal --infer --cwd <ruta> --change <nombre> [--json]   (retro-sellado conservador, REQ-21.4)")
 	_, _ = fmt.Fprintln(stdout, "  show --cwd <ruta> --change <nombre> [--json]")
 	return nil
@@ -71,6 +72,12 @@ func runSDDKickoffSeal(args []string, stdout io.Writer) error {
 		}
 	}
 	sealing.Change = parsed.Change
+
+	// Defensa en profundidad (DD-01): la regla de continuous también se
+	// comprueba sobre el documento ensamblado; el retrosellado queda exento.
+	if err := sealing.ValidateForSeal(); err != nil {
+		return err
+	}
 
 	sealed, wrote, err := kickoff.Seal(changeRoot, sealing)
 	if err != nil {

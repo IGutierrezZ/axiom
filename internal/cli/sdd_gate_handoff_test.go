@@ -20,7 +20,7 @@ import (
 
 var (
 	handOffGatesRel = "openspec/changes/x/gates.yaml"
-	continuousArgs  = []string{"--execution-style", "continuous", "--handoff-policy", "none", "--role", "core", "--role", "qa"}
+	continuousArgs  = []string{"--execution-style", "continuous", "--handoff-policy", "none"}
 )
 
 // handOffProject es un monorepo embebido con el cambio x sellado `checkpointed` con los roles core

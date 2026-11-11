@@ -1,6 +1,7 @@
 package kickoff
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -116,6 +117,48 @@ func (k Kickoff) Validate() error {
 		return k.Git.Validate()
 	}
 	return nil
+}
+
+// ErrContinuousRequiresFullstack identifica el rechazo de sellado de D7/D8:
+// execution_style continuous solo admite el roster exacto [fullstack]. Se
+// envuelve con el roster recibido y las dos salidas; errors.Is lo reconoce.
+var ErrContinuousRequiresFullstack = errors.New("execution_style continuous solo admite el rol único fullstack")
+
+// checkContinuousRoster es la regla pura de sellado: nil si style no es
+// continuous o si roles es exactamente ["fullstack"]. La política de compuerta
+// no se comprueba (DD-02): continuous no tiene compuertas. fromSessionPace solo
+// cambia el texto del mensaje.
+func checkContinuousRoster(style ExecutionStyle, roles []string, fromSessionPace bool) error {
+	if style != ExecutionContinuous {
+		return nil
+	}
+	if len(roles) == 1 && roles[0] == "fullstack" {
+		return nil
+	}
+	prefix := ""
+	if fromSessionPace {
+		prefix = "--from-session-pace auto deriva continuous, que solo admite el rol único fullstack: "
+	}
+	return fmt.Errorf("kickoff seal: %s%w (roles recibidos: %s); sella con --execution-style checkpointed para conservar esos roles, o quita las banderas --role para sellar con fullstack",
+		prefix, ErrContinuousRequiresFullstack, strings.Join(roles, ", "))
+}
+
+// ValidateForSeal es Validate() más la regla de sellado de continuous. Solo la
+// usa el camino de sellado explícito: ParseKickoff y Load siguen con Validate()
+// para leer cualquier kickoff ya sellado o archivado (D7). El retrosellado
+// (SealedBy == SealedByInferred) queda exento (P2, REQ-21.4).
+func (k Kickoff) ValidateForSeal() error {
+	if err := k.Validate(); err != nil {
+		return err
+	}
+	if k.SealedBy == SealedByInferred {
+		return nil
+	}
+	roles := make([]string, 0, len(k.Config.Roles))
+	for _, role := range k.Config.Roles {
+		roles = append(roles, role.Role)
+	}
+	return checkContinuousRoster(k.Config.ExecutionStyle, roles, false)
 }
 
 // ParseGateLedger decodes and validates a gates.yaml document, applying the
