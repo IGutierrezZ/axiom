@@ -260,7 +260,7 @@ func reviewStopHookResolveTargetIdentity(ctx context.Context, repo, runtimeAgent
 		return "", "", ReviewTargetStatusResult{}, false, nil
 	}
 
-	global, globalErr := readGlobalRDDMode()
+	global, globalErr := readRDDModeInputs(root)
 	if globalErr != nil {
 		return "", "", ReviewTargetStatusResult{}, false, fmt.Errorf("review stop-hook: read global review mode: %w", globalErr)
 	}

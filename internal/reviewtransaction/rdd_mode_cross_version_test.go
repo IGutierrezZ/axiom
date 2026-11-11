@@ -22,13 +22,13 @@ func preRelocationCloneMode(t *testing.T, ctx context.Context, repo string) RDDM
 	if err != nil {
 		// An absent legacy tree is how those builds spell "this clone holds no
 		// override", which leaves the global source deciding.
-		return rddModeStatus(RDDModeOn, rddModeOverrideRecord{}, false)
+		return rddModeStatus(RDDModeUnset, RDDModeOn, rddModeOverrideRecord{}, false)
 	}
 	record, present, err := readCloneLocalRDDOverrideHead(dir)
 	if err != nil {
 		t.Fatalf("pre-relocation clone-local read: %v", err)
 	}
-	return rddModeStatus(RDDModeOn, record, present)
+	return rddModeStatus(RDDModeUnset, RDDModeOn, record, present)
 }
 
 // TestCloneScopeDisableAppliesToPreRelocationBuilds is the #3284 guard.

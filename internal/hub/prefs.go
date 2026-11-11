@@ -125,3 +125,75 @@ func sameProject(a, b string) bool {
 	}
 	return a == b
 }
+
+// Preferencia personal del modo RDD de un proyecto (D2 de upstream-revision-nativa): igual
+// que las de worktree, vive en la entrada del proyecto del hub, que se busca por su carpeta
+// maestra y por eso comparten todos los worktrees enlazados. Nunca se versiona, así que a
+// diferencia de un fichero del repositorio puede forzar `on`.
+
+// Los valores que admite la preferencia. El vacío es «sin preferencia».
+const (
+	RDDModeOn  = "on"
+	RDDModeOff = "off"
+)
+
+// ValidateRDDMode comprueba el valor de la preferencia: vacío, `on` u `off` (se distinguen
+// mayúsculas). El mensaje está en castellano y dice qué es válido.
+func ValidateRDDMode(mode string) error {
+	switch mode {
+	case "", RDDModeOn, RDDModeOff:
+		return nil
+	default:
+		return fmt.Errorf("el modo RDD «%s» no es válido: usa %s u %s", mode, RDDModeOn, RDDModeOff)
+	}
+}
+
+// LookupRDDMode devuelve la preferencia RDD guardada para el proyecto cuya carpeta maestra es
+// projectPath y si el proyecto está registrado. Un proyecto sin registrar, o un hub que
+// todavía no existe, devuelve "" sin error: rige entonces el modo global. Un hub que no se
+// puede leer o un valor guardado inválido es un error que nombra el fichero; no modifica nada.
+func (m *Manager) LookupRDDMode(projectPath string) (mode string, registered bool, err error) {
+	cfg, err := m.Load()
+	if err != nil {
+		return "", false, err
+	}
+	for _, record := range cfg.Workspaces {
+		if !sameProject(record.Path, projectPath) {
+			continue
+		}
+		if err := ValidateRDDMode(record.RDDMode); err != nil {
+			return "", true, fmt.Errorf("el modo RDD guardado en %s para %s: %w", m.configPath, projectPath, err)
+		}
+		return record.RDDMode, true, nil
+	}
+	return "", false, nil
+}
+
+// SetRDDMode guarda la preferencia RDD del proyecto registrado que idOrPath nombra, por id o
+// por ruta, y devuelve su entrada actualizada. Un modo vacío retira la preferencia del JSON.
+// Valida antes de leer el hub, de modo que un valor inválido no lo modifica; un proyecto que
+// no está registrado es un error que lo dice y tampoco lo modifica.
+func (m *Manager) SetRDDMode(idOrPath, mode string) (*WorkspaceRecord, error) {
+	if err := ValidateRDDMode(mode); err != nil {
+		return nil, err
+	}
+
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	cfg, err := m.loadUnlocked()
+	if err != nil {
+		return nil, err
+	}
+	for i := range cfg.Workspaces {
+		if cfg.Workspaces[i].ID != idOrPath && !sameProject(cfg.Workspaces[i].Path, idOrPath) {
+			continue
+		}
+		cfg.Workspaces[i].RDDMode = mode
+		if err := m.saveUnlocked(cfg); err != nil {
+			return nil, err
+		}
+		return &cfg.Workspaces[i], nil
+	}
+	return nil, fmt.Errorf("el proyecto «%s» no está registrado en %s", idOrPath, m.configPath)
+}

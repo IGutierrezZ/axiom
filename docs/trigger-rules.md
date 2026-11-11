@@ -60,19 +60,26 @@ status contract; direct and delegated runs do not create or consume an SDD run.
 ## Review mode
 
 Receipt-driven development is user-owned, opt-in, and independent of the
-implementation route. With no source expressing an opinion it is **off**,
-reported as decided by `default`:
+implementation route. Each user decides it per project: the preference lives
+in the user's own hub (`~/.axiom/workspaces.json`, keyed by the project's
+master folder), is never versioned, and is shared by every linked worktree of
+the project. With no source expressing an opinion it is **off**, reported as
+decided by `default`:
 
 | Command | Effect |
 |---|---|
-| `axiom review mode status --cwd <repo>` | Report the global source, clone-local source, deciding source, and effective mode without mutation. |
-| `axiom review mode enable --scope global --cwd <repo>` | Opt in. Enables receipt-driven development globally for future candidates. This is the only command that turns it on. |
-| `axiom review mode disable --cwd <repo>` | Disable receipt-driven development globally. |
+| `axiom review mode status --cwd <repo>` | Report the project, global and clone-local sources, the deciding source (`project`, `global`, `clone_local` or `default`), and the effective mode without mutation. |
+| `axiom review mode enable --cwd <repo>` | Opt in for this project. Inside a project registered in the hub it records your personal preference for future candidates (refused with the exact alternative if the project is not registered). Outside a project it sets the global default. |
+| `axiom review mode disable --cwd <repo>` | Opt out for this project, with the same scope rules as `enable`. |
+| `axiom review mode enable --scope global --cwd <repo>` | Opt in by default for every project without its own preference. |
+| `axiom review mode disable --scope global --cwd <repo>` | Opt out by default for every project without its own preference. |
 | `axiom review mode disable --scope clone --cwd <repo>` | Disable it only for this clone; no other clone inherits the override. |
 | `axiom review mode enable --scope clone --cwd <repo>` | Clear this clone's off-only override. Does not turn review on by itself. |
 
-Any disabled source wins. A clone may opt out but cannot require review for the
-user, so the global scope is the only way in. Interactive starts ask before
+Precedence: the project preference decides first, then the global mode, then the
+default (off). A clone-local off always wins over both. A clone may opt out but
+cannot require review, and nothing versioned can force it on: only the
+user-written project and global values can turn it on. Interactive starts ask before
 reviewer work; non-interactive tier-1/tier-2 starts proceed without prompting and
 report how to disable review mode. Interactive consent is asked
 once per clone. Accepting records that choice; **not now** applies only to that

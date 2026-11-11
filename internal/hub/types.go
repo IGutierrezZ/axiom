@@ -21,6 +21,9 @@ type WorkspaceRecord struct {
 	// los ignora.
 	WorktreeMode string `json:"worktree_mode,omitempty"`
 	WorktreeRoot string `json:"worktree_root,omitempty"`
+	// RDDMode es la preferencia personal del modo RDD del proyecto (`on`, `off` o vacío): igual
+	// que las de worktree, opcional, sin cambiar el esquema `"1.0"`.
+	RDDMode string `json:"rdd_mode,omitempty"`
 }
 
 // HubConfig representa el archivo de configuración central ~/.axiom/workspaces.json.

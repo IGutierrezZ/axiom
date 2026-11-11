@@ -6,7 +6,7 @@
 
 ## RDD starts off
 
-RDD is opt-in. Until a user enables it with `axiom review mode enable --scope global`, review does not govern the candidate and delivery follows ordinary repository policy. Disabling returns to that state. Enabling revalidates the current candidate; it never resumes stale authority.
+RDD is opt-in. Until a user enables it for their project with `axiom review mode enable` (or for every project with `--scope global`), review does not govern the candidate and delivery follows ordinary repository policy. Disabling returns to that state. Enabling revalidates the current candidate; it never resumes stale authority.
 
 ## Quick path
 

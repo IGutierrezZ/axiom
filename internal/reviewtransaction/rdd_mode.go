@@ -93,13 +93,17 @@ const (
 	RDDModeOff RDDMode = "off"
 )
 
-// RDDModeSource names which of the two independent sources decided the
-// effective mode.
+// RDDModeSource names which of the independent sources decided the effective
+// mode.
 type RDDModeSource string
 
 const (
 	// RDDModeSourceDefault means no source expressed an opinion.
 	RDDModeSourceDefault RDDModeSource = "default"
+	// RDDModeSourceProject means the user's personal preference for this project
+	// decided. It lives in the user's hub, keyed by the project's master folder,
+	// so it is unversioned and every linked worktree of the project shares it.
+	RDDModeSourceProject RDDModeSource = "project"
 	// RDDModeSourceGlobal means the user's uncommitted global mode decided.
 	RDDModeSourceGlobal RDDModeSource = "global"
 	// RDDModeSourceCloneLocal means this clone's Git-common-dir override decided.
@@ -142,15 +146,21 @@ const (
 	RDDDeliveryCandidateDeclinedUnmanaged RDDDelivery = "candidate_declined/unmanaged"
 )
 
-// RDDGlobalMode is the raw global user mode read from uncommitted user state.
-// Value is deliberately untyped here so that a hand-edited or future value
-// fails closed inside this package instead of at its persistence boundary.
+// RDDGlobalMode is the raw user-owned mode input read from uncommitted user
+// state: the machine default (Value) and the user's personal preference for the
+// current project (Project, read from the hub). Both are deliberately untyped
+// here so that a hand-edited or future value fails closed inside this package
+// instead of at its persistence boundary.
 // RecordedAt is provenance only: it says when the user last recorded the global
 // mode, and it is deliberately not an approval cutoff, because approval is
 // bound to candidate content rather than to any wall-clock moment.
 type RDDGlobalMode struct {
 	Value      string
 	RecordedAt time.Time
+	// Project is the raw per-user, per-project preference ("", "on" or "off").
+	// Unlike the clone override it may force on: only the user writes it and it
+	// is never versioned.
+	Project string
 }
 
 // RDDModeReach reports how far a clone-scope write actually reached.
@@ -186,6 +196,7 @@ const (
 type RDDModeStatus struct {
 	Schema     string        `json:"schema"`
 	Global     RDDMode       `json:"global"`
+	Project    RDDMode       `json:"project,omitempty"`
 	CloneLocal RDDMode       `json:"clone_local"`
 	Effective  RDDMode       `json:"effective"`
 	Source     RDDModeSource `json:"source"`
@@ -252,6 +263,11 @@ func rddOperationSubject(operation RDDOperation) string {
 // have turned on -- so naming that scope alone was a dead end.
 func reviewModeEnableForSource(source RDDModeSource) string {
 	const enable = "axiom review mode enable --scope="
+	if source == RDDModeSourceProject {
+		// The project preference is the one that decided, and it is the scope a
+		// bare enable inside the project writes.
+		return "axiom review mode enable"
+	}
 	if source == RDDModeSourceCloneLocal {
 		return enable + "global then " + enable + "clone"
 	}
@@ -295,12 +311,19 @@ func (err *RDDModePartialApplyError) Error() string {
 
 func (err *RDDModePartialApplyError) Unwrap() error { return ErrRDDModePartiallyApplied }
 
-// ResolveRDDMode combines the global user mode with this clone's off-only
-// override. Any off wins, a repository can never force on, and every failure
-// projects a disabled status so a caller that drops the error still fails safe.
+// ResolveRDDMode combines the user's project preference, the global user mode
+// and this clone's off-only override. A clone off always wins; below it the
+// project preference decides, then the global mode, then the default off. A
+// repository can never force on (only the user-written project and global
+// values can), and every failure projects a disabled status so a caller that
+// drops the error still fails safe.
 func ResolveRDDMode(ctx context.Context, repo string, global RDDGlobalMode) (RDDModeStatus, error) {
 	if err := ctx.Err(); err != nil {
 		return failedClosedRDDModeStatus(RDDModeSourceDefault), err
+	}
+	projectMode, projectErr := normalizeRDDMode(global.Project)
+	if projectErr != nil {
+		return failedClosedRDDModeStatus(RDDModeSourceProject), projectErr
 	}
 	globalMode, globalErr := normalizeRDDMode(global.Value)
 	if globalErr != nil {
@@ -310,7 +333,7 @@ func ResolveRDDMode(ctx context.Context, repo string, global RDDGlobalMode) (RDD
 	if overrideErr != nil {
 		return failedClosedRDDModeStatus(RDDModeSourceCloneLocal), overrideErr
 	}
-	return rddModeStatus(globalMode, override, present), nil
+	return rddModeStatus(projectMode, globalMode, override, present), nil
 }
 
 // SetCloneLocalRDDMode records this clone's off-only override under the Git
@@ -331,6 +354,10 @@ func SetCloneLocalRDDMode(
 	if err != nil {
 		return failedClosedRDDModeStatus(RDDModeSourceCloneLocal), err
 	}
+	projectMode, projectErr := normalizeRDDMode(global.Project)
+	if projectErr != nil {
+		return failedClosedRDDModeStatus(RDDModeSourceProject), projectErr
+	}
 	globalMode, globalErr := normalizeRDDMode(global.Value)
 	if globalErr != nil {
 		return failedClosedRDDModeStatus(RDDModeSourceGlobal), globalErr
@@ -340,10 +367,15 @@ func SetCloneLocalRDDMode(
 		return failedClosedRDDModeStatus(RDDModeSourceCloneLocal), fmt.Errorf(
 			"%w: expected %q but the clone-local head is %q", ErrRDDModeRevisionMismatch, expectedRevision, currentStatus.Revision)
 	}
-	if currentErr == nil && mode == RDDModeUnset && globalMode == RDDModeOff {
+	if currentErr == nil && mode == RDDModeUnset && (projectMode == RDDModeOff || (projectMode == RDDModeUnset && globalMode == RDDModeOff)) {
 		// Clearing this clone's off-only override cannot enable review while the
-		// global source remains off, so refuse without publishing a generation.
-		return currentStatus, &RDDDisabledError{Operation: RDDOperationStart, Source: RDDModeSourceGlobal}
+		// source below it (the project preference, else the global mode) stays
+		// off, so refuse without publishing a generation.
+		below := RDDModeSourceGlobal
+		if projectMode == RDDModeOff {
+			below = RDDModeSourceProject
+		}
+		return currentStatus, &RDDDisabledError{Operation: RDDOperationStart, Source: below}
 	}
 	// A request that matches the mode this clone already carries publishes no
 	// new generation of its own -- but it is not finished until every gentle-ai
@@ -425,7 +457,7 @@ func SetCloneLocalRDDMode(
 		// cannot be reached at all and no write would change what it reports.
 		// Publishing another generation would move the compare-and-set token
 		// for nothing.
-		return rddModeWriteStatus(globalMode, head, present, mirror.reach()), nil
+		return rddModeWriteStatus(projectMode, globalMode, head, present, mirror.reach()), nil
 	}
 	// The generation is a slot number in both locations, so it clears whichever
 	// of them has published further. A pre-relocation gentle-ai that wrote its
@@ -465,16 +497,16 @@ func SetCloneLocalRDDMode(
 		return failedClosedRDDModeStatus(RDDModeSourceCloneLocal), err
 	}
 	if !mirror.available {
-		return rddModeWriteStatus(globalMode, record, true, RDDModeReachThisBuild), nil
+		return rddModeWriteStatus(projectMode, globalMode, record, true, RDDModeReachThisBuild), nil
 	}
 	// The same exact bytes at the same slot: a pre-relocation gentle-ai parses,
 	// digests, and canonicalises this record identically, so the two locations
 	// hold one decision rather than two that have to be reconciled.
 	if err := publishPrivateRARImmutable(filepath.Join(mirror.dir, rddModeGenerationName(record.Generation)), payload); err != nil {
-		return rddModeWriteStatus(globalMode, record, true, RDDModeReachThisBuild),
+		return rddModeWriteStatus(projectMode, globalMode, record, true, RDDModeReachThisBuild),
 			&RDDModePartialApplyError{Mode: mode, Cause: err}
 	}
-	return rddModeWriteStatus(globalMode, record, true, RDDModeReachMachine), nil
+	return rddModeWriteStatus(projectMode, globalMode, record, true, RDDModeReachMachine), nil
 }
 
 // cloneLocalRDDModeMirror is the pre-relocation copy of this clone's override,
@@ -679,6 +711,7 @@ func RecordRDDConsentAsked(ctx context.Context, repo string) error {
 }
 
 func rddModeStatus(
+	projectMode RDDMode,
 	globalMode RDDMode,
 	override rddModeOverrideRecord,
 	present bool,
@@ -686,6 +719,7 @@ func rddModeStatus(
 	status := RDDModeStatus{
 		Schema:     RDDModeStatusSchema,
 		Global:     globalMode,
+		Project:    projectMode,
 		CloneLocal: RDDModeUnset,
 		Effective:  RDDModeOff,
 		Source:     RDDModeSourceDefault,
@@ -699,6 +733,12 @@ func rddModeStatus(
 	switch {
 	case status.CloneLocal == RDDModeOff:
 		status.Effective, status.Source = RDDModeOff, RDDModeSourceCloneLocal
+	case projectMode == RDDModeOff:
+		status.Effective, status.Source = RDDModeOff, RDDModeSourceProject
+	case projectMode == RDDModeOn:
+		// Allowed: the project preference is user-written and never versioned, so
+		// unlike a repository it may require review.
+		status.Effective, status.Source = RDDModeOn, RDDModeSourceProject
 	case globalMode == RDDModeOff:
 		status.Effective, status.Source = RDDModeOff, RDDModeSourceGlobal
 	case globalMode == RDDModeOn:
@@ -716,12 +756,13 @@ func rddModeStatus(
 // rddModeWriteStatus is the projection a clone-scope write returns. It differs
 // from the read-only one by exactly one fact: how far the decision reached.
 func rddModeWriteStatus(
+	projectMode RDDMode,
 	globalMode RDDMode,
 	override rddModeOverrideRecord,
 	present bool,
 	reach RDDModeReach,
 ) RDDModeStatus {
-	status := rddModeStatus(globalMode, override, present)
+	status := rddModeStatus(projectMode, globalMode, override, present)
 	status.Reach = reach
 	return status
 }
