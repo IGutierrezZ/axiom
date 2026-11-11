@@ -3,6 +3,9 @@ package system
 import (
 	"os"
 	"path/filepath"
+	"strings"
+
+	"github.com/IGutierrezZ/axiom/v3/internal/copilotconfig"
 )
 
 // ConfigState records the filesystem presence of an agent's global config directory.
@@ -45,6 +48,7 @@ func knownAgentConfigDirs(homeDir string) []ConfigState {
 		{Agent: "pi", Path: filepath.Join(homeDir, ".pi")},
 		{Agent: "trae-ide", Path: filepath.Join(homeDir, ".trae")},
 		{Agent: "hermes", Path: filepath.Join(homeDir, ".hermes")},
+		{Agent: "github-copilot-cli", Path: copilotconfig.Root(homeDir)},
 	}
 }
 
@@ -53,6 +57,26 @@ func knownAgentConfigDirs(homeDir string) []ConfigState {
 // SystemPromptDir and SettingsPath are OS-dependent, but GlobalConfigDir is not.
 func vscodeCopilotGlobalConfigDir(homeDir string) string {
 	return filepath.Join(homeDir, ".copilot")
+}
+
+// IsCopilotExtensionDir dice si name es la carpeta de la extensión de Copilot de
+// VS Code ("github.copilot" o "github.copilot-1.2.3", y también la de chat).
+func IsCopilotExtensionDir(name string) bool {
+	return name == "github.copilot" || strings.HasPrefix(name, "github.copilot-")
+}
+
+// hasVSCodeCopilotExtension busca la extensión github.copilot en
+// ~/.vscode/extensions. ~/.copilot ya no sirve como señal de VS Code Copilot:
+// Copilot CLI crea esa misma carpeta, y detectaría la extensión en quien solo usa
+// el CLI. Es la condición que ya aplica vscode.Adapter.Detect.
+func hasVSCodeCopilotExtension(homeDir string) bool {
+	entries, _ := os.ReadDir(filepath.Join(homeDir, ".vscode", "extensions"))
+	for _, entry := range entries {
+		if entry.IsDir() && IsCopilotExtensionDir(entry.Name()) {
+			return true
+		}
+	}
+	return false
 }
 
 // ScanConfigs returns the presence state of every known managed agent's global
@@ -64,8 +88,18 @@ func ScanConfigs(homeDir string) []ConfigState {
 	states := knownAgentConfigDirs(homeDir)
 
 	for idx := range states {
+		if states[idx].Agent == "vscode-copilot" {
+			states[idx].Exists = hasVSCodeCopilotExtension(homeDir)
+			states[idx].IsDirectory = states[idx].Exists
+			continue
+		}
+
 		info, err := os.Stat(states[idx].Path)
 		if err != nil {
+			continue
+		}
+		if states[idx].Agent == "github-copilot-cli" && !copilotconfig.HasCLIState(states[idx].Path) {
+			// ~/.copilot sin nada propio del CLI es la carpeta de skills de VS Code.
 			continue
 		}
 

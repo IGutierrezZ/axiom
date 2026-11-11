@@ -6,6 +6,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/antigravity"
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/claude"
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/codex"
+	"github.com/IGutierrezZ/axiom/v3/internal/agents/copilotcli"
 	cursoradapter "github.com/IGutierrezZ/axiom/v3/internal/agents/cursor"
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/gemini"
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/hermes"
@@ -39,6 +40,7 @@ var defaultAgentIDs = []model.AgentID{
 	model.AgentPi,
 	model.AgentTrae,
 	model.AgentHermes,
+	model.AgentGitHubCopilotCLI,
 }
 
 func NewAdapter(agent model.AgentID) (Adapter, error) {
@@ -75,6 +77,8 @@ func NewAdapter(agent model.AgentID) (Adapter, error) {
 		return trae.NewAdapter(), nil
 	case model.AgentHermes:
 		return hermes.NewAdapter(), nil
+	case model.AgentGitHubCopilotCLI:
+		return copilotcli.NewAdapter(), nil
 	default:
 		return nil, AgentNotSupportedError{Agent: agent}
 	}

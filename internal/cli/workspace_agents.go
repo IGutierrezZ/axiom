@@ -36,12 +36,20 @@ var isSelectableAgent = catalog.IsSelectableAgent
 //   - OpenClaw: su configuración, incluido el MCP de Engram, vive en
 //     ~/.openclaw/openclaw.json; la documentación oficial
 //     (docs.openclaw.ai/gateway/configuration) no describe configuración por proyecto.
+//
+// Copilot CLI también se omite. Su configuración de Axiom (copilot-instructions.md,
+// mcp-config.json, settings.json y skills) vive en <COPILOT_HOME|~/.copilot>, y no hay
+// una ruta de proyecto documentada para ella: el adaptador no tiene modo workspace
+// (aplicarle una raíz de proyecto escribiría <proyecto>/.copilot, que el CLI no lee).
+// Lo que sí lee del proyecto (AGENTS.md y .github/copilot-instructions.md) lo
+// comparte con VS Code Copilot, que mantiene su modo workspace. Pendiente de decisión
+// de producto: si Copilot CLI debe recibir un modo workspace propio.
 func agentSupportsWorkspace(id model.AgentID) bool {
 	if !isSelectableAgent(id) {
 		return false
 	}
 	switch id {
-	case model.AgentTrae, model.AgentWindsurf, model.AgentAntigravity, model.AgentPi, model.AgentOpenClaw:
+	case model.AgentTrae, model.AgentWindsurf, model.AgentAntigravity, model.AgentPi, model.AgentOpenClaw, model.AgentGitHubCopilotCLI:
 		return false
 	default:
 		return true
