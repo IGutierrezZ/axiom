@@ -297,7 +297,7 @@ Plan stop: approved 2026-11-04; implementation continues
 
 ## Siguiente paso
 
-1. **T5 (Copilot CLI)**: hecha el 2026-11-11 en la rama `inc/adaptadores-agentes-upstream`, sobre 65eb17dc. Pendiente de un PR propio (primera rebanada de P5, `size:exception`), que decide el usuario.
+1. **T5 (Copilot CLI)**: fusionada el 2026-11-11 con el PR [#241](https://github.com/IGutierrezZ/axiom/pull/241) (merge `633b2225`). Sus seguimientos menores van en S2.
 2. **T1 libera arreglos T4**, que esperaba a que se fusionara. La decisión de push y PR es del usuario.
 3. Seguimientos menores de T2 y T4: hechos el 2026-11-05 (ver más abajo). El de marca de T6 (`gentle-ai:managed` en el plugin V2) queda para el bloque de marca.
 
@@ -334,3 +334,26 @@ Plan stop: approved 2026-11-04; implementation continues
     - `go vet` limpio y `gofmt` vacío.
   - `axiom review assess`: `medium`. Con RDD apagado basta la verificación del escritor.
   - Riesgo: el test del nieto espera 300 ms a que el hijo quede asignado al Job Object.
+
+## Seguimientos de verificación (T5)
+
+Autorizados por el usuario el 2026-11-11 («Sí, hazlos aquí»). Se hacen en la rama de la feature, recreada con `axiom branch ensure --lane odd --mode worktree` desde `origin/main` `588b0433`. TDD desactivado (configuración de la feature).
+
+- [x] **S2 · Seguimientos menores de Copilot CLI**. Ruta: en línea (2 ficheros de código mecánicos, ya entendidos) más un investigador delegado de solo lectura para las fuentes primarias.
+  - **CodeGraph**: contrastado el 2026-11-11 con `codegraph install --print-config copilot-cli` (1.6.2). Escribe `~/.copilot/mcp-config.json` con `mcpServers`, `type: stdio` y `tools: ["*"]`, que es el destino que declara `internal/components/communitytool/codegraph_contract.go:52-54`. No hace falta cambiar código.
+  - **`HasCLIState`** (`internal/copilotconfig/root.go`): deja de contar «cualquier entrada distinta de `skills`» y pasa a una lista cerrada de entradas propias del CLI.
+    - Su estado: `config.json`, `session-state`, `session-store.db`, `command-history-state`, `logs`, `permissions-config.json`, `installed-plugins`, `plugin-data` e `ide`.
+    - Lo que solo él lee: `settings.json`, `mcp-config.json` y `copilot-instructions.md`.
+    - Fuente: [referencia del directorio de configuración](https://docs.github.com/en/copilot/reference/copilot-cli-reference/cli-config-dir-reference). VS Code lee también `~/.copilot/skills` y `~/.copilot/agents` ([skills](https://code.visualstudio.com/docs/copilot/customization/agent-skills), [agents](https://code.visualstudio.com/docs/agents/reference/custom-agent-file-reference)), así que esas dos y cualquier entrada desconocida no cuentan.
+    - Test de tabla `TestHasCLIStateOnlyCountsCopilotCLIEntries`. La documentación de detección está en `docs/agents.md`.
+  - **Identidad de las skills compartidas**: documentado en `docs/agents.md`, sección «GitHub Copilot CLI». Al instalar Copilot CLI junto a VS Code Copilot, `_shared/review-ledger-contract.md` pasa a `<runtime>` en el siguiente sync, sin efecto práctico.
+  - **Custom agents con `model` en Copilot CLI (para P5)**: existen.
+    - Están en `~/.copilot/agents/*.agent.md` o `*.md`, con frontmatter `name`, `description`, `tools`, `model` (ID cualificado por proveedor) y `model-policy: required` ([docs](https://docs.github.com/en/copilot/how-tos/copilot-cli/customize-copilot/create-custom-agents-for-cli)).
+    - Un `--model` explícito gana al modelo del agente, salvo que el agente lo exija (changelog 1.0.106/1.0.107). También existen `--model` y `COPILOT_MODEL`.
+    - Consecuencia: el modelo por fase de P5 cabe en este adaptador con agentes de fichero.
+    - Riesgo: `~/.copilot/agents` lo lee también VS Code, con su propio formato de frontmatter. P5 debe decidir si los agentes son compartidos o se separan con `COPILOT_HOME`.
+    - Hueco: no consta la versión que introdujo `model` ni si `settings.json` tiene una clave `model` general.
+  - Evidencia:
+    - `go vet ./internal/copilotconfig/`: limpio; `gofmt -l`: vacío.
+    - `go test ./internal/copilotconfig/ ./internal/agents/... ./internal/system/`: ok.
+    - `go test ./internal/cli/ -run 'Copilot|VSCode|Doctor|Detect'`: ok.
