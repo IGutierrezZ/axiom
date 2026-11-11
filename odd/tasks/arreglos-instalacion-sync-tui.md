@@ -2,7 +2,7 @@
 
 > **Documento vivo ODD.** Fichero autoritativo: `odd/tasks/arreglos-instalacion-sync-tui.md`.
 > Espejo de recuperación en Engram: topic `odd/arreglos-instalacion-sync-tui/tasks`, proyecto `axiom`.
-> Estado: **implementado el 2026-11-05**. T1, T2, T3, T5, T6, T7 y T9 están fusionadas en la PR #229. T4 va en una segunda PR desde la misma rama, rehecha sobre `main` (worktree `axiom-wt/arreglos-sync-t4`). T8 pasa a P3.
+> Estado: **implementado el 2026-11-05**. T1, T2, T3, T5, T6, T7 y T9 están fusionadas en la PR #229. T4 va en una segunda PR desde la misma rama, rehecha sobre `main` (worktree `axiom-wt/arreglos-sync-t4`). T8 pasó a P3 y se descartó el 2026-11-11.
 >
 > Plan stop: approved 2026-11-04; implementation continues
 
@@ -136,7 +136,7 @@ Cada tarea es una rebanada de PR de unas 400 líneas como máximo y cierra con u
   - `install.sh` deja el binario en una ruta temporal, aplica `install -m 0755` y hace `mv` atómico, sin interpolar en `sudo`.
   - `install.ps1` añade el directorio al PATH de usuario y respeta `REG_EXPAND_SZ`, con el mismo criterio que #5625 del bloque seguridad.
   - `install.sh` añade al rc de la shell detectada (bash, zsh o fish) una línea idempotente con marcador `axiom`.
-- [ ] ~~**T8 · `doctor` con sondas acotadas**~~ — **se traslada a P3 (doctor por proyecto).** #5359, con el alcance de D-4: `--version` con timeout mediante `exec.CommandContext`, sin código específico de Windows. Se entrega allí, porque P3 reestructura `doctor` con informe estructurado y parametrizado por raíz.
+- [x] ~~**T8 · `doctor` con sondas acotadas**~~ — **descartada el 2026-11-11 por decisión del usuario.** `checkOneTool` (`internal/cli/doctor.go`) solo resuelve el PATH y no ejecuta ningún binario, así que no existe la sonda colgada que corrige #5359. Añadir `--version` sería funcionalidad nueva, no un arreglo. P3 (PR #234) se entregó sin ella. Texto original: se traslada a P3 (doctor por proyecto). #5359, con el alcance de D-4: `--version` con timeout mediante `exec.CommandContext`, sin código específico de Windows. Se entrega allí, porque P3 reestructura `doctor` con informe estructurado y parametrizado por raíz.
 - [x] **T9 · Persona de Claude** — #4173, aprobada en D-1 (~6 + goldens). Afecta a `persona-axiom.md:4`, `persona-gentleman.md:4` y sus goldens.
   - Hecho: `1fcc7a7b` (4 ficheros, +4/−4; ruta: inline, cambio mecánico). Goldens actualizados: `combined-claude-claudemd.golden` y `persona-claude-gentleman.golden` (no hay golden con la línea de `persona-axiom`). `go test ./internal/components/ ./internal/assets/... ./internal/components/persona/...` ok. El diseño archivado de `openspec/changes/archive/2026-07-08-persona-canonical-channel` conserva el texto antiguo: es histórico y no se toca.
 
@@ -154,7 +154,7 @@ Fuentes: hoja de ruta `docs/audits/2026-11-03-vision-producto.md` (rama `inc/aud
   - T7 (#3629 + #5759) toca los dos instaladores: depende de P1 y se rebasa cuando se fusione.
   - #3629 sale de T1 para no bloquear el arreglo de `--help`.
   - T5 (#5012, #5724) no comparte ficheros con P1, porque `run.go` e `installcmd/resolver.go` no cambian allí. Upstream #5012 sí toca `internal/update/upgrade/strategy_test.go`, así que esa parte espera a P1.
-- **P3, doctor por proyecto** (pendiente): reestructura `doctor` (G3.4 y G3.5). #5359 se entrega dentro de P3, con el alcance de D-4.
+- **P3, doctor por proyecto** (fusionada en la PR #234): reestructura `doctor` (G3.4 y G3.5). Estaba previsto entregar #5359 dentro de P3, pero se descartó el 2026-11-11 (véase T8).
 - **Actualización 2026-11-05:** P1 está fusionado (PR #220, merge fbea8965, release v3.6.0). Este worktree está rebasado sobre `origin/main` 7235e6b6 y T7 queda desbloqueada por esa parte.
 
 ## Orden de ejecución entre bloques
@@ -217,8 +217,9 @@ T9 no se mezcla con los demás eslabones.
 - 2026-11-05: T3, T5, T6 y T9 hechas. Líneas acumuladas en la rama sin el documento ODD: +1350/−157, unas 1500 (más que la previsión de unas 1100 para estas seis tareas, sobre todo por tests). Supera el presupuesto de unas 400: la estrategia de cadena se pregunta antes del primer PR.
 - 2026-11-05: rama rebasada sin conflictos sobre `origin/main` fbf96dcb (PR #228). Los paquetes tocados siguen en verde. En la base fallan `TestWriteFileAtomicFollowsDirectoryJunction` y `TestWriteFileAtomicFollowsRelativeDirectoryJunction` (`internal/components/filemerge`, que esta rama no toca). T7 hecha. Acumulado sin el documento ODD: +1960/−181.
 - 2026-11-05: el usuario eligió una sola PR con `size:exception` (como en P2). Rama rebasada sobre `origin/main` b52ea675 (#226), sin conflictos; los paquetes tocados, de nuevo en verde. Abierta la PR #229 (https://github.com/IGutierrezZ/axiom/pull/229) con T1, T2, T3, T5, T6, T7 y T9, etiquetas `type:bug` y `size:exception`. Commits uno por arreglo upstream, no uno por tarea.
+- 2026-11-05: T4 fusionada en la PR #231 (merge 3ad77567).
+- 2026-11-11: el usuario descarta T8 (#5359). El doctor de Axiom no ejecuta binarios al comprobar herramientas, y P3 (#234) se entregó sin la sonda.
 
 ## Siguiente paso
 
-- PR #229 fusionada el 2026-11-05 (merge 606536b3), con la CI en verde. La suite completa de Windows se saltó, así que no consta que se ejecutaran los casos `ucrt64` y `clang64` de T5.
-- T4: va en su propia PR. Seguridad T5 espera a que se fusione.
+- Feature cerrada: T1–T7 y T9 fusionadas (PR #229 y #231); T8 descartada. La suite completa de Windows se saltó en #229, así que no consta que se ejecutaran los casos `ucrt64` y `clang64` de T5.
