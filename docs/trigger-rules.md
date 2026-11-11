@@ -85,6 +85,17 @@ report how to disable review mode. Interactive consent is asked
 once per clone. Accepting records that choice; **not now** applies only to that
 candidate and does not change review mode.
 
+The clone-local override can only turn review off, so it never has to be readable
+while review would be off anyway. If the deciding source computed without it
+(project, then global, then the default) is not `on`, a failure to read or
+inspect the override, such as a Git common directory on an SMB/UNC share where
+the Windows path-safety checks refuse, is ignored: `status` reports `off` and
+the Claude Code stop hook stays silent. If that source is `on`, the failure
+still fails closed with a typed unsupported-filesystem refusal whose
+continuation is `axiom review mode disable` or moving the repository to a local
+NTFS or ReFS volume. `review mode status` then prints `unavailable` instead of a
+deciding source.
+
 While review mode is disabled, continue through direct inline, delegated direct,
 or optional SDD routing without starting, retrying, or re-enabling review on the
 user's behalf. Review context may remain visible when available, but it never
