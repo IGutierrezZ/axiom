@@ -11,8 +11,8 @@ Plan stop: approved 2026-11-04; implementation continues
 **En curso (2026-11-10).**
 - T4 y T5 están fusionadas (PR #226).
 - T1 está fusionada (PR #238).
-- T2 está implementada en `inc/guia-orquestador-upstream`, pendiente de PR.
-- T3 va después de que se fusione T2.
+- T2 está fusionada (PR #239).
+- T3 está implementada en `inc/guia-orquestador-upstream`, pendiente de PR. Es la última tarea del bloque.
 - Las decisiones P1–P3 están resueltas.
 
 ## Objetivo
@@ -111,7 +111,7 @@ Divergencias de Axiom que se conservan:
     - `internal/assets/assets_test.go`.
     - Goldens (`go test ./internal/components/ -update`).
     - `internal/assets/skills/hermes-ephemeral-delegation/SKILL.md:14,34`.
-- [ ] **T3 · Aprobación informada y continuidad** (#5850, #5486)
+- [x] **T3 · Aprobación informada y continuidad** (#5850, #5486). Commit `18402701`, ruta delegada (writer, por continuidad con T1 y T2). Véase el registro del 2026-11-11.
   - Texto en la sección compartida y en `routing.go`.
   - Interpretar «sí», «adelante» o «eso mismo» contra la propuesta inmediatamente anterior.
   - Nunca sustituye el consentimiento nativo, los tokens exactos ni los permisos de publicación o destructivos.
@@ -268,3 +268,20 @@ Lo fija la sesión coordinadora a partir del cruce de ficheros entre bloques (20
   - **Comprobación puntual del padre:** `go test ./internal/components/agentguidance/ ./internal/components/sdd/ ./internal/agents/capabilitymanifest/ -count=1`, ok. Leído el texto nuevo en los goldens.
   - **Riesgo:** `medium`, con RDD apagado.
   - **Entrega:** 1215 líneas, por encima de 400 → un solo PR con `size:exception`.
+- 2026-11-11: T2 se fusiona (PR #239, merge 65eb17dc) y se avisa a la coordinadora, porque ADA T5 ya puede arrancar.
+  - El primer `done` falla porque el `main` local no tenía todavía la fusión. Se arregla con `git fetch` y `merge --ff-only`, y se repiten `done` y `new`.
+  - **T3** (`18402701`, 4 ficheros, +92/−0):
+    - **Dónde vive:** `internal/components/agentguidance/approval.go` expone `InformedApprovalAndContinuity()`, y `RenderRouting` lo incluye como «### Informed approval and continuity». Es una sola fuente, sin duplicarla en `_shared`, y llega a todos los agentes a través de `InjectRouting`.
+    - **Texto:**
+      - Una respuesta afirmativa corta aprueba exactamente la propuesta anterior, sin ampliar el alcance.
+      - Si la propuesta era ambigua o tenía varias opciones, se vuelve a preguntar.
+      - Nunca sustituye el consentimiento nativo (v3 y sdd-integration v1), las respuestas exactas de un Lossless Blocking Prompt ni los permisos de publicación, remotos o destructivos.
+      - Resolver una subdecisión no cancela el objetivo autorizado.
+    - **Docs:** sección nueva en `docs/trigger-rules.md`.
+    - **Referencias upstream:** `59a0768a` (#5850) y `f0b6e477` (#5486). Se omiten los párrafos de #5850 sobre aclarar alcance y sobre la incertidumbre técnica.
+    - **Test nuevo:** `TestRenderRoutingCarriesInformedApprovalOnceForEveryAgent`.
+    - **Goldens:** no cambian, porque cubren las plantillas del orquestador y no la sección de routing que inyecta `InjectRouting`. El padre lo ha comprobado.
+  - **Verificación del writer:** `go test` de `components`, `assets` y `agents`, ok. Siguen los fallos preexistentes de `filemerge`, y `uninstall` falló una vez por carga, pero pasa aislado y en el paquete completo. `go vet` limpio.
+  - **Comprobación puntual del padre:** `go test ./internal/components/agentguidance/ -count=1`, ok.
+  - **Riesgo:** `medium`, con RDD apagado.
+  - **Entrega:** unas 92 líneas de código más el registro, sin `size:exception`.
