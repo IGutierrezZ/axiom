@@ -71,6 +71,15 @@ func hasControlRune(value string) bool {
 // inválidas. Informa de todas las violaciones, en el orden de las fases, no solo
 // de la primera.
 func ValidateCopilotPhaseAssignments(assignments map[string]CopilotPhaseAssignment) error {
+	if problems := CopilotPhaseAssignmentProblems(assignments); len(problems) > 0 {
+		return fmt.Errorf("asignaciones de Copilot no válidas: %s", strings.Join(problems, "; "))
+	}
+	return nil
+}
+
+// CopilotPhaseAssignmentProblems devuelve una frase por cada violación de
+// ValidateCopilotPhaseAssignments, para quien las muestra una a una (el dashboard).
+func CopilotPhaseAssignmentProblems(assignments map[string]CopilotPhaseAssignment) []string {
 	var problems []string
 	for _, phase := range copilotPhaseNames {
 		if assignment, ok := assignments[phase]; ok {
@@ -89,8 +98,5 @@ func ValidateCopilotPhaseAssignments(assignments map[string]CopilotPhaseAssignme
 		slices.Sort(unknown)
 		problems = append(problems, fmt.Sprintf("fases desconocidas: %s", strings.Join(unknown, ", ")))
 	}
-	if len(problems) > 0 {
-		return fmt.Errorf("asignaciones de Copilot no válidas: %s", strings.Join(problems, "; "))
-	}
-	return nil
+	return problems
 }

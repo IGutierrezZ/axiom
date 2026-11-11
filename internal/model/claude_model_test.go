@@ -1,6 +1,7 @@
 package model_test
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
@@ -115,5 +116,43 @@ func TestClaudePhaseAssignmentsFromLegacyPreservesModelsWithDefaultEffort(t *tes
 	}
 	if _, ok := got["bad"]; ok {
 		t.Fatalf("invalid legacy alias should be ignored, got %+v", got["bad"])
+	}
+}
+
+func TestClaudePhaseNamesIsACopyWithoutTheOrchestrator(t *testing.T) {
+	names := model.ClaudePhaseNames()
+	if len(names) != 20 || names[0] != "sdd-explore" || names[len(names)-1] != "default" {
+		t.Fatalf("model.ClaudePhaseNames() = %v", names)
+	}
+	for _, name := range names {
+		if name == "orchestrator" {
+			t.Fatal("Claude Code controla el modelo de la sesión principal: no hay fase orchestrator")
+		}
+	}
+	names[0] = "otra"
+	if model.ClaudePhaseNames()[0] != "sdd-explore" {
+		t.Error("ClaudePhaseNames debe devolver una copia")
+	}
+}
+
+func TestClaudePhaseAssignmentProblemsReportsEveryViolation(t *testing.T) {
+	problems := model.ClaudePhaseAssignmentProblems(map[string]model.ClaudePhaseAssignment{
+		"sdd-apply":    {Model: model.ClaudeModelOpus, Effort: model.ClaudeEffortHigh},
+		"sdd-design":   {Model: "gpt"},
+		"sdd-archive":  {Model: model.ClaudeModelHaiku, Effort: model.ClaudeEffortHigh},
+		"orchestrator": {Model: model.ClaudeModelOpus},
+		"zeta":         {Model: model.ClaudeModelOpus},
+	})
+	joined := strings.Join(problems, "\n")
+	for _, want := range []string{"sdd-design", "sdd-archive", "fases desconocidas: orchestrator, zeta"} {
+		if !strings.Contains(joined, want) {
+			t.Errorf("faltan %q en:\n%s", want, joined)
+		}
+	}
+	if len(problems) != 3 || strings.Contains(joined, "sdd-apply") {
+		t.Errorf("problemas = %v", problems)
+	}
+	if got := model.ClaudePhaseAssignmentProblems(nil); len(got) != 0 {
+		t.Errorf("sin asignaciones no hay problemas: %v", got)
 	}
 }

@@ -2141,6 +2141,14 @@ func RunSync(args []string) (SyncResult, error) {
 	// subcarpeta; el aviso sale por stderr para no mezclarse con el informe.
 	workspaceDir, rootNotice := resolveWorkspaceDir(scope, homeDir)
 	noteWorkspaceRoot(rootNotice)
+	return runSyncResolved(flags, scope, homeDir, workspaceDir, nil)
+}
+
+// runSyncResolved es el núcleo de RunSync: recibe el ámbito, el HOME y la raíz del
+// workspace ya resueltos y no consulta el directorio actual del proceso. overrides,
+// si no es nil, sustituye las asignaciones de modelo por fase de los adaptadores que
+// nombra (SyncInWorkspace).
+func runSyncResolved(flags SyncFlags, scope InstallScope, homeDir, workspaceDir string, overrides *PhaseModelOverrides) (SyncResult, error) {
 	syncStateStore := StateStoreFor(scope, homeDir, workspaceDir)
 
 	// Resolve agents: explicit flag takes precedence over auto-discovery.
@@ -2232,6 +2240,10 @@ func RunSync(args []string) (SyncResult, error) {
 	if selection.CodexOrchestratorAssignment == nil && persistedState.CodexOrchestratorAssignment != nil {
 		selection.CodexOrchestratorAssignment = codexOrchestratorFromState(persistedState.CodexOrchestratorAssignment)
 	}
+
+	// Un cambio de modelo pedido desde el dashboard manda sobre lo restaurado, también
+	// cuando deja el adaptador sin ninguna asignación.
+	overrides.apply(&selection)
 
 	// Restore Codex effort and carril model assignments from state so that
 	// `gentle-ai sync` preserves the user's per-phase effort and per-carril
