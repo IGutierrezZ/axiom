@@ -1,0 +1,12 @@
+schema: axiom.sdd-gate-ledger/v1
+change: sdd-revision-independiente
+records:
+    - gate: integration
+      decision: approved
+      reason: ""
+      evidence_kind: pr_merged
+      evidence_ref: 8c492396ce9a6515a1465b9c410936b65121b599
+      evidence_base_ref: origin/main
+      verified: true
+      actor: cli
+      recorded_at: 2026-11-11T21:22:39.6685794Z

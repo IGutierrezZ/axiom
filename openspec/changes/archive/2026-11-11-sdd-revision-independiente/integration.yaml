@@ -1,0 +1,20 @@
+schema: axiom.sdd-integration/v1
+change: sdd-revision-independiente
+prepared_at: 2026-11-11T21:22:47Z
+inputs_sha256: 9ec2b428954a571e183f89ae0c446eee49b6d2f5131d7ed855eece19f3f8f6e3
+options:
+  supersede: false
+  superseded_requirements: []
+repositories:
+  - repo: .
+    head: 8c492396ce9a6515a1465b9c410936b65121b599
+    dirty:
+      - path: openspec/changes/sdd-revision-independiente/.gates.lock
+        sha256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+      - path: openspec/changes/sdd-revision-independiente/gates.yaml
+        sha256: 42c634f3d68d8a8adc1a69a930d2b83d3f20c887fa98dcd25068915857b20bdd
+id_map: []
+documents: []
+context:
+  decision: none
+entries: []

@@ -1,8 +1,8 @@
 # Catálogo Maestro de Especificaciones Vivas — Axiom
 
 > **Proyecto:** Axiom (Spec-Driven Development Platform)
-> **Última Sincronización:** 2026-11-10 09:31:09 UTC
-> **Total Dominios:** 68 | **Total Requerimientos:** 522 | **Total Escenarios BDD:** 1390
+> **Última Sincronización:** 2026-11-11 21:23:06 UTC
+> **Total Dominios:** 69 | **Total Requerimientos:** 536 | **Total Escenarios BDD:** 1487
 
 ---
 
@@ -62,11 +62,12 @@
 | `rdd-transport-capability` | RDD Transport Capability Specification | 4 | 8 | [Ver Spec](specs/rdd-transport-capability/spec.md) |
 | `review-findings-ledger` | Bounded Review Transaction and Findings Ledger | 18 | 24 | [Ver Spec](specs/review-findings-ledger/spec.md) |
 | `sdd-archive-lifecycle` | Especificación de Requerimientos: Ciclo de Vida de Archive, Integración Formal y Sellado Inmutable (INC-21) | 8 | 43 | [Ver Spec](specs/sdd-archive-lifecycle/spec.md) |
-| `sdd-block-review-gates` | Especificación de Requerimientos: Compuertas de Revisión por Bloque (spec, design, tasks, apply) (INC-21) | 15 | 77 | [Ver Spec](specs/sdd-block-review-gates/spec.md) |
+| `sdd-block-review-gates` | Especificación de Requerimientos: Compuertas de Revisión por Bloque (spec, design, tasks, apply) (INC-21) | 16 | 85 | [Ver Spec](specs/sdd-block-review-gates/spec.md) |
 | `sdd-docs-publication` | Especificación de Publicación Ligera de Documentación SDD (carril-proyecto-publicacion-docs) | 8 | 40 | [Ver Spec](specs/sdd-docs-publication/spec.md) |
-| `sdd-lane-kickoff` | Especificación de Requerimientos: Selección Temprana y Bloqueante de Carril ODD/SDD en el Kickoff (INC-21) | 10 | 48 | [Ver Spec](specs/sdd-lane-kickoff/spec.md) |
+| `sdd-independent-review` | Especificación de Requerimientos: Revisión Independiente en SDD (verify técnico por rol, juicio opcional y revisión de cobertura) | 10 | 57 | [Ver Spec](specs/sdd-independent-review/spec.md) |
+| `sdd-lane-kickoff` | Especificación de Requerimientos: Selección Temprana y Bloqueante de Carril ODD/SDD en el Kickoff (INC-21) | 10 | 52 | [Ver Spec](specs/sdd-lane-kickoff/spec.md) |
 | `sdd-orchestrator-assets` | SDD Orchestrator Assets Specification | 17 | 39 | [Ver Spec](specs/sdd-orchestrator-assets/spec.md) |
-| `sdd-preflight-configuration` | Especificación de Requerimientos: Cuestionario Pre-Vuelo de SDD, Modalidad de Avance y Asignación Obligatoria de Roles (INC-21) | 3 | 16 | [Ver Spec](specs/sdd-preflight-configuration/spec.md) |
+| `sdd-preflight-configuration` | Especificación de Requerimientos: Cuestionario Pre-Vuelo de SDD, Modalidad de Avance y Asignación Obligatoria de Roles (INC-21) | 6 | 44 | [Ver Spec](specs/sdd-preflight-configuration/spec.md) |
 | `sdd-research` | sdd-research Specification | 3 | 9 | [Ver Spec](specs/sdd-research/spec.md) |
 | `sdd-role-closure-handoff` | Especificación de Requerimientos: Cierre de Último Rol, Aviso Formal y Relevo de Integración (INC-21) | 3 | 11 | [Ver Spec](specs/sdd-role-closure-handoff/spec.md) |
 | `semantic-code` | Especificación de Requerimientos: Conector Semántico de Código (Serena MCP & CodeGraph) (INC-06) | 11 | 14 | [Ver Spec](specs/semantic-code/spec.md) |
@@ -1800,6 +1801,15 @@ Define one explicit, content-addressed implementation-review transaction shared 
   - *Escenario BDD:* Con almacén engram o none no hay publicación
   - *Escenario BDD:* La puerta `integration` no publica
   - *Escenario BDD:* La doctrina del orquestador encadena ambas órdenes
+- **[REQ-28.10]** Las Paradas Presentan los Resultados de la Revisión Independiente cuando Existen
+  - *Escenario BDD:* La parada de spec presenta el informe de cobertura
+  - *Escenario BDD:* La parada de design presenta la cobertura de spec y design
+  - *Escenario BDD:* La parada role-apply presenta el verify vigente y el juicio
+  - *Escenario BDD:* Una revisión no ejecutada se declara y no se presenta como limpia
+  - *Escenario BDD:* Un verify no limpio no impide aprobar
+  - *Escenario BDD:* El informe de cobertura no reabre la puerta
+  - *Escenario BDD:* Sin ninguna revisión la presentación no cambia
+  - *Escenario BDD:* Las plantillas del orquestador prescriben la presentación de los resultados
 
 ### Dominio: `sdd-docs-publication` — Especificación de Publicación Ligera de Documentación SDD (carril-proyecto-publicacion-docs)
 
@@ -1856,6 +1866,80 @@ Definir el verbo nativo `axiom sdd publish`, que confirma y sube, y solo eso, lo
   - *Escenario BDD:* Una negativa no interrumpe el encadenado
   - *Escenario BDD:* Almacén sin ficheros no publica
 
+### Dominio: `sdd-independent-review` — Especificación de Requerimientos: Revisión Independiente en SDD (verify técnico por rol, juicio opcional y revisión de cobertura)
+
+Definir el comportamiento observable de las revisiones independientes que el orquestador SDD ofrece, o aplica según la preferencia del usuario, durante un cambio: un `verify` por rol con cumplimiento técnico tras cada `apply`, un juicio opcional sobre el diff de ese rol tras un `verify` limpio, y una revisión de cobertura opcional tras `spec` y tras `design`. Las tres son **informativas**: informan, no bloquean ninguna fase ni el archivado, y la decisión es siempre humana. Son ajenas a RDD.
+
+**Archivo:** [`specs/sdd-independent-review/spec.md`](specs/sdd-independent-review/spec.md)
+
+- **[REQ-28.1]** El Orquestador Ofrece la Revisión Independiente en Tres Puntos del Flujo
+  - *Escenario BDD:* Un rol que concluye su apply activa el verify según la preferencia
+  - *Escenario BDD:* Cada rol activa su propia oferta
+  - *Escenario BDD:* Con la preferencia none no se lanza nada por iniciativa propia
+  - *Escenario BDD:* Una petición explícita se atiende con la preferencia none
+  - *Escenario BDD:* Las ofertas no crean estado de gobierno
+  - *Escenario BDD:* Un rol sin diff propio no produce un verify vacío engañoso
+- **[REQ-28.2]** Aplicación de la Preferencia según el Estilo Sellado, sin Violar `continuous`
+  - *Escenario BDD:* En continuous se aplica la preferencia sin detenerse
+  - *Escenario BDD:* En checkpointed la preferencia es el valor por defecto y la parada se conserva
+  - *Escenario BDD:* Sesión sin preferencia cacheada en continuous
+  - *Escenario BDD:* Sesión sin preferencia cacheada en checkpointed
+  - *Escenario BDD:* La preferencia no se persiste en el kickoff
+  - *Escenario BDD:* La modalidad continua sigue sin presentar paradas aunque haya juicio
+- **[REQ-28.3]** Las Revisiones Son Informativas y No Bloquean
+  - *Escenario BDD:* Un hallazgo crítico no bloquea el archivado
+  - *Escenario BDD:* Un juicio ESCALATED no bloquea
+  - *Escenario BDD:* El verify no modifica el trabajo del rol
+  - *Escenario BDD:* Una revisión de cobertura con huecos no impide iniciar la fase siguiente
+- **[REQ-28.4]** Verify por Rol con Sección de Cumplimiento Técnico
+  - *Escenario BDD:* El informe de un rol contiene la sección Cumplimiento técnico
+  - *Escenario BDD:* El rol fullstack escribe en verify-report.md
+  - *Escenario BDD:* Sin hallazgos la sección existe y lo declara
+  - *Escenario BDD:* El verify global multirrol no cambia
+  - *Escenario BDD:* Un rol con herramienta de análisis no disponible informa la limitación
+- **[REQ-28.5]** Fuentes de Reglas y Forma de los Hallazgos Técnicos
+  - *Escenario BDD:* Un hallazgo cita regla y ubicación
+  - *Escenario BDD:* Una skill del registro que casa con los ficheros tocados se contrasta aunque el apply no la cargara
+  - *Escenario BDD:* Un proyecto sin contexto técnico declarado
+  - *Escenario BDD:* Las reglas de config.yaml se aplican
+  - *Escenario BDD:* Una opinión sin regla no es un incumplimiento
+  - *Escenario BDD:* Un hallazgo en una ruta de referencia no se corrige
+- **[REQ-28.6]** El Juicio Solo se Ofrece o Lanza Tras un Verify Limpio del Rol
+  - *Escenario BDD:* Verify limpio habilita el juicio
+  - *Escenario BDD:* Verify con hallazgo crítico no lanza el juicio
+  - *Escenario BDD:* Un verify con solo avisos y sugerencias es limpio
+  - *Escenario BDD:* Un verify parcial por herramienta no disponible no es limpio
+  - *Escenario BDD:* Petición explícita con verify no limpio
+  - *Escenario BDD:* Sin verify previo no hay juicio por iniciativa del orquestador
+- **[REQ-28.7]** El Juicio Toma como Objetivo el Diff de un Rol SDD y Acota sus Arreglos
+  - *Escenario BDD:* El juicio recibe el diff del rol como objetivo
+  - *Escenario BDD:* Solo se arreglan los severos confirmados por ambos jueces
+  - *Escenario BDD:* El arreglo no sale de las raíces de edición autorizadas
+  - *Escenario BDD:* Máximo dos rondas
+  - *Escenario BDD:* En checkpointed se pide confirmación antes de corregir
+  - *Escenario BDD:* En continuous la preferencia autoriza la corrección acotada
+  - *Escenario BDD:* Un juicio sin hallazgos severos termina sin correcciones
+- **[REQ-28.8]** Si el Juicio Corrige, su Verificación Final Pasa a Ser el Informe Vigente
+  - *Escenario BDD:* Tras una corrección el informe vigente es la verificación final
+  - *Escenario BDD:* Los hallazgos no resueltos se conservan
+  - *Escenario BDD:* Sin correcciones el informe no cambia
+  - *Escenario BDD:* Una verificación final no limpia no se oculta
+- **[REQ-28.9]** Revisión de Cobertura por Unión, de Solo Lectura y sin Autocorrección
+  - *Escenario BDD:* La cobertura del spec une los hallazgos de varios revisores
+  - *Escenario BDD:* Un hueco duplicado aparece una vez
+  - *Escenario BDD:* La revisión no modifica el artefacto ni su digest
+  - *Escenario BDD:* La corrección en checkpointed pasa por iterar
+  - *Escenario BDD:* En continuous los huecos no se autocorrigen
+  - *Escenario BDD:* Un informe sin huecos se declara
+  - *Escenario BDD:* La cobertura tras design incluye spec y design
+  - *Escenario BDD:* Un revisor sin salida no invalida la revisión
+- **[REQ-28.11]** Frontera con RDD: Ningún Texto Nuevo Usa su Vocabulario
+  - *Escenario BDD:* Un pin de texto no encuentra vocabulario RDD en los pasajes nuevos o modificados
+  - *Escenario BDD:* Los textos preexistentes que nombran RDD a propósito no se tocan
+  - *Escenario BDD:* Las guardas de ausencia de oferta de RDD siguen pasando
+  - *Escenario BDD:* RDD activado no altera las ofertas
+  - *Escenario BDD:* El verify limpio no genera un recibo ni lo consume
+
 ### Dominio: `sdd-lane-kickoff` — Especificación de Requerimientos: Selección Temprana y Bloqueante de Carril ODD/SDD en el Kickoff (INC-21)
 
 <!-- Especificación Viva generada a partir de '2026-09-22-inc-21-upfront-flow-governance' -->
@@ -1878,6 +1962,10 @@ Definir el verbo nativo `axiom sdd publish`, que confirma y sube, y solo eso, lo
   - *Escenario BDD:* Reanudación de un cambio con kickoff ya sellado
   - *Escenario BDD:* Reanudación de un cambio sellado con la política de relevos antigua
   - *Escenario BDD:* Cambio preexistente con artefactos pero sin kickoff sellado infiere un valor por defecto sin bloquear
+  - *Escenario BDD:* El retro-sello conserva continuous con roles distintos de fullstack
+  - *Escenario BDD:* El retro-sello de varios roles detectados también conserva continuous
+  - *Escenario BDD:* La regla de sellado sigue aplicándose al sellado explícito del mismo cambio
+  - *Escenario BDD:* Un retro-sello sin ningún rol detectable conserva su comportamiento
   - *Escenario BDD:* El retro-sello no altera qué `tasks.<rol>.md` consulta la barrera
 - **[REQ-25.35]** `ensure` al Nombrar el Cambio, antes de Escribir en su Carpeta
   - *Escenario BDD:* SDD ejecuta `ensure` antes del sellado y de `proposal.md`
@@ -2009,6 +2097,37 @@ Defines required behavior for agent-specific SDD orchestrator guidance assets so
   - *Escenario BDD:* La salida de kickoff y status no emite el campo vacío
   - *Escenario BDD:* El texto de kickoff no menciona la política de relevos
   - *Escenario BDD:* Ningún asset nombra el flag como obligatorio
+- **[REQ-28.12]** `continuous` Solo se Sella con el Rol `fullstack`
+  - *Escenario BDD:* `continuous` con el rol fullstack sella
+  - *Escenario BDD:* La política de compuerta de fullstack no se comprueba
+  - *Escenario BDD:* Un roster con fullstack repetido se rechaza
+  - *Escenario BDD:* Un roster con fullstack y otro rol se rechaza
+  - *Escenario BDD:* `continuous` con varios roles se rechaza con la salida
+  - *Escenario BDD:* `continuous` con un único rol especializado se rechaza
+  - *Escenario BDD:* `continuous` sin ningún rol declarado sella con fullstack
+  - *Escenario BDD:* `checkpointed` admite varios roles y también fullstack
+  - *Escenario BDD:* Un kickoff existente que incumple la regla se sigue leyendo
+  - *Escenario BDD:* Un kickoff archivado que incumple la regla no se reescribe
+- **[REQ-28.13]** `--from-session-pace auto` con Roles Distintos de `fullstack` se Rechaza sin Derivar `checkpointed`
+  - *Escenario BDD:* Ritmo automático con fullstack deriva continuous
+  - *Escenario BDD:* Ritmo automático con varios roles se rechaza
+  - *Escenario BDD:* Ritmo automático con un único rol especializado se rechaza
+  - *Escenario BDD:* Ritmo interactivo no cambia
+  - *Escenario BDD:* Tras el rechazo el usuario puede elegir y repetir
+- **[REQ-28.14]** La Preferencia de Revisión Independiente se Recoge en una Interacción Propia Tras el Pre-Vuelo, sin Alterar sus Tres Grupos Canónicos
+  - *Escenario BDD:* La interacción presenta dos preguntas con sus opciones y descripciones
+  - *Escenario BDD:* Las etiquetas se pueden traducir y el token canónico se conserva
+  - *Escenario BDD:* Los tres grupos canónicos siguen siendo válidos y no cambian
+  - *Escenario BDD:* La interacción de la preferencia no reutiliza los marcadores del pre-vuelo
+  - *Escenario BDD:* Se presenta después del pre-vuelo y antes de la primera fase
+  - *Escenario BDD:* Un runtime sin interfaz nativa usa la sintaxis de texto
+  - *Escenario BDD:* Una respuesta de texto válida se acepta
+  - *Escenario BDD:* Una respuesta fuera del dominio vuelve a preguntarse
+  - *Escenario BDD:* Una opción de la preferencia en un grupo canónico se rechaza
+  - *Escenario BDD:* La preferencia se cachea sin escribir en el kickoff
+  - *Escenario BDD:* La política de revisión de 400 líneas no se pregunta
+  - *Escenario BDD:* Una sesión nueva vuelve a preguntar la preferencia una vez
+  - *Escenario BDD:* Una sesión sin la preferencia deja su ausencia tratada por REQ-28.2
 
 ### Dominio: `sdd-research` — sdd-research Specification
 
