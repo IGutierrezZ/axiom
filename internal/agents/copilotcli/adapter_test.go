@@ -26,11 +26,11 @@ func TestAdapterIdentity(t *testing.T) {
 	if a.Agent() != model.AgentGitHubCopilotCLI || a.Tier() != model.TierFull {
 		t.Fatalf("identity = %s/%s", a.Agent(), a.Tier())
 	}
-	if !a.SupportsSkills() || !a.SupportsSystemPrompt() || !a.SupportsMCP() {
-		t.Fatal("Copilot CLI debe declarar skills, prompt de sistema y MCP")
+	if !a.SupportsSkills() || !a.SupportsSystemPrompt() || !a.SupportsMCP() || !a.SupportsSubAgents() {
+		t.Fatal("Copilot CLI debe declarar skills, prompt de sistema, MCP y agentes de fichero")
 	}
-	if a.SupportsOutputStyles() || a.SupportsSlashCommands() || a.SupportsSubAgents() {
-		t.Fatal("Copilot CLI no recibe estilos, comandos ni subagentes de fichero")
+	if a.SupportsOutputStyles() || a.SupportsSlashCommands() {
+		t.Fatal("Copilot CLI no recibe estilos ni comandos")
 	}
 	if a.SystemPromptStrategy() != model.StrategyFileReplace || a.MCPStrategy() != model.StrategyMCPConfigFile {
 		t.Fatalf("strategies = %v/%v", a.SystemPromptStrategy(), a.MCPStrategy())
@@ -53,6 +53,12 @@ func TestAdapterPathsWithoutCopilotHome(t *testing.T) {
 	if got, want := a.SkillsDir(home), filepath.Join(root, "skills"); got != want {
 		t.Errorf("SkillsDir = %q, want %q", got, want)
 	}
+	if got, want := a.SubAgentsDir(home), filepath.Join(root, "agents"); got != want {
+		t.Errorf("SubAgentsDir = %q, want %q", got, want)
+	}
+	if got := a.EmbeddedSubAgentsDir(); got != "copilot/agents" {
+		t.Errorf("EmbeddedSubAgentsDir = %q, want copilot/agents", got)
+	}
 	if got, want := a.SettingsPath(home), filepath.Join(root, "settings.json"); got != want {
 		t.Errorf("SettingsPath = %q, want %q", got, want)
 	}
@@ -71,6 +77,7 @@ func TestAdapterPathsFollowCopilotHome(t *testing.T) {
 	if a.GlobalConfigDir(home) != custom ||
 		a.SystemPromptFile(home) != filepath.Join(custom, "copilot-instructions.md") ||
 		a.SkillsDir(home) != filepath.Join(custom, "skills") ||
+		a.SubAgentsDir(home) != filepath.Join(custom, "agents") ||
 		a.SettingsPath(home) != filepath.Join(custom, "settings.json") ||
 		a.MCPConfigPath(home, "") != filepath.Join(custom, "mcp-config.json") {
 		t.Fatalf("las rutas no siguen COPILOT_HOME=%s", custom)

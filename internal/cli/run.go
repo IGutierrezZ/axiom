@@ -1954,6 +1954,7 @@ func (s componentApplyStep) Run() error {
 				ClaudeModelAssignments:      s.selection.ClaudeModelAssignments,
 				ClaudePhaseAssignments:      s.selection.ClaudePhaseAssignments,
 				KiroModelAssignments:        s.selection.KiroModelAssignments,
+				CopilotPhaseAssignments:     s.selection.CopilotPhaseAssignments,
 				CodexModelAssignments:       s.selection.CodexModelAssignments,
 				CodexCarrilModelAssignments: s.selection.CodexCarrilModelAssignments,
 				CodexPhaseModelAssignments:  s.selection.CodexPhaseModelAssignments,

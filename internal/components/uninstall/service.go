@@ -1321,7 +1321,7 @@ func (s *Service) componentOperations(adapter agents.Adapter, componentID model.
 			}
 			ops = append(ops, removeDirIfEmpty(workflowsDir), removeDirIfEmpty(filepath.Dir(workflowsDir)))
 		}
-		if adapter.SupportsSubAgents() {
+		if adapter.SupportsSubAgents() && !s.subAgentsDirStaysInUse(adapter.SubAgentsDir(homeDir)) {
 			agentsDir := adapter.SubAgentsDir(homeDir)
 			entries, err := fs.ReadDir(assets.FS, adapter.EmbeddedSubAgentsDir())
 			if err != nil {

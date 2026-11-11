@@ -171,12 +171,17 @@ func (a *Adapter) SupportsSubAgents() bool {
 	return a.CapabilityManifest().Features.FileSubAgents
 }
 
-func (a *Adapter) SubAgentsDir(_ string) string {
-	return ""
+// SubAgentsDir es ~/.copilot/agents, la carpeta de agentes personalizados de
+// usuario que lee VS Code. Copilot CLI lee la misma, y los dos comparten un único
+// `.agent.md` por fase (véase copilotcli.Adapter.SubAgentsDir).
+func (a *Adapter) SubAgentsDir(homeDir string) string {
+	return filepath.Join(homeDir, ".copilot", "agents")
 }
 
+// EmbeddedSubAgentsDir son las plantillas `.agent.md` de Copilot, compartidas con
+// el adaptador de Copilot CLI.
 func (a *Adapter) EmbeddedSubAgentsDir() string {
-	return ""
+	return "copilot/agents"
 }
 
 func (a *Adapter) SupportsSkills() bool {

@@ -15,8 +15,8 @@ func TestValidateCopilotPhaseAssignments(t *testing.T) {
 		{
 			name: "válidas",
 			assignments: map[string]CopilotPhaseAssignment{
-				"orchestrator": {Model: "Claude Opus 4.6 (copilot)", Effort: "high"},
-				"sdd-apply":    {Model: "GPT-5.2 (copilot)"},
+				"sdd-init":  {Model: "Claude Opus 4.6 (copilot)", Effort: "high"},
+				"sdd-apply": {Model: "GPT-5.2 (copilot)"},
 			},
 		},
 		{
@@ -71,11 +71,11 @@ func TestValidateCopilotPhaseAssignments(t *testing.T) {
 
 func TestCopilotPhaseNamesReturnsCopy(t *testing.T) {
 	names := CopilotPhaseNames()
-	if len(names) == 0 || names[0] != "orchestrator" {
+	if len(names) == 0 || names[0] != "sdd-init" {
 		t.Fatalf("CopilotPhaseNames() = %v", names)
 	}
 	names[0] = "otra"
-	if CopilotPhaseNames()[0] != "orchestrator" {
+	if CopilotPhaseNames()[0] != "sdd-init" {
 		t.Error("CopilotPhaseNames() debe devolver una copia")
 	}
 }

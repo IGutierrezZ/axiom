@@ -51,6 +51,11 @@ type InjectOptions struct {
 	CodexCarrilModelAssignments map[string]string // carril→model-id; nil = use defaults
 	CodexPhaseModelAssignments  map[string]string // phase→model-id; non-empty = Custom per-phase mode; nil/empty = preset/carril mode
 
+	// CopilotPhaseAssignments rellena el `model` y el `reasoning-effort` de los
+	// agentes `.agent.md` de VS Code Copilot y Copilot CLI. Sin entrada de una fase,
+	// el agente no lleva ninguna de las dos claves.
+	CopilotPhaseAssignments map[string]model.CopilotPhaseAssignment
+
 	// WorkspaceDir is the root of the current workspace (e.g. os.Getwd()).
 	// When non-empty and the adapter implements workflowInjector, native
 	// workflow files are copied to <workspaceDir>/.windsurf/workflows/.
@@ -926,6 +931,12 @@ func Inject(homeDir string, adapter agents.Adapter, sddMode model.SDDModeID, opt
 				contentStr = injectClaudeEffortFrontmatter(contentStr, assignment)
 			}
 
+			// Los agentes de Copilot son los únicos con este marcador, así que no hace
+			// falta que el adaptador implemente ningún resolver.
+			if strings.Contains(contentStr, copilotModelFrontmatterPlaceholder) {
+				contentStr = injectCopilotModelFrontmatter(contentStr, opts.CopilotPhaseAssignments[copilotAgentPhase(entry.Name())])
+			}
+
 			contentStr = expandEngramToolNames(contentStr)
 
 			if isMarkdownSubAgentPromptFile(entry.Name()) {
@@ -948,7 +959,7 @@ func Inject(homeDir string, adapter agents.Adapter, sddMode model.SDDModeID, opt
 		// Post-check: verify critical agent files exist (either .md or .yaml)
 		for _, phase := range []string{"sdd-apply", "sdd-verify"} {
 			found := false
-			for _, ext := range []string{".md", ".yaml"} {
+			for _, ext := range []string{".md", ".yaml", copilotAgentFileSuffix} {
 				checkPath := filepath.Join(agentsDir, phase+ext)
 				if info, err := os.Stat(checkPath); err == nil && info.Size() >= 10 {
 					found = true

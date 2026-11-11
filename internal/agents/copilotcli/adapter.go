@@ -98,6 +98,18 @@ func (a *Adapter) SkillsDir(homeDir string) string {
 	return filepath.Join(copilotconfig.Root(homeDir), "skills")
 }
 
+// SubAgentsDir es <raíz>/agents: la carpeta de agentes personalizados de usuario
+// de Copilot CLI. Es la misma que lee VS Code Copilot en ~/.copilot/agents, y los
+// dos comparten un único `.agent.md` por fase, con el mismo contenido byte a byte,
+// así que que ambos adaptadores escriban ahí es intencionado, como con las skills.
+func (a *Adapter) SubAgentsDir(homeDir string) string {
+	return filepath.Join(copilotconfig.Root(homeDir), "agents")
+}
+
+// EmbeddedSubAgentsDir son las plantillas `.agent.md` de Copilot, compartidas con
+// el adaptador de VS Code.
+func (a *Adapter) EmbeddedSubAgentsDir() string { return "copilot/agents" }
+
 func (a *Adapter) SettingsPath(homeDir string) string {
 	return filepath.Join(copilotconfig.Root(homeDir), "settings.json")
 }
@@ -127,8 +139,6 @@ func (a *Adapter) OutputStyleDir(_ string) string { return "" }
 func (a *Adapter) SupportsSlashCommands() bool    { return a.CapabilityManifest().Features.SlashCommands }
 func (a *Adapter) CommandsDir(_ string) string    { return "" }
 func (a *Adapter) SupportsSubAgents() bool        { return a.CapabilityManifest().Features.FileSubAgents }
-func (a *Adapter) SubAgentsDir(_ string) string   { return "" }
-func (a *Adapter) EmbeddedSubAgentsDir() string   { return "" }
 func (a *Adapter) SupportsSkills() bool           { return a.CapabilityManifest().Features.Skills }
 func (a *Adapter) SupportsSystemPrompt() bool     { return a.CapabilityManifest().Features.SystemPrompt }
 func (a *Adapter) SupportsMCP() bool              { return a.CapabilityManifest().Features.MCP }

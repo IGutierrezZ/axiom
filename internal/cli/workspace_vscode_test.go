@@ -149,8 +149,12 @@ func TestRunInstallWorkspaceVSCodeUsesProjectLayout(t *testing.T) {
 		t.Errorf("las inputs del usuario deben conservarse: %v", mcp["inputs"])
 	}
 
-	// Agentes, prompts y hooks: Axiom no instala ninguno para VS Code.
-	assertNothingUnder(t, workspace, filepath.Join(".github", "agents"), filepath.Join(".github", "prompts"), filepath.Join(".github", "hooks"), filepath.Join(".github", "AGENTS.md"))
+	// Un agente `.agent.md` por fase SDD en .github/agents.
+	if _, err := os.Stat(filepath.Join(workspace, ".github", "agents", "sdd-apply.agent.md")); err != nil {
+		t.Errorf("falta el agente sdd-apply en .github/agents: %v", err)
+	}
+	// Prompts y hooks: Axiom no instala ninguno para VS Code.
+	assertNothingUnder(t, workspace, filepath.Join(".github", "prompts"), filepath.Join(".github", "hooks"), filepath.Join(".github", "AGENTS.md"))
 	// La guía de enrutado va al fichero de proyecto: ninguna distribución del perfil
 	// de usuario de VS Code (macOS, Windows o Linux) aparece dentro del proyecto.
 	assertNothingUnder(t, workspace, "Library", "AppData", ".config")

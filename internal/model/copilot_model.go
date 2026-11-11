@@ -20,12 +20,14 @@ type CopilotPhaseAssignment struct {
 	Effort string `json:"effort,omitempty"`
 }
 
-// copilotPhaseNames son las fases con agente propio en Copilot: el coordinador y
-// cada fase SDD y de Judgment Day. A diferencia de Claude no hay fase "default":
-// Copilot no tiene un agente genérico al que aplicarla.
+// copilotPhaseNames son las fases con agente propio en Copilot: cada fase SDD y
+// de Judgment Day, las mismas que tienen plantilla en assets/copilot/agents. A
+// diferencia de Claude no hay fase "default": Copilot no tiene un agente genérico
+// al que aplicarla. Tampoco hay "orchestrator": un agente personalizado de Copilot
+// no puede fijar el modelo de la conversación principal (no existe un fichero para
+// ella), así que ese modelo lo elige el usuario en el selector de Copilot.
 var copilotPhaseNames = []string{
-	"orchestrator",
-	"sdd-explore", "sdd-research", "sdd-propose", "sdd-spec", "sdd-design",
+	"sdd-init", "sdd-explore", "sdd-research", "sdd-propose", "sdd-spec", "sdd-design",
 	"sdd-tasks", "sdd-apply", "sdd-verify", "sdd-archive", "sdd-onboard",
 	"jd-judge-a", "jd-judge-b", "jd-fix-agent",
 }
