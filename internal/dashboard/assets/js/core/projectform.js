@@ -1,6 +1,6 @@
 // Lógica pura del formulario de alta de proyecto: normaliza los roles que el
 // usuario teclea y valida en cliente lo que se puede saber sin tocar el disco.
-// El servidor repite estas reglas (hub.ValidateInit) y añade las que dependen de
+// El servidor repite estas reglas (Initializer.ValidateInit en internal/hub) y añade las que dependen de
 // la configuración generada; aquí solo se adelanta el aviso para no esperar a la
 // respuesta. Sin acceso al DOM, para poder probarla con Node.
 

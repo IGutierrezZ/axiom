@@ -93,7 +93,7 @@ func TestInitRejectsInvalidConfigurationsWithoutWriting(t *testing.T) {
 			requireNothingWritten(t, target)
 
 			// ValidateInit da el mismo veredicto sin escribir.
-			requireViolation(t, ValidateInit(InitOptions{Path: target, Name: "Prueba", Roles: tc.roles}), tc.want)
+			requireViolation(t, NewInitializer(nil, nil).ValidateInit(InitOptions{Path: target, Name: "Prueba", Roles: tc.roles}), tc.want)
 			requireNothingWritten(t, target)
 		})
 	}
@@ -110,7 +110,7 @@ func absoluteSample() string {
 
 func TestInitReportsEveryViolationTogether(t *testing.T) {
 	target := filepath.Join(t.TempDir(), "nuevo")
-	err := ValidateInit(InitOptions{
+	err := NewInitializer(nil, nil).ValidateInit(InitOptions{
 		Path: target,
 		Name: "Prueba",
 		Roles: []RoleInput{
@@ -166,7 +166,7 @@ func TestInitAcceptsValidConfigurationOnNewProject(t *testing.T) {
 		{Key: "backend", Name: "Backend", Repositories: []string{"server", "./libs/../shared"}, Tech: []string{"go"}},
 		{Key: "docs", Name: "Docs", Repositories: []string{"docs"}, NonBlocking: true},
 	}
-	if err := ValidateInit(InitOptions{Path: target, Name: "Prueba", Roles: roles}); err != nil {
+	if err := NewInitializer(nil, nil).ValidateInit(InitOptions{Path: target, Name: "Prueba", Roles: roles}); err != nil {
 		t.Fatalf("una configuración válida no debe rechazarse: %v", err)
 	}
 	requireNothingWritten(t, target)
@@ -201,7 +201,7 @@ func TestValidateInitIgnoresGeneratedConfigWhenExistingOneIsKept(t *testing.T) {
 	bad := []RoleInput{{Key: "x", Name: "X", Repositories: []string{"../fuera"}}}
 
 	// Sin --force Init conserva el axiom.yaml y no escribe nada generado.
-	if err := ValidateInit(InitOptions{Path: target, Roles: bad}); err != nil {
+	if err := NewInitializer(nil, nil).ValidateInit(InitOptions{Path: target, Roles: bad}); err != nil {
 		t.Fatalf("con un axiom.yaml conservado no hay configuración generada que validar: %v", err)
 	}
 	if _, err := NewInitializer(nil, nil).Init(InitOptions{Path: target, Roles: bad}); err != nil {
@@ -209,7 +209,7 @@ func TestValidateInitIgnoresGeneratedConfigWhenExistingOneIsKept(t *testing.T) {
 	}
 
 	// Con --force y sin declaraciones que perder se regenera, así que se valida.
-	requireViolation(t, ValidateInit(InitOptions{Path: target, Roles: bad, Force: true}), "sale de la carpeta del proyecto")
+	requireViolation(t, NewInitializer(nil, nil).ValidateInit(InitOptions{Path: target, Roles: bad, Force: true}), "sale de la carpeta del proyecto")
 	got, _ := os.ReadFile(filepath.Join(target, "axiom.yaml"))
 	if string(got) != existing {
 		t.Errorf("el rechazo no debe tocar el axiom.yaml existente:\n%s", got)

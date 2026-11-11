@@ -89,7 +89,7 @@ Fuera de alcance:
   - El alta escribe `deferred` en lugar de `advisory`.
   - Pruebas en el dashboard y en `hub`.
 - [x] **T2 · Validación previa en `hub` (G4.1, G4.3).**
-  - `hub.ValidateInit(opts)` genera la configuración y la pasa por `workspace.ParseConfig` y por `workspace.Validate`, con un FS superpuesto que da por creadas las carpetas que el alta va a crear.
+  - `(*hub.Initializer).ValidateInit(opts)` genera la configuración y la pasa por `workspace.ParseConfig` y por `workspace.Validate`, con un FS superpuesto que da por creadas las carpetas que el alta va a crear.
   - Repos relativos y dentro del proyecto. Claves de rol entre comillas.
   - `gate_policy` con el vocabulario de `multirole`.
   - Devuelve una lista de violaciones, no un único error.

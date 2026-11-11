@@ -137,7 +137,7 @@ func TestInitMultirepoRejectsBadSpecsRepositoryWithoutWriting(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			master := filepath.Join(t.TempDir(), "maestra")
 			opts := InitOptions{Path: master, Topology: tc.topology, SpecsRepository: tc.specs}
-			requireViolation(t, ValidateInit(opts), tc.want)
+			requireViolation(t, NewInitializer(nil, nil).ValidateInit(opts), tc.want)
 			_, err := NewInitializer(nil, nil).Init(opts)
 			requireViolation(t, err, tc.want)
 			requireNothingWritten(t, master)
@@ -151,7 +151,7 @@ func TestInitMultirepoRejectsAddingSpecsRepoToAnExistingDirectConfig(t *testing.
 		t.Fatal(err)
 	}
 	opts := InitOptions{Path: master, Topology: "multirepo", SpecsRepository: "repo-specs"}
-	requireViolation(t, ValidateInit(opts), "solo se puede indicar en un alta nueva")
+	requireViolation(t, NewInitializer(nil, nil).ValidateInit(opts), "solo se puede indicar en un alta nueva")
 	if _, err := os.Stat(filepath.Join(master, "repo-specs")); !os.IsNotExist(err) {
 		t.Errorf("el rechazo no debe crear el repositorio de specs (err=%v)", err)
 	}

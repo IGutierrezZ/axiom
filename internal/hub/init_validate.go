@@ -53,12 +53,8 @@ func (p configPlan) render() string {
 // workspace.Validate (con las carpetas que Init crea dadas por existentes) y
 // aplica las reglas de roles y repositorios. Devuelve un *InitValidationError con
 // todas las violaciones, o nil. Si Init conservaría el axiom.yaml existente, no hay
-// configuración generada que validar y devuelve nil.
-func ValidateInit(opts InitOptions) error {
-	return NewInitializer(nil, nil).ValidateInit(opts)
-}
-
-// ValidateInit es ValidateInit con el detector del inicializador.
+// configuración generada que validar y devuelve nil. Init la llama antes de
+// escribir nada.
 func (ini *Initializer) ValidateInit(opts InitOptions) error {
 	if opts.Path == "" {
 		opts.Path = "."
