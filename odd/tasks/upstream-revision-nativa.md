@@ -171,7 +171,18 @@ Alcance aclarado con el usuario:
   - **CLI:** `axiom review mode enable|disable` escribe en el proyecto cuando hay raíz de workspace. `--scope global` sigue fijando el valor por defecto de la máquina. `status` informa de la fuente decisiva (`project`, `global`, `clone` o `default`).
   - **Raíz:** comprobada el 2026-11-11; ver «Fuente». La carpeta maestra se resuelve como ya lo hace el motor de ramas con `worktree_mode` (`internal/branch/engine/prefs.go`).
   - **Documentación:** contrato «RDD is user-owned» en `docs/trigger-rules.md`, `docs/intended-usage.md` y las instrucciones de orquestador que describen `axiom review mode` (con sus goldens), y la nota de `odd/tasks/huella-usuario-workspace.md:190`.
-- [ ] **T18 · Montajes sin modos POSIX (#5138)** (~400). Depende de T21. Gana importancia porque el estado de proyecto vive en la raíz del repo, y ahí es donde suelen fallar los modos POSIX (`/mnt/c`, SMB).
+- [x] **T18 · Montajes sin modos POSIX (#5138)** (~400). Depende de T21. **Hecha el 2026-11-11 en `6372d946`.**
+  - **Ruta:** writer delegado.
+  - **Cambio:** +476 líneas en 6 ficheros, de las que 330 son tests de upstream. El parche `717087b1` se aplica sin conflicto y la precedencia de la T21 no se toca.
+  - **Riesgo:** `medium`.
+  - **Verificación:**
+    - `go vet ./...` y `GOOS=linux go vet` (reviewtransaction, cli): limpios.
+    - `gofmt -l`: limpio.
+    - `cli` filtrado: OK (275 s).
+    - `reviewtransaction` filtrado: OK.
+    - `state` y `hub`: OK.
+  - **Pendiente de la CI de Linux:** los tests nuevos son solo Unix. En Windows únicamente compilan, y aquí no hay Go en WSL.
+  - **Desviación:** comentarios y mensajes en inglés, como el código de alrededor. Gana importancia porque el estado de proyecto vive en la raíz del repo, y ahí es donde suelen fallar los modos POSIX (`/mnt/c`, SMB).
 - [ ] **T19 · RDD en SMB/UNC (#4670)** (~575). Depende de T18. Supera la heurística porque el arreglo toca a la vez la resolución del modo, la seguridad de rutas de Windows y el hook de parada; partirlo dejaría un estado intermedio incoherente. La regla prevista («si el global no es `on`, se ignora el fallo del override») pasa a ser «si la fuente decisiva no es `on`, se ignora el fallo al leer el override del clon». Se revisa contra la precedencia final de T21.
 - [ ] **T20 · Rutas `\\?\` (#5533)** (~200). Depende de T19. El indicador explícito sigue haciendo falta con independencia de D2: en Axiom, el estado por defecto resuelto es idéntico al de fallo cerrado.
 
