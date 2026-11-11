@@ -152,10 +152,12 @@ Alcance aclarado con el usuario:
 - El TDD por rol es una política de equipo y no entra aquí. Lo mismo vale para la limpieza de otros campos versionados que podrían ser de usuario (`strict_tdd` duplicado, `artifact_store`, `workflow.lane`, `governance.semantic_analysis`, `.codex/` y `GEMINI.md`): va en un trabajo aparte.
 
 - [ ] **T21 · RDD por usuario y proyecto (D2)** (~400). Va antes de T18.
-  - **Fuente:** `rdd_mode` en el estado de proyecto `<raíz>/.axiom/state.json`. Es el mismo almacén de `huella-usuario-workspace` (`internal/state/store.go`, ignorado en `.git/info/exclude`) y admite `on` y `off`. Solo lo escribe el usuario y nunca se versiona, así que no reabre el riesgo que justificaba el comentario de `internal/state/state.go:142`.
+  - **Fuente:** `rdd_mode` en la entrada del proyecto de `~/.axiom/workspaces.json`, el hub. Admite `on` y `off`. Solo lo escribe el usuario y nunca se versiona, así que no reabre el riesgo que justificaba el comentario de `internal/state/state.go:142`.
+    - **Por qué el hub (2026-11-11).** Se comprobó la raíz de proyecto. Dentro de un worktree enlazado, `workspace.ResolveRoot` devuelve la raíz de ese worktree (`internal/workspace/root.go:52-54`), así que `<raíz>/.axiom/state.json` sería un fichero por worktree y cada cambio empezaría sin la preferencia.
+    - El hub busca el proyecto por su carpeta maestra, y por eso lo comparten todos los worktrees. Ahí ya viven las preferencias personales `worktree_mode` y `worktree_root` (REQ-25.29, `internal/hub/prefs.go`). Un proyecto sin registrar cae al global.
   - **Precedencia (recomendada):** valor del proyecto si existe; si no, el global de `~/.axiom/state.json`; si no, `off`. El override del clon en `.git/` se sigue leyendo durante la transición y «gana cualquier `off`» se mantiene para él. Las escrituras nuevas van al estado de proyecto.
   - **CLI:** `axiom review mode enable|disable` escribe en el proyecto cuando hay raíz de workspace. `--scope global` sigue fijando el valor por defecto de la máquina. `status` informa de la fuente decisiva (`project`, `global`, `clone` o `default`).
-  - **A comprobar antes de escribir:** `workspace.ResolveRoot` (que usa `effectiveStateStoreAt` en `internal/cli/install_state_lock.go:58`) puede devolver la raíz de cada worktree y no la del proyecto. Si es así, el RDD quedaría por worktree y cada cambio nuevo empezaría sin la preferencia. Hay que resolverlo desde la raíz del proyecto (git common dir) para que todos los worktrees de un mismo proyecto compartan valor.
+  - **Raíz:** comprobada el 2026-11-11; ver «Fuente». La carpeta maestra se resuelve como ya lo hace el motor de ramas con `worktree_mode` (`internal/branch/engine/prefs.go`).
   - **Documentación:** contrato «RDD is user-owned» en `docs/trigger-rules.md`, `docs/intended-usage.md` y las instrucciones de orquestador que describen `axiom review mode` (con sus goldens), y la nota de `odd/tasks/huella-usuario-workspace.md:190`.
 - [ ] **T18 · Montajes sin modos POSIX (#5138)** (~400). Depende de T21. Gana importancia porque el estado de proyecto vive en la raíz del repo, y ahí es donde suelen fallar los modos POSIX (`/mnt/c`, SMB).
 - [ ] **T19 · RDD en SMB/UNC (#4670)** (~575). Depende de T18. Supera la heurística porque el arreglo toca a la vez la resolución del modo, la seguridad de rutas de Windows y el hook de parada; partirlo dejaría un estado intermedio incoherente. La regla prevista («si el global no es `on`, se ignora el fallo del override») pasa a ser «si la fuente decisiva no es `on`, se ignora el fallo al leer el override del clon». Se revisa contra la precedencia final de T21.
@@ -256,5 +258,6 @@ T1–T17 están hechas y verificadas.
 **Bloque 4 (2026-11-10):**
 - Rama `inc/upstream-revision-nativa` reutilizada y avanzada por *fast-forward* a `origin/main` (`53b36b19`).
 - D2 resuelta y registrada en `docs/audits/2026-11-03-vision-producto.md`.
-- Siguiente: parada del plan con T21 → T18 → T19 → T20; tras aprobarla, la T21 empieza por comprobar la raíz que devuelve `workspace.ResolveRoot` en un worktree.
+- Plan stop: approved 2026-11-11; implementation continues.
+- T21 en curso: raíz comprobada y fuente movida al hub.
 - Previsión: unas 1.575 líneas en cuatro tareas, por encima del presupuesto de unas 400. Se aplica la estrategia `exception-ok` (un único PR con excepción de tamaño), ya decidida por el usuario.
