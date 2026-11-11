@@ -410,6 +410,26 @@ Los adaptadores se instalan después de escribir el proyecto, en su carpeta y co
 
 `POST /api/projects/init` y `POST /api/project/review-mode` solo aceptan peticiones del propio dashboard (`127.0.0.1` o `localhost` en su puerto): con un `Origin` o `Host` ajenos responden `403` sin hacer nada.
 
+#### Modelo por fase desde el dashboard
+
+En **Ecosistema → Modelos** hay una tabla editable por cada adaptador instalado en el proyecto abierto, con una fila por fase SDD (y por agente de Judgment Day) y dos columnas: modelo y esfuerzo. Admiten asignación por fase:
+
+- **OpenCode**: proveedor y modelo, elegidos del catálogo de OpenCode (texto libre si el catálogo no está disponible).
+- **Claude Code**: alias de modelo y esfuerzo, restringido a los valores válidos de ese modelo.
+- **Copilot** (VS Code Copilot y Copilot CLI): nombre del modelo en texto libre con el formato `<Nombre> (copilot)` y esfuerzo opcional. Véase [Agentes por fase de Copilot](agents.md#agentes-por-fase-de-copilot).
+
+El botón **Guardar** de cada adaptador envía solo las fases cambiadas. Si hay violaciones, se listan en línea y no se guarda nada. Si todo es válido, Axiom guarda las asignaciones en el `.axiom/state.json` del proyecto abierto (`model_assignments` para OpenCode, `claude_phase_assignments` para Claude Code y `copilot_phase_assignments` para Copilot) y regenera los ficheros del adaptador sin cambiar de directorio. Si la regeneración falla, el estado vuelve a su valor anterior.
+
+Para quitar una fase, vacía su modelo y guarda: la fase vuelve a heredar el modelo de la conversación (Claude Code y Copilot) o al valor por defecto.
+
+Salvedades:
+
+- **OpenCode**: el modelo por fase solo tiene efecto en el modo SDD multi. Quitar una fase solo la olvida en el estado: el modelo ya escrito en `opencode.json` se conserva, porque la sincronización respeta lo que existe. La pantalla avisa de ambas cosas.
+- **Copilot CLI**: solo tiene ámbito global. El guardado persiste la asignación en el estado del proyecto y regenera `.github/agents` si VS Code Copilot está instalado, pero no regenera `~/.copilot/agents`; la pantalla lo avisa. Para actualizarlo, ejecuta `axiom sync --scope global`.
+- El adaptador debe estar instalado en el proyecto; si no, el guardado se rechaza con `400`.
+
+`GET /api/ecosystem/models` devuelve las asignaciones y las opciones de cada adaptador instalado, y `POST /api/ecosystem/models` guarda un parche por adaptador. Solo el `POST` modifica algo, y, como los demás de este panel, solo acepta peticiones locales (`127.0.0.1` o `localhost` en su puerto): con un `Origin` o `Host` ajenos responde `403` sin hacer nada. Sin proyecto abierto responde `409`.
+
 #### Usar `axiom ui` como aplicación de escritorio
 
 El flujo recomendado es instalar el panel como aplicación (PWA) desde el navegador y anclar ese icono; el servidor arranca solo con Windows.

@@ -13,8 +13,8 @@
 | Kilo Code       | `kilocode`       | Yes          | Yes | Full (multi-mode overlay)        | No            | Yes            | `~/.config/kilo`                    |
 | Gemini CLI      | `gemini-cli`     | Yes          | Yes | Full (experimental)              | No            | No             | `~/.gemini`                         |
 | Cursor          | `cursor`         | Yes          | Yes | Full (native subagents)          | No            | No             | `~/.cursor`                         |
-| VS Code Copilot | `vscode-copilot` | Yes          | Yes | Full (runSubagent)               | No            | No             | `~/.copilot` + VS Code User profile |
-| GitHub Copilot CLI | `github-copilot-cli` | Yes      | Yes | Orquestador SDD genérico (worker nativo) | No            | No             | `~/.copilot` o `$COPILOT_HOME` (solo global) |
+| VS Code Copilot | `vscode-copilot` | Yes          | Yes | Full (runSubagent; agentes `.agent.md` por fase) | No            | No             | `~/.copilot` + VS Code User profile |
+| GitHub Copilot CLI | `github-copilot-cli` | Yes      | Yes | Agentes `.agent.md` por fase (delegación por `description`) | No            | No             | `~/.copilot` o `$COPILOT_HOME` (solo global) |
 | Codex           | `codex`          | Yes          | Yes | Native multi-agent (default; solo fallback) | No            | No             | `~/.codex`                          |
 | Windsurf        | `windsurf`       | Yes (native) | Yes | Solo-agent                       | No            | No             | `~/.codeium/windsurf`               |
 | Antigravity     | `antigravity`    | Yes (native) | Yes | Solo-agent + Mission Control     | No            | No             | `~/.gemini/antigravity`             |
@@ -52,7 +52,7 @@ El ámbito workspace es el predeterminado de la CLI y de la TUI. Axiom escribe e
 | Kilo Code | `.kilo/rules/axiom.md`, registrado en `instructions` | `.kilo/kilo.json` (o el `kilo.jsonc`/`kilo.json` existente) y `.kilo/{commands,plugins,prompts/sdd}` | `.agents/skills` |
 | Gemini CLI | `.gemini/AXIOM.md`, registrado en `context.fileName` de `.gemini/settings.json` | `.gemini/settings.json` (`mcpServers`) y `.gemini/` | `.agents/skills` |
 | Codex | `developer_instructions` de `.codex/config.toml` (bloque `<!-- axiom:workspace-instructions -->`) y `.codex/axiom-instructions.md` | `.codex/config.toml`, `.codex/hooks.json`; exige proyecto de confianza | `.agents/skills` |
-| VS Code Copilot | `.github/instructions/axiom.instructions.md` (`applyTo: "**"`) | `.vscode/mcp.json` (clave `servers`); sin agentes, prompts ni hooks | `.agents/skills` |
+| VS Code Copilot | `.github/instructions/axiom.instructions.md` (`applyTo: "**"`) | `.vscode/mcp.json` (clave `servers`) y `.github/agents/` (un `.agent.md` por fase SDD); sin prompts ni hooks | `.agents/skills` |
 | Cursor | `.cursor/rules/axiom.mdc` | `.cursor/` (`agents/`, `mcp.json`) | `.agents/skills` |
 | Kiro IDE | `.kiro/steering/axiom.md` | `.kiro/` (`agents/`, `settings/mcp.json`, `hooks/`) | `.kiro/skills` |
 
@@ -209,7 +209,8 @@ Kiro usa agentes personalizados en `~/.kiro/agents/`. Axiom escribe los agentes 
   - **Instrucciones**: persona, orquestador ODD/SDD y protocolo de memoria van en `<proyecto>/.github/instructions/axiom.instructions.md`, un fichero propio de Axiom cuya cabecera declara `applyTo: "**"` para que VS Code lo aplique a todas las peticiones (sin `applyTo` solo se adjuntaría a mano). Se suman a las instrucciones de usuario. `.github/copilot-instructions.md` y el `AGENTS.md` de la raíz son del equipo y Axiom no los toca, ni siquiera para retirar restos de instalaciones antiguas. Las rutas del orquestador que apuntaban a `.agent/skills` se resuelven a `.agents/skills`.
   - **Skills**: `<proyecto>/.agents/skills/<nombre>/SKILL.md`, la carpeta compartida (las sesiones locales de VS Code la leen junto a `.github/skills`). Una copia anterior en `.github/skills` se migra como se explica en «Skills en `--scope workspace`».
   - **MCP** (Context7 y Engram): `<proyecto>/.vscode/mcp.json`, con la clave raíz `servers` (no `mcpServers`). La fusión conserva los servidores, las `inputs` y los comentarios que el usuario ya tuviera (VS Code admite JSONC en ese fichero; los comentarios que estén dentro del bloque `servers` se pierden al reescribirlo). Un `mcp.json` que no sea JSON válido se rechaza sin modificarlo y antes de escribir nada.
-  - **Agentes, prompts y hooks**: Axiom no instala ninguno para VS Code Copilot hoy (solo skills, instrucciones y MCP), así que no se crean `.github/agents`, `.github/prompts` ni `.github/hooks`. Tampoco se escriben permisos: VS Code no tiene un `deny` de proyecto y Axiom no impone modos de autoaprobación.
+  - **Agentes**: un `.agent.md` por fase SDD y de Judgment Day en `<proyecto>/.github/agents/`, el formato compartido que se describe en [Agentes por fase de Copilot](#agentes-por-fase-de-copilot).
+  - **Prompts y hooks**: Axiom no instala ninguno para VS Code Copilot, así que no se crean `.github/prompts` ni `.github/hooks`. Tampoco se escriben permisos: VS Code no tiene un `deny` de proyecto y Axiom no impone modos de autoaprobación.
   - **Confianza**: VS Code solo arranca los servidores MCP de `.vscode/mcp.json` si el espacio de trabajo es de confianza (Workspace Trust). Axiom avisa al terminar y no concede esa confianza.
   - GitHub Copilot CLI, que solo tiene ámbito global en Axiom (véase [su sección](#github-copilot-cli)), lee también `.github/instructions` y `.github/skills`. La carpeta `.agents/skills` es la compartida que escribe Axiom en workspace.
   - La instalación global no cambia.
@@ -223,7 +224,8 @@ Agente de terminal de GitHub (binario `copilot`). Es un adaptador propio (`githu
 - **Skills**: `<raíz>/skills/`. Sin `COPILOT_HOME` es la misma carpeta que usa VS Code Copilot. La copia no depende de qué agente la escribe (lleva el hueco genérico de runtime), y desinstalar uno de los dos no retira las skills mientras el otro siga instalado. Quien ya tenía VS Code Copilot verá que el primer sync tras instalar Copilot CLI reescribe `_shared/review-ledger-contract.md`: la identidad del agente pasa a `<runtime>`. Es un cambio de texto sin efecto, porque ninguno de los dos tiene revisión nativa.
 - **MCP** (Context7 y Engram): `<raíz>/mcp-config.json`, con la clave raíz `mcpServers` (no `servers`, la de VS Code) y entradas con `type` (`http` para Context7, `local` para Engram) y `tools: ["*"]`. Se conservan los servidores del usuario. Engram se inyecta directamente, sin `engram setup`. CodeGraph tiene un destino nativo `copilot-cli` que escribe en el mismo fichero.
 - **Ajustes y permisos**: `<raíz>/settings.json`. Axiom no escribe permisos ni modos de autoaprobación: lo que decidas queda intacto.
-- **Hooks, comandos y subagentes de fichero**: ninguno.
+- **Agentes**: un `.agent.md` por fase en `<raíz>/agents/`, el mismo fichero que usa VS Code Copilot (véase [Agentes por fase de Copilot](#agentes-por-fase-de-copilot)).
+- **Hooks y comandos**: ninguno.
 - **Detección**: el binario `copilot` en el `PATH` o una entrada propia de Copilot CLI en la raíz:
   - su estado: `config.json`, `session-state/`, `session-store.db`, `logs/`, etc.;
   - o lo que solo él lee: `settings.json`, `mcp-config.json` y `copilot-instructions.md`.
@@ -231,6 +233,25 @@ Agente de terminal de GitHub (binario `copilot`). Es un adaptador propio (`githu
   `skills/` y `agents/` las lee también VS Code Copilot, y una entrada desconocida no cuenta, así que una `~/.copilot` sin ninguna de esas entradas no se toma por Copilot CLI; y VS Code Copilot se detecta en el escaneo por su extensión `github.copilot`, no por `~/.copilot`.
 - **Instalación** (solo se muestra, Axiom no la ejecuta): `npm install -g --ignore-scripts @github/copilot@latest`, con `sudo` en Linux si el npm es del sistema. `axiom doctor` comprueba el binario `copilot`.
 - **Ámbito workspace**: no tiene. Con `--scope workspace` se omite con un aviso.
+
+### Agentes por fase de Copilot
+
+VS Code Copilot y Copilot CLI comparten un único fichero `.agent.md` por fase SDD y de Judgment Day, con el mismo contenido byte a byte. Si los dos adaptadores están instalados, el fichero se escribe una sola vez y las sincronizaciones siguientes no lo reescriben.
+
+| Caso | Carpeta |
+| --- | --- |
+| VS Code Copilot, `--scope workspace` | `<proyecto>/.github/agents/` |
+| VS Code Copilot, `--scope global` | `~/.copilot/agents/` |
+| Copilot CLI (solo global) | `<raíz Copilot>/agents/` (`~/.copilot` o `$COPILOT_HOME`) |
+
+- **Frontmatter**: `name` y `description` siempre. `model` y `reasoning-effort` solo cuando hay una asignación para esa fase; sin ella el agente hereda el modelo de la conversación.
+- **Formato del modelo**: `<Nombre> (copilot)`, por ejemplo `Claude Sonnet 4.6 (copilot)`. Se elige desde el dashboard (Ecosistema → Modelos, véase [Uso](usage.md#modelo-por-fase-desde-el-dashboard)) y se guarda en `copilot_phase_assignments` del estado del proyecto.
+- **Copilot CLI**: acepta ese formato con sufijo desde la versión 1.0.24. No consta en la documentación que lea `reasoning-effort`, así que ahí puede ignorarse.
+- **Sin fichero `orchestrator`**: el modelo de la conversación principal no se puede fijar desde un fichero de agente, y por eso Axiom no genera ninguno para el coordinador.
+- **Desinstalación**: `axiom uninstall` retira solo los agentes que Axiom gestiona y deja los del usuario. Mientras el otro adaptador de Copilot siga instalado, los ficheros compartidos se conservan.
+- **Aviso con Claude Code**: VS Code también lee `.claude/agents` y `~/.claude/agents`. En un proyecto con Claude Code y VS Code Copilot, los agentes de Claude (con `model: sonnet`) aparecen también en VS Code, junto a los de Copilot.
+
+Fuentes: [referencia del fichero de agente personalizado de VS Code](https://code.visualstudio.com/docs/agents/reference/custom-agent-file-reference) y [agentes personalizados de Copilot CLI](https://docs.github.com/en/copilot/how-tos/copilot-cli/customize-copilot/create-custom-agents-for-cli).
 
 ### Codex
 
