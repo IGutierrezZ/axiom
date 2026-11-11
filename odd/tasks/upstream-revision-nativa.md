@@ -194,7 +194,18 @@ Alcance aclarado con el usuario:
     - `cli` filtrado: OK (214 s).
     - `hub`, `state`, `components`, `assets` y `workspace`: OK, salvo los 2 tests de junction conocidos.
   - **Pendiente de la CI de Linux:** los tests de CLI que necesitan symlinks se saltan en Windows. Supera la heurística porque el arreglo toca a la vez la resolución del modo, la seguridad de rutas de Windows y el hook de parada; partirlo dejaría un estado intermedio incoherente. La regla prevista («si el global no es `on`, se ignora el fallo del override») pasa a ser «si la fuente decisiva no es `on`, se ignora el fallo al leer el override del clon». Se revisa contra la precedencia final de T21.
-- [ ] **T20 · Rutas `\\?\` (#5533)** (~200). Depende de T19. El indicador explícito sigue haciendo falta con independencia de D2: en Axiom, el estado por defecto resuelto es idéntico al de fallo cerrado.
+- [x] **T20 · Rutas `\\?\` (#5533)** (~200). Depende de T19. **Hecha el 2026-11-11 en `101bc65a`.**
+  - **Ruta y tamaño:** writer delegado; +270/−5 líneas, de las que unas 215 son tests.
+  - **Indicador:** el campo no exportado `resolved` de `RDDModeStatus`, con el método `Resolved()`. No cambia el JSON.
+  - **Uso en la CLI:** `RunReviewMode` marca `unavailable` solo cuando `err != nil && !Resolved()`.
+  - **Riesgo:** `medium`.
+  - **Verificación:**
+    - `go vet` en Windows y con `GOOS=linux`: limpio.
+    - `gofmt`: limpio.
+    - `reviewtransaction` filtrado: OK (61 s).
+    - `cli` filtrado: OK (216 s).
+    - `hub` y `state`: OK.
+  - **Pendiente de la CI de Linux:** `TestReviewModeFailedMutationReportsTheModeAsUnavailable` necesita symlink y no se ejecuta en Windows. El indicador explícito sigue haciendo falta con independencia de D2: en Axiom, el estado por defecto resuelto es idéntico al de fallo cerrado.
 
 **Sin solape con distribución.** Comprobado el 2026-11-04 con `git diff origin/main...inc/distribucion-un-comando --stat`: esa rama toca `scripts/install.*`, `internal/update/**`, `cmd/axiom/main.go` y documentación de uso, y ninguna tarea de este documento edita esos ficheros.
 
@@ -292,5 +303,7 @@ T1–T17 están hechas y verificadas.
 - Rama `inc/upstream-revision-nativa` reutilizada y avanzada por *fast-forward* a `origin/main` (`53b36b19`).
 - D2 resuelta y registrada en `docs/audits/2026-11-03-vision-producto.md`.
 - Plan stop: approved 2026-11-11; implementation continues.
-- T21 en curso: raíz comprobada y fuente movida al hub.
+- T21, T18, T19 y T20 hechas y verificadas en local el 2026-11-11 (`9a71ceff`, `6372d946`, `ed48246b`, `101bc65a`). `main` (#239) se fusionó en `f9ebc636`.
+- Tamaño del bloque respecto a `origin/main`: 33 ficheros, +2.363/−86. Entrega `exception-ok`: un único PR con `size:exception`.
+- Siguiente: push y PR, que decide el usuario. La CI de Linux ejecutará los tests de Unix y los que necesitan symlink, que en Windows solo compilan o se saltan.
 - Previsión: unas 1.575 líneas en cuatro tareas, por encima del presupuesto de unas 400. Se aplica la estrategia `exception-ok` (un único PR con excepción de tamaño), ya decidida por el usuario.
