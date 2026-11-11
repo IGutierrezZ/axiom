@@ -77,6 +77,7 @@ func (s *Server) registerRoutes() {
 	s.mux.HandleFunc("/api/projects/add", s.handleProjectsAdd)
 	s.mux.HandleFunc("/api/projects/init", s.handleProjectsInit)
 	s.mux.HandleFunc("/api/adapters", s.handleAdapters)
+	s.mux.HandleFunc("/api/project/review-mode", s.handleProjectReviewMode)
 	s.mux.HandleFunc("/api/projects/active/worktree-prefs", s.handleActiveWorktreePrefs)
 	s.mux.HandleFunc("/api/fs/directories", s.handleFSDirectories)
 	s.mux.HandleFunc("/api/fs/native-picker", s.handleFSNativePicker)
@@ -309,6 +310,11 @@ func (s *Server) handleProjectsInit(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Método no permitido", http.StatusMethodNotAllowed)
 		return
 	}
+	// El alta escribe ficheros e instala adaptadores: solo la acepta el propio dashboard.
+	if !s.isLocalRequest(r) {
+		s.respondJSON(w, http.StatusForbidden, map[string]string{"error": "Petición rechazada: solo se admiten peticiones del propio dashboard"})
+		return
+	}
 	var req ProjectInitRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil && err.Error() != "EOF" {
 		s.respondJSON(w, http.StatusBadRequest, map[string]string{"error": "JSON inválido"})
@@ -338,6 +344,50 @@ func (s *Server) handleProjectsInit(w http.ResponseWriter, r *http.Request) {
 	}
 
 	s.respondJSON(w, http.StatusOK, res)
+}
+
+// handleProjectReviewMode responde GET y POST /api/project/review-mode sobre el proyecto
+// abierto (su raíz registrada, nunca el directorio actual del proceso). GET devuelve el
+// modo de revisión efectivo, su origen y cada fuente. POST guarda la preferencia del
+// usuario para el proyecto en el registro del hub: {"mode": "on"|"off"|"inherit"}.
+// Cambia estado, así que solo lo acepta el propio dashboard.
+func (s *Server) handleProjectReviewMode(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		dto, err := s.service.GetReviewMode()
+		if err != nil {
+			s.respondJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+			return
+		}
+		s.respondJSON(w, http.StatusOK, dto)
+	case http.MethodPost:
+		if !s.isLocalRequest(r) {
+			s.respondJSON(w, http.StatusForbidden, map[string]string{"error": "Petición rechazada: solo se admiten peticiones del propio dashboard"})
+			return
+		}
+		var req struct {
+			Mode string `json:"mode"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			s.respondJSON(w, http.StatusBadRequest, map[string]string{"error": "JSON inválido"})
+			return
+		}
+		if _, err := normalizeReviewModeInput(req.Mode); err != nil {
+			s.respondJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+			return
+		}
+		dto, err := s.service.SetReviewMode(req.Mode)
+		switch {
+		case errors.Is(err, ErrProjectNotRegistered):
+			s.respondJSON(w, http.StatusConflict, map[string]string{"error": err.Error()})
+		case err != nil:
+			s.respondJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		default:
+			s.respondJSON(w, http.StatusOK, dto)
+		}
+	default:
+		http.Error(w, "Método no permitido", http.StatusMethodNotAllowed)
+	}
 }
 
 // handleAdapters devuelve el catálogo de adaptadores que se pueden elegir al dar de

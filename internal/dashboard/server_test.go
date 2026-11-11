@@ -69,8 +69,20 @@ func newProjectDir(t *testing.T, name string) string {
 	return dir
 }
 
+// request lanza una petición como la haría el propio dashboard: Host 127.0.0.1, que es lo
+// que aceptan las rutas que cambian estado (isLocalRequest). httptest usa example.com por
+// defecto.
 func request(router http.Handler, method, target, body string) *httptest.ResponseRecorder {
+	return requestFrom(router, method, target, body, "127.0.0.1", "")
+}
+
+// requestFrom es request con el Host y el Origin indicados.
+func requestFrom(router http.Handler, method, target, body, host, origin string) *httptest.ResponseRecorder {
 	req := httptest.NewRequest(method, target, bytes.NewReader([]byte(body)))
+	req.Host = host
+	if origin != "" {
+		req.Header.Set("Origin", origin)
+	}
 	rr := httptest.NewRecorder()
 	router.ServeHTTP(rr, req)
 	return rr

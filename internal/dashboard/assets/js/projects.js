@@ -545,6 +545,7 @@ function initAddProject() {
 
   const openAdd = () => {
     selectTopology.value = 'monorepo-embedded';
+    $('#select-project-review-mode').value = 'inherit';
     inputSpecs.value = '';
     updateTopologyFields();
     inputPath.value = '';
@@ -600,6 +601,7 @@ function initAddProject() {
     const restore = setBusy(submit, 'Procesando…');
     try {
       // Preferencias personales de worktree: el servidor las guarda en el Hub, no en axiom.yaml.
+      const reviewMode = $('#select-project-review-mode').value;
       const adapters = Array.from(document.querySelectorAll('#adapters-container .adapter-input:checked')).map(box => box.value);
       const response = await api('/api/projects/init', {
         body: {
@@ -608,6 +610,7 @@ function initAddProject() {
           topology,
           ...(specsRepository ? { specs_repository: specsRepository } : {}),
           ...(adapters.length ? { adapters } : {}),
+          ...(reviewMode && reviewMode !== 'inherit' ? { review_mode: reviewMode } : {}),
           roles,
           ...registrationPrefs(selectWorktreeMode.value, inputWorktreeRoot.value)
         }
@@ -618,6 +621,9 @@ function initAddProject() {
       // Fallo parcial: el proyecto existe, pero los adaptadores no se instalaron.
       const warning = adapterWarning(response);
       if (warning) toast(warning, 'warn');
+      if (response?.review_mode_error) {
+        toast(`El proyecto se ha creado, pero no se pudo guardar la preferencia de revisión (${response.review_mode_error}).`, 'warn');
+      }
     } catch (err) {
       showViolations('add-project-error', violationsFromError(err));
     } finally {

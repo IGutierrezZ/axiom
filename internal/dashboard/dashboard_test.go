@@ -688,6 +688,7 @@ func TestProjectsEndpoints(t *testing.T) {
 		Name: "Proyecto 2",
 	})
 	reqInit := httptest.NewRequest(http.MethodPost, "/api/projects/init", bytes.NewReader(initBody))
+	reqInit.Host = "127.0.0.1"
 	rrInit := httptest.NewRecorder()
 	router.ServeHTTP(rrInit, reqInit)
 

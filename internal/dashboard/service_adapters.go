@@ -40,6 +40,9 @@ type AdaptersOutcome struct {
 type ProjectInitResponse struct {
 	*hub.InitResult
 	Adapters *AdaptersOutcome `json:"adapters,omitempty"`
+	// ReviewModeError es un fallo parcial al guardar la preferencia de revisión pedida: el
+	// proyecto ya está creado y registrado y no se deshace.
+	ReviewModeError string `json:"review_mode_error,omitempty"`
 }
 
 // ListAdapters devuelve el catálogo de adaptadores seleccionables, en el orden del catálogo.
@@ -96,11 +99,14 @@ func uniqueAdapterIDs(ids []string) []string {
 	return out
 }
 
-// checkAdapters rechaza, antes de escribir nada, un alta con adaptadores
-// inválidos. Reúne con ellos las violaciones de la configuración del proyecto para
-// que el usuario vea todos los errores a la vez.
-func checkAdapters(ini *hub.Initializer, opts hub.InitOptions, ids []string) error {
+// checkRequest rechaza, antes de escribir nada, un alta con adaptadores o modo de
+// revisión inválidos. Reúne con ellos las violaciones de la configuración del proyecto
+// para que el usuario vea todos los errores a la vez.
+func checkRequest(ini *hub.Initializer, opts hub.InitOptions, ids []string, reviewMode string) error {
 	violations := adapterViolations(ids)
+	if _, err := normalizeReviewModeInput(reviewMode); err != nil {
+		violations = append(violations, err.Error())
+	}
 	if len(violations) == 0 {
 		return nil
 	}

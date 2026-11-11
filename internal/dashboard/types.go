@@ -224,9 +224,13 @@ type ProjectInitRequest struct {
 	Roles           []hub.RoleInput `json:"roles,omitempty"`
 	// Adapters son los adaptadores (agentes) que se instalan en el proyecto, en modo
 	// workspace, una vez escrito. Opcional: sin ninguno el proyecto queda sin adaptadores.
-	Adapters     []string `json:"adapters,omitempty"`
-	WorktreeMode string   `json:"worktree_mode,omitempty"`
-	WorktreeRoot string   `json:"worktree_root,omitempty"`
+	Adapters []string `json:"adapters,omitempty"`
+	// ReviewMode es la preferencia personal de revisión (RDD) del usuario para el proyecto:
+	// "on", "off" o "inherit" (vacío también hereda el global). Se guarda en el registro del
+	// hub una vez escrito y registrado el proyecto, nunca en axiom.yaml.
+	ReviewMode   string `json:"review_mode,omitempty"`
+	WorktreeMode string `json:"worktree_mode,omitempty"`
+	WorktreeRoot string `json:"worktree_root,omitempty"`
 }
 
 // WorktreePrefsDTO son unas preferencias personales de worktree (REQ-25.29): el modo y la

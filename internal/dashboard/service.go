@@ -902,7 +902,7 @@ func (s *Service) InitProject(req ProjectInitRequest) (*ProjectInitResponse, err
 	}
 	adapters := uniqueAdapterIDs(req.Adapters)
 	// Los adaptadores inválidos se rechazan antes de escribir nada.
-	if err := checkAdapters(ini, opts, req.Adapters); err != nil {
+	if err := checkRequest(ini, opts, req.Adapters, req.ReviewMode); err != nil {
 		return nil, err
 	}
 	res, err := ini.Init(opts)
@@ -914,6 +914,15 @@ func (s *Service) InitProject(req ProjectInitRequest) (*ProjectInitResponse, err
 	_, _ = s.SwitchWorkspace(targetPath)
 
 	response := &ProjectInitResponse{InitResult: res}
+	// La preferencia de revisión es del usuario y vive en el registro del hub: se guarda
+	// cuando el proyecto ya está escrito y registrado. Un fallo no deshace el proyecto.
+	if reviewMode, _ := normalizeReviewModeInput(req.ReviewMode); reviewMode != "" {
+		if s.hubManager == nil {
+			response.ReviewModeError = "el proyecto no se registró en el hub, así que no hay dónde guardar la preferencia de revisión"
+		} else if _, err := s.hubManager.SetProjectRDD(res.Record.ID, reviewMode); err != nil {
+			response.ReviewModeError = err.Error()
+		}
+	}
 	if len(adapters) > 0 {
 		// El proyecto ya está creado: un fallo de la instalación se informa como
 		// fallo parcial y no lo deshace.
