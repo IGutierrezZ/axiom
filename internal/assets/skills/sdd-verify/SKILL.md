@@ -1,6 +1,6 @@
 ---
 name: sdd-verify
-description: "Trigger: explicitly requested SDD verification. Run optional practical diagnostics against available implementation and artifacts."
+description: "Trigger: SDD verification requested, accepted as an offer, or set by preference. Run practical diagnostics, per role when a role is given."
 disable-model-invocation: true
 user-invocable: false
 license: MIT
@@ -16,7 +16,7 @@ If you are the dedicated `sdd-verify` executor, perform the diagnostics below; d
 
 ## Activation Contract
 
-Run when the orchestrator explicitly requests verification. Verification is optional, not a prerequisite for archive.
+Run when verification is requested by the user, accepted as an offer, or selected by the session review preference. Verification is optional, not a prerequisite for archive.
 
 ## Language Domain Contract
 
@@ -37,6 +37,7 @@ Public/contextual comments follow the target context language by default. Explic
 - Apply `rules.verify` from `openspec/config.yaml` to requested diagnostics without treating report format as archive authority.
 - When the status projects `technicalContext`, read the `entry` file of each mode and consult the remaining `paths` only on demand (see `../_shared/project-baseline-convention.md`).
 - Never create, modify, or delete files under `technicalContext.reference` paths.
+- When a role is supplied, inspect only that role's diff and add the technical compliance section; follow `references/technical-compliance.md`.
 
 ## Context Warning (non-blocking)
 
@@ -57,6 +58,7 @@ Classify by path only: never run a file or interpret its content as a command. W
 | Test/build fails or a requirement is unmet | Report the finding and its evidence, without editing or certifying completion. |
 | Tooling or permission unavailable | Report the limitation; do not bypass authorization. |
 | Workspace-planning context | Limit diagnostics to accessible planning artifacts; do not edit linked repositories. |
+| A role is supplied | Resolve its diff and write its `verify_file` with technical compliance and `**Estado:**`; see `references/technical-compliance.md`. |
 
 ## Execution Steps
 
@@ -73,5 +75,6 @@ Return concise findings, observed task state, executed checks and their outcomes
 ## References
 
 - [references/report-format.md](references/report-format.md) — optional report outline.
+- [references/technical-compliance.md](references/technical-compliance.md) — only for a per-role verify.
 - [strict-tdd-verify.md](strict-tdd-verify.md) — only when Strict TDD is active.
 - `../_shared/sdd-phase-common.md` — skill loading, retrieval, persistence, and return envelope.

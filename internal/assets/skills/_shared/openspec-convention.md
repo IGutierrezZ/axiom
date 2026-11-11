@@ -22,7 +22,10 @@ openspec/
         │       └── spec.md  <- Delta spec
         ├── design.md        <- from sdd-design
         ├── tasks.md         <- from sdd-tasks (updated by sdd-apply); or tasks.<role>.md per role when kickoff.yaml seals more than one role (REQ-21.10)
-        ├── verify-report.md <- from sdd-verify
+        ├── verify-report.md <- from sdd-verify; or verify-report.<role>.md per role (a per-role verify; `fullstack` keeps verify-report.md)
+        ├── review-ledger.md <- optional judgment ledger of the single role; review-ledger.<role>.md per role (written by the orchestrator)
+        ├── coverage-review.spec.md <- optional coverage review after spec (informational; never digested by a gate)
+        ├── coverage-review.design.md <- optional coverage review after design (informational; never digested by a gate)
         ├── handoff.md       <- legacy: written by earlier versions when the last active role's role-apply gate was approved; today only `axiom handoff create` writes it, and no SDD phase or status reads it
         ├── context-impact.md <- context delta, only when the status projects `technicalContext.maintained`: drafted by sdd-design, kept current by sdd-apply
         └── integration.yaml <- integration plan and trace, written by `axiom sdd integrate prepare` and updated by `axiom sdd integrate verify`; written by no skill
@@ -44,6 +47,9 @@ openspec/
 | sdd-tasks | Creates | `openspec/changes/{change-name}/tasks.md`, or `tasks.<role>.md` per role when `kickoff.yaml` seals more than one role |
 | sdd-apply | Updates | `openspec/changes/{change-name}/tasks.md` (marks `[x]`) |
 | sdd-verify | Creates | `openspec/changes/{change-name}/verify-report.md` |
+| sdd-verify (per role) | Creates (informational; Engram: `sdd/{change-name}/verify-report/{role}`, and `sdd/{change-name}/verify-report` for `fullstack`) | `openspec/changes/{change-name}/verify-report.<role>.md` for a role other than `fullstack` |
+| orchestrator (judgment) | Writes (informational; Engram: `sdd/{change-name}/review-ledger`, and `sdd/{change-name}/review-ledger/{role}` for a role other than `fullstack`) | `openspec/changes/{change-name}/review-ledger.md`, or `review-ledger.<role>.md` for a role other than `fullstack` |
+| orchestrator (coverage review) | Writes, one dated round per run (informational; Engram: `sdd/{change-name}/coverage-review/spec` and `sdd/{change-name}/coverage-review/design`) | `openspec/changes/{change-name}/coverage-review.spec.md`, `openspec/changes/{change-name}/coverage-review.design.md` |
 | none (legacy) | Written by earlier versions when the last active role's role-apply gate was approved; today only `axiom handoff create` writes it, outside the SDD flow | `openspec/changes/{change-name}/handoff.md` |
 | sdd-design, sdd-apply | Create, then keep current (only when the status projects `technicalContext.maintained`) | `openspec/changes/{change-name}/context-impact.md` |
 | native `axiom sdd integrate` | Writes (`prepare`, then `verify`) | `openspec/changes/{change-name}/integration.yaml` |
