@@ -87,10 +87,13 @@ candidate and does not change review mode.
 
 The clone-local override can only turn review off, so it never has to be readable
 while review would be off anyway. If the deciding source computed without it
-(project, then global, then the default) is not `on`, a failure to read or
-inspect the override, such as a Git common directory on an SMB/UNC share where
-the Windows path-safety checks refuse, is ignored: `status` reports `off` and
-the Claude Code stop hook stays silent. If that source is `on`, the failure
+(project, then global, then the default) is not `on`, a failure to validate the
+location of the override, such as a Git common directory on an SMB/UNC share
+where the Windows path-safety checks refuse, is ignored: `status` reports `off`
+and the Claude Code stop hook stays silent. Only that "cannot validate" class
+is ignored: a corrupt override, a private RAR path with insecure permissions,
+or a mount that cannot represent private modes keeps refusing. If that source
+is `on`, the failure
 still fails closed with a typed unsupported-filesystem refusal whose
 continuation is `axiom review mode disable` or moving the repository to a local
 NTFS or ReFS volume. `review mode status` then prints `unavailable` instead of a

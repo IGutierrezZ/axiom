@@ -29,7 +29,12 @@ func unvalidatableReviewModeSwitchRoot(t *testing.T, repo string) {
 	if err := os.MkdirAll(filepath.Join(target, "review-mode", "rar-authority", "v1", "rdd-mode"), 0o700); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.Symlink(target, filepath.Join(repo, ".git", "gentle-ai")); err != nil {
+	// A prior clone-scope write leaves a real gentle-ai directory; replace it.
+	link := filepath.Join(repo, ".git", "gentle-ai")
+	if err := os.RemoveAll(link); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(target, link); err != nil {
 		t.Fatal(err)
 	}
 }

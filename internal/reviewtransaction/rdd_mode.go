@@ -346,6 +346,13 @@ func ResolveRDDMode(ctx context.Context, repo string, global RDDGlobalMode) (RDD
 	if err == nil || ctx.Err() != nil {
 		return status, err
 	}
+	// Only "the common directory cannot be validated" is tolerated. Corruption,
+	// an unsafe private path, and an ineffective private mode are signals about
+	// state this clone does hold, and keep refusing whatever the other sources
+	// say.
+	if !rddOverrideUnvalidatable(err) {
+		return status, err
+	}
 	// An unintelligible project or global value is not an override failure and
 	// is never swallowed: normalizing again tells the two apart.
 	projectMode, projectErr := normalizeRDDMode(global.Project)
@@ -357,6 +364,22 @@ func ResolveRDDMode(ctx context.Context, repo string, global RDDGlobalMode) (RDD
 		return below, nil
 	}
 	return status, err
+}
+
+// rddOverrideUnvalidatable reports the one override failure #4670 tolerates:
+// the shared ancestry of the clone-local location (the Git common directory
+// and the directories above rar-authority) cannot be validated -- an SMB/UNC
+// share, a volume without ownership semantics, a symlinked ancestor. It is
+// the unsafe-path class minus the two typed refusals about the private tree
+// itself, whose insecure permissions are a security signal and never
+// "cannot validate".
+func rddOverrideUnvalidatable(err error) bool {
+	if !errors.Is(err, errUnsafeRARAuthorityPath) {
+		return false
+	}
+	var unsafePath *UnsafeRARPathError
+	var privateMode *PrivateModeIneffectiveError
+	return !errors.As(err, &unsafePath) && !errors.As(err, &privateMode)
 }
 
 // ResolveRDDModeStrict is the strict resolution: any clone-local override that
