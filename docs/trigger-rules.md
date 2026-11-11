@@ -42,6 +42,18 @@ at the next safe boundary. Declining it leads to a safely reduced scope, a
 justified direct or delegated route, or **Needs your decision**—never silent SDD
 enrollment.
 
+## Informed approval and continuity
+
+A short affirmative reply ("yes", "go ahead", "ok", or the equivalent in your
+language) is read against the proposal or question immediately before it and
+approves exactly that, within its stated scope; it never widens the scope. If that
+proposal was ambiguous or offered several options, a short reply does not choose
+and Axiom asks again. Contextual approval never replaces native consent, the exact
+allowed answers of a blocking prompt, or the separate explicit permission that
+publishing, remote, and destructive actions need. Resolving a subdecision does not
+cancel the objective you already authorized: Axiom continues with the authorized
+work that remains.
+
 ## Native progress and authority
 
 | Public state | Meaning |
