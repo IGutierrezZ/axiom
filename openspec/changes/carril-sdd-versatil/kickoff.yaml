@@ -1,0 +1,32 @@
+schema: axiom.sdd-kickoff/v1
+change: carril-sdd-versatil
+sealed_at: 2026-11-04T23:56:05.1169429Z
+sealed_by: cli
+kickoff:
+    flow_mode: sdd
+    execution_style: checkpointed
+    execution_style_source: explicit
+    handoff_policy: none
+    roles:
+        - role: fullstack
+          gate_policy: blocking
+          tasks_file: tasks.md
+          verify_file: verify-report.md
+lifecycle:
+    deployment_target: local
+    post_archive_policy: bug_only
+git:
+    integration_branch: main
+    branch_prefix: inc
+    change_branch: inc/carril-sdd-versatil
+    repositories:
+        - path: .
+          name: axiom
+          role: change_branch
+          integration_branch: main
+          base: main
+          branches:
+            - name: inc/carril-sdd-versatil
+              kind: change
+            - name: inc/carril-sdd-versatil-archive
+              kind: archive
