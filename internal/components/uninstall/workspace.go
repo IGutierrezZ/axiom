@@ -83,6 +83,13 @@ func (s *Service) otherAgentsInProject() []model.AgentID {
 	if !s.workspace {
 		return nil
 	}
+	return s.otherInstalledAgentsInScope()
+}
+
+// otherInstalledAgentsInScope devuelve los agentes que el estado del ámbito (global o
+// proyecto) da por instalados y que esta desinstalación no retira. Sin estado legible
+// devuelve nil: no hay nadie que Axiom sepa que depende de lo que se va a quitar.
+func (s *Service) otherInstalledAgentsInScope() []model.AgentID {
 	current, err := s.readInstallState()
 	if err != nil {
 		return nil
@@ -97,18 +104,23 @@ func (s *Service) otherAgentsInProject() []model.AgentID {
 }
 
 // skillsDirStaysInUse dice si la carpeta de skills sigue siendo de otro agente que
-// permanece instalado en el proyecto. Varios agentes comparten .agents/skills: si
-// se retira solo uno, las skills se quedan para los demás.
+// permanece instalado en el mismo ámbito. En el proyecto, varios agentes comparten
+// .agents/skills; en el global, VS Code Copilot y Copilot CLI comparten
+// ~/.copilot/skills. Si se retira solo uno, las skills se quedan para los demás.
 func (s *Service) skillsDirStaysInUse(skillDir string) bool {
-	if !s.workspace || skillDir == "" {
+	if skillDir == "" {
 		return false
 	}
-	for _, other := range s.otherAgentsInProject() {
+	root := s.homeDir
+	if s.workspace {
+		root = s.workspaceDir
+	}
+	for _, other := range s.otherInstalledAgentsInScope() {
 		adapter, ok := s.adapter(other)
 		if !ok || !adapter.SupportsSkills() {
 			continue
 		}
-		if filepath.Clean(adapter.SkillsDir(s.workspaceDir)) == filepath.Clean(skillDir) {
+		if filepath.Clean(adapter.SkillsDir(root)) == filepath.Clean(skillDir) {
 			return true
 		}
 	}

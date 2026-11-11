@@ -806,8 +806,11 @@ func Inject(homeDir string, adapter agents.Adapter, sddMode model.SDDModeID, opt
 			// La carpeta compartida .agents/skills sirve a varios agentes: se escribe con
 			// el hueco genérico de runtime, igual que la copia de compatibilidad, para que
 			// su contenido no dependa de qué agente la escriba ni de cuántos haya.
+			// Lo mismo vale para ~/.copilot/skills, que comparten VS Code Copilot y
+			// Copilot CLI en el ámbito global: con la identidad de cada uno, dos
+			// agentes reescribirían la copia del otro en cada sync.
 			skillAgent := adapter.Agent()
-			if agents.IsSharedWorkspaceSkillsDir(opts.WorkspaceDir, skillDir) {
+			if agents.IsSharedWorkspaceSkillsDir(opts.WorkspaceDir, skillDir) || agents.SharesSkillsDirWithAnotherAdapter(homeDir, adapter) {
 				skillAgent = ""
 			}
 			skillResult, skillErr := InjectSkillDirectoryForAgent(skillDir, opts.Capability, skillAgent)

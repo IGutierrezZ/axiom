@@ -62,6 +62,8 @@ func TestSetupAgentSlug(t *testing.T) {
 		{model.AgentQwenCode, "", false},
 		{model.AgentCursor, "", false},
 		{model.AgentVSCodeCopilot, "", false},
+		// Copilot CLI recibe el MCP directamente en mcp-config.json.
+		{model.AgentGitHubCopilotCLI, "", false},
 		// Hermes MCP is injected directly via YAML helpers — no engram setup slug.
 		{model.AgentHermes, "", false},
 	}

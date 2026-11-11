@@ -77,3 +77,17 @@ func KimiContext7OverlayJSON() []byte {
 	copy(content, kimiContext7OverlayJSON)
 	return content
 }
+
+// copilotCLIContext7OverlayJSON es el overlay de <COPILOT_HOME|~/.copilot>/mcp-config.json
+// de Copilot CLI. La raíz es `mcpServers` (VS Code usa `servers`) y cada entrada
+// declara `type` y `tools`: `tools: ["*"]` expone todas las herramientas del
+// servidor, que es lo que el CLI exige para no dejarlo sin herramientas. Context7 es
+// remoto (http), así que no hace falta npx. La entrada se reemplaza entera para que
+// una definición local anterior no sobreviva a la fusión profunda.
+var copilotCLIContext7OverlayJSON = []byte("{\n  \"mcpServers\": {\n    \"context7\": {\n      \"__replace__\": {\n        \"type\": \"http\",\n        \"url\": \"https://mcp.context7.com/mcp\",\n        \"tools\": [\n          \"*\"\n        ]\n      }\n    }\n  }\n}\n")
+
+func CopilotCLIContext7OverlayJSON() []byte {
+	content := make([]byte, len(copilotCLIContext7OverlayJSON))
+	copy(content, copilotCLIContext7OverlayJSON)
+	return content
+}
