@@ -1,0 +1,39 @@
+schema: axiom.sdd-gate-ledger/v1
+change: carril-sdd-versatil
+records:
+    - gate: spec
+      decision: rejected
+      reason: 'Reorientación: extender el SDD actual en lugar de sustituirlo; se conservan modos, compuertas y doctrina de verify, y las evidencias ISO pasan a ser opt-in por proyecto'
+      artifact_digest: be382b3fecc29f369c36fd080d0bcbc2a6d86a402b48da26c6090f785c0a0474
+      actor: cli
+      recorded_at: 2026-11-05T17:49:46.077228Z
+    - gate: spec
+      decision: rejected
+      reason: 'Alinear con #235: rehacer REQ-26.1, REQ-21.9 y REQ-28.29 sobre su texto; definir publish --archive con archivado en el mismo PR (Q11) y el bloque de axiom.yaml (Q3)'
+      artifact_digest: 2ee0f65197c7fac08b758586d5eb72ec914646bb15f0377a9386b8ed5d2438e9
+      actor: cli
+      recorded_at: 2026-11-10T11:19:38.2363716Z
+    - gate: spec
+      decision: approved
+      reason: 'Spec alineada con #235; Q3, Q11b y baseline implícita resueltas; supuestos aceptados para design'
+      artifact_digest: d608987456fd4781711e1ec0ac99f2b40faa47eaecd029af5e25462837c8b8a2
+      actor: cli
+      recorded_at: 2026-11-10T16:37:32.2119222Z
+    - gate: design
+      decision: approved
+      reason: 'Design aprobado con las recomendaciones de P1-P7: trace nuevo, status adelanta escenarios en ISO, sdd: inválido bloquea, ISO exige openspec/hybrid, archive fijado en kickoff, branch done acepta first-parent, copias según #235'
+      artifact_digest: a9754c0d2437b1730d7b6f2935d8f202c9c36430876915755f24081f1c93ff40
+      actor: cli
+      recorded_at: 2026-11-10T17:21:55.9379781Z
+    - gate: spec
+      decision: rejected
+      reason: 'Reapertura: añadir P5 (instantánea de sdd.iso y sdd.archive al sellar, REQ-28.30) y P6 (capa first-parent en branch done, REQ-25.16)'
+      artifact_digest: eaae8aecd48dd1fd7b5ac612e8abab93417313c5051a9cd5e98413fc3e1d81bf
+      actor: cli
+      recorded_at: 2026-11-10T19:03:34.8036763Z
+    - gate: design
+      decision: rejected
+      reason: 'Reapertura: reconciliar D13 con REQ-28.30 (instantánea) y REQ-25.16 (capa first-parent); disparador data-model'
+      artifact_digest: a9754c0d2437b1730d7b6f2935d8f202c9c36430876915755f24081f1c93ff40
+      actor: cli
+      recorded_at: 2026-11-10T19:03:34.9802465Z
