@@ -1,6 +1,6 @@
 ---
 name: hermes-ephemeral-delegation
-description: "Trigger: broad exploration, multi-file reads, tests/builds, fresh review, or multi-step debug. Orchestrate complex work via delegate_task to protect context."
+description: "Trigger: exploration beyond the evidence budget, parallel writers, tests/builds, fresh review, multi-step debug. Orchestrate via delegate_task to save context."
 license: Apache-2.0
 metadata:
   author: gentleman-programming
@@ -11,8 +11,8 @@ metadata:
 
 Load this skill when you are acting as the parent orchestrator and the work ahead falls into any of these categories:
 
-- Broad exploration (4+ files to understand, codebase mapping, approach comparison)
-- Multi-file implementation (touching 2+ non-trivial files)
+- Exploration that exceeds the inline evidence budget (one parallel batch, at most 3 calls, approximately 10k tokens; codebase mapping, approach comparison)
+- Implementation with a named reason to delegate a writer (independent units in parallel, or protecting the parent context); the number of files never counts
 - Test or build execution
 - Fresh adversarial review (diffs, PR readiness, incident audit)
 - Multi-step debugging that would flood the parent context
@@ -21,7 +21,7 @@ Do NOT load this skill if you are already inside a delegated child task — you 
 
 ## Hard Rules
 
-- Use `delegate_task` for all complex work listed above. Do NOT execute it inline.
+- Use `delegate_task` for the work listed above only when the gate's condition truly holds; when in doubt, work inline. Do NOT execute work inline that a gate clearly delegates.
 - Workers are EPHEMERAL: each `delegate_task` call creates a fresh context. Do NOT request persistent agent files or profiles.
 - Pass a self-contained mission. Workers have no memory of the parent conversation.
 - Treat worker output as self-report: verify file writes, test pass/fail, URLs, and IDs before reporting success to the user.
@@ -31,12 +31,12 @@ Do NOT load this skill if you are already inside a delegated child task — you 
 
 | Situation | Action |
 |-----------|--------|
-| Need to read 4+ files to understand | Delegate a narrow exploration worker |
-| Need to write 2+ non-trivial files | Delegate a single writer with the full mission |
+| Understanding exceeds the inline evidence budget | Delegate a read-only exploration worker that returns a handoff of at most approximately 2k tokens with `path:line` evidence; make one spot check |
+| Independent units to write in parallel, or a long session whose parent context needs protecting | Delegate one bounded writer per unit with the full mission |
 | Need to run tests or builds | Delegate an executor; do not run inline |
 | Need an adversarial review of a diff | Delegate a fresh-context reviewer |
 | Multi-step debug that grows the context | Delegate a debug worker; feed results back inline |
-| Simple 1-file edit you already understand | Do it inline; no delegation needed |
+| A unit of about 100 changed lines or less, or a change you already understand | Do it inline, whatever the number of files; no delegation needed |
 | Quick git/state check | Do it inline; no delegation needed |
 
 ## Execution Steps

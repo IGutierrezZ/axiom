@@ -79,20 +79,31 @@ type ImplementationRoutingFacts struct {
 	SDD             SDDProposalFacts     `json:"sdd"`
 }
 
+// DirectInlineFacts is the evidence budget of direct inline work. Delegation is
+// decided by what the evidence costs, never by how many files it touches: the
+// manifest carries no file-count field on purpose.
 type DirectInlineFacts struct {
-	MinUnderstandingFiles                    uint8 `json:"minUnderstandingFiles"`
-	MaxUnderstandingFiles                    uint8 `json:"maxUnderstandingFiles"`
-	MaxMechanicalWriteFiles                  uint8 `json:"maxMechanicalWriteFiles"`
-	MechanicalWriteMustBeAlreadyUnderstood   bool  `json:"mechanicalWriteMustBeAlreadyUnderstood"`
-	MechanicalWriteMustNotRequireResearch    bool  `json:"mechanicalWriteMustNotRequireResearch"`
-	MechanicalWriteMustNotHaveOpenDesignWork bool  `json:"mechanicalWriteMustNotHaveOpenDesignWork"`
+	MaxEvidenceBatches                       uint8  `json:"maxEvidenceBatches"`
+	MaxEvidenceCalls                         uint8  `json:"maxEvidenceCalls"`
+	ApproxEvidenceTokens                     uint32 `json:"approxEvidenceTokens"`
+	EvidenceMustUseBoundedRanges             bool   `json:"evidenceMustUseBoundedRanges"`
+	MaxInlineUnitLines                       uint16 `json:"maxInlineUnitLines"`
+	MechanicalWriteMustBeAlreadyUnderstood   bool   `json:"mechanicalWriteMustBeAlreadyUnderstood"`
+	MechanicalWriteMustNotRequireResearch    bool   `json:"mechanicalWriteMustNotRequireResearch"`
+	MechanicalWriteMustNotHaveOpenDesignWork bool   `json:"mechanicalWriteMustNotHaveOpenDesignWork"`
 }
 
+// DelegatedDirectFacts bounds what a delegated worker hands back and when the
+// parent context is worth protecting. A writer is delegated only for a named
+// reason (parallelism or parent context), so no writer threshold exists here.
 type DelegatedDirectFacts struct {
-	MappingMinUnderstandingFiles  uint8 `json:"mappingMinUnderstandingFiles"`
-	WriterMinNonTrivialFiles      uint8 `json:"writerMinNonTrivialFiles"`
-	DelegateWhenReadPreparesWrite bool  `json:"delegateWhenReadPreparesWrite"`
-	DelegateWhenBroadResearch     bool  `json:"delegateWhenBroadResearch"`
+	ApproxHandoffTokens           uint32 `json:"approxHandoffTokens"`
+	MaxParentSpotChecks           uint8  `json:"maxParentSpotChecks"`
+	ApproxParentContextTokens     uint32 `json:"approxParentContextTokens"`
+	ContextBackstopIsAdvisory     bool   `json:"contextBackstopIsAdvisory"`
+	WriterRequiresNamedReason     bool   `json:"writerRequiresNamedReason"`
+	DelegateWhenReadPreparesWrite bool   `json:"delegateWhenReadPreparesWrite"`
+	DelegateWhenBroadResearch     bool   `json:"delegateWhenBroadResearch"`
 }
 
 type SDDProposalFacts struct {
@@ -201,16 +212,21 @@ func MustForAgent(agent model.AgentID) AgentCapabilityManifest {
 func CanonicalImplementationRouting() ImplementationRoutingFacts {
 	return ImplementationRoutingFacts{
 		DirectInline: DirectInlineFacts{
-			MinUnderstandingFiles:                    1,
-			MaxUnderstandingFiles:                    3,
-			MaxMechanicalWriteFiles:                  1,
+			MaxEvidenceBatches:                       1,
+			MaxEvidenceCalls:                         3,
+			ApproxEvidenceTokens:                     10000,
+			EvidenceMustUseBoundedRanges:             true,
+			MaxInlineUnitLines:                       100,
 			MechanicalWriteMustBeAlreadyUnderstood:   true,
 			MechanicalWriteMustNotRequireResearch:    true,
 			MechanicalWriteMustNotHaveOpenDesignWork: true,
 		},
 		DelegatedDirect: DelegatedDirectFacts{
-			MappingMinUnderstandingFiles:  4,
-			WriterMinNonTrivialFiles:      2,
+			ApproxHandoffTokens:           2000,
+			MaxParentSpotChecks:           1,
+			ApproxParentContextTokens:     150000,
+			ContextBackstopIsAdvisory:     true,
+			WriterRequiresNamedReason:     true,
 			DelegateWhenReadPreparesWrite: true,
 			DelegateWhenBroadResearch:     true,
 		},

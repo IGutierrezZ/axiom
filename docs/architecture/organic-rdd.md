@@ -80,8 +80,8 @@ The organic implementation route, with RDD entering at the end over the frozen c
 ```mermaid
 flowchart TD
     A["User requests a change<br/>(Claude Code · OpenCode · Codex...)"] --> B{"Implementation<br/>route"}
-    B -->|"decide/verify<br/>1–3 files"| C["Direct inline"]
-    B -->|"4+ file exploration<br/>or 2+ non-trivial writes"| D["Delegated direct<br/>(one bounded worker)"]
+    B -->|"evidence fits the<br/>inline budget"| C["Direct inline"]
+    B -->|"evidence beyond the budget<br/>or a named writer reason"| D["Delegated direct<br/>(one bounded worker)"]
     C --> E["Implementation + tests"]
     D --> E
     E --> F{"RDD enabled?<br/>(user-owned, opt-in)"}

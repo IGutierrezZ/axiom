@@ -147,34 +147,15 @@ When native SDD status reports `blocked(edit_authority_missing)`, its structured
 <!-- sdd-orchestrator-section:SDD Edit-Authority Consent Relay (MANDATORY):end -->
 
 <!-- sdd-orchestrator-section:Delegation Rules:start -->
-These rules select execution topology, not the implementation method. Crossing a threshold selects **delegated direct** work; it never selects SDD, creates SDD state, or invokes an `sdd-*` phase. Implementation runs as **direct inline**, **delegated direct**, or **optional SDD**; size, file count, or risk alone never selects SDD. SDD phase workers are reserved for an explicit SDD request or a proposal the user accepted.
-
-Core principle: **does this inflate the parent context without need?** If yes, use one bounded worker. If no, do it inline.
-
-| Action | Direct inline | Delegated direct worker |
-|--------|---------------|-------------------------|
-| Read to decide/verify (1–3 files) | ✅ | — |
-| Read to explore/understand (4+ files) | — | ✅ one narrow mapper |
-| Read as preparation for writing | — | ✅ together with the write |
-| Write one mechanical, already-understood file | ✅ | — |
-| Write 2+ non-trivial files | — | ✅ one writer |
-| Bash for state (`git`, `gh`) | ✅ | — |
-| Tests, builds, installs, or native review actions | allowed as a bounded action | ✅ fresh per-action worker without changing route |
+{{AXIOM_DELEGATION_RULES}}
 <!-- sdd-orchestrator-section:Delegation Rules:end -->
 
 <!-- sdd-orchestrator-section:Delegation Rules Handoff:start -->
-Keep one writer and a short synthesized handoff. Delegation is mandatory at the mapping, write, preparation, and broad-research boundaries, but it remains a direct implementation route and must not synthesize SDD artifacts.
+Keep one writer and a short synthesized handoff. Delegation applies at the mapping, write, preparation, and broad-research boundaries only when the trigger condition truly holds, and it remains a direct implementation route and must not synthesize SDD artifacts.
 <!-- sdd-orchestrator-section:Delegation Rules Handoff:end -->
 
 <!-- sdd-orchestrator-section:Mandatory Delegation Triggers:start -->
-These are parent-orchestrator routing boundaries. Use the smallest useful topology and keep the safety machinery behind the outcome-first interaction. Do not pass these rules to child agents as permission to orchestrate.
-
-1. **Bounded read rule**: read 1–3 files inline to decide or verify.
-2. **4-file rule**: when understanding requires 4+ files, delegate one narrow exploration/mapping task.
-3. **Write rule**: keep one mechanical, already-understood file inline only when it needs no research or unresolved design work; delegate one writer for 2+ non-trivial files.
-4. **Context rule**: delegate reading that prepares a write and broad research/context compression.
-5. **Per-action rule**: tests, builds, installs, and native review actors may use fresh workers without changing the implementation route or creating SDD state.
-6. **Optional SDD rule**: propose SDD only when durable proposal/spec/design/tasks materially reduce substantial ambiguity. Select SDD only after an explicit request or accepted proposal; risk alone never forces SDD.
+{{AXIOM_DELEGATION_TRIGGERS}}
 <!-- sdd-orchestrator-section:Mandatory Delegation Triggers:end -->
 
 <!-- sdd-orchestrator-section:Native Checking Contract:start -->
