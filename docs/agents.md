@@ -216,11 +216,15 @@ Agente de terminal de GitHub (binario `copilot`). Es un adaptador propio (`githu
 
 - **Raíz**: `$COPILOT_HOME` si está definida y es una ruta absoluta, o `~/.copilot`. `COPILOT_HOME` solo se respeta con el directorio personal real del usuario: una instalación aislada (otra raíz de instalación) se queda dentro de ella.
 - **Instrucciones**: `<raíz>/copilot-instructions.md` (persona, orquestador ODD/SDD y protocolo de memoria). El SDD es el mismo orquestador genérico de VS Code Copilot, con la elección de almacén de artefactos en la preflight de sesión.
-- **Skills**: `<raíz>/skills/`. Sin `COPILOT_HOME` es la misma carpeta que usa VS Code Copilot. La copia no depende de qué agente la escribe (lleva el hueco genérico de runtime), y desinstalar uno de los dos no retira las skills mientras el otro siga instalado.
+- **Skills**: `<raíz>/skills/`. Sin `COPILOT_HOME` es la misma carpeta que usa VS Code Copilot. La copia no depende de qué agente la escribe (lleva el hueco genérico de runtime), y desinstalar uno de los dos no retira las skills mientras el otro siga instalado. Quien ya tenía VS Code Copilot verá que el primer sync tras instalar Copilot CLI reescribe `_shared/review-ledger-contract.md`: la identidad del agente pasa a `<runtime>`. Es un cambio de texto sin efecto, porque ninguno de los dos tiene revisión nativa.
 - **MCP** (Context7 y Engram): `<raíz>/mcp-config.json`, con la clave raíz `mcpServers` (no `servers`, la de VS Code) y entradas con `type` (`http` para Context7, `local` para Engram) y `tools: ["*"]`. Se conservan los servidores del usuario. Engram se inyecta directamente, sin `engram setup`. CodeGraph tiene un destino nativo `copilot-cli` que escribe en el mismo fichero.
 - **Ajustes y permisos**: `<raíz>/settings.json`. Axiom no escribe permisos ni modos de autoaprobación: lo que decidas queda intacto.
 - **Hooks, comandos y subagentes de fichero**: ninguno.
-- **Detección**: el binario `copilot` en el `PATH` o estado propio de Copilot CLI en la raíz. Una carpeta `~/.copilot` que solo tiene `skills` es de VS Code Copilot y no cuenta como Copilot CLI; y VS Code Copilot se detecta en el escaneo por su extensión `github.copilot`, no por `~/.copilot`.
+- **Detección**: el binario `copilot` en el `PATH` o una entrada propia de Copilot CLI en la raíz:
+  - su estado: `config.json`, `session-state/`, `session-store.db`, `logs/`, etc.;
+  - o lo que solo él lee: `settings.json`, `mcp-config.json` y `copilot-instructions.md`.
+
+  `skills/` y `agents/` las lee también VS Code Copilot, y una entrada desconocida no cuenta, así que una `~/.copilot` sin ninguna de esas entradas no se toma por Copilot CLI; y VS Code Copilot se detecta en el escaneo por su extensión `github.copilot`, no por `~/.copilot`.
 - **Instalación** (solo se muestra, Axiom no la ejecuta): `npm install -g --ignore-scripts @github/copilot@latest`, con `sudo` en Linux si el npm es del sistema. `axiom doctor` comprueba el binario `copilot`.
 - **Ámbito workspace**: no tiene. Con `--scope workspace` se omite con un aviso.
 

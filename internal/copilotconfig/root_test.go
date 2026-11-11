@@ -75,3 +75,42 @@ func TestHasCLIStateIgnoresTheSharedSkillsFolder(t *testing.T) {
 		t.Fatal("settings.json es estado propio de Copilot CLI")
 	}
 }
+
+func TestHasCLIStateOnlyCountsCopilotCLIEntries(t *testing.T) {
+	cases := []struct {
+		name string
+		dir  bool
+		want bool
+	}{
+		{name: "session-state", dir: true, want: true},
+		{name: "session-store.db", want: true},
+		{name: "logs", dir: true, want: true},
+		{name: "config.json", want: true},
+		{name: "mcp-config.json", want: true},
+		{name: "copilot-instructions.md", want: true},
+		// Compartidas con VS Code Copilot: no prueban que haya CLI.
+		{name: "skills", dir: true, want: false},
+		{name: "agents", dir: true, want: false},
+		// Una entrada desconocida tampoco.
+		{name: "notas.txt", want: false},
+		{name: ".DS_Store", want: false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			root := t.TempDir()
+			path := filepath.Join(root, tc.name)
+			var err error
+			if tc.dir {
+				err = os.MkdirAll(path, 0o755)
+			} else {
+				err = os.WriteFile(path, []byte("{}"), 0o644)
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got := HasCLIState(root); got != tc.want {
+				t.Fatalf("HasCLIState con solo %q = %v, want %v", tc.name, got, tc.want)
+			}
+		})
+	}
+}
