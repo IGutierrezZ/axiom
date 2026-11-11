@@ -183,7 +183,17 @@ Alcance aclarado con el usuario:
     - `state` y `hub`: OK.
   - **Pendiente de la CI de Linux:** los tests nuevos son solo Unix. En Windows únicamente compilan, y aquí no hay Go en WSL.
   - **Desviación:** comentarios y mensajes en inglés, como el código de alrededor. Gana importancia porque el estado de proyecto vive en la raíz del repo, y ahí es donde suelen fallar los modos POSIX (`/mnt/c`, SMB).
-- [ ] **T19 · RDD en SMB/UNC (#4670)** (~575). Depende de T18. Supera la heurística porque el arreglo toca a la vez la resolución del modo, la seguridad de rutas de Windows y el hook de parada; partirlo dejaría un estado intermedio incoherente. La regla prevista («si el global no es `on`, se ignora el fallo del override») pasa a ser «si la fuente decisiva no es `on`, se ignora el fallo al leer el override del clon». Se revisa contra la precedencia final de T21.
+- [x] **T19 · RDD en SMB/UNC (#4670)** (~575). Depende de T18. **Hecha el 2026-11-11 en `ed48246b`.**
+  - **Ruta y tamaño:** writer delegado; +712/−17 líneas, de las que unas 470 son tests.
+  - **Regla:** está en `ResolveRDDMode`. Si falla la lectura del override del clon y el modo calculado sin override (proyecto, global o defecto) no es `on`, devuelve ese modo sin error. Si es `on`, se mantiene el fallo cerrado. Las sondas de origen y `SetCloneLocalRDDMode` usan el nuevo `ResolveRDDModeStrict`.
+  - **Riesgo:** `medium`.
+  - **Verificación:**
+    - `go vet` en Windows y con `GOOS=linux`: limpio.
+    - `gofmt`: limpio.
+    - `reviewtransaction` filtrado: OK (54 s).
+    - `cli` filtrado: OK (214 s).
+    - `hub`, `state`, `components`, `assets` y `workspace`: OK, salvo los 2 tests de junction conocidos.
+  - **Pendiente de la CI de Linux:** los tests de CLI que necesitan symlinks se saltan en Windows. Supera la heurística porque el arreglo toca a la vez la resolución del modo, la seguridad de rutas de Windows y el hook de parada; partirlo dejaría un estado intermedio incoherente. La regla prevista («si el global no es `on`, se ignora el fallo del override») pasa a ser «si la fuente decisiva no es `on`, se ignora el fallo al leer el override del clon». Se revisa contra la precedencia final de T21.
 - [ ] **T20 · Rutas `\\?\` (#5533)** (~200). Depende de T19. El indicador explícito sigue haciendo falta con independencia de D2: en Axiom, el estado por defecto resuelto es idéntico al de fallo cerrado.
 
 **Sin solape con distribución.** Comprobado el 2026-11-04 con `git diff origin/main...inc/distribucion-un-comando --stat`: esa rama toca `scripts/install.*`, `internal/update/**`, `cmd/axiom/main.go` y documentación de uso, y ninguna tarea de este documento edita esos ficheros.
