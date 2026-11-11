@@ -1,0 +1,143 @@
+# ODD · alta-proyecto-ui (P4 de la hoja de ruta de visión de producto)
+
+## Objetivo
+
+Dar de alta un proyecto desde el dashboard con la configuración elegida y validada en la UI antes de escribir nada en disco. La configuración cubre:
+
+- la topología y, en multirepo, la raíz y el repositorio de specs;
+- los roles y sus repositorios;
+- los adaptadores que se instalan, siempre en modo workspace;
+- la review (RDD) como preferencia del usuario para ese proyecto.
+
+## Problema y porqué
+
+Auditoría `docs/audits/2026-11-03-vision-producto.md`, objetivo O4, huecos G4.1–G4.7. Todos están verificados al mapear el 2026-11-10.
+
+- **G4.1. El alta no se valida.**
+  - `hub.Init` (`internal/hub/init.go`) escribe `axiom.yaml` sin pasarlo por `workspace.ParseConfig` ni por `workspace.Validate`.
+  - La UI solo comprueba que la ruta no esté vacía.
+  - Las claves de rol se escriben sin comillas: una clave duplicada o con `:` produce un YAML roto, y eso se descubre después de escribir.
+  - Cualquier fallo sale como HTTP 500.
+- **G4.2. No hay campos de multirepo.**
+  - Se escribe siempre `root: "."` y `specs_repository: openspec`.
+  - El puntero `.axiom-workspace` solo se monta a mano.
+- **G4.3. Roles y repositorios sin validar.**
+  - Los repos de rol no se comprueban: ni que existan, ni que sean relativos, ni que estén dentro del proyecto.
+  - `tech` no se puede editar.
+- **G4.4. `gate_policy` fijo en el dashboard.**
+  - `internal/dashboard/service.go:187` fija `GatePolicy: "blocking"` e ignora el valor real del rol.
+  - Además, el alta escribe `advisory` para los roles no bloqueantes. `multirole` solo admite `blocking`, `deferred` y `optional` (`internal/multirole/detector.go:109`), así que esos proyectos fallan al detectar roles.
+- **G4.5. La review es un interruptor de máquina.** No está en la UI web.
+- **G4.6. La UI no elige ni instala adaptadores.**
+  - `/api/ecosystem/sync` solo sincroniza lo ya instalado.
+  - Ese endpoint hace `os.Chdir`, que afecta a todo el proceso.
+- **G4.7. El modo workspace es el ámbito por defecto**, pero queda huella fuera de él. No se toca aquí.
+
+## Decisiones
+
+- **D2 (decidido por el usuario el 2026-11-10 y el 2026-11-11):** el RDD es una preferencia de cada usuario por proyecto y nunca se versiona.
+  - Se guarda en el registro del hub (`~/.axiom/workspaces.json`, `WorkspaceRecord`), junto a las preferencias de worktree.
+  - Precedencia:
+    1. El «apagar» por clon gana.
+    2. Si no lo hay, manda la preferencia del proyecto.
+    3. Si tampoco la hay, manda el interruptor global.
+  - Un repositorio sigue sin poder forzar el encendido.
+- **Las siguientes las tomé por defecto. Se revisan en la parada de plan:**
+  - **`gate_policy`:**
+    - Un rol no bloqueante se escribe como `deferred`, no como `advisory`.
+    - El alta valida con el vocabulario de `multirole`.
+    - Migrar los `advisory` ya escritos queda fuera de alcance (es un seguimiento).
+  - **Adaptadores:**
+    - Son opcionales. Si no se elige ninguno, el proyecto queda sin adaptadores y el doctor de P3 lo refleja.
+    - Los agentes sin modo workspace (Pi, OpenClaw, Windsurf, Antigravity, Trae) se muestran deshabilitados con el motivo.
+  - **Repositorio de specs en multirepo:** el alta crea la carpeta si no existe, pero no hace `git init`. El doctor de P3 avisa si no es git.
+  - **CLI:** `axiom init` usa la misma validación previa. Las configuraciones que hoy escribe rotas pasan a rechazarse con la lista de errores.
+  - **Instalación en proceso con raíz explícita:** nada de `os.Chdir`.
+
+## Alcance autorizado
+
+- `internal/hub/**`: alta, validación previa y preferencias.
+- `internal/workspace/**`: solo lo que necesite la validación previa, como un FS superpuesto.
+- `internal/dashboard/**`: servicio, tipos, handlers, assets y pruebas.
+- `internal/cli/`, en tres partes:
+  - el núcleo de instalación con raíz explícita;
+  - `review_mode.go`;
+  - `axiom init` en `cmd/axiom/main.go`, solo para la validación.
+- `internal/reviewtransaction/rdd_mode.go`: el nuevo origen de la preferencia por proyecto.
+- `docs/usage.md` y este documento.
+
+Fuera de alcance:
+
+- Editar roles después del alta (resto de G4.3).
+- La huella fuera del workspace (G4.7).
+- El `os.Chdir` de `RunSync` en `/api/ecosystem/sync`, que ya está anotado como seguimiento.
+- Migrar los `advisory` existentes.
+
+## Configuración
+
+- **TDD:** off. `axiom.yaml` no lo configura, así que se hacen las comprobaciones funcionales normales.
+- **RDD:** off (`axiom review mode status`: decidido por defecto).
+- **Ejecutor de pruebas:** `go test` en proceso. **Prohibido compilar binarios sueltos** (Cortex).
+  - El JS se prueba con Node mediante `runNodeModules`, solo para módulos de `js/core/`.
+  - `internal/cli` entero tarda más de una hora aquí, así que se acota con `-run`.
+- **Entrega:** `single-pr` con `size:exception` y un commit por tarea (preferencia del usuario). Previsión: entre 2.300 y 3.000 líneas con pruebas.
+
+## Tareas
+
+- [ ] **T1 · `gate_policy` correcto (G4.4).**
+  - `GetWorkspace` devuelve el `GatePolicy` real del rol, con `blocking` por defecto.
+  - El alta escribe `deferred` en lugar de `advisory`.
+  - Pruebas en el dashboard y en `hub`.
+- [ ] **T2 · Validación previa en `hub` (G4.1, G4.3).**
+  - `hub.ValidateInit(opts)` genera la configuración y la pasa por `workspace.ParseConfig` y por `workspace.Validate`, con un FS superpuesto que da por creadas las carpetas que el alta va a crear.
+  - Repos relativos y dentro del proyecto. Claves de rol entre comillas.
+  - `gate_policy` con el vocabulario de `multirole`.
+  - Devuelve una lista de violaciones, no un único error.
+  - `Init` la llama antes de cualquier escritura, también desde `axiom init`.
+- [ ] **T3 · Errores de validación en la API y la UI.**
+  - `handleProjectsInit` devuelve 400 con la lista de violaciones.
+  - El modal las muestra.
+  - La validación en cliente (claves duplicadas, campos obligatorios vacíos) va a un módulo de `js/core/`, probado con Node.
+  - Se añade el campo `tech` por rol (parte de G4.3).
+- [ ] **T4 · Campos de multirepo (G4.2).**
+  - `root` y `specs_repository` en `InitOptions` y en `ProjectInitRequest`.
+  - Se escribe el puntero `.axiom-workspace` y se verifica con `workspace.LocateAt`.
+  - Los campos del modal solo se ven con topología multirepo.
+- [ ] **T5 · Elección e instalación de adaptadores (G4.6).**
+  - Endpoint de catálogo: id, nombre y si admite modo workspace.
+  - Núcleo de instalación en proceso con raíz explícita, sin `os.Chdir`. El estado del proyecto registra los agentes instalados.
+  - Selector en el modal.
+  - Pruebas con la raíz del proyecto nuevo y el cwd en otra carpeta.
+- [ ] **T6 · RDD por usuario y proyecto, mecanismo (G4.5, D2).**
+  - Preferencia en `WorkspaceRecord`, con la precedencia de D2 en `ResolveRDDMode`.
+  - `axiom review mode enable|disable|status --scope project`.
+  - `status` informa del origen que decide.
+  - Pruebas de precedencia, y de que `axiom.yaml` y el estado del proyecto no llevan nada.
+- [ ] **T7 · RDD en el alta y en la UI.**
+  - Opción en el modal de alta.
+  - El dashboard la muestra y la cambia para el proyecto abierto.
+  - Protección de origen (`isLocalRequest`) en el POST.
+- [ ] **T8 · Documentación y cierre.**
+  - `docs/usage.md`: alta desde la UI y RDD por proyecto.
+  - PR. Al fusionar, marcar P4 y D2 en la auditoría.
+
+## Criterios de aceptación
+
+- Un alta con errores (clave duplicada, repo fuera del proyecto, `gate_policy` inválido, specs ausente en multirepo sin poder crearlo) no escribe nada y la UI muestra cada error.
+- Un alta multirepo deja `axiom.yaml` en el repo de specs y el puntero en la carpeta maestra. `workspace.LocateAt` la resuelve.
+- Los adaptadores elegidos quedan instalados en el proyecto nuevo en modo workspace, sin depender del cwd del proceso.
+- Con el RDD encendido en un proyecto y apagado en el global, `axiom review mode status` en ese proyecto dice que está encendido y por qué. El «apagar» por clon sigue ganando. `axiom.yaml` no cambia.
+- El dashboard muestra el `gate_policy` real de cada rol.
+- `axiom init` sigue funcionando con configuraciones válidas.
+- Pruebas acotadas en verde. Como mínimo: `go test ./internal/hub/... ./internal/workspace/... ./internal/dashboard/... ./internal/reviewtransaction/...` y `go test ./internal/cli/ -run '<filtro de la tarea>'`.
+
+## Coordinación
+
+T18–T20 de `odd/tasks/upstream-revision-nativa.md` tocan `rdd_mode.go` y `review_mode.go` y esperaban a D2. T6 cambia la resolución del modo en esos mismos ficheros. Quien retome T18–T20 debe partir de T6 fusionada y revisar la regla de T19 («si el global no es `on`, se ignora el fallo del override»).
+
+## Progreso y evidencias
+
+- 2026-11-10: mapa hecho (delegado, solo lectura).
+- 2026-11-11: el usuario elige el registro del hub para el RDD por proyecto.
+
+Plan stop: approved 2026-11-11; implementation continues
