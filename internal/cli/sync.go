@@ -1401,6 +1401,7 @@ func (s componentSyncStep) Run() error {
 				ClaudeModelAssignments:             s.selection.ClaudeModelAssignments,
 				ClaudePhaseAssignments:             s.selection.ClaudePhaseAssignments,
 				KiroModelAssignments:               s.selection.KiroModelAssignments,
+				CopilotPhaseAssignments:            s.selection.CopilotPhaseAssignments,
 				CodexModelAssignments:              s.selection.CodexModelAssignments,
 				CodexCarrilModelAssignments:        s.selection.CodexCarrilModelAssignments,
 				CodexPhaseModelAssignments:         s.selection.CodexPhaseModelAssignments,
@@ -1421,6 +1422,14 @@ func (s componentSyncStep) Run() error {
 			res, err := inject(targetDir, adapter, sddMode, opts)
 			if err != nil {
 				return fmt.Errorf("sync sdd for %q: %w", adapter.Agent(), err)
+			}
+			s.countChanged(boolToInt(res.Changed), res.Files...)
+		}
+		// Proyecto con Copilot CLI y sin VS Code Copilot: nadie más escribe .github/agents.
+		if copilotProjectAgentsFromCLI(s.homeDir, s.workspaceDir, s.scope, adapters) {
+			res, err := injectCopilotProjectAgents(s.homeDir, s.workspaceDir, s.selection)
+			if err != nil {
+				return fmt.Errorf("sync copilot project agents: %w", err)
 			}
 			s.countChanged(boolToInt(res.Changed), res.Files...)
 		}
@@ -1935,8 +1944,11 @@ func runSyncWithSelectionScoped(homeDir, workspaceDir string, scope InstallScope
 	}
 
 	result, noOp, err := zeroAgentSyncNoOp(homeDir, scope, selection, result)
-	if err != nil || noOp {
+	if err != nil {
 		return result, err
+	}
+	if noOp {
+		return syncCopilotProjectAgentsOnly(homeDir, workspaceDir, scope, selection, result)
 	}
 
 	rt, err := newSyncRuntimeScoped(homeDir, workspaceDir, scope, selection)
@@ -2140,6 +2152,14 @@ func RunSync(args []string) (SyncResult, error) {
 	// subcarpeta; el aviso sale por stderr para no mezclarse con el informe.
 	workspaceDir, rootNotice := resolveWorkspaceDir(scope, homeDir)
 	noteWorkspaceRoot(rootNotice)
+	return runSyncResolved(flags, scope, homeDir, workspaceDir, nil)
+}
+
+// runSyncResolved es el núcleo de RunSync: recibe el ámbito, el HOME y la raíz del
+// workspace ya resueltos y no consulta el directorio actual del proceso. overrides,
+// si no es nil, sustituye las asignaciones de modelo por fase de los adaptadores que
+// nombra (SyncInWorkspace).
+func runSyncResolved(flags SyncFlags, scope InstallScope, homeDir, workspaceDir string, overrides *PhaseModelOverrides) (SyncResult, error) {
 	syncStateStore := StateStoreFor(scope, homeDir, workspaceDir)
 
 	// Resolve agents: explicit flag takes precedence over auto-discovery.
@@ -2208,6 +2228,16 @@ func RunSync(args []string) (SyncResult, error) {
 		}
 		selection.ClaudeModelAssignments = m
 	}
+	// Las asignaciones de Copilot son texto libre: a diferencia de las de Claude no
+	// se descartan en silencio las inválidas, porque un cambio manual erróneo en el
+	// estado dejaría el agente sin el modelo que el usuario creía haber elegido.
+	if len(selection.CopilotPhaseAssignments) == 0 && len(persistedState.CopilotPhaseAssignments) > 0 {
+		assignments := persistedState.CopilotAssignments()
+		if err := model.ValidateCopilotPhaseAssignments(assignments); err != nil {
+			return SyncResult{Agents: agentIDs, Selection: selection}, fmt.Errorf("copilot_phase_assignments del estado del proyecto: %w; corrígelo en .axiom/state.json o bórralo y vuelve a ejecutar `axiom sync`", err)
+		}
+		selection.CopilotPhaseAssignments = assignments
+	}
 	if len(selection.KiroModelAssignments) == 0 && len(persistedState.KiroModelAssignments) > 0 {
 		m := make(map[string]model.KiroModelAlias, len(persistedState.KiroModelAssignments))
 		for k, v := range persistedState.KiroModelAssignments {
@@ -2221,6 +2251,10 @@ func RunSync(args []string) (SyncResult, error) {
 	if selection.CodexOrchestratorAssignment == nil && persistedState.CodexOrchestratorAssignment != nil {
 		selection.CodexOrchestratorAssignment = codexOrchestratorFromState(persistedState.CodexOrchestratorAssignment)
 	}
+
+	// Un cambio de modelo pedido desde el dashboard manda sobre lo restaurado, también
+	// cuando deja el adaptador sin ninguna asignación.
+	overrides.apply(&selection)
 
 	// Restore Codex effort and carril model assignments from state so that
 	// `gentle-ai sync` preserves the user's per-phase effort and per-carril

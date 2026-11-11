@@ -45,10 +45,13 @@ func agentForAssetPath(t *testing.T, path string) model.AgentID {
 	if !ok {
 		t.Fatalf("asset path %q has no runtime family directory", path)
 	}
+	// copilot/agents lo comparten VS Code Copilot y Copilot CLI, que lo renderizan
+	// igual (TestInjectCopilotAgentsAreSharedByVSCodeAndCopilotCLI).
 	agent, known := map[string]model.AgentID{
 		"antigravity": model.AgentAntigravity,
 		"claude":      model.AgentClaudeCode,
 		"codex":       model.AgentCodex,
+		"copilot":     model.AgentVSCodeCopilot,
 		"cursor":      model.AgentCursor,
 		"gemini":      model.AgentGeminiCLI,
 		"hermes":      model.AgentHermes,

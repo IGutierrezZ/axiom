@@ -56,6 +56,42 @@ type ClaudePhaseAssignmentState struct {
 	Effort string `json:"effort,omitempty"`
 }
 
+// CopilotPhaseAssignmentState es la forma serializable de la asignación de
+// modelo y esfuerzo de un agente de Copilot. Model es texto libre en formato de
+// nombre de VS Code ("Claude Sonnet 4.6 (copilot)"); Effort vacío significa que
+// el agente hereda el de la conversación.
+type CopilotPhaseAssignmentState struct {
+	Model  string `json:"model"`
+	Effort string `json:"effort,omitempty"`
+}
+
+// CopilotAssignmentsToState convierte las asignaciones de la selección a su forma
+// persistida. Devuelve nil si no hay ninguna, para que omitempty no escriba la clave.
+func CopilotAssignmentsToState(assignments map[string]model.CopilotPhaseAssignment) map[string]CopilotPhaseAssignmentState {
+	if len(assignments) == 0 {
+		return nil
+	}
+	converted := make(map[string]CopilotPhaseAssignmentState, len(assignments))
+	for phase, assignment := range assignments {
+		converted[phase] = CopilotPhaseAssignmentState{Model: assignment.Model, Effort: assignment.Effort}
+	}
+	return converted
+}
+
+// CopilotAssignments devuelve las asignaciones persistidas como las usa la
+// selección, o nil si no hay ninguna. No valida: quien las aplica lo hace con
+// model.ValidateCopilotPhaseAssignments.
+func (s InstallState) CopilotAssignments() map[string]model.CopilotPhaseAssignment {
+	if len(s.CopilotPhaseAssignments) == 0 {
+		return nil
+	}
+	converted := make(map[string]model.CopilotPhaseAssignment, len(s.CopilotPhaseAssignments))
+	for phase, assignment := range s.CopilotPhaseAssignments {
+		converted[phase] = model.CopilotPhaseAssignment{Model: assignment.Model, Effort: assignment.Effort}
+	}
+	return converted
+}
+
 // InstallState holds the persisted user selections from the last install run.
 type InstallState struct {
 	InstalledAgents        []string            `json:"installed_agents"`
@@ -82,6 +118,11 @@ type InstallState struct {
 	// ClaudePhaseAssignments maps SDD phase names to Claude model+effort assignments.
 	// It supersedes ClaudeModelAssignments while preserving backward compatibility.
 	ClaudePhaseAssignments map[string]ClaudePhaseAssignmentState `json:"claude_phase_assignments,omitempty"`
+
+	// CopilotPhaseAssignments maps SDD phase names to the model and reasoning
+	// effort of the GitHub Copilot agent for that phase. Absent = the agents are
+	// generated without `model` and inherit the conversation's.
+	CopilotPhaseAssignments map[string]CopilotPhaseAssignmentState `json:"copilot_phase_assignments,omitempty"`
 
 	// KiroModelAssignments maps SDD phase names to a Kiro-native model alias.
 	// Values like "opus", "sonnet", and "haiku" remain valid for state files
@@ -287,6 +328,7 @@ func MergeAgents(existing InstallState, newAgents []string) InstallState {
 		ModelAssignments:            existing.ModelAssignments,
 		ClaudeModelAssignments:      existing.ClaudeModelAssignments,
 		ClaudePhaseAssignments:      existing.ClaudePhaseAssignments,
+		CopilotPhaseAssignments:     existing.CopilotPhaseAssignments,
 		KiroModelAssignments:        existing.KiroModelAssignments,
 		CodexModelAssignments:       existing.CodexModelAssignments,
 		CodexOrchestratorAssignment: existing.CodexOrchestratorAssignment,

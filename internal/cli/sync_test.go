@@ -6327,6 +6327,9 @@ func TestRunSyncPreservesCompletePersistedState(t *testing.T) {
 		ClaudePhaseAssignments: map[string]state.ClaudePhaseAssignmentState{
 			"sdd-verify": {Model: "opus", Effort: "high"},
 		},
+		CopilotPhaseAssignments: map[string]state.CopilotPhaseAssignmentState{
+			"sdd-apply": {Model: "Claude Sonnet 4.6 (copilot)", Effort: "high"},
+		},
 		KiroModelAssignments: map[string]string{"sdd-design": "sonnet"},
 		CodexModelAssignments: map[string]string{
 			"sdd-apply": "medium",
@@ -6371,6 +6374,64 @@ func TestRunSyncPreservesCompletePersistedState(t *testing.T) {
 	expected.InstalledBinaryVersion = AppVersion
 	if !reflect.DeepEqual(after, expected) {
 		t.Fatalf("CLI sync changed persisted state beyond the version stamp:\nafter:  %#v\nbefore: %#v", after, expected)
+	}
+}
+
+func syncCopilotAssignmentsHome(t *testing.T, assignments map[string]state.CopilotPhaseAssignmentState) {
+	t.Helper()
+	t.Cleanup(codex.SetRuntimeVersionCommandForTest("codex-cli 0.144.0", nil))
+	home := t.TempDir()
+	if err := state.Write(home, state.InstallState{InstalledAgents: []string{"codex"}, CopilotPhaseAssignments: assignments}); err != nil {
+		t.Fatalf("state.Write() error = %v", err)
+	}
+	setSyncTestHome(t, home)
+}
+
+func TestRunSync_RestoresCopilotPhaseAssignments(t *testing.T) {
+	syncCopilotAssignmentsHome(t, map[string]state.CopilotPhaseAssignmentState{
+		"sdd-apply":  {Model: "Claude Sonnet 4.6 (copilot)", Effort: "high"},
+		"sdd-design": {Model: "GPT-5.2 (copilot)"},
+	})
+
+	result, err := RunSync([]string{"--agents", "codex", "--dry-run"})
+	if err != nil {
+		t.Fatalf("RunSync() error = %v", err)
+	}
+	want := map[string]model.CopilotPhaseAssignment{
+		"sdd-apply":  {Model: "Claude Sonnet 4.6 (copilot)", Effort: "high"},
+		"sdd-design": {Model: "GPT-5.2 (copilot)"},
+	}
+	if !reflect.DeepEqual(result.Selection.CopilotPhaseAssignments, want) {
+		t.Fatalf("Selection.CopilotPhaseAssignments = %v, want %v", result.Selection.CopilotPhaseAssignments, want)
+	}
+}
+
+func TestRunSync_WithoutCopilotAssignmentsChangesNothing(t *testing.T) {
+	syncCopilotAssignmentsHome(t, nil)
+
+	result, err := RunSync([]string{"--agents", "codex", "--dry-run"})
+	if err != nil {
+		t.Fatalf("RunSync() error = %v", err)
+	}
+	if result.Selection.CopilotPhaseAssignments != nil {
+		t.Fatalf("Selection.CopilotPhaseAssignments = %v, want nil", result.Selection.CopilotPhaseAssignments)
+	}
+}
+
+func TestRunSync_RejectsInvalidPersistedCopilotAssignments(t *testing.T) {
+	syncCopilotAssignmentsHome(t, map[string]state.CopilotPhaseAssignmentState{
+		"sdd-nope":  {Model: "GPT-5.2 (copilot)"},
+		"sdd-apply": {Model: " "},
+	})
+
+	_, err := RunSync([]string{"--agents", "codex", "--dry-run"})
+	if err == nil {
+		t.Fatal("RunSync() debería rechazar asignaciones de Copilot inválidas")
+	}
+	for _, fragment := range []string{"fases desconocidas: sdd-nope", "sdd-apply: el modelo no puede estar vacío", "axiom sync"} {
+		if !strings.Contains(err.Error(), fragment) {
+			t.Errorf("el error %q no contiene %q", err, fragment)
+		}
 	}
 }
 

@@ -29,6 +29,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/hub"
 	"github.com/IGutierrezZ/axiom/v3/internal/kickoff"
 	"github.com/IGutierrezZ/axiom/v3/internal/livingdoc"
+	"github.com/IGutierrezZ/axiom/v3/internal/model"
 	"github.com/IGutierrezZ/axiom/v3/internal/multirole"
 	"github.com/IGutierrezZ/axiom/v3/internal/semantic"
 	"github.com/IGutierrezZ/axiom/v3/internal/skillregistry"
@@ -38,8 +39,11 @@ import (
 
 // Service provee la lógica de lectura y agregación del estado de Axiom.
 type Service struct {
-	mu               sync.RWMutex
-	rootPath         string
+	mu       sync.RWMutex
+	rootPath string
+	// modelsMu serializa los guardados de modelos por fase: cada uno lee el estado del
+	// proyecto, lo cambia y regenera ficheros.
+	modelsMu         sync.Mutex
 	hubManager       *hub.Manager
 	hubDetector      *hub.Detector
 	autoskillManager *autoskill.Manager
@@ -1598,37 +1602,51 @@ func (s *Service) RestoreBackup(name string) (*EcosystemActionResponse, error) {
 	}, nil
 }
 
-// GetModelAssignments consulta las configuraciones de modelos de IA activas.
-func (s *Service) GetModelAssignments() (*ModelAssignmentsDTO, error) {
+// readOpenCodeConfigAssignments lee las asignaciones de modelo de opencode.json: el del
+// proyecto y, si no hay, el de usuario. Sin ninguno devuelve un mapa vacío.
+func readOpenCodeConfigAssignments(root string) map[string]model.ModelAssignment {
 	home, _ := os.UserHomeDir()
-	curWs := s.getRootPath()
 	settingsCandidates := []string{
-		filepath.Join(curWs, "opencode.json"),
+		filepath.Join(root, "opencode.json"),
 		filepath.Join(home, ".config", "opencode", "opencode.json"),
 	}
-
-	assignments := make([]ModelConfigItem, 0)
 	for _, p := range settingsCandidates {
 		if fileExists(p) {
-			mMap, err := sdd.ReadCurrentModelAssignments(p)
-			if err == nil {
-				for role, a := range mMap {
-					assignments = append(assignments, ModelConfigItem{
-						Agent:     "opencode",
-						Role:      role,
-						Model:     a.FullID(),
-						Reasoning: a.Effort,
-					})
-				}
-				break
+			if mMap, err := sdd.ReadCurrentModelAssignments(p); err == nil {
+				return mMap
 			}
 		}
 	}
+	return map[string]model.ModelAssignment{}
+}
 
-	return &ModelAssignmentsDTO{
+// GetModelAssignments consulta las configuraciones de modelos de IA activas: la lista
+// plana de opencode.json que ya existía (assignments) y, por cada adaptador instalado
+// en el proyecto abierto, sus asignaciones por fase y las opciones elegibles (adapters).
+func (s *Service) GetModelAssignments() (*ModelAssignmentsDTO, error) {
+	root := s.getRootPath()
+	assignments := make([]ModelConfigItem, 0)
+	for role, a := range readOpenCodeConfigAssignments(root) {
+		assignments = append(assignments, ModelConfigItem{
+			Agent:     "opencode",
+			Role:      role,
+			Model:     a.FullID(),
+			Reasoning: a.Effort,
+		})
+	}
+
+	dto := &ModelAssignmentsDTO{
 		ActivePersona: "axiom",
 		Assignments:   assignments,
-	}, nil
+		Adapters:      []AdapterModelsDTO{},
+	}
+	blocks, err := s.adapterModelBlocks(context.Background(), root)
+	if err != nil {
+		dto.AdaptersError = err.Error()
+	} else {
+		dto.Adapters = blocks
+	}
+	return dto, nil
 }
 
 // GetSpecsSyncStatus consulta el estado de sincronización Git del repositorio de especificaciones (ODD-5.4).

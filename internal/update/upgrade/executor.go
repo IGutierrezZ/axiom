@@ -231,7 +231,7 @@ func managedAgentBackupPaths(homeDir string, adapter agents.Adapter, diagnostics
 		add(sdd.SlashCommandPaths(adapter.Agent(), adapter.CommandsDir(homeDir))...)
 	}
 
-	if adapter.SupportsSubAgents() {
+	if adapter.SupportsSubAgents() && adapter.SubAgentsDir(homeDir) != "" {
 		for _, name := range embeddedFileNames(adapter.EmbeddedSubAgentsDir(), diagnostics) {
 			add(filepath.Join(adapter.SubAgentsDir(homeDir), name))
 		}

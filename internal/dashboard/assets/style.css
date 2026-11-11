@@ -1027,6 +1027,13 @@ h5.md-h, h6.md-h { font-size: 13px; }
 .eco-repo-policy th[scope="row"] { font-size: 12px; font-weight: 600; letter-spacing: 0; text-transform: none; color: var(--text); background: transparent; white-space: normal; }
 .eco-wt-form { display: flex; flex-direction: column; gap: 14px; }
 .eco-wt-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
+.eco-models-adapter { display: flex; flex-direction: column; gap: 12px; }
+.eco-models-adapter + .eco-models-adapter { padding-top: 16px; border-top: 1px solid var(--border); }
+.eco-models-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; }
+.eco-models-title { margin: 0; font-size: 14px; font-weight: 600; }
+.eco-models-table { min-width: 34rem; }
+.eco-models-table td { vertical-align: middle; }
+.eco-models-table select, .eco-models-table input[type="text"] { width: 100%; min-width: 12rem; }
 
 .eco-backups { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
 .eco-backup { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 12px 20px; border-top: 1px solid var(--border); }

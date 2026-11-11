@@ -17,10 +17,12 @@ import (
 //     copia compartida en .agents/skills y no en .github/skills.
 //   - .vscode/mcp.json: servidores MCP, con la clave raíz `servers` (no `mcpServers`).
 //     Hereda la confianza del espacio de trabajo (Workspace Trust).
-//   - .github/agents/*.agent.md, .github/prompts/*.prompt.md y .github/hooks/*.json:
-//     agentes, prompts y hooks. Axiom no instala ninguno para VS Code (su manifiesto
-//     de capacidades solo declara skills, instrucciones y MCP), así que no hay
-//     carpeta de proyecto que mapear para ellos.
+//   - .github/agents/*.agent.md: agentes personalizados. Axiom escribe uno por fase
+//     SDD, con el modelo y el esfuerzo elegidos, y es el mismo fichero que lee
+//     Copilot CLI desde ~/.copilot/agents. VS Code lee además .claude/agents, así que
+//     en un proyecto con Claude Code también ve los agentes de Claude.
+//   - .github/prompts/*.prompt.md y .github/hooks/*.json: prompts y hooks. Axiom no
+//     instala ninguno, así que no hay carpeta de proyecto que mapear para ellos.
 //
 // No se usan .github/copilot-instructions.md ni el AGENTS.md de la raíz: son
 // ficheros del equipo, normalmente versionados y compartidos con otras
@@ -31,6 +33,8 @@ const (
 	instructionsDirName = "instructions"
 	// skillsDirName es la carpeta de skills de proyecto, relativa a .github.
 	skillsDirName = "skills"
+	// agentsDirName es la carpeta de agentes personalizados de proyecto, relativa a .github.
+	agentsDirName = "agents"
 	// vscodeDirName es la carpeta de configuración de proyecto de VS Code.
 	vscodeDirName = ".vscode"
 	// githubDirName es la carpeta donde VS Code busca instrucciones, skills y agentes.
@@ -108,6 +112,15 @@ func (a *WorkspaceAdapter) SkillsDir(dir string) string {
 		return sharedskills.Dir(dir)
 	}
 	return a.Adapter.SkillsDir(dir)
+}
+
+// SubAgentsDir es ~/.copilot/agents en la carpeta de usuario y .github/agents en
+// el proyecto: las dos carpetas de agentes personalizados que lee VS Code.
+func (a *WorkspaceAdapter) SubAgentsDir(dir string) string {
+	if a.InWorkspace(dir) {
+		return filepath.Join(dir, githubDirName, agentsDirName)
+	}
+	return a.Adapter.SubAgentsDir(dir)
 }
 
 // LegacyWorkspaceSkillsDirs lista la carpeta de skills que usaban las instalaciones

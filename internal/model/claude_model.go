@@ -1,6 +1,11 @@
 package model
 
-import "maps"
+import (
+	"fmt"
+	"maps"
+	"slices"
+	"strings"
+)
 
 // ClaudeModelAlias represents one of the Claude model tiers used for
 // per-phase model assignments in the SDD orchestrator.
@@ -206,4 +211,54 @@ func ClaudeModelPresetDiversity() map[string]ClaudeModelAlias {
 	base["jd-judge-b"] = ClaudeModelHaiku
 	base["jd-fix-agent"] = ClaudeModelSonnet
 	return base
+}
+
+// claudePhaseNames son las claves de asignación que admite Claude Code, en el orden
+// en que las muestran la TUI y el dashboard: las fases SDD, los agentes de Judgment
+// Day, los roles de la revisión nativa y la delegación general («default»). No
+// incluye «orchestrator»: Claude Code controla el modelo de la sesión principal.
+var claudePhaseNames = []string{
+	"sdd-explore", "sdd-research", "sdd-propose", "sdd-spec", "sdd-design",
+	"sdd-tasks", "sdd-apply", "sdd-verify", "sdd-archive", "sdd-onboard",
+	"jd-judge-a", "jd-judge-b", "jd-fix-agent",
+	"risk", "readability", "reliability", "resilience", "refuter", "validator",
+	"default",
+}
+
+// ClaudePhaseNames devuelve las claves de asignación de Claude Code en orden de
+// presentación.
+func ClaudePhaseNames() []string {
+	return append([]string(nil), claudePhaseNames...)
+}
+
+// ClaudePhaseAssignmentProblems devuelve una frase por cada violación: claves
+// desconocidas y asignaciones cuyo modelo no es un alias conocido o cuyo esfuerzo no
+// admite ese modelo. Las informa todas, en el orden de las fases, no solo la primera.
+func ClaudePhaseAssignmentProblems(assignments map[string]ClaudePhaseAssignment) []string {
+	var problems []string
+	known := make(map[string]bool, len(claudePhaseNames))
+	for _, phase := range claudePhaseNames {
+		known[phase] = true
+		assignment, ok := assignments[phase]
+		if !ok {
+			continue
+		}
+		switch {
+		case !assignment.Model.Valid():
+			problems = append(problems, fmt.Sprintf("%s: el modelo %q no es válido", phase, assignment.Model))
+		case !ClaudeEffortAllowedForModel(assignment.Model, assignment.Effort):
+			problems = append(problems, fmt.Sprintf("%s: el esfuerzo %q no es válido para %s", phase, assignment.Effort, assignment.Model))
+		}
+	}
+	var unknown []string
+	for phase := range assignments {
+		if !known[phase] {
+			unknown = append(unknown, phase)
+		}
+	}
+	if len(unknown) > 0 {
+		slices.Sort(unknown)
+		problems = append(problems, fmt.Sprintf("fases desconocidas: %s", strings.Join(unknown, ", ")))
+	}
+	return problems
 }

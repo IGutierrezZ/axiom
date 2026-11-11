@@ -91,6 +91,93 @@ func TestDetect(t *testing.T) {
 	}
 }
 
+func TestDetectWithoutCLI(t *testing.T) {
+	missing := func(string) (string, error) { return "", errors.New("missing") }
+	mkdir := func(t *testing.T, parts ...string) {
+		t.Helper()
+		if err := os.MkdirAll(filepath.Join(parts...), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	tests := []struct {
+		name          string
+		goos          string
+		setup         func(t *testing.T, home string)
+		wantInstalled bool
+	}{
+		{
+			name: "extensión de VS Code sin CLI",
+			goos: "linux",
+			setup: func(t *testing.T, home string) {
+				mkdir(t, home, ".vscode", "extensions", "anthropic.claude-code-2.0.1")
+			},
+			wantInstalled: true,
+		},
+		{
+			name: "otra extensión no cuenta",
+			goos: "linux",
+			setup: func(t *testing.T, home string) {
+				mkdir(t, home, ".vscode", "extensions", "anthropic.claude-codex-1.0.0")
+			},
+			wantInstalled: false,
+		},
+		{
+			name:          "Claude Desktop en Windows (Roaming)",
+			goos:          "windows",
+			setup:         func(t *testing.T, home string) { mkdir(t, home, "AppData", "Roaming", "Claude") },
+			wantInstalled: true,
+		},
+		{
+			name:          "Claude Desktop en Windows (AnthropicClaude)",
+			goos:          "windows",
+			setup:         func(t *testing.T, home string) { mkdir(t, home, "AppData", "Local", "AnthropicClaude") },
+			wantInstalled: true,
+		},
+		{
+			name:          "Claude Desktop en macOS",
+			goos:          "darwin",
+			setup:         func(t *testing.T, home string) { mkdir(t, home, "Library", "Application Support", "Claude") },
+			wantInstalled: true,
+		},
+		{
+			name:          "ninguna señal",
+			goos:          "linux",
+			setup:         func(*testing.T, string) {},
+			wantInstalled: false,
+		},
+		{
+			name:          "datos de Desktop en Linux no cuentan",
+			goos:          "linux",
+			setup:         func(t *testing.T, home string) { mkdir(t, home, "AppData", "Roaming", "Claude") },
+			wantInstalled: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			home := t.TempDir()
+			tt.setup(t, home)
+			a := &Adapter{
+				lookPath: missing,
+				statPath: defaultStat,
+				goos:     tt.goos,
+				getenv:   func(string) string { return "" },
+			}
+			installed, binaryPath, _, _, err := a.Detect(context.Background(), home)
+			if err != nil {
+				t.Fatalf("Detect() error = %v", err)
+			}
+			if installed != tt.wantInstalled {
+				t.Fatalf("Detect() installed = %v, want %v", installed, tt.wantInstalled)
+			}
+			if binaryPath != "" {
+				t.Fatalf("Detect() binaryPath = %q, want vacío sin CLI", binaryPath)
+			}
+		})
+	}
+}
+
 func TestAdapter_SubAgentCapability(t *testing.T) {
 	a := NewAdapter()
 

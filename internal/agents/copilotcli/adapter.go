@@ -127,11 +127,16 @@ func (a *Adapter) OutputStyleDir(_ string) string { return "" }
 func (a *Adapter) SupportsSlashCommands() bool    { return a.CapabilityManifest().Features.SlashCommands }
 func (a *Adapter) CommandsDir(_ string) string    { return "" }
 func (a *Adapter) SupportsSubAgents() bool        { return a.CapabilityManifest().Features.FileSubAgents }
-func (a *Adapter) SubAgentsDir(_ string) string   { return "" }
-func (a *Adapter) EmbeddedSubAgentsDir() string   { return "" }
-func (a *Adapter) SupportsSkills() bool           { return a.CapabilityManifest().Features.Skills }
-func (a *Adapter) SupportsSystemPrompt() bool     { return a.CapabilityManifest().Features.SystemPrompt }
-func (a *Adapter) SupportsMCP() bool              { return a.CapabilityManifest().Features.MCP }
+
+// Copilot CLI no tiene agentes en su carpeta de usuario: los agentes por fase viven solo
+// en .github/agents del proyecto, donde los lee también, porque el agente personal de
+// ~/.copilot/agents gana al del proyecto cuando coinciden los identificadores. Los
+// escribe el sync del proyecto cuando Copilot CLI está presente (sdd.InjectCopilotProjectAgents).
+func (a *Adapter) SubAgentsDir(_ string) string { return "" }
+func (a *Adapter) EmbeddedSubAgentsDir() string { return "" }
+func (a *Adapter) SupportsSkills() bool         { return a.CapabilityManifest().Features.Skills }
+func (a *Adapter) SupportsSystemPrompt() bool   { return a.CapabilityManifest().Features.SystemPrompt }
+func (a *Adapter) SupportsMCP() bool            { return a.CapabilityManifest().Features.MCP }
 
 func defaultStat(path string) statResult {
 	info, err := os.Stat(path)

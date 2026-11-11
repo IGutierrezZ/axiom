@@ -20,6 +20,7 @@ import {
 } from '../core/ecosystem.js';
 import { formatDateTime, plural } from '../core/format.js';
 import { icon } from '../core/icons.js';
+import { bindModelsEditor, modelsHtml } from './ecosystem-models.js';
 import { refreshOverview } from '../core/overview.js';
 import { on, state } from '../core/state.js';
 import { loadProjects } from '../projects.js';
@@ -159,19 +160,11 @@ async function loadModels() {
   try {
     const data = (await api('/api/ecosystem/models')) || {};
     $('#eco-persona').textContent = data.active_persona || '—';
-    const list = Array.isArray(data.assignments) ? data.assignments.slice() : [];
-    if (list.length === 0) {
-      body.innerHTML = `<div class="eco-pad">${stateEmpty('Sin asignaciones explícitas', 'No se detectaron asignaciones de modelos en opencode.json. Se usan los presets predeterminados de Axiom.', 'cube')}</div>`;
+    if (data.adapters_error) {
+      body.innerHTML = `<div class="eco-pad">${stateError(data.adapters_error, 'No se pudo leer el estado del proyecto')}</div>`;
       return;
     }
-    list.sort((a, b) => String(a.agent).localeCompare(String(b.agent)) || String(a.role).localeCompare(String(b.role)));
-    const rows = list.map(m => `<tr>
-      <td class="mono">${escapeHtml(m.agent)}</td>
-      <td class="mono">${escapeHtml(m.role)}</td>
-      <td class="mono">${escapeHtml(m.model)}</td>
-      <td>${m.reasoning ? escapeHtml(m.reasoning) : '<span class="dim">estándar</span>'}</td>
-    </tr>`).join('');
-    body.innerHTML = tableWrap(`<table class="data-table"><thead><tr><th>Agente</th><th>Rol</th><th>Modelo</th><th>Razonamiento</th></tr></thead><tbody>${rows}</tbody></table>`, 'Modelos asignados por agente y rol');
+    body.innerHTML = modelsHtml(data.adapters);
   } catch (err) {
     console.error(err);
     body.innerHTML = `<div class="eco-pad">${stateError(err.message, 'No se pudieron cargar los modelos')}</div>`;
@@ -451,6 +444,7 @@ export function initEcosystem() {
     event.preventDefault();
     saveReviewMode();
   });
+  bindModelsEditor($('#eco-models-body'));
   $('#eco-backups-body').addEventListener('click', event => {
     const button = event.target.closest('[data-restore]');
     if (button && !busy) restoreBackup(button);

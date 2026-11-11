@@ -432,9 +432,87 @@ type ModelConfigItem struct {
 }
 
 // ModelAssignmentsDTO agrupa la configuración de modelos de IA y la persona activa.
+//
+// ActivePersona y Assignments (la lista plana de opencode.json) se mantienen tal como
+// eran; Adapters añade, por cada adaptador instalado en el proyecto abierto, sus
+// asignaciones por fase y las opciones elegibles. AdaptersError no vacío dice por qué no
+// se pudieron leer (por ejemplo, un estado del proyecto ilegible).
 type ModelAssignmentsDTO struct {
-	ActivePersona string            `json:"active_persona"`
-	Assignments   []ModelConfigItem `json:"assignments"`
+	ActivePersona string             `json:"active_persona"`
+	Assignments   []ModelConfigItem  `json:"assignments"`
+	Adapters      []AdapterModelsDTO `json:"adapters"`
+	AdaptersError string             `json:"adapters_error,omitempty"`
+}
+
+// PhaseModelDTO es el modelo y el esfuerzo de una fase. Model vacío significa sin
+// asignación (la fase hereda); Effort vacío, el esfuerzo por defecto del modelo. Para
+// OpenCode Model es «proveedor/modelo» y Effort la variante; para Claude Code, un alias
+// (opus, sonnet…); para Copilot, el nombre «Modelo (copilot)» en texto libre.
+type PhaseModelDTO struct {
+	Model  string `json:"model"`
+	Effort string `json:"effort,omitempty"`
+}
+
+// EffortModelOptionDTO es un modelo elegible con los esfuerzos que admite.
+type EffortModelOptionDTO struct {
+	ID      string   `json:"id"`
+	Efforts []string `json:"efforts"`
+}
+
+// ProviderOptionDTO es un proveedor del catálogo de OpenCode con sus modelos.
+type ProviderOptionDTO struct {
+	ID     string                  `json:"id"`
+	Name   string                  `json:"name"`
+	Models []CatalogModelOptionDTO `json:"models"`
+}
+
+// CatalogModelOptionDTO es un modelo del catálogo de OpenCode y sus variantes (esfuerzos).
+type CatalogModelOptionDTO struct {
+	ID       string   `json:"id"`
+	Name     string   `json:"name"`
+	Variants []string `json:"variants"`
+}
+
+// ModelOptionsDTO son las opciones elegibles de un adaptador. Models (Claude Code),
+// Providers (OpenCode) y Suggestions (Copilot, con FreeText) son excluyentes según el
+// adaptador. CatalogError explica por qué falta el catálogo de OpenCode.
+type ModelOptionsDTO struct {
+	Models       []EffortModelOptionDTO `json:"models,omitempty"`
+	Providers    []ProviderOptionDTO    `json:"providers,omitempty"`
+	CatalogError string                 `json:"catalog_error,omitempty"`
+	Suggestions  []string               `json:"suggestions,omitempty"`
+	FreeText     bool                   `json:"free_text,omitempty"`
+}
+
+// AdapterModelsDTO es el bloque de un adaptador: sus fases en orden, las asignaciones
+// guardadas, los valores por defecto cuando no hay asignación y las opciones. Destinations
+// dice dónde se regeneran los ficheros al guardar y Notes avisa de límites que le tocan.
+type AdapterModelsDTO struct {
+	ID           string                   `json:"id"`
+	Name         string                   `json:"name"`
+	Phases       []string                 `json:"phases"`
+	Assignments  map[string]PhaseModelDTO `json:"assignments"`
+	Defaults     map[string]PhaseModelDTO `json:"defaults,omitempty"`
+	Options      ModelOptionsDTO          `json:"options"`
+	Destinations []string                 `json:"destinations,omitempty"`
+	Notes        []string                 `json:"notes,omitempty"`
+}
+
+// ModelsSaveRequest es el cuerpo de POST /api/ecosystem/models: el adaptador y las fases a
+// cambiar. Una fase con Model vacío se quita; las que no aparecen se conservan.
+type ModelsSaveRequest struct {
+	Adapter     string                   `json:"adapter"`
+	Assignments map[string]PhaseModelDTO `json:"assignments"`
+}
+
+// ModelsSaveResponse es el resultado de guardar: las asignaciones resultantes del
+// adaptador, los ficheros regenerados (relativos al proyecto si caben en él) y avisos de
+// lo que no se regeneró desde aquí.
+type ModelsSaveResponse struct {
+	Adapter     string                   `json:"adapter"`
+	Assignments map[string]PhaseModelDTO `json:"assignments"`
+	Regenerated []string                 `json:"regenerated"`
+	Notes       []string                 `json:"notes,omitempty"`
 }
 
 // SpecsSyncStatusDTO reporta el estado de sincronización Git del repositorio de especificaciones (ODD-5.4).

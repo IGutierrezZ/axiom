@@ -30,7 +30,7 @@ func TestAdapterIdentity(t *testing.T) {
 		t.Fatal("Copilot CLI debe declarar skills, prompt de sistema y MCP")
 	}
 	if a.SupportsOutputStyles() || a.SupportsSlashCommands() || a.SupportsSubAgents() {
-		t.Fatal("Copilot CLI no recibe estilos, comandos ni subagentes de fichero")
+		t.Fatal("Copilot CLI no recibe estilos, comandos ni agentes en su carpeta de usuario: los agentes por fase viven solo en el proyecto")
 	}
 	if a.SystemPromptStrategy() != model.StrategyFileReplace || a.MCPStrategy() != model.StrategyMCPConfigFile {
 		t.Fatalf("strategies = %v/%v", a.SystemPromptStrategy(), a.MCPStrategy())
@@ -52,6 +52,9 @@ func TestAdapterPathsWithoutCopilotHome(t *testing.T) {
 	}
 	if got, want := a.SkillsDir(home), filepath.Join(root, "skills"); got != want {
 		t.Errorf("SkillsDir = %q, want %q", got, want)
+	}
+	if got := a.SubAgentsDir(home); got != "" {
+		t.Errorf("SubAgentsDir = %q, want vacío", got)
 	}
 	if got, want := a.SettingsPath(home), filepath.Join(root, "settings.json"); got != want {
 		t.Errorf("SettingsPath = %q, want %q", got, want)

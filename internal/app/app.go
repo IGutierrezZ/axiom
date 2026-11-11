@@ -563,6 +563,9 @@ func tuiExecuteWithBackground(
 			installState.CommunityToolsConfigured = true
 			installState.ClaudeModelAssignments = claudeLegacyAssignmentsForState(selection.ClaudeModelAssignments, claudePhaseState)
 			installState.ClaudePhaseAssignments = claudePhaseState
+			if copilotState := state.CopilotAssignmentsToState(selection.CopilotPhaseAssignments); copilotState != nil {
+				installState.CopilotPhaseAssignments = copilotState
+			}
 			installState.KiroModelAssignments = kiroAliasesToStrings(selection.KiroModelAssignments)
 			installState.CodexModelAssignments = codexEffortsToStrings(selection.CodexModelAssignments)
 			installState.CodexOrchestratorAssignment = codexOrchestratorToState(selection.CodexOrchestratorAssignment)
@@ -767,6 +770,9 @@ func applyOverrides(selection *model.Selection, overrides *model.SyncOverrides) 
 		selection.ClaudePhaseAssignments = overrides.ClaudePhaseAssignments
 		selection.ClaudeModelAssignments = nil
 	}
+	if overrides.CopilotPhaseAssignments != nil {
+		selection.CopilotPhaseAssignments = overrides.CopilotPhaseAssignments
+	}
 	if overrides.KiroModelAssignments != nil {
 		selection.KiroModelAssignments = overrides.KiroModelAssignments
 	}
@@ -848,6 +854,11 @@ func loadPersistedAssignments(store state.Store, selection *model.Selection) {
 		}
 		selection.ClaudeModelAssignments = m
 	}
+	if len(selection.CopilotPhaseAssignments) == 0 && len(s.CopilotPhaseAssignments) > 0 {
+		if assignments := s.CopilotAssignments(); model.ValidateCopilotPhaseAssignments(assignments) == nil {
+			selection.CopilotPhaseAssignments = assignments
+		}
+	}
 	if len(selection.KiroModelAssignments) == 0 && len(s.KiroModelAssignments) > 0 {
 		m := make(map[string]model.KiroModelAlias, len(s.KiroModelAssignments))
 		for k, v := range s.KiroModelAssignments {
@@ -895,6 +906,7 @@ func loadPersistedAssignments(store state.Store, selection *model.Selection) {
 func persistAssignments(store state.Store, selection model.Selection) error {
 	hasAssignmentSignal := selection.ClaudeModelAssignments != nil ||
 		selection.ClaudePhaseAssignments != nil ||
+		selection.CopilotPhaseAssignments != nil ||
 		selection.KiroModelAssignments != nil ||
 		selection.ModelAssignments != nil ||
 		selection.CodexModelAssignments != nil ||
@@ -932,6 +944,10 @@ func persistAssignments(store state.Store, selection model.Selection) error {
 				current.ClaudePhaseAssignments = nil
 			}
 			current.ClaudeModelAssignments = nil
+		}
+		if selection.CopilotPhaseAssignments != nil {
+			// non-nil vacío = reiniciar (borra la clave); nil = no tocar.
+			current.CopilotPhaseAssignments = state.CopilotAssignmentsToState(selection.CopilotPhaseAssignments)
 		}
 		if selection.KiroModelAssignments != nil {
 			if len(selection.KiroModelAssignments) > 0 {

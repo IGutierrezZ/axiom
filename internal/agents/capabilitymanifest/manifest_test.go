@@ -179,7 +179,7 @@ func TestEveryManifestKeepsWorkRoutingDormantAndHashesCanonically(t *testing.T) 
 		model.AgentPi:               "sha256:049740b83550b87958131a157fd1303e3f32743028e1ced2f5d924990d4dad80",
 		model.AgentQwenCode:         "sha256:d5b3c45d7939810c3dd94c1838505825aab0f395e3a1b009a46030ca3b04fc5b",
 		model.AgentTrae:             "sha256:d91de263fb1dcb3f013d811dbad2973e33450b1d193a262ee5937fd68c7419af",
-		model.AgentVSCodeCopilot:    "sha256:d9090cb2302a26972309ec0235214fc0d3e5f65e8f141cae7fd1ac3cc5c41caa",
+		model.AgentVSCodeCopilot:    "sha256:da345ae4c631fdd99d92b77b21415ced213cd8c1fef2511de09c228ef4f01c7f",
 		model.AgentWindsurf:         "sha256:4b57475c602cfeafd91308c66b9360ae135b0459e2544d28c4ab2c13d06aa173",
 	}
 
@@ -263,7 +263,7 @@ func TestEveryManifestDigestStaysByteStable(t *testing.T) {
 		model.AgentOpenCode:         "sha256:303e1d4cd22cf891093b2b4d5d119a12190e7070f88fadeef240c666307a96cc",
 		model.AgentQwenCode:         "sha256:d5b3c45d7939810c3dd94c1838505825aab0f395e3a1b009a46030ca3b04fc5b",
 		model.AgentTrae:             "sha256:d91de263fb1dcb3f013d811dbad2973e33450b1d193a262ee5937fd68c7419af",
-		model.AgentVSCodeCopilot:    "sha256:d9090cb2302a26972309ec0235214fc0d3e5f65e8f141cae7fd1ac3cc5c41caa",
+		model.AgentVSCodeCopilot:    "sha256:da345ae4c631fdd99d92b77b21415ced213cd8c1fef2511de09c228ef4f01c7f",
 		model.AgentWindsurf:         "sha256:4b57475c602cfeafd91308c66b9360ae135b0459e2544d28c4ab2c13d06aa173",
 	}
 

@@ -171,12 +171,19 @@ func (a *Adapter) SupportsSubAgents() bool {
 	return a.CapabilityManifest().Features.FileSubAgents
 }
 
+// SubAgentsDir es vacío en la carpeta de usuario: los agentes por fase de Copilot
+// viven solo en el proyecto (.github/agents, véase WorkspaceAdapter.SubAgentsDir).
+// Copilot CLI da prioridad al agente personal de ~/.copilot/agents frente al del
+// proyecto cuando coinciden los identificadores, así que un agente global sin el
+// modelo elegido en el proyecto lo taparía.
 func (a *Adapter) SubAgentsDir(_ string) string {
 	return ""
 }
 
+// EmbeddedSubAgentsDir son las plantillas `.agent.md` de Copilot, compartidas con
+// el adaptador de Copilot CLI.
 func (a *Adapter) EmbeddedSubAgentsDir() string {
-	return ""
+	return "copilot/agents"
 }
 
 func (a *Adapter) SupportsSkills() bool {

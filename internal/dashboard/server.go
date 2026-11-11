@@ -980,17 +980,48 @@ func (s *Server) handleEcosystemBackupRestore(w http.ResponseWriter, r *http.Req
 	s.respondJSON(w, http.StatusOK, resp)
 }
 
+// handleEcosystemModels responde GET y POST /api/ecosystem/models sobre el proyecto
+// abierto (su raíz registrada, nunca el directorio actual del proceso). GET devuelve las
+// asignaciones de modelo por fase de cada adaptador instalado y sus opciones. POST guarda
+// las de un adaptador en el estado del proyecto y regenera sus ficheros; escribe, así que
+// solo lo acepta el propio dashboard.
 func (s *Server) handleEcosystemModels(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
+	switch r.Method {
+	case http.MethodGet:
+		models, err := s.service.GetModelAssignments()
+		if err != nil {
+			s.respondJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+			return
+		}
+		s.respondJSON(w, http.StatusOK, models)
+	case http.MethodPost:
+		if !s.isLocalRequest(r) {
+			s.respondJSON(w, http.StatusForbidden, map[string]string{"error": "Petición rechazada: solo se admiten peticiones del propio dashboard"})
+			return
+		}
+		var req ModelsSaveRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			s.respondJSON(w, http.StatusBadRequest, map[string]string{"error": "JSON inválido"})
+			return
+		}
+		resp, err := s.service.SaveModelAssignments(r.Context(), req)
+		var invalid *ModelsValidationError
+		switch {
+		case errors.As(err, &invalid):
+			s.respondJSON(w, http.StatusBadRequest, map[string]any{
+				"error":      "Las asignaciones de modelo no son válidas.",
+				"violations": invalid.Violations,
+			})
+		case errors.Is(err, ErrNoProjectOpen):
+			s.respondJSON(w, http.StatusConflict, map[string]string{"error": err.Error()})
+		case err != nil:
+			s.respondJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		default:
+			s.respondJSON(w, http.StatusOK, resp)
+		}
+	default:
 		http.Error(w, "Método no permitido", http.StatusMethodNotAllowed)
-		return
 	}
-	models, err := s.service.GetModelAssignments()
-	if err != nil {
-		s.respondJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
-		return
-	}
-	s.respondJSON(w, http.StatusOK, models)
 }
 
 // decisionRequiredBody es el cuerpo del 409 de `decision_required` (REQ-25.32): el estado con su

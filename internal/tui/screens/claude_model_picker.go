@@ -38,28 +38,8 @@ var claudePresetOrder = []ClaudeModelPreset{
 }
 
 // claudePhases is the ordered list of model-assignment keys shown in custom mode.
-var claudePhases = []string{
-	"sdd-explore",
-	"sdd-research",
-	"sdd-propose",
-	"sdd-spec",
-	"sdd-design",
-	"sdd-tasks",
-	"sdd-apply",
-	"sdd-verify",
-	"sdd-archive",
-	"sdd-onboard",
-	"jd-judge-a",
-	"jd-judge-b",
-	"jd-fix-agent",
-	"risk",
-	"readability",
-	"reliability",
-	"resilience",
-	"refuter",
-	"validator",
-	"default",
-}
+// The list lives in the model package so the dashboard shows the same keys.
+var claudePhases = model.ClaudePhaseNames()
 
 // claudePhaseLabels are the human-readable labels for each configurable
 // agent phase (SDD phases, JD agents, and the general delegation row).
