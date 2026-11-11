@@ -30,6 +30,10 @@ Bind this to the Claude Code orchestrator rule only. Do NOT apply it to executor
 
 {{GENTLE_AI_SDD_SECTION:SDD Change Kickoff and Block Gates}}
 
+### SDD Independent Review
+
+{{GENTLE_AI_SDD_SECTION:SDD Independent Review}}
+
 ### Delegation Rules
 
 {{GENTLE_AI_SDD_SECTION:Delegation Rules}}

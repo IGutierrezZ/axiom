@@ -619,3 +619,57 @@ func TestSDDPreflightHookRejectsPositionalArguments(t *testing.T) {
 		t.Fatal("positional argument should error")
 	}
 }
+
+// El hook corrobora solo la interacción canónica del pre-vuelo: la interacción propia de la preferencia de
+// revisión independiente (REQ-28.14), con otras preguntas y sin el prefijo del pre-vuelo, no se reconoce ni altera la
+// autoridad ya corroborada, aunque llegue después en el mismo transcript.
+func TestSDDPreflightHookIgnoresIndependentReviewPreferenceInteraction(t *testing.T) {
+	dir := t.TempDir()
+	sessionID := "sess-pref"
+	transcript := writeSDDPreflightTranscript(t, dir, sessionID, []struct {
+		toolUseID  string
+		sidechain  bool
+		sessionID  string
+		answersRaw string
+		isError    bool
+	}{
+		{toolUseID: "toolu-1", answersRaw: testSDDPreflightAnswersAutomatic},
+	})
+
+	questions := `[{"question":"After apply of each role: which review should run?","header":"After apply","options":[{"label":"Verify","description":"Per-role verify."},{"label":"Verify and judgment","description":"Verify, then judgment."},{"label":"None","description":"No review."}],"multiSelect":false},{"question":"Coverage review after spec and design?","header":"Coverage","options":[{"label":"Yes","description":"Run it."},{"label":"No","description":"Skip it."}],"multiSelect":false}]`
+	answers := `{"After apply of each role: which review should run?":"Verify and judgment","Coverage review after spec and design?":"Yes"}`
+	assistant := `{"type":"assistant","isSidechain":false,"sessionId":"` + sessionID + `","uuid":"assistant-toolu-2","message":{"role":"assistant","content":[{"type":"tool_use","id":"toolu-2","name":"AskUserQuestion","input":{"questions":` + questions + `}}]}}`
+	user := `{"type":"user","isSidechain":false,"sessionId":"` + sessionID + `","uuid":"user-toolu-2","message":{"role":"user","content":[{"tool_use_id":"toolu-2","type":"tool_result","content":"The user answered the questions."}]},"toolUseResult":{"questions":` + questions + `,"answers":` + answers + `,"annotations":{}}}`
+	f, err := os.OpenFile(transcript, os.O_APPEND|os.O_WRONLY, 0o600)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.WriteString(assistant + "\n" + user + "\n"); err != nil {
+		t.Fatal(err)
+	}
+	if err := f.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	out, err := runSDDPreflightHookTest(t, preToolUseAgentPayload(sessionID, transcript, "sdd-explore", "Explore the request", ""))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got map[string]any
+	if err := json.Unmarshal([]byte(out), &got); err != nil {
+		t.Fatalf("decode output %q: %v", out, err)
+	}
+	specific := got["hookSpecificOutput"].(map[string]any)
+	if specific["permissionDecision"] != "allow" {
+		t.Fatalf("decision = %#v", specific)
+	}
+	prompt := specific["updatedInput"].(map[string]any)["prompt"].(string)
+	for _, want := range []string{"- Pace: auto", "- Artifact store: openspec", "- Delivery strategy: ask-on-risk", "- Review policy: 400 changed lines"} {
+		if !strings.Contains(prompt, want) {
+			t.Fatalf("la autoridad del pre-vuelo cambió: falta %q en %s", want, prompt)
+		}
+	}
+	if strings.Contains(prompt, "Verify and judgment") || strings.Contains(prompt, "Coverage") {
+		t.Fatalf("la preferencia no debe entrar en el bloque del pre-vuelo: %s", prompt)
+	}
+}

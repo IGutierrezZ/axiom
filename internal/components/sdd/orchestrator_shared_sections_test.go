@@ -124,6 +124,9 @@ var sharedOrchestratorSectionNames = []string{
 	// own "continue" guard keeps this registration a no-op for every
 	// runtime until that marker exists.
 	"SDD Change Kickoff and Block Gates",
+	// sdd-revision-independiente (REQ-28.1 a REQ-28.3, REQ-28.10, REQ-28.14): the optional
+	// independent review (per-role verify, judgment and coverage review) and its preference.
+	"SDD Independent Review",
 }
 
 // TestSDDChangeKickoffAndBlockGatesSectionIsDeterministic is task 22.3's own

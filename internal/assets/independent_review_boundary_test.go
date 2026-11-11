@@ -32,21 +32,31 @@ type reviewPassage struct {
 	text string
 }
 
-func assertReviewBoundary(t *testing.T, passages []reviewPassage) {
-	t.Helper()
+// reviewBoundaryViolations devuelve las violaciones de frontera de los pasajes; es la lógica que
+// assertReviewBoundary reporta y que la prueba de mutación ejercita sin tocar ficheros.
+func reviewBoundaryViolations(passages []reviewPassage) []string {
+	var violations []string
 	for _, p := range passages {
 		if strings.TrimSpace(p.text) == "" {
-			t.Errorf("%s (%s): pasaje vacío", p.name, p.file)
+			violations = append(violations, p.name+" ("+p.file+"): pasaje vacío")
 			continue
 		}
 		if m := reviewBoundaryVocabulary.FindString(p.text); m != "" {
-			t.Errorf("%s (%s): usa vocabulario de la otra frontera: %q", p.name, p.file, m)
+			violations = append(violations, p.name+" ("+p.file+"): usa vocabulario de la otra frontera: "+m)
 		}
 		for _, lit := range reviewBoundaryLiterals {
 			if strings.Contains(p.text, lit) {
-				t.Errorf("%s (%s): contiene el literal %q", p.name, p.file, lit)
+				violations = append(violations, p.name+" ("+p.file+"): contiene el literal "+lit)
 			}
 		}
+	}
+	return violations
+}
+
+func assertReviewBoundary(t *testing.T, passages []reviewPassage) {
+	t.Helper()
+	for _, v := range reviewBoundaryViolations(passages) {
+		t.Error(v)
 	}
 }
 
@@ -197,5 +207,98 @@ func TestIndependentReviewBoundaryJudgmentAndCoveragePassages(t *testing.T) {
 	// La prueba del juicio autónomo sigue vigente: la frase sin recibo no se toca.
 	if !strings.Contains(strings.ToLower(judgment), "issues no receipt") {
 		t.Error("judgment-day/SKILL.md debe conservar «issues no receipt»")
+	}
+}
+
+// Frases nuevas del orquestador compartido (DD-06, REQ-28.10, REQ-28.12).
+const (
+	gatesContinuousFullstackPhrase = "`continuous` is valid only with the single role `fullstack`: with specialized roles, seal `checkpointed`; the command rejects `continuous` (also when derived from `--from-session-pace auto`) with any other roster and writes nothing, and only the retro-sealing `--infer` is exempt."
+	gatesStopResultsPhrase         = "Each stop also presents the independent review results that exist at that moment and declares the ones that are absent, as `SDD Independent Review` describes; they never change the gate or its three exits."
+	dependencyGraphPhrase          = "The per-role verify, the judgment, and the coverage review are offered or applied as `SDD Independent Review` describes; they are not phases of this graph."
+	absentResultsPhrase            = "An independent review that did not run, did not answer, or was not clean is presented as such and never as clean."
+)
+
+const (
+	independentReviewSectionStart = "<!-- sdd-orchestrator-section:SDD Independent Review:start -->"
+	independentReviewSectionEnd   = "<!-- sdd-orchestrator-section:SDD Independent Review:end -->"
+	independentReviewTemplateTag  = "{{GENTLE_AI_SDD_SECTION:SDD Independent Review}}"
+	blockGatesTemplateTag         = "{{GENTLE_AI_SDD_SECTION:SDD Change Kickoff and Block Gates}}"
+)
+
+var independentReviewRuntimes = []string{
+	"antigravity", "claude", "codex", "cursor", "gemini", "generic", "hermes", "kimi", "kiro", "opencode", "qwen", "windsurf",
+}
+
+func TestIndependentReviewBoundaryOrchestratorPassages(t *testing.T) {
+	shared := MustRead("skills/_shared/sdd-orchestrator-sections.md")
+	start := strings.Index(shared, independentReviewSectionStart)
+	end := strings.Index(shared, independentReviewSectionEnd)
+	if start < 0 || end < start {
+		t.Fatal("la sección compartida SDD Independent Review no está delimitada por sus marcadores")
+	}
+	section := shared[start+len(independentReviewSectionStart) : end]
+	if strings.Count(shared, independentReviewSectionStart) != 1 {
+		t.Error("la sección compartida debe declararse una sola vez")
+	}
+
+	for _, c := range []struct{ name, phrase string }{
+		{"frase de continuous en las puertas", gatesContinuousFullstackPhrase},
+		{"frase de resultados en las paradas", gatesStopResultsPhrase},
+		{"remisión del grafo de dependencias", dependencyGraphPhrase},
+	} {
+		if !strings.Contains(shared, c.phrase) {
+			t.Errorf("%s: la frase fijada no está en sdd-orchestrator-sections.md: %q", c.name, c.phrase)
+		}
+	}
+	workflow := MustRead("claude/sdd-orchestrator-workflow.md")
+	if !strings.Contains(workflow, dependencyGraphPhrase) {
+		t.Errorf("claude/sdd-orchestrator-workflow.md: falta la remisión del grafo: %q", dependencyGraphPhrase)
+	}
+
+	assertReviewBoundary(t, []reviewPassage{
+		{"SDD Independent Review", "skills/_shared/sdd-orchestrator-sections.md", section},
+		{"frase de continuous en las puertas", "skills/_shared/sdd-orchestrator-sections.md", gatesContinuousFullstackPhrase},
+		{"frase de resultados en las paradas", "skills/_shared/sdd-orchestrator-sections.md", gatesStopResultsPhrase},
+		{"remisión del grafo de dependencias", "skills/_shared/sdd-orchestrator-sections.md", dependencyGraphPhrase},
+	})
+
+	// La interacción de la preferencia no reutiliza los marcadores del pre-vuelo (REQ-28.14).
+	for _, forbidden := range []string{"Axiom SDD preflight", "preflight 4/", "Gentle AI SDD preflight"} {
+		if strings.Contains(section, forbidden) {
+			t.Errorf("la sección contiene el marcador del pre-vuelo %q", forbidden)
+		}
+	}
+	// Resultados ausentes (REQ-28.10) y contrato de la preferencia (REQ-28.14, DD-04, DD-05, DD-07c, DD-11).
+	assertContainsAll(t, "SDD Independent Review", section, []string{
+		absentResultsPhrase,
+		"`after_apply`", "`coverage`", "`verify`", "`verify-judgment`", "`none`", "`yes`", "`no`",
+		"After apply: <label>; Coverage: <label>",
+		"never write it to `kickoff.yaml`, `gates.yaml`, or memory",
+		"explicit exception to routing only by `nextRecommended` and dependencies",
+		"**Estado:** limpio", "SDD Role Target", "skills/_shared/sdd-coverage-review.md",
+		"Never simulate them in your own context",
+	})
+}
+
+// TestIndependentReviewBoundaryTemplateParity: toda plantilla que proyecta las puertas proyecta una vez la sección nueva,
+// detrás de ellas.
+func TestIndependentReviewBoundaryTemplateParity(t *testing.T) {
+	for _, runtime := range independentReviewRuntimes {
+		path := runtime + "/sdd-orchestrator.md"
+		content := MustRead(path)
+		gates := strings.Index(content, blockGatesTemplateTag)
+		if gates < 0 {
+			continue
+		}
+		if got := strings.Count(content, independentReviewTemplateTag); got != 1 {
+			t.Errorf("%s: la sección SDD Independent Review se proyecta %d veces, se esperaba 1", path, got)
+			continue
+		}
+		if strings.Index(content, independentReviewTemplateTag) < gates {
+			t.Errorf("%s: la sección SDD Independent Review debe ir detrás de las puertas", path)
+		}
+		if !strings.Contains(content, "\n### SDD Independent Review\n") {
+			t.Errorf("%s: falta el encabezado de la sección SDD Independent Review", path)
+		}
 	}
 }

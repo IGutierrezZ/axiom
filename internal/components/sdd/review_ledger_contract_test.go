@@ -613,7 +613,10 @@ func TestKilocodeReviewSettingsMatchCurrentMainBaseline(t *testing.T) {
 	// guia-orquestador-upstream T2: la delegación pasa a presupuesto de evidencia y disparadores
 	// condicionales, generados desde agentguidance; Kilocode compone el orquestador de OpenCode, así
 	// que el hash cambia. Deliberate, not drift.
-	const want = "7ced6d11800669652c316d918edbfb1bc107f922e423fadd1a76873e920215c6"
+	// sdd-revision-independiente U4: la sección compartida nueva «SDD Independent Review», la regla de
+	// `continuous` en las puertas y la remisión del grafo de dependencias se proyectan a todos los
+	// orquestadores; Kilocode compone el de OpenCode, así que el hash cambia. Deliberate, not drift.
+	const want = "d3078bb82f5ada4f52c5849384d0c5c352f692c08f8062fa3d46930083e9dab1"
 	if got != want {
 		t.Fatalf("Kilocode settings SHA-256 = %s, want current-main baseline %s", got, want)
 	}

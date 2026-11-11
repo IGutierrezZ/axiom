@@ -9,8 +9,8 @@
 | (planificación) | hecho | `32faf4b3` docs(sdd): planificar sdd-revision-independiente |
 | U1 — regla de sellado en Go | hecho (1.1–1.10) | `99d439d2` feat(kickoff): exigir el rol fullstack al sellar continuous |
 | U2 — verify por rol y cumplimiento técnico | hecho (2.1–2.6) | `65047e2f` feat(sdd-verify): añadir cumplimiento técnico y estado limpio al verify por rol |
-| U3 — juicio por rol y revisión de cobertura | hecho (3.1–3.7), commit pendiente de registrar | ver registro |
-| U4 — sección compartida y proyección | pendiente | — |
+| U3 — juicio por rol y revisión de cobertura | hecho (3.1–3.7) | `74c12aa8` feat(judgment-day): admitir el diff de un rol SDD y la revisión de cobertura |
+| U4 — sección compartida y proyección | hecho (4.1–4.9) | ver U5 |
 | U5 — pins finales, documentación y verificación global | pendiente | — |
 
 ## Work Unit Evidence
@@ -37,7 +37,7 @@
 
 | Evidencia | Valor |
 |-----------|-------|
-| Comando focalizado | `go test ./internal/assets/ ./internal/components/sdd/` (ver registro final). |
+| Comando focalizado | `go test ./internal/assets/ ./internal/components/sdd/`: ok / ok (158 s). `-run IndependentReview` incluye el tramo del juicio y la cobertura. |
 | Harness de ejecución | N/A: solo prosa y pins. |
 | Límite de reversión | `internal/assets/skills/judgment-day/**`, `_shared/sdd-coverage-review.md`, reglas de `sdd-spec`/`sdd-design` y el tramo del pin. |
 
@@ -49,3 +49,12 @@
 ## Incidencias
 
 - `go test ./internal/cli/...` completo tarda más de 25 minutos en esta máquina (2034 pruebas de primer nivel, p. ej. `TestShippedReviewValidateAllGatesIgnoreAuthorityStateWithoutMutation` tarda más de 24 minutos por sí sola). No hay fallos observados en las pruebas del área tocada; se anota como fallo ambiental de duración, no de comportamiento.
+
+### U4
+
+| Evidencia | Valor |
+|-----------|-------|
+| Comando focalizado | `go test ./internal/assets/ ./internal/components/ ./internal/components/sdd/ -count=1`: ok / ok / ok. `go test ./internal/cli/ -run TestSDDPreflightHook -count=1`: ok (incluye el caso nuevo de la interacción de preferencia). `go test ./internal/sddstatus/ -run ReviewOfferAbsence`, `./internal/multirole/`: ok (sin tocar su código). |
+| RED observado | El pin de paridad y de la sección compartida se escribió antes de la proyección; la regeneración de goldens (`go test ./internal/components/ -run TestGolden -update`, 13 ficheros) se repitió sin `-update` en verde. `TestKilocodeReviewSettingsMatchCurrentMainBaseline` falló al proyectar la sección (el hash de Kilocode cambia) y se actualizó con comentario «Deliberate, not drift», como manda la convención del propio test. |
+| Harness de ejecución | Los goldens regenerados y revisados por diff son la prueba de proyección en los doce runtimes (solo aparece la sección nueva y las ediciones de 4.3). |
+| Límite de reversión | Sección compartida, doce plantillas, `claude/sdd-orchestrator-workflow.md`, registros, caso del hook, hash de Kilocode y `testdata/golden/*.golden`. |
