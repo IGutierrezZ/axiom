@@ -16,6 +16,7 @@ import (
 	"unicode/utf16"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/branch"
+	"github.com/IGutierrezZ/axiom/v3/internal/hub"
 	"github.com/IGutierrezZ/axiom/v3/internal/livingdoc"
 	"github.com/IGutierrezZ/axiom/v3/internal/semantic"
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
@@ -320,6 +321,17 @@ func (s *Server) handleProjectsInit(w http.ResponseWriter, r *http.Request) {
 
 	res, err := s.service.InitProject(req)
 	if err != nil {
+		// Una configuración inválida es un error del usuario: 400 con todas las
+		// violaciones, para que el modal las muestre una a una. Solo lo inesperado
+		// es un 500.
+		var invalid *hub.InitValidationError
+		if errors.As(err, &invalid) {
+			s.respondJSON(w, http.StatusBadRequest, map[string]any{
+				"error":      "La configuración del proyecto no es válida.",
+				"violations": invalid.Violations,
+			})
+			return
+		}
 		s.respondJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		return
 	}

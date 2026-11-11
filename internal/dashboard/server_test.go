@@ -14,6 +14,7 @@ import (
 
 	"github.com/IGutierrezZ/axiom/v3/internal/branch"
 	"github.com/IGutierrezZ/axiom/v3/internal/hub"
+	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
 // Pruebas de las preferencias personales de worktree en el dashboard (INC-25, REQ-3.1,
@@ -618,5 +619,55 @@ func TestWorkspaceBranchPolicyHarness(t *testing.T) {
 		if rr.Code != http.StatusOK {
 			t.Errorf("%s: GET /api/workspace = %d, quiero 200", name, rr.Code)
 		}
+	}
+}
+
+// G4.1: una configuración inválida es un 400 con la lista de violaciones y no
+// escribe nada en disco; ya no es un 500 opaco.
+func TestProjectsInitRejectsInvalidConfigurationWith400AndViolations(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), "proyecto-nuevo")
+	router, _, hubPath := newPrefsServer(t, t.TempDir())
+	body := `{"path":` + quoteJSON(dir) + `,"name":"Mal","roles":[` +
+		`{"key":"web","name":"Web","repositories":["../fuera"]},` +
+		`{"key":"web","name":"Otra","repositories":["."]}]}`
+
+	rr := request(router, http.MethodPost, "/api/projects/init", body)
+	if rr.Code != http.StatusBadRequest {
+		t.Fatalf("POST /api/projects/init = %d, quiero 400: %s", rr.Code, rr.Body.String())
+	}
+	var got struct {
+		Error      string   `json:"error"`
+		Violations []string `json:"violations"`
+	}
+	if err := json.Unmarshal(rr.Body.Bytes(), &got); err != nil {
+		t.Fatalf("JSON inválido: %v (%s)", err, rr.Body.String())
+	}
+	if got.Error == "" || len(got.Violations) != 2 {
+		t.Fatalf("se esperaban error y 2 violaciones (repetida y fuera del proyecto): %+v", got)
+	}
+	if _, err := os.Stat(dir); !os.IsNotExist(err) {
+		t.Errorf("el alta rechazada no debe crear %s (err=%v)", dir, err)
+	}
+	if strings.Contains(string(readOrEmpty(t, hubPath)), "proyecto-nuevo") {
+		t.Errorf("el alta rechazada no debe registrar el proyecto en el hub:\n%s", readOrEmpty(t, hubPath))
+	}
+}
+
+// G4.3: el campo `tech` de cada rol viaja hasta el axiom.yaml.
+func TestProjectsInitWritesRoleTech(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), "proyecto-nuevo")
+	router, _, _ := newPrefsServer(t, t.TempDir())
+	body := `{"path":` + quoteJSON(dir) + `,"name":"Con tech","roles":[{"key":"web","name":"Web","repositories":["."],"tech":["go","react"]}]}`
+
+	rr := request(router, http.MethodPost, "/api/projects/init", body)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("POST /api/projects/init = %d: %s", rr.Code, rr.Body.String())
+	}
+	cfg, err := workspace.LoadConfig(filepath.Join(dir, "axiom.yaml"))
+	if err != nil {
+		t.Fatalf("axiom.yaml no carga: %v", err)
+	}
+	if tech := cfg.Roles["web"].Tech; len(tech) != 2 || tech[0] != "go" || tech[1] != "react" {
+		t.Errorf("tech del rol web = %v, quiero [go react]", tech)
 	}
 }

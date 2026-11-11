@@ -94,7 +94,7 @@ Fuera de alcance:
   - `gate_policy` con el vocabulario de `multirole`.
   - Devuelve una lista de violaciones, no un único error.
   - `Init` la llama antes de cualquier escritura, también desde `axiom init`.
-- [ ] **T3 · Errores de validación en la API y la UI.**
+- [x] **T3 · Errores de validación en la API y la UI.**
   - `handleProjectsInit` devuelve 400 con la lista de violaciones.
   - El modal las muestra.
   - La validación en cliente (claves duplicadas, campos obligatorios vacíos) va a un módulo de `js/core/`, probado con Node.
@@ -141,5 +141,6 @@ T18–T20 de `odd/tasks/upstream-revision-nativa.md` tocan `rdd_mode.go` y `revi
 - 2026-11-11: el usuario elige el registro del hub para el RDD por proyecto.
 - 2026-11-11: T1 hecha (ruta: escritor delegado). GetWorkspace devuelve el gate_policy real del rol (blocking por defecto); el alta escribe deferred en lugar de advisory; la etiqueta del modal ya no habla de advisory. Observado: go test ./internal/hub/... ./internal/workspace/... ./internal/dashboard/... -count=1: ok; go test ./internal/multirole/... : ok; go test ./cmd/axiom/ -run Init : ok; go vet y gofmt -l: limpios.
 - 2026-11-11: T2 hecha (ruta: escritor delegado). Nuevo hub.ValidateInit (internal/hub/init_validate.go): planifica el axiom.yaml, lo pasa por workspace.ParseConfig y workspace.Validate con un FS superpuesto (proyecto, openspec/ y repos de rol dados por existentes) y aplica reglas de claves repetidas (también por mayúsculas), repos absolutos o fuera del proyecto y vocabulario de gate_policy de multirole; devuelve *InitValidationError con todas las violaciones. Init lo llama antes de MkdirAll y de cualquier escritura (también axiom init); las claves de rol se escriben entre comillas cuando hace falta. Decisión: el alta no exige que existan los repos de rol (los traen las configuraciones adoptadas y los proyectos nuevos). Observado: go test ./internal/hub/... ./internal/workspace/... ./internal/dashboard/... -count=1: ok; go test ./internal/multirole/... : ok; go test ./cmd/axiom/ -run Init : ok; go vet y gofmt -l: limpios.
+- 2026-11-11: T3 hecha (ruta: escritor delegado). handleProjectsInit devuelve 400 con {error, violations} ante *hub.InitValidationError y 500 solo para lo inesperado; el modal lista cada violación; la validación en cliente (ruta obligatoria, claves duplicadas, repos absolutos o fuera del proyecto) vive en js/core/projectform.js y se prueba con Node; nuevo campo tecnologías por rol (hub.RoleInput ya aceptaba tech, ahora se envía y se escribe). Observado: go test ./internal/hub/... ./internal/workspace/... ./internal/dashboard/... -count=1: ok; go test ./internal/multirole/... : ok; go test ./cmd/axiom/ -run Init : ok; go vet y gofmt -l: limpios. Sin verificar: aspecto visual del modal (no se abrió en navegador).
 
 Plan stop: approved 2026-11-11; implementation continues

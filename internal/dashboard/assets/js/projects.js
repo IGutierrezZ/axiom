@@ -3,6 +3,7 @@
 
 import { api, escapeHtml } from './core/api.js';
 import { defaultWorktreeRoot, registrationPrefs } from './core/branches.js';
+import { validateProjectForm, violationsFromError } from './core/projectform.js';
 import { $, openDialog, closeDialog, toast, setBusy } from './core/components.js';
 import { icon } from './core/icons.js';
 import { resetProjectData } from './core/overview.js';
@@ -397,7 +398,7 @@ function baseName(path) {
   return parts[parts.length - 1];
 }
 
-function addRoleRow(key = '', name = '', repos = '', nonBlocking = false) {
+function addRoleRow(key = '', name = '', repos = '', nonBlocking = false, tech = '') {
   const container = $('#roles-builder-container');
   const card = document.createElement('div');
   card.className = 'role-builder-card';
@@ -414,6 +415,7 @@ function addRoleRow(key = '', name = '', repos = '', nonBlocking = false) {
         <button type="button" class="btn btn-sm btn-browse-role-repo" aria-label="Examinar una carpeta local" title="Examinar una carpeta local">${icon('folder', 14)}</button>
       </div>
     </div>
+    <div class="field"><label>Tecnologías (separadas por coma, opcional)<input type="text" class="form-input role-tech-input" value="${escapeHtml(tech)}" placeholder="go, react"></label></div>
     <label class="check"><input type="checkbox" class="role-nonblocking-input" ${nonBlocking ? 'checked' : ''}><span>No bloqueante al archivar (diferido: deuda acumulativa)</span></label>`;
 
   card.querySelector('.btn-remove-role').addEventListener('click', () => card.remove());
@@ -451,6 +453,31 @@ function showError(id, message) {
   if (!box) return;
   box.hidden = !message;
   box.textContent = message || '';
+}
+
+// showViolations muestra una lista de errores, uno por línea, en la caja de errores.
+// Con una sola entrada la muestra como texto simple.
+function showViolations(id, violations) {
+  if (!violations || violations.length <= 1) {
+    showError(id, violations && violations[0]);
+    return;
+  }
+  const box = document.getElementById(id);
+  if (!box) return;
+  box.textContent = '';
+  const intro = document.createElement('p');
+  intro.textContent = 'No se puede dar de alta el proyecto. Corrige estos errores:';
+  const list = document.createElement('ul');
+  for (const violation of violations) {
+    const item = document.createElement('li');
+    item.textContent = violation;
+    list.appendChild(item);
+  }
+  const content = document.createElement('div');
+  content.className = 'grow';
+  content.append(intro, list);
+  box.append(content);
+  box.hidden = false;
 }
 
 function initAddProject() {
@@ -511,22 +538,21 @@ function initAddProject() {
   const submit = $('#btn-submit-add-project');
   submit.addEventListener('click', async () => {
     const pathVal = inputPath.value.trim();
-    if (!pathVal) {
-      showError('add-project-error', 'Debes indicar la ruta del proyecto en disco.');
-      inputPath.focus();
+    // Se adelantan en cliente los errores que no necesitan el disco; el servidor
+    // vuelve a validar y devuelve la lista completa si algo más falla.
+    const cards = Array.from($('#roles-builder-container').querySelectorAll('.role-builder-card')).map(card => ({
+      key: card.querySelector('.role-key-input').value,
+      name: card.querySelector('.role-name-input').value,
+      repos: card.querySelector('.role-repos-input').value,
+      tech: card.querySelector('.role-tech-input').value,
+      nonBlocking: card.querySelector('.role-nonblocking-input').checked
+    }));
+    const { roles, violations } = validateProjectForm({ path: pathVal, cards });
+    if (violations.length) {
+      showViolations('add-project-error', violations);
+      if (!pathVal) inputPath.focus();
       return;
     }
-    const roles = [];
-    $('#roles-builder-container').querySelectorAll('.role-builder-card').forEach(card => {
-      const key = card.querySelector('.role-key-input').value.trim();
-      const name = card.querySelector('.role-name-input').value.trim();
-      const reposStr = card.querySelector('.role-repos-input').value.trim();
-      const nonBlocking = card.querySelector('.role-nonblocking-input').checked;
-      const repositories = reposStr ? reposStr.split(',').map(s => s.trim()).filter(Boolean) : ['.'];
-      if (key || name) {
-        roles.push({ key: key || name.toLowerCase().replace(/\s+/g, '-'), name: name || key, repositories, non_blocking: nonBlocking });
-      }
-    });
 
     const restore = setBusy(submit, 'Procesando…');
     try {
@@ -544,7 +570,7 @@ function initAddProject() {
       await loadProjects();
       await onSwitched();
     } catch (err) {
-      showError('add-project-error', `Error: ${err.message}`);
+      showViolations('add-project-error', violationsFromError(err));
     } finally {
       restore();
     }
