@@ -25,6 +25,10 @@ const sealChange = "x"
 
 var sealBaseArgs = []string{"--execution-style", "continuous", "--handoff-policy", "none"}
 
+// sealRolesArgs sella checkpointed: continuous solo admite el rol único fullstack (REQ-28.12), así
+// que los casos con roles especializados usan este estilo.
+var sealRolesArgs = []string{"--execution-style", "checkpointed", "--handoff-policy", "none"}
+
 // captureSealWarnings recoge los avisos de la guarda para que no ensucien la salida de las
 // pruebas y se puedan comprobar.
 func captureSealWarnings(t *testing.T) *bytes.Buffer {
@@ -149,7 +153,7 @@ func TestKickoffSealAcceptsTheRoleBranchesOfTheRolesBeingSealed(t *testing.T) {
 	captureSealWarnings(t)
 	config := "workspace:\n  name: ejemplo\n  topology: monorepo-embedded\n  specs_repository: \".\"\nroles:\n  core:\n    name: core\n    repositories:\n      - path: \".\"\n  qa:\n    name: qa\n    repositories:\n      - path: \".\"\n"
 	ws := embeddedSealProject(t, config)
-	roles := append([]string{"--role", "core", "--role", "qa"}, sealBaseArgs...)
+	roles := append([]string{"--role", "core", "--role", "qa"}, sealRolesArgs...)
 
 	integrateGit(t, ws.Master, "switch", "-q", "-c", "feat/x-otro")
 	_, err := runSeal(t, ws.Master, roles...)
@@ -235,7 +239,7 @@ func TestKickoffSealWritesTheGitSnapshotOnce(t *testing.T) {
 	ws := embeddedSealProject(t, twoRoleConfig)
 	integrateGit(t, ws.Master, "switch", "-q", "-c", "feat/x")
 
-	if _, err := runSeal(t, ws.Master, append([]string{"--role", "core", "--role", "qa"}, sealBaseArgs...)...); err != nil {
+	if _, err := runSeal(t, ws.Master, append([]string{"--role", "core", "--role", "qa"}, sealRolesArgs...)...); err != nil {
 		t.Fatalf("sellar en feat/x: %v", err)
 	}
 
@@ -345,7 +349,7 @@ func TestKickoffSealOfAMultirepoWritesTheSnapshotOfEveryRepository(t *testing.T)
 	change := planningHomeChange
 
 	var out bytes.Buffer
-	args := append([]string{"seal", "--cwd", ws.Master, "--change", change, "--role", "backend", "--role", "frontend"}, sealBaseArgs...)
+	args := append([]string{"seal", "--cwd", ws.Master, "--change", change, "--role", "backend", "--role", "frontend"}, sealRolesArgs...)
 	if err := RunSDDKickoff(args, &out); err != nil {
 		t.Fatalf("sellar el multirepo: %v", err)
 	}

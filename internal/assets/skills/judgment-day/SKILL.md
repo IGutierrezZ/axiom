@@ -9,7 +9,7 @@ metadata:
 
 ## Activation Contract
 
-Load only when the user explicitly requests Judgment Day or equivalent dual/adversarial review for a concrete target. Judgment Day is a standalone developer tool: judges run whenever asked, on any runtime, and need no review transaction, runtime identity, or delivery-receipt machinery to start. It replaces ordinary 4R as the adversarial method for that target; never run both.
+Load only when the user explicitly requests Judgment Day or equivalent dual/adversarial review for a concrete target. The diff of one role of an SDD change is a valid target: accepting the orchestrator's offer, or a session preference that includes judgment, counts as that explicit request (see `SDD Role Target` in `references/prompts-and-formats.md`). Judgment Day is a standalone developer tool: judges run whenever asked, on any runtime, and need no review transaction, runtime identity, or delivery-receipt machinery to start. It replaces ordinary 4R as the adversarial method for that target; never run both.
 
 ## Hard Rules
 
@@ -31,6 +31,7 @@ Load only when the user explicitly requests Judgment Day or equivalent dual/adve
 | Both judges confirm severe finding | Ask before round-one correction; then use the bounded fix actor. |
 | One judge reports it | Record suspect; do not auto-fix. |
 | Judges contradict | Escalate for explicit human decision. |
+| Target is an SDD role diff | Follow `SDD Role Target` in `references/prompts-and-formats.md`: only after a clean verify, fixes only inside the authorized edit roots. |
 | Scoped re-judgment fails before round two | Parent may launch the final bounded fix round. |
 | Any issue remains after round two | Escalate and stop. |
 

@@ -134,6 +134,8 @@ proposal -> specs --> tasks -> apply -> archive
            design
 ```
 
+The per-role verify, the judgment, and the coverage review are offered or applied as `SDD Independent Review` describes; they are not phases of this graph.
+
 ### Result Contract
 
 Every SDD phase returns: `status`, `executive_summary`, `artifacts`, `next_recommended`, `risks`, and `skill_resolution`.

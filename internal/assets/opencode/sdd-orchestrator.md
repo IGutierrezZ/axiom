@@ -110,6 +110,10 @@ Meta-commands (type directly - orchestrator handles them, won't appear in autoco
 
 {{GENTLE_AI_SDD_SECTION:SDD Change Kickoff and Block Gates}}
 
+### SDD Independent Review
+
+{{GENTLE_AI_SDD_SECTION:SDD Independent Review}}
+
 
 ### SDD Entry Routing (MANDATORY)
 

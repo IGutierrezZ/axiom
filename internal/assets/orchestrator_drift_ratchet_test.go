@@ -43,6 +43,7 @@ var orchestratorSectionDriftRatchet = []struct {
 	{"Recovery Rule", 1},
 	{"SDD Workflow (Spec-Driven Development)", 2},
 	{"Native SDD Dispatcher Guard", 1},
+	{"SDD Independent Review", 1},
 }
 
 var orchestratorHeading = regexp.MustCompile(`(?m)^#{2,3} .+$`)

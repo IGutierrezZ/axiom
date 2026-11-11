@@ -74,6 +74,11 @@ const (
 	EvidenceAttestation EvidenceKind = "attestation"
 )
 
+// SealedByInferred marks a kickoff written by the conservative retro-seal
+// (InferKickoff). ValidateForSeal exempts it from the continuous-roster rule
+// because it freezes the roles a change already declares (REQ-21.4).
+const SealedByInferred = "inferred"
+
 // roleApplyGatePrefix is the single literal used to build AND to recognise
 // a role-apply gate key. RoleApplyGate is the only constructor; schema
 // validation reuses this same prefix instead of a second literal, so the

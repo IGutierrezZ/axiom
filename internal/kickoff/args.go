@@ -281,6 +281,18 @@ func ParseSealArgs(args []string) (SealArgs, error) {
 	if len(parsed.Roles) == 0 {
 		parsed.Roles = []RoleFlag{{Role: "fullstack", GatePolicy: multirole.PolicyBlocking}}
 	}
+	// Regla de sellado (REQ-28.12, REQ-28.13): continuous solo con el roster
+	// exacto [fullstack]. Es pura: rechaza antes de resolver --change y de
+	// escribir. El estilo derivado de --from-session-pace nunca se degrada a
+	// checkpointed por su cuenta.
+	roleNames := make([]string, 0, len(parsed.Roles))
+	for _, r := range parsed.Roles {
+		roleNames = append(roleNames, r.Role)
+	}
+	derivedFromPace := sessionPaceGiven && !executionStyleExplicit
+	if err := checkContinuousRoster(parsed.ExecutionStyle, roleNames, derivedFromPace); err != nil {
+		return SealArgs{}, err
+	}
 	if parsed.DeploymentTarget == "" {
 		parsed.DeploymentTarget = "local"
 	}

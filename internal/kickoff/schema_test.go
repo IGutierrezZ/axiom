@@ -1,6 +1,7 @@
 package kickoff
 
 import (
+	"errors"
 	"strings"
 	"testing"
 
@@ -276,5 +277,75 @@ func TestKickoffSerializationOmitsEmptyDocsPublication(t *testing.T) {
 	}
 	if err := yaml.Unmarshal(data, &frozen); err != nil {
 		t.Fatalf("un struct congelado anterior no debe fallar con la clave nueva: %v", err)
+	}
+}
+
+func sealRosterKickoff(style ExecutionStyle, sealedBy string, roles ...string) Kickoff {
+	kickoffRoles := make([]KickoffRole, 0, len(roles))
+	for _, role := range roles {
+		kickoffRoles = append(kickoffRoles, KickoffRole{Role: role, GatePolicy: multirole.PolicyBlocking, TasksFile: "tasks.md", VerifyFile: "verify-report.md"})
+	}
+	return Kickoff{
+		Schema:   KickoffSchemaV1,
+		Change:   "inc-99-example",
+		SealedBy: sealedBy,
+		Config: FlowConfig{
+			FlowMode:       FlowSDD,
+			ExecutionStyle: style,
+			Roles:          kickoffRoles,
+		},
+		Lifecycle: Lifecycle{DeploymentTarget: "local", PostArchivePolicy: "bug_only"},
+	}
+}
+
+// TestKickoffValidateForSealContinuousRoster fija la regla de sellado
+// (REQ-28.12, DD-01, DD-02): continuous solo admite el roster exacto
+// [fullstack]; el retrosellado inferido queda exento (REQ-21.4).
+func TestKickoffValidateForSealContinuousRoster(t *testing.T) {
+	tests := []struct {
+		name    string
+		kickoff Kickoff
+		wantErr bool
+	}{
+		{name: "continuous con fullstack", kickoff: sealRosterKickoff(ExecutionContinuous, "cli", "fullstack")},
+		{name: "continuous con core y web", kickoff: sealRosterKickoff(ExecutionContinuous, "cli", "core", "web"), wantErr: true},
+		{name: "continuous con backend", kickoff: sealRosterKickoff(ExecutionContinuous, "cli", "backend"), wantErr: true},
+		{name: "continuous con fullstack y backend", kickoff: sealRosterKickoff(ExecutionContinuous, "cli", "fullstack", "backend"), wantErr: true},
+		{name: "continuous con fullstack repetido", kickoff: sealRosterKickoff(ExecutionContinuous, "cli", "fullstack", "fullstack"), wantErr: true},
+		{name: "checkpointed con core y web", kickoff: sealRosterKickoff(ExecutionCheckpointed, "cli", "core", "web")},
+		{name: "inferido continuous con core", kickoff: sealRosterKickoff(ExecutionContinuous, SealedByInferred, "core")},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.kickoff.ValidateForSeal()
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("ValidateForSeal() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if !tt.wantErr {
+				return
+			}
+			if !errors.Is(err, ErrContinuousRequiresFullstack) {
+				t.Errorf("error = %v, se esperaba ErrContinuousRequiresFullstack", err)
+			}
+			for _, want := range []string{"--execution-style checkpointed", "--role"} {
+				if !strings.Contains(err.Error(), want) {
+					t.Errorf("mensaje %q no contiene %q", err.Error(), want)
+				}
+			}
+		})
+	}
+}
+
+// TestParseKickoffReadsContinuousWithRoles fija la lectura tolerante (D7): un
+// kickoff ya sellado con continuous y varios roles sigue leyendose.
+func TestParseKickoffReadsContinuousWithRoles(t *testing.T) {
+	doc := strings.Replace(validKickoffYAML(), "execution_style: checkpointed", "execution_style: continuous", 1)
+	doc = strings.Replace(doc, "    - role: fullstack\n", "    - role: core\n      gate_policy: blocking\n      tasks_file: tasks.core.md\n      verify_file: verify-report.core.md\n    - role: web\n", 1)
+	k, err := ParseKickoff([]byte(doc))
+	if err != nil {
+		t.Fatalf("ParseKickoff() error = %v, se esperaba lectura tolerante", err)
+	}
+	if len(k.Config.Roles) != 2 {
+		t.Fatalf("Roles = %+v, se esperaban 2", k.Config.Roles)
 	}
 }

@@ -32,6 +32,11 @@ import (
 //     unchanged, and return a non-blocking note. Sealing "fullstack" here
 //     would mask a real configuration error behind an inference.
 //
+// The retro-seal is deliberately exempt from the continuous-roster rule that
+// explicit sealing enforces (P2, REQ-21.4): it keeps sealing continuous with
+// the roles a change already declares, marked sealed_by: inferred, and
+// ValidateForSeal accepts that marker.
+//
 // designPath is the path to the change's design.md; wsConfig is the
 // workspace's axiom.yaml configuration (may be nil).
 //
@@ -82,7 +87,7 @@ func inferredKickoff(roles []multirole.RoleAssignment) Kickoff {
 	}
 	return Kickoff{
 		Schema:   KickoffSchemaV1,
-		SealedBy: "inferred",
+		SealedBy: SealedByInferred,
 		Config: FlowConfig{
 			FlowMode:             FlowSDD,
 			ExecutionStyle:       ExecutionContinuous,

@@ -2,10 +2,14 @@ package cli
 
 import (
 	"bytes"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/IGutierrezZ/axiom/v3/internal/kickoff"
+	"github.com/IGutierrezZ/axiom/v3/internal/multirole"
 )
 
 func mustMkdirAllCLI(t *testing.T, dir string) {
@@ -462,6 +466,84 @@ func TestRunSDDKickoffSealDocsPublication(t *testing.T) {
 		data, _ := os.ReadFile(filepath.Join(changeRoot, "kickoff.yaml"))
 		if strings.Contains(string(data), "docs_publication") || !strings.Contains(second.String(), "Kickoff ya estaba sellado") {
 			t.Fatalf("el segundo seal no debe reescribir:\n%s\n%s", data, second.String())
+		}
+	})
+}
+
+// TestRunSDDKickoffSealContinuousRosterRule cubre REQ-28.12 y REQ-21.4 de extremo a extremo: continuous
+// solo se sella con el rol único fullstack, el rechazo no escribe nada, un seal repetido con los
+// argumentos antiguos se rechaza dejando el kickoff intacto y el retrosellado sigue admitiendo roles.
+func TestRunSDDKickoffSealContinuousRosterRule(t *testing.T) {
+	t.Run("continuous con roles falla sin crear kickoff.yaml", func(t *testing.T) {
+		root, changeRoot := newGovernanceWorkspace(t, "inc-99-example")
+		err := RunSDDKickoff([]string{"seal", "--cwd", root, "--change", "inc-99-example", "--execution-style", "continuous", "--role", "core", "--role", "web"}, &bytes.Buffer{})
+		if err == nil || !strings.Contains(err.Error(), "--execution-style checkpointed") {
+			t.Fatalf("error = %v, se esperaba el rechazo con la salida checkpointed", err)
+		}
+		if _, statErr := os.Stat(filepath.Join(changeRoot, "kickoff.yaml")); !os.IsNotExist(statErr) {
+			t.Fatalf("kickoff.yaml no debía existir tras el rechazo: %v", statErr)
+		}
+	})
+
+	t.Run("un seal repetido con continuous y roles se rechaza y deja el fichero intacto", func(t *testing.T) {
+		root, changeRoot := newGovernanceWorkspace(t, "inc-99-example")
+		sealed := kickoff.Kickoff{
+			Schema:   kickoff.KickoffSchemaV1,
+			Change:   "inc-99-example",
+			SealedBy: "prueba",
+			Config: kickoff.FlowConfig{
+				FlowMode:       kickoff.FlowSDD,
+				ExecutionStyle: kickoff.ExecutionContinuous,
+				Roles: []kickoff.KickoffRole{
+					{Role: "core", GatePolicy: multirole.PolicyBlocking, TasksFile: "tasks.core.md", VerifyFile: "verify-report.core.md"},
+					{Role: "web", GatePolicy: multirole.PolicyBlocking, TasksFile: "tasks.web.md", VerifyFile: "verify-report.web.md"},
+				},
+			},
+			Lifecycle: kickoff.Lifecycle{DeploymentTarget: "local", PostArchivePolicy: "bug_only"},
+		}
+		if _, _, err := kickoff.Seal(changeRoot, sealed); err != nil {
+			t.Fatalf("sellado previo: %v", err)
+		}
+		path := filepath.Join(changeRoot, "kickoff.yaml")
+		before, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatalf("leer kickoff.yaml: %v", err)
+		}
+		err = RunSDDKickoff([]string{"seal", "--cwd", root, "--change", "inc-99-example", "--execution-style", "continuous", "--role", "core", "--role", "web"}, &bytes.Buffer{})
+		if err == nil || !errors.Is(err, kickoff.ErrContinuousRequiresFullstack) {
+			t.Fatalf("error = %v, se esperaba ErrContinuousRequiresFullstack", err)
+		}
+		after, err := os.ReadFile(path)
+		if err != nil || string(before) != string(after) {
+			t.Fatalf("kickoff.yaml cambió tras el rechazo (err=%v)", err)
+		}
+		var show bytes.Buffer
+		if err := RunSDDKickoff([]string{"show", "--cwd", root, "--change", "inc-99-example"}, &show); err != nil || !strings.Contains(show.String(), "core") {
+			t.Fatalf("show debía seguir leyendo el kickoff sellado (err=%v):\n%s", err, show.String())
+		}
+	})
+
+	t.Run("seal --infer con roles detectados sigue sellando continuous", func(t *testing.T) {
+		root, changeRoot := newGovernanceWorkspace(t, "inc-99-example")
+		writeRepoLikeAxiomYAML(t, root)
+		writeCLIFixture(t, filepath.Join(changeRoot, "design.md"),
+			"# Diseno\n\n```yaml\nroles:\n  - role: core\n    gate_policy: blocking\n  - role: e2e\n    gate_policy: deferred\n```\n")
+		var out bytes.Buffer
+		if err := RunSDDKickoff([]string{"seal", "--infer", "--cwd", root, "--change", "inc-99-example"}, &out); err != nil {
+			t.Fatalf("seal --infer error = %v", err)
+		}
+		if !strings.Contains(out.String(), "execution_style=continuous") || !strings.Contains(out.String(), "sealed_by=inferred") {
+			t.Fatalf("el retrosellado debía sellar continuous inferido:\n%s", out.String())
+		}
+	})
+
+	t.Run("la ayuda enuncia la regla", func(t *testing.T) {
+		var help bytes.Buffer
+		if err := RunSDDKickoff([]string{"--help"}, &help); err != nil {
+			t.Fatalf("--help error = %v", err)
+		}
+		if !strings.Contains(help.String(), "continuous solo con el rol fullstack") {
+			t.Fatalf("la ayuda no enuncia la regla:\n%s", help.String())
 		}
 	})
 }

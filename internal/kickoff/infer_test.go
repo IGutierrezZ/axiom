@@ -159,3 +159,29 @@ func TestInferKickoffNeverWritesKickoffFile(t *testing.T) {
 		t.Fatal("InferKickoff() escribio kickoff.yaml; debe ser puro respecto a E/S de escritura")
 	}
 }
+
+// Pin de P2 (REQ-21.4): el retrosellado sigue infiriendo continuous con los
+// roles detectados, marcado sealed_by: inferred, y la regla de sellado de
+// continuous no lo alcanza.
+func TestInferKickoffContinuousWithDetectedRolesPassesValidateForSeal(t *testing.T) {
+	changeRoot := t.TempDir()
+	designPath := writeDesignMD(t, changeRoot,
+		"# Diseno\n\n```yaml\nroles:\n  - role: core\n    gate_policy: blocking\n  - role: e2e\n    gate_policy: deferred\n```\n")
+
+	k, _, err := InferKickoff(designPath, repoLikeWorkspaceConfig())
+	if err != nil {
+		t.Fatalf("InferKickoff() error inesperado = %v", err)
+	}
+	if k.Config.ExecutionStyle != ExecutionContinuous {
+		t.Errorf("ExecutionStyle = %q, se esperaba continuous", k.Config.ExecutionStyle)
+	}
+	if k.SealedBy != SealedByInferred {
+		t.Errorf("SealedBy = %q, se esperaba %q", k.SealedBy, SealedByInferred)
+	}
+	if len(k.Config.Roles) != 2 {
+		t.Fatalf("Roles = %+v, se esperaban los 2 roles detectados", k.Config.Roles)
+	}
+	if err := k.ValidateForSeal(); err != nil {
+		t.Errorf("ValidateForSeal() error = %v, el retrosellado debe quedar exento", err)
+	}
+}

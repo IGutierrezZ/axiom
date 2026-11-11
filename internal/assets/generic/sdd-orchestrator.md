@@ -78,6 +78,10 @@ Runtime-specific lifecycle content is dynamically injected only when the compile
 
 {{GENTLE_AI_SDD_SECTION:SDD Change Kickoff and Block Gates}}
 
+### SDD Independent Review
+
+{{GENTLE_AI_SDD_SECTION:SDD Independent Review}}
+
 ### SDD Init Guard (MANDATORY)
 
 {{GENTLE_AI_SDD_SECTION:SDD Init Guard (MANDATORY)}}

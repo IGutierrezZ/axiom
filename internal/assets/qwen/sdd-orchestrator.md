@@ -73,6 +73,10 @@ Use Qwen's native bounded worker for delegated-direct work; reserve `sdd-*` agen
 
 {{GENTLE_AI_SDD_SECTION:SDD Change Kickoff and Block Gates}}
 
+### SDD Independent Review
+
+{{GENTLE_AI_SDD_SECTION:SDD Independent Review}}
+
 ### SDD Init Guard (MANDATORY)
 
 {{GENTLE_AI_SDD_SECTION:SDD Init Guard (MANDATORY)}}
