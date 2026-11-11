@@ -8,11 +8,11 @@ Plan stop: approved 2026-11-04; implementation continues
 
 ## Estado
 
-**En curso (2026-11-10).**
+**Completada (2026-11-11).**
 - T4 y T5 están fusionadas (PR #226).
 - T1 está fusionada (PR #238).
 - T2 está fusionada (PR #239).
-- T3 está implementada en `inc/guia-orquestador-upstream`, pendiente de PR. Es la última tarea del bloque.
+- T3 está fusionada (PR #240). Era la última tarea del bloque.
 - Las decisiones P1–P3 están resueltas.
 
 ## Objetivo
@@ -285,3 +285,5 @@ Lo fija la sesión coordinadora a partir del cruce de ficheros entre bloques (20
   - **Comprobación puntual del padre:** `go test ./internal/components/agentguidance/ -count=1`, ok.
   - **Riesgo:** `medium`, con RDD apagado.
   - **Entrega:** unas 92 líneas de código más el registro, sin `size:exception`.
+- 2026-11-11: T3 se fusiona (PR #240, merge 7ce5a60c) y el bloque queda completo. Se avisa a la coordinadora.
+  - La fusión se bloqueó porque el check obligatorio «Verify PR Origin & Authority» estaba cancelado. Al abrir y etiquetar el PR se lanzaron dos ejecuciones de «PR Validation» y la concurrencia canceló una. Se relanzó la cancelada con `gh run rerun` y se fusionó sin `--admin`.
