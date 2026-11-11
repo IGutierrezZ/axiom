@@ -7,6 +7,8 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
+	"strings"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/capabilitymanifest"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/filemerge"
@@ -26,6 +28,11 @@ type Adapter struct {
 	lookPath func(string) (string, error)
 	statPath func(string) statResult
 	resolver installcmd.Resolver
+
+	// goos y getenv son inyectables para que las pruebas no dependan de la máquina;
+	// vacíos, valen runtime.GOOS y os.Getenv.
+	goos   string
+	getenv func(string) string
 }
 
 func NewAdapter() *Adapter {
@@ -52,7 +59,15 @@ func (a *Adapter) Detect(_ context.Context, homeDir string) (bool, string, strin
 	configPath := ConfigPath(homeDir)
 
 	binaryPath, err := a.lookPath("claude")
+	// El motor de Claude Code es el mismo en el CLI, en la extensión de VS Code y
+	// en Claude Desktop, y los tres leen .claude/, CLAUDE.md y .mcp.json. Basta
+	// cualquiera de las tres señales para dar el adaptador por instalado; binaryPath
+	// solo se rellena si existe el CLI y ningún llamador lo ejecuta.
 	installed := err == nil
+	if !installed {
+		binaryPath = ""
+		installed = a.hasVSCodeExtension(homeDir) || a.hasDesktopApp(homeDir)
+	}
 
 	stat := a.statPath(configPath)
 	if stat.err != nil {
@@ -63,6 +78,76 @@ func (a *Adapter) Detect(_ context.Context, homeDir string) (bool, string, strin
 	}
 
 	return installed, binaryPath, configPath, stat.isDir, nil
+}
+
+// hasVSCodeExtension busca la extensión anthropic.claude-code en
+// ~/.vscode/extensions (carpeta "anthropic.claude-code-<versión>").
+func (a *Adapter) hasVSCodeExtension(homeDir string) bool {
+	entries, _ := os.ReadDir(filepath.Join(homeDir, ".vscode", "extensions"))
+	for _, entry := range entries {
+		if entry.IsDir() && isClaudeExtensionDir(entry.Name()) {
+			return true
+		}
+	}
+	return false
+}
+
+func isClaudeExtensionDir(name string) bool {
+	return name == "anthropic.claude-code" || strings.HasPrefix(name, "anthropic.claude-code-")
+}
+
+// hasDesktopApp dice si Claude Desktop está instalado en este sistema.
+func (a *Adapter) hasDesktopApp(homeDir string) bool {
+	for _, candidate := range a.desktopPaths(homeDir) {
+		if _, err := os.Stat(candidate); err == nil {
+			return true
+		}
+	}
+	return false
+}
+
+// desktopPaths lista dónde deja Claude Desktop sus datos o su aplicación.
+//
+// Las variables de entorno (APPDATA, LOCALAPPDATA) solo se respetan cuando homeDir
+// es el HOME real del usuario: quien pasa una raíz propia (instalaciones aisladas,
+// pruebas) debe quedarse contenido en ella.
+func (a *Adapter) desktopPaths(homeDir string) []string {
+	goos, getenv := a.goos, a.getenv
+	if goos == "" {
+		goos = runtime.GOOS
+	}
+	if getenv == nil {
+		getenv = os.Getenv
+	}
+	switch goos {
+	case "darwin":
+		return []string{
+			"/Applications/Claude.app",
+			filepath.Join(homeDir, "Library", "Application Support", "Claude"),
+		}
+	case "windows":
+		roaming := filepath.Join(homeDir, "AppData", "Roaming")
+		local := filepath.Join(homeDir, "AppData", "Local")
+		if isRealUserHome(homeDir) {
+			if appData := strings.TrimSpace(getenv("APPDATA")); filepath.IsAbs(appData) {
+				roaming = appData
+			}
+			if localAppData := strings.TrimSpace(getenv("LOCALAPPDATA")); filepath.IsAbs(localAppData) {
+				local = localAppData
+			}
+		}
+		return []string{
+			filepath.Join(roaming, "Claude"),
+			filepath.Join(local, "AnthropicClaude"),
+		}
+	default:
+		return nil
+	}
+}
+
+func isRealUserHome(homeDir string) bool {
+	userHome, err := os.UserHomeDir()
+	return err == nil && filepath.Clean(homeDir) == filepath.Clean(userHome)
 }
 
 // --- Installation ---

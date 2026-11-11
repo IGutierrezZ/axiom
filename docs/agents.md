@@ -147,6 +147,10 @@ Kiro usa agentes personalizados en `~/.kiro/agents/`. Axiom escribe los agentes 
 
 ### Claude Code
 
+- El adaptador `claude-code` cubre los tres entornos que comparten el motor de Claude Code y leen `.claude/`, `CLAUDE.md` y `.mcp.json`: el CLI, la extensión de VS Code y Claude Desktop. Se detecta si existe cualquiera de estas señales, aunque no haya CLI:
+  - CLI: el binario `claude` en el `PATH`.
+  - Extensión de VS Code: una carpeta `anthropic.claude-code-*` en `~/.vscode/extensions`.
+  - Claude Desktop: en Windows, `%APPDATA%\Claude` o `%LOCALAPPDATA%\AnthropicClaude`; en macOS, `/Applications/Claude.app` o `~/Library/Application Support/Claude`.
 - Sub-agents via the native Task tool with isolated context windows
 - Slash commands for SDD phases are installed as `/sdd-*` (`/sdd-init`, `/sdd-new`, `/sdd-continue`, etc.) in `~/.claude/commands/`; install and sync remove the retired `gentle-sdd-*` command files left by older installations
 - Servidores MCP (Context7 y Engram): con `--scope global` se registran en `~/.claude.json`, el registro de usuario que Claude Code lee; con `--scope workspace` se declaran en `<proyecto>/.mcp.json` (clave `mcpServers`), el fichero del que Claude Code carga los servidores de proyecto. La fusión conserva los servidores y las claves que el usuario ya tuviera. Engram rechaza, sin modificarlo, un `.mcp.json` que no sea JSON válido. Al sincronizar en workspace se migra el fichero `<proyecto>/.claude/mcp/engram.json` que dejaron instalaciones anteriores, que Claude Code nunca leyó: solo se retira si tiene exactamente la forma que genera Axiom
