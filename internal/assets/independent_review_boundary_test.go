@@ -127,3 +127,75 @@ func TestIndependentReviewBoundaryVerifyPassages(t *testing.T) {
 		"verify-report/{role}", "comparedTo", "no limpio — diff del rol vacío", "no aplicable",
 	})
 }
+
+// Frases nuevas del juicio y de las reglas de cobertura (DD-08, DD-09, DD-10).
+const (
+	judgmentSkillActivation = "The diff of one role of an SDD change is a valid target: accepting the orchestrator's offer, or a session preference that includes judgment, counts as that explicit request (see `SDD Role Target` in `references/prompts-and-formats.md`)."
+	judgmentSkillGate       = "| Target is an SDD role diff | Follow `SDD Role Target` in `references/prompts-and-formats.md`: only after a clean verify, fixes only inside the authorized edit roots. |"
+	coverageOwnTableRule    = "- Your own coverage table does not replace the independent coverage review (`../_shared/sdd-coverage-review.md`); never present it as that review."
+)
+
+// sectionUntilNextH2 devuelve el cuerpo de un encabezado `## <title>` hasta el
+// siguiente encabezado `## ` (o el final del fichero).
+func sectionUntilNextH2(content, title string) string {
+	start := strings.Index(content, "\n## "+title+"\n")
+	if start < 0 {
+		return ""
+	}
+	body := content[start+1:]
+	if next := strings.Index(body[3:], "\n## "); next >= 0 {
+		return body[:next+3]
+	}
+	return body
+}
+
+func TestIndependentReviewBoundaryJudgmentAndCoveragePassages(t *testing.T) {
+	judgment := MustRead("skills/judgment-day/SKILL.md")
+	formats := MustRead("skills/judgment-day/references/prompts-and-formats.md")
+	coverage := MustRead("skills/_shared/sdd-coverage-review.md")
+	specSkill := MustRead("skills/sdd-spec/SKILL.md")
+	designSkill := MustRead("skills/sdd-design/SKILL.md")
+	convention := MustRead("skills/_shared/openspec-convention.md")
+
+	for _, c := range []struct{ name, content, phrase string }{
+		{"activación del juicio", judgment, judgmentSkillActivation},
+		{"fila de decisión del juicio", judgment, judgmentSkillGate},
+		{"regla de sdd-spec", specSkill, coverageOwnTableRule},
+		{"regla de sdd-design", designSkill, coverageOwnTableRule},
+	} {
+		if !strings.Contains(c.content, c.phrase) {
+			t.Errorf("%s: la frase fijada no está en su fichero: %q", c.name, c.phrase)
+		}
+	}
+
+	roleTarget := sectionUntilNextH2(formats, "SDD Role Target")
+	assertReviewBoundary(t, []reviewPassage{
+		{"activación del juicio", "skills/judgment-day/SKILL.md", judgmentSkillActivation},
+		{"fila de decisión del juicio", "skills/judgment-day/SKILL.md", judgmentSkillGate},
+		{"SDD Role Target", "skills/judgment-day/references/prompts-and-formats.md", roleTarget},
+		{"revisión de cobertura", "skills/_shared/sdd-coverage-review.md", coverage},
+		{"regla de sdd-spec", "skills/sdd-spec/SKILL.md", coverageOwnTableRule},
+		{"regla de sdd-design", "skills/sdd-design/SKILL.md", coverageOwnTableRule},
+	})
+
+	// Matriz de amenazas, fila «Selección de repositorio git».
+	assertContainsAll(t, "SDD Role Target", roleTarget, append([]string{"axiom branch status", "allowedEditRoots", "technicalContext.reference", "**Estado:** limpio"}, reviewScopeMarkers...))
+	assertNoHeadRangeScope(t, "SDD Role Target", roleTarget)
+
+	// Mandato de cobertura (DD-09).
+	assertContainsAll(t, "sdd-coverage-review.md", coverage, []string{
+		"jd-judge-a", "jd-judge-b", `{"gaps":[`, "do not apply", "Ronda N", "coverage-review.spec.md", "coverage-review.design.md",
+		"sdd/{change}/coverage-review/spec", "sdd/{change}/coverage-review/design",
+	})
+
+	// Los informes nuevos constan en la convención compartida (DD-07, DD-08, DD-09).
+	assertContainsAll(t, "openspec-convention.md", convention, []string{
+		"verify-report.<role>.md", "review-ledger.<role>.md", "coverage-review.spec.md", "coverage-review.design.md",
+		"sdd/{change-name}/coverage-review/spec", "sdd/{change-name}/review-ledger/{role}",
+	})
+
+	// La prueba del juicio autónomo sigue vigente: la frase sin recibo no se toca.
+	if !strings.Contains(strings.ToLower(judgment), "issues no receipt") {
+		t.Error("judgment-day/SKILL.md debe conservar «issues no receipt»")
+	}
+}

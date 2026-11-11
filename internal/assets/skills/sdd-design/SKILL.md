@@ -197,6 +197,7 @@ La rama la prepara `axiom branch ensure` (el orquestador la ejecuta antes de la 
 - If you find the codebase uses a pattern different from what you'd recommend, note it but FOLLOW the existing pattern unless the change specifically addresses it
 - Keep ASCII diagrams simple — clarity over beauty
 - Apply any `rules.design` from `openspec/config.yaml`
+- Your own coverage table does not replace the independent coverage review (`../_shared/sdd-coverage-review.md`); never present it as that review.
 - If you have open questions that BLOCK the design, say so clearly — don't guess
 - **Sufficient detail**: Include enough detail to explain decisions, alternatives, rationale, interfaces and testing. Use tables or code snippets where they clarify non-obvious behavior. Do not truncate required detail to meet a word or line cap.
 - Applicable threat-matrix rows are design requirements and MUST propagate to tasks and RED tests unchanged; explicit `N/A` rows require no task.
