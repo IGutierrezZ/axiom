@@ -126,5 +126,9 @@ Fuera de alcance:
 - Actualizar la tabla O5 de la auditoría (G5.1 ya no es «no existe»). Se hará al marcar P5.
 - El `POST /api/ecosystem/models` acepta un proyecto no registrado en el hub: solo exige la carpeta y el adaptador instalado.
 - Aviso más visible cuando OpenCode no está en modo SDD multi (hoy es una nota de texto).
+- Verificación independiente de T7 (2026-11-11): aprobado con observaciones menores.
+  - La retirada de `~/.copilot/agents` borra por nombre, sin mirar el contenido, y un error de E/S al borrar aborta el sync. Solo afecta a quien tenga los ficheros que escribió esta rama, que no se ha publicado.
+  - Un proyecto solo con Claude recibe `.github/agents/` si el usuario tiene Copilot CLI en el equipo (`HasCLIState`). Para evitarlo habría que exigir que Copilot conste en el estado del proyecto.
+  - El uninstall global ya no retira esos ficheros heredados.
 
 Plan stop: approved 2026-11-11; implementation continues
