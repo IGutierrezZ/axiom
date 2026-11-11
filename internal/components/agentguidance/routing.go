@@ -144,6 +144,12 @@ func RenderRouting(agent model.AgentID) (string, error) {
 	output.WriteString("- Never pass `--fetch` without the explicit authorization of the user.\n")
 	output.WriteString("- Never use `EnterWorktree` or `ExitWorktree`; work in another worktree only through the absolute paths that `axiom branch ensure` returns, with `--cwd`, `git -C`, and absolute paths.\n")
 
+	// Informed approval and continuity (upstream #5850, #5486): one source in
+	// approval.go, rendered once per routing block.
+	output.WriteString("\n")
+	output.WriteString(InformedApprovalAndContinuity())
+	output.WriteString("\n")
+
 	// The kill switch ships in the routing block, not in the optional SDD
 	// assets, for the same reason routing itself is unconditional: it is
 	// installed for every configured agent. A switch the agent cannot name does
