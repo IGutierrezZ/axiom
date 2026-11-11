@@ -13,6 +13,7 @@
 
 import { api, escapeHtml } from '../core/api.js';
 import { branchPolicyRows, effectivePrefsText, repoPolicyHtml } from '../core/branches.js';
+import { describeReviewMode, overrideNote, selectValue } from '../core/reviewmode.js';
 import { $, badge, confirmDialog, promptDialog, setBusy, stateEmpty, stateError, stateLoading, statusPill, tableWrap, toast } from '../core/components.js';
 import {
   OPERATION_LABEL, doctorSections, formatBytes, formatEcosystemUpgradeSequence, healthSummary, operationOutcome, sortChecks, statusView
@@ -269,9 +270,61 @@ async function saveWorktreePrefs() {
   }
 }
 
+// ---- Preferencia de revisión (RDD) del proyecto abierto -----------------------------------
+
+function showReviewModeStatus(message, tone = '') {
+  const status = $('#review-mode-status');
+  status.textContent = message;
+  status.className = `field-hint${tone ? ` text-${tone}` : ''}`;
+}
+
+function renderReviewMode(dto) {
+  $('#select-review-mode').value = selectValue(dto);
+  const note = overrideNote(dto);
+  $('#review-mode-effective').textContent = note ? `${describeReviewMode(dto)} ${note}` : describeReviewMode(dto);
+}
+
+// loadReviewMode lee el modo efectivo del proyecto abierto y su origen. Sin proyecto
+// registrado no hay dónde guardar la preferencia: se muestra el modo y no el formulario.
+async function loadReviewMode() {
+  const stateBox = $('#eco-review-state');
+  const form = $('#form-review-mode');
+  try {
+    const dto = await api('/api/project/review-mode');
+    if (dto.registered) {
+      stateBox.innerHTML = '';
+      form.hidden = false;
+      renderReviewMode(dto);
+    } else {
+      form.hidden = true;
+      stateBox.innerHTML = stateEmpty('El proyecto abierto no está registrado en el Hub', `${describeReviewMode(dto)} Regístralo para poder guardar tu preferencia.`, 'folder');
+    }
+  } catch (err) {
+    console.error(err);
+    form.hidden = true;
+    stateBox.innerHTML = stateError(err.message, 'No se pudo consultar el modo de revisión');
+  }
+}
+
+async function saveReviewMode() {
+  const restore = setBusy($('#btn-save-review-mode'), 'Guardando…');
+  showReviewModeStatus('');
+  try {
+    const dto = await api('/api/project/review-mode', { body: { mode: $('#select-review-mode').value } });
+    renderReviewMode(dto);
+    showReviewModeStatus('Preferencia guardada en tu Hub.', 'ok');
+    toast('Preferencia de revisión guardada');
+  } catch (err) {
+    showReviewModeStatus(`No se pudo guardar la preferencia: ${err.message}`, 'bad');
+    toast('No se pudo guardar la preferencia de revisión', 'bad');
+  } finally {
+    restore();
+  }
+}
+
 export async function loadEcosystem() {
   // El Doctor lo refresca la caché (overview.js) junto con Actualizar.
-  await Promise.all([loadTopology(), loadModels(), loadBackups(), loadWorktreePrefs()]);
+  await Promise.all([loadTopology(), loadModels(), loadBackups(), loadWorktreePrefs(), loadReviewMode()]);
 }
 
 // ---- Última operación ----------------------------------------------------------------------
@@ -393,6 +446,10 @@ export function initEcosystem() {
   $('#form-worktree-prefs').addEventListener('submit', event => {
     event.preventDefault();
     saveWorktreePrefs();
+  });
+  $('#form-review-mode').addEventListener('submit', event => {
+    event.preventDefault();
+    saveReviewMode();
   });
   $('#eco-backups-body').addEventListener('click', event => {
     const button = event.target.closest('[data-restore]');

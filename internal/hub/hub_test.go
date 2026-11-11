@@ -386,8 +386,8 @@ func TestInteractiveRolesAndNonBlocking(t *testing.T) {
 	if !strings.Contains(content, "backend:") || !strings.Contains(content, "gate_policy: \"blocking\"") {
 		t.Errorf("esperado rol 'backend' con gate_policy blocking: %s", content)
 	}
-	if !strings.Contains(content, "docs:") || !strings.Contains(content, "gate_policy: \"advisory\"") {
-		t.Errorf("esperado rol 'docs' con gate_policy advisory: %s", content)
+	if !strings.Contains(content, "docs:") || !strings.Contains(content, "gate_policy: \"deferred\"") || strings.Contains(content, "advisory") {
+		t.Errorf("esperado rol 'docs' con gate_policy deferred y sin advisory: %s", content)
 	}
 }
 

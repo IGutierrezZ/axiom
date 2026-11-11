@@ -83,6 +83,26 @@ func splitAgentsForScope(scope InstallScope, agentIDs []model.AgentID) (kept, om
 	return kept, omitted
 }
 
+// AgentSupportsWorkspace expone agentSupportsWorkspace a quien elige adaptadores
+// fuera de este paquete (el alta de proyectos del dashboard).
+func AgentSupportsWorkspace(id model.AgentID) bool {
+	return agentSupportsWorkspace(id)
+}
+
+// WorkspaceUnsupportedReason explica en castellano por qué el agente no se puede
+// instalar con --scope workspace, o devuelve "" si se puede.
+func WorkspaceUnsupportedReason(id model.AgentID) string {
+	if agentSupportsWorkspace(id) {
+		return ""
+	}
+	switch id {
+	case model.AgentPi, model.AgentOpenClaw:
+		return "su configuración vive en la carpeta de usuario y no cabe en el proyecto"
+	default:
+		return "solo tiene configuración global: no admite el modo workspace"
+	}
+}
+
 // AgentsForScope devuelve los agentes que se instalan en el ámbito dado: con
 // --scope workspace, sin los que no admiten ese ámbito. Lo usa la TUI para que el
 // estado persistido coincida con lo que realmente se instaló.

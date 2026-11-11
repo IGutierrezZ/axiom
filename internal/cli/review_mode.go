@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/IGutierrezZ/axiom/v3/internal/hub"
 	"github.com/IGutierrezZ/axiom/v3/internal/pathquote"
 	"github.com/IGutierrezZ/axiom/v3/internal/reviewtransaction"
 	"github.com/IGutierrezZ/axiom/v3/internal/state"
@@ -25,7 +26,10 @@ const ReviewModeSchema = "gentle-ai.review-mode/v1"
 const (
 	reviewModeScopeGlobal = "global"
 	reviewModeScopeClone  = "clone"
-	reviewModeScopeBoth   = "both"
+	// reviewModeScopeProject es la preferencia personal del usuario para el proyecto
+	// registrado en el hub que contiene el repositorio (D2): nunca se versiona.
+	reviewModeScopeProject = "project"
+	reviewModeScopeBoth    = "both"
 )
 
 // ReviewModeResult reports what the command did and the resulting effective
@@ -45,20 +49,22 @@ type ReviewModeResult struct {
 // never mutates, and enabling applies to future candidates only.
 func RunReviewMode(args []string, stdout io.Writer) error {
 	if len(args) == 0 || args[0] == "help" || args[0] == "-h" || args[0] == "--help" {
-		_, _ = fmt.Fprintln(stdout, "Usage: axiom review mode <enable|disable|status> [--cwd <repo>] [--scope <global|clone>] [--expected-revision <revision>] [--json]")
+		_, _ = fmt.Fprintln(stdout, "Usage: axiom review mode <enable|disable|status> [--cwd <repo>] [--scope <global|clone|project>] [--expected-revision <revision>] [--json]")
+		_, _ = fmt.Fprintln(stdout, "       axiom review mode inherit --scope project [--cwd <repo>] [--json]")
+		_, _ = fmt.Fprintln(stdout, "--scope project is your own preference for the registered project that contains the repository, kept in your hub (~/.axiom/workspaces.json), never in the repository. Precedence: a clone-local off wins, then the project preference, then the global switch. inherit clears the project preference.")
 		_, _ = fmt.Fprintln(stdout, "User-owned switch. Receipt-driven development is off until you enable it: run 'axiom review mode enable --scope global' to opt in. Any off wins: a repository may disable it for this clone but can never require it, and no other clone inherits the override. status is read-only and reports both sources plus the effective mode. Enabling applies to future candidates only.")
 		return nil
 	}
 	operation := args[0]
 	switch operation {
-	case "enable", "disable", "status":
+	case "enable", "disable", "status", "inherit":
 	default:
 		return fmt.Errorf("unknown review mode command %q", operation)
 	}
 
 	flags := newReviewFlagSet("review mode "+operation, stdout, "Read or set the user-controlled receipt-driven-development kill switch.")
 	cwd := flags.String("cwd", ".", "repository path")
-	scope := flags.String("scope", reviewModeScopeGlobal, "mode source to write: global or clone")
+	scope := flags.String("scope", reviewModeScopeGlobal, "mode source to write: global, clone or project")
 	expectedRevision := flags.String("expected-revision", "", "exact clone-local revision this write replaces")
 	emitJSON := flags.Bool("json", false, "emit the machine-readable review mode result")
 	if err := parseReviewFlags(flags, args[1:]); err != nil {
@@ -72,9 +78,12 @@ func RunReviewMode(args []string, stdout io.Writer) error {
 	}
 	selectedScope := strings.TrimSpace(*scope)
 	switch selectedScope {
-	case reviewModeScopeGlobal, reviewModeScopeClone:
+	case reviewModeScopeGlobal, reviewModeScopeClone, reviewModeScopeProject:
 	default:
 		return fmt.Errorf("unknown review mode scope %q", *scope)
+	}
+	if operation == "inherit" && selectedScope != reviewModeScopeProject {
+		return fmt.Errorf("review mode inherit only applies to --scope project: run axiom review mode inherit --scope project")
 	}
 	revisionProvided := false
 	flags.Visit(func(current *flag.Flag) {
@@ -89,6 +98,8 @@ func RunReviewMode(args []string, stdout io.Writer) error {
 	if operation == "status" {
 		result.Scope = reviewModeScopeBoth
 		result.Status, err = ReviewModeStatus(ctx, *cwd)
+	} else if selectedScope == reviewModeScopeProject {
+		result.Status, err = SetProjectReviewMode(ctx, *cwd, projectModeForOperation(operation), nil)
 	} else if selectedScope == reviewModeScopeGlobal {
 		result.Status, err = SetGlobalReviewMode(ctx, *cwd, operation == "enable")
 	} else {
@@ -117,8 +128,89 @@ func SetGlobalReviewMode(ctx context.Context, repo string, enabled bool) (review
 	return applyReviewMode(ctx, repo, operation, reviewModeScopeGlobal, "", false)
 }
 
-func reviewModeStatus(ctx context.Context, repo string) (reviewtransaction.RDDModeStatus, error) {
+// ReviewModeStatusFor es ReviewModeStatus leyendo la preferencia de proyecto del
+// registro del hub que se indica (el del dashboard) en vez del de la máquina.
+func ReviewModeStatusFor(ctx context.Context, repo string, hubManager *hub.Manager) (reviewtransaction.RDDModeStatus, error) {
+	return reviewModeStatusWith(ctx, repo, hubManager)
+}
+
+// projectModeForOperation traduce la operación del comando a la preferencia de
+// proyecto: enable es «on», disable es «off» e inherit la retira.
+func projectModeForOperation(operation string) string {
+	switch operation {
+	case "enable":
+		return hub.RDDModeOn
+	case "disable":
+		return hub.RDDModeOff
+	default:
+		return ""
+	}
+}
+
+// SetProjectReviewMode guarda la preferencia personal de revisión («on», «off» o ""
+// para heredar el global) del proyecto registrado que contiene repo, y devuelve el
+// estado resuelto. La preferencia vive en el registro del hub (hubManager, o el de la
+// máquina si es nil): nunca en axiom.yaml ni en el estado del proyecto. Un repo que no
+// está en ningún proyecto registrado es un error que dice cómo registrarlo.
+func SetProjectReviewMode(ctx context.Context, repo, mode string, hubManager *hub.Manager) (reviewtransaction.RDDModeStatus, error) {
+	disabled := reviewtransaction.RDDModeStatus{Schema: reviewtransaction.RDDModeStatusSchema, Effective: reviewtransaction.RDDModeOff}
+	manager, err := reviewModeHub(hubManager)
+	if err != nil {
+		return disabled, err
+	}
+	record, err := manager.ProjectForRepo(repo)
+	if err != nil {
+		return disabled, err
+	}
+	if record == nil {
+		return disabled, fmt.Errorf("%s no está en ningún proyecto registrado en %s: la preferencia de proyecto solo se guarda para proyectos registrados; regístralo desde el dashboard o con `axiom init --path %s`",
+			repo, manager.GetConfigPath(), pathquote.Quote(repo))
+	}
+	if _, err := manager.SetProjectRDD(record.ID, mode); err != nil {
+		return disabled, err
+	}
+	return reviewModeStatusWith(ctx, repo, manager)
+}
+
+// reviewModeHub devuelve el gestor del hub indicado o el de la máquina.
+func reviewModeHub(hubManager *hub.Manager) (*hub.Manager, error) {
+	if hubManager != nil {
+		return hubManager, nil
+	}
+	manager, err := hub.NewManager("")
+	if err != nil {
+		return nil, fmt.Errorf("abrir el registro del hub: %w", err)
+	}
+	return manager, nil
+}
+
+// readUserRDDMode lee las dos fuentes del usuario: el interruptor global (estado de
+// usuario) y su preferencia para el proyecto que contiene repo (registro del hub). Un
+// hub que no se puede leer es un error, no un «sin preferencia»: ignorarlo podría
+// relajar un «off» guardado.
+func readUserRDDMode(repo string, hubManager *hub.Manager) (reviewtransaction.RDDGlobalMode, error) {
 	global, err := readGlobalRDDMode()
+	if err != nil {
+		return global, err
+	}
+	manager, err := reviewModeHub(hubManager)
+	if err != nil {
+		return global, err
+	}
+	project, _, err := manager.LookupProjectRDD(repo)
+	if err != nil {
+		return reviewtransaction.RDDGlobalMode{}, fmt.Errorf("read project review mode: %w", err)
+	}
+	global.Project = project
+	return global, nil
+}
+
+func reviewModeStatus(ctx context.Context, repo string) (reviewtransaction.RDDModeStatus, error) {
+	return reviewModeStatusWith(ctx, repo, nil)
+}
+
+func reviewModeStatusWith(ctx context.Context, repo string, hubManager *hub.Manager) (reviewtransaction.RDDModeStatus, error) {
+	global, err := readUserRDDMode(repo, hubManager)
 	if err != nil {
 		return reviewtransaction.RDDModeStatus{Schema: reviewtransaction.RDDModeStatusSchema, Effective: reviewtransaction.RDDModeOff}, err
 	}
@@ -146,6 +238,18 @@ func globalOnlyReviewModeStatus(global reviewtransaction.RDDGlobalMode) reviewtr
 		status.Global = reviewtransaction.RDDModeOff
 		status.Effective = reviewtransaction.RDDModeOff
 		status.Source = reviewtransaction.RDDModeSourceGlobal
+	}
+	// Sin repositorio no hay override de clon, pero la preferencia de proyecto sigue
+	// valiendo: manda sobre el global en ambos sentidos.
+	switch strings.TrimSpace(global.Project) {
+	case string(reviewtransaction.RDDModeOn):
+		status.Project = reviewtransaction.RDDModeOn
+		status.Effective = reviewtransaction.RDDModeOn
+		status.Source = reviewtransaction.RDDModeSourceProject
+	case string(reviewtransaction.RDDModeOff):
+		status.Project = reviewtransaction.RDDModeOff
+		status.Effective = reviewtransaction.RDDModeOff
+		status.Source = reviewtransaction.RDDModeSourceProject
 	}
 	return status
 }
@@ -376,7 +480,7 @@ func applyReviewMode(
 		}
 		return reviewModeStatus(ctx, repo)
 	}
-	global, err := readGlobalRDDMode()
+	global, err := readUserRDDMode(repo, nil)
 	if err != nil {
 		return disabled, err
 	}
@@ -461,10 +565,11 @@ func emitReviewMode(stdout io.Writer, result ReviewModeResult, emitJSON bool) er
 	}
 	_, err := fmt.Fprintf(
 		stdout,
-		"receipt-driven development: %s (decided by %s)\n  global:      %s\n  clone-local: %s\n",
+		"receipt-driven development: %s (decided by %s)\n  global:      %s\n  project:     %s\n  clone-local: %s\n",
 		reviewModeLabel(result.Status.Effective),
 		result.Status.Source,
 		reviewModeLabel(result.Status.Global),
+		reviewModeLabel(result.Status.Project),
 		reviewModeLabel(result.Status.CloneLocal),
 	)
 	if err != nil {
@@ -699,7 +804,7 @@ func reviewConsoleTerminal(file *os.File) bool {
 // undeclared plain START keeps the one-time console behavior unchanged; an
 // undeclared negotiated START authorizes silently (see below).
 func authorizeReviewStart(ctx context.Context, repo string, assessment reviewtransaction.RiskAssessment, consent reviewStartConsentMode, negotiated bool, runtimeAgent string) error {
-	global, err := readGlobalRDDMode()
+	global, err := readUserRDDMode(repo, nil)
 	if err != nil {
 		return err
 	}

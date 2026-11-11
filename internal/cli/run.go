@@ -137,6 +137,59 @@ func RunInstall(args []string, detection system.DetectionResult) (InstallResult,
 		return InstallResult{}, err
 	}
 
+	homeDir, err := osUserHomeDir()
+	if err != nil {
+		return InstallResult{}, fmt.Errorf("resolve user home directory: %w", err)
+	}
+	// La carpeta actual se resuelve una sola vez, aquí; el resto de la instalación
+	// recibe la raíz ya decidida y no vuelve a mirar el directorio del proceso.
+	workspaceDir, rootNotice := resolveWorkspaceDir(input.Scope, homeDir)
+	return runInstall(flags, input, detection, homeDir, workspaceDir, rootNotice)
+}
+
+// InstallInWorkspace instala con --scope workspace en projectDir, que es la raíz
+// del proyecto tal cual: no la deduce de la carpeta actual del proceso ni la
+// cambia (sin os.Chdir), de modo que un servidor puede instalar en un proyecto
+// recién creado desde cualquier directorio. args son las banderas de
+// `axiom install` sin --scope (por ejemplo --agent claude-code); el resultado, los
+// ficheros y el estado del proyecto (.axiom/state.json) son los de
+// `axiom install --scope workspace` lanzado dentro de projectDir.
+func InstallInWorkspace(projectDir string, args []string, detection system.DetectionResult) (InstallResult, error) {
+	for _, arg := range args {
+		if arg == "--scope" || strings.HasPrefix(arg, "--scope=") {
+			return InstallResult{}, errors.New("InstallInWorkspace fija el ámbito workspace: quita --scope de los argumentos o usa axiom install --scope <ámbito> para otro ámbito")
+		}
+	}
+	root, err := filepath.Abs(strings.TrimSpace(projectDir))
+	if err != nil || strings.TrimSpace(projectDir) == "" {
+		// refusal:by-design operator-knowledge: solo quien hace el alta sabe en qué carpeta está el proyecto
+		return InstallResult{}, fmt.Errorf("raíz del proyecto inválida %q", projectDir)
+	}
+	if info, statErr := os.Stat(root); statErr != nil || !info.IsDir() {
+		// refusal:by-design operator-knowledge: solo quien hace el alta sabe en qué carpeta está el proyecto
+		return InstallResult{}, fmt.Errorf("la raíz del proyecto %q no existe o no es un directorio", root)
+	}
+
+	flags, err := ParseInstallFlags(append([]string{"--scope", string(ScopeWorkspace)}, args...))
+	if err != nil {
+		return InstallResult{}, err
+	}
+	input, err := NormalizeInstallFlags(flags, detection)
+	if err != nil {
+		return InstallResult{}, err
+	}
+	homeDir, err := osUserHomeDir()
+	if err != nil {
+		return InstallResult{}, fmt.Errorf("resolve user home directory: %w", err)
+	}
+	return runInstall(flags, input, detection, homeDir, filepath.Clean(root), "")
+}
+
+// runInstall es el núcleo de la instalación: recibe la raíz del workspace ya
+// resuelta (workspaceDir) y su aviso (rootNotice, vacío si no hay) y no consulta
+// el directorio actual del proceso.
+func runInstall(flags InstallFlags, input InstallInput, detection system.DetectionResult, homeDir, workspaceDir, rootNotice string) (InstallResult, error) {
+
 	// Con --scope workspace los agentes sin modo workspace se omiten enteros, también
 	// los elegidos con --agent, antes de planificar nada: así ningún componente puede
 	// escribir por ellos en la carpeta de usuario.
@@ -155,14 +208,9 @@ func RunInstall(args []string, detection system.DetectionResult) (InstallResult,
 	}
 	profile := ResolveInstallProfile(detection)
 	resolved.PlatformDecision = planner.PlatformDecisionFromProfile(profile)
-	homeDir, err := osUserHomeDir()
-	if err != nil {
-		return InstallResult{}, fmt.Errorf("resolve user home directory: %w", err)
-	}
 	// El estado de instalación es del proyecto con --scope workspace (D2) y de
 	// usuario con --scope global: el ámbito decide qué documento se lee y se escribe.
-	stateWorkspaceDir, _ := resolveWorkspaceDir(input.Scope, homeDir)
-	stateStore := StateStoreFor(input.Scope, homeDir, stateWorkspaceDir)
+	stateStore := StateStoreFor(input.Scope, homeDir, workspaceDir)
 	persistedState, stateErr := stateStore.Read()
 	if errors.Is(stateErr, os.ErrNotExist) {
 		persistedState = state.InstallState{}
@@ -218,9 +266,8 @@ func RunInstall(args []string, detection system.DetectionResult) (InstallResult,
 				"will be written to each selected agent's global config directory and will affect ALL workspaces for those agents on this machine.\n"+
 				"To install only into the current workspace, rerun with --scope=workspace.\n\n")
 	}
-	_, rootNotice := resolveWorkspaceDir(input.Scope, homeDir)
 	noteWorkspaceRoot(rootNotice)
-	runtime, err := newInstallRuntime(homeDir, input.Scope, input.Channel, input.Selection, resolved, profile)
+	runtime, err := newInstallRuntimeAt(homeDir, workspaceDir, input.Scope, input.Channel, input.Selection, resolved, profile)
 	if err != nil {
 		return result, err
 	}
@@ -771,6 +818,14 @@ func (s *runtimeState) compatibilityChangedFiles() []string {
 }
 
 func newInstallRuntime(homeDir string, scope InstallScope, channel InstallChannel, selection model.Selection, resolved planner.ResolvedPlan, profile system.PlatformProfile) (*installRuntime, error) {
+	// En ámbito workspace la raíz es la del proyecto, no la carpeta desde la que
+	// se lanzó el comando. El aviso al usuario lo emite quien llama.
+	workspaceDir, _ := resolveWorkspaceDir(scope, homeDir)
+	return newInstallRuntimeAt(homeDir, workspaceDir, scope, channel, selection, resolved, profile)
+}
+
+// newInstallRuntimeAt es newInstallRuntime con la raíz del workspace ya resuelta.
+func newInstallRuntimeAt(homeDir, workspaceDir string, scope InstallScope, channel InstallChannel, selection model.Selection, resolved planner.ResolvedPlan, profile system.PlatformProfile) (*installRuntime, error) {
 	backupRoot := backup.BackupRootFor(homeDir)
 	// En ámbito workspace no se abre la transacción de ~/.agents/skills: esa copia
 	// de compatibilidad no se refresca y no hay nada que anclar ni capturar.
@@ -787,10 +842,6 @@ func newInstallRuntime(homeDir string, scope InstallScope, channel InstallChanne
 		state.cleanupCompatibilityTransaction()
 		return nil, fmt.Errorf("create backup root directory %q: %w", backupRoot, err)
 	}
-
-	// En ámbito workspace la raíz es la del proyecto, no la carpeta desde la que
-	// se lanzó el comando. El aviso al usuario lo emite RunInstall.
-	workspaceDir, _ := resolveWorkspaceDir(scope, homeDir)
 
 	return &installRuntime{
 		homeDir:      homeDir,

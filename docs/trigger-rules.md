@@ -77,14 +77,19 @@ reported as decided by `default`:
 
 | Command | Effect |
 |---|---|
-| `axiom review mode status --cwd <repo>` | Report the global source, clone-local source, deciding source, and effective mode without mutation. |
-| `axiom review mode enable --scope global --cwd <repo>` | Opt in. Enables receipt-driven development globally for future candidates. This is the only command that turns it on. |
+| `axiom review mode status --cwd <repo>` | Report the global source, project preference, clone-local source, deciding source, and effective mode without mutation. |
+| `axiom review mode enable --scope global --cwd <repo>` | Opt in. Enables receipt-driven development globally for future candidates. Together with `enable --scope project`, the only commands that turn it on. |
 | `axiom review mode disable --cwd <repo>` | Disable receipt-driven development globally. |
 | `axiom review mode disable --scope clone --cwd <repo>` | Disable it only for this clone; no other clone inherits the override. |
 | `axiom review mode enable --scope clone --cwd <repo>` | Clear this clone's off-only override. Does not turn review on by itself. |
+| `axiom review mode enable --scope project --cwd <repo>` | Your own preference: turn it on for the registered project that contains the repository, even if the global switch is off. Stored in your hub (`~/.axiom/workspaces.json`), never in the repository. |
+| `axiom review mode disable --scope project --cwd <repo>` | Your own preference: turn it off for that project, even if the global switch is on. |
+| `axiom review mode inherit --scope project --cwd <repo>` | Clear your project preference; the global switch decides again. |
 
-Any disabled source wins. A clone may opt out but cannot require review for the
-user, so the global scope is the only way in. Interactive starts ask before
+Precedence: a clone-local off wins, then your project preference (either way),
+then the global switch, then off by default. A clone may opt out but cannot
+require review for the user: only your own global or project preference turns it
+on, and the project preference lives in your hub, never in the repository. Interactive starts ask before
 reviewer work; non-interactive tier-1/tier-2 starts proceed without prompting and
 report how to disable review mode. Interactive consent is asked
 once per clone. Accepting records that choice; **not now** applies only to that
