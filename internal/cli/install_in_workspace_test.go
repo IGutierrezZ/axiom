@@ -78,7 +78,7 @@ func TestInstallInWorkspaceRejectsBadInput(t *testing.T) {
 		"raíz vacía":       {"", []string{"--agent", "claude-code"}, "raíz del proyecto inválida"},
 		"raíz inexistente": {missing, []string{"--agent", "claude-code"}, "no existe o no es un directorio"},
 		"raíz es fichero":  {file, []string{"--agent", "claude-code"}, "no existe o no es un directorio"},
-		"con --scope":      {t.TempDir(), []string{"--scope", "global", "--agent", "claude-code"}, "no admite --scope"},
+		"con --scope":      {t.TempDir(), []string{"--scope", "global", "--agent", "claude-code"}, "quita --scope"},
 		"agente inválido":  {t.TempDir(), []string{"--agent", "no-existe"}, "no-existe"},
 	} {
 		t.Run(name, func(t *testing.T) {

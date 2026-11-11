@@ -157,14 +157,16 @@ func RunInstall(args []string, detection system.DetectionResult) (InstallResult,
 func InstallInWorkspace(projectDir string, args []string, detection system.DetectionResult) (InstallResult, error) {
 	for _, arg := range args {
 		if arg == "--scope" || strings.HasPrefix(arg, "--scope=") {
-			return InstallResult{}, errors.New("InstallInWorkspace fija el ámbito workspace: no admite --scope")
+			return InstallResult{}, errors.New("InstallInWorkspace fija el ámbito workspace: quita --scope de los argumentos o usa axiom install --scope <ámbito> para otro ámbito")
 		}
 	}
 	root, err := filepath.Abs(strings.TrimSpace(projectDir))
 	if err != nil || strings.TrimSpace(projectDir) == "" {
+		// refusal:by-design operator-knowledge: solo quien hace el alta sabe en qué carpeta está el proyecto
 		return InstallResult{}, fmt.Errorf("raíz del proyecto inválida %q", projectDir)
 	}
 	if info, statErr := os.Stat(root); statErr != nil || !info.IsDir() {
+		// refusal:by-design operator-knowledge: solo quien hace el alta sabe en qué carpeta está el proyecto
 		return InstallResult{}, fmt.Errorf("la raíz del proyecto %q no existe o no es un directorio", root)
 	}
 

@@ -83,7 +83,7 @@ func RunReviewMode(args []string, stdout io.Writer) error {
 		return fmt.Errorf("unknown review mode scope %q", *scope)
 	}
 	if operation == "inherit" && selectedScope != reviewModeScopeProject {
-		return fmt.Errorf("review mode inherit only applies to --scope project")
+		return fmt.Errorf("review mode inherit only applies to --scope project: run axiom review mode inherit --scope project")
 	}
 	revisionProvided := false
 	flags.Visit(func(current *flag.Flag) {
