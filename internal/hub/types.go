@@ -21,6 +21,9 @@ type WorkspaceRecord struct {
 	// los ignora.
 	WorktreeMode string `json:"worktree_mode,omitempty"`
 	WorktreeRoot string `json:"worktree_root,omitempty"`
+	// RDDMode es la preferencia personal de revisión (RDD) del proyecto: "on", "off" o vacío
+	// para heredar el interruptor global (rddpref.go). Es del usuario y nunca se versiona.
+	RDDMode string `json:"rdd_mode,omitempty"`
 }
 
 // HubConfig representa el archivo de configuración central ~/.axiom/workspaces.json.
