@@ -40,8 +40,8 @@ func TestInitKnowledgeProfile(t *testing.T) {
 	if !strings.Contains(contentStr, `language: "es"`) {
 		t.Errorf("se esperaba language: es, obtenido:\n%s", contentStr)
 	}
-	if !strings.Contains(contentStr, `gate_policy: "advisory"`) {
-		t.Errorf("se esperaba gate_policy: advisory en el rol knowledge, obtenido:\n%s", contentStr)
+	if !strings.Contains(contentStr, `gate_policy: "deferred"`) {
+		t.Errorf("se esperaba gate_policy: deferred en el rol knowledge, obtenido:\n%s", contentStr)
 	}
 	if !strings.Contains(contentStr, "knowledge:") {
 		t.Errorf("se esperaba rol knowledge declarado, obtenido:\n%s", contentStr)

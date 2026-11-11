@@ -37,7 +37,7 @@ type RoleConfig struct {
 	Name         string            `yaml:"name"`
 	Repositories []RepositoryEntry `yaml:"repositories"`
 	Tech         []string          `yaml:"tech,omitempty"`
-	GatePolicy   string            `yaml:"gate_policy,omitempty"` // blocking o advisory
+	GatePolicy   string            `yaml:"gate_policy,omitempty"` // blocking, deferred u optional (vocabulario de multirole)
 }
 
 // GovernanceConfig define configuraciones transversales del proyecto.

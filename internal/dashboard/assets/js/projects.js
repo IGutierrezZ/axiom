@@ -414,7 +414,7 @@ function addRoleRow(key = '', name = '', repos = '', nonBlocking = false) {
         <button type="button" class="btn btn-sm btn-browse-role-repo" aria-label="Examinar una carpeta local" title="Examinar una carpeta local">${icon('folder', 14)}</button>
       </div>
     </div>
-    <label class="check"><input type="checkbox" class="role-nonblocking-input" ${nonBlocking ? 'checked' : ''}><span>No bloqueante al archivar (advisory / deuda diferida acumulativa)</span></label>`;
+    <label class="check"><input type="checkbox" class="role-nonblocking-input" ${nonBlocking ? 'checked' : ''}><span>No bloqueante al archivar (diferido: deuda acumulativa)</span></label>`;
 
   card.querySelector('.btn-remove-role').addEventListener('click', () => card.remove());
 

@@ -384,7 +384,9 @@ func buildAxiomYamlWithRoles(name, topology, specsRepo, domainContext string, ro
 
 		gatePolicy := "blocking"
 		if r.NonBlocking {
-			gatePolicy = "advisory"
+			// El vocabulario de multirole es blocking, deferred y optional: un rol
+			// no bloqueante se escribe como deferred (nunca como advisory).
+			gatePolicy = "deferred"
 		}
 		sb.WriteString(fmt.Sprintf("    gate_policy: %q\n", gatePolicy))
 

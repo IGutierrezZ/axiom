@@ -182,9 +182,14 @@ func (s *Service) GetWorkspace() (*WorkspaceDTO, error) {
 			repoPaths = append(repoPaths, repo.Path)
 		}
 
+		// El rol sin gate_policy declarado es bloqueante (valor por defecto de multirole).
+		gatePolicy := strings.TrimSpace(r.GatePolicy)
+		if gatePolicy == "" {
+			gatePolicy = "blocking"
+		}
 		rolesMap[id] = RoleMeta{
 			Name:         r.Name,
-			GatePolicy:   "blocking",
+			GatePolicy:   gatePolicy,
 			Repositories: repoPaths,
 			Tech:         r.Tech,
 		}
