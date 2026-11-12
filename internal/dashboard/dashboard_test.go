@@ -406,6 +406,11 @@ func TestSkillsInboxEndpoints(t *testing.T) {
 func TestSemanticEndpoints(t *testing.T) {
 	root := t.TempDir()
 	writeFixtureFile(t, root, "sample/sample.go", "package sample\n\n// Service is the symbol the symbols endpoint is queried for.\ntype Service struct{}\n")
+	// A project that already has its CodeGraph index: the reindex runs `index`
+	// (without it the service runs `init --yes`).
+	if err := os.MkdirAll(filepath.Join(root, ".codegraph"), 0o755); err != nil {
+		t.Fatalf("crear .codegraph: %v", err)
+	}
 	recordPath := installFakeCodeGraph(t, 0)
 
 	svc := NewService(root)

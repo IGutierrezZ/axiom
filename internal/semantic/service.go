@@ -63,6 +63,7 @@ func (s *Service) GetStatus(ctx context.Context) (*SemanticStatus, error) {
 	status.CodeGraphInstalled = s.detector.CheckCodeGraphInPath()
 	status.CodeGraphConfigured = s.detector.CheckCodeGraphConfigured(agents)
 	status.CodeGraphAvailable = s.detector.CheckCodeGraphAvailability(agents)
+	status.CodeGraphIndexed = s.codeGraphIndexed()
 
 	status.SerenaInstalled = s.detector.CheckSerenaInPath()
 	status.SerenaConfigured = s.detector.CheckSerenaConfigured(agents)
@@ -241,8 +242,17 @@ func (s *Service) loadWorkspaceConfig() (*workspace.WorkspaceConfig, error) {
 	return workspace.LoadConfig(configPath)
 }
 
+// codeGraphIndexed indica si el workspace ya tiene un índice de CodeGraph, es
+// decir, si existe el directorio '.codegraph' en su raíz.
+func (s *Service) codeGraphIndexed() bool {
+	fi, err := os.Stat(filepath.Join(s.workspaceRoot, ".codegraph"))
+	return err == nil && fi.IsDir()
+}
+
 // ReindexCodeGraph dispara la reindexación de CodeGraph bajo demanda (ODD-3.1).
-// Si CodeGraph CLI está disponible, ejecuta 'codegraph index' en la raíz del workspace.
+// Si CodeGraph CLI está disponible, ejecuta 'codegraph index' en la raíz del workspace;
+// si el workspace aún no tiene índice, ejecuta 'codegraph init --yes', que además
+// construye el índice inicial.
 // En caso de que no esté instalado, notifica el estado del motor semántico nativo sin error fatal.
 func (s *Service) ReindexCodeGraph(ctx context.Context) (*ReindexResult, error) {
 	start := time.Now()
@@ -268,7 +278,14 @@ func (s *Service) ReindexCodeGraph(ctx context.Context) (*ReindexResult, error) 
 		}, nil
 	}
 
-	cmd := exec.CommandContext(ctx, bin, "index")
+	operation := "index"
+	args := []string{"index"}
+	if !s.codeGraphIndexed() {
+		operation = "init"
+		args = []string{"init", "--yes", s.workspaceRoot}
+	}
+
+	cmd := exec.CommandContext(ctx, bin, args...)
 	cmd.Dir = s.workspaceRoot
 
 	var outBuf bytes.Buffer
@@ -281,21 +298,27 @@ func (s *Service) ReindexCodeGraph(ctx context.Context) (*ReindexResult, error) 
 
 	if runErr != nil {
 		if ctx.Err() == context.DeadlineExceeded {
-			return nil, fmt.Errorf("reindexación de CodeGraph excedió el tiempo límite (60s)")
+			return nil, fmt.Errorf("la operación '%s' de CodeGraph excedió el tiempo límite (60s)", operation)
 		}
 		return &ReindexResult{
 			Success:   false,
 			Connector: string(ConnectorCodeGraph),
-			Message:   fmt.Sprintf("Fallo al ejecutar 'codegraph index': %v", runErr),
+			Operation: operation,
+			Message:   fmt.Sprintf("Fallo al ejecutar 'codegraph %s': %v", operation, runErr),
 			Output:    outStr,
 			Duration:  duration,
 		}, runErr
 	}
 
+	message := "Reindexación de CodeGraph completada con éxito."
+	if operation == "init" {
+		message = "Inicialización de CodeGraph completada con éxito."
+	}
 	return &ReindexResult{
 		Success:   true,
 		Connector: string(ConnectorCodeGraph),
-		Message:   "Reindexación de CodeGraph completada con éxito.",
+		Operation: operation,
+		Message:   message,
 		Output:    outStr,
 		Duration:  duration,
 	}, nil

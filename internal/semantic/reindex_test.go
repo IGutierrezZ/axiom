@@ -62,9 +62,11 @@ func TestServiceReindexCodeGraphIgnoresPathWhenDetectorMisses(t *testing.T) {
 	}
 }
 
-// Con un Detector que resuelve `codegraph` a una ruta fuera del PATH, la
-// reindexación ejecuta esa ruta con `index` en la raíz del workspace.
-func TestServiceReindexCodeGraphRunsDetectorBinary(t *testing.T) {
+// codeGraphServiceFor devuelve un Service sobre un workspace nuevo cuyo
+// Detector resuelve `codegraph` al binario de prueba. Con indexed crea el
+// directorio `.codegraph`, como lo dejaría una inicialización previa.
+func codeGraphServiceFor(t *testing.T, indexed bool) (srv *Service, workspaceRoot, recordPath string) {
+	t.Helper()
 	binPath, recordPath := writeFakeCodeGraph(t, t.TempDir())
 	t.Setenv("PATH", t.TempDir())
 
@@ -74,15 +76,79 @@ func TestServiceReindexCodeGraphRunsDetectorBinary(t *testing.T) {
 		}
 		return binPath, nil
 	})
-	workspaceRoot := t.TempDir()
-	srv := NewService(workspaceRoot, detector, NewEngine())
+	workspaceRoot = t.TempDir()
+	if indexed {
+		if err := os.MkdirAll(filepath.Join(workspaceRoot, ".codegraph"), 0o755); err != nil {
+			t.Fatalf("crear .codegraph: %v", err)
+		}
+	}
+	return NewService(workspaceRoot, detector, NewEngine()), workspaceRoot, recordPath
+}
+
+// Sin `.codegraph`, la reindexación inicializa el índice con `init --yes <raíz>`
+// en lugar de lanzar `index`, que fallaría.
+func TestServiceReindexCodeGraphInitializesMissingIndex(t *testing.T) {
+	srv, workspaceRoot, recordPath := codeGraphServiceFor(t, false)
 
 	res, err := srv.ReindexCodeGraph(context.Background())
 	if err != nil {
 		t.Fatalf("error inesperado en ReindexCodeGraph: %v", err)
 	}
-	if !res.Success || res.Connector != string(ConnectorCodeGraph) {
-		t.Errorf("resultado = %+v, se esperaba éxito con el conector %q", res, ConnectorCodeGraph)
+	if !res.Success || res.Connector != string(ConnectorCodeGraph) || res.Operation != "init" {
+		t.Errorf("resultado = %+v, se esperaba éxito con operación init", res)
+	}
+	if !strings.Contains(res.Message, "Inicialización") {
+		t.Errorf("mensaje = %q, se esperaba que nombrara la inicialización", res.Message)
+	}
+
+	raw, err := os.ReadFile(recordPath)
+	if err != nil {
+		t.Fatalf("no se ejecutó el codegraph de prueba: %v", err)
+	}
+	lines := strings.Split(strings.TrimSpace(string(raw)), "\n")
+	if len(lines) != 2 {
+		t.Fatalf("registro de codegraph inesperado: %q", raw)
+	}
+	args := strings.Fields(lines[1])
+	if len(args) != 3 || args[0] != "init" || args[1] != "--yes" {
+		t.Fatalf("argumentos de codegraph = %q, se esperaba \"init --yes <raíz>\"", lines[1])
+	}
+	gotArg, err := os.Stat(args[2])
+	if err != nil {
+		t.Fatalf("ruta pasada a init %q ilegible: %v", args[2], err)
+	}
+	wantDir, _ := os.Stat(workspaceRoot)
+	if !os.SameFile(gotArg, wantDir) {
+		t.Errorf("init recibió %s, se esperaba el workspace %s", args[2], workspaceRoot)
+	}
+}
+
+// El estado informa codegraph_indexed según exista `.codegraph` en el workspace.
+func TestServiceStatusReportsCodeGraphIndexed(t *testing.T) {
+	for _, indexed := range []bool{false, true} {
+		srv, _, _ := codeGraphServiceFor(t, indexed)
+		status, err := srv.GetStatus(context.Background())
+		if err != nil {
+			t.Fatalf("GetStatus: %v", err)
+		}
+		if status.CodeGraphIndexed != indexed {
+			t.Errorf("CodeGraphIndexed = %v, se esperaba %v", status.CodeGraphIndexed, indexed)
+		}
+	}
+}
+
+// Con un Detector que resuelve `codegraph` a una ruta fuera del PATH y un
+// índice existente, la reindexación ejecuta esa ruta con `index` en la raíz del
+// workspace.
+func TestServiceReindexCodeGraphRunsDetectorBinary(t *testing.T) {
+	srv, workspaceRoot, recordPath := codeGraphServiceFor(t, true)
+
+	res, err := srv.ReindexCodeGraph(context.Background())
+	if err != nil {
+		t.Fatalf("error inesperado en ReindexCodeGraph: %v", err)
+	}
+	if !res.Success || res.Connector != string(ConnectorCodeGraph) || res.Operation != "index" {
+		t.Errorf("resultado = %+v, se esperaba éxito con el conector %q y operación index", res, ConnectorCodeGraph)
 	}
 
 	raw, err := os.ReadFile(recordPath)

@@ -69,6 +69,7 @@ type SemanticStatus struct {
 	SerenaConfigured    bool              `json:"serena_configured"`
 	CodeGraphInstalled  bool              `json:"codegraph_installed"`
 	CodeGraphConfigured bool              `json:"codegraph_configured"`
+	CodeGraphIndexed    bool              `json:"codegraph_indexed"`
 	NativeASTReady      bool              `json:"native_ast_ready"`
 	Agents              []AgentToolStatus `json:"agents"`
 	TotalPackages       int               `json:"total_packages"`
@@ -87,6 +88,9 @@ type SemanticQuery struct {
 type ReindexResult struct {
 	Success   bool   `json:"success"`
 	Connector string `json:"connector"`
+	// Operation es "init" cuando faltaba el índice y se inicializó, "index" cuando
+	// se reindexó uno existente; vacío si CodeGraph no está instalado.
+	Operation string `json:"operation"`
 	Message   string `json:"message"`
 	Output    string `json:"output,omitempty"`
 	Duration  string `json:"duration"`
