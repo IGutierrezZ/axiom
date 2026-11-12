@@ -1014,8 +1014,8 @@ Los nombres esperados DEBEN obtenerse de la instantánea del `kickoff.yaml` cuan
 
 ### Requirement: Guarda A en Todo Escritor Go de la Carpeta del Cambio (REQ-25.19)
 
-Todo escritor Go que cree o modifique ficheros dentro de la carpeta de un cambio DEBE consultar el veredicto de REQ-25.18 antes de escribir y, ante `wrong_branch`, DEBE negarse sin escribir nada y devolver el error tipado con la continuación. Esto incluye como mínimo: la creación de un incremento (el escritor compartido por el dashboard y `axiom change create`), la migración al acumulativo, la creación de handoff (`axiom handoff create` y el servicio del dashboard), `kickoff seal`, el registro de compuertas (`gate record`), el marcador de instancia del consentimiento de autoridad de edición, `axiom sdd integrate` (`integration.yaml`) y `axiom sdd archive-compose` (que consulta el veredicto en el contexto de archivado). El dashboard y `axiom change create` DEBEN ejecutar `ensure` y después escribir con el escritor guardado; el escritor guardado DEBE negarse fuera de rama aunque se invoque sin haber ejecutado `ensure`. La TUI solo lista cambios y no ejecuta `ensure`; cualquier escritura que alcance la carpeta de un cambio pasa por un escritor guardado. La guarda NO DEBE bloquear cambios exentos (REQ-25.18). Cada escritor DEBE tener una prueba propia de negativa.
-(Previously: la lista de escritores incluía la creación desde la TUI y `archive-compose` consultaba el veredicto ordinario)
+Todo escritor Go que cree o modifique ficheros dentro de la carpeta de un cambio DEBE consultar el veredicto de REQ-25.18 antes de escribir y, ante `wrong_branch`, DEBE negarse sin escribir nada y devolver el error tipado con la continuación. Esto incluye como mínimo: la creación de un incremento (el escritor compartido por el dashboard y `axiom change create`), la migración al acumulativo, la creación de handoff (`axiom handoff create` y el servicio del dashboard), `kickoff seal`, el registro de compuertas (`gate record`), el marcador de instancia del consentimiento de autoridad de edición, `axiom archive context prepare` y `axiom archive context verify` (plan y traza del contexto, que consultan el veredicto en el contexto de archivado), `axiom archive adopt scan --change` (inventario de adopción) y `axiom sdd archive-compose` (que consulta el veredicto en el contexto de archivado). El dashboard y `axiom change create` DEBEN ejecutar `ensure` y después escribir con el escritor guardado; el escritor guardado DEBE negarse fuera de rama aunque se invoque sin haber ejecutado `ensure`. La TUI solo lista cambios y no ejecuta `ensure`; cualquier escritura que alcance la carpeta de un cambio pasa por un escritor guardado. La guarda NO DEBE bloquear cambios exentos (REQ-25.18). Cada escritor DEBE tener una prueba propia de negativa.
+(Previously: la lista incluía `axiom sdd integrate` (`integration.yaml`), retirado; ahora incluye `axiom archive context prepare|verify` y `axiom archive adopt scan --change`)
 
 #### Scenario: Cada escritor se niega fuera de rama
 - **DADO** un cambio con instantánea y el repositorio del planning home desplegado en la rama de integración
@@ -1031,6 +1031,12 @@ Todo escritor Go que cree o modifique ficheros dentro de la carpeta de un cambio
 #### Scenario: `archive-compose` solo escribe en la rama de archivado
 - **DADO** un cambio fusionado y el repositorio desplegado, por separado, en `feat/x` y en `feat/x-archive`
 - **CUANDO** se invoca `axiom sdd archive-compose`
+- **ENTONCES** se niega con `wrong_branch` y la continuación `axiom branch ensure --cwd <ruta> --change x --archive` en `feat/x`
+- **Y** escribe con normalidad en `feat/x-archive`
+
+#### Scenario: `axiom archive context prepare` solo escribe en la rama de archivado
+- **DADO** un cambio fusionado y el repositorio desplegado, por separado, en `feat/x` y en `feat/x-archive`
+- **CUANDO** se invoca `axiom archive context prepare --change x`
 - **ENTONCES** se niega con `wrong_branch` y la continuación `axiom branch ensure --cwd <ruta> --change x --archive` en `feat/x`
 - **Y** escribe con normalidad en `feat/x-archive`
 
@@ -1055,9 +1061,6 @@ Todo escritor Go que cree o modifique ficheros dentro de la carpeta de un cambio
 - **DADO** el checkout en la rama de integración
 - **CUANDO** se escribe en `openspec/changes/e2e-cumulative` o en `openspec/changes/cumulative-core`
 - **ENTONCES** la escritura procede
-
----
-
 ### Requirement: Cambios Pendientes de Archivar Visibles en `status` y en el Dashboard (REQ-25.20)
 
 Los cambios pendientes de archivar de un repositorio con rama de cambio, es decir, los cambios activos presentes en el árbol de la rama de integración (directorios bajo `changes/` del planning home distintos de `archive/` y de los sumideros `e2e-cumulative` y `cumulative-<rol>`, excluidos por nombre) que no están en fusión intermedia (REQ-26.11), DEBEN mostrarse en `axiom branch status` (REQ-25.15) y en el dashboard (REQ-25.34 de `local-web-dashboard`). Es información, no una comprobación: NO existe ningún código de fallo por su presencia, NO hay integración con la CI y NO DEBE bloquear ninguna orden ni guarda. La evaluación DEBE hacerse sobre la referencia de integración local de REQ-25.10 (`origin/<integración>` si existe en local y, si no, la rama local), sin cambiar de rama y sin operaciones remotas; si esa referencia no puede resolverse, la lista se omite con un aviso y sin error. Solo los directorios cuentan como cambios; los ficheros sueltos de `changes/` no lo son. En el repositorio de specs de un multirepo no aplica: allí los cambios activos viven en la rama de integración de forma normal. Cada cambio pendiente DEBE indicar la continuación para archivarlo (`axiom branch ensure --change <c> --archive`, REQ-25.45).
