@@ -141,7 +141,7 @@ func TestRenderRoutingAuthorizesOutcomesBeforeSelectingTopology(t *testing.T) {
 				"must not write or edit files, delegate a writer, invoke apply, or create implementation artifacts",
 				"If change intent is ambiguous or conditional, ask one clarification and remain read-only until answered.",
 				"After explicit change intent is established",
-				"SDD is selected only by an explicit request, by the project lane `workflow.lane: sdd` for substantial work, or by an accepted proposal.",
+				"SDD is selected only by an explicit request, by the project lane `workflow.lane: sdd` for substantial work, by an ISO project (`iso.project: iso`) for all work, or by an accepted proposal.",
 				"Automatic SDD pace is not mutation authorization",
 			} {
 				if !strings.Contains(rendered, want) {
@@ -177,7 +177,7 @@ func TestRenderRoutingProjectsODDProtocolBeforeTopology(t *testing.T) {
 
 			for _, want := range []string{
 				"Organic Driven Development (ODD) is the predefined workflow of this orchestrator.",
-				"SDD is a branch inside ODD, entered only by an explicit request, by the project lane declared in `axiom.yaml`, or by an accepted proposal.",
+				"SDD is a branch inside ODD, entered only by an explicit request, by the project lane declared in `axiom.yaml` (including an ISO project, `iso.project: iso`), or by an accepted proposal.",
 				"1. **Authorize.**",
 				"2. **Explore.**",
 				"3. **Resolve uncertainty.**",

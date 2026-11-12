@@ -616,7 +616,10 @@ func TestKilocodeReviewSettingsMatchCurrentMainBaseline(t *testing.T) {
 	// sdd-revision-independiente U4: la sección compartida nueva «SDD Independent Review», la regla de
 	// `continuous` en las puertas y la remisión del grafo de dependencias se proyectan a todos los
 	// orquestadores; Kilocode compone el de OpenCode, así que el hash cambia. Deliberate, not drift.
-	const want = "d3078bb82f5ada4f52c5849384d0c5c352f692c08f8062fa3d46930083e9dab1"
+	// carril-sdd-versatil U20 (REQ-29.18): el «Optional SDD trigger» de agentguidance, que
+	// Kilocode compone en el orquestador de OpenCode, nombra el proyecto ISO; el hash cambia.
+	// Deliberate, not drift.
+	const want = "6ee4faa743151bd18efcb1c815560195e11f1fdb6a67d4efffcb463369c695ca"
 	if got != want {
 		t.Fatalf("Kilocode settings SHA-256 = %s, want current-main baseline %s", got, want)
 	}

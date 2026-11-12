@@ -250,7 +250,7 @@ Sin dependencias internas; todo son funciones puras con pruebas por tablas.
 
 ### U20 · `feat(agentguidance): el proyecto ISO tramita todo por SDD` (solape P6)
 
-- [ ] 20.1 Modificar `internal/components/agentguidance/routing.go` (condición ISO al principio del paso 0, excepción en «Small, understood work…», preámbulo y viñeta **Optional SDD**), `internal/components/agentguidance/delegation.go` (proyecto ISO en **Optional SDD trigger**) y los pines en `internal/components/agentguidance/routing_stops_test.go`; regenerar con `-update` los goldens afectados.
+- [x] 20.1 Modificar `internal/components/agentguidance/routing.go` (condición ISO al principio del paso 0, excepción en «Small, understood work…», preámbulo y viñeta **Optional SDD**), `internal/components/agentguidance/delegation.go` (proyecto ISO en **Optional SDD trigger**) y los pines en `internal/components/agentguidance/routing_stops_test.go`; regenerar con `-update` los goldens afectados.
   Cubre: REQ-29.18
   Aceptación: pin de texto con la condición antes de la pregunta de carril, también para trabajo pequeño, sin `odd/tasks/`, tres rutas del bug con sus literales y sin regla de precedencia entre `sdd.iso` y `workflow.lane: odd`; `checkRoutingPolicy` sigue aceptando `explicit_request_project_lane_or_accepted_proposal` y el bloque renderizado con ella nombra la vía ISO; texto idéntico entre agentes y entre proyectos ISO y no ISO.
   Comprobación: `go test ./internal/components/agentguidance/ -run 'TestRenderRouting|TestRoutingISO|TestUnknownRoutingPolicyFailsClosed'` y `go test ./internal/components/ -run TestGolden -update` seguido de `go test ./internal/components/ -run TestGolden`
