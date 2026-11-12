@@ -263,6 +263,7 @@ La rama la prepara `axiom branch ensure` (el orquestador la ejecuta antes de la 
 - Your own coverage table does not replace the independent coverage review (`../_shared/sdd-coverage-review.md`); never present it as that review.
 - **Sufficient detail**: Preserve complete requirements and testable Given/When/Then scenarios, including relevant edge cases. Use the detail each scenario needs to make its expected behavior unambiguous. Do not truncate required detail to meet a word or line cap.
 - Rama del cambio: la prepara `axiom branch ensure`; escribe en la rama del cambio, bajo `workspaceRoot` del status, y usa `--cwd` y las rutas absolutas de su JSON. La fase no hace commit ni push: tras la aprobación de la parada el orquestador publica los documentos con `axiom sdd publish`; el push de código y la PR son de la persona.
+- In an ISO change (`iso.change: iso` in the status), and for a bug without a delta, follow `../_shared/sdd-iso-convention.md`: one `REQ-<n>.<m>` in each requirement name and at least one `#### Scenario:` in every ADDED or MODIFIED requirement.
 - Never create, modify, or delete files under `technicalContext.reference` paths.
 - Return envelope per **Section D** from `skills/_shared/sdd-phase-common.md`.
 

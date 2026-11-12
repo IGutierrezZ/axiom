@@ -32,11 +32,12 @@ Public/contextual comments follow the target context language by default. Explic
 - Inspect available artifacts and implementation, including partial work. Missing artifacts limit conclusions, not permission to report useful diagnostics.
 - Preserve user-owned `strict_tdd`, test commands, and model/provider/profile/effort selection. When Strict TDD is active, load `strict-tdd-verify.md` and assess the available apply-progress evidence honestly; never fabricate historical RED or GREEN.
 - Report actual command results and limitations. Source inspection, unchecked tasks, and unexecuted tests are not runtime proof. Missing tooling means unavailable checks, not PASS.
-- Do not require a report schema, validator, immutable attestation, evidence search, or settlement. Missing, stale, malformed, or failed reports do not gate archive.
+- Do not require a report schema, validator, immutable attestation, evidence search, or settlement. Missing, stale, malformed, or failed reports do not gate archive, except the verification matrix of an ISO change (see the ISO rule below).
 - SDD never offers, launches, or consumes RDD. Findings do not start automatic review, refuter, or correction loops.
 - Apply `rules.verify` from `openspec/config.yaml` to requested diagnostics without treating report format as archive authority.
 - When the status projects `technicalContext`, read the `entry` file of each mode and consult the remaining `paths` only on demand (see `../_shared/project-baseline-convention.md`).
 - Never create, modify, or delete files under `technicalContext.reference` paths.
+- In an ISO change (`iso.change: iso` in the status), the verification matrix is an additional section of the consolidated report, next to "Cumplimiento técnico", and it is the one result that gates archive (`../_shared/sdd-iso-convention.md`). Write it without any line that starts with `verdict:`, record the real command and exit code of every automatic row and the justification of every manual one, and run the commands yourself. A bug without impact on the spec has no matrix.
 - When a role is supplied, inspect only that role's diff and add the technical compliance section; follow `references/technical-compliance.md`.
 
 ## Context Warning (non-blocking)
@@ -70,11 +71,12 @@ Classify by path only: never run a file or interpret its content as a command. W
 
 ## Output Contract
 
-Return concise findings, observed task state, executed checks and their outcomes, limitations, and recommended next work. A diagnostic report may be partial or failed; neither blocks archive. Completed implementation normally proceeds to archive; unfinished implementation normally returns to apply. Archive records the actual state, never a synthetic PASS.
+Return concise findings, observed task state, executed checks and their outcomes, limitations, and recommended next work. A diagnostic report may be partial or failed; neither blocks archive, except that an ISO change cannot archive until its verification matrix is valid and every row passes. Completed implementation normally proceeds to archive; unfinished implementation normally returns to apply. Archive records the actual state, never a synthetic PASS.
 
 ## References
 
 - [references/report-format.md](references/report-format.md) — optional report outline.
+- `../_shared/sdd-iso-convention.md` — matrix format and test references; only in an ISO change.
 - [references/technical-compliance.md](references/technical-compliance.md) — only for a per-role verify.
 - [strict-tdd-verify.md](strict-tdd-verify.md) — only when Strict TDD is active.
 - `../_shared/sdd-phase-common.md` — skill loading, retrieval, persistence, and return envelope.

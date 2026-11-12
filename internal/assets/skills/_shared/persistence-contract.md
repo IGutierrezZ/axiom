@@ -66,7 +66,7 @@ READ-MERGE-WRITE cumulative tasks and apply-progress: retrieve the full current 
 
 ### Optional verification reports
 
-Persist requested diagnostics in the selected store. No report validator or attestation is required. Missing or failed verification never gates archive. Preserve historical report content and findings; archive summarizes their provenance rather than rewriting them as current passing evidence.
+Persist requested diagnostics in the selected store. No report validator or attestation is required. Missing or failed verification never gates archive. The one exception is an ISO change (`iso.change: iso` in the native status): there the verification matrix of `verify-report.md` must be valid and successful before archive, and review findings stay informational (`sdd-iso-convention.md`). Preserve historical report content and findings; archive summarizes their provenance rather than rewriting them as current passing evidence.
 
 ## Sub-Agent Context Rules
 

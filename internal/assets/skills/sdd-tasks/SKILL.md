@@ -261,5 +261,6 @@ Return to the orchestrator:
 - **Sufficient detail**: Use checklist format with enough detail to identify each task, its dependencies, concrete changes and verification. Expand task descriptions when necessary while preserving numbering and prior progress. Do not truncate required detail to meet a word or line cap.
 - **Review workload guard**: ALWAYS include the Review Workload Forecast. If likely above 400 changed lines, recommend chained PRs and honor the received delivery strategy for whether a decision/exception is needed before apply.
 - **Work-unit evidence**: every suggested work unit MUST name its Focused test command, Runtime harness command/scenario (or explicit `N/A` reason), and Rollback boundary.
+- Cover requirements with a `Cubre: REQ-x[, REQ-y ...]` line under the task that covers them. In an ISO change (`iso.change: iso`) every requirement of the delta must appear in some `Cubre:` line; the format and the bug-profile rules are in `../_shared/sdd-iso-convention.md`.
 - Never create, modify, or delete files under `technicalContext.reference` paths.
 - Return envelope per **Section D** from `skills/_shared/sdd-phase-common.md`.

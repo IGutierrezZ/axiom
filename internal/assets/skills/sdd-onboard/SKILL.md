@@ -92,7 +92,7 @@ Conclude with:
  This becomes the contract for everything that follows."
 ```
 
-Create the change folder and write `proposal.md` following `sdd-propose` format. After creating it:
+The orchestrator seals the kickoff with `axiom sdd kickoff seal`, which creates the change folder: never create it by hand first. Then write `proposal.md` following `sdd-propose` format; ISO projects and bugs also follow `../_shared/sdd-iso-convention.md`. After creating it:
 
 ```
 "Here's the proposal I wrote. Notice the Capabilities section —

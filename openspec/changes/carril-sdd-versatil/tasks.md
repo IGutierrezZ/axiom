@@ -257,19 +257,19 @@ Sin dependencias internas; todo son funciones puras con pruebas por tablas.
 
 ### U21 · `docs(assets): convención ISO, doctrina del orquestador y skills`
 
-- [ ] 21.1 Crear `internal/assets/skills/_shared/sdd-iso-convention.md`: formatos de `Cubre:`, matriz (sin `verdict:`; matriz histórica a nivel 3 con fecha), referencias de prueba, perfil de bug con sus textos literales y tres rutas, `archive-check`, reanudación de un archivado interrumpido (solo dominios con `alreadyComposed: false`) y `sdd trace`.
+- [x] 21.1 Crear `internal/assets/skills/_shared/sdd-iso-convention.md`: formatos de `Cubre:`, matriz (sin `verdict:`; matriz histórica a nivel 3 con fecha), referencias de prueba, perfil de bug con sus textos literales y tres rutas, `archive-check`, reanudación de un archivado interrumpido (solo dominios con `alreadyComposed: false`) y `sdd trace`.
   Cubre: REQ-29.17
   Aceptación: contiene los literales `## Informe de bug`, `## Impacto en la spec`, `Sin impacto en la spec` y `## Matriz de verificación`, y la regla histórica de nivel 3.
   Comprobación: `go test ./internal/assets/ -run TestSDDISOConvention`
-- [ ] 21.2 Modificar `internal/assets/skills/_shared/sdd-orchestrator-sections.md` (solo dentro de secciones existentes: «Dependency Graph» con el verify obligatorio en ISO, «SDD Change Kickoff and Block Gates» y «SDD Independent Review») y `internal/assets/skills/_shared/persistence-contract.md` (excepción ISO junto a la regla general).
+- [x] 21.2 Modificar `internal/assets/skills/_shared/sdd-orchestrator-sections.md` (solo dentro de secciones existentes: «Dependency Graph» con el verify obligatorio en ISO, «SDD Change Kickoff and Block Gates» y «SDD Independent Review») y `internal/assets/skills/_shared/persistence-contract.md` (excepción ISO junto a la regla general).
   Cubre: REQ-29.17, REQ-29.11, REQ-28.3, REQ-28.4, REQ-28.6
   Aceptación: ningún marcador ni sección nuevos, así que `orchestrator_no_drift_test.go` pasa sin tocar las 12 plantillas; la excepción ISO declara que los hallazgos de revisión siguen siendo informativos y que solo la matriz bloquea; REQ-28.4 remite a la condición de REQ-21.15 sin repetirla.
   Comprobación: `go test ./internal/components/sdd/ -run 'TestOrchestratorNoDrift|TestCanonicalComposition'`
-- [ ] 21.3 Modificar `internal/assets/skills/sdd-propose/SKILL.md`, `internal/assets/skills/sdd-spec/SKILL.md`, `internal/assets/skills/sdd-tasks/SKILL.md`, `internal/assets/skills/sdd-verify/SKILL.md`, `internal/assets/skills/sdd-verify/references/report-format.md` y `internal/assets/skills/sdd-onboard/SKILL.md`: remisión de una línea a la convención; `seal` sin crear la carpeta a mano; matriz sin `verdict:`; matriz anterior a nivel 3 con fecha en *Historical context*.
+- [x] 21.3 Modificar `internal/assets/skills/sdd-propose/SKILL.md`, `internal/assets/skills/sdd-spec/SKILL.md`, `internal/assets/skills/sdd-tasks/SKILL.md`, `internal/assets/skills/sdd-verify/SKILL.md`, `internal/assets/skills/sdd-verify/references/report-format.md` y `internal/assets/skills/sdd-onboard/SKILL.md`: remisión de una línea a la convención; `seal` sin crear la carpeta a mano; matriz sin `verdict:`; matriz anterior a nivel 3 con fecha en *Historical context*.
   Cubre: REQ-29.17, REQ-29.12
   Aceptación: cada skill cita `_shared/sdd-iso-convention.md`; `report-format.md` fija la regla histórica de nivel 3.
   Comprobación: `go test ./internal/assets/ -run 'TestSDDSkillsReferenceISOConvention|TestReportFormatHistoricalMatrix'`
-- [ ] 21.4 Añadir los pines de REQ-29.17 en `internal/assets/sdd_iso_pins_test.go` (o en la prueba de pines vigente de assets) y regenerar con `-update` los goldens afectados.
+- [x] 21.4 Añadir los pines de REQ-29.17 en `internal/assets/sdd_iso_pins_test.go` (o en la prueba de pines vigente de assets) y regenerar con `-update` los goldens afectados.
   Cubre: REQ-29.17
   Aceptación: pines de textos literales, excepción ISO, sin `verdict:`, sin carpeta a mano, verify obligatorio en ISO y paridad entre runtimes; nueva pasada sin `-update` en verde; si una prueba enumera `_shared/`, se actualiza en este mismo commit.
   Comprobación: `go test ./internal/assets/ -run 'TestSDDISOPins'` y `go test ./internal/components/ -run TestGolden`
