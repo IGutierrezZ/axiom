@@ -77,7 +77,7 @@ Sin dependencias internas; todo son funciones puras con pruebas por tablas.
 
 ### U5 · `feat(workspace): bloque sdd con la clave iso`
 
-- [ ] 5.1 Crear `internal/workspace/sdd.go` y `internal/workspace/sdd_test.go` (parte de decodificación y validación cruzada): `SDDConfig`, `sddKeys`, `decodeSDD` (booleano estricto), `ErrISOWorkflowContradiction` y `checkISOWorkflow` con el mensaje de design §5.1.
+- [x] 5.1 Crear `internal/workspace/sdd.go` y `internal/workspace/sdd_test.go` (parte de decodificación y validación cruzada): `SDDConfig`, `sddKeys`, `decodeSDD` (booleano estricto), `ErrISOWorkflowContradiction` y `checkISOWorkflow` con el mensaje de design §5.1.
   Cubre: REQ-29.1
   Aceptación: RED con `quizás`, `"true"` entre comillas, nulo, lista, clave desconocida (`archive`, `design_triggers`) y duplicada; solo `iso: true` con `lane: odd` falla, nombrando `sdd.iso`, `workflow.lane` y las dos correcciones; el resto de la matriz `iso` × `lane` es válido.
   Comprobación: `go test ./internal/workspace/ -run 'TestDecodeSDD|TestCheckISOWorkflow'`
