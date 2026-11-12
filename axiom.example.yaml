@@ -85,6 +85,25 @@ workspace:
 #     branch_prefix: ui
 
 # ------------------------------------------------------------------------------
+# Contexto Técnico (opcional)
+# ------------------------------------------------------------------------------
+# Documentación técnica del proyecto que ya vive en el repositorio. La única spec
+# viva de requisitos es OpenSpec (openspec/specs/); este bloque no declara una
+# segunda spec, solo qué documentación acompaña al código:
+#   maintained: la mantiene el archivado con un delta por cambio (context-impact.md)
+#               y la integración de ODD; 'entry' es el documento de entrada.
+#   reference:  solo lectura; ninguna fase de Axiom la modifica.
+# Las rutas son relativas a la carpeta maestra y no pueden salir de ella. Con
+# 'maintained' el almacén de artefactos debe ser openspec o hybrid. Se valida con
+# 'axiom workspace validate' y se comprueba con 'axiom archive context check'.
+# technical_context:
+#   maintained:
+#     entry: context/INDICE.md
+#     paths: [context]
+#   reference:
+#     paths: [referencia]
+
+# ------------------------------------------------------------------------------
 # Definición de Roles de Implementación (de 1 a N roles)
 # ------------------------------------------------------------------------------
 roles:

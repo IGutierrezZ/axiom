@@ -28,6 +28,9 @@
    - [Uso por CLI y por Web UI](#uso-por-cli-y-por-web-ui)
 8. [Gestión de Especificaciones Vivas (OpenSpec)](#8-gestión-de-especificaciones-vivas-openspec)
    - [Podado Progresivo y Superación de Especificaciones](#podado-progresivo-y-superación-de-especificaciones-supersede)
+   - [La Spec Viva es OpenSpec](#la-spec-viva-es-openspec)
+   - [Adopción de Requisitos Previos](#adopción-de-requisitos-previos-axiom-archive-adopt)
+   - [Contexto Técnico](#contexto-técnico-technical_context)
    - [Baseline del Proyecto y Contexto Técnico](#baseline-del-proyecto-y-contexto-técnico)
 9. [Flujo Dual de Desarrollo: ODD Cotidiano vs. SDD Formal](#9-flujo-dual-de-desarrollo-odd-cotidiano-vs-sdd-formal)
    - [Compuertas de Bloque e Integración Pre-Archive](#b-carril-formal-sdd-spec-driven-development)
@@ -490,7 +493,53 @@ A medida que el sistema evoluciona, nuevas capacidades reemplazan contratos prev
   ```
 * **Trazabilidad en el Catálogo:** El compilador de archivo retira la especificación obsoleta o genera la sección canónica `## Especificaciones Históricas Superadas`, referenciando el cambio que la sustituye y manteniendo la trazabilidad histórica completa sin contaminar los requerimientos activos.
 
+### La Spec Viva es OpenSpec
+
+La única spec viva de requisitos de un proyecto es `openspec/specs/` (en un `multirepo`, la del repositorio de especificaciones). Todo trabajo que cambia el comportamiento la actualiza por uno de los dos carriles, con la misma composición y la misma numeración `(REQ-n.m)`:
+
+* **SDD:** el archivado del cambio (`sdd-archive`) integra sus deltas.
+* **ODD:** el propio documento `odd/tasks/<feature>.md` lleva la delta y se integra con `axiom archive integrate --odd <feature>` (véase [Carril Cotidiano: ODD](#a-carril-cotidiano-odd-organic-driven-development)).
+
+Un proyecto que ya tiene requisitos propios, en cualquier formato, los migra a OpenSpec con la adopción de la sección siguiente. El bloque `baseline:` de `axiom.yaml` se está retirando: la sección «Baseline del Proyecto y Contexto Técnico» describe su estado actual hasta que se retire, y la vía para dejarlo es la adopción.
+
+### Adopción de Requisitos Previos (`axiom archive adopt`)
+
+La adopción es un cambio SDD ordinario (kickoff, compuertas y archivado) cuya fase `spec` migra los documentos de requisitos existentes a `openspec/specs/`:
+
+1. **Inventario.** Desde el repositorio de especificaciones y en la rama del cambio:
+   ```bash
+   axiom archive adopt scan --change <cambio>
+   ```
+   Inventaría los orígenes (`.md`, `.markdown`, `.txt`, `.docx`, `.xlsx` y `.pdf` fuera de `openspec/`), sus unidades (encabezados con su ancla), los identificadores ajenos (`RF-120`…) y los candidatos a `technical_context`. Es determinista, solo lee y, con `--change`, escribe únicamente `adoption-inventory.yaml` en la carpeta del cambio. Sin `--change` solo informa. `axiom ui` muestra el mismo inventario al inicializar el proyecto.
+2. **Delta.** `sdd-spec` escribe por capacidad una delta con solo `## ADDED Requirements`, cada requisito con su `(REQ-n.m)` de una serie nueva, al menos un escenario y una línea `Origen: <ruta>#<ancla> (<ID original>)` por unidad que migra. Lo que no se migra se declara con motivo en la sección `## Descartado` de `adoption.md`. El identificador ajeno nunca es la identidad del requisito migrado.
+3. **Comprobación.**
+   ```bash
+   axiom archive adopt check --change <cambio>
+   ```
+   No escribe nada ni registra compuertas: lista todos los fallos (formato, unicidad, serie, escenarios, origen, cobertura del inventario, motivo de descarte, inventario ausente o desactualizado) y sale con 1 si hay alguno.
+4. **Compuerta `spec`.** Axiom comprueba la forma y la cobertura; **un humano aprueba que la migración es fiel** a sus orígenes. Ninguna orden juzga la fidelidad semántica.
+5. **Archivado.** Se archiva como cualquier cambio: la spec viva conserva cada línea `Origen:` tal cual.
+
+Los documentos de origen no se modifican. La propuesta de `technical_context` que sugiere el inventario la decide la persona.
+
+### Contexto Técnico (`technical_context:`)
+
+El contexto técnico es la documentación del proyecto que acompaña al código y se declara solo en `axiom.yaml` con dos modos: `maintained` (lo mantiene el archivado con un delta por cambio, `context-impact.md`) y `reference` (solo lectura: ninguna fase lo modifica). La plantilla `axiom.example.yaml` lo documenta. Con un contexto `maintained` el almacén de artefactos debe ser `openspec` o `hybrid`; `axiom workspace validate --path <maestra>` valida la declaración.
+
+Sus comprobaciones y su integración tienen un verbo propio, en la rama de archivado para los que escriben:
+
+```bash
+axiom archive context check --change <cambio>
+axiom archive context prepare --change <cambio>
+axiom archive context verify --change <cambio>
+axiom archive context show --change <cambio>
+```
+
+`check` valida el delta sin escribir; `prepare` fija el plan y escribe solo `integration.yaml`; `verify` comprueba la edición (traza, presencia, anclas y alcance por diff); `show` imprime la traza que se añade al informe de archivado. Un ODD comprueba además, con `axiom archive integrate --odd`, que la rama no modifique rutas de referencia.
+
 ### Baseline del Proyecto y Contexto Técnico
+
+> **En retirada.** El bloque `baseline:` se está retirando: la única spec viva es OpenSpec. Los proyectos nuevos no lo declaran y los que lo tienen migran con `axiom archive adopt` (véase [Adopción de Requisitos Previos](#adopción-de-requisitos-previos-axiom-archive-adopt)). Lo que sigue describe su estado actual mientras no se retire.
 
 Un proyecto que ya tiene sus propios documentos de requisitos (con su propia numeración y estructura) puede declararlos como **baseline del proyecto** en lugar de usar `openspec/specs/`. Se declara solo en `axiom.yaml` (nunca en `openspec/config.yaml`, que conserva las reglas de conducta) con dos bloques opcionales:
 
@@ -548,12 +597,17 @@ El carril por el que el agente aborda el trabajo sustancial lo fija el bloque `w
 
 ### A. Carril Cotidiano: ODD (Organic-Driven Development)
 Para el 90% del trabajo diario: tareas concretas, correcciones de errores y refactorizaciones sin burocracia de fases:
-* **Comando:** Se gestiona mediante `axiom odd create <nombre>` o creando el documento vivo `odd/tasks/<nombre>.md`.
-* **Seguimiento:** `axiom odd status` o la pestaña **ODD** en `axiom ui`.
-* **Promoción:** Si una tarea ODD crece y requiere arquitectura formal, se eleva a SDD con:
+* **Documento vivo:** el agente crea `odd/tasks/<nombre>.md` y lo mantiene tarea a tarea; no existe un verbo `axiom` para crearlo, consultarlo ni promoverlo (los retiró INC-20).
+* **Seguimiento:** la pestaña **ODD** en `axiom ui`.
+* **Promoción:** si una tarea ODD crece y requiere arquitectura formal, se pide el carril SDD y se abre un cambio con su propuesta.
+* **Spec viva (`## Spec viva`):** si el trabajo cambia el comportamiento, el documento lleva una sección `## Spec viva` con un subapartado `### Capacidad: <dominio>` por capacidad afectada y, en cada uno, un único bloque de código vallado `openspec` con la delta (`## ADDED Requirements`, `## MODIFIED Requirements`, `## REMOVED Requirements` o `## RENAMED Requirements`, con `### Requirement:` y `#### Scenario:`). Un requisito ADDED lleva su `(REQ-n.m)` en el título.
+* **Integración:** en la rama de la feature, antes de cerrarla:
   ```bash
-  axiom odd promote <nombre>
+  axiom archive integrate --odd <feature>
   ```
+  Valida y compone todas las capacidades antes de escribir ninguna (todo o nada), escribe solo `openspec/specs/` y, si existe, `openspec/INDEX.md`, es idempotente y no modifica el documento ODD ni crea artefactos SDD. Con `--json` emite el informe `axiom.odd-integration/v1`. Un número `(REQ-n.m)` ya usado en la spec viva o en el cambio de otra persona se rechaza con el siguiente libre.
+* **Impacto de los bugs (`## Impacto en la spec`):** un documento con la línea `Tipo: bug` debe declarar su impacto: una sección `## Spec viva` con delta o una sección `## Impacto en la spec` con la línea exacta `Sin impacto en la spec` y una línea `Motivo: <una línea>`. Sin ninguna de las dos, `axiom archive integrate --odd` se niega. Sin `Tipo:` o con `Tipo: incremento` (el valor por defecto) la sección no es obligatoria.
+* **Contexto técnico:** con `technical_context:` en `axiom.yaml`, la integración se niega si la rama modifica rutas del modo `reference` y te informa de las rutas `maintained` que tocó, que debes actualizar en la misma unidad de trabajo.
 
 ### B. Carril Formal: SDD (Spec-Driven Development)
 Para cambios estructurales profundos, refactorizaciones de arquitectura o requerimientos críticos:

@@ -167,3 +167,9 @@ Specifically:
 - Skills do not interpret `axiom.yaml` on their own: they read the `baseline` and `technicalContext` locators from the status (`axiom sdd status --json`).
 
 To check the declaration: `axiom workspace validate --path <master folder>`.
+
+### Where each piece lives (REQ-30.32)
+
+- `technical_context` lives in `axiom.yaml` and nowhere else. The `baseline` block is being retired: the only living spec is OpenSpec (`openspec/specs/`), and a project with its own requirement documents migrates them with `axiom archive adopt scan` and `axiom archive adopt check`.
+- `rules.<phase>`, `strict_tdd` and `artifact_store` stay in `openspec/config.yaml`; none of them moves to `axiom.yaml`.
+- The technical context is checked and integrated with `axiom archive context check|prepare|verify|show`, and the living spec of an ODD feature with `axiom archive integrate --odd <feature>`.
