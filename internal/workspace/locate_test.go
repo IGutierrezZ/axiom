@@ -773,16 +773,16 @@ const (
 func TestLocateFillsTheDeclarations(t *testing.T) {
 	t.Run("puntero con declaraciones validas", func(t *testing.T) {
 		ws := workspacetest.Canonical(t)
-		workspacetest.WriteFile(t, filepath.Join(ws.Specs, "axiom.yaml"), locateCanonicalConfig+locateValidBaseline+"technical_context:\n  reference:\n    paths: [00_Glosario.md]\n")
+		workspacetest.WriteFile(t, filepath.Join(ws.Specs, "axiom.yaml"), locateCanonicalConfig+"technical_context:\n  reference:\n    paths: [00_Glosario.md]\n")
 		for name, start := range map[string]string{"carpeta maestra": ws.Master, "repositorio de especificaciones": ws.Specs} {
 			loc := mustLocate(t, start)
-			if loc.Declarations.BaselineErr != nil || loc.Declarations.TechnicalContextErr != nil || loc.Declarations.ParseErr != nil {
+			if loc.Declarations.BaselineRetiredErr != nil || loc.Declarations.TechnicalContextErr != nil || loc.Declarations.ParseErr != nil {
 				t.Fatalf("%s: declaraciones válidas con error: %+v", name, loc.Declarations)
 			}
-			if loc.Declarations.Baseline == nil || len(loc.Declarations.Baseline.Documents) != 1 || loc.Declarations.TechnicalContext == nil {
-				t.Fatalf("%s: Declarations = %+v, se esperaban los dos bloques", name, loc.Declarations)
+			if loc.Declarations.TechnicalContext == nil {
+				t.Fatalf("%s: Declarations = %+v, se esperaba el contexto técnico", name, loc.Declarations)
 			}
-			if loc.Config == nil || loc.Config.Baseline != loc.Declarations.Baseline {
+			if loc.Config == nil || loc.Config.TechnicalContext != loc.Declarations.TechnicalContext {
 				t.Fatalf("%s: la configuración base debe llevar el mismo bloque válido", name)
 			}
 		}
@@ -791,7 +791,7 @@ func TestLocateFillsTheDeclarations(t *testing.T) {
 	t.Run("sin bloques nuevos son el valor cero", func(t *testing.T) {
 		ws := workspacetest.Canonical(t)
 		loc := mustLocate(t, ws.Master)
-		if loc.Declarations.ParseErr != nil || loc.Declarations.Baseline != nil || loc.Declarations.BaselineErr != nil ||
+		if loc.Declarations.ParseErr != nil || loc.Declarations.BaselineRetiredErr != nil ||
 			loc.Declarations.TechnicalContext != nil || loc.Declarations.TechnicalContextErr != nil {
 			t.Fatalf("Declarations = %+v, se esperaba el valor cero", loc.Declarations)
 		}
@@ -802,7 +802,7 @@ func TestLocateFillsTheDeclarations(t *testing.T) {
 		workspacetest.MkdirAll(t, filepath.Join(dir, "openspec"))
 		for _, start := range []string{dir, t.TempDir()} {
 			loc := mustLocate(t, start)
-			if loc.Declarations.ParseErr != nil || loc.Declarations.Baseline != nil || loc.Declarations.BaselineErr != nil {
+			if loc.Declarations.ParseErr != nil || loc.Declarations.BaselineRetiredErr != nil {
 				t.Fatalf("Declarations = %+v, sin axiom.yaml se esperaba el valor cero", loc.Declarations)
 			}
 		}
@@ -816,13 +816,16 @@ func TestLocateFillsTheDeclarations(t *testing.T) {
 		if loc.Master != ws.Master || loc.WorkspaceRoot != ws.Specs || loc.PlanningHome != ws.Home {
 			t.Fatalf("la resolución no cambia con una declaración inválida: %+v", loc)
 		}
-		if loc.Declarations.BaselineErr == nil || loc.Declarations.TechnicalContextErr == nil {
+		if loc.Declarations.BaselineRetiredErr == nil || loc.Declarations.TechnicalContextErr == nil {
 			t.Fatalf("las dos declaraciones inválidas deben quedar en su canal: %+v", loc.Declarations)
 		}
-		if loc.Declarations.Baseline != nil || loc.Declarations.TechnicalContext != nil || loc.Declarations.ParseErr != nil {
+		if want := filepath.Join(ws.Specs, "axiom.yaml"); loc.Declarations.BaselineRetiredErr.Path != want || loc.Declarations.BaselineRetiredErr.Line == 0 {
+			t.Fatalf("la baseline retirada nombra el axiom.yaml y la línea: %+v", loc.Declarations.BaselineRetiredErr)
+		}
+		if loc.Declarations.TechnicalContext != nil || loc.Declarations.ParseErr != nil {
 			t.Fatalf("un bloque inválido no se proyecta y ParseErr es solo para el YAML ilegible: %+v", loc.Declarations)
 		}
-		if loc.Config == nil || len(loc.Config.Roles) != 2 || loc.Config.Baseline != nil {
+		if loc.Config == nil || len(loc.Config.Roles) != 2 {
 			t.Fatalf("los roles siguen disponibles en la configuración base: %+v", loc.Config)
 		}
 		if len(loc.Notes) != 0 {
@@ -854,8 +857,7 @@ func TestLocateFillsTheDeclarations(t *testing.T) {
 	t.Run("sin puntero la base invalida conserva la resolucion embebida y evalua la declaracion", func(t *testing.T) {
 		for name, tc := range map[string]struct {
 			baseline string
-			valid    bool
-		}{"declaracion valida": {locateValidBaseline, true}, "declaracion invalida": {locateInvalidBaseline, false}} {
+		}{"baseline con documento": {locateValidBaseline}, "baseline sin documentos": {locateInvalidBaseline}} {
 			t.Run(name, func(t *testing.T) {
 				dir := t.TempDir()
 				workspacetest.MkdirAll(t, filepath.Join(dir, "openspec"))
@@ -867,8 +869,8 @@ func TestLocateFillsTheDeclarations(t *testing.T) {
 				if loc.Declarations.ParseErr != nil {
 					t.Fatalf("el YAML es legible: ParseErr = %v", loc.Declarations.ParseErr)
 				}
-				if tc.valid != (loc.Declarations.Baseline != nil) || tc.valid != (loc.Declarations.BaselineErr == nil) {
-					t.Fatalf("la declaración se evalúa aunque la base falle (válida=%v): %+v", tc.valid, loc.Declarations)
+				if loc.Declarations.BaselineRetiredErr == nil {
+					t.Fatalf("la baseline retirada se evalúa aunque la base falle: %+v", loc.Declarations)
 				}
 			})
 		}
@@ -888,7 +890,7 @@ func TestLocateFillsTheDeclarations(t *testing.T) {
 		ws := workspacetest.Embedded(t, ".")
 		workspacetest.WriteFile(t, filepath.Join(ws.Master, "axiom.yaml"), locateEmbeddedConfig+locateInvalidBaseline)
 		loc := mustLocate(t, ws.Master)
-		if loc.Config == nil || loc.ConfigErr != nil || loc.Declarations.BaselineErr == nil || len(loc.Notes) != 0 {
+		if loc.Config == nil || loc.ConfigErr != nil || loc.Declarations.BaselineRetiredErr == nil || len(loc.Notes) != 0 {
 			t.Fatalf("la base válida carga y la declaración inválida queda en su canal: %+v", loc)
 		}
 	})

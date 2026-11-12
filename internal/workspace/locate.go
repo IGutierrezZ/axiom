@@ -50,7 +50,7 @@ type Location struct {
 	ConfigPath    string           // axiom.yaml efectivo; "" si no hay
 	Config        *WorkspaceConfig // configuración base; nil si no hay o no es cargable
 	ConfigErr     error            // causa de no carga de un axiom.yaml directo
-	Declarations  Declarations     // baseline y technical_context de axiom.yaml, con su estado de validación
+	Declarations  Declarations     // technical_context, git y demás bloques de axiom.yaml, con su estado de validación
 	Notes         []string         // avisos no bloqueantes
 }
 
@@ -284,10 +284,11 @@ func ResolveOwnPointer(dir string) (loc Location, found bool, err error) {
 	if err == nil {
 		// Los errores de las declaraciones nunca rechazan (D-03): sin la
 		// configuración base no se sabe dónde está el planning home, pero un
-		// bloque baseline o technical_context inválido no lo oculta.
+		// bloque baseline residual o technical_context inválido no lo oculta.
 		var cfg *WorkspaceConfig
 		var declarations Declarations
 		cfg, err, declarations = parseLayered(data)
+		declarations = declarations.bindConfigPath(configPath)
 		if err == nil {
 			loc = Location{
 				Start:        absDir,
@@ -321,6 +322,7 @@ func locateFromConfig(start, dir string) (Location, error) {
 	var declarations Declarations
 	if err == nil {
 		cfg, err, declarations = parseLayered(data)
+		declarations = declarations.bindConfigPath(configPath)
 	} else {
 		// Un axiom.yaml que existe y no se puede leer deja la causa en ParseErr.
 		declarations.ParseErr = err

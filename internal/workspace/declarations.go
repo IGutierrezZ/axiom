@@ -5,62 +5,10 @@ import (
 	"fmt"
 	"path"
 	"path/filepath"
-	"regexp"
 	"strings"
 
 	"gopkg.in/yaml.v3"
 )
-
-// IntegrationMode es la forma en que archive integra un documento de la baseline.
-type IntegrationMode string
-
-// ScenariosMode indica si los escenarios de la delta spec pasan al documento.
-type ScenariosMode string
-
-// IdentityKind es la identidad de un requisito dentro de su documento.
-type IdentityKind string
-
-const (
-	// IntegrationCompose es el modo derivado de un documento con perfil de
-	// requisito: no se declara, se deduce de que existe `requirement`.
-	IntegrationCompose IntegrationMode = "compose"
-	// IntegrationDirected es el modo por defecto de un documento de prosa.
-	IntegrationDirected IntegrationMode = "directed"
-	// IntegrationRegister solo registra la integración pendiente.
-	IntegrationRegister IntegrationMode = "register"
-
-	// ScenariosInclude integra descripción y escenarios (valor por defecto).
-	ScenariosInclude ScenariosMode = "include"
-	// ScenariosOmit integra solo la descripción.
-	ScenariosOmit ScenariosMode = "omit"
-
-	// IdentityID identifica el requisito por el grupo `id` (valor por defecto).
-	IdentityID IdentityKind = "id"
-	// IdentityText lo identifica por el texto del título.
-	IdentityText IdentityKind = "text"
-)
-
-// BaselineConfig es el bloque `baseline:` de axiom.yaml (REQ-24.13).
-type BaselineConfig struct {
-	Documents []BaselineDocument `yaml:"documents"`
-}
-
-// BaselineDocument declara un documento de la baseline del proyecto (REQ-24.14).
-type BaselineDocument struct {
-	Domain      string              `yaml:"domain"`
-	Path        string              `yaml:"path"`
-	Requirement *RequirementProfile `yaml:"requirement,omitempty"`
-	Integration IntegrationMode     `yaml:"integration,omitempty"` // directed | register
-	Scenarios   ScenariosMode       `yaml:"scenarios,omitempty"`   // include | omit
-}
-
-// RequirementProfile hace direccionable por requisito un documento (REQ-24.15).
-type RequirementProfile struct {
-	Heading  string       `yaml:"heading"`
-	Level    int          `yaml:"level"`
-	Identity IdentityKind `yaml:"identity,omitempty"` // id | text
-	Render   string       `yaml:"render"`
-}
 
 // TechnicalContextConfig es el bloque `technical_context:` de axiom.yaml (REQ-24.26).
 type TechnicalContextConfig struct {
@@ -81,9 +29,8 @@ type ContextMode struct {
 // configuración base, y la configuración base inválida nunca oculta los errores
 // de las declaraciones.
 type Declarations struct {
-	ParseErr            error // no nulo solo si existe axiom.yaml y no se puede leer como YAML
-	Baseline            *BaselineConfig
-	BaselineErr         error
+	ParseErr            error                 // no nulo solo si existe axiom.yaml y no se puede leer como YAML
+	BaselineRetiredErr  *BaselineRetiredError // no nulo si axiom.yaml aún declara `baseline:`, retirado (REQ-30.21)
 	TechnicalContext    *TechnicalContextConfig
 	TechnicalContextErr error
 	Git                 *GitConfig // lo declarado en `git:`, sin defectos; nil sin bloque o con bloque inválido (REQ-25.26)
@@ -96,76 +43,16 @@ type Declarations struct {
 	RepositoriesErr     error
 }
 
-// EffectiveIntegration devuelve el modo de integración efectivo del documento:
-// `compose` si tiene perfil de requisito, y `directed` o `register` si es de
-// prosa (`directed` por defecto).
-func (d BaselineDocument) EffectiveIntegration() IntegrationMode {
-	if d.Requirement != nil {
-		return IntegrationCompose
-	}
-	if d.Integration == "" {
-		return IntegrationDirected
-	}
-	return d.Integration
-}
-
-// EffectiveScenarios devuelve el tratamiento efectivo de los escenarios (`include` por defecto).
-func (d BaselineDocument) EffectiveScenarios() ScenariosMode {
-	if d.Scenarios == "" {
-		return ScenariosInclude
-	}
-	return d.Scenarios
-}
-
-// EffectiveIdentity devuelve la identidad efectiva del requisito (`id` por defecto).
-func (p RequirementProfile) EffectiveIdentity() IdentityKind {
-	if p.Identity == "" {
-		return IdentityID
-	}
-	return p.Identity
-}
-
-// Compile compila el patrón `heading` (RE2) y comprueba que define los grupos
-// con nombre `id` y `title`. El error no nombra el dominio: lo añade quien llama.
-func (p RequirementProfile) Compile() (*regexp.Regexp, error) {
-	re, err := regexp.Compile(p.Heading)
-	if err != nil {
-		return nil, fmt.Errorf("el patrón 'heading' no compila: %w", err)
-	}
-	var hasID, hasTitle bool
-	for _, name := range re.SubexpNames() {
-		switch name {
-		case "id":
-			hasID = true
-		case "title":
-			hasTitle = true
-		}
-	}
-	if !hasID || !hasTitle {
-		return nil, fmt.Errorf("el patrón 'heading' debe definir los grupos con nombre 'id' y 'title' (por ejemplo (?P<id>...) y (?P<title>...))")
-	}
-	return re, nil
-}
-
 // Claves admitidas por nodo (D-04). yaml.v3 no ofrece KnownFields en
 // Node.Decode, así que cada mapeo de los bloques nuevos se recorre contra su
 // lista cerrada; el resto de claves de axiom.yaml se sigue ignorando (REQ-24.17).
 var (
-	baselineKeys      = []string{"documents"}
-	documentKeys      = []string{"domain", "path", "requirement", "integration", "scenarios"}
-	requirementKeys   = []string{"heading", "level", "identity", "render"}
 	technicalCtxKeys  = []string{"maintained", "reference"}
 	contextModeKeys   = []string{"entry", "paths"}
-	domainPattern     = regexp.MustCompile(`^[a-z0-9]+(-[a-z0-9]+)*$`)
 	contextModeLabels = [...]string{"maintained", "reference"}
 )
 
-// maxScenarioLevel es el nivel de requisito más alto compatible con incluir los
-// escenarios: los de las delta specs son `#### Scenario:` (nivel 4) y con un
-// nivel de requisito igual o mayor cerrarían el bloque (REQ-24.60).
-const maxScenarioLevel = 3
-
-// readDeclarationBlocks localiza los bloques `baseline`, `technical_context`,
+// readDeclarationBlocks localiza los bloques `technical_context`,
 // `git` y `repositories` en el mapeo raíz del documento y los decodifica y valida
 // de forma estricta. displacement es el desplazamiento léxico de la carpeta
 // maestra a workspaceRoot.
@@ -180,12 +67,13 @@ func readDeclarationBlocks(document *yaml.Node, displacement string) Declaration
 	}
 
 	var declarations Declarations
-	var baselinePaths []baselinePath
-	if node, ok := mappingValue(root, "baseline"); ok {
-		declarations.Baseline, baselinePaths, declarations.BaselineErr = decodeBaseline(node, displacement)
+	if line, ok := mappingKeyLine(root, "baseline"); ok {
+		// Un `baseline:` residual nunca se ignora ni se decodifica: es la causa
+		// tipada de REQ-30.21, con la guía de migración.
+		declarations.BaselineRetiredErr = &BaselineRetiredError{Line: line}
 	}
 	if node, ok := mappingValue(root, "technical_context"); ok {
-		declarations.TechnicalContext, declarations.TechnicalContextErr = decodeTechnicalContext(node, displacement, baselinePaths)
+		declarations.TechnicalContext, declarations.TechnicalContextErr = decodeTechnicalContext(node, displacement)
 	}
 	if node, ok := mappingValue(root, "git"); ok {
 		declarations.Git, declarations.GitErr = decodeGit(node)
@@ -207,180 +95,7 @@ func readDeclarationBlocks(document *yaml.Node, displacement string) Declaration
 	return declarations
 }
 
-// baselinePath es la ruta normalizada de un documento de la baseline, para
-// detectar solapes con el contexto técnico.
-type baselinePath struct {
-	domain string
-	raw    string
-	clean  string
-}
-
-func decodeBaseline(node *yaml.Node, displacement string) (*BaselineConfig, []baselinePath, error) {
-	node = resolveAlias(node)
-	if isNull(node) {
-		return nil, nil, errors.New("la baseline declarada requiere al menos un documento en 'baseline.documents'")
-	}
-	if node.Kind != yaml.MappingNode {
-		return nil, nil, errors.New("el bloque 'baseline' debe ser un mapeo con la lista 'documents'")
-	}
-	var errs []error
-	errs = append(errs, unknownKeys(node, "baseline", baselineKeys)...)
-
-	documentsNode, ok := mappingValue(node, "documents")
-	documentsNode = resolveAlias(documentsNode)
-	switch {
-	case !ok || isNull(documentsNode) || (documentsNode.Kind == yaml.SequenceNode && len(documentsNode.Content) == 0):
-		errs = append(errs, errors.New("la baseline declarada requiere al menos un documento en 'baseline.documents'"))
-		return nil, nil, errors.Join(errs...)
-	case documentsNode.Kind != yaml.SequenceNode:
-		errs = append(errs, errors.New("'baseline.documents' debe ser una lista de documentos"))
-		return nil, nil, errors.Join(errs...)
-	}
-
-	documents := make([]BaselineDocument, len(documentsNode.Content))
-	decoded := make([]bool, len(documentsNode.Content))
-	for i, item := range documentsNode.Content {
-		item = resolveAlias(item)
-		label := fmt.Sprintf("baseline.documents[%d]", i)
-		if item.Kind != yaml.MappingNode {
-			errs = append(errs, fmt.Errorf("%s debe ser un mapeo con 'domain' y 'path'", label))
-			continue
-		}
-		errs = append(errs, unknownKeys(item, label, documentKeys)...)
-		if requirementNode, present := mappingValue(item, "requirement"); present {
-			requirementNode = resolveAlias(requirementNode)
-			switch {
-			case isNull(requirementNode):
-				errs = append(errs, fmt.Errorf("%s: 'requirement' debe ser un mapeo con 'heading', 'level' y 'render'", label))
-				continue
-			case requirementNode.Kind == yaml.MappingNode:
-				errs = append(errs, unknownKeys(requirementNode, label+".requirement", requirementKeys)...)
-			}
-		}
-		if err := item.Decode(&documents[i]); err != nil {
-			errs = append(errs, fmt.Errorf("%s no se pudo leer: %w", label, err))
-			continue
-		}
-		decoded[i] = true
-	}
-
-	documentErrs, paths := validateDocuments(documents, decoded, displacement)
-	errs = append(errs, documentErrs...)
-	if err := errors.Join(errs...); err != nil {
-		return nil, paths, err
-	}
-	return &BaselineConfig{Documents: documents}, paths, nil
-}
-
-// validateDocuments aplica las reglas sintácticas de REQ-24.14 a 24.16 y 24.60 a
-// cada documento ya decodificado, sin acceder al disco.
-func validateDocuments(documents []BaselineDocument, decoded []bool, displacement string) ([]error, []baselinePath) {
-	var errs []error
-	var paths []baselinePath
-	domains := map[string]int{}
-	pathDomains := map[string]string{}
-	for i, doc := range documents {
-		if !decoded[i] {
-			continue
-		}
-		label := fmt.Sprintf("baseline.documents[%d]", i)
-		name := label
-		if doc.Domain != "" {
-			name = fmt.Sprintf("el dominio '%s'", doc.Domain)
-		}
-
-		switch {
-		case strings.TrimSpace(doc.Domain) == "":
-			errs = append(errs, fmt.Errorf("%s no declara 'domain'", label))
-		case !domainPattern.MatchString(doc.Domain):
-			errs = append(errs, fmt.Errorf("el dominio '%s' (%s) no es válido: debe usar solo minúsculas, dígitos y guiones (formato %s)", doc.Domain, label, domainPattern.String()))
-		default:
-			if first, seen := domains[doc.Domain]; seen {
-				errs = append(errs, fmt.Errorf("el dominio '%s' está duplicado en 'baseline.documents' (entradas %d y %d): cada dominio mapea a un único documento", doc.Domain, first, i))
-			} else {
-				domains[doc.Domain] = i
-			}
-		}
-
-		if clean, err := checkDocumentPath(doc.Path); err != nil {
-			errs = append(errs, fmt.Errorf("%s: %w", name, err))
-		} else {
-			key := strings.ToLower(clean)
-			if other, seen := pathDomains[key]; seen {
-				errs = append(errs, fmt.Errorf("la ruta '%s' se declara en los dominios '%s' y '%s': cada documento mapea a un único dominio", doc.Path, other, doc.Domain))
-			} else {
-				pathDomains[key] = doc.Domain
-			}
-			paths = append(paths, baselinePath{domain: doc.Domain, raw: doc.Path, clean: clean})
-		}
-
-		errs = append(errs, validateDocumentProfile(doc, name)...)
-	}
-	return errs, paths
-}
-
-// validateDocumentProfile valida `requirement`, `identity`, `integration` y
-// `scenarios` de un documento (REQ-24.15, 24.16 y 24.60).
-func validateDocumentProfile(doc BaselineDocument, name string) []error {
-	var errs []error
-	if doc.Requirement == nil {
-		switch doc.Integration {
-		case "", IntegrationDirected, IntegrationRegister:
-		default:
-			errs = append(errs, fmt.Errorf("%s: 'integration' debe ser 'directed' o 'register', no '%s'", name, doc.Integration))
-		}
-		if doc.Scenarios != "" {
-			errs = append(errs, fmt.Errorf("%s: 'scenarios' solo se admite en documentos con perfil de requisito ('requirement')", name))
-		}
-		return errs
-	}
-
-	profile := doc.Requirement
-	if doc.Integration != "" {
-		errs = append(errs, fmt.Errorf("%s: 'integration' no se admite en un documento con perfil de requisito, cuya integración es la composición", name))
-	}
-	if strings.TrimSpace(profile.Heading) == "" {
-		errs = append(errs, fmt.Errorf("%s: 'requirement.heading' es obligatorio", name))
-	} else if _, err := profile.Compile(); err != nil {
-		errs = append(errs, fmt.Errorf("%s: %w", name, err))
-	}
-	levelValid := profile.Level >= 1 && profile.Level <= 6
-	if !levelValid {
-		errs = append(errs, fmt.Errorf("%s: 'requirement.level' debe ser un entero entre 1 y 6, no %d", name, profile.Level))
-	}
-	switch profile.Identity {
-	case "", IdentityID, IdentityText:
-	default:
-		errs = append(errs, fmt.Errorf("%s: 'requirement.identity' debe ser 'id' o 'text', no '%s'", name, profile.Identity))
-	}
-	errs = append(errs, validateRender(profile, levelValid, name)...)
-
-	switch doc.Scenarios {
-	case "", ScenariosInclude, ScenariosOmit:
-	default:
-		errs = append(errs, fmt.Errorf("%s: 'scenarios' debe ser 'include' u 'omit', no '%s'", name, doc.Scenarios))
-	}
-	if doc.EffectiveScenarios() == ScenariosInclude && levelValid && profile.Level > maxScenarioLevel {
-		errs = append(errs, fmt.Errorf("%s: 'requirement.level' es %d y los escenarios se incluyen (valor por defecto o 'scenarios: include'): los encabezados '#### Scenario:' de las delta specs cerrarían el bloque del requisito de nivel %d. Declara 'scenarios: omit' o un 'level' menor o igual que %d", name, profile.Level, profile.Level, maxScenarioLevel))
-	}
-	return errs
-}
-
-func validateRender(profile *RequirementProfile, levelValid bool, name string) []error {
-	var errs []error
-	if strings.TrimSpace(profile.Render) == "" {
-		return []error{fmt.Errorf("%s: 'requirement.render' es obligatorio", name)}
-	}
-	if levelValid && !strings.HasPrefix(profile.Render, strings.Repeat("#", profile.Level)+" ") {
-		errs = append(errs, fmt.Errorf("%s: 'requirement.render' debe comenzar con exactamente %d signos '#' seguidos de un espacio (el 'level' declarado)", name, profile.Level))
-	}
-	if !strings.Contains(profile.Render, "{id}") || !strings.Contains(profile.Render, "{title}") {
-		errs = append(errs, fmt.Errorf("%s: 'requirement.render' debe contener los marcadores {id} y {title}", name))
-	}
-	return errs
-}
-
-func decodeTechnicalContext(node *yaml.Node, displacement string, baseline []baselinePath) (*TechnicalContextConfig, error) {
+func decodeTechnicalContext(node *yaml.Node, displacement string) (*TechnicalContextConfig, error) {
 	node = resolveAlias(node)
 	if isNull(node) {
 		return nil, errors.New("el bloque 'technical_context' requiere al menos el modo 'maintained' o 'reference'")
@@ -419,7 +134,7 @@ func decodeTechnicalContext(node *yaml.Node, displacement string, baseline []bas
 		errs = append(errs, errors.New("el bloque 'technical_context' requiere al menos el modo 'maintained' o 'reference'"))
 	}
 
-	errs = append(errs, contextOverlaps(cleaned, baseline)...)
+	errs = append(errs, contextOverlaps(cleaned)...)
 	if err := errors.Join(errs...); err != nil {
 		return nil, err
 	}
@@ -463,25 +178,15 @@ func validateContextMode(label string, mode ContextMode, displacement string) ([
 	return paths, append(errs, fmt.Errorf("'%s.entry' ('%s') debe estar contenida en alguna de las rutas de '%s.paths'", label, mode.Entry, label))
 }
 
-// contextOverlaps reporta los solapes entre los dos modos y con los documentos de
-// la baseline. Dos rutas solapan si son iguales o una contiene a la otra; se
+// contextOverlaps reporta los solapes entre los dos modos. Dos rutas solapan si son iguales o una contiene a la otra; se
 // comparan sin distinguir mayúsculas porque axiom.yaml se comparte entre Windows
 // y Linux (la comprobación por identidad la hace workspace validate).
-func contextOverlaps(modes [len(contextModeLabels)][]contextPath, baseline []baselinePath) []error {
+func contextOverlaps(modes [len(contextModeLabels)][]contextPath) []error {
 	var errs []error
 	for _, maintained := range modes[0] {
 		for _, reference := range modes[1] {
 			if lexicalOverlap(strings.ToLower(maintained.clean), strings.ToLower(reference.clean)) {
 				errs = append(errs, fmt.Errorf("la ruta '%s' (%s) solapa con '%s' (%s): una ruta no puede pertenecer a los dos modos del contexto técnico, y dos rutas solapan si son iguales o una contiene a la otra", maintained.raw, maintained.mode, reference.raw, reference.mode))
-			}
-		}
-	}
-	for _, paths := range modes {
-		for _, contextRoute := range paths {
-			for _, document := range baseline {
-				if lexicalOverlap(strings.ToLower(contextRoute.clean), strings.ToLower(document.clean)) {
-					errs = append(errs, fmt.Errorf("la ruta '%s' del modo '%s' solapa con el documento '%s' del dominio '%s' de 'baseline.documents': una ruta no puede pertenecer a la baseline y al contexto técnico", contextRoute.raw, contextRoute.mode, document.raw, document.domain))
-				}
 			}
 		}
 	}
@@ -512,23 +217,6 @@ func checkRelativeTo(raw, anchor string) (string, error) {
 
 func escapes(clean string) bool {
 	return clean == ".." || strings.HasPrefix(clean, "../")
-}
-
-// checkDocumentPath valida la ruta de un documento: relativa y contenida
-// léxicamente en workspaceRoot. Que exista como fichero regular lo comprueba
-// workspace validate (ValidateDeclarationPaths).
-func checkDocumentPath(raw string) (string, error) {
-	clean, err := checkRelative(raw)
-	if err != nil {
-		return "", fmt.Errorf("la ruta '%s' no es válida: %w", raw, err)
-	}
-	if escapes(clean) {
-		return "", fmt.Errorf("la ruta '%s' sale de workspaceRoot: un documento de la baseline debe permanecer dentro del repositorio de especificaciones", raw)
-	}
-	if clean == "." {
-		return "", fmt.Errorf("la ruta '%s' es el propio workspaceRoot: debe apuntar a un fichero", raw)
-	}
-	return clean, nil
 }
 
 // checkContextPath valida una ruta de contexto: relativa a workspaceRoot y
@@ -624,4 +312,14 @@ func containsString(list []string, value string) bool {
 		}
 	}
 	return false
+}
+
+// mappingKeyLine devuelve la línea de una clave de primer nivel de un mapeo.
+func mappingKeyLine(mapping *yaml.Node, key string) (int, bool) {
+	for i := 0; i+1 < len(mapping.Content); i += 2 {
+		if mapping.Content[i].Value == key {
+			return mapping.Content[i].Line, true
+		}
+	}
+	return 0, false
 }

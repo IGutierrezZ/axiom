@@ -9,7 +9,7 @@ import (
 
 // TestMain deja a los procesos git de las pruebas sin acceso a la configuración
 // del usuario, con un autor fijo y sin red (tasks.md, regla 9). Se fija una sola
-// vez para todo el binario, con el mismo patrón que internal/specbaseline.
+// vez para todo el binario, con el mismo patrón que los demás paquetes que ejecutan git.
 //
 // A diferencia de otros paquetes, aquí no se fija workspace.DiscoveryCeilingOverride:
 // gitcommon no llama a workspace.Locate, y workspace importa gitcommon (desde

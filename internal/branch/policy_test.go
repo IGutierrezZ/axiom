@@ -207,12 +207,12 @@ func TestPolicyConfigRefusalIsNilWhenTheConfigurationIsUsable(t *testing.T) {
 	if refusal := ConfigRefusal(workspace.Location{Master: `C:\sin config`}); refusal != nil {
 		t.Errorf("sin axiom.yaml no se rechaza: %+v", refusal)
 	}
-	// Los errores de otras declaraciones (baseline, technical_context) no impiden planificar ramas.
+	// Los errores de otras declaraciones (baseline retirada, technical_context) no impiden planificar ramas.
 	other := configLocation(nil, nil, nil)
-	other.Declarations.BaselineErr = errors.New("baseline inválida")
+	other.Declarations.BaselineRetiredErr = &workspace.BaselineRetiredError{Line: 3}
 	other.Declarations.TechnicalContextErr = errors.New("contexto inválido")
 	if refusal := ConfigRefusal(other); refusal != nil {
-		t.Errorf("un baseline inválido no es asunto de la política de ramas: %+v", refusal)
+		t.Errorf("un baseline residual no es asunto de la política de ramas: %+v", refusal)
 	}
 }
 

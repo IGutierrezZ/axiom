@@ -39,7 +39,7 @@ var ErrNotGitRepository = errors.New("no pertenece a ningún repositorio git")
 // git, otra herramienta) fija el repositorio sobre el que actúa git. Se retiran del
 // entorno: la selección del repositorio es siempre la del directorio que se pide,
 // nunca la del proceso (design §8, «Selección de repositorio git»). Es la misma
-// lista que usa internal/specbaseline/gitview.go.
+// lista que neutralizan las pruebas de los paquetes que ejecutan git.
 var redirectingVariables = map[string]bool{
 	"GIT_DIR":                          true,
 	"GIT_WORK_TREE":                    true,

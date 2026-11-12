@@ -770,12 +770,11 @@ func TestPublishTwiceIsUpToDate(t *testing.T) {
 	}
 }
 
-// Las rutas de `baseline` y `technical_context.maintained` declaradas en axiom.yaml se publican, y las de
+// Las rutas de `technical_context.maintained` declaradas en axiom.yaml se publican, y las de
 // `reference` nunca, aunque estén sucias.
-func TestPublishDeclaredBaselineAndMaintainedPathsAreDocumentation(t *testing.T) {
+func TestPublishDeclaredMaintainedPathsAreDocumentation(t *testing.T) {
 	repo, _ := newMonorepo(t)
 	config := monorepoConfig +
-		"baseline:\n  documents:\n    - domain: arquitectura\n      path: docs/arquitectura.md\n" +
 		"technical_context:\n  maintained:\n    entry: docs/contexto/README.md\n    paths:\n      - docs/contexto\n  reference:\n    paths:\n      - docs/ref\n"
 	// La configuración llega por la integración publicada: no es trabajo de la rama del cambio.
 	runGit(t, repo, "switch", "-q", "main")
@@ -785,7 +784,6 @@ func TestPublishDeclaredBaselineAndMaintainedPathsAreDocumentation(t *testing.T)
 	runGit(t, repo, "push", "-q", "origin", "main")
 	runGit(t, repo, "switch", "-q", "feat/x")
 	runGit(t, repo, "merge", "-q", "--ff-only", "main")
-	writeFile(t, filepath.Join(repo, "docs", "arquitectura.md"), "arquitectura\n")
 	writeFile(t, filepath.Join(repo, "docs", "contexto", "a.md"), "contexto\n")
 	writeFile(t, filepath.Join(repo, "docs", "ref", "r.md"), "referencia\n")
 	writeFile(t, filepath.Join(repo, "docs", "otro.md"), "otro\n")
@@ -793,7 +791,7 @@ func TestPublishDeclaredBaselineAndMaintainedPathsAreDocumentation(t *testing.T)
 	result := run(t, repo, Request{})
 
 	wantPublished(t, result)
-	if want := []string{"docs/arquitectura.md", "docs/contexto/a.md"}; !reflect.DeepEqual(commitFiles(t, repo, "HEAD"), want) {
+	if want := []string{"docs/contexto/a.md"}; !reflect.DeepEqual(commitFiles(t, repo, "HEAD"), want) {
 		t.Errorf("el commit contiene %v, se esperaba %v", commitFiles(t, repo, "HEAD"), want)
 	}
 	status := runGit(t, repo, "status", "--porcelain", "--untracked-files=all")

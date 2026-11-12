@@ -51,10 +51,10 @@ The orchestrator will give you:
 > Follow **Section B** from `skills/_shared/sdd-phase-common.md` for retrieval.
 
 - **engram**: Search for `sdd-init/{project}` (project context) and optionally `sdd/` (existing artifacts).
-- **openspec**: Read `openspec/config.yaml` and the baseline (see below).
+- **openspec**: Read `openspec/config.yaml` and the living specs (see below).
 - **none**: Use whatever context the orchestrator passed in the prompt.
 
-When the status projects `baseline`, read the documents of the affected domains from `baseline.documents` (see `../_shared/project-baseline-convention.md`) and read `openspec/specs/` only when `baseline` is absent.
+Read the living specs of the affected domains from `openspec/specs/{domain}/spec.md` (see `../_shared/project-baseline-convention.md`).
 
 ## What to Do
 

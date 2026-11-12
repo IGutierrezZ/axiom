@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/IGutierrezZ/axiom/v3/internal/adoption"
 	"github.com/IGutierrezZ/axiom/v3/internal/pathquote"
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
@@ -53,7 +54,7 @@ type ownMarkers struct {
 	violations   []string               // violaciones de la validación de carga, una por línea
 }
 
-// declares informa de si el axiom.yaml existente declara `baseline:`,
+// declares informa de si el axiom.yaml existente declara
 // `technical_context:`, `git:`, `workflow:`, `sdd:` o `repositories:`, válidos o no, o no se puede
 // leer: con --force no se sobrescribe un fichero cuyas declaraciones la
 // regeneración perdería (m13). Un bloque inválido cuenta igual que uno válido,
@@ -64,7 +65,6 @@ type ownMarkers struct {
 func (m ownMarkers) declares() bool {
 	d := m.declarations
 	return d.ParseErr != nil ||
-		d.Baseline != nil || d.BaselineErr != nil ||
 		d.TechnicalContext != nil || d.TechnicalContextErr != nil ||
 		d.Git != nil || d.GitErr != nil ||
 		d.Workflow != nil || d.WorkflowErr != nil ||
@@ -116,6 +116,12 @@ func inspectOwnMarkers(absPath, expectedHome string) (ownMarkers, error) {
 		_, loadErr := workspace.LoadConfig(markers.configPath)
 		markers.violations = loadViolations(loadErr)
 	}
+	// Un `baseline:` residual (REQ-30.21) no se ignora ni se completa con avisos:
+	// el alta se rechaza antes de escribir ni registrar nada, con la guía de
+	// migración, y el axiom.yaml existente no se toca.
+	if retired := markers.declarations.BaselineRetiredErr; retired != nil {
+		return ownMarkers{}, retired
+	}
 	return markers, nil
 }
 
@@ -137,9 +143,9 @@ func loadViolations(err error) []string {
 //
 // Antes de escribir ni registrar nada, también antes de crear el directorio
 // destino, evalúa los marcadores del propio destino (inspectOwnMarkers). Con una
-// baseline del proyecto, o indeterminada, no crea openspec/specs/ ni
-// openspec/INDEX.md, conserva el resto del andamiaje de su perfil e informa en
-// InitResult.Notes (REQ-24.23). Las violaciones de las declaraciones se informan
+// `baseline:` residual rechaza el alta (REQ-30.21), y con un axiom.yaml que no se
+// puede leer no crea openspec/specs/ ni openspec/INDEX.md, conserva el resto del
+// andamiaje de su perfil e informa en InitResult.Notes. Las violaciones de las declaraciones se informan
 // pero no cambian el resultado: REQ-24.23 sitúa a init entre las operaciones que
 // completan su resultado.
 func (ini *Initializer) Init(opts InitOptions) (*InitResult, error) {
@@ -168,7 +174,6 @@ func (ini *Initializer) Init(opts InitOptions) (*InitResult, error) {
 	if err != nil {
 		return nil, err
 	}
-	ownership, ownershipCause := markers.declarations.Ownership()
 
 	// El axiom.yaml existente es el que indica el puntero propio, si lo hay, y no
 	// <ruta>/axiom.yaml.
@@ -187,22 +192,20 @@ func (ini *Initializer) Init(opts InitOptions) (*InitResult, error) {
 		notes = append(notes, fmt.Sprintf("Ejecuta `axiom workspace validate --path %s` para ver el informe completo, incluidas las reglas que dependen del sistema de ficheros.", pathquote.Quote(absPath)))
 	}
 
-	// --force no sobrescribe un axiom.yaml que declara baseline:, technical_context:,
+	// --force no sobrescribe un axiom.yaml que declara technical_context:,
 	// git: o repositories: (o que no se puede leer): la regeneración perdería la
 	// declaración (m13).
 	preserveConfig := alreadyExisted && opts.Force && markers.declares()
 	if preserveConfig {
-		notes = append(notes, fmt.Sprintf("Se conserva %s sin sobrescribirlo aunque se pidió --force: declara `baseline:`, `technical_context:`, `git:`, `workflow:`, `sdd:` o `repositories:`, o no se puede leer, y regenerarlo perdería esa declaración. Edítalo a mano o retira esos bloques antes de volver a ejecutar `axiom init --force`.", pathquote.Quote(configPath)))
+		notes = append(notes, fmt.Sprintf("Se conserva %s sin sobrescribirlo aunque se pidió --force: declara `technical_context:`, `git:`, `workflow:`, `sdd:` o `repositories:`, o no se puede leer, y regenerarlo perdería esa declaración. Edítalo a mano o retira esos bloques antes de volver a ejecutar `axiom init --force`.", pathquote.Quote(configPath)))
 	}
 
-	writeBaseline := ownership == workspace.BaselineDefault
-	switch ownership {
-	case workspace.BaselineProject:
-		notes = append(notes, fmt.Sprintf("La baseline de especificaciones es del proyecto (%s declara los dominios %s): no se crean openspec/specs/ ni openspec/INDEX.md, para no producir una segunda baseline.",
-			pathquote.Quote(configPath), strings.Join(markers.declarations.DeclaredDomains(), ", ")))
-	case workspace.BaselineIndeterminate:
-		notes = append(notes, fmt.Sprintf("No se puede determinar si la baseline de especificaciones es del proyecto (%v): no se crean openspec/specs/ ni openspec/INDEX.md. Ejecuta `axiom workspace validate --path %s` y corrige %s.",
-			ownershipCause, pathquote.Quote(absPath), pathquote.Quote(configPath)))
+	// Con un axiom.yaml que no se puede leer no se crean openspec/specs/ ni
+	// openspec/INDEX.md: no hay forma de saber qué declara el proyecto.
+	writeSpecs := markers.declarations.ParseErr == nil
+	if !writeSpecs {
+		notes = append(notes, fmt.Sprintf("No se puede leer %s (%v): no se crean openspec/specs/ ni openspec/INDEX.md. Ejecuta `axiom workspace validate --path %s` y corrige el fichero.",
+			pathquote.Quote(configPath), markers.declarations.ParseErr, pathquote.Quote(absPath)))
 	}
 
 	// 1. Si no existe axiom.yaml o se fuerza la recreación. El axiom.yaml que se va
@@ -257,14 +260,13 @@ func (ini *Initializer) Init(opts InitOptions) (*InitResult, error) {
 		createdFiles = append(createdFiles, pointerPath)
 	}
 
-	// 2. Crear carpetas canónicas del arnés SDD. Con una baseline que no es la de
-	// OpenSpec por defecto se omite openspec/specs/ y se conserva el resto del
-	// andamiaje del perfil.
+	// 2. Crear carpetas canónicas del arnés SDD. Con un axiom.yaml ilegible se omite
+	// openspec/specs/ y se conserva el resto del andamiaje del perfil.
 	var standardDirs []string
 	if opts.Profile != "knowledge" && opts.Profile != "spec-only" {
 		standardDirs = append(standardDirs, filepath.Join(workspaceRoot, ".axiom", "inbox", "skills"))
 	}
-	if writeBaseline {
+	if writeSpecs {
 		standardDirs = append(standardDirs, filepath.Join(home, "specs"))
 	}
 	standardDirs = append(standardDirs, filepath.Join(home, "changes"))
@@ -278,7 +280,7 @@ func (ini *Initializer) Init(opts InitOptions) (*InitResult, error) {
 	// 2.1 En perfil knowledge, asegurar openspec/INDEX.md e inyectar .mcp.json
 	if opts.Profile == "knowledge" || opts.Profile == "spec-only" {
 		indexPath := filepath.Join(absPath, "openspec", "INDEX.md")
-		if writeBaseline && !fileExists(indexPath) {
+		if writeSpecs && !fileExists(indexPath) {
 			initialIndex := fmt.Sprintf("# Catálogo Maestro de Especificaciones Vivas — %s\n\n> **Proyecto:** %s (Spec-Driven Knowledge Base)\n> **Perfil:** Knowledge\n\n---\n\n## Resumen de Especificaciones Vivas\n\n| Dominio | Título de la Especificación | Reqs | Escenarios | Enlace |\n| :--- | :--- | :---: | :---: | :--- |\n", opts.Name, opts.Name)
 			if err := os.WriteFile(indexPath, []byte(initialIndex), 0644); err != nil {
 				return nil, fmt.Errorf("fallo al escribir %s: %w", indexPath, err)
@@ -323,14 +325,30 @@ func (ini *Initializer) Init(opts InitOptions) (*InitResult, error) {
 		}
 	}
 
+	// 4. Informe de adopción (REQ-30.27): el inventario del repositorio de especificaciones,
+	// de solo lectura, y la instrucción para lanzar la adopción desde el agente. No ejecuta
+	// nada ni crea el cambio de adopción. Un fallo del escaneo deja el informe ausente.
+	var adoptionReport *adoption.Summary
+	adoptionInstruction := ""
+	if inv, scanErr := adoption.Scan(workspaceRoot); scanErr == nil {
+		if summary := adoption.Summarize(inv); !summary.Empty() {
+			adoptionReport = &summary
+			if summary.SourceCount > 0 {
+				adoptionInstruction = adoptionInstructionFor(absPath)
+			}
+		}
+	}
+
 	return &InitResult{
-		ConfigPath:         configPath,
-		Record:             record,
-		CreatedFiles:       createdFiles,
-		AlreadyExisted:     alreadyExisted && (!opts.Force || preserveConfig),
-		AdoptedSkillsCount: adoptedSkillsCount,
-		Notes:              notes,
-		BaselineOwnership:  ownership,
+		ConfigPath:          configPath,
+		Record:              record,
+		CreatedFiles:        createdFiles,
+		AlreadyExisted:      alreadyExisted && (!opts.Force || preserveConfig),
+		AdoptedSkillsCount:  adoptedSkillsCount,
+		Notes:               notes,
+		SpecsSkipped:        !writeSpecs,
+		Adoption:            adoptionReport,
+		AdoptionInstruction: adoptionInstruction,
 	}, nil
 }
 
@@ -436,4 +454,14 @@ func buildAxiomYamlWithRoles(name, topology, specsRepo, root, domainContext stri
 	}
 
 	return sb.String()
+}
+
+// AdoptionChange es el nombre del cambio SDD de adopción que propone la instrucción del alta.
+const AdoptionChange = "adopcion-openspec"
+
+// adoptionInstructionFor compone la orden y la frase para el agente (REQ-30.27). La ruta es la
+// carpeta maestra, que `axiom archive adopt` resuelve al repositorio de especificaciones.
+func adoptionInstructionFor(masterPath string) string {
+	return fmt.Sprintf("Adopta los requisitos previos de este proyecto en OpenSpec: crea el cambio SDD `%[1]s`, ejecuta `axiom archive adopt scan --path %[2]s --change %[1]s` y redacta la delta siguiendo la referencia de adopción de la skill sdd-spec; comprueba el resultado con `axiom archive adopt check --path %[2]s --change %[1]s` y somete la compuerta `spec` a aprobación humana.",
+		AdoptionChange, pathquote.Quote(masterPath))
 }

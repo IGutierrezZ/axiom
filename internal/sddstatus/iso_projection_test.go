@@ -253,7 +253,7 @@ func TestDecorateISO(t *testing.T) {
 
 	t.Run("las instrucciones de fase conservan la línea de integración", func(t *testing.T) {
 		ws := workspacetest.Embedded(t, ".")
-		workspacetest.WriteFile(t, filepath.Join(ws.Master, "axiom.yaml"), declEmbeddedBase+declThreeDocuments+"sdd:\n  iso: quizás\n")
+		workspacetest.WriteFile(t, filepath.Join(ws.Master, "axiom.yaml"), declEmbeddedBase+declMaintainedOnly+"sdd:\n  iso: quizás\n")
 		seedReadyChange(t, ws.Master, "demo", "- [x] 1.1 Hecho\n")
 		status, err := Resolve(ResolveOptions{CWD: ws.Master, ChangeName: "demo", IncludeInstructions: true})
 		if err != nil {
@@ -262,7 +262,7 @@ func TestDecorateISO(t *testing.T) {
 		if status.PhaseInstructions == nil {
 			t.Fatal("se esperaban instrucciones de fase")
 		}
-		if len(reasonsWith(status.PhaseInstructions.Archive, "axiom sdd integrate prepare")) == 0 {
+		if len(reasonsWith(status.PhaseInstructions.Archive, "axiom archive context prepare")) == 0 {
 			t.Errorf("phaseInstructions.archive = %v, debe conservar la línea de la integración", status.PhaseInstructions.Archive)
 		}
 	})

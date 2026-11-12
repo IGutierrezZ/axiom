@@ -15,10 +15,8 @@ const (
 	tasksDone    = "- [x] 1.1 Trabajo hecho\n"
 	tasksPending = "- [ ] 1.1 Trabajo pendiente\n"
 
-	declInvalidBaseline = "baseline:\n  documents:\n    - domain: rf\n      path: rf.md\n      requirement:\n        heading: '^### (?P<id>RF-\\d+): (?P<title>.+)$'\n        level: 3\n        identity: nombre\n        render: '### {id}: {title}'\n"
-	declValidBaseline   = "baseline:\n  documents:\n    - domain: modelo-de-datos\n      path: 03_Modelo_Datos.md\n"
-	declMaintainedOnly  = "technical_context:\n  maintained:\n    entry: context/TECHNICAL_CONTEXT.md\n    paths: [context/]\n"
-	declReferenceOnly   = "technical_context:\n  reference:\n    paths: [00_Glosario.md]\n"
+	declMaintainedOnly = "technical_context:\n  maintained:\n    entry: context/TECHNICAL_CONTEXT.md\n    paths: [context/]\n"
+	declReferenceOnly  = "technical_context:\n  reference:\n    paths: [00_Glosario.md]\n"
 )
 
 // embeddedChange monta un proyecto embebido con los bloques dados, un
@@ -62,10 +60,11 @@ func wantNotContains(t *testing.T, what string, lines []string, unwanted string)
 	}
 }
 
-// REQ-24.18: una declaración inválida bloquea solo el archivado.
+// REQ-24.18 y REQ-30.21: una declaración inválida, o un `baseline:` residual,
+// bloquea solo el archivado.
 func TestArchiveBlockedByAnInvalidDeclaration(t *testing.T) {
 	t.Run("ruta archive: bloqueada, con la causa en notes y blockedReasons", func(t *testing.T) {
-		ws := embeddedChange(t, declInvalidBaseline, "", tasksDone)
+		ws := embeddedChange(t, declResidualBaseline, "", tasksDone)
 		status := resolveWithInstructions(t, ws.Master, "demo")
 		if status.Dependencies.Archive != DependencyBlocked {
 			t.Fatalf("dependencies.archive = %q, se esperaba blocked", status.Dependencies.Archive)
@@ -76,19 +75,20 @@ func TestArchiveBlockedByAnInvalidDeclaration(t *testing.T) {
 		for name, lines := range map[string][]string{"blockedReasons": status.BlockedReasons, "notes": status.Notes} {
 			wantContains(t, name, lines,
 				"La declaración de axiom.yaml no es válida",
-				"'id' o 'text', no 'nombre'",
+				"baseline_retired",
+				"axiom archive adopt scan",
 				"axiom workspace validate --path",
 				ws.Master,
 				"antes de archivar",
 			)
 		}
-		if status.Baseline != nil {
-			t.Error("una baseline inválida no se proyecta")
+		if _, present := statusJSON(t, status)["baseline"]; present {
+			t.Error("el status no proyecta la clave baseline (REQ-30.21)")
 		}
 	})
 
 	t.Run("ruta apply: la causa va solo a notes y apply no se bloquea", func(t *testing.T) {
-		ws := embeddedChange(t, declInvalidBaseline, "", tasksPending)
+		ws := embeddedChange(t, declResidualBaseline, "", tasksPending)
 		status := resolveWithInstructions(t, ws.Master, "demo")
 		if status.Dependencies.Archive != DependencyBlocked {
 			t.Fatalf("dependencies.archive = %q, se esperaba blocked", status.Dependencies.Archive)
@@ -104,7 +104,7 @@ func TestArchiveBlockedByAnInvalidDeclaration(t *testing.T) {
 
 	t.Run("ruta de planificación: las dependencias de planificación no se bloquean", func(t *testing.T) {
 		ws := workspacetest.Embedded(t, ".")
-		workspacetest.WriteFile(t, filepath.Join(ws.Master, "axiom.yaml"), declEmbeddedBase+declInvalidBaseline)
+		workspacetest.WriteFile(t, filepath.Join(ws.Master, "axiom.yaml"), declEmbeddedBase+declResidualBaseline)
 		workspacetest.WriteFile(t, filepath.Join(ws.Home, "changes", "demo", "proposal.md"), "# Propuesta\n")
 		status := resolveWithInstructions(t, ws.Master, "demo")
 		if status.NextRecommended != "spec" {
@@ -119,15 +119,16 @@ func TestArchiveBlockedByAnInvalidDeclaration(t *testing.T) {
 		wantContains(t, "notes", status.Notes, "La declaración de axiom.yaml no es válida")
 	})
 
-	t.Run("technical_context inválido sin afectar a la baseline", func(t *testing.T) {
-		ws := embeddedChange(t, declValidBaseline+"technical_context:\n  maintained:\n    paths: []\n", "", tasksDone)
+	t.Run("technical_context inválido junto a una baseline residual", func(t *testing.T) {
+		ws := embeddedChange(t, declResidualBaseline+"technical_context:\n  maintained:\n    paths: []\n", "", tasksDone)
 		status := resolveWithInstructions(t, ws.Master, "demo")
 		if status.Dependencies.Archive != DependencyBlocked || status.NextRecommended != "resolve-blockers" {
 			t.Fatalf("archive = %q next = %q", status.Dependencies.Archive, status.NextRecommended)
 		}
 		wantContains(t, "blockedReasons", status.BlockedReasons, "requiere al menos una ruta", "axiom workspace validate")
-		if status.Baseline == nil || status.TechnicalContext != nil {
-			t.Errorf("la baseline válida se proyecta y el contexto inválido no: baseline=%v contexto=%v", status.Baseline, status.TechnicalContext)
+		wantContains(t, "notes", status.Notes, "baseline_retired")
+		if status.TechnicalContext != nil {
+			t.Errorf("el contexto inválido no se proyecta: %v", status.TechnicalContext)
 		}
 	})
 
@@ -164,7 +165,7 @@ func TestArchiveBlockedByAnInvalidDeclaration(t *testing.T) {
 		if status.Dependencies.Archive != DependencyBlocked {
 			t.Fatalf("archive = %q, la declaración inválida bloquea aunque la base falle", status.Dependencies.Archive)
 		}
-		wantContains(t, "notes", status.Notes, "la baseline declarada requiere al menos un documento")
+		wantContains(t, "notes", status.Notes, "baseline_retired", "axiom archive adopt scan")
 	})
 
 	t.Run("base inválida sin bloques nuevos no bloquea archive", func(t *testing.T) {
@@ -196,7 +197,7 @@ func TestArchiveNotBlockedWithoutDeclarations(t *testing.T) {
 			if len(status.BlockedReasons) != 0 || len(status.Notes) != 0 {
 				t.Fatalf("blockedReasons = %v notes = %v, se esperaban vacíos", status.BlockedReasons, status.Notes)
 			}
-			wantNotContains(t, "phaseInstructions.archive", status.PhaseInstructions.Archive, "integrate prepare")
+			wantNotContains(t, "phaseInstructions.archive", status.PhaseInstructions.Archive, "context prepare")
 		})
 	}
 }
@@ -272,31 +273,28 @@ func TestArchiveBlockedWithoutTheContextDelta(t *testing.T) {
 	})
 }
 
-// REQ-24.62: una baseline del proyecto o un contexto mantenido exigen un almacén de ficheros.
+// REQ-24.62: un contexto mantenido exige un almacén de ficheros.
 func TestArchiveBlockedByAFilelessStore(t *testing.T) {
 	t.Run("none declarado con el cambio en disco", func(t *testing.T) {
-		ws := embeddedChange(t, declValidBaseline, "artifact_store: none\n", tasksPending)
+		ws := embeddedChange(t, declMaintainedOnly, "artifact_store: none\n", tasksPending)
 		status := resolveWithInstructions(t, ws.Master, "demo")
 		if status.Dependencies.Archive != DependencyBlocked {
 			t.Fatalf("archive = %q, el almacén declarado prevalece sobre el hallado en disco", status.Dependencies.Archive)
 		}
-		wantContains(t, "notes", status.Notes, "La baseline del proyecto (`baseline`) exige un almacén de ficheros", "`none`", "`artifact_store: openspec` o `hybrid` en `openspec/config.yaml`")
-		if status.Baseline == nil {
-			t.Error("la baseline sigue proyectada: la declaración no es inválida")
-		}
+		wantContains(t, "notes", status.Notes, "El contexto técnico mantenido (`technical_context.maintained`) exige un almacén de ficheros", "`none`", "`artifact_store: openspec` o `hybrid` en `openspec/config.yaml`")
 		if status.Dependencies.Apply != DependencyReady || status.NextRecommended != "apply" || len(status.BlockedReasons) != 0 {
 			t.Errorf("apply = %q next = %q blockedReasons = %v: la causa solo bloquea archive", status.Dependencies.Apply, status.NextRecommended, status.BlockedReasons)
 		}
 	})
 
 	t.Run("none declarado en la ruta archive va a blockedReasons", func(t *testing.T) {
-		ws := embeddedChange(t, declValidBaseline+declMaintainedOnly, "artifact_store: none\n", tasksDone)
+		ws := embeddedChange(t, declMaintainedOnly, "artifact_store: none\n", tasksDone)
 		status := resolveWithInstructions(t, ws.Master, "demo")
 		if status.Dependencies.Archive != DependencyBlocked || status.NextRecommended != "resolve-blockers" {
 			t.Fatalf("archive = %q next = %q", status.Dependencies.Archive, status.NextRecommended)
 		}
 		wantContains(t, "blockedReasons", status.BlockedReasons,
-			"La baseline del proyecto (`baseline`) y el contexto técnico mantenido (`technical_context.maintained`) exigen un almacén de ficheros", "`none`")
+			"El contexto técnico mantenido (`technical_context.maintained`) exige un almacén de ficheros", "`none`")
 	})
 
 	engramObservations := func() []engramObservation {
@@ -310,7 +308,7 @@ func TestArchiveBlockedByAFilelessStore(t *testing.T) {
 
 	t.Run("engram declarado con el cambio en Engram", func(t *testing.T) {
 		ws := workspacetest.Embedded(t, ".")
-		workspacetest.WriteFile(t, filepath.Join(ws.Master, "axiom.yaml"), declEmbeddedBase+declValidBaseline)
+		workspacetest.WriteFile(t, filepath.Join(ws.Master, "axiom.yaml"), declEmbeddedBase+declMaintainedOnly)
 		workspacetest.WriteFile(t, filepath.Join(ws.Home, "config.yaml"), "artifact_store: engram\n")
 		t.Setenv("ENGRAM_PROJECT", "demo")
 		defer stubEngramExport(t, engramObservations())()
@@ -321,10 +319,7 @@ func TestArchiveBlockedByAFilelessStore(t *testing.T) {
 		if status.Dependencies.Archive != DependencyBlocked {
 			t.Fatalf("archive = %q", status.Dependencies.Archive)
 		}
-		wantContains(t, "notes", status.Notes, "La baseline del proyecto (`baseline`) exige un almacén de ficheros", "`engram`")
-		if status.Baseline == nil {
-			t.Error("la baseline sigue proyectada")
-		}
+		wantContains(t, "notes", status.Notes, "El contexto técnico mantenido (`technical_context.maintained`) exige un almacén de ficheros", "`engram`")
 		if status.Dependencies.Apply != DependencyReady || status.NextRecommended != "apply" || len(status.BlockedReasons) != 0 {
 			t.Errorf("apply = %q next = %q blockedReasons = %v", status.Dependencies.Apply, status.NextRecommended, status.BlockedReasons)
 		}
@@ -356,7 +351,7 @@ func TestArchiveBlockedByAFilelessStore(t *testing.T) {
 
 	t.Run("almacenes de ficheros no bloquean", func(t *testing.T) {
 		for _, store := range []string{"openspec", "hybrid"} {
-			ws := embeddedChange(t, declValidBaseline, "artifact_store: "+store+"\n", tasksDone)
+			ws := embeddedChange(t, declReferenceOnly, "artifact_store: "+store+"\n", tasksDone)
 			func() {
 				defer stubEngramExport(t, nil)()
 				status := resolveWithInstructions(t, ws.Master, "demo")
@@ -368,24 +363,29 @@ func TestArchiveBlockedByAFilelessStore(t *testing.T) {
 	})
 }
 
-// D-05: con baseline del proyecto o contexto mantenido, phaseInstructions.archive
-// nombra el verbo que prepara la integración.
-func TestArchiveInstructionsNameIntegratePrepare(t *testing.T) {
-	for name, blocks := range map[string]string{"baseline": declValidBaseline, "contexto mantenido": declMaintainedOnly} {
-		t.Run(name, func(t *testing.T) {
-			ws := embeddedChange(t, blocks, "", tasksPending)
-			status := resolveWithInstructions(t, ws.Master, "demo")
-			wantContains(t, "phaseInstructions.archive", status.PhaseInstructions.Archive,
-				"axiom sdd integrate prepare --cwd", ws.Master, "--change demo")
-		})
-	}
-	t.Run("sin baseline del proyecto ni contexto mantenido", func(t *testing.T) {
+// D-05: con contexto mantenido, phaseInstructions.archive nombra el verbo que
+// prepara la integración del contexto; con un `baseline:` residual no nombra
+// ningún verbo retirado (REQ-30.25).
+func TestArchiveInstructionsNameContextPrepare(t *testing.T) {
+	t.Run("contexto mantenido", func(t *testing.T) {
+		ws := embeddedChange(t, declMaintainedOnly, "", tasksPending)
+		status := resolveWithInstructions(t, ws.Master, "demo")
+		wantContains(t, "phaseInstructions.archive", status.PhaseInstructions.Archive,
+			"axiom archive context prepare --cwd", ws.Master, "--change demo")
+		wantNotContains(t, "phaseInstructions.archive", status.PhaseInstructions.Archive, "sdd integrate")
+	})
+	t.Run("sin contexto mantenido", func(t *testing.T) {
 		ws := embeddedChange(t, declReferenceOnly, "", tasksPending)
 		status := resolveWithInstructions(t, ws.Master, "demo")
-		wantNotContains(t, "phaseInstructions.archive", status.PhaseInstructions.Archive, "integrate prepare")
+		wantNotContains(t, "phaseInstructions.archive", status.PhaseInstructions.Archive, "context prepare")
+	})
+	t.Run("baseline residual", func(t *testing.T) {
+		ws := embeddedChange(t, declResidualBaseline, "", tasksPending)
+		status := resolveWithInstructions(t, ws.Master, "demo")
+		wantNotContains(t, "phaseInstructions.archive", status.PhaseInstructions.Archive, "sdd integrate")
 	})
 	t.Run("sin instrucciones pedidas no se generan", func(t *testing.T) {
-		ws := embeddedChange(t, declValidBaseline, "", tasksPending)
+		ws := embeddedChange(t, declMaintainedOnly, "", tasksPending)
 		status, err := Resolve(ResolveOptions{CWD: ws.Master, ChangeName: "demo"})
 		if err != nil {
 			t.Fatal(err)

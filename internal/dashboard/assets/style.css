@@ -396,6 +396,10 @@ dialog.modal::backdrop { background: rgba(10, 10, 14, .55); }
   font-size: 12px; overflow-x: auto; white-space: nowrap; display: flex; align-items: center;
 }
 
+/* Informe de adopción tras el alta (REQ-30.27): la instrucción es una frase larga y se parte en líneas. */
+.adoption-list { margin: 4px 0 12px; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; }
+#adoption-instruction { white-space: normal; overflow-wrap: anywhere; line-height: 1.5; }
+
 /* -------------------------------------------------------------------------
    Pestañas del detalle de incremento (enlaces de ruta)
    ------------------------------------------------------------------------- */

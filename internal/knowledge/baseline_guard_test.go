@@ -15,9 +15,8 @@ import (
 )
 
 const (
-	guardCanonicalConfig = "workspace:\n  name: ejemplo-canonico\n  topology: multirepo\n  specs_repository: repo-specs\nroles:\n  backend:\n    name: Backend\n    repositories:\n      - path: repo-backend\n"
-	guardProjectBaseline = "baseline:\n  documents:\n    - domain: modelo-de-datos\n      path: 03_Modelo_Datos.md\n    - domain: flujos-de-negocio\n      path: docs/04_Flujos_Negocio.md\n"
-	guardInvalidBaseline = "baseline:\n  documents: []\n"
+	guardCanonicalConfig  = "workspace:\n  name: ejemplo-canonico\n  topology: multirepo\n  specs_repository: repo-specs\nroles:\n  backend:\n    name: Backend\n    repositories:\n      - path: repo-backend\n"
+	guardResidualBaseline = "baseline:\n  documents:\n    - domain: modelo-de-datos\n      path: 03_Modelo_Datos.md\n"
 )
 
 // guardWorkspace monta el canónico con la baseline dada y un módulo de código en
@@ -51,17 +50,16 @@ func hasNote(notes []string, fragment string) bool {
 	return false
 }
 
-// REQ-24.23: con baseline del proyecto, o indeterminada, el barrido completa el
+// REQ-30.21: con un `baseline:` residual el barrido completa el
 // análisis, omite la siembra y el índice, devuelve `created_specs: []` y anota la
 // omisión, sin error.
-func TestSweepWithAProjectOrIndeterminateBaselineSkipsTheSeeding(t *testing.T) {
+func TestSweepWithAResidualBaselineSkipsTheSeeding(t *testing.T) {
 	tests := []struct {
 		name     string
 		baseline string
 		wants    []string
 	}{
-		{"del proyecto", guardProjectBaseline, []string{"baseline de especificaciones es del proyecto", "modelo-de-datos, flujos-de-negocio", "retira el bloque `baseline:`", "Se omite la siembra"}},
-		{"indeterminada", guardInvalidBaseline, []string{"no se puede determinar", "al menos un documento", "axiom workspace validate --path", "Se omite la siembra"}},
+		{"residual", guardResidualBaseline, []string{"baseline_retired", "axiom archive adopt scan", "Se omite la siembra"}},
 	}
 	for _, tt := range tests {
 		for _, start := range []string{"repositorio de código", "carpeta maestra"} {
@@ -115,19 +113,16 @@ func TestSweepWithTheDefaultBaselineStillSeeds(t *testing.T) {
 	}
 }
 
-// REQ-24.23 y REQ-24.25: con --enrich la consulta se responde sin enriquecer y
-// anota la omisión; con baseline del proyecto avisa además de que la búsqueda
-// spec-first no cubre la baseline externa, también sin --enrich.
-func TestQueryEnrichWithAProjectOrIndeterminateBaseline(t *testing.T) {
+// REQ-30.21: con --enrich y un `baseline:` residual la consulta se responde sin
+// enriquecer y anota la omisión; ya no existe ningún aviso de baseline externa.
+func TestQueryEnrichWithAResidualBaseline(t *testing.T) {
 	question := "¿Cuál es la regla_facturacion_anual?"
 	tests := []struct {
-		name         string
-		baseline     string
-		wants        []string
-		wantSpecNote bool
+		name     string
+		baseline string
+		wants    []string
 	}{
-		{"del proyecto", guardProjectBaseline, []string{"baseline de especificaciones es del proyecto", "Se omite el enriquecimiento"}, true},
-		{"indeterminada", guardInvalidBaseline, []string{"no se puede determinar", "al menos un documento", "Se omite el enriquecimiento"}, false},
+		{"residual", guardResidualBaseline, []string{"baseline_retired", "Se omite el enriquecimiento"}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -148,22 +143,18 @@ func TestQueryEnrichWithAProjectOrIndeterminateBaseline(t *testing.T) {
 					t.Errorf("ninguna nota contiene %q: %q", want, res.Notes)
 				}
 			}
-			if got := hasNote(res.Notes, "La búsqueda spec-first no cubre la baseline externa"); got != tt.wantSpecNote {
-				t.Errorf("aviso de búsqueda spec-first = %v, se esperaba %v: %q", got, tt.wantSpecNote, res.Notes)
+			if hasNote(res.Notes, "La búsqueda spec-first no cubre la baseline externa") {
+				t.Errorf("la baseline externa ya no existe: %q", res.Notes)
 			}
 			requireNoSpecsWritten(t, ws)
 
-			// Sin --enrich la consulta es de solo lectura, pero el aviso de la
-			// búsqueda spec-first sigue apareciendo con baseline del proyecto.
+			// Sin --enrich la consulta es de solo lectura.
 			res, err = RunQuery(context.Background(), QueryOptions{WorkspaceRoot: ws.Backend, Question: question})
 			if err != nil {
 				t.Fatalf("RunQuery sin --enrich = %v", err)
 			}
 			if hasNote(res.Notes, "Se omite el enriquecimiento") {
 				t.Errorf("sin --enrich no hay nada que omitir: %q", res.Notes)
-			}
-			if got := hasNote(res.Notes, "La búsqueda spec-first no cubre la baseline externa"); got != tt.wantSpecNote {
-				t.Errorf("sin --enrich, aviso de búsqueda spec-first = %v, se esperaba %v: %q", got, tt.wantSpecNote, res.Notes)
 			}
 		})
 	}
@@ -198,16 +189,14 @@ func crawlJobOf(t *testing.T, ws workspacetest.Workspace) (jobPath, unitID strin
 	return jobPath, job.Units[0].ID
 }
 
-// REQ-24.23: con baseline del proyecto o indeterminada, registrar una unidad y
-// finalizar el crawl se rechazan sin escribir en openspec/specs ni INDEX.md.
-func TestCrawlRecordAndFinalizeAreRejectedWithAProjectOrIndeterminateBaseline(t *testing.T) {
+// REQ-30.21: con un `baseline:` residual, registrar una unidad y finalizar el
+// crawl se rechazan sin escribir en openspec/specs ni INDEX.md.
+func TestCrawlRecordAndFinalizeAreRejectedWithAResidualBaseline(t *testing.T) {
 	tests := []struct {
-		name      string
-		baseline  string
-		ownership workspace.BaselineOwnership
+		name     string
+		baseline string
 	}{
-		{"del proyecto", guardProjectBaseline, workspace.BaselineProject},
-		{"indeterminada", guardInvalidBaseline, workspace.BaselineIndeterminate},
+		{"residual", guardResidualBaseline},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -218,20 +207,17 @@ func TestCrawlRecordAndFinalizeAreRejectedWithAProjectOrIndeterminateBaseline(t 
 			workspacetest.WriteFile(t, filepath.Join(ws.Specs, "axiom.yaml"), guardCanonicalConfig+tt.baseline)
 
 			_, err := RecordUnit(context.Background(), jobPath, UnitAnalysisInput{UnitID: unitID, Summary: "Resumen del análisis."})
-			var second *workspace.SecondBaselineError
-			if !errors.As(err, &second) || second.Ownership != tt.ownership {
-				t.Fatalf("RecordUnit = %v, se esperaba un *workspace.SecondBaselineError %s", err, tt.ownership)
+			var retired *workspace.BaselineRetiredError
+			if !errors.As(err, &retired) {
+				t.Fatalf("RecordUnit = %v, se esperaba un *workspace.BaselineRetiredError", err)
 			}
-			if !strings.Contains(err.Error(), "axiom knowledge crawl --record-unit") {
-				t.Errorf("el mensaje debe nombrar la operación rechazada: %v", err)
+			if !strings.Contains(err.Error(), "axiom archive adopt scan") {
+				t.Errorf("el mensaje debe nombrar la migración: %v", err)
 			}
 
 			_, err = FinalizeCrawl(context.Background(), jobPath)
-			if !errors.As(err, &second) || second.Ownership != tt.ownership {
-				t.Fatalf("FinalizeCrawl = %v, se esperaba un *workspace.SecondBaselineError %s", err, tt.ownership)
-			}
-			if !strings.Contains(err.Error(), "axiom knowledge crawl --finalize") {
-				t.Errorf("el mensaje debe nombrar la operación rechazada: %v", err)
+			if !errors.As(err, &retired) {
+				t.Fatalf("FinalizeCrawl = %v, se esperaba un *workspace.BaselineRetiredError", err)
 			}
 
 			requireNoSpecsWritten(t, ws)
@@ -246,8 +232,8 @@ func TestCrawlRecordAndFinalizeAreRejectedWithAProjectOrIndeterminateBaseline(t 
 	}
 }
 
-// REQ-24.22: si Locate rechaza en el momento de escribir, no hay respuesta de
-// baseline y RecordUnit y FinalizeCrawl no escriben.
+// Si Locate rechaza en el momento de escribir, RecordUnit y FinalizeCrawl no
+// escriben.
 func TestCrawlWritesAreRejectedWhenLocateRejects(t *testing.T) {
 	ws := guardWorkspace(t, "")
 	jobPath, unitID := crawlJobOf(t, ws)

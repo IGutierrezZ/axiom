@@ -312,20 +312,13 @@ func changeNotFound(change, planningHome string) *Refusal {
 		fmt.Sprintf("comprueba el nombre con `axiom sdd status --cwd %s` y repite la orden", pathquote.Quote(filepath.Dir(planningHome))), nil)
 }
 
-// composeSet compone la lista cerrada de documentación (DD-06) con las rutas de `baseline` y
+// composeSet compone la lista cerrada de documentación (DD-06) con las rutas de
 // `technical_context` de axiom.yaml, que son relativas al workspaceRoot, convertidas a relativas a
 // la raíz git del destino.
 func composeSet(location workspace.Location, target branch.PublicationTarget, change string) (docpaths.Set, error) {
 	wsRel := workspaceRelative(target.PlanningRel)
-	var baseline, maintained, reference []string
+	var maintained, reference []string
 	declarations := location.Declarations
-	if declarations.Baseline != nil {
-		for _, document := range declarations.Baseline.Documents {
-			if rel, ok := fromWorkspace(wsRel, document.Path); ok {
-				baseline = append(baseline, rel)
-			}
-		}
-	}
 	if technical := declarations.TechnicalContext; technical != nil {
 		if technical.Maintained != nil {
 			for _, declared := range technical.Maintained.Paths {
@@ -342,7 +335,7 @@ func composeSet(location workspace.Location, target branch.PublicationTarget, ch
 			}
 		}
 	}
-	return docpaths.New(target.PlanningRel, change, baseline, maintained, reference)
+	return docpaths.New(target.PlanningRel, change, maintained, reference)
 }
 
 // workspaceRelative es el workspaceRoot relativo a la raíz git, derivado del planning home, que es

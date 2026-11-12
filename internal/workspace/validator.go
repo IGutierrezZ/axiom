@@ -132,7 +132,7 @@ func Validate(fs FS, cfg *WorkspaceConfig, baseDir string) (*ValidationReport, e
 }
 
 // ValidateDeclarationPaths comprueba las declaraciones válidas de cfg
-// (`baseline:` y `technical_context:`) contra el sistema de ficheros real y el
+// (`technical_context:`) contra el sistema de ficheros real y el
 // almacén declarado, y devuelve los errores y las advertencias para que quien
 // llama los fusione en el informe de Validate (REQ-24.14, 24.17, 24.27 y 24.62).
 // master es la carpeta maestra (la ruta que recibe `workspace validate`).
@@ -144,8 +144,6 @@ func Validate(fs FS, cfg *WorkspaceConfig, baseDir string) (*ValidationReport, e
 // declaración inválida no llega aquí: cfg no la lleva.
 //
 // Las reglas son las de D-04:
-//   - cada documento de la baseline existe como fichero regular y, tras resolver
-//     los enlaces simbólicos, sigue dentro de workspaceRoot (error);
 //   - cada ruta de contexto que existe, resuelta, sigue dentro de la carpeta
 //     maestra (error); una ruta inexistente solo avisa;
 //   - los solapes se comprueban de nuevo por identidad sobre lo que existe, para
@@ -153,7 +151,7 @@ func Validate(fs FS, cfg *WorkspaceConfig, baseDir string) (*ValidationReport, e
 //   - con almacén declarado `engram` o `none`, un error por cada declaración que
 //     exige ficheros.
 func ValidateDeclarationPaths(cfg *WorkspaceConfig, master string) (errs []string, warnings []string) {
-	if cfg == nil || (cfg.Baseline == nil && cfg.TechnicalContext == nil) {
+	if cfg == nil || cfg.TechnicalContext == nil {
 		return nil, nil
 	}
 	master = filepath.Clean(master)
@@ -163,11 +161,6 @@ func ValidateDeclarationPaths(cfg *WorkspaceConfig, master string) (errs []strin
 	// contra él solo añadiría un error por declaración con la misma causa.
 	if info, err := os.Stat(workspaceRoot); err == nil && info.IsDir() {
 		var located []declaredLocation
-		if cfg.Baseline != nil {
-			documentErrs, documents := checkBaselineDocuments(cfg.Baseline, workspaceRoot)
-			errs = append(errs, documentErrs...)
-			located = append(located, documents...)
-		}
 		if cfg.TechnicalContext != nil {
 			contextErrs, contextWarnings, contexts := checkContextPaths(cfg.TechnicalContext, workspaceRoot, master)
 			errs = append(errs, contextErrs...)
@@ -182,48 +175,11 @@ func ValidateDeclarationPaths(cfg *WorkspaceConfig, master string) (errs []strin
 }
 
 // declaredLocation es una ruta declarada que existe, con el lugar al que
-// resuelve. owner es «baseline» o el modo del contexto técnico.
+// resuelve. owner es el modo del contexto técnico.
 type declaredLocation struct {
 	owner    string
 	declared string
 	resolved string
-}
-
-// checkBaselineDocuments comprueba que cada documento existe como fichero
-// regular y que sigue dentro de workspaceRoot tras resolver los enlaces.
-func checkBaselineDocuments(baseline *BaselineConfig, workspaceRoot string) ([]string, []declaredLocation) {
-	var errs []string
-	var located []declaredLocation
-	for _, doc := range baseline.Documents {
-		clean, err := checkRelative(doc.Path)
-		if err != nil {
-			continue // ya rechazado al cargar la configuración
-		}
-		full := filepath.Join(workspaceRoot, filepath.FromSlash(clean))
-		info, err := os.Stat(full)
-		switch {
-		case err != nil && os.IsNotExist(err):
-			errs = append(errs, fmt.Sprintf("el documento '%s' del dominio '%s' no existe en el repositorio de especificaciones (ruta: '%s')", doc.Path, doc.Domain, full))
-			continue
-		case err != nil:
-			errs = append(errs, fmt.Sprintf("no se pudo acceder al documento '%s' del dominio '%s': %v", doc.Path, doc.Domain, err))
-			continue
-		case !info.Mode().IsRegular():
-			errs = append(errs, fmt.Sprintf("el documento '%s' del dominio '%s' no es un fichero regular (ruta: '%s')", doc.Path, doc.Domain, full))
-			continue
-		}
-		resolved, err := filepath.EvalSymlinks(full)
-		if err != nil {
-			errs = append(errs, fmt.Sprintf("no se pudo resolver el documento '%s' del dominio '%s': %v", doc.Path, doc.Domain, err))
-			continue
-		}
-		if !pathidentity.Contains(workspaceRoot, resolved) {
-			errs = append(errs, fmt.Sprintf("el documento '%s' del dominio '%s' resuelve a '%s', fuera de workspaceRoot '%s' (enlace simbólico): un documento de la baseline debe permanecer dentro del repositorio de especificaciones", doc.Path, doc.Domain, resolved, workspaceRoot))
-			continue
-		}
-		located = append(located, declaredLocation{owner: "baseline", declared: doc.Path, resolved: resolved})
-	}
-	return errs, located
 }
 
 // checkContextPaths comprueba las rutas de los dos modos del contexto técnico: la
@@ -281,7 +237,7 @@ func checkContextPaths(context *TechnicalContextConfig, workspaceRoot, master st
 
 // identityOverlaps repite por identidad la comprobación de solapes de la carga:
 // una grafía distinta del mismo directorio, o un enlace, no esquiva la regla de
-// que ninguna ruta pertenece a los dos modos ni a la baseline. Las rutas de un
+// que ninguna ruta pertenece a los dos modos. Las rutas de un
 // mismo propietario no se comparan entre sí.
 func identityOverlaps(located []declaredLocation) []string {
 	var errs []string
@@ -291,7 +247,7 @@ func identityOverlaps(located []declaredLocation) []string {
 				continue
 			}
 			if sameLocation(a.resolved, b.resolved) {
-				errs = append(errs, fmt.Sprintf("la ruta '%s' (%s) y la ruta '%s' (%s) solapan por identidad: apuntan al mismo lugar o una contiene a la otra, y una ruta no puede pertenecer a la baseline ni a los dos modos del contexto técnico", a.declared, a.owner, b.declared, b.owner))
+				errs = append(errs, fmt.Sprintf("la ruta '%s' (%s) y la ruta '%s' (%s) solapan por identidad: apuntan al mismo lugar o una contiene a la otra, y una ruta no puede pertenecer a los dos modos del contexto técnico", a.declared, a.owner, b.declared, b.owner))
 			}
 		}
 	}
@@ -318,9 +274,6 @@ func storeErrors(cfg *WorkspaceConfig, workspaceRoot string) []string {
 		return nil
 	}
 	var errs []string
-	if cfg.Baseline != nil && len(cfg.Baseline.Documents) > 0 {
-		errs = append(errs, storeError("baseline", "la baseline del proyecto", store))
-	}
 	if cfg.TechnicalContext != nil && cfg.TechnicalContext.Maintained != nil {
 		errs = append(errs, storeError("technical_context.maintained", "el contexto técnico mantenido", store))
 	}

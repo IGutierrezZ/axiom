@@ -25,18 +25,16 @@ type Set struct {
 	archiveName *regexp.Regexp // <fecha>-<x>, nombre completo de la carpeta archivada
 	specsDir    string         // <p>/specs
 	indexFile   string         // <p>/INDEX.md
-	baseline    []string
 	maintained  []string
 	reference   []string
 }
 
 // New compone el conjunto. planningRel es el planning home relativo a la raíz git
-// ("" si es la raíz, como en el repositorio de specs de un multirepo); baseline,
-// maintained y reference son las rutas declaradas en axiom.yaml, ya relativas a la
+// ("" si es la raíz, como en el repositorio de specs de un multirepo); maintained y reference son las rutas declaradas en axiom.yaml, ya relativas a la
 // raíz git (las que caen fuera de ella se descartan antes de llamar). Devuelve un
 // error si el cambio no es un nombre de carpeta simple o si una ruta declarada es
 // vacía, absoluta, sale de la raíz o es la raíz misma.
-func New(planningRel, change string, baseline, maintained, reference []string) (Set, error) {
+func New(planningRel, change string, maintained, reference []string) (Set, error) {
 	if change == "" || change == "." || change == ".." || strings.ContainsAny(change, `/\`) {
 		return Set{}, fmt.Errorf("el nombre de cambio %q no es un nombre de carpeta simple", change)
 	}
@@ -56,7 +54,6 @@ func New(planningRel, change string, baseline, maintained, reference []string) (
 		in   []string
 		out  *[]string
 	}{
-		{"baseline", baseline, &set.baseline},
 		{"technical_context.maintained", maintained, &set.maintained},
 		{"technical_context.reference", reference, &set.reference},
 	} {
@@ -116,7 +113,7 @@ func underAny(rel string, dirs []string) bool {
 }
 
 // Root devuelve la raíz de pathspec que cubre rel (la carpeta del cambio, la carpeta
-// archivada, `<p>/specs`, `<p>/INDEX.md`, el documento de baseline o la ruta
+// archivada, `<p>/specs`, `<p>/INDEX.md` o la ruta
 // mantenida declarada) y false si rel no es documentación. Una ruta bajo
 // `technical_context.reference` nunca lo es, aunque coincida con otra regla.
 func (s Set) Root(rel string) (string, bool) {
@@ -135,11 +132,6 @@ func (s Set) Root(rel string) (string, bool) {
 		return s.specsDir, true
 	case rel == s.indexFile:
 		return s.indexFile, true
-	}
-	for _, document := range s.baseline {
-		if rel == document {
-			return document, true
-		}
 	}
 	for _, root := range s.maintained {
 		if rel == root || under(rel, root) {
@@ -166,7 +158,6 @@ func (s Set) Candidates() []string {
 		return nil
 	}
 	roots := []string{s.changeDir, s.archiveDir, s.specsDir, s.indexFile}
-	roots = append(roots, s.baseline...)
 	roots = append(roots, s.maintained...)
 	seen := make(map[string]bool, len(roots))
 	var unique []string

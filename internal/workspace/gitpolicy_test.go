@@ -191,7 +191,7 @@ func TestGitDuplicatedKeyIsRejected(t *testing.T) {
 func TestGitErrorsShareTheLoadWithTheOtherBlocksAndTheBase(t *testing.T) {
 	t.Run("con otro bloque inválido", func(t *testing.T) {
 		_, err := ParseConfig([]byte(declarationsBase + "git:\n  branch_prefix: \"inc//\"\nbaseline:\n  documents: []\n"))
-		wantErrorContains(t, err, "git.branch_prefix", "baseline.documents")
+		wantErrorContains(t, err, "git.branch_prefix", BaselineRetiredCode)
 	})
 
 	t.Run("con la base inválida", func(t *testing.T) {
@@ -208,8 +208,8 @@ func TestGitErrorsShareTheLoadWithTheOtherBlocksAndTheBase(t *testing.T) {
 
 	t.Run("un bloque válido no se ve afectado por otro inválido", func(t *testing.T) {
 		cfg, baseErr, declarations := parseDeclarations(t, "git:\n  branch_prefix: inc\nbaseline:\n  documents: []\n")
-		if baseErr != nil || declarations.GitErr != nil || declarations.BaselineErr == nil {
-			t.Fatalf("base=%v git=%v baseline=%v", baseErr, declarations.GitErr, declarations.BaselineErr)
+		if baseErr != nil || declarations.GitErr != nil || declarations.BaselineRetiredErr == nil {
+			t.Fatalf("base=%v git=%v baseline=%v", baseErr, declarations.GitErr, declarations.BaselineRetiredErr)
 		}
 		wantGit(t, cfg, "main", "inc")
 	})
@@ -649,7 +649,7 @@ func TestRepositoriesErrorsShareTheLoadWithTheOtherBlocksAndTheBase(t *testing.T
 
 	t.Run("con otro bloque inválido", func(t *testing.T) {
 		_, err := ParseConfig([]byte(declarationsBase + invalidRepositories + "baseline:\n  documents: []\n"))
-		wantErrorContains(t, err, "repositories[0].path", "baseline.documents")
+		wantErrorContains(t, err, "repositories[0].path", BaselineRetiredCode)
 	})
 
 	t.Run("con la base inválida", func(t *testing.T) {

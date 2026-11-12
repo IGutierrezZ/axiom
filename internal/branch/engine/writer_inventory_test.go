@@ -27,9 +27,9 @@ import (
 //
 //  1. Llamadas por selector, resueltas por la ruta de importación y no por el alias local, a
 //     kickoff.Seal, kickoff.AppendGate, handoff.WriteFile y sddstatus.PrepareChangeInstanceConsent,
-//     más specbaseline.Prepare, Verify y ApplyCompose (escriben integration.yaml y los documentos
-//     del baseline; el plan nombra las cuatro primeras y esta ampliación cubre `integrate prepare`,
-//     `integrate verify` y `archive-compose --in-place`). También la llamada sin cualificar dentro
+//     más techcontext.Prepare y Verify (escriben integration.yaml; el plan nombra las cuatro
+//     primeras y esta ampliación cubre `archive context prepare` y `archive context verify`).
+//     También la llamada sin cualificar dentro
 //     del propio paquete que define la función.
 //  2. Una aproximación de «escribe bajo changes/»: una función que llama a una primitiva de
 //     escritura del paquete os (WriteFile, MkdirAll, Mkdir, Rename, Remove, RemoveAll, Create,
@@ -64,11 +64,10 @@ var writerCalls = []struct{ pkgPath, name string }{
 	{"internal/kickoff", "AppendGate"},
 	{"internal/handoff", "WriteFile"},
 	{"internal/sddstatus", "PrepareChangeInstanceConsent"},
-	// integration.yaml y los documentos del baseline: los escribe specbaseline, no una primitiva de
-	// os visible desde el escritor, así que se siguen por selector (ampliación de S8.19).
-	{"internal/specbaseline", "Prepare"},
-	{"internal/specbaseline", "Verify"},
-	{"internal/specbaseline", "ApplyCompose"},
+	// integration.yaml del contexto técnico: lo escribe techcontext, no una primitiva de os visible
+	// desde el escritor, así que se sigue por selector (ampliación de S8.19).
+	{"internal/techcontext", "Prepare"},
+	{"internal/techcontext", "Verify"},
 }
 
 // osWritePrimitives son las primitivas del paquete os que el inventario cuenta como escritura.
@@ -113,10 +112,9 @@ var guardedWriters = map[string]writerEntry{
 	"internal/cli.runSDDKickoffSeal":              {status: statusGuarded, reason: "kickoff seal: guarda A y después la instantánea (applySealBranchPolicy); `--infer` y el kickoff sin instantánea quedan exentos dentro de la guarda (R15)"},
 	"internal/cli.runSDDGateRecord":               {status: statusGuarded, reason: "gate record: contexto ordinary, archive con --gate integration (G-10); cubre AppendGate"},
 	"internal/cli.RunSDDContinue":                 {status: statusGuarded, reason: "marcador de instancia: guarda solo si el marcador se va a escribir (ChangeInstanceMarkerPending)"},
-	"internal/cli.runSDDIntegratePrepare":         {status: statusGuarded, reason: "integration.yaml: contexto archive"},
-	"internal/cli.runSDDIntegrateVerify":          {status: statusGuarded, reason: "integration.yaml: contexto archive"},
-	"internal/cli.runSDDArchiveComposeInPlace":    {status: statusGuarded, reason: "archive-compose --change --in-place: contexto archive"},
-	"internal/cli.runSDDArchiveComposeWithStderr": {status: statusGuarded, reason: "archive-compose con --output a fichero (canonical/document sobre un delta bajo changes/<c>/): guarda archive; la previsualización a stdout no escribe y no se guarda"},
+	"internal/cli.runArchiveContextPrepare":       {status: statusGuarded, reason: "archive context prepare: integration.yaml, contexto archive"},
+	"internal/cli.runArchiveContextVerify":        {status: statusGuarded, reason: "archive context verify: integration.yaml, contexto archive"},
+	"internal/cli.runSDDArchiveComposeWithStderr": {status: statusGuarded, reason: "archive-compose con --output a fichero (--canonical sobre un delta bajo changes/<c>/): guarda archive; la previsualización a stdout no escribe y no se guarda"},
 	// --- cmd/axiom ---
 	"cmd/axiom.runHandoffCreate": {status: statusGuarded, reason: "handoff create: contexto ordinary; los sumideros cumulative-<rol> quedan exentos por nombre dentro de la guarda"},
 	// --- dashboard (S8-c4) ---

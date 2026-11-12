@@ -194,11 +194,11 @@ type Status struct {
 	// increment shipped -- the byte-for-byte regression this increment's own
 	// control gate guards (kickoff_absence_regression_test.go).
 	Governance *Governance `json:"governance,omitempty"`
-	// Baseline and TechnicalContext are inc-24's additive projection of the
-	// valid `baseline:` and `technical_context:` declarations of axiom.yaml.
-	// Structural absence (nil, omitempty) when the declaration is absent or
-	// invalid: an invalid block is never projected, not even partially.
-	Baseline         *BaselineProjection         `json:"baseline,omitempty"`
+	// TechnicalContext is inc-24's additive projection of the valid
+	// `technical_context:` declaration of axiom.yaml. Structural absence (nil,
+	// omitempty) when the declaration is absent or invalid: an invalid block is
+	// never projected, not even partially. The retired `baseline:` block is never
+	// projected (REQ-30.21): it blocks archiving through a typed cause instead.
 	TechnicalContext *TechnicalContextProjection `json:"technicalContext,omitempty"`
 	// Workflow is the project lane declared in the `workflow:` block of axiom.yaml
 	// (REQ-27.2): always filled by decorateWorkspaceDeclarations, with or without a
@@ -233,19 +233,6 @@ type Status struct {
 	// for an ISO change with apply finished; decorateISO copies it into ISO.Matrix.
 	// It is internal: it never reaches the wire on its own.
 	isoMatrix *ISOMatrixProjection
-}
-
-// BaselineProjection lists the documents of the project baseline. Every path
-// is absolute; Integration is `compose` for a document with a requirement
-// profile and `directed` or `register` for a prose document.
-type BaselineProjection struct {
-	Documents []BaselineDocumentProjection `json:"documents"`
-}
-
-type BaselineDocumentProjection struct {
-	Domain      string `json:"domain"`
-	Path        string `json:"path"`
-	Integration string `json:"integration"`
 }
 
 // WorkflowProjection is the effective project lane (REQ-27.2). Lane is odd, sdd

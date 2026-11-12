@@ -283,33 +283,46 @@ func TestGuardWarnsAndDoesNotBlockOutsideGit(t *testing.T) {
 	}
 }
 
-// G-10: `integrate prepare` y `verify` escriben `integration.yaml` y son del contexto `archive`;
-// `check` y `show` solo leen y no se guardan.
-func TestGuardIntegrateWritersUseTheArchiveContext(t *testing.T) {
+// REQ-30.25: `axiom sdd integrate` ya no existe: ningún subcomando escribe, y todos se
+// rechazan con el motivo tipado que remite a `axiom archive context` y `axiom archive adopt`,
+// desde cualquier rama (los escritores del contexto técnico, con su guarda A, son
+// `axiom archive context prepare` y `verify`).
+func TestSDDIntegrateIsRetiredAndNeverWrites(t *testing.T) {
 	ws := guardProject(t)
-	integrateGit(t, ws.Master, "switch", "-q", "feat/x")
-	before := consentCLISnapshot(t, guardChangeRoot(ws))
-	for _, verb := range []string{"prepare", "verify"} {
-		var out bytes.Buffer
-		err := RunSDDIntegrate([]string{verb, "--cwd", ws.Master, "--change", sealChange}, &out)
+	for _, branchName := range []string{"feat/x", guardArchiveBranch} {
+		if branchName == guardArchiveBranch {
+			integrateGit(t, ws.Master, "switch", "-q", "-c", guardArchiveBranch)
+		} else {
+			integrateGit(t, ws.Master, "switch", "-q", branchName)
+		}
+		before := consentCLISnapshot(t, guardChangeRoot(ws))
+		for _, verb := range []string{"check", "prepare", "verify", "show", ""} {
+			args := []string{"--cwd", ws.Master, "--change", sealChange}
+			if verb != "" {
+				args = append([]string{verb}, args...)
+			}
+			var out bytes.Buffer
+			err := RunSDDIntegrate(args, &out)
 
-		wantWrongBranch(t, err, "feat/x", guardArchiveBranch, ws.Master)
-		wantContinuation(t, err, " --archive")
-		wantNoWrite(t, ws, before)
+			var retired *SDDIntegrateRetiredError
+			if !errors.As(err, &retired) || retired.Subcommand != verb {
+				t.Fatalf("rama %s, verbo %q: error = %v, se esperaba un *SDDIntegrateRetiredError", branchName, verb, err)
+			}
+			for _, want := range []string{"axiom archive context check|prepare|verify|show", "axiom archive adopt scan"} {
+				if !strings.Contains(err.Error(), want) {
+					t.Errorf("el rechazo %q debe nombrar %q", err, want)
+				}
+			}
+			if out.Len() != 0 {
+				t.Errorf("el rechazo escribió salida: %q", out.String())
+			}
+			wantNoWrite(t, ws, before)
+		}
 	}
 
-	integrateGit(t, ws.Master, "switch", "-q", "-c", guardArchiveBranch)
-	for _, verb := range []string{"prepare", "verify"} {
-		err := RunSDDIntegrate([]string{verb, "--cwd", ws.Master, "--change", sealChange}, &bytes.Buffer{})
-		wantNotRefusedByTheGuard(t, err)
-	}
-}
-
-func TestGuardIntegrateCheckAndShowAreNotGuarded(t *testing.T) {
-	ws := guardProject(t)
-	for _, verb := range []string{"check", "show"} {
-		err := RunSDDIntegrate([]string{verb, "--cwd", ws.Master, "--change", sealChange}, &bytes.Buffer{})
-		wantNotRefusedByTheGuard(t, err)
+	var help bytes.Buffer
+	if err := RunSDDIntegrate([]string{"--help"}, &help); err != nil || !strings.Contains(help.String(), "axiom archive context") {
+		t.Errorf("la ayuda explica la retirada con código 0: err=%v\n%s", err, help.String())
 	}
 }
 
@@ -327,13 +340,10 @@ func guardComposeFiles(t *testing.T, ws workspacetest.Workspace) (canonical, del
 
 // REQ-25.19, escenario «`archive-compose` solo escribe en la rama de archivado»: con un delta bajo
 // `changes/<c>/` y un fichero de salida, en `feat/x` se niega con la continuación `--archive` y en
-// `feat/x-archive` escribe. Cubre los modos `--canonical --delta` y `--document --delta`.
+// `feat/x-archive` escribe. Cubre el modo `--canonical --delta`.
 func TestGuardArchiveComposeWithAChangeDeltaWritesOnlyOnTheArchiveBranch(t *testing.T) {
 	for name, modeArgs := range map[string]func(canonical, delta string) []string{
 		"canonical": func(canonical, delta string) []string { return []string{"--canonical", canonical, "--delta", delta} },
-		"document": func(_, delta string) []string {
-			return []string{"--document", "widgets", "--delta", delta}
-		},
 	} {
 		t.Run(name, func(t *testing.T) {
 			ws := guardProject(t)
@@ -395,23 +405,6 @@ func TestGuardArchiveComposeOfALooseDeltaIsNotGuarded(t *testing.T) {
 	if err != nil {
 		t.Fatalf("un delta suelto no se guarda: %v", err)
 	}
-}
-
-// REQ-25.19: el modo cambio (`--change <c> --in-place`) es del contexto `archive`.
-func TestGuardArchiveComposeInPlaceUsesTheArchiveContext(t *testing.T) {
-	ws := guardProject(t)
-	integrateGit(t, ws.Master, "switch", "-q", "feat/x")
-	before := consentCLISnapshot(t, guardChangeRoot(ws))
-	args := []string{"--cwd", ws.Master, "--change", sealChange, "--document", "widgets", "--in-place"}
-
-	err := RunSDDArchiveCompose(args, &bytes.Buffer{})
-
-	wantWrongBranch(t, err, "feat/x", guardArchiveBranch, ws.Master)
-	wantContinuation(t, err, " --archive")
-	wantNoWrite(t, ws, before)
-
-	integrateGit(t, ws.Master, "switch", "-q", "-c", guardArchiveBranch)
-	wantNotRefusedByTheGuard(t, RunSDDArchiveCompose(args, &bytes.Buffer{}))
 }
 
 // guardContinueProject es guardProject con un cambio listo cuya tarea toca una ruta fuera del

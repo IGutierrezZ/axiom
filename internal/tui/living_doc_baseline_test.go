@@ -14,17 +14,16 @@ import (
 )
 
 const (
-	livingCanonicalConfig = "workspace:\n  name: ejemplo-canonico\n  topology: multirepo\n  specs_repository: repo-specs\nroles:\n  backend:\n    name: Backend\n    repositories:\n      - path: repo-backend\n"
-	livingProjectBaseline = "baseline:\n  documents:\n    - domain: modelo-de-datos\n      path: 03_Modelo_Datos.md\n    - domain: flujos-de-negocio\n      path: docs/04_Flujos_Negocio.md\n"
-	livingInvalidBaseline = "baseline:\n  documents: []\n"
+	livingCanonicalConfig  = "workspace:\n  name: ejemplo-canonico\n  topology: multirepo\n  specs_repository: repo-specs\nroles:\n  backend:\n    name: Backend\n    repositories:\n      - path: repo-backend\n"
+	livingResidualBaseline = "baseline:\n  documents:\n    - domain: modelo-de-datos\n      path: 03_Modelo_Datos.md\n"
 )
 
 // livingDocsOf abre la pantalla de documentación viva de un espacio canónico con
-// la baseline dada, desde el repositorio de código (donde no hay marcadores).
-func livingDocsOf(t *testing.T, baseline string) (workspacetest.Workspace, Model) {
+// el bloque dado, desde el repositorio de código (donde no hay marcadores).
+func livingDocsOf(t *testing.T, block string) (workspacetest.Workspace, Model) {
 	t.Helper()
 	ws := workspacetest.Canonical(t)
-	workspacetest.WriteFile(t, filepath.Join(ws.Specs, "axiom.yaml"), livingCanonicalConfig+baseline)
+	workspacetest.WriteFile(t, filepath.Join(ws.Specs, "axiom.yaml"), livingCanonicalConfig+block)
 	m := governanceModel(t, filepath.Join(ws.Backend, "src"))
 	return ws, openGovernanceEntry(t, m, governanceLivingDocs, ScreenLivingDoc)
 }
@@ -38,42 +37,31 @@ func requireNoSpecsWritten(t *testing.T, ws workspacetest.Workspace) {
 	}
 }
 
-// REQ-17.10 y REQ-24.25: con baseline del proyecto la pantalla no muestra el
-// catálogo vacío como ausencia de especificación, sino el aviso de baseline
-// externa con los dominios y las rutas declarados.
-func TestLivingDocScreenShowsAnExternalBaseline(t *testing.T) {
-	ws, state := livingDocsOf(t, livingProjectBaseline)
+// REQ-17.10 y REQ-30.21: con un `baseline:` residual la pantalla no lo oculta ni
+// lo convierte en un catálogo externo: lee openspec/specs/ como siempre y avisa
+// del bloque retirado con la guía de migración.
+func TestLivingDocScreenWarnsAboutAResidualBaseline(t *testing.T) {
+	ws, state := livingDocsOf(t, livingResidualBaseline)
 
-	if !state.LivingExternalBaseline || len(state.LivingSpecs) != 0 {
-		t.Fatalf("LivingExternalBaseline = %v, LivingSpecs = %+v", state.LivingExternalBaseline, state.LivingSpecs)
-	}
-	for _, want := range []string{
-		"baseline de especificaciones es externa",
-		"modelo-de-datos → " + filepath.Join(ws.Specs, "03_Modelo_Datos.md"),
-		"flujos-de-negocio → " + filepath.Join(ws.Specs, "docs", "04_Flujos_Negocio.md"),
-	} {
+	for _, want := range []string{"baseline_retired", "axiom archive adopt scan"} {
 		if !strings.Contains(state.GovernanceMessage, want) {
 			t.Errorf("el mensaje de gobernanza no contiene %q:\n%s", want, state.GovernanceMessage)
 		}
 	}
-
 	view := state.View()
-	if !strings.Contains(view, "baseline de especificaciones es del proyecto") {
-		t.Errorf("la pantalla debe indicar que la baseline es del proyecto:\n%s", view)
-	}
-	if strings.Contains(view, "No se encontraron especificaciones consolidadas") {
-		t.Errorf("con baseline externa el catálogo vacío no significa ausencia de especificación:\n%s", view)
+	if !strings.Contains(view, "Especificaciones consolidadas en openspec/specs/") {
+		t.Errorf("la pantalla conserva su presentación sobre openspec/specs/:\n%s", view)
 	}
 	requireNoSpecsWritten(t, ws)
 }
 
-// Sin baseline del proyecto la pantalla conserva su presentación.
-func TestLivingDocScreenWithoutAProjectBaselineKeepsItsPresentation(t *testing.T) {
+// Sin baseline residual la pantalla conserva su presentación.
+func TestLivingDocScreenWithoutAResidualBaselineKeepsItsPresentation(t *testing.T) {
 	ws := workspacetest.Canonical(t)
 	m := governanceModel(t, ws.Master)
 	state := openGovernanceEntry(t, m, governanceLivingDocs, ScreenLivingDoc)
-	if state.LivingExternalBaseline || state.GovernanceMessage != "" {
-		t.Errorf("sin baseline externa no hay aviso: externa=%v, mensaje=%q", state.LivingExternalBaseline, state.GovernanceMessage)
+	if state.GovernanceMessage != "" {
+		t.Errorf("sin baseline residual no hay aviso: mensaje=%q", state.GovernanceMessage)
 	}
 	view := state.View()
 	if !strings.Contains(view, "No se encontraron especificaciones consolidadas") || !strings.Contains(view, "sincronizadas en INDEX.md") {
@@ -81,21 +69,19 @@ func TestLivingDocScreenWithoutAProjectBaselineKeepsItsPresentation(t *testing.T
 	}
 }
 
-// REQ-17.10 y REQ-24.23: la tecla `s` y la opción de sincronizar muestran el
+// REQ-17.10 y REQ-30.21: la tecla `s` y la opción de sincronizar muestran el
 // rechazo con su continuación y no escriben INDEX.md.
 func TestLivingDocSyncShowsTheRejectionWithItsContinuation(t *testing.T) {
 	tests := []struct {
-		name     string
-		baseline string
-		wants    []string
+		name  string
+		wants []string
 	}{
-		{"baseline del proyecto", livingProjectBaseline, []string{"baseline de especificaciones es del proyecto", "modelo-de-datos, flujos-de-negocio", "retira el bloque `baseline:`"}},
-		{"baseline indeterminada", livingInvalidBaseline, []string{"no se puede determinar", "al menos un documento", "axiom workspace validate --path"}},
+		{"baseline residual", []string{"baseline_retired", "axiom archive adopt scan"}},
 	}
 	for _, tt := range tests {
 		for _, trigger := range []string{"tecla s", "opción sincronizar"} {
 			t.Run(tt.name+" con "+trigger, func(t *testing.T) {
-				ws, state := livingDocsOf(t, tt.baseline)
+				ws, state := livingDocsOf(t, livingResidualBaseline)
 
 				var updated tea.Model
 				if trigger == "tecla s" {

@@ -19,7 +19,7 @@ import (
 
 // TestMain deja a los procesos git de las pruebas sin acceso a la configuración del
 // usuario, con un autor fijo y sin red (tasks.md, regla 9), con el mismo patrón que
-// internal/specbaseline, y fija el techo de descubrimiento de proyectos de las
+// internal/gitcommon, y fija el techo de descubrimiento de proyectos de las
 // pruebas (workspace.DiscoveryCeilingOverride), como el resto de paquetes que usan
 // repositorios temporales.
 func TestMain(m *testing.M) {

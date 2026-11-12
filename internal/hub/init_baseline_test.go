@@ -17,7 +17,6 @@ const (
 	initEmbeddedConfig = "workspace:\n  name: ejemplo\n  topology: monorepo-embedded\n  specs_repository: openspec\nroles:\n  core:\n    name: Core\n    repositories:\n      - path: .\n"
 	initMultirepoOpen  = "workspace:\n  name: ejemplo\n  topology: multirepo\n  specs_repository: openspec\nroles:\n  core:\n    name: Core\n    repositories:\n      - path: .\n"
 	initValidBaseline  = "baseline:\n  documents:\n    - domain: modelo-de-datos\n      path: 03_Modelo_Datos.md\n    - domain: flujos-de-negocio\n      path: 04_Flujos_Negocio.md\n"
-	initInvalidBase    = "baseline:\n  documents: []\n"
 	initValidContext   = "technical_context:\n  reference:\n    paths: [00_Glosario.md]\n"
 	initInvalidContext = "technical_context:\n  maintained:\n    paths: []\n"
 	// Bloques de política de ramas (INC-25): válidos e inválidos.
@@ -246,7 +245,7 @@ func TestInitUsesThePointedConfigAsTheExistingOne(t *testing.T) {
 	master := t.TempDir()
 	workspacetest.WriteFile(t, filepath.Join(master, ".axiom-workspace"), "config: config/axiom.yaml\n")
 	configPath := filepath.Join(master, "config", "axiom.yaml")
-	workspacetest.WriteFile(t, configPath, initMultirepoOpen+initValidBaseline)
+	workspacetest.WriteFile(t, configPath, initMultirepoOpen+initValidContext)
 	sandbox := newInitSandbox(t)
 
 	res, err := sandbox.initializer.Init(InitOptions{Path: master})
@@ -258,9 +257,6 @@ func TestInitUsesThePointedConfigAsTheExistingOne(t *testing.T) {
 	}
 	if exists(filepath.Join(master, "axiom.yaml")) {
 		t.Error("no debe escribirse <ruta>/axiom.yaml cuando el puntero indica otro fichero")
-	}
-	if res.BaselineOwnership != workspace.BaselineProject || exists(filepath.Join(master, "openspec", "specs")) {
-		t.Errorf("la consulta de baseline es la del fichero apuntado: %q", res.BaselineOwnership)
 	}
 }
 
@@ -285,8 +281,8 @@ func TestInitIgnoresAPointerInAnAncestor(t *testing.T) {
 	if sandbox.registered(t) != 1 {
 		t.Errorf("el proyecto debe quedar registrado")
 	}
-	if res.BaselineOwnership != workspace.BaselineDefault || len(res.Notes) != 0 {
-		t.Errorf("sin declaraciones: ownership %q, notas %q", res.BaselineOwnership, res.Notes)
+	if res.SpecsSkipped || len(res.Notes) != 0 {
+		t.Errorf("sin declaraciones: SpecsSkipped %v, notas %q", res.SpecsSkipped, res.Notes)
 	}
 }
 
@@ -302,109 +298,67 @@ func TestInitIgnoresABrokenPointerInAnAncestor(t *testing.T) {
 	}
 }
 
-// REQ-24.23: con baseline del proyecto, init no crea openspec/specs/ ni
-// openspec/INDEX.md, conserva el resto del andamiaje de su perfil, informa y no
-// falla. El axiom.yaml existente no se sobrescribe.
-func TestInitWithAProjectBaselineSkipsTheSpecs(t *testing.T) {
-	tests := []struct {
-		name        string
-		profile     string
-		wantPresent []string
-		wantAbsent  []string
-	}{
-		{
-			name:        "perfil completo",
-			profile:     "full",
-			wantPresent: []string{"openspec/changes", ".axiom/inbox/skills"},
-			wantAbsent:  []string{"openspec/specs", "openspec/INDEX.md", ".mcp.json"},
-		},
-		{
-			name:        "perfil knowledge",
-			profile:     "knowledge",
-			wantPresent: []string{"openspec/changes", ".mcp.json"},
-			wantAbsent:  []string{"openspec/specs", "openspec/INDEX.md", ".axiom/inbox/skills"},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			dir := t.TempDir()
-			config := initEmbeddedConfig + initValidBaseline
-			workspacetest.WriteFile(t, filepath.Join(dir, "axiom.yaml"), config)
-			sandbox := newInitSandbox(t)
+// REQ-30.21: un `baseline:` residual rechaza el alta con el error tipado y la
+// guía de migración, antes de escribir ni registrar nada: el axiom.yaml existente
+// no se toca y no se crea ningún andamiaje.
+func TestInitRejectsAResidualBaseline(t *testing.T) {
+	for _, profile := range []string{"full", "knowledge"} {
+		for name, baseline := range map[string]string{"con documentos": initValidBaseline, "sin documentos": "baseline:\n  documents: []\n"} {
+			t.Run(profile+" "+name, func(t *testing.T) {
+				dir := t.TempDir()
+				config := initEmbeddedConfig + baseline
+				workspacetest.WriteFile(t, filepath.Join(dir, "axiom.yaml"), config)
+				before := snapshotTree(t, dir)
+				sandbox := newInitSandbox(t)
 
-			res, err := sandbox.initializer.Init(InitOptions{Path: dir, Profile: tt.profile})
-			if err != nil {
-				t.Fatalf("Init = %v, con baseline del proyecto completa con código 0", err)
-			}
-			for _, rel := range tt.wantPresent {
-				if !exists(filepath.Join(dir, filepath.FromSlash(rel))) {
-					t.Errorf("debe existir %s", rel)
+				_, err := sandbox.initializer.Init(InitOptions{Path: dir, Profile: profile})
+				var retired *workspace.BaselineRetiredError
+				if !errors.As(err, &retired) {
+					t.Fatalf("Init = %v, se esperaba un *workspace.BaselineRetiredError", err)
 				}
-			}
-			for _, rel := range tt.wantAbsent {
-				if exists(filepath.Join(dir, filepath.FromSlash(rel))) {
-					t.Errorf("no debe existir %s", rel)
+				if retired.Code() != "baseline_retired" || !strings.Contains(err.Error(), "axiom archive adopt scan") {
+					t.Errorf("el rechazo debe llevar el código y la migración: %v", err)
 				}
-			}
-			if got := readFile(t, filepath.Join(dir, "axiom.yaml")); got != config {
-				t.Errorf("el axiom.yaml existente no se sobrescribe:\n%s", got)
-			}
-			if res.BaselineOwnership != workspace.BaselineProject || !res.AlreadyExisted {
-				t.Errorf("ownership/AlreadyExisted = %q / %v", res.BaselineOwnership, res.AlreadyExisted)
-			}
-			requireNote(t, res.Notes, "baseline de especificaciones es del proyecto")
-			requireNote(t, res.Notes, "modelo-de-datos, flujos-de-negocio")
-			requireNote(t, res.Notes, "no se crean openspec/specs/ ni openspec/INDEX.md")
-			if sandbox.registered(t) != 1 {
-				t.Errorf("el proyecto debe quedar registrado")
-			}
-		})
+				if !reflect.DeepEqual(before, snapshotTree(t, dir)) {
+					t.Error("el rechazo no debe escribir nada: el axiom.yaml existente y el árbol quedan intactos")
+				}
+				sandbox.requireUntouchedRegistry(t)
+			})
+		}
 	}
 }
 
-// REQ-24.18 y REQ-24.23: con una baseline indeterminada, init omite la baseline,
-// informa de la causa y completa con código 0.
-func TestInitWithAnIndeterminateBaselineSkipsTheSpecs(t *testing.T) {
-	tests := []struct {
-		name   string
-		config string
-		cause  string
-	}{
-		{"baseline invalida", initEmbeddedConfig + initInvalidBase, "al menos un documento"},
-		{"yaml ilegible", "workspace: [sin cerrar\n", "error al parsear axiom.yaml"},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			dir := t.TempDir()
-			workspacetest.WriteFile(t, filepath.Join(dir, "axiom.yaml"), tt.config)
-			sandbox := newInitSandbox(t)
+// Un axiom.yaml ilegible: init omite openspec/specs/ e INDEX.md, informa de la
+// causa y completa con código 0.
+func TestInitWithAnUnreadableConfigSkipsTheSpecs(t *testing.T) {
+	const config = "workspace: [sin cerrar\n"
+	dir := t.TempDir()
+	workspacetest.WriteFile(t, filepath.Join(dir, "axiom.yaml"), config)
+	sandbox := newInitSandbox(t)
 
-			res, err := sandbox.initializer.Init(InitOptions{Path: dir})
-			if err != nil {
-				t.Fatalf("Init = %v, con baseline indeterminada completa con código 0", err)
-			}
-			if exists(filepath.Join(dir, "openspec", "specs")) || exists(filepath.Join(dir, "openspec", "INDEX.md")) {
-				t.Error("no debe crearse openspec/specs/ ni INDEX.md con una baseline indeterminada")
-			}
-			if !exists(filepath.Join(dir, "openspec", "changes")) || !exists(filepath.Join(dir, ".axiom", "inbox", "skills")) {
-				t.Error("el resto del andamiaje se conserva")
-			}
-			if res.BaselineOwnership != workspace.BaselineIndeterminate {
-				t.Errorf("ownership = %q", res.BaselineOwnership)
-			}
-			requireNote(t, res.Notes, "No se puede determinar")
-			requireNote(t, res.Notes, tt.cause)
-			requireNote(t, res.Notes, "axiom workspace validate --path")
-			if got := readFile(t, filepath.Join(dir, "axiom.yaml")); got != tt.config {
-				t.Errorf("el axiom.yaml existente no se sobrescribe:\n%s", got)
-			}
-		})
+	res, err := sandbox.initializer.Init(InitOptions{Path: dir})
+	if err != nil {
+		t.Fatalf("Init = %v, con un axiom.yaml ilegible completa con código 0", err)
+	}
+	if exists(filepath.Join(dir, "openspec", "specs")) || exists(filepath.Join(dir, "openspec", "INDEX.md")) {
+		t.Error("no debe crearse openspec/specs/ ni INDEX.md con un axiom.yaml ilegible")
+	}
+	if !exists(filepath.Join(dir, "openspec", "changes")) || !exists(filepath.Join(dir, ".axiom", "inbox", "skills")) {
+		t.Error("el resto del andamiaje se conserva")
+	}
+	if !res.SpecsSkipped {
+		t.Error("SpecsSkipped debe ser verdadero")
+	}
+	requireNote(t, res.Notes, "No se puede leer")
+	requireNote(t, res.Notes, "error al parsear axiom.yaml")
+	requireNote(t, res.Notes, "axiom workspace validate --path")
+	if got := readFile(t, filepath.Join(dir, "axiom.yaml")); got != config {
+		t.Errorf("el axiom.yaml existente no se sobrescribe:\n%s", got)
 	}
 }
 
 // REQ-2.2, punto 4: init valida el axiom.yaml que encuentra, informa de cada
-// violación con la continuación y no cambia el código de salida. Solo la baseline
-// decide si se escribe openspec/specs/.
+// violación con la continuación y no cambia el código de salida.
 func TestInitReportsEveryViolationOfAnExistingConfig(t *testing.T) {
 	t.Run("technical_context invalido no impide la baseline por defecto", func(t *testing.T) {
 		dir := t.TempDir()
@@ -419,8 +373,8 @@ func TestInitReportsEveryViolationOfAnExistingConfig(t *testing.T) {
 		requireNote(t, res.Notes, "no es válido")
 		requireNote(t, res.Notes, "technical_context")
 		requireNote(t, res.Notes, "axiom workspace validate --path")
-		if res.BaselineOwnership != workspace.BaselineDefault {
-			t.Errorf("ownership = %q", res.BaselineOwnership)
+		if res.SpecsSkipped {
+			t.Error("un technical_context inválido no omite openspec/specs/")
 		}
 	})
 	t.Run("error de la configuracion base solo se informa", func(t *testing.T) {
@@ -431,14 +385,14 @@ func TestInitReportsEveryViolationOfAnExistingConfig(t *testing.T) {
 			t.Fatalf("Init = %v", err)
 		}
 		if !exists(filepath.Join(dir, "openspec", "specs")) {
-			t.Error("un error ajeno al bloque baseline no cambia la baseline por defecto")
+			t.Error("un error de la configuración base no omite openspec/specs/")
 		}
 		requireNote(t, res.Notes, "al menos un rol")
 		requireNote(t, res.Notes, "axiom workspace validate --path")
 	})
 	t.Run("una violacion por nota", func(t *testing.T) {
 		dir := t.TempDir()
-		workspacetest.WriteFile(t, filepath.Join(dir, "axiom.yaml"), initEmbeddedConfig+initInvalidBase+initInvalidContext)
+		workspacetest.WriteFile(t, filepath.Join(dir, "axiom.yaml"), initEmbeddedConfig+initInvalidGit+initInvalidContext)
 		res, err := newInitSandbox(t).initializer.Init(InitOptions{Path: dir})
 		if err != nil {
 			t.Fatalf("Init = %v", err)
@@ -450,7 +404,7 @@ func TestInitReportsEveryViolationOfAnExistingConfig(t *testing.T) {
 			}
 		}
 		if violations < 2 {
-			t.Errorf("se esperaba una nota por violación (baseline y technical_context), notas: %q", res.Notes)
+			t.Errorf("se esperaba una nota por violación (git y technical_context), notas: %q", res.Notes)
 		}
 	})
 	t.Run("sin axiom.yaml no hay violaciones", func(t *testing.T) {
@@ -465,21 +419,18 @@ func TestInitReportsEveryViolationOfAnExistingConfig(t *testing.T) {
 }
 
 // m13: con --force, init lee y valida el axiom.yaml existente antes de
-// sobrescribirlo. Si declara baseline: o technical_context: (válidos o no), lo
+// sobrescribirlo. Si declara technical_context: (válido o no), lo
 // conserva íntegro, lo explica y completa con código 0; sin esos bloques lo
 // sobrescribe como antes.
 func TestInitForceKeepsAConfigWithDeclarations(t *testing.T) {
 	tests := []struct {
-		name          string
-		config        string
-		wantSpecs     bool // si openspec/specs/ debe crearse (baseline por defecto)
-		wantOwnership workspace.BaselineOwnership
+		name      string
+		config    string
+		wantSpecs bool // si openspec/specs/ debe crearse
 	}{
-		{"baseline valida", initEmbeddedConfig + initValidBaseline, false, workspace.BaselineProject},
-		{"baseline invalida", initEmbeddedConfig + initInvalidBase, false, workspace.BaselineIndeterminate},
-		{"technical_context valido", initEmbeddedConfig + initValidContext, true, workspace.BaselineDefault},
-		{"technical_context invalido", initEmbeddedConfig + initInvalidContext, true, workspace.BaselineDefault},
-		{"yaml ilegible", "workspace: [sin cerrar\n", false, workspace.BaselineIndeterminate},
+		{"technical_context valido", initEmbeddedConfig + initValidContext, true},
+		{"technical_context invalido", initEmbeddedConfig + initInvalidContext, true},
+		{"yaml ilegible", "workspace: [sin cerrar\n", false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -502,9 +453,6 @@ func TestInitForceKeepsAConfigWithDeclarations(t *testing.T) {
 			requireNote(t, res.Notes, "--force")
 			if exists(filepath.Join(dir, "openspec", "specs")) != tt.wantSpecs {
 				t.Errorf("openspec/specs existe = %v, se esperaba %v", !tt.wantSpecs, tt.wantSpecs)
-			}
-			if res.BaselineOwnership != tt.wantOwnership {
-				t.Errorf("ownership = %q, se esperaba %q", res.BaselineOwnership, tt.wantOwnership)
 			}
 			if sandbox.registered(t) != 1 {
 				t.Errorf("el proyecto debe quedar registrado")
@@ -551,14 +499,14 @@ func TestInitForceKeepsAConfigWithGitOrRepositoriesDeclarations(t *testing.T) {
 			}
 			requireNote(t, res.Notes, "Se conserva")
 			requireNote(t, res.Notes, "--force")
-			for _, block := range []string{"`baseline:`", "`technical_context:`", "`git:`", "`workflow:`", "`repositories:`"} {
+			for _, block := range []string{"`technical_context:`", "`git:`", "`workflow:`", "`repositories:`"} {
 				requireNote(t, res.Notes, block)
 			}
 			if !exists(filepath.Join(dir, "openspec", "specs")) {
-				t.Error("sin baseline del proyecto se crea openspec/specs/ aunque se conserve el axiom.yaml")
+				t.Error("se crea openspec/specs/ aunque se conserve el axiom.yaml")
 			}
-			if res.BaselineOwnership != workspace.BaselineDefault {
-				t.Errorf("ownership = %q, se esperaba %q", res.BaselineOwnership, workspace.BaselineDefault)
+			if res.SpecsSkipped {
+				t.Error("sin ilegibilidad no se omite openspec/specs/")
 			}
 			if sandbox.registered(t) != 1 {
 				t.Errorf("el proyecto debe quedar registrado")

@@ -149,3 +149,33 @@ export function adapterWarning(response) {
   if (!outcome?.error) return '';
   return `El proyecto se ha creado, pero no se pudieron instalar los adaptadores (${outcome.error}). Puedes instalarlos más tarde con «axiom install --scope workspace».`;
 }
+
+const MODE_LABELS = { maintained: 'mantenida', reference: 'de referencia' };
+
+// adoptionPanel convierte el informe de adopción de la respuesta del alta (REQ-30.27) en el
+// modelo del panel, o null si no hay nada que mostrar. La instrucción solo se ofrece si el
+// informe lista algún origen de requisitos: sin orígenes no hay nada que migrar. El dashboard
+// solo muestra el informe y la instrucción; no ejecuta nada.
+export function adoptionPanel(response) {
+  const report = response?.adoption;
+  if (!report) return null;
+  const sources = (Array.isArray(report.sources) ? report.sources : []).map(item => ({
+    path: String(item.path),
+    units: Number(item.units) || 0
+  }));
+  const candidates = (Array.isArray(report.context_candidates) ? report.context_candidates : []).map(item => ({
+    path: String(item.path),
+    mode: String(item.mode),
+    modeLabel: MODE_LABELS[item.mode] || String(item.mode),
+    reason: String(item.reason || '')
+  }));
+  if (!sources.length && !candidates.length) return null;
+  return {
+    sourceCount: sources.length,
+    unitCount: Number(report.unit_count) || sources.reduce((total, item) => total + item.units, 0),
+    sources,
+    candidates,
+    warnings: (Array.isArray(report.warnings) ? report.warnings : []).map(String),
+    instruction: sources.length ? String(response?.adoption_instruction || '') : ''
+  };
+}

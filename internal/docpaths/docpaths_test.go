@@ -5,9 +5,9 @@ import (
 	"testing"
 )
 
-func mustNew(t *testing.T, planning, change string, baseline, maintained, reference []string) Set {
+func mustNew(t *testing.T, planning, change string, maintained, reference []string) Set {
 	t.Helper()
-	set, err := New(planning, change, baseline, maintained, reference)
+	set, err := New(planning, change, maintained, reference)
 	if err != nil {
 		t.Fatalf("New: %v", err)
 	}
@@ -18,7 +18,6 @@ func mustNew(t *testing.T, planning, change string, baseline, maintained, refere
 // por raíz de ruta y no por extensión.
 func TestDocPathsClassifiesByRootNotExtension(t *testing.T) {
 	set := mustNew(t, "openspec", "x",
-		[]string{"docs/arquitectura.md"},
 		[]string{"docs/contexto"},
 		[]string{"docs/contexto/referencia"})
 
@@ -48,12 +47,10 @@ func TestDocPathsClassifiesByRootNotExtension(t *testing.T) {
 		{"openspec/changes/archive/2026-11-09-x-y/proposal.md", "", false},
 		{"openspec/changes/archive/x/proposal.md", "", false},
 		{"openspec/changes/archive/2026-11-09-x", "", false},
-		// Specs, índice, baseline y contexto mantenido.
+		// Specs, índice y contexto mantenido.
 		{"openspec/specs/a/spec.md", "openspec/specs", true},
 		{"openspec/INDEX.md", "openspec/INDEX.md", true},
 		{"openspec/INDEX.md.bak", "", false},
-		{"docs/arquitectura.md", "docs/arquitectura.md", true},
-		{"docs/arquitectura.md/otro", "", false},
 		{"docs/contexto", "docs/contexto", true},
 		{"docs/contexto/a.md", "docs/contexto", true},
 		{"docs/contexto-otro/a.md", "", false},
@@ -87,7 +84,7 @@ func TestDocPathsClassifiesByRootNotExtension(t *testing.T) {
 
 // El repositorio de specs de un multirepo tiene el planning home en la raíz.
 func TestDocPathsEmptyPlanningHome(t *testing.T) {
-	set := mustNew(t, "", "x", nil, nil, nil)
+	set := mustNew(t, "", "x", nil, nil)
 	for rel, want := range map[string]bool{
 		"changes/x/design.md":               true,
 		"specs/a/spec.md":                   true,
@@ -107,7 +104,7 @@ func TestDocPathsEmptyPlanningHome(t *testing.T) {
 }
 
 func TestDocPathsLocalState(t *testing.T) {
-	set := mustNew(t, "openspec", "x", nil, nil, nil)
+	set := mustNew(t, "openspec", "x", nil, nil)
 	cases := map[string]bool{
 		"openspec/changes/x/.gates.lock":                    true,
 		"openspec/changes/x/.axiom-instance":                true,
@@ -129,8 +126,8 @@ func TestDocPathsLocalState(t *testing.T) {
 }
 
 func TestDocPathsCandidatesAreStableAndUnique(t *testing.T) {
-	set := mustNew(t, "openspec", "x", []string{"docs/a.md", "docs/a.md"}, []string{"docs/ctx", "docs/a.md"}, []string{"docs/ref"})
-	want := []string{"openspec/changes/x", "openspec/changes/archive", "openspec/specs", "openspec/INDEX.md", "docs/a.md", "docs/ctx"}
+	set := mustNew(t, "openspec", "x", []string{"docs/ctx", "docs/a.md", "docs/a.md"}, []string{"docs/ref"})
+	want := []string{"openspec/changes/x", "openspec/changes/archive", "openspec/specs", "openspec/INDEX.md", "docs/ctx", "docs/a.md"}
 	if got := set.Candidates(); !reflect.DeepEqual(got, want) {
 		t.Errorf("Candidates = %v, se esperaba %v", got, want)
 	}
@@ -138,15 +135,15 @@ func TestDocPathsCandidatesAreStableAndUnique(t *testing.T) {
 
 func TestDocPathsNewRejectsUnusableInput(t *testing.T) {
 	for name, call := range map[string]func() error{
-		"cambio vacío":        func() error { _, err := New("openspec", "", nil, nil, nil); return err },
-		"cambio con barra":    func() error { _, err := New("openspec", "a/b", nil, nil, nil); return err },
-		"cambio punto punto":  func() error { _, err := New("openspec", "..", nil, nil, nil); return err },
-		"planning fuera":      func() error { _, err := New("../x", "x", nil, nil, nil); return err },
-		"baseline absoluta":   func() error { _, err := New("", "x", []string{"/etc/passwd"}, nil, nil); return err },
-		"maintained raíz":     func() error { _, err := New("", "x", nil, []string{"."}, nil); return err },
-		"reference fuera":     func() error { _, err := New("", "x", nil, nil, []string{"../a"}); return err },
-		"baseline con unidad": func() error { _, err := New("", "x", []string{`C:\a`}, nil, nil); return err },
-		"maintained vacía":    func() error { _, err := New("", "x", nil, []string{""}, nil); return err },
+		"cambio vacío":          func() error { _, err := New("openspec", "", nil, nil); return err },
+		"cambio con barra":      func() error { _, err := New("openspec", "a/b", nil, nil); return err },
+		"cambio punto punto":    func() error { _, err := New("openspec", "..", nil, nil); return err },
+		"planning fuera":        func() error { _, err := New("../x", "x", nil, nil); return err },
+		"maintained absoluta":   func() error { _, err := New("", "x", []string{"/etc/passwd"}, nil); return err },
+		"maintained raíz":       func() error { _, err := New("", "x", []string{"."}, nil); return err },
+		"reference fuera":       func() error { _, err := New("", "x", nil, []string{"../a"}); return err },
+		"maintained con unidad": func() error { _, err := New("", "x", []string{`C:\a`}, nil); return err },
+		"maintained vacía":      func() error { _, err := New("", "x", []string{""}, nil); return err },
 	} {
 		if call() == nil {
 			t.Errorf("%s: se esperaba un error", name)
