@@ -169,11 +169,11 @@ Sin dependencias internas; todo son funciones puras con pruebas por tablas.
 
 ### U13 · `feat(sddstatus): etapa archive, matriz y ruta verify en cambios ISO`
 
-- [ ] 13.1 Completar `internal/sddstatus/iso.go` con `ISOArchiveRefusal(workspaceRoot, changeRoot) []isoevidence.Finding` (declaración válida, escenarios de todas las deltas y matriz válida y de éxito, con `NewTreeResolver` sobre `Location.Master`) y `archiveDependencyFromISO` (solo estrecha de `ready` a `blocked`).
+- [x] 13.1 Completar `internal/sddstatus/iso.go` con `ISOArchiveRefusal(workspaceRoot, changeRoot) []isoevidence.Finding` (declaración válida, escenarios de todas las deltas y matriz válida y de éxito, con `NewTreeResolver` sobre `Location.Master`) y `archiveDependencyFromISO` (solo estrecha de `ready` a `blocked`).
   Cubre: REQ-29.10, REQ-29.11, REQ-29.6, REQ-29.7, REQ-29.8
   Aceptación: con tareas pendientes, `archive` bloqueado, motivo solo en `notes`, ruta `apply` sin cambios (D12); la regla no evalúa REQ-29.3.
   Comprobación: `go test ./internal/sddstatus/ -run 'TestISOArchiveRefusal|TestISOArchiveWithPendingTasks'`
-- [ ] 13.2 Completar `internal/sddstatus/iso.go` y `internal/sddstatus/status.go` con la ruta `verify` (D19) y `iso.matrix`: con `apply` terminado y matriz ausente o inválida, `nextRecommended: verify` (también sobre `await-gate` de `integration`); filas `fail`, `resolve-blockers`; `ISOMatrixProjection`.
+- [x] 13.2 Completar `internal/sddstatus/iso.go` y `internal/sddstatus/status.go` con la ruta `verify` (D19) y `iso.matrix`: con `apply` terminado y matriz ausente o inválida, `nextRecommended: verify` (también sobre `await-gate` de `integration`); filas `fail`, `resolve-blockers`; `ISOMatrixProjection`.
   Cubre: REQ-29.11, REQ-29.16, REQ-29.19
   Aceptación: las compuertas `spec`, `design`, `tasks` y `role-apply` conservan su precedencia; bug sin impacto sin matriz queda `not_required` y de éxito; motivos `iso_matrix_missing`, `iso_matrix_invalid` e `iso_matrix_failed` con su continuación.
   Comprobación: `go test ./internal/sddstatus/ -run 'TestISOVerifyRoute|TestISOMatrixProjection'`

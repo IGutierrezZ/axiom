@@ -291,6 +291,11 @@ type ResolveOptions struct {
 	// worktreeCandidates son los cambios activos de los worktrees registrados (REQ-25.44): sin nombre,
 	// se unen a los del checkout actual para el `select-change`. Solo los rellena Resolve.
 	worktreeCandidates []string
+
+	// master es la carpeta maestra de la ubicación resuelta: la raíz del árbol contra
+	// la que resuelven las referencias de prueba de la matriz ISO (design D11). Solo la
+	// rellena Resolve; vacía, se usa la raíz del workspace.
+	master string
 }
 
 type CommandArgs struct {
@@ -531,6 +536,7 @@ func Resolve(options ResolveOptions) (Status, error) {
 		options, location = rerootOnRegisteredWorktrees(options, location)
 		workspaceRoot = options.WorkspaceRoot
 	}
+	options.master = location.Master
 	status, err := resolveStatus(options, workspaceRoot)
 	if err != nil {
 		return status, err
@@ -769,6 +775,10 @@ func resolveByPreferenceOrder(options ResolveOptions) (Status, error) {
 	}
 	dependencies := resolveDependencies(artifacts, applyState, coreReady)
 	iso.narrow(&dependencies)
+	// D12: la etapa archive se evalúa siempre que resolveDependencies dejaría el
+	// archivado disponible, antes de que lo estreche la compuerta `integration`,
+	// y también con tareas pendientes (el archivado explícito de trabajo incompleto).
+	archiveAvailable := dependencies.Archive == DependencyReady
 	verifyState, verifyReason := verifyDependencyFromRoleGates(governance, dependencies.Verify)
 	dependencies.Verify = verifyState
 	if verifyReason != "" {
@@ -783,7 +793,26 @@ func resolveByPreferenceOrder(options ResolveOptions) (Status, error) {
 	// (artefactos, gobierno, autoridad de edición, verify y archivado); wrong_branch
 	// se antepone al final, como siempre.
 	blockedReasons.genuine = append(blockedReasons.genuine, iso.planningReasons()...)
+	var isoMatrix *ISOMatrixProjection
+	if iso != nil && archiveAvailable {
+		master := options.master
+		if master == "" {
+			master = workspaceRoot
+		}
+		iso.evaluateArchive(artifactPaths.VerifyReport, master)
+		dependencies.Archive = archiveDependencyFromISO(dependencies.Archive, iso)
+		// Los motivos de la etapa archive van siempre a notes y, con apply terminado
+		// (la ruta sería archive), también a blockedReasons: el contrato de los
+		// consumidores prohíbe apply con blockedReasons no vacío (design D6).
+		blockedReasons.notes = append(blockedReasons.notes, findingReasons(iso.archive)...)
+		if applyState == ApplyAllDone {
+			blockedReasons.genuine = append(blockedReasons.genuine, findingReasons(iso.archive)...)
+			isoMatrix = iso.matrixProjection()
+		}
+	}
 	nextRecommended := resolveNextRecommended(dependencies, applyState, governance)
+	// D19: en un cambio ISO el verify es obligatorio y el status ruta a él.
+	nextRecommended = iso.verifyRoute(nextRecommended, applyState, governance)
 	if bctx.wrongBranch != nil {
 		// Ninguna fase ni compuerta se autoriza con la rama equivocada (REQ-25.42): tampoco hay
 		// pregunta de compuerta, que se construye solo para await-gate.
@@ -815,6 +844,7 @@ func resolveByPreferenceOrder(options ResolveOptions) (Status, error) {
 	status.Dependencies = dependencies
 	status.ApplyState = applyState
 	status.consentPreparationRoots = append([]string{}, unauthorizedRoots...)
+	status.isoMatrix = isoMatrix
 	status.BlockedReasons = blockedReasons.finalize(status.NextRecommended, status.BlockedReasons)
 	if bctx.wrongBranch != nil {
 		// El motivo de la guarda B va siempre primero, también delante de los motivos de planificación

@@ -222,6 +222,9 @@ func TestDecorateISO(t *testing.T) {
 		changeRoot := seedReadyChange(t, ws.Master, "demo", "- [x] 1.1 Hecho\n")
 		declareArtifactStore(t, ws.Master, "none")
 		sealISOChange(t, changeRoot, "demo", &kickoff.SDDSnapshot{ISO: true})
+		// Con una matriz de éxito la ruta sería archive: es entonces cuando el motivo
+		// del almacén pasa también a blockedReasons.
+		write(t, filepath.Join(changeRoot, "verify-report.md"), verifyReportWith())
 		status := resolveFrom(t, ws.Master, "demo")
 
 		if status.Dependencies.Archive != DependencyBlocked {

@@ -95,10 +95,11 @@ func loadISOInputs(planningHome, changeRoot string, paths ArtifactPaths, artifac
 		in.bug = isoevidence.ParseBugDeclaration(readText(firstPath(paths.Proposal)))
 	}
 	in.tasksComplete = artifacts["tasks"] == ArtifactDone && len(paths.Tasks) > 0
-	if in.tasksComplete {
-		for _, path := range paths.Tasks {
-			in.cubre = append(in.cubre, isoevidence.ParseCubre(filepath.Base(path), readText(path))...)
-		}
+	// Las líneas `Cubre:` se leen de todos los ficheros de tareas que existen: la
+	// etapa `tasks` solo se evalúa con todos presentes (tasksComplete), pero el
+	// archivado necesita los requisitos citados por un bug con requisito existente.
+	for _, path := range paths.Tasks {
+		in.cubre = append(in.cubre, isoevidence.ParseCubre(filepath.Base(path), readText(path))...)
 	}
 	return in
 }
@@ -190,6 +191,127 @@ type isoEvaluation struct {
 	inputs isoInputs
 	specs  []isoevidence.Finding
 	tasks  []isoevidence.Finding
+	// archive son los hallazgos de la etapa `archive` (escenarios y matriz), y
+	// matrix el resultado de validar la matriz. Los rellena evaluateArchive solo
+	// cuando el archivado estaría disponible (D12).
+	archive []isoevidence.Finding
+	matrix  *isoevidence.MatrixResult
+}
+
+// evaluateISOArchive aplica la regla del archivado ISO sobre los artefactos del
+// cambio: los escenarios de todas las deltas (REQ-29.10) y la matriz de verify,
+// válida y de éxito (REQ-29.11, REQ-29.6 a REQ-29.8 y REQ-29.19). No evalúa
+// REQ-29.3: la unicidad de un ADDED es de la etapa `specs`, y tras componer un
+// dominio dejaría de cumplirse (D17). master es la raíz del árbol contra la que
+// resuelven las referencias de prueba (D11); con una raíz que no se puede abrir
+// no hay árbol y las filas automáticas quedan inválidas, nunca aprobadas.
+func evaluateISOArchive(in isoInputs, verifyReport, master string) ([]isoevidence.Finding, isoevidence.MatrixResult) {
+	var tree isoevidence.TreeResolver
+	if resolver, err := isoevidence.NewTreeResolver(master); err == nil {
+		defer resolver.Close()
+		tree = resolver
+	}
+
+	noImpact := !in.hasDelta && in.bug.Kind == isoevidence.BugKindNoImpact && in.bug.Valid
+	var affected []isoevidence.ScenarioKey
+	switch {
+	case in.hasDelta:
+		affected = isoevidence.AffectedFromDelta(in.delta)
+	case in.bug.Kind == isoevidence.BugKindExistingRequirement && in.bug.Valid:
+		var cited []string
+		for _, line := range in.cubre {
+			cited = append(cited, line.IDs...)
+		}
+		affected = isoevidence.AffectedFromBaseline(in.index, cited)
+	}
+	result := isoevidence.ValidateMatrix(isoevidence.ParseMatrix(verifyReport), affected, noImpact, tree)
+
+	var findings []isoevidence.Finding
+	if in.hasDelta {
+		findings = append(findings, isoevidence.CheckScenarios(in.delta)...)
+	}
+	return append(findings, result.Findings...), result
+}
+
+// ISOArchiveRefusal es la regla del archivado de un cambio ISO (design D13): la
+// declaración `sdd:` válida (D8), los escenarios de todas las deltas y la matriz
+// de verify válida y de éxito, con independencia de cuántas tareas queden
+// pendientes (D12). La comparten `axiom sdd status`, `axiom sdd archive-check` y
+// `axiom sdd archive-compose`, de modo que ninguno discrepa. Un cambio sin
+// instantánea ISO, sin kickoff o con un kickoff ilegible no tiene hallazgos: el
+// kickoff ilegible ya lo reporta el status con su error nombrado.
+func ISOArchiveRefusal(workspaceRoot, changeRoot string) []isoevidence.Finding {
+	sealed, err := kickoff.Load(changeRoot)
+	if err != nil || sealed == nil || !sealed.IsISO() {
+		return nil
+	}
+	location, _ := workspace.LocateAt(workspaceRoot)
+	master := location.Master
+	if master == "" {
+		master = workspaceRoot
+	}
+
+	var findings []isoevidence.Finding
+	if declaration := readISODeclaration(location.Declarations); declaration.invalidText != "" {
+		findings = append(findings, declaration.finding(master))
+	}
+	paths, err := resolveArtifactPaths(changeRoot)
+	if err != nil {
+		return findings
+	}
+	inputs := loadISOInputs(filepath.Join(workspaceRoot, "openspec"), changeRoot, paths, nil)
+	archive, _ := evaluateISOArchive(inputs, readText(firstPath(paths.VerifyReport)), master)
+	return append(findings, archive...)
+}
+
+// evaluateArchive rellena la etapa `archive` y la proyección de la matriz.
+func (e *isoEvaluation) evaluateArchive(verifyPaths []string, master string) {
+	findings, result := evaluateISOArchive(e.inputs, readText(firstPath(verifyPaths)), master)
+	e.archive = findings
+	e.matrix = &result
+}
+
+// matrixProjection es `iso.matrix`, que usa el orquestador para decidir si el
+// verify es limpio sin leer el informe (REQ-29.16).
+func (e *isoEvaluation) matrixProjection() *ISOMatrixProjection {
+	if e == nil || e.matrix == nil {
+		return nil
+	}
+	return &ISOMatrixProjection{State: string(e.matrix.State), Successful: e.matrix.Successful, Findings: len(e.matrix.Findings)}
+}
+
+// archiveDependencyFromISO solo estrecha `archive` de `ready` a `blocked`: nunca
+// lo mejora, y no añade ningún motivo propio (van a notes y blockedReasons).
+func archiveDependencyFromISO(archive DependencyState, e *isoEvaluation) DependencyState {
+	if e == nil || archive != DependencyReady || len(e.archive) == 0 {
+		return archive
+	}
+	return DependencyBlocked
+}
+
+// verifyRoute aplica D19: con apply terminado y la matriz fallando, la ruta
+// ordinaria (resolve-blockers, o await-gate de la compuerta `integration`, porque
+// la matriz forma parte de la PR que esa compuerta fusiona) se sustituye por
+// `verify` si la matriz falta o es inválida, y por resolve-blockers si tiene
+// filas `fail`. Las compuertas spec, design, tasks y role-apply conservan su
+// precedencia.
+func (e *isoEvaluation) verifyRoute(next string, applyState ApplyState, governance *Governance) string {
+	if e == nil || e.matrix == nil || e.matrix.Successful || len(e.archive) == 0 || applyState != ApplyAllDone {
+		return next
+	}
+	switch next {
+	case "resolve-blockers":
+	case "await-gate":
+		if gate, ok := firstOpenGate(governance); !ok || gate.Key != kickoff.GateIntegration {
+			return next
+		}
+	default:
+		return next
+	}
+	if e.matrix.State == isoevidence.MatrixMissing || e.matrix.State == isoevidence.MatrixInvalid {
+		return string(PhaseVerify)
+	}
+	return "resolve-blockers"
 }
 
 // evaluateISOChange evalúa las etapas `specs` y `tasks` de un cambio ISO, leído
