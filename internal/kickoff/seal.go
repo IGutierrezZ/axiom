@@ -109,3 +109,61 @@ func Seal(changeRoot string, k Kickoff) (Kickoff, bool, error) {
 	}
 	return *winner, true, nil
 }
+
+// PrepareChangeRoot crea changeRoot y sus padres ausentes, uno a uno, y devuelve una
+// función que borra, en orden inverso, solo los directorios que creó y solo si están
+// vacíos (REQ-29.12). Si changeRoot ya existe no crea nada y la retirada no hace nada.
+// La retirada nunca borra ficheros: un directorio que ya no está vacío se respeta.
+//
+// Cada nivel se crea con os.Mkdir, no con os.MkdirAll, para saber con exactitud cuáles
+// existían antes y cuáles son propios. Quien llama valida antes el nombre del cambio:
+// PrepareChangeRoot no interpreta changeRoot, solo lo crea.
+func PrepareChangeRoot(changeRoot string) (rollback func(), err error) {
+	noop := func() {}
+	cleaned := filepath.Clean(changeRoot)
+	info, statErr := os.Stat(cleaned)
+	switch {
+	case statErr == nil && info.IsDir():
+		return noop, nil
+	case statErr == nil:
+		return noop, fmt.Errorf("la ruta del cambio %q existe y no es una carpeta", cleaned)
+	case !os.IsNotExist(statErr):
+		return noop, fmt.Errorf("comprobar la carpeta del cambio %q: %w", cleaned, statErr)
+	}
+
+	// Recoge los niveles ausentes, del más profundo al más superficial.
+	var missing []string
+	for current := cleaned; ; {
+		if _, err := os.Stat(current); err == nil {
+			break
+		} else if !os.IsNotExist(err) {
+			return noop, fmt.Errorf("comprobar %q: %w", current, err)
+		}
+		missing = append(missing, current)
+		parent := filepath.Dir(current)
+		if parent == current {
+			break
+		}
+		current = parent
+	}
+
+	var created []string
+	rollback = func() {
+		for i := len(created) - 1; i >= 0; i-- {
+			// os.Remove falla en un directorio no vacío: es la comprobación que se busca.
+			_ = os.Remove(created[i])
+		}
+		created = nil
+	}
+	for i := len(missing) - 1; i >= 0; i-- {
+		if err := os.Mkdir(missing[i], 0o755); err != nil {
+			if os.IsExist(err) {
+				continue // otra orden lo creó entre medias: no es propio
+			}
+			rollback()
+			return noop, fmt.Errorf("crear la carpeta del cambio %q: %w", missing[i], err)
+		}
+		created = append(created, missing[i])
+	}
+	return rollback, nil
+}

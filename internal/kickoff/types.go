@@ -149,7 +149,23 @@ type Kickoff struct {
 	// Git es la instantánea de política git que escribe `seal` (REQ-25.36); nil en un kickoff
 	// preexistente o retro-sellado (gitsnapshot.go).
 	Git *GitSnapshot `yaml:"git,omitempty"`
+	// SDD es la instantánea de la declaración `sdd:` de axiom.yaml al sellar (REQ-29.13);
+	// nil salvo en un cambio ISO, y siempre nil en un kickoff preexistente o retro-sellado.
+	SDD *SDDSnapshot `yaml:"sdd,omitempty"`
 }
+
+// SDDSnapshot es la instantánea de la declaración `sdd:` de axiom.yaml al sellar
+// (REQ-29.13). Solo existe en un cambio ISO: con iso falso no se escribe.
+type SDDSnapshot struct {
+	ISO bool `yaml:"iso,omitempty"`
+}
+
+// IsZero hace que `omitempty` omita también un bloque con iso falso: yaml.v3 solo
+// omitiría el puntero nulo y escribiría `sdd: {}`.
+func (s SDDSnapshot) IsZero() bool { return !s.ISO }
+
+// IsISO dice si el cambio se selló como ISO. Sin bloque, o con iso falso, es no ISO.
+func (k Kickoff) IsISO() bool { return k.SDD != nil && k.SDD.ISO }
 
 // GateRecord is one append-only entry in gates.yaml: a single human
 // decision about one gate, the digest of the artifact judged, and, for the

@@ -106,11 +106,11 @@ Sin dependencias internas; todo son funciones puras con pruebas por tablas.
 
 ### U8 · `feat(kickoff): instantánea sdd.iso y PrepareChangeRoot`
 
-- [ ] 8.1 Modificar `internal/kickoff/types.go` (`Kickoff.SDD *SDDSnapshot`, `SDDSnapshot`, `IsISO()`) y `internal/kickoff/types_test.go`.
+- [x] 8.1 Modificar `internal/kickoff/types.go` (`Kickoff.SDD *SDDSnapshot`, `SDDSnapshot`, `IsISO()`) y `internal/kickoff/types_test.go`.
   Cubre: REQ-29.13
   Aceptación: `omitempty` (con iso falso no se escribe `sdd:`), lectura sin clave, decodificación con el esquema previo (struct sin `SDD`) y `IsISO`.
   Comprobación: `go test ./internal/kickoff/ -run 'TestSDDSnapshot|TestIsISO'`
-- [ ] 8.2 Modificar `internal/kickoff/seal.go` (`PrepareChangeRoot(changeRoot) (rollback func(), err error)`) y `internal/kickoff/seal_prepare_test.go`.
+- [x] 8.2 Modificar `internal/kickoff/seal.go` (`PrepareChangeRoot(changeRoot) (rollback func(), err error)`) y `internal/kickoff/seal_prepare_test.go`.
   Cubre: REQ-29.12
   Aceptación: crea padres ausentes; la retirada borra en orden inverso solo lo creado y solo si está vacío; carpeta existente intacta y retirada sin efecto.
   Comprobación: `go test ./internal/kickoff/ -run TestPrepareChangeRoot`
