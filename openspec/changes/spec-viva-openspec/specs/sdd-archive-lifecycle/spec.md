@@ -160,7 +160,7 @@ Con `technical_context.maintained` declarado, archive DEBE integrar el delta de 
 
 ---
 
-### Requirement: Condiciones de Parada del Archivado con Contexto del Proyecto (REQ-24.56)
+### Requirement: Condiciones de Parada del Archivado con Baseline o Contexto del Proyecto (REQ-24.56)
 
 Archive DEBE detenerse sin mover el cambio a `openspec/changes/archive/`, nombrando la causa y la continuación, cuando: (a) con `technical_context.maintained` declarado, el cambio no lleva delta de contexto; (b) el delta de contexto es inválido (REQ-24.31 y REQ-24.32); (c) falla una precondición de la integración del contexto (REQ-30.29); (d) falla la composición (REQ-30.24) o la verificación nativa (REQ-30.17); (e) con `technical_context.maintained` declarado, el almacén de artefactos es `engram` o `none` (REQ-30.19), porque sin la carpeta del cambio en ficheros no hay delta de contexto ni traza que integrar; la continuación es declarar `artifact_store: openspec` o `hybrid` en `openspec/config.yaml`, o retirar la declaración; o (f) la declaración de `axiom.yaml` es inválida: un `technical_context:` que no supera la validación (REQ-30.30) o un bloque `baseline:` residual (REQ-30.21 de `workspace-topology`). Archive NO DEBE asumir «Sin impacto» ante la ausencia del delta. Cuando la parada ocurre tras ediciones dirigidas ya realizadas, estas DEBEN quedar como cambios sin confirmar en el árbol de trabajo, informadas y revertibles con git, y el cambio permanece en `openspec/changes/`.
 (Previously: incluía como causas un dominio no declarado en la baseline, las precondiciones de integración de la baseline, la declaración `baseline:` inválida y el almacén `engram`/`none` con baseline del proyecto; ahora la causa (f) incluye el `baseline:` residual)
