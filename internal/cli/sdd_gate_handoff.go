@@ -191,7 +191,7 @@ func resolveGatePublish(parsed kickoff.GateRecordArgs, workspaceRoot string, han
 
 // gateRecordJSON es el `--json` de `gate record` (§4.4). delivery, handedOff y handedOffTo solo
 // salen con la salida 2; publish y publishUnavailable, en toda aprobación distinta de integration;
-// lastRoleClosed solo en una compuerta de rol.
+// lastRoleClosed solo en una compuerta de rol (y pendingNonBlockingRoles, solo al cerrar el último blocking).
 type gateRecordJSON struct {
 	Schema             string              `json:"schema"`
 	Change             string              `json:"change"`
@@ -200,20 +200,45 @@ type gateRecordJSON struct {
 	HandedOff          bool                `json:"handedOff,omitempty"`
 	HandedOffTo        string              `json:"handedOffTo,omitempty"`
 	LastRoleClosed     *bool               `json:"lastRoleClosed,omitempty"`
+	PendingNonBlocking []pendingRoleJSON   `json:"pendingNonBlockingRoles,omitempty"`
 	Publish            *gatePublishJSON    `json:"publish,omitempty"`
 	PublishUnavailable string              `json:"publishUnavailable,omitempty"`
 	Delivery           *branch.HandOffPlan `json:"delivery,omitempty"`
 }
 
+// pendingRoleJSON es un rol no bloqueante cuya compuerta role-apply sigue abierta cuando se cierra
+// el último rol blocking (REQ-21.13): el rol, su política y el estado de su compuerta (`pending` o
+// `rejected`). No bloquea la verificación global.
+type pendingRoleJSON struct {
+	Role   string `json:"role"`
+	Policy string `json:"policy"`
+	Status string `json:"status"`
+}
+
+// pendingRolesJSON traduce los roles pendientes; nil si no hay ninguno, para que `omitempty` omita la
+// clave y la salida de un cambio con todos los roles blocking no cambie.
+func pendingRolesJSON(pending []kickoff.PendingRole) []pendingRoleJSON {
+	if len(pending) == 0 {
+		return nil
+	}
+	out := make([]pendingRoleJSON, 0, len(pending))
+	for _, role := range pending {
+		out = append(out, pendingRoleJSON{Role: role.Role, Policy: string(role.Policy), Status: role.Status})
+	}
+	return out
+}
+
 // writeGateRecordJSON emite el `--json` de una compuerta registrada. lastRoleClosed es nil fuera de
-// una compuerta de rol.
-func writeGateRecordJSON(stdout io.Writer, parsed kickoff.GateRecordArgs, handOff *handOffPrepared, publish gatePublish, lastRoleClosed *bool) error {
+// una compuerta de rol; con la aprobación que cierra el último rol blocking es true (el aviso de
+// REQ-21.13 en forma de campo) y pendingNonBlocking lista los roles no bloqueantes aún abiertos.
+func writeGateRecordJSON(stdout io.Writer, parsed kickoff.GateRecordArgs, handOff *handOffPrepared, publish gatePublish, lastRoleClosed *bool, pendingNonBlocking []kickoff.PendingRole) error {
 	document := gateRecordJSON{
 		Schema:             gateRecordSchema,
 		Change:             parsed.Change,
 		Gate:               string(parsed.Gate),
 		Decision:           string(parsed.Decision),
 		LastRoleClosed:     lastRoleClosed,
+		PendingNonBlocking: pendingRolesJSON(pendingNonBlocking),
 		Publish:            publish.target,
 		PublishUnavailable: publish.unavailable,
 	}

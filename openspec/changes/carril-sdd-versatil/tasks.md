@@ -239,7 +239,7 @@ Sin dependencias internas; todo son funciones puras con pruebas por tablas.
 
 ### U19 · `fix(cli): aviso de último rol activo solo al cerrar el último bloqueante`
 
-- [ ] 19.1 Modificar `internal/cli/sdd_gate.go`, `internal/cli/sdd_gate_handoff.go` y `internal/cli/sdd_gate_test.go`: aviso de REQ-21.13 solo cuando la compuerta aprobada es de un rol `blocking` y con ella quedan aprobados todos los bloqueantes; el aviso nombra los no bloqueantes pendientes; el JSON conserva `lastRoleClosed` y añade `pendingNonBlockingRoles` con `omitempty`.
+- [x] 19.1 Modificar `internal/cli/sdd_gate.go`, `internal/cli/sdd_gate_handoff.go` y `internal/cli/sdd_gate_test.go`: aviso de REQ-21.13 solo cuando la compuerta aprobada es de un rol `blocking` y con ella quedan aprobados todos los bloqueantes; el aviso nombra los no bloqueantes pendientes; el JSON conserva `lastRoleClosed` y añade `pendingNonBlockingRoles` con `omitempty`.
   Cubre: REQ-21.13
   Aceptación: escenarios con `deferred` y `optional`; sin segundo aviso; con todos los roles `blocking` el JSON no cambia.
   Comprobación: `go test ./internal/cli/ -run 'TestGateRecordLastRoleNotice'`

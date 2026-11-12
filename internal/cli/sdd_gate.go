@@ -168,21 +168,24 @@ func runSDDGateRecord(args []string, stdout io.Writer) error {
 	}
 
 	var lastRoleClosed *bool
+	var pendingNonBlocking []kickoff.PendingRole
 	if isRoleApply && sealed != nil {
 		closedValue := false
 		lastRoleClosed = &closedValue
 		if parsed.Decision == kickoff.DecisionApproved {
-			closed, evalErr := lastRoleJustClosed(changeRoot, roster)
+			closed, pending, evalErr := lastBlockingRoleJustClosed(changeRoot, roster, parsed.Gate)
 			if evalErr != nil {
 				return evalErr
 			}
 			closedValue = closed
-			// The notice is the only thing the last role's approval adds (REQ-21.13): no
-			// handoff.md is written any more, the ledger already says every role closed
-			// and `status` opens verify from it (REQ-21.15). It accompanies exit 2 and
-			// exit 3 alike.
+			pendingNonBlocking = pending
+			// The notice is the only thing the approval of the last blocking role adds
+			// (REQ-21.13): no handoff.md is written any more, the ledger already says every
+			// blocking role closed and `status` opens verify from it (REQ-21.15). It
+			// accompanies exit 2 and exit 3 alike, names the deferred and optional roles
+			// still open, and is not repeated when one of them closes later.
 			if closed && !parsed.JSON {
-				if _, err := fmt.Fprintf(stdout, "Aviso: se ha concluido la implementacion del %s del cambio %q; queda abierta la verificacion global de la solucion (REQ-21.13, REQ-21.15).\n", lastRoleNoticeMarker, parsed.Change); err != nil {
+				if _, err := fmt.Fprintf(stdout, "Aviso: se ha concluido la implementacion del %s del cambio %q; queda abierta la verificacion global de la solucion (REQ-21.13, REQ-21.15).%s\n", lastRoleNoticeMarker, parsed.Change, pendingNonBlockingNotice(pending)); err != nil {
 					return err
 				}
 			}
@@ -190,9 +193,29 @@ func runSDDGateRecord(args []string, stdout io.Writer) error {
 	}
 
 	if parsed.JSON {
-		return writeGateRecordJSON(stdout, parsed, handOff, publish, lastRoleClosed)
+		return writeGateRecordJSON(stdout, parsed, handOff, publish, lastRoleClosed, pendingNonBlocking)
 	}
 	return nil
+}
+
+// pendingNonBlockingNotice is the sentence the last-role notice appends when roles
+// with policy deferred or optional still have their role-apply gate open: each role
+// with its policy and the state of its gate, and that none of them blocks the global
+// verification (REQ-21.13). Empty when there is none, so a change with only blocking
+// roles prints the notice exactly as before.
+func pendingNonBlockingNotice(pending []kickoff.PendingRole) string {
+	if len(pending) == 0 {
+		return ""
+	}
+	items := make([]string, 0, len(pending))
+	for _, role := range pending {
+		state := "pendiente"
+		if role.Status == "rejected" {
+			state = "rechazado"
+		}
+		items = append(items, fmt.Sprintf("%s (politica %s, role-apply %s)", role.Role, role.Policy, state))
+	}
+	return " Roles no bloqueantes aun abiertos, que no bloquean la verificacion global: " + strings.Join(items, ", ") + "."
 }
 
 func runSDDGateShow(args []string, stdout io.Writer) error {
@@ -266,27 +289,39 @@ func gateKeyInRoster(key kickoff.GateKey, roster []multirole.RoleAssignment) boo
 	return false
 }
 
-// lastRoleJustClosed reports whether every role-apply gate in roster is
-// approved in the change's ledger, reusing kickoff.EvaluateGates and
-// kickoff.LastRoleClosed (task 10.2) rather than re-deriving gate status by
-// hand.
+// lastBlockingRoleJustClosed reports whether the approval of gate just closed the
+// last role with policy blocking (REQ-21.13): gate belongs to a blocking role and,
+// with it, every blocking role-apply gate of the roster is approved in the change's
+// ledger. It reuses kickoff.EvaluateGates and kickoff.LastBlockingRoleClosed
+// rather than re-deriving gate status by hand. It also returns the roles with
+// policy deferred or optional whose gate is still open, which the notice names;
+// they never block the global verification (REQ-21.15).
+//
+// The approval of a deferred or optional role never closes anything, so it never
+// repeats the notice. With every role blocking, or with the single fullstack role,
+// the result is exactly the one LastRoleClosed gave before.
 //
 // It marks every roster role as already "reached" (RolePending: 0)
 // because, at this call site, apply-progress tracking is not the question
 // being asked — that belongs to sddstatus (wired in Phase 13), which this
 // verb does not read. The question EvaluateGates answers here is narrower
 // and fully answerable from the ledger alone: given the sealed roster, has
-// every role's role-apply:<role> gate ended up approved? A role whose
+// every blocking role's role-apply:<role> gate ended up approved? A role whose
 // last-recorded decision is a rejection is still reported "rejected" by
 // resolveGateStatus regardless of this stand-in RolePending map, so an
-// unresolved role still correctly keeps LastRoleClosed false.
-func lastRoleJustClosed(changeRoot string, roster []multirole.RoleAssignment) (bool, error) {
+// unresolved role still correctly keeps the result false.
+func lastBlockingRoleJustClosed(changeRoot string, roster []multirole.RoleAssignment, gate kickoff.GateKey) (bool, []kickoff.PendingRole, error) {
 	if len(roster) == 0 {
-		return false, nil
+		return false, nil, nil
+	}
+	for _, r := range roster {
+		if kickoff.RoleApplyGate(r.Role) == gate && !kickoff.IsBlockingRole(r) {
+			return false, nil, nil
+		}
 	}
 	ledger, err := kickoff.LoadGates(changeRoot)
 	if err != nil {
-		return false, err
+		return false, nil, err
 	}
 	rolePending := make(map[string]int, len(roster))
 	for _, r := range roster {
@@ -299,9 +334,12 @@ func lastRoleJustClosed(changeRoot string, roster []multirole.RoleAssignment) (b
 		Ledger:      ledger,
 	})
 	if err != nil {
-		return false, err
+		return false, nil, err
 	}
-	return kickoff.LastRoleClosed(roster, states), nil
+	if !kickoff.LastBlockingRoleClosed(roster, states) {
+		return false, nil, nil
+	}
+	return true, kickoff.PendingNonBlockingRoles(roster, states), nil
 }
 
 // fileHasContent reports whether path exists, is a regular file, and is
