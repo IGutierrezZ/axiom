@@ -55,6 +55,22 @@ workspace:
 #   lane: ask
 
 # ------------------------------------------------------------------------------
+# Modo ISO (opcional)
+# ------------------------------------------------------------------------------
+# Un proyecto sometido a auditoría ISO declara que solo usa SDD:
+#   iso: true   todo el trabajo, también el pequeño, va por el carril SDD sin
+#               preguntar el carril y sin documento 'odd/tasks/'. Cada cambio
+#               sellado copia la declaración en su 'kickoff.yaml' y exige
+#               identificador REQ-<n>.<m> y escenario en cada requisito, línea
+#               'Cubre:' en las tareas y una matriz de verificación válida y con
+#               éxito para archivar. Un bug usa siempre el perfil de bug.
+#   iso: false  es el valor por defecto; no cambia nada.
+# No puede convivir con 'workflow.lane: odd': la validación lo rechaza. El valor
+# debe ser un booleano sin comillas y una clave desconocida es un error.
+# sdd:
+#   iso: true
+
+# ------------------------------------------------------------------------------
 # Ajustes de Ramas por Repositorio (opcional)
 # ------------------------------------------------------------------------------
 # Un repositorio puede sustituir la rama de integración o el prefijo del bloque

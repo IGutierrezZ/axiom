@@ -22,6 +22,7 @@
    - [Política de Ramas (`git:`)](#política-de-ramas-git)
    - [Ajustes por Repositorio (`repositories:`)](#ajustes-por-repositorio-repositories)
    - [Carril de Trabajo (`workflow:`)](#carril-de-trabajo-workflow)
+   - [Modo ISO y Perfil de Bug (`sdd:`)](#modo-iso-y-perfil-de-bug-sdd)
 7. [Gobernanza de Skills y Autoskills](#7-gobernanza-de-skills-y-autoskills)
    - [Flujo Human-in-the-Loop](#flujo-human-in-the-loop)
    - [Uso por CLI y por Web UI](#uso-por-cli-y-por-web-ui)
@@ -366,6 +367,46 @@ workflow:
 - ODD no tiene paradas propias: el agente crea el documento de la tarea y empieza a implementar. Las paradas con tres salidas son de las compuertas de SDD.
 - Los binarios anteriores ignoran el bloque, como el de `git:`.
 
+### Modo ISO y Perfil de Bug (`sdd:`)
+
+`axiom.yaml` puede declarar un bloque opcional `sdd:` para un proyecto sometido a auditoría ISO. Como `workflow:`, es política versionada que comparte todo el equipo:
+
+```yaml
+sdd:
+  iso: true        # true | false (por defecto: false)
+```
+
+- `iso: true` declara que el proyecto solo usa SDD: todo el trabajo, también el pequeño y entendido, se tramita por el carril SDD sin preguntar el carril (tampoco con `workflow.lane: ask`) y sin crear `odd/tasks/<tarea>.md`. La combinación con `workflow.lane: odd` es contradictoria: `axiom workspace validate` la rechaza (salida `1`, nombrando `sdd.iso` y `workflow.lane`) y `axiom sdd kickoff seal` se niega a sellar. El valor es un booleano sin comillas y una clave desconocida es un error.
+- `axiom sdd kickoff seal` crea la carpeta del cambio y copia `iso` en su `kickoff.yaml`: no se crea la carpeta a mano antes. Un cambio ISO es el que se selló con esa instantánea; uno sin ella es no ISO aunque el proyecto declare ISO después, y un retrosellado (`--infer`) nunca la lleva.
+- `axiom sdd status --json` proyecta el estado en el campo `iso` (`project`, `change`, `matrix` y `reason` si el bloque es `invalid`). Cada negativa es un motivo tipado `blocked(<token>)` con su continuación; la lista cerrada de trece tokens está en el contrato de status.
+- Reglas de un cambio ISO: cada requisito de la delta lleva un `REQ-<n>.<m>` en su nombre y al menos un `#### Scenario:`; las tareas citan cada requisito con una línea `Cubre: REQ-x[, REQ-y ...]`; `verify` es obligatorio y escribe en `verify-report.md` la sección `## Matriz de verificación` (una fila por escenario afectado, con referencia de prueba `ruta/fichero:símbolo` o `TestX`, comando y código de salida, o responsable, fecha y justificación si es manual; nunca líneas `verdict:`); `archive` se bloquea mientras la matriz falte, sea inválida o tenga una fila `fail`. Los hallazgos de la revisión independiente siguen siendo informativos: solo bloquea la validez de la matriz.
+- `axiom sdd archive-check --cwd <ruta> --change <cambio> [--json]` comprueba, sin escribir, si un cambio ISO puede archivarse; la skill `sdd-archive` lo ejecuta antes de componer o mover y se detiene si sale distinto de cero. Con `--json` informa por dominio de `alreadyComposed`: para reanudar un archivado interrumpido solo se compone lo que sigue en `false`.
+- `axiom sdd trace --cwd <ruta> --change <cambio> [--integration-branch <rama>] [--json]` deriva, sin escribir, la traza del cambio desde el historial git: commit de código, commit y carpeta de archivado, y la cadena requisito, línea `Cubre:` y filas de la matriz. Una divergencia con la evidencia de la compuerta `integration` se informa como discrepancia, nunca como error.
+- Los binarios anteriores ignoran el bloque, como el de `git:`.
+
+**Perfil de bug (todo proyecto, ISO o no).** Un bug se tramita siempre por SDD, por una de tres rutas; `proposal.md` fija cuál:
+
+| Ruta | Cuándo | Delta | `Cubre:` | Secciones de `proposal.md` |
+|---|---|---|---|---|
+| Requisito existente | El bug restaura un requisito que ya existe | no | cita ese requisito | `## Informe de bug` |
+| Sin impacto en la spec | El bug no toca ningún requisito | no | ninguna | `## Informe de bug` y `## Impacto en la spec` |
+| Con delta | El requisito estaba mal especificado o faltaba | sí | como un cambio normal | ninguna |
+
+```markdown
+## Informe de bug
+
+Observado: el total omite el IVA reducido.
+Esperado: el total aplica el IVA de cada línea.
+Referencia: JIRA-1234
+
+## Impacto en la spec
+
+Sin impacto en la spec
+Motivo: el defecto estaba en el script de despliegue, no en un requisito.
+```
+
+`Observado:` y `Esperado:` son obligatorias y `Referencia:` es opcional. La ruta sin impacto exige la línea literal `Sin impacto en la spec` y un `Motivo:` no vacío; en un cambio ISO ese motivo es la evidencia, y la matriz ausente o vacía es válida. Una declaración incompleta mantiene abierta la fase de specs con `blocked(bug_report_incomplete)` o `blocked(bug_no_impact_incomplete)`.
+
 ---
 
 ## 7. Gobernanza de Skills y Autoskills
@@ -533,7 +574,7 @@ Para cambios estructurales profundos, refactorizaciones de arquitectura o requer
   `gate record` solo registra: no comprueba qué está confirmado (tampoco el trabajo de un rol), no ejecuta git y, tras escribir `gates.yaml`, devuelve en `--json` la orden `publish.invocation` (`axiom sdd publish --cwd <ruta> --change <cambio> --branch <rama>`, atada a la rama con `--branch`) con el `prTarget` informativo, o `publishUnavailable` si el destino no se puede calcular. La salida 2 añade la marca de cesión y la reanudación (`git fetch origin` y `axiom branch ensure`), sin exigir una PR fusionada. La pregunta tipada de la parada (`gateQuestion`) nombra el remoto y la rama (`publication`) antes de decidir. Una publicación rechazada no deshace la aprobación ya registrada: se informa con su código y su continuación. `axiom sdd status` muestra la cesión (`handedOff`, `handedOffTo`) sin bloquear ninguna fase. La compuerta `integration` conserva sus dos salidas (aprobar con evidencia o rechazar).
 * **Publicación de los documentos (`axiom sdd publish`):** `axiom sdd publish --change <nombre> [--archive] [--branch <rama>] [--json]` confirma solo las rutas de documentación del cambio (su carpeta en `openspec/changes/<nombre>/`, `openspec/specs/`, `openspec/INDEX.md` y las rutas de `baseline` y de `technical_context.maintained` declaradas en `axiom.yaml`; nunca `reference` ni `odd/tasks/`) y sube solo la rama del cambio a `origin` con `refs/heads/<rama>:refs/heads/<rama>`, sin forzar y sin saltarse hooks. El commit usa `git commit --only` sobre esas rutas: el código preparado sigue preparado y el no preparado, intacto. No hace `fetch`, no sube código ni abre PR: si la rama tiene commits de código sin subir, los informa (`code_commits_unpublished`) y los sube la persona. En el repositorio de specs de un `multirepo` sube su rama de integración; en un monorepo o en un repositorio de código nunca sube `main` (`integration_branch`). Con `--archive` publica la rama de archivado, que sin el flag es `wrong_branch`. La salida es 0 con `published` y `up_to_date`, y 1 con una negativa tipada; `--json` escribe `axiom.sdd-publish/v1` también cuando se rechaza. Solo existe con el almacén `openspec` o `hybrid` (`store_without_files` con `engram` o `none`). Lo encadena el orquestador tras cada aprobación de una parada (véase «Compuertas de Bloque Formales») y, en continuo con `docs_publication: auto`, al cerrar `tasks` y tras archivar con `--archive`. Nota para otros proyectos: el push de la rama puede disparar su CI, que queda fuera del control de Axiom.
 * **Verificación Formal y Precondición de Integración:**
-  1. `verify` valida el código mediante tests automatizados y genera `verify-report.md`.
+  1. `verify` valida el código mediante tests automatizados y genera `verify-report.md`. En un cambio ISO es obligatorio: escribe la `## Matriz de verificación` y el archivado se bloquea hasta que sea válida y con éxito (véase «Modo ISO y Perfil de Bug»).
   2. **`archive` no procede inmediatamente tras verificar:** exige registrar previamente evidencia formal de integración o despliegue en la compuerta de integración:
      ```bash
      axiom sdd gate record --gate integration --decision approved --evidence-kind pr_merged|deployment|attestation [--commit <sha>]
@@ -545,7 +586,7 @@ Para cambios estructurales profundos, refactorizaciones de arquitectura o requer
 
 ## 10. Relevos Estructurados entre Roles y Fases (Handoffs)
 
-El documento **`handoff.md`** es una utilidad general de Axiom para dejar por escrito un traspaso de contexto entre roles o fases (por ejemplo `core`, `frontend`, `qa`) cuando no quieres que dependa de mensajes informales en un chat. **No es un paso del flujo SDD**: el flujo SDD no lo escribe, no lo exige y no lo consulta. La cesión de una fase a otra persona se hace con la salida 2 de las paradas (véase «Compuertas de Bloque Formales»), que la registra en `gates.yaml`, y `verify` en un cambio multirrol se habilita cuando todos los `role-apply` están aprobados. Los `handoff.md` que generaron versiones anteriores siguen siendo legibles con `axiom handoff`.
+El documento **`handoff.md`** es una utilidad general de Axiom para dejar por escrito un traspaso de contexto entre roles o fases (por ejemplo `core`, `frontend`, `qa`) cuando no quieres que dependa de mensajes informales en un chat. **No es un paso del flujo SDD**: el flujo SDD no lo escribe, no lo exige y no lo consulta. La cesión de una fase a otra persona se hace con la salida 2 de las paradas (véase «Compuertas de Bloque Formales»), que la registra en `gates.yaml`, y `verify` en un cambio multirrol se habilita cuando están aprobados los `role-apply` de todos los roles `blocking` (un rol `deferred` u `optional` pendiente no lo bloquea y se nombra en una nota). Los `handoff.md` que generaron versiones anteriores siguen siendo legibles con `axiom handoff`.
 
 ### Estructura Canónica del Relevo (`handoff.md`)
 Cada relevo se redacta en castellano peninsular y se divide en 5 secciones obligatorias y un Frontmatter YAML con metadatos:

@@ -290,7 +290,7 @@ Sin dependencias internas; todo son funciones puras con pruebas por tablas.
 
 ### U24 · `docs: declaración ISO, perfil de bug y traza en el manual y el ejemplo`
 
-- [ ] 24.1 Modificar `docs/manual-de-inicio.md` y `axiom.example.yaml`: declaración `sdd: {iso: true}`, perfil de bug con sus tres rutas y traza.
+- [x] 24.1 Modificar `docs/manual-de-inicio.md` y `axiom.example.yaml`: declaración `sdd: {iso: true}`, perfil de bug con sus tres rutas y traza.
   Cubre: REQ-29.17
   Aceptación: el ejemplo carga sin error y `iso: true` no convive con `workflow.lane: odd`.
   Comprobación: `go test ./internal/workspace/ -run TestExampleConfigLoads`
