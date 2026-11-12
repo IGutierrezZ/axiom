@@ -254,7 +254,7 @@ Mientras no se archiva, un cambio ya fusionado figura como pendiente de archivar
 #### En este repositorio (política local)
 
 - `axiom.yaml` declara `git: {integration_branch: main, branch_prefix: inc}`.
-- El envoltorio `scripts/axiom-worktree.ps1` (o `.sh`) ofrece `new`, `pr` y `done` sobre `axiom branch`: los worktrees quedan en `C:\repos\axiom-wt\<slug>\axiom` y necesita un `axiom` con `axiom branch` en el PATH (`go install ./cmd/axiom`).
+- El envoltorio `scripts/axiom-worktree.ps1` (o `.sh`) ofrece `new`, `pr` y `done` sobre `axiom branch`: los worktrees quedan en `C:\repos\axiom-wt\<slug>\axiom` y necesita un `axiom` con `axiom branch` en el PATH (`go install ./cmd/axiom`). El registro de ramas es por carril: un cambio ODD (documento en `odd/tasks/`) usa `-Lane odd` (`--lane odd` en `.sh`) en los tres verbos; sin él rige `sdd` y la guarda esperaría el prefijo de `axiom.yaml` al escribir el documento.
 - El hook local `scripts/claude-hooks/guard-primary-checkout.ps1` deniega cualquier escritura en el checkout principal (siempre en `main`) y avisa si un comando lo deja fuera de `main`; complementa a `axiom branch guard`, que no cubre Bash ni PowerShell.
 
 ---

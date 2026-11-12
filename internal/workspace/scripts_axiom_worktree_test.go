@@ -269,9 +269,9 @@ func TestScriptsAxiomWorktreeShellNewRunsAxiomBranchEnsure(t *testing.T) {
 		if !strings.Contains(stdout, f.worktreePath("demo")) {
 			t.Errorf("new no muestra la ruta del worktree %q:\n%s", f.worktreePath("demo"), stdout)
 		}
-		want := regexp.MustCompile(`(?m)^axiom branch ensure --cwd \S*proj --change demo --mode worktree --prefix inc --json$`)
+		want := regexp.MustCompile(`(?m)^axiom branch ensure --cwd \S*proj --change demo --lane sdd --mode worktree --prefix inc --json$`)
 		if !want.MatchString(f.logText(t)) {
-			t.Errorf("new no lanzó `axiom branch ensure --cwd <principal> --change demo --mode worktree --prefix inc --json`:\n%s", f.logText(t))
+			t.Errorf("new no lanzó `axiom branch ensure --cwd <principal> --change demo --lane sdd --mode worktree --prefix inc --json`:\n%s", f.logText(t))
 		}
 	})
 
@@ -331,8 +331,8 @@ func TestScriptsAxiomWorktreeShellPrTakesTheBaseFromPrTarget(t *testing.T) {
 			t.Fatalf("pr salió con %d\nstdout: %s\nstderr: %s", code, stdout, stderr)
 		}
 		log := f.logText(t)
-		if !strings.Contains(log, "axiom branch status --cwd") || !strings.Contains(log, "--change demo --json") {
-			t.Errorf("pr no consultó `axiom branch status --cwd ... --change demo --json`:\n%s", log)
+		if !strings.Contains(log, "axiom branch status --cwd") || !strings.Contains(log, "--change demo --lane sdd --json") {
+			t.Errorf("pr no consultó `axiom branch status --cwd ... --change demo --lane sdd --json`:\n%s", log)
 		}
 		if !strings.Contains(log, "--base release --head inc/demo") {
 			t.Errorf("pr no tomó la base de prTarget (release):\n%s", log)
@@ -354,8 +354,8 @@ func TestScriptsAxiomWorktreeShellDoneRunsAxiomBranchDone(t *testing.T) {
 		t.Fatalf("done salió con %d\nstdout: %s\nstderr: %s", code, stdout, stderr)
 	}
 	log := f.logText(t)
-	if !regexp.MustCompile(`(?m)^axiom branch done --cwd \S*proj --change demo$`).MatchString(log) {
-		t.Errorf("done no lanzó `axiom branch done --cwd <principal> --change demo`:\n%s", log)
+	if !regexp.MustCompile(`(?m)^axiom branch done --cwd \S*proj --change demo --lane sdd$`).MatchString(log) {
+		t.Errorf("done no lanzó `axiom branch done --cwd <principal> --change demo --lane sdd`:\n%s", log)
 	}
 	if strings.Contains(log, "--force") {
 		t.Errorf("done sin -Force no debe pasar --force:\n%s", log)
@@ -367,7 +367,7 @@ func TestScriptsAxiomWorktreeShellDoneRunsAxiomBranchDone(t *testing.T) {
 	if _, _, code := f.run(t, bash, "scripts/axiom-worktree.sh", "done", "demo", "--force"); code != 0 {
 		t.Fatalf("done --force salió con %d", code)
 	}
-	if !strings.Contains(f.logText(t), "--change demo --force") {
+	if !strings.Contains(f.logText(t), "--change demo --lane sdd --force") {
 		t.Errorf("done --force no pasó --force a axiom:\n%s", f.logText(t))
 	}
 }
@@ -397,6 +397,47 @@ func TestScriptsAxiomWorktreeShellDoneWarnsWhenNoBranchExists(t *testing.T) {
 		if !strings.Contains(stdout, want) {
 			t.Errorf("done no avisa %q:\n%s", want, stdout)
 		}
+	}
+}
+
+// Un cambio ODD (documento en odd/tasks/) debe registrarse en el carril `odd`: el
+// envoltorio reenvía --lane a ensure, status y done, y rechaza un carril inválido.
+func TestScriptsAxiomWorktreeShellForwardsLane(t *testing.T) {
+	f := newWrapperFixture(t)
+	f.installBashStubs(t)
+	bash := bashPath(t)
+
+	worktree := f.worktreePath("demo")
+	if err := os.MkdirAll(filepath.Dir(worktree), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	f.git(t, f.proj, "worktree", "add", "-q", "-b", "fix/demo", worktree, "main")
+	f.writeJSON(t, "ensure.json", demoChange(f, "fix/demo", "main", true))
+	f.writeJSON(t, "status.json", demoChange(f, "fix/demo", "main", true))
+
+	for _, step := range []struct {
+		verb string
+		args []string
+		want string
+	}{
+		{"new", []string{"fix", "--lane", "odd"}, `(?m)^axiom branch ensure --cwd \S*proj --change demo --lane odd --mode worktree --prefix fix --json$`},
+		{"pr", []string{"--lane", "odd"}, `(?m)^axiom branch status --cwd \S*proj --change demo --lane odd --json$`},
+		{"done", []string{"--lane=odd", "--force"}, `(?m)^axiom branch done --cwd \S*proj --change demo --lane odd --force$`},
+	} {
+		if err := os.Remove(f.log); err != nil && !os.IsNotExist(err) {
+			t.Fatal(err)
+		}
+		args := append([]string{"scripts/axiom-worktree.sh", step.verb, "demo"}, step.args...)
+		if stdout, stderr, code := f.run(t, bash, args...); code != 0 {
+			t.Fatalf("%s --lane odd salió con %d\nstdout: %s\nstderr: %s", step.verb, code, stdout, stderr)
+		}
+		if !regexp.MustCompile(step.want).MatchString(f.logText(t)) {
+			t.Errorf("%s --lane odd no reenvió --lane odd a axiom:\n%s", step.verb, f.logText(t))
+		}
+	}
+
+	if _, stderr, code := f.run(t, bash, "scripts/axiom-worktree.sh", "new", "demo", "--lane", "otro"); code == 0 || !strings.Contains(stderr, "Carril inválido") {
+		t.Errorf("--lane otro debía rechazarse con «Carril inválido», salió con %d:\n%s", code, stderr)
 	}
 }
 
@@ -460,9 +501,38 @@ func TestScriptsAxiomWorktreePowerShellDrivesAxiomBranch(t *testing.T) {
 		if !strings.Contains(stdout, worktree) {
 			t.Errorf("new no muestra la ruta del worktree %q:\n%s", worktree, stdout)
 		}
-		want := regexp.MustCompile(`(?m)^axiom branch ensure --cwd \S*proj --change demo --mode worktree --prefix inc --json\s*$`)
+		want := regexp.MustCompile(`(?m)^axiom branch ensure --cwd \S*proj --change demo --lane sdd --mode worktree --prefix inc --json\s*$`)
 		if !want.MatchString(f.logText(t)) {
-			t.Errorf("new no lanzó `axiom branch ensure --cwd <principal> --change demo --mode worktree --prefix inc --json`:\n%s", f.logText(t))
+			t.Errorf("new no lanzó `axiom branch ensure --cwd <principal> --change demo --lane sdd --mode worktree --prefix inc --json`:\n%s", f.logText(t))
+		}
+	})
+
+	t.Run("carril odd en new, pr y done", func(t *testing.T) {
+		for _, step := range []struct {
+			verb string
+			args []string
+			want string
+		}{
+			{"new", []string{"-Prefix", "fix"}, `(?m)^axiom branch ensure --cwd \S*proj --change demo --lane odd --mode worktree --prefix fix --json\s*$`},
+			{"pr", nil, `(?m)^axiom branch status --cwd \S*proj --change demo --lane odd --json\s*$`},
+			{"done", []string{"-Force"}, `(?m)^axiom branch done --cwd \S*proj --change demo --lane odd --force\s*$`},
+		} {
+			if err := os.Remove(f.log); err != nil && !os.IsNotExist(err) {
+				t.Fatal(err)
+			}
+			args := append([]string{step.verb, "demo", "-Lane", "odd"}, step.args...)
+			if stdout, stderr, code := f.run(t, powershell, powerShellArgs(script, args...)...); code != 0 {
+				t.Fatalf("%s -Lane odd salió con %d\nstdout: %s\nstderr: %s", step.verb, code, stdout, stderr)
+			}
+			if !regexp.MustCompile(step.want).MatchString(f.logText(t)) {
+				t.Errorf("%s -Lane odd no reenvió --lane odd a axiom:\n%s", step.verb, f.logText(t))
+			}
+		}
+	})
+
+	t.Run("carril inválido", func(t *testing.T) {
+		if _, _, code := f.run(t, powershell, powerShellArgs(script, "new", "demo", "-Lane", "otro")...); code == 0 {
+			t.Error("-Lane otro debía rechazarse")
 		}
 	})
 
@@ -484,8 +554,8 @@ func TestScriptsAxiomWorktreePowerShellDrivesAxiomBranch(t *testing.T) {
 		if code != 0 {
 			t.Fatalf("done salió con %d\nstdout: %s\nstderr: %s", code, stdout, stderr)
 		}
-		if !regexp.MustCompile(`(?m)^axiom branch done --cwd \S*proj --change demo --force\s*$`).MatchString(f.logText(t)) {
-			t.Errorf("done no lanzó `axiom branch done --cwd <principal> --change demo --force`:\n%s", f.logText(t))
+		if !regexp.MustCompile(`(?m)^axiom branch done --cwd \S*proj --change demo --lane sdd --force\s*$`).MatchString(f.logText(t)) {
+			t.Errorf("done no lanzó `axiom branch done --cwd <principal> --change demo --lane sdd --force`:\n%s", f.logText(t))
 		}
 		if !strings.Contains(stdout, "desmantelado") {
 			t.Errorf("done no confirma el desmontaje:\n%s", stdout)

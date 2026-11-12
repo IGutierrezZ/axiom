@@ -7,10 +7,11 @@
 La topología de este repositorio es `monorepo-embedded` (`axiom.yaml`): `openspec/` comparte repositorio con el código. Por tanto, **todo cambio** (código, artefactos de `openspec/` y documentos `odd/tasks/`) nace **desde la primera escritura** en un worktree propio que prepara `axiom branch ensure`. El envoltorio local lo invoca:
 
 ```
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/axiom-worktree.ps1 new <slug> [-Prefix feat|inc|fix|refactor]
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/axiom-worktree.ps1 new <slug> [-Lane sdd|odd] [-Prefix feat|inc|fix|refactor]
 ```
 
 - Ejecuta `axiom branch ensure --cwd <checkout principal> --change <slug> --mode worktree --json` y muestra la ruta del worktree: `C:\repos\axiom-wt\<slug>\axiom`, sobre la rama `<prefijo>/<slug>` (el prefijo sale de `git.branch_prefix` en `axiom.yaml`, `inc`, salvo `-Prefix`) desde `origin/main`, sin red.
+- Los cambios ODD (su documento está en `odd/tasks/`) usan `-Lane odd` en `new`, `pr` y `done`; sin él el registro cae en el carril `sdd` y la guarda espera el prefijo de `axiom.yaml` en lugar del indicado con `-Prefix`.
 - PR: `... scripts/axiom-worktree.ps1 pr <slug>` (la base sale de `prTarget` en `axiom branch status --json`).
 - Tras el merge: `... scripts/axiom-worktree.ps1 done <slug>` (`axiom branch done` y avance rápido de `main`).
 - Necesita un `axiom` con `axiom branch` en el `PATH` (`go install ./cmd/axiom`).

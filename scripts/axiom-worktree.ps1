@@ -8,20 +8,26 @@
     aporta la costumbre local y el verbo `pr`, que el producto deja fuera (la publicación es una
     decisión de la persona):
 
-    new  <slug> [-Prefix p]  axiom branch ensure --cwd <checkout principal> --change <slug> [--prefix p] --json
-    pr   <slug>              push de la rama del cambio y PR hacia el prTarget de axiom branch status --json
-    done <slug> [-Force]     axiom branch done --cwd <checkout principal> --change <slug> y, después,
+    new  <slug> [-Lane l] [-Prefix p]  axiom branch ensure --cwd <checkout principal> --change <slug> --lane l [--prefix p] --json
+    pr   <slug> [-Lane l]    push de la rama del cambio y PR hacia el prTarget de axiom branch status --lane l --json
+    done <slug> [-Lane l] [-Force]  axiom branch done --cwd <checkout principal> --change <slug> --lane l y, después,
                              el avance rápido de main. La rama sale del registro local que escribe
                              `ensure` (con su prefijo); `done` no admite -Prefix. Si no ve ninguna
                              rama del cambio, lo avisa en lugar de dar el cambio por desmantelado
+
+    El registro local de ramas es por carril (`<git common dir>/axiom/branch/v1/<carril>/<cambio>.json`)
+    y la guarda `axiom branch guard` clasifica `odd/tasks/*.md` como carril `odd`. Por eso un cambio ODD
+    (su documento es `odd/tasks/<slug>.md`) debe usar `-Lane odd` en los tres verbos (`new`, `pr` y
+    `done`); sin él, el registro cae en `sdd` y la guarda esperaría el prefijo de `axiom.yaml`. `-Prefix`
+    se registra por carril. Sin -Lane rige `sdd`, el carril por defecto del producto.
 
     Los worktrees viven en <carpeta del proyecto>-wt/<slug>/<repositorio> (p. ej. axiom-wt\<slug>\axiom).
     Necesita un `axiom` con el verbo `axiom branch` en el PATH (`go install ./cmd/axiom`).
 
 .USAGE
-    scripts/axiom-worktree.ps1 new <slug> [-Prefix feat|inc|fix|refactor]
-    scripts/axiom-worktree.ps1 pr <slug>
-    scripts/axiom-worktree.ps1 done <slug> [-Force]
+    scripts/axiom-worktree.ps1 new <slug> [-Lane sdd|odd] [-Prefix feat|inc|fix|refactor]
+    scripts/axiom-worktree.ps1 pr <slug> [-Lane sdd|odd]
+    scripts/axiom-worktree.ps1 done <slug> [-Lane sdd|odd] [-Force]
 #>
 param(
     [Parameter(Position = 0, Mandatory = $true)]
@@ -35,6 +41,11 @@ param(
     [Parameter(Position = 2, Mandatory = $false)]
     [ValidateSet('feat', 'inc', 'fix', 'refactor')]
     [string]$Prefix,
+
+    # Carril del registro local de ramas: `odd` para cambios con documento en odd/tasks/.
+    [Parameter(Mandatory = $false)]
+    [ValidateSet('sdd', 'odd')]
+    [string]$Lane = 'sdd',
 
     [Parameter(Mandatory = $false)]
     [switch]$Force
@@ -92,7 +103,7 @@ switch ($Verb) {
 
         # `--mode worktree`: la política local exige un worktree propio y un checkout principal
         # siempre en main, sea cual sea la preferencia personal del hub.
-        $lines = & axiom branch ensure --cwd $mainRoot --change $Slug @ensureArgs --json 2>&1
+        $lines = & axiom branch ensure --cwd $mainRoot --change $Slug --lane $Lane @ensureArgs --json 2>&1
         $exitCode = $LASTEXITCODE
         $text = ($lines | ForEach-Object { "$_" }) -join "`n"
         if ($exitCode -ne 0) {
@@ -120,7 +131,7 @@ switch ($Verb) {
     }
 
     'pr' {
-        $lines = & axiom branch status --cwd $mainRoot --change $Slug --json 2>&1
+        $lines = & axiom branch status --cwd $mainRoot --change $Slug --lane $Lane --json 2>&1
         $exitCode = $LASTEXITCODE
         $text = ($lines | ForEach-Object { "$_" }) -join "`n"
         if ($exitCode -ne 0) {
@@ -141,7 +152,7 @@ switch ($Verb) {
             }
         }
         if ($null -eq $changeBranch) {
-            Fail "axiom branch status no encontró la rama del cambio '$Slug'. Créala con: scripts/axiom-worktree.ps1 new $Slug"
+            Fail "axiom branch status no encontró la rama del cambio '$Slug'. Créala con: scripts/axiom-worktree.ps1 new $Slug -Lane $Lane"
         }
         $branch   = [string]$changeBranch.name
         $wtPath   = [string]$changeBranch.worktree
@@ -208,7 +219,7 @@ switch ($Verb) {
         # Una rama creada fuera de `ensure` no está en el registro y `done` no la ve: sin esta
         # comprobación el script daría por desmantelado un cambio que sigue montado.
         $existing = @()
-        $statusLines = & axiom branch status --cwd $mainRoot --change $Slug --json 2>&1
+        $statusLines = & axiom branch status --cwd $mainRoot --change $Slug --lane $Lane --json 2>&1
         if ($LASTEXITCODE -eq 0) {
             try {
                 $status = (($statusLines | ForEach-Object { "$_" }) -join "`n") | ConvertFrom-Json
@@ -227,7 +238,7 @@ switch ($Verb) {
         }
 
         # `axiom branch done` confirma la fusión y desmonta el worktree y la rama local del plan.
-        & axiom branch done --cwd $mainRoot --change $Slug @doneArgs
+        & axiom branch done --cwd $mainRoot --change $Slug --lane $Lane @doneArgs
         if ($LASTEXITCODE -ne 0) {
             Fail "axiom branch done no desmanteló por completo el cambio '$Slug' (revisa el mensaje anterior)."
         }
