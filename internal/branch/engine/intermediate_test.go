@@ -102,7 +102,7 @@ func TestPendingArchiveSkipsAnIntermediateMergeAndListsAFinishedChange(t *testin
 	}
 }
 
-// Con la marca y el roster vacío, la fusión sigue siendo intermedia (como LastRoleClosed, que nunca
+// Con la marca y el roster vacío, la fusión sigue siendo intermedia (como LastBlockingRoleClosed, que nunca
 // cierra con roster vacío).
 func TestPendingArchiveTreatsAHandedOffChangeWithAnEmptyRosterAsIntermediate(t *testing.T) {
 	t.Parallel()

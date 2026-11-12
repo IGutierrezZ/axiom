@@ -90,14 +90,6 @@ func TestLastBlockingRoleClosed(t *testing.T) {
 			if got := LastBlockingRoleClosed(tt.roster, tt.gates); got != tt.want {
 				t.Errorf("LastBlockingRoleClosed() = %v, se esperaba %v", got, tt.want)
 			}
-			// Con todos los roles blocking coincide con LastRoleClosed.
-			allBlocking := true
-			for _, role := range tt.roster {
-				allBlocking = allBlocking && IsBlockingRole(role)
-			}
-			if allBlocking && LastRoleClosed(tt.roster, tt.gates) != LastBlockingRoleClosed(tt.roster, tt.gates) {
-				t.Errorf("con todos los roles blocking LastBlockingRoleClosed debe coincidir con LastRoleClosed")
-			}
 		})
 	}
 }

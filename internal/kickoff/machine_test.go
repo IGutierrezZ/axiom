@@ -364,14 +364,14 @@ func TestEvaluateGatesRoleApplyGateReopensWhenRoleTasksDigestChanges(t *testing.
 	}
 }
 
-// TestLastRoleClosedRequiresEveryRoleApproved covers REQ-21.13's core
+// TestLastBlockingRoleClosedRequiresEveryBlockingRoleApproved covers REQ-21.13's core
 // predicate: the notice and the integration handoff must wait for every
 // active role, not just most of them.
-func TestLastRoleClosedRequiresEveryRoleApproved(t *testing.T) {
+func TestLastBlockingRoleClosedRequiresEveryBlockingRoleApproved(t *testing.T) {
 	roster := []multirole.RoleAssignment{
 		{Role: "core", GatePolicy: multirole.PolicyBlocking},
 		{Role: "web", GatePolicy: multirole.PolicyBlocking},
-		{Role: "qa", GatePolicy: multirole.PolicyDeferred},
+		{Role: "qa", GatePolicy: multirole.PolicyBlocking},
 	}
 
 	t.Run("N-1 of N approved is not closed", func(t *testing.T) {
@@ -380,8 +380,8 @@ func TestLastRoleClosedRequiresEveryRoleApproved(t *testing.T) {
 			{Key: RoleApplyGate("web"), Status: "approved"},
 			{Key: RoleApplyGate("qa"), Status: "pending"},
 		}
-		if LastRoleClosed(roster, gates) {
-			t.Error("LastRoleClosed() = true, se esperaba false con un rol todavia pendiente")
+		if LastBlockingRoleClosed(roster, gates) {
+			t.Error("LastBlockingRoleClosed() = true, se esperaba false con un rol todavia pendiente")
 		}
 	})
 
@@ -391,8 +391,8 @@ func TestLastRoleClosedRequiresEveryRoleApproved(t *testing.T) {
 			{Key: RoleApplyGate("web"), Status: "approved"},
 			{Key: RoleApplyGate("qa"), Status: "approved"},
 		}
-		if !LastRoleClosed(roster, gates) {
-			t.Error("LastRoleClosed() = false, se esperaba true con los N roles aprobados")
+		if !LastBlockingRoleClosed(roster, gates) {
+			t.Error("LastBlockingRoleClosed() = false, se esperaba true con los N roles aprobados")
 		}
 	})
 
@@ -402,20 +402,20 @@ func TestLastRoleClosedRequiresEveryRoleApproved(t *testing.T) {
 			{Key: RoleApplyGate("web"), Status: "rejected"},
 			{Key: RoleApplyGate("qa"), Status: "approved"},
 		}
-		if LastRoleClosed(roster, gates) {
-			t.Error("LastRoleClosed() = true, se esperaba false: un rol rechazado nunca cierra el ultimo rol (REQ-21.13, tercer escenario)")
+		if LastBlockingRoleClosed(roster, gates) {
+			t.Error("LastBlockingRoleClosed() = true, se esperaba false: un rol rechazado nunca cierra el ultimo rol (REQ-21.13, tercer escenario)")
 		}
 	})
 }
 
-// TestLastRoleClosedSingleFullstackRoleClosesImmediately is REQ-21.13's
+// TestLastBlockingRoleClosedSingleFullstackRoleClosesImmediately is REQ-21.13's
 // second scenario: a one-role roster satisfies "last role" the moment that
 // single role's own apply gate is approved.
-func TestLastRoleClosedSingleFullstackRoleClosesImmediately(t *testing.T) {
+func TestLastBlockingRoleClosedSingleFullstackRoleClosesImmediately(t *testing.T) {
 	roster := []multirole.RoleAssignment{{Role: "fullstack", GatePolicy: multirole.PolicyBlocking}}
 	gates := []GateState{{Key: RoleApplyGate("fullstack"), Status: "approved"}}
-	if !LastRoleClosed(roster, gates) {
-		t.Error("LastRoleClosed() = false, se esperaba true de inmediato para un roster de un unico rol fullstack aprobado")
+	if !LastBlockingRoleClosed(roster, gates) {
+		t.Error("LastBlockingRoleClosed() = false, se esperaba true de inmediato para un roster de un unico rol fullstack aprobado")
 	}
 }
 
