@@ -209,15 +209,15 @@ Sin dependencias internas; todo son funciones puras con pruebas por tablas.
 
 ### U17 · `feat(cli): axiom sdd trace de solo lectura`
 
-- [ ] 17.1 RED de amenazas en `internal/cli/sdd_trace_test.go`: traza lanzada desde un directorio ajeno con `--cwd` al repositorio; nombre de cambio con `:(`, `*` o `..` y referencia con `..` rechazados antes de llamar a git.
+- [x] 17.1 RED de amenazas en `internal/cli/sdd_trace_test.go`: traza lanzada desde un directorio ajeno con `--cwd` al repositorio; nombre de cambio con `:(`, `*` o `..` y referencia con `..` rechazados antes de llamar a git.
   Cubre: REQ-29.9
   Aceptación: pruebas escritas y en rojo antes de 17.2.
   Comprobación: `go test ./internal/cli/ -run TestSDDTraceRejectsUnsafeInput` (rojo esperado antes de 17.2)
-- [ ] 17.2 Crear `internal/cli/sdd_trace.go` y completar `internal/cli/sdd_trace_test.go`: verbo `axiom sdd trace --cwd --change [--integration-branch] [--json]`, puerto `History` sobre `gitcommon.Run` con `dir` = raíz git resuelta desde `--cwd`, referencia validada con `gitref.ValidRefName`, esquema `axiom.sdd-trace/v1`; repos git reales en `t.TempDir()` con squash, merge y rebase, PR del cambio y PR documental, discrepancia y ausencia.
+- [x] 17.2 Crear `internal/cli/sdd_trace.go` y completar `internal/cli/sdd_trace_test.go`: verbo `axiom sdd trace --cwd --change [--integration-branch] [--json]`, puerto `History` sobre `gitcommon.Run` con `dir` = raíz git resuelta desde `--cwd`, referencia validada con `gitref.ValidRefName`, esquema `axiom.sdd-trace/v1`; repos git reales en `t.TempDir()` con squash, merge y rebase, PR del cambio y PR documental, discrepancia y ausencia.
   Cubre: REQ-29.9
   Aceptación: misma cadena REQ → `Cubre:` → fila → commit de código → commit de archivado con los tres modos de fusión; ningún fichero nuevo en el árbol tras ejecutar.
   Comprobación: `go test ./internal/cli/ -run 'TestSDDTrace'`
-- [ ] 17.3 Modificar `cmd/axiom` para registrar `sdd trace` y su ayuda.
+- [x] 17.3 Modificar `cmd/axiom` para registrar `sdd trace` y su ayuda.
   Cubre: REQ-29.9
   Aceptación: el verbo se enruta junto a los demás `sdd` y aparece en la ayuda.
   Comprobación: `go test ./cmd/axiom/ -run 'TestSDDVerbRouting'`

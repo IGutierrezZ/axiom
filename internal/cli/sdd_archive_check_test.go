@@ -63,23 +63,7 @@ func archiveCheckWorkspace(t *testing.T, change archiveCheckChange) (root, chang
 	if change.verify != "" {
 		writeCLIFixture(t, filepath.Join(changeRoot, "verify-report.md"), change.verify)
 	}
-	snapshot := &kickoff.SDDSnapshot{ISO: change.iso}
-	if !change.iso {
-		snapshot = nil
-	}
-	_, ok, err := kickoff.Seal(changeRoot, kickoff.Kickoff{
-		Schema: kickoff.KickoffSchemaV1, Change: change.name, SealedBy: "test",
-		Config: kickoff.FlowConfig{
-			FlowMode: kickoff.FlowSDD, ExecutionStyle: kickoff.ExecutionContinuous, ExecutionStyleSource: "explicit",
-			HandoffPolicy: kickoff.HandoffNone,
-			Roles:         []kickoff.KickoffRole{{Role: "fullstack", GatePolicy: "blocking", TasksFile: "tasks.md", VerifyFile: "verify-report.md"}},
-		},
-		Lifecycle: kickoff.Lifecycle{DeploymentTarget: "local", PostArchivePolicy: "bug_only"},
-		SDD:       snapshot,
-	})
-	if err != nil || !ok {
-		t.Fatalf("kickoff.Seal() = (ok=%v, err=%v)", ok, err)
-	}
+	sealTestChange(t, changeRoot, change.name, change.iso)
 	return root, changeRoot
 }
 
@@ -368,5 +352,28 @@ func TestSDDArchiveCheckAlreadyComposedNegatives(t *testing.T) {
 				t.Errorf("se esperaba alreadyComposed=false:\n%s", out)
 			}
 		})
+	}
+}
+
+// sealTestChange sella un cambio de prueba en continuous con el rol fullstack, con
+// o sin la instantánea ISO.
+func sealTestChange(t *testing.T, changeRoot, name string, iso bool) {
+	t.Helper()
+	var snapshot *kickoff.SDDSnapshot
+	if iso {
+		snapshot = &kickoff.SDDSnapshot{ISO: true}
+	}
+	_, ok, err := kickoff.Seal(changeRoot, kickoff.Kickoff{
+		Schema: kickoff.KickoffSchemaV1, Change: name, SealedBy: "test",
+		Config: kickoff.FlowConfig{
+			FlowMode: kickoff.FlowSDD, ExecutionStyle: kickoff.ExecutionContinuous, ExecutionStyleSource: "explicit",
+			HandoffPolicy: kickoff.HandoffNone,
+			Roles:         []kickoff.KickoffRole{{Role: "fullstack", GatePolicy: "blocking", TasksFile: "tasks.md", VerifyFile: "verify-report.md"}},
+		},
+		Lifecycle: kickoff.Lifecycle{DeploymentTarget: "local", PostArchivePolicy: "bug_only"},
+		SDD:       snapshot,
+	})
+	if err != nil || !ok {
+		t.Fatalf("kickoff.Seal() = (ok=%v, err=%v)", ok, err)
 	}
 }
