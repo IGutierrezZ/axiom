@@ -47,19 +47,19 @@ Sin dependencias internas; todo son funciones puras con pruebas por tablas.
 
 ### U3 · `feat(isoevidence): matriz de verificación y resolución de referencias`
 
-- [ ] 3.1 RED de amenazas, `internal/isoevidence/testref_test.go` y `internal/isoevidence/matrix_threat_test.go`: (a) fila con un comando que crearía un fichero centinela y referencia a un `README.sh`: tras validar, el centinela no existe y la referencia resuelve solo por texto; (b) referencias `C:\x:Sym`, `\\srv\x:Sym`, `../x_test.go:TestX`, ruta absoluta y enlace simbólico que sale del árbol rechazadas con el motivo «fuera del árbol» (el caso del enlace se omite si el sistema no permite crearlo).
+- [x] 3.1 RED de amenazas, `internal/isoevidence/testref_test.go` y `internal/isoevidence/matrix_threat_test.go`: (a) fila con un comando que crearía un fichero centinela y referencia a un `README.sh`: tras validar, el centinela no existe y la referencia resuelve solo por texto; (b) referencias `C:\x:Sym`, `\\srv\x:Sym`, `../x_test.go:TestX`, ruta absoluta y enlace simbólico que sale del árbol rechazadas con el motivo «fuera del árbol» (el caso del enlace se omite si el sistema no permite crearlo).
   Cubre: REQ-29.7
   Aceptación: las pruebas existen y fallan (RED) antes de 3.2.
   Comprobación: `go test ./internal/isoevidence/ -run 'TestTreeResolverRejectsEscapes|TestMatrixNeverExecutesCommands'` (rojo esperado antes de 3.2)
-- [ ] 3.2 Crear `internal/isoevidence/testref.go`: `TreeResolver`, `NewTreeResolver` sobre `os.Root`, `ResolvePathSymbol` (identificador completo, lectura acotada a 4 MiB) y `ResolveGoTest` (recorrido único con prefiltro y `go/parser`, omitiendo `.git`, `vendor`, `node_modules` y `testdata`; índice construido una sola vez).
+- [x] 3.2 Crear `internal/isoevidence/testref.go`: `TreeResolver`, `NewTreeResolver` sobre `os.Root`, `ResolvePathSymbol` (identificador completo, lectura acotada a 4 MiB) y `ResolveGoTest` (recorrido único con prefiltro y `go/parser`, omitiendo `.git`, `vendor`, `node_modules` y `testdata`; índice construido una sola vez).
   Cubre: REQ-29.7
   Aceptación: pasan las pruebas de 3.1 más forma general, `TestX`, subcadena de otro identificador, fichero mayor del límite, Python y TypeScript.
   Comprobación: `go test ./internal/isoevidence/ -run 'TestTreeResolver|TestResolveGoTest'`
-- [ ] 3.3 Crear `internal/isoevidence/matrix.go` (parte `ParseMatrix`) y `internal/isoevidence/matrix_parse_test.go`: sección `## Matriz de verificación` de nivel 2 fuera de vallas, cabeceras por nombre sin importar orden ni mayúsculas, `\|` literal, celdas con `-` o `—`, matriz ambigua (dos encabezados de nivel 2) y matriz histórica de nivel 3 ignorada.
+- [x] 3.3 Crear `internal/isoevidence/matrix.go` (parte `ParseMatrix`) y `internal/isoevidence/matrix_parse_test.go`: sección `## Matriz de verificación` de nivel 2 fuera de vallas, cabeceras por nombre sin importar orden ni mayúsculas, `\|` literal, celdas con `-` o `—`, matriz ambigua (dos encabezados de nivel 2) y matriz histórica de nivel 3 ignorada.
   Cubre: REQ-29.6, REQ-29.8
   Aceptación: tabla de casos de design §5.5; ninguna línea de la sección empieza por `verdict:`.
   Comprobación: `go test ./internal/isoevidence/ -run TestParseMatrix`
-- [ ] 3.4 Completar `internal/isoevidence/matrix.go` con `ValidateMatrix` y `internal/isoevidence/matrix_validate_test.go`: completitud (una fila por escenario afectado, ninguna sobrante ni repetida), tipo y resultado exactos, fila automática (referencia resoluble, comando, salida entera, `pass` exige `0`), fila manual (responsable, fecha `AAAA-MM-DD`, justificación), `Successful`, y bug sin impacto (`not_required`, cualquier fila es inválida), con un `TreeResolver` simulado.
+- [x] 3.4 Completar `internal/isoevidence/matrix.go` con `ValidateMatrix` y `internal/isoevidence/matrix_validate_test.go`: completitud (una fila por escenario afectado, ninguna sobrante ni repetida), tipo y resultado exactos, fila automática (referencia resoluble, comando, salida entera, `pass` exige `0`), fila manual (responsable, fecha `AAAA-MM-DD`, justificación), `Successful`, y bug sin impacto (`not_required`, cualquier fila es inválida), con un `TreeResolver` simulado.
   Cubre: REQ-29.6, REQ-29.7, REQ-29.8, REQ-29.11, REQ-29.19
   Aceptación: cada escenario de REQ-29.6 a REQ-29.8 y REQ-29.19 en tabla; filas `fail` producen `iso_matrix_failed`.
   Comprobación: `go test ./internal/isoevidence/ -run TestValidateMatrix`
