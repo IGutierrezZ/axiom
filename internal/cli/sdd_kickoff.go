@@ -6,7 +6,9 @@ import (
 	"io"
 	"path/filepath"
 
+	"github.com/IGutierrezZ/axiom/v3/internal/gitref"
 	"github.com/IGutierrezZ/axiom/v3/internal/kickoff"
+	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
 // RunSDDKickoff is the CLI entry point for `axiom sdd kickoff <seal|show>`
@@ -45,13 +47,18 @@ func runSDDKickoffSeal(args []string, stdout io.Writer) error {
 	if err != nil {
 		return err
 	}
-	loc, changeRoot, err := resolveGovernanceChangeRoot(parsed.CWD, parsed.Change)
+	loc, changeRoot, existed, err := resolveSealChangeRoot(parsed.CWD, parsed.Change)
 	if err != nil {
 		return err
 	}
 
 	var sealing kickoff.Kickoff
 	if parsed.Infer {
+		// El retrosellado es de un cambio con artefactos: nunca crea la carpeta.
+		if !existed {
+			return fmt.Errorf("el cambio %q no existe en %q; `seal --infer` retrosella un cambio que ya tiene artefactos y nunca crea la carpeta; para sellar un cambio nuevo ejecuta `seal` sin `--infer`",
+				parsed.Change, changeRoot)
+		}
 		designPath := filepath.Join(changeRoot, "design.md")
 		// loc.Config is the base configuration the resolver already loaded
 		// (through the pointer when there is one); it is nil when there is no
@@ -66,9 +73,19 @@ func runSDDKickoffSeal(args []string, stdout io.Writer) error {
 		sealing = inferred
 	} else {
 		sealing = parsed.ToKickoff(parsed.Change)
+		// Una declaración `sdd:` inválida, o contradictoria con `workflow.lane`, se
+		// rechaza antes de tocar nada (REQ-29.1, REQ-29.12).
+		if err := loc.Declarations.SDDErr; err != nil {
+			return fmt.Errorf("no se sella el cambio %q: la declaración `sdd:` de axiom.yaml no es válida: %w", parsed.Change, err)
+		}
 		// Guarda A (REQ-25.38) e instantánea de política git (REQ-25.36): sin --infer.
 		if err := applySealBranchPolicy(loc, changeRoot, &sealing); err != nil {
 			return err
+		}
+		// Instantánea de `sdd:` (REQ-29.13): solo un proyecto ISO la lleva, y nunca el
+		// retrosellado.
+		if sdd := loc.Declarations.SDD; sdd != nil && sdd.ISO {
+			sealing.SDD = &kickoff.SDDSnapshot{ISO: true}
 		}
 	}
 	sealing.Change = parsed.Change
@@ -79,12 +96,53 @@ func runSDDKickoffSeal(args []string, stdout io.Writer) error {
 		return err
 	}
 
-	sealed, wrote, err := kickoff.Seal(changeRoot, sealing)
+	// La carpeta se crea después de todas las validaciones y justo antes de sellar;
+	// si el sellado falla, se retira lo que se creó (REQ-29.12).
+	rollback, err := kickoff.PrepareChangeRoot(changeRoot)
 	if err != nil {
+		return err
+	}
+	sealed, wrote, err := sealKickoffFile(changeRoot, sealing)
+	if err != nil {
+		rollback()
 		return err
 	}
 
 	return renderKickoffSealResult(stdout, parsed.JSON, sealed, wrote)
+}
+
+// sealKickoffFile es la costura de prueba sobre kickoff.Seal.
+var sealKickoffFile = kickoff.Seal
+
+// resolveSealChangeRoot resuelve la carpeta de un cambio para `seal`, que a
+// diferencia de gate y show puede sellar un cambio cuya carpeta aún no existe
+// (REQ-29.12). Valida el nombre con gitref.ValidBranchComponent antes de construir
+// ninguna ruta, reserva `archive` (colisionaría con changes/archive/), conserva la
+// negativa de un cambio archivado y devuelve la ruta y si la carpeta ya existía,
+// sin crearla.
+func resolveSealChangeRoot(cwd, change string) (workspace.Location, string, bool, error) {
+	if err := gitref.ValidBranchComponent(change); err != nil {
+		return workspace.Location{}, "", false, fmt.Errorf("--change %q no es un nombre de cambio válido: %w", change, err)
+	}
+	if change == "archive" {
+		return workspace.Location{}, "", false, fmt.Errorf("--change %q es un nombre reservado: openspec/changes/archive/ guarda los cambios archivados", change)
+	}
+	loc, err := workspace.Locate(cwd)
+	if err != nil {
+		return workspace.Location{}, "", false, err
+	}
+
+	changeRoot := filepath.Join(loc.WorkspaceRoot, "openspec", "changes", change)
+	existed := isDirectory(changeRoot)
+	if !existed {
+		if archived, ok := kickoff.ArchivedChangeRoot(loc.WorkspaceRoot, change); ok {
+			changeRoot, existed = archived, true
+		}
+	}
+	if err := kickoff.RefuseArchivedRoot(loc.WorkspaceRoot, changeRoot); err != nil {
+		return workspace.Location{}, "", false, err
+	}
+	return loc, changeRoot, existed, nil
 }
 
 func runSDDKickoffShow(args []string, stdout io.Writer) error {
@@ -140,6 +198,9 @@ func renderKickoffSummaryText(k kickoff.Kickoff, wrote bool) string {
 	if k.Config.DocsPublication != "" {
 		text += fmt.Sprintf(" docs_publication=%s", k.Config.DocsPublication)
 	}
+	if k.IsISO() {
+		text += " iso=true"
+	}
 	return text
 }
 
@@ -172,6 +233,7 @@ type kickoffJSON struct {
 	Roles            []kickoffRoleJSON `json:"roles"`
 	DeploymentTarget string            `json:"deploymentTarget"`
 	DocsPublication  string            `json:"docsPublication,omitempty"`
+	ISO              bool              `json:"iso,omitempty"` // REQ-29.13: solo un cambio sellado como ISO
 }
 
 func toKickoffJSON(k kickoff.Kickoff) kickoffJSON {
@@ -195,6 +257,7 @@ func toKickoffJSON(k kickoff.Kickoff) kickoffJSON {
 		Roles:            roles,
 		DeploymentTarget: k.Lifecycle.DeploymentTarget,
 		DocsPublication:  string(k.Config.DocsPublication),
+		ISO:              k.IsISO(),
 	}
 }
 

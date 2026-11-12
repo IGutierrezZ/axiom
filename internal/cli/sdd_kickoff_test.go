@@ -236,21 +236,11 @@ func TestRunSDDKickoffShowOnSealedChangeDisplaysIt(t *testing.T) {
 	}
 }
 
-// TestRunSDDKickoffSealOnNonexistentChangeNamesResolvedPath covers
-// design.md S5.7's "cambio inexistente" row: these verbs write inside a
-// change that already exists and never create one (task 8.2).
-func TestRunSDDKickoffSealOnNonexistentChangeNamesResolvedPath(t *testing.T) {
-	root := t.TempDir()
-	mustMkdirAllCLI(t, filepath.Join(root, "openspec", "changes"))
-
-	err := RunSDDKickoff([]string{"seal", "--cwd", root, "--change", "does-not-exist", "--execution-style", "continuous", "--handoff-policy", "none"}, &bytes.Buffer{})
-	if err == nil {
-		t.Fatal("RunSDDKickoff() = nil error, se esperaba rechazo: el cambio no existe")
-	}
-	if !strings.Contains(err.Error(), "does-not-exist") {
-		t.Fatalf("error = %v, se esperaba que nombrase la ruta resuelta", err)
-	}
-}
+// La prueba que exigía que la carpeta del cambio existiera
+// (TestRunSDDKickoffSealOnNonexistentChangeNamesResolvedPath) se invirtió por
+// REQ-29.12: `seal` crea la carpeta tras las validaciones. Su sustituta es
+// TestRunSDDKickoffSealOnNonexistentChangeCreatesTheFolder
+// (sdd_kickoff_iso_test.go); `--infer` conserva el rechazo.
 
 // --- REQ-26.9: handoff_policy is deprecated. The flag is accepted and ignored,
 // never required, never named by help, errors or text, and the JSON echoes the

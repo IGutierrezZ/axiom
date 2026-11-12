@@ -117,15 +117,15 @@ Sin dependencias internas; todo son funciones puras con pruebas por tablas.
 
 ### U9 · `feat(cli): kickoff seal prepara la carpeta del cambio y copia sdd.iso`
 
-- [ ] 9.1 RED de amenazas en `internal/cli/sdd_kickoff_test.go`: `--change ../x`, `--change archive`, nombres con `:(`, `*` y `..` rechazados sin crear nada; `wrong_branch` y `sdd:` inválido o contradictorio sin carpeta ni `kickoff.yaml`.
+- [x] 9.1 RED de amenazas en `internal/cli/sdd_kickoff_test.go`: `--change ../x`, `--change archive`, nombres con `:(`, `*` y `..` rechazados sin crear nada; `wrong_branch` y `sdd:` inválido o contradictorio sin carpeta ni `kickoff.yaml`.
   Cubre: REQ-29.12, REQ-29.1
   Aceptación: pruebas escritas y en rojo antes de 9.2; la prueba de `TestRunSDDKickoffSealOnNonexistentChangeNamesResolvedPath` invertida.
   Comprobación: `go test ./internal/cli/ -run 'TestRunSDDKickoffSeal'` (rojo esperado antes de 9.2)
-- [ ] 9.2 Modificar `internal/cli/sdd_kickoff.go` y `internal/cli/sdd_kickoff_test.go`: `resolveSealChangeRoot` (nombre válido con `gitref.ValidBranchComponent`, `archive` reservado, rechazo de cambio archivado), creación con `kickoff.PrepareChangeRoot` tras todas las validaciones y justo antes de `kickoff.Seal`, retirada si `Seal` falla, lectura de `sdd:`, copia de `sdd.iso` (nunca con `--infer`, que sigue exigiendo carpeta) e `iso` en texto y JSON.
+- [x] 9.2 Modificar `internal/cli/sdd_kickoff.go` y `internal/cli/sdd_kickoff_test.go`: `resolveSealChangeRoot` (nombre válido con `gitref.ValidBranchComponent`, `archive` reservado, rechazo de cambio archivado), creación con `kickoff.PrepareChangeRoot` tras todas las validaciones y justo antes de `kickoff.Seal`, retirada si `Seal` falla, lectura de `sdd:`, copia de `sdd.iso` (nunca con `--infer`, que sigue exigiendo carpeta) e `iso` en texto y JSON.
   Cubre: REQ-29.12, REQ-29.13, REQ-29.1
   Aceptación: escenarios de REQ-29.12 (idempotencia, carpeta existente intacta, sin carpeta ante rechazo) y REQ-29.13 (una sola escritura, `--infer` sin `iso`).
   Comprobación: `go test ./internal/cli/ -run 'TestRunSDDKickoffSeal'`
-- [ ] 9.3 Modificar `internal/branch/engine/writer_inventory_test.go`: añadir `{"internal/kickoff", "PrepareChangeRoot"}` a `writerCalls`.
+- [x] 9.3 Modificar `internal/branch/engine/writer_inventory_test.go`: añadir `{"internal/kickoff", "PrepareChangeRoot"}` a `writerCalls`.
   Cubre: REQ-29.12
   Aceptación: el inventario de escritores sigue en verde; `runSDDKickoffSeal` queda cubierto por `applySealBranchPolicy`.
   Comprobación: `go test ./internal/branch/engine/ -run TestWriterInventory`
