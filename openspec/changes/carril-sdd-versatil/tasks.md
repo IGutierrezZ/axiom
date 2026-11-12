@@ -36,11 +36,11 @@ Sin dependencias internas; todo son funciones puras con pruebas por tablas.
 
 ### U2 · `feat(isoevidence): perfil de bug y cobertura Cubre`
 
-- [ ] 2.1 Crear `internal/isoevidence/bug.go` y `internal/isoevidence/bug_test.go`: `ParseBugDeclaration`, `BugDeclaration.Findings()` según design §5.6 y la tabla de D9 (`bug_report_incomplete`, `bug_no_impact_incomplete`; marca literal `Sin impacto en la spec` sensible a mayúsculas; sin delta y con `## Impacto en la spec`, ruta sin impacto).
+- [x] 2.1 Crear `internal/isoevidence/bug.go` y `internal/isoevidence/bug_test.go`: `ParseBugDeclaration`, `BugDeclaration.Findings()` según design §5.6 y la tabla de D9 (`bug_report_incomplete`, `bug_no_impact_incomplete`; marca literal `Sin impacto en la spec` sensible a mayúsculas; sin delta y con `## Impacto en la spec`, ruta sin impacto).
   Cubre: REQ-29.15
   Aceptación: cada escenario de REQ-29.15 en tabla, incluidos el punto final, las minúsculas, valores vacíos y secciones dentro de vallas; si faltan cosas de las dos secciones salen los dos tokens.
   Comprobación: `go test ./internal/isoevidence/ -run TestParseBugDeclaration`
-- [ ] 2.2 Crear `internal/isoevidence/cubre.go` y `internal/isoevidence/cubre_test.go`: `ParseCubre`, `BaselineIndex`/`NewBaselineIndex`, `CheckCoverage`, `CheckExistingRequirementBug`, `CheckNoImpactBug`, `AffectedFromDelta`, `AffectedFromBaseline`.
+- [x] 2.2 Crear `internal/isoevidence/cubre.go` y `internal/isoevidence/cubre_test.go`: `ParseCubre`, `BaselineIndex`/`NewBaselineIndex`, `CheckCoverage`, `CheckExistingRequirementBug`, `CheckNoImpactBug`, `AffectedFromDelta`, `AffectedFromBaseline`.
   Cubre: REQ-29.4, REQ-29.5, REQ-29.14, REQ-29.19
   Aceptación: unión de varios ficheros de tareas, varios identificadores por línea, identificadores mal formados, `iso_cubre_unknown` una vez por identificador, baseline sin delta, requisito citado con cero escenarios, ambigüedad en la baseline y `iso_bug_contradiction` ante un bug sin impacto con `Cubre:`.
   Comprobación: `go test ./internal/isoevidence/ -run 'TestParseCubre|TestCheckCoverage|TestCheckExistingRequirementBug|TestCheckNoImpactBug|TestAffected'`
