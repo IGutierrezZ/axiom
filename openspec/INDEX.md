@@ -1,8 +1,8 @@
 # Catálogo Maestro de Especificaciones Vivas — Axiom
 
 > **Proyecto:** Axiom (Spec-Driven Development Platform)
-> **Última Sincronización:** 2026-11-11 21:23:06 UTC
-> **Total Dominios:** 69 | **Total Requerimientos:** 536 | **Total Escenarios BDD:** 1487
+> **Última Sincronización:** 2026-11-12 10:58:10 UTC
+> **Total Dominios:** 70 | **Total Requerimientos:** 555 | **Total Escenarios BDD:** 1684
 
 ---
 
@@ -14,7 +14,7 @@
 | `autoskills` | Especificación de Requerimientos: Autoskills (midudev/autoskills) y Minería Heurística con Gobernanza Human-in-the-Loop | 13 | 17 | [Ver Spec](specs/autoskills/spec.md) |
 | `axiom-binary-ci-coverage` | Especificación Viva: Cobertura de Integración Continua sobre el Binario Canónico | 2 | 2 | [Ver Spec](specs/axiom-binary-ci-coverage/spec.md) |
 | `axiom-distribution-identity` | Especificación Viva: Identidad de Distribución de Axiom | 8 | 8 | [Ver Spec](specs/axiom-distribution-identity/spec.md) |
-| `axiom-sdd-cli-integration` | Especificación de Requerimientos: Integración de Comandos SDD en la CLI axiom (INC-13) | 9 | 39 | [Ver Spec](specs/axiom-sdd-cli-integration/spec.md) |
+| `axiom-sdd-cli-integration` | Especificación de Requerimientos: Integración de Comandos SDD en la CLI axiom (INC-13) | 11 | 64 | [Ver Spec](specs/axiom-sdd-cli-integration/spec.md) |
 | `axiom-skills-index-governance` | Especificación Viva: Gobernanza del Índice Unificado de Skills | 6 | 13 | [Ver Spec](specs/axiom-skills-index-governance/spec.md) |
 | `axiom-tui-branding` | Especificación de Requerimientos: Unificación de TUI Bubbletea, Comandos de Ecosistema en CLI axiom y Pasarela de gentle-ai (INC-14) | 4 | 9 | [Ver Spec](specs/axiom-tui-branding/spec.md) |
 | `axiom-updater-resilience` | Especificación Viva: Resiliencia y Gobernanza del Actualizador Autónomo de Axiom | 9 | 10 | [Ver Spec](specs/axiom-updater-resilience/spec.md) |
@@ -36,7 +36,7 @@
 | `odd-sdd-promotion` | Especificación de Requerimientos: Promoción de Documentos ODD a Propuestas SDD (INC-19) | 4 | 0 | [Ver Spec](specs/odd-sdd-promotion/spec.md) |
 | `odd-ui-integration` | Especificación de Requerimientos: Integración de ODD en Dashboard Web y TUI (INC-19) | 3 | 0 | [Ver Spec](specs/odd-ui-integration/spec.md) |
 | `orchestrator-commands-markers` | Especificación de Requerimientos: axiom-orchestrator y Comandos Slash Canónicos (INC-11) | 4 | 5 | [Ver Spec](specs/orchestrator-commands-markers/spec.md) |
-| `organic-agent-trigger-rules` | Organic Agent Routing Projection | 18 | 45 | [Ver Spec](specs/organic-agent-trigger-rules/spec.md) |
+| `organic-agent-trigger-rules` | Organic Agent Routing Projection | 19 | 53 | [Ver Spec](specs/organic-agent-trigger-rules/spec.md) |
 | `persona-behavior-contract` | persona-behavior-contract Specification | 17 | 32 | [Ver Spec](specs/persona-behavior-contract/spec.md) |
 | `planning-home-resolution` | Especificación de Requerimientos: Resolución del Planning Home desde Cualquier Directorio (INC-24) | 13 | 58 | [Ver Spec](specs/planning-home-resolution/spec.md) |
 | `project-technical-context` | Especificación de Requerimientos: Contexto Técnico del Proyecto: Declaración, Lectura y Mantenimiento (INC-24) | 12 | 45 | [Ver Spec](specs/project-technical-context/spec.md) |
@@ -61,18 +61,19 @@
 | `rdd-simplification-design` | RDD Simplification Design Specification | 9 | 14 | [Ver Spec](specs/rdd-simplification-design/spec.md) |
 | `rdd-transport-capability` | RDD Transport Capability Specification | 4 | 8 | [Ver Spec](specs/rdd-transport-capability/spec.md) |
 | `review-findings-ledger` | Bounded Review Transaction and Findings Ledger | 18 | 24 | [Ver Spec](specs/review-findings-ledger/spec.md) |
-| `sdd-archive-lifecycle` | Especificación de Requerimientos: Ciclo de Vida de Archive, Integración Formal y Sellado Inmutable (INC-21) | 8 | 43 | [Ver Spec](specs/sdd-archive-lifecycle/spec.md) |
+| `sdd-archive-lifecycle` | Especificación de Requerimientos: Ciclo de Vida de Archive, Integración Formal y Sellado Inmutable (INC-21) | 10 | 59 | [Ver Spec](specs/sdd-archive-lifecycle/spec.md) |
 | `sdd-block-review-gates` | Especificación de Requerimientos: Compuertas de Revisión por Bloque (spec, design, tasks, apply) (INC-21) | 16 | 85 | [Ver Spec](specs/sdd-block-review-gates/spec.md) |
 | `sdd-docs-publication` | Especificación de Publicación Ligera de Documentación SDD (carril-proyecto-publicacion-docs) | 8 | 40 | [Ver Spec](specs/sdd-docs-publication/spec.md) |
-| `sdd-independent-review` | Especificación de Requerimientos: Revisión Independiente en SDD (verify técnico por rol, juicio opcional y revisión de cobertura) | 10 | 57 | [Ver Spec](specs/sdd-independent-review/spec.md) |
-| `sdd-lane-kickoff` | Especificación de Requerimientos: Selección Temprana y Bloqueante de Carril ODD/SDD en el Kickoff (INC-21) | 10 | 52 | [Ver Spec](specs/sdd-lane-kickoff/spec.md) |
-| `sdd-orchestrator-assets` | SDD Orchestrator Assets Specification | 17 | 39 | [Ver Spec](specs/sdd-orchestrator-assets/spec.md) |
+| `sdd-independent-review` | Especificación de Requerimientos: Revisión Independiente en SDD (verify técnico por rol, juicio opcional y revisión de cobertura) | 10 | 67 | [Ver Spec](specs/sdd-independent-review/spec.md) |
+| `sdd-iso-evidence` | Especificación: Evidencias ISO Opcionales del SDD (carril-sdd-versatil) | 10 | 97 | [Ver Spec](specs/sdd-iso-evidence/spec.md) |
+| `sdd-lane-kickoff` | Especificación de Requerimientos: Selección Temprana y Bloqueante de Carril ODD/SDD en el Kickoff (INC-21) | 12 | 69 | [Ver Spec](specs/sdd-lane-kickoff/spec.md) |
+| `sdd-orchestrator-assets` | SDD Orchestrator Assets Specification | 18 | 48 | [Ver Spec](specs/sdd-orchestrator-assets/spec.md) |
 | `sdd-preflight-configuration` | Especificación de Requerimientos: Cuestionario Pre-Vuelo de SDD, Modalidad de Avance y Asignación Obligatoria de Roles (INC-21) | 6 | 44 | [Ver Spec](specs/sdd-preflight-configuration/spec.md) |
 | `sdd-research` | sdd-research Specification | 3 | 9 | [Ver Spec](specs/sdd-research/spec.md) |
-| `sdd-role-closure-handoff` | Especificación de Requerimientos: Cierre de Último Rol, Aviso Formal y Relevo de Integración (INC-21) | 3 | 11 | [Ver Spec](specs/sdd-role-closure-handoff/spec.md) |
+| `sdd-role-closure-handoff` | Especificación de Requerimientos: Cierre de Último Rol, Aviso Formal y Relevo de Integración (INC-21) | 3 | 20 | [Ver Spec](specs/sdd-role-closure-handoff/spec.md) |
 | `semantic-code` | Especificación de Requerimientos: Conector Semántico de Código (Serena MCP & CodeGraph) (INC-06) | 11 | 14 | [Ver Spec](specs/semantic-code/spec.md) |
 | `spec-baseline-declaration` | Especificación de Requerimientos: Declaración de la Baseline del Proyecto y Guarda contra una Segunda Baseline (INC-24) | 15 | 71 | [Ver Spec](specs/spec-baseline-declaration/spec.md) |
-| `spec-baseline-integration` | Especificación de Requerimientos: Integración de los Cambios en la Baseline del Proyecto (INC-24) | 19 | 91 | [Ver Spec](specs/spec-baseline-integration/spec.md) |
+| `spec-baseline-integration` | Especificación de Requerimientos: Integración de los Cambios en la Baseline del Proyecto (INC-24) | 20 | 97 | [Ver Spec](specs/spec-baseline-integration/spec.md) |
 | `structured-handoffs` | Especificación Viva: Handoffs Estructurados y Ciclo de Vida de Transición | 7 | 13 | [Ver Spec](specs/structured-handoffs/spec.md) |
 | `tui-spanish-localization` | Especificación Viva: Localización Integral al Castellano y Desacoplamiento de Avisos en la TUI (Axiom) | 4 | 9 | [Ver Spec](specs/tui-spanish-localization/spec.md) |
 | `tui-ui-parity` | Especificación Viva: Paridad Bidireccional entre TUI y Web UI | 10 | 12 | [Ver Spec](specs/tui-ui-parity/spec.md) |
@@ -224,6 +225,33 @@ Contrato de nombre publicado por clase de superficie: instalador y tap, compuert
 - **[REQ-27.2b]** Subcomando `axiom sdd publish` en el Contrato del Binario
   - *Escenario BDD:* La ayuda de `sdd` lista `publish`
   - *Escenario BDD:* `publish` sin cambio se rechaza con ayuda
+- **[REQ-29.15]** Preparación del Cambio con Bug sin Delta (con Requisito Existente o sin Impacto en la Spec), Aceptando el Formato Actual
+  - *Escenario BDD:* El formato actual produce el mismo estado
+  - *Escenario BDD:* Un bug con requisito existente queda preparado fuera de ISO
+  - *Escenario BDD:* La referencia del informe es opcional
+  - *Escenario BDD:* Un informe sin `Esperado:` o con valor vacío está incompleto
+  - *Escenario BDD:* Un cambio sin delta y sin declaración de bug no está preparado
+  - *Escenario BDD:* Un cambio con delta que declara ser un bug se trata como cambio normal
+  - *Escenario BDD:* Un bug sin impacto en la spec queda preparado en cualquier proyecto
+  - *Escenario BDD:* La marca sin `Motivo:` no prepara el cambio
+  - *Escenario BDD:* La marca con motivo vacío no prepara el cambio
+  - *Escenario BDD:* La sección sin la línea literal no prepara el cambio
+  - *Escenario BDD:* El texto de la marca debe ser exactamente el literal
+  - *Escenario BDD:* `## Impacto en la spec` sin `## Informe de bug` no prepara el cambio
+  - *Escenario BDD:* La marca junto a una delta se ignora y se evalúa como cambio con delta
+  - *Escenario BDD:* Un bug sin delta llega al archivado sin integrar nada
+  - *Escenario BDD:* El informe del bug va en `proposal.md`
+  - *Escenario BDD:* El contrato del status solo crece
+- **[REQ-29.16]** Motivos de Bloqueo Tipados de ISO, Cobertura, Escenarios y Matriz en `status`
+  - *Escenario BDD:* Un bloqueo ISO nombra el elemento y la continuación
+  - *Escenario BDD:* Un requisito sin escenarios se proyecta antes del archivado
+  - *Escenario BDD:* Una matriz inválida bloquea la dependencia `archive`
+  - *Escenario BDD:* Fuera de ISO la cobertura y la matriz no proyectan nada
+  - *Escenario BDD:* `axiom sdd continue` refleja el bloqueo ISO
+  - *Escenario BDD:* Varios bloqueos concurrentes se proyectan todos
+  - *Escenario BDD:* Un `Cubre:` junto a la marca de bug sin impacto se proyecta como motivo tipado
+  - *Escenario BDD:* La precedencia de los motivos existentes se conserva
+  - *Escenario BDD:* El contrato del status solo crece
 
 ### Dominio: `axiom-skills-index-governance` — Especificación Viva: Gobernanza del Índice Unificado de Skills
 
@@ -975,6 +1003,15 @@ Define the managed, provider-neutral instructions that project Gentle AI's
   - *Escenario BDD:* Los orquestadores SDD conservan el texto de las salidas
   - *Escenario BDD:* La reanudación sin espejo de Engram se conserva
   - *Escenario BDD:* El renderizado sigue siendo determinista
+- **[REQ-29.18]** La Doctrina ODD Remite Todo el Trabajo de un Proyecto ISO al SDD
+  - *Escenario BDD:* La doctrina remite todo el trabajo de un proyecto ISO al SDD según el status
+  - *Escenario BDD:* La doctrina remite los bugs de un proyecto ISO al SDD con el perfil de bug
+  - *Escenario BDD:* La doctrina no pregunta el carril en un proyecto ISO con carril `ask`
+  - *Escenario BDD:* La doctrina nombra la sección y la línea literal de la ruta sin impacto
+  - *Escenario BDD:* La doctrina no fija regla sobre la integración de ODD en la spec viva
+  - *Escenario BDD:* La doctrina es idéntica en proyectos ISO y no ISO
+  - *Escenario BDD:* La doctrina no menciona la combinación contradictoria
+  - *Escenario BDD:* La adición no reintroduce ninguna parada
 
 ### Dominio: `persona-behavior-contract` — persona-behavior-contract Specification
 
@@ -1702,6 +1739,24 @@ Define one explicit, content-addressed implementation-review transaction shared 
   - *Escenario BDD:* Sin `--archive` desde la rama de archivado se rechaza nombrando la orden correcta
   - *Escenario BDD:* `archive` no publica por sí mismo
   - *Escenario BDD:* Una negativa de `publish` no revierte el archivado
+- **[REQ-29.10]** Al Menos un Escenario por Requisito en el Archivado de un Proyecto ISO
+  - *Escenario BDD:* Un ADDED sin escenarios se rechaza en ISO
+  - *Escenario BDD:* Un MODIFIED sin escenarios se rechaza en ISO
+  - *Escenario BDD:* REMOVED y RENAMED no exigen escenarios
+  - *Escenario BDD:* Status adelanta el rechazo
+  - *Escenario BDD:* Fuera de ISO el archivado no cambia
+  - *Escenario BDD:* Sin contexto de proyecto la regla no se aplica
+- **[REQ-29.11]** En un Cambio ISO el Archivado Exige la Matriz de Verify Válida y con Éxito
+  - *Escenario BDD:* Una matriz con una fila fallida bloquea el archivado en ISO
+  - *Escenario BDD:* Una matriz inválida bloquea el archivado en ISO aunque el cambio sea `continuous`
+  - *Escenario BDD:* Una matriz ausente bloquea el archivado en ISO
+  - *Escenario BDD:* Un bug sin impacto en la spec archiva sin matriz
+  - *Escenario BDD:* Una referencia de prueba que no resuelve bloquea el archivado
+  - *Escenario BDD:* Una matriz válida y con éxito permite el archivado en ISO
+  - *Escenario BDD:* Una matriz válida no sustituye las demás precondiciones
+  - *Escenario BDD:* Un hallazgo de verify no bloquea el archivado en ISO
+  - *Escenario BDD:* El escritor de `archive` se niega sin mover el cambio
+  - *Escenario BDD:* Fuera de ISO un verify fallido no bloquea el archivado
 
 ### Dominio: `sdd-block-review-gates` — Especificación de Requerimientos: Compuertas de Revisión por Bloque (spec, design, tasks, apply) (INC-21)
 
@@ -1891,11 +1946,17 @@ Definir el comportamiento observable de las revisiones independientes que el orq
   - *Escenario BDD:* Un juicio ESCALATED no bloquea
   - *Escenario BDD:* El verify no modifica el trabajo del rol
   - *Escenario BDD:* Una revisión de cobertura con huecos no impide iniciar la fase siguiente
+  - *Escenario BDD:* En un cambio ISO una matriz inválida bloquea el archivado sin ningún hallazgo
+  - *Escenario BDD:* En un cambio ISO un hallazgo crítico con la matriz válida no bloquea
+  - *Escenario BDD:* En un cambio ISO un juicio ESCALATED no bloquea
+  - *Escenario BDD:* Fuera de ISO la matriz no condiciona el archivado
 - **[REQ-28.4]** Verify por Rol con Sección de Cumplimiento Técnico
   - *Escenario BDD:* El informe de un rol contiene la sección Cumplimiento técnico
   - *Escenario BDD:* El rol fullstack escribe en verify-report.md
   - *Escenario BDD:* Sin hallazgos la sección existe y lo declara
   - *Escenario BDD:* El verify global multirrol no cambia
+  - *Escenario BDD:* El verify global se evalúa con REQ-21.15 aunque un rol deferred siga pendiente
+  - *Escenario BDD:* En un cambio ISO el informe consolidado incluye la matriz como sección adicional
   - *Escenario BDD:* Un rol con herramienta de análisis no disponible informa la limitación
 - **[REQ-28.5]** Fuentes de Reglas y Forma de los Hallazgos Técnicos
   - *Escenario BDD:* Un hallazgo cita regla y ubicación
@@ -1911,6 +1972,10 @@ Definir el comportamiento observable de las revisiones independientes que el orq
   - *Escenario BDD:* Un verify parcial por herramienta no disponible no es limpio
   - *Escenario BDD:* Petición explícita con verify no limpio
   - *Escenario BDD:* Sin verify previo no hay juicio por iniciativa del orquestador
+  - *Escenario BDD:* En ISO una matriz inválida hace que el verify no sea limpio
+  - *Escenario BDD:* En ISO una fila fallida hace que el verify no sea limpio
+  - *Escenario BDD:* En ISO una matriz válida y con éxito no impide un verify limpio
+  - *Escenario BDD:* Fuera de ISO la matriz no interviene en «limpio»
 - **[REQ-28.7]** El Juicio Toma como Objetivo el Diff de un Rol SDD y Acota sus Arreglos
   - *Escenario BDD:* El juicio recibe el diff del rol como objetivo
   - *Escenario BDD:* Solo se arreglan los severos confirmados por ambos jueces
@@ -1939,6 +2004,120 @@ Definir el comportamiento observable de las revisiones independientes que el orq
   - *Escenario BDD:* Las guardas de ausencia de oferta de RDD siguen pasando
   - *Escenario BDD:* RDD activado no altera las ofertas
   - *Escenario BDD:* El verify limpio no genera un recibo ni lo consume
+
+### Dominio: `sdd-iso-evidence` — Especificación: Evidencias ISO Opcionales del SDD (carril-sdd-versatil)
+
+Definir el **modo ISO**, una opción declarada por el proyecto en `axiom.yaml` y sellada en cada cambio al arrancarlo (REQ-29.13 de `sdd-lane-kickoff`), que extiende el SDD actual con la evidencia que pide un auditor de procesos (familia ISO/IEC 330xx, atributo PA 2.2 de gestión de productos de trabajo, con apoyo de ISO/IEC/IEEE 29148 para la calidad de los requisitos): requisitos con identificador estable, cobertura requisito → tarea, matriz de verificación con una fila de evidencia contrastable por escenario, archivado condicionado a esa matriz (REQ-29.11 de `sdd-archive-lifecycle`) y trazabilidad hasta los commits de integración y de archivado en la rama principal.
+
+**Archivo:** [`specs/sdd-iso-evidence/spec.md`](specs/sdd-iso-evidence/spec.md)
+
+- **[REQ-29.1]** Declaración ISO Opcional por Proyecto y Comportamiento sin Ella
+  - *Escenario BDD:* Bloque `sdd:` válido con `iso`
+  - *Escenario BDD:* Un cambio no ISO recorre `continuous` sin cambios
+  - *Escenario BDD:* Un cambio no ISO recorre `checkpointed` con las mismas compuertas
+  - *Escenario BDD:* La declaración ISO no cambia el ritmo, las compuertas ni el modo de archivado
+  - *Escenario BDD:* Clave desconocida dentro de `sdd:`
+  - *Escenario BDD:* Valor de `iso` no admitido
+  - *Escenario BDD:* `sdd:` que no es un mapa
+  - *Escenario BDD:* Una declaración inválida falla cerrada, también al sellar
+  - *Escenario BDD:* `iso: true` con `workflow.lane: odd` es una declaración contradictoria
+  - *Escenario BDD:* La contradicción se reporta también al cargar la configuración
+  - *Escenario BDD:* La declaración contradictoria falla cerrada al sellar
+  - *Escenario BDD:* `iso: true` con `workflow.lane: sdd` o sin carril declarado es válido
+  - *Escenario BDD:* `iso: true` con `workflow.lane: ask` es válido
+  - *Escenario BDD:* `iso: false` con `workflow.lane: odd` es válido
+  - *Escenario BDD:* `workflow:` no cambia
+  - *Escenario BDD:* Un binario anterior ignora el bloque `sdd:`
+  - *Escenario BDD:* Sin el bloque `sdd:` la validación no cambia
+- **[REQ-29.2]** Proyección Aditiva de `sdd.iso` en el Status v2
+  - *Escenario BDD:* El status proyecta el cambio ISO
+  - *Escenario BDD:* Sin cambio seleccionado se proyecta el valor del proyecto
+  - *Escenario BDD:* El status proyecta el valor sellado aunque el proyecto haya cambiado
+  - *Escenario BDD:* Un cambio sin instantánea se proyecta como no ISO
+  - *Escenario BDD:* Un `sdd:` inválido se proyecta como inválido
+  - *Escenario BDD:* Una declaración contradictoria con `workflow.lane` se proyecta como inválida
+  - *Escenario BDD:* Sin el bloque un consumidor anterior no ve diferencia
+  - *Escenario BDD:* El contrato publicado documenta la proyección
+- **[REQ-29.3]** Identificador `REQ-<n>.<m>` en el Nombre de los Requisitos de la Delta
+  - *Escenario BDD:* Un ADDED sin identificador bloquea antes de design
+  - *Escenario BDD:* Un nombre con identificador válido no bloquea
+  - *Escenario BDD:* Un identificador mal formado no cuenta
+  - *Escenario BDD:* Un nombre con dos identificadores distintos bloquea
+  - *Escenario BDD:* Un ADDED con un identificador que ya existe bloquea
+  - *Escenario BDD:* Archivado interrumpido: el ADDED ya compuesto no bloquea y el archivado se completa
+  - *Escenario BDD:* El mismo identificador con un bloque distinto sigue bloqueando
+  - *Escenario BDD:* Dos ADDED con el mismo identificador bloquean
+  - *Escenario BDD:* Un RENAMED que conserva el identificador no bloquea
+  - *Escenario BDD:* Un RENAMED que cambia el identificador bloquea
+  - *Escenario BDD:* Un RENAMED puede añadir el identificador a un requisito que no lo tenía
+  - *Escenario BDD:* Un MODIFIED de un requisito existente sin identificador bloquea con la continuación del RENAMED
+  - *Escenario BDD:* Los requisitos que la delta no toca no se comprueban
+  - *Escenario BDD:* En un cambio no ISO el identificador no se exige
+- **[REQ-29.4]** Cobertura `Cubre:` de los Requisitos de la Delta
+  - *Escenario BDD:* Un requisito de la delta sin tarea que lo cubra bloquea
+  - *Escenario BDD:* La cobertura se calcula sobre la unión de los ficheros por rol
+  - *Escenario BDD:* Un identificador inexistente en `Cubre:` bloquea
+  - *Escenario BDD:* Una tarea puede citar varios requisitos
+  - *Escenario BDD:* Un requisito existente de la baseline se admite y no cubre la delta
+  - *Escenario BDD:* Sin ficheros de tareas no hay motivo de cobertura
+  - *Escenario BDD:* En un cambio no ISO la cobertura no bloquea
+- **[REQ-29.5]** Bug con Requisito Existente en un Cambio ISO: el Requisito Citado Existe y Tiene Escenarios
+  - *Escenario BDD:* Un bug sin delta con `Cubre:` a un requisito inexistente bloquea en ISO
+  - *Escenario BDD:* Un bug sin delta con `Cubre:` a un requisito existente avanza
+  - *Escenario BDD:* Un bug sin delta sin ningún `Cubre:` bloquea en ISO
+  - *Escenario BDD:* Una fila de la matriz por cada escenario del requisito existente
+  - *Escenario BDD:* El requisito citado sin escenarios bloquea y remite al cambio normal
+  - *Escenario BDD:* Fuera de ISO un bug sin delta no se comprueba
+- **[REQ-29.6]** Matriz de Verify con una Fila por Escenario, Dentro del Informe de Verify
+  - *Escenario BDD:* Matriz completa y válida
+  - *Escenario BDD:* Un escenario sin fila invalida la matriz
+  - *Escenario BDD:* Una fila que apunta a un escenario inexistente invalida la matriz
+  - *Escenario BDD:* Dos filas para el mismo escenario invalidan la matriz
+  - *Escenario BDD:* Una fila sin resultado o con resultado desconocido invalida la matriz
+  - *Escenario BDD:* Una fila fallida hace que la matriz no sea de éxito
+  - *Escenario BDD:* Una matriz ausente es inválida en ISO
+  - *Escenario BDD:* La matriz no escribe líneas `verdict:`
+  - *Escenario BDD:* La matriz convive con «Cumplimiento técnico»
+  - *Escenario BDD:* Los informes por rol no se validan
+  - *Escenario BDD:* Solo se valida la matriz del contenido vigente
+  - *Escenario BDD:* Nombre de escenario repetido dentro de un requisito
+  - *Escenario BDD:* La columna commit no se valida
+  - *Escenario BDD:* Fuera de ISO el informe de verify es libre
+- **[REQ-29.7]** Las Filas Automáticas Apuntan a una Prueba que Existe en el Árbol y Registran su Ejecución
+  - *Escenario BDD:* Una fila automática con referencia resoluble, comando y código de salida es válida
+  - *Escenario BDD:* El atajo `TestX` resuelve contra los ficheros de prueba de Go
+  - *Escenario BDD:* El atajo `TestX` no resuelve si ningún fichero de prueba lo declara
+  - *Escenario BDD:* Un fichero inexistente no resuelve
+  - *Escenario BDD:* Un símbolo ausente del fichero no resuelve
+  - *Escenario BDD:* El símbolo debe figurar como identificador completo
+  - *Escenario BDD:* Una referencia en lenguaje distinto de Go con la forma general resuelve
+  - *Escenario BDD:* Una ruta que sale del árbol no resuelve
+  - *Escenario BDD:* Sin comando o sin código de salida la fila es inválida
+  - *Escenario BDD:* Un resultado `pass` con código de salida distinto de cero es inválido
+  - *Escenario BDD:* Una referencia sin ninguna de las dos formas es inválida
+  - *Escenario BDD:* El motor no reejecuta el comando
+- **[REQ-29.8]** Las Filas Manuales Justifican Quién, Cuándo y Por Qué No se Automatiza
+  - *Escenario BDD:* Una fila manual con justificación completa es válida
+  - *Escenario BDD:* Una fila manual sin justificación invalida la matriz
+  - *Escenario BDD:* Una fecha no válida invalida la fila manual
+  - *Escenario BDD:* La referencia de una fila manual no se resuelve
+- **[REQ-29.9]** Trazabilidad por `git log --first-parent` Independiente de la Estrategia de Fusión y Compatible con la Rama `-archive`
+  - *Escenario BDD:* Cambio fusionado por squash
+  - *Escenario BDD:* Cambio fusionado por commit de merge
+  - *Escenario BDD:* Cambio fusionado por rebase
+  - *Escenario BDD:* El commit de código se contrasta con la evidencia `pr_merged`
+  - *Escenario BDD:* Una discrepancia con la evidencia se informa sin error
+  - *Escenario BDD:* Sin compuerta `integration` la derivación no exige evidencia
+  - *Escenario BDD:* Los trailers intermedios no se validan
+  - *Escenario BDD:* Ruta archivada ausente de la rama principal
+  - *Escenario BDD:* La derivación no añade estado
+- **[REQ-29.19]** Bug sin Impacto en la Spec en un Cambio ISO: el Motivo es la Evidencia
+  - *Escenario BDD:* El motivo es la única evidencia que exige ISO
+  - *Escenario BDD:* Una matriz presente y vacía es válida
+  - *Escenario BDD:* Una fila de matriz en un bug sin impacto invalida la matriz
+  - *Escenario BDD:* Un `Cubre:` junto a la marca bloquea en ISO
+  - *Escenario BDD:* Sin ficheros de tareas no hay contradicción que comprobar
+  - *Escenario BDD:* Fuera de ISO un `Cubre:` junto a la marca no bloquea
 
 ### Dominio: `sdd-lane-kickoff` — Especificación de Requerimientos: Selección Temprana y Bloqueante de Carril ODD/SDD en el Kickoff (INC-21)
 
@@ -2008,6 +2187,25 @@ Definir el comportamiento observable de las revisiones independientes que el orq
   - *Escenario BDD:* Un kickoff sin el campo se lee sin error
   - *Escenario BDD:* Un binario anterior ignora el campo
   - *Escenario BDD:* El sellado único no reescribe el campo
+- **[REQ-29.12]** `kickoff seal` Prepara la Carpeta del Cambio si No Existe
+  - *Escenario BDD:* Sellar un cambio sin carpeta la crea y escribe `kickoff.yaml`
+  - *Escenario BDD:* Sellar en la rama equivocada no crea la carpeta
+  - *Escenario BDD:* Un sellado rechazado por otro motivo no deja la carpeta
+  - *Escenario BDD:* Una carpeta existente se respeta
+  - *Escenario BDD:* Repetir el sellado es idempotente respecto de la carpeta
+  - *Escenario BDD:* La skill de kickoff no pide crear la carpeta a mano
+- **[REQ-29.13]** Instantánea de `sdd.iso` en `kickoff.yaml`, Escrita una Sola Vez por `seal`
+  - *Escenario BDD:* El sellado copia `iso` en `kickoff.yaml`
+  - *Escenario BDD:* Sin declaración se sella un cambio no ISO
+  - *Escenario BDD:* Activar `iso` a mitad no exige la matriz a un cambio ya sellado
+  - *Escenario BDD:* Desactivar `iso` a mitad sigue exigiendo la matriz a un cambio ya sellado
+  - *Escenario BDD:* Un cambio sellado antes de esta versión cuenta como no ISO
+  - *Escenario BDD:* La discrepancia entre la instantánea y el proyecto es una nota no bloqueante
+  - *Escenario BDD:* Un segundo `seal` no reescribe la instantánea
+  - *Escenario BDD:* El retrosellado no escribe `iso` y el cambio cuenta como no ISO
+  - *Escenario BDD:* El retrosellado sigue exento de las guardas de rama
+  - *Escenario BDD:* Un `sdd:` inválido rechaza el sellado
+  - *Escenario BDD:* Un binario anterior ignora el campo
 
 ### Dominio: `sdd-orchestrator-assets` — SDD Orchestrator Assets Specification
 
@@ -2071,6 +2269,16 @@ Defines required behavior for agent-specific SDD orchestrator guidance assets so
   - *Escenario BDD:* Dedicated reviewer is installed
 - **[REQ-sdd-orchestrator-assets-17]** Read-Only Reviewer and Refuter Roles
   - *Escenario BDD:* Reviewer finishes
+- **[REQ-29.17]** Guía y Doctrina del Modo ISO, `Cubre:`, la Matriz y el Bug sin Delta, con la Excepción ISO, en Paridad entre Runtimes
+  - *Escenario BDD:* La doctrina conserva la regla general y declara la excepción ISO
+  - *Escenario BDD:* Paridad de la guía en todos los runtimes
+  - *Escenario BDD:* La guía de bug describe las tres rutas y los textos literales
+  - *Escenario BDD:* La skill de verify describe la matriz sin líneas `verdict:`
+  - *Escenario BDD:* La skill de tareas describe `Cubre:`
+  - *Escenario BDD:* La skill de archive conserva su flujo
+  - *Escenario BDD:* La guía de kickoff no pide crear la carpeta
+  - *Escenario BDD:* El contrato del status documenta la proyección ISO
+  - *Escenario BDD:* Los goldens y las copias versionadas están en paridad
 
 ### Dominio: `sdd-preflight-configuration` — Especificación de Requerimientos: Cuestionario Pre-Vuelo de SDD, Modalidad de Avance y Asignación Obligatoria de Roles (INC-21)
 
@@ -2159,6 +2367,10 @@ Selected research is optional. When the orchestrator decides to invoke it, it ru
   - *Escenario BDD:* Rol único fullstack satisface la condición de último rol de inmediato
   - *Escenario BDD:* Compuerta rechazada no dispara el cierre aunque sea el único rol pendiente
   - *Escenario BDD:* Aprobar el último rol con la salida 2 emite el aviso y cede verify
+  - *Escenario BDD:* El aviso se emite al cerrar el último rol blocking aunque un rol deferred siga pendiente
+  - *Escenario BDD:* Un rol optional pendiente se informa en el aviso
+  - *Escenario BDD:* Aprobar un rol blocking cuando otro rol blocking sigue pendiente no emite el aviso
+  - *Escenario BDD:* El cierre posterior de un rol deferred no repite el aviso
 - **[REQ-sdd-role-closure-handoff-2]** Generación del `handoff.md` de Integración (REQ-21.14) [SUPERSEDED / DEPRECADO]
   - *Escenario BDD:* Handoff de integración consolida todos los roles participantes
 - **[REQ-21.15]** Ejecución de la Fase `verify` Global tras Aprobarse Todos los `role-apply`
@@ -2167,6 +2379,11 @@ Selected research is optional. When the orchestrator decides to invoke it, it ru
   - *Escenario BDD:* Verify multirrol se desbloquea con todos los role-apply aprobados sin handoff.md
   - *Escenario BDD:* Un handoff.md bloqueado ya no impide verify
   - *Escenario BDD:* Un role-apply rechazado mantiene verify bloqueado
+  - *Escenario BDD:* Un rol deferred sin aprobar no bloquea verify y se informa
+  - *Escenario BDD:* Un rol optional sin aprobar no bloquea verify
+  - *Escenario BDD:* Un role-apply rechazado de un rol deferred no bloquea verify
+  - *Escenario BDD:* Un rol blocking pendiente bloquea aunque los no bloqueantes estén aprobados
+  - *Escenario BDD:* La barrera y verify coinciden en qué roles bloquean
   - *Escenario BDD:* Un cambio de un solo rol o continuo no cambia
 
 ### Dominio: `semantic-code` — Especificación de Requerimientos: Conector Semántico de Código (Serena MCP & CodeGraph) (INC-06)
@@ -2303,6 +2520,7 @@ Definir cómo integra archive un cambio en la baseline declarada del proyecto: l
 - **[REQ-24.38]** Composición Nativa Intacta sin Perfil
   - *Escenario BDD:* La salida nativa no cambia
   - *Escenario BDD:* Rechazo nativo sin escribir
+  - *Escenario BDD:* En ISO un ADDED sin escenarios se rechaza y los aceptados no cambian
   - *Escenario BDD:* `--supersede` conserva su comportamiento
 - **[REQ-24.39]** Reconocimiento de Requisitos e Identidad según el Perfil
   - *Escenario BDD:* Se reconocen solo los encabezados de requisito
@@ -2410,6 +2628,12 @@ Definir cómo integra archive un cambio en la baseline declarada del proyecto: l
   - *Escenario BDD:* La traza registra la omisión
   - *Escenario BDD:* Un encabezado de nivel 4 que no es un escenario se conserva
   - *Escenario BDD:* La baseline OpenSpec por defecto no se ve afectada
+- **[REQ-29.14]** Consulta de un Requisito Existente en la Baseline para el Bug sin Delta
+  - *Escenario BDD:* Un identificador existente se resuelve con sus escenarios
+  - *Escenario BDD:* Un identificador inexistente se informa sin error
+  - *Escenario BDD:* Un requisito sin identificador en su nombre no puede citarse
+  - *Escenario BDD:* Un requisito existente sin escenarios se informa como tal
+  - *Escenario BDD:* La consulta no escribe
 
 ### Dominio: `structured-handoffs` — Especificación Viva: Handoffs Estructurados y Ciclo de Vida de Transición
 
