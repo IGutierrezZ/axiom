@@ -95,7 +95,7 @@ Sin dependencias internas; todo son funciones puras con pruebas por tablas.
 
 ### U7 · `feat(sddstatus): projectWorkflow no asume odd ante la contradicción ISO` (solape P6)
 
-- [ ] 7.1 Modificar `internal/sddstatus/workspace_declarations.go` (solo `projectWorkflow`: `ask` / `invalid` cuando `errors.Is(SDDErr, ErrISOWorkflowContradiction)`) y crear `internal/sddstatus/iso_workflow_test.go`.
+- [x] 7.1 Modificar `internal/sddstatus/workspace_declarations.go` (solo `projectWorkflow`: `ask` / `invalid` cuando `errors.Is(SDDErr, ErrISOWorkflowContradiction)`) y crear `internal/sddstatus/iso_workflow_test.go`.
   Cubre: REQ-29.1, REQ-29.2
   Aceptación: con la contradicción, `workflow.lane` proyecta `ask` / `invalid`; un `SDDErr` ordinario no cambia el carril.
   Comprobación: `go test ./internal/sddstatus/ -run TestProjectWorkflowISOContradiction`
