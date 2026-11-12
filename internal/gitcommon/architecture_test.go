@@ -110,6 +110,10 @@ func TestArchitectureOnlyExecGoLaunchesProcesses(t *testing.T) {
 	// git a través de gitcommon.Run y gitcommon.RunWithTimeout, y la lista de rutas es pura.
 	sources = append(sources, collectSources(t, filepath.Join("..", "sddpublish"), "internal/sddpublish")...)
 	sources = append(sources, collectSources(t, filepath.Join("..", "docpaths"), "internal/docpaths")...)
+	// El contexto técnico y la spec viva (REQ-30.15): ejecutan git con gitcommon.Run. `livespec` llega con
+	// la integración ODD y collectSources tolera su ausencia.
+	sources = append(sources, collectSources(t, filepath.Join("..", "techcontext"), "internal/techcontext")...)
+	sources = append(sources, collectSources(t, filepath.Join("..", "livespec"), "internal/livespec")...)
 
 	labels := map[string]bool{}
 	for _, source := range sources {
@@ -138,6 +142,7 @@ func TestArchitectureOnlyExecGoLaunchesProcesses(t *testing.T) {
 		"internal/branch/gitcli/ops.go",
 		"internal/branch/registry/registry.go",
 		"internal/sddpublish/publish.go", "internal/sddpublish/gitport.go", "internal/docpaths/docpaths.go",
+		"internal/techcontext/gitview.go",
 	} {
 		if !labels[want] {
 			t.Errorf("el recorrido no vio %s; ve %v", want, labels)

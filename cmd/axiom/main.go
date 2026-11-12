@@ -153,6 +153,7 @@ COMANDOS DE GOBERNANZA Y WORKSPACE:
   archive list         Lista las especificaciones vivas consolidadas y sus versiones
   archive show         Muestra el contenido Markdown de una especificación viva por dominio
   archive coldstart    Sintetiza una especificación viva inicial a partir de un cambio archivado
+  archive context      Valida (check), prepara (prepare), verifica (verify) y consulta la traza (show) de la integración del contexto técnico de un cambio
   sdd status           Consulta el estado de fases y artefactos de un cambio SDD (--json, --instructions)
   sdd continue         Calcula y emite la siguiente acción autorizada del despachador SDD
   sdd attempt          Registra la autoridad de edición por raíz para el cambio activo (grant)
@@ -394,24 +395,7 @@ func main() {
 		}
 
 	case "archive":
-		if len(os.Args) < 3 {
-			fmt.Println("Error: subcomando de 'archive' requerido. Opciones: sync, list, show, coldstart")
-			os.Exit(1)
-		}
-		subCmd := os.Args[2]
-		switch subCmd {
-		case "sync":
-			runArchiveSync(os.Args[3:])
-		case "list":
-			runArchiveList(os.Args[3:])
-		case "show":
-			runArchiveShow(os.Args[3:])
-		case "coldstart":
-			runArchiveColdStart(os.Args[3:])
-		default:
-			fmt.Printf("Error: subcomando '%s' no reconocido para archive. Usa 'axiom archive [sync|list|show|coldstart]'.\n", subCmd)
-			os.Exit(1)
-		}
+		os.Exit(runArchive(os.Args[2:], os.Stdout, os.Stderr))
 
 	case "ui":
 		runUI(os.Args[2:])
@@ -1747,6 +1731,49 @@ func boolToStatus(b bool) string {
 		return "DISPONIBLE [OK]"
 	}
 	return "NO DETECTADO"
+}
+
+// archiveHelpText es la ayuda del grupo `axiom archive`.
+func archiveHelpText() string {
+	return `Uso: axiom archive <subcomando> [argumentos]
+
+Subcomandos disponibles:
+  sync       Sincroniza y regenera el catálogo maestro openspec/INDEX.md desde openspec/specs/
+  list       Lista las especificaciones vivas consolidadas y sus versiones
+  show       Muestra el contenido Markdown de una especificación viva por dominio
+  coldstart  Sintetiza una especificación viva inicial a partir de un cambio archivado
+  context    Valida (check), prepara (prepare), verifica (verify) y consulta la traza (show) de la integración del contexto técnico de un cambio
+`
+}
+
+// runArchive despacha el grupo `axiom archive`. Los subcomandos históricos
+// (sync, list, show, coldstart) conservan su propia salida con os.Exit; `context`
+// devuelve su código de salida como el resto de adaptadores finos.
+func runArchive(args []string, stdout, stderr io.Writer) int {
+	if len(args) == 0 {
+		fmt.Fprintln(stdout, "Error: subcomando de 'archive' requerido. Opciones: sync, list, show, coldstart, context. Ejecuta 'axiom archive --help'.")
+		return 1
+	}
+	subCmd := args[0]
+	switch subCmd {
+	case "--help", "-h", "help":
+		fmt.Fprint(stdout, archiveHelpText())
+		return 0
+	case "sync":
+		runArchiveSync(args[1:])
+	case "list":
+		runArchiveList(args[1:])
+	case "show":
+		runArchiveShow(args[1:])
+	case "coldstart":
+		runArchiveColdStart(args[1:])
+	case "context":
+		return runSimpleCommand(cli.RunArchiveContext, args[1:], stdout, stderr)
+	default:
+		fmt.Fprintf(stdout, "Error: subcomando '%s' no reconocido para archive. Usa 'axiom archive [sync|list|show|coldstart|context]'.\n", subCmd)
+		return 1
+	}
+	return 0
 }
 
 func runArchiveSync(args []string) {
