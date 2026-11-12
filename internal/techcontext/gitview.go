@@ -286,3 +286,15 @@ func (r repository) committedExists(ctx context.Context, commit, rel string) (bo
 	}
 	return len(bytes.Trim(tree, "\x00")) > 0, nil
 }
+
+// RepositoryRoot devuelve la raíz absoluta, con los enlaces simbólicos resueltos, del
+// repositorio git que contiene path: un directorio, un fichero o una ruta que aún no
+// existe (se atribuye al repositorio de su directorio existente más profundo). path
+// debe ser absoluta: el repositorio nunca se elige desde el directorio del proceso.
+func RepositoryRoot(ctx context.Context, path string) (string, error) {
+	r, err := openRepository(ctx, path)
+	if err != nil {
+		return "", err
+	}
+	return r.root, nil
+}

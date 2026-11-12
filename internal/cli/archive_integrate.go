@@ -27,8 +27,9 @@ import (
 // todas o ninguna. No tiene compuertas, no crea artefactos SDD y no modifica el
 // documento ODD.
 //
-// El orden de rechazos es configuración, rama, documento, secciones, identificadores y
-// composición; la primera escritura ocurre tras la última comprobación.
+// El orden de rechazos es configuración, rama, documento, secciones, impacto,
+// identificadores, composición y contexto técnico; la primera escritura ocurre tras la
+// última comprobación.
 func RunArchiveIntegrate(args []string, stdout io.Writer) error {
 	if hasGovernanceHelpFlag(args) {
 		return renderArchiveIntegrateHelp(stdout)
@@ -101,6 +102,8 @@ func renderArchiveIntegrateHelp(stdout io.Writer) error {
 		"  con la misma composición que el archivado SDD. Cada capacidad lleva su delta en un bloque ```openspec bajo `### Capacidad: <dominio>`.",
 		"  Todo o nada: valida y compone todas las capacidades en memoria antes de escribir ninguna. Es idempotente: repetirla no cambia nada.",
 		"  Un `### Requirement:` ADDED lleva su `(REQ-n.m)` en el título; si el identificador ya existe en openspec/specs/ o en la delta de un cambio activo, se rechaza con el siguiente número libre.",
+		"  Un documento con `Tipo: bug` declara su impacto: una `## Spec viva` con delta, o una sección `## Impacto en la spec` con la línea exacta `Sin impacto en la spec` y una línea `Motivo: <una línea>`.",
+		"  Con `technical_context` en axiom.yaml, rechaza que la rama modifique rutas de referencia (modo reference) o no se pueda determinar su base, e informa de las rutas mantenidas que tocó.",
 		"  Escribe solo openspec/specs/ y, si ya existe, openspec/INDEX.md; no modifica el documento ODD ni crea artefactos SDD. Sale con código distinto de cero ante cualquier rechazo, sin escribir nada.",
 		"  Solo en la rama de la feature (guarda de rama del carril ODD). En multirepo opera sobre el repositorio de specs.",
 		"  --odd <feature>  Nombre de la feature: el documento es odd/tasks/<feature>.md (obligatorio).",
@@ -189,6 +192,16 @@ func oddIntegrateReportText(report livespec.Report) string {
 		b.WriteString("\nEscrito:\n")
 		for _, path := range report.Written {
 			fmt.Fprintf(&b, "  - %s\n", path)
+		}
+	}
+	if context := report.Context; context != nil && context.Declared {
+		if len(context.MaintainedTouched) == 0 {
+			b.WriteString("\nContexto técnico: la rama no tocó ninguna ruta mantenida.\n")
+		} else {
+			b.WriteString("\nContexto técnico: la rama tocó rutas mantenidas:\n")
+			for _, path := range context.MaintainedTouched {
+				fmt.Fprintf(&b, "  - %s\n", path)
+			}
 		}
 	}
 	if report.NothingToIntegrate {

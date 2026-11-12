@@ -160,3 +160,7 @@ func (s Scope) Classify(abs string) PathMode {
 	}
 	return Outside
 }
+
+// RealPath resuelve los enlaces simbólicos del tramo existente de una ruta y conserva
+// tal cual el resto; es la forma en que Classify compara las rutas.
+func RealPath(path string) string { return resolveDeepest(path) }

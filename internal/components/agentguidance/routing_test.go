@@ -821,3 +821,76 @@ func TestRenderRoutingClosesODDWithTheLivingSpecIntegration(t *testing.T) {
 		})
 	}
 }
+
+// TestRenderRoutingClosesODDWithTheMaintainedContextLocator guards
+// organic-agent-trigger-rules REQ-24.58 (part 1, spec-viva-openspec): the ODD
+// close step tells the agent where the maintained technical context is located
+// (`technicalContext.maintained.entry` and `.paths` of `axiom sdd status
+// --json`) and to open `entry` first. The sentence follows the maintained-context
+// sentence inside the single paragraph of step 7, renders once, is identical for
+// every adapter and neither authorizes touching reference documentation nor
+// requires anything when no maintained context is declared.
+func TestRenderRoutingClosesODDWithTheMaintainedContextLocator(t *testing.T) {
+	t.Parallel()
+
+	const maintained = "without a maintained context this adds no requirement."
+
+	reference, err := RenderRouting(model.AgentClaudeCode)
+	if err != nil {
+		t.Fatalf("RenderRouting(%q) error = %v", model.AgentClaudeCode, err)
+	}
+
+	for _, agent := range catalog.AllAgents() {
+		t.Run(string(agent.ID), func(t *testing.T) {
+			t.Parallel()
+
+			rendered, err := RenderRouting(agent.ID)
+			if err != nil {
+				t.Fatalf("RenderRouting(%q) error = %v", agent.ID, err)
+			}
+			if rendered != reference {
+				t.Fatalf("RenderRouting(%q) differs from the reference adapter: the locator rule must not depend on the agent", agent.ID)
+			}
+
+			closeOffset := strings.Index(rendered, "7. **Close.**")
+			resumeOffset := strings.Index(rendered, "Resume an interrupted feature with")
+			if closeOffset < 0 || resumeOffset < closeOffset {
+				t.Fatalf("RenderRouting(%q) lost step 7 (close=%d resume=%d)", agent.ID, closeOffset, resumeOffset)
+			}
+			closeStep := rendered[closeOffset:resumeOffset]
+			if strings.Count(closeStep, "\n") > 2 {
+				t.Fatalf("RenderRouting(%q) step 7 must stay a single paragraph, got:\n%q", agent.ID, closeStep)
+			}
+
+			for _, want := range []string{
+				"`technicalContext.maintained.entry`",
+				"`technicalContext.maintained.paths`",
+				"`axiom sdd status --json`",
+				"open `entry` first",
+			} {
+				if got := strings.Count(closeStep, want); got != 1 {
+					t.Fatalf("RenderRouting(%q) step 7 must contain %q exactly once, got %d:\n%s", agent.ID, want, got, closeStep)
+				}
+			}
+			if got := strings.Count(rendered, "`technicalContext.maintained.entry`"); got != 1 {
+				t.Fatalf("RenderRouting(%q) renders the locator %d times, want exactly once", agent.ID, got)
+			}
+
+			maintainedOffset := strings.Index(closeStep, maintained)
+			locatorOffset := strings.Index(closeStep, "`technicalContext.maintained.entry`")
+			specOffset := strings.Index(closeStep, "`## Spec viva`")
+			if maintainedOffset < 0 || locatorOffset < maintainedOffset || specOffset < locatorOffset {
+				t.Fatalf("RenderRouting(%q) must place the locator after the maintained-context sentence and before the living-spec rule (maintained=%d locator=%d spec=%d)", agent.ID, maintainedOffset, locatorOffset, specOffset)
+			}
+
+			// The locator is read only when a maintained context exists and never
+			// widens what may be edited.
+			sentenceStart := locatorOffset
+			sentenceEnd := sentenceStart + strings.Index(closeStep[sentenceStart:], ". ")
+			locatorSentence := closeStep[sentenceStart:sentenceEnd]
+			if strings.Contains(locatorSentence, "reference") {
+				t.Fatalf("RenderRouting(%q) the locator sentence must not mention reference documentation: %q", agent.ID, locatorSentence)
+			}
+		})
+	}
+}

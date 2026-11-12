@@ -1,6 +1,7 @@
 package livespec
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -131,8 +132,13 @@ type classified struct {
 // contra la especificación canónica (D5): `already` si ya está con el mismo cuerpo,
 // rechazo si un ADDED está con otro cuerpo, `pending` en el resto. Después comprueba los
 // identificadores de los ADDED pendientes contra el registro (REQ-30.4) y compone solo
-// lo pendiente con la composición del archivado SDD. El primer error rechaza todo el plan.
+// lo pendiente con la composición del archivado SDD. Antes comprueba la obligación de
+// impacto de los bugs (CheckImpact) y, al final, el contexto técnico de la rama (REQ-30.6).
+// El primer error rechaza todo el plan.
 func PlanIntegration(loc workspace.Location, doc FeatureDoc, reg *Registry) (Integration, error) {
+	if err := CheckImpact(doc); err != nil {
+		return Integration{}, err
+	}
 	plan := Integration{Feature: doc.Feature, Kind: doc.Kind, loc: loc, Impact: impactOf(doc)}
 	if plan.Impact == ImpactNone {
 		plan.Reason = doc.Impact.Reason
@@ -158,6 +164,14 @@ func PlanIntegration(loc workspace.Location, doc FeatureDoc, reg *Registry) (Int
 		}
 		plan.Capabilities = append(plan.Capabilities, step)
 	}
+
+	// La comprobación del contexto es lo último que se calcula: Apply es la única
+	// escritura y solo se alcanza si todo el plan, contexto incluido, es válido (REQ-30.6).
+	report, err := checkContext(context.Background(), loc, doc.Feature)
+	if err != nil {
+		return Integration{}, err
+	}
+	plan.Context = report
 	return plan, nil
 }
 

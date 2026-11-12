@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -79,11 +80,21 @@ func (f *oddFixture) writeDoc(t *testing.T, content string) {
 // espera para la feature.
 func newODDFixture(t *testing.T, onFeatureBranch bool) *oddFixture {
 	t.Helper()
+	return newODDFixtureWith(t, onFeatureBranch, nil)
+}
+
+// newODDFixtureWith añade al primer commit los ficheros dados (rutas relativas al
+// workspaceRoot, con `/`); uno de ellos puede ser axiom.yaml para declarar `technical_context`.
+func newODDFixtureWith(t *testing.T, onFeatureBranch bool, files map[string]string) *oddFixture {
+	t.Helper()
 	contextCLIIsolateGit(t)
 	captureWriterWarnings(t)
 	ws := workspacetest.Embedded(t, ".")
 	f := &oddFixture{ws: ws, root: ws.Master}
 	workspacetest.WriteFile(t, f.specPath("facturacion"), oddFacturacionSpec)
+	for rel, content := range files {
+		workspacetest.WriteFile(t, filepath.Join(ws.Master, filepath.FromSlash(rel)), content)
+	}
 	contextCLIGit(t, ws.Master, "init", "-q")
 	contextCLIGit(t, ws.Master, "symbolic-ref", "HEAD", "refs/heads/main")
 	contextCLIGit(t, ws.Master, "config", "core.autocrlf", "false")
@@ -477,5 +488,201 @@ func TestArchiveIntegrateOutsideGitIsNotRefusedByTheGuard(t *testing.T) {
 
 	if _, err := runODDIntegrate(t, "--odd", oddFeature, "--path", ws.Master); err != nil {
 		t.Fatalf("fuera de git la guarda no comprueba la rama: %v", err)
+	}
+}
+
+// Impacto de los bugs y contexto técnico (REQ-30.5, REQ-30.6).
+
+const oddContextConfig = `workspace:
+  name: ejemplo-embebido
+  topology: monorepo-embedded
+  specs_repository: "."
+roles:
+  core:
+    name: Core
+    repositories:
+      - path: .
+technical_context:
+  maintained:
+    paths:
+      - context/
+  reference:
+    paths:
+      - referencia/
+`
+
+func newODDContextFixture(t *testing.T) *oddFixture {
+	t.Helper()
+	return newODDFixtureWith(t, true, map[string]string{
+		"axiom.yaml":              oddContextConfig,
+		"context/ARQUITECTURA.md": "# Arquitectura\n\nTexto.\n",
+		"referencia/ADR.md":       "# ADR\n\nTexto.\n",
+	})
+}
+
+const oddValidMarker = "## Impacto en la spec\n\nSin impacto en la spec\nMotivo: el fallo era un error tipográfico en un mensaje\n"
+
+func TestArchiveIntegrateBugImpactContract(t *testing.T) {
+	rejected := []struct {
+		name string
+		body string
+		want []string
+	}{
+		{"sin delta ni marcador", "", []string{"## Impacto en la spec", "Sin impacto en la spec", "Motivo:"}},
+		{"Motivo vacío", "## Impacto en la spec\n\nSin impacto en la spec\nMotivo:\n", []string{"## Impacto en la spec", "impact_reason_missing"}},
+		{"punto final", "## Impacto en la spec\n\nSin impacto en la spec.\nMotivo: razón\n", []string{"## Impacto en la spec", "impact_marker_invalid"}},
+	}
+	for _, tt := range rejected {
+		t.Run("rechaza "+tt.name, func(t *testing.T) {
+			f := newODDFixture(t, true)
+			f.writeDoc(t, oddDoc("Tipo: bug\n\n", tt.body))
+			before := oddSnapshot(t, f.root)
+
+			out, err := f.run(t)
+			if err == nil {
+				t.Fatalf("se esperaba un rechazo; salida:\n%s", out)
+			}
+			for _, want := range append(tt.want, "axiom archive integrate --odd") {
+				if !strings.Contains(err.Error(), want) {
+					t.Errorf("el rechazo %q debe contener %q", err, want)
+				}
+			}
+			if !oddSameSnapshot(before, oddSnapshot(t, f.root)) {
+				t.Error("un rechazo no escribe nada")
+			}
+		})
+	}
+
+	t.Run("acepta el marcador válido sin cambiar la spec", func(t *testing.T) {
+		f := newODDFixture(t, true)
+		f.writeDoc(t, oddDoc("Tipo: bug\n\n", oddValidMarker))
+		before := oddSnapshot(t, f.root)
+
+		out, err := f.run(t, "--json")
+		if err != nil {
+			t.Fatalf("RunArchiveIntegrate: %v", err)
+		}
+		report := decodeODDReport(t, out)
+		if report.Kind != livespec.KindBug || report.Impact != livespec.ImpactNone || !report.NothingToIntegrate || report.Reason == "" || len(report.Written) != 0 {
+			t.Errorf("informe = %+v", report)
+		}
+		if !oddSameSnapshot(before, oddSnapshot(t, f.root)) {
+			t.Error("con el marcador la spec viva no cambia")
+		}
+		text, err := f.run(t)
+		if err != nil || !strings.Contains(text, "motivo: el fallo era un error tipográfico") {
+			t.Errorf("la salida legible debe informar del motivo (err %v):\n%s", err, text)
+		}
+	})
+
+	t.Run("el marcador junto con una delta se ignora y se integra la delta", func(t *testing.T) {
+		f := newODDFixture(t, true)
+		f.writeDoc(t, oddDoc("Tipo: bug\n\n", oddSpecSection([2]string{"facturacion", oddAddedDelta})+oddValidMarker))
+
+		out, err := f.run(t, "--json")
+		if err != nil {
+			t.Fatalf("RunArchiveIntegrate: %v", err)
+		}
+		if report := decodeODDReport(t, out); report.Impact != livespec.ImpactDelta || report.NothingToIntegrate {
+			t.Errorf("informe = %+v: el marcador se ignora y el documento se evalúa como delta", report)
+		}
+		if spec := readODDFile(t, f.specPath("facturacion")); !strings.Contains(spec, "Nota de abono (REQ-31.5)") {
+			t.Errorf("se integra la delta:\n%s", spec)
+		}
+	})
+
+	t.Run("un incremento sin impacto declarado se acepta", func(t *testing.T) {
+		f := newODDFixture(t, true)
+		f.writeDoc(t, oddDoc("", ""))
+		if _, err := f.run(t); err != nil {
+			t.Fatalf("RunArchiveIntegrate: %v", err)
+		}
+	})
+}
+
+func TestArchiveIntegrateRejectsAReferenceEditWithoutWriting(t *testing.T) {
+	f := newODDContextFixture(t)
+	f.writeDoc(t, oddDoc("", oddSpecSection([2]string{"facturacion", oddAddedDelta})))
+	workspacetest.WriteFile(t, filepath.Join(f.root, "referencia", "ADR.md"), "# ADR\n\nEditado.\n")
+	before := oddSnapshot(t, f.root)
+
+	out, err := f.run(t)
+	if err == nil {
+		t.Fatalf("se esperaba un rechazo; salida:\n%s", out)
+	}
+	var refErr *livespec.ReferencePathError
+	if !errors.As(err, &refErr) {
+		t.Fatalf("error = %v, se esperaba *livespec.ReferencePathError", err)
+	}
+	for _, want := range []string{"referencia/ADR.md", "reference", "axiom archive integrate --odd"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("el rechazo %q debe contener %q", err, want)
+		}
+	}
+	if !oddSameSnapshot(before, oddSnapshot(t, f.root)) {
+		t.Error("un rechazo del contexto no escribe nada en openspec/specs")
+	}
+}
+
+func TestArchiveIntegrateReportsTheMaintainedContextTheBranchTouched(t *testing.T) {
+	f := newODDContextFixture(t)
+	f.writeDoc(t, oddDoc("", oddSpecSection([2]string{"facturacion", oddAddedDelta})))
+	workspacetest.WriteFile(t, filepath.Join(f.root, "context", "ARQUITECTURA.md"), "# Arquitectura\n\nEditada.\n")
+
+	out, err := f.run(t, "--json")
+	if err != nil {
+		t.Fatalf("RunArchiveIntegrate: %v", err)
+	}
+	report := decodeODDReport(t, out)
+	if report.Context == nil || !report.Context.Declared ||
+		!reflect.DeepEqual(report.Context.MaintainedTouched, []string{"context/ARQUITECTURA.md"}) || len(report.Context.ReferenceTouched) != 0 {
+		t.Errorf("context = %+v", report.Context)
+	}
+	if !strings.Contains(out, `"referenceTouched": []`) && !strings.Contains(out, `"referenceTouched":[]`) {
+		t.Errorf("referenceTouched debe ser una lista vacía en el JSON:\n%s", out)
+	}
+	if spec := readODDFile(t, f.specPath("facturacion")); !strings.Contains(spec, "Nota de abono (REQ-31.5)") {
+		t.Errorf("el informe del contexto no bloquea la integración:\n%s", spec)
+	}
+}
+
+func TestArchiveIntegrateTextOutputSaysWhichContextWasTouched(t *testing.T) {
+	f := newODDContextFixture(t)
+	f.writeDoc(t, oddDoc("", oddSpecSection([2]string{"facturacion", oddAddedDelta})))
+
+	untouched, err := f.run(t)
+	if err != nil {
+		t.Fatalf("RunArchiveIntegrate: %v", err)
+	}
+	if !strings.Contains(untouched, "no tocó ninguna ruta mantenida") {
+		t.Errorf("la salida debe decir que no se tocó ninguna ruta mantenida:\n%s", untouched)
+	}
+
+	f2 := newODDContextFixture(t)
+	f2.writeDoc(t, oddDoc("", oddSpecSection([2]string{"facturacion", oddAddedDelta})))
+	workspacetest.WriteFile(t, filepath.Join(f2.root, "context", "ARQUITECTURA.md"), "# Arquitectura\n\nEditada.\n")
+	touched, err := f2.run(t)
+	if err != nil {
+		t.Fatalf("RunArchiveIntegrate: %v", err)
+	}
+	if !strings.Contains(touched, "context/ARQUITECTURA.md") {
+		t.Errorf("la salida debe nombrar la ruta mantenida tocada:\n%s", touched)
+	}
+}
+
+func TestArchiveIntegrateWithoutTechnicalContextHasNoContextReport(t *testing.T) {
+	f := newODDFixture(t, true)
+	f.writeDoc(t, oddDoc("", oddSpecSection([2]string{"facturacion", oddAddedDelta})))
+
+	out, err := f.run(t, "--json")
+	if err != nil {
+		t.Fatalf("RunArchiveIntegrate: %v", err)
+	}
+	if strings.Contains(out, `"context"`) {
+		t.Errorf("sin technical_context el informe no lleva `context`:\n%s", out)
+	}
+	text, err := f.run(t)
+	if err != nil || strings.Contains(text, "ontexto") {
+		t.Errorf("sin technical_context la salida no habla del contexto (err %v):\n%s", err, text)
 	}
 }
