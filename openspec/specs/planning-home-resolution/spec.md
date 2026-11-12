@@ -257,10 +257,10 @@ Cuando la carpeta maestra contiene un puntero `.axiom-workspace` y además un di
 El primitivo DEBE distinguir cuatro casos:
 
 1. Un puntero cuyo destino no existe, o que no define `config` ni `specs`, DEBE rechazarse nombrando el puntero, el destino y la acción para corregirlo o retirarlo.
-2. Un puntero cuyo destino existe pero cuyo `axiom.yaml` no puede leerse como YAML o no supera la validación de la configuración base (nombre, topología y roles) DEBE rechazarse nombrando la causa y `axiom workspace validate` como continuación: la configuración base determina el repositorio de especificaciones, de modo que el planning home es desconocido y no hay resolución ni status que devolver. Un destino legible cuya configuración base es válida y cuyo único defecto es un bloque `baseline:` o `technical_context:` inválido NO DEBE rechazarse: el planning home es determinable y se aplica REQ-24.18.
-3. Un `axiom.yaml` directo (sin puntero) que no puede cargarse NO DEBE rechazarse: el primitivo DEBE conservar la resolución embebida (`workspaceRoot` es el directorio que lo contiene y el planning home es `<raíz>/openspec`) y comunicar un aviso no bloqueante que nombre la causa y `axiom workspace validate`. Que esa configuración impida declarar una baseline (fichero ilegible o bloque inválido) deja el status operativo y bloquea solo el archivado (REQ-24.18).
+2. Un puntero cuyo destino existe pero cuyo `axiom.yaml` no puede leerse como YAML o no supera la validación de la configuración base (nombre, topología y roles) DEBE rechazarse nombrando la causa y `axiom workspace validate` como continuación: la configuración base determina el repositorio de especificaciones, de modo que el planning home es desconocido y no hay resolución ni status que devolver. Un destino legible cuya configuración base es válida y cuyo único defecto es un bloque `baseline:` residual o un bloque `technical_context:` inválido NO DEBE rechazarse: el planning home es determinable y se aplican REQ-30.21 de `workspace-topology` y REQ-30.30 de `project-technical-context`.
+3. Un `axiom.yaml` directo (sin puntero) que no puede cargarse NO DEBE rechazarse: el primitivo DEBE conservar la resolución embebida (`workspaceRoot` es el directorio que lo contiene y el planning home es `<raíz>/openspec`) y comunicar un aviso no bloqueante que nombre la causa y `axiom workspace validate`. Que esa configuración impida leer el contexto técnico (fichero ilegible o bloque inválido) deja el status operativo y bloquea solo el archivado (REQ-30.30 de `project-technical-context`).
 4. En `multirepo`, una raíz del repositorio de especificaciones (`workspaceRoot`) inexistente DEBE rechazarse nombrando la ruta esperada y la acción para crearla o corregir `specs_repository`. Esa raíz es `<maestra>/<specs_repository>` o, si el último segmento de `specs_repository` es `openspec`, su directorio padre. El planning home (`openspec/`) NO tiene que existir para resolver: el primitivo no lo exige ni lo crea (REQ-24.1).
-(Previously: el caso 4 se aplicaba a `monorepo-decoupled` y `multirepo`)
+(Previously: los casos 2 y 3 hablaban de un bloque `baseline:` inválido y de impedir declarar una baseline, y remitían a REQ-24.18; la baseline ajena se retira)
 
 #### Scenario: Puntero sin `config` ni `specs`
 - **DADO** un `.axiom-workspace` vacío
@@ -278,11 +278,17 @@ El primitivo DEBE distinguir cuatro casos:
 - **ENTONCES** se rechaza con código de salida distinto de cero nombrando la causa y `axiom workspace validate`, porque el planning home es desconocido
 - **Y** no se devuelve ningún status y no se escribe nada
 
-#### Scenario: Puntero hacia una configuración legible con un bloque `baseline:` inválido
-- **DADO** un `.axiom-workspace` cuyo destino es un `axiom.yaml` con configuración base válida y con `baseline.documents[0].requirement.identity: nombre`
+#### Scenario: Puntero hacia una configuración legible con un bloque `baseline:` residual
+- **DADO** un `.axiom-workspace` cuyo destino es un `axiom.yaml` con configuración base válida y con un bloque `baseline:`
 - **CUANDO** se ejecuta `axiom sdd status --json` desde la carpeta del puntero
 - **ENTONCES** la resolución se completa sin rechazo y el status devuelve el planning home que determina el puntero
-- **Y** el status señala la causa y marca el archivado como bloqueado (REQ-24.18)
+- **Y** el status señala la causa tipada de REQ-30.21 y marca el archivado como bloqueado
+
+#### Scenario: Puntero hacia una configuración legible con un `technical_context:` inválido
+- **DADO** un `.axiom-workspace` cuyo destino es un `axiom.yaml` con configuración base válida y con `technical_context.maintained.paths: []`
+- **CUANDO** se ejecuta `axiom sdd status --json` desde la carpeta del puntero
+- **ENTONCES** la resolución se completa sin rechazo y el status devuelve el planning home que determina el puntero
+- **Y** el status señala la causa y marca el archivado como bloqueado (REQ-30.30 de `project-technical-context`)
 
 #### Scenario: `axiom.yaml` directo no cargable conserva la resolución embebida
 - **DADO** un proyecto con `openspec/` y un `axiom.yaml` sin la sección `roles`
@@ -300,9 +306,6 @@ El primitivo DEBE distinguir cuatro casos:
 - **CUANDO** se resuelve desde `M`
 - **ENTONCES** no se rechaza: `workspaceRoot` es `M` y el planning home es `M/openspec`
 - **Y** `M/openspec` no se crea
-
----
-
 ### Requirement: Consumo Idéntico por los Verbos del Flujo SDD (REQ-24.8)
 
 Los siguientes verbos DEBEN obtener carpeta maestra, `workspaceRoot`, planning home y configuración del primitivo de REQ-24.1: `axiom sdd status`, `axiom sdd continue`, `axiom sdd kickoff seal|show`, `axiom sdd gate record|show`, `axiom sdd-attempt grant`, `axiom sdd archive-compose` (cuando recibe `--cwd`), `axiom handoff show|create|validate` y `axiom role list|status|barrier`. Desde un mismo workspace DEBEN resolver el mismo planning home con independencia del directorio de partida. La configuración de `axiom.yaml` que estos verbos consultan (roles, topología) DEBE cargarse a través del resultado de la resolución y NO comprobando la existencia de `<raíz>/axiom.yaml`, de modo que un puntero sin `axiom.yaml` en la carpeta maestra se honre.

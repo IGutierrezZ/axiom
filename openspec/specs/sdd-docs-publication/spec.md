@@ -18,7 +18,8 @@ Definir el verbo nativo `axiom sdd publish`, que confirma y sube, y solo eso, lo
 
 ### Requirement: Verbo `axiom sdd publish --change <x>` y Lista Cerrada de Rutas de Documentación (REQ-27.5)
 
-La CLI DEBE exponer `axiom sdd publish --change <nombre>` con `--cwd` y `--json`, como subcomando de `axiom sdd` y no de `axiom branch`. La orden DEBE operar únicamente sobre las **rutas de documentación**, una lista cerrada formada por: `openspec/changes/<x>/**`; la carpeta de `openspec/changes/archive/**` que corresponde al cambio; `openspec/specs/**`; `openspec/INDEX.md`; y las rutas de baseline y de contexto técnico mantenido declaradas en `axiom.yaml` (`baseline.documents` y `technical_context.maintained`). Las rutas de `technical_context.reference` y `odd/tasks/**` NO DEBEN pertenecer nunca a la lista. Toda ruta que no esté en la lista es **código** a efectos de esta capacidad. El indicador opcional `--archive` selecciona la rama de archivado del cambio como rama asignada que `publish` espera (REQ-27.7 y REQ-27.14): la publicación posterior al archivado DEBE invocarse como `axiom sdd publish --change <x> --archive`. Sin `--change`, o con un nombre de cambio inválido, la orden DEBE rechazarse sin efectos.
+La CLI DEBE exponer `axiom sdd publish --change <nombre>` con `--cwd` y `--json`, como subcomando de `axiom sdd` y no de `axiom branch`. La orden DEBE operar únicamente sobre las **rutas de documentación**, una lista cerrada formada por: `openspec/changes/<x>/**`; la carpeta de `openspec/changes/archive/**` que corresponde al cambio; `openspec/specs/**`; `openspec/INDEX.md`; y las rutas de contexto técnico mantenido declaradas en `axiom.yaml` (`technical_context.maintained`). Las rutas de `technical_context.reference` y `odd/tasks/**` NO DEBEN pertenecer nunca a la lista. Toda ruta que no esté en la lista es **código** a efectos de esta capacidad. El indicador opcional `--archive` selecciona la rama de archivado del cambio como rama asignada que `publish` espera (REQ-27.7 y REQ-27.14): la publicación posterior al archivado DEBE invocarse como `axiom sdd publish --change <x> --archive`. Sin `--change`, o con un nombre de cambio inválido, la orden DEBE rechazarse sin efectos.
+(Previously: la lista incluía también las rutas de `baseline.documents`; la baseline ajena se retira)
 
 #### Scenario: La orden existe en `sdd` y no en `branch`
 
@@ -27,11 +28,11 @@ La CLI DEBE exponer `axiom sdd publish --change <nombre>` con `--cwd` y `--json`
 - **ENTONCES** la ayuda de `sdd` lista `publish`
 - **Y** la ayuda de `branch` no lista `publish` ni `push`
 
-#### Scenario: La lista incluye la baseline y el contexto mantenido declarados
+#### Scenario: La lista incluye el contexto mantenido declarado
 
-- **DADO** un `axiom.yaml` con `baseline.documents` que declara `docs/requisitos.md` y `technical_context.maintained` que declara `docs/arquitectura.md`
-- **CUANDO** `publish` clasifica `docs/requisitos.md` y `docs/arquitectura.md`
-- **ENTONCES** ambas son rutas de documentación
+- **DADO** un `axiom.yaml` con `technical_context.maintained` que declara `docs/arquitectura.md`
+- **CUANDO** `publish` clasifica `docs/arquitectura.md`
+- **ENTONCES** es una ruta de documentación
 
 #### Scenario: Las rutas de referencia y `odd/tasks` no son documentación
 
@@ -52,9 +53,6 @@ La CLI DEBE exponer `axiom sdd publish --change <nombre>` con `--cwd` y `--json`
 - **CUANDO** se ejecuta `axiom sdd publish` sin `--change`
 - **ENTONCES** se rechaza con un error que nombra el argumento obligatorio
 - **Y** no se confirma ni se sube nada
-
----
-
 ### Requirement: `publish` Confirma Solo las Rutas de Documentación del Cambio (REQ-27.6)
 
 `publish` DEBE confirmar (commit) únicamente las rutas de documentación del cambio que tengan modificaciones, mediante una selección explícita de rutas con semántica «solo estas rutas» (`--only`): el commit NO DEBE contener ninguna ruta de código y NO DEBE alterar ni el árbol de trabajo ni el índice de las rutas que no confirma, incluidas las rutas de código ya preparadas por la persona. El commit DEBE incluir `gates.yaml` y `kickoff.yaml` del cambio cuando estén modificados. Si no hay modificaciones en rutas de documentación, `publish` NO DEBE crear un commit vacío y DEBE continuar con la comprobación y el push de los commits ya existentes (REQ-27.8 y REQ-27.7). `publish` NO DEBE usar `--no-verify`: los hooks de git del usuario se ejecutan.

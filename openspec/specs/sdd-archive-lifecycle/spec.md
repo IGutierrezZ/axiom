@@ -15,7 +15,7 @@ El archivado es la entrega formal del incremento a un entorno preproductivo o pr
 ### Requirement: Precondición de Integración o Despliegue para Ejecutar `archive` (REQ-21.16)
 
 La fase `archive` NO DEBE ejecutarse como un paso inmediato tras la finalización de las pruebas locales de desarrollo, aunque `verify-report.md` (o el consolidado de REQ-21.15) tenga veredicto favorable. `archive` SOLO DEBE ejecutarse cuando exista evidencia de que el incremento se ha integrado o desplegado hacia un entorno preproductivo o productivo, mediante un PR formal fusionado hacia la rama de integración (`git.integration_branch`) u otro evento de despliegue equivalente ya configurado para el proyecto. Si se solicita `archive` sin esa evidencia, el orquestador DEBE rechazar la operación de forma explícita, indicando la precondición concreta que falta, y el cambio DEBE permanecer sin mover a `openspec/changes/archive/`. En la topología `multirepo`, la evidencia `pr_merged` se verifica contra el grafo git del repositorio de especificaciones (`workspaceRoot`); la integración de un repositorio de código se acredita con las evidencias `deployment` o `attestation`.
-(Previously: el destino del PR era «la rama principal» y la verificación de `pr_merged` se enunciaba también para `monorepo-decoupled`, topología retirada)
+(Previously: el escenario de rechazo citaba también los documentos de la baseline del proyecto; la baseline ajena se retira)
 
 #### Scenario: PR fusionado habilita el archivado
 - **DADO** un cambio con `verify-report.md` en veredicto favorable y un PR fusionado hacia la rama de integración que integra ese incremento
@@ -27,7 +27,7 @@ La fase `archive` NO DEBE ejecutarse como un paso inmediato tras la finalizació
 - **CUANDO** se solicita `archive` para ese cambio
 - **ENTONCES** el orquestador rechaza la operación de forma explícita, señalando la ausencia de integración o despliegue como motivo
 - **Y** el cambio permanece en `openspec/changes/<cambio>/` sin moverse a `openspec/changes/archive/`
-- **Y** no se actualiza ninguna especificación viva de la baseline declarada (ni `openspec/specs/` ni los documentos de la baseline del proyecto)
+- **Y** no se actualiza ninguna especificación viva de `openspec/specs/`
 - **Y** no se modifica ningún documento del contexto técnico
 
 #### Scenario: La evidencia pr_merged en multirepo se verifica contra el repositorio de especificaciones
@@ -36,26 +36,20 @@ La fase `archive` NO DEBE ejecutarse como un paso inmediato tras la finalizació
 - **ENTONCES** la evidencia se acepta
 - **Y** registrada con el commit presente solo en `repo-backend`, se rechaza por no figurar en el grafo del repositorio de especificaciones
 
+---
+
 ### Requirement: Contenido del Archivado (REQ-21.17)
 
-Al ejecutarse `archive` con su precondición satisfecha (REQ-21.16), el sistema DEBE: (1) integrar los deltas del incremento en la baseline declarada, que es la del proyecto si `axiom.yaml` declara `baseline:` (capacidad `spec-baseline-integration`) y `openspec/specs/` por defecto, sin crear nunca una segunda baseline; (2) con `technical_context.maintained` declarado, integrar el delta de contexto del cambio en las rutas mantenidas con el mismo mecanismo de edición dirigida con verificación nativa, registrando la traza por entrada (REQ-24.55), sin modificar nunca las rutas del modo `reference` (REQ-24.30); (3) transferir el incremento a `openspec/changes/archive/`; y (4) con baseline por defecto, actualizar el inventario maestro (`openspec/INDEX.md`) y los roadmaps declarados que referencien el incremento, y con baseline del proyecto no crear ni actualizar `openspec/INDEX.md`. Las integraciones (1) y (2) DEBEN completarse y verificarse antes de la transferencia (3), porque un incremento archivado es inmutable (REQ-21.18).
-(Previously: actualizaba solo la especificación viva de `openspec/specs/` y el inventario `openspec/INDEX.md`, sin baseline del proyecto ni contexto técnico)
+Al ejecutarse `archive` con su precondición satisfecha (REQ-21.16), el sistema DEBE: (1) integrar los deltas del incremento en la spec viva `openspec/specs/`, sin crear nunca una segunda spec viva; (2) con `technical_context.maintained` declarado, integrar el delta de contexto del cambio en las rutas mantenidas con el mismo mecanismo de edición dirigida con verificación nativa, registrando la traza por entrada (REQ-24.55), sin modificar nunca las rutas del modo `reference` (REQ-24.30); (3) transferir el incremento a `openspec/changes/archive/`; y (4) actualizar el inventario maestro (`openspec/INDEX.md`) y los roadmaps declarados que referencien el incremento. Las integraciones (1) y (2) DEBEN completarse y verificarse antes de la transferencia (3), porque un incremento archivado es inmutable (REQ-21.18).
+(Previously: la integración (1) podía dirigirse a una baseline del proyecto declarada con `baseline:` y, con ella, no se creaba ni actualizaba `openspec/INDEX.md`; la baseline ajena se retira)
 
 #### Scenario: Archivado exitoso actualiza incremento, especificación viva e inventario
 
-- **DADO** un cambio cuya precondición de archivado ya está satisfecha y una baseline OpenSpec por defecto
+- **DADO** un cambio cuya precondición de archivado ya está satisfecha
 - **CUANDO** se ejecuta `archive`
 - **ENTONCES** el incremento se transfiere a `openspec/changes/archive/`
 - **Y** la especificación viva en `openspec/specs/` incorpora los requerimientos `ADDED`/`MODIFIED`/`REMOVED` del cambio
 - **Y** `openspec/INDEX.md` y los roadmaps afectados reflejan el incremento como archivado
-
-#### Scenario: Archivado con baseline del proyecto integra en los documentos declarados
-
-- **DADO** un cambio con deltas para dos dominios declarados en `baseline.documents` y la precondición satisfecha
-- **CUANDO** se ejecuta `archive`
-- **ENTONCES** los dos documentos del proyecto incorporan los requisitos `ADDED`/`MODIFIED`/`REMOVED` según el modo de integración de su dominio
-- **Y** no se crea `openspec/specs/` ni `openspec/INDEX.md`
-- **Y** el incremento se transfiere a `openspec/changes/archive/`
 
 #### Scenario: Archivado con contexto mantenido integra el delta de contexto
 
@@ -92,7 +86,8 @@ Una vez archivado un incremento, su alcance queda formalmente congelado. El sist
 - **Y** el contenido del incremento archivado original permanece sin modificaciones
 ### Requirement: Integración del Delta de Contexto en las Rutas Mantenidas (REQ-24.55)
 
-Con `technical_context.maintained` declarado, archive DEBE integrar el delta de contexto del cambio en las rutas del modo `maintained` mediante el mecanismo de edición dirigida con verificación nativa y traza de la capacidad `spec-baseline-integration` (REQ-24.50 a REQ-24.52): por cada entrada del delta, archive edita el documento y la sección ancla según la acción (`add`, `modify` o `remove`) y la traza registra el documento, el ancla, la acción y el estado. Si una entrada `add` apunta a un documento que aún no existe, archive PUEDE crearlo solo dentro de las rutas del modo `maintained` y DEBE registrarlo en la traza con la acción `created`. Archive NO DEBE modificar rutas del modo `reference`, ni documentos no nombrados en las entradas del delta, ni generar un contexto técnico inicial a partir del código. El texto que archive integra en los documentos mantenidos DEBE contener los IDs definitivos en lugar de los IDs provisionales del cambio (REQ-24.59), y el delta de contexto de la carpeta del cambio se archiva sin alteración.
+Con `technical_context.maintained` declarado, archive DEBE integrar el delta de contexto del cambio en las rutas del modo `maintained` mediante el mecanismo de edición dirigida con verificación nativa y traza de la capacidad `project-technical-context` (REQ-30.16 a REQ-30.18): por cada entrada del delta, archive edita el documento y la sección ancla según la acción (`add`, `modify` o `remove`) y la traza registra el documento, el ancla, la acción y el estado. Si una entrada `add` apunta a un documento que aún no existe, archive PUEDE crearlo solo dentro de las rutas del modo `maintained` y DEBE registrarlo en la traza con la acción `created`. Archive NO DEBE modificar rutas del modo `reference`, ni documentos no nombrados en las entradas del delta, ni generar un contexto técnico inicial a partir del código. El delta de contexto de la carpeta del cambio se archiva sin alteración.
+(Previously: remitía a REQ-24.50 a REQ-24.52 de `spec-baseline-integration` y exigía sustituir los identificadores provisionales por los definitivos en el texto integrado; los identificadores provisionales dejan de existir)
 
 #### Scenario: Entrada `modify` integrada con traza
 - **DADO** un delta con una entrada `modify` sobre `context/ARQUITECTURA.md`, ancla `Componentes > Servicio de pagos`
@@ -117,18 +112,12 @@ Con `technical_context.maintained` declarado, archive DEBE integrar el delta de 
 - **CUANDO** archive integra el cambio
 - **ENTONCES** no se crea ningún documento del contexto
 
-#### Scenario: Los IDs provisionales se sustituyen en el texto integrado del contexto
-- **DADO** una entrada `modify` cuyo motivo cita `RF-9001`, ID provisional de un requisito ADDED del cambio con ID definitivo `RF-008`
-- **CUANDO** archive integra el cambio
-- **ENTONCES** el texto integrado en el documento mantenido cita `RF-008` y no `RF-9001`
-- **Y** el delta de contexto de la carpeta del cambio conserva `RF-9001` sin alteración
-- **Y** la traza registra la correspondencia de `RF-9001` a `RF-008`
-
 ---
 
 ### Requirement: Condiciones de Parada del Archivado con Baseline o Contexto del Proyecto (REQ-24.56)
 
-Archive DEBE detenerse sin mover el cambio a `openspec/changes/archive/`, nombrando la causa y la continuación, cuando: (a) con `technical_context.maintained` declarado, el cambio no lleva delta de contexto; (b) el delta de contexto es inválido (REQ-24.31 y REQ-24.32); (c) falla una precondición de la integración (REQ-24.49); (d) un dominio del cambio no está declarado en la baseline (REQ-24.48); (e) falla la composición (REQ-24.46, incluida la frontera de bloque de REQ-24.42) o la verificación nativa (REQ-24.51); (f) la declaración de `axiom.yaml` es inválida (REQ-24.18); o (g) con baseline del proyecto o `technical_context.maintained` declarados, el almacén de artefactos es `engram` o `none` (REQ-24.62), porque sin la carpeta del cambio en ficheros no hay delta de contexto ni traza que integrar; la continuación es declarar `artifact_store: openspec` o `hybrid` en `openspec/config.yaml`, o retirar la declaración. Archive NO DEBE asumir «Sin impacto» ante la ausencia del delta. Cuando la parada ocurre tras ediciones dirigidas ya realizadas, estas DEBEN quedar como cambios sin confirmar en el árbol de trabajo, informadas y revertibles con git, y el cambio permanece en `openspec/changes/`.
+Archive DEBE detenerse sin mover el cambio a `openspec/changes/archive/`, nombrando la causa y la continuación, cuando: (a) con `technical_context.maintained` declarado, el cambio no lleva delta de contexto; (b) el delta de contexto es inválido (REQ-24.31 y REQ-24.32); (c) falla una precondición de la integración del contexto (REQ-30.29); (d) falla la composición (REQ-30.24) o la verificación nativa (REQ-30.17); (e) con `technical_context.maintained` declarado, el almacén de artefactos es `engram` o `none` (REQ-30.19), porque sin la carpeta del cambio en ficheros no hay delta de contexto ni traza que integrar; la continuación es declarar `artifact_store: openspec` o `hybrid` en `openspec/config.yaml`, o retirar la declaración; o (f) la declaración de `axiom.yaml` es inválida: un `technical_context:` que no supera la validación (REQ-30.30) o un bloque `baseline:` residual (REQ-30.21 de `workspace-topology`). Archive NO DEBE asumir «Sin impacto» ante la ausencia del delta. Cuando la parada ocurre tras ediciones dirigidas ya realizadas, estas DEBEN quedar como cambios sin confirmar en el árbol de trabajo, informadas y revertibles con git, y el cambio permanece en `openspec/changes/`.
+(Previously: incluía como causas un dominio no declarado en la baseline, las precondiciones de integración de la baseline, la declaración `baseline:` inválida y el almacén `engram`/`none` con baseline del proyecto; ahora la causa (f) incluye el `baseline:` residual)
 
 #### Scenario: Falta el delta de contexto
 - **DADO** `technical_context.maintained` declarado y un cambio sin delta de contexto
@@ -137,7 +126,7 @@ Archive DEBE detenerse sin mover el cambio a `openspec/changes/archive/`, nombra
 - **Y** el cambio permanece en `openspec/changes/`
 
 #### Scenario: Falla una precondición de la integración
-- **DADO** un documento afectado con cambios sin confirmar
+- **DADO** un documento mantenido afectado con cambios sin confirmar
 - **CUANDO** se solicita el archivado
 - **ENTONCES** archive se detiene nombrando el documento y la continuación
 - **Y** ningún documento se modifica
@@ -149,21 +138,27 @@ Archive DEBE detenerse sin mover el cambio a `openspec/changes/archive/`, nombra
 - **Y** las ediciones realizadas quedan como cambios sin confirmar, informadas y revertibles con git
 - **Y** el cambio permanece en `openspec/changes/`
 
-#### Scenario: Declaración inválida
-- **DADO** un `axiom.yaml` con un bloque `baseline:` inválido
+#### Scenario: Declaración de contexto inválida
+- **DADO** un `axiom.yaml` con un bloque `technical_context:` inválido
 - **CUANDO** se solicita el archivado
 - **ENTONCES** archive se detiene nombrando la causa y `axiom workspace validate`
 
+#### Scenario: Un `baseline:` residual detiene el archivado
+- **DADO** un `axiom.yaml` que aún declara un bloque `baseline:`
+- **CUANDO** se solicita el archivado
+- **ENTONCES** archive se detiene con el motivo tipado de REQ-30.21 y la continuación de retirar `baseline:` y migrar con `axiom archive adopt`
+- **Y** no se escribe en `openspec/specs/`
+
 #### Scenario: Almacén de artefactos sin ficheros
-- **DADO** una baseline del proyecto o `technical_context.maintained` declarados y `artifact_store: engram` (o `none`) en `openspec/config.yaml`
+- **DADO** `technical_context.maintained` declarado y `artifact_store: engram` (o `none`) en `openspec/config.yaml`
 - **CUANDO** se solicita el archivado
 - **ENTONCES** archive se detiene nombrando el almacén declarado y la continuación (declarar `openspec` o `hybrid`, o retirar la declaración)
 - **Y** no se modifica ningún documento ni se archiva el cambio
 
-#### Scenario: Sin baseline del proyecto ni contexto mantenido el almacén Engram no detiene el archivado
-- **DADO** un proyecto con `artifact_store: engram`, sin baseline del proyecto ni contexto mantenido, y con la precondición de archivado satisfecha
+#### Scenario: Sin contexto mantenido el almacén Engram no detiene el archivado
+- **DADO** un proyecto con `artifact_store: engram`, sin contexto mantenido y con la precondición de archivado satisfecha
 - **CUANDO** se solicita el archivado
-- **ENTONCES** archive no se detiene por el almacén y se comporta como antes de esta capacidad
+- **ENTONCES** archive no se detiene por el almacén y se comporta como antes de este cambio
 
 ---
 
@@ -184,13 +179,14 @@ Cuando el delta de contexto declara «Sin impacto», archive DEBE dejar intactas
 - **Y** archive se detiene
 ### Requirement: En Monorepo el Archive se Ejecuta en la Rama de Archivado y se Entrega en un PR Documental Aparte (REQ-25.39)
 
-En los repositorios con rama de cambio (`monorepo-embedded`), `archive` DEBE ejecutarse en la rama de archivado `<prefijo>/<cambio>-archive` (REQ-25.45 de `change-branch-lifecycle`), que se crea con `axiom branch ensure --change <c> --archive` **después** de fusionar en la rama de integración el PR del cambio, y su resultado DEBE entregarse en un PR documental aparte contra la rama de integración. La precondición de `archive` es la de REQ-21.16, sin excepción: evidencia `pr_merged` del PR del cambio (verificada contra el grafo git del repositorio del planning home), veredicto favorable de verificación y compuertas aprobadas. Archivar en cualquier otra rama (la del cambio, la de integración, una de rol o una ajena) DEBE rechazarse: `axiom sdd status` proyecta `blocked(wrong_branch)` en la fase archive con la continuación exacta `axiom branch ensure --cwd <ruta> --change <c> --archive` (REQ-25.42 de `axiom-sdd-cli-integration`) y el escritor de archive se niega con `wrong_branch` (REQ-25.19), nombrando la rama esperada y sin mover el cambio. El PR documental contiene solo documentación: el movimiento del cambio a `openspec/changes/archive/`, la integración en la baseline declarada y los índices. Mientras el cambio no se haya archivado, el cambio fusionado figura como pendiente de archivar (REQ-25.20) sin bloquear nada. Tras fusionar el PR documental, `axiom branch done` elimina la rama de archivado (REQ-25.16 y REQ-25.17). En el repositorio de specs de un `multirepo` NO existe rama de archivado: `archive` se ejecuta in situ en la rama de integración, conserva la precondición de REQ-21.16 (evidencia `pr_merged` contra el repositorio de especificaciones, `deployment` o `attestation`) y no crea ramas ni worktrees (REQ-25.5). La skill `sdd-archive` DEBE indicar este orden y la rama.
+En los repositorios con rama de cambio (`monorepo-embedded`), `archive` DEBE ejecutarse en la rama de archivado `<prefijo>/<cambio>-archive` (REQ-25.45 de `change-branch-lifecycle`), que se crea con `axiom branch ensure --change <c> --archive` **después** de fusionar en la rama de integración el PR del cambio, y su resultado DEBE entregarse en un PR documental aparte contra la rama de integración. La precondición de `archive` es la de REQ-21.16, sin excepción: evidencia `pr_merged` del PR del cambio (verificada contra el grafo git del repositorio del planning home), veredicto favorable de verificación y compuertas aprobadas. Archivar en cualquier otra rama (la del cambio, la de integración, una de rol o una ajena) DEBE rechazarse: `axiom sdd status` proyecta `blocked(wrong_branch)` en la fase archive con la continuación exacta `axiom branch ensure --cwd <ruta> --change <c> --archive` (REQ-25.42 de `axiom-sdd-cli-integration`) y el escritor de archive se niega con `wrong_branch` (REQ-25.19), nombrando la rama esperada y sin mover el cambio. El PR documental contiene solo documentación: el movimiento del cambio a `openspec/changes/archive/`, la integración en `openspec/specs/` y los índices. Mientras el cambio no se haya archivado, el cambio fusionado figura como pendiente de archivar (REQ-25.20) sin bloquear nada. Tras fusionar el PR documental, `axiom branch done` elimina la rama de archivado (REQ-25.16 y REQ-25.17). En el repositorio de specs de un `multirepo` NO existe rama de archivado: `archive` se ejecuta in situ en la rama de integración, conserva la precondición de REQ-21.16 (evidencia `pr_merged` contra el repositorio de especificaciones, `deployment` o `attestation`) y no crea ramas ni worktrees (REQ-25.5). La skill `sdd-archive` DEBE indicar este orden y la rama.
+(Previously: el PR documental contenía la integración «en la baseline declarada»; la baseline ajena se retira)
 
 #### Scenario: Archive en la rama de archivado con la evidencia del PR del cambio
 - **DADO** un monorepo con el cambio `x` fusionado en la rama de integración, evidencia `pr_merged` del PR del cambio, `verify-report.md` favorable, compuertas aprobadas y el repositorio desplegado en `feat/x-archive`
 - **CUANDO** se ejecuta `archive`
 - **ENTONCES** `openspec/changes/archive/<fecha>-x/` existe en la rama `feat/x-archive` y `openspec/changes/x/` ya no existe en ella
-- **Y** la integración en la baseline declarada y los índices se actualizan en esa rama
+- **Y** la integración en `openspec/specs/` y los índices se actualizan en esa rama
 - **Y** ningún fichero de código fuente cambia respecto de la rama de integración
 
 #### Scenario: Sin la evidencia del PR del cambio el archive se rechaza aunque la rama sea la de archivado
@@ -254,9 +250,13 @@ En los repositorios con rama de cambio (`monorepo-embedded`), `archive` DEBE eje
 - **DADO** el texto de `sdd-archive/SKILL.md`
 - **CUANDO** se inspecciona (pin de texto)
 - **ENTONCES** indica crear la rama de archivado con `axiom branch ensure --change <c> --archive` tras fusionar el PR del cambio, ejecutar allí el archive y entregarlo en un PR documental aparte
+
+---
+
 ### Requirement: Publicación de la Documentación Tras el Archivado (REQ-27.14)
 
-Una vez completado `archive`, la documentación que toca el archivado DEBE poder publicarse con `axiom sdd publish --change <x> --archive` (capacidad `sdd-docs-publication`) sobre la rama donde se archivó (el indicador `--archive` selecciona la rama de archivado como rama esperada de `publish`): en `monorepo-embedded`, la rama de archivado `<prefijo>/<cambio>-archive` que prepara `axiom branch ensure --change <x> --archive` (REQ-25.45 de `change-branch-lifecycle`); en el repositorio de specs de un `multirepo`, su rama de integración, donde se archiva in situ. La publicación DEBE incluir únicamente rutas de la lista cerrada de documentación (REQ-27.5): la carpeta archivada del cambio bajo `openspec/changes/archive/`, el borrado del directorio `openspec/changes/<x>/`, las especificaciones vivas de `openspec/specs/` que integró el archivado, `openspec/INDEX.md` y las rutas de baseline o de contexto técnico mantenido a las que el archivado integró su delta (REQ-24.55). NO DEBE incluir código ni rutas de `technical_context.reference`. En un cambio `continuous` con `docs_publication: auto` el orquestador DEBE ejecutar la publicación al cerrar el archivado, sin preguntar (REQ-27.13); en un cambio sin ese campo DEBE ofrecer `axiom sdd publish --change <x> --archive` como siguiente paso, y en un cambio `checkpointed` DEBE ofrecerlo igualmente, sin parada adicional. `archive` NO DEBE ejecutar `git commit` ni `git push` por sí mismo: la publicación es una orden aparte. Una negativa de `publish` (rama equivocada, almacén sin ficheros, remoto inexistente) es informativa y NO revierte el archivado. La PR documental contra la integración y su merge siguen siendo decisión de la persona (REQ-25.39).
+Una vez completado `archive`, la documentación que toca el archivado DEBE poder publicarse con `axiom sdd publish --change <x> --archive` (capacidad `sdd-docs-publication`) sobre la rama donde se archivó (el indicador `--archive` selecciona la rama de archivado como rama esperada de `publish`): en `monorepo-embedded`, la rama de archivado `<prefijo>/<cambio>-archive` que prepara `axiom branch ensure --change <x> --archive` (REQ-25.45 de `change-branch-lifecycle`); en el repositorio de specs de un `multirepo`, su rama de integración, donde se archiva in situ. La publicación DEBE incluir únicamente rutas de la lista cerrada de documentación (REQ-27.5): la carpeta archivada del cambio bajo `openspec/changes/archive/`, el borrado del directorio `openspec/changes/<x>/`, las especificaciones vivas de `openspec/specs/` que integró el archivado, `openspec/INDEX.md` y las rutas de contexto técnico mantenido a las que el archivado integró su delta (REQ-24.55). NO DEBE incluir código ni rutas de `technical_context.reference`. En un cambio `continuous` con `docs_publication: auto` el orquestador DEBE ejecutar la publicación al cerrar el archivado, sin preguntar (REQ-27.13); en un cambio sin ese campo DEBE ofrecer `axiom sdd publish --change <x> --archive` como siguiente paso, y en un cambio `checkpointed` DEBE ofrecerlo igualmente, sin parada adicional. `archive` NO DEBE ejecutar `git commit` ni `git push` por sí mismo: la publicación es una orden aparte. Una negativa de `publish` (rama equivocada, almacén sin ficheros, remoto inexistente) es informativa y NO revierte el archivado. La PR documental contra la integración y su merge siguen siendo decisión de la persona (REQ-25.39).
+(Previously: la lista incluía también las rutas de baseline a las que el archivado integraba su delta; la baseline ajena se retira)
 
 #### Scenario: Monorepo publica la rama de archivado
 
@@ -271,11 +271,11 @@ Una vez completado `archive`, la documentación que toca el archivado DEBE poder
 - **CUANDO** se ejecuta `axiom sdd publish --change x --archive` en ese repositorio
 - **ENTONCES** se sube su rama de integración a `origin` con los documentos archivados
 
-#### Scenario: La baseline y el contexto mantenido integrados se publican
+#### Scenario: El contexto mantenido integrado se publica
 
-- **DADO** un archivado que integró su delta en `docs/requisitos.md` (baseline declarada) y `docs/arquitectura.md` (`technical_context.maintained`)
+- **DADO** un archivado que integró su delta de contexto en `docs/arquitectura.md` (`technical_context.maintained`)
 - **CUANDO** se ejecuta `axiom sdd publish --change x --archive`
-- **ENTONCES** ambas rutas figuran en el commit
+- **ENTONCES** esa ruta figura en el commit
 - **Y** una ruta de `technical_context.reference` modificada en el mismo árbol no figura en el commit
 
 #### Scenario: Cambio continuo autorizado publica al archivar
@@ -429,3 +429,97 @@ En un cambio ISO, `archive` DEBE bloquearse con un motivo tipado mientras la mat
 - **DADO** un cambio no ISO y un `verify-report.md` con veredicto fallido o ausente, y el resto de precondiciones satisfechas
 - **CUANDO** se solicita el archivado
 - **ENTONCES** el archivado no se bloquea por la verificación, como antes de este cambio
+### Requirement: Composición Nativa de OpenSpec con `axiom sdd archive-compose --canonical --delta` (REQ-30.22)
+
+La composición de una delta sobre una especificación canónica y `axiom sdd archive-compose --canonical <ruta> --delta <ruta>` DEBEN producir la salida con identidad por el texto exacto del nombre del requisito, orden de aplicación RENAMED, MODIFIED, REMOVED y ADDED, rechazo sin escribir ante una delta no aplicable y opciones `--supersede` y `--superseded-requirements`. Toda composición aceptada produce la misma salida byte a byte que antes de este cambio. `archive-compose` NO DEBE aceptar los modos `--document` ni `--in-place`: su uso DEBE rechazarse con un motivo tipado que indique que la baseline ajena se retiró y que la composición es `--canonical --delta`. (Es REQ-24.38 de `spec-baseline-integration`, aplicable a OpenSpec, más la retirada de los modos de documento.)
+
+Supuesto: se conservan sin cambios las pruebas nativas de composición de `--canonical --delta`.
+
+#### Scenario: La salida nativa no cambia
+- **DADO** una especificación canónica y un delta con ADDED, MODIFIED, REMOVED y RENAMED
+- **CUANDO** se ejecuta `axiom sdd archive-compose --canonical <ruta> --delta <ruta>`
+- **ENTONCES** la salida es idéntica byte a byte a la que producía la composición antes de este cambio
+
+#### Scenario: Rechazo nativo sin escribir
+- **DADO** un delta con un MODIFIED sobre un nombre de requisito inexistente
+- **CUANDO** se ejecuta la composición con `--output <ruta>`
+- **ENTONCES** finaliza con código distinto de cero nombrando la sección y el requisito
+- **Y** no se escribe el fichero de salida
+
+#### Scenario: `--supersede` conserva su comportamiento
+- **DADO** un delta con un REMOVED y la opción `--supersede`
+- **CUANDO** se compone
+- **ENTONCES** el requisito se conserva marcado como superado, con su nota de motivo
+
+#### Scenario: Los modos de documento se rechazan
+- **DADO** el binario `axiom`
+- **CUANDO** se ejecuta `axiom sdd archive-compose --document <dominio> --delta <ruta>` o con `--in-place`
+- **ENTONCES** finaliza con código distinto de cero con un motivo tipado que remite a `--canonical --delta`
+- **Y** no se escribe ningún fichero
+
+---
+
+### Requirement: Fidelidad de Bytes al Componer (REQ-30.23)
+
+La composición DEBE preservar byte a byte todo lo que no pertenece a un bloque editado: finales de línea (LF y CRLF), marca de orden de bytes (BOM) UTF-8, contenido entre bloques y final del fichero. Los bloques insertados o sustituidos DEBEN emitirse con el final de línea del documento y NUNCA DEBEN introducir un BOM; si el fichero tiene BOM, se conserva. Si el documento no termina en salto de línea y el último bloque no se edita, el final del fichero se conserva. (Es REQ-24.45 de `spec-baseline-integration`.)
+
+#### Scenario: Round-trip en LF, CRLF y CRLF con BOM
+- **DADO** una especificación fixture en variantes LF, CRLF y CRLF con BOM
+- **CUANDO** se compone un delta con ADDED, MODIFIED y REMOVED
+- **ENTONCES** la salida es idéntica byte a byte a la original salvo en los bloques editados, en las tres variantes
+
+#### Scenario: Los bloques editados usan el final de línea del documento
+- **DADO** un documento CRLF y un delta en LF
+- **CUANDO** se compone
+- **ENTONCES** los bloques insertados o sustituidos usan CRLF y el fichero no contiene saltos LF sueltos
+
+#### Scenario: El BOM se conserva y no se añade
+- **DADO** un documento con BOM y otro sin BOM
+- **CUANDO** se componen sendos deltas
+- **ENTONCES** el primero conserva su BOM y el segundo no gana BOM
+
+#### Scenario: Final de fichero sin salto de línea
+- **DADO** un documento cuyo último bloque no termina en salto de línea y un delta que no lo edita
+- **CUANDO** se compone
+- **ENTONCES** el final del fichero conserva sus bytes
+
+---
+
+### Requirement: Validación Completa antes de Escribir (REQ-30.24)
+
+Todas las composiciones de todas las capacidades del cambio DEBEN validarse y componerse en memoria antes de escribir ninguna especificación ni el contexto: o se aplican todas las composiciones o ninguna. Un rechazo NO DEBE dejar la spec viva parcialmente modificada y DEBE nombrar la capacidad, la sección, el requisito y el motivo. La integración del contexto solo comienza cuando todas las composiciones han tenido éxito. (Es REQ-24.46 de `spec-baseline-integration`.)
+
+#### Scenario: Una capacidad falla y ninguna se modifica
+- **DADO** un cambio con deltas para dos capacidades, la segunda con un MODIFIED sobre un requisito inexistente
+- **CUANDO** se ejecuta el archivado
+- **ENTONCES** se rechaza nombrando la capacidad, la sección y el requisito
+- **Y** ninguna especificación cambia
+
+#### Scenario: Todas las operaciones válidas se aplican
+- **DADO** un cambio con deltas válidos para dos capacidades
+- **CUANDO** se ejecuta el archivado
+- **ENTONCES** ambas especificaciones se sustituyen por su composición
+
+#### Scenario: La integración del contexto no empieza si una composición falla
+- **DADO** un cambio con una composición inválida y un delta de contexto válido
+- **CUANDO** se ejecuta el archivado
+- **ENTONCES** se rechaza nombrando la composición inválida
+- **Y** no se edita ningún documento del contexto
+
+---
+
+### Requirement: Retirada de `axiom sdd integrate` (REQ-30.25)
+
+El subcomando `axiom sdd integrate` NO DEBE existir. Su invocación DEBE rechazarse con un motivo tipado que remita a `axiom archive context check|prepare|verify|show` para el contexto técnico (REQ-30.15 de `project-technical-context`) y a `axiom archive adopt` para la migración (REQ-30.9 y REQ-30.11 de `openspec-adoption`), sin escribir nada. Las skills y la doctrina gestionadas NO DEBEN citar `axiom sdd integrate`.
+
+#### Scenario: `axiom sdd integrate` remite a los verbos nuevos
+- **DADO** el binario `axiom`
+- **CUANDO** se ejecuta `axiom sdd integrate check --change <cambio>`
+- **ENTONCES** finaliza con código distinto de cero con un motivo tipado que nombra `axiom archive context` y `axiom archive adopt`
+- **Y** no se escribe ningún fichero
+
+#### Scenario: Las skills no citan el verbo retirado
+- **DADO** los textos de las skills y la doctrina gestionadas
+- **CUANDO** se inspeccionan (pin de texto)
+- **ENTONCES** ninguno contiene `axiom sdd integrate`
+

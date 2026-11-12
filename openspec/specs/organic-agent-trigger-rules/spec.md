@@ -272,7 +272,14 @@ this same capability already governs.
 
 ### Requirement: El cierre de ODD mantiene al día el contexto técnico mantenido (REQ-24.58)
 
-Las instrucciones de enrutamiento gestionadas que proyectan el protocolo ODD DEBEN incluir, en su paso de cierre, una regla mínima: si el proyecto declara un contexto técnico mantenido (`technical_context.maintained` en `axiom.yaml`) y una unidad de trabajo cambia algo que ese contexto documenta, la documentación afectada se actualiza en el mismo commit de esa unidad de trabajo. La regla NO DEBE exigir nada cuando el proyecto no declara contexto mantenido, NO DEBE autorizar la modificación de documentación declarada como de referencia (`technical_context.reference`) y NO DEBE alterar los demás pasos del protocolo ODD ni el carril SDD. La proyección DEBE seguir siendo determinista: el mismo texto en cada renderizado. Esta regla es la extensión mínima de `project-technical-context` al carril ODD, que no tiene archive.
+Las instrucciones de enrutamiento gestionadas que proyectan el protocolo ODD DEBEN incluir, en su paso de cierre, estas reglas mínimas, en un texto idéntico para todos los proyectos y adaptadores:
+
+1. Contexto técnico: el cierre DEBE indicar que se lea `technicalContext.maintained.entry` y `technicalContext.maintained.paths` de la salida de `axiom sdd status --json` (el localizador del contexto mantenido) y que, si el proyecto declara un contexto técnico mantenido y una unidad de trabajo cambia algo que ese contexto documenta, la documentación afectada se actualiza en el mismo commit de esa unidad de trabajo, abriendo primero `entry`. La regla NO DEBE exigir nada cuando el proyecto no declara contexto mantenido y NO DEBE autorizar la modificación de documentación declarada como de referencia (`technical_context.reference`).
+2. Spec viva: el cierre DEBE indicar que, cuando el trabajo cambia o debe revisar la spec viva, la delta OpenSpec se escribe en la sección `## Spec viva` del documento `odd/tasks/<feature>.md`, que todo bug (señalado con `Tipo: bug`) aporta una `## Spec viva` con contenido o el marcador de la sección `## Impacto en la spec` (la línea `Sin impacto en la spec` más una línea `Motivo:` no vacía, el mismo contrato que el carril SDD; el bug ODD no exige `## Informe de bug`) y que se ejecuta `axiom archive integrate --odd <feature>` en el commit de la unidad de trabajo que cierra la feature, sin paradas (REQ-27.17). La integración en `openspec/specs/` es la única escritura permitida fuera del documento ODD y del código.
+3. Remisión: el cierre NO DEBE contener el valor del carril ni la condición ISO de ningún proyecto; la negativa de la integración en proyectos ISO la emite el verbo (REQ-30.7 de `odd-living-spec-integration`).
+
+El cierre NO DEBE alterar los demás pasos del protocolo ODD ni el carril SDD. La proyección DEBE seguir siendo determinista: el mismo texto en cada renderizado. Estas reglas son la extensión de `project-technical-context` y de `odd-living-spec-integration` al carril ODD, que no tiene archive.
+(Previously: el cierre solo exigía actualizar el contexto mantenido en el mismo commit, sin localizador de `axiom sdd status --json` y sin la integración de la spec viva)
 
 #### Scenario: La regla figura en el paso de cierre del protocolo ODD
 
@@ -280,6 +287,19 @@ Las instrucciones de enrutamiento gestionadas que proyectan el protocolo ODD DEB
 - **CUANDO** se renderizan sus instrucciones de enrutamiento gestionadas
 - **ENTONCES** el paso de cierre del protocolo ODD incluye la regla de actualizar el contexto técnico mantenido en el mismo commit de la unidad de trabajo
 - **Y** la regla indica que solo aplica cuando el proyecto declara `technical_context.maintained`
+
+#### Scenario: El cierre cita el localizador del contexto
+
+- **DADO** las instrucciones de enrutamiento renderizadas
+- **CUANDO** se inspecciona (pin de texto) el paso de cierre
+- **ENTONCES** indica leer `technicalContext.maintained.entry` y `technicalContext.maintained.paths` de `axiom sdd status --json`
+
+#### Scenario: El cierre manda integrar la spec viva y declarar el impacto de los bugs
+
+- **DADO** las instrucciones de enrutamiento renderizadas
+- **CUANDO** se inspecciona (pin de texto) el paso de cierre
+- **ENTONCES** indica la sección `## Spec viva`, el marcador de `## Impacto en la spec` para los bugs sin delta (la línea literal `Sin impacto en la spec` y una línea `Motivo:`) y la ejecución de `axiom archive integrate --odd <feature>`
+- **Y** no contiene ninguna parada ni el texto de las tres salidas
 
 #### Scenario: La regla no exige nada sin contexto mantenido
 
@@ -294,11 +314,11 @@ Las instrucciones de enrutamiento gestionadas que proyectan el protocolo ODD DEB
 - **CUANDO** una unidad de trabajo bajo ODD cambia algo que esa documentación describe
 - **ENTONCES** la regla no autoriza a modificarla
 
-#### Scenario: El renderizado sigue siendo determinista
+#### Scenario: El renderizado sigue siendo determinista e idéntico entre proyectos
 
-- **DADO** una sincronización de adaptador
+- **DADO** una sincronización de adaptador y dos proyectos, uno ISO y otro no
 - **CUANDO** se renderizan repetidamente las instrucciones de enrutamiento gestionadas
-- **ENTONCES** el texto es idéntico en cada renderizado
+- **ENTONCES** el texto es idéntico en cada renderizado y entre proyectos
 - **Y** los demás pasos del protocolo ODD y el carril SDD no cambian
 ### Requirement: El Protocolo ODD Prepara la Rama con `axiom branch ensure` (REQ-25.40)
 
