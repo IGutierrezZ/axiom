@@ -261,3 +261,87 @@ func mustLoadKickoff(t *testing.T, changeRoot string) *kickoff.Kickoff {
 	}
 	return sealed
 }
+
+// TestGateDigestBugWithoutDelta fija el acuerdo de D20 entre `gate record` y el
+// status: sin delta, un bug declarado en proposal.md hace que la compuerta
+// `spec` juzgue proposal.md, y el rechazo registrado sobrevive a la siguiente
+// lectura del status; una declaración incompleta no produce huella.
+func TestGateDigestBugWithoutDelta(t *testing.T) {
+	const report = "## Informe de bug\n\nObservado: el total omite el IVA.\nEsperado: el total lo incluye.\n"
+
+	t.Run("declaración completa", func(t *testing.T) {
+		root, changeRoot := newGovernanceWorkspace(t, "inc-99-example")
+		sealForGateTest(t, root, "inc-99-example")
+		proposal := filepath.Join(changeRoot, "proposal.md")
+		if err := os.WriteFile(proposal, []byte("# Propuesta\n\n"+report), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		want, err := kickoff.ArtifactDigest([]string{proposal})
+		if err != nil {
+			t.Fatal(err)
+		}
+		got, err := gateArtifactDigest(changeRoot, kickoff.GateSpec, mustLoadKickoff(t, changeRoot))
+		if err != nil || got != want {
+			t.Fatalf("gateArtifactDigest(spec) = (%q, %v), se esperaba la huella de proposal.md %q", got, err, want)
+		}
+
+		const reason = "falta la referencia externa"
+		if err := RunSDDGate([]string{
+			"record", "--cwd", root, "--change", "inc-99-example",
+			"--gate", "spec", "--decision", "rejected", "--reason", reason, "--actor", "reviewer",
+		}, &bytes.Buffer{}); err != nil {
+			t.Fatalf("RunSDDGate() error = %v", err)
+		}
+		status, err := sddstatus.Resolve(sddstatus.ResolveOptions{CWD: root, ChangeName: "inc-99-example"})
+		if err != nil || status.Governance == nil {
+			t.Fatalf("sddstatus.Resolve() = (governance=%v, err=%v)", status.Governance != nil, err)
+		}
+		var found bool
+		for _, gate := range status.Governance.Gates {
+			if gate.Key != kickoff.GateSpec {
+				continue
+			}
+			found = true
+			if gate.Status != "rejected" || gate.Reason != reason || gate.Reopened {
+				t.Fatalf(`gate "spec" = %+v, se esperaba rejected sin reabrir: la huella del registro y la del status deben coincidir`, gate)
+			}
+		}
+		if !found {
+			t.Fatal(`no se encontro la compuerta "spec" en status.Governance.Gates`)
+		}
+	})
+
+	t.Run("declaración incompleta", func(t *testing.T) {
+		root, changeRoot := newGovernanceWorkspace(t, "inc-99-example")
+		sealForGateTest(t, root, "inc-99-example")
+		if err := os.WriteFile(filepath.Join(changeRoot, "proposal.md"), []byte("## Informe de bug\n\nObservado: algo.\n"), 0644); err != nil {
+			t.Fatal(err)
+		}
+		if got, err := gateArtifactDigest(changeRoot, kickoff.GateSpec, mustLoadKickoff(t, changeRoot)); err != nil || got != "" {
+			t.Fatalf("gateArtifactDigest(spec) = (%q, %v), una declaración incompleta no produce huella", got, err)
+		}
+	})
+
+	t.Run("con delta juzga las specs", func(t *testing.T) {
+		root, changeRoot := newGovernanceWorkspace(t, "inc-99-example")
+		sealForGateTest(t, root, "inc-99-example")
+		if err := os.WriteFile(filepath.Join(changeRoot, "proposal.md"), []byte(report), 0644); err != nil {
+			t.Fatal(err)
+		}
+		specPath := filepath.Join(changeRoot, "specs", "auth", "spec.md")
+		if err := os.MkdirAll(filepath.Dir(specPath), 0755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(specPath, []byte("### Requirement: Auth\n#### Scenario: x\n"), 0644); err != nil {
+			t.Fatal(err)
+		}
+		want, err := kickoff.ArtifactDigest([]string{specPath})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got, err := gateArtifactDigest(changeRoot, kickoff.GateSpec, mustLoadKickoff(t, changeRoot)); err != nil || got != want {
+			t.Fatalf("gateArtifactDigest(spec) = (%q, %v), con delta se esperaba la huella de las specs %q", got, err, want)
+		}
+	})
+}

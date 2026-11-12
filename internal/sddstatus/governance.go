@@ -485,12 +485,21 @@ func governanceArtifactInputs(changeRoot string, roles []kickoff.KickoffRole) (m
 		tasksPaths = nil
 	}
 
+	// D20: en un bug sin delta la compuerta `spec` juzga proposal.md, que lleva el
+	// informe de bug y, en su caso, la marca de «sin impacto». Con delta juzga las
+	// specs como siempre. internal/cli/sdd_gate_digest.go aplica el mismo criterio
+	// para que `gate record` y este cálculo coincidan.
+	specPaths := artifactPaths.Specs
+	if bugDeclaredWithoutDelta(artifactPaths.Specs, artifactPaths.Proposal) {
+		specPaths = artifactPaths.Proposal
+	}
+
 	artifacts := make(map[string]string, 3+len(roles))
 	for _, entry := range []struct {
 		key   string
 		paths []string
 	}{
-		{key: "spec", paths: artifactPaths.Specs},
+		{key: "spec", paths: specPaths},
 		{key: "design", paths: artifactPaths.Design},
 		{key: "tasks", paths: tasksPaths},
 	} {

@@ -136,11 +136,11 @@ Sin dependencias internas; todo son funciones puras con pruebas por tablas.
 
 ### U10 · `feat(sddstatus): perfil de bug sin delta y compuerta spec sobre proposal.md`
 
-- [ ] 10.1 Crear `internal/sddstatus/iso.go` (parte del perfil de bug: adaptador de D9) y modificar `internal/sddstatus/status.go` (llamada en `resolveOpenSpecStatus` tras calcular `artifacts`); pruebas en `internal/sddstatus/iso_test.go`.
+- [x] 10.1 Crear `internal/sddstatus/iso.go` (parte del perfil de bug: adaptador de D9) y modificar `internal/sddstatus/status.go` (llamada en `resolveOpenSpecStatus` tras calcular `artifacts`); pruebas en `internal/sddstatus/iso_test.go`.
   Cubre: REQ-29.15, REQ-29.16
   Aceptación: sin las secciones, estado idéntico al actual; declaración válida, `specs` pasa a `done`; incompleta, `specs` sigue `missing` con un motivo por cada falta; con delta, las secciones no se analizan; vale en todo proyecto, sea o no ISO.
   Comprobación: `go test ./internal/sddstatus/ -run TestISOBugProfile`
-- [ ] 10.2 Modificar `internal/sddstatus/governance.go` (huella de la compuerta `spec` sobre `proposal.md` en un bug sin delta), `internal/cli/sdd_gate_digest.go` (mismo criterio) y `internal/sddstatus/governance_test.go`.
+- [x] 10.2 Modificar `internal/sddstatus/governance.go` (huella de la compuerta `spec` sobre `proposal.md` en un bug sin delta), `internal/cli/sdd_gate_digest.go` (mismo criterio) y `internal/sddstatus/governance_test.go`.
   Cubre: REQ-29.15
   Aceptación: la compuerta `spec` de un bug sin delta se abre, se reabre al cambiar `proposal.md` y la huella coincide entre status y `gate record`; con delta, juzga las specs como hoy.
   Comprobación: `go test ./internal/sddstatus/ -run TestGovernanceSpecGateBugWithoutDelta` y `go test ./internal/cli/ -run TestGateDigestBugWithoutDelta`

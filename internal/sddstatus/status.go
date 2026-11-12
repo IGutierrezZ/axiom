@@ -661,6 +661,13 @@ func resolveByPreferenceOrder(options ResolveOptions) (Status, error) {
 		ApplyProgress: singleArtifactState(artifactPaths.ApplyProgress),
 		VerifyReport:  singleArtifactState(artifactPaths.VerifyReport),
 	}.statesFor(ArtifactStoreOpenSpec)
+	// REQ-29.15 (design D9): sin delta, un bug declarado en proposal.md cumple el
+	// artefacto de specs; una declaración incompleta lo deja `missing` con un
+	// motivo por cada falta. Vale en todo proyecto, sea o no ISO.
+	bug := evaluateBugProfile(artifacts["specs"], artifactPaths.Proposal)
+	if bug.satisfiesSpecs() {
+		artifacts["specs"] = ArtifactDone
+	}
 	var taskProgress TaskProgress
 	editPlans := []planText{{name: "tasks.md", text: readText(firstPath(artifactPaths.Tasks))}}
 	if perRoleTasks != nil {
@@ -706,6 +713,7 @@ func resolveByPreferenceOrder(options ResolveOptions) (Status, error) {
 	if artifacts["specs"] == ArtifactPartial {
 		blockedReasons.genuine = append(blockedReasons.genuine, openSpecSpecsLayoutReason(changeName))
 	}
+	blockedReasons.genuine = append(blockedReasons.genuine, findingReasons(bug.findings)...)
 	// Guarda B (REQ-25.42, design D-13): un único punto, después de resolveApplyState y loadGovernance
 	// y antes de la autoridad de edición. Con la rama equivocada esta no se evalúa (S-9): sin sobre de
 	// consentimiento ni marcador pendiente; tras corregir la rama aparece edit_authority_missing.
