@@ -56,7 +56,7 @@ func runSDDKickoffSeal(args []string, stdout io.Writer) error {
 	if parsed.Infer {
 		// El retrosellado es de un cambio con artefactos: nunca crea la carpeta.
 		if !existed {
-			return fmt.Errorf("el cambio %q no existe en %q; `seal --infer` retrosella un cambio que ya tiene artefactos y nunca crea la carpeta; para sellar un cambio nuevo ejecuta `seal` sin `--infer`",
+			return fmt.Errorf("el cambio %q no existe en %q; `seal --infer` retrosella un cambio que ya tiene artefactos y nunca crea la carpeta; para sellar un cambio nuevo ejecuta `axiom sdd kickoff seal` sin `--infer`",
 				parsed.Change, changeRoot)
 		}
 		designPath := filepath.Join(changeRoot, "design.md")
@@ -125,7 +125,7 @@ func resolveSealChangeRoot(cwd, change string) (workspace.Location, string, bool
 		return workspace.Location{}, "", false, fmt.Errorf("--change %q no es un nombre de cambio válido: %w", change, err)
 	}
 	if change == "archive" {
-		return workspace.Location{}, "", false, fmt.Errorf("--change %q es un nombre reservado: openspec/changes/archive/ guarda los cambios archivados", change)
+		return workspace.Location{}, "", false, fmt.Errorf("--change %q es un nombre reservado: openspec/changes/archive/ guarda los cambios archivados; elige otro nombre y ejecuta `axiom sdd kickoff seal --change <nombre>`", change)
 	}
 	loc, err := workspace.Locate(cwd)
 	if err != nil {

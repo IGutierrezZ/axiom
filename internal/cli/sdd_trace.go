@@ -59,7 +59,7 @@ func RunSDDTrace(args []string, stdout io.Writer) error {
 		if err != nil {
 			reason = err.Error()
 		}
-		return fmt.Errorf("sdd trace: --change %q no es un nombre de cambio válido: %s", *change, reason)
+		return fmt.Errorf("sdd trace: --change %q no es un nombre de cambio válido: %s; usa el nombre de la carpeta del cambio que proyecta `axiom sdd status --cwd <dir> --json`", *change, reason)
 	}
 	if *integrationBranch != "" {
 		if err := gitref.ValidRefName(*integrationBranch); err != nil {
@@ -128,7 +128,7 @@ func planningHomePrefix(gitRoot, planningHome string) (string, error) {
 	}
 	relative, err := filepath.Rel(resolve(gitRoot), resolve(planningHome))
 	if err != nil || relative == ".." || strings.HasPrefix(relative, ".."+string(filepath.Separator)) || filepath.IsAbs(relative) {
-		return "", fmt.Errorf("el planning home %s no está dentro del repositorio git %s", planningHome, gitRoot)
+		return "", fmt.Errorf("el planning home %s no está dentro del repositorio git %s; ejecuta `axiom sdd trace` con un `--cwd` dentro del repositorio que contiene el planning home", planningHome, gitRoot)
 	}
 	relative = filepath.ToSlash(relative)
 	if relative == "." {
@@ -204,6 +204,7 @@ func revision(rev string) error {
 }
 
 func gitFailure(result gitcommon.Result, what string) error {
+	// refusal:by-design world-action: el fallo lo produce git y su salida de error, incluida en el mensaje, nombra la causa y su remedio.
 	return fmt.Errorf("%s falló (salida %d): %s", what, result.ExitCode, strings.TrimSpace(result.Stderr))
 }
 

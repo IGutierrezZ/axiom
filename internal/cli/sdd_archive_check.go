@@ -51,7 +51,7 @@ func RunSDDArchiveCheck(args []string, stdout io.Writer) error {
 		if err != nil {
 			reason = err.Error()
 		}
-		return fmt.Errorf("sdd archive-check: --change %q no es un nombre de cambio válido: %s", *change, reason)
+		return fmt.Errorf("sdd archive-check: --change %q no es un nombre de cambio válido: %s; usa el nombre de la carpeta del cambio que proyecta `axiom sdd status --cwd <dir> --json`", *change, reason)
 	}
 	start := *cwd
 	if strings.TrimSpace(start) == "" {
@@ -88,7 +88,7 @@ func RunSDDArchiveCheck(args []string, stdout io.Writer) error {
 	}
 	switch {
 	case report.Error != "":
-		return fmt.Errorf("sdd archive-check: %s", report.Error)
+		return fmt.Errorf("sdd archive-check: %s; revisa el cambio con `axiom sdd status %s --cwd <dir> --json` y corrige lo que no se puede leer antes de archivar", report.Error, *change)
 	case !report.OK:
 		return fmt.Errorf("sdd archive-check: el archivado del cambio %q está bloqueado por %d motivo(s); corrígelos y vuelve a ejecutar `axiom sdd archive-check --cwd <dir> --change %s` antes de componer o mover la carpeta", *change, len(report.Findings), *change)
 	}
