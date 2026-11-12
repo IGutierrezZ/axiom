@@ -580,13 +580,10 @@ func archiveDependencyFromGovernance(governance *Governance, changeName string, 
 	)
 }
 
-// lastRoleClosedForGovernance reuses kickoff.LastRoleClosed against the
-// governance snapshot's own roster and already-evaluated gate states,
-// rather than re-deriving "every role-apply gate approved" a second way.
+// lastRoleClosedForGovernance reuses kickoff.LastBlockingRoleClosed against the
+// governance snapshot's own roster (with the gate policy of each role) and
+// already-evaluated gate states, rather than re-deriving "every blocking
+// role-apply gate approved" a second way (REQ-21.15).
 func lastRoleClosedForGovernance(governance *Governance) bool {
-	roster := make([]multirole.RoleAssignment, 0, len(governance.Roster.Roles))
-	for _, role := range governance.Roster.Roles {
-		roster = append(roster, multirole.RoleAssignment{Role: role})
-	}
-	return kickoff.LastRoleClosed(roster, governance.Gates)
+	return kickoff.LastBlockingRoleClosed(governanceRoleAssignments(governance), governance.Gates)
 }

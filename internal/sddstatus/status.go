@@ -853,6 +853,7 @@ func resolveByPreferenceOrder(options ResolveOptions) (Status, error) {
 	}
 	status.Notes = append(status.Notes, blockedReasons.notes...)
 	status.Notes = append(status.Notes, handedOffNotes(governance)...)
+	status.Notes = append(status.Notes, nonBlockingRoleNotes(governance)...)
 	if options.IncludeInstructions {
 		instructions := renderPhaseInstructions(status)
 		status.PhaseInstructions = &instructions

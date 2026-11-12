@@ -82,9 +82,16 @@ func TestHandedOffToRoleApply(t *testing.T) {
 		}
 	})
 
-	t.Run("un rol rechazado cuenta como pendiente", func(t *testing.T) {
+	t.Run("un rol blocking rechazado cuenta como pendiente", func(t *testing.T) {
+		// Con qa blocking, un rechazo lo deja pendiente. (REQ-21.15: con qa deferred la
+		// verificación global ya está abierta, véase TestHandedOffToIgnoresNonBlockingRoles.)
+		allBlocking := []multirole.RoleAssignment{
+			{Role: "web", GatePolicy: multirole.PolicyBlocking},
+			{Role: "core", GatePolicy: multirole.PolicyBlocking},
+			{Role: "qa", GatePolicy: multirole.PolicyBlocking},
+		}
 		states := []GateState{gate("core", "approved"), gate("qa", "rejected"), gate("web", "approved")}
-		if got := HandedOffTo(gate("core", "approved"), roster, states); got != "apply:qa" {
+		if got := HandedOffTo(gate("core", "approved"), allBlocking, states); got != "apply:qa" {
 			t.Errorf("HandedOffTo() = %q, se esperaba apply:qa", got)
 		}
 	})

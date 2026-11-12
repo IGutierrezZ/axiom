@@ -228,11 +228,11 @@ Sin dependencias internas; todo son funciones puras con pruebas por tablas.
 
 ### U18 · `fix(sddstatus): verify solo exige los role-apply de los roles blocking`
 
-- [ ] 18.1 Modificar `internal/kickoff/machine.go` (`LastBlockingRoleClosed`, `RoleGateStatus`, `PendingNonBlockingRoles`) y `internal/kickoff/handed_off.go` (`HandedOffTo` con `LastBlockingRoleClosed`; `IntermediateMerge` solo con roles `blocking`) y sus pruebas (`internal/kickoff/machine_test.go`, `internal/kickoff/handed_off_test.go`).
+- [x] 18.1 Modificar `internal/kickoff/machine.go` (`LastBlockingRoleClosed`, `RoleGateStatus`, `PendingNonBlockingRoles`) y `internal/kickoff/handed_off.go` (`HandedOffTo` con `LastBlockingRoleClosed`; `IntermediateMerge` solo con roles `blocking`) y sus pruebas (`internal/kickoff/machine_test.go`, `internal/kickoff/handed_off_test.go`).
   Cubre: REQ-21.15, REQ-21.13
   Aceptación: todos `blocking`, mezcla, sin bloqueantes y rechazado; `IntermediateMerge` con un rol `deferred` pendiente no rechaza el archivado; con el rol único `fullstack` el resultado es el actual.
   Comprobación: `go test ./internal/kickoff/ -run 'TestLastBlockingRoleClosed|TestPendingNonBlockingRoles|TestIntermediateMerge|TestHandedOffTo'`
-- [ ] 18.2 Modificar `internal/sddstatus/governance_handoff.go` (`verifyDependencyFromRoleGates` por `gate_policy`, con notas), `internal/sddstatus/governance.go` (`lastRoleClosedForGovernance` pasa a bloqueantes) y `internal/sddstatus/role_gates_dependency_test.go`.
+- [x] 18.2 Modificar `internal/sddstatus/governance_handoff.go` (`verifyDependencyFromRoleGates` por `gate_policy`, con notas), `internal/sddstatus/governance.go` (`lastRoleClosedForGovernance` pasa a bloqueantes) y `internal/sddstatus/role_gates_dependency_test.go`.
   Cubre: REQ-21.15
   Aceptación: con un `blocking` aprobado y un `deferred` sin aprobar, `verify` queda desbloqueado y el rol diferido se informa en notas con su política y estado; con un `blocking` sin aprobar sigue bloqueado.
   Comprobación: `go test ./internal/sddstatus/ -run 'TestVerifyDependencyFromRoleGates|TestRoleGatesDependency'`
