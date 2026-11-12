@@ -49,3 +49,12 @@ records:
       artifact_digest: 291efdc0e7da50fc2032c6a86aa927455b8d72367328ec293104ea5dcb7cad4a
       actor: cli
       recorded_at: 2026-11-12T08:44:41.4750132Z
+    - gate: integration
+      decision: approved
+      reason: PR IGutierrezZ/axiom#256 fusionada en main
+      evidence_kind: pr_merged
+      evidence_ref: b16ff42e7d8f9535cf9809695286e71a6774d773
+      evidence_base_ref: main
+      verified: true
+      actor: cli
+      recorded_at: 2026-11-12T10:41:40.1756598Z
