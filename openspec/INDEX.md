@@ -1,8 +1,8 @@
 # Catálogo Maestro de Especificaciones Vivas — Axiom
 
 > **Proyecto:** Axiom (Spec-Driven Development Platform)
-> **Última Sincronización:** 2026-11-12 13:29:42 UTC
-> **Total Dominios:** 72 | **Total Requerimientos:** 553 | **Total Escenarios BDD:** 1644
+> **Última Sincronización:** 2026-11-12 13:32:38 UTC
+> **Total Dominios:** 71 | **Total Requerimientos:** 553 | **Total Escenarios BDD:** 1644
 
 ---
 
@@ -74,7 +74,6 @@
 | `sdd-research` | sdd-research Specification | 3 | 9 | [Ver Spec](specs/sdd-research/spec.md) |
 | `sdd-role-closure-handoff` | Especificación de Requerimientos: Cierre de Último Rol, Aviso Formal y Relevo de Integración (INC-21) | 3 | 20 | [Ver Spec](specs/sdd-role-closure-handoff/spec.md) |
 | `semantic-code` | Especificación de Requerimientos: Conector Semántico de Código (Serena MCP & CodeGraph) (INC-06) | 11 | 14 | [Ver Spec](specs/semantic-code/spec.md) |
-| `spec-baseline-declaration` | Especificación de Requerimientos: Declaración de la Baseline del Proyecto y Guarda contra una Segunda Baseline (INC-24) | 0 | 0 | [Ver Spec](specs/spec-baseline-declaration/spec.md) |
 | `spec-baseline-integration` | Especificación de Requerimientos: Integración de los Cambios en la Baseline del Proyecto (INC-24) | 1 | 5 | [Ver Spec](specs/spec-baseline-integration/spec.md) |
 | `structured-handoffs` | Especificación Viva: Handoffs Estructurados y Ciclo de Vida de Transición | 7 | 13 | [Ver Spec](specs/structured-handoffs/spec.md) |
 | `tui-spanish-localization` | Especificación Viva: Localización Integral al Castellano y Desacoplamiento de Avisos en la TUI (Axiom) | 4 | 9 | [Ver Spec](specs/tui-spanish-localization/spec.md) |
@@ -2582,14 +2581,6 @@ Definir de forma ejecutable, determinista y verificable los requerimientos funci
   - *Escenario BDD:* Petición HTTP a `/api/semantic/status`
 - **[REQ-4.2]** Interfaz Web SPA con Panel Semántico y Buscador
   - *Escenario BDD:* Exploración de símbolos desde el navegador web
-
-### Dominio: `spec-baseline-declaration` — Especificación de Requerimientos: Declaración de la Baseline del Proyecto y Guarda contra una Segunda Baseline (INC-24)
-
-Definir cómo declara un proyecto, en `axiom.yaml`, dónde está su *baseline* (la especificación viva que archive mantiene) y con qué formato; cómo se valida esa declaración, incluida su compatibilidad con el almacén de artefactos; cómo se proyecta en el status v2 sin romper su contrato; y cómo se garantiza que ningún creador de Axiom produce una segunda baseline cuando la declarada es del proyecto. Sin declaración, la baseline es OpenSpec (`<planning home>/specs/`) y todo el comportamiento es idéntico al actual.
-
-**Archivo:** [`specs/spec-baseline-declaration/spec.md`](specs/spec-baseline-declaration/spec.md)
-
-_Sin requerimientos canónicos registrados._
 
 ### Dominio: `spec-baseline-integration` — Especificación de Requerimientos: Integración de los Cambios en la Baseline del Proyecto (INC-24)
 
