@@ -1,18 +1,19 @@
 # Propuesta: Evidencias ISO y correcciones del SDD (carril-sdd-versatil)
 
 > Fase `propose` (remediación) · rama `inc/carril-sdd-versatil` · 2026-11-05 · sin `explore.md`: la entrada son las decisiones de producto cerradas con el usuario (Engram, `architecture/sdd-carril-versatil/*`), la segunda opinión (`architecture/sdd-carril-versatil/segunda-opinion`) y los huecos de código verificados.
+> **Enmienda 2026-11-12 (D4/D5).** Aprobada por el usuario. D4: los bugs y el trabajo ODD sí se integran en la spec viva; este cambio solo remite los bugs de un proyecto ISO al SDD y la integración desde ODD (verbo y revisión de impacto de los bugs) la diseña P6. D5: OpenSpec es el único formato de spec viva y la migración de proyectos a OpenSpec va en P6; no hay otros formatos de destino.
 > Kickoff sellado: `checkpointed`, `handoff_policy: none`, rol único `fullstack` (`blocking`).
 > Pre-vuelo de la sesión (Engram `sdd/carril-sdd-versatil/preflight`): ritmo automático, artefactos `hybrid`, entrega `single-pr` con `size:exception` aprobada por el mantenedor.
 > Actualización 2026-11-10: la rama está al día con `origin/main` tras #235 (`carril-proyecto-publicacion-docs`). Se incorporan Q3 (bloque `sdd:`), Q11b y la baseline implícita.
 > Actualización 2026-11-10 (2): #235 archivado en `openspec/specs` (#236). Se añaden P5 (instantánea en `kickoff.yaml`) y P6 (capa first-parent de `axiom branch done`).
-> **Actualización 2026-11-11 (recorte).** El usuario recorta el cambio a lo que importa: **evidencia ISO para un cliente real** y dos correcciones del SDD actual (QA diferido y arranque con carpeta). Se cortan `story.md`, el design proporcional y por rol (pieza 9), el archivado en el mismo PR (pieza 10 y P6), la frontera de D5 (pieza 11) y Q7. P5 se reduce a `sdd.iso`; el perfil de bug se reduce a la ruta sin delta. La matriz de verify pasa a exigir **evidencia contrastable** y se integra en el `verify-report.md` que existe tras #249. La rama está en `origin/main` `1b632f03`, con `sdd-revision-independiente` archivado (#251): sus requisitos ocupan REQ-28.1 a REQ-28.14, así que los requisitos nuevos de este cambio pasan a la serie **REQ-29.x**.
+> **Actualización 2026-11-11 (recorte).** El usuario recorta el cambio a lo que importa: **evidencia ISO para un cliente real** y dos correcciones del SDD actual (QA diferido y arranque con carpeta). Se cortan `story.md`, el design proporcional y por rol (pieza 9), el archivado en el mismo PR (pieza 10 y P6), la frontera del destino del archivado (pieza 11, innecesaria: OpenSpec es el único formato) y Q7. P5 se reduce a `sdd.iso`; el perfil de bug se reduce a la ruta sin delta. La matriz de verify pasa a exigir **evidencia contrastable** y se integra en el `verify-report.md` que existe tras #249. La rama está en `origin/main` `1b632f03`, con `sdd-revision-independiente` archivado (#251): sus requisitos ocupan REQ-28.1 a REQ-28.14, así que los requisitos nuevos de este cambio pasan a la serie **REQ-29.x**.
 > Esta versión **extiende** el SDD actual, no lo sustituye (rechazo de la compuerta `spec` del 2026-11-05, Engram `architecture/sdd-carril-versatil/decisiones-convivencia`). El slug se conserva.
 
 ## 0. Resumen
 
 El SDD actual funciona y se conserva entero: el preflight Pace como eje de ritmo (`continuous`/`checkpointed`), las compuertas `spec`, `design`, `tasks`, `role-apply:<rol>` e `integration`, las paradas de tres salidas, el archivado en la rama `<prefijo>/<cambio>-archive`, la doctrina «Missing or failed verification never gates archive» para proyectos no ISO, las revisiones independientes informativas de #249 y los cambios activos en su formato actual. Lo que le falta es la evidencia que pide un auditor ISO para un cliente real: requisitos con ID estable, cada escenario verificado con evidencia contrastable y trazabilidad requisito → tarea → verificación → commit de `main`.
 
-Este cambio **extiende** el SDD con un **modo ISO opcional por proyecto**, declarado en un bloque nuevo de primer nivel `sdd:` de `axiom.yaml` con una sola clave, `iso`. El modo activa: al menos un escenario por requisito, `identity: id` en los documentos de baseline afectados, `Cubre: REQ-x` en las tareas con cobertura validada por Go, una matriz de verify por escenario cuya evidencia automática Go puede contrastar con el árbol, un `verify` que sí bloquea el archivado y la trazabilidad por `git log --first-parent`, compatible con la rama `-archive`. Añade el perfil de bug **sin delta** (`Cubre:` a un requisito existente), necesario porque en un proyecto ISO los bugs van por el SDD (D4). Corrige de paso dos fricciones del SDD actual: el QA `deferred` que bloquea `verify` y el `kickoff seal` que no crea la carpeta del cambio. Resuelve D4 y D6 (esta última vía el modo ISO); D5 queda para su propio cambio.
+Este cambio **extiende** el SDD con un **modo ISO opcional por proyecto**, declarado en un bloque nuevo de primer nivel `sdd:` de `axiom.yaml` con una sola clave, `iso`. El modo activa: al menos un escenario por requisito, `identity: id` en los documentos de baseline afectados, `Cubre: REQ-x` en las tareas con cobertura validada por Go, una matriz de verify por escenario cuya evidencia automática Go puede contrastar con el árbol, un `verify` que sí bloquea el archivado y la trazabilidad por `git log --first-parent`, compatible con la rama `-archive`. Añade el perfil de bug **sin delta** (`Cubre:` a un requisito existente), necesario porque en un proyecto ISO los bugs van por el SDD (D4). Corrige de paso dos fricciones del SDD actual: el QA `deferred` que bloquea `verify` y el `kickoff seal` que no crea la carpeta del cambio. Resuelve D4 y D6 (esta última vía el modo ISO) y deja D5 resuelta: OpenSpec es el único formato de spec viva y la migración de proyectos a OpenSpec va en P6.
 
 ## 1. Propósito (Intent)
 
@@ -28,7 +29,7 @@ Este cambio **extiende** el SDD con un **modo ISO opcional por proyecto**, decla
 | Las tareas no declaran qué requisito cubren; nada comprueba que cada requisito de la delta tenga al menos una tarea. | Ausencia de `Cubre:` en `internal/` |
 | La doctrina declara que la verificación nunca bloquea el archivado, y #249 lo repite para las revisiones independientes; un proyecto ISO necesita lo contrario para su evidencia y hoy no puede pedirlo. | `internal/assets/skills/_shared/persistence-contract.md:69`; REQ-28.3 en `openspec/specs/sdd-independent-review/spec.md:112-121` |
 | La preparación del cambio exige siempre una delta de spec; un bug que restaura un requisito existente no tiene ruta. | `internal/sddstatus/status.go` (`coreReady`) |
-| ODD no integra en la spec viva y no hay vía prevista para trazar un bug contra el requisito que incumple (D4). | Auditoría de visión, G6.5 y D4 |
+| No hay vía prevista para trazar un bug de un proyecto ISO contra el requisito que incumple (D4); la integración desde ODD la diseña P6. | Auditoría de visión, G6.5 y D4 |
 
 ### 1.2 Por qué ahora
 
@@ -70,7 +71,7 @@ Se citan por su topic en Engram (proyecto `axiom`). La columna «Estado» indica
 | C9 | ~~Archivado en el mismo PR como opción por proyecto en monorepo.~~ | **Aplazada** (2026-11-11): candidata a un cambio aparte posterior | `decisiones-archivado` |
 | C10 | En un proyecto declarado ISO con baseline declarada, todo documento de la baseline afectado por una delta debe tener perfil con `identity: id` (la baseline implícita `openspec/specs/` cuenta como `id`); se comprueba en el estado del cambio, una vez escrita la delta y antes de avanzar a design. `scenarios: omit` se admite. Sin ISO vale cualquier perfil. | Se mantiene | `decisiones-baseline` |
 | C11 | Perfil de bug **sin delta**: el informe (observado, esperado, referencia externa) va en `proposal.md`; `Cubre:` apunta al REQ existente que el bug incumple (en ISO, Go comprueba que existe); una fila de evidencia por escenario afectado. Un bug con el requisito mal especificado o ausente va como un cambio normal, con delta. Disponible en todo proyecto. | Reducida (2026-11-11): solo la ruta sin delta | `decisiones-bugs` |
-| C12 | ~~Destino del archivado tras una frontera para D5.~~ D5 sigue fuera, en su propio cambio, que diseñará su propia frontera. | **Aplazada** (2026-11-11): abstracción prematura | `decisiones-d5` |
+| C12 | ~~Destino del archivado tras una frontera para D5.~~ Innecesaria: OpenSpec es el único formato (D5). | **Cortada** (2026-11-11; confirmada 2026-11-12) | `decisiones-d5` |
 | C13 | ~~Sustituye al SDD actual.~~ **Extiende** el SDD actual; todo convive; sin migración obligatoria. | **Sustituida** | `decisiones-convivencia` |
 | C14 | Lo que toque la prosa del orquestador se implementa el último de su cadena. La cadena ya está fusionada (§7), así que la condición queda satisfecha. | **Cumplida** | `orden-ejecucion` |
 | C15 | En modo ISO, la matriz de verify válida y con éxito bloquea el archivado, con independencia del ritmo. Es una excepción **declarada** a la doctrina de `persistence-contract.md:69` y a REQ-28.3, que siguen vigentes para proyectos no ISO y para los hallazgos de revisión. | Se mantiene | `decisiones-convivencia` |
@@ -107,7 +108,7 @@ La numeración de piezas se conserva para no romper las referencias de los artef
 
 **Transversal**
 
-12. **D4 en la doctrina.** Una frase en el bloque ODD: ODD nunca integra en la spec viva; en proyectos ISO los bugs van por el SDD con el perfil de bug.
+12. **D4 en la doctrina.** Una frase en el bloque ODD: cuando el status proyecta un proyecto ISO, un bug se tramita por el SDD con el perfil de bug. La integración de ODD en la spec viva (verbo de integración ODD y revisión de impacto de los bugs en ODD) la diseña P6 y queda fuera de este cambio.
 13. **Doctrina, specs, goldens y manual.** Skills `sdd-*` (sobre todo `sdd-verify/references/report-format.md`, `sdd-tasks` y `sdd-archive`), `_shared/sdd-status-contract.md`, `_shared/persistence-contract.md` (excepción ISO), `_shared/sdd-orchestrator-sections.md` donde haga falta; deltas de §4; regeneración de `testdata/golden/` y de las copias versionadas (`AGENTS.md`, `GEMINI.md`, `.codex/AGENTS.md`); `docs/manual-de-inicio.md` y `axiom.example.yaml` con la declaración ISO.
 
 ### 3.2 Fuera de alcance (Out of Scope)
@@ -115,10 +116,10 @@ La numeración de piezas se conserva para no romper las referencias de los artef
 - **`story.md` como variante de `proposal.md`** (C4). No aporta evidencia ISO: el informe de un bug cabe en `proposal.md`.
 - **Pieza 9 entera** (C5, C6 parcial): design proporcional con mínimo y disparadores, escalado al arquitecto, `design.<rol>.md`, clave `design_triggers` y plan propio en `tasks.<rol>.md`. No aporta evidencia ISO y añadía validación de prosa con riesgo de ruido. Q9 y Q10 dejan de aplicar.
 - **Pieza 10 y P6** (C9): archivado en el mismo PR, `axiom sdd publish --archive` en la rama del cambio, excepción a la rama `-archive` y a `change_not_integrated`, y capa first-parent de `axiom branch done`. La rama `-archive` sigue siendo el único modo. Q11 y Q11b dejan de aplicar. Candidato a un cambio aparte posterior.
-- **Pieza 11** (C12): frontera del destino del archivado para D5. Abstracción prematura con una sola implementación; la diseñará D5.
+- **Pieza 11** (C12): frontera del destino del archivado. Innecesaria: OpenSpec es el único formato de spec viva (D5).
 - **Q7** («Listo»/«Hecho»): descartada.
 - **Claves `archive` y `design_triggers` del bloque `sdd:`**: el bloque queda solo con `iso`.
-- **D5**: formatos de spec viva distintos de Markdown por dominio (KVP y otros). Cambio aparte.
+- **Migración a OpenSpec e integración desde ODD (P6)**: D5 está resuelta (OpenSpec es el único formato de spec viva); la migración de proyectos a OpenSpec, el verbo de integración de ODD y la revisión de impacto de los bugs en ODD los diseña P6.
 - **Plugins externos** (Azure DevOps, Jira, Redmine): solo se reserva el hueco de metadatos.
 - **Cualquier retirada** de fases, compuertas, artefactos o del ritmo Pace; cualquier migración de cambios activos o archivados.
 - **Multirepo**: sin cambios en su archivado, salvo lo que comparta (matriz, cobertura, perfil de bug).
@@ -129,7 +130,7 @@ La numeración de piezas se conserva para no romper las referencias de los artef
 
 ### 3.3 Qué no cambia
 
-El preflight Pace y el estilo sellado como eje de ritmo; las compuertas `spec`, `design`, `tasks`, `role-apply:<rol>` e `integration` y su registro en `gates.yaml`; las paradas de tres salidas (#218), que desde #235 publican los documentos con `axiom sdd publish`; el archivado en la rama `-archive` con su PR documental y `axiom branch done`; la doctrina «verification never gates archive» en proyectos no ISO; las revisiones independientes de #249 (verify por rol, juicio, cobertura), que siguen siendo informativas; la barrera de `multi-role-fan-out`; los cambios activos y archivados en el formato actual; RDD y su separación de SDD; el carril ODD y `odd/tasks/`, salvo la mención de D4; el bloque `workflow:` y su carril; la persistencia `hybrid`; la traza de integración (`integration.yaml`) y la asignación de IDs, que se reutilizan; el contexto técnico mantenido y `context-impact.md`.
+El preflight Pace y el estilo sellado como eje de ritmo; las compuertas `spec`, `design`, `tasks`, `role-apply:<rol>` e `integration` y su registro en `gates.yaml`; las paradas de tres salidas (#218), que desde #235 publican los documentos con `axiom sdd publish`; el archivado en la rama `-archive` con su PR documental y `axiom branch done`; la doctrina «verification never gates archive» en proyectos no ISO; las revisiones independientes de #249 (verify por rol, juicio, cobertura), que siguen siendo informativas; la barrera de `multi-role-fan-out`; los cambios activos y archivados en el formato actual; RDD y su separación de SDD; el carril ODD y `odd/tasks/`, salvo la remisión de los bugs ISO al SDD; el bloque `workflow:` y su carril; la persistencia `hybrid`; la traza de integración (`integration.yaml`) y la asignación de IDs, que se reutilizan; el contexto técnico mantenido y `context-impact.md`.
 
 ## 4. Capacidades (Capabilities)
 
@@ -147,10 +148,10 @@ El preflight Pace y el estilo sellado como eje de ritmo; las compuertas `spec`, 
 - `sdd-independent-review`: REQ-28.4 — la frase sobre el verify global remite a la condición de REQ-21.15 en lugar de repetir «tras todos los `role-apply` aprobados»; la matriz ISO es una sección adicional del mismo informe, sin líneas `verdict:`. REQ-28.3 — excepción declarada: en un cambio ISO, la validez de la matriz bloquea el archivado; los hallazgos de revisión siguen sin bloquear. Si la spec lo considera necesario, REQ-28.6 aclara que en ISO una matriz no válida impide un verify limpio.
 - `sdd-lane-kickoff`: `kickoff seal` prepara la carpeta del cambio; instantánea de `sdd.iso` en `kickoff.yaml` (se conservan las dos deltas actuales, renumeradas, y la de la instantánea se reduce a `iso`).
 - `sdd-archive-lifecycle`: en ISO, al menos un escenario por requisito y archivado bloqueado por la matriz. Se conserva solo el requisito de escenarios (renumerado); sobran los MODIFIED de REQ-21.16, REQ-25.39 y REQ-27.14 y el ADDED del archivado en el mismo PR.
-- `spec-baseline-integration`: validación de escenarios en la composición (REQ-24.38 y REQ-24.46) y consulta de un REQ existente para el bug sin delta (renumerado). Sobra el MODIFIED de REQ-24.47 (frontera de destino para D5).
+- `spec-baseline-integration`: validación de escenarios en la composición (REQ-24.38 y REQ-24.46) y consulta de un REQ existente para el bug sin delta (renumerado). Sobra el MODIFIED de REQ-24.47 (frontera de destino, innecesaria: OpenSpec es el único formato).
 - `axiom-sdd-cli-integration`: `coreReady` acepta el bug sin delta sin dejar de aceptar el formato actual, y motivos de bloqueo tipados de ISO, cobertura, escenarios y matriz. Se recortan de la delta actual `story.md` y los motivos de design; sobra el MODIFIED de REQ-25.42 (`wrong_branch` con mismo PR).
 - `sdd-orchestrator-assets`: skills `sdd-*` y doctrina con la excepción ISO, el formato de `Cubre:` y de la matriz, y el perfil de bug, en paridad entre runtimes.
-- `organic-agent-trigger-rules`: solo la frase de D4 en el bloque ODD.
+- `organic-agent-trigger-rules`: solo la remisión de los bugs de un proyecto ISO al SDD en el bloque ODD (REQ-29.18).
 
 ### 4.3 Capacidades que dejan de modificarse
 
@@ -159,12 +160,12 @@ El preflight Pace y el estilo sellado como eje de ritmo; las compuertas `spec`, 
 | `change-branch-lifecycle` | Sobra entera (REQ-25.18, REQ-25.45, REQ-25.16) | Solo existía por el archivado en el mismo PR y la capa first-parent de `branch done` (cortados). La trazabilidad lee `main` con `git log`, sin tocar el motor de ramas. |
 | `sdd-block-review-gates` | Sobra entera (REQ-21.9, REQ-26.1) | Los cambios eran los disparadores y el arquitecto en la compuerta `design` y la exención de `integration` con mismo PR (cortados). Las compuertas no cambian. |
 | `multi-role-fan-out` | Sobra entera (REQ-1.2, REQ-2.1) | REQ-1.2 era `design.<rol>.md` (cortado). REQ-2.1 ya distingue por política (`openspec/specs/multi-role-fan-out/spec.md:72-74`) y la barrera ya lo implementa (`barrier.go:124`); la corrección de la pieza 1 alinea el estado con ella sin cambiar su requisito. |
-| `spec-baseline-declaration` | Sobra entera (bloque `sdd:` y su proyección) | El bloque solo declara `iso`; se especifica en `sdd-iso-evidence`. La frontera de D5 se corta y el bloque `baseline:` no cambia. |
+| `spec-baseline-declaration` | Sobra entera (bloque `sdd:` y su proyección) | El bloque solo declara `iso`; se especifica en `sdd-iso-evidence`. La frontera del destino del archivado se corta (OpenSpec es el único formato) y el bloque `baseline:` no cambia. |
 | `sdd-artifact-profiles` | Sobra entera | Ver §4.1. |
 
 ## 5. Enfoque (Approach)
 
-1. **Correcciones primero (piezas 1 y 3).** Cada una es una unidad de trabajo con su prueba y su delta: el filtro por `gate_policy` en `verifyDependencyFromRoleGates` (el roster de `Governance` solo lleva nombres, `governance_handoff.go:200-209`; la política está en el kickoff, `governance.go:429`) y la preparación de la carpeta en `kickoff seal`. Van por el SDD porque modifican requisitos de la spec viva y ODD nunca integra en ella (D4).
+1. **Correcciones primero (piezas 1 y 3).** Cada una es una unidad de trabajo con su prueba y su delta: el filtro por `gate_policy` en `verifyDependencyFromRoleGates` (el roster de `Governance` solo lleva nombres, `governance_handoff.go:200-209`; la política está en el kickoff, `governance.go:429`) y la preparación de la carpeta en `kickoff seal`. Van por el SDD porque modifican requisitos de la spec viva y este cambio es SDD.
 2. **El modo ISO como una sola llave.** `sdd.iso` en `axiom.yaml`, copiada en `kickoff.yaml` al sellar, activa a la vez las piezas 2 y 4 a 7 y la comprobación ISO de la pieza 8. Sin ella, ningún validador nuevo bloquea.
 3. **Validadores en Go, no en prosa.** Escenarios, `Cubre:`, la matriz (incluida la resolución de referencias de prueba contra el árbol) e `identity: id` se analizan en Go y producen motivos de bloqueo tipados en `axiom sdd status` y en `archive-compose`; las skills solo describen el formato.
 4. **La matriz se suma al informe de #249.** Es una sección más de `verify-report.md` con su propio esquema; no altera «Cumplimiento técnico», el veredicto que lee la barrera ni el carácter informativo de las revisiones.
@@ -198,7 +199,7 @@ Ya no se tocan: `internal/branch/` (`verdict.go`, `archive_refusal.go`, `engine/
 - **#235 y #249/#251 archivados.** Los MODIFIED parten de `openspec/specs` actual. `sdd-independent-review` pasa a ser capacidad modificada (§4.2).
 - **#250 (`modelos-por-fase`)** está en la base; no comparte capacidades con este cambio.
 - **Solapes con P6:** `internal/workspace/declarations.go` (declaración ISO frente a intake de `baseline:`) y el bloque ODD de `routing.go` (D4 frente al localizador de G6.6). Quien llegue segundo rebasa.
-- **Cambio siguiente:** D5 (formatos KVP) diseña su propia frontera del destino del archivado. El archivado en el mismo PR, si se retoma, es otro cambio.
+- **Cambio siguiente:** P6 diseña la migración de proyectos a OpenSpec (D5) y la integración desde ODD en la spec viva (D4). El archivado en el mismo PR, si se retoma, es otro cambio.
 - Reutiliza `internal/specbaseline/trace.go`, `internal/specbaseline/ids.go`, `kickoff.RoleTaskFiles` y la evidencia `pr_merged` de `internal/kickoff/integration.go`.
 - Restricciones de trabajo: sin compilar binarios sueltos (solo `go test` acotado por paquete), commits Conventional sin atribución de IA, RDD fuera del SDD.
 
@@ -257,11 +258,11 @@ Chained PRs recommended: No
 
 | Id | Resolución |
 |---|---|
-| D4 | **Resuelta.** ODD nunca integra en la spec viva. En proyectos ISO, los bugs van por el SDD: con el perfil de bug sin delta cuando restauran un requisito existente, y como cambio normal con delta cuando estaba mal especificado o faltaba. |
-| D5 | **Fuera de alcance.** Cambio aparte (formatos KVP), que diseñará su propia frontera del destino del archivado. |
+| D4 | **Resuelta.** Los bugs y el trabajo ODD se integran en la spec viva. El perfil de bug (sin delta, o con delta como cambio normal) cubre la revisión de impacto de los bugs por el SDD; en proyectos ISO los bugs van por el SDD. La integración desde ODD (verbo y revisión de impacto en ODD) queda para P6. |
+| D5 | **Resuelta.** OpenSpec es el único formato de spec viva; todo proyecto que llega a Axiom migra a OpenSpec y no hay otros formatos de destino. La migración va en P6. |
 | D6 | **Resuelta vía el modo ISO opcional.** Un proyecto declarado ISO deja las evidencias que pide el atributo de proceso PA 2.2 (gestión de productos de trabajo) de la familia ISO/IEC 330xx: productos de trabajo definidos y validados (propuesta, delta con al menos un escenario por requisito, design, tasks con `Cubre:`, matriz de verify con evidencia contrastable), revisiones registradas (las compuertas existentes en `checkpointed` y las revisiones de #249), trazabilidad requisito → tarea → verificación → commit (C8) e IDs de requisito estables (C10). La calidad de la especificación de requisitos se apoya en ISO/IEC/IEEE 29148. Los proyectos no ISO no quedan sujetos a estas evidencias. |
 
-La hoja de ruta de la auditoría puede marcar D4 y D6 como resueltas (D6 para proyectos que declaren ISO) y D5 como asignada a su propio cambio.
+La hoja de ruta de la auditoría puede marcar D4 y D6 como resueltas (D6 para proyectos que declaren ISO) y D5 como resuelta (la migración de proyectos a OpenSpec va en P6).
 
 ## 13. Preguntas abiertas
 
@@ -298,7 +299,7 @@ Solo huecos reales. Las que bloquean, bloquean únicamente la spec del requisito
 | En multirrol, la matriz vive en el `verify-report.md` consolidado de REQ-21.15; con el rol único `fullstack` es el mismo informe que el del rol (REQ-28.4). | Requisito de la matriz; delta de REQ-28.4 |
 | En ISO, una matriz no válida cuenta como comprobación obligatoria fallida y el verify no es limpio (REQ-28.6). | Delta de `sdd-independent-review` |
 | En la baseline implícita, el identificador de un requisito es el `REQ-<n>.<m>` de su nombre. | Requisitos de identidad, cobertura y bug sin delta |
-| En un proyecto ISO, el perfil de bug del SDD prevalece sobre un `workflow.lane: odd` declarado cuando el trabajo es corregir un bug. | Requisito de D4 en `organic-agent-trigger-rules` |
+| En un proyecto ISO, el perfil de bug del SDD prevalece sobre un `workflow.lane: odd` declarado cuando el trabajo es corregir un bug (remisión de los bugs ISO al perfil de bug, REQ-29.18). | REQ-29.18 en `organic-agent-trigger-rules` |
 | `archive-compose` determina el cambio (por `--change` o por la ruta de la delta) para leer su instantánea; sin cambio determinable no aplica la regla de escenarios. | Requisito de escenarios en `sdd-archive-lifecycle` |
 | La referencia de una fila automática se resuelve contra el árbol de trabajo en el momento de validar (verify en la rama del cambio, archivado en la rama `-archive`). | Requisito de la matriz |
 
