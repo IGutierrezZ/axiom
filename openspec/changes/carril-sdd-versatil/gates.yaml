@@ -43,3 +43,9 @@ records:
       artifact_digest: 357d06361bdfe0bba117c7909f59d2a748acaee1eb26f011f494c325194b6f3d
       actor: cli
       recorded_at: 2026-11-12T01:52:50.2478749Z
+    - gate: role-apply:fullstack
+      decision: approved
+      reason: 'Apply completo: 46/46 tareas, REQ-29.1-29.19 cubiertos, regresión no ISO intacta; .codex/AGENTS.md fuera de alcance por decisión del usuario'
+      artifact_digest: 291efdc0e7da50fc2032c6a86aa927455b8d72367328ec293104ea5dcb7cad4a
+      actor: cli
+      recorded_at: 2026-11-12T08:44:41.4750132Z
