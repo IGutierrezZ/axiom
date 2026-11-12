@@ -39,6 +39,8 @@ dist/
 .opencode/
 .gemini/
 .mcp.json
+# Índice local de CodeGraph (`codegraph init`): base de datos por máquina
+.codegraph/
 # Kiro: artefactos regenerados por `axiom setup --agent kiro-ide` (settings lleva rutas absolutas por máquina
 # y el steering axiom.md se regenera desde internal/assets/kiro). Se versionan .kiro/hooks/ y el steering propio del equipo.
 .kiro/agents/
