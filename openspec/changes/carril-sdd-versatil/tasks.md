@@ -147,11 +147,11 @@ Sin dependencias internas; todo son funciones puras con pruebas por tablas.
 
 ### U11 · `feat(sddstatus): proyección iso y declaración ISO en el status`
 
-- [ ] 11.1 Completar `internal/sddstatus/iso.go` (`ISOProjection`, `decorateISO`: `iso.project`, `iso.reason`, nota de discrepancia, nota de declaración inválida con o sin cambio, `ParseErr`, `iso_declaration_invalid`, `iso_store_unsupported`), modificar `internal/sddstatus/status.go` (campo `ISO`, llamada desde `Resolve` tras `decorateWorkspaceDeclarations`) y `internal/sddstatus/status_v2.go` (`ISO` en `StatusV2Projection`).
+- [x] 11.1 Completar `internal/sddstatus/iso.go` (`ISOProjection`, `decorateISO`: `iso.project`, `iso.reason`, nota de discrepancia, nota de declaración inválida con o sin cambio, `ParseErr`, `iso_declaration_invalid`, `iso_store_unsupported`), modificar `internal/sddstatus/status.go` (campo `ISO`, llamada desde `Resolve` tras `decorateWorkspaceDeclarations`) y `internal/sddstatus/status_v2.go` (`ISO` en `StatusV2Projection`).
   Cubre: REQ-29.1, REQ-29.2, REQ-29.13
   Aceptación: `iso` solo aparece con bloque `sdd:` o cambio ISO; `invalid` con `reason` aunque no haya cambio seleccionado; el archivado se estrecha solo cuando la ruta sería `archive`; un cambio ISO con almacén `engram` o `none` bloquea con `iso_store_unsupported`.
   Comprobación: `go test ./internal/sddstatus/ -run 'TestDecorateISO|TestISOProjection'`
-- [ ] 11.2 Prueba de continuidad en `internal/sddstatus/iso_test.go`: sin bloque `sdd:` el JSON del status es idéntico byte a byte; las pruebas existentes de regresión no cambian.
+- [x] 11.2 Prueba de continuidad en `internal/sddstatus/iso_test.go`: sin bloque `sdd:` el JSON del status es idéntico byte a byte; las pruebas existentes de regresión no cambian.
   Cubre: REQ-29.2
   Aceptación: `kickoff_absence_regression_test.go` y `status_v2_clean_break_test.go` siguen en verde sin editarlos.
   Comprobación: `go test ./internal/sddstatus/ -run 'TestISOStatusContinuity|TestKickoffAbsenceRegression|TestStatusV2CleanBreak'`

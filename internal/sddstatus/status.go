@@ -204,6 +204,11 @@ type Status struct {
 	// (REQ-27.2): always filled by decorateWorkspaceDeclarations, with or without a
 	// selected change. `omitempty` only protects hand-built statuses in tests.
 	Workflow *WorkflowProjection `json:"workflow,omitempty"`
+	// ISO is the additive projection of REQ-29.2: the project's `sdd:` declaration
+	// and the selected change's ISO snapshot. Structural absence (nil, omitempty)
+	// when axiom.yaml has no `sdd:` block and the change is not ISO, so a consumer
+	// that predates it sees no difference (decorateISO).
+	ISO *ISOProjection `json:"iso,omitempty"`
 	// GateQuestion is the typed blocking question for the one gate
 	// firstOpenGate names when NextRecommended is "await-gate" (design.md
 	// S5.5): the same Lossless Blocking Prompt shape as Consent, scoped to
@@ -224,6 +229,10 @@ type Status struct {
 	// continuation command. It is deliberately internal: status reports why
 	// preparation is needed but never gains authority to perform it.
 	consentPreparationRoots []string
+	// isoMatrix is the verification-matrix result the OpenSpec resolver computed
+	// for an ISO change with apply finished; decorateISO copies it into ISO.Matrix.
+	// It is internal: it never reaches the wire on its own.
+	isoMatrix *ISOMatrixProjection
 }
 
 // BaselineProjection lists the documents of the project baseline. Every path
@@ -527,6 +536,7 @@ func Resolve(options ResolveOptions) (Status, error) {
 		return status, err
 	}
 	decorateWorkspaceDeclarations(&status, location)
+	decorateISO(&status, location)
 	return status, nil
 }
 

@@ -47,6 +47,9 @@ type StatusV2Projection struct {
 	// Workflow projects Status.Workflow unchanged (REQ-27.2): the wire type
 	// already matches the public contract 1:1.
 	Workflow *WorkflowProjection `json:"workflow,omitempty"`
+	// ISO projects Status.ISO unchanged (REQ-29.2): additive and omitted when
+	// axiom.yaml has no `sdd:` block and the change is not ISO.
+	ISO *ISOProjection `json:"iso,omitempty"`
 	// GateQuestion projects Status.GateQuestion unchanged: like Consent, the
 	// wire type already matches the public contract 1:1, so no *V2
 	// translation type is needed (design.md S5.5 defines the wire shape
@@ -240,6 +243,7 @@ func ProjectStatusV2(status Status) (StatusV2Projection, error) {
 	projected.Baseline = status.Baseline
 	projected.TechnicalContext = status.TechnicalContext
 	projected.Workflow = status.Workflow
+	projected.ISO = status.ISO
 	if status.PhaseInstructions != nil {
 		projected.PhaseInstructions = &phaseInstructionsV2{
 			Apply: status.PhaseInstructions.Apply, Verify: status.PhaseInstructions.Verify,

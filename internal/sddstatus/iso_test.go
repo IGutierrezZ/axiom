@@ -123,3 +123,68 @@ func TestISOBugProfile(t *testing.T) {
 		})
 	}
 }
+
+// REQ-29.2: sin bloque `sdd:` y con un cambio no ISO, el JSON del status es
+// idéntico byte a byte al que produce la resolución sin la decoración ISO, y no
+// aparece ni la clave `iso` ni ningún token `iso_*`. Las pruebas de regresión
+// existentes (kickoff_absence_regression_test.go, status_v2_clean_break_test.go)
+// siguen sin editarse.
+func TestISOStatusContinuity(t *testing.T) {
+	builds := map[string]func(t *testing.T) (root, change string){
+		"sin axiom.yaml": func(t *testing.T) (string, string) {
+			root := t.TempDir()
+			seedReadyChange(t, root, "demo", "- [x] 1.1 Hecho\n- [ ] 1.2 Pendiente\n")
+			return root, "demo"
+		},
+		"axiom.yaml sin sdd": func(t *testing.T) (string, string) {
+			ws := embeddedWithDeclaration(t, "")
+			return ws.Master, "demo"
+		},
+		"cambio sellado no ISO": func(t *testing.T) (string, string) {
+			ws := embeddedWithDeclaration(t, "")
+			sealISOChange(t, filepath.Join(ws.Master, "openspec", "changes", "demo"), "demo", nil)
+			return ws.Master, "demo"
+		},
+		"cambio con delta listo para archivar": func(t *testing.T) (string, string) {
+			root := t.TempDir()
+			seedReadyChange(t, root, "demo", "- [x] 1.1 Hecho\n")
+			return root, "demo"
+		},
+	}
+	for name, build := range builds {
+		t.Run(name, func(t *testing.T) {
+			root, change := build(t)
+			options := ResolveOptions{CWD: root, ChangeName: change, IncludeInstructions: true}
+			got, err := Resolve(options)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			workspaceRoot, location, err := resolveWorkspaceLocation(options)
+			if err != nil {
+				t.Fatal(err)
+			}
+			options.WorkspaceRoot = workspaceRoot
+			want, err := resolveStatus(options, workspaceRoot)
+			if err != nil {
+				t.Fatal(err)
+			}
+			decorateWorkspaceDeclarations(&want, location)
+
+			gotJSON, err := marshalStatusV2Indent(got)
+			if err != nil {
+				t.Fatal(err)
+			}
+			wantJSON, err := marshalStatusV2Indent(want)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(gotJSON) != string(wantJSON) {
+				t.Fatalf("la decoración ISO cambió el status de un cambio no ISO sin bloque sdd:\n--- got ---\n%s\n--- want ---\n%s", gotJSON, wantJSON)
+			}
+			if got.ISO != nil || strings.Contains(string(gotJSON), `"iso"`) || strings.Contains(string(gotJSON), "iso_") {
+				t.Fatalf("no debe aparecer la proyección iso ni ningún token iso_*:\n%s", gotJSON)
+			}
+		})
+	}
+}
