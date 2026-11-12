@@ -46,7 +46,37 @@ func TestArchiveUnknownSubcommandNamesTheValidOnes(t *testing.T) {
 	if code := runArchive([]string{"inexistente"}, &stdout, &stderr); code != 1 {
 		t.Fatalf("código = %d", code)
 	}
-	if !strings.Contains(stdout.String(), "sync|list|show|coldstart|context") {
+	if !strings.Contains(stdout.String(), "sync|list|show|coldstart|integrate|context") {
 		t.Errorf("la negativa nombra los subcomandos: %q", stdout.String())
+	}
+}
+
+// REQ-30.2: `axiom archive integrate` está en la ayuda del grupo y de la ayuda global, y se
+// despacha a la CLI.
+func TestArchiveHelpListsTheIntegrateVerb(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	if code := runArchive([]string{"--help"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("archive --help salió con %d: %s", code, stderr.String())
+	}
+	if !strings.Contains(stdout.String(), "\n  integrate ") {
+		t.Errorf("la ayuda de archive debe listar `integrate`:\n%s", stdout.String())
+	}
+	if !strings.Contains(axiomHelpText(), "\n  archive integrate ") {
+		t.Errorf("la ayuda global debe listar `archive integrate`:\n%s", axiomHelpText())
+	}
+}
+
+func TestArchiveIntegrateIsDispatchedToTheCLI(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	if code := runArchive([]string{"integrate"}, &stdout, &stderr); code != 1 {
+		t.Fatalf("sin --odd debe salir con 1, salió con %d", code)
+	}
+	if !strings.Contains(stderr.String(), "archive integrate requiere --odd") || !strings.Contains(stderr.String(), "axiom archive integrate --odd <feature>") {
+		t.Errorf("stderr = %q", stderr.String())
+	}
+	stdout.Reset()
+	stderr.Reset()
+	if code := runArchive([]string{"integrate", "--help"}, &stdout, &stderr); code != 0 || !strings.Contains(stdout.String(), "Uso: axiom archive integrate --odd <feature>") {
+		t.Errorf("archive integrate --help = %d\n%s", code, stdout.String())
 	}
 }

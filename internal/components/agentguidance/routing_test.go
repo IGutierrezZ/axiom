@@ -739,3 +739,85 @@ func routingVocabularyForGuard(block, forbidden string) string {
 	}
 	return block
 }
+
+// TestRenderRoutingClosesODDWithTheLivingSpecIntegration guards
+// organic-agent-trigger-rules REQ-24.58 (part 2) and REQ-30.20
+// (spec-viva-openspec): the ODD close step tells the agent where the OpenSpec
+// delta goes (`## Spec viva`), what a bug declares when it has no delta (the
+// exact `Sin impacto en la spec` line plus `Motivo:`, the same contract as the
+// SDD lane, with no `## Informe de bug`), and to run
+// `axiom archive integrate --odd <feature>` in the work-unit commit that closes
+// the feature, with no stop. It stays one paragraph inside step 7, renders once,
+// is identical for every adapter and names no lane value or ISO condition.
+func TestRenderRoutingClosesODDWithTheLivingSpecIntegration(t *testing.T) {
+	t.Parallel()
+
+	reference, err := RenderRouting(model.AgentClaudeCode)
+	if err != nil {
+		t.Fatalf("RenderRouting(%q) error = %v", model.AgentClaudeCode, err)
+	}
+
+	for _, agent := range catalog.AllAgents() {
+		t.Run(string(agent.ID), func(t *testing.T) {
+			t.Parallel()
+
+			rendered, err := RenderRouting(agent.ID)
+			if err != nil {
+				t.Fatalf("RenderRouting(%q) error = %v", agent.ID, err)
+			}
+			if rendered != reference {
+				t.Fatalf("RenderRouting(%q) differs from the reference adapter: the living-spec rule must not depend on the agent", agent.ID)
+			}
+
+			closeOffset := strings.Index(rendered, "7. **Close.**")
+			resumeOffset := strings.Index(rendered, "Resume an interrupted feature with")
+			if closeOffset < 0 || resumeOffset < closeOffset {
+				t.Fatalf("RenderRouting(%q) lost step 7 (close=%d resume=%d)", agent.ID, closeOffset, resumeOffset)
+			}
+			closeStep := rendered[closeOffset:resumeOffset]
+			if strings.Count(closeStep, "\n") > 2 {
+				t.Fatalf("RenderRouting(%q) step 7 must stay a single paragraph, got:\n%q", agent.ID, closeStep)
+			}
+
+			for _, want := range []string{
+				"`## Spec viva`",
+				"`odd/tasks/<feature>.md`",
+				"`### Capacidad: <domain>`",
+				"`openspec`",
+				"`Tipo: bug`",
+				"`## Impacto en la spec`",
+				"the exact line `Sin impacto en la spec`",
+				"`Motivo: <one line>`",
+				"ignored",
+				"`## Informe de bug`",
+				"`axiom archive integrate --odd <feature>`",
+				"work-unit commit that closes the feature",
+				"`openspec/specs/`",
+			} {
+				if !strings.Contains(closeStep, want) {
+					t.Fatalf("RenderRouting(%q) step 7 must contain %q:\n%s", agent.ID, want, closeStep)
+				}
+			}
+			if got := strings.Count(rendered, "axiom archive integrate --odd <feature>"); got != 1 {
+				t.Fatalf("RenderRouting(%q) names the integration command %d times, want exactly once", agent.ID, got)
+			}
+
+			// ODD has no stop (REQ-27.17), and the rule carries no lane value or ISO condition.
+			for _, forbidden := range []string{"three exits", "Plan stop", "plan stop"} {
+				if strings.Contains(closeStep, forbidden) {
+					t.Fatalf("RenderRouting(%q) step 7 must not carry %q", agent.ID, forbidden)
+				}
+			}
+			for _, forbidden := range []string{"ISO", "iso ", "kickoff"} {
+				if strings.Contains(closeStep, forbidden) {
+					t.Fatalf("RenderRouting(%q) step 7 must not carry the lane value or ISO condition (%q):\n%s", agent.ID, forbidden, closeStep)
+				}
+			}
+
+			// The first sentence keeps its exact text (pinned by the maintained-context test).
+			if !strings.Contains(closeStep, "without a maintained context this adds no requirement.") {
+				t.Fatalf("RenderRouting(%q) step 7 lost the maintained-context sentence", agent.ID)
+			}
+		})
+	}
+}
