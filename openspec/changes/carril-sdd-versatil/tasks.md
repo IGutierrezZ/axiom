@@ -66,7 +66,7 @@ Sin dependencias internas; todo son funciones puras con pruebas por tablas.
 
 ### U4 · `feat(isoevidence): traza por first-parent`
 
-- [ ] 4.1 Crear `internal/isoevidence/trace.go` y `internal/isoevidence/trace_test.go`: puerto `History`, `TraceInput`, `Trace` y `DeriveTrace` con el algoritmo de design §6.4 (commit de código = primero con `verify-report.md` y algún `tasks*.md`; carpeta archivada `^\d{4}-\d{2}-\d{2}-<c>$`; commit de archivado; contraste `pr_merged` con `Discrepancy` sin error).
+- [x] 4.1 Crear `internal/isoevidence/trace.go` y `internal/isoevidence/trace_test.go`: puerto `History`, `TraceInput`, `Trace` y `DeriveTrace` con el algoritmo de design §6.4 (commit de código = primero con `verify-report.md` y algún `tasks*.md`; carpeta archivada `^\d{4}-\d{2}-\d{2}-<c>$`; commit de archivado; contraste `pr_merged` con `Discrepancy` sin error).
   Cubre: REQ-29.9
   Aceptación: squash, merge y rebase simulados en el puerto dan la misma cadena; discrepancia con la evidencia; ausencia de carpeta archivada.
   Comprobación: `go test ./internal/isoevidence/ -run TestDeriveTrace`
