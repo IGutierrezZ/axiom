@@ -143,9 +143,8 @@ func sameContextPath(a, b string) bool {
 // para no consultar Engram.
 var resolveContextStatus = sddstatus.Resolve
 
-// locateContext resuelve el espacio con workspace.Locate. Con una baseline
-// declarada se niega: mientras `axiom sdd integrate` exista, ese verbo es el dueño
-// del cambio (REQ-30.15).
+// locateContext resuelve el espacio con workspace.Locate. Con un `baseline:`
+// residual se niega con el error tipado de su retirada (REQ-30.21).
 func locateContext(verb, path, change string) (workspace.Location, error) {
 	start := path
 	if strings.TrimSpace(start) == "" {
@@ -155,9 +154,8 @@ func locateContext(verb, path, change string) (workspace.Location, error) {
 	if err != nil {
 		return workspace.Location{}, err
 	}
-	if loc.Declarations.Baseline != nil || loc.Declarations.BaselineErr != nil {
-		return workspace.Location{}, fmt.Errorf("archive context %s: %s declara `baseline:` y `axiom archive context` solo integra el contexto técnico de proyectos sin baseline; continúa con `axiom sdd integrate %s --cwd %s --change %s`",
-			verb, pathquote.Quote(loc.ConfigPath), verb, pathquote.Quote(loc.WorkspaceRoot), pathquote.ShellWord(change))
+	if retired := loc.Declarations.BaselineRetiredErr; retired != nil {
+		return workspace.Location{}, retired
 	}
 	return loc, nil
 }

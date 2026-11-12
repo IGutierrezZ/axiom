@@ -89,7 +89,7 @@ func TestDecodeTraceRejectsForeignPlans(t *testing.T) {
 				t.Errorf("el error %q debe nombrar %q", err, tt.want)
 			}
 			if !strings.Contains(err.Error(), "axiom sdd integrate") {
-				t.Errorf("el error debe nombrar la continuación `axiom sdd integrate`: %v", err)
+				t.Errorf("el error debe nombrar el verbo retirado `axiom sdd integrate`: %v", err)
 			}
 		})
 	}

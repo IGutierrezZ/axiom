@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/adoption"
-	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
 // WorkspaceRecord modela un proyecto registrado en el Hub global de Axiom.
@@ -104,12 +103,12 @@ type InitResult struct {
 	AlreadyExisted     bool
 	AdoptedSkillsCount int
 	// Notes reúne los avisos de la inicialización: la omisión de openspec/specs/
-	// e INDEX.md con una baseline del proyecto, la conservación de un axiom.yaml
+	// e INDEX.md con un axiom.yaml ilegible, la conservación de un axiom.yaml
 	// con --force y las violaciones de la validación de las declaraciones.
 	Notes []string
-	// BaselineOwnership es la respuesta de la consulta única de baseline sobre el
-	// axiom.yaml existente (REQ-24.22); «por defecto» si no había ninguno.
-	BaselineOwnership workspace.BaselineOwnership
+	// SpecsSkipped indica que no se crearon openspec/specs/ ni openspec/INDEX.md
+	// porque el axiom.yaml existente no se pudo leer.
+	SpecsSkipped bool
 	// Adoption es el informe de orígenes de migración y candidatos a technical_context del
 	// repositorio de especificaciones recién dado de alta (REQ-30.27); nil si no hay ninguno.
 	Adoption *adoption.Summary `json:"adoption,omitempty"`

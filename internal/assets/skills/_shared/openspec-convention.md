@@ -28,7 +28,7 @@ openspec/
         ├── coverage-review.design.md <- optional coverage review after design (informational; never digested by a gate)
         ├── handoff.md       <- legacy: written by earlier versions when the last active role's role-apply gate was approved; today only `axiom handoff create` writes it, and no SDD phase or status reads it
         ├── context-impact.md <- context delta, only when the status projects `technicalContext.maintained`: drafted by sdd-design, kept current by sdd-apply
-        └── integration.yaml <- integration plan and trace, written by `axiom sdd integrate prepare` and updated by `axiom sdd integrate verify`; written by no skill
+        └── integration.yaml <- context integration plan and trace, written by `axiom archive context prepare` and updated by `axiom archive context verify`; written by no skill
 ```
 
 ## Artifact File Paths
@@ -36,7 +36,7 @@ openspec/
 | Skill | Creates / Reads | Path |
 |-------|----------------|------|
 | orchestrator | Optional recovery hint | `openspec/changes/{change-name}/state.yaml` |
-| sdd-init | Creates | `openspec/config.yaml`, `openspec/specs/` (only when the status does not project `baseline`), `openspec/changes/`, `openspec/changes/archive/` |
+| sdd-init | Creates | `openspec/config.yaml`, `openspec/specs/`, `openspec/changes/`, `openspec/changes/archive/` |
 | orchestrator | Seals once (`axiom sdd kickoff seal`) | `openspec/changes/{change-name}/kickoff.yaml` |
 | orchestrator | Appends (`axiom sdd gate record`) | `openspec/changes/{change-name}/gates.yaml` |
 | sdd-explore | Creates (optional) | `openspec/changes/{change-name}/exploration.md` |
@@ -52,11 +52,9 @@ openspec/
 | orchestrator (coverage review) | Writes, one dated round per run (informational; Engram: `sdd/{change-name}/coverage-review/spec` and `sdd/{change-name}/coverage-review/design`) | `openspec/changes/{change-name}/coverage-review.spec.md`, `openspec/changes/{change-name}/coverage-review.design.md` |
 | none (legacy) | Written by earlier versions when the last active role's role-apply gate was approved; today only `axiom handoff create` writes it, outside the SDD flow | `openspec/changes/{change-name}/handoff.md` |
 | sdd-design, sdd-apply | Create, then keep current (only when the status projects `technicalContext.maintained`) | `openspec/changes/{change-name}/context-impact.md` |
-| native `axiom sdd integrate` | Writes (`prepare`, then `verify`) | `openspec/changes/{change-name}/integration.yaml` |
+| native `axiom archive context` | Writes (`prepare`, then `verify`) | `openspec/changes/{change-name}/integration.yaml` |
 | sdd-archive | Moves | `openspec/changes/{change-name}/` → `openspec/changes/archive/YYYY-MM-DD-{change-name}/` |
 | sdd-archive | Updates | `openspec/specs/{domain}/spec.md` (merges deltas into main specs) |
-
-When the status projects `baseline`, the project's own declared documents are the baseline: no skill creates `openspec/specs/` or `openspec/INDEX.md`. See `project-baseline-convention.md`.
 
 ## Reading Artifacts
 

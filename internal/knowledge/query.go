@@ -23,19 +23,13 @@ func RunQuery(ctx context.Context, opts QueryOptions) (*QueryResult, error) {
 	}
 
 	// La guarda de escritura solo importa con --enrich, pero la resolución se hace
-	// siempre: la búsqueda spec-first lee del planning home y, con baseline del
-	// proyecto, avisa de que no cubre la baseline externa (REQ-24.25).
+	// siempre: la búsqueda spec-first lee del planning home.
 	target, err := resolveSpecsTarget(absWorkspace, opts.SpecsRoot, opQueryEnrich)
 	if err != nil {
 		return nil, err
 	}
 	opts.SpecsRoot = target.root
 	notes := target.notes
-	if len(target.externalDomains) > 0 {
-		notes = append(notes, fmt.Sprintf(
-			"La búsqueda spec-first no cubre la baseline externa del proyecto (dominios %s): solo consulta %s.",
-			strings.Join(target.externalDomains, ", "), filepath.Join(opts.SpecsRoot, "specs")))
-	}
 
 	res := &QueryResult{
 		Evidences:        make([]EvidenceItem, 0),

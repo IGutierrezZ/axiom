@@ -206,7 +206,7 @@ When launching `sdd-archive`, forward explicit final-state facts for any work co
 
 ### Archive Directed Integration Model (MANDATORY)
 
-When launching `sdd-archive`, read the native status: when it projects `technicalContext.maintained`, or any `baseline.documents[].integration == "directed"`, launch `sdd-archive` with the model assigned to `sdd-apply` in the Model Assignments table, because directed integration edits prose and needs an implementation-level model; in every other case launch it with the model of the `sdd-archive` row. Claude Code accepts `model` per call, so this elevation is deterministic and comes from the status, never from reading `axiom.yaml`. Never block or delay archive on this rule: `axiom sdd integrate verify` protects the result whatever the model. The reasoning and the advice for runtimes that fix the model per agent are in `project-baseline-convention.md`, section 7.
+When launching `sdd-archive`, read the native status: when it projects `technicalContext.maintained`, launch `sdd-archive` with the model assigned to `sdd-apply` in the Model Assignments table, because the integration of the maintained context edits prose and needs an implementation-level model; in every other case launch it with the model of the `sdd-archive` row. Claude Code accepts `model` per call, so this elevation is deterministic and comes from the status, never from reading `axiom.yaml`. Never block or delay archive on this rule: `axiom archive context verify` protects the result whatever the model. The reasoning and the advice for runtimes that fix the model per agent are in `project-baseline-convention.md`, section 7.
 
 ### Topic Keys
 

@@ -27,7 +27,7 @@ import (
 // todas o ninguna. No tiene compuertas, no crea artefactos SDD y no modifica el
 // documento ODD.
 //
-// El orden de rechazos es configuración, rama, documento, secciones, impacto,
+// El orden de rechazos es configuración (incluidos `baseline:` residual e ISO), rama, documento, secciones, impacto,
 // identificadores, composición y contexto técnico; la primera escritura ocurre tras la
 // última comprobación.
 func RunArchiveIntegrate(args []string, stdout io.Writer) error {
@@ -47,11 +47,13 @@ func RunArchiveIntegrate(args []string, stdout io.Writer) error {
 	if err != nil {
 		return err
 	}
-	// Mientras `axiom sdd integrate` exista, una baseline declarada la tiene el verbo
-	// antiguo (solo U1–U5; la retirada de `baseline:` la hace U6).
-	if loc.Declarations.Baseline != nil || loc.Declarations.BaselineErr != nil {
-		return fmt.Errorf("archive integrate: %s declara `baseline:` y `axiom archive integrate --odd` solo integra en la spec viva de proyectos sin baseline; continúa con `axiom sdd integrate prepare --cwd %s --change <cambio>`",
-			pathquote.Quote(loc.ConfigPath), pathquote.Quote(loc.WorkspaceRoot))
+	// Un `baseline:` residual (REQ-30.21) y un proyecto ISO (REQ-30.7) se rechazan
+	// antes de leer el documento ODD y sin escribir nada.
+	if retired := loc.Declarations.BaselineRetiredErr; retired != nil {
+		return retired
+	}
+	if err := livespec.RefuseISOProject(loc.Declarations.SDD != nil && loc.Declarations.SDD.ISO, loc.ConfigPath, loc.WorkspaceRoot, parsed.feature); err != nil {
+		return err
 	}
 	command := oddIntegrateCommandLine(parsed.feature, loc.WorkspaceRoot)
 

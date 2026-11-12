@@ -220,9 +220,7 @@ function helpRows() {
   });
   check('specs', 'las specs vivas', (catalog) => {
     const domains = Array.isArray(catalog.specs) ? catalog.specs.length : 0;
-    if (catalog.external_baseline) {
-      rows.push(helpRow({ href: '#/specs', iconName: 'book', title: 'La baseline de specs es externa', text: 'Sus documentos no se indexan aquí; consulta los dominios y rutas declarados.' }));
-    } else if (domains > 0) {
+    if (domains > 0) {
       rows.push(helpRow({ href: '#/specs', iconName: 'book', title: `${plural(domains, 'dominio', 'dominios')} en specs vivas`, text: `${plural(catalog.total_requirements || 0, 'requisito consolidado', 'requisitos consolidados')}. Consúltalas antes de proponer.` }));
     }
   });

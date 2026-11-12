@@ -162,7 +162,7 @@ COMANDOS DE GOBERNANZA Y WORKSPACE:
   sdd archive-compose  Compone el reporte de archivado formal y actualiza las especificaciones vivas
   sdd archive-check    Comprueba, sin escribir, si un cambio ISO puede archivarse (--json)
   sdd trace            Deriva, sin escribir, la traza git de un cambio: commit de código, de archivado y cadena requisito-matriz (--json)
-  sdd integrate        Valida (check), prepara (prepare), verifica (verify) y consulta la traza (show) de la integración de un cambio en la baseline del proyecto
+  sdd integrate        Retirado: remite a "axiom archive context" (contexto técnico) y "axiom archive adopt" (migración)
   review               Gestiona el ciclo de revisión formal RDD (start, resume, step, mode, validate)
   ui                   Inicia el servidor local y abre el dashboard web interactivo
 
@@ -1833,19 +1833,6 @@ func runArchiveList(args []string) {
 		fmt.Printf("[AVISO] %s\n", warning)
 	}
 
-	// Con baseline del proyecto el catálogo no se indexa: se informa de que es
-	// externa y de dónde está, para que un catálogo vacío no se interprete como
-	// ausencia de especificación (REQ-24.25).
-	if catalog.ExternalBaseline != nil {
-		fmt.Println("\nLa baseline de especificaciones es externa (del proyecto): sus documentos no se indexan aquí.")
-		fmt.Println("Dominios y rutas declarados:")
-		for _, document := range catalog.ExternalBaseline.Documents {
-			fmt.Printf("  - %-25s %s\n", document.Domain, document.Path)
-		}
-		fmt.Println()
-		return
-	}
-
 	if len(catalog.Specs) == 0 {
 		fmt.Println("\nNo se encontraron especificaciones vivas en openspec/specs/.")
 		fmt.Println("Ejecuta 'axiom archive sync' o 'axiom archive coldstart' para generarlas.")
@@ -1886,15 +1873,6 @@ func runArchiveShow(args []string) {
 	svc := livingdoc.NewService(baseDir, nil, nil)
 	entry, content, err := svc.GetSpecDetail(domain)
 	if err != nil {
-		// Un dominio de la baseline externa del proyecto no se indexa: se informa de
-		// que le pertenece y de dónde está su documento, sin error (REQ-24.25).
-		var external *livingdoc.ExternalBaselineError
-		if errors.As(err, &external) {
-			fmt.Printf("[INFO] El dominio %q pertenece a la baseline externa del proyecto y no se indexa.\n", external.Domain)
-			fmt.Printf("  - Documento:  %s\n", external.Path)
-			fmt.Printf("  - Declarada:  %s\n", external.ConfigPath)
-			return
-		}
 		fmt.Printf("[ERROR] %v\n", err)
 		os.Exit(1)
 	}
@@ -2026,19 +2004,18 @@ func initCommand(args []string, stdout, stderr io.Writer) int {
 	fmt.Fprintf(stdout, "  - Directorio:          %s\n", res.Record.Path)
 	fmt.Fprintf(stdout, "  - Topología:           %s\n", res.Record.Topology)
 	fmt.Fprintf(stdout, "  - Archivo Config:      %s\n", res.ConfigPath)
-	// Con una baseline que no es la de OpenSpec por defecto no se crean
-	// openspec/specs/ ni openspec/INDEX.md (REQ-24.23).
-	baselineOwned := res.BaselineOwnership != workspace.BaselineDefault
+	// Con un axiom.yaml ilegible no se crean openspec/specs/ ni openspec/INDEX.md.
+	specsSkipped := res.SpecsSkipped
 	if res.AlreadyExisted {
 		fmt.Fprintln(stdout, "  - Estado:              Ya contenía axiom.yaml (registrado y marcado como activo)")
 	} else if effectiveProfile == "knowledge" {
-		if baselineOwned {
+		if specsSkipped {
 			fmt.Fprintln(stdout, "  - Estructura creada:   openspec/changes/, .mcp.json")
 		} else {
 			fmt.Fprintln(stdout, "  - Estructura creada:   openspec/specs/, openspec/changes/, openspec/INDEX.md, .mcp.json")
 		}
 		fmt.Fprintln(stdout, "  - Perfil activo:       knowledge (multirepo, documentación viva, sin arneses de testeo)")
-	} else if baselineOwned {
+	} else if specsSkipped {
 		fmt.Fprintln(stdout, "  - Estructura creada:   openspec/changes/, .axiom/inbox/skills/")
 	} else {
 		fmt.Fprintln(stdout, "  - Estructura creada:   openspec/specs/, openspec/changes/, .axiom/inbox/skills/")
@@ -2047,7 +2024,7 @@ func initCommand(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintf(stdout, "  - Registro global:     %s [ACTIVO]\n", hubMgr.GetConfigPath())
 	}
 	printWorktreePrefs(stdout, res.Record)
-	// Avisos de la inicialización: la omisión de la baseline, la conservación del
+	// Avisos de la inicialización: la omisión de openspec/specs/, la conservación del
 	// axiom.yaml con --force y las violaciones de sus declaraciones.
 	for _, note := range res.Notes {
 		fmt.Fprintf(stdout, "  - [AVISO] %s\n", note)
@@ -2235,7 +2212,7 @@ func runSDD(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stdout, "  archive-compose  Compone el reporte de archivado formal y actualiza las especificaciones vivas")
 		fmt.Fprintln(stdout, "  archive-check    Comprueba, sin escribir, si un cambio ISO puede archivarse (--json)")
 		fmt.Fprintln(stdout, "  trace            Deriva, sin escribir, la traza git de un cambio: commit de código, de archivado y cadena requisito-matriz (--json)")
-		fmt.Fprintln(stdout, "  integrate        Valida (check), prepara (prepare), verifica (verify) y consulta la traza (show) de la integración de un cambio en la baseline del proyecto")
+		fmt.Fprintln(stdout, "  integrate        Retirado: remite a `axiom archive context` (contexto técnico) y `axiom archive adopt` (migración)")
 		fmt.Fprintln(stdout, "  task-result      Valida y extrae el resultado tipado de una fase delegada")
 		fmt.Fprintln(stdout, "  preflight-hook   Ejecuta el hook previo de verificación SDD")
 		fmt.Fprintln(stdout, "  kickoff          Sella la configuración de kickoff de un cambio (seal, show)")

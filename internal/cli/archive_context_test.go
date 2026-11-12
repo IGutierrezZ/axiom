@@ -16,6 +16,7 @@ import (
 
 	"github.com/IGutierrezZ/axiom/v3/internal/sddstatus"
 	"github.com/IGutierrezZ/axiom/v3/internal/techcontext"
+	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace/workspacetest"
 )
 
@@ -43,8 +44,8 @@ technical_context:
       - referencia/
 `
 
-// contextCLIBaseline es la declaración de una baseline de proyecto: mientras
-// `axiom sdd integrate` exista, `archive context` se niega ante ella.
+// contextCLIBaseline es un bloque `baseline:` residual (REQ-30.21): `archive
+// context` se niega ante él con el error tipado de su retirada.
 const contextCLIBaseline = `baseline:
   documents:
     - domain: modelo-de-datos
@@ -494,18 +495,19 @@ func TestArchiveContextShowWithoutATraceNamesPrepare(t *testing.T) {
 	}
 }
 
-// REQ-30.15 (solo U1–U5): con una baseline declarada, `archive context` se niega
-// sin escribir y remite a `axiom sdd integrate`.
-func TestArchiveContextRefusesWhenABaselineIsDeclared(t *testing.T) {
+// REQ-30.21: con un `baseline:` residual, `archive context` se niega sin escribir
+// con el error tipado de la retirada y la migración `axiom archive adopt`.
+func TestArchiveContextRefusesWhenABaselineIsRetired(t *testing.T) {
 	f := newContextCLIFixture(t, false, true)
 	before := f.snapshot(t)
 	for _, verb := range []string{"check", "prepare", "verify", "show"} {
 		t.Run(verb, func(t *testing.T) {
 			_, err := runArchiveContextCLI(t, verb, "--path", f.ws.Specs, "--change", contextCLIChange)
-			if err == nil {
-				t.Fatal("se esperaba la negativa")
+			var retired *workspace.BaselineRetiredError
+			if !errors.As(err, &retired) {
+				t.Fatalf("error = %v, se esperaba un *workspace.BaselineRetiredError", err)
 			}
-			for _, want := range []string{"baseline", "axiom sdd integrate " + verb, "--change " + contextCLIChange} {
+			for _, want := range []string{"baseline_retired", "axiom archive adopt scan --path"} {
 				if !strings.Contains(err.Error(), want) {
 					t.Errorf("la negativa %q debe contener %q", err, want)
 				}

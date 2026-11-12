@@ -14,23 +14,9 @@ const (
 	declEmbeddedBase  = "workspace:\n  name: ejemplo-embebido\n  topology: monorepo-embedded\n  specs_repository: .\nroles:\n  core:\n    name: Core\n    repositories:\n      - path: .\n"
 	declCanonicalBase = "workspace:\n  name: ejemplo-canonico\n  topology: multirepo\n  specs_repository: repo-specs\nroles:\n  backend:\n    name: Backend\n    repositories:\n      - path: repo-backend\n  frontend:\n    name: Frontend\n    repositories:\n      - path: repo-frontend\n"
 
-	// Tres documentos: uno con perfil de requisito, uno de prosa por defecto
-	// (directed) y uno de prosa en modo solo registro.
-	declThreeDocuments = `baseline:
-  documents:
-    - domain: requisitos-funcionales
-      path: 01_Requisitos_Funcionales.md
-      requirement:
-        heading: '^### (?P<id>RF-\d+): (?P<title>.+)$'
-        level: 3
-        render: '### {id}: {title}'
-    - domain: modelo-de-datos
-      path: docs\03_Modelo_Datos.md
-    - domain: flujos-de-negocio
-      path: 04_Flujos_Negocio.md
-      integration: register
-`
-	declBothModes = "technical_context:\n  maintained:\n    entry: context/TECHNICAL_CONTEXT.md\n    paths: [context/]\n  reference:\n    paths: [00_Glosario.md]\n"
+	// Bloque `baseline:` residual (REQ-30.21): ya no se proyecta nunca.
+	declResidualBaseline = "baseline:\n  documents:\n    - domain: modelo-de-datos\n      path: 03_Modelo_Datos.md\n"
+	declBothModes        = "technical_context:\n  maintained:\n    entry: context/TECHNICAL_CONTEXT.md\n    paths: [context/]\n  reference:\n    paths: [00_Glosario.md]\n"
 )
 
 // statusJSON devuelve el status v2 proyectado como mapa de claves de primer nivel.
@@ -116,9 +102,9 @@ func TestDeclarationsStatusWithoutDeclarationHasNoNewKeys(t *testing.T) {
 	})
 }
 
-// REQ-24.19 y 24.28: proyección con rutas absolutas y los tres modos de integración.
-func TestDeclarationsStatusProjectsBothBlocksWithAbsolutePaths(t *testing.T) {
-	ws := embeddedWithDeclaration(t, declThreeDocuments+declBothModes)
+// REQ-24.28: proyección del contexto técnico con rutas absolutas.
+func TestDeclarationsStatusProjectsTechnicalContextWithAbsolutePaths(t *testing.T) {
+	ws := embeddedWithDeclaration(t, declBothModes)
 	for name, resolve := range map[string]func() Status{
 		"desde el directorio": func() Status { return resolveFrom(t, ws.Master, "demo") },
 		"raíz explícita": func() Status {
@@ -132,14 +118,8 @@ func TestDeclarationsStatusProjectsBothBlocksWithAbsolutePaths(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			fields := statusJSON(t, resolve())
 
-			baseline := decodeField[BaselineProjection](t, fields, "baseline")
-			want := []BaselineDocumentProjection{
-				{Domain: "requisitos-funcionales", Path: filepath.Join(ws.Master, "01_Requisitos_Funcionales.md"), Integration: "compose"},
-				{Domain: "modelo-de-datos", Path: filepath.Join(ws.Master, "docs", "03_Modelo_Datos.md"), Integration: "directed"},
-				{Domain: "flujos-de-negocio", Path: filepath.Join(ws.Master, "04_Flujos_Negocio.md"), Integration: "register"},
-			}
-			if !reflect.DeepEqual(baseline.Documents, want) {
-				t.Fatalf("baseline.documents = %+v\nse esperaba %+v", baseline.Documents, want)
+			if _, present := fields["baseline"]; present {
+				t.Error("el status no proyecta nunca la clave baseline (REQ-30.21)")
 			}
 
 			context := decodeField[TechnicalContextProjection](t, fields, "technicalContext")
@@ -182,27 +162,24 @@ func TestDeclarationsStatusProjectsOnlyTheDeclaredMode(t *testing.T) {
 	}
 }
 
-// REQ-24.18: un bloque inválido no se proyecta, ni parcial ni por defecto, y no
-// arrastra al otro bloque.
+// REQ-24.18: un bloque inválido no se proyecta, ni parcial ni por defecto, y un
+// `baseline:` residual no arrastra al contexto técnico.
 func TestDeclarationsStatusNeverProjectsAnInvalidBlock(t *testing.T) {
-	t.Run("baseline inválida con contexto válido", func(t *testing.T) {
-		ws := embeddedWithDeclaration(t, "baseline:\n  documents:\n    - domain: a\n      path: ../fuera.md\n    - domain: b\n      path: b.md\n"+declBothModes)
+	t.Run("baseline residual con contexto válido", func(t *testing.T) {
+		ws := embeddedWithDeclaration(t, declResidualBaseline+declBothModes)
 		fields := statusJSON(t, resolveFrom(t, ws.Master, "demo"))
 		if _, present := fields["baseline"]; present {
-			t.Error("una baseline inválida no se proyecta, ni siquiera sus documentos válidos")
+			t.Error("una baseline residual no se proyecta")
 		}
 		if _, present := fields["technicalContext"]; !present {
-			t.Error("el contexto válido se proyecta aunque la baseline sea inválida")
+			t.Error("el contexto válido se proyecta aunque haya una baseline residual")
 		}
 	})
-	t.Run("contexto inválido con baseline válida", func(t *testing.T) {
-		ws := embeddedWithDeclaration(t, declThreeDocuments+"technical_context:\n  maintained:\n    paths: []\n")
+	t.Run("contexto inválido", func(t *testing.T) {
+		ws := embeddedWithDeclaration(t, "technical_context:\n  maintained:\n    paths: []\n")
 		fields := statusJSON(t, resolveFrom(t, ws.Master, "demo"))
 		if _, present := fields["technicalContext"]; present {
 			t.Error("un contexto inválido no se proyecta")
-		}
-		if _, present := fields["baseline"]; !present {
-			t.Error("la baseline válida se proyecta aunque el contexto sea inválido")
 		}
 	})
 	t.Run("axiom.yaml ilegible", func(t *testing.T) {
@@ -218,11 +195,11 @@ func TestDeclarationsStatusNeverProjectsAnInvalidBlock(t *testing.T) {
 	})
 	t.Run("base inválida con declaración válida sin puntero", func(t *testing.T) {
 		ws := workspacetest.Embedded(t, ".")
-		workspacetest.WriteFile(t, filepath.Join(ws.Master, "axiom.yaml"), "workspace: {name: x, topology: monorepo-embedded}\n"+declThreeDocuments)
+		workspacetest.WriteFile(t, filepath.Join(ws.Master, "axiom.yaml"), "workspace: {name: x, topology: monorepo-embedded}\n"+declBothModes)
 		seedReadyChange(t, ws.Master, "demo", planningHomeTasks)
 		fields := statusJSON(t, resolveFrom(t, ws.Master, "demo"))
-		if _, present := fields["baseline"]; !present {
-			t.Error("las declaraciones se evalúan aunque la base falle (D-03): la baseline válida se proyecta")
+		if _, present := fields["technicalContext"]; !present {
+			t.Error("las declaraciones se evalúan aunque la base falle (D-03): el contexto válido se proyecta")
 		}
 	})
 }
@@ -230,7 +207,7 @@ func TestDeclarationsStatusNeverProjectsAnInvalidBlock(t *testing.T) {
 // REQ-24.19: la proyección existe con o sin cambio seleccionado.
 func TestDeclarationsStatusProjectsWithoutASelectedChange(t *testing.T) {
 	ws := workspacetest.Embedded(t, ".")
-	workspacetest.WriteFile(t, filepath.Join(ws.Master, "axiom.yaml"), declEmbeddedBase+declThreeDocuments+declBothModes)
+	workspacetest.WriteFile(t, filepath.Join(ws.Master, "axiom.yaml"), declEmbeddedBase+declBothModes)
 	status := resolveFrom(t, ws.Master, "")
 	if status.ChangeName != nil {
 		t.Fatalf("changeName = %v, se esperaba nulo", *status.ChangeName)
@@ -239,10 +216,8 @@ func TestDeclarationsStatusProjectsWithoutASelectedChange(t *testing.T) {
 	if string(fields["changeName"]) != "null" {
 		t.Errorf("changeName = %s, se esperaba null", fields["changeName"])
 	}
-	for _, key := range []string{"baseline", "technicalContext"} {
-		if _, present := fields[key]; !present {
-			t.Errorf("la proyección debe existir sin cambio seleccionado: falta %q", key)
-		}
+	if _, present := fields["technicalContext"]; !present {
+		t.Error("la proyección debe existir sin cambio seleccionado: falta technicalContext")
 	}
 }
 
@@ -250,7 +225,7 @@ func TestDeclarationsStatusProjectsWithoutASelectedChange(t *testing.T) {
 func TestDeclarationsStatusDoesNotAlterPlanningHomeOrArtifacts(t *testing.T) {
 	plain := workspacetest.Embedded(t, ".")
 	seedReadyChange(t, plain.Master, "demo", planningHomeTasks)
-	declared := embeddedWithDeclaration(t, declThreeDocuments+declBothModes)
+	declared := embeddedWithDeclaration(t, declBothModes)
 	// Un delta de contexto presente no se proyecta ni cambia los localizadores.
 	workspacetest.WriteFile(t, filepath.Join(declared.Home, "changes", "demo", "context-impact.md"), "# Delta de contexto: demo\n")
 
@@ -297,11 +272,11 @@ func TestDeclarationsStatusIgnoresADeclarationInOpenSpecConfig(t *testing.T) {
 	}
 }
 
-// Espacio canónico: las rutas son absolutas y relativas al repositorio de
-// especificaciones, y las del contexto pueden subir a un repositorio hermano.
+// Espacio canónico: las rutas del contexto son absolutas y pueden subir a un
+// repositorio hermano.
 func TestDeclarationsStatusInTheCanonicalWorkspace(t *testing.T) {
 	ws := workspacetest.Canonical(t)
-	workspacetest.WriteFile(t, filepath.Join(ws.Specs, "axiom.yaml"), declCanonicalBase+declThreeDocuments+"technical_context:\n  maintained:\n    paths: [../repo-backend/docs/]\n")
+	workspacetest.WriteFile(t, filepath.Join(ws.Specs, "axiom.yaml"), declCanonicalBase+"technical_context:\n  maintained:\n    paths: [../repo-backend/docs/]\n")
 	seedReadyChange(t, ws.Specs, "inc-demo", planningHomeTasks)
 	for name, start := range map[string]string{
 		"carpeta maestra":                 ws.Master,
@@ -310,10 +285,6 @@ func TestDeclarationsStatusInTheCanonicalWorkspace(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			fields := statusJSON(t, resolveFrom(t, start, "inc-demo"))
-			baseline := decodeField[BaselineProjection](t, fields, "baseline")
-			if len(baseline.Documents) != 3 || baseline.Documents[0].Path != filepath.Join(ws.Specs, "01_Requisitos_Funcionales.md") {
-				t.Fatalf("baseline = %+v, los documentos cuelgan del repositorio de especificaciones", baseline)
-			}
 			context := decodeField[TechnicalContextProjection](t, fields, "technicalContext")
 			if want := []string{filepath.Join(ws.Master, "repo-backend", "docs")}; context.Maintained == nil || !reflect.DeepEqual(context.Maintained.Paths, want) {
 				t.Fatalf("technicalContext = %+v, se esperaba %v", context, want)

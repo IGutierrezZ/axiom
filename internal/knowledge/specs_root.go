@@ -42,11 +42,8 @@ func defaultSpecsRoot(absWorkspace string) (specsRoot string, notes []string, er
 type specsTarget struct {
 	root  string   // raíz de especificaciones efectiva
 	notes []string // avisos no bloqueantes (ubicación antigua divergente)
-	// externalDomains son los dominios de la baseline del proyecto, que la
-	// búsqueda spec-first no cubre (REQ-24.25); nil si la baseline no es del proyecto.
-	externalDomains []string
 	// blocked es la causa por la que no se puede escribir en la raíz: un
-	// *workspace.SecondBaselineError con baseline del proyecto o indeterminada, o
+	// *workspace.BaselineRetiredError con un `baseline:` residual, o
 	// el *workspace.LocateError que impide saber qué baseline es la del proyecto
 	// (REQ-24.22). Es nil si se puede escribir.
 	blocked error
@@ -72,27 +69,23 @@ func resolveSpecsTarget(absWorkspace, explicitRoot, op string) (specsTarget, err
 			target.notes = append(target.notes, warning)
 		}
 	}
-	if ownership, _ := loc.BaselineOwnership(); ownership == workspace.BaselineProject {
-		target.externalDomains = loc.Declarations.DeclaredDomains()
-	}
 	return target, nil
 }
 
 // skipNote explica que se omite una escritura y que el resto del resultado se
-// completa: nombra la baseline declarada y la continuación, o la causa por la que
-// no se puede determinar la baseline.
+// completa: nombra el `baseline:` residual y su migración, o la causa por la que
+// no se puede resolver el planning home.
 func skipNote(blocked error, skipped string) string {
-	var second *workspace.SecondBaselineError
-	if errors.As(blocked, &second) {
+	var retired *workspace.BaselineRetiredError
+	if errors.As(blocked, &retired) {
 		return fmt.Sprintf("%v. Se omite %s y el resto del resultado se completa.", blocked, skipped)
 	}
-	return fmt.Sprintf("No se puede determinar si la baseline de especificaciones es del proyecto porque la resolución del planning home se rechaza: %v. Se omite %s y el resto del resultado se completa.", blocked, skipped)
+	return fmt.Sprintf("No se puede escribir en la especificación viva porque la resolución del planning home se rechaza: %v. Se omite %s y el resto del resultado se completa.", blocked, skipped)
 }
 
 // guardCrawlWrite resuelve el planning home de la raíz de código del job en el
-// momento de escribir y rechaza la escritura de op con baseline del proyecto o
-// indeterminada (REQ-24.23). Un rechazo de Locate también impide escribir: no hay
-// respuesta de baseline (REQ-24.22).
+// momento de escribir y rechaza la escritura de op con un `baseline:` residual
+// (REQ-30.21). Un rechazo de Locate también impide escribir.
 func guardCrawlWrite(job *CrawlJob, op string) error {
 	loc, err := workspace.Locate(job.WorkspaceRoot)
 	if err != nil {

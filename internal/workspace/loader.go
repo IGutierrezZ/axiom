@@ -11,11 +11,18 @@ import (
 )
 
 // ParseConfig deserializa y valida la estructura sintáctica de axiom.yaml desde
-// bytes: la configuración base y, si existen, los bloques `baseline:`,
+// bytes: la configuración base y, si existen, los bloques
 // `technical_context:`, `git:`, `workflow:`, `sdd:` y `repositories:`. Si la base o alguna declaración
 // es inválida devuelve un error que acumula todas las violaciones (REQ-24.17).
 func ParseConfig(data []byte) (*WorkspaceConfig, error) {
+	return parseConfigAt(data, "")
+}
+
+// parseConfigAt es ParseConfig con la ruta del axiom.yaml que se analiza, para que
+// el error de un `baseline:` residual la nombre.
+func parseConfigAt(data []byte, path string) (*WorkspaceConfig, error) {
 	cfg, baseErr, declarations := parseLayered(data)
+	declarations = declarations.bindConfigPath(path)
 	if err := joinLoadErrors(baseErr, declarations); err != nil {
 		return nil, err
 	}
@@ -27,7 +34,13 @@ func ParseConfig(data []byte) (*WorkspaceConfig, error) {
 // mensajes de la configuración base de siempre.
 func joinLoadErrors(baseErr error, declarations Declarations) error {
 	var errs []error
-	for _, err := range []error{baseErr, declarations.BaselineErr, declarations.TechnicalContextErr, declarations.GitErr, declarations.WorkflowErr, declarations.SDDErr, declarations.RepositoriesErr} {
+	// El error tipado de la baseline retirada se añade aparte: un puntero nulo en
+	// una interfaz error no sería nil.
+	candidates := []error{baseErr}
+	if declarations.BaselineRetiredErr != nil {
+		candidates = append(candidates, declarations.BaselineRetiredErr)
+	}
+	for _, err := range append(candidates, declarations.TechnicalContextErr, declarations.GitErr, declarations.WorkflowErr, declarations.SDDErr, declarations.RepositoriesErr) {
 		if err != nil {
 			errs = append(errs, err)
 		}
@@ -86,9 +99,6 @@ func parseLayered(data []byte) (*WorkspaceConfig, error, Declarations) {
 	if baseErr != nil {
 		return nil, baseErr, declarations
 	}
-	if declarations.BaselineErr == nil {
-		cfg.Baseline = declarations.Baseline
-	}
 	if declarations.TechnicalContextErr == nil {
 		cfg.TechnicalContext = declarations.TechnicalContext
 	}
@@ -125,7 +135,7 @@ func ReadDeclarations(configPath string) Declarations {
 		return Declarations{ParseErr: fmt.Errorf("no se pudo leer el archivo '%s': %w", configPath, err)}
 	}
 	_, _, declarations := parseLayered(data)
-	return declarations
+	return declarations.bindConfigPath(configPath)
 }
 
 // retiredTopologyMonorepoDecoupled es el literal de la topología retirada en
@@ -309,5 +319,5 @@ func LoadConfig(filePath string) (*WorkspaceConfig, error) {
 		return nil, fmt.Errorf("no se pudo leer el archivo '%s': %w", resolvedPath, err)
 	}
 
-	return ParseConfig(data)
+	return parseConfigAt(data, resolvedPath)
 }

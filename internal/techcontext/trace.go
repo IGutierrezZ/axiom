@@ -17,9 +17,9 @@ import (
 )
 
 const (
-	// PlanSchema es el esquema de `integration.yaml`. Es el mismo que escribe
-	// `axiom sdd integrate`: el plan y la traza del contexto siguen en un solo
-	// fichero (D3 de spec-viva-openspec).
+	// PlanSchema es el esquema de `integration.yaml`. Es el mismo que escribía el
+	// verbo retirado `axiom sdd integrate`: el plan y la traza del contexto siguen en
+	// un solo fichero (D3 de spec-viva-openspec).
 	PlanSchema = "axiom.sdd-integration/v1"
 	// TraceFileName es el nombre del plan y de la traza dentro de la carpeta del cambio.
 	TraceFileName = "integration.yaml"
@@ -109,11 +109,10 @@ type ContextDecision struct {
 	Reason   string `yaml:"reason,omitempty" json:"reason,omitempty"`
 }
 
-// Trace es un subconjunto estricto de `specbaseline.Plan` (`integration.yaml`,
-// esquema axiom.sdd-integration/v1): lo que `prepare` fija y `verify` comprueba
-// del contexto técnico. Las claves de baseline (`options`, `id_map`, `documents`)
-// se leen y se escriben vacías, de modo que `axiom sdd integrate` y `axiom
-// archive context` se leen mutuamente el plan sin ventana rota.
+// Trace es el plan de integración del contexto técnico (`integration.yaml`,
+// esquema axiom.sdd-integration/v1): lo que `prepare` fija y `verify` comprueba.
+// Las claves heredadas de la baseline retirada (`options`, `id_map`, `documents`)
+// se leen y se escriben vacías, de modo que una traza anterior se sigue leyendo.
 type Trace struct {
 	Schema       string            `yaml:"schema"`
 	Change       string            `yaml:"change"`
@@ -130,8 +129,8 @@ type Trace struct {
 
 // ForeignPlanError es el rechazo de un plan que no es solo de contexto técnico:
 // lleva documentos de una baseline, correspondencia de IDs, opciones de supersede
-// o entradas que no son de contexto. Lo escribió `axiom sdd integrate` con una
-// baseline declarada.
+// o entradas que no son de contexto. Lo escribió el verbo retirado
+// `axiom sdd integrate` con una baseline declarada.
 type ForeignPlanError struct {
 	File    string
 	Reasons []string
@@ -142,7 +141,7 @@ func (e *ForeignPlanError) Error() string {
 	if file == "" {
 		file = TraceFileName
 	}
-	return fmt.Sprintf("%s no es un plan de contexto técnico (%s): lo escribió `axiom sdd integrate` con una baseline y `axiom archive context` solo integra el contexto técnico. Continuación: continúa con `axiom sdd integrate verify` o consulta la traza con `axiom sdd integrate show`", file, strings.Join(e.Reasons, "; "))
+	return fmt.Sprintf("%s no es un plan de contexto técnico (%s): lo escribió el verbo retirado `axiom sdd integrate` con una baseline y `axiom archive context` solo integra el contexto técnico. Continuación: migra los requisitos con `axiom archive adopt scan --path <ruta> --change <cambio>` y retira el integration.yaml heredado de la carpeta del cambio", file, strings.Join(e.Reasons, "; "))
 }
 
 // foreign devuelve las razones por las que el plan no es solo de contexto.
@@ -398,7 +397,7 @@ const (
 
 // TraceView es el JSON de `show --format json`: la traza sin la línea base de
 // git, que no es parte de la auditoría. `idMap` está siempre vacío: la forma es la
-// de `axiom sdd integrate show`.
+// que tenía en el verbo retirado `axiom sdd integrate show`.
 type TraceView struct {
 	Schema     string          `json:"schema"`
 	Change     string          `json:"change"`

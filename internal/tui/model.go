@@ -656,10 +656,6 @@ type Model struct {
 	ActiveHandoff     *handoff.Handoff
 	HandoffErr        string
 	LivingSpecs       []livingdoc.LivingSpecEntry
-	// LivingExternalBaseline indica que la baseline de especificaciones es del
-	// proyecto: el catálogo está vacío porque no se indexa, no porque falte
-	// especificación (REQ-24.25). Los dominios y rutas van en GovernanceMessage.
-	LivingExternalBaseline bool
 
 	// BackgroundIntent is the effective OpenCode background choice for the
 	// current install. BackgroundPersist is published only after success.
@@ -1724,7 +1720,7 @@ func (m Model) View() string {
 	case ScreenHandoffs:
 		return screens.RenderHandoffs(m.ActiveHandoff, m.SDDActiveChange, m.HandoffErr)
 	case ScreenLivingDoc:
-		return screens.RenderLivingDoc(m.LivingSpecs, m.LivingExternalBaseline, m.Cursor, m.GovernanceMessage)
+		return screens.RenderLivingDoc(m.LivingSpecs, m.Cursor, m.GovernanceMessage)
 	default:
 		return ""
 	}
@@ -6209,7 +6205,6 @@ func (m *Model) loadActiveHandoff() {
 func (m *Model) loadLivingDocs() {
 	m.GovernanceMessage = ""
 	m.LivingSpecs = nil
-	m.LivingExternalBaseline = false
 	srv := livingdoc.NewService(".", nil, nil)
 	cat, err := srv.GetCatalog(context.Background())
 	if err != nil {
@@ -6218,25 +6213,8 @@ func (m *Model) loadLivingDocs() {
 	}
 	if cat != nil {
 		m.LivingSpecs = cat.Specs
-		var messages []string
-		// Con baseline del proyecto el catálogo no se indexa: se muestran los
-		// dominios y las rutas declarados en lugar del catálogo (REQ-24.25).
-		if cat.ExternalBaseline != nil {
-			m.LivingExternalBaseline = true
-			messages = append(messages, externalBaselineMessage(cat.ExternalBaseline))
-		}
-		// Entre los avisos del catálogo va el de la ubicación antigua divergente (Q14).
-		messages = append(messages, cat.Warnings...)
-		m.GovernanceMessage = strings.Join(messages, " ")
+		// Entre los avisos del catálogo van el de la ubicación antigua divergente
+		// (Q14) y el de un `baseline:` residual (REQ-30.21).
+		m.GovernanceMessage = strings.Join(cat.Warnings, " ")
 	}
-}
-
-// externalBaselineMessage explica que la baseline es del proyecto y lista los
-// dominios con la ruta de su documento.
-func externalBaselineMessage(external *livingdoc.ExternalBaseline) string {
-	documents := make([]string, 0, len(external.Documents))
-	for _, document := range external.Documents {
-		documents = append(documents, document.Domain+" → "+document.Path)
-	}
-	return "La baseline de especificaciones es externa (del proyecto) y no se indexa aquí. Dominios y rutas declarados: " + strings.Join(documents, "; ") + "."
 }

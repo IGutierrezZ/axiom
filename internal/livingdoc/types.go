@@ -1,10 +1,7 @@
 package livingdoc
 
 import (
-	"fmt"
 	"time"
-
-	"github.com/IGutierrezZ/axiom/v3/internal/pathquote"
 )
 
 // RequirementMeta describe un requerimiento canónico extraído de una spec viva.
@@ -39,9 +36,6 @@ type LivingCatalog struct {
 	// Warnings reúne los avisos de lectura del catálogo, entre ellos el de la
 	// ubicación antigua divergente (Q14, REQ-24.10).
 	Warnings []string `json:"warnings,omitempty"`
-	// ExternalBaseline solo aparece con una baseline del proyecto declarada
-	// (REQ-24.25): lista los dominios y las rutas declarados, que no se indexan.
-	ExternalBaseline *ExternalBaseline `json:"external_baseline,omitempty"`
 }
 
 // SyncReport resume el resultado determinista de una sincronización de índice de especificaciones vivas.
@@ -52,31 +46,4 @@ type SyncReport struct {
 	IndexPath         string    `json:"index_path"`
 	SyncedAt          time.Time `json:"synced_at"`
 	Warnings          []string  `json:"warnings,omitempty"`
-}
-
-// ExternalBaseline informa de que la baseline de especificaciones es del
-// proyecto (REQ-24.25): los documentos declarados no se indexan, y un catálogo
-// vacío no debe interpretarse como ausencia de especificación.
-type ExternalBaseline struct {
-	Documents []ExternalBaselineDocument `json:"documents"`
-}
-
-// ExternalBaselineDocument es un documento declarado de la baseline del proyecto.
-type ExternalBaselineDocument struct {
-	Domain string `json:"domain"`
-	Path   string `json:"path"` // absoluta
-}
-
-// ExternalBaselineError lo devuelve GetSpecDetail para un dominio de la
-// baseline del proyecto: su contenido no se indexa ni se muestra aquí.
-type ExternalBaselineError struct {
-	Domain     string
-	Path       string // documento declarado, absoluto
-	ConfigPath string // axiom.yaml que lo declara
-}
-
-// Error nombra el dominio, su ruta y el axiom.yaml que lo declara.
-func (e *ExternalBaselineError) Error() string {
-	return fmt.Sprintf("el dominio %q pertenece a la baseline externa del proyecto (declarada en %s) y no se indexa: su documento está en %s",
-		e.Domain, pathquote.Quote(e.ConfigPath), pathquote.Quote(e.Path))
 }

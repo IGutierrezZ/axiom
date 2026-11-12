@@ -63,7 +63,8 @@ func TestOpenSpecConfigDocumentsTheConfigurationBoundary(t *testing.T) {
 	doc := string(raw)
 	for _, want := range []string{
 		"## Configuration boundary with `axiom.yaml`",
-		"`baseline` and `technical_context` live only in `axiom.yaml`",
+		"`technical_context` lives only in `axiom.yaml`",
+		"`baseline_retired`",
 		"A key with that name in `openspec/config.yaml` has no effect",
 		"The behavioral rules (`rules.<phase>`, `strict_tdd`, `artifact_store`) stay in `openspec/config.yaml`",
 		"`governance.context` is unchanged",
@@ -86,36 +87,38 @@ func TestManualDeInicioDocumentsTheResolutionChangeFromASubdirectory(t *testing.
 	)
 }
 
-// REQ-24.13, REQ-24.17 y REQ-24.62 (design §9): el manual documenta la
-// declaración de la baseline del proyecto, su validación y la adopción en cuatro
-// pasos, con el aviso de usar el binario nuevo en todo el equipo.
-func TestManualDeInicioDocumentsTheProjectBaselineAndItsAdoption(t *testing.T) {
-	assertDocContains(t, readManualDeInicio(t),
-		"### Baseline del Proyecto y Contexto Técnico",
-		"Se declara solo en `axiom.yaml` (nunca en `openspec/config.yaml`",
-		"baseline:\n  documents:",
-		"integration: directed",
-		"integration: register",
-		"technical_context:\n  maintained:",
-		"`axiom workspace validate --path <maestra>` comprueba la declaración contra el sistema de ficheros y el almacén de artefactos",
+// REQ-30.21 (design §9): el manual documenta la baseline retirada, el error tipado
+// que produce, los verbos retirados y la migración por adopción, con el aviso de
+// usar el binario nuevo en todo el equipo.
+func TestManualDeInicioDocumentsTheRetiredBaselineAndItsMigration(t *testing.T) {
+	manual := readManualDeInicio(t)
+	assertDocContains(t, manual,
+		"### Baseline Retirada y Migración",
+		"El bloque `baseline:` de `axiom.yaml` ya no existe: la única spec viva es OpenSpec (`openspec/specs/`)",
+		"el error tipado `baseline_retired`, que nombra la ruta, la línea y la continuación",
+		"`axiom workspace validate --path <maestra>` sale con código `1`",
 		"bloquea solo el archivado",
-		"exigen `artifact_store` `openspec` o `hybrid`",
-		"ninguna operación de Axiom crea `openspec/specs/` ni `openspec/INDEX.md`",
-		"`axiom sdd integrate check --cwd <maestra> --change <cambio>`",
-		"#### Adopción en cuatro pasos",
-		"1. Monta a mano la topología canónica",
-		"2. Declara `baseline:` y `technical_context:` en `axiom.yaml`",
+		"`axiom init` se rechaza antes de escribir ni registrar nada",
+		"`axiom sdd integrate` ya no existe: remite a `axiom archive context check|prepare|verify|show`",
+		"`axiom sdd archive-compose` solo admite `--canonical --delta`",
+		"#### Migración en tres pasos",
+		"1. Retira el bloque `baseline:` de `axiom.yaml`.",
+		"2. Migra sus requisitos a `openspec/specs/` con `axiom archive adopt scan --path <maestra> --change <cambio>`",
 		"3. Ejecuta `axiom workspace validate --path <maestra>` hasta que sea conforme.",
-		"4. Para los cambios con baseline con perfil de requisito, ejecuta `axiom sdd integrate check` desde `sdd-spec`.",
-		"todo el equipo debe usar el binario nuevo antes de declarar la baseline",
+		"todo el equipo debe usar el binario nuevo antes de migrar",
 	)
+	for _, retired := range []string{"baseline:\n  documents:", "integration: directed", "integration: register", "axiom sdd integrate check"} {
+		if strings.Contains(manual, retired) {
+			t.Errorf("el manual aún describe la baseline retirada: %q", retired)
+		}
+	}
 }
 
 // D-14 (design §9): el manual indica, para los runtimes con el modelo fijado por
 // agente, que se asigne a sdd-archive un modelo de nivel de implementación.
-func TestManualDeInicioDocumentsTheArchiveModelForDirectedIntegration(t *testing.T) {
+func TestManualDeInicioDocumentsTheArchiveModelForMaintainedContext(t *testing.T) {
 	assertDocContains(t, readManualDeInicio(t),
-		"#### Modelo de `sdd-archive` con integración dirigida",
+		"#### Modelo de `sdd-archive` con contexto mantenido",
 		"el orquestador lanza `sdd-archive` con el modelo asignado a `sdd-apply`",
 		"En los runtimes con el modelo fijado por agente (OpenCode, Kiro y otros)",
 		"asigna a `sdd-archive` un modelo de nivel de implementación con el selector de modelos existente",

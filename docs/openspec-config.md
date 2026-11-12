@@ -156,20 +156,20 @@ An SDD project is configured in two files, and each one has its own responsibili
 
 | File | What it declares | What validates it |
 |------|------------------|-------------------|
-| `axiom.yaml` | The structural declaration: `baseline` (the documents of the project baseline) and `technical_context` (the `maintained` and `reference` technical context). `governance.context` is unchanged and coexists with them | Loading `axiom.yaml` (strict syntax) and `axiom workspace validate` (files and artifact store) |
+| `axiom.yaml` | The structural declaration: `technical_context` (the `maintained` and `reference` technical context) and the project policy blocks. `governance.context` is unchanged and coexists with them. The `baseline` block is retired | Loading `axiom.yaml` (strict syntax) and `axiom workspace validate` (files and artifact store) |
 | `openspec/config.yaml` | The behavioral rules: `rules.<phase>`, `strict_tdd`, `testing`, and `artifact_store` | Nothing in Go: it is the convention described in this document |
 
 Specifically:
 
-- `baseline` and `technical_context` live only in `axiom.yaml`. A key with that name in `openspec/config.yaml` has no effect: the status does not project it and archive does not read it.
+- `technical_context` lives only in `axiom.yaml`. A key with that name in `openspec/config.yaml` has no effect: the status does not project it and archive does not read it. The retired `baseline` block is not accepted in `axiom.yaml` either: it is rejected with the typed error `baseline_retired` and the continuation `axiom archive adopt`.
 - The behavioral rules (`rules.<phase>`, `strict_tdd`, `artifact_store`) stay in `openspec/config.yaml` and do not move to `axiom.yaml`.
-- A project baseline (`baseline` with documents) and a maintained technical context (`technical_context.maintained`) require a file-based artifact store, because the archive integration reads and writes the change folder. If `openspec/config.yaml` declares `artifact_store`, it must be `openspec` or `hybrid`. With `engram` or `none`, `axiom workspace validate` reports an error and the status blocks only archiving, naming the cause and the continuation. When no `artifact_store` is declared, validation reports nothing for this reason; a context declared only as `reference` does not require a file-based store.
-- Skills do not interpret `axiom.yaml` on their own: they read the `baseline` and `technicalContext` locators from the status (`axiom sdd status --json`).
+- A maintained technical context (`technical_context.maintained`) requires a file-based artifact store, because the archive integration reads and writes the change folder. If `openspec/config.yaml` declares `artifact_store`, it must be `openspec` or `hybrid`. With `engram` or `none`, `axiom workspace validate` reports an error and the status blocks only archiving, naming the cause and the continuation. When no `artifact_store` is declared, validation reports nothing for this reason; a context declared only as `reference` does not require a file-based store.
+- Skills do not interpret `axiom.yaml` on their own: they read the `technicalContext` locators from the status (`axiom sdd status --json`).
 
 To check the declaration: `axiom workspace validate --path <master folder>`.
 
 ### Where each piece lives (REQ-30.32)
 
-- `technical_context` lives in `axiom.yaml` and nowhere else. The `baseline` block is being retired: the only living spec is OpenSpec (`openspec/specs/`), and a project with its own requirement documents migrates them with `axiom archive adopt scan` and `axiom archive adopt check`.
+- `technical_context` lives in `axiom.yaml` and nowhere else. The `baseline` block is retired: the only living spec is OpenSpec (`openspec/specs/`), and a project with its own requirement documents migrates them with `axiom archive adopt scan` and `axiom archive adopt check`.
 - `rules.<phase>`, `strict_tdd` and `artifact_store` stay in `openspec/config.yaml`; none of them moves to `axiom.yaml`.
 - The technical context is checked and integrated with `axiom archive context check|prepare|verify|show`, and the living spec of an ODD feature with `axiom archive integrate --odd <feature>`.

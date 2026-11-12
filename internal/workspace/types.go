@@ -50,7 +50,7 @@ type GovernanceConfig struct {
 
 // WorkspaceConfig es la raíz del archivo de configuración axiom.yaml.
 //
-// Baseline, TechnicalContext, Git y Repositories se decodifican aparte y de forma
+// TechnicalContext, Git y Repositories se decodifican aparte y de forma
 // estricta (D-04), por eso llevan yaml:"-": la decodificación base ignora esas
 // claves y parseLayered las rellena solo cuando el bloque es válido.
 //
@@ -71,7 +71,6 @@ type WorkspaceConfig struct {
 	Workspace        WorkspaceSection        `yaml:"workspace"`
 	Roles            map[string]RoleConfig   `yaml:"roles"`
 	Governance       GovernanceConfig        `yaml:"governance,omitempty"`
-	Baseline         *BaselineConfig         `yaml:"-"`
 	TechnicalContext *TechnicalContextConfig `yaml:"-"`
 	Git              *GitConfig              `yaml:"-"`
 	Workflow         *WorkflowConfig         `yaml:"-"`

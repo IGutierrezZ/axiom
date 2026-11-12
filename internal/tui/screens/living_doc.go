@@ -26,21 +26,13 @@ func LivingDocOptions(specs []livingdoc.LivingSpecEntry) []string {
 }
 
 // RenderLivingDoc renderiza la pantalla de especificaciones vivas en la TUI.
-//
-// Con externalBaseline la baseline es del proyecto: el catálogo vacío no
-// significa que falte especificación, y message lleva los dominios y rutas
-// declarados (REQ-24.25).
-func RenderLivingDoc(specs []livingdoc.LivingSpecEntry, externalBaseline bool, cursor int, message string) string {
+func RenderLivingDoc(specs []livingdoc.LivingSpecEntry, cursor int, message string) string {
 	var b strings.Builder
 
 	b.WriteString(styles.TitleStyle.Render("📚 Catálogo de Especificaciones Vivas"))
 	b.WriteString("\n\n")
 
-	if externalBaseline {
-		b.WriteString(styles.SubtextStyle.Render("La baseline de especificaciones es del proyecto: este catálogo no la indexa ni sincroniza INDEX.md."))
-	} else {
-		b.WriteString(styles.SubtextStyle.Render("Especificaciones consolidadas en openspec/specs/ y sincronizadas en INDEX.md:"))
-	}
+	b.WriteString(styles.SubtextStyle.Render("Especificaciones consolidadas en openspec/specs/ y sincronizadas en INDEX.md:"))
 	b.WriteString("\n\n")
 
 	if message != "" {
@@ -48,7 +40,7 @@ func RenderLivingDoc(specs []livingdoc.LivingSpecEntry, externalBaseline bool, c
 		b.WriteString("\n\n")
 	}
 
-	if len(specs) == 0 && !externalBaseline {
+	if len(specs) == 0 {
 		b.WriteString(styles.SubtextStyle.Render("No se encontraron especificaciones consolidadas aún en openspec/specs/."))
 		b.WriteString("\n\n")
 	}

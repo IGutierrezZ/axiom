@@ -31,7 +31,7 @@
    - [La Spec Viva es OpenSpec](#la-spec-viva-es-openspec)
    - [Adopción de Requisitos Previos](#adopción-de-requisitos-previos-axiom-archive-adopt)
    - [Contexto Técnico](#contexto-técnico-technical_context)
-   - [Baseline del Proyecto y Contexto Técnico](#baseline-del-proyecto-y-contexto-técnico)
+   - [Baseline Retirada y Migración](#baseline-retirada-y-migración)
 9. [Flujo Dual de Desarrollo: ODD Cotidiano vs. SDD Formal](#9-flujo-dual-de-desarrollo-odd-cotidiano-vs-sdd-formal)
    - [Compuertas de Bloque e Integración Pre-Archive](#b-carril-formal-sdd-spec-driven-development)
 10. [Relevos Estructurados entre Roles y Fases (Handoffs)](#10-relevos-estructurados-entre-roles-y-fases-handoffs)
@@ -500,7 +500,7 @@ La única spec viva de requisitos de un proyecto es `openspec/specs/` (en un `mu
 * **SDD:** el archivado del cambio (`sdd-archive`) integra sus deltas.
 * **ODD:** el propio documento `odd/tasks/<feature>.md` lleva la delta y se integra con `axiom archive integrate --odd <feature>` (véase [Carril Cotidiano: ODD](#a-carril-cotidiano-odd-organic-driven-development)).
 
-Un proyecto que ya tiene requisitos propios, en cualquier formato, los migra a OpenSpec con la adopción de la sección siguiente. El bloque `baseline:` de `axiom.yaml` se está retirando: la sección «Baseline del Proyecto y Contexto Técnico» describe su estado actual hasta que se retire, y la vía para dejarlo es la adopción.
+Un proyecto que ya tiene requisitos propios, en cualquier formato, los migra a OpenSpec con la adopción de la sección siguiente. El bloque `baseline:` de `axiom.yaml` se retiró: la vía para dejarlo es esta adopción (véase [Baseline Retirada y Migración](#baseline-retirada-y-migración)).
 
 ### Adopción de Requisitos Previos (`axiom archive adopt`)
 
@@ -537,55 +537,28 @@ axiom archive context show --change <cambio>
 
 `check` valida el delta sin escribir; `prepare` fija el plan y escribe solo `integration.yaml`; `verify` comprueba la edición (traza, presencia, anclas y alcance por diff); `show` imprime la traza que se añade al informe de archivado. Un ODD comprueba además, con `axiom archive integrate --odd`, que la rama no modifique rutas de referencia.
 
-### Baseline del Proyecto y Contexto Técnico
+### Baseline Retirada y Migración
 
-> **En retirada.** El bloque `baseline:` se está retirando: la única spec viva es OpenSpec. Los proyectos nuevos no lo declaran y los que lo tienen migran con `axiom archive adopt` (véase [Adopción de Requisitos Previos](#adopción-de-requisitos-previos-axiom-archive-adopt)). Lo que sigue describe su estado actual mientras no se retire.
+> **Retirada.** El bloque `baseline:` de `axiom.yaml` ya no existe: la única spec viva es OpenSpec (`openspec/specs/`). La vía para dejarlo es la adopción (véase [Adopción de Requisitos Previos](#adopción-de-requisitos-previos-axiom-archive-adopt)).
 
-Un proyecto que ya tiene sus propios documentos de requisitos (con su propia numeración y estructura) puede declararlos como **baseline del proyecto** en lugar de usar `openspec/specs/`. Se declara solo en `axiom.yaml` (nunca en `openspec/config.yaml`, que conserva las reglas de conducta) con dos bloques opcionales:
+Un `axiom.yaml` que aún declara el bloque no se ignora ni se degrada a «sin baseline»: cada canal lo rechaza con el error tipado `baseline_retired`, que nombra la ruta, la línea y la continuación.
 
-```yaml
-baseline:
-  documents:
-    - domain: requisitos-funcionales        # un dominio, un documento
-      path: 01_Requisitos_Funcionales.md    # relativa a workspaceRoot, dentro de la carpeta maestra
-      scenarios: omit                       # include (por defecto) u omit
-      requirement:                          # perfil de requisito: hace direccionable cada requisito
-        heading: '^### (?P<id>RF-\d+): (?P<title>.+)$'
-        level: 3
-        identity: id                        # id (por defecto) o text
-        render: '### {id}: {title}'
-    - domain: modelo-de-datos
-      path: 03_Modelo_Datos.md
-      integration: directed                 # prosa: archive la edita en secciones del cambio
-    - domain: flujos-de-negocio
-      path: 04_Flujos_Negocio.md
-      integration: register                 # prosa: archive solo la registra
+* **Carga.** `axiom workspace validate --path <maestra>` sale con código `1` y los verbos que cargan la configuración devuelven el mismo error.
+* **Estado.** `axiom sdd status --json` no proyecta ninguna clave `baseline`: bloquea solo el archivado (`dependencies.archive`) con la causa, sin bloquear la planificación ni la resolución del planning home.
+* **Archivado y escrituras.** El archivado se detiene sin escribir en `openspec/specs/` ni mover el cambio; `axiom archive sync`, `axiom archive coldstart` y `axiom sdd archive-compose` con salida a fichero se niegan con el mismo error, y `axiom init` se rechaza antes de escribir ni registrar nada.
+* **Verbos retirados.** `axiom sdd integrate` ya no existe: remite a `axiom archive context check|prepare|verify|show` (contexto técnico) y a `axiom archive adopt` (migración). `axiom sdd archive-compose` solo admite `--canonical --delta`; los modos `--document`, `--change` e `--in-place` se rechazan con un motivo tipado.
 
-technical_context:
-  maintained:                               # lo mantiene el archivado con un delta por cambio
-    entry: context/INDICE.md
-    paths: [context]
-  reference:                                # solo lectura: ninguna fase lo modifica
-    paths: [referencia]
-```
+#### Migración en tres pasos
 
-* **Validación.** `axiom workspace validate --path <maestra>` comprueba la declaración contra el sistema de ficheros y el almacén de artefactos. Una declaración inválida nunca degrada a la baseline por defecto: el estado de `axiom sdd status --json` la señala y bloquea solo el archivado, con la causa y esta continuación.
-* **Almacén de ficheros.** Una baseline del proyecto o un contexto mantenido exigen `artifact_store` `openspec` o `hybrid` en `openspec/config.yaml`; con `engram` o `none` la validación lo reporta y el archivado se detiene.
-* **Sin segunda baseline.** Con una baseline del proyecto declarada, ninguna operación de Axiom crea `openspec/specs/` ni `openspec/INDEX.md`; el catálogo y el panel informan de que la baseline es externa.
-* **Integración en el archivado.** Antes de dar por terminada la fase `spec`, `axiom sdd integrate check --cwd <maestra> --change <cambio>` comprueba los deltas sin escribir. Al archivar, `axiom sdd integrate prepare` fija el plan y `axiom sdd archive-compose --cwd <maestra> --change <cambio> --document <dominio> --in-place` compone los documentos con perfil; `axiom sdd integrate verify` comprueba la edición dirigida y `axiom sdd integrate show` imprime la traza que se añade al informe de archivado.
-
-#### Adopción en cuatro pasos
-
-1. Monta a mano la topología canónica (receta en [Espacio Canónico Multirepo](#espacio-canónico-multirepo-montaje-manual)).
-2. Declara `baseline:` y `technical_context:` en `axiom.yaml`, con `artifact_store` `openspec` o `hybrid` si se integra en ellos.
+1. Retira el bloque `baseline:` de `axiom.yaml`.
+2. Migra sus requisitos a `openspec/specs/` con `axiom archive adopt scan --path <maestra> --change <cambio>` y el cambio de adopción.
 3. Ejecuta `axiom workspace validate --path <maestra>` hasta que sea conforme.
-4. Para los cambios con baseline con perfil de requisito, ejecuta `axiom sdd integrate check` desde `sdd-spec`.
 
-Un binario anterior ignora los bloques nuevos y no ve el puntero en los verbos SDD: todo el equipo debe usar el binario nuevo antes de declarar la baseline.
+Un binario anterior ignora el bloque `technical_context:` y no ve el puntero en los verbos SDD: todo el equipo debe usar el binario nuevo antes de migrar.
 
-#### Modelo de `sdd-archive` con integración dirigida
+#### Modelo de `sdd-archive` con contexto mantenido
 
-Los documentos `integration: directed` y el contexto mantenido los edita el propio `sdd-archive`, lo que exige un modelo de nivel de implementación. Claude Code lo resuelve solo: el orquestador lanza `sdd-archive` con el modelo asignado a `sdd-apply` cuando el estado proyecta contexto mantenido o integración dirigida. En los runtimes con el modelo fijado por agente (OpenCode, Kiro y otros) no existe esa elevación: al declarar integración dirigida o contexto mantenido, asigna a `sdd-archive` un modelo de nivel de implementación con el selector de modelos existente. Nunca bloquea el archivado: `axiom sdd integrate verify` protege el resultado con cualquier modelo.
+El contexto mantenido lo edita el propio `sdd-archive`, lo que exige un modelo de nivel de implementación. Claude Code lo resuelve solo: el orquestador lanza `sdd-archive` con el modelo asignado a `sdd-apply` cuando el estado proyecta contexto mantenido. En los runtimes con el modelo fijado por agente (OpenCode, Kiro y otros) no existe esa elevación: al declarar contexto mantenido, asigna a `sdd-archive` un modelo de nivel de implementación con el selector de modelos existente. Nunca bloquea el archivado: `axiom archive context verify` protege el resultado con cualquier modelo.
 
 ---
 
@@ -626,7 +599,7 @@ Para cambios estructurales profundos, refactorizaciones de arquitectura o requer
   axiom sdd gate record --gate spec|design|tasks|role-apply:<rol> --decision approved [--reason "<motivo>"]
   ```
   `gate record` solo registra: no comprueba qué está confirmado (tampoco el trabajo de un rol), no ejecuta git y, tras escribir `gates.yaml`, devuelve en `--json` la orden `publish.invocation` (`axiom sdd publish --cwd <ruta> --change <cambio> --branch <rama>`, atada a la rama con `--branch`) con el `prTarget` informativo, o `publishUnavailable` si el destino no se puede calcular. La salida 2 añade la marca de cesión y la reanudación (`git fetch origin` y `axiom branch ensure`), sin exigir una PR fusionada. La pregunta tipada de la parada (`gateQuestion`) nombra el remoto y la rama (`publication`) antes de decidir. Una publicación rechazada no deshace la aprobación ya registrada: se informa con su código y su continuación. `axiom sdd status` muestra la cesión (`handedOff`, `handedOffTo`) sin bloquear ninguna fase. La compuerta `integration` conserva sus dos salidas (aprobar con evidencia o rechazar).
-* **Publicación de los documentos (`axiom sdd publish`):** `axiom sdd publish --change <nombre> [--archive] [--branch <rama>] [--json]` confirma solo las rutas de documentación del cambio (su carpeta en `openspec/changes/<nombre>/`, `openspec/specs/`, `openspec/INDEX.md` y las rutas de `baseline` y de `technical_context.maintained` declaradas en `axiom.yaml`; nunca `reference` ni `odd/tasks/`) y sube solo la rama del cambio a `origin` con `refs/heads/<rama>:refs/heads/<rama>`, sin forzar y sin saltarse hooks. El commit usa `git commit --only` sobre esas rutas: el código preparado sigue preparado y el no preparado, intacto. No hace `fetch`, no sube código ni abre PR: si la rama tiene commits de código sin subir, los informa (`code_commits_unpublished`) y los sube la persona. En el repositorio de specs de un `multirepo` sube su rama de integración; en un monorepo o en un repositorio de código nunca sube `main` (`integration_branch`). Con `--archive` publica la rama de archivado, que sin el flag es `wrong_branch`. La salida es 0 con `published` y `up_to_date`, y 1 con una negativa tipada; `--json` escribe `axiom.sdd-publish/v1` también cuando se rechaza. Solo existe con el almacén `openspec` o `hybrid` (`store_without_files` con `engram` o `none`). Lo encadena el orquestador tras cada aprobación de una parada (véase «Compuertas de Bloque Formales») y, en continuo con `docs_publication: auto`, al cerrar `tasks` y tras archivar con `--archive`. Nota para otros proyectos: el push de la rama puede disparar su CI, que queda fuera del control de Axiom.
+* **Publicación de los documentos (`axiom sdd publish`):** `axiom sdd publish --change <nombre> [--archive] [--branch <rama>] [--json]` confirma solo las rutas de documentación del cambio (su carpeta en `openspec/changes/<nombre>/`, `openspec/specs/`, `openspec/INDEX.md` y las rutas de `technical_context.maintained` declaradas en `axiom.yaml`; nunca `reference` ni `odd/tasks/`) y sube solo la rama del cambio a `origin` con `refs/heads/<rama>:refs/heads/<rama>`, sin forzar y sin saltarse hooks. El commit usa `git commit --only` sobre esas rutas: el código preparado sigue preparado y el no preparado, intacto. No hace `fetch`, no sube código ni abre PR: si la rama tiene commits de código sin subir, los informa (`code_commits_unpublished`) y los sube la persona. En el repositorio de specs de un `multirepo` sube su rama de integración; en un monorepo o en un repositorio de código nunca sube `main` (`integration_branch`). Con `--archive` publica la rama de archivado, que sin el flag es `wrong_branch`. La salida es 0 con `published` y `up_to_date`, y 1 con una negativa tipada; `--json` escribe `axiom.sdd-publish/v1` también cuando se rechaza. Solo existe con el almacén `openspec` o `hybrid` (`store_without_files` con `engram` o `none`). Lo encadena el orquestador tras cada aprobación de una parada (véase «Compuertas de Bloque Formales») y, en continuo con `docs_publication: auto`, al cerrar `tasks` y tras archivar con `--archive`. Nota para otros proyectos: el push de la rama puede disparar su CI, que queda fuera del control de Axiom.
 * **Verificación Formal y Precondición de Integración:**
   1. `verify` valida el código mediante tests automatizados y genera `verify-report.md`. En un cambio ISO es obligatorio: escribe la `## Matriz de verificación` y el archivado se bloquea hasta que sea válida y con éxito (véase «Modo ISO y Perfil de Bug»).
   2. **`archive` no procede inmediatamente tras verificar:** exige registrar previamente evidencia formal de integración o despliegue en la compuerta de integración:

@@ -2,6 +2,7 @@ package cli
 
 import (
 	"bytes"
+	"errors"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -115,8 +116,8 @@ func composeISOFixture(t *testing.T, change archiveCheckChange) (root, canonical
 	return root, canonical, filepath.Join(changeRoot, "specs", "pagos", "spec.md")
 }
 
-// REQ-29.10 y REQ-29.11, de extremo a extremo: en los dos modos el rechazo no
-// escribe nada, ni en la salida ni en la canónica.
+// REQ-29.10 y REQ-29.11, de extremo a extremo: el rechazo no escribe nada, ni en
+// la salida ni en la canónica.
 func TestArchiveComposeISORefusesEndToEndWithoutWriting(t *testing.T) {
 	change := archiveCheckChange{name: "demo", proposal: "# P\n", deltas: map[string]string{"pagos": archiveCheckDeltaNoScene}, tasks: archiveCheckTasksDone, verify: archiveCheckVerify(), iso: true}
 	root, canonical, delta := composeISOFixture(t, change)
@@ -124,7 +125,6 @@ func TestArchiveComposeISORefusesEndToEndWithoutWriting(t *testing.T) {
 
 	for name, args := range map[string][]string{
 		"--canonical": {"--canonical", canonical, "--delta", delta},
-		"--document":  {"--cwd", root, "--document", "pagos", "--delta", delta},
 	} {
 		var stdout, stderr bytes.Buffer
 		err := runSDDArchiveComposeWithStderr(args, &stdout, &stderr)
@@ -153,16 +153,12 @@ func TestArchiveComposeISOAcceptedOutputIsByteIdentical(t *testing.T) {
 	plainChange := isoChange
 	plainChange.iso = false
 
-	compose := func(change archiveCheckChange, mode string) string {
+	compose := func(change archiveCheckChange) string {
 		t.Helper()
-		root, canonical, delta := composeISOFixture(t, change)
-		args := []string{"--canonical", canonical, "--delta", delta}
-		if mode == "--document" {
-			args = []string{"--cwd", root, "--document", "pagos", "--delta", delta}
-		}
+		_, canonical, delta := composeISOFixture(t, change)
 		var stdout, stderr bytes.Buffer
-		if err := runSDDArchiveComposeWithStderr(args, &stdout, &stderr); err != nil {
-			t.Fatalf("modo %s, iso=%v: error = %v", mode, change.iso, err)
+		if err := runSDDArchiveComposeWithStderr([]string{"--canonical", canonical, "--delta", delta}, &stdout, &stderr); err != nil {
+			t.Fatalf("iso=%v: error = %v", change.iso, err)
 		}
 		return stdout.String()
 	}
@@ -170,11 +166,9 @@ func TestArchiveComposeISOAcceptedOutputIsByteIdentical(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, mode := range []string{"--canonical", "--document"} {
-		iso, plain := compose(isoChange, mode), compose(plainChange, mode)
-		if iso != plain || iso != native {
-			t.Errorf("modo %s: la salida difiere\nISO:\n%s\nno ISO:\n%s\nnativa:\n%s", mode, iso, plain, native)
-		}
+	iso, plain := compose(isoChange), compose(plainChange)
+	if iso != plain || iso != native {
+		t.Errorf("la salida difiere\nISO:\n%s\nno ISO:\n%s\nnativa:\n%s", iso, plain, native)
 	}
 }
 
@@ -191,14 +185,54 @@ func TestArchiveComposeNonISOKeepsComposingWithoutScenarios(t *testing.T) {
 	}
 }
 
-// El modo `--change --in-place` no pasa por la negativa ISO: solo existe para la
-// baseline declarada y lo gobierna el plan de integración.
-func TestArchiveComposeInPlaceIsNotTouchedByTheISORefusal(t *testing.T) {
+// Los modos retirados con la baseline ajena (`--document`, `--change`, `--in-place`) se
+// rechazan con un motivo tipado, antes de la regla ISO y sin escribir nada
+// (REQ-30.22).
+func TestArchiveComposeRetiredModesAreRejectedWithATypedError(t *testing.T) {
 	change := archiveCheckChange{name: "demo", proposal: "# P\n", deltas: map[string]string{"pagos": archiveCheckDeltaNoScene}, tasks: archiveCheckTasksDone, verify: archiveCheckVerify(), iso: true}
-	root, _, _ := composeISOFixture(t, change)
-	var stdout, stderr bytes.Buffer
-	err := runSDDArchiveComposeWithStderr([]string{"--cwd", root, "--change", "demo", "--document", "pagos", "--in-place"}, &stdout, &stderr)
-	if err != nil && strings.Contains(err.Error(), "blocked(iso_") {
-		t.Fatalf("--in-place no debe aplicar la regla ISO: %v", err)
+	root, canonical, delta := composeISOFixture(t, change)
+	before := treeSnapshot(t, root)
+
+	for name, tc := range map[string]struct {
+		args  []string
+		flags []string
+	}{
+		"--document": {[]string{"--cwd", root, "--document", "pagos", "--delta", delta}, []string{"--document"}},
+		"--in-place": {[]string{"--cwd", root, "--change", "demo", "--document", "pagos", "--in-place"}, []string{"--document", "--change", "--in-place"}},
+		"mezclado":   {[]string{"--canonical", canonical, "--delta", delta, "--document", "pagos"}, []string{"--document"}},
+	} {
+		t.Run(name, func(t *testing.T) {
+			var stdout, stderr bytes.Buffer
+			err := runSDDArchiveComposeWithStderr(tc.args, &stdout, &stderr)
+			var retired *ComposeModeRetiredError
+			if !errors.As(err, &retired) {
+				t.Fatalf("error = %v, se esperaba un *ComposeModeRetiredError", err)
+			}
+			for _, flag := range tc.flags {
+				if !strings.Contains(err.Error(), flag) {
+					t.Errorf("el rechazo no nombra %s: %v", flag, err)
+				}
+			}
+			for _, want := range []string{"axiom sdd archive-compose --canonical", "axiom archive context", "axiom archive adopt scan"} {
+				if !strings.Contains(err.Error(), want) {
+					t.Errorf("el rechazo no nombra la continuación %q: %v", want, err)
+				}
+			}
+			if strings.Contains(err.Error(), "blocked(iso_") {
+				t.Errorf("un modo retirado no pasa por la regla ISO: %v", err)
+			}
+			if stdout.Len() != 0 || stderr.Len() != 0 {
+				t.Errorf("el rechazo escribió salida: %q %q", stdout.String(), stderr.String())
+			}
+		})
+	}
+	after := treeSnapshot(t, root)
+	if len(after) != len(before) {
+		t.Errorf("el rechazo creó o borró ficheros: antes %d, después %d", len(before), len(after))
+	}
+	for path, text := range before {
+		if after[path] != text {
+			t.Errorf("el rechazo modificó %s", path)
+		}
 	}
 }

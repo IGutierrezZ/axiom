@@ -1,8 +1,9 @@
 // Package techcontext integra el contexto técnico mantenido de un cambio: el
 // delta `context-impact.md`, sus anclas, el alcance de las rutas declaradas en
 // `technical_context`, la traza `integration.yaml` y la verificación por diff de
-// git. Es la extracción dirigida de la rama de contexto de `specbaseline`, sin
-// baseline, perfiles ni identificadores provisionales (D2 de spec-viva-openspec).
+// git. Nació como la extracción dirigida de la rama de contexto de la integración
+// de la baseline ajena (retirada), sin baseline, perfiles ni identificadores
+// provisionales (D2 de spec-viva-openspec).
 package techcontext
 
 import "strings"

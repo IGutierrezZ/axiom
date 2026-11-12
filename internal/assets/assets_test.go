@@ -358,7 +358,7 @@ func TestAllEmbeddedAssetsAreReadable(t *testing.T) {
 		"skills/sdd-init/references/init-details.md",
 		"skills/sdd-apply/SKILL.md",
 		"skills/sdd-archive/SKILL.md",
-		"skills/sdd-archive/references/project-baseline-integration.md",
+		"skills/sdd-archive/references/technical-context-integration.md",
 		"skills/sdd-design/SKILL.md",
 		"skills/sdd-explore/SKILL.md",
 		"skills/sdd-propose/SKILL.md",
@@ -2035,33 +2035,36 @@ func TestSDDStatusContractPreservesFrozenExternalV2Projection(t *testing.T) {
 	}
 }
 
-// REQ-24.19 y REQ-24.28: el contrato compartido documenta baseline y
-// technicalContext como campos opcionales y la regla de leer sus localizadores del
-// status en lugar de interpretar axiom.yaml.
-func TestSDDStatusContractDocumentsBaselineAndTechnicalContext(t *testing.T) {
+// REQ-24.28 y REQ-30.21: el contrato compartido documenta technicalContext como
+// campo opcional, la regla de leer sus localizadores del status en lugar de
+// interpretar axiom.yaml y que el status ya no proyecta ninguna clave baseline.
+func TestSDDStatusContractDocumentsTechnicalContextAndNoBaseline(t *testing.T) {
 	content := mustReadResolved("skills/_shared/sdd-status-contract.md")
 
 	for _, want := range []string{
-		// El esquema los lista como opcionales, con su forma.
-		"baseline: # optional; present only with a valid `baseline:` declaration in axiom.yaml",
-		"integration: compose | directed | register",
 		"technicalContext: # optional; present only with a valid `technical_context:` declaration in axiom.yaml",
 		"maintained: # optional mode",
-		// La sección nueva fija la regla de lectura y la omisión.
-		"## Project Baseline and Technical Context",
-		"`baseline` and `technicalContext` are additive, optional fields of the status.",
+		"## Technical Context",
+		"`technicalContext` is an additive, optional field of the status.",
+		"The status never projects a `baseline` key",
 		"so phase skills never interpret that file themselves",
 		"Read the locators from the status",
 		"Never read `axiom.yaml` to find them",
-		"Both fields are omitted entirely (never `null`, never empty)",
+		"The field is omitted entirely (never `null`, never empty)",
 		"An invalid declaration is never projected, not even partially.",
 		"planning and `apply` are never blocked by it",
 		"Only archive is gated by a declaration cause",
+		"the retired `baseline_retired` block remains",
 		"it appears in `blockedReasons` (and `nextRecommended` becomes `resolve-blockers`) only when the route would otherwise be `archive`",
 		"The context delta (`context-impact.md`) is not projected",
 	} {
 		if !strings.Contains(content, want) {
-			t.Errorf("sdd-status-contract missing baseline/technicalContext rule %q", want)
+			t.Errorf("sdd-status-contract missing technicalContext rule %q", want)
+		}
+	}
+	for _, forbidden := range []string{"baseline.documents", "integration: compose | directed | register", "baseline: # optional"} {
+		if strings.Contains(content, forbidden) {
+			t.Errorf("sdd-status-contract still describes the retired baseline: %q", forbidden)
 		}
 	}
 }
@@ -2086,28 +2089,32 @@ func TestSDDStatusContractDocumentsWorkflowLane(t *testing.T) {
 	}
 }
 
-// REQ-24.19, REQ-24.24, REQ-24.29 y REQ-24.30: la convención compartida fija de
-// dónde se leen los localizadores de la baseline y del contexto técnico, qué se
-// lee y qué está prohibido, para que cada skill la cite en lugar de repetirla.
+// REQ-24.19, REQ-24.29, REQ-24.30 y REQ-30.28: la convención compartida fija de
+// dónde se leen los localizadores del contexto técnico, qué se lee y qué está
+// prohibido, para que cada skill la cite en lugar de repetirla; la spec viva es solo
+// openspec/specs/.
 func TestProjectBaselineConventionStatesLocatorsReadingAndProhibitions(t *testing.T) {
 	content := mustReadResolved("skills/_shared/project-baseline-convention.md")
 
 	for _, want := range []string{
+		"# Technical Context Convention (shared across SDD skills)",
 		// 1. Localizadores del status; nunca axiom.yaml.
-		"Read the `baseline` and `technicalContext` locators from the status",
+		"Read the `technicalContext` locators from the status",
 		"never read or interpret `axiom.yaml`",
-		"`baseline.documents[]`",
 		"`technicalContext.maintained` and `technicalContext.reference`",
-		"If `notes` report a declaration cause, the declaration is invalid, not the default",
-		// 2. Lectura: la entrada de cada modo y el resto bajo demanda.
+		"If `notes` report a declaration cause, the declaration is invalid, not absent",
+		"A cause coded `baseline_retired`",
+		"`axiom archive adopt scan`",
+		// 2. Lectura: la spec viva y la entrada de cada modo.
+		"The living specification is `openspec/specs/{domain}/spec.md`",
 		"Read the `entry` file of each declared `technicalContext` mode and consult the remaining `paths` only on demand",
 		"A mode declared without `entry` has nothing to preload",
-		"read the project's specifications from `baseline.documents`",
 		// 3. Prohibiciones.
 		"Never create, modify, or delete files under `technicalContext.reference` paths.",
-		"change only through the archive integration",
-		"never create or write `openspec/specs/` or `openspec/INDEX.md`",
-		"A domain that the baseline does not declare is rejected by archive",
+		"change only through the archive integration (`axiom archive context`)",
+		"A phase never writes `openspec/specs/` or `openspec/INDEX.md`",
+		// 4. Comprobación del delta de contexto.
+		"`axiom archive context check --path \"<workspaceRoot>\" --change <cambio>` validates the context delta",
 	} {
 		if !strings.Contains(content, want) {
 			t.Errorf("project-baseline-convention missing %q", want)
@@ -2115,24 +2122,56 @@ func TestProjectBaselineConventionStatesLocatorsReadingAndProhibitions(t *testin
 	}
 }
 
-// REQ-24.24: el texto de sdd-init no prescribe crear openspec/specs/ cuando el
-// status proyecta baseline, en la skill, en su referencia y en la convención de
-// OpenSpec compartida.
-func TestSDDInitDoesNotPrescribeSpecsWithAProjectBaseline(t *testing.T) {
-	skill := mustReadResolved("skills/sdd-init/SKILL.md")
-	for _, want := range []string{
-		"If the status projects `baseline`, do not create `openspec/specs/` or `openspec/INDEX.md`",
-		"`../_shared/project-baseline-convention.md`",
-	} {
-		if !strings.Contains(skill, want) {
-			t.Errorf("sdd-init SKILL.md missing %q", want)
-		}
+// REQ-30.28: ninguna skill ni fichero compartido describe la baseline ajena
+// retirada, `axiom sdd integrate` ni los modos `--document` e `--in-place` de
+// archive-compose.
+func TestSDDSkillsDoNotDescribeTheRetiredBaseline(t *testing.T) {
+	retired := []string{
+		"baseline.documents",
+		"integration: directed",
+		"integration: compose",
+		"axiom sdd integrate",
+		"--in-place",
+		"--document \"<dominio>\"",
+		"project-baseline-integration.md",
+		"status projects `baseline`",
+		"Project Baseline Branch",
 	}
+	var checked int
+	err := fs.WalkDir(FS, "skills", func(path string, entry fs.DirEntry, err error) error {
+		if err != nil || entry.IsDir() || !strings.HasSuffix(path, ".md") {
+			return err
+		}
+		data, readErr := fs.ReadFile(FS, path)
+		if readErr != nil {
+			return readErr
+		}
+		checked++
+		for _, old := range retired {
+			if strings.Contains(string(data), old) {
+				t.Errorf("%s still describes the retired baseline: %q", path, old)
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if checked == 0 {
+		t.Fatal("no skill file was checked")
+	}
+	if strings.Contains(mustReadResolved("claude/sdd-orchestrator-workflow.md"), "baseline.documents") {
+		t.Error("the orchestrator workflow still describes baseline.documents")
+	}
+}
 
+// REQ-24.24 y REQ-30.28: sdd-init no prescribe ninguna rama de baseline: openspec/specs/
+// es la spec viva y lo crea vacío.
+func TestSDDInitCreatesTheLivingSpecsDirectory(t *testing.T) {
 	details := mustReadResolved("skills/sdd-init/references/init-details.md")
 	for _, want := range []string{
-		"If the status projects `baseline`, do not create `openspec/specs/` or `openspec/INDEX.md`",
-		"create only `config.yaml` and `changes/archive/`",
+		"`specs/` holds the living specification of the project (`openspec/specs/`)",
+		"only `sdd-archive` promotes delta specs into it",
 	} {
 		if !strings.Contains(details, want) {
 			t.Errorf("sdd-init references/init-details.md missing %q", want)
@@ -2141,8 +2180,7 @@ func TestSDDInitDoesNotPrescribeSpecsWithAProjectBaseline(t *testing.T) {
 
 	convention := mustReadResolved("skills/_shared/openspec-convention.md")
 	for _, want := range []string{
-		"`openspec/specs/` (only when the status does not project `baseline`)",
-		"no skill creates `openspec/specs/` or `openspec/INDEX.md`",
+		"`openspec/specs/`, `openspec/changes/`, `openspec/changes/archive/`",
 	} {
 		if !strings.Contains(convention, want) {
 			t.Errorf("openspec-convention missing %q", want)
@@ -2175,104 +2213,23 @@ func TestReadingPhaseSkillsReadTheTechnicalContextEntry(t *testing.T) {
 	}
 }
 
-// REQ-24.54: sdd-explore, sdd-propose, sdd-spec y, como DEBERÍA, sdd-onboard leen la
-// baseline del campo `baseline` del status; las rutas openspec/specs/ solo rigen sin
-// él. Las ubicaciones fijadas por pins anteriores (copias de sdd-propose y ubicación
-// local del cambio en sdd-spec) no se tocan.
-func TestPlanningSkillsReadTheBaselineFromTheStatus(t *testing.T) {
-	const (
-		readBaseline = "When the status projects `baseline`, read the documents of the affected domains from `baseline.documents`"
-		onlyDefault  = "only when `baseline` is absent"
-	)
-	for _, phase := range []string{"sdd-explore", "sdd-propose", "sdd-spec", "sdd-onboard"} {
+// REQ-30.28: sdd-explore, sdd-propose, sdd-spec y sdd-onboard leen la spec viva de
+// openspec/specs/{dominio}/spec.md, la única fuente del comportamiento vigente.
+func TestPlanningSkillsReadTheLivingSpecs(t *testing.T) {
+	for phase, wants := range map[string][]string{
+		"sdd-explore": {"Read the living specs of the affected domains from `openspec/specs/{domain}/spec.md`"},
+		"sdd-propose": {"Read the relevant specs under `openspec/specs/` to understand current behavior"},
+		"sdd-spec":    {"Read `openspec/specs/{domain}/spec.md` for the affected domains to understand CURRENT behavior"},
+		"sdd-onboard": {"Read the living specs of the affected domains from `openspec/specs/{domain}/spec.md`"},
+	} {
 		t.Run(phase, func(t *testing.T) {
 			content := mustReadResolved("skills/" + phase + "/SKILL.md")
-			for _, want := range []string{readBaseline, onlyDefault, "`../_shared/project-baseline-convention.md`"} {
+			for _, want := range append(wants, "`../_shared/project-baseline-convention.md`") {
 				if !strings.Contains(content, want) {
-					t.Errorf("%s missing baseline reading wording %q", phase, want)
+					t.Errorf("%s missing living spec reading wording %q", phase, want)
 				}
 			}
 		})
-	}
-
-	// Las lecturas incondicionales de openspec/specs/ ya no figuran.
-	for path, retired := range map[string][]string{
-		"skills/sdd-explore/SKILL.md": {"Read `openspec/config.yaml` and `openspec/specs/`."},
-		"skills/sdd-propose/SKILL.md": {
-			"If `openspec/specs/` has relevant specs, read them",
-			"Research `openspec/specs/` before filling this in.",
-			"Research `openspec/specs/` first",
-			"Use existing spec names from openspec/specs/.",
-		},
-		"skills/sdd-spec/SKILL.md": {
-			"If `openspec/specs/{domain}/spec.md` exists, read it to understand CURRENT behavior",
-			"Locate the requirement in openspec/specs/{domain}/spec.md",
-			"Read existing openspec/specs/<capability-name>/spec.md first",
-		},
-	} {
-		content := mustReadResolved(path)
-		for _, old := range retired {
-			if strings.Contains(content, old) {
-				t.Errorf("%s still reads openspec/specs/ unconditionally: %q", path, old)
-			}
-		}
-	}
-
-	t.Run("sdd-propose names only declared domains", func(t *testing.T) {
-		content := mustReadResolved("skills/sdd-propose/SKILL.md")
-		if want := "name only domains that `baseline.documents` declares"; !strings.Contains(content, want) {
-			t.Errorf("sdd-propose missing %q", want)
-		}
-	})
-}
-
-// REQ-24.54, REQ-24.42 y D-11: sdd-spec fija las reglas de IDs de una baseline con
-// perfil de requisito y la frase que ordena ejecutar la comprobación previa antes
-// de dar por terminada la fase; la convención compartida las concentra.
-func TestSDDSpecWritesProfileDeltasAndRunsTheCheck(t *testing.T) {
-	const checkSentence = "Before you finish the spec phase with such a baseline, run `axiom sdd integrate check --cwd \"<workspaceRoot>\" --change <cambio>` and correct every violation it reports."
-
-	skill := mustReadResolved("skills/sdd-spec/SKILL.md")
-	for _, want := range []string{
-		"#### Deltas for a Project Baseline with a Requirement Profile",
-		"`integration: compose`",
-		"Prose domains (`directed` or `register`) keep the format above with no ID rules",
-		"without the leading `#` signs, for example `RF-120: <title>`",
-		"use the IDs that exist in the baseline document",
-		"provisional ID that matches the document's heading pattern",
-		"Start where `axiom sdd integrate check` suggests",
-		`(Placement: after <ID>)`,
-		`(Placement: section "<title>")`,
-		"never rely on the order of IDs",
-		"contains no heading at or above the level of the project's requirement headings outside code fences",
-		"A domain that `baseline.documents` does not declare is rejected at archive",
-		checkSentence,
-	} {
-		if !strings.Contains(skill, want) {
-			t.Errorf("sdd-spec missing profile delta wording %q", want)
-		}
-	}
-	// La comprobación va después de las reglas y antes de la sección de specs nuevas.
-	if rules, check, fresh := strings.Index(skill, "#### Deltas for a Project Baseline"), strings.Index(skill, checkSentence), strings.Index(skill, "#### For NEW Specs"); rules < 0 || check < rules || fresh < check {
-		t.Errorf("the profile delta rules and the check sentence are out of order: %d %d %d", rules, check, fresh)
-	}
-
-	convention := mustReadResolved("skills/_shared/project-baseline-convention.md")
-	for _, want := range []string{
-		"## 4. Deltas for a baseline with a requirement profile",
-		"a document with a requirement profile",
-		"A name that does not match is rejected, naming the requirement and the pattern.",
-		"never guess or renumber",
-		"prints a suggested provisional start for each ID family",
-		"A family with no ID in the document cannot receive an ADDED requirement.",
-		"The note is delta metadata and is never integrated.",
-		"`check` names the offending line",
-		"the next free definitive ID of its family (with the zero padding of the family's highest ID)",
-		"Before the spec phase is finished, run `axiom sdd integrate check --cwd \"<workspaceRoot>\" --change <cambio>`",
-	} {
-		if !strings.Contains(convention, want) {
-			t.Errorf("project-baseline-convention missing profile delta rule %q", want)
-		}
 	}
 }
 
@@ -2282,9 +2239,9 @@ func TestOpenSpecConventionListsTheContextDeltaAndTheIntegrationPlan(t *testing.
 	convention := mustReadResolved("skills/_shared/openspec-convention.md")
 	for _, want := range []string{
 		"├── context-impact.md <- context delta, only when the status projects `technicalContext.maintained`",
-		"└── integration.yaml <- integration plan and trace, written by `axiom sdd integrate prepare`",
+		"└── integration.yaml <- context integration plan and trace, written by `axiom archive context prepare`",
 		"| sdd-design, sdd-apply | Create, then keep current (only when the status projects `technicalContext.maintained`) | `openspec/changes/{change-name}/context-impact.md` |",
-		"| native `axiom sdd integrate` | Writes (`prepare`, then `verify`) | `openspec/changes/{change-name}/integration.yaml` |",
+		"| native `axiom archive context` | Writes (`prepare`, then `verify`) | `openspec/changes/{change-name}/integration.yaml` |",
 	} {
 		if !strings.Contains(convention, want) {
 			t.Errorf("openspec-convention missing %q", want)
@@ -2350,7 +2307,7 @@ func TestSDDDesignDraftsTheContextDeltaAndRemediatesTheGate(t *testing.T) {
 		"`../_shared/project-baseline-convention.md`, section 5",
 		"Never edit any file under the `technicalContext.maintained` paths",
 		"Without a maintained context, create no context delta.",
-		`axiom sdd integrate check --cwd "<workspaceRoot>" --change "{change-name}"`,
+		`axiom archive context check --path "<workspaceRoot>" --change "{change-name}"`,
 		"a `design` gate rejected because of the context delta",
 		"append one dated line to the `## Registro de remediación` section of `design.md`",
 		"never a task checkbox",
@@ -2417,8 +2374,8 @@ func TestProjectBaselineConventionCoversTheContextDeltaGatesAndModel(t *testing.
 		"The line is never a task checkbox, so it never alters progress.",
 		"the gate returns to `pending`",
 		"never look for a reopen command: there is none",
-		// 7. Modelo del archivado con integración dirigida.
-		"## 7. Model for `sdd-archive` with directed integration",
+		// 7. Modelo del archivado con contexto mantenido.
+		"## 7. Model for `sdd-archive` with a maintained context",
 		"Claude Code launches `sdd-archive` with the model assigned to `sdd-apply`",
 		`"Archive Directed Integration Model (MANDATORY)"`,
 		"In runtimes where the model is fixed per agent (OpenCode, Kiro, and others)",
@@ -2593,13 +2550,13 @@ func TestClaudeWorkflowCarriesTheArchiveDirectedIntegrationModelRule(t *testing.
 	}
 	for _, want := range []string{
 		"read the native status",
-		"projects `technicalContext.maintained`, or any `baseline.documents[].integration == \"directed\"`",
+		"when it projects `technicalContext.maintained`, launch `sdd-archive`",
 		"launch `sdd-archive` with the model assigned to `sdd-apply` in the Model Assignments table",
 		"in every other case launch it with the model of the `sdd-archive` row",
 		"Claude Code accepts `model` per call",
 		"never from reading `axiom.yaml`",
 		"Never block or delay archive on this rule",
-		"`axiom sdd integrate verify` protects the result whatever the model",
+		"`axiom archive context verify` protects the result whatever the model",
 		"`project-baseline-convention.md`, section 7",
 	} {
 		if !strings.Contains(rule, want) {
@@ -3217,57 +3174,56 @@ func TestSDDArchiveStoreSpecificFilesystemContract(t *testing.T) {
 	}
 }
 
-// REQ-24.47, REQ-24.24, REQ-24.62, REQ-21.17 y REQ-24.56 (g): sdd-archive decide
-// primero la rama de integración del proyecto, nombra la forma de la invocación de
-// composición sin plantillar rutas de openspec/specs/, para como blocked con la
-// causa literal sin deducir el almacén y refresca el catálogo maestro solo en la
-// rama por defecto, sin tocar los bloques fijados.
-func TestSDDArchiveProjectBaselineBranch(t *testing.T) {
+// REQ-30.28, REQ-24.62, REQ-21.17 y REQ-24.56 (f): sdd-archive decide primero la
+// rama del contexto técnico mantenido, nombra la forma de la invocación nativa sin
+// plantillar rutas de openspec/specs/, para como blocked con la causa literal sin
+// deducir el almacén y refresca el catálogo maestro, sin tocar los bloques fijados.
+func TestSDDArchiveTechnicalContextBranch(t *testing.T) {
 	skill := mustReadResolved("skills/sdd-archive/SKILL.md")
 
-	const invocation = `axiom sdd archive-compose --cwd "<workspaceRoot>" --change "{change-name}" --document "<dominio>" [--document ...] --in-place`
+	const invocation = `axiom archive context prepare --path "<workspaceRoot>" --change "{change-name}" --json`
 	for _, want := range []string{
-		"#### Project Baseline Branch (decide first)",
+		"#### Technical Context Branch (decide first)",
 		"`../_shared/project-baseline-convention.md`",
-		"**IF the status projects `baseline` or `technicalContext.maintained`:**",
-		"`references/project-baseline-integration.md`",
+		"**IF the status projects `technicalContext.maintained`:**",
+		"`references/technical-context-integration.md`",
 		"takes precedence over the `engram` and `none` lines below",
-		"never create, write, or copy anything under `openspec/specs/` or `openspec/INDEX.md`",
-		"Execute that command literally",
+		"`openspec/specs/` is the only living specification",
+		"Execute each command literally",
 		invocation,
 		"STOP and report `blocked` when the status marks the archive as blocked",
-		"or when `axiom sdd integrate prepare` rejects",
-		"`engram` or `none`, case (g)",
+		"or when `axiom archive context prepare` rejects",
+		"`engram` or `none`, case (f)",
+		"`baseline_retired`",
+		"`axiom archive adopt scan`",
 		"Quote the cause literally",
 		"Do not deduce or change the artifact store",
 		"do not move the change to the archive",
-		"**IF neither is projected:**",
-		"#### Refresh the Master Catalog (default baseline only)",
+		"**IF `technicalContext.maintained` is not projected:**",
+		"#### Refresh the Master Catalog",
 		`axiom archive sync --path "<workspaceRoot>"`,
-		"Skip this step when the status projects `baseline`",
-		"never promote or copy a delta to `openspec/specs/{domain}/`",
 		"bounded `Edit` operations",
 		"never a whole-file rewrite",
 		`never assume "Sin impacto"`,
 		"Never create, modify, or delete files under `technicalContext.reference` paths.",
 	} {
 		if !strings.Contains(skill, want) {
-			t.Errorf("skills/sdd-archive/SKILL.md missing project baseline wording %q", want)
+			t.Errorf("skills/sdd-archive/SKILL.md missing technical context wording %q", want)
 		}
 	}
 
-	// El texto de la invocación de composición no plantilla rutas de openspec/specs/.
+	// El texto de la invocación nativa no plantilla rutas de openspec/specs/.
 	at := strings.Index(skill, invocation)
 	if at < 0 {
-		t.Fatal("the composition invocation is missing")
+		t.Fatal("the native invocation is missing")
 	}
 	open := strings.LastIndex(skill[:at], "```bash\n")
 	closing := strings.Index(skill[at:], "\n```")
 	if open < 0 || closing < 0 {
-		t.Fatal("the composition invocation is not inside a fenced bash block")
+		t.Fatal("the native invocation is not inside a fenced bash block")
 	}
 	if block := skill[open : at+closing]; strings.Contains(block, "openspec/specs/") {
-		t.Errorf("the composition invocation block names openspec/specs/: %q", block)
+		t.Errorf("the native invocation block names openspec/specs/: %q", block)
 	}
 
 	// La rama se decide antes que las líneas por almacén y que los bloques fijados;
@@ -3280,14 +3236,14 @@ func TestSDDArchiveProjectBaselineBranch(t *testing.T) {
 		}
 		return at
 	}
-	branch := index("#### Project Baseline Branch (decide first)")
+	branch := index("#### Technical Context Branch (decide first)")
 	if engram := index("**IF mode is `engram`:** Skip filesystem sync"); branch >= engram {
-		t.Error("the project baseline branch must precede the engram line of Step 2")
+		t.Error("the technical context branch must precede the engram line of Step 2")
 	}
 	if exists := index("#### If Main Spec Exists"); branch >= exists {
-		t.Error("the project baseline branch must precede the default composition blocks")
+		t.Error("the technical context branch must precede the default composition blocks")
 	}
-	catalog := index("#### Refresh the Master Catalog (default baseline only)")
+	catalog := index("#### Refresh the Master Catalog")
 	if copyBlock := index("#### If Main Spec Does NOT Exist"); catalog <= copyBlock {
 		t.Error("the master catalog refresh must follow the full-spec copy block")
 	}
@@ -3296,31 +3252,29 @@ func TestSDDArchiveProjectBaselineBranch(t *testing.T) {
 	}
 }
 
-// REQ-24.50, REQ-24.52, REQ-24.55 a REQ-24.57 y D-13: la referencia de sdd-archive
-// describe los tres flujos paso a paso, las causas de parada y los límites de la
-// edición dirigida.
-func TestSDDArchiveProjectBaselineReferenceDescribesTheFlows(t *testing.T) {
-	reference := mustReadResolved("skills/sdd-archive/references/project-baseline-integration.md")
+// REQ-24.50, REQ-24.52, REQ-24.55 a REQ-24.57 y REQ-30.28: la referencia de
+// sdd-archive describe los dos flujos paso a paso, las causas de parada y los
+// límites de la edición del contexto.
+func TestSDDArchiveTechnicalContextReferenceDescribesTheFlows(t *testing.T) {
+	reference := mustReadResolved("skills/sdd-archive/references/technical-context-integration.md")
 
 	for _, want := range []string{
 		"## Which flow applies",
 		"## Stop protocol (every flow)",
-		"## Flow 1: project baseline",
-		"## Flow 2: default baseline with a maintained context",
-		"## Flow 3: default baseline, no integration plan",
-		"## Directed edits",
-		// Flujo 1: prepare, composición literal, verificación, traza.
-		`axiom sdd integrate prepare --cwd "<workspaceRoot>" --change "{change-name}"`,
-		"Execute `composeCommand` literally",
-		"writes all of their documents or none",
-		`axiom sdd integrate verify --cwd "<workspaceRoot>" --change "{change-name}"`,
+		"## Flow 1: maintained context",
+		"## Flow 2: no integration plan",
+		"## Context edits",
+		// Flujo 1: prepare, specs vivas, catálogo, ediciones, verificación, traza.
+		`axiom archive context prepare --path "<workspaceRoot>" --change "{change-name}"`,
+		"Run the default Step 2 blocks of `SKILL.md` to compose `openspec/specs/{domain}/spec.md` with the native engine.",
+		`axiom archive context verify --path "<workspaceRoot>" --change "{change-name}"`,
 		"Run Step 3 of `SKILL.md` unchanged.",
-		`axiom sdd integrate show --cwd "<workspaceRoot>" --change "{change-name}" --format markdown >> "openspec/changes/archive/YYYY-MM-DD-{change-name}/archive-report.md"`,
+		`axiom archive context show --path "<workspaceRoot>" --change "{change-name}" --format markdown >> "openspec/changes/archive/YYYY-MM-DD-{change-name}/archive-report.md"`,
 		"never retyping it",
-		// Flujos 2 y 3: bloques por defecto y catálogo.
+		// Flujo 2: bloques por defecto y catálogo.
 		"Run the default Step 2 blocks",
 		`axiom archive sync --path "<workspaceRoot>"`,
-		"No `integrate` command runs.",
+		"No `axiom archive context` command runs.",
 		// Protocolo de parada.
 		"Quote the message literally",
 		"uncommitted changes, reported and reversible with git",
@@ -3330,26 +3284,26 @@ func TestSDDArchiveProjectBaselineReferenceDescribesTheFlows(t *testing.T) {
 		"is a resume signal",
 		"`artifact_store: openspec` or `hybrid`",
 		"`axiom workspace validate`",
-		// Edición dirigida.
+		"`baseline_retired`",
+		"`axiom archive adopt scan --path",
+		// Edición del contexto.
 		"bounded `Edit` operations",
 		"never copy a document through Read and Write",
 		"(`verify` rejects it)",
-		"leave exactly one such section",
-		"they stay `pending` in the trace",
 		"`context.decision` is `no_impact`",
 		"edit nothing under the maintained paths",
 		"Never touch `technicalContext.reference` paths",
 		"Never run `git add` or `git commit`",
 	} {
 		if !strings.Contains(reference, want) {
-			t.Errorf("project-baseline-integration.md missing %q", want)
+			t.Errorf("technical-context-integration.md missing %q", want)
 		}
 	}
 
-	// Las siete causas (a) a (g) de REQ-24.56 figuran con su continuación.
-	for _, cause := range []string{"(a) ", "(b) ", "(c) ", "(d) ", "(e) ", "(f) ", "(g) "} {
+	// Las seis causas (a) a (f) de REQ-24.56 figuran con su continuación.
+	for _, cause := range []string{"(a) ", "(b) ", "(c) ", "(d) ", "(e) ", "(f) "} {
 		if !strings.Contains(reference, "| "+cause) {
-			t.Errorf("project-baseline-integration.md missing the stop cause %q", cause)
+			t.Errorf("technical-context-integration.md missing the stop cause %q", cause)
 		}
 	}
 }
@@ -4149,10 +4103,10 @@ func TestSDDArchiveFollowsTheArchiveBranchFlow(t *testing.T) {
 		"`change_not_integrated`",
 		"suggest `--fetch` only with the explicit authorization of the user",
 		"`axiom sdd gate record --cwd <path> --change <c> --gate integration --decision approved --evidence-kind pr_merged`",
-		"`axiom sdd integrate prepare`",
+		"`axiom archive context prepare`",
 		"`axiom sdd archive-compose`",
 		"`openspec/changes/archive/`",
-		"`axiom sdd integrate verify`",
+		"`axiom archive context verify`",
 		"a separate documentation pull request toward the integration branch (`git.integration_branch`)",
 		"`axiom branch done --cwd \"<workspaceRoot>\" --change <c>`",
 		"If the documentation pull request is rejected",
@@ -4170,10 +4124,10 @@ func TestSDDArchiveFollowsTheArchiveBranchFlow(t *testing.T) {
 	last := -1
 	for _, step := range []string{
 		"--evidence-kind pr_merged`",
-		"`axiom sdd integrate prepare`",
+		"`axiom archive context prepare`",
 		"`axiom sdd archive-compose`",
+		"`axiom archive context verify`",
 		"`openspec/changes/archive/`",
-		"`axiom sdd integrate verify`",
 	} {
 		at := strings.Index(section, step)
 		if at < 0 || at < last {

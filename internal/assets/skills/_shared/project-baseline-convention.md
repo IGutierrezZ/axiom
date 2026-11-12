@@ -1,18 +1,17 @@
-# Project Baseline and Technical Context Convention (shared across SDD skills)
+# Technical Context Convention (shared across SDD skills)
 
-A project may declare in its `axiom.yaml` that its living specification (the baseline) and its technical context belong to the project and live outside `openspec/specs/`. Phase skills never read `axiom.yaml` to find out: the status exposes the declaration, and this convention says how to read it and what is forbidden. Without a declaration nothing changes: `openspec/specs/` stays the baseline and every phase behaves as before.
+A project may declare in its `axiom.yaml` a technical context: documentation that lives outside `openspec/specs/` and that the SDD phases read (`reference`) or keep current (`maintained`). The living specification is only `openspec/specs/`. Phase skills never read `axiom.yaml` to find out: the status exposes the declaration, and this convention says how to read it and what is forbidden. Without a declaration nothing changes and every phase behaves as before. The file keeps its historical name so that existing references stay valid.
 
 ## 1. Locators come from the status
 
-- Read the `baseline` and `technicalContext` locators from the status (`axiom sdd status <change> --json`); never read or interpret `axiom.yaml`.
-- `baseline.documents[]` lists each declared document: `domain`, absolute `path`, and `integration` (`compose`, `directed` or `register`).
+- Read the `technicalContext` locators from the status (`axiom sdd status <change> --json`); never read or interpret `axiom.yaml`.
 - `technicalContext.maintained` and `technicalContext.reference` are two independent modes. Each one has absolute `paths` and an optional `entry` file.
-- A field that is absent from the status means there is no valid declaration of it. Never guess paths. If `notes` report a declaration cause, the declaration is invalid, not the default: report that cause and `axiom workspace validate`, and do not treat the project as having the OpenSpec default baseline.
+- A field that is absent from the status means there is no valid declaration of it. Never guess paths. If `notes` report a declaration cause, the declaration is invalid, not absent: report that cause and `axiom workspace validate`. A cause coded `baseline_retired` means `axiom.yaml` still carries a retired block: report it and its continuation, `axiom archive adopt scan`; archive stays blocked until the block is gone.
 - Paths in the status are absolute; resolve any other relative artifact path against `actionContext.workspaceRoot`, as `sdd-phase-common.md` section G states.
 
 ## 2. Reading
 
-- When the status projects `baseline`, read the project's specifications from `baseline.documents` and treat `openspec/specs/` as the baseline only when `baseline` is absent.
+- The living specification is `openspec/specs/{domain}/spec.md`: it is the only source of the current behavior of a capability.
 - Read the `entry` file of each declared `technicalContext` mode and consult the remaining `paths` only on demand, without loading them in advance.
 - A mode declared without `entry` has nothing to preload: open its files only when the work needs them.
 - Only `sdd-explore`, `sdd-design`, `sdd-apply` and `sdd-verify` are required to read the technical context; the other phases are not.
@@ -20,21 +19,12 @@ A project may declare in its `axiom.yaml` that its living specification (the bas
 ## 3. Prohibitions
 
 - Never create, modify, or delete files under `technicalContext.reference` paths.
-- Files under `technicalContext.maintained` paths and under `baseline.documents` change only through the archive integration, never by editing them directly from a phase.
-- When the status projects `baseline`, never create or write `openspec/specs/` or `openspec/INDEX.md`: a second baseline would contradict the project's own. The same applies when `notes` report an invalid `baseline:` declaration.
-- A domain that the baseline does not declare is rejected by archive, not promoted to `openspec/specs/{domain}/`.
+- Files under `technicalContext.maintained` paths change only through the archive integration (`axiom archive context`), never by editing them directly from a phase.
+- A phase never writes `openspec/specs/` or `openspec/INDEX.md`: only `sdd-archive` promotes the delta specs of the change.
 
-## 4. Deltas for a baseline with a requirement profile
+## 4. Checking the context delta from the spec and apply phases
 
-This applies to a `baseline.documents[]` entry with `integration: compose`: a document with a requirement profile (the project's own heading pattern, level, and identity). `sdd-spec` writes the deltas of those domains with these rules; prose domains (`directed` or `register`) use the plain delta format with no ID rules.
-
-- A requirement name is the project's heading without the leading `#` signs, so the level's `#` signs, one space, and the name form a heading the profile recognizes (for example `RF-120: <title>`). A name that does not match is rejected, naming the requirement and the pattern.
-- MODIFIED, REMOVED, and RENAMED requirements use the IDs that exist in the baseline document. Read them from the document; never guess or renumber.
-- An ADDED requirement carries a provisional ID: it matches the profile's heading pattern, equals no ID of the document, is unique across the change, and sits outside the existing range. `axiom sdd integrate check --cwd "<workspaceRoot>" --change <cambio>` prints a suggested provisional start for each ID family. A family with no ID in the document cannot receive an ADDED requirement.
-- An ADDED requirement also carries a note line `(Placement: after <ID>)` or `(Placement: section "<title>")`. The note is delta metadata and is never integrated.
-- A requirement body contains no heading at or above the level of the profile's requirement headings outside code fences; `check` names the offending line.
-- Archive replaces each provisional ID with the next free definitive ID of its family (with the zero padding of the family's highest ID) and writes the definitive IDs in every integrated text, references between new requirements included. The correspondence is recorded in the integration trace.
-- Before the spec phase is finished, run `axiom sdd integrate check --cwd "<workspaceRoot>" --change <cambio>` and correct every violation it reports. `check` writes nothing.
+`axiom archive context check --path "<workspaceRoot>" --change <cambio>` validates the context delta of the change (format, maintained and reference paths, anchors) and writes nothing. `sdd-design` drafts the delta, `sdd-apply` keeps it current and may run the check; the archive runs the writing verbs (`prepare`, `verify`) and `show` for the trace.
 
 ## 5. The context delta (`context-impact.md`)
 
@@ -60,7 +50,7 @@ Without entries:
 Sin impacto: el cambio solo corrige una errata en un mensaje de error
 ```
 
-- `## Entrada: <ruta>`: the path is relative to the workspace root and may be wrapped in backticks. It must lie under a `technicalContext.maintained` path, never under a `reference` path or in `baseline.documents`.
+- `## Entrada: <ruta>`: the path is relative to the workspace root and may be wrapped in backticks. It must lie under a `technicalContext.maintained` path, never under a `reference` path.
 - Exactly three fields follow, `- Ancla:`, `- Acción:` (`add`, `modify`, or `remove`), and `- Motivo:`, then a blank line. An unknown or missing field is an error, and so is a repeated (document, anchor) pair.
 - The anchor is `Title`, `Parent > Title`, or `Grandparent > Parent > Title`, with an optional ordinal ` #N` on the last element. More than one match is rejected, listing each; no match is valid only with `add`. A document that does not exist is valid only with `add`: archive creates it inside the maintained paths.
 - `Sin impacto: <motivo>` needs a non-empty motive and cannot coexist with entries; a file with neither is invalid.
@@ -77,6 +67,6 @@ The digest of the `design` gate covers only `design.md`, and the digest of a `ro
 
 Never edit `gates.yaml` and never look for a reopen command: there is none.
 
-## 7. Model for `sdd-archive` with directed integration
+## 7. Model for `sdd-archive` with a maintained context
 
-A `baseline.documents[]` entry with `integration: directed`, or a declared `technicalContext.maintained`, makes `sdd-archive` edit prose, which needs an implementation-level model. Claude Code launches `sdd-archive` with the model assigned to `sdd-apply` (the orchestrator rule "Archive Directed Integration Model (MANDATORY)"). In runtimes where the model is fixed per agent (OpenCode, Kiro, and others) the orchestrator cannot raise it per call: when the project declares directed integration or a maintained context, advise the user to assign `sdd-archive` an implementation-level model with the existing model selector. Never block archive on this: `axiom sdd integrate verify` protects the result whatever the model.
+A declared `technicalContext.maintained` makes `sdd-archive` edit prose, which needs an implementation-level model. Claude Code launches `sdd-archive` with the model assigned to `sdd-apply` (the orchestrator rule "Archive Directed Integration Model (MANDATORY)"). In runtimes where the model is fixed per agent (OpenCode, Kiro, and others) the orchestrator cannot raise it per call: when the project declares a maintained context, advise the user to assign `sdd-archive` an implementation-level model with the existing model selector. Never block archive on this: `axiom archive context verify` protects the result whatever the model.

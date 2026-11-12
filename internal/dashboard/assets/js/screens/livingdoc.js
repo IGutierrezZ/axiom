@@ -16,7 +16,7 @@ const ctx = {
   catalogError: '',
   filter: '',
   domain: null,            // dominio de la ruta activa
-  detail: { domain: null, status: 'idle', data: null, error: '', external: null },
+  detail: { domain: null, status: 'idle', data: null, error: '' },
   raw: false,
   token: 0,                // descarta respuestas de detalle obsoletas
   focusViewer: false,      // mover el foco al visor tras elegir un dominio
@@ -30,10 +30,6 @@ function renderSummary() {
   const c = ctx.catalog;
   if (!c) {
     el.textContent = ctx.catalogError ? 'No se pudo leer el catálogo.' : 'Cargando el catálogo…';
-    return;
-  }
-  if (c.external_baseline && Array.isArray(c.external_baseline.documents)) {
-    el.textContent = `Baseline externa del proyecto · ${plural(c.external_baseline.documents.length, 'documento declarado', 'documentos declarados')}`;
     return;
   }
   const parts = [
@@ -50,16 +46,6 @@ function renderNotice() {
   const el = $('#specs-notice');
   const out = [];
   const c = ctx.catalog;
-  // Con baseline del proyecto declarada el catálogo no se indexa: se informa de que es
-  // externa y de dónde está, para que un catálogo vacío no se interprete como ausencia
-  // de especificación (REQ-24.25).
-  const externalBaseline = c && c.external_baseline;
-  if (externalBaseline && Array.isArray(externalBaseline.documents)) {
-    const items = externalBaseline.documents.map(doc =>
-      `<li><strong>${escapeHtml(doc.domain)}</strong>: <code>${escapeHtml(doc.path)}</code></li>`
-    ).join('');
-    out.push(`<div class="alert alert-warn external-baseline-notice">${icon('info', 18)}<div class="grow"><p>La baseline de especificaciones es externa (del proyecto): sus documentos no se indexan aquí. Dominios y rutas declarados:</p><ul class="kn-notice-list">${items}</ul></div></div>`);
-  }
   if (c && Array.isArray(c.warnings) && c.warnings.length) {
     out.push(`<div class="alert alert-warn">${icon('alert', 18)}<div class="grow"><strong>Avisos del catálogo</strong><ul class="kn-notice-list">${c.warnings.map(w => `<li>${escapeHtml(w)}</li>`).join('')}</ul></div></div>`);
   }
@@ -92,9 +78,7 @@ function renderList() {
   const total = (ctx.catalog.specs || []).length;
   if (total === 0) {
     count.textContent = '';
-    list.innerHTML = ctx.catalog.external_baseline
-      ? stateEmpty('Sin dominios indexados', 'La baseline es externa al proyecto: sus documentos se enumeran arriba.', 'book')
-      : stateEmpty('No hay especificaciones vivas', 'No hay ningún spec en openspec/specs/. Usa «Sincronizar catálogo» o la CLI para generarlas.', 'book');
+    list.innerHTML = stateEmpty('No hay especificaciones vivas', 'No hay ningún spec en openspec/specs/. Usa «Sincronizar catálogo» o la CLI para generarlas.', 'book');
     return;
   }
   const domains = visibleDomains();
@@ -124,8 +108,8 @@ function markCurrent() {
 
 export async function loadLivingDocs() {
   try {
-    // Los rechazos de la API (p. ej. 409 con baseline del proyecto) llegan en
-    // err.message: api() extrae el campo `error` que nombra la baseline y la continuación.
+    // Los rechazos de la API (p. ej. 409 con un `baseline:` retirado) llegan en
+    // err.message: api() extrae el campo `error` que nombra el bloque retirado y la migración.
     ctx.catalog = await api('/api/archive/specs');
     ctx.catalogError = '';
   } catch (err) {
@@ -166,9 +150,7 @@ function renderViewer() {
     return;
   }
   if (d.status === 'error') {
-    const body = d.external
-      ? `<div class="alert alert-warn">${icon('info', 18)}<div class="grow"><p>${escapeHtml(d.error)}</p>${d.path ? `<p class="kn-hint">Documento declarado: <code>${escapeHtml(d.path)}</code></p>` : ''}</div></div>`
-      : stateError(d.error, 'No se pudo cargar la especificación');
+    const body = stateError(d.error, 'No se pudo cargar la especificación');
     el.innerHTML = viewerShell(ctx.domain, `<div class="kn-pad">${body}<p class="kn-hint"><a href="${escapeHtml(hrefFor('specs'))}">Volver a la lista de dominios</a></p></div>`);
     return;
   }
@@ -200,17 +182,16 @@ async function loadDetail(domain) {
   const token = ++ctx.token;
   const refresh = ctx.detail.domain === domain && ctx.detail.status === 'ready';
   if (!refresh) {
-    ctx.detail = { domain, status: 'loading', data: null, error: '', external: null };
+    ctx.detail = { domain, status: 'loading', data: null, error: '' };
     renderViewer();
   }
   try {
     const data = await api(`/api/archive/specs/${encodeURIComponent(domain)}`);
     if (token !== ctx.token) return;
-    ctx.detail = { domain, status: 'ready', data: data || {}, error: '', external: null };
+    ctx.detail = { domain, status: 'ready', data: data || {}, error: '' };
   } catch (err) {
     if (token !== ctx.token) return;
-    const data = err.data || {};
-    ctx.detail = { domain, status: 'error', data: null, error: err.message, external: data.external_baseline ? true : null, path: data.path || '' };
+    ctx.detail = { domain, status: 'error', data: null, error: err.message };
   }
   renderViewer();
   applyFocus();
@@ -232,7 +213,7 @@ export function enterSpecs(route) {
   markCurrent();
   if (!domain) {
     ctx.token += 1;
-    ctx.detail = { domain: null, status: 'idle', data: null, error: '', external: null };
+    ctx.detail = { domain: null, status: 'idle', data: null, error: '' };
     renderViewer();
     return;
   }

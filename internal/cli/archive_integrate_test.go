@@ -13,6 +13,7 @@ import (
 
 	"github.com/IGutierrezZ/axiom/v3/internal/branch"
 	"github.com/IGutierrezZ/axiom/v3/internal/livespec"
+	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace/workspacetest"
 )
 
@@ -426,9 +427,9 @@ func TestArchiveIntegrateHelp(t *testing.T) {
 	}
 }
 
-// Mientras `axiom sdd integrate` exista, una baseline declarada la tiene el verbo
-// antiguo: este se niega sin escribir y remite a él (solo U1–U5; U6 lo retira).
-func TestArchiveIntegrateRefusesWhenABaselineIsDeclared(t *testing.T) {
+// REQ-30.21: un `baseline:` residual se rechaza sin escribir con el error tipado de
+// su retirada y la migración `axiom archive adopt`.
+func TestArchiveIntegrateRefusesWhenABaselineIsRetired(t *testing.T) {
 	f := newODDFixture(t, true)
 	config := readODDFile(t, filepath.Join(f.root, "axiom.yaml")) + contextCLIBaseline
 	workspacetest.WriteFile(t, filepath.Join(f.root, "03_Modelo_Datos.md"), "# Modelo\n\n## Entidades\n")
@@ -437,11 +438,51 @@ func TestArchiveIntegrateRefusesWhenABaselineIsDeclared(t *testing.T) {
 	before := oddSnapshot(t, f.root)
 
 	_, err := f.run(t)
-	if err == nil || !strings.Contains(err.Error(), "baseline") || !strings.Contains(err.Error(), "axiom sdd integrate") {
-		t.Fatalf("error = %v, se esperaba el rechazo con la continuación de axiom sdd integrate", err)
+	var retired *workspace.BaselineRetiredError
+	if !errors.As(err, &retired) || !strings.Contains(err.Error(), "axiom archive adopt scan") {
+		t.Fatalf("error = %v, se esperaba un *workspace.BaselineRetiredError con la migración", err)
 	}
 	if !oddSameSnapshot(before, oddSnapshot(t, f.root)) {
 		t.Error("el rechazo no escribe nada")
+	}
+}
+
+// REQ-30.7: un proyecto que declara `sdd.iso: true` rechaza la integración ODD con
+// un motivo tipado que remite al carril SDD, antes de leer el documento ODD y sin
+// escribir nada; la spec viva no cambia.
+func TestArchiveIntegrateRefusesAnISOProject(t *testing.T) {
+	f := newODDFixture(t, true)
+	config := readODDFile(t, filepath.Join(f.root, "axiom.yaml")) + "sdd:\n  iso: true\n"
+	workspacetest.WriteFile(t, filepath.Join(f.root, "axiom.yaml"), config)
+	f.writeDoc(t, oddDoc("", oddSpecSection([2]string{"facturacion", oddAddedDelta})))
+	before := oddSnapshot(t, f.root)
+
+	_, err := f.run(t)
+	var iso *livespec.ISOProjectError
+	if !errors.As(err, &iso) {
+		t.Fatalf("error = %v, se esperaba un *livespec.ISOProjectError", err)
+	}
+	for _, want := range []string{"sdd.iso: true", "perfil de bug", "axiom sdd kickoff seal --cwd"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("el rechazo %q debe contener %q", err, want)
+		}
+	}
+	if !oddSameSnapshot(before, oddSnapshot(t, f.root)) {
+		t.Error("el rechazo no escribe nada: openspec/specs/ no cambia")
+	}
+}
+
+// REQ-30.7: la negativa ISO precede a la lectura del documento ODD: un proyecto ISO
+// sin documento se rechaza por ISO, no por el documento ausente.
+func TestArchiveIntegrateISORefusalPrecedesReadingTheDocument(t *testing.T) {
+	f := newODDFixture(t, true)
+	config := readODDFile(t, filepath.Join(f.root, "axiom.yaml")) + "sdd:\n  iso: true\n"
+	workspacetest.WriteFile(t, filepath.Join(f.root, "axiom.yaml"), config)
+
+	_, err := f.run(t)
+	var iso *livespec.ISOProjectError
+	if !errors.As(err, &iso) {
+		t.Fatalf("error = %v, se esperaba un *livespec.ISOProjectError antes de leer el documento", err)
 	}
 }
 

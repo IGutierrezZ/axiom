@@ -31,3 +31,31 @@ func TestExampleYAMLDoesNotDocumentBaseline(t *testing.T) {
 		}
 	}
 }
+
+// REQ-29.1 y REQ-30.28 (R7): la plantilla axiom.example.yaml documenta el bloque
+// `sdd:` y, una vez descomentado, es válido y declara ISO.
+func TestExampleYAMLDocumentsTheSDDBlock(t *testing.T) {
+	var block []string
+	for _, line := range strings.Split(strings.ReplaceAll(readRepoFile(t, "axiom.example.yaml"), "\r\n", "\n"), "\n") {
+		if len(block) == 0 {
+			if line == "# sdd:" {
+				block = append(block, "sdd:")
+			}
+			continue
+		}
+		if !strings.HasPrefix(line, "#   ") {
+			break
+		}
+		block = append(block, strings.TrimPrefix(line, "# "))
+	}
+	if len(block) < 2 {
+		t.Fatalf("axiom.example.yaml debe documentar un bloque `# sdd:` con su clave, y se halló %q", block)
+	}
+	_, baseErr, declarations := parseDeclarations(t, strings.Join(block, "\n")+"\n")
+	if baseErr != nil || declarations.SDDErr != nil {
+		t.Fatalf("el bloque de la plantilla no es válido: base=%v sdd=%v\n%s", baseErr, declarations.SDDErr, block)
+	}
+	if declarations.SDD == nil || !declarations.SDD.ISO {
+		t.Errorf("la plantilla debe documentar `sdd.iso: true`: %+v", declarations.SDD)
+	}
+}

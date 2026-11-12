@@ -250,5 +250,5 @@ Sin migración de datos de Axiom. `integration.yaml` conserva formato (D3). Las 
 
 ## 10. Preguntas abiertas
 
-- [ ] Nombre definitivo del campo ISO de carril (`Declarations.SDD.ISO` es provisional) y paquete destino de su traza `--first-parent`: se fija al rebasar U6 sobre carril.
+- [x] Nombre definitivo del campo ISO de carril y paquete destino de su traza `--first-parent`: resuelto en U6 (`Declarations.SDD.ISO`; la traza vive en `internal/isoevidence`).
 - [ ] D2 se desvía del «delega» de la propuesta §5.1: el resultado observable es el mismo; si el usuario exige delegación real, U1 crece con un refactor de `specbaseline` que U6 borra.

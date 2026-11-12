@@ -16,21 +16,19 @@ import (
 // decorateWorkspaceDeclarations proyecta sobre el status lo que la resolución
 // del workspace (workspace.Locate) tiene que comunicar: los avisos de Location
 // (un axiom.yaml directo que no se pudo cargar y un planning home divergente de
-// <maestra>/openspec) y las declaraciones válidas de axiom.yaml, `baseline:` y
-// `technical_context:`, como campos aditivos y opcionales (D-05, REQ-24.19,
-// REQ-24.28), más el carril efectivo `workflow` (REQ-27.2), que se proyecta
+// <maestra>/openspec) y las declaraciones válidas de axiom.yaml, `technical_context:`, como campo
+// aditivo y opcional (D-05, REQ-24.19, REQ-24.28), más el carril efectivo `workflow` (REQ-27.2), que se proyecta
 // siempre. Es un decorador que actúa fuera de baseStatus, de modo que la
 // firma que usa status_v2_clean_break_test no cambia.
 //
 // Un bloque inválido no se proyecta, ni parcial ni por defecto (REQ-24.18), y sin
-// declaración las dos claves no existen en el JSON: un proyecto sin axiom.yaml, o
+// declaración la clave no existe en el JSON: un proyecto sin axiom.yaml, o
 // con uno que no declara los bloques, produce el mismo status que antes.
 //
 // Un aviso es informativo: nunca modifica la ruta recomendada ni las
 // dependencias. Si el status ya lleva instrucciones de fase, se vuelven a
 // generar para que reflejen lo añadido.
 func decorateWorkspaceDeclarations(status *Status, location workspace.Location) {
-	status.Baseline = projectBaseline(location)
 	status.TechnicalContext = projectTechnicalContext(location)
 	status.Workflow = projectWorkflow(location)
 
@@ -43,7 +41,7 @@ func decorateWorkspaceDeclarations(status *Status, location workspace.Location) 
 		status.Notes = append(status.Notes, note)
 		changed = true
 	}
-	archiveLine := integratePrepareLine(status, location)
+	archiveLine := contextPrepareLine(status, location)
 	if status.PhaseInstructions == nil || (!changed && archiveLine == "") {
 		return
 	}
@@ -52,25 +50,6 @@ func decorateWorkspaceDeclarations(status *Status, location workspace.Location) 
 		instructions.Archive = append(instructions.Archive, archiveLine)
 	}
 	status.PhaseInstructions = &instructions
-}
-
-// projectBaseline devuelve la proyección de la baseline declarada, o nil si no
-// hay declaración o no es válida. Las rutas son absolutas: las declaradas son
-// relativas a workspaceRoot.
-func projectBaseline(location workspace.Location) *BaselineProjection {
-	declarations := location.Declarations
-	if declarations.BaselineErr != nil || declarations.Baseline == nil {
-		return nil
-	}
-	documents := make([]BaselineDocumentProjection, 0, len(declarations.Baseline.Documents))
-	for _, document := range declarations.Baseline.Documents {
-		documents = append(documents, BaselineDocumentProjection{
-			Domain:      document.Domain,
-			Path:        absoluteDeclaredPath(location.WorkspaceRoot, document.Path),
-			Integration: string(document.EffectiveIntegration()),
-		})
-	}
-	return &BaselineProjection{Documents: documents}
 }
 
 // projectTechnicalContext devuelve la proyección del contexto técnico declarado,
@@ -139,9 +118,9 @@ func absoluteDeclaredPath(workspaceRoot, declared string) string {
 const contextImpactFile = "context-impact.md"
 
 // blockArchiveOnDeclarations aplica las causas de D-05 a un status con cambio
-// seleccionado y no archivado: una declaración inválida o un axiom.yaml
-// ilegible, la ausencia del delta de contexto y un almacén sin ficheros con una
-// baseline del proyecto o un contexto mantenido. Cada causa bloquea solo el
+// seleccionado y no archivado: una declaración inválida, un `baseline:`
+// residual o un axiom.yaml ilegible, la ausencia del delta de contexto y un
+// almacén sin ficheros con un contexto mantenido. Cada causa bloquea solo el
 // archivado (dependencies.archive en blocked) y se informa por dos canales:
 //
 //   - notes, siempre;
@@ -184,8 +163,7 @@ func declarationCauses(status *Status, location workspace.Location) []string {
 	}
 
 	maintained := status.TechnicalContext != nil && status.TechnicalContext.Maintained != nil
-	projectBaseline := status.Baseline != nil
-	if !maintained && !projectBaseline {
+	if !maintained {
 		return causes
 	}
 	store := effectiveArtifactStore(status, location)
@@ -200,20 +178,9 @@ func declarationCauses(status *Status, location workspace.Location) []string {
 			}
 		}
 	case ArtifactStoreEngram, ArtifactStoreNone:
-		var subjects []string
-		if projectBaseline {
-			subjects = append(subjects, "la baseline del proyecto (`baseline`)")
-		}
-		if maintained {
-			subjects = append(subjects, "el contexto técnico mantenido (`technical_context.maintained`)")
-		}
-		verb := "exige"
-		if len(subjects) > 1 {
-			verb = "exigen"
-		}
 		causes = append(causes, fmt.Sprintf(
-			"%s %s un almacén de ficheros y el almacén es `%s`: declara `artifact_store: openspec` o `hybrid` en `openspec/config.yaml`, o retira la declaración.",
-			capitalize(strings.Join(subjects, " y ")), verb, store))
+			"El contexto técnico mantenido (`technical_context.maintained`) exige un almacén de ficheros y el almacén es `%s`: declara `artifact_store: openspec` o `hybrid` en `openspec/config.yaml`, o retira la declaración.",
+			store))
 	}
 	return causes
 }
@@ -234,11 +201,17 @@ func effectiveArtifactStore(status *Status, location workspace.Location) Artifac
 }
 
 // invalidDeclarationErrors reúne, en líneas sueltas, las causas por las que las
-// declaraciones no son válidas: un axiom.yaml ilegible o un bloque que no supera
-// la validación. Con axiom.yaml ausente o sin bloques nuevos, es vacío.
+// declaraciones no son válidas: un axiom.yaml ilegible, un bloque `baseline:` retirado
+// o un bloque que no supera la validación. Con axiom.yaml ausente o sin bloques nuevos, es vacío.
 func invalidDeclarationErrors(declarations workspace.Declarations) []string {
 	var lines []string
-	for _, err := range []error{declarations.ParseErr, declarations.BaselineErr, declarations.TechnicalContextErr} {
+	// La baseline retirada es un puntero: se añade aparte para que un nil tipado no
+	// se convierta en un error no nulo (REQ-30.21).
+	candidates := []error{declarations.ParseErr}
+	if declarations.BaselineRetiredErr != nil {
+		candidates = append(candidates, declarations.BaselineRetiredErr)
+	}
+	for _, err := range append(candidates, declarations.TechnicalContextErr) {
 		if err != nil {
 			lines = append(lines, errorLines(err)...)
 		}
@@ -260,22 +233,14 @@ func errorLines(err error) []string {
 	return strings.Split(strings.TrimSpace(err.Error()), "\n")
 }
 
-func capitalize(text string) string {
-	if text == "" {
-		return text
-	}
-	return strings.ToUpper(text[:1]) + text[1:]
-}
-
-// integratePrepareLine es la línea que gana phaseInstructions.archive cuando el
-// cambio seleccionado tiene baseline del proyecto o contexto mantenido: nombra el
-// verbo que prepara la integración. Vacía en los demás casos.
-func integratePrepareLine(status *Status, location workspace.Location) string {
+// contextPrepareLine es la línea que gana phaseInstructions.archive cuando el
+// cambio seleccionado tiene contexto técnico mantenido: nombra el verbo que
+// prepara la integración del contexto. Vacía en los demás casos.
+func contextPrepareLine(status *Status, location workspace.Location) string {
 	if status.ChangeName == nil || status.Archived != nil {
 		return ""
 	}
-	maintained := status.TechnicalContext != nil && status.TechnicalContext.Maintained != nil
-	if status.Baseline == nil && !maintained {
+	if status.TechnicalContext == nil || status.TechnicalContext.Maintained == nil {
 		return ""
 	}
 	root := location.WorkspaceRoot
@@ -283,7 +248,7 @@ func integratePrepareLine(status *Status, location workspace.Location) string {
 		root = status.ActionContext.WorkspaceRoot
 	}
 	return fmt.Sprintf(
-		"Con baseline del proyecto o contexto técnico mantenido, prepara la integración antes de archivar: `axiom sdd integrate prepare --cwd %s --change %s`.",
+		"Con contexto técnico mantenido, prepara la integración antes de archivar: `axiom archive context prepare --cwd %s --change %s`.",
 		pathquote.Quote(root), *status.ChangeName)
 }
 

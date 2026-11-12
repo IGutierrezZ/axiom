@@ -360,60 +360,15 @@ func writeTestFile(t *testing.T, path, content string) {
 	}
 }
 
-const validateBaselineBlock = "baseline:\n  documents:\n    - domain: modelo-de-datos\n      path: 03_Modelo_Datos.md\n    - domain: notas\n      path: docs\\notas.md\n"
-
-// REQ-24.14: cada documento existe como fichero regular dentro de workspaceRoot.
-func TestValidateDeclarationPathsBaselineDocuments(t *testing.T) {
-	t.Run("documentos existentes", func(t *testing.T) {
-		root := t.TempDir()
-		writeTestFile(t, filepath.Join(root, "03_Modelo_Datos.md"), "# modelo\n")
-		writeTestFile(t, filepath.Join(root, "docs", "notas.md"), "# notas\n")
-		errs, warnings := ValidateDeclarationPaths(declarationsConfig(t, locateEmbeddedConfig, validateBaselineBlock), root)
-		if len(errs) != 0 || len(warnings) != 0 {
-			t.Fatalf("errores=%v advertencias=%v, se esperaba ninguno", errs, warnings)
-		}
-	})
-
-	t.Run("documento inexistente y directorio en lugar de fichero", func(t *testing.T) {
-		root := t.TempDir()
-		if err := os.MkdirAll(filepath.Join(root, "03_Modelo_Datos.md"), 0o755); err != nil {
-			t.Fatal(err)
-		}
-		errs, _ := ValidateDeclarationPaths(declarationsConfig(t, locateEmbeddedConfig, validateBaselineBlock), root)
-		if len(errs) != 2 {
-			t.Fatalf("errores = %v, se esperaban 2", errs)
-		}
-		assertContains(t, errs, "el documento '03_Modelo_Datos.md' del dominio 'modelo-de-datos' no es un fichero regular")
-		assertContains(t, errs, "el documento 'docs\\notas.md' del dominio 'notas' no existe")
-	})
-
-	t.Run("sin declaraciones no hay nada que comprobar", func(t *testing.T) {
-		errs, warnings := ValidateDeclarationPaths(declarationsConfig(t, locateEmbeddedConfig, ""), t.TempDir())
-		if errs != nil || warnings != nil {
-			t.Fatalf("errores=%v advertencias=%v", errs, warnings)
-		}
-		if errs, warnings = ValidateDeclarationPaths(nil, t.TempDir()); errs != nil || warnings != nil {
-			t.Fatalf("una configuración nula no produce nada: %v %v", errs, warnings)
-		}
-	})
-
-	t.Run("workspaceRoot inexistente no multiplica los errores", func(t *testing.T) {
-		missing := filepath.Join(t.TempDir(), "no-existe")
-		errs, _ := ValidateDeclarationPaths(declarationsConfig(t, locateEmbeddedConfig, validateBaselineBlock), missing)
-		if len(errs) != 0 {
-			t.Fatalf("Validate ya reporta la raíz inexistente: %v", errs)
-		}
-	})
-
-	t.Run("multirepo resuelve contra el repositorio de especificaciones", func(t *testing.T) {
-		master := t.TempDir()
-		writeTestFile(t, filepath.Join(master, "repo-specs", "03_Modelo_Datos.md"), "# modelo\n")
-		writeTestFile(t, filepath.Join(master, "repo-specs", "docs", "notas.md"), "# notas\n")
-		errs, warnings := ValidateDeclarationPaths(declarationsConfig(t, locateCanonicalConfig, validateBaselineBlock), master)
-		if len(errs) != 0 || len(warnings) != 0 {
-			t.Fatalf("errores=%v advertencias=%v", errs, warnings)
-		}
-	})
+// Sin declaraciones, o sin configuración, no hay nada que comprobar.
+func TestValidateDeclarationPathsWithoutDeclarations(t *testing.T) {
+	errs, warnings := ValidateDeclarationPaths(declarationsConfig(t, locateEmbeddedConfig, ""), t.TempDir())
+	if errs != nil || warnings != nil {
+		t.Fatalf("errores=%v advertencias=%v", errs, warnings)
+	}
+	if errs, warnings = ValidateDeclarationPaths(nil, t.TempDir()); errs != nil || warnings != nil {
+		t.Fatalf("una configuración nula no produce nada: %v %v", errs, warnings)
+	}
 }
 
 // REQ-24.27: una ruta de contexto inexistente solo avisa.
@@ -457,35 +412,8 @@ func TestValidateDeclarationPathsContextPaths(t *testing.T) {
 	})
 }
 
-// REQ-24.14 y 24.27: un enlace simbólico que sale del límite declarado es un error.
+// REQ-24.27: un enlace simbólico que sale del límite declarado es un error.
 func TestValidateDeclarationPathsSymlinks(t *testing.T) {
-	t.Run("documento que resuelve fuera de workspaceRoot", func(t *testing.T) {
-		outside := t.TempDir()
-		writeTestFile(t, filepath.Join(outside, "notas.md"), "# ajeno\n")
-		root := t.TempDir()
-		writeTestFile(t, filepath.Join(root, "03_Modelo_Datos.md"), "# modelo\n")
-		// docs/ es un enlace a un directorio ajeno: docs\notas.md existe, pero
-		// resuelve fuera de workspaceRoot.
-		linkDirOrSkip(t, outside, filepath.Join(root, "docs"))
-		errs, _ := ValidateDeclarationPaths(declarationsConfig(t, locateEmbeddedConfig, validateBaselineBlock), root)
-		if len(errs) != 1 {
-			t.Fatalf("errores = %v, se esperaba 1", errs)
-		}
-		assertContains(t, errs, "el documento 'docs\\notas.md' del dominio 'notas' resuelve a")
-		assertContains(t, errs, "fuera de workspaceRoot")
-	})
-
-	t.Run("documento que resuelve dentro de workspaceRoot es valido", func(t *testing.T) {
-		root := t.TempDir()
-		writeTestFile(t, filepath.Join(root, "03_Modelo_Datos.md"), "# modelo\n")
-		writeTestFile(t, filepath.Join(root, "real-docs", "notas.md"), "# notas\n")
-		linkDirOrSkip(t, filepath.Join(root, "real-docs"), filepath.Join(root, "docs"))
-		errs, _ := ValidateDeclarationPaths(declarationsConfig(t, locateEmbeddedConfig, validateBaselineBlock), root)
-		if len(errs) != 0 {
-			t.Fatalf("errores = %v, se esperaba ninguno", errs)
-		}
-	})
-
 	t.Run("ruta de contexto que resuelve fuera de la carpeta maestra", func(t *testing.T) {
 		outside := t.TempDir()
 		writeTestFile(t, filepath.Join(outside, "ajeno.md"), "# ajeno\n")
@@ -525,18 +453,6 @@ func TestValidateDeclarationPathsSymlinks(t *testing.T) {
 		assertContains(t, errs, "'context/' (technical_context.maintained) y la ruta 'alias/' (technical_context.reference) solapan por identidad")
 	})
 
-	t.Run("solape por identidad con un documento de la baseline", func(t *testing.T) {
-		root := t.TempDir()
-		writeTestFile(t, filepath.Join(root, "real", "03_Modelo_Datos.md"), "# modelo\n")
-		linkDirOrSkip(t, filepath.Join(root, "real"), filepath.Join(root, "alias"))
-		cfg := declarationsConfig(t, locateEmbeddedConfig, "baseline:\n  documents:\n    - domain: modelo-de-datos\n      path: real/03_Modelo_Datos.md\ntechnical_context:\n  reference:\n    paths: [alias/03_Modelo_Datos.md]\n")
-		errs, _ := ValidateDeclarationPaths(cfg, root)
-		if len(errs) != 1 {
-			t.Fatalf("errores = %v, se esperaba 1", errs)
-		}
-		assertContains(t, errs, "'real/03_Modelo_Datos.md' (baseline) y la ruta 'alias/03_Modelo_Datos.md' (technical_context.reference) solapan por identidad")
-	})
-
 	t.Run("rutas distintas no solapan", func(t *testing.T) {
 		root := t.TempDir()
 		writeTestFile(t, filepath.Join(root, "context", "a.md"), "# a\n")
@@ -548,9 +464,9 @@ func TestValidateDeclarationPathsSymlinks(t *testing.T) {
 	})
 }
 
-// REQ-24.62: baseline del proyecto y contexto mantenido exigen un almacén de ficheros.
+// REQ-24.62: el contexto mantenido exige un almacén de ficheros.
 func TestValidateDeclarationPathsArtifactStore(t *testing.T) {
-	const both = "baseline:\n  documents:\n    - domain: modelo-de-datos\n      path: 03_Modelo_Datos.md\ntechnical_context:\n  maintained:\n    paths: [context/]\n"
+	const both = "technical_context:\n  maintained:\n    paths: [context/]\n"
 	const referenceOnly = "technical_context:\n  reference:\n    paths: [00_Glosario.md]\n"
 
 	setup := func(t *testing.T, configFile, content string) string {
@@ -566,17 +482,15 @@ func TestValidateDeclarationPathsArtifactStore(t *testing.T) {
 	}
 
 	for _, store := range []string{"engram", "none"} {
-		t.Run("almacen "+store+" con las dos declaraciones", func(t *testing.T) {
+		t.Run("almacen "+store+" con contexto mantenido", func(t *testing.T) {
 			root := setup(t, "config.yaml", "artifact_store: "+store+"\n")
 			errs, _ := ValidateDeclarationPaths(declarationsConfig(t, locateEmbeddedConfig, both), root)
-			if len(errs) != 2 {
-				t.Fatalf("errores = %v, se esperaba uno por declaración", errs)
+			if len(errs) != 1 {
+				t.Fatalf("errores = %v, se esperaba uno", errs)
 			}
-			for _, declaration := range []string{"baseline", "technical_context.maintained"} {
-				assertContains(t, errs, "la declaración '"+declaration+"' exige un almacén de artefactos de ficheros")
-			}
+			assertContains(t, errs, "la declaración 'technical_context.maintained' exige un almacén de artefactos de ficheros")
 			assertContains(t, errs, "declara artifact_store '"+store+"'")
-			assertContains(t, errs, "Declara 'artifact_store: openspec' o 'hybrid' en openspec/config.yaml, o retira la declaración 'baseline'")
+			assertContains(t, errs, "Declara 'artifact_store: openspec' o 'hybrid' en openspec/config.yaml, o retira la declaración 'technical_context.maintained'")
 		})
 	}
 
@@ -593,7 +507,7 @@ func TestValidateDeclarationPathsArtifactStore(t *testing.T) {
 	t.Run("config.yml tambien se lee", func(t *testing.T) {
 		root := setup(t, "config.yml", "artifactStore: \"Engram\"  # almacén\n")
 		errs, _ := ValidateDeclarationPaths(declarationsConfig(t, locateEmbeddedConfig, both), root)
-		if len(errs) != 2 {
+		if len(errs) != 1 {
 			t.Fatalf("errores = %v", errs)
 		}
 	})
@@ -621,13 +535,13 @@ func TestValidateDeclarationPathsArtifactStore(t *testing.T) {
 
 	t.Run("multirepo lee el almacen del repositorio de especificaciones", func(t *testing.T) {
 		master := t.TempDir()
-		writeTestFile(t, filepath.Join(master, "repo-specs", "03_Modelo_Datos.md"), "# modelo\n")
+		writeTestFile(t, filepath.Join(master, "repo-specs", "context", "a.md"), "# ctx\n")
 		writeTestFile(t, filepath.Join(master, "repo-specs", "openspec", "config.yaml"), "artifact_store: none\n")
-		cfg := declarationsConfig(t, locateCanonicalConfig, "baseline:\n  documents:\n    - domain: modelo-de-datos\n      path: 03_Modelo_Datos.md\n")
+		cfg := declarationsConfig(t, locateCanonicalConfig, both)
 		errs, _ := ValidateDeclarationPaths(cfg, master)
 		if len(errs) != 1 {
 			t.Fatalf("errores = %v", errs)
 		}
-		assertContains(t, errs, "la declaración 'baseline' exige")
+		assertContains(t, errs, "la declaración 'technical_context.maintained' exige")
 	})
 }

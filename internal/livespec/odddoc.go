@@ -2,7 +2,7 @@
 // carril ODD: analiza las secciones `## Spec viva` e `## Impacto en la spec` del
 // documento odd/tasks/<feature>.md, planifica la integración de cada delta con la misma
 // composición que el archivado SDD y la aplica todo o nada. No tiene estado propio, no
-// ejecuta procesos (git pasa por gitcommon) y no importa specbaseline.
+// ejecuta procesos (git pasa por gitcommon) y no importa ningún paquete de integración de documentos.
 package livespec
 
 import (

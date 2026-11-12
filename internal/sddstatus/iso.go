@@ -578,10 +578,10 @@ func narrowArchive(status *Status, findings, noted []isoevidence.Finding) {
 
 // refreshPhaseInstructions vuelve a generar las instrucciones de fase para que
 // reflejen la ruta y las notas añadidas, conservando la línea de archivado de la
-// integración que decorateWorkspaceDeclarations ya había añadido.
+// integración del contexto que decorateWorkspaceDeclarations ya había añadido.
 func refreshPhaseInstructions(status *Status, location workspace.Location) {
 	instructions := renderPhaseInstructions(*status)
-	if line := integratePrepareLine(status, location); line != "" {
+	if line := contextPrepareLine(status, location); line != "" {
 		instructions.Archive = append(instructions.Archive, line)
 	}
 	status.PhaseInstructions = &instructions
