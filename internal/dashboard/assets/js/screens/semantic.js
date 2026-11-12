@@ -20,7 +20,7 @@ const KIND_LABEL = { struct: 'struct', interface: 'interface', func: 'func', met
 // Filas de símbolos que se pintan como máximo; el recuento total va siempre en texto.
 const MAX_ROWS = 300;
 
-const ctx = { kind: '', query: '', symbolsToken: 0, symbols: null, deps: null, internalOnly: false, debounce: null };
+const ctx = { needsInit: false, kind: '', query: '', symbolsToken: 0, symbols: null, deps: null, internalOnly: false, debounce: null };
 
 function yesNo(flag, yes, no) {
   return flag ? statusPill('ok', yes) : badge('neutral', no, 'x');
@@ -28,10 +28,13 @@ function yesNo(flag, yes, no) {
 
 // ---- Estado de conectores ------------------------------------------------------------------
 
-function connectorCard(title, installed, configured, note) {
+// `indexed` es undefined en los conectores sin índice propio (Serena) y, en CodeGraph,
+// solo se muestra con la CLI instalada: sin ella no hay índice que inicializar.
+function connectorCard(title, installed, configured, note, indexed) {
+  const indexPill = installed && typeof indexed === 'boolean' ? yesNo(indexed, 'Índice inicializado', 'Sin índice') : '';
   return `<div class="kn-card">
     <h3 class="kn-card-label">${escapeHtml(title)}</h3>
-    <div class="kn-pills">${yesNo(installed, 'Instalado (CLI en PATH)', 'No está en PATH')}${yesNo(configured, 'Configurado en el workspace', 'Sin configurar en el workspace')}</div>
+    <div class="kn-pills">${yesNo(installed, 'Instalado (CLI en PATH)', 'No está en PATH')}${yesNo(configured, 'Registrado en un agente', 'Sin registrar en agentes')}${indexPill}</div>
     ${note ? `<p class="kn-hint">${note}</p>` : ''}
   </div>`;
 }
@@ -68,9 +71,11 @@ export async function loadSemanticStatus() {
         <p class="kn-hint">Modo configurado: ${escapeHtml(MODE_LABEL[mode] || mode)} · ${plural(data.total_symbols || 0, 'símbolo', 'símbolos')} en ${plural(data.total_packages || 0, 'paquete', 'paquetes')}</p>
         <div class="kn-pills">${nativeReady ? statusPill('ok', 'AST nativo listo') : badge('warn', 'AST nativo no disponible', 'alert')}</div>
       </div>
-      ${connectorCard('CodeGraph', data.codegraph_installed, data.codegraph_configured, 'Grafo de conocimiento del código.')}
+      ${connectorCard('CodeGraph', data.codegraph_installed, data.codegraph_configured, 'Grafo de conocimiento del código.', !!data.codegraph_indexed)}
       ${connectorCard('Serena MCP', data.serena_installed, data.serena_configured, data.serena_configured ? '' : 'Se configura con «Sincronizar workspace» en <a href="#/ecosistema">Ecosistema</a>.')}
       ${warnings.length ? `<div class="alert alert-warn kn-status-warn">${icon('alert', 18)}<div class="grow"><strong>Avisos de configuración</strong><ul class="kn-notice-list">${warnings.map(w => `<li>${escapeHtml(w)}</li>`).join('')}</ul></div></div>` : ''}`;
+    ctx.needsInit = !!data.codegraph_installed && !data.codegraph_indexed;
+    syncReindexButton();
     renderAgents(data.agents);
   } catch (err) {
     box.innerHTML = stateError(err.message, 'Error cargando el estado semántico');
@@ -192,29 +197,48 @@ function feedback(kind, html, busy = false) {
   box.innerHTML = `${lead}<div class="grow">${html}</div>`;
 }
 
+// Sin índice, el botón inicializa CodeGraph (crea .codegraph/ y construye el primer índice);
+// con índice, reindexa. El rótulo sigue a `ctx.needsInit`, que fija el estado del servidor.
+const BUTTON_ICON = '<i data-icon="bolt"></i>';
+
+function syncReindexButton() {
+  const btn = $('#btn-reindex-codegraph');
+  if (!btn || btn.disabled) return;
+  const label = ctx.needsInit ? 'Inicializar CodeGraph' : 'Reindexar CodeGraph';
+  btn.title = ctx.needsInit ? 'Inicializar CodeGraph en el workspace' : 'Reindexar CodeGraph bajo demanda';
+  btn.innerHTML = `${BUTTON_ICON}${label}`;
+}
+
 async function reindex() {
   const btn = $('#btn-reindex-codegraph');
   const consoleBox = $('#reindex-console');
-  const restore = setBusy(btn, 'Reindexando…');
+  const initializing = ctx.needsInit;
+  const restore = setBusy(btn, initializing ? 'Inicializando…' : 'Reindexando…');
   consoleBox.hidden = true;
-  feedback('neutral', 'Ejecutando la reindexación de CodeGraph en el workspace. Puede tardar un rato; no cierres esta pestaña.', true);
+  feedback('neutral', initializing
+    ? 'Inicializando CodeGraph: se crea la carpeta .codegraph/ en el workspace y se construye el primer índice. Puede tardar un rato; no cierres esta pestaña.'
+    : 'Ejecutando la reindexación de CodeGraph en el workspace. Puede tardar un rato; no cierres esta pestaña.', true);
+  let didInit = initializing;
   try {
     const data = await api('/api/semantic/reindex', { method: 'POST' });
+    if (data.operation) didInit = data.operation === 'init';
     const ok = data.success !== false;
     const parts = [];
     if (data.connector) parts.push(`Conector: ${escapeHtml(data.connector)}`);
     if (data.duration) parts.push(`Duración: ${escapeHtml(data.duration)}`);
-    feedback(ok ? 'ok' : 'warn', `<strong>${escapeHtml(data.message || 'Reindexación completada.')}</strong>${parts.length ? ` ${parts.join(' · ')}` : ''}`);
-    if (data.output) renderConsole(consoleBox, { title: 'Salida de la reindexación', text: data.output, state: ok ? 'ok' : 'error' });
+    feedback(ok ? 'ok' : 'warn', `<strong>${escapeHtml(data.message || (didInit ? 'Inicialización completada.' : 'Reindexación completada.'))}</strong>${parts.length ? ` ${parts.join(' · ')}` : ''}`);
+    if (data.output) renderConsole(consoleBox, { title: didInit ? 'Salida de la inicialización' : 'Salida de la reindexación', text: data.output, state: ok ? 'ok' : 'error' });
     await Promise.all([loadSemanticData(), refreshOverview(['semantic'])]);
   } catch (err) {
     console.error(err);
-    feedback('bad', `<strong>La reindexación ha fallado.</strong> ${escapeHtml(err.message)}`);
+    if (err.data && err.data.operation) didInit = err.data.operation === 'init';
+    feedback('bad', `<strong>${didInit ? 'La inicialización ha fallado.' : 'La reindexación ha fallado.'}</strong> ${escapeHtml(err.message)}`);
     // Con un fallo, el servidor devuelve igualmente el resultado con la salida del proceso.
     const output = err.data && err.data.output;
-    if (output) renderConsole(consoleBox, { title: 'Salida de la reindexación', text: output, state: 'error' });
+    if (output) renderConsole(consoleBox, { title: didInit ? 'Salida de la inicialización' : 'Salida de la reindexación', text: output, state: 'error' });
   } finally {
     restore();
+    syncReindexButton();
   }
 }
 

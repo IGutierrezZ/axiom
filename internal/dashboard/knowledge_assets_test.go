@@ -134,7 +134,7 @@ func TestSymbolFiltersAreServerSide(t *testing.T) {
 			t.Errorf("semantic.js no contiene %q", marker)
 		}
 	}
-	for _, marker := range []string{"native_ast_ready", "codegraph_installed", "serena_installed", "api('/api/semantic/reindex', { method: 'POST' })", "api('/api/semantic/dependencies')", "data.agents"} {
+	for _, marker := range []string{"native_ast_ready", "codegraph_installed", "codegraph_indexed", "serena_installed", "api('/api/semantic/reindex', { method: 'POST' })", "api('/api/semantic/dependencies')", "data.agents"} {
 		if !strings.Contains(js, marker) {
 			t.Errorf("semantic.js no contiene %q", marker)
 		}
@@ -235,7 +235,7 @@ func TestKnowledgeScreensAreAccessible(t *testing.T) {
 	}
 	// El estado se dice con texto (y icono), no solo con color.
 	sem := readAsset(t, "js/screens/semantic.js")
-	for _, text := range []string{"Instalado (CLI en PATH)", "No está en PATH", "Configurado en el workspace", "Sin configurar en el workspace", "AST nativo listo", "AST nativo no disponible"} {
+	for _, text := range []string{"Instalado (CLI en PATH)", "No está en PATH", "Registrado en un agente", "Sin registrar en agentes", "Índice inicializado", "Sin índice", "Inicializar CodeGraph", "La inicialización ha fallado.", "Salida de la inicialización", "AST nativo listo", "AST nativo no disponible"} {
 		if !strings.Contains(sem, text) {
 			t.Errorf("semantic.js no expresa con texto el estado %q", text)
 		}
