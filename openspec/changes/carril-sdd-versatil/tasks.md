@@ -21,15 +21,15 @@ Sin dependencias internas; todo son funciones puras con pruebas por tablas.
 
 ### U1 · `feat(isoevidence): modelo, identificadores REQ y escenarios`
 
-- [ ] 1.1 Crear `internal/isoevidence/doc.go`, `internal/isoevidence/model.go` y `internal/isoevidence/imports_test.go`: tipos `Section`, `Requirement`, `Stage`, `Code` (los 14 tokens de design §5.3), `Finding` y `Finding.Reason()` con la forma `blocked(<token>): <detalle>; <continuación>`.
+- [x] 1.1 Crear `internal/isoevidence/doc.go`, `internal/isoevidence/model.go` y `internal/isoevidence/imports_test.go`: tipos `Section`, `Requirement`, `Stage`, `Code` (los 14 tokens de design §5.3), `Finding` y `Finding.Reason()` con la forma `blocked(<token>): <detalle>; <continuación>`.
   Cubre: REQ-29.16
   Aceptación: `Reason()` compone exactamente la línea de design §5.3; una prueba de importaciones falla si el paquete importa `os/exec` o cualquier paquete `internal/...`.
   Comprobación: `go test ./internal/isoevidence/ -run 'TestFindingReason|TestPackageImports'`
-- [ ] 1.2 Crear `internal/isoevidence/reqid.go` y `internal/isoevidence/reqid_test.go`: `RequirementIDs` (válido `^REQ-\d+\.\d+$` y mal formado en límite de palabra) y `CheckRequirementIDs` con las reglas de design §6.1 (ausente, ambiguo, repetido que cuenta como uno, ADDED único entre dominios y ausente de la baseline, MODIFIED/REMOVED/RENAMED con su continuación RENAMED) y la tolerancia D17 (mismo dominio, mismo nombre y bloque idéntico tras `ensureTrailingNewline`).
+- [x] 1.2 Crear `internal/isoevidence/reqid.go` y `internal/isoevidence/reqid_test.go`: `RequirementIDs` (válido `^REQ-\d+\.\d+$` y mal formado en límite de palabra) y `CheckRequirementIDs` con las reglas de design §6.1 (ausente, ambiguo, repetido que cuenta como uno, ADDED único entre dominios y ausente de la baseline, MODIFIED/REMOVED/RENAMED con su continuación RENAMED) y la tolerancia D17 (mismo dominio, mismo nombre y bloque idéntico tras `ensureTrailingNewline`).
   Cubre: REQ-29.3
   Aceptación: RED primero con cada fila de la tabla de REQ-29.3 y los negativos de la tolerancia de design §7 (un byte distinto, otro nombre, otro dominio, diferencia solo en el salto de línea final); GREEN con todas en verde.
   Comprobación: `go test ./internal/isoevidence/ -run 'TestRequirementIDs|TestCheckRequirementIDs'`
-- [ ] 1.3 Crear `internal/isoevidence/scenarios.go` y `internal/isoevidence/scenarios_test.go`: `Scenarios` (solo `#### Scenario:` fuera de vallas) y `CheckScenarios` (ADDED/MODIFIED sin escenarios y nombres de escenario repetidos; REMOVED y RENAMED exentos).
+- [x] 1.3 Crear `internal/isoevidence/scenarios.go` y `internal/isoevidence/scenarios_test.go`: `Scenarios` (solo `#### Scenario:` fuera de vallas) y `CheckScenarios` (ADDED/MODIFIED sin escenarios y nombres de escenario repetidos; REMOVED y RENAMED exentos).
   Cubre: REQ-29.10, REQ-29.6
   Aceptación: escenario dentro de una valla no cuenta; el motivo nombra dominio y requisito; REMOVED/RENAMED no se rechazan.
   Comprobación: `go test ./internal/isoevidence/ -run 'TestScenarios|TestCheckScenarios'`
