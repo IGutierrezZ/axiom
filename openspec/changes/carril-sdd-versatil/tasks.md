@@ -84,11 +84,11 @@ Sin dependencias internas; todo son funciones puras con pruebas por tablas.
 
 ### U6 · `feat(workspace): cargar sdd y rechazar la contradicción con workflow.lane` (solape P6)
 
-- [ ] 6.1 Modificar `internal/workspace/declarations.go` (campos `SDD`/`SDDErr`, una rama en `readDeclarationBlocks`, llamada a `checkISOWorkflow` tras decodificar `sdd:` y `workflow:`), `internal/workspace/loader.go` (`SDDErr` en `joinLoadErrors` y en el comentario de `ParseConfig`) y completar `internal/workspace/sdd_test.go` con la carga por capas (`ParseConfig`, `ReadDeclarations`, `LoadConfig`).
+- [x] 6.1 Modificar `internal/workspace/declarations.go` (campos `SDD`/`SDDErr`, una rama en `readDeclarationBlocks`, llamada a `checkISOWorkflow` tras decodificar `sdd:` y `workflow:`), `internal/workspace/loader.go` (`SDDErr` en `joinLoadErrors` y en el comentario de `ParseConfig`) y completar `internal/workspace/sdd_test.go` con la carga por capas (`ParseConfig`, `ReadDeclarations`, `LoadConfig`).
   Cubre: REQ-29.1, REQ-29.2
   Aceptación: la contradicción y un `sdd:` inválido fallan al cargar con salida `1` en `workspace validate`; `workflow` se resuelve igual y `WorkflowErr` queda en `nil`; sin bloque `sdd:` nada cambia.
   Comprobación: `go test ./internal/workspace/ -run 'TestSDDLoad|TestWorkspaceValidateSDD'`
-- [ ] 6.2 Modificar `internal/hub/init.go` y su prueba (`internal/hub/init_test.go`): `declares()` cuenta `SDD` y `SDDErr` para que `axiom init --force` no pierda `sdd:`.
+- [x] 6.2 Modificar `internal/hub/init.go` y su prueba (`internal/hub/init_test.go`): `declares()` cuenta `SDD` y `SDDErr` para que `axiom init --force` no pierda `sdd:`.
   Cubre: REQ-29.1
   Aceptación: con solo `sdd:` declarado, `declares()` es verdadero.
   Comprobación: `go test ./internal/hub/ -run TestDeclaresCountsSDD`

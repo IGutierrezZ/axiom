@@ -12,7 +12,7 @@ import (
 
 // ParseConfig deserializa y valida la estructura sintáctica de axiom.yaml desde
 // bytes: la configuración base y, si existen, los bloques `baseline:`,
-// `technical_context:`, `git:` y `repositories:`. Si la base o alguna declaración
+// `technical_context:`, `git:`, `workflow:`, `sdd:` y `repositories:`. Si la base o alguna declaración
 // es inválida devuelve un error que acumula todas las violaciones (REQ-24.17).
 func ParseConfig(data []byte) (*WorkspaceConfig, error) {
 	cfg, baseErr, declarations := parseLayered(data)
@@ -27,7 +27,7 @@ func ParseConfig(data []byte) (*WorkspaceConfig, error) {
 // mensajes de la configuración base de siempre.
 func joinLoadErrors(baseErr error, declarations Declarations) error {
 	var errs []error
-	for _, err := range []error{baseErr, declarations.BaselineErr, declarations.TechnicalContextErr, declarations.GitErr, declarations.WorkflowErr, declarations.RepositoriesErr} {
+	for _, err := range []error{baseErr, declarations.BaselineErr, declarations.TechnicalContextErr, declarations.GitErr, declarations.WorkflowErr, declarations.SDDErr, declarations.RepositoriesErr} {
 		if err != nil {
 			errs = append(errs, err)
 		}
