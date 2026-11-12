@@ -9,6 +9,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
+	"github.com/IGutierrezZ/axiom/v3/internal/adoption"
 	"github.com/IGutierrezZ/axiom/v3/internal/gitcommon"
 	"github.com/IGutierrezZ/axiom/v3/internal/pathquote"
 )
@@ -149,6 +150,14 @@ func (d *Detector) Detect(dirPath string) (*TechDetection, error) {
 
 	// 7. Detección de agentes, prompts y skills preexistentes (.agents/skills, .github/copilot, etc.)
 	detectExistingAgents(absPath, result)
+
+	// 8. Orígenes de migración y candidatos a contexto técnico (REQ-30.26): el inventario
+	// de `axiom archive adopt scan`, de solo lectura. Un fallo del escaneo no impide la
+	// detección: el informe queda ausente.
+	if inv, scanErr := adoption.Scan(absPath); scanErr == nil {
+		summary := adoption.Summarize(inv)
+		result.Adoption = &summary
+	}
 
 	// Valores predeterminados si no se detectó nada
 	if len(result.RecommendedRoles["core"]) == 0 {

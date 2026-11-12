@@ -76,6 +76,10 @@ If the proposal has no Capabilities section (older format), fall back to inferri
 
 **IF mode is `none`:** Skip — no existing specs to read.
 
+### Step 3b: Adoption Changes
+
+**IF `openspec/changes/{change-name}/adoption-inventory.yaml` exists** (modes `openspec` and `hybrid`), the change migrates pre-existing requirements to OpenSpec: follow `references/openspec-adoption.md` for Step 4 (an ADDED-only delta with an `Origen:` line and a scenario per requirement, `Descartado:` reasons, and `axiom archive adopt check`). The fidelity of the migration is approved by a human at the `spec` gate; no command judges it. The rest of this skill (persistence and return envelope) applies unchanged.
+
 ### Step 4: Write Delta Specs
 
 **Directiva de Interrogación Exhaustiva (Funcional y Criterios BDD — ODD-1.1):**

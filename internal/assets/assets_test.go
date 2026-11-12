@@ -364,6 +364,7 @@ func TestAllEmbeddedAssetsAreReadable(t *testing.T) {
 		"skills/sdd-propose/SKILL.md",
 		"skills/sdd-research/SKILL.md",
 		"skills/sdd-spec/SKILL.md",
+		"skills/sdd-spec/references/openspec-adoption.md",
 		"skills/sdd-tasks/SKILL.md",
 		"skills/sdd-verify/SKILL.md",
 		"skills/sdd-verify/references/report-format.md",
@@ -4305,5 +4306,79 @@ func TestStopsDoctrineRetiresTheMergedPullRequestAndPublishesOnApproval(t *testi
 		if !strings.Contains(contract, want) {
 			t.Errorf("status contract missing %q", want)
 		}
+	}
+}
+
+// REQ-30.31 y D8: la referencia de adopción de sdd-spec describe el flujo completo de la migración
+// a OpenSpec y no atribuye a Go la fidelidad semántica, que aprueba un humano en la compuerta `spec`.
+func TestSDDSpecAdoptionReferenceDescribesTheWholeFlow(t *testing.T) {
+	reference := mustReadResolved("skills/sdd-spec/references/openspec-adoption.md")
+
+	for _, want := range []string{
+		"`openspec/changes/{change-name}/adoption-inventory.yaml`",
+		`axiom archive adopt scan --path "<workspaceRoot>" --change "{change-name}"`,
+		`axiom archive adopt check --path "<workspaceRoot>" --change "{change-name}"`,
+		"**only `## ADDED Requirements`**",
+		"(REQ-n.m)",
+		"one series `REQ-n.*` that is new for the migrated project",
+		"never the identity of the migrated requirement",
+		"`Origen: <path>#<anchor> (<original ID>)`",
+		"`#### Scenario:`",
+		"`## Descartado` section",
+		"`- <path>#<anchor>: <reason>`",
+		"The reason is never empty",
+		"`wrong_branch`",
+		"`inventory_stale`",
+		"`axiom sdd archive-compose --canonical --delta`",
+		"keeps each `Origen:` line byte for byte",
+		"`spec` gate",
+	} {
+		if !strings.Contains(reference, want) {
+			t.Errorf("sdd-spec adoption reference is missing %q", want)
+		}
+	}
+}
+
+func TestSDDSpecAdoptionReferenceLeavesSemanticFidelityToTheHuman(t *testing.T) {
+	reference := mustReadResolved("skills/sdd-spec/references/openspec-adoption.md")
+
+	for _, want := range []string{
+		"A human approves, at the `spec` gate, that the migration is **faithful** to its sources",
+		"No command judges semantic fidelity",
+		"`adopt check` never records or replaces a gate decision",
+		"Do not claim that `adopt check` verified fidelity",
+	} {
+		if !strings.Contains(reference, want) {
+			t.Errorf("sdd-spec adoption reference is missing %q", want)
+		}
+	}
+	for _, retired := range []string{"Go judges", "Go verifies the fidelity", "check verifies the fidelity", "check verifies fidelity", "guarantees fidelity"} {
+		if strings.Contains(reference, retired) {
+			t.Errorf("sdd-spec adoption reference attributes semantic fidelity to Go: %q", retired)
+		}
+	}
+}
+
+// D8: la adopción es una referencia de sdd-spec con un disparador determinista, no una skill nueva.
+func TestSDDSpecAndProposePointToTheAdoptionReference(t *testing.T) {
+	spec := mustReadResolved("skills/sdd-spec/SKILL.md")
+	for _, want := range []string{
+		"### Step 3b: Adoption Changes",
+		"`openspec/changes/{change-name}/adoption-inventory.yaml` exists",
+		"`references/openspec-adoption.md`",
+		"approved by a human at the `spec` gate",
+	} {
+		if !strings.Contains(spec, want) {
+			t.Errorf("sdd-spec/SKILL.md is missing %q", want)
+		}
+	}
+	propose := mustReadResolved("skills/sdd-propose/SKILL.md")
+	for _, want := range []string{"`axiom archive adopt scan`", "`sdd-spec` `references/openspec-adoption.md`", "`spec` gate"} {
+		if !strings.Contains(propose, want) {
+			t.Errorf("sdd-propose/SKILL.md is missing %q", want)
+		}
+	}
+	if skills, err := fs.Glob(FS, "skills/sdd-adopt*"); err != nil || len(skills) != 0 {
+		t.Errorf("adoption is a reference of sdd-spec, not a new skill: %v (%v)", skills, err)
 	}
 }

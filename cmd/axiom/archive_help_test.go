@@ -46,7 +46,7 @@ func TestArchiveUnknownSubcommandNamesTheValidOnes(t *testing.T) {
 	if code := runArchive([]string{"inexistente"}, &stdout, &stderr); code != 1 {
 		t.Fatalf("código = %d", code)
 	}
-	if !strings.Contains(stdout.String(), "sync|list|show|coldstart|integrate|context") {
+	if !strings.Contains(stdout.String(), "sync|list|show|coldstart|integrate|adopt|context") {
 		t.Errorf("la negativa nombra los subcomandos: %q", stdout.String())
 	}
 }
@@ -78,5 +78,37 @@ func TestArchiveIntegrateIsDispatchedToTheCLI(t *testing.T) {
 	stderr.Reset()
 	if code := runArchive([]string{"integrate", "--help"}, &stdout, &stderr); code != 0 || !strings.Contains(stdout.String(), "Uso: axiom archive integrate --odd <feature>") {
 		t.Errorf("archive integrate --help = %d\n%s", code, stdout.String())
+	}
+}
+
+// REQ-30.9 y REQ-30.15: la ayuda del grupo `archive` lista `integrate`, `adopt` y `context`, la
+// ayuda global anuncia `archive adopt` y el verbo se despacha a la CLI.
+func TestArchiveHelpListsTheAdoptVerb(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	if code := runArchive([]string{"--help"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("archive --help salió con %d: %s", code, stderr.String())
+	}
+	for _, want := range []string{"\n  integrate ", "\n  adopt ", "\n  context "} {
+		if !strings.Contains(stdout.String(), want) {
+			t.Errorf("la ayuda de archive debe listar %q:\n%s", want, stdout.String())
+		}
+	}
+	if !strings.Contains(axiomHelpText(), "\n  archive adopt ") {
+		t.Errorf("la ayuda global debe listar `archive adopt`:\n%s", axiomHelpText())
+	}
+}
+
+func TestArchiveAdoptIsDispatchedToTheCLI(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	if code := runArchive([]string{"adopt"}, &stdout, &stderr); code != 1 {
+		t.Fatalf("sin verbo debe salir con 1, salió con %d", code)
+	}
+	if !strings.Contains(stderr.String(), "archive adopt requiere un subcomando") || !strings.Contains(stderr.String(), "axiom archive adopt --help") {
+		t.Errorf("stderr = %q", stderr.String())
+	}
+	stdout.Reset()
+	stderr.Reset()
+	if code := runArchive([]string{"adopt", "--help"}, &stdout, &stderr); code != 0 || !strings.Contains(stdout.String(), "Uso: axiom archive adopt <scan|check>") {
+		t.Errorf("archive adopt --help = %d\n%s", code, stdout.String())
 	}
 }

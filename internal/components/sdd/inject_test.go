@@ -10370,3 +10370,28 @@ func TestRefreshInstalledOpenCodePluginsKeepsBranchGuardPluginInSync(t *testing.
 		t.Fatal("la copia desactualizada no se ha refrescado")
 	}
 }
+
+// REQ-30.31, escenario «Paridad entre runtimes»: la referencia de adopción de sdd-spec se instala
+// con el mismo contenido normativo en cada runtime, byte a byte igual al activo embebido.
+func TestInjectInstallsTheAdoptionReferenceIdenticallyAcrossRuntimes(t *testing.T) {
+	mockNoPackageManager(t)
+	want := assets.MustRead("skills/sdd-spec/references/openspec-adoption.md")
+
+	adapters := map[string]agents.Adapter{"claude-code": claudeAdapter(), "opencode": opencodeAdapter(), "kimi": kimiAdapter()}
+	for name, adapter := range adapters {
+		t.Run(name, func(t *testing.T) {
+			home := t.TempDir()
+			if _, err := Inject(home, adapter, ""); err != nil {
+				t.Fatalf("Inject(%s) error = %v", name, err)
+			}
+			path := filepath.Join(adapter.SkillsDir(home), "sdd-spec", "references", "openspec-adoption.md")
+			got, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatalf("la referencia de adopción no se instaló en %s: %v", path, err)
+			}
+			if string(got) != want {
+				t.Errorf("la referencia instalada en %s difiere del activo embebido", name)
+			}
+		})
+	}
+}

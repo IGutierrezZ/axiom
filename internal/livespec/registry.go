@@ -141,6 +141,24 @@ func (r *Registry) NextFree(series int) string {
 	return fmt.Sprintf("REQ-%d.%d", series, r.maxFor[series]+1)
 }
 
+// SeriesRefs devuelve todas las apariciones de identificadores de una serie `REQ-n.*`, en
+// un orden estable (por ruta y después por identificador).
+func (r *Registry) SeriesRefs(series int) []IDRef {
+	var refs []IDRef
+	for id, list := range r.byID {
+		if s, ok := SeriesOf(id); ok && s == series {
+			refs = append(refs, list...)
+		}
+	}
+	sort.SliceStable(refs, func(i, j int) bool {
+		if refs[i].Path != refs[j].Path {
+			return refs[i].Path < refs[j].Path
+		}
+		return refs[i].ID < refs[j].ID
+	})
+	return refs
+}
+
 // SeriesOf devuelve el número de serie `n` de un identificador `REQ-n.m`.
 func SeriesOf(id string) (int, bool) {
 	m := reqIDParts.FindStringSubmatch(id)

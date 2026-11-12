@@ -155,6 +155,7 @@ COMANDOS DE GOBERNANZA Y WORKSPACE:
   archive coldstart    Sintetiza una especificación viva inicial a partir de un cambio archivado
   archive integrate    Integra en openspec/specs/ la sección "## Spec viva" del documento ODD de una feature (--odd <feature>), todo o nada e idempotente
   archive context      Valida (check), prepara (prepare), verifica (verify) y consulta la traza (show) de la integración del contexto técnico de un cambio
+  archive adopt        Inventaría (scan) los orígenes de requisitos previos y verifica (check) el cambio SDD que los migra a OpenSpec
   sdd status           Consulta el estado de fases y artefactos de un cambio SDD (--json, --instructions)
   sdd continue         Calcula y emite la siguiente acción autorizada del despachador SDD
   sdd attempt          Registra la autoridad de edición por raíz para el cambio activo (grant)
@@ -1745,6 +1746,7 @@ Subcomandos disponibles:
   coldstart  Sintetiza una especificación viva inicial a partir de un cambio archivado
   integrate  Integra en la spec viva (openspec/specs/) la delta de la sección "## Spec viva" de una feature ODD (--odd <feature>)
   context    Valida (check), prepara (prepare), verifica (verify) y consulta la traza (show) de la integración del contexto técnico de un cambio
+  adopt      Inventaría (scan) los orígenes de requisitos previos y verifica (check) el cambio SDD que los migra a OpenSpec (--change <cambio>)
 `
 }
 
@@ -1753,7 +1755,7 @@ Subcomandos disponibles:
 // devuelve su código de salida como el resto de adaptadores finos.
 func runArchive(args []string, stdout, stderr io.Writer) int {
 	if len(args) == 0 {
-		fmt.Fprintln(stdout, "Error: subcomando de 'archive' requerido. Opciones: sync, list, show, coldstart, integrate, context. Ejecuta 'axiom archive --help'.")
+		fmt.Fprintln(stdout, "Error: subcomando de 'archive' requerido. Opciones: sync, list, show, coldstart, integrate, adopt, context. Ejecuta 'axiom archive --help'.")
 		return 1
 	}
 	subCmd := args[0]
@@ -1771,10 +1773,12 @@ func runArchive(args []string, stdout, stderr io.Writer) int {
 		runArchiveColdStart(args[1:])
 	case "integrate":
 		return runSimpleCommand(cli.RunArchiveIntegrate, args[1:], stdout, stderr)
+	case "adopt":
+		return runSimpleCommand(cli.RunArchiveAdopt, args[1:], stdout, stderr)
 	case "context":
 		return runSimpleCommand(cli.RunArchiveContext, args[1:], stdout, stderr)
 	default:
-		fmt.Fprintf(stdout, "Error: subcomando '%s' no reconocido para archive. Usa 'axiom archive [sync|list|show|coldstart|integrate|context]'.\n", subCmd)
+		fmt.Fprintf(stdout, "Error: subcomando '%s' no reconocido para archive. Usa 'axiom archive [sync|list|show|coldstart|integrate|adopt|context]'.\n", subCmd)
 		return 1
 	}
 	return 0

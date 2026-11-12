@@ -45,7 +45,7 @@ Definir cómo un proyecto que llega con documentación de requisitos previa, en 
 
 ### Requirement: `axiom archive adopt scan` Inventaría los Orígenes (REQ-30.9)
 
-`axiom archive adopt scan [--path <dir>] [--change <cambio>] [--json]` DEBE producir un inventario de solo lectura de los orígenes candidatos del proyecto (ficheros de requisitos fuera de `openspec/specs/` y de `openspec/changes/`) y de sus unidades: para cada origen, sus ficheros, sus encabezados, los identificadores ajenos reconocidos por patrón (por ejemplo `RF-120`) y los candidatos a `technical_context` (documentación mantenida y de referencia) propuestos para declarar en `axiom.yaml`. El inventario DEBE ser determinista: el mismo árbol produce el mismo inventario con el mismo orden y las mismas anclas. Sin `--change`, la orden NO DEBE escribir ningún fichero. Con `--change <cambio>`, DEBE escribir únicamente el inventario en la carpeta del cambio (nombre y formato los fija el diseño) y nada más. Sin ningún origen candidato, la orden DEBE informarlo y finalizar con código `0`. La orden NO DEBE requerir que exista `openspec/`.
+`axiom archive adopt scan [--path <dir>] [--change <cambio>] [--json]` DEBE producir un inventario de solo lectura de los orígenes candidatos del proyecto (ficheros de requisitos fuera de `openspec/specs/` y de `openspec/changes/`) y de sus unidades: para cada origen, sus ficheros, sus encabezados, los identificadores ajenos reconocidos por patrón (por ejemplo `RF-120`) y los candidatos a `technical_context` (documentación mantenida y de referencia) propuestos para declarar en `axiom.yaml`. El inventario DEBE ser determinista: el mismo árbol produce el mismo inventario con el mismo orden y las mismas anclas. Sin `--change`, la orden NO DEBE escribir ningún fichero. Con `--change <cambio>`, DEBE escribir únicamente el inventario en la carpeta del cambio (`adoption-inventory.yaml`, formato `axiom.openspec-adoption-inventory/v1`) y nada más. Como escritor Go de la carpeta del cambio, DEBE consultar la guarda A de REQ-25.19 (`change-branch-lifecycle`) en el contexto ordinario antes de escribir y, ante `wrong_branch`, DEBE negarse sin escribir nada y devolver la continuación de `axiom branch ensure`. Sin ningún origen candidato, la orden DEBE informarlo y finalizar con código `0`. La orden NO DEBE requerir que exista `openspec/`.
 
 Supuesto: el inventario con `--change` es la referencia de cobertura de REQ-30.11; sin esa opción, el detector del hub lo reutiliza sin escribir (REQ-30.26 de `multi-project-hub`).
 
@@ -65,6 +65,12 @@ Supuesto: el inventario con `--change` es la referencia de cobertura de REQ-30.1
 - **CUANDO** se ejecuta `axiom archive adopt scan --change adopcion-requisitos`
 - **ENTONCES** la carpeta del cambio contiene el inventario
 - **Y** ningún otro fichero del proyecto cambia
+
+#### Scenario: `adopt scan --change` se niega fuera de rama
+- **DADO** un cambio `adopcion-requisitos` con instantánea y el repositorio desplegado en la rama de integración
+- **CUANDO** se ejecuta `axiom archive adopt scan --change adopcion-requisitos`
+- **ENTONCES** se niega con `wrong_branch` y la continuación de `axiom branch ensure`
+- **Y** no se crea el inventario ni ningún otro fichero de la carpeta del cambio
 
 #### Scenario: Sin orígenes candidatos
 - **DADO** un proyecto sin documentación de requisitos fuera de `openspec/`

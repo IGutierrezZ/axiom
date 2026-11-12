@@ -3,8 +3,8 @@
 
 import { api, escapeHtml } from './core/api.js';
 import { defaultWorktreeRoot, registrationPrefs } from './core/branches.js';
-import { adapterOptions, adapterWarning, validateProjectForm, violationsFromError } from './core/projectform.js';
-import { $, openDialog, closeDialog, toast, setBusy } from './core/components.js';
+import { adapterOptions, adapterWarning, adoptionPanel, validateProjectForm, violationsFromError } from './core/projectform.js';
+import { $, openDialog, closeDialog, toast, setBusy, iconButton } from './core/components.js';
 import { icon } from './core/icons.js';
 import { resetProjectData } from './core/overview.js';
 import { state, set } from './core/state.js';
@@ -624,12 +624,46 @@ function initAddProject() {
       if (response?.review_mode_error) {
         toast(`El proyecto se ha creado, pero no se pudo guardar la preferencia de revisión (${response.review_mode_error}).`, 'warn');
       }
+      // Informe de orígenes de migración y candidatos a contexto técnico (REQ-30.27).
+      const adoption = adoptionPanel(response);
+      if (adoption) showAdoptionPanel(adoption);
     } catch (err) {
       showViolations('add-project-error', violationsFromError(err));
     } finally {
       restore();
     }
   });
+}
+
+// showAdoptionPanel muestra, tras el alta, el informe de orígenes de migración y de
+// candidatos a technical_context y la instrucción para lanzar la adopción desde el agente
+// (REQ-30.27). Solo informa: no ejecuta ninguna orden ni crea el cambio de adopción; la
+// instrucción se copia con el botón [data-copy] que ya atiende bindCopyButtons.
+function showAdoptionPanel(panel) {
+  const dialog = $('#modal-adoption');
+  const body = $('#adoption-body');
+  if (!dialog || !body) return;
+  const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+  const sources = panel.sources.length
+    ? `<h3 class="field-label">Orígenes de requisitos previos</h3>
+       <p class="field-hint">${escapeHtml(plural(panel.sourceCount, 'origen', 'orígenes'))} y ${escapeHtml(plural(panel.unitCount, 'unidad', 'unidades'))} que se pueden migrar a OpenSpec.</p>
+       <ul class="adoption-list">${panel.sources.map(item => `<li><code>${escapeHtml(item.path)}</code> <span class="field-hint">· ${escapeHtml(plural(item.units, 'unidad', 'unidades'))}</span></li>`).join('')}</ul>`
+    : '';
+  const candidates = panel.candidates.length
+    ? `<h3 class="field-label">Candidatos a contexto técnico</h3>
+       <p class="field-hint">Propuestos para declarar en <code>technical_context</code> de <code>axiom.yaml</code>; el alta no ha modificado nada.</p>
+       <ul class="adoption-list">${panel.candidates.map(item => `<li><code>${escapeHtml(item.path)}</code> <span class="field-hint">· ${escapeHtml(item.modeLabel)} (${escapeHtml(item.reason)})</span></li>`).join('')}</ul>`
+    : '';
+  const warnings = panel.warnings.length
+    ? `<ul class="adoption-list">${panel.warnings.map(text => `<li class="field-hint">${escapeHtml(text)}</li>`).join('')}</ul>`
+    : '';
+  const instruction = panel.instruction
+    ? `<h3 class="field-label">Instrucción para tu agente</h3>
+       <p class="field-hint">Axiom no ejecuta nada ni crea el cambio de adopción: copia la instrucción y lánzala desde tu agente. Un humano aprueba la migración en la compuerta <code>spec</code>.</p>
+       <div class="reminder-cmd"><code id="adoption-instruction">${escapeHtml(panel.instruction)}</code>${iconButton({ iconName: 'copy', label: 'Copiar la instrucción', size: 'sm', attrs: `data-copy="${escapeHtml(panel.instruction)}"` })}</div>`
+    : '';
+  body.innerHTML = sources + candidates + warnings + instruction;
+  openDialog(dialog, '#btn-close-adoption');
 }
 
 // initProjects enlaza el popover, el explorador y el modal de alta.

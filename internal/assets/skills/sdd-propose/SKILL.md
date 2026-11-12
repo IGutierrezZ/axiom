@@ -191,4 +191,5 @@ Ready for specs (sdd-spec) or design (sdd-design).
 - **Sufficient detail**: Keep the proposal concise but complete enough to explain intent, scope, risks, rollback and success criteria. Use bullets or tables where they improve clarity. Do not truncate required detail to meet a word or line cap.
 - For a bug (any project) and for an ISO change, the proposal follows `../_shared/sdd-iso-convention.md`: the bug profile sections `## Informe de bug` and `## Impacto en la spec` and their literal lines.
 - Never create, modify, or delete files under `technicalContext.reference` paths.
+- If the user is migrating pre-existing requirement documents to OpenSpec (`axiom archive adopt scan` or the dashboard reports sources), propose the migrated project as a New Capability; the spec phase then follows `sdd-spec` `references/openspec-adoption.md`, and a human approves the migration at the `spec` gate.
 - Return envelope per **Section D** from `skills/_shared/sdd-phase-common.md`.

@@ -114,6 +114,9 @@ func TestArchitectureOnlyExecGoLaunchesProcesses(t *testing.T) {
 	// la integración ODD y collectSources tolera su ausencia.
 	sources = append(sources, collectSources(t, filepath.Join("..", "techcontext"), "internal/techcontext")...)
 	sources = append(sources, collectSources(t, filepath.Join("..", "livespec"), "internal/livespec")...)
+	// La adopción de OpenSpec (REQ-30.9 a REQ-30.14) solo lee ficheros: no lanza procesos.
+	sources = append(sources, collectSources(t, filepath.Join("..", "adoption"), "internal/adoption")...)
+	sources = append(sources, collectSources(t, filepath.Join("..", "adoption", "adoptcheck"), "internal/adoption/adoptcheck")...)
 
 	labels := map[string]bool{}
 	for _, source := range sources {

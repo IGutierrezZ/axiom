@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/IGutierrezZ/axiom/v3/internal/adoption"
 	"github.com/IGutierrezZ/axiom/v3/internal/pathquote"
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
@@ -323,14 +324,30 @@ func (ini *Initializer) Init(opts InitOptions) (*InitResult, error) {
 		}
 	}
 
+	// 4. Informe de adopción (REQ-30.27): el inventario del repositorio de especificaciones,
+	// de solo lectura, y la instrucción para lanzar la adopción desde el agente. No ejecuta
+	// nada ni crea el cambio de adopción. Un fallo del escaneo deja el informe ausente.
+	var adoptionReport *adoption.Summary
+	adoptionInstruction := ""
+	if inv, scanErr := adoption.Scan(workspaceRoot); scanErr == nil {
+		if summary := adoption.Summarize(inv); !summary.Empty() {
+			adoptionReport = &summary
+			if summary.SourceCount > 0 {
+				adoptionInstruction = adoptionInstructionFor(absPath)
+			}
+		}
+	}
+
 	return &InitResult{
-		ConfigPath:         configPath,
-		Record:             record,
-		CreatedFiles:       createdFiles,
-		AlreadyExisted:     alreadyExisted && (!opts.Force || preserveConfig),
-		AdoptedSkillsCount: adoptedSkillsCount,
-		Notes:              notes,
-		BaselineOwnership:  ownership,
+		ConfigPath:          configPath,
+		Record:              record,
+		CreatedFiles:        createdFiles,
+		AlreadyExisted:      alreadyExisted && (!opts.Force || preserveConfig),
+		AdoptedSkillsCount:  adoptedSkillsCount,
+		Notes:               notes,
+		BaselineOwnership:   ownership,
+		Adoption:            adoptionReport,
+		AdoptionInstruction: adoptionInstruction,
 	}, nil
 }
 
@@ -436,4 +453,14 @@ func buildAxiomYamlWithRoles(name, topology, specsRepo, root, domainContext stri
 	}
 
 	return sb.String()
+}
+
+// AdoptionChange es el nombre del cambio SDD de adopción que propone la instrucción del alta.
+const AdoptionChange = "adopcion-openspec"
+
+// adoptionInstructionFor compone la orden y la frase para el agente (REQ-30.27). La ruta es la
+// carpeta maestra, que `axiom archive adopt` resuelve al repositorio de especificaciones.
+func adoptionInstructionFor(masterPath string) string {
+	return fmt.Sprintf("Adopta los requisitos previos de este proyecto en OpenSpec: crea el cambio SDD `%[1]s`, ejecuta `axiom archive adopt scan --path %[2]s --change %[1]s` y redacta la delta siguiendo la referencia de adopción de la skill sdd-spec; comprueba el resultado con `axiom archive adopt check --path %[2]s --change %[1]s` y somete la compuerta `spec` a aprobación humana.",
+		AdoptionChange, pathquote.Quote(masterPath))
 }

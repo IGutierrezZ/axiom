@@ -163,3 +163,25 @@ func TestIDRefWhereNamesTheCapabilityOrTheChange(t *testing.T) {
 		t.Errorf("Where() = %q", got)
 	}
 }
+
+func TestRegistrySeriesRefsListsEveryReferenceOfTheSeries(t *testing.T) {
+	reg, err := LoadRegistry(registryFixture(t), RegistryOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ids := map[string]bool{}
+	for _, ref := range reg.SeriesRefs(31) {
+		ids[ref.ID] = true
+	}
+	for _, want := range []string{"REQ-31.1", "REQ-31.2", "REQ-31.5", "REQ-31.6"} {
+		if !ids[want] {
+			t.Errorf("SeriesRefs(31) no incluye %s: %v", want, ids)
+		}
+	}
+	if ids["REQ-32.7"] || ids["REQ-31.40"] {
+		t.Errorf("SeriesRefs(31) incluye otra serie o el archivo: %v", ids)
+	}
+	if got := reg.SeriesRefs(3); len(got) != 0 {
+		t.Errorf("la serie 3 no comparte prefijo con la 31: %v", got)
+	}
+}

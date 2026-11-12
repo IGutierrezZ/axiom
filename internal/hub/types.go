@@ -3,6 +3,7 @@ package hub
 import (
 	"time"
 
+	"github.com/IGutierrezZ/axiom/v3/internal/adoption"
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
@@ -72,6 +73,9 @@ type TechDetection struct {
 	Projects         []DetectedProject   `json:"projects,omitempty"`
 	ConfiguredRoles  []RoleInput         `json:"configured_roles,omitempty"`
 	AdoptedSkills    []AdoptedSkillInfo  `json:"adopted_skills,omitempty"`
+	// Adoption es el informe de orígenes de migración y candidatos a technical_context del
+	// directorio (REQ-30.26): el inventario de `axiom archive adopt scan`, sin escribir nada.
+	Adoption *adoption.Summary `json:"adoption,omitempty"`
 }
 
 // InitOptions define las opciones de configuración para inicializar un proyecto.
@@ -106,4 +110,10 @@ type InitResult struct {
 	// BaselineOwnership es la respuesta de la consulta única de baseline sobre el
 	// axiom.yaml existente (REQ-24.22); «por defecto» si no había ninguno.
 	BaselineOwnership workspace.BaselineOwnership
+	// Adoption es el informe de orígenes de migración y candidatos a technical_context del
+	// repositorio de especificaciones recién dado de alta (REQ-30.27); nil si no hay ninguno.
+	Adoption *adoption.Summary `json:"adoption,omitempty"`
+	// AdoptionInstruction es la orden y la frase para lanzar la adopción desde el agente; vacía
+	// si el informe no lista ningún origen de requisitos. El alta no ejecuta nada.
+	AdoptionInstruction string `json:"adoption_instruction,omitempty"`
 }

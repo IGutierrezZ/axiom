@@ -689,6 +689,21 @@
     </div>
   </dialog>
 
+  <!-- Informe de adopción tras el alta: solo informa; no ejecuta nada -->
+  <dialog id="modal-adoption" class="modal modal-wide" aria-labelledby="adoption-title">
+    <div class="modal-head">
+      <div>
+        <h2 id="adoption-title">Adopción de requisitos previos</h2>
+        <span class="modal-sub">Axiom ha encontrado documentación que puedes migrar a OpenSpec</span>
+      </div>
+      <button type="button" class="btn btn-ghost btn-icon btn-sm" data-close id="btn-close-adoption" aria-label="Cerrar"><i data-icon="x"></i></button>
+    </div>
+    <div class="modal-body form-stack" id="adoption-body"></div>
+    <div class="modal-foot">
+      <button type="button" class="btn btn-primary" data-close>Entendido</button>
+    </div>
+  </dialog>
+
   <!-- Explorador de carpetas locales -->
   <dialog id="modal-folder-picker" class="modal modal-wide" aria-labelledby="fp-title">
     <div class="modal-head">
