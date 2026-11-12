@@ -37,3 +37,15 @@ records:
       artifact_digest: a9754c0d2437b1730d7b6f2935d8f202c9c36430876915755f24081f1c93ff40
       actor: cli
       recorded_at: 2026-11-10T19:03:34.9802465Z
+    - gate: tasks
+      decision: approved
+      reason: Plan de 46 tareas en 24 commits aprobado; cubre REQ-29.1-29.19; una PR con size:exception; solapes P6 en commits propios
+      artifact_digest: 357d06361bdfe0bba117c7909f59d2a748acaee1eb26f011f494c325194b6f3d
+      actor: cli
+      recorded_at: 2026-11-12T01:52:50.2478749Z
+    - gate: role-apply:fullstack
+      decision: approved
+      reason: 'Apply completo: 46/46 tareas, REQ-29.1-29.19 cubiertos, regresión no ISO intacta; .codex/AGENTS.md fuera de alcance por decisión del usuario'
+      artifact_digest: 291efdc0e7da50fc2032c6a86aa927455b8d72367328ec293104ea5dcb7cad4a
+      actor: cli
+      recorded_at: 2026-11-12T08:44:41.4750132Z

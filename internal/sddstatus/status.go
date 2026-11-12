@@ -204,6 +204,11 @@ type Status struct {
 	// (REQ-27.2): always filled by decorateWorkspaceDeclarations, with or without a
 	// selected change. `omitempty` only protects hand-built statuses in tests.
 	Workflow *WorkflowProjection `json:"workflow,omitempty"`
+	// ISO is the additive projection of REQ-29.2: the project's `sdd:` declaration
+	// and the selected change's ISO snapshot. Structural absence (nil, omitempty)
+	// when axiom.yaml has no `sdd:` block and the change is not ISO, so a consumer
+	// that predates it sees no difference (decorateISO).
+	ISO *ISOProjection `json:"iso,omitempty"`
 	// GateQuestion is the typed blocking question for the one gate
 	// firstOpenGate names when NextRecommended is "await-gate" (design.md
 	// S5.5): the same Lossless Blocking Prompt shape as Consent, scoped to
@@ -224,6 +229,10 @@ type Status struct {
 	// continuation command. It is deliberately internal: status reports why
 	// preparation is needed but never gains authority to perform it.
 	consentPreparationRoots []string
+	// isoMatrix is the verification-matrix result the OpenSpec resolver computed
+	// for an ISO change with apply finished; decorateISO copies it into ISO.Matrix.
+	// It is internal: it never reaches the wire on its own.
+	isoMatrix *ISOMatrixProjection
 }
 
 // BaselineProjection lists the documents of the project baseline. Every path
@@ -282,6 +291,11 @@ type ResolveOptions struct {
 	// worktreeCandidates son los cambios activos de los worktrees registrados (REQ-25.44): sin nombre,
 	// se unen a los del checkout actual para el `select-change`. Solo los rellena Resolve.
 	worktreeCandidates []string
+
+	// master es la carpeta maestra de la ubicación resuelta: la raíz del árbol contra
+	// la que resuelven las referencias de prueba de la matriz ISO (design D11). Solo la
+	// rellena Resolve; vacía, se usa la raíz del workspace.
+	master string
 }
 
 type CommandArgs struct {
@@ -522,11 +536,13 @@ func Resolve(options ResolveOptions) (Status, error) {
 		options, location = rerootOnRegisteredWorktrees(options, location)
 		workspaceRoot = options.WorkspaceRoot
 	}
+	options.master = location.Master
 	status, err := resolveStatus(options, workspaceRoot)
 	if err != nil {
 		return status, err
 	}
 	decorateWorkspaceDeclarations(&status, location)
+	decorateISO(&status, location)
 	return status, nil
 }
 
@@ -661,6 +677,13 @@ func resolveByPreferenceOrder(options ResolveOptions) (Status, error) {
 		ApplyProgress: singleArtifactState(artifactPaths.ApplyProgress),
 		VerifyReport:  singleArtifactState(artifactPaths.VerifyReport),
 	}.statesFor(ArtifactStoreOpenSpec)
+	// REQ-29.15 (design D9): sin delta, un bug declarado en proposal.md cumple el
+	// artefacto de specs; una declaración incompleta lo deja `missing` con un
+	// motivo por cada falta. Vale en todo proyecto, sea o no ISO.
+	bug := evaluateBugProfile(artifacts["specs"], artifactPaths.Proposal)
+	if bug.satisfiesSpecs() {
+		artifacts["specs"] = ArtifactDone
+	}
 	var taskProgress TaskProgress
 	editPlans := []planText{{name: "tasks.md", text: readText(firstPath(artifactPaths.Tasks))}}
 	if perRoleTasks != nil {
@@ -684,6 +707,14 @@ func resolveByPreferenceOrder(options ResolveOptions) (Status, error) {
 		return Status{}, err
 	}
 
+	// REQ-29.3 a REQ-29.5 y REQ-29.19 (design D6): las reglas de un cambio ISO se
+	// leen de su instantánea de kickoff.yaml, nunca de axiom.yaml en vivo. Un
+	// cambio sin instantánea, o con iso falso, no evalúa nada.
+	var iso *isoEvaluation
+	if governance != nil && governance.Kickoff.IsISO() {
+		iso = evaluateISOChange(planningHome, changeRoot, artifactPaths, artifacts)
+	}
+
 	// The change-instance identity (#2563, S4b of #2540) binds the runtime
 	// read so persisted grants project only for THIS instance of the change
 	// name; without a marker the replay conservatively projects no granted
@@ -700,12 +731,13 @@ func resolveByPreferenceOrder(options ResolveOptions) (Status, error) {
 	if runtimeStatus != nil {
 		grantedRoots = runtimeStatus.GrantedRoots
 	}
-	coreReady := artifacts["proposal"] == ArtifactDone && artifacts["specs"] == ArtifactDone && artifacts["design"] == ArtifactDone && artifacts["tasks"] == ArtifactDone && taskProgress.Total > 0 && (perRoleTasks == nil || len(perRoleTasks.noCheckboxes) == 0)
+	coreReady := artifacts["proposal"] == ArtifactDone && artifacts["specs"] == ArtifactDone && artifacts["design"] == ArtifactDone && artifacts["tasks"] == ArtifactDone && taskProgress.Total > 0 && (perRoleTasks == nil || len(perRoleTasks.noCheckboxes) == 0) && !iso.blocksCore()
 	applyState := resolveApplyState(coreReady, taskProgress)
 	blockedReasons := artifactBlockedReasonsForRoleTasks(artifacts, taskProgress, changeName, governance, perRoleTasks)
 	if artifacts["specs"] == ArtifactPartial {
 		blockedReasons.genuine = append(blockedReasons.genuine, openSpecSpecsLayoutReason(changeName))
 	}
+	blockedReasons.genuine = append(blockedReasons.genuine, findingReasons(bug.findings)...)
 	// Guarda B (REQ-25.42, design D-13): un único punto, después de resolveApplyState y loadGovernance
 	// y antes de la autoridad de edición. Con la rama equivocada esta no se evalúa (S-9): sin sobre de
 	// consentimiento ni marcador pendiente; tras corregir la rama aparece edit_authority_missing.
@@ -742,6 +774,11 @@ func resolveByPreferenceOrder(options ResolveOptions) (Status, error) {
 		}
 	}
 	dependencies := resolveDependencies(artifacts, applyState, coreReady)
+	iso.narrow(&dependencies)
+	// D12: la etapa archive se evalúa siempre que resolveDependencies dejaría el
+	// archivado disponible, antes de que lo estreche la compuerta `integration`,
+	// y también con tareas pendientes (el archivado explícito de trabajo incompleto).
+	archiveAvailable := dependencies.Archive == DependencyReady
 	verifyState, verifyReason := verifyDependencyFromRoleGates(governance, dependencies.Verify)
 	dependencies.Verify = verifyState
 	if verifyReason != "" {
@@ -752,7 +789,30 @@ func resolveByPreferenceOrder(options ResolveOptions) (Status, error) {
 	if archiveReason != "" {
 		blockedReasons.genuine = append(blockedReasons.genuine, archiveReason)
 	}
+	// Los motivos de las etapas specs y tasks van después de los existentes
+	// (artefactos, gobierno, autoridad de edición, verify y archivado); wrong_branch
+	// se antepone al final, como siempre.
+	blockedReasons.genuine = append(blockedReasons.genuine, iso.planningReasons()...)
+	var isoMatrix *ISOMatrixProjection
+	if iso != nil && archiveAvailable {
+		master := options.master
+		if master == "" {
+			master = workspaceRoot
+		}
+		iso.evaluateArchive(artifactPaths.VerifyReport, master)
+		dependencies.Archive = archiveDependencyFromISO(dependencies.Archive, iso)
+		// Los motivos de la etapa archive van siempre a notes y, con apply terminado
+		// (la ruta sería archive), también a blockedReasons: el contrato de los
+		// consumidores prohíbe apply con blockedReasons no vacío (design D6).
+		blockedReasons.notes = append(blockedReasons.notes, findingReasons(iso.archive)...)
+		if applyState == ApplyAllDone {
+			blockedReasons.genuine = append(blockedReasons.genuine, findingReasons(iso.archive)...)
+			isoMatrix = iso.matrixProjection()
+		}
+	}
 	nextRecommended := resolveNextRecommended(dependencies, applyState, governance)
+	// D19: en un cambio ISO el verify es obligatorio y el status ruta a él.
+	nextRecommended = iso.verifyRoute(nextRecommended, applyState, governance)
 	if bctx.wrongBranch != nil {
 		// Ninguna fase ni compuerta se autoriza con la rama equivocada (REQ-25.42): tampoco hay
 		// pregunta de compuerta, que se construye solo para await-gate.
@@ -784,6 +844,7 @@ func resolveByPreferenceOrder(options ResolveOptions) (Status, error) {
 	status.Dependencies = dependencies
 	status.ApplyState = applyState
 	status.consentPreparationRoots = append([]string{}, unauthorizedRoots...)
+	status.isoMatrix = isoMatrix
 	status.BlockedReasons = blockedReasons.finalize(status.NextRecommended, status.BlockedReasons)
 	if bctx.wrongBranch != nil {
 		// El motivo de la guarda B va siempre primero, también delante de los motivos de planificación
@@ -792,6 +853,7 @@ func resolveByPreferenceOrder(options ResolveOptions) (Status, error) {
 	}
 	status.Notes = append(status.Notes, blockedReasons.notes...)
 	status.Notes = append(status.Notes, handedOffNotes(governance)...)
+	status.Notes = append(status.Notes, nonBlockingRoleNotes(governance)...)
 	if options.IncludeInstructions {
 		instructions := renderPhaseInstructions(status)
 		status.PhaseInstructions = &instructions

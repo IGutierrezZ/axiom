@@ -607,3 +607,32 @@ func TestInitWithoutForceKeepsTheExistingConfig(t *testing.T) {
 		t.Errorf("sin --force no hay nota de conservación: %q", res.Notes)
 	}
 }
+
+// REQ-29.1: `sdd:` también es una declaración que la regeneración perdería, sea
+// válida, inválida o contradictoria con `workflow.lane`.
+func TestDeclaresCountsSDD(t *testing.T) {
+	if (ownMarkers{}).declares() {
+		t.Fatal("sin declaraciones declares() debe ser falso")
+	}
+	for name, declarations := range map[string]workspace.Declarations{
+		"sdd valido":   {SDD: &workspace.SDDConfig{ISO: true}},
+		"sdd invalido": {SDDErr: errors.New("iso no es booleano")},
+	} {
+		t.Run(name, func(t *testing.T) {
+			if !(ownMarkers{declarations: declarations}).declares() {
+				t.Errorf("declares() debe contar sdd: %+v", declarations)
+			}
+		})
+	}
+
+	dir := t.TempDir()
+	configPath := filepath.Join(dir, "axiom.yaml")
+	config := initEmbeddedConfig + "sdd:\n  iso: true\n"
+	workspacetest.WriteFile(t, configPath, config)
+	if _, err := newInitSandbox(t).initializer.Init(InitOptions{Path: dir, Name: "Nuevo", Force: true}); err != nil {
+		t.Fatalf("Init --force = %v", err)
+	}
+	if got := readFile(t, configPath); got != config {
+		t.Errorf("--force no debe perder sdd:\n%s", got)
+	}
+}

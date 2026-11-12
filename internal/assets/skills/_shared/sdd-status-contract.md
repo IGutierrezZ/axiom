@@ -98,6 +98,14 @@ technicalContext: # optional; present only with a valid `technical_context:` dec
 workflow: # always present, with or without a selected change
   lane: odd | sdd | ask
   source: declared | default | no_workspace | invalid
+iso: # optional; omitted when axiom.yaml has no `sdd:` block and the selected change is not ISO
+  project: iso | not_iso | invalid
+  reason: <only with project invalid>
+  change: iso | not_iso # absent without a selected change
+  matrix: # only in an ISO change whose apply is finished
+    state: valid | invalid | missing | not_required
+    successful: <boolean>
+    findings: <count>
 phaseInstructions:
   apply: [<instruction strings>]
   verify: [<instruction strings>]
@@ -107,7 +115,7 @@ blockedReasons: []
 notes: []
 ```
 
-SDD status never reads review mode, offers RDD, or exposes review state. After completed implementation, proceed directly toward archive; verification is optional and standalone non-SDD review remains separate.
+SDD status never reads review mode, offers RDD, or exposes review state. After completed implementation, proceed directly toward archive; verification is optional (except in an ISO change, see `ISO Evidence`) and standalone non-SDD review remains separate.
 
 `phaseInstructions` is optional and appears only when instructions are requested. It carries execution-phase keys (`apply`, `verify`, `archive`); planning-phase instructions (`propose`, `spec`, `design`, `tasks`) are surfaced in dispatcher markdown. `consent` requires an OpenSpec-backed native status reporting `blocked(edit_authority_missing)` with a valid persisted marker; never reconstruct it. Empty path fields MUST be arrays, not null. `blockedReasons` and `notes` are always arrays as well, both `[]` rather than null when empty. `changeName` and `changeRoot` are nullable; all other non-optional sections are required in native output.
 
@@ -129,6 +137,43 @@ SDD status never reads review mode, offers RDD, or exposes review state. After c
 - `no_workspace` and `invalid` always project `ask`: the rule fails closed toward asking the lane question. If the status does not answer, the orchestrator acts as `ask`.
 - The field is informational: it adds no note and no blocking reason, and the recommended route does not depend on it.
 
+## ISO Evidence
+
+`iso` is an additive, optional field of the status. It projects the ISO declaration of the project (`sdd: {iso: true}` in `axiom.yaml`) and of the selected change, so orchestrators and phase skills never read `axiom.yaml` or `kickoff.yaml` themselves. The formats the rules refer to are in `sdd-iso-convention.md`.
+
+- `project` is `iso` (the project declares `iso: true`), `not_iso` (`iso: false`, or an `sdd:` block without the key) or `invalid` (the block is invalid, contradicts `workflow.lane: odd`, or `axiom.yaml` cannot be read). `invalid` fails closed: it is never read as `not_iso`, and `reason` carries the error and its correction, with or without a selected change.
+- `change` is `iso` or `not_iso`, read from the snapshot that `axiom sdd kickoff seal` copied into `kickoff.yaml`. Only a seal made in an ISO project carries that snapshot, so a change without it (a project that is not ISO, a seal made before the declaration existed, or a retro-seal with `--infer`) is not ISO, even if the project later declares ISO, and no ISO rule applies to it. When the snapshot differs from the current declaration, a note says so and the rules of the change follow its snapshot.
+- `matrix` appears only in an ISO change whose apply is finished: `state` is `valid`, `invalid`, `missing`, or `not_required` (a bug without impact on the spec and without matrix), `successful` is true when the matrix is valid (or not required) and no row fails, and `findings` counts the findings; their detail is in `blockedReasons`. The orchestrator reads it to decide whether a verify is clean, without reading the report.
+- An ISO project only uses SDD: every project that projects `project: iso` sends all work, including small, understood work, through the SDD lane.
+
+### Typed reasons
+
+An ISO refusal is a typed reason in `blockedReasons` (or `notes`), in the form `blocked(<token>): <detail>; <continuation>`. The detail names the domain, section, requirement, row or file; the continuation says what to do. One finding produces one reason, and `axiom sdd continue` reflects them unchanged. Follow the continuation: never reinterpret a token. The closed list:
+
+| Token | Applies to | Stage | Continuation |
+|---|---|---|---|
+| `bug_report_incomplete` | every project | specs | complete `Observado:` or `Esperado:`, or add `## Informe de bug` to `proposal.md` |
+| `bug_no_impact_incomplete` | every project | specs | add the line `Sin impacto en la spec` or a non-empty `Motivo:` to `## Impacto en la spec` |
+| `iso_declaration_invalid` | selected change with an invalid or contradictory `sdd:` | archive | `axiom workspace validate`; for the contradiction, retire `iso` or the `odd` lane |
+| `iso_requirement_id` | ISO | specs | add or fix `REQ-<n>.<m>` in the requirement name; a RENAMED entry when the requirement exists without one |
+| `iso_requirement_scenarios` | ISO | specs | add a `#### Scenario:` to the requirement, or rename a repeated scenario |
+| `iso_coverage` | ISO | tasks | add `Cubre: REQ-x` to some task |
+| `iso_cubre_unknown` | ISO | tasks | fix the cited identifier or remove it |
+| `iso_bug_requirement` | ISO | tasks | cite the existing requirement with `Cubre:`, or handle it as a normal change with a delta |
+| `iso_bug_contradiction` | ISO | tasks | remove the `Cubre:` line, or remove the no-impact mark and cite an existing requirement |
+| `iso_matrix_missing` | ISO | archive | run `sdd-verify` to write `## Matriz de verificación` in `verify-report.md` |
+| `iso_matrix_invalid` | ISO | archive | run `sdd-verify` to fix the row the reason names |
+| `iso_matrix_failed` | ISO | archive | fix the failing behaviour, then run `sdd-verify` again |
+| `iso_store_unsupported` | ISO change with `engram` or `none` store | archive | declare `artifact_store: openspec` or `hybrid` in `openspec/config.yaml` |
+
+- The reasons of the `specs` and `tasks` stages are blocking reasons: the route stays on the phase that must fix them. The reasons of the `archive` stage always appear in `notes`, and in `blockedReasons` only when, without them, the route would be `archive`; a change with pending tasks keeps routing to `apply`.
+- Outside an ISO change none of the `iso_*` tokens appears. `bug_report_incomplete` and `bug_no_impact_incomplete` also apply outside ISO, because the bug profile is available to every project; `iso_declaration_invalid` applies to any selected change when the project declaration is invalid.
+- `blocked(wrong_branch)` is still projected first.
+
+### Verify route in an ISO change
+
+In an ISO change `verify` is mandatory before archive. When apply is finished and the matrix is missing or invalid (`iso_matrix_missing`, `iso_matrix_invalid`), `nextRecommended` is `verify` with the reason in `blockedReasons`, and a `continuous` orchestrator chains it like any other recommended phase. With a valid matrix that has failing rows (`iso_matrix_failed`) the route is `resolve-blockers`. The `verify` route replaces `await-gate` only when the open gate is `integration`; the gates `spec`, `design`, `tasks` and `role-apply:<role>` keep their precedence. Every other change keeps verification optional.
+
 ## Governance (sealed kickoff)
 
 `governance` is an additive, optional field. It is omitted entirely (never `null`) for a change with no sealed `kickoff.yaml`; every sealed change carries it:
@@ -146,7 +191,7 @@ governance:
 - `handedOff` and `handedOffTo` appear on a gate approved with exit 2 of its stop (approve, publish and stop): `handedOffTo` names the phase handed to another person (`design`, `tasks`, `apply`, `apply:<role>,<role>` for the roles still pending, or `verify` after the last role). Both are absent on exits 1 and 3. They are information only: the route (`nextRecommended`) is the one an ordinary approval yields, and nothing is blocked by them.
 - `gateQuestion` (the typed gate-decision envelope) appears only while `nextRecommended` is `await-gate`, which only a `checkpointed` change with an open gate can reach. Never expect it under `continuous`. For `spec`, `design`, `tasks` and `role-apply:<role>` it offers three choices in the order `rejected`, `hand_off`, `approved`, every one resolved with `axiom sdd gate record`; with the `none` artifact store it offers two (`rejected`, `approved`) plus `handOffUnavailable`, which names the store that makes exit 2 unavailable. The `integration` gate keeps its two choices. On a planning gate whose store keeps files, the question also carries `publication: { remote, branch, prTarget?, invocation }` (the remote is always `origin`, `branch` is the branch that is pushed, `prTarget` is informative and absent in the in-place integration of a `multirepo` specs repository, and `invocation` is an `axiom sdd publish` bound to that branch with `--branch`), or `publicationUnavailable: "<code>"` (for example `wrong_branch`) when the target cannot be resolved; the choices are then still the `gate record` ones. Approving with exit 2 or 3 is the authorization of that push of documents and of nothing else. `axiom sdd gate record --json` returns the same `publish` (or `publishUnavailable`) on every approval except `integration`: it only calculates the invocation, and the orchestrator runs it once afterwards.
 - Gate-only preconditions never apply to `continuous`: archive is not blocked by a missing `integration` gate.
-- In a `checkpointed` multi-role change, `verify` is blocked until every active role has its `role-apply` gate approved (the reason names the roles still pending). `handoff.md` plays no part in it: a `handoff.md` that exists is ignored.
+- In a `checkpointed` multi-role change, `verify` is blocked until every active role has its `role-apply` gate approved, counting only the roles whose gate policy is `blocking` (the reason names the roles still pending). A `deferred` or `optional` role that is still pending never blocks `verify`: a note names it with its policy and state. The last-active-role notice of `axiom sdd gate record` is emitted when the approved gate closes the last `blocking` role. `handoff.md` plays no part in it: a `handoff.md` that exists is ignored.
 
 ## Apply State
 
@@ -158,9 +203,9 @@ governance:
 
 - `proposal`, `specs`, `design`, and `tasks` report whether prerequisite artifacts are blocked, ready, or all done.
 - `apply` is `ready` only when specs, design, and tasks are available and task progress is not all done.
-- `verify` is an optional diagnostic and may inspect partial implementation. Its availability never certifies a report or task completion; missing artifacts limit conclusions.
+- `verify` is an optional diagnostic and may inspect partial implementation. Its availability never certifies a report or task completion; missing artifacts limit conclusions. In an ISO change it is mandatory before archive (see `ISO Evidence`).
 - Completed implementation normally recommends `archive`; pending work normally recommends `apply`. Explicit archive can record incomplete work, but actual edit permissions and mechanical archive/spec-composition safety checks remain mandatory.
-- Report presence is a locator/status fact, not a verdict. Missing, stale, malformed, or failed reports do not block archive or create remediation state. Preserve historical bytes and report actual unfinished tasks and findings without inventing PASS.
+- Report presence is a locator/status fact, not a verdict. Missing, stale, malformed, or failed reports do not block archive or create remediation state, except the verification matrix of an ISO change, which is validated and must be successful. Preserve historical bytes and report actual unfinished tasks and findings without inventing PASS.
 - No SDD phase offers or launches RDD, ordinary 4R, or Judgment Day. Delivery follows ordinary repository policy; optional diagnostics create no review or delivery authority.
 
 ## Action Context Guard

@@ -55,7 +55,7 @@ Follow **Section A** from `skills/_shared/sdd-phase-common.md`.
 
 ### Step 2: Create Change Directory
 
-**IF mode is `openspec` or `hybrid`:** create the change folder structure:
+**IF mode is `openspec` or `hybrid`:** the change folder already exists, because `axiom sdd kickoff seal` created it. Never create it by hand before the seal; write `proposal.md` inside it:
 
 ```
 openspec/changes/{change-name}/
@@ -189,5 +189,6 @@ Ready for specs (sdd-spec) or design (sdd-design).
 - Modified Capabilities → each will become a delta spec in the change folder
 - If nothing changes at the spec level (pure refactor, config change), explicitly write "None" under both sub-sections — don't leave them as template placeholders
 - **Sufficient detail**: Keep the proposal concise but complete enough to explain intent, scope, risks, rollback and success criteria. Use bullets or tables where they improve clarity. Do not truncate required detail to meet a word or line cap.
+- For a bug (any project) and for an ISO change, the proposal follows `../_shared/sdd-iso-convention.md`: the bug profile sections `## Informe de bug` and `## Impacto en la spec` and their literal lines.
 - Never create, modify, or delete files under `technicalContext.reference` paths.
 - Return envelope per **Section D** from `skills/_shared/sdd-phase-common.md`.

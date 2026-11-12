@@ -198,12 +198,18 @@ func gateQuestionChoices(cwd, change, gateKey string, answers []string, publicat
 }
 
 // governanceRoleAssignments is the roster of the sealed kickoff in the shape
-// kickoff.HandedOffTo reads. The roster of a Governance only carries role
-// names, which is all that function needs.
+// kickoff.HandedOffTo and the blocking-role rules (REQ-21.15) read: the role
+// names of the Governance roster, each with the gate policy the sealed kickoff
+// gives it. A role the kickoff does not list keeps an empty policy, which is the
+// default (blocking).
 func governanceRoleAssignments(governance *Governance) []multirole.RoleAssignment {
+	policies := make(map[string]multirole.GatePolicy, len(governance.Kickoff.Config.Roles))
+	for _, role := range governance.Kickoff.Config.Roles {
+		policies[role.Role] = role.GatePolicy
+	}
 	roster := make([]multirole.RoleAssignment, 0, len(governance.Roster.Roles))
 	for _, role := range governance.Roster.Roles {
-		roster = append(roster, multirole.RoleAssignment{Role: role})
+		roster = append(roster, multirole.RoleAssignment{Role: role, GatePolicy: policies[role]})
 	}
 	return roster
 }
@@ -246,8 +252,10 @@ func handedOffNotes(governance *Governance) []string {
 }
 
 // verifyDependencyFromRoleGates is DD-10's rule: REQ-21.15 forbids starting the
-// global "verify" phase while a role of a multi-role roster has no approved
-// role-apply gate. It replaces the rule that consulted an integration handoff.md,
+// global "verify" phase while a role of a multi-role roster with policy
+// blocking has no approved role-apply gate. A role with policy deferred or
+// optional never blocks it, whatever the state of its gate; nonBlockingRoleNotes
+// reports those roles. It replaces the rule that consulted an integration handoff.md,
 // which is no longer part of the SDD flow: the ledger already says which roles
 // closed, so no second document has to agree with it.
 //
@@ -274,12 +282,39 @@ func verifyDependencyFromRoleGates(governance *Governance, baseline DependencySt
 		}
 	}
 	var open []string
-	for _, role := range governance.Roster.Roles {
-		if !approved[kickoff.RoleApplyGate(role)] {
-			open = append(open, role)
+	for _, role := range governanceRoleAssignments(governance) {
+		if kickoff.IsBlockingRole(role) && !approved[kickoff.RoleApplyGate(role.Role)] {
+			open = append(open, role.Role)
 		}
+	}
+	if len(open) == 0 {
+		// Ningún rol blocking: nada que esperar (un roster solo con roles
+		// deferred u optional).
+		return baseline, ""
 	}
 	return DependencyBlocked, fmt.Sprintf(
 		"La fase verify global no puede iniciarse: faltan roles sin la compuerta role-apply aprobada (%s) (REQ-21.15).",
 		strings.Join(open, ", "))
+}
+
+// nonBlockingRoleNotes reports, as informational notes, every role with policy
+// deferred or optional whose role-apply gate is not approved: the role, its
+// policy and the state of its gate. They never block verify (REQ-21.15); the
+// notes only make visible that the global verification runs with that work
+// still open. A change with only blocking roles projects no note.
+func nonBlockingRoleNotes(governance *Governance) []string {
+	if !governanceGated(governance) {
+		return nil
+	}
+	var notes []string
+	for _, pending := range kickoff.PendingNonBlockingRoles(governanceRoleAssignments(governance), governance.Gates) {
+		state := "pendiente"
+		if pending.Status == "rejected" {
+			state = "rechazado"
+		}
+		notes = append(notes, fmt.Sprintf(
+			"El rol %q (política %s) tiene su compuerta role-apply %s: no bloquea la fase verify global (REQ-21.15).",
+			pending.Role, pending.Policy, state))
+	}
+	return notes
 }

@@ -442,3 +442,81 @@ func TestNewGovernanceGateQuestionRejectsUnrecognisedGateKey(t *testing.T) {
 		t.Fatal("newGovernanceGateQuestion() error = nil, want a named error for a gate key gateCriteria cannot resolve")
 	}
 }
+
+// gateStateOf devuelve el estado de una compuerta del status.
+func gateStateOf(t *testing.T, status Status, key kickoff.GateKey) kickoff.GateState {
+	t.Helper()
+	if status.Governance == nil {
+		t.Fatal("status.Governance = nil, se esperaba un kickoff sellado en checkpointed")
+	}
+	for _, gate := range status.Governance.Gates {
+		if gate.Key == key {
+			return gate
+		}
+	}
+	t.Fatalf("la compuerta %q no figura en %+v", key, status.Governance.Gates)
+	return kickoff.GateState{}
+}
+
+// REQ-29.15 y D20: la compuerta `spec` de un bug sin delta juzga proposal.md: se
+// abre, un rechazo guarda la huella de proposal.md y se reabre al cambiar ese
+// fichero. Con delta, la compuerta juzga las specs como hasta ahora.
+func TestGovernanceSpecGateBugWithoutDelta(t *testing.T) {
+	t.Run("bug sin delta", func(t *testing.T) {
+		root := t.TempDir()
+		changeRoot := seedBugChange(t, root, "bug-gate", "# Propuesta\n\n"+bugReportOK, "- [x] 1.1 Corregir\n")
+		sealFullstackKickoff(t, changeRoot, "bug-gate", kickoff.ExecutionCheckpointed)
+
+		status := resolveFrom(t, root, "bug-gate")
+		if gate := gateStateOf(t, status, kickoff.GateSpec); gate.Status != "pending" {
+			t.Fatalf("la compuerta spec = %q, se esperaba pending (se abre sobre proposal.md)", gate.Status)
+		}
+		if status.NextRecommended != "await-gate" {
+			t.Fatalf("nextRecommended = %q, se esperaba await-gate", status.NextRecommended)
+		}
+
+		proposal := filepath.Join(changeRoot, "proposal.md")
+		digest, err := kickoff.ArtifactDigest([]string{proposal})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := kickoff.AppendGate(changeRoot, kickoff.GateRecord{
+			Gate: kickoff.GateSpec, Decision: kickoff.DecisionRejected, Reason: "falta la referencia", ArtifactDigest: digest, Actor: "reviewer",
+		}); err != nil {
+			t.Fatal(err)
+		}
+		status = resolveFrom(t, root, "bug-gate")
+		if gate := gateStateOf(t, status, kickoff.GateSpec); gate.Status != "rejected" || gate.Reopened {
+			t.Fatalf("la compuerta spec = %+v, se esperaba rejected con la huella de proposal.md", gate)
+		}
+
+		write(t, proposal, "# Propuesta\n\n"+bugReportOK+"Referencia: JIRA-1234\n")
+		status = resolveFrom(t, root, "bug-gate")
+		if gate := gateStateOf(t, status, kickoff.GateSpec); gate.Status != "pending" || !gate.Reopened {
+			t.Fatalf("la compuerta spec = %+v, se esperaba reabierta tras cambiar proposal.md", gate)
+		}
+	})
+
+	t.Run("con delta juzga las specs", func(t *testing.T) {
+		root := t.TempDir()
+		changeRoot := seedBugChange(t, root, "bug-delta", "# Propuesta\n\n"+bugReportOK, "- [x] 1.1 Corregir\n")
+		specPath := filepath.Join(changeRoot, "specs", "pagos", "spec.md")
+		write(t, specPath, "### Requirement: REQ-1.1 Cobro\n#### Scenario: Cobro\n")
+		sealFullstackKickoff(t, changeRoot, "bug-delta", kickoff.ExecutionCheckpointed)
+
+		digest, err := kickoff.ArtifactDigest([]string{specPath})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := kickoff.AppendGate(changeRoot, kickoff.GateRecord{
+			Gate: kickoff.GateSpec, Decision: kickoff.DecisionRejected, Reason: "conforme", ArtifactDigest: digest, Actor: "reviewer",
+		}); err != nil {
+			t.Fatal(err)
+		}
+		write(t, filepath.Join(changeRoot, "proposal.md"), "# Propuesta cambiada\n\n"+bugReportOK)
+		status := resolveFrom(t, root, "bug-delta")
+		if gate := gateStateOf(t, status, kickoff.GateSpec); gate.Status != "rejected" || gate.Reopened {
+			t.Fatalf("la compuerta spec = %+v, con delta debe seguir juzgando las specs", gate)
+		}
+	})
+}

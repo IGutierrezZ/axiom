@@ -96,6 +96,7 @@ internal/installcmd/resolver.go	validateGoForModuleInstall
 internal/installcmd/testhelper.go	OverrideGetenv
 internal/installcmd/testhelper.go	OverrideGoVersion
 internal/installcmd/testhelper.go	OverrideLookPath
+internal/isoevidence/model.go	AllCodes
 internal/livingdoc/service.go	Service.GetIndexPath
 internal/livingdoc/service.go	Service.GetSpecsRoot
 internal/multirole/detector.go	RoleExists

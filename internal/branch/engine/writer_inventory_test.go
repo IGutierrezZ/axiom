@@ -60,6 +60,7 @@ const inventoryModule = "github.com/IGutierrezZ/axiom/v3/"
 // writerCalls son las funciones de escritura que el inventario sigue por selector.
 var writerCalls = []struct{ pkgPath, name string }{
 	{"internal/kickoff", "Seal"},
+	{"internal/kickoff", "PrepareChangeRoot"},
 	{"internal/kickoff", "AppendGate"},
 	{"internal/handoff", "WriteFile"},
 	{"internal/sddstatus", "PrepareChangeInstanceConsent"},

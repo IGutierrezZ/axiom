@@ -485,12 +485,21 @@ func governanceArtifactInputs(changeRoot string, roles []kickoff.KickoffRole) (m
 		tasksPaths = nil
 	}
 
+	// D20: en un bug sin delta la compuerta `spec` juzga proposal.md, que lleva el
+	// informe de bug y, en su caso, la marca de «sin impacto». Con delta juzga las
+	// specs como siempre. internal/cli/sdd_gate_digest.go aplica el mismo criterio
+	// para que `gate record` y este cálculo coincidan.
+	specPaths := artifactPaths.Specs
+	if bugDeclaredWithoutDelta(artifactPaths.Specs, artifactPaths.Proposal) {
+		specPaths = artifactPaths.Proposal
+	}
+
 	artifacts := make(map[string]string, 3+len(roles))
 	for _, entry := range []struct {
 		key   string
 		paths []string
 	}{
-		{key: "spec", paths: artifactPaths.Specs},
+		{key: "spec", paths: specPaths},
 		{key: "design", paths: artifactPaths.Design},
 		{key: "tasks", paths: tasksPaths},
 	} {
@@ -571,13 +580,10 @@ func archiveDependencyFromGovernance(governance *Governance, changeName string, 
 	)
 }
 
-// lastRoleClosedForGovernance reuses kickoff.LastRoleClosed against the
-// governance snapshot's own roster and already-evaluated gate states,
-// rather than re-deriving "every role-apply gate approved" a second way.
+// lastRoleClosedForGovernance reuses kickoff.LastBlockingRoleClosed against the
+// governance snapshot's own roster (with the gate policy of each role) and
+// already-evaluated gate states, rather than re-deriving "every blocking
+// role-apply gate approved" a second way (REQ-21.15).
 func lastRoleClosedForGovernance(governance *Governance) bool {
-	roster := make([]multirole.RoleAssignment, 0, len(governance.Roster.Roles))
-	for _, role := range governance.Roster.Roles {
-		roster = append(roster, multirole.RoleAssignment{Role: role})
-	}
-	return kickoff.LastRoleClosed(roster, governance.Gates)
+	return kickoff.LastBlockingRoleClosed(governanceRoleAssignments(governance), governance.Gates)
 }

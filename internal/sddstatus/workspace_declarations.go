@@ -106,7 +106,8 @@ func projectTechnicalContext(location workspace.Location) *TechnicalContextProje
 //
 //  1. sin axiom.yaml: ask / no_workspace;
 //  2. axiom.yaml ilegible, base que no carga o bloque `workflow:` inválido (aunque
-//     el bloque fuera válido y la base no): ask / invalid;
+//     el bloque fuera válido y la base no), o `sdd.iso: true` contradictorio con
+//     `workflow.lane: odd` (REQ-29.1): ask / invalid;
 //  3. bloque con `lane` declarado: el declarado / declared;
 //  4. el resto: sdd / default.
 //
@@ -116,7 +117,8 @@ func projectWorkflow(location workspace.Location) *WorkflowProjection {
 	switch {
 	case location.ConfigPath == "":
 		return &WorkflowProjection{Lane: string(workspace.WorkflowLaneAsk), Source: "no_workspace"}
-	case location.ConfigErr != nil, declarations.ParseErr != nil, declarations.WorkflowErr != nil:
+	case location.ConfigErr != nil, declarations.ParseErr != nil, declarations.WorkflowErr != nil,
+		errors.Is(declarations.SDDErr, workspace.ErrISOWorkflowContradiction):
 		return &WorkflowProjection{Lane: string(workspace.WorkflowLaneAsk), Source: "invalid"}
 	case declarations.Workflow != nil && declarations.Workflow.Lane != "":
 		return &WorkflowProjection{Lane: string(declarations.Workflow.Lane), Source: "declared"}

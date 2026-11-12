@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"sort"
 
+	"github.com/IGutierrezZ/axiom/v3/internal/isoevidence"
 	"github.com/IGutierrezZ/axiom/v3/internal/kickoff"
 )
 
@@ -137,5 +138,24 @@ func specArtifactPathsForDigest(changeRoot string) ([]string, error) {
 			files = []string{flat}
 		}
 	}
+	if len(files) == 0 {
+		// D20: un bug sin delta declara su informe en proposal.md, y la compuerta
+		// `spec` juzga ese fichero. El criterio es el de sddstatus (declaración
+		// completa de REQ-29.15), para que la huella coincida con la del status.
+		proposal := filepath.Join(changeRoot, "proposal.md")
+		if declaration := isoevidence.ParseBugDeclaration(readFileOrEmpty(proposal)); declaration.Kind != isoevidence.BugKindNone && declaration.Valid {
+			files = []string{proposal}
+		}
+	}
 	return files, nil
+}
+
+// readFileOrEmpty devuelve el contenido del fichero, o la cadena vacía si no se
+// puede leer.
+func readFileOrEmpty(path string) string {
+	content, err := os.ReadFile(path)
+	if err != nil {
+		return ""
+	}
+	return string(content)
 }

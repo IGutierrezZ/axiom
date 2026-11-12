@@ -24,7 +24,7 @@ func (l GateLedger) Approval(gate GateKey) (GateRecord, bool) {
 // somebody else once gate is approved (REQ-26.7):
 //
 //   - a fixed gate hands over what it blocks: design, tasks or apply;
-//   - a role-apply:<role> gate hands over verify when it closes the last role
+//   - a role-apply:<role> gate hands over verify when it closes the last blocking role
 //     of the roster, and otherwise "apply:<r1>,<r2>" with the roles that still
 //     have no approved role-apply gate, in alphabetical order.
 //
@@ -62,7 +62,7 @@ func HandedOffTo(gate GateState, roster []multirole.RoleAssignment, states []Gat
 		withGate = append(withGate, approved)
 	}
 
-	if LastRoleClosed(roster, withGate) {
+	if LastBlockingRoleClosed(roster, withGate) {
 		return "verify"
 	}
 
@@ -93,8 +93,9 @@ func HandedOffTo(gate GateState, roster []multirole.RoleAssignment, states []Gat
 // role-apply gate approved yet.
 //
 // It only reads what the hand-off itself leaves integrated (gates.yaml and
-// kickoff.yaml). A roster with no roles satisfies the second condition, in the
-// same spirit as LastRoleClosed, which never closes over an empty roster.
+// kickoff.yaml), and only the roles with policy blocking count (REQ-21.15). A roster
+// with no blocking role satisfies the second condition, in the
+// same spirit as LastBlockingRoleClosed, which never closes over an empty set.
 func IntermediateMerge(k Kickoff, l GateLedger) bool {
 	handedOff := false
 	for _, r := range l.Records {
@@ -106,13 +107,18 @@ func IntermediateMerge(k Kickoff, l GateLedger) bool {
 	if !handedOff {
 		return false
 	}
-	if len(k.Config.Roles) == 0 {
-		return true
-	}
+	// Solo los roles blocking deciden (REQ-21.15, H4): un rol deferred u optional
+	// que nunca se aprueba no puede hacer que el archivado se rechace como una
+	// fusión intermedia.
+	blocking := 0
 	for _, role := range k.Config.Roles {
+		if !IsBlockingRole(multirole.RoleAssignment{Role: role.Role, GatePolicy: role.GatePolicy}) {
+			continue
+		}
+		blocking++
 		if _, ok := l.Approval(RoleApplyGate(role.Role)); !ok {
 			return true
 		}
 	}
-	return false
+	return blocking == 0
 }

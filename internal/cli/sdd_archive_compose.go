@@ -147,6 +147,12 @@ func runSDDArchiveComposeWithStderr(args []string, stdout, stderr io.Writer) err
 		}
 	}
 
+	// REQ-29.10 y REQ-29.11 (D13): un cambio ISO que no cumple la regla del archivado no se
+	// compone; se niega antes de leer la canónica y sin escribir.
+	if err := refuseISOCompose(loc, resolve(*deltaPath), documents); err != nil {
+		return err
+	}
+
 	var canonicalBytes []byte
 	if !documentMode {
 		var err error

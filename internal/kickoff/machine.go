@@ -30,7 +30,7 @@ type Inputs struct {
 // EvaluateGates inserts one role-apply:<role> gate per roster role, sorted
 // by role name, between the tasks and integration entries below — see
 // evaluateRoleApplyGates. Extracted here so Phase 6 (reopening rules) and
-// Phase 7 (LastRoleClosed) reuse the exact same order and Blocks wording
+// Phase 7 (LastBlockingRoleClosed) reuse the exact same order and Blocks wording
 // instead of a second, driftable copy.
 var fixedGateOrder = []Gate{
 	{Key: GateSpec, Blocks: "design"},
@@ -151,32 +151,76 @@ func groupGateRecordsByKey(records []GateRecord) map[GateKey][]GateRecord {
 	return grouped
 }
 
-// LastRoleClosed reports whether every role in roster has its own
-// role-apply gate approved in gates (REQ-21.13). A role whose gate is
-// missing, still pending, or rejected keeps this false — including when
-// every other role is already approved: a single rejected or not-yet-open
-// role-apply gate must never let the last-role notice fire, nor open the
-// global verify phase (REQ-21.13, third scenario; REQ-21.15). A single-role roster (the
-// fullstack default included) satisfies this the moment that one gate is
-// approved, with no other role to wait for.
-//
-// An empty roster is never "closed": there is no role whose approval could
-// have produced this state, so treating it as true would let a caller with
-// a missing or not-yet-resolved roster fire the notice by accident.
-func LastRoleClosed(roster []multirole.RoleAssignment, gates []GateState) bool {
-	if len(roster) == 0 {
-		return false
-	}
-	statusByKey := make(map[GateKey]string, len(gates))
+// IsBlockingRole reports whether role holds up the global verify phase: its
+// gate policy is "blocking". An empty policy is the default, blocking, exactly
+// as multirole.NormalizeRoster resolves it, so a roster built without policies
+// (the roster of a Governance, older callers) keeps its previous meaning.
+func IsBlockingRole(role multirole.RoleAssignment) bool {
+	policy := multirole.GatePolicy(strings.ToLower(strings.TrimSpace(string(role.GatePolicy))))
+	return policy == "" || policy == multirole.PolicyBlocking
+}
+
+// RoleGateStatus is the status of one role's role-apply gate in gates:
+// "approved", "rejected" or "pending". A role whose gate is absent from gates
+// (its tasks are still open, or it was never evaluated) is "pending".
+func RoleGateStatus(role multirole.RoleAssignment, gates []GateState) string {
+	key := RoleApplyGate(role.Role)
 	for _, g := range gates {
-		statusByKey[g.Key] = g.Status
+		if g.Key == key && (g.Status == "approved" || g.Status == "rejected") {
+			return g.Status
+		}
 	}
+	return "pending"
+}
+
+// LastBlockingRoleClosed reports whether every role of roster with policy
+// "blocking" has its role-apply gate approved in gates (REQ-21.13, REQ-21.15):
+// the condition that opens the global verify phase. Roles with policy deferred
+// or optional never take part, whatever the status of their gates. With every
+// role blocking, or with the single fullstack role, it requires every role-apply
+// gate approved: a single pending or rejected gate keeps it false.
+//
+// It is never true over an empty set: a roster with no blocking role has no
+// approval that could have produced this state, so a caller with a missing or
+// not-yet-resolved roster can never fire the notice by accident.
+func LastBlockingRoleClosed(roster []multirole.RoleAssignment, gates []GateState) bool {
+	blocking := 0
 	for _, role := range roster {
-		if statusByKey[RoleApplyGate(role.Role)] != "approved" {
+		if !IsBlockingRole(role) {
+			continue
+		}
+		blocking++
+		if RoleGateStatus(role, gates) != "approved" {
 			return false
 		}
 	}
-	return true
+	return blocking > 0
+}
+
+// PendingRole is a non-blocking role whose role-apply gate is not approved yet:
+// the role, its gate policy and the status of its gate ("pending" or
+// "rejected").
+type PendingRole struct {
+	Role   string
+	Policy multirole.GatePolicy
+	Status string
+}
+
+// PendingNonBlockingRoles lists, in roster order, the roles with policy
+// deferred or optional whose role-apply gate is not approved (REQ-21.13,
+// REQ-21.15). They neither block verify nor repeat the last-role notice; they
+// are only reported.
+func PendingNonBlockingRoles(roster []multirole.RoleAssignment, gates []GateState) []PendingRole {
+	var pending []PendingRole
+	for _, role := range roster {
+		if IsBlockingRole(role) {
+			continue
+		}
+		if status := RoleGateStatus(role, gates); status != "approved" {
+			pending = append(pending, PendingRole{Role: role.Role, Policy: multirole.GatePolicy(strings.ToLower(strings.TrimSpace(string(role.GatePolicy)))), Status: status})
+		}
+	}
+	return pending
 }
 
 // resolveGateStatus derives one gate's current status from its recorded

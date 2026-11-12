@@ -49,13 +49,44 @@ func TestRunSDDHelp(t *testing.T) {
 			if !strings.Contains(out, "Uso: axiom sdd <subcomando>") {
 				t.Fatalf("la salida no contiene el uso esperado:\n%s", out)
 			}
-			expectedSubcmds := []string{"status", "continue", "attempt", "archive-compose", "integrate", "task-result", "preflight-hook", "publish"}
+			expectedSubcmds := []string{"status", "continue", "attempt", "archive-compose", "archive-check", "trace", "integrate", "task-result", "preflight-hook", "publish"}
 			for _, sub := range expectedSubcmds {
 				if !strings.Contains(out, sub) {
 					t.Fatalf("la ayuda de sdd no documenta el subcomando %q:\n%s", sub, out)
 				}
 			}
 		})
+	}
+}
+
+// TestSDDVerbRouting fija que `sdd archive-check` y `sdd trace` se enrutan junto
+// a los demás verbos de `sdd` (REQ-29.9, REQ-29.10): sin un --change válido el
+// verbo propio falla con su mensaje, no con «subcomando no reconocido», y ambos
+// aparecen en la ayuda.
+func TestSDDVerbRouting(t *testing.T) {
+	for _, verb := range []string{"archive-check", "trace"} {
+		t.Run(verb, func(t *testing.T) {
+			var stdout, stderr bytes.Buffer
+			if code := runSDD([]string{verb}, &stdout, &stderr); code != 1 {
+				t.Fatalf("runSDD(%s) sin --change = %d, se esperaba 1", verb, code)
+			}
+			if strings.Contains(stderr.String(), "no reconocido") || !strings.Contains(stderr.String(), "requiere --change") {
+				t.Errorf("el verbo %s no está enrutado:\n%s", verb, stderr.String())
+			}
+
+			stdout.Reset()
+			if code := runSDD([]string{verb, "--help"}, &stdout, &stderr); code != 0 || !strings.Contains(stdout.String(), "axiom sdd "+verb) {
+				t.Errorf("runSDD(%s --help) = %d:\n%s", verb, code, stdout.String())
+			}
+		})
+	}
+
+	var help bytes.Buffer
+	runSDD([]string{"--help"}, &help, &bytes.Buffer{})
+	for _, verb := range []string{"archive-check", "trace"} {
+		if !strings.Contains(help.String(), verb) {
+			t.Errorf("la ayuda de sdd no documenta %q:\n%s", verb, help.String())
+		}
 	}
 }
 
