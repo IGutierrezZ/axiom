@@ -31,6 +31,7 @@ func TestCheckImpactBugContract(t *testing.T) {
 		{"bug con marcador válido y espacios alrededor", featureDoc("Tipo: bug\n\n", "## Impacto en la spec\n\n   Sin impacto en la spec   \nMotivo: razón\n"), ""},
 		{"Motivo vacío", featureDoc("Tipo: bug\n\n", "## Impacto en la spec\n\nSin impacto en la spec\nMotivo:\n"), "impact_reason_missing"},
 		{"Motivo ausente", featureDoc("Tipo: bug\n\n", "## Impacto en la spec\n\nSin impacto en la spec\n"), "impact_reason_missing"},
+		{"primer Motivo vacío y segundo con texto", featureDoc("Tipo: bug\n\n", "## Impacto en la spec\n\nSin impacto en la spec\nMotivo:\nMotivo: razón\n"), "impact_reason_missing"},
 		{"punto final", featureDoc("Tipo: bug\n\n", "## Impacto en la spec\n\nSin impacto en la spec.\nMotivo: razón\n"), "impact_marker_invalid"},
 		{"otra capitalización", featureDoc("Tipo: bug\n\n", "## Impacto en la spec\n\nsin impacto en la spec\nMotivo: razón\n"), "impact_marker_invalid"},
 		{"prefijo en la línea", featureDoc("Tipo: bug\n\n", "## Impacto en la spec\n\n- Sin impacto en la spec\nMotivo: razón\n"), "impact_marker_invalid"},

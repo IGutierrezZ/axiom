@@ -10,6 +10,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/IGutierrezZ/axiom/v3/internal/isoevidence"
 	"github.com/IGutierrezZ/axiom/v3/internal/openspecdoc"
 )
 
@@ -34,10 +35,12 @@ const (
 const (
 	specSectionHeading   = "Spec viva"
 	impactSectionHeading = "Impacto en la spec"
-	impactMarkerLine     = "Sin impacto en la spec"
-	impactReasonPrefix   = "Motivo:"
-	capabilityPrefix     = "### Capacidad:"
-	openspecFenceLabel   = "openspec"
+	// impactMarkerLine es la misma línea que fija el perfil de bug del carril SDD
+	// (REQ-29.15): un único contrato para los dos carriles.
+	impactMarkerLine   = isoevidence.NoImpactMark
+	impactReasonPrefix = "Motivo:"
+	capabilityPrefix   = "### Capacidad:"
+	openspecFenceLabel = "openspec"
 )
 
 var (
@@ -334,7 +337,7 @@ func parseCapabilities(section docSection, add func(code string, line int, subje
 // línea `Motivo:` con texto. Las líneas dentro de vallas son ejemplos y no cuentan.
 func parseImpact(section docSection) *Impact {
 	impact := &Impact{Line: section.line}
-	marker := false
+	marker, reasonSeen := false, false
 	for _, l := range section.lines {
 		if l.fenced {
 			continue
@@ -343,7 +346,10 @@ func parseImpact(section docSection) *Impact {
 		switch {
 		case trimmed == impactMarkerLine:
 			marker = true
-		case strings.HasPrefix(trimmed, impactReasonPrefix) && impact.Reason == "":
+		case strings.HasPrefix(trimmed, impactReasonPrefix) && !reasonSeen:
+			// Solo cuenta la primera línea `Motivo:`, como en el carril SDD: si está
+			// vacía, el marcador queda incompleto aunque haya otra con texto.
+			reasonSeen = true
 			impact.Reason = strings.TrimSpace(trimmed[len(impactReasonPrefix):])
 		}
 	}
