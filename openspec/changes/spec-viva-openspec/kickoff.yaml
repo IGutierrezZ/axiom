@@ -1,0 +1,34 @@
+schema: axiom.sdd-kickoff/v1
+change: spec-viva-openspec
+sealed_at: 2026-11-12T00:19:35.2550247Z
+sealed_by: cli
+kickoff:
+    flow_mode: sdd
+    execution_style: continuous
+    execution_style_source: session_pace
+    handoff_policy: none
+    roles:
+        - role: fullstack
+          gate_policy: blocking
+          tasks_file: tasks.md
+          verify_file: verify-report.md
+lifecycle:
+    deployment_target: local
+    post_archive_policy: bug_only
+git:
+    integration_branch: main
+    branch_prefix: inc
+    exceptions:
+        prefix: inc
+    change_branch: inc/spec-viva-openspec
+    repositories:
+        - path: .
+          name: axiom
+          role: change_branch
+          integration_branch: main
+          base: main
+          branches:
+            - name: inc/spec-viva-openspec
+              kind: change
+            - name: inc/spec-viva-openspec-archive
+              kind: archive
