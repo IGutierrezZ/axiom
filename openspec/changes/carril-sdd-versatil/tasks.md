@@ -276,7 +276,7 @@ Sin dependencias internas; todo son funciones puras con pruebas por tablas.
 
 ### U22 · `docs(assets): sdd-archive exige archive-check y reanuda archivados` (solape P6)
 
-- [ ] 22.1 Modificar `internal/assets/skills/sdd-archive/SKILL.md` (paso obligatorio de *Archive Readiness*: `axiom sdd archive-check --cwd <workspaceRoot> --change <name>` y `STOP` con `blocked` ante salida distinta de cero; compone solo los dominios con `alreadyComposed: false`) y su pin en `internal/assets/sdd_iso_pins_test.go`.
+- [x] 22.1 Modificar `internal/assets/skills/sdd-archive/SKILL.md` (paso obligatorio de *Archive Readiness*: `axiom sdd archive-check --cwd <workspaceRoot> --change <name>` y `STOP` con `blocked` ante salida distinta de cero; compone solo los dominios con `alreadyComposed: false`) y su pin en `internal/assets/sdd_iso_pins_test.go`.
   Cubre: REQ-29.17, REQ-29.10, REQ-29.11
   Aceptación: el pin falla si la skill pierde el paso previo a componer o mover.
   Comprobación: `go test ./internal/assets/ -run TestSDDArchiveRequiresArchiveCheck`

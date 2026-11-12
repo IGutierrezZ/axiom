@@ -110,6 +110,43 @@ func TestReportFormatHistoricalMatrix(t *testing.T) {
 	)
 }
 
+// carril-sdd-versatil U22 (REQ-29.17, REQ-29.10, REQ-29.11): la negativa del
+// archivado ISO la decide Go, pero la skill es quien invoca el verbo; este pin
+// falla si pierde el paso previo a componer o mover.
+func TestSDDArchiveRequiresArchiveCheck(t *testing.T) {
+	skill := MustRead("skills/sdd-archive/SKILL.md")
+
+	from := strings.Index(skill, "### Archive Readiness")
+	to := strings.Index(skill, "### Honest Partial Archive")
+	if from < 0 || to < from {
+		t.Fatal("sdd-archive/SKILL.md lost the Archive Readiness section")
+	}
+	readiness := skill[from:to]
+	requireContains(t, "Archive Readiness", readiness,
+		"**Archive check (mandatory, before composing or moving).**",
+		"axiom sdd archive-check --cwd <workspaceRoot> --change <name>",
+		"before any `axiom sdd archive-compose` and before any move",
+		"On a non-zero exit, STOP and return `blocked`, quoting its typed reasons",
+		"compose only the domains with `alreadyComposed: false`",
+		"`../_shared/sdd-iso-convention.md`",
+	)
+
+	// El paso precede a toda composición y a todo movimiento de la skill.
+	check := strings.Index(skill, "axiom sdd archive-check --cwd <workspaceRoot> --change <name>")
+	for _, later := range []string{"### Archive Branch Flow", "### Step 2: Sync Delta Specs to Main Specs", "### Step 3: Move to Archive"} {
+		if at := strings.Index(skill, later); at < 0 || check > at {
+			t.Errorf("archive-check (offset %d) must come before %q (offset %d)", check, later, at)
+		}
+	}
+
+	// REQ-29.17: el flujo de archivado no cambia; la rama `-archive` y el PR
+	// documental aparte siguen siendo el único modo.
+	requireContains(t, "sdd-archive/SKILL.md", skill,
+		"`axiom branch ensure --cwd \"<workspaceRoot>\" --change <c> --archive --json`",
+		"separate documentation pull request",
+	)
+}
+
 func TestSDDISOPins(t *testing.T) {
 	t.Run("persistence contract keeps the general rule and declares the ISO exception", func(t *testing.T) {
 		content := MustRead("skills/_shared/persistence-contract.md")
