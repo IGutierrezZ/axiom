@@ -264,6 +264,18 @@ func ISOArchiveRefusal(workspaceRoot, changeRoot string) []isoevidence.Finding {
 	return append(findings, archive...)
 }
 
+// ISOChangeRequirements devuelve los requisitos de las deltas del cambio y los de
+// la baseline de planningHome, leídos con el mismo lector nativo que usa el
+// compositor (D2). Los usa `axiom sdd archive-check` para decidir, por dominio,
+// si la composición ya está hecha (D17). No evalúa ninguna regla.
+func ISOChangeRequirements(planningHome, changeRoot string) (delta, baseline []isoevidence.Requirement, err error) {
+	paths, err := resolveArtifactPaths(changeRoot)
+	if err != nil {
+		return nil, nil, err
+	}
+	return readDeltaRequirements(changeRoot, paths.Specs), readBaselineRequirements(planningHome), nil
+}
+
 // evaluateArchive rellena la etapa `archive` y la proyección de la matriz.
 func (e *isoEvaluation) evaluateArchive(verifyPaths []string, master string) {
 	findings, result := evaluateISOArchive(e.inputs, readText(firstPath(verifyPaths)), master)

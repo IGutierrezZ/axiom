@@ -184,11 +184,11 @@ Sin dependencias internas; todo son funciones puras con pruebas por tablas.
 
 ### U14 · `feat(cli): axiom sdd archive-check de solo lectura`
 
-- [ ] 14.1 Crear `internal/cli/sdd_archive_check.go`, `internal/cli/sdd_archive_check_test.go` y modificar `cmd/axiom` (registro del verbo y su ayuda junto a los demás `sdd`): verbo `axiom sdd archive-check --cwd --change [--json]` sobre `sddstatus.ISOArchiveRefusal`, texto y JSON.
+- [x] 14.1 Crear `internal/cli/sdd_archive_check.go`, `internal/cli/sdd_archive_check_test.go` y modificar `cmd/axiom` (registro del verbo y su ayuda junto a los demás `sdd`): verbo `axiom sdd archive-check --cwd --change [--json]` sobre `sddstatus.ISOArchiveRefusal`, texto y JSON.
   Cubre: REQ-29.10, REQ-29.11
   Aceptación: salida `0` en un cambio no ISO o sin hallazgos; salida `1` con motivos tipados con matriz ausente (también con tareas pendientes), bug sin delta, capacidad nueva sin composición y declaración inválida; no escribe nada.
   Comprobación: `go test ./internal/cli/ -run TestSDDArchiveCheck`
-- [ ] 14.2 Completar `internal/cli/sdd_archive_check.go` con `alreadyComposed` por dominio (D17: todo ADDED con mismo nombre y bloque, todo MODIFIED con el bloque de la delta, todo REMOVED ausente o superado con `--supersede`, todo RENAMED con el nuevo presente y el antiguo ausente).
+- [x] 14.2 Completar `internal/cli/sdd_archive_check.go` con `alreadyComposed` por dominio (D17: todo ADDED con mismo nombre y bloque, todo MODIFIED con el bloque de la delta, todo REMOVED ausente o superado con `--supersede`, todo RENAMED con el nuevo presente y el antiguo ausente).
   Cubre: REQ-29.3, REQ-29.10
   Aceptación: tras componer un dominio con el compositor real, informa `alreadyComposed: true` para él y `false` para el resto; el resto se compone y se mueve.
   Comprobación: `go test ./internal/cli/ -run TestSDDArchiveCheckAlreadyComposed`
