@@ -9,6 +9,7 @@ import (
 
 	"github.com/IGutierrezZ/axiom/v3/internal/isoevidence"
 	"github.com/IGutierrezZ/axiom/v3/internal/kickoff"
+	"github.com/IGutierrezZ/axiom/v3/internal/openspecdoc"
 	"github.com/IGutierrezZ/axiom/v3/internal/pathquote"
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
@@ -104,7 +105,7 @@ func loadISOInputs(planningHome, changeRoot string, paths ArtifactPaths, artifac
 	return in
 }
 
-// readDeltaRequirements lee los requisitos de cada delta con parseOpenSpecDelta,
+// readDeltaRequirements lee los requisitos de cada delta con openspecdoc.ParseDelta,
 // la misma función que usa el compositor de archivado. El dominio es el de la
 // carpeta `specs/<dominio>/`; una delta plana no tiene dominio.
 func readDeltaRequirements(changeRoot string, specFiles []string) []isoevidence.Requirement {
@@ -114,12 +115,12 @@ func readDeltaRequirements(changeRoot string, specFiles []string) []isoevidence.
 		if dir := filepath.Dir(path); filepath.Clean(dir) != filepath.Clean(changeRoot) {
 			domain = filepath.Base(dir)
 		}
-		parsed := parseOpenSpecDelta(readText(path))
-		add := func(section isoevidence.Section, blocks []specRequirementBlock) {
+		parsed := openspecdoc.ParseDelta(readText(path))
+		add := func(section isoevidence.Section, blocks []openspecdoc.Requirement) {
 			for _, block := range blocks {
-				requirement := isoevidence.Requirement{Domain: domain, Section: section, Name: block.Name, Text: block.Text}
+				requirement := isoevidence.Requirement{Domain: domain, Section: section, Name: block.Name, Text: block.Body}
 				if section == isoevidence.SectionRenamed {
-					if oldName, newName, ok := splitRenamePair(block.Name); ok {
+					if oldName, newName, ok := openspecdoc.SplitRename(block.Name); ok {
 						requirement.OldName, requirement.Name = oldName, newName
 					}
 				}
@@ -135,7 +136,7 @@ func readDeltaRequirements(changeRoot string, specFiles []string) []isoevidence.
 }
 
 // readBaselineRequirements lee los requisitos de `<planning home>/specs/*/spec.md`
-// con parseSpecDocument, el lector nativo (D2). El texto de cada requisito es el
+// con openspecdoc.ParseCanonical, el lector nativo (D2). El texto de cada requisito es el
 // del segmento, que es lo que compara la tolerancia del archivado interrumpido.
 func readBaselineRequirements(planningHome string) []isoevidence.Requirement {
 	files, err := filepath.Glob(filepath.Join(planningHome, "specs", "*", "spec.md"))
@@ -146,10 +147,8 @@ func readBaselineRequirements(planningHome string) []isoevidence.Requirement {
 	var baseline []isoevidence.Requirement
 	for _, path := range files {
 		domain := filepath.Base(filepath.Dir(path))
-		for _, segment := range parseSpecDocument(readText(path)).Segments {
-			if segment.IsRequirement {
-				baseline = append(baseline, isoevidence.Requirement{Domain: domain, Name: segment.Name, Text: segment.Text})
-			}
+		for _, req := range openspecdoc.ParseCanonical(readText(path)) {
+			baseline = append(baseline, isoevidence.Requirement{Domain: domain, Name: req.Name, Text: req.Body})
 		}
 	}
 	return baseline
