@@ -18,14 +18,17 @@ import (
 //
 // Determina el cambio con changeRootOfDelta, la misma función que usa la guarda A
 // (guardComposeDelta). En el modo documento recibe el espacio ya resuelto y el
-// dominio; en el modo --canonical (documentMode falso) localiza el espacio desde
+// dominio; en el modo --canonical (sin --document) localiza el espacio desde
 // la carpeta de la delta y toma el dominio de esa carpeta, como
 // guardComposeLooseDelta. Sin cambio determinable (una delta suelta, fuera de
 // `changes/<cambio>/specs/<dominio>/`) no aplica nada, y un cambio no ISO nunca
 // tiene hallazgos: su salida no cambia ni un byte (REQ-24.38). El modo
 // `--change --in-place` no pasa por aquí.
-func refuseISOCompose(loc workspace.Location, documentMode bool, deltaPath, domain string) error {
-	if !documentMode {
+func refuseISOCompose(loc workspace.Location, deltaPath string, documents []string) error {
+	var domain string
+	if len(documents) > 0 {
+		domain = documents[0]
+	} else {
 		absolute, err := filepath.Abs(deltaPath)
 		if err != nil {
 			return nil

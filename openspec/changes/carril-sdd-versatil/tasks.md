@@ -202,7 +202,7 @@ Sin dependencias internas; todo son funciones puras con pruebas por tablas.
 
 ### U16 · `feat(cli): enganchar la negativa ISO en archive-compose` (solape P6)
 
-- [ ] 16.1 Modificar `internal/cli/sdd_archive_compose.go` (llamada de 5 a 8 líneas antes de leer la canónica) y completar `internal/cli/sdd_archive_compose_iso_test.go` con las pruebas de extremo a extremo.
+- [x] 16.1 Modificar `internal/cli/sdd_archive_compose.go` (llamada de 5 a 8 líneas antes de leer la canónica) y completar `internal/cli/sdd_archive_compose_iso_test.go` con las pruebas de extremo a extremo.
   Cubre: REQ-29.10, REQ-29.11, REQ-24.38
   Aceptación: rechazo ISO sin escribir; la salida de una composición aceptada y la de un cambio no ISO son idénticas byte a byte; el modo `--change --in-place` no se toca.
   Comprobación: `go test ./internal/cli/ -run 'TestArchiveCompose'`

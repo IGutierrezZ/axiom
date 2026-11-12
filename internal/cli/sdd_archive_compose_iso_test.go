@@ -1,10 +1,12 @@
 package cli
 
 import (
+	"bytes"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/IGutierrezZ/axiom/v3/internal/sddstatus"
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
@@ -53,8 +55,8 @@ func TestArchiveComposeISORefusal(t *testing.T) {
 			}
 
 			for mode, refuse := range map[string]func() error{
-				"documento":   func() error { return refuseISOCompose(loc, true, deltaPath, "pagos") },
-				"--canonical": func() error { return refuseISOCompose(workspace.Location{}, false, deltaPath, "") },
+				"documento":   func() error { return refuseISOCompose(loc, deltaPath, []string{"pagos"}) },
+				"--canonical": func() error { return refuseISOCompose(workspace.Location{}, deltaPath, nil) },
 			} {
 				err := refuse()
 				switch {
@@ -83,19 +85,120 @@ func TestArchiveComposeISORefusalWithoutChangeContext(t *testing.T) {
 
 	loose := filepath.Join(root, "delta-suelta", "pagos", "spec.md")
 	writeCLIFixture(t, loose, archiveCheckDeltaNoScene)
-	if err := refuseISOCompose(loc, true, loose, "pagos"); err != nil {
+	if err := refuseISOCompose(loc, loose, []string{"pagos"}); err != nil {
 		t.Errorf("delta suelta (modo documento): error = %v, sin cambio no se aplica nada", err)
 	}
-	if err := refuseISOCompose(workspace.Location{}, false, loose, ""); err != nil {
+	if err := refuseISOCompose(workspace.Location{}, loose, nil); err != nil {
 		t.Errorf("delta suelta (--canonical): error = %v", err)
 	}
 	outside := filepath.Join(t.TempDir(), "pagos", "spec.md")
 	writeCLIFixture(t, outside, archiveCheckDeltaNoScene)
-	if err := refuseISOCompose(workspace.Location{}, false, outside, ""); err != nil {
+	if err := refuseISOCompose(workspace.Location{}, outside, nil); err != nil {
 		t.Errorf("delta fuera de todo espacio: error = %v", err)
 	}
 	// El dominio que se indica debe ser el de la carpeta de la delta.
-	if err := refuseISOCompose(loc, true, filepath.Join(changeRoot, "specs", "pagos", "spec.md"), "otro"); err != nil {
+	if err := refuseISOCompose(loc, filepath.Join(changeRoot, "specs", "pagos", "spec.md"), []string{"otro"}); err != nil {
 		t.Errorf("dominio que no es el de la carpeta de la delta: error = %v", err)
+	}
+}
+
+// archiveComposeCanonical es la canónica del dominio `pagos` sobre la que componen
+// las pruebas de extremo a extremo.
+const archiveComposeCanonical = "# pagos\n\n## Requirements\n\n### Requirement: REQ-5.1 Recibo\n\nEl sistema emite recibo.\n\n#### Scenario: Recibo emitido\n\n- **CUANDO** se paga\n"
+
+// composeISOFixture monta el cambio y la canónica y devuelve las rutas de ambas.
+func composeISOFixture(t *testing.T, change archiveCheckChange) (root, canonical, delta string) {
+	t.Helper()
+	root, changeRoot := archiveCheckWorkspace(t, change)
+	canonical = filepath.Join(root, "openspec", "specs", "pagos", "spec.md")
+	writeCLIFixture(t, canonical, archiveComposeCanonical)
+	return root, canonical, filepath.Join(changeRoot, "specs", "pagos", "spec.md")
+}
+
+// REQ-29.10 y REQ-29.11, de extremo a extremo: en los dos modos el rechazo no
+// escribe nada, ni en la salida ni en la canónica.
+func TestArchiveComposeISORefusesEndToEndWithoutWriting(t *testing.T) {
+	change := archiveCheckChange{name: "demo", proposal: "# P\n", deltas: map[string]string{"pagos": archiveCheckDeltaNoScene}, tasks: archiveCheckTasksDone, verify: archiveCheckVerify(), iso: true}
+	root, canonical, delta := composeISOFixture(t, change)
+	before := treeSnapshot(t, root)
+
+	for name, args := range map[string][]string{
+		"--canonical": {"--canonical", canonical, "--delta", delta},
+		"--document":  {"--cwd", root, "--document", "pagos", "--delta", delta},
+	} {
+		var stdout, stderr bytes.Buffer
+		err := runSDDArchiveComposeWithStderr(args, &stdout, &stderr)
+		if err == nil || !strings.Contains(err.Error(), "blocked(iso_requirement_scenarios)") {
+			t.Fatalf("modo %s: error = %v, se esperaba el rechazo ISO", name, err)
+		}
+		if stdout.Len() != 0 || stderr.Len() != 0 {
+			t.Errorf("modo %s: el rechazo escribió salida: %q %q", name, stdout.String(), stderr.String())
+		}
+	}
+	after := treeSnapshot(t, root)
+	for path, text := range before {
+		if after[path] != text {
+			t.Errorf("el rechazo modificó %s", path)
+		}
+	}
+	if len(after) != len(before) {
+		t.Errorf("el rechazo creó ficheros: antes %d, después %d", len(before), len(after))
+	}
+}
+
+// REQ-24.38: la salida de una composición aceptada de un cambio ISO y la de un
+// cambio no ISO son idénticas byte a byte, y coinciden con el motor nativo.
+func TestArchiveComposeISOAcceptedOutputIsByteIdentical(t *testing.T) {
+	isoChange := archiveCheckChange{name: "demo", proposal: "# P\n", deltas: map[string]string{"pagos": archiveCheckDeltaOK}, tasks: archiveCheckTasksDone, verify: archiveCheckVerify(archiveCheckRowPass), iso: true}
+	plainChange := isoChange
+	plainChange.iso = false
+
+	compose := func(change archiveCheckChange, mode string) string {
+		t.Helper()
+		root, canonical, delta := composeISOFixture(t, change)
+		args := []string{"--canonical", canonical, "--delta", delta}
+		if mode == "--document" {
+			args = []string{"--cwd", root, "--document", "pagos", "--delta", delta}
+		}
+		var stdout, stderr bytes.Buffer
+		if err := runSDDArchiveComposeWithStderr(args, &stdout, &stderr); err != nil {
+			t.Fatalf("modo %s, iso=%v: error = %v", mode, change.iso, err)
+		}
+		return stdout.String()
+	}
+	native, err := sddstatus.ComposeOpenSpecCanonicalSpec(archiveComposeCanonical, archiveCheckDeltaOK)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, mode := range []string{"--canonical", "--document"} {
+		iso, plain := compose(isoChange, mode), compose(plainChange, mode)
+		if iso != plain || iso != native {
+			t.Errorf("modo %s: la salida difiere\nISO:\n%s\nno ISO:\n%s\nnativa:\n%s", mode, iso, plain, native)
+		}
+	}
+}
+
+// Un cambio no ISO sigue componiendo un ADDED sin escenarios, como antes.
+func TestArchiveComposeNonISOKeepsComposingWithoutScenarios(t *testing.T) {
+	change := archiveCheckChange{name: "demo", proposal: "# P\n", deltas: map[string]string{"pagos": archiveCheckDeltaNoScene}, tasks: archiveCheckTasksDone}
+	_, canonical, delta := composeISOFixture(t, change)
+	var stdout, stderr bytes.Buffer
+	if err := runSDDArchiveComposeWithStderr([]string{"--canonical", canonical, "--delta", delta}, &stdout, &stderr); err != nil {
+		t.Fatalf("un cambio no ISO compone sin escenarios: %v", err)
+	}
+	if !strings.Contains(stdout.String(), "REQ-30.1 Cobro con IVA") {
+		t.Errorf("la composición no incluye el requisito añadido:\n%s", stdout.String())
+	}
+}
+
+// El modo `--change --in-place` no pasa por la negativa ISO: solo existe para la
+// baseline declarada y lo gobierna el plan de integración.
+func TestArchiveComposeInPlaceIsNotTouchedByTheISORefusal(t *testing.T) {
+	change := archiveCheckChange{name: "demo", proposal: "# P\n", deltas: map[string]string{"pagos": archiveCheckDeltaNoScene}, tasks: archiveCheckTasksDone, verify: archiveCheckVerify(), iso: true}
+	root, _, _ := composeISOFixture(t, change)
+	var stdout, stderr bytes.Buffer
+	err := runSDDArchiveComposeWithStderr([]string{"--cwd", root, "--change", "demo", "--document", "pagos", "--in-place"}, &stdout, &stderr)
+	if err != nil && strings.Contains(err.Error(), "blocked(iso_") {
+		t.Fatalf("--in-place no debe aplicar la regla ISO: %v", err)
 	}
 }
