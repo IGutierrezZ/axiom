@@ -10,8 +10,9 @@
 
     new  <slug> [-Lane l] [-Prefix p]  axiom branch ensure --cwd <checkout principal> --change <slug> --lane l [--prefix p] --json
     pr   <slug> [-Lane l]    push de la rama del cambio y PR hacia el prTarget de axiom branch status --lane l --json
-    done <slug> [-Lane l] [-Force]  axiom branch done --cwd <checkout principal> --change <slug> --lane l y, después,
-                             el avance rápido de main. La rama sale del registro local que escribe
+    done <slug> [-Lane l] [-Force]  axiom branch done --cwd <checkout principal> --change <slug> --lane l --fetch y,
+                             después, el avance rápido de main. `--fetch` trae origin antes de confirmar
+                             la fusión: sin él, un squash recién fusionado no se ve y da merge_not_confirmed. La rama sale del registro local que escribe
                              `ensure` (con su prefijo); `done` no admite -Prefix. Si no ve ninguna
                              rama del cambio, lo avisa en lugar de dar el cambio por desmantelado
 
@@ -238,7 +239,9 @@ switch ($Verb) {
         }
 
         # `axiom branch done` confirma la fusión y desmonta el worktree y la rama local del plan.
-        & axiom branch done --cwd $mainRoot --change $Slug --lane $Lane @doneArgs
+        # `--fetch` trae origin antes de evaluar: una PR fusionada con squash solo se confirma
+        # por árbol equivalente contra un origin/main que ya contenga ese commit.
+        & axiom branch done --cwd $mainRoot --change $Slug --lane $Lane --fetch @doneArgs
         if ($LASTEXITCODE -ne 0) {
             Fail "axiom branch done no desmanteló por completo el cambio '$Slug' (revisa el mensaje anterior)."
         }
