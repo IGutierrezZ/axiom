@@ -5,12 +5,18 @@
 # aporta la costumbre local y el verbo `pr`, que el producto deja fuera (la publicación es una
 # decisión de la persona):
 #
-#   new  <slug> [prefijo]  axiom branch ensure --cwd <checkout principal> --change <slug> [--prefix p] --json
-#   pr   <slug>            push de la rama del cambio y PR hacia el prTarget de axiom branch status --json
-#   done <slug> [--force]  axiom branch done --cwd <checkout principal> --change <slug> y, después,
+#   new  <slug> [prefijo] [--lane l]  axiom branch ensure --cwd <checkout principal> --change <slug> --lane l [--prefix p] --json
+#   pr   <slug> [--lane l]            push de la rama del cambio y PR hacia el prTarget de axiom branch status --lane l --json
+#   done <slug> [--lane l] [--force]  axiom branch done --cwd <checkout principal> --change <slug> --lane l y, después,
 #                          el avance rápido de main. La rama sale del registro local que escribe
 #                          `ensure` (con su prefijo); `done` no admite prefijo. Si no ve ninguna
 #                          rama del cambio, lo avisa en lugar de dar el cambio por desmantelado
+#
+# El registro local de ramas es por carril (<git common dir>/axiom/branch/v1/<carril>/<cambio>.json) y la
+# guarda `axiom branch guard` clasifica `odd/tasks/*.md` como carril `odd`. Por eso un cambio ODD (su
+# documento es `odd/tasks/<slug>.md`) debe usar `--lane odd` en los tres verbos (new, pr y done); sin él,
+# el registro cae en `sdd` y la guarda esperaría el prefijo de `axiom.yaml`. El prefijo se registra por
+# carril. Sin --lane rige `sdd`, el carril por defecto del producto.
 #
 # Los worktrees viven en <carpeta del proyecto>-wt/<slug>/<repositorio> (p. ej. axiom-wt/<slug>/axiom).
 # Necesita un `axiom` con el verbo `axiom branch` en el PATH (`go install ./cmd/axiom`).
@@ -19,10 +25,11 @@ set -euo pipefail
 VERB="${1:-}"
 SLUG="${2:-}"
 PREFIX=""
+LANE="sdd"
 FORCE=0
 
 usage() {
-    echo "Uso: $0 {new|pr|done} <slug> [feat|inc|fix|refactor] [--force]"
+    echo "Uso: $0 {new|pr|done} <slug> [feat|inc|fix|refactor] [--lane sdd|odd] [--force]"
     exit 1
 }
 
@@ -35,11 +42,28 @@ if [ -n "${3:-}" ] && [ "${3#-}" = "$3" ]; then
     PREFIX="$3"
 fi
 
-for arg in "$@"; do
-    if [ "$arg" = "--force" ] || [ "$arg" = "-f" ]; then
-        FORCE=1
-    fi
+# Carril del registro local de ramas: `odd` para cambios con documento en odd/tasks/.
+# Sin --lane rige `sdd`, el carril por defecto del producto.
+ARGS=("$@")
+for ((i = 2; i < ${#ARGS[@]}; i++)); do
+    case "${ARGS[$i]}" in
+        --force|-f) FORCE=1 ;;
+        --lane)
+            if [ $((i + 1)) -ge ${#ARGS[@]} ]; then
+                echo "ERROR: --lane necesita un valor (sdd u odd)." >&2
+                exit 1
+            fi
+            LANE="${ARGS[$((i + 1))]}"
+            i=$((i + 1))
+            ;;
+        --lane=*) LANE="${ARGS[$i]#--lane=}" ;;
+    esac
 done
+
+if ! [[ "$LANE" =~ ^(sdd|odd)$ ]]; then
+    echo "ERROR: Carril inválido '$LANE'. Usa sdd u odd." >&2
+    exit 1
+fi
 
 case "$VERB" in
     new|pr|done) ;;
@@ -96,7 +120,7 @@ case "$VERB" in
 
         # `--mode worktree`: la política local exige un worktree propio y un checkout principal
         # siempre en main, sea cual sea la preferencia personal del hub.
-        if ! RESULT="$(axiom branch ensure --cwd "$MAIN_ROOT" --change "$SLUG" --mode worktree ${PREFIX_ARGS[@]+"${PREFIX_ARGS[@]}"} --json)"; then
+        if ! RESULT="$(axiom branch ensure --cwd "$MAIN_ROOT" --change "$SLUG" --lane "$LANE" --mode worktree ${PREFIX_ARGS[@]+"${PREFIX_ARGS[@]}"} --json)"; then
             echo "$RESULT" >&2
             echo "ERROR: axiom branch ensure rechazó el cambio '$SLUG'." >&2
             exit 1
@@ -115,7 +139,7 @@ case "$VERB" in
         ;;
 
     pr)
-        STATUS="$(axiom branch status --cwd "$MAIN_ROOT" --change "$SLUG" --json)"
+        STATUS="$(axiom branch status --cwd "$MAIN_ROOT" --change "$SLUG" --lane "$LANE" --json)"
         # Rama del cambio, su worktree y la base del PR (`prTarget`) salen del plan del producto.
         CHANGE_BRANCH="$(printf '%s\n' "$STATUS" | awk '
             /^          "name": "/    { name=$0; sub(/^ *"name": "/, "", name); sub(/",?$/, "", name); kind=""; wt="" }
@@ -126,7 +150,7 @@ case "$VERB" in
                 if (kind == "change") { print name "\001" wt "\001" target; exit }
             }')"
         if [ -z "$CHANGE_BRANCH" ]; then
-            echo "ERROR: axiom branch status no encontró la rama del cambio '$SLUG'. Créala con: scripts/axiom-worktree.sh new $SLUG" >&2
+            echo "ERROR: axiom branch status no encontró la rama del cambio '$SLUG'. Créala con: scripts/axiom-worktree.sh new $SLUG --lane $LANE" >&2
             exit 1
         fi
         # El separador \001 no es un espacio en blanco de IFS: un worktree vacío no desplaza los campos.
@@ -178,14 +202,14 @@ case "$VERB" in
         # lectura). Una rama creada fuera de `ensure` no está en el registro y `done` no la ve: sin
         # esta comprobación el script daría por desmantelado un cambio que sigue montado.
         EXISTING=""
-        if STATUS="$(axiom branch status --cwd "$MAIN_ROOT" --change "$SLUG" --json 2>/dev/null)"; then
+        if STATUS="$(axiom branch status --cwd "$MAIN_ROOT" --change "$SLUG" --lane "$LANE" --json 2>/dev/null)"; then
             EXISTING="$(printf '%s\n' "$STATUS" | grep -c '^ *"exists": true' || true)"
         else
             echo "[AVISO] axiom branch status falló; no se puede comprobar qué ramas existen."
         fi
 
         # `axiom branch done` confirma la fusión y desmonta el worktree y la rama local del plan.
-        if ! axiom branch done --cwd "$MAIN_ROOT" --change "$SLUG" ${FORCE_ARGS[@]+"${FORCE_ARGS[@]}"}; then
+        if ! axiom branch done --cwd "$MAIN_ROOT" --change "$SLUG" --lane "$LANE" ${FORCE_ARGS[@]+"${FORCE_ARGS[@]}"}; then
             echo "ERROR: axiom branch done no desmanteló por completo el cambio '$SLUG' (revisa el mensaje anterior)." >&2
             exit 1
         fi
