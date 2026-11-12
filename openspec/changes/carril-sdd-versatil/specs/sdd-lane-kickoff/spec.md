@@ -51,7 +51,7 @@
 
 ### Requirement: Instantánea de `sdd.iso` en `kickoff.yaml`, Escrita una Sola Vez por `seal` (REQ-29.13)
 
-`axiom sdd kickoff seal` DEBE copiar en `kickoff.yaml`, dentro de la misma única escritura de sellado y con la semántica de sellado único de REQ-25.36, el valor que el proyecto declara en el bloque `sdd:` de `axiom.yaml` para la declaración ISO (clave `iso`, REQ-29.1 de `sdd-iso-evidence`). Es una instantánea, igual que la de política git (REQ-25.36) y que el campo `docs_publication` (REQ-27.4): el valor sigue siendo del proyecto y nadie elige ISO por cambio. Las reglas ISO de ESE cambio (REQ-29.3 a REQ-29.11) DEBEN leerse de su instantánea y NO de `axiom.yaml` en vivo; la declaración de `axiom.yaml` solo es la fuente en el momento de sellar. Un proyecto que no declara `iso`, o lo declara desactivado, sella un cambio no ISO. La serialización DEBE omitir los campos vacíos (`omitempty`), la lectura de `kickoff.yaml` DEBE tolerar su ausencia y un binario anterior DEBE ignorarlo sin error. Un cambio sellado antes de esta versión, sin instantánea de `sdd:`, DEBE contar como no ISO, que es el comportamiento actual. Cambiar `sdd:` en `axiom.yaml` solo afecta a los cambios sellados después: un cambio ya sellado conserva su valor hasta que se archive. `axiom sdd status` PUEDE avisar con una nota no bloqueante de la discrepancia entre la instantánea del cambio y la declaración vigente del proyecto, y NO DEBE bloquear por ella. El retrosellado `axiom sdd kickoff seal --infer` de un cambio preexistente DEBE congelar lo que ya rige ese cambio, como exige REQ-21.4: `iso: false`, sin leer la declaración `sdd:` de `axiom.yaml`. Así ningún cambio en curso pasa a ISO por retrosellarse. Registrar `iso` en el retrosellado NO DEBE contar como la instantánea de política git de REQ-25.36: REQ-25.37 no cambia y el cambio retro-sellado sigue exento de las guardas de rama. Un `sdd:` inválido DEBE rechazar el sellado sin escribir nada (REQ-29.1): nunca se sella «no ISO» por defecto ante una declaración inválida. Un segundo `seal` NO DEBE reescribir la instantánea (REQ-25.36).
+`axiom sdd kickoff seal` DEBE copiar en `kickoff.yaml`, dentro de la misma única escritura de sellado y con la semántica de sellado único de REQ-25.36, el valor que el proyecto declara en el bloque `sdd:` de `axiom.yaml` para la declaración ISO (clave `iso`, REQ-29.1 de `sdd-iso-evidence`). Es una instantánea, igual que la de política git (REQ-25.36) y que el campo `docs_publication` (REQ-27.4): el valor sigue siendo del proyecto y nadie elige ISO por cambio. Las reglas ISO de ESE cambio (REQ-29.3 a REQ-29.11 y REQ-29.19) DEBEN leerse de su instantánea y NO de `axiom.yaml` en vivo; la declaración de `axiom.yaml` solo es la fuente en el momento de sellar. Un proyecto que no declara `iso`, o lo declara desactivado, sella un cambio no ISO. `iso` es un booleano y la serialización DEBE omitir los campos vacíos (`omitempty`): con `iso` falso la clave no se escribe, de modo que solo un cambio ISO lleva la clave `iso` en `kickoff.yaml`. La lectura de `kickoff.yaml` DEBE tolerar la ausencia de la clave, y un cambio sin la clave `iso` cuenta como no ISO, igual que uno sin instantánea. Un binario anterior DEBE ignorar la clave sin error. Un cambio sellado antes de esta versión, sin instantánea de `sdd:`, DEBE contar como no ISO, que es el comportamiento actual. Cambiar `sdd:` en `axiom.yaml` solo afecta a los cambios sellados después: un cambio ya sellado conserva su valor hasta que se archive. `axiom sdd status` PUEDE avisar con una nota no bloqueante de la discrepancia entre la instantánea del cambio y la declaración vigente del proyecto, y NO DEBE bloquear por ella. El retrosellado `axiom sdd kickoff seal --infer` de un cambio preexistente DEBE congelar lo que ya rige ese cambio, como exige REQ-21.4: NO escribe la clave `iso` (que, por la regla `omitempty` de este mismo requisito, queda ausente) y NO lee la declaración `sdd:` de `axiom.yaml`. Un cambio retro-sellado cuenta así como no ISO, igual que uno sin instantánea, y ningún cambio en curso pasa a ISO por retrosellarse. El retrosellado NO escribe la instantánea de política git de REQ-25.36: REQ-25.37 no cambia y el cambio retro-sellado sigue exento de las guardas de rama. Un `sdd:` inválido DEBE rechazar el sellado sin escribir nada (REQ-29.1): nunca se sella «no ISO» por defecto ante una declaración inválida. Un segundo `seal` NO DEBE reescribir la instantánea (REQ-25.36).
 
 #### Scenario: El sellado copia `iso` en `kickoff.yaml`
 
@@ -64,7 +64,7 @@
 
 - **DADO** un `axiom.yaml` sin `sdd:`
 - **CUANDO** se sella un cambio
-- **ENTONCES** `kickoff.yaml` no contiene `iso` activo
+- **ENTONCES** `kickoff.yaml` no contiene la clave `iso`
 - **Y** `axiom sdd status` proyecta el cambio como no ISO
 
 #### Scenario: Activar `iso` a mitad no exige la matriz a un cambio ya sellado
@@ -101,12 +101,12 @@
 - **ENTONCES** termina con éxito indicando «Kickoff ya estaba sellado»
 - **Y** `kickoff.yaml` conserva los valores de la primera escritura
 
-#### Scenario: El retrosellado congela `iso: false`
+#### Scenario: El retrosellado no escribe `iso` y el cambio cuenta como no ISO
 
 - **DADO** un cambio preexistente con artefactos, sin kickoff sellado, y un `axiom.yaml` con `sdd: {iso: true}`
 - **CUANDO** se ejecuta `axiom sdd kickoff seal --infer --change x`
-- **ENTONCES** el cambio queda sellado con `iso: false`, sin leer la declaración `sdd:`
-- **Y** `axiom sdd status x --json` lo proyecta como no ISO
+- **ENTONCES** el cambio queda sellado sin la clave `iso` en `kickoff.yaml`, sin leer la declaración `sdd:`
+- **Y** `axiom sdd status x --json` lo proyecta como no ISO, igual que un cambio sin instantánea
 - **Y** el retrosellado no escribe la instantánea de política git (REQ-25.37) ni cambia el rol que ya infería
 
 #### Scenario: El retrosellado sigue exento de las guardas de rama
@@ -114,7 +114,7 @@
 - **DADO** el cambio retro-sellado del escenario anterior y el repositorio desplegado en la rama de integración
 - **CUANDO** se consulta el veredicto de rama
 - **ENTONCES** es `not_applicable`
-- **Y** el campo `iso` registrado no se interpreta como instantánea de política git
+- **Y** el retrosellado no ha escrito la instantánea de política git ni la clave `iso`
 
 #### Scenario: Un `sdd:` inválido rechaza el sellado
 

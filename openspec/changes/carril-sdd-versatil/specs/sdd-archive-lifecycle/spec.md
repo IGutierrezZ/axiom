@@ -6,7 +6,7 @@
 
 ### Requirement: Al Menos un Escenario por Requisito en el Archivado de un Proyecto ISO (REQ-29.10)
 
-En un cambio ISO (sellado con `iso`, REQ-29.1 de `sdd-iso-evidence` y REQ-29.13 de `sdd-lane-kickoff`), la composición del archivado (`archive` y `axiom sdd archive-compose` cuando resuelve el documento desde la declaración del proyecto y puede determinar el cambio, por `--change` o porque la delta está en la carpeta de un cambio; supuesto visible) DEBE rechazar, sin escribir ningún documento y con un motivo tipado que nombre el dominio, la sección y el requisito, todo requisito ADDED o MODIFIED de la delta que no contenga al menos un escenario (un encabezado `#### Scenario:`). La regla se aplica también cuando el documento declara `scenarios: omit` (REQ-24.60 de `spec-baseline-declaration`): los escenarios deben figurar en la delta aunque no se integren en el documento. NO se aplica a los requisitos REMOVED ni RENAMED. `axiom sdd status` DEBE adelantar el rechazo con el mismo motivo tipado en cuanto la delta existe (REQ-29.16 de `axiom-sdd-cli-integration`). Fuera de un cambio ISO la composición NO cambia. Un cambio sellado sin `iso`, o sin instantánea, es un cambio no ISO y la regla NO se aplica. Cuando `axiom sdd archive-compose` se invoca con `--canonical` y `--delta` sin contexto de proyecto ni de cambio, no hay instantánea que consultar y la regla NO se aplica.
+En un cambio ISO (sellado con `iso`, REQ-29.1 de `sdd-iso-evidence` y REQ-29.13 de `sdd-lane-kickoff`), la composición del archivado (`archive` y `axiom sdd archive-compose` cuando resuelve el dominio en la baseline del proyecto (`openspec/specs/`) y puede determinar el cambio, por `--change` o porque la delta está en la carpeta de un cambio; supuesto visible) DEBE rechazar, sin escribir ningún documento y con un motivo tipado que nombre el dominio, la sección y el requisito, todo requisito ADDED o MODIFIED de la delta que no contenga al menos un escenario (un encabezado `#### Scenario:`). NO se aplica a los requisitos REMOVED ni RENAMED. `axiom sdd status` DEBE adelantar el rechazo con el mismo motivo tipado en cuanto la delta existe (REQ-29.16 de `axiom-sdd-cli-integration`). Fuera de un cambio ISO la composición NO cambia. Un cambio sellado sin `iso`, o sin instantánea, es un cambio no ISO y la regla NO se aplica. Cuando `axiom sdd archive-compose` se invoca con `--canonical` y `--delta` sin contexto de proyecto ni de cambio, no hay instantánea que consultar y la regla NO se aplica.
 
 #### Scenario: Un ADDED sin escenarios se rechaza en ISO
 
@@ -22,13 +22,6 @@ En un cambio ISO (sellado con `iso`, REQ-29.1 de `sdd-iso-evidence` y REQ-29.13 
 - **CUANDO** se ejecuta `axiom sdd archive-compose --cwd <raíz> --document <dominio> --delta <ruta>`
 - **ENTONCES** se rechaza con el motivo tipado nombrando el requisito
 - **Y** no se escribe el fichero de salida
-
-#### Scenario: Con `scenarios: omit` la regla se aplica a la delta
-
-- **DADO** un cambio ISO, un documento con `scenarios: omit` y un ADDED sin escenarios en la delta
-- **CUANDO** se ejecuta el archivado
-- **ENTONCES** se rechaza igualmente
-- **Y** un ADDED con escenarios se acepta y archive integra solo su descripción conforme a REQ-24.61 de `spec-baseline-integration`
 
 #### Scenario: REMOVED y RENAMED no exigen escenarios
 
@@ -58,7 +51,7 @@ En un cambio ISO (sellado con `iso`, REQ-29.1 de `sdd-iso-evidence` y REQ-29.13 
 
 ### Requirement: En un Cambio ISO el Archivado Exige la Matriz de Verify Válida y con Éxito (REQ-29.11)
 
-En un cambio ISO, `archive` DEBE bloquearse con un motivo tipado mientras la matriz de verify del `verify-report.md` esté ausente, sea inválida (REQ-29.6 a REQ-29.8 de `sdd-iso-evidence`) o contenga alguna fila con resultado `fail`, con independencia del ritmo sellado (`continuous` o `checkpointed`). `axiom sdd status` DEBE reflejar el bloqueo en la dependencia `archive` nombrando la fila o el escenario afectado, `axiom sdd continue` NO DEBE autorizarla, y el escritor de `archive` DEBE negarse sin mover el cambio ni modificar la baseline. El bloqueo se **suma** a las demás precondiciones del archivado (integración o despliegue, rama y compuertas) y no sustituye a ninguna de ellas. Esta regla es una **excepción declarada** a la doctrina «Missing or failed verification never gates archive» (`persistence-contract.md`) y a REQ-28.3 de `sdd-independent-review`, que siguen vigentes íntegras para los cambios no ISO y para los hallazgos de revisión: en ISO, lo que bloquea es la validez de la matriz (evidencia declarada y contrastada con el árbol), nunca un hallazgo de verify, un juicio `ESCALATED` ni una revisión de cobertura. Fuera de un cambio ISO, un verify ausente, libre o fallido NO DEBE bloquear el archivado por sí mismo.
+En un cambio ISO, `archive` DEBE bloquearse con un motivo tipado mientras la matriz de verify del `verify-report.md` esté ausente (salvo en un bug sin impacto en la spec, que no tiene escenarios afectados y cuya matriz ausente o vacía es válida, REQ-29.19 de `sdd-iso-evidence`), sea inválida (REQ-29.6 a REQ-29.8 de `sdd-iso-evidence`) o contenga alguna fila con resultado `fail`, con independencia del ritmo sellado (`continuous` o `checkpointed`). `axiom sdd status` DEBE reflejar el bloqueo en la dependencia `archive` nombrando la fila o el escenario afectado, `axiom sdd continue` NO DEBE autorizarla, y el escritor de `archive` DEBE negarse sin mover el cambio ni modificar la baseline. El bloqueo se **suma** a las demás precondiciones del archivado (integración o despliegue, rama y compuertas) y no sustituye a ninguna de ellas. Esta regla es una **excepción declarada** a la doctrina «Missing or failed verification never gates archive» (`persistence-contract.md`) y a REQ-28.3 de `sdd-independent-review`, que siguen vigentes íntegras para los cambios no ISO y para los hallazgos de revisión: en ISO, lo que bloquea es la validez de la matriz (evidencia declarada y contrastada con el árbol), nunca un hallazgo de verify, un juicio `ESCALATED` ni una revisión de cobertura. Fuera de un cambio ISO, un verify ausente, libre o fallido NO DEBE bloquear el archivado por sí mismo.
 
 #### Scenario: Una matriz con una fila fallida bloquea el archivado en ISO
 
@@ -79,6 +72,13 @@ En un cambio ISO, `archive` DEBE bloquearse con un motivo tipado mientras la mat
 - **DADO** un cambio ISO cuyo `verify-report.md` no contiene matriz
 - **CUANDO** se solicita el archivado
 - **ENTONCES** se bloquea con el motivo tipado de matriz ausente
+
+#### Scenario: Un bug sin impacto en la spec archiva sin matriz
+
+- **DADO** un cambio ISO declarado como bug sin impacto en la spec, con `Motivo:` no vacío, sin `verify-report.md` o con la matriz vacía, y el resto de precondiciones de archivado satisfechas
+- **CUANDO** se solicita el archivado
+- **ENTONCES** el archivado no se bloquea por la matriz
+- **Y** el archivado no integra ningún requisito en la baseline
 
 #### Scenario: Una referencia de prueba que no resuelve bloquea el archivado
 

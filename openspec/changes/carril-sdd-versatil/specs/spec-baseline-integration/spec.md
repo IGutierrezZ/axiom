@@ -4,26 +4,26 @@
 
 ### Requirement: Consulta de un Requisito Existente en la Baseline para el Bug sin Delta (REQ-29.14)
 
-El motor DEBE poder resolver si un identificador de requisito existe en la baseline declarada y, si existe, devolver sus escenarios. En un documento con perfil de requisito la resolución se hace por el ID (REQ-24.39); en la baseline implícita `openspec/specs/`, que cuenta como identidad `id` en un cambio ISO (REQ-29.3 de `sdd-iso-evidence`), la resolución se hace por el identificador `REQ-<n>.<m>` que contiene el nombre del requisito, y un requisito cuyo nombre no contiene ese identificador no puede citarse (supuesto visible). La consulta es de solo lectura y NO DEBE modificar ningún documento. La usan el perfil de bug sin delta (REQ-29.5 de `sdd-iso-evidence`) para comprobar, en un cambio ISO, que el `Cubre:` apunta a un requisito existente y para conocer los escenarios que la matriz de verify debe cubrir (REQ-29.6). Un identificador que no existe se informa como tal, sin error de ejecución, y un requisito existente sin escenarios se informa como existente con una lista de escenarios vacía.
+El motor DEBE poder resolver si un identificador de requisito existe en la baseline (`openspec/specs/`, la spec viva del proyecto) y, si existe, devolver sus escenarios. La resolución se hace por el identificador `REQ-<n>.<m>` que contiene el nombre del requisito (REQ-29.3 de `sdd-iso-evidence`), y un requisito cuyo nombre no contiene ese identificador no puede citarse (supuesto visible). La consulta es de solo lectura y NO DEBE modificar ningún documento. La usa el bug con requisito existente (REQ-29.5 de `sdd-iso-evidence`) para comprobar, en un cambio ISO, que el `Cubre:` apunta a un requisito existente y para conocer los escenarios que la matriz de verify debe cubrir (REQ-29.6). Un identificador que no existe se informa como tal, sin error de ejecución, y un requisito existente sin escenarios se informa como existente con una lista de escenarios vacía.
 
-#### Scenario: Un ID existente se resuelve con sus escenarios
+#### Scenario: Un identificador existente se resuelve con sus escenarios
 
-- **DADO** una baseline con perfil de requisito que contiene `RF-120` con dos escenarios
-- **CUANDO** se consulta `RF-120`
+- **DADO** la baseline con el requisito `Subcomando axiom sdd status (REQ-13.1)` con dos escenarios
+- **CUANDO** se consulta `REQ-13.1`
 - **ENTONCES** se informa de que existe y se devuelven sus dos escenarios
 
-#### Scenario: Un ID inexistente se informa sin error
+#### Scenario: Un identificador inexistente se informa sin error
 
-- **DADO** la misma baseline y el identificador `RF-999`
-- **CUANDO** se consulta `RF-999`
+- **DADO** la misma baseline y el identificador `REQ-13.99`
+- **CUANDO** se consulta `REQ-13.99`
 - **ENTONCES** se informa de que no existe
 - **Y** la consulta no falla ni modifica ningún documento
 
-#### Scenario: En la baseline implícita se resuelve por el identificador del nombre
+#### Scenario: Un requisito sin identificador en su nombre no puede citarse
 
-- **DADO** la baseline implícita con el requisito `Subcomando axiom sdd status (REQ-13.1)`
-- **CUANDO** se consulta `REQ-13.1`
-- **ENTONCES** se informa de que existe y se devuelven sus escenarios
+- **DADO** la baseline con un requisito cuyo nombre no contiene `REQ-<n>.<m>`
+- **CUANDO** se consulta cualquier identificador
+- **ENTONCES** ese requisito no se devuelve para ningún identificador
 
 #### Scenario: Un requisito existente sin escenarios se informa como tal
 
@@ -70,35 +70,3 @@ Cuando el documento de la baseline no declara perfil de requisito (baseline Open
 - **DADO** un delta con un REMOVED y la opción `--supersede`
 - **CUANDO** se compone
 - **ENTONCES** el requisito se conserva marcado como superado, con su nota de motivo, como hasta ahora
-
-### Requirement: Validación Completa antes de Escribir (REQ-24.46)
-
-Todas las operaciones de todos los documentos con perfil de requisito del cambio DEBEN validarse y componerse en memoria antes de escribir ningún documento de la integración (de composición, dirigida o de contexto): o se aplican todas las composiciones o ninguna. Un rechazo NO DEBE dejar la baseline parcialmente modificada y DEBE nombrar la sección, el requisito y el motivo. La integración dirigida y la del contexto solo comienzan cuando todas las composiciones han tenido éxito. En un cambio ISO (REQ-29.1 de `sdd-iso-evidence`), esa validación previa incluye la regla de al menos un escenario por requisito ADDED o MODIFIED (REQ-29.10 de `sdd-archive-lifecycle`).
-(Previously: la validación previa cubría solo la aplicabilidad de las operaciones; en ISO incluye también la regla de escenarios)
-
-#### Scenario: Un dominio falla y ninguno se modifica
-
-- **DADO** un cambio con deltas para dos dominios, el segundo con un MODIFIED sobre un ID inexistente
-- **CUANDO** se ejecuta el archivado
-- **ENTONCES** se rechaza nombrando el dominio, la sección y el requisito
-- **Y** ningún documento de la baseline cambia
-
-#### Scenario: Todas las operaciones válidas se aplican
-
-- **DADO** un cambio con deltas válidos para dos dominios
-- **CUANDO** se ejecuta el archivado
-- **ENTONCES** ambos documentos se sustituyen por su composición
-
-#### Scenario: La integración dirigida no empieza si una composición falla
-
-- **DADO** un cambio con una composición inválida y un dominio de prosa con `integration: directed`
-- **CUANDO** se ejecuta el archivado
-- **ENTONCES** se rechaza nombrando la composición inválida
-- **Y** no se edita ningún documento, tampoco el de prosa
-
-#### Scenario: En ISO un requisito sin escenarios en un dominio impide modificar los demás
-
-- **DADO** un cambio ISO con deltas para dos dominios, el segundo con un ADDED sin escenarios
-- **CUANDO** se ejecuta el archivado
-- **ENTONCES** se rechaza nombrando el dominio, la sección y el requisito
-- **Y** ningún documento de la baseline cambia, tampoco el del primer dominio

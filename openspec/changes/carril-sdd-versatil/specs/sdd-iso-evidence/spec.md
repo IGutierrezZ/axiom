@@ -14,11 +14,13 @@ El modo ISO **no sustituye nada**: no cambia el ritmo (`continuous` o `checkpoin
 |---|---|
 | Declaración ISO | Valor `iso` del bloque de primer nivel `sdd:` de `axiom.yaml` (REQ-29.1). |
 | Cambio ISO | Cambio cuyo `kickoff.yaml` se selló con `iso` activo: copia del valor que el proyecto declaraba en `axiom.yaml` al sellar (REQ-29.13). Las reglas ISO de un cambio se leen de esa instantánea, no de `axiom.yaml` en vivo. Un cambio sin instantánea es un cambio no ISO. |
-| Baseline implícita | La baseline OpenSpec por defecto, `openspec/specs/`, que rige cuando `axiom.yaml` no declara `baseline:` (REQ-24.13). |
+| Baseline | La spec viva del proyecto, `openspec/specs/`: el único formato de spec viva. El identificador de un requisito es el `REQ-<n>.<m>` que contiene su nombre (REQ-29.3). |
 | Delta | Conjunto de requisitos ADDED, MODIFIED, REMOVED y RENAMED de las specs del cambio. |
-| Bug sin delta | Cambio declarado como bug en su `proposal.md` (observado, esperado y, opcionalmente, referencia externa) que restaura un requisito ya existente de la baseline y por eso no lleva delta (REQ-29.15 de `axiom-sdd-cli-integration`). Un bug cuyo requisito estaba mal especificado o faltaba NO es un bug sin delta: es un cambio normal, con delta. |
+| Informe de bug | Sección fija `## Informe de bug` de `proposal.md`, con las líneas `Observado:` y `Esperado:` (obligatorias) y `Referencia:` (opcional). La propia sección es la declaración de bug: no hay front matter (REQ-29.15 de `axiom-sdd-cli-integration`). |
+| Bug sin delta | Cambio declarado como bug con `## Informe de bug`, sin delta. Tiene dos variantes: el **bug con requisito existente**, que restaura un requisito ya existente de la baseline y lo cita con `Cubre:`, y el **bug sin impacto en la spec**. Un bug cuyo requisito estaba mal especificado o faltaba NO es un bug sin delta: es un cambio normal, con delta. |
+| Bug sin impacto en la spec | Bug sin delta que no toca ningún requisito, declarado con la sección `## Impacto en la spec` cuyo contenido es la línea literal `Sin impacto en la spec` y una línea `Motivo: <una línea>`, junto a `## Informe de bug`. No lleva delta ni `Cubre:` (REQ-29.15 de `axiom-sdd-cli-integration`, REQ-29.19). El texto de la marca es un contrato compartido con otros carriles. |
 | `Cubre:` | Línea de una tarea que declara los requisitos que esa tarea cubre. |
-| Escenario afectado | Cada escenario de un bloque ADDED o MODIFIED de la delta; en un bug sin delta, cada escenario del requisito existente que cita `Cubre:`. Se identifica por el par (requisito, nombre del escenario). |
+| Escenario afectado | Cada escenario de un bloque ADDED o MODIFIED de la delta; en un bug con requisito existente, cada escenario del requisito existente que cita `Cubre:`; en un bug sin impacto en la spec no hay ninguno. Se identifica por el par (requisito, nombre del escenario). |
 | Matriz de verify | Sección de `verify-report.md` con una fila por escenario afectado. |
 | Fila automática | Fila de tipo `unitario`, `integración` o `e2e`. |
 | Fila manual | Fila de tipo `manual`. |
@@ -30,15 +32,16 @@ El modo ISO **no sustituye nada**: no cambia el ritmo (`continuous` o `checkpoin
 
 | ID | Requerimiento | Garantía principal |
 |---|---|---|
-| REQ-29.1 | Declaración ISO opcional por proyecto | Un cambio no ISO no bloquea ni cambia; declaración inválida falla cerrada |
+| REQ-29.1 | Declaración ISO opcional por proyecto | Un cambio no ISO no bloquea ni cambia; declaración inválida o contradictoria (`iso: true` con `workflow.lane: odd`) falla cerrada |
 | REQ-29.2 | Proyección de `sdd.iso` en el status | Solo aditiva |
-| REQ-29.3 | Identidad `id` en los documentos afectados | Bloqueo accionable antes de design |
+| REQ-29.3 | Identificador `REQ-<n>.<m>` en el nombre de los requisitos de la delta | Bloqueo accionable antes de design |
 | REQ-29.4 | Cobertura `Cubre:` | Cada requisito de la delta, al menos una tarea |
-| REQ-29.5 | Bug sin delta en ISO | El requisito citado existe y tiene escenarios |
+| REQ-29.5 | Bug con requisito existente en ISO | El requisito citado existe y tiene escenarios |
 | REQ-29.6 | Matriz de verify: forma y completitud | Una fila por escenario afectado, sin líneas `verdict:` |
 | REQ-29.7 | Filas automáticas contrastables | La referencia resuelve a un símbolo del árbol; comando y código de salida registrados |
 | REQ-29.8 | Filas manuales justificadas | Quién, cuándo y por qué no se automatiza |
 | REQ-29.9 | Trazabilidad por `--first-parent` | Independiente de squash, merge y rebase; con la rama `-archive` |
+| REQ-29.19 | Bug sin impacto en la spec en ISO | El motivo es la evidencia; matriz vacía válida; sin `Cubre:` |
 
 El bloqueo del archivado por la matriz es el REQ-29.11 de `sdd-archive-lifecycle`, y la regla de al menos un escenario por requisito es el REQ-29.10 de esa misma capacidad.
 
@@ -58,7 +61,7 @@ El bloqueo del archivado por la matriz es el REQ-29.11 de `sdd-archive-lifecycle
 
 ### Requirement: Declaración ISO Opcional por Proyecto y Comportamiento sin Ella (REQ-29.1)
 
-`axiom.yaml` PUEDE declarar el modo ISO del proyecto en un bloque nuevo de primer nivel `sdd:` con una única clave, `iso` (booleano; el tipo definitivo lo fija el diseño), distinto de `workflow:` y de `baseline:`, que NO se modifican. El bloque `sdd:` se decodifica de forma estricta por lista cerrada de claves, con el mismo patrón que `workflow:` (REQ-27.1 de `workspace-topology`): una clave desconocida dentro de `sdd:`, un valor no admitido de `iso` y un `sdd:` que no sea un mapa (incluido el nulo) DEBEN reportarse como error accionable que nombre la clave o el valor y los admitidos, tanto al cargar la configuración como en `axiom workspace validate`, con mensajes en español y código de salida `1`. La opción es admisible en toda topología. La declaración es por proyecto, nunca por cambio: nadie elige ISO para un cambio concreto, para no mezclar dos reglas de evidencia en un mismo proyecto auditado. `axiom sdd kickoff seal` copia el valor del proyecto en el `kickoff.yaml` del cambio (REQ-29.13) y, desde entonces, el cambio es ISO o no ISO según esa instantánea, no según `axiom.yaml` en vivo. Con el cambio sellado como ISO se activan, a la vez, las reglas de REQ-29.3 a REQ-29.9, la regla de escenarios de REQ-29.10 y el bloqueo del archivado de REQ-29.11. En un cambio no ISO (sellado sin `iso`, o sin instantánea), ninguna de esas reglas DEBE bloquear: un cambio no ISO DEBE recorrer `continuous` y `checkpointed` con las mismas compuertas y paradas que antes de este cambio, y DEBE archivar con un `verify-report.md` libre o ausente. Ser un cambio ISO NO DEBE modificar el ritmo sellado, las compuertas `spec`, `design`, `tasks`, `role-apply:<rol>` e `integration`, las paradas de tres salidas ni el modo de archivado. Una declaración inválida DEBE fallar cerrada (REQ-24.18 de `spec-baseline-declaration`), también al sellar: nunca se degrada a «cambio no ISO». La validación de la declaración NO DEBE fallar por documentos de la baseline sin identidad `id`: esa comprobación pertenece al estado del cambio (REQ-29.3). Un binario anterior a este cambio ignora el bloque `sdd:` como cualquier clave de primer nivel desconocida (REQ-24.17 de `spec-baseline-declaration`) y trata el cambio como no ISO: la declaración solo tiene efecto con el binario que la implementa. Un `axiom.yaml` sin el bloque `sdd:` se valida exactamente como antes de este cambio.
+`axiom.yaml` PUEDE declarar el modo ISO del proyecto en un bloque nuevo de primer nivel `sdd:` con una única clave, `iso` (booleano: `true` o `false`), distinto de `workflow:`, cuyo bloque, claves y valores (`workflow.lane` admite `odd`, `sdd` y `ask`, y toma `sdd` por defecto) NO se modifican. El bloque `sdd:` se decodifica de forma estricta por lista cerrada de claves, con el mismo patrón que `workflow:` (REQ-27.1 de `workspace-topology`): una clave desconocida dentro de `sdd:`, un valor no admitido de `iso` y un `sdd:` que no sea un mapa (incluido el nulo) DEBEN reportarse como error accionable que nombre la clave o el valor y los admitidos, tanto al cargar la configuración como en `axiom workspace validate`, con mensajes en español y código de salida `1`. La opción es admisible en toda topología. **Validación cruzada con `workflow:`:** un `axiom.yaml` que declara a la vez `sdd.iso: true` y `workflow.lane: odd` es una declaración contradictoria, porque un proyecto ISO tramita todo el trabajo por el carril SDD (REQ-29.18 de `organic-agent-trigger-rules`), y DEBE reportarse como error accionable, tanto al cargar la configuración como en `axiom workspace validate`, con mensaje en español y código de salida `1`. El mensaje DEBE nombrar las dos claves (`sdd.iso` y `workflow.lane`) y la corrección: retirar `workflow.lane: odd` (o fijarlo en `sdd`) o retirar `iso` (o ponerlo en `false`). Es una regla nueva entre dos bloques ya válidos por separado: NO cambia la decodificación de `workflow:` ni sus valores admitidos (REQ-27.1 de `workspace-topology` queda como está, sin MODIFIED), y solo rechaza la combinación `iso: true` con `lane: odd`. Son combinaciones válidas: `iso: true` con `workflow.lane: sdd`, `iso: true` con `workflow.lane: ask` (la doctrina de REQ-29.18 no formula entonces la pregunta de carril), `iso: true` sin `workflow.lane` o sin bloque `workflow:` (el carril por defecto es `sdd`), e `iso: false` o sin `sdd:` con cualquier `workflow.lane`, incluido `odd`. La declaración es por proyecto, nunca por cambio: nadie elige ISO para un cambio concreto, para no mezclar dos reglas de evidencia en un mismo proyecto auditado. `axiom sdd kickoff seal` copia el valor del proyecto en el `kickoff.yaml` del cambio (REQ-29.13) y, desde entonces, el cambio es ISO o no ISO según esa instantánea, no según `axiom.yaml` en vivo. Con el cambio sellado como ISO se activan, a la vez, las reglas de REQ-29.3 a REQ-29.9 y de REQ-29.19, la regla de escenarios de REQ-29.10 y el bloqueo del archivado de REQ-29.11. En un cambio no ISO (sellado sin `iso`, o sin instantánea), ninguna de esas reglas DEBE bloquear: un cambio no ISO DEBE recorrer `continuous` y `checkpointed` con las mismas compuertas y paradas que antes de este cambio, y DEBE archivar con un `verify-report.md` libre o ausente. Ser un cambio ISO NO DEBE modificar el ritmo sellado, las compuertas `spec`, `design`, `tasks`, `role-apply:<rol>` e `integration`, las paradas de tres salidas ni el modo de archivado. Una declaración inválida, incluida la contradictoria de la validación cruzada, DEBE fallar cerrada, también al sellar: nunca se degrada a «cambio no ISO». Un binario anterior a este cambio ignora el bloque `sdd:` como cualquier clave de primer nivel desconocida y trata el cambio como no ISO: la declaración solo tiene efecto con el binario que la implementa. Un `axiom.yaml` sin el bloque `sdd:` se valida exactamente como antes de este cambio.
 
 #### Scenario: Bloque `sdd:` válido con `iso`
 
@@ -70,7 +73,7 @@ El bloqueo del archivado por la matriz es el REQ-29.11 de `sdd-archive-lifecycle
 
 - **DADO** un cambio no ISO sellado `continuous`
 - **CUANDO** el cambio recorre `spec`, `design`, `tasks`, `apply`, `verify` y `archive` con un `verify-report.md` libre
-- **ENTONCES** `axiom sdd status` no proyecta ningún motivo de bloqueo de REQ-29.3 a REQ-29.11
+- **ENTONCES** `axiom sdd status` no proyecta ningún motivo de bloqueo de REQ-29.3 a REQ-29.11 ni de REQ-29.19
 - **Y** las fases se encadenan sin ninguna parada, como antes de este cambio
 
 #### Scenario: Un cambio no ISO recorre `checkpointed` con las mismas compuertas
@@ -117,17 +120,53 @@ El bloqueo del archivado por la matriz es el REQ-29.11 de `sdd-archive-lifecycle
 - **Y** el cambio NO se trata como no ISO
 - **Y** el sellado se rechaza sin escribir `kickoff.yaml`
 
-#### Scenario: `workflow:` y `baseline:` no cambian
+#### Scenario: `iso: true` con `workflow.lane: odd` es una declaración contradictoria
 
-- **DADO** un `axiom.yaml` con `workflow: {lane: odd}`, `baseline:` válida y `sdd:` válido
-- **CUANDO** se carga la configuración
-- **ENTONCES** `workflow` y `baseline` se resuelven exactamente igual que sin el bloque `sdd:`
-
-#### Scenario: Documentos sin identidad `id` no invalidan la declaración
-
-- **DADO** un `axiom.yaml` con `sdd: {iso: true}` y un documento de baseline con `identity: text`
+- **DADO** un `axiom.yaml` con `sdd: {iso: true}` y `workflow: {lane: odd}`
 - **CUANDO** se ejecuta `axiom workspace validate`
-- **ENTONCES** no se reporta error por esa identidad
+- **ENTONCES** se reporta en español un error que nombra `sdd.iso` y `workflow.lane`
+- **Y** indica la corrección: retirar `workflow.lane: odd` o retirar `iso`
+- **Y** el código de salida es `1`
+
+#### Scenario: La contradicción se reporta también al cargar la configuración
+
+- **DADO** el mismo `axiom.yaml` con `sdd: {iso: true}` y `workflow: {lane: odd}`
+- **CUANDO** se carga la configuración (por ejemplo, con `axiom sdd status`)
+- **ENTONCES** la carga reporta el mismo error accionable, con las dos claves y la corrección
+- **Y** no asume «no ISO» ni carril `odd`
+
+#### Scenario: La declaración contradictoria falla cerrada al sellar
+
+- **DADO** un `axiom.yaml` con `sdd: {iso: true}` y `workflow: {lane: odd}`
+- **CUANDO** se ejecuta `axiom sdd kickoff seal` sobre un cambio de ese proyecto
+- **ENTONCES** el sellado se rechaza con el error de la contradicción
+- **Y** NO se escribe `kickoff.yaml`
+
+#### Scenario: `iso: true` con `workflow.lane: sdd` o sin carril declarado es válido
+
+- **DADO** un `axiom.yaml` con `sdd: {iso: true}` y `workflow: {lane: sdd}`, y otro con `sdd: {iso: true}` sin `workflow.lane` o sin bloque `workflow:`
+- **CUANDO** se ejecuta `axiom workspace validate`
+- **ENTONCES** no se reporta ningún error por la combinación en ninguno de los dos
+- **Y** el carril efectivo es `sdd`
+
+#### Scenario: `iso: true` con `workflow.lane: ask` es válido
+
+- **DADO** un `axiom.yaml` con `sdd: {iso: true}` y `workflow: {lane: ask}`
+- **CUANDO** se ejecuta `axiom workspace validate`
+- **ENTONCES** no se reporta ningún error por la combinación
+
+#### Scenario: `iso: false` con `workflow.lane: odd` es válido
+
+- **DADO** un `axiom.yaml` con `sdd: {iso: false}` y `workflow: {lane: odd}`, y otro con `workflow: {lane: odd}` sin bloque `sdd:`
+- **CUANDO** se ejecuta `axiom workspace validate`
+- **ENTONCES** no se reporta ningún error por la combinación en ninguno de los dos
+
+#### Scenario: `workflow:` no cambia
+
+- **DADO** un `axiom.yaml` con `workflow: {lane: odd}` y `sdd: {iso: false}`
+- **CUANDO** se carga la configuración
+- **ENTONCES** `workflow` se resuelve exactamente igual que sin el bloque `sdd:`
+- **Y** el bloque `workflow:` y sus valores admitidos (`odd`, `sdd`, `ask`) no cambian por la validación cruzada
 
 #### Scenario: Un binario anterior ignora el bloque `sdd:`
 
@@ -146,7 +185,7 @@ El bloqueo del archivado por la matriz es el REQ-29.11 de `sdd-archive-lifecycle
 
 ### Requirement: Proyección Aditiva de `sdd.iso` en el Status v2 (REQ-29.2)
 
-`axiom sdd status` DEBE proyectar de forma aditiva, sin que ninguna skill ni orquestador tenga que parsear `axiom.yaml`: (a) el valor vigente del proyecto (si declara ISO), que usa el orquestador antes de que exista un cambio (por ejemplo, para tramitar un bug, REQ-29.18), y (b) el valor efectivo del cambio consultado, leído de su instantánea en `kickoff.yaml` (REQ-29.13 de `sdd-lane-kickoff`): si el cambio es ISO. La proyección va junto a la de `workflow` (REQ-27.2 de `axiom-sdd-cli-integration`) y con o sin cambio seleccionado. Cuando el valor sellado del cambio difiere del vigente del proyecto, el status DEBE emitir la nota no bloqueante de REQ-29.13. Un cambio sin instantánea se proyecta como no ISO. Con un `sdd:` inválido, el status DEBE proyectar la declaración como inválida en lugar de asumir el valor por defecto. Los nombres de las claves proyectadas los fija el diseño. Ninguna clave existente del status v2 DEBE cambiar de nombre, tipo ni valor (REQ-24.20 de `spec-baseline-declaration`). Sin el bloque `sdd:`, las claves nuevas indican «no ISO», o se omiten, de modo que un consumidor anterior no observa diferencia. El contrato publicado (`sdd-status-contract.md`) DEBE documentar la proyección.
+`axiom sdd status` DEBE proyectar de forma aditiva, sin que ninguna skill ni orquestador tenga que parsear `axiom.yaml`: (a) el valor vigente del proyecto (si declara ISO), que usa el orquestador antes de que exista un cambio (por ejemplo, para elegir el carril SDD y tramitar un bug con el perfil de bug, REQ-29.18), y (b) el valor efectivo del cambio consultado, leído de su instantánea en `kickoff.yaml` (REQ-29.13 de `sdd-lane-kickoff`): si el cambio es ISO. La proyección va junto a la de `workflow` (REQ-27.2 de `axiom-sdd-cli-integration`) y con o sin cambio seleccionado. Cuando el valor sellado del cambio difiere del vigente del proyecto, el status DEBE emitir la nota no bloqueante de REQ-29.13. Un cambio sin instantánea se proyecta como no ISO. Con un `sdd:` inválido, o contradictorio con `workflow.lane` (REQ-29.1), el status DEBE proyectar la declaración como inválida en lugar de asumir el valor por defecto. Los nombres de las claves proyectadas los fija el diseño. Ninguna clave existente del status v2 DEBE cambiar de nombre, tipo ni valor. Sin el bloque `sdd:`, las claves nuevas indican «no ISO», o se omiten, de modo que un consumidor anterior no observa diferencia. El contrato publicado (`sdd-status-contract.md`) DEBE documentar la proyección.
 
 #### Scenario: El status proyecta el cambio ISO
 
@@ -181,6 +220,13 @@ El bloqueo del archivado por la matriz es el REQ-29.11 de `sdd-archive-lifecycle
 - **ENTONCES** el status proyecta la declaración como inválida
 - **Y** no asume «no ISO»
 
+#### Scenario: Una declaración contradictoria con `workflow.lane` se proyecta como inválida
+
+- **DADO** un `axiom.yaml` con `sdd: {iso: true}` y `workflow: {lane: odd}`
+- **CUANDO** se ejecuta `axiom sdd status --json`
+- **ENTONCES** el status proyecta la declaración como inválida, con el error de REQ-29.1
+- **Y** no asume «no ISO»
+
 #### Scenario: Sin el bloque un consumidor anterior no ve diferencia
 
 - **DADO** un `axiom.yaml` sin `sdd:`
@@ -195,60 +241,114 @@ El bloqueo del archivado por la matriz es el REQ-29.11 de `sdd-archive-lifecycle
 
 ---
 
-### Requirement: Identidad Estable `id` en los Documentos de Baseline Afectados (REQ-29.3)
+### Requirement: Identificador `REQ-<n>.<m>` en el Nombre de los Requisitos de la Delta (REQ-29.3)
 
-En un cambio ISO con baseline declarada (`baseline:`), todo documento de la baseline afectado por una delta del cambio DEBE tener un perfil de requisito cuya identidad efectiva sea `id` (declarada o por omisión, REQ-24.15 de `spec-baseline-declaration`). La baseline implícita `openspec/specs/` cuenta como identidad `id`: la comprobación NO se aplica cuando `axiom.yaml` no declara `baseline:`, y en ella el identificador de un requisito es el `REQ-<n>.<m>` que contiene su nombre (supuesto visible). La comprobación DEBE hacerse en el estado del cambio, una vez escrita la delta y antes de habilitar la fase `design`. Un documento afectado de una baseline declarada, sin perfil de requisito o con `identity: text`, DEBE bloquear el cambio con un motivo tipado accionable que nombre el dominio, el documento y la continuación (declarar en la baseline un perfil con identidad `id`). Se admite `scenarios: omit` (REQ-24.60 de `spec-baseline-declaration`). Solo se comprueban los documentos afectados por la delta, nunca el resto de la baseline. Sin la declaración ISO, cualquier perfil es válido y esta regla NO DEBE bloquear.
+En un cambio ISO, el nombre de todo requisito de la delta (ADDED, MODIFIED, REMOVED o RENAMED) DEBE contener un identificador con la forma `REQ-<n>.<m>`, con `<n>` y `<m>` enteros decimales sin signo. Es el identificador que citan `Cubre:` (REQ-29.4), la consulta de un requisito existente (REQ-29.14 de `spec-baseline-integration`) y la matriz de verify (REQ-29.6). La baseline es `openspec/specs/`, el único formato de spec viva: no existe ninguna otra identidad que declarar, y el identificador es solo el que figura en el nombre del requisito. La comprobación DEBE hacerse en el estado del cambio, una vez escrita la delta y antes de habilitar la fase `design`, y DEBE aplicar estas reglas:
 
-#### Scenario: Documento afectado con identidad `text` bloquea antes de design
+| Caso | Regla |
+|---|---|
+| Nombre sin identificador, o con una forma que no es `REQ-<n>.<m>` | Bloquea. |
+| Nombre con más de un identificador distinto | Bloquea: es ambiguo. |
+| ADDED cuyo identificador ya existe en la baseline, o que repite el de otro ADDED de la delta | Bloquea (supuesto visible: sin identificadores únicos, `Cubre:` y la consulta del bug no resuelven sin ambigüedad). **Excepción (archivado interrumpido):** NO bloquea un ADDED cuyo identificador figura en la baseline del mismo dominio en un requisito con el mismo nombre y el mismo bloque, byte a byte (encabezado `### Requirement:` y cuerpo), que el bloque ADDED de la delta. La comparación se hace tras la única normalización que aplica el compositor (`axiom sdd archive-compose` solo asegura que el bloque termine en un salto de línea); no se normaliza nada más (espacios, finales de línea ni orden). Es el propio requisito, ya compuesto por un archivado que se interrumpió antes de mover la carpeta del cambio. Cualquier diferencia de nombre, de bloque o de dominio sigue bloqueando. |
+| MODIFIED o REMOVED | Su nombre es el del requisito existente, de modo que el identificador es el que ya contiene. Si el existente no lo contiene, bloquea. |
+| RENAMED | El nombre nuevo contiene identificador. Si el nombre antiguo también lo contiene, ambos son el mismo (supuesto visible: renombrar no cambia la identidad). Un RENAMED puede añadir el identificador a un requisito que no lo tenía. |
 
-- **DADO** un cambio ISO y una delta para el dominio `requisitos-funcionales`, cuyo documento declara `identity: text`
+Un bloqueo DEBE ser un motivo tipado accionable que nombre el dominio, la sección, el requisito y la continuación (añadir o corregir el identificador en el nombre; si el requisito ya existe sin él, añadírselo con un RENAMED de la delta). Solo se comprueban los requisitos de la delta, nunca el resto de la baseline. Sin la declaración ISO, esta regla NO DEBE bloquear.
+
+#### Scenario: Un ADDED sin identificador bloquea antes de design
+
+- **DADO** un cambio ISO y una delta con un requisito ADDED llamado `Cobro con IVA` (sin `REQ-<n>.<m>`)
 - **CUANDO** se ejecuta `axiom sdd status <cambio> --json`
-- **ENTONCES** el cambio queda bloqueado con el motivo tipado de identidad ISO
-- **Y** el motivo nombra el dominio `requisitos-funcionales`, su documento y la continuación
+- **ENTONCES** el cambio queda bloqueado con el motivo tipado de identificador
+- **Y** el motivo nombra el dominio, la sección ADDED, el requisito y la continuación
 - **Y** la fase `design` no se proyecta como siguiente
 
-#### Scenario: Documento afectado con identidad `id` no bloquea
+#### Scenario: Un nombre con identificador válido no bloquea
 
-- **DADO** un cambio ISO y una delta para un dominio cuyo documento tiene perfil con identidad `id`
+- **DADO** un cambio ISO y una delta con un ADDED `Cobro con IVA (REQ-30.1)` y un MODIFIED `Subcomando axiom sdd status (REQ-13.1)` que existe con ese nombre en la baseline
 - **CUANDO** se ejecuta `axiom sdd status <cambio> --json`
-- **ENTONCES** no se proyecta el motivo tipado de identidad ISO
+- **ENTONCES** no se proyecta el motivo tipado de identificador
 
-#### Scenario: `scenarios: omit` se admite en ISO
+#### Scenario: Un identificador mal formado no cuenta
 
-- **DADO** un cambio ISO y un documento afectado con perfil de identidad `id` y `scenarios: omit`
+- **DADO** un cambio ISO y un ADDED llamado `Cobro con IVA (REQ-30)` o `Cobro con IVA (REQ-x.1)`
 - **CUANDO** se ejecuta `axiom sdd status <cambio> --json`
-- **ENTONCES** no se proyecta el motivo tipado de identidad ISO
+- **ENTONCES** el cambio queda bloqueado con el motivo tipado de identificador
 
-#### Scenario: La baseline implícita cuenta como identidad `id` en ISO
+#### Scenario: Un nombre con dos identificadores distintos bloquea
 
-- **DADO** un cambio ISO cuyo `axiom.yaml` no declara `baseline:` y una delta para un dominio de `openspec/specs/`
+- **DADO** un cambio ISO y un ADDED llamado `Cobro y devolución (REQ-30.1, REQ-30.2)`
 - **CUANDO** se ejecuta `axiom sdd status <cambio> --json`
-- **ENTONCES** no se proyecta el motivo tipado de identidad ISO
+- **ENTONCES** el cambio queda bloqueado con el motivo tipado de identificador, que indica que el nombre es ambiguo
 
-#### Scenario: Documento afectado de una baseline declarada sin perfil de requisito bloquea en ISO
+#### Scenario: Un ADDED con un identificador que ya existe bloquea
 
-- **DADO** un cambio ISO con `baseline:` declarada y una delta para un dominio cuyo documento no declara perfil de requisito
+- **DADO** un cambio ISO y un ADDED llamado `Otro requisito (REQ-13.1)`, identificador que ya existe en la baseline
 - **CUANDO** se ejecuta `axiom sdd status <cambio> --json`
-- **ENTONCES** el cambio queda bloqueado con el motivo tipado de identidad ISO
-- **Y** la continuación indica declarar un perfil con identidad `id` en la baseline
+- **ENTONCES** el cambio queda bloqueado con el motivo tipado de identificador, que nombra `REQ-13.1`
 
-#### Scenario: Los documentos no afectados no se comprueban
+#### Scenario: Archivado interrumpido: el ADDED ya compuesto no bloquea y el archivado se completa
 
-- **DADO** un cambio ISO con dos documentos en la baseline, uno con `identity: text` sin relación con la delta
-- **CUANDO** se ejecuta `axiom sdd status <cambio> --json` para una delta que solo afecta al otro documento
-- **ENTONCES** no se proyecta el motivo tipado de identidad ISO
-
-#### Scenario: En un cambio no ISO cualquier perfil es válido
-
-- **DADO** un cambio no ISO y una delta para un documento con `identity: text`
+- **DADO** un cambio ISO con un ADDED `Cobro con IVA (REQ-30.1)` en el dominio `pagos`, cuyo archivado se interrumpió después de componerlo en `openspec/specs/pagos/spec.md` y antes de mover la carpeta del cambio, de modo que la baseline contiene un requisito con el mismo nombre y el mismo bloque, byte a byte, que el ADDED
 - **CUANDO** se ejecuta `axiom sdd status <cambio> --json`
-- **ENTONCES** no se proyecta ningún motivo de identidad ISO
+- **ENTONCES** no se proyecta el motivo tipado de identificador
+- **Y** la ruta no vuelve a `spec`
+- **Y** el archivado se reanuda y se completa sin modificar la delta
+
+#### Scenario: El mismo identificador con un bloque distinto sigue bloqueando
+
+- **DADO** un cambio ISO con un ADDED `Cobro con IVA (REQ-30.1)` en el dominio `pagos` y una baseline cuyo `openspec/specs/pagos/spec.md` ya contiene un requisito con el mismo nombre e identificador pero con un bloque que difiere en cualquier byte del ADDED (por ejemplo, un escenario más, otro texto o un espacio distinto)
+- **CUANDO** se ejecuta `axiom sdd status <cambio> --json`
+- **ENTONCES** el cambio queda bloqueado con el motivo tipado de identificador, que nombra `REQ-30.1`
+
+#### Scenario: Dos ADDED con el mismo identificador bloquean
+
+- **DADO** un cambio ISO con dos ADDED, en el mismo dominio o en dominios distintos, ambos con `REQ-30.1`
+- **CUANDO** se ejecuta `axiom sdd status <cambio> --json`
+- **ENTONCES** el cambio queda bloqueado con el motivo tipado de identificador, que nombra `REQ-30.1` y los dos requisitos
+
+#### Scenario: Un RENAMED que conserva el identificador no bloquea
+
+- **DADO** un cambio ISO y un RENAMED de `Cobro (REQ-30.1)` a `Cobro con IVA (REQ-30.1)`
+- **CUANDO** se ejecuta `axiom sdd status <cambio> --json`
+- **ENTONCES** no se proyecta el motivo tipado de identificador
+
+#### Scenario: Un RENAMED que cambia el identificador bloquea
+
+- **DADO** un cambio ISO y un RENAMED de `Cobro (REQ-30.1)` a `Cobro con IVA (REQ-30.2)`
+- **CUANDO** se ejecuta `axiom sdd status <cambio> --json`
+- **ENTONCES** el cambio queda bloqueado con el motivo tipado de identificador, que nombra los dos identificadores
+
+#### Scenario: Un RENAMED puede añadir el identificador a un requisito que no lo tenía
+
+- **DADO** un cambio ISO y un RENAMED de `Cobro` (sin identificador, existente en la baseline) a `Cobro (REQ-30.3)`
+- **CUANDO** se ejecuta `axiom sdd status <cambio> --json`
+- **ENTONCES** no se proyecta el motivo tipado de identificador
+
+#### Scenario: Un MODIFIED de un requisito existente sin identificador bloquea con la continuación del RENAMED
+
+- **DADO** un cambio ISO y un MODIFIED de un requisito existente cuyo nombre no contiene `REQ-<n>.<m>`
+- **CUANDO** se ejecuta `axiom sdd status <cambio> --json`
+- **ENTONCES** el cambio queda bloqueado con el motivo tipado de identificador
+- **Y** la continuación indica añadir el identificador al nombre con un RENAMED de la delta
+
+#### Scenario: Los requisitos que la delta no toca no se comprueban
+
+- **DADO** un cambio ISO y una baseline con un requisito existente sin identificador que la delta no menciona
+- **CUANDO** se ejecuta `axiom sdd status <cambio> --json`
+- **ENTONCES** no se proyecta el motivo tipado de identificador
+
+#### Scenario: En un cambio no ISO el identificador no se exige
+
+- **DADO** un cambio no ISO y un ADDED llamado `Cobro con IVA` (sin identificador)
+- **CUANDO** se ejecuta `axiom sdd status <cambio> --json`
+- **ENTONCES** no se proyecta ningún motivo de identificador
 
 ---
 
 ### Requirement: Cobertura `Cubre:` de los Requisitos de la Delta (REQ-29.4)
 
-En un cambio ISO, cada tarea de `tasks.md` o de `tasks.<rol>.md` DEBE poder declarar los requisitos que cubre con una línea `Cubre: REQ-x[, REQ-y ...]`. En la baseline implícita el identificador citado es el `REQ-<n>.<m>` del nombre del requisito (REQ-29.3). El motor DEBE analizar esas líneas en todos los ficheros de tareas del cambio y validar la cobertura conjunta, en cuanto existan los ficheros de tareas: cada requisito de la delta (ADDED por su ID provisional, y MODIFIED, REMOVED y RENAMED por su ID existente) DEBE aparecer en al menos un `Cubre:` del conjunto de ficheros. Un requisito de la delta sin cobertura DEBE bloquear con un motivo tipado que lo nombre. Un identificador de `Cubre:` que no existe ni en la delta ni en la baseline DEBE bloquear con un motivo tipado que lo nombre; uno que existe en la baseline pero no en la delta se admite y no cuenta para la cobertura. Fuera de ISO, `Cubre:` es informativo y opcional y NUNCA DEBE bloquear.
+En un cambio ISO, cada tarea de `tasks.md` o de `tasks.<rol>.md` DEBE poder declarar los requisitos que cubre con una línea `Cubre: REQ-x[, REQ-y ...]`. El identificador citado es el `REQ-<n>.<m>` del nombre del requisito (REQ-29.3). El motor DEBE analizar esas líneas en todos los ficheros de tareas del cambio y validar la cobertura conjunta, en cuanto existan los ficheros de tareas: cada requisito de la delta (identificado por el `REQ-<n>.<m>` de su nombre; en un RENAMED, el de su nombre nuevo) DEBE aparecer en al menos un `Cubre:` del conjunto de ficheros. Un requisito de la delta sin cobertura DEBE bloquear con un motivo tipado que lo nombre. Un identificador de `Cubre:` que no existe ni en la delta ni en la baseline DEBE bloquear con un motivo tipado que lo nombre; uno que existe en la baseline pero no en la delta se admite y no cuenta para la cobertura. Fuera de ISO, `Cubre:` es informativo y opcional y NUNCA DEBE bloquear.
 
 #### Scenario: Un requisito de la delta sin tarea que lo cubra bloquea
 
@@ -295,9 +395,9 @@ En un cambio ISO, cada tarea de `tasks.md` o de `tasks.<rol>.md` DEBE poder decl
 
 ---
 
-### Requirement: Bug sin Delta en un Cambio ISO: el Requisito Citado Existe y Tiene Escenarios (REQ-29.5)
+### Requirement: Bug con Requisito Existente en un Cambio ISO: el Requisito Citado Existe y Tiene Escenarios (REQ-29.5)
 
-En un cambio ISO declarado como bug sin delta (REQ-29.15 de `axiom-sdd-cli-integration`), el motor DEBE comprobar que el cambio cita, en los `Cubre:` de sus tareas, al menos un requisito, y que todo requisito citado existe en la baseline, con la consulta de REQ-29.14 de `spec-baseline-integration`. Un `Cubre:` que apunta a un requisito inexistente DEBE bloquear con un motivo tipado que nombre el identificador; un bug sin delta cuyas tareas no citan ningún requisito DEBE bloquear con un motivo tipado que lo indique. Los escenarios del requisito existente citado son los escenarios afectados de ese cambio: la matriz de verify (REQ-29.6) DEBE tener una fila por cada uno. Si el requisito citado existe pero no tiene ningún escenario, el cambio DEBE bloquear con un motivo tipado que lo nombre, porque no hay nada que verificar; la continuación es tramitar el trabajo como un cambio normal con delta que añada los escenarios, ya que el requisito estaba mal especificado. Fuera de ISO, un bug sin delta queda preparado con la sola declaración y esta comprobación NO DEBE bloquear.
+En un cambio ISO declarado como bug sin delta y sin la marca `Sin impacto en la spec` (bug con requisito existente, REQ-29.15 de `axiom-sdd-cli-integration`), el motor DEBE comprobar que el cambio cita, en los `Cubre:` de sus tareas, al menos un requisito, y que todo requisito citado existe en la baseline, con la consulta de REQ-29.14 de `spec-baseline-integration`. Un `Cubre:` que apunta a un requisito inexistente DEBE bloquear con un motivo tipado que nombre el identificador; un bug sin delta cuyas tareas no citan ningún requisito DEBE bloquear con un motivo tipado que lo indique. Los escenarios del requisito existente citado son los escenarios afectados de ese cambio: la matriz de verify (REQ-29.6) DEBE tener una fila por cada uno. Si el requisito citado existe pero no tiene ningún escenario, el cambio DEBE bloquear con un motivo tipado que lo nombre, porque no hay nada que verificar; la continuación es tramitar el trabajo como un cambio normal con delta que añada los escenarios, ya que el requisito estaba mal especificado. Un bug con la marca `Sin impacto en la spec` no cita ningún requisito y se rige por REQ-29.19, no por esta regla. Fuera de ISO, un bug sin delta queda preparado con la sola declaración y esta comprobación NO DEBE bloquear.
 
 #### Scenario: Un bug sin delta con `Cubre:` a un requisito inexistente bloquea en ISO
 
@@ -313,7 +413,7 @@ En un cambio ISO declarado como bug sin delta (REQ-29.15 de `axiom-sdd-cli-integ
 
 #### Scenario: Un bug sin delta sin ningún `Cubre:` bloquea en ISO
 
-- **DADO** un cambio ISO declarado como bug sin delta cuyas tareas no contienen `Cubre:`
+- **DADO** un cambio ISO declarado como bug sin delta, sin la marca `Sin impacto en la spec`, cuyas tareas no contienen `Cubre:`
 - **CUANDO** se ejecuta `axiom sdd status <cambio> --json`
 - **ENTONCES** el cambio queda bloqueado con un motivo tipado que indica que ningún requisito existente está citado
 
@@ -341,7 +441,7 @@ En un cambio ISO declarado como bug sin delta (REQ-29.15 de `axiom-sdd-cli-integ
 
 ### Requirement: Matriz de Verify con una Fila por Escenario, Dentro del Informe de Verify (REQ-29.6)
 
-En un cambio ISO, el `verify-report.md` del cambio (el consolidado, en un cambio con varios roles; el mismo informe del rol, con el rol único `fullstack`) DEBE contener, como una sección adicional, una matriz tabular con **una fila por cada escenario afectado** y, por fila: requisito, escenario, tipo (`unitario`, `integración`, `e2e` o `manual`), referencia, resultado (`pass` o `fail`) y commit. La columna commit es opcional e informativa: el motor NO DEBE validarla contra git. La distribución exacta en columnas la fija el diseño. La matriz es una sección más del informe de REQ-28.4 de `sdd-independent-review`: NO sustituye a la sección «Cumplimiento técnico», NO DEBE escribir ninguna línea que empiece por `verdict:` (la barrera de sincronización lee la primera línea de ese tipo y su significado sigue siendo funcional) y NO altera el carácter informativo de las revisiones. Los informes por rol (`verify-report.<rol>.md`) NO necesitan matriz ni se validan. El motor DEBE validar que: (a) todo escenario afectado tiene fila; (b) ninguna fila apunta a un escenario o a un requisito que no figura entre los afectados (supuesto visible: invalida la matriz); (c) ningún escenario tiene más de una fila; (d) todo resultado es `pass` o `fail`; (e) las filas automáticas cumplen REQ-29.7 y las manuales REQ-29.8. Una matriz ausente cuenta como inválida. Una matriz válida es la que cumple (a) a (e); que sea **de éxito** exige además que ninguna fila tenga resultado `fail`. Cuando el informe conserva contenido de verificaciones anteriores como contexto histórico (REQ-28.8 de `sdd-independent-review`), solo la matriz del contenido vigente se valida. Los escenarios se identifican por el par (requisito, nombre del escenario): si un requisito repite el nombre de un escenario, el motor DEBE reportarlo con un motivo tipado que nombre el requisito y el escenario. Fuera de un cambio ISO, `verify-report.md` NO cambia de formato ni se valida más allá de lo que ya se valida.
+En un cambio ISO, el `verify-report.md` del cambio (el consolidado, en un cambio con varios roles; el mismo informe del rol, con el rol único `fullstack`) DEBE contener, como una sección adicional, una matriz tabular con **una fila por cada escenario afectado** y, por fila: requisito, escenario, tipo (`unitario`, `integración`, `e2e` o `manual`), referencia, resultado (`pass` o `fail`) y commit. La columna commit es opcional e informativa: el motor NO DEBE validarla contra git. La distribución exacta en columnas la fija el diseño. La matriz es una sección más del informe de REQ-28.4 de `sdd-independent-review`: NO sustituye a la sección «Cumplimiento técnico», NO DEBE escribir ninguna línea que empiece por `verdict:` (la barrera de sincronización lee la primera línea de ese tipo y su significado sigue siendo funcional) y NO altera el carácter informativo de las revisiones. Los informes por rol (`verify-report.<rol>.md`) NO necesitan matriz ni se validan. El motor DEBE validar que: (a) todo escenario afectado tiene fila; (b) ninguna fila apunta a un escenario o a un requisito que no figura entre los afectados (supuesto visible: invalida la matriz); (c) ningún escenario tiene más de una fila; (d) todo resultado es `pass` o `fail`; (e) las filas automáticas cumplen REQ-29.7 y las manuales REQ-29.8. Una matriz ausente cuenta como inválida, salvo en un bug sin impacto en la spec, que no tiene escenarios afectados (REQ-29.19). Una matriz válida es la que cumple (a) a (e); que sea **de éxito** exige además que ninguna fila tenga resultado `fail`. Cuando el informe conserva contenido de verificaciones anteriores como contexto histórico (REQ-28.8 de `sdd-independent-review`), solo la matriz del contenido vigente se valida. Los escenarios se identifican por el par (requisito, nombre del escenario): si un requisito repite el nombre de un escenario, el motor DEBE reportarlo con un motivo tipado que nombre el requisito y el escenario. Fuera de un cambio ISO, `verify-report.md` NO cambia de formato ni se valida más allá de lo que ya se valida.
 
 #### Scenario: Matriz completa y válida
 
@@ -543,7 +643,7 @@ En un cambio ISO, toda fila manual (tipo `manual`) DEBE justificar la evidencia 
 
 ### Requirement: Trazabilidad por `git log --first-parent` Independiente de la Estrategia de Fusión y Compatible con la Rama `-archive` (REQ-29.9)
 
-Para un cambio ISO archivado por la rama `<prefijo>/<cambio>-archive` (`monorepo-embedded`), Axiom DEBE poder derivar, con `git log --first-parent <rama de integración>` y sin ningún estado persistido nuevo, dos commits de la línea principal: (a) el **commit de integración del código**, el primero que incorpora la carpeta `openspec/changes/<cambio>/` con sus `tasks.md` y `verify-report.md`; y (b) el **commit de archivado**, el primero que incorpora `openspec/changes/archive/<fecha>-<cambio>/`. La derivación DEBE dar el mismo resultado con fusión por squash, por commit de merge y por rebase, tanto para el PR del cambio como para el PR documental del archivado. Cuando la compuerta `integration` registra evidencia `pr_merged` con un commit (`internal/kickoff`), el commit de código derivado DEBE contrastarse con ella: DEBE ser ese commit o un ancestro suyo en la línea principal, y una discrepancia se informa sin error de ejecución. DEBE reutilizar la traza de integración existente (`integration.yaml` y la asignación de IDs, que relaciona el ID provisional con el definitivo) y NO DEBE introducir estado persistido nuevo. La cadena requisito definitivo → ID provisional → `Cubre:` de las tareas archivadas → fila de la matriz del informe archivado → commit de integración del código → commit de archivado DEBE poder reconstruirse a partir de los artefactos archivados y del historial de la rama principal. Los trailers de los commits intermedios son informativos y NUNCA se validan. Si la carpeta archivada, o la carpeta del cambio, no existe todavía en la rama principal, la derivación DEBE informar de la ausencia del commit correspondiente sin error de ejecución. En `multirepo` la derivación no se especifica en este cambio (supuesto visible).
+Para un cambio ISO archivado por la rama `<prefijo>/<cambio>-archive` (`monorepo-embedded`), Axiom DEBE poder derivar, con `git log --first-parent <rama de integración>` y sin ningún estado persistido nuevo, dos commits de la línea principal: (a) el **commit de integración del código**, el primero que incorpora la carpeta `openspec/changes/<cambio>/` con sus `tasks.md` y `verify-report.md`; y (b) el **commit de archivado**, el primero que incorpora `openspec/changes/archive/<fecha>-<cambio>/`. La derivación DEBE dar el mismo resultado con fusión por squash, por commit de merge y por rebase, tanto para el PR del cambio como para el PR documental del archivado. Cuando la compuerta `integration` registra evidencia `pr_merged` con un commit (`internal/kickoff`), el commit de código derivado DEBE contrastarse con ella: DEBE ser ese commit o un ancestro suyo en la línea principal, y una discrepancia se informa sin error de ejecución. NO DEBE introducir estado persistido nuevo ni depender de ninguna traza de integración de IDs: el identificador de un requisito es el `REQ-<n>.<m>` de su nombre, elegido por quien redacta la delta, y no hay ID provisional ni definitivo (supuesto visible). La cadena requisito (`REQ-<n>.<m>`) → `Cubre:` de las tareas archivadas → fila de la matriz del informe archivado → commit de integración del código → commit de archivado DEBE poder reconstruirse a partir de los artefactos archivados y del historial de la rama principal. Los trailers de los commits intermedios son informativos y NUNCA se validan. Si la carpeta archivada, o la carpeta del cambio, no existe todavía en la rama principal, la derivación DEBE informar de la ausencia del commit correspondiente sin error de ejecución. En `multirepo` la derivación no se especifica en este cambio (supuesto visible).
 
 #### Scenario: Cambio fusionado por squash
 
@@ -604,8 +704,59 @@ Para un cambio ISO archivado por la rama `<prefijo>/<cambio>-archive` (`monorepo
 - **CUANDO** se derivan los dos commits
 - **ENTONCES** no se escribe ningún fichero nuevo de estado en la carpeta del cambio ni en el repositorio
 
-#### Scenario: Un ID provisional se enlaza con el definitivo por la traza existente
+---
 
-- **DADO** un cambio ISO con baseline declarada y `identity: id`, archivado, cuyo requisito ADDED `RF-9001` se archivó con el ID definitivo `RF-142` y la entrada correspondiente de `integration.yaml`
-- **CUANDO** se reconstruye la cadena desde `RF-142`
-- **ENTONCES** se llega a `RF-9001`, a su `Cubre:` en las tareas archivadas y a su fila de la matriz
+### Requirement: Bug sin Impacto en la Spec en un Cambio ISO: el Motivo es la Evidencia (REQ-29.19)
+
+Un cambio ISO declarado como bug sin impacto en la spec (REQ-29.15 de `axiom-sdd-cli-integration`: `## Informe de bug` más `## Impacto en la spec` con la línea literal `Sin impacto en la spec` y `Motivo:`) no toca ningún requisito, de modo que no tiene escenarios afectados (término «Escenario afectado»). En un cambio ISO el motor DEBE aplicarle estas reglas, y ninguna otra de REQ-29.3 a REQ-29.9 le exige evidencia adicional:
+
+| Aspecto | Regla |
+|---|---|
+| Evidencia | La línea `Motivo:` no vacía es la evidencia. No se crea ningún tipo de fila nuevo en la matriz. |
+| Matriz de verify | No se exige: la matriz ausente, o presente sin ninguna fila, es válida y de éxito, porque no hay escenarios afectados. Una fila que apunte a cualquier escenario invalida la matriz, por REQ-29.6 (b): ningún escenario figura entre los afectados. |
+| `Cubre:` | Ninguna tarea PUEDE contener `Cubre:`. Un `Cubre:` es una declaración contradictoria con la marca y DEBE bloquear con un motivo tipado que nombre el fichero de tareas y el requisito citado. La continuación es retirar el `Cubre:` (el bug no toca ningún requisito) o retirar la marca y tramitarlo como bug con requisito existente (REQ-29.5). |
+| Cobertura de la delta | No hay delta, así que REQ-29.4 no exige cobertura. |
+| Archivado | No integra nada en la baseline (REQ-29.15). El bloqueo por matriz de REQ-29.11 no se aplica porque la matriz es válida y de éxito. |
+
+Fuera de un cambio ISO esta regla NO DEBE bloquear: la marca se acepta en todo proyecto (REQ-29.15) y un `Cubre:` es informativo (REQ-29.4), de modo que no se proyecta ningún motivo.
+
+#### Scenario: El motivo es la única evidencia que exige ISO
+
+- **DADO** un cambio ISO declarado como bug sin impacto en la spec, con `Motivo: el defecto estaba en el script de despliegue, no en un requisito`, sin delta, sin `Cubre:` y sin `verify-report.md`
+- **CUANDO** se ejecuta `axiom sdd status <cambio> --json`
+- **ENTONCES** no se proyecta ningún motivo de identificador, cobertura, bug ni matriz
+- **Y** la dependencia `archive` no queda bloqueada por la matriz
+
+#### Scenario: Una matriz presente y vacía es válida
+
+- **DADO** un cambio ISO declarado como bug sin impacto en la spec y un `verify-report.md` con la sección de matriz sin ninguna fila
+- **CUANDO** el motor valida el `verify-report.md`
+- **ENTONCES** la matriz es válida y de éxito
+
+#### Scenario: Una fila de matriz en un bug sin impacto invalida la matriz
+
+- **DADO** un cambio ISO declarado como bug sin impacto en la spec y una matriz con una fila para el escenario `X` del requisito `REQ-13.1`
+- **CUANDO** el motor valida el `verify-report.md`
+- **ENTONCES** la matriz es inválida con un motivo tipado que nombra la fila y el escenario que no figura entre los afectados
+
+#### Scenario: Un `Cubre:` junto a la marca bloquea en ISO
+
+- **DADO** un cambio ISO declarado como bug sin impacto en la spec y una tarea con `Cubre: REQ-13.1`
+- **CUANDO** se ejecuta `axiom sdd status <cambio> --json`
+- **ENTONCES** el cambio queda bloqueado con el motivo tipado de declaración contradictoria
+- **Y** el motivo nombra el fichero de tareas y `REQ-13.1`
+- **Y** la continuación indica retirar el `Cubre:` o retirar la marca y tramitar el cambio como bug con requisito existente
+
+#### Scenario: Sin ficheros de tareas no hay contradicción que comprobar
+
+- **DADO** un cambio ISO declarado como bug sin impacto en la spec y sin `tasks.md` todavía
+- **CUANDO** se ejecuta `axiom sdd status <cambio> --json`
+- **ENTONCES** no se proyecta ningún motivo de declaración contradictoria
+- **Y** el artefacto de specs se considera cumplido (REQ-29.15)
+
+#### Scenario: Fuera de ISO un `Cubre:` junto a la marca no bloquea
+
+- **DADO** un cambio no ISO declarado como bug sin impacto en la spec y una tarea con `Cubre: REQ-13.1`
+- **CUANDO** se ejecuta `axiom sdd status <cambio> --json`
+- **ENTONCES** no se proyecta ningún motivo de bloqueo
+- **Y** el artefacto de specs sigue considerándose cumplido
