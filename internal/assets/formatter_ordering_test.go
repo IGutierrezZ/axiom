@@ -55,7 +55,18 @@ func TestRequiredChecksFailClosedWhenFormatFails(t *testing.T) {
 		needs    string
 		ifTokens []string
 	}{
-		{id: "unit-tests", next: "windows-runtime"},
+		// unit-tests is omitted on a PR that only touches planning artifacts
+		// (odd/, openspec/), so it uses !cancelled() instead of always(). A
+		// red go-format still runs it and the guard still fails it.
+		{
+			id:    "unit-tests",
+			next:  "claude-network-none",
+			needs: "[go-format, changes]",
+			ifTokens: []string{
+				"!cancelled()",
+				"needs.changes.outputs.artifacts_only != 'true'",
+			},
+		},
 		// The sharded Windows full suite is deliberately NOT here: it lives in
 		// its own workflow while the pre-existing Windows failures it exposed
 		// are paid down, so it is not one of ci.yml's required checks and owes

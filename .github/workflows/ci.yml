@@ -27,8 +27,15 @@ env:
   AXIOM_TEST_BUILD_BINARIES: "1"
 
 jobs:
+  # Este job, go-format, unit-tests y claude-network-none se omiten en un PR
+  # que solo toca artefactos de planificación (salida `artifacts_only` del job
+  # `changes`). Un job omitido cuenta como superado para un check obligatorio;
+  # un workflow filtrado por rutas, en cambio, deja el check esperando.
   opencode-v2-contracts:
     name: OpenCode V2 Released SDK Contracts
+    needs: changes
+    if: >-
+      !cancelled() && needs.changes.outputs.artifacts_only != 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout exact event candidate
@@ -47,6 +54,11 @@ jobs:
 
   go-format:
     name: Go Format
+    needs: changes
+    # `!cancelled()` y no el `success()` implícito: si `changes` falla, el
+    # formato se comprueba igualmente en lugar de omitirse.
+    if: >-
+      !cancelled() && needs.changes.outputs.artifacts_only != 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout exact event candidate
@@ -74,6 +86,15 @@ jobs:
   # Falla abierto: si no se puede calcular el diff, o la referencia anterior ya
   # no existe (rama nueva, force push), el resultado es `true`. Un cálculo roto
   # nunca debe dejar Windows sin ejecutar en silencio.
+  #
+  # Decide también `artifacts_only`: `true` solo en un PR cuyos ficheros están
+  # todos bajo `odd/` u `openspec/` (documentos ODD, cambios SDD, sus archivados
+  # y la spec viva que actualiza el archivado). Entonces se omiten las pruebas,
+  # para que corregir un estado olvidado no espere a la suite completa. Ninguna
+  # prueba lee `odd/`, y las que leen el `openspec/` real dependen de cambios
+  # archivados hace tiempo. El push a `main` nunca es `true`: tras fusionar
+  # corre la suite completa. Ante cualquier duda (diff roto, PR vacío, etiqueta
+  # `ci:windows`, que exige go-format) el resultado es `false`.
   changes:
     name: Detect Windows-relevant changes
     runs-on: ubuntu-latest
@@ -83,6 +104,7 @@ jobs:
       contents: read
     outputs:
       windows: ${{ steps.detect.outputs.windows }}
+      artifacts_only: ${{ steps.detect.outputs.artifacts_only }}
     steps:
       # Checkout por defecto, no el del candidato: en un PR es la referencia de
       # fusión del repositorio base, que contiene el SHA base y el del PR aunque
@@ -102,6 +124,7 @@ jobs:
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           PUSH_BEFORE_SHA: ${{ github.event.before }}
           PUSH_AFTER_SHA: ${{ github.sha }}
+          PR_HAS_WINDOWS_LABEL: ${{ contains(github.event.pull_request.labels.*.name, 'ci:windows') }}
         run: |
           # Un fichero justifica ejecutar Windows. El `*` de `case` también
           # cruza `/`, así que `*_windows.go` equivale a `**/*_windows.go`.
@@ -116,15 +139,26 @@ jobs:
             return 1
           }
 
+          # Un artefacto de planificación: documentos ODD y cambios SDD, activos
+          # o archivados, más la spec viva que actualiza el archivado.
+          is_planning_artifact() {
+            case "$1" in
+              odd/* | openspec/*) return 0 ;;
+            esac
+            return 1
+          }
+
           fail_open() {
-            echo "::warning::$1; running the Windows lane."
+            echo "::warning::$1; running the Windows lane and every check."
             echo 'windows=true' >> "$GITHUB_OUTPUT"
+            echo 'artifacts_only=false' >> "$GITHUB_OUTPUT"
             exit 0
           }
 
           case "$EVENT_NAME" in
             workflow_dispatch)
               echo 'windows=true' >> "$GITHUB_OUTPUT"
+              echo 'artifacts_only=false' >> "$GITHUB_OUTPUT"
               exit 0
               ;;
             pull_request)
@@ -150,20 +184,40 @@ jobs:
           fi
 
           relevant=false
+          artifacts_only=true
+          count=0
           while IFS= read -r file; do
-            if [ -n "$file" ] && is_windows_file "$file"; then
+            if [ -z "$file" ]; then
+              continue
+            fi
+            count=$((count + 1))
+            if is_windows_file "$file"; then
               echo "Windows-relevant: $file"
               relevant=true
             fi
+            if ! is_planning_artifact "$file"; then
+              artifacts_only=false
+            fi
           done <<< "$files"
 
+          # Sin ficheros nada demuestra que el PR sea solo de artefactos; fuera
+          # de un PR, o con `ci:windows`, las pruebas corren siempre.
+          if [ "$count" -eq 0 ] || [ "$EVENT_NAME" != pull_request ] || [ "$PR_HAS_WINDOWS_LABEL" = true ]; then
+            artifacts_only=false
+          fi
+
           echo "windows=$relevant" >> "$GITHUB_OUTPUT"
-          echo "Compared $range: windows=$relevant"
+          echo "artifacts_only=$artifacts_only" >> "$GITHUB_OUTPUT"
+          echo "Compared $range ($count files): windows=$relevant artifacts_only=$artifacts_only"
 
   unit-tests:
     name: Unit Tests
-    needs: go-format
-    if: always()
+    needs: [go-format, changes]
+    # `!cancelled()` en lugar de `always()` solo por la omisión de un PR de
+    # artefactos: con go-format en rojo el job sigue corriendo y su primer paso
+    # lo deja en rojo, así que un formato roto no se convierte en una omisión.
+    if: >-
+      !cancelled() && needs.changes.outputs.artifacts_only != 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Require successful Go format
@@ -383,6 +437,9 @@ jobs:
 
   claude-network-none:
     name: Claude Network-None Runtime (Required)
+    needs: changes
+    if: >-
+      !cancelled() && needs.changes.outputs.artifacts_only != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
