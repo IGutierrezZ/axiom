@@ -701,6 +701,14 @@ func resolveByPreferenceOrder(options ResolveOptions) (Status, error) {
 		return Status{}, err
 	}
 
+	// REQ-29.3 a REQ-29.5 y REQ-29.19 (design D6): las reglas de un cambio ISO se
+	// leen de su instantánea de kickoff.yaml, nunca de axiom.yaml en vivo. Un
+	// cambio sin instantánea, o con iso falso, no evalúa nada.
+	var iso *isoEvaluation
+	if governance != nil && governance.Kickoff.IsISO() {
+		iso = evaluateISOChange(planningHome, changeRoot, artifactPaths, artifacts)
+	}
+
 	// The change-instance identity (#2563, S4b of #2540) binds the runtime
 	// read so persisted grants project only for THIS instance of the change
 	// name; without a marker the replay conservatively projects no granted
@@ -717,7 +725,7 @@ func resolveByPreferenceOrder(options ResolveOptions) (Status, error) {
 	if runtimeStatus != nil {
 		grantedRoots = runtimeStatus.GrantedRoots
 	}
-	coreReady := artifacts["proposal"] == ArtifactDone && artifacts["specs"] == ArtifactDone && artifacts["design"] == ArtifactDone && artifacts["tasks"] == ArtifactDone && taskProgress.Total > 0 && (perRoleTasks == nil || len(perRoleTasks.noCheckboxes) == 0)
+	coreReady := artifacts["proposal"] == ArtifactDone && artifacts["specs"] == ArtifactDone && artifacts["design"] == ArtifactDone && artifacts["tasks"] == ArtifactDone && taskProgress.Total > 0 && (perRoleTasks == nil || len(perRoleTasks.noCheckboxes) == 0) && !iso.blocksCore()
 	applyState := resolveApplyState(coreReady, taskProgress)
 	blockedReasons := artifactBlockedReasonsForRoleTasks(artifacts, taskProgress, changeName, governance, perRoleTasks)
 	if artifacts["specs"] == ArtifactPartial {
@@ -760,6 +768,7 @@ func resolveByPreferenceOrder(options ResolveOptions) (Status, error) {
 		}
 	}
 	dependencies := resolveDependencies(artifacts, applyState, coreReady)
+	iso.narrow(&dependencies)
 	verifyState, verifyReason := verifyDependencyFromRoleGates(governance, dependencies.Verify)
 	dependencies.Verify = verifyState
 	if verifyReason != "" {
@@ -770,6 +779,10 @@ func resolveByPreferenceOrder(options ResolveOptions) (Status, error) {
 	if archiveReason != "" {
 		blockedReasons.genuine = append(blockedReasons.genuine, archiveReason)
 	}
+	// Los motivos de las etapas specs y tasks van después de los existentes
+	// (artefactos, gobierno, autoridad de edición, verify y archivado); wrong_branch
+	// se antepone al final, como siempre.
+	blockedReasons.genuine = append(blockedReasons.genuine, iso.planningReasons()...)
 	nextRecommended := resolveNextRecommended(dependencies, applyState, governance)
 	if bctx.wrongBranch != nil {
 		// Ninguna fase ni compuerta se autoriza con la rama equivocada (REQ-25.42): tampoco hay

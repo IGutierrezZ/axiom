@@ -158,11 +158,11 @@ Sin dependencias internas; todo son funciones puras con pruebas por tablas.
 
 ### U12 · `feat(sddstatus): etapas specs y tasks de las reglas ISO`
 
-- [ ] 12.1 Completar `internal/sddstatus/iso.go` con el adaptador de la etapa `specs`: índice de baseline con `parseSpecDocument` y modelo de la delta con `parseOpenSpecDelta` (ambas en `internal/sddstatus/openspec_archive_compose.go` (read-only)); `CheckRequirementIDs` y `CheckScenarios`; estrechamiento de `specs` y de `coreReady`.
+- [x] 12.1 Completar `internal/sddstatus/iso.go` con el adaptador de la etapa `specs`: índice de baseline con `parseSpecDocument` y modelo de la delta con `parseOpenSpecDelta` (ambas en `internal/sddstatus/openspec_archive_compose.go` (read-only)); `CheckRequirementIDs` y `CheckScenarios`; estrechamiento de `specs` y de `coreReady`.
   Cubre: REQ-29.3, REQ-29.10, REQ-29.6, REQ-29.16
   Aceptación: motivos `iso_requirement_id` e `iso_requirement_scenarios` en `blockedReasons`, ruta vuelve a `spec`; archivado interrumpido tras componer un ADDED con el compositor real no proyecta `iso_requirement_id` ni ruta a `spec`; fuera de ISO no aparece ningún token `iso_*`.
   Comprobación: `go test ./internal/sddstatus/ -run 'TestISOSpecsStage|TestISOInterruptedArchive'`
-- [ ] 12.2 Completar `internal/sddstatus/iso.go` y `internal/sddstatus/status.go` con la etapa `tasks`: lectura de todos los ficheros de tareas (`kickoff.RoleTaskFiles` o `tasks.md`), `CheckCoverage`, `CheckExistingRequirementBug`, `CheckNoImpactBug`; estrechamiento de `tasks`.
+- [x] 12.2 Completar `internal/sddstatus/iso.go` y `internal/sddstatus/status.go` con la etapa `tasks`: lectura de todos los ficheros de tareas (`kickoff.RoleTaskFiles` o `tasks.md`), `CheckCoverage`, `CheckExistingRequirementBug`, `CheckNoImpactBug`; estrechamiento de `tasks`.
   Cubre: REQ-29.4, REQ-29.5, REQ-29.19, REQ-29.16
   Aceptación: `iso_coverage`, `iso_cubre_unknown`, `iso_bug_requirement` e `iso_bug_contradiction` solo cuando existen todos los ficheros de tareas; un motivo por hallazgo; `axiom sdd continue` refleja los mismos motivos; `wrong_branch` sigue delante.
   Comprobación: `go test ./internal/sddstatus/ -run 'TestISOTasksStage|TestISOReasonsOrdering'`

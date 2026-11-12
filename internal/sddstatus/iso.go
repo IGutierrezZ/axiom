@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/isoevidence"
@@ -64,6 +65,167 @@ func findingReasons(findings []isoevidence.Finding) []string {
 		reasons = append(reasons, finding.Reason())
 	}
 	return reasons
+}
+
+// isoInputs es lo que las reglas ISO leen de un cambio: la delta y la baseline
+// con el lector nativo de OpenSpec (D2), la declaración de bug de proposal.md y
+// las líneas `Cubre:` de todos los ficheros de tareas. El paquete isoevidence
+// no lee ficheros: este adaptador los lee y le entrega el modelo ya construido.
+type isoInputs struct {
+	// hasDelta dice si el cambio lleva al menos un fichero de specs.
+	hasDelta bool
+	delta    []isoevidence.Requirement
+	baseline []isoevidence.Requirement
+	index    isoevidence.BaselineIndex
+	bug      isoevidence.BugDeclaration
+	// tasksComplete dice si existen todos los ficheros de tareas del cambio
+	// (tasks.md o los de cada rol): sin ellos no se evalúa la cobertura.
+	tasksComplete bool
+	cubre         []isoevidence.CubreLine
+}
+
+// loadISOInputs lee los artefactos del cambio. Un fichero ilegible cuenta como
+// vacío: la ausencia de un artefacto la proyectan ya los estados ordinarios.
+func loadISOInputs(planningHome, changeRoot string, paths ArtifactPaths, artifacts map[string]ArtifactState) isoInputs {
+	in := isoInputs{hasDelta: len(paths.Specs) > 0}
+	in.delta = readDeltaRequirements(changeRoot, paths.Specs)
+	in.baseline = readBaselineRequirements(planningHome)
+	in.index = isoevidence.NewBaselineIndex(in.baseline)
+	if !in.hasDelta {
+		in.bug = isoevidence.ParseBugDeclaration(readText(firstPath(paths.Proposal)))
+	}
+	in.tasksComplete = artifacts["tasks"] == ArtifactDone && len(paths.Tasks) > 0
+	if in.tasksComplete {
+		for _, path := range paths.Tasks {
+			in.cubre = append(in.cubre, isoevidence.ParseCubre(filepath.Base(path), readText(path))...)
+		}
+	}
+	return in
+}
+
+// readDeltaRequirements lee los requisitos de cada delta con parseOpenSpecDelta,
+// la misma función que usa el compositor de archivado. El dominio es el de la
+// carpeta `specs/<dominio>/`; una delta plana no tiene dominio.
+func readDeltaRequirements(changeRoot string, specFiles []string) []isoevidence.Requirement {
+	var delta []isoevidence.Requirement
+	for _, path := range specFiles {
+		domain := ""
+		if dir := filepath.Dir(path); filepath.Clean(dir) != filepath.Clean(changeRoot) {
+			domain = filepath.Base(dir)
+		}
+		parsed := parseOpenSpecDelta(readText(path))
+		add := func(section isoevidence.Section, blocks []specRequirementBlock) {
+			for _, block := range blocks {
+				requirement := isoevidence.Requirement{Domain: domain, Section: section, Name: block.Name, Text: block.Text}
+				if section == isoevidence.SectionRenamed {
+					if oldName, newName, ok := splitRenamePair(block.Name); ok {
+						requirement.OldName, requirement.Name = oldName, newName
+					}
+				}
+				delta = append(delta, requirement)
+			}
+		}
+		add(isoevidence.SectionAdded, parsed.Added)
+		add(isoevidence.SectionModified, parsed.Modified)
+		add(isoevidence.SectionRemoved, parsed.Removed)
+		add(isoevidence.SectionRenamed, parsed.Renamed)
+	}
+	return delta
+}
+
+// readBaselineRequirements lee los requisitos de `<planning home>/specs/*/spec.md`
+// con parseSpecDocument, el lector nativo (D2). El texto de cada requisito es el
+// del segmento, que es lo que compara la tolerancia del archivado interrumpido.
+func readBaselineRequirements(planningHome string) []isoevidence.Requirement {
+	files, err := filepath.Glob(filepath.Join(planningHome, "specs", "*", "spec.md"))
+	if err != nil {
+		return nil
+	}
+	sort.Strings(files)
+	var baseline []isoevidence.Requirement
+	for _, path := range files {
+		domain := filepath.Base(filepath.Dir(path))
+		for _, segment := range parseSpecDocument(readText(path)).Segments {
+			if segment.IsRequirement {
+				baseline = append(baseline, isoevidence.Requirement{Domain: domain, Name: segment.Name, Text: segment.Text})
+			}
+		}
+	}
+	return baseline
+}
+
+// specsFindings es la etapa `specs` de un cambio con delta: identificadores
+// (REQ-29.3) y escenarios (REQ-29.10 y nombres repetidos de REQ-29.6). Un bug
+// sin delta no tiene requisitos propios que comprobar.
+func (in isoInputs) specsFindings() []isoevidence.Finding {
+	if !in.hasDelta {
+		return nil
+	}
+	findings := isoevidence.CheckRequirementIDs(in.delta, in.baseline)
+	return append(findings, isoevidence.CheckScenarios(in.delta)...)
+}
+
+// tasksFindings es la etapa `tasks`: cobertura (REQ-29.4) con delta, y las
+// comprobaciones del bug sin delta (REQ-29.5 y REQ-29.19) cuando su declaración
+// es completa. Solo se evalúa cuando existen todos los ficheros de tareas.
+func (in isoInputs) tasksFindings() []isoevidence.Finding {
+	if !in.tasksComplete {
+		return nil
+	}
+	switch {
+	case in.hasDelta:
+		return isoevidence.CheckCoverage(in.delta, in.index, in.cubre)
+	case in.bug.Kind == isoevidence.BugKindExistingRequirement && in.bug.Valid:
+		findings := isoevidence.CheckCoverage(nil, in.index, in.cubre)
+		return append(findings, isoevidence.CheckExistingRequirementBug(in.index, in.cubre)...)
+	case in.bug.Kind == isoevidence.BugKindNoImpact && in.bug.Valid:
+		return isoevidence.CheckNoImpactBug(in.cubre)
+	}
+	return nil
+}
+
+// isoEvaluation es el resultado de las reglas ISO de un cambio ISO, por etapa
+// (design D6).
+type isoEvaluation struct {
+	inputs isoInputs
+	specs  []isoevidence.Finding
+	tasks  []isoevidence.Finding
+}
+
+// evaluateISOChange evalúa las etapas `specs` y `tasks` de un cambio ISO, leído
+// de su instantánea. Con otro cambio no se llama: fuera de ISO ninguna de estas
+// reglas proyecta ni bloqueo ni aviso (REQ-29.16).
+func evaluateISOChange(planningHome, changeRoot string, paths ArtifactPaths, artifacts map[string]ArtifactState) *isoEvaluation {
+	inputs := loadISOInputs(planningHome, changeRoot, paths, artifacts)
+	return &isoEvaluation{inputs: inputs, specs: inputs.specsFindings(), tasks: inputs.tasksFindings()}
+}
+
+// blocksCore dice si alguna etapa de planificación tiene hallazgos: `coreReady`
+// pasa a falso y la ruta vuelve a la fase que los corrige. Es seguro con nil.
+func (e *isoEvaluation) blocksCore() bool {
+	return e != nil && len(e.specs)+len(e.tasks) > 0
+}
+
+// narrow estrecha las dependencias `specs` y `tasks` de las etapas con hallazgos.
+func (e *isoEvaluation) narrow(dependencies *Dependencies) {
+	if e == nil {
+		return
+	}
+	if len(e.specs) > 0 {
+		dependencies.Specs = DependencyBlocked
+	}
+	if len(e.tasks) > 0 {
+		dependencies.Tasks = DependencyBlocked
+	}
+}
+
+// planningReasons son los motivos de las etapas `specs` y `tasks`, un motivo por
+// hallazgo, para el canal `genuine` que la ruta de planificación conserva.
+func (e *isoEvaluation) planningReasons() []string {
+	if e == nil {
+		return nil
+	}
+	return append(findingReasons(e.specs), findingReasons(e.tasks)...)
 }
 
 // Valores de ISOProjection.Project y ISOProjection.Change (design §5.2).
