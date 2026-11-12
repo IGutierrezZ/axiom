@@ -283,7 +283,7 @@ Sin dependencias internas; todo son funciones puras con pruebas por tablas.
 
 ### U23 · `docs(assets): contrato de status con la proyección iso y los motivos` (solape P6)
 
-- [ ] 23.1 Modificar `internal/assets/skills/_shared/sdd-status-contract.md` (proyección `iso` con `reason`, ruta `verify` en ISO y tabla de los 14 tokens) y su pin en `internal/assets/sdd_iso_pins_test.go`; regenerar con `-update` los goldens afectados.
+- [x] 23.1 Modificar `internal/assets/skills/_shared/sdd-status-contract.md` (proyección `iso` con `reason`, ruta `verify` en ISO y tabla de los 14 tokens) y su pin en `internal/assets/sdd_iso_pins_test.go`; regenerar con `-update` los goldens afectados.
   Cubre: REQ-29.2, REQ-29.16, REQ-29.17
   Aceptación: la tabla de tokens coincide con la lista cerrada de `isoevidence` (la prueba compara ambas).
   Comprobación: `go test ./internal/assets/ -run TestSDDStatusContractISO` y `go test ./internal/components/ -run TestGolden`

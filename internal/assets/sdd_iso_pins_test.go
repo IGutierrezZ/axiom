@@ -1,8 +1,12 @@
 package assets
 
 import (
+	"regexp"
+	"sort"
 	"strings"
 	"testing"
+
+	"github.com/IGutierrezZ/axiom/v3/internal/isoevidence"
 )
 
 // carril-sdd-versatil U21 (REQ-29.17): pins de texto de la guía ISO, el perfil de
@@ -145,6 +149,59 @@ func TestSDDArchiveRequiresArchiveCheck(t *testing.T) {
 		"`axiom branch ensure --cwd \"<workspaceRoot>\" --change <c> --archive --json`",
 		"separate documentation pull request",
 	)
+}
+
+// carril-sdd-versatil U23 (REQ-29.2, REQ-29.16, REQ-29.17): el contrato de status
+// documenta la proyección `iso`, la ruta `verify` y la lista cerrada de motivos,
+// que coincide con la de isoevidence.
+func TestSDDStatusContractISO(t *testing.T) {
+	const path = "skills/_shared/sdd-status-contract.md"
+	contract := MustRead(path)
+
+	requireContains(t, path, contract,
+		// Proyección `iso`.
+		"iso: # optional; omitted when axiom.yaml has no `sdd:` block and the selected change is not ISO",
+		"project: iso | not_iso | invalid",
+		"reason: <only with project invalid>",
+		"change: iso | not_iso # absent without a selected change",
+		"state: valid | invalid | missing | not_required",
+		"`invalid` fails closed: it is never read as `not_iso`",
+		// Un cambio sin instantánea es no ISO.
+		"so a change without it",
+		"is not ISO, even if the project later declares ISO, and no ISO rule applies to it",
+		// Forma del motivo y ruta verify.
+		"`blocked(<token>): <detail>; <continuation>`",
+		"`nextRecommended` is `verify` with the reason in `blockedReasons`",
+		"With a valid matrix that has failing rows (`iso_matrix_failed`) the route is `resolve-blockers`",
+		"The `verify` route replaces `await-gate` only when the open gate is `integration`",
+		"Every other change keeps verification optional.",
+		// El QA diferido no bloquea verify.
+		"A `deferred` or `optional` role that is still pending never blocks `verify`",
+	)
+
+	from := strings.Index(contract, "### Typed reasons")
+	to := strings.Index(contract, "### Verify route in an ISO change")
+	if from < 0 || to < from {
+		t.Fatal("sdd-status-contract.md lost the Typed reasons section")
+	}
+	row := regexp.MustCompile("(?m)^\\| `([a-z_]+)` \\|")
+	var published []string
+	for _, match := range row.FindAllStringSubmatch(contract[from:to], -1) {
+		published = append(published, match[1])
+	}
+
+	var want []string
+	for _, code := range isoevidence.AllCodes() {
+		want = append(want, string(code))
+	}
+	sort.Strings(published)
+	sort.Strings(want)
+	if strings.Join(published, ",") != strings.Join(want, ",") {
+		t.Errorf("the token table of the status contract differs from isoevidence.AllCodes():\npublished %v\nwant      %v", published, want)
+	}
+	if len(want) != 13 {
+		t.Errorf("isoevidence.AllCodes() has %d tokens, the design lists 13", len(want))
+	}
 }
 
 func TestSDDISOPins(t *testing.T) {
