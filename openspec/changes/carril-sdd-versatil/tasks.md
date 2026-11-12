@@ -297,10 +297,11 @@ Sin dependencias internas; todo son funciones puras con pruebas por tablas.
 
 ### Cierre sin commit propio
 
-- [ ] 24.2 Verificación final de goldens, copias versionadas y paquetes tocados, sin -update. Si `AGENTS.md` (read-only), `GEMINI.md` (read-only) o `.codex/AGENTS.md` (read-only) solo se regeneran con axiom sync, no compilar ni ejecutar un binario: localizar con rg la prueba que las compara; si no existe ruta en proceso, parar y consultar al usuario.
+- [x] 24.2 Verificación final de goldens, copias versionadas y paquetes tocados, sin -update. Si `AGENTS.md` (read-only), `GEMINI.md` (read-only) o `.codex/AGENTS.md` (read-only) solo se regeneran con axiom sync, no compilar ni ejecutar un binario: localizar con rg la prueba que las compara; si no existe ruta en proceso, parar y consultar al usuario.
   Cubre: REQ-29.17, REQ-29.18
   Aceptación: nada pendiente de regenerar; `git status` limpio tras la pasada.
   Comprobación: `go test ./internal/components/ -run TestGolden`, `go test ./internal/components/agentguidance/`, `go test ./internal/components/sdd/`, `go test ./internal/assets/`, `go test ./internal/isoevidence/`, `go test ./internal/workspace/`, `go test ./internal/kickoff/`, `go test ./internal/sddstatus/`, `go test ./internal/cli/`
+  Resultado (2026-11-12): en verde todo lo que se puede ejecutar en proceso. Excepciones: `internal/cli` se acota con `-run` porque la suite completa supera los 10 minutos de `go test`; el fallo de `internal/components/filemerge` (uniones de directorio en Windows) existe también en `main`. Decisión del usuario: `.codex/AGENTS.md` (read-only), la única copia generada versionada, ya estaba desfasada antes de este cambio, ninguna prueba la compara y solo se regenera con `axiom sync` desde un binario de esta rama; queda fuera de alcance y pasa a seguimiento aparte.
 
 ---
 
