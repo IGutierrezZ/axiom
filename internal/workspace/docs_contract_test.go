@@ -435,24 +435,13 @@ func TestDocsRemitToAxiomBranchEnsure(t *testing.T) {
 		}
 	}
 
-	// La instrucción gestionada de Codex que se versiona en el repositorio lleva la
-	// doctrina nueva (paso 6, subsección de ramas y sección de kickoff) y no la regla
-	// retirada. Se regenera con `axiom sync` (HOME aislado); aquí solo se fijan los
-	// tres textos de ramas y worktrees.
-	codex := readRepoFile(t, ".codex/AGENTS.md")
-	for _, want := range []string{
-		"### Branches and worktrees",
-		"run `axiom branch ensure --lane odd --change <feature-name> --json`",
-		"on the branch that `axiom branch ensure --lane odd --change <feature-name>` prepared",
-		"run `axiom branch ensure --change <name> --json` and use the absolute paths of its JSON as `--cwd` of every later command",
-		"Never use `EnterWorktree` or `ExitWorktree`; work in another worktree only through the absolute paths that `axiom branch ensure` returns",
-	} {
-		if !strings.Contains(codex, want) {
-			t.Errorf(".codex/AGENTS.md no contiene %q", want)
-		}
-	}
-	if strings.Contains(codex, "branch first when on the default branch") {
-		t.Error(".codex/AGENTS.md conserva la regla retirada «branch first when on the default branch»")
+	// Codex no carga .codex/AGENTS.md en el proyecto y `axiom sync` lo retira como
+	// fichero heredado (LegacySystemPromptFiles de internal/agents/codex): una copia
+	// versionada no la regenera nada y se desfasa sin que ningún test lo note. La
+	// doctrina de ramas y worktrees que proyecta Codex se fija en su origen:
+	// internal/components/agentguidance (todos los agentes) e internal/assets (kickoff).
+	if _, err := os.Stat(filepath.Join("..", "..", ".codex", "AGENTS.md")); !os.IsNotExist(err) {
+		t.Errorf(".codex/AGENTS.md no debe versionarse: Codex no lo lee y axiom sync lo retira (err = %v)", err)
 	}
 
 	claude := readRepoFile(t, "CLAUDE.md")
