@@ -47,7 +47,7 @@ Sin dependencias internas; todo son funciones puras con pruebas por tablas.
 
 ### U3 · `feat(isoevidence): matriz de verificación y resolución de referencias`
 
-- [x] 3.1 RED de amenazas, `internal/isoevidence/testref_test.go` y `internal/isoevidence/matrix_threat_test.go`: (a) fila con un comando que crearía un fichero centinela y referencia a un `README.sh`: tras validar, el centinela no existe y la referencia resuelve solo por texto; (b) referencias `C:\x:Sym`, `\\srv\x:Sym`, `../x_test.go:TestX`, ruta absoluta y enlace simbólico que sale del árbol rechazadas con el motivo «fuera del árbol» (el caso del enlace se omite si el sistema no permite crearlo).
+- [x] 3.1 RED de amenazas, `internal/isoevidence/testref_test.go` y `internal/isoevidence/matrix_threat_test.go`: (a) fila con un comando que crearía un fichero centinela y referencia a un `README.sh`: tras validar, el centinela no existe y la referencia resuelve solo por texto; (b) referencias `C:\x:Sym` (read-only), `\\srv\x:Sym` (read-only), `../x_test.go:TestX` (read-only), ruta absoluta y enlace simbólico que sale del árbol rechazadas con el motivo «fuera del árbol» (el caso del enlace se omite si el sistema no permite crearlo).
   Cubre: REQ-29.7
   Aceptación: las pruebas existen y fallan (RED) antes de 3.2.
   Comprobación: `go test ./internal/isoevidence/ -run 'TestTreeResolverRejectsEscapes|TestMatrixNeverExecutesCommands'` (rojo esperado antes de 3.2)
@@ -297,7 +297,7 @@ Sin dependencias internas; todo son funciones puras con pruebas por tablas.
 
 ### Cierre sin commit propio
 
-- [ ] 24.2 Verificación final de goldens, copias versionadas y paquetes tocados, sin `-update`. Si `AGENTS.md`, `GEMINI.md` o `.codex/AGENTS.md` solo se regeneran con `axiom sync`, no compilar ni ejecutar un binario: localizar la prueba que las compara con `rg`; si no existe ruta en proceso, parar y consultar al usuario.
+- [ ] 24.2 Verificación final de goldens, copias versionadas y paquetes tocados, sin -update. Si `AGENTS.md` (read-only), `GEMINI.md` (read-only) o `.codex/AGENTS.md` (read-only) solo se regeneran con axiom sync, no compilar ni ejecutar un binario: localizar con rg la prueba que las compara; si no existe ruta en proceso, parar y consultar al usuario.
   Cubre: REQ-29.17, REQ-29.18
   Aceptación: nada pendiente de regenerar; `git status` limpio tras la pasada.
   Comprobación: `go test ./internal/components/ -run TestGolden`, `go test ./internal/components/agentguidance/`, `go test ./internal/components/sdd/`, `go test ./internal/assets/`, `go test ./internal/isoevidence/`, `go test ./internal/workspace/`, `go test ./internal/kickoff/`, `go test ./internal/sddstatus/`, `go test ./internal/cli/`
