@@ -195,7 +195,7 @@ Sin dependencias internas; todo son funciones puras con pruebas por tablas.
 
 ### U15 · `feat(cli): archive-compose rechaza el archivado ISO sin escenarios o sin matriz`
 
-- [ ] 15.1 Crear `internal/cli/sdd_archive_compose_iso.go` y `internal/cli/sdd_archive_compose_iso_test.go`: determinación del cambio con `changeRootOfDelta` (modo `--canonical`, como `guardComposeLooseDelta`) y negativa con `ISOArchiveRefusal`, antes de leer la canónica y sin escribir; sin cambio determinable, no aplica nada.
+- [x] 15.1 Crear `internal/cli/sdd_archive_compose_iso.go` y `internal/cli/sdd_archive_compose_iso_test.go`: determinación del cambio con `changeRootOfDelta` (modo `--canonical`, como `guardComposeLooseDelta`) y negativa con `ISOArchiveRefusal`, antes de leer la canónica y sin escribir; sin cambio determinable, no aplica nada.
   Cubre: REQ-29.10, REQ-29.11
   Aceptación: la función se prueba directamente: ISO con y sin escenarios, matriz inválida y sin contexto de cambio.
   Comprobación: `go test ./internal/cli/ -run TestArchiveComposeISORefusal`
