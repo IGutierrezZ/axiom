@@ -34,7 +34,7 @@ Fuera de alcance: cambiar `axiom codegraph init` de la CLI, el tiempo límite de
 ## Tareas
 
 - [x] T1 — Backend: `CodeGraphIndexed` en el estado y `ReindexCodeGraph` que ejecuta `codegraph init --yes <root>` sin índice y `codegraph index` con índice; el resultado informa la operación. Tests en `internal/semantic`. Ruta: delegada (escritor único; toca 3+ ficheros no triviales).
-- [ ] T2 — Panel: pastilla «Registrado en un agente» / «Sin registrar en agentes», pastilla de índice en la tarjeta de CodeGraph y botón con rótulo y textos de progreso según el índice. Tests del panel afectados. Ruta: delegada (mismo escritor que T1).
+- [x] T2 — Panel: pastilla «Registrado en un agente» / «Sin registrar en agentes», pastilla de índice en la tarjeta de CodeGraph y botón con rótulo y textos de progreso según el índice. Tests del panel afectados. Ruta: delegada (mismo escritor que T1).
 
 ## Criterios de aceptación
 
@@ -50,3 +50,5 @@ Fuera de alcance: cambiar `axiom codegraph init` de la CLI, el tiempo límite de
 ## Progreso
 
 - Plan stop: approved 2026-11-12; implementation continues
+- T1: f97dac72 — go test ./internal/semantic/... ./internal/dashboard/... ok; go vet ok; gofmt limpio
+- T2: (este commit) — go test ./internal/semantic/... ./internal/dashboard/... ok; go vet ok; gofmt limpio
