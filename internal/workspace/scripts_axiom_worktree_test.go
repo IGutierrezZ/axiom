@@ -354,8 +354,8 @@ func TestScriptsAxiomWorktreeShellDoneRunsAxiomBranchDone(t *testing.T) {
 		t.Fatalf("done salió con %d\nstdout: %s\nstderr: %s", code, stdout, stderr)
 	}
 	log := f.logText(t)
-	if !regexp.MustCompile(`(?m)^axiom branch done --cwd \S*proj --change demo --lane sdd$`).MatchString(log) {
-		t.Errorf("done no lanzó `axiom branch done --cwd <principal> --change demo --lane sdd`:\n%s", log)
+	if !regexp.MustCompile(`(?m)^axiom branch done --cwd \S*proj --change demo --lane sdd --fetch$`).MatchString(log) {
+		t.Errorf("done no lanzó `axiom branch done --cwd <principal> --change demo --lane sdd --fetch`:\n%s", log)
 	}
 	if strings.Contains(log, "--force") {
 		t.Errorf("done sin -Force no debe pasar --force:\n%s", log)
@@ -367,7 +367,7 @@ func TestScriptsAxiomWorktreeShellDoneRunsAxiomBranchDone(t *testing.T) {
 	if _, _, code := f.run(t, bash, "scripts/axiom-worktree.sh", "done", "demo", "--force"); code != 0 {
 		t.Fatalf("done --force salió con %d", code)
 	}
-	if !strings.Contains(f.logText(t), "--change demo --lane sdd --force") {
+	if !strings.Contains(f.logText(t), "--change demo --lane sdd --fetch --force") {
 		t.Errorf("done --force no pasó --force a axiom:\n%s", f.logText(t))
 	}
 }
@@ -422,7 +422,7 @@ func TestScriptsAxiomWorktreeShellForwardsLane(t *testing.T) {
 	}{
 		{"new", []string{"fix", "--lane", "odd"}, `(?m)^axiom branch ensure --cwd \S*proj --change demo --lane odd --mode worktree --prefix fix --json$`},
 		{"pr", []string{"--lane", "odd"}, `(?m)^axiom branch status --cwd \S*proj --change demo --lane odd --json$`},
-		{"done", []string{"--lane=odd", "--force"}, `(?m)^axiom branch done --cwd \S*proj --change demo --lane odd --force$`},
+		{"done", []string{"--lane=odd", "--force"}, `(?m)^axiom branch done --cwd \S*proj --change demo --lane odd --fetch --force$`},
 	} {
 		if err := os.Remove(f.log); err != nil && !os.IsNotExist(err) {
 			t.Fatal(err)
@@ -515,7 +515,7 @@ func TestScriptsAxiomWorktreePowerShellDrivesAxiomBranch(t *testing.T) {
 		}{
 			{"new", []string{"-Prefix", "fix"}, `(?m)^axiom branch ensure --cwd \S*proj --change demo --lane odd --mode worktree --prefix fix --json\s*$`},
 			{"pr", nil, `(?m)^axiom branch status --cwd \S*proj --change demo --lane odd --json\s*$`},
-			{"done", []string{"-Force"}, `(?m)^axiom branch done --cwd \S*proj --change demo --lane odd --force\s*$`},
+			{"done", []string{"-Force"}, `(?m)^axiom branch done --cwd \S*proj --change demo --lane odd --fetch --force\s*$`},
 		} {
 			if err := os.Remove(f.log); err != nil && !os.IsNotExist(err) {
 				t.Fatal(err)
@@ -554,8 +554,8 @@ func TestScriptsAxiomWorktreePowerShellDrivesAxiomBranch(t *testing.T) {
 		if code != 0 {
 			t.Fatalf("done salió con %d\nstdout: %s\nstderr: %s", code, stdout, stderr)
 		}
-		if !regexp.MustCompile(`(?m)^axiom branch done --cwd \S*proj --change demo --lane sdd --force\s*$`).MatchString(f.logText(t)) {
-			t.Errorf("done no lanzó `axiom branch done --cwd <principal> --change demo --lane sdd --force`:\n%s", f.logText(t))
+		if !regexp.MustCompile(`(?m)^axiom branch done --cwd \S*proj --change demo --lane sdd --fetch --force\s*$`).MatchString(f.logText(t)) {
+			t.Errorf("done no lanzó `axiom branch done --cwd <principal> --change demo --lane sdd --fetch --force`:\n%s", f.logText(t))
 		}
 		if !strings.Contains(stdout, "desmantelado") {
 			t.Errorf("done no confirma el desmontaje:\n%s", stdout)
