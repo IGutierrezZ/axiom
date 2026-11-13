@@ -24,6 +24,7 @@ type Git interface {
 	AddWorktree(ctx context.Context, dir, path, branch string) error
 	Switch(ctx context.Context, dir, branch string) error
 	RemoveWorktree(ctx context.Context, dir, path string, force bool) error
+	RemoveEmptyDir(ctx context.Context, path string) error // solo si está vacío: gitcli.ErrDirNotEmpty en otro caso
 	DeleteBranch(ctx context.Context, dir, name string) error
 	IsAncestor(ctx context.Context, dir, ancestor, descendant string) (bool, error)
 	MergeTreeEquivalent(ctx context.Context, dir, target, branch string) (equivalent, supported bool, err error)

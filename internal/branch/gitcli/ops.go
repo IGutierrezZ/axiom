@@ -16,6 +16,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -403,6 +404,28 @@ func (*Git) RemoveWorktree(ctx context.Context, dir, path string, force bool) er
 		args = append(args, "--force")
 	}
 	return runWrite(ctx, dir, append(args, path)...)
+}
+
+// ErrDirNotEmpty indica que RemoveEmptyDir no retiró el directorio porque contiene algo: es el
+// caso esperado cuando otro proceso o el usuario dejó ficheros en él, no un fallo.
+var ErrDirNotEmpty = errors.New("el directorio no está vacío")
+
+// RemoveEmptyDir retira el directorio path solo si está vacío (`os.Remove`, nunca recursivo): es
+// el último paso del desmontaje de `done`, que deja vacía la carpeta `<raíz>/<cambio>` que contenía
+// el worktree. Devuelve ErrDirNotEmpty si tiene contenido, sin tocarlo, y un error que cumple
+// errors.Is(err, fs.ErrNotExist) si no existe. path debe ser absoluta. No ejecuta git.
+func (*Git) RemoveEmptyDir(_ context.Context, path string) error {
+	if !filepath.IsAbs(path) {
+		return errors.New("la ruta " + strconv.Quote(path) + " del directorio no es válida: debe ser absoluta")
+	}
+	entries, err := os.ReadDir(path)
+	if err != nil {
+		return err
+	}
+	if len(entries) > 0 {
+		return ErrDirNotEmpty
+	}
+	return os.Remove(path)
 }
 
 // DeleteBranch elimina la rama local name aunque git no la considere fusionada

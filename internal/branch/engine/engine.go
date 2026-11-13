@@ -67,6 +67,7 @@ type gitWriter interface {
 	AddWorktree(ctx context.Context, dir, path, branch string) error
 	Switch(ctx context.Context, dir, branch string) error
 	RemoveWorktree(ctx context.Context, dir, path string, force bool) error
+	RemoveEmptyDir(ctx context.Context, path string) error
 	DeleteBranch(ctx context.Context, dir, name string) error
 	Fetch(ctx context.Context, dir, remote string) error
 }

@@ -18,6 +18,9 @@ import (
 // archiveSuffix es lo que la rama de archivado añade al nombre de la rama del cambio.
 const archiveSuffix = "-" + archiveRole
 
+// ArchiveSuffix es archiveSuffix para quien debe reconocer la carpeta del worktree de archivado.
+const ArchiveSuffix = archiveSuffix
+
 // ensureOperation es la orden de `axiom branch` cuyas continuaciones deben repetir `--archive`
 // cuando lo que se planifica es el archivado.
 const ensureOperation = "ensure"

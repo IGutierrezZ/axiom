@@ -2,6 +2,8 @@ package gitcli
 
 import (
 	"context"
+	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -192,5 +194,39 @@ func TestDeleteBranchRefusesABranchDeployedInAWorktreeAndOptionLikeNames(t *test
 	}
 	if len(*seen) != 0 {
 		t.Errorf("los nombres inválidos no lanzan git: %v", *seen)
+	}
+}
+
+// RemoveEmptyDir retira un directorio vacío, deja intacto uno con contenido y lo señala con
+// ErrDirNotEmpty, informa de uno inexistente y rechaza una ruta relativa.
+func TestRemoveEmptyDirOnlyRemovesEmptyDirectories(t *testing.T) {
+	ctx := context.Background()
+	root := t.TempDir()
+	empty := filepath.Join(root, "vacio")
+	full := filepath.Join(root, "lleno")
+	for _, dir := range []string{empty, full} {
+		if err := os.Mkdir(dir, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	writeFile(t, filepath.Join(full, "dentro.txt"), "contenido\n")
+
+	if err := New().RemoveEmptyDir(ctx, empty); err != nil {
+		t.Fatalf("RemoveEmptyDir sobre un directorio vacío: %v", err)
+	}
+	if _, err := os.Stat(empty); !os.IsNotExist(err) {
+		t.Errorf("el directorio vacío debía desaparecer: %v", err)
+	}
+	if err := New().RemoveEmptyDir(ctx, full); !errors.Is(err, ErrDirNotEmpty) {
+		t.Errorf("un directorio con contenido da ErrDirNotEmpty, se obtuvo %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(full, "dentro.txt")); err != nil {
+		t.Errorf("el contenido no se toca: %v", err)
+	}
+	if err := New().RemoveEmptyDir(ctx, empty); !errors.Is(err, fs.ErrNotExist) {
+		t.Errorf("un directorio inexistente da fs.ErrNotExist, se obtuvo %v", err)
+	}
+	if err := New().RemoveEmptyDir(ctx, "relativa/x"); err == nil || !strings.Contains(err.Error(), "absoluta") {
+		t.Errorf("una ruta relativa se rechaza: %v", err)
 	}
 }
