@@ -4,10 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/fs"
 	"path/filepath"
 	"slices"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/branch"
+	"github.com/IGutierrezZ/axiom/v3/internal/branch/gitcli"
 	"github.com/IGutierrezZ/axiom/v3/internal/gitcommon"
 	"github.com/IGutierrezZ/axiom/v3/internal/kickoff"
 	"github.com/IGutierrezZ/axiom/v3/internal/pathidentity"
@@ -382,6 +384,7 @@ func (d *doneRun) branch(repository doneRepository, planned branch.BranchPlan) (
 			return failed(fmt.Sprintf("retirar el worktree %s de la rama %s", deployed.Path, planned.Name), removeFix(main, deployed.Path), err)
 		}
 		described.Discarded = dirty
+		d.removeWorktreeFolder(planned, deployed.Path)
 	case inMain:
 		if err := d.engine.writer.Switch(d.ctx, main, repo.IntegrationBranch); err != nil {
 			return failed(fmt.Sprintf("cambiar el repositorio %s a la rama %s", repo.Name, repo.IntegrationBranch),
@@ -394,6 +397,30 @@ func (d *doneRun) branch(repository doneRepository, planned branch.BranchPlan) (
 	described.Exists, described.Dirty = false, false
 	described.SetOutcome(branch.OutcomeRemoved)
 	return described, nil
+}
+
+// removeWorktreeFolder retira, si queda vacía, la carpeta `<raíz>/<carpeta>` que contenía el worktree
+// recién retirado (`<raíz>/<carpeta>/<repo>`), para que `done` no acumule carpetas vacías. Solo
+// actúa si el nombre de la carpeta es el que planifica el motor para la rama (el cambio,
+// `<cambio>-<rol>` o `<cambio>-archive`): un worktree colocado a mano en otra parte no se toca.
+// Es de mejor esfuerzo: que no exista o no esté vacía no se avisa y ningún fallo cambia el resultado.
+func (d *doneRun) removeWorktreeFolder(planned branch.BranchPlan, worktree string) {
+	folder := d.request.Change
+	switch planned.Kind {
+	case branch.KindRole:
+		folder += "-" + planned.RoleID
+	case branch.KindArchive:
+		folder += branch.ArchiveSuffix
+	}
+	parent := filepath.Dir(worktree)
+	if filepath.Base(parent) != folder {
+		return
+	}
+	err := d.engine.writer.RemoveEmptyDir(d.ctx, parent)
+	if err == nil || errors.Is(err, gitcli.ErrDirNotEmpty) || errors.Is(err, fs.ErrNotExist) {
+		return
+	}
+	d.warn(fmt.Sprintf("no se pudo retirar la carpeta vacía %s del worktree retirado (%v): puedes borrarla a mano", pathquote.Quote(parent), err))
 }
 
 // removeFix es la acción que resuelve un worktree que no se pudo retirar: en Windows, un worktree

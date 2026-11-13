@@ -485,6 +485,10 @@ func (f failingWriter) RemoveWorktree(ctx context.Context, dir, path string, for
 	return f.real.RemoveWorktree(ctx, dir, path, force)
 }
 
+func (f failingWriter) RemoveEmptyDir(ctx context.Context, path string) error {
+	return f.real.RemoveEmptyDir(ctx, path)
+}
+
 func (f failingWriter) DeleteBranch(ctx context.Context, dir, name string) error {
 	if f.failDelete {
 		return errors.New("fallo simulado de git al eliminar la rama")
