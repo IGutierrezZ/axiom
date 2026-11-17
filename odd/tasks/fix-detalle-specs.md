@@ -39,11 +39,11 @@ Renderizar HTML, cambiar el renderizador de markdown, pestañas nuevas, el lista
 
 ## Tareas
 
-- [ ] **T1 · Backend: regla única y DTO** (`internal/sddstatus`, `internal/dashboard/service.go`, `types.go` y tests). Ruta: escritor delegado (2+ ficheros no triviales).
+- [x] **T1 · Backend: regla única y DTO** (`internal/sddstatus`, `internal/dashboard/service.go`, `types.go` y tests). Ruta: escritor delegado (2+ ficheros no triviales).
   - Exportar la resolución de ficheros de spec y tareas desde `internal/sddstatus`.
   - `GetIncrementDetail` rellena `specs` y `tasks` con esa regla.
   - Tests en `internal/dashboard` de los tres casos del criterio de terminado; ajustar `listing_test.go`.
-- [ ] **T2 · Frontend: documentos dinámicos en el detalle** (`detalle.js`, `workflow_assets_test.go`). Ruta: mismo escritor delegado.
+- [x] **T2 · Frontend: documentos dinámicos en el detalle** (`detalle.js`, `workflow_assets_test.go`). Ruta: mismo escritor delegado.
   - Un documento por spec y por fichero de tareas; marcador «no existe todavía» con `specs/<dominio>/spec.md` y `tasks.md` cuando faltan.
 
 ## Criterio de terminado
@@ -63,3 +63,24 @@ Renderizar HTML, cambiar el renderizador de markdown, pestañas nuevas, el lista
 
 - Plan stop: approved 2026-11-17; implementation continues
 - Espejo Engram: pendiente (el guardado no se pudo ejecutar en modo automático; se resincroniza cuando esté disponible).
+- T1 hecha: commit `4ba64c32`. Riesgo `axiom review assess`: high (RDD off: autoverificación del escritor más verificador independiente).
+- T2 hecha: commit `47a0dc49`.
+
+## Evidencia de verificación
+
+- `go test ./internal/dashboard/`: ok (escritor). Repetido por el padre con `-run 'TestIncrementDetail|TestServiceIncrementDetail|Listing|Worktree'`: ok.
+- `go test ./internal/sddstatus/`: ok (escritor). Repetido por el padre con `-run TestChangeArtifactPaths`: ok.
+- `go vet ./internal/dashboard/ ./internal/sddstatus/`: limpio. `gofmt -l`: vacío.
+- Tests de los tres casos del criterio: `TestIncrementDetailListsDomainSpecs`, `TestIncrementDetailListsPerRoleTasksInKickoffOrder`, `TestIncrementDetailKeepsLegacyFlatFiles` (`internal/dashboard/detail_artifacts_test.go`).
+- Verificador independiente: sin hallazgos bloqueantes.
+
+## Seguimientos (fuera de alcance)
+
+- Un `spec.md` plano vacío ya no aparece en el detalle: la regla compartida exige contenido. Es coherente con `axiom sdd status`.
+- Faltan tests del fallback con `kickoff.yaml` corrupto y del detalle de un cambio archivado.
+- `assets/js/core/increment.js:191,193` sigue rotulando el paso a paso con `spec.md` y `tasks.md`.
+- El digest de las puertas (`internal/cli/sdd_gate_digest.go`) sigue siendo un espejo de `sddstatus.resolveArtifactPaths` en vez de llamar a `ChangeArtifactPaths`.
+
+## Siguiente paso
+
+PR única lista para abrirse cuando el usuario lo autorice (`scripts/axiom-worktree.ps1 pr fix-detalle-specs -Lane odd`), con etiqueta `type:*`.
