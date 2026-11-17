@@ -1,6 +1,6 @@
 # Progreso de apply: preflight-topologia (C-01-b)
 
-Modo: estándar (TDD estricto no activo; RED observado igualmente en cada tarea). Estrategia de entrega: `exception-ok` (una PR con `size:exception`). Lotes 1 a 5: U1 a U6.
+Modo: estándar (TDD estricto no activo; RED observado igualmente en cada tarea). Estrategia de entrega: `exception-ok` (una PR con `size:exception`). Lotes 1 a 6: U1 a U8 (completo).
 
 ## Unidades completadas
 
@@ -12,7 +12,9 @@ Modo: estándar (TDD estricto no activo; RED observado igualmente en cada tarea)
 | U3 | hecha | `494049a5` |
 | U4 | hecha | `9b53f58f` |
 | U5 | hecha | `43094d2d` |
-| U6 | hecha | ver `git log` (`feat(sdd): el texto y la doctrina fijan el almacén hybrid y el ritmo por topología`) |
+| U6 | hecha | `6fa3d6ff` |
+| U7 | hecha | `ba88196f` |
+| U8 | hecha | commit final `docs(sdd): registrar la evidencia de cierre de preflight-topologia` (ver `git log`) |
 
 ## U1 · Work Unit Evidence
 
@@ -140,6 +142,46 @@ No reclasificados, a propósito: los fixtures agnósticos de topología (`embedd
 
 Notas:
 - Discrepancia spec/producción (sin cambiar código de producción): el escenario «Ejecución previa al sellado y posterior al sellado» de REQ-25.7 dice que antes del sellado se crea `feat/x` en el repositorio del planning home; en `multirepo` el repositorio de specs se trabaja in situ (REQ-25.5), así que la primera ejecución no crea ramas y la segunda crea las de `repo-backend`. La prueba afirma el comportamiento real de producción.
+
+## U8 · Verificación global y cierre
+
+Hecha (lote 6). Todos los comandos desde `C:\repos\axiom-wt\preflight-topologia\axiom`, en proceso, sin binarios sueltos.
+
+| Comando | Resultado |
+|---|---|
+| `go test ./internal/workspace/...` | ok (55 s) |
+| `go test ./internal/kickoff/...` | ok |
+| `go test ./internal/hub/...` | ok |
+| `go test ./internal/dashboard/...` | ok (102 s; una pasada anterior con el árbol sucio marcó FAIL solo por la guarda «dashboard tests modified the checkout» al ver mis ediciones de U7 sin commitear, con `PASS` de todas las pruebas; repetida con el árbol limpio: ok) |
+| `go test ./internal/branch/...` | ok (engine 281 s) |
+| `go test ./internal/sddstatus/...` | ok (60 s) |
+| `go test ./internal/sddtaskresult/...` | ok |
+| `go test ./internal/assets/...` | ok |
+| `go test ./internal/components/sdd/...` | ok (64 s) |
+| `go test ./internal/components/ -run TestGolden` | ok |
+| `go test ./internal/cli/ -run 'SDDPreflight\|TestRunSDDKickoff\|TestKickoffSeal\|TestWriter\|TestGate\|TestRunSDDGate\|TestBranch'` | ok (103 s) |
+| `go test ./internal/cli/ -run TestEveryProductionRefusalNamesResolutionOrDeclaresByDesign` | ok |
+| `go test ./internal/app/ -run 'Documented\|Invocation'` | ok |
+| `gofmt -l ./internal ./cmd` | vacío |
+| `go vet ./internal/branch/... ./internal/sddstatus/ ./internal/kickoff/` | limpio |
+
+No se observó ningún fallo ajeno conocido en esta pasada (junctions de `filemerge`, `TestTuiInstallOnThenSyncPreservesAndRefreshesOpenCodeActivation` y `communitytool`: no estaban en la batería de 8.1).
+
+8.2 · Conformidad de este repositorio: con una prueba temporal en proceso (`go test`, eliminada sin commitear) sobre `Locate` y `Validate` del `axiom.yaml` raíz: topología gobernante `monorepo-embedded`, único rol `fullstack`, `artifact_store` no declarado, `Valid=true`, sin errores ni avisos. `go test ./internal/workspace/...` (incluye `Validate`): ok.
+
+8.3 · Revisión de `git log --oneline 668a72e8..HEAD`: un commit convencional en castellano por unidad (U0 a U7), sin `Co-Authored-By` ni atribución de IA (búsqueda de `co-authored|claude|anthropic|generated` en los mensajes: sin coincidencias).
+
+### Datos de la PR única (el empuje y la apertura son del usuario)
+
+| Campo | Valor |
+|---|---|
+| Rama | `inc/preflight-topologia` → `main` |
+| Título propuesto | `feat(sdd): preflight y sellado derivados de la topología (C-01-b)` |
+| Etiquetas | `type:feat` y `size:exception` |
+| Estrategia | `exception-ok` (una sola PR, diez commits revertibles por unidad: U0 a U7 más el de cierre) |
+| Líneas de autor, total (`git diff --shortstat 668a72e8..HEAD` antes del commit de cierre) | 89 ficheros, +5725 / −819 |
+| Sin `testdata/golden` | 76 ficheros, +5601 / −675 (goldens: +124 / −144) |
+| Sin goldens ni artefactos de `openspec/changes/preflight-topologia` | 62 ficheros, +2949 / −675 (código, pruebas y doctrina) |
 
 ## Riesgos abiertos
 - Ninguno nuevo de U3 ni de U4.
