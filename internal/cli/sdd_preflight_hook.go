@@ -155,9 +155,9 @@ func runSDDPreflightHook(args []string, stdin io.Reader, stdout io.Writer) error
 		return writeSDDPreflightHookDecision(stdout, "deny", "SDD child dispatch refused: the hook payload does not bind the session transcript.", nil)
 	}
 
-	block, ok := resolveSDDPreflightTranscriptAuthority(payload.TranscriptPath, payload.SessionID)
+	block, ok, rejection := resolveSDDPreflightTranscriptAuthority(payload.TranscriptPath, payload.SessionID)
 	if !ok {
-		return writeSDDPreflightHookDecision(stdout, "deny", "SDD child dispatch refused: parent-confirmed SDD preflight is missing, invalid, or uncorroborated. Ask the canonical grouped preflight with AskUserQuestion and stop before retrying.", nil)
+		return writeSDDPreflightHookDecision(stdout, "deny", sddPreflightHookMissingAuthorityReason(rejection), nil)
 	}
 
 	updated := payload.ToolInputRaw
@@ -214,19 +214,20 @@ type sddPreflightTranscriptContentBlock struct {
 // AskUserQuestion tool_use asking the canonical grouped questions, matched
 // by tool_use id to a later, non-error user tool_result carrying
 // toolUseResult.answers for that same session (isSidechain false). The last
-// corroborated pair in file order wins. Malformed or unparsable lines are
+// corroborated pair in file order wins. When none is valid, rejection is the
+// reason the last recognized preflight was refused (nil when there was none),
+// so the denial can say what to correct. Malformed or unparsable lines are
 // skipped, never fatal; a line longer than maxSDDPreflightTranscriptLine has
 // its remainder discarded without being buffered, and scanning continues
 // with the next line.
-func resolveSDDPreflightTranscriptAuthority(path, sessionID string) (string, bool) {
+func resolveSDDPreflightTranscriptAuthority(path, sessionID string) (block string, found bool, rejection error) {
 	file, err := os.Open(path)
 	if err != nil {
-		return "", false
+		return "", false, nil
 	}
 	defer file.Close()
 
 	pending := map[string][]sddPreflightHookQuestion{}
-	block, found := "", false
 
 	reader := bufio.NewReader(file)
 	for {
@@ -266,7 +267,14 @@ func resolveSDDPreflightTranscriptAuthority(path, sessionID string) (string, boo
 								continue
 							}
 							candidate, recognized, err := resolveSDDPreflightHookBlock(questions, toolUseResult.Answers)
-							if err != nil || !recognized || !validSDDPreflightHookBlock(candidate) {
+							if !recognized {
+								continue
+							}
+							if err != nil {
+								rejection = err
+								continue
+							}
+							if !validSDDPreflightHookBlock(candidate) {
 								continue
 							}
 							block, found = candidate, true
@@ -279,7 +287,21 @@ func resolveSDDPreflightTranscriptAuthority(path, sessionID string) (string, boo
 			break
 		}
 	}
-	return block, found
+	if found {
+		rejection = nil
+	}
+	return block, found, rejection
+}
+
+// sddPreflightHookMissingAuthorityReason is the denial text when no valid
+// preflight authorizes the dispatch. When the last recognized preflight was
+// refused, the text names that concrete cause so it can be corrected.
+func sddPreflightHookMissingAuthorityReason(rejection error) string {
+	const missing = "SDD child dispatch refused: parent-confirmed SDD preflight is missing, invalid, or uncorroborated."
+	if rejection == nil {
+		return missing + " Ask the canonical grouped preflight with AskUserQuestion and stop before retrying."
+	}
+	return missing + " The last SDD preflight in this session was rejected: " + rejection.Error() + ". Fix that, ask the canonical grouped preflight again with AskUserQuestion and stop before retrying."
 }
 
 // readSDDPreflightTranscriptLine reads one newline- or EOF-terminated line

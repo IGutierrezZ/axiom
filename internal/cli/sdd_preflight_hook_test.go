@@ -247,7 +247,7 @@ func TestSDDPreflightHookRejectsMalformedMarkerUnderEveryPrefix(t *testing.T) {
 				t.Fatal(err)
 			}
 			pre := preToolUseAgentPayload(sessionID, transcript, "sdd-apply", "Apply", "")
-			denyCase(t, pre, "missing, invalid, or uncorroborated")
+			denyCase(t, pre, "missing, invalid, or uncorroborated", "SDD preflight question 1/3 (Pace) offers option \\\"OpenSpec\\\", which is not one of its labels: Interactive, Automatic")
 		})
 	}
 }
@@ -421,7 +421,7 @@ func TestSDDPreflightHookDeniesOutsideDomainAnswer(t *testing.T) {
 		{toolUseID: "toolu-1", answersRaw: `{"Axiom SDD preflight 1/3: How should phases run?":"Nonsense","Axiom SDD preflight 2/3: Where should artifacts live?":"OpenSpec","Axiom SDD preflight 3/3: How should oversized delivery be handled?":"Ask me"}`},
 	})
 	pre := preToolUseAgentPayload(sessionID, transcript, "sdd-apply", "Apply", "")
-	denyCase(t, pre, "missing, invalid, or uncorroborated")
+	denyCase(t, pre, "missing, invalid, or uncorroborated", "SDD preflight question 1/3 (Pace) answer \\\"Nonsense\\\" is not one of its labels: Interactive, Automatic")
 }
 
 func TestSDDPreflightHookDeniesMultiSelectAnswer(t *testing.T) {
@@ -437,7 +437,7 @@ func TestSDDPreflightHookDeniesMultiSelectAnswer(t *testing.T) {
 		{toolUseID: "toolu-1", answersRaw: `{"Axiom SDD preflight 1/3: How should phases run?":["Automatic","Interactive"],"Axiom SDD preflight 2/3: Where should artifacts live?":"OpenSpec","Axiom SDD preflight 3/3: How should oversized delivery be handled?":"Ask me"}`},
 	})
 	pre := preToolUseAgentPayload(sessionID, transcript, "sdd-apply", "Apply", "")
-	denyCase(t, pre, "missing, invalid, or uncorroborated")
+	denyCase(t, pre, "missing, invalid, or uncorroborated", "is not single-select")
 }
 
 const (
@@ -763,4 +763,102 @@ func TestSDDPreflightHookIgnoresIndependentReviewPreferenceInteraction(t *testin
 	if strings.Contains(prompt, "Verify and judgment") || strings.Contains(prompt, "Coverage") {
 		t.Fatalf("la preferencia no debe entrar en el bloque del pre-vuelo: %s", prompt)
 	}
+}
+
+// TestSDDPreflightHookDenialNamesTheCause pins that a recognized but invalid
+// preflight is denied with its concrete cause (missing or repeated question,
+// option or answer outside the domain, missing answer), never only with the
+// generic text, and that the authority boundary is unchanged.
+func TestSDDPreflightHookDenialNamesTheCause(t *testing.T) {
+	pace := testSDDPreflightQuestion("Pace", testSDDPreflightPaceQuestion, "Interactive", "Automatic")
+	artifacts := testSDDPreflightQuestion("Artifacts", testSDDPreflightArtifactQuestion, "OpenSpec", "Engram", "Both")
+	pr := testSDDPreflightQuestion("PR strategy", testSDDPreflightPRQuestion, "Ask me", "Single PR", "Auto")
+	answers := func(paceAnswer, artifactAnswer, prAnswer string) string {
+		return `{` + jsonStr(testSDDPreflightPaceQuestion) + `:` + jsonStr(paceAnswer) + `,` + jsonStr(testSDDPreflightArtifactQuestion) + `:` + jsonStr(artifactAnswer) + `,` + jsonStr(testSDDPreflightPRQuestion) + `:` + jsonStr(prAnswer) + `}`
+	}
+	cases := []struct {
+		name      string
+		questions []string
+		answers   string
+		want      string
+	}{
+		{
+			name:      "free text outside the domain",
+			questions: []string{pace, artifacts, pr},
+			answers:   answers("Automatic", "Both", "un pr con size expection"),
+			want:      `SDD preflight question 3/3 (PR strategy) answer \"un pr con size expection\" is not one of its labels: Ask me, Single PR, Auto`,
+		},
+		{
+			name:      "a question is missing",
+			questions: []string{pace, artifacts},
+			answers:   answers("Automatic", "Both", "Auto"),
+			want:      "the SDD preflight must ask exactly 3 questions in one call, but it asked 2",
+		},
+		{
+			name:      "a marker is repeated",
+			questions: []string{pace, pace, pr},
+			answers:   answers("Automatic", "Both", "Auto"),
+			want:      "SDD preflight marker 1/3 (Pace) appears in more than one question",
+		},
+		{
+			name:      "an option is renamed",
+			questions: []string{pace, testSDDPreflightQuestion("Artifacts", testSDDPreflightArtifactQuestion, "OpenSpec", "Engram", "Hybrid"), pr},
+			answers:   answers("Automatic", "Both", "Auto"),
+			want:      `SDD preflight question 2/3 (Artifacts) offers option \"Hybrid\", which is not one of its labels: OpenSpec, Engram, Both`,
+		},
+		{
+			name:      "an option is dropped",
+			questions: []string{pace, testSDDPreflightQuestion("Artifacts", testSDDPreflightArtifactQuestion, "OpenSpec", "Both"), pr},
+			answers:   answers("Automatic", "Both", "Auto"),
+			want:      "SDD preflight question 2/3 (Artifacts) must offer every one of its labels: OpenSpec, Engram, Both",
+		},
+		{
+			name:      "an option is repeated",
+			questions: []string{pace, testSDDPreflightQuestion("Artifacts", testSDDPreflightArtifactQuestion, "OpenSpec", "Both", "both (Recommended)"), pr},
+			answers:   answers("Automatic", "Both", "Auto"),
+			want:      `SDD preflight question 2/3 (Artifacts) offers \"Both\" more than once`,
+		},
+		{
+			name:      "an answer is missing",
+			questions: []string{pace, artifacts, pr},
+			answers:   `{` + jsonStr(testSDDPreflightPaceQuestion) + `:"Automatic",` + jsonStr(testSDDPreflightArtifactQuestion) + `:"Both"}`,
+			want:      "SDD preflight question 3/3 (PR strategy) has no answer",
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			sessionID := "sess-cause"
+			transcript := writeSDDPreflightRawTranscript(t, sessionID, "["+strings.Join(tc.questions, ",")+"]", tc.answers)
+			denyCase(t, preToolUseAgentPayload(sessionID, transcript, "sdd-apply", "Apply", ""), "missing, invalid, or uncorroborated", "The last SDD preflight in this session was rejected: "+tc.want)
+		})
+	}
+
+	t.Run("a valid preflight before an invalid one still authorizes", func(t *testing.T) {
+		sessionID := "sess-cause-earlier"
+		transcript := writeSDDPreflightTranscript(t, t.TempDir(), sessionID, []struct {
+			toolUseID  string
+			sidechain  bool
+			sessionID  string
+			answersRaw string
+			isError    bool
+		}{
+			{toolUseID: "toolu-1", answersRaw: testSDDPreflightAnswersAutomatic},
+			{toolUseID: "toolu-2", answersRaw: answers("Automatic", "Both", "something else")},
+		})
+		if prompt := allowedSDDPreflightPrompt(t, preToolUseAgentPayload(sessionID, transcript, "sdd-apply", "Apply", "")); !strings.Contains(prompt, "- Artifact store: openspec") {
+			t.Fatalf("the earlier valid preflight must still authorize: %s", prompt)
+		}
+	})
+
+	t.Run("no preflight keeps the generic denial", func(t *testing.T) {
+		sessionID := "sess-cause-none"
+		transcript := writeSDDPreflightTranscript(t, t.TempDir(), sessionID, nil)
+		out, err := runSDDPreflightHookTest(t, preToolUseAgentPayload(sessionID, transcript, "sdd-apply", "Apply", ""))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if strings.Contains(out, "was rejected") || !strings.Contains(out, "Ask the canonical grouped preflight with AskUserQuestion") {
+			t.Fatalf("a missing preflight must keep the generic denial: %s", out)
+		}
+	})
 }

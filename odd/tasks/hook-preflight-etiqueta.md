@@ -34,7 +34,7 @@ Quitar preguntas del preflight (C-01-b), cambiar el contrato de autoridad, el pl
   - Aceptar opciones y preguntas en cualquier orden con las etiquetas canónicas y producir el mismo bloque `## SDD Session Preflight`.
   - Tolerar el sufijo «(Recommended)», espacios y mayúsculas.
   - `TestSDDPreflightHookDeniesReorderedCanonicalLabels` pasa a aceptar el orden invertido.
-- [ ] **T2 · Rechazo con causa concreta** — mismo fichero y test. Ruta: inline.
+- [x] **T2 · Rechazo con causa concreta** — mismo fichero y test. Ruta: inline.
   - `resolveSDDPreflightTranscriptAuthority` devuelve la causa del último preflight reconocido e inválido y el `deny` la incluye.
   - Una etiqueta fuera del dominio produce un `deny` que nombra la pregunta y la etiqueta.
 - [ ] **T3 · Texto proyectado sin exigir orden** — `internal/components/sdd/session_preflight.go:16` y `testdata/golden/sdd-opencode-multi-settings.golden`. Ruta: inline (mecánico).
