@@ -5,7 +5,7 @@
 ## 1. Propósito y reglas de uso
 
 - Este plan es la fuente de verdad del backlog. Cada sección (`01`…`07`) define sus cambios con id estable `C-NN-x`: objetivo, decisiones literales, carril, tamaño, dependencias, ficheros, criterio de terminado y riesgos.
-- Cada sesión hija lee su cambio completo en la sección correspondiente antes de empezar. Las decisiones de las secciones son vinculantes y no se reabren sin el usuario. Lo que una sección marca como no confirmado se trata en el apartado 6 y no se decide por cuenta propia.
+- Cada sesión hija lee su cambio completo en la sección correspondiente antes de empezar. Las decisiones de las secciones son vinculantes y no se reabren sin el usuario. Lo que una sección marca como no confirmado se trata en el apartado 6 y no se decide por cuenta propia. **Las resoluciones del apartado 6.2 prevalecen sobre el texto de las secciones**: antes de empezar, la sesión hija lee el 6.2 y aplica las que afecten a su cambio.
 - Push, PR y merge los decide el usuario. Ninguna sesión hace `git push`, abre PR ni fusiona sin orden expresa. Nunca `--fetch` sin autorización.
 - Cada cambio se trabaja en un worktree propio, desde la primera escritura:
   `powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/axiom-worktree.ps1 new <slug> -Lane odd|sdd`
@@ -23,7 +23,7 @@ Tamaños: S, M, L, XL. «(blanda)» = dependencia de la que la sección dice «c
 |---|---|---|---|---|---|---|
 | C-01-a | Hook del preflight valida por etiqueta, no por posición | [01](01-poda-friccion.md) | ODD | S | — | `hook-preflight-etiqueta` |
 | C-01-b | Preflight y sellado derivados de la topología (hybrid fijo, multirepo checkpointed, monorepo solo fullstack) | [01](01-poda-friccion.md) | SDD | M | C-01-a; P10 (diseño del hook) | `preflight-topologia` |
-| C-01-c | RDD apagado de fábrica y sin posibilidad de activarlo (incluye `routing.go:129`, `:131`, `:152-166`) | [01](01-poda-friccion.md) | ODD | S-M | — | `rdd-apagado` |
+| C-01-c | RDD apagado de fábrica y sin posibilidad de activarlo (incluye `routing.go:77`, `:129`, `:131`, `:152-166`) | [01](01-poda-friccion.md) | ODD | S-M | — | `rdd-apagado` |
 | C-01-d | Quitar Serena | [01](01-poda-friccion.md) | ODD (P9) | S-M | — | `quitar-serena` |
 | C-01-e | Retirada completa de RDD (al final del plan) | [01](01-poda-friccion.md) | SDD | XL | C-01-c | `retirar-rdd` |
 | C-02-a | Promoción por repositorio y por cambio (`branch`\|`release`\|`ask`) | [02](02-entrega-git.md) | SDD | L | — | `promocion-ramas` |
@@ -48,13 +48,13 @@ Tamaños: S, M, L, XL. «(blanda)» = dependencia de la que la sección dice «c
 | C-06-b | HTML explicativo de spec y design (`resumen-*.html`) | [06](06-ui-human-loop.md) | SDD | M | C-06-a, C-01-a; C-05-b (blanda); C-01-b, C-02-c (inf.); P10 | `html-explicativo` |
 | C-06-c | Batería de pruebas `pruebas.md` en sdd-tasks | [06](06-ui-human-loop.md) | SDD | M | C-06-a, C-01-b; C-03-a (blanda) | `bateria-pruebas` |
 | C-06-d | Marcas de ejecución por entorno en la UI, publicadas a integración | [06](06-ui-human-loop.md) | SDD | M | C-06-c, C-02-a | `marcas-pruebas` |
-| C-06-e | Pantalla «Ajustes del proyecto» con catálogo de claves | [06](06-ui-human-loop.md) | SDD | L (XL si P15 = editar todo) | C-01-b, C-01-c, C-02-a, C-03-a, C-06-b, C-06-c; C-02-c (si P5); P15 | `ajustes-proyecto` |
-| C-06-f | Registrar decisiones de puerta desde la UI (sin confirmar) | [06](06-ui-human-loop.md) | SDD | M | C-06-a, C-02-d; P3 | `puertas-desde-ui` |
+| C-06-e | Pantalla «Ajustes del proyecto» con catálogo de claves, más bloque de preferencias personales con el interruptor del autofetch (P16) | [06](06-ui-human-loop.md) | SDD | L | C-01-b, C-01-c, C-02-a, C-03-a, C-05-d, C-06-b, C-06-c; C-02-c (P5 resuelta: con clave) | `ajustes-proyecto` |
+| C-06-f | Registrar decisiones de puerta desde la UI (confirmada, P3) | [06](06-ui-human-loop.md) | SDD | M | C-06-a, C-02-d | `puertas-desde-ui` |
 | C-07-a | Identidad git como actor de los artefactos versionados (capacidad nueva `change-actor-identity`) | [07](07-integraciones.md) | SDD | S | — | `identidad-git-actor` |
 | C-07-b | Marco de plugins de integración | [07](07-integraciones.md) | SDD | L | C-07-a (blanda) | `marco-integraciones` |
 | C-07-c | Adaptador Azure DevOps: REST, conexión, identidad, descubrimiento | [07](07-integraciones.md) | SDD | M | C-07-b | `adaptador-ado` |
 | C-07-d | Arranque de un cambio desde un work item (`external_ref`) | [07](07-integraciones.md) | SDD | M | C-07-b, C-07-c; C-01-b, C-02-a (inf.) | `arranque-desde-wi` |
-| C-07-e | Eventos del ciclo de vida: Tasks por rol, estimación, resumen, imputación | [07](07-integraciones.md) | SDD | L | C-07-a, C-07-b, C-07-c, C-07-d; C-03-b, C-06-b (blandas); P8, P12 | `eventos-ado` |
+| C-07-e | Eventos del ciclo de vida: Tasks por rol, estimación, resumen, IDs funcionales aparte (P12), imputación | [07](07-integraciones.md) | SDD | L | C-07-a, C-07-b, C-07-c, C-07-d, C-03-b; C-06-b (blanda) | `eventos-ado` |
 | C-07-f | Plantillas de nombre de rama y ramas diferidas a la entrada del rol | [07](07-integraciones.md) | SDD | M | C-07-d, C-07-e; C-02-a (blanda) | `plantilla-ramas` |
 | C-07-g | MCP de Azure DevOps para el agente | [07](07-integraciones.md) | ODD | S | C-07-b | `mcp-ado` |
 | C-07-h | UI de integraciones (incluye como primer commit el requisito previo de seguridad: CSP y retirar `Access-Control-Allow-Origin: *`) | [07](07-integraciones.md) | SDD | L | C-07-a, C-07-b, C-07-c, C-07-d, C-07-e, C-06-e; C-07-f (blanda) | `ui-integraciones` |
@@ -137,7 +137,7 @@ graph TD
   C06e --> C07h
   C01b -.->|inferida| C07d
   C02a -.->|inferida| C07d
-  C03b -.->|blanda| C07e
+  C03b --> C07e
   C06b -.->|blanda| C07e
 ```
 
@@ -152,7 +152,7 @@ Dependencias inferidas y su razón:
 | C-07-d ← C-01-b, C-02-a | El verbo de arranque va antes de `kickoff` y de `ensure`. C-01-b cambia el sellado y C-02-a el `ensure`. |
 | `external_ref` | No lo aporta la 03: lo introduce C-07-d. Ningún cambio de la 03 lo necesita. |
 | C-07-h ← C-07-a, C-07-d, C-07-e | Antes inferida. La 07 la declara tras la revisión: la vista de quién hizo cada fase (a), el campo de ID o URL (d) y las Tasks, imputaciones y outbox (e). |
-| C-03-b → C-07-e | Antes inferida. Declarada blanda en la 03 y en la 07: el resumen reproduce la spec con los IDs que tenga. Ver P12. |
+| C-03-b → C-07-e | Dura desde P12 (2026-11-17): C-07-e envía los IDs funcionales aparte al work item. |
 | C-07-b → C-06-e | Contradicción abierta. La 07 dice que C-07-b bloquea a C-06-e (que registraría las claves `integrations.<plugin>`). La 06 dice que C-06-e no depende de C-07-b: esas claves las registra C-07-h. Con las olas adoptadas no cambia nada (C-07-b va antes). |
 
 ## 4. Mapa de solapes
@@ -221,8 +221,7 @@ Dos grados. **Duro**: el mismo fichero de lógica o la misma prosa (doctrina, sk
 
 ## 5. Olas
 
-Reglas: máximo 3 cambios por ola. En paralelo solo si no comparten ficheros con solape duro ni dependen entre sí. Entre olas, todo en serie: una ola empieza cuando la anterior está fusionada. Si dos cambios de una misma ola comparten solo solape blando, el segundo en fusionarse rebasa sobre `main` y regenera los goldens. La ola 15 es condicional (P3).
-
+Reglas: máximo 3 cambios por ola. En paralelo solo si no comparten ficheros con solape duro ni dependen entre sí. Entre olas, todo en serie: una ola empieza cuando la anterior está fusionada. Si dos cambios de una misma ola comparten solo solape blando, el segundo en fusionarse rebasa sobre `main` y regenera los goldens.
 | Ola | Cambios | Justificación |
 |---|---|---|
 | 1 | C-01-a, C-04-a, C-06-a | El hook por etiqueta va primero: es la base del preflight y la fricción, y bloquea a C-01-b y C-06-b. Los dos bugs aislados (minero y detalle de la UI) no se solapan con él ni entre sí. |
@@ -239,8 +238,8 @@ Reglas: máximo 3 cambios por ola. En paralelo solo si no comparten ficheros con
 | 12 | C-07-e, C-06-e | Eventos ADO (`sdd_gate.go`, `ensure.go`, skills design/apply/archive) y ajustes del proyecto (workspace y dashboard) son disjuntos. Requieren P5, P8, P12 y P15. |
 | 13 | C-06-d, C-07-f, C-07-g | Marcas (dashboard, `sddpublish`, sdd-archive), plantillas de rama (planner, `gitpolicy.go`) y MCP de ADO (`components/mcp`, doctrina) son disjuntos. C-07-f registra en el catálogo de C-06-e sus claves `branch_template`. |
 | 14 | C-07-h | Pide C-06-e, C-07-e y C-07-f ya fusionados; toca dashboard, que comparte con C-06-d y C-06-f. |
-| 15 | C-06-f (condicional) | Solo si el usuario la confirma (P3). Comparte `sdd_gate.go` con C-07-e y el dashboard con C-07-h. Si no se confirma, esta ola no existe. |
-| 16 | C-01-e | XL. Mueve primitivas de fichero que usan `kickoff`, `sddstatus` y `branch/registry`, y toca `inject.go`, `boundedreview.go`, `state.go` y la CI; al final, ningún cambio posterior tiene que rebasar sobre el movimiento. Si P3 no se confirma, pasa a la ola 15. |
+| 15 | C-06-f | Confirmada por el usuario (P3). Comparte `sdd_gate.go` con C-07-e y el dashboard con C-07-h. |
+| 16 | C-01-e | XL. Mueve primitivas de fichero que usan `kickoff`, `sddstatus` y `branch/registry`, y toca `inject.go`, `boundedreview.go`, `state.go` y la CI; al final, ningún cambio posterior tiene que rebasar sobre el movimiento. |
 
 Diferencias con el orden temático de referencia y con la versión anterior de este plan:
 
@@ -251,31 +250,17 @@ Diferencias con el orden temático de referencia y con la versión anterior de e
 - **RF.** Olas 6 a 9, el orden de la sección 03: a → b → (c ∥ d) → e.
 - **Integraciones.** Se adelantan: C-07-a (ola 4), C-07-b (6) y C-07-c (7) no tocan doctrina y solo dependen entre sí; la identidad git ya no solapa con la batería de pruebas. El resto de la 07 sigue a RF y a la UI. Por eso la 07 ocupa las olas 4 a 14 en vez de cerrar el plan. Antes de C-07-e (ola 12) están ya fusionados C-03-b y C-03-e.
 - **`skillcheck`.** Ola 5, antes que en la referencia: solo exige C-04-a y no toca doctrina. La publicación (C-05-b y C-05-c) se adelanta a las olas 7 y 8; el autofetch (C-05-d) espera a la ola 10 por P4 y P14.
-- **UI.** C-06-e baja a la ola 12: ya no depende de C-05-b ni de C-07-b (según la 06), solo de C-01-b, C-01-c, C-02-a, C-03-a, C-06-b y C-06-c. C-06-f queda como opcional.
+- **UI.** C-06-e baja a la ola 12: ya no depende de C-05-b ni de C-07-b (según la 06), solo de C-01-b, C-01-c, C-02-a, C-03-a, C-06-b y C-06-c. C-06-f queda confirmada (P3) en la ola 15.
 
 ## 6. Decisiones pendientes del usuario
 
-Ninguna sesión las resuelve. Las marcadas «bloquea» deben cerrarse antes de lanzar la ola indicada. Antes de la ola 2 hay que cerrar P6, P7 y P10.
+Ninguna sesión hija las resuelve: si aparece una nueva, se detiene y la eleva a la padre, que la pregunta al usuario.
 
 ### 6.1 Pendientes
 
-| Id | Pregunta | Opciones y consecuencia | Bloquea (cambio, ola) | Recomendación del análisis |
-|---|---|---|---|---|
-| P1 | ¿La doctrina recomienda fusionar sin squash (merge commit)? | **Sí:** los commits revisados llegan a la rama destino y `done` confirma por ascendencia; coste: historial más ruidoso. **No:** doctrina neutra; `done` tolera squash por árbol equivalente (`merge-tree`, git ≥ 2.38) o `--force`, con posibles falsos negativos. C-02-a debe funcionar en los dos casos pase lo que pase. | C-02-d, ola 5. No bloquea C-02-a. | Sí (merge commit). Propuesta del análisis, no confirmada. |
-| P2 | ¿El modo `notify`/`stop` se queda sin pregunta en el preflight (por defecto `notify`, paradas cuando la persona las pida)? | **Sin pregunta:** el preflight no se amplía y el usuario decide sobre la marcha. **Con pregunta:** se decide al inicio; el hook ya admite preguntas variables (C-01-b), así que no hay límite técnico. | C-02-d, ola 5. | Sin pregunta. El motivo ya no es el límite de 3 preguntas, sino la frase del usuario «que lo decida el usuario». |
-| P3 | ¿Se puede aprobar o rechazar una puerta desde la UI? | **Sí:** C-06-f (M, SDD); decisiones con motivo y tres salidas; «aprobar, publicar y parar» implica push desde la UI, con aviso de operación remota. **No:** la UI solo lee `gates.yaml`. | C-06-f, ola 15. | Hacerla: «aporta más contra saltarse la revisión» (análisis, sin confirmar). |
-| P4 | ¿Un interruptor persistente, opt-in y apagado por defecto, cuenta como «opción explícita» de REQ-25.10 y como autorización de la regla de operaciones remotas? | **Interruptor opt-in:** hace falta delta de REQ-25.10 y de la regla de doctrina; activarlo autoriza el fetch. **Fetch siempre activo:** contradice REQ-25.10 y la regla vigente. **Sin autofetch:** se descarta C-05-d. El usuario eligió «Avisar y avanzar»; el interruptor lo propuso el análisis y se presentó dos veces sin objeción, pero el usuario no lo eligió expresamente. | C-05-d, ola 10. | Interruptor opt-in. |
-| P5 | ¿`delivery.split_hint_lines` es una clave de `axiom.yaml`? | **Clave (desactivada por defecto):** avisa una vez de «cambio grande» y no bloquea; hay que catalogarla en C-06-e. **Sin clave:** el control es solo cualitativo (la lista de tareas que la persona ya ve). El usuario aceptó «un control» pero no cerró la forma. | Aviso de C-02-c, ola 4; catálogo de C-06-e, ola 12. | Clave desactivada por defecto (es la propuesta de la 02, sin confirmar). |
-| P6 | ¿ODD obtiene los locators del contexto técnico con un comando de workspace nuevo o basta con `axiom sdd status --json`? | **Comando nuevo:** locators sin ruido; coste: `cmd/axiom/main.go` e `internal/cli/` (adaptador que reutiliza `projectTechnicalContext`). **Solo `status --json`:** sin código nuevo, solo texto de guía. Por lectura de código, con 0 o varios cambios activos el status proyecta `technicalContext` pero bloqueado y con razones ajenas a ODD (`status.go:531,620,624`, `status_test.go:77-90`); no está probado en ejecución. El usuario aceptó el comando en su momento y el paso 7 ya usa el status. | C-04-b, ola 2. | La 04 señala el ruido como argumento a favor del comando. Cerrarla tras el test que pide C-04-b (comprobar el status con 0 y varios cambios). |
-| P7 | ¿C-05-a amplía su alcance a `GEMINI.md:48`, `docs/intended-usage.md` y `docs/codebase/sync-and-cloud.md`? | **Ampliar:** coherencia (tres ficheros más). **Limitar** a `.engram/`, `docs/engram.md`, `.gitignore` y `AGENTS.md`: quedan docs que presentan `engram sync` como flujo de equipo. Hallazgo al verificar en `5f6b05b4`, no tratado con el usuario. | C-05-a (alcance), ola 2. No bloquea el resto. | Ampliar. |
-| P8 | ¿Si falla crear las Tasks de rol, la aprobación del design se registra igualmente y se bloquea el `ensure` de cada rol hasta vincular la Task? | **Bloquear el `ensure`:** la Task existe antes de crear ramas y `{task_ref}` es válido. **Solo avisar:** puede haber ramas de rol sin Task. El usuario dijo «la aprobación del design deberá indicarlo y ofrecer reintentar o que la cree a mano»; el registro y el bloqueo los propuso el análisis. | C-07-e, ola 12. | Bloquear el `ensure`. |
-| P9 | ¿ODD o SDD para C-01-d (Serena, retirada de menciones en 4 specs vivas) y C-04-d (`skillcheck`)? | **ODD:** más ágil; en C-01-d, integración con `axiom archive integrate --odd`. **SDD:** deltas formales; en C-04-d, el contrato de `axiom skill check --json` sería estable para terceros. | No bloquea ninguna ola: `workflow.lane: ask` hace la pregunta de carril al arrancar el cambio. | ODD en ambos (la 01 y la 04). |
-| P10 | ¿La pregunta de estrategia de PR sale del preflight? Contradicción: la 01 (C-01-b) dice que C-02-c la conserva; la 02 (C-02-c) dice que sale. Las revisiones 01 y 02 la dan por resuelta en sentidos opuestos. | **Sale** (`single-pr` sin preguntar, `chained` a petición en el chat): en multirepo el preflight queda sin preguntas, y el hook debe aceptar un preflight vacío o suprimirlo; C-06-b necesitaría una interacción propia si `explainer_html: ask`. **Se conserva** (menú con `single-pr` por defecto): el preflight nunca queda vacío y C-06-b tiene sitio, pero se pregunta algo ya decidido. | Condiciona el diseño de C-01-b (ola 2) y bloquea C-02-c (ola 4); condiciona C-06-b (ola 10). | Que salga: el usuario dijo «La PR mejor unificada, salvo que el usuario pida otra cosa». Que sea consecuencia directa de esa frase es inferencia de la 02. |
-| P12 | ¿El resumen que sustituye la descripción del work item basta con listar los requisitos con su ID funcional, o hay que enviar los IDs funcionales aparte (campo, etiqueta o enlaces)? Fusiona las antiguas P12 y la P14 de la revisión 03. | **Basta el resumen:** sin cambio nuevo; coincide con lo dicho por el usuario («y listo»). **Enviar los IDs aparte:** hace falta ampliar la 07 con una dependencia dura de C-03-b. El tema 3 del origen pide «enviarlo también» al tercero y ningún cambio lo hace hoy. | C-07-e, ola 12. | Basta el resumen. |
-| P14 | ¿El autofetch solo avanza `integration_branch` y nunca `main_branch` (solo avisa)? Era la propuesta P14 de la revisión 05; el usuario eligió «Avisar y avanzar» antes de que existiera `main_branch`. | **Solo `integration_branch`:** el avance con ff estricto queda acotado a una rama. **También `main_branch`:** más actualizado, pero mueve la rama de producción de un clon desde un hook. | C-05-d, ola 10. | Solo `integration_branch`. |
-| P15 | ¿«Todas las configuraciones […] tienen que estar en la ui» (el usuario, en C-07-h) significa verlas o también editarlas? Era la P14 de la revisión 06. Afecta a `technical_context`, `workspace.root`, `skill_roots` y `governance.*`, hoy en solo lectura con «abrir en el editor». | **Solo ver:** C-06-e queda en L. **Editarlas:** C-06-e pasa a XL, con más validación cruzada y más riesgo de romper comentarios del YAML. | Alcance de C-06-e, ola 12. | Ninguna del análisis; la 06 propuso solo lectura para lo estructural, sin confirmar. |
+Ninguna. Todas las decisiones quedaron resueltas por el usuario el 2026-11-17 (apartado 6.2).
 
-### 6.2 Resueltas por las revisiones
+### 6.2 Resueltas
 
 | Id | Resolución y evidencia |
 |---|---|
@@ -283,17 +268,30 @@ Ninguna sesión las resuelve. Las marcadas «bloquea» deben cerrarse antes de l
 | P11 (solo lectura de `integrations.tracker`) | `integrations.<plugin>` se edita desde la UI y lo hace C-07-h. Evidencia: el usuario dijo «todas las configuraciones que hablamos a nivel de proyecto o lo que sea tienen que estar en la ui» (Engram `analisis-backlog/integraciones-terceros` v2, 2026-11-16). |
 | P11 (ciclo C-06-e ↔ C-07-h) | Con C-06-e sin dependencia de C-07-b (la 06) el ciclo desaparece: es planificación, no del usuario. Queda abierta la contradicción de la arista (apartado 6.3). |
 | P13 | Resuelta. Evidencia: el usuario eligió «Eliminarlo» para el check de 400 (Engram `analisis-backlog/entrega-git/ci-size-check`). C-02-e (ola 5) lo elimina, actualiza la memoria local `entrega-una-pr-size-exception.md` y la preferencia de Engram `preference/delivery-strategy`; C-03-e (ola 9) ya no necesita la etiqueta. |
-| P10 (parte de la 01, «¿queda vacío el preflight?») | No resuelta: las revisiones 01 y 02 se contradicen. Se mantiene arriba como P10. |
+| P10 | **Resuelta por el usuario (2026-11-17): la pregunta de estrategia de PR sale del preflight.** `single-pr` sin preguntar y `chained` solo a petición en el chat. Consecuencias: en multirepo el preflight queda sin preguntas y C-01-b diseña el hook para aceptar un preflight vacío o suprimirlo; C-02-c retira la pregunta; C-06-b necesita una interacción propia para `explainer_html: ask`. |
 | P14 (revisión 03) | Fusionada en P12. |
+| P1 | **Resuelta por el usuario (2026-11-17): sí, sin squash.** La doctrina (C-02-d) recomienda fusionar con merge commit para que los commits revisados lleguen a la rama destino y `done` confirme por ascendencia. C-02-a sigue tolerando squash (árbol equivalente o `--force`). |
+| P2 | **Resuelta por el usuario (2026-11-17), con matiz: la pregunta no va en el preflight, sino en la parada previa a las tareas** (puerta `tasks` en SDD `checkpointed`; parada de plan en ODD). Se pregunta si parar al terminar cada tarea y si el commit es automático. Tres modos: (1) avisar y seguir con commit automático (por defecto); (2) parar tras cada tarea con commit automático; (3) parar tras cada tarea sin commit: la persona revisa el diff, aprueba, y entonces se hace el commit y se pasa a la siguiente. «Sin commit» implica parar (si no, la siguiente tarea se mezclaría en el árbol sin revisar). En `continuous` y en ODD pequeño sin documento de feature no hay pregunta: modo 1. C-02-d se amplía en consecuencia: el modo se registra en esa parada (no en `kickoff seal`) y el modo 3 es comportamiento nuevo en `sdd-apply` y en el paso 6 de ODD. |
+| P4 | **Resuelta por el usuario (2026-11-17): interruptor opt-in, apagado por defecto.** Es preferencia personal en el hub (`~/.axiom/workspaces.json`, REQ-25.29), no clave de `axiom.yaml`; activarlo es la autorización explícita y persistente del fetch. C-05-d reformula REQ-25.10 y la regla de doctrina en consecuencia. |
+| P14 | **Resuelta por el usuario (2026-11-17), con interruptor encendido:** (a) **repo de specs**: su rama `main` (en multirepo es la única y hace de integración; en monorepo, la integración del propio repo) se trae y se avanza con ff estricto siempre que se pueda (árbol limpio, sin divergencia); (b) **repos de código**: no se avanza ninguna rama local, pero antes de que `axiom branch ensure` cree una rama se hace fetch para crearla sobre lo último de `origin`. **Amplía C-05-d**, que excluía los repos de código. `main_branch` de código nunca se avanza localmente. Con el interruptor apagado, ninguna orden hace red (REQ-25.10). |
+| P9 | **Resuelta por el usuario (2026-11-17): ODD en ambos.** C-01-d (quitar Serena; integra las specs vivas con `axiom archive integrate --odd`) y C-04-d (`skillcheck`) van por ODD; al arrancar, la respuesta a la pregunta de carril es ODD. |
+| P3 | **Resuelta por el usuario (2026-11-17): sí, hacerla.** C-06-f (M, SDD) va en la ola 15: decisiones de puerta desde la UI con motivo y las tres salidas; «aprobar, publicar y parar» hace push desde la UI tras avisar de que es una operación remota (lo dispara la persona con su clic). |
+| P8 | **Resuelta por el usuario (2026-11-17): bloquear el `ensure`.** Si falla crear las Tasks de rol, la aprobación del design se registra igualmente, lo indica y ofrece reintentar o crearla a mano; el `ensure` de cada rol queda bloqueado hasta vincular su Task, así `{task_ref}` siempre es válido. |
+| P12 | **Resuelta por el usuario (2026-11-17): enviar los IDs funcionales aparte.** Además del resumen que sustituye la descripción, C-07-e envía al work item los IDs funcionales del cambio por separado (campo, etiqueta o enlaces: lo elige el diseño de C-07-e según lo que permita el tracker sin personalizar el proceso). C-07-e pasa a depender **duro** de C-03-b (ola 7; no cambia las olas). Cubre el «enviarlo también» del tema 3 del origen. |
+| P15 | **Resuelta por el usuario (2026-11-17): solo ver.** `technical_context`, `workspace.root`, `skill_roots` y `governance.*` se muestran en C-06-e en solo lectura con «abrir en el editor»; el resto del catálogo de C-06-e sigue siendo editable. C-06-e queda en L. |
+| P16 (nueva, del interruptor de P4) | **Resuelta por el usuario (2026-11-17): el interruptor del autofetch se ve y se edita en la UI.** C-06-e añade, junto a las preferencias del hub que la UI ya edita (`worktree_mode`, `worktree_root`), un bloque de preferencias personales con el interruptor. C-05-d (ola 10) aporta la preferencia y el comando; C-06-e (ola 12) depende de C-05-d. Sustituye la línea de la sección 06 «El autofetch es un ajuste personal (sección 05), no del proyecto, y no entra en esta pantalla». |
+| P5 | **Resuelta por el usuario (2026-11-17): con clave.** `delivery.split_hint_lines` en `axiom.yaml`, desactivada por defecto; si se activa, C-02-c avisa una vez de «cambio grande» sin bloquear. C-06-e la incluye en su catálogo. |
+| P6 | **Resuelta por el usuario (2026-11-17): comando nuevo de workspace.** C-04-b añade el comando (adaptador en `cmd/axiom/main.go` e `internal/cli/` que reutiliza `projectTechnicalContext`) y ODD lo usa para obtener los locators del contexto técnico; no se depende de `axiom sdd status --json`. |
+| P7 | **Resuelta por el usuario (2026-11-17): ampliar.** C-05-a limpia también `GEMINI.md:48`, `docs/intended-usage.md` y `docs/codebase/sync-and-cloud.md`, además de `.engram/`, `docs/engram.md`, `.gitignore` y `AGENTS.md`. |
 
-### 6.3 Contradicciones abiertas entre secciones o revisiones (planificación, no del usuario)
+### 6.3 Contradicciones de planificación (resueltas por la coordinación, 2026-11-17)
 
-| Contradicción | Efecto |
+| Contradicción | Resolución |
 |---|---|
-| **Propietario de `routing.go:77`** (frase de RDD del paso 7: «The native review candidate is a work-unit commit or a PR slice… native review runs only under the user-owned receipt-driven development switch»). La sección 01 ya asigna a C-01-c `:129`, `:131` y `:152-166`, así que el hueco de `routing.go:129` está cerrado. Pero ninguna sección retira la frase del `:77`: la revisión 02 propone añadirla a C-01-c, la sección 01 y la revisión 01 no la citan. C-02-d, C-03-a, C-03-b y C-04-b tocan ese mismo paso por otros motivos. | Si nadie la retira, la doctrina conserva prosa de RDD tras la ola 3. Propuesta (decide la padre): asignar el `:77` a C-01-c, que va antes que C-02-d, C-03-a y C-03-b (C-04-b, ola 2, lo toca antes). |
-| **Arista C-07-b → C-06-e.** La 07 dice que C-07-b bloquea a C-06-e; la 06 dice que C-06-e no depende de C-07-b. | No cambia las olas (C-07-b va en la 6, C-06-e en la 12). |
-| **Texto obsoleto en la 02 (C-02-c).** Dice que C-01-e «va en la misma ola 4», pero la 01 lo lleva al final del plan. | Sin efecto en las olas. El criterio de terminado de C-02-c ya admite el residuo `risk.go:22` mientras C-01-e no esté fusionado. |
-| **Errata de la 07 (C-07-h).** Cita `isLocalRequest` en `server.go:1045`; en `5f6b05b4` la función empieza en `:1050`. | Sin efecto. |
+| **Propietario de `routing.go:77`** (frase de RDD del paso 7: «The native review candidate is a work-unit commit or a PR slice… native review runs only under the user-owned receipt-driven development switch»). Ninguna sección la retiraba. | **Asignada a C-01-c** (ola 3), junto con `:129`, `:131` y `:152-166`. C-04-b (ola 2) toca el mismo paso antes por otro motivo; C-02-d, C-03-a y C-03-b después rebasan sobre la frase ya retirada. |
+| **Arista C-07-b → C-06-e.** La 07 dice que C-07-b bloquea a C-06-e; la 06 dice que no. | Se mantiene como dependencia **blanda**: no cambia las olas (C-07-b en la 6, C-06-e en la 12) y C-06-e no necesita código de C-07-b. |
+| **Texto obsoleto en la 02 (C-02-c).** Decía que C-01-e «va en la misma ola 4». | Corregido en la sección 02: C-01-e va al final del plan (ola 16). |
+| **Errata de la 07 (C-07-h).** Citaba `isLocalRequest` en `server.go:1045`. | Corregido en la sección 07: `:1050` en `5f6b05b4`. |
 
 ### Verificaciones técnicas que las secciones marcan «no verificado» (las comprueba la sesión hija)
 
@@ -306,7 +304,7 @@ Ninguna sesión las resuelve. Las marcadas «bloquea» deben cerrarse antes de l
 
 ### Decisiones de diseño delegadas a la sesión de cada cambio (no son del usuario salvo que cambien el alcance)
 
-- C-01-b: ¿un `artifact_store` declarado distinto de `hybrid` se ignora con aviso o se rechaza?; esquema de marcadores del preflight para un número de preguntas variable (marcador por nombre de grupo o `N/M` con `M` variable), también para preguntas que se añadan después (`explainer_html` de C-06-b); cómo trata el hook un preflight sin preguntas si P10 lo permite.
+- C-01-b: ¿un `artifact_store` declarado distinto de `hybrid` se ignora con aviso o se rechaza?; esquema de marcadores del preflight para un número de preguntas variable (marcador por nombre de grupo o `N/M` con `M` variable), también para preguntas que se añadan después (`explainer_html` de C-06-b); cómo trata el hook un preflight sin preguntas, que P10 hace posible en multirepo (aceptarlo vacío o suprimirlo).
 - C-01-c: qué parte general de `Delegated Verification Gate` se conserva, y que nada ajeno a RDD use el handoff de defectos.
 - C-02-a: dónde se guarda el modo de promoción resuelto (kickoff o registro local; en ODD, que no tiene kickoff, solo cabe el registro local).
 - C-03-a: clave del patrón de IDs y cierre de las sugerencias del verify de P6 (paridad del marcador entre `isoevidence` y `livespec`, e interpretación de `Motivo:`).

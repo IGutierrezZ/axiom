@@ -130,7 +130,7 @@ El cambio se decide por preferencia propia del usuario, no por imitar a upstream
   - (Usuario, vía sección 01.) RDD queda apagado de fábrica y sin posibilidad de activarlo, porque se va a retirar. La revisión por commit no se apoya en RDD ni en `axiom review assess`.
   - (Análisis.) Las dos referencias de RDD al 400 se van con RDD (sección 01) y **este cambio no las toca**, para no editar dos veces los mismos pasajes:
     - `internal/components/agentguidance/routing.go:129`, con la rebanada de PR de RDD medium acotada a unas 400 líneas. **Aviso de la revisión cruzada:** C-01-c solo lista `routing.go:131` y `:158`, así que `:129` hoy no tiene dueño. Ver `revision-02.md`. Si al llegar a C-02-c sigue en `main`, C-02-c lo reduce a su primera frase, la que no es de RDD: «Run applicable functional checks per task, not a review cycle per TODO checkbox».
-    - `internal/reviewtransaction/risk.go:22` `LargeChangeLines`, con la composición 4R. Lo retira C-01-e, que va en la misma ola 4.
+    - `internal/reviewtransaction/risk.go:22` `LargeChangeLines`, con la composición 4R. Lo retira C-01-e, que va al final del plan (ola 16).
   - (Usuario.) Se elimina el check de tamaño del CI del propio repo: ver C-02-e.
 - **Fuera de alcance.**
   - `risk.go:22` (C-01-e) y la parte de RDD de `routing.go:129`, que debería retirar C-01-c (ver *Decisiones* y `revision-02.md`).
@@ -194,7 +194,9 @@ El cambio se decide por preferencia propia del usuario, no por imitar a upstream
     - si ya se publicó, un commit correctivo nuevo.
     Nunca se reescribe historia publicada.
   - (Análisis, **no confirmado por el usuario**.) Fusionar sin squash (merge commit), para que los commits revisados lleguen a la rama destino y para que `done` confirme por ascendencia en el modo `branch` de C-02-a.
-  - (Análisis, **no confirmado por el usuario**; P2.) Sin pregunta nueva en el pre-vuelo: el modo es `notify` por defecto y la persona pide paradas en cualquier momento. El motivo ya no es que el hook exija exactamente 3 preguntas (C-01-b lo hace variable), sino no ampliar el pre-vuelo con una decisión que el usuario quiere tomar sobre la marcha («que lo decida el usuario»). En SDD se refleja en el kickoff (bandera nueva en `axiom sdd kickoff seal`, ortogonal a `--execution-style`); en ODD, en el documento de feature.
+  - (Usuario, 2026-11-17; P2 resuelta, **sustituye a la viñeta siguiente**.) El modo se pregunta en la parada previa a las tareas (puerta `tasks` en SDD `checkpointed`; parada de plan en ODD), no en el pre-vuelo ni en `kickoff seal`. Se pregunta si parar al terminar cada tarea y si el commit es automático. Tres modos: (1) avisar y seguir con commit automático, por defecto; (2) parar tras cada tarea con commit automático; (3) parar tras cada tarea sin commit: la persona revisa el diff, aprueba y entonces se hace el commit. «Sin commit» implica parar. En `continuous` y en ODD pequeño sin documento de feature no se pregunta: modo 1.
+  - (Usuario, 2026-11-17; P1 resuelta.) La doctrina recomienda fusionar sin squash (merge commit).
+  - (Análisis, **superada por P2**.) Sin pregunta nueva en el pre-vuelo: el modo es `notify` por defecto y la persona pide paradas en cualquier momento. El motivo ya no es que el hook exija exactamente 3 preguntas (C-01-b lo hace variable), sino no ampliar el pre-vuelo con una decisión que el usuario quiere tomar sobre la marcha («que lo decida el usuario»). En SDD se refleja en el kickoff (bandera nueva en `axiom sdd kickoff seal`, ortogonal a `--execution-style`); en ODD, en el documento de feature.
   - (Sección 01.) Sin RDD.
 - **Fuera de alcance.**
   - Revisión automática de commits.

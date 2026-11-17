@@ -28,7 +28,7 @@ Análisis completo, con evidencia y fuentes: `side-session-notes/.../07-integrac
 - **`external_ref`.** No existe en `main`. El archivado de `carril-sdd-versatil` (#257) recortó `story.md` y solo dejó la intención («se reserva el hueco»).
 - **Perfil de bug.** Va en `proposal.md`, con `## Informe de bug` y `## Impacto en la spec` (`internal/isoevidence/bug.go:8-11`).
 - **Inyección de MCP por agente.** Ya existe para Context7 (`internal/components/mcp/context7.go:39-89`, `internal/catalog/components.go:15`).
-- **Dashboard.** Solo escucha en `127.0.0.1` (`internal/dashboard/server.go:146`). Las mutaciones se protegen con `isLocalRequest` (`server.go:1045`). Las respuestas llevan `Access-Control-Allow-Origin: *` (`server.go:217`) y no hay CSP.
+- **Dashboard.** Solo escucha en `127.0.0.1` (`internal/dashboard/server.go:146`). Las mutaciones se protegen con `isLocalRequest` (`server.go:1050`). Las respuestas llevan `Access-Control-Allow-Origin: *` (`server.go:217`) y no hay CSP.
 
 ## Cambios resultantes
 
@@ -313,7 +313,7 @@ Análisis completo, con evidencia y fuentes: `side-session-notes/.../07-integrac
   - (Análisis) Pantalla «Integraciones» generada desde el manifiesto del plugin. Al activarlo se despliegan sus secciones: conexión, tipos, eventos, estados, campos, tags, plantillas de rama y jornada para la propuesta de horas.
     - Los desplegables se rellenan con `discovery` (C-07-c).
     - Se escribe con el escritor `yaml.Node` y el catálogo de claves de la sección 06.
-  - (Análisis) «Conectar»: el PAT se envía por POST a un endpoint local protegido por `isLocalRequest` (`internal/dashboard/server.go:1045`), se guarda en el almacén del sistema y **nunca se devuelve**. «Probar conexión» muestra la identidad resuelta.
+  - (Análisis) «Conectar»: el PAT se envía por POST a un endpoint local protegido por `isLocalRequest` (`internal/dashboard/server.go:1050`), se guarda en el almacén del sistema y **nunca se devuelve**. «Probar conexión» muestra la identidad resuelta.
   - (Usuario) No hay formulario de alta de WI: solo un campo de ID o URL al arrancar y un enlace «Abrir en Azure DevOps» (ver C-07-d).
   - (Análisis) Vista por cambio: WI enlazado, Task por rol con su estimación e imputaciones, operaciones pendientes de la outbox y quién hizo cada fase (C-07-a).
 - **Fuera de alcance:** formulario de alta de work items.
