@@ -199,14 +199,19 @@ func TestRenderRoutingProjectsODDProtocolBeforeTopology(t *testing.T) {
 }
 
 // TestRenderRoutingClosesODDWithTheMaintainedTechnicalContext guards
-// organic-agent-trigger-rules REQ-24.58 (inc-24, design D-19): the ODD close
-// step carries one deterministic English sentence about the maintained
-// technical context. It must sit inside step 7, render once, be identical in
-// two renders and for every adapter, and leave every other step untouched.
+// organic-agent-trigger-rules REQ-24.58, as revised by C-04-b (decision P6): ODD
+// reads the maintained technical context while exploring (step 2) and updates it
+// when it closes (step 7). Each step carries one deterministic English sentence,
+// rendered once, inside its own step, identical in two renders and for every
+// adapter. The locators come from `axiom workspace context --cwd <repo> --json`,
+// never from `axiom sdd status --json`. The inc-24 rule that forbade mentioning
+// the technical context outside step 7 is deliberately revised: steps 0, 1, 3, 4,
+// 5 and 6 must still not mention it.
 func TestRenderRoutingClosesODDWithTheMaintainedTechnicalContext(t *testing.T) {
 	t.Parallel()
 
-	const sentence = "When the project declares a maintained technical context (`technical_context.maintained` in `axiom.yaml`), a work unit that changes something that context documents updates the affected documentation in that same work-unit commit; documentation declared as reference (`technical_context.reference`) is never modified, and without a maintained context this adds no requirement."
+	const exploreSentence = "When the project declares a maintained technical context, read its entry before proposing or writing: get the locators from `axiom workspace context --cwd <repo> --json`, open `technicalContext.maintained.entry` first and consult the remaining `technicalContext.maintained.paths` only on demand; without a declared maintained context this step reads nothing more."
+	const sentence = "When the project declares a maintained technical context, a work unit that changes something that context documents updates the affected documentation in that same work-unit commit; documentation declared as reference (`technical_context.reference`) is never modified, and without a maintained context this adds no requirement. The locators of that maintained context are the ones read in step 2, from the output of `axiom workspace context --cwd <repo> --json`."
 
 	reference, err := RenderRouting(model.AgentClaudeCode)
 	if err != nil {
@@ -257,8 +262,28 @@ func TestRenderRoutingClosesODDWithTheMaintainedTechnicalContext(t *testing.T) {
 				}
 			}
 
-			// No other ODD step changes, and the SDD lane gains nothing.
-			for _, step := range []string{"0. **Evaluate scope and lane.**", "1. **Authorize.**", "2. **Explore.**", "3. **Resolve uncertainty.**", "4. **Classify.**", "5. **Track before the first write.**", "6. **Implement task by task.**"} {
+			// Step 2 carries the read sentence once, inside step 2 only.
+			if got := strings.Count(first, exploreSentence); got != 1 {
+				t.Fatalf("RenderRouting(%q) renders the step-2 sentence %d times, want exactly once", agent.ID, got)
+			}
+			exploreOffset := strings.Index(first, "2. **Explore.**")
+			exploreEnd := exploreOffset + strings.Index(first[exploreOffset:], "\n")
+			if at := strings.Index(first, exploreSentence); exploreOffset < 0 || at < exploreOffset || at+len(exploreSentence) > exploreEnd {
+				t.Fatalf("RenderRouting(%q) must place the read sentence inside step 2", agent.ID)
+			}
+			if !strings.Contains(first[exploreOffset:exploreEnd], "Explore the existing code and requirements first, proportionately to the request, before proposing or writing anything.") {
+				t.Fatalf("RenderRouting(%q) step 2 lost its existing sentence", agent.ID)
+			}
+			// The technical-context locator no longer comes from the SDD status.
+			if strings.Contains(first, "technicalContext.maintained.paths` in the output of `axiom sdd status") {
+				t.Fatalf("RenderRouting(%q) must not name `axiom sdd status` as the technical-context locator", agent.ID)
+			}
+			if strings.Contains(closeStep, "axiom sdd status") || strings.Contains(closeStep, "in `axiom.yaml`") {
+				t.Fatalf("RenderRouting(%q) step 7 must point to the workspace command only:\n%s", agent.ID, closeStep)
+			}
+
+			// The other ODD steps stay untouched, and the SDD lane gains nothing.
+			for _, step := range []string{"0. **Evaluate scope and lane.**", "1. **Authorize.**", "3. **Resolve uncertainty.**", "4. **Classify.**", "5. **Track before the first write.**", "6. **Implement task by task.**"} {
 				offset := strings.Index(first, step)
 				if offset < 0 {
 					t.Fatalf("RenderRouting(%q) lost step %q", agent.ID, step)
@@ -268,8 +293,8 @@ func TestRenderRoutingClosesODDWithTheMaintainedTechnicalContext(t *testing.T) {
 					t.Fatalf("RenderRouting(%q) step %q must not mention the technical context", agent.ID, step)
 				}
 			}
-			if strings.Count(first, "technical_context") != 2 {
-				t.Fatalf("RenderRouting(%q) must mention technical_context only inside the new sentence", agent.ID)
+			if strings.Count(first, "technical_context") != 1 {
+				t.Fatalf("RenderRouting(%q) must mention technical_context only inside the step-7 sentence", agent.ID)
 			}
 		})
 	}
@@ -824,12 +849,13 @@ func TestRenderRoutingClosesODDWithTheLivingSpecIntegration(t *testing.T) {
 
 // TestRenderRoutingClosesODDWithTheMaintainedContextLocator guards
 // organic-agent-trigger-rules REQ-24.58 (part 1, spec-viva-openspec): the ODD
-// close step tells the agent where the maintained technical context is located
-// (`technicalContext.maintained.entry` and `.paths` of `axiom sdd status
-// --json`) and to open `entry` first. The sentence follows the maintained-context
-// sentence inside the single paragraph of step 7, renders once, is identical for
-// every adapter and neither authorizes touching reference documentation nor
-// requires anything when no maintained context is declared.
+// explore step (2) tells the agent where the maintained technical context is
+// located (`technicalContext.maintained.entry` and `.paths` of `axiom workspace
+// context --cwd <repo> --json`, no longer `axiom sdd status --json`, C-04-b) and
+// to open `entry` first; the close step (7) points back to that same command
+// after the maintained-context sentence, inside its single paragraph. Both render
+// once, are identical for every adapter and neither authorizes touching reference
+// documentation nor requires anything when no maintained context is declared.
 func TestRenderRoutingClosesODDWithTheMaintainedContextLocator(t *testing.T) {
 	t.Parallel()
 
@@ -862,22 +888,27 @@ func TestRenderRoutingClosesODDWithTheMaintainedContextLocator(t *testing.T) {
 				t.Fatalf("RenderRouting(%q) step 7 must stay a single paragraph, got:\n%q", agent.ID, closeStep)
 			}
 
+			exploreOffset := strings.Index(rendered, "2. **Explore.**")
+			exploreStep := rendered[exploreOffset : exploreOffset+strings.Index(rendered[exploreOffset:], "\n")]
 			for _, want := range []string{
 				"`technicalContext.maintained.entry`",
 				"`technicalContext.maintained.paths`",
-				"`axiom sdd status --json`",
-				"open `entry` first",
+				"`axiom workspace context --cwd <repo> --json`",
+				"open `technicalContext.maintained.entry` first",
 			} {
-				if got := strings.Count(closeStep, want); got != 1 {
-					t.Fatalf("RenderRouting(%q) step 7 must contain %q exactly once, got %d:\n%s", agent.ID, want, got, closeStep)
+				if got := strings.Count(exploreStep, want); got != 1 {
+					t.Fatalf("RenderRouting(%q) step 2 must contain %q exactly once, got %d:\n%s", agent.ID, want, got, exploreStep)
 				}
 			}
 			if got := strings.Count(rendered, "`technicalContext.maintained.entry`"); got != 1 {
 				t.Fatalf("RenderRouting(%q) renders the locator %d times, want exactly once", agent.ID, got)
 			}
+			if got := strings.Count(closeStep, "`axiom workspace context --cwd <repo> --json`"); got != 1 {
+				t.Fatalf("RenderRouting(%q) step 7 must name the workspace command exactly once, got %d:\n%s", agent.ID, got, closeStep)
+			}
 
 			maintainedOffset := strings.Index(closeStep, maintained)
-			locatorOffset := strings.Index(closeStep, "`technicalContext.maintained.entry`")
+			locatorOffset := strings.Index(closeStep, "`axiom workspace context --cwd <repo> --json`")
 			specOffset := strings.Index(closeStep, "`## Spec viva`")
 			if maintainedOffset < 0 || locatorOffset < maintainedOffset || specOffset < locatorOffset {
 				t.Fatalf("RenderRouting(%q) must place the locator after the maintained-context sentence and before the living-spec rule (maintained=%d locator=%d spec=%d)", agent.ID, maintainedOffset, locatorOffset, specOffset)
@@ -885,9 +916,7 @@ func TestRenderRoutingClosesODDWithTheMaintainedContextLocator(t *testing.T) {
 
 			// The locator is read only when a maintained context exists and never
 			// widens what may be edited.
-			sentenceStart := locatorOffset
-			sentenceEnd := sentenceStart + strings.Index(closeStep[sentenceStart:], ". ")
-			locatorSentence := closeStep[sentenceStart:sentenceEnd]
+			locatorSentence := exploreStep
 			if strings.Contains(locatorSentence, "reference") {
 				t.Fatalf("RenderRouting(%q) the locator sentence must not mention reference documentation: %q", agent.ID, locatorSentence)
 			}
