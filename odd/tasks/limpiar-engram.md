@@ -34,7 +34,7 @@ El repositorio versiona memoria de Engram heredada de upstream y varias guías i
 
 - [x] **T1 · Retirar la memoria versionada** (`.engram/chunks/`, `.engram/manifest.json`, `.gitignore`). Ruta: inline (mecánico, 1 fichero de texto).
 - [x] **T2 · Alinear la documentación de Engram** (`docs/engram.md`, `docs/intended-usage.md`, `docs/codebase/sync-and-cloud.md`). Ruta: inline (ediciones mecánicas y acotadas ya localizadas).
-- [ ] **T3 · Fetch solo con autorización** (`AGENTS.md:17`, `GEMINI.md:48`). Ruta: inline (una línea por fichero).
+- [x] **T3 · Fetch solo con autorización** (`AGENTS.md:17`, `GEMINI.md:48`). Ruta: inline (una línea por fichero).
 - [ ] **T4 · Diagrama `docs/assets/diagrams/engram-memory.svg`**: reescribir solo las cadenas `:3`, `:91` y `:93`, que presentan `engram sync` como reparto con el equipo, sin cambiar la geometría. Lo enlaza `README.md:67`. Ruta: inline (tres cadenas de texto).
 - [ ] **T5 · Verificar el criterio de terminado** (ver «Comprobaciones»).
 
