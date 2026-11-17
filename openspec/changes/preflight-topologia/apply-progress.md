@@ -1,6 +1,6 @@
 # Progreso de apply: preflight-topologia (C-01-b)
 
-Modo: estándar (TDD estricto no activo; RED observado igualmente en cada tarea). Estrategia de entrega: `exception-ok` (una PR con `size:exception`). Lotes 1 a 3: U1 a U4.
+Modo: estándar (TDD estricto no activo; RED observado igualmente en cada tarea). Estrategia de entrega: `exception-ok` (una PR con `size:exception`). Lotes 1 a 4: U1 a U5.
 
 ## Unidades completadas
 
@@ -10,7 +10,8 @@ Modo: estándar (TDD estricto no activo; RED observado igualmente en cada tarea)
 | U1 | hecha | `37da0abf` |
 | U2 | hecha | `9383953d` |
 | U3 | hecha | `494049a5` |
-| U4 | hecha | ver `git log` (`feat(cli): el hook de preflight valida los grupos que exige la topología`) |
+| U4 | hecha | `9b53f58f` |
+| U5 | hecha | ver `git log` (`feat(opencode): el plugin aplica el contrato de grupos por topología del hook`) |
 
 ## U1 · Work Unit Evidence
 
@@ -61,7 +62,7 @@ Notas:
 
 ## U4 · Hook de preflight por topología
 
-Hecha (lote 3; commit `feat(cli): el hook de preflight valida los grupos que exige la topología`, el hash está en `git log`).
+Hecha (lote 3; commit `9b53f58f`, `feat(cli): el hook de preflight valida los grupos que exige la topología`).
 
 | Evidencia | Valor |
 |---|---|
@@ -76,5 +77,25 @@ Notas:
 - «Un prompt que ya trae el bloque no se duplica»: el hook deniega siempre un prompt con el encabezado del bloque (denegación de bloque del modelo, también con cero grupos); la prueba afirma que el prompt permitido contiene el encabezado exactamente una vez.
 - `internal/sddtaskresult/preflight_question_harness_test.go` ejercita el plugin de OpenCode (U5), no el hook: no cambia.
 
+## U5 · Plugin de OpenCode (dos copias)
+
+Hecha (lote 4; commit `feat(opencode): el plugin aplica el contrato de grupos por topología del hook`, el hash está en `git log`).
+
+| Evidencia | Valor |
+|---|---|
+| Prueba focalizada | `go test ./internal/assets/ -run "OpenCode|Opencode|SDD"`: ok; `go test ./internal/sddtaskresult/...`: ok; `go test ./internal/components/sdd/ -run "OpenCode|Opencode|Digest|Plugin"`: ok (48 s). RED observado: con las dos copias restauradas a la revisión anterior (`git show HEAD:...`), fallan `TestOpenCodeSDDPreflightTopologyContract`, `TestOpenCodeV2SDDDispatch`, `TestOpenCodeV2SDDPreflightAcceptsBothPrefixes`, las dos pruebas de sincronía de bloques y tablas, `TestOpenCodeTopologyReaderParity` y el arnés de v1 |
+| Arnés de ejecución | Los plugins reales (v1 y v2) ejecutados con Node (`--experimental-strip-types`) con el mismo guion sobre un adaptador por generación; el arnés de v1 de `internal/sddtaskresult` ejecuta también con Node cuando `bun` no está en el `PATH` (en esta máquina no lo está); paridad del lector de topología frente a `workspace.Locate`/`GoverningTopology` sobre 34 directorios más tres rutas relativas |
+| Límite de reversión | Las dos copias de `sdd-task-result-artifacts.ts`, `opencode_plugin_digests.go`, la cuenta de la tabla en `opencode_runtime_test.go` y las pruebas de plugin (el digest antiguo sigue registrado) |
+
+Notas:
+- Digests registrados antes de editar (5.1): v1 `5b259f9f…` y v2 `e12ef869…`, ambos de la revisión `386e0cc0`; `TestHistoricalOpenCodePluginDigestTable` pasa de 8/3 a 9/4 digests.
+- Contrato replicado: tabla `SDD_PREFLIGHT_GROUPS` (`id`, `header`, `legacyNumber`, `requiredIn`, opciones con `token`) y `SDD_PREFLIGHT_BLOCK_FIELDS` espejo de las del hook; el grupo heredado `artifacts` se reconoce y se ignora (queda en la tabla con `requiredIn: []`, y su pregunta no se toca); las preguntas sin marcador nunca se asignan por posición. La canonicalización reescribe el marcador (heredado o con prefijo heredado) al nominal con el prefijo Axiom solo en los grupos requeridos.
+- El `before` de `question` también rechaza un grupo requerido ausente o repetido nombrándolo (conserva el rechazo temprano que antes daba «exactamente tres preguntas»); el `after` es la red de seguridad y valida por etiqueta (conjunto exacto de etiquetas ofrecidas, selección única, respuesta en el dominio) con los mismos motivos de rechazo que el hook. Las respuestas del host son posicionales respecto a las preguntas, así que la respuesta de un grupo es la del índice de su pregunta.
+- Con cero grupos requeridos el despacho antepone el bloque derivado sin exigir pregunta, y se conservan las denegaciones de sesión hija y de bloque del modelo (se comprueban antes). La prueba de cero grupos sustituye en el fuente la fila `requiredIn` de `pr-strategy` (fixture de tabla).
+- Lector de topología (bloque `// axiom-topology:begin … end`, idéntico en las dos copias, comprobado por `TestSDDTaskResultArtifactsTopologyReaderIsInSyncAcrossGenerations`): sigue el marcador más cercano como `Locate` (puntero sobre `axiom.yaml` sobre `openspec/` suelto), un puntero roto o un inicio inexistente dan `monorepo-embedded`. Divergencias conocidas y aceptadas, documentadas en el código: estilo de flujo de YAML (se trata como ilegible: lado seguro) y no comprobar que exista el repositorio de especificaciones de un multirepo (el binario falla en `Locate` y gobierna monorepo; el plugin lee multirepo). El bloque `axiom-project-gate` no se tocó.
+- `preflight_question_harness_test.go` (arnés de v1) pasa a usar `bun` si existe y, si no, `node --experimental-strip-types` (importa el plugin con extensión explícita); se omite solo sin ninguno de los dos. Así corre en esta máquina, donde `bun` no está instalado. Los escenarios se reescribieron al contrato nuevo (dos grupos, marcadores nominales y heredados, artefactos ignorados, sin asignación posicional).
+- Pruebas nuevas en `internal/assets/opencode_sdd_preflight_topology_test.go` (mismo guion en v1 y v2) y `internal/sddtaskresult/topology_reader_parity_test.go`. `opencode_sdd_project_gate_test.go`, `transport_parity_test.go` y `sdd_task_result_transport_test.go` no necesitaron cambios (los escenarios de dos preguntas ya se rechazaban por grupo requerido ausente); `TestSDDTaskResultArtifactsPluginContract` sigue fijando las etiquetas, el `NFD` y las frases de rechazo.
+
 ## Riesgos abiertos
 - Ninguno nuevo de U3 ni de U4.
+- U5: la divergencia aceptada del lector de topología (multirepo cuyo repositorio de especificaciones falta) lee `multirepo` en el plugin y `monorepo-embedded` en el binario; un proyecto así ya falla `Locate` y no es utilizable.

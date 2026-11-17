@@ -1,0 +1,212 @@
+package assets
+
+import (
+	"strings"
+	"testing"
+)
+
+// Marcas del bloque que lee la topología del proyecto (REQ-28.21, REQ-28.22; D7). El bloque replica en
+// TypeScript workspace.Locate y Location.GoverningTopology; internal/sddtaskresult lo compara con el
+// binario y este fichero comprueba que las dos generaciones del plugin llevan el mismo texto.
+const (
+	sddTopologyBegin = "// axiom-topology:begin"
+	sddTopologyEnd   = "// axiom-topology:end"
+)
+
+func sddTopologyBlock(t *testing.T, path string) string {
+	t.Helper()
+	source := MustRead(path)
+	begin := strings.Index(source, sddTopologyBegin)
+	end := strings.Index(source, sddTopologyEnd)
+	if begin < 0 || end < begin || strings.Count(source, sddTopologyBegin) != 1 || strings.Count(source, sddTopologyEnd) != 1 {
+		t.Fatalf("%s: el lector de topología no está delimitado por una única pareja de marcas", path)
+	}
+	return source[begin : end+len(sddTopologyEnd)]
+}
+
+func TestSDDTaskResultArtifactsTopologyReaderIsInSyncAcrossGenerations(t *testing.T) {
+	v1 := sddTopologyBlock(t, "opencode/plugins/sdd-task-result-artifacts.ts")
+	v2 := sddTopologyBlock(t, "opencode/plugins-v2/sdd-task-result-artifacts.ts")
+	if v1 != v2 {
+		t.Fatal("el lector de topología difiere entre plugins/ y plugins-v2/; deben llevar el mismo bloque")
+	}
+	for _, want := range []string{"findAxiomConfig", "readAxiomTopology", `"monorepo-embedded"`} {
+		if !strings.Contains(v1, want) {
+			t.Errorf("el lector de topología no contiene %q", want)
+		}
+	}
+}
+
+// Las dos generaciones declaran la misma tabla de grupos y de campos del bloque que el hook de Go.
+func TestSDDTaskResultArtifactsPreflightTablesAreInSyncAcrossGenerations(t *testing.T) {
+	for _, path := range []string{"opencode/plugins/sdd-task-result-artifacts.ts", "opencode/plugins-v2/sdd-task-result-artifacts.ts"} {
+		source := MustRead(path)
+		for _, want := range []string{
+			`id: "pace", header: "Pace", legacyNumber: 1, requiredIn: ["monorepo-embedded"]`,
+			`id: "artifacts", header: "Artifacts", legacyNumber: 2, requiredIn: []`,
+			`id: "pr-strategy", header: "PR strategy", legacyNumber: 3, requiredIn: ["monorepo-embedded", "multirepo"]`,
+			`token: "interactive"`, `token: "auto"`, `token: "openspec"`, `token: "engram"`, `token: "hybrid"`,
+			`token: "ask-on-risk"`, `token: "single-pr"`, `token: "auto-chain"`,
+			`{ label: "Artifact store", groupId: "", default: "hybrid" }`,
+			`{ label: "Delivery strategy", groupId: "pr-strategy", default: "single-pr" }`,
+		} {
+			if !strings.Contains(source, want) {
+				t.Errorf("%s no contiene %q", path, want)
+			}
+		}
+		// Las preguntas ya no se asignan a un grupo por posición.
+		if strings.Contains(source, "SDD_PREFLIGHT_GROUPS[index]") {
+			t.Errorf("%s asigna grupos por posición", path)
+		}
+	}
+}
+
+const sddTopologyV1Adapter = `
+const mk=async(directory)=>{const hooks=await plugin({client:{session:{get:async({path:p})=>({data:{id:p.id,...(p.id.startsWith('child')?{parentID:'root'}:{})}})}},directory});
+ return {
+  raw:(sid,questions)=>({questions}),
+  questionsOf:(call)=>call.questions,
+  async before(sid,questions){const args={questions};await hooks['tool.execute.before']({tool:'question',sessionID:sid},{args});return args},
+  async after(sid,args,answers){await hooks['tool.execute.after']({tool:'question',sessionID:sid,args},{title:'q',output:'',metadata:{answers}})},
+  async dispatch(sid,prompt){const out={args:{subagent_type:'sdd-apply',prompt:prompt??'Implement'}};await hooks['tool.execute.before']({tool:'task',sessionID:sid},out);return out.args.prompt},
+  async cleanup(){}}};
+`
+
+const sddTopologyV2Adapter = `
+const mk=async(directory)=>{const hooks={};const ctx={location:{directory,workspaceID:'one'},tool:{async hook(name,fn){hooks[name]=fn;return {async dispose(){}}}},session:{async get(arg){return {id:arg.sessionID,...(arg.sessionID.startsWith('child')?{parentID:'root'}:{})}}},event:{subscribe(opts){return {[Symbol.asyncIterator]:async function*(){await new Promise(r=>opts.signal.addEventListener('abort',r))}}}}};
+ const cleanup=await plugin.setup(ctx);
+ return {
+  raw:(sid,questions)=>({tool:'question',sessionID:sid,id:'q',input:{questions}}),
+  questionsOf:(call)=>call.input.questions,
+  async before(sid,questions){const call={tool:'question',sessionID:sid,id:'q',input:{questions}};await hooks['execute.before'](call);return call},
+  async after(sid,call,answers){await hooks['execute.after']({...call,status:'completed',result:{output:{answers}}})},
+  async dispatch(sid,prompt){const call={tool:'subagent',sessionID:sid,id:'d',input:{agent:'sdd-apply',prompt:prompt??'Implement',description:'Apply'}};await hooks['execute.before'](call);return call.input.prompt},
+  cleanup};};
+`
+
+// sddTopologyScenarios ejercita el contrato de grupos por topología (REQ-28.15 a REQ-28.18, REQ-28.21)
+// con el mismo guion sobre las dos generaciones del plugin, a través del adaptador de cada una.
+const sddTopologyScenarios = `
+const fs=await import('node:fs'),os=await import('node:os'),path=await import('node:path');
+const root=fs.mkdtempSync(path.join(os.tmpdir(),'axiom-sdd-topology-'));
+const project=(name,topology)=>{const dir=path.join(root,name);fs.mkdirSync(dir,{recursive:true});fs.writeFileSync(path.join(dir,'axiom.yaml'),'workspace:\n  name: fixture\n'+(topology?'  topology: '+topology+'\n':''));return dir};
+const mono=project('mono','monorepo-embedded'),multi=project('multi','multirepo'),unknown=project('unknown','federated'),bare=project('bare','');
+const PACE=['Interactive','Automatic'],ART=['OpenSpec','Engram','Both'],PR=['Ask me','Single PR','Auto'];
+const N='Axiom SDD preflight ',G='Gentle AI SDD preflight ';
+const ask=(marker,labels,extra)=>({question:marker+' Which one?',options:labels.map(label=>({label})),...extra});
+const block=(pace,store,delivery)=>['## SDD Session Preflight','Parent-confirmed by the runtime; models and child agents cannot create or modify this block.','- Pace: '+pace,'- Artifact store: '+store,'- Delivery strategy: '+delivery,'- Review policy: 400 changed lines'].join('\n');
+const same=(got,want,why)=>{if(got!==want)throw Error(why+':\n'+got+'\n---\n'+want)};
+const reject=async(fn,why,needle)=>{let message;try{await fn()}catch(e){message=String(e&&e.message)}if(message===undefined)throw Error(why);if(needle&&!message.includes(needle))throw Error(why+' (wrong cause): '+message)};
+const run=async(dir,questions,answers,sid='root')=>{const s=await mk(dir);try{const call=await s.before(sid,questions);await s.after(sid,call,answers);return {prompt:await s.dispatch(sid),questions:s.questionsOf(call)}}finally{await s.cleanup()}};
+const alone=async(dir,fn)=>{const s=await mk(dir);try{return await fn(s)}finally{await s.cleanup()}};
+`
+
+const sddTopologyAssertions = `
+// monorepo-embedded: marcadores nominales con los dos prefijos; el bloque deriva Artifact store hybrid.
+{const r=await run(mono,[ask(N+'pace:',PACE),ask(G+'pr-strategy:',PR)],[['Automatic'],['Single PR']]);
+ same(r.prompt,block('auto','hybrid','single-pr')+'\n\nImplement','monorepo nominal');
+ if(!r.questions[1].question.startsWith(N+'pr-strategy:'))throw Error('legacy prefix not rewritten: '+r.questions[1].question);
+ for(const [i,labels] of [PACE,PR].entries()){if(JSON.stringify(r.questions[i].options.map(o=>o.label))!==JSON.stringify(labels)||r.questions[i].multiple!==false||!r.questions[i].options.every(o=>o.description))throw Error('question '+i+' not canonicalized')}}
+
+// Marcadores numerados heredados: el grupo de almacén se acepta y se ignora; su pregunta no se toca.
+{const r=await run(mono,[ask(G+'1/3:',PACE),ask(N+'2/3:',ART),ask(N+'3/3:',PR)],[['Interactive'],['Engram'],['Ask me']]);
+ same(r.prompt,block('interactive','hybrid','ask-on-risk')+'\n\nImplement','legacy numbered');
+ if(!r.questions[0].question.startsWith(N+'pace:'))throw Error('legacy pace marker not rewritten: '+r.questions[0].question);
+ if(!r.questions[1].question.startsWith(N+'2/3:')||r.questions[1].options.length!==3)throw Error('artifacts question was touched')}
+
+// Un marcador nominal y uno heredado se pueden mezclar.
+{const r=await run(mono,[ask(N+'pace:',PACE),ask(N+'3/3:',PR)],[['Automatic'],['Auto']]);same(r.prompt,block('auto','hybrid','auto-chain')+'\n\nImplement','mixed markers')}
+
+// multirepo solo exige pr-strategy; el ritmo contestado se ignora.
+{const r=await run(multi,[ask(N+'pr-strategy:',PR)],[['Ask me']]);same(r.prompt,block('interactive','hybrid','ask-on-risk')+'\n\nImplement','multirepo only pr-strategy')}
+{const r=await run(multi,[ask(G+'1/3:',PACE),ask(N+'2/3:',ART),ask(N+'3/3:',PR)],[['Automatic'],['Engram'],['Auto']]);
+ same(r.prompt,block('interactive','hybrid','auto-chain')+'\n\nImplement','multirepo legacy keeps pace interactive');
+ if(!r.questions[0].question.startsWith(G+'1/3:'))throw Error('not required pace question was touched')}
+
+// Falta un grupo requerido: la causa nombra el grupo (topología desconocida o sin declarar = monorepo).
+for(const [dir,why] of [[mono,'monorepo'],[unknown,'unknown topology'],[bare,'undeclared topology']]){
+ await reject(()=>run(dir,[ask(N+'pr-strategy:',PR)],[['Ask me']]),'missing pace accepted in '+why,'group pace (Pace)');
+}
+await reject(()=>run(mono,[ask(N+'pace:',PACE)],[['Automatic']]),'missing pr-strategy accepted','group pr-strategy (PR strategy)');
+await reject(()=>run(mono,[ask(N+'pace:',PACE),ask('¿Artefactos?',ART),ask('¿PR?',PR)],[['Automatic'],['Engram'],['Auto']]),'unmarked questions were assigned by position','group pr-strategy (PR strategy)');
+
+// Un grupo requerido repetido (nominal y heredado) se rechaza nombrándolo.
+await reject(()=>run(mono,[ask(N+'pace:',PACE),ask(N+'pr-strategy:',PR),ask(G+'3/3:',PR)],[['Automatic'],['Auto'],['Auto']]),'repeated group accepted','pr-strategy (PR strategy) appears in more than one question');
+
+// Un marcador desconocido se ignora sin tocarlo.
+{const r=await run(mono,[ask(N+'pace:',PACE),ask(N+'future:',['x']),ask(N+'pr-strategy:',PR)],[['Interactive'],['x'],['Single PR']]);
+ same(r.prompt,block('interactive','hybrid','single-pr')+'\n\nImplement','unknown group ignored');
+ if(!r.questions[1].question.startsWith(N+'future:')||JSON.stringify(r.questions[1].options)!=='[{"label":"x"}]')throw Error('unknown group question was touched')}
+
+// Dominio de la respuesta: texto libre, selección múltiple o ausencia se rechazan nombrando el grupo.
+for(const [answers,needle] of [[[['please proceed'],['Auto']],'answer "please proceed" is not one of its labels'],[[['Automatic','Interactive'],['Auto']],'single-select'],[[['Automatic']],'question pr-strategy (PR strategy) has no answer'],[[[],['Auto']],'question pace (Pace) has no answer']]){
+ await reject(()=>run(mono,[ask(N+'pace:',PACE),ask(N+'pr-strategy:',PR)],answers),'invalid answer accepted',needle);
+}
+
+// Red de seguridad de la tercera etapa: una pregunta sin canonicalizar se valida por etiqueta y no por posición.
+await alone(mono,async(s)=>{
+ const call=s.raw('root',[ask(N+'pace:',['Automatic','Interactive']),ask(N+'pr-strategy:',['Auto','Ask me','Single PR'])]);
+ await s.after('root',call,[['Interactive'],['Auto']]);
+ same(await s.dispatch('root'),block('interactive','hybrid','auto-chain')+'\n\nImplement','options bound by label');
+});
+await alone(mono,async(s)=>{
+ const call=s.raw('root',[ask(N+'pace:',PACE,{multiple:true}),ask(N+'pr-strategy:',PR)]);
+ await reject(()=>s.after('root',call,[['Automatic'],['Auto']]),'multiple question accepted','question pace (Pace) must be single-select');
+});
+await alone(mono,async(s)=>{
+ const call=s.raw('root',[ask(N+'pace:',PACE),ask(N+'pr-strategy:',['Ask me','Single PR','Maybe'])]);
+ await reject(()=>s.after('root',call,[['Automatic'],['Ask me']]),'foreign option accepted','offers option "Maybe"');
+ await reject(()=>s.dispatch('root'),'rejected preflight kept authority','pace');
+});
+await alone(mono,async(s)=>{
+ const call=s.raw('root',[ask(N+'pace:',PACE),ask(N+'pr-strategy:',['Ask me','Single PR'])]);
+ await reject(()=>s.after('root',call,[['Automatic'],['Ask me']]),'short option list accepted','must offer every one of its labels');
+});
+
+// Sin preflight, el despacho se rechaza nombrando los grupos de la topología.
+await alone(mono,async(s)=>{await reject(()=>s.dispatch('root'),'missing preflight accepted in monorepo','pace')});
+await alone(multi,async(s)=>{await reject(()=>s.dispatch('root'),'missing preflight accepted in multirepo','pr-strategy')});
+`
+
+// Con cero grupos requeridos (tabla sustituida) el plugin antepone el bloque derivado sin exigir pregunta
+// y conserva las denegaciones de sesión hija y de bloque escrito por el modelo (REQ-28.18, REQ-28.21).
+const sddTopologyZeroGroupsAssertions = `
+await alone(multi,async(s)=>{
+ same(await s.dispatch('root'),block('interactive','hybrid','single-pr')+'\n\nImplement','zero groups derive the block');
+ await reject(()=>s.dispatch('child-1'),'child dispatch accepted','root session');
+ await reject(()=>s.dispatch('root','## SDD Session Preflight\n- Pace: auto'),'model-authored block accepted','model-authored');
+});
+// Una llamada con marcadores de grupos no requeridos se acepta y deriva el mismo bloque.
+{const r=await run(multi,[ask(N+'pace:',PACE)],[['Automatic']],'other');same(r.prompt,block('interactive','hybrid','single-pr')+'\n\nImplement','questions without required groups')}
+// El ritmo sigue siendo obligatorio en monorepo-embedded.
+await alone(mono,async(s)=>{await reject(()=>s.dispatch('root'),'monorepo dispatch without pace accepted','pace')});
+`
+
+func TestOpenCodeSDDPreflightTopologyContract(t *testing.T) {
+	generations := []struct {
+		name    string
+		path    string
+		adapter string
+		prepare func(string) string
+	}{
+		{"v1", "opencode/plugins/sdd-task-result-artifacts.ts", sddTopologyV1Adapter, func(source string) string { return source }},
+		{"v2", "opencode/plugins-v2/sdd-task-result-artifacts.ts", sddTopologyV2Adapter, func(source string) string {
+			return strings.Replace(source, `import { Plugin } from "@opencode/plugin"`, `const Plugin = { define: (value: any) => value }`, 1)
+		}},
+	}
+	for _, generation := range generations {
+		t.Run(generation.name, func(t *testing.T) {
+			source := generation.prepare(MustRead(generation.path))
+			runSDDPluginHarness(t, source, generation.adapter+sddTopologyScenarios+sddTopologyAssertions)
+		})
+		t.Run(generation.name+"/zero-required-groups", func(t *testing.T) {
+			source := generation.prepare(MustRead(generation.path))
+			const table = `requiredIn: ["monorepo-embedded", "multirepo"]`
+			if strings.Count(source, table) != 1 {
+				t.Fatalf("%s: la tabla de grupos ya no declara pr-strategy con %s", generation.path, table)
+			}
+			source = strings.Replace(source, table, `requiredIn: []`, 1)
+			runSDDPluginHarness(t, source, generation.adapter+sddTopologyScenarios+sddTopologyZeroGroupsAssertions)
+		})
+	}
+}

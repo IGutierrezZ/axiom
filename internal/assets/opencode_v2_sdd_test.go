@@ -13,13 +13,13 @@ const cleanup=await plugin.setup(ctx);if(!hooks['execute.before']||!hooks['execu
 const reject=async(fn,why)=>{let failed=false;try{await fn()}catch{failed=true}if(!failed)throw Error(why)};
 const request=()=>({tool:'subagent',sessionID:'root',id:'call',input:{agent:'sdd-apply',prompt:'Implement approved tasks',description:'Apply'}});
 await reject(()=>hooks['execute.before'](request()),'missing preflight accepted');
-const question={tool:'question',sessionID:'root',id:'q',input:{questions:[{question:'Gentle AI SDD preflight 1/3: Pace?',options:[]},{question:'Artifacts?',options:[]},{question:'PR?',options:[]}]}};
+const question={tool:'question',sessionID:'root',id:'q',input:{questions:[{question:'Gentle AI SDD preflight 1/3: Pace?',options:[]},{question:'Axiom SDD preflight pr-strategy: PR?',options:[]}]}};
 await hooks['execute.before'](question);
-await reject(()=>hooks['execute.after']({...question,status:'completed',result:{output:{answers:[['please proceed'],['Engram'],['Auto']]}}}),'free text accepted');
-for(const answers of [[['Automatic','Interactive'],['Engram'],['Auto']],[['Automátic'],['Engram'],['Auto']],[['Automatic'],['Engram']]]) {
+await reject(()=>hooks['execute.after']({...question,status:'completed',result:{output:{answers:[['please proceed'],['Auto']]}}}),'free text accepted');
+for(const answers of [[['Automatic','Interactive'],['Auto']],[['Automátic'],['Auto']],[['Automatic']]]) {
  await reject(()=>hooks['execute.after']({...question,status:'completed',result:{output:{answers}}}),'non-exact domain accepted');
 }
-await hooks['execute.after']({...question,status:'completed',result:{output:{answers:[[' Automatic '],['Engram'],['Auto']]}}});
+await hooks['execute.after']({...question,status:'completed',result:{output:{answers:[[' Automatic '],['Auto']]}}});
 const call=request();await hooks['execute.before'](call);if(!call.input.prompt.startsWith('## SDD Session Preflight'))throw Error('authority missing');
 await reject(()=>hooks['execute.before']({...request(),sessionID:'child'}),'child authority');
 await hooks['execute.after']({...call,status:'completed',result:{output:{sessionID:'worker',status:'running',output:'started'}}});
@@ -29,7 +29,7 @@ await reject(()=>hooks['execute.after']({...call,status:'completed',result:{outp
 await reject(()=>hooks['execute.before'](request()),'failure not latched');
 queue.push({type:'session.deleted',location:ctx.location,data:{sessionID:'root'}});wake?.();await new Promise(r=>setImmediate(r));
 await reject(()=>hooks['execute.before'](request()),'deletion retained authority');
-const errorQuestion={...question,sessionID:'errorroot'};await hooks['execute.after']({...errorQuestion,status:'completed',result:{output:{answers:[['Automatic'],['Engram'],['Auto']]}}});
+const errorQuestion={...question,sessionID:'errorroot'};await hooks['execute.after']({...errorQuestion,status:'completed',result:{output:{answers:[['Automatic'],['Auto']]}}});
 const errorCall={...request(),sessionID:'errorroot'};await hooks['execute.before'](errorCall);
 await reject(()=>hooks['execute.after']({...errorCall,status:'error',error:{message:'provider failure'}}),'tool error ignored');
 await reject(()=>hooks['execute.before']({...request(),sessionID:'errorroot'}),'tool failure not latched');
@@ -52,16 +52,17 @@ for(const prefix of ['Gentle AI SDD preflight','Axiom SDD preflight']){
  const sessionID='root-'+prefix.split(' ')[0];
  const request=()=>({tool:'subagent',sessionID,id:'call',input:{agent:'sdd-apply',prompt:'Implement approved tasks',description:'Apply'}});
  await reject(()=>hooks['execute.before'](request()),'missing preflight accepted for '+prefix);
- const question={tool:'question',sessionID,id:'q',input:{questions:[{question:prefix+' 1/3: Pace?',options:[]},{question:'Artifacts?',options:[]},{question:'PR?',options:[]}]}};
+ // Marcadores numerados heredados: se reescriben al marcador nominal con el prefijo Axiom.
+ const question={tool:'question',sessionID,id:'q',input:{questions:[{question:prefix+' 1/3: Pace?',options:[]},{question:prefix+' 3/3: PR?',options:[]}]}};
  await hooks['execute.before'](question);
- for(const [index,q] of question.input.questions.entries()){if(!/^(?:Gentle AI|Axiom) SDD preflight \d\/3: /.test(q.question)||!q.question.includes(String(index+1)+'/3:'))throw Error('marker not canonicalized for '+prefix+': '+q.question)}
- await hooks['execute.after']({...question,status:'completed',result:{output:{answers:[['Automatic'],['Engram'],['Auto']]}}});
+ for(const [index,q] of question.input.questions.entries()){if(!q.question.startsWith('Axiom SDD preflight '+['pace','pr-strategy'][index]+': '))throw Error('marker not canonicalized for '+prefix+': '+q.question)}
+ await hooks['execute.after']({...question,status:'completed',result:{output:{answers:[['Automatic'],['Auto']]}}});
  const call=request();await hooks['execute.before'](call);
  if(!call.input.prompt.startsWith('## SDD Session Preflight'))throw Error('authority missing for '+prefix);
  // Prefixes already canonical (typed by the model with a different prefix) are also recognized after canonicalization.
- const already={tool:'question',sessionID:sessionID+'-b',id:'q',input:{questions:[{question:prefix+' 1/3: Pace',options:[{label:'Interactive'},{label:'Automatic'}]},{question:prefix+' 2/3: Artifacts',options:[{label:'OpenSpec'},{label:'Engram'},{label:'Both'}]},{question:prefix+' 3/3: PR',options:[{label:'Ask me'},{label:'Single PR'},{label:'Auto'}]}]}};
+ const already={tool:'question',sessionID:sessionID+'-b',id:'q',input:{questions:[{question:prefix+' pace: Pace',options:[{label:'Interactive'},{label:'Automatic'}]},{question:prefix+' pr-strategy: PR',options:[{label:'Ask me'},{label:'Single PR'},{label:'Auto'}]}]}};
  await hooks['execute.before'](already);
- await hooks['execute.after']({...already,status:'completed',result:{output:{answers:[['Interactive'],['OpenSpec'],['Ask me']]}}});
+ await hooks['execute.after']({...already,status:'completed',result:{output:{answers:[['Interactive'],['Ask me']]}}});
  const second={tool:'subagent',sessionID:sessionID+'-b',id:'call2',input:{agent:'sdd-apply',prompt:'Implement approved tasks',description:'Apply'}};await hooks['execute.before'](second);
  if(!second.input.prompt.startsWith('## SDD Session Preflight'))throw Error('authority missing for '+prefix+' (full set)');
 }
