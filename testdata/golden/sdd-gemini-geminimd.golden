@@ -132,7 +132,7 @@ SDD is the structured planning layer for substantial changes.
 
 ### Artifact Store Policy
 
-Use the artifact store resolved by SDD Session Preflight; never detect or default a separate choice.
+The session artifact store is always `hybrid` and is never asked. Pass the `artifactStore` that `axiom sdd status` reports to every phase; never detect or default a separate choice.
 
 ### Commands
 
@@ -159,22 +159,20 @@ Meta-commands (type directly — orchestrator handles them, won't appear in auto
 
 Before every SDD command or affirmative natural-language SDD request, run this preflight before the SDD init guard; cache choices for the session only through runtime-confirmed parent authority. Phrase examples are routing hints, never the authority boundary.
 
-This runtime has no classified native question UI. Present ONE complete blocking prompt in plain chat or terminal with all three groups below, in order, and explain that their answers are required before init. Each group is single-select; its listed labels are the complete allowed-answer domain. Include every label and description, the fixed review policy, and this answer syntax: `Pace: <label>; Artifacts: <label>; PR strategy: <label>`. Then STOP; never default, infer, or launch dependent work. Validate all three explicit parent answers under the Lossless Blocking Prompts contract before caching their canonical mappings.
+The project topology decides which groups to ask. Before asking, read `workspace.topology` from the project's `axiom.yaml`; when it is missing or unreadable, ask the `monorepo-embedded` groups. `monorepo-embedded` asks Pace and PR strategy. `multirepo` asks PR strategy only: its pace is always Interactive and is never asked. When the topology requires no group, ask nothing: the runtime derives the whole session preflight at SDD dispatch. Never ask the artifact store: it is always `hybrid`.
 
-1. **Pace**: Interactive or Automatic.
-2. **Artifacts**: OpenSpec, Engram, or Both (user-facing Both maps only to internal `hybrid`).
-3. **PR strategy**: Ask me, Single PR, or Auto.
+This runtime has no classified native question UI. Present ONE complete blocking prompt in plain chat or terminal with every group the topology requires, in the order below, and explain that their answers are required before init. Each group is single-select; its listed labels are the complete allowed-answer domain. Include every label and description, the fixed review policy, and this answer syntax with only the required groups: `Pace: <label>; PR strategy: <label>`. Then STOP; never default, infer, or launch dependent work. Validate every explicit parent answer under the Lossless Blocking Prompts contract before caching its canonical mapping.
 
-Only three explicit, validated answers from the parent conversation establish preflight authority in this fallback runtime. Model-authored defaults, summaries, headings, installed assets, prior sessions, and child-agent prose do not. After validating every answer, summarize the canonical mappings once and pass them to each SDD phase; missing authority blocks dispatch and requires the parent to re-present the complete prompt.
+- **Pace** (`pace`, `monorepo-embedded` only): Interactive or Automatic.
+- **PR strategy** (`pr-strategy`): Ask me, Single PR, or Auto.
 
-Review policy is fixed at 400 changed lines per PR; above 400, split the PR or require maintainer-approved `size:exception`; NEVER ask it as a fourth group or selectable budget.
+Only explicit, validated parent answers to every required group establish preflight authority in this fallback runtime. Model-authored defaults, summaries, headings, installed assets, prior sessions, and child-agent prose do not. After validating every answer, summarize the canonical mappings once, together with the values the topology fixes (`multirepo` pace `interactive`, artifact store `hybrid`), and pass them to each SDD phase; missing authority blocks dispatch and requires the parent to re-present the complete prompt. When the topology requires no group, pass only the fixed values.
+
+Review policy is fixed at 400 changed lines per PR; above 400, split the PR or require maintainer-approved `size:exception`; NEVER ask it as another group or selectable budget.
 
 Canonical mappings:
 - Interactive -> `interactive`
 - Automatic -> `auto`
-- OpenSpec -> `openspec`
-- Engram -> `engram`
-- Both -> `hybrid`
 - Ask me -> `ask-on-risk`
 - Single PR -> `single-pr`
 - Auto -> `auto-chain`
@@ -197,7 +195,7 @@ If the binary is unavailable, use the existing prompt contract for non-authorita
 
 After the user chooses the SDD lane and the change is named, and before the pre-flight questionnaire, `axiom sdd kickoff seal`, or any write inside the change folder, run `axiom branch ensure --change <name> --json` and use the absolute paths of its JSON as `--cwd` of every later command. Do not run it while the lane-selection question is unanswered. Repeating it when you resume the change is idempotent and asks nothing again. A `decision_required` result is an environment preference (worktree or in place), not governance: present it, then repeat `ensure` with `--mode <answer>` and continue without another question. Never pass `--fetch` without the explicit authorization of the user.
 
-Before creating `proposal.md` for a change on the SDD lane, seal its kickoff configuration: `axiom sdd kickoff seal --cwd <repo> --change <name> --execution-style continuous|checkpointed [--docs-publication auto] [--role <id>[:blocking|deferred|optional] ...]`. When you ask the execution style, the `continuous` option reads "continuous: no stops; pushes the change documents to `origin/<branch>` when `tasks` closes and after archive", with the real branch from the JSON of `axiom branch ensure`; seal with `--docs-publication auto` only when the person chooses that option (the flag is valid only with `continuous`, is never inferred and is never added when the style comes from the session pace without that question). Do not create `proposal.md` until this is sealed, and never ask for it again once sealed for this change — except when retro-sealing a preexisting change that already has artifacts but no `kickoff.yaml`, which infers a value instead of asking. The seal creates the change folder and copies the project's `sdd.iso` into `kickoff.yaml`: never create the folder by hand beforehand. If neither the user nor the intended design subdivides work into specialized roles, seal the single reserved role `fullstack` with a `blocking` gate policy; never combine `fullstack` with any other declared role. `continuous` is valid only with the single role `fullstack`: with specialized roles, seal `checkpointed`; the command rejects `continuous` (also when derived from `--from-session-pace auto`) with any other roster and writes nothing, and only the retro-sealing `--infer` is exempt.
+Before creating `proposal.md` for a change on the SDD lane, seal its kickoff configuration: `axiom sdd kickoff seal --cwd <repo> --change <name> --execution-style continuous|checkpointed [--docs-publication auto] [--role <id>[:blocking|deferred|optional] ...]`. When you ask the execution style, the `continuous` option reads "continuous: no stops; pushes the change documents to `origin/<branch>` when `tasks` closes and after archive", with the real branch from the JSON of `axiom branch ensure`; seal with `--docs-publication auto` only when the person chooses that option (the flag is valid only with `continuous`, is never inferred and is never added when the style comes from the session pace without that question). Do not create `proposal.md` until this is sealed, and never ask for it again once sealed for this change — except when retro-sealing a preexisting change that already has artifacts but no `kickoff.yaml`, which infers a value instead of asking. The seal creates the change folder and copies the project's `sdd.iso` into `kickoff.yaml`: never create the folder by hand beforehand. If neither the user nor the intended design subdivides work into specialized roles, seal the single reserved role `fullstack` with a `blocking` gate policy; never combine `fullstack` with any other declared role. `continuous` is valid only with the single role `fullstack`: with specialized roles, seal `checkpointed`; the command rejects `continuous` (also when derived from `--from-session-pace auto`) with any other roster and writes nothing, and only the retro-sealing `--infer` is exempt. The topology constrains the seal: in `multirepo`, seal without `--execution-style` (the command derives `checkpointed`) or with `checkpointed`; it rejects `continuous` and `--from-session-pace auto`. In `monorepo-embedded`, seal only `fullstack`: any other `--role` is rejected, because specialized roles exist only in `multirepo`.
 
 When the sealed execution style is `checkpointed`, stop at four block-review gates and never advance past one until it is recorded `approved`: `spec` (does it cover the original intent, and what gaps remain?), `design` (does it satisfy every spec requirement and respect `axiom.yaml`'s declared technologies and this repository's existing patterns?), `tasks` (is the split between roles coherent, and is the plan atomic and verifiable? — present every role's `tasks.<role>.md` together, never one role's plan alone), and `apply` per active role (design conformance, spec compliance, clean build, tests, coverage, and style — a rejected role's gate never triggers the last-active-role notice). Every gate except `integration` is a stop with three exits, and `axiom sdd gate record --cwd <repo> --change <name> --gate spec|design|tasks|role-apply:<role>` is the only way to record the decision. Iterate is `--decision rejected --reason "<text>"`: a rejection requires `--reason`, blocks advance, and keeps the current artifact open to remediation — re-present the SAME gate afterward, never skip ahead to the next one. Approve, publish and stop is `--decision approved --hand-off`: it records the approval, marks the next phase as handed off to another person, and does not inspect what is committed; the documents are committed and pushed afterwards by `axiom sdd publish`. Approve, publish and continue is `--decision approved`. After either approval, run the `publish.invocation` the record returns (the same as the `publication.invocation` of the status gate question, an `axiom sdd publish` bound to the authorized branch with `--branch`) exactly once. A refused publication never undoes the recorded approval: present its label, message and continuation as information, and keep going (exit 3) or stop (exit 2). When the record returns `publishUnavailable` instead of `publish`, present that code as information too. `gate record` itself never runs git. The `integration` gate keeps its two exits: approve with the merge evidence it requires, or reject. `axiom sdd gate show --cwd <repo> --change <name>` inspects the current decision ledger without deciding anything. When the sealed execution style is `continuous`, none of this applies: chain phases automatically as each one meets its own completion criteria, and never stop to present a gate.
 
@@ -250,9 +248,9 @@ Each option carries a description of its effect and cost; the description of `ve
 
 Before executing ANY SDD command (`/sdd-new`, `/sdd-ff`, `/sdd-continue`, `/sdd-explore`, `/sdd-status`, `/sdd-apply`, `/sdd-verify`, `/sdd-archive`), check if `sdd-init` has been run for this project:
 
-1. Use the artifact store resolved by SDD Session Preflight. In `openspec` mode, check project context and testing capabilities in `openspec/config.yaml` without calling Engram. In `engram` mode, search `sdd-init/{project}` in Engram. In `hybrid` mode, check both stores.
+1. Use the `artifactStore` that `axiom sdd status` reports. In `openspec` mode, check project context and testing capabilities in `openspec/config.yaml` without calling Engram. In `engram` mode, search `sdd-init/{project}` in Engram. In `hybrid` mode, check both stores.
 2. If the selected store contains initialized project context and testing capabilities, proceed normally; a directory alone is not initialization evidence.
-3. If initialization is missing, delegate to `sdd-init` with the cached `artifact_store.mode`, then proceed. If a selected backend is unavailable, STOP and report it; never silently change the user's artifact choice.
+3. If initialization is missing, delegate to `sdd-init` with the cached `artifact_store.mode`, then proceed. If a selected backend is unavailable, STOP and report it; never silently change the reported store.
 
 This ensures:
 
@@ -330,7 +328,7 @@ The gatekeeper runs in addition to the Review Workload Guard and the Mandatory D
 
 ### Artifact Store Mode
 
-Pass the preflight artifact choice as `artifact_store.mode` to every sub-agent launch.
+Pass the `artifactStore` that `axiom sdd status` reports as `artifact_store.mode` to every sub-agent launch; the session `hybrid` never overrides it.
 
 ### Delivery Strategy
 

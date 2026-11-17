@@ -626,7 +626,11 @@ func TestKilocodeReviewSettingsMatchCurrentMainBaseline(t *testing.T) {
 	// hook-preflight-etiqueta T3 (C-01-a): el preflight proyectado deja de pedir «Keep options in
 	// the exact order below» porque el hook enlaza cada respuesta por su etiqueta; Kilocode compone
 	// ese bloque, así que el hash cambia. Deliberate, not drift.
-	const want = "52e8965b4a58442f527943ee36b1aab0c3d1633aa898b7b10e03d350d9985c30"
+	// preflight-topologia U6 (C-01-b): el preflight proyectado pasa a grupos por topología con marcadores
+	// nominales, el almacén `hybrid` fijo y el ritmo por topología; las secciones compartidas «Execution
+	// Mode», «Artifact Store Mode» y «Artifact Store Policy» y el párrafo del kickoff lo reflejan.
+	// Kilocode los compone en el orquestador de OpenCode, así que el hash cambia. Deliberate, not drift.
+	const want = "cd93b4b577822f6c17b725b999d9d8d98f7b8e9d1cc6aa7ea701fa0969e7501e"
 	if got != want {
 		t.Fatalf("Kilocode settings SHA-256 = %s, want current-main baseline %s", got, want)
 	}

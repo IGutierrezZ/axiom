@@ -1165,17 +1165,21 @@ func TestClaudeSDDWorkflowRequiresSessionPreflight(t *testing.T) {
 		t.Fatal("claude/sdd-orchestrator-workflow.md must not use `both` as a canonical artifact-store value; the Claude asset vocabulary is `hybrid` end to end (Dispatcher Guard, Artifact Store Policy/Mode)")
 	}
 
-	for _, section := range []string{"### Execution Mode", "### Artifact Store Mode"} {
-		idx := strings.Index(content, section)
+	// The pace is collected by the preflight (or fixed by the topology); the artifact store is never asked.
+	for _, section := range []struct{ heading, want string }{
+		{"### Execution Mode", "This is collected by `SDD Session Preflight`"},
+		{"### Artifact Store Mode", "The artifact store is never asked: in Axiom the session store is always `hybrid`."},
+	} {
+		idx := strings.Index(content, section.heading)
 		if idx < 0 {
-			t.Fatalf("claude/sdd-orchestrator-workflow.md missing section %q", section)
+			t.Fatalf("claude/sdd-orchestrator-workflow.md missing section %q", section.heading)
 		}
-		body := content[idx+len(section):]
+		body := content[idx+len(section.heading):]
 		if end := strings.Index(body, "\n### "); end >= 0 {
 			body = body[:end]
 		}
-		if !strings.Contains(body, "This is collected by `SDD Session Preflight`") {
-			t.Fatalf("claude/sdd-orchestrator-workflow.md section %q must state its value is collected by SDD Session Preflight instead of independently re-asking", section)
+		if !strings.Contains(body, section.want) {
+			t.Fatalf("claude/sdd-orchestrator-workflow.md section %q must state %q instead of independently re-asking", section.heading, section.want)
 		}
 	}
 
@@ -1187,10 +1191,10 @@ func TestClaudeSDDWorkflowRequiresSessionPreflight(t *testing.T) {
 }
 
 // sddOrchestratorAutomaticDefaultRuntimes lists every runtime whose asset
-// carries the flipped "default to Automatic" execution-mode sentence: the 11
-// runtimes with a standalone `sdd-orchestrator.md` plus Claude's separate
-// workflow surface. Deliberately not "all 12 runtime dirs" — Claude ships two
-// files and only its workflow file carries this sentence.
+// carries the topology-driven execution-mode sentence: the 11 runtimes with a
+// standalone `sdd-orchestrator.md` plus Claude's separate workflow surface.
+// Deliberately not "all 12 runtime dirs" — Claude ships two files and only its
+// workflow file carries this sentence.
 var sddOrchestratorAutomaticDefaultRuntimes = []string{
 	"antigravity/sdd-orchestrator.md",
 	"hermes/sdd-orchestrator.md",
@@ -1208,19 +1212,35 @@ var sddOrchestratorAutomaticDefaultRuntimes = []string{
 
 const sddOrchestratorAutomaticDefaultSentence = "If the user doesn't specify, default to **Automatic**."
 
+// sddOrchestratorTopologyModeSentence replaces it (REQ-28.20): no mode is assumed by default, the
+// project topology decides the pace.
+const sddOrchestratorTopologyModeSentence = "No mode is assumed by default: `multirepo` always runs **Interactive** and never asks; `monorepo-embedded` asks it in the session preflight."
+
+// sddOrchestratorHybridStoreSentence is the fixed-store doctrine of «Artifact Store Mode» (REQ-28.20),
+// byte-identical in every runtime that projects it.
+const sddOrchestratorHybridStoreSentence = "The artifact store is never asked: in Axiom the session store is always `hybrid`. Pass, as `artifact_store.mode` to every phase launch, the `artifactStore` and `artifactPaths` that `axiom sdd status` reports for the change; that native value (`openspec` when `openspec/config.yaml` declares nothing) is the authority phases persist to, and the session `hybrid` never overrides it. `axiom workspace validate` rejects a declared `engram` or `none`."
+
 const sddOrchestratorPromptBudgetSentence = "After scope approval, expect zero further prompts on the happy path and at most one actionable prompt per recoverable failure; the gatekeeper summarizes phase progress instead of interrupting except on a second consecutive gate failure or a genuine scope/product decision."
 
-// TestSDDOrchestratorAssetsDefaultToAutomatic pins that every SDD
-// orchestrator asset defaults to Automatic execution mode when unspecified,
-// with a byte-identical default sentence and prompt-budget sentence across
-// all 12 runtimes, and that Interactive stays explicitly selectable (never
-// removed as an option).
-func TestSDDOrchestratorAssetsDefaultToAutomatic(t *testing.T) {
+// TestSDDOrchestratorAssetsExecutionModeFollowsTopology pins that no SDD orchestrator asset
+// defaults to Automatic any more: every runtime carries the byte-identical topology sentence and
+// prompt-budget sentence, the fixed `hybrid` artifact-store doctrine, and keeps Interactive
+// explicitly selectable (never removed as an option).
+func TestSDDOrchestratorAssetsExecutionModeFollowsTopology(t *testing.T) {
 	for _, path := range sddOrchestratorAutomaticDefaultRuntimes {
 		t.Run(path, func(t *testing.T) {
 			content := mustReadResolved(path)
-			if !strings.Contains(content, sddOrchestratorAutomaticDefaultSentence) {
-				t.Fatalf("%s missing byte-identical default sentence %q", path, sddOrchestratorAutomaticDefaultSentence)
+			if strings.Contains(content, sddOrchestratorAutomaticDefaultSentence) || strings.Contains(content, "default to **Automatic**") {
+				t.Fatalf("%s still defaults to Automatic", path)
+			}
+			if !strings.Contains(content, sddOrchestratorTopologyModeSentence) {
+				t.Fatalf("%s missing byte-identical topology sentence %q", path, sddOrchestratorTopologyModeSentence)
+			}
+			if !strings.Contains(content, sddOrchestratorHybridStoreSentence) {
+				t.Fatalf("%s missing byte-identical hybrid store doctrine", path)
+			}
+			if strings.Contains(content, "ALSO ASK which artifact store") || strings.Contains(content, "default to `engram`") {
+				t.Fatalf("%s still asks or defaults the artifact store", path)
 			}
 			if !strings.Contains(content, sddOrchestratorPromptBudgetSentence) {
 				t.Fatalf("%s missing byte-identical prompt-budget sentence %q", path, sddOrchestratorPromptBudgetSentence)
@@ -1232,6 +1252,26 @@ func TestSDDOrchestratorAssetsDefaultToAutomatic(t *testing.T) {
 				t.Fatalf("%s must keep Interactive explicitly selectable", path)
 			}
 		})
+	}
+}
+
+// TestPersistenceContractFixesTheHybridSessionStore pins «Mode Resolution» (REQ-28.20): the contract
+// never asks the user for a mode, records the session `hybrid`, and consumes the store status reports.
+func TestPersistenceContractFixesTheHybridSessionStore(t *testing.T) {
+	content := MustRead("skills/_shared/persistence-contract.md")
+	for _, want := range []string{
+		"The orchestrator passes `artifact_store.mode` with the `artifactStore` that `axiom sdd status` reports",
+		"The orchestrator never asks the user for a mode: the session preflight always records `hybrid`, and it never overrides the reported store.",
+		"If no mode is passed, STOP and report it; never detect or default one.",
+	} {
+		if !strings.Contains(content, want) {
+			t.Errorf("persistence-contract.md missing %q", want)
+		}
+	}
+	for _, stale := range []string{"The orchestrator ASKs the user which mode", "Default (if user doesn't specify)"} {
+		if strings.Contains(content, stale) {
+			t.Errorf("persistence-contract.md retains %q", stale)
+		}
 	}
 }
 

@@ -225,7 +225,7 @@ When the user invokes `/sdd-new`, `/sdd-ff`, or `/sdd-continue` for the first ti
 - **Automatic** (`auto`): Run all phases back-to-back. The orchestrator runs a gatekeeper validation after every phase before launching the next sub-agent — the user only sees an interruption when the gatekeeper catches a problem. Final result only.
 - **Interactive** (`interactive`): After each phase, show the result summary and ask before proceeding.
 
-If the user doesn't specify, default to **Automatic**. After scope approval, expect zero further prompts on the happy path and at most one actionable prompt per recoverable failure; the gatekeeper summarizes phase progress instead of interrupting except on a second consecutive gate failure or a genuine scope/product decision.
+No mode is assumed by default: `multirepo` always runs **Interactive** and never asks; `monorepo-embedded` asks it in the session preflight. After scope approval, expect zero further prompts on the happy path and at most one actionable prompt per recoverable failure; the gatekeeper summarizes phase progress instead of interrupting except on a second consecutive gate failure or a genuine scope/product decision.
 
 In **Interactive** mode, between phases:
 
@@ -266,13 +266,7 @@ The gatekeeper runs in addition to the Review Workload Guard and the Mandatory D
 
 ### Artifact Store Mode
 
-When the user invokes `/sdd-new`, `/sdd-ff`, or `/sdd-continue` for the first time in a session, also ask which artifact store they want:
-
-- **`engram`**: Fast, no files created. Best for solo work.
-- **`openspec`**: File-based. Creates `openspec/` directory. Committable, shareable.
-- **`hybrid`**: Both — files for team sharing + engram for cross-session recovery.
-
-Default: `engram` when available. Cache the choice for the session.
+{{GENTLE_AI_SDD_SECTION:Artifact Store Mode}}
 
 ### Delivery Strategy
 

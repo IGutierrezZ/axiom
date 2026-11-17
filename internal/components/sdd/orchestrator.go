@@ -146,13 +146,13 @@ func composeFallbackSessionPreflight(content string, agent model.AgentID) string
 		}
 	}
 	for _, section := range []struct{ start, end, body string }{
-		{"### Artifact Store Policy", "### Commands", "Use the artifact store resolved by SDD Session Preflight; never detect or default a separate choice."},
-		{"### Artifact Store Mode", "### Delivery Strategy", "Pass the preflight artifact choice as `artifact_store.mode` to every sub-agent launch."},
+		{"### Artifact Store Policy", "### Commands", "The session artifact store is always `hybrid` and is never asked. Pass the `artifactStore` that `axiom sdd status` reports to every phase; never detect or default a separate choice."},
+		{"### Artifact Store Mode", "### Delivery Strategy", "Pass the `artifactStore` that `axiom sdd status` reports as `artifact_store.mode` to every sub-agent launch; the session `hybrid` never overrides it."},
 		{"### Delivery Strategy", "### Chain Strategy", "Pass the preflight PR strategy as `delivery_strategy` to `sdd-tasks` and `sdd-apply`. `exception-ok` is never a preflight choice; it requires explicit maintainer-approved `size:exception`."},
 	} {
 		if agent == model.AgentCodex && section.start == "### Artifact Store Policy" {
 			const tableHeading = "### Artifact store (engram default)\n"
-			content = strings.Replace(content, tableHeading, "### Artifact store (preflight-selected backend)\n\nUse the following topic keys and retrieval calls only in `engram` or `hybrid` mode. In `openspec` mode, use OpenSpec artifacts instead; do not call Engram for this table.\n", 1)
+			content = strings.Replace(content, tableHeading, "### Artifact store (status-reported backend)\n\nUse the following topic keys and retrieval calls only in `engram` or `hybrid` mode. In `openspec` mode, use OpenSpec artifacts instead; do not call Engram for this table.\n", 1)
 			continue
 		}
 		start := strings.Index(content, section.start+"\n")
@@ -169,7 +169,7 @@ func composeFallbackSessionPreflight(content string, agent model.AgentID) string
 	}
 	for _, bounds := range [][2]string{
 		{"When the user invokes `/sdd-new`", "- **Automatic**"},
-		{"If the user doesn't specify, default to **Automatic**.", executionEnd},
+		{"No mode is assumed by default: `multirepo` always runs **Interactive** and never asks; `monorepo-embedded` asks it in the session preflight.", executionEnd},
 	} {
 		start := strings.Index(content, bounds[0])
 		end := strings.Index(content, bounds[1])
@@ -185,7 +185,7 @@ func composeFallbackSessionPreflight(content string, agent model.AgentID) string
 		{[]model.AgentID{model.AgentCursor}, "**Interactive** is the default behavior", "**Interactive** uses the preflight choice"},
 		// Copilot CLI usa la misma plantilla genérica que VS Code Copilot, así que
 		// lleva la misma cláusula de origen.
-		{[]model.AgentID{model.AgentVSCodeCopilot, model.AgentGitHubCopilotCLI}, "Artifact store: default `engram` when available.", "Artifact store: use the SDD Session Preflight choice."},
+		{[]model.AgentID{model.AgentVSCodeCopilot, model.AgentGitHubCopilotCLI}, "Artifact store: default `engram` when available.", "Artifact store: use the `artifactStore` that `axiom sdd status` reports."},
 	} {
 		want := 0
 		if slices.Contains(replacement.agents, agent) {
@@ -220,7 +220,7 @@ func composeFallbackSessionPreflight(content string, agent model.AgentID) string
 	if strings.Count(content, legacyInitLookup) != 1 {
 		panic("sdd: missing or ambiguous fallback init lookup")
 	}
-	content = strings.Replace(content, legacyInitLookup, "1. Use the artifact store resolved by SDD Session Preflight. In `openspec` mode, check project context and testing capabilities in `openspec/config.yaml` without calling Engram. In `engram` mode, search `sdd-init/{project}` in Engram. In `hybrid` mode, check both stores.\n2. If the selected store contains initialized project context and testing capabilities, proceed normally; a directory alone is not initialization evidence.\n3. If initialization is missing, "+initAction+" with the cached `artifact_store.mode`, then proceed. If a selected backend is unavailable, STOP and report it; never silently change the user's artifact choice.", 1)
+	content = strings.Replace(content, legacyInitLookup, "1. Use the `artifactStore` that `axiom sdd status` reports. In `openspec` mode, check project context and testing capabilities in `openspec/config.yaml` without calling Engram. In `engram` mode, search `sdd-init/{project}` in Engram. In `hybrid` mode, check both stores.\n2. If the selected store contains initialized project context and testing capabilities, proceed normally; a directory alone is not initialization evidence.\n3. If initialization is missing, "+initAction+" with the cached `artifact_store.mode`, then proceed. If a selected backend is unavailable, STOP and report it; never silently change the reported store.", 1)
 	projected, err := projectSDDSessionPreflightWithTool(content, "### Native SDD Dispatcher Guard", "")
 	if err != nil {
 		panic(err)

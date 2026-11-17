@@ -42,8 +42,8 @@ import (
 var deliveryDomainDeclaration = regexp.MustCompile("`(ask-on-risk(?: \\| [a-z][a-z0-9-]*)+)`")
 
 // preflightPRGroupLabels matches the user-facing PR option list the preflight
-// renders, e.g. "3. **PR strategy**: Ask me, Single PR, or Auto."
-var preflightPRGroupLabels = regexp.MustCompile(`(?m)^\s*3\. \*\*PR strategy\*\*: (.+?)\.[ \t]*\r?$`)
+// renders, e.g. "- **PR strategy** (`pr-strategy`): Ask me, Single PR, or Auto."
+var preflightPRGroupLabels = regexp.MustCompile(`(?m)^\s*- \*\*PR strategy\*\* \(` + "`pr-strategy`" + `\): (.+?)\.[ \t]*\r?$`)
 
 var backtickSpan = regexp.MustCompile("`([^`]+)`")
 
@@ -507,7 +507,7 @@ func TestInjectOpenCodeMigratesRetiredChainedPRPreflightOption(t *testing.T) {
 			t.Errorf("opencode.json kept retired preflight fragment %q after sync", residue)
 		}
 	}
-	if !strings.Contains(text, "3. **PR strategy**: Ask me, Single PR, or Auto.") {
+	if !strings.Contains(text, "- **PR strategy** (`pr-strategy`): Ask me, Single PR, or Auto.") {
 		t.Error("opencode.json did not receive the canonical three-option PR preflight list")
 	}
 	if !strings.Contains(text, "Auto -> `auto-chain`") {

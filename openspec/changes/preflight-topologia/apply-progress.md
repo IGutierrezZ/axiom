@@ -1,6 +1,6 @@
 # Progreso de apply: preflight-topologia (C-01-b)
 
-Modo: estándar (TDD estricto no activo; RED observado igualmente en cada tarea). Estrategia de entrega: `exception-ok` (una PR con `size:exception`). Lotes 1 a 4: U1 a U5.
+Modo: estándar (TDD estricto no activo; RED observado igualmente en cada tarea). Estrategia de entrega: `exception-ok` (una PR con `size:exception`). Lotes 1 a 5: U1 a U6.
 
 ## Unidades completadas
 
@@ -11,7 +11,8 @@ Modo: estándar (TDD estricto no activo; RED observado igualmente en cada tarea)
 | U2 | hecha | `9383953d` |
 | U3 | hecha | `494049a5` |
 | U4 | hecha | `9b53f58f` |
-| U5 | hecha | ver `git log` (`feat(opencode): el plugin aplica el contrato de grupos por topología del hook`) |
+| U5 | hecha | `43094d2d` |
+| U6 | hecha | ver `git log` (`feat(sdd): el texto y la doctrina fijan el almacén hybrid y el ritmo por topología`) |
 
 ## U1 · Work Unit Evidence
 
@@ -95,6 +96,23 @@ Notas:
 - Lector de topología (bloque `// axiom-topology:begin … end`, idéntico en las dos copias, comprobado por `TestSDDTaskResultArtifactsTopologyReaderIsInSyncAcrossGenerations`): sigue el marcador más cercano como `Locate` (puntero sobre `axiom.yaml` sobre `openspec/` suelto), un puntero roto o un inicio inexistente dan `monorepo-embedded`. Divergencias conocidas y aceptadas, documentadas en el código: estilo de flujo de YAML (se trata como ilegible: lado seguro) y no comprobar que exista el repositorio de especificaciones de un multirepo (el binario falla en `Locate` y gobierna monorepo; el plugin lee multirepo). El bloque `axiom-project-gate` no se tocó.
 - `preflight_question_harness_test.go` (arnés de v1) pasa a usar `bun` si existe y, si no, `node --experimental-strip-types` (importa el plugin con extensión explícita); se omite solo sin ninguno de los dos. Así corre en esta máquina, donde `bun` no está instalado. Los escenarios se reescribieron al contrato nuevo (dos grupos, marcadores nominales y heredados, artefactos ignorados, sin asignación posicional).
 - Pruebas nuevas en `internal/assets/opencode_sdd_preflight_topology_test.go` (mismo guion en v1 y v2) y `internal/sddtaskresult/topology_reader_parity_test.go`. `opencode_sdd_project_gate_test.go`, `transport_parity_test.go` y `sdd_task_result_transport_test.go` no necesitaron cambios (los escenarios de dos preguntas ya se rechazaban por grupo requerido ausente); `TestSDDTaskResultArtifactsPluginContract` sigue fijando las etiquetas, el `NFD` y las frases de rechazo.
+
+## U6 · Texto proyectado, doctrina y goldens
+
+Hecha (lote 5; commit `feat(sdd): el texto y la doctrina fijan el almacén hybrid y el ritmo por topología`, el hash está en `git log`).
+
+| Evidencia | Valor |
+|---|---|
+| Prueba focalizada | `go test ./internal/components/sdd/`: ok; `go test ./internal/assets/...`: ok; `go test ./internal/components/ -run TestGolden` (tras `-update` y revisión del diff): ok |
+| Arnés de ejecución | Proyecciones reales de todos los runtimes (`composeOrchestratorPrompt`, `renderClaudeSessionPreflight`, inyección en `opencode.json`) y los 13 goldens regenerados con `-update` |
+| Límite de reversión | `session_preflight.go`, `orchestrator.go`, las doctrinas de `internal/assets/**`, los goldens y sus pruebas (hook y plugin siguen aceptando los marcadores heredados) |
+
+Notas:
+- Cuerpo canónico y variante sin UI según D6 (el ancla de la variante es la línea de `Pace` de la lista); el párrafo de autoridad es una constante (`sddSessionPreflightAuthorityParagraph`) que la variante sin UI sustituye por su texto de solo prompt. Se conserva el rechazo específico de `Both -> both`.
+- Doctrina: «Execution Mode» sin «default to Automatic» (frase nueva idéntica en los 12 assets) y «Artifact Store Mode» con la frase única de D11. Los assets cuyo cuerpo es idéntico al de la sección compartida pasan a la referencia `{{GENTLE_AI_SDD_SECTION:...}}` (la prueba de no-deriva lo exige); lo hacen antigravity, codex, kimi, kiro, opencode y windsurf. «Artifact Store Policy» de Claude, de OpenCode y de la sección compartida pasa al texto de política fija (decisión de este lote, coherente con REQ-28.20: ningún asset indica elegir `engram` o `none` según la disponibilidad de Engram). Kickoff y `persistence-contract.md` según D11.
+- `orchestrator.go`: reescrituras de reserva y cota de «Execution Mode» a la frase nueva en el mismo commit; el encabezado de Codex pasa a «Artifact store (status-reported backend)».
+- Pruebas: nuevas `TestSessionPreflightBodyNamesTopologyGroups`, `TestSessionPreflightFallbackAnswerSyntaxUsesRequiredGroups` y `TestPersistenceContractFixesTheHybridSessionStore`; `TestSDDOrchestratorAssetsDefaultToAutomatic` pasa a `TestSDDOrchestratorAssetsExecutionModeFollowsTopology`; el pin de REQ-28.14 prohíbe además `pace`, `pr-strategy` y `N/3`; la regexp de grupos de estrategia de PR y los literales de `inject_test`/`renderer_invariants_test` siguen la lista `- **PR strategy** (`pr-strategy`)`.
+- `TestKilocodeReviewSettingsMatchCurrentMainBaseline`: nuevo hash con comentario de causa (deliberado).
 
 ## Riesgos abiertos
 - Ninguno nuevo de U3 ni de U4.

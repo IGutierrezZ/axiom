@@ -2,11 +2,7 @@
 
 ## Mode Resolution
 
-The orchestrator passes `artifact_store.mode` with one of: `engram | openspec | hybrid | none`.
-
-The orchestrator ASKs the user which mode they want when `/sdd-new`, `/sdd-ff`, or `/sdd-continue` is invoked for the first time in a session. The choice is cached for the session.
-
-Default (if user doesn't specify): if Engram is available → `engram`. Otherwise → `none`.
+The orchestrator passes `artifact_store.mode` with the `artifactStore` that `axiom sdd status` reports (`openspec` or `hybrid` in Axiom; `engram` and `none` only for a legacy declaration, which `axiom workspace validate` rejects). The orchestrator never asks the user for a mode: the session preflight always records `hybrid`, and it never overrides the reported store. If no mode is passed, STOP and report it; never detect or default one.
 
 ## Mode Roles
 

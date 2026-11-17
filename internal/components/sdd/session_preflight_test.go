@@ -22,7 +22,7 @@ func assertFallbackSessionPreflight(t *testing.T, got string) {
 	if end <= start || end >= strings.Index(got, "### SDD Init Guard (MANDATORY)") {
 		t.Fatal("complete preflight must precede init")
 	}
-	for _, want := range []string{"Interactive or Automatic", "OpenSpec, Engram, or Both", "Ask me, Single PR, or Auto", "Both -> `hybrid`", "fixed at 400", "NEVER ask it as a fourth group", "plain chat or terminal", "STOP", "Pace: <label>; Artifacts: <label>; PR strategy: <label>"} {
+	for _, want := range []string{"Interactive or Automatic", "Ask me, Single PR, or Auto", "workspace.topology", "always `hybrid`", "fixed at 400", "NEVER ask it as another group", "plain chat or terminal", "STOP", "Pace: <label>; PR strategy: <label>"} {
 		if !strings.Contains(got[start:end], want) {
 			t.Errorf("preflight missing %q", want)
 		}
@@ -67,7 +67,7 @@ func TestSessionPreflightActualProjectionInventory(t *testing.T) {
 				"orphan":          strings.Replace(content, sddSessionPreflightEnd, "", 1),
 				"reversed":        strings.Replace(content, block, sddSessionPreflightEnd+"\n"+sddSessionPreflightMarker, 1),
 				"misplaced":       strings.Replace(content, block, "", 1) + "\n" + block,
-				"stale":           strings.Replace(content, "Both -> `hybrid`", "Both -> `both`", 1),
+				"stale":           strings.Replace(content, "Interactive -> `interactive`", "Interactive -> `auto`", 1),
 				"wrong transport": strings.Replace(content, block, sddSessionPreflightBlockWithTool("wrong-tool"), 1),
 				"mixed endings":   content + "\r\n",
 				"bare CR":         content + "\r",
@@ -117,7 +117,7 @@ func TestFallbackSessionPreflightCohort(t *testing.T) {
 				t.Fatal("preflight follows init")
 			}
 			block := got[strings.Index(got, sddSessionPreflightMarker):end]
-			for _, want := range []string{"Interactive or Automatic", "OpenSpec, Engram, or Both", "Ask me, Single PR, or Auto", "Both -> `hybrid`", "Interactive -> `interactive`", "Automatic -> `auto`", "OpenSpec -> `openspec`", "Engram -> `engram`", "Ask me -> `ask-on-risk`", "Single PR -> `single-pr`", "Auto -> `auto-chain`", "fixed at 400", "NEVER ask it as a fourth group", "plain chat or terminal", "STOP", "Pace: <label>; Artifacts: <label>; PR strategy: <label>"} {
+			for _, want := range []string{"Interactive or Automatic", "Ask me, Single PR, or Auto", "workspace.topology", "always `hybrid`", "Interactive -> `interactive`", "Automatic -> `auto`", "Ask me -> `ask-on-risk`", "Single PR -> `single-pr`", "Auto -> `auto-chain`", "fixed at 400", "NEVER ask it as another group", "plain chat or terminal", "STOP", "Pace: <label>; PR strategy: <label>"} {
 				if !strings.Contains(block, want) {
 					t.Errorf("preflight missing %q", want)
 				}
@@ -148,7 +148,8 @@ func TestFallbackSessionPreflightProjectionBoundaries(t *testing.T) {
 		{"duplicate", sddSessionPreflightBlockWithTool("") + "\n" + got, false},
 		{"after init", template + "\n" + sddSessionPreflightBlockWithTool(""), false},
 		{"native transport", strings.Replace(got, sddSessionPreflightBlockWithTool(""), sddSessionPreflightBlock(), 1), false},
-		{"wrong mapping", strings.ReplaceAll(got, "Both -> `hybrid`", "Both -> `both`"), false},
+		{"wrong mapping", strings.ReplaceAll(got, "Interactive -> `interactive`", "Interactive -> `auto`"), false},
+		{"legacy mapping", strings.Replace(got, "- Auto -> `auto-chain`", "- Auto -> `auto-chain`\n- Both -> `both`", 1), false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			if err := validateSDDSessionPreflightProjection(tc.content, anchor, ""); (err == nil) != tc.valid {
@@ -182,7 +183,7 @@ func TestClaudeSessionPreflightProjectionStructure(t *testing.T) {
 		{"after routing", strings.Replace(template, anchor, anchor+"\n"+block, 1), false},
 		{"missing close", strings.Replace(got, sddSessionPreflightEnd, "", 1), false},
 		{"wrong tool", strings.ReplaceAll(got, "`AskUserQuestion`", "`question`"), false},
-		{"legacy mapping", strings.ReplaceAll(got, "Both -> `hybrid`", "Both -> `both`"), false},
+		{"legacy mapping", strings.Replace(got, "- Auto -> `auto-chain`", "- Auto -> `auto-chain`\n- Both -> `both`", 1), false},
 		{"duplicate init", got + "\n" + sddSessionPreflightInit, false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -203,7 +204,7 @@ func TestOpenCodeSessionPreflightCompositionIsRuntimeScoped(t *testing.T) {
 		if err != nil {
 			t.Fatalf("composeOpenCodeOrchestratorPrompt(%s) error = %v", agent, err)
 		}
-		if !strings.Contains(content, sddSessionPreflightMarker) || !strings.Contains(content, "Both -> `hybrid`") {
+		if !strings.Contains(content, sddSessionPreflightMarker) || !strings.Contains(content, "always `hybrid`") {
 			t.Fatalf("composeOpenCodeOrchestratorPrompt(%s) omitted canonical session preflight", agent)
 		}
 	}
@@ -244,7 +245,7 @@ func TestMigratePreservedSDDSessionPreflightReplacesOnlyOwnedBytes(t *testing.T)
 
 func TestSDDSessionPreflightFallbackStatesPromptOnlyLimitation(t *testing.T) {
 	block := sddSessionPreflightBlockWithTool("")
-	for _, want := range []string{"no classified native question UI", "Only three explicit, validated answers from the parent conversation", "preflight authority in this fallback runtime", "missing authority blocks dispatch"} {
+	for _, want := range []string{"no classified native question UI", "Only explicit, validated parent answers to every required group", "preflight authority in this fallback runtime", "missing authority blocks dispatch"} {
 		if !strings.Contains(block, want) {
 			t.Fatalf("fallback block missing %q", want)
 		}
@@ -256,12 +257,12 @@ func TestSDDSessionPreflightFallbackStatesPromptOnlyLimitation(t *testing.T) {
 
 func TestSDDSessionPreflightProjectionCanonicalAndBounded(t *testing.T) {
 	block := sddSessionPreflightBlock()
-	for _, want := range []string{"<!-- gentle-ai:sdd-session-preflight -->", "### SDD Session Preflight (HARD GATE)", "Phrase examples are routing hints, never the authority boundary", "Axiom SDD preflight 1/3:", "Axiom SDD preflight 2/3:", "Axiom SDD preflight 3/3:", "Only a successful parent `question` result", "Model-authored defaults, summaries", "runtime derives and prepends the canonical `## SDD Session Preflight` block", "1. **Pace**", "2. **Artifacts**", "3. **PR strategy**", "Both -> `hybrid`", "fixed at 400 changed lines", "<!-- /gentle-ai:sdd-session-preflight -->"} {
+	for _, want := range []string{"<!-- gentle-ai:sdd-session-preflight -->", "### SDD Session Preflight (HARD GATE)", "Phrase examples are routing hints, never the authority boundary", "Axiom SDD preflight pace:", "Axiom SDD preflight pr-strategy:", "Only a successful parent `question` result", "Model-authored defaults, summaries", "runtime derives and prepends the canonical `## SDD Session Preflight` block", "- **Pace** (`pace`, `monorepo-embedded` only)", "- **PR strategy** (`pr-strategy`)", "always `hybrid`", "fixed at 400 changed lines", "<!-- /gentle-ai:sdd-session-preflight -->"} {
 		if !strings.Contains(block, want) {
 			t.Fatalf("canonical block missing %q", want)
 		}
 	}
-	for _, retired := range []string{"4. **", "Both -> `both`", "Review: 800 lines", "Other ->"} {
+	for _, retired := range []string{"1. **Pace**", "2. **Artifacts**", "1/3:", "2/3:", "3/3:", "OpenSpec ->", "Engram ->", "Both ->", "Review: 800 lines", "Other ->"} {
 		if strings.Contains(block, retired) {
 			t.Fatalf("canonical block retains retired content %q", retired)
 		}
@@ -298,5 +299,48 @@ func TestSDDSessionPreflightProjectionCanonicalAndBounded(t *testing.T) {
 		if _, err := projectSDDSessionPreflight(rendered, testSDDSessionPreflightEntryAnchor); err == nil {
 			t.Fatal("projectSDDSessionPreflight() accepted an inline anchor")
 		}
+	}
+}
+
+func TestSessionPreflightBodyNamesTopologyGroups(t *testing.T) {
+	block := sddSessionPreflightBlock()
+	for _, want := range []string{
+		"read `workspace.topology` from the project's `axiom.yaml`",
+		"`monorepo-embedded` asks Pace and PR strategy",
+		"`multirepo` asks PR strategy only",
+		"When the topology requires no group, ask nothing",
+		"Never ask the artifact store: it is always `hybrid`",
+		"`Axiom SDD preflight pace:`",
+		"`Axiom SDD preflight pr-strategy:`",
+		"- **Pace** (`pace`, `monorepo-embedded` only)",
+		"- **PR strategy** (`pr-strategy`)",
+		"NEVER ask it as another group or selectable budget",
+		"Review policy is fixed at 400 changed lines",
+	} {
+		if !strings.Contains(block, want) {
+			t.Errorf("preflight body missing %q", want)
+		}
+	}
+	for _, retired := range []string{"Artifacts", "Both -> `hybrid`", "OpenSpec -> `openspec`", "Engram -> `engram`", "Ask Pace, Artifacts, and PR strategy", "no three separate calls", "fourth group"} {
+		if strings.Contains(block, retired) {
+			t.Errorf("preflight body retains retired content %q", retired)
+		}
+	}
+}
+
+func TestSessionPreflightFallbackAnswerSyntaxUsesRequiredGroups(t *testing.T) {
+	fallback := sddSessionPreflightBlockWithTool("")
+	for _, want := range []string{
+		"`Pace: <label>; PR strategy: <label>`",
+		"every group the topology requires",
+		"together with the values the topology fixes (`multirepo` pace `interactive`, artifact store `hybrid`)",
+		"When the topology requires no group, pass only the fixed values.",
+	} {
+		if !strings.Contains(fallback, want) {
+			t.Errorf("fallback variant missing %q", want)
+		}
+	}
+	if strings.Contains(fallback, "Artifacts: <label>") || strings.Contains(fallback, "all three") {
+		t.Error("fallback variant retains the three-group answer syntax")
 	}
 }

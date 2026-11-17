@@ -263,7 +263,7 @@ func TestIndependentReviewBoundaryOrchestratorPassages(t *testing.T) {
 	})
 
 	// La interacción de la preferencia no reutiliza los marcadores del pre-vuelo (REQ-28.14).
-	for _, forbidden := range []string{"Axiom SDD preflight", "preflight 4/", "Gentle AI SDD preflight"} {
+	for _, forbidden := range []string{"Axiom SDD preflight", "preflight 4/", "Gentle AI SDD preflight", "preflight pace", "preflight pr-strategy", "`pace`", "`pr-strategy`", "1/3", "2/3", "3/3"} {
 		if strings.Contains(section, forbidden) {
 			t.Errorf("la sección contiene el marcador del pre-vuelo %q", forbidden)
 		}

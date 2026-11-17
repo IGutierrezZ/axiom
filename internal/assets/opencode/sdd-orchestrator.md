@@ -77,10 +77,7 @@ Keep pre-call lines to 15 tokens or fewer and post-call lines to 25 tokens or fe
 
 ### Artifact Store Policy
 
-- `engram` -> default when available; persistent memory across sessions
-- `openspec` -> file-based artifacts; use only when the user explicitly requests it
-- `hybrid` -> both backends; cross-session recovery + local files; more tokens per operation
-- `none` -> return results inline only; recommend enabling engram or openspec
+{{GENTLE_AI_SDD_SECTION:Artifact Store Policy}}
 
 ### Commands
 
@@ -159,7 +156,7 @@ In **Interactive** mode, between phases:
 
 Interactive means the orchestrator pauses after each delegation returns before launching the next phase, including `/sdd-ff` planning phases.
 
-If the user doesn't specify, default to **Automatic**. After scope approval, expect zero further prompts on the happy path and at most one actionable prompt per recoverable failure; the gatekeeper summarizes phase progress instead of interrupting except on a second consecutive gate failure or a genuine scope/product decision.
+No mode is assumed by default: `multirepo` always runs **Interactive** and never asks; `monorepo-embedded` asks it in the session preflight. After scope approval, expect zero further prompts on the happy path and at most one actionable prompt per recoverable failure; the gatekeeper summarizes phase progress instead of interrupting except on a second consecutive gate failure or a genuine scope/product decision.
 
 Cache the mode choice for the session - do not ask again unless the user explicitly requests a mode change.
 
@@ -197,15 +194,7 @@ The gatekeeper runs in addition to the Review Workload Guard and the Mandatory D
 
 ### Artifact Store Mode
 
-This is collected by `SDD Session Preflight`. If missing, enforce the hard gate before any phase work. Ask which artifact store they want for this change:
-
-- **`engram`**: Fast, no files created. Artifacts live in engram only.
-- **`openspec`**: File-based. Creates `openspec/` with a shareable artifact trail.
-- **`both` / `hybrid`**: Both - files for team sharing + engram for cross-session recovery.
-
-If the user doesn't specify, detect: if engram is available -> default to `engram`. Otherwise -> `none`.
-
-Cache the artifact store choice for the session. Pass it as `artifact_store.mode` to every sub-agent launch.
+{{GENTLE_AI_SDD_SECTION:Artifact Store Mode}}
 
 ### Delivery Strategy
 
