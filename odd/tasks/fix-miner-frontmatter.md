@@ -48,15 +48,15 @@ Desactivado: `axiom.yaml` no declara TDD y no hay elección del usuario. Comprob
 
 ## Tareas
 
-- [ ] **T1 · Frontmatter generado en el minero** (ruta: delegada, un escritor; disparador: código y test no triviales en dos ficheros)
+- [x] **T1 · Frontmatter generado en el minero** (ruta: delegada, un escritor; disparador: código y test no triviales en dos ficheros)
   - Función que compone el frontmatter desde `Name`, `Description` y `Trigger`, y cuerpo con `# Título` tras el bloque.
   - Acortar `Description` y `Trigger` de las tres propuestas para que la `description` quepa en 160 caracteres.
   - Test en `internal/autoskill` que, para cada patrón del minero (los tres), comprueba: empieza con `---`; `name` igual al nombre del directorio de la skill (`Name`); `description` entrecomillada, de una línea, <=160 y con `Trigger:`; solo claves permitidas; `metadata.origin: mined`.
   - Comprobación: `go test ./internal/autoskill/...`.
-- [ ] **T2 · Skills minadas versionadas** (ruta: en línea, mecánica)
+- [x] **T2 · Skills minadas versionadas** (ruta: en línea, mecánica)
   - Sustituir la cabecera rota de las dos skills de `skills/` por el frontmatter que genera ahora el minero (el cuerpo no cambia) y actualizar sus filas de `AGENTS.md`.
   - Comprobación: el `SKILL.md` versionado coincide con el `SkillMD` del minero (test o comparación).
-- [ ] **T3 · Spec viva de REQ-3.2** (ruta: en línea)
+- [x] **T3 · Spec viva de REQ-3.2** (ruta: en línea)
   - Delta MODIFIED en `## Spec viva` e integración con `axiom archive integrate --odd fix-miner-frontmatter`.
   - Comprobación: la integración termina sin rechazo y `openspec/specs/autoskills/spec.md` refleja el nuevo texto.
 
@@ -99,5 +99,22 @@ Cada patrón detectado por el minero DEBE formularse como un documento canónico
 ## Progreso
 
 Plan stop: approved 2026-11-17; implementation continues
+
+- T1 · commit `110d2cd6`. Escritor delegado: `composeSkillMD` en `miner.go`; test `TestMinerFrontmatterEsValido` en `internal/autoskill/miner_frontmatter_test.go` (tres patrones). Descripciones compuestas: 137, 151 y 134 runas.
+- T2 · commit `4c8ff64b`. Las dos skills de `skills/` se regeneraron con la salida del minero mediante un test temporal (ya borrado); solo cambia la cabecera. Las filas de `AGENTS.md` coinciden con lo que lee el registro (`axiom skill index list --json`).
+- T3 · commit `3de744f5`. `axiom archive integrate --odd fix-miner-frontmatter`: `autoskills: composed`; repetirlo da `already_integrated`.
+- RDD: desactivado (`axiom review mode status`: off por defecto); sin revisión nativa.
+
+## Verificación
+
+- `gofmt -l internal/autoskill`: sin salida (escritor).
+- `go vet ./internal/autoskill/...`: sin avisos (escritor).
+- `go test ./internal/autoskill/...`: ok (escritor); comprobación de la sesión con `go test -count=1 -run TestMiner ./internal/autoskill/`: ok.
+- `go test -count=1 ./internal/skillregistry/ ./internal/assets/`: ok.
+
+## Seguimientos
+
+- `axiom archive integrate --odd` quitó la regla `---` que separaba REQ-3.2 de la sección 4 de `openspec/specs/autoskills/spec.md`: al componer un requisito MODIFIED, el separador final parece contarse como parte del bloque. No se corrige aquí (fuera de alcance).
+- C-04-d debe unificar las reglas del frontmatter que ahora duplica `miner_frontmatter_test.go`.
 
 Espejo Engram: pendiente (el modo automático no pudo revisar `mem_save` porque un hook modifica la llamada; se resincroniza cuando sea posible).
