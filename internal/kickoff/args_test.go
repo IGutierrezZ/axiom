@@ -49,9 +49,14 @@ func TestParseSealArgsKnownAndUnknownFlags(t *testing.T) {
 // second scenario: an ambiguous or absent modality must never fall back to
 // a silent default.
 func TestParseSealArgsRequiresExecutionStyleOrSessionPace(t *testing.T) {
-	_, err := ParseSealArgs([]string{"--cwd", "/repo", "--change", "inc-99-example", "--handoff-policy", "none"})
-	if err == nil {
-		t.Fatal("ParseSealArgs() = nil error, se esperaba rechazo sin --execution-style ni --from-session-pace")
+	// REQ-21.5: la sintaxis se acepta y el estilo obligatorio lo aplica
+	// ApplyTopology (sin topología conocida no hay valor por defecto).
+	parsed, err := ParseSealArgs([]string{"--cwd", "/repo", "--change", "inc-99-example", "--handoff-policy", "none"})
+	if err != nil {
+		t.Fatalf("ParseSealArgs() error = %v, la ausencia de estilo ya no es un error de sintaxis", err)
+	}
+	if err := parsed.ApplyTopology(""); err == nil {
+		t.Fatal("ApplyTopology(\"\") = nil error, se esperaba rechazo sin --execution-style ni --from-session-pace")
 	}
 }
 
@@ -553,9 +558,13 @@ func TestParseSealArgsContinuousRosterRule(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			parsed, err := ParseSealArgs(tt.args)
+			if err != nil {
+				t.Fatalf("ParseSealArgs() error = %v, la regla de roster ya no es sintáctica", err)
+			}
+			err = parsed.ApplyTopology("")
 			if tt.wantErr != "" {
 				if err == nil || !strings.Contains(err.Error(), tt.wantErr) {
-					t.Fatalf("ParseSealArgs() error = %v, se esperaba un mensaje con %q", err, tt.wantErr)
+					t.Fatalf("ApplyTopology(\"\") error = %v, se esperaba un mensaje con %q", err, tt.wantErr)
 				}
 				if !errors.Is(err, ErrContinuousRequiresFullstack) {
 					t.Errorf("error = %v, se esperaba ErrContinuousRequiresFullstack", err)

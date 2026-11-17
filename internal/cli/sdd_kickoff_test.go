@@ -10,6 +10,7 @@ import (
 
 	"github.com/IGutierrezZ/axiom/v3/internal/kickoff"
 	"github.com/IGutierrezZ/axiom/v3/internal/multirole"
+	"github.com/IGutierrezZ/axiom/v3/internal/workspace/workspacetest"
 )
 
 func mustMkdirAllCLI(t *testing.T, dir string) {
@@ -536,4 +537,101 @@ func TestRunSDDKickoffSealContinuousRosterRule(t *testing.T) {
 			t.Fatalf("la ayuda no enuncia la regla:\n%s", help.String())
 		}
 	})
+}
+
+// sealMultirepoChangeRoot es la ruta del kickoff.yaml de un cambio en el planning home de un multirepo.
+func sealMultirepoChangeRoot(ws workspacetest.Workspace, change string) string {
+	return filepath.Join(ws.Home, "changes", change, "kickoff.yaml")
+}
+
+// REQ-28.19: en multirepo el sellado sin estilo deriva checkpointed y lo registra con origen topology.
+func TestRunSDDKickoffSealMultirepoDerivesCheckpointed(t *testing.T) {
+	captureSealWarnings(t)
+	ws := workspacetest.Canonical(t)
+	var out bytes.Buffer
+	args := []string{"seal", "--cwd", ws.Master, "--change", "inc-99-topologia", "--role", "backend", "--role", "frontend"}
+	if err := RunSDDKickoff(args, &out); err != nil {
+		t.Fatalf("RunSDDKickoff() error = %v", err)
+	}
+	if !strings.Contains(out.String(), "execution_style=checkpointed") {
+		t.Fatalf("el resumen no muestra checkpointed:\n%s", out.String())
+	}
+	data, err := os.ReadFile(sealMultirepoChangeRoot(ws, "inc-99-topologia"))
+	if err != nil {
+		t.Fatalf("kickoff.yaml no se escribió: %v", err)
+	}
+	if !strings.Contains(string(data), "execution_style_source: topology") {
+		t.Fatalf("kickoff.yaml sin el origen topology:\n%s", data)
+	}
+}
+
+// REQ-28.19: en multirepo continuous, explícito o por ritmo auto, se rechaza sin escribir nada.
+func TestRunSDDKickoffSealMultirepoRejectsContinuous(t *testing.T) {
+	for name, extra := range map[string][]string{
+		"estilo explicito": {"--execution-style", "continuous"},
+		"ritmo auto":       {"--from-session-pace", "auto"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			captureSealWarnings(t)
+			ws := workspacetest.Canonical(t)
+			args := append([]string{"seal", "--cwd", ws.Master, "--change", "inc-99-topologia"}, extra...)
+			err := RunSDDKickoff(args, &bytes.Buffer{})
+			if err == nil || !errors.Is(err, kickoff.ErrTopologyForbidsContinuous) || !strings.Contains(err.Error(), "multirepo") {
+				t.Fatalf("error = %v, se esperaba ErrTopologyForbidsContinuous nombrando multirepo", err)
+			}
+			if _, statErr := os.Stat(sealMultirepoChangeRoot(ws, "inc-99-topologia")); !os.IsNotExist(statErr) {
+				t.Fatalf("un rechazo no debe escribir kickoff.yaml: %v", statErr)
+			}
+		})
+	}
+}
+
+// REQ-28.19 y D8: en monorepo el rechazo por roles precede a la guarda de rama: no emite avisos,
+// no devuelve wrong_branch y no escribe kickoff.yaml.
+func TestRunSDDKickoffSealMonorepoRejectsRolesBeforeBranchGuard(t *testing.T) {
+	warnings := captureSealWarnings(t)
+	ws := embeddedSealProject(t, "")
+	out, err := runSeal(t, ws.Master, "--execution-style", "checkpointed", "--role", "core", "--role", "qa")
+	if err == nil || !errors.Is(err, kickoff.ErrTopologyRequiresFullstack) {
+		t.Fatalf("error = %v, se esperaba ErrTopologyRequiresFullstack (y no wrong_branch desde main)", err)
+	}
+	for _, want := range []string{"monorepo-embedded", "core, qa", "multirepo"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("error = %q, se esperaba que nombrara %q", err, want)
+		}
+	}
+	if out != "" || warnings.Len() != 0 {
+		t.Errorf("el rechazo no imprime resumen ni avisos de rama: out=%q avisos=%q", out, warnings.String())
+	}
+	wantKickoffAbsent(t, ws)
+}
+
+// Una topología desconocida o retirada en el axiom.yaml directo se gobierna como monorepo-embedded.
+func TestRunSDDKickoffSealUnknownTopologyAppliesMonorepoRule(t *testing.T) {
+	captureSealWarnings(t)
+	root, changeRoot := newGovernanceWorkspace(t, "inc-99-example")
+	writeCLIFixture(t, filepath.Join(root, "axiom.yaml"), "workspace: {name: x, topology: monorepo-decoupled}\nroles: {a: {name: a, repositories: [{path: .}]}}\n")
+	err := RunSDDKickoff([]string{"seal", "--cwd", root, "--change", "inc-99-example", "--execution-style", "checkpointed", "--role", "core"}, &bytes.Buffer{})
+	if err == nil || !errors.Is(err, kickoff.ErrTopologyRequiresFullstack) {
+		t.Fatalf("error = %v, se esperaba ErrTopologyRequiresFullstack", err)
+	}
+	if _, statErr := os.Stat(filepath.Join(changeRoot, "kickoff.yaml")); !os.IsNotExist(statErr) {
+		t.Fatalf("un rechazo no debe escribir kickoff.yaml: %v", statErr)
+	}
+}
+
+// El retrosellado no pasa por la regla de topología: conserva los roles y el estilo inferidos.
+func TestRunSDDKickoffSealInferIsExemptFromTopology(t *testing.T) {
+	captureSealWarnings(t)
+	root, changeRoot := newGovernanceWorkspace(t, "inc-99-example")
+	writeRepoLikeAxiomYAML(t, root)
+	writeCLIFixture(t, filepath.Join(changeRoot, "design.md"),
+		"# Diseno\n\n```yaml\nroles:\n  - role: core\n    gate_policy: blocking\n  - role: e2e\n    gate_policy: deferred\n```\n")
+	var out bytes.Buffer
+	if err := RunSDDKickoff([]string{"seal", "--infer", "--cwd", root, "--change", "inc-99-example"}, &out); err != nil {
+		t.Fatalf("seal --infer error = %v", err)
+	}
+	if !strings.Contains(out.String(), "sealed_by=inferred") || !strings.Contains(out.String(), "core") {
+		t.Fatalf("el retrosellado debía conservar los roles inferidos:\n%s", out.String())
+	}
 }

@@ -63,6 +63,39 @@ func runSeal(t *testing.T, cwd string, extra ...string) (string, error) {
 	return out.String(), err
 }
 
+// sealLegacyKickoff replica el sellado explícito de `runSDDKickoffSeal` sin `ApplyTopology`:
+// simula un kickoff sellado antes de que la topología gobernara el estilo y los roles (C-01-b),
+// que es lo que dejan los cambios preexistentes de un monorepo con roles especializados. Las
+// guardas de rama y la instantánea se aplican igual; solo se omiten las reglas de topología.
+func sealLegacyKickoff(t *testing.T, cwd string, extra ...string) (string, error) {
+	t.Helper()
+	parsed, err := kickoff.ParseSealArgs(append([]string{"--cwd", cwd, "--change", sealChange}, extra...))
+	if err != nil {
+		return "", err
+	}
+	loc, changeRoot, _, err := resolveSealChangeRoot(parsed.CWD, parsed.Change)
+	if err != nil {
+		return "", err
+	}
+	sealing := parsed.ToKickoff(parsed.Change)
+	if err := applySealBranchPolicy(loc, changeRoot, &sealing); err != nil {
+		return "", err
+	}
+	if err := sealing.ValidateForSeal(); err != nil {
+		return "", err
+	}
+	rollback, err := kickoff.PrepareChangeRoot(changeRoot)
+	if err != nil {
+		return "", err
+	}
+	sealed, wrote, err := kickoff.Seal(changeRoot, sealing)
+	if err != nil {
+		rollback()
+		return "", err
+	}
+	return renderKickoffSummaryText(sealed, wrote), nil
+}
+
 func wantKickoffAbsent(t *testing.T, ws workspacetest.Workspace) {
 	t.Helper()
 	if _, err := os.Stat(filepath.Join(ws.Home, "changes", sealChange, "kickoff.yaml")); !errors.Is(err, os.ErrNotExist) {
@@ -147,21 +180,35 @@ func TestKickoffSealTakesTheExpectedBranchFromThePolicyPrefix(t *testing.T) {
 	wantKickoffWritten(t, ws)
 }
 
-// REQ-25.38 y REQ-25.18: con los roles que se van a sellar, una rama de rol del cambio es
-// correcta; una rama ajena no.
-func TestKickoffSealAcceptsTheRoleBranchesOfTheRolesBeingSealed(t *testing.T) {
+// REQ-28.19: un monorepo ya no sella roles especializados; el rechazo por topología llega antes
+// que la guarda de rama (D8), con independencia de la rama en la que se esté.
+func TestKickoffSealRejectsSpecializedRolesInAMonorepoBeforeTheBranchGuard(t *testing.T) {
 	captureSealWarnings(t)
-	config := "workspace:\n  name: ejemplo\n  topology: monorepo-embedded\n  specs_repository: \".\"\nroles:\n  core:\n    name: core\n    repositories:\n      - path: \".\"\n  qa:\n    name: qa\n    repositories:\n      - path: \".\"\n"
-	ws := embeddedSealProject(t, config)
+	ws := embeddedSealProject(t, twoRoleConfig)
 	roles := append([]string{"--role", "core", "--role", "qa"}, sealRolesArgs...)
 
 	integrateGit(t, ws.Master, "switch", "-q", "-c", "feat/x-otro")
 	_, err := runSeal(t, ws.Master, roles...)
+	if err == nil || !errors.Is(err, kickoff.ErrTopologyRequiresFullstack) {
+		t.Fatalf("error = %v, se esperaba el rechazo por topología y no wrong_branch", err)
+	}
+	wantKickoffAbsent(t, ws)
+}
+
+// REQ-25.38 y REQ-25.18: con los roles que se van a sellar, una rama de rol del cambio es
+// correcta; una rama ajena no. Cubre un kickoff sellado antes de C-01-b (sin reglas de topología).
+func TestKickoffSealAcceptsTheRoleBranchesOfTheRolesBeingSealed(t *testing.T) {
+	captureSealWarnings(t)
+	ws := embeddedSealProject(t, twoRoleConfig)
+	roles := append([]string{"--role", "core", "--role", "qa"}, sealRolesArgs...)
+
+	integrateGit(t, ws.Master, "switch", "-q", "-c", "feat/x-otro")
+	_, err := sealLegacyKickoff(t, ws.Master, roles...)
 	wantWrongBranch(t, err, "feat/x-otro", "feat/x", ws.Master)
 	wantKickoffAbsent(t, ws)
 
 	integrateGit(t, ws.Master, "switch", "-q", "-c", "feat/x-qa")
-	if _, err := runSeal(t, ws.Master, roles...); err != nil {
+	if _, err := sealLegacyKickoff(t, ws.Master, roles...); err != nil {
 		t.Fatalf("sellar en la rama de rol feat/x-qa: %v", err)
 	}
 	wantKickoffWritten(t, ws)
@@ -239,7 +286,7 @@ func TestKickoffSealWritesTheGitSnapshotOnce(t *testing.T) {
 	ws := embeddedSealProject(t, twoRoleConfig)
 	integrateGit(t, ws.Master, "switch", "-q", "-c", "feat/x")
 
-	if _, err := runSeal(t, ws.Master, append([]string{"--role", "core", "--role", "qa"}, sealRolesArgs...)...); err != nil {
+	if _, err := sealLegacyKickoff(t, ws.Master, append([]string{"--role", "core", "--role", "qa"}, sealRolesArgs...)...); err != nil {
 		t.Fatalf("sellar en feat/x: %v", err)
 	}
 
@@ -290,7 +337,7 @@ func TestKickoffSealDoesNotRewriteTheSnapshotOnASecondSeal(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	out, err := runSeal(t, ws.Master, "--execution-style", "checkpointed", "--handoff-policy", "none", "--role", "core", "--role", "qa")
+	out, err := runSeal(t, ws.Master, "--execution-style", "checkpointed", "--handoff-policy", "none")
 	if err != nil {
 		t.Fatalf("segundo sellado en la rama correcta: %v", err)
 	}
@@ -400,7 +447,7 @@ func TestKickoffSealOfAMultirepoRequiresTheSpecsIntegrationBranchAndIgnoresTheCo
 	change := planningHomeChange
 	seal := func() error {
 		var out bytes.Buffer
-		return RunSDDKickoff(append([]string{"seal", "--cwd", ws.Master, "--change", change}, sealBaseArgs...), &out)
+		return RunSDDKickoff(append([]string{"seal", "--cwd", ws.Master, "--change", change}, sealRolesArgs...), &out)
 	}
 
 	integrateGit(t, ws.Specs, "switch", "-q", "-c", "feat/"+change+"-core")

@@ -51,7 +51,8 @@ func guardProjectSealedWith(t *testing.T, sealArgs []string) workspacetest.Works
 	captureWriterWarnings(t)
 	ws := embeddedSealProject(t, twoRoleConfig)
 	integrateGit(t, ws.Master, "switch", "-q", "-c", "feat/x")
-	if _, err := runSeal(t, ws.Master, sealArgs...); err != nil {
+	// Sellado previo a C-01-b: los roles especializados de un monorepo ya no se sellan por la CLI.
+	if _, err := sealLegacyKickoff(t, ws.Master, sealArgs...); err != nil {
 		t.Fatalf("sellar en feat/x: %v", err)
 	}
 	integrateGit(t, ws.Master, "switch", "-q", "main")
