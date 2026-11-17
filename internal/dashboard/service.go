@@ -31,6 +31,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/livingdoc"
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
 	"github.com/IGutierrezZ/axiom/v3/internal/multirole"
+	"github.com/IGutierrezZ/axiom/v3/internal/sddstatus"
 	"github.com/IGutierrezZ/axiom/v3/internal/semantic"
 	"github.com/IGutierrezZ/axiom/v3/internal/skillregistry"
 	"github.com/IGutierrezZ/axiom/v3/internal/system"
@@ -541,24 +542,19 @@ func (s *Service) GetIncrementDetail(name string) (*IncrementDetailDTO, error) {
 	dto := &IncrementDetailDTO{
 		Summary:     summary,
 		HasProposal: fileExists(filepath.Join(path, "proposal.md")),
-		HasSpec:     fileExists(filepath.Join(path, "spec.md")),
 		HasDesign:   fileExists(filepath.Join(path, "design.md")),
-		HasTasks:    fileExists(filepath.Join(path, "tasks.md")),
 		HasVerify:   fileExists(filepath.Join(path, "verify-report.md")),
 		HasArchive:  fileExists(filepath.Join(path, "archive-report.md")),
 	}
+	dto.Specs, dto.Tasks = readArtifactFiles(path)
+	dto.HasSpec = len(dto.Specs) > 0
+	dto.HasTasks = len(dto.Tasks) > 0
 
 	if dto.HasProposal {
 		dto.Proposal, _ = readFileString(filepath.Join(path, "proposal.md"))
 	}
-	if dto.HasSpec {
-		dto.Spec, _ = readFileString(filepath.Join(path, "spec.md"))
-	}
 	if dto.HasDesign {
 		dto.Design, _ = readFileString(filepath.Join(path, "design.md"))
-	}
-	if dto.HasTasks {
-		dto.TasksContent, _ = readFileString(filepath.Join(path, "tasks.md"))
 	}
 	if dto.HasVerify {
 		dto.VerifyReport, _ = readFileString(filepath.Join(path, "verify-report.md"))
@@ -580,6 +576,39 @@ func (s *Service) GetIncrementDetail(name string) (*IncrementDetailDTO, error) {
 	}
 
 	return dto, nil
+}
+
+// readArtifactFiles lee las specs y los ficheros de tareas del cambio con la regla canónica de
+// `axiom sdd status` (sddstatus.ChangeArtifactPaths). Si la regla falla (p. ej. kickoff.yaml
+// corrupto) no se rompe el detalle: se cae a la detección plana anterior (spec.md y tasks.md).
+func readArtifactFiles(changeRoot string) (specs, tasks []ArtifactFileDTO) {
+	var specPaths, taskPaths []string
+	if paths, err := sddstatus.ChangeArtifactPaths(changeRoot); err == nil {
+		specPaths, taskPaths = paths.Specs, paths.Tasks
+	} else {
+		if p := filepath.Join(changeRoot, "spec.md"); fileExists(p) {
+			specPaths = append(specPaths, p)
+		}
+		if p := filepath.Join(changeRoot, "tasks.md"); fileExists(p) {
+			taskPaths = append(taskPaths, p)
+		}
+	}
+	return readArtifactList(changeRoot, specPaths), readArtifactList(changeRoot, taskPaths)
+}
+
+// readArtifactList convierte rutas absolutas en ficheros con ruta relativa al cambio (con `/`).
+// Devuelve una lista vacía, no nil, para que el JSON lleve `[]`.
+func readArtifactList(changeRoot string, paths []string) []ArtifactFileDTO {
+	files := []ArtifactFileDTO{}
+	for _, p := range paths {
+		rel, err := filepath.Rel(changeRoot, p)
+		if err != nil {
+			rel = filepath.Base(p)
+		}
+		content, _ := readFileString(p)
+		files = append(files, ArtifactFileDTO{Path: filepath.ToSlash(rel), Content: content})
+	}
+	return files
 }
 
 // GetRoleStatus obtiene el estado de los roles y la barrera de sincronización de un cambio.
