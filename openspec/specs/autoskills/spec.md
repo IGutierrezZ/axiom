@@ -110,7 +110,7 @@ El minero DEBE inspeccionar archivos `.go` del repositorio e identificar patrone
 ### Requirement: Generación Canónica de Borradores de Skill Minada (REQ-3.2)
 
 Cada patrón detectado por el minero DEBE formularse como un documento canónico `SKILL.md` que incluya:
-1. Encabezado Frontmatter con `name`, `description`, `trigger` y `origin: mined`.
+1. Un bloque de frontmatter al inicio del fichero, delimitado por `---`, con `name` igual al directorio de la skill, `description` entrecomillada en una sola línea que contenga `Trigger:`, y `metadata` con `origin: mined` y `trigger`. No DEBE llevar otras claves de primer nivel que las admitidas para las skills de Axiom.
 2. Sección de Propósito y Reglas del patrón en español.
 3. Ejemplos de código correctos (*Do*) e incorrectos (*Don't*) basados en la estructura del propio repositorio.
 
@@ -120,7 +120,12 @@ Cada patrón detectado por el minero DEBE formularse como un documento canónico
 - **ENTONCES** el archivo `SKILL.md` resultante sigue estrictamente el formato canónico de skills de Axiom
 - **Y** queda redactado en español castellano con ejemplos del repositorio
 
----
+#### Scenario: Frontmatter válido de la skill minada
+- **DADO** un patrón detectado por el minero
+- **CUANDO** se genera su `SKILL.md`
+- **ENTONCES** el fichero empieza con `---` y su frontmatter declara `name` igual al directorio de la skill
+- **Y** la `description` es una cadena entrecomillada de una línea que contiene `Trigger:`
+- **Y** `origin: mined` y el disparador figuran bajo `metadata`
 
 ## 4. Capacidad: `autoskill-governance-inbox`
 
