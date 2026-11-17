@@ -114,7 +114,7 @@ func TestIncrementDetailTabsAndRoutes(t *testing.T) {
 	detail := readAsset(t, "js/screens/detalle.js")
 	for _, marker := range []string{
 		"aria-current", "hrefFor('incremento'", "data-artifact", "data-format", "aria-pressed",
-		"tasks_content", "verify_report", "archive_report", "no existe todavía",
+		"detail.specs", "detail.tasks", "CSS.escape", "verify_report", "archive_report", "no existe todavía",
 		"sectionStats", "withFocus", "ctx.token",
 		"continueIncrement(", "renderConsole(", "aria-current=\"step\"",
 	} {

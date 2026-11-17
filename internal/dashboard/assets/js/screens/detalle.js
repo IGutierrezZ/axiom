@@ -15,15 +15,6 @@ import { loadIncrements } from './incrementos.js';
 // Estado de la vista abierta. token invalida respuestas tardías al cambiar de ruta.
 const ctx = { change: null, failed: null, detail: null, tab: 'artefactos', token: 0, artifact: null, raw: false };
 
-const ARTIFACTS = [
-  { id: 'proposal', flag: 'has_proposal', body: 'proposal', file: 'proposal.md' },
-  { id: 'spec', flag: 'has_spec', body: 'spec', file: 'spec.md' },
-  { id: 'design', flag: 'has_design', body: 'design', file: 'design.md' },
-  { id: 'tasks', flag: 'has_tasks', body: 'tasks_content', file: 'tasks.md' },
-  { id: 'verify', flag: 'has_verify', body: 'verify_report', file: 'verify-report.md' },
-  { id: 'archive', flag: 'has_archive', body: 'archive_report', file: 'archive-report.md' }
-];
-
 function incrementUrl(change) {
   return `/api/increments/${encodeURIComponent(change)}`;
 }
@@ -109,12 +100,31 @@ function renderTabPill(detail) {
 
 // ---- Artefactos ----------------------------------------------------------------------------------------
 
+// Construye la lista de documentos desde el detalle, en este orden: proposal, cada spec de dominio,
+// design, cada fichero de tareas, verify y archive. Cada documento lleva un id estable. Si no hay
+// specs o tareas se deja un único marcador ausente con el nombre habitual del fichero.
 function availableArtifacts(detail) {
-  return ARTIFACTS.map(a => ({ ...a, exists: !!detail[a.flag], text: detail[a.body] || '' }));
+  const single = (id, flag, body, file) => ({ id, file, exists: !!detail[flag], text: detail[body] || '' });
+  const files = (kind, list, flag, placeholder) => {
+    const items = Array.isArray(list) ? list : [];
+    if (items.length === 0) return [{ id: kind, kind, file: placeholder, exists: false, text: '' }];
+    return items.map(f => ({ id: `${kind}:${f.path}`, kind, file: f.path, exists: true, text: f.content || '' }));
+  };
+  return [
+    single('proposal', 'has_proposal', 'proposal', 'proposal.md'),
+    ...files('spec', detail.specs, 'has_spec', 'specs/<dominio>/spec.md'),
+    single('design', 'has_design', 'design', 'design.md'),
+    ...files('tasks', detail.tasks, 'has_tasks', 'tasks.md'),
+    single('verify', 'has_verify', 'verify_report', 'verify-report.md'),
+    single('archive', 'has_archive', 'archive_report', 'archive-report.md')
+  ];
 }
 
+// El progreso agregado del cambio solo se atribuye a las tareas cuando hay un único fichero.
 function artifactMeta(a, detail) {
-  if (a.id === 'tasks' && detail.summary.tasks_total > 0) return `${detail.summary.tasks_completed}/${detail.summary.tasks_total}`;
+  if (a.kind === 'tasks' && a.exists && (detail.tasks || []).length === 1 && detail.summary.tasks_total > 0) {
+    return `${detail.summary.tasks_completed}/${detail.summary.tasks_total}`;
+  }
   return '';
 }
 
@@ -136,7 +146,7 @@ function renderArtifacts() {
     }
     const meta = artifactMeta(a, detail);
     const current = a.id === ctx.artifact;
-    return `<li><button type="button" class="dt-doc" data-artifact="${a.id}"${current ? ' aria-current="true"' : ''}>${icon('file', 16)}<span class="mono grow">${escapeHtml(a.file)}</span>${meta ? `<span class="dt-doc-meta mono">${escapeHtml(meta)}</span>` : ''}</button></li>`;
+    return `<li><button type="button" class="dt-doc" data-artifact="${escapeHtml(a.id)}"${current ? ' aria-current="true"' : ''}>${icon('file', 16)}<span class="mono grow">${escapeHtml(a.file)}</span>${meta ? `<span class="dt-doc-meta mono">${escapeHtml(meta)}</span>` : ''}</button></li>`;
   }).join('');
 
   let body;
@@ -145,7 +155,7 @@ function renderArtifacts() {
   } else if (ctx.raw) {
     body = `<pre class="md-raw" tabindex="0">${escapeHtml(selected.text)}</pre>`;
   } else {
-    body = `<div class="md">${renderMarkdown(selected.text, { sectionStats: selected.id === 'tasks' })}</div>`;
+    body = `<div class="md">${renderMarkdown(selected.text, { sectionStats: selected.kind === 'tasks' })}</div>`;
   }
 
   panel.innerHTML = `<div class="dt-artifacts">
@@ -168,7 +178,7 @@ function withFocus(fn) {
   const el = document.activeElement;
   let sel = null;
   if (el && $('#inc-panel-artefactos').contains(el)) {
-    if (el.hasAttribute('data-artifact')) sel = `[data-artifact="${el.getAttribute('data-artifact')}"]`;
+    if (el.hasAttribute('data-artifact')) sel = `[data-artifact="${CSS.escape(el.getAttribute('data-artifact'))}"]`;
     else if (el.hasAttribute('data-format')) sel = `[data-format="${el.getAttribute('data-format')}"]`;
   }
   fn();
