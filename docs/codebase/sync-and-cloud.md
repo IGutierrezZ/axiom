@@ -2,14 +2,14 @@
 
 [Back to Codebase Guide](../CODEBASE-GUIDE.md)
 
-Axiom sync refreshes managed agent configuration. Engram sync exports/imports memory. Cloud sync is not implemented in this source tree.
+Axiom sync refreshes managed agent configuration. Engram memory is personal and is not shared through git. Cloud sync is not implemented in this source tree.
 
 ## Sync boundaries
 
 | Flow | Command surface | Owner | What changes |
 |---|---|---|---|
 | Axiom config sync | `axiom sync` | `internal/cli/sync.go`, components, adapters | Agent prompts, skills, MCP configs, SDD profiles, GGA assets, persona assets, and configured community tool guidance. |
-| Engram git-friendly sync | `engram sync`, `engram sync --import` | External Engram runtime | `.engram/` memory export/import for team sharing. |
+| Engram memory sharing | Not used | External Engram runtime | Nothing in the repository: memory stays in each person's local store; only `.engram/config.json` is versioned. |
 | Cloud sync | Not present in Axiom source | External or future Engram capability | Do not document implementation here without source. |
 | Autosync | Not present in Axiom source | External or future Engram capability | Do not imply background sync exists in this repo. |
 
@@ -34,9 +34,9 @@ Important behavior from `internal/cli/sync.go`:
 - Community tool guidance/config, such as CodeGraph guidance, belongs to the managed config sync path when the tool is configured or legacy guidance needs cleanup.
 - Idempotency matters: `FilesChanged == 0` means managed assets were already current.
 
-## Git-friendly memory sync
+## Memory is not shared through git
 
-Engram team sharing is documented in [Engram Commands](../engram.md). The important maintainer distinction: `engram sync` exports memory to `.engram/`; `axiom sync` refreshes agent configuration.
+Engram memory is personal (see [Engram Commands](../engram.md)). The team shares each change's documentation in OpenSpec or the ODD feature document, not memory exports. `.engram/chunks/` and `.engram/manifest.json` are ignored; `axiom sync` refreshes agent configuration and never touches memory.
 
 ## Remote transport boundary
 
@@ -49,7 +49,7 @@ This repository does not contain cloud server or cloud store packages. If future
 ## Contributor checklist
 
 - [ ] Use `axiom sync` for managed config, not memory export/import.
-- [ ] Use `engram sync` docs for memory sharing behavior.
+- [ ] Do not commit Engram memory exports (`.engram/chunks/`, `.engram/manifest.json`).
 - [ ] Keep sync changes idempotent and test `FilesChanged` expectations.
 - [ ] Check persona behavior against persisted state and neutral fallback rules.
 - [ ] Keep community tool guidance separate from OpenCode plugin registration.
