@@ -1,10 +1,12 @@
-# Convención de Pruebas Tabulares en Go (Table-Driven Tests)
-
-description: "Estandarización de pruebas unitarias idiomáticas en Go mediante estructuras anónimas y subpruebas t.Run"
-trigger: "Al crear o modificar suites de pruebas unitarias *_test.go en paquetes Go"
-origin: "mined"
-
 ---
+name: axiom-go-table-tests
+description: "Pruebas unitarias tabulares en Go con structs anónimos y subpruebas t.Run. Trigger: Al crear o modificar suites *_test.go en paquetes Go."
+metadata:
+  origin: mined
+  trigger: "Al crear o modificar suites *_test.go en paquetes Go"
+---
+
+# Convención de Pruebas Tabulares en Go (Table-Driven Tests)
 
 ## Propósito
 
