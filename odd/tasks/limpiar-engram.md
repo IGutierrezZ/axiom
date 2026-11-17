@@ -36,7 +36,7 @@ El repositorio versiona memoria de Engram heredada de upstream y varias guías i
 - [x] **T2 · Alinear la documentación de Engram** (`docs/engram.md`, `docs/intended-usage.md`, `docs/codebase/sync-and-cloud.md`). Ruta: inline (ediciones mecánicas y acotadas ya localizadas).
 - [x] **T3 · Fetch solo con autorización** (`AGENTS.md:17`, `GEMINI.md:48`). Ruta: inline (una línea por fichero).
 - [x] **T4 · Diagrama `docs/assets/diagrams/engram-memory.svg`**: reescribir solo las cadenas `:3`, `:91` y `:93`, que presentan `engram sync` como reparto con el equipo, sin cambiar la geometría. Lo enlaza `README.md:67`. Ruta: inline (cadenas de texto). También se cambió el título de esa franja (`:90`, «Hand it to the team» → «What the team shares»), que formaba parte del mismo mensaje. El texto nuevo de `:91` es más corto que el original, así que cabe en la franja.
-- [ ] **T5 · Verificar el criterio de terminado** (ver «Comprobaciones»).
+- [x] **T5 · Verificar el criterio de terminado** (ver «Comprobaciones»).
 
 ## Comprobaciones (criterio de terminado)
 
@@ -50,7 +50,18 @@ El repositorio versiona memoria de Engram heredada de upstream y varias guías i
 
 - Worktree: `C:\repos\axiom-wt\limpiar-engram\axiom`, rama `inc/limpiar-engram`.
 - Plan stop: approved 2026-11-17; implementation continues
+- Commits: T1 `3289d914`, T2 `a412d1b7`, T3 `a2316eec`, T4 `8485c643`; T5 en el commit de este documento.
+- RDD: apagado (`axiom review mode status`: off, decidido por defecto); sin revisión nativa.
+
+## Verificación observada (2026-11-17)
+
+- `git ls-files .engram` → solo `.engram/config.json`.
+- `rg -n "engram sync" docs/ -g '!docs/plan/**'` → sin resultados. Las 6 menciones de `docs/plan/backlog-2026-11/05-conocimiento-equipo.md` describen la decisión de descartar el flujo, no lo presentan.
+- `rg -n "pasivamente .git fetch" AGENTS.md GEMINI.md` → sin resultados (rc=1).
+- `mem_current_project` desde el worktree → `project: axiom`, `project_source: config`.
+- `go test ./internal/workspace/...` → `ok` (56 s).
+- No verificado: el render visual del SVG (no se pudo capturar el fichero local). El texto nuevo es más corto que el que sustituye.
 
 ## Siguiente paso
 
-Presentar la parada de plan.
+Abrir la PR cuando la persona lo autorice: `scripts/axiom-worktree.ps1 pr limpiar-engram -Lane odd`, con etiqueta `type:docs` (o `type:chore`). Diff de 75+/75−, por debajo de 400 líneas: sin `size:exception`.
