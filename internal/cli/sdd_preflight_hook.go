@@ -155,9 +155,9 @@ func runSDDPreflightHook(args []string, stdin io.Reader, stdout io.Writer) error
 		return writeSDDPreflightHookDecision(stdout, "deny", "SDD child dispatch refused: the hook payload does not bind the session transcript.", nil)
 	}
 
-	block, ok := resolveSDDPreflightTranscriptAuthority(payload.TranscriptPath, payload.SessionID)
+	block, ok, rejection := resolveSDDPreflightTranscriptAuthority(payload.TranscriptPath, payload.SessionID)
 	if !ok {
-		return writeSDDPreflightHookDecision(stdout, "deny", "SDD child dispatch refused: parent-confirmed SDD preflight is missing, invalid, or uncorroborated. Ask the canonical grouped preflight with AskUserQuestion and stop before retrying.", nil)
+		return writeSDDPreflightHookDecision(stdout, "deny", sddPreflightHookMissingAuthorityReason(rejection), nil)
 	}
 
 	updated := payload.ToolInputRaw
@@ -214,19 +214,20 @@ type sddPreflightTranscriptContentBlock struct {
 // AskUserQuestion tool_use asking the canonical grouped questions, matched
 // by tool_use id to a later, non-error user tool_result carrying
 // toolUseResult.answers for that same session (isSidechain false). The last
-// corroborated pair in file order wins. Malformed or unparsable lines are
+// corroborated pair in file order wins. When none is valid, rejection is the
+// reason the last recognized preflight was refused (nil when there was none),
+// so the denial can say what to correct. Malformed or unparsable lines are
 // skipped, never fatal; a line longer than maxSDDPreflightTranscriptLine has
 // its remainder discarded without being buffered, and scanning continues
 // with the next line.
-func resolveSDDPreflightTranscriptAuthority(path, sessionID string) (string, bool) {
+func resolveSDDPreflightTranscriptAuthority(path, sessionID string) (block string, found bool, rejection error) {
 	file, err := os.Open(path)
 	if err != nil {
-		return "", false
+		return "", false, nil
 	}
 	defer file.Close()
 
 	pending := map[string][]sddPreflightHookQuestion{}
-	block, found := "", false
 
 	reader := bufio.NewReader(file)
 	for {
@@ -266,7 +267,14 @@ func resolveSDDPreflightTranscriptAuthority(path, sessionID string) (string, boo
 								continue
 							}
 							candidate, recognized, err := resolveSDDPreflightHookBlock(questions, toolUseResult.Answers)
-							if err != nil || !recognized || !validSDDPreflightHookBlock(candidate) {
+							if !recognized {
+								continue
+							}
+							if err != nil {
+								rejection = err
+								continue
+							}
+							if !validSDDPreflightHookBlock(candidate) {
 								continue
 							}
 							block, found = candidate, true
@@ -279,7 +287,21 @@ func resolveSDDPreflightTranscriptAuthority(path, sessionID string) (string, boo
 			break
 		}
 	}
-	return block, found
+	if found {
+		rejection = nil
+	}
+	return block, found, rejection
+}
+
+// sddPreflightHookMissingAuthorityReason is the denial text when no valid
+// preflight authorizes the dispatch. When the last recognized preflight was
+// refused, the text names that concrete cause so it can be corrected.
+func sddPreflightHookMissingAuthorityReason(rejection error) string {
+	const missing = "SDD child dispatch refused: parent-confirmed SDD preflight is missing, invalid, or uncorroborated."
+	if rejection == nil {
+		return missing + " Ask the canonical grouped preflight with AskUserQuestion and stop before retrying."
+	}
+	return missing + " The last SDD preflight in this session was rejected: " + rejection.Error() + ". Fix that, ask the canonical grouped preflight again with AskUserQuestion and stop before retrying."
 }
 
 // readSDDPreflightTranscriptLine reads one newline- or EOF-terminated line
@@ -348,6 +370,77 @@ func hasSDDPreflightQuestionMarker(question string, index int) bool {
 	return false
 }
 
+// sddPreflightChoice binds one canonical option label to its internal token.
+type sddPreflightChoice struct {
+	Label string
+	Token string
+}
+
+// sddPreflightGroup is one canonical preflight question. Its position in
+// sddPreflightGroups is its marker: the first group is asked as `1/3:`, and
+// so on.
+type sddPreflightGroup struct {
+	Name    string
+	Choices []sddPreflightChoice
+}
+
+// sddPreflightGroups is the canonical preflight. The hook binds every
+// question by its marker and every answer by its label, so neither the order
+// of the questions nor the order of their options changes the outcome.
+var sddPreflightGroups = []sddPreflightGroup{
+	{Name: "Pace", Choices: []sddPreflightChoice{{"Interactive", "interactive"}, {"Automatic", "auto"}}},
+	{Name: "Artifacts", Choices: []sddPreflightChoice{{"OpenSpec", "openspec"}, {"Engram", "engram"}, {"Both", "hybrid"}}},
+	{Name: "PR strategy", Choices: []sddPreflightChoice{{"Ask me", "ask-on-risk"}, {"Single PR", "single-pr"}, {"Auto", "auto-chain"}}},
+}
+
+// sddPreflightRecommendedSuffix is the suffix the AskUserQuestion guidance
+// asks models to append to the label of the option they recommend.
+const sddPreflightRecommendedSuffix = "(recommended)"
+
+// normalizeSDDPreflightLabel folds the presentation of a label: surrounding
+// whitespace, letter case and a trailing "(Recommended)" never change which
+// canonical option it names.
+func normalizeSDDPreflightLabel(label string) string {
+	normalized := strings.ToLower(strings.TrimSpace(label))
+	return strings.TrimSpace(strings.TrimSuffix(normalized, sddPreflightRecommendedSuffix))
+}
+
+// choice returns the index of the canonical choice the label names, or -1.
+func (group sddPreflightGroup) choice(label string) int {
+	normalized := normalizeSDDPreflightLabel(label)
+	for index, choice := range group.Choices {
+		if normalized == strings.ToLower(choice.Label) {
+			return index
+		}
+	}
+	return -1
+}
+
+func (group sddPreflightGroup) labels() string {
+	labels := make([]string, len(group.Choices))
+	for index, choice := range group.Choices {
+		labels[index] = choice.Label
+	}
+	return strings.Join(labels, ", ")
+}
+
+// sddPreflightQuestionMarkerIndex returns the zero-based group index of the
+// `N/3:` marker the question starts with under any accepted prefix, or -1.
+func sddPreflightQuestionMarkerIndex(question string) int {
+	for index := range sddPreflightGroups {
+		if hasSDDPreflightQuestionMarker(question, index) {
+			return index
+		}
+	}
+	return -1
+}
+
+// resolveSDDPreflightHookBlock derives the canonical preflight block from one
+// grouped AskUserQuestion call and its answers. recognized is false when no
+// question carries a preflight prefix. Each question is bound to its group by
+// its marker and each option and answer to a canonical choice by its label,
+// so presentation order never matters; every error names the question and
+// what to correct.
 func resolveSDDPreflightHookBlock(questions []sddPreflightHookQuestion, answersRaw json.RawMessage) (string, bool, error) {
 	recognized := false
 	for _, question := range questions {
@@ -359,52 +452,63 @@ func resolveSDDPreflightHookBlock(questions []sddPreflightHookQuestion, answersR
 	if !recognized {
 		return "", false, nil
 	}
-	expectedLabels := [][]string{{"Interactive", "Automatic"}, {"OpenSpec", "Engram", "Both"}, {"Ask me", "Single PR", "Auto"}}
-	if len(questions) != 3 {
-		return "", true, sddPreflightHookProtocolError("parent-confirmed SDD preflight requires exactly three questions")
+	total := len(sddPreflightGroups)
+	if len(questions) != total {
+		return "", true, sddPreflightHookProtocolError("the SDD preflight must ask exactly %d questions in one call, but it asked %d", total, len(questions))
 	}
-	for i, question := range questions {
-		if !hasSDDPreflightQuestionMarker(question.Question, i) || question.MultiSelect || len(question.Options) != len(expectedLabels[i]) {
-			return "", true, sddPreflightHookProtocolError("SDD preflight question %d is malformed", i+1)
+	byGroup := make([]*sddPreflightHookQuestion, total)
+	for i := range questions {
+		question := &questions[i]
+		index := sddPreflightQuestionMarkerIndex(question.Question)
+		if index < 0 {
+			return "", true, sddPreflightHookProtocolError("SDD preflight question %q does not start with its `Axiom SDD preflight N/%d:` marker", question.Question, total)
 		}
-		for optionIndex, option := range question.Options {
-			if option.Label != expectedLabels[i][optionIndex] {
-				return "", true, sddPreflightHookProtocolError("SDD preflight question %d changed the canonical option semantics", i+1)
-			}
+		if byGroup[index] != nil {
+			return "", true, sddPreflightHookProtocolError("SDD preflight marker %d/%d (%s) appears in more than one question", index+1, total, sddPreflightGroups[index].Name)
 		}
+		byGroup[index] = question
 	}
 	answers, err := sddPreflightHookAnswers(answersRaw)
 	if err != nil {
 		return "", true, err
 	}
-	indexes := make([]int, 3)
-	for i, question := range questions {
+	tokens := make([]string, total)
+	for index, group := range sddPreflightGroups {
+		question := byGroup[index]
+		name := fmt.Sprintf("SDD preflight question %d/%d (%s)", index+1, total, group.Name)
+		if question.MultiSelect {
+			return "", true, sddPreflightHookProtocolError("%s must be single-select", name)
+		}
+		offered := make([]bool, len(group.Choices))
+		for _, option := range question.Options {
+			choice := group.choice(option.Label)
+			if choice < 0 {
+				return "", true, sddPreflightHookProtocolError("%s offers option %q, which is not one of its labels: %s", name, option.Label, group.labels())
+			}
+			if offered[choice] {
+				return "", true, sddPreflightHookProtocolError("%s offers %q more than once", name, group.Choices[choice].Label)
+			}
+			offered[choice] = true
+		}
+		if len(question.Options) != len(group.Choices) {
+			return "", true, sddPreflightHookProtocolError("%s must offer every one of its labels: %s", name, group.labels())
+		}
 		answer, ok := answers[question.Question]
 		if !ok {
-			return "", true, sddPreflightHookProtocolError("SDD preflight question %d has no answer", i+1)
+			return "", true, sddPreflightHookProtocolError("%s has no answer", name)
 		}
-		indexes[i] = -1
-		for optionIndex, option := range question.Options {
-			if answer == option.Label {
-				if indexes[i] >= 0 {
-					return "", true, sddPreflightHookProtocolError("SDD preflight question %d answer is ambiguous", i+1)
-				}
-				indexes[i] = optionIndex
-			}
+		choice := group.choice(answer)
+		if choice < 0 {
+			return "", true, sddPreflightHookProtocolError("%s answer %q is not one of its labels: %s", name, answer, group.labels())
 		}
-		if indexes[i] < 0 {
-			return "", true, sddPreflightHookProtocolError("SDD preflight question %d answer is outside the offered domain", i+1)
-		}
+		tokens[index] = group.Choices[choice].Token
 	}
-	pace := []string{"interactive", "auto"}[indexes[0]]
-	store := []string{"openspec", "engram", "hybrid"}[indexes[1]]
-	strategy := []string{"ask-on-risk", "single-pr", "auto-chain"}[indexes[2]]
 	block := strings.Join([]string{
 		"## SDD Session Preflight",
 		"Parent-confirmed by the runtime; models and child agents cannot create or modify this block.",
-		"- Pace: " + pace,
-		"- Artifact store: " + store,
-		"- Delivery strategy: " + strategy,
+		"- Pace: " + tokens[0],
+		"- Artifact store: " + tokens[1],
+		"- Delivery strategy: " + tokens[2],
 		"- Review policy: 400 changed lines",
 	}, "\n")
 	return block, true, nil

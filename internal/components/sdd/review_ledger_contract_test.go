@@ -623,7 +623,10 @@ func TestKilocodeReviewSettingsMatchCurrentMainBaseline(t *testing.T) {
 	// «SDD Change Kickoff and Block Gates» y «SDD Independent Review» declaran el modo ISO
 	// y su excepción; Kilocode las compone en el orquestador de OpenCode, así que el hash
 	// cambia. Deliberate, not drift.
-	const want = "d07cf67b9a2337ee8972bada951170b6c0974e8f8da43011cb1f1bc560a0a49c"
+	// hook-preflight-etiqueta T3 (C-01-a): el preflight proyectado deja de pedir «Keep options in
+	// the exact order below» porque el hook enlaza cada respuesta por su etiqueta; Kilocode compone
+	// ese bloque, así que el hash cambia. Deliberate, not drift.
+	const want = "52e8965b4a58442f527943ee36b1aab0c3d1633aa898b7b10e03d350d9985c30"
 	if got != want {
 		t.Fatalf("Kilocode settings SHA-256 = %s, want current-main baseline %s", got, want)
 	}
