@@ -16,8 +16,10 @@ import (
 // absolutas, lectura no estricta (un binario anterior la ignora) y escritura única con el
 // sellado.
 
-// sampleSnapshot es la instantánea de un monorepo con los roles core y qa sobre el mismo
-// repositorio, la integración `main` y el prefijo `feat`.
+// sampleSnapshot es la instantánea de un multirepo (único lugar con ramas de rol: en un monorepo
+// el único rol es `fullstack`, REQ-2.2 de `workspace-topology`) con los roles core y qa sobre el
+// mismo repositorio de código, la integración `main` y el prefijo `feat`; el repositorio de specs
+// se trabaja in situ y no lleva ramas.
 func sampleSnapshot() *GitSnapshot {
 	return &GitSnapshot{
 		IntegrationBranch: "main",
@@ -26,16 +28,15 @@ func sampleSnapshot() *GitSnapshot {
 		ChangeBranch:      "inc/x",
 		Repositories: []GitSnapshotRepo{
 			{
-				Path:              ".",
-				Name:              "axiom",
-				Role:              "change_branch",
+				Path:              "repo-backend",
+				Name:              "repo-backend",
+				Role:              "code",
 				IntegrationBranch: "main",
 				Base:              "develop",
 				Branches: []GitSnapshotBranch{
 					{Name: "inc/x", Kind: "change"},
 					{Name: "inc/x-core", Kind: "role", Role: "core"},
 					{Name: "inc/x-qa", Kind: "role", Role: "qa"},
-					{Name: "inc/x-archive", Kind: "archive"},
 				},
 			},
 			{Path: "repo-specs", Name: "repo-specs", Role: "specs_in_place", IntegrationBranch: "main", Base: "main"},
@@ -72,7 +73,7 @@ func TestGitSnapshotRoundTripsThroughKickoffYAML(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{"git:", "integration_branch: main", "branch_prefix: feat", "change_branch: inc/x", "kind: archive", "role: core"} {
+	for _, want := range []string{"git:", "integration_branch: main", "branch_prefix: feat", "change_branch: inc/x", "kind: role", "role: core"} {
 		if !strings.Contains(string(data), want) {
 			t.Errorf("kickoff.yaml debe contener %q:\n%s", want, data)
 		}

@@ -114,6 +114,33 @@ Notas:
 - Pruebas: nuevas `TestSessionPreflightBodyNamesTopologyGroups`, `TestSessionPreflightFallbackAnswerSyntaxUsesRequiredGroups` y `TestPersistenceContractFixesTheHybridSessionStore`; `TestSDDOrchestratorAssetsDefaultToAutomatic` pasa a `TestSDDOrchestratorAssetsExecutionModeFollowsTopology`; el pin de REQ-28.14 prohíbe además `pace`, `pr-strategy` y `N/3`; la regexp de grupos de estrategia de PR y los literales de `inject_test`/`renderer_invariants_test` siguen la lista `- **PR strategy** (`pr-strategy`)`.
 - `TestKilocodeReviewSettingsMatchCurrentMainBaseline`: nuevo hash con comentario de causa (deliberado).
 
+## U7 · Fidelidad de ramas, archive y status a la regla de roles
+
+Hecha (lote 6; commit `test(branch): los escenarios de ramas de rol y archive usan multirepo o fullstack`, el hash está en `git log` y en la sección de cierre).
+
+| Evidencia | Valor |
+|---|---|
+| Prueba focalizada | `go test ./internal/branch/... ./internal/sddstatus/... ./internal/kickoff/...`: ok (engine 281 s, sddstatus 60 s) |
+| Arnés de ejecución | `git` real aislado y repositorios temporales (`newProject`, `newMultirepo`, `sealChangeAt`); planificador y veredicto como tablas puras |
+| Cierre | `gofmt -l ./internal ./cmd` vacío; `go vet ./internal/branch/... ./internal/sddstatus/ ./internal/kickoff/` limpio; `go test ./internal/cli/ -run TestBranch`: ok (93 s) |
+| Límite de reversión | Solo ficheros `_test.go` (sin código de producción) |
+
+Ficheros tocados y por qué (alcance acotado: solo pruebas cuyo nombre o comentario declara un escenario de monorepo con ramas de rol de los requisitos modificados):
+- `internal/branch/planner_test.go`: `TestPlanEmbeddedWithTwoRolesCreatesTrackingAndRoleBranches` pasa a `TestPlanMultirepoWithTwoRolesCreatesTrackingAndRoleBranches` (REQ-25.4, 25.11: roles `core` y `qa` sobre `repo-backend`, worktrees `x-core/repo-backend`); en `TestPlanEmbeddedWithOneRoleHasASingleChangeBranch` el caso de monorepo con el rol `core` pasa a `fullstack` declarado.
+- `internal/branch/verdict_test.go`: `TestDecideARoleBranchIsCorrectWhenThereAreRoleBranches` usa un repositorio de código de multirepo (`multirepoCodeInput`, REQ-25.18); el contexto de archivado en monorepo ya no lleva ramas de rol (la rama ajena pasa a `feat/otra`).
+- `internal/branch/engine/ensure_test.go`: `TestEnsureCompletesIncrementallyBeforeAndAfterSealing` pasa a multirepo (REQ-25.7, 25.11) y se añade `TestEnsureInAMonorepoAddsNoBranchesAfterSealingFullstack` (REQ-25.7: monorepo con `fullstack`, solo `feat/x`, segunda ejecución sin cambios).
+- `internal/branch/engine/status_test.go`: `TestStatusProposesThePRTargetOfEachBranch` pasa a multirepo (destinos de PR de rol y seguimiento, REQ-25.4/25.15).
+- `internal/branch/engine/status_archive_test.go` y `archive_test.go`: el ayudante `twoRolesProject` se sustituye por `fullstackProject`; `TestStatusArchiveBranchDoesNotBelongToTheRoleModel` y `TestEnsureArchiveDoesNotAlterTheChangeBranch` afirman `feat/x` y `feat/x-archive` hacia la integración, sin ramas de rol (REQ-25.4, 25.7).
+- `internal/branch/engine/ensure_adopt_test.go`: `TestEnsureRoleBranchesAdoptTheirPublishedBranch` pasa a multirepo con remoto en `repo-backend` (REQ-27.15).
+- `internal/branch/engine/snapshot_test.go`: la prueba de dos roles en monorepo se divide en `…OfAMonorepoWithFullstack` y `…OfAMultirepoWithTwoRoles` (REQ-25.36); `TestSnapshotReflectsTheRegisteredExceptions` pasa a `fullstack`.
+- `internal/kickoff/gitsnapshot_test.go`: `sampleSnapshot` describe un multirepo (repositorio de código con `core` y `qa`, specs in situ, sin rama de archivado) (REQ-25.36).
+- `internal/sddstatus/branch_context_test.go`: la rama ajena del escenario de archive en monorepo pasa de `feat/x-core` a `feat/otra` (REQ-25.39, 25.42); el escenario del repositorio de specs de multirepo con `feat/x-core` ya existía y no cambia.
+
+No reclasificados, a propósito: los fixtures agnósticos de topología (`embeddedCoreProject` y los tests que sellan `core` en un monorepo de un solo rol, `planner_snapshot_test.go`, `TestTheSnapshotPrevailsOverALaterPolicyChange`, `handoff_test.go`, `publication_test.go`, `registry_test.go`, `done_test.go`, `result_*_test.go`, `ensure_dirty/inplace/exception/registry_test.go`, `guard_warn_test.go`, `listing_test.go`, `edit_authority_registered_test.go`): no dicen probar un escenario de monorepo con ramas de rol de los requisitos modificados, la carga sigue aceptando esos monorepos y sus pruebas pasan sin cambios.
+
+Notas:
+- Discrepancia spec/producción (sin cambiar código de producción): el escenario «Ejecución previa al sellado y posterior al sellado» de REQ-25.7 dice que antes del sellado se crea `feat/x` en el repositorio del planning home; en `multirepo` el repositorio de specs se trabaja in situ (REQ-25.5), así que la primera ejecución no crea ramas y la segunda crea las de `repo-backend`. La prueba afirma el comportamiento real de producción.
+
 ## Riesgos abiertos
 - Ninguno nuevo de U3 ni de U4.
 - U5: la divergencia aceptada del lector de topología (multirepo cuyo repositorio de especificaciones falta) lee `multirepo` en el plugin y `monorepo-embedded` en el binario; un proyecto así ya falla `Locate` y no es utilizable.

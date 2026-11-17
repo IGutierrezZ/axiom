@@ -105,12 +105,13 @@ func repositoryNames(plan ChangePlan) []string {
 // un rol solo existe `<prefijo>/<cambio>`, con PR hacia la integración y su worktree
 // en `<raíz>/<cambio>/<repo>`; `fullstack` también cuenta como un único rol.
 func TestPlanEmbeddedWithOneRoleHasASingleChangeBranch(t *testing.T) {
+	// En un monorepo el único rol es `fullstack` (REQ-2.2 de `workspace-topology`).
 	for name, tc := range map[string]struct {
 		sealed   []string
 		declared []string
 	}{
-		"un rol declarado": {sealed: []string{"core"}, declared: []string{"core"}},
-		"fullstack":        {sealed: []string{"fullstack"}},
+		"fullstack sin roles declarados":    {sealed: []string{"fullstack"}},
+		"fullstack declarado en axiom.yaml": {sealed: []string{"fullstack"}, declared: []string{"fullstack"}},
 	} {
 		t.Run(name, func(t *testing.T) {
 			in := embeddedInput("x", tc.sealed...)
@@ -142,17 +143,21 @@ func TestPlanEmbeddedWithOneRoleHasASingleChangeBranch(t *testing.T) {
 
 // REQ-25.4 (escenario «Dos roles sobre el mismo repositorio crean seguimiento y
 // ramas de rol») y REQ-25.11 (ruta con sufijo de rol): la de seguimiento más una
-// rama por rol, en orden alfabético, con el PR de los roles hacia la de seguimiento.
-func TestPlanEmbeddedWithTwoRolesCreatesTrackingAndRoleBranches(t *testing.T) {
+// rama por rol, en orden alfabético, con el PR de los roles hacia la de seguimiento. Solo es
+// posible en `multirepo` (en `monorepo-embedded` el único rol es `fullstack`, REQ-2.2 de
+// `workspace-topology`): los dos roles comparten el repositorio de código `repo-backend`.
+func TestPlanMultirepoWithTwoRolesCreatesTrackingAndRoleBranches(t *testing.T) {
 	in := embeddedInput("x", "qa", "core")
-	in.PlanningRepo = planningFacts("core", "qa")
+	in.Topology = workspace.TopologyMultirepo
+	in.CodeRepos = []RepoFacts{codeFacts("repo-backend", "core", "qa")}
 	plan := mustPlan(t, in)
 
-	repo := plan.Repositories[0]
+	wantNames(t, "repositorios", repositoryNames(plan), "axiom", "repo-backend")
+	repo := plan.Repositories[1]
 	want := []BranchPlan{
-		{Name: "feat/x", Kind: KindChange, PRTarget: "main", Worktree: filepath.Join(testWorktreeRoot, "x", "axiom")},
-		{Name: "feat/x-core", Kind: KindRole, RoleID: "core", From: "feat/x", PRTarget: "feat/x", Worktree: filepath.Join(testWorktreeRoot, "x-core", "axiom")},
-		{Name: "feat/x-qa", Kind: KindRole, RoleID: "qa", From: "feat/x", PRTarget: "feat/x", Worktree: filepath.Join(testWorktreeRoot, "x-qa", "axiom")},
+		{Name: "feat/x", Kind: KindChange, PRTarget: "main", Worktree: filepath.Join(testWorktreeRoot, "x", "repo-backend")},
+		{Name: "feat/x-core", Kind: KindRole, RoleID: "core", From: "feat/x", PRTarget: "feat/x", Worktree: filepath.Join(testWorktreeRoot, "x-core", "repo-backend")},
+		{Name: "feat/x-qa", Kind: KindRole, RoleID: "qa", From: "feat/x", PRTarget: "feat/x", Worktree: filepath.Join(testWorktreeRoot, "x-qa", "repo-backend")},
 	}
 	if !reflect.DeepEqual(repo.Branches, want) {
 		t.Errorf("ramas = %+v\nse esperaba %+v", repo.Branches, want)

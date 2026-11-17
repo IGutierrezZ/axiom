@@ -66,13 +66,13 @@ func sealWithSnapshot(t *testing.T, repo, change string, snapshot *kickoff.GitSn
 }
 
 // REQ-25.36, escenario «El sellado escribe la instantánea»: integración `main`, prefijo `feat`,
-// la base `main` y los nombres `feat/x`, `feat/x-core`, `feat/x-qa` y la rama de archivado
-// `feat/x-archive`.
-func TestSnapshotNamesTheDerivedBranchesOfAMonorepoWithTwoRoles(t *testing.T) {
+// la base `main` y los nombres `feat/x` y la rama de archivado `feat/x-archive` de un monorepo
+// con el rol único `fullstack` (sin ramas de rol, REQ-2.2 de `workspace-topology`).
+func TestSnapshotNamesTheDerivedBranchesOfAMonorepoWithFullstack(t *testing.T) {
 	t.Parallel()
-	repo := newProject(t, configWithRoles(map[string][]string{"core": {"."}, "qa": {"."}}, "git:\n  integration_branch: main\n  branch_prefix: feat\n"))
+	repo := newProject(t, configWithRoles(map[string][]string{"fullstack": {"."}}, "git:\n  integration_branch: main\n  branch_prefix: feat\n"))
 
-	got := snapshotOf(t, repo, "x", "core", "qa")
+	got := snapshotOf(t, repo, "x", "fullstack")
 
 	want := &kickoff.GitSnapshot{
 		IntegrationBranch: "main",
@@ -86,8 +86,6 @@ func TestSnapshotNamesTheDerivedBranchesOfAMonorepoWithTwoRoles(t *testing.T) {
 			Base:              "main",
 			Branches: []kickoff.GitSnapshotBranch{
 				{Name: "feat/x", Kind: "change"},
-				{Name: "feat/x-core", Kind: "role", Role: "core"},
-				{Name: "feat/x-qa", Kind: "role", Role: "qa"},
 				{Name: "feat/x-archive", Kind: "archive"},
 			},
 		}},
@@ -95,6 +93,49 @@ func TestSnapshotNamesTheDerivedBranchesOfAMonorepoWithTwoRoles(t *testing.T) {
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("instantánea = %+v, se esperaba %+v", got, want)
 	}
+	assertSnapshotHasNoSHAsOrPaths(t, got, repo)
+}
+
+// REQ-25.36 en un multirepo con los roles `core` y `qa` sobre `repo-backend` (único lugar con
+// ramas de rol): el repositorio de código lleva `feat/x`, `feat/x-core` y `feat/x-qa` y el de
+// specs, que se trabaja in situ, no lleva ramas; no hay rama de archivado (REQ-25.45).
+func TestSnapshotNamesTheDerivedBranchesOfAMultirepoWithTwoRoles(t *testing.T) {
+	t.Parallel()
+	master, _ := newMultirepo(t, map[string][]string{"core": {"repo-backend"}, "qa": {"repo-backend"}}, "repo-backend")
+	writeFile(t, filepath.Join(master, "axiom.yaml"), configFor("multirepo", "repo-specs", map[string][]string{"core": {"repo-backend"}, "qa": {"repo-backend"}}, "git:\n  integration_branch: main\n  branch_prefix: feat\n"))
+
+	got := snapshotOf(t, master, "x", "core", "qa")
+
+	if got.IntegrationBranch != "main" || got.BranchPrefix != "feat" || got.ChangeBranch != "feat/x" {
+		t.Errorf("política = %+v, se esperaba main, feat y feat/x", got)
+	}
+	var code *kickoff.GitSnapshotRepo
+	for i := range got.Repositories {
+		switch got.Repositories[i].Role {
+		case "specs_in_place":
+			if len(got.Repositories[i].Branches) != 0 {
+				t.Errorf("el repositorio de specs se trabaja in situ y no lleva ramas: %+v", got.Repositories[i])
+			}
+		case "code":
+			code = &got.Repositories[i]
+		}
+	}
+	if code == nil {
+		t.Fatalf("la instantánea debe incluir repo-backend como repositorio de código: %+v", got.Repositories)
+	}
+	want := []kickoff.GitSnapshotBranch{
+		{Name: "feat/x", Kind: "change"},
+		{Name: "feat/x-core", Kind: "role", Role: "core"},
+		{Name: "feat/x-qa", Kind: "role", Role: "qa"},
+	}
+	if code.Name != "repo-backend" || !reflect.DeepEqual(code.Branches, want) {
+		t.Errorf("repositorio de código = %+v, se esperaba repo-backend con %+v", code, want)
+	}
+	assertSnapshotHasNoSHAsOrPaths(t, got, master)
+}
+
+func assertSnapshotHasNoSHAsOrPaths(t *testing.T, got *kickoff.GitSnapshot, repo string) {
+	t.Helper()
 	k := kickoff.Kickoff{Git: got}
 	data, err := yaml.Marshal(k)
 	if err != nil {
@@ -127,14 +168,15 @@ func TestSnapshotOfASingleRoleHasOnlyTheChangeAndArchiveBranches(t *testing.T) {
 }
 
 // REQ-25.36, escenario «La instantánea refleja las excepciones por cambio»: tras
-// `ensure --change x --branch inc/x` la instantánea nombra `inc/x` y deriva de ella las ramas de
-// rol y la de archivado; las excepciones quedan registradas en el bloque.
+// `ensure --change x --branch inc/x` la instantánea nombra `inc/x` y deriva de ella la rama de
+// archivado (monorepo con el rol único `fullstack`, sin ramas de rol); las excepciones quedan
+// registradas en el bloque.
 func TestSnapshotReflectsTheRegisteredExceptions(t *testing.T) {
 	t.Parallel()
-	repo := newProject(t, configWithRoles(map[string][]string{"core": {"."}, "qa": {"."}}, ""))
+	repo := newProject(t, configWithRoles(map[string][]string{"fullstack": {"."}}, ""))
 	wantReady(t, ensureException(t, repo, "x", branch.Exceptions{Branch: "inc/x", Base: "main"}))
 
-	got := snapshotOf(t, repo, "x", "core", "qa")
+	got := snapshotOf(t, repo, "x", "fullstack")
 
 	if got.ChangeBranch != "inc/x" || !reflect.DeepEqual(got.Exceptions, &kickoff.GitExceptions{Branch: "inc/x", Base: "main"}) {
 		t.Errorf("rama del cambio %q y excepciones %+v, se esperaba inc/x con rama y base", got.ChangeBranch, got.Exceptions)
@@ -143,7 +185,7 @@ func TestSnapshotReflectsTheRegisteredExceptions(t *testing.T) {
 	for _, planned := range got.Repositories[0].Branches {
 		names = append(names, planned.Name)
 	}
-	wantNamesEqual(t, "ramas", names, "inc/x", "inc/x-core", "inc/x-qa", "inc/x-archive")
+	wantNamesEqual(t, "ramas", names, "inc/x", "inc/x-archive")
 	if got.Repositories[0].Base != "main" {
 		t.Errorf("base = %q, se esperaba la fijada con --base: main", got.Repositories[0].Base)
 	}

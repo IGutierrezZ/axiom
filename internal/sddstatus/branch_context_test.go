@@ -196,10 +196,11 @@ func TestResolveBranchContextIsEvaluatedInEveryPhaseOfAMonorepo(t *testing.T) {
 }
 
 // REQ-25.42 y REQ-25.39, escenario «En la fase archive solo la rama de archivado es correcta»:
-// feat/x, main y feat/x-core bloquean con la rama esperada feat/x-archive y la continuación
-// `--archive`; en feat/x-archive no bloquea.
+// (monorepo con el rol `fullstack`, sin ramas de rol) feat/x, main y la rama ajena feat/otra
+// bloquean con la rama esperada feat/x-archive y la continuación `--archive`; en feat/x-archive
+// no bloquea.
 func TestResolveBranchContextOnlyTheArchiveBranchIsCorrectInTheArchivePhase(t *testing.T) {
-	for _, current := range []string{"feat/x", "main", "feat/x-core"} {
+	for _, current := range []string{"feat/x", "main", "feat/otra"} {
 		t.Run(current, func(t *testing.T) {
 			root := branchMonorepo(t, current, true)
 

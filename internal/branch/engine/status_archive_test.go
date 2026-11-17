@@ -13,10 +13,12 @@ import (
 // roles», REQ-25.45), con git real y sin red. La rama de archivado figura cuando existe, con
 // los mismos datos que las demás y el destino de su PR en la rama de integración.
 
-func twoRolesProject(t *testing.T) string {
+// fullstackProject es un monorepo con el rol único `fullstack` sellado en el cambio `x`: en
+// `monorepo-embedded` no existen ramas de rol (REQ-2.2 de `workspace-topology`).
+func fullstackProject(t *testing.T) string {
 	t.Helper()
-	repo := newProject(t, configWithRoles(map[string][]string{"core": {"."}, "qa": {"."}}, ""))
-	sealChange(t, repo, "x", "core", "qa")
+	repo := newProject(t, configWithRoles(map[string][]string{"fullstack": {"."}}, ""))
+	sealChange(t, repo, "x", "fullstack")
 	return repo
 }
 
@@ -62,13 +64,13 @@ func TestStatusIncludesTheArchiveBranchWithItsWorktreeAndTheIntegrationAsPRTarge
 	}
 }
 
-// REQ-25.4, escenario «La rama de archivado no pertenece al modelo de roles»: con los roles
-// `core` y `qa`, el destino del PR de `feat/x` es la integración, el de las ramas de rol es
-// `feat/x` y el de la rama de archivado, cuando existe, es la integración.
+// REQ-25.4, escenario «La rama de archivado no pertenece al modelo de roles»: con el rol único
+// `fullstack` de un monorepo (sin ramas de rol), el destino del PR de `feat/x` es la integración,
+// el de la rama de archivado `feat/x-archive` también y el plan no contiene ninguna rama de rol.
 func TestStatusArchiveBranchDoesNotBelongToTheRoleModel(t *testing.T) {
 	t.Parallel()
-	repo := twoRolesProject(t)
-	for _, name := range []string{"feat/x", "feat/x-core", "feat/x-qa", "feat/x-archive"} {
+	repo := fullstackProject(t)
+	for _, name := range []string{"feat/x", "feat/x-archive"} {
 		runGit(t, repo, "branch", name, "main")
 	}
 
@@ -76,10 +78,15 @@ func TestStatusArchiveBranchDoesNotBelongToTheRoleModel(t *testing.T) {
 
 	wantReady(t, result)
 	repository := onlyRepository(t, result)
-	if want := []string{"feat/x", "feat/x-core", "feat/x-qa", "feat/x-archive"}; !reflect.DeepEqual(branchNamesOf(repository), want) {
+	if want := []string{"feat/x", "feat/x-archive"}; !reflect.DeepEqual(branchNamesOf(repository), want) {
 		t.Fatalf("ramas = %v, se esperaba %v", branchNamesOf(repository), want)
 	}
-	for name, wantTarget := range map[string]string{"feat/x": "main", "feat/x-core": "feat/x", "feat/x-qa": "feat/x", "feat/x-archive": "main"} {
+	for _, described := range repository.Branches {
+		if described.Kind == branch.KindRole {
+			t.Errorf("un monorepo con fullstack no tiene ramas de rol: %+v", described)
+		}
+	}
+	for name, wantTarget := range map[string]string{"feat/x": "main", "feat/x-archive": "main"} {
 		if got := branchByName(t, repository, name).PRTarget; got != wantTarget {
 			t.Errorf("prTarget de %s = %q, se esperaba %q", name, got, wantTarget)
 		}

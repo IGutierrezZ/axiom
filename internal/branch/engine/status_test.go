@@ -424,22 +424,27 @@ func TestStatusOfAChangeWithoutBranchesIsNotStarted(t *testing.T) {
 
 // REQ-25.4 (escenarios «Dos roles sobre el mismo repositorio…» y «La rama de
 // archivado no pertenece al modelo de roles») y REQ-25.15 (escenario «Rama destino
-// propuesta para el PR»): con dos roles sellados, el destino de cada rama de rol es la
-// de seguimiento y el de esta, la integración; el adelanto de una rama de rol se mide
+// propuesta para el PR»): en un multirepo (único lugar con ramas de rol, REQ-2.2 de
+// `workspace-topology`) con dos roles sellados sobre `repo-backend`, el destino de cada rama de
+// rol es la de seguimiento y el de esta, la integración; el adelanto de una rama de rol se mide
 // contra la de seguimiento.
 func TestStatusProposesThePRTargetOfEachBranch(t *testing.T) {
 	t.Parallel()
-	repo := newProject(t, configWithRoles(map[string][]string{"core": {"."}, "qa": {"."}}, ""))
-	sealChange(t, repo, "x", "core", "qa")
+	master, specs := newMultirepo(t, map[string][]string{"core": {"repo-backend"}, "qa": {"repo-backend"}}, "repo-backend")
+	repo := filepath.Join(master, "repo-backend")
+	sealChangeAt(t, specs, "x", "core", "qa")
 	runGit(t, repo, "branch", "feat/x")
-	core := filepath.Join(t.TempDir(), "x-core", filepath.Base(repo))
+	core := filepath.Join(t.TempDir(), "x-core", "repo-backend")
 	runGit(t, repo, "worktree", "add", "-q", "-b", "feat/x-core", core, "feat/x")
 	commits(t, core, "en el rol core", 2)
 
-	result := status(t, repo, "x", branch.LaneSDD)
+	result := status(t, master, "x", branch.LaneSDD)
 
 	wantReady(t, result)
-	repository := onlyRepository(t, result)
+	if len(result.Repositories) != 2 {
+		t.Fatalf("repositorios = %+v, se esperaban el de specs y repo-backend", result.Repositories)
+	}
+	repository := result.Repositories[1]
 	if !reflect.DeepEqual(repository.Roles, []string{"core", "qa"}) {
 		t.Errorf("roles = %v, se esperaba [core qa]", repository.Roles)
 	}
