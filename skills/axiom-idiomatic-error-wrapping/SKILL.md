@@ -1,10 +1,12 @@
-# Manejo y Envoltorio Idiomático de Errores en Go (%w)
-
-description: "Uso estricto de fmt.Errorf con el especificador %w para preservación de cadenas de error y errores centinela"
-trigger: "Al capturar, propagar o formatear errores en cualquier paquete Go"
-origin: "mined"
-
 ---
+name: axiom-idiomatic-error-wrapping
+description: "Errores envueltos con fmt.Errorf y %w para conservar la causa raíz. Trigger: Al capturar, propagar o formatear errores en paquetes Go."
+metadata:
+  origin: mined
+  trigger: "Al capturar, propagar o formatear errores en paquetes Go"
+---
+
+# Manejo y Envoltorio Idiomático de Errores en Go (%w)
 
 ## Propósito
 

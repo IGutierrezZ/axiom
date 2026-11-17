@@ -1,8 +1,8 @@
 # Catálogo Maestro de Especificaciones Vivas — Axiom
 
 > **Proyecto:** Axiom (Spec-Driven Development Platform)
-> **Última Sincronización:** 2026-11-12 13:32:38 UTC
-> **Total Dominios:** 71 | **Total Requerimientos:** 553 | **Total Escenarios BDD:** 1644
+> **Última Sincronización:** 2026-11-17 20:20:49 UTC
+> **Total Dominios:** 71 | **Total Requerimientos:** 553 | **Total Escenarios BDD:** 1645
 
 ---
 
@@ -11,7 +11,7 @@
 | Dominio | Título de la Especificación | Reqs | Escenarios | Enlace |
 | :--- | :--- | :---: | :---: | :--- |
 | `antigravity-support` | Antigravity support | 4 | 4 | [Ver Spec](specs/antigravity-support/spec.md) |
-| `autoskills` | Especificación de Requerimientos: Autoskills (midudev/autoskills) y Minería Heurística con Gobernanza Human-in-the-Loop | 13 | 17 | [Ver Spec](specs/autoskills/spec.md) |
+| `autoskills` | Especificación de Requerimientos: Autoskills (midudev/autoskills) y Minería Heurística con Gobernanza Human-in-the-Loop | 13 | 18 | [Ver Spec](specs/autoskills/spec.md) |
 | `axiom-binary-ci-coverage` | Especificación Viva: Cobertura de Integración Continua sobre el Binario Canónico | 2 | 2 | [Ver Spec](specs/axiom-binary-ci-coverage/spec.md) |
 | `axiom-distribution-identity` | Especificación Viva: Identidad de Distribución de Axiom | 8 | 8 | [Ver Spec](specs/axiom-distribution-identity/spec.md) |
 | `axiom-sdd-cli-integration` | Especificación de Requerimientos: Integración de Comandos SDD en la CLI axiom (INC-13) | 11 | 64 | [Ver Spec](specs/axiom-sdd-cli-integration/spec.md) |
@@ -123,6 +123,7 @@ Definir de forma rigurosa, ejecutable y verificable los requerimientos funcional
   - *Escenario BDD:* Detección de pruebas tabulares en Go
 - **[REQ-3.2]** Generación Canónica de Borradores de Skill Minada
   - *Escenario BDD:* Generación estructurada de borrador de skill minada
+  - *Escenario BDD:* Frontmatter válido de la skill minada
 - **[REQ-4.1]** Depósito de Propuestas en Bandeja de Entrada Transitoria
   - *Escenario BDD:* Depósito de propuesta de skill en el buzón
 - **[REQ-4.2]** Aprobación y Promoción Atómica a Producción
