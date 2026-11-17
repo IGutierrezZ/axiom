@@ -3,6 +3,7 @@ package autoskill
 import (
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 )
 
@@ -24,18 +25,10 @@ func (m *Miner) MinePatterns(repoRoot string) ([]MiningProposal, error) {
 			Name:          "axiom-go-table-tests",
 			PatternID:     "pattern-table-tests",
 			Title:         "Convención de Pruebas Tabulares en Go (Table-Driven Tests)",
-			Description:   "Estandarización de pruebas unitarias idiomáticas en Go mediante estructuras anónimas y subpruebas t.Run",
-			Trigger:       "Al crear o modificar suites de pruebas unitarias *_test.go en paquetes Go",
+			Description:   "Pruebas unitarias tabulares en Go con structs anónimos y subpruebas t.Run",
+			Trigger:       "Al crear o modificar suites *_test.go en paquetes Go",
 			Justification: "Detectadas múltiples suites de pruebas unitarias estructuradas con tests := []struct y t.Run en el repositorio",
-			SkillMD: `# Convención de Pruebas Tabulares en Go (Table-Driven Tests)
-
-description: "Estandarización de pruebas unitarias idiomáticas en Go mediante estructuras anónimas y subpruebas t.Run"
-trigger: "Al crear o modificar suites de pruebas unitarias *_test.go en paquetes Go"
-origin: "mined"
-
----
-
-## Propósito
+			SkillMD: `## Propósito
 
 Asegurar que todas las pruebas unitarias en Go mantengan alta legibilidad, cobertura de casos borde y diagnóstico rápido de fallos mediante el patrón idiomático de Table-Driven Tests recomendado por el equipo de Go y adoptado canónicamente en Axiom.
 
@@ -84,18 +77,10 @@ Asegurar que todas las pruebas unitarias en Go mantengan alta legibilidad, cober
 			Name:          "axiom-internal-layering",
 			PatternID:     "pattern-internal-layering",
 			Title:         "Arquitectura y Encapsulación en Paquetes internal/",
-			Description:   "Convención de diseño de módulos de dominio aislados en internal/ con separación types.go y service.go",
-			Trigger:       "Al añadir nuevos módulos, componentes o paquetes de dominio al runtime de Axiom",
+			Description:   "Módulos de dominio aislados en internal/ con types.go y service.go separados",
+			Trigger:       "Al añadir módulos, componentes o paquetes de dominio al runtime",
 			Justification: "Detectada estructura modular canónica con paquetes desacoplados en internal/ (tipos, servicios y tests)",
-			SkillMD: `# Arquitectura y Encapsulación en Paquetes internal/
-
-description: "Convención de diseño de módulos de dominio aislados en internal/ con separación types.go y service.go"
-trigger: "Al añadir nuevos módulos, componentes o paquetes de dominio al runtime de Axiom"
-origin: "mined"
-
----
-
-## Propósito
+			SkillMD: `## Propósito
 
 Garantizar la protección de la API interna del runtime de Axiom y mantener un alto desacoplamiento entre componentes siguiendo las directrices de la carpeta ` + "`internal/`" + ` de Go.
 
@@ -118,18 +103,10 @@ Garantizar la protección de la API interna del runtime de Axiom y mantener un a
 			Name:          "axiom-idiomatic-error-wrapping",
 			PatternID:     "pattern-error-wrapping",
 			Title:         "Manejo y Envoltorio Idiomático de Errores en Go (%w)",
-			Description:   "Uso estricto de fmt.Errorf con el especificador %w para preservación de cadenas de error y errores centinela",
-			Trigger:       "Al capturar, propagar o formatear errores en cualquier paquete Go",
+			Description:   "Errores envueltos con fmt.Errorf y %w para conservar la causa raíz",
+			Trigger:       "Al capturar, propagar o formatear errores en paquetes Go",
 			Justification: "Detectado uso recurrente del especificador %w en fmt.Errorf para preservación contextual de errores",
-			SkillMD: `# Manejo y Envoltorio Idiomático de Errores en Go (%w)
-
-description: "Uso estricto de fmt.Errorf con el especificador %w para preservación de cadenas de error y errores centinela"
-trigger: "Al capturar, propagar o formatear errores en cualquier paquete Go"
-origin: "mined"
-
----
-
-## Propósito
+			SkillMD: `## Propósito
 
 Preservar el contexto de ejecución y la causa raíz de los errores a través de las capas del sistema, permitiendo la inspección mediante ` + "`errors.Is`" + ` y ` + "`errors.As`" + `.
 
@@ -147,7 +124,34 @@ Preservar el contexto de ejecución y la causa raíz de los errores a través de
 		})
 	}
 
+	// Las plantillas solo definen el cuerpo; el frontmatter se compone aquí
+	// desde los campos de la propuesta para que nombre, descripción y
+	// disparador no diverjan.
+	for i := range proposals {
+		proposals[i].SkillMD = composeSkillMD(proposals[i], proposals[i].SkillMD)
+	}
+
 	return proposals, nil
+}
+
+// composeSkillMD antepone al cuerpo el frontmatter canónico de una skill
+// minada: name igual al directorio, description entrecomillada de una línea
+// con "Trigger:", y origin/trigger bajo metadata.
+func composeSkillMD(p MiningProposal, body string) string {
+	desc := strings.TrimSuffix(strings.TrimSpace(p.Description), ".")
+	trigger := strings.TrimSuffix(strings.TrimSpace(p.Trigger), ".")
+
+	var b strings.Builder
+	b.WriteString("---\n")
+	b.WriteString("name: " + p.Name + "\n")
+	b.WriteString("description: " + strconv.Quote(desc+". Trigger: "+trigger+".") + "\n")
+	b.WriteString("metadata:\n")
+	b.WriteString("  origin: mined\n")
+	b.WriteString("  trigger: " + strconv.Quote(trigger) + "\n")
+	b.WriteString("---\n\n")
+	b.WriteString("# " + p.Title + "\n\n")
+	b.WriteString(body)
+	return b.String()
 }
 
 func hasTableDrivenTests(root string) bool {
