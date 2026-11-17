@@ -130,6 +130,7 @@ COMANDOS DE GOBERNANZA Y WORKSPACE:
   project remove       Desvincula un proyecto del catálogo global
   project prune        Purga rutas inexistentes o worktrees huérfanos del Hub
   workspace validate   Valida la configuración de axiom.yaml y la topología de repositorios
+  workspace context    Proyecta el contexto técnico declarado en axiom.yaml sin cambio SDD (--cwd, --json)
   handoff show         Muestra el relevo activo de un cambio
   handoff create       Genera una plantilla canónica de relevo (handoff.md)
   handoff validate     Valida la consistencia semántica y transición de fases de un relevo
@@ -321,7 +322,7 @@ func main() {
 	case "workspace":
 
 		if len(os.Args) < 3 {
-			fmt.Println("Error: subcomando de 'workspace' requerido. Opciones: validate")
+			fmt.Println("Error: subcomando de 'workspace' requerido. Opciones: validate, context")
 			os.Exit(1)
 		}
 
@@ -329,8 +330,10 @@ func main() {
 		switch subCmd {
 		case "validate":
 			runWorkspaceValidate(os.Args[3:])
+		case "context":
+			os.Exit(cli.RunWorkspaceContext(os.Args[3:], os.Stdout, os.Stderr))
 		default:
-			fmt.Printf("Error: subcomando '%s' no reconocido para workspace. Usa 'axiom workspace validate'.\n", subCmd)
+			fmt.Printf("Error: subcomando '%s' no reconocido para workspace. Usa 'axiom workspace validate' o 'axiom workspace context'.\n", subCmd)
 			os.Exit(1)
 		}
 
