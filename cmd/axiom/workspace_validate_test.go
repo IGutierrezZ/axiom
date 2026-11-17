@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	validateEmbeddedBase     = "workspace:\n  name: ejemplo-embebido\n  topology: monorepo-embedded\n  specs_repository: .\nroles:\n  core:\n    name: Core\n    repositories:\n      - path: .\n"
+	validateEmbeddedBase     = "workspace:\n  name: ejemplo-embebido\n  topology: monorepo-embedded\n  specs_repository: .\nroles:\n  fullstack:\n    name: Fullstack\n    repositories:\n      - path: .\n"
 	validateResidualBaseline = "baseline:\n  documents:\n    - domain: modelo-de-datos\n      path: 03_Modelo_Datos.md\n"
 	validateContext          = "technical_context:\n  maintained:\n    entry: context/TECHNICAL_CONTEXT.md\n    paths: [context/]\n  reference:\n    paths: [00_Glosario.md]\n"
 )
@@ -149,12 +149,19 @@ func TestWorkspaceValidateRejectsAFileDeclarationWithAFilelessStore(t *testing.T
 		})
 	}
 
-	t.Run("solo contexto de referencia no exige almacen de ficheros", func(t *testing.T) {
+	// project-technical-context REQ-30.19 y workspace-topology REQ-2.6: sin
+	// contexto mantenido no hay error de la declaración, pero el almacén engram
+	// se rechaza igualmente porque el almacén de Axiom es siempre hybrid.
+	t.Run("solo contexto de referencia no exige almacen de ficheros pero rechaza engram", func(t *testing.T) {
 		master := validateWorkspace(t, "technical_context:\n  reference:\n    paths: [00_Glosario.md]\n", "artifact_store: engram\n")
 		workspacetest.WriteFile(t, filepath.Join(master, "00_Glosario.md"), "# glosario\n")
 		output, code := runAxiom(t, "workspace", "validate", "--path", master)
-		if code != 0 {
-			t.Fatalf("salió con %d, se esperaba 0:\n%s", code, output)
+		if code != 1 {
+			t.Fatalf("salió con %d, se esperaba 1:\n%s", code, output)
+		}
+		wantOutput(t, output, "artifact_store 'engram', que Axiom ya no admite", "quita la clave artifact_store o declara 'artifact_store: hybrid'")
+		if strings.Contains(output, "la declaración 'technical_context.maintained' exige") {
+			t.Errorf("sin contexto mantenido no debe aparecer el error de la declaración:\n%s", output)
 		}
 	})
 }
@@ -202,9 +209,10 @@ func TestWorkspaceValidateRejectsTheRetiredTopology(t *testing.T) {
 	}
 }
 
-// Sin bloques nuevos el comando se comporta como antes.
+// Sin bloques nuevos el comando se comporta como antes. El almacén es hybrid:
+// engram y none se rechazan siempre (workspace-topology REQ-2.6).
 func TestWorkspaceValidateWithoutDeclarationsIsUnchanged(t *testing.T) {
-	master := validateWorkspace(t, "", "artifact_store: none\n")
+	master := validateWorkspace(t, "", "artifact_store: hybrid\n")
 	output, code := runAxiom(t, "workspace", "validate", "--path", master)
 	if code != 0 {
 		t.Fatalf("salió con %d:\n%s", code, output)
