@@ -50,6 +50,10 @@ dist/
 # Artefactos de trabajo de orquestadores externos (planes, revisiones y metadatos de PR con rutas locales)
 .agents/tasks/
 
-# Engram local runtime state (project sync chunks are intentionally versioned)
+# Engram: estado local de cada persona. La memoria no se comparte por git; solo se versiona
+# .engram/config.json, que identifica el proyecto. chunks/ y manifest.json se ignoran para que
+# un `engram sync` no vuelva a meterlos.
 .engram/engram.db
 .engram/cloud.json
+.engram/chunks/
+.engram/manifest.json
