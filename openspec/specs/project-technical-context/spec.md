@@ -139,7 +139,10 @@ La sintaxis (modos admitidos, claves desconocidas, `paths` no vacío, rutas rela
 
 ### Requirement: Proyección Aditiva de `technicalContext` en el Status v2 (REQ-24.28)
 
-Cuando `axiom.yaml` declara `technical_context:` y la declaración es válida, el status v2 DEBE incluir el campo opcional `technicalContext` con, por cada modo declarado (`maintained`, `reference`), `paths` (rutas absolutas) y, si se declaró, `entry` (ruta absoluta). Un modo no declarado NO DEBE aparecer y, sin declaración, el campo NO DEBE aparecer. El campo se proyecta con o sin cambio seleccionado y NO DEBE alterar `artifacts`, `artifactPaths` ni `contextFiles`: el delta de contexto no se proyecta en el status.
+Cuando `axiom.yaml` declara `technical_context:` y la declaración es válida, el status v2 DEBE incluir el campo opcional `technicalContext` con, por cada modo declarado (`maintained`, `reference`), `paths` (rutas absolutas) y, si se declaró, `entry` (ruta absoluta). Un modo no declarado NO DEBE aparecer y, sin declaración, el campo NO DEBE aparecer. El campo se proyecta con o sin cambio seleccionado, también cuando el status queda bloqueado por no haber cambios activos o por una selección ambigua, y NO DEBE alterar `artifacts`, `artifactPaths` ni `contextFiles`: el delta de contexto no se proyecta en el status.
+
+La misma proyección DEBE obtenerse sin cambio SDD con `axiom workspace context [--cwd <dir>] [--json]`, que resuelve el workspace desde `--cwd` y devuelve un JSON con `schemaName` `axiom.workspace-context`, `schemaVersion` 1, `workspaceRoot` y `technicalContext` (la misma forma que el campo del status, o `null` sin declaración). Sin declaración el comando DEBE terminar con código 0. Con una declaración inválida DEBE fallar cerrado (REQ-30.30): `technicalContext` `null`, un campo `invalid` con el motivo y la indicación de ejecutar `axiom workspace validate`, y código distinto de cero.
+(Previously: la proyección solo existía en el status v2 y no constaba su presencia con cero o varios cambios activos)
 
 #### Scenario: Ambos modos proyectados
 - **DADO** un `technical_context:` con los dos modos
@@ -161,7 +164,23 @@ Cuando `axiom.yaml` declara `technical_context:` y la declaración es válida, e
 - **CUANDO** se ejecuta `axiom sdd status --json`
 - **ENTONCES** las claves de `artifacts` y de `artifactPaths` son las mismas que sin delta de contexto
 
----
+#### Scenario: Proyección con cero o varios cambios activos
+- **DADO** un `technical_context:` válido y ningún cambio activo, o dos cambios activos sin `--change`
+- **CUANDO** se ejecuta `axiom sdd status --json`
+- **ENTONCES** el status queda bloqueado
+- **Y** `technicalContext` se proyecta igualmente
+
+#### Scenario: Proyección sin cambio SDD
+- **DADO** un `technical_context:` válido
+- **CUANDO** se ejecuta `axiom workspace context --cwd <dir> --json`
+- **ENTONCES** el JSON contiene `workspaceRoot` y `technicalContext` con la misma forma que el campo del status
+- **Y** el código de salida es 0
+
+#### Scenario: El comando falla cerrado ante una declaración inválida
+- **DADO** un `technical_context:` inválido
+- **CUANDO** se ejecuta `axiom workspace context --cwd <dir> --json`
+- **ENTONCES** `technicalContext` es `null` y `invalid` indica el motivo y `axiom workspace validate`
+- **Y** el código de salida es distinto de cero
 
 ### Requirement: Lectura del Contexto por las Fases Lectoras y Presupuesto de Lectura (REQ-24.29)
 

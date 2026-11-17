@@ -524,7 +524,7 @@ Los documentos de origen no se modifican. La propuesta de `technical_context` qu
 
 ### Contexto Técnico (`technical_context:`)
 
-El contexto técnico es la documentación del proyecto que acompaña al código y se declara solo en `axiom.yaml` con dos modos: `maintained` (lo mantiene el archivado con un delta por cambio, `context-impact.md`) y `reference` (solo lectura: ninguna fase lo modifica). La plantilla `axiom.example.yaml` lo documenta. Con un contexto `maintained` el almacén de artefactos debe ser `openspec` o `hybrid`; `axiom workspace validate --path <maestra>` valida la declaración.
+El contexto técnico es la documentación del proyecto que acompaña al código y se declara solo en `axiom.yaml` con dos modos: `maintained` (lo mantiene el archivado con un delta por cambio, `context-impact.md`) y `reference` (solo lectura: ninguna fase lo modifica). La plantilla `axiom.example.yaml` lo documenta. Con un contexto `maintained` el almacén de artefactos debe ser `openspec` o `hybrid`; `axiom workspace validate --path <maestra>` valida la declaración. `axiom workspace context --cwd <repo> --json` proyecta el `entry` y las rutas absolutas de cada modo sin seleccionar ningún cambio SDD (sin declaración devuelve `technicalContext: null`; con una declaración inválida falla cerrado con código `1`); es lo que lee ODD al explorar y al cerrar.
 
 Sus comprobaciones y su integración tienen un verbo propio, en la rama de archivado para los que escriben:
 

@@ -1,8 +1,8 @@
 # Catálogo Maestro de Especificaciones Vivas — Axiom
 
 > **Proyecto:** Axiom (Spec-Driven Development Platform)
-> **Última Sincronización:** 2026-11-17 20:20:49 UTC
-> **Total Dominios:** 71 | **Total Requerimientos:** 553 | **Total Escenarios BDD:** 1645
+> **Última Sincronización:** 2026-11-17 21:07:58 UTC
+> **Total Dominios:** 71 | **Total Requerimientos:** 553 | **Total Escenarios BDD:** 1649
 
 ---
 
@@ -38,10 +38,10 @@
 | `odd-ui-integration` | Especificación de Requerimientos: Integración de ODD en Dashboard Web y TUI (INC-19) | 3 | 0 | [Ver Spec](specs/odd-ui-integration/spec.md) |
 | `openspec-adoption` | Especificación de Requerimientos: Adopción de OpenSpec como Spec Viva Única (REQ-30.9 a REQ-30.14) | 6 | 26 | [Ver Spec](specs/openspec-adoption/spec.md) |
 | `orchestrator-commands-markers` | Especificación de Requerimientos: axiom-orchestrator y Comandos Slash Canónicos (INC-11) | 4 | 5 | [Ver Spec](specs/orchestrator-commands-markers/spec.md) |
-| `organic-agent-trigger-rules` | Organic Agent Routing Projection | 19 | 55 | [Ver Spec](specs/organic-agent-trigger-rules/spec.md) |
+| `organic-agent-trigger-rules` | Organic Agent Routing Projection | 19 | 56 | [Ver Spec](specs/organic-agent-trigger-rules/spec.md) |
 | `persona-behavior-contract` | persona-behavior-contract Specification | 17 | 32 | [Ver Spec](specs/persona-behavior-contract/spec.md) |
 | `planning-home-resolution` | Especificación de Requerimientos: Resolución del Planning Home desde Cualquier Directorio (INC-24) | 13 | 59 | [Ver Spec](specs/planning-home-resolution/spec.md) |
-| `project-technical-context` | Especificación de Requerimientos: Contexto Técnico del Proyecto: Declaración, Lectura y Mantenimiento (INC-24) | 21 | 78 | [Ver Spec](specs/project-technical-context/spec.md) |
+| `project-technical-context` | Especificación de Requerimientos: Contexto Técnico del Proyecto: Declaración, Lectura y Mantenimiento (INC-24) | 21 | 81 | [Ver Spec](specs/project-technical-context/spec.md) |
 | `rdd-authority-disposition-plan` | RDD Authority Disposition Plan Specification | 7 | 11 | [Ver Spec](specs/rdd-authority-disposition-plan/spec.md) |
 | `rdd-authority-graph-classification` | RDD Authority Graph Classification Specification | 4 | 6 | [Ver Spec](specs/rdd-authority-graph-classification/spec.md) |
 | `rdd-authority-store` | RDD Authority Store Specification | 5 | 7 | [Ver Spec](specs/rdd-authority-store/spec.md) |
@@ -1070,8 +1070,9 @@ Define the managed, provider-neutral instructions that project Gentle AI's
   - *Escenario BDD:* ODD is projected before any routing decision
   - *Escenario BDD:* SDD still requires explicit selection even with ODD as default
 - **[REQ-24.58]** El cierre de ODD mantiene al día el contexto técnico mantenido
+  - *Escenario BDD:* La exploración lee la entrada del contexto mantenido
   - *Escenario BDD:* La regla figura en el paso de cierre del protocolo ODD
-  - *Escenario BDD:* El cierre cita el localizador del contexto
+  - *Escenario BDD:* El cierre remite a los localizadores de la exploración
   - *Escenario BDD:* El cierre manda integrar la spec viva y declarar el impacto de los bugs
   - *Escenario BDD:* La regla no exige nada sin contexto mantenido
   - *Escenario BDD:* La documentación de referencia no se modifica
@@ -1264,6 +1265,9 @@ Definir el contexto técnico del proyecto como concepto de primera clase: cómo 
   - *Escenario BDD:* Un solo modo
   - *Escenario BDD:* Sin declaración
   - *Escenario BDD:* El estado de artefactos no cambia
+  - *Escenario BDD:* Proyección con cero o varios cambios activos
+  - *Escenario BDD:* Proyección sin cambio SDD
+  - *Escenario BDD:* El comando falla cerrado ante una declaración inválida
 - **[REQ-24.29]** Lectura del Contexto por las Fases Lectoras y Presupuesto de Lectura
   - *Escenario BDD:* Las cuatro fases lectoras leen la entrada
   - *Escenario BDD:* Modo sin entrada
