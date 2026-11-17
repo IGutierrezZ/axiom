@@ -183,8 +183,8 @@ func TestIncrementsWorktreePrevailsOverTheMainCheckout(t *testing.T) {
 	if err := json.Unmarshal(detail.Body.Bytes(), &dto); err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(dto.TasksContent, "1.1 hecha") {
-		t.Errorf("el detalle debía leerse del worktree y no del checkout principal: %q", dto.TasksContent)
+	if len(dto.Tasks) != 1 || !strings.Contains(dto.Tasks[0].Content, "1.1 hecha") {
+		t.Errorf("el detalle debía leerse del worktree y no del checkout principal: %+v", dto.Tasks)
 	}
 }
 

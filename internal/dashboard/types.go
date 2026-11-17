@@ -74,22 +74,31 @@ type IncrementSummaryDTO struct {
 	PendingArchive bool `json:"pendingArchive,omitempty"`
 }
 
+// ArtifactFileDTO es un fichero de artefacto del cambio (una spec de dominio o un plan de tareas).
+// Path es relativo a la carpeta del cambio y usa `/` (p. ej. `specs/a/spec.md`, `tasks.core.md`).
+type ArtifactFileDTO struct {
+	Path    string `json:"path"`
+	Content string `json:"content"`
+}
+
 // IncrementDetailDTO contiene el detalle estructurado de un cambio y sus artefactos.
 type IncrementDetailDTO struct {
-	Summary       IncrementSummaryDTO `json:"summary"`
-	HasProposal   bool                `json:"has_proposal"`
-	HasSpec       bool                `json:"has_spec"`
-	HasDesign     bool                `json:"has_design"`
-	HasTasks      bool                `json:"has_tasks"`
-	HasVerify     bool                `json:"has_verify"`
-	HasArchive    bool                `json:"has_archive"`
-	Proposal      string              `json:"proposal,omitempty"`
-	Spec          string              `json:"spec,omitempty"`
-	Design        string              `json:"design,omitempty"`
-	TasksContent  string              `json:"tasks_content,omitempty"`
-	VerifyReport  string              `json:"verify_report,omitempty"`
-	ArchiveReport string              `json:"archive_report,omitempty"`
-	BarrierReport *BarrierDTO         `json:"barrier_report,omitempty"`
+	Summary     IncrementSummaryDTO `json:"summary"`
+	HasProposal bool                `json:"has_proposal"`
+	HasSpec     bool                `json:"has_spec"`
+	HasDesign   bool                `json:"has_design"`
+	HasTasks    bool                `json:"has_tasks"`
+	HasVerify   bool                `json:"has_verify"`
+	HasArchive  bool                `json:"has_archive"`
+	Proposal    string              `json:"proposal,omitempty"`
+	// Specs y Tasks listan todos los ficheros del artefacto (nunca null). HasSpec y HasTasks son
+	// verdaderos cuando la lista no está vacía.
+	Specs         []ArtifactFileDTO `json:"specs"`
+	Design        string            `json:"design,omitempty"`
+	Tasks         []ArtifactFileDTO `json:"tasks"`
+	VerifyReport  string            `json:"verify_report,omitempty"`
+	ArchiveReport string            `json:"archive_report,omitempty"`
+	BarrierReport *BarrierDTO       `json:"barrier_report,omitempty"`
 }
 
 // BarrierDTO es el contrato JSON propio del dashboard para la barrera de sincronización
