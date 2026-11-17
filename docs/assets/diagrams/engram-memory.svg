@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1240 730" width="1240" height="730" role="img" aria-labelledby="engTitle engDesc" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Helvetica, Arial, sans-serif">
   <title id="engTitle">How Engram keeps project context</title>
-  <desc id="engDesc">Three work sessions sit side by side, separated by a restart and by context compaction. Each break cuts the session layer but stops at the memory layer underneath. In the first session the agent saves a decision. The next session, with zero history, asks memory before it asks you. Weeks later the same question is answered from memory rather than by re-reading the repository. Engram saves automatically as you work, and engram sync writes the memories into the repo so a teammate starts with the same context.</desc>
+  <desc id="engDesc">Three work sessions sit side by side, separated by a restart and by context compaction. Each break cuts the session layer but stops at the memory layer underneath. In the first session the agent saves a decision. The next session, with zero history, asks memory before it asks you. Weeks later the same question is answered from memory rather than by re-reading the repository. Engram saves automatically as you work; the memory stays local to each person, and the team shares each change through its documentation in OpenSpec.</desc>
 
   <defs>
     <radialGradient id="engAmbient" cx="12%" cy="0%" r="70%">
@@ -87,8 +87,8 @@
 
   <!-- team strip -->
   <rect x="40" y="598" width="1160" height="54" rx="16" fill="#221820" stroke="#392A33"/>
-  <text x="620" y="623" font-size="15" font-weight="700" text-anchor="middle" fill="#F095C8">Hand it to the team</text>
-  <text x="620" y="643" font-size="12" text-anchor="middle" fill="#A88E9B">engram sync writes the memories into the repo. A teammate clones, imports, and their first session already knows the project.</text>
+  <text x="620" y="623" font-size="15" font-weight="700" text-anchor="middle" fill="#F095C8">What the team shares</text>
+  <text x="620" y="643" font-size="12" text-anchor="middle" fill="#A88E9B">Memory stays on each machine. The team shares each change through its documentation in OpenSpec, versioned in the repo.</text>
 
-  <text x="620" y="694" font-size="12" text-anchor="middle" fill="#8A6E7C" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">engram sync &#160;&#183;&#160; engram sync --import</text>
+  <text x="620" y="694" font-size="12" text-anchor="middle" fill="#8A6E7C" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">openspec/ &#160;&#183;&#160; odd/tasks/</text>
 </svg>

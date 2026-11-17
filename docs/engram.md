@@ -20,9 +20,6 @@ engram tui
 
 # Search from the terminal without opening the TUI
 engram search "auth refactor"
-
-# Export project memories to .engram/ so you can commit them to git
-engram sync
 ```
 
 `engram tui` is the fastest way to see what your agent has been saving. Start there.
@@ -47,19 +44,9 @@ The MCP equivalent is `mem_merge_projects`, which the AI agent can call directly
 
 ---
 
-## Team Sharing
+## Memory Stays Local
 
-Engram memories live locally by default. To share them with your team via git:
-
-```bash
-# After a work session -- export memories to .engram/ in your repo
-engram sync
-
-# On another machine -- import memories after cloning
-engram sync --import
-```
-
-Add `.engram/` to your repo and commit it. When a teammate clones and runs `engram sync --import`, they get the full project context. This is especially useful for onboarding -- new contributors start with the accumulated knowledge of the team.
+Engram memory is personal: each person's memories live in their own local store and are not shared through git. What the team shares is the documentation of each change in OpenSpec (or the ODD feature document), which Axiom keeps in the repository. The only versioned Engram file is `.engram/config.json`, which identifies the project; `.engram/chunks/` and `.engram/manifest.json` are ignored, so do not commit memory exports.
 
 ---
 

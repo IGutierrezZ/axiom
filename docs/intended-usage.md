@@ -27,8 +27,6 @@ Engram is persistent memory for your AI agent. It saves decisions, discoveries, 
 | Command                       | When to use                                                                                 |
 | ----------------------------- | ------------------------------------------------------------------------------------------- |
 | `engram tui`                  | Browse your memories visually -- search, filter, drill into observations                    |
-| `engram sync`                 | Export project memories to `.engram/` for git tracking. Run after significant work sessions |
-| `engram sync --import`        | Import memories on another machine after cloning a repo with `.engram/`                     |
 | `engram projects list`        | See all projects with observation counts                                                    |
 | `engram projects consolidate` | Fix project name drift (e.g., "my-app" vs "My-App" vs "my-app-frontend")                    |
 | `engram search <query>`       | Quick memory search from the terminal                                                       |
@@ -169,7 +167,7 @@ The less you think about Axiom after installing, the better it's working.
 | Run the installer, pick your agents and preset             | Manually edit the generated config files                                          |
 | Just start coding with your AI agent                       | Memorize SDD phases or commands                                                   |
 | Let the agent suggest SDD when a task is big enough        | Force SDD on every small task                                                     |
-| Trust that engram is saving context when installed and active | Dig into engram's storage unless you need `engram sync` or `engram tui`           |
+| Trust that engram is saving context when installed and active | Dig into engram's storage (use `engram tui`) or commit memory exports to git      |
 | Let startup hooks or SDD init refresh the skill registry      | Manually rescan skills unless you need `axiom skill-registry refresh --force`     |
 | Say "use sdd" if you know you want structured planning     | Worry about which SDD phase comes next                                            |
 | Re-run the installer to update or change your setup        | Manually patch skill files or persona instructions                                |
