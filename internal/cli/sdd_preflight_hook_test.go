@@ -440,21 +440,112 @@ func TestSDDPreflightHookDeniesMultiSelectAnswer(t *testing.T) {
 	denyCase(t, pre, "missing, invalid, or uncorroborated")
 }
 
-func TestSDDPreflightHookDeniesReorderedCanonicalLabels(t *testing.T) {
-	dir := t.TempDir()
-	sessionID := "sess-reordered"
-	path := filepath.Join(dir, sessionID+".jsonl")
-	reordered := strings.Replace(testSDDPreflightQuestions, `"label":"Interactive"`, `"label":"TEMP"`, 1)
-	reordered = strings.Replace(reordered, `"label":"Automatic"`, `"label":"Interactive"`, 1)
-	reordered = strings.Replace(reordered, `"label":"TEMP"`, `"label":"Automatic"`, 1)
-	questionsRaw := reordered[len(`{"questions":`) : len(reordered)-1]
+const (
+	testSDDPreflightPaceQuestion     = "Axiom SDD preflight 1/3: How should phases run?"
+	testSDDPreflightArtifactQuestion = "Axiom SDD preflight 2/3: Where should artifacts live?"
+	testSDDPreflightPRQuestion       = "Axiom SDD preflight 3/3: How should oversized delivery be handled?"
+)
+
+// testSDDPreflightQuestion renders one AskUserQuestion question with the
+// given option labels, in the given order.
+func testSDDPreflightQuestion(header, question string, labels ...string) string {
+	options := make([]string, len(labels))
+	for i, label := range labels {
+		options[i] = `{"label":` + jsonStr(label) + `,"description":"d"}`
+	}
+	return `{"header":` + jsonStr(header) + `,"question":` + jsonStr(question) + `,"options":[` + strings.Join(options, ",") + `]}`
+}
+
+// writeSDDPreflightRawTranscript writes one corroborated AskUserQuestion
+// tool_use / tool_result pair whose questions (a JSON array) and answers (a
+// JSON object) are given verbatim.
+func writeSDDPreflightRawTranscript(t *testing.T, sessionID, questionsRaw, answersRaw string) string {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), sessionID+".jsonl")
 	assistant := `{"type":"assistant","isSidechain":false,"sessionId":"` + sessionID + `","message":{"role":"assistant","content":[{"type":"tool_use","id":"toolu-1","name":"AskUserQuestion","input":{"questions":` + questionsRaw + `}}]}}`
-	user := `{"type":"user","isSidechain":false,"sessionId":"` + sessionID + `","message":{"role":"user","content":[{"tool_use_id":"toolu-1","type":"tool_result","content":"answered"}]},"toolUseResult":{"answers":` + testSDDPreflightAnswersAutomatic + `}}`
+	user := `{"type":"user","isSidechain":false,"sessionId":"` + sessionID + `","message":{"role":"user","content":[{"tool_use_id":"toolu-1","type":"tool_result","content":"answered"}]},"toolUseResult":{"answers":` + answersRaw + `}}`
 	if err := os.WriteFile(path, []byte(assistant+"\n"+user+"\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	pre := preToolUseAgentPayload(sessionID, path, "sdd-apply", "Apply", "")
-	denyCase(t, pre, "missing, invalid, or uncorroborated")
+	return path
+}
+
+// allowedSDDPreflightPrompt runs the hook and returns the prompt it attached,
+// failing unless the decision is allow.
+func allowedSDDPreflightPrompt(t *testing.T, payload string) string {
+	t.Helper()
+	out, err := runSDDPreflightHookTest(t, payload)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got map[string]any
+	if err := json.Unmarshal([]byte(out), &got); err != nil {
+		t.Fatalf("decode output %q: %v", out, err)
+	}
+	specific := got["hookSpecificOutput"].(map[string]any)
+	if specific["permissionDecision"] != "allow" {
+		t.Fatalf("decision = %#v", specific)
+	}
+	return specific["updatedInput"].(map[string]any)["prompt"].(string)
+}
+
+// TestSDDPreflightHookBindsAnswersByLabelNotPosition pins that the hook binds
+// every question by its marker and every answer by its label: the order of
+// the options, the order of the questions and the presentation of a label
+// (case, surrounding spaces, the "(Recommended)" suffix the AskUserQuestion
+// guidance asks for) produce the same block as the canonical presentation.
+func TestSDDPreflightHookBindsAnswersByLabelNotPosition(t *testing.T) {
+	pace := testSDDPreflightQuestion("Pace", testSDDPreflightPaceQuestion, "Interactive", "Automatic")
+	artifacts := testSDDPreflightQuestion("Artifacts", testSDDPreflightArtifactQuestion, "OpenSpec", "Engram", "Both")
+	pr := testSDDPreflightQuestion("PR strategy", testSDDPreflightPRQuestion, "Ask me", "Single PR", "Auto")
+	canonical := "[" + strings.Join([]string{pace, artifacts, pr}, ",") + "]"
+
+	sessionID := "sess-label"
+	want := allowedSDDPreflightPrompt(t, preToolUseAgentPayload(sessionID, writeSDDPreflightRawTranscript(t, sessionID, canonical, testSDDPreflightAnswersAutomatic), "sdd-apply", "Apply", ""))
+	for _, line := range []string{"- Pace: auto", "- Artifact store: openspec", "- Delivery strategy: ask-on-risk"} {
+		if !strings.Contains(want, line) {
+			t.Fatalf("canonical prompt missing %q: %s", line, want)
+		}
+	}
+
+	recommendedAnswers := `{` + jsonStr(testSDDPreflightPaceQuestion) + `:"Automatic (Recommended)",` + jsonStr(testSDDPreflightArtifactQuestion) + `:" openspec ",` + jsonStr(testSDDPreflightPRQuestion) + `:"ASK ME"}`
+	cases := []struct {
+		name      string
+		questions string
+		answers   string
+	}{
+		{
+			name: "options in reverse order",
+			questions: "[" + strings.Join([]string{
+				testSDDPreflightQuestion("Pace", testSDDPreflightPaceQuestion, "Automatic", "Interactive"),
+				testSDDPreflightQuestion("Artifacts", testSDDPreflightArtifactQuestion, "Both", "Engram", "OpenSpec"),
+				testSDDPreflightQuestion("PR strategy", testSDDPreflightPRQuestion, "Auto", "Single PR", "Ask me"),
+			}, ",") + "]",
+			answers: testSDDPreflightAnswersAutomatic,
+		},
+		{
+			name:      "questions in reverse order",
+			questions: "[" + strings.Join([]string{pr, artifacts, pace}, ",") + "]",
+			answers:   testSDDPreflightAnswersAutomatic,
+		},
+		{
+			name: "recommended option first with its suffix",
+			questions: "[" + strings.Join([]string{
+				testSDDPreflightQuestion("Pace", testSDDPreflightPaceQuestion, "Automatic (Recommended)", "Interactive"),
+				testSDDPreflightQuestion("Artifacts", testSDDPreflightArtifactQuestion, "openspec", "Engram", " Both "),
+				pr,
+			}, ",") + "]",
+			answers: recommendedAnswers,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			transcript := writeSDDPreflightRawTranscript(t, sessionID, tc.questions, tc.answers)
+			if got := allowedSDDPreflightPrompt(t, preToolUseAgentPayload(sessionID, transcript, "sdd-apply", "Apply", "")); got != want {
+				t.Fatalf("prompt differs from the canonical presentation:\n got: %s\nwant: %s", got, want)
+			}
+		})
+	}
 }
 
 func TestSDDPreflightHookDeniesChildHookEvenWithValidTranscript(t *testing.T) {
