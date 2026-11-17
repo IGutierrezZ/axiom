@@ -37,7 +37,7 @@ Quitar preguntas del preflight (C-01-b), cambiar el contrato de autoridad, el pl
 - [x] **T2 · Rechazo con causa concreta** — mismo fichero y test. Ruta: inline.
   - `resolveSDDPreflightTranscriptAuthority` devuelve la causa del último preflight reconocido e inválido y el `deny` la incluye.
   - Una etiqueta fuera del dominio produce un `deny` que nombra la pregunta y la etiqueta.
-- [ ] **T3 · Texto proyectado sin exigir orden** — `internal/components/sdd/session_preflight.go:16` y `testdata/golden/sdd-opencode-multi-settings.golden`. Ruta: inline (mecánico).
+- [x] **T3 · Texto proyectado sin exigir orden** — `internal/components/sdd/session_preflight.go:16` y `testdata/golden/sdd-opencode-multi-settings.golden`. Ruta: inline (mecánico).
   - Sustituir «Keep options in the exact order below.» por una frase que diga que el runtime enlaza por etiqueta.
 
 ## Criterio de terminado
@@ -57,9 +57,17 @@ Quitar preguntas del preflight (C-01-b), cambiar el contrato de autoridad, el pl
 
 - Worktree `C:\repos\axiom-wt\hook-preflight-etiqueta\axiom`, rama `inc/hook-preflight-etiqueta` desde `a7fb0ed9`.
 - Espejo Engram: **pendiente** (el modo automático no pudo revisar `mem_save` porque un hook modifica la llamada).
+- T1 → `d7b0a8cf` (inline). T2 → `f8dda256` (inline). T3 → commit de cierre (inline). RDD apagado: sin evaluación de riesgo por commit.
+- Tamaño real: ~470 líneas (más que la previsión por las pruebas de cada causa); pasa de 400 → `exception-ok`, PR con `size:exception`.
 
 Plan stop: approved 2026-11-17; implementation continues
 
+## Verificación observada
+
+- `go test ./internal/cli/ -run SDDPreflight -count=1` → ok (incluye `TestSDDPreflightHookBindsAnswersByLabelNotPosition`: opciones invertidas, preguntas invertidas y sufijo «(Recommended)» dan el mismo bloque que el orden canónico; `TestSDDPreflightHookDenialNamesTheCause`; y los casos de autoridad sin cambios: hijo, texto del modelo, payload sin transcripción).
+- `go test ./internal/components/ ./internal/components/sdd/ -count=1` → ok (golden `sdd-opencode-multi-settings` y hash de Kilocode actualizados con su justificación).
+- `go test ./internal/app/ ./internal/assets/... ./internal/components/... -count=1` → fallan solo `TestWriteFileAtomicFollows{,Relative}DirectoryJunction` (`filemerge`) y `TestTuiInstallOnThenSyncPreservesAndRefreshesOpenCodeActivation` (`app`); los tres fallan igual en `main` sin cambios (`a7fb0ed9`): entorno (uniones de directorio en Windows y versión de OpenCode no disponible), ajenos a este cambio.
+
 ## Siguiente paso
 
-T1.
+PR única cuando el usuario la autorice: `scripts/axiom-worktree.ps1 pr hook-preflight-etiqueta -Lane odd`, etiquetas `type:fix` y `size:exception`.
