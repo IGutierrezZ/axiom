@@ -7,7 +7,9 @@ Modo: estándar (TDD estricto no activo; RED observado igualmente en cada tarea)
 | Unidad | Estado | Commit |
 |---|---|---|
 | U0 | hecha | `1ca2b85c` |
-| U1 | hecha | ver commit `feat(workspace): topología gobernante y reglas de roles y almacén en la validación` |
+| U1 | hecha | `37da0abf` |
+| U2 | hecha | `9383953d` |
+| U3 | hecha | ver `git log` (`feat(hub): el alta en monorepo-embedded escribe solo el rol fullstack`) |
 
 ## U1 · Work Unit Evidence
 
@@ -38,5 +40,23 @@ Notas:
 - Nuevas: `TestKickoffSealRejectsSpecializedRolesInAMonorepoBeforeTheBranchGuard` y `TestRunSDDKickoffSealUnknownTopologyAppliesMonorepoRule`.
 - `ParseSealArgs` sigue rechazando `--docs-publication` sin `continuous` (con estilo vacío también).
 
+## U3 · Alta del proyecto (hub y dashboard)
+
+Hecha (lote 2; commit `feat(hub): el alta en monorepo-embedded escribe solo el rol fullstack`, el hash está en `git log`).
+
+| Evidencia | Valor |
+|---|---|
+| Prueba focalizada | `go test ./internal/hub/... ./internal/dashboard/...`: ok; RED del dashboard observado (`TestProjectFormValidationRuntime`: monorepo devolvía los roles del formulario) |
+| Arnés de ejecución | `Init`/`ValidateInit` reales sobre carpetas temporales con `NewDetector()`; formulario ejecutado con Node (`runNodeModules`) |
+| Cierre | `gofmt -l` vacío; `go vet ./internal/hub/... ./internal/dashboard/...` limpio; `go test ./internal/workspace/...` ok |
+| Límite de reversión | `internal/hub/{init,init_validate}.go`, `internal/dashboard/assets/{index.html,js/projects.js,js/core/projectform.js}` y sus pruebas |
+
+Notas:
+- `planConfig` y `buildAxiomYaml` aplican `tech.ConfiguredRoles` solo si la topología es `multirepo`; el perfil `knowledge`/`spec-only` no cambia; los roles explícitos se conservan y los rechaza `ValidateInit` (D9).
+- Dashboard: se oculta la sección completa de roles (`#field-project-roles`, que envuelve a `#roles-builder-container`, el botón y su ayuda) en monorepo, no solo el contenedor; `validateProjectForm` devuelve `roles: []` únicamente con `topology === 'monorepo-embedded'` (sin topología declarada se comporta como antes).
+- Pruebas heredadas adaptadas sin debilitarlas: las que ejercen roles especializados (claves seguras, violaciones juntas, roles personalizados, adopción con roles detectados, `tech` por rol y 400 con violaciones del dashboard) pasan a `Topology: "multirepo"`.
+- Las cuatro pruebas nuevas del hub se escribieron tras la implementación (el RED de la conducta ya se observó en las pruebas heredadas que fallaron tras U1); el RED del formulario sí se observó antes del GREEN.
+- `buildAxiomYaml` no tiene llamadores (código muerto previo); se aplicó igualmente la regla por el diseño.
+
 ## Riesgos abiertos
-- `go test ./internal/hub/... ./internal/dashboard/...` falla desde U1 (D9 rechaza roles distintos de `fullstack` en monorepo): `TestProjectsInitWritesRoleTech`, `TestProjectsInitRejectsInvalidConfigurationWith400AndViolations` y las pruebas de hub con roles detectados. Es el alcance de U3 (tareas 3.1 a 3.5), que adapta esas expectativas.
+- Ninguno nuevo de U3.

@@ -185,7 +185,9 @@ func (ini *Initializer) planConfig(absPath string, opts InitOptions) configPlan 
 		}
 	} else if len(opts.Roles) > 0 {
 		effectiveRoles = opts.Roles
-	} else if len(tech.ConfiguredRoles) > 0 {
+	} else if opts.Topology == "multirepo" && len(tech.ConfiguredRoles) > 0 {
+		// Los roles detectados solo se aplican en multirepo: monorepo-embedded
+		// admite únicamente el rol fullstack.
 		effectiveRoles = tech.ConfiguredRoles
 	} else {
 		// Regla de negocio: si no se proveen ni detectan roles, rol único 'fullstack'.

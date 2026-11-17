@@ -354,7 +354,8 @@ func (ini *Initializer) Init(opts InitOptions) (*InitResult, error) {
 
 func buildAxiomYaml(name, topology string, tech *TechDetection) string {
 	var roles []RoleInput
-	if tech != nil && len(tech.ConfiguredRoles) > 0 {
+	if topology == "multirepo" && tech != nil && len(tech.ConfiguredRoles) > 0 {
+		// Los roles detectados solo se aplican en multirepo.
 		roles = tech.ConfiguredRoles
 	} else {
 		var techList []string

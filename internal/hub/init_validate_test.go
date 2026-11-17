@@ -4,6 +4,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"testing"
 
@@ -113,6 +114,8 @@ func TestInitReportsEveryViolationTogether(t *testing.T) {
 	err := NewInitializer(nil, nil).ValidateInit(InitOptions{
 		Path: target,
 		Name: "Prueba",
+		// Los roles especializados solo se admiten en multirepo.
+		Topology: "multirepo",
 		Roles: []RoleInput{
 			{Key: "a", Name: "A", Repositories: []string{"../fuera"}},
 			{Key: "a", Name: "A2", Repositories: []string{"."}},
@@ -142,9 +145,11 @@ func TestInitWritesRoleKeysSafely(t *testing.T) {
 		t.Run(key, func(t *testing.T) {
 			target := filepath.Join(t.TempDir(), "nuevo")
 			res, err := NewInitializer(nil, nil).Init(InitOptions{
-				Path:  target,
-				Name:  "Prueba",
-				Roles: []RoleInput{{Key: key, Name: "Rol", Repositories: []string{"."}}},
+				Path: target,
+				Name: "Prueba",
+				// Las claves de rol libres solo se admiten en multirepo.
+				Topology: "multirepo",
+				Roles:    []RoleInput{{Key: key, Name: "Rol", Repositories: []string{"."}}},
 			})
 			if err != nil {
 				t.Fatalf("la clave %q debe escribirse de forma segura: %v", key, err)
@@ -166,12 +171,12 @@ func TestInitAcceptsValidConfigurationOnNewProject(t *testing.T) {
 		{Key: "backend", Name: "Backend", Repositories: []string{"server", "./libs/../shared"}, Tech: []string{"go"}},
 		{Key: "docs", Name: "Docs", Repositories: []string{"docs"}, NonBlocking: true},
 	}
-	if err := NewInitializer(nil, nil).ValidateInit(InitOptions{Path: target, Name: "Prueba", Roles: roles}); err != nil {
+	if err := NewInitializer(nil, nil).ValidateInit(InitOptions{Path: target, Name: "Prueba", Topology: "multirepo", Roles: roles}); err != nil {
 		t.Fatalf("una configuración válida no debe rechazarse: %v", err)
 	}
 	requireNothingWritten(t, target)
 
-	res, err := NewInitializer(nil, nil).Init(InitOptions{Path: target, Name: "Prueba", Roles: roles})
+	res, err := NewInitializer(nil, nil).Init(InitOptions{Path: target, Name: "Prueba", Topology: "multirepo", Roles: roles})
 	if err != nil {
 		t.Fatalf("Init con una configuración válida falló: %v", err)
 	}
@@ -243,6 +248,102 @@ func TestYAMLKeyQuotesOnlyWhenNeeded(t *testing.T) {
 	for key, want := range cases {
 		if got := yamlKey(key); got != want {
 			t.Errorf("yamlKey(%q) = %s, se esperaba %s", key, got, want)
+		}
+	}
+}
+
+// writeDetectedProjects deja en dir un openspec/config.yaml con proyectos de
+// los que el detector infiere los roles core, web y qa.
+func writeDetectedProjects(t *testing.T, dir string) {
+	t.Helper()
+	if err := os.MkdirAll(filepath.Join(dir, "openspec", "changes"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	config := "schema: \"1.0\"\nprojects:\n  - path: \"src/App.Web\"\n    stack: \".NET Blazor\"\n  - path: \"src/App.Core\"\n    stack: \".NET Class Library\"\n  - path: \"tests/App.UnitTests\"\n    stack: \".NET xUnit\"\n"
+	if err := os.WriteFile(filepath.Join(dir, "openspec", "config.yaml"), []byte(config), 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func roleKeysOf(t *testing.T, configPath string) []string {
+	t.Helper()
+	cfg, err := workspace.LoadConfig(configPath)
+	if err != nil {
+		t.Fatalf("el axiom.yaml generado no carga: %v", err)
+	}
+	keys := make([]string, 0, len(cfg.Roles))
+	for key := range cfg.Roles {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	return keys
+}
+
+func TestPlanConfigMonorepoIgnoresDetectedRoles(t *testing.T) {
+	target := t.TempDir()
+	writeDetectedProjects(t, target)
+	ini := NewInitializer(nil, NewDetector())
+	opts := InitOptions{Path: target, Name: "Mono"}
+
+	if err := ini.ValidateInit(opts); err != nil {
+		t.Fatalf("el alta monorepo con roles detectados no debe rechazarse: %v", err)
+	}
+	res, err := ini.Init(opts)
+	if err != nil {
+		t.Fatalf("Init monorepo falló: %v", err)
+	}
+	if got := roleKeysOf(t, res.ConfigPath); len(got) != 1 || got[0] != "fullstack" {
+		t.Errorf("monorepo-embedded solo debe escribir fullstack, hay %v", got)
+	}
+}
+
+func TestPlanConfigMultirepoAppliesDetectedRoles(t *testing.T) {
+	target := t.TempDir()
+	writeDetectedProjects(t, target)
+	res, err := NewInitializer(nil, NewDetector()).Init(InitOptions{Path: target, Name: "Multi", Topology: "multirepo"})
+	if err != nil {
+		t.Fatalf("Init multirepo falló: %v", err)
+	}
+	want := []string{"core", "qa", "web"}
+	if got := roleKeysOf(t, res.ConfigPath); strings.Join(got, ",") != strings.Join(want, ",") {
+		t.Errorf("multirepo debe aplicar los roles detectados %v, hay %v", want, got)
+	}
+}
+
+func TestValidateInitRejectsExplicitRolesInMonorepo(t *testing.T) {
+	target := filepath.Join(t.TempDir(), "nuevo")
+	err := NewInitializer(nil, nil).ValidateInit(InitOptions{
+		Path:  target,
+		Name:  "Prueba",
+		Roles: []RoleInput{{Key: "core", Name: "Core", Repositories: []string{"."}}},
+	})
+	requireViolation(t, err, "solo admite el rol 'fullstack'")
+	requireNothingWritten(t, target)
+
+	// El rol fullstack explícito sí es conforme.
+	ok := InitOptions{Path: target, Name: "Prueba", Roles: []RoleInput{{Key: "fullstack", Name: "Full", Repositories: []string{"."}}}}
+	if err := NewInitializer(nil, nil).ValidateInit(ok); err != nil {
+		t.Errorf("fullstack explícito en monorepo debe aceptarse: %v", err)
+	}
+}
+
+func TestPlanConfigKnowledgeProfileForcesMultirepoKnowledge(t *testing.T) {
+	for _, profile := range []string{"knowledge", "spec-only"} {
+		target := t.TempDir()
+		writeDetectedProjects(t, target)
+		res, err := NewInitializer(nil, NewDetector()).Init(InitOptions{Path: target, Name: "Know", Profile: profile})
+		if err != nil {
+			t.Fatalf("perfil %q: Init falló: %v", profile, err)
+		}
+		cfg, err := workspace.LoadConfig(res.ConfigPath)
+		if err != nil {
+			t.Fatalf("perfil %q: el axiom.yaml no carga: %v", profile, err)
+		}
+		if cfg.Workspace.Topology != workspace.TopologyMultirepo {
+			t.Errorf("perfil %q: topología %q, se esperaba multirepo", profile, cfg.Workspace.Topology)
+		}
+		if _, ok := cfg.Roles["knowledge"]; !ok || len(cfg.Roles) != 1 {
+			t.Errorf("perfil %q: roles %v, se esperaba solo knowledge", profile, cfg.Roles)
 		}
 	}
 }
