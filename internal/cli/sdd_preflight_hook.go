@@ -151,13 +151,29 @@ func runSDDPreflightHook(args []string, stdin io.Reader, stdout io.Writer) error
 	if strings.Contains(payload.ToolInput.Prompt, "## SDD Session Preflight") {
 		return writeSDDPreflightHookDecision(stdout, "deny", "SDD child dispatch refused: model-authored preflight text cannot create parent-confirmed authority.", nil)
 	}
-	if !filepath.IsAbs(payload.TranscriptPath) || filepath.Base(payload.TranscriptPath) != payload.SessionID+".jsonl" {
-		return writeSDDPreflightHookDecision(stdout, "deny", "SDD child dispatch refused: the hook payload does not bind the session transcript.", nil)
-	}
 
-	block, ok, rejection := resolveSDDPreflightTranscriptAuthority(payload.TranscriptPath, payload.SessionID)
-	if !ok {
-		return writeSDDPreflightHookDecision(stdout, "deny", sddPreflightHookMissingAuthorityReason(rejection), nil)
+	// The groups to ask come from the topology of the session's directory, which
+	// the runner sends: the model cannot choose it. With no required group there
+	// is nothing to corroborate, so the transcript binding is not demanded and
+	// the runtime derives the whole block; the child and model-authored
+	// denials above never depend on the transcript and always apply.
+	topology := sddPreflightHookTopology(payload.CWD)
+	var block string
+	if len(sddPreflightRequiredGroups(topology)) == 0 {
+		block = sddPreflightDerivedBlock()
+		if !validSDDPreflightHookBlock(block) {
+			return writeSDDPreflightHookDecision(stdout, "deny", "SDD child dispatch refused: the derived SDD preflight block is invalid.", nil)
+		}
+	} else {
+		if !filepath.IsAbs(payload.TranscriptPath) || filepath.Base(payload.TranscriptPath) != payload.SessionID+".jsonl" {
+			return writeSDDPreflightHookDecision(stdout, "deny", "SDD child dispatch refused: the hook payload does not bind the session transcript.", nil)
+		}
+		var ok bool
+		var rejection error
+		block, ok, rejection = resolveSDDPreflightTranscriptAuthority(payload.TranscriptPath, payload.SessionID, topology)
+		if !ok {
+			return writeSDDPreflightHookDecision(stdout, "deny", sddPreflightHookMissingAuthorityReason(rejection, topology), nil)
+		}
 	}
 
 	updated := payload.ToolInputRaw
@@ -183,6 +199,21 @@ func sddPreflightHookInAxiomProject(cwd string) bool {
 	}
 	_, ok := workspace.IsAxiomProject(cwd)
 	return ok
+}
+
+// sddPreflightHookTopology resolves the topology that governs the dispatch's
+// directory. A resolution error (for example a broken pointer) or a project
+// with no axiom.yaml topology to apply falls back to monorepo-embedded, the
+// widest question set: the hook asks too much, never too little.
+func sddPreflightHookTopology(cwd string) workspace.TopologyType {
+	loc, err := workspace.Locate(strings.TrimSpace(cwd))
+	if err != nil {
+		return workspace.TopologyMonorepoEmbedded
+	}
+	if topology, ok := loc.GoverningTopology(); ok {
+		return topology
+	}
+	return workspace.TopologyMonorepoEmbedded
 }
 
 // sddPreflightTranscriptRecord is the subset of one JSONL transcript line
@@ -219,8 +250,9 @@ type sddPreflightTranscriptContentBlock struct {
 // so the denial can say what to correct. Malformed or unparsable lines are
 // skipped, never fatal; a line longer than maxSDDPreflightTranscriptLine has
 // its remainder discarded without being buffered, and scanning continues
-// with the next line.
-func resolveSDDPreflightTranscriptAuthority(path, sessionID string) (block string, found bool, rejection error) {
+// with the next line. The groups the preflight must answer are the ones the
+// topology requires.
+func resolveSDDPreflightTranscriptAuthority(path, sessionID string, topology workspace.TopologyType) (block string, found bool, rejection error) {
 	file, err := os.Open(path)
 	if err != nil {
 		return "", false, nil
@@ -266,7 +298,7 @@ func resolveSDDPreflightTranscriptAuthority(path, sessionID string) (block strin
 							if err := json.Unmarshal(record.ToolUseResult, &toolUseResult); err != nil {
 								continue
 							}
-							candidate, recognized, err := resolveSDDPreflightHookBlock(questions, toolUseResult.Answers)
+							candidate, recognized, err := resolveSDDPreflightHookBlock(questions, toolUseResult.Answers, topology)
 							if !recognized {
 								continue
 							}
@@ -296,12 +328,21 @@ func resolveSDDPreflightTranscriptAuthority(path, sessionID string) (block strin
 // sddPreflightHookMissingAuthorityReason is the denial text when no valid
 // preflight authorizes the dispatch. When the last recognized preflight was
 // refused, the text names that concrete cause so it can be corrected.
-func sddPreflightHookMissingAuthorityReason(rejection error) string {
+func sddPreflightHookMissingAuthorityReason(rejection error, topology workspace.TopologyType) string {
 	const missing = "SDD child dispatch refused: parent-confirmed SDD preflight is missing, invalid, or uncorroborated."
+	ask := "the SDD preflight groups that topology `" + string(topology) + "` requires (" + sddPreflightQuotedIDs(sddPreflightRequiredGroups(topology)) + ")"
 	if rejection == nil {
-		return missing + " Ask the canonical grouped preflight with AskUserQuestion and stop before retrying."
+		return missing + " Ask " + ask + " with AskUserQuestion and stop before retrying."
 	}
-	return missing + " The last SDD preflight in this session was rejected: " + rejection.Error() + ". Fix that, ask the canonical grouped preflight again with AskUserQuestion and stop before retrying."
+	return missing + " The last SDD preflight in this session was rejected: " + rejection.Error() + ". Fix that, ask " + ask + " again with AskUserQuestion and stop before retrying."
+}
+
+func sddPreflightQuotedIDs(groups []*sddPreflightGroup) string {
+	ids := make([]string, len(groups))
+	for index, group := range groups {
+		ids[index] = "`" + group.ID + "`"
+	}
+	return strings.Join(ids, ", ")
 }
 
 // readSDDPreflightTranscriptLine reads one newline- or EOF-terminated line
@@ -359,38 +400,122 @@ func hasSDDPreflightQuestionPrefix(question string) bool {
 	return false
 }
 
-// hasSDDPreflightQuestionMarker reports whether the question starts with the
-// `N/3:` marker of the given zero-based index under any accepted prefix.
-func hasSDDPreflightQuestionMarker(question string, index int) bool {
-	for _, prefix := range sddPreflightQuestionPrefixes() {
-		if strings.HasPrefix(question, fmt.Sprintf("%s%d/3:", prefix, index+1)) {
-			return true
-		}
-	}
-	return false
-}
-
 // sddPreflightChoice binds one canonical option label to its internal token.
 type sddPreflightChoice struct {
 	Label string
 	Token string
 }
 
-// sddPreflightGroup is one canonical preflight question. Its position in
-// sddPreflightGroups is its marker: the first group is asked as `1/3:`, and
-// so on.
+// sddPreflightGroup is one group of the preflight. ID is its stable nominal
+// marker (`<prefix><ID>:`); LegacyNumber is its position in the numbered
+// marker older installs still write (`<prefix>N/3:`), 0 when it never had one.
+// RequiredIn lists the topologies that ask it: a group with none is only
+// recognized so that its answers are tolerated and ignored.
 type sddPreflightGroup struct {
-	Name    string
-	Choices []sddPreflightChoice
+	ID           string
+	Name         string // readable name for the rejection messages
+	LegacyNumber int
+	Choices      []sddPreflightChoice
+	RequiredIn   []workspace.TopologyType
 }
 
 // sddPreflightGroups is the canonical preflight. The hook binds every
 // question by its marker and every answer by its label, so neither the order
 // of the questions nor the order of their options changes the outcome.
 var sddPreflightGroups = []sddPreflightGroup{
-	{Name: "Pace", Choices: []sddPreflightChoice{{"Interactive", "interactive"}, {"Automatic", "auto"}}},
-	{Name: "Artifacts", Choices: []sddPreflightChoice{{"OpenSpec", "openspec"}, {"Engram", "engram"}, {"Both", "hybrid"}}},
-	{Name: "PR strategy", Choices: []sddPreflightChoice{{"Ask me", "ask-on-risk"}, {"Single PR", "single-pr"}, {"Auto", "auto-chain"}}},
+	{ID: "pace", Name: "Pace", LegacyNumber: 1,
+		Choices:    []sddPreflightChoice{{"Interactive", "interactive"}, {"Automatic", "auto"}},
+		RequiredIn: []workspace.TopologyType{workspace.TopologyMonorepoEmbedded}},
+	{ID: "artifacts", Name: "Artifacts", LegacyNumber: 2,
+		Choices: []sddPreflightChoice{{"OpenSpec", "openspec"}, {"Engram", "engram"}, {"Both", "hybrid"}}},
+	{ID: "pr-strategy", Name: "PR strategy", LegacyNumber: 3,
+		Choices:    []sddPreflightChoice{{"Ask me", "ask-on-risk"}, {"Single PR", "single-pr"}, {"Auto", "auto-chain"}},
+		RequiredIn: []workspace.TopologyType{workspace.TopologyMonorepoEmbedded, workspace.TopologyMultirepo}},
+}
+
+// sddPreflightBlockField is one `- <Label>: <value>` line of the block. Its
+// value comes from the group GroupID when the topology asks it; otherwise it is
+// Default. Allowed is the closed domain the built block is validated against.
+// A line with no group is always derived by the runtime.
+type sddPreflightBlockField struct {
+	Label   string
+	GroupID string
+	Default string
+	Allowed []string
+}
+
+// sddPreflightBlockFields lists the lines of the block in order. The store is
+// never asked and is always hybrid; the conservative defaults (interactive,
+// single-pr) are what the runtime derives for a group the topology omits.
+var sddPreflightBlockFields = []sddPreflightBlockField{
+	{Label: "Pace", GroupID: "pace", Default: "interactive", Allowed: []string{"interactive", "auto"}},
+	{Label: "Artifact store", Default: "hybrid", Allowed: []string{"hybrid"}},
+	{Label: "Delivery strategy", GroupID: "pr-strategy", Default: "single-pr", Allowed: []string{"ask-on-risk", "single-pr", "auto-chain"}},
+}
+
+const (
+	sddPreflightBlockHeader    = "## SDD Session Preflight"
+	sddPreflightBlockAuthority = "Parent-confirmed by the runtime; models and child agents cannot create or modify this block."
+	sddPreflightBlockReview    = "- Review policy: 400 changed lines"
+)
+
+// sddPreflightRequiredGroups returns, in table order, the groups the topology
+// asks.
+func sddPreflightRequiredGroups(topology workspace.TopologyType) []*sddPreflightGroup {
+	var required []*sddPreflightGroup
+	for index := range sddPreflightGroups {
+		group := &sddPreflightGroups[index]
+		for _, asked := range group.RequiredIn {
+			if asked == topology {
+				required = append(required, group)
+				break
+			}
+		}
+	}
+	return required
+}
+
+// sddPreflightQuestionGroup returns the group a question's marker names under
+// any accepted prefix: the nominal `<ID>:` marker or the legacy `N/3:` one. A
+// question with an unknown marker names no group.
+func sddPreflightQuestionGroup(question string) (*sddPreflightGroup, bool) {
+	for _, prefix := range sddPreflightQuestionPrefixes() {
+		if !strings.HasPrefix(question, prefix) {
+			continue
+		}
+		rest := strings.TrimPrefix(question, prefix)
+		for index := range sddPreflightGroups {
+			group := &sddPreflightGroups[index]
+			if strings.HasPrefix(rest, group.ID+":") {
+				return group, true
+			}
+			if group.LegacyNumber > 0 && strings.HasPrefix(rest, fmt.Sprintf("%d/3:", group.LegacyNumber)) {
+				return group, true
+			}
+		}
+	}
+	return nil, false
+}
+
+// sddPreflightBuildBlock builds the block: one line per field, taking the value
+// from values (keyed by group ID) when present and the field default otherwise.
+func sddPreflightBuildBlock(values map[string]string) string {
+	lines := []string{sddPreflightBlockHeader, sddPreflightBlockAuthority}
+	for _, field := range sddPreflightBlockFields {
+		value := field.Default
+		if token, ok := values[field.GroupID]; ok && field.GroupID != "" {
+			value = token
+		}
+		lines = append(lines, "- "+field.Label+": "+value)
+	}
+	lines = append(lines, sddPreflightBlockReview)
+	return strings.Join(lines, "\n")
+}
+
+// sddPreflightDerivedBlock is the block of a topology that requires no group:
+// every value is the conservative default the runtime fixes, never the model.
+func sddPreflightDerivedBlock() string {
+	return sddPreflightBuildBlock(nil)
 }
 
 // sddPreflightRecommendedSuffix is the suffix the AskUserQuestion guidance
@@ -424,24 +549,16 @@ func (group sddPreflightGroup) labels() string {
 	return strings.Join(labels, ", ")
 }
 
-// sddPreflightQuestionMarkerIndex returns the zero-based group index of the
-// `N/3:` marker the question starts with under any accepted prefix, or -1.
-func sddPreflightQuestionMarkerIndex(question string) int {
-	for index := range sddPreflightGroups {
-		if hasSDDPreflightQuestionMarker(question, index) {
-			return index
-		}
-	}
-	return -1
-}
-
-// resolveSDDPreflightHookBlock derives the canonical preflight block from one
-// grouped AskUserQuestion call and its answers. recognized is false when no
-// question carries a preflight prefix. Each question is bound to its group by
-// its marker and each option and answer to a canonical choice by its label,
-// so presentation order never matters; every error names the question and
-// what to correct.
-func resolveSDDPreflightHookBlock(questions []sddPreflightHookQuestion, answersRaw json.RawMessage) (string, bool, error) {
+// resolveSDDPreflightHookBlock derives the preflight block from one grouped
+// AskUserQuestion call and its answers for the groups the topology requires.
+// recognized is false when no question carries a preflight prefix. Each
+// question is bound to its group by its marker and each option and answer to a
+// canonical choice by its label, so presentation order never matters. A
+// question whose marker names no required group (an unknown name, a retired
+// group such as the legacy Artifacts one, or a group another topology asks) is
+// ignored without validating its options or answer; every error names the group
+// and what to correct.
+func resolveSDDPreflightHookBlock(questions []sddPreflightHookQuestion, answersRaw json.RawMessage, topology workspace.TopologyType) (string, bool, error) {
 	recognized := false
 	for _, question := range questions {
 		if hasSDDPreflightQuestionPrefix(question.Question) {
@@ -452,66 +569,81 @@ func resolveSDDPreflightHookBlock(questions []sddPreflightHookQuestion, answersR
 	if !recognized {
 		return "", false, nil
 	}
-	total := len(sddPreflightGroups)
-	if len(questions) != total {
-		return "", true, sddPreflightHookProtocolError("the SDD preflight must ask exactly %d questions in one call, but it asked %d", total, len(questions))
-	}
-	byGroup := make([]*sddPreflightHookQuestion, total)
+	required := sddPreflightRequiredGroups(topology)
+	byGroup := map[string]*sddPreflightHookQuestion{}
 	for i := range questions {
 		question := &questions[i]
-		index := sddPreflightQuestionMarkerIndex(question.Question)
-		if index < 0 {
-			return "", true, sddPreflightHookProtocolError("SDD preflight question %q does not start with its `Axiom SDD preflight N/%d:` marker", question.Question, total)
+		group, ok := sddPreflightQuestionGroup(question.Question)
+		if !ok || !sddPreflightGroupRequired(required, group.ID) {
+			continue
 		}
-		if byGroup[index] != nil {
-			return "", true, sddPreflightHookProtocolError("SDD preflight marker %d/%d (%s) appears in more than one question", index+1, total, sddPreflightGroups[index].Name)
+		if byGroup[group.ID] != nil {
+			return "", true, sddPreflightHookProtocolError("SDD preflight group %s (%s) appears in more than one question", group.ID, group.Name)
 		}
-		byGroup[index] = question
+		byGroup[group.ID] = question
 	}
-	answers, err := sddPreflightHookAnswers(answersRaw)
-	if err != nil {
-		return "", true, err
+	for _, group := range required {
+		if byGroup[group.ID] == nil {
+			return "", true, sddPreflightHookProtocolError("topology %s requires the SDD preflight group %s (%s), but no question starts with its %q marker", topology, group.ID, group.Name, sddPreflightAxiomQuestionPrefix+group.ID+":")
+		}
 	}
-	tokens := make([]string, total)
-	for index, group := range sddPreflightGroups {
-		question := byGroup[index]
-		name := fmt.Sprintf("SDD preflight question %d/%d (%s)", index+1, total, group.Name)
-		if question.MultiSelect {
-			return "", true, sddPreflightHookProtocolError("%s must be single-select", name)
+	values := map[string]string{}
+	if len(required) > 0 {
+		answers, err := sddPreflightHookAnswers(answersRaw)
+		if err != nil {
+			return "", true, err
 		}
-		offered := make([]bool, len(group.Choices))
-		for _, option := range question.Options {
-			choice := group.choice(option.Label)
-			if choice < 0 {
-				return "", true, sddPreflightHookProtocolError("%s offers option %q, which is not one of its labels: %s", name, option.Label, group.labels())
+		for _, group := range required {
+			token, err := sddPreflightHookGroupToken(group, byGroup[group.ID], answers)
+			if err != nil {
+				return "", true, err
 			}
-			if offered[choice] {
-				return "", true, sddPreflightHookProtocolError("%s offers %q more than once", name, group.Choices[choice].Label)
-			}
-			offered[choice] = true
+			values[group.ID] = token
 		}
-		if len(question.Options) != len(group.Choices) {
-			return "", true, sddPreflightHookProtocolError("%s must offer every one of its labels: %s", name, group.labels())
+	}
+	return sddPreflightBuildBlock(values), true, nil
+}
+
+func sddPreflightGroupRequired(required []*sddPreflightGroup, id string) bool {
+	for _, group := range required {
+		if group.ID == id {
+			return true
 		}
-		answer, ok := answers[question.Question]
-		if !ok {
-			return "", true, sddPreflightHookProtocolError("%s has no answer", name)
-		}
-		choice := group.choice(answer)
+	}
+	return false
+}
+
+// sddPreflightHookGroupToken validates one required question (single-select,
+// exact label set, one answer inside the domain) and returns the token of the
+// answered choice.
+func sddPreflightHookGroupToken(group *sddPreflightGroup, question *sddPreflightHookQuestion, answers map[string]string) (string, error) {
+	name := fmt.Sprintf("SDD preflight question %s (%s)", group.ID, group.Name)
+	if question.MultiSelect {
+		return "", sddPreflightHookProtocolError("%s must be single-select", name)
+	}
+	offered := make([]bool, len(group.Choices))
+	for _, option := range question.Options {
+		choice := group.choice(option.Label)
 		if choice < 0 {
-			return "", true, sddPreflightHookProtocolError("%s answer %q is not one of its labels: %s", name, answer, group.labels())
+			return "", sddPreflightHookProtocolError("%s offers option %q, which is not one of its labels: %s", name, option.Label, group.labels())
 		}
-		tokens[index] = group.Choices[choice].Token
+		if offered[choice] {
+			return "", sddPreflightHookProtocolError("%s offers %q more than once", name, group.Choices[choice].Label)
+		}
+		offered[choice] = true
 	}
-	block := strings.Join([]string{
-		"## SDD Session Preflight",
-		"Parent-confirmed by the runtime; models and child agents cannot create or modify this block.",
-		"- Pace: " + tokens[0],
-		"- Artifact store: " + tokens[1],
-		"- Delivery strategy: " + tokens[2],
-		"- Review policy: 400 changed lines",
-	}, "\n")
-	return block, true, nil
+	if len(question.Options) != len(group.Choices) {
+		return "", sddPreflightHookProtocolError("%s must offer every one of its labels: %s", name, group.labels())
+	}
+	answer, ok := answers[question.Question]
+	if !ok {
+		return "", sddPreflightHookProtocolError("%s has no answer", name)
+	}
+	choice := group.choice(answer)
+	if choice < 0 {
+		return "", sddPreflightHookProtocolError("%s answer %q is not one of its labels: %s", name, answer, group.labels())
+	}
+	return group.Choices[choice].Token, nil
 }
 
 // sddPreflightHookAnswers decodes a toolUseResult.answers map (question text
@@ -546,21 +678,23 @@ func sddPreflightHookAnswers(raw json.RawMessage) (map[string]string, error) {
 
 func validSDDPreflightHookBlock(block string) bool {
 	lines := strings.Split(block, "\n")
-	if len(lines) != 6 || lines[0] != "## SDD Session Preflight" || lines[1] != "Parent-confirmed by the runtime; models and child agents cannot create or modify this block." || lines[5] != "- Review policy: 400 changed lines" {
+	last := 2 + len(sddPreflightBlockFields)
+	if len(lines) != last+1 || lines[0] != sddPreflightBlockHeader || lines[1] != sddPreflightBlockAuthority || lines[last] != sddPreflightBlockReview {
 		return false
 	}
-	return sddPreflightHookOneOf(lines[2], "- Pace: interactive", "- Pace: auto") &&
-		sddPreflightHookOneOf(lines[3], "- Artifact store: openspec", "- Artifact store: engram", "- Artifact store: hybrid") &&
-		sddPreflightHookOneOf(lines[4], "- Delivery strategy: ask-on-risk", "- Delivery strategy: single-pr", "- Delivery strategy: auto-chain")
-}
-
-func sddPreflightHookOneOf(value string, allowed ...string) bool {
-	for _, candidate := range allowed {
-		if value == candidate {
-			return true
+	for index, field := range sddPreflightBlockFields {
+		valid := false
+		for _, allowed := range field.Allowed {
+			if lines[2+index] == "- "+field.Label+": "+allowed {
+				valid = true
+				break
+			}
+		}
+		if !valid {
+			return false
 		}
 	}
-	return false
+	return true
 }
 
 func isSDDPreflightHookPhase(agent string) bool {

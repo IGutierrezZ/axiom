@@ -1,6 +1,6 @@
 # Progreso de apply: preflight-topologia (C-01-b)
 
-Modo: estándar (TDD estricto no activo; RED observado igualmente en cada tarea). Estrategia de entrega: `exception-ok` (una PR con `size:exception`). Lote 1: U1 y U2.
+Modo: estándar (TDD estricto no activo; RED observado igualmente en cada tarea). Estrategia de entrega: `exception-ok` (una PR con `size:exception`). Lotes 1 a 3: U1 a U4.
 
 ## Unidades completadas
 
@@ -9,7 +9,8 @@ Modo: estándar (TDD estricto no activo; RED observado igualmente en cada tarea)
 | U0 | hecha | `1ca2b85c` |
 | U1 | hecha | `37da0abf` |
 | U2 | hecha | `9383953d` |
-| U3 | hecha | ver `git log` (`feat(hub): el alta en monorepo-embedded escribe solo el rol fullstack`) |
+| U3 | hecha | `494049a5` |
+| U4 | hecha | ver `git log` (`feat(cli): el hook de preflight valida los grupos que exige la topología`) |
 
 ## U1 · Work Unit Evidence
 
@@ -42,7 +43,7 @@ Notas:
 
 ## U3 · Alta del proyecto (hub y dashboard)
 
-Hecha (lote 2; commit `feat(hub): el alta en monorepo-embedded escribe solo el rol fullstack`, el hash está en `git log`).
+Hecha (lote 2; commit `494049a5`, `feat(hub): el alta en monorepo-embedded escribe solo el rol fullstack`).
 
 | Evidencia | Valor |
 |---|---|
@@ -58,5 +59,22 @@ Notas:
 - Las cuatro pruebas nuevas del hub se escribieron tras la implementación (el RED de la conducta ya se observó en las pruebas heredadas que fallaron tras U1); el RED del formulario sí se observó antes del GREEN.
 - `buildAxiomYaml` no tiene llamadores (código muerto previo); se aplicó igualmente la regla por el diseño.
 
+## U4 · Hook de preflight por topología
+
+Hecha (lote 3; commit `feat(cli): el hook de preflight valida los grupos que exige la topología`, el hash está en `git log`).
+
+| Evidencia | Valor |
+|---|---|
+| Prueba focalizada | `go test ./internal/cli/ -run "SDDPreflight\|Preflight"`: ok (165 s). RED observado: la compilación de las pruebas nuevas fallaba (`group.ID` sin definir) antes de implementar |
+| Arnés de ejecución | Payloads y transcripciones sintéticas con `cwd` explícito (`workspacetest.Embedded`, `Canonical`, `WithBrokenPointer`); los payloads sin `cwd` resuelven el `axiom.yaml` de este repositorio (monorepo) |
+| Cierre | `gofmt -l internal/cli` vacío; `go vet ./internal/cli/` limpio; `TestEveryProductionRefusalNamesResolutionOrDeclaresByDesign` ok; `go test ./internal/sddtaskresult/...` ok; `deadcode-ratchet.sh`: sin funciones inalcanzables nuevas |
+| Límite de reversión | `internal/cli/sdd_preflight_hook.go`, `sdd_preflight_hook_test.go` y `sdd_preflight_hook_topology_test.go` |
+
+Notas:
+- Las pruebas nuevas viven en `internal/cli/sdd_preflight_hook_topology_test.go` (fichero nuevo); `sdd_preflight_hook_test.go` solo adapta las existentes (almacén `hybrid`, mensajes con el id del grupo, causa de «grupo requerido ausente»). Las pruebas de opción renombrada, omitida y repetida pasan al grupo `pr-strategy`, porque el grupo heredado `artifacts` ya se ignora.
+- `sddPreflightDerivedBlock()` no recibe la topología (desviación menor del diseño): con cero grupos requeridos todos los valores son los por defecto, así que la topología no aporta nada. `sddPreflightHookTopology(cwd)` devuelve `monorepo-embedded` ante un error de `Locate`.
+- «Un prompt que ya trae el bloque no se duplica»: el hook deniega siempre un prompt con el encabezado del bloque (denegación de bloque del modelo, también con cero grupos); la prueba afirma que el prompt permitido contiene el encabezado exactamente una vez.
+- `internal/sddtaskresult/preflight_question_harness_test.go` ejercita el plugin de OpenCode (U5), no el hook: no cambia.
+
 ## Riesgos abiertos
-- Ninguno nuevo de U3.
+- Ninguno nuevo de U3 ni de U4.
