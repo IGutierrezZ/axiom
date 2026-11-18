@@ -39,6 +39,8 @@ type Declarations struct {
 	WorkflowErr         error
 	SDD                 *SDDConfig // lo declarado en `sdd:`, sin defectos; nil sin bloque, con bloque inválido o con la contradicción con `workflow.lane` (REQ-29.1)
 	SDDErr              error
+	Delivery            *DeliveryConfig // lo declarado en `delivery:`, sin defectos; nil sin bloque o con bloque inválido
+	DeliveryErr         error
 	Repositories        []RepositoryPolicy // lo declarado en `repositories:`; nil sin bloque, sin entradas o con bloque inválido (REQ-25.27)
 	RepositoriesErr     error
 }
@@ -53,7 +55,7 @@ var (
 )
 
 // readDeclarationBlocks localiza los bloques `technical_context`,
-// `git` y `repositories` en el mapeo raíz del documento y los decodifica y valida
+// `git`, `workflow`, `sdd`, `delivery` y `repositories` en el mapeo raíz del documento y los decodifica y valida
 // de forma estricta. displacement es el desplazamiento léxico de la carpeta
 // maestra a workspaceRoot.
 func readDeclarationBlocks(document *yaml.Node, displacement string) Declarations {
@@ -88,6 +90,9 @@ func readDeclarationBlocks(document *yaml.Node, displacement string) Declaration
 				declarations.SDD, declarations.SDDErr = nil, err
 			}
 		}
+	}
+	if node, ok := mappingValue(root, "delivery"); ok {
+		declarations.Delivery, declarations.DeliveryErr = decodeDelivery(node)
 	}
 	if node, ok := mappingValue(root, "repositories"); ok {
 		declarations.Repositories, declarations.RepositoriesErr = decodeRepositories(node)

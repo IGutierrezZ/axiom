@@ -15,9 +15,9 @@ Use it for:
 
 - Splitting a feature into reviewable work.
 - Preparing commits before opening a PR.
-- Turning a large change into chained or stacked PRs.
+- Turning a change into chained or stacked PRs when the person asks for them.
 - Keeping reviewer cognitive load healthy.
-- Applying SDD tasks without accidentally producing a PR above 400 changed lines.
+- Applying SDD tasks as one work-unit commit each inside a single PR.
 
 ## Critical Rules
 
@@ -28,8 +28,9 @@ Use it for:
 | Keep tests with code | Tests belong in the same commit as the behavior they verify. |
 | Keep docs with the user-visible change | Docs belong with the feature or workflow they explain. |
 | Tell a story | A reviewer should understand why each commit exists from its diff and message. |
-| Future PR-ready | Each commit should be a candidate chained PR when the change grows. |
-| SDD workload guard | If SDD tasks forecast a >400-line change, group commits into chained PR slices before implementation. |
+| One PR by default | The commits of a change ship together in a single PR; chaining happens only when the person asks for it. |
+| Chain-ready | Each commit should be a candidate chained PR if the person later asks to chain. |
+| No code-golf | Never shrink a diff by deleting comments, blank lines, docs, or tests, or by compressing code. Commit by work unit; there is no size target to fit. |
 
 ## Work Unit Checklist
 
@@ -55,21 +56,21 @@ Before committing, confirm:
 
 ## PR Relationship
 
-Use work-unit commits as the foundation for chained PRs:
+Use work-unit commits as the foundation of the pull request:
 
 1. Build the smallest independent work unit.
 2. Include verification for that unit.
 3. Commit it with a Conventional Commit message.
-4. If the PR approaches 400 changed lines, promote commits or groups of commits into chained PRs.
+4. Keep all the commits in one PR. Only when the person asks to chain, stack, or slice, promote commits or groups of commits into chained PRs with the `chained-pr` skill.
 
 ## SDD Relationship
 
-When `sdd-tasks` produces a Review Workload Forecast:
+When `sdd-tasks` produces a Delivery Forecast:
 
-- Low risk: keep work-unit commits inside one PR.
-- Medium risk: commit by work unit and monitor changed lines before PR creation.
-- High risk: follow SDD `delivery_strategy` — ask on `ask-on-risk`, auto-slice on `auto-chain`, require `size:exception` on over-budget `single-pr`, or record accepted `size:exception` on `exception-ok`.
-- Count authored additions plus deletions for the `>400` threshold. Exclude generated goldens from that authored count, but include every generated file in complete snapshot identity and receipt validation.
+- With `delivery_strategy: single-pr` (the default), commit by work unit inside one PR.
+- With `delivery_strategy: chained`, follow the `chain_strategy` and the PR slice each work unit names; the `chained-pr` skill plans the chain.
+- The forecast never stops implementation and never asks for a decision.
+- Splitting is bounded: after one honest slicing pass, keep the best cohesive work-unit split. Do not iterate shrinking the code.
 
 Each SDD work unit should map cleanly to a commit or PR with:
 

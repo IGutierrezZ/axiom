@@ -22,6 +22,7 @@
    - [Política de Ramas (`git:`)](#política-de-ramas-git)
    - [Ajustes por Repositorio (`repositories:`)](#ajustes-por-repositorio-repositories)
    - [Carril de Trabajo (`workflow:`)](#carril-de-trabajo-workflow)
+   - [Aviso de Cambio Grande (`delivery:`)](#aviso-de-cambio-grande-delivery)
    - [Modo ISO y Perfil de Bug (`sdd:`)](#modo-iso-y-perfil-de-bug-sdd)
 7. [Gobernanza de Skills y Autoskills](#7-gobernanza-de-skills-y-autoskills)
    - [Flujo Human-in-the-Loop](#flujo-human-in-the-loop)
@@ -375,6 +376,21 @@ workflow:
 - `axiom sdd status --json` proyecta el carril efectivo en el campo `workflow` (`lane` y `source`: `declared`, `default`, `no_workspace` o `invalid`), con o sin cambio seleccionado. Sin `axiom.yaml`, o con uno inválido, proyecta `ask`: el agente pregunta antes que entrar en SDD por su cuenta.
 - ODD no tiene paradas propias: el agente crea el documento de la tarea y empieza a implementar. Las paradas con tres salidas son de las compuertas de SDD.
 - Los binarios anteriores ignoran el bloque, como el de `git:`.
+
+### Aviso de Cambio Grande (`delivery:`)
+
+`axiom.yaml` puede declarar un bloque opcional `delivery:` con el umbral de un aviso de cambio grande. Como `workflow:`, es política versionada que comparte todo el equipo:
+
+```yaml
+delivery:
+  split_hint_lines: 600   # entero mayor que cero (por defecto: sin aviso)
+```
+
+- Un cambio se entrega en una sola PR por defecto. Cuando `delivery.split_hint_lines` está declarado y la previsión de líneas cambiadas del cambio (el extremo superior del rango estimado) lo supera, el agente avisa una sola vez de que el cambio es grande y de que la persona puede pedir PRs encadenadas, y continúa sin esperar respuesta. El aviso nunca bloquea.
+- Sin el bloque, o sin la clave `split_hint_lines`, el aviso está desactivado: no hay aviso y no se cita ningún número.
+- La validación es estricta: el valor es un entero sin comillas mayor que cero (`0`, `-1`, `"600"`, `6e2`, `1.5`, `true` y el valor nulo se rechazan) y una clave desconocida o repetida es un error. `axiom workspace validate` rechaza un bloque inválido nombrando `delivery.split_hint_lines`, con código de salida `1`.
+- Los binarios anteriores ignoran el bloque, como el de `git:`.
+- `axiom init --force` conserva un `axiom.yaml` que declara `delivery:`, sea válido o no.
 
 ### Modo ISO y Perfil de Bug (`sdd:`)
 

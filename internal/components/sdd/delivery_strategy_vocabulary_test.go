@@ -39,7 +39,7 @@ import (
 // delivery strategy: one backticked, pipe-separated list led by the default
 // value. Keeping the pattern anchored on that shape is what lets the guard read
 // the domain out of the shipped skill instead of hardcoding it.
-var deliveryDomainDeclaration = regexp.MustCompile("`(ask-on-risk(?: \\| [a-z][a-z0-9-]*)+)`")
+var deliveryDomainDeclaration = regexp.MustCompile("`(single-pr(?: \\| [a-z][a-z0-9-]*)+)`")
 
 // preflightPRGroupLabels matches the user-facing PR option list the preflight
 // renders, e.g. "- **PR strategy** (`pr-strategy`): Ask me, Single PR, or Auto."
@@ -60,6 +60,7 @@ var canonicalValueShape = regexp.MustCompile(`^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$`)
 var deliveryStrategySkillContracts = []string{
 	"skills/sdd-apply/SKILL.md",
 	"skills/sdd-tasks/SKILL.md",
+	"skills/_shared/sdd-phase-common.md",
 }
 
 // canonicalDeliveryStrategyDomain reads the domain out of the shipped phase
@@ -164,6 +165,22 @@ func mappedCanonicalValue(mapping, label string) (string, bool) {
 	return rest[:end], true
 }
 
+// preflightBlockOf isolates the marker-owned session preflight from the rest of
+// the orchestrator document it is installed in.
+func preflightBlockOf(t *testing.T, path, content string) string {
+	t.Helper()
+
+	start := strings.Index(content, sddSessionPreflightMarker)
+	if start < 0 {
+		t.Fatalf("%s lost its session preflight block", path)
+	}
+	block := content[start:]
+	if end := strings.Index(block, sddSessionPreflightEnd); end >= 0 {
+		block = block[:end]
+	}
+	return block
+}
+
 // canonicalMappingBlock isolates the mapping from the surrounding prose so a
 // label that merely appears in the UI section is never mistaken for a mapping.
 func canonicalMappingBlock(t *testing.T, path, content string) string {
@@ -180,99 +197,71 @@ func canonicalMappingBlock(t *testing.T, path, content string) string {
 	return block
 }
 
-func TestSDDPreflightDeliveryStrategyMappingStaysInsideConsumerDomain(t *testing.T) {
-	domain := canonicalDeliveryStrategyDomain(t)
-	allowed := map[string]bool{}
-	for _, value := range domain {
-		allowed[value] = true
-	}
-
+// The preflight no longer produces a delivery strategy: it offers no PR group, no
+// option list and no label -> value mapping, and it never states a review
+// threshold. The only producer left is the hook (and the OpenCode plugin), whose
+// block always says `Delivery strategy: single-pr`.
+func TestSDDPreflightOffersNoDeliveryStrategyGroupOrMapping(t *testing.T) {
 	for path, content := range preflightMappingSources(t) {
-		labelMatch := preflightPRGroupLabels.FindStringSubmatch(content)
-		if labelMatch == nil {
-			t.Fatalf("%s carries a canonical mapping but no `3. PRs: ...` option list to map from", path)
+		if match := preflightPRGroupLabels.FindStringSubmatch(content); match != nil {
+			t.Errorf("%s still offers a PR strategy group: %q", path, match[0])
 		}
-
 		mapping := canonicalMappingBlock(t, path, content)
-		for _, rawLabel := range strings.Split(labelMatch[1], ",") {
-			label := strings.TrimPrefix(strings.TrimSpace(rawLabel), "or ")
-			if label == "" {
-				continue
+		for _, label := range []string{"Ask me", "Single PR", "Auto", "Chained"} {
+			if value, mapped := mappedCanonicalValue(mapping, label); mapped {
+				t.Errorf("%s still maps the PR option %q to %q", path, label, value)
 			}
-
-			value, ok := mappedCanonicalValue(mapping, label)
-			if !ok {
-				t.Errorf("%s offers PR option %q but maps it to no canonical value", path, label)
-				continue
-			}
-			if !allowed[value] {
-				t.Errorf(
-					"%s maps PR option %q to %q, which is outside the delivery strategy domain %v declared by %v; "+
-						"the consumer branch list has no arm for it, so the orchestrator would pick a strategy freely",
-					path,
-					label,
-					value,
-					domain,
-					deliveryStrategySkillContracts,
-				)
+		}
+		block := preflightBlockOf(t, path, content)
+		for _, residue := range []string{"pr-strategy", "PR strategy", "ask-on-risk", "auto-chain", "exception-ok", "Review policy", "400"} {
+			if strings.Contains(block, residue) {
+				t.Errorf("%s still carries the retired preflight text %q", path, residue)
 			}
 		}
 	}
 }
 
-func TestSDDPreflightStrategyChoicesStayInsideConsumerDomain(t *testing.T) {
+// The delivery the preflight fixes must stay inside the domain the phase skills
+// declare, or the consumer branch list would have no arm for it.
+func TestSDDPreflightFixedDeliveryStaysInsideConsumerDomain(t *testing.T) {
 	domain := canonicalDeliveryStrategyDomain(t)
 	allowed := map[string]bool{}
 	for _, value := range domain {
 		allowed[value] = true
 	}
 
+	fixed := regexp.MustCompile("Delivery is never asked: it is always `([a-z][a-z0-9-]*)`")
 	checked := 0
 	for path, content := range preflightMappingSources(t) {
-		mapping := canonicalMappingBlock(t, path, content)
-		// Inspect every emitted mapping, including one accidentally added outside
-		// the declared UI choices. Pace/artifact mappings are not PR strategies.
-		start := strings.Index(mapping, "- Ask me ->")
-		if start < 0 {
-			t.Fatalf("%s missing PR strategy mappings", path)
+		match := fixed.FindStringSubmatch(preflightBlockOf(t, path, content))
+		if match == nil {
+			t.Errorf("%s does not state the delivery strategy it fixes", path)
+			continue
 		}
 		checked++
-
-		for _, span := range backtickSpan.FindAllStringSubmatch(mapping[start:], -1) {
-			for _, value := range splitDeclaredDomain(span[1]) {
-				if !canonicalValueShape.MatchString(value) {
-					continue
-				}
-				if !allowed[value] {
-					t.Errorf(
-						"%s declares chained PR strategy choice %q, which is outside the delivery strategy domain %v",
-						path,
-						value,
-						domain,
-					)
-				}
-			}
+		if !allowed[match[1]] {
+			t.Errorf("%s fixes the delivery strategy %q, which is outside the domain %v declared by %v", path, match[1], domain, deliveryStrategySkillContracts)
 		}
 	}
-
 	if checked == 0 {
-		t.Fatal("no preflight declares its chained PR strategy choices; the guard has lost its subject")
+		t.Fatal("no preflight states its fixed delivery strategy; the guard has lost its subject")
 	}
 }
 
-// reviewWorkloadGuardSections returns the Review Workload Guard body of every
-// shipped orchestrator, discovered by walking the embedded tree.
-func reviewWorkloadGuardSections(t *testing.T) map[string]string {
+// deliveryStrategySections returns the Delivery Strategy body of every shipped
+// orchestrator, rendered through the shared-section substitution and discovered
+// by walking the embedded tree.
+func deliveryStrategySections(t *testing.T) map[string]string {
 	t.Helper()
 
-	const heading = "### Review Workload Guard"
+	const heading = "### Delivery Strategy"
 	sections := map[string]string{}
 	err := fs.WalkDir(assets.FS, ".", func(path string, entry fs.DirEntry, walkErr error) error {
 		if walkErr != nil || entry.IsDir() || !strings.HasSuffix(path, ".md") {
 			return walkErr
 		}
 		content := assets.MustRead(path)
-		if strings.HasSuffix(path, "/sdd-orchestrator.md") {
+		if strings.HasSuffix(path, "/sdd-orchestrator.md") || strings.HasSuffix(path, "/sdd-orchestrator-workflow.md") {
 			content = substituteSharedOrchestratorSections(content)
 		}
 		start := strings.Index(content, heading)
@@ -292,18 +281,29 @@ func reviewWorkloadGuardSections(t *testing.T) map[string]string {
 		t.Fatalf("walk embedded assets: %v", err)
 	}
 	if len(sections) == 0 {
-		t.Fatal("no shipped orchestrator carries a Review Workload Guard; the guard has lost its subject")
+		t.Fatal("no shipped orchestrator carries a Delivery Strategy section; the guard has lost its subject")
 	}
 	return sections
 }
 
-// A branch list that silently drops an arm is the same defect seen from the
-// other side: a value the producer can emit that the consumer cannot match. The
-// domain is derived, so a typo in any arm shows up here as a missing arm.
-func TestSDDReviewWorkloadGuardsCoverTheWholeDeliveryStrategyDomain(t *testing.T) {
+// A section that silently drops a value is the same defect seen from the other
+// side: a value the producer can emit that the consumer cannot match. The domain
+// is derived from the phase skills, so a typo in the orchestrators shows up here
+// as a missing value. The legacy aliases are stated on their own with an arrow,
+// never with a pipe, so they cannot be mistaken for part of the domain.
+func TestSDDDeliveryStrategySectionsCoverTheWholeDomain(t *testing.T) {
 	domain := canonicalDeliveryStrategyDomain(t)
 
-	for path, section := range reviewWorkloadGuardSections(t) {
+	for path, section := range deliveryStrategySections(t) {
+		matches := deliveryDomainDeclaration.FindAllStringSubmatch(section, -1)
+		if len(matches) != 1 {
+			t.Errorf("%s Delivery Strategy must declare the domain exactly once as a backticked `a | b` list; found %d declarations", path, len(matches))
+			continue
+		}
+		if got := splitDeclaredDomain(matches[0][1]); strings.Join(got, "|") != strings.Join(domain, "|") {
+			t.Errorf("%s Delivery Strategy declares the domain %v, the phase skills declare %v", path, got, domain)
+		}
+
 		var missing []string
 		for _, value := range domain {
 			if !strings.Contains(section, "`"+value+"`") {
@@ -312,24 +312,29 @@ func TestSDDReviewWorkloadGuardsCoverTheWholeDeliveryStrategyDomain(t *testing.T
 		}
 		if len(missing) > 0 {
 			sort.Strings(missing)
-			t.Errorf(
-				"%s Review Workload Guard has no arm for delivery strategy %v; an unmatched value lets the orchestrator choose freely",
-				path,
-				missing,
-			)
+			t.Errorf("%s Delivery Strategy does not name delivery strategy %v; an unmatched value lets the orchestrator choose freely", path, missing)
+		}
+
+		for _, alias := range []string{"`ask-on-risk`", "`exception-ok`", "`auto-chain`"} {
+			if !strings.Contains(section, alias) {
+				t.Errorf("%s Delivery Strategy does not state the legacy alias %s", path, alias)
+			}
+		}
+		if !strings.Contains(section, "→") {
+			t.Errorf("%s Delivery Strategy states its legacy aliases without the → mapping", path)
 		}
 	}
 }
 
 // The vocabularies agreeing today does not stop a future typo from reintroducing
-// silent fallthrough. Every guard must say what happens to a value it does not
-// recognise instead of leaving the branch list open.
-func TestSDDReviewWorkloadGuardsRejectUnrecognisedDeliveryStrategy(t *testing.T) {
-	for path, section := range reviewWorkloadGuardSections(t) {
+// silent fallthrough. Every Delivery Strategy section must say what happens to a
+// value it does not recognise instead of leaving the choice open.
+func TestSDDDeliveryStrategySectionsRejectUnrecognisedValue(t *testing.T) {
+	for path, section := range deliveryStrategySections(t) {
 		if !strings.Contains(section, "Any other `delivery_strategy` value is invalid") {
 			t.Errorf(
-				"%s Review Workload Guard does not say what to do with an unrecognised `delivery_strategy`; "+
-					"a bare branch list falls through silently",
+				"%s Delivery Strategy does not say what to do with an unrecognised `delivery_strategy`; "+
+					"an open list falls through silently",
 				path,
 			)
 		}
@@ -380,67 +385,11 @@ func TestInjectOpenCodeMigratesRetiredDeliveryStrategyMapping(t *testing.T) {
 			t.Errorf("opencode.json kept retired delivery strategy value %q after sync", retired)
 		}
 	}
-	if !strings.Contains(text, "Ask me -> `ask-on-risk`") {
-		t.Error("opencode.json did not receive the corrected delivery strategy mapping")
+	if strings.Contains(text, "Ask me ->") || !strings.Contains(text, "Delivery is never asked: it is always `single-pr`") {
+		t.Error("opencode.json did not receive the preflight without a delivery strategy mapping")
 	}
 	if !strings.Contains(text, "# Custom prompt") {
 		t.Error("migration discarded the user's own prompt content")
-	}
-}
-
-// `Chained` was retired from the preflight PR question. Chaining is not a mode
-// an operator can force: `delivery_strategy` is read only after the tasks
-// Review Workload Forecast crosses the review-budget line, so below that line
-// there is nothing to chain, and above it `Auto` already resolves to
-// `auto-chain` without asking again. The label therefore promised control the
-// design does not offer, and it collided with the pace question's `Automatic`.
-// Only the label is retired; `auto-chain` stays canonical, which the companion
-// guard below pins.
-func TestSDDPreflightNoLongerOffersRetiredChainedPRLabel(t *testing.T) {
-	const retired = "Chained"
-
-	for path, content := range preflightMappingSources(t) {
-		labelMatch := preflightPRGroupLabels.FindStringSubmatch(content)
-		if labelMatch == nil {
-			t.Fatalf("%s carries a canonical mapping but no `3. PRs: ...` option list to check", path)
-		}
-
-		for _, rawLabel := range strings.Split(labelMatch[1], ",") {
-			if strings.TrimPrefix(strings.TrimSpace(rawLabel), "or ") != retired {
-				continue
-			}
-			t.Errorf(
-				"%s still offers the retired PR option %q; chaining is decided by the tasks review-budget forecast, "+
-					"not by this preference, so the option promises control the preflight cannot deliver",
-				path,
-				retired,
-			)
-		}
-
-		if _, mapped := mappedCanonicalValue(canonicalMappingBlock(t, path, content), retired); mapped {
-			t.Errorf("%s still maps the retired PR option %q to a canonical value", path, retired)
-		}
-	}
-}
-
-// Removing a label must not remove a canonical value. `auto-chain` is still in
-// the consumer domain and `Auto` is still the label that produces it; a guard
-// that only checked for the absence of `Chained` would pass on a preflight that
-// dropped auto-chaining altogether.
-func TestSDDPreflightAutoStillProducesAutoChain(t *testing.T) {
-	for path, content := range preflightMappingSources(t) {
-		value, mapped := mappedCanonicalValue(canonicalMappingBlock(t, path, content), "Auto")
-		if !mapped {
-			t.Errorf("%s no longer maps the PR option \"Auto\" to any canonical value", path)
-			continue
-		}
-		if value != "auto-chain" {
-			t.Errorf(
-				"%s maps PR option \"Auto\" to %q; retiring the `Chained` label must not retire the `auto-chain` canonical value",
-				path,
-				value,
-			)
-		}
 	}
 }
 
@@ -507,11 +456,11 @@ func TestInjectOpenCodeMigratesRetiredChainedPRPreflightOption(t *testing.T) {
 			t.Errorf("opencode.json kept retired preflight fragment %q after sync", residue)
 		}
 	}
-	if !strings.Contains(text, "- **PR strategy** (`pr-strategy`): Ask me, Single PR, or Auto.") {
-		t.Error("opencode.json did not receive the canonical three-option PR preflight list")
+	if strings.Contains(text, "PR strategy") || strings.Contains(text, "auto-chain") || strings.Contains(text, "Auto ->") {
+		t.Error("opencode.json kept the PR strategy group after the migration; the preflight no longer offers it")
 	}
-	if !strings.Contains(text, "Auto -> `auto-chain`") {
-		t.Error("opencode.json lost the `auto-chain` canonical value; only the `Chained` label was retired")
+	if !strings.Contains(text, "Delivery is never asked: it is always `single-pr`") {
+		t.Error("opencode.json did not receive the fixed delivery text")
 	}
 	if !strings.Contains(text, "# Custom prompt") {
 		t.Error("migration discarded the user's own prompt content")

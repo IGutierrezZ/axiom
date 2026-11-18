@@ -25,7 +25,6 @@ var orchestratorSectionDriftRatchet = []struct {
 }{
 	{"Delegation Rules", 11},
 	{"Execution Mode", 9},
-	{"Review Workload Guard (MANDATORY)", 10},
 	{"State and Conventions", 10},
 	{"Automatic Mode Gatekeeper (MANDATORY)", 8},
 	{"Commands", 8},
@@ -34,10 +33,14 @@ var orchestratorSectionDriftRatchet = []struct {
 	{"SDD Init Guard (MANDATORY)", 6},
 	{"Agent Teams Orchestrator", 6},
 	{"Chain Strategy", 6},
-	{"Delivery Strategy", 4},
+	{"Delivery Strategy", 1},
 	{"Lossless Blocking Prompts (MANDATORY)", 4},
 	{"Artifact Store Policy", 3},
-	{"Result Contract", 3},
+	// single-pr (C-02-c): retiring `Review Workload Guard` left the marker blocks that followed it
+	// (`gentle-ai:sdd-model-assignments`, `section:model-capable`) trailing `Result Contract`, which the
+	// heading-based measure counts as a fourth body. No body was edited: it is a layout artifact of
+	// deleting the section, not drift between runtimes.
+	{"Result Contract", 4},
 	{"Dependency Graph", 2},
 	{"Language Domain Contract", 2},
 	{"Recovery Rule", 1},

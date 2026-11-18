@@ -48,7 +48,7 @@ Naming convention: `axiom-*` skills are repo-specific workflow skills. Unprefixe
 | `axiom-branch-pr` | Create Axiom pull requests. Trigger: creating, opening, or preparing PRs for review. | project | `skills/branch-pr/SKILL.md` |
 | `axiom-go-table-tests` | Pruebas unitarias tabulares en Go con structs anónimos y subpruebas t.Run. Trigger: Al crear o modificar suites *_test.go en paquetes Go. | project | `skills/axiom-go-table-tests/SKILL.md` |
 | `axiom-idiomatic-error-wrapping` | Errores envueltos con fmt.Errorf y %w para conservar la causa raíz. Trigger: Al capturar, propagar o formatear errores en paquetes Go. | project | `skills/axiom-idiomatic-error-wrapping/SKILL.md` |
-| `chained-pr` | Trigger: PRs over 400 lines, stacked PRs, review slices. Split oversized changes into chained PRs that protect review focus. | project | `internal/assets/skills/chained-pr/SKILL.md` |
+| `chained-pr` | Trigger: the person asks to chain, stack, or slice pull requests, or delivery_strategy is chained. Plan chained PRs that keep each review focused. | project | `internal/assets/skills/chained-pr/SKILL.md` |
 | `cognitive-doc-design` | Design docs that reduce cognitive load. Trigger: writing guides, READMEs, RFCs, onboarding, architecture, or review-facing docs. | project | `skills/cognitive-doc-design/SKILL.md` |
 | `comment-writer` | Write warm, direct collaboration comments. Trigger: PR feedback, issue replies, reviews, Slack messages, or GitHub comments. | project | `skills/comment-writer/SKILL.md` |
 | `go-testing` | Trigger: Go tests, go test coverage, Bubbletea teatest, golden files. Apply focused Go testing patterns. | project | `internal/assets/skills/go-testing/SKILL.md` |

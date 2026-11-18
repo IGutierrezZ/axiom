@@ -64,6 +64,18 @@ workspace:
 #   lane: ask
 
 # ------------------------------------------------------------------------------
+# Aviso de Cambio Grande (opcional)
+# ------------------------------------------------------------------------------
+# Umbral del aviso único y no bloqueante de cambio grande: cuando la previsión de
+# líneas cambiadas de un cambio supera 'split_hint_lines', el agente avisa una vez
+# de que la persona puede pedir PRs encadenadas y continúa sin esperar respuesta.
+# Está desactivado por defecto: sin este bloque, o sin la clave, no hay aviso y no
+# se cita ningún número. El valor debe ser un entero sin comillas mayor que cero y
+# una clave desconocida es un error. El aviso nunca bloquea el trabajo.
+# delivery:
+#   split_hint_lines: 600
+
+# ------------------------------------------------------------------------------
 # Modo ISO (opcional)
 # ------------------------------------------------------------------------------
 # Un proyecto sometido a auditoría ISO declara que solo usa SDD:

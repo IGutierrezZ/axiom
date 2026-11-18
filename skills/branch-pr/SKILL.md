@@ -20,10 +20,9 @@ Load this skill whenever you need to:
 
 1. **Ordinary `type:*` categorization** — CI rejects zero or multiple type labels. Route it through the canonical issue-creation workflow contract: a current direct human instruction binds the exact target/action, target-host capability is verified, and it uses one bounded mutation and target-host readback; otherwise wait without mutation.
 2. **Protected policy labels** — Adding or removing `size:exception` requires verified policy authority from a target-host repository maintainer or repository-authorized approver for the exact target/action, plus authenticated actor target-host `viewerPermission` `MAINTAIN` or `ADMIN`. `size:exception` additionally requires documented over-budget rationale.
-3. **400-line review budget** — keep PRs within 400 changed lines (`additions + deletions`) or document the rationale required for a `size:exception` label.
-4. **Automated checks must pass** — see the Automated Checks table below.
-5. **No `Co-Authored-By` trailers** — never add AI attribution to commits.
-6. **No force-push to main/master** — protected branch.
+3. **Automated checks must pass** — see the Automated Checks table below.
+4. **No `Co-Authored-By` trailers** — never add AI attribution to commits.
+5. **No force-push to main/master** — protected branch.
 
 ## Workflow
 
@@ -123,7 +122,6 @@ cd e2e && ./docker-test.sh
 
 ## ✅ Contributor Checklist
 
-- [ ] PR stays within 400 changed lines, or the `size:exception` rationale and verified policy authority are documented
 - [ ] API read-back confirms exactly one appropriate `type:*` label on this PR
 - [ ] Unit tests pass (`go test ./...`)
 - [ ] E2E tests pass (`cd e2e && ./docker-test.sh`)
@@ -140,7 +138,7 @@ These checks run on every PR and **all must pass** before merge:
 
 | Check | What It Verifies | How to Fix |
 |-------|-----------------|------------|
-| **Check PR Cognitive Load** | PR stays within 400 changed lines (`additions + deletions`) or has `size:exception` | Split the PR, or document the `size:exception` rationale and verify policy authority before its canonical workflow action |
+| **Check PR Cognitive Load** | PR meets the repository's size policy or has `size:exception` | Follow the repository's size policy: split the PR, or document the `size:exception` rationale and verify policy authority before its canonical workflow action |
 | **Check PR Has `type:*` Label** | Exactly one `type:*` label is applied to the PR | Use the canonical issue-creation workflow contract only when a current direct instruction and target-host capability authorize the exact action; otherwise wait |
 | **Unit Tests** | `go test ./...` passes | Fix failing tests before pushing |
 | **Go Format** | `go run ./internal/gofmtcheck` passes | Format malformed Go files before pushing |
@@ -271,7 +269,6 @@ Fixes Claude Code binary detection failing on Linux when HOME is not set.
 
 ## ✅ Contributor Checklist
 
-- [x] PR stays within 400 changed lines, or the \`size:exception\` rationale and verified policy authority are documented
 - [x] API read-back confirms exactly one appropriate \`type:*\` label on this PR
 - [x] Unit tests pass (\`go test ./...\`)
 - [x] E2E tests pass (\`cd e2e && ./docker-test.sh\`)

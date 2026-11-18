@@ -147,7 +147,7 @@ func TestSDDPreflightHookAllowsCorroboratedCanonicalPreflight(t *testing.T) {
 	}
 	updated := specific["updatedInput"].(map[string]any)
 	prompt := updated["prompt"].(string)
-	for _, want := range []string{"## SDD Session Preflight", "- Pace: auto", "- Artifact store: hybrid", "- Delivery strategy: ask-on-risk", "- Review policy: 400 changed lines", "Explore the request"} {
+	for _, want := range []string{"## SDD Session Preflight", "- Pace: auto", "- Artifact store: hybrid", "- Delivery strategy: single-pr", "Explore the request"} {
 		if !strings.Contains(prompt, want) {
 			t.Fatalf("prompt missing %q: %s", want, prompt)
 		}
@@ -277,7 +277,7 @@ func TestSDDPreflightHookLastAnswerWins(t *testing.T) {
 	specific := got["hookSpecificOutput"].(map[string]any)
 	updated := specific["updatedInput"].(map[string]any)
 	prompt := updated["prompt"].(string)
-	if !strings.Contains(prompt, "- Pace: interactive") || !strings.Contains(prompt, "- Artifact store: hybrid") || !strings.Contains(prompt, "- Delivery strategy: auto-chain") {
+	if !strings.Contains(prompt, "- Pace: interactive") || !strings.Contains(prompt, "- Artifact store: hybrid") || !strings.Contains(prompt, "- Delivery strategy: single-pr") {
 		t.Fatalf("last answer did not win: %s", prompt)
 	}
 }
@@ -502,7 +502,7 @@ func TestSDDPreflightHookBindsAnswersByLabelNotPosition(t *testing.T) {
 
 	sessionID := "sess-label"
 	want := allowedSDDPreflightPrompt(t, preToolUseAgentPayload(sessionID, writeSDDPreflightRawTranscript(t, sessionID, canonical, testSDDPreflightAnswersAutomatic), "sdd-apply", "Apply", ""))
-	for _, line := range []string{"- Pace: auto", "- Artifact store: hybrid", "- Delivery strategy: ask-on-risk"} {
+	for _, line := range []string{"- Pace: auto", "- Artifact store: hybrid", "- Delivery strategy: single-pr"} {
 		if !strings.Contains(want, line) {
 			t.Fatalf("canonical prompt missing %q: %s", line, want)
 		}
@@ -755,7 +755,7 @@ func TestSDDPreflightHookIgnoresIndependentReviewPreferenceInteraction(t *testin
 		t.Fatalf("decision = %#v", specific)
 	}
 	prompt := specific["updatedInput"].(map[string]any)["prompt"].(string)
-	for _, want := range []string{"- Pace: auto", "- Artifact store: hybrid", "- Delivery strategy: ask-on-risk", "- Review policy: 400 changed lines"} {
+	for _, want := range []string{"- Pace: auto", "- Artifact store: hybrid", "- Delivery strategy: single-pr"} {
 		if !strings.Contains(prompt, want) {
 			t.Fatalf("la autoridad del pre-vuelo cambió: falta %q en %s", want, prompt)
 		}
@@ -785,14 +785,14 @@ func TestSDDPreflightHookDenialNamesTheCause(t *testing.T) {
 		{
 			name:      "free text outside the domain",
 			questions: []string{pace, artifacts, pr},
-			answers:   answers("Automatic", "Both", "un pr con size expection"),
-			want:      `SDD preflight question pr-strategy (PR strategy) answer \"un pr con size expection\" is not one of its labels: Ask me, Single PR, Auto`,
+			answers:   answers("un pr con size expection", "Both", "Auto"),
+			want:      `SDD preflight question pace (Pace) answer \"un pr con size expection\" is not one of its labels: Interactive, Automatic`,
 		},
 		{
 			name:      "a required group is missing",
-			questions: []string{pace, artifacts},
+			questions: []string{artifacts, pr},
 			answers:   answers("Automatic", "Both", "Auto"),
-			want:      `topology monorepo-embedded requires the SDD preflight group pr-strategy (PR strategy), but no question starts with its \"Axiom SDD preflight pr-strategy:\" marker`,
+			want:      `topology monorepo-embedded requires the SDD preflight group pace (Pace), but no question starts with its \"Axiom SDD preflight pace:\" marker`,
 		},
 		{
 			name:      "a group is repeated",
@@ -802,27 +802,27 @@ func TestSDDPreflightHookDenialNamesTheCause(t *testing.T) {
 		},
 		{
 			name:      "an option is renamed",
-			questions: []string{pace, artifacts, testSDDPreflightQuestion("PR strategy", testSDDPreflightPRQuestion, "Ask me", "Single PR", "Chain")},
+			questions: []string{testSDDPreflightQuestion("Pace", testSDDPreflightPaceQuestion, "Interactive", "Chain"), artifacts, pr},
 			answers:   answers("Automatic", "Both", "Auto"),
-			want:      `SDD preflight question pr-strategy (PR strategy) offers option \"Chain\", which is not one of its labels: Ask me, Single PR, Auto`,
+			want:      `SDD preflight question pace (Pace) offers option \"Chain\", which is not one of its labels: Interactive, Automatic`,
 		},
 		{
 			name:      "an option is dropped",
-			questions: []string{pace, artifacts, testSDDPreflightQuestion("PR strategy", testSDDPreflightPRQuestion, "Ask me", "Auto")},
+			questions: []string{testSDDPreflightQuestion("Pace", testSDDPreflightPaceQuestion, "Automatic"), artifacts, pr},
 			answers:   answers("Automatic", "Both", "Auto"),
-			want:      "SDD preflight question pr-strategy (PR strategy) must offer every one of its labels: Ask me, Single PR, Auto",
+			want:      "SDD preflight question pace (Pace) must offer every one of its labels: Interactive, Automatic",
 		},
 		{
 			name:      "an option is repeated",
-			questions: []string{pace, artifacts, testSDDPreflightQuestion("PR strategy", testSDDPreflightPRQuestion, "Ask me", "Single PR", "single pr (Recommended)")},
+			questions: []string{testSDDPreflightQuestion("Pace", testSDDPreflightPaceQuestion, "Interactive", "Automatic", "interactive (Recommended)"), artifacts, pr},
 			answers:   answers("Automatic", "Both", "Auto"),
-			want:      `SDD preflight question pr-strategy (PR strategy) offers \"Single PR\" more than once`,
+			want:      `SDD preflight question pace (Pace) offers \"Interactive\" more than once`,
 		},
 		{
 			name:      "an answer is missing",
 			questions: []string{pace, artifacts, pr},
-			answers:   `{` + jsonStr(testSDDPreflightPaceQuestion) + `:"Automatic",` + jsonStr(testSDDPreflightArtifactQuestion) + `:"Both"}`,
-			want:      "SDD preflight question pr-strategy (PR strategy) has no answer",
+			answers:   `{` + jsonStr(testSDDPreflightArtifactQuestion) + `:"Both",` + jsonStr(testSDDPreflightPRQuestion) + `:"Auto"}`,
+			want:      "SDD preflight question pace (Pace) has no answer",
 		},
 	}
 	for _, tc := range cases {
@@ -843,7 +843,7 @@ func TestSDDPreflightHookDenialNamesTheCause(t *testing.T) {
 			isError    bool
 		}{
 			{toolUseID: "toolu-1", answersRaw: testSDDPreflightAnswersAutomatic},
-			{toolUseID: "toolu-2", answersRaw: answers("Automatic", "Both", "something else")},
+			{toolUseID: "toolu-2", answersRaw: answers("something else", "Both", "Auto")},
 		})
 		if prompt := allowedSDDPreflightPrompt(t, preToolUseAgentPayload(sessionID, transcript, "sdd-apply", "Apply", "")); !strings.Contains(prompt, "- Artifact store: hybrid") {
 			t.Fatalf("the earlier valid preflight must still authorize: %s", prompt)
@@ -857,7 +857,7 @@ func TestSDDPreflightHookDenialNamesTheCause(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if strings.Contains(out, "was rejected") || !strings.Contains(out, "Ask the SDD preflight groups that topology `monorepo-embedded` requires (`pace`, `pr-strategy`) with AskUserQuestion") {
+		if strings.Contains(out, "was rejected") || !strings.Contains(out, "Ask the SDD preflight groups that topology `monorepo-embedded` requires (`pace`) with AskUserQuestion") {
 			t.Fatalf("a missing preflight must keep the generic denial: %s", out)
 		}
 	})

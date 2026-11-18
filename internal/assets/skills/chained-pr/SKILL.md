@@ -1,6 +1,6 @@
 ---
 name: chained-pr
-description: "Trigger: PRs over 400 lines, stacked PRs, review slices. Split oversized changes into chained PRs that protect review focus."
+description: "Trigger: the person asks to chain, stack, or slice pull requests, or delivery_strategy is chained. Plan chained PRs that keep each review focused."
 license: Apache-2.0
 metadata:
   author: gentleman-programming
@@ -9,13 +9,13 @@ metadata:
 
 ## Activation Contract
 
-Load this skill when a planned PR may exceed **400 changed lines**, SDD forecasts `400-line budget risk: High` or `Chained PRs recommended: Yes`, or the user asks for chained/stacked PRs, review slices, or reviewer-load control.
+Load this skill only when the person asks to chain, stack, or slice pull requests, or when `delivery_strategy` is `chained`. Without that request a change ships as one pull request (`single-pr`) and this skill does not apply.
 
 ## Hard Rules
 
-- Split PRs over **400 changed lines** unless a maintainer explicitly accepts `size:exception`.
-- The budget constrains how work is **sliced**, never the code itself. Never delete comments, blank lines, docs, or tests, and never compress or restyle code, to fit under the budget.
-- Slicing is bounded: make **one** honest slicing pass. If no cohesive split brings every slice within budget, stop iterating, keep the best cohesive split, and report the final line count with a `size:exception` recommendation.
+- Chaining is opt-in: never propose or start it on your own because of the size of a change.
+- Slicing constrains how work is **split**, never the code itself. Never delete comments, blank lines, docs, or tests, and never compress or restyle code to make a slice look smaller.
+- Slicing is bounded: make **one** honest slicing pass and keep the best cohesive split; do not iterate on the split.
 - Keep each PR reviewable in about **≤60 minutes**.
 - Use one deliverable work unit per PR; keep tests/docs with the unit they verify.
 - State start, end, prior dependencies, follow-up work, and out-of-scope items in every chained PR.
@@ -28,17 +28,17 @@ Load this skill when a planned PR may exceed **400 changed lines**, SDD forecast
 
 | Condition | Action |
 |---|---|
-| PR ≤400 changed lines and focused | Keep single PR. |
-| PR >400, each slice can land independently | Use Stacked PRs to main. |
-| PR >400, feature must integrate before main | Use Feature Branch Chain with tracker. |
-| Generated/vendor/migration diff cannot split cleanly | Ask maintainer for `size:exception`. |
-| No cohesive split fits the budget after one slicing pass | Stop; deliver the best split, report the overage and why it cannot shrink further, and recommend `size:exception`. |
-| SDD provides `delivery_strategy` | Follow it before apply/PR creation. |
+| The person did not ask to chain | Keep a single PR with one work-unit commit per task. |
+| Chaining requested, each slice can land independently | Use Stacked PRs to main. |
+| Chaining requested, feature must integrate before main | Use Feature Branch Chain with tracker. |
+| Generated/vendor/migration diff cannot split cleanly | Keep that part in one slice and say why. |
+| No cohesive split exists after one slicing pass | Stop; deliver the best split and report why it cannot be split further. |
+| When `delivery_strategy` is `chained`, SDD provides it | Follow it before apply/PR creation. |
 
 ## Execution Steps
 
-1. Estimate changed lines and identify independent work units.
-2. Ask for a chain strategy when none is cached and the budget is exceeded.
+1. Identify independent work units.
+2. Ask for a chain strategy when none was named or cached.
 3. Create branches/PRs using the chosen strategy only.
 4. Add Chain Context to each PR without replacing the repo PR template.
 5. Verify each PR independently: CI/tests/docs/manual checks, rollback scope, and clean diff.
@@ -46,7 +46,7 @@ Load this skill when a planned PR may exceed **400 changed lines**, SDD forecast
 
 ## Output Contract
 
-Return the chosen strategy, PR order, current PR boundary, dependency diagram, review budget (`additions + deletions`), verification plan, and any `size:exception` rationale.
+Return the chosen strategy, PR order, current PR boundary, dependency diagram, verification plan, and the reason for any slice that could not be split further.
 
 ## References
 

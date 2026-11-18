@@ -16,7 +16,7 @@ await reject(()=>hooks['execute.before'](request()),'missing preflight accepted'
 const question={tool:'question',sessionID:'root',id:'q',input:{questions:[{question:'Gentle AI SDD preflight 1/3: Pace?',options:[]},{question:'Axiom SDD preflight pr-strategy: PR?',options:[]}]}};
 await hooks['execute.before'](question);
 await reject(()=>hooks['execute.after']({...question,status:'completed',result:{output:{answers:[['please proceed'],['Auto']]}}}),'free text accepted');
-for(const answers of [[['Automatic','Interactive'],['Auto']],[['Automátic'],['Auto']],[['Automatic']]]) {
+for(const answers of [[['Automatic','Interactive'],['Auto']],[['Automátic'],['Auto']],[[]]]) {
  await reject(()=>hooks['execute.after']({...question,status:'completed',result:{output:{answers}}}),'non-exact domain accepted');
 }
 await hooks['execute.after']({...question,status:'completed',result:{output:{answers:[[' Automatic '],['Auto']]}}});
@@ -52,10 +52,13 @@ for(const prefix of ['Gentle AI SDD preflight','Axiom SDD preflight']){
  const sessionID='root-'+prefix.split(' ')[0];
  const request=()=>({tool:'subagent',sessionID,id:'call',input:{agent:'sdd-apply',prompt:'Implement approved tasks',description:'Apply'}});
  await reject(()=>hooks['execute.before'](request()),'missing preflight accepted for '+prefix);
- // Marcadores numerados heredados: se reescriben al marcador nominal con el prefijo Axiom.
+ // Marcadores numerados heredados: el del ritmo se reescribe al marcador nominal con el prefijo Axiom; el de
+ // la estrategia de PR, grupo retirado, se ignora sin tocarlo.
  const question={tool:'question',sessionID,id:'q',input:{questions:[{question:prefix+' 1/3: Pace?',options:[]},{question:prefix+' 3/3: PR?',options:[]}]}};
  await hooks['execute.before'](question);
- for(const [index,q] of question.input.questions.entries()){if(!q.question.startsWith('Axiom SDD preflight '+['pace','pr-strategy'][index]+': '))throw Error('marker not canonicalized for '+prefix+': '+q.question)}
+ const [pace,retired]=question.input.questions;
+ if(!pace.question.startsWith('Axiom SDD preflight pace: '))throw Error('marker not canonicalized for '+prefix+': '+pace.question);
+ if(!retired.question.startsWith(prefix+' 3/3: '))throw Error('retired group question was touched for '+prefix+': '+retired.question)
  await hooks['execute.after']({...question,status:'completed',result:{output:{answers:[['Automatic'],['Auto']]}}});
  const call=request();await hooks['execute.before'](call);
  if(!call.input.prompt.startsWith('## SDD Session Preflight'))throw Error('authority missing for '+prefix);

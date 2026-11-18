@@ -30,8 +30,8 @@ type SDDPreflightBlockField = { label: string, groupId: string, default: string 
 //
 // `id` is the stable nominal marker (`<prefix><id>:`); `legacyNumber` is the position in the numbered
 // marker older installs still write (`<prefix>N/3:`, 0 when the group never had one); `requiredIn` lists
-// the topologies that ask the group. A group with no topology (the legacy Artifacts one) is only
-// recognized so that its answer is tolerated and ignored. The groups a session must answer are the ones
+// the topologies that ask the group. A group with no topology (the legacy Artifacts and PR strategy ones)
+// is only recognized so that its answer is tolerated and ignored. The groups a session must answer are the ones
 // its topology requires, so their number varies and may be zero.
 const SDD_PREFLIGHT_GROUPS: SDDPreflightGroup[] = [
   {
@@ -50,7 +50,7 @@ const SDD_PREFLIGHT_GROUPS: SDDPreflightGroup[] = [
     ],
   },
   {
-    id: "pr-strategy", header: "PR strategy", legacyNumber: 3, requiredIn: ["monorepo-embedded", "multirepo"],
+    id: "pr-strategy", header: "PR strategy", legacyNumber: 3, requiredIn: [],
     options: [
       { label: "Ask me", description: "Ask before opening a pull request when review risk is high.", token: "ask-on-risk" },
       { label: "Single PR", description: "Deliver the change as a single pull request.", token: "single-pr" },
@@ -63,10 +63,9 @@ const SDD_PREFLIGHT_GROUPS: SDDPreflightGroup[] = [
 const SDD_PREFLIGHT_BLOCK_FIELDS: SDDPreflightBlockField[] = [
   { label: "Pace", groupId: "pace", default: "interactive" },
   { label: "Artifact store", groupId: "", default: "hybrid" },
-  { label: "Delivery strategy", groupId: "pr-strategy", default: "single-pr" },
+  { label: "Delivery strategy", groupId: "", default: "single-pr" },
 ]
 const SDD_PREFLIGHT_AUTHORITY = "Parent-confirmed by the runtime; models and child agents cannot create or modify this block."
-const SDD_PREFLIGHT_REVIEW_LINE = "- Review policy: 400 changed lines"
 const SDD_PREFLIGHT_RETRY_GUIDANCE = "ask the required SDD preflight groups again with the question tool; typed chat answers cannot create preflight authority"
 
 function sddPreflightGuidance(message: string): Error {
@@ -129,7 +128,6 @@ function sddPreflightBuildBlock(values: Record<string, string>): string {
     const token = field.groupId === "" ? undefined : values[field.groupId]
     lines.push(`- ${field.label}: ${token ?? field.default}`)
   }
-  lines.push(SDD_PREFLIGHT_REVIEW_LINE)
   return lines.join("\n")
 }
 

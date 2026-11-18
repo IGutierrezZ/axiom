@@ -12,10 +12,10 @@ CONTEXT:
 
 HARD GATES:
 
-1. SDD Session Preflight must already be complete for this session. It must include execution mode, artifact store, chained PR strategy, and review budget. If missing, ask the exact orchestrator preflight prompt and STOP. Do not start onboarding in the same turn.
+1. SDD Session Preflight must already be complete for this session: the pace the topology asks (the artifact store is always `hybrid` and delivery is `single-pr` unless the person asks for chained PRs). If missing, ask the exact orchestrator preflight prompt and STOP. Do not start onboarding in the same turn.
 2. Use the resolved artifact store from session preflight; do not hardcode Engram.
 
 TASK:
-If all gates pass, launch the hidden `sdd-onboard` sub-agent to guide the user through a real SDD cycle. Keep user-facing pauses in interactive mode and enforce the review budget before apply.
+If all gates pass, launch the hidden `sdd-onboard` sub-agent to guide the user through a real SDD cycle. Keep user-facing pauses in interactive mode.
 
 Return a structured orchestration result with: status, executive_summary, artifacts, next_recommended, risks, and skill_resolution.

@@ -104,20 +104,9 @@ var currentOpenCodeOrchestratorSections = []orchestratorContractSection{
 		name:   "delivery strategy",
 		marker: "### Delivery Strategy",
 		sentinels: []string{
-			"`ask-on-risk`",
-			"`auto-chain`",
 			"`single-pr`",
-			"`exception-ok`",
-			"Pass it as `delivery_strategy`",
-		},
-	},
-	{
-		name:   "review workload guard",
-		marker: "### Review Workload Guard (MANDATORY)",
-		sentinels: []string{
-			"Chained PRs recommended: Yes",
-			"size:exception",
-			"Do this even in Automatic mode",
+			"`chained`",
+			"Pass the resolved `delivery_strategy`",
 		},
 	},
 	{
