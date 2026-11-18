@@ -354,7 +354,7 @@ func (d *doneRun) branch(repository doneRepository, planned branch.BranchPlan) (
 	}
 	layer, confirmed := branch.ConfirmMerge(planned.Kind, evidence, request.Force)
 	if !confirmed {
-		return keep(branch.MergeNotConfirmed(request.Change, request.CWD, request.Lane, repo, planned, targets))
+		return keep(branch.MergeNotConfirmed(request.Change, request.CWD, request.Lane, repo, planned, planned.PRTarget, targets))
 	}
 	described.SetConfirmedBy(layer)
 	// La punta, antes de borrar nada: sin fusión confirmada es lo único que permite recuperar la rama.

@@ -21,21 +21,29 @@ func repeatContinuation(operation, change, master string) string {
 // BaseNotFound es el rechazo `base_not_found` (REQ-25.10): el repositorio no tiene la
 // referencia de la que saldrían las ramas del cambio. Con `--base` fijada, nombra esa
 // referencia; si no, la rama de integración que resuelve la política, que no existe ni
-// en local ni como referencia remota local. Un repositorio sin commits cae aquí.
+// en local ni como referencia remota local. Un repositorio sin commits cae aquí. En un
+// repositorio de dos etapas en modo `branch`, la base es la rama principal y el rechazo la nombra
+// junto con `git.main_branch`.
 func BaseNotFound(operation, change, master string, repo RepoPlan) *Refusal {
 	expected := repo.IntegrationBranch
 	message := fmt.Sprintf("no existe la rama de integración «%s» del repositorio %s (%s) ni en local ni como referencia remota local origin/%s: no hay base desde la que crear las ramas del cambio",
 		expected, repo.Name, repo.GitRoot, expected)
+	setting := "git.integration_branch"
+	if expected = repo.Base(); expected != repo.IntegrationBranch {
+		setting = "git.main_branch"
+		message = fmt.Sprintf("no existe la rama principal «%s» (git.main_branch) del repositorio %s (%s) ni en local ni como referencia remota local origin/%s: no hay base desde la que crear las ramas del cambio en modo de promoción %s",
+			expected, repo.Name, repo.GitRoot, expected, PromotionBranch)
+	}
 	if repo.BaseRef != "" {
-		expected = repo.BaseRef
+		expected, setting = repo.BaseRef, "git.integration_branch"
 		message = fmt.Sprintf("la base «%s» fijada para el cambio no existe en el repositorio %s (%s): no hay base desde la que crear las ramas del cambio",
 			expected, repo.Name, repo.GitRoot)
 	}
 	return &Refusal{
 		Code:    CodeBaseNotFound,
 		Message: message,
-		Continuation: fmt.Sprintf("crea la rama «%s» en el repositorio (por ejemplo, `git -C %s branch %s <commit>`; un repositorio sin commits necesita antes el primero) o corrige git.integration_branch en axiom.yaml, y repite `%s`",
-			expected, pathquote.Quote(repo.GitRoot), expected, repeatContinuation(operation, change, master)),
+		Continuation: fmt.Sprintf("crea la rama «%s» en el repositorio (por ejemplo, `git -C %s branch %s <commit>`; un repositorio sin commits necesita antes el primero) o corrige %s en axiom.yaml, y repite `%s`",
+			expected, pathquote.Quote(repo.GitRoot), expected, setting, repeatContinuation(operation, change, master)),
 		Details: map[string]string{"repository": repo.GitRoot, "branch": expected},
 	}
 }
@@ -120,21 +128,19 @@ func PlannedPathConflict(operation, change, master, name, worktree, message, fix
 // modeInvocation es la orden de `ensure` que da una respuesta de modo. cwd es el directorio de
 // partida; el carril `sdd`, el de por defecto, no se repite.
 func modeInvocation(operation, change, cwd string, lane Lane, mode Mode) string {
-	laneFlag := ""
-	if lane == LaneODD {
-		laneFlag = " --lane " + string(lane)
-	}
-	return fmt.Sprintf("axiom branch %s --change %s%s --mode %s --cwd %s", operation, change, laneFlag, mode, pathquote.Quote(cwd))
+	return EnsureArgs{Operation: operation, Change: change, CWD: cwd, Lane: lane, Mode: mode}.Invocation()
 }
 
 // DecisionRequired es el resultado `decision_required` de un proyecto en modo `ask` cuyo
 // cambio no tiene respuesta registrada (REQ-25.8): no se ha creado nada, ni siquiera el
 // registro, y `ensure` no espera entrada. La decisión lleva las dos respuestas posibles, cada
 // una con la orden que la da; quien invoca (una skill, el dashboard) presenta la pregunta y
-// repite `ensure` con `--mode`.
-func DecisionRequired(operation, change, cwd string, lane Lane) *Refusal {
-	worktree := modeInvocation(operation, change, cwd, lane, ModeWorktree)
-	inPlace := modeInvocation(operation, change, cwd, lane, ModeInPlace)
+// repite `ensure` con `--mode`. args conserva en las invocaciones las excepciones, los `--repo` y
+// los `--promotion` de la invocación original.
+func DecisionRequired(args EnsureArgs) *Refusal {
+	change := args.Change
+	worktree := args.withMode(ModeWorktree).Invocation()
+	inPlace := args.withMode(ModeInPlace).Invocation()
 	return &Refusal{
 		Code:    CodeDecisionRequired,
 		Message: fmt.Sprintf("el modo de trabajo del proyecto es «%s» y el cambio %s no tiene respuesta registrada: no se ha creado nada ni se ha escrito el registro", Label(string(ModeAsk)), change),

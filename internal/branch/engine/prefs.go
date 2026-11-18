@@ -120,7 +120,7 @@ func resolveMode(operation string, r EnsureRequest, facts changeFacts) (workMode
 		return workMode{mode: r.Mode, source: source}, nil
 	}
 	if prefs.mode == branch.ModeAsk {
-		return workMode{}, branch.DecisionRequired(operation, r.Change, r.CWD, r.Lane)
+		return workMode{}, branch.DecisionRequired(branch.EnsureArgs{Operation: operation, Change: r.Change, CWD: r.CWD, Lane: r.Lane})
 	}
 	return workMode{mode: prefs.mode, source: prefs.source}, nil
 }
