@@ -58,7 +58,7 @@ Estrategia `exception-ok`: una sola PR con `type:refactor` y `size:exception` si
   - Reescritura de `knowledge-query` y `knowledge-crawl` sobre `codegraph_explore` y `axiom semantic symbols|inspect`; `AGENTS.md:59-60`.
   - `axiom.example.yaml:160` → `"auto"`; `manual-de-inicio.md` (`:115`, `:307`, `:703`); `AXIOM_ENTERPRISE_VISION.md`; `docs/redesign/README.md:158` y maquetas.
   - Comprobación: relectura del diff.
-- [ ] **T3 · Spec viva** (ruta: en línea)
+- [x] **T3 · Spec viva** (ruta: en línea)
   - Título y propósito de `semantic-code` a mano; `axiom archive integrate --odd quitar-serena` con el `axiom` instalado; segunda ejecución `already_integrated`.
   - Comprobación: `rg -in serena openspec/specs openspec/INDEX.md` sin resultados.
 - [ ] **T4 · Verificación final** (ruta: en línea)
@@ -82,7 +82,7 @@ Estrategia `exception-ok`: una sola PR con `type:refactor` y `size:exception` si
 
 ### Requirement: Detección y Diagnóstico de Serena MCP (REQ-1.1)
 
-(Motivo: C-01-d retira Serena del producto; solo se mantienen Axiom, Engram y CodeGraph. El detector deja de buscarla en el `PATH` y en las configuraciones MCP de los agentes.)
+(Reason: C-01-d retira Serena del producto; solo se mantienen Axiom, Engram y CodeGraph. El detector deja de buscarla en el `PATH` y en las configuraciones MCP de los agentes.)
 
 ## MODIFIED Requirements
 
@@ -239,6 +239,7 @@ El barrido DEBE inspeccionar el árbol de código y las definiciones AST/símbol
 - Plan stop: approved 2026-11-18; implementation continues
 - **T1** `ea871c11` (delegada, un escritor). `go build ./...`, `go vet` de los paquetes tocados y `gofmt -l`: limpios. `go test ./internal/semantic/... ./internal/hub/... ./internal/dashboard/... ./internal/knowledge/...`: ok (repetido por el padre en `semantic` y `hub`). `go test ./cmd/axiom/ -run 'Semantic|Help'`: ok. Aviso: «El valor «serena» de governance.semantic_analysis en axiom.yaml está obsoleto (Serena ya no está soportada) y se trata como «auto».» Coincidencias de `serena` que quedan a propósito en código: la constante `deprecatedConnectorSerena` y su aviso (`internal/semantic/service.go`), `isManagedSerenaEntry` y la retirada en `internal/hub/mcp.go`, y los tests que los cubren; el propio criterio de terminado exige ese valor obsoleto y esa retirada, así que no pueden desaparecer.
 - **T2** (delegada, un escritor; commit siguiente a `ea871c11`, ver `git log`). Skills reescritas sobre `codegraph_explore` y `axiom semantic symbols --query --kind` / `inspect` (banderas comprobadas en `cmd/axiom/main.go:1631-1632`); `AGENTS.md:59-60`, `axiom.example.yaml` (`"auto"`), `manual-de-inicio.md` (`:115`, `:307` de `"enabled"` a `"auto"`, `:703`), `AXIOM_ENTERPRISE_VISION.md`, `docs/redesign/README.md:158` y las tres maquetas (conteos de avisos y comprobaciones ajustados). `rg -in serena` sobre esos ficheros: sin resultados. `go test ./internal/app/ -run SkillIndex` y `go test ./cmd/axiom/ -run SkillIndex`: ok. Maquetas no abiertas en navegador (bloques completos retirados).
+- **T3** (en línea). Título y propósito de `semantic-code` editados a mano. Primera ejecución de `axiom archive integrate --odd quitar-serena` (el `axiom` instalado, `v3.7.1-0.20261118144407-c18dd7868805`) rechazada sin escribir: el REMOVED exige `(Reason: ...)` en lugar de `(Motivo: ...)`; corregido en la delta. Segunda: `composed` en las cuatro capacidades y `openspec/INDEX.md` regenerado (incluida la fila del título); tercera: `already_integrated`. `rg -in serena openspec/specs openspec/INDEX.md`: solo quedan el valor obsoleto `serena`, la retirada de la entrada gestionada (exigidos por el criterio) y las notas `(Previously: ...)` del formato de delta.
 
 ## Siguiente paso
 
