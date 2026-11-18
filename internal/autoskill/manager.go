@@ -11,6 +11,8 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/IGutierrezZ/axiom/v3/internal/skillcheck"
 )
 
 // IndexRegenerator refreshes the unified skills index after a successful
@@ -180,6 +182,14 @@ func (m *Manager) Scan(ctx context.Context, targetRole string, offline bool) (*S
 				continue
 			}
 
+			// Puerta de entrada: una skill minada con errores de frontmatter
+			// no llega al buzón; se informa en el reporte del escaneo.
+			findings := skillcheck.CheckContent(mined.SkillMD, mined.Name, skillcheck.Options{Profile: skillcheck.Canonical})
+			if errs := filterErrors(findings); len(errs) > 0 {
+				report.SkillsInvalid = append(report.SkillsInvalid, InvalidSkill{Name: mined.Name, Errors: errs})
+				continue
+			}
+
 			skillInboxPath := filepath.Join(m.inboxDir, mined.Name)
 			if err := os.MkdirAll(skillInboxPath, 0755); err != nil {
 				continue
@@ -289,6 +299,19 @@ func (m *Manager) Approve(skillName string) (ApproveOutcome, error) {
 		return ApproveOutcome{}, fmt.Errorf("la propuesta '%s' no existe en el buzón transitorio", skillName)
 	}
 
+	// Puerta de entrada: se valida la carpeta del buzón antes de copiar nada.
+	// Las skills minadas siguen el perfil canónico; las de terceros (midudev,
+	// verificadas por SHA y no reescribibles) o de origen desconocido, el
+	// portable. Solo bloquean los errores; los avisos no.
+	profile := skillcheck.Portable
+	if m.inboxOrigin(sourceDir) == OriginMined {
+		profile = skillcheck.Canonical
+	}
+	report := skillcheck.CheckDir(sourceDir, skillcheck.Options{Profile: profile})
+	if errs := report.Errors(); len(errs) > 0 {
+		return ApproveOutcome{}, &SkillValidationError{Skill: skillName, Profile: profile, Findings: errs}
+	}
+
 	destDir := filepath.Join(m.skillsDir, skillName)
 	if err := os.MkdirAll(destDir, 0755); err != nil {
 		return ApproveOutcome{}, fmt.Errorf("error creando directorio destino %s: %w", destDir, err)
@@ -323,6 +346,46 @@ func (m *Manager) Approve(skillName string) (ApproveOutcome, error) {
 	outcome := ApproveOutcome{Promoted: true}
 	outcome.RegenerateError = m.regenerateIndex()
 	return outcome, nil
+}
+
+// SkillValidationError es el rechazo de Approve por errores de skillcheck. La
+// skill sigue intacta en el buzón.
+type SkillValidationError struct {
+	Skill    string
+	Profile  skillcheck.Profile
+	Findings []skillcheck.Finding
+}
+
+func (e *SkillValidationError) Error() string {
+	var b strings.Builder
+	fmt.Fprintf(&b, "la skill '%s' no supera la validación (perfil %s); sigue en el buzón sin cambios:", e.Skill, e.Profile)
+	for _, f := range e.Findings {
+		fmt.Fprintf(&b, "\n  - %s: %s", f.Rule, f.Message)
+	}
+	return b.String()
+}
+
+// inboxOrigin lee el origen de metadata.json; vacío si falta o no se entiende.
+func (m *Manager) inboxOrigin(skillDir string) OriginType {
+	data, err := os.ReadFile(filepath.Join(skillDir, "metadata.json"))
+	if err != nil {
+		return ""
+	}
+	var meta ProposalMetadata
+	if json.Unmarshal(data, &meta) != nil {
+		return ""
+	}
+	return meta.Origin
+}
+
+func filterErrors(fs []skillcheck.Finding) []skillcheck.Finding {
+	var out []skillcheck.Finding
+	for _, f := range fs {
+		if f.Severity == skillcheck.SeverityError {
+			out = append(out, f)
+		}
+	}
+	return out
 }
 
 // regenerateIndex runs the injected regenerator after a completed promotion.

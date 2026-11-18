@@ -1383,6 +1383,12 @@ func runSkillScan(args []string) {
 	fmt.Printf("  Nuevas Skills Propuestas: %d (%d de midudev auditado, %d de minería local)\n",
 		len(report.SkillsProposed), report.RegistrySkillsCount, report.MinedSkillsCount)
 	fmt.Printf("  Total en Buzón Transitorio: %d\n", report.TotalInInbox)
+	for _, inv := range report.SkillsInvalid {
+		fmt.Printf("  Descartada por validación: %s\n", inv.Name)
+		for _, f := range inv.Errors {
+			fmt.Printf("    - %s: %s\n", f.Rule, f.Message)
+		}
+	}
 
 	if len(report.SkillsProposed) > 0 {
 		fmt.Println("\nPropuestas añadidas al buzón (.axiom/skills/inbox/):")

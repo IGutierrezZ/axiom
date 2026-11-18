@@ -224,7 +224,7 @@ func TestRunSkillApproveWarnsOnIndexRegenerationFailure(t *testing.T) {
 	if err := os.MkdirAll(inbox, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(inbox, "SKILL.md"), []byte("---\nname: branch-pr\n---\n\nBody.\n"), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(inbox, "SKILL.md"), []byte("---\nname: branch-pr\ndescription: \"Skill de prueba. Trigger: tests.\"\n---\n\nBody.\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 

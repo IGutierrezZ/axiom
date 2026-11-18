@@ -14,12 +14,19 @@ type AdapterInfo struct {
 	SkillsDir string
 }
 
-// Install writes the SKILL.md for agent into each adapter's skills directory.
+// Install composes the SKILL.md frontmatter, validates it with skillcheck and writes it for agent into each adapter's skills directory.
 // On any write failure all previously written files are rolled back (deleted).
 // Returns one InstallResult per adapter.
 func Install(agent *GeneratedAgent, adapters []AdapterInfo, _ string) ([]InstallResult, error) {
 	if agent == nil {
 		return nil, fmt.Errorf("install: agent must not be nil")
+	}
+
+	// Puerta de entrada: se compone el frontmatter y se valida antes de escribir
+	// nada; si falla, no se crea ningún fichero.
+	content := composeSkillMD(agent)
+	if err := validateSkill(agent, content); err != nil {
+		return nil, err
 	}
 
 	results := make([]InstallResult, 0, len(adapters))
@@ -42,7 +49,7 @@ func Install(agent *GeneratedAgent, adapters []AdapterInfo, _ string) ([]Install
 			return results, fmt.Errorf("install failed for %s: %w", adapter.AgentID, err)
 		}
 
-		if err := os.WriteFile(skillFile, []byte(agent.Content), 0644); err != nil {
+		if err := os.WriteFile(skillFile, []byte(content), 0644); err != nil {
 			// Rollback previously written files and mark all results as failed.
 			rollback(written)
 			markAllFailed(results)
