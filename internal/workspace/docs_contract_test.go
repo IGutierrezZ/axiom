@@ -582,7 +582,7 @@ func TestDocsDocumentTheBranchPromotionKeys(t *testing.T) {
 		"- `main_branch` (opcional",
 		"- `promotion` (opcional)",
 		"`axiom branch ensure --promotion branch|release|<repo>=branch|release`",
-		"un binario anterior rechaza `git.main_branch` y `git.promotion` (`config_invalid`, clave desconocida)",
+		"es anterior a `main_branch` y `promotion` rechaza esas dos claves (`config_invalid`, clave desconocida)",
 	)
 
 	example, err := os.ReadFile(filepath.Join("..", "..", "axiom.example.yaml"))

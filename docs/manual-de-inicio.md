@@ -333,7 +333,7 @@ git:
 - Los binarios anteriores ignoran el bloque, así que declararlo no rompe a un equipo con versiones mezcladas.
 - `main_branch` (opcional, sin valor por defecto) declara la rama principal a la que se promueve lo ya integrado. Sin ella, o igual a `integration_branch`, el trabajo se integra en una sola etapa; con ella distinta, el repositorio tiene dos etapas.
 - `promotion` (opcional) decide cómo se recorren las dos etapas: `branch` (por defecto) saca la rama del cambio de la principal, su primera PR va a la rama de integración y, una vez fusionada, `axiom branch status` propone `main_branch` como destino de la segunda; `release` saca la rama de la integración y deja el paso a la principal a la release; `ask` pregunta por cada cambio (`decision_required`). Sin `main_branch` no tiene efecto y `axiom workspace validate` lo avisa sin invalidar la configuración.
-- Compatibilidad: un binario anterior rechaza `git.main_branch` y `git.promotion` (`config_invalid`, clave desconocida); actualizad todo el equipo antes de declararlas o retiradlas antes de volver atrás.
+- Compatibilidad: lo anterior vale para el bloque con `integration_branch` y `branch_prefix`. Un binario que ya lee `git:` pero es anterior a `main_branch` y `promotion` rechaza esas dos claves (`config_invalid`, clave desconocida); actualizad todo el equipo antes de declararlas o retiradlas antes de volver atrás.
 
 ### Ajustes por Repositorio (`repositories:`)
 
