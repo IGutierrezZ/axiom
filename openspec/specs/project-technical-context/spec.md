@@ -184,12 +184,19 @@ La misma proyección DEBE obtenerse sin cambio SDD con `axiom workspace context 
 
 ### Requirement: Lectura del Contexto por las Fases Lectoras y Presupuesto de Lectura (REQ-24.29)
 
-Cuando el status proyecta `technicalContext`, las skills `sdd-explore`, `sdd-design`, `sdd-apply` y `sdd-verify` DEBEN leer el fichero `entry` de cada modo declarado y DEBEN consultar el resto de `paths` solo bajo demanda, sin cargarlo por anticipado. Las demás fases NO están obligadas a leerlo. Las skills DEBEN obtener los localizadores del status y NO DEBEN interpretar `axiom.yaml`.
+Cuando el status proyecta `technicalContext`, las skills `sdd-explore`, `sdd-design`, `sdd-apply` y `sdd-verify` DEBEN leer el fichero `entry` de cada modo declarado y DEBEN consultar el resto de `paths` solo bajo demanda, sin cargarlo por anticipado. `sdd-propose` DEBE leer el fichero `entry` de cada modo declarado solo cuando no recibió exploración (ni hallazgos de exploración del orquestador, ni `exploration.md`, ni la observación `sdd/{change-name}/explore`), y NO DEBE consultar el resto de `paths`; con exploración NO DEBE leer nada del contexto técnico. Las demás fases NO están obligadas a leerlo. Las skills DEBEN obtener los localizadores del status y NO DEBEN interpretar `axiom.yaml`.
+(Previously: `sdd-propose` estaba entre las fases no obligadas a leer el contexto técnico, también cuando se saltaba la exploración)
 
 #### Scenario: Las cuatro fases lectoras leen la entrada
 - **DADO** los textos de `sdd-explore`, `sdd-design`, `sdd-apply` y `sdd-verify`
 - **CUANDO** se inspeccionan (pin de texto)
 - **ENTONCES** cada uno indica leer la `entry` de cada modo de `technicalContext` y consultar el resto bajo demanda
+
+#### Scenario: La propuesta lee la entrada solo sin exploración
+- **DADO** el texto de `sdd-propose` y la convención del contexto técnico
+- **CUANDO** se inspeccionan (pin de texto)
+- **ENTONCES** `sdd-propose` indica leer la `entry` de cada modo de `technicalContext` solo cuando no recibió exploración, sin consultar el resto de `paths`
+- **Y** la convención recoge esa excepción condicional
 
 #### Scenario: Modo sin entrada
 - **DADO** un modo declarado sin `entry`
@@ -200,8 +207,6 @@ Cuando el status proyecta `technicalContext`, las skills `sdd-explore`, `sdd-des
 - **DADO** un status sin `technicalContext`
 - **CUANDO** se ejecutan las fases
 - **ENTONCES** operan como antes de esta capacidad
-
----
 
 ### Requirement: Las Rutas de Referencia Nunca se Modifican (REQ-24.30)
 

@@ -38,12 +38,12 @@ Desactivado: `openspec/config.yaml` declara `strict_tdd: false` y no hay elecci�
 
 ## Tareas
 
-- [ ] **T1 · Lectura condicional en propose, convención y test** (ruta: en línea; disparador: 3 ficheros, dos de un párrafo y un test ya entendido, sin investigación pendiente)
+- [x] **T1 · Lectura condicional en propose, convención y test** (ruta: en línea; disparador: 3 ficheros, dos de un párrafo y un test ya entendido, sin investigación pendiente)
   - Paso 3 de `sdd-propose`: párrafo con el disparador «no exploration was received», leer solo el `entry` de cada modo antes de «Affected Areas», «Risks» y «Dependencies», nunca el resto de `paths`; con exploración no lee nada más. Remite a la convención.
   - Convención, sección 2: la excepción condicional de propose; spec y tasks siguen sin leer.
   - Test: subcaso `sdd-propose` con la frase condicional, sin la frase incondicional de las cuatro fases lectoras, y la excepción en la convención.
   - Comprobación: `go test ./internal/assets/...` y `go test ./internal/components/ -run Golden`.
-- [ ] **T2 · Spec viva** (ruta: en línea)
+- [x] **T2 · Spec viva** (ruta: en línea)
   - MODIFIED REQ-24.29 (`project-technical-context`) en `## Spec viva`; integración con `axiom archive integrate --odd propose-lee-contexto` en el commit que cierra la feature.
   - Comprobación: la integración termina sin rechazo y repetirla da `already_integrated`.
 
@@ -93,8 +93,14 @@ Cuando el status proyecta `technicalContext`, las skills `sdd-explore`, `sdd-des
 
 Plan stop: approved 2026-11-18; implementation continues
 
+- T1 · commit `26539131`. Párrafo nuevo al final del paso 3 de `sdd-propose`, válido en cualquier modo de almacén, con el disparador explícito; línea de excepción condicional en la sección 2 de la convención; subcaso `sdd-propose` en `TestReadingPhaseSkillsReadTheTechnicalContextEntry` (frases condicionales, ausencia de la frase incondicional y excepción en la convención). Sin cambios en goldens.
+- T2 · commit de cierre `docs(spec)`. `axiom archive integrate --odd propose-lee-contexto`: `project-technical-context: composed`; repetirlo da `already_integrated`.
 - RDD: desactivado (`axiom review mode status`: off por defecto); sin revisión nativa.
 
 ## Verificación
 
-- Pendiente.
+- `gofmt -l internal/assets/`: sin salida.
+- `go test ./internal/assets/...`: ok.
+- `go test ./internal/components/ -run Golden`: ok. Ningún golden ni fichero de `testdata` fija el texto tocado.
+- `axiom archive integrate --odd propose-lee-contexto`: compuesto; segunda ejecución `already_integrated`.
+- Aviso: la integración quita la regla `---` que separaba REQ-24.29 de REQ-24.30 en `openspec/specs/project-technical-context/spec.md`. Es el mismo defecto de composición de un MODIFIED que anotaron C-04-a y C-04-b. No se corrige aquí: fuera de alcance.
