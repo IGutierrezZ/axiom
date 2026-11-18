@@ -162,6 +162,12 @@ the SDD workflow, not delegator-selected. This exclusion is intentional and
 silent, so a user skill whose name collides with these prefixes is dropped
 without a warning.
 
+`axiom skill check` reports what the registry tolerates silently: it runs
+`skillcheck` over every scanned skill and flags name collisions between folders
+(saying which copy the registry picks), reserved names that are dropped, and a
+stale registry cache. It never changes the registry; `axiom doctor` surfaces the
+same findings as `project:skills`.
+
 ## Inspecting Without Writing
 
 `skill-registry list` resolves the same deduplicated skill set as `refresh` (the

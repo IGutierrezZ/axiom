@@ -463,6 +463,13 @@ Axiom nunca instala una habilidad de IA a ciegas en tu proyecto. Sigue un flujo 
    * La tabla de habilidades en `AGENTS.md`
    * El tópico correspondiente en la memoria persistente de Engram MCP.
 
+6. **Validar las skills de proyecto y de usuario:**
+   ```bash
+   axiom skill check            # informe por skill y de conjunto
+   axiom skill check --json     # el mismo informe para máquinas
+   ```
+   Pasa las mismas reglas que el build y que `approve` (frontmatter, `name`, `description` con `Trigger:`, referencias) e informa de lo que el registro tolera en silencio: colisiones entre carpetas, nombres reservados, alcance por carpeta y registro desactualizado. Sale con código distinto de cero solo si hay errores. `axiom doctor` incluye un resumen (`project:skills`).
+
 ### Uso por Web UI (`axiom ui`)
 
 1. Ve a la pestaña **Skills / Autoskills** en el panel web.
