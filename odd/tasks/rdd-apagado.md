@@ -49,7 +49,7 @@ Desactivado: `openspec/config.yaml` declara `strict_tdd: false` y no hay elecci�
   - `review mode enable --scope global|project|clone` sale con error «RDD no está disponible» sin escribir nada; `disable` y `status` siguen funcionando; `status` informa `off`.
   - `SetProjectRDD` rechaza `on`; `axiom review stop-hook` es un no-op con código 0.
   - Comprobación: `go test ./internal/cli/ -run 'ReviewMode|StopHook'` y `go test ./internal/hub/`.
-- [ ] **T3 · Prosa: orquestadores y guía de agentes** (ruta: delegada, un escritor; disparador: 15+ ficheros)
+- [x] **T3 · Prosa: orquestadores y guía de agentes** (ruta: delegada, un escritor; disparador: 15+ ficheros)
   - Secciones compartidas: reescritura de `Delegated Verification Gate` (completa y reducida), retirada de `Axiom Provider Defect Handoff`, de la prosa RDD de `Native Checking Contract` y de la mención en `SDD Change Kickoff and Block Gates`; `Review Execution Contract` deja de renderizarse.
   - Los 12 `sdd-orchestrator.md`: sin marcador ni cabecera del handoff; `codex:341`.
   - `routing.go` (`:77`, `:120`, `:122`, `:129`, `:131`, `:152-166`), `delegation.go:48,65`, `approval.go:17`.
@@ -92,6 +92,10 @@ Plan stop: approved 2026-11-18; implementation continues
   - Observado: `go test ./internal/reviewtransaction/` ok; `./internal/hub/` ok; `./internal/cli/ -run 'ReviewMode|StopHook|WhileSuspended'` ok; lo mismo con `-tags rdd_harness` ok; `go vet -tags rdd_harness` limpio; `dashboard`, `tui`, `sddstatus`, `cmd/axiom`, `components/sdd` ok. Comprobación del padre: `-run 'Suspended'` ok.
   - `go test ./internal/cli/ -run 'Review'` completo agota el tiempo (sin `--- FAIL`); se trocea en la verificación final.
   - Fallo ambiental preexistente: `internal/app` `TestTuiInstallOnThenSyncPreservesAndRefreshesOpenCodeActivation` («OpenCode runtime version unavailable or unsupported») falla igual en la base `bd36e5c2`.
+- **T3** `af75804a`, `478c6d43` (escritor delegado). `Delegated Verification Gate` reescrita (nivel deducido del diff; lo dudoso cuenta como el nivel más alto); `Axiom Provider Defect Handoff` y `Native Checking Contract` retirados (sus viñetas eran RDD o duplicaban la nueva puerta; la de entrega pasa a `Cost and Context Balance`); `rendersReviewLifecycle` exige `rddharness.Enabled()` y el procedimiento de autoridad de `sdd-apply` se elimina en suspensión. `routing.go`, `delegation.go` y `approval.go` sin RDD. 15 goldens (+106/−1172), diff revisado por el escritor: solo retiradas y el texto reescrito.
+  - Observado: `go test ./internal/components/sdd/` ok; `./internal/assets/...` ok; `./internal/providercontractbundle/` ok; `./internal/components/agentguidance/` ok (y comprobación del padre ok); `./internal/components/` ok; `go vet ./...` limpio.
+  - Fallos ambientales preexistentes: `components/filemerge` `TestWriteFileAtomicFollows*Junction` (falla igual en la base) y `communitytool` `TestPiCodeGraphPendingProbePreservesConfiguredFiles` (timeout del sondeo MCP).
+  - Pendiente para T4: los overlays de OpenCode, el bloque `Review Execution Contract` preservado en instalaciones antiguas de OpenCode y las frases «SDD never offers or launches RDD» de las skills y comandos SDD y el contraste con `axiom review capture-result` en `judgment-day`.
 
 ## Spec viva
 
