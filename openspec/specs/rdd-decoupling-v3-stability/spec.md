@@ -34,14 +34,34 @@ El motor de estados en `internal/sddstatus` DEBE omitir de forma limpia el bloqu
 ---
 
 ### Requirement: Independencia Operativa de las Herramientas RDD (REQ-18.2)
-Las herramientas de revisión (`axiom review ...`) DEBEN operar como comandos opt-in independientes gobernados por el usuario, sin condicionar la máquina de estados SDD.
+RDD está suspendido (C-01-c) hasta su retirada (C-01-e). Las herramientas de revisión (`axiom review ...`) NO DEBEN condicionar la máquina de estados SDD. El modo efectivo de RDD DEBE ser siempre `off`: `axiom review mode enable` DEBE fallar en todos los alcances con un mensaje que indique que RDD no está disponible, y `axiom review mode status` DEBE informar `off` aunque haya preferencias `on` guardadas. Axiom NO DEBE proyectar prosa de RDD en orquestadores ni en la guía de agentes, NO DEBE instalar los agentes `review-*` y NO DEBE registrar el hook `axiom review stop-hook`; `axiom review stop-hook` DEBE terminar sin error y sin efecto para los proyectos que aún lo tengan registrado. Solo un binario compilado con la etiqueta `rdd_harness` (bench, e2e y CI) PUEDE activar RDD.
+(Previously: las herramientas `axiom review ...` eran comandos opt-in gobernados por el usuario)
 
-#### Scenario: Invocación autónoma de comandos review en la CLI
+#### Scenario: Activar RDD falla en todos los alcances
+- **DADO** el binario `axiom` sin la etiqueta `rdd_harness`
+- **CUANDO** el usuario ejecuta `axiom review mode enable --scope global`, `--scope project` o `--scope clone`
+- **ENTONCES** la orden termina con error indicando que RDD no está disponible
+- **Y** no guarda ninguna preferencia
+
+#### Scenario: Las preferencias guardadas no activan RDD
+- **DADO** una preferencia `on` guardada en el ámbito global, en el proyecto del hub o en el clon
+- **CUANDO** se ejecuta `axiom review mode status`
+- **ENTONCES** el modo efectivo es `off`
+
+#### Scenario: La sincronización no instala RDD
+- **DADO** un proyecto limpio
+- **CUANDO** se ejecuta `axiom sync --scope workspace`
+- **ENTONCES** no se escriben agentes `review-*`, no se registra el hook de parada de revisión y los ficheros gestionados no contienen prosa de RDD
+
+#### Scenario: El hook de parada antiguo no falla
+- **DADO** un proyecto que aún registra `axiom review stop-hook`
+- **CUANDO** el runtime lo invoca
+- **ENTONCES** termina con código 0 sin efecto
+
+#### Scenario: Las herramientas de revisión no alteran las fases SDD
 - **DADO** el binario `axiom`
 - **CUANDO** el usuario ejecuta comandos bajo `axiom review`
-- **ENTONCES** la CLI ejecutará las operaciones de revisión sin alterar las fases SDD del workspace
-
----
+- **ENTONCES** las fases SDD del workspace no cambian
 
 ### Requirement: Resiliencia en Decodificación de Rutas Windows en Salidas JSON de SDD (REQ-18.3)
 Los consumidores y aserciones de la salida JSON de `sdd status` DEBEN decodificar estructuradamente en tipos Go nativos (`StatusV2Projection`) en lugar de hacer matching textual simple de rutas en Windows.
