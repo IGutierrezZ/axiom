@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"slices"
 	"strings"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/agents"
@@ -367,7 +368,7 @@ func injectSkillDirectoryWithWriter(skillDir, capability string, agent model.Age
 		}
 
 		path := filepath.Join(skillDir, "_shared", fileName)
-		writeResult, err := writeFile(path, []byte(bindSharedSkillRuntimeIdentity(content, agent)), 0o644)
+		writeResult, err := writeFile(path, suspendedSharedSkillContent(fileName, []byte(bindSharedSkillRuntimeIdentity(content, agent))), 0o644)
 		if err != nil {
 			return InjectionResult{}, err
 		}
@@ -737,6 +738,16 @@ func Inject(homeDir string, adapter agents.Adapter, sddMode model.SDDModeID, opt
 			overlayBytes, err = defaultOpenCodeShareDisabled(settingsPath, overlayBytes)
 			if err != nil {
 				return InjectionResult{}, fmt.Errorf("default OpenCode share mode: %w", err)
+			}
+
+			if !rddharness.Enabled() {
+				// RDD suspendido (C-01-c): se retiran de la configuración instalada
+				// los agentes de revisión que Axiom gestiona.
+				retired, retireErr := retireOpenCodeReviewAgents(settingsPath)
+				if retireErr != nil {
+					return InjectionResult{}, fmt.Errorf("retire OpenCode review agents: %w", retireErr)
+				}
+				changed = changed || retired
 			}
 
 			mergeSettings := mergeOpenCodeCompatibleJSONFile
@@ -1348,6 +1359,10 @@ func isKilocodeProfilePhase(name string) bool {
 
 func expandOpenCodeBoundedReviewAgents(agentsMap map[string]any, usePermissions ...bool) {
 	permissions := len(usePermissions) > 0 && usePermissions[0]
+	if !rddharness.Enabled() {
+		// RDD suspendido (C-01-c): el overlay no declara los agentes de revisión.
+		stripOpenCodeReviewAgents(agentsMap)
+	}
 	for _, name := range opencode.ReviewLensPhases() {
 		agent, ok := agentsMap[name].(map[string]any)
 		if !ok {
@@ -1692,6 +1707,11 @@ func migrateLegacyMandatoryWordingInDelegationHardGates(prompt string) string {
 }
 
 func ensurePreservedOpenCodeReviewExecutionContract(prompt string) string {
+	if !rddharness.Enabled() {
+		// RDD suspendido (C-01-c): el bloque preservado de una instalación antigua
+		// deja de proyectarse.
+		return stripPreservedOpenCodeReviewExecutionContract(prompt)
+	}
 	const (
 		startMarker = "<!-- gentle-ai:review-execution-contract-migration -->"
 		endMarker   = "<!-- /gentle-ai:review-execution-contract-migration -->"
@@ -1873,9 +1893,19 @@ func installSkillRegistryAutomation(homeDir string, adapter agents.Adapter) (Inj
 	if err != nil {
 		return InjectionResult{}, fmt.Errorf("install Claude skill-registry hook: %w", err)
 	}
-	stopHookChanged, err := ensureClaudeReviewStopHook(settingsPath, adapter.Agent())
-	if err != nil {
-		return InjectionResult{}, fmt.Errorf("install Claude review stop-hook: %w", err)
+	var stopHookChanged bool
+	if rddharness.Enabled() {
+		stopHookChanged, err = ensureClaudeReviewStopHook(settingsPath, adapter.Agent())
+		if err != nil {
+			return InjectionResult{}, fmt.Errorf("install Claude review stop-hook: %w", err)
+		}
+	} else {
+		// RDD suspendido (C-01-c): el hook de parada no se registra y se retira
+		// el que dejó una versión anterior.
+		stopHookChanged, err = retireClaudeReviewStopHook(settingsPath, string(adapter.Agent()))
+		if err != nil {
+			return InjectionResult{}, fmt.Errorf("retire Claude review stop-hook: %w", err)
+		}
 	}
 	preflightHookChanged, err := ensureClaudeSDDPreflightHook(settingsPath, adapter.Agent())
 	if err != nil {
@@ -3906,6 +3936,10 @@ func injectModelAssignments(overlayBytes []byte, assignments map[string]model.Mo
 	// only when already present in user settings. Deep merge updates their model
 	// and clears/updates variant while preserving other settings.
 	for agent, assignment := range assignments {
+		if !rddharness.Enabled() && slices.Contains(opencode.ReviewPhases(), agent) {
+			// RDD suspendido (C-01-c): una asignación antigua no recrea el agente.
+			continue
+		}
 		if (!existingAgentKeys[agent] && agent != "general" && agent != "explore") || assignment.ProviderID == "" || assignment.ModelID == "" {
 			continue
 		}
@@ -4049,6 +4083,16 @@ func writeSubAgents(homeDir string, adapter agents.Adapter, opts InjectOptions) 
 
 	for _, entry := range entries {
 		if entry.IsDir() {
+			continue
+		}
+		if !rddharness.Enabled() && isReviewSubAgentFile(entry.Name()) {
+			// RDD suspendido (C-01-c): no se instala y se retira el que dejó una
+			// versión anterior.
+			retired, retireErr := retireReviewSubAgentFile(agentsDir, entry.Name())
+			if retireErr != nil {
+				return InjectionResult{}, retireErr
+			}
+			changed = changed || retired
 			continue
 		}
 		// Copy all files (not just .md) to support Kimi's YAML-based agents

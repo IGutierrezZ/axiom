@@ -636,7 +636,9 @@ func TestKilocodeReviewSettingsMatchCurrentMainBaseline(t *testing.T) {
 	// rdd-apagado T3 (C-01-c): el hash fija el estado entregado con RDD suspendido (sin el handoff de
 	// defectos ni el «Native Checking Contract» en el orquestador de OpenCode que compone Kilocode) y la
 	// «Delegated Verification Gate» reescrita. Deliberate, not drift.
-	const want = "5bb25ef71f6d966129d6b382dddb2df580d9e706703bd5ad49edf58afd22f60a"
+	// rdd-apagado T4 (C-01-c): el overlay de OpenCode que hereda Kilocode deja de declarar los agentes
+	// `review-*` y sus permisos de delegación. Deliberate, not drift.
+	const want = "d9e923499e1ff097c8bd54b62607a3f61ab926135107b59a355e72ca5a0737d6"
 	if got != want {
 		t.Fatalf("Kilocode settings SHA-256 = %s, want current-main baseline %s", got, want)
 	}
