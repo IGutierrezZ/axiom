@@ -60,14 +60,14 @@ Desactivado: `openspec/config.yaml` declara `strict_tdd: false` y no hay elecci�
   - Claude: no se registra el hook de parada y se retira de `Stop` y `SessionStart` (patrón `telemetry_retire.go`).
   - Test en proceso de `sync --scope workspace` sobre un proyecto limpio: sin `review-*`, sin stop-hook y sin coincidencias de `receipt-driven|Review Execution Contract|Provider Defect Handoff` (sin mayúsculas).
   - Comprobación: `go test ./internal/components/sdd/ -run '<tests nuevos>'` y el paquete.
-- [ ] **T5 · TUI y dashboard sin selector** (ruta: delegada, un escritor)
+- [x] **T5 · TUI y dashboard sin selector** (ruta: delegada, un escritor)
   - TUI: sin pantalla de modo de revisión en la instalación, sin entrada «Revisión formal RDD» en el menú ni en el resumen; goldens regenerados.
   - Dashboard: sin selector en la creación de proyecto ni tarjeta del modo; el endpoint queda latente y rechaza `on`.
   - Comprobación: `go test ./internal/tui/... ./internal/dashboard/...`.
-- [ ] **T6 · Bench, e2e y CI con la etiqueta** (ruta: en línea; tres líneas mecánicas)
+- [x] **T6 · Bench, e2e y CI con la etiqueta** (ruta: en línea; tres líneas mecánicas)
   - `-tags rdd_harness` en la compilación del binario de `bench/main_test.go`, `e2e/organicruntime/organic_runtime_test.go` y el paso de `ci.yml` que lo compila.
   - Comprobación: relectura del diff; `go vet -tags rdd_harness ./internal/reviewtransaction/`.
-- [ ] **T7 · Spec viva y verificación final** (ruta: en línea)
+- [x] **T7 · Spec viva y verificación final** (ruta: en línea)
   - MODIFIED REQ-18.2 en `## Spec viva`; `axiom archive integrate --odd rdd-apagado` (en proceso, sin binario suelto).
   - Batería del criterio de terminado.
 
@@ -100,6 +100,17 @@ Plan stop: approved 2026-11-18; implementation continues
   - Observado: `go test ./internal/components/sdd/` ok; `uninstall`, `opencode`, `assets/...`, `agentguidance`, `components` ok; `./internal/cli/ -run 'Sync'` ok (136 s); `go vet ./...` limpio. Comprobación del padre: `-run 'WhileSuspended'` ok.
   - Test de regresión del criterio de terminado: `TestInjectWorkspaceInstallsNoRDDWhileSuspended` (todos los agentes del catálogo y OpenCode multi; sin `review-*`, sin stop-hook y sin coincidencias de `receipt-driven|Review Execution Contract|Provider Defect Handoff`; con el punto de inyección activo da 8 coincidencias en Claude, así que no es vacuo). Además `...RetiresInstalledReviewAgents...`, `...RetiresReviewStopHook...` y `...RetiresManagedReviewAgents...`.
   - **Residuos aplazados a C-01-e** (no coinciden con el criterio y dependen de código latente): el contraste con `axiom review capture-result` en `judgment-day` (lo exige `TestJudgmentDayPromptsDoNotClaimTheLensEnvelope` para el contrato del juez) y `_shared/review-ledger-contract*.md`, que `sync` sigue escribiendo y que `judgment-day/SKILL.md` enlaza.
+- **T5** `8e15700b`, `bbed7074` (escritor delegado). Desconexión incondicional en la interfaz: la TUI pierde el paso de modo de revisión de la instalación (las 7 llamadas van directas a la revisión), la entrada «Revisión formal RDD» del menú y la línea del resumen; `screens/review_mode.go` e `install_review_mode.go` quedan latentes. Dashboard sin la tarjeta `form-review-mode` ni el selector `select-project-review-mode`; `js/core/reviewmode.js` queda sin referencias; `normalizeReviewModeInput` rechaza `on` con `rddharness.UnavailableMessage` (endpoint con HTTP 400 y alta de proyecto sin escribir nada); campos `review_mode` conservados por compatibilidad. Golden `custom-no-opencode-engram-next` (+8/−10): la pantalla de RDD pasa a ser la de revisión y confirmación.
+  - Observado: `go test ./internal/tui/...` ok; `./internal/dashboard/...` ok; `go vet` limpio. Comprobación del padre: tests nuevos de TUI y dashboard ok.
+  - **Aplazado a C-01-e** (no es el selector del modo): la entrada «Reiniciar almacén de revisiones», las filas de roles RDD de los selectores de modelos de Claude y Codex y la skill de colaborador «RDD Defect Workflow» del selector de skills.
+- **T6** `79d708c3` (en línea). `-tags rdd_harness` en el binario de los journeys de `ci.yml` («Run benchmark evidence»), en el de `e2e/organicruntime` y en el binario candidato de `internal/app` (su test ejecuta `review mode enable`). `bench/main_test.go:204` compila un binario falso, no `axiom`: no lleva la etiqueta. El binario `bench_fixture` de `ci.yml` solo ejecuta el journey del selector de modelos, que no activa RDD.
+  - Observado: `go vet ./e2e/organicruntime/ ./internal/app/` limpio. Los binarios no se compilan en local (EDR); la CI es la comprobación.
+- **T7** `a1eac43a` (en línea). `axiom archive integrate --odd rdd-apagado` (el `axiom` instalado): `rdd-decoupling-v3-stability: composed`; repetirlo da `already_integrated`.
+  - Observado: `go test ./internal/components/... ./internal/assets/...` ok salvo el fallo ambiental conocido de `filemerge`. `./internal/tui/...` y `./internal/dashboard/...` ok (T5, último cambio en esos paquetes).
+  - `./internal/cli/` troceado por nombre (`^Test[A-C]`, `[D-F]`, `[G-O]`, `P`, `R[a-df-z]`, `Re[a-u]`, `Rev`, `S`, `[T-Z]`; los últimos en paralelo): todo ok salvo tres fallos ambientales, ninguno en ficheros que toque el cambio:
+    - `TestOpaqueRepositoryContextResolutionNamesDistinctCauses` y `TestOpaqueRepositoryContextCauseIsScrubbed`: comparan con el texto inglés «The system cannot find the file specified.» y el sistema lo da en castellano. En la base `bd36e5c2` fallan antes, con `managed_assets_outdated`.
+    - `TestReviewStatusSelectorFreeResolvesRepositoryRoot/safe_symlink`: sin privilegio para crear enlaces simbólicos («El cliente no dispone de un privilegio requerido»); falla igual en la base.
+  - `internal/cli` no tiene subpaquetes.
 
 ## Spec viva
 
