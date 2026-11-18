@@ -236,7 +236,8 @@ type ProjectInitRequest struct {
 	Adapters []string `json:"adapters,omitempty"`
 	// ReviewMode es la preferencia personal de revisión (RDD) del usuario para el proyecto:
 	// "on", "off" o "inherit" (vacío también hereda el global). Se guarda en el registro del
-	// hub una vez escrito y registrado el proyecto, nunca en axiom.yaml.
+	// hub una vez escrito y registrado el proyecto, nunca en axiom.yaml. El dashboard ya no lo
+	// ofrece y, con RDD suspendido, «on» se rechaza; se conserva por compatibilidad.
 	ReviewMode   string `json:"review_mode,omitempty"`
 	WorktreeMode string `json:"worktree_mode,omitempty"`
 	WorktreeRoot string `json:"worktree_root,omitempty"`
