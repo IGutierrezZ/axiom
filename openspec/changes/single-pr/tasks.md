@@ -200,27 +200,27 @@ Comandos de prueba acotados: `go test ./internal/assets/ -run 'SkillCopies'`, `g
 Arnés de ejecución real: N/A (texto de skills y documentación). No ejecutar `axiom skill-registry refresh` (exige compilar el binario).
 Límite de reversión: skills, `AGENTS.md`, `docs/components.md` y test de paridad.
 
-- [ ] 5.1 Crear `internal/assets/skill_copies_parity_test.go` (RED): paridad byte a byte de `work-unit-commits` y `comment-writer` entre el asset embebido y `../../skills/<skill>/SKILL.md`, con el patrón de `rdd_defect_workflow_skill_test.go` (líneas 11-25 del mismo directorio). Debe fallar hoy en `work-unit-commits` (divergencia en dos líneas).
+- [x] 5.1 Crear `internal/assets/skill_copies_parity_test.go` (RED): paridad byte a byte de `work-unit-commits` y `comment-writer` entre el asset embebido y `../../skills/<skill>/SKILL.md`, con el patrón de `rdd_defect_workflow_skill_test.go` (líneas 11-25 del mismo directorio). Debe fallar hoy en `work-unit-commits` (divergencia en dos líneas).
   Cubre: REQ-32.3
-- [ ] 5.2 Modificar `internal/assets/skills/chained-pr/SKILL.md`: `description`, activación, reglas y tabla de decisión sin número; activación solo cuando la persona pide encadenar, apilar o rebanar o con `delivery_strategy: chained`; frase «When `delivery_strategy` is `chained`, …» de la sustitución idéntica.
+- [x] 5.2 Modificar `internal/assets/skills/chained-pr/SKILL.md`: `description`, activación, reglas y tabla de decisión sin número; activación solo cuando la persona pide encadenar, apilar o rebanar o con `delivery_strategy: chained`; frase «When `delivery_strategy` is `chained`, …» de la sustitución idéntica.
   Cubre: REQ-32.3, chained-pr Skill Binding in Chain Strategy Guidance
-- [ ] 5.3 Modificar `internal/assets/skills/chained-pr/references/chaining-details.md`: quitar la fila «Review budget» del contrato de salida (línea 62) y la referencia de la línea 96.
+- [x] 5.3 Modificar `internal/assets/skills/chained-pr/references/chaining-details.md`: quitar la fila «Review budget» del contrato de salida (línea 62) y la referencia de la línea 96.
   Cubre: REQ-32.3
-- [ ] 5.4 Modificar `AGENTS.md` (línea 51): `description` de `chained-pr` idéntico al nuevo de 5.2, a mano.
+- [x] 5.4 Modificar `AGENTS.md` (línea 51): `description` de `chained-pr` idéntico al nuevo de 5.2, a mano.
   Cubre: REQ-32.3
-- [ ] 5.5 Modificar `docs/components.md` (línea 77): «Planifica PR encadenadas cuando la persona las pide.»
+- [x] 5.5 Modificar `docs/components.md` (línea 77): «Planifica PR encadenadas cuando la persona las pide.»
   Cubre: REQ-32.3
-- [ ] 5.6 Modificar `internal/assets/skills/work-unit-commits/SKILL.md` (canónica; líneas 20, 32-33, 64 y 66-74): un commit por unidad dentro de una sola PR; cadena solo a petición; conserva «no code-golf» sin número.
+- [x] 5.6 Modificar `internal/assets/skills/work-unit-commits/SKILL.md` (canónica; líneas 20, 32-33, 64 y 66-74): un commit por unidad dentro de una sola PR; cadena solo a petición; conserva «no code-golf» sin número.
   Cubre: REQ-32.3
-- [ ] 5.7 Modificar `skills/work-unit-commits/SKILL.md`: copia byte a byte de la embebida de 5.6 (hoy divergen en las líneas 33 y 74 de la embebida).
+- [x] 5.7 Modificar `skills/work-unit-commits/SKILL.md`: copia byte a byte de la embebida de 5.6 (hoy divergen en las líneas 33 y 74 de la embebida).
   Cubre: REQ-32.3
-- [ ] 5.8 Modificar `internal/assets/skills/comment-writer/SKILL.md` y `skills/comment-writer/SKILL.md` (línea 64 de ambas): ejemplo de tono sin presupuesto, idéntico en las dos copias.
+- [x] 5.8 Modificar `internal/assets/skills/comment-writer/SKILL.md` y `skills/comment-writer/SKILL.md` (línea 64 de ambas): ejemplo de tono sin presupuesto, idéntico en las dos copias.
   Cubre: REQ-32.3
-- [ ] 5.9 Modificar `skills/branch-pr/SKILL.md` (D11): retirar el punto 3 de la línea 23, la casilla de la línea 126, el ejemplo de la línea 274 y el número de la fila de la línea 143 (la fila remite a la política de tamaño del repositorio sin citar número); conservar el punto 2 de la línea 22 (gobierno de la etiqueta protegida `size:exception`).
+- [x] 5.9 Modificar `skills/branch-pr/SKILL.md` (D11): retirar el punto 3 de la línea 23, la casilla de la línea 126, el ejemplo de la línea 274 y el número de la fila de la línea 143 (la fila remite a la política de tamaño del repositorio sin citar número); conservar el punto 2 de la línea 22 (gobierno de la etiqueta protegida `size:exception`).
   Cubre: REQ-32.3
-- [ ] 5.10 Regenerar goldens si alguna proyección de skills cambia: `go test ./internal/components/ -run 'TestGolden' -update`; revisar el diff (puede no haber cambios) y comprobar sin `-update`.
-- [ ] 5.11 Comprobar la unidad: `go test ./internal/assets/`, `go test ./internal/skillregistry/ -run 'TestRepoAgentsIndexMatchesVersionedSkills'`, `go test ./internal/components/ -run 'TestGolden'` y `go vet ./internal/assets/... ./internal/skillregistry/...`. En verde.
-- [ ] 5.12 Commit de la unidad 5: `docs(skills): chained-pr a petición y work-unit-commits sin presupuesto`.
+- [x] 5.10 Regenerar goldens si alguna proyección de skills cambia: `go test ./internal/components/ -run 'TestGolden' -update`; revisar el diff (puede no haber cambios) y comprobar sin `-update`.
+- [x] 5.11 Comprobar la unidad: `go test ./internal/assets/`, `go test ./internal/skillregistry/ -run 'TestRepoAgentsIndexMatchesVersionedSkills'`, `go test ./internal/components/ -run 'TestGolden'` y `go vet ./internal/assets/... ./internal/skillregistry/...`. En verde.
+- [x] 5.12 Commit de la unidad 5: `docs(skills): chained-pr a petición y work-unit-commits sin presupuesto`.
 
 ---
 

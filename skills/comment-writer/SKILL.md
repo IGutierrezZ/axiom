@@ -61,7 +61,7 @@ For the next PR, add links to the previous and following PRs so the chain stays 
 ### Ask for split
 
 ```markdown
-This PR exceeds the 400-line budget, so we need to split it or justify `size:exception`.
+This PR bundles several concerns, so I would review it commit by commit.
 
 Suggested order: foundation + tests first, then integration, then docs. That gives each review a clear start and end.
 ```
