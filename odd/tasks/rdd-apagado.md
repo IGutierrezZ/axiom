@@ -55,7 +55,7 @@ Desactivado: `openspec/config.yaml` declara `strict_tdd: false` y no hay elecci�
   - `routing.go` (`:77`, `:120`, `:122`, `:129`, `:131`, `:152-166`), `delegation.go:48,65`, `approval.go:17`.
   - Tests que fijan la prosa y goldens regenerados con `-update` y revisados por diff.
   - Comprobación: `go test ./internal/components/... ./internal/assets/...`.
-- [ ] **T4 · Instalación: agentes `review-*` y hook de parada** (ruta: delegada, un escritor)
+- [x] **T4 · Instalación: agentes `review-*` y hook de parada** (ruta: delegada, un escritor)
   - `writeSubAgents` omite `review-*` (Claude, Cursor, Kiro, Kimi); el overlay de OpenCode deja de declararlos y de expandirlos; `sync` borra los gestionados ya instalados.
   - Claude: no se registra el hook de parada y se retira de `Stop` y `SessionStart` (patrón `telemetry_retire.go`).
   - Test en proceso de `sync --scope workspace` sobre un proyecto limpio: sin `review-*`, sin stop-hook y sin coincidencias de `receipt-driven|Review Execution Contract|Provider Defect Handoff` (sin mayúsculas).
@@ -96,6 +96,10 @@ Plan stop: approved 2026-11-18; implementation continues
   - Observado: `go test ./internal/components/sdd/` ok; `./internal/assets/...` ok; `./internal/providercontractbundle/` ok; `./internal/components/agentguidance/` ok (y comprobación del padre ok); `./internal/components/` ok; `go vet ./...` limpio.
   - Fallos ambientales preexistentes: `components/filemerge` `TestWriteFileAtomicFollows*Junction` (falla igual en la base) y `communitytool` `TestPiCodeGraphPendingProbePreservesConfiguredFiles` (timeout del sondeo MCP).
   - Pendiente para T4: los overlays de OpenCode, el bloque `Review Execution Contract` preservado en instalaciones antiguas de OpenCode y las frases «SDD never offers or launches RDD» de las skills y comandos SDD y el contraste con `axiom review capture-result` en `judgment-day`.
+- **T4** `3e7c38d1`, `8a0bd822` (escritor delegado). `writeSubAgents` omite y borra los `review-*` por nombre exacto (el mismo criterio que `uninstall`; un `review-mine.md` del usuario se conserva); `retireClaudeReviewStopHook` (patrón de `telemetry_retire.go`) retira el hook actual y el heredado de `Stop` y `SessionStart`; OpenCode: el overlay se filtra al renderizar y `retireOpenCodeReviewAgents` borra antes de la fusión solo las entradas gestionadas (`opencode.IsManagedAgent`) y sus claves de `permission.task`; se elimina el bloque `Review Execution Contract` preservado y el marcador de la copia escrita de `_shared/sdd-orchestrator-sections.md`. Frases «SDD never offers or launches RDD» retiradas de skills y comandos SDD, con los pins convertidos en ausencia. Goldens: `sdd-opencode-multi-settings` (−69) y 4 de comandos (−1 cada uno).
+  - Observado: `go test ./internal/components/sdd/` ok; `uninstall`, `opencode`, `assets/...`, `agentguidance`, `components` ok; `./internal/cli/ -run 'Sync'` ok (136 s); `go vet ./...` limpio. Comprobación del padre: `-run 'WhileSuspended'` ok.
+  - Test de regresión del criterio de terminado: `TestInjectWorkspaceInstallsNoRDDWhileSuspended` (todos los agentes del catálogo y OpenCode multi; sin `review-*`, sin stop-hook y sin coincidencias de `receipt-driven|Review Execution Contract|Provider Defect Handoff`; con el punto de inyección activo da 8 coincidencias en Claude, así que no es vacuo). Además `...RetiresInstalledReviewAgents...`, `...RetiresReviewStopHook...` y `...RetiresManagedReviewAgents...`.
+  - **Residuos aplazados a C-01-e** (no coinciden con el criterio y dependen de código latente): el contraste con `axiom review capture-result` en `judgment-day` (lo exige `TestJudgmentDayPromptsDoNotClaimTheLensEnvelope` para el contrato del juez) y `_shared/review-ledger-contract*.md`, que `sync` sigue escribiendo y que `judgment-day/SKILL.md` enlaza.
 
 ## Spec viva
 
