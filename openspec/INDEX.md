@@ -1,8 +1,8 @@
 # Catálogo Maestro de Especificaciones Vivas — Axiom
 
 > **Proyecto:** Axiom (Spec-Driven Development Platform)
-> **Última Sincronización:** 2026-11-18 07:31:13 UTC
-> **Total Dominios:** 71 | **Total Requerimientos:** 553 | **Total Escenarios BDD:** 1650
+> **Última Sincronización:** 2026-11-18 10:51:20 UTC
+> **Total Dominios:** 71 | **Total Requerimientos:** 563 | **Total Escenarios BDD:** 1726
 
 ---
 
@@ -19,7 +19,7 @@
 | `axiom-tui-branding` | Especificación de Requerimientos: Unificación de TUI Bubbletea, Comandos de Ecosistema en CLI axiom y Pasarela de gentle-ai (INC-14) | 4 | 9 | [Ver Spec](specs/axiom-tui-branding/spec.md) |
 | `axiom-updater-resilience` | Especificación Viva: Resiliencia y Gobernanza del Actualizador Autónomo de Axiom | 9 | 10 | [Ver Spec](specs/axiom-updater-resilience/spec.md) |
 | `axiom-user-state-and-env` | Especificación de Requerimientos: Unificación de Estado en ~/.axiom y Variables AXIOM_* (INC-12) | 3 | 5 | [Ver Spec](specs/axiom-user-state-and-env/spec.md) |
-| `change-branch-lifecycle` | Especificación de Requerimientos: Ciclo de Vida de las Ramas y Worktrees de un Cambio por Topología (INC-25) | 27 | 193 | [Ver Spec](specs/change-branch-lifecycle/spec.md) |
+| `change-branch-lifecycle` | Especificación de Requerimientos: Ciclo de Vida de las Ramas y Worktrees de un Cambio por Topología (INC-25) | 27 | 195 | [Ver Spec](specs/change-branch-lifecycle/spec.md) |
 | `dashboard-sdd-orchestration` | Especificación de Requerimientos: Orquestación Interactiva SDD y Creación de Cambios en Dashboard Web y CLI (INC-15) | 5 | 10 | [Ver Spec](specs/dashboard-sdd-orchestration/spec.md) |
 | `engram-protocol-injection` | Engram protocol injection Specification | 5 | 12 | [Ver Spec](specs/engram-protocol-injection/spec.md) |
 | `gga` | GGA Specification | 3 | 8 | [Ver Spec](specs/gga/spec.md) |
@@ -29,7 +29,7 @@
 | `knowledge-sweep-command` | Especificación de Requerimientos: Barrido Autónomo Knowledge y Siembra Inicial (INC-23) | 5 | 5 | [Ver Spec](specs/knowledge-sweep-command/spec.md) |
 | `living-documentation` | Especificación Viva: Motor de Documentación Viva y Adopción Orgánica en Archive (INC-07) | 11 | 15 | [Ver Spec](specs/living-documentation/spec.md) |
 | `local-web-dashboard` | Especificación Viva: Servidor HTTP Local Embebido y Dashboard Web | 11 | 35 | [Ver Spec](specs/local-web-dashboard/spec.md) |
-| `multi-project-hub` | Especificación Viva: Hub Multi-Proyecto, Selector Dinámico en Dashboard Web y CLI axiom init (INC-08) | 11 | 38 | [Ver Spec](specs/multi-project-hub/spec.md) |
+| `multi-project-hub` | Especificación Viva: Hub Multi-Proyecto, Selector Dinámico en Dashboard Web y CLI axiom init (INC-08) | 12 | 45 | [Ver Spec](specs/multi-project-hub/spec.md) |
 | `multi-role-fan-out` | Especificación Viva: Despliegue Multi-Rol y Barrera de Sincronización en SDD | 8 | 13 | [Ver Spec](specs/multi-role-fan-out/spec.md) |
 | `odd-cli-commands` | Especificación de Requerimientos: Comandos CLI para ODD (INC-19) | 4 | 0 | [Ver Spec](specs/odd-cli-commands/spec.md) |
 | `odd-living-document` | Especificación de Requerimientos: Documento Vivo ODD y Espejo de Recuperación en Engram (INC-19) | 4 | 0 | [Ver Spec](specs/odd-living-document/spec.md) |
@@ -68,9 +68,9 @@
 | `sdd-docs-publication` | Especificación de Publicación Ligera de Documentación SDD (carril-proyecto-publicacion-docs) | 8 | 40 | [Ver Spec](specs/sdd-docs-publication/spec.md) |
 | `sdd-independent-review` | Especificación de Requerimientos: Revisión Independiente en SDD (verify técnico por rol, juicio opcional y revisión de cobertura) | 10 | 67 | [Ver Spec](specs/sdd-independent-review/spec.md) |
 | `sdd-iso-evidence` | Especificación: Evidencias ISO Opcionales del SDD (carril-sdd-versatil) | 10 | 97 | [Ver Spec](specs/sdd-iso-evidence/spec.md) |
-| `sdd-lane-kickoff` | Especificación de Requerimientos: Selección Temprana y Bloqueante de Carril ODD/SDD en el Kickoff (INC-21) | 12 | 69 | [Ver Spec](specs/sdd-lane-kickoff/spec.md) |
+| `sdd-lane-kickoff` | Especificación de Requerimientos: Selección Temprana y Bloqueante de Carril ODD/SDD en el Kickoff (INC-21) | 12 | 70 | [Ver Spec](specs/sdd-lane-kickoff/spec.md) |
 | `sdd-orchestrator-assets` | SDD Orchestrator Assets Specification | 20 | 56 | [Ver Spec](specs/sdd-orchestrator-assets/spec.md) |
-| `sdd-preflight-configuration` | Especificación de Requerimientos: Cuestionario Pre-Vuelo de SDD, Modalidad de Avance y Asignación Obligatoria de Roles (INC-21) | 6 | 44 | [Ver Spec](specs/sdd-preflight-configuration/spec.md) |
+| `sdd-preflight-configuration` | Especificación de Requerimientos: Cuestionario Pre-Vuelo de SDD, Modalidad de Avance y Asignación Obligatoria de Roles (INC-21) | 14 | 101 | [Ver Spec](specs/sdd-preflight-configuration/spec.md) |
 | `sdd-research` | sdd-research Specification | 3 | 9 | [Ver Spec](specs/sdd-research/spec.md) |
 | `sdd-role-closure-handoff` | Especificación de Requerimientos: Cierre de Último Rol, Aviso Formal y Relevo de Integración (INC-21) | 3 | 20 | [Ver Spec](specs/sdd-role-closure-handoff/spec.md) |
 | `semantic-code` | Especificación de Requerimientos: Conector Semántico de Código (Serena MCP & CodeGraph) (INC-06) | 11 | 14 | [Ver Spec](specs/semantic-code/spec.md) |
@@ -80,7 +80,7 @@
 | `tui-ui-parity` | Especificación Viva: Paridad Bidireccional entre TUI y Web UI | 10 | 11 | [Ver Spec](specs/tui-ui-parity/spec.md) |
 | `upstream-absorption-protocol` | Especificación Viva: Protocolo de Absorción por Tandas desde Upstream | 6 | 9 | [Ver Spec](specs/upstream-absorption-protocol/spec.md) |
 | `visual-decoupling` | Especificación de Requerimientos: Desacoplamiento Visual y Limpieza de Marca (Axiom) | 4 | 7 | [Ver Spec](specs/visual-decoupling/spec.md) |
-| `workspace-topology` | Especificación Viva: Topología de Workspace y CLI de Axiom | 12 | 49 | [Ver Spec](specs/workspace-topology/spec.md) |
+| `workspace-topology` | Especificación Viva: Topología de Workspace y CLI de Axiom | 13 | 58 | [Ver Spec](specs/workspace-topology/spec.md) |
 
 ---
 
@@ -392,6 +392,7 @@ Definir cómo crea, consulta, cierra y protege Axiom las ramas (y, opcionalmente
   - *Escenario BDD:* La rama existente se reutiliza sin moverla
   - *Escenario BDD:* Rama desplegada en un worktree desconocido
   - *Escenario BDD:* Ejecución previa al sellado y posterior al sellado
+  - *Escenario BDD:* En monorepo la ejecución posterior al sellado no añade ramas
   - *Escenario BDD:* Se rechaza un nombre de cambio que no es válido
   - *Escenario BDD:* `--archive` no altera las ramas del cambio
   - *Escenario BDD:* La rama publicada se adopta en lugar de crearse desde la base
@@ -489,7 +490,7 @@ Definir cómo crea, consulta, cierra y protege Axiom las ramas (y, opcionalmente
   - *Escenario BDD:* Una rama de rol es correcta cuando hay ramas de rol
   - *Escenario BDD:* La rama de archivado es incorrecta en el contexto ordinario
   - *Escenario BDD:* En el contexto de archivado solo la rama de archivado es correcta
-  - *Escenario BDD:* En el contexto de archivado la rama del cambio, la de integración y las de rol son incorrectas
+  - *Escenario BDD:* En el contexto de archivado la rama del cambio, la de integración y una ajena son incorrectas
   - *Escenario BDD:* Un HEAD desacoplado es incorrecto
   - *Escenario BDD:* El repositorio de specs de un multirepo exige su rama de integración
   - *Escenario BDD:* El repositorio de código de un multirepo solo se evalúa en apply
@@ -564,7 +565,8 @@ Definir cómo crea, consulta, cierra y protege Axiom las ramas (y, opcionalmente
   - *Escenario BDD:* Ningún fetch implícito
   - *Escenario BDD:* Con `--fetch` se adopta la referencia actualizada
   - *Escenario BDD:* Una rama local existente no se mueve
-  - *Escenario BDD:* Adopta también la rama de rol y la de archivado
+  - *Escenario BDD:* Adopta también la rama de rol en multirepo
+  - *Escenario BDD:* Adopta también la rama de archivado en monorepo
   - *Escenario BDD:* En modo `in_place` se adopta y se hace checkout
   - *Escenario BDD:* Idempotencia tras adoptar
   - *Escenario BDD:* Quien continúa un relevo no necesita una PR fusionada
@@ -816,6 +818,10 @@ Definir formal y deterministamente los requerimientos funcionales, no funcionale
   - *Escenario BDD:* Un puntero propio que no puede resolverse rechaza la inicialización
   - *Escenario BDD:* Un puntero que resuelve a `<directorio>/openspec` no se rechaza aunque ese directorio no exista todavía
   - *Escenario BDD:* Un puntero en un directorio ancestro no impide inicializar
+  - *Escenario BDD:* El alta en monorepo escribe solo `fullstack` aunque se detecten otros roles
+  - *Escenario BDD:* El alta en monorepo ignora los roles enviados por el formulario
+  - *Escenario BDD:* El alta en multirepo aplica los roles detectados o del formulario
+  - *Escenario BDD:* El perfil `knowledge` sigue forzando `multirepo` con el rol `knowledge`
 - **[REQ-3.1]** Endpoints REST de Gestión Multi-Proyecto
   - *Escenario BDD:* Conmutación en caliente de workspace en la UI
   - *Escenario BDD:* Registro con preferencias personales
@@ -848,6 +854,10 @@ Definir formal y deterministamente los requerimientos funcionales, no funcionale
 - **[REQ-30.27]** El Alta de Proyecto Muestra el Informe de Adopción y la Instrucción
   - *Escenario BDD:* Informe e instrucción tras el alta
   - *Escenario BDD:* Informe vacío
+- **[REQ-3.3]** El Formulario de Alta del Dashboard Solo Ofrece Roles en `multirepo`
+  - *Escenario BDD:* Con monorepo no hay constructor de roles y el rol es `fullstack`
+  - *Escenario BDD:* Con multirepo el constructor de roles está disponible
+  - *Escenario BDD:* Cambiar de multirepo a monorepo descarta los roles especializados
 
 ### Dominio: `multi-role-fan-out` — Especificación Viva: Despliegue Multi-Rol y Barrera de Sincronización en SDD
 
@@ -1335,7 +1345,7 @@ Definir el contexto técnico del proyecto como concepto de primera clase: cómo 
   - *Escenario BDD:* Contexto mantenido con almacén `none`
   - *Escenario BDD:* Los almacenes de ficheros y la ausencia de declaración no se reportan
   - *Escenario BDD:* El status bloquea el archivado sin bloquear la planificación
-  - *Escenario BDD:* Sin contexto mantenido el almacén no se exige
+  - *Escenario BDD:* Sin contexto mantenido el almacén no bloquea el status ni el archivado, pero la validación lo reporta
 - **[REQ-30.20]** El Mantenimiento del Contexto en ODD se Rige por `odd-living-spec-integration`
   - *Escenario BDD:* ODD no genera delta de contexto
   - *Escenario BDD:* La comprobación estructural es la de la integración ODD
@@ -1864,7 +1874,7 @@ Define one explicit, content-addressed implementation-review transaction shared 
   - *Escenario BDD:* Sin la evidencia del PR del cambio el archive se rechaza aunque la rama sea la de archivado
   - *Escenario BDD:* Archivar en la rama del cambio se rechaza
   - *Escenario BDD:* Archivar en la rama de integración se rechaza
-  - *Escenario BDD:* Archivar en una rama de rol se rechaza
+  - *Escenario BDD:* Archivar en una rama ajena se rechaza
   - *Escenario BDD:* Status proyecta el bloqueo de rama en la fase archive
   - *Escenario BDD:* Mientras no se archiva, el cambio fusionado figura como pendiente
   - *Escenario BDD:* Un PR documental rechazado deja el cambio pendiente de archivar
@@ -2315,6 +2325,7 @@ Definir el **modo ISO**, una opción declarada por el proyecto en `axiom.yaml` y
   - *Escenario BDD:* Doctrina presente en los orquestadores
 - **[REQ-25.36]** Instantánea de Política Git en `kickoff.yaml`, Escrita una Sola Vez por `seal`
   - *Escenario BDD:* El sellado escribe la instantánea
+  - *Escenario BDD:* El sellado en multirepo escribe las ramas de rol y ninguna rama de archivado
   - *Escenario BDD:* La instantánea refleja las excepciones por cambio
   - *Escenario BDD:* La instantánea no se reescribe
   - *Escenario BDD:* Un segundo sellado desde otra rama se rechaza
@@ -2457,13 +2468,16 @@ Defines required behavior for agent-specific SDD orchestrator guidance assets so
 **Archivo:** [`specs/sdd-preflight-configuration/spec.md`](specs/sdd-preflight-configuration/spec.md)
 
 - **[REQ-21.5]** Bloqueo de Avance sin Modalidad Sellada
-  - *Escenario BDD:* Modalidad de avance sellada antes de crear la propuesta
-  - *Escenario BDD:* Respuesta ambigua o ausente no crea la propuesta ni asume un valor por defecto
+  - *Escenario BDD:* Modalidad de avance sellada antes de crear la propuesta en monorepo
+  - *Escenario BDD:* En multirepo la modalidad se sella `checkpointed` sin preguntarla
+  - *Escenario BDD:* Respuesta ambigua o ausente no crea la propuesta ni asume un valor por defecto en monorepo
+  - *Escenario BDD:* En monorepo el sellado sin modalidad se rechaza
   - *Escenario BDD:* El sellado funciona sin política de relevos
 - **[REQ-21.6]** Asignación Obligatoria del Rol `fullstack` sin Subdivisión Especializada
   - *Escenario BDD:* Sin roles declarados, se asigna fullstack por defecto
-  - *Escenario BDD:* Un único rol especializado declarado no se combina con fullstack
-  - *Escenario BDD:* Varios roles especializados declarados tampoco activan fullstack
+  - *Escenario BDD:* En monorepo no se proponen roles especializados
+  - *Escenario BDD:* Un único rol especializado declarado no se combina con fullstack en multirepo
+  - *Escenario BDD:* Varios roles especializados declarados en multirepo tampoco activan fullstack
 - **[REQ-26.9]** `handoff_policy` Deprecado: se Acepta, se Ignora y se Fija a `none`
   - *Escenario BDD:* Sellar sin la política de relevos funciona
   - *Escenario BDD:* Un orquestador antiguo que pasa el flag sigue funcionando
@@ -2484,6 +2498,7 @@ Defines required behavior for agent-specific SDD orchestrator guidance assets so
   - *Escenario BDD:* `continuous` con un único rol especializado se rechaza
   - *Escenario BDD:* `continuous` sin ningún rol declarado sella con fullstack
   - *Escenario BDD:* `checkpointed` admite varios roles y también fullstack
+  - *Escenario BDD:* Con topología declarada el rechazo por topología precede y nombra la topología
   - *Escenario BDD:* Un kickoff existente que incumple la regla se sigue leyendo
   - *Escenario BDD:* Un kickoff archivado que incumple la regla no se reescribe
 - **[REQ-28.13]** `--from-session-pace auto` con Roles Distintos de `fullstack` se Rechaza sin Derivar `checkpointed`
@@ -2492,20 +2507,81 @@ Defines required behavior for agent-specific SDD orchestrator guidance assets so
   - *Escenario BDD:* Ritmo automático con un único rol especializado se rechaza
   - *Escenario BDD:* Ritmo interactivo no cambia
   - *Escenario BDD:* Tras el rechazo el usuario puede elegir y repetir
-- **[REQ-28.14]** La Preferencia de Revisión Independiente se Recoge en una Interacción Propia Tras el Pre-Vuelo, sin Alterar sus Tres Grupos Canónicos
+- **[REQ-28.14]** La Preferencia de Revisión Independiente se Recoge en una Interacción Propia Tras el Pre-Vuelo, sin Reutilizar sus Marcadores ni sus Grupos
   - *Escenario BDD:* La interacción presenta dos preguntas con sus opciones y descripciones
   - *Escenario BDD:* Las etiquetas se pueden traducir y el token canónico se conserva
-  - *Escenario BDD:* Los tres grupos canónicos siguen siendo válidos y no cambian
+  - *Escenario BDD:* Los grupos requeridos siguen estableciendo la autoridad del pre-vuelo
   - *Escenario BDD:* La interacción de la preferencia no reutiliza los marcadores del pre-vuelo
   - *Escenario BDD:* Se presenta después del pre-vuelo y antes de la primera fase
   - *Escenario BDD:* Un runtime sin interfaz nativa usa la sintaxis de texto
   - *Escenario BDD:* Una respuesta de texto válida se acepta
   - *Escenario BDD:* Una respuesta fuera del dominio vuelve a preguntarse
-  - *Escenario BDD:* Una opción de la preferencia en un grupo canónico se rechaza
+  - *Escenario BDD:* Una opción de la preferencia en un grupo del pre-vuelo se rechaza
   - *Escenario BDD:* La preferencia se cachea sin escribir en el kickoff
   - *Escenario BDD:* La política de revisión de 400 líneas no se pregunta
   - *Escenario BDD:* Una sesión nueva vuelve a preguntar la preferencia una vez
   - *Escenario BDD:* Una sesión sin la preferencia deja su ausencia tratada por REQ-28.2
+- **[REQ-28.15]** Los Grupos del Pre-Vuelo Dependen de la Topología y los Valores No Preguntados se Derivan
+  - *Escenario BDD:* En multirepo no se pregunta ritmo ni almacén
+  - *Escenario BDD:* En monorepo se pregunta el ritmo y la estrategia de entrega
+  - *Escenario BDD:* El almacén no se pregunta en ninguna topología
+  - *Escenario BDD:* El texto proyectado manda leer la topología antes de preguntar
+  - *Escenario BDD:* Un conjunto variable de grupos no rompe a los demás
+  - *Escenario BDD:* Un bloque con un almacén distinto de `hybrid` no es válido
+- **[REQ-28.16]** Cada Pregunta del Pre-Vuelo Lleva un Marcador por Nombre de Grupo y se Toleran los Marcadores Numerados Heredados
+  - *Escenario BDD:* Marcador nominal aceptado con cualquiera de los dos prefijos
+  - *Escenario BDD:* Los marcadores numerados heredados toleran un cuestionario antiguo de tres preguntas
+  - *Escenario BDD:* Un cuestionario heredado en multirepo ignora ritmo y almacén
+  - *Escenario BDD:* Un grupo requerido con el marcador repetido se deniega nombrándolo
+  - *Escenario BDD:* Un grupo requerido sin marcador se deniega nombrándolo
+  - *Escenario BDD:* La interacción de la preferencia de revisión no se confunde con un grupo
+- **[REQ-28.17]** El Hook Valida el Significado del Pre-Vuelo según la Topología, no su Presentación
+  - *Escenario BDD:* Un grupo extra se ignora
+  - *Escenario BDD:* Falta un grupo requerido y la causa lo nombra
+  - *Escenario BDD:* El orden de las preguntas y de las opciones no importa
+  - *Escenario BDD:* Una respuesta fuera del dominio o de selección múltiple se deniega
+  - *Escenario BDD:* Un agente hijo no despacha
+  - *Escenario BDD:* El texto del modelo no crea autoridad
+  - *Escenario BDD:* Un payload sin transcripción enlazada se deniega
+  - *Escenario BDD:* Gana la última respuesta válida
+  - *Escenario BDD:* Fuera de un proyecto Axiom el hook no interviene
+- **[REQ-28.18]** Sin Grupos Requeridos el Cuestionario se Suprime y el Bloque es Enteramente Derivado
+  - *Escenario BDD:* Cero grupos requeridos permite el despacho con el bloque derivado
+  - *Escenario BDD:* El orquestador no lanza la herramienta de preguntas con cero grupos
+  - *Escenario BDD:* Con un grupo requerido no hay relajación
+  - *Escenario BDD:* El prompt que ya trae el bloque no se duplica
+- **[REQ-28.19]** El Sellado del Kickoff Aplica la Topología al Estilo de Ejecución y a los Roles
+  - *Escenario BDD:* En multirepo `continuous` se rechaza nombrando la topología
+  - *Escenario BDD:* En multirepo `--from-session-pace auto` se rechaza nombrando la topología
+  - *Escenario BDD:* En multirepo sin estilo explícito se deriva `checkpointed`
+  - *Escenario BDD:* En multirepo `checkpointed` e `interactive` se aceptan con roles especializados
+  - *Escenario BDD:* En monorepo un rol especializado se rechaza nombrando la topología
+  - *Escenario BDD:* En monorepo `fullstack` con otro rol se rechaza
+  - *Escenario BDD:* En monorepo sin `--role` se sella `fullstack`
+  - *Escenario BDD:* En monorepo `continuous` con `fullstack` se acepta
+  - *Escenario BDD:* El retro-sellado queda exento
+  - *Escenario BDD:* Un kickoff existente que incumple la topología se sigue leyendo
+- **[REQ-28.20]** La Doctrina del Orquestador Fija el Almacén `hybrid` y Hace que la Topología Decida el Ritmo
+  - *Escenario BDD:* La doctrina no pregunta el almacén ni elige `engram` o `none`
+  - *Escenario BDD:* El ritmo por defecto ya no es automático
+  - *Escenario BDD:* Todos los runtimes proyectan el mismo texto
+  - *Escenario BDD:* El valor por defecto de `status` no cambia
+- **[REQ-28.21]** El Plugin de OpenCode Aplica el Mismo Contrato de Grupos que el Hook
+  - *Escenario BDD:* El plugin acepta el marcador nominal y el heredado
+  - *Escenario BDD:* El plugin enlaza por etiqueta y no por posición
+  - *Escenario BDD:* El plugin exige los grupos de la topología que lee
+  - *Escenario BDD:* El plugin con topología ilegible usa los grupos de monorepo
+  - *Escenario BDD:* La lectura de topología del plugin coincide con la del binario
+  - *Escenario BDD:* El plugin ignora el grupo de almacén heredado
+  - *Escenario BDD:* La revisión anterior del plugin queda registrada
+- **[REQ-28.22]** Topología Efectiva: una Topología No Gobernable se Trata como `monorepo-embedded` y sin `axiom.yaml` no se Aplica Ninguna Regla
+  - *Escenario BDD:* Topología desconocida en el hook se trata como monorepo
+  - *Escenario BDD:* Un `axiom.yaml` no cargable en el hook se trata como monorepo
+  - *Escenario BDD:* Sin `axiom.yaml` el hook y el plugin no intervienen
+  - *Escenario BDD:* El sellado con topología desconocida aplica las reglas de monorepo
+  - *Escenario BDD:* El sellado sin `axiom.yaml` no aplica la regla de topología
+  - *Escenario BDD:* Sin `axiom.yaml` sigue rigiendo la regla de roster
+  - *Escenario BDD:* Con `monorepo-embedded` y `continuous` con rol especializado gana la topología
 
 ### Dominio: `sdd-research` — sdd-research Specification
 
@@ -2739,6 +2815,11 @@ Definir de forma canónica el comportamiento del punto de entrada CLI `axiom` y 
   - *Escenario BDD:* El bloque `baseline` ya no es un bloque admitido
 - **[REQ-2.2]** Topología Monorepo Embebido
   - *Escenario BDD:* Monorepo embebido con specs en raíz o subdirectorio válido
+  - *Escenario BDD:* Monorepo con el rol único `fullstack` es conforme
+  - *Escenario BDD:* Monorepo con roles especializados se rechaza con los pasos de migración
+  - *Escenario BDD:* Monorepo con `fullstack` y otro rol se rechaza
+  - *Escenario BDD:* La carga no se rompe con un monorepo de roles especializados
+  - *Escenario BDD:* Multirepo con roles especializados sigue siendo conforme
 - **[REQ-workspace-topology-5]** Topología Monorepo Desacoplado (REQ-2.3) [SUPERSEDED / DEPRECADO]
   - *Escenario BDD:* Monorepo desacoplado con repositorio de specs presente
   - *Escenario BDD:* Monorepo desacoplado sin repositorio de specs
@@ -2783,4 +2864,9 @@ Definir de forma canónica el comportamiento del punto de entrada CLI `axiom` y 
   - *Escenario BDD:* El archivado se detiene sin escribir una segunda spec viva
   - *Escenario BDD:* Un `axiom.yaml` sin `baseline:` no se ve afectado
   - *Escenario BDD:* La carga produce la causa tipada
+- **[REQ-2.6]** El Almacén de Artefactos Declarado Solo Admite Ficheros: `engram` y `none` se Reportan
+  - *Escenario BDD:* `engram` declarado se reporta con la migración
+  - *Escenario BDD:* `none` declarado se reporta
+  - *Escenario BDD:* `openspec`, `hybrid` y la ausencia de declaración se aceptan
+  - *Escenario BDD:* La carga no se rompe con `engram` o `none`
 

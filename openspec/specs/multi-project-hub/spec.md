@@ -66,7 +66,7 @@ El gestor provee inicialización asistida y automática de proyectos (`axiom ini
 
 ### Requirement: Detección Heurística de Tecnologías (REQ-2.1)
 
-El inicializador DEBE inspeccionar los archivos del repositorio para deducir la tecnología principal y configurar adecuadamente los roles y herramientas en `axiom.yaml`:
+El inicializador DEBE inspeccionar los archivos del repositorio para deducir la tecnología principal y configurar adecuadamente las herramientas y, solo en `multirepo`, los roles en `axiom.yaml` (en `monorepo-embedded` el único rol que se escribe es `fullstack`, REQ-2.2):
 - Si detecta `go.mod` ➔ Tecnología: `go` / `go-test`.
 - Si detecta `package.json` ➔ Tecnología: `nodejs` / `typescript` (o `react`/`vue`/`svelte` si están en dependencias).
 - Si detecta `*.csproj` o `*.sln` ➔ Tecnología: `dotnet` / `csharp`.
@@ -76,19 +76,19 @@ El inicializador DEBE inspeccionar los archivos del repositorio para deducir la 
 #### Scenario: Detección automática en proyecto Go
 - **DADO** un directorio con un archivo `go.mod`
 - **CUANDO** se ejecuta el detector tecnológico
-- **ENTONCES** retorna `go` como tecnología base del rol `core` y `go-test` para el rol `qa`
+- **ENTONCES** el detector retorna `go` como tecnología base del rol `core` y `go-test` para el rol `qa`
+- **Y** esos roles detectados solo se escriben en `axiom.yaml` si la topología es `multirepo`
 
 #### Scenario: Detección automática en proyecto .NET / C#
 - **DADO** un directorio con un archivo `Ludeka.sln` o `*.csproj`
 - **CUANDO** se ejecuta el detector tecnológico
 - **ENTONCES** retorna `csharp` y `dotnet` en la configuración inicial
 
----
 
 ### Requirement: Generación de Andamiaje `axiom.yaml` y Registro Automático (REQ-2.2)
 
 Al ejecutar `axiom init` sobre un directorio:
-1. Si NO existe `axiom.yaml`, genera un archivo canónico con el nombre del proyecto, topología seleccionada (`monorepo-embedded`), repositorio de especificaciones (`openspec`), roles detectados (`core` y `qa`) y gobernanza en español.
+1. Si NO existe `axiom.yaml`, genera un archivo canónico con el nombre del proyecto, topología seleccionada (`monorepo-embedded` por defecto), repositorio de especificaciones (`openspec`), roles y gobernanza en español. Los roles dependen de la topología: en `monorepo-embedded` el alta escribe SOLO el rol `fullstack`, aunque el detector haya deducido otros roles o el formulario los haya enviado; en `multirepo` se aplican los roles detectados (`core`, `web`, `qa`) o los del formulario. El perfil `knowledge` (o `spec-only`) fuerza `multirepo` con un único rol `knowledge`.
 2. Crea las carpetas base necesarias: `.axiom/inbox/skills/`, `openspec/specs/` y `openspec/changes/`.
 3. Registra automáticamente el proyecto en `~/.axiom/workspaces.json` y lo marca como proyecto activo.
 4. Si YA existe `axiom.yaml`, no lo sobreescribe; valida su estructura (incluido el bloque opcional `technical_context`; un bloque `baseline:` residual se rechaza con el error tipado de REQ-30.21) y lo registra en el Hub global si no estaba registrado.
@@ -99,7 +99,7 @@ Cuando el puntero del propio directorio no puede resolverse (por ejemplo, un pun
 
 `axiom init` NO DEBE rechazarse cuando el puntero resuelve a `<directorio>/openspec` (exista ya ese directorio o no), cuando el propio directorio no contiene puntero (aunque lo contenga un directorio ancestro: el marcador más cercano gana, REQ-24.2) ni cuando no hay ningún marcador: en esos casos se comporta como describen los puntos 1 a 4.
 
-(Previously: el punto 2 omitía `openspec/specs/` e `openspec/INDEX.md` cuando `axiom.yaml` declaraba una baseline del proyecto y el punto 4 validaba también el bloque `baseline`; la baseline ajena se retira y `openspec/specs/` se crea siempre)
+(Previously: el punto 2 omitía `openspec/specs/` e `openspec/INDEX.md` cuando `axiom.yaml` declaraba una baseline del proyecto y el punto 4 validaba también el bloque `baseline`; la baseline ajena se retira y `openspec/specs/` se crea siempre; el andamiaje escribía los roles detectados `core` y `qa` en cualquier topología, y ahora en `monorepo-embedded` escribe solo `fullstack`)
 
 #### Scenario: Inicialización exitosa de proyecto virgen
 - **DADO** un directorio limpio sin archivos de Axiom
@@ -137,6 +137,30 @@ Cuando el puntero del propio directorio no puede resolverse (por ejemplo, un pun
 - **DADO** el mismo workspace canónico y el directorio `<maestra>/repo-backend`, que no contiene `.axiom-workspace` propio
 - **CUANDO** se ejecuta `axiom init --path <maestra>/repo-backend`
 - **ENTONCES** no se rechaza por el puntero de `<maestra>` y la inicialización se comporta como antes de este incremento
+
+
+#### Scenario: El alta en monorepo escribe solo `fullstack` aunque se detecten otros roles
+- **DADO** un directorio con `go.mod` y `package.json` cuyo detector deduce los roles `core`, `web` y `qa`
+- **CUANDO** se ejecuta `axiom init` con la topología `monorepo-embedded` (por defecto)
+- **ENTONCES** el `axiom.yaml` generado declara exactamente un rol, `fullstack`
+- **Y** `axiom workspace validate` sobre ese `axiom.yaml` no reporta errores de roles
+
+#### Scenario: El alta en monorepo ignora los roles enviados por el formulario
+- **DADO** un alta con la topología `monorepo-embedded` y una lista de roles `core` y `qa` en los parámetros
+- **CUANDO** se genera el `axiom.yaml`
+- **ENTONCES** el `axiom.yaml` declara exactamente un rol, `fullstack`
+
+#### Scenario: El alta en multirepo aplica los roles detectados o del formulario
+- **DADO** un alta con la topología `multirepo` y los roles `core` y `qa` (detectados o enviados)
+- **CUANDO** se genera el `axiom.yaml`
+- **ENTONCES** el `axiom.yaml` declara los roles `core` y `qa`
+
+#### Scenario: El perfil `knowledge` sigue forzando `multirepo` con el rol `knowledge`
+- **DADO** un alta con el perfil `knowledge` (o `spec-only`) y cualquier topología solicitada
+- **CUANDO** se genera el `axiom.yaml`
+- **ENTONCES** la topología es `multirepo`
+- **Y** el único rol declarado es `knowledge`
+
 ## 3. Capacidad: `dashboard-project-switcher`
 
 El Dashboard Web (`axiom ui`) opera como un Centro de Control Multi-Proyecto con conmutación en tiempo real.
@@ -325,3 +349,22 @@ Tras el alta de un proyecto (`/api/projects/init`), el dashboard DEBE mostrar el
 - **CUANDO** el alta termina con éxito
 - **ENTONCES** el dashboard no muestra la instrucción de adopción
 
+### Requirement: El Formulario de Alta del Dashboard Solo Ofrece Roles en `multirepo` (REQ-3.3)
+
+El formulario de alta de proyecto del dashboard DEBE ofrecer el constructor de roles únicamente cuando la topología seleccionada es `multirepo`. Con `monorepo-embedded` NO DEBE mostrar el constructor de roles y el rol enviado DEBE ser siempre `fullstack`. Al cambiar la topología del formulario, el constructor DEBE mostrarse u ocultarse en consecuencia y la validación del formulario NO DEBE exigir roles especializados en monorepo.
+
+#### Scenario: Con monorepo no hay constructor de roles y el rol es `fullstack`
+- **DADO** el formulario de alta con la topología `monorepo-embedded`
+- **CUANDO** el usuario lo envía
+- **ENTONCES** el constructor de roles no se muestra
+- **Y** los roles enviados son exactamente `fullstack`
+
+#### Scenario: Con multirepo el constructor de roles está disponible
+- **DADO** el formulario de alta con la topología `multirepo`
+- **CUANDO** el usuario lo abre
+- **ENTONCES** el constructor de roles se muestra y los roles que defina son los que se envían
+
+#### Scenario: Cambiar de multirepo a monorepo descarta los roles especializados
+- **DADO** el formulario con la topología `multirepo` y los roles `core` y `qa` definidos
+- **CUANDO** el usuario cambia la topología a `monorepo-embedded` y lo envía
+- **ENTONCES** los roles enviados son exactamente `fullstack`
