@@ -33,6 +33,10 @@ type EnsureRequest struct {
 	Exceptions branch.Exceptions
 	Repos      []string
 	Archive    bool
+	// Promotions son los `--promotion` (`<modo>` o `<repo>=<modo>`, REQ-25.47): la respuesta a la
+	// pregunta de promoción de un repositorio de dos etapas o su modo explícito. Vacío si no se
+	// dieron.
+	Promotions []branch.PromotionRequest
 }
 
 // Ensure crea lo que falta de las ramas del cambio y las despliega según el modo de trabajo
@@ -147,10 +151,22 @@ func (e *Engine) Ensure(ctx context.Context, r EnsureRequest) branch.Result {
 	// En `in_place` las ramas se despliegan en el propio repositorio: el plan no lleva rutas
 	// de worktree (ni se comprueba su colocación ni su longitud).
 	facts.input.InPlace = mode.mode == branch.ModeInPlace
-	plan, refusal := branch.Plan(facts.input)
+	// La promoción se resuelve y, con `ask` sin respuesta, se pregunta después del modo de
+	// trabajo y antes de cualquier fetch o escritura. Con `--archive` no se resuelve: el plan de
+	// archivado sale de la integración y conserva el modo ya registrado.
+	var (
+		plan              branch.ChangePlan
+		promotionWarnings []string
+	)
+	if r.Archive {
+		plan, refusal = branch.Plan(facts.input)
+	} else {
+		plan, promotionWarnings, refusal = e.planWithPromotion(ctx, &facts, promotionRequest{interactive: true, requested: r.Promotions, args: ensureArgs(command, r)})
+	}
 	if refusal != nil {
 		return refused(refusal)
 	}
+	promotions := facts.input.Promotions
 
 	pending, fetched, refusal := e.checkPlan(ctx, command, r.CWD, plan, facts, r.Fetch)
 	if refusal != nil {
@@ -167,6 +183,8 @@ func (e *Engine) Ensure(ctx context.Context, r EnsureRequest) branch.Result {
 			return refused(refusal)
 		}
 		facts.input.InPlace = mode.mode == branch.ModeInPlace
+		// El modo de promoción ya está resuelto: se reaplica sin volver a resolverlo.
+		facts.input.Promotions = promotions
 		if plan, refusal = branch.Plan(facts.input); refusal != nil {
 			return refused(refusal)
 		}
@@ -199,6 +217,7 @@ func (e *Engine) Ensure(ctx context.Context, r EnsureRequest) branch.Result {
 		result.WorktreeRoot = plan.WorktreeRoot
 	}
 	result.Warnings = append(result.Warnings, facts.warnings...)
+	result.Warnings = append(result.Warnings, promotionWarnings...)
 	if facts.prefs.warning != "" {
 		result.Warnings = append(result.Warnings, facts.prefs.warning)
 	}

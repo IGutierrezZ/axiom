@@ -67,7 +67,7 @@ Banderas:
   --json              Imprime el resultado como axiom.branch-result/v1
 `
 
-const branchEnsureHelp = `Uso: axiom branch ensure --change <nombre> [--lane sdd|odd] [--mode worktree|in_place] [--prefix <prefijo>] [--branch <rama>] [--base <ref>] [--repo <ruta>]... [--archive] [--fetch] [--cwd <ruta>] [--json]
+const branchEnsureHelp = `Uso: axiom branch ensure --change <nombre> [--lane sdd|odd] [--mode worktree|in_place] [--prefix <prefijo>] [--branch <rama>] [--base <ref>] [--repo <ruta>]... [--promotion <modo>]... [--archive] [--fetch] [--cwd <ruta>] [--json]
 
 Crea lo que falta de las ramas de un cambio y de sus worktrees. En cada repositorio del
 plan crea la rama del cambio (<prefijo>/<cambio>; con dos o más roles sobre el mismo
@@ -118,6 +118,17 @@ contradice lo ya materializado es plan_conflict sin tocar nada y un --prefix, --
 indicados los repositorios de código del plan en el carril sdd y, en el carril odd, los
 incluye.
 
+Con git.main_branch declarada y distinta de la rama de integración, el repositorio tiene dos
+etapas y el modo de promoción decide de dónde sale la rama del cambio: branch, desde
+origin/<principal> (su primera PR va a la integración y la segunda a la principal), o release,
+desde la integración (el paso a la principal es la release). El modo sale de git.promotion o de
+repositories[].promotion (por defecto, branch); con ask y sin respuesta, ensure devuelve
+decision_required por repositorio, sin crear nada, y repite la orden con --promotion.
+--promotion branch|release|<repo>=branch|release (repetible) fija el modo del cambio y se registra
+con su origen; <repo> es el nombre del repositorio en el plan. El modo registrado manda y un
+--promotion distinto es plan_conflict. No se admite con --archive. Sin main_branch no tiene efecto
+y ensure lo avisa.
+
 En un multirepo el repositorio de specs se trabaja in situ en su rama de integración:
 ensure nunca crea en él ramas, worktrees ni checkout, y si está en otra rama (o con HEAD
 desacoplado) rechaza con specs_repo_not_on_integration. Cada repositorio de código con un
@@ -166,6 +177,8 @@ Banderas:
   --branch <rama>     Nombre completo de la rama del cambio, solo para este cambio
   --base <ref>        Referencia de la que salen las ramas, solo para este cambio
   --repo <ruta>       Repositorio que se incluye (odd) o al que se acota el plan (sdd); repetible
+  --promotion branch|release|<repo>=branch|release
+                      Modo de promoción de un repositorio de dos etapas; es la respuesta a decision_required; repetible
   --archive           Crea la rama de archivado del cambio ya fusionado; solo admite --prefix, --mode, --fetch, --cwd y --json
   --fetch           Ejecuta git fetch origin en cada repositorio del plan antes de resolver la base
   --cwd <ruta>        Directorio de partida (por defecto, el directorio de trabajo del proceso)
@@ -218,6 +231,8 @@ func runBranchEnsure(args []string, stdout, stderr io.Writer) int {
 	base := flags.String("base", "", "referencia de la que salen las ramas del cambio, solo para este cambio")
 	var repos branchRepeatedFlag
 	flags.Var(&repos, "repo", "repositorio que se incluye (ODD) o al que se acota el plan (SDD); repetible")
+	var promotionValues branchRepeatedFlag
+	flags.Var(&promotionValues, "promotion", "modo de promoción: branch, release, <repo>=branch o <repo>=release; repetible")
 	archive := flags.Bool("archive", false, "crea la rama de archivado del cambio ya fusionado")
 	cwd := flags.String("cwd", ".", "directorio de partida")
 	asJSON := flags.Bool("json", false, "imprime el resultado como axiom.branch-result/v1")
@@ -263,6 +278,17 @@ func runBranchEnsure(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "Error: --repo no se admite con --archive: la rama de archivado solo se crea en el repositorio del proyecto y solo admite --prefix, --mode, --fetch, --cwd y --json. Repite `axiom branch ensure --change <nombre> --archive` sin --repo o ejecuta `axiom branch ensure --help`.")
 		return branch.ExitUsage
 	}
+	// Con --archive tampoco hay modo de promoción que fijar: la rama de archivado sale de la
+	// integración y conserva el modo ya registrado.
+	if *archive && len(promotionValues) > 0 {
+		fmt.Fprintln(stderr, "Error: --promotion no se admite con --archive: la rama de archivado sale de la rama de integración y conserva el modo de promoción registrado, y solo admite --prefix, --mode, --fetch, --cwd y --json. Repite `axiom branch ensure --change <nombre> --archive` sin --promotion o ejecuta `axiom branch ensure --help`.")
+		return branch.ExitUsage
+	}
+	promotions, err := branch.ParsePromotionRequests(promotionValues)
+	if err != nil {
+		fmt.Fprintf(stderr, "Error: %v. Ejecuta `axiom branch ensure --help`.\n", err)
+		return branch.ExitUsage
+	}
 	dir, err := filepath.Abs(*cwd)
 	if err != nil {
 		fmt.Fprintf(stderr, "Error: no se pudo resolver --cwd '%s' (%v). Indica una ruta absoluta con `axiom branch ensure --change <nombre> --cwd <ruta>`.\n", *cwd, err)
@@ -271,6 +297,7 @@ func runBranchEnsure(args []string, stdout, stderr io.Writer) int {
 	result := engine.Default().Ensure(context.Background(), engine.EnsureRequest{
 		CWD: dir, Change: *change, Lane: branch.Lane(*lane), Fetch: *fetch, Mode: branch.Mode(*mode),
 		Exceptions: branch.Exceptions{Prefix: *prefix, Branch: *branchName, Base: *base}, Repos: repos, Archive: *archive,
+		Promotions: promotions,
 	})
 	return writeBranchResult(result, *asJSON, stdout, stderr)
 }

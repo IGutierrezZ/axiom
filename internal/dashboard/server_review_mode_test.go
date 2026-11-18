@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/hub"
+	"github.com/IGutierrezZ/axiom/v3/internal/rddharness"
 )
 
 // reviewModeServer aísla el HOME (el interruptor global es estado de usuario) y monta un
@@ -223,5 +224,46 @@ func TestProjectsInitRejectsAnInvalidReviewModeBeforeWriting(t *testing.T) {
 	}
 	if list, _ := mgr.List(); len(list) != 0 {
 		t.Errorf("no debe registrar nada: %v", list)
+	}
+}
+
+// RDD suspendido (C-01-c): el endpoint sigue latente pero rechaza activar la revisión con
+// el motivo de rddharness, sin guardar nada; apagar y heredar siguen funcionando.
+func TestProjectReviewModeEndpointRejectsOnWhileSuspended(t *testing.T) {
+	defer rddharness.SetForTesting(false)()
+	router, root, mgr := reviewModeServer(t, true)
+
+	rr := request(router, http.MethodPost, "/api/project/review-mode", `{"mode":"on"}`)
+	if rr.Code != http.StatusBadRequest || !strings.Contains(rr.Body.String(), rddharness.UnavailableMessage) {
+		t.Fatalf("POST on = %d, quiero 400 con el motivo: %s", rr.Code, rr.Body.String())
+	}
+	if saved, _, err := mgr.LookupProjectRDD(root); err != nil || saved != "" {
+		t.Errorf("el hub no debe guardar nada: %q (err=%v)", saved, err)
+	}
+	for _, mode := range []string{"off", "inherit"} {
+		if rr = request(router, http.MethodPost, "/api/project/review-mode", `{"mode":"`+mode+`"}`); rr.Code != http.StatusOK {
+			t.Errorf("POST %s = %d: %s", mode, rr.Code, rr.Body.String())
+		}
+	}
+	rr = request(router, http.MethodGet, "/api/project/review-mode", "")
+	if dto := decodeReviewMode(t, rr.Body.Bytes()); rr.Code != http.StatusOK || dto.Effective != "off" {
+		t.Errorf("GET = %d %+v", rr.Code, dto)
+	}
+}
+
+// El alta con review_mode "on" se rechaza antes de escribir nada mientras RDD esté suspendido.
+func TestProjectInitRejectsReviewModeOnWhileSuspended(t *testing.T) {
+	defer rddharness.SetForTesting(false)()
+	router, _, mgr := reviewModeServer(t, true)
+	newDir := filepath.Join(t.TempDir(), "proyecto-nuevo")
+	rr := request(router, http.MethodPost, "/api/projects/init", `{"path":`+quoteJSON(newDir)+`,"review_mode":"on"}`)
+	if rr.Code < 400 || rr.Code >= 500 || !strings.Contains(rr.Body.String(), rddharness.UnavailableMessage) {
+		t.Fatalf("alta con review_mode on = %d, quiero 4xx con el motivo: %s", rr.Code, rr.Body.String())
+	}
+	if _, err := os.Stat(newDir); !os.IsNotExist(err) {
+		t.Errorf("el alta rechazada no debe crear %s (err=%v)", newDir, err)
+	}
+	if mode, _, _ := mgr.LookupProjectRDD(newDir); mode != "" {
+		t.Errorf("no debe guardarse nada: %q", mode)
 	}
 }

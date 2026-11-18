@@ -207,22 +207,26 @@ func TestEveryRuntimeRendersTheSharedSections(t *testing.T) {
 	}
 }
 
-// TestDelegatedVerificationGateDeclinedReviewFallbackRenders pins #4304: the
-// canonical body (full and reduced forms) must state that verification follows
-// the risk-gated tier table whether or not the native review reaches a
-// terminal outcome for this candidate, so a declined consent envelope,
-// clone-local RDD disable, or a START/STATUS refusal never lowers the bar
-// below the one RDD off applies.
-func TestDelegatedVerificationGateDeclinedReviewFallbackRenders(t *testing.T) {
-	const fallbackPhrase = "the native review reaches a terminal outcome for this candidate"
-	const sddBoundary = "SDD never offers or launches RDD"
+// TestDelegatedVerificationGateCarriesNoRDDProse pins the RDD suspension
+// (C-01-c): the canonical bodies (full and reduced forms) and every rendered
+// orchestrator state the diff-inferred verification tier without mentioning RDD,
+// the review switch, or the native risk assessment.
+func TestDelegatedVerificationGateCarriesNoRDDProse(t *testing.T) {
+	const sddBoundary = "For SDD work, run the applicable functional checks and configured TDD, report actual results, and follow the SDD phase instructions."
+	forbidden := []string{"RDD", "receipt-driven", "axiom review", "review assess", "native review", "native risk", "consent"}
 
 	for _, name := range []string{
 		"Delegated Verification Gate (MANDATORY)",
 		"Delegated Verification Gate (Reduced Form)",
 	} {
-		if body := sharedOrchestratorSection(name); !strings.Contains(body, fallbackPhrase) || !strings.Contains(body, sddBoundary) {
-			t.Errorf("shared section %q canonical body lacks the SDD boundary or %q", name, fallbackPhrase)
+		body := sharedOrchestratorSection(name)
+		if !strings.Contains(body, sddBoundary) || !strings.Contains(body, "The parent spot check") {
+			t.Errorf("shared section %q canonical body lacks the SDD boundary or the parent spot check", name)
+		}
+		for _, bad := range forbidden {
+			if strings.Contains(body, bad) {
+				t.Errorf("shared section %q still mentions %q", name, bad)
+			}
 		}
 	}
 
@@ -232,8 +236,8 @@ func TestDelegatedVerificationGateDeclinedReviewFallbackRenders(t *testing.T) {
 		if !strings.Contains(rendered, "Delegated Verification Gate") {
 			continue // a runtime that never carries either form keeps not carrying it
 		}
-		if !strings.Contains(rendered, fallbackPhrase) || !strings.Contains(rendered, sddBoundary) {
-			t.Errorf("%s renders a Delegated Verification Gate section without the SDD exclusion or non-SDD declined-review fallback", agent)
+		if !strings.Contains(rendered, sddBoundary) {
+			t.Errorf("%s renders a Delegated Verification Gate section without the SDD exclusion", agent)
 		}
 	}
 }

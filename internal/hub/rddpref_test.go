@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/IGutierrezZ/axiom/v3/internal/rddharness"
 )
 
 func newRDDManager(t *testing.T) *Manager {
@@ -117,5 +119,33 @@ func TestProjectRDDUnreadableValueNamesTheFile(t *testing.T) {
 	}
 	if _, _, err := mgr.LookupProjectRDD(project); err == nil || !strings.Contains(err.Error(), mgr.GetConfigPath()) {
 		t.Errorf("debe nombrar el fichero: %v", err)
+	}
+}
+
+// RDD suspendido (C-01-c): sin la etiqueta rdd_harness no se guarda "on".
+func TestProjectRDDRejectsOnWhileSuspended(t *testing.T) {
+	restore := rddharness.SetForTesting(false)
+	t.Cleanup(restore)
+	if rddharness.Enabled() {
+		t.Skip("binario compilado con rdd_harness: el apagado no aplica")
+	}
+	mgr := newRDDManager(t)
+	project := t.TempDir()
+	rec, err := mgr.Register(project, "p", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := mgr.SetProjectRDD(rec.ID, "on"); err == nil || !strings.Contains(err.Error(), "RDD no está disponible") {
+		t.Fatalf("on debe rechazarse con «RDD no está disponible»: %v", err)
+	}
+	if mode, _, err := mgr.LookupProjectRDD(project); err != nil || mode != "" {
+		t.Fatalf("no debe guardarse nada: %q %v", mode, err)
+	}
+	// off y heredar siguen funcionando.
+	if _, err := mgr.SetProjectRDD(rec.ID, "off"); err != nil {
+		t.Fatalf("off: %v", err)
+	}
+	if _, err := mgr.SetProjectRDD(rec.ID, ""); err != nil {
+		t.Fatalf("heredar: %v", err)
 	}
 }

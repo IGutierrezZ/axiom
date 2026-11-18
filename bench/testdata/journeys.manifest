@@ -16,12 +16,10 @@ j118-doctor-dangling-config-ancestor
 j119-global-review-mode-status-reports-persisted-source
 j12-rejected-capture-then-recapture
 j120-welcome-tui-runs-under-a-real-tty
-j121-rdd-tui-controls-global-mode
 j122-global-review-mode-from-non-git-cwd
 j123-rejected-provider-validator-starts-fresh-high-risk-review
 j125-claude-code-stop-hook-reminds-once-per-candidate
 j126-selected-untracked-terminal-status-resumes-without-flags
-j127-customizable-install-rdd-choice
 j128-historical-verification-does-not-block-apply
 j13-next-transition-runs-verbatim
 j14-abandon-needs-a-hand-built-token

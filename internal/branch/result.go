@@ -182,6 +182,14 @@ type RepositoryResult struct {
 	Detached          bool           `json:"detached,omitempty"`
 	Base              *BaseResult    `json:"base,omitempty"`
 	Branches          []BranchResult `json:"branches,omitempty"`
+
+	// La promoción de un repositorio de dos etapas (REQ-25.48): la rama principal, el modo y su
+	// origen, cada token con su etiqueta. Solo aparecen con `main_branch` efectivo.
+	MainBranch           string `json:"mainBranch,omitempty"`
+	Promotion            string `json:"promotion,omitempty"`
+	PromotionLabel       string `json:"promotionLabel,omitempty"`
+	PromotionSource      string `json:"promotionSource,omitempty"`
+	PromotionSourceLabel string `json:"promotionSourceLabel,omitempty"`
 }
 
 // BaseResult es la base de un repositorio: la referencia, su commit y de dónde sale
@@ -218,6 +226,12 @@ type BranchResult struct {
 	Behind             *int   `json:"behind,omitempty"`
 	PRTarget           string `json:"prTarget"`
 
+	// PromotionStage es adónde va la siguiente PR de la rama del cambio de un repositorio de dos
+	// etapas en modo `branch` (`integration` o `main`), con su etiqueta; vacío en cualquier otro
+	// caso (REQ-25.48). Con `main`, PRTarget es la rama principal.
+	PromotionStage      string `json:"promotionStage,omitempty"`
+	PromotionStageLabel string `json:"promotionStageLabel,omitempty"`
+
 	// Lo que añade `ensure` (REQ-27.15), solo para las ramas que creó esa ejecución:
 	// CreatedFrom es el origen de la rama (CreatedFromBase, CreatedFromChangeBranch o
 	// CreatedFromRemote) y CreatedFromRef, la referencia de partida.
@@ -248,6 +262,11 @@ const (
 	CreatedFromRemote       = "remote"
 )
 
+// SetPromotionStage fija adónde va la siguiente PR de la rama, con su etiqueta en castellano.
+func (b *BranchResult) SetPromotionStage(stage string) {
+	b.PromotionStage, b.PromotionStageLabel = stage, PromotionLabel(stage)
+}
+
 // SetOutcome fija lo que `done` hizo con la rama, con su etiqueta en castellano.
 func (b *BranchResult) SetOutcome(outcome DoneOutcome) {
 	b.Outcome, b.OutcomeLabel = outcome, Label(string(outcome))
@@ -277,6 +296,15 @@ func NewRepositoryResult(repo RepoPlan) RepositoryResult {
 		RoleLabel:         Label(string(repo.Role)),
 		Roles:             repo.Roles,
 		IntegrationBranch: repo.IntegrationBranch,
+	}
+	if repo.TwoStage() {
+		result.MainBranch = repo.MainBranch
+		if repo.Promotion != "" {
+			result.Promotion, result.PromotionLabel = string(repo.Promotion), PromotionLabel(string(repo.Promotion))
+		}
+		if repo.PromotionSource != "" {
+			result.PromotionSource, result.PromotionSourceLabel = repo.PromotionSource, PromotionLabel(repo.PromotionSource)
+		}
 	}
 	for _, planned := range repo.Branches {
 		result.Branches = append(result.Branches, BranchResult{
@@ -483,6 +511,16 @@ func (r RepositoryResult) writeText(stdout io.Writer) {
 		fmt.Fprintf(stdout, "%sRama actual: %s\n", indent, r.CurrentBranch)
 	}
 	fmt.Fprintf(stdout, "%sRama de integración: %s\n", indent, r.IntegrationBranch)
+	if r.MainBranch != "" {
+		fmt.Fprintf(stdout, "%sRama principal: %s\n", indent, r.MainBranch)
+	}
+	if r.Promotion != "" {
+		line := fmt.Sprintf("%sPromoción: %s", indent, r.PromotionLabel)
+		if r.PromotionSourceLabel != "" {
+			line += " (" + r.PromotionSourceLabel + ")"
+		}
+		fmt.Fprintln(stdout, line)
+	}
 	if len(r.Roles) > 0 {
 		fmt.Fprintf(stdout, "%sRoles del cambio: %s\n", indent, strings.Join(r.Roles, ", "))
 	}
@@ -519,6 +557,9 @@ func (b BranchResult) textParts() []string {
 	}
 	if b.Ahead != nil && b.Behind != nil {
 		parts = append(parts, fmt.Sprintf("adelanto %d, atraso %d respecto de %s", *b.Ahead, *b.Behind, b.ComparedTo))
+	}
+	if b.PromotionStage != "" {
+		return append(parts, "siguiente PR hacia "+b.PRTarget)
 	}
 	return append(parts, "PR hacia "+b.PRTarget)
 }

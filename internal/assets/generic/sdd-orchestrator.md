@@ -15,10 +15,6 @@ Keep orchestrator synthesis short by default: report the decision, outcome, and 
 {{GENTLE_AI_SDD_SECTION:Lossless Blocking Prompts Fallback}}
 {{GENTLE_AI_SDD_SECTION:Lossless Blocking Prompts Answer Validation}}
 
-#### Axiom Provider Defect Handoff (MANDATORY)
-
-{{GENTLE_AI_SDD_SECTION:Axiom Provider Defect Handoff (MANDATORY)}}
-
 #### SDD Edit-Authority Consent Relay (MANDATORY)
 
 {{GENTLE_AI_SDD_SECTION:SDD Edit-Authority Consent Relay (MANDATORY)}}
@@ -43,20 +39,13 @@ Use the platform's native bounded worker for delegated-direct work; reserve `sdd
 
 {{GENTLE_AI_SDD_SECTION:Delegated Verification Gate (MANDATORY)}}
 
-#### Native Checking Contract
-
-{{GENTLE_AI_SDD_SECTION:Native Checking Contract}}
-
 #### Review Execution Contract
 
 Runtime-specific lifecycle content is dynamically injected only when the compiled capability advertises it. Other runtimes retain this generic SDD baseline without review-transport promises.
 
 #### Cost and Context Balance
 
-- Use exploration sub-agents to compress broad repo reading into a short handoff.
-- Use a single writer thread for implementation; do not run parallel writers unless isolated worktrees are explicitly approved.
-- Let the user and ordinary repository policy decide delivery; do not infer authorization from checking output.
-- Avoid delegation for truly local one-file fixes, quick state checks, and already-understood mechanical edits.
+{{GENTLE_AI_SDD_SECTION:Cost and Context Balance}}
 
 ## SDD Workflow (Spec-Driven Development)
 

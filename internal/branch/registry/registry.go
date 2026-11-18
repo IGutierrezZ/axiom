@@ -309,6 +309,14 @@ func validate(record branch.Record, lane branch.Lane, change string) error {
 				return err
 			}
 		}
+		// El modo de promoción es un vocabulario cerrado y derivado: un valor desconocido se borra
+		// (el motor lo reconstruye al repetir `ensure`).
+		if repo.Promotion != "" && repo.Promotion != branch.PromotionBranch && repo.Promotion != branch.PromotionRelease {
+			return fmt.Errorf("repositories[%d].promotion %q no es válido: debe ser %s o %s; es un campo derivado, bórralo", i, repo.Promotion, branch.PromotionBranch, branch.PromotionRelease)
+		}
+		if !branch.KnownPromotionSource(repo.PromotionSource) {
+			return fmt.Errorf("repositories[%d].promotionSource %q no es válido; es un campo derivado, bórralo", i, repo.PromotionSource)
+		}
 	}
 	if prefix := record.Exceptions.Prefix; prefix != "" {
 		if err := gitref.ValidPrefix(prefix); err != nil {

@@ -16,7 +16,7 @@ HARD GATES:
 2. `sdd-init` must already exist or be run after preflight, per the orchestrator init guard.
 3. Resolve the active change using the status contract. If `$ARGUMENTS` is missing or ambiguous, ask the user to choose and STOP. Do not guess.
 4. Produce structured status before acting. Use the resolved artifact store from session preflight; do not hardcode Engram. Use refreshed native SDD status and preserve actual edit permissions. Completed implementation normally recommends archive; an explicit archive request may close unfinished work without a verification certificate.
-5. Read available artifacts at their selected-store references. Missing or failed optional reports and unfinished tasks do not gate archive; SDD never offers or launches RDD.
+5. Read available artifacts at their selected-store references. Missing or failed optional reports and unfinished tasks do not gate archive.
 6. actionContext must allow archive operations. If status reports `workspace-planning`, STOP and explain that workspace archive is not supported in this slice.
 
 Record actual task completion, missing artifacts, and unresolved findings. Preserve historical task/report bytes; do not reconcile checkboxes during archive.

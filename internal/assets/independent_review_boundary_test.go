@@ -355,9 +355,7 @@ func TestIndependentReviewBoundaryPinDetectsMutations(t *testing.T) {
 // un barrido de fichero completo fallaría; el pin inspecciona solo los pasajes nuevos o modificados (REQ-28.11).
 func TestIndependentReviewBoundaryIsNotAWholeFileSweep(t *testing.T) {
 	deliberate := []struct{ file, mention string }{
-		{"skills/sdd-verify/SKILL.md", "SDD never offers, launches, or consumes RDD."},
 		{"skills/judgment-day/SKILL.md", "issues no receipt"},
-		{"skills/_shared/sdd-orchestrator-sections.md", "receipt-driven development (RDD)"},
 	}
 	for _, d := range deliberate {
 		content := MustRead(d.file)
@@ -371,6 +369,13 @@ func TestIndependentReviewBoundaryIsNotAWholeFileSweep(t *testing.T) {
 			if pinned.file == d.file && len(pinned.phrase) >= len(content) {
 				t.Errorf("%s: un pasaje pineado cubre el fichero completo", d.file)
 			}
+		}
+	}
+
+	// RDD suspendido (C-01-c): las skills de SDD ya no nombran RDD como frontera.
+	for _, file := range []string{"skills/sdd-verify/SKILL.md", "skills/sdd-apply/SKILL.md", "skills/sdd-archive/SKILL.md", "skills/_shared/sdd-status-contract.md"} {
+		if strings.Contains(MustRead(file), "RDD") {
+			t.Errorf("%s: sigue nombrando RDD", file)
 		}
 	}
 }

@@ -44,15 +44,6 @@ var currentOpenCodeOrchestratorSections = []orchestratorContractSection{
 		},
 	},
 	{
-		name:   "provider defect handoff",
-		marker: "#### Axiom Provider Defect Handoff (MANDATORY)",
-		sentinels: []string{
-			"`report_and_continue`, `continue_without_reporting`, `stop_here`",
-			"Only after explicit consent and that final privacy scan",
-			"Both continue choices execute that exact captured decline invocation exactly once",
-		},
-	},
-	{
 		name:   "edit-authority consent relay",
 		marker: "#### SDD Edit-Authority Consent Relay (MANDATORY)",
 		sentinels: []string{

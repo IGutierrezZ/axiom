@@ -22,10 +22,6 @@ These rules apply to **all non-trivial work**, not only SDD phases. Delegation i
 {{GENTLE_AI_SDD_SECTION:Lossless Blocking Prompts Fallback}}
 {{GENTLE_AI_SDD_SECTION:Lossless Blocking Prompts Answer Validation}}
 
-#### Axiom Provider Defect Handoff (MANDATORY)
-
-{{GENTLE_AI_SDD_SECTION:Axiom Provider Defect Handoff (MANDATORY)}}
-
 #### SDD Edit-Authority Consent Relay (MANDATORY)
 
 {{GENTLE_AI_SDD_SECTION:SDD Edit-Authority Consent Relay (MANDATORY)}}
@@ -42,20 +38,13 @@ These rules apply to **all non-trivial work**, not only SDD phases. Delegation i
 
 {{GENTLE_AI_SDD_SECTION:Delegated Verification Gate (MANDATORY)}}
 
-#### Native Checking Contract
-
-{{GENTLE_AI_SDD_SECTION:Native Checking Contract}}
-
 #### Review Execution Contract
 
 {{GENTLE_AI_SDD_SECTION:Review Execution Contract}}
 
 ### Cost and Context Balance
 
-- Use exploration sub-agents to compress broad repo reading into a short handoff.
-- Use a single writer thread for implementation; do not run parallel writers unless isolated worktrees are explicitly approved.
-- Let native review select its bounded checking plan; delivery remains human-owned under ordinary repository policy.
-- Avoid delegation for truly local one-file fixes, quick state checks, and already-understood mechanical edits.
+{{GENTLE_AI_SDD_SECTION:Cost and Context Balance}}
 - If Codex's sub-agent tool policy blocks automatic spawning, stop and tell the user that the hard gate requires delegation before continuing.
 
 ## Capability Check (run once, at session start)
@@ -338,6 +327,6 @@ These profile files apply to whole CLI sessions: `codex --profile <name> "<promp
 
 ### ODD worker-class assignments
 
-These are worker classes, not installed named agents. For ODD delegation, select the matching row below and pass its `model` and `reasoning_effort` directly to `spawn_agent` with `fork_turns: "none"`. If a custom assignment is absent, the row inherits the selected preset carril. Do not use RDD role assignments for these workers; RDD is handled by the native adapter.
+These are worker classes, not installed named agents. For ODD delegation, select the matching row below and pass its `model` and `reasoning_effort` directly to `spawn_agent` with `fork_turns: "none"`. If a custom assignment is absent, the row inherits the selected preset carril.
 
 {{CODEX_ODD_ASSIGNMENTS}}

@@ -16,6 +16,7 @@ import (
 
 	"github.com/IGutierrezZ/axiom/v3/internal/hub"
 	"github.com/IGutierrezZ/axiom/v3/internal/pathquote"
+	"github.com/IGutierrezZ/axiom/v3/internal/rddharness"
 	"github.com/IGutierrezZ/axiom/v3/internal/reviewtransaction"
 	"github.com/IGutierrezZ/axiom/v3/internal/state"
 )
@@ -82,6 +83,11 @@ func RunReviewMode(args []string, stdout io.Writer) error {
 	default:
 		return fmt.Errorf("unknown review mode scope %q", *scope)
 	}
+	if operation == "enable" {
+		if err := reviewModeEnableAvailable(); err != nil {
+			return err
+		}
+	}
 	if operation == "inherit" && selectedScope != reviewModeScopeProject {
 		return fmt.Errorf("review mode inherit only applies to --scope project: run axiom review mode inherit --scope project")
 	}
@@ -129,6 +135,11 @@ func ReviewModeStatus(ctx context.Context, repo string) (reviewtransaction.RDDMo
 // SetGlobalReviewMode changes only the global review-mode source and returns the
 // resolved status for the requested repository.
 func SetGlobalReviewMode(ctx context.Context, repo string, enabled bool) (reviewtransaction.RDDModeStatus, error) {
+	if enabled {
+		if err := reviewModeEnableAvailable(); err != nil {
+			return reviewModeUnavailableStatus(), err
+		}
+	}
 	operation := "disable"
 	if enabled {
 		operation = "enable"
@@ -161,6 +172,11 @@ func projectModeForOperation(operation string) string {
 // máquina si es nil): nunca en axiom.yaml ni en el estado del proyecto. Un repo que no
 // está en ningún proyecto registrado es un error que dice cómo registrarlo.
 func SetProjectReviewMode(ctx context.Context, repo, mode string, hubManager *hub.Manager) (reviewtransaction.RDDModeStatus, error) {
+	if mode == hub.RDDModeOn {
+		if err := reviewModeEnableAvailable(); err != nil {
+			return reviewModeUnavailableStatus(), err
+		}
+	}
 	disabled := reviewtransaction.RDDModeStatus{Schema: reviewtransaction.RDDModeStatusSchema, Effective: reviewtransaction.RDDModeOff}
 	manager, err := reviewModeHub(hubManager)
 	if err != nil {
@@ -540,6 +556,11 @@ func applyReviewMode(
 	revisionProvided bool,
 ) (reviewtransaction.RDDModeStatus, error) {
 	disabled := reviewtransaction.RDDModeStatus{Schema: reviewtransaction.RDDModeStatusSchema, Effective: reviewtransaction.RDDModeOff}
+	if operation == "enable" {
+		if err := reviewModeEnableAvailable(); err != nil {
+			return disabled, err
+		}
+	}
 	if scope == reviewModeScopeGlobal {
 		if err := writeGlobalRDDMode(operation); err != nil {
 			return disabled, err
@@ -1162,4 +1183,20 @@ func reviewConsentSignalSubject(signal reviewtransaction.RiskSignal) string {
 	default:
 		return "a sensitive area"
 	}
+}
+
+// reviewModeEnableAvailable rechaza activar RDD mientras esté suspendido
+// (C-01-c): sin la etiqueta rdd_harness ningún alcance admite «enable» y no se
+// escribe nada. «disable» y «status» siguen funcionando.
+func reviewModeEnableAvailable() error {
+	if rddharness.Enabled() {
+		return nil
+	}
+	return errors.New(rddharness.UnavailableMessage)
+}
+
+// reviewModeUnavailableStatus es la proyección que acompaña a un «enable»
+// rechazado: apagado y sin resolver, igual que cualquier fallo cerrado.
+func reviewModeUnavailableStatus() reviewtransaction.RDDModeStatus {
+	return reviewtransaction.RDDModeStatus{Schema: reviewtransaction.RDDModeStatusSchema, Effective: reviewtransaction.RDDModeOff}
 }

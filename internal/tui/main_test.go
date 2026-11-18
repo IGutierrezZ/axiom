@@ -4,6 +4,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/IGutierrezZ/axiom/v3/internal/rddharness"
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
@@ -14,6 +15,9 @@ import (
 // (inc-24, R29). Las pruebas de gobernanza usan t.Chdir sobre espacios
 // temporales y la TUI resuelve el planning home desde el directorio actual.
 func TestMain(m *testing.M) {
+	// RDD está suspendido sin la etiqueta rdd_harness (C-01-c): los tests en proceso
+	// que ejercitan la revisión activan el punto de inyección del paquete.
+	rddharness.SetForTesting(true)
 	workspace.DiscoveryCeilingOverride = []string{os.TempDir()}
 	os.Exit(m.Run())
 }

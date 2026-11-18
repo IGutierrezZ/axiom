@@ -100,6 +100,7 @@ internal/isoevidence/model.go	AllCodes
 internal/livingdoc/service.go	Service.GetIndexPath
 internal/livingdoc/service.go	Service.GetSpecsRoot
 internal/multirole/detector.go	RoleExists
+internal/rddharness/harness.go	SetForTesting
 internal/reviewerprovider/runtimes.go	RegisteredRuntimeIdentities
 internal/reviewerprovider/windows_batch_cmdline.go	isWindowsBatchFile
 internal/reviewerprovider/windows_batch_cmdline.go	quoteWindowsArgument
@@ -230,8 +231,13 @@ internal/tui/router.go	NextScreen
 internal/tui/screens/claude_model_picker.go	NewClaudeModelPickerStateFromAssignments
 internal/tui/screens/codex_model_picker.go	CodexPresetDescription
 internal/tui/screens/codex_model_picker.go	HandleCodexCustomNav
+internal/tui/screens/install_review_mode.go	InstallReviewModeOptions
+internal/tui/screens/install_review_mode.go	RenderInstallReviewMode
+internal/tui/screens/install_review_mode.go	installReviewModeStatusLabel
 internal/tui/screens/model_picker.go	ModelPickerRows
 internal/tui/screens/model_picker.go	SeparatorRowIdx
+internal/tui/screens/review_mode.go	RenderReviewMode
+internal/tui/screens/review_mode.go	ReviewModeOptions
 internal/tui/screens/upgrade.go	RenderUpgrade
 internal/tui/screens/upgrade_sync.go	RenderUpgradeSync
 internal/tui/screens/welcome.go	RenderWelcome

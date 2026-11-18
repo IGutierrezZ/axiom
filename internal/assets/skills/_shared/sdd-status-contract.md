@@ -110,7 +110,7 @@ blockedReasons: []
 notes: []
 ```
 
-SDD status never reads review mode, offers RDD, or exposes review state. After completed implementation, proceed directly toward archive; verification is optional (except in an ISO change, see `ISO Evidence`) and standalone non-SDD review remains separate.
+SDD status never reads review mode or exposes review state. After completed implementation, proceed directly toward archive; verification is optional (except in an ISO change, see `ISO Evidence`) and standalone non-SDD review remains separate.
 
 `phaseInstructions` is optional and appears only when instructions are requested. It carries execution-phase keys (`apply`, `verify`, `archive`); planning-phase instructions (`propose`, `spec`, `design`, `tasks`) are surfaced in dispatcher markdown. `consent` requires an OpenSpec-backed native status reporting `blocked(edit_authority_missing)` with a valid persisted marker; never reconstruct it. Empty path fields MUST be arrays, not null. `blockedReasons` and `notes` are always arrays as well, both `[]` rather than null when empty. `changeName` and `changeRoot` are nullable; all other non-optional sections are required in native output.
 
@@ -201,7 +201,7 @@ governance:
 - `verify` is an optional diagnostic and may inspect partial implementation. Its availability never certifies a report or task completion; missing artifacts limit conclusions. In an ISO change it is mandatory before archive (see `ISO Evidence`).
 - Completed implementation normally recommends `archive`; pending work normally recommends `apply`. Explicit archive can record incomplete work, but actual edit permissions and mechanical archive/spec-composition safety checks remain mandatory.
 - Report presence is a locator/status fact, not a verdict. Missing, stale, malformed, or failed reports do not block archive or create remediation state, except the verification matrix of an ISO change, which is validated and must be successful. Preserve historical bytes and report actual unfinished tasks and findings without inventing PASS.
-- No SDD phase offers or launches RDD, ordinary 4R, or Judgment Day. Delivery follows ordinary repository policy; optional diagnostics create no review or delivery authority.
+- No SDD phase launches ordinary 4R or Judgment Day. Delivery follows ordinary repository policy; optional diagnostics create no review or delivery authority.
 
 ## Action Context Guard
 

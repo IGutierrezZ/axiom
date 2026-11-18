@@ -14,6 +14,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/IGutierrezZ/axiom/v3/internal/rddharness"
 )
 
 const (
@@ -338,6 +340,9 @@ func (err *RDDModePartialApplyError) Unwrap() error { return ErrRDDModePartially
 // failure is dropped, and only while that deciding source is not on. With it
 // on, the override can still decide, and its failure keeps failing closed.
 func ResolveRDDMode(ctx context.Context, repo string, global RDDGlobalMode) (RDDModeStatus, error) {
+	if !rddharness.Enabled() {
+		return rddSuspendedStatus(ctx, global)
+	}
 	status, err := ResolveRDDModeStrict(ctx, repo, global)
 	if err == nil || ctx.Err() != nil {
 		return status, err
@@ -385,6 +390,9 @@ func rddOverrideUnvalidatable(err error) bool {
 func ResolveRDDModeStrict(ctx context.Context, repo string, global RDDGlobalMode) (RDDModeStatus, error) {
 	if err := ctx.Err(); err != nil {
 		return failedClosedRDDModeStatus(RDDModeSourceDefault), err
+	}
+	if !rddharness.Enabled() {
+		return rddSuspendedStatus(ctx, global)
 	}
 	globalMode, globalErr := normalizeRDDMode(global.Value)
 	if globalErr != nil {
@@ -798,6 +806,9 @@ func rddModeStatus(
 		}
 	}
 	switch {
+	case !rddharness.Enabled():
+		// RDD suspendido (C-01-c): las preferencias guardadas no se aplican.
+		status.Effective, status.Source = RDDModeOff, RDDModeSourceDefault
 	case status.CloneLocal == RDDModeOff:
 		status.Effective, status.Source = RDDModeOff, RDDModeSourceCloneLocal
 	case projectMode == RDDModeOff:
@@ -1226,4 +1237,26 @@ func rddModeGenerationOf(name string) (int, bool) {
 		return 0, false
 	}
 	return generation, true
+}
+
+// rddSuspendedStatus es la proyección de RDD suspendido (C-01-c): sin la
+// etiqueta rdd_harness el modo efectivo es off con fuente default, aunque haya
+// preferencias on guardadas, y no se lee la anulación del clon, de modo que
+// una ubicación ilegible tampoco falla. Las preferencias guardadas se siguen
+// informando, sin aplicarse.
+func rddSuspendedStatus(ctx context.Context, global RDDGlobalMode) (RDDModeStatus, error) {
+	if err := ctx.Err(); err != nil {
+		return failedClosedRDDModeStatus(RDDModeSourceDefault), err
+	}
+	globalMode, _ := normalizeRDDMode(global.Value)
+	projectMode, _ := normalizeRDDMode(global.Project)
+	return RDDModeStatus{
+		Schema:     RDDModeStatusSchema,
+		Global:     globalMode,
+		Project:    projectMode,
+		CloneLocal: RDDModeUnset,
+		Effective:  RDDModeOff,
+		Source:     RDDModeSourceDefault,
+		resolved:   true,
+	}, nil
 }

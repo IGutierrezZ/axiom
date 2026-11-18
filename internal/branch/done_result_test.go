@@ -83,12 +83,12 @@ func TestDoneRefusalsNameExecutableContinuations(t *testing.T) {
 		t.Errorf("DoneInvocation con carril odd y --force = %q", got)
 	}
 
-	notMerged := MergeNotConfirmed("x", cwd, LaneSDD, repo, planned, []string{"origin/main", "main"})
+	notMerged := MergeNotConfirmed("x", cwd, LaneSDD, repo, planned, "main", []string{"origin/main", "main"})
 	if notMerged.Code != CodeMergeNotConfirmed || !strings.Contains(notMerged.Message, "origin/main ni en main") ||
 		!strings.Contains(notMerged.Continuation, DoneInvocation("x", cwd, LaneSDD, "--force")) || !strings.Contains(notMerged.Continuation, "log --oneline main..feat/x") {
 		t.Errorf("merge_not_confirmed = %+v", notMerged)
 	}
-	if noTarget := MergeNotConfirmed("x", cwd, LaneSDD, repo, planned, nil); !strings.Contains(noTarget.Message, "no existe main") {
+	if noTarget := MergeNotConfirmed("x", cwd, LaneSDD, repo, planned, "main", nil); !strings.Contains(noTarget.Message, "no existe main") {
 		t.Errorf("sin destino, el mensaje debe decirlo: %q", noTarget.Message)
 	}
 

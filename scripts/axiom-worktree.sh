@@ -203,8 +203,12 @@ case "$VERB" in
         # lectura). Una rama creada fuera de `ensure` no está en el registro y `done` no la ve: sin
         # esta comprobación el script daría por desmantelado un cambio que sigue montado.
         EXISTING=""
+        INTEGRATION="main"
         if STATUS="$(axiom branch status --cwd "$MAIN_ROOT" --change "$SLUG" --lane "$LANE" --json 2>/dev/null)"; then
             EXISTING="$(printf '%s\n' "$STATUS" | grep -c '^ *"exists": true' || true)"
+            # La rama de integración sale del plan del producto; sin ella rige main.
+            INTEGRATION="$(printf '%s\n' "$STATUS" | json_paths integrationBranch | head -n 1)"
+            INTEGRATION="${INTEGRATION:-main}"
         else
             echo "[AVISO] axiom branch status falló; no se puede comprobar qué ramas existen."
         fi
@@ -218,10 +222,10 @@ case "$VERB" in
         fi
 
         CURRENT_BRANCH="$(git -C "$MAIN_ROOT" rev-parse --abbrev-ref HEAD)"
-        if [ "$CURRENT_BRANCH" = "main" ]; then
-            echo "[INFO] Actualizando main local con origin/main..."
-            git -C "$MAIN_ROOT" fetch origin main 2>/dev/null || true
-            git -C "$MAIN_ROOT" merge --ff-only origin/main 2>/dev/null || echo "[AVISO] No se pudo hacer ff-only en main."
+        if [ "$CURRENT_BRANCH" = "$INTEGRATION" ]; then
+            echo "[INFO] Actualizando $INTEGRATION local con origin/$INTEGRATION..."
+            git -C "$MAIN_ROOT" fetch origin "$INTEGRATION" 2>/dev/null || true
+            git -C "$MAIN_ROOT" merge --ff-only "origin/$INTEGRATION" 2>/dev/null || echo "[AVISO] No se pudo hacer ff-only en $INTEGRATION."
         fi
 
         git -C "$MAIN_ROOT" worktree prune

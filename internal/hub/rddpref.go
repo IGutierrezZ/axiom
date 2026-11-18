@@ -1,11 +1,13 @@
 package hub
 
 import (
+	"errors"
 	"fmt"
 	"path/filepath"
 	"strings"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/pathidentity"
+	"github.com/IGutierrezZ/axiom/v3/internal/rddharness"
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
@@ -90,6 +92,9 @@ func (m *Manager) LookupProjectRDD(repo string) (string, *WorkspaceRecord, error
 func (m *Manager) SetProjectRDD(idOrPath, mode string) (*WorkspaceRecord, error) {
 	if err := ValidateRDDMode(mode); err != nil {
 		return nil, err
+	}
+	if strings.TrimSpace(mode) == RDDModeOn && !rddharness.Enabled() {
+		return nil, errors.New(rddharness.UnavailableMessage)
 	}
 
 	m.mu.Lock()

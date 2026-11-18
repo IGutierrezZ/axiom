@@ -15,7 +15,7 @@ import (
 const modeTestCWD = `C:\repos\mi proyecto`
 
 func TestDecisionRequiredAskCarriesTheQuestionAndBothChoices(t *testing.T) {
-	refusal := DecisionRequired("ensure", "x", modeTestCWD, LaneSDD)
+	refusal := DecisionRequired(EnsureArgs{Operation: "ensure", Change: "x", CWD: modeTestCWD, Lane: LaneSDD})
 
 	if refusal.Code != CodeDecisionRequired || refusal.Message == "" || refusal.Continuation == "" {
 		t.Fatalf("rechazo = %+v, se esperaba decision_required con mensaje y continuación", refusal)
@@ -37,7 +37,7 @@ func TestDecisionRequiredAskCarriesTheQuestionAndBothChoices(t *testing.T) {
 }
 
 func TestDecisionRequiredAskKeepsTheLaneInTheInvocations(t *testing.T) {
-	for _, choice := range DecisionRequired("ensure", "mi-feature", modeTestCWD, LaneODD).Decision.Choices {
+	for _, choice := range DecisionRequired(EnsureArgs{Operation: "ensure", Change: "mi-feature", CWD: modeTestCWD, Lane: LaneODD}).Decision.Choices {
 		if !strings.Contains(choice.Invocation, "--change mi-feature --lane odd --mode "+choice.Answer) {
 			t.Errorf("la invocación %q debe repetir --lane odd", choice.Invocation)
 		}
@@ -47,7 +47,7 @@ func TestDecisionRequiredAskKeepsTheLaneInTheInvocations(t *testing.T) {
 // El resultado de un `decision_required` lleva su estado propio, el código, la decisión y,
 // como cualquier resultado que no es «listo», sale con 1 y escribe por stderr.
 func TestResultRefusedWithADecisionRequiredCarriesTheDecision(t *testing.T) {
-	refusal := DecisionRequired("ensure", "x", modeTestCWD, LaneSDD)
+	refusal := DecisionRequired(EnsureArgs{Operation: "ensure", Change: "x", CWD: modeTestCWD, Lane: LaneSDD})
 
 	result := NewResult("ensure").Refused(refusal)
 

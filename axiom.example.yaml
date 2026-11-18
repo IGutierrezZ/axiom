@@ -40,6 +40,15 @@ workspace:
 # git:
 #   integration_branch: main
 #   branch_prefix: feat
+#   # main_branch: master
+#   # promotion: branch
+# Promoción en dos etapas (opcional): 'main_branch' es la rama principal a la que
+# se promueve lo ya integrado; sin ella, o igual a la rama de integración, el
+# trabajo se integra en una sola etapa. 'promotion' admite 'branch' (la rama del
+# cambio sale de la principal: su primera PR va a la rama de integración y la segunda
+# a 'main_branch'), 'release' (sale de la rama de integración; el paso a la principal
+# es la release) y 'ask' (pregunta por cada cambio). Sin valor rige 'branch'; sin
+# 'main_branch' no tiene efecto.
 
 # ------------------------------------------------------------------------------
 # Carril de Trabajo (opcional)
@@ -83,6 +92,8 @@ workspace:
 #     integration_branch: release
 #   - path: frontend-portal
 #     branch_prefix: ui
+#     promotion: ask
+# 'promotion' (branch, release o ask) sustituye a git.promotion en ese repositorio.
 
 # ------------------------------------------------------------------------------
 # Contexto Técnico (opcional)

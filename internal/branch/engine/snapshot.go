@@ -34,13 +34,13 @@ func (e *Engine) Snapshot(ctx context.Context, loc workspace.Location, change st
 	}
 	// Solo se necesitan los nombres: sin rutas de worktree que colocar ni medir.
 	facts.input.InPlace = true
-	plan, refusal := branch.Plan(facts.input)
+	plan, _, refusal := e.planWithPromotion(ctx, &facts, promotionRequest{args: branch.EnsureArgs{Operation: "status", Change: change, CWD: loc.Start, Lane: branch.LaneSDD}})
 	if refusal != nil {
 		return nil, &branch.RefusalError{Refusal: *refusal}
 	}
 
 	policy := branch.ResolvePolicy(loc.Config)
-	snapshot := &kickoff.GitSnapshot{IntegrationBranch: policy.IntegrationBranch, BranchPrefix: policy.BranchPrefix}
+	snapshot := &kickoff.GitSnapshot{IntegrationBranch: policy.IntegrationBranch, BranchPrefix: policy.BranchPrefix, MainBranch: policy.MainBranch}
 	if exceptions := facts.input.Exceptions; exceptions != (branch.Exceptions{}) {
 		snapshot.Exceptions = &kickoff.GitExceptions{Prefix: exceptions.Prefix, Branch: exceptions.Branch, Base: exceptions.Base}
 	}
@@ -58,10 +58,16 @@ func (e *Engine) Snapshot(ctx context.Context, loc workspace.Location, change st
 			Name:              repo.Name,
 			Role:              string(repo.Role),
 			IntegrationBranch: repo.IntegrationBranch,
-			Base:              repo.IntegrationBranch,
+			Base:              repo.Base(),
 		}
 		if repo.BaseRef != "" {
 			entry.Base = repo.BaseRef
+		}
+		// El modo solo se congela cuando ya está materializado en el registro (la rama se creó antes
+		// del sellado); una política aún no aplicada o una respuesta posterior no se copian (D9).
+		if resolved, ok := facts.input.Promotions[repo.GitRoot]; ok && resolved.Recorded &&
+			(resolved.Mode == branch.PromotionBranch || resolved.Mode == branch.PromotionRelease) {
+			entry.Promotion = string(resolved.Mode)
 		}
 		for _, planned := range repo.Branches {
 			entry.Branches = append(entry.Branches, kickoff.GitSnapshotBranch{Name: planned.Name, Kind: string(planned.Kind), Role: planned.RoleID})

@@ -33,9 +33,11 @@ func DoneInvocation(change, cwd string, lane Lane, flags ...string) string {
 // confirma (REQ-25.16): no se elimina ni su worktree ni su rama. targets son las referencias en
 // las que se buscó (vacías si el destino no existe) y repo, el repositorio de la rama; la
 // continuación ofrece comprobar qué le falta a la rama y, si se quiere eliminar igualmente,
-// `--force`, que deja en el informe la punta de la rama para recuperarla.
-func MergeNotConfirmed(change, cwd string, lane Lane, repo RepoPlan, planned BranchPlan, targets []string) *Refusal {
-	destination := planned.PRTarget
+// `--force`, que deja en el informe la punta de la rama para recuperarla. destination es la rama
+// contra la que se buscó la fusión (MergeDestination): la integración, la de seguimiento de una
+// rama de rol o, en dos etapas con modo `branch`, la rama principal; nombra el mensaje, la orden
+// `git log <destino>..<rama>` y Details.target.
+func MergeNotConfirmed(change, cwd string, lane Lane, repo RepoPlan, planned BranchPlan, destination string, targets []string) *Refusal {
 	message := fmt.Sprintf("la rama %s del repositorio %s no se puede confirmar como fusionada: no existe %s (ni en local ni como referencia remota local) donde buscar su fusión; no se elimina ni su worktree ni la rama", planned.Name, repo.Name, destination)
 	if len(targets) > 0 {
 		message = fmt.Sprintf("la rama %s del repositorio %s no está fusionada en %s: ninguna capa de confirmación de la fusión lo acredita; no se elimina ni su worktree ni la rama", planned.Name, repo.Name, strings.Join(targets, " ni en "))

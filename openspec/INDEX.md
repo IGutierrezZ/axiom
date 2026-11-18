@@ -1,8 +1,8 @@
 # Catálogo Maestro de Especificaciones Vivas — Axiom
 
 > **Proyecto:** Axiom (Spec-Driven Development Platform)
-> **Última Sincronización:** 2026-11-18 14:31:07 UTC
-> **Total Dominios:** 72 | **Total Requerimientos:** 572 | **Total Escenarios BDD:** 1759
+> **Última Sincronización:** 2026-11-18 14:34:28 UTC
+> **Total Dominios:** 72 | **Total Requerimientos:** 572 | **Total Escenarios BDD:** 1763
 
 ---
 
@@ -50,7 +50,7 @@
 | `rdd-candidate-identity` | RDD Candidate Identity Specification | 5 | 8 | [Ver Spec](specs/rdd-candidate-identity/spec.md) |
 | `rdd-candidate-relation-algebra` | RDD Candidate Relation Algebra Specification | 8 | 12 | [Ver Spec](specs/rdd-candidate-relation-algebra/spec.md) |
 | `rdd-closure-disposition-execution` | RDD Closure Disposition Execution Specification | 7 | 9 | [Ver Spec](specs/rdd-closure-disposition-execution/spec.md) |
-| `rdd-decoupling-v3-stability` | Especificación Viva: Desacoplamiento de RDD y Parches de Estabilidad Upstream v3 | 6 | 6 | [Ver Spec](specs/rdd-decoupling-v3-stability/spec.md) |
+| `rdd-decoupling-v3-stability` | Especificación Viva: Desacoplamiento de RDD y Parches de Estabilidad Upstream v3 | 6 | 10 | [Ver Spec](specs/rdd-decoupling-v3-stability/spec.md) |
 | `rdd-delivery-exception-removal` | RDD Delivery Exception Removal Specification | 4 | 4 | [Ver Spec](specs/rdd-delivery-exception-removal/spec.md) |
 | `rdd-freeze-expansion-policy` | RDD Freeze-Expansion Policy Specification | 3 | 3 | [Ver Spec](specs/rdd-freeze-expansion-policy/spec.md) |
 | `rdd-leaf-disposition-execution` | RDD Leaf Disposition Execution Specification | 11 | 11 | [Ver Spec](specs/rdd-leaf-disposition-execution/spec.md) |
@@ -1567,7 +1567,11 @@ Esta especificación consolida la arquitectura canónica de Axiom respecto a la 
 - **[REQ-18.1]** Desacoplamiento de RDD en la Proyección de Estado SDD
   - *Escenario BDD:* Proyección de estado SDD tras verificación exitosa sin reviewOffer forzado
 - **[REQ-18.2]** Independencia Operativa de las Herramientas RDD
-  - *Escenario BDD:* Invocación autónoma de comandos review en la CLI
+  - *Escenario BDD:* Activar RDD falla en todos los alcances
+  - *Escenario BDD:* Las preferencias guardadas no activan RDD
+  - *Escenario BDD:* La sincronización no instala RDD
+  - *Escenario BDD:* El hook de parada antiguo no falla
+  - *Escenario BDD:* Las herramientas de revisión no alteran las fases SDD
 - **[REQ-18.3]** Resiliencia en Decodificación de Rutas Windows en Salidas JSON de SDD
   - *Escenario BDD:* Validación de rutas permitidas bajo Windows
 - **[REQ-18.4]** Aislamiento del Directorio de Trabajo (CWD) en la Gestión de Artefactos

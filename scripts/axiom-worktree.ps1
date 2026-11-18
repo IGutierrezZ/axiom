@@ -220,10 +220,13 @@ switch ($Verb) {
         # Una rama creada fuera de `ensure` no está en el registro y `done` no la ve: sin esta
         # comprobación el script daría por desmantelado un cambio que sigue montado.
         $existing = @()
+        $integration = 'main'
         $statusLines = & axiom branch status --cwd $mainRoot --change $Slug --lane $Lane --json 2>&1
         if ($LASTEXITCODE -eq 0) {
             try {
                 $status = (($statusLines | ForEach-Object { "$_" }) -join "`n") | ConvertFrom-Json
+                $declared = @($status.repositories)[0].integrationBranch
+                if ($declared) { $integration = "$declared" }
                 foreach ($repository in @($status.repositories)) {
                     foreach ($b in @($repository.branches)) {
                         if ($b.exists) { $existing += $b.name }
@@ -246,16 +249,16 @@ switch ($Verb) {
             Fail "axiom branch done no desmanteló por completo el cambio '$Slug' (revisa el mensaje anterior)."
         }
 
-        # Sincronizar main si estamos en él en el checkout principal
+        # Sincronizar la rama de integración si estamos en ella en el checkout principal
         $currentBranch = (git -C $mainRoot rev-parse --abbrev-ref HEAD 2>$null).Trim()
-        if ($currentBranch -eq 'main') {
-            Info "Actualizando main local con origin/main..."
-            git -C $mainRoot fetch origin main
-            git -C $mainRoot merge --ff-only origin/main
+        if ($currentBranch -eq $integration) {
+            Info "Actualizando $integration local con origin/$integration..."
+            git -C $mainRoot fetch origin $integration
+            git -C $mainRoot merge --ff-only "origin/$integration"
             if ($LASTEXITCODE -eq 0) {
-                Ok "main local actualizado correctamente."
+                Ok "$integration local actualizado correctamente."
             } else {
-                Warn "main local no se pudo actualizar vía fast-forward. Realiza pull manual."
+                Warn "$integration local no se pudo actualizar vía fast-forward. Realiza pull manual."
             }
         }
 

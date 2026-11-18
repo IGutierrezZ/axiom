@@ -111,6 +111,10 @@ type PlanInput struct {
 	// cambiado desde entonces (una rama de archivado no cambia de nombre); un `--prefix` que
 	// daría otro nombre es `plan_conflict`. Solo cuenta con Archive.
 	ArchiveBranch string
+	// Promotions es el modo de promoción ya resuelto de cada repositorio, por raíz git
+	// (ResolvePromotion). Un repositorio que falta se planifica como de una sola etapa a efectos
+	// de base. Nil, el plan es idéntico al que no conoce la promoción.
+	Promotions map[string]ResolvedPromotion
 }
 
 // ChangePlan es el plan de un cambio: sus repositorios en orden estable (primero el
@@ -144,8 +148,35 @@ type RepoPlan struct {
 	IntegrationBranch string
 	// BaseRef es la base fijada por la excepción `--base`; vacía, la resuelve el motor
 	// desde la rama de integración (design D-06).
-	BaseRef  string
-	Branches []BranchPlan
+	BaseRef string
+	// MainBranch es `git.main_branch` efectivo; vacío con una sola etapa (sin rama principal, o
+	// igual a la integración) y en el repositorio de specs de un multirepo, que está exento.
+	MainBranch string
+	// Promotion es el modo de promoción resuelto (PlanInput.Promotions): "" con una sola etapa
+	// o sin resolver, `branch`, `release` o `ask` (pendiente de preguntar). PromotionSource es
+	// su origen.
+	Promotion       Promotion
+	PromotionSource string
+	// BaseBranch es la rama de la que sale la rama del cambio: MainBranch en modo `branch` e
+	// IntegrationBranch en los demás repositorios de dos etapas. Vacía con una sola etapa;
+	// Base() la completa. BaseRef sigue prevaleciendo sobre todo.
+	BaseBranch string
+	Branches   []BranchPlan
+}
+
+// TwoStage dice que el repositorio tiene dos ramas permanentes: `main_branch` declarada y
+// distinta de su integración.
+func (r RepoPlan) TwoStage() bool {
+	return r.MainBranch != "" && r.MainBranch != r.IntegrationBranch
+}
+
+// Base es la rama de la que salen las ramas del cambio del repositorio: BaseBranch o, si
+// está vacía (un RepoPlan de una etapa o construido a mano), la integración.
+func (r RepoPlan) Base() string {
+	if r.BaseBranch != "" {
+		return r.BaseBranch
+	}
+	return r.IntegrationBranch
 }
 
 // BranchPlan es una rama del plan.
@@ -367,6 +398,7 @@ func planRepository(in PlanInput, selection repoSelection) (RepoPlan, *Refusal) 
 	if repo.Role == RepoSpecsInPlace {
 		return repo, nil
 	}
+	applyPromotion(in, facts, effective, &repo)
 
 	// La excepción `--prefix` sustituye al prefijo de la política, que entonces no se
 	// usa y no hace falta validar.
@@ -415,6 +447,23 @@ func planRepository(in PlanInput, selection repoSelection) (RepoPlan, *Refusal) 
 	return repo, nil
 }
 
+// applyPromotion rellena los campos de promoción de un repositorio de dos etapas desde el modo
+// ya resuelto de PlanInput.Promotions (por raíz git) y calcula su base efectiva: la rama
+// principal en modo `branch` y la integración en los demás. Un repositorio de una etapa no
+// cambia ni un campo, de modo que sin `main_branch` el plan es idéntico al de siempre.
+func applyPromotion(in PlanInput, facts RepoFacts, effective RepoPolicy, repo *RepoPlan) {
+	if effective.MainBranch == "" || effective.MainBranch == effective.IntegrationBranch {
+		return
+	}
+	repo.MainBranch = effective.MainBranch
+	resolved := in.Promotions[facts.GitRoot]
+	repo.Promotion, repo.PromotionSource = resolved.Mode, resolved.Source
+	repo.BaseBranch = repo.IntegrationBranch
+	if repo.Promotion == PromotionBranch {
+		repo.BaseBranch = repo.MainBranch
+	}
+}
+
 // plannedWorktree es la ruta del worktree de una rama: `<raíz>/<carpeta>/<repo>`, o vacía en
 // el modo `in_place`, en el que las ramas se despliegan en el propio repositorio y no hay
 // nada que colocar ni medir (design D-05; la ruta vacía ya está excluida de la colocación).
@@ -439,12 +488,18 @@ func repositoryRole(topology workspace.TopologyType, planning bool) RepoRole {
 	}
 }
 
+// EffectivePolicy es la política efectiva del repositorio de facts (REQ-25.3): la que el motor
+// necesita para conocer lo declarado de su promoción y de qué capa sale.
+func EffectivePolicy(policy Policy, facts RepoFacts) RepoPolicy {
+	return repoPolicy(policy, facts)
+}
+
 // repoPolicy es la política efectiva de un repositorio (REQ-25.3): la entrada de
 // `repositories:` o, sin ella, la del workspace. Un repositorio fuera de la carpeta
 // maestra solo hereda la del workspace.
 func repoPolicy(policy Policy, facts RepoFacts) RepoPolicy {
 	if facts.RelPath == "" {
-		return RepoPolicy{IntegrationBranch: policy.IntegrationBranch, BranchPrefix: policy.BranchPrefix}
+		return policy.workspacePolicy()
 	}
 	return policy.For(facts.RelPath)
 }

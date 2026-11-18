@@ -45,7 +45,7 @@ func renderDelegationRules(routing capabilitymanifest.ImplementationRoutingFacts
 	_, _ = fmt.Fprintf(&output, "| Write a unit of about %d changed lines or less | ✅ always | — |\n", routing.DirectInline.MaxInlineUnitLines)
 	output.WriteString("| Write a larger unit | ✅ by default | ✅ one bounded writer, only for a named reason: parallelism or protecting the parent context |\n")
 	output.WriteString("| Bash for state (`git`, `gh`) | ✅ | — |\n")
-	output.WriteString("| Tests, builds, installs, or native review actions | allowed as a bounded action | ✅ fresh per-action worker without changing route |")
+	output.WriteString("| Tests, builds, or installs | allowed as a bounded action | ✅ fresh per-action worker without changing route |")
 	return output.String()
 }
 
@@ -62,7 +62,7 @@ func renderDelegationTriggers(routing capabilitymanifest.ImplementationRoutingFa
 		routing.DirectInline.MaxInlineUnitLines,
 	)
 	output.WriteString("- **Preparation trigger:** when the Writer trigger delegates a write, the reading that prepares it, and broad research or context compression, delegate together with or ahead of the write instead of filling the parent context. Inline writes read inline.\n")
-	output.WriteString("- **Per-action trigger:** tests, builds, installs, and native review actors may use fresh workers without changing the implementation route or creating SDD state.\n")
+	output.WriteString("- **Per-action trigger:** tests, builds, and installs may use fresh workers without changing the implementation route or creating SDD state.\n")
 	output.WriteString("- **Optional SDD trigger:** propose SDD only when durable proposal/spec/design/tasks materially reduce substantial ambiguity. Select SDD only after an explicit request, the project lane `workflow.lane: sdd` for substantial work, an ISO project (`iso.project: iso`) for all work, or an accepted proposal; risk alone never forces SDD.\n")
 	output.WriteString("- **Proportionality:** validate consequential premises against available evidence before acting on them; reuse relevant sibling investigation instead of repeating it; run focused checks while iterating and all applicable full checks when a task closes. Keep spend proportional without a hard spend or line gate.\n")
 	_, _ = fmt.Fprintf(&output, "- **Long-session backstop:** at approximately %dk parent-context tokens, consider delegating the next bounded unit to protect the parent context. This is advisory guidance, not a mechanically observed or enforced limit: do not claim runtime telemetry, and it never fires on a count of calls, reads, edits, or files.\n",

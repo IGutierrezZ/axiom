@@ -82,6 +82,11 @@ func TestOrganicConfiguredAgentReceivesRoutingGuidanceRealAgents(t *testing.T) {
 					t.Fatalf("routing guidance for %s omits %q:\n%s", agent.agentID, fragment, rendered)
 				}
 			}
+			for _, fragment := range organicRoutingGuidanceForbiddenFragments {
+				if bytes.Contains(rendered, []byte(fragment)) {
+					t.Fatalf("routing guidance for %s still carries RDD prose %q:\n%s", agent.agentID, fragment, rendered)
+				}
+			}
 			if agent.inHome {
 				stranded := filepath.Join(workspace, filepath.FromSlash(agent.path))
 				if _, statErr := os.Stat(stranded); !os.IsNotExist(statErr) {

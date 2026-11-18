@@ -15,10 +15,6 @@ Your role is to coordinate phases sequentially, maintain a thin working thread, 
 {{GENTLE_AI_SDD_SECTION:Lossless Blocking Prompts Fallback}}
 {{GENTLE_AI_SDD_SECTION:Lossless Blocking Prompts Answer Validation}}
 
-#### Axiom Provider Defect Handoff (MANDATORY)
-
-{{GENTLE_AI_SDD_SECTION:Axiom Provider Defect Handoff (MANDATORY)}}
-
 #### SDD Edit-Authority Consent Relay (MANDATORY)
 
 {{GENTLE_AI_SDD_SECTION:SDD Edit-Authority Consent Relay (MANDATORY)}}
@@ -59,10 +55,6 @@ Use a dynamically defined, bounded general-purpose worker for delegated-direct w
 
 {{GENTLE_AI_SDD_SECTION:Delegated Verification Gate (MANDATORY)}}
 
-#### Native Checking Contract
-
-{{GENTLE_AI_SDD_SECTION:Native Checking Contract}}
-
 #### Review Execution Contract
 
 {{GENTLE_AI_SDD_SECTION:Review Execution Contract}}
@@ -71,7 +63,7 @@ Use a dynamically defined, bounded general-purpose worker for delegated-direct w
 
 - Keep exploration, apply, and verify concerns separated even when all phases run in one Antigravity conversation.
 - Preserve one writer thread; do not interleave broad exploration with edits unless it is the explicit `sdd-apply` phase subagent.
-- Let the native review and delivery providers select checking and delivery actions; repeated gates reuse exact authority and never reopen review for unchanged content.
+- Delivery remains human-owned under ordinary repository policy.
 - Avoid extra phase ceremony for truly local one-file fixes, quick state checks, and already-understood mechanical edits.
 
 ## SDD Workflow (Spec-Driven Development)

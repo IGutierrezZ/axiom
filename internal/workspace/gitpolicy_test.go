@@ -143,7 +143,7 @@ func TestGitInvalidValuesAreLoadErrorsNamingTheKeyAndTheValue(t *testing.T) {
 // raíz de los worktrees viven en el hub personal, no en axiom.yaml.
 func TestGitUnknownKeysAreRejected(t *testing.T) {
 	_, _, declarations := parseDeclarations(t, "git:\n  worktree_mode: worktree\n")
-	wantErrorContains(t, declarations.GitErr, "worktree_mode", "'git'", "integration_branch", "branch_prefix")
+	wantErrorContains(t, declarations.GitErr, "worktree_mode", "'git'", "integration_branch", "branch_prefix", "main_branch", "promotion")
 
 	_, _, declarations = parseDeclarations(t, "git:\n  integration_branch: main\n  worktree_root: /tmp/x\n")
 	wantErrorContains(t, declarations.GitErr, "worktree_root")
@@ -173,7 +173,7 @@ func TestGitBlockMustBeAMapping(t *testing.T) {
 			if baseErr != nil {
 				t.Fatalf("la base es válida: %v", baseErr)
 			}
-			wantErrorContains(t, declarations.GitErr, "'git'", "mapeo", "integration_branch")
+			wantErrorContains(t, declarations.GitErr, "'git'", "mapeo", "integration_branch", "branch_prefix", "main_branch", "promotion")
 			if declarations.Git != nil || cfg.Git != nil {
 				t.Errorf("un bloque que no es un mapeo no se proyecta: %+v / %+v", declarations.Git, cfg.Git)
 			}
@@ -536,7 +536,7 @@ func TestRepositoriesInvalidBranchValuesNameTheEntryTheKeyAndTheValue(t *testing
 // una clave desconocida dentro de una entrada es un error que la nombra.
 func TestRepositoriesUnknownKeysAreRejected(t *testing.T) {
 	_, _, declarations := parseDeclarations(t, "repositories:\n  - path: a\n    worktree_mode: worktree\n")
-	wantErrorContains(t, declarations.RepositoriesErr, "worktree_mode", "'repositories[0]'", "path", "integration_branch", "branch_prefix")
+	wantErrorContains(t, declarations.RepositoriesErr, "worktree_mode", "'repositories[0]'", "path", "integration_branch", "branch_prefix", "promotion")
 
 	_, _, declarations = parseDeclarations(t, "repositories:\n  - path: a\n  - path: b\n    root: /tmp/x\n")
 	wantErrorContains(t, declarations.RepositoriesErr, "root", "'repositories[1]'")

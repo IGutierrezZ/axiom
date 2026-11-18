@@ -1,15 +1,13 @@
-Receipt-Driven Development
+Review and Confirm
 
-RDD adds an independent review of your code changes to help catch bugs and regressions before they reach your project.
-It records review findings and verifies corrections, helping you understand what was checked and build confidence in your changes.
+  Agents  cursor
+  Persona  axiom — Conversación en castellano peninsular; artefactos en español
+  Preset  choose components and skills manually
 
-Would you like to enable RDD?
-Your choice applies globally after installation succeeds. Existing project-specific settings are preserved.
+Components
+  engram selected
 
-No global RDD preference is configured. RDD defaults to OFF until you explicitly choose otherwise.
-
-  Enable RDD
-▸ Disable RDD
+▸ Install
   Back
 
-j/k: navigate • enter: choose • esc: back
+enter: install • esc: back

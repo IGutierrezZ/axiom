@@ -15,6 +15,7 @@ import (
 
 	"github.com/IGutierrezZ/axiom/v3/internal/components/filemerge"
 	"github.com/IGutierrezZ/axiom/v3/internal/pathquote"
+	"github.com/IGutierrezZ/axiom/v3/internal/rddharness"
 	"github.com/IGutierrezZ/axiom/v3/internal/reviewtransaction"
 	"github.com/IGutierrezZ/axiom/v3/internal/system"
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
@@ -121,6 +122,12 @@ func runReviewStopHook(args []string, stdin io.Reader, stdout, stderr io.Writer)
 	raw, err := io.ReadAll(io.LimitReader(stdin, maxReviewStopHookPayloadBytes))
 	if err != nil {
 		return fmt.Errorf("review stop-hook: read hook payload: %w", err)
+	}
+	// RDD suspendido (C-01-c): sin la etiqueta rdd_harness el hook que aún registren
+	// los proyectos antiguos no hace nada y termina con 0, sin leer el modo ni
+	// escribir marcas de sesión.
+	if !rddharness.Enabled() {
+		return nil
 	}
 	var payload reviewStopHookPayload
 	if err := json.Unmarshal(raw, &payload); err != nil {

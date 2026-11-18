@@ -568,3 +568,33 @@ func TestDocsDocumentThePublicationOfTheChangeDocuments(t *testing.T) {
 		}
 	}
 }
+
+// promocion-ramas REQ-25.26, REQ-25.27: el manual y la plantilla documentan
+// `main_branch` y `promotion` sin reformular las líneas fijadas del bloque `git:`.
+func TestDocsDocumentTheBranchPromotionKeys(t *testing.T) {
+	doc := readManualDeInicio(t)
+	assertDocContains(t, doc,
+		// Líneas fijadas que deben seguir intactas.
+		"Los binarios anteriores ignoran el bloque, así que declararlo no rompe a un equipo con versiones mezcladas.",
+		"rigen `integration_branch: main` y `branch_prefix: feat`",
+		"Una clave desconocida dentro de `git:` es un error",
+		// Contenido nuevo.
+		"- `main_branch` (opcional",
+		"- `promotion` (opcional)",
+		"`axiom branch ensure --promotion branch|release|<repo>=branch|release`",
+		"es anterior a `main_branch` y `promotion` rechaza esas dos claves (`config_invalid`, clave desconocida)",
+	)
+
+	example, err := os.ReadFile(filepath.Join("..", "..", "axiom.example.yaml"))
+	if err != nil {
+		t.Fatalf("no se pudo leer axiom.example.yaml: %v", err)
+	}
+	for _, want := range []string{
+		"#   # main_branch: master", "#   # promotion: branch", "#     promotion: ask",
+		"#   integration_branch: main", "#   branch_prefix: feat",
+	} {
+		if !strings.Contains(string(example), want) {
+			t.Errorf("axiom.example.yaml no contiene %q", want)
+		}
+	}
+}

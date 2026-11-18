@@ -8,6 +8,7 @@ import (
 
 	"github.com/IGutierrezZ/axiom/v3/internal/cli"
 	"github.com/IGutierrezZ/axiom/v3/internal/hub"
+	"github.com/IGutierrezZ/axiom/v3/internal/rddharness"
 )
 
 // Valores del cuerpo de POST /api/project/review-mode y de `review_mode` en el alta.
@@ -35,12 +36,17 @@ type ReviewModeDTO struct {
 }
 
 // normalizeReviewModeInput traduce el valor de la petición a la preferencia guardada
-// («on», «off» o «» para heredar). El vacío también hereda.
+// («on», «off» o «» para heredar). El vacío también hereda. Mientras RDD esté suspendido
+// (C-01-c) «on» se rechaza con el motivo de rddharness: el endpoint y el alta siguen
+// latentes, pero no pueden activar la revisión.
 func normalizeReviewModeInput(mode string) (string, error) {
 	switch strings.TrimSpace(mode) {
 	case "", reviewModeInherit:
 		return "", nil
 	case reviewModeOn:
+		if !rddharness.Enabled() {
+			return "", errors.New(rddharness.UnavailableMessage)
+		}
 		return hub.RDDModeOn, nil
 	case reviewModeOff:
 		return hub.RDDModeOff, nil

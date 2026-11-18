@@ -53,8 +53,8 @@ func TestWelcomeMenuOffersTheReviewStoreReset(t *testing.T) {
 	if reset < 0 {
 		t.Fatalf("the welcome menu does not offer the reset: %#v", options)
 	}
-	if reset != backups+1 || reset+2 != uninstall {
-		t.Fatalf("reset at %d is not between backups (%d) and uninstall (%d)", reset, backups, uninstall)
+	if reset != backups+1 || reset+1 != uninstall {
+		t.Fatalf("reset at %d is not right after backups (%d) and right before uninstall (%d)", reset, backups, uninstall)
 	}
 }
 
