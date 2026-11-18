@@ -780,7 +780,6 @@ func TestOpenCodeAndClaudeArchiveInstructionsDoNotGateOnReviewAuthority(t *testi
 		t.Run(path, func(t *testing.T) {
 			content := assets.MustRead(path)
 			for _, required := range []string{
-				"SDD never offers or launches RDD.",
 				"an explicit archive request may close unfinished work without a verification certificate",
 			} {
 				if !strings.Contains(content, required) {
@@ -792,6 +791,7 @@ func TestOpenCodeAndClaudeArchiveInstructionsDoNotGateOnReviewAuthority(t *testi
 				"Only a PRESENT `reviewGate`",
 				"native receipt and task completion gates",
 				"exact transaction/ledger/receipt/gate-context references",
+				"RDD",
 			} {
 				if strings.Contains(content, forbidden) {
 					t.Errorf("%s retains obsolete archive review gate %q", path, forbidden)

@@ -14,7 +14,7 @@ const informedApprovalAndContinuity = `### Informed approval and continuity
 
 - A short affirmative reply ("yes", "go ahead", "that one", "ok", or the equivalent in the user's language) is read against the proposal or question immediately before it, and approves exactly that, within its stated scope. It never widens the scope.
 - If that proposal was ambiguous, or offered several options, a short reply does not choose: ask again.
-- Contextual approval never replaces provider-owned consent (` + "`gentle-ai.review-integration.consent/v3`, `axiom.sdd-integration.consent/v1`" + `), the exact allowed answers of a Lossless Blocking Prompt, or the separate explicit permission that publishing, remote, and destructive actions require.
+- Contextual approval never replaces provider-owned consent (` + "`axiom.sdd-integration.consent/v1`" + `), the exact allowed answers of a Lossless Blocking Prompt, or the separate explicit permission that publishing, remote, and destructive actions require.
 - Resolving a subdecision or an intermediate question does not cancel or replace the objective already authorized: after the answer, continue with the authorized work that remains.
 `
 

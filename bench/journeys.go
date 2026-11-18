@@ -902,6 +902,7 @@ func Journeys() []Journey {
 	journeys = append(journeys, issue3813Journeys()...)
 	journeys = append(journeys, stopHookJourneys()...)
 	journeys = removeRetiredAtomicJourneys(journeys)
+	journeys = removeSuspendedRDDTUIJourneys(journeys)
 	return declareCoreJourneyReviewModes(journeys)
 }
 

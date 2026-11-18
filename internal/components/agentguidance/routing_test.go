@@ -255,7 +255,6 @@ func TestRenderRoutingClosesODDWithTheMaintainedTechnicalContext(t *testing.T) {
 			}
 			for _, kept := range []string{
 				"Report the verified outcome, every failed, skipped, or pending check, and the next step.",
-				"native review runs only under the user-owned receipt-driven development switch.",
 			} {
 				if !strings.Contains(closeStep, kept) {
 					t.Fatalf("RenderRouting(%q) step 7 lost its existing text %q:\n%s", agent.ID, kept, closeStep)
@@ -429,13 +428,12 @@ func TestRenderRoutingProjectsTheBranchesAndWorktreesSubsection(t *testing.T) {
 				t.Fatalf("RenderRouting(%q) subsection differs from the reference adapter:\n got: %q\nwant: %q", agent.ID, section, referenceSection)
 			}
 
-			// It sits after the ODD protocol and its reference detail, ahead of the
-			// receipt-driven switch, so no adapter reads it as an SDD-only rule.
+			// It sits after the ODD protocol and its reference detail, so no adapter
+			// reads it as an SDD-only rule.
 			detail := strings.Index(rendered, "### Organic Driven Development\n")
 			branches := strings.Index(rendered, "### Branches and worktrees\n")
-			review := strings.Index(rendered, "### Receipt-driven development is user-owned\n")
-			if detail < 0 || branches < detail || review < branches {
-				t.Fatalf("RenderRouting(%q) subsection order is wrong (detail=%d branches=%d review=%d)", agent.ID, detail, branches, review)
+			if detail < 0 || branches < detail {
+				t.Fatalf("RenderRouting(%q) subsection order is wrong (detail=%d branches=%d)", agent.ID, detail, branches)
 			}
 
 			for _, want := range []string{
@@ -574,11 +572,10 @@ func TestRenderRoutingRendersMandatoryDelegationTriggers(t *testing.T) {
 	}
 }
 
-// TestRenderRoutingMakesTheReviewKillSwitchDiscoverable guards the product
-// promise that configuring an agent tells it what it may do. The kill switch is
-// only real for the user if every configured agent can name it, so the exact
-// command surface must be projected into the unconditional routing block.
-func TestRenderRoutingMakesTheReviewKillSwitchDiscoverable(t *testing.T) {
+// TestRenderRoutingOmitsRDDGuidance guards the suspension of RDD (C-01-c): no
+// configured agent is told about receipt-driven development, the review switch,
+// or the native review lifecycle.
+func TestRenderRoutingOmitsRDDGuidance(t *testing.T) {
 	t.Parallel()
 
 	all := catalog.AllAgents()
@@ -595,42 +592,24 @@ func TestRenderRoutingMakesTheReviewKillSwitchDiscoverable(t *testing.T) {
 				t.Fatalf("RenderRouting(%q) error = %v", agent.ID, err)
 			}
 
-			for _, want := range []string{
-				"axiom review mode enable|disable|status",
-				"`status` is read-only",
-				"deciding source and the effective mode",
+			for _, forbidden := range []string{
+				"receipt-driven",
+				"RDD",
+				"axiom review",
+				"native review",
+				"review actor",
+				"review-integration",
+				"user-owned",
+				"disabled/unmanaged",
 			} {
-				if !strings.Contains(rendered, want) {
-					t.Fatalf("RenderRouting(%q) hides the kill switch, missing %q:\n%s", agent.ID, want, rendered)
+				if strings.Contains(rendered, forbidden) {
+					t.Fatalf("RenderRouting(%q) still projects RDD guidance %q", agent.ID, forbidden)
 				}
 			}
+			if !strings.Contains(rendered, "Preserve applicable functional verification.") {
+				t.Fatalf("RenderRouting(%q) lost the functional verification bullet", agent.ID)
+			}
 		})
-	}
-}
-
-// TestRenderRoutingObeysTheUserOnReviewMode asserts the specific instructional
-// phrases, not merely the topic, so that prose drift which softens "run disable"
-// into a negotiation, or which lets an agent switch review back on unbidden,
-// fails here instead of shipping to every configured agent.
-func TestRenderRoutingObeysTheUserOnReviewMode(t *testing.T) {
-	t.Parallel()
-
-	rendered, err := RenderRouting(model.AgentClaudeCode)
-	if err != nil {
-		t.Fatalf("RenderRouting error = %v", err)
-	}
-
-	for _, want := range []string{
-		"When the user asks to stop using receipt-driven development, run `disable`.",
-		"Do not argue, do not work around it, and do not propose alternatives first.",
-		"Never enable receipt-driven development on the user's behalf unless the user explicitly asks for it.",
-		"do not start reviews, do not retry, do not reactivate it, and do not fall back to any retired path",
-		"reports `disabled/unmanaged`",
-		"never a fabricated approval",
-	} {
-		if !strings.Contains(rendered, want) {
-			t.Fatalf("rendered routing is missing the exact instruction %q:\n%s", want, rendered)
-		}
 	}
 }
 

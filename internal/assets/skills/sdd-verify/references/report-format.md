@@ -14,6 +14,6 @@ Use only sections useful for the requested checks. This outline is not a schema 
 - **Summary:** what was verified, what failed or remains unknown, and recommended next work.
 - **Estado:** only in a per-role verify, as the last line of the summary: `**Estado:** limpio` or `**Estado:** no limpio — <reason>`. Apply the rule of `technical-compliance.md`.
 
-Do not invent output hashes, passing executions, or historical TDD evidence. A missing test or unavailable tool is a limitation, not proof of correctness. Findings are diagnostic; archive may record them without a verification verdict or mandatory remediation cycle. No RDD state is read or required.
+Do not invent output hashes, passing executions, or historical TDD evidence. A missing test or unavailable tool is a limitation, not proof of correctness. Findings are diagnostic; archive may record them without a verification verdict or mandatory remediation cycle.
 
 When Strict TDD is active, use `strict-tdd-verify.md` to assess available TDD evidence for implemented work without claiming that unobserved RED/GREEN execution occurred.

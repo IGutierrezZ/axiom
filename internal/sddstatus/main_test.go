@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/branch/engine"
+	"github.com/IGutierrezZ/axiom/v3/internal/rddharness"
 	"github.com/IGutierrezZ/axiom/v3/internal/reviewtransaction"
 	"github.com/IGutierrezZ/axiom/v3/internal/testenv"
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
@@ -20,6 +21,9 @@ import (
 // 2 minutos de producción. Solo cambia el valor dentro de este binario de
 // pruebas, nunca el valor declarado en reviewtransaction.
 func TestMain(m *testing.M) {
+	// RDD está suspendido sin la etiqueta rdd_harness (C-01-c): los tests en proceso
+	// que ejercitan la revisión activan el punto de inyección del paquete.
+	rddharness.SetForTesting(true)
 	workspace.DiscoveryCeilingOverride = []string{os.TempDir()}
 	// La guarda B (rama del cambio) queda desactivada por defecto: los fixtures de las pruebas
 	// anteriores montan repositorios git en master o main sin kickoff.yaml y no tratan de la rama.

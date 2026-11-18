@@ -12,6 +12,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/components/filemerge"
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
 	"github.com/IGutierrezZ/axiom/v3/internal/opencode"
+	"github.com/IGutierrezZ/axiom/v3/internal/rddharness"
 )
 
 // profileNameRegex matches valid profile name slugs: lowercase alphanumeric + hyphens,
@@ -306,8 +307,10 @@ func GenerateProfileOverlay(profile model.Profile, homeDir, settingsPath string,
 	// Add native review agent permissions (global, not profile-scoped).
 	// The base overlays define these shared review agents; named profiles only
 	// need permission to delegate to the unsuffixed global agent keys.
-	for _, reviewAgent := range opencode.ReviewPhases() {
-		taskPerms[reviewAgent] = "allow"
+	if rddharness.Enabled() {
+		for _, reviewAgent := range opencode.ReviewPhases() {
+			taskPerms[reviewAgent] = "allow"
+		}
 	}
 
 	orchEntry := map[string]any{

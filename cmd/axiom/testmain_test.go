@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/hub"
+	"github.com/IGutierrezZ/axiom/v3/internal/rddharness"
 	"github.com/IGutierrezZ/axiom/v3/internal/system"
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
@@ -30,6 +31,9 @@ var sandboxHome string
 // binary those subprocess tests run (which is not a Go test binary, so it
 // bypasses the in-process guard) from writing the developer's real user PATH.
 func TestMain(m *testing.M) {
+	// RDD está suspendido sin la etiqueta rdd_harness (C-01-c): los tests en proceso
+	// que ejercitan la revisión activan el punto de inyección del paquete.
+	rddharness.SetForTesting(true)
 	os.Exit(runTests(m))
 }
 

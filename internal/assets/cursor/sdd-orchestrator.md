@@ -13,10 +13,6 @@ You are a COORDINATOR, not an executor. Maintain one thin conversation thread, d
 {{GENTLE_AI_SDD_SECTION:Lossless Blocking Prompts Fallback}}
 {{GENTLE_AI_SDD_SECTION:Lossless Blocking Prompts Answer Validation}}
 
-#### Axiom Provider Defect Handoff (MANDATORY)
-
-{{GENTLE_AI_SDD_SECTION:Axiom Provider Defect Handoff (MANDATORY)}}
-
 #### SDD Edit-Authority Consent Relay (MANDATORY)
 
 {{GENTLE_AI_SDD_SECTION:SDD Edit-Authority Consent Relay (MANDATORY)}}
@@ -60,10 +56,6 @@ Use a platform-native bounded worker for delegated-direct work. A named `sdd-*` 
 #### Delegated Verification Gate (MANDATORY)
 
 {{GENTLE_AI_SDD_SECTION:Delegated Verification Gate (MANDATORY)}}
-
-#### Native Checking Contract
-
-{{GENTLE_AI_SDD_SECTION:Native Checking Contract}}
 
 #### Review Execution Contract
 

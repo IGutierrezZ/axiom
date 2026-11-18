@@ -71,6 +71,7 @@ func journeySources() []journeySource {
 	}
 	for index := range sources {
 		sources[index].Journeys = removeRetiredAtomicJourneys(sources[index].Journeys)
+		sources[index].Journeys = removeSuspendedRDDTUIJourneys(sources[index].Journeys)
 	}
 	return sources
 }
