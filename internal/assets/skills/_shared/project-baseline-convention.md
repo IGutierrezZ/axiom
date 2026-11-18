@@ -15,6 +15,7 @@ A project may declare in its `axiom.yaml` a technical context: documentation tha
 - Read the `entry` file of each declared `technicalContext` mode and consult the remaining `paths` only on demand, without loading them in advance.
 - A mode declared without `entry` has nothing to preload: open its files only when the work needs them.
 - Only `sdd-explore`, `sdd-design`, `sdd-apply` and `sdd-verify` are required to read the technical context; the other phases are not.
+- Conditional exception: `sdd-propose` reads the `entry` file of each mode, and never the remaining `paths`, only when no exploration was received. With exploration it reads nothing from the technical context; `sdd-spec` and `sdd-tasks` never read it.
 
 ## 3. Prohibitions
 

@@ -72,6 +72,8 @@ openspec/changes/{change-name}/
 
 **IF mode is `none`:** Skip — no existing specs to read.
 
+**Technical context, in any mode, only when no exploration was received:** no exploration was received when the orchestrator passed no exploration findings, the change folder has no `exploration.md`, and there is no `sdd/{change-name}/explore` observation. Only in that case, and only when the status projects `technicalContext`, read the `entry` file of each mode before writing «Affected Areas», «Risks» and «Dependencies»; never open the remaining `paths`. When exploration was received, read nothing from the technical context: exploration already read the `entry`, and its depth belongs to `sdd-design` (see `../_shared/project-baseline-convention.md`).
+
 ### Step 4: Write proposal.md
 
 **Directiva de Interrogación Exhaustiva (Funcional — ODD-1.1):**
