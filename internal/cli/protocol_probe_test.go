@@ -14,6 +14,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/openclaw"
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/opencode"
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/qwen"
+	"github.com/IGutierrezZ/axiom/v3/internal/gitidentity"
 	runtimeopencode "github.com/IGutierrezZ/axiom/v3/internal/opencode"
 	"github.com/IGutierrezZ/axiom/v3/internal/rddharness"
 	"github.com/IGutierrezZ/axiom/v3/internal/system"
@@ -50,10 +51,19 @@ import (
 // TestAgentInstallStepRefusesMissingCodexInsteadOfInstalling, and
 // TestRunInstallRefusesMissingKimiRegardlessOfUVPresence for that opposite,
 // deliberately-kept case.
+//
+// resolveActorIdentity (capacidad change-actor-identity) se fija a una identidad
+// determinista: sin ello, cada prueba existente de `seal` y de `gate record` lanzaría
+// git y su resultado dependería de la configuración git de la máquina. Las pruebas que
+// necesitan otra identidad, o la resolución real, la sustituyen localmente con
+// stubActorIdentity y useRealActorIdentity.
 func TestMain(m *testing.M) {
 	// RDD está suspendido sin la etiqueta rdd_harness (C-01-c): los tests en proceso
 	// que ejercitan la revisión activan el punto de inyección del paquete.
 	rddharness.SetForTesting(true)
+	resolveActorIdentity = func(context.Context, string) gitidentity.Identity {
+		return gitidentity.New("Prueba Axiom", "prueba@ejemplo.invalid")
+	}
 	// Ceiling for the upward planning-home discovery (inc-24, R29): a marker
 	// (`.axiom-workspace`, `axiom.yaml`, `openspec/`) in an ancestor of the
 	// system temp directory, for instance in a developer's home directory,

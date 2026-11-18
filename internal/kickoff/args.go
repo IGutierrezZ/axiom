@@ -370,9 +370,11 @@ func (a SealArgs) ToKickoff(change string) Kickoff {
 		})
 	}
 	return Kickoff{
-		Schema:   KickoffSchemaV1,
-		Change:   change,
-		SealedBy: "cli",
+		Schema: KickoffSchemaV1,
+		Change: change,
+		// FallbackActor es el valor puro: el adaptador CLI lo sustituye por la identidad git
+		// del operador cuando está completa (capacidad change-actor-identity).
+		SealedBy: FallbackActor,
 		Config: FlowConfig{
 			FlowMode:             a.FlowMode,
 			ExecutionStyle:       a.ExecutionStyle,

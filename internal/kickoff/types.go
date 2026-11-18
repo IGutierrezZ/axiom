@@ -79,6 +79,12 @@ const (
 // because it freezes the roles a change already declares (REQ-21.4).
 const SealedByInferred = "inferred"
 
+// FallbackActor es el actor y el sellador que se registran cuando no hay
+// identidad git completa ni --actor explícito (capacidad change-actor-identity).
+// Es un valor reservado: nunca coincide con una identidad git, que siempre
+// lleva la forma "Nombre <email>".
+const FallbackActor = "cli"
+
 // roleApplyGatePrefix is the single literal used to build AND to recognise
 // a role-apply gate key. RoleApplyGate is the only constructor; schema
 // validation reuses this same prefix instead of a second literal, so the
@@ -140,9 +146,13 @@ type Lifecycle struct {
 // "kickoff" and "lifecycle" blocks never change for the life of the change
 // instance (D-01, D-02).
 type Kickoff struct {
-	Schema    string     `yaml:"schema"`
-	Change    string     `yaml:"change"`
-	SealedAt  time.Time  `yaml:"sealed_at"`
+	Schema   string    `yaml:"schema"`
+	Change   string    `yaml:"change"`
+	SealedAt time.Time `yaml:"sealed_at"`
+	// SealedBy es quien selló el kickoff: por defecto la identidad git del operador
+	// ("Nombre <email>"), FallbackActor ("cli") si esa identidad no está completa y
+	// SealedByInferred en el retrosellado. El valor no se valida: los kickoff
+	// anteriores con "cli" siguen siendo válidos.
 	SealedBy  string     `yaml:"sealed_by"`
 	Config    FlowConfig `yaml:"kickoff"`
 	Lifecycle Lifecycle  `yaml:"lifecycle"`
@@ -187,9 +197,13 @@ type GateRecord struct {
 	// HandedOffTo es la fase que cedio esa aprobacion en el momento de registrarla
 	// (por ejemplo "design" o "apply:web"). Solo la escribe la salida 2 junto a
 	// HandedOff: el roster cambia despues y la cesion no debe cambiar con el.
-	HandedOffTo string    `yaml:"handed_off_to,omitempty"`
-	Actor       string    `yaml:"actor"`
-	RecordedAt  time.Time `yaml:"recorded_at"`
+	HandedOffTo string `yaml:"handed_off_to,omitempty"`
+	// Actor es quien registró la decisión: --actor si se indica; si no, la identidad git
+	// del operador ("Nombre <email>"); y FallbackActor ("cli") si esa identidad no está
+	// completa. El valor no se valida: los registros anteriores ("cli", "maintainer",
+	// "release-manager") siguen siendo válidos.
+	Actor      string    `yaml:"actor"`
+	RecordedAt time.Time `yaml:"recorded_at"`
 }
 
 // GateLedger is the full append-only content of gates.yaml: every decision

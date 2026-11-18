@@ -114,6 +114,9 @@ func TestArchitectureOnlyExecGoLaunchesProcesses(t *testing.T) {
 	// la integración ODD y collectSources tolera su ausencia.
 	sources = append(sources, collectSources(t, filepath.Join("..", "techcontext"), "internal/techcontext")...)
 	sources = append(sources, collectSources(t, filepath.Join("..", "livespec"), "internal/livespec")...)
+	// La identidad git del actor (capacidad change-actor-identity) lee user.name y user.email con
+	// gitcommon.RunWithTimeout: tampoco lanza procesos por su cuenta.
+	sources = append(sources, collectSources(t, filepath.Join("..", "gitidentity"), "internal/gitidentity")...)
 	// La adopción de OpenSpec (REQ-30.9 a REQ-30.14) solo lee ficheros: no lanza procesos.
 	sources = append(sources, collectSources(t, filepath.Join("..", "adoption"), "internal/adoption")...)
 	sources = append(sources, collectSources(t, filepath.Join("..", "adoption", "adoptcheck"), "internal/adoption/adoptcheck")...)
@@ -145,7 +148,7 @@ func TestArchitectureOnlyExecGoLaunchesProcesses(t *testing.T) {
 		"internal/branch/gitcli/ops.go",
 		"internal/branch/registry/registry.go",
 		"internal/sddpublish/publish.go", "internal/sddpublish/gitport.go", "internal/docpaths/docpaths.go",
-		"internal/techcontext/gitview.go",
+		"internal/techcontext/gitview.go", "internal/gitidentity/gitidentity.go",
 	} {
 		if !labels[want] {
 			t.Errorf("el recorrido no vio %s; ve %v", want, labels)

@@ -54,6 +54,8 @@ func runSDDKickoffSeal(args []string, stdout io.Writer) error {
 	}
 
 	var sealing kickoff.Kickoff
+	// Aviso de identidad git incompleta (capacidad change-actor-identity): vacío en --infer.
+	sealWarning := ""
 	if parsed.Infer {
 		// El retrosellado es de un cambio con artefactos: nunca crea la carpeta.
 		if !existed {
@@ -90,6 +92,9 @@ func runSDDKickoffSeal(args []string, stdout io.Writer) error {
 		if err := applySealBranchPolicy(loc, changeRoot, &sealing); err != nil {
 			return err
 		}
+		// El sellador es la identidad git de la raíz del workspace (no de la carpeta del
+		// cambio, que puede no existir aún); `--infer` conserva `inferred` y no lanza git.
+		sealing.SealedBy, sealWarning = defaultActor(loc.WorkspaceRoot, sealActorTarget)
 		// Instantánea de `sdd:` (REQ-29.13): solo un proyecto ISO la lleva, y nunca el
 		// retrosellado.
 		if sdd := loc.Declarations.SDD; sdd != nil && sdd.ISO {
@@ -114,6 +119,9 @@ func runSDDKickoffSeal(args []string, stdout io.Writer) error {
 	if err != nil {
 		rollback()
 		return err
+	}
+	if wrote {
+		emitActorIdentityWarning(sealWarning)
 	}
 
 	return renderKickoffSealResult(stdout, parsed.JSON, sealed, wrote)
