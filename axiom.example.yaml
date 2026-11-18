@@ -156,5 +156,5 @@ governance:
   # Motor de memoria compartida persistente
   shared_memory: "engram"
 
-  # Conector para análisis semántico del código
-  semantic_analysis: "serena"
+  # Conector para análisis semántico del código: auto | codegraph | native-ast
+  semantic_analysis: "auto"

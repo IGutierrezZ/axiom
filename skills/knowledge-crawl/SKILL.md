@@ -1,6 +1,6 @@
 ---
 name: knowledge-crawl
-description: "Trigger: knowledge crawl, crawling de codigo, analizar unidad de trabajo, catalogacion profunda, descomponer modulo. Analyze a codebase unit from crawl-job.json using Serena AST and symbols, generating canonical OpenSpec specifications for record-unit."
+description: "Trigger: knowledge crawl, crawling de codigo, analizar unidad de trabajo, catalogacion profunda, descomponer modulo. Analyze a codebase unit from crawl-job.json using CodeGraph and the native AST engine, generating canonical OpenSpec specifications for record-unit."
 license: Apache-2.0
 metadata:
   author: gentleman-programming
@@ -19,8 +19,8 @@ Carga esta skill cuando se te asigne una unidad de trabajo proveniente de un pla
    - La unidad de trabajo asignada contiene la lista acotada de archivos, firmas públicas e interfaces del módulo en `.axiom/knowledge/crawl-job.json`.
    - Limita tu análisis a los componentes de esa unidad para garantizar aislamiento y evitar solapamientos.
 
-2. **Extracción Semántica con Serena:**
-   - Utiliza Serena (`get_ast`, `find_symbol`, `search_definitions`) para extraer con fidelidad absoluta:
+2. **Extracción Semántica con CodeGraph y el motor nativo:**
+   - Utiliza CodeGraph (`codegraph_explore`) y el motor AST nativo para código Go (`axiom semantic symbols --query <texto> --kind struct|interface|func|method`, `axiom semantic inspect`) para extraer con fidelidad absoluta:
      - Nombres de structs, interfaces, enums y tipos de datos.
      - Métodos públicos y contratos de interfaces.
      - Constantes y errores tipados que definen invariantes de negocio.

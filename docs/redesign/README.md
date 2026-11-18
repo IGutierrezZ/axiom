@@ -155,7 +155,7 @@ Todas las rutas existen hoy en `server.go`. Los DTO están en `types.go`.
 
 | Bloque | Fuente |
 |--------|--------|
-| Estado de los conectores | `GET /api/semantic/status` (`active_connector`, `codegraph_installed` y `_configured`, `serena_installed` y `_configured`) |
+| Estado de los conectores | `GET /api/semantic/status` (`active_connector`, `codegraph_installed` y `_configured`) |
 | Agentes y MCPs | La misma fuente que la lista de agentes actual (`#semantic-agents-list`) |
 | Símbolos | `GET /api/semantic/symbols`, con filtros de tipo struct, interface, func y method |
 | Dependencias | `GET /api/semantic/dependencies` |

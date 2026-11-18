@@ -48,13 +48,13 @@ Estrategia `exception-ok`: una sola PR con `type:refactor` y `size:exception` si
 
 ## Tareas
 
-- [ ] **T1 · Código Go y dashboard sin Serena** (ruta: delegada, un escritor; disparador: 8+ ficheros no triviales en 5 paquetes)
+- [x] **T1 · Código Go y dashboard sin Serena** (ruta: delegada, un escritor; disparador: 8+ ficheros no triviales en 5 paquetes)
   - `semantic`: fuera `ConnectorSerena`, campos `Serena*`, `CheckSerena*` y detección en JSON; selector `auto` = CodeGraph > `native-ast`; aviso de valor obsoleto para `serena`; mensaje de reindexado sin Serena.
   - `hub/mcp.go`: solo `engram` y `codegraph`; retirada de la entrada exacta `serena` gestionada.
   - `main.go` (`:149`, `:1604`), `knowledge/types.go:59`, `semantic.js` (`:14`, `:17`, `:31`, `:75`).
   - Tests: `semantic_test.go` (auto con y sin CodeGraph, `serena` obsoleto con aviso), `init_knowledge_test.go` (solo `engram` y `codegraph`; retirada de la `serena` exacta; conservación de una `serena` modificada y de `custom-db`), `knowledge_assets_test.go`.
   - Comprobación: `go test ./internal/semantic/... ./internal/hub/... ./internal/dashboard/... ./internal/knowledge/...` y `go vet ./cmd/axiom/`.
-- [ ] **T2 · Skills, configuración y documentación** (ruta: delegada, un escritor; disparador: 6+ ficheros de prosa)
+- [x] **T2 · Skills, configuración y documentación** (ruta: delegada, un escritor; disparador: 6+ ficheros de prosa)
   - Reescritura de `knowledge-query` y `knowledge-crawl` sobre `codegraph_explore` y `axiom semantic symbols|inspect`; `AGENTS.md:59-60`.
   - `axiom.example.yaml:160` → `"auto"`; `manual-de-inicio.md` (`:115`, `:307`, `:703`); `AXIOM_ENTERPRISE_VISION.md`; `docs/redesign/README.md:158` y maquetas.
   - Comprobación: relectura del diff.
@@ -66,7 +66,7 @@ Estrategia `exception-ok`: una sola PR con `type:refactor` y `size:exception` si
 
 ## Criterio de terminado
 
-- `rg -i serena` sin resultados fuera de los históricos archivados (`docs/archive`, `openspec/changes/archive`, `docs/audits`, `docs/plan`, `odd/tasks` cerrados y este documento) y de las coincidencias falsas de `internal/reviewtransaction`.
+- `rg -i serena` sin resultados fuera de los históricos archivados (`docs/archive`, `openspec/changes/archive`, `docs/audits`, `docs/plan`, `odd/tasks` cerrados y este documento) y de las coincidencias falsas de `internal/reviewtransaction`. Excepción obligada por los dos criterios siguientes: el valor obsoleto `serena` y la retirada de la entrada gestionada (`internal/semantic/service.go`, `internal/hub/mcp.go` y sus tests).
 - `axiom semantic status` no informa de Serena (test de `GetStatus` y relectura de `main.go`).
 - En `auto` gana CodeGraph si está disponible y, si no, `native-ast`.
 - Un `axiom.yaml` con `semantic_analysis: serena` sigue cargando, con un aviso de valor obsoleto y caída a CodeGraph o `native-ast`.
@@ -237,6 +237,8 @@ El barrido DEBE inspeccionar el árbol de código y las definiciones AST/símbol
 
 - Exploración (delegada a un mapeador: 10+ ficheros) y worktree `axiom-wt/quitar-serena` creados el 2026-11-18.
 - Plan stop: approved 2026-11-18; implementation continues
+- **T1** `ea871c11` (delegada, un escritor). `go build ./...`, `go vet` de los paquetes tocados y `gofmt -l`: limpios. `go test ./internal/semantic/... ./internal/hub/... ./internal/dashboard/... ./internal/knowledge/...`: ok (repetido por el padre en `semantic` y `hub`). `go test ./cmd/axiom/ -run 'Semantic|Help'`: ok. Aviso: «El valor «serena» de governance.semantic_analysis en axiom.yaml está obsoleto (Serena ya no está soportada) y se trata como «auto».» Coincidencias de `serena` que quedan a propósito en código: la constante `deprecatedConnectorSerena` y su aviso (`internal/semantic/service.go`), `isManagedSerenaEntry` y la retirada en `internal/hub/mcp.go`, y los tests que los cubren; el propio criterio de terminado exige ese valor obsoleto y esa retirada, así que no pueden desaparecer.
+- **T2** (delegada, un escritor; commit siguiente a `ea871c11`, ver `git log`). Skills reescritas sobre `codegraph_explore` y `axiom semantic symbols --query --kind` / `inspect` (banderas comprobadas en `cmd/axiom/main.go:1631-1632`); `AGENTS.md:59-60`, `axiom.example.yaml` (`"auto"`), `manual-de-inicio.md` (`:115`, `:307` de `"enabled"` a `"auto"`, `:703`), `AXIOM_ENTERPRISE_VISION.md`, `docs/redesign/README.md:158` y las tres maquetas (conteos de avisos y comprobaciones ajustados). `rg -in serena` sobre esos ficheros: sin resultados. `go test ./internal/app/ -run SkillIndex` y `go test ./cmd/axiom/ -run SkillIndex`: ok. Maquetas no abiertas en navegador (bloques completos retirados).
 
 ## Siguiente paso
 
