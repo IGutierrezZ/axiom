@@ -87,7 +87,7 @@ Cuando el veredicto de rama (REQ-25.18 de `change-branch-lifecycle`) para el cam
 - **ENTONCES** se proyecta `blocked(wrong_branch)`
 
 #### Scenario: En la fase archive solo la rama de archivado es correcta
-- **DADO** un monorepo con el cambio `x` fusionado en la fase archive y el repositorio desplegado, por separado, en `feat/x`, en `main` y en `feat/x-core`
+- **DADO** un monorepo con el cambio `x` fusionado en la fase archive y el repositorio desplegado, por separado, en `feat/x`, en `main` y en una rama ajena `feat/otra`
 - **CUANDO** se ejecuta `axiom sdd status x --json`
 - **ENTONCES** en los tres casos se proyecta `blocked(wrong_branch)` con la rama esperada `feat/x-archive`
 - **Y** la continuación es `axiom branch ensure --cwd <ruta absoluta> --change x --archive`
@@ -136,8 +136,6 @@ Cuando el veredicto de rama (REQ-25.18 de `change-branch-lifecycle`) para el cam
 - **DADO** el status de un cambio sin bloqueo de rama
 - **CUANDO** se compara con el de antes de este incremento
 - **ENTONCES** ninguna clave existente cambia de nombre, tipo ni valor
-
----
 
 ### Requirement: Las Raíces Registradas por `ensure` Entran en `allowedEditRoots` (REQ-25.43)
 

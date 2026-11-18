@@ -252,11 +252,11 @@ La política de cada repositorio DEBE resolverse con esta precedencia, de mayor 
 El modelo de ramas de cada repositorio con rama de cambio DEBE depender de cuántos roles del cambio lo tocan (roles sellados en el `kickoff.yaml` del cambio intersecados con los roles de `axiom.yaml` cuyos repositorios resuelven a esa raíz git):
 
 - **Un rol** (lo habitual, también `fullstack`): solo existe la rama `<prefijo>/<cambio>`; el rol trabaja en ella y su PR se dirige a la rama de integración.
-- **Dos o más roles**: `<prefijo>/<cambio>` es la rama de seguimiento y cada rol saca `<prefijo>/<cambio>-<rol>` desde ella. Hay un PR de cada rol contra la rama de seguimiento y un PR final a la rama de integración que lleva el cambio (código y artefactos), sin el archive. Se RECOMIENDA el merge commit, sin imponerlo.
+- **Dos o más roles** (solo posible en `multirepo`: en `monorepo-embedded` el único rol es `fullstack`, REQ-2.2 de `workspace-topology`, y por tanto nunca hay rama de rol): `<prefijo>/<cambio>` es la rama de seguimiento y cada rol saca `<prefijo>/<cambio>-<rol>` desde ella. Hay un PR de cada rol contra la rama de seguimiento y un PR final a la rama de integración que lleva el cambio (código y artefactos), sin el archive. Se RECOMIENDA el merge commit, sin imponerlo.
 - **Rama de archivado** (solo en repositorios con rama de cambio): una vez fusionado en la rama de integración el PR del cambio, el archive se hace en `<prefijo>/<cambio>-archive`, que sale de la rama de integración (REQ-25.45) y se entrega en un PR documental aparte contra la rama de integración. NO existe en `multirepo`.
 
 El modelo DEBE evaluarse por repositorio: en un mismo cambio un repositorio puede tener rama de rol y otro no. Un rol cuyo nombre sea `archive` colisionaría con la rama de archivado y DEBE rechazarse con `invalid_name` al planificar las ramas de rol (supuesto S-15). `ensure` NO DEBE publicar la rama de seguimiento: DEBE avisar de que la persona la sube al remoto antes del primer PR de rol. La rama destino propuesta para cada PR (rol contra seguimiento, cambio contra integración, archivado contra integración) DEBE poder obtenerse del plan (`status`, REQ-25.15) para que `sdd-apply` la proponga en lugar de preguntarla.
-(Previously: el PR final a la rama de integración llevaba el archive y no existía rama de archivado)
+(Previously: el PR final a la rama de integración llevaba el archive y no existía rama de archivado; los escenarios de ramas de rol, de la colisión con `archive` y del destino de los PR se ejecutaban sobre un monorepo con los roles `core` y `qa`, y ahora se ejecutan sobre `multirepo` o sobre el rol `fullstack`)
 
 #### Scenario: Un rol, rama única
 - **DADO** un monorepo con el rol único `fullstack` sellado en el kickoff del cambio `x`
@@ -265,9 +265,9 @@ El modelo DEBE evaluarse por repositorio: en un mismo cambio un repositorio pued
 - **Y** no existe ninguna rama `feat/x-<rol>`
 
 #### Scenario: Dos roles sobre el mismo repositorio crean seguimiento y ramas de rol
-- **DADO** un monorepo con los roles `core` y `qa` sellados en el kickoff del cambio `x`, ambos con repositorios que resuelven a la misma raíz git
+- **DADO** un multirepo con los roles `core` y `qa` sellados en el kickoff del cambio `x`, ambos con repositorios que resuelven a la misma raíz git de código `repo-backend`
 - **CUANDO** se ejecuta `ensure --change x`
-- **ENTONCES** existe la rama de seguimiento `feat/x` desde la base
+- **ENTONCES** en `repo-backend` existe la rama de seguimiento `feat/x` desde la base
 - **Y** existen `feat/x-core` y `feat/x-qa`, ambas creadas desde `feat/x`
 - **Y** la salida avisa de que la rama de seguimiento debe publicarla la persona antes del primer PR de rol
 - **Y** no se ejecuta ningún `git push`
@@ -291,16 +291,18 @@ El modelo DEBE evaluarse por repositorio: en un mismo cambio un repositorio pued
 - **Y** la salida incluye un aviso que nombra el rol
 
 #### Scenario: Un rol llamado `archive` colisiona con la rama de archivado
-- **DADO** un monorepo con los roles `core` y `archive` sellados sobre el mismo repositorio
+- **DADO** un multirepo con los roles `core` y `archive` sellados sobre el mismo repositorio de código
 - **CUANDO** se ejecuta `ensure --change x`
-- **ENTONCES** se rechaza con `invalid_name` nombrando el rol `archive` y la colisión con `feat/x-archive`
+- **ENTONCES** se rechaza con `invalid_name` nombrando el rol `archive` y la colisión con el nombre reservado `feat/x-archive`
 - **Y** no se crea ninguna rama de rol
 
 #### Scenario: La rama de archivado no pertenece al modelo de roles
-- **DADO** un monorepo con los roles `core` y `qa` y las ramas `feat/x`, `feat/x-core` y `feat/x-qa`
+- **DADO** un monorepo con el rol único `fullstack` y las ramas `feat/x` y `feat/x-archive`
 - **CUANDO** se ejecuta `axiom branch status --change x --json`
 - **ENTONCES** el destino propuesto del PR de `feat/x` es la rama de integración
-- **Y** el de la rama de archivado `feat/x-archive`, cuando existe, es la rama de integración
+- **Y** el de la rama de archivado `feat/x-archive` es la rama de integración
+- **Y** el plan no contiene ninguna rama de rol
+
 
 ---
 
@@ -368,7 +370,9 @@ El motor DEBE obtener la raíz git de cada repositorio declarado en `roles.<rol>
 
 ### Requirement: `ensure` Planifica de Forma Determinista y es Idempotente (REQ-25.7)
 
-`axiom branch ensure` DEBE producir un plan determinista a partir de la topología, `git:`, `repositories:`, los roles del kickoff y las preferencias personales, y ejecutarlo con git. Una segunda ejecución con los mismos argumentos y el mismo estado DEBE no cambiar nada (ni ramas, ni worktrees, ni registro) y devolver el mismo JSON, salvo `branches[].createdFrom` y `branches[].createdFromRef` (REQ-27.15), que se emiten solo en la ejecuciÃ³n que crea la rama y no en las siguientes. El comando DEBE crear solo lo que falta: si la rama ya existe, DEBE reutilizarla sin moverla ni reiniciarla; si no existe en local pero existe su referencia remota local, DEBE adoptarla (REQ-27.15); si ya existe su worktree registrado, DEBE devolver su ruta. Si la rama ya está desplegada en un worktree que el registro local no conoce, DEBE rechazar con `branch_checked_out_elsewhere` nombrando la ruta. Cuando todavía no hay kickoff sellado (el cambio se nombra antes del sellado), `ensure` DEBE planificar solo para el repositorio del planning home la rama `<prefijo>/<cambio>`, que es idéntica en ambos modelos de REQ-25.4, y una ejecución posterior, ya con el kickoff sellado, DEBE completar de forma incremental las ramas de rol y los repositorios de código que correspondan sin alterar lo ya creado (supuesto S-1). `ensure --change <c> --archive` (REQ-25.45) es un plan aparte con las mismas garantías de determinismo e idempotencia: no altera las ramas del cambio ya creadas.
+`axiom branch ensure` DEBE producir un plan determinista a partir de la topología, `git:`, `repositories:`, los roles del kickoff y las preferencias personales, y ejecutarlo con git. Una segunda ejecución con los mismos argumentos y el mismo estado DEBE no cambiar nada (ni ramas, ni worktrees, ni registro) y devolver el mismo JSON, salvo `branches[].createdFrom` y `branches[].createdFromRef` (REQ-27.15), que se emiten solo en la ejecución que crea la rama y no en las siguientes. El comando DEBE crear solo lo que falta: si la rama ya existe, DEBE reutilizarla sin moverla ni reiniciarla; si no existe en local pero existe su referencia remota local, DEBE adoptarla (REQ-27.15); si ya existe su worktree registrado, DEBE devolver su ruta. Si la rama ya está desplegada en un worktree que el registro local no conoce, DEBE rechazar con `branch_checked_out_elsewhere` nombrando la ruta. Cuando todavía no hay kickoff sellado (el cambio se nombra antes del sellado), `ensure` DEBE planificar solo para el repositorio del planning home la rama `<prefijo>/<cambio>`, que es idéntica en ambos modelos de REQ-25.4 (en `multirepo` ese repositorio se trabaja in situ, REQ-25.5, y no se crea ninguna rama), y una ejecución posterior, ya con el kickoff sellado, DEBE completar de forma incremental las ramas de rol y los repositorios de código que correspondan sin alterar lo ya creado (supuesto S-1). `ensure --change <c> --archive` (REQ-25.45) es un plan aparte con las mismas garantías de determinismo e idempotencia: no altera las ramas del cambio ya creadas.
+(Previously: los escenarios de ejecución previa y posterior al sellado y de `--archive` suponían un monorepo con los roles `core` y `qa` y la rama `feat/x-core`; ahora el de roles se ejecuta sobre `multirepo` y los de monorepo sobre el rol `fullstack`)
+
 
 #### Scenario: Segunda ejecución sin cambios
 - **DADO** un cambio ya preparado por `ensure`
@@ -389,10 +393,16 @@ El motor DEBE obtener la raíz git de cada repositorio declarado en `roles.<rol>
 - **Y** no se crea ningún otro worktree
 
 #### Scenario: Ejecución previa al sellado y posterior al sellado
+- **DADO** un cambio nombrado sin `kickoff.yaml`, en un multirepo con los roles `core` y `qa` sobre el mismo repositorio de código `repo-backend`
+- **CUANDO** se ejecuta `ensure --change x` antes del sellado y de nuevo después de sellar los dos roles
+- **ENTONCES** la primera ejecución no crea ninguna rama, porque el repositorio de specs de un multirepo se trabaja in situ en su rama de integración (REQ-25.5)
+- **Y** la segunda conserva lo ya creado y crea en `repo-backend` `feat/x`, `feat/x-core` y `feat/x-qa` (las de rol desde `feat/x`)
+
+#### Scenario: En monorepo la ejecución posterior al sellado no añade ramas
 - **DADO** un cambio nombrado sin `kickoff.yaml`, en un monorepo
-- **CUANDO** se ejecuta `ensure --change x` antes del sellado y de nuevo después de sellar dos roles `core` y `qa`
-- **ENTONCES** la primera ejecución crea solo `feat/x`
-- **Y** la segunda conserva `feat/x` y crea `feat/x-core` y `feat/x-qa` desde ella
+- **CUANDO** se ejecuta `ensure --change x` antes del sellado y de nuevo después de sellar el rol `fullstack`
+- **ENTONCES** ambas ejecuciones dejan solo la rama `feat/x`
+- **Y** la segunda no cambia nada
 
 #### Scenario: Se rechaza un nombre de cambio que no es válido
 - **DADO** un nombre de cambio con caracteres inválidos como componente de rama git
@@ -401,15 +411,16 @@ El motor DEBE obtener la raíz git de cada repositorio declarado en `roles.<rol>
 - **Y** no se crea nada
 
 #### Scenario: `--archive` no altera las ramas del cambio
-- **DADO** un cambio con las ramas `feat/x` y `feat/x-core` ya creadas y su PR fusionado
+- **DADO** un monorepo con la rama `feat/x` ya creada y su PR fusionado
 - **CUANDO** se ejecuta `ensure --change x --archive`
-- **ENTONCES** se crea `feat/x-archive` y el commit al que apunta cada una de las ramas anteriores no cambia
+- **ENTONCES** se crea `feat/x-archive` y el commit al que apunta `feat/x` no cambia
 
 #### Scenario: La rama publicada se adopta en lugar de crearse desde la base
 - **DADO** una rama `feat/x` inexistente en local y `refs/remotes/origin/feat/x` presente
 - **CUANDO** se ejecuta `ensure --change x`
 - **ENTONCES** `feat/x` se crea desde `origin/feat/x`
 - **Y** una segunda ejecución con los mismos argumentos devuelve el mismo JSON sin cambiar nada
+
 
 ---
 
@@ -537,7 +548,7 @@ En modo `in_place`, `ensure` DEBE rechazar con `dirty_worktree` cuando el reposi
 ### Requirement: Rutas de Worktree y Límite de Longitud (REQ-25.11)
 
 La ruta del worktree de cada rama DEBE ser `<raíz de worktrees>/<cambio>[-<rol>|-archive]/<repo>`, donde el sufijo `-<rol>` solo aparece si existe rama de rol para ese repositorio (REQ-25.4), el sufijo `-archive` solo aparece en el worktree de la rama de archivado (REQ-25.45) y `<repo>` es el último segmento de la ruta (`path`) del repositorio, tal como la declara `repositories:` o el rol (supuesto S-4); para el repositorio cuya ruta es `.`, `<repo>` es el nombre del directorio de su raíz git, y si dos repositorios del plan tuvieran el mismo último segmento, `ensure` DEBE rechazar con `invalid_name` nombrando ambos, antes de crear nada (supuesto S-17). La raíz de worktrees DEBE ser la preferencia personal del hub o, sin ella, `<padre de la carpeta maestra>/<nombre de la carpeta maestra>-wt`, fuera de cualquier repositorio. El planificador DEBE validar, antes de crear nada, que el nombre del cambio es válido a la vez como componente de rama git y como nombre de directorio en Windows, y que la longitud de cada ruta de worktree no supera el límite admitido: el de la plataforma menos un margen de 40 caracteres, es decir, 220 caracteres en Windows sin rutas largas habilitadas (260 menos 40). Si no se cumple, DEBE rechazar con `invalid_name` o `path_too_long`, nombrando la ruta, su longitud y el máximo, sin crear ramas ni worktrees.
-(Previously: `<repo>` era el nombre declarado en `repositories:` o el del directorio de la raíz git, la ruta no contemplaba la rama de archivado y el límite solo exigía «margen» sin cifra)
+(Previously: `<repo>` era el nombre declarado en `repositories:` o el del directorio de la raíz git, la ruta no contemplaba la rama de archivado y el límite solo exigía «margen» sin cifra; el escenario del sufijo de rol se ejecutaba sobre un monorepo con los roles `core` y `qa` y ahora sobre `multirepo`)
 
 #### Scenario: Ruta sin sufijo de rol con una sola rama
 - **DADO** un monorepo con un rol y modo `worktree`
@@ -546,7 +557,7 @@ La ruta del worktree de cada rama DEBE ser `<raíz de worktrees>/<cambio>[-<rol>
 - **Y** la ruta no contiene sufijo de rol
 
 #### Scenario: Ruta con sufijo de rol cuando hay rama de rol
-- **DADO** un monorepo con los roles `core` y `qa` sobre el mismo repositorio
+- **DADO** un multirepo con los roles `core` y `qa` sobre el mismo repositorio de código
 - **CUANDO** se ejecuta `ensure --change x` con ambos sellados
 - **ENTONCES** el worktree de la rama de seguimiento está en `<raíz de worktrees>/x/<repo>`
 - **Y** los de las ramas de rol están en `<raíz de worktrees>/x-core/<repo>` y `<raíz de worktrees>/x-qa/<repo>`
@@ -588,8 +599,9 @@ La ruta del worktree de cada rama DEBE ser `<raíz de worktrees>/<cambio>[-<rol>
 - **CUANDO** se ejecuta `ensure --change`
 - **ENTONCES** se rechaza con `invalid_name` antes de crear nada
 
----
 
+
+---
 ### Requirement: Excepciones por Cambio `--prefix`, `--branch` y `--base` (REQ-25.12)
 
 `ensure` DEBE admitir `--prefix`, `--branch` y `--base` como excepciones por cambio a la política del proyecto. `--prefix` sustituye el prefijo; `--branch` sustituye el nombre completo de la rama del cambio (la rama de seguimiento si hay ramas de rol, y las ramas de rol derivan como `<--branch>-<rol>`) y se aplica a todos los repositorios del plan, que `--repo` PUEDE acotar; `--base` sustituye la base de todos los repositorios del plan. Las excepciones DEBEN registrarse en el registro local y, cuando el cambio se selle, reflejarse en la instantánea del `kickoff.yaml` (REQ-25.36) para que ejecuciones posteriores y las guardas usen los mismos nombres. Una invocación posterior cuyas excepciones contradigan las ya materializadas DEBE rechazarse con `plan_conflict`. Con `--archive` (REQ-25.45) solo se admite `--prefix`, que fija el prefijo de la rama de archivado sin contradecir el del cambio; `--branch` y `--base` se rechazan con `plan_conflict` (supuesto S-16). Sin `--prefix`, la rama de archivado deriva de la rama del cambio registrada como `<rama del cambio>-archive`.
@@ -959,7 +971,7 @@ Los nombres esperados DEBEN obtenerse de la instantánea del `kickoff.yaml` cuan
 - **Y** la continuación es la orden exacta de `axiom branch ensure --cwd <ruta> --change x`
 
 #### Scenario: Una rama de rol es correcta cuando hay ramas de rol
-- **DADO** un cambio con los roles `core` y `qa` y el repositorio desplegado en `feat/x-qa`
+- **DADO** un multirepo con los roles `core` y `qa` sobre el mismo repositorio de código y ese repositorio desplegado en `feat/x-qa`
 - **CUANDO** se consulta el veredicto en el contexto ordinario
 - **ENTONCES** es `correct`
 
@@ -973,8 +985,8 @@ Los nombres esperados DEBEN obtenerse de la instantánea del `kickoff.yaml` cuan
 - **CUANDO** se consulta el veredicto en el contexto de archivado
 - **ENTONCES** es `correct`
 
-#### Scenario: En el contexto de archivado la rama del cambio, la de integración y las de rol son incorrectas
-- **DADO** un cambio con instantánea y el repositorio desplegado, por separado, en `feat/x`, en `main` y en `feat/x-core`
+#### Scenario: En el contexto de archivado la rama del cambio, la de integración y una ajena son incorrectas
+- **DADO** un monorepo con instantánea y el repositorio desplegado, por separado, en `feat/x`, en `main` y en una rama ajena `feat/otra`
 - **CUANDO** se consulta el veredicto en el contexto de archivado
 - **ENTONCES** es `wrong_branch` en los tres casos con rama esperada `feat/x-archive`
 - **Y** la continuación es `axiom branch ensure --cwd <ruta> --change x --archive`
@@ -1009,6 +1021,7 @@ Los nombres esperados DEBEN obtenerse de la instantánea del `kickoff.yaml` cuan
 - **DADO** un directorio de proyecto que no pertenece a ningún repositorio git
 - **CUANDO** se consulta el veredicto
 - **ENTONCES** no se bloquea y se emite un aviso
+
 
 ---
 
@@ -1412,12 +1425,19 @@ Si la rama de un cambio (rama del cambio, rama de rol o rama de archivado) NO ex
 - **ENTONCES** la rama local no cambia de commit
 - **Y** la entrada de `inc/x` en `branches[]` no indica `createdFrom: remote`
 
-#### Scenario: Adopta también la rama de rol y la de archivado
+#### Scenario: Adopta también la rama de rol en multirepo
 
-- **DADO** referencias remotas locales para `inc/x-core` y `inc/x-archive` sin ramas locales
-- **CUANDO** se ejecutan `ensure --change x` y `ensure --change x --archive`
-- **ENTONCES** cada rama local se crea desde su referencia remota respectiva
-- **Y** la entrada de cada una en `branches[]` indica `createdFrom: remote` con su `createdFromRef`
+- **DADO** un multirepo con dos roles sobre el mismo repositorio de código y la referencia remota local `inc/x-core` sin rama local
+- **CUANDO** se ejecuta `ensure --change x`
+- **ENTONCES** la rama local `inc/x-core` se crea desde su referencia remota
+- **Y** su entrada en `branches[]` indica `createdFrom: remote` con su `createdFromRef`
+
+#### Scenario: Adopta también la rama de archivado en monorepo
+
+- **DADO** un monorepo y la referencia remota local `inc/x-archive` sin rama local
+- **CUANDO** se ejecuta `ensure --change x --archive`
+- **ENTONCES** la rama local `inc/x-archive` se crea desde su referencia remota
+- **Y** su entrada en `branches[]` indica `createdFrom: remote` con su `createdFromRef`
 
 #### Scenario: En modo `in_place` se adopta y se hace checkout
 
@@ -1437,6 +1457,44 @@ Si la rama de un cambio (rama del cambio, rama de rol o rama de archivado) NO ex
 - **CUANDO** otra persona ejecuta `git fetch` y `axiom branch ensure --change x`
 - **ENTONCES** obtiene la rama `inc/x` con los documentos aprobados
 - **Y** `axiom sdd status` proyecta la fase siguiente cedida
+
+## Supuestos confirmados en la compuerta de spec (2026-10-15)
+
+Los supuestos son decisiones mínimas tomadas para que los requerimientos sean comprobables. El usuario los confirmó en la compuerta de spec del 2026-10-15; S-6 se corrigió según D3. Q1, Q2 y Q6 de la propuesta pertenecen a `sdd-design` y se citan como dependencias.
+
+> **Nota de reapertura (2026-10-17):** la spec se reabrió por D16 a D19. D15 queda retirada y S-12 se resuelve ahora por D16. S-4 se actualiza por la lectura G-5 y S-5 queda sin objeto por D17. Los supuestos S-15 a S-18 se añaden en la reapertura.
+
+| ID | Supuesto | Estado | Dónde afecta |
+|---|---|---|---|
+| S-1 | La propuesta no indica cómo conocer los roles cuando `ensure` se ejecuta al nombrar el cambio, antes de `kickoff seal`. `ensure` es incremental: antes del sellado planifica solo `<prefijo>/<cambio>` en el repositorio del planning home (idéntica en ambos modelos) y tras el sellado completa ramas de rol y repositorios de código. | Confirmado | REQ-25.7 |
+| S-2 | La respuesta a `decision_required` de `ask` se da con la opción `--mode worktree\|in_place` de `ensure`. | Confirmado | REQ-25.8 |
+| S-3 | `fullstack` no existe en `axiom.yaml`. Cuenta como un único rol que toca todos los repositorios declarados por algún rol y, en monorepo, el del planning home. | Confirmado | Términos, REQ-25.4 |
+| S-4 | `<repo>` es el último segmento de la ruta (`path`) del repositorio (G-5), y `<workspace>-wt` usa el nombre de la carpeta maestra. | Confirmado (actualizado por G-5) | REQ-25.11 |
+| S-5 | Retirado por D17: existía para fijar el mecanismo con el que el comprobador de CI evaluaba un árbol desacoplado, y el comprobador se ha eliminado. | Sin objeto (D17) | — |
+| S-6 | Resuelto según D3: `done` elimina el worktree y la rama local una vez confirmada la fusión por capas (REQ-25.16); se niega si la rama no está fusionada o si el árbol está sucio, salvo `--force`; en `in_place` devuelve el checkout a la rama de integración y elimina la rama local solo con el árbol limpio (`--force` no salta esa exigencia); nunca toca ramas remotas; procesa cada rama por separado, incluida la de archivado, sin selector de rol en esta versión. | Confirmado (corregido, D3) | REQ-25.17 |
+| S-7 | Si el cambio ya tiene `kickoff.yaml` pero sin instantánea queda exento; si aún no tiene `kickoff.yaml` se aplica la política de `axiom.yaml`. | Confirmado | REQ-25.18 |
+| S-8 | `--fetch` fallido termina con `fetch_failed` sin crear nada. | Confirmado | REQ-25.10 |
+| S-9 | `blocked(wrong_branch)` se evalúa antes de `blocked(edit_authority_missing)`. | Confirmado | `axiom-sdd-cli-integration` |
+| S-10 | La pregunta de `ask` del carril ODD es una preferencia de entorno personal, no una pregunta de gobernanza, y no contraviene REQ-21.2. | Confirmado | `sdd-lane-kickoff` |
+| S-11 | Si el directorio de partida es un worktree enlazado sin marcador ascendente, el planning home se resuelve desde el checkout principal del mismo clon. | Confirmado | `planning-home-resolution` |
+| S-12 | Resuelto por D16 (sustituye a la decisión anterior): en monorepo el archive se hace en un PR documental aparte, en la rama de archivado `<prefijo>/<cambio>-archive` (D18), una vez fusionado el PR del cambio. REQ-21.16 vuelve a su forma original con dos cambios (rama de integración configurada y sin `monorepo-decoupled`) y la precondición incluye la evidencia `pr_merged` del PR del cambio. Archivar en otra rama se rechaza con `blocked(wrong_branch)` y la continuación `ensure --archive`. `multirepo` no cambia. | Confirmado (D16) | `sdd-archive-lifecycle` |
+| S-13 | `repositories:` identifica cada entrada por `path` y admite `integration_branch` y `branch_prefix` como ajustes propios por repositorio. | Confirmado (incluye `branch_prefix` por repositorio) | `workspace-topology` |
+| S-14 | La TUI se cubre como escenario de paridad en `local-web-dashboard`; `tui-ui-parity` no figura en las capacidades modificadas de la propuesta. | Confirmado | `local-web-dashboard` |
+| S-15 | Un rol llamado `archive` colisionaría con la rama de archivado `<prefijo>/<cambio>-archive` y se rechaza con `invalid_name` al planificar las ramas de rol. | Propuesto en la reapertura (2026-10-17) | REQ-25.4 |
+| S-16 | Con `--archive` solo se admite `--prefix`; `--branch` y `--base` se rechazan con `plan_conflict`; sin `--prefix` la rama de archivado deriva de la rama del cambio registrada como `<rama del cambio>-archive`. Una base «contiene el cambio fusionado» cuando su árbol incluye `changes/<cambio>/` del planning home y el cambio no está en fusión intermedia (REQ-26.11). | Propuesto en la reapertura (2026-10-17); enmendado por REQ-25.45 y REQ-26.11 (paradas-tres-salidas) | REQ-25.12, REQ-25.45 |
+| S-17 | Para el repositorio cuya ruta es `.`, `<repo>` es el nombre del directorio de su raíz git; dos repositorios del plan con el mismo último segmento se rechazan con `invalid_name`. | Propuesto en la reapertura (2026-10-17) | REQ-25.11 |
+| S-18 | D19: el bloqueo de documentos de Axiom (carpeta del cambio y `odd/tasks/`) rige en todo proyecto Axiom aunque no haya cambio registrado, para cubrir el carril ODD antes de `ensure`; el aviso en otros ficheros solo rige en repositorios con un cambio activo registrado; el repositorio de specs de un multirepo queda exento del aviso pero no del bloqueo de documentos. | Propuesto en la reapertura (2026-10-17) | REQ-25.21 |
+| A-7 | Un cambio con todos los `role-apply` aprobados deja de ser fusión intermedia aunque la última puerta lleve marca de cesión (la fase `verify` cedida no hace intermedia la fusión del trabajo ya implementado). | Confirmado (paradas-tres-salidas) | REQ-26.11 |
+| A-8 | Un cambio fusionado sin ninguna marca de cesión en su registro de puertas (incluidos los cambios preexistentes y los sellados en modalidad continua) se comporta exactamente como hasta ahora. | Confirmado (paradas-tres-salidas) | REQ-26.11 |
+
+### Dependencias de diseño
+
+| ID | Dependencia | Dónde afecta |
+|---|---|---|
+| Q1 | Versión mínima de git para `git merge-tree --write-tree` (2.38). | REQ-25.16 (design) |
+| Q2 | Coexistencia del registro local con `<git common dir>/gentle-ai/`. | REQ-25.14 (design) |
+| Q6 | Destino de los scripts locales y de `guard-primary-checkout.ps1`. | REQ-25.24 (design) |
+
 
 ## Supuestos confirmados en la compuerta de spec (2026-10-15)
 
