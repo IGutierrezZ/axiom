@@ -25,6 +25,10 @@ type GitSnapshot struct {
 	// IntegrationBranch y BranchPrefix son los del workspace, resueltos al sellar.
 	IntegrationBranch string `yaml:"integration_branch"`
 	BranchPrefix      string `yaml:"branch_prefix"`
+	// MainBranch es `git.main_branch` declarada al sellar; vacía si no la había. Es el marcador
+	// con el que la resolución de la promoción distingue una instantánea anterior a la promoción
+	// de una sellada con ella (REQ-25.36, REQ-25.46).
+	MainBranch string `yaml:"main_branch,omitempty"`
 	// Exceptions son las excepciones por cambio de `ensure` que regían al sellar; nil si no había.
 	Exceptions *GitExceptions `yaml:"exceptions,omitempty"`
 	// ChangeBranch es la rama del cambio. Vacía si ningún repositorio la tiene (un multirepo
@@ -49,8 +53,11 @@ type GitSnapshotRepo struct {
 	Role              string `yaml:"role"`
 	IntegrationBranch string `yaml:"integration_branch"`
 	// Base es el nombre de la referencia de la que salen las ramas, nunca un SHA.
-	Base     string              `yaml:"base"`
-	Branches []GitSnapshotBranch `yaml:"branches,omitempty"`
+	Base string `yaml:"base"`
+	// Promotion es el modo de promoción (`branch` o `release`) que el repositorio ya tenía
+	// materializado al sellar; vacío si la rama del cambio aún no existía.
+	Promotion string              `yaml:"promotion,omitempty"`
+	Branches  []GitSnapshotBranch `yaml:"branches,omitempty"`
 }
 
 // GitSnapshotBranch es una rama derivada del cambio.
@@ -67,6 +74,9 @@ type GitSnapshotBranch struct {
 var (
 	validSnapshotRoles = map[string]bool{"change_branch": true, "specs_in_place": true, "code": true}
 	validSnapshotKinds = map[string]bool{"change": true, "role": true, "archive": true}
+	// validSnapshotPromotions son los modos de promoción que la instantánea puede congelar: `ask` es
+	// una pregunta pendiente, nunca un modo materializado.
+	validSnapshotPromotions = map[string]bool{"branch": true, "release": true}
 )
 
 // Validate comprueba la forma de la instantánea con las reglas de gitref (ramas y prefijos),
@@ -78,6 +88,11 @@ func (g GitSnapshot) Validate() error {
 	}
 	if err := gitref.ValidPrefix(g.BranchPrefix); err != nil {
 		return fmt.Errorf("kickoff: git.branch_prefix %q no es válido: %w", g.BranchPrefix, err)
+	}
+	if g.MainBranch != "" {
+		if err := gitref.ValidRefName(g.MainBranch); err != nil {
+			return fmt.Errorf("kickoff: git.main_branch %q no es válido: %w", g.MainBranch, err)
+		}
 	}
 	if g.ChangeBranch != "" {
 		if err := gitref.ValidRefName(g.ChangeBranch); err != nil {
@@ -124,6 +139,9 @@ func (r GitSnapshotRepo) validate() error {
 	}
 	if err := validBase(r.Base); err != nil {
 		return fmt.Errorf("base %q no es válida: %w", r.Base, err)
+	}
+	if r.Promotion != "" && !validSnapshotPromotions[r.Promotion] {
+		return fmt.Errorf("promotion desconocido %q para el repositorio %q: debe ser `branch` o `release`", r.Promotion, r.Path)
 	}
 	for _, branch := range r.Branches {
 		if !validSnapshotKinds[branch.Kind] {

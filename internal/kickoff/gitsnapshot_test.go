@@ -144,28 +144,31 @@ func TestGitSnapshotIsIgnoredByAnOlderDecoderAndToleratesUnknownKeys(t *testing.
 // existe, y nunca la coacciona.
 func TestGitSnapshotValidateChecksTheShape(t *testing.T) {
 	mutations := map[string]func(g *GitSnapshot){
-		"integración inválida":              func(g *GitSnapshot) { g.IntegrationBranch = "ma in" },
-		"integración vacía":                 func(g *GitSnapshot) { g.IntegrationBranch = "" },
-		"prefijo inválido":                  func(g *GitSnapshot) { g.BranchPrefix = "mi prefijo//" },
-		"rama del cambio inválida":          func(g *GitSnapshot) { g.ChangeBranch = "a..b" },
-		"excepción de prefijo inválida":     func(g *GitSnapshot) { g.Exceptions = &GitExceptions{Prefix: "a b"} },
-		"excepción de rama inválida":        func(g *GitSnapshot) { g.Exceptions = &GitExceptions{Branch: "-x"} },
-		"repositorio sin ruta":              func(g *GitSnapshot) { g.Repositories[0].Path = "" },
-		"repositorio sin nombre":            func(g *GitSnapshot) { g.Repositories[0].Name = "" },
-		"papel desconocido":                 func(g *GitSnapshot) { g.Repositories[0].Role = "otro" },
-		"integración del repositorio":       func(g *GitSnapshot) { g.Repositories[0].IntegrationBranch = "x:y" },
-		"base vacía":                        func(g *GitSnapshot) { g.Repositories[0].Base = "" },
-		"tipo de rama desconocido":          func(g *GitSnapshot) { g.Repositories[0].Branches[0].Kind = "otra" },
-		"nombre de rama inválido":           func(g *GitSnapshot) { g.Repositories[0].Branches[1].Name = "feat/x y" },
-		"rol en una rama que no es de rol":  func(g *GitSnapshot) { g.Repositories[0].Branches[0].Role = "core" },
-		"rama de rol sin rol":               func(g *GitSnapshot) { g.Repositories[0].Branches[1].Role = "" },
-		"ruta absoluta de POSIX":            func(g *GitSnapshot) { g.Repositories[0].Path = "/home/yo/axiom" },
-		"ruta absoluta de Windows":          func(g *GitSnapshot) { g.Repositories[0].Path = `C:\repos\axiom` },
-		"ruta absoluta de Windows con «/»":  func(g *GitSnapshot) { g.Repositories[0].Path = "C:/repos/axiom" },
-		"ruta de worktree como base":        func(g *GitSnapshot) { g.Repositories[0].Base = "/tmp/wt/x" },
-		"SHA como base del repositorio":     func(g *GitSnapshot) { g.Repositories[0].Base = strings.Repeat("a1", 20) },
-		"SHA como base de la excepción":     func(g *GitSnapshot) { g.Exceptions = &GitExceptions{Base: strings.Repeat("0f", 20)} },
-		"SHA-256 como base de la excepción": func(g *GitSnapshot) { g.Exceptions = &GitExceptions{Base: strings.Repeat("ab", 32)} },
+		"integración inválida":                  func(g *GitSnapshot) { g.IntegrationBranch = "ma in" },
+		"integración vacía":                     func(g *GitSnapshot) { g.IntegrationBranch = "" },
+		"prefijo inválido":                      func(g *GitSnapshot) { g.BranchPrefix = "mi prefijo//" },
+		"rama del cambio inválida":              func(g *GitSnapshot) { g.ChangeBranch = "a..b" },
+		"excepción de prefijo inválida":         func(g *GitSnapshot) { g.Exceptions = &GitExceptions{Prefix: "a b"} },
+		"excepción de rama inválida":            func(g *GitSnapshot) { g.Exceptions = &GitExceptions{Branch: "-x"} },
+		"repositorio sin ruta":                  func(g *GitSnapshot) { g.Repositories[0].Path = "" },
+		"repositorio sin nombre":                func(g *GitSnapshot) { g.Repositories[0].Name = "" },
+		"papel desconocido":                     func(g *GitSnapshot) { g.Repositories[0].Role = "otro" },
+		"integración del repositorio":           func(g *GitSnapshot) { g.Repositories[0].IntegrationBranch = "x:y" },
+		"rama principal inválida":               func(g *GitSnapshot) { g.MainBranch = "ma in" },
+		"promoción desconocida":                 func(g *GitSnapshot) { g.Repositories[0].Promotion = "otra" },
+		"promoción ask no es un modo congelado": func(g *GitSnapshot) { g.Repositories[0].Promotion = "ask" },
+		"base vacía":                            func(g *GitSnapshot) { g.Repositories[0].Base = "" },
+		"tipo de rama desconocido":              func(g *GitSnapshot) { g.Repositories[0].Branches[0].Kind = "otra" },
+		"nombre de rama inválido":               func(g *GitSnapshot) { g.Repositories[0].Branches[1].Name = "feat/x y" },
+		"rol en una rama que no es de rol":      func(g *GitSnapshot) { g.Repositories[0].Branches[0].Role = "core" },
+		"rama de rol sin rol":                   func(g *GitSnapshot) { g.Repositories[0].Branches[1].Role = "" },
+		"ruta absoluta de POSIX":                func(g *GitSnapshot) { g.Repositories[0].Path = "/home/yo/axiom" },
+		"ruta absoluta de Windows":              func(g *GitSnapshot) { g.Repositories[0].Path = `C:\repos\axiom` },
+		"ruta absoluta de Windows con «/»":      func(g *GitSnapshot) { g.Repositories[0].Path = "C:/repos/axiom" },
+		"ruta de worktree como base":            func(g *GitSnapshot) { g.Repositories[0].Base = "/tmp/wt/x" },
+		"SHA como base del repositorio":         func(g *GitSnapshot) { g.Repositories[0].Base = strings.Repeat("a1", 20) },
+		"SHA como base de la excepción":         func(g *GitSnapshot) { g.Exceptions = &GitExceptions{Base: strings.Repeat("0f", 20)} },
+		"SHA-256 como base de la excepción":     func(g *GitSnapshot) { g.Exceptions = &GitExceptions{Base: strings.Repeat("ab", 32)} },
 	}
 	for name, mutate := range mutations {
 		t.Run(name, func(t *testing.T) {
@@ -251,5 +254,60 @@ func TestSealedSnapshotUsesUnixLineEndings(t *testing.T) {
 	}
 	if strings.Contains(string(data), "\r") {
 		t.Errorf("kickoff.yaml debe escribirse con \\n:\n%q", data)
+	}
+}
+
+// REQ-25.36 y REQ-25.46: la rama principal sellada y el modo de promoción ya materializado
+// sobreviven a escribir y leer `kickoff.yaml`; ambos campos son válidos con `branch` y `release`.
+func TestGitSnapshotRoundTripsTheMainBranchAndThePromotion(t *testing.T) {
+	for _, mode := range []string{"branch", "release"} {
+		t.Run(mode, func(t *testing.T) {
+			changeRoot := t.TempDir()
+			k := snapshotKickoff("x")
+			k.Git.MainBranch = "master"
+			k.Git.Repositories[0].Promotion = mode
+
+			sealed, wrote, err := Seal(changeRoot, k)
+			if err != nil || !wrote {
+				t.Fatalf("Seal() = (%v, %v)", wrote, err)
+			}
+			if sealed.Git.MainBranch != "master" || sealed.Git.Repositories[0].Promotion != mode {
+				t.Errorf("instantánea sellada = %+v", sealed.Git)
+			}
+			data, err := os.ReadFile(filepath.Join(changeRoot, KickoffFileName))
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, want := range []string{"main_branch: master", "promotion: " + mode} {
+				if !strings.Contains(string(data), want) {
+					t.Errorf("kickoff.yaml debe contener %q:\n%s", want, data)
+				}
+			}
+			loaded, err := Load(changeRoot)
+			if err != nil || loaded == nil || loaded.Git.MainBranch != "master" || loaded.Git.Repositories[0].Promotion != mode {
+				t.Fatalf("Load() = (%+v, %v)", loaded, err)
+			}
+		})
+	}
+}
+
+// REQ-25.36: sin los campos nuevos no se emite ninguna clave y un kickoff anterior se lee sin ellos.
+func TestGitSnapshotWithoutPromotionFieldsEmitsNoNewKeysAndReadsOldDocuments(t *testing.T) {
+	changeRoot := t.TempDir()
+	if _, _, err := Seal(changeRoot, snapshotKickoff("x")); err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(filepath.Join(changeRoot, KickoffFileName))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, unwanted := range []string{"main_branch", "promotion"} {
+		if strings.Contains(string(data), unwanted) {
+			t.Errorf("sin los campos no se emite %q (los bytes de un kickoff anterior no cambian):\n%s", unwanted, data)
+		}
+	}
+	loaded, err := Load(changeRoot)
+	if err != nil || loaded == nil || loaded.Git.MainBranch != "" || loaded.Git.Repositories[0].Promotion != "" {
+		t.Fatalf("Load() = (%+v, %v), se esperaba una instantánea sin los campos", loaded, err)
 	}
 }

@@ -79,7 +79,28 @@ func recordRepository(facts changeFacts, repo branch.RepoPlan, mode workMode) br
 		}
 		registered.Branches = append(registered.Branches, recorded)
 	}
+	registered.Promotion, registered.PromotionSource = recordedMode(facts.record, repo)
 	return registered
+}
+
+// recordedMode es el modo de promoción y su origen que se escriben en la entrada del repositorio:
+// los del plan definitivo (`branch` o `release`, nunca `ask`) o, si el plan no tiene modo (una
+// sola etapa), los que ya guardaba el registro previo, como el prefijo de archivado: si
+// `main_branch` vuelve, la respuesta sigue ahí. Sin `main_branch` ni registro previo con modo,
+// vacíos y los bytes del registro no cambian.
+func recordedMode(previous *branch.Record, repo branch.RepoPlan) (branch.Promotion, string) {
+	if repo.Promotion == branch.PromotionBranch || repo.Promotion == branch.PromotionRelease {
+		return repo.Promotion, repo.PromotionSource
+	}
+	if previous == nil {
+		return "", ""
+	}
+	for _, registered := range previous.Repositories {
+		if pathidentity.SameDirectory(registered.CommonDir, repo.CommonDir) {
+			return registered.Promotion, registered.PromotionSource
+		}
+	}
+	return "", ""
 }
 
 // preservedArchiveBranches son las ramas de archivado que el registro previo guarda para el

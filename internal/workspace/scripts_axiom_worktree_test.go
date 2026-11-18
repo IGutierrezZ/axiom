@@ -32,9 +32,10 @@ type stubBranch struct {
 }
 
 type stubRepository struct {
-	Name     string       `json:"name"`
-	Role     string       `json:"role"`
-	Branches []stubBranch `json:"branches"`
+	Name              string       `json:"name"`
+	Role              string       `json:"role"`
+	IntegrationBranch string       `json:"integrationBranch,omitempty"`
+	Branches          []stubBranch `json:"branches"`
 }
 
 type stubResult struct {
@@ -593,4 +594,99 @@ func TestScriptsAxiomWorktreePowerShellDrivesAxiomBranch(t *testing.T) {
 			t.Errorf("new no explica cómo instalar `axiom branch`:\n%s%s", stdout, stderr)
 		}
 	})
+}
+
+// behindIntegration deja el checkout principal en `branch` con su origin/<branch>
+// un commit por delante: tras `done`, solo un fast-forward de esa rama lo alcanza.
+// Devuelve el commit que debe tener la rama local al terminar.
+func (f *wrapperFixture) behindIntegration(t *testing.T, branch string) string {
+	t.Helper()
+	if branch != "main" {
+		f.git(t, f.proj, "checkout", "-q", "-b", branch)
+		f.git(t, f.proj, "push", "-q", "origin", branch)
+	}
+	if err := os.WriteFile(filepath.Join(f.proj, "ahead.txt"), []byte(branch+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	f.git(t, f.proj, "add", "ahead.txt")
+	f.git(t, f.proj, "commit", "-q", "-m", "ahead")
+	f.git(t, f.proj, "push", "-q", "origin", branch)
+	tip := f.git(t, f.proj, "rev-parse", "HEAD")
+	f.git(t, f.proj, "reset", "-q", "--hard", "HEAD~1")
+	if got := f.git(t, f.proj, "rev-parse", "HEAD"); got == tip {
+		t.Fatal("la rama local no quedó por detrás de origin")
+	}
+	return tip
+}
+
+// REQ-25.24: `done` avanza la rama de integración que declara `axiom branch status`
+// y cae en `main` cuando el JSON no la trae.
+func TestScriptsAxiomWorktreeDoneSyncsTheResolvedIntegrationBranch(t *testing.T) {
+	type runner func(t *testing.T, f *wrapperFixture) (string, string, int)
+	shell := func(t *testing.T, f *wrapperFixture) (string, string, int) {
+		f.installBashStubs(t)
+		return f.run(t, bashPath(t), "scripts/axiom-worktree.sh", "done", "demo")
+	}
+	powershell := func(t *testing.T, f *wrapperFixture) (string, string, int) {
+		f.installPowerShellStubs(t)
+		return f.run(t, powerShellPath(t), powerShellArgs(filepath.Join("scripts", "axiom-worktree.ps1"), "done", "demo")...)
+	}
+
+	for name, run := range map[string]runner{"sh": shell, "ps1": powershell} {
+		for _, tc := range []struct{ label, integration, declared string }{
+			{"develop declarada", "develop", "develop"},
+			{"sin el campo rige main", "main", ""},
+		} {
+			t.Run(name+"/"+tc.label, func(t *testing.T) {
+				f := newWrapperFixture(t)
+				tip := f.behindIntegration(t, tc.integration)
+				status := demoChange(f, "inc/demo", "main", false)
+				status.Repositories[0].IntegrationBranch = tc.declared
+				f.writeJSON(t, "status.json", status)
+
+				stdout, stderr, code := run(t, f)
+				if code != 0 {
+					t.Fatalf("done salió con %d\nstdout: %s\nstderr: %s", code, stdout, stderr)
+				}
+				if got := f.git(t, f.proj, "rev-parse", "HEAD"); got != tip {
+					t.Errorf("done no avanzó %s con fast-forward: HEAD=%s, esperado %s\n%s", tc.integration, got, tip, stdout)
+				}
+			})
+		}
+	}
+
+	t.Run("sh/fuera de la integración no toca la rama", func(t *testing.T) {
+		f := newWrapperFixture(t)
+		tip := f.behindIntegration(t, "main")
+		status := demoChange(f, "inc/demo", "main", false)
+		status.Repositories[0].IntegrationBranch = "develop"
+		f.writeJSON(t, "status.json", status)
+
+		if _, stderr, code := shell(t, f); code != 0 {
+			t.Fatalf("done salió con %d\nstderr: %s", code, stderr)
+		}
+		if got := f.git(t, f.proj, "rev-parse", "HEAD"); got == tip {
+			t.Error("done avanzó main aunque la integración declarada es develop")
+		}
+	})
+}
+
+// REQ-25.24: `pr` toma la base de prTarget, también cuando es la rama principal de la
+// segunda etapa.
+func TestScriptsAxiomWorktreePrTargetsTheMainBranchOfTheSecondStage(t *testing.T) {
+	f := newWrapperFixture(t)
+	f.installBashStubs(t)
+	worktree := f.worktreePath("demo")
+	if err := os.MkdirAll(filepath.Dir(worktree), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	f.git(t, f.proj, "worktree", "add", "-q", "-b", "inc/demo", worktree, "main")
+	f.writeJSON(t, "status.json", demoChange(f, "inc/demo", "master", true))
+
+	if stdout, stderr, code := f.run(t, bashPath(t), "scripts/axiom-worktree.sh", "pr", "demo"); code != 0 {
+		t.Fatalf("pr salió con %d\nstdout: %s\nstderr: %s", code, stdout, stderr)
+	}
+	if !strings.Contains(f.logText(t), "--base master --head inc/demo") {
+		t.Errorf("pr no tomó la base de prTarget (master):\n%s", f.logText(t))
+	}
 }

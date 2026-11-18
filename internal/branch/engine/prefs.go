@@ -1,8 +1,10 @@
 package engine
 
 import (
+	"context"
 	"fmt"
 	"path/filepath"
+	"slices"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/branch"
 	"github.com/IGutierrezZ/axiom/v3/internal/gitcommon"
@@ -120,7 +122,203 @@ func resolveMode(operation string, r EnsureRequest, facts changeFacts) (workMode
 		return workMode{mode: r.Mode, source: source}, nil
 	}
 	if prefs.mode == branch.ModeAsk {
-		return workMode{}, branch.DecisionRequired(operation, r.Change, r.CWD, r.Lane)
+		return workMode{}, branch.DecisionRequired(ensureArgs(operation, r))
 	}
 	return workMode{mode: prefs.mode, source: prefs.source}, nil
+}
+
+// ensureArgs son los argumentos de la invocación de `ensure` que repiten las continuaciones de
+// sus rechazos: el cambio, las excepciones, los `--repo` y los `--promotion` dados. Con
+// `--archive` solo cuentan las excepciones: el plan de archivado no admite `--repo` ni
+// `--promotion`.
+func ensureArgs(operation string, r EnsureRequest) branch.EnsureArgs {
+	args := branch.EnsureArgs{Operation: operation, Change: r.Change, CWD: r.CWD, Lane: r.Lane, Mode: r.Mode, Exceptions: r.Exceptions}
+	if !r.Archive {
+		args.Repos, args.Promotions = r.Repos, r.Promotions
+	}
+	return args
+}
+
+// promotionRequest es lo que condiciona la resolución de la promoción de una operación:
+// interactive dice que un modo `ask` sin respuesta se pregunta (`ensure`; `status`, `done` y
+// la instantánea no preguntan), requested son los `--promotion` dados y args, la invocación que
+// repiten las continuaciones.
+type promotionRequest struct {
+	interactive bool
+	requested   []branch.PromotionRequest
+	args        branch.EnsureArgs
+}
+
+// planWithPromotion planifica en dos pasos (design D5): un plan provisional sin modos, que da los
+// repositorios, sus nombres y sus papeles; la resolución del modo de promoción de cada
+// repositorio de dos etapas (branch.ResolvePromotion: registro > instantánea > `--promotion` >
+// política > defecto); y el plan definitivo con ese mapa en la entrada, que calcula la base
+// efectiva. Sin ningún repositorio de dos etapas devuelve el plan provisional tal cual, de modo
+// que sin `main_branch` el plan es idéntico al de siempre.
+//
+// Rechaza sin escribir nada: un modo pedido que no es una respuesta (`config_invalid`), un
+// `--promotion <repo>=…` cuyo repositorio no es del plan (`invalid_name`), el primer repositorio
+// cuyo modo materializado contradice el pedido (`plan_conflict`) y, solo en modo interactivo, el
+// primer repositorio del plan con el modo `ask` sin respuesta (`decision_required`). Los avisos
+// son los de las peticiones sin efecto. facts.input.Promotions queda con el mapa resuelto.
+func (e *Engine) planWithPromotion(ctx context.Context, facts *changeFacts, req promotionRequest) (branch.ChangePlan, []string, *branch.Refusal) {
+	for _, request := range req.requested {
+		if request.Mode != branch.PromotionBranch && request.Mode != branch.PromotionRelease {
+			return branch.ChangePlan{}, nil, branch.InvalidPromotion(req.args, string(request.Mode))
+		}
+	}
+	facts.input.Promotions = nil
+	provisional, refusal := branch.Plan(facts.input)
+	if refusal != nil {
+		return branch.ChangePlan{}, nil, refusal
+	}
+
+	names := make([]string, 0, len(provisional.Repositories))
+	withBranches := 0
+	for _, repo := range provisional.Repositories {
+		names = append(names, repo.Name)
+		if len(repo.Branches) > 0 {
+			withBranches++
+		}
+	}
+	for _, request := range req.requested {
+		if request.Repository != "" && !slices.Contains(names, request.Repository) {
+			return branch.ChangePlan{}, nil, branch.UnknownPromotionRepository(req.args, request.Repository, names)
+		}
+	}
+
+	known := plannedRepositoryFacts(facts.input)
+	resolved := map[string]branch.ResolvedPromotion{}
+	var pendingAsk *branch.RepoPlan
+	effective := false
+	for index, repo := range provisional.Repositories {
+		planned := known[repo.GitRoot]
+		policy := branch.EffectivePolicy(facts.input.Policy, planned)
+		exempt := repo.Role == branch.RepoSpecsInPlace
+		promotionFacts := branch.PromotionFacts{
+			Exempt:         exempt,
+			TwoStage:       repo.TwoStage(),
+			Recorded:       recordedPromotion(facts.record, repo),
+			Snapshot:       branch.SnapshotPromotionFor(facts.input, planned),
+			Requested:      requestedFor(req.requested, repo.Name),
+			Declared:       policy.Promotion,
+			DeclaredSource: policy.PromotionSource,
+		}
+		if snapshot := promotionFacts.Snapshot; snapshot != nil && promotionFacts.TwoStage && !exempt && snapshot.Mode == "" && !snapshot.SealedWithMain {
+			exists, err := e.git.BranchExists(ctx, repo.GitRoot, changeBranchName(repo))
+			if err != nil {
+				return branch.ChangePlan{}, nil, gitRefusal(req.args.Operation, req.args.CWD, "comprobar si existe la rama del cambio de "+repo.Name, err)
+			}
+			promotionFacts.ChangeBranchExists = exists
+		}
+
+		resolution := branch.ResolvePromotion(promotionFacts)
+		if resolution.Materialized != "" {
+			return branch.ChangePlan{}, nil, branch.PromotionConflict(req.args, repo, resolution.Materialized, promotionFacts.Requested, resolution.Resolved.Source)
+		}
+		if resolution.Resolved.Mode == "" {
+			continue
+		}
+		effective = true
+		resolved[repo.GitRoot] = resolution.Resolved
+		if resolution.Resolved.Mode == branch.PromotionAsk && pendingAsk == nil {
+			pendingAsk = &provisional.Repositories[index]
+		}
+	}
+	warnings := ineffectivePromotions(provisional, req.requested, effective)
+
+	if req.interactive && pendingAsk != nil {
+		return branch.ChangePlan{}, nil, branch.PromotionDecisionRequired(req.args, *pendingAsk, withBranches >= 2)
+	}
+	if len(resolved) == 0 {
+		return provisional, warnings, nil
+	}
+	facts.input.Promotions = resolved
+	plan, refusal := branch.Plan(facts.input)
+	if refusal != nil {
+		return branch.ChangePlan{}, nil, refusal
+	}
+	return plan, warnings, nil
+}
+
+// plannedRepositoryFacts son los hechos de cada repositorio de la entrada del planificador, por
+// raíz git: el planning home, los de código y los incluidos con `--repo`.
+func plannedRepositoryFacts(input branch.PlanInput) map[string]branch.RepoFacts {
+	known := map[string]branch.RepoFacts{input.PlanningRepo.GitRoot: input.PlanningRepo}
+	for _, group := range [][]branch.RepoFacts{input.CodeRepos, input.IncludedRepos} {
+		for _, repo := range group {
+			known[repo.GitRoot] = repo
+		}
+	}
+	return known
+}
+
+// recordedPromotion es lo que el registro local del cambio sabe de la promoción del repositorio
+// del plan (se reconoce por su git common dir), o nil si el registro no lo lista.
+func recordedPromotion(record *branch.Record, repo branch.RepoPlan) *branch.RecordedPromotion {
+	if record == nil {
+		return nil
+	}
+	for _, registered := range record.Repositories {
+		if !pathidentity.SameDirectory(registered.CommonDir, repo.CommonDir) {
+			continue
+		}
+		hasChange := slices.ContainsFunc(registered.Branches, func(recorded branch.RecordBranch) bool {
+			return recorded.Kind == branch.KindChange
+		})
+		return &branch.RecordedPromotion{Mode: registered.Promotion, Source: registered.PromotionSource, HasChangeBranch: hasChange}
+	}
+	return nil
+}
+
+// requestedFor es el `--promotion` que se aplica al repositorio de ese nombre: el cualificado
+// prevalece sobre el que no lo está. Vacío si ninguno lo alcanza.
+func requestedFor(requests []branch.PromotionRequest, name string) branch.Promotion {
+	var unqualified branch.Promotion
+	for _, request := range requests {
+		switch request.Repository {
+		case name:
+			return request.Mode
+		case "":
+			unqualified = request.Mode
+		}
+	}
+	return unqualified
+}
+
+// changeBranchName es el nombre de la rama del cambio de un repositorio del plan.
+func changeBranchName(repo branch.RepoPlan) string {
+	for _, planned := range repo.Branches {
+		if planned.Kind == branch.KindChange {
+			return planned.Name
+		}
+	}
+	return ""
+}
+
+// ineffectivePromotions son los avisos de los `--promotion` que no tienen efecto: el de un
+// repositorio de una sola etapa o de specs (`<repo>=<modo>`) y el sin cualificar cuando ningún
+// repositorio del plan tiene dos etapas (effective es falso).
+func ineffectivePromotions(plan branch.ChangePlan, requests []branch.PromotionRequest, effective bool) []string {
+	var warnings []string
+	for _, request := range requests {
+		if request.Repository == "" {
+			if !effective {
+				warnings = append(warnings, fmt.Sprintf("--promotion %s no tiene efecto: ningún repositorio del plan tiene git.main_branch distinta de su rama de integración", request.Mode))
+			}
+			continue
+		}
+		for _, repo := range plan.Repositories {
+			if repo.Name != request.Repository {
+				continue
+			}
+			switch {
+			case repo.Role == branch.RepoSpecsInPlace:
+				warnings = append(warnings, fmt.Sprintf("--promotion %s=%s no tiene efecto: el repositorio de specs se trabaja in situ y no tiene modo de promoción", request.Repository, request.Mode))
+			case !repo.TwoStage():
+				warnings = append(warnings, fmt.Sprintf("--promotion %s=%s no tiene efecto: %s tiene una sola etapa (sin git.main_branch distinta de su rama de integración)", request.Repository, request.Mode, request.Repository))
+			}
+		}
+	}
+	return warnings
 }

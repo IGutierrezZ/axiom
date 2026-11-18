@@ -189,6 +189,11 @@ type RecordRepo struct {
 	CommonDir string         `json:"commonDir"`
 	Role      RepoRole       `json:"role"`
 	Branches  []RecordBranch `json:"branches"`
+	// Promotion es el modo de promoción materializado (`branch` o `release`, nunca `ask`) y
+	// PromotionSource su origen. Solo los repositorios de dos etapas los llevan: sin
+	// `main_branch` el registro es idéntico al de siempre.
+	Promotion       Promotion `json:"promotion,omitempty"`
+	PromotionSource string    `json:"promotionSource,omitempty"`
 }
 
 // RecordBranch es una rama del plan registrada, con su worktree si lo hay o, en el modo

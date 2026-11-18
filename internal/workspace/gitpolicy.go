@@ -23,17 +23,29 @@ const (
 	DefaultBranchPrefix = "feat"
 )
 
+// Valores de `promotion` (REQ-25.26, REQ-25.27). Son los mismos literales que
+// branch.Promotion: branch importa workspace y no al revés, así que se repiten.
+const (
+	PromotionBranch  = "branch"
+	PromotionRelease = "release"
+	PromotionAsk     = "ask"
+)
+
 // GitConfig es el bloque `git:` de axiom.yaml (REQ-25.26): la política de ramas
 // del proyecto. Es política versionada y compartida por el equipo; el modo de
 // trabajo y la raíz de los worktrees son preferencias personales y no se
 // declaran aquí.
 //
 // En Declarations.Git cada campo conserva lo escrito en el fichero (cadena vacía
-// si la clave no se declaró). En WorkspaceConfig.Git los dos campos están
-// siempre rellenos: lo no declarado toma su valor por defecto.
+// si la clave no se declaró). En WorkspaceConfig.Git los dos primeros campos están
+// siempre rellenos: lo no declarado toma su valor por defecto. MainBranch y
+// Promotion no tienen valor por defecto: vacío significa una sola etapa y que
+// rige el defecto del motor, respectivamente.
 type GitConfig struct {
 	IntegrationBranch string `yaml:"integration_branch,omitempty"`
 	BranchPrefix      string `yaml:"branch_prefix,omitempty"`
+	MainBranch        string `yaml:"main_branch,omitempty"` // sin defecto: vacío = una etapa
+	Promotion         string `yaml:"promotion,omitempty"`   // branch | release | ask; vacío = defecto del motor
 }
 
 // RepositoryPolicy es una entrada del bloque `repositories:` de axiom.yaml
@@ -41,19 +53,21 @@ type GitConfig struct {
 // bloque `git:` solo en lo que la entrada declara.
 //
 // Path es la ruta tal como se escribió, relativa a la carpeta maestra. Los otros
-// dos campos conservan lo escrito y quedan vacíos si la clave no se declaró: un
+// campos conservan lo escrito y quedan vacíos si la clave no se declaró: un
 // valor vacío significa «hereda el del bloque `git:`». La herencia no se aplica
-// aquí; la resuelve quien consume la política de ramas.
+// aquí; la resuelve quien consume la política de ramas. `main_branch` no se
+// admite por repositorio: solo existe en `git:`.
 type RepositoryPolicy struct {
 	Path              string `yaml:"path"`
 	IntegrationBranch string `yaml:"integration_branch,omitempty"`
 	BranchPrefix      string `yaml:"branch_prefix,omitempty"`
+	Promotion         string `yaml:"promotion,omitempty"`
 }
 
 // Listas cerradas de claves de los bloques de política de ramas (D-03).
 var (
-	gitKeys        = []string{"integration_branch", "branch_prefix"}
-	repositoryKeys = []string{"path", "integration_branch", "branch_prefix"}
+	gitKeys        = []string{"integration_branch", "branch_prefix", "main_branch", "promotion"}
+	repositoryKeys = []string{"path", "integration_branch", "branch_prefix", "promotion"}
 )
 
 // resolveGit devuelve la política de ramas efectiva a partir de lo declarado, que
@@ -68,6 +82,8 @@ func resolveGit(declared *GitConfig) *GitConfig {
 		if declared.BranchPrefix != "" {
 			resolved.BranchPrefix = declared.BranchPrefix
 		}
+		resolved.MainBranch = declared.MainBranch
+		resolved.Promotion = declared.Promotion
 	}
 	return &resolved
 }
@@ -86,19 +102,24 @@ func resolveGit(declared *GitConfig) *GitConfig {
 func decodeGit(node *yaml.Node) (*GitConfig, error) {
 	node = resolveAlias(node)
 	if node == nil || node.Kind != yaml.MappingNode {
-		return nil, errors.New("el bloque 'git' debe ser un mapeo con las claves opcionales 'integration_branch' y 'branch_prefix'; para usar los valores por defecto, elimina el bloque")
+		return nil, errors.New("el bloque 'git' debe ser un mapeo con las claves opcionales 'integration_branch', 'branch_prefix', 'main_branch' y 'promotion'; para usar los valores por defecto, elimina el bloque")
 	}
 
 	values, errs := decodeStringKeys(node, "git", gitKeys, branchValidator)
 	if err := errors.Join(errs...); err != nil {
 		return nil, err
 	}
-	return &GitConfig{IntegrationBranch: values["integration_branch"], BranchPrefix: values["branch_prefix"]}, nil
+	return &GitConfig{
+		IntegrationBranch: values["integration_branch"],
+		BranchPrefix:      values["branch_prefix"],
+		MainBranch:        values["main_branch"],
+		Promotion:         values["promotion"],
+	}, nil
 }
 
 // decodeRepositories decodifica y valida el bloque `repositories:` con el mismo
 // patrón que decodeGit (REQ-25.27): una lista de mapeos, cada uno recorrido contra
-// la lista cerrada de claves `path`, `integration_branch` y `branch_prefix`, con
+// la lista cerrada de claves `path`, `integration_branch`, `branch_prefix` y `promotion`, con
 // los errores acumulados. Cada error nombra la entrada (`repositories[0]`), la
 // clave y, si procede, el valor y la regla incumplida.
 //
@@ -111,7 +132,7 @@ func decodeGit(node *yaml.Node) (*GitConfig, error) {
 func decodeRepositories(node *yaml.Node) ([]RepositoryPolicy, error) {
 	node = resolveAlias(node)
 	if node == nil || node.Kind != yaml.SequenceNode {
-		return nil, errors.New("el bloque 'repositories' debe ser una lista de entradas con 'path' y, opcionalmente, 'integration_branch' y 'branch_prefix'; para usar los valores del bloque 'git', elimina el bloque")
+		return nil, errors.New("el bloque 'repositories' debe ser una lista de entradas con 'path' y, opcionalmente, 'integration_branch', 'branch_prefix' y 'promotion'; para usar los valores del bloque 'git', elimina el bloque")
 	}
 
 	type declaredPath struct {
@@ -125,7 +146,7 @@ func decodeRepositories(node *yaml.Node) ([]RepositoryPolicy, error) {
 		label := fmt.Sprintf("repositories[%d]", i)
 		item = resolveAlias(item)
 		if item == nil || item.Kind != yaml.MappingNode {
-			errs = append(errs, fmt.Errorf("%s debe ser un mapeo con 'path' y, opcionalmente, 'integration_branch' y 'branch_prefix'", label))
+			errs = append(errs, fmt.Errorf("%s debe ser un mapeo con 'path' y, opcionalmente, 'integration_branch', 'branch_prefix' y 'promotion'", label))
 			continue
 		}
 
@@ -151,7 +172,12 @@ func decodeRepositories(node *yaml.Node) ([]RepositoryPolicy, error) {
 		} else {
 			firstByPath[key] = declaredPath{index: i, raw: raw}
 		}
-		entries = append(entries, RepositoryPolicy{Path: raw, IntegrationBranch: values["integration_branch"], BranchPrefix: values["branch_prefix"]})
+		entries = append(entries, RepositoryPolicy{
+			Path:              raw,
+			IntegrationBranch: values["integration_branch"],
+			BranchPrefix:      values["branch_prefix"],
+			Promotion:         values["promotion"],
+		})
 	}
 
 	if err := errors.Join(errs...); err != nil {
@@ -164,13 +190,71 @@ func decodeRepositories(node *yaml.Node) ([]RepositoryPolicy, error) {
 }
 
 // branchValidator devuelve la validación del valor de una clave de rama:
-// `branch_prefix` sigue gitref.ValidPrefix y `integration_branch`,
-// gitref.ValidRefName.
+// `branch_prefix` sigue gitref.ValidPrefix, `promotion` validPromotion y
+// `integration_branch` y `main_branch`, gitref.ValidRefName.
 func branchValidator(key string) func(string) error {
-	if key == "branch_prefix" {
+	switch key {
+	case "branch_prefix":
 		return gitref.ValidPrefix
+	case "promotion":
+		return validPromotion
+	default:
+		return gitref.ValidRefName
 	}
-	return gitref.ValidRefName
+}
+
+// validPromotion acepta exactamente `branch`, `release` y `ask`, distinguiendo
+// mayúsculas.
+func validPromotion(raw string) error {
+	switch raw {
+	case PromotionBranch, PromotionRelease, PromotionAsk:
+		return nil
+	}
+	return fmt.Errorf("debe ser '%s', '%s' o '%s'", PromotionBranch, PromotionRelease, PromotionAsk)
+}
+
+// PromotionWarnings devuelve los avisos de `workspace validate` sobre la
+// promoción de ramas (REQ-25.26, REQ-25.27). Nunca invalidan la configuración:
+// una promoción sin una segunda rama a la que promover simplemente no tiene
+// efecto. Avisa en dos casos:
+//   - `git.promotion` declarado sin `main_branch`, o con `main_branch` igual a la
+//     rama de integración del bloque;
+//   - `repositories[i].promotion` declarado cuando la integración efectiva de la
+//     entrada (la suya o la heredada) es igual a `main_branch`, o `main_branch`
+//     no existe.
+//
+// Es pura: no toca el sistema de ficheros.
+func PromotionWarnings(cfg *WorkspaceConfig) []string {
+	if cfg == nil || cfg.Git == nil {
+		return nil
+	}
+	var warnings []string
+	main := cfg.Git.MainBranch
+	if cfg.Git.Promotion != "" {
+		switch {
+		case main == "":
+			warnings = append(warnings, fmt.Sprintf("'git.promotion' (%s) no tiene efecto: falta 'git.main_branch', y sin una rama principal la promoción es de una sola etapa", cfg.Git.Promotion))
+		case main == cfg.Git.IntegrationBranch:
+			warnings = append(warnings, fmt.Sprintf("'git.promotion' (%s) no tiene efecto: 'git.main_branch' ('%s') es igual a 'git.integration_branch', y con una sola rama la promoción es de una sola etapa", cfg.Git.Promotion, main))
+		}
+	}
+	for i, entry := range cfg.Repositories {
+		if entry.Promotion == "" {
+			continue
+		}
+		integration := cfg.Git.IntegrationBranch
+		if entry.IntegrationBranch != "" {
+			integration = entry.IntegrationBranch
+		}
+		label := fmt.Sprintf("repositories[%d]", i)
+		switch {
+		case main == "":
+			warnings = append(warnings, fmt.Sprintf("'%s.promotion' (%s) no tiene efecto: falta 'git.main_branch'", label, entry.Promotion))
+		case main == integration:
+			warnings = append(warnings, fmt.Sprintf("'%s.promotion' (%s) no tiene efecto: su rama de integración ('%s') es igual a 'git.main_branch'", label, entry.Promotion, integration))
+		}
+	}
+	return warnings
 }
 
 // repositoryValidator es branchValidator más la regla de `path`.
