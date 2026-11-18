@@ -120,15 +120,15 @@ Comando de prueba acotado: `go test ./internal/components/agentguidance/` y `go 
 Arnés de ejecución real: N/A (texto proyectado; lo cubren las aserciones de `RenderRouting` por agente y los goldens).
 Límite de reversión: `routing.go`, su test y los goldens de doctrina.
 
-- [ ] 3.1 Modificar `internal/components/agentguidance/routing_test.go` (RED): aserciones de la doctrina nueva en `RenderRouting` de cada agente (`single-pr` por defecto, `chained` solo a petición, `stacked-to-main` y `feature-branch-chain`, `delivery.split_hint_lines`, aviso único sin bloqueo, `work-unit-commits` siempre y `chained-pr` solo al encadenar) y de ausencia de `400`, `ask-on-risk`, `auto-chain`, `exception-ok` y «Existing PR size gates».
+- [x] 3.1 Modificar `internal/components/agentguidance/routing_test.go` (RED): aserciones de la doctrina nueva en `RenderRouting` de cada agente (`single-pr` por defecto, `chained` solo a petición, `stacked-to-main` y `feature-branch-chain`, `delivery.split_hint_lines`, aviso único sin bloqueo, `work-unit-commits` siempre y `chained-pr` solo al encadenar) y de ausencia de `400`, `ask-on-risk`, `auto-chain`, `exception-ok` y «Existing PR size gates».
   Cubre: REQ-32.4, REQ-32.2
-- [ ] 3.2 Modificar `internal/components/agentguidance/routing.go` (línea 122): «Size each ODD task as the smallest coherent behavior with its tests and docs; there is no line-count target, cap, or forced split. Never delete spaces, blank lines, or comments for cosmetic line savings; never omit tests, minify, add gratuitous abstractions, or split artificially. Forward this same instruction when delegating tasks to subagents.»
+- [x] 3.2 Modificar `internal/components/agentguidance/routing.go` (línea 122): «Size each ODD task as the smallest coherent behavior with its tests and docs; there is no line-count target, cap, or forced split. Never delete spaces, blank lines, or comments for cosmetic line savings; never omit tests, minify, add gratuitous abstractions, or split artificially. Forward this same instruction when delegating tasks to subagents.»
   Cubre: REQ-32.4
-- [ ] 3.3 Modificar `internal/components/agentguidance/routing.go` (línea 130): bullet «Delivery follows work units» con el texto exacto de «Doctrina ODD (`routing.go`)» del diseño (`single-pr` por defecto, previsión al crear el documento de la feature, aviso único y no bloqueante con `delivery.split_hint_lines`, `chained` solo a petición con una única pregunta por la estrategia de cadena, `work-unit-commits` siempre y `chained-pr` solo al encadenar). Debe terminar en una frase a la que C-02-d pueda añadir texto sin reescribir.
+- [x] 3.3 Modificar `internal/components/agentguidance/routing.go` (línea 130): bullet «Delivery follows work units» con el texto exacto de «Doctrina ODD (`routing.go`)» del diseño (`single-pr` por defecto, previsión al crear el documento de la feature, aviso único y no bloqueante con `delivery.split_hint_lines`, `chained` solo a petición con una única pregunta por la estrategia de cadena, `work-unit-commits` siempre y `chained-pr` solo al encadenar). Debe terminar en una frase a la que C-02-d pueda añadir texto sin reescribir.
   Cubre: REQ-32.4, REQ-32.2
-- [ ] 3.4 Regenerar goldens de doctrina: `go test ./internal/components/ -run 'TestGolden' -update`; revisar `git diff -- testdata/golden` (solo los dos bullets) y comprobar sin `-update`.
-- [ ] 3.5 Comprobar la unidad: `go test ./internal/components/agentguidance/`, `go test ./internal/components/ -run 'TestGolden'` y `go vet ./internal/components/...`. En verde.
-- [ ] 3.6 Commit de la unidad 3: `refactor(odd): entrega single-pr por defecto en la doctrina ODD`.
+- [x] 3.4 Regenerar goldens de doctrina: `go test ./internal/components/ -run 'TestGolden' -update`; revisar `git diff -- testdata/golden` (solo los dos bullets) y comprobar sin `-update`.
+- [x] 3.5 Comprobar la unidad: `go test ./internal/components/agentguidance/`, `go test ./internal/components/ -run 'TestGolden'` y `go vet ./internal/components/...`. En verde.
+- [x] 3.6 Commit de la unidad 3: `refactor(odd): entrega single-pr por defecto en la doctrina ODD`.
 
 ---
 
