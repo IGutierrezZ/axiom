@@ -14,6 +14,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/assets"
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
 	"github.com/IGutierrezZ/axiom/v3/internal/opencode"
+	"github.com/IGutierrezZ/axiom/v3/internal/rddharness"
 )
 
 // requiredLedgerClauses is the OpenCode binding of the shared clause set: the
@@ -353,6 +354,8 @@ func TestReviewerBashPromptIsNativeAndWindowsPortable(t *testing.T) {
 }
 
 func TestKilocodeReviewSettingsMatchCurrentMainBaseline(t *testing.T) {
+	// The baseline pins the shipped state, with RDD suspended (C-01-c).
+	t.Cleanup(rddharness.SetForTesting(false))
 	home := t.TempDir()
 	if _, err := Inject(home, kilocodeAdapter(), model.SDDModeMulti); err != nil {
 		t.Fatal(err)
@@ -630,7 +633,10 @@ func TestKilocodeReviewSettingsMatchCurrentMainBaseline(t *testing.T) {
 	// nominales, el almacén `hybrid` fijo y el ritmo por topología; las secciones compartidas «Execution
 	// Mode», «Artifact Store Mode» y «Artifact Store Policy» y el párrafo del kickoff lo reflejan.
 	// Kilocode los compone en el orquestador de OpenCode, así que el hash cambia. Deliberate, not drift.
-	const want = "cd93b4b577822f6c17b725b999d9d8d98f7b8e9d1cc6aa7ea701fa0969e7501e"
+	// rdd-apagado T3 (C-01-c): el hash fija el estado entregado con RDD suspendido (sin el handoff de
+	// defectos ni el «Native Checking Contract» en el orquestador de OpenCode que compone Kilocode) y la
+	// «Delegated Verification Gate» reescrita. Deliberate, not drift.
+	const want = "5bb25ef71f6d966129d6b382dddb2df580d9e706703bd5ad49edf58afd22f60a"
 	if got != want {
 		t.Fatalf("Kilocode settings SHA-256 = %s, want current-main baseline %s", got, want)
 	}

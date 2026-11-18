@@ -357,7 +357,6 @@ func TestIndependentReviewBoundaryIsNotAWholeFileSweep(t *testing.T) {
 	deliberate := []struct{ file, mention string }{
 		{"skills/sdd-verify/SKILL.md", "SDD never offers, launches, or consumes RDD."},
 		{"skills/judgment-day/SKILL.md", "issues no receipt"},
-		{"skills/_shared/sdd-orchestrator-sections.md", "receipt-driven development (RDD)"},
 	}
 	for _, d := range deliberate {
 		content := MustRead(d.file)

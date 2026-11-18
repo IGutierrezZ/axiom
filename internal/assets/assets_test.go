@@ -132,7 +132,7 @@ func TestSDDOrchestratorAssetsCarryTheKickoffAndBlockGatesMarker(t *testing.T) {
 }
 
 func TestAllShippedOrchestratorsKeepDeliveryUnmanaged(t *testing.T) {
-	const ordinaryDelivery = "Commit, push, PR, direct-main, emergency, and release gates are informational and unmanaged; ordinary repository policy decides delivery and they never reopen review for unchanged content."
+	const ordinaryDelivery = "Delivery remains human-owned under ordinary repository policy."
 	const receiptValidation = "Commit, push, PR, direct-main, emergency, and release gates validate the same exact owner-issued receipt/authorization"
 
 	for _, path := range allSDDOrchestratorAssetPaths(t) {
@@ -2459,7 +2459,7 @@ func TestSharedGateSectionPresentsAndRemediatesTheContextDelta(t *testing.T) {
 		"`project-baseline-convention.md`, sections 5 and 6",
 		// Las compuertas existentes y la frontera con RDD siguen intactas.
 		"re-present the SAME gate afterward, never skip ahead to the next one",
-		"a gate approval is never a receipt",
+		"A gate approval never authorizes delivery on its own",
 		// Las tres salidas de cada parada (REQ-26.1, REQ-26.8): una sola orden, tres
 		// invocaciones, y el marcador del texto único.
 		"Every gate except `integration` is a stop with three exits",
@@ -2888,42 +2888,20 @@ func TestSDDOrchestratorsDoNotRequireRuntimeAttempts(t *testing.T) {
 	}
 }
 
-func TestSDDOrchestratorsProjectNativeCheckingWithoutPromptOwnedLenses(t *testing.T) {
+// TestSDDOrchestratorsCarryNoNativeCheckingContract pins the RDD suspension
+// (C-01-c): the Native Checking Contract only described the native review
+// (RAR, lenses, receipts), so no orchestrator projects it, and no prompt-owned
+// review mechanism comes back either.
+func TestSDDOrchestratorsCarryNoNativeCheckingContract(t *testing.T) {
 	for _, path := range allSDDOrchestratorAssetPaths(t) {
 		content := mustReadResolved(path)
-		section := markdownSection(content, "#### Native Checking Contract")
-		if section == "" {
-			t.Fatalf("%s missing Native Checking Contract", path)
-		}
-		for _, required := range []string{
-			"Native RAR owns verification applicability",
-			"bounded zero/one/four-lens plan",
-			"never select lenses or author PASS",
-			"passive ordinary document or image",
-			"structural readback",
-			"trivial passive documentation-only edit",
-			"structural readback is the complete proportional check",
-			"do not open a separate semantic-verification or heavy review ceremony",
-			"applicable verifier is unavailable",
-			"preserve the typed unavailable result",
-			"never invent PASS, retry indefinitely, or escalate into extra ceremony",
-			"quick check runs once",
-			"Long or very-long work gets one cost/side-effect forecast",
-			"Needs your decision",
-			"Functional proof and adversarial review both project as **Checking**",
-			"at most one scoped correction",
-			"never reopen review for unchanged content",
-		} {
-			if !strings.Contains(section, required) {
-				t.Fatalf("%s native checking contract missing %q", path, required)
-			}
-		}
 		for _, retired := range []string{
+			"Native Checking Contract", "Native RAR", "zero/one/four-lens", "terminal receipt",
 			"Review Lens Selection", "review-risk", "review-readability",
 			"review-reliability", "review-resilience", "loop-until-dry",
 		} {
 			if strings.Contains(content, retired) {
-				t.Fatalf("%s retained prompt-owned review mechanism %q", path, retired)
+				t.Fatalf("%s retained review mechanism %q", path, retired)
 			}
 		}
 	}

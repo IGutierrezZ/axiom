@@ -18,6 +18,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/components/skills"
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
 	"github.com/IGutierrezZ/axiom/v3/internal/opencode"
+	"github.com/IGutierrezZ/axiom/v3/internal/rddharness"
 )
 
 // delegationBlockSignature is a sentence of the current delegation triggers that
@@ -1458,7 +1459,16 @@ func renderPreservedOpenCodeOrchestratorPrompt(
 	options ...OrchestratorRenderOptions,
 ) string {
 	migrated := migratePreservedOpenCodeOrchestratorPrompt(prompt)
-	if agent == model.AgentOpenCode {
+	if agent == model.AgentOpenCode && !rddharness.Enabled() {
+		// RDD is suspended (C-01-c): retire the consent route a previous sync wrote.
+		for _, route := range []string{legacyOpenCodeConsentV3QuestionRoute, previousOpenCodeConsentV3QuestionRoute, openCodeConsentV3QuestionRoute} {
+			migrated = strings.ReplaceAll(migrated, route, openCodeNativeQuestionSourceRoute)
+		}
+		for _, clause := range []string{previousOpenCodeConsentV3FallbackClause, openCodeConsentV3FallbackClause} {
+			migrated = strings.ReplaceAll(migrated, clause, openCodeFallbackSourceClause)
+		}
+	}
+	if agent == model.AgentOpenCode && rddharness.Enabled() {
 		migrated = strings.ReplaceAll(migrated, legacyOpenCodeConsentV3QuestionRoute, openCodeConsentV3QuestionRoute)
 		migrated = strings.ReplaceAll(migrated, previousOpenCodeConsentV3QuestionRoute, openCodeConsentV3QuestionRoute)
 		migrated = strings.ReplaceAll(migrated, previousOpenCodeConsentV3FallbackClause, openCodeConsentV3FallbackClause)

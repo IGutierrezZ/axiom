@@ -12,24 +12,20 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/versions"
 )
 
-func TestSDDOrchestratorsRequireSafeFormatterOrdering(t *testing.T) {
+// TestSDDOrchestratorsCarryNoFormatterOrderingContract: the normalization ordering
+// rule only protected the frozen candidate of the native review, which is
+// suspended (C-01-c), so no orchestrator projects it.
+func TestSDDOrchestratorsCarryNoFormatterOrderingContract(t *testing.T) {
 	for _, path := range allSDDOrchestratorAssetPaths(t) {
 		t.Run(path, func(t *testing.T) {
 			content := mustReadResolved(path)
-			for _, required := range []string{
+			for _, retired := range []string{
 				"Normalization ordering rule",
 				"before review START and its identity freeze",
-				"run every source-mutating normalizer",
-				"re-snapshot the candidate",
-				"exact bytes, paths, and modes",
-				"only check-only formatting, typechecking, tests, and native gates",
-				"already convergent and therefore a no-op",
 				"any byte, path, or mode change invalidates the receipt",
-				"normalization followed by a new review",
-				"never formatter-only tolerance",
 			} {
-				if !strings.Contains(content, required) {
-					t.Fatalf("%s missing formatter-ordering contract %q", path, required)
+				if strings.Contains(content, retired) {
+					t.Fatalf("%s retains formatter-ordering contract %q", path, retired)
 				}
 			}
 		})

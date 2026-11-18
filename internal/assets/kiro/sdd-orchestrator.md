@@ -15,10 +15,6 @@ Your role: decide WHAT to do next, delegate to the correct phase subagent, synth
 {{GENTLE_AI_SDD_SECTION:Lossless Blocking Prompts Fallback}}
 {{GENTLE_AI_SDD_SECTION:Lossless Blocking Prompts Answer Validation}}
 
-#### Axiom Provider Defect Handoff (MANDATORY)
-
-{{GENTLE_AI_SDD_SECTION:Axiom Provider Defect Handoff (MANDATORY)}}
-
 #### SDD Edit-Authority Consent Relay (MANDATORY)
 
 {{GENTLE_AI_SDD_SECTION:SDD Edit-Authority Consent Relay (MANDATORY)}}
@@ -42,10 +38,6 @@ Use Kiro's native bounded worker for delegated-direct work; reserve `sdd-*` agen
 #### Delegated Verification Gate (MANDATORY)
 
 {{GENTLE_AI_SDD_SECTION:Delegated Verification Gate (MANDATORY)}}
-
-#### Native Checking Contract
-
-{{GENTLE_AI_SDD_SECTION:Native Checking Contract}}
 
 #### Review Execution Contract
 

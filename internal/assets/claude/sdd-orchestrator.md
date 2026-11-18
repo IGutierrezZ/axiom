@@ -13,10 +13,6 @@ Bind this to the Claude Code orchestrator rule only. Do NOT apply it to executor
 {{GENTLE_AI_SDD_SECTION:Lossless Blocking Prompts Fallback}} Native-tool-only wording elsewhere never disables this fallback.
 {{GENTLE_AI_SDD_SECTION:Lossless Blocking Prompts Answer Validation}}
 
-#### Axiom Provider Defect Handoff (MANDATORY)
-
-{{GENTLE_AI_SDD_SECTION:Axiom Provider Defect Handoff (MANDATORY)}}
-
 #### SDD Edit-Authority Consent Relay (MANDATORY)
 
 {{GENTLE_AI_SDD_SECTION:SDD Edit-Authority Consent Relay (MANDATORY)}}
@@ -50,20 +46,13 @@ Use Claude Code's native Agent/Task mechanism for delegated-direct work; reserve
 
 {{GENTLE_AI_SDD_SECTION:Delegated Verification Gate (MANDATORY)}}
 
-#### Native Checking Contract
-
-{{GENTLE_AI_SDD_SECTION:Native Checking Contract}}
-
 #### Review Execution Contract
 
 {{GENTLE_AI_SDD_SECTION:Review Execution Contract}}
 
 #### Cost and Context Balance
 
-- Use exploration sub-agents to compress broad repo reading into a short handoff.
-- Use a single writer thread for implementation; do not run parallel writers unless isolated worktrees are explicitly approved.
-- Let native review select its bounded checking plan; delivery remains human-owned under ordinary repository policy.
-- Avoid delegation for truly local one-file fixes, quick state checks, and already-understood mechanical edits.
+{{GENTLE_AI_SDD_SECTION:Cost and Context Balance}}
 
 {{GENTLE_AI_RESEARCH_LIFECYCLE}}
 

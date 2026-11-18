@@ -25,39 +25,9 @@ When a sub-agent or tool returns a user-facing blocking prompt or menu, preserve
 - Fallback: If a native UI is unavailable, denied, the runtime is noninteractive, or the complete envelope is oversized or otherwise unrepresentable because of question-count, option-count, or text-length limits, emit the COMPLETE choice envelope as a plain chat or terminal response. Include the required answer syntax and why the input blocks progress. Then STOP. Do not choose, default, infer, launch dependent work, or continue.
 - Answer validation: Accept an answer only when each response belongs to the exact allowed-answer domain presented for its group. Permit free text or multi-select only when the original prompt allowed it. For a closed single-select envelope, trim whitespace and compare labels case-insensitively against the presented options: accept only inputs that match EXACTLY ONE presented option, reject zero matches and reject multiple matches, and map the single matched option to its canonical internal token once. Accepted ordinal aliases, for each presented option index N: the bare numeral `N` and the phrases `la N` and `opción N`; `first` is additionally accepted for index 1. Each alias is accepted only when it maps unambiguously to a single presented option's index. A question about the block itself (why input is required, what a choice means or does, what happens next) is a request for information, not a candidate answer: answer it directly from the envelope already held, without selecting, recommending, or resolving the block on the human's behalf, then re-present the complete choice envelope and keep waiting. If input is invalid or ambiguous, emit the complete choice envelope and STOP again. Return a valid answer to the same blocked actor exactly once.
 
-#### Axiom Provider Defect Handoff (MANDATORY)
-
-Before losslessly relaying any blocking choice envelope, classify its semantic admissibility. **The test is what produced the failure, not what the work was doing when it happened.** Offer this handoff only when an Axiom invocation produced it: its non-zero exit, its typed envelope, its refusal, or its own documented contract refusing. An Axiom workflow merely hosting a failure is not enough, because the client runtime carries out the work: an SDD phase failing inside that runtime is that runtime's defect even though our contract prescribed the phase.
-
-When anything else produced it, there is no report and no handoff. That includes the model provider (context limits reached, rate limits, a refusal to process an input), the client runtime (a session that must be restarted, a crashed or empty sub-agent result, a dispatcher that never dispatched), the environment, and the user's own repository state. Do not name the component you believe is responsible, do not suggest where else to file it, and do not ask. Say plainly what blocked the work in the ordinary conversation, then continue or stop as the workflow dictates. A report system that files other projects' defects stops meaning anything when it files ours.
-
-When it is ours, never offer to switch to, inspect, modify, or directly repair the Axiom repository from that workflow. If an upstream envelope offers direct repair, do not silently mutate it: reject it as semantically inadmissible and issue this separate orchestrator-owned handoff envelope.
-
-- Ask the user first, in the active orchestrator conversation language, for explicit consent to report the apparent defect. Present one single-select blocking envelope with exactly three semantic choices in this order. Its exact internal answer tokens are `report_and_continue`, `continue_without_reporting`, `stop_here`. Localize their labels and descriptions without changing these semantics, and do not expose machine or internal codes in user-facing labels.
-- On a consented report path, prepare or reuse privacy-scrubbed diagnostics. Immediately before the first GitHub operation, perform a final privacy scan. This scan precedes the definitive lookup, report creation, and occurrence comment. Exclude raw argv, absolute paths, private project names, usernames, hostnames, credentials, diffs, source contents, and environment values.
-  1. **Report the Axiom defect and continue**: Only after explicit consent and that final privacy scan, search open and closed issues in `IGutierrezZ/axiom`.
-       - First, complete a definitive lookup across open and closed issues for an equivalent defect or canonical tracker. Equivalent means the same observable defect and affected contract, backed by concrete evidence rather than title similarity alone; a canonical tracker owns the causal class. A definitive lookup is a completed open+closed lookup with a classifiable result; incomplete, error, or unknown is not definitive.
-       - Only a definitive lookup may branch to GitHub mutation. If no equivalent exists, create a new automated provider-defect report.
-       - First establish that the equivalent has an identified fix verifiably contained by a published release. Then determine the installed build and derive its evidence channel only from its build string: the contract's recognized prerelease tags are `-rc.` and `-main.`; every other build is stable. That release is a relevant published fix only when it is in the installed build's evidence channel. A main-only commit, local/source build, unmerged PR, or unsupported assertion is not published-fix evidence, including for prerelease or main builds.
-       - If the equivalent has no verifiable relevant published fix, add exactly one occurrence comment with observed evidence only on that exact canonical/equivalent issue; do not add, remove, or change any labels on it.
-       - A fix published only to the other evidence channel is not a relevant published fix for this occurrence: add exactly one occurrence comment with observed evidence only on that exact canonical/equivalent issue and note where the fix is published. Do not recommend switching channels; channel choice is the user's. Do not add, remove, or change any labels on that issue.
-       - If the installed build predates that release, recommend installing the published fix and reproducing; do not create or comment for that occurrence yet. If the installed build demonstrably contains the fix and still reproduces, treat it as a possible regression: reproduction on a build proven to contain that fix; comment on a suitable canonical tracker, or create a linked regression issue when that tracker is unsuitable. Never reopen automatically.
-       - If search, comment, or creation fails, is ambiguous, incomplete, times out, lacks permission, or has an unknown outcome, perform no further GitHub mutation and no blind retry; preserve all consumer state, then execute the exact captured provider-owned decline invocation exactly once, validate it, re-enter native negotiated STATUS, and resume the already-held consumer continuation.
-       - Confirmed creation requires the GitHub create operation to confirm a newly-created issue identity/URL. Never infer creation from output text alone. If creation fails, is ambiguous, incomplete, times out, lacks permission, or has an unknown outcome, preserve all consumer state; do not search, comment, update, or retry creation until the exact created issue identity is resolved, then use the uncertainty continuation below.
-       - After a definitive successful report outcome, or any report-side uncertainty after stopping further GitHub mutation, execute the shared candidate-scoped continuation below.
-  2. **Continue without reporting**: Perform no GitHub search, write, comment, or label, and no report-side privacy scan is required. Execute the shared candidate-scoped continuation below.
-  3. **Stop here**: Perform no GitHub operation and no decline invocation; preserve all consumer state and STOP.
-- Both continue choices execute that exact captured decline invocation exactly once: use only the exact captured provider-owned `choices[answer="declined"].invocation` from the `gentle-ai.review-integration.consent/v3` envelope. Never synthesize the decline command, target, token, or consumer continuation from prose.
-- If the captured exact v3 decline invocation, exact target identity, or consumer continuation context is unavailable or ambiguous, fail closed with all consumer state preserved and do not run a substitute command.
-- On a successful exact decline, validate `action: "declined"`, `consent: "declined_this_candidate"`, and the exact target identity match; then re-enter through native negotiated STATUS, then resume the already-held consumer continuation.
-- The result carries no lineage or receipt; ordinary delivery is unmanaged by the candidate choice, and the next candidate asks again.
-- Do not invoke `axiom review mode disable` at clone or global scope within this handoff. Do not turn RDD off or on within this handoff.
-- Report observed evidence, not an unconfirmed root cause. Include or reuse sanitized version/build, OS/architecture/client, the operation shape without secrets, bounded attempts and outcomes, failure envelopes, mutation outcome, expected and actual behavior, a minimal reproduction, safe opaque reason/revision identifiers, and preserved-state evidence.
-- Resume after an installed published fix or an explicit maintainer-authorized, documented native recovery or reset that the runtime contract supports; then re-enter through native status. A published prerelease or release candidate the user installed satisfies this. Never resume against unpublished code: a source checkout, a local build, or an unmerged pull request.
-
 #### SDD Edit-Authority Consent Relay (MANDATORY)
 
-When native SDD status reports `blocked(edit_authority_missing)`, its structured output may carry the typed `axiom.sdd-integration.consent/v1` envelope as the optional `consent` block. Treat that envelope as a Lossless Blocking Prompt under this contract, with the same discipline as the review consent relay. Present the complete envelope once in the active conversation language: faithfully translate the headline, reason, `value`, the missing-root evidence, choice labels, every choice `effect`, and the off-path note, while preserving the original choices, order, selection mode, exact allowed-answer domain, and answer tokens. Never translate or alter the machine answer tokens (`granted`, `declined`), commands, paths, or invocations. Never summarize, reshape, reorder, merge, or omit any part. The human decides: never answer on the human's behalf and never run the grant unprompted. Only after the human's explicit `granted` answer, execute the envelope's exact grant invocation verbatim, exactly once, then re-enter through native status; the granted roots project into `allowedEditRoots`, and the grant is per-change, audited, and dies with archive. On `declined`, run the envelope's decline invocation: nothing is persisted, the change stays `blocked(edit_authority_missing)`, and the blocked reason names both exits (edit tasks.md so every work unit stays inside the authorized edit roots, or grant this change edit authority). A blocked status without a `consent` block names the same two exits; relay them and stop.
+When native SDD status reports `blocked(edit_authority_missing)`, its structured output may carry the typed `axiom.sdd-integration.consent/v1` envelope as the optional `consent` block. Treat that envelope as a Lossless Blocking Prompt under this contract, with the same discipline. Present the complete envelope once in the active conversation language: faithfully translate the headline, reason, `value`, the missing-root evidence, choice labels, every choice `effect`, and the off-path note, while preserving the original choices, order, selection mode, exact allowed-answer domain, and answer tokens. Never translate or alter the machine answer tokens (`granted`, `declined`), commands, paths, or invocations. Never summarize, reshape, reorder, merge, or omit any part. The human decides: never answer on the human's behalf and never run the grant unprompted. Only after the human's explicit `granted` answer, execute the envelope's exact grant invocation verbatim, exactly once, then re-enter through native status; the granted roots project into `allowedEditRoots`, and the grant is per-change, audited, and dies with archive. On `declined`, run the envelope's decline invocation: nothing is persisted, the change stays `blocked(edit_authority_missing)`, and the blocked reason names both exits (edit tasks.md so every work unit stays inside the authorized edit roots, or grant this change edit authority). A blocked status without a `consent` block names the same two exits; relay them and stop.
 
 #### Delegation Rules
 
@@ -75,7 +45,7 @@ Evidence budget: inline evidence is one parallel batch of at most 3 calls and ap
 | Write a unit of about 100 changed lines or less | ✅ always | — |
 | Write a larger unit | ✅ by default | ✅ one bounded writer, only for a named reason: parallelism or protecting the parent context |
 | Bash for state (`git`, `gh`) | ✅ | — |
-| Tests, builds, installs, or native review actions | allowed as a bounded action | ✅ fresh per-action worker without changing route |
+| Tests, builds, or installs | allowed as a bounded action | ✅ fresh per-action worker without changing route |
 
 #### Mandatory Delegation Triggers
 
@@ -84,7 +54,7 @@ Each trigger holds only when its condition truly holds, and only then is it mand
 - **Mapping trigger:** when understanding exceeds the inline evidence budget (one parallel batch, at most 3 calls, approximately 10k tokens), delegate one read-only explorer before deciding or writing anything. It returns a handoff of at most approximately 2k tokens with `path:line` evidence; the parent makes 1 spot check at most and does not reread the whole mapped evidence. The number of files never fires this trigger, and never explore to read files you will read anyway before writing inline.
 - **Writer trigger:** a writer is delegated only for a named reason, one bounded writer per unit: (a) parallelism: two or more independent units of behavior with disjoint edit surfaces, each needing several minutes of work, launched together; (b) context: protecting the parent context under the long-session backstop below. A unit is one independent piece of behavior with its code, tests, and docs together: never split one behavior into test, docs, and code writers, and a delivery that depends on another is not independent. Units of about 100 changed lines or less always run inline: writing them costs less than starting workers. Never delegate a writer for size, file count, or because the task is large; without a named reason the parent works inline.
 - **Preparation trigger:** when the Writer trigger delegates a write, the reading that prepares it, and broad research or context compression, delegate together with or ahead of the write instead of filling the parent context. Inline writes read inline.
-- **Per-action trigger:** tests, builds, installs, and native review actors may use fresh workers without changing the implementation route or creating SDD state.
+- **Per-action trigger:** tests, builds, and installs may use fresh workers without changing the implementation route or creating SDD state.
 - **Optional SDD trigger:** propose SDD only when durable proposal/spec/design/tasks materially reduce substantial ambiguity. Select SDD only after an explicit request, the project lane `workflow.lane: sdd` for substantial work, an ISO project (`iso.project: iso`) for all work, or an accepted proposal; risk alone never forces SDD.
 - **Proportionality:** validate consequential premises against available evidence before acting on them; reuse relevant sibling investigation instead of repeating it; run focused checks while iterating and all applicable full checks when a task closes. Keep spend proportional without a hard spend or line gate.
 - **Long-session backstop:** at approximately 150k parent-context tokens, consider delegating the next bounded unit to protect the parent context. This is advisory guidance, not a mechanically observed or enforced limit: do not claim runtime telemetry, and it never fires on a count of calls, reads, edits, or files.
@@ -93,139 +63,20 @@ Each trigger holds only when its condition truly holds, and only then is it mand
 
 #### Delegated Verification Gate (MANDATORY)
 
-SDD never offers or launches RDD, regardless of review mode. For SDD work, run the applicable functional checks and configured TDD, report actual results, and follow the SDD phase instructions; do not assess review risk or invoke review from this gate. The rules below apply only to non-SDD work.
+For SDD work, run the applicable functional checks and configured TDD, report actual results, and follow the SDD phase instructions. The rules below apply only to non-SDD work.
 
-Verification of a delegated writer's work follows the native risk tier whether receipt-driven development (RDD) is on or off. After the writer returns, the parent runs `axiom review assess --cwd <repo> --json` (`gentle-ai.review-assessment/v1`, `risk` one of `passive`, `medium`, `high`) over the writer's diff; any assessment failure or an unrecognized verb is treated as `high`.
+After the writer returns, the parent infers the verification tier from the writer's diff and follows it:
 
-- **Risk tier**: passive: structural readback only; medium: writer self-verification, with a separate verifier only when the writer ran on a small-model profile (low effort or a mini model); high or unassessable: writer self-verification plus an independent verifier. The small-model bias raises the tier by one for verification purposes. The bounded writer runs the parent-authorized `## Verification` commands in the foreground and reports `<command>: <observed result>`.
-- **RDD on**: the native review is an additional outside view of the change; it never replaces or skips the tier's verification, and the tier's verifier runs before review, whether or not the native review reaches a terminal outcome for this candidate. A runtime that renders an RDD status line reads it from there; otherwise read `axiom review mode status` (read-only) and treat a failure as `unknown`. A declined consent, a disabled clone, or a refused START or STATUS changes nothing about verification.
+- **Risk tier**: documentation-only or passive content (ordinary documents, images): structural readback only; ordinary code: writer self-verification, with a separate verifier only when the writer ran on a small-model profile (low effort or a mini model); security-sensitive, executable or operational, mode-changing, or unclear changes: writer self-verification plus an independent verifier. The small-model bias raises the tier by one for verification purposes. When the tier is unclear, treat it as the highest one. The bounded writer runs the parent-authorized `## Verification` commands in the foreground and reports `<command>: <observed result>`.
 - The parent spot check — re-running one reported command before delivery — stays in every tier.
 - The writer receives `## Verification` naming the exact commands to run, and may receive `## Known environmental failures` naming exact test names or command lines already failing on the base as evidence; any other failing required command still forces `partial`.
 - Exploration stays a separate delegation only when the parent needs the map to decide or route; reading that prepares a write belongs to the writer doing that write.
-
-#### Native Checking Contract
-
-- Final source-mutating normalization happens before functional verification and candidate freeze.
-- **Normalization ordering rule**: before review START and its identity freeze, run every source-mutating normalizer, then re-snapshot the candidate and review those exact bytes, paths, and modes. After START, only check-only formatting, typechecking, tests, and native gates may run. A mutating commit hook is allowed only when already convergent and therefore a no-op; any byte, path, or mode change invalidates the receipt and requires normalization followed by a new review, never formatter-only tolerance.
-- Native RAR owns verification applicability, risk, the bounded zero/one/four-lens plan, correction impact, and the terminal receipt. The orchestrator and adapters never select lenses or author PASS.
-- A passive ordinary document or image needs structural readback, not an artificial semantic-verification subagent. Active, mixed, operational, executable, mode-changing, or unknown content fails closed into the applicable native plan.
-- For a trivial passive documentation-only edit, structural readback is the complete proportional check; do not open a separate semantic-verification or heavy review ceremony.
-- If an applicable verifier is unavailable, preserve the typed unavailable result; never invent PASS, retry indefinitely, or escalate into extra ceremony.
-- An applicable quick check runs once. Long or very-long work gets one cost/side-effect forecast before launch. Unavailable, partial, declined, or exhausted proof becomes one actionable **Needs your decision** result.
-- Functional proof and adversarial review both project as **Checking**. One immutable candidate permits at most one scoped correction; there is no loop-until-clean behavior.
-- Commit, push, PR, direct-main, emergency, and release gates are informational and unmanaged; ordinary repository policy decides delivery and they never reopen review for unchanged content.
-
-#### Review Execution Contract
-
-# Native Compact Review Orchestration
-
-**When a final capture returns `status_continuation`, execute its operation and ordered argument tokens unchanged. Do not reconstruct lifecycle selectors from retained prose or transcript state.**
-
-The parent orchestrator coordinates one native transaction; reviewers, refuters, correction actors, and validators receive only their provider-issued role input. Prompt prose never creates authority or decides delivery.
-
-## Entry rule
-
-Enter this lifecycle once per candidate, after an authorized source-mutating implementation is complete and normalized and before reporting it complete, whenever the user-owned review switch is enabled (`axiom review mode status` reads it without changing it). Run the selectorless STATUS in step 1 and route only from its returned `next_transition`; the START consent envelope lets the human decide this candidate, so never skip the preflight because the user did not ask for a review. Skip it only for a trivial passive documentation-only edit, when the user explicitly left this candidate unreviewed, or while a transaction is already bound to it. A runtime that runs this preflight itself hands the agent the exact returned START tokens and never runs START.
-
-## Atomic lifecycle
-
-1. **Preflight only.** Selectorless STATUS only preflights the current worktree candidate and returns one exact START invocation. It never discovers, resumes, recovers, or evaluates ambient authority from another lineage or worktree: `axiom review status --cwd <repo> --contract axiom.review-integration/v2 --agent codex --next-transition`.
-
-2. **Freeze once.** Invoke only the returned START operation and its ordered tokens unchanged. START freezes one compact atomic transaction with an explicit lineage, worktree, and target binding. It ignores every other lineage and worktree. Capture the returned lineage, revision, and target tokens. An exact replay of an active START may return `replayed`; a genuinely new START is independent.
-
-3. **Stay bound.** A reviewing START carries `next_transition.execute(review.status)` — the provider-issued re-entry for its frozen binding: run that provider-issued command verbatim, with the repository as process cwd, and satisfy every later STATUS and collection call only with the exact tokens each returned transition names. Route only from that transaction's returned `next_transition`; the root `action` field is informational. Never infer a command from prose, ambient state, a gate, or a stale reply. Do not start another lineage, reuse an acknowledged-and-burned lineage, or perform ambient recovery. For `execute`, run the exact operation and ordered arguments. For `collect`, satisfy only the named inputs and their exact capture operations, then ask STATUS again with the same binding. For `stop`, run no lifecycle operation.
-
-4. **Acknowledge exactly.** Native Go owns frozen lenses, provider context and admission, refutation, one bounded correction, repository evidence, targeted validation, and approved closure. A final approved capture commits one pending acknowledgement token and returns `review.acknowledge-approved`; restarted STATUS returns the same operation, ordered arguments, token, and live revision. Only that exact invocation burns authority and artifacts, and on success it prints one `gentle-ai.review-acknowledged/v1` envelope; report the burn from that envelope, never from a later STATUS. Wrong, stale, or replayed acknowledgement refuses without creating a receipt, tombstone, witness, mirror, sidecar, or delivery authority. Unrelated transactions survive unchanged.
-
-The final reviewer, refuter, or targeted-validator capture owns closure. A malformed, incomplete, or unavailable capture never reaches acknowledgement: issue one retained target-bound read-only STATUS and relaunch only when it reoffers the same bound slot. Never invent a binding or retry from prose.
-
-When v2 returns `forecast`, relay it losslessly in the user's language: preserve every step's order and fields (`step`, `kind`, `reason_code`, `description`) and the horizon. Forecast is informational; route only from `next_transition`.
-
-### Cross-repository lifecycle root
-
-A session in repository A may review an explicitly selected nested target in unrelated repository B only after explicit user authorization. Native Go resolves the requested path to the canonical B worktree root; adapters never parse authorization or roots.
-
-- After B is selected, retain canonical B as the lifecycle working root from selectorless STATUS through consent, collection, correction, targeted validation, acknowledgement, and burn. Do not fall back to A.
-- Run provider-issued command tokens exactly. Never append, remove, or rebuild provider-issued command tokens. When a command omits `--cwd`, run it with process cwd B.
-- Opaque `repository_context` can capture or materialize from any process cwd, but the host still retains B for lifecycle continuity. Go owns repository binding; adapters never parse authorization or roots.
-- The same lineage text in A and B is independent. Approval awaits acknowledgement in B; exact acknowledgement burns B only, and A remains untouched.
-
-This lifecycle is rendered for exactly Claude Code, Codex, OpenCode, and Pi. Unsupported runtimes remain unavailable before repository or authority mutation.
-
-## Capture and correction
-
-For each returned `review.capture-result` input, run its exact capture operation once with its argument tokens exactly as returned. This runtime captures in process: those tokens carry `--agent` and no `--input`, and running them makes Go materialize the immutable reviewer context, run its own locked-down reviewer on it, and admit the result. Never assemble a reviewer prompt, never launch a lens subagent, and never add `--input` to a returned token list. Each of those rebuilds the returned command into the relay form and moves the complete candidate evidence onto the parent for every lens, to reach a result the returned command already produces carrying nothing. An empty, malformed, schema-invalid, or incomplete result is handled by the recovery rule below, exactly as a relayed one is.
-
-After an empty, malformed, schema-invalid, access/provider-failed, or incomplete capture, query the same exact-lineage STATUS. Relaunch only if its fresh `next_transition` reoffers the same bound slot. Never infer a retry from transcript text. A relayed capture passes its result through `--input <path|->`, one per lens in lens order; BOM-less UTF-8 is required on Windows PowerShell 5.1. Tokens carrying `--agent` capture in process with no `--input`.
-
-Only candidate-caused severe findings block. Pre-existing/base-only findings are follow-ups; unknown causality escalates. A deterministic blocker needs no refuter; inferential blockers share one read-only refuter batch. A four-lens review is long work: before its first lens, give one forecast covering four reviewer runs, the frozen correction budget, and the at-most-one bounded correction.
-
-A correction is native-scoped. When the final reviewer or refuter capture opens `correction_required`, its `status_continuation` is the only re-entry: run its `review.status` operation and ordered tokens unchanged before acting again. Native Go maps edits only to corroborated frozen findings, owns repository evidence and the targeted validator, and permits at most one bounded correction. A validator that cannot inspect the immutable trees produced no verdict: surface one blocked human decision and submit nothing. Do not route it to a refuter or another actor without read-only immutable-tree access. Independent requirements/runtime verification never starts another reviewer, refuter, correction, or validator.
-
-## Consent and immutable inspection
-
-If exact provider-returned START returns the typed `gentle-ai.review-integration.consent/v3` envelope, relay it as a Lossless Blocking Prompt. Global RDD enabled permits review; it never grants consent for this candidate. For medium/high candidates, faithfully translate the headline, reason, `value`, risk evidence, choice labels, every choice `effect`, and the off-path note while preserving original groups/order, selection mode, allowed-answer domain, answer tokens, commands, target IDs, and invocations. Project `value` as benefits and every `effect` as consequences. Do not translate machine answer tokens (`granted`, `declined`). Run exactly the invocation selected by the human; a decline is candidate-scoped and is not the kill switch.
-
-Claude Code, OpenCode, Codex, and Pi use the shared Go provider contract. Go owns frozen evidence, binding, schema, byte bounds, validation, admission, and capture; runtime adapters transport opaque provider output. Claude uses a tool-free fresh reviewer; OpenCode relays one host Task through its live Go transport; Codex uses its provider-bound subprocess; Pi uses its gentle-pi-owned relay. Compiled capability is authoritative before repository, target, authority, collection, or process work.
-
-Reviewers inspect only the provider-bound immutable trees. Never hand candidate bytes through `/tmp`, an external file, a repository scratch file, or `GENTLE_AI_FROZEN_CANDIDATE_CONTEXT`. Use the provider-issued inspection path, never the live worktree, index, `HEAD`, or an unbound revision. Never pass `--binary`, change checkout, or substitute live files.
-
-<!-- authority-first-terminal-procedure:start -->
-### Authority-First Terminal Procedure
-
-| Order | Operation | Required result |
-| --- | --- | --- |
-| 01 | canonical initial STATUS above | exactly one current-worktree START preflight; no authority discovery |
-| 02 | exact returned START | one compact lineage/worktree/target binding; retain lineage, revision, and target |
-| 03 | exact-lineage STATUS and collect | only returned transaction actions; no ambient resume, reuse, or delivery gate |
-| 04 | final admitted capture | native readback, approved authority, and one exact acknowledgement continuation |
-| 05 | STATUS restart + exact acknowledgement | replayed operation/token/revision; only exact acknowledgement burns authority |
-| 06 | terminal lifecycle stop | ordinary repository policy owns any later delivery decision |
-
-<!-- authority-first-terminal-procedure:end -->
-
-### Continue after a stop reason code
-
-A `stop` ends its transition, never approves delivery. Complete atomic inventory: B stays target root; gates stay unmanaged. `D` means `axiom review mode disable --scope clone --cwd <B>`; B ordinary policy decides delivery. `S` means re-query the exact captured target-root STATUS command with lineage and target.
-
-| Reason codes | Continuation |
-| --- | --- |
-| `captured_artifacts_unverifiable` | Terminal — maintainer inspects B authority, or `D`. |
-| `captured_result_selection_unavailable` | Terminal — maintainer inspects lineage, or `D`. |
-| `missing_authority_binding` | Terminal — file a bounded defect with lineage, or `D`. |
-| `corrupted_or_unverifiable_authority`, `manual_intervention_required`, `native_stop_required` | Terminal — maintainer inspects authority/lineage, or `D`. |
-| `empty_base_diff_bootstrap_required` | Terminal — authorized empty-root bootstrap for a new target, or `D`. |
-| `lens_context_budget_exceeded` | Terminal — reduce B scope and start a new transaction, or `D`. |
-| `correction_context_budget_exceeded` | Release B authority with `axiom review abandon` (run it with no flags for the binding template); `axiom review invalidate` refuses here. Then review B as smaller candidates, or `D`. |
-| `managed_assets_outdated` | Run the `axiom sync` command from the stop's `continuation`, then `S`. |
-| `staged_workspace_overlay_recovery_unavailable` | Terminal — pass `--lineage <id>` to recover, or drop `--workspace-overlay` and start fresh; otherwise `D`. |
-| `corrected_candidate_unavailable` | Change B correction candidate, then `S`. For committed-only review, commit or amend the bounded correction; unrelated tracked worktree edits are ignored. Do not recapture the accepted forecast or reuse the pre-correction target. |
-| `recovery_scope_unchanged` | Change B target identity, then retry the exact returned `axiom review recover`. |
-| `unachievable_lens_slot` | A host reported a selected reviewer slot unachievable. If transient, re-run `axiom review capture-unachievable` with the same binding and `--withdraw=true` so B re-offers the slot. If not, reduce B scope and start a new `axiom review start`, or `D`. |
-| `target_already_acknowledged` | Terminal: this exact target was already acknowledged and its review authority burned. No further review action is required; delivery follows ordinary repository policy. Changed targets remain eligible for review. Only when deliberately requesting a new independent review, use `axiom review start`; do not automatically restart this consumed target. |
-| `acknowledged_predecessor_passive_delta` | Terminal: this committed range only adds passive content to an acknowledged candidate. No review is required and no authority was created; non-passive changes are offered again. Only for a deliberate independent review, use `axiom review start`. |
-| `acknowledged_boundary_reaches_head` | The reviewed boundary reaches HEAD (#5638): nothing unreviewed remains; any new commit is offered again via `S`. |
-| `rdd_disabled` | `--scope clone` only clears a clone-local off; `axiom review mode enable --scope global`, then `S`. |
-
-## Delivery follows ordinary repository policy
-
-Shipped `review validate` and gate commands are compatibility/informational only. They never discover authority or decide delivery: enabled gates return `invalidated/unmanaged`; disabled gates return `disabled/unmanaged`. They never allow, approve, block, commit, push, open a PR, or govern release.
-
-After exact acknowledgement burns terminal `approved` authority, the review lifecycle stops. Commit, push, PR, and release remain separate human decisions under ordinary repository policy. A review outcome is informational and never authorizes delivery, including when the selected repository is B.
-
-Historical compatibility commands may read older artifacts manually, but they are never the ordinary lifecycle and never restore delivery authority.
-
-### Concurrent Reviewer Group (MANDATORY)
-
-When one fresh `collect.inputs` set contains multiple distinct independent `review.capture-result` reviewer slots, launch every returned capture operation concurrently in provider order: start all without waiting between launches, then wait for every result. For canonical 4R, preserve `review-risk`, `review-resilience`, `review-readability`, `review-reliability` order.
-
-Each launch runs only its own provider-issued `review.capture-result` argument tokens exactly as returned. Completion order is not authority: shared Go admission/election owns reduction and semantics. The final admitted capture owns reduction and closure. On `approved`, authority is already burned: do not FINALIZE or issue a trailing STATUS. On `correction_required`, continue only through exact bound STATUS and the provider-issued `review.capture-correction-plan` binding. After a malformed or nonterminal capture, reconcile through exact bound STATUS and retry only an identically reoffered slot.
 
 ### Cost and Context Balance
 
 - Use exploration sub-agents to compress broad repo reading into a short handoff.
 - Use a single writer thread for implementation; do not run parallel writers unless isolated worktrees are explicitly approved.
-- Let native review select its bounded checking plan; delivery remains human-owned under ordinary repository policy.
+- Delivery remains human-owned under ordinary repository policy.
 - Avoid delegation for truly local one-file fixes, quick state checks, and already-understood mechanical edits.
 - If Codex's sub-agent tool policy blocks automatic spawning, stop and tell the user that the hard gate requires delegation before continuing.
 
@@ -439,7 +290,7 @@ When to publish. In a `checkpointed` change, publish after every approval of `sp
 
 When the native status projects `technicalContext.maintained`, the `design` gate also presents `<changeRoot>/context-impact.md`, evaluates whether it is coherent with the design, and states explicitly that it is missing when it is — never assume `Sin impacto`; and each `role-apply` gate also presents the updated context delta and evaluates whether it reflects what that role implemented. Without a maintained technical context, both gates stay exactly as described above. When a gate is rejected only because of the context delta, correcting `context-impact.md` alone does not reopen it: the remediating phase (`sdd-design` for `design`, `sdd-apply` for `role-apply`) corrects the delta and appends one dated line, `YYYY-MM-DD: <rejection reason>; <what changed in the delta>`, to the `## Registro de remediación` section of the artifact the gate judges (`design.md`, or the role's tasks file); the digest then changes, the gate returns to `pending`, and you present it again with the corrected delta. Never edit `gates.yaml` and never look for a reopen command: there is none. The delta format and this procedure are in `project-baseline-convention.md`, sections 5 and 6.
 
-These block-review gates are a distinct mechanism from receipt-driven development (RDD), never a substitute or an alias for it. A gate answers "does this planning artifact, or this role's implementation, satisfy the user's intent?"; RDD answers "does this frozen code candidate survive adversarial review?" — different questions, different triggers, different persisted state, and a different vocabulary. SDD never offers or launches RDD, and the reverse holds too: a gate approval is never a receipt, is never phrased with `lineage`, `candidate`, `acknowledge`, or `burn`, and never authorizes delivery on its own — delivery still follows ordinary repository policy either way. The only way to approve a gate is one of the exact `axiom sdd gate record` invocations above; never relay a gate decision toward `axiom sdd-attempt grant` or any other RDD verb, and never treat an RDD receipt as satisfying a gate.
+A gate approval never authorizes delivery on its own — delivery still follows ordinary repository policy. The only way to approve a gate is one of the exact `axiom sdd gate record` invocations above.
 
 ### SDD Independent Review
 
@@ -638,7 +489,7 @@ These profile files apply to whole CLI sessions: `codex --profile <name> "<promp
 
 ### ODD worker-class assignments
 
-These are worker classes, not installed named agents. For ODD delegation, select the matching row below and pass its `model` and `reasoning_effort` directly to `spawn_agent` with `fork_turns: "none"`. If a custom assignment is absent, the row inherits the selected preset carril. Do not use RDD role assignments for these workers; RDD is handled by the native adapter.
+These are worker classes, not installed named agents. For ODD delegation, select the matching row below and pass its `model` and `reasoning_effort` directly to `spawn_agent` with `fork_turns: "none"`. If a custom assignment is absent, the row inherits the selected preset carril.
 
 | ODD worker class | Model | reasoning_effort |
 |---|---|---|
