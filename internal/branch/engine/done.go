@@ -83,7 +83,7 @@ func (e *Engine) Done(ctx context.Context, r DoneRequest) branch.Result {
 	// calcula rutas, de modo que su colocación y su longitud (`plan_conflict`, `path_too_long`) no
 	// pueden impedir eliminar lo que ya existe.
 	facts.input.InPlace = true
-	plan, refusal := branch.Plan(facts.input)
+	plan, _, refusal := e.planWithPromotion(ctx, &facts, promotionRequest{args: branch.EnsureArgs{Operation: operation, Change: r.Change, CWD: r.CWD, Lane: r.Lane}})
 	if refusal != nil {
 		return refused(refusal)
 	}
@@ -348,13 +348,13 @@ func (d *doneRun) branch(repository doneRepository, planned branch.BranchPlan) (
 		}
 	}
 
-	targets, evidence, err := d.mergeEvidence(main, planned, repo)
+	targets, destination, evidence, err := d.mergeEvidence(main, planned, repo)
 	if err != nil {
 		return failed("comprobar si la rama "+planned.Name+" está fusionada", readFix, err)
 	}
 	layer, confirmed := branch.ConfirmMerge(planned.Kind, evidence, request.Force)
 	if !confirmed {
-		return keep(branch.MergeNotConfirmed(request.Change, request.CWD, request.Lane, repo, planned, planned.PRTarget, targets))
+		return keep(branch.MergeNotConfirmed(request.Change, request.CWD, request.Lane, repo, planned, destination, targets))
 	}
 	described.SetConfirmedBy(layer)
 	// La punta, antes de borrar nada: sin fusión confirmada es lo único que permite recuperar la rama.
@@ -432,70 +432,37 @@ func removeFix(main, worktree string) string {
 		pathquote.Quote(worktree), pathquote.Quote(main), pathquote.Quote(main))
 }
 
-// mergeEvidence reúne la evidencia de fusión de una rama contra su destino (D-09): las referencias
-// que existen donde buscar su fusión (targets, para el mensaje) y el resultado de las tres capas, que
-// se evalúan por orden y solo hasta la primera que confirma, porque ConfirmMerge se detiene en ella:
-// la ascendencia contra cada destino; si ninguno la confirma, el árbol equivalente contra cada
-// destino (si git lo admite; si no, la capa se omite con un aviso); y, si tampoco, el `gates.yaml` del
-// cambio, salvo para la rama de archivado, que no admite la capa 3. Usa solo referencias locales.
-func (d *doneRun) mergeEvidence(main string, planned branch.BranchPlan, repo branch.RepoPlan) (targets []string, evidence branch.MergeEvidence, err error) {
-	type reference struct{ shown, full string }
-	candidates := []reference{
-		{originRemote + "/" + repo.IntegrationBranch, "refs/remotes/" + originRemote + "/" + repo.IntegrationBranch},
-		{repo.IntegrationBranch, "refs/heads/" + repo.IntegrationBranch},
-	}
+// mergeEvidence reúne la evidencia de fusión de una rama contra su destino (D-09, D7): el destino
+// que fija branch.MergeDestination, las referencias que existen donde buscar su fusión (targets,
+// para el mensaje) y el resultado de las tres capas, que se evalúan por orden y solo hasta la
+// primera que confirma, porque ConfirmMerge se detiene en ella: la ascendencia contra cada destino;
+// si ninguno la confirma, el árbol equivalente contra cada destino (si git lo admite; si no, la capa
+// se omite con un aviso); y, si tampoco, el `gates.yaml` del cambio, salvo para la rama de archivado
+// y para el destino `main_branch` de un repositorio de dos etapas, que no admiten la capa 3 (la
+// evidencia `pr_merged` acredita la PR hacia la integración, nunca la segunda). Usa solo
+// referencias locales.
+func (d *doneRun) mergeEvidence(main string, planned branch.BranchPlan, repo branch.RepoPlan) (targets []string, destination string, evidence branch.MergeEvidence, err error) {
+	destination, prMergedApplies := branch.MergeDestination(repo, planned)
+	candidates := integrationReferences(destination)
 	// Una rama de rol se confirma contra la de seguimiento, que es local.
 	if planned.Kind == branch.KindRole {
-		candidates = []reference{{planned.From, "refs/heads/" + planned.From}}
+		candidates = []mergeReference{{planned.From, "refs/heads/" + planned.From}}
 	}
-	var existing []string
-	for _, candidate := range candidates {
-		if candidate.shown == "" {
-			continue
-		}
-		_, found, err := d.engine.git.ResolveCommit(d.ctx, main, candidate.full)
-		if err != nil {
-			return nil, evidence, err
-		}
-		if !found {
-			continue
-		}
-		targets = append(targets, candidate.shown)
-		existing = append(existing, candidate.full)
+	existing, evidence, unsupported, err := d.engine.mergeLayers(d.ctx, main, "refs/heads/"+planned.Name, candidates)
+	if err != nil {
+		return nil, destination, evidence, err
 	}
-	branchRef := "refs/heads/" + planned.Name
-
-	// Capa 1: ascendencia.
-	for _, target := range existing {
-		if evidence.Ancestry, err = d.engine.git.IsAncestor(d.ctx, main, branchRef, target); err != nil {
-			return nil, evidence, err
-		}
-		if evidence.Ancestry {
-			return targets, evidence, nil
-		}
+	targets = shownReferences(existing)
+	if unsupported {
+		d.warn("la capa de árbol equivalente (`git merge-tree --write-tree`) se omite porque git no la admite (requiere git 2.38 o superior): un merge por squash o rebase solo se confirma con evidencia `pr_merged` en gates.yaml o con --force")
 	}
-
-	// Capa 2: árbol equivalente. Sin soporte se omite sin error y con un aviso (Q1).
-	for _, target := range existing {
-		equivalent, supported, err := d.engine.git.MergeTreeEquivalent(d.ctx, main, target, branchRef)
-		if err != nil {
-			return nil, evidence, err
-		}
-		if !supported {
-			d.warn("la capa de árbol equivalente (`git merge-tree --write-tree`) se omite porque git no la admite (requiere git 2.38 o superior): un merge por squash o rebase solo se confirma con evidencia `pr_merged` en gates.yaml o con --force")
-			break
-		}
-		evidence.TreeLayerSupported = true
-		if evidence.TreeEquivalent = equivalent; equivalent {
-			return targets, evidence, nil
-		}
+	if evidence.Ancestry || evidence.TreeEquivalent {
+		return targets, destination, evidence, nil
 	}
-
-	// Capa 3: evidencia `pr_merged` del cambio. No aplica a la rama de archivado (REQ-25.16).
-	if planned.Kind != branch.KindArchive {
+	if prMergedApplies {
 		evidence.PRMerged = d.prMergedEvidence()
 	}
-	return targets, evidence, nil
+	return targets, destination, evidence, nil
 }
 
 // prMergedEvidence dice si el `gates.yaml` del cambio, activo o archivado (kickoff.ArchivedChangeRoot),

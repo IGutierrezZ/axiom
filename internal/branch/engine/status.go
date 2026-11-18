@@ -45,7 +45,7 @@ func (e *Engine) Status(ctx context.Context, cwd, change string, lane branch.Lan
 	if refusal != nil {
 		return branch.NewResult(operation).Refused(refusal)
 	}
-	plan, refusal := branch.Plan(facts.input)
+	plan, _, refusal := e.planWithPromotion(ctx, &facts, promotionRequest{args: branch.EnsureArgs{Operation: operation, Change: change, CWD: cwd, Lane: lane}})
 	if refusal != nil {
 		return branch.NewResult(operation).Refused(refusal)
 	}
@@ -248,6 +248,9 @@ func (e *Engine) describeRepository(ctx context.Context, operation, cwd string, 
 	default:
 		repository.CurrentBranch = name
 	}
+	if repo.TwoStage() && repo.Promotion == branch.PromotionAsk {
+		warnings = append(warnings, fmt.Sprintf("el modo de promoción de %s está pendiente: `axiom branch ensure` lo preguntará", repo.Name))
+	}
 	if len(repo.Branches) == 0 {
 		return repository, warnings, nil
 	}
@@ -308,6 +311,20 @@ func (e *Engine) describeRepository(ctx context.Context, operation, cwd string, 
 		}
 		described.ComparedTo, described.Ahead, described.Behind = compared.ref, &ahead, &behind
 	}
+
+	if repo.TwoStage() && repo.Promotion == branch.PromotionBranch {
+		for i := range repository.Branches {
+			described := &repository.Branches[i]
+			if described.Kind != branch.KindChange || !described.Exists {
+				continue
+			}
+			stageWarnings, err := e.describePromotionStage(ctx, operation, cwd, repo, described)
+			if err != nil {
+				return branch.RepositoryResult{}, nil, err
+			}
+			warnings = append(warnings, stageWarnings...)
+		}
+	}
 	return repository, warnings, nil
 }
 
@@ -322,4 +339,44 @@ func comparisonFor(planned branch.BranchPlan, base baseReference, haveBase bool,
 		return base
 	}
 	return baseReference{}
+}
+
+// describePromotionStage fija la etapa de promoción de la rama del cambio de un repositorio de dos
+// etapas en modo `branch` (REQ-25.48, design D8), solo con referencias locales: los commits que la
+// rama lleva por delante de la rama principal (sin `--base`, que no cuenta aquí) y la evidencia de
+// fusión de las capas 1 y 2 contra la integración. Con etapa `main`, la siguiente PR va a la rama
+// principal y PRTarget pasa a ser esta. Si la capa 2 no tiene soporte y no basta la ascendencia,
+// la etapa es inconclusa y se avisa en lugar de fingir certeza.
+func (e *Engine) describePromotionStage(ctx context.Context, operation, cwd string, repo branch.RepoPlan, described *branch.BranchResult) ([]string, *branch.Refusal) {
+	mainOnly := repo
+	mainOnly.BaseRef = ""
+	var aheadOfMain *int
+	main, found, err := e.resolveBase(ctx, mainOnly)
+	if err != nil {
+		return nil, gitRefusal(operation, cwd, "resolver la rama principal de "+repo.GitRoot, err)
+	}
+	branchRef := "refs/heads/" + described.Name
+	if found {
+		ahead, _, err := e.git.AheadBehind(ctx, repo.GitRoot, main.full, branchRef)
+		if err != nil {
+			return nil, gitRefusal(operation, cwd, "contar los commits de la rama "+described.Name, err)
+		}
+		aheadOfMain = &ahead
+	}
+
+	var evidence branch.MergeEvidence
+	unsupported := false
+	if aheadOfMain != nil && *aheadOfMain > 0 {
+		_, evidence, unsupported, err = e.mergeLayers(ctx, repo.GitRoot, branchRef, integrationReferences(repo.IntegrationBranch))
+		if err != nil {
+			return nil, gitRefusal(operation, cwd, "comprobar si la rama "+described.Name+" está fusionada en "+repo.IntegrationBranch, err)
+		}
+	}
+	stage, target, inconclusive := branch.PromotionStage(repo, aheadOfMain, evidence)
+	described.SetPromotionStage(stage)
+	described.PRTarget = target
+	if !inconclusive || !unsupported {
+		return nil, nil
+	}
+	return []string{fmt.Sprintf("no se puede comprobar si %s está fusionada en %s sin git 2.38 o superior (`git merge-tree --write-tree`): la siguiente PR puede ser ya hacia %s", described.Name, repo.IntegrationBranch, repo.MainBranch)}, nil
 }

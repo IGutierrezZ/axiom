@@ -406,3 +406,83 @@ func TestRegisteredChangeBranchFollowsRegistrySnapshotThenPolicy(t *testing.T) {
 		t.Errorf("sin registro ni instantánea = %q, se esperaba vacío (la compone la política)", got)
 	}
 }
+
+// REQ-25.36 y REQ-25.46: sin modo materializado la instantánea solo lleva la rama principal
+// declarada (el marcador) y la base efectiva; no congela una política que aún no se ha aplicado.
+func TestSnapshotRecordsTheMainBranchAndTheEffectiveBaseButNotAnUnappliedPromotion(t *testing.T) {
+	t.Parallel()
+	repo, _, _ := twoStageProject(t, "")
+
+	got := snapshotOf(t, repo, "x", "core")
+
+	if got.MainBranch != "master" || got.IntegrationBranch != "develop" {
+		t.Errorf("rama principal %q e integración %q, se esperaba master y develop", got.MainBranch, got.IntegrationBranch)
+	}
+	entry := got.Repositories[0]
+	if entry.Promotion != "" || entry.Base != "master" || entry.IntegrationBranch != "develop" {
+		t.Errorf("repositorio = %+v, se esperaba sin modo, base master (modo branch por defecto) e integración develop", entry)
+	}
+}
+
+// REQ-25.36 y REQ-25.46: monorepo SDD con la rama creada por `ensure` antes del sellado: el modo
+// del registro se congela con `main_branch` y la base efectiva; con `release` la base es la
+// integración. `ensure` nunca reescribe `kickoff.yaml` y, con el registro borrado, el modo se
+// resuelve desde la instantánea con origen `snapshot`.
+func TestSnapshotFreezesTheRecordedPromotionAndResolvesItBackWhenTheRecordIsGone(t *testing.T) {
+	t.Run("branch", func(t *testing.T) {
+		t.Parallel()
+		repo, _, _ := twoStageProject(t, "")
+		wantReady(t, ensurePromoted(t, EnsureRequest{CWD: repo, Change: "x"}))
+
+		got := snapshotOf(t, repo, "x", "core")
+
+		entry := got.Repositories[0]
+		if got.MainBranch != "master" || entry.Promotion != "branch" || entry.Base != "master" {
+			t.Fatalf("instantánea = %+v / %+v, se esperaba main_branch master, promotion branch y base master", got, entry)
+		}
+		sealWithSnapshot(t, repo, "x", got, "core")
+		file := filepath.Join(repo, "openspec", "changes", "x", kickoff.KickoffFileName)
+		sealed, err := os.ReadFile(file)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		wantReady(t, ensurePromoted(t, EnsureRequest{CWD: repo, Change: "x"}))
+
+		if after, err := os.ReadFile(file); err != nil || string(after) != string(sealed) {
+			t.Errorf("`ensure` no reescribe kickoff.yaml (%v):\n%s\n---\n%s", err, sealed, after)
+		}
+
+		if err := os.Remove(recordFile(commonDir(repo), "sdd", "x")); err != nil {
+			t.Fatal(err)
+		}
+		repository := onlyRepository(t, status(t, repo, "x", branch.LaneSDD))
+		wantPromotion(t, repository, branch.PromotionBranch, branch.PromotionSourceSnapshot)
+	})
+
+	t.Run("release", func(t *testing.T) {
+		t.Parallel()
+		repo, _, _ := twoStageProject(t, "  promotion: release\n")
+		wantReady(t, ensurePromoted(t, EnsureRequest{CWD: repo, Change: "x"}))
+
+		got := snapshotOf(t, repo, "x", "core")
+
+		entry := got.Repositories[0]
+		if got.MainBranch != "master" || entry.Promotion != "release" || entry.Base != "develop" {
+			t.Errorf("instantánea = %+v / %+v, se esperaba main_branch master, promotion release y base develop", got, entry)
+		}
+	})
+}
+
+// REQ-25.36 y REQ-25.46 (invariante): sin `main_branch` la
+// instantánea no lleva ninguno de los campos nuevos.
+func TestSnapshotWithoutMainBranchCarriesNoPromotionFields(t *testing.T) {
+	t.Parallel()
+	repo := newProject(t, configWithRoles(map[string][]string{"fullstack": {"."}}, "git:\n  integration_branch: main\n"))
+
+	got := snapshotOf(t, repo, "x", "fullstack")
+
+	if got.MainBranch != "" || got.Repositories[0].Promotion != "" || got.Repositories[0].Base != "main" {
+		t.Errorf("instantánea = %+v / %+v, sin main_branch no hay campos nuevos y la base es la integración", got, got.Repositories[0])
+	}
+}

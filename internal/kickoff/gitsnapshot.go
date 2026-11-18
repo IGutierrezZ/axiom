@@ -74,6 +74,9 @@ type GitSnapshotBranch struct {
 var (
 	validSnapshotRoles = map[string]bool{"change_branch": true, "specs_in_place": true, "code": true}
 	validSnapshotKinds = map[string]bool{"change": true, "role": true, "archive": true}
+	// validSnapshotPromotions son los modos de promoción que la instantánea puede congelar: `ask` es
+	// una pregunta pendiente, nunca un modo materializado.
+	validSnapshotPromotions = map[string]bool{"branch": true, "release": true}
 )
 
 // Validate comprueba la forma de la instantánea con las reglas de gitref (ramas y prefijos),
@@ -85,6 +88,11 @@ func (g GitSnapshot) Validate() error {
 	}
 	if err := gitref.ValidPrefix(g.BranchPrefix); err != nil {
 		return fmt.Errorf("kickoff: git.branch_prefix %q no es válido: %w", g.BranchPrefix, err)
+	}
+	if g.MainBranch != "" {
+		if err := gitref.ValidRefName(g.MainBranch); err != nil {
+			return fmt.Errorf("kickoff: git.main_branch %q no es válido: %w", g.MainBranch, err)
+		}
 	}
 	if g.ChangeBranch != "" {
 		if err := gitref.ValidRefName(g.ChangeBranch); err != nil {
@@ -131,6 +139,9 @@ func (r GitSnapshotRepo) validate() error {
 	}
 	if err := validBase(r.Base); err != nil {
 		return fmt.Errorf("base %q no es válida: %w", r.Base, err)
+	}
+	if r.Promotion != "" && !validSnapshotPromotions[r.Promotion] {
+		return fmt.Errorf("promotion desconocido %q para el repositorio %q: debe ser `branch` o `release`", r.Promotion, r.Path)
 	}
 	for _, branch := range r.Branches {
 		if !validSnapshotKinds[branch.Kind] {
