@@ -111,6 +111,7 @@ Plan stop: approved 2026-11-18; implementation continues
     - `TestOpaqueRepositoryContextResolutionNamesDistinctCauses` y `TestOpaqueRepositoryContextCauseIsScrubbed`: comparan con el texto inglés «The system cannot find the file specified.» y el sistema lo da en castellano. En la base `bd36e5c2` fallan antes, con `managed_assets_outdated`.
     - `TestReviewStatusSelectorFreeResolvesRepositoryRoot/safe_symlink`: sin privilegio para crear enlaces simbólicos («El cliente no dispone de un privilegio requerido»); falla igual en la base.
   - `internal/cli` no tiene subpaquetes.
+- **CI de la PR #275.** Fusión de `origin/main` (`e5ea6ca9`, `INDEX.md` regenerado con `axiom archive sync`). `2f75e806`: la guía de enrutado de `e2e/organicruntime` pasa `review mode enable|disable|status` y `disabled/unmanaged` a fragmentos prohibidos; la regla de procedencia de `internal/app` comprueba el escáner sobre una superficie sintética al no quedar `--agent` en los goldens. `1046e680` (decisión del usuario): j121 y j127 recorren el selector de RDD de la TUI y dejan de ejecutarse; siguen definidos hasta C-01-e. Los fallos restantes de `go test` en `bench/` son ambientales y coinciden con `main`.
 
 ## Spec viva
 
