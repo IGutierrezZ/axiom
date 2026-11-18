@@ -18,6 +18,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/IGutierrezZ/axiom/v3/internal/rddharness"
 	"github.com/IGutierrezZ/axiom/v3/internal/system"
 )
 
@@ -31,6 +32,9 @@ var (
 )
 
 func TestMain(m *testing.M) {
+	// RDD está suspendido sin la etiqueta rdd_harness (C-01-c): los tests en proceso
+	// que ejercitan la revisión activan el punto de inyección del paquete.
+	rddharness.SetForTesting(true)
 	testHome, err := os.MkdirTemp("", "gentle-ai-reviewtransaction-test-home-*")
 	if err != nil {
 		panic(err)

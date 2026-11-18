@@ -15,6 +15,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/opencode"
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/qwen"
 	runtimeopencode "github.com/IGutierrezZ/axiom/v3/internal/opencode"
+	"github.com/IGutierrezZ/axiom/v3/internal/rddharness"
 	"github.com/IGutierrezZ/axiom/v3/internal/system"
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
@@ -50,6 +51,9 @@ import (
 // TestRunInstallRefusesMissingKimiRegardlessOfUVPresence for that opposite,
 // deliberately-kept case.
 func TestMain(m *testing.M) {
+	// RDD está suspendido sin la etiqueta rdd_harness (C-01-c): los tests en proceso
+	// que ejercitan la revisión activan el punto de inyección del paquete.
+	rddharness.SetForTesting(true)
 	// Ceiling for the upward planning-home discovery (inc-24, R29): a marker
 	// (`.axiom-workspace`, `axiom.yaml`, `openspec/`) in an ancestor of the
 	// system temp directory, for instance in a developer's home directory,
