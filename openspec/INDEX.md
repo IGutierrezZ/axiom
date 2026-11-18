@@ -1,8 +1,8 @@
 # Catálogo Maestro de Especificaciones Vivas — Axiom
 
 > **Proyecto:** Axiom (Spec-Driven Development Platform)
-> **Última Sincronización:** 2026-11-17 21:07:58 UTC
-> **Total Dominios:** 71 | **Total Requerimientos:** 553 | **Total Escenarios BDD:** 1649
+> **Última Sincronización:** 2026-11-18 07:31:13 UTC
+> **Total Dominios:** 71 | **Total Requerimientos:** 553 | **Total Escenarios BDD:** 1650
 
 ---
 
@@ -41,7 +41,7 @@
 | `organic-agent-trigger-rules` | Organic Agent Routing Projection | 19 | 56 | [Ver Spec](specs/organic-agent-trigger-rules/spec.md) |
 | `persona-behavior-contract` | persona-behavior-contract Specification | 17 | 32 | [Ver Spec](specs/persona-behavior-contract/spec.md) |
 | `planning-home-resolution` | Especificación de Requerimientos: Resolución del Planning Home desde Cualquier Directorio (INC-24) | 13 | 59 | [Ver Spec](specs/planning-home-resolution/spec.md) |
-| `project-technical-context` | Especificación de Requerimientos: Contexto Técnico del Proyecto: Declaración, Lectura y Mantenimiento (INC-24) | 21 | 81 | [Ver Spec](specs/project-technical-context/spec.md) |
+| `project-technical-context` | Especificación de Requerimientos: Contexto Técnico del Proyecto: Declaración, Lectura y Mantenimiento (INC-24) | 21 | 82 | [Ver Spec](specs/project-technical-context/spec.md) |
 | `rdd-authority-disposition-plan` | RDD Authority Disposition Plan Specification | 7 | 11 | [Ver Spec](specs/rdd-authority-disposition-plan/spec.md) |
 | `rdd-authority-graph-classification` | RDD Authority Graph Classification Specification | 4 | 6 | [Ver Spec](specs/rdd-authority-graph-classification/spec.md) |
 | `rdd-authority-store` | RDD Authority Store Specification | 5 | 7 | [Ver Spec](specs/rdd-authority-store/spec.md) |
@@ -1270,6 +1270,7 @@ Definir el contexto técnico del proyecto como concepto de primera clase: cómo 
   - *Escenario BDD:* El comando falla cerrado ante una declaración inválida
 - **[REQ-24.29]** Lectura del Contexto por las Fases Lectoras y Presupuesto de Lectura
   - *Escenario BDD:* Las cuatro fases lectoras leen la entrada
+  - *Escenario BDD:* La propuesta lee la entrada solo sin exploración
   - *Escenario BDD:* Modo sin entrada
   - *Escenario BDD:* Sin contexto declarado
 - **[REQ-24.30]** Las Rutas de Referencia Nunca se Modifican
