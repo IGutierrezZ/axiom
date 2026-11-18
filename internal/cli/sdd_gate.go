@@ -46,6 +46,7 @@ func RunSDDGate(args []string, stdout io.Writer) error {
 func renderSDDGateHelp(stdout io.Writer) error {
 	_, _ = fmt.Fprintln(stdout, "Uso: axiom sdd gate <record|show> [argumentos]")
 	_, _ = fmt.Fprintln(stdout, "  record --cwd <ruta> --change <nombre> --gate spec|design|tasks|role-apply:<rol>|integration --decision approved|rejected [--hand-off] [--reason \"<texto>\"] [--evidence-kind pr_merged|deployment|attestation] [--commit <sha>] [--base-ref <ref>] [--evidence \"<texto>\"] [--actor <id>] [--json]")
+	_, _ = fmt.Fprintln(stdout, "    --actor: si se omite, la identidad git configurada (\"user.name <user.email>\") en la raíz del workspace; sin ella, \"cli\"")
 	_, _ = fmt.Fprintln(stdout, "  show --cwd <ruta> --change <nombre> [--json]")
 	return nil
 }
@@ -97,9 +98,11 @@ func runSDDGateRecord(args []string, stdout io.Writer) error {
 		}
 	}
 
-	actor := parsed.Actor
+	// Sin --actor, el actor es la identidad git de la raíz del workspace; sin identidad
+	// completa se conserva "cli" y el aviso se emite solo si el registro llega a escribirse.
+	actor, actorWarning := parsed.Actor, ""
 	if actor == "" {
-		actor = "cli"
+		actor, actorWarning = defaultActor(workspaceRoot, gateActorTarget)
 	}
 	digest, err := gateArtifactDigest(changeRoot, parsed.Gate, sealed)
 	if err != nil {
@@ -149,6 +152,7 @@ func runSDDGateRecord(args []string, stdout io.Writer) error {
 	if err != nil {
 		return err
 	}
+	emitActorIdentityWarning(actorWarning)
 
 	// REQ-27.12: aprobar publica, pero `gate record` solo registra. Calcula (sin ejecutar) la orden de
 	// `axiom sdd publish` que sigue al registro, para que el orquestador la ejecute una vez.
