@@ -4141,7 +4141,7 @@ func buildOrganicBinary(workspace string) (string, error) {
 	path := filepath.Join(workspace, name)
 	ctx, cancel := context.WithTimeout(context.Background(), organicSetupTimeout)
 	defer cancel()
-	command := organicCommandContext(ctx, "go", "build", "-trimpath", "-o", path, "./cmd/axiom")
+	command := organicCommandContext(ctx, "go", "build", "-tags", "rdd_harness", "-trimpath", "-o", path, "./cmd/axiom")
 	command.Dir = moduleRoot
 	command.Env = os.Environ()
 	if output, err := command.CombinedOutput(); err != nil {
