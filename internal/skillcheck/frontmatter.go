@@ -88,6 +88,11 @@ func parseFrontmatter(content string) (frontmatter, []Finding) {
 		if line[0] == '#' {
 			continue
 		}
+		// Una secuencia YAML sin sangrar bajo una clave (`tags:` seguida de `- a`)
+		// es válida: sus elementos pertenecen a la clave anterior.
+		if current != "" && (line == "-" || strings.HasPrefix(line, "- ")) {
+			continue
+		}
 		key, rawValue, ok := strings.Cut(line, ":")
 		if !ok {
 			findings = append(findings, Finding{Rule: RuleFrontmatterLine, Severity: SeverityError,

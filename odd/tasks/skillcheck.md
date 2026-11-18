@@ -71,6 +71,12 @@ Plan stop: approved 2026-11-18; implementation continues
 - T3: hecho; checks: go test ./internal/skillcheck/... ./internal/skillregistry/... ./internal/doctor/... ./internal/cli/ -run Doctor|ProjectSkills|SkillFolderRuntimes: ok
 - T4: hecho; checks: go test ./cmd/axiom/ -run Skill: ok; reejecutados T1-T3 + go vet + gofmt -l limpios
 
+Commits: T1 `951d3230`, T2 `c13562d0`, T3 `42a29e04`, T4 `4150262f`. Rutas: las cuatro delegadas (un writer; disparadores de escritura de 2+ ficheros no triviales y preparación).
+
+Verificación: RDD apagado; `axiom review assess` dio riesgo `high`, así que hubo verificador independiente: sin bugs confirmados contra los criterios. Corrección acotada de sus sospechas: el parser acepta secuencias YAML sin sangrar bajo una clave (antes, error estructural en skills de terceros) y `axiom skill check --path` rechaza una ruta inexistente. Se deja sin cambio que `skill check` exija carpeta de usuario resoluble: con home vacío las carpetas de usuario serían relativas al directorio actual.
+
+Seguimiento fuera de alcance: las skills del propio repositorio que `skill check` señala (`axiom-branch-pr: name-mismatch`, presupuestos de `description` en `axiom-bench` e `issue-root-resolution`, referencia `references/openspec-adoption.md` ausente en `sdd-spec`).
+
 ## Siguiente paso
 
-T1.
+PR única con `type:feat` y `size:exception` (+~2100/−300 líneas), cuando el usuario la autorice.

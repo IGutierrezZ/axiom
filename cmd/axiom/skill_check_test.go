@@ -93,6 +93,17 @@ func TestSkillCheckRechazaArgumentosInesperados(t *testing.T) {
 	}
 }
 
+func TestSkillCheckRechazaRutaInexistente(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	missing := filepath.Join(t.TempDir(), "no-existe")
+	if code := runSkillGroup([]string{"check", "--path", missing}, &stdout, &stderr); code != 1 {
+		t.Fatalf("exit = %d, want 1", code)
+	}
+	if !strings.Contains(stderr.String(), "no existe") {
+		t.Errorf("stderr = %q", stderr.String())
+	}
+}
+
 func TestSkillGroupHelpListsCheck(t *testing.T) {
 	if !strings.Contains(skillGroupHelp(), "check") || !strings.Contains(axiomHelpText(), "skill check") {
 		t.Fatal("la ayuda debe documentar `skill check`")

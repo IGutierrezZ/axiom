@@ -42,6 +42,10 @@ func runSkillCheck(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintf(stderr, "Error resolviendo ruta: %v\n", err)
 		return 1
 	}
+	if info, statErr := os.Stat(root); statErr != nil || !info.IsDir() {
+		fmt.Fprintf(stderr, "Error: la ruta %s no existe o no es un directorio\n", root)
+		return 1
+	}
 	home, err := os.UserHomeDir()
 	if err != nil || home == "" {
 		fmt.Fprintf(stderr, "Error: no se pudo resolver la carpeta de usuario: %v\n", err)

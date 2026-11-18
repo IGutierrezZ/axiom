@@ -32,6 +32,8 @@ func TestCheckContentTabla(t *testing.T) {
 		{name: "CRLF y comentario de sección", content: "<!-- section:model-x -->\r\n---\r\nname: demo\r\ndescription: \"A. Trigger: b\"\r\n---\r\nx\r\n"},
 		{name: "sin frontmatter", content: "# hola\n", errors: []string{RuleFrontmatterStart}},
 		{name: "frontmatter sin cierre", content: "---\nname: demo\n", errors: []string{RuleFrontmatterClose}},
+		{name: "secuencia sin sangrar portable", content: "---\nname: demo\ndescription: \"A. Trigger: b\"\nallowed-tools:\n- Read\n- Grep\n---\n", opts: Options{Profile: Portable}, warns: []string{RuleKeysAllowed}},
+		{name: "guion sin clave previa", content: "---\n- suelto\nname: demo\ndescription: \"A. Trigger: b\"\n---\n", errors: []string{RuleFrontmatterLine}},
 		{name: "linea sin dos puntos", content: "---\nname: demo\nbasura\ndescription: \"A. Trigger: b\"\n---\n", errors: []string{RuleFrontmatterLine}},
 		{name: "name ausente", content: "---\ndescription: \"A. Trigger: b\"\n---\n", errors: []string{RuleNameMissing}},
 		{name: "name distinto del directorio", content: "---\nname: otro\ndescription: \"A. Trigger: b\"\n---\n", errors: []string{RuleNameMismatch}},
