@@ -33,7 +33,7 @@ Public/contextual comments follow the target context language by default. Explic
 - Preserve user-owned `strict_tdd`, test commands, and model/provider/profile/effort selection. When Strict TDD is active, load `strict-tdd-verify.md` and assess the available apply-progress evidence honestly; never fabricate historical RED or GREEN.
 - Report actual command results and limitations. Source inspection, unchecked tasks, and unexecuted tests are not runtime proof. Missing tooling means unavailable checks, not PASS.
 - Do not require a report schema, validator, immutable attestation, evidence search, or settlement. Missing, stale, malformed, or failed reports do not gate archive, except the verification matrix of an ISO change (see the ISO rule below).
-- SDD never offers, launches, or consumes RDD. Findings do not start automatic review, refuter, or correction loops.
+- Findings do not start automatic review, refuter, or correction loops.
 - Apply `rules.verify` from `openspec/config.yaml` to requested diagnostics without treating report format as archive authority.
 - When the status projects `technicalContext`, read the `entry` file of each mode and consult the remaining `paths` only on demand (see `../_shared/project-baseline-convention.md`).
 - Never create, modify, or delete files under `technicalContext.reference` paths.

@@ -53,7 +53,6 @@ func TestSDDApplyRoutesToArchiveWithOptionalVerify(t *testing.T) {
 	for _, want := range []string{
 		"After all implementation work units finish, return control to the parent orchestrator for archive.",
 		"Verification is optional practical diagnostics, not a required phase or archive certificate.",
-		"neither executor nor parent offers or launches RDD within SDD.",
 	} {
 		if !strings.Contains(content, want) {
 			t.Fatalf("sdd-apply missing ordering rule %q", want)
@@ -62,12 +61,14 @@ func TestSDDApplyRoutesToArchiveWithOptionalVerify(t *testing.T) {
 	if strings.Contains(content, "review/start(target)") {
 		t.Fatal("sdd-apply retains a direct post-apply review launch")
 	}
+	if strings.Contains(content, "RDD") {
+		t.Fatal("sdd-apply names RDD, which is suspended (C-01-c)")
+	}
 }
 
 func TestSDDVerifyRunsWithoutReviewArtifacts(t *testing.T) {
 	content := assets.MustRead("skills/sdd-verify/SKILL.md")
 	for _, want := range []string{
-		"SDD never offers, launches, or consumes RDD.",
 		"Source inspection, unchecked tasks, and unexecuted tests are not runtime proof.",
 		"Missing tooling means unavailable checks, not PASS.",
 		"Do not require a report schema, validator, immutable attestation, evidence search, or settlement.",
@@ -79,6 +80,7 @@ func TestSDDVerifyRunsWithoutReviewArtifacts(t *testing.T) {
 	}
 	for _, forbidden := range []string{
 		"authoritative preterminal transaction",
+		"RDD",
 		"missing_review_authority",
 		"authority_only_failure",
 		"exact canonical verification-evidence bytes, not only their hash",

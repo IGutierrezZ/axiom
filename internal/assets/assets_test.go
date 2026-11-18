@@ -474,8 +474,11 @@ func TestSDDVerificationAndArchiveContractsIgnoreReviewContext(t *testing.T) {
 				t.Errorf("%s retains %q", path, forbidden)
 			}
 		}
-		if !strings.Contains(content, "RDD") || !strings.Contains(content, "optional") {
-			t.Errorf("%s omits optional verification/RDD boundary", path)
+		if strings.Contains(content, "RDD") {
+			t.Errorf("%s still names RDD (suspended, C-01-c)", path)
+		}
+		if !strings.Contains(content, "optional") {
+			t.Errorf("%s omits the optional verification boundary", path)
 		}
 	}
 	skill := mustReadResolved("skills/sdd-verify/SKILL.md")

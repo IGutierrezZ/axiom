@@ -3953,12 +3953,14 @@ func TestRunSyncWithSelection_WritesExpectedFiles(t *testing.T) {
 	// post-apply returns to SDD verification without offering review. It
 	// must not negotiate canonical STATUS or retain review authority itself.
 	for _, required := range []string{
-		"SDD never offers or launches RDD",
 		"SDD does not retain, read, or persist review lineage, receipt, binding, successor, gate, transaction, or prior authority",
 	} {
 		if !strings.Contains(postApply, required) {
 			t.Errorf("synced OpenCode post-apply controller is missing parent-owned routing clause %q", required)
 		}
+	}
+	if strings.Contains(postApply, "RDD") {
+		t.Error("synced OpenCode post-apply controller names RDD, which is suspended (C-01-c)")
 	}
 	if strings.Contains(postApply, canonicalStatusAxiom) || strings.Contains(postApply, canonicalStatusGentle) {
 		t.Error("synced OpenCode post-apply controller repeats canonical STATUS instead of consuming parent routing")
