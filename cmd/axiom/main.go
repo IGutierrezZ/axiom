@@ -610,6 +610,10 @@ func runWorkspaceValidate(args []string) {
 		report.Valid = false
 	}
 
+	// `promotion` sin una segunda rama a la que promover no tiene efecto: se avisa
+	// sin invalidar la configuración (REQ-25.26).
+	report.Warnings = append(report.Warnings, workspace.PromotionWarnings(cfg)...)
+
 	if !report.Valid {
 		fmt.Printf("[ERROR] Espacio de trabajo NO CONFORME (Topología: %s)\n", report.Topology)
 		fmt.Printf("Directorio evaluado: %s\n\n", report.WorkspaceRoot)

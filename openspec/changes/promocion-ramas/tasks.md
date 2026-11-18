@@ -36,22 +36,22 @@ Aviso de ámbito: esta lista no toca `internal/branch/engine/publication.go`, `h
 
 ## Fase 1: Esquema y política (Unidad 1)
 
-- [ ] 1.1 En `internal/workspace/gitpolicy.go`: añadir `MainBranch` y `Promotion` a `GitConfig` y `Promotion` a `RepositoryPolicy`; constantes `PromotionBranch`, `PromotionRelease`, `PromotionAsk`; ampliar `gitKeys` y `repositoryKeys` (`main_branch` en `repositories[]` queda como clave desconocida); `branchValidator(key)` pasa a `switch` con `validPromotion` (acepta solo `branch`, `release`, `ask`, distingue mayúsculas, el error enumera los tres); `resolveGit` copia ambos campos sin valor por defecto; ampliar los textos de error que enumeran claves (`:89`, `:114`, `:128`).
+- [x] 1.1 En `internal/workspace/gitpolicy.go`: añadir `MainBranch` y `Promotion` a `GitConfig` y `Promotion` a `RepositoryPolicy`; constantes `PromotionBranch`, `PromotionRelease`, `PromotionAsk`; ampliar `gitKeys` y `repositoryKeys` (`main_branch` en `repositories[]` queda como clave desconocida); `branchValidator(key)` pasa a `switch` con `validPromotion` (acepta solo `branch`, `release`, `ask`, distingue mayúsculas, el error enumera los tres); `resolveGit` copia ambos campos sin valor por defecto; ampliar los textos de error que enumeran claves (`:89`, `:114`, `:128`).
   Cubre: REQ-25.26, REQ-25.27
   Aceptación: `promotion: Branch` y `main_branch` dentro de `repositories[]` producen error; los errores acumulados nombran las cuatro claves; `resolveGit` sin `promotion` devuelve vacío.
-- [ ] 1.2 En `internal/workspace/gitpolicy.go`: función pura `PromotionWarnings(cfg *WorkspaceConfig) []string` con los dos casos de D1 (`git.promotion` sin `main_branch` o con `main_branch` igual a `integration_branch`; `repositories[i].promotion` cuando la integración efectiva de la entrada iguala a `main_branch` o `main_branch` no existe).
+- [x] 1.2 En `internal/workspace/gitpolicy.go`: función pura `PromotionWarnings(cfg *WorkspaceConfig) []string` con los dos casos de D1 (`git.promotion` sin `main_branch` o con `main_branch` igual a `integration_branch`; `repositories[i].promotion` cuando la integración efectiva de la entrada iguala a `main_branch` o `main_branch` no existe).
   Cubre: REQ-25.26, REQ-25.27
-- [ ] 1.3 En `cmd/axiom/main.go` (junto a `ValidateRepositoryPolicies`, `:606`): añadir los avisos de `PromotionWarnings` a `report.Warnings` sin tocar `report.Valid`.
+- [x] 1.3 En `cmd/axiom/main.go` (junto a `ValidateRepositoryPolicies`, `:606`): añadir los avisos de `PromotionWarnings` a `report.Warnings` sin tocar `report.Valid`.
   Cubre: REQ-25.26
-- [ ] 1.4 En `internal/branch/policy.go`: `Policy` y `RepoPolicy` ganan `MainBranch` y `Promotion`; `RepoPolicy` gana `PromotionSource` (`repository` | `git` | vacío); `ResolvePolicy` copia los campos y carga `RepositoryPolicy.Promotion` en `PerRepository`; `For(rel)` hereda campo a campo (vacío hereda; `MainBranch` siempre del workspace). Crear `internal/branch/promotion.go` solo con `type Promotion string` y sus tres constantes (el resto de D3 va en 2.1).
+- [x] 1.4 En `internal/branch/policy.go`: `Policy` y `RepoPolicy` ganan `MainBranch` y `Promotion`; `RepoPolicy` gana `PromotionSource` (`repository` | `git` | vacío); `ResolvePolicy` copia los campos y carga `RepositoryPolicy.Promotion` en `PerRepository`; `For(rel)` hereda campo a campo (vacío hereda; `MainBranch` siempre del workspace). Crear `internal/branch/promotion.go` solo con `type Promotion string` y sus tres constantes (el resto de D3 va en 2.1).
   Cubre: REQ-25.3, REQ-25.46
-- [ ] 1.5 En `internal/branch/planner.go`: `repoPolicy()` (`:445`) propaga `MainBranch` y `Promotion` del workspace para un repositorio fuera de la carpeta maestra.
+- [x] 1.5 En `internal/branch/planner.go`: `repoPolicy()` (`:445`) propaga `MainBranch` y `Promotion` del workspace para un repositorio fuera de la carpeta maestra.
   Cubre: REQ-25.3
-- [ ] 1.6 Tests en `internal/workspace/gitpolicy_test.go`: tablas de claves nuevas válidas e inválidas, `main_branch` en `repositories[]` rechazada, `promotion: Branch` rechazada, `resolveGit` sin defecto, `PromotionWarnings` (sin `main`, `main` igual a la integración, entrada que iguala la integración); añadir las claves nuevas a `wantErrorContains` en `:146`, `:176` y `:539`.
+- [x] 1.6 Tests en `internal/workspace/gitpolicy_test.go`: tablas de claves nuevas válidas e inválidas, `main_branch` en `repositories[]` rechazada, `promotion: Branch` rechazada, `resolveGit` sin defecto, `PromotionWarnings` (sin `main`, `main` igual a la integración, entrada que iguala la integración); añadir las claves nuevas a `wantErrorContains` en `:146`, `:176` y `:539`.
   Cubre: REQ-25.26, REQ-25.27
-- [ ] 1.7 Tests en `internal/branch/policy_test.go`: herencia `git` → `repositories[]` de `Promotion`, `MainBranch` solo global, repositorio fuera de la carpeta maestra. Test de `workspace validate` en `cmd/axiom/` (patrón `WorkspaceValidate` existente): `promotion` sin `main_branch` avisa y `Valid` sigue en `true`.
+- [x] 1.7 Tests en `internal/branch/policy_test.go`: herencia `git` → `repositories[]` de `Promotion`, `MainBranch` solo global, repositorio fuera de la carpeta maestra. Test de `workspace validate` en `cmd/axiom/` (patrón `WorkspaceValidate` existente): `promotion` sin `main_branch` avisa y `Valid` sigue en `true`.
   Cubre: REQ-25.3, REQ-25.26, REQ-25.27
-- [ ] 1.8 Verificar y cerrar: `go test ./internal/workspace/ ./internal/branch/` y `go test ./cmd/axiom/ -run "WorkspaceValidate"`; commit `feat(workspace): claves main_branch y promotion en git y repositories`.
+- [x] 1.8 Verificar y cerrar: `go test ./internal/workspace/ ./internal/branch/` y `go test ./cmd/axiom/ -run "WorkspaceValidate"`; commit `feat(workspace): claves main_branch y promotion en git y repositories`.
   Aceptación: tests en verde y sin cambios en los resultados de tests existentes salvo la lista de claves.
 
 ## Fase 2: Dominio puro de la promoción (Unidad 2)

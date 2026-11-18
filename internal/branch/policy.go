@@ -17,6 +17,12 @@ import (
 type Policy struct {
 	IntegrationBranch string
 	BranchPrefix      string
+	// MainBranch es `git.main_branch`: la rama principal de los proyectos con dos
+	// etapas de promoción. Vacía, la promoción es de una sola etapa. Solo existe en
+	// el workspace: ningún repositorio la sustituye.
+	MainBranch string
+	// Promotion es `git.promotion`; vacía, rige el defecto del motor.
+	Promotion Promotion
 	// PerRepository guarda lo declarado por cada repositorio, con la clave normalizada
 	// (ruta relativa a la carpeta maestra, con «/»). Un campo vacío hereda el valor
 	// del workspace; la herencia la resuelve For.
@@ -24,8 +30,14 @@ type Policy struct {
 }
 
 // RepoPolicy es la política efectiva de un repositorio (o lo declarado por él, en
-// Policy.PerRepository).
-type RepoPolicy struct{ IntegrationBranch, BranchPrefix string }
+// Policy.PerRepository). MainBranch siempre sale del workspace. PromotionSource
+// dice de qué capa sale Promotion: `repository` si lo declara la entrada, `git` si
+// lo hereda del bloque y vacío si nadie lo declara.
+type RepoPolicy struct {
+	IntegrationBranch, BranchPrefix, MainBranch string
+	Promotion                                   Promotion
+	PromotionSource                             string
+}
 
 // ResolvePolicy resuelve la política a partir de la configuración cargada. Es total:
 // con `cfg == nil` (sin axiom.yaml) o con `cfg.Git == nil` (una configuración
@@ -46,6 +58,8 @@ func ResolvePolicy(cfg *workspace.WorkspaceConfig) Policy {
 		if git.BranchPrefix != "" {
 			policy.BranchPrefix = git.BranchPrefix
 		}
+		policy.MainBranch = git.MainBranch
+		policy.Promotion = Promotion(git.Promotion)
 	}
 	for _, entry := range cfg.Repositories {
 		key := repoKey(entry.Path)
@@ -55,7 +69,11 @@ func ResolvePolicy(cfg *workspace.WorkspaceConfig) Policy {
 		if policy.PerRepository == nil {
 			policy.PerRepository = map[string]RepoPolicy{}
 		}
-		policy.PerRepository[key] = RepoPolicy{IntegrationBranch: entry.IntegrationBranch, BranchPrefix: entry.BranchPrefix}
+		policy.PerRepository[key] = RepoPolicy{
+			IntegrationBranch: entry.IntegrationBranch,
+			BranchPrefix:      entry.BranchPrefix,
+			Promotion:         Promotion(entry.Promotion),
+		}
 	}
 	return policy
 }
@@ -66,16 +84,35 @@ func ResolvePolicy(cfg *workspace.WorkspaceConfig) Policy {
 // `./web/` y `web` son el mismo repositorio. Sin entrada propia, o en lo que la
 // entrada no declara, rige el valor del workspace.
 func (p Policy) For(repoRelPath string) RepoPolicy {
-	effective := RepoPolicy{IntegrationBranch: p.IntegrationBranch, BranchPrefix: p.BranchPrefix}
+	effective := p.workspacePolicy()
 	declared, ok := p.PerRepository[repoKey(repoRelPath)]
 	if !ok {
 		return effective
+	}
+	if declared.Promotion != "" {
+		effective.Promotion = declared.Promotion
+		effective.PromotionSource = PromotionSourceRepository
 	}
 	if declared.IntegrationBranch != "" {
 		effective.IntegrationBranch = declared.IntegrationBranch
 	}
 	if declared.BranchPrefix != "" {
 		effective.BranchPrefix = declared.BranchPrefix
+	}
+	return effective
+}
+
+// workspacePolicy es la política que rige un repositorio sin entrada propia en
+// `repositories:`: la del bloque `git:`.
+func (p Policy) workspacePolicy() RepoPolicy {
+	effective := RepoPolicy{
+		IntegrationBranch: p.IntegrationBranch,
+		BranchPrefix:      p.BranchPrefix,
+		MainBranch:        p.MainBranch,
+		Promotion:         p.Promotion,
+	}
+	if p.Promotion != "" {
+		effective.PromotionSource = PromotionSourceGit
 	}
 	return effective
 }

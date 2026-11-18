@@ -444,7 +444,7 @@ func repositoryRole(topology workspace.TopologyType, planning bool) RepoRole {
 // maestra solo hereda la del workspace.
 func repoPolicy(policy Policy, facts RepoFacts) RepoPolicy {
 	if facts.RelPath == "" {
-		return RepoPolicy{IntegrationBranch: policy.IntegrationBranch, BranchPrefix: policy.BranchPrefix}
+		return policy.workspacePolicy()
 	}
 	return policy.For(facts.RelPath)
 }
