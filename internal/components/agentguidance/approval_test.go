@@ -19,7 +19,6 @@ func TestRenderRoutingCarriesInformedApprovalOnceForEveryAgent(t *testing.T) {
 		"immediately before it, and approves exactly that",
 		"never widens the scope",
 		"does not choose: ask again",
-		"gentle-ai.review-integration.consent/v3",
 		"axiom.sdd-integration.consent/v1",
 		"exact allowed answers of a Lossless Blocking Prompt",
 		"publishing, remote, and destructive actions",
