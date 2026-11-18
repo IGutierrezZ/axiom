@@ -125,6 +125,18 @@ func TestRenderedSurfaceNamesOnlyItsOwnRuntime(t *testing.T) {
 	}
 
 	if verified == 0 {
-		t.Fatal("verified no --agent binding in any rendered golden; either the surfaces stopped binding identity or the scanner went stale")
+		// C-01-c: suspending RDD removed the only rendered --agent bindings
+		// (the Review Execution Contract), so the rule now holds over the
+		// goldens without a subject. Prove the scanner itself is not stale on
+		// a synthetic surface instead of failing on the empty corpus.
+		probe := "Run `axiom review status --agent claude-code` now."
+		invocations := extractInvocations("probe", probe)
+		if len(invocations) != 1 {
+			t.Fatalf("verified no --agent binding in any rendered golden and the scanner extracted %d invocations from a synthetic surface; the scanner went stale", len(invocations))
+		}
+		values := agentFlagValues(invocations[0].command)
+		if len(values) != 1 || values[0] != "claude-code" || len(rawAgentBindingRegexp.FindAllString(probe, -1)) != 1 {
+			t.Fatalf("verified no --agent binding in any rendered golden and the scanner misread a synthetic binding (values %q); the scanner went stale", values)
+		}
 	}
 }

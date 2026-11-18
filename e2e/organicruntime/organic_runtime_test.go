@@ -1903,6 +1903,11 @@ var organicRoutingGuidanceRequiredFragments = []string{
 	"Optional SDD",
 	"never selects SDD",
 	"never create SDD artifacts",
+}
+
+// organicRoutingGuidanceForbiddenFragments is RDD prose that routing guidance
+// must no longer carry while RDD is suspended (C-01-c).
+var organicRoutingGuidanceForbiddenFragments = []string{
 	"review mode enable|disable|status",
 	"disabled/unmanaged",
 }
@@ -1952,6 +1957,11 @@ func TestOrganicConfiguredAgentReceivesRoutingGuidanceCursor(t *testing.T) {
 	for _, fragment := range organicRoutingGuidanceRequiredFragments {
 		if !bytes.Contains(rendered, []byte(fragment)) {
 			t.Fatalf("routing guidance for cursor omits %q:\n%s", fragment, rendered)
+		}
+	}
+	for _, fragment := range organicRoutingGuidanceForbiddenFragments {
+		if bytes.Contains(rendered, []byte(fragment)) {
+			t.Fatalf("routing guidance for cursor still carries RDD prose %q:\n%s", fragment, rendered)
 		}
 	}
 }
