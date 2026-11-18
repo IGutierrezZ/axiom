@@ -24,7 +24,8 @@ func TestWorkspaceChecksSkipProjectsWithoutAxiomYAML(t *testing.T) {
 	home, root := t.TempDir(), t.TempDir()
 	t.Chdir(t.TempDir())
 	for id := range runDoctorChecks(t, doctor.Options{Home: home, Root: root}) {
-		if strings.HasPrefix(string(id), "project:") {
+		// project:skills no depende de axiom.yaml: solo de que haya raíz.
+		if strings.HasPrefix(string(id), "project:") && id != doctor.CheckProjectSkills {
 			t.Fatalf("un proyecto sin axiom.yaml no debe tener %s", id)
 		}
 	}

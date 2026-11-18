@@ -164,6 +164,7 @@ func buildDoctorChecks(opts doctor.Options) ([]doctor.Check, state.InstallState)
 	)
 	checks = append(checks, projectDoctorChecks(opts, stateStore)...)
 	checks = append(checks, workspaceDoctorChecks(opts)...)
+	checks = append(checks, skillsDoctorChecks(opts, installedAgents)...)
 	return checks, installedState
 }
 

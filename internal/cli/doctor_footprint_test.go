@@ -81,6 +81,8 @@ func writeFootprintFile(t *testing.T, path string) {
 
 // El doctor no marca GGA ausente como fallo: ya no forma parte de ningún preset.
 func TestRunDoctor_GGAAbsentIsNotAFailure(t *testing.T) {
+	// El proyecto de la carpeta actual aporta sus propias comprobaciones (project:skills): se aísla.
+	t.Chdir(t.TempDir())
 	stubDoctorUserPath(t, nil)
 	home := t.TempDir()
 	writeDoctorState(t, home, `{"installed_agents":["claude-code"]}`)
@@ -150,6 +152,8 @@ func TestRunDoctor_FootprintIgnoresAnAgentsSkillsDirWithoutAxiomSkills(t *testin
 // Restos de una instalación global: se listan y se marcan como tales sin afectar
 // al estado de salud.
 func TestRunDoctor_FootprintMarksGlobalLeftovers(t *testing.T) {
+	// El proyecto de la carpeta actual aporta sus propias comprobaciones (project:skills): se aísla.
+	t.Chdir(t.TempDir())
 	home := t.TempDir()
 	t.Setenv("APPDATA", filepath.Join(home, "AppData", "Roaming"))
 	writeDoctorState(t, home, `{"installed_agents":["claude-code"]}`)

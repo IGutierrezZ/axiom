@@ -39,7 +39,7 @@ Instalar skills en Pi; que `approve` instale la skill en las carpetas de los run
 
 - [x] **T1** — Paquete `internal/skillcheck`: parser de frontmatter, reglas con severidad por perfil, comprobación de referencias, API `CheckFile`/`CheckDir`; tests de tabla. `TestSkillFrontmatterIsLintClean` delega en él (perfil `Canonical`, presupuesto especial conservado). Ruta: delegada (writer; 2+ ficheros no triviales).
 - [x] **T2** — Puertas: `Manager.Approve` (perfil según `origin` de `metadata.json`), minero antes de depositar, `agentbuilder.Install` con frontmatter compuesto en código. Tests de rechazo con mensaje. Ruta: delegada (writer).
-- [ ] **T3** — Comprobaciones de conjunto en `skillcheck` (escaneo de carpetas de proyecto y usuario de `skillregistry`, sombras, alcance por carpeta inyectado desde los adaptadores, aviso de Pi, frescura) y comprobación `project:skills` de `doctor`. Ruta: delegada (writer).
+- [x] **T3** — Comprobaciones de conjunto en `skillcheck` (escaneo de carpetas de proyecto y usuario de `skillregistry`, sombras, alcance por carpeta inyectado desde los adaptadores, aviso de Pi, frescura) y comprobación `project:skills` de `doctor`. Ruta: delegada (writer).
 - [ ] **T4** — `axiom skill check [--json] [--path]` en `cmd/axiom`, ayuda del grupo `skill`, tests en proceso; documentación (`docs/usage.md`, `docs/manual-de-inicio.md`, `docs/skill-registry.md`). Ruta: delegada (writer).
 
 ## Criterio de aceptación
@@ -68,6 +68,7 @@ Plan stop: approved 2026-11-18; implementation continues
 
 - T1: hecho; checks: go test ./internal/skillcheck/... ./internal/assets/ -run Skill ./internal/autoskill/...: ok
 - T2: hecho; checks: go test ./internal/autoskill/... ./internal/agentbuilder/... ./internal/tui/ -run AgentBuilder ./cmd/axiom/ -run Skill: ok
+- T3: hecho; checks: go test ./internal/skillcheck/... ./internal/skillregistry/... ./internal/doctor/... ./internal/cli/ -run Doctor|ProjectSkills|SkillFolderRuntimes: ok
 
 ## Siguiente paso
 
