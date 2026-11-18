@@ -9,6 +9,18 @@ import (
 
 // ─── WelcomeOptions ──────────────────────────────────────────────────────────
 
+// TestWelcomeOptions_NoRDDEntry: RDD está suspendido (C-01-c), el menú no ofrece
+// «Revisión formal RDD».
+func TestWelcomeOptions_NoRDDEntry(t *testing.T) {
+	for _, showProfiles := range []bool{false, true} {
+		for _, opt := range screens.WelcomeOptions(nil, true, showProfiles, 1, true) {
+			if strings.Contains(opt, "RDD") || strings.Contains(opt, "Revisión formal") {
+				t.Errorf("el menú no debe ofrecer RDD; opción %q", opt)
+			}
+		}
+	}
+}
+
 // TestWelcomeOptions_WithoutProfiles verifies that when showProfiles is false,
 // the "Perfiles SDD de OpenCode" option is NOT present.
 func TestWelcomeOptions_WithoutProfiles(t *testing.T) {
@@ -69,23 +81,23 @@ func TestWelcomeOptions_WithProfiles_CountOne(t *testing.T) {
 	}
 }
 
-// TestWelcomeOptions_OptionCount_WithoutProfiles verifies 15 options when showProfiles=false
+// TestWelcomeOptions_OptionCount_WithoutProfiles verifies 14 options when showProfiles=false
 // and hasEngines=true.
 func TestWelcomeOptions_OptionCount_WithoutProfiles(t *testing.T) {
 	opts := screens.WelcomeOptions(nil, true, false, 0, true)
-	// Includes the Receipt-Driven Development and Governance entries.
-	want := 15
+	// Includes the Governance entry (no RDD entry while it is suspended).
+	want := 14
 	if len(opts) != want {
 		t.Errorf("WelcomeOptions(showProfiles=false, hasEngines=true) = %d options, want %d; opts: %v", len(opts), want, opts)
 	}
 }
 
-// TestWelcomeOptions_OptionCount_WithProfiles verifies 16 options when showProfiles=true
+// TestWelcomeOptions_OptionCount_WithProfiles verifies 15 options when showProfiles=true
 // and hasEngines=true.
 func TestWelcomeOptions_OptionCount_WithProfiles(t *testing.T) {
 	opts := screens.WelcomeOptions(nil, true, true, 2, true)
-	// Includes the Receipt-Driven Development and Governance entries.
-	want := 16
+	// Includes the Governance entry (no RDD entry while it is suspended).
+	want := 15
 	if len(opts) != want {
 		t.Errorf("WelcomeOptions(showProfiles=true, hasEngines=true) = %d options, want %d; opts: %v", len(opts), want, opts)
 	}
