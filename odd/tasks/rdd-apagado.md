@@ -41,11 +41,11 @@ Desactivado: `openspec/config.yaml` declara `strict_tdd: false` y no hay elecci�
 
 ## Tareas
 
-- [ ] **T1 · Modo siempre apagado y etiqueta `rdd_harness`** (ruta: delegada, un escritor; disparador: 4+ ficheros no triviales en varios paquetes)
+- [x] **T1 · Modo siempre apagado y etiqueta `rdd_harness`** (ruta: delegada, un escritor; disparador: 4+ ficheros no triviales en varios paquetes)
   - Constante de compilación por etiqueta y punto de inyección para tests; `rddModeStatus`, `ResolveRDDMode` y `ResolveRDDModeStrict` devuelven `off`/`default` sin la etiqueta, aunque haya preferencias `on` guardadas (global, proyecto del hub, clon).
   - `TestMain` con el punto de inyección en los paquetes que ejercitan RDD en proceso.
   - Comprobación: `go test ./internal/reviewtransaction/ -run 'RDDMode'` y tests nuevos de apagado con preferencias `on` guardadas.
-- [ ] **T2 · CLI, hub y stop-hook** (ruta: delegada, mismo escritor)
+- [x] **T2 · CLI, hub y stop-hook** (ruta: delegada, mismo escritor)
   - `review mode enable --scope global|project|clone` sale con error «RDD no está disponible» sin escribir nada; `disable` y `status` siguen funcionando; `status` informa `off`.
   - `SetProjectRDD` rechaza `on`; `axiom review stop-hook` es un no-op con código 0.
   - Comprobación: `go test ./internal/cli/ -run 'ReviewMode|StopHook'` y `go test ./internal/hub/`.
@@ -87,6 +87,11 @@ Una sola PR con etiqueta `type:*` y `size:exception` (estrategia `exception-ok`)
 ## Progreso
 
 Plan stop: approved 2026-11-18; implementation continues
+
+- **T1** `57a743c0`, **T2** `dc693b24` (escritor delegado). Paquete nuevo `internal/rddharness` (`Enabled`, `SetForTesting`, `UnavailableMessage`); `ResolveRDDMode`/`ResolveRDDModeStrict` cortocircuitan a off/default sin leer la anulación del clon. `TestMain` con el punto de inyección en `reviewtransaction`, `hub`, `cli`, `app`, `dashboard`, `tui`, `sddstatus` y `cmd/axiom`.
+  - Observado: `go test ./internal/reviewtransaction/` ok; `./internal/hub/` ok; `./internal/cli/ -run 'ReviewMode|StopHook|WhileSuspended'` ok; lo mismo con `-tags rdd_harness` ok; `go vet -tags rdd_harness` limpio; `dashboard`, `tui`, `sddstatus`, `cmd/axiom`, `components/sdd` ok. Comprobación del padre: `-run 'Suspended'` ok.
+  - `go test ./internal/cli/ -run 'Review'` completo agota el tiempo (sin `--- FAIL`); se trocea en la verificación final.
+  - Fallo ambiental preexistente: `internal/app` `TestTuiInstallOnThenSyncPreservesAndRefreshesOpenCodeActivation` («OpenCode runtime version unavailable or unsupported») falla igual en la base `bd36e5c2`.
 
 ## Spec viva
 
