@@ -64,6 +64,10 @@ type GovernanceConfig struct {
 // una configuración construida a mano o cuando el bloque `workflow:` es inválido
 // (el motivo queda en Declarations.WorkflowErr).
 //
+// Delivery conserva lo declarado en `delivery:` (umbral del aviso de cambio
+// grande): es nil sin bloque y también cuando el bloque es inválido (el motivo
+// queda en Declarations.DeliveryErr).
+//
 // Repositories, en cambio, conserva lo declarado en `repositories:` (REQ-25.27),
 // sin resolver la herencia de Git: es nil sin bloque o sin entradas, y también
 // cuando el bloque es inválido (el motivo queda en Declarations.RepositoriesErr).
@@ -74,6 +78,7 @@ type WorkspaceConfig struct {
 	TechnicalContext *TechnicalContextConfig `yaml:"-"`
 	Git              *GitConfig              `yaml:"-"`
 	Workflow         *WorkflowConfig         `yaml:"-"`
+	Delivery         *DeliveryConfig         `yaml:"-"`
 	Repositories     []RepositoryPolicy      `yaml:"-"`
 }
 

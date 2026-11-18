@@ -598,3 +598,29 @@ func TestDocsDocumentTheBranchPromotionKeys(t *testing.T) {
 		}
 	}
 }
+
+// REQ-32.1 y REQ-32.2: el manual documenta el bloque `delivery:` (clave, dominio,
+// ausencia igual a aviso desactivado, validación estricta, binario anterior e
+// `init --force`); la plantilla muestra el bloque comentado.
+func TestDocsDocumentTheDeliveryBlock(t *testing.T) {
+	doc := readManualDeInicio(t)
+	assertDocContains(t, doc,
+		"[Aviso de Cambio Grande (`delivery:`)](#aviso-de-cambio-grande-delivery)",
+		"### Aviso de Cambio Grande (`delivery:`)",
+		"delivery:\n  split_hint_lines: 600",
+		"entero mayor que cero",
+		"el agente avisa una sola vez",
+		"El aviso nunca bloquea",
+		"Sin el bloque, o sin la clave `split_hint_lines`, el aviso está desactivado",
+		"`axiom workspace validate` rechaza un bloque inválido nombrando `delivery.split_hint_lines`",
+		"Los binarios anteriores ignoran el bloque, como el de `git:`",
+		"`axiom init --force` conserva un `axiom.yaml` que declara `delivery:`",
+	)
+
+	example := readRepoFile(t, "axiom.example.yaml")
+	for _, want := range []string{"# delivery:", "#   split_hint_lines: 600"} {
+		if !strings.Contains(example, want) {
+			t.Errorf("axiom.example.yaml no contiene %q", want)
+		}
+	}
+}

@@ -12,7 +12,7 @@ import (
 
 // ParseConfig deserializa y valida la estructura sintáctica de axiom.yaml desde
 // bytes: la configuración base y, si existen, los bloques
-// `technical_context:`, `git:`, `workflow:`, `sdd:` y `repositories:`. Si la base o alguna declaración
+// `technical_context:`, `git:`, `workflow:`, `sdd:`, `delivery:` y `repositories:`. Si la base o alguna declaración
 // es inválida devuelve un error que acumula todas las violaciones (REQ-24.17).
 func ParseConfig(data []byte) (*WorkspaceConfig, error) {
 	return parseConfigAt(data, "")
@@ -40,7 +40,7 @@ func joinLoadErrors(baseErr error, declarations Declarations) error {
 	if declarations.BaselineRetiredErr != nil {
 		candidates = append(candidates, declarations.BaselineRetiredErr)
 	}
-	for _, err := range append(candidates, declarations.TechnicalContextErr, declarations.GitErr, declarations.WorkflowErr, declarations.SDDErr, declarations.RepositoriesErr) {
+	for _, err := range append(candidates, declarations.TechnicalContextErr, declarations.GitErr, declarations.WorkflowErr, declarations.SDDErr, declarations.DeliveryErr, declarations.RepositoriesErr) {
 		if err != nil {
 			errs = append(errs, err)
 		}
@@ -64,7 +64,7 @@ func joinLoadErrors(baseErr error, declarations Declarations) error {
 // fichero, las declaraciones conservan su valor cero, que equivale a «sin
 // declaraciones»: un proyecto sin axiom.yaml nunca bloquea el archivado (R1).
 // La base se decodifica desde un yaml.Node, con las claves `baseline`,
-// `technical_context`, `git` y `repositories` fuera de la decodificación base; el
+// `technical_context`, `git`, `workflow`, `sdd`, `delivery` y `repositories` fuera de la decodificación base; el
 // resto de claves desconocidas se sigue ignorando.
 //
 // El orden del tipo de retorno (configuración, error de la base, declaraciones)
@@ -109,6 +109,10 @@ func parseLayered(data []byte) (*WorkspaceConfig, error, Declarations) {
 	// El carril de trabajo se proyecta ya resuelto, también sin bloque (REQ-27.1).
 	if declarations.WorkflowErr == nil {
 		cfg.Workflow = resolveWorkflow(declarations.Workflow)
+	}
+	// El umbral del aviso de entrega se proyecta tal como se declaró (nil sin bloque).
+	if declarations.DeliveryErr == nil {
+		cfg.Delivery = declarations.Delivery
 	}
 	// Las entradas de `repositories:` se proyectan tal como se declararon: la
 	// herencia de `git:` la resuelve quien consume la política (REQ-25.27).

@@ -38,30 +38,30 @@ Comando de prueba acotado de la unidad: `go test ./internal/workspace/ ./interna
 Arnés de ejecución real: N/A (esquema y validación, cubierto en proceso por tests).
 Límite de reversión: los ficheros de esta unidad; un `axiom.yaml` con `delivery:` sigue siendo válido tras revertir (los binarios anteriores ignoran las claves de primer nivel desconocidas).
 
-- [ ] 1.1 Crear `internal/workspace/delivery_test.go` con tabla de subtests espejo de `sdd_test.go`/`workflow_test.go` (casos RED de D10): válidos `split_hint_lines: 600`, `1`, `delivery: {}`; rechazos con `delivery.split_hint_lines` en el mensaje para `0`, `-1`, `"600"`, `6e2`, `1.5`, `true`, nulo, lista, mapeo, desbordamiento de `int`; clave desconocida, clave repetida, bloque nulo (`delivery:`) y bloque escalar; sin bloque `Declarations.Delivery == nil` y sin error; proyección en `WorkspaceConfig` (nil sin bloque).
+- [x] 1.1 Crear `internal/workspace/delivery_test.go` con tabla de subtests espejo de `sdd_test.go`/`workflow_test.go` (casos RED de D10): válidos `split_hint_lines: 600`, `1`, `delivery: {}`; rechazos con `delivery.split_hint_lines` en el mensaje para `0`, `-1`, `"600"`, `6e2`, `1.5`, `true`, nulo, lista, mapeo, desbordamiento de `int`; clave desconocida, clave repetida, bloque nulo (`delivery:`) y bloque escalar; sin bloque `Declarations.Delivery == nil` y sin error; proyección en `WorkspaceConfig` (nil sin bloque).
   Cubre: REQ-32.1
-- [ ] 1.2 Crear `internal/workspace/delivery.go` con `DeliveryConfig{SplitHintLines int}`, `deliveryKeys = []string{"split_hint_lines"}`, `decodeDelivery(*yaml.Node)` (recorrido del nodo, `unknownKeys`, repetidas, `errors.Join`) y `deliveryPositiveInt(label, node)` (solo escalar `!!int`, mayor que cero, desbordamiento como error), con los mensajes en castellano de «Interfaces / Contratos» del diseño.
+- [x] 1.2 Crear `internal/workspace/delivery.go` con `DeliveryConfig{SplitHintLines int}`, `deliveryKeys = []string{"split_hint_lines"}`, `decodeDelivery(*yaml.Node)` (recorrido del nodo, `unknownKeys`, repetidas, `errors.Join`) y `deliveryPositiveInt(label, node)` (solo escalar `!!int`, mayor que cero, desbordamiento como error), con los mensajes en castellano de «Interfaces / Contratos» del diseño.
   Cubre: REQ-32.1
-- [ ] 1.3 Modificar `internal/workspace/declarations.go`: campos `Delivery *DeliveryConfig` y `DeliveryErr error` en `Declarations`, rama en `readDeclarationBlocks` y comentarios de la lista de bloques.
+- [x] 1.3 Modificar `internal/workspace/declarations.go`: campos `Delivery *DeliveryConfig` y `DeliveryErr error` en `Declarations`, rama en `readDeclarationBlocks` y comentarios de la lista de bloques.
   Cubre: REQ-32.1, REQ-2.1
-- [ ] 1.4 Modificar `internal/workspace/loader.go`: añadir `DeliveryErr` a `joinLoadErrors`, proyectar `Delivery` en `parseLayered` (nil sin bloque) y actualizar los comentarios de lista de bloques.
+- [x] 1.4 Modificar `internal/workspace/loader.go`: añadir `DeliveryErr` a `joinLoadErrors`, proyectar `Delivery` en `parseLayered` (nil sin bloque) y actualizar los comentarios de lista de bloques.
   Cubre: REQ-32.1, REQ-2.1
-- [ ] 1.5 Modificar `internal/workspace/types.go`: `WorkspaceConfig.Delivery *DeliveryConfig` con etiqueta `yaml:"-"` y su comentario.
+- [x] 1.5 Modificar `internal/workspace/types.go`: `WorkspaceConfig.Delivery *DeliveryConfig` con etiqueta `yaml:"-"` y su comentario.
   Cubre: REQ-32.1
-- [ ] 1.6 Modificar `internal/hub/init.go`: `ownMarkers.declares()` incluye `d.Delivery != nil || d.DeliveryErr != nil`; actualizar el comentario de la lista de bloques y el mensaje de `--force` para nombrar `delivery:`.
+- [x] 1.6 Modificar `internal/hub/init.go`: `ownMarkers.declares()` incluye `d.Delivery != nil || d.DeliveryErr != nil`; actualizar el comentario de la lista de bloques y el mensaje de `--force` para nombrar `delivery:`.
   Cubre: REQ-32.1
-- [ ] 1.7 Ampliar el test de preservación existente de `internal/hub` (localizarlo con `rg -n "declares\(|workflow:" internal/hub --glob "*_test.go"`; si hay varios, el que cubre `axiom init --force`) con un caso nuevo: `axiom init --force` conserva un `axiom.yaml` que declara `delivery:`, válido o no.
+- [x] 1.7 Ampliar el test de preservación existente de `internal/hub` (localizarlo con `rg -n "declares\(|workflow:" internal/hub --glob "*_test.go"`; si hay varios, el que cubre `axiom init --force`) con un caso nuevo: `axiom init --force` conserva un `axiom.yaml` que declara `delivery:`, válido o no.
   Cubre: REQ-32.1
-- [ ] 1.8 Modificar `axiom.example.yaml`: bloque comentado `# delivery:` / `#   split_hint_lines: 600` con su explicación (desactivado por defecto; el aviso nunca bloquea).
+- [x] 1.8 Modificar `axiom.example.yaml`: bloque comentado `# delivery:` / `#   split_hint_lines: 600` con su explicación (desactivado por defecto; el aviso nunca bloquea).
   Cubre: REQ-32.1, REQ-32.2
-- [ ] 1.9 Modificar `internal/workspace/example_yaml_test.go`: el bloque de la plantilla, una vez descomentado, es válido (patrón de las líneas 35-60 del mismo fichero).
+- [x] 1.9 Modificar `internal/workspace/example_yaml_test.go`: el bloque de la plantilla, una vez descomentado, es válido (patrón de las líneas 35-60 del mismo fichero).
   Cubre: REQ-32.1
-- [ ] 1.10 Modificar `docs/manual-de-inicio.md`: entrada del índice (líneas 24-25) y sección «### Aviso de Cambio Grande (`delivery:`)» tras «Carril de Trabajo» (clave, dominio, ausencia = desactivado, validación estricta, el binario anterior la ignora, `init --force` la preserva).
+- [x] 1.10 Modificar `docs/manual-de-inicio.md`: entrada del índice (líneas 24-25) y sección «### Aviso de Cambio Grande (`delivery:`)» tras «Carril de Trabajo» (clave, dominio, ausencia = desactivado, validación estricta, el binario anterior la ignora, `init --force` la preserva).
   Cubre: REQ-32.1, REQ-32.2
-- [ ] 1.11 Modificar `internal/workspace/docs_contract_test.go`: añadir `TestDocsDocumentTheDeliveryBlock` con el patrón de `TestDocsDocumentTheWorkflowLaneBlock` (líneas 213-252 del mismo fichero).
+- [x] 1.11 Modificar `internal/workspace/docs_contract_test.go`: añadir `TestDocsDocumentTheDeliveryBlock` con el patrón de `TestDocsDocumentTheWorkflowLaneBlock` (líneas 213-252 del mismo fichero).
   Cubre: REQ-32.1
-- [ ] 1.12 Comprobar la unidad: `go test ./internal/workspace/` y `go test ./internal/hub/`, luego `go vet ./internal/workspace/ ./internal/hub/`. Todo en verde.
-- [ ] 1.13 Commit de la unidad 1: `feat(workspace): bloque delivery con split_hint_lines en axiom.yaml`.
+- [x] 1.12 Comprobar la unidad: `go test ./internal/workspace/` y `go test ./internal/hub/`, luego `go vet ./internal/workspace/ ./internal/hub/`. Todo en verde.
+- [x] 1.13 Commit de la unidad 1: `feat(workspace): bloque delivery con split_hint_lines en axiom.yaml`.
 
 ---
 
