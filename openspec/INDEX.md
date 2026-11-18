@@ -1,8 +1,8 @@
 # Catálogo Maestro de Especificaciones Vivas — Axiom
 
 > **Proyecto:** Axiom (Spec-Driven Development Platform)
-> **Última Sincronización:** 2026-11-18 13:02:27 UTC
-> **Total Dominios:** 71 | **Total Requerimientos:** 563 | **Total Escenarios BDD:** 1730
+> **Última Sincronización:** 2026-11-18 14:34:28 UTC
+> **Total Dominios:** 72 | **Total Requerimientos:** 572 | **Total Escenarios BDD:** 1763
 
 ---
 
@@ -19,6 +19,7 @@
 | `axiom-tui-branding` | Especificación de Requerimientos: Unificación de TUI Bubbletea, Comandos de Ecosistema en CLI axiom y Pasarela de gentle-ai (INC-14) | 4 | 9 | [Ver Spec](specs/axiom-tui-branding/spec.md) |
 | `axiom-updater-resilience` | Especificación Viva: Resiliencia y Gobernanza del Actualizador Autónomo de Axiom | 9 | 10 | [Ver Spec](specs/axiom-updater-resilience/spec.md) |
 | `axiom-user-state-and-env` | Especificación de Requerimientos: Unificación de Estado en ~/.axiom y Variables AXIOM_* (INC-12) | 3 | 5 | [Ver Spec](specs/axiom-user-state-and-env/spec.md) |
+| `change-actor-identity` | Especificación Viva: Identidad Git como Actor de los Artefactos Versionados (REQ-42.1 a REQ-42.9) | 9 | 33 | [Ver Spec](specs/change-actor-identity/spec.md) |
 | `change-branch-lifecycle` | Especificación de Requerimientos: Ciclo de Vida de las Ramas y Worktrees de un Cambio por Topología (INC-25) | 27 | 195 | [Ver Spec](specs/change-branch-lifecycle/spec.md) |
 | `dashboard-sdd-orchestration` | Especificación de Requerimientos: Orquestación Interactiva SDD y Creación de Cambios en Dashboard Web y CLI (INC-15) | 5 | 10 | [Ver Spec](specs/dashboard-sdd-orchestration/spec.md) |
 | `engram-protocol-injection` | Engram protocol injection Specification | 5 | 12 | [Ver Spec](specs/engram-protocol-injection/spec.md) |
@@ -341,6 +342,55 @@ Estrategias y salvaguardas de actualización del binario `axiom` para entornos W
 - **[REQ-12.3]** Precedencia de variables AXIOM_* sobre GENTLE_AI_*
   - *Escenario BDD:* Variable AXIOM_* toma precedencia
   - *Escenario BDD:* Fallback a GENTLE_AI_* si AXIOM_* no está definido
+
+### Dominio: `change-actor-identity` — Especificación Viva: Identidad Git como Actor de los Artefactos Versionados (REQ-42.1 a REQ-42.9)
+
+Fijar quién queda registrado en los ficheros versionados que dicen quién hizo qué: el `actor` de `gates.yaml` (`axiom sdd gate record`) y el `sealed_by` de `kickoff.yaml` (`axiom sdd kickoff seal`). Por defecto se registra la identidad git configurada (`Nombre <email>`); `--actor` explícito prevalece; sin identidad completa se conserva `cli` con un aviso y nunca se bloquea.
+
+**Archivo:** [`specs/change-actor-identity/spec.md`](specs/change-actor-identity/spec.md)
+
+- **[REQ-42.1]** Identidad Git como Actor por Defecto de `gate record`
+  - *Escenario BDD:* Identidad completa registrada como actor
+  - *Escenario BDD:* La ayuda de `--actor` describe el valor por defecto
+- **[REQ-42.2]** `--actor` Explícito Prevalece sin Consultar Git
+  - *Escenario BDD:* Actor explícito con identidad git presente
+  - *Escenario BDD:* Actor explícito sin identidad git
+- **[REQ-42.3]** Sellador del Kickoff con la Identidad Git
+  - *Escenario BDD:* Sellado con identidad completa
+  - *Escenario BDD:* Gate y sellado usan la misma identidad
+  - *Escenario BDD:* `seal` no ofrece forma de indicar el sellador
+- **[REQ-42.4]** El Retro-sellado Conserva `inferred`
+  - *Escenario BDD:* `--infer` con identidad git completa
+  - *Escenario BDD:* `--infer` sin identidad git
+  - *Escenario BDD:* La exención de `inferred` sigue vigente
+- **[REQ-42.5]** Reserva `cli` con Aviso por stderr sin Bloqueo
+  - *Escenario BDD:* Sin identidad alguna
+  - *Escenario BDD:* Solo nombre
+  - *Escenario BDD:* Solo email
+  - *Escenario BDD:* Un valor que queda vacío tras el saneado cuenta como ausente
+  - *Escenario BDD:* El aviso no altera stdout ni el código de salida
+  - *Escenario BDD:* Los avisos de rama existentes no cambian
+- **[REQ-42.6]** Resolución Solo desde la Configuración de Git en la Raíz del Workspace
+  - *Escenario BDD:* Configuración local del repositorio
+  - *Escenario BDD:* La configuración local prevalece sobre la global
+  - *Escenario BDD:* Las variables `GIT_AUTHOR_*` se ignoran
+  - *Escenario BDD:* Directorio que no es repositorio
+  - *Escenario BDD:* Git no disponible
+  - *Escenario BDD:* En multirepo se lee desde la raíz del workspace de specs
+- **[REQ-42.7]** Saneado y Formato de la Identidad
+  - *Escenario BDD:* Recorte de espacios
+  - *Escenario BDD:* Caracteres de control
+  - *Escenario BDD:* UTF-8 no válido
+  - *Escenario BDD:* Retirada de `<` y `>`
+  - *Escenario BDD:* Tope de longitud
+  - *Escenario BDD:* Caracteres especiales y no ASCII hacen round-trip por YAML
+- **[REQ-42.8]** Registros Anteriores Siguen Siendo Válidos sin Migración
+  - *Escenario BDD:* Lectura de registros anteriores
+  - *Escenario BDD:* Un registro nuevo convive con los anteriores
+  - *Escenario BDD:* Un actor con formato de identidad no se rechaza
+- **[REQ-42.9]** La Forma de la Salida JSON No Cambia
+  - *Escenario BDD:* El conjunto de claves del JSON de `gate record` es el mismo
+  - *Escenario BDD:* El conjunto de claves del JSON de `seal` es el mismo
 
 ### Dominio: `change-branch-lifecycle` — Especificación de Requerimientos: Ciclo de Vida de las Ramas y Worktrees de un Cambio por Topología (INC-25)
 

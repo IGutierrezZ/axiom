@@ -1,0 +1,12 @@
+schema: axiom.sdd-gate-ledger/v1
+change: identidad-git-actor
+records:
+    - gate: integration
+      decision: approved
+      reason: ""
+      evidence_kind: pr_merged
+      evidence_ref: bddd7ee9
+      evidence_base_ref: main
+      verified: true
+      actor: cli
+      recorded_at: 2026-11-18T14:23:10.3810204Z
