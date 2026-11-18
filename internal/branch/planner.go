@@ -488,6 +488,12 @@ func repositoryRole(topology workspace.TopologyType, planning bool) RepoRole {
 	}
 }
 
+// EffectivePolicy es la política efectiva del repositorio de facts (REQ-25.3): la que el motor
+// necesita para conocer lo declarado de su promoción y de qué capa sale.
+func EffectivePolicy(policy Policy, facts RepoFacts) RepoPolicy {
+	return repoPolicy(policy, facts)
+}
+
 // repoPolicy es la política efectiva de un repositorio (REQ-25.3): la entrada de
 // `repositories:` o, sin ella, la del workspace. Un repositorio fuera de la carpeta
 // maestra solo hereda la del workspace.

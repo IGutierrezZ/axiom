@@ -25,6 +25,10 @@ type GitSnapshot struct {
 	// IntegrationBranch y BranchPrefix son los del workspace, resueltos al sellar.
 	IntegrationBranch string `yaml:"integration_branch"`
 	BranchPrefix      string `yaml:"branch_prefix"`
+	// MainBranch es `git.main_branch` declarada al sellar; vacía si no la había. Es el marcador
+	// con el que la resolución de la promoción distingue una instantánea anterior a la promoción
+	// de una sellada con ella (REQ-25.36, REQ-25.46).
+	MainBranch string `yaml:"main_branch,omitempty"`
 	// Exceptions son las excepciones por cambio de `ensure` que regían al sellar; nil si no había.
 	Exceptions *GitExceptions `yaml:"exceptions,omitempty"`
 	// ChangeBranch es la rama del cambio. Vacía si ningún repositorio la tiene (un multirepo
@@ -49,8 +53,11 @@ type GitSnapshotRepo struct {
 	Role              string `yaml:"role"`
 	IntegrationBranch string `yaml:"integration_branch"`
 	// Base es el nombre de la referencia de la que salen las ramas, nunca un SHA.
-	Base     string              `yaml:"base"`
-	Branches []GitSnapshotBranch `yaml:"branches,omitempty"`
+	Base string `yaml:"base"`
+	// Promotion es el modo de promoción (`branch` o `release`) que el repositorio ya tenía
+	// materializado al sellar; vacío si la rama del cambio aún no existía.
+	Promotion string              `yaml:"promotion,omitempty"`
+	Branches  []GitSnapshotBranch `yaml:"branches,omitempty"`
 }
 
 // GitSnapshotBranch es una rama derivada del cambio.

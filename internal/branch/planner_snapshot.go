@@ -34,6 +34,16 @@ func snapshotBranch(repo kickoff.GitSnapshotRepo, kind BranchKind, role string) 
 	return ""
 }
 
+// SnapshotPromotionFor devuelve lo que la instantánea del plan sabe de la promoción del
+// repositorio de facts, o nil si no hay instantánea o no lista el repositorio.
+func SnapshotPromotionFor(in PlanInput, facts RepoFacts) *SnapshotPromotion {
+	repo, ok := snapshotRepo(in, facts)
+	if !ok {
+		return nil
+	}
+	return &SnapshotPromotion{Mode: Promotion(repo.Promotion), SealedWithMain: in.Snapshot.MainBranch != ""}
+}
+
 // SnapshotChangeBranch devuelve la rama del cambio que la instantánea del plan nombra para el
 // repositorio de facts, o la cadena vacía si no hay instantánea o no la nombra. El motor la usa
 // para derivar la rama de archivado (D-25, paso 3) cuando el registro no guarda la del cambio.

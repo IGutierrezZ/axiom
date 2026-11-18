@@ -175,9 +175,10 @@ func baseCandidates(repo branch.RepoPlan) []baseReference {
 			{ref: ref, full: ref, source: "local"},
 		}
 	}
+	base := repo.Base()
 	return []baseReference{
-		{ref: originRemote + "/" + repo.IntegrationBranch, full: "refs/remotes/" + originRemote + "/" + repo.IntegrationBranch, source: "remote-tracking"},
-		{ref: repo.IntegrationBranch, full: "refs/heads/" + repo.IntegrationBranch, source: "local"},
+		{ref: originRemote + "/" + base, full: "refs/remotes/" + originRemote + "/" + base, source: "remote-tracking"},
+		{ref: base, full: "refs/heads/" + base, source: "local"},
 	}
 }
 
@@ -202,6 +203,9 @@ func (e *Engine) resolveBase(ctx context.Context, repo branch.RepoPlan) (base ba
 func missingBaseWarning(repo branch.RepoPlan) string {
 	if repo.BaseRef != "" {
 		return fmt.Sprintf("la base «%s» fijada para el cambio no existe en %s: no se calculan adelanto ni atraso", repo.BaseRef, repo.Name)
+	}
+	if repo.Base() != repo.IntegrationBranch {
+		return fmt.Sprintf("no existe la rama principal «%s» de %s (git.main_branch), ni en local ni como referencia remota local: no se calculan adelanto ni atraso", repo.Base(), repo.Name)
 	}
 	return fmt.Sprintf("no existe la rama de integración «%s» de %s, ni en local ni como referencia remota local: no se calculan adelanto ni atraso", repo.IntegrationBranch, repo.Name)
 }
