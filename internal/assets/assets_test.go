@@ -2251,6 +2251,31 @@ func TestReadingPhaseSkillsReadTheTechnicalContextEntry(t *testing.T) {
 			}
 		})
 	}
+
+	// C-04-c: sdd-propose lee la `entry` solo cuando no recibió exploración y
+	// nunca el resto de `paths`; la convención recoge la excepción condicional.
+	t.Run("sdd-propose", func(t *testing.T) {
+		content := mustReadResolved("skills/sdd-propose/SKILL.md")
+		for _, required := range []string{
+			"**Technical context, in any mode, only when no exploration was received:**",
+			"no exploration was received when the orchestrator passed no exploration findings, the change folder has no `exploration.md`, and there is no `sdd/{change-name}/explore` observation",
+			"read the `entry` file of each mode before writing «Affected Areas», «Risks» and «Dependencies»; never open the remaining `paths`",
+			"When exploration was received, read nothing from the technical context",
+			"../_shared/project-baseline-convention.md",
+		} {
+			if !strings.Contains(content, required) {
+				t.Errorf("sdd-propose must read the technicalContext entry only without exploration: missing %q", required)
+			}
+		}
+		if strings.Contains(content, want) {
+			t.Errorf("sdd-propose must not carry the unconditional reading instruction %q", want)
+		}
+		convention := mustReadResolved("skills/_shared/project-baseline-convention.md")
+		const exception = "Conditional exception: `sdd-propose` reads the `entry` file of each mode, and never the remaining `paths`, only when no exploration was received. With exploration it reads nothing from the technical context; `sdd-spec` and `sdd-tasks` never read it."
+		if !strings.Contains(convention, exception) {
+			t.Errorf("project-baseline-convention must record the conditional sdd-propose exception: missing %q", exception)
+		}
+	})
 }
 
 // REQ-30.28: sdd-explore, sdd-propose, sdd-spec y sdd-onboard leen la spec viva de
