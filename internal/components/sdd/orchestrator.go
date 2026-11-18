@@ -149,7 +149,6 @@ func composeFallbackSessionPreflight(content string, agent model.AgentID) string
 	for _, section := range []struct{ start, end, body string }{
 		{"### Artifact Store Policy", "### Commands", "The session artifact store is always `hybrid` and is never asked. Pass the `artifactStore` that `axiom sdd status` reports to every phase; never detect or default a separate choice."},
 		{"### Artifact Store Mode", "### Delivery Strategy", "Pass the `artifactStore` that `axiom sdd status` reports as `artifact_store.mode` to every sub-agent launch; the session `hybrid` never overrides it."},
-		{"### Delivery Strategy", "### Chain Strategy", "Pass the preflight PR strategy as `delivery_strategy` to `sdd-tasks` and `sdd-apply`. `exception-ok` is never a preflight choice; it requires explicit maintainer-approved `size:exception`."},
 	} {
 		if agent == model.AgentCodex && section.start == "### Artifact Store Policy" {
 			const tableHeading = "### Artifact store (engram default)\n"

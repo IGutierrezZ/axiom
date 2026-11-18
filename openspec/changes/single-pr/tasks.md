@@ -141,55 +141,55 @@ Límite de reversión: todos los ficheros de esta unidad se revierten juntos con
 
 ### 4A. Tests primero (RED)
 
-- [ ] 4.1 Modificar `internal/components/sdd/orchestrator_shared_sections_test.go`: añadir `"Delivery Strategy"` a `sharedOrchestratorSectionNames` (hacia la línea 103), de modo que `TestSharedOrchestratorSectionsHaveOneSource` impida copias en línea y `TestEveryRuntimeRendersTheSharedSections` compruebe que los 13 runtimes la renderizan.
+- [x] 4.1 Modificar `internal/components/sdd/orchestrator_shared_sections_test.go`: añadir `"Delivery Strategy"` a `sharedOrchestratorSectionNames` (hacia la línea 103), de modo que `TestSharedOrchestratorSectionsHaveOneSource` impida copias en línea y `TestEveryRuntimeRendersTheSharedSections` compruebe que los 13 runtimes la renderizan.
   Cubre: REQ-32.3
-- [ ] 4.2 Modificar `internal/assets/orchestrator_drift_ratchet_test.go`: eliminar la entrada de `Review Workload Guard` (línea 28; el test exige retirarla a propósito, líneas 92-95) y bajar `Delivery Strategy` de 4 a 1; `Chain Strategy` (6) y `Automatic Mode Gatekeeper (MANDATORY)` (8) no cambian.
+- [x] 4.2 Modificar `internal/assets/orchestrator_drift_ratchet_test.go`: eliminar la entrada de `Review Workload Guard` (línea 28; el test exige retirarla a propósito, líneas 92-95) y bajar `Delivery Strategy` de 4 a 1; `Chain Strategy` (6) y `Automatic Mode Gatekeeper (MANDATORY)` (8) no cambian.
   Cubre: REQ-32.3
-- [ ] 4.3 Modificar `internal/components/sdd/renderer_invariants_test.go` (líneas 104-122): centinelas nuevos de `Delivery Strategy` (`single-pr`, `chained`, ``Pass `delivery_strategy` ``) y fuera la entrada del guard.
+- [x] 4.3 Modificar `internal/components/sdd/renderer_invariants_test.go` (líneas 104-122): centinelas nuevos de `Delivery Strategy` (`single-pr`, `chained`, ``Pass `delivery_strategy` ``) y fuera la entrada del guard.
   Cubre: REQ-32.3
-- [ ] 4.4 Modificar `internal/components/sdd/inject_test.go` (líneas 2639-2650): la sección de cadena acaba en el siguiente `### ` (ya no en el guard) y se afirman las frases nuevas; conservar las coletillas por runtime de las líneas 2569-2614.
+- [x] 4.4 Modificar `internal/components/sdd/inject_test.go` (líneas 2639-2650): la sección de cadena acaba en el siguiente `### ` (ya no en el guard) y se afirman las frases nuevas; conservar las coletillas por runtime de las líneas 2569-2614.
   Cubre: REQ-32.3, Chain Strategy Guidance Parity, Non-Claude Chain Strategy Guidance Parity
-- [ ] 4.5 Modificar `internal/components/sdd/orchestrator_composition_test.go`: ajustar lo que fije del guard o de la entrega; conservar la negativa de la línea 543.
+- [x] 4.5 Modificar `internal/components/sdd/orchestrator_composition_test.go`: ajustar lo que fije del guard o de la entrega; conservar la negativa de la línea 543.
   Cubre: REQ-32.3
-- [ ] 4.6 Modificar `internal/components/sdd/delivery_strategy_vocabulary_test.go`: el dominio se lee de `sdd-apply`, `sdd-tasks` y `sdd-phase-common` con el patrón `` `single-pr | chained` ``; los tests del guard (líneas 265-339) pasan a las secciones `Delivery Strategy`: cubren el dominio, enuncian los alias (`→`, nunca con `|`) y rechazan un valor desconocido.
+- [x] 4.6 Modificar `internal/components/sdd/delivery_strategy_vocabulary_test.go`: el dominio se lee de `sdd-apply`, `sdd-tasks` y `sdd-phase-common` con el patrón `` `single-pr | chained` ``; los tests del guard (líneas 265-339) pasan a las secciones `Delivery Strategy`: cubren el dominio, enuncian los alias (`→`, nunca con `|`) y rechazan un valor desconocido.
   Cubre: REQ-32.3
-- [ ] 4.7 Modificar `internal/components/sdd/planning_detail_test.go` (línea 23): `## Delivery Forecast` y `Estimated changed lines` en lugar de `## Review Workload Forecast` y `400 changed-line review budget`.
+- [x] 4.7 Modificar `internal/components/sdd/planning_detail_test.go` (línea 23): `## Delivery Forecast` y `Estimated changed lines` en lugar de `## Review Workload Forecast` y `400 changed-line review budget`.
   Cubre: REQ-32.3
 
 ### 4B. Fuente canónica y convención de fases
 
-- [ ] 4.8 Modificar `internal/assets/skills/_shared/sdd-orchestrator-sections.md`: reescribir `Delivery Strategy` (líneas 261-263) con el cuerpo canónico de «Interfaces / Contratos» del diseño (entrega nunca preguntada, dominio `single-pr | chained`, alias de lectura, valor inválido detiene, precedencia, reenvío de `delivery_strategy`/`chain_strategy`, caché solo de sesión, aviso único tras la previsión con `delivery.split_hint_lines`); aplicar la sustitución idéntica a `Chain Strategy` (líneas 265-274); sustituir la frase del gatekeeper (línea 254) por «The gatekeeper runs in addition to the Mandatory Delegation Triggers»; eliminar el bloque `Review Workload Guard (MANDATORY)` (líneas 405-420).
+- [x] 4.8 Modificar `internal/assets/skills/_shared/sdd-orchestrator-sections.md`: reescribir `Delivery Strategy` (líneas 261-263) con el cuerpo canónico de «Interfaces / Contratos» del diseño (entrega nunca preguntada, dominio `single-pr | chained`, alias de lectura, valor inválido detiene, precedencia, reenvío de `delivery_strategy`/`chain_strategy`, caché solo de sesión, aviso único tras la previsión con `delivery.split_hint_lines`); aplicar la sustitución idéntica a `Chain Strategy` (líneas 265-274); sustituir la frase del gatekeeper (línea 254) por «The gatekeeper runs in addition to the Mandatory Delegation Triggers»; eliminar el bloque `Review Workload Guard (MANDATORY)` (líneas 405-420).
   Cubre: REQ-32.3, REQ-32.2, Chain Strategy Propagation to Downstream Phases
-- [ ] 4.9 Modificar `internal/assets/skills/_shared/sdd-phase-common.md` (§E, líneas 109-125): pasa a «## E. Delivery Strategy» con dominio `single-pr | chained` (declaración única en esa forma), alias en línea aparte con `→`, valor inválido y precedencia de D1/D2; sin presupuesto ni líneas de guarda.
+- [x] 4.9 Modificar `internal/assets/skills/_shared/sdd-phase-common.md` (§E, líneas 109-125): pasa a «## E. Delivery Strategy» con dominio `single-pr | chained` (declaración única en esa forma), alias en línea aparte con `→`, valor inválido y precedencia de D1/D2; sin presupuesto ni líneas de guarda.
   Cubre: REQ-32.3
-- [ ] 4.10 Modificar `internal/assets/skills/sdd-tasks/SKILL.md`: línea 38 (dominio `single-pr | chained`); plantilla (líneas 84-101) y reglas (líneas 149-183) sustituidas por `## Delivery Forecast` (tamaño `S | M | L | XL`, rango de líneas cambiadas, unidades de trabajo con porción de PR y rama base solo si `chained`; sin campos de riesgo, decisión, estrategia ni número; nunca escribir `Delivery strategy` ni `Chain strategy` como campos); resumen (líneas 238-245) y regla de la línea 262 sin guard de 400.
+- [x] 4.10 Modificar `internal/assets/skills/sdd-tasks/SKILL.md`: línea 38 (dominio `single-pr | chained`); plantilla (líneas 84-101) y reglas (líneas 149-183) sustituidas por `## Delivery Forecast` (tamaño `S | M | L | XL`, rango de líneas cambiadas, unidades de trabajo con porción de PR y rama base solo si `chained`; sin campos de riesgo, decisión, estrategia ni número; nunca escribir `Delivery strategy` ni `Chain strategy` como campos); resumen (líneas 238-245) y regla de la línea 262 sin guard de 400.
   Cubre: REQ-32.3, REQ-32.2
-- [ ] 4.11 Modificar `internal/assets/skills/sdd-apply/SKILL.md`: línea 40 (dominio); reescribir el paso 2a (líneas 82-104) como «Step 2a: Follow the Delivery Strategy» (solo rama destino: `stacked-to-main` rama de la porción anterior o de integración, `feature-branch-chain` rama *tracker* para la porción 1; sin parada por tamaño; si recibe `chained` sin estrategia apunta a la rama del cambio y lo anota; conserva «no minificar» sin número); no renumerar el paso 2b; eliminar la regla de la línea 333 y quitar el número de la línea 334.
+- [x] 4.11 Modificar `internal/assets/skills/sdd-apply/SKILL.md`: línea 40 (dominio); reescribir el paso 2a (líneas 82-104) como «Step 2a: Follow the Delivery Strategy» (solo rama destino: `stacked-to-main` rama de la porción anterior o de integración, `feature-branch-chain` rama *tracker* para la porción 1; sin parada por tamaño; si recibe `chained` sin estrategia apunta a la rama del cambio y lo anota; conserva «no minificar» sin número); no renumerar el paso 2b; eliminar la regla de la línea 333 y quitar el número de la línea 334.
   Cubre: REQ-32.3
 
 ### 4C. Orquestadores por runtime
 
-- [ ] 4.12 Modificar `internal/assets/claude/sdd-orchestrator-workflow.md`: `Delivery Strategy` (líneas 98-108) pasa a plantilla `{{GENTLE_AI_SDD_SECTION:Delivery Strategy}}`; cadena (líneas 109-120) con las mismas cláusulas en redacción compacta; eliminar `Review Workload Guard` (líneas 138-153); frase del gatekeeper idéntica.
+- [x] 4.12 Modificar `internal/assets/claude/sdd-orchestrator-workflow.md`: `Delivery Strategy` (líneas 98-108) pasa a plantilla `{{GENTLE_AI_SDD_SECTION:Delivery Strategy}}`; cadena (líneas 109-120) con las mismas cláusulas en redacción compacta; eliminar `Review Workload Guard` (líneas 138-153); frase del gatekeeper idéntica.
   Cubre: REQ-32.3, Chain Strategy Guidance Parity
-- [ ] 4.13 Modificar `internal/assets/claude/sdd-orchestrator.md` (línea 68): dejar de listar «review workload guard» en la superficie perezosa.
+- [x] 4.13 Modificar `internal/assets/claude/sdd-orchestrator.md` (línea 68): dejar de listar «review workload guard» en la superficie perezosa.
   Cubre: REQ-32.3
-- [ ] 4.14 Modificar `internal/assets/gemini/sdd-orchestrator.md` y `internal/assets/qwen/sdd-orchestrator.md` (plantillas): eliminar el encabezado de `Review Workload Guard` y su plantilla; frase del gatekeeper idéntica; `Chain Strategy` ya por plantilla.
+- [x] 4.14 Modificar `internal/assets/gemini/sdd-orchestrator.md` y `internal/assets/qwen/sdd-orchestrator.md` (plantillas): eliminar el encabezado de `Review Workload Guard` y su plantilla; frase del gatekeeper idéntica; `Chain Strategy` ya por plantilla.
   Cubre: REQ-32.3
-- [ ] 4.15 Modificar `internal/assets/codex/sdd-orchestrator.md`, `internal/assets/kiro/sdd-orchestrator.md` y `internal/assets/opencode/sdd-orchestrator.md`: `### Delivery Strategy` en línea pasa a `{{GENTLE_AI_SDD_SECTION:Delivery Strategy}}`; eliminar `Review Workload Guard` en línea; sustitución idéntica en `Chain Strategy`; frase del gatekeeper (copias en línea). Conservar las coletillas por runtime (Kiro «phase context», ruta `question` de OpenCode).
+- [x] 4.15 Modificar `internal/assets/codex/sdd-orchestrator.md`, `internal/assets/kiro/sdd-orchestrator.md` y `internal/assets/opencode/sdd-orchestrator.md`: `### Delivery Strategy` en línea pasa a `{{GENTLE_AI_SDD_SECTION:Delivery Strategy}}`; eliminar `Review Workload Guard` en línea; sustitución idéntica en `Chain Strategy`; frase del gatekeeper (copias en línea). Conservar las coletillas por runtime (Kiro «phase context», ruta `question` de OpenCode).
   Cubre: REQ-32.3, Non-Claude Chain Strategy Guidance Parity, Inline Chain Strategy Summary Retained
-- [ ] 4.16 Modificar `internal/assets/antigravity/sdd-orchestrator.md`, `internal/assets/cursor/sdd-orchestrator.md`, `internal/assets/generic/sdd-orchestrator.md`, `internal/assets/hermes/sdd-orchestrator.md`, `internal/assets/kimi/sdd-orchestrator.md` y `internal/assets/windsurf/sdd-orchestrator.md`: eliminar `Review Workload Guard` (en línea; en `generic` líneas 106-117), sustitución idéntica en `Chain Strategy` (plantilla o en línea según el runtime; conservar coletillas «Kimi custom-agent prompt context», «inline phase context», «dynamic subagent context»), frase del gatekeeper idéntica; `Delivery Strategy` ya por plantilla.
+- [x] 4.16 Modificar `internal/assets/antigravity/sdd-orchestrator.md`, `internal/assets/cursor/sdd-orchestrator.md`, `internal/assets/generic/sdd-orchestrator.md`, `internal/assets/hermes/sdd-orchestrator.md`, `internal/assets/kimi/sdd-orchestrator.md` y `internal/assets/windsurf/sdd-orchestrator.md`: eliminar `Review Workload Guard` (en línea; en `generic` líneas 106-117), sustitución idéntica en `Chain Strategy` (plantilla o en línea según el runtime; conservar coletillas «Kimi custom-agent prompt context», «inline phase context», «dynamic subagent context»), frase del gatekeeper idéntica; `Delivery Strategy` ya por plantilla.
   Cubre: REQ-32.3, Cursor Chain Strategy Section Parity, Chain Strategy Guidance Parity
-- [ ] 4.17 Verificar con `rg -n "Review Workload Guard|review workload guard" internal/assets internal/components` que no queda ninguna referencia viva (solo pueden quedar aserciones negativas de tests); corregir cualquier resto en los orquestadores.
+- [x] 4.17 Verificar con `rg -n "Review Workload Guard|review workload guard" internal/assets internal/components` que no queda ninguna referencia viva (solo pueden quedar aserciones negativas de tests); corregir cualquier resto en los orquestadores.
   Cubre: REQ-32.3
-- [ ] 4.18 Modificar `internal/components/sdd/orchestrator.go` (D6): eliminar la tupla de la línea 152 de `composeFallbackSessionPreflight`; conservar la comprobación de cardinalidad de la línea 144 y los dos encabezados `### Delivery Strategy` y `### Chain Strategy` (el segundo sigue siendo el ancla de la cadena y el primero el de `### Artifact Store Mode`).
+- [x] 4.18 Modificar `internal/components/sdd/orchestrator.go` (D6): eliminar la tupla de la línea 152 de `composeFallbackSessionPreflight`; conservar la comprobación de cardinalidad de la línea 144 y los dos encabezados `### Delivery Strategy` y `### Chain Strategy` (el segundo sigue siendo el ancla de la cadena y el primero el de `### Artifact Store Mode`).
   Cubre: REQ-32.3
 
 ### 4D. Verificación y goldens
 
-- [ ] 4.19 Comprobar los orquestadores: `go test ./internal/components/sdd/` y `go test ./internal/assets/`. En verde (ratchet con `Delivery Strategy` a 1; `TestEveryRuntimeRendersTheSharedSections` con los 13 runtimes).
-- [ ] 4.20 Regenerar goldens: `go test ./internal/components/ -run 'TestGolden' -update`; revisar `git diff -- testdata/golden` (las 11 proyecciones de orquestador; solo deben cambiar `Delivery Strategy`, `Chain Strategy`, el gatekeeper y la retirada del guard) y comprobar sin `-update`.
-- [ ] 4.21 Comprobar la unidad completa: `go test ./internal/components/...`, `go test ./internal/assets/...`, `go vet ./internal/components/... ./internal/assets/...`.
-- [ ] 4.22 Commit de la unidad 4: `refactor(sdd): entrega single-pr en orquestadores y fases sin guard de carga`.
+- [x] 4.19 Comprobar los orquestadores: `go test ./internal/components/sdd/` y `go test ./internal/assets/`. En verde (ratchet con `Delivery Strategy` a 1; `TestEveryRuntimeRendersTheSharedSections` con los 13 runtimes).
+- [x] 4.20 Regenerar goldens: `go test ./internal/components/ -run 'TestGolden' -update`; revisar `git diff -- testdata/golden` (las 11 proyecciones de orquestador; solo deben cambiar `Delivery Strategy`, `Chain Strategy`, el gatekeeper y la retirada del guard) y comprobar sin `-update`.
+- [x] 4.21 Comprobar la unidad completa: `go test ./internal/components/...`, `go test ./internal/assets/...`, `go vet ./internal/components/... ./internal/assets/...`.
+- [x] 4.22 Commit de la unidad 4: `refactor(sdd): entrega single-pr en orquestadores y fases sin guard de carga`.
 
 ---
 

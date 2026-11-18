@@ -127,6 +127,11 @@ var sharedOrchestratorSectionNames = []string{
 	// sdd-revision-independiente (REQ-28.1 a REQ-28.3, REQ-28.10, REQ-28.14): the optional
 	// independent review (per-role verify, judgment and coverage review) and its preference.
 	"SDD Independent Review",
+	// single-pr (C-02-c): the one canonical Delivery Strategy body (delivery is
+	// never asked: `single-pr | chained`, aliases read only, one non-blocking size
+	// warning). Every runtime references it by placeholder, so no inline copy of
+	// the retired four-way strategy can come back.
+	"Delivery Strategy",
 }
 
 // TestSDDChangeKickoffAndBlockGatesSectionIsDeterministic is task 22.3's own

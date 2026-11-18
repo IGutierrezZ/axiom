@@ -285,7 +285,7 @@ In **Automatic** mode the orchestrator is the gatekeeper between phases. The gat
 
 **On gate FAIL:** re-run the same phase exactly once with corrective feedback that names the specific failures the gatekeeper found (do not blanket-retry). Re-run the gate on the new result. If it passes, continue the chain. If it fails again, STOP the automatic chain and surface a report to the user naming the phase, what the gatekeeper caught, both attempts, and the recommended fix. Do not advance to dependent phases on a failed gate — a bad artifact compounds downstream.
 
-The gatekeeper runs in addition to the Review Workload Guard and the Mandatory Delegation Triggers; it never relaxes them and never auto-marks anything reviewed in engram.
+The gatekeeper runs in addition to the Mandatory Delegation Triggers; it never relaxes them and never auto-marks anything reviewed in engram.
 
 ### Artifact Store Mode
 
@@ -293,18 +293,22 @@ Pass the `artifactStore` that `axiom sdd status` reports as `artifact_store.mode
 
 ### Delivery Strategy
 
-Pass the preflight PR strategy as `delivery_strategy` to `sdd-tasks` and `sdd-apply`. `exception-ok` is never a preflight choice; it requires explicit maintainer-approved `size:exception`.
+Delivery is never asked. Every change ships as `single-pr` (one pull request holding one work-unit commit per task) unless the person asks in chat to chain, stack, or slice its pull requests; then it is `chained`. The domain is `single-pr | chained`. Legacy values are read as aliases: `ask-on-risk` and `exception-ok` → `single-pr`, `auto-chain` → `chained`; never write or forward an alias. Any other `delivery_strategy` value is invalid: do not map it to the nearest value; report it and STOP before launching `sdd-apply`.
+
+The `Delivery strategy` line of the runtime-confirmed session preflight block is the session default. A `chained` request from the person in this session takes precedence, and so does a legacy value recorded in the change's existing `tasks.md`, read through the aliases. Pass the resolved `delivery_strategy` to every `sdd-tasks` and `sdd-apply` launch, with `chain_strategy` when it is `chained`. Cache `chained` for this session only; never write it to `kickoff.yaml`, `gates.yaml`, or `tasks.md`.
+
+After `sdd-tasks` returns its Delivery Forecast, read `delivery.split_hint_lines` from the project's `axiom.yaml`. When it is a positive integer and the upper end of the estimated changed lines exceeds it, tell the person once for this change in this session that the change is large and that they can ask for chained pull requests, then continue without waiting. Without that key, give no size warning and cite no line number. Neither the forecast nor the warning ever stops `sdd-apply`.
 
 ### Chain Strategy
 
-When `delivery_strategy` results in chained PRs (either by user choice via `ask-on-risk` or automatically via `auto-chain`), ask the user which chain strategy to use:
+When `delivery_strategy` is `chained` and the person did not name a chain strategy, ask the user which chain strategy to use:
 
 - **`stacked-to-main`**: Each PR merges to main in order. Fast iteration, fix on the go. Best for speed-first teams and independent slices.
 - **`feature-branch-chain`**: The feature/tracker branch accumulates final integration; PR #1 targets the tracker branch, later child PRs target the immediate previous PR branch so review diffs stay focused. Only the tracker merges to main. Best for rollback control and coordinated releases.
 
 Cache the chain strategy for the session. Pass it as `chain_strategy` to `sdd-tasks` and `sdd-apply` prompts alongside `delivery_strategy`. Do not ask again unless the user changes scope.
 
-When delivery planning yields chained PRs, treat `chained-pr` (registry skill `chained-pr`) as a required skill match: resolve it by registry name through this template's existing skill-resolution mechanism (the same one it already uses to pass skills to phases) and ensure the `sdd-tasks` and `sdd-apply` phases load and follow it BEFORE planning or creating any PR. Do not hardcode the skill path; defer resolution to that mechanism.
+When `delivery_strategy` is `chained`, treat `chained-pr` (registry skill `chained-pr`) as a required skill match: resolve it by registry name through this template's existing skill-resolution mechanism (the same one it already uses to pass skills to phases) and ensure the `sdd-tasks` and `sdd-apply` phases load and follow it BEFORE planning or creating any PR. Do not hardcode the skill path; defer resolution to that mechanism.
 
 ### Dependency Graph
 
@@ -320,18 +324,6 @@ Verification is opt-in and may inspect partial work. Completed implementation no
 ### Result Contract
 
 Each phase returns: `status`, `executive_summary`, `artifacts`, `next_recommended`, `risks`, `skill_resolution`.
-
-### Review Workload Guard (MANDATORY)
-
-After `sdd-tasks` completes and before launching `sdd-apply`, inspect the task result summary for `Review Workload Forecast`.
-
-If it says `Chained PRs recommended: Yes`, `400-line budget risk: High`, estimated changed lines exceed 400, or `Decision needed before apply: Yes`, apply the cached `delivery_strategy`: `ask-on-risk` asks, `auto-chain` asks for a missing `chain_strategy` and applies only the next PR slice, `single-pr` requires `size:exception`, and `exception-ok` records the exception.
-
-Any other `delivery_strategy` value is invalid. Do NOT pick the nearest branch and do NOT proceed: STOP, report the unrecognised value, and re-collect the delivery strategy before `sdd-apply` runs.
-
-Do this even in Automatic mode. Automatic mode does not override reviewer burnout protection.
-
-When launching `sdd-apply`, include the resolved `delivery_strategy`, `chain_strategy`, and any chosen PR boundary/exception in the prompt.
 
 <!-- /section:model-capable -->
 

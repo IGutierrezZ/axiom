@@ -39,7 +39,7 @@ import (
 // delivery strategy: one backticked, pipe-separated list led by the default
 // value. Keeping the pattern anchored on that shape is what lets the guard read
 // the domain out of the shipped skill instead of hardcoding it.
-var deliveryDomainDeclaration = regexp.MustCompile("`(ask-on-risk(?: \\| [a-z][a-z0-9-]*)+)`")
+var deliveryDomainDeclaration = regexp.MustCompile("`(single-pr(?: \\| [a-z][a-z0-9-]*)+)`")
 
 // preflightPRGroupLabels matches the user-facing PR option list the preflight
 // renders, e.g. "- **PR strategy** (`pr-strategy`): Ask me, Single PR, or Auto."
@@ -60,6 +60,7 @@ var canonicalValueShape = regexp.MustCompile(`^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$`)
 var deliveryStrategySkillContracts = []string{
 	"skills/sdd-apply/SKILL.md",
 	"skills/sdd-tasks/SKILL.md",
+	"skills/_shared/sdd-phase-common.md",
 }
 
 // canonicalDeliveryStrategyDomain reads the domain out of the shipped phase
@@ -247,19 +248,20 @@ func TestSDDPreflightFixedDeliveryStaysInsideConsumerDomain(t *testing.T) {
 	}
 }
 
-// reviewWorkloadGuardSections returns the Review Workload Guard body of every
-// shipped orchestrator, discovered by walking the embedded tree.
-func reviewWorkloadGuardSections(t *testing.T) map[string]string {
+// deliveryStrategySections returns the Delivery Strategy body of every shipped
+// orchestrator, rendered through the shared-section substitution and discovered
+// by walking the embedded tree.
+func deliveryStrategySections(t *testing.T) map[string]string {
 	t.Helper()
 
-	const heading = "### Review Workload Guard"
+	const heading = "### Delivery Strategy"
 	sections := map[string]string{}
 	err := fs.WalkDir(assets.FS, ".", func(path string, entry fs.DirEntry, walkErr error) error {
 		if walkErr != nil || entry.IsDir() || !strings.HasSuffix(path, ".md") {
 			return walkErr
 		}
 		content := assets.MustRead(path)
-		if strings.HasSuffix(path, "/sdd-orchestrator.md") {
+		if strings.HasSuffix(path, "/sdd-orchestrator.md") || strings.HasSuffix(path, "/sdd-orchestrator-workflow.md") {
 			content = substituteSharedOrchestratorSections(content)
 		}
 		start := strings.Index(content, heading)
@@ -279,18 +281,29 @@ func reviewWorkloadGuardSections(t *testing.T) map[string]string {
 		t.Fatalf("walk embedded assets: %v", err)
 	}
 	if len(sections) == 0 {
-		t.Fatal("no shipped orchestrator carries a Review Workload Guard; the guard has lost its subject")
+		t.Fatal("no shipped orchestrator carries a Delivery Strategy section; the guard has lost its subject")
 	}
 	return sections
 }
 
-// A branch list that silently drops an arm is the same defect seen from the
-// other side: a value the producer can emit that the consumer cannot match. The
-// domain is derived, so a typo in any arm shows up here as a missing arm.
-func TestSDDReviewWorkloadGuardsCoverTheWholeDeliveryStrategyDomain(t *testing.T) {
+// A section that silently drops a value is the same defect seen from the other
+// side: a value the producer can emit that the consumer cannot match. The domain
+// is derived from the phase skills, so a typo in the orchestrators shows up here
+// as a missing value. The legacy aliases are stated on their own with an arrow,
+// never with a pipe, so they cannot be mistaken for part of the domain.
+func TestSDDDeliveryStrategySectionsCoverTheWholeDomain(t *testing.T) {
 	domain := canonicalDeliveryStrategyDomain(t)
 
-	for path, section := range reviewWorkloadGuardSections(t) {
+	for path, section := range deliveryStrategySections(t) {
+		matches := deliveryDomainDeclaration.FindAllStringSubmatch(section, -1)
+		if len(matches) != 1 {
+			t.Errorf("%s Delivery Strategy must declare the domain exactly once as a backticked `a | b` list; found %d declarations", path, len(matches))
+			continue
+		}
+		if got := splitDeclaredDomain(matches[0][1]); strings.Join(got, "|") != strings.Join(domain, "|") {
+			t.Errorf("%s Delivery Strategy declares the domain %v, the phase skills declare %v", path, got, domain)
+		}
+
 		var missing []string
 		for _, value := range domain {
 			if !strings.Contains(section, "`"+value+"`") {
@@ -299,24 +312,29 @@ func TestSDDReviewWorkloadGuardsCoverTheWholeDeliveryStrategyDomain(t *testing.T
 		}
 		if len(missing) > 0 {
 			sort.Strings(missing)
-			t.Errorf(
-				"%s Review Workload Guard has no arm for delivery strategy %v; an unmatched value lets the orchestrator choose freely",
-				path,
-				missing,
-			)
+			t.Errorf("%s Delivery Strategy does not name delivery strategy %v; an unmatched value lets the orchestrator choose freely", path, missing)
+		}
+
+		for _, alias := range []string{"`ask-on-risk`", "`exception-ok`", "`auto-chain`"} {
+			if !strings.Contains(section, alias) {
+				t.Errorf("%s Delivery Strategy does not state the legacy alias %s", path, alias)
+			}
+		}
+		if !strings.Contains(section, "→") {
+			t.Errorf("%s Delivery Strategy states its legacy aliases without the → mapping", path)
 		}
 	}
 }
 
 // The vocabularies agreeing today does not stop a future typo from reintroducing
-// silent fallthrough. Every guard must say what happens to a value it does not
-// recognise instead of leaving the branch list open.
-func TestSDDReviewWorkloadGuardsRejectUnrecognisedDeliveryStrategy(t *testing.T) {
-	for path, section := range reviewWorkloadGuardSections(t) {
+// silent fallthrough. Every Delivery Strategy section must say what happens to a
+// value it does not recognise instead of leaving the choice open.
+func TestSDDDeliveryStrategySectionsRejectUnrecognisedValue(t *testing.T) {
+	for path, section := range deliveryStrategySections(t) {
 		if !strings.Contains(section, "Any other `delivery_strategy` value is invalid") {
 			t.Errorf(
-				"%s Review Workload Guard does not say what to do with an unrecognised `delivery_strategy`; "+
-					"a bare branch list falls through silently",
+				"%s Delivery Strategy does not say what to do with an unrecognised `delivery_strategy`; "+
+					"an open list falls through silently",
 				path,
 			)
 		}

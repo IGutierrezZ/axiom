@@ -639,10 +639,13 @@ func TestKilocodeReviewSettingsMatchCurrentMainBaseline(t *testing.T) {
 	// rdd-apagado T4 (C-01-c): el overlay de OpenCode que hereda Kilocode deja de declarar los agentes
 	// `review-*` y sus permisos de delegación. Deliberate, not drift.
 	// single-pr U2 (C-02-c): el preflight proyectado deja de preguntar la estrategia de PR y de fijar la
-	// política de revisión de 400 líneas: `monorepo-embedded` pregunta solo el ritmo, la entrega es siempre
-	// `single-pr` y el bloque pasa a cinco líneas. Kilocode compone ese bloque en el orquestador de
+	// política de revisión por umbral numérico: `monorepo-embedded` pregunta solo el ritmo, la entrega es
+	// siempre `single-pr` y el bloque pasa a cinco líneas. Kilocode compone ese bloque en el orquestador de
 	// OpenCode, así que el hash cambia. Deliberate, not drift.
-	const want = "f73c6a6ccf2c25ba136358b5c351274f875f31620e4dfa992fc350d4874cc552"
+	// single-pr U4 (C-02-c): el orquestador de OpenCode que compone Kilocode pasa a una sola sección
+	// compartida `Delivery Strategy` (`single-pr | chained`, nunca preguntada), sustituye la frase de
+	// cadena, retira `Review Workload Guard` y reduce la frase del gatekeeper. Deliberate, not drift.
+	const want = "2e1fbb87ebb8a70808a4b60b9e0566683f11f8ca752dcc81452ad15315385a74"
 	if got != want {
 		t.Fatalf("Kilocode settings SHA-256 = %s, want current-main baseline %s", got, want)
 	}

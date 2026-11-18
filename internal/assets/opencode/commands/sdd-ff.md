@@ -28,8 +28,7 @@ CONTEXT:
 - Change name: $ARGUMENTS
 - Execution mode: ask/cache per orchestrator
 - Artifact store mode: ask/cache per orchestrator; do not hardcode Engram
-- Delivery strategy: ask/cache per orchestrator
-- Review budget: ask/cache per orchestrator
+- Delivery strategy: never asked; `single-pr` unless the person asks for chained PRs
 
 ENGRAM NOTE:
 Sub-agents handle persistence automatically using the selected artifact store. In engram/hybrid, each phase saves with topic_key "sdd/$ARGUMENTS/{type}" where type is: proposal, spec, design, tasks.

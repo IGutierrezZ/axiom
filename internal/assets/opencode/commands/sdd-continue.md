@@ -24,8 +24,7 @@ CONTEXT:
 - Change name: $ARGUMENTS
 - Execution mode: ask/cache per orchestrator
 - Artifact store mode: ask/cache per orchestrator; do not hardcode Engram
-- Delivery strategy: ask/cache per orchestrator
-- Review budget: ask/cache per orchestrator
+- Delivery strategy: never asked; `single-pr` unless the person asks for chained PRs
 
 ENGRAM NOTE:
 To check which artifacts exist in engram/hybrid, search: mem_search(query: "sdd/$ARGUMENTS/", project: "{project}") to list all artifacts for this change.

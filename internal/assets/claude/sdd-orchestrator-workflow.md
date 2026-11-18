@@ -46,7 +46,7 @@ Only launch `sdd-apply` when all are true:
 
 1. Session preflight is complete.
 2. The active change has existing spec, design, and tasks artifacts.
-3. The user explicitly asked to apply/continue implementation, or the prior SDD planning phase completed and the orchestrator has passed the review workload guard.
+3. The user explicitly asked to apply/continue implementation, or the prior SDD planning phase completed.
 
 If any dependency is missing, STOP and propose `/sdd-new` or `/sdd-ff`; do not implement.
 
@@ -97,23 +97,16 @@ The artifact store is never asked: in Axiom the session store is always `hybrid`
 
 ### Delivery Strategy
 
-Use the delivery strategy cached by SDD Session Preflight; do not ask a separate strategy question:
-
-- `ask-on-risk` — default; ask only when the tasks forecast detects review-budget risk.
-- `auto-chain` — automatically split into chained/stacked PR slices when needed.
-- `single-pr` — proceed as one PR only if the size is within budget.
-- `exception-ok` — user accepts `size:exception` when over budget. The preflight menu cannot select this; it is reached only when the user explicitly accepts `size:exception`, either up front or when `ask-on-risk` stops to ask.
-
-These four are the whole domain. Pass `delivery_strategy` to `sdd-tasks` and `sdd-apply`.
+{{GENTLE_AI_SDD_SECTION:Delivery Strategy}}
 
 ### Chain Strategy
 
-When delivery planning yields chained PRs, ask once for chain strategy and cache it:
+When `delivery_strategy` is `chained` and the person did not name a chain strategy, ask once for chain strategy and cache it:
 
 - `stacked-to-main` — each PR targets the previous PR branch or main in sequence.
 - `feature-branch-chain` — PR #1 targets the tracker branch; child PRs target the immediate previous PR branch; only the tracker merges to main.
 
-When chained PRs are selected, treat `chained-pr` (registry skill `chained-pr`) as a required skill match. Resolve and forward it by registry path to `sdd-tasks` and `sdd-apply`; do not hardcode its path.
+When `delivery_strategy` is `chained`, treat `chained-pr` (registry skill `chained-pr`) as a required skill match. Resolve and forward it by registry path to `sdd-tasks` and `sdd-apply`; do not hardcode its path.
 
 Pass it as `chain_strategy` to `sdd-tasks` and `sdd-apply` prompts alongside `delivery_strategy`.
 
@@ -134,23 +127,6 @@ The per-role verify, the judgment, and the coverage review are offered or applie
 ### Result Contract
 
 Every SDD phase returns: `status`, `executive_summary`, `artifacts`, `next_recommended`, `risks`, and `skill_resolution`.
-
-### Review Workload Guard (MANDATORY)
-
-After `sdd-tasks` completes and before launching `sdd-apply`, inspect `Review Workload Forecast`.
-
-If it says `Chained PRs recommended: Yes`, `400-line budget risk: High`, estimated changed lines exceed 400, or `Decision needed before apply: Yes`, apply cached `delivery_strategy`:
-
-- `ask-on-risk`: stop and ask whether to split or proceed with `size:exception`.
-- `auto-chain`: split automatically; ask for `chain_strategy` only if missing.
-- `single-pr`: stop and require/record `size:exception` before apply.
-- `exception-ok`: continue and tell `sdd-apply` this run uses `size:exception`.
-
-Any other `delivery_strategy` value is invalid. Do NOT pick the nearest branch and do NOT proceed: STOP, report the unrecognised value, and re-collect the delivery strategy before launching `sdd-apply`.
-
-Always pass the resolved `delivery_strategy`, `chain_strategy`, and PR boundary/exception to `sdd-apply`.
-
-When launching `sdd-apply`, always include the resolved `delivery_strategy`, `chain_strategy`, and any chosen PR boundary/exception in the prompt.
 
 ### Sub-Agent Launch Deduplication (MANDATORY)
 

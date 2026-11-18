@@ -2634,12 +2634,16 @@ func TestInjectKimiKiroWindsurfAntigravityPreserveNativeChainStrategyWording(t *
 			// delivery-strategy producer.
 			assertFallbackSessionPreflight(t, text)
 			chainStart := strings.Index(text, "### Chain Strategy\n")
-			chainEnd := strings.Index(text, "### Review Workload Guard (MANDATORY)")
-			if chainStart < 0 || chainEnd <= chainStart {
+			if chainStart < 0 {
+				t.Fatal("missing chain strategy section")
+			}
+			// The section ends at the next heading, whichever section follows it.
+			chainEnd := strings.Index(text[chainStart+len("### Chain Strategy\n"):], "\n### ")
+			if chainEnd < 0 {
 				t.Fatal("missing bounded chain strategy section")
 			}
-			chain := text[chainStart:chainEnd]
-			for _, want := range []string{"When `delivery_strategy` results in chained PRs", "ask the user which chain strategy to use", "Cache the chain strategy for the session", "`chain_strategy`", "`delivery_strategy`"} {
+			chain := text[chainStart : chainStart+len("### Chain Strategy\n")+chainEnd]
+			for _, want := range []string{"When `delivery_strategy` is `chained` and the person did not name a chain strategy", "ask the user which chain strategy to use", "Cache the chain strategy for the session", "`chain_strategy`", "`delivery_strategy`", "When `delivery_strategy` is `chained`, treat `chained-pr`"} {
 				if !strings.Contains(chain, want) {
 					t.Errorf("native chain strategy missing independent semantics %q", want)
 				}
