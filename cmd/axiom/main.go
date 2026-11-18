@@ -146,7 +146,7 @@ COMANDOS DE GOBERNANZA Y WORKSPACE:
   knowledge sweep      Barrido rápido técnico y funcional del proyecto (soporta --json, --headless)
   knowledge crawl      Crawling exhaustivo desacoplado por unidades de trabajo (soporta --plan, --record-unit, --status, --finalize)
   knowledge query      Consulta spec-first fundamentada con evidencias de código (solo lectura por defecto)
-  semantic status      Diagnostica los conectores semánticos (Serena, CodeGraph, AST) y salud del workspace
+  semantic status      Diagnostica los conectores semánticos (CodeGraph, AST) y salud del workspace
   semantic symbols     Consulta y filtra símbolos de código (struct, interface, func, method)
   semantic inspect     Inspecciona el grafo de dependencias entre paquetes del workspace
   semantic reindex     Dispara la reindexación de CodeGraph bajo demanda en el workspace
@@ -1601,7 +1601,6 @@ func runSemanticStatus(args []string) {
 	fmt.Printf("===================================================\n")
 	fmt.Printf("  - Conector activo:      %s\n", strings.ToUpper(string(status.ActiveConnector)))
 	fmt.Printf("  - Conector configurado: %s\n", status.ConfiguredConnector)
-	fmt.Printf("  - Serena MCP:           %s\n", boolToStatus(status.SerenaAvailable))
 	fmt.Printf("  - CodeGraph CLI:        %s\n", boolToStatus(status.CodeGraphAvailable))
 	fmt.Printf("  - Motor Nativo Go AST:  LISTO [OK]\n")
 	fmt.Printf("  - Total paquetes:       %d\n", status.TotalPackages)

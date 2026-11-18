@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-// Detector inspecciona el entorno local para determinar la disponibilidad de Serena MCP y CodeGraph.
+// Detector inspecciona el entorno local para determinar la disponibilidad de CodeGraph.
 type Detector struct {
 	homeDir      string
 	lookPathFunc func(file string) (string, error)
@@ -144,7 +144,7 @@ func (d *Detector) DetectAgents(projectRoots ...string) []AgentToolStatus {
 	return results
 }
 
-// findSemanticToolsInJSON busca referencias a serena o codegraph en un archivo de configuración JSON.
+// findSemanticToolsInJSON busca referencias a codegraph en un archivo de configuración JSON.
 func (d *Detector) findSemanticToolsInJSON(content []byte) []string {
 	var parsed map[string]interface{}
 	if err := json.Unmarshal(content, &parsed); err != nil {
@@ -157,9 +157,6 @@ func (d *Detector) findSemanticToolsInJSON(content []byte) []string {
 	checkObj := func(m map[string]interface{}) {
 		for k := range m {
 			lower := strings.ToLower(k)
-			if strings.Contains(lower, "serena") {
-				found = append(found, "serena-mcp")
-			}
 			if strings.Contains(lower, "codegraph") {
 				found = append(found, "codegraph")
 			}
@@ -191,17 +188,6 @@ func (d *Detector) CheckCodeGraphInPath() bool {
 	return err == nil
 }
 
-// CheckSerenaInPath comprueba si el binario o ejecutable de Serena MCP está en el PATH del sistema.
-func (d *Detector) CheckSerenaInPath() bool {
-	if _, err := d.lookPathFunc("serena"); err == nil {
-		return true
-	}
-	if _, err := d.lookPathFunc("serena-mcp"); err == nil {
-		return true
-	}
-	return false
-}
-
 // CheckCodeGraphConfigured comprueba si CodeGraph está configurado en algún agente (workspace o global).
 func (d *Detector) CheckCodeGraphConfigured(agents []AgentToolStatus) bool {
 	for _, a := range agents {
@@ -210,21 +196,6 @@ func (d *Detector) CheckCodeGraphConfigured(agents []AgentToolStatus) bool {
 		}
 	}
 	return false
-}
-
-// CheckSerenaConfigured comprueba si Serena está configurada en algún agente (workspace o global).
-func (d *Detector) CheckSerenaConfigured(agents []AgentToolStatus) bool {
-	for _, a := range agents {
-		if a.Configured && strings.Contains(strings.ToLower(a.Details), "serena") {
-			return true
-		}
-	}
-	return false
-}
-
-// CheckSerenaAvailability comprueba si Serena MCP está disponible en algún agente o CLI.
-func (d *Detector) CheckSerenaAvailability(agents []AgentToolStatus) bool {
-	return d.CheckSerenaInPath() || d.CheckSerenaConfigured(agents)
 }
 
 // CheckCodeGraphAvailability comprueba si CodeGraph está disponible en CLI o agentes.

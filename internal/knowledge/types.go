@@ -56,7 +56,7 @@ const (
 
 // EvidenceItem detalla una evidencia de código que respalda la respuesta.
 type EvidenceItem struct {
-	Source  string `json:"source"` // "spec", "serena", "codegraph", "code"
+	Source  string `json:"source"` // "spec", "codegraph", "code"
 	File    string `json:"file"`
 	Lines   string `json:"lines,omitempty"`
 	Symbol  string `json:"symbol,omitempty"`
