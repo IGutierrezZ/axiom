@@ -235,6 +235,8 @@ Modelo de ramas por topología:
 - La persona publica (`push`) y abre los PR; `axiom branch` nunca lo hace.
 - Cada parada de un cambio SDD con paradas ofrece tres salidas (véase «Compuertas de Bloque Formales»); ODD no tiene paradas propias (véase «Carril de Trabajo (`workflow:`)»). Con las salidas 2 y 3, «aprobar, publicar y parar» y «aprobar, publicar y seguir», el orquestador encadena `axiom sdd gate record` y `axiom sdd publish`: la aprobación es la autorización explícita de subir los documentos del cambio a `origin/<rama>` con las credenciales de git ya configuradas, y de nada más; el push de código, la PR y el merge siguen siendo de la persona. Quien continúa en otra máquina no necesita una PR fusionada: en un monorepo-embedded basta `git fetch origin` (o `axiom branch ensure --fetch`, con autorización) y `axiom branch ensure --change <cambio>`, que adopta la rama publicada. En el repositorio de specs de un multirepo se publica la rama de integración, sin PR.
 
+Con `git.main_branch` declarada y distinta de la rama de integración, `axiom branch ensure --promotion branch|release|<repo>=branch|release` (repetible) fija el modo de promoción del cambio, que se registra con su origen; un modo distinto del ya registrado es `plan_conflict`, y no se admite con `--archive`. En el modo `branch`, `done` trabaja en dos etapas: tras fusionar la primera PR en la integración conserva la rama del cambio (`merge_not_confirmed`) hasta que se fusiona también en `main_branch`, y solo entonces la elimina; la rama de archivado se retira como siempre. El envoltorio `scripts/axiom-worktree.*` toma la rama de integración de `axiom branch status --json`, con `main` si no la obtiene.
+
 El modo de trabajo (`worktree` por defecto, `in_place` o `ask`) y la raíz de los worktrees no se declaran en `axiom.yaml`: son preferencias personales del hub. Se fijan al registrar el proyecto (`axiom project add --worktree-mode in_place --worktree-root <ruta absoluta> <proyecto>`, o los dos campos del modal de registro de `axiom ui`) y `axiom branch ensure --mode` las sustituye para un cambio concreto.
 
 #### Flujo de la rama de archivado (monorepo)
@@ -329,6 +331,9 @@ git:
 - Una clave desconocida dentro de `git:` es un error. El modo de trabajo y la raíz de los worktrees **no** se declaran en `axiom.yaml`: son preferencias personales de cada usuario.
 - `axiom workspace validate` rechaza un bloque `git:` inválido nombrando la clave, el valor y la regla incumplida, con código de salida `1`. Un `git:` inválido no impide resolver el proyecto (la resolución solo necesita la configuración base): solo fallan la carga estricta y la validación.
 - Los binarios anteriores ignoran el bloque, así que declararlo no rompe a un equipo con versiones mezcladas.
+- `main_branch` (opcional, sin valor por defecto) declara la rama principal a la que se promueve lo ya integrado. Sin ella, o igual a `integration_branch`, el trabajo se integra en una sola etapa; con ella distinta, el repositorio tiene dos etapas.
+- `promotion` (opcional) decide cómo se recorren las dos etapas: `branch` (por defecto) saca la rama del cambio de la principal, su primera PR va a la rama de integración y, una vez fusionada, `axiom branch status` propone `main_branch` como destino de la segunda; `release` saca la rama de la integración y deja el paso a la principal a la release; `ask` pregunta por cada cambio (`decision_required`). Sin `main_branch` no tiene efecto y `axiom workspace validate` lo avisa sin invalidar la configuración.
+- Compatibilidad: un binario anterior rechaza `git.main_branch` y `git.promotion` (`config_invalid`, clave desconocida); actualizad todo el equipo antes de declararlas o retiradlas antes de volver atrás.
 
 ### Ajustes por Repositorio (`repositories:`)
 
@@ -346,6 +351,7 @@ repositories:
 - `integration_branch` y `branch_prefix` siguen las mismas reglas de validez que en `git:`. Un repositorio sin entrada, o una entrada sin una de las claves, hereda el valor del bloque `git:` (y, sin él, el valor por defecto): `repositories:` solo sustituye lo que declara.
 - Una clave desconocida dentro de una entrada es un error, igual que una entrada sin `path`. El modo de trabajo y la raíz de los worktrees siguen sin declararse en `axiom.yaml`.
 - `axiom workspace validate` rechaza un bloque `repositories:` inválido nombrando la entrada (`repositories[0]`), la clave, el valor y la regla incumplida, con código de salida `1`. Igual que `git:`, un `repositories:` inválido no impide resolver el proyecto: solo fallan la carga estricta y la validación.
+- `promotion` (`branch`, `release` o `ask`) sustituye a `git.promotion` en ese repositorio y se hereda si falta; solo tiene efecto cuando `git.main_branch` existe y es distinta de la integración efectiva de la entrada.
 - `axiom workspace validate` comprueba además en disco que cada `path` existe como directorio y obtiene su raíz git ascendiendo hasta una entrada `.git`, sin lanzar procesos (un worktree enlazado tiene su propia raíz): dos entradas que resuelven a la misma raíz git se rechazan nombrando ambas rutas y la raíz compartida (`app/web` y `app/api` dentro de un mismo repositorio). Una ruta que no pertenece a ningún repositorio git solo produce una advertencia que la nombra: el resultado sigue siendo `COMPLIANT`.
 - Los binarios anteriores ignoran el bloque, como el de `git:`.
 

@@ -263,7 +263,7 @@ If none, say "None."}
 ### Closing the Work and Proposing the Pull Request
 When the assigned tasks are complete and checked:
 1. Offer the user a formal commit with a semantic message (`feat(<role>): ...`) on the branch of that role.
-2. Propose the target branch of the pull request from `prTarget` of `repositories[].branches[]` in `axiom branch status --cwd "<workspaceRoot>" --change <c> --json`; do not ask the user for it. A role branch targets the tracking branch of the change, and the tracking branch targets the integration branch (`git.integration_branch`).
+2. Propose the target branch of the pull request from `prTarget` of `repositories[].branches[]` in `axiom branch status --cwd "<workspaceRoot>" --change <c> --json`; do not ask the user for it. A role branch targets the tracking branch of the change, and the tracking branch targets the integration branch (`git.integration_branch`) and, in promotion mode `branch`, once merged there `prTarget` names `git.main_branch` for the second pull request.
 3. Suggest the command with that base, and leave publishing to the person:
    ```bash
    gh pr create --base <prTarget> --head <current-branch> --title "<title>" --body "<summary of changes and verification>"
