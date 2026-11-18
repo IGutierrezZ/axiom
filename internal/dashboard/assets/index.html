@@ -668,7 +668,8 @@
         </div>
       </div>
       <p class="field-hint">Preferencias personales: se guardan en tu Hub, no en <code>axiom.yaml</code>. Si dejas la raíz vacía se usa la ruta por defecto.</p>
-      <div class="form-stack" style="border-top: 1px solid var(--border); padding-top: 14px">
+      <!-- Solo en multirepo: monorepo-embedded solo admite el rol fullstack -->
+      <div class="form-stack" id="field-project-roles" hidden style="border-top: 1px solid var(--border); padding-top: 14px">
         <div class="field-row" style="justify-content: space-between">
           <span class="field-label">Roles del proyecto (opcional)</span>
           <button type="button" id="btn-add-role-row" class="btn btn-sm"><i data-icon="plus" data-size="14"></i>Agregar rol</button>

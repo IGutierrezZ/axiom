@@ -119,17 +119,25 @@ func TestEnsureWithoutAPublishedBranchCreatesItFromTheBaseAndWarns(t *testing.T)
 	wantNoRemoteOperations(t, *seen)
 }
 
+// Las ramas de rol solo existen en `multirepo` (REQ-2.2 de `workspace-topology`): los roles `core`
+// y `qa` comparten el repositorio de código `repo-backend`, que es el que tiene remoto.
 func TestEnsureRoleBranchesAdoptTheirPublishedBranch(t *testing.T) {
-	repo := newProject(t, configWithRoles(map[string][]string{"core": {"."}, "qa": {"."}}, ""))
+	master, specs := newMultirepo(t, map[string][]string{"core": {"repo-backend"}, "qa": {"repo-backend"}}, "repo-backend")
+	repo := filepath.Join(master, "repo-backend")
 	remote := remoteWithMain(t, repo)
-	sealChange(t, repo, "x", "core", "qa")
+	sealChangeAt(t, specs, "x", "core", "qa")
 	publishedQA := publishBranch(t, remote, "feat/x-qa")
 	runGit(t, repo, "fetch", "-q", "origin")
 
-	result := ensureOf(t, repo, "x")
+	result := ensureOf(t, master, "x")
 
 	wantReady(t, result)
-	repository := onlyRepository(t, result)
+	var repository branch.RepositoryResult
+	for _, candidate := range result.Repositories {
+		if candidate.Name == "repo-backend" {
+			repository = candidate
+		}
+	}
 	wantAdopted(t, repo, branchByName(t, repository, "feat/x-qa"), publishedQA)
 	if core := branchByName(t, repository, "feat/x-core"); core.CreatedFrom != branch.CreatedFromChangeBranch || core.CreatedFromRef != "refs/heads/feat/x" {
 		t.Errorf("feat/x-core: createdFrom=%q createdFromRef=%q, se esperaba change_branch y refs/heads/feat/x", core.CreatedFrom, core.CreatedFromRef)

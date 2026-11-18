@@ -35,8 +35,9 @@ func RunSDDKickoff(args []string, stdout io.Writer) error {
 
 func renderSDDKickoffHelp(stdout io.Writer) error {
 	_, _ = fmt.Fprintln(stdout, "Uso: axiom sdd kickoff <seal|show> [argumentos]")
-	_, _ = fmt.Fprintln(stdout, "  seal --cwd <ruta> --change <nombre> (--execution-style continuous|checkpointed | --from-session-pace interactive|auto) [--docs-publication auto (solo con continuous)] [--role <id>[:blocking|deferred|optional] ...] [--deployment-target local|staging|production] [--json]")
+	_, _ = fmt.Fprintln(stdout, "  seal --cwd <ruta> --change <nombre> [--execution-style continuous|checkpointed | --from-session-pace interactive|auto] [--docs-publication auto (solo con continuous)] [--role <id>[:blocking|deferred|optional] ...] [--deployment-target local|staging|production] [--json]")
 	_, _ = fmt.Fprintln(stdout, "    continuous solo con el rol fullstack: con roles especializados se sella --execution-style checkpointed")
+	_, _ = fmt.Fprintln(stdout, "    la topología de axiom.yaml manda: en multirepo se sella siempre checkpointed (el estilo se deriva si se omite y continuous se rechaza); en monorepo-embedded solo se admite el rol fullstack; sin axiom.yaml el estilo es obligatorio")
 	_, _ = fmt.Fprintln(stdout, "  seal --infer --cwd <ruta> --change <nombre> [--json]   (retro-sellado conservador, REQ-21.4)")
 	_, _ = fmt.Fprintln(stdout, "  show --cwd <ruta> --change <nombre> [--json]")
 	return nil
@@ -72,6 +73,13 @@ func runSDDKickoffSeal(args []string, stdout io.Writer) error {
 		}
 		sealing = inferred
 	} else {
+		// La topología que gobierna el cambio fija el estilo y los roles (REQ-28.19). Se aplica antes
+		// de ensamblar el documento, de leer `sdd:` y de la guarda de rama: un rechazo por topología
+		// no emite avisos de rama ni escribe nada, y su mensaje gana a la regla de continuous.
+		topology, _ := loc.GoverningTopology()
+		if err := parsed.ApplyTopology(topology); err != nil {
+			return err
+		}
 		sealing = parsed.ToKickoff(parsed.Change)
 		// Una declaración `sdd:` inválida, o contradictoria con `workflow.lane`, se
 		// rechaza antes de tocar nada (REQ-29.1, REQ-29.12).

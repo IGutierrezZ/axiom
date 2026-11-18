@@ -322,6 +322,8 @@ projects:
 	res, err := ini.Init(InitOptions{
 		Path: tempDir,
 		Name: "Ludeka Adopted",
+		// Los roles detectados solo se aplican en multirepo.
+		Topology: "multirepo",
 	})
 	if err != nil {
 		t.Fatalf("error en Init con adopción: %v", err)
@@ -359,6 +361,8 @@ func TestInteractiveRolesAndNonBlocking(t *testing.T) {
 	res, err := ini.Init(InitOptions{
 		Path: tempDir,
 		Name: "Custom Roles Proj",
+		// Los roles especializados solo existen en multirepo.
+		Topology: "multirepo",
 		Roles: []RoleInput{
 			{
 				Key:          "backend",

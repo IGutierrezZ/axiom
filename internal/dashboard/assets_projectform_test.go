@@ -24,6 +24,9 @@ func TestProjectFormValidationRuntime(t *testing.T) {
 			"  errList: violationsFromError({ message: 'x', data: { violations: ['a', 'b'] } }),\n"+
 			"  errPlain: violationsFromError({ message: 'caído' }),\n"+
 			"  list: splitList(' a, b ,, c ,'),\n"+
+			"  monoRoles: validateProjectForm({ path: '/p', topology: 'monorepo-embedded', cards: [card({ key: 'core', repos: '.' }), card({ key: 'qa', repos: '/abs' })] }),\n"+
+			"  multiRoles: validateProjectForm({ path: '/p', topology: 'multirepo', specsRepository: 'repo-specs', cards: [card({ key: 'core', repos: 'a' }), card({ key: 'qa', repos: 'b' })] }),\n"+
+			"  switched: ['multirepo', 'monorepo-embedded'].map(topology => validateProjectForm({ path: '/p', topology, specsRepository: 'repo-specs', cards: [card({ key: 'core', repos: 'a' }), card({ key: 'qa', repos: 'b' })] }).roles.length),\n"+
 			"}));\n")
 	var res struct {
 		NoPath []string `json:"noPath"`
@@ -48,6 +51,15 @@ func TestProjectFormValidationRuntime(t *testing.T) {
 		ErrList   []string `json:"errList"`
 		ErrPlain  []string `json:"errPlain"`
 		SplitList []string `json:"list"`
+		MonoRoles struct {
+			Roles      []any    `json:"roles"`
+			Violations []string `json:"violations"`
+		} `json:"monoRoles"`
+		MultiRoles struct {
+			Roles      []any    `json:"roles"`
+			Violations []string `json:"violations"`
+		} `json:"multiRoles"`
+		Switched []int `json:"switched"`
 	}
 	if err := json.Unmarshal(out, &res); err != nil {
 		t.Fatalf("salida de node ilegible: %v\n%s", err, out)
@@ -101,6 +113,18 @@ func TestProjectFormValidationRuntime(t *testing.T) {
 	}
 	if len(res.SplitList) != 3 {
 		t.Errorf("splitList = %q", res.SplitList)
+	}
+
+	// REQ-3.3: en monorepo-embedded el formulario no envía roles (el servidor
+	// escribe el fullstack canónico) ni valida las tarjetas; multirepo los conserva.
+	if len(res.MonoRoles.Roles) != 0 || len(res.MonoRoles.Violations) != 0 {
+		t.Errorf("monorepo-embedded debe devolver roles vacíos sin violaciones de roles: %+v", res.MonoRoles)
+	}
+	if len(res.MultiRoles.Roles) != 2 || len(res.MultiRoles.Violations) != 0 {
+		t.Errorf("multirepo debe conservar los roles del formulario: %+v", res.MultiRoles)
+	}
+	if len(res.Switched) != 2 || res.Switched[0] != 2 || res.Switched[1] != 0 {
+		t.Errorf("al pasar de multirepo a monorepo-embedded con roles definidos debe devolver roles vacíos: %v", res.Switched)
 	}
 }
 
@@ -175,7 +199,11 @@ func TestAddProjectModalShowsSpecsRepositoryOnlyForMultirepo(t *testing.T) {
 	if !strings.Contains(modal, `id="field-project-specs-repository" hidden`) || !strings.Contains(modal, `id="input-project-specs-repository"`) {
 		t.Error("el campo del repositorio de specs debe estar en el modal de alta y oculto por defecto")
 	}
-	for _, marker := range []string{"updateTopologyFields", "'multirepo'", "specs_repository"} {
+	// REQ-3.3: el constructor de roles también queda oculto salvo en multirepo.
+	if !strings.Contains(modal, `id="field-project-roles" hidden`) || !strings.Contains(modal, `id="roles-builder-container"`) {
+		t.Error("la sección de roles debe estar en el modal de alta y oculta por defecto (monorepo-embedded)")
+	}
+	for _, marker := range []string{"updateTopologyFields", "'multirepo'", "specs_repository", "#field-project-roles", "fieldRoles.hidden"} {
 		if !strings.Contains(projects, marker) {
 			t.Errorf("projects.js debe contener %q", marker)
 		}

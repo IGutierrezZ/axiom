@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/IGutierrezZ/axiom/v3/internal/workspace/workspacetest"
 )
 
 // mockFS simula un sistema de archivos en memoria para pruebas deterministas
@@ -485,8 +487,8 @@ func TestValidateDeclarationPathsArtifactStore(t *testing.T) {
 		t.Run("almacen "+store+" con contexto mantenido", func(t *testing.T) {
 			root := setup(t, "config.yaml", "artifact_store: "+store+"\n")
 			errs, _ := ValidateDeclarationPaths(declarationsConfig(t, locateEmbeddedConfig, both), root)
-			if len(errs) != 1 {
-				t.Fatalf("errores = %v, se esperaba uno", errs)
+			if len(errs) != 2 {
+				t.Fatalf("errores = %v, se esperaban el del contexto mantenido y el del almacén", errs)
 			}
 			assertContains(t, errs, "la declaración 'technical_context.maintained' exige un almacén de artefactos de ficheros")
 			assertContains(t, errs, "declara artifact_store '"+store+"'")
@@ -497,7 +499,7 @@ func TestValidateDeclarationPathsArtifactStore(t *testing.T) {
 	t.Run("solo contexto mantenido con none", func(t *testing.T) {
 		root := setup(t, "config.yaml", "artifact_store: none\n")
 		errs, _ := ValidateDeclarationPaths(declarationsConfig(t, locateEmbeddedConfig, "technical_context:\n  maintained:\n    paths: [context/]\n"), root)
-		if len(errs) != 1 {
+		if len(errs) != 2 {
 			t.Fatalf("errores = %v", errs)
 		}
 		assertContains(t, errs, "'technical_context.maintained'")
@@ -507,7 +509,7 @@ func TestValidateDeclarationPathsArtifactStore(t *testing.T) {
 	t.Run("config.yml tambien se lee", func(t *testing.T) {
 		root := setup(t, "config.yml", "artifactStore: \"Engram\"  # almacén\n")
 		errs, _ := ValidateDeclarationPaths(declarationsConfig(t, locateEmbeddedConfig, both), root)
-		if len(errs) != 1 {
+		if len(errs) != 2 {
 			t.Fatalf("errores = %v", errs)
 		}
 	})
@@ -521,8 +523,6 @@ func TestValidateDeclarationPathsArtifactStore(t *testing.T) {
 		{"almacen hybrid", "artifact_store: hybrid\n", both},
 		{"sin artifact_store declarado", "rules:\n  apply: []\n", both},
 		{"sin openspec/config.yaml", "", both},
-		{"solo contexto de referencia con engram", "artifact_store: engram\n", referenceOnly},
-		{"sin declaraciones con none", "artifact_store: none\n", ""},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			root := setup(t, "config.yaml", tc.content)
@@ -539,9 +539,146 @@ func TestValidateDeclarationPathsArtifactStore(t *testing.T) {
 		writeTestFile(t, filepath.Join(master, "repo-specs", "openspec", "config.yaml"), "artifact_store: none\n")
 		cfg := declarationsConfig(t, locateCanonicalConfig, both)
 		errs, _ := ValidateDeclarationPaths(cfg, master)
-		if len(errs) != 1 {
+		if len(errs) != 2 {
 			t.Fatalf("errores = %v", errs)
 		}
 		assertContains(t, errs, "la declaración 'technical_context.maintained' exige")
 	})
+}
+
+// REQ-2.2: en monorepo-embedded el único rol admitido es fullstack.
+func TestValidateMonorepoRejectsSpecializedRoles(t *testing.T) {
+	baseDir := filepath.Clean("/workspace")
+	build := func(roles ...string) *WorkspaceConfig {
+		cfg := &WorkspaceConfig{
+			Workspace: WorkspaceSection{Name: "App", Topology: TopologyMonorepoEmbedded, SpecsRepository: "."},
+			Roles:     map[string]RoleConfig{},
+		}
+		for _, role := range roles {
+			cfg.Roles[role] = RoleConfig{Name: role, Repositories: []RepositoryEntry{{Path: "."}}}
+		}
+		return cfg
+	}
+	validate := func(cfg *WorkspaceConfig) *ValidationReport {
+		fs := newMockFS()
+		fs.addDir(baseDir)
+		report, err := Validate(fs, cfg, baseDir)
+		if err != nil {
+			t.Fatalf("error inesperado: %v", err)
+		}
+		return report
+	}
+
+	t.Run("core y qa se rechazan con la migracion", func(t *testing.T) {
+		report := validate(build("core", "qa"))
+		if report.Valid || len(report.Errors) != 1 {
+			t.Fatalf("Valid=%v errores=%v, se esperaba un único error", report.Valid, report.Errors)
+		}
+		for _, want := range []string{"'monorepo-embedded'", "'fullstack'", "core, qa", "multirepo", "kickoff.yaml"} {
+			assertContains(t, report.Errors, want)
+		}
+	})
+
+	t.Run("fullstack y web se rechaza nombrando web", func(t *testing.T) {
+		report := validate(build("fullstack", "web"))
+		if report.Valid || len(report.Errors) != 1 {
+			t.Fatalf("Valid=%v errores=%v", report.Valid, report.Errors)
+		}
+		assertContains(t, report.Errors, "declara: web")
+	})
+
+	t.Run("fullstack solo es conforme", func(t *testing.T) {
+		report := validate(build("fullstack"))
+		if !report.Valid || len(report.Errors) != 0 {
+			t.Fatalf("Valid=%v errores=%v", report.Valid, report.Errors)
+		}
+	})
+}
+
+func TestValidateMultirepoKeepsSpecializedRoles(t *testing.T) {
+	baseDir := filepath.Clean("/workspace")
+	fs := newMockFS()
+	fs.addDir(baseDir)
+	fs.addDir(filepath.Join(baseDir, "repo-specs"))
+	fs.addDir(filepath.Join(baseDir, "repo-core"))
+	fs.addDir(filepath.Join(baseDir, "repo-qa"))
+	cfg := &WorkspaceConfig{
+		Workspace: WorkspaceSection{Name: "App", Topology: TopologyMultirepo, SpecsRepository: "repo-specs"},
+		Roles: map[string]RoleConfig{
+			"core": {Name: "Core", Repositories: []RepositoryEntry{{Path: "repo-core"}}},
+			"qa":   {Name: "QA", Repositories: []RepositoryEntry{{Path: "repo-qa"}}},
+		},
+	}
+	report, err := Validate(fs, cfg, baseDir)
+	if err != nil {
+		t.Fatalf("error inesperado: %v", err)
+	}
+	if !report.Valid || len(report.Errors) != 0 {
+		t.Fatalf("multirepo admite cualquier rol válido: Valid=%v errores=%v", report.Valid, report.Errors)
+	}
+}
+
+// La regla es solo de validación: la carga no falla con roles especializados en
+// monorepo ni con un almacén heredado declarado.
+func TestLocateLoadsMonorepoRolesAndLegacyStore(t *testing.T) {
+	ws := workspacetest.Embedded(t, ".")
+	workspacetest.WriteFile(t, filepath.Join(ws.Master, "axiom.yaml"), locateEmbeddedConfig+"  qa:\n    name: QA\n    repositories:\n      - path: .\n")
+	workspacetest.WriteFile(t, filepath.Join(ws.Master, "openspec", "config.yaml"), "artifact_store: engram\n")
+
+	loc := mustLocate(t, ws.Master)
+	if loc.Config == nil || len(loc.Config.Roles) != 2 {
+		t.Fatalf("la carga debe conservar core y qa: %+v", loc.Config)
+	}
+	if store, declared := DeclaredArtifactStore(loc.WorkspaceRoot); !declared || store != "engram" {
+		t.Fatalf("DeclaredArtifactStore = (%q, %v), el almacén declarado sigue leyéndose", store, declared)
+	}
+}
+
+// REQ-2.6 y REQ-30.19: engram y none se reportan con independencia del contexto
+// técnico mantenido; openspec, hybrid y la ausencia de declaración no.
+func TestValidateDeclarationPathsRejectsLegacyArtifactStore(t *testing.T) {
+	setup := func(t *testing.T, content string) string {
+		t.Helper()
+		root := t.TempDir()
+		writeTestFile(t, filepath.Join(root, "00_Glosario.md"), "# glosario\n")
+		if content != "" {
+			writeTestFile(t, filepath.Join(root, "openspec", "config.yaml"), content)
+		}
+		return root
+	}
+
+	for _, store := range []string{"engram", "none"} {
+		for _, blocks := range []string{"", "technical_context:\n  reference:\n    paths: [00_Glosario.md]\n"} {
+			t.Run(store+" sin contexto mantenido", func(t *testing.T) {
+				root := setup(t, "artifact_store: "+store+"\n")
+				errs, _ := ValidateDeclarationPaths(declarationsConfig(t, locateEmbeddedConfig, blocks), root)
+				if len(errs) != 1 {
+					t.Fatalf("errores = %v, se esperaba uno", errs)
+				}
+				for _, want := range []string{"artifact_store", "'" + store + "'", "paradas de tres salidas", "publicación de compuertas", "--hand-off", "quita la clave", "'artifact_store: hybrid'"} {
+					assertContains(t, errs, want)
+				}
+				if strings.Contains(errs[0], "technical_context.maintained") {
+					t.Fatalf("sin contexto mantenido el error no lo nombra: %v", errs)
+				}
+			})
+		}
+	}
+
+	t.Run("con contexto mantenido el error nombra tambien technical_context.maintained", func(t *testing.T) {
+		root := setup(t, "artifact_store: engram\n")
+		writeTestFile(t, filepath.Join(root, "context", "a.md"), "# ctx\n")
+		errs, _ := ValidateDeclarationPaths(declarationsConfig(t, locateEmbeddedConfig, "technical_context:\n  maintained:\n    paths: [context/]\n"), root)
+		assertContains(t, errs, "paradas de tres salidas")
+		assertContains(t, errs, "technical_context.maintained")
+	})
+
+	for _, content := range []string{"artifact_store: openspec\n", "artifact_store: hybrid\n", "rules:\n  apply: []\n", ""} {
+		t.Run("sin error con "+strings.TrimSpace(content), func(t *testing.T) {
+			root := setup(t, content)
+			if errs, _ := ValidateDeclarationPaths(declarationsConfig(t, locateEmbeddedConfig, ""), root); len(errs) != 0 {
+				t.Fatalf("errores = %v, no se esperaba ninguno", errs)
+			}
+		})
+	}
 }

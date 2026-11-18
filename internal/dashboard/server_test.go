@@ -640,7 +640,9 @@ func TestWorkspaceBranchPolicyHarness(t *testing.T) {
 func TestProjectsInitRejectsInvalidConfigurationWith400AndViolations(t *testing.T) {
 	dir := filepath.Join(t.TempDir(), "proyecto-nuevo")
 	router, _, hubPath := newPrefsServer(t, t.TempDir())
-	body := `{"path":` + quoteJSON(dir) + `,"name":"Mal","roles":[` +
+	// Roles especializados: solo admisibles en multirepo (en monorepo-embedded el
+	// único rol es fullstack), así que las violaciones son las propias de los roles.
+	body := `{"path":` + quoteJSON(dir) + `,"name":"Mal","topology":"multirepo","roles":[` +
 		`{"key":"web","name":"Web","repositories":["../fuera"]},` +
 		`{"key":"web","name":"Otra","repositories":["."]}]}`
 
@@ -670,7 +672,7 @@ func TestProjectsInitRejectsInvalidConfigurationWith400AndViolations(t *testing.
 func TestProjectsInitWritesRoleTech(t *testing.T) {
 	dir := filepath.Join(t.TempDir(), "proyecto-nuevo")
 	router, _, _ := newPrefsServer(t, t.TempDir())
-	body := `{"path":` + quoteJSON(dir) + `,"name":"Con tech","roles":[{"key":"web","name":"Web","repositories":["."],"tech":["go","react"]}]}`
+	body := `{"path":` + quoteJSON(dir) + `,"name":"Con tech","topology":"multirepo","roles":[{"key":"web","name":"Web","repositories":["."],"tech":["go","react"]}]}`
 
 	rr := request(router, http.MethodPost, "/api/projects/init", body)
 	if rr.Code != http.StatusOK {

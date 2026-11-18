@@ -78,7 +78,7 @@ var currentOpenCodeOrchestratorSections = []orchestratorContractSection{
 		marker: "### SDD Session Preflight (HARD GATE)",
 		sentinels: []string{
 			"never collect these answers as typed chat text",
-			"no sequential wizard and no three separate calls",
+			"no sequential wizard and no separate calls",
 			"cache choices for the session",
 		},
 	},

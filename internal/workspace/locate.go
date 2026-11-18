@@ -54,6 +54,23 @@ type Location struct {
 	Notes         []string         // avisos no bloqueantes
 }
 
+// GoverningTopology devuelve la topología que gobierna el directorio resuelto.
+// Con una configuración cargada es la suya; con un axiom.yaml directo que no se
+// pudo cargar (topología ausente, desconocida o retirada) se conserva la
+// resolución embebida, igual que hace Locate (REQ-24.7, caso 3), y la topología
+// es monorepo-embedded, que además es el conjunto de reglas más amplio. Sin
+// axiom.yaml (origen openspec o start) no hay topología que aplicar y devuelve
+// ("", false). Un puntero roto no llega aquí: Locate ya falla.
+func (l Location) GoverningTopology() (TopologyType, bool) {
+	if l.Config != nil {
+		return l.Config.Workspace.Topology, true
+	}
+	if l.ConfigPath != "" {
+		return TopologyMonorepoEmbedded, true
+	}
+	return "", false
+}
+
 // LocateErrorKind clasifica los rechazos de la resolución.
 type LocateErrorKind string
 

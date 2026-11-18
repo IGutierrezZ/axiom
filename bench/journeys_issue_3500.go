@@ -50,7 +50,7 @@ func issue3500AssertFirstSync(sandbox *Sandbox, observation Observation) error {
 	if err != nil || observation.ExitCode != 0 || !strings.Contains(prompt, issue3500ExternalPrompt) ||
 		strings.Count(prompt, "<!-- gentle-ai:sdd-session-preflight -->") != 1 ||
 		strings.Count(prompt, "<!-- /gentle-ai:sdd-session-preflight -->") != 1 ||
-		!strings.Contains(prompt, "Both -> `hybrid`") || strings.Contains(prompt, "Both -> `both`") {
+		!strings.Contains(prompt, "Never ask the artifact store: it is always `hybrid`") || strings.Contains(prompt, "Both -> `both`") {
 		return fmt.Errorf("external OpenCode sync did not preserve user bytes and compose one canonical hybrid preflight: %q (%v)", prompt, err)
 	}
 	sandbox.Scratch["issue3500-first-prompt"] = prompt

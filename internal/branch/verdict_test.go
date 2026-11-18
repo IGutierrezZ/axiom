@@ -76,13 +76,22 @@ func TestDecideTheIntegrationBranchIsWrongInAMonorepo(t *testing.T) {
 	}
 }
 
-// REQ-25.18, escenario «Una rama de rol es correcta cuando hay ramas de rol»: también lo es
-// la de seguimiento, la del cambio.
+// multirepoCodeInput es la consulta de `apply` sobre un repositorio de código de un multirepo
+// (único lugar donde existen ramas de rol: en un monorepo el único rol es `fullstack`, REQ-2.2
+// de `workspace-topology`), parado en current.
+func multirepoCodeInput(current string) VerdictInput {
+	in := monorepoInput(current)
+	in.Role, in.Repo, in.Consultant = RepoCode, "repo-backend", ConsultantApply
+	return in
+}
+
+// REQ-25.18, escenario «Una rama de rol es correcta cuando hay ramas de rol» (repositorio de
+// código de un multirepo): también lo es la de seguimiento, la del cambio.
 func TestDecideARoleBranchIsCorrectWhenThereAreRoleBranches(t *testing.T) {
 	for _, current := range []string{"feat/x-qa", "feat/x-core", "feat/x"} {
-		wantVerdict(t, Decide(withRoles(monorepoInput(current))), VerdictCorrect)
+		wantVerdict(t, Decide(withRoles(multirepoCodeInput(current))), VerdictCorrect)
 	}
-	wrong := Decide(withRoles(monorepoInput("feat/x-otro")))
+	wrong := Decide(withRoles(multirepoCodeInput("feat/x-otro")))
 	wantVerdict(t, wrong, VerdictWrongBranch)
 	if want := []string{"feat/x", "feat/x-core", "feat/x-qa"}; !reflect.DeepEqual(wrong.Expected, want) {
 		t.Errorf("ramas esperadas = %v, se esperaban %v (la del cambio primero)", wrong.Expected, want)
@@ -102,16 +111,17 @@ func TestDecideTheArchiveBranchIsWrongInTheOrdinaryContext(t *testing.T) {
 }
 
 // REQ-25.18, escenarios «En el contexto de archivado solo la rama de archivado es correcta»
-// y «...la rama del cambio, la de integración y las de rol son incorrectas».
+// y «...la rama del cambio, la de integración y las ajenas son incorrectas» (monorepo con el
+// rol `fullstack`: no hay ramas de rol).
 func TestDecideInTheArchiveContextOnlyTheArchiveBranchIsCorrect(t *testing.T) {
 	archive := func(current string) VerdictInput {
-		in := withRoles(monorepoInput(current))
+		in := monorepoInput(current)
 		in.Context = ContextArchive
 		return in
 	}
 	wantVerdict(t, Decide(archive("feat/x-archive")), VerdictCorrect)
 
-	for _, current := range []string{"feat/x", "main", "feat/x-core", "feat/ajena"} {
+	for _, current := range []string{"feat/x", "main", "feat/otra", "feat/ajena"} {
 		t.Run(current, func(t *testing.T) {
 			verdict := Decide(archive(current))
 			wantVerdict(t, verdict, VerdictWrongBranch)

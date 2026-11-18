@@ -540,7 +540,13 @@ function initAddProject() {
   };
 
   // El repositorio de especificaciones solo existe en multirepo.
-  const updateTopologyFields = () => { fieldSpecs.hidden = selectTopology.value !== 'multirepo'; };
+  // Los roles especializados también: monorepo-embedded solo admite fullstack.
+  const fieldRoles = $('#field-project-roles');
+  const updateTopologyFields = () => {
+    const multirepo = selectTopology.value === 'multirepo';
+    fieldSpecs.hidden = !multirepo;
+    fieldRoles.hidden = !multirepo;
+  };
   selectTopology.addEventListener('change', updateTopologyFields);
 
   const openAdd = () => {

@@ -109,12 +109,12 @@ Do NOT skip this check. Do NOT ask the user — just run init silently if needed
 
 ### Execution Mode
 
-When the user invokes `/sdd-new`, `/sdd-ff`, or `/sdd-continue` (or an equivalent natural-language request, e.g. "create an SDD for X" / "do SDD for X") for the first time in a session, ASK which execution mode they prefer:
+When the user invokes `/sdd-new`, `/sdd-ff`, or `/sdd-continue` (or an equivalent natural-language request, e.g. "create an SDD for X" / "do SDD for X") for the first time in a session, resolve the execution mode from the project topology (`workspace.topology` in `axiom.yaml`): `multirepo` always uses **Interactive** without asking; in `monorepo-embedded` ASK which mode they prefer:
 
 - **Automatic** (`auto`): Run all phases back-to-back without pausing. The orchestrator runs a gatekeeper validation after every phase before invoking the next custom-agent — the user only sees an interruption when the gatekeeper catches a real problem. Show the final result only.
 - **Interactive** (`interactive`): After each phase completes, show the result summary and ASK: "Want to adjust anything or continue?" before proceeding to the next phase.
 
-If the user doesn't specify, default to **Automatic**. After scope approval, expect zero further prompts on the happy path and at most one actionable prompt per recoverable failure; the gatekeeper summarizes phase progress instead of interrupting except on a second consecutive gate failure or a genuine scope/product decision.
+No mode is assumed by default: `multirepo` always runs **Interactive** and never asks; `monorepo-embedded` asks it in the session preflight. After scope approval, expect zero further prompts on the happy path and at most one actionable prompt per recoverable failure; the gatekeeper summarizes phase progress instead of interrupting except on a second consecutive gate failure or a genuine scope/product decision.
 
 Interactive approval is phase-scoped. Words like "continue", "dale", or "go on" approve only the immediate next phase, not the rest of the SDD pipeline. Do not treat a generated artifact as approved until the user has had a chance to review or explicitly delegate that review.
 
@@ -146,15 +146,7 @@ The gatekeeper runs in addition to the Review Workload Guard and the Mandatory D
 
 ### Artifact Store Mode
 
-When the user invokes `/sdd-new`, `/sdd-ff`, or `/sdd-continue` (or an equivalent natural-language request) for the first time in a session, ALSO ASK which artifact store they want for this change:
-
-- **`engram`**: Fast, no files created. Artifacts live in engram only.
-- **`openspec`**: File-based. Creates `openspec/` with a shareable artifact trail.
-- **`hybrid`**: Both — files for team sharing + engram for cross-session recovery.
-
-If the user doesn't specify, detect: if engram is available → default to `engram`. Otherwise → `none`.
-
-Cache the artifact store choice for the session. Pass it as `artifact_store.mode` to every sub-agent launch.
+{{GENTLE_AI_SDD_SECTION:Artifact Store Mode}}
 
 ### Delivery Strategy
 

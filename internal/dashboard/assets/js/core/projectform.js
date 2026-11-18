@@ -117,6 +117,11 @@ export function validateProjectForm({ path, cards, topology, specsRepository }) 
     if (problem) violations.push(problem);
     else specs = String(specsRepository).trim();
   }
+  // monorepo-embedded solo admite el rol fullstack: no se envían roles y el
+  // servidor escribe el fullstack canónico (REQ-3.3). Las tarjetas no se ven.
+  if (topology === 'monorepo-embedded') {
+    return { roles: [], specsRepository: specs, violations };
+  }
   const built = buildRoles(cards);
   violations.push(...built.violations);
   return { roles: built.roles, specsRepository: specs, violations };

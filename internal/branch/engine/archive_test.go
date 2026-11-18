@@ -711,14 +711,14 @@ func TestEnsureArchiveNeverPublishes(t *testing.T) {
 	}
 }
 
-// REQ-25.7 (escenario «`--archive` no altera las ramas del cambio») y REQ-25.4: con las ramas
-// `feat/x`, `feat/x-core` y `feat/x-qa` ya creadas y el PR fusionado, `ensure --archive` crea
-// `feat/x-archive` y el commit al que apunta cada una de las ramas anteriores no cambia, ni
-// aparecen otras ramas; el plan de archivado tampoco se ve afectado por los roles sellados.
-func TestEnsureArchiveDoesNotAlterTheChangeAndRoleBranches(t *testing.T) {
+// REQ-25.7 (escenario «`--archive` no altera las ramas del cambio») y REQ-25.4: en un monorepo con
+// el rol único `fullstack` (sin ramas de rol) y `feat/x` ya creada con su PR fusionado,
+// `ensure --archive` crea `feat/x-archive` y el commit al que apunta `feat/x` no cambia, ni
+// aparecen otras ramas.
+func TestEnsureArchiveDoesNotAlterTheChangeBranch(t *testing.T) {
 	t.Parallel()
-	repo := twoRolesProject(t)
-	for _, name := range []string{"feat/x", "feat/x-core", "feat/x-qa"} {
+	repo := fullstackProject(t)
+	for _, name := range []string{"feat/x"} {
 		runGit(t, repo, "branch", name, "main")
 	}
 	mergeChange(t, repo, "x")
@@ -740,8 +740,8 @@ func TestEnsureArchiveDoesNotAlterTheChangeAndRoleBranches(t *testing.T) {
 	if want := runGit(t, repo, "rev-parse", "main"); archiveHead != want {
 		t.Errorf("feat/x-archive apunta a %s, se esperaba la integración %s", archiveHead, want)
 	}
-	if got := strings.Count(after, "\n") + 1; got != 4 {
-		t.Errorf("se esperaban las tres ramas anteriores y la de archivado:\n%s", after)
+	if got := strings.Count(after, "\n") + 1; got != 2 {
+		t.Errorf("se esperaban la rama del cambio y la de archivado:\n%s", after)
 	}
 	record := loadRecord(t, repo, "x")
 	if len(record.Repositories[0].Branches) != 1 || record.Repositories[0].Branches[0].Kind != branch.KindArchive {

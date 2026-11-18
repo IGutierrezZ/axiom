@@ -62,7 +62,7 @@ func TestFallbackSessionPreflightRejectsAmbiguousSource(t *testing.T) {
 		if agent == model.AgentCodex {
 			policyHeading = "### Artifact store (engram default)"
 		}
-		for _, heading := range []string{initLookup, policyHeading, "### Commands", "### Execution Mode", "### Artifact Store Mode", "### Delivery Strategy", "### Chain Strategy", "### Native SDD Dispatcher Guard", "### SDD Init Guard (MANDATORY)", "If the user doesn't specify, default to **Automatic**."} {
+		for _, heading := range []string{initLookup, policyHeading, "### Commands", "### Execution Mode", "### Artifact Store Mode", "### Delivery Strategy", "### Chain Strategy", "### Native SDD Dispatcher Guard", "### SDD Init Guard (MANDATORY)", "No mode is assumed by default: `multirepo` always runs **Interactive** and never asks; `monorepo-embedded` asks it in the session preflight."} {
 			for _, mutation := range []string{"missing", "duplicate"} {
 				t.Run(string(agent)+"/"+mutation+"/"+heading, func(t *testing.T) {
 					defer func() {

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/pathidentity"
@@ -34,6 +35,9 @@ func (OSFileSystem) IsDir(path string) (bool, error) {
 func DefaultFS() FS {
 	return OSFileSystem{}
 }
+
+// monorepoRole es el único rol que admite la topología monorepo-embedded.
+const monorepoRole = "fullstack"
 
 // Validate comprueba deterministamente que un WorkspaceConfig cumple las reglas de topología de Axiom en baseDir.
 func Validate(fs FS, cfg *WorkspaceConfig, baseDir string) (*ValidationReport, error) {
@@ -115,6 +119,24 @@ func Validate(fs FS, cfg *WorkspaceConfig, baseDir string) (*ValidationReport, e
 		}
 	}
 
+	// 3b. En monorepo-embedded el único rol admitido es fullstack: los roles
+	// especializados pertenecen a multirepo (REQ-2.2). Es solo una regla de
+	// validación; la carga no la aplica, de modo que un axiom.yaml existente sigue
+	// resolviéndose y los kickoff.yaml ya sellados se siguen leyendo igual.
+	if cfg.Workspace.Topology == TopologyMonorepoEmbedded {
+		var specialized []string
+		for roleKey := range cfg.Roles {
+			if roleKey != monorepoRole {
+				specialized = append(specialized, roleKey)
+			}
+		}
+		if len(specialized) > 0 {
+			sort.Strings(specialized)
+			report.Valid = false
+			report.Errors = append(report.Errors, fmt.Sprintf("la topología 'monorepo-embedded' solo admite el rol 'fullstack', pero axiom.yaml declara: %s. Para migrar, deja en 'roles' solo 'fullstack' (con los repositorios y tecnologías de los demás) o pasa a 'workspace.topology: multirepo' con un 'specs_repository' propio; los kickoff.yaml ya sellados se siguen leyendo igual", strings.Join(specialized, ", ")))
+		}
+	}
+
 	// 4. Validación de las raíces de skills versionadas. El escaneo del índice ignora
 	// en silencio las inválidas, así que este es el único punto donde se avisa.
 	for _, root := range cfg.Workspace.SkillRoots {
@@ -151,7 +173,7 @@ func Validate(fs FS, cfg *WorkspaceConfig, baseDir string) (*ValidationReport, e
 //   - con almacén declarado `engram` o `none`, un error por cada declaración que
 //     exige ficheros.
 func ValidateDeclarationPaths(cfg *WorkspaceConfig, master string) (errs []string, warnings []string) {
-	if cfg == nil || cfg.TechnicalContext == nil {
+	if cfg == nil {
 		return nil, nil
 	}
 	master = filepath.Clean(master)
@@ -159,7 +181,7 @@ func ValidateDeclarationPaths(cfg *WorkspaceConfig, master string) (errs []strin
 
 	// Si workspaceRoot no existe, Validate ya lo reporta: comprobar cada ruta
 	// contra él solo añadiría un error por declaración con la misma causa.
-	if info, err := os.Stat(workspaceRoot); err == nil && info.IsDir() {
+	if info, err := os.Stat(workspaceRoot); err == nil && info.IsDir() && cfg.TechnicalContext != nil {
 		var located []declaredLocation
 		if cfg.TechnicalContext != nil {
 			contextErrs, contextWarnings, contexts := checkContextPaths(cfg.TechnicalContext, workspaceRoot, master)
@@ -265,19 +287,33 @@ func sameLocation(a, b string) bool {
 	return pathidentity.Contains(a, b) || pathidentity.Contains(b, a)
 }
 
-// storeErrors reporta un error por cada declaración que exige un almacén de
-// ficheros cuando openspec/config.yaml declara `engram` o `none` (REQ-24.62). Sin
-// `artifact_store` declarado no reporta nada: el status cubre ese caso.
+// storeErrors reporta que openspec/config.yaml declara `engram` o `none`, con
+// independencia del contexto técnico (REQ-2.6), y además un error por cada
+// declaración que exige un almacén de ficheros (REQ-24.62, REQ-30.19). Sin
+// `artifact_store` declarado, o con `openspec` o `hybrid`, no reporta nada: el
+// status cubre el valor por defecto y esta regla no cambia su resolución.
 func storeErrors(cfg *WorkspaceConfig, workspaceRoot string) []string {
 	store, declared := DeclaredArtifactStore(workspaceRoot)
 	if !declared || (store != "engram" && store != "none") {
 		return nil
 	}
-	var errs []string
-	if cfg.TechnicalContext != nil && cfg.TechnicalContext.Maintained != nil {
+	maintained := cfg.TechnicalContext != nil && cfg.TechnicalContext.Maintained != nil
+	errs := []string{legacyStoreError(store, maintained)}
+	if maintained {
 		errs = append(errs, storeError("technical_context.maintained", "el contexto técnico mantenido", store))
 	}
 	return errs
+}
+
+// legacyStoreError es el error incondicional de REQ-2.6: en Axiom el almacén de
+// una sesión SDD es siempre hybrid. Con contexto mantenido nombra también la
+// declaración afectada (REQ-30.19).
+func legacyStoreError(store string, maintained bool) string {
+	msg := fmt.Sprintf("openspec/config.yaml declara artifact_store '%s', que Axiom ya no admite: el almacén de los cambios es siempre 'hybrid', y con '%s' no hay paradas de tres salidas, publicación de compuertas ni relevo (--hand-off). Para migrar, quita la clave artifact_store o declara 'artifact_store: hybrid'", store, store)
+	if maintained {
+		msg += "; la declaración 'technical_context.maintained' también lo exige"
+	}
+	return msg
 }
 
 func storeError(declaration, subject, store string) string {

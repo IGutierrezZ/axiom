@@ -221,7 +221,7 @@ func TestKnowledgeCrawlRecordAndFinalizeAreRejectedWithAResidualBaseline(t *test
 // registrar nada (tampoco con --force); sobre una carpeta maestra con puntero hacia
 // otro planning home se rechaza igualmente.
 func TestInitRejectsAResidualBaselineAndAForeignPointer(t *testing.T) {
-	const embedded = "workspace:\n  name: ejemplo\n  topology: monorepo-embedded\n  specs_repository: openspec\nroles:\n  core:\n    name: Core\n    repositories:\n      - path: .\n"
+	const embedded = "workspace:\n  name: ejemplo\n  topology: monorepo-embedded\n  specs_repository: openspec\nroles:\n  fullstack:\n    name: Fullstack\n    repositories:\n      - path: .\n"
 	for name, args := range map[string][]string{
 		"perfil completo":          {},
 		"perfil knowledge":         {"--profile", "knowledge"},

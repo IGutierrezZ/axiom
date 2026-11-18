@@ -1,11 +1,14 @@
 package kickoff
 
 import (
+	"errors"
 	"fmt"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/multirole"
+	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
 // maxChangeNameLength bounds a --change value to a plausible single path
@@ -113,7 +116,7 @@ type SealArgs struct {
 	FlowMode FlowMode
 
 	ExecutionStyle       ExecutionStyle
-	ExecutionStyleSource string // "explicit" | "session_pace"
+	ExecutionStyleSource string // "explicit" | "session_pace" | "topology"
 	// ExecutionStyleOverride is true when both --execution-style and
 	// --from-session-pace were given: the explicit flag wins, and this
 	// records that as a deliberate override rather than a silent one
@@ -260,9 +263,6 @@ func ParseSealArgs(args []string) (SealArgs, error) {
 		return parsed, nil
 	}
 
-	if !executionStyleExplicit && !sessionPaceGiven {
-		return SealArgs{}, fmt.Errorf("kickoff seal requiere --execution-style o --from-session-pace (REQ-21.5: no se asume un valor por defecto)")
-	}
 	if sessionPaceGiven {
 		derived := ExecutionCheckpointed
 		if sessionPaceValue == "auto" {
@@ -281,23 +281,74 @@ func ParseSealArgs(args []string) (SealArgs, error) {
 	if len(parsed.Roles) == 0 {
 		parsed.Roles = []RoleFlag{{Role: "fullstack", GatePolicy: multirole.PolicyBlocking}}
 	}
-	// Regla de sellado (REQ-28.12, REQ-28.13): continuous solo con el roster
-	// exacto [fullstack]. Es pura: rechaza antes de resolver --change y de
-	// escribir. El estilo derivado de --from-session-pace nunca se degrada a
-	// checkpointed por su cuenta.
-	roleNames := make([]string, 0, len(parsed.Roles))
-	for _, r := range parsed.Roles {
-		roleNames = append(roleNames, r.Role)
-	}
-	derivedFromPace := sessionPaceGiven && !executionStyleExplicit
-	if err := checkContinuousRoster(parsed.ExecutionStyle, roleNames, derivedFromPace); err != nil {
-		return SealArgs{}, err
-	}
+	// El estilo obligatorio (REQ-21.5), la regla de continuous (REQ-28.12,
+	// REQ-28.13) y las reglas de topología (REQ-28.19) las aplica ApplyTopology,
+	// que necesita la topología que gobierna el cambio.
 	if parsed.DeploymentTarget == "" {
 		parsed.DeploymentTarget = "local"
 	}
 
 	return parsed, nil
+}
+
+// ErrTopologyForbidsContinuous identifica el rechazo de continuous en la
+// topología multirepo, que sella siempre checkpointed (REQ-28.19).
+var ErrTopologyForbidsContinuous = errors.New("la topología multirepo sella siempre checkpointed")
+
+// ErrTopologyRequiresFullstack identifica el rechazo de un rol distinto de
+// fullstack en la topología monorepo-embedded (REQ-28.19, REQ-21.6).
+var ErrTopologyRequiresFullstack = errors.New("la topología monorepo-embedded solo admite el rol fullstack")
+
+// ApplyTopology resuelve el estilo y valida el roster del sellado explícito
+// para la topología que gobierna el cambio ("" sin axiom.yaml). Es pura. Orden:
+// reglas de topología (con mensaje que nombra la topología), estilo obligatorio
+// (REQ-21.5) y, como red de seguridad, la regla de continuous (REQ-28.12,
+// REQ-28.13). El sellado con --infer no pasa por aquí.
+//
+//   - multirepo: continuous (explícito o derivado de --from-session-pace auto)
+//     se rechaza; sin estilo se deriva checkpointed con origen "topology".
+//   - monorepo-embedded: cualquier rol distinto de fullstack se rechaza; la
+//     política de compuerta de fullstack no se comprueba.
+func (a *SealArgs) ApplyTopology(topology workspace.TopologyType) error {
+	switch topology {
+	case workspace.TopologyMultirepo:
+		if a.ExecutionStyle == ExecutionContinuous {
+			origin := "--execution-style continuous"
+			if a.ExecutionStyleSource == "session_pace" {
+				origin = "--from-session-pace auto"
+			}
+			return fmt.Errorf("kickoff seal: la topología `multirepo` sella siempre `checkpointed`: %s no se admite (%w); quita la bandera o sella con `--execution-style checkpointed`",
+				origin, ErrTopologyForbidsContinuous)
+		}
+		if a.ExecutionStyle == "" {
+			a.ExecutionStyle = ExecutionCheckpointed
+			a.ExecutionStyleSource = "topology"
+		}
+	case workspace.TopologyMonorepoEmbedded:
+		var specialized []string
+		for _, r := range a.Roles {
+			if r.Role != "fullstack" {
+				specialized = append(specialized, r.Role)
+			}
+		}
+		if len(specialized) > 0 {
+			received := make([]string, 0, len(a.Roles))
+			for _, r := range a.Roles {
+				received = append(received, r.Role)
+			}
+			sort.Strings(received)
+			return fmt.Errorf("kickoff seal: la topología `monorepo-embedded` solo admite el rol `fullstack` (roles recibidos: %s): %w; quita las banderas `--role` para sellar con fullstack, o declara `workspace.topology: multirepo` en axiom.yaml si el trabajo necesita roles especializados",
+				strings.Join(received, ", "), ErrTopologyRequiresFullstack)
+		}
+	}
+	if a.ExecutionStyle == "" {
+		return fmt.Errorf("kickoff seal requiere --execution-style o --from-session-pace (REQ-21.5: no se asume un valor por defecto; solo la topología multirepo deriva checkpointed)")
+	}
+	roleNames := make([]string, 0, len(a.Roles))
+	for _, r := range a.Roles {
+		roleNames = append(roleNames, r.Role)
+	}
+	return checkContinuousRoster(a.ExecutionStyle, roleNames, a.ExecutionStyleSource == "session_pace")
 }
 
 // ToKickoff assembles the sealed document body an explicit (non --infer)

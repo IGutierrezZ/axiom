@@ -259,12 +259,65 @@ func TestEnsureRefusesABranchCheckedOutInAnUnknownWorktree(t *testing.T) {
 	})
 }
 
-// REQ-25.7, escenario «Ejecución previa al sellado y posterior al sellado»: antes de sellar
-// solo se crea `feat/x`; con dos roles sellados se completan, sin alterar lo creado,
-// `feat/x-core` y `feat/x-qa` desde ella, cada una con su worktree.
+// REQ-25.7, escenario «Ejecución previa al sellado y posterior al sellado» (multirepo, único
+// lugar con ramas de rol, REQ-2.2 de `workspace-topology`): los roles `core` y `qa` comparten
+// el repositorio de código `repo-backend`. Antes de sellar el repositorio de specs se trabaja
+// in situ y no hay nada que crear; con los dos roles sellados se completan en `repo-backend`,
+// sin alterar lo ya creado, `feat/x` y, desde ella, `feat/x-core` y `feat/x-qa`, cada una con
+// su worktree.
 func TestEnsureCompletesIncrementallyBeforeAndAfterSealing(t *testing.T) {
 	t.Parallel()
-	repo := newProject(t, configWithRoles(map[string][]string{"core": {"."}, "qa": {"."}}, ""))
+	master, specs := newMultirepo(t, map[string][]string{"core": {"repo-backend"}, "qa": {"repo-backend"}}, "repo-backend")
+	backend := filepath.Join(master, "repo-backend")
+
+	first := ensureOf(t, master, "x")
+
+	wantReady(t, first)
+	for _, repository := range first.Repositories {
+		if len(repository.Branches) != 0 {
+			t.Fatalf("antes del sellado no se crea ninguna rama (el de specs se trabaja in situ): %s = %+v", repository.Name, repository.Branches)
+		}
+	}
+	sealChangeAt(t, specs, "x", "core", "qa")
+
+	second := ensureOf(t, master, "x")
+
+	wantReady(t, second)
+	var repository branch.RepositoryResult
+	for _, candidate := range second.Repositories {
+		if candidate.Name == "repo-backend" {
+			repository = candidate
+		}
+	}
+	if len(repository.Branches) != 3 {
+		t.Fatalf("ramas = %+v, se esperaban feat/x, feat/x-core y feat/x-qa", repository.Branches)
+	}
+	tracking := runGit(t, backend, "rev-parse", "refs/heads/feat/x")
+	for _, role := range []string{"core", "qa"} {
+		described := branchByName(t, repository, "feat/x-"+role)
+		if described.Kind != branch.KindRole || described.Role != role || described.PRTarget != "feat/x" || !described.Exists {
+			t.Errorf("rama de rol %s = %+v", role, described)
+		}
+		if got := runGit(t, backend, "rev-parse", "refs/heads/feat/x-"+role); got != tracking {
+			t.Errorf("feat/x-%s apunta a %s, se esperaba la rama de seguimiento %s", role, got, tracking)
+		}
+		wantSameDirectory(t, "worktree de "+role, described.Worktree, plannedWorktree(t, master, "x-"+role, "repo-backend"))
+	}
+	wantSameDirectory(t, "worktree de feat/x", branchByName(t, repository, "feat/x").Worktree, plannedWorktree(t, master, "x", "repo-backend"))
+
+	// Una tercera ejecución con el mismo estado no cambia nada (REQ-25.7: idempotencia).
+	state := repositoryState(t, backend)
+	wantReady(t, ensureOf(t, master, "x"))
+	if got := repositoryState(t, backend); got != state {
+		t.Errorf("la repetición cambió el repositorio:\n%s\n---\n%s", state, got)
+	}
+}
+
+// REQ-25.7, escenario «En monorepo la ejecución posterior al sellado no añade ramas»: con el
+// rol único `fullstack` ambas ejecuciones dejan solo `feat/x` y la segunda no cambia nada.
+func TestEnsureInAMonorepoAddsNoBranchesAfterSealingFullstack(t *testing.T) {
+	t.Parallel()
+	repo := newProject(t, configWithRoles(map[string][]string{"fullstack": {"."}}, ""))
 	name := filepath.Base(repo)
 
 	first := ensureOf(t, repo, "x")
@@ -273,31 +326,23 @@ func TestEnsureCompletesIncrementallyBeforeAndAfterSealing(t *testing.T) {
 	if branches := onlyRepository(t, first).Branches; len(branches) != 1 || branches[0].Name != "feat/x" {
 		t.Fatalf("antes del sellado solo existe feat/x: %+v", branches)
 	}
-	commit(t, plannedWorktree(t, repo, "x", name), "trabajo en la rama de seguimiento")
+	commit(t, plannedWorktree(t, repo, "x", name), "trabajo en la rama del cambio")
 	tracking := runGit(t, repo, "rev-parse", "refs/heads/feat/x")
-	sealChange(t, repo, "x", "core", "qa")
+	sealChange(t, repo, "x", "fullstack")
+	state := repositoryState(t, repo)
 
 	second := ensureOf(t, repo, "x")
 
 	wantReady(t, second)
-	repository := onlyRepository(t, second)
-	if len(repository.Branches) != 3 {
-		t.Fatalf("ramas = %+v, se esperaban feat/x, feat/x-core y feat/x-qa", repository.Branches)
+	if branches := onlyRepository(t, second).Branches; len(branches) != 1 || branches[0].Name != "feat/x" {
+		t.Fatalf("tras sellar fullstack solo existe feat/x: %+v", branches)
 	}
 	if got := runGit(t, repo, "rev-parse", "refs/heads/feat/x"); got != tracking {
-		t.Errorf("feat/x se movió de %s a %s al completar las ramas de rol", tracking, got)
+		t.Errorf("feat/x se movió de %s a %s", tracking, got)
 	}
-	for _, role := range []string{"core", "qa"} {
-		described := branchByName(t, repository, "feat/x-"+role)
-		if described.Kind != branch.KindRole || described.Role != role || described.PRTarget != "feat/x" || !described.Exists {
-			t.Errorf("rama de rol %s = %+v", role, described)
-		}
-		if got := runGit(t, repo, "rev-parse", "refs/heads/feat/x-"+role); got != tracking {
-			t.Errorf("feat/x-%s apunta a %s, se esperaba la rama de seguimiento %s", role, got, tracking)
-		}
-		wantSameDirectory(t, "worktree de "+role, described.Worktree, plannedWorktree(t, repo, "x-"+role, name))
+	if got := repositoryState(t, repo); got != state {
+		t.Errorf("la segunda ejecución cambió el repositorio:\n%s\n---\n%s", state, got)
 	}
-	wantSameDirectory(t, "worktree de feat/x", branchByName(t, repository, "feat/x").Worktree, plannedWorktree(t, repo, "x", name))
 }
 
 // REQ-25.7, escenario «Se rechaza un nombre de cambio que no es válido»: `invalid_name`

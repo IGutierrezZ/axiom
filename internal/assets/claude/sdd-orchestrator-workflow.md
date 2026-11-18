@@ -4,10 +4,7 @@ SDD is the structured planning layer for substantial changes. This file is the l
 
 ### Artifact Store Policy
 
-- `engram` — default when available; persistent memory across sessions.
-- `openspec` — file-based artifacts; use only when the user explicitly requests it or a change already exists there.
-- `hybrid` — both backends; useful for team-shareable files plus cross-session recovery.
-- `none` — return results inline only; recommend enabling engram or openspec.
+The session artifact store is always `hybrid` and is never asked. Pass the `artifactStore` that `axiom sdd status` reports to every phase; never detect or default a separate choice.
 
 ### Commands
 
@@ -70,7 +67,7 @@ This is collected by `SDD Session Preflight`. If missing, enforce the hard gate 
 - **Automatic** (`auto`): phases run back-to-back without pausing, but the orchestrator gatekeeper validates after each phase before launching the next.
 - **Interactive** (`interactive`): after each phase, show a concise summary and ask whether to adjust or continue.
 
-If the user doesn't specify, default to **Automatic**. After scope approval, expect zero further prompts on the happy path and at most one actionable prompt per recoverable failure; the gatekeeper summarizes phase progress instead of interrupting except on a second consecutive gate failure or a genuine scope/product decision. Interactive approval is phase-scoped; words like "continue", "dale", or "go on" approve only the immediate next phase.
+No mode is assumed by default: `multirepo` always runs **Interactive** and never asks; `monorepo-embedded` asks it in the session preflight. After scope approval, expect zero further prompts on the happy path and at most one actionable prompt per recoverable failure; the gatekeeper summarizes phase progress instead of interrupting except on a second consecutive gate failure or a genuine scope/product decision. Interactive approval is phase-scoped; words like "continue", "dale", or "go on" approve only the immediate next phase.
 
 {{GENTLE_AI_RESEARCH_LIFECYCLE}}
 
@@ -96,9 +93,7 @@ On gate failure, re-run the same phase exactly once with specific corrective fee
 
 ### Artifact Store Mode
 
-This is collected by `SDD Session Preflight`. If missing, enforce the hard gate before any phase work. Cache the collected store (`engram`, `openspec`, `hybrid`, or `none`) for the session. If unspecified, default to `engram` when Engram is available; otherwise use `none` and explain the persistence limitation.
-
-Pass the artifact store mode to every SDD phase agent.
+The artifact store is never asked: in Axiom the session store is always `hybrid`. Pass, as `artifact_store.mode` to every phase launch, the `artifactStore` and `artifactPaths` that `axiom sdd status` reports for the change; that native value (`openspec` when `openspec/config.yaml` declares nothing) is the authority phases persist to, and the session `hybrid` never overrides it. `axiom workspace validate` rejects a declared `engram` or `none`.
 
 ### Delivery Strategy
 
