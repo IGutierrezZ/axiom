@@ -1,8 +1,8 @@
 # Catálogo Maestro de Especificaciones Vivas — Axiom
 
 > **Proyecto:** Axiom (Spec-Driven Development Platform)
-> **Última Sincronización:** 2026-11-18 14:34:28 UTC
-> **Total Dominios:** 72 | **Total Requerimientos:** 572 | **Total Escenarios BDD:** 1763
+> **Última Sincronización:** 2026-11-18 14:42:58 UTC
+> **Total Dominios:** 72 | **Total Requerimientos:** 577 | **Total Escenarios BDD:** 1852
 
 ---
 
@@ -20,7 +20,7 @@
 | `axiom-updater-resilience` | Especificación Viva: Resiliencia y Gobernanza del Actualizador Autónomo de Axiom | 9 | 10 | [Ver Spec](specs/axiom-updater-resilience/spec.md) |
 | `axiom-user-state-and-env` | Especificación de Requerimientos: Unificación de Estado en ~/.axiom y Variables AXIOM_* (INC-12) | 3 | 5 | [Ver Spec](specs/axiom-user-state-and-env/spec.md) |
 | `change-actor-identity` | Especificación Viva: Identidad Git como Actor de los Artefactos Versionados (REQ-42.1 a REQ-42.9) | 9 | 33 | [Ver Spec](specs/change-actor-identity/spec.md) |
-| `change-branch-lifecycle` | Especificación de Requerimientos: Ciclo de Vida de las Ramas y Worktrees de un Cambio por Topología (INC-25) | 27 | 195 | [Ver Spec](specs/change-branch-lifecycle/spec.md) |
+| `change-branch-lifecycle` | Especificación de Requerimientos: Ciclo de Vida de las Ramas y Worktrees de un Cambio por Topología (INC-25) | 32 | 266 | [Ver Spec](specs/change-branch-lifecycle/spec.md) |
 | `dashboard-sdd-orchestration` | Especificación de Requerimientos: Orquestación Interactiva SDD y Creación de Cambios en Dashboard Web y CLI (INC-15) | 5 | 10 | [Ver Spec](specs/dashboard-sdd-orchestration/spec.md) |
 | `engram-protocol-injection` | Engram protocol injection Specification | 5 | 12 | [Ver Spec](specs/engram-protocol-injection/spec.md) |
 | `gga` | GGA Specification | 3 | 8 | [Ver Spec](specs/gga/spec.md) |
@@ -69,7 +69,7 @@
 | `sdd-docs-publication` | Especificación de Publicación Ligera de Documentación SDD (carril-proyecto-publicacion-docs) | 8 | 40 | [Ver Spec](specs/sdd-docs-publication/spec.md) |
 | `sdd-independent-review` | Especificación de Requerimientos: Revisión Independiente en SDD (verify técnico por rol, juicio opcional y revisión de cobertura) | 10 | 67 | [Ver Spec](specs/sdd-independent-review/spec.md) |
 | `sdd-iso-evidence` | Especificación: Evidencias ISO Opcionales del SDD (carril-sdd-versatil) | 10 | 97 | [Ver Spec](specs/sdd-iso-evidence/spec.md) |
-| `sdd-lane-kickoff` | Especificación de Requerimientos: Selección Temprana y Bloqueante de Carril ODD/SDD en el Kickoff (INC-21) | 12 | 70 | [Ver Spec](specs/sdd-lane-kickoff/spec.md) |
+| `sdd-lane-kickoff` | Especificación de Requerimientos: Selección Temprana y Bloqueante de Carril ODD/SDD en el Kickoff (INC-21) | 12 | 77 | [Ver Spec](specs/sdd-lane-kickoff/spec.md) |
 | `sdd-orchestrator-assets` | SDD Orchestrator Assets Specification | 20 | 56 | [Ver Spec](specs/sdd-orchestrator-assets/spec.md) |
 | `sdd-preflight-configuration` | Especificación de Requerimientos: Cuestionario Pre-Vuelo de SDD, Modalidad de Avance y Asignación Obligatoria de Roles (INC-21) | 14 | 101 | [Ver Spec](specs/sdd-preflight-configuration/spec.md) |
 | `sdd-research` | sdd-research Specification | 3 | 9 | [Ver Spec](specs/sdd-research/spec.md) |
@@ -81,7 +81,7 @@
 | `tui-ui-parity` | Especificación Viva: Paridad Bidireccional entre TUI y Web UI | 10 | 11 | [Ver Spec](specs/tui-ui-parity/spec.md) |
 | `upstream-absorption-protocol` | Especificación Viva: Protocolo de Absorción por Tandas desde Upstream | 6 | 9 | [Ver Spec](specs/upstream-absorption-protocol/spec.md) |
 | `visual-decoupling` | Especificación de Requerimientos: Desacoplamiento Visual y Limpieza de Marca (Axiom) | 4 | 7 | [Ver Spec](specs/visual-decoupling/spec.md) |
-| `workspace-topology` | Especificación Viva: Topología de Workspace y CLI de Axiom | 13 | 58 | [Ver Spec](specs/workspace-topology/spec.md) |
+| `workspace-topology` | Especificación Viva: Topología de Workspace y CLI de Axiom | 13 | 69 | [Ver Spec](specs/workspace-topology/spec.md) |
 
 ---
 
@@ -419,6 +419,8 @@ Definir cómo crea, consulta, cierra y protege Axiom las ramas (y, opcionalmente
   - *Escenario BDD:* La excepción por cambio prevalece sobre todo lo demás
   - *Escenario BDD:* Un prefijo inválido de la invocación se rechaza sin efectos
   - *Escenario BDD:* Un prefijo inválido de `axiom.yaml` se rechaza como configuración
+  - *Escenario BDD:* La política hereda la rama principal y el modo de promoción
+  - *Escenario BDD:* Sin `main_branch` la política no inventa una rama principal
 - **[REQ-25.4]** Modelo de Ramas por Número de Roles que Tocan Cada Repositorio
   - *Escenario BDD:* Un rol, rama única
   - *Escenario BDD:* Dos roles sobre el mismo repositorio crean seguimiento y ramas de rol
@@ -454,6 +456,7 @@ Definir cómo crea, consulta, cierra y protege Axiom las ramas (y, opcionalmente
   - *Escenario BDD:* La respuesta a `ask` se registra por cambio
   - *Escenario BDD:* La rama de archivado reutiliza la respuesta registrada
   - *Escenario BDD:* Un modo distinto del materializado se rechaza
+  - *Escenario BDD:* Con ambas decisiones pendientes se pregunta primero el modo de trabajo
 - **[REQ-25.9]** `ensure` en `in_place` Rechaza un Árbol Sucio
   - *Escenario BDD:* Árbol sucio rechaza el cambio de rama
   - *Escenario BDD:* Un fichero sin seguimiento también cuenta
@@ -466,6 +469,7 @@ Definir cómo crea, consulta, cierra y protege Axiom las ramas (y, opcionalmente
   - *Escenario BDD:* `--fetch` fallido no deja efectos
   - *Escenario BDD:* Rama de integración inexistente
   - *Escenario BDD:* La rama del cambio publicada se indica con `createdFrom: remote`
+  - *Escenario BDD:* En modo `branch` la base es la referencia remota local de la rama principal
 - **[REQ-25.11]** Rutas de Worktree y Límite de Longitud
   - *Escenario BDD:* Ruta sin sufijo de rol con una sola rama
   - *Escenario BDD:* Ruta con sufijo de rol cuando hay rama de rol
@@ -496,6 +500,7 @@ Definir cómo crea, consulta, cierra y protege Axiom las ramas (y, opcionalmente
   - *Escenario BDD:* Modo `in_place` hace checkout de la rama de archivado
   - *Escenario BDD:* Modo `in_place` con árbol sucio se rechaza
   - *Escenario BDD:* Idempotencia y ausencia de publicación
+  - *Escenario BDD:* Con dos etapas en modo `branch` el archivado espera solo a la integración
 - **[REQ-25.13]** Carril ODD con la Misma Política
   - *Escenario BDD:* ODD en monorepo prepara rama y worktree
   - *Escenario BDD:* ODD en multirepo trabaja in situ en el repositorio de specs
@@ -506,6 +511,9 @@ Definir cómo crea, consulta, cierra y protege Axiom las ramas (y, opcionalmente
   - *Escenario BDD:* El registro es visible desde un worktree enlazado
   - *Escenario BDD:* Borrar el registro no daña el repositorio
   - *Escenario BDD:* Registro ausente informado por `status`
+  - *Escenario BDD:* El registro guarda el modo de promoción y su origen por repositorio
+  - *Escenario BDD:* Un registro sin modo de promoción sigue siendo válido
+  - *Escenario BDD:* `ensure` conserva el modo registrado al reescribir el registro
 - **[REQ-25.15]** `status`: Estado de Ramas y Worktrees del Cambio
   - *Escenario BDD:* Estado de un cambio con rama y worktree
   - *Escenario BDD:* Atraso calculado solo con referencias locales
@@ -513,6 +521,7 @@ Definir cómo crea, consulta, cierra y protege Axiom las ramas (y, opcionalmente
   - *Escenario BDD:* Rama destino propuesta para el PR
   - *Escenario BDD:* La rama de archivado figura en el plan
   - *Escenario BDD:* `status` sin `--change` lista registrados y pendientes
+  - *Escenario BDD:* La base y el modo de un repositorio con dos etapas figuran en el estado
 - **[REQ-25.16]** `done`: Detección de Fusión por Capas
   - *Escenario BDD:* Fusión real detectada por ascendencia
   - *Escenario BDD:* Merge por squash detectado por la capa `equivalent_tree`
@@ -522,6 +531,8 @@ Definir cómo crea, consulta, cierra y protege Axiom las ramas (y, opcionalmente
   - *Escenario BDD:* La evidencia `pr_merged` no confirma la rama de archivado
   - *Escenario BDD:* Nada confirma la fusión
   - *Escenario BDD:* La detección no usa la red
+  - *Escenario BDD:* En modo `branch` la capa `pr_merged` no confirma la fusión en la rama principal
+  - *Escenario BDD:* En modo `branch` las capas 1 y 2 se evalúan contra la rama principal
 - **[REQ-25.17]** `done`: Seguridad y Eliminación de Worktree y Rama Local
   - *Escenario BDD:* Eliminación tras una fusión confirmada
   - *Escenario BDD:* Una rama integrada con squash se elimina tras confirmarse por `equivalent_tree`
@@ -534,6 +545,8 @@ Definir cómo crea, consulta, cierra y protege Axiom las ramas (y, opcionalmente
   - *Escenario BDD:* `in_place` con árbol limpio vuelve a la integración y elimina la rama local
   - *Escenario BDD:* `in_place` con árbol sucio se rechaza incluso con `--force`
   - *Escenario BDD:* `in_place` sin fusión confirmada se rechaza
+  - *Escenario BDD:* El rechazo en modo `branch` nombra la rama principal
+  - *Escenario BDD:* `in_place` en modo `branch` vuelve a la integración al borrar
 - **[REQ-25.18]** Veredicto Único de Rama, por Papel del Repositorio
   - *Escenario BDD:* Rama del cambio en un monorepo es correcta
   - *Escenario BDD:* La rama de integración es incorrecta para un cambio en monorepo
@@ -599,6 +612,9 @@ Definir cómo crea, consulta, cierra y protege Axiom las ramas (y, opcionalmente
   - *Escenario BDD:* `axiom.yaml` de este repositorio declara `git:`
   - *Escenario BDD:* La documentación remite al verbo
   - *Escenario BDD:* Un cambio preexistente ya fusionado figura como pendiente de archivar
+  - *Escenario BDD:* `done` usa la integración resuelta del `status`
+  - *Escenario BDD:* Sin JSON legible `done` cae a `main`
+  - *Escenario BDD:* Con la configuración actual los scripts siguen igual
 - **[REQ-26.11]** Fusión Intermedia de un Cambio no es Integración ni Pendiente de Archivar
   - *Escenario BDD:* Un cambio con solo spec cedida y fusionada no figura como pendiente de archivar
   - *Escenario BDD:* Un cambio con design cedido y roles sin aprobar sigue siendo intermedio
@@ -620,6 +636,66 @@ Definir cómo crea, consulta, cierra y protege Axiom las ramas (y, opcionalmente
   - *Escenario BDD:* En modo `in_place` se adopta y se hace checkout
   - *Escenario BDD:* Idempotencia tras adoptar
   - *Escenario BDD:* Quien continúa un relevo no necesita una PR fusionada
+- **[REQ-25.46]** Modo de Promoción por Repositorio y por Cambio
+  - *Escenario BDD:* Sin `main_branch` nada cambia
+  - *Escenario BDD:* `main_branch` igual a la integración equivale a una sola etapa
+  - *Escenario BDD:* Con `main_branch` y sin `promotion` el modo es `branch`
+  - *Escenario BDD:* El registro prevalece sobre la instantánea
+  - *Escenario BDD:* La instantánea prevalece sobre `--promotion` y sobre la política
+  - *Escenario BDD:* `--promotion` prevalece sobre `repositories[].promotion` y `git.promotion`
+  - *Escenario BDD:* `repositories[].promotion` prevalece sobre `git.promotion`
+  - *Escenario BDD:* `git.promotion` prevalece sobre el defecto
+  - *Escenario BDD:* El modo registrado sobrevive a una ejecución posterior
+  - *Escenario BDD:* Con el registro borrado se respeta la instantánea
+  - *Escenario BDD:* Con el registro borrado y sin instantánea `ask` vuelve a preguntar
+  - *Escenario BDD:* Un registro con la rama y sin modo se resuelve como `release` legacy
+  - *Escenario BDD:* Una instantánea sin `main_branch` y con la rama ya creada se resuelve como `release` legacy
+  - *Escenario BDD:* Una instantánea sin `main_branch` y sin la rama creada toma la política vigente
+  - *Escenario BDD:* En multirepo cada repositorio de código resuelve su propio modo
+  - *Escenario BDD:* El repositorio de specs de un multirepo no tiene modo
+- **[REQ-25.47]** `ensure`: Base Efectiva, `ask` y `--promotion`
+  - *Escenario BDD:* En modo `branch` la rama sale de la rama principal
+  - *Escenario BDD:* En modo `release` la rama sale de la integración
+  - *Escenario BDD:* Sin referencia remota la base efectiva es la rama principal local
+  - *Escenario BDD:* Base efectiva inexistente
+  - *Escenario BDD:* `--base` prevalece sobre la base efectiva
+  - *Escenario BDD:* `ask` devuelve `decision_required` con `branch` y `release`
+  - *Escenario BDD:* Repetir con `--promotion` crea la rama en la base correcta
+  - *Escenario BDD:* `--promotion branch` crea la rama desde la rama principal
+  - *Escenario BDD:* Un modo distinto del registrado se rechaza con `plan_conflict`
+  - *Escenario BDD:* El mismo modo que el registrado es un no-op
+  - *Escenario BDD:* Un modo distinto del de la instantánea se rechaza
+  - *Escenario BDD:* `ask` no es una respuesta válida
+  - *Escenario BDD:* Un `--promotion` vacío se rechaza
+  - *Escenario BDD:* En multirepo las preguntas son secuenciales y conservan las respuestas
+  - *Escenario BDD:* `--promotion <repositorio>=<modo>` fija modos distintos por repositorio
+  - *Escenario BDD:* Un repositorio inexistente en el plan se rechaza
+  - *Escenario BDD:* `--promotion` sobre un repositorio de una sola etapa avisa y no actúa
+  - *Escenario BDD:* La rama de archivado y las de rol no cambian de base
+- **[REQ-25.48]** `status`: Siguiente PR hacia la Rama Principal en Modo `branch`
+  - *Escenario BDD:* Antes de fusionar en la integración el destino es la integración
+  - *Escenario BDD:* Tras fusionar con merge commit en la integración aparece la siguiente PR
+  - *Escenario BDD:* Tras fusionar con squash se detecta por árbol equivalente
+  - *Escenario BDD:* Si la comprobación no concluye se mantiene la integración con un aviso
+  - *Escenario BDD:* En modo `release` no hay siguiente PR
+  - *Escenario BDD:* Sin `main_branch` el resultado no cambia
+  - *Escenario BDD:* Modo `ask` sin respuesta se informa como pendiente
+- **[REQ-25.49]** `done`: Destino de la Confirmación de Fusión según el Modo de Promoción
+  - *Escenario BDD:* En modo `branch` una rama fusionada solo en la integración no se borra
+  - *Escenario BDD:* En modo `branch` una fusión en la rama principal con merge commit se confirma por ascendencia
+  - *Escenario BDD:* En modo `branch` un squash en la rama principal se confirma por árbol equivalente
+  - *Escenario BDD:* En modo `branch` un squash que no concluye exige `--force`
+  - *Escenario BDD:* En modo `branch` la evidencia `pr_merged` no confirma la fusión en la rama principal
+  - *Escenario BDD:* En modo `release` la rama se borra al fusionarla en la integración
+  - *Escenario BDD:* Sin `main_branch` el destino sigue siendo la integración
+  - *Escenario BDD:* En multirepo `done` omite el repositorio de specs y evalúa cada repositorio con su modo
+  - *Escenario BDD:* Con `ask` pendiente `done` confirma contra la rama principal
+  - *Escenario BDD:* Las ramas de rol y de archivado conservan su destino
+- **[REQ-25.50]** Contratos de Integración y Publicación que No Cambian con el Modo
+  - *Escenario BDD:* `IntegrationBranch` no cambia de significado
+  - *Escenario BDD:* La publicación y el relevo siguen apuntando a la integración
+  - *Escenario BDD:* El archivado sigue esperando solo a la integración
+  - *Escenario BDD:* El archivado se rechaza si el cambio no está en la integración aunque esté en la rama principal
 
 ### Dominio: `dashboard-sdd-orchestration` — Especificación de Requerimientos: Orquestación Interactiva SDD y Creación de Cambios en Dashboard Web y CLI (INC-15)
 
@@ -2385,6 +2461,13 @@ Definir el **modo ISO**, una opción declarada por el proyecto en `axiom.yaml` y
   - *Escenario BDD:* Un segundo sellado desde otra rama se rechaza
   - *Escenario BDD:* La lectura tolera la ausencia de instantánea
   - *Escenario BDD:* Un binario anterior ignora la instantánea
+  - *Escenario BDD:* El sellado copia el modo de promoción cuando ya estaba resuelto en el registro
+  - *Escenario BDD:* El sellado copia el modo `release` con la integración como base
+  - *Escenario BDD:* Sin modo resuelto en el registro al sellar la instantánea guarda solo `main_branch`
+  - *Escenario BDD:* Una sola etapa no escribe `main_branch` ni modo de promoción
+  - *Escenario BDD:* Multirepo con el registro borrado tras responder después del sellado vuelve a preguntar
+  - *Escenario BDD:* `ensure` respeta el modo de la instantánea y no la reescribe
+  - *Escenario BDD:* La instantánea con modo de promoción sigue siendo inmutable
 - **[REQ-25.37]** Exención de Cambios Preexistentes sin Instantánea y de `seal --infer`
   - *Escenario BDD:* Cambio preexistente sin instantánea no se bloquea
   - *Escenario BDD:* `seal --infer` funciona desde cualquier rama y no escribe instantánea
@@ -2895,12 +2978,23 @@ Definir de forma canónica el comportamiento del punto de entrada CLI `axiom` y 
   - *Escenario BDD:* Bloque parcial completa con los valores por defecto
   - *Escenario BDD:* Valor inválido
   - *Escenario BDD:* Clave desconocida en `git:`
+  - *Escenario BDD:* `main_branch` y `promotion` válidos
+  - *Escenario BDD:* `main_branch` con un nombre de referencia inválido
+  - *Escenario BDD:* `promotion` con un valor fuera del vocabulario
+  - *Escenario BDD:* Varios errores se acumulan
+  - *Escenario BDD:* `promotion` sin `main_branch` solo avisa
+  - *Escenario BDD:* `main_branch` igual a la integración solo avisa
 - **[REQ-25.27]** Bloque `repositories:` de Primer Nivel con Ajustes por Repositorio
   - *Escenario BDD:* Entrada con rama de integración propia
   - *Escenario BDD:* Ruta inexistente o fuera de la carpeta maestra
   - *Escenario BDD:* Dos entradas de la misma raíz git
   - *Escenario BDD:* Ruta que no es un repositorio git solo avisa
   - *Escenario BDD:* Sin bloque `repositories:` todos heredan
+  - *Escenario BDD:* Entrada con modo de promoción propio
+  - *Escenario BDD:* La herencia de `promotion` es campo a campo
+  - *Escenario BDD:* `promotion` con un valor fuera del vocabulario en una entrada
+  - *Escenario BDD:* `main_branch` en una entrada es una clave desconocida
+  - *Escenario BDD:* `promotion` en un repositorio sin dos etapas solo avisa
 - **[REQ-27.1]** Bloque `workflow:` Opcional de `axiom.yaml` con el Carril del Proyecto
   - *Escenario BDD:* Sin bloque el carril efectivo es `sdd`
   - *Escenario BDD:* Bloque con `lane: odd`

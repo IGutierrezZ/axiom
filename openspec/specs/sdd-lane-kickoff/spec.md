@@ -195,8 +195,8 @@ Una vez determinado el carril (elegido por el usuario en REQ-21.1 o declarado po
 - **ENTONCES** indica ejecutar `axiom branch ensure` antes de escribir en la carpeta del cambio y usar las rutas absolutas del resultado con `--cwd`
 ### Requirement: Instantánea de Política Git en `kickoff.yaml`, Escrita una Sola Vez por `seal` (REQ-25.36)
 
-`axiom sdd kickoff seal` DEBE escribir en `kickoff.yaml`, junto al resto de la configuración sellada y en la misma única escritura, la instantánea de política git del cambio: la rama de integración y el prefijo resueltos, la base (nombre de rama, no SHA) de cada repositorio y los nombres de rama derivados del cambio (rama del cambio, por repositorio con dos o más roles las ramas de rol y, en los repositorios con rama de cambio, la rama de archivado `<prefijo>/<cambio>-archive`), calculados con la política de `axiom.yaml`, las excepciones por cambio de `ensure` (`--prefix`, `--branch`, `--base`) y los roles que se sellan. La instantánea contiene entradas de política, nunca resultados: NO DEBE incluir SHAs, rutas absolutas ni rutas de worktree, que son personales o cambian. La instantánea se escribe una sola vez: conserva la semántica de sellado único, en la que gana la primera publicación, y NINGUNA otra orden, incluida `ensure`, DEBE modificarla. Un segundo `seal` desde la rama del cambio NO DEBE reescribir `kickoff.yaml`: DEBE terminar con éxito, devolver el kickoff ya sellado e indicar que no escribió (texto «Kickoff ya estaba sellado»; `wrote: false` en `--json`). Un segundo `seal` desde otra rama DEBE rechazarse con `wrong_branch` (veredicto de REQ-25.18 de `change-branch-lifecycle`) sin modificar nada. La lectura de `kickoff.yaml` DEBE tolerar su ausencia y un binario anterior DEBE ignorarla sin error.
-(Previously: decía que «un segundo `seal` se rechaza como hoy», pero el sellado único nunca ha rechazado un segundo `seal` desde la rama del cambio: devuelve el ganador sin reescribir, como fijan `internal/kickoff/seal.go` y sus pruebas; el escenario de la instantánea se ejecutaba sobre un monorepo con los roles `core` y `qa`, y ahora se divide en un monorepo con `fullstack` y un `multirepo` con roles especializados)
+`axiom sdd kickoff seal` DEBE escribir en `kickoff.yaml`, junto al resto de la configuración sellada y en la misma única escritura, la instantánea de política git del cambio: la rama de integración y el prefijo resueltos, la base (nombre de rama, no SHA) de cada repositorio y los nombres de rama derivados del cambio (rama del cambio, por repositorio con dos o más roles las ramas de rol y, en los repositorios con rama de cambio, la rama de archivado `<prefijo>/<cambio>-archive`), calculados con la política de `axiom.yaml`, las excepciones por cambio de `ensure` (`--prefix`, `--branch`, `--base`) y los roles que se sellan. Siempre que haya dos etapas al sellar (`git.main_branch` declarada y distinta de la rama de integración de algún repositorio del plan, REQ-25.46 de `change-branch-lifecycle`), la instantánea DEBE guardar además el campo opcional `main_branch` (la rama principal declarada al sellar), que actúa de marcador: distingue un cambio sellado con dos etapas de uno sellado antes de existir esta capacidad. Además, la instantánea DEBE copiar el modo de promoción (`branch` o `release`) de un repositorio solo cuando ese modo ya estaba resuelto en el registro local al sellar (la rama del cambio se creó antes del sellado, como en el monorepo SDD), y la base de ese repositorio DEBE ser su base efectiva (la rama principal en `branch`, la de integración en `release`). El modo es un campo opcional de cada repositorio: NO DEBE escribirse en los repositorios de una sola etapa ni en los repositorios cuyo modo no estaba resuelto en el registro al sellar (como los repositorios de código de un `multirepo`, cuyas ramas y respuestas nacen en un `ensure` posterior al sellado); su ausencia, con `main_branch` presente en la instantánea, significa que el modo se resuelve al crear la rama, nunca que el repositorio sea de una sola etapa. Sin dos etapas al sellar, la instantánea no contiene `main_branch`. La instantánea contiene entradas de política, nunca resultados: NO DEBE incluir SHAs, rutas absolutas ni rutas de worktree, que son personales o cambian. La instantánea se escribe una sola vez: conserva la semántica de sellado único, en la que gana la primera publicación, y NINGUNA otra orden, incluida `ensure`, DEBE modificarla. Un segundo `seal` desde la rama del cambio NO DEBE reescribir `kickoff.yaml`: DEBE terminar con éxito, devolver el kickoff ya sellado e indicar que no escribió (texto «Kickoff ya estaba sellado»; `wrote: false` en `--json`). Un segundo `seal` desde otra rama DEBE rechazarse con `wrong_branch` (veredicto de REQ-25.18 de `change-branch-lifecycle`) sin modificar nada. La lectura de `kickoff.yaml` DEBE tolerar su ausencia y un binario anterior DEBE ignorarla sin error, incluidos los campos opcionales `main_branch` y el modo de promoción.
+(Previously: la instantánea no incluía `main_branch` ni el modo de promoción y la base de cada repositorio era siempre la rama de integración)
 
 #### Scenario: El sellado escribe la instantánea
 - **DADO** un monorepo con `git.integration_branch: main`, `git.branch_prefix: feat` y el rol único `fullstack`
@@ -204,6 +204,7 @@ Una vez determinado el carril (elegido por el usuario en REQ-21.1 o declarado po
 - **ENTONCES** `kickoff.yaml` contiene la integración `main`, el prefijo `feat`, la base `main` del repositorio y los nombres `feat/x` y la rama de archivado `feat/x-archive`
 - **Y** no contiene ninguna rama de rol
 - **Y** no contiene SHAs ni rutas absolutas
+- **Y** no contiene `main_branch` ni modo de promoción
 
 #### Scenario: El sellado en multirepo escribe las ramas de rol y ninguna rama de archivado
 - **DADO** un multirepo con `git.integration_branch: main`, `git.branch_prefix: feat` y los roles `core` y `qa` sobre el mismo repositorio de código `repo-backend`
@@ -239,6 +240,45 @@ Una vez determinado el carril (elegido por el usuario en REQ-21.1 o declarado po
 - **CUANDO** lo lee un binario anterior a esta capacidad
 - **ENTONCES** carga el resto de la configuración sellada sin error
 
+#### Scenario: El sellado copia el modo de promoción cuando ya estaba resuelto en el registro
+- **DADO** un monorepo con `git.main_branch: master`, `git.integration_branch: develop`, el cambio `x` ya preparado por `ensure` con el modo `branch` registrado
+- **CUANDO** se ejecuta `axiom sdd kickoff seal --change x ...`
+- **ENTONCES** `kickoff.yaml` contiene `main_branch: master`, el modo `branch` del repositorio y su base efectiva `master`
+- **Y** la integración sigue siendo `develop`
+
+#### Scenario: El sellado copia el modo `release` con la integración como base
+- **DADO** el mismo monorepo con el modo `release` registrado
+- **CUANDO** se sella el cambio
+- **ENTONCES** la instantánea contiene el modo `release` y la base `develop`
+
+#### Scenario: Sin modo resuelto en el registro al sellar la instantánea guarda solo `main_branch`
+- **DADO** un multirepo con `git.main_branch: master` y `git.promotion: ask`, cuyos repositorios de código no tienen modo registrado al sellar
+- **CUANDO** se sella el cambio
+- **ENTONCES** la instantánea contiene `main_branch: master` y no contiene modo de promoción para esos repositorios
+- **Y** `kickoff.yaml` no contiene ninguna pregunta ni respuesta pendiente
+
+#### Scenario: Una sola etapa no escribe `main_branch` ni modo de promoción
+- **DADO** un monorepo con `git.integration_branch: develop` y sin `git.main_branch`
+- **CUANDO** se sella el cambio
+- **ENTONCES** la instantánea no contiene `main_branch` ni modo de promoción
+
+#### Scenario: Multirepo con el registro borrado tras responder después del sellado vuelve a preguntar
+- **DADO** un multirepo con `git.main_branch: master` y `git.promotion: ask`, el cambio sellado con `main_branch: master` y sin modo en la instantánea, la respuesta `branch` dada y registrada con un `ensure` posterior al sellado, y el registro local borrado después
+- **CUANDO** se ejecuta `axiom branch ensure --change x`
+- **ENTONCES** `ensure` devuelve `decision_required` por el modo de promoción del repositorio, porque la instantánea tiene `main_branch`
+- **Y** no trata el repositorio como de una sola etapa ni lo resuelve como `legacy`
+- **Y** `kickoff.yaml` no se modifica
+
+#### Scenario: `ensure` respeta el modo de la instantánea y no la reescribe
+- **DADO** un cambio sellado con la instantánea con el modo `branch` y el registro local borrado
+- **CUANDO** se ejecuta `axiom branch ensure --change x`
+- **ENTONCES** el modo resuelto es `branch` y se registra con el origen de instantánea
+- **Y** `kickoff.yaml` no se modifica
+
+#### Scenario: La instantánea con modo de promoción sigue siendo inmutable
+- **DADO** un cambio sellado con la instantánea con el modo `branch`
+- **CUANDO** se cambia `git.promotion` a `release` en `axiom.yaml` y se ejecuta de nuevo `kickoff seal` y `ensure`
+- **ENTONCES** `kickoff.yaml` conserva el modo `branch` sin modificarse
 ### Requirement: Exención de Cambios Preexistentes sin Instantánea y de `seal --infer` (REQ-25.37)
 
 Las guardas de rama (veredicto de REQ-25.18 de `change-branch-lifecycle`) NO DEBEN bloquear un cambio cuyo `kickoff.yaml` existe y no contiene instantánea (cambio preexistente sellado antes de esta capacidad). El retro-sellado `axiom sdd kickoff seal --infer` (REQ-21.4) NO DEBE exigir una rama determinada y NO DEBE escribir instantánea, de modo que un cambio retro-sellado permanezca exento. El producto NO añade ninguna otra exención para cambios preexistentes: solo quedan exentos por nombre los sumideros acumulativos `e2e-cumulative` y `cumulative-<rol>` (REQ-25.18).
