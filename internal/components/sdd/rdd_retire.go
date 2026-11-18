@@ -35,6 +35,22 @@ func isReviewSubAgentFile(fileName string) bool {
 	return false
 }
 
+// IsRetiredReviewSubAgentPath dice si path es un agente de revisión que, con
+// RDD suspendido, install y sync retiran en lugar de escribir; la verificación
+// posterior debe comprobar su ausencia. Se limita al directorio de subagentes
+// (`agents`, el que usan todos los adaptadores con subagentes) para no tratar
+// como retirado un fichero homónimo de otra ruta gestionada.
+func IsRetiredReviewSubAgentPath(path string) bool {
+	if rddharness.Enabled() {
+		return false
+	}
+	path = filepath.Clean(path)
+	if filepath.Base(filepath.Dir(path)) != "agents" {
+		return false
+	}
+	return isReviewSubAgentFile(filepath.Base(path))
+}
+
 // retireReviewSubAgentFile borra de agentsDir el agente de revisión con el
 // nombre de la plantilla embebida. Solo actúa sobre nombres exactos de Axiom
 // (el mismo criterio que usa uninstall); un fichero con otro nombre, aunque
