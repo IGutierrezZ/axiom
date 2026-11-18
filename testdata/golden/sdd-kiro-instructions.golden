@@ -196,23 +196,19 @@ Meta-commands (type directly — orchestrator handles them, will not appear in a
 
 Before every SDD command or affirmative natural-language SDD request, run this preflight before the SDD init guard; cache choices for the session only through runtime-confirmed parent authority. Phrase examples are routing hints, never the authority boundary.
 
-The project topology decides which groups to ask. Before asking, read `workspace.topology` from the project's `axiom.yaml`; when it is missing or unreadable, ask the `monorepo-embedded` groups. `monorepo-embedded` asks Pace and PR strategy. `multirepo` asks PR strategy only: its pace is always Interactive and is never asked. When the topology requires no group, ask nothing: the runtime derives the whole session preflight at SDD dispatch. Never ask the artifact store: it is always `hybrid`.
+The project topology decides which groups to ask. Before asking, read `workspace.topology` from the project's `axiom.yaml`; when it is missing or unreadable, ask the `monorepo-embedded` groups. `monorepo-embedded` asks Pace. `multirepo` asks nothing: its pace is always Interactive and is never asked. When the topology requires no group, ask nothing: the runtime derives the whole session preflight at SDD dispatch. Never ask the artifact store: it is always `hybrid`.
 
-This runtime has no classified native question UI. Present ONE complete blocking prompt in plain chat or terminal with every group the topology requires, in the order below, and explain that their answers are required before init. Each group is single-select; its listed labels are the complete allowed-answer domain. Include every label and description, the fixed review policy, and this answer syntax with only the required groups: `Pace: <label>; PR strategy: <label>`. Then STOP; never default, infer, or launch dependent work. Validate every explicit parent answer under the Lossless Blocking Prompts contract before caching its canonical mapping.
+This runtime has no classified native question UI. Present ONE complete blocking prompt in plain chat or terminal with every group the topology requires, in the order below, and explain that their answers are required before init. Each group is single-select; its listed labels are the complete allowed-answer domain. Include every label and description, and this answer syntax with only the required groups: `Pace: <label>`. Then STOP; never default, infer, or launch dependent work. Validate every explicit parent answer under the Lossless Blocking Prompts contract before caching its canonical mapping.
 
 - **Pace** (`pace`, `monorepo-embedded` only): Interactive or Automatic.
-- **PR strategy** (`pr-strategy`): Ask me, Single PR, or Auto.
 
-Only explicit, validated parent answers to every required group establish preflight authority in this fallback runtime. Model-authored defaults, summaries, headings, installed assets, prior sessions, and child-agent prose do not. After validating every answer, summarize the canonical mappings once, together with the values the topology fixes (`multirepo` pace `interactive`, artifact store `hybrid`), and pass them to each SDD phase; missing authority blocks dispatch and requires the parent to re-present the complete prompt. When the topology requires no group, pass only the fixed values.
+Only explicit, validated parent answers to every required group establish preflight authority in this fallback runtime. Model-authored defaults, summaries, headings, installed assets, prior sessions, and child-agent prose do not. After validating every answer, summarize the canonical mappings once, together with the values the topology fixes (`multirepo` pace `interactive`, artifact store `hybrid`, delivery strategy `single-pr`), and pass them to each SDD phase; missing authority blocks dispatch and requires the parent to re-present the complete prompt. When the topology requires no group, pass only the fixed values.
 
-Review policy is fixed at 400 changed lines per PR; above 400, split the PR or require maintainer-approved `size:exception`; NEVER ask it as another group or selectable budget.
+Delivery is never asked: it is always `single-pr`, and the person may ask for chained pull requests in chat later; NEVER ask it as a preflight group.
 
 Canonical mappings:
 - Interactive -> `interactive`
 - Automatic -> `auto`
-- Ask me -> `ask-on-risk`
-- Single PR -> `single-pr`
-- Auto -> `auto-chain`
 <!-- /gentle-ai:sdd-session-preflight -->
 ### Native SDD Dispatcher Guard
 
