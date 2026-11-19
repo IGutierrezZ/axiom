@@ -80,6 +80,23 @@ workspace:
 #   iso: true
 
 # ------------------------------------------------------------------------------
+# Integraciones con Trackers (opcional)
+# ------------------------------------------------------------------------------
+# Un proyecto puede conectar sus cambios con un tracker externo mediante plugins de
+# integración. Cada plugin se declara por su identificador bajo 'integrations', con
+# 'enabled' (por defecto true) y las claves que fija su manifiesto, cada una con su tipo.
+# Los secretos (tokens, PAT, contraseñas) NUNCA se escriben aquí: se guardan con 'axiom integrations secret set' (valor por stdin) o en la variable de entorno
+# AXIOM_INTEGRATION_<PLUGIN>_<SECRETO>.
+# El catálogo de plugins está vacío en esta versión hasta C-07-c: declarar cualquier plugin es un error de carga.
+# 'integrations: {}' es válido y no configura nada.
+# Una clave desconocida, un tipo incorrecto o una clave obligatoria ausente son errores
+# que 'axiom workspace validate' rechaza con su línea y las alternativas admitidas.
+# integrations:
+#   <plugin>:
+#     enabled: true
+#     <clave>: <valor>
+
+# ------------------------------------------------------------------------------
 # Ajustes de Ramas por Repositorio (opcional)
 # ------------------------------------------------------------------------------
 # Un repositorio puede sustituir la rama de integración o el prefijo del bloque

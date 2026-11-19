@@ -598,3 +598,21 @@ func TestDocsDocumentTheBranchPromotionKeys(t *testing.T) {
 		}
 	}
 }
+
+// REQ-43.21: el manual documenta el bloque `integrations:`, el catálogo, los secretos y los verbos.
+func TestManualDocumentsIntegrations(t *testing.T) {
+	assertDocContains(t, readManualDeInicio(t),
+		"[Integraciones con Trackers (`integrations:`)](#integraciones-con-trackers-integrations)",
+		"### Integraciones con Trackers (`integrations:`)",
+		"**Catálogo cerrado de plugins.**",
+		"vacío en esta versión",
+		"Los secretos nunca se escriben en `axiom.yaml`",
+		"AXIOM_INTEGRATION_<PLUGIN>_<SECRETO>",
+		"`axiom integrations sync`",
+		"`axiom integrations emit`",
+		"`axiom integrations secret set --plugin <id> --name <secreto>`",
+		"`.integrations-outbox.yaml`",
+		"`integrations.yaml`",
+		"axiom branch ensure --role",
+	)
+}

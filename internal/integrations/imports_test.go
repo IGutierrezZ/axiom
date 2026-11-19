@@ -115,6 +115,12 @@ func TestImportsDirection(t *testing.T) {
 			"el motor de ramas no conoce las integraciones")
 	})
 
+	t.Run("internal/workspace no importa internal/integrations salvo manifest", func(t *testing.T) {
+		assertNoImporters(t, filepath.Join(root, "internal", "workspace"), func(p string) bool {
+			return pkg("internal/integrations")(p) && !pkgExact("internal/integrations/manifest")(p)
+		}, "workspace solo puede depender de la hoja manifest")
+	})
+
 	t.Run("secrets no importa internal/integrations ni workspace", func(t *testing.T) {
 		dir := filepath.Join(root, "internal", "integrations", "secrets")
 		assertNoImporters(t, dir, pkgExact("internal/integrations"), "secrets no importa el núcleo")

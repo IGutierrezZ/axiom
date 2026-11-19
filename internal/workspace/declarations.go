@@ -39,6 +39,8 @@ type Declarations struct {
 	WorkflowErr         error
 	SDD                 *SDDConfig // lo declarado en `sdd:`, sin defectos; nil sin bloque, con bloque inválido o con la contradicción con `workflow.lane` (REQ-29.1)
 	SDDErr              error
+	Integrations        *IntegrationsConfig // lo declarado en `integrations:`; nil sin bloque o con bloque inválido (REQ-43.19)
+	IntegrationsErr     error
 	Repositories        []RepositoryPolicy // lo declarado en `repositories:`; nil sin bloque, sin entradas o con bloque inválido (REQ-25.27)
 	RepositoriesErr     error
 }
@@ -88,6 +90,9 @@ func readDeclarationBlocks(document *yaml.Node, displacement string) Declaration
 				declarations.SDD, declarations.SDDErr = nil, err
 			}
 		}
+	}
+	if node, ok := mappingValue(root, "integrations"); ok {
+		declarations.Integrations, declarations.IntegrationsErr = decodeIntegrations(node)
 	}
 	if node, ok := mappingValue(root, "repositories"); ok {
 		declarations.Repositories, declarations.RepositoriesErr = decodeRepositories(node)

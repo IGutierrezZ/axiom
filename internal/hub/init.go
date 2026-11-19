@@ -55,7 +55,7 @@ type ownMarkers struct {
 }
 
 // declares informa de si el axiom.yaml existente declara
-// `technical_context:`, `git:`, `workflow:`, `sdd:` o `repositories:`, válidos o no, o no se puede
+// `technical_context:`, `git:`, `workflow:`, `sdd:`, `integrations:` o `repositories:`, válidos o no, o no se puede
 // leer: con --force no se sobrescribe un fichero cuyas declaraciones la
 // regeneración perdería (m13). Un bloque inválido cuenta igual que uno válido,
 // porque lo que se pierde es lo que el usuario escribió.
@@ -69,6 +69,7 @@ func (m ownMarkers) declares() bool {
 		d.Git != nil || d.GitErr != nil ||
 		d.Workflow != nil || d.WorkflowErr != nil ||
 		d.SDD != nil || d.SDDErr != nil ||
+		d.Integrations != nil || d.IntegrationsErr != nil ||
 		len(d.Repositories) > 0 || d.RepositoriesErr != nil
 }
 

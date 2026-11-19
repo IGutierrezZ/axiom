@@ -12,7 +12,7 @@ import (
 
 // ParseConfig deserializa y valida la estructura sintáctica de axiom.yaml desde
 // bytes: la configuración base y, si existen, los bloques
-// `technical_context:`, `git:`, `workflow:`, `sdd:` y `repositories:`. Si la base o alguna declaración
+// `technical_context:`, `git:`, `workflow:`, `sdd:`, `integrations:` y `repositories:`. Si la base o alguna declaración
 // es inválida devuelve un error que acumula todas las violaciones (REQ-24.17).
 func ParseConfig(data []byte) (*WorkspaceConfig, error) {
 	return parseConfigAt(data, "")
@@ -40,7 +40,7 @@ func joinLoadErrors(baseErr error, declarations Declarations) error {
 	if declarations.BaselineRetiredErr != nil {
 		candidates = append(candidates, declarations.BaselineRetiredErr)
 	}
-	for _, err := range append(candidates, declarations.TechnicalContextErr, declarations.GitErr, declarations.WorkflowErr, declarations.SDDErr, declarations.RepositoriesErr) {
+	for _, err := range append(candidates, declarations.TechnicalContextErr, declarations.GitErr, declarations.WorkflowErr, declarations.SDDErr, declarations.IntegrationsErr, declarations.RepositoriesErr) {
 		if err != nil {
 			errs = append(errs, err)
 		}
@@ -114,6 +114,10 @@ func parseLayered(data []byte) (*WorkspaceConfig, error, Declarations) {
 	// herencia de `git:` la resuelve quien consume la política (REQ-25.27).
 	if declarations.RepositoriesErr == nil {
 		cfg.Repositories = declarations.Repositories
+	}
+	// El bloque `integrations:` se proyecta tal como se declaró: nil sin bloque (REQ-43.19).
+	if declarations.IntegrationsErr == nil {
+		cfg.Integrations = declarations.Integrations
 	}
 	return &cfg, nil, declarations
 }

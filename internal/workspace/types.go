@@ -75,6 +75,7 @@ type WorkspaceConfig struct {
 	Git              *GitConfig              `yaml:"-"`
 	Workflow         *WorkflowConfig         `yaml:"-"`
 	Repositories     []RepositoryPolicy      `yaml:"-"`
+	Integrations     *IntegrationsConfig     `yaml:"-"`
 }
 
 // ValidationReport contiene el resultado determinista de la validación del espacio de trabajo.
