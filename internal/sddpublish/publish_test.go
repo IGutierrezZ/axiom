@@ -865,3 +865,43 @@ func TestPublishArchiveExcludesArchivedOutbox(t *testing.T) {
 		t.Errorf("el tercer commit contiene %v, solo la nota con punto anidado", files)
 	}
 }
+
+// REQ-43.9: `integrations.yaml` (sin punto) es documentación del cambio y `publish` la confirma como
+// cualquier otro documento; fija la regla de clasificación que ya cumple `docpaths`.
+func TestPublishCommitsIntegrationsLinks(t *testing.T) {
+	repo, _ := newMonorepo(t)
+	folder := filepath.Join(repo, "openspec", "changes", "x")
+	writeFile(t, filepath.Join(folder, "integrations.yaml"), "schema: axiom.integrations/v1\nchange: x\n")
+
+	result := run(t, repo, Request{})
+
+	wantPublished(t, result)
+	if want := []string{"openspec/changes/x/integrations.yaml"}; !reflect.DeepEqual(commitFiles(t, repo, "HEAD"), want) || !reflect.DeepEqual(result.Commit.Paths, want) {
+		t.Errorf("el commit contiene %v (resultado %v), se esperaba %v", commitFiles(t, repo, "HEAD"), result.Commit.Paths, want)
+	}
+}
+
+// REQ-43.8: la cola de integraciones y los temporales de su escritura atómica (y los de
+// `integrations.yaml`) son estado local con punto en la raíz de la carpeta del cambio: nunca se
+// confirman, aunque haya documentación sucia en la misma carpeta.
+func TestPublishExcludesIntegrationsOutbox(t *testing.T) {
+	repo, _ := newMonorepo(t)
+	folder := filepath.Join(repo, "openspec", "changes", "x")
+	writeFile(t, filepath.Join(folder, "integrations.yaml"), "schema: axiom.integrations/v1\nchange: x\n")
+	writeFile(t, filepath.Join(folder, ".integrations-outbox.yaml"), "schema: axiom.integrations-outbox/v1\n")
+	writeFile(t, filepath.Join(folder, ".integrations-outbox-42.yaml"), "temporal de la cola\n")
+	writeFile(t, filepath.Join(folder, ".integrations-7.yaml"), "temporal de los vínculos\n")
+
+	result := run(t, repo, Request{})
+
+	wantPublished(t, result)
+	if want := []string{"openspec/changes/x/integrations.yaml"}; !reflect.DeepEqual(commitFiles(t, repo, "HEAD"), want) {
+		t.Errorf("el commit contiene %v, se esperaba solo %v", commitFiles(t, repo, "HEAD"), want)
+	}
+	status := runGit(t, repo, "status", "--porcelain", "--untracked-files=all")
+	for _, local := range []string{".integrations-outbox.yaml", ".integrations-outbox-42.yaml", ".integrations-7.yaml"} {
+		if !strings.Contains(status, "?? openspec/changes/x/"+local) {
+			t.Errorf("%s debe seguir sin seguimiento:\n%s", local, status)
+		}
+	}
+}

@@ -196,12 +196,19 @@ func usersOf(t *testing.T, dir, pkgName, symbol string) []string {
 func TestOnlyIntegrationsUsesTheArchivedWriteGuard(t *testing.T) {
 	root := repoRoot(t)
 	allowed := filepath.Join(root, "internal", "integrations") + string(filepath.Separator)
+	allowedUsers := 0
 	for _, top := range []string{"internal", "cmd"} {
 		for _, user := range usersOf(t, filepath.Join(root, top), "kickoff", "RefuseArchivedWriteExceptLocalState") {
 			if !strings.HasPrefix(user, allowed) {
 				t.Errorf("%s usa kickoff.RefuseArchivedWriteExceptLocalState: solo internal/integrations puede hacerlo", user)
+				continue
 			}
+			allowedUsers++
 		}
+	}
+	// Desde la cola local, internal/integrations es el único importador: la guarda no queda sin uso.
+	if allowedUsers == 0 {
+		t.Error("internal/integrations debe usar kickoff.RefuseArchivedWriteExceptLocalState antes de cada escritura en una carpeta del cambio")
 	}
 }
 
