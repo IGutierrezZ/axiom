@@ -178,7 +178,7 @@ func TestInstallInstallsAndRestoresAfterCleanup(t *testing.T) {
 		t.Fatal("Install debe instalar el manifiesto en el catálogo")
 	}
 	reg, err := integrations.DefaultRegistry()
-	if err != nil || len(reg.IDs()) != 1 || reg.IDs()[0] != "fake" {
+	if _, ok := reg.Get("fake"); err != nil || !ok {
 		t.Fatalf("Install debe instalar el registro: %v %v", reg, err)
 	}
 	ref := secrets.Ref{Plugin: "fake", Name: "token"}
@@ -191,8 +191,10 @@ func TestInstallInstallsAndRestoresAfterCleanup(t *testing.T) {
 	if _, ok := manifest.Lookup("fake"); ok {
 		t.Fatal("Cleanup debe restaurar el catálogo")
 	}
-	if reg, _ := integrations.DefaultRegistry(); len(reg.IDs()) != 0 {
-		t.Fatal("Cleanup debe restaurar el registro")
+	if reg, _ := integrations.DefaultRegistry(); reg != nil {
+		if _, ok := reg.Get("fake"); ok {
+			t.Fatal("Cleanup debe restaurar el registro")
+		}
 	}
 	if _, _, err := secrets.Default().Get(context.Background(), ref); err == nil {
 		t.Fatal("Cleanup debe restaurar el almacén de producción")

@@ -44,6 +44,11 @@ var labels = map[string]string{
 	string(CodeDetachedHead):      "HEAD desacoplado",
 	string(CodeIntegrationBranch): "rama de integración no publicable",
 
+	// Rechazos de `ensure --role` (REQ-43.24).
+	string(CodeRoleNotApplicable): "rol no aplicable",
+	string(CodeKickoffNotSealed):  "kickoff sin sellar",
+	string(CodeRoleNotInRoster):   "rol fuera del roster",
+
 	// Modo de trabajo materializado y su origen (REQ-25.15, design §4.4).
 	string(ModeWorktree): "un worktree por rama",
 	string(ModeInPlace):  "en la carpeta del proyecto",

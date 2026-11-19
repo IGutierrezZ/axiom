@@ -114,6 +114,13 @@ func RunSDDPublish(args []string, stdout io.Writer) error {
 	} else {
 		writePublishText(stdout, result)
 	}
+	// Tras un archivado publicado, el evento archive se encola de forma duradera en la carpeta
+	// archivada y se intenta de inmediato; nunca cambia lo que imprime ni el código de salida.
+	if *archive && result.Status != sddpublish.StatusRefused {
+		if archivedRoot, found := kickoff.ArchivedChangeRoot(loc.WorkspaceRoot, *change); found {
+			emitArchiveEvent(loc, archivedRoot)
+		}
+	}
 	if result.Status == sddpublish.StatusRefused {
 		return fmt.Errorf("%w: %s (%s)", errPublishRefused, result.Refusal.Label, result.Refusal.Code)
 	}

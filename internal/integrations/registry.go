@@ -51,9 +51,6 @@ func (r *Registry) Get(id string) (Plugin, bool) {
 	return p, ok
 }
 
-// IDs devuelve los identificadores en orden de registro.
-func (r *Registry) IDs() []string { return append([]string(nil), r.ids...) }
-
 // builtinPlugins es la lista cerrada de plugins compilados en esta versión. Está vacía hasta
 // C-07-c; añadir uno exige también añadir su manifiesto a manifest.builtinCatalog.
 var builtinPlugins = []Plugin{}

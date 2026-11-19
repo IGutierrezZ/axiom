@@ -198,3 +198,24 @@ func TestColdStartSynthesis(t *testing.T) {
 		t.Fatalf("GetSpecDetail falló: %v", err)
 	}
 }
+
+// REQ-21.18 (MODIFIED): la cola de integraciones de la raíz de una carpeta archivada es estado
+// local: no se confunde con la spec del incremento ni cambia el resultado de ColdStart.
+func TestColdStartIgnoresTheArchivedIntegrationsOutbox(t *testing.T) {
+	workspaceRoot := t.TempDir()
+	changeDir := filepath.Join(workspaceRoot, "openspec", "changes", "archive", "2026-11-19-inc-outbox")
+	_ = os.MkdirAll(changeDir, 0o755)
+	_ = os.WriteFile(filepath.Join(changeDir, ".integrations-outbox.yaml"), []byte("schema: axiom.integrations-outbox/v1\nchange: inc-outbox\n"), 0o644)
+
+	svc := NewService(workspaceRoot, nil, nil)
+	if _, err := svc.ColdStart("inc-outbox", "outbox"); err == nil {
+		t.Fatal("sin spec.md la cola archivada no cuenta como spec del incremento")
+	}
+
+	spec := "# Spec\n### Requirement: Regla (REQ-01)\n#### Scenario: Escenario\n- DADO un sistema\n"
+	_ = os.WriteFile(filepath.Join(changeDir, "spec.md"), []byte(spec), 0o644)
+	entry, err := svc.ColdStart("inc-outbox", "outbox")
+	if err != nil || entry.Domain != "outbox" {
+		t.Fatalf("con spec.md y cola archivada ColdStart sigue funcionando: %v %+v", err, entry)
+	}
+}

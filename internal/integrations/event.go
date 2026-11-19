@@ -92,11 +92,6 @@ func ArchiveKey(change, archivedFolder string) string {
 	return fmt.Sprintf("%s/%s/%s", manifest.EventArchive, change, archivedFolder)
 }
 
-// ChangeStartKey es la clave de change.start (solo catálogo en esta versión: lo dispara C-07-d).
-func ChangeStartKey(change string) string {
-	return fmt.Sprintf("%s/%s", manifest.EventChangeStart, change)
-}
-
 // EventPolicy resume las reglas propias de cada evento.
 type EventPolicy struct {
 	// Emittable indica si Axiom puede emitirlo en esta versión (change.start solo es catálogo).

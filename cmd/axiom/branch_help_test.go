@@ -1,8 +1,11 @@
 package main
 
 import (
+	"bytes"
 	"strings"
 	"testing"
+
+	"github.com/IGutierrezZ/axiom/v3/internal/cli"
 )
 
 // REQ-25.1: la ayuda global lista los cuatro verbos, `axiom branch ensure`, `status`, `done` y
@@ -23,6 +26,20 @@ func TestBranchVerbsAreListedInTheGlobalHelp(t *testing.T) {
 		}
 		if !implemented[fields[1]] {
 			t.Errorf("la ayuda global anuncia `branch %s`, que aún no existe: %q", fields[1], line)
+		}
+	}
+}
+
+// REQ-43.24: la ayuda de `axiom branch ensure` documenta `--role`.
+func TestBranchEnsureHelpDocumentsTheRoleFlag(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	if code := cli.RunBranch([]string{"ensure", "--help"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("ensure --help sale con %d", code)
+	}
+	help := stdout.String()
+	for _, want := range []string{"[--role <rol>]", "  --role <rol>", "role.start", "role_not_in_roster", "kickoff_not_sealed", "role_not_applicable"} {
+		if !strings.Contains(help, want) {
+			t.Errorf("la ayuda de ensure debe contener %q", want)
 		}
 	}
 }

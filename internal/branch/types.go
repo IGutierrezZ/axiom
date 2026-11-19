@@ -145,6 +145,12 @@ const (
 	// repositorio donde no se publica. Los devuelve `Engine.PublicationTarget`.
 	CodeDetachedHead      Code = "detached_head"
 	CodeIntegrationBranch Code = "integration_branch"
+
+	// Rechazos de `ensure --role` (REQ-43.24): el rol no se puede aplicar o no consta en el roster
+	// sellado del cambio.
+	CodeRoleNotApplicable Code = "role_not_applicable"
+	CodeKickoffNotSealed  Code = "kickoff_not_sealed"
+	CodeRoleNotInRoster   Code = "role_not_in_roster"
 )
 
 // Exceptions son las excepciones por cambio de `ensure` (`--prefix`, `--branch`,

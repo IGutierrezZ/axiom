@@ -38,7 +38,7 @@ func TestNewRegistryAcceptsCatalogedPlugins(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewRegistry: %v", err)
 	}
-	if got := reg.IDs(); !reflect.DeepEqual(got, []string{"alpha", "beta"}) {
+	if got := idsOf(reg); !reflect.DeepEqual(got, []string{"alpha", "beta"}) {
 		t.Fatalf("IDs() = %v", got)
 	}
 	if p, ok := reg.Get("beta"); !ok || p.Manifest().ID != "beta" {
@@ -93,15 +93,15 @@ func TestDefaultRegistryIsEmptyAndMatchesCatalog(t *testing.T) {
 	if err != nil {
 		t.Fatalf("DefaultRegistry: %v", err)
 	}
-	if len(reg.IDs()) != 0 {
-		t.Fatalf("la lista cerrada de esta versión está vacía, obtuvo %v", reg.IDs())
+	if len(idsOf(reg)) != 0 {
+		t.Fatalf("la lista cerrada de esta versión está vacía, obtuvo %v", idsOf(reg))
 	}
 	var catalogIDs []string
 	for _, m := range manifest.Catalog() {
 		catalogIDs = append(catalogIDs, m.ID)
 	}
 	sort.Strings(catalogIDs)
-	got := reg.IDs()
+	got := idsOf(reg)
 	sort.Strings(got)
 	if len(catalogIDs) != len(got) {
 		t.Fatalf("los ids de DefaultRegistry %v deben coincidir con los de Catalog %v", got, catalogIDs)
@@ -114,12 +114,12 @@ func TestSetDefaultRegistryForTestRestores(t *testing.T) {
 	SetDefaultRegistryForTest(inner, stubPlugin{stubManifest("alpha")})
 
 	reg, err := DefaultRegistry()
-	if err != nil || !reflect.DeepEqual(reg.IDs(), []string{"alpha"}) {
+	if err != nil || !reflect.DeepEqual(idsOf(reg), []string{"alpha"}) {
 		t.Fatalf("DefaultRegistry instalado: %v %v", reg, err)
 	}
 	inner.run()
 	reg, err = DefaultRegistry()
-	if err != nil || len(reg.IDs()) != 0 {
+	if err != nil || len(idsOf(reg)) != 0 {
 		t.Fatalf("Cleanup restaura el registro vacío: %v %v", reg, err)
 	}
 }
@@ -143,3 +143,6 @@ func (c *cleanupRecorder) run() {
 		c.fns[i]()
 	}
 }
+
+// idsOf devuelve los identificadores del registro en orden de registro (solo lo usan las pruebas).
+func idsOf(r *Registry) []string { return append([]string(nil), r.ids...) }

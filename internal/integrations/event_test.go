@@ -62,11 +62,6 @@ func TestIdempotencyKeys(t *testing.T) {
 			t.Fatalf("clave = %q", got)
 		}
 	})
-	t.Run("change.start solo catálogo", func(t *testing.T) {
-		if got := ChangeStartKey("x"); got != "change.start/x" {
-			t.Fatalf("clave = %q", got)
-		}
-	})
 	t.Run("la misma aprobación da la misma clave y otro digest da otra", func(t *testing.T) {
 		a1 := GateApprovedKey(manifest.EventGateSpecApproved, "x", Fingerprint(digestA, 1))
 		a2 := GateApprovedKey(manifest.EventGateSpecApproved, "x", Fingerprint(digestA, 7))

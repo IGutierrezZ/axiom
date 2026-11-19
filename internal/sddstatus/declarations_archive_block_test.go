@@ -462,3 +462,34 @@ func TestArchiveNotBlockedByAnInvalidIntegrationsBlock(t *testing.T) {
 		t.Fatalf("invalidDeclarationErrors no cambia con IntegrationsErr: %v", lines)
 	}
 }
+
+// REQ-21.18 (MODIFIED): la cola de integraciones `.integrations-outbox.yaml` de la raíz de una
+// carpeta archivada es estado local: no cambia la entrada archivada de un cambio ni su proyección.
+func TestArchivedOutboxDoesNotChangeTheArchivedProjection(t *testing.T) {
+	project := func(withOutbox bool) (Status, string, []string) {
+		root := t.TempDir()
+		folder := filepath.Join(root, "openspec", "changes", "archive", "2026-11-19-x")
+		workspacetest.WriteFile(t, filepath.Join(folder, "proposal.md"), "# x\n")
+		if withOutbox {
+			workspacetest.WriteFile(t, filepath.Join(folder, ".integrations-outbox.yaml"), "schema: axiom.integrations-outbox/v1\nchange: x\n")
+		}
+		entry, ok := newestArchivedOpenSpecEntry(root, "x")
+		if !ok {
+			t.Fatal("la entrada archivada debe resolverse")
+		}
+		active, err := listActiveOpenSpecChanges(root)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return archivedOpenSpecStatus(root, "x", entry, false), entry, active
+	}
+	without, entryWithout, activeWithout := project(false)
+	with, entryWith, activeWith := project(true)
+	if entryWith != entryWithout || len(activeWith) != 0 || len(activeWithout) != 0 {
+		t.Fatalf("entrada %q/%q, activos %v/%v", entryWith, entryWithout, activeWith, activeWithout)
+	}
+	if with.Archived == nil || without.Archived == nil || with.Archived.Path != without.Archived.Path ||
+		with.Dependencies != without.Dependencies || with.ApplyState != without.ApplyState || with.NextRecommended != without.NextRecommended {
+		t.Fatalf("la proyección archivada no cambia:\n%+v\n%+v", with, without)
+	}
+}

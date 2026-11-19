@@ -390,31 +390,31 @@ func buildManualEvent(loc workspace.Location, change, eventName, role, actorFlag
 	switch {
 	case ev.Type == manifest.EventArchive:
 		if !hasArchived {
-			return integrations.Event{}, "", fmt.Errorf("archive exige la carpeta archivada del cambio %q y no existe ninguna bajo openspec/changes/archive/", change)
+			return integrations.Event{}, "", fmt.Errorf("archive exige la carpeta archivada del cambio %q y no existe ninguna bajo openspec/changes/archive/; comprueba el estado con `axiom sdd status --change %s`", change, change)
 		}
 		root = archived
 	case isDirectory(ordinary):
 		root = ordinary
 	case hasArchived:
-		return integrations.Event{}, "", fmt.Errorf("el cambio %q está archivado: solo se puede emitir archive", change)
+		return integrations.Event{}, "", fmt.Errorf("el cambio %q está archivado: solo se puede emitir archive; consulta su estado con `axiom sdd status --change %s`", change, change)
 	default:
-		return integrations.Event{}, "", fmt.Errorf("el cambio %q no existe en %q", change, ordinary)
+		return integrations.Event{}, "", fmt.Errorf("el cambio %q no existe en %q; ejecuta `axiom sdd status` para ver los cambios activos", change, ordinary)
 	}
 
 	if policy.NeedsRole {
 		if role == "" {
-			return integrations.Event{}, "", fmt.Errorf("el evento %s exige --role", ev.Type)
+			return integrations.Event{}, "", fmt.Errorf("el evento %s exige --role con un rol del roster sellado; ejecuta `axiom integrations emit --help`", ev.Type)
 		}
 		sealed, err := kickoff.Load(root)
 		if err != nil {
 			return integrations.Event{}, "", err
 		}
 		if sealed == nil {
-			return integrations.Event{}, "", fmt.Errorf("el cambio %q no tiene un kickoff sellado con roster de roles; sella el kickoff primero", change)
+			return integrations.Event{}, "", fmt.Errorf("el cambio %q no tiene un kickoff sellado con roster de roles; sella el kickoff con `axiom sdd kickoff seal --change %s --execution-style checkpointed`", change, change)
 		}
 		roster := rosterFromKickoff(*sealed)
 		if !gateKeyInRoster(kickoff.RoleApplyGate(role), roster) {
-			return integrations.Event{}, "", fmt.Errorf("el rol %q no pertenece al roster sellado de %q (roster: %s)", role, change, strings.Join(rosterRoleNames(roster), ", "))
+			return integrations.Event{}, "", fmt.Errorf("el rol %q no pertenece al roster sellado de %q (roster: %s); repite con --role de uno de ellos o consulta el estado con `axiom sdd status --change %s`", role, change, strings.Join(rosterRoleNames(roster), ", "), change)
 		}
 	}
 
@@ -467,7 +467,7 @@ func lastGateRecord(changeRoot string, gate kickoff.GateKey) (kickoff.GateRecord
 		return kickoff.GateRecord{}, fmt.Errorf("la compuerta %s no tiene ninguna decisión en gates.yaml: emit no fabrica aprobaciones; regístrala con `axiom sdd gate record`", gate)
 	}
 	if last.Decision != kickoff.DecisionApproved {
-		return kickoff.GateRecord{}, fmt.Errorf("la última decisión de la compuerta %s en gates.yaml es %s, no approved: emit no fabrica aprobaciones", gate, last.Decision)
+		return kickoff.GateRecord{}, fmt.Errorf("la última decisión de la compuerta %s en gates.yaml es %s, no approved: emit no fabrica aprobaciones: regístrala con `axiom sdd gate record --change %s --gate %s --decision approved`", gate, last.Decision, filepath.Base(changeRoot), gate)
 	}
 	return *last, nil
 }
@@ -520,11 +520,11 @@ func resolveSecretTarget(plugin, name string, requireName bool) (manifest.Manife
 			}
 			list = strings.Join(ids, ", ")
 		}
-		return manifest.Manifest{}, fmt.Errorf("plugin desconocido %q; plugins admitidos: %s", plugin, list)
+		return manifest.Manifest{}, fmt.Errorf("plugin desconocido %q; plugins admitidos: %s; los plugins configurados salen de axiom.yaml (`axiom workspace validate`)", plugin, list)
 	}
 	if name == "" {
 		if requireName {
-			return manifest.Manifest{}, errors.New("--name es obligatorio")
+			return manifest.Manifest{}, errors.New("--name es obligatorio: ejecuta `axiom integrations secret --help`")
 		}
 		return m, nil
 	}
@@ -539,7 +539,7 @@ func resolveSecretTarget(plugin, name string, requireName bool) (manifest.Manife
 	if len(declared) > 0 {
 		list = strings.Join(declared, ", ")
 	}
-	return manifest.Manifest{}, fmt.Errorf("el plugin %s no declara el secreto %q; secretos declarados: %s", plugin, name, list)
+	return manifest.Manifest{}, fmt.Errorf("el plugin %s no declara el secreto %q; secretos declarados: %s; consúltalos con `axiom integrations secret status --plugin %s`", plugin, name, list, plugin)
 }
 
 func secretFlags(name string) (*flag.FlagSet, *string, *string) {
