@@ -214,7 +214,7 @@ func TestManagerLifecycle(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	// 1. Configurar mock server
-	skillContent := []byte("# Docker Best Practices\n\nUso de contenedores...")
+	skillContent := []byte("---\nname: docker-best-practices\ndescription: \"Buenas prácticas de Docker. Trigger: al tocar Dockerfiles.\"\n---\n\n# Docker Best Practices\n\nUso de contenedores...")
 	hasher := sha256.New()
 	hasher.Write(skillContent)
 	expectedHash := hex.EncodeToString(hasher.Sum(nil))

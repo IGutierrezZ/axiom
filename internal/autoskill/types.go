@@ -1,6 +1,10 @@
 package autoskill
 
-import "time"
+import (
+	"time"
+
+	"github.com/IGutierrezZ/axiom/v3/internal/skillcheck"
+)
 
 // OriginType indica la fuente de origen de una skill propuesta.
 type OriginType string
@@ -174,4 +178,13 @@ type ScanReport struct {
 	MinedSkillsCount     int             `json:"mined_skills_count"`
 	RegistrySkillsCount  int             `json:"registry_skills_count"`
 	TotalInInbox         int             `json:"total_in_inbox"`
+	// SkillsInvalid son las skills minadas descartadas por errores de skillcheck;
+	// no se depositaron en el buzón.
+	SkillsInvalid []InvalidSkill `json:"skills_invalid,omitempty"`
+}
+
+// InvalidSkill describe una skill descartada antes de llegar al buzón.
+type InvalidSkill struct {
+	Name   string               `json:"name"`
+	Errors []skillcheck.Finding `json:"errors"`
 }
