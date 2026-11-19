@@ -328,3 +328,17 @@ func TestSyncInvalidQueueIsAnError(t *testing.T) {
 		t.Fatalf("una cola inválida es un error que la nombra: %v", err)
 	}
 }
+
+func TestSyncGuardRejectionSkipsTheFolderAndKeepsTheQueue(t *testing.T) {
+	f, plugin, d := setup(t)
+	seedOutbox(t, f.Folder(), eventOf(manifest.EventGateSpecApproved, "k1"))
+	d.Guard = func(Folder) error { return errors.New("rama equivocada") }
+
+	report, err := d.Sync(context.Background(), SyncOptions{})
+	if err != nil || !report.Remaining || !report.Changes[0].Skipped || plugin.calls() != 0 {
+		t.Fatalf("la guarda salta la carpeta: %+v %v", report, err)
+	}
+	if !fileExists(f.Folder().path(outboxName)) {
+		t.Fatal("la cola sigue ahí")
+	}
+}

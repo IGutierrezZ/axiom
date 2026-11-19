@@ -283,3 +283,16 @@ func RoleTaskFiles(roles []KickoffRole) []string {
 	}
 	return files
 }
+
+// RoleFromGate devuelve el rol de una compuerta role-apply:<rol> (en minúsculas, como la deja
+// RoleApplyGate) y true. Para cualquier otra compuerta, o una role-apply: sin rol, devuelve ("", false).
+func RoleFromGate(key GateKey) (string, bool) {
+	if !strings.HasPrefix(string(key), roleApplyGatePrefix) {
+		return "", false
+	}
+	role := strings.TrimPrefix(string(key), roleApplyGatePrefix)
+	if role == "" {
+		return "", false
+	}
+	return role, true
+}

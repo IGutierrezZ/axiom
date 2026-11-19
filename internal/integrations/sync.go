@@ -31,6 +31,8 @@ type ChangeReport struct {
 	Abandoned []OperationReport
 	Discarded []OperationReport
 	Warnings  []string
+	// Skipped indica que la guarda rechazó la carpeta: su cola no se ha tratado y sigue ahí.
+	Skipped bool
 }
 
 // SyncReport es el resultado de sync. Remaining indica que queda alguna operación, pendiente o
@@ -52,7 +54,7 @@ func (d *Dispatcher) Sync(ctx context.Context, opts SyncOptions) (SyncReport, er
 			return report, err
 		}
 		report.Changes = append(report.Changes, change)
-		if len(change.Pending) > 0 || len(change.Abandoned) > 0 {
+		if change.Skipped || len(change.Pending) > 0 || len(change.Abandoned) > 0 {
 			report.Remaining = true
 		}
 	}
@@ -111,6 +113,14 @@ func subdirectories(dir, skip string) []string {
 
 func (d *Dispatcher) syncFolder(ctx context.Context, folder Folder, opts SyncOptions) (ChangeReport, error) {
 	report := ChangeReport{Change: folder.Change(), Folder: folder.Root, Archived: folder.Archived()}
+
+	if d.Guard != nil {
+		if err := d.Guard(folder); err != nil {
+			report.Skipped = true
+			report.Warnings = append(report.Warnings, fmt.Sprintf("se salta la cola de %s: %v", folder.Change(), err))
+			return report, nil
+		}
+	}
 
 	release, err := folder.acquire()
 	if err != nil {

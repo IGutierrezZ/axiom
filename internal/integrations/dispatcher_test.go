@@ -424,3 +424,32 @@ func TestDispatchPersistsLinksBeforeRemovingTheOperation(t *testing.T) {
 		t.Fatal("y después la cola se retira")
 	}
 }
+
+func TestDispatchGuardRejectionIsAReportErrorAndTouchesNothing(t *testing.T) {
+	f, plugin, d := setup(t)
+	boom := errors.New("rama equivocada")
+	d.Guard = func(Folder) error { return boom }
+
+	report := d.Dispatch(context.Background(), f.Root, specEvent("k1"), durable)
+	if !errors.Is(report.Err, boom) || plugin.calls() != 0 {
+		t.Fatalf("la guarda rechaza el despacho: %+v", report)
+	}
+	assertNoIntegrationsFiles(t, f)
+
+	// Sin plugin que escuche, la guarda ni se consulta.
+	called := false
+	d.Guard = func(Folder) error { called = true; return nil }
+	ev := specEvent("c")
+	ev.Type = manifest.EventChangeStart
+	d.Dispatch(context.Background(), f.Root, ev, durable)
+	if called {
+		t.Fatal("sin oyentes no se consulta la guarda")
+	}
+}
+
+func TestHasListeners(t *testing.T) {
+	_, _, d := setup(t)
+	if !HasListeners(d.Config, manifest.EventArchive) || HasListeners(d.Config, manifest.EventChangeStart) || HasListeners(nil, manifest.EventArchive) {
+		t.Fatal("HasListeners usa el catálogo y la configuración activa")
+	}
+}

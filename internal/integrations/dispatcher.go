@@ -46,6 +46,10 @@ type Dispatcher struct {
 	Now           func() time.Time
 	Immediate     time.Duration // 10 s si es cero
 	PerOp         time.Duration // 30 s si es cero (sync)
+	// Guard, si no es nil, se llama con la carpeta antes de tomar su cerrojo: un error la rechaza
+	// (la guarda A de ramas, REQ-25.19, la pone la capa de verbos). Dispatch lo deja en Report.Err y
+	// Sync salta la carpeta con un aviso.
+	Guard func(Folder) error
 }
 
 // OperationReport describe una operación en un informe. Nunca lleva secretos: LastError ya está
@@ -116,6 +120,13 @@ func (d *Dispatcher) listening(t EventType) []workspace.IntegrationPluginConfig 
 	return out
 }
 
+// HasListeners indica si algún plugin activo del bloque escucha t según el catálogo cerrado. Es la
+// comprobación barata que permite a un verbo no leer ni escribir nada (ni construir el evento)
+// cuando nadie escucha.
+func HasListeners(config *workspace.IntegrationsConfig, t EventType) bool {
+	return (&Dispatcher{Config: config}).listening(t) != nil
+}
+
 // activeConfig devuelve la configuración activa del plugin id.
 func (d *Dispatcher) activeConfig(id string) (workspace.IntegrationPluginConfig, bool) {
 	for _, p := range d.Config.Active() {
@@ -153,6 +164,12 @@ func (d *Dispatcher) Dispatch(ctx context.Context, changeRoot string, ev Event, 
 	}
 	if ev.OccurredAt.IsZero() {
 		ev.OccurredAt = d.now()
+	}
+	if d.Guard != nil {
+		if err := d.Guard(folder); err != nil {
+			report.Err = err
+			return report
+		}
 	}
 
 	release, err := folder.acquire()
