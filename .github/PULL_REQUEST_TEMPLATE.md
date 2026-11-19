@@ -82,7 +82,6 @@ The following checks run automatically on this PR:
 
 | Check | Status | Description |
 |-------|--------|-------------|
-| Check PR Cognitive Load | ⏳ | PR should stay within 400 changed lines (`additions + deletions`) or use `size:exception` |
 | Check PR Has `type:*` Label | ⏳ | Exactly one `type:*` label must be applied |
 | Unit Tests | ⏳ | `go test ./...` must pass |
 | Go Format | ⏳ | `go run ./internal/gofmtcheck` must pass |
@@ -92,7 +91,6 @@ The following checks run automatically on this PR:
 
 ## ✅ Contributor Checklist
 
-- [ ] PR stays within 400 changed lines, or I have requested/obtained maintainer-applied `size:exception` with rationale documented
 - [ ] I have added the appropriate `type:*` label to this PR
 - [ ] Unit tests pass (`go test ./...`)
 - [ ] Go format passes (`go run ./internal/gofmtcheck`)

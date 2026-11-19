@@ -155,9 +155,13 @@ func TestDelegatedWorkflowMutationContract(t *testing.T) {
 			t.Errorf(".github/workflows/pr-check.yml retains stale maintainer-only approval authority %q", stale)
 		}
 	}
-	// La puerta de presupuesto de revisión sí sigue viva y debe seguir estándolo.
-	if condition := "const hasException = labels.includes('size:exception');"; !strings.Contains(string(workflow), condition) {
-		t.Errorf("pr-check workflow must retain enforcement condition %q", condition)
+	// La puerta de presupuesto de revisión (400 líneas y `size:exception`) se
+	// retiró con C-02-e: una sola PR por cambio es la entrega por defecto y la
+	// división se hace en commits, no en PRs. Que no vuelva.
+	for _, removed := range []string{"check-pr-size", "size:exception", "const limit = 400"} {
+		if strings.Contains(string(workflow), removed) {
+			t.Errorf("pr-check workflow vuelve a referenciar %q; el check de tamaño de PR se retiró con C-02-e", removed)
+		}
 	}
 	// Contrapartida de haber retirado la puerta: que la retirada sea completa y
 	// siga siéndolo. Una restauración a medias dejaría el workflow exigiendo una
