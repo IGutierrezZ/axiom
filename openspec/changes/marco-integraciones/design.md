@@ -168,7 +168,7 @@ Ningún error sale del adaptador. El texto de los avisos ya pasa por la limpieza
 **Elección**:
 - `secrets.Store.Get(ctx, Ref) (Secret, Source, error)`; `WritableStore` añade `Set` y `Delete`.
 - `Env`: lee `manifest.EnvVarName(plugin, secreto)` = `AXIOM_INTEGRATION_` + id del plugin en mayúsculas con `-`→`_` + `_` + nombre del secreto en mayúsculas (`azure-devops` + `pat` → `AXIOM_INTEGRATION_AZURE_DEVOPS_PAT`). La validación del catálogo rechaza dos pares que den la misma variable.
-- `Keyring`: servicio `axiom`, cuenta `<plugin>/<secreto>`, sobre `github.com/zalando/go-keyring`.
+- `Keyring`: servicio `axiom`, cuenta `<plugin>/<secreto>`, sobre `github.com/zalando/go-keyring`. **Decisión del usuario sobre plataformas:** el adaptador se compila solo para Windows y macOS (`//go:build windows || darwin`). En Linux y en cualquier otro sistema no hay Secret Service: el único almacén es la variable de entorno, `secret set` y `secret delete` se niegan con `*KeyringUnavailableError` (causa `ErrNoWritableStore`, que remite a la variable) y `secret status` informa `env` o `missing` (no `keyring_unavailable`, que queda para un keyring que existe y falla).
 - `Chain`: entorno no vacío gana; si no, keyring. `ErrNotFound` del keyring → `*MissingError` (nombra `axiom integrations secret set` y la variable). Cualquier otro error del keyring (sin D-Bus, plataforma no soportada) → `*KeyringUnavailableError{Ref, EnvVar, Cause}`; **nunca** cae a un fichero en texto plano. `Set` y `Delete` solo van al keyring.
 - `Secret` guarda el valor en un campo no exportado; `String`, `GoString`, `Format`, `MarshalJSON`, `MarshalYAML`, `MarshalText` y `LogValue` devuelven `[REDACTED]`; el valor solo sale con `Reveal()`.
 - El despachador entrega al plugin un `SecretSource` acotado a los secretos de **su** manifiesto y con rastreo: cada valor resuelto se apunta en memoria y `sanitize` reemplaza sus apariciones (≥ 4 caracteres) por `[REDACTED]` en todo texto de error antes de escribir la cola, imprimir un aviso o devolver JSON. El texto también se recorta a 512 caracteres y se aplana a una línea.
@@ -693,13 +693,15 @@ Riesgo de proceso fuera de la matriz: en macOS, `go-keyring` lanza `security`; s
 
 ## 9. Dependencia `github.com/zalando/go-keyring`: estado de verificación
 
-**No verificado.** El módulo no está en la caché local (`go env GOMODCACHE`) y consultar el proxy de módulos o el repositorio es una operación remota que esta fase no tiene autorizada. Lo que sigue procede de conocimiento previo y **debe comprobarse en la unidad 3**, con autorización explícita del usuario para la descarga (`go get`):
+**Estado: verificado en la unidad 3** (`go-keyring v0.2.8`, `wincred v1.2.3`, `dbus v5.2.2`; el valor viaja por stdin a `security -i` en `keyring_darwin.go`; `MockInit` y `MockInitWithError` existen). Lo que sigue es la expectativa original; el módulo ya está descargado.
+
+**Histórico: no verificado.** El módulo no está en la caché local (`go env GOMODCACHE`) y consultar el proxy de módulos o el repositorio es una operación remota que esta fase no tiene autorizada. Lo que sigue procede de conocimiento previo y **debe comprobarse en la unidad 3**, con autorización explícita del usuario para la descarga (`go get`):
 
 | Punto | Expectativa (sin verificar) | Cómo verificarlo |
 |---|---|---|
 | Versión estable a fijar | serie `v0.2.x` | `go list -m -versions github.com/zalando/go-keyring` |
 | Windows puro Go (sin cgo) | `github.com/danieljoos/wincred` sobre `golang.org/x/sys/windows` (ya en `go.mod`, v0.47.0) | `go list -deps` con `GOOS=windows CGO_ENABLED=0 go build ./internal/integrations/secrets/...` dentro de `go test` (`go vet` cruzado) |
-| Linux | `github.com/godbus/dbus/v5` (Secret Service); sin D-Bus en CI devuelve error, que el diseño traduce a `KeyringUnavailableError` | prueba con `MockInitWithError` |
+| Linux | Fuera de alcance por decisión del usuario: `keyring.go` lleva `//go:build windows || darwin`; en Linux `platformKeyring()` es nil y el almacén es solo el entorno (`godbus/dbus` queda como dependencia transitiva del módulo, sin uso) | `GOOS=linux go vet` y `keyring_other_test.go` |
 | macOS | invoca `/usr/bin/security`; comprobar que el valor viaja por stdin (`security -i`) y no por argumento | leer `keyring_darwin.go` de la versión fijada |
 | Errores | `keyring.ErrNotFound`, `keyring.ErrUnsupportedPlatform`, `keyring.ErrSetDataTooBig` | `go doc github.com/zalando/go-keyring` |
 | Límite de tamaño | Windows ≈ 2.560 bytes por credencial | ídem; el límite propio de 4 KiB de `secret set` se ajusta por debajo si hace falta |

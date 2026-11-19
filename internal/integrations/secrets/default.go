@@ -10,8 +10,8 @@ var (
 	defaultStore WritableStore
 )
 
-// Default devuelve el almacén de producción. De momento compone solo el entorno; la unidad del
-// keyring le añade el segundo eslabón sin cambiar esta firma.
+// Default devuelve el almacén de producción: el entorno primero y, solo en Windows y macOS, el
+// almacén del sistema. En el resto de sistemas el único almacén es el entorno.
 func Default() WritableStore {
 	defaultMu.RLock()
 	override := defaultStore
@@ -19,7 +19,7 @@ func Default() WritableStore {
 	if override != nil {
 		return override
 	}
-	return NewChain(Env{}, nil)
+	return NewChain(Env{}, platformKeyring())
 }
 
 // SetDefaultForTest instala store como almacén por defecto y lo restaura con Cleanup. Es estado

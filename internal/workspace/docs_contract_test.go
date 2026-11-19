@@ -614,5 +614,6 @@ func TestManualDocumentsIntegrations(t *testing.T) {
 		"`.integrations-outbox.yaml`",
 		"`integrations.yaml`",
 		"axiom branch ensure --role",
+		"en Linux y en cualquier otro sistema el único almacén es la variable de entorno",
 	)
 }

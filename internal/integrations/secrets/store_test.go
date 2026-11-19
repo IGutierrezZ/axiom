@@ -3,7 +3,6 @@ package secrets
 import (
 	"context"
 	"errors"
-	"strings"
 	"testing"
 )
 
@@ -55,16 +54,10 @@ func TestMemoryStore(t *testing.T) {
 	}
 }
 
-func TestDefaultComposesEnvOnlyAndCanBeOverridden(t *testing.T) {
+func TestDefaultReadsEnvAndCanBeOverridden(t *testing.T) {
 	t.Setenv("AXIOM_INTEGRATION_FAKE_TOKEN", "x")
 	if s, src, err := Default().Get(context.Background(), Ref{Plugin: "fake", Name: "token"}); err != nil || s.Reveal() != "x" || src != SourceEnv {
 		t.Fatalf("Default() lee el entorno: %v %q %q", err, s.Reveal(), src)
-	}
-
-	t.Setenv("AXIOM_INTEGRATION_FAKE_TOKEN", "")
-	_, _, err := Default().Get(context.Background(), Ref{Plugin: "fake", Name: "token"})
-	if err == nil || !strings.Contains(err.Error(), "AXIOM_INTEGRATION_FAKE_TOKEN") {
-		t.Fatalf("sin variable, Default() es un MissingError que la nombra: %v", err)
 	}
 
 	inner := &fakeT{}
@@ -75,7 +68,8 @@ func TestDefaultComposesEnvOnlyAndCanBeOverridden(t *testing.T) {
 		t.Fatalf("SetDefaultForTest: %v %q", err, s.Reveal())
 	}
 	inner.run()
-	if _, _, err := Default().Get(context.Background(), Ref{Plugin: "fake", Name: "token"}); err == nil {
+	t.Setenv("AXIOM_INTEGRATION_FAKE_TOKEN", "otro")
+	if s, _, err := Default().Get(context.Background(), Ref{Plugin: "fake", Name: "token"}); err != nil || s.Reveal() != "otro" {
 		t.Fatal("Cleanup debe restaurar el almacén de producción")
 	}
 }

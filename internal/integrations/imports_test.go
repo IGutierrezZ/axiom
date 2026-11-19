@@ -122,6 +122,19 @@ func TestImportsDirection(t *testing.T) {
 		}, "workspace solo puede depender de la hoja manifest")
 	})
 
+	t.Run("solo internal/integrations/secrets importa go-keyring", func(t *testing.T) {
+		isKeyring := func(p string) bool {
+			return p == "github.com/zalando/go-keyring" || strings.HasPrefix(p, "github.com/zalando/go-keyring/")
+		}
+		for _, top := range []string{"internal", "cmd"} {
+			for _, user := range importers(t, filepath.Join(root, top), isKeyring) {
+				if !strings.Contains(filepath.ToSlash(user), "/internal/integrations/secrets/") {
+					t.Errorf("%s importa go-keyring: solo internal/integrations/secrets puede hacerlo", user)
+				}
+			}
+		}
+	})
+
 	t.Run("secrets no importa internal/integrations ni workspace", func(t *testing.T) {
 		dir := filepath.Join(root, "internal", "integrations", "secrets")
 		assertNoImporters(t, dir, pkgExact("internal/integrations"), "secrets no importa el núcleo")

@@ -362,7 +362,7 @@ Cuando un verbo determinista despacha un evento (REQ-43.22, REQ-43.25 y REQ-43.2
 
 ### Requirement: Almacén de Secretos sin Caída Silenciosa a Texto Plano (REQ-43.13)
 
-El paquete `internal/integrations/secrets` DEBE definir el puerto `SecretStore` con un adaptador de entorno, un adaptador de keyring del sistema (`github.com/zalando/go-keyring`: Windows Credential Manager, Keychain, Secret Service) y una cadena de resolución entorno → keyring. El adaptador de entorno lee `AXIOM_INTEGRATION_<PLUGIN>_<CLAVE>`, con el identificador del plugin en mayúsculas y `-` sustituido por `_` y el nombre del secreto en mayúsculas (`azure-devops` y `pat` dan `AXIOM_INTEGRATION_AZURE_DEVOPS_PAT`); una variable vacía cuenta como no definida y el catálogo rechaza dos pares que den la misma variable. El keyring usa el servicio `axiom` y la cuenta `<plugin>/<secreto>`. Un secreto ausente DEBE dar un error tipado que nombre `axiom integrations secret set` y la variable. NUNCA DEBE existir un almacén en texto plano ni una caída a él: si el keyring no está disponible y el entorno no aporta valor, DEBE devolverse un error tipado que nombre la variable de entorno alternativa. Los errores NUNCA DEBEN envolver el valor del secreto. Los secretos solo DEBEN declararse por nombre en el manifiesto (REQ-43.3).
+El paquete `internal/integrations/secrets` DEBE definir el puerto `SecretStore` con un adaptador de entorno, un adaptador de keyring del sistema (`github.com/zalando/go-keyring`: Windows Credential Manager y llavero de macOS) y una cadena de resolución entorno → keyring. El adaptador de keyring se compila SOLO para Windows y macOS (`//go:build windows || darwin`): en Linux y en cualquier otro sistema no hay Secret Service y el único almacén es la variable de entorno. El adaptador de entorno lee `AXIOM_INTEGRATION_<PLUGIN>_<CLAVE>`, con el identificador del plugin en mayúsculas y `-` sustituido por `_` y el nombre del secreto en mayúsculas (`azure-devops` y `pat` dan `AXIOM_INTEGRATION_AZURE_DEVOPS_PAT`); una variable vacía cuenta como no definida y el catálogo rechaza dos pares que den la misma variable. El keyring usa el servicio `axiom` y la cuenta `<plugin>/<secreto>`. Un secreto ausente DEBE dar un error tipado que nombre `axiom integrations secret set` y la variable. NUNCA DEBE existir un almacén en texto plano ni una caída a él: si el keyring no está disponible y el entorno no aporta valor, DEBE devolverse un error tipado que nombre la variable de entorno alternativa. Los errores NUNCA DEBEN envolver el valor del secreto. Los secretos solo DEBEN declararse por nombre en el manifiesto (REQ-43.3).
 
 #### Scenario: El entorno prevalece
 - **DADO** la variable de entorno definida y un valor distinto en el keyring
@@ -373,6 +373,11 @@ El paquete `internal/integrations/secrets` DEBE definir el puerto `SecretStore` 
 - **DADO** un keyring simulado con el secreto y sin variable de entorno
 - **CUANDO** se resuelve
 - **ENTONCES** se obtiene el valor y la fuente es `keyring`
+
+#### Scenario: Linux solo tiene el entorno
+- **DADO** un sistema que no es Windows ni macOS
+- **CUANDO** se resuelve un secreto sin variable de entorno
+- **ENTONCES** el error es el de secreto ausente que nombra la variable y la fuente es `missing`, y nunca se consulta un servicio de secretos ni se crea un fichero
 
 #### Scenario: Keyring no disponible
 - **DADO** un keyring no disponible y sin variable de entorno
@@ -401,7 +406,7 @@ El tipo `Secret` DEBE redactar su valor en `String`, `GoString`, `MarshalJSON` y
 
 ### Requirement: `axiom integrations secret set|status|delete` (REQ-43.15)
 
-`axiom integrations secret set|status|delete --plugin <id> --name <secreto>` DEBE gestionar los secretos en el keyring del sistema. `set` DEBE leer el valor únicamente por stdin (máximo 4 KiB, quitando un único salto de línea final y rechazando el valor vacío) y NUNCA aceptarlo como argumento ni como bandera; si stdin es un terminal DEBE negarse y sugerir canalizar el valor, porque no hay prompt sin eco en este cambio. `status` (con `--name` opcional) DEBE informar, por cada secreto del manifiesto, de su `source`, con exactamente uno de los valores `env`, `keyring`, `missing` o `keyring_unavailable`, y NUNCA el valor ni su longitud, tampoco con `--json` (`axiom.integrations-secret-status/v1`). `delete` elimina el secreto del keyring, es idempotente (sin secreto informa y sale con 0) y recuerda que una variable de entorno no se borra desde Axiom. Un `--plugin` o `--name` que el manifiesto no declare DEBE rechazarse con error tipado. Ninguna salida, error ni registro DEBE contener el valor.
+`axiom integrations secret set|status|delete --plugin <id> --name <secreto>` DEBE gestionar los secretos en el keyring del sistema (Windows y macOS). En Linux y en cualquier otro sistema `set` y `delete` DEBEN negarse con un error tipado que explique que el único almacén es la variable de entorno `AXIOM_INTEGRATION_<PLUGIN>_<SECRETO>` y NUNCA escribir el valor en un fichero; `status` informa `env` o `missing`. `set` DEBE leer el valor únicamente por stdin (máximo 4 KiB, quitando un único salto de línea final y rechazando el valor vacío) y NUNCA aceptarlo como argumento ni como bandera; si stdin es un terminal DEBE negarse y sugerir canalizar el valor, porque no hay prompt sin eco en este cambio. `status` (con `--name` opcional) DEBE informar, por cada secreto del manifiesto, de su `source`, con exactamente uno de los valores `env`, `keyring`, `missing` o `keyring_unavailable`, y NUNCA el valor ni su longitud, tampoco con `--json` (`axiom.integrations-secret-status/v1`). `delete` elimina el secreto del keyring, es idempotente (sin secreto informa y sale con 0) y recuerda que una variable de entorno no se borra desde Axiom. Un `--plugin` o `--name` que el manifiesto no declare DEBE rechazarse con error tipado. Ninguna salida, error ni registro DEBE contener el valor.
 
 #### Scenario: `set` por stdin
 - **DADO** el doble con un secreto declarado
@@ -412,6 +417,12 @@ El tipo `Secret` DEBE redactar su valor en `String`, `GoString`, `MarshalJSON` y
 #### Scenario: El valor por argumento se rechaza
 - **CUANDO** se ejecuta `secret set --plugin <doble> --name token --value abc`
 - **ENTONCES** el verbo rechaza `--value` como opción desconocida y no escribe nada en el keyring
+
+#### Scenario: `set` en Linux se niega
+- **DADO** un sistema que no es Windows ni macOS
+- **CUANDO** se ejecuta `secret set --plugin <doble> --name token` con el valor por stdin
+- **ENTONCES** el verbo sale con 1 con un error tipado que nombra la variable `AXIOM_INTEGRATION_<PLUGIN>_<SECRETO>`
+- **Y** no se escribe ningún fichero ni se imprime el valor
 
 #### Scenario: `status` sin revelar el valor
 - **DADO** un secreto definido por entorno

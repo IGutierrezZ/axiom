@@ -34,7 +34,7 @@ const (
 var ErrNotFound = errors.New("secreto no encontrado")
 
 // ErrNoWritableStore indica que no hay almacén en el que guardar o borrar un secreto.
-var ErrNoWritableStore = errors.New("no hay un almacén de secretos en el que escribir")
+var ErrNoWritableStore = errors.New("este sistema no tiene almacén de secretos propio (solo Windows y macOS): usa la variable de entorno, Axiom nunca escribe secretos en texto plano")
 
 // Store resuelve secretos. La fuente se devuelve siempre, también con error.
 type Store interface {
