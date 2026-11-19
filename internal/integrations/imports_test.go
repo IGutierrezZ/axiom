@@ -1,6 +1,7 @@
 package integrations
 
 import (
+	"go/ast"
 	"go/parser"
 	"go/token"
 	"io/fs"
@@ -146,5 +147,78 @@ func TestImportsCheckerDetectsViolations(t *testing.T) {
 	}
 	if got := importers(t, dir, pkgExact("internal/clix")); len(got) != 0 {
 		t.Fatalf("pkgExact no debe coincidir con otro paquete: %v", got)
+	}
+}
+
+// usersOf devuelve los ficheros que no son de prueba bajo dir que usan el identificador
+// <pkgName>.<symbol> (por ejemplo kickoff.RefuseArchivedWriteExceptLocalState).
+func usersOf(t *testing.T, dir, pkgName, symbol string) []string {
+	t.Helper()
+	var found []string
+	err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
+			return nil
+		}
+		src, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		f, err := parser.ParseFile(token.NewFileSet(), path, src, 0)
+		if err != nil {
+			return err
+		}
+		used := false
+		ast.Inspect(f, func(n ast.Node) bool {
+			if sel, ok := n.(*ast.SelectorExpr); ok && sel.Sel.Name == symbol {
+				if id, ok := sel.X.(*ast.Ident); ok && id.Name == pkgName {
+					used = true
+				}
+			}
+			return !used
+		})
+		if used {
+			found = append(found, path)
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("recorrer %s: %v", dir, err)
+	}
+	sort.Strings(found)
+	return found
+}
+
+// TestOnlyIntegrationsUsesTheArchivedWriteGuard fija la excepción acotada de MODIFIED REQ-21.18: la
+// guarda hermana que autoriza la cola bajo archive/ solo la llama internal/integrations (D-18).
+func TestOnlyIntegrationsUsesTheArchivedWriteGuard(t *testing.T) {
+	root := repoRoot(t)
+	allowed := filepath.Join(root, "internal", "integrations") + string(filepath.Separator)
+	for _, top := range []string{"internal", "cmd"} {
+		for _, user := range usersOf(t, filepath.Join(root, top), "kickoff", "RefuseArchivedWriteExceptLocalState") {
+			if !strings.HasPrefix(user, allowed) {
+				t.Errorf("%s usa kickoff.RefuseArchivedWriteExceptLocalState: solo internal/integrations puede hacerlo", user)
+			}
+		}
+	}
+}
+
+func TestUsersOfDetectsTheSymbol(t *testing.T) {
+	dir := t.TempDir()
+	files := map[string]string{
+		"uses.go":      "package x\n\nimport \"example.test/kickoff\"\n\nvar _ = kickoff.RefuseArchivedWriteExceptLocalState\n",
+		"other.go":     "package x\n\nimport \"example.test/kickoff\"\n\nvar _ = kickoff.RefuseArchivedRoot\n",
+		"uses_test.go": "package x\n\nimport \"example.test/kickoff\"\n\nvar _ = kickoff.RefuseArchivedWriteExceptLocalState\n",
+	}
+	for name, src := range files {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(src), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	found := usersOf(t, dir, "kickoff", "RefuseArchivedWriteExceptLocalState")
+	if len(found) != 1 || filepath.Base(found[0]) != "uses.go" {
+		t.Fatalf("debe detectar solo uses.go, obtuvo %v", found)
 	}
 }

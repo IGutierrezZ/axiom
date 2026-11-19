@@ -20,6 +20,7 @@ import (
 // Todas las rutas son relativas a la raíz git y usan «/». El valor cero no reconoce
 // ninguna ruta: se compone siempre con New.
 type Set struct {
+	change      string         // <x>, nombre simple de la carpeta del cambio
 	changeDir   string         // <p>/changes/<x>
 	archiveDir  string         // <p>/changes/archive
 	archiveName *regexp.Regexp // <fecha>-<x>, nombre completo de la carpeta archivada
@@ -43,6 +44,7 @@ func New(planningRel, change string, maintained, reference []string) (Set, error
 		return Set{}, fmt.Errorf("planning home: %w", err)
 	}
 	set := Set{
+		change:      change,
 		changeDir:   join(home, "changes", change),
 		archiveDir:  join(home, "changes", "archive"),
 		archiveName: regexp.MustCompile(`^\d{4}-\d{2}-\d{2}-` + regexp.QuoteMeta(change) + `$`),
@@ -170,20 +172,38 @@ func (s Set) Candidates() []string {
 	return unique
 }
 
-// LocalState dice si rel es estado local de la carpeta del cambio que nunca se
-// versiona: un fichero de su raíz cuyo nombre empieza por punto (`.gates.lock`,
-// `.axiom-instance`, temporales de escritura atómica).
+// LocalState dice si rel es estado local del cambio que nunca se versiona: un fichero cuyo nombre
+// empieza por punto y que está directamente en la raíz de la carpeta del cambio o de su carpeta
+// archivada (`.gates.lock`, `.axiom-instance`, `.integrations-outbox.yaml`, temporales de
+// escritura atómica). Un fichero con punto anidado, o en la carpeta archivada de otro cambio, sigue
+// siendo documentación (MODIFIED REQ-27.5).
 func (s Set) LocalState(rel string) bool {
-	if s.changeDir == "" || !valid(rel) || !under(rel, s.changeDir) {
+	if s.changeDir == "" || !valid(rel) {
 		return false
 	}
-	name := strings.TrimPrefix(rel, s.changeDir+"/")
+	if under(rel, s.changeDir) {
+		return localFile(strings.TrimPrefix(rel, s.changeDir+"/"))
+	}
+	if under(rel, s.archiveDir) {
+		name, file, found := strings.Cut(strings.TrimPrefix(rel, s.archiveDir+"/"), "/")
+		return found && s.archiveName.MatchString(name) && localFile(file)
+	}
+	return false
+}
+
+// localFile dice si name es un fichero de una sola componente cuyo nombre empieza por punto.
+func localFile(name string) bool {
 	return !strings.Contains(name, "/") && strings.HasPrefix(name, ".")
 }
 
-// LocalStateGlob devuelve el glob, relativo a la raíz git, que deja fuera el estado local de la
-// carpeta del cambio (`<p>/changes/<x>/.*`): quien confirma lo añade como exclusión de pathspec
-// a las raíces que publica.
-func (s Set) LocalStateGlob() string {
-	return s.changeDir + "/.*"
+// LocalStateGlobs devuelve los globs, relativos a la raíz git, que dejan fuera el estado local del
+// cambio: `<p>/changes/<x>/.*` para la carpeta ordinaria y
+// `<p>/changes/archive/AAAA-MM-DD-<x>/.*` para la carpeta archivada de ese cambio. Quien confirma
+// los añade como exclusiones de pathspec a las raíces que publica. Un nombre de cambio válido no
+// contiene metacaracteres de glob.
+func (s Set) LocalStateGlobs() []string {
+	return []string{
+		s.changeDir + "/.*",
+		s.archiveDir + "/[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]-" + s.change + "/.*",
+	}
 }
