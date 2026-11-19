@@ -14,10 +14,6 @@ func DefaultKnowledgeMCPServers() map[string]any {
 			"command": "engram",
 			"args":    []any{"serve"},
 		},
-		"serena": map[string]any{
-			"command": "serena",
-			"args":    []any{"serve"},
-		},
 		"codegraph": map[string]any{
 			"command": "codegraph",
 			"args":    []any{"serve"},
@@ -25,8 +21,27 @@ func DefaultKnowledgeMCPServers() map[string]any {
 	}
 }
 
-// InjectKnowledgeMCPServers inyecta y fusiona de forma no destructiva los servidores engram,
-// serena y codegraph dentro de <workspaceRoot>/.mcp.json.
+// isManagedSerenaEntry indica si la entrada es exactamente la que escribían versiones
+// anteriores de Axiom para Serena: command "serena", args ["serve"] y ninguna otra clave.
+func isManagedSerenaEntry(entry any) bool {
+	m, ok := entry.(map[string]any)
+	if !ok || len(m) != 2 {
+		return false
+	}
+	if cmd, ok := m["command"].(string); !ok || cmd != "serena" {
+		return false
+	}
+	args, ok := m["args"].([]any)
+	if !ok || len(args) != 1 {
+		return false
+	}
+	arg, ok := args[0].(string)
+	return ok && arg == "serve"
+}
+
+// InjectKnowledgeMCPServers inyecta y fusiona de forma no destructiva los servidores engram
+// y codegraph dentro de <workspaceRoot>/.mcp.json. Además retira la entrada serena solo si es
+// exactamente la que escribían versiones anteriores de Axiom. Solo escribe si algo cambia.
 func InjectKnowledgeMCPServers(workspaceRoot string) error {
 	mcpPath := filepath.Join(workspaceRoot, ".mcp.json")
 
@@ -52,11 +67,21 @@ func InjectKnowledgeMCPServers(workspaceRoot string) error {
 		root["mcpServers"] = servers
 	}
 
+	changed := false
+	if entry, exists := servers["serena"]; exists && isManagedSerenaEntry(entry) {
+		delete(servers, "serena")
+		changed = true
+	}
+
 	defaultServers := DefaultKnowledgeMCPServers()
 	for name, def := range defaultServers {
 		if _, exists := servers[name]; !exists {
 			servers[name] = def
+			changed = true
 		}
+	}
+	if !changed {
+		return nil
 	}
 
 	output, err := json.MarshalIndent(root, "", "  ")

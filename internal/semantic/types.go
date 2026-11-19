@@ -4,9 +4,6 @@ package semantic
 type ConnectorType string
 
 const (
-	// ConnectorSerena representa el servidor MCP de Serena (LSP / Tree-sitter).
-	ConnectorSerena ConnectorType = "serena"
-
 	// ConnectorCodeGraph representa la herramienta de grafos de conocimiento de código.
 	ConnectorCodeGraph ConnectorType = "codegraph"
 
@@ -63,10 +60,7 @@ type AgentToolStatus struct {
 type SemanticStatus struct {
 	ConfiguredConnector ConnectorType     `json:"configured_connector"`
 	ActiveConnector     ConnectorType     `json:"active_connector"`
-	SerenaAvailable     bool              `json:"serena_available"`
 	CodeGraphAvailable  bool              `json:"codegraph_available"`
-	SerenaInstalled     bool              `json:"serena_installed"`
-	SerenaConfigured    bool              `json:"serena_configured"`
 	CodeGraphInstalled  bool              `json:"codegraph_installed"`
 	CodeGraphConfigured bool              `json:"codegraph_configured"`
 	CodeGraphIndexed    bool              `json:"codegraph_indexed"`

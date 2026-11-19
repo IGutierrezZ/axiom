@@ -2,6 +2,7 @@ package semantic
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -11,7 +12,7 @@ import (
 func TestDetectorAgentConfigs(t *testing.T) {
 	tempHome := t.TempDir()
 
-	// Crear archivo mcp_config.json simulado para Antigravity con Serena
+	// Crear archivo mcp_config.json simulado para Antigravity con CodeGraph
 	antigravityDir := filepath.Join(tempHome, ".gemini", "antigravity")
 	if err := os.MkdirAll(antigravityDir, 0755); err != nil {
 		t.Fatalf("error creando directorio de prueba: %v", err)
@@ -19,9 +20,9 @@ func TestDetectorAgentConfigs(t *testing.T) {
 
 	mcpContent := `{
 		"mcpServers": {
-			"serena": {
-				"command": "npx",
-				"args": ["-y", "serena-mcp"]
+			"codegraph": {
+				"command": "codegraph",
+				"args": ["serve"]
 			}
 		}
 	}`
@@ -50,11 +51,7 @@ func TestDetectorAgentConfigs(t *testing.T) {
 	}
 
 	if antigravityAgent == nil || !antigravityAgent.Configured {
-		t.Errorf("se esperaba que Google Antigravity estuviera configurado con serena")
-	}
-
-	if !detector.CheckSerenaAvailability(agents) {
-		t.Errorf("se esperaba que Serena estuviera disponible")
+		t.Errorf("se esperaba que Google Antigravity estuviera configurado con codegraph")
 	}
 
 	if !detector.CheckCodeGraphAvailability(agents) {
@@ -183,10 +180,11 @@ func (s *Service) Execute(action string) (bool, error) {
 	}
 }
 
-func TestServiceFindSymbolsAndFallback(t *testing.T) {
+// writeSemanticWorkspace crea un workspace mínimo con el conector indicado en axiom.yaml
+// (cadena vacía = sin clave `semantic_analysis`).
+func writeSemanticWorkspace(t *testing.T, connector string) string {
+	t.Helper()
 	tempWorkspace := t.TempDir()
-
-	// Crear archivo axiom.yaml con conector explícito 'serena' pero sin estar instalado
 	axiomYAML := `workspace:
   name: "TestProject"
   topology: "monorepo-embedded"
@@ -196,12 +194,107 @@ roles:
     name: "Equipo Core"
     repositories:
       - path: "."
-governance:
-  semantic_analysis: "serena"
 `
+	if connector != "" {
+		axiomYAML += "governance:\n  semantic_analysis: \"" + connector + "\"\n"
+	}
 	if err := os.WriteFile(filepath.Join(tempWorkspace, "axiom.yaml"), []byte(axiomYAML), 0644); err != nil {
 		t.Fatalf("error escribiendo axiom.yaml: %v", err)
 	}
+	return tempWorkspace
+}
+
+func semanticStatusFor(t *testing.T, connector string, codeGraphInPath bool) *SemanticStatus {
+	t.Helper()
+	detector := NewDetectorWithCustomHome(t.TempDir(), func(file string) (string, error) {
+		if codeGraphInPath && file == "codegraph" {
+			return "/usr/local/bin/codegraph", nil
+		}
+		return "", os.ErrNotExist
+	})
+	srv := NewService(writeSemanticWorkspace(t, connector), detector, NewEngine())
+	status, err := srv.GetStatus(context.Background())
+	if err != nil {
+		t.Fatalf("error obteniendo status: %v", err)
+	}
+	return status
+}
+
+func TestServiceResolvesConnectorByPriority(t *testing.T) {
+	cases := []struct {
+		name       string
+		connector  string
+		codeGraph  bool
+		wantActive ConnectorType
+		wantWarn   bool
+	}{
+		{"auto con CodeGraph", "auto", true, ConnectorCodeGraph, false},
+		{"auto sin CodeGraph", "auto", false, ConnectorNativeAST, false},
+		{"sin valor con CodeGraph", "", true, ConnectorCodeGraph, false},
+		{"sin valor sin CodeGraph", "", false, ConnectorNativeAST, false},
+		{"codegraph disponible", "codegraph", true, ConnectorCodeGraph, false},
+		{"codegraph no disponible", "codegraph", false, ConnectorNativeAST, true},
+		{"native-ast fuerza el motor nativo", "native-ast", true, ConnectorNativeAST, false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			status := semanticStatusFor(t, tc.connector, tc.codeGraph)
+			if status.ActiveConnector != tc.wantActive {
+				t.Errorf("conector activo = %s, se esperaba %s", status.ActiveConnector, tc.wantActive)
+			}
+			if (len(status.Warnings) > 0) != tc.wantWarn {
+				t.Errorf("avisos = %v, se esperaba aviso=%v", status.Warnings, tc.wantWarn)
+			}
+		})
+	}
+}
+
+func TestServiceDeprecatedSerenaValueLoadsAsAuto(t *testing.T) {
+	for _, tc := range []struct {
+		name       string
+		value      string
+		codeGraph  bool
+		wantActive ConnectorType
+	}{
+		{"serena con CodeGraph", "serena", true, ConnectorCodeGraph},
+		{"serena sin CodeGraph", "serena", false, ConnectorNativeAST},
+		{"Serena en mayúsculas", "Serena", false, ConnectorNativeAST},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			status := semanticStatusFor(t, tc.value, tc.codeGraph)
+			if string(status.ConfiguredConnector) != strings.ToLower(tc.value) {
+				t.Errorf("conector configurado = %q, se esperaba el valor de axiom.yaml", status.ConfiguredConnector)
+			}
+			if status.ActiveConnector != tc.wantActive {
+				t.Errorf("conector activo = %s, se esperaba %s", status.ActiveConnector, tc.wantActive)
+			}
+			if len(status.Warnings) != 1 || !strings.Contains(status.Warnings[0], "obsoleto") || !strings.Contains(status.Warnings[0], "serena") {
+				t.Errorf("se esperaba un aviso de valor obsoleto, se obtuvo %v", status.Warnings)
+			}
+		})
+	}
+}
+
+func TestSemanticStatusJSONHasNoSerena(t *testing.T) {
+	status := semanticStatusFor(t, "auto", true)
+	raw, err := json.Marshal(status)
+	if err != nil {
+		t.Fatalf("error serializando el estado: %v", err)
+	}
+	var fields map[string]any
+	if err := json.Unmarshal(raw, &fields); err != nil {
+		t.Fatalf("error leyendo el JSON del estado: %v", err)
+	}
+	for key := range fields {
+		if strings.Contains(strings.ToLower(key), "serena") {
+			t.Errorf("el JSON del estado no debe exponer la clave %q", key)
+		}
+	}
+}
+
+func TestServiceFindSymbolsAndFallback(t *testing.T) {
+	// Conector explícito 'codegraph' pero sin estar instalado
+	tempWorkspace := writeSemanticWorkspace(t, "codegraph")
 
 	// Crear código Go
 	goCode := `package testpkg
@@ -212,7 +305,7 @@ func NewHandler() *Handler { return &Handler{} }
 		t.Fatalf("error escribiendo handler.go: %v", err)
 	}
 
-	// Detector sin Serena ni CodeGraph
+	// Detector sin CodeGraph
 	detector := NewDetectorWithCustomHome(t.TempDir(), func(file string) (string, error) {
 		return "", os.ErrNotExist
 	})
@@ -224,8 +317,8 @@ func NewHandler() *Handler { return &Handler{} }
 		t.Fatalf("error obteniendo status: %v", err)
 	}
 
-	if status.ConfiguredConnector != ConnectorSerena {
-		t.Errorf("se esperaba conector configurado 'serena', se obtuvo %s", status.ConfiguredConnector)
+	if status.ConfiguredConnector != ConnectorCodeGraph {
+		t.Errorf("se esperaba conector configurado 'codegraph', se obtuvo %s", status.ConfiguredConnector)
 	}
 
 	if status.ActiveConnector != ConnectorNativeAST {
@@ -294,9 +387,6 @@ func TestDetectorProjectWorkspaceConfigsAndDiagnostics(t *testing.T) {
 	}
 
 	detector := NewDetectorWithCustomHome(tempHome, func(file string) (string, error) {
-		if file == "serena" || file == "serena-mcp" {
-			return "/usr/local/bin/serena", nil
-		}
 		return "", os.ErrNotExist
 	})
 
@@ -316,9 +406,6 @@ func TestDetectorProjectWorkspaceConfigsAndDiagnostics(t *testing.T) {
 		t.Errorf("se esperaba que el agente de workspace tuviera codegraph configurado")
 	}
 
-	if !detector.CheckSerenaInPath() {
-		t.Errorf("se esperaba que Serena estuviera instalada en PATH")
-	}
 	if detector.CheckCodeGraphInPath() {
 		t.Errorf("no se esperaba CodeGraph en PATH")
 	}

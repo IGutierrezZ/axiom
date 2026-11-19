@@ -1,6 +1,6 @@
 ---
 name: knowledge-query
-description: "Trigger: knowledge query, consulta de conocimiento, consultar regla de negocio, spec-first query, buscar en codigo con herramientas, enriquecer spec viva. Answer technical and functional questions using Spec-First, Serena, CodeGraph, and Engram, with curated living spec enrichment."
+description: "Trigger: knowledge query, consulta de conocimiento, consultar regla de negocio, spec-first query, buscar en codigo con herramientas, enriquecer spec viva. Answer technical and functional questions using Spec-First, CodeGraph, the native AST engine, and Engram, with curated living spec enrichment."
 license: Apache-2.0
 metadata:
   author: gentleman-programming
@@ -23,8 +23,8 @@ Esta skill gobierna la investigación basada en evidencias y protege la integrid
 
 2. **Uso de Herramientas Reales (Sin Búsquedas Naive):**
    - Si la spec no cubre la consulta o requiere mayor nivel de detalle técnico, utiliza exclusivamente las herramientas semánticas configuradas en el workspace (`.mcp.json`):
-     - **Serena MCP:** `find_symbol`, `get_ast`, `search_definitions` para inspeccionar structs, interfaces, firmas de funciones y métodos.
-     - **CodeGraph MCP:** para trazar grafos de dependencias, llamadas entre paquetes y consumidores de interfaces.
+     - **CodeGraph MCP:** `codegraph_explore` (pregunta en lenguaje natural o nombres de símbolos/ficheros) devuelve el código fuente verbatim de los símbolos relevantes, sus rutas de llamada y los consumidores afectados; cubre también lenguajes distintos de Go. Equivalente por shell: `codegraph explore "<consulta>"`.
+     - **Motor AST nativo (código Go):** `axiom semantic symbols --query <texto> --kind struct|interface|func|method` para inspeccionar structs, interfaces y firmas, y `axiom semantic inspect` para el grafo de dependencias entre paquetes.
      - **Grep / Ripgrep / File View:** para anclajes directos de cadenas, constantes y comentarios de código.
      - **Engram MCP:** (`mem_search`, `mem_context`) para recuperar contexto histórico de decisiones o cambios previos.
 
@@ -58,8 +58,8 @@ flowchart TD
     A[Pregunta del Usuario / App] --> B[1. Comprobar openspec/specs/]
     B -->|Resuelta en Spec| C[Responder desde Spec Viva Spec-First]
     B -->|Incompleta o Ausente| D[2. Triangulación con Herramientas]
-    D --> E[Serena: AST y Simbolos]
-    D --> F[CodeGraph: Grafo y Llamadas]
+    D --> E[Motor AST nativo: Simbolos]
+    D --> F[CodeGraph: Grafo, Llamadas y Simbolos]
     D --> G[Grep / Ripgrep: Codigo Fuente]
     D --> H[Engram: Memoria Historica]
     E & F & G & H --> I[3. Sintetizar Respuesta + Evidencias]

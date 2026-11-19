@@ -11,10 +11,9 @@ import { refreshOverview } from '../core/overview.js';
 
 const CONNECTOR_LABEL = {
   codegraph: 'CodeGraph (grafo de conocimiento)',
-  serena: 'Serena MCP (LSP y Tree-sitter)',
   'native-ast': 'AST nativo de Go (autónomo)'
 };
-const MODE_LABEL = { auto: 'automático', codegraph: 'CodeGraph', serena: 'Serena MCP', 'native-ast': 'AST nativo de Go' };
+const MODE_LABEL = { auto: 'automático', codegraph: 'CodeGraph', 'native-ast': 'AST nativo de Go' };
 const KIND_LABEL = { struct: 'struct', interface: 'interface', func: 'func', method: 'method', type: 'type' };
 
 // Filas de símbolos que se pintan como máximo; el recuento total va siempre en texto.
@@ -28,8 +27,8 @@ function yesNo(flag, yes, no) {
 
 // ---- Estado de conectores ------------------------------------------------------------------
 
-// `indexed` es undefined en los conectores sin índice propio (Serena) y, en CodeGraph,
-// solo se muestra con la CLI instalada: sin ella no hay índice que inicializar.
+// `indexed` es opcional y, en CodeGraph, solo se muestra con la CLI instalada: sin ella no
+// hay índice que inicializar.
 function connectorCard(title, installed, configured, note, indexed) {
   const indexPill = installed && typeof indexed === 'boolean' ? yesNo(indexed, 'Índice inicializado', 'Sin índice') : '';
   return `<div class="kn-card">
@@ -72,7 +71,6 @@ export async function loadSemanticStatus() {
         <div class="kn-pills">${nativeReady ? statusPill('ok', 'AST nativo listo') : badge('warn', 'AST nativo no disponible', 'alert')}</div>
       </div>
       ${connectorCard('CodeGraph', data.codegraph_installed, data.codegraph_configured, 'Grafo de conocimiento del código.', !!data.codegraph_indexed)}
-      ${connectorCard('Serena MCP', data.serena_installed, data.serena_configured, data.serena_configured ? '' : 'Se configura con «Sincronizar workspace» en <a href="#/ecosistema">Ecosistema</a>.')}
       ${warnings.length ? `<div class="alert alert-warn kn-status-warn">${icon('alert', 18)}<div class="grow"><strong>Avisos de configuración</strong><ul class="kn-notice-list">${warnings.map(w => `<li>${escapeHtml(w)}</li>`).join('')}</ul></div></div>` : ''}`;
     ctx.needsInit = !!data.codegraph_installed && !data.codegraph_indexed;
     syncReindexButton();

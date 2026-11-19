@@ -113,7 +113,7 @@ axiom doctor
 * Binarios requeridos en el `PATH` (Git, Go, Node.js, npm, etc.).
 * Agentes de IA detectados en el sistema.
 * Disponibilidad de servidores MCP y memoria Engram.
-* Integridad de herramientas semánticas (Serena, CodeGraph).
+* Integridad de herramientas semánticas (CodeGraph, motor nativo).
 * Huella de máquina: lo que Axiom tiene a nivel de usuario (binarios, registro del hub, GGA, CodeGraph global, entradas de PATH gestionadas) y qué elementos son restos de una instalación global. Para retirarlos, `axiom uninstall --all --scope global`; la guía de migración está en [Uso: migrar de una instalación global a una por proyecto](usage.md#migrar-de-una-instalación-global-a-una-por-proyecto).
 
 ---
@@ -305,7 +305,7 @@ roles:
 governance:
   language: "es"                  # Idioma obligatorio de comunicación y artefactos
   shared_memory: "engram"         # Conector de memoria persistente
-  semantic_analysis: "enabled"    # Serena y CodeGraph
+  semantic_analysis: "auto"    # auto (CodeGraph si está disponible; si no, motor nativo) | codegraph | native-ast
 ```
 
 `workspace.skill_roots` es opcional. Sirve para proyectos que guardan sus skills canónicas fuera de `skills/`: cada ruta debe ser relativa a la carpeta maestra y quedar dentro de ella (no se admiten rutas absolutas, `..` ni `.`). Esas raíces se escanean justo después de `skills/` y antes de los directorios de cada agente (`.claude/skills`, `.gemini/skills`, etc.), de modo que el índice de skills de `AGENTS.md` apunta a la copia versionada y no a una copia local.
@@ -716,7 +716,7 @@ Este comando asegura que los prompts, agentes locales (`opencode.json`) y herram
 
 ### Mantenimiento Semántico del CodeGraph (`axiom semantic reindex`)
 
-Axiom integra análisis semántico del código fuente mediante CodeGraph y Serena. Tras refactorizaciones mayores o tras sincronizar cambios de otros roles:
+Axiom integra análisis semántico del código fuente mediante CodeGraph y el motor AST nativo de Go. Tras refactorizaciones mayores o tras sincronizar cambios de otros roles:
 * **Por Línea de Comandos:**
   ```bash
   axiom semantic reindex

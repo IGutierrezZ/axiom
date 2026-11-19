@@ -85,10 +85,13 @@ func TestInitKnowledgeProfile(t *testing.T) {
 	if !ok {
 		t.Fatalf(".mcp.json no contiene mcpServers")
 	}
-	for _, expected := range []string{"engram", "serena", "codegraph"} {
+	for _, expected := range []string{"engram", "codegraph"} {
 		if _, exists := servers[expected]; !exists {
 			t.Errorf("servidor %s no encontrado en .mcp.json", expected)
 		}
+	}
+	if _, exists := servers["serena"]; exists {
+		t.Errorf("el perfil knowledge ya no debe escribir la entrada serena")
 	}
 }
 
@@ -166,9 +169,99 @@ func TestInitKnowledgeProfileMergeMCP(t *testing.T) {
 	}
 
 	// Verificar que los nuevos servidores fueron añadidos
-	for _, expected := range []string{"engram", "serena", "codegraph"} {
+	for _, expected := range []string{"engram", "codegraph"} {
 		if _, exists := servers[expected]; !exists {
 			t.Errorf("servidor %s no encontrado tras merge", expected)
 		}
+	}
+}
+
+func injectAndReadServers(t *testing.T, initialMCP string) map[string]any {
+	t.Helper()
+	dir := t.TempDir()
+	mcpPath := filepath.Join(dir, ".mcp.json")
+	if err := os.WriteFile(mcpPath, []byte(initialMCP), 0644); err != nil {
+		t.Fatalf("error pre-creando .mcp.json: %v", err)
+	}
+	if err := InjectKnowledgeMCPServers(dir); err != nil {
+		t.Fatalf("InjectKnowledgeMCPServers fallo: %v", err)
+	}
+	data, err := os.ReadFile(mcpPath)
+	if err != nil {
+		t.Fatalf("error leyendo .mcp.json: %v", err)
+	}
+	var parsed map[string]any
+	if err := json.Unmarshal(data, &parsed); err != nil {
+		t.Fatalf("error parseando .mcp.json: %v", err)
+	}
+	servers, ok := parsed["mcpServers"].(map[string]any)
+	if !ok {
+		t.Fatalf("mcpServers no encontrado")
+	}
+	return servers
+}
+
+func TestInjectKnowledgeMCPServersRemovesManagedSerena(t *testing.T) {
+	servers := injectAndReadServers(t, `{
+		"mcpServers": {
+			"serena": {"command": "serena", "args": ["serve"]},
+			"custom-db": {"command": "db-server", "args": ["--port", "5432"]}
+		}
+	}`)
+	if _, exists := servers["serena"]; exists {
+		t.Errorf("la entrada serena gestionada debía retirarse")
+	}
+	for _, expected := range []string{"engram", "codegraph", "custom-db"} {
+		if _, exists := servers[expected]; !exists {
+			t.Errorf("servidor %s no encontrado tras la retirada", expected)
+		}
+	}
+}
+
+func TestInjectKnowledgeMCPServersPreservesModifiedSerena(t *testing.T) {
+	for name, entry := range map[string]string{
+		"otros argumentos": `{"command": "serena", "args": ["serve", "--context", "ide"]}`,
+		"otro comando":     `{"command": "uvx", "args": ["serve"]}`,
+		"clave extra env":  `{"command": "serena", "args": ["serve"], "env": {"A": "1"}}`,
+	} {
+		t.Run(name, func(t *testing.T) {
+			servers := injectAndReadServers(t, `{"mcpServers": {"serena": `+entry+`, "custom-db": {"command": "db-server"}}}`)
+			got, exists := servers["serena"]
+			if !exists {
+				t.Fatalf("la entrada serena modificada debía conservarse")
+			}
+			var want any
+			if err := json.Unmarshal([]byte(entry), &want); err != nil {
+				t.Fatalf("entrada de prueba inválida: %v", err)
+			}
+			gotJSON, _ := json.Marshal(got)
+			wantJSON, _ := json.Marshal(want)
+			if string(gotJSON) != string(wantJSON) {
+				t.Errorf("serena = %s, se esperaba intacta %s", gotJSON, wantJSON)
+			}
+			if _, exists := servers["custom-db"]; !exists {
+				t.Errorf("se perdió el servidor preexistente 'custom-db'")
+			}
+		})
+	}
+}
+
+func TestInjectKnowledgeMCPServersDoesNotRewriteWhenUnchanged(t *testing.T) {
+	dir := t.TempDir()
+	mcpPath := filepath.Join(dir, ".mcp.json")
+	// Formato deliberadamente distinto al que serializa Axiom: si se reescribiera, cambiaría.
+	initial := `{"mcpServers":{"engram":{"command":"engram","args":["serve"]},"codegraph":{"command":"codegraph","args":["serve"]}}}`
+	if err := os.WriteFile(mcpPath, []byte(initial), 0644); err != nil {
+		t.Fatalf("error pre-creando .mcp.json: %v", err)
+	}
+	if err := InjectKnowledgeMCPServers(dir); err != nil {
+		t.Fatalf("InjectKnowledgeMCPServers fallo: %v", err)
+	}
+	data, err := os.ReadFile(mcpPath)
+	if err != nil {
+		t.Fatalf("error leyendo .mcp.json: %v", err)
+	}
+	if string(data) != initial {
+		t.Errorf(".mcp.json se reescribió sin cambios: %s", data)
 	}
 }
