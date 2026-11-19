@@ -81,7 +81,7 @@ func runSkillCheck(args []string, stdout, stderr io.Writer) int {
 	} else {
 		writeSkillCheckText(stdout, root, report)
 	}
-	if report.Errors > 0 {
+	if set.HasErrors() {
 		return 1
 	}
 	return 0
