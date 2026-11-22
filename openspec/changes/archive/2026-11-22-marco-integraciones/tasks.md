@@ -27,10 +27,11 @@ Orden de ejecución recomendado: **1 → 2 → 4 → 5 → 3 → 6 → 7**. Las 
 
 ## Precondiciones y notas de ejecución
 
-- [ ] P.1 **Precondición de la unidad 3 (bloqueante solo para ella):** autorización explícita del usuario para descargar `github.com/zalando/go-keyring` y sus transitivas (operación remota sobre el proxy de módulos). Sin ella, las unidades 1, 2, 4 y 5 se pueden ejecutar y commitear; las unidades 3, 6 y 7 se detienen en la primera tarea que importe `go-keyring`. No ejecutar `go get`, `go list -m -versions` ni `go mod tidy` contra la red sin esa autorización.
-- [ ] P.2 La unidad 7 depende de 3 (los canarios de `secret set` usan el keyring simulado), de 5 y de 6; la unidad 6 depende de 3 y de 5; la 5 depende de 1 y 4; la 2 depende de 1 (`manifest`).
-- [ ] P.3 Cada unidad termina con `gofmt -l` vacío y `go vet` sobre los paquetes tocados, antes de su commit. Mensajes de commit convencionales, sin atribución de IA. Los commits son de una sola PR con `size:exception`; no hay PR encadenadas.
-- [ ] P.4 Las specs delta no son tareas de `apply`: las integra `sdd-archive` en `openspec/specs/`. Antes de archivar se confirma el prefijo REQ-43 libre en `main` (riesgo de la propuesta).
+- [x] P.1 **Precondición de la unidad 3 (bloqueante solo para ella):** autorización explícita del usuario para descargar `github.com/zalando/go-keyring` y sus transitivas (operación remota sobre el proxy de módulos). Sin ella, las unidades 1, 2, 4 y 5 se pueden ejecutar y commitear; las unidades 3, 6 y 7 se detienen en la primera tarea que importe `go-keyring`. No ejecutar `go get`, `go list -m -versions` ni `go mod tidy` contra la red sin esa autorización.
+- [x] P.2 La unidad 7 depende de 3 (los canarios de `secret set` usan el keyring simulado), de 5 y de 6; la unidad 6 depende de 3 y de 5; la 5 depende de 1 y 4; la 2 depende de 1 (`manifest`).
+- [x] P.3 Cada unidad termina con `gofmt -l` vacío y `go vet` sobre los paquetes tocados, antes de su commit. Mensajes de commit convencionales, sin atribución de IA. Los commits son de una sola PR con `size:exception`; no hay PR encadenadas.
+- [x] P.4 Las specs delta no son tareas de `apply`: las integra `sdd-archive` en `openspec/specs/`. Antes de archivar se confirma el prefijo REQ-43 libre en `main` (riesgo de la propuesta).
+  Evidencia (2026-11-22): P.1 autorizada por el usuario y `go-keyring v0.2.8` en `go.mod` (commit `0ca07551`); P.2 se respetó aplicando las unidades en el orden 1, 2, 4, 5, 3, 6 y 7; P.3 se cumplió en los siete commits de la PR #285 (`size:exception`, sin cadena); P.4 confirmado: ningún fichero de `openspec/specs/` usa `REQ-43.` en `main` (`c0de4c0f`).
 
 ## Phase 1 (unidad 1): Manifiesto, puerto, registro, núcleo de secretos y doble
 
