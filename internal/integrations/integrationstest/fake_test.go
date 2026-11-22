@@ -177,7 +177,7 @@ func TestInstallInstallsAndRestoresAfterCleanup(t *testing.T) {
 	if _, ok := manifest.Lookup("fake"); !ok {
 		t.Fatal("Install debe instalar el manifiesto en el catálogo")
 	}
-	reg, err := integrations.DefaultRegistry()
+	reg, err := integrations.ResolveRegistry(nil)
 	if _, ok := reg.Get("fake"); err != nil || !ok {
 		t.Fatalf("Install debe instalar el registro: %v %v", reg, err)
 	}
@@ -191,7 +191,7 @@ func TestInstallInstallsAndRestoresAfterCleanup(t *testing.T) {
 	if _, ok := manifest.Lookup("fake"); ok {
 		t.Fatal("Cleanup debe restaurar el catálogo")
 	}
-	if reg, _ := integrations.DefaultRegistry(); reg != nil {
+	if reg, _ := integrations.ResolveRegistry(nil); reg != nil {
 		if _, ok := reg.Get("fake"); ok {
 			t.Fatal("Cleanup debe restaurar el registro")
 		}

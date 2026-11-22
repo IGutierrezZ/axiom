@@ -51,24 +51,23 @@ func (r *Registry) Get(id string) (Plugin, bool) {
 	return p, ok
 }
 
-// builtinPlugins es la lista cerrada de plugins compilados en esta versión. Está vacía hasta
-// C-07-c; añadir uno exige también añadir su manifiesto a manifest.builtinCatalog.
-var builtinPlugins = []Plugin{}
-
 var (
 	defaultRegistryMu sync.RWMutex
 	defaultRegistry   *Registry
 )
 
-// DefaultRegistry devuelve el registro de producción: la lista cerrada de esta versión.
-func DefaultRegistry() (*Registry, error) {
+// ResolveRegistry devuelve el registro instalado por SetDefaultRegistryForTest o, si no hay
+// ninguno, NewRegistry(builtins...). Lo llama el ensamblado de plugins
+// (internal/integrations/builtin), que es el único que conoce los adaptadores concretos: el núcleo
+// no importa ninguno.
+func ResolveRegistry(builtins []Plugin) (*Registry, error) {
 	defaultRegistryMu.RLock()
 	override := defaultRegistry
 	defaultRegistryMu.RUnlock()
 	if override != nil {
 		return override, nil
 	}
-	return NewRegistry(builtinPlugins...)
+	return NewRegistry(builtins...)
 }
 
 // SetDefaultRegistryForTest instala un registro con plugins y lo restaura con Cleanup. Es estado de

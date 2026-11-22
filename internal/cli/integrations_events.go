@@ -11,6 +11,7 @@ import (
 
 	"github.com/IGutierrezZ/axiom/v3/internal/branch"
 	"github.com/IGutierrezZ/axiom/v3/internal/integrations"
+	"github.com/IGutierrezZ/axiom/v3/internal/integrations/builtin"
 	"github.com/IGutierrezZ/axiom/v3/internal/integrations/manifest"
 	"github.com/IGutierrezZ/axiom/v3/internal/integrations/secrets"
 	"github.com/IGutierrezZ/axiom/v3/internal/kickoff"
@@ -29,7 +30,7 @@ func integrationWarn(format string, args ...any) {
 // newIntegrationDispatcher compone el despachador con el bloque, el registro cerrado, el almacén de
 // secretos y la guarda A de ramas (contexto ordinary o archive según la carpeta).
 func newIntegrationDispatcher(loc workspace.Location) (*integrations.Dispatcher, error) {
-	registry, err := integrations.DefaultRegistry()
+	registry, err := builtin.DefaultRegistry()
 	if err != nil {
 		return nil, err
 	}

@@ -627,11 +627,24 @@ func TestDocsDocumentTheDeliveryBlock(t *testing.T) {
 
 // REQ-43.21: el manual documenta el bloque `integrations:`, el catálogo, los secretos y los verbos.
 func TestManualDocumentsIntegrations(t *testing.T) {
+	if strings.Contains(readManualDeInicio(t), "vacío en esta versión") {
+		t.Error("el manual ya no debe afirmar que el catálogo de plugins está vacío")
+	}
 	assertDocContains(t, readManualDeInicio(t),
 		"[Integraciones con Trackers (`integrations:`)](#integraciones-con-trackers-integrations)",
 		"### Integraciones con Trackers (`integrations:`)",
 		"**Catálogo cerrado de plugins.**",
-		"vacío en esta versión",
+		"el catálogo es `azure-devops`",
+		"**Plugin `azure-devops`.**",
+		"`organization`",
+		"`project`",
+		"`team`",
+		"`pat`",
+		"AXIOM_INTEGRATION_AZURE_DEVOPS_PAT",
+		"**una sola organización**",
+		"`vso.work_write`",
+		"`vso.project`",
+		"`vso.code`",
 		"Los secretos nunca se escriben en `axiom.yaml`",
 		"AXIOM_INTEGRATION_<PLUGIN>_<SECRETO>",
 		"`axiom integrations sync`",

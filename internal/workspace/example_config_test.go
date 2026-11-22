@@ -101,25 +101,64 @@ func TestManualDocumentsTheISOMode(t *testing.T) {
 	)
 }
 
-// REQ-43.21: la plantilla documenta el bloque `integrations:` comentado, la regla de que los
-// secretos nunca se escriben en axiom.yaml y que el catálogo está vacío hasta C-07-c. Al estar
-// comentado, la plantilla sigue cargando sin errores.
+// REQ-43.21: la plantilla documenta el bloque `integrations:` comentado con `azure-devops`
+// (`organization`, `project` y `team`) y la regla de que los secretos nunca se escriben en
+// axiom.yaml. Al estar comentado, la plantilla sigue cargando sin errores; descomentado, carga con el
+// catálogo por defecto.
 func TestExampleConfigDocumentsIntegrations(t *testing.T) {
 	example := readExampleConfig(t)
 	for _, want := range []string{
 		"# Integraciones con Trackers (opcional)",
 		"# integrations:",
+		"#   azure-devops:",
+		"#     organization:",
+		"#     project:",
+		"#     team:",
 		"Los secretos (tokens, PAT, contraseñas) NUNCA se escriben aquí",
 		"axiom integrations secret set",
 		"AXIOM_INTEGRATION_<PLUGIN>_<SECRETO>",
-		"El catálogo de plugins está vacío en esta versión hasta C-07-c",
+		"AXIOM_INTEGRATION_AZURE_DEVOPS_PAT",
+		"vso.work_write, vso.project y vso.code",
 		"'integrations: {}' es válido y no configura nada",
 	} {
 		if !strings.Contains(example, want) {
 			t.Errorf("axiom.example.yaml debe contener %q", want)
 		}
 	}
+	if strings.Contains(example, "está vacío") {
+		t.Error("la plantilla ya no debe afirmar que el catálogo de plugins está vacío")
+	}
 	if _, baseErr, declarations := parseLayered([]byte(example)); baseErr != nil || declarations.IntegrationsErr != nil || declarations.Integrations != nil {
 		t.Fatalf("con el bloque comentado la plantilla no declara integraciones: base=%v integrations=%v", baseErr, declarations.IntegrationsErr)
+	}
+}
+
+// El bloque comentado de la plantilla, descomentado, carga con el catálogo por defecto y declara
+// organization, project y team (REQ-43.21).
+func TestExampleConfigIntegrationsBlockLoadsWhenUncommented(t *testing.T) {
+	var block []string
+	in := false
+	for _, line := range strings.Split(readExampleConfig(t), "\n") {
+		switch {
+		case line == "# integrations:":
+			in = true
+			block = append(block, "integrations:")
+		case in && strings.HasPrefix(line, "#   "):
+			block = append(block, strings.TrimPrefix(line, "# "))
+		case in:
+			in = false
+		}
+	}
+	if len(block) == 0 {
+		t.Fatal("la plantilla no contiene el bloque comentado '# integrations:'")
+	}
+	source := "workspace:\n  name: ejemplo\n  topology: monorepo-embedded\n" + strings.Join(block, "\n") + "\n"
+	_, _, declarations := parseLayered([]byte(source))
+	if declarations.IntegrationsErr != nil || declarations.Integrations == nil || len(declarations.Integrations.Plugins) != 1 {
+		t.Fatalf("el bloque descomentado debe cargar: err=%v integrations=%+v\n%s", declarations.IntegrationsErr, declarations.Integrations, source)
+	}
+	p := declarations.Integrations.Plugins[0]
+	if p.ID != "azure-devops" || p.Values["organization"] == "" || p.Values["project"] == "" || p.Values["team"] == "" {
+		t.Fatalf("plugin = %+v", p)
 	}
 }

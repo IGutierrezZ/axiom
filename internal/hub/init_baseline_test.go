@@ -588,7 +588,7 @@ func TestDeclaresCountsSDD(t *testing.T) {
 }
 
 // REQ-43.20: `integrations:` también es una declaración que la regeneración perdería, sea válida o
-// inválida (con el catálogo vacío de esta versión, cualquier plugin declarado es un error de carga).
+// inválida (el catálogo de esta versión solo admite azure-devops: cualquier otro plugin es un error de carga).
 func TestDeclaresCountsIntegrations(t *testing.T) {
 	for name, declarations := range map[string]workspace.Declarations{
 		"integrations valido":   {Integrations: &workspace.IntegrationsConfig{}},

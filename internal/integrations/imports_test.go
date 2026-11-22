@@ -242,3 +242,152 @@ func TestUsersOfDetectsTheSymbol(t *testing.T) {
 		t.Fatalf("debe detectar solo uses.go, obtuvo %v", found)
 	}
 }
+
+// dirImports devuelve las importaciones de los ficheros .go que no son de prueba directamente en
+// dir (sin recursión de directorio).
+func dirImports(t *testing.T, dir string) []string {
+	t.Helper()
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatalf("leer %s: %v", dir, err)
+	}
+	var out []string
+	for _, e := range entries {
+		name := e.Name()
+		if e.IsDir() || !strings.HasSuffix(name, ".go") || strings.HasSuffix(name, "_test.go") {
+			continue
+		}
+		path := filepath.Join(dir, name)
+		src, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatalf("leer %s: %v", path, err)
+		}
+		f, err := parser.ParseFile(token.NewFileSet(), path, src, parser.ImportsOnly)
+		if err != nil {
+			t.Fatalf("parsear %s: %v", path, err)
+		}
+		for _, imp := range f.Imports {
+			p, err := strconv.Unquote(imp.Path.Value)
+			if err != nil {
+				t.Fatalf("importación ilegible en %s: %v", path, err)
+			}
+			out = append(out, p)
+		}
+	}
+	return out
+}
+
+// reachablePackages recorre el grafo de paquetes del módulo desde startRel (ruta relativa a la raíz
+// del módulo) y devuelve las rutas relativas de todos los paquetes alcanzables, directa o
+// transitivamente, a través de ficheros que no son de prueba. Solo sigue importaciones con el
+// prefijo modulePrefix; las demás (biblioteca estándar, terceros) no aportan paquetes del módulo.
+func reachablePackages(t *testing.T, moduleDir, modulePrefix, startRel string) map[string]bool {
+	t.Helper()
+	seen := map[string]bool{}
+	queue := []string{startRel}
+	for len(queue) > 0 {
+		rel := queue[0]
+		queue = queue[1:]
+		if seen[rel] {
+			continue
+		}
+		seen[rel] = true
+		for _, p := range dirImports(t, filepath.Join(moduleDir, filepath.FromSlash(rel))) {
+			if strings.HasPrefix(p, modulePrefix) {
+				queue = append(queue, strings.TrimPrefix(p, modulePrefix))
+			}
+		}
+	}
+	return seen
+}
+
+func TestAdapterAssemblyImportRules(t *testing.T) {
+	root := repoRoot(t)
+
+	t.Run("(a) el paquete raíz no importa transitivamente azuredevops ni builtin", func(t *testing.T) {
+		reached := reachablePackages(t, root, modulePath, "internal/integrations")
+		if !reached["internal/integrations/manifest"] {
+			t.Fatal("el recorrido transitivo debería alcanzar manifest: la regla sería vacua")
+		}
+		for rel := range reached {
+			if rel == "internal/integrations/builtin" ||
+				rel == "internal/integrations/azuredevops" ||
+				strings.HasPrefix(rel, "internal/integrations/azuredevops/") {
+				t.Errorf("internal/integrations alcanza %s: el núcleo no puede conocer los adaptadores", rel)
+			}
+		}
+	})
+
+	t.Run("(b) solo builtin y adotest importan azuredevops", func(t *testing.T) {
+		sep := string(filepath.Separator)
+		allowed := []string{
+			filepath.Join(root, "internal", "integrations", "builtin") + sep,
+			filepath.Join(root, "internal", "integrations", "azuredevops", "adotest") + sep,
+			// El propio paquete y sus subpaquetes no se importan a sí mismos como adaptador.
+			filepath.Join(root, "internal", "integrations", "azuredevops") + sep,
+		}
+		for _, top := range []string{"internal", "cmd"} {
+			for _, user := range importers(t, filepath.Join(root, top), pkg("internal/integrations/azuredevops")) {
+				ok := false
+				for _, prefix := range allowed {
+					if strings.HasPrefix(user, prefix) {
+						ok = true
+					}
+				}
+				if !ok {
+					t.Errorf("%s importa azuredevops: solo builtin y azuredevops/adotest pueden hacerlo", user)
+				}
+			}
+		}
+	})
+
+	t.Run("(c) identitystore solo importa la biblioteca estándar, system y filemerge", func(t *testing.T) {
+		dir := filepath.Join(root, "internal", "integrations", "identitystore")
+		if _, err := os.Stat(dir); err != nil {
+			t.Skip("identitystore todavía no existe (llega en la unidad 5)")
+		}
+		for file, imports := range nonTestImports(t, dir) {
+			for _, p := range imports {
+				if !strings.Contains(strings.SplitN(p, "/", 2)[0], ".") {
+					continue // biblioteca estándar
+				}
+				if p == modulePath+"internal/system" || p == modulePath+"internal/components/filemerge" {
+					continue
+				}
+				t.Errorf("%s importa %q: identitystore solo admite la biblioteca estándar, internal/system e internal/components/filemerge", file, p)
+			}
+		}
+	})
+}
+
+// TestReachablePackagesIsTransitiveAndNotVacuous fija que el recorrido transitivo detecta una
+// violación sembrada dos saltos más allá y que ignora los ficheros de prueba.
+func TestReachablePackagesIsTransitiveAndNotVacuous(t *testing.T) {
+	const prefix = "example.test/mod/"
+	dir := t.TempDir()
+	layout := map[string]string{
+		"a/a.go":      "package a\n\nimport _ \"" + prefix + "b\"\n",
+		"b/b.go":      "package b\n\nimport (\n\t_ \"fmt\"\n\t_ \"" + prefix + "bad\"\n)\n",
+		"bad/bad.go":  "package bad\n",
+		"lonely/l.go": "package lonely\n",
+		"a/a_test.go": "package a\n\nimport _ \"" + prefix + "lonely\"\n",
+	}
+	for name, src := range layout {
+		path := filepath.Join(dir, filepath.FromSlash(name))
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, []byte(src), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	got := reachablePackages(t, dir, prefix, "a")
+	for _, want := range []string{"a", "b", "bad"} {
+		if !got[want] {
+			t.Errorf("%s debe ser alcanzable: %v", want, got)
+		}
+	}
+	if got["lonely"] {
+		t.Error("una importación solo de prueba no cuenta")
+	}
+}

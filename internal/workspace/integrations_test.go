@@ -276,3 +276,50 @@ func TestLocateLoadsValidIntegrations(t *testing.T) {
 		t.Fatal("la configuración debe cargar")
 	}
 }
+
+// Con el catálogo por defecto (sin costura), azure-devops es el único plugin admitido (REQ-45.2).
+func TestDecodeIntegrationsAzureDevOpsWithDefaultCatalog(t *testing.T) {
+	const valid = "integrations:\n  azure-devops:\n    organization: contoso\n    project: Fabrikam\n    team: Fabrikam Team\n"
+
+	t.Run("bloque válido", func(t *testing.T) {
+		got, err := decodeIntegrations(integrationsNode(t, valid))
+		if err != nil || got == nil || len(got.Plugins) != 1 {
+			t.Fatalf("decodeIntegrations = %+v, %v", got, err)
+		}
+		p := got.Plugins[0]
+		want := map[string]any{"organization": "contoso", "project": "Fabrikam", "team": "Fabrikam Team"}
+		if p.ID != "azure-devops" || !p.Enabled || !reflect.DeepEqual(p.Values, want) {
+			t.Fatalf("plugin = %+v", p)
+		}
+	})
+
+	t.Run("clave desconocida base_url", func(t *testing.T) {
+		_, err := decodeIntegrations(integrationsNode(t, valid+"    base_url: https://example.test\n"))
+		wantErrorContains(t, err, "clave desconocida 'base_url'", "claves admitidas: enabled, organization, project, team")
+	})
+
+	t.Run("pat no es una clave de configuración", func(t *testing.T) {
+		_, err := decodeIntegrations(integrationsNode(t, valid+"    pat: valor-ficticio-no-secreto\n"))
+		wantErrorContains(t, err, "clave desconocida 'pat'")
+		if err != nil && strings.Contains(err.Error(), "valor-ficticio-no-secreto") {
+			t.Fatalf("el error no debe imprimir el valor: %v", err)
+		}
+	})
+
+	t.Run("falta team", func(t *testing.T) {
+		_, err := decodeIntegrations(integrationsNode(t, "integrations:\n  azure-devops:\n    organization: contoso\n    project: Fabrikam\n"))
+		wantErrorContains(t, err, "integrations.azure-devops.team", "obligatoria")
+	})
+
+	t.Run("enabled false no exige claves", func(t *testing.T) {
+		got, err := decodeIntegrations(integrationsNode(t, "integrations:\n  azure-devops:\n    enabled: false\n"))
+		if err != nil || len(got.Plugins) != 1 || got.Plugins[0].Enabled {
+			t.Fatalf("decodeIntegrations = %+v, %v", got, err)
+		}
+	})
+
+	t.Run("jira desconocido nombra azure-devops entre los disponibles", func(t *testing.T) {
+		_, err := decodeIntegrations(integrationsNode(t, "integrations:\n  jira:\n    project: p\n"))
+		wantErrorContains(t, err, "plugin desconocido 'jira'", "plugins admitidos: azure-devops")
+	})
+}
