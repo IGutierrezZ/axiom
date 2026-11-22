@@ -2,6 +2,7 @@ package azuredevops
 
 import (
 	"encoding/base64"
+	"math"
 	"net/http"
 	"strings"
 	"testing"
@@ -120,6 +121,12 @@ func TestParseRetryAfter(t *testing.T) {
 		{"0", 0, true},
 		{"-1", 0, false},
 		{"mañana", 0, false},
+		// Valores que desbordarían time.Duration se saturan al máximo en lugar
+		// de dar la vuelta a una duración negativa o pequeña (JD-1).
+		{"9223372037", time.Duration(math.MaxInt64), true},
+		{"10000000000", time.Duration(math.MaxInt64), true},
+		{"99999999999999999999", time.Duration(math.MaxInt64), true},
+		{"-99999999999999999999", 0, false},
 		{now.Add(7 * time.Second).Format(http.TimeFormat), 7 * time.Second, true},
 		{now.Add(-7 * time.Second).Format(http.TimeFormat), 0, true},
 	}

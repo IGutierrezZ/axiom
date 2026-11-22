@@ -142,6 +142,21 @@ func TestRetryAfterBeyondTheCeilingIsNotRetried(t *testing.T) {
 			t.Fatal("no se reintenta ni se espera")
 		}
 	})
+	t.Run("429 con un valor que desbordaría time.Duration", func(t *testing.T) {
+		srv := adotest.NewServer(t, nil)
+		srv.Reply("GET", pingPath, withRetryAfter(429, "10000000000"))
+		client, _ := newTestClient(t, srv, nil)
+
+		err := ping(context.Background(), client, nil)
+
+		var limit *azuredevops.RateLimitError
+		if !errors.As(err, &limit) || limit.Attempts != 1 {
+			t.Fatalf("esperaba RateLimitError con 1 intento: %v", err)
+		}
+		if srv.Count("GET", pingPath) != 1 || len(srv.Clock().Sleeps()) != 0 {
+			t.Fatal("no se reintenta ni se espera")
+		}
+	})
 	t.Run("503", func(t *testing.T) {
 		srv := adotest.NewServer(t, nil)
 		srv.Reply("GET", pingPath, withRetryAfter(503, "120"))
@@ -160,23 +175,28 @@ func TestRetryAfterBeyondTheCeilingIsNotRetried(t *testing.T) {
 }
 
 func TestPacingBeyondTheCeilingSendsNothing(t *testing.T) {
-	srv := adotest.NewServer(t, nil)
-	slow := okJSON()
-	slow.Header = http.Header{"Retry-After": {"90"}}
-	srv.Sequence("GET", pingPath, slow, okJSON())
-	client, _ := newTestClient(t, srv, nil)
+	// "10000000000" desbordaría time.Duration si no se saturara (JD-1).
+	for _, value := range []string{"90", "10000000000"} {
+		t.Run(value, func(t *testing.T) {
+			srv := adotest.NewServer(t, nil)
+			slow := okJSON()
+			slow.Header = http.Header{"Retry-After": {value}}
+			srv.Sequence("GET", pingPath, slow, okJSON())
+			client, _ := newTestClient(t, srv, nil)
 
-	if err := ping(context.Background(), client, nil); err != nil {
-		t.Fatal(err)
-	}
-	err := ping(context.Background(), client, nil)
+			if err := ping(context.Background(), client, nil); err != nil {
+				t.Fatal(err)
+			}
+			err := ping(context.Background(), client, nil)
 
-	var limit *azuredevops.RateLimitError
-	if !errors.As(err, &limit) || limit.Attempts != 0 {
-		t.Fatalf("esperaba RateLimitError con 0 intentos: %v", err)
-	}
-	if srv.Count("GET", pingPath) != 1 {
-		t.Fatal("la segunda lectura no debe enviarse")
+			var limit *azuredevops.RateLimitError
+			if !errors.As(err, &limit) || limit.Attempts != 0 {
+				t.Fatalf("esperaba RateLimitError con 0 intentos: %v", err)
+			}
+			if srv.Count("GET", pingPath) != 1 || len(srv.Clock().Sleeps()) != 0 {
+				t.Fatal("la segunda lectura no debe enviarse ni esperar")
+			}
+		})
 	}
 }
 

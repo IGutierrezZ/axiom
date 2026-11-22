@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"mime"
 	"net/http"
 	"net/url"
@@ -485,9 +486,16 @@ func parseRetryAfter(value string, now time.Time) (time.Duration, bool) {
 	if value == "" {
 		return 0, false
 	}
-	if secs, err := strconv.Atoi(value); err == nil {
+	// ParseInt devuelve el extremo del rango con ErrRange: un número fuera de
+	// int64 se trata como su extremo en lugar de como un valor ilegible.
+	if secs, err := strconv.ParseInt(value, 10, 64); err == nil || errors.Is(err, strconv.ErrRange) {
 		if secs < 0 {
 			return 0, false
+		}
+		// Satura en lugar de desbordar: un valor desorbitado nunca puede volverse
+		// negativo ni pequeño y saltarse el techo de maxRetryAfter.
+		if secs > int64(math.MaxInt64/int64(time.Second)) {
+			return time.Duration(math.MaxInt64), true
 		}
 		return time.Duration(secs) * time.Second, true
 	}

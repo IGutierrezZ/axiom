@@ -97,3 +97,16 @@ D-01 a D-12 reflejados en el código (cliente, parche con `test /rev`, caché po
 - **Contradicciones:** ninguna.
 
 JUDGMENT: APPROVED ✅
+
+### Corrección posterior de JD-1 (2026-11-22, a petición del usuario)
+
+- **Arreglo.** `parseRetryAfter` lee con `strconv.ParseInt` y trata `ErrRange` como el extremo del rango. Cualquier valor por encima de `MaxInt64 / time.Second` se satura a `time.Duration(math.MaxInt64)`, así que nunca da la vuelta y siempre supera el techo de 60 s.
+- **RED observado:**
+  - `TestParseRetryAfter`: `"9223372037"` daba una duración negativa.
+  - `TestRetryAfterBeyondTheCeilingIsNotRetried/429_con_un_valor_que_desbordaría_time.Duration`: se enviaban 4 intentos.
+- **GREEN:**
+  - `go test -count=1 ./internal/integrations/...`: ok.
+  - `go vet ./internal/integrations/azuredevops`: limpio.
+  - `gofmt -l internal/integrations`: vacío.
+- **Prueba añadida:** el ritmo tras un 200 con ese valor no envía ni espera (`TestPacingBeyondTheCeilingSendsNothing/10000000000`).
+- **Pendientes informativos:** JD-2 a JD-6 siguen abiertos.
