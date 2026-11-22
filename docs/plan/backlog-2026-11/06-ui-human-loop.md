@@ -243,7 +243,7 @@ Durante el análisis apareció además un bug previo. El detalle de un cambio en
     - sección 03: el patrón de ID y el bloque `sdd:` (C-03-a);
     - esta sección: `explainer_html` (C-06-b) y `acceptance_tests` (C-06-c).
   - (Revisión 2026-11-17) Quedan fuera del catálogo dos claves que la primera versión daba por claves de `axiom.yaml` y no lo son:
-    - `commit_review`: la parada por tarea es una bandera del kickoff en SDD y del documento de feature en ODD (C-02-d), no una clave de proyecto.
+    - `commit_review`: la parada por tarea es un campo de la decisión de la puerta `tasks` en SDD (C-02-d); ODD va siempre en modo 1, no una clave de proyecto.
     - `docs_publication`: es un campo de `kickoff.yaml` (`internal/kickoff/types.go:122`, `schema.go:99-105`), no de `axiom.yaml`.
   - (Usuario, en la sección 07, C-07-h) «todas las configuraciones que hablamos a nivel de proyecto o lo que sea tienen que estar en la ui».
     - Corrige la v2 de esta sección: `integrations.<plugin>` **se edita** desde la UI, no queda en solo lectura.

@@ -40,8 +40,6 @@ func requireHandOffStops(parsed kickoff.GateRecordArgs, sealed *kickoff.Kickoff,
 type handOffPrepared struct {
 	handedOffTo string
 	plan        branch.HandOffPlan
-	parsed      kickoff.GateRecordArgs
-	workspace   string
 }
 
 // prepareHandOff implementa los pasos 6 a 9 de DD-02: almacén con ficheros, artefacto presente,
@@ -92,16 +90,20 @@ func prepareHandOff(parsed kickoff.GateRecordArgs, loc workspace.Location, chang
 	if refusal != nil {
 		return nil, &branch.RefusalError{Refusal: *refusal}
 	}
-	return &handOffPrepared{handedOffTo: handedOffTo, plan: plan, parsed: parsed, workspace: workspaceRoot}, nil
+	return &handOffPrepared{handedOffTo: handedOffTo, plan: plan}, nil
 }
 
-// notApprovedCheck es la comprobación del paso 10 de DD-02, bajo el cerrojo del ledger: la puerta
-// sigue sin aprobar cuando se va a anexar el registro.
-func (h *handOffPrepared) notApprovedCheck(ledger kickoff.GateLedger) error {
-	if _, resolved := ledger.Approval(h.parsed.Gate); resolved {
-		return gateAlreadyResolved(h.parsed, h.workspace)
+// gateStillPendingCheck es la comprobación del paso 10 de DD-02, bajo el cerrojo del ledger, cuando
+// el registro lleva `--hand-off`, `--commit-review` o ambas: la puerta sigue sin aprobar cuando se va
+// a anexar el registro (REQ-26.3, REQ-33.2). Una aprobación posterior a la primera quedaría oculta
+// tras ella y su marca o su modo serían invisibles.
+func gateStillPendingCheck(parsed kickoff.GateRecordArgs, workspaceRoot string) func(kickoff.GateLedger) error {
+	return func(ledger kickoff.GateLedger) error {
+		if _, resolved := ledger.Approval(parsed.Gate); resolved {
+			return gateAlreadyResolved(parsed, workspaceRoot)
+		}
+		return nil
 	}
-	return nil
 }
 
 // handedOffToFor es la fase que cede aprobar gate: lo que bloquea una puerta fija o, en un
@@ -127,7 +129,7 @@ func handedOffToFor(gate kickoff.GateKey, roster []multirole.RoleAssignment, led
 }
 
 func gateAlreadyResolved(parsed kickoff.GateRecordArgs, workspaceRoot string) error {
-	return fmt.Errorf("la compuerta %q del cambio %q ya está resuelta (approved): no se puede registrar otra aprobación con cesión sobre ella; consulta su estado con `axiom sdd status %s --cwd %s`",
+	return fmt.Errorf("la compuerta %q del cambio %q ya está resuelta (approved): no se puede registrar otra aprobación con cesión o con modo de revisión por commit sobre ella; consulta su estado con `axiom sdd status %s --cwd %s`",
 		parsed.Gate, parsed.Change, pathquote.ShellWord(parsed.Change), pathquote.Quote(workspaceRoot))
 }
 
@@ -191,7 +193,8 @@ func resolveGatePublish(parsed kickoff.GateRecordArgs, workspaceRoot string, han
 
 // gateRecordJSON es el `--json` de `gate record` (§4.4). delivery, handedOff y handedOffTo solo
 // salen con la salida 2; publish y publishUnavailable, en toda aprobación distinta de integration;
-// lastRoleClosed solo en una compuerta de rol (y pendingNonBlockingRoles, solo al cerrar el último blocking).
+// lastRoleClosed solo en una compuerta de rol (y pendingNonBlockingRoles, solo al cerrar el último blocking);
+// commitReview solo cuando la aprobación de tasks persiste el modo (REQ-33.2).
 type gateRecordJSON struct {
 	Schema             string              `json:"schema"`
 	Change             string              `json:"change"`
@@ -199,6 +202,7 @@ type gateRecordJSON struct {
 	Decision           string              `json:"decision"`
 	HandedOff          bool                `json:"handedOff,omitempty"`
 	HandedOffTo        string              `json:"handedOffTo,omitempty"`
+	CommitReview       string              `json:"commitReview,omitempty"`
 	LastRoleClosed     *bool               `json:"lastRoleClosed,omitempty"`
 	PendingNonBlocking []pendingRoleJSON   `json:"pendingNonBlockingRoles,omitempty"`
 	Publish            *gatePublishJSON    `json:"publish,omitempty"`
@@ -231,12 +235,13 @@ func pendingRolesJSON(pending []kickoff.PendingRole) []pendingRoleJSON {
 // writeGateRecordJSON emite el `--json` de una compuerta registrada. lastRoleClosed es nil fuera de
 // una compuerta de rol; con la aprobación que cierra el último rol blocking es true (el aviso de
 // REQ-21.13 en forma de campo) y pendingNonBlocking lista los roles no bloqueantes aún abiertos.
-func writeGateRecordJSON(stdout io.Writer, parsed kickoff.GateRecordArgs, handOff *handOffPrepared, publish gatePublish, lastRoleClosed *bool, pendingNonBlocking []kickoff.PendingRole) error {
+func writeGateRecordJSON(stdout io.Writer, parsed kickoff.GateRecordArgs, mode kickoff.CommitReviewMode, handOff *handOffPrepared, publish gatePublish, lastRoleClosed *bool, pendingNonBlocking []kickoff.PendingRole) error {
 	document := gateRecordJSON{
 		Schema:             gateRecordSchema,
 		Change:             parsed.Change,
 		Gate:               string(parsed.Gate),
 		Decision:           string(parsed.Decision),
+		CommitReview:       string(mode),
 		LastRoleClosed:     lastRoleClosed,
 		PendingNonBlocking: pendingRolesJSON(pendingNonBlocking),
 		Publish:            publish.target,
@@ -254,14 +259,17 @@ func writeGateRecordJSON(stdout io.Writer, parsed kickoff.GateRecordArgs, handOf
 	return encoder.Encode(document)
 }
 
-// writeGateRecordHeader es la primera línea de texto de una compuerta registrada: la de siempre y,
-// con la salida 2, la fase cedida.
-func writeGateRecordHeader(stdout io.Writer, parsed kickoff.GateRecordArgs, handOff *handOffPrepared) error {
-	if handOff == nil {
-		_, err := fmt.Fprintf(stdout, "Compuerta %q registrada (%s) para %q.\n", parsed.Gate, parsed.Decision, parsed.Change)
-		return err
+// writeGateRecordHeader es la primera línea de texto de una compuerta registrada: la de siempre,
+// con la salida 2 la fase cedida y, con `--commit-review`, el modo registrado.
+func writeGateRecordHeader(stdout io.Writer, parsed kickoff.GateRecordArgs, mode kickoff.CommitReviewMode, handOff *handOffPrepared) error {
+	details := []string{string(parsed.Decision)}
+	if handOff != nil {
+		details = append(details, "fase siguiente cedida: "+handOff.handedOffTo)
 	}
-	_, err := fmt.Fprintf(stdout, "Compuerta %q registrada (%s, fase siguiente cedida: %s) para %q.\n", parsed.Gate, parsed.Decision, handOff.handedOffTo, parsed.Change)
+	if mode != "" {
+		details = append(details, "revisión por commit: "+string(mode))
+	}
+	_, err := fmt.Fprintf(stdout, "Compuerta %q registrada (%s) para %q.\n", parsed.Gate, strings.Join(details, ", "), parsed.Change)
 	return err
 }
 

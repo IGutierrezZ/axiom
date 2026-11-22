@@ -38,6 +38,8 @@ From the orchestrator:
 - Artifact store mode as REPORTED by native status (`engram | openspec | hybrid | none`) — consume it, never re-derive it
 - Structured status from `skills/_shared/sdd-status-contract.md`: `schemaName`, `planningHome`, `changeRoot`, `artifactPaths`, `contextFiles`, `applyState`, task progress, dependency states, and `actionContext`
 - Delivery strategy (`single-pr | chained`), plus `chain_strategy` when it is `chained`
+- `commit_review`: `notify | stop | stop-before-commit`, taken from `commitReview` of the `tasks` gate in the status; `notify` when it is missing
+- `fixup_of` (optional): `{ sha, task, request }`, a request for changes on a commit already made; that launch implements no new task (Step 4b)
 
 ## Execution and Persistence Contract
 
@@ -173,6 +175,16 @@ FOR EACH TASK:
 └── Note any issues or deviations
 ```
 
+### Step 4b: Commit Review
+
+The orchestrator launches you with one task per launch in every mode and passes `commit_review`. Work only on the task you are given. Each task closes with its own work-unit commit, except in `stop-before-commit`. `<worktree>` is the absolute worktree path of Step 2c: every git order is `git -C <worktree> ...` and never changes the working directory of the session.
+
+- **`notify`**: implement the task, commit it, and return it in `commits` with the task, the short sha and the subject. When the launch carries several tasks, return one entry per commit, in task order. Never wait for anything.
+- **`stop`**: implement and commit one task, return its entry in `commits`, and give control back: never start the next task.
+- **`stop-before-commit`**: implement the task and mark its checkbox, stage exactly the paths you would have committed with `git -C <worktree> add -- <paths>`, and do not commit. Return `pending_commit` with the task, the proposed message and the paths, and no sha. In `apply-progress`, record the task as commit pending approval, with that message, so the work can be resumed. The orchestrator makes the commit after the person approves; paths you changed outside the list are reported, never committed.
+
+When the launch carries `fixup_of`, it implements no new task: it applies the request of the person to the commit already made. A commit is published when `git -C <worktree> branch -r --contains <sha>` prints anything; never fetch to decide. If it is not published, make the change and commit it with `git -C <worktree> commit --fixup=<sha>`; the orchestrator defers the autosquash until the pull request is requested. If it is published, make a corrective commit that cites the corrected sha. Never rewrite published history and never force a push. In `stop-before-commit`, leave the correction staged and return it in `pending_commit` with `fixup_of` carrying the sha and whether it is published (`{ "sha": "<sha>", "published": false }`), so the orchestrator commits it with `--fixup=<sha>` or as a corrective commit. Then add one line to the `## Commits con cambios pedidos` section of the tasks file of the role (`tasks.md` for `fullstack`): `- <short-sha> (tarea <id>): <request in one line> → fixup` or `→ commit correctivo`. It is never a checkbox, and never reopen the `tasks` gate: it stays approved with its `commit_review`.
+
 ### Step 5: Mark Tasks Complete
 
 Update `tasks.md` — change `- [ ]` to `- [x]` for completed tasks:
@@ -238,6 +250,9 @@ If none, say "None."}
 - [ ] {next task}
 - [ ] {next task}
 
+### Commits
+{One line per task commit: task, short sha, subject. In `stop-before-commit`, instead the `pending_commit`: task, proposed message, staged paths, and `fixup_of` when it is a correction. "None" when nothing was committed.}
+
 ### Delivery / PR Boundary
 - Mode: {single PR | chained PR slice | stacked PR slice}
 - Current work unit: {unit name or "N/A"}
@@ -248,7 +263,7 @@ If none, say "None."}
 
 ### Closing the Work and Proposing the Pull Request
 When the assigned tasks are complete and checked:
-1. Offer the user a formal commit with a semantic message (`feat(<role>): ...`) on the branch of that role.
+1. Every task already has its work-unit commit (Step 4b); offer a formal commit with a semantic message (`feat(<role>): ...`) on the branch of that role only for work left uncommitted. Recommend merging the pull request with a merge commit, without squash, so the reviewed commits reach the target branch.
 2. Propose the target branch of the pull request from `prTarget` of `repositories[].branches[]` in `axiom branch status --cwd "<workspaceRoot>" --change <c> --json`; do not ask the user for it. A role branch targets the tracking branch of the change, and the tracking branch targets the integration branch (`git.integration_branch`) and, in promotion mode `branch`, once merged there `prTarget` names `git.main_branch` for the second pull request.
 3. Suggest the command with that base, and leave publishing to the person:
    ```bash
@@ -321,6 +336,8 @@ You are an IMPLEMENTER sub-agent. You receive specific tasks and implement them 
 - When the status projects `technicalContext.maintained`, keep `context-impact.md` current with what was actually implemented: add, modify, or remove entries, or switch between entries and `Sin impacto: <motivo>`; never reopen `design.md` and never edit any file under the maintained paths. A change with several roles has one context delta: every role updates that same file. Validate it with `axiom archive context check --path "<workspaceRoot>" --change "{change-name}"` (see `../_shared/project-baseline-convention.md`).
 - When a `role-apply` gate rejected because of the context delta reopens this phase, correct `context-impact.md` and append one dated line to the `## Registro de remediación` section of the role's tasks file (never a task checkbox), as `../_shared/project-baseline-convention.md`, section 6, describes.
 - Never create, modify, or delete files under `technicalContext.reference` paths.
+- Commit review: the orchestrator passes `commit_review` (`notify | stop | stop-before-commit`, `notify` when missing) and launches you with one task. Every git order is `git -C <worktree> ...` with the absolute worktree path. `notify`: commit the task and return its sha in `commits`. `stop`: commit one task, return it and give control back. `stop-before-commit`: stage the task with `git -C <worktree> add -- <paths>`, do NOT commit, and return `pending_commit` (task, message, paths); record the task as commit pending approval in apply-progress.
+- `fixup_of` (`{ sha, task, request }`): implement no new task. If `git -C <worktree> branch -r --contains <sha>` prints anything the commit is published (never fetch to decide): make a corrective commit citing the sha. Otherwise commit with `git -C <worktree> commit --fixup=<sha>`. In `stop-before-commit`, stage the correction instead and return it in `pending_commit` with `fixup_of` as `{ "sha": "<sha>", "published": <bool> }`. Never rewrite published history and never force a push. Add one line `- <short-sha> (tarea <id>): <request> → fixup` (or `→ commit correctivo`) to the `## Commits con cambios pedidos` section of the tasks file of the role, never a checkbox, and never reopen the `tasks` gate.
 - Never create a branch or a worktree by hand: run `axiom branch ensure --cwd "<workspaceRoot>" --change <c> --json` before the first work unit and edit only under `repositories[].branches[].worktree` of the active role, with that absolute path as `--cwd`, `git -C`, and the root of every file path. Propose the pull request base from `prTarget` in `axiom branch status --json`; do not ask for it.
 
 ## Steps
@@ -345,7 +362,11 @@ You are an IMPLEMENTER sub-agent. You receive specific tasks and implement them 
   "status": "ok|blocked|error",
   "completed_tasks": ["1.1", "1.2"],
   "files_changed": ["path/to/file.ext"],
+  "commits": [{ "task": "1.1", "sha": "abc1234", "subject": "feat(x): ..." }],
+  "pending_commit": null,
   "notes": "short text"
 }
 ```
+
+In `stop-before-commit`, `commits` is empty and `pending_commit` is `{ "task": "1.2", "message": "feat(x): ...", "paths": ["path/to/file.ext"], "fixup_of": null }`.
 <!-- /section:model-small -->

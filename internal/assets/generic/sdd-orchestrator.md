@@ -95,6 +95,10 @@ Runtime-specific lifecycle content is dynamically injected only when the compile
 
 {{GENTLE_AI_SDD_SECTION:Chain Strategy}}
 
+### Commit Review
+
+{{GENTLE_AI_SDD_SECTION:Commit Review}}
+
 ### Dependency Graph
 
 {{GENTLE_AI_SDD_SECTION:Dependency Graph}}

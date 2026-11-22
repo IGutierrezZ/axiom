@@ -60,15 +60,16 @@ func EvaluateGates(in Inputs) ([]GateState, error) {
 		if !open {
 			return
 		}
-		status, reason, reopened, handedOff, handedOffTo := resolveGateStatus(digest, recordsByGate[gate.Key])
+		status, reason, reopened, closing := resolveGateStatus(digest, recordsByGate[gate.Key])
 		states = append(states, GateState{
-			Key:         gate.Key,
-			Status:      status,
-			Reason:      reason,
-			Blocks:      gate.Blocks,
-			Reopened:    reopened,
-			HandedOff:   handedOff,
-			HandedOffTo: handedOffTo,
+			Key:          gate.Key,
+			Status:       status,
+			Reason:       reason,
+			Blocks:       gate.Blocks,
+			Reopened:     reopened,
+			HandedOff:    closing.HandedOff,
+			HandedOffTo:  closing.HandedOffTo,
+			CommitReview: closing.CommitReview,
 		})
 	}
 
@@ -242,23 +243,24 @@ func PendingNonBlockingRoles(roster []multirole.RoleAssignment, gates []GateStat
 //     manual "reopen" verb.
 //   - No record at all yet: freshly pending.
 //
-// handedOff is the HandedOff mark of the FIRST approved record, the one that
-// closes the gate (REQ-26.7): a later approved record neither adds nor removes
-// it, and a later rejection leaves the gate approved with its mark intact.
-// handedOffTo is the phase that same record persisted when it was written
-// (empty in a ledger written before the field existed).
-func resolveGateStatus(digest string, records []GateRecord) (status, reason string, reopened, handedOff bool, handedOffTo string) {
+// closing is the FIRST approved record, the one that closes the gate (REQ-26.7,
+// REQ-33.4): its HandedOff, HandedOffTo (the phase persisted when it was written,
+// empty in a ledger written before the field existed) and CommitReview are what the
+// gate projects; a later approved record neither adds nor removes them, and a later
+// rejection leaves the gate approved with them intact. It is the zero record while
+// the gate is not approved.
+func resolveGateStatus(digest string, records []GateRecord) (status, reason string, reopened bool, closing GateRecord) {
 	for _, r := range records {
 		if r.Decision == DecisionApproved {
-			return "approved", r.Reason, false, r.HandedOff, r.HandedOffTo
+			return "approved", r.Reason, false, r
 		}
 	}
 	if len(records) == 0 {
-		return "pending", "", false, false, ""
+		return "pending", "", false, GateRecord{}
 	}
 	last := records[len(records)-1]
 	if last.ArtifactDigest == digest {
-		return "rejected", last.Reason, false, false, ""
+		return "rejected", last.Reason, false, GateRecord{}
 	}
-	return "pending", "", true, false, ""
+	return "pending", "", true, GateRecord{}
 }

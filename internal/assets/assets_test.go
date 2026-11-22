@@ -2593,7 +2593,9 @@ func TestNoAssetOffersTheHandoffTransitionNorPrescribesHandoffPolicy(t *testing.
 
 	contract := mustReadResolved("skills/_shared/sdd-status-contract.md")
 	for _, want := range []string{
-		"gates: [{ key, status, blocks, reason?, reopened?, handedOff?, handedOffTo? }]",
+		"gates: [{ key, status, blocks, reason?, reopened?, handedOff?, handedOffTo?, commitReview? }]",
+		"`commitReview` appears only on the `tasks` gate once it is `approved`",
+		"or `notify` when the record carries none",
 		"in the order `rejected`, `hand_off`, `approved`",
 		"`handOffUnavailable`",
 		"`verify` is blocked until every active role has its `role-apply` gate approved",
@@ -4381,5 +4383,240 @@ func TestSDDSpecAndProposePointToTheAdoptionReference(t *testing.T) {
 	}
 	if skills, err := fs.Glob(FS, "skills/sdd-adopt*"); err != nil || len(skills) != 0 {
 		t.Errorf("adoption is a reference of sdd-spec, not a new skill: %v (%v)", skills, err)
+	}
+}
+
+// commitReviewSection returns the canonical body of the shared `Commit Review` section.
+func commitReviewSection(t *testing.T) string {
+	t.Helper()
+	shared := MustRead("skills/_shared/sdd-orchestrator-sections.md")
+	const start = "<!-- sdd-orchestrator-section:Commit Review:start -->"
+	const end = "<!-- sdd-orchestrator-section:Commit Review:end -->"
+	from := strings.Index(shared, start)
+	to := strings.Index(shared, end)
+	if from < 0 || to < from {
+		t.Fatalf("sdd-orchestrator-sections.md has no %q section", "Commit Review")
+	}
+	return shared[from+len(start) : to]
+}
+
+// REQ-33.9 (a)-(h), REQ-33.5 and D5: the shared section carries the per-commit notice, the three
+// modes, the own interaction of the tasks gate with the composed invocation, the pause that is not
+// a gate, the implicit validation by the pull request and the fixup rules.
+func TestCommitReviewSectionCarriesTheCommonDoctrine(t *testing.T) {
+	section := commitReviewSection(t)
+	for _, want := range []string{
+		// (a) notice, one per commit, in task order.
+		"`git show <sha>`",
+		"One notice per commit, in task order",
+		// (b) the three canonical tokens and the pause that is not a gate.
+		"`notify`", "`stop`", "`stop-before-commit`",
+		"never translated",
+		"is not a gate",
+		"writes nothing in `gates.yaml`",
+		"changes no digest",
+		// (c) notify continues without stopping.
+		"continues without stopping",
+		// Mode source and forwarding.
+		"`commitReview` of the `tasks` gate in `governance.gates` of `axiom sdd status`",
+		"absent means `notify`",
+		"`commit_review` to every `sdd-apply` launch",
+		// REQ-33.5 and D5: own interaction, composition of the invocation.
+		"in an interaction of its own",
+		"which keeps its three exits and mentions no mode",
+		"declare `notify` the default",
+		"` --commit-review <token>` appended at its end",
+		"every other token unchanged",
+		"the only alteration of a provider invocation",
+		"Never ask for the mode in `continuous` nor in ODD",
+		"never when iterating",
+		// Task by task and mode 3.
+		"one task per launch in every mode",
+		"`pending_commit`",
+		"`git -C <worktree> add -- <paths>`",
+		"`git -C <worktree> diff --cached --stat`",
+		// JD-3: the proposed message never reaches a shell string.
+		"`git -C <worktree> commit -F <message-file>`",
+		"`git -C <worktree> commit -F -`",
+		"never interpolated into a shell string",
+		// JD-2: a pending fixup is committed as a fixup.
+		"when `pending_commit` carries `fixup_of`",
+		// (d) the pull request validates implicitly.
+		"validates every commit",
+		"nothing blocks the pull request",
+		// (e) only requested changes are recorded.
+		"Record only the commits the person asked to change",
+		"`## Commits con cambios pedidos`",
+		// (f) published or not, fixup and corrective commit.
+		"`git -C <worktree> branch -r --contains <sha>`",
+		"`git -C <worktree> commit --fixup=<sha>`",
+		"defer the autosquash until the pull request is requested",
+		// JD-1: the autosquash tolerates uncommitted edits of the change documents.
+		"`git -C <worktree> -c sequence.editor=true rebase -i --autosquash --autostash <base>`",
+		"commit any pending `stop-before-commit` diff first",
+		"corrective commit",
+		"Never rewrite published history",
+		// (g) finish the task in progress first.
+		"Finish the task in progress first",
+		// (h) merge without squash; Axiom never merges.
+		"merge commit, without squash",
+		"Axiom never merges",
+		// Where sdd-apply runs inline.
+		"Where `sdd-apply` runs inline",
+	} {
+		if !strings.Contains(section, want) {
+			t.Errorf("Commit Review section is missing %q", want)
+		}
+	}
+}
+
+// Threat matrix of aviso-commit: every git order of the doctrine selects its repository with
+// `git -C <worktree>`, the staging is explicit, nothing fetches, pushes, forces or commits with -a,
+// and the text never mentions RDD nor receipts.
+func TestCommitReviewSectionKeepsGitOrdersInsideTheWorktree(t *testing.T) {
+	section := commitReviewSection(t)
+
+	orders := regexp.MustCompile("`git [^`]*`").FindAllString(section, -1)
+	if len(orders) == 0 {
+		t.Fatal("the Commit Review section names no git order")
+	}
+	for _, order := range orders {
+		if order == "`git show <sha>`" || strings.HasPrefix(order, "`git -C <worktree> ") {
+			continue
+		}
+		t.Errorf("git order %s does not start with `git -C <worktree>`", order)
+	}
+	for _, want := range []string{"add -- <paths>", "never fetch"} {
+		if !strings.Contains(section, want) {
+			t.Errorf("Commit Review section is missing %q", want)
+		}
+	}
+	for _, forbidden := range []string{"commit -a", "commit -m", "--force", "git push", "RDD", "receipt", "Receipt", "consent"} {
+		if strings.Contains(section, forbidden) {
+			t.Errorf("Commit Review section must not contain %q", forbidden)
+		}
+	}
+}
+
+// REQ-33.10 and D6-D9: sdd-apply documents the `commit_review` and `fixup_of` parameters, the
+// compact per-task return, `pending_commit` of the third mode and the record of requested changes,
+// in both of its model tiers.
+func TestSDDApplyDocumentsTheCommitReviewContractInBothModelTiers(t *testing.T) {
+	const path = "skills/sdd-apply/SKILL.md"
+	content := mustReadResolved(path)
+	common := []string{
+		"`commit_review`",
+		"`fixup_of`",
+		"`pending_commit`",
+		"`notify`",
+		"`stop`",
+		"`stop-before-commit`",
+		"`## Commits con cambios pedidos`",
+	}
+	for _, tier := range []struct {
+		name string
+		want []string
+	}{
+		{"capable", append([]string{
+			"### Step 4b: Commit Review",
+			"one task per launch",
+			"`git -C <worktree> add -- <paths>`",
+			"do not commit",
+			"the task as commit pending approval",
+			"`git -C <worktree> branch -r --contains <sha>`",
+			"`git -C <worktree> commit --fixup=<sha>`",
+			"corrective commit",
+			"with `fixup_of` carrying the sha and whether it is published",
+			"never reopen the `tasks` gate",
+			"never fetch",
+			"merge commit, without squash",
+		}, common...)},
+		{"small", append([]string{
+			"\"commits\"",
+			"\"pending_commit\"",
+			"`git -C <worktree> add -- <paths>`",
+			"never fetch",
+		}, common...)},
+	} {
+		t.Run(tier.name, func(t *testing.T) {
+			section := extractModelSectionForTest(content, tier.name)
+			for _, want := range tier.want {
+				if !strings.Contains(section, want) {
+					t.Errorf("%s model-%s is missing %q", path, tier.name, want)
+				}
+			}
+			for _, forbidden := range []string{"commit -a", "--force", "git push", "RDD", "receipt"} {
+				if strings.Contains(section, forbidden) {
+					t.Errorf("%s model-%s must not contain %q", path, tier.name, forbidden)
+				}
+			}
+		})
+	}
+}
+
+// REQ-33.11 and D9: work-unit-commits carries the "Review and Fixups" section, the same in both copies.
+func TestWorkUnitCommitsCarriesReviewAndFixups(t *testing.T) {
+	embedded := MustRead("skills/work-unit-commits/SKILL.md")
+	source, err := os.ReadFile(filepath.Join("..", "..", "skills", "work-unit-commits", "SKILL.md"))
+	if err != nil {
+		t.Fatalf("ReadFile(source work-unit-commits) error = %v", err)
+	}
+	for name, content := range map[string]string{"embedded": embedded, "source": string(source)} {
+		for _, want := range []string{
+			"## Review and Fixups",
+			"the short sha, the task ID and `git show <sha>`",
+			"Record only the commits the person asked to change",
+			"`git commit --fixup=<sha>`",
+			"defer the autosquash until the pull request is requested",
+			"`git -c sequence.editor=true rebase -i --autosquash --autostash <base>`",
+			"corrective commit",
+			"Never rewrite published history",
+			"Finish the task in progress first",
+			"merge commit, without squash",
+			"never fetch",
+		} {
+			if !strings.Contains(content, want) {
+				t.Errorf("%s work-unit-commits is missing %q", name, want)
+			}
+		}
+		for _, forbidden := range []string{"commit -a", "--force", "git push", "RDD", "receipt"} {
+			if strings.Contains(content, forbidden) {
+				t.Errorf("%s work-unit-commits must not contain %q", name, forbidden)
+			}
+		}
+	}
+}
+
+// REQ-33.8: the twelve orchestrators reference the section right after Chain Strategy, with the
+// placeholder and no inline copy, and Block Gates links the tasks gate interaction (REQ-33.5).
+func TestEveryOrchestratorReferencesTheCommitReviewSection(t *testing.T) {
+	// claude/sdd-orchestrator.md is the bootstrap that points to the workflow: it carries no sections.
+	var paths []string
+	for _, path := range allSDDOrchestratorAssetPaths(t) {
+		if path != "claude/sdd-orchestrator.md" {
+			paths = append(paths, path)
+		}
+	}
+	paths = append(paths, "claude/sdd-orchestrator-workflow.md")
+	if len(paths) != 12 {
+		t.Fatalf("expected twelve orchestrators, got %d: %v", len(paths), paths)
+	}
+	const block = "### Commit Review\n\n{{GENTLE_AI_SDD_SECTION:Commit Review}}"
+	for _, path := range paths {
+		content := MustRead(path)
+		if strings.Count(content, block) != 1 {
+			t.Errorf("%s must carry the Commit Review heading and placeholder exactly once", path)
+			continue
+		}
+		chain := strings.Index(content, "### Chain Strategy")
+		if chain < 0 || strings.Index(content, block) < chain {
+			t.Errorf("%s must place Commit Review after Chain Strategy", path)
+		}
+	}
+
+	shared := MustRead("skills/_shared/sdd-orchestrator-sections.md")
+	const link = "At the `tasks` gate, an approval exit is followed by the commit review question and recorded with `--commit-review`, as `Commit Review` describes."
+	if strings.Count(shared, link) != 1 {
+		t.Errorf("the Block Gates section must link the tasks gate interaction exactly once: %q", link)
 	}
 }

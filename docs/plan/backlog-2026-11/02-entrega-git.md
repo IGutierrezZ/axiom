@@ -194,7 +194,8 @@ El cambio se decide por preferencia propia del usuario, no por imitar a upstream
     - si ya se publicó, un commit correctivo nuevo.
     Nunca se reescribe historia publicada.
   - (Análisis, **no confirmado por el usuario**.) Fusionar sin squash (merge commit), para que los commits revisados lleguen a la rama destino y para que `done` confirme por ascendencia en el modo `branch` de C-02-a.
-  - (Usuario, 2026-11-17; P2 resuelta, **sustituye a la viñeta siguiente**.) El modo se pregunta en la parada previa a las tareas (puerta `tasks` en SDD `checkpointed`; parada de plan en ODD), no en el pre-vuelo ni en `kickoff seal`. Se pregunta si parar al terminar cada tarea y si el commit es automático. Tres modos: (1) avisar y seguir con commit automático, por defecto; (2) parar tras cada tarea con commit automático; (3) parar tras cada tarea sin commit: la persona revisa el diff, aprueba y entonces se hace el commit. «Sin commit» implica parar. En `continuous` y en ODD pequeño sin documento de feature no se pregunta: modo 1.
+  - (Usuario, 2026-11-17; P2 resuelta, **sustituye a la viñeta siguiente**.) El modo se pregunta en la parada previa a las tareas (puerta `tasks` en SDD `checkpointed`), no en el pre-vuelo ni en `kickoff seal`. Se pregunta si parar al terminar cada tarea y si el commit es automático. Tres modos: (1) avisar y seguir con commit automático, por defecto; (2) parar tras cada tarea con commit automático; (3) parar tras cada tarea sin commit: la persona revisa el diff, aprueba y entonces se hace el commit. «Sin commit» implica parar. En `continuous` no se pregunta: modo 1.
+  - (Usuario, 2026-11-20; corrige P2.) ODD va siempre en modo 1: sin pregunta ni paradas, tampoco a petición en el chat. Quien quiera parar tras cada tarea usa SDD `checkpointed`. La «parada de plan en ODD» que citaba P2 ya no existía (la retiró REQ-27.17 el 2026-11-10); REQ-27.17 no cambia y el modo 3 solo es comportamiento nuevo en `sdd-apply`.
   - (Usuario, 2026-11-17; P1 resuelta.) La doctrina recomienda fusionar sin squash (merge commit).
   - (Análisis, **superada por P2**.) Sin pregunta nueva en el pre-vuelo: el modo es `notify` por defecto y la persona pide paradas en cualquier momento. El motivo ya no es que el hook exija exactamente 3 preguntas (C-01-b lo hace variable), sino no ampliar el pre-vuelo con una decisión que el usuario quiere tomar sobre la marcha («que lo decida el usuario»). En SDD se refleja en el kickoff (bandera nueva en `axiom sdd kickoff seal`, ortogonal a `--execution-style`); en ODD, en el documento de feature.
   - (Sección 01.) Sin RDD.
@@ -202,7 +203,7 @@ El cambio se decide por preferencia propia del usuario, no por imitar a upstream
   - Revisión automática de commits.
   - Bloquear la PR por commits pendientes.
   - La interfaz de usuario para validar commits (en su caso, sección 06).
-- **Carril propuesto.** SDD: añade una bandera al kickoff (`openspec/specs/sdd-lane-kickoff/`) y cambia la doctrina del orquestador. ODD hoy no tiene parada propia (`internal/components/agentguidance/routing.go:66-67`, REQ-27.17), así que la parada por tarea en ODD es comportamiento nuevo.
+- **Carril propuesto.** SDD: registra el modo en la decisión de la puerta `tasks` (`gates.yaml`; el kickoff no admite cambios tras el sellado, REQ-25.36) y cambia la doctrina del orquestador. ODD no gana paradas: sigue sin parada propia (`internal/components/agentguidance/routing.go:66-67`, REQ-27.17) y va siempre en modo 1.
 - **Tamaño.** M.
 - **Depende de / bloquea a.**
   - Depende de C-02-c (comparte doctrina y skills).
@@ -213,12 +214,12 @@ El cambio se decide por preferencia propia del usuario, no por imitar a upstream
   - `internal/components/agentguidance/routing.go:76` (paso 6, «Implement task by task») y `:77` (paso 7, «Close»). **[COMPARTIDO]**
   - `internal/assets/skills/_shared/sdd-orchestrator-sections.md` y los 12 `internal/assets/<agente>/sdd-orchestrator.md` **[COMPARTIDO]**.
   - `internal/assets/skills/sdd-apply/SKILL.md` y `internal/assets/skills/work-unit-commits/SKILL.md` **[COMPARTIDO]**.
-  - `internal/kickoff/args.go` (bandera de `seal`), `internal/cli/sdd_kickoff.go:36` (uso).
-  - `openspec/specs/sdd-lane-kickoff/`.
+  - `internal/kickoff/types.go` (`GateRecord`), `internal/cli/sdd_gate*.go` (bandera de `gate record`) e `internal/sddstatus/status_v2.go` (proyección); ni `internal/kickoff/args.go` ni `sdd_kickoff.go` cambian.
+  - `openspec/specs/sdd-block-review-gates/` y `openspec/specs/sdd-orchestrator-assets/`.
   - Goldens **[COMPARTIDO]**.
 - **Criterio de terminado.**
   - La doctrina generada indica avisar con el sha tras cada commit de tarea, continuar en `notify`, esperar en `stop`, y dar por validados todos los commits al pedir la PR.
-  - `kickoff seal` acepta y persiste el modo, con `notify` por defecto.
+  - `gate record --gate tasks` acepta y persiste el modo; sin registro, modo 1 (avisar y seguir).
   - Tests de la doctrina y del kickoff en verde, y goldens regenerados.
 - **Riesgos y avisos.**
   - Un mensaje del usuario con cambios sobre una tarea anterior llega mientras el modelo trabaja en la siguiente. La doctrina debe decir cómo intercalar el `fixup!` sin perder la tarea en curso.

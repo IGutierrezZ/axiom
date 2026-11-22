@@ -110,6 +110,10 @@ When `delivery_strategy` is `chained`, treat `chained-pr` (registry skill `chain
 
 Pass it as `chain_strategy` to `sdd-tasks` and `sdd-apply` prompts alongside `delivery_strategy`.
 
+### Commit Review
+
+{{GENTLE_AI_SDD_SECTION:Commit Review}}
+
 #Verification is optional and may inspect partial work. Diagnostic findings never trigger the gatekeeper retry loop or gate archive. Archive records actual unfinished tasks and findings, not synthetic completion.
 
 ## Dependency Graph

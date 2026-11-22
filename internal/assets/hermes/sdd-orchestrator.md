@@ -133,6 +133,10 @@ Interactive approval is phase-scoped. Words like "continue", "dale", or "go on" 
 
 {{GENTLE_AI_SDD_SECTION:Chain Strategy}}
 
+### Commit Review
+
+{{GENTLE_AI_SDD_SECTION:Commit Review}}
+
 ### Dependency Graph
 {{GENTLE_AI_SDD_SECTION:Dependency Graph}}
 

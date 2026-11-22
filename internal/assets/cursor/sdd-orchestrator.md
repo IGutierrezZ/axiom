@@ -169,6 +169,10 @@ The gatekeeper runs in addition to the Mandatory Delegation Triggers; it never r
 
 {{GENTLE_AI_SDD_SECTION:Chain Strategy}}
 
+### Commit Review
+
+{{GENTLE_AI_SDD_SECTION:Commit Review}}
+
 ### Dependency Graph
 
 {{GENTLE_AI_SDD_SECTION:Dependency Graph}}

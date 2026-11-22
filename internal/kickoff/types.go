@@ -135,6 +135,33 @@ type DocsPublication string
 // DocsPublicationAuto autoriza publicar al cerrar `tasks` y tras archivar, sin preguntar.
 const DocsPublicationAuto DocsPublication = "auto"
 
+// CommitReviewMode is the per-commit review mode chosen at the tasks gate of a
+// checkpointed change (REQ-33.1). The empty value means "not recorded" and is
+// read as CommitReviewNotify.
+type CommitReviewMode string
+
+const (
+	// CommitReviewNotify notifies after each task and continues (default).
+	CommitReviewNotify CommitReviewMode = "notify"
+	// CommitReviewStop pauses after each task commit.
+	CommitReviewStop CommitReviewMode = "stop"
+	// CommitReviewStopBeforeCommit pauses after each task, before its commit.
+	CommitReviewStopBeforeCommit CommitReviewMode = "stop-before-commit"
+)
+
+// CommitReviewModes returns the closed vocabulary in its canonical order.
+func CommitReviewModes() []CommitReviewMode {
+	return []CommitReviewMode{CommitReviewNotify, CommitReviewStop, CommitReviewStopBeforeCommit}
+}
+
+// EffectiveCommitReview maps the empty value to CommitReviewNotify.
+func EffectiveCommitReview(m CommitReviewMode) CommitReviewMode {
+	if m == "" {
+		return CommitReviewNotify
+	}
+	return m
+}
+
 // Lifecycle is the "lifecycle:" block of the sealed document.
 type Lifecycle struct {
 	DeploymentTarget  string `yaml:"deployment_target"`
@@ -198,6 +225,10 @@ type GateRecord struct {
 	// (por ejemplo "design" o "apply:web"). Solo la escribe la salida 2 junto a
 	// HandedOff: el roster cambia despues y la cesion no debe cambiar con el.
 	HandedOffTo string `yaml:"handed_off_to,omitempty"`
+	// CommitReview is the mode recorded with the approval that closes the tasks
+	// gate (REQ-33.2). Only `gate record --commit-review` writes it; omitempty
+	// keeps every other record byte-identical, and an older binary ignores it.
+	CommitReview CommitReviewMode `yaml:"commit_review,omitempty"`
 	// Actor es quien registró la decisión: --actor si se indica; si no, la identidad git
 	// del operador ("Nombre <email>"); y FallbackActor ("cli") si esa identidad no está
 	// completa. El valor no se valida: los registros anteriores ("cli", "maintainer",
@@ -238,6 +269,9 @@ type GateState struct {
 	// HandedOffTo es la fase cedida que persistio ese mismo registro; vacia en un
 	// ledger anterior a este campo, y entonces se calcula (HandedOffTo).
 	HandedOffTo string
+	// CommitReview es el modo del registro approved que cierra la puerta (REQ-33.4); vacio si
+	// el registro no lo lleva (modo efectivo notify).
+	CommitReview CommitReviewMode
 }
 
 // defaultRoleArtifactFiles derives the tasks/verify file names a role uses

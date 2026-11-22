@@ -132,6 +132,9 @@ var sharedOrchestratorSectionNames = []string{
 	// warning). Every runtime references it by placeholder, so no inline copy of
 	// the retired four-way strategy can come back.
 	"Delivery Strategy",
+	// aviso-commit (C-02-d, REQ-33.8): the per-commit notice, the three review modes and
+	// the fixup rules live once here; every runtime references them by placeholder.
+	"Commit Review",
 }
 
 // TestSDDChangeKickoffAndBlockGatesSectionIsDeterministic is task 22.3's own
@@ -199,6 +202,14 @@ func TestEveryRuntimeRendersTheSharedSections(t *testing.T) {
 		model.AgentClaudeCode, model.AgentKiroIDE, model.AgentAntigravity, model.AgentVSCodeCopilot, model.AgentGitHubCopilotCLI,
 	} {
 		rendered := renderSDDOrchestratorAsset(agent)
+		if agent == model.AgentClaudeCode {
+			// Claude keeps part of the shared sections in the lazy workflow, not in the bootstrap.
+			lazy, err := renderClaudeSessionPreflight()
+			if err != nil {
+				t.Fatal(err)
+			}
+			rendered += lazy
+		}
 		for _, name := range sharedOrchestratorSectionNames {
 			if !strings.Contains(rendered, name) {
 				continue // a runtime that never carried this section keeps not carrying it
