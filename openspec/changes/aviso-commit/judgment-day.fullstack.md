@@ -5,6 +5,7 @@ Revisión independiente e informativa: no bloquea ninguna fase ni el archive y n
 - Objetivo inmutable: `28084a56..cdac5184` (rama `inc/aviso-commit`).
 - Ronda: 1. Jueces ciegos `jd-judge-a` (A) y `jd-judge-b` (B), en paralelo. B completó su barrido en una segunda pasada, porque la primera no cubría la doctrina.
 - Hallazgos graves (CRITICAL) confirmados: 0. No hubo ronda de correcciones ni re-juicio.
+- Seguimiento (2026-11-22, a petición de la persona): JD-1, JD-2 y JD-3 corregidos fuera del juicio en el commit `fix(sdd): commit seguro, fixups del modo 3 y autostash en la doctrina Commit Review`, con pines nuevos en RED antes del GREEN. El autosquash usa `--autostash` y antes confirma el diff pendiente del modo 3. El commit del modo 3 pasa el mensaje con `-F`. Una corrección pendiente con `fixup_of` (`sha`, `published`) se confirma con `--fixup`. JD-4, JD-5 y JD-6 siguen abiertos e informativos.
 
 ## Libro de hallazgos
 
