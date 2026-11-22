@@ -15,7 +15,10 @@ import (
 // GatesFileName is the append-only gate ledger's file name inside a change root.
 const GatesFileName = "gates.yaml"
 
-const gatesLockFileName = ".gates.lock"
+// GatesLockFileName es el cerrojo consultivo de gates.yaml en la carpeta del cambio: un fichero vacío
+// que persiste tras liberarse (borrarlo rompería la exclusión entre procesos) y nunca se publica.
+// `axiom branch done` no lo cuenta como árbol sucio (REQ-25.17).
+const GatesLockFileName = ".gates.lock"
 
 // gateLockAcquireAttempts, gateLockRetryDelay and gateLockMaxRetryDelay bound
 // how long AppendGate spins against a busy advisory lock before giving up.
@@ -93,7 +96,7 @@ func AppendGateChecked(changeRoot string, rec GateRecord, check func(GateLedger)
 		return err
 	}
 
-	lockPath := filepath.Join(changeRoot, gatesLockFileName)
+	lockPath := filepath.Join(changeRoot, GatesLockFileName)
 	lock, err := acquireGateLedgerLockWithRetry(lockPath)
 	if err != nil {
 		return fmt.Errorf("adquirir cerrojo de gates.yaml en %q: %w", lockPath, err)

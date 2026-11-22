@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"os"
+	"path"
 	"path/filepath"
 	"slices"
 
@@ -328,7 +330,8 @@ func (d *doneRun) branch(repository doneRepository, planned branch.BranchPlan) (
 	}
 
 	// Árbol limpio: el worktree de la rama o, en `in_place`, el propio repositorio.
-	var dirty []string
+	// Los cerrojos locales vacíos no cuentan como sucios, pero obligan a forzar la retirada del worktree.
+	var dirty, locks []string
 	switch {
 	case inMain && !d.inPlace:
 		return keep(branch.DoneCheckedOutInMainCheckout(request.Change, request.CWD, request.Lane, repo, planned.Name, main))
@@ -341,6 +344,7 @@ func (d *doneRun) branch(repository doneRepository, planned branch.BranchPlan) (
 		if err != nil {
 			return failed("leer el estado de "+dir, fmt.Sprintf("comprueba %s (si su directorio ya no existe, `git -C %s worktree prune` elimina su registro)", pathquote.Quote(dir), pathquote.Quote(main)), err)
 		}
+		dirty, locks = withoutLocalLocks(dir, dirty)
 		described.Dirty = len(dirty) > 0
 		// En `in_place`, `--force` nunca salta la limpieza: el cambio de rama pondría en riesgo esos cambios.
 		if len(dirty) > 0 && (inMain || !request.Force) {
@@ -380,7 +384,7 @@ func (d *doneRun) branch(repository doneRepository, planned branch.BranchPlan) (
 
 	switch {
 	case linked:
-		if err := d.engine.writer.RemoveWorktree(d.ctx, main, deployed.Path, len(dirty) > 0); err != nil {
+		if err := d.engine.writer.RemoveWorktree(d.ctx, main, deployed.Path, len(dirty) > 0 || len(locks) > 0); err != nil {
 			return failed(fmt.Sprintf("retirar el worktree %s de la rama %s", deployed.Path, planned.Name), removeFix(main, deployed.Path), err)
 		}
 		described.Discarded = dirty
@@ -397,6 +401,22 @@ func (d *doneRun) branch(repository doneRepository, planned branch.BranchPlan) (
 	described.Exists, described.Dirty = false, false
 	described.SetOutcome(branch.OutcomeRemoved)
 	return described, nil
+}
+
+// withoutLocalLocks separa de las rutas sucias de dir los cerrojos de la compuerta que deja
+// `gate record` (`kickoff.GatesLockFileName`, REQ-25.17): ficheros regulares vacíos, sin datos que
+// perder. Uno que no esté vacío, o que no se pueda leer, sigue contando como sucio.
+func withoutLocalLocks(dir string, paths []string) (dirty, locks []string) {
+	for _, p := range paths {
+		if path.Base(p) == kickoff.GatesLockFileName {
+			if info, err := os.Lstat(filepath.Join(dir, filepath.FromSlash(p))); err == nil && info.Mode().IsRegular() && info.Size() == 0 {
+				locks = append(locks, p)
+				continue
+			}
+		}
+		dirty = append(dirty, p)
+	}
+	return dirty, locks
 }
 
 // removeWorktreeFolder retira, si queda vacía, la carpeta `<raíz>/<carpeta>` que contenía el worktree

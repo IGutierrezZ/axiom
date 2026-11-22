@@ -1,8 +1,8 @@
 # Catálogo Maestro de Especificaciones Vivas — Axiom
 
 > **Proyecto:** Axiom (Spec-Driven Development Platform)
-> **Última Sincronización:** 2026-11-22 10:41:12 UTC
-> **Total Dominios:** 73 | **Total Requerimientos:** 612 | **Total Escenarios BDD:** 2040
+> **Última Sincronización:** 2026-11-22 11:09:26 UTC
+> **Total Dominios:** 73 | **Total Requerimientos:** 612 | **Total Escenarios BDD:** 2041
 
 ---
 
@@ -20,7 +20,7 @@
 | `axiom-updater-resilience` | Especificación Viva: Resiliencia y Gobernanza del Actualizador Autónomo de Axiom | 9 | 10 | [Ver Spec](specs/axiom-updater-resilience/spec.md) |
 | `axiom-user-state-and-env` | Especificación de Requerimientos: Unificación de Estado en ~/.axiom y Variables AXIOM_* (INC-12) | 3 | 5 | [Ver Spec](specs/axiom-user-state-and-env/spec.md) |
 | `change-actor-identity` | Especificación Viva: Identidad Git como Actor de los Artefactos Versionados (REQ-42.1 a REQ-42.9) | 9 | 33 | [Ver Spec](specs/change-actor-identity/spec.md) |
-| `change-branch-lifecycle` | Especificación de Requerimientos: Ciclo de Vida de las Ramas y Worktrees de un Cambio por Topología (INC-25) | 34 | 278 | [Ver Spec](specs/change-branch-lifecycle/spec.md) |
+| `change-branch-lifecycle` | Especificación de Requerimientos: Ciclo de Vida de las Ramas y Worktrees de un Cambio por Topología (INC-25) | 34 | 279 | [Ver Spec](specs/change-branch-lifecycle/spec.md) |
 | `dashboard-sdd-orchestration` | Especificación de Requerimientos: Orquestación Interactiva SDD y Creación de Cambios en Dashboard Web y CLI (INC-15) | 5 | 10 | [Ver Spec](specs/dashboard-sdd-orchestration/spec.md) |
 | `engram-protocol-injection` | Engram protocol injection Specification | 5 | 12 | [Ver Spec](specs/engram-protocol-injection/spec.md) |
 | `gga` | GGA Specification | 3 | 8 | [Ver Spec](specs/gga/spec.md) |
@@ -539,6 +539,7 @@ Definir cómo crea, consulta, cierra y protege Axiom las ramas (y, opcionalmente
   - *Escenario BDD:* Una rama integrada con squash se elimina tras confirmarse por `equivalent_tree`
   - *Escenario BDD:* La rama de archivado se elimina como las demás
   - *Escenario BDD:* Árbol sucio impide la eliminación
+  - *Escenario BDD:* El cerrojo vacío de la compuerta no ensucia el árbol
   - *Escenario BDD:* Rama sin fusionar impide la eliminación
   - *Escenario BDD:* `--force` elimina con fusión no confirmada y avisa de lo descartado
   - *Escenario BDD:* Linaje RDD abierto genera un aviso
