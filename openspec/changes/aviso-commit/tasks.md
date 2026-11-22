@@ -37,9 +37,9 @@
 
 ## Fase 2: Proyección en `status` (unidad 2)
 
-- [ ] 2.1 En `internal/sddstatus/status_v2.go`: `gateV2.CommitReview` (`commitReview,omitempty`), relleno solo con clave `tasks` y estado `approved` mediante `kickoff.EffectiveCommitReview`. Pruebas en `internal/sddstatus/status_v2_test.go`: `stop` registrado; `notify` efectivo sin campo; con cesión, ambos campos; ausente en `tasks` pendiente, en `design` aprobada y en `continuous`; `nextRecommended` y dependencias idénticos con y sin modo; la pregunta tipada de `tasks` conserva tres opciones y no menciona el modo.
+- [x] 2.1 En `internal/sddstatus/status_v2.go`: `gateV2.CommitReview` (`commitReview,omitempty`), relleno solo con clave `tasks` y estado `approved` mediante `kickoff.EffectiveCommitReview`. Pruebas en `internal/sddstatus/status_v2_test.go`: `stop` registrado; `notify` efectivo sin campo; con cesión, ambos campos; ausente en `tasks` pendiente, en `design` aprobada y en `continuous`; `nextRecommended` y dependencias idénticos con y sin modo; la pregunta tipada de `tasks` conserva tres opciones y no menciona el modo.
   Cubre: REQ-33.4, REQ-33.5
-- [ ] 2.2 En `internal/assets/skills/_shared/sdd-status-contract.md`: documentar `commitReview?` en la forma de `gates` y su significado (ausente = `notify`).
+- [x] 2.2 En `internal/assets/skills/_shared/sdd-status-contract.md`: documentar `commitReview?` en la forma de `gates` y su significado (ausente = `notify`).
   Cubre: REQ-33.4
 
 ## Fase 3: Doctrina SDD (unidad 3)

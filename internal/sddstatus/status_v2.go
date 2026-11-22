@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"time"
+
+	"github.com/IGutierrezZ/axiom/v3/internal/kickoff"
 )
 
 const (
@@ -147,6 +149,11 @@ type gateV2 struct {
 	// and 3, so a change that never used exit 2 projects what it always did.
 	HandedOff   bool   `json:"handedOff,omitempty"`
 	HandedOffTo string `json:"handedOffTo,omitempty"`
+	// CommitReview is the effective per-commit review mode of the approved tasks gate (REQ-33.4):
+	// the recorded mode, or notify when the record has none. Absent on any other gate, on a
+	// pending tasks gate and in continuous, where there are no gates. Informative: it never
+	// changes nextRecommended or the dependencies.
+	CommitReview string `json:"commitReview,omitempty"`
 }
 
 // rosterV2 projects GovernanceRoster. Conflict stays nil (omitempty) in
@@ -169,11 +176,15 @@ func projectGovernanceV2(governance *Governance) *governanceV2 {
 	}
 	gates := make([]gateV2, 0, len(governance.Gates))
 	for _, gate := range governance.Gates {
-		gates = append(gates, gateV2{
+		projected := gateV2{
 			Key: string(gate.Key), Status: gate.Status, Blocks: gate.Blocks,
 			Reason: gate.Reason, Reopened: gate.Reopened,
 			HandedOff: gate.HandedOff, HandedOffTo: governanceHandedOffTo(governance, gate),
-		})
+		}
+		if gate.Key == kickoff.GateTasks && gate.Status == "approved" {
+			projected.CommitReview = string(kickoff.EffectiveCommitReview(gate.CommitReview))
+		}
+		gates = append(gates, projected)
 	}
 	sealedAt := ""
 	if !governance.Kickoff.SealedAt.IsZero() {

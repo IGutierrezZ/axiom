@@ -2593,7 +2593,9 @@ func TestNoAssetOffersTheHandoffTransitionNorPrescribesHandoffPolicy(t *testing.
 
 	contract := mustReadResolved("skills/_shared/sdd-status-contract.md")
 	for _, want := range []string{
-		"gates: [{ key, status, blocks, reason?, reopened?, handedOff?, handedOffTo? }]",
+		"gates: [{ key, status, blocks, reason?, reopened?, handedOff?, handedOffTo?, commitReview? }]",
+		"`commitReview` appears only on the `tasks` gate once it is `approved`",
+		"or `notify` when the record carries none",
 		"in the order `rejected`, `hand_off`, `approved`",
 		"`handOffUnavailable`",
 		"`verify` is blocked until every active role has its `role-apply` gate approved",
