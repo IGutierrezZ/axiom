@@ -71,9 +71,9 @@
 
 ## Fase 6: Goldens y barrido (unidad 6)
 
-- [ ] 6.1 Regenerar `testdata/golden/*.golden` con `go test ./internal/components/ -run TestGolden -update`, repetir sin `-update` y revisar el diff (orquestadores, `sdd-apply` y documentos que proyectan routing).
+- [x] 6.1 Regenerar `testdata/golden/*.golden` con `go test ./internal/components/ -run TestGolden -update`, repetir sin `-update` y revisar el diff (orquestadores, `sdd-apply` y documentos que proyectan routing).
   Cubre: REQ-33.8, REQ-33.12
-- [ ] 6.2 Barrido de tests afectados por paquete: `go test ./internal/kickoff/ ./internal/sddstatus/ ./internal/cli/ -run "Gate|Status|CommitReview"`, `go test ./internal/assets/`, `go test ./internal/components/sdd/ ./internal/components/agentguidance/`; los paquetes lentos en Windows se lanzan aparte. Cierre: `go vet ./...` (no se compilan binarios de `axiom`).
+- [x] 6.2 Barrido de tests afectados por paquete: `go test ./internal/kickoff/ ./internal/sddstatus/ ./internal/cli/ -run "Gate|Status|CommitReview"`, `go test ./internal/assets/`, `go test ./internal/components/sdd/ ./internal/components/agentguidance/`; los paquetes lentos en Windows se lanzan aparte. Cierre: `go vet ./...` (no se compilan binarios de `axiom`).
   Cubre: REQ-33.1, REQ-33.12
 
 ## Orden y paralelismo
