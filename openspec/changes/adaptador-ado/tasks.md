@@ -30,9 +30,9 @@ Orden obligado: **1 → 2 → {3, 4} → 5 → 6 → 7**. La 1 va primera (el ca
 
 ## Precondiciones y notas de ejecución
 
-- [ ] P.1 Sin dependencias nuevas: solo biblioteca estándar. No ejecutar `go get` ni `go mod tidy`.
-- [ ] P.2 Las pruebas que usan costuras (`SetDefaultRegistryForTest`, `SetCatalogForTest`, `secrets.SetDefaultForTest`) no llaman a `t.Parallel()`. Ninguna prueba espera tiempo real, salvo el timeout (`Timeout: 20ms`, `MaxAttempts: 1`).
-- [ ] P.3 Cada unidad termina con `gofmt -l` vacío y `go vet` sobre los paquetes tocados antes de su commit. Commits convencionales, sin atribución de IA.
+- [x] P.1 Sin dependencias nuevas: solo biblioteca estándar. No ejecutar `go get` ni `go mod tidy`.
+- [x] P.2 Las pruebas que usan costuras (`SetDefaultRegistryForTest`, `SetCatalogForTest`, `secrets.SetDefaultForTest`) no llaman a `t.Parallel()`. Ninguna prueba espera tiempo real, salvo el timeout (`Timeout: 20ms`, `MaxAttempts: 1`).
+- [x] P.3 Cada unidad termina con `gofmt -l` vacío y `go vet` sobre los paquetes tocados antes de su commit. Commits convencionales, sin atribución de IA.
 - [ ] P.4 Las specs delta no son tareas de `apply`: las integra `sdd-archive`. Confirmar antes de archivar que `REQ-45` está libre en `main`.
 
 ## Phase 1 (unidad 1): Alta del plugin
@@ -131,13 +131,13 @@ Orden obligado: **1 → 2 → {3, 4} → 5 → 6 → 7**. La 1 va primera (el ca
 
 ## Phase 7 (unidad 7): Canario y cierre
 
-- [ ] 7.1 [RED] Crear `internal/cli/integrations_ado_canary_test.go` (`TestADOCanary...`): PAT canario en el entorno; `connect` con y sin `--user`, `discover` y servidores en modo 401, 403, 429 (presupuesto agotado) y 500; ni el canario ni su base64 ni `Basic <b64>` aparecen en stdout, stderr, errores, fichero de identidad, `axiom.yaml` ni salida de `discover`. Prueba: `go test ./internal/cli -run 'ADOCanary'`.
+- [x] 7.1 [RED] Crear `internal/cli/integrations_ado_canary_test.go` (`TestADOCanary...`): PAT canario en el entorno; `connect` con y sin `--user`, `discover` y servidores en modo 401, 403, 429 (presupuesto agotado) y 500; ni el canario ni su base64 ni `Basic <b64>` aparecen en stdout, stderr, errores, fichero de identidad, `axiom.yaml` ni salida de `discover`. Prueba: `go test ./internal/cli -run 'ADOCanary'`.
   Cubre: REQ-45.15
-- [ ] 7.2 Ratchet de código muerto: ejecutar `bash scripts/deadcode-ratchet.sh` y corregir cualquier función exportada sin llamador (por ejemplo `RateLimit()`, `UpdateWorkItem`, `GetWorkItems`, `ListRepositories`: dar un llamador real o ajustar a no exportada, y solo como último recurso `--update` con justificación). Si el entorno no puede instalar la herramienta, dejarlo registrado como no ejecutado y delegarlo a la CI.
+- [x] 7.2 Ratchet de código muerto: ejecutar `bash scripts/deadcode-ratchet.sh` y corregir cualquier función exportada sin llamador (por ejemplo `RateLimit()`, `UpdateWorkItem`, `GetWorkItems`, `ListRepositories`: dar un llamador real o ajustar a no exportada, y solo como último recurso `--update` con justificación). Si el entorno no puede instalar la herramienta, dejarlo registrado como no ejecutado y delegarlo a la CI.
   Cubre: calidad (CI)
-- [ ] 7.3 Comprobación final por paquetes (nunca `go test ./...` completo ni binarios sueltos): `go test ./internal/integrations/...`, `go test ./internal/workspace/... ./internal/hub/...`, `go test ./cmd/axiom -run 'IntegrationsHelp|Help'`, `go test ./internal/cli -run 'Integrations|ADOCanary|GateRecord|BranchEnsure|SDDPublish'`, `go vet` y `gofmt -l` sobre `internal/integrations internal/cli internal/workspace internal/hub cmd/axiom`. Confirmar que no hay goldens afectados (la ayuda se cubre con pruebas de contenido) y que `internal/hub/manager.go` no cambió.
+- [x] 7.3 Comprobación final por paquetes (nunca `go test ./...` completo ni binarios sueltos): `go test ./internal/integrations/...`, `go test ./internal/workspace/... ./internal/hub/...`, `go test ./cmd/axiom -run 'IntegrationsHelp|Help'`, `go test ./internal/cli -run 'Integrations|ADOCanary|GateRecord|BranchEnsure|SDDPublish'`, `go vet` y `gofmt -l` sobre `internal/integrations internal/cli internal/workspace internal/hub cmd/axiom`. Confirmar que no hay goldens afectados (la ayuda se cubre con pruebas de contenido) y que `internal/hub/manager.go` no cambió.
   Cubre: REQ-45.1 a REQ-45.17, MOD REQ-43.4, MOD REQ-43.18, MOD REQ-43.21
-- [ ] 7.4 Commit `test(integrations): canario del PAT de Azure DevOps y cierre`.
+- [x] 7.4 Commit `test(integrations): canario del PAT de Azure DevOps y cierre`.
   Cubre: REQ-45.15
 
 ## Registro de remediación

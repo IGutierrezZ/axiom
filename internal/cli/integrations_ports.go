@@ -145,11 +145,13 @@ func resolvePortTarget(cwd, pluginID string) (portTarget, error) {
 	return portTarget{manifest: m, plugin: plugin, config: *declared}, nil
 }
 
-// connectResult es lo que devuelve connectIntegration: la identidad guardada y el fichero.
+// connectResult es lo que devuelve connectIntegration: la identidad guardada, el fichero y, si la
+// organización ya tenía una entrada, la que se sustituye.
 type connectResult struct {
 	Identity     integrations.TrackerIdentity
 	ResolvedAt   string
 	IdentityFile string
+	Replaced     *identitystore.Entry
 }
 
 // connectIntegration resuelve la identidad por el puerto y la guarda. La falta de puerto, la
@@ -169,10 +171,19 @@ func connectIntegration(ctx context.Context, cwd, pluginID, user string) (connec
 	}
 	resolvedAt := nowUTC()
 	entry := identitystore.Entry{ID: identity.ID, DisplayName: identity.DisplayName, Source: identity.Source, ResolvedAt: resolvedAt}
-	if err := (identitystore.Store{Path: path}).Put(pluginID, identity.Account, entry); err != nil {
+	store := identitystore.Store{Path: path}
+	previous, hadPrevious, err := store.Get(pluginID, identity.Account)
+	if err != nil {
 		return connectResult{}, err
 	}
-	return connectResult{Identity: identity, ResolvedAt: resolvedAt.Format("2006-01-02T15:04:05Z"), IdentityFile: path}, nil
+	if err := store.Put(pluginID, identity.Account, entry); err != nil {
+		return connectResult{}, err
+	}
+	result := connectResult{Identity: identity, ResolvedAt: resolvedAt.Format("2006-01-02T15:04:05Z"), IdentityFile: path}
+	if hadPrevious {
+		result.Replaced = &previous
+	}
+	return result, nil
 }
 
 // discoverIntegration invoca el puerto de descubrimiento. No escribe ningún fichero.
@@ -249,6 +260,9 @@ func runIntegrationsConnect(args []string, stdout, stderr io.Writer) int {
 	}
 	fmt.Fprintf(stdout, "Conectado a %s (organización %s) como %s (id %s), origen %s. Identidad guardada en %s.\n",
 		*pluginID, identity.Account, oneLine(identity.DisplayName), identity.ID, identity.Source, result.IdentityFile)
+	if result.Replaced != nil {
+		fmt.Fprintf(stdout, "Sustituye la identidad anterior de esa organización (id %s, origen %s).\n", result.Replaced.ID, result.Replaced.Source)
+	}
 	return integrationsExitOK
 }
 

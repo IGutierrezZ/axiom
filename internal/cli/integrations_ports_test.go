@@ -54,31 +54,44 @@ func newADOEnv(t *testing.T, block string) *adoEnv {
 
 // serveProcess programa un proceso completo: dos tipos, dos iteraciones y tres miembros.
 func (e *adoEnv) serveProcess(connection adotest.Response) {
-	e.srv.Reply("GET", adoConnectionDataRoute, connection)
-	e.srv.Reply("GET", adoTypesRoute, adotest.Response{JSON: map[string]any{"value": []map[string]any{
-		{"name": "Bug", "referenceName": "Microsoft.VSTS.WorkItemTypes.Bug"},
-		{"name": "Task", "referenceName": "Microsoft.VSTS.WorkItemTypes.Task"},
-	}}})
-	e.srv.Reply("GET", adoTypesRoute+"/Bug/states", adotest.Response{JSON: map[string]any{"value": []map[string]any{
-		{"name": "New", "category": "Proposed"}, {"name": "Active", "category": "InProgress"}, {"name": "Removed", "category": "Removed"},
-	}}})
-	e.srv.Reply("GET", adoTypesRoute+"/Task/states", adotest.Response{JSON: map[string]any{"value": []map[string]any{
-		{"name": "To Do", "category": "Proposed"},
-	}}})
-	e.srv.Reply("GET", adoTypesRoute+"/Bug/fields", adotest.Response{JSON: map[string]any{"value": []map[string]any{
-		{"referenceName": "System.Title", "name": "Title", "alwaysRequired": true},
-	}}})
-	e.srv.Reply("GET", adoTypesRoute+"/Task/fields", adotest.Response{JSON: map[string]any{"value": []map[string]any{
-		{"referenceName": "System.Title", "name": "Title", "alwaysRequired": true},
-	}}})
-	e.srv.Reply("GET", adoIterationsRoute, adotest.Response{JSON: map[string]any{"value": []map[string]any{
-		{"id": "it-1", "name": "Sprint 1", "path": `Fabrikam\Sprint 1`,
-			"attributes": map[string]any{"startDate": "2026-11-01T00:00:00Z", "finishDate": "2026-11-14T00:00:00Z", "timeFrame": "current"}},
-		{"id": "it-2", "name": "Sprint 2", "path": `Fabrikam\Sprint 2`},
-	}}})
-	e.srv.Reply("GET", adoMembersRoute, adotest.Response{JSON: map[string]any{"value": []map[string]any{
-		adoMember("abc-123", "Ana"), adoMember("def-456", "Berto"), adoMember("ghi-789", "Carla"),
-	}}})
+	for _, route := range adoProcessRoutes(connection) {
+		e.srv.Reply("GET", route.path, route.response)
+	}
+}
+
+// adoRoute es una ruta GET del servidor de prueba con su respuesta.
+type adoRoute struct {
+	path     string
+	response adotest.Response
+}
+
+// adoProcessRoutes devuelve las rutas del proceso completo: connectionData con la respuesta dada,
+// dos tipos con sus estados y campos, dos iteraciones y tres miembros.
+func adoProcessRoutes(connection adotest.Response) []adoRoute {
+	list := func(items ...map[string]any) adotest.Response {
+		return adotest.Response{JSON: map[string]any{"value": items}}
+	}
+	return []adoRoute{
+		{adoConnectionDataRoute, connection},
+		{adoTypesRoute, list(
+			map[string]any{"name": "Bug", "referenceName": "Microsoft.VSTS.WorkItemTypes.Bug"},
+			map[string]any{"name": "Task", "referenceName": "Microsoft.VSTS.WorkItemTypes.Task"},
+		)},
+		{adoTypesRoute + "/Bug/states", list(
+			map[string]any{"name": "New", "category": "Proposed"},
+			map[string]any{"name": "Active", "category": "InProgress"},
+			map[string]any{"name": "Removed", "category": "Removed"},
+		)},
+		{adoTypesRoute + "/Task/states", list(map[string]any{"name": "To Do", "category": "Proposed"})},
+		{adoTypesRoute + "/Bug/fields", list(map[string]any{"referenceName": "System.Title", "name": "Title", "alwaysRequired": true})},
+		{adoTypesRoute + "/Task/fields", list(map[string]any{"referenceName": "System.Title", "name": "Title", "alwaysRequired": true})},
+		{adoIterationsRoute, list(
+			map[string]any{"id": "it-1", "name": "Sprint 1", "path": `Fabrikam\Sprint 1`,
+				"attributes": map[string]any{"startDate": "2026-11-01T00:00:00Z", "finishDate": "2026-11-14T00:00:00Z", "timeFrame": "current"}},
+			map[string]any{"id": "it-2", "name": "Sprint 2", "path": `Fabrikam\Sprint 2`},
+		)},
+		{adoMembersRoute, list(adoMember("abc-123", "Ana"), adoMember("def-456", "Berto"), adoMember("ghi-789", "Carla"))},
+	}
 }
 
 func adoMember(id, name string) map[string]any {
@@ -600,5 +613,29 @@ func TestIntegrationsConnectAndDiscoverHelp(t *testing.T) {
 	}
 	if _, out, _ := runIntegrationsCLI(t, "", "connect", "--help"); !strings.Contains(out, "--user") || !strings.Contains(out, "integration-identities.json") {
 		t.Errorf("connect --help debe documentar --user y el fichero: %q", out)
+	}
+}
+
+func TestIntegrationsReconnectReplacesTheEntryAndSaysSo(t *testing.T) {
+	e := newADOEnv(t, adoBlock)
+	e.serveProcess(adotest.Response{Status: 401})
+	if code, out, errOut := e.run(t, "connect", "--plugin", "azure-devops", "--user", "def-456"); code != 0 || strings.Contains(out, "Sustituye") {
+		t.Fatalf("la primera conexión no sustituye nada: %d %q %q", code, out, errOut)
+	}
+	// Reconexión por connectionData: la entrada de contoso pasa a connection_data.
+	srv := adotest.NewServer(t, nil)
+	for _, route := range adoProcessRoutes(adoConnectionOK()) {
+		srv.Reply("GET", route.path, route.response)
+	}
+	adotest.Install(t, srv)
+
+	code, out, errOut := e.run(t, "connect", "--plugin", "azure-devops")
+
+	if code != 0 || errOut != "" || !strings.Contains(out, "Sustituye la identidad anterior") || !strings.Contains(out, "def-456") || !strings.Contains(out, "member_selection") {
+		t.Fatalf("reconexión: %d %q %q", code, out, errOut)
+	}
+	entry := readIdentityFile(t, e.identityPath()).Plugins["azure-devops"]["contoso"]
+	if entry.ID != "guid-1" || entry.Source != "connection_data" {
+		t.Errorf("la entrada debe pasar a connection_data: %+v", entry)
 	}
 }

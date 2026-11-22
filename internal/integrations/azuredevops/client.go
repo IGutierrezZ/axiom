@@ -115,13 +115,6 @@ type Client struct {
 	state       *orgState
 }
 
-// NewClient construye un cliente independiente (con su propio estado de organización). Es la entrada
-// pública para quien no pasa por un Plugin: las pruebas externas y los adaptadores posteriores.
-// secrets resuelve el secreto pat en cada petición.
-func NewClient(opts Options, target Target, src integrations.SecretSource) (*Client, error) {
-	return newClient(opts, target, src, &orgState{})
-}
-
 // NewClient construye un cliente ligado al estado de la organización del plugin: el ritmo, las
 // cabeceras de tasa y la caché de repositorios se comparten entre llamadas durante la vida del
 // proceso. cfg es la configuración de integrations.azure-devops. El PAT se resuelve en cada petición
@@ -134,10 +127,19 @@ func (p *Plugin) NewClient(cfg map[string]any, src integrations.SecretSource) (*
 	if err := target.validate(); err != nil {
 		return nil, err
 	}
-	return newClient(p.opts, target, src, p.session(target.Organization))
+	client, err := NewClient(p.opts, target, src)
+	if err != nil {
+		return nil, err
+	}
+	client.state = p.session(target.Organization)
+	return client, nil
 }
 
-func newClient(opts Options, target Target, src integrations.SecretSource, state *orgState) (*Client, error) {
+// NewClient construye un cliente con su propio estado de organización (ritmo, cabeceras de tasa y
+// caché de repositorios). Es la entrada pública de quien no pasa por un Plugin y la que usa
+// (*Plugin).NewClient, que además le asigna el estado compartido de la organización. src resuelve el
+// secreto pat en cada petición.
+func NewClient(opts Options, target Target, src integrations.SecretSource) (*Client, error) {
 	if src == nil {
 		return nil, fmt.Errorf("%w: falta la fuente de secretos", ErrConfig)
 	}
@@ -169,7 +171,7 @@ func newClient(opts Options, target Target, src integrations.SecretSource, state
 		clock:       opts.Clock,
 		target:      target,
 		secrets:     src,
-		state:       state,
+		state:       &orgState{},
 	}
 	if c.timeout <= 0 {
 		c.timeout = DefaultTimeout
