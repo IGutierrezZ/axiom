@@ -939,10 +939,10 @@ Si ninguna capa confirma la fusión, la rama NO se considera fusionada y `done` 
 
 ### Requirement: `done`: Seguridad y Eliminación de Worktree y Rama Local (REQ-25.17)
 
-Para cada rama cuya fusión esté confirmada por la detección por capas de REQ-25.16, `done` DEBE eliminar su worktree (`git worktree remove`), después eliminar la rama local (también cuando git no la considere fusionada, como ocurre tras un squash, porque la fusión ya está confirmada por las capas) y actualizar el registro local. Si la eliminación del worktree falla, NO DEBE eliminarse la rama. `done` DEBE rechazar la operación sobre una rama cuya fusión no esté confirmada contra el destino que corresponde a su modo (`merge_not_confirmed`, REQ-25.49, nombrando ese destino) y sobre un worktree con cambios sin confirmar (`dirty_worktree`), salvo `--force`. Con `--force`, DEBE saltarse la exigencia de fusión confirmada y la de árbol limpio, y DEBE informar en el JSON de los cambios sin confirmar descartados y, si la rama no estaba fusionada, de la punta (SHA) que tenía la rama eliminada para poder recuperarla. `done` NUNCA DEBE tocar ramas remotas ni ejecutar operaciones remotas (REQ-25.1). Si queda abierto un linaje RDD asociado al worktree, `done` DEBE emitir un aviso que nombre el linaje y la acción (`axiom review abandon`), sin impedir la operación. Cada rama del cambio, incluida la de archivado, DEBE procesarse por separado, sin selector de rol en esta versión: las confirmadas se eliminan y las no confirmadas se conservan y se reportan, y el código de salida DEBE ser distinto de cero si alguna rama no pudo procesarse.
+Para cada rama cuya fusión esté confirmada por la detección por capas de REQ-25.16, `done` DEBE eliminar su worktree (`git worktree remove`), después eliminar la rama local (también cuando git no la considere fusionada, como ocurre tras un squash, porque la fusión ya está confirmada por las capas) y actualizar el registro local. Si la eliminación del worktree falla, NO DEBE eliminarse la rama. `done` DEBE rechazar la operación sobre una rama cuya fusión no esté confirmada contra el destino que corresponde a su modo (`merge_not_confirmed`, REQ-25.49, nombrando ese destino) y sobre un worktree con cambios sin confirmar (`dirty_worktree`), salvo `--force`. El cerrojo de la compuerta que deja `axiom sdd gate record` en la carpeta del cambio o en la archivada (`.gates.lock`, un fichero vacío y sin seguimiento, REQ-27.5) NO DEBE contar como cambio sin confirmar ni aparecer en el rechazo; si es lo único sin confirmar, `done` DEBE retirar el worktree descartándolo. Un `.gates.lock` con contenido sí cuenta como cambio sin confirmar. Con `--force`, DEBE saltarse la exigencia de fusión confirmada y la de árbol limpio, y DEBE informar en el JSON de los cambios sin confirmar descartados y, si la rama no estaba fusionada, de la punta (SHA) que tenía la rama eliminada para poder recuperarla. `done` NUNCA DEBE tocar ramas remotas ni ejecutar operaciones remotas (REQ-25.1). Si queda abierto un linaje RDD asociado al worktree, `done` DEBE emitir un aviso que nombre el linaje y la acción (`axiom review abandon`), sin impedir la operación. Cada rama del cambio, incluida la de archivado, DEBE procesarse por separado, sin selector de rol en esta versión: las confirmadas se eliminan y las no confirmadas se conservan y se reportan, y el código de salida DEBE ser distinto de cero si alguna rama no pudo procesarse.
 
 En modo `in_place` no hay worktree que eliminar: `done` DEBE devolver el checkout a la rama de integración (también en modo de promoción `branch`) y, después, eliminar la rama local, y solo si el árbol está limpio. En `in_place`, `--force` solo salta la exigencia de fusión confirmada: NUNCA salta la de árbol limpio, de modo que con cambios sin confirmar `done` rechaza con `dirty_worktree` sin cambiar de rama ni eliminar nada.
-(Previously: el rechazo por fusión no confirmada no nombraba el destino ni distinguía el modo de promoción)
+(Previously: el `.gates.lock` vacío que deja `gate record` contaba como cambio sin confirmar y `done` se negaba con `dirty_worktree` tras archivar)
 
 #### Scenario: Eliminación tras una fusión confirmada
 - **DADO** una rama `feat/x` fusionada, su worktree con el árbol limpio y una rama remota `origin/feat/x`
@@ -967,6 +967,12 @@ En modo `in_place` no hay worktree que eliminar: `done` DEBE devolver el checkou
 - **CUANDO** se ejecuta `axiom branch done --change x`
 - **ENTONCES** se rechaza con `dirty_worktree`
 - **Y** el worktree y la rama local permanecen intactos
+
+#### Scenario: El cerrojo vacío de la compuerta no ensucia el árbol
+- **DADO** la rama de archivado fusionada cuyo worktree solo tiene sin confirmar el `.gates.lock` vacío de la carpeta archivada
+- **CUANDO** se ejecuta `axiom branch done --change x`
+- **ENTONCES** se eliminan el worktree y la rama local `feat/x-archive`
+- **Y** con otro fichero sin confirmar junto al cerrojo, el rechazo `dirty_worktree` nombra ese fichero y no el cerrojo
 
 #### Scenario: Rama sin fusionar impide la eliminación
 - **DADO** una rama con commits propios sin fusionar y sin evidencia, con su worktree limpio
@@ -1022,8 +1028,6 @@ En modo `in_place` no hay worktree que eliminar: `done` DEBE devolver el checkou
 - **DADO** un cambio en `in_place`, modo `branch`, con `feat/x` fusionada en `master` y el árbol limpio
 - **CUANDO** se ejecuta `axiom branch done --change x`
 - **ENTONCES** el repositorio queda desplegado en la rama de integración y se elimina la rama local `feat/x`
-
----
 
 ### Requirement: Veredicto Único de Rama, por Papel del Repositorio (REQ-25.18)
 

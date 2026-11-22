@@ -57,3 +57,47 @@ func TestDoneOnTheArchiveBranchRefusesWithAPendingIntegrationsQueueAndProceedsOn
 		t.Fatal("la rama de archivado se elimina cuando no queda cola")
 	}
 }
+
+// REQ-25.17: el cerrojo vacío que deja `gate record` (`.gates.lock`) es estado local sin datos; no
+// cuenta como árbol sucio, así que `done` retira la rama de archivado aunque siga ahí. Cualquier
+// otro fichero sin confirmar sigue bloqueando, y el rechazo no nombra el cerrojo.
+func TestDoneOnTheArchiveBranchIgnoresTheLocalGatesLock(t *testing.T) {
+	repo := embeddedCoreProject(t)
+	wantReady(t, ensureWith(t, hubWorktree, EnsureRequest{CWD: repo, Change: "x"}))
+	worktree := plannedWorktree(t, repo, "x", filepath.Base(repo))
+	writeFile(t, filepath.Join(worktree, "cambio.txt"), "trabajo del cambio\n")
+	runGit(t, worktree, "add", "-A")
+	commit(t, worktree, "trabajo del cambio")
+	mergeInto(t, repo, "feat/x")
+	runGit(t, repo, "branch", "feat/x-archive", "main")
+	archive := archiveWorktree(t, repo)
+	runGit(t, repo, "worktree", "add", "-q", archive, "feat/x-archive")
+	archived := filepath.Join(archive, "openspec", "changes", "archive", "2026-11-22-x")
+	writeFile(t, filepath.Join(archived, "proposal.md"), "propuesta\n")
+	runGit(t, archive, "add", "-A")
+	commit(t, archive, "archivado")
+	mergeInto(t, repo, "feat/x-archive")
+	writeFile(t, filepath.Join(archived, ".gates.lock"), "")
+	other := filepath.Join(archived, "notas.md")
+	writeFile(t, other, "sin confirmar\n")
+
+	refused := doneOf(t, doneRequest(repo))
+	kept := branchByName(t, onlyRepository(t, refused), "feat/x-archive")
+	wantOutcome(t, kept, branch.OutcomeKept, "", branch.CodeDirtyWorktree)
+	if !strings.Contains(kept.Message, "notas.md") || strings.Contains(kept.Message, ".gates.lock") {
+		t.Errorf("el rechazo nombra solo el fichero con datos: %q", kept.Message)
+	}
+
+	if err := os.Remove(other); err != nil {
+		t.Fatal(err)
+	}
+	result := doneOf(t, doneRequest(repo))
+	wantReady(t, result)
+	wantOutcome(t, branchByName(t, onlyRepository(t, result), "feat/x-archive"), branch.OutcomeRemoved, branch.LayerAncestry, "")
+	if branchExists(t, repo, "feat/x-archive") {
+		t.Fatal("la rama de archivado se elimina aunque quede el cerrojo local")
+	}
+	if _, err := os.Stat(archive); !os.IsNotExist(err) {
+		t.Fatalf("el worktree de archivado se retira del disco: %v", err)
+	}
+}
