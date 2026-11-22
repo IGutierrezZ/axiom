@@ -124,6 +124,9 @@ COMANDOS DE GOBERNANZA Y WORKSPACE:
   branch status        Muestra el estado de las ramas y worktrees de un cambio (solo lectura; --change, --json)
   branch done          Elimina el worktree y la rama local de un cambio ya fusionado (--change, --force, --fetch, --json)
   branch guard         Hook de los runtimes: bloquea los documentos de Axiom en la rama equivocada (--agent)
+  integrations sync    Reintenta las entregas pendientes a los trackers configurados en axiom.yaml (--change, --json)
+  integrations emit    Emite a mano un evento del ciclo de vida de un cambio a los plugins configurados (--change, --event)
+  integrations secret  Guarda (set, solo por stdin), consulta (status) o borra (delete) un secreto de integración
   project list        Lista los proyectos registrados en el Hub global (~/.axiom/workspaces.json)
   project switch       Conmuta el proyecto activo por defecto
   project add          Registra un proyecto existente en el Hub
@@ -319,6 +322,9 @@ func main() {
 
 	case "branch":
 		os.Exit(cli.RunBranch(os.Args[2:], os.Stdout, os.Stderr))
+
+	case "integrations":
+		os.Exit(cli.RunIntegrations(os.Args[2:], os.Stdin, os.Stdout, os.Stderr))
 
 	case "workspace":
 

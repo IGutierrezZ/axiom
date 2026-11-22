@@ -442,3 +442,54 @@ func TestStatusWarnsAboutSiblingRepositoryPathsWithoutDotDot(t *testing.T) {
 		wantNotContains(t, "notes", status.Notes, "tasks.md cita")
 	})
 }
+
+// REQ-43.20: un bloque `integrations:` inválido no bloquea el archivado. `invalidDeclarationErrors`
+// solo reúne la lectura de YAML, la baseline retirada y technical_context, como `git:`, `workflow:`
+// y `sdd:`; el error de integraciones lo reportan `workspace validate` y los verbos de integración.
+func TestArchiveNotBlockedByAnInvalidIntegrationsBlock(t *testing.T) {
+	ws := embeddedChange(t, "integrations:\n  azure:\n    project: p\n", "", tasksDone)
+	status := resolveWithInstructions(t, ws.Master, "demo")
+	if status.Dependencies.Archive != DependencyReady || status.NextRecommended != "archive" {
+		t.Fatalf("archive = %q next = %q: integrations inválido no bloquea el archivado", status.Dependencies.Archive, status.NextRecommended)
+	}
+	if len(status.BlockedReasons) != 0 {
+		t.Fatalf("blockedReasons = %v, se esperaba vacío", status.BlockedReasons)
+	}
+	wantNotContains(t, "notes", status.Notes, "La declaración de axiom.yaml no es válida")
+
+	declarations := workspace.Declarations{IntegrationsErr: errors.New("plugin desconocido 'azure'")}
+	if lines := invalidDeclarationErrors(declarations); len(lines) != 0 {
+		t.Fatalf("invalidDeclarationErrors no cambia con IntegrationsErr: %v", lines)
+	}
+}
+
+// REQ-21.18 (MODIFIED): la cola de integraciones `.integrations-outbox.yaml` de la raíz de una
+// carpeta archivada es estado local: no cambia la entrada archivada de un cambio ni su proyección.
+func TestArchivedOutboxDoesNotChangeTheArchivedProjection(t *testing.T) {
+	project := func(withOutbox bool) (Status, string, []string) {
+		root := t.TempDir()
+		folder := filepath.Join(root, "openspec", "changes", "archive", "2026-11-19-x")
+		workspacetest.WriteFile(t, filepath.Join(folder, "proposal.md"), "# x\n")
+		if withOutbox {
+			workspacetest.WriteFile(t, filepath.Join(folder, ".integrations-outbox.yaml"), "schema: axiom.integrations-outbox/v1\nchange: x\n")
+		}
+		entry, ok := newestArchivedOpenSpecEntry(root, "x")
+		if !ok {
+			t.Fatal("la entrada archivada debe resolverse")
+		}
+		active, err := listActiveOpenSpecChanges(root)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return archivedOpenSpecStatus(root, "x", entry, false), entry, active
+	}
+	without, entryWithout, activeWithout := project(false)
+	with, entryWith, activeWith := project(true)
+	if entryWith != entryWithout || len(activeWith) != 0 || len(activeWithout) != 0 {
+		t.Fatalf("entrada %q/%q, activos %v/%v", entryWith, entryWithout, activeWith, activeWithout)
+	}
+	if with.Archived == nil || without.Archived == nil || with.Archived.Path != without.Archived.Path ||
+		with.Dependencies != without.Dependencies || with.ApplyState != without.ApplyState || with.NextRecommended != without.NextRecommended {
+		t.Fatalf("la proyección archivada no cambia:\n%+v\n%+v", with, without)
+	}
+}

@@ -24,6 +24,7 @@
    - [Carril de Trabajo (`workflow:`)](#carril-de-trabajo-workflow)
    - [Aviso de Cambio Grande (`delivery:`)](#aviso-de-cambio-grande-delivery)
    - [Modo ISO y Perfil de Bug (`sdd:`)](#modo-iso-y-perfil-de-bug-sdd)
+   - [Integraciones con Trackers (`integrations:`)](#integraciones-con-trackers-integrations)
 7. [Gobernanza de Skills y Autoskills](#7-gobernanza-de-skills-y-autoskills)
    - [Flujo Human-in-the-Loop](#flujo-human-in-the-loop)
    - [Uso por CLI y por Web UI](#uso-por-cli-y-por-web-ui)
@@ -431,6 +432,25 @@ Motivo: el defecto estaba en el script de despliegue, no en un requisito.
 ```
 
 `Observado:` y `Esperado:` son obligatorias y `Referencia:` es opcional. La ruta sin impacto exige la línea literal `Sin impacto en la spec` y un `Motivo:` no vacío; en un cambio ISO ese motivo es la evidencia, y la matriz ausente o vacía es válida. Una declaración incompleta mantiene abierta la fase de specs con `blocked(bug_report_incomplete)` o `blocked(bug_no_impact_incomplete)`.
+
+### Integraciones con Trackers (`integrations:`)
+
+`axiom.yaml` puede declarar un bloque opcional `integrations:` para conectar los cambios con un tracker externo mediante plugins de integración. Como `git:` o `sdd:`, es política versionada que comparte todo el equipo:
+
+```yaml
+integrations:
+  <plugin>:          # identificador del catálogo de plugins
+    enabled: true    # reservada: true por defecto; con false el plugin queda desactivado
+    <clave>: <valor> # solo las claves que fija el manifiesto del plugin, con su tipo
+```
+
+- **Catálogo cerrado de plugins.** Solo se admiten los plugins que el binario trae compilados, cada uno con su manifiesto (identificador, capacidades, eventos, claves de configuración, secretos e identidad). El catálogo está vacío en esta versión: el primer adaptador real llega con C-07-c, así que declarar cualquier plugin es un error de carga. `integrations: {}` es válido y no configura nada.
+- **Validación estricta.** Un bloque nulo o que no es un mapeo, un plugin desconocido, una clave desconocida, una clave repetida, un tipo incorrecto, un valor fuera del enumerado y una clave obligatoria ausente (salvo con `enabled: false`) son errores de carga con su línea y las alternativas admitidas. `axiom workspace validate` los rechaza con salida `1`; un bloque inválido nunca bloquea el archivado ni impide planificar ramas, pero los verbos de compuerta avisan por stderr y no despachan.
+- **Secretos.** Los secretos nunca se escriben en `axiom.yaml`: una clave de secreto es una clave desconocida y su valor jamás se imprime. Se guardan en el almacén de secretos del sistema con `axiom integrations secret set --plugin <id> --name <secreto>` (el valor entra solo por stdin, nunca como argumento) o se aportan en la variable de entorno `AXIOM_INTEGRATION_<PLUGIN>_<SECRETO>` (identificador del plugin en mayúsculas con `-` convertido en `_`), que gana al almacén. No hay respaldo en un fichero en texto plano. El almacén del sistema solo existe en Windows (Credential Manager) y macOS (llavero); en Linux y en cualquier otro sistema el único almacén es la variable de entorno: `secret set` se niega con un error que lo explica y `secret status` informa `env` o `missing`.
+- **Eventos y estado local.** Los plugins escuchan los eventos del ciclo de vida del cambio: `gate.spec.approved`, `gate.design.approved` y `role.apply.approved` (al aprobar las compuertas con `axiom sdd gate record`), `role.start` (con `axiom branch ensure --role <rol>`) y `archive` (con `axiom sdd publish --archive`). Cada entrega se encola antes de intentarse en `.integrations-outbox.yaml`, un fichero local con punto que `axiom sdd publish` nunca confirma y que se borra al quedar vacío; los vínculos devueltos por el tracker se guardan en `integrations.yaml`, un documento versionado del cambio. La entrega es al menos una vez con clave de idempotencia estable. Si una entrega falla, el verbo de origen sale igual con su resultado de siempre y avisa por stderr; la operación queda pendiente.
+- **Verbos.** `axiom integrations sync` reintenta lo pendiente (`--retry-abandoned` reactiva lo abandonado y `--discard <clave>` retira una operación), `axiom integrations emit` emite a mano un evento y `axiom integrations secret set|status|delete` gestiona el ciclo de vida de un secreto.
+- Sin el bloque, con `integrations: {}` o sin plugins activos que escuchen el evento, ningún verbo lee ni escribe estos ficheros: el coste es cero.
+- Los binarios anteriores ignoran el bloque, como el de `git:`.
 
 ---
 

@@ -67,7 +67,7 @@ Banderas:
   --json              Imprime el resultado como axiom.branch-result/v1
 `
 
-const branchEnsureHelp = `Uso: axiom branch ensure --change <nombre> [--lane sdd|odd] [--mode worktree|in_place] [--prefix <prefijo>] [--branch <rama>] [--base <ref>] [--repo <ruta>]... [--promotion <modo>]... [--archive] [--fetch] [--cwd <ruta>] [--json]
+const branchEnsureHelp = `Uso: axiom branch ensure --change <nombre> [--lane sdd|odd] [--mode worktree|in_place] [--prefix <prefijo>] [--branch <rama>] [--base <ref>] [--repo <ruta>]... [--promotion <modo>]... [--archive] [--role <rol>] [--fetch] [--cwd <ruta>] [--json]
 
 Crea lo que falta de las ramas de un cambio y de sus worktrees. En cada repositorio del
 plan crea la rama del cambio (<prefijo>/<cambio>; con dos o más roles sobre el mismo
@@ -156,6 +156,13 @@ repositorio de specs, y en el carril odd, que no archiva, rechaza con archive_br
 No toca las ramas del cambio ni las de rol, reutiliza el modo registrado del cambio (también la
 respuesta a ask) y es idempotente; registra la rama con tipo archive y nunca la publica.
 
+--role <rol> arranca un rol del roster sellado del cambio: se valida antes de crear nada y, si el rol
+no es válido, rechaza sin efectos con plan_conflict (con --archive), role_not_applicable (carril odd),
+kickoff_not_sealed (sin kickoff.yaml sellado) o role_not_in_roster (rol fuera del roster, que
+lista). Con un ensure listo emite el evento role.start a los plugins de integración configurados
+(axiom.yaml, bloque integrations:); si la entrega falla, ensure sale igual con su resultado de
+siempre y avisa por stderr. Sin --role nada cambia, y el JSON es idéntico con y sin la bandera.
+
 Guarda el plan en un registro local por cambio, dentro del git common dir del repositorio
 del proyecto (<git common dir>/axiom/branch/v1/<carril>/<cambio>.json), que solo se
 reescribe si cambia su contenido: es estado local derivado y no se versiona. Si lo borras,
@@ -180,6 +187,7 @@ Banderas:
   --promotion branch|release|<repo>=branch|release
                       Modo de promoción de un repositorio de dos etapas; es la respuesta a decision_required; repetible
   --archive           Crea la rama de archivado del cambio ya fusionado; solo admite --prefix, --mode, --fetch, --cwd y --json
+  --role <rol>        Rol del roster sellado que arranca: tras un ensure listo emite role.start a las integraciones configuradas
   --fetch           Ejecuta git fetch origin en cada repositorio del plan antes de resolver la base
   --cwd <ruta>        Directorio de partida (por defecto, el directorio de trabajo del proceso)
   --json              Imprime el resultado como axiom.branch-result/v1
@@ -234,6 +242,7 @@ func runBranchEnsure(args []string, stdout, stderr io.Writer) int {
 	var promotionValues branchRepeatedFlag
 	flags.Var(&promotionValues, "promotion", "modo de promoción: branch, release, <repo>=branch o <repo>=release; repetible")
 	archive := flags.Bool("archive", false, "crea la rama de archivado del cambio ya fusionado")
+	role := flags.String("role", "", "rol del roster sellado que arranca: emite role.start a las integraciones")
 	cwd := flags.String("cwd", ".", "directorio de partida")
 	asJSON := flags.Bool("json", false, "imprime el resultado como axiom.branch-result/v1")
 	if err := flags.Parse(args); err != nil {
@@ -268,7 +277,7 @@ func runBranchEnsure(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintf(stderr, "Error: --mode '%s' no es válido: usa worktree o in_place (ask es una preferencia del hub, no una respuesta). Ejecuta `axiom branch ensure --help`.\n", *mode)
 		return branch.ExitUsage
 	}
-	if blank := branchBlankFlag(flags, "prefix", "branch", "base", "repo"); blank != "" {
+	if blank := branchBlankFlag(flags, "prefix", "branch", "base", "repo", "role"); blank != "" {
 		fmt.Fprintf(stderr, "Error: --%s no puede estar vacío: indica un valor o quita la bandera. Ejecuta `axiom branch ensure --help`.\n", blank)
 		return branch.ExitUsage
 	}
@@ -294,12 +303,24 @@ func runBranchEnsure(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintf(stderr, "Error: no se pudo resolver --cwd '%s' (%v). Indica una ruta absoluta con `axiom branch ensure --change <nombre> --cwd <ruta>`.\n", *cwd, err)
 		return branch.ExitUsage
 	}
+	roleGiven := strings.TrimSpace(*role) != ""
+	if roleGiven {
+		*role = canonicalEnsureRole(*role)
+		// Rechazo tipado y sin efectos, antes de llamar al motor (REQ-43.24, D-13).
+		if refusal := validateEnsureRole(dir, *change, branch.Lane(*lane), *archive, *role); refusal != nil {
+			return writeBranchResult(branch.NewResult("ensure").Refused(refusal), *asJSON, stdout, stderr)
+		}
+	}
 	result := engine.Default().Ensure(context.Background(), engine.EnsureRequest{
 		CWD: dir, Change: *change, Lane: branch.Lane(*lane), Fetch: *fetch, Mode: branch.Mode(*mode),
 		Exceptions: branch.Exceptions{Prefix: *prefix, Branch: *branchName, Base: *base}, Repos: repos, Archive: *archive,
 		Promotions: promotions,
 	})
-	return writeBranchResult(result, *asJSON, stdout, stderr)
+	code := writeBranchResult(result, *asJSON, stdout, stderr)
+	if roleGiven {
+		emitEnsureRoleStart(dir, result, *change, *role)
+	}
+	return code
 }
 
 func runBranchStatus(args []string, stdout, stderr io.Writer) int {

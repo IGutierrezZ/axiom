@@ -586,3 +586,32 @@ func TestDeclaresCountsSDD(t *testing.T) {
 		t.Errorf("--force no debe perder sdd:\n%s", got)
 	}
 }
+
+// REQ-43.20: `integrations:` también es una declaración que la regeneración perdería, sea válida o
+// inválida (con el catálogo vacío de esta versión, cualquier plugin declarado es un error de carga).
+func TestDeclaresCountsIntegrations(t *testing.T) {
+	for name, declarations := range map[string]workspace.Declarations{
+		"integrations valido":   {Integrations: &workspace.IntegrationsConfig{}},
+		"integrations invalido": {IntegrationsErr: errors.New("plugin desconocido 'azure'")},
+	} {
+		t.Run(name, func(t *testing.T) {
+			if !(ownMarkers{declarations: declarations}).declares() {
+				t.Errorf("declares() debe contar integrations: %+v", declarations)
+			}
+		})
+	}
+}
+
+// REQ-43.20: `init --force` conserva el bloque `integrations:` del axiom.yaml existente.
+func TestInitForceKeepsIntegrationsBlock(t *testing.T) {
+	dir := t.TempDir()
+	configPath := filepath.Join(dir, "axiom.yaml")
+	config := initEmbeddedConfig + "integrations:\n  azure:\n    project: p\n"
+	workspacetest.WriteFile(t, configPath, config)
+	if _, err := newInitSandbox(t).initializer.Init(InitOptions{Path: dir, Name: "Nuevo", Force: true}); err != nil {
+		t.Fatalf("Init --force = %v", err)
+	}
+	if got := readFile(t, configPath); got != config {
+		t.Errorf("--force no debe perder integrations:\n%s", got)
+	}
+}

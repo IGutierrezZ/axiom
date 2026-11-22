@@ -153,6 +153,7 @@ func runSDDGateRecord(args []string, stdout io.Writer) error {
 		return err
 	}
 	emitActorIdentityWarning(actorWarning)
+	emitGateIntegrationEvent(loc, changeRoot, record)
 
 	// REQ-27.12: aprobar publica, pero `gate record` solo registra. Calcula (sin ejecutar) la orden de
 	// `axiom sdd publish` que sigue al registro, para que el orquestador la ejecute una vez.

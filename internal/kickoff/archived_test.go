@@ -3,6 +3,7 @@ package kickoff
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -105,4 +106,88 @@ func TestRefuseArchivedRootRejectsAbsolutePathOutsideWorkspace(t *testing.T) {
 	if err := RefuseArchivedRoot(workspaceRoot, changeRoot); err == nil {
 		t.Fatal("RefuseArchivedRoot() = nil, se esperaba rechazo por contencion (ruta absoluta fuera del workspace)")
 	}
+}
+
+// MODIFIED REQ-21.18 y REQ-43.28: la guarda hermana autoriza bajo archive/ solo la cola de
+// integraciones (y sus temporales) en la raíz exacta de una carpeta archivada.
+func TestRefuseArchivedWriteExceptLocalState(t *testing.T) {
+	workspaceRoot := t.TempDir()
+	changeRoot := filepath.Join(workspaceRoot, "openspec", "changes", "x")
+	archiveDir := filepath.Join(workspaceRoot, "openspec", "changes", "archive")
+	archived := filepath.Join(archiveDir, "2026-11-19-x")
+
+	tests := []struct {
+		name       string
+		changeRoot string
+		file       string
+		wantErr    bool
+	}{
+		{"carpeta ordinaria delega y acepta cualquier nombre simple", changeRoot, "integrations.yaml", false},
+		{"carpeta ordinaria acepta la cola", changeRoot, IntegrationsOutboxFile, false},
+		{"raíz archivada con la cola", archived, ".integrations-outbox.yaml", false},
+		{"raíz archivada con un temporal de la cola", archived, ".integrations-outbox-123456.yaml", false},
+		{"raíz archivada con integrations.yaml", archived, "integrations.yaml", true},
+		{"raíz archivada con gates.yaml", archived, "gates.yaml", true},
+		{"raíz archivada con .gates.lock", archived, ".gates.lock", true},
+		{"raíz archivada con otro fichero con punto", archived, ".otro", true},
+		{"raíz archivada con un temporal de integrations.yaml", archived, ".integrations-123.yaml", true},
+		{"temporal sin sufijo yaml", archived, ".integrations-outbox-123.tmp", true},
+		{"temporal vacío", archived, ".integrations-outbox-.yaml", true},
+		{"subcarpeta de la archivada", filepath.Join(archived, "specs"), ".integrations-outbox.yaml", true},
+		{"subcarpeta anidada profunda", filepath.Join(archived, "specs", "a"), ".integrations-outbox.yaml", true},
+		{"archive sin carpeta de cambio", archiveDir, ".integrations-outbox.yaml", true},
+		{"carpeta archivada sin fecha", filepath.Join(archiveDir, "x"), ".integrations-outbox.yaml", true},
+		{"carpeta archivada con fecha incompleta", filepath.Join(archiveDir, "2026-11-x"), ".integrations-outbox.yaml", true},
+		{"nombre con separador", archived, "sub/.integrations-outbox.yaml", true},
+		{"nombre con separador de Windows", archived, `sub\.integrations-outbox.yaml`, true},
+		{"nombre con ..", archived, "..", true},
+		{"nombre con ../", archived, "../.integrations-outbox.yaml", true},
+		{"nombre vacío", archived, "", true},
+		{"nombre con separador en carpeta ordinaria", changeRoot, "../integrations.yaml", true},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			err := RefuseArchivedWriteExceptLocalState(workspaceRoot, tc.changeRoot, tc.file)
+			if (err != nil) != tc.wantErr {
+				t.Fatalf("RefuseArchivedWriteExceptLocalState(%q, %q) = %v, wantErr %v", tc.changeRoot, tc.file, err, tc.wantErr)
+			}
+		})
+	}
+
+	t.Run("el rechazo en la archivada lleva el mensaje de REQ-21.18", func(t *testing.T) {
+		want := RefuseArchivedRoot(workspaceRoot, archived)
+		if want == nil {
+			t.Fatal("RefuseArchivedRoot debe rechazar la carpeta archivada")
+		}
+		for _, file := range []string{"integrations.yaml", "gates.yaml", ".gates.lock"} {
+			got := RefuseArchivedWriteExceptLocalState(workspaceRoot, archived, file)
+			if got == nil || got.Error() != want.Error() {
+				t.Errorf("%s: error = %v, se esperaba el mensaje de REQ-21.18 %q", file, got, want)
+			}
+		}
+		if err := RefuseArchivedWriteExceptLocalState(workspaceRoot, archiveDir, IntegrationsOutboxFile); err == nil || !strings.Contains(err.Error(), "REQ-21.18") {
+			t.Errorf("archive/ sin carpeta de cambio debe llevar REQ-21.18: %v", err)
+		}
+	})
+
+	t.Run("una raíz fuera del workspace se rechaza", func(t *testing.T) {
+		if err := RefuseArchivedWriteExceptLocalState(workspaceRoot, t.TempDir(), IntegrationsOutboxFile); err == nil {
+			t.Fatal("una carpeta fuera del workspace se rechaza como en RefuseArchivedRoot")
+		}
+	})
+
+	t.Run("RefuseArchivedRoot queda intacta", func(t *testing.T) {
+		if err := RefuseArchivedRoot(workspaceRoot, archived); err == nil {
+			t.Fatal("RefuseArchivedRoot sigue rechazando toda carpeta archivada")
+		}
+		if err := RefuseArchivedRoot(workspaceRoot, changeRoot); err != nil {
+			t.Fatalf("RefuseArchivedRoot sigue aceptando la ordinaria: %v", err)
+		}
+	})
+
+	t.Run("IntegrationsOutboxFile es el único literal", func(t *testing.T) {
+		if IntegrationsOutboxFile != ".integrations-outbox.yaml" {
+			t.Fatalf("IntegrationsOutboxFile = %q", IntegrationsOutboxFile)
+		}
+	})
 }

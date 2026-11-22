@@ -190,7 +190,7 @@ func (p *Publisher) Run(ctx context.Context, req Request) Result {
 		if req.Archive {
 			message = fmt.Sprintf(commitMessageArchive, req.Change)
 		}
-		sha, err := p.Git.Commit(ctx, dir, message, slices.Sorted(mapKeys(roots)), []string{set.LocalStateGlob()})
+		sha, err := p.Git.Commit(ctx, dir, message, slices.Sorted(mapKeys(roots)), set.LocalStateGlobs())
 		if err != nil {
 			var failure *CommandError
 			if !errors.As(err, &failure) {

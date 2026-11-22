@@ -41,6 +41,8 @@ type Declarations struct {
 	SDDErr              error
 	Delivery            *DeliveryConfig // lo declarado en `delivery:`, sin defectos; nil sin bloque o con bloque inválido
 	DeliveryErr         error
+	Integrations        *IntegrationsConfig // lo declarado en `integrations:`; nil sin bloque o con bloque inválido (REQ-43.19)
+	IntegrationsErr     error
 	Repositories        []RepositoryPolicy // lo declarado en `repositories:`; nil sin bloque, sin entradas o con bloque inválido (REQ-25.27)
 	RepositoriesErr     error
 }
@@ -93,6 +95,9 @@ func readDeclarationBlocks(document *yaml.Node, displacement string) Declaration
 	}
 	if node, ok := mappingValue(root, "delivery"); ok {
 		declarations.Delivery, declarations.DeliveryErr = decodeDelivery(node)
+	}
+	if node, ok := mappingValue(root, "integrations"); ok {
+		declarations.Integrations, declarations.IntegrationsErr = decodeIntegrations(node)
 	}
 	if node, ok := mappingValue(root, "repositories"); ok {
 		declarations.Repositories, declarations.RepositoriesErr = decodeRepositories(node)

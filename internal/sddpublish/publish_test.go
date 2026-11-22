@@ -799,3 +799,109 @@ func TestPublishDeclaredMaintainedPathsAreDocumentation(t *testing.T) {
 		t.Errorf("reference y lo no declarado quedan sin seguimiento:\n%s", status)
 	}
 }
+
+// archiveBranchWithOutbox deja el cambio x movido a su carpeta archivada, en la rama de archivado, con
+// la cola de integraciones y un temporal de su escritura atómica sin seguimiento en la raíz de esa
+// carpeta (MODIFIED REQ-27.5).
+func archiveBranchWithOutbox(t *testing.T) (repo, archived string) {
+	t.Helper()
+	repo, _ = newMonorepo(t)
+	runGit(t, repo, "switch", "-q", "main")
+	runGit(t, repo, "switch", "-q", "-c", "feat/x-archive")
+	changes := filepath.Join(repo, "openspec", "changes")
+	if err := os.MkdirAll(filepath.Join(changes, "archive"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	archived = filepath.Join(changes, "archive", "2026-11-19-x")
+	if err := os.Rename(filepath.Join(changes, "x"), archived); err != nil {
+		t.Fatal(err)
+	}
+	writeFile(t, filepath.Join(archived, ".integrations-outbox.yaml"), "schema: axiom.integrations-outbox/v1\n")
+	writeFile(t, filepath.Join(archived, ".integrations-outbox-7.yaml"), "temporal\n")
+	return repo, archived
+}
+
+// MODIFIED REQ-27.5: `publish --archive` no confirma la cola archivada, también cuando la carpeta
+// archivada sí tiene documentación sucia que confirmar, y una publicación repetida con la cola
+// pendiente no la confirma tampoco.
+func TestPublishArchiveExcludesArchivedOutbox(t *testing.T) {
+	repo, archived := archiveBranchWithOutbox(t)
+	rel := "openspec/changes/archive/2026-11-19-x/"
+
+	result := run(t, repo, Request{Archive: true})
+
+	wantPublished(t, result)
+	got := commitFiles(t, repo, "HEAD")
+	for _, local := range []string{".integrations-outbox.yaml", ".integrations-outbox-7.yaml"} {
+		if slices.Contains(got, rel+local) {
+			t.Errorf("el commit de archivado no debe contener %s: %v", local, got)
+		}
+	}
+	if !slices.Contains(got, rel+"proposal.md") {
+		t.Errorf("el commit de archivado debe contener la documentación archivada: %v", got)
+	}
+	status := runGit(t, repo, "status", "--porcelain", "--untracked-files=all")
+	for _, local := range []string{".integrations-outbox.yaml", ".integrations-outbox-7.yaml"} {
+		if !strings.Contains(status, "?? "+rel+local) {
+			t.Errorf("%s debe seguir sin seguimiento:\n%s", local, status)
+		}
+	}
+
+	// Una publicación repetida con la cola aún pendiente no la confirma: no hay nada que publicar.
+	head := runGit(t, repo, "rev-parse", "HEAD")
+	second := run(t, repo, Request{Archive: true})
+	if second.Status != StatusUpToDate || second.Commit != nil {
+		t.Fatalf("segunda publicación = %+v, se esperaba up_to_date sin commit", second)
+	}
+	if runGit(t, repo, "rev-parse", "HEAD") != head {
+		t.Error("la segunda publicación no debe crear ningún commit")
+	}
+
+	// Aunque se añada documentación nueva, el commit siguiente sigue sin llevarse la cola.
+	writeFile(t, filepath.Join(archived, "specs", ".nota"), "nota\n")
+	third := run(t, repo, Request{Archive: true})
+	wantPublished(t, third)
+	if files := commitFiles(t, repo, "HEAD"); !reflect.DeepEqual(files, []string{rel + "specs/.nota"}) {
+		t.Errorf("el tercer commit contiene %v, solo la nota con punto anidado", files)
+	}
+}
+
+// REQ-43.9: `integrations.yaml` (sin punto) es documentación del cambio y `publish` la confirma como
+// cualquier otro documento; fija la regla de clasificación que ya cumple `docpaths`.
+func TestPublishCommitsIntegrationsLinks(t *testing.T) {
+	repo, _ := newMonorepo(t)
+	folder := filepath.Join(repo, "openspec", "changes", "x")
+	writeFile(t, filepath.Join(folder, "integrations.yaml"), "schema: axiom.integrations/v1\nchange: x\n")
+
+	result := run(t, repo, Request{})
+
+	wantPublished(t, result)
+	if want := []string{"openspec/changes/x/integrations.yaml"}; !reflect.DeepEqual(commitFiles(t, repo, "HEAD"), want) || !reflect.DeepEqual(result.Commit.Paths, want) {
+		t.Errorf("el commit contiene %v (resultado %v), se esperaba %v", commitFiles(t, repo, "HEAD"), result.Commit.Paths, want)
+	}
+}
+
+// REQ-43.8: la cola de integraciones y los temporales de su escritura atómica (y los de
+// `integrations.yaml`) son estado local con punto en la raíz de la carpeta del cambio: nunca se
+// confirman, aunque haya documentación sucia en la misma carpeta.
+func TestPublishExcludesIntegrationsOutbox(t *testing.T) {
+	repo, _ := newMonorepo(t)
+	folder := filepath.Join(repo, "openspec", "changes", "x")
+	writeFile(t, filepath.Join(folder, "integrations.yaml"), "schema: axiom.integrations/v1\nchange: x\n")
+	writeFile(t, filepath.Join(folder, ".integrations-outbox.yaml"), "schema: axiom.integrations-outbox/v1\n")
+	writeFile(t, filepath.Join(folder, ".integrations-outbox-42.yaml"), "temporal de la cola\n")
+	writeFile(t, filepath.Join(folder, ".integrations-7.yaml"), "temporal de los vínculos\n")
+
+	result := run(t, repo, Request{})
+
+	wantPublished(t, result)
+	if want := []string{"openspec/changes/x/integrations.yaml"}; !reflect.DeepEqual(commitFiles(t, repo, "HEAD"), want) {
+		t.Errorf("el commit contiene %v, se esperaba solo %v", commitFiles(t, repo, "HEAD"), want)
+	}
+	status := runGit(t, repo, "status", "--porcelain", "--untracked-files=all")
+	for _, local := range []string{".integrations-outbox.yaml", ".integrations-outbox-42.yaml", ".integrations-7.yaml"} {
+		if !strings.Contains(status, "?? openspec/changes/x/"+local) {
+			t.Errorf("%s debe seguir sin seguimiento:\n%s", local, status)
+		}
+	}
+}

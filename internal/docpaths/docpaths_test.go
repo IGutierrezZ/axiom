@@ -112,7 +112,7 @@ func TestDocPathsLocalState(t *testing.T) {
 		"openspec/changes/x/gates.yaml":                     false,
 		"openspec/changes/x/specs/.hidden":                  false,
 		"openspec/changes/y/.gates.lock":                    false,
-		"openspec/changes/archive/2026-01-01-x/.gates.lock": false,
+		"openspec/changes/archive/2026-01-01-x/.gates.lock": true, // MODIFIED REQ-27.5: estado local del cambio archivado
 		".gates.lock": false,
 	}
 	for rel, want := range cases {
@@ -120,8 +120,49 @@ func TestDocPathsLocalState(t *testing.T) {
 			t.Errorf("LocalState(%q) = %v, se esperaba %v", rel, got, want)
 		}
 	}
-	if got, want := set.LocalStateGlob(), "openspec/changes/x/.*"; got != want {
-		t.Errorf("LocalStateGlob = %q, se esperaba %q", got, want)
+}
+
+// MODIFIED REQ-27.5: un fichero con punto directamente en la raíz de la carpeta archivada del cambio
+// es estado local; el anidado, el de otro cambio y el de una carpeta que no es archivada, no.
+func TestLocalStateArchivedRoot(t *testing.T) {
+	set := mustNew(t, "openspec", "x", nil, nil)
+	cases := map[string]bool{
+		"openspec/changes/archive/2026-11-19-x/.integrations-outbox.yaml":     true,  // raíz archivada del cambio
+		"openspec/changes/archive/2026-11-19-x/.integrations-outbox-123.yaml": true,  // temporal de escritura atómica
+		"openspec/changes/x/.integrations-outbox.yaml":                        true,  // raíz ordinaria, como hoy
+		"openspec/changes/archive/2026-11-19-x/specs/.nota":                   false, // anidado: sigue siendo documentación
+		"openspec/changes/archive/2026-11-19-x/.dir/fichero":                  false, // dentro de una carpeta con punto
+		"openspec/changes/archive/2026-11-01-y/.x":                            false, // carpeta archivada de otro cambio
+		"openspec/changes/archive/2026-11-19-x-y/.x":                          false, // nombre que solo empieza igual
+		"openspec/changes/archive/x/.x":                                       false, // sin fecha
+		"openspec/changes/archive/.x":                                         false, // archive sin carpeta de cambio
+		"openspec/changes/archive/2026-11-19-x/integrations.yaml":             false, // sin punto: documentación
+		"openspec/changes/archive/2026-11-19-x":                               false, // la carpeta misma
+		"openspec/changes/archive/2026-11-19-x/":                              false,
+		"openspec/changes/archive/2026-11-19-x/.gates.lock/":                  false,
+		"openspec/specs/.x":                                                   false,
+	}
+	for rel, want := range cases {
+		if got := set.LocalState(rel); got != want {
+			t.Errorf("LocalState(%q) = %v, se esperaba %v", rel, got, want)
+		}
+	}
+
+	want := []string{
+		"openspec/changes/x/.*",
+		"openspec/changes/archive/[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]-x/.*",
+	}
+	if got := set.LocalStateGlobs(); !reflect.DeepEqual(got, want) {
+		t.Errorf("LocalStateGlobs = %v, se esperaba %v", got, want)
+	}
+
+	// Una raíz de planning vacía (repositorio de specs de un multirepo) cuelga de changes/ sin prefijo.
+	root := mustNew(t, "", "x", nil, nil)
+	if !root.LocalState("changes/archive/2026-11-19-x/.integrations-outbox.yaml") {
+		t.Error("la raíz archivada también es estado local con planning home vacío")
+	}
+	if got := root.LocalStateGlobs()[1]; got != "changes/archive/[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]-x/.*" {
+		t.Errorf("glob archivado con planning home vacío = %q", got)
 	}
 }
 

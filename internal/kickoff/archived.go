@@ -84,3 +84,61 @@ func RefuseArchivedRoot(workspaceRoot, changeRoot string) error {
 	}
 	return nil
 }
+
+// IntegrationsOutboxFile es el único fichero que Axiom puede escribir en una carpeta archivada
+// (MODIFIED REQ-21.18): la cola local de operaciones de integración. internal/integrations usa esta
+// constante; no hay un segundo literal.
+const IntegrationsOutboxFile = ".integrations-outbox.yaml"
+
+const (
+	integrationsOutboxTempPrefix = ".integrations-outbox-"
+	integrationsOutboxTempSuffix = ".yaml"
+)
+
+// archivedFolderPattern reconoce la raíz exacta de una carpeta archivada respecto a workspaceRoot:
+// openspec/changes/archive/AAAA-MM-DD-<cambio>, sin anidar.
+var archivedFolderPattern = regexp.MustCompile(`^` + regexp.QuoteMeta(archivedChangesPrefix) + `/\d{4}-\d{2}-\d{2}-[^/]+$`)
+
+// RefuseArchivedWriteExceptLocalState rechaza escribir name en changeRoot salvo cuando changeRoot
+// NO está archivada (delega en RefuseArchivedRoot) o cuando es exactamente la raíz de una carpeta
+// archivada (<workspace>/openspec/changes/archive/<AAAA-MM-DD>-<cambio>, sin anidar) y name es
+// IntegrationsOutboxFile o un temporal ".integrations-outbox-*.yaml" de su escritura atómica.
+// Cualquier otro nombre (integrations.yaml, gates.yaml, otro fichero con punto) o ruta con
+// separador se rechaza; en una carpeta archivada con el mismo mensaje que RefuseArchivedRoot
+// (REQ-21.18). RefuseArchivedRoot no cambia y sigue siendo la guarda de todos los demás escritores.
+func RefuseArchivedWriteExceptLocalState(workspaceRoot, changeRoot, name string) error {
+	rel, err := filepath.Rel(workspaceRoot, changeRoot)
+	if err != nil {
+		return fmt.Errorf("resolver la raiz del cambio %q respecto al workspace %q: %w", changeRoot, workspaceRoot, err)
+	}
+	rel = filepath.ToSlash(rel)
+	archived := rel == archivedChangesPrefix || strings.HasPrefix(rel, archivedChangesPrefix+"/")
+	validName := name != "" && name != "." && name != ".." && !strings.ContainsAny(name, `/\`)
+
+	if !archived {
+		if guard := RefuseArchivedRoot(workspaceRoot, changeRoot); guard != nil {
+			return guard // fuera del workspace
+		}
+		if !validName {
+			return fmt.Errorf("el nombre de fichero %q no es válido: debe ser un nombre simple, sin separadores", name)
+		}
+		return nil
+	}
+	if validName && archivedFolderPattern.MatchString(rel) && isIntegrationsOutboxName(name) {
+		return nil
+	}
+	return RefuseArchivedRoot(workspaceRoot, changeRoot)
+}
+
+// isIntegrationsOutboxName dice si name es la cola de integraciones o un temporal de su escritura
+// atómica (.integrations-outbox-<relleno>.yaml con relleno no vacío y sin separadores).
+func isIntegrationsOutboxName(name string) bool {
+	if name == IntegrationsOutboxFile {
+		return true
+	}
+	if !strings.HasPrefix(name, integrationsOutboxTempPrefix) || !strings.HasSuffix(name, integrationsOutboxTempSuffix) {
+		return false
+	}
+	fill := strings.TrimSuffix(strings.TrimPrefix(name, integrationsOutboxTempPrefix), integrationsOutboxTempSuffix)
+	return fill != "" && !strings.ContainsAny(fill, `/\`)
+}

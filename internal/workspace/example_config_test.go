@@ -100,3 +100,26 @@ func TestManualDocumentsTheISOMode(t *testing.T) {
 		"axiom sdd trace",
 	)
 }
+
+// REQ-43.21: la plantilla documenta el bloque `integrations:` comentado, la regla de que los
+// secretos nunca se escriben en axiom.yaml y que el catálogo está vacío hasta C-07-c. Al estar
+// comentado, la plantilla sigue cargando sin errores.
+func TestExampleConfigDocumentsIntegrations(t *testing.T) {
+	example := readExampleConfig(t)
+	for _, want := range []string{
+		"# Integraciones con Trackers (opcional)",
+		"# integrations:",
+		"Los secretos (tokens, PAT, contraseñas) NUNCA se escriben aquí",
+		"axiom integrations secret set",
+		"AXIOM_INTEGRATION_<PLUGIN>_<SECRETO>",
+		"El catálogo de plugins está vacío en esta versión hasta C-07-c",
+		"'integrations: {}' es válido y no configura nada",
+	} {
+		if !strings.Contains(example, want) {
+			t.Errorf("axiom.example.yaml debe contener %q", want)
+		}
+	}
+	if _, baseErr, declarations := parseLayered([]byte(example)); baseErr != nil || declarations.IntegrationsErr != nil || declarations.Integrations != nil {
+		t.Fatalf("con el bloque comentado la plantilla no declara integraciones: base=%v integrations=%v", baseErr, declarations.IntegrationsErr)
+	}
+}

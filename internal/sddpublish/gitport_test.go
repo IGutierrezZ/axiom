@@ -11,6 +11,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/IGutierrezZ/axiom/v3/internal/docpaths"
 )
 
 // Pruebas del adaptador del puerto Git (DD-08, REQ-27.6, REQ-27.9, REQ-27.11) con git real,
@@ -444,5 +446,53 @@ func TestPublishIgnoresGitDirEnvironment(t *testing.T) {
 	}
 	if got := runGit(t, decoy, "log", "--oneline"); strings.Contains(got, "publicar") {
 		t.Errorf("el repositorio señuelo no debe recibir el commit:\n%s", got)
+	}
+}
+
+// MODIFIED REQ-27.5, matriz «Estado del commit»: la cola de integraciones de la carpeta archivada
+// (sin seguimiento, o preparada a mano) nunca entra en el commit y queda como estaba, igual que
+// `.gates.lock` en la carpeta ordinaria.
+func TestCommitExcludesArchivedLocalState(t *testing.T) {
+	isolateGit(t)
+	ctx := context.Background()
+	repo := newRepo(t)
+	port := NewGit()
+	set, err := docpaths.New("openspec", "x", nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	archived := filepath.Join(repo, "openspec", "changes", "archive", "2026-11-19-x")
+	other := filepath.Join(repo, "openspec", "changes", "archive", "2026-11-01-y")
+	writeFile(t, filepath.Join(archived, "proposal.md"), "propuesta archivada\n")
+	writeFile(t, filepath.Join(archived, "specs", ".nota"), "con punto anidado: documentación\n")
+	writeFile(t, filepath.Join(archived, ".integrations-outbox.yaml"), "cola\n")
+	writeFile(t, filepath.Join(archived, ".integrations-outbox-1.yaml"), "temporal\n")
+	writeFile(t, filepath.Join(other, ".x"), "de otro cambio\n")
+	// El temporal se prepara a mano: sigue preparado tras el commit.
+	runGit(t, repo, "add", "openspec/changes/archive/2026-11-19-x/.integrations-outbox-1.yaml")
+
+	root := "openspec/changes/archive/2026-11-19-x"
+	sha, err := port.Commit(ctx, repo, "docs(sdd): publicar el archivado de x", []string{root}, set.LocalStateGlobs())
+	if err != nil {
+		t.Fatalf("Commit: %v", err)
+	}
+	if sha != runGit(t, repo, "rev-parse", "HEAD") {
+		t.Errorf("Commit devolvió %s, que no es HEAD", sha)
+	}
+	touched := strings.Fields(runGit(t, repo, "diff-tree", "-r", "--no-commit-id", "--name-only", "--root", "HEAD"))
+	slices.Sort(touched)
+	want := []string{root + "/proposal.md", root + "/specs/.nota"}
+	if !reflect.DeepEqual(touched, want) {
+		t.Errorf("el commit tocó %q, se esperaba %q (sin la cola ni su temporal)", touched, want)
+	}
+	if got := runGit(t, repo, "diff", "--cached", "--name-only"); got != root+"/.integrations-outbox-1.yaml" {
+		t.Errorf("lo preparado a mano debe seguir preparado, el índice tiene %q", got)
+	}
+	status := runGit(t, repo, "status", "--porcelain", "--untracked-files=all")
+	if !strings.Contains(status, "?? "+root+"/.integrations-outbox.yaml") {
+		t.Errorf("la cola archivada queda sin seguimiento:\n%s", status)
+	}
+	if !strings.Contains(status, "?? openspec/changes/archive/2026-11-01-y/.x") {
+		t.Errorf("la carpeta archivada de otro cambio no se toca:\n%s", status)
 	}
 }

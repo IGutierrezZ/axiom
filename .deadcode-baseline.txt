@@ -96,6 +96,14 @@ internal/installcmd/resolver.go	validateGoForModuleInstall
 internal/installcmd/testhelper.go	OverrideGetenv
 internal/installcmd/testhelper.go	OverrideGoVersion
 internal/installcmd/testhelper.go	OverrideLookPath
+internal/integrations/manifest/catalog.go	SetCatalogForTest
+internal/integrations/manifest/catalog.go	ValidateCatalog
+internal/integrations/registry.go	SetDefaultRegistryForTest
+internal/integrations/secrets/default.go	Memory.Delete
+internal/integrations/secrets/default.go	Memory.Get
+internal/integrations/secrets/default.go	Memory.Set
+internal/integrations/secrets/default.go	NewMemory
+internal/integrations/secrets/default.go	SetDefaultForTest
 internal/isoevidence/model.go	AllCodes
 internal/livingdoc/service.go	Service.GetIndexPath
 internal/livingdoc/service.go	Service.GetSpecsRoot

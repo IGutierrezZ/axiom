@@ -103,3 +103,22 @@ func TestIsISO(t *testing.T) {
 		})
 	}
 }
+
+func TestRoleFromGate(t *testing.T) {
+	for key, want := range map[GateKey]struct {
+		role string
+		ok   bool
+	}{
+		RoleApplyGate("backend"):  {"backend", true},
+		RoleApplyGate("Backend"):  {"backend", true},
+		GateKey("role-apply:web"): {"web", true},
+		GateSpec:                  {"", false},
+		GateDesign:                {"", false},
+		GateKey("role-apply:"):    {"", false},
+		GateKey(""):               {"", false},
+	} {
+		if role, ok := RoleFromGate(key); role != want.role || ok != want.ok {
+			t.Errorf("RoleFromGate(%q) = (%q, %v), se esperaba (%q, %v)", key, role, ok, want.role, want.ok)
+		}
+	}
+}
