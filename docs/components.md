@@ -74,7 +74,7 @@ Axiom incorpora skills y las inyecta en la configuración de los agentes selecci
 | Skill Creator | `skill-creator` | Crea skills para agentes siguiendo el formato Agent Skills. |
 | Skill Improver | `skill-improver` | Audita y mejora skills frente a las convenciones del repositorio. |
 | Skill Registry | `skill-registry` | Genera el índice de skills con sus activadores y rutas `SKILL.md`; cada skill apunta a una sola carpeta (la compartida `.agents/skills` si existe). Solo actúa dentro de un proyecto de Axiom (con `axiom.yaml`). |
-| Chained PR | `chained-pr` | Planifica PR encadenadas revisables cuando se necesitan. |
+| Chained PR | `chained-pr` | Planifica PR encadenadas cuando la persona las pide. |
 | Cognitive Doc Design | `cognitive-doc-design` | Diseña documentación clara y fácil de revisar. |
 | Work Unit Commits | `work-unit-commits` | Divide la implementación en unidades de trabajo revisables. |
 

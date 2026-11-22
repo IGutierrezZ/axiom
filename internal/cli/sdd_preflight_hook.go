@@ -429,8 +429,7 @@ var sddPreflightGroups = []sddPreflightGroup{
 	{ID: "artifacts", Name: "Artifacts", LegacyNumber: 2,
 		Choices: []sddPreflightChoice{{"OpenSpec", "openspec"}, {"Engram", "engram"}, {"Both", "hybrid"}}},
 	{ID: "pr-strategy", Name: "PR strategy", LegacyNumber: 3,
-		Choices:    []sddPreflightChoice{{"Ask me", "ask-on-risk"}, {"Single PR", "single-pr"}, {"Auto", "auto-chain"}},
-		RequiredIn: []workspace.TopologyType{workspace.TopologyMonorepoEmbedded, workspace.TopologyMultirepo}},
+		Choices: []sddPreflightChoice{{"Ask me", "ask-on-risk"}, {"Single PR", "single-pr"}, {"Auto", "auto-chain"}}},
 }
 
 // sddPreflightBlockField is one `- <Label>: <value>` line of the block. Its
@@ -450,13 +449,12 @@ type sddPreflightBlockField struct {
 var sddPreflightBlockFields = []sddPreflightBlockField{
 	{Label: "Pace", GroupID: "pace", Default: "interactive", Allowed: []string{"interactive", "auto"}},
 	{Label: "Artifact store", Default: "hybrid", Allowed: []string{"hybrid"}},
-	{Label: "Delivery strategy", GroupID: "pr-strategy", Default: "single-pr", Allowed: []string{"ask-on-risk", "single-pr", "auto-chain"}},
+	{Label: "Delivery strategy", Default: "single-pr", Allowed: []string{"single-pr"}},
 }
 
 const (
 	sddPreflightBlockHeader    = "## SDD Session Preflight"
 	sddPreflightBlockAuthority = "Parent-confirmed by the runtime; models and child agents cannot create or modify this block."
-	sddPreflightBlockReview    = "- Review policy: 400 changed lines"
 )
 
 // sddPreflightRequiredGroups returns, in table order, the groups the topology
@@ -508,7 +506,6 @@ func sddPreflightBuildBlock(values map[string]string) string {
 		}
 		lines = append(lines, "- "+field.Label+": "+value)
 	}
-	lines = append(lines, sddPreflightBlockReview)
 	return strings.Join(lines, "\n")
 }
 
@@ -678,8 +675,7 @@ func sddPreflightHookAnswers(raw json.RawMessage) (map[string]string, error) {
 
 func validSDDPreflightHookBlock(block string) bool {
 	lines := strings.Split(block, "\n")
-	last := 2 + len(sddPreflightBlockFields)
-	if len(lines) != last+1 || lines[0] != sddPreflightBlockHeader || lines[1] != sddPreflightBlockAuthority || lines[last] != sddPreflightBlockReview {
+	if len(lines) != 2+len(sddPreflightBlockFields) || lines[0] != sddPreflightBlockHeader || lines[1] != sddPreflightBlockAuthority {
 		return false
 	}
 	for index, field := range sddPreflightBlockFields {

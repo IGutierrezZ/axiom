@@ -37,7 +37,7 @@ From the orchestrator:
 - The specific task(s) to implement (e.g., "Phase 1, tasks 1.1-1.3")
 - Artifact store mode as REPORTED by native status (`engram | openspec | hybrid | none`) — consume it, never re-derive it
 - Structured status from `skills/_shared/sdd-status-contract.md`: `schemaName`, `planningHome`, `changeRoot`, `artifactPaths`, `contextFiles`, `applyState`, task progress, dependency states, and `actionContext`
-- Delivery strategy and resolved workload decision (`ask-on-risk | auto-chain | single-pr | exception-ok`, plus PR slice or `size:exception` when applicable)
+- Delivery strategy (`single-pr | chained`), plus `chain_strategy` when it is `chained`
 
 ## Execution and Persistence Contract
 
@@ -79,29 +79,16 @@ Before writing ANY code:
 6. Check the project's coding conventions from `config.yaml`
 7. When the status projects `technicalContext`, read the `entry` file of each mode and consult the remaining `paths` only on demand (see `../_shared/project-baseline-convention.md`).
 
-#### Step 2a: Enforce Review Workload Decision
+#### Step 2a: Follow the Delivery Strategy
 
-Before implementing, inspect the tasks artifact for `Review Workload Forecast`.
+Delivery only chooses the target branch of your commits; it never stops the phase. Use the `delivery_strategy` and `chain_strategy` from the orchestrator's launch prompt. Do not read delivery fields from the tasks artifact: the orchestrator is the single authority and resolves them.
 
-If the forecast says any of the following:
+- **`single-pr`**: commit every work unit on the branch of the change, as one pull request holding one work-unit commit per task.
+- **`chained` with `stacked-to-main`**: each PR targets the previous PR's branch (or the integration branch (`git.integration_branch`) after the previous merges).
+- **`chained` with `feature-branch-chain`**: PR #1 targets the feature/tracker branch; later PRs target the immediate previous PR branch. The tracker PR aggregates the feature branch to the integration branch (`git.integration_branch`); child PR diffs must stay focused on only the current work unit and must never target the integration branch directly.
+- **`chained` without a `chain_strategy`**: target the branch of the change as in `single-pr` and note it in your result; do not block.
 
-- `400-line budget risk: High`
-- `Chained PRs recommended: Yes`
-- `Decision needed before apply: Yes`
-
-Then you MUST confirm the orchestrator/user provided a resolved delivery path:
-
-1. **`auto-chain` or chosen chained/stacked PR mode**: implement only the assigned work-unit slice, keep scope autonomous, and report the intended PR boundary. Follow the `Chain strategy` from the tasks artifact (`stacked-to-main` or `feature-branch-chain`) for branch targeting.
-2. **`exception-ok` or single PR with exception**: continue only if the prompt explicitly says the maintainer accepts `size:exception`.
-3. **`single-pr` above budget**: continue only after the prompt explicitly records `size:exception`.
-
-Also check for `Chain strategy` in the tasks artifact. If present and not `pending`, follow it consistently:
-- `stacked-to-main`: each PR targets the previous PR's branch (or the integration branch (`git.integration_branch`) after the previous merges).
-- `feature-branch-chain`: PR #1 targets the feature/tracker branch; later PRs target the immediate previous PR branch. The tracker PR aggregates the feature branch to the integration branch (`git.integration_branch`); child PR diffs must stay focused on only the current work unit and must never target the integration branch directly.
-
-If neither delivery decision nor chain strategy is present, STOP before writing code and return `blocked` with: `Workload decision required before apply: estimated work may exceed 400 changed lines. Ask the user which chain strategy to use (stacked-to-main, feature-branch-chain, or size-exception).`
-
-The budget constrains how work is sliced, never the code itself. Never delete comments, blank lines, docs, or tests, and never compress or restyle code, to fit under the review budget (400 by default, or the session `review_budget_lines`). If the assigned slice cannot land within budget as one cohesive work unit, implement it honestly, then report the final authored line count, why it cannot shrink further, and a `size:exception` recommendation — do not iterate trying to reach the number.
+Never stop because of the size of the change, its forecast, or a missing delivery decision. Slicing never constrains the code itself: never delete comments, blank lines, docs, or tests, and never compress or restyle code to make a change look smaller.
 
 #### Step 2b: Read Previous Apply-Progress (if exists)
 
@@ -251,11 +238,10 @@ If none, say "None."}
 - [ ] {next task}
 - [ ] {next task}
 
-### Workload / PR Boundary
-- Mode: {single PR | chained PR slice | stacked PR slice | size:exception}
+### Delivery / PR Boundary
+- Mode: {single PR | chained PR slice | stacked PR slice}
 - Current work unit: {unit name or "N/A"}
 - Boundary: {what this apply batch starts from and ends with}
-- Estimated review budget impact: {brief note}
 
 ### Status
 {N}/{total} tasks complete. {Ready for next batch / Ready for archive / Blocked by X}
@@ -282,9 +268,7 @@ When the assigned tasks are complete and checked:
 - Before returning, re-read the persisted tasks artifact and ensure completed tasks are visibly marked `[x]`; internal todos are not completion evidence
 - If you discover the design is wrong or incomplete, NOTE IT in your return summary — don't silently deviate
 - If a task is blocked by something unexpected, STOP and report back
-- If workload forecast requires a decision and none was provided, STOP before writing code
 - When applying a chained/stacked PR slice, keep the batch autonomous: one deliverable scope, verification included, and clear rollback boundary
-- When applying `size:exception`, state it explicitly in apply-progress and the return summary
 - NEVER implement tasks that weren't assigned to you
 - Skill loading is handled in Step 1 — follow any loaded skills strictly when writing code
 - Apply any `rules.apply` from `openspec/config.yaml`
@@ -330,8 +314,7 @@ You are an IMPLEMENTER sub-agent. You receive specific tasks and implement them 
 - Read max 3 files at a time — if you need more to understand a task, stop and report `needs-explore`
 - Keep edits minimal and localized to task files
 - Consume structured status when provided; stop on `blocked`, `all_done`, or unsafe `actionContext`
-- If workload forecast says >400 lines or `Chained PRs recommended`, STOP and return `blocked: workload-decision-required`
-- Never minify the diff (strip comments, blank lines, docs, or tests) to fit the review budget; implement the cohesive slice honestly and report the final count with a `size:exception` recommendation when it stays over
+- Never minify the diff (strip comments, blank lines, docs, or tests) to make a change look smaller; implement the cohesive slice honestly
 - If previous apply-progress exists, read it via mem_search + mem_get_observation and MERGE before saving
 - Apply any `rules.apply` from `openspec/config.yaml`
 - When the status projects `technicalContext`, read the `entry` file of each mode and consult the remaining `paths` only on demand (see `../_shared/project-baseline-convention.md`).

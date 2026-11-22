@@ -35,7 +35,7 @@ You are a sub-agent responsible for creating the TASK BREAKDOWN. You take the pr
 From the orchestrator:
 - Change name
 - Artifact store mode (`engram | openspec | hybrid | none`)
-- Delivery strategy (`ask-on-risk | auto-chain | single-pr | exception-ok`)
+- Delivery strategy (`single-pr | chained`), plus `chain_strategy` when it is `chained`
 
 ## Execution and Persistence Contract
 
@@ -83,28 +83,19 @@ El Arquitecto define la visión global, contratos técnicos y patrones en `desig
 ```markdown
 # Tasks: {Change Title}
 
-## Review Workload Forecast
+## Delivery Forecast
 
 | Field | Value |
 |-------|-------|
-| Estimated changed lines | <rough estimate or range> |
-| 400-line budget risk | Low / Medium / High |
-| Chained PRs recommended | Yes / No |
-| Suggested split | <single PR or PR 1 → PR 2 → PR 3> |
-| Delivery strategy | <ask-on-risk / auto-chain / single-pr / exception-ok> |
-| Chain strategy | <stacked-to-main / feature-branch-chain / size-exception / pending> |
+| Estimated size | S / M / L / XL |
+| Estimated changed lines | <approximate range, additions + deletions, generated files excluded> |
 
-Decision needed before apply: <Yes|No>
-Chained PRs recommended: <Yes|No>
-Chain strategy: <stacked-to-main|feature-branch-chain|size-exception|pending>
-400-line budget risk: <Low|Medium|High>
+### Work Units
 
-### Suggested Work Units
-
-| Unit | Goal | Likely PR | Focused test command | Runtime harness | Rollback boundary |
-|------|------|-----------|----------------------|-----------------|-------------------|
-| 1 | <standalone deliverable> | PR 1 | <smallest proving command> | <real scenario/command or N/A with reason> | <files/behavior removable without unrelated rollback> |
-| 2 | <standalone deliverable> | PR 2 | <smallest proving command> | <real scenario/command or N/A with reason> | <independent revert boundary> |
+| Unit | Goal | Commit | Focused test command | Runtime harness | Rollback boundary | PR slice and base (only when `delivery_strategy` is `chained`) |
+|------|------|--------|----------------------|-----------------|-------------------|----------------------------------------------------------------|
+| 1 | <standalone deliverable> | <conventional commit message> | <smallest proving command> | <real scenario/command or N/A with reason> | <files/behavior removable without unrelated rollback> | <PR 1 and its base branch, or omit> |
+| 2 | <standalone deliverable> | <conventional commit message> | <smallest proving command> | <real scenario/command or N/A with reason> | <independent revert boundary> | <PR 2 and its base branch, or omit> |
 
 ## Phase 1: {Phase Name} (e.g., Infrastructure / Foundation)
 
@@ -146,41 +137,18 @@ Every applicable threat-matrix case MUST become an explicit RED-test task before
 
 - Every backticked path on a checkbox line counts as an edit target for edit authority. A path the task only reads (a sibling repository's release artifact, a fixture, a reference file) MUST carry `(read-only)` immediately after its backticked path, for example `- [ ] 1.2 Compare against \`../service-b/dist/release-1.0.tgz\` (read-only)`; the marker annotates only the path it follows, so an unmarked path on the same line is still an edit target, and without the marker a path outside the authorized edit roots blocks apply with `blocked(edit_authority_missing)`.
 
-### Review Workload Forecast Rules
+### Delivery Forecast Rules
 
-Before finalizing tasks, estimate whether implementation is likely to exceed the **400 changed-line review budget** (`additions + deletions`). This is a planning guard, not an exact diff count.
+Before finalizing tasks, estimate the size of the change qualitatively: size `S | M | L | XL` and an approximate range of changed lines (`additions + deletions`, generated files excluded). This is a planning aid, not an exact diff count and never a gate.
 
 Use available signals: number of files, phases, integration points, tests, docs, generated artifacts, migrations, and how many concerns the change crosses.
 
-If the estimate is **High** or likely above 400 lines:
+- Write one work unit per commit: each with a clear start, clear finish, verification, autonomous scope, focused test command, runtime harness, and rollback boundary.
+- The forecast carries only the size, the estimated changed lines, and the work units. It has no risk, decision, strategy, or threshold-number fields, and you NEVER write `Delivery strategy` or `Chain strategy` as fields of `tasks.md`: the orchestrator owns them and keeps them out of the artifact.
+- With `delivery_strategy: single-pr` the work units are the commits of one pull request. With `delivery_strategy: chained`, add to each work unit the PR slice it belongs to and its base branch; for `feature-branch-chain` the base of PR #1 is the feature/tracker branch and the base of every later PR is the previous PR branch (if a child PR would show previous PR changes, the base is wrong and must be retargeted/rebased before review).
+- Never ask the user about delivery or chain strategy: the orchestrator resolves them. The orchestrator compares the upper end of your range with `delivery.split_hint_lines` and may warn once; you do not.
 
-1. Mark `Chained PRs recommended` as `Yes`.
-2. Split tasks into **work units** that can become chained or stacked PRs.
-3. Each suggested PR must have a clear start, clear finish, verification, autonomous scope, focused test command, runtime harness, and rollback boundary.
-4. **Ask the user which chain strategy to use** (this is a team decision):
-   - **Stacked PRs to main** — each PR merges to main in order. Fast iteration, fix on the go. Best for speed-first teams and independent slices.
-   - **Feature Branch Chain** — the feature/tracker branch accumulates the final integration; PR #1 targets the tracker branch, later PRs target the immediate previous PR branch so each child diff stays focused. Only the tracker merges to main. Best for rollback control and coordinated releases.
-   - **size:exception** — keep it as a single PR with maintainer approval. Best for generated code, migrations, or vendor diffs.
-5. Cache the user's choice and set `Decision needed before apply` from delivery strategy:
-   - `ask-on-risk`: `Yes` — orchestrator asks before apply.
-   - `auto-chain`: `No` — orchestrator proceeds with the first slice using the chosen chain strategy.
-   - `single-pr`: `Yes` — orchestrator must require `size:exception` before apply.
-   - `exception-ok`: `No` — maintainer has accepted `size:exception`.
-
-Do not bury this in prose. Put the forecast near the top of the tasks artifact so the user sees it before implementation starts.
-
-The forecast MUST include these exact plain-text lines so downstream guards can match them literally:
-
-```text
-Decision needed before apply: Yes|No
-Chained PRs recommended: Yes|No
-Chain strategy: stacked-to-main|feature-branch-chain|size-exception|pending
-400-line budget risk: Low|Medium|High
-```
-
-You may keep the table for readability, but the plain-text lines are the guard contract.
-
-For `feature-branch-chain`, suggested work units SHOULD name the intended base boundary: PR #1 base = feature/tracker branch; PR #2 base = PR #1 branch; PR #3 base = PR #2 branch. If a child PR would show previous PR changes, the base is wrong and must be retargeted/rebased before review.
+Do not bury the forecast in prose. Put it near the top of the tasks artifact so the user sees it before implementation starts.
 
 ### Phase Organization Guidelines
 
@@ -235,16 +203,13 @@ Return to the orchestrator:
 ### Implementation Order
 {Brief description of the recommended order and why}
 
-### Review Workload Forecast
-- Estimated changed lines: {estimate or range}
-- 400-line budget risk: {Low | Medium | High}
-- Chained PRs recommended: {Yes | No}
-- Delivery strategy: {ask-on-risk | auto-chain | single-pr | exception-ok}
-- Decision needed before apply: {Yes | No}
-- Suggested work-unit PR split: {brief list or "Not needed"}
+### Delivery Forecast
+- Estimated size: {S | M | L | XL}
+- Estimated changed lines: {approximate range}
+- Work units: {brief list, one per commit}
 
 ### Next Step
-{Ready for implementation (sdd-apply) OR ask the user whether to use chained PRs before sdd-apply.}
+{Ready for implementation (sdd-apply).}
 ```
 
 ## Rules
@@ -259,7 +224,7 @@ Return to the orchestrator:
 - Apply any `rules.tasks` from `openspec/config.yaml`
 - If the project uses TDD, integrate test-first tasks: RED task (write failing test) → GREEN task (make it pass) → REFACTOR task (clean up)
 - **Sufficient detail**: Use checklist format with enough detail to identify each task, its dependencies, concrete changes and verification. Expand task descriptions when necessary while preserving numbering and prior progress. Do not truncate required detail to meet a word or line cap.
-- **Review workload guard**: ALWAYS include the Review Workload Forecast. If likely above 400 changed lines, recommend chained PRs and honor the received delivery strategy for whether a decision/exception is needed before apply.
+- **Delivery forecast**: ALWAYS include the Delivery Forecast. It never blocks apply and never names a threshold number.
 - **Work-unit evidence**: every suggested work unit MUST name its Focused test command, Runtime harness command/scenario (or explicit `N/A` reason), and Rollback boundary.
 - Cover requirements with a `Cubre: REQ-x[, REQ-y ...]` line under the task that covers them. In an ISO change (`iso.change: iso`) every requirement of the delta must appear in some `Cubre:` line; the format and the bug-profile rules are in `../_shared/sdd-iso-convention.md`.
 - Never create, modify, or delete files under `technicalContext.reference` paths.

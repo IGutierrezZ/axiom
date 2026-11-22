@@ -3274,7 +3274,8 @@ func openCodeConfigChecks(homeDir, workspaceDir string, agentIDs []model.AgentID
 // isRetiredManagedPath reports whether path names a managed file that install
 // and sync remove instead of write, so verification checks its absence.
 func isRetiredManagedPath(path string) bool {
-	return isLegacyOpenCodeBackgroundAgentsPlugin(path) || sdd.IsLegacyClaudeCommandPath(path)
+	return isLegacyOpenCodeBackgroundAgentsPlugin(path) || sdd.IsLegacyClaudeCommandPath(path) ||
+		sdd.IsRetiredReviewSubAgentPath(path)
 }
 
 func isLegacyOpenCodeBackgroundAgentsPlugin(path string) bool {

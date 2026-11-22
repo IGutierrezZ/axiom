@@ -101,10 +101,6 @@ Use Qwen's native bounded worker for delegated-direct work; reserve `sdd-*` agen
 
 {{GENTLE_AI_SDD_SECTION:Result Contract}}
 
-### Review Workload Guard (MANDATORY)
-
-{{GENTLE_AI_SDD_SECTION:Review Workload Guard (MANDATORY)}}
-
 ### Sub-Agent Launch Deduplication (MANDATORY)
 
 {{GENTLE_AI_SDD_SECTION:Sub-Agent Launch Deduplication (MANDATORY)}}

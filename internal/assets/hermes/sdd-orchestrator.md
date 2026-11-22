@@ -139,21 +139,6 @@ Interactive approval is phase-scoped. Words like "continue", "dale", or "go on" 
 ### Result Contract
 {{GENTLE_AI_SDD_SECTION:Result Contract}}
 
-### Review Workload Guard (MANDATORY)
-
-After `sdd-tasks` completes and before launching `sdd-apply`, inspect `Review Workload Forecast`.
-
-If it says `Chained PRs recommended: Yes`, `400-line budget risk: High`, estimated changed lines exceed 400, or `Decision needed before apply: Yes`, apply cached `delivery_strategy`:
-
-- **`ask-on-risk`**: STOP and ask whether to split into chained/stacked PRs or proceed with `size:exception`. If the user chooses chained PRs and `chain_strategy` is not yet cached, also ask which chain strategy to use (`stacked-to-main` or `feature-branch-chain`).
-- **`auto-chain`**: Do not ask about splitting. If `chain_strategy` is not yet cached, ask which chain strategy to use. Then pass to `sdd-apply`: implement only the next autonomous slice using work-unit commits, with clear start, finish, verification, and rollback boundary.
-- **`single-pr`**: STOP and require/record `size:exception` before apply.
-- **`exception-ok`**: Continue, but tell `sdd-apply` this run uses `size:exception`.
-
-Any other `delivery_strategy` value is invalid. Do NOT pick the nearest branch and do NOT proceed: STOP, report the unrecognised value, and re-collect the delivery strategy before `sdd-apply` runs.
-
-Automatic mode does not override this guard. Always pass the resolved `delivery_strategy`, `chain_strategy`, and any chosen PR boundary/exception in the prompt.
-
 ### Sub-Agent Launch Deduplication (MANDATORY)
 
 Before emitting any delegation call, check your in-session launch log:

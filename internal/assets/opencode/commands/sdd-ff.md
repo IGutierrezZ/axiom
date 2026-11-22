@@ -6,7 +6,7 @@ agent: axiom-orchestrator
 Follow the SDD orchestrator workflow to fast-forward all planning phases for change "$ARGUMENTS".
 
 HARD GATE:
-SDD Session Preflight must already be complete for this session. It must include execution mode, artifact store, chained PR strategy, and review budget. If missing, ask the exact orchestrator preflight prompt and STOP. Do not launch planning sub-agents in the same turn.
+SDD Session Preflight must already be complete for this session: the pace the topology asks (the artifact store is always `hybrid` and delivery is `single-pr` unless the person asks for chained PRs). If missing, ask the exact orchestrator preflight prompt and STOP. Do not launch planning sub-agents in the same turn.
 
 WORKFLOW:
 Honor the cached execution mode from SDD Session Preflight.
@@ -28,8 +28,7 @@ CONTEXT:
 - Change name: $ARGUMENTS
 - Execution mode: ask/cache per orchestrator
 - Artifact store mode: ask/cache per orchestrator; do not hardcode Engram
-- Delivery strategy: ask/cache per orchestrator
-- Review budget: ask/cache per orchestrator
+- Delivery strategy: never asked; `single-pr` unless the person asks for chained PRs
 
 ENGRAM NOTE:
 Sub-agents handle persistence automatically using the selected artifact store. In engram/hybrid, each phase saves with topic_key "sdd/$ARGUMENTS/{type}" where type is: proposal, spec, design, tasks.

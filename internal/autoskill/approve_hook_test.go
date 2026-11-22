@@ -16,7 +16,7 @@ func writeInboxSkill(t *testing.T, workspace, name string) {
 	if err := os.MkdirAll(folder, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(folder, "SKILL.md"), []byte("---\nname: "+name+"\n---\n\nBody.\n"), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(folder, "SKILL.md"), []byte("---\nname: "+name+"\ndescription: \"Skill de prueba. Trigger: tests.\"\n---\n\nBody.\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(filepath.Join(folder, "metadata.json"), []byte(`{"name":"`+name+`"}`), 0o644); err != nil {

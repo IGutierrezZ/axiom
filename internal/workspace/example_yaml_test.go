@@ -59,3 +59,31 @@ func TestExampleYAMLDocumentsTheSDDBlock(t *testing.T) {
 		t.Errorf("la plantilla debe documentar `sdd.iso: true`: %+v", declarations.SDD)
 	}
 }
+
+// REQ-32.1 y REQ-32.2: la plantilla axiom.example.yaml documenta el bloque
+// `delivery:` y, una vez descomentado, es válido y declara el umbral del aviso.
+func TestExampleYAMLDocumentsTheDeliveryBlock(t *testing.T) {
+	var block []string
+	for _, line := range strings.Split(strings.ReplaceAll(readRepoFile(t, "axiom.example.yaml"), "\r\n", "\n"), "\n") {
+		if len(block) == 0 {
+			if line == "# delivery:" {
+				block = append(block, "delivery:")
+			}
+			continue
+		}
+		if !strings.HasPrefix(line, "#   ") {
+			break
+		}
+		block = append(block, strings.TrimPrefix(line, "# "))
+	}
+	if len(block) < 2 {
+		t.Fatalf("axiom.example.yaml debe documentar un bloque `# delivery:` con su clave, y se halló %q", block)
+	}
+	_, baseErr, declarations := parseDeclarations(t, strings.Join(block, "\n")+"\n")
+	if baseErr != nil || declarations.DeliveryErr != nil {
+		t.Fatalf("el bloque de la plantilla no es válido: base=%v delivery=%v\n%s", baseErr, declarations.DeliveryErr, block)
+	}
+	if declarations.Delivery == nil || declarations.Delivery.SplitHintLines != 600 {
+		t.Errorf("la plantilla debe documentar `split_hint_lines: 600`: %+v", declarations.Delivery)
+	}
+}

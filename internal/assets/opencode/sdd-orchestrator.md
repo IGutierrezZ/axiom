@@ -109,7 +109,7 @@ Only launch `sdd-apply` when all are true:
 
 1. Session preflight is complete.
 2. The active change has existing spec, design, and tasks artifacts.
-3. The user explicitly asked to apply/continue implementation, or the prior SDD planning phase completed and the orchestrator has passed the review workload guard.
+3. The user explicitly asked to apply/continue implementation, or the prior SDD planning phase completed.
 
 If any dependency is missing, STOP and propose `/sdd-new` or `/sdd-ff`; do not implement.
 
@@ -179,7 +179,7 @@ A terminal `sdd_task_result_empty` or `sdd_task_result_malformed` failure is a t
 
 OpenCode `background: true` launch acknowledgements and progress signals are nonterminal. They must not produce either transport failure or a session latch; wait for the child to complete, then use the normal artifact/status route.
 
-The gatekeeper runs in addition to the Review Workload Guard and the Mandatory Delegation Triggers; it never relaxes them and never auto-marks anything reviewed in engram.
+The gatekeeper runs in addition to the Mandatory Delegation Triggers; it never relaxes them and never auto-marks anything reviewed in engram.
 
 ### Artifact Store Mode
 
@@ -187,25 +187,18 @@ The gatekeeper runs in addition to the Review Workload Guard and the Mandatory D
 
 ### Delivery Strategy
 
-This is collected by `SDD Session Preflight` as the chained PR strategy. If missing, enforce the hard gate before any phase work. Ask which delivery/review strategy they want:
-
-- **`ask-on-risk`** (default): Ask later if `sdd-tasks` forecasts high risk or >400 changed lines.
-- **`auto-chain`**: If forecast is high, continue with chained/stacked PR slices without asking again.
-- **`single-pr`**: Prefer one PR; if forecast exceeds 400 lines, require `size:exception` before apply.
-- **`exception-ok`**: Allow a large PR because the maintainer explicitly accepts `size:exception`. The preflight menu cannot select this; it is reached only when the user explicitly accepts `size:exception`, either up front or when `ask-on-risk` stops to ask.
-
-These four are the whole domain. Cache the delivery strategy for the session. Pass it as `delivery_strategy` to `sdd-tasks` and `sdd-apply` prompts.
+{{GENTLE_AI_SDD_SECTION:Delivery Strategy}}
 
 ### Chain Strategy
 
-When `delivery_strategy` results in chained PRs (either by user choice via `ask-on-risk` or automatically via `auto-chain`), ask the user which chain strategy to use. Present the two strategy options through one `question` tool call when the lossless native route is usable; otherwise emit the complete choice through the plain chat or terminal fallback and STOP.
+When `delivery_strategy` is `chained` and the person did not name a chain strategy, ask the user which chain strategy to use. Present the two strategy options through one `question` tool call when the lossless native route is usable; otherwise emit the complete choice through the plain chat or terminal fallback and STOP.
 
 - **`stacked-to-main`**: Each PR merges to main in order. Fast iteration, fix on the go. Best for speed-first teams and independent slices.
 - **`feature-branch-chain`**: The feature/tracker branch accumulates final integration; PR #1 targets the tracker branch, later child PRs target the immediate previous PR branch so review diffs stay focused. Only the tracker merges to main. Best for rollback control and coordinated releases.
 
 Cache the chain strategy for the session. Pass it as `chain_strategy` to `sdd-tasks` and `sdd-apply` prompts alongside `delivery_strategy`. Do not ask again unless the user changes scope.
 
-When delivery planning yields chained PRs, treat `chained-pr` (registry skill `chained-pr`) as a required skill match: resolve it by registry name through this template's existing skill-resolution mechanism (the same one it already uses to pass skills to phases) and ensure the `sdd-tasks` and `sdd-apply` phases load and follow it BEFORE planning or creating any PR. Do not hardcode the skill path; defer resolution to that mechanism.
+When `delivery_strategy` is `chained`, treat `chained-pr` (registry skill `chained-pr`) as a required skill match: resolve it by registry name through this template's existing skill-resolution mechanism (the same one it already uses to pass skills to phases) and ensure the `sdd-tasks` and `sdd-apply` phases load and follow it BEFORE planning or creating any PR. Do not hardcode the skill path; defer resolution to that mechanism.
 
 ### Dependency Graph
 
@@ -214,23 +207,6 @@ When delivery planning yields chained PRs, treat `chained-pr` (registry skill `c
 ### Result Contract
 
 {{GENTLE_AI_SDD_SECTION:Result Contract}}
-
-### Review Workload Guard (MANDATORY)
-
-After `sdd-tasks` completes and before launching `sdd-apply`, inspect the task result summary for `Review Workload Forecast`.
-
-If it says `Chained PRs recommended: Yes`, `400-line budget risk: High`, estimated changed lines exceed 400, or `Decision needed before apply: Yes`, apply the cached `delivery_strategy`. Whenever a directive below tells the orchestrator to ask the user a decision (split vs. exception, or which chain strategy), use one `question` tool call only when the complete decision is natively representable; otherwise emit the complete choice through the plain chat or terminal fallback and STOP.
-
-- **`ask-on-risk`**: STOP and ask whether to split into chained/stacked PRs or proceed with `size:exception`, using the lossless blocking-prompt route. If the user chooses chained PRs and `chain_strategy` is not yet cached, ask which chain strategy to use (stacked-to-main or feature-branch-chain) through the same route.
-- **`auto-chain`**: Do not ask about splitting. If `chain_strategy` is not yet cached, ask which chain strategy to use through the lossless blocking-prompt route. Then pass to `sdd-apply`: implement only the next autonomous slice using work-unit commits, with clear start, finish, verification, and rollback boundary.
-- **`single-pr`**: STOP and require/record maintainer-approved `size:exception` before `sdd-apply`.
-- **`exception-ok`**: Continue, but pass to `sdd-apply` that this run uses maintainer-approved `size:exception`.
-
-Any other `delivery_strategy` value is invalid. Do NOT pick the nearest branch and do NOT proceed: STOP, report the unrecognised value, and re-collect the delivery strategy through the lossless blocking-prompt route before launching `sdd-apply`.
-
-Do this even in Automatic mode. Automatic mode does not override reviewer burnout protection.
-
-When launching `sdd-apply`, always include the resolved `delivery_strategy`, `chain_strategy`, and any chosen PR boundary/exception in the prompt.
 
 <!-- gentle-ai:sdd-model-assignments -->
 

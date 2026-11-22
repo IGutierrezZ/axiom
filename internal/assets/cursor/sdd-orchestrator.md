@@ -155,7 +155,7 @@ In **Automatic** mode the orchestrator is the gatekeeper between phases. The gat
 
 **On gate FAIL:** re-run the same phase exactly once with corrective feedback that names the specific failures the gatekeeper found (do not blanket-retry). Re-run the gate on the new result. If it passes, continue the chain. If it fails again, STOP the automatic chain and surface a report to the user naming the phase, what the gatekeeper caught, both attempts, and the recommended fix. Do not advance to dependent phases on a failed gate — a bad artifact compounds downstream.
 
-The gatekeeper runs in addition to the Review Workload Guard and the Mandatory Delegation Triggers; it never relaxes them and never auto-marks anything reviewed in engram.
+The gatekeeper runs in addition to the Mandatory Delegation Triggers; it never relaxes them and never auto-marks anything reviewed in engram.
 
 ### Artifact Store Mode
 
@@ -176,21 +176,6 @@ The gatekeeper runs in addition to the Review Workload Guard and the Mandatory D
 ### Result Contract
 
 {{GENTLE_AI_SDD_SECTION:Result Contract}}
-
-### Review Workload Guard (MANDATORY)
-
-After `sdd-tasks` completes and before launching `sdd-apply`, inspect `Review Workload Forecast`.
-
-If it says `Chained PRs recommended: Yes`, `400-line budget risk: High`, estimated changed lines exceed 400, or `Decision needed before apply: Yes`, apply cached `delivery_strategy`:
-
-- **`ask-on-risk`**: STOP and ask chained/stacked PRs vs maintainer-approved `size:exception`.
-- **`auto-chain`**: Do not ask. Tell `sdd-apply` to implement only the next autonomous chained/stacked PR slice using work-unit commits.
-- **`single-pr`**: STOP and require/record `size:exception` before apply.
-- **`exception-ok`**: Continue, but tell `sdd-apply` this run uses `size:exception`.
-
-Any other `delivery_strategy` value is invalid. Do NOT pick the nearest branch and do NOT proceed: STOP, report the unrecognised value, and re-collect the delivery strategy before `sdd-apply` runs.
-
-Automatic mode does not override this guard. Always pass the resolved delivery strategy to `sdd-apply`.
 
 <!-- gentle-ai:sdd-model-assignments -->
 ## Model Assignments

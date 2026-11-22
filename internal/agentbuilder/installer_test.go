@@ -3,17 +3,21 @@ package agentbuilder
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
+	"github.com/IGutierrezZ/axiom/v3/internal/skillcheck"
 )
 
 // makeAgent creates a minimal GeneratedAgent for testing.
 func makeAgent(name, content string) *GeneratedAgent {
 	return &GeneratedAgent{
-		Name:    name,
-		Title:   "Test Agent",
-		Content: content,
+		Name:        name,
+		Title:       "Test Agent",
+		Description: "Agente de prueba",
+		Trigger:     "cuando se pida una prueba",
+		Content:     content,
 	}
 }
 
@@ -60,12 +64,76 @@ func TestInstall_FileContentMatchesAgentContent(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ReadFile: %v", err)
 	}
-	if string(data) != content {
-		t.Errorf("file content = %q, want %q", string(data), content)
+	// Install antepone el frontmatter compuesto en código y conserva el cuerpo.
+	want := "---\nname: my-agent\ndescription: \"Agente de prueba. Trigger: cuando se pida una prueba\"\n---\n\n" + content
+	if string(data) != want {
+		t.Errorf("file content = %q, want %q", string(data), want)
+	}
+	if findings := skillcheck.CheckContent(string(data), "my-agent", skillcheck.Options{Profile: skillcheck.Canonical}); len(findings) != 0 {
+		t.Errorf("el frontmatter compuesto debe ser válido incluso en perfil canónico: %+v", findings)
 	}
 
 	if results[0].Path != skillFile {
 		t.Errorf("Path = %q, want %q", results[0].Path, skillFile)
+	}
+}
+
+func TestInstall_ColapsaDescripcionMultilineaYEscapaComillas(t *testing.T) {
+	dir := t.TempDir()
+	agent := makeAgent("my-agent", "# Body\n")
+	agent.Description = "Revisa \"cosas\"\n  en varias   líneas."
+	agent.Trigger = "al\nrevisar"
+
+	if _, err := Install(agent, []AdapterInfo{{AgentID: model.AgentClaudeCode, SkillsDir: dir}}, ""); err != nil {
+		t.Fatalf("Install error: %v", err)
+	}
+	data, _ := os.ReadFile(filepath.Join(dir, "my-agent", "SKILL.md"))
+	want := "description: \"Revisa \\\"cosas\\\" en varias líneas. Trigger: al revisar\"\n"
+	if !strings.Contains(string(data), want) {
+		t.Errorf("SKILL.md = %q, want it to contain %q", string(data), want)
+	}
+}
+
+func TestInstall_ContenidoConFrontmatterPropioSeRespeta(t *testing.T) {
+	dir := t.TempDir()
+	content := "---\nname: my-agent\ndescription: \"Propio. Trigger: x\"\n---\n\n# Body\n"
+	if _, err := Install(makeAgent("my-agent", content), []AdapterInfo{{AgentID: model.AgentClaudeCode, SkillsDir: dir}}, ""); err != nil {
+		t.Fatalf("Install error: %v", err)
+	}
+	data, _ := os.ReadFile(filepath.Join(dir, "my-agent", "SKILL.md"))
+	if string(data) != content {
+		t.Errorf("SKILL.md = %q, want the original content", string(data))
+	}
+}
+
+func TestInstall_RechazaSinEscribirNada(t *testing.T) {
+	tests := []struct {
+		name    string
+		agent   *GeneratedAgent
+		wantMsg string
+	}{
+		{"nombre con separador de ruta", makeAgent("../evil", "# x\n"), "nombre de skill no válido"},
+		{"nombre con subcarpeta", makeAgent("a/b", "# x\n"), "nombre de skill no válido"},
+		{"nombre vacío", makeAgent("", "# x\n"), "nombre de skill no válido"},
+		{"descripción vacía", &GeneratedAgent{Name: "my-agent", Content: "# x\n"}, "description-missing"},
+		{"frontmatter propio con otro nombre", makeAgent("my-agent", "---\nname: otro\ndescription: \"A. Trigger: b\"\n---\n"), "name-mismatch"},
+		{"nombre reservado", makeAgent("sdd-propio", "# x\n"), "name-reserved"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dir := t.TempDir()
+			results, err := Install(tt.agent, []AdapterInfo{{AgentID: model.AgentClaudeCode, SkillsDir: dir}}, "")
+			if err == nil || !strings.Contains(err.Error(), tt.wantMsg) {
+				t.Fatalf("error = %v, want it to contain %q", err, tt.wantMsg)
+			}
+			if len(results) != 0 {
+				t.Errorf("results = %+v, want none", results)
+			}
+			entries, _ := os.ReadDir(dir)
+			if len(entries) != 0 {
+				t.Errorf("no debe escribirse nada, hay %d entradas en %s", len(entries), dir)
+			}
+		})
 	}
 }
 

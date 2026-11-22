@@ -23,30 +23,28 @@ El sistema DEBE proveer el comando `axiom knowledge query "<pregunta>" [--type=t
 ### Requirement: Resolución Spec-First con Cortocircuito Inmediato (REQ-23.13)
 
 El motor de consulta DEBE evaluar primero si la pregunta se encuentra resuelta con suficiente detalle y precisión dentro de las especificaciones vivas existentes (`openspec/specs/`). Si la respuesta está contenida en la spec, el motor DEBE responder directamente a partir de ella sin necesidad de inspeccionar el código ni invocar conectores semánticos.
+(Previously: el escenario citaba Serena entre los conectores no invocados.)
 
 #### Scenario: Respuesta directa desde la spec viva sin tocar código
 - **DADO** una especificación viva `openspec/specs/billing/spec.md` que detalla las reglas de reembolso
 - **CUANDO** se consulta `axiom knowledge query "¿Cuáles son las condiciones de reembolso?"`
 - **ENTONCES** el motor responde utilizando la especificación viva
-- **Y** no realiza llamadas a Serena ni a CodeGraph para inspeccionar código
-
----
+- **Y** no realiza llamadas a CodeGraph ni al motor semántico nativo para inspeccionar código
 
 ### Requirement: Triangulación Profunda con Evidencias ante Lagunas en la Spec (REQ-23.14)
 
 Si la consulta no está cubierta en la spec viva o requiere detalle de implementación no documentado, el motor DEBE realizar una investigación profunda triangulando:
-1. Símbolos y AST mediante Serena.
-2. Jerarquía de llamadas y dependencias mediante CodeGraph.
+1. Símbolos y AST mediante el motor semántico nativo (`axiom semantic symbols` e `inspect`).
+2. Símbolos, jerarquía de llamadas y dependencias mediante CodeGraph.
 3. Decisiones y descubrimientos previos en la memoria Engram.
 4. Código fuente correspondiente en los repositorios locales.
+(Previously: los símbolos y el AST se obtenían mediante Serena.)
 
 #### Scenario: Consulta que requiere inspección profunda de código
 - **DADO** una consulta cuya respuesta no figura en `openspec/specs/`
 - **CUANDO** el motor detecta la ausencia en la spec
-- **ENTONCES** consulta a Serena para localizar las firmas relevantes y a CodeGraph para rastrear los invocadores
+- **ENTONCES** consulta a CodeGraph o al motor semántico nativo para localizar las firmas relevantes y a CodeGraph para rastrear los invocadores
 - **Y** examina las líneas de código afectadas
-
----
 
 ### Requirement: Contrato de Respuesta en Dos Niveles (REQ-23.15)
 

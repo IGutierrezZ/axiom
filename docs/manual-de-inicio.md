@@ -22,6 +22,7 @@
    - [Política de Ramas (`git:`)](#política-de-ramas-git)
    - [Ajustes por Repositorio (`repositories:`)](#ajustes-por-repositorio-repositories)
    - [Carril de Trabajo (`workflow:`)](#carril-de-trabajo-workflow)
+   - [Aviso de Cambio Grande (`delivery:`)](#aviso-de-cambio-grande-delivery)
    - [Modo ISO y Perfil de Bug (`sdd:`)](#modo-iso-y-perfil-de-bug-sdd)
    - [Integraciones con Trackers (`integrations:`)](#integraciones-con-trackers-integrations)
 7. [Gobernanza de Skills y Autoskills](#7-gobernanza-de-skills-y-autoskills)
@@ -113,7 +114,7 @@ axiom doctor
 * Binarios requeridos en el `PATH` (Git, Go, Node.js, npm, etc.).
 * Agentes de IA detectados en el sistema.
 * Disponibilidad de servidores MCP y memoria Engram.
-* Integridad de herramientas semánticas (Serena, CodeGraph).
+* Integridad de herramientas semánticas (CodeGraph, motor nativo).
 * Huella de máquina: lo que Axiom tiene a nivel de usuario (binarios, registro del hub, GGA, CodeGraph global, entradas de PATH gestionadas) y qué elementos son restos de una instalación global. Para retirarlos, `axiom uninstall --all --scope global`; la guía de migración está en [Uso: migrar de una instalación global a una por proyecto](usage.md#migrar-de-una-instalación-global-a-una-por-proyecto).
 
 ---
@@ -305,7 +306,7 @@ roles:
 governance:
   language: "es"                  # Idioma obligatorio de comunicación y artefactos
   shared_memory: "engram"         # Conector de memoria persistente
-  semantic_analysis: "enabled"    # Serena y CodeGraph
+  semantic_analysis: "auto"    # auto (CodeGraph si está disponible; si no, motor nativo) | codegraph | native-ast
 ```
 
 `workspace.skill_roots` es opcional. Sirve para proyectos que guardan sus skills canónicas fuera de `skills/`: cada ruta debe ser relativa a la carpeta maestra y quedar dentro de ella (no se admiten rutas absolutas, `..` ni `.`). Esas raíces se escanean justo después de `skills/` y antes de los directorios de cada agente (`.claude/skills`, `.gemini/skills`, etc.), de modo que el índice de skills de `AGENTS.md` apunta a la copia versionada y no a una copia local.
@@ -376,6 +377,21 @@ workflow:
 - `axiom sdd status --json` proyecta el carril efectivo en el campo `workflow` (`lane` y `source`: `declared`, `default`, `no_workspace` o `invalid`), con o sin cambio seleccionado. Sin `axiom.yaml`, o con uno inválido, proyecta `ask`: el agente pregunta antes que entrar en SDD por su cuenta.
 - ODD no tiene paradas propias: el agente crea el documento de la tarea y empieza a implementar. Las paradas con tres salidas son de las compuertas de SDD.
 - Los binarios anteriores ignoran el bloque, como el de `git:`.
+
+### Aviso de Cambio Grande (`delivery:`)
+
+`axiom.yaml` puede declarar un bloque opcional `delivery:` con el umbral de un aviso de cambio grande. Como `workflow:`, es política versionada que comparte todo el equipo:
+
+```yaml
+delivery:
+  split_hint_lines: 600   # entero mayor que cero (por defecto: sin aviso)
+```
+
+- Un cambio se entrega en una sola PR por defecto. Cuando `delivery.split_hint_lines` está declarado y la previsión de líneas cambiadas del cambio (el extremo superior del rango estimado) lo supera, el agente avisa una sola vez de que el cambio es grande y de que la persona puede pedir PRs encadenadas, y continúa sin esperar respuesta. El aviso nunca bloquea.
+- Sin el bloque, o sin la clave `split_hint_lines`, el aviso está desactivado: no hay aviso y no se cita ningún número.
+- La validación es estricta: el valor es un entero sin comillas mayor que cero (`0`, `-1`, `"600"`, `6e2`, `1.5`, `true` y el valor nulo se rechazan) y una clave desconocida o repetida es un error. `axiom workspace validate` rechaza un bloque inválido nombrando `delivery.split_hint_lines`, con código de salida `1`.
+- Los binarios anteriores ignoran el bloque, como el de `git:`.
+- `axiom init --force` conserva un `axiom.yaml` que declara `delivery:`, sea válido o no.
 
 ### Modo ISO y Perfil de Bug (`sdd:`)
 
@@ -482,6 +498,13 @@ Axiom nunca instala una habilidad de IA a ciegas en tu proyecto. Sigue un flujo 
    * `.atl/skill-registry.md`
    * La tabla de habilidades en `AGENTS.md`
    * El tópico correspondiente en la memoria persistente de Engram MCP.
+
+6. **Validar las skills de proyecto y de usuario:**
+   ```bash
+   axiom skill check            # informe por skill y de conjunto
+   axiom skill check --json     # el mismo informe para máquinas
+   ```
+   Pasa las mismas reglas que el build y que `approve` (frontmatter, `name`, `description` con `Trigger:`, referencias) e informa de lo que el registro tolera en silencio: colisiones entre carpetas, nombres reservados, alcance por carpeta y registro desactualizado. Sale con código distinto de cero solo si hay errores. `axiom doctor` incluye un resumen (`project:skills`).
 
 ### Uso por Web UI (`axiom ui`)
 
@@ -720,7 +743,7 @@ Este comando asegura que los prompts, agentes locales (`opencode.json`) y herram
 
 ### Mantenimiento Semántico del CodeGraph (`axiom semantic reindex`)
 
-Axiom integra análisis semántico del código fuente mediante CodeGraph y Serena. Tras refactorizaciones mayores o tras sincronizar cambios de otros roles:
+Axiom integra análisis semántico del código fuente mediante CodeGraph y el motor AST nativo de Go. Tras refactorizaciones mayores o tras sincronizar cambios de otros roles:
 * **Por Línea de Comandos:**
   ```bash
   axiom semantic reindex

@@ -1117,6 +1117,7 @@ func TestRunDoctor_IntegrationAllMocked(t *testing.T) {
   [ok]  installed:asset_version        no installed binary version recorded in state file — check skipped
   [ok]  engram:reachable               engram MCP (stdio) answered the initialize handshake for persisted configuration: %s
   [ok]  disk:space                     1024 MB free on %s filesystem
+  [ok]  project:skills                 0 skills checked, no issues
 
 Huella de máquina (nivel de usuario)
 -------------------------------------
@@ -1124,7 +1125,7 @@ Huella de máquina (nivel de usuario)
   [declarado]    binario engram                 /usr/local/bin/engram
   [declarado]    hub y estado de Axiom          %s (state.json)
 
-Summary: 7 passed, 0 failed, 0 warnings
+Summary: 8 passed, 0 failed, 0 warnings
 Status:  healthy
 `, configPath, filepath.Join(homeDir, ".axiom"), filepath.Join(homeDir, ".axiom"))
 	// The state directory is ".axiom" since the rename; doctor.go:640 is the
@@ -1468,6 +1469,8 @@ func TestCheckOneTool_FileWithoutExecBit_NotCountedAsDuplicate(t *testing.T) {
 // although not on PATH — is NOT in the rendered report (because it is not
 // in state.json's InstalledAgents). This is the headline scenario from #709.
 func TestRunDoctor_OnlySelectedAgentsAreRequired(t *testing.T) {
+	// El proyecto de la carpeta actual aporta sus propias comprobaciones (project:skills): se aísla.
+	t.Chdir(t.TempDir())
 	origLook := lookPathFn
 	origAvail := availableBytesFn
 	origHTTP := httpGetFn

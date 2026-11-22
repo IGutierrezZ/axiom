@@ -106,23 +106,19 @@ Example:
 (other values: `fallback-registry`, `fallback-path`, or `none — no registry found`)
 ```
 
-## E. Review Workload Guard
+## E. Delivery Strategy
 
-SDD must protect reviewer cognitive load, not only generate tasks.
+Delivery is a branch-targeting choice, never a stop for size or workload.
 
-- The default PR review budget is **400 changed lines** (`additions + deletions`).
-- Count authored text additions plus deletions only for this threshold. Generated goldens are excluded from authored risk count but remain included in complete snapshot identity and receipt validation.
-- The orchestrator MUST cache a delivery strategy at session start: `ask-on-risk` (default), `auto-chain`, `single-pr`, or `exception-ok`. Those four are the whole domain.
-- Any other `delivery_strategy` value is invalid. A phase MUST NOT map it to the nearest branch, MUST NOT record it in an artifact, and MUST NOT forward it: report the unrecognised value and stop.
-- The orchestrator MUST pass `delivery_strategy` to `sdd-tasks` and the resolved decision to `sdd-apply`.
-- `sdd-tasks` MUST forecast whether the planned work may exceed that budget.
-- The forecast MUST include exact plain-text guard lines: `Decision needed before apply: Yes|No`, `Chained PRs recommended: Yes|No`, and `400-line budget risk: Low|Medium|High`.
-- If the forecast is high, `sdd-tasks` MUST recommend chained or stacked PRs using deliverable work units.
-- `sdd-apply` MUST NOT start oversized work unless the delivery strategy resolves to chained/stacked PR slices or explicitly accepted `size:exception`.
+- The domain of `delivery_strategy` is `single-pr | chained`. The default is `single-pr`: one pull request holding one work-unit commit per task. `chained` applies only when the person asked for chained, stacked, or sliced pull requests.
+- Legacy values are read as aliases: `ask-on-risk` and `exception-ok` → `single-pr`, `auto-chain` → `chained`. Never write or forward an alias; forward the canonical value.
+- Any other `delivery_strategy` value is invalid. A phase MUST NOT map it to the nearest value, MUST NOT record it in an artifact, and MUST NOT forward it: report the unrecognised value and stop.
+- Precedence, highest first: a `chained` request from the person in this session; a legacy value in the change's existing `tasks.md`; the `Delivery strategy` line of the runtime-confirmed session preflight block. The orchestrator resolves it; phases only consume it.
+- The orchestrator MUST pass the resolved `delivery_strategy` to `sdd-tasks` and `sdd-apply`, and `chain_strategy` only when it is `chained`.
+- `sdd-tasks` MUST include a qualitative Delivery Forecast (size, estimated changed lines, work units). It never blocks apply.
+- `sdd-apply` uses the strategy only to choose the target branch of its commits; it never stops because of size, forecast, or a missing delivery decision.
 - Each chained PR slice must have a clear start, clear finish, autonomous scope, verification, and reasonable rollback.
 - In a Feature Branch Chain, PR #1 targets the feature/tracker branch and later child PRs target the immediate previous PR branch; if GitHub shows previous slices in a child diff, retarget/rebase until the diff is clean.
-
-This guard exists to reduce reviewer burnout and keep implementation delivery safe. Do not treat it as optional process noise.
 
 ## F. Key Learnings Closing
 

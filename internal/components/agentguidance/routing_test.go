@@ -902,3 +902,68 @@ func TestRenderRoutingClosesODDWithTheMaintainedContextLocator(t *testing.T) {
 		})
 	}
 }
+
+// TestRenderRoutingDeliversInASinglePRByDefault guards organic-agent-trigger-rules
+// REQ-32.4 (C-02-c): ODD ships a feature as `single-pr` unless the person asks to
+// chain it, warns once and never blocks when the forecast exceeds
+// `delivery.split_hint_lines`, names no line-count threshold, and no longer offers
+// the retired delivery vocabulary or the size gates it relied on. The delivery
+// bullet is self-contained so that a later change can extend its last sentence.
+func TestRenderRoutingDeliversInASinglePRByDefault(t *testing.T) {
+	t.Parallel()
+
+	for _, agent := range catalog.AllAgents() {
+		t.Run(string(agent.ID), func(t *testing.T) {
+			t.Parallel()
+
+			rendered, err := RenderRouting(agent.ID)
+			if err != nil {
+				t.Fatalf("RenderRouting(%q) error = %v", agent.ID, err)
+			}
+
+			for _, want := range []string{
+				"Size each ODD task as the smallest coherent behavior with its tests and docs; there is no line-count target, cap, or forced split.",
+				"Never delete spaces, blank lines, or comments for cosmetic line savings; never omit tests, minify, add gratuitous abstractions, or split artificially.",
+				"Forward this same instruction when delegating tasks to subagents.",
+				"Delivery follows work units. By default a feature ships as `single-pr`: one pull request holding one work-unit commit per task.",
+				"At feature-document creation, forecast the approximate authored changed lines (additions plus deletions, generated files excluded) from the task list.",
+				"When the project's `axiom.yaml` declares `delivery.split_hint_lines` and the forecast exceeds it, tell the person once for this feature that the change is large and that they can ask for chained pull requests, then continue without waiting; without that key, give no size warning and cite no line number.",
+				"Use `chained` only when the person asks to chain, stack, or slice the pull requests",
+				"ask once whether `stacked-to-main` or `feature-branch-chain`",
+				"record slice boundaries, which commits each pull request holds, in the feature document.",
+				"Resolve the `work-unit-commits` skill by registry name for every feature and the `chained-pr` skill only when chaining, never hardcoding their paths.",
+			} {
+				if !strings.Contains(rendered, want) {
+					t.Errorf("RenderRouting(%q) is missing the delivery doctrine %q", agent.ID, want)
+				}
+			}
+
+			for _, retired := range []string{
+				"400",
+				"ask-on-risk",
+				"auto-chain",
+				"exception-ok",
+				"Existing PR size gates",
+				"delivery budget",
+				"Choose one delivery strategy per feature",
+			} {
+				if strings.Contains(rendered, retired) {
+					t.Errorf("RenderRouting(%q) still carries the retired delivery text %q", agent.ID, retired)
+				}
+			}
+
+			// The delivery bullet ends in a sentence a later change can extend.
+			start := strings.Index(rendered, "- Delivery follows work units.")
+			if start < 0 {
+				t.Fatalf("RenderRouting(%q) lost the delivery bullet", agent.ID)
+			}
+			bullet := rendered[start:]
+			if end := strings.Index(bullet, "\n"); end >= 0 {
+				bullet = bullet[:end]
+			}
+			if !strings.HasSuffix(bullet, "never hardcoding their paths.") {
+				t.Errorf("RenderRouting(%q) delivery bullet must end in a sentence that can be extended: %q", agent.ID, bullet)
+			}
+		})
+	}
+}

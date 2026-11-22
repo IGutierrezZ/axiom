@@ -134,10 +134,13 @@ func TestSymbolFiltersAreServerSide(t *testing.T) {
 			t.Errorf("semantic.js no contiene %q", marker)
 		}
 	}
-	for _, marker := range []string{"native_ast_ready", "codegraph_installed", "codegraph_indexed", "serena_installed", "api('/api/semantic/reindex', { method: 'POST' })", "api('/api/semantic/dependencies')", "data.agents"} {
+	for _, marker := range []string{"native_ast_ready", "codegraph_installed", "codegraph_indexed", "api('/api/semantic/reindex', { method: 'POST' })", "api('/api/semantic/dependencies')", "data.agents"} {
 		if !strings.Contains(js, marker) {
 			t.Errorf("semantic.js no contiene %q", marker)
 		}
+	}
+	if strings.Contains(strings.ToLower(js), "serena") {
+		t.Errorf("semantic.js no debe mencionar Serena: el conector se retiró del producto")
 	}
 	// El servidor acepta realmente el filtro por tipo.
 	root := t.TempDir()

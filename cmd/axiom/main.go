@@ -105,7 +105,7 @@ const skillCollisionNote = "  Nota: 'skill list' es autoskill (activas y buzón)
 // skillGroupHelp returns the `axiom skill` subcommand listing and the collision
 // clarification (REQ-22.10).
 func skillGroupHelp() string {
-	return "Error: subcomando de 'skill' requerido. Opciones: index, scan, list, approve, reject\n" + skillCollisionNote + "\n"
+	return "Error: subcomando de 'skill' requerido. Opciones: index, scan, list, approve, reject, check\n" + skillCollisionNote + "\n"
 }
 
 // axiomHelpText returns the global help text.
@@ -144,12 +144,13 @@ COMANDOS DE GOBERNANZA Y WORKSPACE:
   skill list           Lista las skills activas o propuestas pendientes en el buzón transitorio (--inbox)
   skill index          Regenera (refresh) o consulta (list) el índice unificado de skills
   skill approve        Aprueba e instala formalmente una skill desde el buzón transitorio a skills/
+  skill check          Valida las skills de proyecto y usuario e informa de colisiones y registro desactualizado (--json, --path)
   skill reject         Descarta y purga una propuesta del buzón transitorio
 ` + skillCollisionNote + `
   knowledge sweep      Barrido rápido técnico y funcional del proyecto (soporta --json, --headless)
   knowledge crawl      Crawling exhaustivo desacoplado por unidades de trabajo (soporta --plan, --record-unit, --status, --finalize)
   knowledge query      Consulta spec-first fundamentada con evidencias de código (solo lectura por defecto)
-  semantic status      Diagnostica los conectores semánticos (Serena, CodeGraph, AST) y salud del workspace
+  semantic status      Diagnostica los conectores semánticos (CodeGraph, AST) y salud del workspace
   semantic symbols     Consulta y filtra símbolos de código (struct, interface, func, method)
   semantic inspect     Inspecciona el grafo de dependencias entre paquetes del workspace
   semantic reindex     Dispara la reindexación de CodeGraph bajo demanda en el workspace
@@ -1389,6 +1390,12 @@ func runSkillScan(args []string) {
 	fmt.Printf("  Nuevas Skills Propuestas: %d (%d de midudev auditado, %d de minería local)\n",
 		len(report.SkillsProposed), report.RegistrySkillsCount, report.MinedSkillsCount)
 	fmt.Printf("  Total en Buzón Transitorio: %d\n", report.TotalInInbox)
+	for _, inv := range report.SkillsInvalid {
+		fmt.Printf("  Descartada por validación: %s\n", inv.Name)
+		for _, f := range inv.Errors {
+			fmt.Printf("    - %s: %s\n", f.Rule, f.Message)
+		}
+	}
 
 	if len(report.SkillsProposed) > 0 {
 		fmt.Println("\nPropuestas añadidas al buzón (.axiom/skills/inbox/):")
@@ -1504,12 +1511,14 @@ func runSkillGroup(args []string, stdout, stderr io.Writer) int {
 		runSkillList(args[1:])
 	case "index":
 		return app.RunSkillIndex(args[1:], stdout, stderr)
+	case "check":
+		return runSkillCheck(args[1:], stdout, stderr)
 	case "approve":
 		return runSkillApprove(args[1:], stdout, stderr)
 	case "reject":
 		runSkillReject(args[1:])
 	default:
-		fmt.Fprintf(stdout, "Error: subcomando '%s' no reconocido para skill. Usa 'axiom skill [index|scan|list|approve|reject]'.\n", args[0])
+		fmt.Fprintf(stdout, "Error: subcomando '%s' no reconocido para skill. Usa 'axiom skill [index|scan|list|approve|reject|check]'.\n", args[0])
 		return 1
 	}
 	return 0
@@ -1607,7 +1616,6 @@ func runSemanticStatus(args []string) {
 	fmt.Printf("===================================================\n")
 	fmt.Printf("  - Conector activo:      %s\n", strings.ToUpper(string(status.ActiveConnector)))
 	fmt.Printf("  - Conector configurado: %s\n", status.ConfiguredConnector)
-	fmt.Printf("  - Serena MCP:           %s\n", boolToStatus(status.SerenaAvailable))
 	fmt.Printf("  - CodeGraph CLI:        %s\n", boolToStatus(status.CodeGraphAvailable))
 	fmt.Printf("  - Motor Nativo Go AST:  LISTO [OK]\n")
 	fmt.Printf("  - Total paquetes:       %d\n", status.TotalPackages)

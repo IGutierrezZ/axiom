@@ -341,6 +341,7 @@ Checks performed:
 | Workspace y topología (`project:workspace`, `project:topology`) | Solo si existe `axiom.yaml`. Valida la configuración e informa de la topología (`monorepo-embedded` o `multirepo`, con su ruta global) |
 | Repos de rol (`project:role_repos`) | Cada repositorio de rol declarado existe (si falta, es un fallo) y es un repositorio git (si no lo es, es un aviso). No se comprueba la rama |
 | Repo de specs (`project:specs_repo`) | El repositorio de specs declarado existe y es un repositorio git |
+| Skills del proyecto (`project:skills`) | Solo con raíz de proyecto. Pasa `skillcheck` (perfil portable) por las skills de proyecto y de usuario que escanea el registro e informa de frontmatter roto, referencias rotas, colisiones de nombre entre carpetas (aviso si el contenido difiere, informativo si es copia idéntica), nombres reservados que el registro descarta y registro desactualizado. Es un aviso si hay errores o avisos y nunca un fallo; el alcance por carpeta y el aviso de Pi (las skills llegan por gentle-pi, fuera de Axiom) son informativos. Detalle con `axiom skill check` |
 
 Each check reports **pass**, **warn**, or **fail** with an optional remedy hint. Run `doctor` first when troubleshooting an unexpected install or sync result.
 

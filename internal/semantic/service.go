@@ -15,6 +15,10 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
+// deprecatedConnectorSerena es el valor obsoleto de governance.semantic_analysis que
+// siguen conteniendo algunos axiom.yaml: se acepta y se trata como "auto" con un aviso.
+const deprecatedConnectorSerena = "serena"
+
 // Service proporciona la interfaz de alto nivel para operaciones semánticas en el workspace.
 type Service struct {
 	workspaceRoot string
@@ -65,19 +69,13 @@ func (s *Service) GetStatus(ctx context.Context) (*SemanticStatus, error) {
 	status.CodeGraphAvailable = s.detector.CheckCodeGraphAvailability(agents)
 	status.CodeGraphIndexed = s.codeGraphIndexed()
 
-	status.SerenaInstalled = s.detector.CheckSerenaInPath()
-	status.SerenaConfigured = s.detector.CheckSerenaConfigured(agents)
-	status.SerenaAvailable = s.detector.CheckSerenaAvailability(agents)
-
 	// 3. Resolver conector activo
-	switch status.ConfiguredConnector {
-	case ConnectorSerena:
-		if status.SerenaAvailable {
-			status.ActiveConnector = ConnectorSerena
-		} else {
-			status.ActiveConnector = ConnectorNativeAST
-			status.Warnings = append(status.Warnings, "Serena MCP está configurado en axiom.yaml pero no se detectó en los agentes ni en PATH. Activado fallback a native-ast.")
-		}
+	configured := status.ConfiguredConnector
+	if string(configured) == deprecatedConnectorSerena {
+		status.Warnings = append(status.Warnings, "El valor «serena» de governance.semantic_analysis en axiom.yaml está obsoleto (Serena ya no está soportada) y se trata como «auto».")
+		configured = ConnectorAuto
+	}
+	switch configured {
 	case ConnectorCodeGraph:
 		if status.CodeGraphAvailable {
 			status.ActiveConnector = ConnectorCodeGraph
@@ -88,9 +86,7 @@ func (s *Service) GetStatus(ctx context.Context) (*SemanticStatus, error) {
 	case ConnectorNativeAST:
 		status.ActiveConnector = ConnectorNativeAST
 	default: // Auto
-		if status.SerenaAvailable {
-			status.ActiveConnector = ConnectorSerena
-		} else if status.CodeGraphAvailable {
+		if status.CodeGraphAvailable {
 			status.ActiveConnector = ConnectorCodeGraph
 		} else {
 			status.ActiveConnector = ConnectorNativeAST
@@ -273,7 +269,7 @@ func (s *Service) ReindexCodeGraph(ctx context.Context) (*ReindexResult, error) 
 		return &ReindexResult{
 			Success:   true,
 			Connector: string(ConnectorNativeAST),
-			Message:   "CodeGraph CLI no se encuentra en el PATH. El motor semántico activo Native AST y Serena MCP operan dinámicamente en memoria sin requerir reindexación estática.",
+			Message:   "CodeGraph CLI no se encuentra en el PATH. El motor semántico activo Native AST opera dinámicamente en memoria sin requerir reindexación estática.",
 			Duration:  duration,
 		}, nil
 	}

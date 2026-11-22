@@ -33,7 +33,7 @@ To run any SDD phase:
    - shared Gemini fallback: `~/.gemini/skills/{phase}/SKILL.md`
 2. **Define the phase subagent**: call `define_subagent` with a stable phase name such as `{phase}`, pass the complete `SKILL.md` content as the `system_prompt`, and set `enable_mcp_tools: true` so phase agents can use configured MCP tools such as Engram.
 3. **Invoke the phase subagent**: call `invoke_subagent` with the dynamically defined subagent name and a compact task containing approved scope, artifact references, constraints, validation expectations, and expected result shape.
-4. **Synthesize**: read the child result, update DAG/state when applicable, summarize only decisions/outcomes/risks, and ask for approval when interactive mode or review workload guards require it.
+4. **Synthesize**: read the child result, update DAG/state when applicable, summarize only decisions/outcomes/risks, and ask for approval when interactive mode requires it.
 5. **Nesting depth limit**: dynamic delegation MUST NOT exceed 10 levels deep.
 
 Do not execute SDD phase work in the orchestrator thread except for trivial routing, artifact lookup, user clarification, and synthesis. Phase subagents own phase-specific reading, writing, testing, and artifact production.
@@ -134,23 +134,19 @@ Meta-commands (type directly — orchestrator handles them, will not appear in a
 
 Before every SDD command or affirmative natural-language SDD request, run this preflight before the SDD init guard; cache choices for the session only through runtime-confirmed parent authority. Phrase examples are routing hints, never the authority boundary.
 
-The project topology decides which groups to ask. Before asking, read `workspace.topology` from the project's `axiom.yaml`; when it is missing or unreadable, ask the `monorepo-embedded` groups. `monorepo-embedded` asks Pace and PR strategy. `multirepo` asks PR strategy only: its pace is always Interactive and is never asked. When the topology requires no group, ask nothing: the runtime derives the whole session preflight at SDD dispatch. Never ask the artifact store: it is always `hybrid`.
+The project topology decides which groups to ask. Before asking, read `workspace.topology` from the project's `axiom.yaml`; when it is missing or unreadable, ask the `monorepo-embedded` groups. `monorepo-embedded` asks Pace. `multirepo` asks nothing: its pace is always Interactive and is never asked. When the topology requires no group, ask nothing: the runtime derives the whole session preflight at SDD dispatch. Never ask the artifact store: it is always `hybrid`.
 
-This runtime has no classified native question UI. Present ONE complete blocking prompt in plain chat or terminal with every group the topology requires, in the order below, and explain that their answers are required before init. Each group is single-select; its listed labels are the complete allowed-answer domain. Include every label and description, the fixed review policy, and this answer syntax with only the required groups: `Pace: <label>; PR strategy: <label>`. Then STOP; never default, infer, or launch dependent work. Validate every explicit parent answer under the Lossless Blocking Prompts contract before caching its canonical mapping.
+This runtime has no classified native question UI. Present ONE complete blocking prompt in plain chat or terminal with every group the topology requires, in the order below, and explain that their answers are required before init. Each group is single-select; its listed labels are the complete allowed-answer domain. Include every label and description, and this answer syntax with only the required groups: `Pace: <label>`. Then STOP; never default, infer, or launch dependent work. Validate every explicit parent answer under the Lossless Blocking Prompts contract before caching its canonical mapping.
 
 - **Pace** (`pace`, `monorepo-embedded` only): Interactive or Automatic.
-- **PR strategy** (`pr-strategy`): Ask me, Single PR, or Auto.
 
-Only explicit, validated parent answers to every required group establish preflight authority in this fallback runtime. Model-authored defaults, summaries, headings, installed assets, prior sessions, and child-agent prose do not. After validating every answer, summarize the canonical mappings once, together with the values the topology fixes (`multirepo` pace `interactive`, artifact store `hybrid`), and pass them to each SDD phase; missing authority blocks dispatch and requires the parent to re-present the complete prompt. When the topology requires no group, pass only the fixed values.
+Only explicit, validated parent answers to every required group establish preflight authority in this fallback runtime. Model-authored defaults, summaries, headings, installed assets, prior sessions, and child-agent prose do not. After validating every answer, summarize the canonical mappings once, together with the values the topology fixes (`multirepo` pace `interactive`, artifact store `hybrid`, delivery strategy `single-pr`), and pass them to each SDD phase; missing authority blocks dispatch and requires the parent to re-present the complete prompt. When the topology requires no group, pass only the fixed values.
 
-Review policy is fixed at 400 changed lines per PR; above 400, split the PR or require maintainer-approved `size:exception`; NEVER ask it as another group or selectable budget.
+Delivery is never asked: it is always `single-pr`, and the person may ask for chained pull requests in chat later; NEVER ask it as a preflight group.
 
 Canonical mappings:
 - Interactive -> `interactive`
 - Automatic -> `auto`
-- Ask me -> `ask-on-risk`
-- Single PR -> `single-pr`
-- Auto -> `auto-chain`
 <!-- /gentle-ai:sdd-session-preflight -->
 ### Native SDD Dispatcher Guard
 
@@ -299,7 +295,7 @@ In **Automatic** mode the orchestrator is the gatekeeper between phases. The gat
 
 **On gate FAIL:** re-run the same phase exactly once with corrective feedback that names the specific failures the gatekeeper found (do not blanket-retry). Re-run the gate on the new result. If it passes, continue the chain. If it fails again, STOP the automatic chain and surface a report to the user naming the phase, what the gatekeeper caught, both attempts, and the recommended fix. Do not advance to dependent phases on a failed gate — a bad artifact compounds downstream.
 
-The gatekeeper runs in addition to the Review Workload Guard and the Mandatory Delegation Triggers; it never relaxes them and never auto-marks anything reviewed in engram.
+The gatekeeper runs in addition to the Mandatory Delegation Triggers; it never relaxes them and never auto-marks anything reviewed in engram.
 
 ### Artifact Store Mode
 
@@ -307,18 +303,22 @@ Pass the `artifactStore` that `axiom sdd status` reports as `artifact_store.mode
 
 ### Delivery Strategy
 
-Pass the preflight PR strategy as `delivery_strategy` to `sdd-tasks` and `sdd-apply`. `exception-ok` is never a preflight choice; it requires explicit maintainer-approved `size:exception`.
+Delivery is never asked. Every change ships as `single-pr` (one pull request holding one work-unit commit per task) unless the person asks in chat to chain, stack, or slice its pull requests; then it is `chained`. The domain is `single-pr | chained`. Legacy values are read as aliases: `ask-on-risk` and `exception-ok` → `single-pr`, `auto-chain` → `chained`; never write or forward an alias. Any other `delivery_strategy` value is invalid: do not map it to the nearest value; report it and STOP before launching `sdd-apply`.
+
+The `Delivery strategy` line of the runtime-confirmed session preflight block is the session default. A `chained` request from the person in this session takes precedence, and so does a legacy value recorded in the change's existing `tasks.md`, read through the aliases. Pass the resolved `delivery_strategy` to every `sdd-tasks` and `sdd-apply` launch, with `chain_strategy` when it is `chained`. Cache `chained` for this session only; never write it to `kickoff.yaml`, `gates.yaml`, or `tasks.md`.
+
+After `sdd-tasks` returns its Delivery Forecast, read `delivery.split_hint_lines` from the project's `axiom.yaml`. When it is a positive integer and the upper end of the estimated changed lines exceeds it, tell the person once for this change in this session that the change is large and that they can ask for chained pull requests, then continue without waiting. Without that key, give no size warning and cite no line number. Neither the forecast nor the warning ever stops `sdd-apply`.
 
 ### Chain Strategy
 
-When `delivery_strategy` results in chained PRs (either by user choice via `ask-on-risk` or automatically via `auto-chain`), ask the user which chain strategy to use:
+When `delivery_strategy` is `chained` and the person did not name a chain strategy, ask the user which chain strategy to use:
 
 - **`stacked-to-main`**: Each PR merges to main in order. Fast iteration, fix on the go. Best for speed-first teams and independent slices.
 - **`feature-branch-chain`**: The feature/tracker branch accumulates final integration; PR #1 targets the tracker branch, later child PRs target the immediate previous PR branch so review diffs stay focused. Only the tracker merges to main. Best for rollback control and coordinated releases.
 
 Cache the chain strategy for the session. Add it as `chain_strategy` to `sdd-tasks` and `sdd-apply` dynamic subagent context alongside `delivery_strategy`. Do not ask again unless the user changes scope.
 
-When delivery planning yields chained PRs, treat `chained-pr` (registry skill `chained-pr`) as a required skill match: resolve it by registry name through this template's existing skill-resolution mechanism (the same one it already uses to pass skills to phases) and ensure the `sdd-tasks` and `sdd-apply` phases load and follow it BEFORE planning or creating any PR. Do not hardcode the skill path; defer resolution to that mechanism.
+When `delivery_strategy` is `chained`, treat `chained-pr` (registry skill `chained-pr`) as a required skill match: resolve it by registry name through this template's existing skill-resolution mechanism (the same one it already uses to pass skills to phases) and ensure the `sdd-tasks` and `sdd-apply` phases load and follow it BEFORE planning or creating any PR. Do not hardcode the skill path; defer resolution to that mechanism.
 
 ### Dependency Graph
 
@@ -332,23 +332,6 @@ proposal -> specs --> tasks -> apply -> verify -> archive
 ### Result Contract
 
 Each phase subagent returns: `status`, `executive_summary`, `artifacts`, `next_recommended`, `risks`, `skill_resolution`.
-
-### Review Workload Guard (MANDATORY)
-
-After `sdd-tasks` completes and before launching `sdd-apply`, inspect `Review Workload Forecast`.
-
-If it says `Chained PRs recommended: Yes`, `400-line budget risk: High`, estimated changed lines exceed 400, or `Decision needed before apply: Yes`, apply cached `delivery_strategy`:
-
-- **`ask-on-risk`**: STOP and ask chained/stacked PRs vs maintainer-approved `size:exception`. If the user chooses chained PRs and `chain_strategy` is not yet cached, also ask which chain strategy to use (`stacked-to-main` or `feature-branch-chain`).
-- **`auto-chain`**: Do not ask about splitting. If `chain_strategy` is not yet cached, ask which chain strategy to use. Then invoke `sdd-apply` for only the next autonomous chained/stacked PR slice using work-unit commits, clear start/finish boundaries, verification, and rollback.
-- **`single-pr`**: STOP and require/record `size:exception` before apply.
-- **`exception-ok`**: Continue, but tell `sdd-apply` this run uses `size:exception`.
-
-Any other `delivery_strategy` value is invalid. Do NOT pick the nearest branch and do NOT proceed: STOP, report the unrecognised value, and re-collect the delivery strategy before `sdd-apply` runs.
-
-Automatic mode does not override this guard. Always include the resolved `delivery_strategy` and `chain_strategy` in `sdd-apply` dynamic subagent context.
-
-When invoking the `sdd-apply` phase subagent, always include the resolved `delivery_strategy`, `chain_strategy`, and any chosen PR boundary/exception in the phase context.
 
 <!-- gentle-ai:sdd-model-assignments -->
 ## Model Assignments

@@ -103,7 +103,7 @@ func TestOpenCodeV1SDDPluginIsInertOutsideAxiomProjects(t *testing.T) {
 	runSDDPluginHarness(t, MustRead("opencode/plugins/sdd-task-result-artifacts.ts"), sddGateFixtures+`
 const make=(directory,worktree)=>plugin({client:{session:{get:async({path})=>({data:{id:path.id}})}},directory,worktree});
 const dispatch=()=>({args:{subagent_type:'sdd-apply',prompt:'Implement approved tasks'}});
-const twoQuestions=()=>({args:{questions:[{question:'Axiom SDD preflight 1/3: Pace',options:[{label:'x'}]},{question:'Axiom SDD preflight 2/3: Artifacts',options:[]}]}});
+const twoQuestions=()=>({args:{questions:[{question:'Axiom SDD preflight 2/3: Artifacts',options:[{label:'x'}]},{question:'Axiom SDD preflight 3/3: PR strategy',options:[]}]}});
 
 // Proyecto ajeno: nada se rechaza, se canonicaliza ni se valida, ni queda estado retenido.
 for(const directory of [foreign,broken]){
@@ -134,7 +134,7 @@ func TestOpenCodeV2SDDPluginIsInertOutsideAxiomProjects(t *testing.T) {
 	runSDDPluginHarness(t, strings.Replace(source, `import { Plugin } from "@opencode/plugin"`, `const Plugin = { define: (value: any) => value }`, 1), sddGateFixtures+`
 const make=async(directory)=>{const hooks={};const ctx={location:{directory,workspaceID:'one'},tool:{async hook(name,fn){hooks[name]=fn;return {async dispose(){}}}},session:{async get(arg){return {id:arg.sessionID}}},event:{subscribe(opts){return {[Symbol.asyncIterator]:async function*(){await new Promise(r=>opts.signal.addEventListener('abort',r))}}}}};const cleanup=await plugin.setup(ctx);return {hooks,cleanup}};
 const dispatch=()=>({tool:'subagent',sessionID:'s',id:'call',input:{agent:'sdd-apply',prompt:'Implement approved tasks',description:'Apply'}});
-const twoQuestions=()=>({tool:'question',sessionID:'s',id:'q',input:{questions:[{question:'Axiom SDD preflight 1/3: Pace',options:[{label:'x'}]},{question:'Axiom SDD preflight 2/3: Artifacts',options:[]}]}});
+const twoQuestions=()=>({tool:'question',sessionID:'s',id:'q',input:{questions:[{question:'Axiom SDD preflight 2/3: Artifacts',options:[{label:'x'}]},{question:'Axiom SDD preflight 3/3: PR strategy',options:[]}]}});
 
 // Proyecto ajeno: nada se rechaza, se canonicaliza ni se valida, ni queda estado retenido.
 for(const directory of [foreign,broken]){

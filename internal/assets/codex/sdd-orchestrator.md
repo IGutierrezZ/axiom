@@ -251,7 +251,7 @@ In **Automatic** mode the orchestrator is the gatekeeper between phases. The gat
 
 **On gate FAIL:** re-run the same phase exactly once with corrective feedback that names the specific failures the gatekeeper found (do not blanket-retry). Re-run the gate on the new result. If it passes, continue the chain. If it fails again, STOP the automatic chain and surface a report to the user naming the phase, what the gatekeeper caught, both attempts, and the recommended fix. Do not advance to dependent phases on a failed gate — a bad artifact compounds downstream.
 
-The gatekeeper runs in addition to the Review Workload Guard and the Mandatory Delegation Triggers; it never relaxes them and never auto-marks anything reviewed in engram.
+The gatekeeper runs in addition to the Mandatory Delegation Triggers; it never relaxes them and never auto-marks anything reviewed in engram.
 
 ### Artifact Store Mode
 
@@ -259,21 +259,11 @@ The gatekeeper runs in addition to the Review Workload Guard and the Mandatory D
 
 ### Delivery Strategy
 
-On the first `/sdd-new`, `/sdd-ff`, or `/sdd-continue` in a session, ask once for and cache delivery strategy: `ask-on-risk` (default), `auto-chain`, `single-pr`, or `exception-ok`. Pass it as `delivery_strategy` to `sdd-tasks` and `sdd-apply` prompts.
+{{GENTLE_AI_SDD_SECTION:Delivery Strategy}}
 
 ### Chain Strategy
 
 {{GENTLE_AI_SDD_SECTION:Chain Strategy}}
-
-### Review Workload Guard (MANDATORY)
-
-After `sdd-tasks` completes and before launching `sdd-apply`, inspect the task result summary for `Review Workload Forecast`.
-
-If it says `Chained PRs recommended: Yes`, `400-line budget risk: High`, estimated changed lines exceed 400, or `Decision needed before apply: Yes`, apply the cached `delivery_strategy`: `ask-on-risk` asks, `auto-chain` asks for a missing `chain_strategy` and applies only the next PR slice, `single-pr` requires `size:exception`, and `exception-ok` records the exception.
-
-Any other `delivery_strategy` value is invalid. Do NOT pick the nearest branch and do NOT proceed: STOP, report the unrecognised value, and re-collect the delivery strategy before `sdd-apply` runs.
-
-When launching `sdd-apply`, include the resolved `delivery_strategy`, `chain_strategy`, and any chosen PR boundary/exception in the prompt.
 
 ### Apply/Verify Context Forwarding (MANDATORY)
 

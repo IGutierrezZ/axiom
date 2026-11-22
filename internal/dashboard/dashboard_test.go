@@ -329,7 +329,7 @@ func TestSkillsInboxEndpoints(t *testing.T) {
 	if err := os.MkdirAll(inboxFolder, 0755); err != nil {
 		t.Fatal(err)
 	}
-	_ = os.WriteFile(filepath.Join(inboxFolder, "SKILL.md"), []byte("# Sample Skill\n\nContenido prueba"), 0644)
+	_ = os.WriteFile(filepath.Join(inboxFolder, "SKILL.md"), []byte("---\nname: sample-skill\ndescription: \"Skill de prueba. Trigger: cuando se pruebe el buzón.\"\nmetadata:\n  origin: mined\n---\n\n# Sample Skill\n\nContenido prueba"), 0644)
 	metaJSON := `{"name":"sample-skill","origin":"mined","verified":true}`
 	_ = os.WriteFile(filepath.Join(inboxFolder, "metadata.json"), []byte(metaJSON), 0644)
 

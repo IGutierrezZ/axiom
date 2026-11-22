@@ -1,31 +1,14 @@
-# Especificación de Requerimientos: Conector Semántico de Código (Serena MCP & CodeGraph) (INC-06)
+# Especificación de Requerimientos: Conector Semántico de Código (CodeGraph y motor AST nativo) (INC-06)
 
 ## Propósito
 
-Definir de forma ejecutable, determinista y verificable los requerimientos funcionales, no funcionales y escenarios BDD para la integración semántica de código en Axiom: diagnóstico de conectores externos (Serena MCP y CodeGraph), motor semántico nativo en Go con análisis de AST (`go/parser`, `go/ast`), subcomandos CLI `axiom semantic` y la extensión del Dashboard Web local (`axiom ui`) con la pestaña de exploración semántica.
+Definir de forma ejecutable, determinista y verificable los requerimientos funcionales, no funcionales y escenarios BDD para la integración semántica de código en Axiom: diagnóstico del conector externo CodeGraph, motor semántico nativo en Go con análisis de AST (`go/parser`, `go/ast`), subcomandos CLI `axiom semantic` y la extensión del Dashboard Web local (`axiom ui`) con la pestaña de exploración semántica.
 
 ---
 
 ## 1. Capacidad: `semantic-connector-detection`
 
 El paquete `internal/semantic` provee capacidades de detección, inspección y diagnóstico del entorno semántico local, analizando las herramientas disponibles en el sistema y en las configuraciones de los agentes de IA compatibles.
-
-### Requirement: Detección y Diagnóstico de Serena MCP (REQ-1.1)
-
-El detector DEBE inspeccionar las configuraciones de MCP de los agentes en el sistema del usuario (tales como `~/.gemini/antigravity/mcp_config.json`, `~/.claude.json` o `~/.kiro/settings/mcp.json`) para determinar si el servidor MCP de Serena (`serena`, `serena-mcp`) se encuentra configurado y disponible.
-
-#### Scenario: Serena MCP detectado en la configuración de un agente soportado
-- **DADO** un archivo de configuración MCP que registra la clave `serena` o `serena-mcp`
-- **CUANDO** el detector semántico ejecuta el diagnóstico de agentes
-- **ENTONCES** reporta a Serena como conector configurado
-- **Y** documenta el archivo de configuración de origen y el estado del agente
-
-#### Scenario: Serena MCP no configurado
-- **DADO** un entorno donde ningún agente tiene configurado el servidor Serena MCP
-- **CUANDO** el detector ejecuta la comprobación de Serena
-- **ENTONCES** reporta a Serena como no detectado (`missing`) sin producir errores fatales
-
----
 
 ### Requirement: Detección de CodeGraph CLI y Configuración (REQ-1.2)
 
@@ -45,24 +28,36 @@ El detector DEBE verificar la disponibilidad de CodeGraph comprobando la presenc
 
 ### Requirement: Resolución del Conector Semántico Activo (REQ-1.3)
 
-El servicio semántico DEBE resolver el conector activo basándose en la configuración `governance.semantic_analysis` de `axiom.yaml` (`serena`, `codegraph` o `auto`):
-1. Si se configura `serena` y está disponible, se selecciona Serena.
-2. Si se configura `codegraph` y está disponible, se selecciona CodeGraph.
-3. Si se configura `auto` (o el conector explícito no está disponible), el sistema activa de forma transparente y determinista el **motor nativo Go AST** (`native-ast`).
+El servicio semántico DEBE resolver el conector activo basándose en la configuración `governance.semantic_analysis` de `axiom.yaml` (`codegraph`, `native-ast` o `auto`):
+1. Si se configura `codegraph` y está disponible, se selecciona CodeGraph; si no está disponible, el estado DEBE advertirlo y activar el **motor nativo Go AST** (`native-ast`).
+2. Si se configura `native-ast`, se selecciona el motor nativo.
+3. Si se configura `auto` o no se especifica, se selecciona CodeGraph si está disponible y, si no, `native-ast`.
+4. El valor obsoleto `serena` DEBE seguir cargando: el estado DEBE incluir un aviso de valor obsoleto y el servicio DEBE resolver el conector como en `auto`.
+(Previously: se reconocía `serena`, que tenía prioridad sobre CodeGraph en `auto`.)
+
+#### Scenario: Resolución automática con CodeGraph disponible
+- **DADO** un archivo `axiom.yaml` con `semantic_analysis: "auto"` (o no especificado) y CodeGraph disponible
+- **CUANDO** se inicializa el servicio semántico
+- **ENTONCES** se selecciona el conector `codegraph`
 
 #### Scenario: Resolución automática con fallback a AST nativo
-- **DADO** un archivo `axiom.yaml` con `semantic_analysis: "auto"` (o no especificado) y sin servidores MCP externos configurados
+- **DADO** un archivo `axiom.yaml` con `semantic_analysis: "auto"` (o no especificado) y sin CodeGraph disponible
 - **CUANDO** se inicializa el servicio semántico
 - **ENTONCES** se selecciona el conector `native-ast`
 - **Y** se asegura la operatividad semántica del 100% de consultas sobre repositorios Go
 
 #### Scenario: Conector explícito no disponible advierte y activa fallback
-- **DADO** `axiom.yaml` con `semantic_analysis: "serena"` pero sin Serena MCP instalado
+- **DADO** `axiom.yaml` con `semantic_analysis: "codegraph"` pero sin CodeGraph instalado
 - **CUANDO** se consulta el estado semántico
-- **ENTONCES** el estado reporta una advertencia indicando que Serena no está disponible
+- **ENTONCES** el estado reporta una advertencia indicando que CodeGraph no está disponible
 - **Y** conmuta al motor nativo `native-ast` para evitar el bloqueo del agente
 
----
+#### Scenario: Valor obsoleto `serena`
+- **DADO** `axiom.yaml` con `semantic_analysis: "serena"`
+- **CUANDO** se consulta el estado semántico
+- **ENTONCES** la configuración carga sin error
+- **Y** el estado reporta un aviso de valor obsoleto
+- **Y** el conector activo es `codegraph` si está disponible y, si no, `native-ast`
 
 ## 2. Capacidad: `semantic-native-ast-engine`
 
@@ -123,17 +118,16 @@ La interfaz de línea de comandos de Axiom en `cmd/axiom/main.go` expone el grup
 
 El comando `axiom semantic status [--path <dir>]` DEBE mostrar:
 1. El conector semántico configurado en `axiom.yaml`.
-2. El conector activo en ejecución (`serena`, `codegraph` o `native-ast`).
-3. La disponibilidad de Serena MCP y CodeGraph en los agentes compatibles del sistema.
+2. El conector activo en ejecución (`codegraph` o `native-ast`).
+3. La disponibilidad de CodeGraph en el sistema.
 4. El total de paquetes Go y símbolos indexados en el workspace.
+(Previously: también mostraba la disponibilidad de Serena MCP y podía informar `serena` como conector activo.)
 
 #### Scenario: Ejecución de `axiom semantic status`
 - **DADO** un workspace válido de Axiom
 - **CUANDO** el usuario ejecuta `axiom semantic status`
 - **ENTONCES** la CLI imprime un informe detallado con código de salida 0
 - **Y** muestra el estado del conector activo y los agentes verificados
-
----
 
 ### Requirement: Comando `axiom semantic symbols` (REQ-3.2)
 
@@ -179,13 +173,15 @@ El servidor web DEBE exponer las siguientes rutas REST:
 ### Requirement: Interfaz Web SPA con Panel Semántico y Buscador (REQ-4.2)
 
 La interfaz SPA embebida (`assets/index.html`, `app.js`, `style.css`) DEBE incluir una nueva sección de navegación "Semántica & Grafo" que permita:
-1. Visualizar la tarjeta de salud del conector semántico con badges distintivos (`Serena MCP`, `CodeGraph`, `AST Nativo Go`).
+1. Visualizar la tarjeta de salud del conector semántico con badges distintivos (`CodeGraph`, `AST Nativo Go`).
 2. Disponer de un buscador en tiempo real para filtrar símbolos por texto y tipo.
 3. Explorar la tabla de símbolos con enlaces relativos al filesystem y signaturas de funciones/métodos.
 4. Visualizar las dependencias internas de los módulos.
+(Previously: la tarjeta de salud incluía también el badge de Serena MCP.)
 
 #### Scenario: Exploración de símbolos desde el navegador web
 - **DADO** el usuario con el Dashboard abierto en la pestaña "Semántica & Grafo"
 - **CUANDO** escribe un término en el campo de búsqueda de símbolos
 - **ENTONCES** la tabla de resultados se filtra dinámicamente mostrando los símbolos coincidentes
 - **Y** se indican su tipo, paquete y línea sin requerir recargar la página
+

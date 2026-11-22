@@ -55,7 +55,7 @@ type ownMarkers struct {
 }
 
 // declares informa de si el axiom.yaml existente declara
-// `technical_context:`, `git:`, `workflow:`, `sdd:`, `integrations:` o `repositories:`, válidos o no, o no se puede
+// `technical_context:`, `git:`, `workflow:`, `sdd:`, `delivery:`, `integrations:` o `repositories:`, válidos o no, o no se puede
 // leer: con --force no se sobrescribe un fichero cuyas declaraciones la
 // regeneración perdería (m13). Un bloque inválido cuenta igual que uno válido,
 // porque lo que se pierde es lo que el usuario escribió.
@@ -69,6 +69,7 @@ func (m ownMarkers) declares() bool {
 		d.Git != nil || d.GitErr != nil ||
 		d.Workflow != nil || d.WorkflowErr != nil ||
 		d.SDD != nil || d.SDDErr != nil ||
+		d.Delivery != nil || d.DeliveryErr != nil ||
 		d.Integrations != nil || d.IntegrationsErr != nil ||
 		len(d.Repositories) > 0 || d.RepositoriesErr != nil
 }
@@ -198,7 +199,7 @@ func (ini *Initializer) Init(opts InitOptions) (*InitResult, error) {
 	// declaración (m13).
 	preserveConfig := alreadyExisted && opts.Force && markers.declares()
 	if preserveConfig {
-		notes = append(notes, fmt.Sprintf("Se conserva %s sin sobrescribirlo aunque se pidió --force: declara `technical_context:`, `git:`, `workflow:`, `sdd:` o `repositories:`, o no se puede leer, y regenerarlo perdería esa declaración. Edítalo a mano o retira esos bloques antes de volver a ejecutar `axiom init --force`.", pathquote.Quote(configPath)))
+		notes = append(notes, fmt.Sprintf("Se conserva %s sin sobrescribirlo aunque se pidió --force: declara `technical_context:`, `git:`, `workflow:`, `sdd:`, `delivery:` o `repositories:`, o no se puede leer, y regenerarlo perdería esa declaración. Edítalo a mano o retira esos bloques antes de volver a ejecutar `axiom init --force`.", pathquote.Quote(configPath)))
 	}
 
 	// Con un axiom.yaml que no se puede leer no se crean openspec/specs/ ni

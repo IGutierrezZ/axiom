@@ -23,19 +23,18 @@ El subcomando `axiom knowledge sweep` DEBE soportar ejecución autónoma no inte
 
 ### Requirement: Detección Técnica Multidimensional (REQ-23.8)
 
-El barrido DEBE inspeccionar el árbol de código y las definiciones AST/símbolos disponibles (vía Serena o detector nativo) para identificar:
+El barrido DEBE inspeccionar el árbol de código y las definiciones AST/símbolos disponibles (vía CodeGraph o detector nativo) para identificar:
 - Lenguajes de programación principales y secundarios.
 - Frameworks y dependencias clave.
 - Puntos de entrada (`main`, controladores, handlers, configuraciones).
 - Estructura y capas de la arquitectura (monolito, microservicios, hexagonal, MVC, etc.).
+(Previously: las definiciones AST/símbolos se obtenían vía Serena o detector nativo.)
 
 #### Scenario: Identificación de stack y puntos de entrada
 - **DADO** un repositorio con un proyecto Go y frontend React
 - **CUANDO** se ejecuta el barrido `axiom knowledge sweep`
 - **ENTONCES** el reporte técnico incluye `go` y `typescript/react` en lenguajes/frameworks
 - **Y** señala los puntos de entrada principales detectados en el sistema
-
----
 
 ### Requirement: Inferencia Funcional de Módulos y Dominios (REQ-23.9)
 

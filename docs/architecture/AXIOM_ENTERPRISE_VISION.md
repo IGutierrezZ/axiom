@@ -13,7 +13,7 @@ El objetivo no es sustituir la esencia de Gentle-AI ni reinventar un framework S
 1. **Trabajo colaborativo y multi-rol:** Desacoplo por responsabilidades y ejecución paralela de tareas de implementación.
 2. **Topologías de Workspace Flexibles:** Soporte nativo de monorrepositorios y multirrepositorios bajo una carpeta maestra común.
 3. **Adopción Orgánica ("Zero-Doc Cold Start"):** Capacidad de entrar en proyectos sin documentación previa e ir generando la especificación viva conforme se cierran incrementos.
-4. **Comprensión Semántica Profunda:** Integración con herramientas de análisis de código (Serena / CodeGraph).
+4. **Comprensión Semántica Profunda:** Integración con herramientas de análisis de código (CodeGraph / motor AST nativo de Go).
 5. **Autoskills Supervisadas:** Generación y sugerencia de skills técnicas y de proyecto con aprobación humana previa.
 6. **Experiencia de Usuario Simplificada:** Servidor local embebido con Web Dashboard (`axiom ui`) agnóstico a cualquier IDE.
 
@@ -89,9 +89,9 @@ roles:
     tech: ["go", "postgresql"]
 ```
 
-### 2.5. Comprensión Semántica de Código (Serena & CodeGraph)
+### 2.5. Comprensión Semántica de Código (CodeGraph y motor AST nativo)
 
-Para evitar que los agentes dependan únicamente de búsquedas léxicas (`grep`) o de documentación perfecta, Axiom integra conectores semánticos locales (Serena MCP con LSP/Tree-sitter y CodeGraph) para consultar jerarquías de tipos, llamadas y dependencias entre paquetes y repositorios en las fases de `Explore` y `Design`.
+Para evitar que los agentes dependan únicamente de búsquedas léxicas (`grep`) o de documentación perfecta, Axiom integra conectores semánticos locales (CodeGraph y el motor AST nativo de Go) para consultar jerarquías de tipos, llamadas y dependencias entre paquetes y repositorios en las fases de `Explore` y `Design`.
 
 ### 2.6. Autoskills en Dos Capas (Con Aprobación Humana)
 

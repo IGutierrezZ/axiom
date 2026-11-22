@@ -1,8 +1,8 @@
 # Catálogo Maestro de Especificaciones Vivas — Axiom
 
 > **Proyecto:** Axiom (Spec-Driven Development Platform)
-> **Última Sincronización:** 2026-11-18 14:42:58 UTC
-> **Total Dominios:** 72 | **Total Requerimientos:** 577 | **Total Escenarios BDD:** 1852
+> **Última Sincronización:** 2026-11-18 22:22:12 UTC
+> **Total Dominios:** 72 | **Total Requerimientos:** 576 | **Total Escenarios BDD:** 1853
 
 ---
 
@@ -25,7 +25,7 @@
 | `engram-protocol-injection` | Engram protocol injection Specification | 5 | 12 | [Ver Spec](specs/engram-protocol-injection/spec.md) |
 | `gga` | GGA Specification | 3 | 8 | [Ver Spec](specs/gga/spec.md) |
 | `installer-picker-navigation` | Installer Picker Navigation Specification | 3 | 9 | [Ver Spec](specs/installer-picker-navigation/spec.md) |
-| `knowledge-profile-init` | Especificación de Requerimientos: Perfil de Inicialización Knowledge (INC-23) | 6 | 8 | [Ver Spec](specs/knowledge-profile-init/spec.md) |
+| `knowledge-profile-init` | Especificación de Requerimientos: Perfil de Inicialización Knowledge (INC-23) | 6 | 9 | [Ver Spec](specs/knowledge-profile-init/spec.md) |
 | `knowledge-query-engine` | Especificación de Requerimientos: Consulta Spec-First con Auto-Enriquecimiento de la Spec Viva (INC-23) | 5 | 5 | [Ver Spec](specs/knowledge-query-engine/spec.md) |
 | `knowledge-sweep-command` | Especificación de Requerimientos: Barrido Autónomo Knowledge y Siembra Inicial (INC-23) | 5 | 5 | [Ver Spec](specs/knowledge-sweep-command/spec.md) |
 | `living-documentation` | Especificación Viva: Motor de Documentación Viva y Adopción Orgánica en Archive (INC-07) | 11 | 15 | [Ver Spec](specs/living-documentation/spec.md) |
@@ -74,7 +74,7 @@
 | `sdd-preflight-configuration` | Especificación de Requerimientos: Cuestionario Pre-Vuelo de SDD, Modalidad de Avance y Asignación Obligatoria de Roles (INC-21) | 14 | 101 | [Ver Spec](specs/sdd-preflight-configuration/spec.md) |
 | `sdd-research` | sdd-research Specification | 3 | 9 | [Ver Spec](specs/sdd-research/spec.md) |
 | `sdd-role-closure-handoff` | Especificación de Requerimientos: Cierre de Último Rol, Aviso Formal y Relevo de Integración (INC-21) | 3 | 20 | [Ver Spec](specs/sdd-role-closure-handoff/spec.md) |
-| `semantic-code` | Especificación de Requerimientos: Conector Semántico de Código (Serena MCP & CodeGraph) (INC-06) | 11 | 14 | [Ver Spec](specs/semantic-code/spec.md) |
+| `semantic-code` | Especificación de Requerimientos: Conector Semántico de Código (CodeGraph y motor AST nativo) (INC-06) | 10 | 14 | [Ver Spec](specs/semantic-code/spec.md) |
 | `spec-baseline-integration` | Especificación de Requerimientos: Integración de los Cambios en la Baseline del Proyecto (INC-24) | 1 | 5 | [Ver Spec](specs/spec-baseline-integration/spec.md) |
 | `structured-handoffs` | Especificación Viva: Handoffs Estructurados y Ciclo de Vida de Transición | 7 | 13 | [Ver Spec](specs/structured-handoffs/spec.md) |
 | `tui-spanish-localization` | Especificación Viva: Localización Integral al Castellano y Desacoplamiento de Avisos en la TUI (Axiom) | 4 | 9 | [Ver Spec](specs/tui-spanish-localization/spec.md) |
@@ -796,6 +796,7 @@ Permite inicializar un espacio de trabajo ligero de Axiom enfocado en documentac
 - **[REQ-23.4]** Configuración Automática de Servidores MCP en .mcp.json
   - *Escenario BDD:* Inyección de servidores MCP en .mcp.json nuevo
   - *Escenario BDD:* Fusión no destructiva con .mcp.json existente
+  - *Escenario BDD:* Retirada de la entrada serena gestionada
 - **[REQ-23.5]** Oclusión Estricta de Ejecutores de Código y Suites de Testeo
   - *Escenario BDD:* Ausencia de ejecutores y pipelines de testeo
 - **[REQ-23.6]** Creación de Borradores de Cambio para Traspaso Futuro
@@ -2769,21 +2770,20 @@ Selected research is optional. When the orchestrator decides to invoke it, it ru
   - *Escenario BDD:* La barrera y verify coinciden en qué roles bloquean
   - *Escenario BDD:* Un cambio de un solo rol o continuo no cambia
 
-### Dominio: `semantic-code` — Especificación de Requerimientos: Conector Semántico de Código (Serena MCP & CodeGraph) (INC-06)
+### Dominio: `semantic-code` — Especificación de Requerimientos: Conector Semántico de Código (CodeGraph y motor AST nativo) (INC-06)
 
-Definir de forma ejecutable, determinista y verificable los requerimientos funcionales, no funcionales y escenarios BDD para la integración semántica de código en Axiom: diagnóstico de conectores externos (Serena MCP y CodeGraph), motor semántico nativo en Go con análisis de AST (`go/parser`, `go/ast`), subcomandos CLI `axiom semantic` y la extensión del Dashboard Web local (`axiom ui`) con la pestaña de exploración semántica.
+Definir de forma ejecutable, determinista y verificable los requerimientos funcionales, no funcionales y escenarios BDD para la integración semántica de código en Axiom: diagnóstico del conector externo CodeGraph, motor semántico nativo en Go con análisis de AST (`go/parser`, `go/ast`), subcomandos CLI `axiom semantic` y la extensión del Dashboard Web local (`axiom ui`) con la pestaña de exploración semántica.
 
 **Archivo:** [`specs/semantic-code/spec.md`](specs/semantic-code/spec.md)
 
-- **[REQ-1.1]** Detección y Diagnóstico de Serena MCP
-  - *Escenario BDD:* Serena MCP detectado en la configuración de un agente soportado
-  - *Escenario BDD:* Serena MCP no configurado
 - **[REQ-1.2]** Detección de CodeGraph CLI y Configuración
   - *Escenario BDD:* CodeGraph disponible en el PATH del sistema
   - *Escenario BDD:* CodeGraph no instalado en el sistema
 - **[REQ-1.3]** Resolución del Conector Semántico Activo
+  - *Escenario BDD:* Resolución automática con CodeGraph disponible
   - *Escenario BDD:* Resolución automática con fallback a AST nativo
   - *Escenario BDD:* Conector explícito no disponible advierte y activa fallback
+  - *Escenario BDD:* Valor obsoleto `serena`
 - **[REQ-2.1]** Extracción de Símbolos de Código en Go
   - *Escenario BDD:* Extracción de interfaces y structs con métodos
 - **[REQ-2.2]** Análisis del Grafo de Dependencias de Paquetes

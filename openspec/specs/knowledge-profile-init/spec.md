@@ -62,21 +62,25 @@ El inicializador DEBE crear la estructura canónica de documentación viva dentr
 
 El inicializador DEBE generar o actualizar el archivo `.mcp.json` en la raíz del workspace, registrando de forma predeterminada los servidores MCP:
 - `engram`: memoria persistente de proyecto y sesiones.
-- `serena`: indexación de código y símbolos AST.
 - `codegraph`: grafo de llamadas y dependencias.
-Si `.mcp.json` ya contenía otros servidores, el inicializador DEBE fusionar las entradas sin borrar las preexistentes.
+Si `.mcp.json` ya contenía otros servidores, el inicializador DEBE fusionar las entradas sin borrar las preexistentes, salvo la entrada `serena` que escribían versiones anteriores de Axiom: DEBE retirarla solo cuando coincida exactamente con la gestionada (`command: "serena"`, `args: ["serve"]`, sin otras claves).
+(Previously: también registraba `serena` y nunca retiraba entradas.)
 
 #### Scenario: Inyección de servidores MCP en .mcp.json nuevo
 - **DADO** un workspace sin archivo `.mcp.json` previo
 - **CUANDO** se ejecuta `axiom init --profile=knowledge`
-- **ENTONCES** se crea `.mcp.json` conteniendo las definiciones para `engram`, `serena` y `codegraph`
+- **ENTONCES** se crea `.mcp.json` conteniendo solo las definiciones para `engram` y `codegraph`
 
 #### Scenario: Fusión no destructiva con .mcp.json existente
 - **DADO** un workspace con un archivo `.mcp.json` que ya declara un servidor `custom-tool`
 - **CUANDO** se ejecuta `axiom init --profile=knowledge`
-- **ENTONCES** `.mcp.json` preserva `custom-tool` y añade `engram`, `serena` y `codegraph`
+- **ENTONCES** `.mcp.json` preserva `custom-tool` y añade `engram` y `codegraph`
 
----
+#### Scenario: Retirada de la entrada serena gestionada
+- **DADO** un `.mcp.json` con la entrada `serena` que escribía Axiom (`command: "serena"`, `args: ["serve"]`)
+- **CUANDO** se ejecuta `axiom init --profile=knowledge`
+- **ENTONCES** `.mcp.json` ya no contiene `serena`
+- **Y** una entrada `serena` con otro comando, argumentos o claves se conserva intacta
 
 ### Requirement: Oclusión Estricta de Ejecutores de Código y Suites de Testeo (REQ-23.5)
 
