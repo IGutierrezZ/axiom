@@ -86,6 +86,19 @@ Its implementation evidence MUST include:
 - Rollback boundary stated independently of commit creation; uncommitted work units still require it.
 - When fixing a bounded review ledger, group atomic work units inside the single correction transaction; work-unit count never creates another fix budget.
 
+## Review and Fixups
+
+Each work-unit commit is announced and can be reviewed while the work continues:
+
+- After each work-unit commit, tell the person in one line the short sha, the task ID and `git show <sha>`.
+- Asking for the pull request validates every commit of the change: there is no commit-by-commit approval and nothing blocks the pull request.
+- Record only the commits the person asked to change, one line each, never as a checkbox, in the `## Commits con cambios pedidos` section of the tasks file of the change.
+- Finish the task in progress first, or park it, before a correction on an earlier commit.
+- A commit is published when a remote-tracking branch contains it (`git branch -r --contains <sha>` prints anything); never fetch to decide.
+- If it is not published, use `git commit --fixup=<sha>` and defer the autosquash until the pull request is requested: `git -c sequence.editor=true rebase -i --autosquash <base>`. On a conflict, abort the rebase, leave the fixups as they are and report it.
+- If it is published, add a corrective commit that cites the corrected sha. Never rewrite published history and never force a push.
+- Recommend merging with a merge commit, without squash, so the reviewed commits reach the target branch. Axiom never merges.
+
 ## Commands
 
 ```bash

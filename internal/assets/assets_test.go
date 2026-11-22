@@ -4491,6 +4491,94 @@ func TestCommitReviewSectionKeepsGitOrdersInsideTheWorktree(t *testing.T) {
 	}
 }
 
+// REQ-33.10 and D6-D9: sdd-apply documents the `commit_review` and `fixup_of` parameters, the
+// compact per-task return, `pending_commit` of the third mode and the record of requested changes,
+// in both of its model tiers.
+func TestSDDApplyDocumentsTheCommitReviewContractInBothModelTiers(t *testing.T) {
+	const path = "skills/sdd-apply/SKILL.md"
+	content := mustReadResolved(path)
+	common := []string{
+		"`commit_review`",
+		"`fixup_of`",
+		"`pending_commit`",
+		"`notify`",
+		"`stop`",
+		"`stop-before-commit`",
+		"`## Commits con cambios pedidos`",
+	}
+	for _, tier := range []struct {
+		name string
+		want []string
+	}{
+		{"capable", append([]string{
+			"### Step 4b: Commit Review",
+			"one task per launch",
+			"`git -C <worktree> add -- <paths>`",
+			"do not commit",
+			"the task as commit pending approval",
+			"`git -C <worktree> branch -r --contains <sha>`",
+			"`git -C <worktree> commit --fixup=<sha>`",
+			"corrective commit",
+			"never reopen the `tasks` gate",
+			"never fetch",
+			"merge commit, without squash",
+		}, common...)},
+		{"small", append([]string{
+			"\"commits\"",
+			"\"pending_commit\"",
+			"`git -C <worktree> add -- <paths>`",
+			"never fetch",
+		}, common...)},
+	} {
+		t.Run(tier.name, func(t *testing.T) {
+			section := extractModelSectionForTest(content, tier.name)
+			for _, want := range tier.want {
+				if !strings.Contains(section, want) {
+					t.Errorf("%s model-%s is missing %q", path, tier.name, want)
+				}
+			}
+			for _, forbidden := range []string{"commit -a", "--force", "git push", "RDD", "receipt"} {
+				if strings.Contains(section, forbidden) {
+					t.Errorf("%s model-%s must not contain %q", path, tier.name, forbidden)
+				}
+			}
+		})
+	}
+}
+
+// REQ-33.11 and D9: work-unit-commits carries the "Review and Fixups" section, the same in both copies.
+func TestWorkUnitCommitsCarriesReviewAndFixups(t *testing.T) {
+	embedded := MustRead("skills/work-unit-commits/SKILL.md")
+	source, err := os.ReadFile(filepath.Join("..", "..", "skills", "work-unit-commits", "SKILL.md"))
+	if err != nil {
+		t.Fatalf("ReadFile(source work-unit-commits) error = %v", err)
+	}
+	for name, content := range map[string]string{"embedded": embedded, "source": string(source)} {
+		for _, want := range []string{
+			"## Review and Fixups",
+			"the short sha, the task ID and `git show <sha>`",
+			"Record only the commits the person asked to change",
+			"`git commit --fixup=<sha>`",
+			"defer the autosquash until the pull request is requested",
+			"`git -c sequence.editor=true rebase -i --autosquash <base>`",
+			"corrective commit",
+			"Never rewrite published history",
+			"Finish the task in progress first",
+			"merge commit, without squash",
+			"never fetch",
+		} {
+			if !strings.Contains(content, want) {
+				t.Errorf("%s work-unit-commits is missing %q", name, want)
+			}
+		}
+		for _, forbidden := range []string{"commit -a", "--force", "git push", "RDD", "receipt"} {
+			if strings.Contains(content, forbidden) {
+				t.Errorf("%s work-unit-commits must not contain %q", name, forbidden)
+			}
+		}
+	}
+}
+
 // REQ-33.8: the twelve orchestrators reference the section right after Chain Strategy, with the
 // placeholder and no inline copy, and Block Gates links the tasks gate interaction (REQ-33.5).
 func TestEveryOrchestratorReferencesTheCommitReviewSection(t *testing.T) {

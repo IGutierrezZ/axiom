@@ -55,11 +55,11 @@
 
 ## Fase 4: Skills (unidad 4)
 
-- [ ] 4.1 RED: pines en `internal/assets/assets_test.go` para `sdd-apply` (parámetros `commit_review` y `fixup_of`, retorno por tarea, `pending_commit`, registro en el fichero de tareas, en `model-capable` y `model-small`) y para la sección «Review and Fixups» de `work-unit-commits`.
+- [x] 4.1 RED: pines en `internal/assets/assets_test.go` para `sdd-apply` (parámetros `commit_review` y `fixup_of`, retorno por tarea, `pending_commit`, registro en el fichero de tareas, en `model-capable` y `model-small`) y para la sección «Review and Fixups» de `work-unit-commits`.
   Cubre: REQ-33.10, REQ-33.11
-- [ ] 4.2 GREEN: `internal/assets/skills/sdd-apply/SKILL.md`, ambas secciones: parámetros, una tarea por lanzamiento, `pending_commit` del modo `stop-before-commit` (`git -C <worktree> add -- <paths>` sin commit), retorno compacto, `fixup_of` (publicado con `git branch -r --contains`, `commit --fixup` o commit correctivo), línea de `## Commits con cambios pedidos` (D8), ajuste del cierre y merge sin squash.
+- [x] 4.2 GREEN: `internal/assets/skills/sdd-apply/SKILL.md`, ambas secciones: parámetros, una tarea por lanzamiento, `pending_commit` del modo `stop-before-commit` (`git -C <worktree> add -- <paths>` sin commit), retorno compacto, `fixup_of` (publicado con `git branch -r --contains`, `commit --fixup` o commit correctivo), línea de `## Commits con cambios pedidos` (D8), ajuste del cierre y merge sin squash.
   Cubre: REQ-33.10
-- [ ] 4.3 Sección «Review and Fixups» idéntica en `internal/assets/skills/work-unit-commits/SKILL.md` y `skills/work-unit-commits/SKILL.md`; ejecutar `internal/assets/skill_copies_parity_test.go` (sin cambios en el test).
+- [x] 4.3 Sección «Review and Fixups» idéntica en `internal/assets/skills/work-unit-commits/SKILL.md` y `skills/work-unit-commits/SKILL.md`; ejecutar `internal/assets/skill_copies_parity_test.go` (sin cambios en el test).
   Cubre: REQ-33.11
 
 ## Fase 5: ODD (unidad 5)
