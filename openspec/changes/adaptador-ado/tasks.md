@@ -105,15 +105,15 @@ Orden obligado: **1 → 2 → {3, 4} → 5 → 6 → 7**. La 1 va primera (el ca
 
 ## Phase 5 (unidad 5): Identidad y fichero de identidad
 
-- [ ] 5.1 [RED] Crear `azuredevops/identity_test.go`: `connectionData` válido → `Source: connection_data` sin consultar miembros; 401 de `connectionData` o `authenticatedUser` vacío → `IdentitySelectionError` con candidatos; `User` válido (sin distinguir mayúsculas) → `member_selection` sin consultar `connectionData`; `User` desconocido → `IdentitySelectionError{User}`; si `listMembers` también falla se devuelve ese error con la nota de `connectionData`; la cancelación del `ctx` se propaga.
+- [x] 5.1 [RED] Crear `azuredevops/identity_test.go`: `connectionData` válido → `Source: connection_data` sin consultar miembros; 401 de `connectionData` o `authenticatedUser` vacío → `IdentitySelectionError` con candidatos; `User` válido (sin distinguir mayúsculas) → `member_selection` sin consultar `connectionData`; `User` desconocido → `IdentitySelectionError{User}`; si `listMembers` también falla se devuelve ese error con la nota de `connectionData`; la cancelación del `ctx` se propaga.
   Cubre: REQ-45.10
-- [ ] 5.2 Crear `azuredevops/identity.go` (`Plugin.ResolveIdentity`, D-08). Prueba: 5.1 en verde.
+- [x] 5.2 Crear `azuredevops/identity.go` (`Plugin.ResolveIdentity`, D-08). Prueba: 5.1 en verde.
   Cubre: REQ-45.10
-- [ ] 5.3 [RED] Crear `internal/integrations/identitystore/store_test.go`: primera escritura (modo 0600 solo fuera de Windows); dos organizaciones coexisten; sustitución de una entrada; organización normalizada a minúsculas; fallo de escritura con la costura `writeAtomic` deja el fichero anterior byte a byte y sin ficheros nuevos; JSON corrupto o `schema` desconocido → `*CorruptError` sin sobrescribir; `workspaces.json` intacto; inexistente → `File` vacío. Usa `t.TempDir()` y `AXIOM_STATE_DIR`.
+- [x] 5.3 [RED] Crear `internal/integrations/identitystore/store_test.go`: primera escritura (modo 0600 solo fuera de Windows); dos organizaciones coexisten; sustitución de una entrada; organización normalizada a minúsculas; fallo de escritura con la costura `writeAtomic` deja el fichero anterior byte a byte y sin ficheros nuevos; JSON corrupto o `schema` desconocido → `*CorruptError` sin sobrescribir; `workspaces.json` intacto; inexistente → `File` vacío. Usa `t.TempDir()` y `AXIOM_STATE_DIR`.
   Cubre: REQ-45.11
-- [ ] 5.4 Crear `internal/integrations/identitystore/store.go` (`SchemaV1`, `FileName`, `Entry`, `File`, `Store`, `DefaultPath`, `Load`, `Get`, `Put`, `CorruptError`, `writeAtomic = filemerge.WriteFileAtomicMode`). Prueba: 5.3 en verde y `go test ./internal/integrations -run Imports` (regla (c)).
+- [x] 5.4 Crear `internal/integrations/identitystore/store.go` (`SchemaV1`, `FileName`, `Entry`, `File`, `Store`, `DefaultPath`, `Load`, `Get`, `Put`, `CorruptError`, `writeAtomic = filemerge.WriteFileAtomicMode`). Prueba: 5.3 en verde y `go test ./internal/integrations -run Imports` (regla (c)).
   Cubre: REQ-45.11
-- [ ] 5.5 Cierre de la unidad: `gofmt -l internal/integrations`, `go vet ./internal/integrations/...`, `go test ./internal/integrations/identitystore ./internal/integrations/azuredevops -run 'Identity|Store'`; commit `feat(integrations): identidad del adaptador y fichero de identidad por persona`.
+- [x] 5.5 Cierre de la unidad: `gofmt -l internal/integrations`, `go vet ./internal/integrations/...`, `go test ./internal/integrations/identitystore ./internal/integrations/azuredevops -run 'Identity|Store'`; commit `feat(integrations): identidad del adaptador y fichero de identidad por persona`.
   Cubre: REQ-45.10, REQ-45.11
 
 ## Phase 6 (unidad 6): Verbos `connect` y `discover`
