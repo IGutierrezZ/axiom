@@ -31,13 +31,13 @@ func TestRunIntegrationsUsageAndUnknownSubcommand(t *testing.T) {
 		t.Fatalf("sin argumentos: código %d, salida %q", code, out)
 	}
 	code, out, errOut := runIntegrationsCLI(t, "", "inspect")
-	if code == 0 || !strings.Contains(out, "emit") || !strings.Contains(errOut, "inspect") {
+	if code == 0 || !strings.Contains(out, "emit") || !strings.Contains(out, "connect") || !strings.Contains(out, "discover") || !strings.Contains(errOut, "inspect") {
 		t.Fatalf("subcomando desconocido: código %d, stdout %q, stderr %q", code, out, errOut)
 	}
 	if code, out, _ := runIntegrationsCLI(t, "", "--help"); code != 0 || !strings.Contains(out, "secret") {
 		t.Fatalf("--help: %d %q", code, out)
 	}
-	for _, sub := range []string{"sync", "emit", "secret"} {
+	for _, sub := range []string{"sync", "emit", "secret", "connect", "discover"} {
 		if code, out, _ := runIntegrationsCLI(t, "", sub, "--help"); code != 0 || !strings.Contains(out, "Uso: axiom integrations "+sub) {
 			t.Errorf("%s --help: %d %q", sub, code, out)
 		}

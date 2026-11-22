@@ -105,7 +105,11 @@ workspace:
 # Una clave desconocida, un tipo incorrecto o una clave obligatoria ausente son errores
 # que 'axiom workspace validate' rechaza con su línea y las alternativas admitidas.
 # El PAT de Azure DevOps es el secreto 'pat' (variable AXIOM_INTEGRATION_AZURE_DEVOPS_PAT): de
-# una sola organización, con los scopes vso.work_write, vso.project y vso.code. Nunca va aquí.
+# una sola organización, con los scopes vso.work_write (work items; vso.work, que cubre las
+# iteraciones, queda incluido), vso.project y vso.code. Nunca va aquí.
+# Con el bloque configurado, 'axiom integrations connect --plugin azure-devops' prueba la conexión y
+# guarda tu identidad en ~/.axiom, y 'axiom integrations discover --plugin azure-devops' imprime los
+# tipos, estados, campos, iteraciones y miembros del proyecto.
 # integrations:
 #   azure-devops:
 #     enabled: true

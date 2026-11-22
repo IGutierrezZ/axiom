@@ -23,6 +23,8 @@ import (
 
 // `axiom integrations` (C-07-b): recuperación (`sync`), respaldo (`emit`) y ciclo de vida del secreto
 // (`secret`) de los plugins de integración configurados en el bloque `integrations:` de axiom.yaml.
+// `connect` y `discover` (C-07-c, integrations_ports.go) despachan por los puertos opcionales de
+// identidad y descubrimiento.
 // Códigos de salida como `axiom branch`: 0 éxito, 1 rechazo, error o algo pendiente, 2 error de uso.
 
 const (
@@ -41,9 +43,11 @@ const (
 const integrationsHelp = `Uso: axiom integrations <subcomando> [argumentos]
 
 Subcomandos:
-  sync     Reintenta las entregas pendientes a los trackers configurados en axiom.yaml
-  emit     Emite a mano un evento del ciclo de vida de un cambio a los plugins configurados
-  secret   Guarda (set, solo por stdin), consulta (status) o borra (delete) un secreto de integración
+  sync      Reintenta las entregas pendientes a los trackers configurados en axiom.yaml
+  emit      Emite a mano un evento del ciclo de vida de un cambio a los plugins configurados
+  secret    Guarda (set, solo por stdin), consulta (status) o borra (delete) un secreto de integración
+  connect   Prueba la conexión con el tracker y guarda tu identidad en ~/.axiom (--plugin, --user)
+  discover  Imprime el proceso del tracker: tipos, estados, campos, iteraciones y miembros (--plugin, --json)
 
 Ejecuta ` + "`axiom integrations <subcomando> --help`" + ` para ver las banderas de cada subcomando.
 `
@@ -143,8 +147,12 @@ func RunIntegrations(args []string, stdin io.Reader, stdout, stderr io.Writer) i
 		return runIntegrationsEmit(rest, stdout, stderr)
 	case "secret":
 		return runIntegrationsSecret(rest, stdin, stdout, stderr)
+	case "connect":
+		return runIntegrationsConnect(rest, stdout, stderr)
+	case "discover":
+		return runIntegrationsDiscover(rest, stdout, stderr)
 	default:
-		fmt.Fprintf(stderr, "Error: subcomando '%s' no reconocido para integrations; los disponibles son sync, emit y secret.\n", subcommand)
+		fmt.Fprintf(stderr, "Error: subcomando '%s' no reconocido para integrations; los disponibles son sync, emit, secret, connect y discover.\n", subcommand)
 		fmt.Fprint(stdout, integrationsHelp)
 		return integrationsExitUsage
 	}

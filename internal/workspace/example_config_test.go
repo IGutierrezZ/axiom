@@ -118,7 +118,11 @@ func TestExampleConfigDocumentsIntegrations(t *testing.T) {
 		"axiom integrations secret set",
 		"AXIOM_INTEGRATION_<PLUGIN>_<SECRETO>",
 		"AXIOM_INTEGRATION_AZURE_DEVOPS_PAT",
-		"vso.work_write, vso.project y vso.code",
+		"una sola organización",
+		"vso.work_write (work items; vso.work, que cubre las",
+		"vso.project y vso.code",
+		"'axiom integrations connect --plugin azure-devops'",
+		"'axiom integrations discover --plugin azure-devops'",
 		"'integrations: {}' es válido y no configura nada",
 	} {
 		if !strings.Contains(example, want) {
