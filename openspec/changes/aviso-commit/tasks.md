@@ -64,9 +64,9 @@
 
 ## Fase 5: ODD (unidad 5)
 
-- [ ] 5.1 RED: pines en `internal/components/agentguidance/routing_test.go` (aviso en el paso 6, viñeta con las reglas comunes y `odd/tasks/<feature>.md`, ausencia de `` `stop` ``, `stop-before-commit`, `--commit-review`, «commit review», «three exits» y «plan stop»); `routing_stops_test.go` y el pin de REQ-27.17 no se tocan.
+- [x] 5.1 RED: pines en `internal/components/agentguidance/routing_test.go` (aviso en el paso 6, viñeta con las reglas comunes y `odd/tasks/<feature>.md`, ausencia de `` `stop` ``, `stop-before-commit`, `--commit-review`, «commit review», «three exits» y «plan stop»); `routing_stops_test.go` y el pin de REQ-27.17 no se tocan.
   Cubre: REQ-33.12
-- [ ] 5.2 GREEN: en `internal/components/agentguidance/routing.go`, frase del aviso al final del paso 6 y viñeta «Commits and the pull request» tras «Delivery follows work units», con el texto fijado por el diseño.
+- [x] 5.2 GREEN: en `internal/components/agentguidance/routing.go`, frase del aviso al final del paso 6 y viñeta «Commits and the pull request» tras «Delivery follows work units», con el texto fijado por el diseño.
   Cubre: REQ-33.12
 
 ## Fase 6: Goldens y barrido (unidad 6)

@@ -903,6 +903,70 @@ func TestRenderRoutingClosesODDWithTheMaintainedContextLocator(t *testing.T) {
 	}
 }
 
+// TestRenderRoutingNotifiesPerCommitAndSharesTheCommitRules guards
+// organic-agent-trigger-rules REQ-33.12 (C-02-d): ODD always runs in notify mode
+// (one line per work-unit commit, no wait), carries the common commit and pull
+// request rules in its own bullet, and projects none of the SDD-only commit review
+// vocabulary nor the SDD gate vocabulary guarded by REQ-27.17.
+func TestRenderRoutingNotifiesPerCommitAndSharesTheCommitRules(t *testing.T) {
+	t.Parallel()
+
+	for _, agent := range catalog.AllAgents() {
+		t.Run(string(agent.ID), func(t *testing.T) {
+			t.Parallel()
+
+			rendered, err := RenderRouting(agent.ID)
+			if err != nil {
+				t.Fatalf("RenderRouting(%q) error = %v", agent.ID, err)
+			}
+
+			for _, want := range []string{
+				"After each work-unit commit, tell the person in one line the short sha, the task ID and `git show <sha>`, then continue with the next task without waiting.",
+				"- Commits and the pull request. Asking for the pull request validates every commit of the feature: there is no commit-by-commit approval and nothing blocks it.",
+				"Record in a `## Commits con cambios pedidos` section of `odd/tasks/<feature>.md` only the commits the person asked to change, one line each, never a checkbox.",
+				"park it with `git stash push --include-untracked` and restore it afterwards",
+				"`git branch -r --contains <sha>`, never fetch to decide",
+				"`git commit --fixup=<sha>`",
+				"`git -c sequence.editor=true rebase -i --autosquash <base>` only when the pull request is requested",
+				"add a new corrective commit and never rewrite published history",
+				"Recommend merging with a merge commit, without squash.",
+			} {
+				if !strings.Contains(rendered, want) {
+					t.Errorf("RenderRouting(%q) is missing the commit doctrine %q", agent.ID, want)
+				}
+			}
+
+			// The notice closes step 6 and the bullet follows the delivery bullet.
+			step6 := strings.Index(rendered, "6. **Implement task by task.**")
+			notice := strings.Index(rendered, "After each work-unit commit, tell the person")
+			step7 := strings.Index(rendered, "7. **Close.**")
+			if step6 < 0 || notice < step6 || (step7 >= 0 && notice > step7) {
+				t.Errorf("RenderRouting(%q) must place the commit notice inside step 6", agent.ID)
+			}
+			delivery := strings.Index(rendered, "- Delivery follows work units.")
+			commits := strings.Index(rendered, "- Commits and the pull request.")
+			if delivery < 0 || commits < delivery {
+				t.Errorf("RenderRouting(%q) must place the commits bullet after the delivery bullet", agent.ID)
+			}
+
+			for _, forbidden := range []string{
+				"`stop`",
+				"stop-before-commit",
+				"--commit-review",
+				"commit review",
+				"Commit Review",
+				"three exits",
+				"Plan stop",
+				"plan stop",
+			} {
+				if strings.Contains(rendered, forbidden) {
+					t.Errorf("RenderRouting(%q) leaks SDD-only vocabulary %q", agent.ID, forbidden)
+				}
+			}
+		})
+	}
+}
+
 // TestRenderRoutingDeliversInASinglePRByDefault guards organic-agent-trigger-rules
 // REQ-32.4 (C-02-c): ODD ships a feature as `single-pr` unless the person asks to
 // chain it, warns once and never blocks when the forecast exceeds
