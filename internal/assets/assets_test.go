@@ -4435,7 +4435,12 @@ func TestCommitReviewSectionCarriesTheCommonDoctrine(t *testing.T) {
 		"`pending_commit`",
 		"`git -C <worktree> add -- <paths>`",
 		"`git -C <worktree> diff --cached --stat`",
-		"`git -C <worktree> commit -m \"<message>\"`",
+		// JD-3: the proposed message never reaches a shell string.
+		"`git -C <worktree> commit -F <message-file>`",
+		"`git -C <worktree> commit -F -`",
+		"never interpolated into a shell string",
+		// JD-2: a pending fixup is committed as a fixup.
+		"when `pending_commit` carries `fixup_of`",
 		// (d) the pull request validates implicitly.
 		"validates every commit",
 		"nothing blocks the pull request",
@@ -4446,7 +4451,9 @@ func TestCommitReviewSectionCarriesTheCommonDoctrine(t *testing.T) {
 		"`git -C <worktree> branch -r --contains <sha>`",
 		"`git -C <worktree> commit --fixup=<sha>`",
 		"defer the autosquash until the pull request is requested",
-		"`git -C <worktree> -c sequence.editor=true rebase -i --autosquash <base>`",
+		// JD-1: the autosquash tolerates uncommitted edits of the change documents.
+		"`git -C <worktree> -c sequence.editor=true rebase -i --autosquash --autostash <base>`",
+		"commit any pending `stop-before-commit` diff first",
 		"corrective commit",
 		"Never rewrite published history",
 		// (g) finish the task in progress first.
@@ -4484,7 +4491,7 @@ func TestCommitReviewSectionKeepsGitOrdersInsideTheWorktree(t *testing.T) {
 			t.Errorf("Commit Review section is missing %q", want)
 		}
 	}
-	for _, forbidden := range []string{"commit -a", "--force", "git push", "RDD", "receipt", "Receipt", "consent"} {
+	for _, forbidden := range []string{"commit -a", "commit -m", "--force", "git push", "RDD", "receipt", "Receipt", "consent"} {
 		if strings.Contains(section, forbidden) {
 			t.Errorf("Commit Review section must not contain %q", forbidden)
 		}
@@ -4519,6 +4526,7 @@ func TestSDDApplyDocumentsTheCommitReviewContractInBothModelTiers(t *testing.T) 
 			"`git -C <worktree> branch -r --contains <sha>`",
 			"`git -C <worktree> commit --fixup=<sha>`",
 			"corrective commit",
+			"with `fixup_of` carrying the sha and whether it is published",
 			"never reopen the `tasks` gate",
 			"never fetch",
 			"merge commit, without squash",
@@ -4560,7 +4568,7 @@ func TestWorkUnitCommitsCarriesReviewAndFixups(t *testing.T) {
 			"Record only the commits the person asked to change",
 			"`git commit --fixup=<sha>`",
 			"defer the autosquash until the pull request is requested",
-			"`git -c sequence.editor=true rebase -i --autosquash <base>`",
+			"`git -c sequence.editor=true rebase -i --autosquash --autostash <base>`",
 			"corrective commit",
 			"Never rewrite published history",
 			"Finish the task in progress first",

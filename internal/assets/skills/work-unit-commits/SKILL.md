@@ -95,7 +95,7 @@ Each work-unit commit is announced and can be reviewed while the work continues:
 - Record only the commits the person asked to change, one line each, never as a checkbox, in the `## Commits con cambios pedidos` section of the tasks file of the change.
 - Finish the task in progress first, or park it, before a correction on an earlier commit.
 - A commit is published when a remote-tracking branch contains it (`git branch -r --contains <sha>` prints anything); never fetch to decide.
-- If it is not published, use `git commit --fixup=<sha>` and defer the autosquash until the pull request is requested: `git -c sequence.editor=true rebase -i --autosquash <base>`. On a conflict, abort the rebase, leave the fixups as they are and report it.
+- If it is not published, use `git commit --fixup=<sha>` and defer the autosquash until the pull request is requested: commit any staged task first, then run `git -c sequence.editor=true rebase -i --autosquash --autostash <base>`, whose `--autostash` sets other uncommitted edits aside and restores them. On a conflict, abort the rebase, leave the fixups as they are and report it.
 - If it is published, add a corrective commit that cites the corrected sha. Never rewrite published history and never force a push.
 - Recommend merging with a merge commit, without squash, so the reviewed commits reach the target branch. Axiom never merges.
 

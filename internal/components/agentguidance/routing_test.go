@@ -927,7 +927,7 @@ func TestRenderRoutingNotifiesPerCommitAndSharesTheCommitRules(t *testing.T) {
 				"park it with `git stash push --include-untracked` and restore it afterwards",
 				"`git branch -r --contains <sha>`, never fetch to decide",
 				"`git commit --fixup=<sha>`",
-				"`git -c sequence.editor=true rebase -i --autosquash <base>` only when the pull request is requested",
+				"`git -c sequence.editor=true rebase -i --autosquash --autostash <base>` only when the pull request is requested",
 				"add a new corrective commit and never rewrite published history",
 				"Recommend merging with a merge commit, without squash.",
 			} {
