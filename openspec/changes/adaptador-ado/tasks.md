@@ -92,15 +92,15 @@ Orden obligado: **1 → 2 → {3, 4} → 5 → 6 → 7**. La 1 va primera (el ca
 
 ## Phase 4 (unidad 4): Puertos y descubrimiento
 
-- [ ] 4.1 [RED] Crear `internal/integrations/ports_test.go` con dobles locales: aserción de tipo detecta `IdentityResolver` y `Discoverer`; plugin sin puerto → `PortUnsupportedError` (`errors.Is(ErrPortUnsupported)`) antes de resolver secretos; el error se sanea con un doble que filtra el secreto y conserva la causa con `errors.As`; un pánico se recupera como error; `Discover` fija `Schema` y `Plugin` y devuelve listas no nulas (sin `null` en JSON); `ResolveIdentity` rechaza `ID` o `Account` vacíos.
+- [x] 4.1 [RED] Crear `internal/integrations/ports_test.go` con dobles locales: aserción de tipo detecta `IdentityResolver` y `Discoverer`; plugin sin puerto → `PortUnsupportedError` (`errors.Is(ErrPortUnsupported)`) antes de resolver secretos; el error se sanea con un doble que filtra el secreto y conserva la causa con `errors.As`; un pánico se recupera como error; `Discover` fija `Schema` y `Plugin` y devuelve listas no nulas (sin `null` en JSON); `ResolveIdentity` rechaza `ID` o `Account` vacíos.
   Cubre: REQ-45.17 (núcleo)
-- [ ] 4.2 Crear `internal/integrations/ports.go` (puertos, tipos `Discovery`, `ItemType`, `ItemState`, `ItemField`, `Iteration`, `Member`, `TrackerIdentity`, errores tipados, `ResolveIdentity` y `Discover` de D-02, `Plugin` sin cambios). Prueba: 4.1 en verde y `go test ./internal/integrations -run Imports`.
+- [x] 4.2 Crear `internal/integrations/ports.go` (puertos, tipos `Discovery`, `ItemType`, `ItemState`, `ItemField`, `Iteration`, `Member`, `TrackerIdentity`, errores tipados, `ResolveIdentity` y `Discover` de D-02, `Plugin` sin cambios). Prueba: 4.1 en verde y `go test ./internal/integrations -run Imports`.
   Cubre: REQ-45.17
-- [ ] 4.3 [RED] Crear `azuredevops/discovery_test.go`: descubrimiento completo (tipos, estados con categoría copiada tal cual incluidas `InProgress` y `Removed`, campos, iteraciones, miembros); paginación con 250 miembros y página de 100 sin repetidos; servidor que ignora `$skip` termina; iteraciones vacías y en `values` o en `value`; un 403 en miembros hace fallar todo el descubrimiento con `vso.project`; un 403 en iteraciones nombra **`vso.work`**; ningún correo (`uniqueName`) en la salida.
+- [x] 4.3 [RED] Crear `azuredevops/discovery_test.go`: descubrimiento completo (tipos, estados con categoría copiada tal cual incluidas `InProgress` y `Removed`, campos, iteraciones, miembros); paginación con 250 miembros y página de 100 sin repetidos; servidor que ignora `$skip` termina; iteraciones vacías y en `values` o en `value`; un 403 en miembros hace fallar todo el descubrimiento con `vso.project`; un 403 en iteraciones nombra **`vso.work`**; ningún correo (`uniqueName`) en la salida.
   Cubre: REQ-45.9
-- [ ] 4.4 Crear `azuredevops/discovery.go` (`Plugin.Discover`, `listMembers` reutilizable para la unidad 5, D-08 y D-12). Prueba: 4.3 en verde.
+- [x] 4.4 Crear `azuredevops/discovery.go` (`Plugin.Discover`, `listMembers` reutilizable para la unidad 5, D-08 y D-12). Prueba: 4.3 en verde.
   Cubre: REQ-45.9
-- [ ] 4.5 Cierre de la unidad: `gofmt -l internal/integrations`, `go vet ./internal/integrations/...`, `go test ./internal/integrations -run 'Port|Discover|Imports'` y `go test ./internal/integrations/azuredevops -run Discover`; commit `feat(integrations): puertos opcionales y descubrimiento de Azure DevOps`.
+- [x] 4.5 Cierre de la unidad: `gofmt -l internal/integrations`, `go vet ./internal/integrations/...`, `go test ./internal/integrations -run 'Port|Discover|Imports'` y `go test ./internal/integrations/azuredevops -run Discover`; commit `feat(integrations): puertos opcionales y descubrimiento de Azure DevOps`.
   Cubre: REQ-45.9, REQ-45.17
 
 ## Phase 5 (unidad 5): Identidad y fichero de identidad

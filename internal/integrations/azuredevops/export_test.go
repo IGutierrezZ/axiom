@@ -1,6 +1,9 @@
 package azuredevops
 
-import "context"
+import (
+	"context"
+	"testing"
+)
 
 // Este fichero solo se compila con las pruebas: expone el punto de salida HTTP genérico para las
 // pruebas externas (azuredevops_test), que no pueden alcanzar lo no exportado y que, al importar
@@ -17,3 +20,12 @@ func NewReadRequest(scope, operation string, workItemID int, segments ...string)
 
 // Do ejecuta una petición lógica por el único punto de salida HTTP.
 func (c *Client) Do(ctx context.Context, r DoRequest, out any) error { return c.do(ctx, r, out) }
+
+// SetMaxMemberPagesForTest fija el tope de páginas de la lista de miembros y lo restaura al terminar.
+// Es estado de paquete: la prueba no llama a t.Parallel().
+func SetMaxMemberPagesForTest(t testing.TB, n int) {
+	t.Helper()
+	previous := maxMemberPages
+	maxMemberPages = n
+	t.Cleanup(func() { maxMemberPages = previous })
+}

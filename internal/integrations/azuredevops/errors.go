@@ -32,7 +32,25 @@ var (
 	ErrInvalidResponse = errors.New("respuesta de azure devops inválida")
 	ErrRevConflict     = errors.New("el work item cambió desde que se leyó (conflicto de /rev)")
 	ErrMissingRev      = errors.New("una modificación de work item exige la revisión (rev) leída")
+	// ErrPagination indica que una lista paginada no se pudo leer entera. Nunca se devuelve un
+	// resultado truncado como si fuera completo.
+	ErrPagination = errors.New("azure devops devolvió una paginación que no se puede completar")
 )
+
+// PaginationError indica que la paginación de una lista no terminó de forma fiable: se alcanzó el
+// tope de páginas o el servidor devolvió una página llena sin elementos nuevos (ignora $skip). Pages
+// es el número de páginas leídas.
+type PaginationError struct {
+	Operation string
+	Pages     int
+	Reason    string
+}
+
+func (e *PaginationError) Error() string {
+	return fmt.Sprintf("la paginación al %s no se puede completar tras %d página(s): %s; no se devuelve un resultado parcial", e.Operation, e.Pages, e.Reason)
+}
+
+func (e *PaginationError) Is(target error) bool { return target == ErrPagination }
 
 // AuthError es un rechazo de autenticación o de permisos: 401, 403, 203, una página HTML de inicio
 // de sesión en un 200 o una redirección (que no se sigue). Scope es el scope probable del PAT para la
