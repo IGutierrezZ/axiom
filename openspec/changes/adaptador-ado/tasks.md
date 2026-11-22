@@ -77,17 +77,17 @@ Orden obligado: **1 → 2 → {3, 4} → 5 → 6 → 7**. La 1 va primera (el ca
 
 ## Phase 3 (unidad 3): Work items y repositorios
 
-- [ ] 3.1 [RED] Crear `azuredevops/workitems_test.go` (lectura y lotes): `GetWorkItem` con `$expand=relations`; 404 → `NotFoundError` con el id; lista vacía sin HTTP; lote de 450 ids → 3 `POST` de 200 como máximo con el orden pedido conservado aunque la API lo desordene; id inexistente con `errorPolicy: Fail` → `NotFoundError`.
+- [x] 3.1 [RED] Crear `azuredevops/workitems_test.go` (lectura y lotes): `GetWorkItem` con `$expand=relations`; 404 → `NotFoundError` con el id; lista vacía sin HTTP; lote de 450 ids → 3 `POST` de 200 como máximo con el orden pedido conservado aunque la API lo desordene; id inexistente con `errorPolicy: Fail` → `NotFoundError`.
   Cubre: REQ-45.6
-- [ ] 3.2 Crear `azuredevops/workitems.go` (`WorkItem`, `Relation`, `GetWorkItem`, `GetWorkItems`). Prueba: 3.1 en verde.
+- [x] 3.2 Crear `azuredevops/workitems.go` (`WorkItem`, `Relation`, `GetWorkItem`, `GetWorkItems`). Prueba: 3.1 en verde.
   Cubre: REQ-45.6
-- [ ] 3.3 [RED] Crear `azuredevops/patch_test.go`: `newPatchBody` es la única forma de construir el cuerpo y antepone `test /rev`; rechaza `rev <= 0` (`ErrMissingRev`), ops vacías y un `test` sobre `/rev` aportado por quien llama; PATCH con rev vigente → rev 8; con rev obsoleto → una sola petición y ningún cambio; 412, 400 y 409 de `test` → `RevConflictError`; 400 ajeno → `ErrBadRequest`; corte tras aplicar y reintento rechazado → conflicto con `AfterRetry` y una sola aplicación; nunca se reintenta tras un 4xx.
+- [x] 3.3 [RED] Crear `azuredevops/patch_test.go`: `newPatchBody` es la única forma de construir el cuerpo y antepone `test /rev`; rechaza `rev <= 0` (`ErrMissingRev`), ops vacías y un `test` sobre `/rev` aportado por quien llama; PATCH con rev vigente → rev 8; con rev obsoleto → una sola petición y ningún cambio; 412, 400 y 409 de `test` → `RevConflictError`; 400 ajeno → `ErrBadRequest`; corte tras aplicar y reintento rechazado → conflicto con `AfterRetry` y una sola aplicación; nunca se reintenta tras un 4xx.
   Cubre: REQ-45.7
-- [ ] 3.4 Implementar `PatchOp`, `UpdateWorkItem` y `newPatchBody` en `workitems.go` (`application/json-patch+json`, `revPatch`, `retryable`). Prueba: 3.3 en verde. No se declara capacidad de escritura en el manifiesto.
+- [x] 3.4 Implementar `PatchOp`, `UpdateWorkItem` y `newPatchBody` en `workitems.go` (`application/json-patch+json`, `revPatch`, `retryable`). Prueba: 3.3 en verde. No se declara capacidad de escritura en el manifiesto.
   Cubre: REQ-45.7
-- [ ] 3.5 [RED] Crear `azuredevops/repos_test.go` y `repos.go` (`Repository`, `ListRepositories` con caché por proyecto en `orgState`): segunda llamada sin petición; un fallo (500) no se cachea y la siguiente repite; caché por organización y proceso. Prueba: `go test ./internal/integrations/azuredevops -run Repos`.
+- [x] 3.5 [RED] Crear `azuredevops/repos_test.go` y `repos.go` (`Repository`, `ListRepositories` con caché por proyecto en `orgState`): segunda llamada sin petición; un fallo (500) no se cachea y la siguiente repite; caché por organización y proceso. Prueba: `go test ./internal/integrations/azuredevops -run Repos`.
   Cubre: REQ-45.8
-- [ ] 3.6 Cierre de la unidad: `gofmt -l internal/integrations`, `go vet ./internal/integrations/azuredevops/...`, `go test ./internal/integrations/azuredevops/...`; commit `feat(integrations): work items, PATCH con rev y repositorios de Azure DevOps`.
+- [x] 3.6 Cierre de la unidad: `gofmt -l internal/integrations`, `go vet ./internal/integrations/azuredevops/...`, `go test ./internal/integrations/azuredevops/...`; commit `feat(integrations): work items, PATCH con rev y repositorios de Azure DevOps`.
   Cubre: REQ-45.6, REQ-45.7, REQ-45.8
 
 ## Phase 4 (unidad 4): Puertos y descubrimiento

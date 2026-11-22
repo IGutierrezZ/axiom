@@ -93,11 +93,12 @@ type RateLimitInfo struct {
 }
 
 // orgState es el estado compartido por organización durante la vida del proceso: el ritmo marcado
-// por Retry-After y las últimas cabeceras de tasa.
+// por Retry-After, las últimas cabeceras de tasa y la caché de repositorios.
 type orgState struct {
 	mu        sync.Mutex
 	notBefore time.Time
 	rate      RateLimitInfo
+	repos     map[string][]Repository // caché por proyecto; solo éxitos
 }
 
 // Client es el cliente REST de Azure DevOps 7.1 para una organización, un proyecto y un equipo. Todo
@@ -208,6 +209,7 @@ type request struct {
 	revPatch    bool   // activa la clasificación del rechazo de test /rev
 	workItemID  int    // para NotFound y RevConflict
 	rev         int    // revisión enviada en test /rev
+	batchIDs    []int  // identificadores de un lote: un 404 nombra el que falta
 }
 
 // buildURL compone la URL: [organización, segmentos...] escapados uno a uno con url.PathEscape. Nunca
@@ -395,7 +397,8 @@ func (c *Client) attempt(ctx context.Context, req request, target, auth string, 
 	defer resp.Body.Close()
 
 	res := attemptResult{status: resp.StatusCode, header: resp.Header, contentType: resp.Header.Get("Content-Type")}
-	if !readsBody(resp.StatusCode) {
+	// Un 404 de un lote se lee para nombrar el work item que falta.
+	if !readsBody(resp.StatusCode) && !(resp.StatusCode == http.StatusNotFound && len(req.batchIDs) > 0) {
 		return res
 	}
 	limit := int64(maxErrorBodyBytes)
@@ -520,7 +523,11 @@ func (c *Client) classify(req request, res attemptResult, attempts int, red reda
 		return decodeSuccess(req, res, out)
 
 	case status == http.StatusNotFound:
-		return &NotFoundError{Operation: req.operation, WorkItemID: req.workItemID}
+		id := req.workItemID
+		if id == 0 && len(req.batchIDs) > 0 {
+			id = missingIDFromMessage(red.redact(parseErrorBody(res.body).Message), req.batchIDs)
+		}
+		return &NotFoundError{Operation: req.operation, WorkItemID: id}
 	}
 
 	body := parseErrorBody(res.body)
