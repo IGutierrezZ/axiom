@@ -1,8 +1,8 @@
 # Catálogo Maestro de Especificaciones Vivas — Axiom
 
 > **Proyecto:** Axiom (Spec-Driven Development Platform)
-> **Última Sincronización:** 2026-11-18 22:22:12 UTC
-> **Total Dominios:** 72 | **Total Requerimientos:** 576 | **Total Escenarios BDD:** 1853
+> **Última Sincronización:** 2026-11-22 10:41:12 UTC
+> **Total Dominios:** 73 | **Total Requerimientos:** 612 | **Total Escenarios BDD:** 2040
 
 ---
 
@@ -20,11 +20,12 @@
 | `axiom-updater-resilience` | Especificación Viva: Resiliencia y Gobernanza del Actualizador Autónomo de Axiom | 9 | 10 | [Ver Spec](specs/axiom-updater-resilience/spec.md) |
 | `axiom-user-state-and-env` | Especificación de Requerimientos: Unificación de Estado en ~/.axiom y Variables AXIOM_* (INC-12) | 3 | 5 | [Ver Spec](specs/axiom-user-state-and-env/spec.md) |
 | `change-actor-identity` | Especificación Viva: Identidad Git como Actor de los Artefactos Versionados (REQ-42.1 a REQ-42.9) | 9 | 33 | [Ver Spec](specs/change-actor-identity/spec.md) |
-| `change-branch-lifecycle` | Especificación de Requerimientos: Ciclo de Vida de las Ramas y Worktrees de un Cambio por Topología (INC-25) | 32 | 266 | [Ver Spec](specs/change-branch-lifecycle/spec.md) |
+| `change-branch-lifecycle` | Especificación de Requerimientos: Ciclo de Vida de las Ramas y Worktrees de un Cambio por Topología (INC-25) | 34 | 278 | [Ver Spec](specs/change-branch-lifecycle/spec.md) |
 | `dashboard-sdd-orchestration` | Especificación de Requerimientos: Orquestación Interactiva SDD y Creación de Cambios en Dashboard Web y CLI (INC-15) | 5 | 10 | [Ver Spec](specs/dashboard-sdd-orchestration/spec.md) |
 | `engram-protocol-injection` | Engram protocol injection Specification | 5 | 12 | [Ver Spec](specs/engram-protocol-injection/spec.md) |
 | `gga` | GGA Specification | 3 | 8 | [Ver Spec](specs/gga/spec.md) |
 | `installer-picker-navigation` | Installer Picker Navigation Specification | 3 | 9 | [Ver Spec](specs/installer-picker-navigation/spec.md) |
+| `integration-plugins` | Especificación de integration-plugins | 22 | 92 | [Ver Spec](specs/integration-plugins/spec.md) |
 | `knowledge-profile-init` | Especificación de Requerimientos: Perfil de Inicialización Knowledge (INC-23) | 6 | 9 | [Ver Spec](specs/knowledge-profile-init/spec.md) |
 | `knowledge-query-engine` | Especificación de Requerimientos: Consulta Spec-First con Auto-Enriquecimiento de la Spec Viva (INC-23) | 5 | 5 | [Ver Spec](specs/knowledge-query-engine/spec.md) |
 | `knowledge-sweep-command` | Especificación de Requerimientos: Barrido Autónomo Knowledge y Siembra Inicial (INC-23) | 5 | 5 | [Ver Spec](specs/knowledge-sweep-command/spec.md) |
@@ -39,7 +40,7 @@
 | `odd-ui-integration` | Especificación de Requerimientos: Integración de ODD en Dashboard Web y TUI (INC-19) | 3 | 0 | [Ver Spec](specs/odd-ui-integration/spec.md) |
 | `openspec-adoption` | Especificación de Requerimientos: Adopción de OpenSpec como Spec Viva Única (REQ-30.9 a REQ-30.14) | 6 | 26 | [Ver Spec](specs/openspec-adoption/spec.md) |
 | `orchestrator-commands-markers` | Especificación de Requerimientos: axiom-orchestrator y Comandos Slash Canónicos (INC-11) | 4 | 5 | [Ver Spec](specs/orchestrator-commands-markers/spec.md) |
-| `organic-agent-trigger-rules` | Organic Agent Routing Projection | 19 | 56 | [Ver Spec](specs/organic-agent-trigger-rules/spec.md) |
+| `organic-agent-trigger-rules` | Organic Agent Routing Projection | 20 | 63 | [Ver Spec](specs/organic-agent-trigger-rules/spec.md) |
 | `persona-behavior-contract` | persona-behavior-contract Specification | 17 | 32 | [Ver Spec](specs/persona-behavior-contract/spec.md) |
 | `planning-home-resolution` | Especificación de Requerimientos: Resolución del Planning Home desde Cualquier Directorio (INC-24) | 13 | 59 | [Ver Spec](specs/planning-home-resolution/spec.md) |
 | `project-technical-context` | Especificación de Requerimientos: Contexto Técnico del Proyecto: Declaración, Lectura y Mantenimiento (INC-24) | 21 | 82 | [Ver Spec](specs/project-technical-context/spec.md) |
@@ -64,14 +65,14 @@
 | `rdd-simplification-design` | RDD Simplification Design Specification | 9 | 14 | [Ver Spec](specs/rdd-simplification-design/spec.md) |
 | `rdd-transport-capability` | RDD Transport Capability Specification | 4 | 8 | [Ver Spec](specs/rdd-transport-capability/spec.md) |
 | `review-findings-ledger` | Bounded Review Transaction and Findings Ledger | 18 | 24 | [Ver Spec](specs/review-findings-ledger/spec.md) |
-| `sdd-archive-lifecycle` | Especificación de Requerimientos: Ciclo de Vida de Archive, Integración Formal y Sellado Inmutable (INC-21) | 14 | 71 | [Ver Spec](specs/sdd-archive-lifecycle/spec.md) |
-| `sdd-block-review-gates` | Especificación de Requerimientos: Compuertas de Revisión por Bloque (spec, design, tasks, apply) (INC-21) | 16 | 85 | [Ver Spec](specs/sdd-block-review-gates/spec.md) |
-| `sdd-docs-publication` | Especificación de Publicación Ligera de Documentación SDD (carril-proyecto-publicacion-docs) | 8 | 40 | [Ver Spec](specs/sdd-docs-publication/spec.md) |
+| `sdd-archive-lifecycle` | Especificación de Requerimientos: Ciclo de Vida de Archive, Integración Formal y Sellado Inmutable (INC-21) | 14 | 73 | [Ver Spec](specs/sdd-archive-lifecycle/spec.md) |
+| `sdd-block-review-gates` | Especificación de Requerimientos: Compuertas de Revisión por Bloque (spec, design, tasks, apply) (INC-21) | 18 | 94 | [Ver Spec](specs/sdd-block-review-gates/spec.md) |
+| `sdd-docs-publication` | Especificación de Publicación Ligera de Documentación SDD (carril-proyecto-publicacion-docs) | 10 | 50 | [Ver Spec](specs/sdd-docs-publication/spec.md) |
 | `sdd-independent-review` | Especificación de Requerimientos: Revisión Independiente en SDD (verify técnico por rol, juicio opcional y revisión de cobertura) | 10 | 67 | [Ver Spec](specs/sdd-independent-review/spec.md) |
 | `sdd-iso-evidence` | Especificación: Evidencias ISO Opcionales del SDD (carril-sdd-versatil) | 10 | 97 | [Ver Spec](specs/sdd-iso-evidence/spec.md) |
 | `sdd-lane-kickoff` | Especificación de Requerimientos: Selección Temprana y Bloqueante de Carril ODD/SDD en el Kickoff (INC-21) | 12 | 77 | [Ver Spec](specs/sdd-lane-kickoff/spec.md) |
-| `sdd-orchestrator-assets` | SDD Orchestrator Assets Specification | 20 | 56 | [Ver Spec](specs/sdd-orchestrator-assets/spec.md) |
-| `sdd-preflight-configuration` | Especificación de Requerimientos: Cuestionario Pre-Vuelo de SDD, Modalidad de Avance y Asignación Obligatoria de Roles (INC-21) | 14 | 101 | [Ver Spec](specs/sdd-preflight-configuration/spec.md) |
+| `sdd-orchestrator-assets` | SDD Orchestrator Assets Specification | 21 | 71 | [Ver Spec](specs/sdd-orchestrator-assets/spec.md) |
+| `sdd-preflight-configuration` | Especificación de Requerimientos: Cuestionario Pre-Vuelo de SDD, Modalidad de Avance y Asignación Obligatoria de Roles (INC-21) | 15 | 111 | [Ver Spec](specs/sdd-preflight-configuration/spec.md) |
 | `sdd-research` | sdd-research Specification | 3 | 9 | [Ver Spec](specs/sdd-research/spec.md) |
 | `sdd-role-closure-handoff` | Especificación de Requerimientos: Cierre de Último Rol, Aviso Formal y Relevo de Integración (INC-21) | 3 | 20 | [Ver Spec](specs/sdd-role-closure-handoff/spec.md) |
 | `semantic-code` | Especificación de Requerimientos: Conector Semántico de Código (CodeGraph y motor AST nativo) (INC-06) | 10 | 14 | [Ver Spec](specs/semantic-code/spec.md) |
@@ -81,7 +82,7 @@
 | `tui-ui-parity` | Especificación Viva: Paridad Bidireccional entre TUI y Web UI | 10 | 11 | [Ver Spec](specs/tui-ui-parity/spec.md) |
 | `upstream-absorption-protocol` | Especificación Viva: Protocolo de Absorción por Tandas desde Upstream | 6 | 9 | [Ver Spec](specs/upstream-absorption-protocol/spec.md) |
 | `visual-decoupling` | Especificación de Requerimientos: Desacoplamiento Visual y Limpieza de Marca (Axiom) | 4 | 7 | [Ver Spec](specs/visual-decoupling/spec.md) |
-| `workspace-topology` | Especificación Viva: Topología de Workspace y CLI de Axiom | 13 | 69 | [Ver Spec](specs/workspace-topology/spec.md) |
+| `workspace-topology` | Especificación Viva: Topología de Workspace y CLI de Axiom | 18 | 99 | [Ver Spec](specs/workspace-topology/spec.md) |
 
 ---
 
@@ -696,6 +697,20 @@ Definir cómo crea, consulta, cierra y protege Axiom las ramas (y, opcionalmente
   - *Escenario BDD:* La publicación y el relevo siguen apuntando a la integración
   - *Escenario BDD:* El archivado sigue esperando solo a la integración
   - *Escenario BDD:* El archivado se rechaza si el cambio no está en la integración aunque esté en la rama principal
+- **[REQ-43.24]** `ensure --role` Validado contra el Roster Sellado
+  - *Escenario BDD:* Rol sellado
+  - *Escenario BDD:* Rol ausente del kickoff
+  - *Escenario BDD:* Incompatible con `--archive`
+  - *Escenario BDD:* Fuera del carril `sdd`
+  - *Escenario BDD:* Sin kickoff sellado
+  - *Escenario BDD:* El motor no conoce el rol
+- **[REQ-43.25]** `ensure --role` Listo Emite `role.start` Idempotente
+  - *Escenario BDD:* Primera entrada al rol
+  - *Escenario BDD:* `ensure` repetido
+  - *Escenario BDD:* Operación pendiente no se duplica
+  - *Escenario BDD:* Sin `--role` no se emite
+  - *Escenario BDD:* Estado distinto de `ready`
+  - *Escenario BDD:* El dashboard no emite
 
 ### Dominio: `dashboard-sdd-orchestration` — Especificación de Requerimientos: Orquestación Interactiva SDD y Creación de Cambios en Dashboard Web y CLI (INC-15)
 
@@ -779,6 +794,127 @@ Defines the navigation contract for the installer TUI's conditional picker chain
 - **[REQ-installer-picker-navigation-3]** Cross-cutting guards remain outside the slice
   - *Escenario BDD:* ModelConfigMode exit-ramp returns to config menu
   - *Escenario BDD:* OpenCodePlugins guard precedes the dependency tree without SDD
+
+### Dominio: `integration-plugins` — Especificación de integration-plugins
+
+Marco de plugins de integración (C-07-b): un punto de extensión hacia trackers externos que no acopla el núcleo de Axiom a ninguno. Fija el puerto `Plugin`, el manifiesto serializable, los catálogos cerrados de eventos y capacidades, el registro cerrado en compilación, el despacho duradero con reintento (outbox local), el fichero versionado de vínculos por cambio, el almacén seguro de secretos, los verbos `axiom integrations` y las garantías de coste cero y de no fuga de secretos. El bloque `integrations:` de `axiom.yaml` y los enganches en `gate record`, `branch ensure --role` y `sdd publish --archive` se especifican en las capacidades `workspace-topology`, `sdd-block-review-gates`, `change-branch-lifecycle` y `sdd-docs-publication`. Ningún adaptador real (Azure DevOps, C-07-c) forma parte de este cambio.
+
+**Archivo:** [`specs/integration-plugins/spec.md`](specs/integration-plugins/spec.md)
+
+- **[REQ-43.1]** Catálogo Cerrado de Eventos y Puerto `Plugin`
+  - *Escenario BDD:* El catálogo contiene exactamente los seis eventos
+  - *Escenario BDD:* Evento fuera del catálogo
+- **[REQ-43.2]** Catálogo Cerrado de Capacidades
+  - *Escenario BDD:* Capacidad declarada válida
+  - *Escenario BDD:* Capacidad desconocida
+- **[REQ-43.3]** Manifiesto Serializable, Versionado y en un Paquete Hoja
+  - *Escenario BDD:* Ida y vuelta JSON estable
+  - *Escenario BDD:* Evento escuchado desconocido
+  - *Escenario BDD:* Clave de configuración con nombre de secreto
+  - *Escenario BDD:* Clave de configuración que coincide con un secreto declarado
+  - *Escenario BDD:* Clave reservada `enabled`
+  - *Escenario BDD:* Identificador inválido
+  - *Escenario BDD:* El paquete hoja no depende de `workspace`
+- **[REQ-43.4]** Registro Cerrado en Compilación
+  - *Escenario BDD:* Identificador duplicado
+  - *Escenario BDD:* Plugin ausente del catálogo o distinto de él
+  - *Escenario BDD:* Registro por defecto vacío
+  - *Escenario BDD:* Costura de prueba
+- **[REQ-43.5]** Coste Cero sin Integración Configurada
+  - *Escenario BDD:* Sin bloque `integrations`
+  - *Escenario BDD:* Plugin desactivado
+  - *Escenario BDD:* Bloque declarado sin plugins
+  - *Escenario BDD:* El almacén de secretos no se consulta
+- **[REQ-43.6]** Despacho Duradero con Intento Inmediato Acotado
+  - *Escenario BDD:* Entrega inmediata con éxito
+  - *Escenario BDD:* Entrega fallida deja la operación pendiente
+  - *Escenario BDD:* Plugin que no escucha el evento
+  - *Escenario BDD:* Error permanente abandona la operación
+  - *Escenario BDD:* Pánico del plugin
+  - *Escenario BDD:* Entrega que excede el tiempo acotado
+- **[REQ-43.7]** Clave de Idempotencia Estable por Operación
+  - *Escenario BDD:* Reintento de la misma aprobación
+  - *Escenario BDD:* Reaprobar un artefacto cambiado
+  - *Escenario BDD:* Clave de `role.start`
+  - *Escenario BDD:* Clave de `archive`
+  - *Escenario BDD:* Entrega al menos una vez
+- **[REQ-43.8]** Outbox Local Persistente con Reintento
+  - *Escenario BDD:* El fichero se borra al vaciarse
+  - *Escenario BDD:* La outbox no se publica
+  - *Escenario BDD:* Escritura atómica
+  - *Escenario BDD:* Operaciones concurrentes
+  - *Escenario BDD:* Operación abandonada tras el máximo de intentos
+  - *Escenario BDD:* El cerrojo no ensucia el árbol
+- **[REQ-43.9]** `integrations.yaml` Versionado con Vínculos e Imputaciones
+  - *Escenario BDD:* Los vínculos devueltos se persisten
+  - *Escenario BDD:* Persistir el mismo vínculo dos veces
+  - *Escenario BDD:* URL con credenciales
+  - *Escenario BDD:* Sin vínculos no hay fichero
+  - *Escenario BDD:* Ningún estado de entrega en el fichero versionado
+- **[REQ-43.10]** La Emisión Nunca Hace Fallar el Verbo de Origen
+  - *Escenario BDD:* Fallo del plugin no rompe el verbo
+  - *Escenario BDD:* Bloque `integrations` inválido
+  - *Escenario BDD:* Fallo de escritura de la outbox
+- **[REQ-43.11]** `axiom integrations sync` Drena la Outbox
+  - *Escenario BDD:* Reintento con éxito
+  - *Escenario BDD:* Queda algo pendiente
+  - *Escenario BDD:* Descartar una operación
+  - *Escenario BDD:* Sin integración y sin cola no hay efecto
+  - *Escenario BDD:* Cola existente sin plugin configurado
+  - *Escenario BDD:* Bloque inválido en `sync`
+- **[REQ-43.12]** `axiom integrations emit` Dispara un Evento del Catálogo
+  - *Escenario BDD:* Emisión manual con éxito
+  - *Escenario BDD:* `change.start` rechazado
+  - *Escenario BDD:* `emit` no fabrica aprobaciones
+  - *Escenario BDD:* `emit` toma digest, huella y actor del ledger
+  - *Escenario BDD:* Ningún plugin escucha el evento
+  - *Escenario BDD:* Evento de rol sin rol
+  - *Escenario BDD:* Rol ausente del kickoff
+  - *Escenario BDD:* Fallo de entrega en `emit`
+- **[REQ-43.13]** Almacén de Secretos sin Caída Silenciosa a Texto Plano
+  - *Escenario BDD:* El entorno prevalece
+  - *Escenario BDD:* Resolución desde el keyring
+  - *Escenario BDD:* Linux solo tiene el entorno
+  - *Escenario BDD:* Keyring no disponible
+  - *Escenario BDD:* Secreto inexistente
+- **[REQ-43.14]** Tipo `Secret` Redactado
+  - *Escenario BDD:* Formateo redactado
+  - *Escenario BDD:* Error que incluye el secreto
+- **[REQ-43.15]** `axiom integrations secret set|status|delete`
+  - *Escenario BDD:* `set` por stdin
+  - *Escenario BDD:* El valor por argumento se rechaza
+  - *Escenario BDD:* `set` en Linux se niega
+  - *Escenario BDD:* `status` sin revelar el valor
+  - *Escenario BDD:* Los cuatro valores de `source`
+  - *Escenario BDD:* `set` desde un terminal
+  - *Escenario BDD:* `set` con valor vacío o demasiado grande
+  - *Escenario BDD:* `delete` idempotente
+  - *Escenario BDD:* Secreto no declarado
+- **[REQ-43.16]** Ningún Secreto Llega a Disco Versionado, a la Salida ni a un GET
+  - *Escenario BDD:* Canario tras un flujo completo
+  - *Escenario BDD:* Canario en los GET del dashboard
+- **[REQ-43.17]** Doble de Prueba en Memoria y Criterio de Terminado
+  - *Escenario BDD:* Recorrido de todos los verbos
+  - *Escenario BDD:* Reintento tras fallo
+- **[REQ-43.18]** Alta del Verbo `integrations` en la CLI y la Ayuda
+  - *Escenario BDD:* Ayuda global
+  - *Escenario BDD:* Subcomando desconocido
+- **[REQ-43.28]** `archive` se Encola de Forma Duradera en la Carpeta Archivada
+  - *Escenario BDD:* La operación se encola en la carpeta archivada
+  - *Escenario BDD:* Cola archivada vacía se borra
+  - *Escenario BDD:* Otro nombre bajo `archive/` se rechaza
+  - *Escenario BDD:* Sin git no se encola
+- **[REQ-43.29]** `sync` y `emit --event archive` Cubren las Carpetas Archivadas
+  - *Escenario BDD:* `sync` reintenta la cola archivada
+  - *Escenario BDD:* `sync` sin `--change` recorre las archivadas
+  - *Escenario BDD:* `emit --event archive` sin carpeta archivada
+  - *Escenario BDD:* `emit --event archive` con carpeta archivada
+- **[REQ-43.30]** El Evento `archive` Nunca Fusiona Vínculos en `integrations.yaml`
+  - *Escenario BDD:* Vínculos devueltos por `archive` se descartan
+  - *Escenario BDD:* El plugin recibe los vínculos existentes
+- **[REQ-43.31]** `done` en la Rama de Archivado se Niega con Cola Pendiente
+  - *Escenario BDD:* `done` se niega con cola archivada pendiente
+  - *Escenario BDD:* `done` tras vaciar la cola
 
 ### Dominio: `knowledge-profile-init` — Especificación de Requerimientos: Perfil de Inicialización Knowledge (INC-23)
 
@@ -1246,6 +1382,14 @@ Define the managed, provider-neutral instructions that project Gentle AI's
   - *Escenario BDD:* La doctrina es idéntica en proyectos ISO y no ISO
   - *Escenario BDD:* La doctrina no menciona la combinación contradictoria
   - *Escenario BDD:* La adición no reintroduce ninguna parada
+- **[REQ-32.4]** La Doctrina ODD de Entrega es `single-pr` por Defecto, la Cadena Solo a Petición y la Heurística por Tarea no Lleva Ningún Número
+  - *Escenario BDD:* La doctrina ODD declara `single-pr` por defecto sin preguntar
+  - *Escenario BDD:* La cadena solo se usa a petición
+  - *Escenario BDD:* La heurística por tarea no contiene ningún número
+  - *Escenario BDD:* La doctrina no ofrece las estrategias heredadas
+  - *Escenario BDD:* El aviso de cambio grande es opcional y no bloquea
+  - *Escenario BDD:* La doctrina no contiene ningún umbral numérico de entrega
+  - *Escenario BDD:* El resto del protocolo ODD no cambia
 
 ### Dominio: `persona-behavior-contract` — persona-behavior-contract Specification
 
@@ -1984,6 +2128,8 @@ Define one explicit, content-addressed implementation-review transaction shared 
 - **[REQ-21.18]** Sellado Inmutable Post-Archive y Gestión Exclusiva vía Bug o Nuevo Incremento
   - *Escenario BDD:* Intento de reabrir un incremento archivado se rechaza
   - *Escenario BDD:* Regresión post-archive se gestiona mediante bug o nuevo incremento
+  - *Escenario BDD:* La cola de integraciones escribe estado local en la carpeta archivada
+  - *Escenario BDD:* Ningún otro escritor abre la excepción
 - **[REQ-24.55]** Integración del Delta de Contexto en las Rutas Mantenidas
   - *Escenario BDD:* Entrada `modify` integrada con traza
   - *Escenario BDD:* Documento mantenido inexistente se crea dentro de las rutas declaradas
@@ -2166,6 +2312,17 @@ Define one explicit, content-addressed implementation-review transaction shared 
   - *Escenario BDD:* El informe de cobertura no reabre la puerta
   - *Escenario BDD:* Sin ninguna revisión la presentación no cambia
   - *Escenario BDD:* Las plantillas del orquestador prescriben la presentación de los resultados
+- **[REQ-43.22]** Aprobar `spec`, `design` o `role-apply` Emite su Evento de Integración
+  - *Escenario BDD:* Aprobar `spec`
+  - *Escenario BDD:* Aprobar `design`
+  - *Escenario BDD:* Aprobar `role-apply` de un rol
+  - *Escenario BDD:* Rechazar no emite
+  - *Escenario BDD:* El fallo de la integración no rompe la aprobación
+  - *Escenario BDD:* Reaprobar un artefacto cambiado
+- **[REQ-43.23]** `tasks` e `integration` no Emiten y el Contrato `gate-record/v1` no Cambia
+  - *Escenario BDD:* `tasks` no emite
+  - *Escenario BDD:* `integration` no emite
+  - *Escenario BDD:* Salida JSON idéntica con y sin integración
 
 ### Dominio: `sdd-docs-publication` — Especificación de Publicación Ligera de Documentación SDD (carril-proyecto-publicacion-docs)
 
@@ -2179,6 +2336,8 @@ Definir el verbo nativo `axiom sdd publish`, que confirma y sube, y solo eso, lo
   - *Escenario BDD:* Las rutas de referencia y `odd/tasks` no son documentación
   - *Escenario BDD:* Una carpeta archivada de otro cambio no es del cambio
   - *Escenario BDD:* Sin `--change` la orden se rechaza
+  - *Escenario BDD:* El estado local de la raíz no se publica
+  - *Escenario BDD:* Un fichero con punto anidado sigue siendo documentación
 - **[REQ-27.6]** `publish` Confirma Solo las Rutas de Documentación del Cambio
   - *Escenario BDD:* El commit contiene solo documentación
   - *Escenario BDD:* El índice de la persona queda intacto
@@ -2221,6 +2380,16 @@ Definir el verbo nativo `axiom sdd publish`, que confirma y sube, y solo eso, lo
   - *Escenario BDD:* No se publica entre otras fases
   - *Escenario BDD:* Una negativa no interrumpe el encadenado
   - *Escenario BDD:* Almacén sin ficheros no publica
+- **[REQ-43.26]** `sdd publish --archive` Confirmado Emite `archive`
+  - *Escenario BDD:* Archivado confirmado
+  - *Escenario BDD:* Publicación rechazada
+  - *Escenario BDD:* Sin `--archive`
+  - *Escenario BDD:* Fallo de la integración deja la cola en la carpeta archivada
+  - *Escenario BDD:* Una publicación posterior no confirma la cola
+- **[REQ-43.27]** El Evento `archive` no Reescribe `integrations.yaml`
+  - *Escenario BDD:* El plugin devuelve vínculos en `archive`
+  - *Escenario BDD:* Intento de escribir `integrations.yaml` archivado
+  - *Escenario BDD:* Entrega fallida de `archive`
 
 ### Dominio: `sdd-independent-review` — Especificación de Requerimientos: Revisión Independiente en SDD (verify técnico por rol, juicio opcional y revisión de cobertura)
 
@@ -2525,15 +2694,19 @@ Defines required behavior for agent-specific SDD orchestrator guidance assets so
 - **[REQ-sdd-orchestrator-assets-1]** Chain Strategy Guidance Parity
   - *Escenario BDD:* Claude guidance lists both required strategies
   - *Escenario BDD:* Strategy naming remains canonical
+  - *Escenario BDD:* La cadena solo se activa a petición
 - **[REQ-sdd-orchestrator-assets-2]** Chain Strategy Propagation to Downstream Phases
-  - *Escenario BDD:* Guidance forwards both strategy fields to sdd-tasks
-  - *Escenario BDD:* Guidance forwards both strategy fields to sdd-apply
+  - *Escenario BDD:* Guidance forwards both strategy fields to sdd-tasks on chained
+  - *Escenario BDD:* Guidance forwards both strategy fields to sdd-apply on chained
+  - *Escenario BDD:* Con la entrega por defecto no se reenvía `chain_strategy`
 - **[REQ-sdd-orchestrator-assets-3]** Non-Claude Chain Strategy Guidance Parity
   - *Escenario BDD:* Non-Claude delivery-planning guidance lists both required strategies
   - *Escenario BDD:* Non-Claude strategy naming remains canonical
+  - *Escenario BDD:* La cadena solo se activa a petición en los activos no Claude
 - **[REQ-sdd-orchestrator-assets-4]** Non-Claude Strategy Propagation to Downstream Phases
-  - *Escenario BDD:* Non-Claude guidance forwards both strategy fields to sdd-tasks
-  - *Escenario BDD:* Non-Claude guidance forwards both strategy fields to sdd-apply
+  - *Escenario BDD:* Non-Claude guidance forwards both strategy fields to sdd-tasks on chained
+  - *Escenario BDD:* Non-Claude guidance forwards both strategy fields to sdd-apply on chained
+  - *Escenario BDD:* Non-Claude con la entrega por defecto no reenvía `chain_strategy`
 - **[REQ-sdd-orchestrator-assets-5]** Platform-Native Solo Inline Semantics Preservation
   - *Escenario BDD:* Windsurf and Antigravity keep inline-accurate wording
   - *Escenario BDD:* Other non-Claude platform-native assets avoid inaccurate persistence claims
@@ -2542,12 +2715,13 @@ Defines required behavior for agent-specific SDD orchestrator guidance assets so
   - *Escenario BDD:* Binding is present in all 12 orchestrator templates
   - *Escenario BDD:* sdd-tasks sub-agent reads chained-pr skill before planning PRs
   - *Escenario BDD:* sdd-apply sub-agent reads chained-pr skill before creating PRs
+  - *Escenario BDD:* La skill chained-pr no menciona ningún umbral numérico
 - **[REQ-sdd-orchestrator-assets-7]** Inline Chain Strategy Summary Retained
   - *Escenario BDD:* Chain strategy inline summary coexists with skill binding
   - *Escenario BDD:* Static validation passes after binding is added
 - **[REQ-sdd-orchestrator-assets-8]** Cursor Chain Strategy Section Parity
   - *Escenario BDD:* Cursor template includes a Chain Strategy section
-  - *Escenario BDD:* Cursor forwards chain_strategy to downstream phases
+  - *Escenario BDD:* Cursor forwards chain_strategy to downstream phases on chained
   - *Escenario BDD:* Cursor includes the chained-pr skill binding
   - *Escenario BDD:* Cursor chain strategy naming is canonical
 - **[REQ-sdd-orchestrator-assets-9]** Platform-Accurate Binding Wording for Solo-Inline and Platform-Native Hosts
@@ -2598,6 +2772,17 @@ Defines required behavior for agent-specific SDD orchestrator guidance assets so
   - *Escenario BDD:* La guía de adopción describe el flujo completo
   - *Escenario BDD:* La guía no atribuye a Go la fidelidad semántica
   - *Escenario BDD:* Paridad entre runtimes
+- **[REQ-32.3]** La Entrega es `single-pr` por Defecto sin Preguntar, `chained` Solo a Petición y se Leen los Valores Heredados mediante Alias
+  - *Escenario BDD:* La entrega por defecto es `single-pr` y no se pregunta
+  - *Escenario BDD:* Una petición de encadenar sin estrategia provoca una única pregunta
+  - *Escenario BDD:* Los valores heredados se leen mediante alias
+  - *Escenario BDD:* Un valor desconocido se sigue informando sin mapearlo
+  - *Escenario BDD:* `chained` no se persiste
+  - *Escenario BDD:* Un `chained` reenviado prevalece sobre el valor del bloque de pre-vuelo
+  - *Escenario BDD:* No existe ningún Review Workload Guard ni presupuesto numérico
+  - *Escenario BDD:* `sdd-apply` no se detiene por carga de revisión
+  - *Escenario BDD:* `sdd-tasks` emite una previsión cualitativa
+  - *Escenario BDD:* Con `delivery.split_hint_lines` fijada la doctrina indica el aviso único
 
 ### Dominio: `sdd-preflight-configuration` — Especificación de Requerimientos: Cuestionario Pre-Vuelo de SDD, Modalidad de Avance y Asignación Obligatoria de Roles (INC-21)
 
@@ -2656,25 +2841,29 @@ Defines required behavior for agent-specific SDD orchestrator guidance assets so
   - *Escenario BDD:* Una respuesta fuera del dominio vuelve a preguntarse
   - *Escenario BDD:* Una opción de la preferencia en un grupo del pre-vuelo se rechaza
   - *Escenario BDD:* La preferencia se cachea sin escribir en el kickoff
-  - *Escenario BDD:* La política de revisión de 400 líneas no se pregunta
+  - *Escenario BDD:* La interacción no ofrece presupuesto de líneas ni estrategia de entrega
   - *Escenario BDD:* Una sesión nueva vuelve a preguntar la preferencia una vez
   - *Escenario BDD:* Una sesión sin la preferencia deja su ausencia tratada por REQ-28.2
 - **[REQ-28.15]** Los Grupos del Pre-Vuelo Dependen de la Topología y los Valores No Preguntados se Derivan
-  - *Escenario BDD:* En multirepo no se pregunta ritmo ni almacén
-  - *Escenario BDD:* En monorepo se pregunta el ritmo y la estrategia de entrega
-  - *Escenario BDD:* El almacén no se pregunta en ninguna topología
+  - *Escenario BDD:* En multirepo no se pregunta nada
+  - *Escenario BDD:* En monorepo solo se pregunta el ritmo
+  - *Escenario BDD:* El bloque derivado tiene cinco líneas y ninguna política de revisión
+  - *Escenario BDD:* Ni el almacén ni la estrategia de PR se preguntan en ninguna topología
   - *Escenario BDD:* El texto proyectado manda leer la topología antes de preguntar
+  - *Escenario BDD:* La sintaxis de respuesta sin interfaz nativa solo cubre el ritmo
   - *Escenario BDD:* Un conjunto variable de grupos no rompe a los demás
   - *Escenario BDD:* Un bloque con un almacén distinto de `hybrid` no es válido
+  - *Escenario BDD:* Un bloque con una entrega distinta de `single-pr` no es válido
 - **[REQ-28.16]** Cada Pregunta del Pre-Vuelo Lleva un Marcador por Nombre de Grupo y se Toleran los Marcadores Numerados Heredados
   - *Escenario BDD:* Marcador nominal aceptado con cualquiera de los dos prefijos
   - *Escenario BDD:* Los marcadores numerados heredados toleran un cuestionario antiguo de tres preguntas
-  - *Escenario BDD:* Un cuestionario heredado en multirepo ignora ritmo y almacén
+  - *Escenario BDD:* Una respuesta heredada `Ask me` o `Auto` no produce una entrega distinta de `single-pr`
+  - *Escenario BDD:* Un cuestionario heredado en multirepo ignora ritmo, almacén y estrategia
   - *Escenario BDD:* Un grupo requerido con el marcador repetido se deniega nombrándolo
   - *Escenario BDD:* Un grupo requerido sin marcador se deniega nombrándolo
   - *Escenario BDD:* La interacción de la preferencia de revisión no se confunde con un grupo
 - **[REQ-28.17]** El Hook Valida el Significado del Pre-Vuelo según la Topología, no su Presentación
-  - *Escenario BDD:* Un grupo extra se ignora
+  - *Escenario BDD:* Un grupo heredado o extra se ignora
   - *Escenario BDD:* Falta un grupo requerido y la causa lo nombra
   - *Escenario BDD:* El orden de las preguntas y de las opciones no importa
   - *Escenario BDD:* Una respuesta fuera del dominio o de selección múltiple se deniega
@@ -2685,6 +2874,7 @@ Defines required behavior for agent-specific SDD orchestrator guidance assets so
   - *Escenario BDD:* Fuera de un proyecto Axiom el hook no interviene
 - **[REQ-28.18]** Sin Grupos Requeridos el Cuestionario se Suprime y el Bloque es Enteramente Derivado
   - *Escenario BDD:* Cero grupos requeridos permite el despacho con el bloque derivado
+  - *Escenario BDD:* Multirepo entra siempre por la ruta sin grupos
   - *Escenario BDD:* El orquestador no lanza la herramienta de preguntas con cero grupos
   - *Escenario BDD:* Con un grupo requerido no hay relajación
   - *Escenario BDD:* El prompt que ya trae el bloque no se duplica
@@ -2701,6 +2891,7 @@ Defines required behavior for agent-specific SDD orchestrator guidance assets so
   - *Escenario BDD:* Un kickoff existente que incumple la topología se sigue leyendo
 - **[REQ-28.20]** La Doctrina del Orquestador Fija el Almacén `hybrid` y Hace que la Topología Decida el Ritmo
   - *Escenario BDD:* La doctrina no pregunta el almacén ni elige `engram` o `none`
+  - *Escenario BDD:* La doctrina no pregunta la estrategia de PR
   - *Escenario BDD:* El ritmo por defecto ya no es automático
   - *Escenario BDD:* Todos los runtimes proyectan el mismo texto
   - *Escenario BDD:* El valor por defecto de `status` no cambia
@@ -2710,7 +2901,8 @@ Defines required behavior for agent-specific SDD orchestrator guidance assets so
   - *Escenario BDD:* El plugin exige los grupos de la topología que lee
   - *Escenario BDD:* El plugin con topología ilegible usa los grupos de monorepo
   - *Escenario BDD:* La lectura de topología del plugin coincide con la del binario
-  - *Escenario BDD:* El plugin ignora el grupo de almacén heredado
+  - *Escenario BDD:* El plugin ignora los grupos de almacén y de estrategia heredados
+  - *Escenario BDD:* El bloque del plugin no contiene política de revisión
   - *Escenario BDD:* La revisión anterior del plugin queda registrada
 - **[REQ-28.22]** Topología Efectiva: una Topología No Gobernable se Trata como `monorepo-embedded` y sin `axiom.yaml` no se Aplica Ninguna Regla
   - *Escenario BDD:* Topología desconocida en el hook se trata como monorepo
@@ -2720,6 +2912,10 @@ Defines required behavior for agent-specific SDD orchestrator guidance assets so
   - *Escenario BDD:* El sellado sin `axiom.yaml` no aplica la regla de topología
   - *Escenario BDD:* Sin `axiom.yaml` sigue rigiendo la regla de roster
   - *Escenario BDD:* Con `monorepo-embedded` y `continuous` con rol especializado gana la topología
+- **[REQ-28.23]** El Pre-Vuelo y su Bloque Derivado no Contienen Ningún Umbral Numérico de Entrega
+  - *Escenario BDD:* El texto y el bloque del pre-vuelo no contienen un umbral de entrega
+  - *Escenario BDD:* Los comandos de OpenCode no exigen presupuesto de revisión en el pre-vuelo
+  - *Escenario BDD:* Un valor heredado de entrega en un bloque no se acepta como bloque derivado
 
 ### Dominio: `sdd-research` — sdd-research Specification
 
@@ -2949,6 +3145,7 @@ Definir de forma canónica el comportamiento del punto de entrada CLI `axiom` y 
   - *Escenario BDD:* Topología retirada finaliza con error accionable
 - **[REQ-2.1]** Estructura del Esquema axiom.yaml
   - *Escenario BDD:* El bloque `workflow` es opcional y se valida cuando está presente
+  - *Escenario BDD:* El bloque `delivery` es opcional y se valida cuando está presente
   - *Escenario BDD:* El bloque `baseline` ya no es un bloque admitido
 - **[REQ-2.2]** Topología Monorepo Embebido
   - *Escenario BDD:* Monorepo embebido con specs en raíz o subdirectorio válido
@@ -3017,4 +3214,38 @@ Definir de forma canónica el comportamiento del punto de entrada CLI `axiom` y 
   - *Escenario BDD:* `none` declarado se reporta
   - *Escenario BDD:* `openspec`, `hybrid` y la ausencia de declaración se aceptan
   - *Escenario BDD:* La carga no se rompe con `engram` o `none`
+- **[REQ-32.1]** Bloque `delivery:` Opcional de `axiom.yaml` con el Umbral del Aviso de Cambio Grande
+  - *Escenario BDD:* Sin bloque el aviso está desactivado
+  - *Escenario BDD:* Bloque vacío o sin clave mantiene el aviso desactivado
+  - *Escenario BDD:* Valor válido
+  - *Escenario BDD:* Valor cero, negativo, no entero o nulo
+  - *Escenario BDD:* Clave desconocida o repetida dentro de `delivery:`
+  - *Escenario BDD:* `delivery:` que no es un mapa
+  - *Escenario BDD:* La carga de la configuración rechaza el valor inválido por el mismo canal
+  - *Escenario BDD:* Un binario anterior ignora el bloque
+  - *Escenario BDD:* `axiom init --force` preserva el bloque
+  - *Escenario BDD:* Ambas topologías admiten el bloque
+  - *Escenario BDD:* El manual documenta la clave
+- **[REQ-32.2]** Con `delivery.split_hint_lines` Fijada el Orquestador Avisa una Vez de un Cambio Grande y Nunca Bloquea
+  - *Escenario BDD:* Con la clave fijada y la previsión superada se avisa una vez
+  - *Escenario BDD:* El aviso no se repite en el mismo cambio
+  - *Escenario BDD:* Con la previsión por debajo o igual no hay aviso
+  - *Escenario BDD:* Sin la clave no hay aviso ni número
+  - *Escenario BDD:* El aviso nunca bloquea
+- **[REQ-43.19]** Bloque `integrations:` Opcional y Estricto de `axiom.yaml`
+  - *Escenario BDD:* Bloque válido
+  - *Escenario BDD:* Clave desconocida
+  - *Escenario BDD:* Plugin desconocido
+  - *Escenario BDD:* Bloque nulo o no mapeo
+  - *Escenario BDD:* Clave duplicada
+  - *Escenario BDD:* Plugin desactivado
+  - *Escenario BDD:* Obligatoria ausente, tipo y enumerado
+  - *Escenario BDD:* Bloque vacío
+  - *Escenario BDD:* Un secreto no se puede declarar en `axiom.yaml`
+- **[REQ-43.20]** `Locate` Expone el Error del Bloque sin Rechazar y no Bloquea el Archivado
+  - *Escenario BDD:* `Locate` con bloque inválido
+  - *Escenario BDD:* Archivado no bloqueado
+  - *Escenario BDD:* `init --force` conserva el bloque
+- **[REQ-43.21]** Plantilla y Manual Documentan `integrations:`
+  - *Escenario BDD:* Plantilla y manual cubiertos por las pruebas de contrato
 
