@@ -39,11 +39,11 @@ func splitCommitReviewFlag(args []string) (kickoff.CommitReviewMode, []string, e
 			continue
 		}
 		if seen {
-			return "", nil, fmt.Errorf("`%s` se indicó más de una vez; repite la orden con un único `%s <%s>`", commitReviewFlag, commitReviewFlag, strings.ReplaceAll(commitReviewVocabulary(), ", ", "|"))
+			return "", nil, fmt.Errorf("`%s` se indicó más de una vez; repite `axiom sdd gate record` con un único `%s <%s>`", commitReviewFlag, commitReviewFlag, strings.ReplaceAll(commitReviewVocabulary(), ", ", "|"))
 		}
 		seen = true
 		if i+1 >= len(args) || strings.HasPrefix(args[i+1], "-") {
-			return "", nil, fmt.Errorf("`%s` requiere un valor; opciones: %s", commitReviewFlag, commitReviewVocabulary())
+			return "", nil, fmt.Errorf("`%s` requiere un valor; repite `axiom sdd gate record` con uno de: %s", commitReviewFlag, commitReviewVocabulary())
 		}
 		value := kickoff.CommitReviewMode(args[i+1])
 		valid := false
@@ -54,7 +54,7 @@ func splitCommitReviewFlag(args []string) (kickoff.CommitReviewMode, []string, e
 			}
 		}
 		if !valid {
-			return "", nil, fmt.Errorf("`%s` desconocido %q; opciones: %s", commitReviewFlag, args[i+1], commitReviewVocabulary())
+			return "", nil, fmt.Errorf("`%s` desconocido %q; repite `axiom sdd gate record` con uno de: %s", commitReviewFlag, args[i+1], commitReviewVocabulary())
 		}
 		mode = value
 		i++
