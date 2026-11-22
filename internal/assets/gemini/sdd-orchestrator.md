@@ -93,6 +93,10 @@ Use Gemini's native bounded worker for delegated-direct work; reserve `sdd-*` ag
 
 {{GENTLE_AI_SDD_SECTION:Chain Strategy}}
 
+### Commit Review
+
+{{GENTLE_AI_SDD_SECTION:Commit Review}}
+
 ### Dependency Graph
 
 {{GENTLE_AI_SDD_SECTION:Dependency Graph}}

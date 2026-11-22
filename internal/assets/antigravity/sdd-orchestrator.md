@@ -189,6 +189,10 @@ Cache the chain strategy for the session. Add it as `chain_strategy` to `sdd-tas
 
 When `delivery_strategy` is `chained`, treat `chained-pr` (registry skill `chained-pr`) as a required skill match: resolve it by registry name through this template's existing skill-resolution mechanism (the same one it already uses to pass skills to phases) and ensure the `sdd-tasks` and `sdd-apply` phases load and follow it BEFORE planning or creating any PR. Do not hardcode the skill path; defer resolution to that mechanism.
 
+### Commit Review
+
+{{GENTLE_AI_SDD_SECTION:Commit Review}}
+
 ### Dependency Graph
 
 ```text

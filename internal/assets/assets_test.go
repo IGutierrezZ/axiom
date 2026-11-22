@@ -4385,3 +4385,142 @@ func TestSDDSpecAndProposePointToTheAdoptionReference(t *testing.T) {
 		t.Errorf("adoption is a reference of sdd-spec, not a new skill: %v (%v)", skills, err)
 	}
 }
+
+// commitReviewSection returns the canonical body of the shared `Commit Review` section.
+func commitReviewSection(t *testing.T) string {
+	t.Helper()
+	shared := MustRead("skills/_shared/sdd-orchestrator-sections.md")
+	const start = "<!-- sdd-orchestrator-section:Commit Review:start -->"
+	const end = "<!-- sdd-orchestrator-section:Commit Review:end -->"
+	from := strings.Index(shared, start)
+	to := strings.Index(shared, end)
+	if from < 0 || to < from {
+		t.Fatalf("sdd-orchestrator-sections.md has no %q section", "Commit Review")
+	}
+	return shared[from+len(start) : to]
+}
+
+// REQ-33.9 (a)-(h), REQ-33.5 and D5: the shared section carries the per-commit notice, the three
+// modes, the own interaction of the tasks gate with the composed invocation, the pause that is not
+// a gate, the implicit validation by the pull request and the fixup rules.
+func TestCommitReviewSectionCarriesTheCommonDoctrine(t *testing.T) {
+	section := commitReviewSection(t)
+	for _, want := range []string{
+		// (a) notice, one per commit, in task order.
+		"`git show <sha>`",
+		"One notice per commit, in task order",
+		// (b) the three canonical tokens and the pause that is not a gate.
+		"`notify`", "`stop`", "`stop-before-commit`",
+		"never translated",
+		"is not a gate",
+		"writes nothing in `gates.yaml`",
+		"changes no digest",
+		// (c) notify continues without stopping.
+		"continues without stopping",
+		// Mode source and forwarding.
+		"`commitReview` of the `tasks` gate in `governance.gates` of `axiom sdd status`",
+		"absent means `notify`",
+		"`commit_review` to every `sdd-apply` launch",
+		// REQ-33.5 and D5: own interaction, composition of the invocation.
+		"in an interaction of its own",
+		"which keeps its three exits and mentions no mode",
+		"declare `notify` the default",
+		"` --commit-review <token>` appended at its end",
+		"every other token unchanged",
+		"the only alteration of a provider invocation",
+		"Never ask for the mode in `continuous` nor in ODD",
+		"never when iterating",
+		// Task by task and mode 3.
+		"one task per launch in every mode",
+		"`pending_commit`",
+		"`git -C <worktree> add -- <paths>`",
+		"`git -C <worktree> diff --cached --stat`",
+		"`git -C <worktree> commit -m \"<message>\"`",
+		// (d) the pull request validates implicitly.
+		"validates every commit",
+		"nothing blocks the pull request",
+		// (e) only requested changes are recorded.
+		"Record only the commits the person asked to change",
+		"`## Commits con cambios pedidos`",
+		// (f) published or not, fixup and corrective commit.
+		"`git -C <worktree> branch -r --contains <sha>`",
+		"`git -C <worktree> commit --fixup=<sha>`",
+		"defer the autosquash until the pull request is requested",
+		"`git -C <worktree> -c sequence.editor=true rebase -i --autosquash <base>`",
+		"corrective commit",
+		"Never rewrite published history",
+		// (g) finish the task in progress first.
+		"Finish the task in progress first",
+		// (h) merge without squash; Axiom never merges.
+		"merge commit, without squash",
+		"Axiom never merges",
+		// Where sdd-apply runs inline.
+		"Where `sdd-apply` runs inline",
+	} {
+		if !strings.Contains(section, want) {
+			t.Errorf("Commit Review section is missing %q", want)
+		}
+	}
+}
+
+// Threat matrix of aviso-commit: every git order of the doctrine selects its repository with
+// `git -C <worktree>`, the staging is explicit, nothing fetches, pushes, forces or commits with -a,
+// and the text never mentions RDD nor receipts.
+func TestCommitReviewSectionKeepsGitOrdersInsideTheWorktree(t *testing.T) {
+	section := commitReviewSection(t)
+
+	orders := regexp.MustCompile("`git [^`]*`").FindAllString(section, -1)
+	if len(orders) == 0 {
+		t.Fatal("the Commit Review section names no git order")
+	}
+	for _, order := range orders {
+		if order == "`git show <sha>`" || strings.HasPrefix(order, "`git -C <worktree> ") {
+			continue
+		}
+		t.Errorf("git order %s does not start with `git -C <worktree>`", order)
+	}
+	for _, want := range []string{"add -- <paths>", "never fetch"} {
+		if !strings.Contains(section, want) {
+			t.Errorf("Commit Review section is missing %q", want)
+		}
+	}
+	for _, forbidden := range []string{"commit -a", "--force", "git push", "RDD", "receipt", "Receipt", "consent"} {
+		if strings.Contains(section, forbidden) {
+			t.Errorf("Commit Review section must not contain %q", forbidden)
+		}
+	}
+}
+
+// REQ-33.8: the twelve orchestrators reference the section right after Chain Strategy, with the
+// placeholder and no inline copy, and Block Gates links the tasks gate interaction (REQ-33.5).
+func TestEveryOrchestratorReferencesTheCommitReviewSection(t *testing.T) {
+	// claude/sdd-orchestrator.md is the bootstrap that points to the workflow: it carries no sections.
+	var paths []string
+	for _, path := range allSDDOrchestratorAssetPaths(t) {
+		if path != "claude/sdd-orchestrator.md" {
+			paths = append(paths, path)
+		}
+	}
+	paths = append(paths, "claude/sdd-orchestrator-workflow.md")
+	if len(paths) != 12 {
+		t.Fatalf("expected twelve orchestrators, got %d: %v", len(paths), paths)
+	}
+	const block = "### Commit Review\n\n{{GENTLE_AI_SDD_SECTION:Commit Review}}"
+	for _, path := range paths {
+		content := MustRead(path)
+		if strings.Count(content, block) != 1 {
+			t.Errorf("%s must carry the Commit Review heading and placeholder exactly once", path)
+			continue
+		}
+		chain := strings.Index(content, "### Chain Strategy")
+		if chain < 0 || strings.Index(content, block) < chain {
+			t.Errorf("%s must place Commit Review after Chain Strategy", path)
+		}
+	}
+
+	shared := MustRead("skills/_shared/sdd-orchestrator-sections.md")
+	const link = "At the `tasks` gate, an approval exit is followed by the commit review question and recorded with `--commit-review`, as `Commit Review` describes."
+	if strings.Count(shared, link) != 1 {
+		t.Errorf("the Block Gates section must link the tasks gate interaction exactly once: %q", link)
+	}
+}

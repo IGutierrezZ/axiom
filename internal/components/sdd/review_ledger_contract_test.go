@@ -645,7 +645,9 @@ func TestKilocodeReviewSettingsMatchCurrentMainBaseline(t *testing.T) {
 	// single-pr U4 (C-02-c): el orquestador de OpenCode que compone Kilocode pasa a una sola sección
 	// compartida `Delivery Strategy` (`single-pr | chained`, nunca preguntada), sustituye la frase de
 	// cadena, retira `Review Workload Guard` y reduce la frase del gatekeeper. Deliberate, not drift.
-	const want = "2e1fbb87ebb8a70808a4b60b9e0566683f11f8ca752dcc81452ad15315385a74"
+	// aviso-commit U3 (C-02-d): el orquestador de OpenCode que compone Kilocode gana la sección compartida
+	// `Commit Review` y la frase de enlace de «SDD Change Kickoff and Block Gates». Deliberate, not drift.
+	const want = "a3a324741659c9001a621e5526eb30ec7d539227fb8a942ce3c439f7d817b99f"
 	if got != want {
 		t.Fatalf("Kilocode settings SHA-256 = %s, want current-main baseline %s", got, want)
 	}

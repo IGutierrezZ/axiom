@@ -265,6 +265,10 @@ The gatekeeper runs in addition to the Mandatory Delegation Triggers; it never r
 
 {{GENTLE_AI_SDD_SECTION:Chain Strategy}}
 
+### Commit Review
+
+{{GENTLE_AI_SDD_SECTION:Commit Review}}
+
 ### Apply/Verify Context Forwarding (MANDATORY)
 
 Before spawning each delegated `sdd-apply` or `sdd-verify` phase:
