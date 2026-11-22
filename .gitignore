@@ -47,6 +47,8 @@ dist/
 .kiro/skills/
 .kiro/settings/
 .kiro/steering/axiom.md
+# GitHub Copilot: agentes de fase SDD que regenera `axiom sync` en el ámbito del repositorio
+.github/agents/
 # Artefactos de trabajo de orquestadores externos (planes, revisiones y metadatos de PR con rutas locales)
 .agents/tasks/
 
