@@ -45,15 +45,24 @@ func RunSDDGate(args []string, stdout io.Writer) error {
 
 func renderSDDGateHelp(stdout io.Writer) error {
 	_, _ = fmt.Fprintln(stdout, "Uso: axiom sdd gate <record|show> [argumentos]")
-	_, _ = fmt.Fprintln(stdout, "  record --cwd <ruta> --change <nombre> --gate spec|design|tasks|role-apply:<rol>|integration --decision approved|rejected [--hand-off] [--reason \"<texto>\"] [--evidence-kind pr_merged|deployment|attestation] [--commit <sha>] [--base-ref <ref>] [--evidence \"<texto>\"] [--actor <id>] [--json]")
+	_, _ = fmt.Fprintln(stdout, "  record --cwd <ruta> --change <nombre> --gate spec|design|tasks|role-apply:<rol>|integration --decision approved|rejected [--hand-off] [--commit-review notify|stop|stop-before-commit] [--reason \"<texto>\"] [--evidence-kind pr_merged|deployment|attestation] [--commit <sha>] [--base-ref <ref>] [--evidence \"<texto>\"] [--actor <id>] [--json]")
 	_, _ = fmt.Fprintln(stdout, "    --actor: si se omite, la identidad git configurada (\"user.name <user.email>\") en la raíz del workspace; sin ella, \"cli\"")
+	_, _ = fmt.Fprintln(stdout, "    --commit-review: modo de revisión por commit; solo con --gate tasks --decision approved en un cambio checkpointed; sin la bandera equivale a notify")
 	_, _ = fmt.Fprintln(stdout, "  show --cwd <ruta> --change <nombre> [--json]")
 	return nil
 }
 
 func runSDDGateRecord(args []string, stdout io.Writer) error {
+	// `--commit-review` se separa antes del análisis de internal/kickoff (D2): no toca args.go.
+	commitReview, args, err := splitCommitReviewFlag(args)
+	if err != nil {
+		return err
+	}
 	parsed, err := kickoff.ParseGateRecordArgs(args)
 	if err != nil {
+		return err
+	}
+	if err := validateCommitReviewShape(parsed, commitReview); err != nil {
 		return err
 	}
 	loc, changeRoot, err := resolveGovernanceChangeRoot(parsed.CWD, parsed.Change)
@@ -79,6 +88,22 @@ func runSDDGateRecord(args []string, stdout io.Writer) error {
 	if parsed.HandOff {
 		if err := requireHandOffStops(parsed, sealed, workspaceRoot); err != nil {
 			return err
+		}
+	}
+	if commitReview != "" {
+		if err := requireCommitReviewStops(parsed, sealed, workspaceRoot); err != nil {
+			return err
+		}
+		// Sin cesión, prepareHandOff no corre: la puerta aún pendiente se comprueba aquí antes de
+		// calcular nada más y otra vez bajo el cerrojo (REQ-33.2).
+		if !parsed.HandOff {
+			ledger, err := kickoff.LoadGates(changeRoot)
+			if err != nil {
+				return err
+			}
+			if err := gateStillPendingCheck(parsed, workspaceRoot)(ledger); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -122,6 +147,7 @@ func runSDDGateRecord(args []string, stdout io.Writer) error {
 		Reason:         parsed.Reason,
 		ArtifactDigest: digest,
 		HandedOff:      handOff != nil,
+		CommitReview:   commitReview,
 		Actor:          actor,
 		RecordedAt:     time.Now().UTC(),
 	}
@@ -142,10 +168,11 @@ func runSDDGateRecord(args []string, stdout io.Writer) error {
 		record.EvidenceBaseRef = evidence.BaseRef
 		record.Verified = evidence.Verified
 	}
-	if handOff != nil {
+	if handOff != nil || commitReview != "" {
 		// The "still pending" check is repeated under the ledger lock: two recorders (exit 2 and
-		// exit 3) racing on the same pending gate must leave a single approved record.
-		err = kickoff.AppendGateChecked(changeRoot, record, handOff.notApprovedCheck)
+		// exit 3, or two approvals with a commit review mode) racing on the same pending gate must
+		// leave a single approved record.
+		err = kickoff.AppendGateChecked(changeRoot, record, gateStillPendingCheck(parsed, workspaceRoot))
 	} else {
 		err = kickoff.AppendGate(changeRoot, record)
 	}
@@ -160,7 +187,7 @@ func runSDDGateRecord(args []string, stdout io.Writer) error {
 	publish := resolveGatePublish(parsed, workspaceRoot, handOff)
 
 	if !parsed.JSON {
-		if err := writeGateRecordHeader(stdout, parsed, handOff); err != nil {
+		if err := writeGateRecordHeader(stdout, parsed, commitReview, handOff); err != nil {
 			return err
 		}
 		if handOff != nil {
@@ -198,7 +225,7 @@ func runSDDGateRecord(args []string, stdout io.Writer) error {
 	}
 
 	if parsed.JSON {
-		return writeGateRecordJSON(stdout, parsed, handOff, publish, lastRoleClosed, pendingNonBlocking)
+		return writeGateRecordJSON(stdout, parsed, commitReview, handOff, publish, lastRoleClosed, pendingNonBlocking)
 	}
 	return nil
 }

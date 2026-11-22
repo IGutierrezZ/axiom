@@ -55,6 +55,12 @@ var (
 		DecisionRejected: true,
 	}
 
+	validCommitReviewModes = map[CommitReviewMode]bool{
+		CommitReviewNotify:           true,
+		CommitReviewStop:             true,
+		CommitReviewStopBeforeCommit: true,
+	}
+
 	fixedGateKeys = map[GateKey]bool{
 		GateSpec:        true,
 		GateDesign:      true,
@@ -203,6 +209,16 @@ func (r GateRecord) Validate() error {
 	}
 	if r.EvidenceKind != "" && !validEvidenceKinds[r.EvidenceKind] {
 		return fmt.Errorf("gate record: evidence_kind desconocido %q", r.EvidenceKind)
+	}
+	// commit_review (REQ-33.1, REQ-33.3): vacio u uno de los tres tokens, y solo en la
+	// aprobacion de la puerta tasks.
+	if r.CommitReview != "" {
+		if !validCommitReviewModes[r.CommitReview] {
+			return fmt.Errorf("gate record: commit_review desconocido %q; opciones: notify, stop, stop-before-commit", r.CommitReview)
+		}
+		if r.Gate != GateTasks || r.Decision != DecisionApproved {
+			return fmt.Errorf("gate record: commit_review solo se admite en la aprobacion de la compuerta tasks (compuerta %q, decision %q)", r.Gate, r.Decision)
+		}
 	}
 	return nil
 }
