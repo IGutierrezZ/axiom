@@ -8,22 +8,12 @@ package azuredevops
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"strings"
 	"sync"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/integrations"
 	"github.com/IGutierrezZ/axiom/v3/internal/integrations/manifest"
 )
-
-// Options configura el plugin. El valor cero es el de producción.
-type Options struct {
-	// Endpoint es la URL base del servicio. Solo para pruebas: por defecto https://dev.azure.com y
-	// axiom.yaml no puede cambiarla.
-	Endpoint string
-	// HTTPClient es el cliente HTTP. Por defecto uno nuevo con el transporte por defecto.
-	HTTPClient *http.Client
-}
 
 // Plugin es el adaptador de Azure DevOps. Implementa integrations.Plugin.
 type Plugin struct {
@@ -48,11 +38,6 @@ func (p *Plugin) Manifest() manifest.Manifest { return manifest.AzureDevOps() }
 // abandonado en el primer intento, sin bucle de reintentos.
 func (p *Plugin) Deliver(context.Context, integrations.Delivery) (integrations.Outcome, error) {
 	return integrations.Outcome{}, integrations.Permanent(ErrLifecycleUnsupported)
-}
-
-// orgState es el estado compartido por organización durante la vida del proceso.
-type orgState struct {
-	mu sync.Mutex
 }
 
 // session devuelve el estado de la organización, creándolo la primera vez. Las organizaciones de
