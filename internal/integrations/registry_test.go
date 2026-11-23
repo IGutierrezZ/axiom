@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"reflect"
-	"sort"
 	"strings"
 	"testing"
 
@@ -88,23 +87,34 @@ func TestNewRegistryRejectsManifestDifferentFromCatalog(t *testing.T) {
 	}
 }
 
-func TestDefaultRegistryIsEmptyAndMatchesCatalog(t *testing.T) {
-	reg, err := DefaultRegistry()
+func TestResolveRegistryWithoutSeamBuildsFromBuiltins(t *testing.T) {
+	manifest.SetCatalogForTest(t, stubManifest("alpha"))
+	reg, err := ResolveRegistry([]Plugin{stubPlugin{stubManifest("alpha")}})
 	if err != nil {
-		t.Fatalf("DefaultRegistry: %v", err)
+		t.Fatalf("ResolveRegistry: %v", err)
 	}
-	if len(idsOf(reg)) != 0 {
-		t.Fatalf("la lista cerrada de esta versión está vacía, obtuvo %v", idsOf(reg))
+	if got := idsOf(reg); !reflect.DeepEqual(got, []string{"alpha"}) {
+		t.Fatalf("ids = %v", got)
 	}
-	var catalogIDs []string
-	for _, m := range manifest.Catalog() {
-		catalogIDs = append(catalogIDs, m.ID)
+	empty, err := ResolveRegistry(nil)
+	if err != nil || len(idsOf(empty)) != 0 {
+		t.Fatalf("ResolveRegistry(nil) = %v, %v; esperaba un registro vacío", idsOf(empty), err)
 	}
-	sort.Strings(catalogIDs)
-	got := idsOf(reg)
-	sort.Strings(got)
-	if len(catalogIDs) != len(got) {
-		t.Fatalf("los ids de DefaultRegistry %v deben coincidir con los de Catalog %v", got, catalogIDs)
+}
+
+func TestResolveRegistryPropagatesBuildErrors(t *testing.T) {
+	manifest.SetCatalogForTest(t, stubManifest("alpha"))
+	if reg, err := ResolveRegistry([]Plugin{stubPlugin{stubManifest("fuera")}}); err == nil || reg != nil {
+		t.Fatalf("un plugin ajeno al catálogo se rechaza: %v", err)
+	}
+}
+
+func TestResolveRegistryHonoursTheTestSeam(t *testing.T) {
+	manifest.SetCatalogForTest(t, stubManifest("alpha"), stubManifest("beta"))
+	SetDefaultRegistryForTest(t, stubPlugin{stubManifest("alpha")})
+	reg, err := ResolveRegistry([]Plugin{stubPlugin{stubManifest("beta")}})
+	if err != nil || !reflect.DeepEqual(idsOf(reg), []string{"alpha"}) {
+		t.Fatalf("la costura sustituye a los builtins: %v %v", idsOf(reg), err)
 	}
 }
 
@@ -113,14 +123,14 @@ func TestSetDefaultRegistryForTestRestores(t *testing.T) {
 	inner := &cleanupRecorder{}
 	SetDefaultRegistryForTest(inner, stubPlugin{stubManifest("alpha")})
 
-	reg, err := DefaultRegistry()
+	reg, err := ResolveRegistry(nil)
 	if err != nil || !reflect.DeepEqual(idsOf(reg), []string{"alpha"}) {
-		t.Fatalf("DefaultRegistry instalado: %v %v", reg, err)
+		t.Fatalf("registro instalado: %v %v", reg, err)
 	}
 	inner.run()
-	reg, err = DefaultRegistry()
+	reg, err = ResolveRegistry(nil)
 	if err != nil || len(idsOf(reg)) != 0 {
-		t.Fatalf("Cleanup restaura el registro vacío: %v %v", reg, err)
+		t.Fatalf("Cleanup restaura el registro sin costura (los builtins pasados): %v %v", reg, err)
 	}
 }
 

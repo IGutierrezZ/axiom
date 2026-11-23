@@ -321,3 +321,45 @@ func TestApprovalOrdinalCountsApprovalsOfTheSameGate(t *testing.T) {
 		t.Fatalf("ordinal = %d, se esperaba 2", got)
 	}
 }
+
+// adoBlock es un bloque integrations.azure-devops válido (REQ-45.2).
+const adoBlock = "integrations:\n  azure-devops:\n    organization: contoso\n    project: Fabrikam\n    team: Fabrikam Team\n"
+
+// REQ-45.14: con el plugin azure-devops configurado y activo, `gate record` produce la misma salida
+// y el mismo código que sin el bloque, y no crea integrations.yaml ni la cola: el manifiesto solo
+// escucha change.start, que ningún verbo emite.
+func TestGateRecordIsIdenticalWithAndWithoutAzureDevOpsBlock(t *testing.T) {
+	run := func(t *testing.T, block string) (stdout, stderr string, code int, changeRoot string) {
+		t.Helper()
+		root, changeRoot := newGovernanceWorkspace(t, "inc-99-example")
+		writeCLIFixture(t, filepath.Join(root, "axiom.yaml"), integrationsBase+block)
+		var warnings bytes.Buffer
+		previousWriter, previousIntegrations := writerBranchWarnings, integrationWarnings
+		writerBranchWarnings, integrationWarnings = &warnings, &warnings
+		t.Cleanup(func() { writerBranchWarnings, integrationWarnings = previousWriter, previousIntegrations })
+		secrets.SetDefaultForTest(t, failingStore{t}) // ningún secreto se resuelve sin oyentes
+
+		var out bytes.Buffer
+		if err := RunSDDGate([]string{"record", "--cwd", root, "--change", "inc-99-example", "--gate", "spec", "--decision", "approved", "--reason", "ok", "--actor", "Ana <ana@example.test>"}, &out); err != nil {
+			code = 1
+			warnings.WriteString("error: " + err.Error())
+		}
+		normalize := func(s string) string { return strings.ReplaceAll(s, root, "<root>") }
+		return normalize(out.String()), normalize(warnings.String()), code, changeRoot
+	}
+
+	withoutOut, withoutErr, withoutCode, _ := run(t, "")
+	withOut, withErr, withCode, withRoot := run(t, adoBlock)
+
+	if withOut != withoutOut || withErr != withoutErr || withCode != withoutCode {
+		t.Fatalf("la salida debe coincidir con y sin el bloque:\nsin: %q %q %d\ncon: %q %q %d", withoutOut, withoutErr, withoutCode, withOut, withErr, withCode)
+	}
+	if withCode != 0 {
+		t.Fatalf("el registro de la compuerta debe tener éxito (no basta con coincidir): %q %q %d", withOut, withErr, withCode)
+	}
+	for _, name := range []string{"integrations.yaml", ".integrations-outbox.yaml"} {
+		if fileExistsCLI(filepath.Join(withRoot, name)) {
+			t.Errorf("no debe crearse %s", name)
+		}
+	}
+}

@@ -270,7 +270,7 @@ func installTestPlugin(t *testing.T, plugins ...*testPlugin) *secrets.Memory {
 // newTestDispatcher compone un despachador con el reloj fijo y la configuración de los plugins
 // dados activos (project: p). Los plazos son holgados salvo que la prueba los cambie.
 func newTestDispatcher(f workspaceFixture, ids ...string) *Dispatcher {
-	registry, _ := DefaultRegistry()
+	registry, _ := ResolveRegistry(nil)
 	config := &workspace.IntegrationsConfig{}
 	for _, id := range ids {
 		config.Plugins = append(config.Plugins, workspace.IntegrationPluginConfig{ID: id, Enabled: true, Values: map[string]any{"project": "p"}, Line: 2})

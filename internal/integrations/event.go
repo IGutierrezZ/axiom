@@ -1,7 +1,8 @@
 // Package integrations es el marco de plugins de integración: define el puerto Plugin, el registro
 // cerrado, los eventos del ciclo de vida con sus claves de idempotencia, la cola local de
 // operaciones, los vínculos versionados y el despachador con reintento. No conoce ningún tracker
-// concreto: los adaptadores reales llegan en C-07-c.
+// concreto: los adaptadores reales viven en subpaquetes (internal/integrations/azuredevops) y los
+// ensambla internal/integrations/builtin.
 package integrations
 
 import (

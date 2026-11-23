@@ -12,12 +12,19 @@ func fakeManifest(id string) Manifest {
 	return m
 }
 
-func TestCatalogIsEmptyByDefault(t *testing.T) {
-	if got := Catalog(); len(got) != 0 {
-		t.Fatalf("el catálogo cerrado de esta versión está vacío, obtuvo %d manifiestos", len(got))
+func TestCatalogDefaultIsExactlyAzureDevOps(t *testing.T) {
+	got := Catalog()
+	if len(got) != 1 || got[0].ID != AzureDevOpsID {
+		t.Fatalf("el catálogo cerrado de esta versión es exactamente azure-devops, obtuvo %v", got)
+	}
+	if !reflect.DeepEqual(got[0], AzureDevOps()) {
+		t.Fatal("la entrada del catálogo debe ser igual a AzureDevOps()")
 	}
 	if _, ok := Lookup("fake"); ok {
-		t.Fatal("Lookup no debe encontrar nada en el catálogo vacío")
+		t.Fatal("Lookup no debe encontrar un plugin ajeno al catálogo")
+	}
+	if _, ok := Lookup(AzureDevOpsID); !ok {
+		t.Fatal("Lookup debe encontrar azure-devops")
 	}
 }
 
@@ -38,8 +45,8 @@ func TestSetCatalogForTestInstallsAndRestores(t *testing.T) {
 	}
 
 	inner.runCleanups()
-	if got := Catalog(); len(got) != 0 {
-		t.Fatalf("Cleanup debe restaurar el catálogo vacío, obtuvo %v", got)
+	if got := Catalog(); len(got) != 1 || got[0].ID != AzureDevOpsID {
+		t.Fatalf("Cleanup debe restaurar el catálogo por defecto (azure-devops), obtuvo %v", got)
 	}
 }
 

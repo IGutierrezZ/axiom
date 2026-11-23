@@ -5,9 +5,10 @@ import (
 	"sync"
 )
 
-// builtinCatalog es la lista cerrada de manifiestos de esta versión. Está vacía hasta que C-07-c
-// añada el primer adaptador real: cualquier plugin declarado en axiom.yaml es un error de carga.
-var builtinCatalog = []Manifest{}
+// builtinCatalog es la lista cerrada de manifiestos de esta versión: solo azure-devops. Cualquier
+// otro plugin declarado en axiom.yaml es un error de carga. Añadir un plugin exige también añadirlo
+// a builtin.Plugins().
+var builtinCatalog = []Manifest{AzureDevOps()}
 
 var (
 	catalogMu sync.RWMutex
