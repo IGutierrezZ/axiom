@@ -196,3 +196,105 @@ func TestWorkspaceValidateSDD(t *testing.T) {
 		}
 	}
 }
+
+// REQ-44.1: `sdd.id_pattern` es un texto no vacío que compila como plantilla.
+func TestDecodeSDDIDPattern(t *testing.T) {
+	t.Run("ausente deja el patrón sin declarar", func(t *testing.T) {
+		got, err := decodeSDD(sddNode(t, "sdd:\n  iso: true\n"))
+		if err != nil || got == nil || got.IDPattern != nil {
+			t.Fatalf("decodeSDD = %+v, %v", got, err)
+		}
+	})
+	valid := map[string]string{
+		"solo el patrón":       "sdd:\n  id_pattern: \"RF-<DOM>-<NN>\"\n",
+		"junto a iso":          "sdd:\n  iso: true\n  id_pattern: \"RF-<DOM>-<NN>\"\n",
+		"antes de iso":         "sdd:\n  id_pattern: \"RF-<DOM>-<NN>\"\n  iso: false\n",
+		"sin comillas":         "sdd:\n  id_pattern: HU-<NNN>\n",
+		"el defecto explícito": "sdd:\n  id_pattern: \"REQ-<n>.<m>\"\n",
+	}
+	for name, source := range valid {
+		t.Run("valido/"+name, func(t *testing.T) {
+			got, err := decodeSDD(sddNode(t, source))
+			if err != nil || got == nil || got.IDPattern == nil {
+				t.Fatalf("decodeSDD = %+v, %v", got, err)
+			}
+		})
+	}
+	invalid := []struct {
+		name   string
+		source string
+		wants  []string
+	}{
+		{"plantilla inválida", "sdd:\n  id_pattern: \"RF-<DOM><NN>\"\n", []string{
+			"sdd.id_pattern (línea 2)", `la plantilla "RF-<DOM><NN>" no es válida:`, "seguidos",
+			`un ejemplo válido es "RF-<DOM>-<NN>"`, "para el patrón por defecto (REQ-<n>.<m>) retira la clave"}},
+		{"lista", "sdd:\n  id_pattern: [RF-<m>]\n", []string{"sdd.id_pattern", "debe ser un texto no vacío"}},
+		{"mapa", "sdd:\n  id_pattern: {a: b}\n", []string{"sdd.id_pattern", "debe ser un texto no vacío"}},
+		{"nulo", "sdd:\n  id_pattern:\n", []string{"sdd.id_pattern", "debe ser un texto no vacío"}},
+		{"cadena vacía", "sdd:\n  id_pattern: \"\"\n", []string{"sdd.id_pattern", "debe ser un texto no vacío"}},
+		{"número", "sdd:\n  id_pattern: 12\n", []string{"sdd.id_pattern", "debe ser un texto no vacío"}},
+		{"clave repetida", "sdd:\n  id_pattern: RF-<m>\n  id_pattern: HU-<m>\n", []string{"clave duplicada 'id_pattern'"}},
+		{"clave desconocida", "sdd:\n  id_patern: RF-<m>\n", []string{"id_patern", "claves admitidas: iso, id_pattern"}},
+		{"patrón inválido con iso", "sdd:\n  iso: true\n  id_pattern: nope\n", []string{"sdd.id_pattern (línea 3)", `"nope"`}},
+	}
+	for _, tc := range invalid {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := decodeSDD(sddNode(t, tc.source))
+			if got != nil {
+				t.Errorf("un bloque inválido no devuelve configuración: %+v", got)
+			}
+			wantErrorContains(t, err, tc.wants...)
+		})
+	}
+}
+
+// REQ-44.1 y REQ-44.9: IDPattern() lee en vivo la declaración y nunca cae en
+// silencio al defecto cuando el bloque o el fichero no se pueden leer.
+func TestDeclarationsIDPattern(t *testing.T) {
+	template := func(t *testing.T, blocks string) string {
+		t.Helper()
+		_, _, declarations := parseDeclarations(t, blocks)
+		p, err := declarations.IDPattern()
+		if err != nil {
+			t.Fatalf("IDPattern(%q): %v", blocks, err)
+		}
+		return p.Template()
+	}
+	if got := template(t, ""); got != "REQ-<n>.<m>" {
+		t.Errorf("sin bloque: %q", got)
+	}
+	if got := template(t, "sdd:\n  iso: true\n"); got != "REQ-<n>.<m>" {
+		t.Errorf("sin clave: %q", got)
+	}
+	if got := template(t, "sdd:\n  id_pattern: \"RF-<DOM>-<NN>\"\n"); got != "RF-<DOM>-<NN>" {
+		t.Errorf("declarado: %q", got)
+	}
+
+	_, _, bad := parseDeclarations(t, "sdd:\n  id_pattern: nope\n")
+	if _, err := bad.IDPattern(); err == nil || !errors.Is(err, bad.SDDErr) {
+		t.Errorf("con SDDErr debe envolverlo con %%w: %v", err)
+	}
+	contradiction := Declarations{SDDErr: ErrISOWorkflowContradiction}
+	if _, err := contradiction.IDPattern(); !errors.Is(err, ErrISOWorkflowContradiction) {
+		t.Errorf("con la contradicción debe envolverla: %v", err)
+	}
+	parseErr := errors.New("yaml roto")
+	broken := Declarations{ParseErr: parseErr}
+	if _, err := broken.IDPattern(); !errors.Is(err, parseErr) {
+		t.Errorf("con ParseErr debe envolverlo: %v", err)
+	}
+}
+
+// REQ-44.1: workspace validate (LoadConfig) falla con un patrón inválido.
+func TestWorkspaceValidateIDPattern(t *testing.T) {
+	ws := workspacetest.Embedded(t, ".")
+	configPath := filepath.Join(ws.Master, "axiom.yaml")
+
+	workspacetest.WriteFile(t, configPath, locateEmbeddedConfig+"sdd:\n  id_pattern: \"RF-<DOM>-<NN>\"\n")
+	if _, err := LoadConfig(configPath); err != nil {
+		t.Fatalf("un patrón válido debe cargar: %v", err)
+	}
+	workspacetest.WriteFile(t, configPath, locateEmbeddedConfig+"sdd:\n  id_pattern: \"<m><m>\"\n")
+	_, err := LoadConfig(configPath)
+	wantErrorContains(t, err, "sdd.id_pattern", `"<m><m>"`)
+}

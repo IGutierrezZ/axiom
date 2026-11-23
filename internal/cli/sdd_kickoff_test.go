@@ -635,3 +635,57 @@ func TestRunSDDKickoffSealInferIsExemptFromTopology(t *testing.T) {
 		t.Fatalf("el retrosellado debía conservar los roles inferidos:\n%s", out.String())
 	}
 }
+
+// REQ-44.1: un `sdd.id_pattern` inválido se rechaza al sellar, sin carpeta ni
+// kickoff.yaml, con el error del patrón; uno válido sella sin copiar el patrón.
+func TestRunSDDKickoffSealIDPattern(t *testing.T) {
+	t.Run("patrón inválido se rechaza sin escribir", func(t *testing.T) {
+		root := t.TempDir()
+		mustMkdirAllCLI(t, filepath.Join(root, "openspec", "changes"))
+		writeSDDAxiomYAML(t, root, "sdd:\n  id_pattern: \"<m><m>\"\n")
+
+		err := RunSDDKickoff(append([]string{"seal", "--cwd", root, "--change", "nuevo"}, sealPlain...), &bytes.Buffer{})
+		if err == nil {
+			t.Fatal("un sdd.id_pattern inválido debe rechazar el sellado")
+		}
+		for _, want := range []string{"sdd.id_pattern", `"<m><m>"`, "no es válida"} {
+			if !strings.Contains(err.Error(), want) {
+				t.Errorf("el error %q debe contener %q", err, want)
+			}
+		}
+		if got := listDir(t, filepath.Join(root, "openspec", "changes")); len(got) != 0 {
+			t.Errorf("no debe crearse la carpeta del cambio: %v", got)
+		}
+	})
+
+	t.Run("patrón válido sella sin copiar el patrón", func(t *testing.T) {
+		root := t.TempDir()
+		mustMkdirAllCLI(t, filepath.Join(root, "openspec", "changes"))
+		writeSDDAxiomYAML(t, root, "sdd:\n  id_pattern: \"RF-<DOM>-<NN>\"\n")
+		without := t.TempDir()
+		mustMkdirAllCLI(t, filepath.Join(without, "openspec", "changes"))
+		writeSDDAxiomYAML(t, without, "")
+
+		for _, r := range []string{root, without} {
+			if err := RunSDDKickoff(append([]string{"seal", "--cwd", r, "--change", "cobro"}, sealPlain...), &bytes.Buffer{}); err != nil {
+				t.Fatal(err)
+			}
+		}
+		read := func(r string) string {
+			data, err := os.ReadFile(filepath.Join(r, "openspec", "changes", "cobro", "kickoff.yaml"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			return string(data)
+		}
+		got := read(root)
+		if strings.Contains(got, "RF-") || strings.Contains(got, "id_pattern") {
+			t.Errorf("kickoff.yaml no debe llevar el patrón:\n%s", got)
+		}
+		// El patrón es lectura en vivo (D-04): el documento sellado es idéntico al de un
+		// proyecto sin declaración, salvo los campos propios de cada sellado.
+		if strings.Count(got, "\n") != strings.Count(read(without), "\n") {
+			t.Errorf("kickoff.yaml no debe tener campos nuevos:\n%s\n---\n%s", got, read(without))
+		}
+	})
+}

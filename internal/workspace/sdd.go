@@ -6,15 +6,24 @@ import (
 	"strings"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/IGutierrezZ/axiom/v3/internal/reqid"
 )
 
-// SDDConfig es el bloque `sdd:` de axiom.yaml (REQ-29.1).
+// SDDConfig es el bloque `sdd:` de axiom.yaml (REQ-29.1 y REQ-44.1).
 type SDDConfig struct {
 	ISO bool
+	// IDPattern es la plantilla de identificadores de requisito declarada en
+	// `sdd.id_pattern`, ya compilada; nil si no se declara (rige el defecto).
+	IDPattern *reqid.Pattern
 }
 
 // sddKeys es la lista cerrada de claves del bloque `sdd:`.
-var sddKeys = []string{"iso"}
+var sddKeys = []string{"iso", "id_pattern"}
+
+// idPatternExample es la plantilla de ejemplo que citan los mensajes de error de
+// `sdd.id_pattern`.
+const idPatternExample = "RF-<DOM>-<NN>"
 
 // ErrISOWorkflowContradiction identifica la declaración contradictoria de
 // REQ-29.1: `sdd.iso: true` junto a `workflow.lane: odd`. errors.Is lo reconoce
@@ -22,12 +31,13 @@ var sddKeys = []string{"iso"}
 var ErrISOWorkflowContradiction = errors.New("sdd.iso: true es incompatible con workflow.lane: odd")
 
 // decodeSDD decodifica y valida el bloque `sdd:`. Rechaza un nodo que no es un
-// mapeo (incluido el nulo), las claves fuera de sddKeys o repetidas y un `iso`
-// que no sea un escalar booleano (`true` o `false` sin comillas).
+// mapeo (incluido el nulo), las claves fuera de sddKeys o repetidas, un `iso`
+// que no sea un escalar booleano (`true` o `false` sin comillas) y un `id_pattern`
+// que no sea un texto no vacío o no compile como plantilla (reqid.Parse).
 func decodeSDD(node *yaml.Node) (*SDDConfig, error) {
 	node = resolveAlias(node)
 	if node == nil || node.Kind != yaml.MappingNode {
-		return nil, errors.New("el bloque 'sdd' debe ser un mapeo con la clave opcional 'iso' (true o false); para no declararlo, elimina el bloque")
+		return nil, errors.New("el bloque 'sdd' debe ser un mapeo con las claves opcionales 'iso' (true o false) e 'id_pattern' (una plantilla de texto); para no declararlo, elimina el bloque")
 	}
 
 	errs := unknownKeys(node, "sdd", sddKeys)
@@ -44,6 +54,16 @@ func decodeSDD(node *yaml.Node) (*SDDConfig, error) {
 		}
 		seen[key.Value] = true
 
+		if key.Value == "id_pattern" {
+			pattern, err := sddPattern(key.Line, node.Content[i+1])
+			if err != nil {
+				errs = append(errs, err)
+				continue
+			}
+			config.IDPattern = &pattern
+			continue
+		}
+
 		value, err := sddBool("sdd."+key.Value, node.Content[i+1])
 		if err != nil {
 			errs = append(errs, err)
@@ -55,6 +75,21 @@ func decodeSDD(node *yaml.Node) (*SDDConfig, error) {
 		return nil, err
 	}
 	return config, nil
+}
+
+// sddPattern lee `sdd.id_pattern`: un escalar de texto no vacío que compila con
+// reqid.Parse. El error de plantilla cita el valor, el motivo, un ejemplo válido y
+// cómo volver al patrón por defecto.
+func sddPattern(line int, node *yaml.Node) (reqid.Pattern, error) {
+	node = resolveAlias(node)
+	if isNull(node) || node.Kind != yaml.ScalarNode || node.Tag != "!!str" || strings.TrimSpace(node.Value) == "" {
+		return reqid.Pattern{}, fmt.Errorf("sdd.id_pattern (línea %d) debe ser un texto no vacío con la plantilla del identificador, por ejemplo %q; para el patrón por defecto (%s) retira la clave", line, idPatternExample, reqid.Default().Template())
+	}
+	pattern, err := reqid.Parse(node.Value)
+	if err != nil {
+		return reqid.Pattern{}, fmt.Errorf("sdd.id_pattern (línea %d): %w; un ejemplo válido es %q; para el patrón por defecto (%s) retira la clave", line, err, idPatternExample, reqid.Default().Template())
+	}
+	return pattern, nil
 }
 
 // sddBool lee un booleano estricto: solo el escalar con etiqueta !!bool, de modo

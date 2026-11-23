@@ -58,6 +58,16 @@ func TestExampleYAMLDocumentsTheSDDBlock(t *testing.T) {
 	if declarations.SDD == nil || !declarations.SDD.ISO {
 		t.Errorf("la plantilla debe documentar `sdd.iso: true`: %+v", declarations.SDD)
 	}
+	// REQ-44.1: la plantilla comentada también documenta `sdd.id_pattern`.
+	if p, err := declarations.IDPattern(); err != nil || p.Template() != "RF-<DOM>-<NN>" {
+		t.Errorf("la plantilla debe documentar `id_pattern: \"RF-<DOM>-<NN>\"`: %q, %v", p.Template(), err)
+	}
+	raw := readRepoFile(t, "axiom.example.yaml")
+	for _, want := range []string{"Bloque SDD: modo ISO y patrón de identificadores (opcional)", "<DOM>", "<NN>", "REQ-<n>.<m>"} {
+		if !strings.Contains(raw, want) {
+			t.Errorf("axiom.example.yaml debe documentar %q", want)
+		}
+	}
 }
 
 // REQ-32.1 y REQ-32.2: la plantilla axiom.example.yaml documenta el bloque
