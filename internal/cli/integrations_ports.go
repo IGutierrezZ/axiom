@@ -63,19 +63,21 @@ Sale con 0 si el descubrimiento terminó; con 1 si falló; con 2 por un error de
 `
 
 // Errores tipados de los verbos que despachan por puertos (REQ-45.12 y REQ-45.13). Se comprueban con
-// errors.Is; el texto de cada uno dice qué corregir.
+// errors.Is. La persona lee el mensaje de integrationVerbError, que dice qué corregir; el texto del
+// centinela solo aparece si alguien lo imprime suelto, y aun así nombra la salida o declara por qué
+// no hay comando que la resuelva.
 var (
 	// ErrIntegrationPluginUnknown: --plugin no está en el catálogo cerrado.
-	ErrIntegrationPluginUnknown = errors.New("plugin de integración desconocido")
+	ErrIntegrationPluginUnknown = errors.New("plugin de integración desconocido: usa un id del catálogo") // refusal:by-design operator-knowledge: solo la persona sabe qué plugin del catálogo quería; el mensaje envuelto lista los ids válidos
 	// ErrIntegrationNotConfigured: axiom.yaml no declara integrations.<plugin>.
-	ErrIntegrationNotConfigured = errors.New("plugin de integración no configurado")
+	ErrIntegrationNotConfigured = errors.New("plugin de integración no configurado en axiom.yaml") // refusal:by-design world-action: la salida es añadir el bloque integrations.<plugin> a axiom.yaml, no un comando
 	// ErrIntegrationDisabled: integrations.<plugin>.enabled es false.
-	ErrIntegrationDisabled = errors.New("plugin de integración desactivado")
+	ErrIntegrationDisabled = errors.New("plugin de integración desactivado en axiom.yaml") // refusal:by-design world-action: la salida es poner enabled: true en axiom.yaml, no un comando
 	// ErrIntegrationConfigInvalid: el bloque integrations: no es válido (por ejemplo, falta una clave
 	// obligatoria de un plugin activo).
-	ErrIntegrationConfigInvalid = errors.New("configuración de integraciones inválida")
+	ErrIntegrationConfigInvalid = errors.New("configuración de integraciones inválida: revísala con `axiom workspace validate`")
 	// ErrIntegrationNotRegistered: el plugin está en el catálogo pero no está compilado en esta versión.
-	ErrIntegrationNotRegistered = errors.New("plugin de integración no registrado")
+	ErrIntegrationNotRegistered = errors.New("plugin de integración no registrado en esta versión de axiom") // refusal:by-design world-action: la salida es instalar una versión de axiom que compile el plugin, no un comando de este binario
 )
 
 // integrationVerbError es un error tipado de un verbo de integraciones: kind es el centinela y
