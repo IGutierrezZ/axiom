@@ -9,6 +9,10 @@ const (
 	bugImpactHeading = "## Impacto en la spec"
 	// NoImpactMark es la línea literal que declara un bug sin impacto en la spec.
 	NoImpactMark = "Sin impacto en la spec"
+	// NoImpactReasonLabel es la etiqueta de la línea del motivo de un bug sin impacto. La
+	// comparten el carril SDD (esta función) y el ODD (livespec.impactReasonPrefix), con una
+	// prueba de paridad que contrasta los dos analizadores (REQ-44.8).
+	NoImpactReasonLabel = "Motivo:"
 )
 
 // BugKind es la variante de bug sin delta que declara un proposal.md.
@@ -67,12 +71,12 @@ func ParseBugDeclaration(proposal string) BugDeclaration {
 		if !hasMark(impact) {
 			d.impactMissing = append(d.impactMissing, "la línea literal `"+NoImpactMark+"`")
 		}
-		value, found := labelValue(impact, "Motivo:")
+		value, found := labelValue(impact, NoImpactReasonLabel)
 		switch {
 		case !found:
-			d.impactMissing = append(d.impactMissing, "la línea `Motivo:`")
+			d.impactMissing = append(d.impactMissing, "la línea `"+NoImpactReasonLabel+"`")
 		case value == "":
-			d.impactMissing = append(d.impactMissing, "la línea `Motivo:` con texto (está vacía)")
+			d.impactMissing = append(d.impactMissing, "la línea `"+NoImpactReasonLabel+"` con texto (está vacía)")
 		default:
 			d.Motivo = value
 		}

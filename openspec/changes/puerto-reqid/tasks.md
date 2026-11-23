@@ -109,9 +109,9 @@ Una sola PR (`single-pr`), un commit por unidad, en el orden 1 → 9. Cada commi
 
 ## Phase 7 (unidad 7): paridad del «Sin impacto en la spec»
 
-- [ ] 7.1 [RED] Crear `internal/livespec/impact_parity_test.go` (`TestImpactParityWithISO`, D-08): para cada cuerpo de sección (completo; sin marcador; sin `Motivo:`; `Motivo:` vacío seguido de otro con texto, cuenta el primero; sangría con espacios y con tabulador; espacios finales; marcador y `Motivo:` dentro de una valla; marcador con texto adicional) compara `isoevidence.ParseBugDeclaration` (`## Informe de bug` + `## Impacto en la spec`) con `livespec.ParseFeatureDoc` (`Tipo: bug`): marcador presente, validez y motivo. Prueba: `go test ./internal/livespec -run ImpactParity`.
+- [x] 7.1 [RED] Crear `internal/livespec/impact_parity_test.go` (`TestImpactParityWithISO`, D-08): para cada cuerpo de sección (completo; sin marcador; sin `Motivo:`; `Motivo:` vacío seguido de otro con texto, cuenta el primero; sangría con espacios y con tabulador; espacios finales; marcador y `Motivo:` dentro de una valla; marcador con texto adicional) compara `isoevidence.ParseBugDeclaration` (`## Informe de bug` + `## Impacto en la spec`) con `livespec.ParseFeatureDoc` (`Tipo: bug`): marcador presente, validez y motivo. Prueba: `go test ./internal/livespec -run ImpactParity`.
   Cubre: REQ-44.8
-- [ ] 7.2 Exportar `isoevidence.NoImpactReasonLabel = "Motivo:"` junto a `NoImpactMark` en `internal/isoevidence/bug.go` (sustituye el literal y los textos de `Missing`) y usarla en `internal/livespec/impact.go` (`impactReasonPrefix = isoevidence.NoImpactReasonLabel`). Cierre: `gofmt -l`, `go vet`, `go test ./internal/isoevidence/... ./internal/livespec/...`; commit `refactor(isoevidence): constante compartida del motivo de sin impacto y prueba de paridad`.
+- [x] 7.2 Exportar `isoevidence.NoImpactReasonLabel = "Motivo:"` junto a `NoImpactMark` en `internal/isoevidence/bug.go` (sustituye el literal y los textos de `Missing`) y usarla en `internal/livespec/impact.go` (`impactReasonPrefix = isoevidence.NoImpactReasonLabel`). Cierre: `gofmt -l`, `go vet`, `go test ./internal/isoevidence/... ./internal/livespec/...`; commit `refactor(isoevidence): constante compartida del motivo de sin impacto y prueba de paridad`.
   Cubre: REQ-44.8
 
 ## Phase 8 (unidad 8): guías, manual y goldens
