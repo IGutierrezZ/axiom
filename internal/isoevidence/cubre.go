@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+
+	"github.com/IGutierrezZ/axiom/v3/internal/reqid"
 )
 
 // cubreLine reconoce una línea `Cubre:` propia, con sangría o viñeta opcionales.
@@ -48,10 +50,10 @@ type BaselineIndex map[string][]Requirement
 // NewBaselineIndex construye el índice. Varios requisitos con el mismo
 // identificador quedan todos bajo él: la consulta los devuelve y el llamador
 // decide si es ambiguo.
-func NewBaselineIndex(baseline []Requirement) BaselineIndex {
+func NewBaselineIndex(baseline []Requirement, p reqid.Pattern) BaselineIndex {
 	index := BaselineIndex{}
 	for _, r := range baseline {
-		valid, _ := RequirementIDs(r.Name)
+		valid, _ := RequirementIDs(r.Name, p)
 		for _, id := range valid {
 			index[id] = append(index[id], r)
 		}
@@ -85,10 +87,10 @@ func citations(cubre []CubreLine) []citation {
 
 // deltaIDs devuelve los identificadores válidos de los requisitos de la delta
 // (en un RENAMED, el de su nombre nuevo), con el requisito que los declara.
-func deltaIDs(delta []Requirement) (order []string, byID map[string]Requirement) {
+func deltaIDs(delta []Requirement, p reqid.Pattern) (order []string, byID map[string]Requirement) {
 	byID = map[string]Requirement{}
 	for _, r := range delta {
-		valid, _ := RequirementIDs(r.Name)
+		valid, _ := RequirementIDs(r.Name, p)
 		for _, id := range valid {
 			if _, seen := byID[id]; !seen {
 				order = append(order, id)
@@ -104,9 +106,9 @@ func deltaIDs(delta []Requirement) (order []string, byID map[string]Requirement)
 // (también uno mal formado se reporta como desconocido, una vez por
 // identificador). Con delta vacía solo se comprueban los desconocidos, que es
 // lo que necesita el bug con requisito existente (REQ-29.5).
-func CheckCoverage(delta []Requirement, index BaselineIndex, cubre []CubreLine) []Finding {
+func CheckCoverage(delta []Requirement, index BaselineIndex, cubre []CubreLine, p reqid.Pattern) []Finding {
 	var findings []Finding
-	order, byID := deltaIDs(delta)
+	order, byID := deltaIDs(delta, p)
 	cited := citations(cubre)
 	citedSet := map[string]bool{}
 	for _, c := range cited {
@@ -148,7 +150,7 @@ func CheckCoverage(delta []Requirement, index BaselineIndex, cubre []CubreLine) 
 // debe citar al menos un requisito, el requisito citado no puede ser ambiguo en
 // la baseline y debe tener escenarios. Un identificador que no existe no se
 // reporta aquí: lo reporta CheckCoverage como `iso_cubre_unknown`.
-func CheckExistingRequirementBug(index BaselineIndex, cubre []CubreLine) []Finding {
+func CheckExistingRequirementBug(index BaselineIndex, cubre []CubreLine, p reqid.Pattern) []Finding {
 	cited := citations(cubre)
 	if len(cited) == 0 {
 		return []Finding{{
@@ -156,7 +158,7 @@ func CheckExistingRequirementBug(index BaselineIndex, cubre []CubreLine) []Findi
 			Stage:        StageTasks,
 			Subject:      "",
 			Detail:       "el bug sin delta no cita ningún requisito existente: ninguna tarea tiene `Cubre:`",
-			Continuation: "cita el requisito que el bug restaura con `Cubre: REQ-<n>.<m>` en alguna tarea",
+			Continuation: "cita el requisito que el bug restaura con `Cubre: " + p.Template() + "` en alguna tarea",
 		}}
 	}
 	var findings []Finding
@@ -223,14 +225,14 @@ type ScenarioKey struct{ RequirementID, Scenario string }
 // AffectedFromDelta devuelve los escenarios afectados de una delta: cada
 // escenario de un bloque ADDED o MODIFIED, identificado por el `REQ-<n>.<m>` de
 // su nombre. Sin repetidos y en orden.
-func AffectedFromDelta(delta []Requirement) []ScenarioKey {
+func AffectedFromDelta(delta []Requirement, p reqid.Pattern) []ScenarioKey {
 	var out []ScenarioKey
 	seen := map[ScenarioKey]bool{}
 	for _, r := range delta {
 		if r.Section != SectionAdded && r.Section != SectionModified {
 			continue
 		}
-		valid, _ := RequirementIDs(r.Name)
+		valid, _ := RequirementIDs(r.Name, p)
 		if len(valid) != 1 {
 			continue
 		}

@@ -147,12 +147,12 @@ func TestISOArchiveRefusal(t *testing.T) {
 		}
 	})
 
-	t.Run("una declaración inválida se suma a la matriz", func(t *testing.T) {
+	t.Run("una declaración inválida no calcula escenarios ni matriz (D-07)", func(t *testing.T) {
 		ws := workspacetest.Embedded(t, ".")
 		workspacetest.WriteFile(t, filepath.Join(ws.Master, "axiom.yaml"), declEmbeddedBase+"sdd:\n  iso: quizás\n")
 		changeRoot := seedISOChange(t, ws, "demo", "# P\n", map[string]string{"pagos": deltaAddedOK}, tasksCoveredDone, "")
 		findings := ISOArchiveRefusal(ws.Master, changeRoot)
-		if got := strings.Join(archiveTokens(findings), ","); got != "iso_declaration_invalid,iso_matrix_missing" {
+		if got := strings.Join(archiveTokens(findings), ","); got != "iso_declaration_invalid" {
 			t.Fatalf("hallazgos = %v", got)
 		}
 	})

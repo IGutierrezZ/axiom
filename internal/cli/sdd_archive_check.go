@@ -11,6 +11,8 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/gitref"
 	"github.com/IGutierrezZ/axiom/v3/internal/isoevidence"
 	"github.com/IGutierrezZ/axiom/v3/internal/kickoff"
+	"github.com/IGutierrezZ/axiom/v3/internal/openspecdoc"
+	"github.com/IGutierrezZ/axiom/v3/internal/reqid"
 	"github.com/IGutierrezZ/axiom/v3/internal/sddstatus"
 )
 
@@ -74,12 +76,19 @@ func RunSDDArchiveCheck(args []string, stdout io.Writer) error {
 				Token: string(finding.Code), Subject: finding.Subject, Reason: finding.Reason(),
 			})
 		}
+		// REQ-44.9: sin el patrón accesible no se decide qué está compuesto; el verbo termina con
+		// error y la continuación de `axiom workspace validate`.
+		pattern, patternErr := projectIDPattern("sdd archive-check", loc)
+		if patternErr != nil {
+			report.Error = patternErr.Error()
+			break
+		}
 		delta, baseline, readErr := sddstatus.ISOChangeRequirements(loc.PlanningHome, changeRoot)
 		if readErr != nil {
 			report.Error = fmt.Sprintf("no se pueden leer los artefactos del cambio: %v; comprueba la carpeta del cambio y vuelve a ejecutar `axiom sdd archive-check --cwd <dir> --change %s`", readErr, *change)
 			break
 		}
-		report.Domains = alreadyComposed(delta, baseline)
+		report.Domains = alreadyComposed(delta, baseline, pattern)
 	}
 	report.OK = report.Error == "" && len(report.Findings) == 0
 
@@ -157,13 +166,15 @@ func renderArchiveCheck(stdout io.Writer, asJSON bool, report archiveCheckReport
 // insertar: bloque de la delta con salto de línea final frente al texto del
 // segmento de la baseline, sin ninguna otra normalización. Los dominios salen en
 // orden alfabético.
-func alreadyComposed(delta, baseline []isoevidence.Requirement) []archiveCheckDomain {
+func alreadyComposed(delta, baseline []isoevidence.Requirement, pattern reqid.Pattern) []archiveCheckDomain {
 	byDomain := map[string]map[string]string{}
+	namesByDomain := map[string][]string{}
 	for _, requirement := range baseline {
 		if byDomain[requirement.Domain] == nil {
 			byDomain[requirement.Domain] = map[string]string{}
 		}
 		byDomain[requirement.Domain][requirement.Name] = requirement.Text
+		namesByDomain[requirement.Domain] = append(namesByDomain[requirement.Domain], requirement.Name)
 	}
 	composed := map[string]bool{}
 	for _, requirement := range delta {
@@ -171,7 +182,7 @@ func alreadyComposed(delta, baseline []isoevidence.Requirement) []archiveCheckDo
 		if !ok {
 			present = true
 		}
-		composed[requirement.Domain] = present && requirementComposed(requirement, byDomain[requirement.Domain])
+		composed[requirement.Domain] = present && requirementComposed(requirement, byDomain[requirement.Domain], namesByDomain[requirement.Domain], pattern)
 	}
 	domains := make([]string, 0, len(composed))
 	for domain := range composed {
@@ -185,16 +196,20 @@ func alreadyComposed(delta, baseline []isoevidence.Requirement) []archiveCheckDo
 	return out
 }
 
-func requirementComposed(requirement isoevidence.Requirement, canonical map[string]string) bool {
+func requirementComposed(requirement isoevidence.Requirement, canonical map[string]string, names []string, pattern reqid.Pattern) bool {
 	text, present := canonical[requirement.Name]
 	switch requirement.Section {
 	case isoevidence.SectionAdded, isoevidence.SectionModified:
 		return present && text == ensureNewline(requirement.Text)
 	case isoevidence.SectionRemoved:
-		// Borrado o superado: en ambos casos el nombre original deja de figurar
-		// (con --supersede el compositor lo renombra), y volver a componer fallaría
-		// con «no canonical requirement named».
-		return !present
+		// Borrado o superado: en ambos casos el requisito deja de resolverse (con
+		// --supersede el compositor lo renombra), y volver a componer fallaría con
+		// «no canonical requirement named». Se resuelve como el compositor, por
+		// identificador con vuelta al título exacto (REQ-30.22): un REMOVED por
+		// identificador con el título obsoleto sigue sin componer mientras el requisito
+		// existe bajo otro título.
+		_, match := openspecdoc.Resolve(names, requirement.Name, pattern)
+		return match == openspecdoc.MatchNone
 	case isoevidence.SectionRenamed:
 		_, oldPresent := canonical[requirement.OldName]
 		return present && !oldPresent

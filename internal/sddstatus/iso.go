@@ -11,6 +11,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/kickoff"
 	"github.com/IGutierrezZ/axiom/v3/internal/openspecdoc"
 	"github.com/IGutierrezZ/axiom/v3/internal/pathquote"
+	"github.com/IGutierrezZ/axiom/v3/internal/reqid"
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
@@ -83,15 +84,25 @@ type isoInputs struct {
 	// (tasks.md o los de cada rol): sin ellos no se evalúa la cobertura.
 	tasksComplete bool
 	cubre         []isoevidence.CubreLine
+	// pattern es el patrón de identificadores del proyecto, leído en vivo de axiom.yaml
+	// (REQ-44.1, nunca de la instantánea del kickoff). patternErr no es nil cuando es
+	// inaccesible (bloque `sdd:` inválido o configuración ilegible): entonces el cambio no se
+	// evalúa con un patrón no declarado (D-07) y declaration lleva el motivo.
+	pattern     reqid.Pattern
+	patternErr  error
+	declaration isoDeclaration
+	master      string
 }
 
 // loadISOInputs lee los artefactos del cambio. Un fichero ilegible cuenta como
 // vacío: la ausencia de un artefacto la proyectan ya los estados ordinarios.
-func loadISOInputs(planningHome, changeRoot string, paths ArtifactPaths, artifacts map[string]ArtifactState) isoInputs {
-	in := isoInputs{hasDelta: len(paths.Specs) > 0}
+func loadISOInputs(planningHome, changeRoot string, paths ArtifactPaths, artifacts map[string]ArtifactState, declarations workspace.Declarations, master string) isoInputs {
+	in := isoInputs{hasDelta: len(paths.Specs) > 0, master: master}
+	in.pattern, in.patternErr = declarations.IDPattern()
+	in.declaration = readISODeclaration(declarations)
 	in.delta = readDeltaRequirements(changeRoot, paths.Specs)
 	in.baseline = readBaselineRequirements(planningHome)
-	in.index = isoevidence.NewBaselineIndex(in.baseline)
+	in.index = isoevidence.NewBaselineIndex(in.baseline, in.pattern)
 	if !in.hasDelta {
 		in.bug = isoevidence.ParseBugDeclaration(readText(firstPath(paths.Proposal)))
 	}
@@ -161,7 +172,13 @@ func (in isoInputs) specsFindings() []isoevidence.Finding {
 	if !in.hasDelta {
 		return nil
 	}
-	findings := isoevidence.CheckRequirementIDs(in.delta, in.baseline)
+	if in.patternErr != nil {
+		// D-07: con el patrón inaccesible no se aplican las reglas de identificador; la etapa
+		// `specs` lleva el hallazgo de la declaración, sin ningún código de motivo nuevo.
+		findings := []isoevidence.Finding{in.declaration.findingAt(isoevidence.StageSpecs, in.master)}
+		return append(findings, isoevidence.CheckScenarios(in.delta)...)
+	}
+	findings := isoevidence.CheckRequirementIDs(in.delta, in.baseline, in.pattern)
 	return append(findings, isoevidence.CheckScenarios(in.delta)...)
 }
 
@@ -169,15 +186,16 @@ func (in isoInputs) specsFindings() []isoevidence.Finding {
 // comprobaciones del bug sin delta (REQ-29.5 y REQ-29.19) cuando su declaración
 // es completa. Solo se evalúa cuando existen todos los ficheros de tareas.
 func (in isoInputs) tasksFindings() []isoevidence.Finding {
-	if !in.tasksComplete {
+	if !in.tasksComplete || in.patternErr != nil {
+		// Con el patrón inaccesible la etapa `tasks` no se evalúa (D-07).
 		return nil
 	}
 	switch {
 	case in.hasDelta:
-		return isoevidence.CheckCoverage(in.delta, in.index, in.cubre)
+		return isoevidence.CheckCoverage(in.delta, in.index, in.cubre, in.pattern)
 	case in.bug.Kind == isoevidence.BugKindExistingRequirement && in.bug.Valid:
-		findings := isoevidence.CheckCoverage(nil, in.index, in.cubre)
-		return append(findings, isoevidence.CheckExistingRequirementBug(in.index, in.cubre)...)
+		findings := isoevidence.CheckCoverage(nil, in.index, in.cubre, in.pattern)
+		return append(findings, isoevidence.CheckExistingRequirementBug(in.index, in.cubre, in.pattern)...)
 	case in.bug.Kind == isoevidence.BugKindNoImpact && in.bug.Valid:
 		return isoevidence.CheckNoImpactBug(in.cubre)
 	}
@@ -215,7 +233,7 @@ func evaluateISOArchive(in isoInputs, verifyReport, master string) ([]isoevidenc
 	var affected []isoevidence.ScenarioKey
 	switch {
 	case in.hasDelta:
-		affected = isoevidence.AffectedFromDelta(in.delta)
+		affected = isoevidence.AffectedFromDelta(in.delta, in.pattern)
 	case in.bug.Kind == isoevidence.BugKindExistingRequirement && in.bug.Valid:
 		var cited []string
 		for _, line := range in.cubre {
@@ -258,7 +276,11 @@ func ISOArchiveRefusal(workspaceRoot, changeRoot string) []isoevidence.Finding {
 	if err != nil {
 		return findings
 	}
-	inputs := loadISOInputs(filepath.Join(workspaceRoot, "openspec"), changeRoot, paths, nil)
+	inputs := loadISOInputs(filepath.Join(workspaceRoot, "openspec"), changeRoot, paths, nil, location.Declarations, master)
+	if inputs.patternErr != nil {
+		// D-07: sin patrón accesible no se calculan escenarios afectados ni matriz.
+		return findings
+	}
 	archive, _ := evaluateISOArchive(inputs, readText(firstPath(paths.VerifyReport)), master)
 	return append(findings, archive...)
 }
@@ -277,6 +299,12 @@ func ISOChangeRequirements(planningHome, changeRoot string) (delta, baseline []i
 
 // evaluateArchive rellena la etapa `archive` y la proyección de la matriz.
 func (e *isoEvaluation) evaluateArchive(verifyPaths []string, master string) {
+	if e.inputs.patternErr != nil {
+		// D-07: sin patrón accesible no se calculan escenarios afectados ni matriz, y la
+		// proyección `iso.matrix` se omite.
+		e.archive, e.matrix = nil, nil
+		return
+	}
 	findings, result := evaluateISOArchive(e.inputs, readText(firstPath(verifyPaths)), master)
 	e.archive = findings
 	e.matrix = &result
@@ -328,8 +356,8 @@ func (e *isoEvaluation) verifyRoute(next string, applyState ApplyState, governan
 // evaluateISOChange evalúa las etapas `specs` y `tasks` de un cambio ISO, leído
 // de su instantánea. Con otro cambio no se llama: fuera de ISO ninguna de estas
 // reglas proyecta ni bloqueo ni aviso (REQ-29.16).
-func evaluateISOChange(planningHome, changeRoot string, paths ArtifactPaths, artifacts map[string]ArtifactState) *isoEvaluation {
-	inputs := loadISOInputs(planningHome, changeRoot, paths, artifacts)
+func evaluateISOChange(planningHome, changeRoot string, paths ArtifactPaths, artifacts map[string]ArtifactState, declarations workspace.Declarations, master string) *isoEvaluation {
+	inputs := loadISOInputs(planningHome, changeRoot, paths, artifacts, declarations, master)
 	return &isoEvaluation{inputs: inputs, specs: inputs.specsFindings(), tasks: inputs.tasksFindings()}
 }
 
@@ -441,9 +469,16 @@ func (d isoDeclaration) reason(master string) string {
 
 // finding es el hallazgo `iso_declaration_invalid` que estrecha el archivado.
 func (d isoDeclaration) finding(master string) isoevidence.Finding {
+	return d.findingAt(isoevidence.StageArchive, master)
+}
+
+// findingAt es el mismo hallazgo en la etapa dada: la de archivado estrecha el
+// archivado y la de `specs` sustituye a las reglas de identificador cuando el patrón es
+// inaccesible (D-07).
+func (d isoDeclaration) findingAt(stage isoevidence.Stage, master string) isoevidence.Finding {
 	return isoevidence.Finding{
 		Code:         isoevidence.CodeDeclarationInvalid,
-		Stage:        isoevidence.StageArchive,
+		Stage:        stage,
 		Subject:      "sdd",
 		Detail:       "la declaración `sdd:` de axiom.yaml no es válida: " + d.invalidText,
 		Continuation: "ejecuta `axiom workspace validate --path " + pathquote.Quote(master) + "` y corrígela",

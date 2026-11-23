@@ -9,8 +9,13 @@ import (
 	"testing"
 )
 
+// reqidImport es el único paquete interno que isoevidence puede importar: el puerto
+// único de identificadores de requisito (D-02 y REQ-44.4).
+const reqidImport = "github.com/IGutierrezZ/axiom/v3/internal/reqid"
+
 // TestPackageImports fija la arquitectura del paquete hoja: ningún fichero de
-// producción importa `os/exec` ni un paquete interno de Axiom.
+// producción importa `os/exec` ni un paquete interno de Axiom, salvo exactamente
+// internal/reqid.
 func TestPackageImports(t *testing.T) {
 	files, err := filepath.Glob("*.go")
 	if err != nil {
@@ -35,7 +40,7 @@ func TestPackageImports(t *testing.T) {
 			if path == "os/exec" {
 				t.Errorf("%s importa os/exec: el paquete no ejecuta órdenes", file)
 			}
-			if strings.Contains(path, "/internal/") || strings.HasPrefix(path, "internal/") {
+			if path != reqidImport && (strings.Contains(path, "/internal/") || strings.HasPrefix(path, "internal/")) {
 				t.Errorf("%s importa el paquete interno %s: isoevidence es un paquete hoja", file, path)
 			}
 		}

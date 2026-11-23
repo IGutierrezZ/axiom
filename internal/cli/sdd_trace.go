@@ -16,6 +16,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/gitref"
 	"github.com/IGutierrezZ/axiom/v3/internal/isoevidence"
 	"github.com/IGutierrezZ/axiom/v3/internal/kickoff"
+	"github.com/IGutierrezZ/axiom/v3/internal/reqid"
 	"github.com/IGutierrezZ/axiom/v3/internal/sddstatus"
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
@@ -75,6 +76,12 @@ func RunSDDTrace(args []string, stdout io.Writer) error {
 	if err != nil {
 		return fmt.Errorf("sdd trace: %w", err)
 	}
+	// REQ-44.9: el patrón se lee en vivo de axiom.yaml; inaccesible, el verbo termina con error
+	// y la continuación de `axiom workspace validate`, sin tocar git.
+	pattern, err := projectIDPattern("sdd trace", loc)
+	if err != nil {
+		return err
+	}
 	ctx := context.Background()
 	gitRoot, err := gitcommon.TopLevel(ctx, loc.PlanningHome)
 	if err != nil {
@@ -111,7 +118,7 @@ func RunSDDTrace(args []string, stdout io.Writer) error {
 		ChainSource: source, Chain: []traceChainEntry{},
 	}
 	if changeRoot != "" {
-		report.Chain = traceChain(loc.PlanningHome, changeRoot, sealed)
+		report.Chain = traceChain(loc.PlanningHome, changeRoot, sealed, pattern)
 	}
 	return renderTrace(stdout, *asJSON, report)
 }
@@ -325,7 +332,7 @@ type traceMatrixRow struct {
 // traceChain construye la cadena de los artefactos del cambio: los requisitos de
 // la delta (ADDED y MODIFIED) y los citados en `Cubre:`, cada uno con sus líneas
 // `Cubre:` y sus filas de matriz, ordenados por identificador.
-func traceChain(planningHome, changeRoot string, sealed *kickoff.Kickoff) []traceChainEntry {
+func traceChain(planningHome, changeRoot string, sealed *kickoff.Kickoff, pattern reqid.Pattern) []traceChainEntry {
 	tasksFiles, verifyFiles := []string{"tasks.md"}, []string{"verify-report.md"}
 	if sealed != nil {
 		if perRole := kickoff.RoleTaskFiles(sealed.Config.Roles); perRole != nil {
@@ -354,7 +361,7 @@ func traceChain(planningHome, changeRoot string, sealed *kickoff.Kickoff) []trac
 			if requirement.Section != isoevidence.SectionAdded && requirement.Section != isoevidence.SectionModified {
 				continue
 			}
-			if ids, _ := isoevidence.RequirementIDs(requirement.Name); len(ids) == 1 {
+			if ids, _ := isoevidence.RequirementIDs(requirement.Name, pattern); len(ids) == 1 {
 				e := entry(ids[0])
 				e.Domain, e.Section, e.Name = requirement.Domain, string(requirement.Section), requirement.Name
 			}
@@ -363,7 +370,7 @@ func traceChain(planningHome, changeRoot string, sealed *kickoff.Kickoff) []trac
 	for _, name := range tasksFiles {
 		for _, line := range isoevidence.ParseCubre(name, readTraceFile(changeRoot, name)) {
 			for _, raw := range line.IDs {
-				if ids, _ := isoevidence.RequirementIDs(raw); len(ids) == 1 {
+				if ids, _ := isoevidence.RequirementIDs(raw, pattern); len(ids) == 1 {
 					e := entry(ids[0])
 					e.Cubre = append(e.Cubre, traceCubre{File: line.File, Line: line.Line})
 				}
@@ -372,7 +379,7 @@ func traceChain(planningHome, changeRoot string, sealed *kickoff.Kickoff) []trac
 	}
 	for _, name := range verifyFiles {
 		for _, row := range isoevidence.ParseMatrix(readTraceFile(changeRoot, name)).Rows {
-			if ids, _ := isoevidence.RequirementIDs(row.RequirementID); len(ids) == 1 {
+			if ids, _ := isoevidence.RequirementIDs(row.RequirementID, pattern); len(ids) == 1 {
 				e := entry(ids[0])
 				e.Rows = append(e.Rows, traceMatrixRow{Scenario: row.Scenario, Type: row.Type, Reference: row.Reference, Result: row.Result, Commit: row.Commit})
 			}

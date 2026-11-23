@@ -4,6 +4,8 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/IGutierrezZ/axiom/v3/internal/reqid"
 )
 
 func TestRequirementIDs(t *testing.T) {
@@ -28,7 +30,7 @@ func TestRequirementIDs(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			valid, malformed := RequirementIDs(tc.in)
+			valid, malformed := RequirementIDs(tc.in, reqid.Default())
 			if !reflect.DeepEqual(valid, tc.wantValid) {
 				t.Errorf("válidos = %v, quería %v", valid, tc.wantValid)
 			}
@@ -202,7 +204,7 @@ func TestCheckRequirementIDs(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got := CheckRequirementIDs(tc.delta, tc.baseline)
+			got := CheckRequirementIDs(tc.delta, tc.baseline, reqid.Default())
 			assertFindings(t, got, CodeRequirementID, StageSpecs, tc.wantContains)
 		})
 	}
@@ -258,7 +260,7 @@ func TestCheckRequirementIDsInterruptedArchive(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got := CheckRequirementIDs([]Requirement{added}, []Requirement{tc.baseline})
+			got := CheckRequirementIDs([]Requirement{added}, []Requirement{tc.baseline}, reqid.Default())
 			if tc.wantFind != (len(got) > 0) {
 				t.Fatalf("bloqueo = %v, quería %v: %v", len(got) > 0, tc.wantFind, reasons(got))
 			}
@@ -270,13 +272,13 @@ func TestCheckRequirementIDsInterruptedArchive(t *testing.T) {
 
 	t.Run("el compositor solo añade el salto de línea final", func(t *testing.T) {
 		noNewline := Requirement{Domain: "pagos", Section: SectionAdded, Name: name, Text: strings.TrimSuffix(reqBlock(name), "\n")}
-		if got := CheckRequirementIDs([]Requirement{noNewline}, []Requirement{composed}); len(got) != 0 {
+		if got := CheckRequirementIDs([]Requirement{noNewline}, []Requirement{composed}, reqid.Default()); len(got) != 0 {
 			t.Fatalf("un ADDED sin salto final debía tolerarse tras ensureTrailingNewline: %v", reasons(got))
 		}
 	})
 	t.Run("la baseline sin salto final no coincide con el bloque de la delta", func(t *testing.T) {
 		noNewlineBaseline := Requirement{Domain: "pagos", Name: name, Text: strings.TrimSuffix(reqBlock(name), "\n")}
-		if got := CheckRequirementIDs([]Requirement{added}, []Requirement{noNewlineBaseline}); len(got) == 0 {
+		if got := CheckRequirementIDs([]Requirement{added}, []Requirement{noNewlineBaseline}, reqid.Default()); len(got) == 0 {
 			t.Fatal("la diferencia solo en el salto de línea final de la baseline debía seguir bloqueando")
 		}
 	})
