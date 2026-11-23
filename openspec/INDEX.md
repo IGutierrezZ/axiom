@@ -1,8 +1,8 @@
 # Catálogo Maestro de Especificaciones Vivas — Axiom
 
 > **Proyecto:** Axiom (Spec-Driven Development Platform)
-> **Última Sincronización:** 2026-11-22 11:09:26 UTC
-> **Total Dominios:** 73 | **Total Requerimientos:** 612 | **Total Escenarios BDD:** 2041
+> **Última Sincronización:** 2026-11-22 20:48:25 UTC
+> **Total Dominios:** 73 | **Total Requerimientos:** 624 | **Total Escenarios BDD:** 2086
 
 ---
 
@@ -40,7 +40,7 @@
 | `odd-ui-integration` | Especificación de Requerimientos: Integración de ODD en Dashboard Web y TUI (INC-19) | 3 | 0 | [Ver Spec](specs/odd-ui-integration/spec.md) |
 | `openspec-adoption` | Especificación de Requerimientos: Adopción de OpenSpec como Spec Viva Única (REQ-30.9 a REQ-30.14) | 6 | 26 | [Ver Spec](specs/openspec-adoption/spec.md) |
 | `orchestrator-commands-markers` | Especificación de Requerimientos: axiom-orchestrator y Comandos Slash Canónicos (INC-11) | 4 | 5 | [Ver Spec](specs/orchestrator-commands-markers/spec.md) |
-| `organic-agent-trigger-rules` | Organic Agent Routing Projection | 20 | 63 | [Ver Spec](specs/organic-agent-trigger-rules/spec.md) |
+| `organic-agent-trigger-rules` | Organic Agent Routing Projection | 21 | 68 | [Ver Spec](specs/organic-agent-trigger-rules/spec.md) |
 | `persona-behavior-contract` | persona-behavior-contract Specification | 17 | 32 | [Ver Spec](specs/persona-behavior-contract/spec.md) |
 | `planning-home-resolution` | Especificación de Requerimientos: Resolución del Planning Home desde Cualquier Directorio (INC-24) | 13 | 59 | [Ver Spec](specs/planning-home-resolution/spec.md) |
 | `project-technical-context` | Especificación de Requerimientos: Contexto Técnico del Proyecto: Declaración, Lectura y Mantenimiento (INC-24) | 21 | 82 | [Ver Spec](specs/project-technical-context/spec.md) |
@@ -66,12 +66,12 @@
 | `rdd-transport-capability` | RDD Transport Capability Specification | 4 | 8 | [Ver Spec](specs/rdd-transport-capability/spec.md) |
 | `review-findings-ledger` | Bounded Review Transaction and Findings Ledger | 18 | 24 | [Ver Spec](specs/review-findings-ledger/spec.md) |
 | `sdd-archive-lifecycle` | Especificación de Requerimientos: Ciclo de Vida de Archive, Integración Formal y Sellado Inmutable (INC-21) | 14 | 73 | [Ver Spec](specs/sdd-archive-lifecycle/spec.md) |
-| `sdd-block-review-gates` | Especificación de Requerimientos: Compuertas de Revisión por Bloque (spec, design, tasks, apply) (INC-21) | 18 | 94 | [Ver Spec](specs/sdd-block-review-gates/spec.md) |
+| `sdd-block-review-gates` | Especificación de Requerimientos: Compuertas de Revisión por Bloque (spec, design, tasks, apply) (INC-21) | 25 | 119 | [Ver Spec](specs/sdd-block-review-gates/spec.md) |
 | `sdd-docs-publication` | Especificación de Publicación Ligera de Documentación SDD (carril-proyecto-publicacion-docs) | 10 | 50 | [Ver Spec](specs/sdd-docs-publication/spec.md) |
 | `sdd-independent-review` | Especificación de Requerimientos: Revisión Independiente en SDD (verify técnico por rol, juicio opcional y revisión de cobertura) | 10 | 67 | [Ver Spec](specs/sdd-independent-review/spec.md) |
 | `sdd-iso-evidence` | Especificación: Evidencias ISO Opcionales del SDD (carril-sdd-versatil) | 10 | 97 | [Ver Spec](specs/sdd-iso-evidence/spec.md) |
 | `sdd-lane-kickoff` | Especificación de Requerimientos: Selección Temprana y Bloqueante de Carril ODD/SDD en el Kickoff (INC-21) | 12 | 77 | [Ver Spec](specs/sdd-lane-kickoff/spec.md) |
-| `sdd-orchestrator-assets` | SDD Orchestrator Assets Specification | 21 | 71 | [Ver Spec](specs/sdd-orchestrator-assets/spec.md) |
+| `sdd-orchestrator-assets` | SDD Orchestrator Assets Specification | 25 | 86 | [Ver Spec](specs/sdd-orchestrator-assets/spec.md) |
 | `sdd-preflight-configuration` | Especificación de Requerimientos: Cuestionario Pre-Vuelo de SDD, Modalidad de Avance y Asignación Obligatoria de Roles (INC-21) | 15 | 111 | [Ver Spec](specs/sdd-preflight-configuration/spec.md) |
 | `sdd-research` | sdd-research Specification | 3 | 9 | [Ver Spec](specs/sdd-research/spec.md) |
 | `sdd-role-closure-handoff` | Especificación de Requerimientos: Cierre de Último Rol, Aviso Formal y Relevo de Integración (INC-21) | 3 | 20 | [Ver Spec](specs/sdd-role-closure-handoff/spec.md) |
@@ -1391,6 +1391,12 @@ Define the managed, provider-neutral instructions that project Gentle AI's
   - *Escenario BDD:* El aviso de cambio grande es opcional y no bloquea
   - *Escenario BDD:* La doctrina no contiene ningún umbral numérico de entrega
   - *Escenario BDD:* El resto del protocolo ODD no cambia
+- **[REQ-33.12]** La Doctrina ODD Avisa por Commit en el Modo 1 Fijo, sin Preguntas ni Paradas
+  - *Escenario BDD:* El paso 6 contiene el aviso por commit
+  - *Escenario BDD:* ODD no contiene vocabulario de paradas ni del modo
+  - *Escenario BDD:* Una petición de parada en el chat no cambia el modo
+  - *Escenario BDD:* El registro de commits con cambios pedidos va al documento ODD
+  - *Escenario BDD:* La doctrina ODD declara validación implícita y merge sin squash
 
 ### Dominio: `persona-behavior-contract` — persona-behavior-contract Specification
 
@@ -2324,6 +2330,38 @@ Define one explicit, content-addressed implementation-review transaction shared 
   - *Escenario BDD:* `tasks` no emite
   - *Escenario BDD:* `integration` no emite
   - *Escenario BDD:* Salida JSON idéntica con y sin integración
+- **[REQ-33.1]** Vocabulario Cerrado del Modo de Revisión por Commit
+  - *Escenario BDD:* Los tres tokens se aceptan
+  - *Escenario BDD:* Un valor fuera del vocabulario se rechaza
+- **[REQ-33.2]** `gate record` Persiste el Modo Solo en la Aprobación de la Puerta `tasks` de un Cambio `checkpointed`
+  - *Escenario BDD:* La aprobación con modo escribe el campo
+  - *Escenario BDD:* El modo viaja junto con la cesión en un único registro
+  - *Escenario BDD:* Sin la bandera no se escribe el campo
+  - *Escenario BDD:* Otra puerta rechaza la bandera
+  - *Escenario BDD:* Un rechazo no admite el modo
+  - *Escenario BDD:* Un cambio `continuous` rechaza la bandera
+  - *Escenario BDD:* Una puerta `tasks` ya aprobada rechaza un segundo registro con modo
+  - *Escenario BDD:* El kickoff y el digest no cambian
+- **[REQ-33.3]** Compatibilidad Hacia Atrás del Campo `commit_review`
+  - *Escenario BDD:* Un ledger antiguo se lee como `notify`
+  - *Escenario BDD:* Un decodificador anterior ignora el campo
+  - *Escenario BDD:* Un valor inválido persistido se rechaza al leer
+- **[REQ-33.4]** `axiom sdd status` Proyecta el Modo de Revisión por Commit
+  - *Escenario BDD:* Se proyecta el modo registrado
+  - *Escenario BDD:* Sin campo se proyecta `notify`
+  - *Escenario BDD:* Sobrevive al traspaso
+  - *Escenario BDD:* No aparece donde no aplica
+  - *Escenario BDD:* La proyección no cambia la ruta
+- **[REQ-33.5]** El Modo se Pregunta en una Interacción Propia de la Puerta `tasks` y Solo en `checkpointed`
+  - *Escenario BDD:* La salida de aprobación dispara la pregunta del modo
+  - *Escenario BDD:* Iterar no pregunta
+  - *Escenario BDD:* `continuous` no pregunta
+  - *Escenario BDD:* La pregunta tipada conserva tres opciones
+  - *Escenario BDD:* El texto de la doctrina fija la interacción
+- **[REQ-33.6]** El Modo es Inmutable tras la Aprobación de `tasks`
+  - *Escenario BDD:* Un rechazo posterior no cambia el modo
+- **[REQ-33.7]** La Ayuda de `gate record` Documenta la Bandera
+  - *Escenario BDD:* La ayuda menciona la bandera
 
 ### Dominio: `sdd-docs-publication` — Especificación de Publicación Ligera de Documentación SDD (carril-proyecto-publicacion-docs)
 
@@ -2784,6 +2822,25 @@ Defines required behavior for agent-specific SDD orchestrator guidance assets so
   - *Escenario BDD:* `sdd-apply` no se detiene por carga de revisión
   - *Escenario BDD:* `sdd-tasks` emite una previsión cualitativa
   - *Escenario BDD:* Con `delivery.split_hint_lines` fijada la doctrina indica el aviso único
+- **[REQ-33.8]** Sección «Commit Review» de Fuente Única Proyectada a Todos los Runtimes
+  - *Escenario BDD:* Todos los orquestadores proyectan la sección
+  - *Escenario BDD:* Un marcador sin sección registrada falla
+  - *Escenario BDD:* Los goldens reflejan la sección
+- **[REQ-33.9]** Contenido Común de la Doctrina «Commit Review»
+  - *Escenario BDD:* La sección contiene el aviso y la orden de revisión
+  - *Escenario BDD:* La sección describe los tres modos sin convertirlos en puerta
+  - *Escenario BDD:* La sección declara la validación implícita
+  - *Escenario BDD:* La sección distingue publicada de no publicada
+  - *Escenario BDD:* La sección recomienda merge sin squash
+  - *Escenario BDD:* Un lote devuelto de golpe sigue produciendo un aviso por commit
+- **[REQ-33.10]** Contrato `commit_review` de `sdd-apply`
+  - *Escenario BDD:* `notify` devuelve un sha por tarea
+  - *Escenario BDD:* `stop` devuelve el control tras cada tarea
+  - *Escenario BDD:* `stop-before-commit` no confirma antes de la aprobación
+  - *Escenario BDD:* Registrar cambios pedidos no reabre `tasks`
+- **[REQ-33.11]** La Skill `work-unit-commits` Incluye `fixup!`, Autosquash y Merge sin Squash, en Paridad
+  - *Escenario BDD:* Las copias mantienen la paridad
+  - *Escenario BDD:* Divergir entre copias falla
 
 ### Dominio: `sdd-preflight-configuration` — Especificación de Requerimientos: Cuestionario Pre-Vuelo de SDD, Modalidad de Avance y Asignación Obligatoria de Roles (INC-21)
 
