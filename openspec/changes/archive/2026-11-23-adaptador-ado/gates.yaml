@@ -1,0 +1,21 @@
+schema: axiom.sdd-gate-ledger/v1
+change: adaptador-ado
+records:
+    - gate: integration
+      decision: approved
+      reason: ""
+      evidence_kind: pr_merged
+      evidence_ref: b1ba724693023ee58db57c689ba64e3f6cefc15e
+      evidence_base_ref: main
+      verified: true
+      actor: cli
+      recorded_at: 2026-11-23T03:53:24.154003Z
+    - gate: integration
+      decision: approved
+      reason: ""
+      evidence_kind: pr_merged
+      evidence_ref: b1ba724693023ee58db57c689ba64e3f6cefc15e
+      evidence_base_ref: main
+      verified: true
+      actor: cli
+      recorded_at: 2026-11-23T03:53:24.7984494Z

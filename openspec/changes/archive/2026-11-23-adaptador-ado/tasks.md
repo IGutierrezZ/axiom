@@ -33,7 +33,7 @@ Orden obligado: **1 → 2 → {3, 4} → 5 → 6 → 7**. La 1 va primera (el ca
 - [x] P.1 Sin dependencias nuevas: solo biblioteca estándar. No ejecutar `go get` ni `go mod tidy`.
 - [x] P.2 Las pruebas que usan costuras (`SetDefaultRegistryForTest`, `SetCatalogForTest`, `secrets.SetDefaultForTest`) no llaman a `t.Parallel()`. Ninguna prueba espera tiempo real, salvo el timeout (`Timeout: 20ms`, `MaxAttempts: 1`).
 - [x] P.3 Cada unidad termina con `gofmt -l` vacío y `go vet` sobre los paquetes tocados antes de su commit. Commits convencionales, sin atribución de IA.
-- [ ] P.4 Las specs delta no son tareas de `apply`: las integra `sdd-archive`. Confirmar antes de archivar que `REQ-45` está libre en `main`.
+- [x] P.4 Las specs delta no son tareas de `apply`: las integra `sdd-archive`. Confirmar antes de archivar que `REQ-45` está libre en `main`. Comprobado en `main` `b1ba7246` (merge de #291): `openspec/specs/` no contiene ningún `REQ-45.x`, y el único cambio abierto con numeración nueva (`puerto-reqid`, C-02-b) usa `REQ-44`.
 
 ## Phase 1 (unidad 1): Alta del plugin
 

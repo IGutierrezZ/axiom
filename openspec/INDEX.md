@@ -1,8 +1,8 @@
 # Catálogo Maestro de Especificaciones Vivas — Axiom
 
 > **Proyecto:** Axiom (Spec-Driven Development Platform)
-> **Última Sincronización:** 2026-11-22 20:48:25 UTC
-> **Total Dominios:** 73 | **Total Requerimientos:** 624 | **Total Escenarios BDD:** 2086
+> **Última Sincronización:** 2026-11-23 03:55:20 UTC
+> **Total Dominios:** 74 | **Total Requerimientos:** 641 | **Total Escenarios BDD:** 2166
 
 ---
 
@@ -19,13 +19,14 @@
 | `axiom-tui-branding` | Especificación de Requerimientos: Unificación de TUI Bubbletea, Comandos de Ecosistema en CLI axiom y Pasarela de gentle-ai (INC-14) | 4 | 9 | [Ver Spec](specs/axiom-tui-branding/spec.md) |
 | `axiom-updater-resilience` | Especificación Viva: Resiliencia y Gobernanza del Actualizador Autónomo de Axiom | 9 | 10 | [Ver Spec](specs/axiom-updater-resilience/spec.md) |
 | `axiom-user-state-and-env` | Especificación de Requerimientos: Unificación de Estado en ~/.axiom y Variables AXIOM_* (INC-12) | 3 | 5 | [Ver Spec](specs/axiom-user-state-and-env/spec.md) |
+| `azure-devops-adapter` | Especificación de azure-devops-adapter | 16 | 71 | [Ver Spec](specs/azure-devops-adapter/spec.md) |
 | `change-actor-identity` | Especificación Viva: Identidad Git como Actor de los Artefactos Versionados (REQ-42.1 a REQ-42.9) | 9 | 33 | [Ver Spec](specs/change-actor-identity/spec.md) |
 | `change-branch-lifecycle` | Especificación de Requerimientos: Ciclo de Vida de las Ramas y Worktrees de un Cambio por Topología (INC-25) | 34 | 279 | [Ver Spec](specs/change-branch-lifecycle/spec.md) |
 | `dashboard-sdd-orchestration` | Especificación de Requerimientos: Orquestación Interactiva SDD y Creación de Cambios en Dashboard Web y CLI (INC-15) | 5 | 10 | [Ver Spec](specs/dashboard-sdd-orchestration/spec.md) |
 | `engram-protocol-injection` | Engram protocol injection Specification | 5 | 12 | [Ver Spec](specs/engram-protocol-injection/spec.md) |
 | `gga` | GGA Specification | 3 | 8 | [Ver Spec](specs/gga/spec.md) |
 | `installer-picker-navigation` | Installer Picker Navigation Specification | 3 | 9 | [Ver Spec](specs/installer-picker-navigation/spec.md) |
-| `integration-plugins` | Especificación de integration-plugins | 22 | 92 | [Ver Spec](specs/integration-plugins/spec.md) |
+| `integration-plugins` | Especificación de integration-plugins | 23 | 98 | [Ver Spec](specs/integration-plugins/spec.md) |
 | `knowledge-profile-init` | Especificación de Requerimientos: Perfil de Inicialización Knowledge (INC-23) | 6 | 9 | [Ver Spec](specs/knowledge-profile-init/spec.md) |
 | `knowledge-query-engine` | Especificación de Requerimientos: Consulta Spec-First con Auto-Enriquecimiento de la Spec Viva (INC-23) | 5 | 5 | [Ver Spec](specs/knowledge-query-engine/spec.md) |
 | `knowledge-sweep-command` | Especificación de Requerimientos: Barrido Autónomo Knowledge y Siembra Inicial (INC-23) | 5 | 5 | [Ver Spec](specs/knowledge-sweep-command/spec.md) |
@@ -82,7 +83,7 @@
 | `tui-ui-parity` | Especificación Viva: Paridad Bidireccional entre TUI y Web UI | 10 | 11 | [Ver Spec](specs/tui-ui-parity/spec.md) |
 | `upstream-absorption-protocol` | Especificación Viva: Protocolo de Absorción por Tandas desde Upstream | 6 | 9 | [Ver Spec](specs/upstream-absorption-protocol/spec.md) |
 | `visual-decoupling` | Especificación de Requerimientos: Desacoplamiento Visual y Limpieza de Marca (Axiom) | 4 | 7 | [Ver Spec](specs/visual-decoupling/spec.md) |
-| `workspace-topology` | Especificación Viva: Topología de Workspace y CLI de Axiom | 18 | 99 | [Ver Spec](specs/workspace-topology/spec.md) |
+| `workspace-topology` | Especificación Viva: Topología de Workspace y CLI de Axiom | 18 | 102 | [Ver Spec](specs/workspace-topology/spec.md) |
 
 ---
 
@@ -343,6 +344,100 @@ Estrategias y salvaguardas de actualización del binario `axiom` para entornos W
 - **[REQ-12.3]** Precedencia de variables AXIOM_* sobre GENTLE_AI_*
   - *Escenario BDD:* Variable AXIOM_* toma precedencia
   - *Escenario BDD:* Fallback a GENTLE_AI_* si AXIOM_* no está definido
+
+### Dominio: `azure-devops-adapter` — Especificación de azure-devops-adapter
+
+Primer adaptador real del marco de integraciones (C-07-c): el plugin `azure-devops`, su manifiesto, un cliente REST 7.1 único y robusto (autenticación por PAT, timeouts, límites de tasa, errores tipados y saneados), la lectura de work items, la escritura protegida por `/rev`, el descubrimiento del proceso del proyecto, la identidad de la persona en Azure DevOps y los verbos `axiom integrations connect` y `discover`. No emite ningún evento del ciclo de vida hacia Azure DevOps (C-07-d y C-07-e), no crea work items, no ofrece interfaz (C-07-h), no usa Entra ID y no soporta Azure DevOps Server on-premises. Todo se verifica con un servidor `httptest`: ninguna prueba llama a Azure DevOps real.
+
+**Archivo:** [`specs/azure-devops-adapter/spec.md`](specs/azure-devops-adapter/spec.md)
+
+- **[REQ-45.1]** Manifiesto y Alta del Plugin `azure-devops`
+  - *Escenario BDD:* El manifiesto es válido e idéntico al del catálogo
+  - *Escenario BDD:* Variable de entorno del secreto
+  - *Escenario BDD:* Ninguna capacidad de escritura del ciclo de vida
+- **[REQ-45.2]** Configuración `integrations.azure-devops` y Secreto `pat`
+  - *Escenario BDD:* Bloque válido
+  - *Escenario BDD:* Clave desconocida
+  - *Escenario BDD:* Clave que parece un secreto
+  - *Escenario BDD:* El PAT se resuelve en cada llamada
+  - *Escenario BDD:* Secreto ausente
+- **[REQ-45.3]** Cliente REST con Autenticación, Versión y Timeout
+  - *Escenario BDD:* Versión y autenticación en toda petición
+  - *Escenario BDD:* Timeout por petición
+  - *Escenario BDD:* Cancelación durante una espera
+  - *Escenario BDD:* Organización con caracteres reservados
+- **[REQ-45.4]** Límites de Tasa y Reintentos Acotados
+  - *Escenario BDD:* Reintento tras 429
+  - *Escenario BDD:* `Retry-After` en una respuesta 200
+  - *Escenario BDD:* Reintento tras 503 con retroceso
+  - *Escenario BDD:* Presupuesto agotado
+  - *Escenario BDD:* Cabeceras de tasa expuestas
+  - *Escenario BDD:* Error de red transitorio
+- **[REQ-45.5]** Errores Tipados y Saneados con Scope Probable
+  - *Escenario BDD:* 401 con scope probable
+  - *Escenario BDD:* 203 con página de inicio de sesión
+  - *Escenario BDD:* 403 en repositorios
+  - *Escenario BDD:* Cuerpo de error acotado
+  - *Escenario BDD:* Cuerpo de error que contiene el PAT
+  - *Escenario BDD:* JSON inválido en una respuesta 200
+- **[REQ-45.6]** Lectura de Work Items y Lotes
+  - *Escenario BDD:* Lectura con relaciones
+  - *Escenario BDD:* Lote troceado
+  - *Escenario BDD:* Work item inexistente
+  - *Escenario BDD:* Lote vacío
+- **[REQ-45.7]** Escritura con Concurrencia Optimista `test /rev`
+  - *Escenario BDD:* Escritura con `/rev` vigente
+  - *Escenario BDD:* `/rev` obsoleto
+  - *Escenario BDD:* Variantes del código de rechazo
+  - *Escenario BDD:* Un 400 ajeno al test no es conflicto
+  - *Escenario BDD:* Reintento tras respuesta perdida
+  - *Escenario BDD:* Sin operación de test no hay petición
+- **[REQ-45.8]** Repositorios Git con Caché por Proceso
+  - *Escenario BDD:* Listado de repositorios
+  - *Escenario BDD:* Segunda consulta desde la caché
+  - *Escenario BDD:* Un fallo no se cachea
+- **[REQ-45.9]** Descubrimiento del Proceso del Proyecto
+  - *Escenario BDD:* Descubrimiento completo
+  - *Escenario BDD:* Categoría del estado sin normalizar
+  - *Escenario BDD:* Miembros paginados
+  - *Escenario BDD:* Iteraciones vacías
+  - *Escenario BDD:* Fallo parcial
+- **[REQ-45.10]** Resolución de la Identidad de la Persona
+  - *Escenario BDD:* Identidad por `connectionData`
+  - *Escenario BDD:* `connectionData` falla
+  - *Escenario BDD:* `connectionData` sin usuario utilizable
+  - *Escenario BDD:* Elección explícita con `--user`
+  - *Escenario BDD:* `--user` desconocido
+- **[REQ-45.11]** Fichero de Identidad por Persona Indexado por Organización
+  - *Escenario BDD:* Primera identidad guardada
+  - *Escenario BDD:* Varias organizaciones
+  - *Escenario BDD:* Reconexión sustituye la entrada
+  - *Escenario BDD:* Escritura atómica
+  - *Escenario BDD:* Sin secretos ni cambios en `workspaces.json`
+  - *Escenario BDD:* Fichero corrupto
+- **[REQ-45.12]** Verbo `axiom integrations connect`
+  - *Escenario BDD:* Conexión por `connectionData`
+  - *Escenario BDD:* Sin identidad utilizable y sin `--user`
+  - *Escenario BDD:* Repetición con `--user`
+  - *Escenario BDD:* Bloque ausente
+  - *Escenario BDD:* Plugin desactivado
+  - *Escenario BDD:* Plugin desconocido
+  - *Escenario BDD:* Ayuda del verbo
+- **[REQ-45.13]** Verbo `axiom integrations discover`
+  - *Escenario BDD:* Descubrimiento en JSON
+  - *Escenario BDD:* Salida legible
+  - *Escenario BDD:* Sin escritura de ficheros
+  - *Escenario BDD:* Fallo de autorización
+- **[REQ-45.14]** `Deliver` sin Efectos del Ciclo de Vida
+  - *Escenario BDD:* `Deliver` devuelve error permanente
+  - *Escenario BDD:* Verbos de despacho sin cambios
+- **[REQ-45.15]** El PAT No Aparece en Ninguna Salida
+  - *Escenario BDD:* Canario en el flujo completo
+  - *Escenario BDD:* Eco del servidor
+  - *Escenario BDD:* El PAT sale del almacén
+- **[REQ-45.16]** Pruebas Herméticas sin Azure DevOps Real
+  - *Escenario BDD:* Servidor local inyectado
+  - *Escenario BDD:* Reintentos sin dormir
 
 ### Dominio: `change-actor-identity` — Especificación Viva: Identidad Git como Actor de los Artefactos Versionados (REQ-42.1 a REQ-42.9)
 
@@ -819,8 +914,10 @@ Marco de plugins de integración (C-07-b): un punto de extensión hacia trackers
 - **[REQ-43.4]** Registro Cerrado en Compilación
   - *Escenario BDD:* Identificador duplicado
   - *Escenario BDD:* Plugin ausente del catálogo o distinto de él
-  - *Escenario BDD:* Registro por defecto vacío
+  - *Escenario BDD:* Registro por defecto con `azure-devops`
+  - *Escenario BDD:* Identificador fuera del catálogo por defecto
   - *Escenario BDD:* Costura de prueba
+  - *Escenario BDD:* Sin ciclo de importaciones
 - **[REQ-43.5]** Coste Cero sin Integración Configurada
   - *Escenario BDD:* Sin bloque `integrations`
   - *Escenario BDD:* Plugin desactivado
@@ -916,6 +1013,11 @@ Marco de plugins de integración (C-07-b): un punto de extensión hacia trackers
 - **[REQ-43.31]** `done` en la Rama de Archivado se Niega con Cola Pendiente
   - *Escenario BDD:* `done` se niega con cola archivada pendiente
   - *Escenario BDD:* `done` tras vaciar la cola
+- **[REQ-45.17]** Puertos Opcionales de Identidad y Descubrimiento
+  - *Escenario BDD:* Plugin que ofrece ambos puertos
+  - *Escenario BDD:* Plugin sin puerto de identidad
+  - *Escenario BDD:* Plugin sin puerto de descubrimiento
+  - *Escenario BDD:* El puerto `Plugin` no cambia
 
 ### Dominio: `knowledge-profile-init` — Especificación de Requerimientos: Perfil de Inicialización Knowledge (INC-23)
 
@@ -3306,4 +3408,7 @@ Definir de forma canónica el comportamiento del punto de entrada CLI `axiom` y 
   - *Escenario BDD:* `init --force` conserva el bloque
 - **[REQ-43.21]** Plantilla y Manual Documentan `integrations:`
   - *Escenario BDD:* Plantilla y manual cubiertos por las pruebas de contrato
+  - *Escenario BDD:* La plantilla documenta `azure-devops`
+  - *Escenario BDD:* El manual documenta secreto, scopes y verbos
+  - *Escenario BDD:* Ya no se afirma catálogo vacío
 
