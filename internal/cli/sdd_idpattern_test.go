@@ -94,7 +94,7 @@ func TestSDDArchiveCheckAlreadyComposedRemovedByID(t *testing.T) {
 }
 
 // REQ-44.7 y REQ-29.9: con `RF-<DOM>-<NN>` `sdd trace` encadena RF-USU-01.
-func TestSDDTraceChainsAnRFIdentifier(t *testing.T) {
+func TestReqidRFTraceChainsAnIdentifier(t *testing.T) {
 	repo := traceRepo(t)
 	writeSDDAxiomYAML(t, repo, "sdd:\n  iso: true\n  id_pattern: \"RF-<DOM>-<NN>\"\n")
 	changeRoot := filepath.Join(repo, "openspec", "changes", "demo")
