@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/IGutierrezZ/axiom/v3/internal/pathquote"
+	"github.com/IGutierrezZ/axiom/v3/internal/reqid"
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
@@ -49,6 +51,24 @@ func (s *Service) resolve() (workspace.Location, error) {
 	return workspace.Locate(s.start)
 }
 
+// indexerFor devuelve el indexador del servicio con el patrón de identificadores del
+// workspace de loc (REQ-44.1). livingdoc es informativo y nunca falla por el patrón: si no es
+// accesible (bloque `sdd:` inválido o configuración ilegible) indexa con el patrón por
+// defecto y devuelve un aviso que nombra el error y la continuación (REQ-44.9).
+func (s *Service) indexerFor(loc workspace.Location) (*Indexer, string) {
+	pattern, err := loc.Declarations.IDPattern()
+	if err != nil {
+		master := loc.Master
+		if master == "" {
+			master = loc.WorkspaceRoot
+		}
+		warning := fmt.Sprintf("El patrón de identificadores de requisito no es accesible (%v); se indexa con el patrón por defecto %s hasta que lo corrijas con `axiom workspace validate --path %s`",
+			err, reqid.Default().Template(), pathquote.Quote(master))
+		return s.indexer.WithPattern(reqid.Default()), warning
+	}
+	return s.indexer.WithPattern(pattern), ""
+}
+
 func specsRootOf(loc workspace.Location) string {
 	return filepath.Join(loc.PlanningHome, "specs")
 }
@@ -87,11 +107,15 @@ func (s *Service) GetCatalog(ctx context.Context) (*LivingCatalog, error) {
 	if err != nil {
 		return nil, err
 	}
-	catalog, _, err := s.indexer.ScanSpecs(specsRootOf(loc))
+	indexer, patternWarning := s.indexerFor(loc)
+	catalog, _, err := indexer.ScanSpecs(specsRootOf(loc))
 	if err != nil {
 		return catalog, err
 	}
 	catalog.ProjectName = projectNameOf(loc)
+	if patternWarning != "" {
+		catalog.Warnings = append(catalog.Warnings, patternWarning)
+	}
 	if retired := loc.Declarations.BaselineRetiredErr; retired != nil {
 		catalog.Warnings = append(catalog.Warnings, retired.Error())
 	}
@@ -116,7 +140,8 @@ func (s *Service) GetSpecDetail(domain string) (*LivingSpecEntry, string, error)
 	fi, _ := os.Stat(specPath)
 	modTime := fi.ModTime()
 
-	entry, _ := s.indexer.ParseSpecContent(string(contentBytes), domain, specPath, modTime)
+	indexer, _ := s.indexerFor(loc)
+	entry, _ := indexer.ParseSpecContent(string(contentBytes), domain, specPath, modTime)
 	return entry, string(contentBytes), nil
 }
 
@@ -131,9 +156,13 @@ func (s *Service) Sync(ctx context.Context) (*SyncReport, error) {
 	if err := loc.GuardSpecsWrite(opSync); err != nil {
 		return nil, err
 	}
-	report, err := s.indexer.SyncIndexForProject(projectNameOf(loc), specsRootOf(loc), indexPathOf(loc))
+	indexer, patternWarning := s.indexerFor(loc)
+	report, err := indexer.SyncIndexForProject(projectNameOf(loc), specsRootOf(loc), indexPathOf(loc))
 	if err != nil {
 		return nil, err
+	}
+	if patternWarning != "" {
+		report.Warnings = append(report.Warnings, patternWarning)
 	}
 	if warning, ok := loc.LegacySpecsDivergence(); ok {
 		report.Warnings = append(report.Warnings, warning)

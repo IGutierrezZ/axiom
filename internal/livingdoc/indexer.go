@@ -10,20 +10,33 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/IGutierrezZ/axiom/v3/internal/reqid"
 )
 
 var (
-	titleRegex       = regexp.MustCompile(`^#\s+(.+)$`)
-	requirementRegex = regexp.MustCompile(`^###\s+Requirement:\s*(.+?)(?:\s*\((REQ-[^\)]+)\))?\s*$`)
-	scenarioRegex    = regexp.MustCompile(`^####\s+Scenario:\s*(.+)$`)
+	titleRegex    = regexp.MustCompile(`^#\s+(.+)$`)
+	scenarioRegex = regexp.MustCompile(`^####\s+Scenario:\s*(.+)$`)
 )
 
-// Indexer analiza especificaciones canónicas y compila el índice maestro.
-type Indexer struct{}
+// Indexer analiza especificaciones canónicas y compila el índice maestro. Lee el
+// identificador de un requisito con el patrón del proyecto (reqid.Pattern; el valor cero
+// es el patrón por defecto, `REQ-<n>.<m>`).
+type Indexer struct {
+	pattern reqid.Pattern
+}
 
 // NewIndexer crea una nueva instancia del indexador de documentación viva.
 func NewIndexer() *Indexer {
 	return &Indexer{}
+}
+
+// WithPattern devuelve una copia del indexador que lee los identificadores con el patrón
+// dado; el indexador original no cambia.
+func (idx *Indexer) WithPattern(p reqid.Pattern) *Indexer {
+	clone := *idx
+	clone.pattern = p
+	return &clone
 }
 
 // ScanSpecs recorre el directorio raíz de especificaciones vivas e indexa cada spec.md.
@@ -125,15 +138,16 @@ func (idx *Indexer) ParseSpecContent(content, domain, filePath string, modTime t
 			reqTitle := strings.TrimPrefix(trimmed, "### Requirement:")
 			reqTitle = strings.TrimSpace(reqTitle)
 
-			if match := requirementRegex.FindStringSubmatch(trimmed); len(match) > 1 {
-				reqTitle = strings.TrimSpace(match[1])
-				if len(match) > 2 && match[2] != "" {
-					reqID = match[2]
-				}
+			// Lectura laxa: un `(<literal inicial>…)` final se toma como identificador sin
+			// validarlo; el resto del título es el nombre.
+			if rest, candidate, ok := idx.pattern.TrailingCandidate(reqTitle); ok {
+				reqTitle, reqID = strings.TrimSpace(rest), candidate
 			}
 
 			if reqID == "" {
-				reqID = fmt.Sprintf("REQ-%s-%d", domain, len(entry.Requirements)+1)
+				// Sin identificador, el sintético queda fuera del espacio válido de cualquier
+				// patrón (REQ-44.6).
+				reqID = reqid.Synthetic(domain, len(entry.Requirements)+1)
 			}
 
 			currentReq = &RequirementMeta{
