@@ -610,4 +610,3 @@ El paquete `internal/integrations` DEBE definir dos puertos opcionales que un pl
 - **DADO** un plugin que implementa solo `Manifest` y `Deliver`
 - **CUANDO** se registra con `NewRegistry`
 - **ENTONCES** el registro lo acepta sin exigir ningún puerto opcional
-
