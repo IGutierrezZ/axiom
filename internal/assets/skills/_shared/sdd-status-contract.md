@@ -150,7 +150,7 @@ An ISO refusal is a typed reason in `blockedReasons` (or `notes`), in the form `
 | `bug_report_incomplete` | every project | specs | complete `Observado:` or `Esperado:`, or add `## Informe de bug` to `proposal.md` |
 | `bug_no_impact_incomplete` | every project | specs | add the line `Sin impacto en la spec` or a non-empty `Motivo:` to `## Impacto en la spec` |
 | `iso_declaration_invalid` | selected change with an invalid or contradictory `sdd:` | archive | `axiom workspace validate`; for the contradiction, retire `iso` or the `odd` lane |
-| `iso_requirement_id` | ISO | specs | add or fix `REQ-<n>.<m>` in the requirement name; a RENAMED entry when the requirement exists without one |
+| `iso_requirement_id` | ISO | specs | add or fix an identifier valid for the project's `sdd.id_pattern` (default `REQ-<n>.<m>`) in the requirement name; a RENAMED entry when the requirement exists without one |
 | `iso_requirement_scenarios` | ISO | specs | add a `#### Scenario:` to the requirement, or rename a repeated scenario |
 | `iso_coverage` | ISO | tasks | add `Cubre: REQ-x` to some task |
 | `iso_cubre_unknown` | ISO | tasks | fix the cited identifier or remove it |

@@ -15,7 +15,7 @@ Read the state from `axiom sdd status --cwd <repo> --json`, never from `axiom.ya
 
 ## Requirement Identifiers and Scenarios (spec phase)
 
-- Each requirement name of a delta carries exactly one `REQ-<n>.<m>`, for example `### Requirement: Cobro con IVA (REQ-30.1)`. A repeated copy of the same identifier counts as one; a malformed token such as `REQ-30` does not count.
+- Each requirement name of a delta carries exactly one valid identifier according to the project pattern (`sdd.id_pattern` of `axiom.yaml`; without it, `REQ-<n>.<m>`), for example `### Requirement: Cobro con IVA (REQ-30.1)`. A repeated copy of the same identifier counts as one; a malformed token (one that starts like the pattern and does not fit it, such as `REQ-30` with the default pattern) does not count.
 - An ADDED identifier is unique among all the ADDED requirements of the change and absent from the baseline. MODIFIED and REMOVED requirements carry the identifier of the requirement they name; for a requirement that has none, use a RENAMED entry first. A RENAMED entry carries it in the new name.
 - Every ADDED or MODIFIED requirement has at least one `#### Scenario:` outside code fences, and no scenario name repeats within a requirement. REMOVED and RENAMED requirements need none.
 
