@@ -229,7 +229,7 @@ func classify(loc workspace.Location, c CapabilityDelta) (classified, error) {
 		case !ok:
 			item.pending.Added = append(item.pending.Added, r)
 		case !same(present, r):
-			return classified{}, &DivergentRequirementError{Capability: c.Name, Requirement: r.Name, ID: r.ID, Path: item.path}
+			return classified{}, &DivergentRequirementError{Capability: c.Name, Requirement: r.Name, ID: idOf(r), Path: item.path}
 		}
 	}
 	for _, r := range c.Delta.Modified {
@@ -260,15 +260,15 @@ func checkIdentifiers(feature string, items []classified, reg *Registry) error {
 	taken := map[string]bool{}
 	for _, item := range items {
 		for _, r := range item.pending.Added {
-			if r.ID != "" {
-				taken[r.ID] = true
+			if idOf(r) != "" {
+				taken[idOf(r)] = true
 			}
 		}
 	}
 	firstSeen := map[string]string{}
 	for _, item := range items {
 		for _, r := range item.pending.Added {
-			if r.ID == "" {
+			if idOf(r) == "" {
 				return &DocError{Feature: feature, Problems: []Problem{{
 					Code:    "added_without_id",
 					Line:    item.cap.Line + r.Line,
@@ -276,17 +276,17 @@ func checkIdentifiers(feature string, items []classified, reg *Registry) error {
 					Message: fmt.Sprintf("el requisito ADDED %q de la capacidad %s no lleva un identificador `(REQ-n.m)` en el título; añade el siguiente número libre de la serie, p. ej. `### Requirement: %s (REQ-n.m)`", r.Name, item.cap.Name, r.Name),
 				}}}
 			}
-			if refs := reg.Lookup(r.ID); len(refs) > 0 {
-				return &CollisionError{ID: r.ID, Where: refs[0].Where(), NextFree: nextFree(reg, r.ID, taken)}
+			if refs := reg.Lookup(idOf(r)); len(refs) > 0 {
+				return &CollisionError{ID: idOf(r), Where: refs[0].Where(), NextFree: nextFree(reg, idOf(r), taken)}
 			}
-			if other, dup := firstSeen[r.ID]; dup {
+			if other, dup := firstSeen[idOf(r)]; dup {
 				return &CollisionError{
-					ID:       r.ID,
+					ID:       idOf(r),
 					Where:    fmt.Sprintf("el propio documento, en las capacidades %s y %s", other, item.cap.Name),
-					NextFree: nextFree(reg, r.ID, taken),
+					NextFree: nextFree(reg, idOf(r), taken),
 				}
 			}
-			firstSeen[r.ID] = item.cap.Name
+			firstSeen[idOf(r)] = item.cap.Name
 		}
 	}
 	return nil

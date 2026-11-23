@@ -1,7 +1,8 @@
 // Package openspecdoc es el paquete hoja que analiza y compone documentos OpenSpec
 // (especificaciones canónicas y deltas con ADDED, MODIFIED, REMOVED y RENAMED). Lo
 // comparten el archivado SDD (sddstatus), la integración ODD (livespec) y la adopción
-// sin que ninguno dependa de otro; no importa ningún paquete interno.
+// sin que ninguno dependa de otro; solo importa la biblioteca estándar y
+// internal/reqid, que define la forma de los identificadores de requisito.
 package openspecdoc
 
 import (
@@ -9,6 +10,8 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+
+	"github.com/IGutierrezZ/axiom/v3/internal/reqid"
 )
 
 // UnappliedDeltaError names exactly one delta requirement that
@@ -253,6 +256,23 @@ type ComposeOptions struct {
 	SupersedeRemoved bool
 	// ExplicitSuperseded lista nombres de requisitos adicionales que deben marcarse como superados.
 	ExplicitSuperseded []string
+	// IDPattern es el patrón de identificadores del proyecto con el que MODIFIED, REMOVED y el
+	// nombre antiguo de RENAMED se resuelven por identificador (REQ-30.22). El valor cero es el
+	// patrón por defecto, `REQ-<n>.<m>`.
+	IDPattern reqid.Pattern
+}
+
+// ambiguousReason es el motivo, en castellano, de un identificador que llevan varios
+// requisitos de la canónica sin que ninguno tenga el título exacto de la delta.
+func ambiguousReason(segments []specSegment, name string, p reqid.Pattern) string {
+	id := p.InTitle(name)
+	var titles []string
+	for _, s := range segments {
+		if s.IsRequirement && !reqid.IsSuperseded(s.Name) && p.InTitle(s.Name) == id {
+			titles = append(titles, fmt.Sprintf("%q", s.Name))
+		}
+	}
+	return fmt.Sprintf("el identificador %s lo llevan %d requisitos de la canónica (%s) y ninguno se llama %q; deja en la delta el título exacto de uno de ellos", id, len(titles), strings.Join(titles, ", "), name)
 }
 
 func extractReason(text string) string {
@@ -275,7 +295,7 @@ func annotateRequirementSuperseded(text, name, reason string) string {
 		}
 		replaced = true
 		note := fmt.Sprintf("\n> [!CAUTION]\n> **REQUISITO HISTÓRICO SUPERADO / DEPRECADO:** Este requisito ha sido superado o deprecado.\n> Motivo: %s\n", reason)
-		return "### Requirement: " + name + " [SUPERSEDED / DEPRECADO]" + note
+		return "### Requirement: " + name + reqid.SupersededSuffix + note
 	})
 	return ensureTrailingNewline(out)
 }
@@ -315,6 +335,27 @@ func Compose(canonical, delta string, opts ComposeOptions) (string, error) {
 		}
 		return -1
 	}
+	// resolve empareja el nombre de una delta con un requisito de la canónica por
+	// identificador, con vuelta al título exacto (REQ-30.22). Devuelve el índice del
+	// segmento y, si no hay emparejamiento, la causa para el rechazo.
+	resolve := func(section, name string) (int, *UnappliedDeltaError) {
+		var names []string
+		var at []int
+		for i, s := range segments {
+			if s.IsRequirement {
+				names = append(names, s.Name)
+				at = append(at, i)
+			}
+		}
+		k, match := opts.IDPattern.Resolve(names, name)
+		switch match {
+		case reqid.MatchFound:
+			return at[k], nil
+		case reqid.MatchAmbiguous:
+			return -1, &UnappliedDeltaError{Section: section, Requirement: name, Reason: ambiguousReason(segments, name, opts.IDPattern)}
+		}
+		return -1, &UnappliedDeltaError{Section: section, Requirement: name, Reason: fmt.Sprintf("no canonical requirement named %q", name)}
+	}
 	lastRequirementIndex := func() int {
 		last := -1
 		for i, s := range segments {
@@ -330,9 +371,10 @@ func Compose(canonical, delta string, opts ComposeOptions) (string, error) {
 		if !ok {
 			return "", &UnappliedDeltaError{Section: "RENAMED", Requirement: r.Name, Reason: `heading must state "Old Name → New Name"`}
 		}
-		i := indexOf(oldName)
-		if i == -1 {
-			return "", &UnappliedDeltaError{Section: "RENAMED", Requirement: r.Name, Reason: fmt.Sprintf("no canonical requirement named %q", oldName)}
+		i, unapplied := resolve("RENAMED", oldName)
+		if unapplied != nil {
+			unapplied.Requirement = r.Name
+			return "", unapplied
 		}
 		if !openSpecReasonNote.MatchString(r.Text) {
 			return "", &UnappliedDeltaError{Section: "RENAMED", Requirement: r.Name, Reason: `missing required "(Reason: ...)" note`}
@@ -345,11 +387,14 @@ func Compose(canonical, delta string, opts ComposeOptions) (string, error) {
 	}
 
 	for _, r := range deltaDoc.Modified {
-		i := indexOf(r.Name)
-		if i == -1 {
-			return "", &UnappliedDeltaError{Section: "MODIFIED", Requirement: r.Name, Reason: fmt.Sprintf("no canonical requirement named %q", r.Name)}
+		i, unapplied := resolve("MODIFIED", r.Name)
+		if unapplied != nil {
+			return "", unapplied
 		}
 		segments[i].Text = ensureTrailingNewline(r.Text)
+		// El segmento toma el nombre de la delta: las operaciones siguientes de la misma
+		// delta lo ven con el título nuevo (REQ-30.22).
+		segments[i].Name = r.Name
 	}
 
 	// addAnchor is "insert the next ADDED requirement right after this
@@ -363,14 +408,17 @@ func Compose(canonical, delta string, opts ComposeOptions) (string, error) {
 		if !openSpecReasonNote.MatchString(r.Text) {
 			return "", &UnappliedDeltaError{Section: "REMOVED", Requirement: r.Name, Reason: `missing required "(Reason: ...)" note`}
 		}
-		i := indexOf(r.Name)
-		if i == -1 {
-			return "", &UnappliedDeltaError{Section: "REMOVED", Requirement: r.Name, Reason: fmt.Sprintf("no canonical requirement named %q", r.Name)}
+		i, unapplied := resolve("REMOVED", r.Name)
+		if unapplied != nil {
+			return "", unapplied
 		}
 		if opts.SupersedeRemoved {
+			// La anotación usa el nombre del segmento de la canónica, que puede diferir del
+			// de la delta cuando el requisito se resolvió por identificador.
 			reason := extractReason(r.Text)
-			segments[i].Text = annotateRequirementSuperseded(segments[i].Text, r.Name, reason)
-			segments[i].Name = r.Name + " [SUPERSEDED / DEPRECADO]"
+			canonicalName := segments[i].Name
+			segments[i].Text = annotateRequirementSuperseded(segments[i].Text, canonicalName, reason)
+			segments[i].Name = canonicalName + reqid.SupersededSuffix
 			continue
 		}
 		switch {
@@ -386,7 +434,7 @@ func Compose(canonical, delta string, opts ComposeOptions) (string, error) {
 		i := indexOf(name)
 		if i != -1 {
 			segments[i].Text = annotateRequirementSuperseded(segments[i].Text, name, "Superado por consolidación de arquitectura")
-			segments[i].Name = name + " [SUPERSEDED / DEPRECADO]"
+			segments[i].Name = name + reqid.SupersededSuffix
 		}
 	}
 

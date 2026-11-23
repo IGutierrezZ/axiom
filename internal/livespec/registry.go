@@ -11,7 +11,12 @@ import (
 	"strconv"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/openspecdoc"
+	"github.com/IGutierrezZ/axiom/v3/internal/reqid"
 )
+
+// idOf es el identificador del título de un requisito con el patrón por defecto; la
+// unidad 5 lo sustituye por el patrón del proyecto.
+func idOf(r openspecdoc.Requirement) string { return reqid.Default().InTitle(r.Name) }
 
 // RefKind dice de dónde sale una referencia del registro.
 type RefKind string
@@ -76,7 +81,7 @@ func LoadRegistry(planningHome string, opts RegistryOptions) (*Registry, error) 
 			return nil, err
 		}
 		for _, r := range openspecdoc.ParseCanonical(string(data)) {
-			reg.add(IDRef{ID: r.ID, Kind: RefSpec, Capability: capability, Path: path, Requirement: r.Name})
+			reg.add(IDRef{ID: idOf(r), Kind: RefSpec, Capability: capability, Path: path, Requirement: r.Name})
 		}
 	}
 	if opts.SpecsOnly {
@@ -106,7 +111,7 @@ func LoadRegistry(planningHome string, opts RegistryOptions) (*Registry, error) 
 			delta := openspecdoc.ParseDelta(string(data))
 			for _, group := range [][]openspecdoc.Requirement{delta.Added, delta.Modified, delta.Renamed} {
 				for _, r := range group {
-					reg.add(IDRef{ID: r.ID, Kind: RefChange, Capability: capability, Change: change, Path: path, Requirement: r.Name})
+					reg.add(IDRef{ID: idOf(r), Kind: RefChange, Capability: capability, Change: change, Path: path, Requirement: r.Name})
 				}
 			}
 		}

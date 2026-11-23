@@ -5,6 +5,8 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/IGutierrezZ/axiom/v3/internal/reqid"
 )
 
 // Las pruebas de ParseFeatureDoc (REQ-30.1 y el formato de REQ-30.5). Todos los textos
@@ -76,7 +78,7 @@ func TestParseFeatureDocReadsOneDeltaPerCapability(t *testing.T) {
 		t.Fatalf("capacidades = %+v", doc.Capabilities)
 	}
 	first := doc.Capabilities[0]
-	if len(first.Delta.Added) != 1 || first.Delta.Added[0].ID != "REQ-31.1" {
+	if len(first.Delta.Added) != 1 || idOfName(first.Delta.Added[0].Name) != "REQ-31.1" {
 		t.Errorf("delta de facturacion = %+v", first.Delta)
 	}
 	if first.Text != addedDelta {
@@ -299,3 +301,7 @@ func TestDocErrorProblemsKeepTheirOrder(t *testing.T) {
 		t.Errorf("códigos = %v", codes)
 	}
 }
+
+// idOfName deriva el identificador del título con el patrón por defecto: el ID ya no es un
+// campo de openspecdoc.Requirement (REQ-44.4).
+func idOfName(name string) string { return reqid.Default().InTitle(name) }

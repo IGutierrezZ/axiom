@@ -3,6 +3,8 @@ package openspecdoc
 import (
 	"strings"
 	"testing"
+
+	"github.com/IGutierrezZ/axiom/v3/internal/reqid"
 )
 
 func TestRenderNewSpecWritesTheDocumentSkeleton(t *testing.T) {
@@ -23,7 +25,7 @@ func TestRenderNewSpecIsComposableAndItsRequirementsAreAlreadyPresent(t *testing
 	rendered := RenderNewSpec("facturacion", "mi-feature", added)
 
 	parsed := ParseCanonical(rendered)
-	if len(parsed) != 1 || parsed[0].ID != "REQ-31.1" {
+	if len(parsed) != 1 || reqid.Default().InTitle(parsed[0].Name) != "REQ-31.1" {
 		t.Fatalf("ParseCanonical(rendered) = %+v", parsed)
 	}
 	if NormalizeBody(parsed[0].Body) != NormalizeBody(added[0].Body) {

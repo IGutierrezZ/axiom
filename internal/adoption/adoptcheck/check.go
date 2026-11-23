@@ -17,8 +17,13 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/livespec"
 	"github.com/IGutierrezZ/axiom/v3/internal/openspecdoc"
 	"github.com/IGutierrezZ/axiom/v3/internal/pathquote"
+	"github.com/IGutierrezZ/axiom/v3/internal/reqid"
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
+
+// legacy es el patrón por defecto, `REQ-<n>.<m>`: `adopt check` lo mantiene aunque el
+// proyecto declare otro, hasta que C-03-c lo lea de la declaración (REQ-30.31).
+var legacy = reqid.Default()
 
 // Reglas de Check. Todas se acumulan: el informe lista cada fallo, no solo el primero.
 const (
@@ -144,7 +149,7 @@ func (c *checker) loadDeltas() error {
 				"el encabezado `%s` no es una sección de delta; un cambio de adopción solo admite `## ADDED Requirements`", heading)
 		}
 		for _, r := range delta.Added {
-			if r.ID == "" {
+			if legacy.InTitle(r.Name) == "" {
 				c.fail(RuleFormat, r.Name, "el título del requisito (%s, línea %d) no lleva un identificador `(REQ-n.m)`; añádelo al título", rel, r.Line)
 			}
 			c.added = append(c.added, addedRequirement{req: r, file: rel})
@@ -162,14 +167,14 @@ func (c *checker) checkIdentifiers() error {
 	var ids []string
 	seriesSet := map[int]bool{}
 	for _, a := range c.added {
-		if a.req.ID == "" {
+		if legacy.InTitle(a.req.Name) == "" {
 			continue
 		}
-		if len(byID[a.req.ID]) == 0 {
-			ids = append(ids, a.req.ID)
+		if len(byID[legacy.InTitle(a.req.Name)]) == 0 {
+			ids = append(ids, legacy.InTitle(a.req.Name))
 		}
-		byID[a.req.ID] = append(byID[a.req.ID], a)
-		if series, ok := livespec.SeriesOf(a.req.ID); ok {
+		byID[legacy.InTitle(a.req.Name)] = append(byID[legacy.InTitle(a.req.Name)], a)
+		if series, ok := livespec.SeriesOf(legacy.InTitle(a.req.Name)); ok {
 			seriesSet[series] = true
 		}
 	}
