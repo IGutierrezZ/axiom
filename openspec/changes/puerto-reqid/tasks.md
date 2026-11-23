@@ -134,10 +134,30 @@ Una sola PR (`single-pr`), un commit por unidad, en el orden 1 → 9. Cada commi
 
 ## Phase 10: verificación final
 
-- [ ] 10.1 `go vet ./...` sin hallazgos y `gofmt -l .` vacío.
-- [ ] 10.2 `go test` troceado por paquete, sin compilar binarios de `axiom`: `go test ./internal/reqid/... ./internal/workspace/... ./internal/openspecdoc/... ./internal/isoevidence/... ./internal/sddstatus/... ./internal/livespec/... ./internal/livingdoc/... ./internal/adoption/...`, luego `go test ./internal/cli/...`, luego `go test ./internal/assets/... ./internal/components/` y, al final, el resto (`go test ./...`). El fallo conocido de `internal/components/filemerge` en Windows se tolera y se anota; cualquier otro fallo bloquea.
-- [ ] 10.3 Reconfirmar en `main` (`git show main:openspec/specs/` con `rg 'REQ-44\.'`) que el prefijo REQ-44 sigue libre antes de archivar (riesgo de la propuesta; C-02-b y otras olas).
+- [x] 10.1 `go vet ./...` sin hallazgos y `gofmt -l .` vacío. Observado: `go vet ./...` sin salida y `gofmt -l .` vacío.
+- [ ] 10.2 (parcial; ver «Evidencia de verificación») `go test` troceado por paquete, sin compilar binarios de `axiom`: `go test ./internal/reqid/... ./internal/workspace/... ./internal/openspecdoc/... ./internal/isoevidence/... ./internal/sddstatus/... ./internal/livespec/... ./internal/livingdoc/... ./internal/adoption/...`, luego `go test ./internal/cli/...`, luego `go test ./internal/assets/... ./internal/components/` y, al final, el resto (`go test ./...`). El fallo conocido de `internal/components/filemerge` en Windows se tolera y se anota; cualquier otro fallo bloquea.
+- [x] 10.3 Reconfirmar en `main` (`git show main:openspec/specs/` con `rg 'REQ-44\.'`) que el prefijo REQ-44 sigue libre antes de archivar (riesgo de la propuesta; C-02-b y otras olas).
   Cubre: REQ-44.1, REQ-44.2, REQ-44.3, REQ-44.4, REQ-44.5, REQ-44.6, REQ-44.7, REQ-44.8, REQ-44.9
+
+## Commits registrados (rama `inc/puerto-reqid`, una PR)
+
+| Unidad | Commit | Mensaje |
+|--------|--------|---------|
+| 1 | `5ca498e6` | `feat(reqid): puerto único de identificadores de requisito con plantilla de segmentos` |
+| 2 | `9f8d3836` | `feat(workspace): clave sdd.id_pattern con decodificador estricto y lectura en vivo` |
+| 3 | `1b3fbda0` | `feat(openspecdoc): compositor por identificador con vuelta al título exacto` |
+| 4 | `14fbb45a` | `feat(isoevidence): evidencia ISO, estado, archive-check y trace con el patrón declarado` |
+| 5 | `97bdb44e` | `feat(livespec): registro, siguiente libre y composición con el patrón del proyecto` |
+| 6 | `051bc41f` | `feat(livingdoc): índice vivo con el patrón del proyecto y sintético fuera del espacio válido` |
+| 7 | `b0574af2` | `refactor(isoevidence): constante compartida del motivo de sin impacto y prueba de paridad` |
+| 8 | `4393822c` | `docs(sdd): documentar sdd.id_pattern en guías, manual y skill de archivado` |
+| 9 | `70bca4a9` | `test(reqid): extremo a extremo con RF-<DOM>-<NN> y guarda de formato de identificador` |
+
+## Evidencia de verificación
+
+- 10.1: `go vet ./...` y `gofmt -l .` limpios.
+- 10.2 (parcial): en verde `go test` de `internal/reqid`, `workspace`, `openspecdoc`, `isoevidence`, `sddstatus`, `livespec`, `livingdoc` y `adoption/...`, y `internal/assets` y `internal/components` (sin `golden mismatch`: no se tocó ningún golden). `internal/cli` completo no termina en esta máquina (más de 10 minutos y más de 60 minutos con la plantilla de EDR): se ejecutó el subconjunto que ejercita lo tocado (`-run 'Archive|SDD|Sdd|ISO|Kickoff|Compose|Integrate|Adopt|Trace|Workspace|Living|Catalog|Sync|Reqid|Index|Publish|Baseline|Governance|Impact|Bug|Gate' -skip 'Review|Correction|Committed|Lineage|Transaction|RDD|Receipt|Refut'`): `ok internal/cli 500s`, 702 pruebas de primer nivel en verde y ninguna en rojo. Fallos de `go test ./...` ajenos al cambio: `internal/components/filemerge` (conocido), `internal/app` (`TestTuiInstallOnThenSyncPreservesAndRefreshesOpenCodeActivation`, sin runtime de OpenCode), `internal/backup` (`TestSnapshotterSkipsUnixSockets`, sockets Unix en Windows) e `internal/components/mcp` (`TestInjectClaudeWorkspaceIsDiscoveredByNativeClaudeMCPList`); los tres últimos fallan igual sobre `main` (`d580368d`). `internal/reviewtransaction` agotó los 10 minutos por carga y no depende de ningún paquete tocado.
+- 10.3: `git grep -n 'REQ-44\.' main -- openspec/specs` (con `main` local en `d580368d`, sin `fetch`) no encuentra nada: el prefijo REQ-44 sigue libre.
 
 ## Pronóstico de líneas
 
