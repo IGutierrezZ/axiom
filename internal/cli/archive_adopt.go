@@ -13,6 +13,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/adoption/adoptcheck"
 	"github.com/IGutierrezZ/axiom/v3/internal/branch"
 	"github.com/IGutierrezZ/axiom/v3/internal/pathquote"
+	"github.com/IGutierrezZ/axiom/v3/internal/reqid"
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
@@ -51,7 +52,8 @@ func renderArchiveAdoptHelp(stdout io.Writer) error {
 		"        (encabezados H1–H3 con su ancla), los identificadores ajenos (RF-120…) y los candidatos a technical_context. Solo lee, es determinista",
 		"        y no exige openspec/. Con --change escribe únicamente <cambio>/adoption-inventory.yaml, solo en la rama del cambio; sin orígenes informa y sale con 0.",
 		"  check --change <cambio> [--path <ruta>] [--json]",
-		"        Verifica el cambio de adopción sin escribir ni registrar compuertas: solo ADDED, (REQ-n.m) únicos de una serie nueva, escenarios, Origen: que resuelven",
+		// `adopt check` aplica siempre el patrón por defecto hasta C-03-c (REQ-30.31).
+		fmt.Sprintf("        Verifica el cambio de adopción sin escribir ni registrar compuertas: solo ADDED, (%s) únicos de una serie nueva, escenarios, Origen: que resuelven", reqid.Default().Compact()),
 		"        y cobertura del inventario (cada unidad migrada con Origen: o descartada con motivo en `## Descartado` de adoption.md). Lista todos los fallos y sale con 1 si hay alguno.",
 		"        La fidelidad semántica de la migración la aprueba un humano en la compuerta `spec`; esta orden no la juzga.",
 		"  --path <ruta>  Directorio desde el que resolver el workspaceRoot (por defecto, el directorio actual). --cwd es un alias.",

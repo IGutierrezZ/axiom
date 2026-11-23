@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"path/filepath"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/pathquote"
 	"github.com/IGutierrezZ/axiom/v3/internal/reqid"
@@ -19,6 +20,24 @@ func projectIDPattern(command string, loc workspace.Location) (reqid.Pattern, er
 		return reqid.Pattern{}, idPatternRefusal(command, loc, err)
 	}
 	return pattern, nil
+}
+
+// composeIDPattern es el patrón de `axiom sdd-archive-compose`: el del workspace ya resuelto
+// de `--cwd` (haveLocation) o, sin él, el del workspace que contiene la delta, como
+// refuseISOCompose. Una delta fuera de cualquier workspace usa el patrón por defecto.
+func composeIDPattern(loc workspace.Location, haveLocation bool, deltaPath string) (reqid.Pattern, error) {
+	if !haveLocation {
+		absolute, err := filepath.Abs(deltaPath)
+		if err != nil {
+			return reqid.Default(), nil
+		}
+		located, err := workspace.Locate(filepath.Dir(absolute))
+		if err != nil {
+			return reqid.Default(), nil
+		}
+		loc = located
+	}
+	return projectIDPattern("sdd-archive-compose", loc)
 }
 
 // idPatternRefusal es el error de un verbo que no puede conocer el patrón: nombra la causa y

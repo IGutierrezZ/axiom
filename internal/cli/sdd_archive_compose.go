@@ -125,6 +125,14 @@ func runSDDArchiveComposeWithStderr(args []string, stdout, _ io.Writer) error {
 		return err
 	}
 
+	// REQ-44.9 y REQ-30.22: el compositor empareja por identificador con el patrón del workspace
+	// de `--cwd` o, sin él, del que contiene la delta; sin workspace rige el patrón por defecto.
+	// Con el patrón inaccesible se niega sin escribir y con la continuación de validate.
+	pattern, err := composeIDPattern(loc, strings.TrimSpace(*cwd) != "", resolve(*deltaPath))
+	if err != nil {
+		return err
+	}
+
 	canonicalBytes, err := os.ReadFile(resolve(*canonicalPath))
 	if err != nil {
 		return fmt.Errorf("read canonical spec: %w", err)
@@ -133,7 +141,7 @@ func runSDDArchiveComposeWithStderr(args []string, stdout, _ io.Writer) error {
 	if err != nil {
 		return fmt.Errorf("read delta spec: %w", err)
 	}
-	options := sddstatus.ComposeOptions{SupersedeRemoved: *supersede, ExplicitSuperseded: splitSupersededRequirements(*supersededReqs)}
+	options := sddstatus.ComposeOptions{SupersedeRemoved: *supersede, ExplicitSuperseded: splitSupersededRequirements(*supersededReqs), IDPattern: pattern}
 	native, err := sddstatus.ComposeOpenSpecCanonicalSpecWithOptions(string(canonicalBytes), string(deltaBytes), options)
 	if err != nil {
 		return err

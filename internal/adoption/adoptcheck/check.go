@@ -150,7 +150,7 @@ func (c *checker) loadDeltas() error {
 		}
 		for _, r := range delta.Added {
 			if legacy.InTitle(r.Name) == "" {
-				c.fail(RuleFormat, r.Name, "el título del requisito (%s, línea %d) no lleva un identificador `(REQ-n.m)`; añádelo al título", rel, r.Line)
+				c.fail(RuleFormat, r.Name, "el título del requisito (%s, línea %d) no lleva un identificador `(%s)`; añádelo al título", rel, r.Line, legacy.Compact())
 			}
 			c.added = append(c.added, addedRequirement{req: r, file: rel})
 		}
@@ -165,16 +165,17 @@ func (c *checker) loadDeltas() error {
 func (c *checker) checkIdentifiers() error {
 	byID := map[string][]addedRequirement{}
 	var ids []string
-	seriesSet := map[int]bool{}
+	seriesSet := map[reqid.Series]bool{}
 	for _, a := range c.added {
-		if legacy.InTitle(a.req.Name) == "" {
+		id := legacy.InTitle(a.req.Name)
+		if id == "" {
 			continue
 		}
-		if len(byID[legacy.InTitle(a.req.Name)]) == 0 {
-			ids = append(ids, legacy.InTitle(a.req.Name))
+		if len(byID[id]) == 0 {
+			ids = append(ids, id)
 		}
-		byID[legacy.InTitle(a.req.Name)] = append(byID[legacy.InTitle(a.req.Name)], a)
-		if series, ok := livespec.SeriesOf(legacy.InTitle(a.req.Name)); ok {
+		byID[id] = append(byID[id], a)
+		if series, ok := legacy.Series(id); ok {
 			seriesSet[series] = true
 		}
 	}
@@ -196,17 +197,17 @@ func (c *checker) checkIdentifiers() error {
 		}
 	}
 
-	var series []int
+	var series []reqid.Series
 	for s := range seriesSet {
 		series = append(series, s)
 	}
-	sort.Ints(series)
+	sort.Slice(series, func(i, j int) bool { return series[i].Compare(series[j]) < 0 })
 	if len(series) > 1 {
 		names := make([]string, len(series))
 		for i, s := range series {
-			names[i] = fmt.Sprint(s)
+			names[i] = s.Key()
 		}
-		c.fail(RuleSeries, "series", "el cambio mezcla las series %s; usa una única serie `REQ-n.*` nueva para todo el proyecto migrado", strings.Join(names, " y "))
+		c.fail(RuleSeries, "series", "el cambio mezcla las series %s; usa una única serie `%s` nueva para todo el proyecto migrado", strings.Join(names, " y "), legacy.SeriesCompact())
 	}
 	if len(series) > 0 {
 		specs, err := livespec.LoadRegistry(c.loc.PlanningHome, livespec.RegistryOptions{SpecsOnly: true})
@@ -226,7 +227,7 @@ func (c *checker) checkIdentifiers() error {
 				names = append(names, "la capacidad "+name)
 			}
 			sort.Strings(names)
-			c.fail(RuleSeries, fmt.Sprintf("serie %d", s), "la serie ya existe en openspec/specs/ (%s); elige un número de serie que no se use", strings.Join(names, ", "))
+			c.fail(RuleSeries, fmt.Sprintf("serie %s", s.Key()), "la serie ya existe en openspec/specs/ (%s); elige un número de serie que no se use", strings.Join(names, ", "))
 		}
 	}
 	return nil
