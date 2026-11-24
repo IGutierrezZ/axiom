@@ -160,7 +160,12 @@ func compileTemplate(template string) (*compiled, error) {
 			b := text[j]
 			if (b == '.' || b == '_' || b == '-') && !seenExtra[b] {
 				seenExtra[b] = true
-				extras.WriteString(regexp.QuoteMeta(string(b)))
+				// QuoteMeta no escapa '-': dentro de una clase formaría rangos.
+				if b == '-' {
+					extras.WriteString(`\-`)
+				} else {
+					extras.WriteString(regexp.QuoteMeta(string(b)))
+				}
 			}
 		}
 	}

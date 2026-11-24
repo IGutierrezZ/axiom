@@ -9,6 +9,8 @@ import (
 var fuzzTemplates = []string{
 	"REQ-<n>.<m>", "RF-<DOM>-<NN>", "RF-<m>", "HU-<NNN>", "A.B-<DOM>_<n>.<m>-X",
 	"REQ-<DOM>-<NNNNNN>", "R-<n>-<m>", "Z9_<m>",
+	"RF-<DOM>_<n>-<m>.V", "RF-<DOM>.<n>-<m>_V", "RF-<DOM>-<n>_<m>.V",
+	"RF-<DOM>.<n>-<m>V", "RF-<DOM>_<n>.<m>V",
 }
 
 func FuzzParse(f *testing.F) {
