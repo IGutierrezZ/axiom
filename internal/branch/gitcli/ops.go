@@ -1,8 +1,8 @@
 // Package gitcli son las operaciones tipadas de git del motor de ramas (INC-25, design
 // D-01): el adaptador de los puertos de `internal/branch` sobre gitcommon.Run, el único
 // punto que ejecuta git (REQ-25.1, G-7). Las lecturas usan una lista cerrada de
-// subcomandos (`rev-parse`, `worktree list`, `status`, `rev-list`, `ls-tree`, `cat-file blob` y
-// `merge-base --is-ancestor`) y las escrituras son solo `branch` (crear y eliminar), `worktree add`,
+// subcomandos (`rev-parse`, `worktree list`, `status`, `rev-list`, `ls-tree`, `cat-file blob`, `log`,
+// `reflog show` y `merge-base --is-ancestor`) y las escrituras son solo `branch` (crear y eliminar), `worktree add`,
 // `worktree remove` y `switch` (modo `in_place`); ninguna es remota. La única
 // operación remota es Fetch (`git fetch origin`, `ensure --fetch` y `done --fetch`, REQ-25.10):
 // el puerto no tiene ningún método que publique. La capa de árbol equivalente de `done`

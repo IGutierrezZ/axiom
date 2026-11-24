@@ -212,3 +212,19 @@ type RecordBranch struct {
 	Worktree string     `json:"worktree,omitempty"`
 	InPlace  bool       `json:"inPlace,omitempty"`
 }
+
+// RevEntry es un commit de `git rev-list --parents`: su SHA y los de sus padres (ninguno en el
+// commit raíz, más de uno en una fusión).
+type RevEntry struct {
+	SHA     string
+	Parents []string
+}
+
+// CommitPaths es un commit con las rutas que toca (`git log --name-only --no-renames`): relativas a
+// la raíz del repositorio, con «/». Un commit de fusión lleva sus padres y ninguna ruta, porque
+// git no lista los ficheros de una fusión.
+type CommitPaths struct {
+	SHA     string
+	Parents []string
+	Paths   []string
+}

@@ -29,9 +29,12 @@ type Git interface {
 	IsAncestor(ctx context.Context, dir, ancestor, descendant string) (bool, error)
 	MergeTreeEquivalent(ctx context.Context, dir, target, branch string) (equivalent, supported bool, err error)
 	AheadBehind(ctx context.Context, dir, base, branch string) (ahead, behind int, err error)
-	TreeDirs(ctx context.Context, dir, rev, relPath string) ([]string, bool, error) // dirs, exists, err
-	FileAt(ctx context.Context, dir, rev, relPath string) ([]byte, bool, error)     // contenido, exists, err
-	Fetch(ctx context.Context, dir, remote string) error                            // la única operación remota
+	TreeDirs(ctx context.Context, dir, rev, relPath string) ([]string, bool, error)                     // dirs, exists, err
+	FileAt(ctx context.Context, dir, rev, relPath string) ([]byte, bool, error)                         // contenido, exists, err
+	RevList(ctx context.Context, dir string, firstParent bool, revisions ...string) ([]RevEntry, error) // rev-list --parents [--first-parent] <revs> --
+	CommitFiles(ctx context.Context, dir string, revisions ...string) ([]CommitPaths, error)            // log -z --no-renames --name-only
+	BranchCreation(ctx context.Context, dir, name string) (sha, from string, ok bool, err error)        // reflog show, entrada más antigua
+	Fetch(ctx context.Context, dir, remote string) error                                                // la única operación remota
 }
 
 // Registry es el registro local de los planes materializados, en el git common dir

@@ -455,11 +455,14 @@ func TestReadsLaunchOnlyTheClosedListOfReadSubcommands(t *testing.T) {
 	_, _, _ = git.AheadBehind(ctx, repo, "refs/heads/main", "refs/heads/feat/x")
 	_, _, _ = git.TreeDirs(ctx, repo, "refs/heads/main", "openspec/changes")
 	_, _, _ = git.FileAt(ctx, repo, "refs/heads/main", "README.md")
+	_, _ = git.RevList(ctx, repo, true, "refs/heads/main")
+	_, _ = git.CommitFiles(ctx, repo, "refs/heads/main")
+	_, _, _, _ = git.BranchCreation(ctx, repo, "feat/x")
 
-	allowed := map[string]bool{"rev-parse": true, "worktree": true, "status": true, "rev-list": true, "ls-tree": true, "cat-file": true}
+	allowed := map[string]bool{"rev-parse": true, "worktree": true, "status": true, "rev-list": true, "ls-tree": true, "cat-file": true, "log": true, "reflog": true}
 	// FileAt lanza dos invocaciones (`ls-tree` y `cat-file blob`) cuando el fichero existe y una cuando no.
-	if len(*seen) != 9 {
-		t.Fatalf("el observador vio %d invocaciones, se esperaban 9: %v", len(*seen), *seen)
+	if len(*seen) != 12 {
+		t.Fatalf("el observador vio %d invocaciones, se esperaban 12: %v", len(*seen), *seen)
 	}
 	for _, invocation := range *seen {
 		if !allowed[invocation[1]] {
@@ -470,6 +473,9 @@ func TestReadsLaunchOnlyTheClosedListOfReadSubcommands(t *testing.T) {
 		}
 		if invocation[1] == "cat-file" && invocation[2] != "blob" {
 			t.Errorf("la lectura de ficheros solo usa `cat-file blob`: %v", invocation)
+		}
+		if invocation[1] == "reflog" && invocation[2] != "show" {
+			t.Errorf("la lectura del reflog solo usa `reflog show`: %v", invocation)
 		}
 	}
 }
