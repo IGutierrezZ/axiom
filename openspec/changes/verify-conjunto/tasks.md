@@ -66,9 +66,9 @@ Tests lentos (señalar para segundo plano): `go test ./internal/branch/engine/` 
   Cubre: REQ-28.4, REQ-28.41
 - [x] 4.2 (Unidad 7, GREEN) Crear `internal/assets/skills/sdd-verify/references/joint-verification.md` (D11); modificar `internal/assets/skills/sdd-verify/SKILL.md` (regla, fila de *Decision Gates*, entrada en *References*) y `internal/assets/skills/sdd-verify/references/report-format.md` (ronda fechada de solo añadir, sin `verdict:` ni `**Estado:**`).
   Cubre: REQ-28.4, REQ-28.41
-- [ ] 4.3 (Unidad 8, RED) Ampliar `internal/assets/independent_review_boundary_test.go` con los pasajes nuevos (vocabulario de frontera limpio) y los pines: «Four points, and only these.», `axiom branch scope`, la frase de `integration`, los tres estados (hecha, ofrecida, no verificable), no ejecutar `fetch` y no bloqueo; comprobar que las frases fijadas de `integration` de `internal/assets/assets_test.go` y `orchestrator_stop_exits_test.go` siguen intactas.
+- [x] 4.3 (Unidad 8, RED) Ampliar `internal/assets/independent_review_boundary_test.go` con los pasajes nuevos (vocabulario de frontera limpio) y los pines: «Four points, and only these.», `axiom branch scope`, la frase de `integration`, los tres estados (hecha, ofrecida, no verificable), no ejecutar `fetch` y no bloqueo; comprobar que las frases fijadas de `integration` de `internal/assets/assets_test.go` y `orchestrator_stop_exits_test.go` siguen intactas.
   Cubre: REQ-28.1, REQ-28.42, REQ-43.32
-- [ ] 4.4 (Unidad 8, GREEN) Modificar `internal/assets/skills/_shared/sdd-orchestrator-sections.md`: frase de `integration` tras la de `Commit Review` (sin reflujo de la línea 81), «Four points, and only these.» con el punto (d) y el párrafo **Joint verify.** (D12).
+- [x] 4.4 (Unidad 8, GREEN) Modificar `internal/assets/skills/_shared/sdd-orchestrator-sections.md`: frase de `integration` tras la de `Commit Review` (sin reflujo de la línea 81), «Four points, and only these.» con el punto (d) y el párrafo **Joint verify.** (D12).
   Cubre: REQ-28.1, REQ-28.42, REQ-43.32
 - [ ] 4.5 (Unidad 9) Crear `internal/sddstatus/joint_verify_nonblocking_test.go`: con y sin ronda «Verificación conjunta» en `verify-report.md`, `nextRecommended` y dependencias idénticos, sin cambios en `internal/sddstatus/governance.go`.
   Cubre: REQ-28.1, REQ-43.32

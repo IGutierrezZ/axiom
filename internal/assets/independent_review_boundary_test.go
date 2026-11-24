@@ -216,6 +216,7 @@ const (
 	gatesStopResultsPhrase         = "Each stop also presents the independent review results that exist at that moment and declares the ones that are absent, as `SDD Independent Review` describes; they never change the gate or its three exits."
 	dependencyGraphPhrase          = "The per-role verify, the judgment, and the coverage review are offered or applied as `SDD Independent Review` describes; they are not phases of this graph."
 	absentResultsPhrase            = "An independent review that did not run, did not answer, or was not clean is presented as such and never as clean."
+	gatesIntegrationJointPhrase    = "At the `integration` gate, the presentation also declares the state of the joint verify, as `SDD Independent Review` describes; it never changes the two exits of `integration` nor the merge evidence it requires."
 )
 
 const (
@@ -244,6 +245,7 @@ func TestIndependentReviewBoundaryOrchestratorPassages(t *testing.T) {
 	for _, c := range []struct{ name, phrase string }{
 		{"frase de continuous en las puertas", gatesContinuousFullstackPhrase},
 		{"frase de resultados en las paradas", gatesStopResultsPhrase},
+		{"frase de integration en las puertas", gatesIntegrationJointPhrase},
 		{"remisión del grafo de dependencias", dependencyGraphPhrase},
 	} {
 		if !strings.Contains(shared, c.phrase) {
@@ -259,6 +261,7 @@ func TestIndependentReviewBoundaryOrchestratorPassages(t *testing.T) {
 		{"SDD Independent Review", "skills/_shared/sdd-orchestrator-sections.md", section},
 		{"frase de continuous en las puertas", "skills/_shared/sdd-orchestrator-sections.md", gatesContinuousFullstackPhrase},
 		{"frase de resultados en las paradas", "skills/_shared/sdd-orchestrator-sections.md", gatesStopResultsPhrase},
+		{"frase de integration en las puertas", "skills/_shared/sdd-orchestrator-sections.md", gatesIntegrationJointPhrase},
 		{"remisión del grafo de dependencias", "skills/_shared/sdd-orchestrator-sections.md", dependencyGraphPhrase},
 	})
 
@@ -316,6 +319,7 @@ var pinnedReviewPhrases = []struct{ file, phrase string }{
 	{"skills/sdd-design/SKILL.md", coverageOwnTableRule},
 	{"skills/_shared/sdd-orchestrator-sections.md", gatesContinuousFullstackPhrase},
 	{"skills/_shared/sdd-orchestrator-sections.md", gatesStopResultsPhrase},
+	{"skills/_shared/sdd-orchestrator-sections.md", gatesIntegrationJointPhrase},
 	{"skills/_shared/sdd-orchestrator-sections.md", dependencyGraphPhrase},
 	{"claude/sdd-orchestrator-workflow.md", dependencyGraphPhrase},
 }
@@ -378,4 +382,52 @@ func TestIndependentReviewBoundaryIsNotAWholeFileSweep(t *testing.T) {
 			t.Errorf("%s: sigue nombrando RDD", file)
 		}
 	}
+}
+
+// Punto (d) de «SDD Independent Review»: la oferta de la verificación conjunta al presentar
+// `integration` (C-02-b, REQ-28.1, REQ-28.42, REQ-43.32).
+func TestIndependentReviewBoundaryJointVerifyPoint(t *testing.T) {
+	shared := MustRead("skills/_shared/sdd-orchestrator-sections.md")
+	start := strings.Index(shared, independentReviewSectionStart)
+	end := strings.Index(shared, independentReviewSectionEnd)
+	if start < 0 || end < start {
+		t.Fatal("la sección compartida SDD Independent Review no está delimitada por sus marcadores")
+	}
+	section := shared[start:end]
+
+	if strings.Contains(section, "Three points, and only these.") {
+		t.Error("la sección debe declarar cuatro puntos, no tres")
+	}
+	assertContainsAll(t, "SDD Independent Review", section, []string{
+		"**Four points, and only these.**",
+		"(d) When the `integration` gate of a `checkpointed` change is presented",
+	})
+
+	paragraph := ""
+	for _, block := range strings.Split(section, "\n\n") {
+		if strings.HasPrefix(block, "**Joint verify.**") {
+			paragraph = block
+		}
+	}
+	if paragraph == "" {
+		t.Fatal("falta el párrafo **Joint verify.** en la sección SDD Independent Review")
+	}
+	assertContainsAll(t, "Joint verify", paragraph, []string{
+		"axiom branch scope --cwd <root> --change <change> --json",
+		// Ruta exacta donde se buscan las rondas (hueco de cobertura #2).
+		"`<planningHome>/changes/<change>/verify-report.md`", "does not exist or cannot be read", "there is no round",
+		"## Verificación conjunta (AAAA-MM-DD)",
+		// Los tres estados y sus motivos.
+		"`hecha (<date of the last round>)`", "`ofrecida`", "`no verificable (<reason>)`",
+		"`branch_missing`", "`base_missing`", "`fork_point_undetermined`", "ramas pendientes de fusionar", "sin commits propios que verificar", "consulta no disponible",
+		// Sin vigencia, sin fetch, sin bloqueo.
+		"never compute whether a round is still current", "never run `fetch`", "show the `fetch` the person must authorize",
+		"Never block", "`nextRecommended`", "In `continuous` there is no gate and no offer",
+		"never launch it on your own initiative", "explicit request",
+	})
+	assertReviewBoundary(t, []reviewPassage{
+		{"punto (d)", "skills/_shared/sdd-orchestrator-sections.md", "(d) When the `integration` gate of a `checkpointed` change is presented"},
+		{"párrafo Joint verify", "skills/_shared/sdd-orchestrator-sections.md", paragraph},
+	})
+	assertNoHeadRangeScope(t, "Joint verify", paragraph)
 }
