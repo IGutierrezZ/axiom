@@ -4,10 +4,12 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/branch"
+	"github.com/IGutierrezZ/axiom/v3/internal/gitcommon"
 	"github.com/IGutierrezZ/axiom/v3/internal/pathquote"
 )
 
@@ -188,7 +190,8 @@ func TestScopeExemptsTheSpecsRepositoryAndOffersNothingToVerifyWhenItIsTheOnlyOn
 func TestScopeDeclaresABranchThatIsGoneUnverifiableWithoutFetching(t *testing.T) {
 	master, _ := scopeMultirepo(t, "repo-api", "repo-web")
 	api := filepath.Join(master, "repo-api")
-	runGit(t, api, "branch", "feat/x", "main")
+	runGit(t, api, "switch", "-q", "-c", "feat/x", "main")
+	commitFile(t, api, "a.go", "propio")
 	seen := observe(t)
 
 	result := scopeOf(t, master, "x")
@@ -206,11 +209,11 @@ func TestScopeDeclaresABranchThatIsGoneUnverifiableWithoutFetching(t *testing.T)
 		t.Errorf("continuación = %q, se esperaba %q", web.Continuation, wantFetch)
 	}
 	wantSameDirectory(t, "gitRoot de repo-web", web.GitRoot, filepath.Join(master, "repo-web"))
-	if scopeEntryOf(t, result, "repo-api").Outcome == branch.ScopeOutcomeUnverifiable {
-		t.Error("un repositorio no verificable no impide calcular el resto")
+	if api := scopeEntryOf(t, result, "repo-api"); api.Outcome != branch.ScopeOutcomeOK || len(api.Files) != 1 {
+		t.Errorf("repo-api = %+v, un repositorio no verificable no impide calcular el resto", api)
 	}
-	if result.Summary.Offer != branch.ScopeOfferUnverifiable || len(result.Summary.Pending) != 1 || result.Summary.Pending[0].Repository != "repo-web" {
-		t.Errorf("resumen = %+v, se esperaba unverifiable con repo-web pendiente", result.Summary)
+	if result.Summary.Offer != branch.ScopeOfferUnverifiable || len(result.Summary.Pending) != 2 || result.Summary.Pending[1].Repository != "repo-web" {
+		t.Errorf("resumen = %+v, se esperaba unverifiable con repo-api sin fusionar y repo-web ausente", result.Summary)
 	}
 	for _, invocation := range *seen {
 		if invocation[1] == "fetch" {
@@ -225,7 +228,11 @@ func TestScopeDeclaresABranchThatIsGoneUnverifiableWithoutFetching(t *testing.T)
 func TestScopeUsesTheDownloadedRemoteTrackingBranchAndSaysSo(t *testing.T) {
 	t.Parallel()
 	repo := scopeProject(t, "")
-	runGit(t, repo, "update-ref", "refs/remotes/origin/feat/x", "main")
+	runGit(t, repo, "switch", "-q", "-c", "feat/x", "main")
+	commitFile(t, repo, "a.go", "propio")
+	runGit(t, repo, "update-ref", "refs/remotes/origin/feat/x", "feat/x")
+	runGit(t, repo, "switch", "-q", "main")
+	runGit(t, repo, "branch", "-D", "feat/x")
 
 	result := scopeOf(t, repo, "x")
 
@@ -283,7 +290,9 @@ func TestScopeDeclaresARepositoryThatIsNotOnThisMachineUnverifiable(t *testing.T
 	t.Parallel()
 	master, specs := newMultirepo(t, map[string][]string{"api": {"repo-api"}, "web": {"repo-web"}}, "repo-api")
 	sealWithSnapshot(t, specs, "x", snapshotOf(t, master, "x", "api", "web"), "api", "web")
-	runGit(t, filepath.Join(master, "repo-api"), "branch", "feat/x", "main")
+	api := filepath.Join(master, "repo-api")
+	runGit(t, api, "switch", "-q", "-c", "feat/x", "main")
+	commitFile(t, api, "a.go", "propio")
 
 	result := scopeOf(t, master, "x")
 
@@ -323,5 +332,362 @@ func TestScopeResolvesARelativeCwdToAbsolutePaths(t *testing.T) {
 	}
 	if _, err := os.Stat(result.WorkspaceRoot); err != nil {
 		t.Errorf("workspaceRoot no existe: %v", err)
+	}
+}
+
+// ---- Unidad 4: punto de partida por primer padre, commits propios, ficheros y fusión (E1, E2) ----
+
+func commitShas(commits []branch.ScopeCommit) []string {
+	shas := make([]string, 0, len(commits))
+	for _, c := range commits {
+		shas = append(shas, c.SHA)
+	}
+	slices.Sort(shas)
+	return shas
+}
+
+func sortedShas(shas ...string) []string {
+	slices.Sort(shas)
+	return shas
+}
+
+// wantOwnScope comprueba el alcance de un repositorio calculado: los commits propios, los ficheros
+// exactos y que nada ajeno ni de la carpeta del cambio entra.
+func wantOwnScope(t *testing.T, entry branch.RepositoryScope, ownCommits []string, files []string) {
+	t.Helper()
+	if entry.Outcome != branch.ScopeOutcomeOK {
+		t.Fatalf("entrada = %+v, se esperaba el resultado ok", entry)
+	}
+	if got := commitShas(entry.Commits); !slices.Equal(got, sortedShas(ownCommits...)) {
+		t.Errorf("commits = %v, se esperaban los propios %v", got, ownCommits)
+	}
+	if !slices.Equal(entry.Files, files) {
+		t.Errorf("ficheros = %v, se esperaban exactamente %v", entry.Files, files)
+	}
+	for _, file := range entry.Files {
+		if strings.HasPrefix(file, "openspec/changes/x/") {
+			t.Errorf("la carpeta del cambio no entra en los ficheros: %s", file)
+		}
+	}
+	if entry.Range != entry.Start.SHA+".."+entry.Tip || len(entry.Revisions) < 2 || entry.Revisions[0] != entry.Tip || entry.Revisions[1] != "^"+entry.Start.SHA {
+		t.Errorf("rango %q y revisiones %v, se esperaba <inicio>..<punta> y [punta, ^inicio, …]", entry.Range, entry.Revisions)
+	}
+}
+
+// releaseWithForeignCommit es E1: `feat/x` sale de `main` (integración y base, una etapa), tiene dos
+// commits propios (el segundo toca también `openspec/changes/x/tasks.md`) y después llega a `main`
+// un commit ajeno `F` que modifica `otro.go`. Devuelve el repositorio, el punto de bifurcación, los
+// commits propios y `F`.
+func releaseWithForeignCommit(t *testing.T) (repo, fork string, own []string, foreign string) {
+	t.Helper()
+	repo = scopeProject(t, "")
+	fork = runGit(t, repo, "rev-parse", "main")
+	runGit(t, repo, "switch", "-q", "-c", "feat/x", "main")
+	commitFile(t, repo, "a.go", "propio uno")
+	own = append(own, runGit(t, repo, "rev-parse", "HEAD"))
+	writeFile(t, filepath.Join(repo, "b.go"), "propio dos\n")
+	writeFile(t, filepath.Join(repo, "openspec", "changes", "x", "tasks.md"), "tareas\n")
+	runGit(t, repo, "add", "b.go", "openspec/changes/x/tasks.md")
+	commit(t, repo, "propio dos")
+	own = append(own, runGit(t, repo, "rev-parse", "HEAD"))
+	runGit(t, repo, "switch", "-q", "main")
+	commitFile(t, repo, "otro.go", "ajeno")
+	foreign = runGit(t, repo, "rev-parse", "HEAD")
+	return repo, fork, own, foreign
+}
+
+// REQ-25.52, escenario «Commit ajeno en develop, modo release, rama sin fusionar», y REQ-25.51,
+// escenario «La orden no cambia nada»: el rango y los ficheros son solo los de la rama, sin `F`, sin
+// `otro.go` y sin la carpeta del cambio; scope no lanza nada remoto ni cambia referencias, índice ni
+// worktrees, con cambios con y sin stage y un fichero sin seguimiento que no entran en `files`.
+func TestScopeReleaseBeforeTheMergeListsOnlyTheOwnCommitsAndChangesNothing(t *testing.T) {
+	repo, fork, own, foreign := releaseWithForeignCommit(t)
+	runGit(t, repo, "switch", "-q", "feat/x")
+	writeFile(t, filepath.Join(repo, "a.go"), "modificado sin stage\n")
+	writeFile(t, filepath.Join(repo, "b.go"), "modificado con stage\n")
+	runGit(t, repo, "add", "b.go")
+	writeFile(t, filepath.Join(repo, "sin-seguimiento.go"), "no confirmado\n")
+	before := detachableState(t, repo)
+	seen := observe(t)
+
+	result := scopeOf(t, repo, "x")
+
+	wantComputed(t, result)
+	entry := scopeEntryOf(t, result, filepath.Base(repo))
+	wantOwnScope(t, entry, own, []string{"a.go", "b.go"})
+	if entry.Start.SHA != fork || entry.Start.Source != branch.ScopeStartFirstParent || entry.Tip != own[1] {
+		t.Errorf("inicio %+v y punta %s, se esperaban la bifurcación %s (first_parent) y %s", entry.Start, entry.Tip, fork, own[1])
+	}
+	if slices.Contains(commitShas(entry.Commits), foreign) || len(entry.Excluded) != 0 || len(entry.Warnings) != 0 {
+		t.Errorf("el commit ajeno %s no entra ni se excluye ni avisa: commits %v, excluidos %v, avisos %v", foreign, entry.Commits, entry.Excluded, entry.Warnings)
+	}
+	if entry.Merged == nil || *entry.Merged {
+		t.Errorf("merged = %v, se esperaba false", entry.Merged)
+	}
+	if result.Summary.Offer != branch.ScopeOfferPendingMerge || len(result.Summary.Pending) != 1 || result.Summary.Pending[0].Reason != branch.ScopeReasonNotMerged {
+		t.Errorf("resumen = %+v, se esperaba pending_merge con la rama sin fusionar", result.Summary)
+	}
+	wantNoRemoteOrWrite(t, *seen)
+	gitcommon.Observe = nil
+	if after := detachableState(t, repo); after != before {
+		t.Errorf("scope no cambia nada:\nantes:\n%s\ndespués:\n%s", before, after)
+	}
+}
+
+// REQ-25.52, escenario «Modo release, rama ya fusionada, mismo alcance» y REQ-25.54: tras fusionar
+// con un commit de fusión (o con un squash) el alcance es el mismo, sin `F`, y la rama figura
+// fusionada.
+func TestScopeReleaseAfterTheMergeKeepsTheSameScope(t *testing.T) {
+	for _, tc := range []struct {
+		name  string
+		merge func(t *testing.T, repo string)
+		by    branch.MergeLayer
+	}{
+		{"commit de fusión", func(t *testing.T, repo string) { mergeInto(t, repo, "feat/x") }, branch.LayerAncestry},
+		{"squash", func(t *testing.T, repo string) {
+			runGit(t, repo, "merge", "--squash", "feat/x")
+			commit(t, repo, "squash de x")
+			commitFile(t, repo, "posterior.go", "avanza main")
+		}, branch.LayerEquivalentTree},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if tc.by == branch.LayerEquivalentTree {
+				requireMergeTree(t)
+			}
+			repo, fork, own, foreign := releaseWithForeignCommit(t)
+			tc.merge(t, repo)
+
+			result := scopeOf(t, repo, "x")
+
+			wantComputed(t, result)
+			entry := scopeEntryOf(t, result, filepath.Base(repo))
+			wantOwnScope(t, entry, own, []string{"a.go", "b.go"})
+			if entry.Start.SHA != fork {
+				t.Errorf("inicio = %s, se esperaba la misma bifurcación %s antes y después de fusionar", entry.Start.SHA, fork)
+			}
+			if slices.Contains(commitShas(entry.Commits), foreign) || slices.Contains(entry.Files, "otro.go") {
+				t.Errorf("ni el commit ajeno ni otro.go aparecen: %v %v", entry.Commits, entry.Files)
+			}
+			if entry.Merged == nil || !*entry.Merged || entry.MergedBy != tc.by || entry.MergedByLabel == "" {
+				t.Errorf("merged = %v por %q, se esperaba true por %s", entry.Merged, entry.MergedBy, tc.by)
+			}
+			if result.Summary.Offer != branch.ScopeOfferOfferable {
+				t.Errorf("oferta = %q, se esperaba offerable", result.Summary.Offer)
+			}
+		})
+	}
+}
+
+// REQ-25.52: los commits ajenos que llegan a la rama por una fusión de la integración se excluyen
+// del rango, de los commits y de los ficheros, y se listan como excluidos.
+func TestScopeReleaseExcludesTheForeignCommitsMergedIntoTheBranch(t *testing.T) {
+	repo, _, own, foreign := releaseWithForeignCommit(t)
+	runGit(t, repo, "switch", "-q", "feat/x")
+	runGit(t, repo, "merge", "-q", "--no-ff", "-m", "integra main", "main")
+	mergeCommit := runGit(t, repo, "rev-parse", "HEAD")
+
+	result := scopeOf(t, repo, "x")
+
+	wantComputed(t, result)
+	entry := scopeEntryOf(t, result, filepath.Base(repo))
+	wantOwnScope(t, entry, append(own, mergeCommit), []string{"a.go", "b.go"})
+	if !slices.Equal(entry.Excluded, []string{foreign}) {
+		t.Errorf("excluidos = %v, se esperaba solo el ajeno %s", entry.Excluded, foreign)
+	}
+	if slices.Contains(entry.Files, "otro.go") {
+		t.Errorf("otro.go del commit ajeno no entra: %v", entry.Files)
+	}
+	for _, c := range entry.Commits {
+		if c.SHA == mergeCommit && !c.Merge {
+			t.Errorf("el commit de fusión %s debe llevar merge: true", mergeCommit)
+		}
+	}
+	if len(entry.Warnings) != 0 {
+		t.Errorf("se distinguen los ajenos: no hay aviso, y hay %v", entry.Warnings)
+	}
+}
+
+// REQ-25.52: si el punto de bifurcación no puede determinarse (historias sin relación), la entrada
+// es `unverifiable` con `fork_point_undetermined` y no presenta un rango vacío como válido.
+func TestScopeReleaseWithUnrelatedHistoriesIsForkPointUndetermined(t *testing.T) {
+	repo := scopeProject(t, "")
+	root := runGit(t, repo, "commit-tree", "-m", "raíz sin relación", runGit(t, repo, "rev-parse", "main^{tree}"))
+	runGit(t, repo, "branch", "feat/x", root)
+
+	result := scopeOf(t, repo, "x")
+
+	wantComputed(t, result)
+	entry := scopeEntryOf(t, result, filepath.Base(repo))
+	if entry.Outcome != branch.ScopeOutcomeUnverifiable || entry.Reason != branch.ScopeReasonForkPointUndetermined || entry.Range != "" || len(entry.Commits) != 0 {
+		t.Errorf("entrada = %+v, se esperaba unverifiable con fork_point_undetermined y sin rango", entry)
+	}
+	if result.Summary.Offer != branch.ScopeOfferUnverifiable {
+		t.Errorf("oferta = %q, se esperaba unverifiable", result.Summary.Offer)
+	}
+}
+
+// REQ-25.53: un commit propio vacío (o de fusión, sin ficheros) cuenta como commit propio: la entrada
+// se decide por los commits, no por la lista de ficheros. Solo es `empty` cuando todos los commits
+// propios tocan únicamente la carpeta del cambio.
+func TestScopeReleaseDecidesTheOutcomeByOwnCommitsAndNotByFiles(t *testing.T) {
+	t.Run("un commit vacío es propio y la entrada es ok con ficheros vacíos", func(t *testing.T) {
+		repo := scopeProject(t, "")
+		runGit(t, repo, "switch", "-q", "-c", "feat/x", "main")
+		commit(t, repo, "commit vacío")
+		empty := runGit(t, repo, "rev-parse", "HEAD")
+
+		result := scopeOf(t, repo, "x")
+
+		wantComputed(t, result)
+		entry := scopeEntryOf(t, result, filepath.Base(repo))
+		if entry.Outcome != branch.ScopeOutcomeOK || !slices.Equal(commitShas(entry.Commits), []string{empty}) || len(entry.Files) != 0 {
+			t.Errorf("entrada = %+v, se esperaba ok con el commit vacío y sin ficheros", entry)
+		}
+	})
+	t.Run("todos los commits tocan solo la carpeta del cambio: empty", func(t *testing.T) {
+		repo := scopeProject(t, "")
+		runGit(t, repo, "switch", "-q", "-c", "feat/x", "main")
+		commitFile(t, repo, "openspec/changes/x/tasks.md", "tareas")
+
+		result := scopeOf(t, repo, "x")
+
+		wantComputed(t, result)
+		entry := scopeEntryOf(t, result, filepath.Base(repo))
+		if entry.Outcome != branch.ScopeOutcomeEmpty || entry.Range != "" || len(entry.Commits) != 0 || len(entry.Files) != 0 || entry.Merged != nil {
+			t.Errorf("entrada = %+v, se esperaba empty sin rango, commits, ficheros ni fusión", entry)
+		}
+		if result.Summary.Offer != branch.ScopeOfferNothingToVerify {
+			t.Errorf("oferta = %q, se esperaba nothing_to_verify", result.Summary.Offer)
+		}
+	})
+}
+
+// twoStageScope es E2: monorepo de dos etapas (`master` y `develop`, modo `branch` por defecto) con
+// el kickoff de `x` sellado. `feat/x` sale de `master` con dos commits propios y a `develop` llega
+// después un commit ajeno `F` que modifica `otro.go`.
+func twoStageScope(t *testing.T) (repo string, own []string, foreign string) {
+	t.Helper()
+	repo, _, _ = twoStageProject(t, "")
+	sealWithSnapshot(t, repo, "x", snapshotOf(t, repo, "x", "core"), "core")
+	runGit(t, repo, "switch", "-q", "-c", "feat/x", "master")
+	commitFile(t, repo, "a.go", "propio uno")
+	own = append(own, runGit(t, repo, "rev-parse", "HEAD"))
+	commitFile(t, repo, "b.go", "propio dos")
+	own = append(own, runGit(t, repo, "rev-parse", "HEAD"))
+	runGit(t, repo, "switch", "-q", "develop")
+	commitFile(t, repo, "otro.go", "ajeno")
+	foreign = runGit(t, repo, "rev-parse", "HEAD")
+	return repo, own, foreign
+}
+
+// REQ-25.52 y REQ-25.54, modo `branch`: la rama fusionada en `develop` se mide frente a `master`
+// (solo sus commits propios) y figura fusionada en la integración, no en la rama principal.
+func TestScopeBranchMergedIntoTheIntegrationHasOnlyTheOwnCommits(t *testing.T) {
+	repo, own, foreign := twoStageScope(t)
+	mergeInto(t, repo, "feat/x")
+
+	result := scopeOf(t, repo, "x")
+
+	wantComputed(t, result)
+	entry := scopeEntryOf(t, result, filepath.Base(repo))
+	wantOwnScope(t, entry, own, []string{"a.go", "b.go"})
+	if slices.Contains(commitShas(entry.Commits), foreign) || len(entry.Excluded) != 0 || len(entry.Warnings) != 0 {
+		t.Errorf("commits %v, excluidos %v, avisos %v; el ajeno %s no entra", entry.Commits, entry.Excluded, entry.Warnings, foreign)
+	}
+	if entry.Merged == nil || !*entry.Merged || entry.MergedBy != branch.LayerAncestry {
+		t.Errorf("merged = %v por %q, se esperaba true por ascendencia", entry.Merged, entry.MergedBy)
+	}
+	if entry.Base == nil || entry.Base.Name != "master" || entry.Integration == nil || entry.Integration.Name != "develop" {
+		t.Errorf("base %+v e integración %+v, se esperaban master y develop", entry.Base, entry.Integration)
+	}
+	if result.Summary.Offer != branch.ScopeOfferOfferable {
+		t.Errorf("oferta = %q, se esperaba offerable", result.Summary.Offer)
+	}
+}
+
+// REQ-25.52, modo `branch`: con `develop` fusionada dentro de la rama, los commits de `develop` se
+// excluyen del alcance y se listan como excluidos.
+func TestScopeBranchExcludesTheIntegrationCommitsMergedIntoTheBranch(t *testing.T) {
+	repo, own, foreign := twoStageScope(t)
+	integration := runGit(t, repo, "rev-parse", "develop~1") // el commit «integración» de develop
+	runGit(t, repo, "switch", "-q", "feat/x")
+	runGit(t, repo, "merge", "-q", "--no-ff", "-m", "integra develop", "develop")
+	mergeCommit := runGit(t, repo, "rev-parse", "HEAD")
+
+	result := scopeOf(t, repo, "x")
+
+	wantComputed(t, result)
+	entry := scopeEntryOf(t, result, filepath.Base(repo))
+	wantOwnScope(t, entry, append(own, mergeCommit), []string{"a.go", "b.go"})
+	if !slices.Equal(sortedShas(entry.Excluded...), sortedShas(foreign, integration)) {
+		t.Errorf("excluidos = %v, se esperaban los de develop %s y %s", entry.Excluded, foreign, integration)
+	}
+	if slices.Contains(entry.Files, "otro.go") || len(entry.Warnings) != 0 {
+		t.Errorf("otro.go no entra y no hay aviso: ficheros %v, avisos %v", entry.Files, entry.Warnings)
+	}
+	if len(entry.Revisions) != 3 || entry.Revisions[2] != "^"+runGit(t, repo, "rev-parse", "develop") {
+		t.Errorf("revisiones = %v, se esperaba [punta, ^inicio, ^integración]", entry.Revisions)
+	}
+}
+
+// REQ-25.52, escenario «Commits ajenos no distinguibles se avisan»: si `develop` entra en la rama por
+// avance rápido, sus commits no se distinguen de los propios: el alcance es el rango disponible y la
+// entrada lleva `foreign_commits_possible`.
+func TestScopeBranchWarnsWhenTheIntegrationEntersTheBranchByFastForward(t *testing.T) {
+	repo, _, foreign := twoStageScope(t)
+	runGit(t, repo, "switch", "-q", "feat/x")
+	runGit(t, repo, "reset", "-q", "--hard", "master")
+	runGit(t, repo, "merge", "-q", "--ff-only", "develop")
+	commitFile(t, repo, "c.go", "propio tras avanzar")
+	own := runGit(t, repo, "rev-parse", "HEAD")
+
+	result := scopeOf(t, repo, "x")
+
+	wantComputed(t, result)
+	entry := scopeEntryOf(t, result, filepath.Base(repo))
+	if !slices.Equal(entry.Warnings, []string{branch.ScopeWarningForeignCommitsPossible}) || len(entry.Excluded) != 0 {
+		t.Fatalf("avisos %v y excluidos %v, se esperaba solo foreign_commits_possible", entry.Warnings, entry.Excluded)
+	}
+	if !slices.Contains(commitShas(entry.Commits), own) || !slices.Contains(commitShas(entry.Commits), foreign) {
+		t.Errorf("commits = %v, se esperaba el rango disponible (con el propio %s y el ajeno posible %s)", entry.Commits, own, foreign)
+	}
+}
+
+// REQ-25.52: la rama que entra en `develop` por avance rápido no tiene ajenos que no se distingan:
+// `develop` apunta a la punta de la rama y no hay aviso.
+func TestScopeBranchFastForwardedIntoTheIntegrationDoesNotWarn(t *testing.T) {
+	repo, _, _ := twoStageProject(t, "")
+	sealWithSnapshot(t, repo, "x", snapshotOf(t, repo, "x", "core"), "core")
+	runGit(t, repo, "switch", "-q", "-c", "feat/x", "master")
+	commitFile(t, repo, "a.go", "propio uno")
+	own := runGit(t, repo, "rev-parse", "HEAD")
+	runGit(t, repo, "branch", "-f", "develop", "feat/x")
+
+	result := scopeOf(t, repo, "x")
+
+	wantComputed(t, result)
+	entry := scopeEntryOf(t, result, filepath.Base(repo))
+	wantOwnScope(t, entry, []string{own}, []string{"a.go"})
+	if len(entry.Warnings) != 0 || len(entry.Excluded) != 0 {
+		t.Errorf("avisos %v y excluidos %v, no debía haber ninguno: develop es la propia rama", entry.Warnings, entry.Excluded)
+	}
+	if entry.Merged == nil || !*entry.Merged {
+		t.Errorf("merged = %v, se esperaba true: develop contiene la rama", entry.Merged)
+	}
+}
+
+// REQ-25.53, escenario «Rama sin commits propios», modo `branch`: una rama recién creada desde
+// `master` es `empty`.
+func TestScopeBranchWithoutOwnCommitsIsEmpty(t *testing.T) {
+	repo, _, _ := twoStageProject(t, "")
+	sealWithSnapshot(t, repo, "x", snapshotOf(t, repo, "x", "core"), "core")
+	runGit(t, repo, "branch", "feat/x", "master")
+
+	result := scopeOf(t, repo, "x")
+
+	wantComputed(t, result)
+	entry := scopeEntryOf(t, result, filepath.Base(repo))
+	if entry.Outcome != branch.ScopeOutcomeEmpty || entry.Range != "" || len(entry.Commits) != 0 {
+		t.Errorf("entrada = %+v, se esperaba empty y no ok con un rango vacío", entry)
 	}
 }

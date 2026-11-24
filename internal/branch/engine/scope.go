@@ -4,10 +4,13 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/branch"
+	"github.com/IGutierrezZ/axiom/v3/internal/pathidentity"
 	"github.com/IGutierrezZ/axiom/v3/internal/pathquote"
 )
 
@@ -151,10 +154,196 @@ func (e *Engine) scopeRepository(ctx context.Context, operation, cwd string, fac
 	}
 	entry.Integration = integration.scopeRef(repo.IntegrationBranch)
 
-	// El cálculo de los commits propios y los ficheros llega con la siguiente unidad: mientras tanto
-	// la rama resuelta no aporta nada.
-	entry.SetOutcome(branch.ScopeOutcomeEmpty)
+	if refusal := e.scopeCommits(ctx, operation, cwd, facts, repo, change, &entry, base, integration, tipRef); refusal != nil {
+		return entry, refusal
+	}
 	return entry, nil
+}
+
+// scopeCommits fija el punto de partida estable, los commits propios, los excluidos, los ficheros y
+// la fusión en la integración de una rama ya resuelta (D5, D7, D8) y deja en la entrada el
+// resultado: `ok`, `empty` o `unverifiable` con `fork_point_undetermined`.
+func (e *Engine) scopeCommits(ctx context.Context, operation, cwd string, facts changeFacts, repo branch.RepoPlan, change string, entry *branch.RepositoryScope, base baseReference, integration, tip scopeReference) *branch.Refusal {
+	root := repo.GitRoot
+	failed := func(what string, err error) *branch.Refusal {
+		return gitRefusal(operation, cwd, what+" de "+root, err)
+	}
+	undetermined := func(reason string) {
+		entry.SetUnverifiable(branch.ScopeReasonForkPointUndetermined, reason, "", nil)
+	}
+	empty := func(start *branch.ScopeStart) {
+		entry.Start = start
+		entry.SetOutcome(branch.ScopeOutcomeEmpty)
+	}
+
+	fB, determined, err := e.firstParentFork(ctx, root, base.sha, tip.sha)
+	if err != nil {
+		return failed("calcular el punto de bifurcación", err)
+	}
+	if !determined {
+		undetermined(fmt.Sprintf("no se puede fijar el punto de bifurcación de %s respecto de %s: no tienen historia común (¿clon superficial o historias sin relación?)", tip.shown, base.ref))
+		return nil
+	}
+	sameBase := repo.BaseRef == "" && repo.Base() == repo.IntegrationBranch
+	start := fB
+	startSource := branch.ScopeStartFirstParent
+	if fB == tip.sha {
+		if !sameBase {
+			empty(branch.NewScopeStart(fB, startSource))
+			return nil
+		}
+		// Avance rápido o rama recién creada en una sola etapa: el reflog de la rama (D6), que llega
+		// con la unidad siguiente. Mientras tanto el punto de partida no puede fijarse.
+		undetermined(fmt.Sprintf("la rama %s coincide con el punto de bifurcación: no se puede distinguir una rama sin commits de una fusionada por avance rápido", tip.shown))
+		return nil
+	}
+
+	revisions := []string{tip.sha, "^" + start}
+	var excluded, warnings []string
+	if sameBase {
+		// La integración que entró en la rama no es del cambio: los commits que van de la bifurcación
+		// original a `fB` se excluyen (D5, columna izquierda).
+		chain, err := e.git.RevList(ctx, root, true, tip.sha, "^"+fB)
+		if err != nil {
+			return failed("leer la cadena de primeros padres", err)
+		}
+		if len(chain) > 0 {
+			oldest := chain[len(chain)-1]
+			if len(oldest.Parents) > 0 && oldest.Parents[0] != fB {
+				if excluded, err = e.revListShas(ctx, root, fB, "^"+oldest.Parents[0]); err != nil {
+					return failed("listar los commits excluidos", err)
+				}
+			}
+		}
+	} else {
+		fI, determinedIntegration, err := e.firstParentFork(ctx, root, integration.sha, tip.sha)
+		if err != nil {
+			return failed("calcular el punto de bifurcación de la integración", err)
+		}
+		if !determinedIntegration {
+			undetermined(fmt.Sprintf("no se puede fijar el punto de bifurcación de %s respecto de %s: no tienen historia común", tip.shown, integration.shown))
+			return nil
+		}
+		chain, err := e.git.RevList(ctx, root, true, tip.sha, "^"+fB)
+		if err != nil {
+			return failed("leer la cadena de primeros padres", err)
+		}
+		onChain := fI != fB && slices.ContainsFunc(chain, func(entry branch.RevEntry) bool { return entry.SHA == fI })
+		switch {
+		case onChain:
+			// La integración entró en la rama por avance rápido (o la rama entró así en la
+			// integración): sus commits no se distinguen de los propios. Si `fI` es la propia punta
+			// la rama es la integración y no hay nada ajeno que temer.
+			if fI != tip.sha {
+				warnings = append(warnings, branch.ScopeWarningForeignCommitsPossible)
+			}
+		default:
+			if fI != fB {
+				revisions = append(revisions, "^"+fI)
+			}
+			if excluded, err = e.revListShas(ctx, root, fI, "^"+fB); err != nil {
+				return failed("listar los commits excluidos", err)
+			}
+		}
+	}
+
+	commits, err := e.git.CommitFiles(ctx, root, revisions...)
+	if err != nil {
+		return failed("leer los commits propios", err)
+	}
+	prefix := changeFolderPrefix(facts, repo, change)
+	files, own, relevant := ownFiles(commits, prefix)
+	entry.Start = branch.NewScopeStart(start, startSource)
+	if !relevant {
+		// Sin commits propios, o todos tocan solo la carpeta del cambio (REQ-25.53).
+		entry.SetOutcome(branch.ScopeOutcomeEmpty)
+		return nil
+	}
+	entry.SetOutcome(branch.ScopeOutcomeOK)
+	entry.Range, entry.Revisions = start+".."+tip.sha, revisions
+	entry.Commits, entry.Excluded, entry.Files, entry.Warnings = own, excluded, files, warnings
+
+	_, evidence, _, err := e.mergeLayers(ctx, root, tip.full, integrationReferences(repo.IntegrationBranch))
+	if err != nil {
+		return failed("comprobar si la rama "+tip.shown+" está fusionada en "+repo.IntegrationBranch, err)
+	}
+	switch {
+	case evidence.Ancestry:
+		entry.SetMerged(true, branch.LayerAncestry)
+	case evidence.TreeLayerSupported && evidence.TreeEquivalent:
+		entry.SetMerged(true, branch.LayerEquivalentTree)
+	default:
+		entry.SetMerged(false, "")
+	}
+	return nil
+}
+
+// firstParentFork es el commit de la cadena de primeros padres de ref más reciente que ya contiene
+// tip (D5): no se mueve al fusionar tip en ref, con commit de fusión ni con squash, porque la fusión
+// y todo commit ajeno posterior a la bifurcación quedan fuera de esa cadena. Si ref ya está contenido
+// en tip, es el propio ref. determined es falso cuando la cadena acaba en un commit sin padre
+// (historias sin relación o clon superficial).
+func (e *Engine) firstParentFork(ctx context.Context, dir, ref, tip string) (sha string, determined bool, err error) {
+	entries, err := e.git.RevList(ctx, dir, true, ref, "^"+tip)
+	if err != nil {
+		return "", false, err
+	}
+	if len(entries) == 0 {
+		return ref, true, nil
+	}
+	oldest := entries[len(entries)-1]
+	if len(oldest.Parents) == 0 {
+		return "", false, nil
+	}
+	return oldest.Parents[0], true, nil
+}
+
+// revListShas son los SHAs de `git rev-list <revisiones>`, del más reciente al más antiguo.
+func (e *Engine) revListShas(ctx context.Context, dir string, revisions ...string) ([]string, error) {
+	entries, err := e.git.RevList(ctx, dir, false, revisions...)
+	if err != nil {
+		return nil, err
+	}
+	shas := make([]string, 0, len(entries))
+	for _, entry := range entries {
+		shas = append(shas, entry.SHA)
+	}
+	return shas, nil
+}
+
+// changeFolderPrefix es la carpeta del cambio (`<WorkspaceRel>/openspec/changes/<cambio>/`) en el
+// repositorio del planning home, cuyos ficheros no entran en el alcance; vacía en los demás
+// repositorios, que no la tienen (D7).
+func changeFolderPrefix(facts changeFacts, repo branch.RepoPlan, change string) string {
+	if !pathidentity.SameDirectory(repo.GitRoot, facts.input.PlanningRepo.GitRoot) {
+		return ""
+	}
+	return path.Join(facts.input.WorkspaceRel, "openspec", "changes", change) + "/"
+}
+
+// ownFiles reúne los commits propios y la unión ordenada y sin repetidos de sus rutas, sin las de
+// prefix. relevant dice si hay algún commit propio que aporte algo: el resultado se decide por los
+// commits y no por la lista de ficheros (un commit vacío o de fusión no lista ficheros y cuenta); no
+// es relevante el commit que toca únicamente la carpeta del cambio.
+func ownFiles(commits []branch.CommitPaths, prefix string) (files []string, own []branch.ScopeCommit, relevant bool) {
+	seen := map[string]bool{}
+	for _, commit := range commits {
+		own = append(own, branch.ScopeCommit{SHA: commit.SHA, Merge: len(commit.Parents) > 1})
+		outside := len(commit.Paths) == 0 || len(commit.Parents) > 1
+		for _, file := range commit.Paths {
+			if prefix != "" && strings.HasPrefix(file, prefix) {
+				continue
+			}
+			outside = true
+			if !seen[file] {
+				seen[file] = true
+				files = append(files, file)
+			}
+		}
+		relevant = relevant || outside
+	}
+	slices.Sort(files)
+	return files, own, relevant
 }
 
 // scopeReference es una referencia resuelta del alcance: la completa, de dónde sale y el commit.
