@@ -55,3 +55,18 @@ No se ejecutó la suite completa de `internal/cli` ni `go test ./...` (cuelgue y
 Implementación completa y conforme a los tres deltas; todas las comprobaciones solicitadas pasan. Siguiente paso recomendado: `sdd-archive`.
 
 **Estado:** limpio
+
+## Juicio (judgment-day) — 2026-11-24
+
+Objetivo: `origin/main...4b442e81`, rol `fullstack`. Dos jueces ciegos (A y B), una ronda, sin correcciones.
+
+| Estado | Recuento | Detalle |
+|---|---|---|
+| Confirmados graves | 0 | — |
+| Sospechosos | 0 | — |
+| Contradicciones | 0 | — |
+| Informativos | 1 | A (SUGGESTION): `internal/branch/engine/scope.go:88-98` — el repositorio ausente se declara siempre con rol `code` y nombre `filepath.Base(path)`; dos rutas con el mismo nombre base serían ambiguas. |
+
+Limitación declarada por ambos jueces: leyeron los ficheros del worktree en `4b442e81` (árbol limpio) sin ejecutar git.
+
+JUDGMENT: APPROVED ✅
