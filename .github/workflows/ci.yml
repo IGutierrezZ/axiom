@@ -88,11 +88,12 @@ jobs:
   # nunca debe dejar Windows sin ejecutar en silencio.
   #
   # Decide también `artifacts_only`: `true` solo en un PR cuyos ficheros están
-  # todos bajo `odd/` u `openspec/` (documentos ODD, cambios SDD, sus archivados
-  # y la spec viva que actualiza el archivado). Entonces se omiten las pruebas,
-  # para que corregir un estado olvidado no espere a la suite completa. Ninguna
-  # prueba lee `odd/`, y las que leen el `openspec/` real dependen de cambios
-  # archivados hace tiempo. El push a `main` nunca es `true`: tras fusionar
+  # todos bajo `odd/`, `openspec/` o `docs/plan/` (documentos ODD, cambios SDD,
+  # sus archivados, la spec viva que actualiza el archivado y el plan maestro).
+  # Entonces se omiten las pruebas, para que corregir un estado olvidado no
+  # espere a la suite completa. Ninguna prueba lee `odd/` ni `docs/plan/`, y las
+  # que leen el `openspec/` real dependen de cambios archivados hace tiempo. El
+  # resto de `docs/` no entra: hay pruebas que leen documentación real. El push a `main` nunca es `true`: tras fusionar
   # corre la suite completa. Ante cualquier duda (diff roto, PR vacío, etiqueta
   # `ci:windows`, que exige go-format) el resultado es `false`.
   changes:
@@ -140,10 +141,11 @@ jobs:
           }
 
           # Un artefacto de planificación: documentos ODD y cambios SDD, activos
-          # o archivados, más la spec viva que actualiza el archivado.
+          # o archivados, la spec viva que actualiza el archivado y el plan
+          # maestro del backlog.
           is_planning_artifact() {
             case "$1" in
-              odd/* | openspec/*) return 0 ;;
+              odd/* | openspec/* | docs/plan/*) return 0 ;;
             esac
             return 1
           }
