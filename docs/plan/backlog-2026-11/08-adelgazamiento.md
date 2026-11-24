@@ -368,6 +368,10 @@ En conjunto, en torno a un tercio del Go del repositorio.
     - `deadcode-ratchet`.
     - Lo que quede de `bench` según P21.
   - (Análisis) Se mantiene un job agregador con el nombre del check obligatorio, para no tocar la protección de rama.
+  - (Usuario, 2026-11-24) Anotar aquí que el atajo de PR solo de planificación también cubra `docs/plan/`.
+    - Hoy `is_planning_artifact` (`ci.yml:144-149`) solo acepta `odd/*` y `openspec/*`, así que una PR del plan maestro lanza la suite completa (por ejemplo, #295).
+    - Ningún test lee `docs/plan/`: la única coincidencia, `internal/cli/review_runtime_budget_test.go:190`, es un nombre de fixture.
+    - El resto de `docs/` no entra en el atajo, porque hay tests que leen documentación real (por ejemplo, `workspace/docs_contract_test.go`).
   - (Análisis) Se rebalancea `windows-full-suite.yml`. Hoy 6 de 10 shards son de `cli` y 3 de `reviewtransaction`.
   - (Análisis) `TestWindowsFullSuiteShardsCoverEveryTestName` se conserva o se sustituye según cómo se valide la nueva partición. Lo decide la sesión.
 - **Fuera de alcance.** Los jobs que solo se lanzan a mano (`darwin-runtime`, `organic-runtime-e2e`, `e2e-tests`).
@@ -378,6 +382,8 @@ En conjunto, en torno a un tercio del Go del repositorio.
 - **Criterio de terminado.**
   - Tiempo de pared de la CI de una PR, antes y después, registrado en el documento ODD.
   - El check obligatorio conserva el nombre y falla si falla cualquier job hijo.
+  - Una PR cuyos ficheros están todos bajo `odd/`, `openspec/` o `docs/plan/` da `artifacts_only=true` y se salta los tests.
+  - Una PR que toca cualquier otra ruta de `docs/` sigue lanzando la suite completa.
   - Lista de pasos antes y después sin pérdidas no justificadas.
 - **Riesgos y avisos.** Si cambia el nombre del check requerido, se rompe la protección de rama.
 
