@@ -52,9 +52,3 @@ func TestResolve(t *testing.T) {
 		t.Errorf("el patrón cero debe ser el defecto: %d, %v", idx, got)
 	}
 }
-
-func TestIsSuperseded(t *testing.T) {
-	if !IsSuperseded("Alta (REQ-1.1)"+SupersededSuffix) || IsSuperseded("Alta (REQ-1.1)") {
-		t.Error("IsSuperseded no distingue el sufijo")
-	}
-}

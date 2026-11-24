@@ -15,9 +15,6 @@ const (
 // superado o deprecado.
 const SupersededSuffix = reqid.SupersededSuffix
 
-// IsSuperseded dice si el nombre de un requisito lleva la marca de superado.
-func IsSuperseded(name string) bool { return reqid.IsSuperseded(name) }
-
 // Resolve devuelve el índice, en names (la canónica en orden), del requisito al que se
 // refiere el nombre de una delta (REQ-30.22): por identificador cuando el nombre lleva
 // uno válido para p, con vuelta al título exacto ante varios con el mismo identificador,

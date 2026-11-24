@@ -43,7 +43,7 @@ func TestComposeCorpusIdentityModified(t *testing.T) {
 			idx, match := Resolve(names, s.Name, p)
 			if match == MatchNone {
 				t.Errorf("%s: Resolve no encuentra %q", domain, s.Name)
-			} else if match == MatchFound && names[idx] != s.Name && !IsSuperseded(names[idx]) && p.InTitle(names[idx]) != p.InTitle(s.Name) {
+			} else if match == MatchFound && names[idx] != s.Name && !reqid.IsSuperseded(names[idx]) && p.InTitle(names[idx]) != p.InTitle(s.Name) {
 				t.Errorf("%s: Resolve(%q) devolvió %q", domain, s.Name, names[idx])
 			}
 			k++
