@@ -134,22 +134,47 @@ func (p Pattern) TrailingCandidate(title string) (rest, id string, ok bool) {
 	return strings.TrimSpace(title), "", false
 }
 
-// Series devuelve la serie del identificador (el ID sin su número).
+// Series devuelve la serie del identificador (el ID sin su número). Cada `<n>` se
+// identifica por su valor entero, como hacía `strconv.Atoi` con el patrón por defecto:
+// `REQ-09.1` y `REQ-9.2` son la serie `REQ-9.*`, y un `<n>` que desborda int no forma
+// serie. `<DOM>` se conserva tal cual.
 func (p Pattern) Series(id string) (Series, bool) {
 	loc, ok := p.match(id)
 	if !ok {
 		return Series{}, false
 	}
 	c := p.get()
-	g := c.groupOf[c.numSeg]
+	var canon strings.Builder
 	var key []string
+	last, numStart, numEnd := 0, 0, 0
 	for i, s := range c.segs {
-		if s.kind == segDomain || s.kind == segSeries {
-			gi := c.groupOf[i]
-			key = append(key, id[loc[2*gi]:loc[2*gi+1]])
+		if i != c.numSeg && s.kind != segDomain && s.kind != segSeries {
+			continue
 		}
+		gi := c.groupOf[i]
+		start, end := loc[2*gi], loc[2*gi+1]
+		canon.WriteString(id[last:start])
+		last = end
+		value := id[start:end]
+		switch {
+		case i == c.numSeg:
+			numStart = canon.Len()
+			canon.WriteString(value)
+			numEnd = canon.Len()
+			continue
+		case s.kind == segSeries:
+			n, err := strconv.Atoi(value)
+			if err != nil {
+				return Series{}, false
+			}
+			value = strconv.Itoa(n)
+		}
+		key = append(key, value)
+		canon.WriteString(value)
 	}
-	return Series{prefix: id[:loc[2*g]], suffix: id[loc[2*g+1]:], key: strings.Join(key, "-")}, true
+	canon.WriteString(id[last:])
+	text := canon.String()
+	return Series{prefix: text[:numStart], suffix: text[numEnd:], key: strings.Join(key, "-")}, true
 }
 
 // Number devuelve el valor entero del segmento de número del identificador.

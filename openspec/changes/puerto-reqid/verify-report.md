@@ -14,7 +14,7 @@ Contexto histórico: el informe anterior (2026-11-23) salió «no limpio» con W
 Veredicto: APPROVED (ronda 1; el re-juicio del fix fue aprobado por ambos jueces).
 
 - **JD-1 (confirmado por ambos jueces, corregido en `2a5888f8`).** La clase de candidatos de la plantilla incluía `-` sin escapar (`regexp.QuoteMeta` no lo escapa): `Parse("RF-<DOM>_<n>-<m>.V")` provocaba pánico y `RF-<DOM>.<n>-<m>_V` formaba un rango 0x2E-0x5F. Verificado: `internal/reqid/template.go:160-170` emite `\-` explícito; `separators_test.go` cubre cinco órdenes de separadores y `fuzz_test.go` añade semillas. Conforme con REQ-44.3 (gramática) y REQ-44.5 (candidato frente a válido) y con D-01 (puerto único); sin cambio de comportamiento con el patrón por defecto.
-- **Informativo (i), confirmado por ambos, WARNING, no corregido.** Con el patrón por defecto la serie es el texto del prefijo, de modo que `REQ-09.1` y `REQ-9.2` son series distintas (antes ambas serie 9 por `Atoi`); afecta a `NextFree`, `adopt check` y `SeriesRefs` (`internal/reqid/series.go:7`, `reqid.go:138-153`, `livespec/registry.go`). Registrado como W-5; no gobierna archive.
+- **Informativo (i), confirmado por ambos, WARNING, corregido el 2026-11-24 por decisión del usuario (`fix(reqid)` posterior a `b5c874de`; RED observado en `internal/reqid/series_canonical_test.go`).** Con el patrón por defecto la serie es el texto del prefijo, de modo que `REQ-09.1` y `REQ-9.2` son series distintas (antes ambas serie 9 por `Atoi`); afecta a `NextFree`, `adopt check` y `SeriesRefs` (`internal/reqid/series.go:7`, `reqid.go:138-153`, `livespec/registry.go`). Registrado como W-5; no gobierna archive.
 - **Informativos (ii), sospechas de un solo juez, no corregidas:** `Resolve` con un superado citado por título exacto y un único portador vigente del mismo ID resuelve al vigente (`resolve.go:48-65`); plantilla que termina en puntuación (`RF-<NN>.`) no deja a `Scan` devolver un ID válido (`template.go:195`); título solo `(REQ-1.1)` pasa a sintético en `livingdoc`; el mensaje de literal no ASCII cita un byte; `Service.ColdStart` usa el patrón por defecto (sin llamadores).
 
 ## Cumplimiento técnico
@@ -35,7 +35,7 @@ La matriz de cumplimiento REQ-44.1 a 44.9, REQ-29.x y REQ-30.4/30.22, la conform
 Ninguno.
 
 ### WARNING
-- W-5 · informativo del judgment-day (i), no corregido: serie por texto de prefijo con el patrón por defecto (`REQ-09.1` frente a `REQ-9.2`). No bloquea.
+- W-5 · informativo del judgment-day (i), corregido el 2026-11-24 (cada `<n>` de la serie se identifica por su valor entero; un `<n>` que desborda int no forma serie): serie por texto de prefijo con el patrón por defecto (`REQ-09.1` frente a `REQ-9.2`). No bloquea.
 W-1 a W-4 resueltos (W-4: frases residuales en `tasks.md:7` y `:66`, ver «Cierre»).
 
 ### Limitación de entorno (no hallazgo)
@@ -51,6 +51,6 @@ Releído `tasks.md:7` (decisión c) y `:66` (tarea 3.3): ya dicen que `isoeviden
 
 ## Resumen
 
-W-1, W-2 y W-4 resueltos, JD-1 corregido y verificado, W-5 vigente (WARNING informativo), todo coherente con el código; vet, gofmt, 9 paquetes y el subconjunto de cli en verde; 10.2 es limitación de entorno pendiente de CI; S-1 y S-2 vigentes. Siguiente: `sdd-archive`.
+W-1, W-2 y W-4 resueltos, JD-1 corregido y verificado, W-5 corregido, todo coherente con el código; vet, gofmt, 9 paquetes y el subconjunto de cli en verde; 10.2 es limitación de entorno pendiente de CI; S-1 y S-2 vigentes. Siguiente: `sdd-archive`.
 
 **Estado:** limpio

@@ -156,6 +156,25 @@ func TestRegistryDoesNotConfuseSeriesWithSharedPrefixes(t *testing.T) {
 	}
 }
 
+// Con el patrón por defecto la serie es su valor entero, como antes de reqid:
+// `REQ-09.4` cuenta en la serie 9 y aparece entre sus referencias.
+func TestRegistryTreatsLeadingZerosInTheSeriesAsTheSameSeries(t *testing.T) {
+	home := t.TempDir()
+	writeTree(t, home, map[string]string{
+		"specs/a/spec.md": "# a\n\n### Requirement: Uno (REQ-09.4)\n\ncuerpo\n\n### Requirement: Dos (REQ-9.2)\n\ncuerpo\n",
+	})
+	reg, err := LoadRegistry(home, RegistryOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := reg.NextFree(defaultSeries(9)); got != "REQ-9.5" {
+		t.Errorf("NextFree(9) = %q, se esperaba REQ-9.5", got)
+	}
+	if got := len(reg.SeriesRefs(defaultSeries(9))); got != 2 {
+		t.Errorf("SeriesRefs(9) tiene %d referencias, se esperaban 2", got)
+	}
+}
+
 func TestIDRefWhereNamesTheCapabilityOrTheChange(t *testing.T) {
 	spec := IDRef{ID: "REQ-1.1", Kind: RefSpec, Capability: "facturacion"}
 	change := IDRef{ID: "REQ-1.2", Kind: RefChange, Capability: "pagos", Change: "inc-7"}
