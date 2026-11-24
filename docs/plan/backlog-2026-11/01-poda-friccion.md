@@ -207,32 +207,74 @@ Durante el análisis surgió un tema más, a propuesta del usuario:
   - `InjectKnowledgeMCPServers` solo añade claves y nunca borra. Los `.mcp.json` existentes conservan `serena` si no se añade su retirada. Al retirarla, borrar solo la entrada exacta que escribió Axiom (`command: serena`, `args: [serve]`).
   - `docs/manual-de-inicio.md` documenta `semantic_analysis: "enabled"`, un valor que el código no reconoce. Conviene corregirlo de paso.
 
-### C-01-e · Retirada completa de RDD (posterior)
+### C-01-e · Retirada completa de RDD (adelantada a la ola A2)
 
-- **Objetivo.** Eliminar del producto el código, los contratos y la CI de RDD una vez apagado.
+Corregido el 2026-11-24 con el inventario de la sección 08 (`main` en `d580368d`). El motivo del adelanto está en la sección 08, «C-01-e adelantada».
+
+- **Objetivo.** Eliminar del producto el código, los contratos, los assets, las specs y la CI de RDD una vez apagado.
 - **Decisiones.**
   - (Usuario) «Mi idea es quitar RDD», cuando sea posible, después de C-01-c.
-  - (Análisis) Antes de borrar, hay que sacar a un paquete neutral las primitivas de fichero que exporta `internal/reviewtransaction` y usan paquetes ajenos a RDD: `AcquireAuthorityFileLock`, `ReplaceFileAtomic`, `SyncReviewDirectory` y `PublishFileNoReplace`. Las usan `internal/kickoff` (`ledger.go`, `seal.go`), `internal/sddstatus` (`runtime_ledger.go`, `edit_authority_consent.go`), `internal/branch/registry/registry.go`, `internal/statecoord` e `internal/filecoord`.
-- **Fuera de alcance.** Nada más: es el cierre del tema.
-- **Carril propuesto.** SDD. Es XL y retira capacidades publicadas (`contracts/review-integration`, `contracts/review-provider-contract`) y 23 specs vivas. Necesita un plan por fases con verificación.
-- **Tamaño.** XL. Unas 66.000 líneas de Go de producción y unas 100.000 de pruebas, más los contratos, `bench/` y la CI.
+  - (Usuario, 2026-11-24) Se adelanta: «Sí, redacta la 08», sobre la propuesta de la sección 08 con C-01-e adelantada.
+  - (Análisis) Las primitivas que usan paquetes ajenos a RDD las saca antes C-08-c. Son `AcquireAuthorityFileLock`, `ReplaceFileAtomic`, `SyncReviewDirectory` y `PublishFileNoReplace`, más `SnapshotBuilder` y las demás que lista la 08. Este cambio parte de un `reviewtransaction` que ya solo importa código de RDD o usos clasificados como «parte RDD».
+  - (Análisis) Se quedan como lápidas, según P20:
+    - `components/sdd/rdd_retire.go`, que retira los agentes `review-*` y el hook de instalaciones antiguas.
+    - `axiom review stop-hook` como no-op mientras existan proyectos con esa entrada.
+  - (Análisis) `internal/consentenvelope` no se borra: lo usa el consentimiento de edición de SDD. Solo se quita su uso desde `cli/review_consent_contract.go:8`.
+  - (Análisis) `bench/` se trata según P21.
+- **Fuera de alcance.**
+  - `internal/handoff` (traspaso de SDD) e `internal/recoverytrace` (lo retira C-08-a): ninguno es de RDD.
+  - `internal/releasepolicy` e `internal/releaseprovenance`, que son de la distribución.
+- **Carril propuesto.** SDD. Es XL y retira capacidades publicadas (`contracts/review-integration` y `contracts/review-provider-contract`) y 21 specs vivas (`rdd-*` y `review-findings-ledger`). Necesita un plan por fases con verificación.
+- **Tamaño.** XL. Unas 61.300 líneas de Go de producción y unas 100.000 de pruebas. Además, 11.175 de contratos, unas 3.500 de specs, unas 3.200 de docs y `bench/`.
 - **Depende de / bloquea a.**
-  - Depende de C-01-c y de que la revisión commit a commit de C-02-c y C-02-d no use RDD (ya acordado).
-  - No bloquea nada.
-  - Toca primitivas de fichero que usan `internal/kickoff`, `internal/sddstatus` e `internal/branch/registry`, que reescriben muchos cambios posteriores. Por eso conviene que vaya al final del plan.
+  - Depende de C-01-c, de C-08-c, de P20 y de P21. Depende también de que la revisión commit a commit de C-02-c y C-02-d no use RDD (ya acordado).
+  - Bloquea a C-08-d, C-08-g, C-08-h y C-08-i.
   - Retira `internal/reviewtransaction/risk.go:22` (`LargeChangeLines = 400`), que C-02-c deja expresamente para la sección 01.
 - **Ficheros y paquetes que toca.**
-  - Paquetes de RDD y satélites: `internal/reviewtransaction`, `internal/cli/review*`, `internal/reviewerprovider`, `internal/recoverytrace`, `internal/providercontractbundle`, `internal/providercontractbundlecmd`, `internal/handoff` y `internal/consentenvelope`, a confirmar uno a uno.
+  - Paquetes de RDD (confirmados por imports):
+    - `internal/reviewtransaction` (36.077 + 38.307).
+    - `internal/cli/review*` (21.666 + 50.879), más 12 ficheros de `cli` con RDD (`sdd_gate_commit_review*`, `sdd_no_review_test`, `sdd_status_*review*` y `codex_review_provider_model_test`).
+    - `internal/reviewerprovider`, `internal/providercontractbundle` y `internal/providercontractbundlecmd`.
+    - `internal/rddharness`, que va el último: tiene 28 importadores, entre ellos los `main_test.go` de seis paquetes.
+  - Despachador: `cmd/axiom/main.go:173` y `:432`.
+  - Parte RDD de paquetes ajenos:
+    - `components/sdd`: `boundedreview.go`, `review_*` y `rdd_*`, salvo la lápida. Cableado en `inject.go`, `orchestrator.go` y `profiles.go`.
+    - TUI: `review_mode`, `install_review_mode` y `review_store_reset`, con sus referencias en `tui/model.go` y `app/app.go:1146-1166`.
+    - Dashboard: `service_review_mode.go` y `js/core/reviewmode.js`.
+    - Hub: `hub/rddpref.go` y sus referencias en `hub/init.go` y `hub/types.go`.
+    - `internal/state/state.go` (`rdd_mode`), con lectura tolerante.
+    - Las guardas `sddstatus/review_offer_absence_guard_test.go` y `kickoff/rdd_boundary_test.go`.
+    - Los usos clasificados como «parte RDD» por C-08-c.
+  - Assets:
+    - Los 25 agentes `review-*`.
+    - `review-ledger-contract*.md`, enlazado desde `judgment-day/SKILL.md`.
+    - La skill `rdd-defect-workflow`.
+    - El plugin `opencode-review-transport.ts` (v1 y v2).
+    - La prosa RDD residual de los orquestadores, `sdd-overlay-*.json`, `judgment-day`, `sdd-apply` y `sdd-verify`.
   - Contratos: `contracts/review-*`.
-  - CI [COMPARTIDO]: `.github/workflows/ci.yml` y `.github/workflows/promote-stable-rc.yml`.
-  - `scripts/test-review-*.sh`, `scripts/crosslane`, `e2e/organicruntime`, `.deadcode-baseline.txt` y `internal/state/state.go` (`rdd_mode`).
+  - CI [COMPARTIDO]:
+    - `ci.yml`: `:271-299` y `:555-623` (etiqueta, bench y el estrés `-count=100`) y el paso de `opencode-v2-contracts`, en la parte que sea RDD.
+    - `windows-full-suite.yml`: `:143-211` y `:257`, los shards `cli-review-*` y `reviewtransaction-*`.
+    - `release.yml`: `:67`, `:83` y `:148`.
+    - `promote-stable-rc.yml`: `:73-109`.
+  - Scripts:
+    - `scripts/test-review-*.sh`, `opencode_v2_loopback.py`, `test-opencode-v2-*` y `test_opencode_v2_host_test.py`.
+    - Revisar uno a uno, porque son mixtos: `scripts/crosslane` y `e2e/organicruntime`.
+  - `bench/`: según P21.
+  - Specs: `openspec/specs/rdd-*` (20) y `review-findings-ledger`. `sdd-block-review-gates` y `sdd-independent-review` son de SDD: solo pierden sus menciones a RDD.
+  - Docs: `review-integration.md`, `review-authority-threat-model.md`, `architecture/rdd-*` y `audits/*rdd*`.
+  - `.deadcode-baseline.txt`.
 - **Criterio de terminado.**
-  - `go build ./...` y `go test ./...` en verde, sin referencias a `reviewtransaction`.
-  - Las primitivas de fichero viven en un paquete neutral con sus pruebas.
-  - Las specs RDD están retiradas o archivadas.
+  - `go vet ./...` y `go test ./...` en verde.
+  - `rg -l 'reviewtransaction|reviewerprovider|rddharness'` sin resultados fuera de los históricos y de las lápidas de P20.
+  - La release no publica el bundle del contrato de revisión, y `update/release_security_test.go:44` está ajustado.
+  - Las specs RDD están retiradas.
+  - Los shards de `windows-full-suite.yml` cubren todos los tests que quedan.
 - **Riesgos y avisos.**
-  - Varios paquetes tienen nombres ambiguos (`handoff`, `recoverytrace`). Se confirma su pertenencia a RDD por importaciones, no por el nombre.
-  - El hook Stop instalado en proyectos antiguos llama a `axiom review stop-hook`. Hay que mantener un no-op o retirarlo antes con `sync`.
+  - Los nombres no bastan para saber qué es de RDD: la pertenencia se confirma por importaciones. `handoff`, `recoverytrace` y `consentenvelope` no lo son, o no del todo.
+  - El hook `Stop` instalado en proyectos antiguos llama a `axiom review stop-hook`. Hay que mantener un no-op o retirarlo antes con `sync` (P20).
+  - Retirar el bundle cambia los assets de la release. Lo comprueban `release.yml` y `release_security_test.go`.
+  - `scripts/crosslane`, `e2e/organicruntime` y `opencode-v2-contracts` cubren también OpenCode, la guarda de ramas y los carriles de agentes. No se pierde esa cobertura.
 
 ## Descartado
 

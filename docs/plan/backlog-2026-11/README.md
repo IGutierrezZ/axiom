@@ -1,10 +1,10 @@
 # Plan maestro del backlog 2026-11
 
-Índice, orden de ejecución y protocolo de las 7 secciones de análisis. Rutas y líneas de las secciones verificadas contra `main` en `5f6b05b4`. Total: 37 cambios. Versión integrada con la revisión cruzada de las 7 sesiones (ver «Registro de revisión»).
+Índice, orden de ejecución y protocolo de las 8 secciones de análisis. Rutas y líneas de las secciones 01 a 07 verificadas contra `main` en `5f6b05b4`; la sección 08 (adelgazamiento, 2026-11-24) y la corrección de C-01-e, contra `d580368d`. Total: 46 cambios. Versión integrada con la revisión cruzada de las 7 sesiones y con la revisión 08 (ver «Registro de revisión»).
 
 ## 1. Propósito y reglas de uso
 
-- Este plan es la fuente de verdad del backlog. Cada sección (`01`…`07`) define sus cambios con id estable `C-NN-x`: objetivo, decisiones literales, carril, tamaño, dependencias, ficheros, criterio de terminado y riesgos.
+- Este plan es la fuente de verdad del backlog. Cada sección (`01`…`08`) define sus cambios con id estable `C-NN-x`: objetivo, decisiones literales, carril, tamaño, dependencias, ficheros, criterio de terminado y riesgos.
 - Cada sesión hija lee su cambio completo en la sección correspondiente antes de empezar. Las decisiones de las secciones son vinculantes y no se reabren sin el usuario. Lo que una sección marca como no confirmado se trata en el apartado 6 y no se decide por cuenta propia. **Las resoluciones del apartado 6.2 prevalecen sobre el texto de las secciones**: antes de empezar, la sesión hija lee el 6.2 y aplica las que afecten a su cambio.
 - Push, PR y merge los decide el usuario. Ninguna sesión hace `git push`, abre PR ni fusiona sin orden expresa. Nunca `--fetch` sin autorización.
 - Cada cambio se trabaja en un worktree propio, desde la primera escritura:
@@ -25,7 +25,7 @@ Tamaños: S, M, L, XL. «(blanda)» = dependencia de la que la sección dice «c
 | C-01-b | Preflight y sellado derivados de la topología (hybrid fijo, multirepo checkpointed, monorepo solo fullstack) | [01](01-poda-friccion.md) | SDD | M | C-01-a; P10 (diseño del hook) | `preflight-topologia` |
 | C-01-c | RDD apagado de fábrica y sin posibilidad de activarlo (incluye `routing.go:77`, `:129`, `:131`, `:152-166`) | [01](01-poda-friccion.md) | ODD | S-M | — | `rdd-apagado` |
 | C-01-d | Quitar Serena | [01](01-poda-friccion.md) | ODD (P9) | S-M | — | `quitar-serena` |
-| C-01-e | Retirada completa de RDD (al final del plan) | [01](01-poda-friccion.md) | SDD | XL | C-01-c | `retirar-rdd` |
+| C-01-e | Retirada completa de RDD (adelantada a la ola A2; alcance corregido en la revisión 08) | [01](01-poda-friccion.md) | SDD | XL | C-01-c, C-08-c; P20, P21 | `retirar-rdd` |
 | C-02-a | Promoción por repositorio y por cambio (`branch`\|`release`\|`ask`) | [02](02-entrega-git.md) | SDD | L | — | `promocion-ramas` |
 | C-02-b | Verificación conjunta del cambio antes de la PR a la rama principal | [02](02-entrega-git.md) | SDD | M | C-02-a | `verify-conjunto` |
 | C-02-c | Una sola PR por defecto y retirada del umbral de 400 | [02](02-entrega-git.md) | SDD | L | C-01-a, C-01-b; C-01-c (blanda); P10, P5 | `single-pr` |
@@ -58,6 +58,15 @@ Tamaños: S, M, L, XL. «(blanda)» = dependencia de la que la sección dice «c
 | C-07-f | Plantillas de nombre de rama y ramas diferidas a la entrada del rol | [07](07-integraciones.md) | SDD | M | C-07-d, C-07-e; C-02-a (blanda) | `plantilla-ramas` |
 | C-07-g | MCP de Azure DevOps para el agente | [07](07-integraciones.md) | ODD | S | C-07-b | `mcp-ado` |
 | C-07-h | UI de integraciones (incluye como primer commit el requisito previo de seguridad: CSP y retirar `Access-Control-Allow-Origin: *`) | [07](07-integraciones.md) | SDD | L | C-07-a, C-07-b, C-07-c, C-07-d, C-07-e, C-06-e; C-07-f (blanda) | `ui-integraciones` |
+| C-08-a | Retirar los paquetes sin importadores (`recoverytrace`, `absorptionledger`) | [08](08-adelgazamiento.md) | ODD | S | — | `paquetes-huerfanos` |
+| C-08-b | Suite local que termina, sin compilar con el toolchain (cuatro tests a la puerta de la CI y fallos locales de Windows) | [08](08-adelgazamiento.md) | ODD | S-M | — | `suite-local-windows` |
+| C-08-c | Extraer de `reviewtransaction` las primitivas que usan otros paquetes | [08](08-adelgazamiento.md) | ODD | M | — | `primitivas-fichero` |
+| C-08-d | Solo Claude Code, VS Code (Copilot) y OpenCode: retirar los otros 14 agentes | [08](08-adelgazamiento.md) | SDD | XL | C-01-e; P17, P20 | `solo-tres-agentes` |
+| C-08-e | Retirar GGA y las lápidas de telemetría | [08](08-adelgazamiento.md) | ODD (`## Spec viva`) | S-M | C-08-d; P20 | `retirar-gga-telemetria` |
+| C-08-f | Arranque mínimo: retirar persona, presets, temas, agent builder y logo heredados | [08](08-adelgazamiento.md) | ODD (`## Spec viva`; SDD si reescribe requisitos) | L | C-08-d, C-08-e; P18, P19 | `arranque-minimo` |
+| C-08-g | Pruebas en paralelo y repositorios git de plantilla | [08](08-adelgazamiento.md) | ODD | L | C-01-e, C-08-d, C-08-f | `pruebas-paralelas` |
+| C-08-h | Centinelas de prosa a goldens | [08](08-adelgazamiento.md) | ODD | M | C-01-e, C-08-d, C-08-f, C-08-g | `centinelas-golden` |
+| C-08-i | CI de PR por jobs y shards de Windows rebalanceados | [08](08-adelgazamiento.md) | ODD | S | C-01-e; P21 | `ci-por-jobs` |
 
 ## 3. Grafo de dependencias
 
@@ -67,7 +76,7 @@ Flecha continua: dependencia declarada. Punteada «blanda»: la sección dice «
 graph TD
   %% Sección 01
   C01a["C-01-a hook por etiqueta"] --> C01b["C-01-b preflight/topología"]
-  C01c["C-01-c RDD apagado"] --> C01e["C-01-e retirar RDD (final)"]
+  C01c["C-01-c RDD apagado"] --> C01e["C-01-e retirar RDD (ola A2)"]
   C01d["C-01-d quitar Serena"]
   %% Sección 02
   C02a["C-02-a promoción"] --> C02b["C-02-b verify conjunto"]
@@ -139,6 +148,20 @@ graph TD
   C02a -.->|inferida| C07d
   C03b --> C07e
   C06b -.->|blanda| C07e
+  %% Sección 08
+  C08a["C-08-a paquetes huérfanos"]
+  C08b["C-08-b suite local"]
+  C08c["C-08-c primitivas de fichero"] --> C01e
+  C01e --> C08d["C-08-d solo tres agentes"]
+  C08d --> C08e["C-08-e GGA y telemetría"]
+  C08d --> C08f["C-08-f arranque mínimo"]
+  C08e --> C08f
+  C01e --> C08g["C-08-g pruebas paralelas"]
+  C08d --> C08g
+  C08f --> C08g
+  C08g --> C08h["C-08-h centinelas a goldens"]
+  C08f --> C08h
+  C01e --> C08i["C-08-i CI por jobs"]
 ```
 
 Dependencias inferidas y su razón:
@@ -154,6 +177,10 @@ Dependencias inferidas y su razón:
 | C-07-h ← C-07-a, C-07-d, C-07-e | Antes inferida. La 07 la declara tras la revisión: la vista de quién hizo cada fase (a), el campo de ID o URL (d) y las Tasks, imputaciones y outbox (e). |
 | C-03-b → C-07-e | Dura desde P12 (2026-11-17): C-07-e envía los IDs funcionales aparte al work item. |
 | C-07-b → C-06-e | Contradicción abierta. La 07 dice que C-07-b bloquea a C-06-e (que registraría las claves `integrations.<plugin>`). La 06 dice que C-06-e no depende de C-07-b: esas claves las registra C-07-h. Con las olas adoptadas no cambia nada (C-07-b va antes). |
+| C-08-d ← C-01-e | Solape duro: `components/sdd/inject.go`, los agentes `review-*` por agente, `tui/model.go`, los tests de `cli` y los goldens. |
+| C-08-e ← C-08-d; C-08-f ← C-08-e | Solape duro en `cli/run.go`, `cli/sync.go`, `components/uninstall`, `model/types.go`, `model/presets.go`, `catalog/components.go` y la pantalla de presets. |
+| C-08-g, C-08-h ← C-01-e, C-08-d, C-08-f | No se paraleliza ni se reescribe lo que se va a borrar. C-08-h va tras C-08-g porque los dos tocan ficheros de test de `components/sdd`. |
+| Funcionales pendientes ← C-08-c, C-01-e | C-03-b, C-05-c, C-06-b, C-06-c y C-06-f arrancan desde un `main` con las primitivas ya movidas y RDD retirado. No hay arista dura: es el motivo del orden de las olas. |
 
 ## 4. Mapa de solapes
 
@@ -176,9 +203,9 @@ Dos grados. **Duro**: el mismo fichero de lógica o la misma prosa (doctrina, sk
 | `internal/kickoff/args.go` | duro | C-01-b, C-02-b (`:351-385`), C-02-d, C-06-b, C-07-a (`:324`) |
 | `internal/kickoff/types.go`, `schema.go` | duro | types: C-05-b (comentario), C-06-b, C-07-a (doc); schema: C-01-b, C-06-b |
 | `internal/kickoff/gitsnapshot.go` | duro | C-02-a, C-07-f |
-| `internal/kickoff/ledger.go`, `seal.go`, `machine.go` | duro | C-01-e (primitivas de fichero en `ledger.go` y `seal.go`), C-06-f |
+| `internal/kickoff/ledger.go`, `seal.go`, `machine.go`, `integration.go` | duro | C-08-c (primitivas de fichero en `ledger.go`, `seal.go` e `integration.go`; antes C-01-e), C-06-f |
 | `internal/sddstatus/status.go`, `governance.go`, `status_v2.go` | duro | C-03-b, C-05-c, C-06-b, C-06-c, C-06-d |
-| `internal/sddstatus/runtime_ledger.go`, `edit_authority_consent.go`; `internal/branch/registry/registry.go`; `internal/statecoord`; `internal/filecoord` | duro | C-01-e (solo la importación de las primitivas de fichero) |
+| `internal/sddstatus/runtime_ledger.go`, `edit_authority_consent.go`; `internal/branch/registry/registry.go`; `internal/statecoord`; `internal/filecoord`; `internal/cli/branch_lineage.go`, `compatibility_transaction_windows.go`, `sdd_gate_evidence.go` | duro | C-08-c (importación de las primitivas), C-01-e (borra lo que C-08-c clasifique como parte RDD) |
 | `internal/branch/engine/ensure.go` | duro | C-05-d, C-07-b, C-07-e, C-07-f |
 | `internal/branch/engine/status.go`, `prefs.go` | duro | status: C-02-a, C-05-c, C-05-d; prefs: C-02-a, C-05-d |
 | `internal/branch/planner.go`, `planner_snapshot.go`, `naming.go` | duro | C-02-a (planner), C-07-f |
@@ -216,8 +243,19 @@ Dos grados. **Duro**: el mismo fichero de lógica o la misma prosa (doctrina, sk
 | `openspec/specs/local-web-dashboard/` | duro | C-06-b, C-06-d, C-06-e, C-06-f, C-07-h |
 | `openspec/specs/` otras | duro | `sdd-preflight-configuration`: C-01-b, C-06-b; `workspace-topology`: C-06-c, C-06-e; `sdd-orchestrator-assets`: C-02-c; `rdd-*`: C-01-c, C-01-e; `sdd-iso-evidence` (REQ-29.3): C-03-a |
 | `openspec/specs/**` entero e `INDEX.md` | duro | C-03-e (+ C-01-d, que retira menciones de Serena) |
-| `.github/workflows/` | duro | `ci.yml` y `promote-stable-rc.yml`: C-01-e; `pr-check.yml` y la plantilla de PR: C-02-e |
+| `.github/workflows/` | duro | `ci.yml`: C-01-e, C-08-b (solo si cambia la puerta de los tests del toolchain), C-08-i; `windows-full-suite.yml`: C-01-e, C-08-i; `release.yml` y `promote-stable-rc.yml`: C-01-e; `pr-check.yml` y la plantilla de PR: C-02-e |
 | `scripts/axiom-worktree.ps1` y `.sh` | duro | C-02-a |
+| `internal/model/types.go`, `model/presets.go`, `internal/catalog/` | duro | C-08-d (agentes), C-08-e (GGA), C-08-f (persona y presets) |
+| `internal/agents/` (`factory.go`, `capability_manifest.go`, `discovery.go`, paquetes por agente), `internal/installcmd/resolver.go` | duro | C-08-d |
+| `internal/cli/run.go`, `sync.go`, `doctor*.go`, `validate.go` | duro | C-01-e, C-08-d, C-08-e, C-08-f |
+| `internal/components/uninstall/` | duro | C-01-e (lápidas), C-08-d, C-08-e, C-08-f |
+| `internal/tui/model.go`, `router.go`, `screens/` | duro | C-01-e (pantallas RDD), C-08-d (selectores de Codex y Kiro, Pi), C-08-e (`preset`, `complete`, `upgrade_sync`), C-08-f (persona, preset, welcome, agent builder) |
+| `internal/components/persona`, `theme`, `opencodedefault`, `internal/agentbuilder` | duro | C-08-d (ramas por agente), C-08-f |
+| `internal/testenv`, `TestMain` y helpers `isolate*` | duro | C-08-b (puerta del toolchain), C-08-g |
+| `internal/assets/formatter_ordering_test.go` | duro | C-08-b, C-08-i |
+| `internal/assets/*_test.go`, tests de contrato de `components/sdd` | duro | C-01-e, C-08-d, C-08-f (borran), C-08-h (reescribe lo que quede) |
+| `e2e/`, `scripts/crosslane` | blando | C-01-e, C-08-d, C-08-e |
+| `bench/` | duro | C-01-e (según P21), C-08-i |
 
 ## 5. Olas
 
@@ -230,6 +268,13 @@ Reglas: máximo 3 cambios por ola. En paralelo solo si no comparten ficheros con
 | 4 | C-02-c, C-01-d, C-07-a | Una sola PR toca el preflight ya reescrito y va tras el RDD apagado; Serena no toca doctrina; la identidad git solo toca kickoff y `sdd_gate.go` y ya no cita guías de agente. Requiere P10 y P5. |
 | 5 | C-02-d, C-02-e, C-04-d | El aviso por commit y el CI de 400 salen de C-02-c. `skillcheck` solo exigía C-04-a y no toca doctrina. Requiere P1 y P2. |
 | 6 | C-02-b, C-03-a, C-07-b | Verify conjunto (compuerta `integration`, sdd-verify), puerto de IDs (`openspecdoc`, `isoevidence`, `routing.go`) y marco de plugins (`integrations`, `sdd_gate.go`, `ensure.go`) son disjuntos. |
+| A1 | C-08-a, C-08-b, C-08-c | Adelgazamiento (sección 08). Empieza cuando la ola 6 esté fusionada. Paquetes huérfanos, suite local y extracción de primitivas: disjuntos. C-08-b toca tests de `update`, `app`, `assets`, `backup`, `filemerge` y `cli` (doctor y state); C-08-c, `kickoff`, `sddstatus`, `branch/registry`, `statecoord`, `filecoord` y otros tres ficheros de `cli`. |
+| A2 | C-01-e | XL. Va sola: toca CI, `cli`, `components/sdd`, TUI, dashboard, hub, assets, contratos, specs y `bench/`. Requiere C-08-c fusionado, P20 y P21. |
+| A3 | C-08-d | XL. Va sola: toca todos los registros y `switch` por agente, la TUI, los componentes, los goldens y e2e. Requiere P17 y P20. |
+| A4 | C-08-e, C-08-i | GGA y telemetría (`cli/run.go`, `sync.go`, `uninstall`, `model`, e2e) y CI por jobs (`ci.yml`, `windows-full-suite.yml`) son disjuntos. Requiere P20 y P21. |
+| A5 | C-08-f | Comparte `model`, `catalog` y la pantalla de presets con C-08-e. Requiere P18 y P19. |
+| A6 | C-08-g | Paraleliza lo que queda tras los borrados. |
+| A7 | C-08-h | Va tras C-08-g: los dos tocan ficheros de test de `components/sdd`. Después se reanuda la ola 7. |
 | 7 | C-03-b, C-05-b, C-07-c | IDs provisionales, publicación tras spec y design, y adaptador ADO no comparten ficheros duros. C-05-b va antes que C-06-b y C-05-c. |
 | 8 | C-03-c, C-03-d, C-05-c | La sección 03 admite C-03-c ∥ C-03-d. C-05-c toca `sddstatus`, el motor de ramas, la doctrina (`sdd-orchestrator-sections.md:82,88`), `sdd_gate_handoff.go`, `sdd-docs-publication` y goldens, sin solape duro con ellos. |
 | 9 | C-03-e | XL mecánico. La sección 03 exige una ventana sin cambios SDD abiertos: va solo. |
@@ -239,18 +284,24 @@ Reglas: máximo 3 cambios por ola. En paralelo solo si no comparten ficheros con
 | 13 | C-06-d, C-07-f, C-07-g | Marcas (dashboard, `sddpublish`, sdd-archive), plantillas de rama (planner, `gitpolicy.go`) y MCP de ADO (`components/mcp`, doctrina) son disjuntos. C-07-f registra en el catálogo de C-06-e sus claves `branch_template`. |
 | 14 | C-07-h | Pide C-06-e, C-07-e y C-07-f ya fusionados; toca dashboard, que comparte con C-06-d y C-06-f. |
 | 15 | C-06-f | Confirmada por el usuario (P3). Comparte `sdd_gate.go` con C-07-e y el dashboard con C-07-h. |
-| 16 | C-01-e | XL. Mueve primitivas de fichero que usan `kickoff`, `sddstatus` y `branch/registry`, y toca `inject.go`, `boundedreview.go`, `state.go` y la CI; al final, ningún cambio posterior tiene que rebasar sobre el movimiento. |
+
+La ola 16 desaparece: C-01-e pasa a la A2.
 
 Diferencias con el orden temático de referencia y con la versión anterior de este plan:
 
 - **Ola 1.** La referencia ponía 4 cambios. El tope es 3 y C-05-a pasa a la ola 2. C-01-b no puede ir en la ola 1 porque depende de C-01-a.
-- **RDD.** C-01-c queda en la ola 3. La retirada completa, C-01-e, pasa de la ola 4 al final del plan (ola 16): solapa en `inject.go` y `boundedreview.go` con C-02-c, y extrae primitivas de fichero que reescriben luego C-02-a, C-03-b, C-05-c, C-06-b, C-06-c, C-06-f y C-07-a. La intención del usuario es que RDD «no moleste y no gaste tokens» ya (C-01-c) y quitarlo cuando sea posible. Es una decisión de planificación, no del usuario.
+- **RDD.** C-01-c queda en la ola 3. La retirada completa, C-01-e, pasa de la ola 4 al final del plan (ola 16): solapa en `inject.go` y `boundedreview.go` con C-02-c, y extrae primitivas de fichero que reescriben luego C-02-a, C-03-b, C-05-c, C-06-b, C-06-c, C-06-f y C-07-a. La intención del usuario es que RDD «no moleste y no gaste tokens» ya (C-01-c) y quitarlo cuando sea posible. Es una decisión de planificación, no del usuario. **Sustituido en la revisión 08:** C-01-e pasa a la ola A2 (ver la viñeta «Adelgazamiento»).
 - **Serena y contexto técnico.** C-04-b (ola 2) y C-01-c (ola 3) comparten `routing.go` y `routing_test.go`; Serena (C-01-d) va en la ola 4 por los solapes blandos con C-02-a.
 - **Entrega Git.** La referencia la ponía como una sola ola; aquí se reparte entre las olas 3, 4, 5 y 6 por las dependencias de C-02-c y la doctrina que comparten C-02-b y C-02-d.
 - **RF.** Olas 6 a 9, el orden de la sección 03: a → b → (c ∥ d) → e.
 - **Integraciones.** Se adelantan: C-07-a (ola 4), C-07-b (6) y C-07-c (7) no tocan doctrina y solo dependen entre sí; la identidad git ya no solapa con la batería de pruebas. El resto de la 07 sigue a RF y a la UI. Por eso la 07 ocupa las olas 4 a 14 en vez de cerrar el plan. Antes de C-07-e (ola 12) están ya fusionados C-03-b y C-03-e.
 - **`skillcheck`.** Ola 5, antes que en la referencia: solo exige C-04-a y no toca doctrina. La publicación (C-05-b y C-05-c) se adelanta a las olas 7 y 8; el autofetch (C-05-d) espera a la ola 10 por P4 y P14.
 - **UI.** C-06-e baja a la ola 12: ya no depende de C-05-b ni de C-07-b (según la 06), solo de C-01-b, C-01-c, C-02-a, C-03-a, C-06-b y C-06-c. C-06-f queda confirmada (P3) en la ola 15.
+- **Adelgazamiento (revisión 08, 2026-11-24).** Las olas A1 a A7 van entre la 6 y la 7, y C-01-e pasa de la ola 16 a la A2 (decisión del usuario: «Sí, redacta la 08», sobre la propuesta con C-01-e adelantada).
+  - El motivo es el coste: cada cambio funcional pendiente paga hoy una suite que en Windows local no termina en 10 minutos.
+  - El motivo para dejar C-01-e al final era que movía primitivas que reescriben C-03-b, C-05-c, C-06-b, C-06-c y C-06-f. Desaparece con C-08-c, que las mueve antes en un cambio propio, y porque esos cambios aún no han empezado.
+  - La ola 7 queda con C-03-b y C-05-b, porque C-07-c ya está fusionado.
+  - Si el usuario prefiere intercalar, de la A4 en adelante pueden alternarse con olas funcionales que no compartan ficheros con solape duro.
 
 ## 6. Decisiones pendientes del usuario
 
@@ -258,7 +309,15 @@ Ninguna sesión hija las resuelve: si aparece una nueva, se detiene y la eleva a
 
 ### 6.1 Pendientes
 
-Ninguna. Todas las decisiones quedaron resueltas por el usuario el 2026-11-17 (apartado 6.2).
+Las decisiones P1 a P16 quedaron resueltas por el usuario el 2026-11-17 (apartado 6.2). La sección 08 abre cinco nuevas. Su contexto y la recomendación están en la propia sección.
+
+| Id | Pregunta | Bloquea |
+|---|---|---|
+| P17 | ¿Se retira también Copilot CLI (`github-copilot-cli`)? | C-08-d (A3) |
+| P18 | ¿Se retira el agent builder? | C-08-f (A5) |
+| P19 | ¿Se conserva solo la persona de Axiom y se retiran `gentleman` y `neutral`? | C-08-f (A5) |
+| P20 | ¿Cuánto viven las lápidas de retirada: RDD, telemetría y limpieza en `uninstall` de lo retirado? | C-01-e (A2), C-08-d (A3), C-08-e (A4) |
+| P21 | ¿Sobrevive `bench/` a la retirada de RDD? | C-01-e (A2), C-08-i (A4) |
 
 ### 6.2 Resueltas
 
@@ -427,6 +486,15 @@ Para la sesión padre que coordine el plan.
 | C-07-f | pendiente | | | |
 | C-07-g | pendiente | | | |
 | C-07-h | pendiente | | | |
+| C-08-a | pendiente | | | |
+| C-08-b | pendiente | | | |
+| C-08-c | pendiente | | | |
+| C-08-d | pendiente | | | |
+| C-08-e | pendiente | | | |
+| C-08-f | pendiente | | | |
+| C-08-g | pendiente | | | |
+| C-08-h | pendiente | | | |
+| C-08-i | pendiente | | | |
 
 ## 9. Registro de revisión
 
@@ -437,3 +505,11 @@ Para la sesión padre que coordine el plan.
 - **Revisión 05:** C-05-d depende de C-02-a (inferida) y de C-01-c con el detalle `Stop`/`SessionStart`; guarda de vocabulario sin edición de C-05-c; filas de `docs/`, `AGENTS.md:20`, `docs_contract_test.go`, `sdd-block-review-gates` y `persistence-contract.md`; ola 8 con la justificación completa; correcciones de la 05; P4 con el matiz del interruptor; su P14 pasa a P14 (solo `integration_branch`); P9 de C-05-b resuelta por `workflow.lane: ask`.
 - **Revisión 06:** C-06-e sin C-05-b ni C-07-b y con C-02-a, C-03-a, C-02-c (si P5); ciclo C-06-e ↔ C-07-h desaparece, queda abierta la arista; solapes `ecosystem.js` y `branches.js`; justificaciones de ola 12 y UI; P11 en parte resuelta; P10 afecta a C-06-b; su P14 pasa a P15; dos viñetas de correcciones a la consolidación; errata de `isLocalRequest`.
 - **Revisión 07:** C-07-b depende de C-07-a de forma blanda; C-07-h con las dependencias de a, d, e y f (blanda) y el requisito previo de seguridad; C-07-a sin solape con guías de agente y con capacidad nueva `change-actor-identity` (la ola de C-07-a pasa a la 4, sin conflicto con C-06-c); verificación del `ArtifactLink`; delegados de la 07; P8 sigue abierta; P11 editable resuelta; P12 con pregunta de producto abierta; su sugerencia sobre la ola 16 (C-07-f antes de C-07-h) se cumple porque C-07-f va en la ola 13 y C-07-h en la 14.
+- **Revisión 08 (2026-11-24, `d580368d`):**
+  - Se añade la sección 08 (adelgazamiento) con C-08-a a C-08-i, las olas A1 a A7 entre la 6 y la 7, y las decisiones pendientes P17 a P21.
+  - C-01-e se adelanta a la A2 y su alcance se corrige en la 01:
+    - `handoff` y `recoverytrace` no son RDD, y `consentenvelope` es mixto.
+    - Las primitivas pasan a C-08-c, con seis símbolos más.
+    - Se añaden `release.yml`, `windows-full-suite.yml`, `bench/`, la TUI, el dashboard, `hub/rddpref`, los assets y las specs.
+    - Specs: 21 capacidades. `sdd-block-review-gates` y `sdd-independent-review` son de SDD.
+  - Las filas de solapes de las primitivas pasan de C-01-e a C-08-c.
