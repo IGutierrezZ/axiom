@@ -70,7 +70,7 @@ Tests lentos (señalar para segundo plano): `go test ./internal/branch/engine/` 
   Cubre: REQ-28.1, REQ-28.42, REQ-43.32
 - [x] 4.4 (Unidad 8, GREEN) Modificar `internal/assets/skills/_shared/sdd-orchestrator-sections.md`: frase de `integration` tras la de `Commit Review` (sin reflujo de la línea 81), «Four points, and only these.» con el punto (d) y el párrafo **Joint verify.** (D12).
   Cubre: REQ-28.1, REQ-28.42, REQ-43.32
-- [ ] 4.5 (Unidad 9) Crear `internal/sddstatus/joint_verify_nonblocking_test.go`: con y sin ronda «Verificación conjunta» en `verify-report.md`, `nextRecommended` y dependencias idénticos, sin cambios en `internal/sddstatus/governance.go`.
+- [x] 4.5 (Unidad 9) Crear `internal/sddstatus/joint_verify_nonblocking_test.go`: con y sin ronda «Verificación conjunta» en `verify-report.md`, `nextRecommended` y dependencias idénticos, sin cambios en `internal/sddstatus/governance.go`.
   Cubre: REQ-28.1, REQ-43.32
 
 ## Phase 5: Documentación, pines y cierre
