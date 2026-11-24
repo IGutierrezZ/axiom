@@ -368,6 +368,7 @@ func TestAllEmbeddedAssetsAreReadable(t *testing.T) {
 		"skills/sdd-tasks/SKILL.md",
 		"skills/sdd-verify/SKILL.md",
 		"skills/sdd-verify/references/report-format.md",
+		"skills/sdd-verify/references/joint-verification.md",
 		"skills/skill-registry/SKILL.md",
 		"skills/judgment-day/references/prompts-and-formats.md",
 		"skills/_shared/README.md",
@@ -4620,3 +4621,48 @@ func TestEveryOrchestratorReferencesTheCommitReviewSection(t *testing.T) {
 		t.Errorf("the Block Gates section must link the tasks gate interaction exactly once: %q", link)
 	}
 }
+
+// Verificación conjunta (C-02-b, REQ-28.4, REQ-28.41): la referencia de `sdd-verify` fija la
+// consulta nativa del alcance, la selección del repositorio con `git -C`, la forma de la ronda y
+// los límites (solo commits, nunca `fetch`, nunca `verdict:`).
+func TestJointVerificationReferencePins(t *testing.T) {
+	joint := MustRead("skills/sdd-verify/references/joint-verification.md")
+	assertContainsAll(t, "joint-verification.md", joint, []string{
+		"axiom branch scope", "git -C", "Verificación conjunta", "**Resultado conjunto:**", "branch_missing", "consulta no disponible",
+		"axiom.branch-scope/v1", "mode: joint", "foreign_commits_possible", "verify-report.md", "never runs `fetch`", "<planningHome>/changes/<change>/verify-report.md",
+		"commits only", "no round",
+	})
+	for _, banned := range []string{"ls-files --others", "git diff", "git status"} {
+		if strings.Contains(joint, banned) {
+			t.Errorf("joint-verification.md: no puede mencionar %q: the joint verification reads commits only", banned)
+		}
+	}
+	assertNoHeadRangeScope(t, "joint-verification.md", joint)
+	assertReviewBoundary(t, []reviewPassage{{"verificación conjunta", "skills/sdd-verify/references/joint-verification.md", joint}})
+}
+
+// El verify sin rol en modo conjunto consta en la regla y en la tabla de decisiones de la skill, y
+// la ronda consta en el esquema del informe.
+func TestJointVerificationSkillAndReportPins(t *testing.T) {
+	skill := MustRead("skills/sdd-verify/SKILL.md")
+	report := MustRead("skills/sdd-verify/references/report-format.md")
+	for _, want := range []string{jointVerifySkillRule, jointVerifySkillGate, jointVerifySkillReference} {
+		if !strings.Contains(skill, want) {
+			t.Errorf("sdd-verify/SKILL.md: falta la frase fijada %q", want)
+		}
+	}
+	round := linesWithPrefix(report, "- **Verificación conjunta:**")
+	assertContainsAll(t, "report-format.md (Verificación conjunta)", round, []string{"## Verificación conjunta (AAAA-MM-DD)", "append-only", "verdict:", "**Estado:**"})
+	assertReviewBoundary(t, []reviewPassage{
+		{"regla del modo conjunto", "skills/sdd-verify/SKILL.md", jointVerifySkillRule},
+		{"fila del modo conjunto", "skills/sdd-verify/SKILL.md", jointVerifySkillGate},
+		{"entrada de referencias", "skills/sdd-verify/SKILL.md", jointVerifySkillReference},
+		{"elemento Verificación conjunta", "skills/sdd-verify/references/report-format.md", round},
+	})
+}
+
+const (
+	jointVerifySkillRule      = "- When the orchestrator launches you without a role in joint mode (`mode: joint`), inspect only the commits that `axiom branch scope` returns and append a dated round to the report; follow `references/joint-verification.md`."
+	jointVerifySkillGate      = "| Launched without a role in joint mode (`mode: joint`) | Follow `references/joint-verification.md`: commits only, never `fetch`, append-only round, no `verdict:` line and no `**Estado:**` change. |"
+	jointVerifySkillReference = "- [references/joint-verification.md](references/joint-verification.md) — only for the verify without a role in joint mode."
+)

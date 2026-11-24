@@ -62,9 +62,9 @@ Tests lentos (señalar para segundo plano): `go test ./internal/branch/engine/` 
 
 ## Phase 4: Skill y doctrina
 
-- [ ] 4.1 (Unidad 7, RED) En `internal/assets/assets_test.go` registrar `joint-verification.md` en la lista de assets y añadir los pines: `joint-verification.md` contiene `axiom branch scope`, `git -C`, «Verificación conjunta», `**Resultado conjunto:**`, `branch_missing` y «consulta no disponible», y no contiene `ls-files --others` ni rangos `...HEAD` (`assertNoHeadRangeScope`); `sdd-verify/SKILL.md` contiene la regla y la fila de *Decision Gates* del modo conjunto.
+- [x] 4.1 (Unidad 7, RED) En `internal/assets/assets_test.go` registrar `joint-verification.md` en la lista de assets y añadir los pines: `joint-verification.md` contiene `axiom branch scope`, `git -C`, «Verificación conjunta», `**Resultado conjunto:**`, `branch_missing` y «consulta no disponible», y no contiene `ls-files --others` ni rangos `...HEAD` (`assertNoHeadRangeScope`); `sdd-verify/SKILL.md` contiene la regla y la fila de *Decision Gates* del modo conjunto.
   Cubre: REQ-28.4, REQ-28.41
-- [ ] 4.2 (Unidad 7, GREEN) Crear `internal/assets/skills/sdd-verify/references/joint-verification.md` (D11); modificar `internal/assets/skills/sdd-verify/SKILL.md` (regla, fila de *Decision Gates*, entrada en *References*) y `internal/assets/skills/sdd-verify/references/report-format.md` (ronda fechada de solo añadir, sin `verdict:` ni `**Estado:**`).
+- [x] 4.2 (Unidad 7, GREEN) Crear `internal/assets/skills/sdd-verify/references/joint-verification.md` (D11); modificar `internal/assets/skills/sdd-verify/SKILL.md` (regla, fila de *Decision Gates*, entrada en *References*) y `internal/assets/skills/sdd-verify/references/report-format.md` (ronda fechada de solo añadir, sin `verdict:` ni `**Estado:**`).
   Cubre: REQ-28.4, REQ-28.41
 - [ ] 4.3 (Unidad 8, RED) Ampliar `internal/assets/independent_review_boundary_test.go` con los pasajes nuevos (vocabulario de frontera limpio) y los pines: «Four points, and only these.», `axiom branch scope`, la frase de `integration`, los tres estados (hecha, ofrecida, no verificable), no ejecutar `fetch` y no bloqueo; comprobar que las frases fijadas de `integration` de `internal/assets/assets_test.go` y `orchestrator_stop_exits_test.go` siguen intactas.
   Cubre: REQ-28.1, REQ-28.42, REQ-43.32

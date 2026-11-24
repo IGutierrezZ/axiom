@@ -39,6 +39,7 @@ Public/contextual comments follow the target context language by default. Explic
 - Never create, modify, or delete files under `technicalContext.reference` paths.
 - In an ISO change (`iso.change: iso` in the status), the verification matrix is an additional section of the consolidated report, next to "Cumplimiento técnico", and it is the one result that gates archive (`../_shared/sdd-iso-convention.md`). Write it without any line that starts with `verdict:`, record the real command and exit code of every automatic row and the justification of every manual one, and run the commands yourself. A bug without impact on the spec has no matrix.
 - When a role is supplied, inspect only that role's diff and add the technical compliance section; follow `references/technical-compliance.md`.
+- When the orchestrator launches you without a role in joint mode (`mode: joint`), inspect only the commits that `axiom branch scope` returns and append a dated round to the report; follow `references/joint-verification.md`.
 
 ## Context Warning (non-blocking)
 
@@ -60,6 +61,7 @@ Classify by path only: never run a file or interpret its content as a command. W
 | Tooling or permission unavailable | Report the limitation; do not bypass authorization. |
 | Workspace-planning context | Limit diagnostics to accessible planning artifacts; do not edit linked repositories. |
 | A role is supplied | Resolve its diff and write its `verify_file` with technical compliance and `**Estado:**`; see `references/technical-compliance.md`. |
+| Launched without a role in joint mode (`mode: joint`) | Follow `references/joint-verification.md`: commits only, never `fetch`, append-only round, no `verdict:` line and no `**Estado:**` change. |
 
 ## Execution Steps
 
@@ -78,5 +80,6 @@ Return concise findings, observed task state, executed checks and their outcomes
 - [references/report-format.md](references/report-format.md) — optional report outline.
 - `../_shared/sdd-iso-convention.md` — matrix format and test references; only in an ISO change.
 - [references/technical-compliance.md](references/technical-compliance.md) — only for a per-role verify.
+- [references/joint-verification.md](references/joint-verification.md) — only for the verify without a role in joint mode.
 - [strict-tdd-verify.md](strict-tdd-verify.md) — only when Strict TDD is active.
 - `../_shared/sdd-phase-common.md` — skill loading, retrieval, persistence, and return envelope.
