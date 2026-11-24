@@ -291,10 +291,10 @@ func helpVerbs(help string) []string {
 	return verbs
 }
 
-// REQ-25.1, escenario «La ayuda lista los cuatro verbos»: la ayuda lista `ensure`, `status`,
+// REQ-25.1, escenario «La ayuda lista los cinco verbos»: la ayuda lista `ensure`, `status`, `scope`,
 // `done` y `guard`; ni `push`, ni `pr`, ni el retirado `check`.
-func TestBranchHelpListsTheFourVerbs(t *testing.T) {
-	implemented := []string{"ensure", "status", "done", "guard"}
+func TestBranchHelpListsTheFiveVerbs(t *testing.T) {
+	implemented := []string{"ensure", "status", "scope", "done", "guard"}
 	t.Run("sin subcomando es un error de uso con la ayuda", func(t *testing.T) {
 		code, stdout, _ := runBranchCLI(t)
 		if code != 2 {

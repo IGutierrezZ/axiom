@@ -122,6 +122,7 @@ COMANDOS DE GOBERNANZA Y WORKSPACE:
   change create        Crea un nuevo incremento/cambio SDD con plantilla proposal.md en español
   branch ensure        Crea la rama de un cambio y su worktree si faltan (idempotente; --change, --json)
   branch status        Muestra el estado de las ramas y worktrees de un cambio (solo lectura; --change, --json)
+  branch scope         Alcance conjunto de un cambio: commits propios por repositorio y oferta de verificación (solo lectura; --change, --json)
   branch done          Elimina el worktree y la rama local de un cambio ya fusionado (--change, --force, --fetch, --json)
   branch guard         Hook de los runtimes: bloquea los documentos de Axiom en la rama equivocada (--agent)
   integrations sync      Reintenta las entregas pendientes a los trackers configurados en axiom.yaml (--change, --json)

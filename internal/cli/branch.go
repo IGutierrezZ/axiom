@@ -15,9 +15,9 @@ import (
 )
 
 // `axiom branch` (INC-25, D-02): la familia de verbos que planifica, crea y consulta las
-// ramas y worktrees de un cambio. Trae `status`, `ensure`, `done` y `guard` sobre el motor
+// ramas y worktrees de un cambio. Trae `status`, `ensure`, `scope`, `done` y `guard` sobre el motor
 // internal/branch/engine (planificador puro, operaciones de git y resultado
-// `axiom.branch-result/v1`); la ayuda lista los cuatro verbos de REQ-25.1. `guard` es el hook de
+// `axiom.branch-result/v1`, o `axiom.branch-scope/v1` en `scope`); la ayuda lista los cinco verbos de REQ-25.1. `guard` es el hook de
 // los runtimes con hooks (branch_guard.go). Ningún verbo ejecuta `push` ni
 // abre un PR, y ninguno hace operaciones remotas salvo `ensure --fetch` y `done --fetch`, que
 // ejecutan `git fetch origin` (REQ-25.1, REQ-25.10). `ensure --archive` crea la rama de archivado de un
@@ -29,6 +29,7 @@ const branchHelp = `Uso: axiom branch <subcomando> [argumentos]
 Subcomandos:
   ensure   Crea la rama de un cambio y su worktree si faltan (idempotente)
   status   Estado de las ramas y los worktrees de un cambio (solo lectura)
+  scope    Alcance conjunto de un cambio: commits propios por repositorio y oferta de verificación (solo lectura)
   done     Elimina el worktree y la rama local de un cambio ya fusionado
   guard    Hook de los runtimes: bloquea los documentos de Axiom en la rama equivocada
 
@@ -215,12 +216,14 @@ func runBranch(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 		return runBranchEnsure(rest, stdout, stderr)
 	case "status":
 		return runBranchStatus(rest, stdout, stderr)
+	case "scope":
+		return runBranchScope(rest, stdout, stderr)
 	case "done":
 		return runBranchDone(rest, stdout, stderr)
 	case "guard":
 		return runBranchGuard(rest, stdin, stdout, stderr)
 	default:
-		fmt.Fprintf(stderr, "Error: subcomando '%s' no reconocido para branch; los disponibles son ensure, status, done y guard. Ejecuta `axiom branch --help`.\n", subcommand)
+		fmt.Fprintf(stderr, "Error: subcomando '%s' no reconocido para branch; los disponibles son ensure, status, scope, done y guard. Ejecuta `axiom branch --help`.\n", subcommand)
 		return branch.ExitUsage
 	}
 }

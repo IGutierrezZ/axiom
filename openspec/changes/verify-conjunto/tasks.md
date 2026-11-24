@@ -55,9 +55,9 @@ Tests lentos (señalar para segundo plano): `go test ./internal/branch/engine/` 
 
 ## Phase 3: CLI
 
-- [ ] 3.1 (Unidad 6, RED) Crear `internal/cli/branch_scope_test.go` con `cli.RunBranch`: `--fetch`, bandera desconocida, `--change` ausente o nombre inválido → salida `2` sin leer repositorios; sin kickoff → `kickoff_not_sealed` (`1`); documento ODD → `scope_not_applicable` (`1`); `--json` con `schema: axiom.branch-scope/v1`, `--cwd` relativa. Ampliar el escenario «La ayuda lista los cinco verbos» en `internal/cli/branch_test.go` y añadir `scope` a `implemented` en `cmd/axiom/branch_help_test.go`.
+- [x] 3.1 (Unidad 6, RED) Crear `internal/cli/branch_scope_test.go` con `cli.RunBranch`: `--fetch`, bandera desconocida, `--change` ausente o nombre inválido → salida `2` sin leer repositorios; sin kickoff → `kickoff_not_sealed` (`1`); documento ODD → `scope_not_applicable` (`1`); `--json` con `schema: axiom.branch-scope/v1`, `--cwd` relativa. Ampliar el escenario «La ayuda lista los cinco verbos» en `internal/cli/branch_test.go` y añadir `scope` a `implemented` en `cmd/axiom/branch_help_test.go`.
   Cubre: REQ-25.1, REQ-25.2, REQ-25.51
-- [ ] 3.2 (Unidad 6, GREEN) Crear `internal/cli/branch_scope.go` (`runBranchScope`, `branchScopeHelp` con `--change`, `--cwd`, `--json`; sin `--fetch` ni `--lane`); `case "scope"`, ayuda de cinco verbos y mensaje «los disponibles son ensure, status, scope, done y guard» en `internal/cli/branch.go`; línea `branch scope` en la ayuda global de `cmd/axiom/main.go`.
+- [x] 3.2 (Unidad 6, GREEN) Crear `internal/cli/branch_scope.go` (`runBranchScope`, `branchScopeHelp` con `--change`, `--cwd`, `--json`; sin `--fetch` ni `--lane`); `case "scope"`, ayuda de cinco verbos y mensaje «los disponibles son ensure, status, scope, done y guard» en `internal/cli/branch.go`; línea `branch scope` en la ayuda global de `cmd/axiom/main.go`.
   Cubre: REQ-25.1, REQ-25.2, REQ-25.51
 
 ## Phase 4: Skill y doctrina
