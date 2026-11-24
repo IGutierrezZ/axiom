@@ -1,8 +1,8 @@
 # Catálogo Maestro de Especificaciones Vivas — Axiom
 
 > **Proyecto:** Axiom (Spec-Driven Development Platform)
-> **Última Sincronización:** 2026-11-23 03:55:20 UTC
-> **Total Dominios:** 74 | **Total Requerimientos:** 641 | **Total Escenarios BDD:** 2166
+> **Última Sincronización:** 2026-11-24 15:45:23 UTC
+> **Total Dominios:** 75 | **Total Requerimientos:** 650 | **Total Escenarios BDD:** 2279
 
 ---
 
@@ -14,7 +14,7 @@
 | `autoskills` | Especificación de Requerimientos: Autoskills (midudev/autoskills) y Minería Heurística con Gobernanza Human-in-the-Loop | 13 | 18 | [Ver Spec](specs/autoskills/spec.md) |
 | `axiom-binary-ci-coverage` | Especificación Viva: Cobertura de Integración Continua sobre el Binario Canónico | 2 | 2 | [Ver Spec](specs/axiom-binary-ci-coverage/spec.md) |
 | `axiom-distribution-identity` | Especificación Viva: Identidad de Distribución de Axiom | 8 | 8 | [Ver Spec](specs/axiom-distribution-identity/spec.md) |
-| `axiom-sdd-cli-integration` | Especificación de Requerimientos: Integración de Comandos SDD en la CLI axiom (INC-13) | 11 | 64 | [Ver Spec](specs/axiom-sdd-cli-integration/spec.md) |
+| `axiom-sdd-cli-integration` | Especificación de Requerimientos: Integración de Comandos SDD en la CLI axiom (INC-13) | 11 | 69 | [Ver Spec](specs/axiom-sdd-cli-integration/spec.md) |
 | `axiom-skills-index-governance` | Especificación Viva: Gobernanza del Índice Unificado de Skills | 6 | 13 | [Ver Spec](specs/axiom-skills-index-governance/spec.md) |
 | `axiom-tui-branding` | Especificación de Requerimientos: Unificación de TUI Bubbletea, Comandos de Ecosistema en CLI axiom y Pasarela de gentle-ai (INC-14) | 4 | 9 | [Ver Spec](specs/axiom-tui-branding/spec.md) |
 | `axiom-updater-resilience` | Especificación Viva: Resiliencia y Gobernanza del Actualizador Autónomo de Axiom | 9 | 10 | [Ver Spec](specs/axiom-updater-resilience/spec.md) |
@@ -36,7 +36,7 @@
 | `multi-role-fan-out` | Especificación Viva: Despliegue Multi-Rol y Barrera de Sincronización en SDD | 8 | 13 | [Ver Spec](specs/multi-role-fan-out/spec.md) |
 | `odd-cli-commands` | Especificación de Requerimientos: Comandos CLI para ODD (INC-19) | 4 | 0 | [Ver Spec](specs/odd-cli-commands/spec.md) |
 | `odd-living-document` | Especificación de Requerimientos: Documento Vivo ODD y Espejo de Recuperación en Engram (INC-19) | 4 | 0 | [Ver Spec](specs/odd-living-document/spec.md) |
-| `odd-living-spec-integration` | Especificación de Requerimientos: Integración del Carril ODD en la Spec Viva de OpenSpec (REQ-30.1 a REQ-30.8) | 8 | 38 | [Ver Spec](specs/odd-living-spec-integration/spec.md) |
+| `odd-living-spec-integration` | Especificación de Requerimientos: Integración del Carril ODD en la Spec Viva de OpenSpec (REQ-30.1 a REQ-30.8) | 9 | 48 | [Ver Spec](specs/odd-living-spec-integration/spec.md) |
 | `odd-sdd-promotion` | Especificación de Requerimientos: Promoción de Documentos ODD a Propuestas SDD (INC-19) | 4 | 0 | [Ver Spec](specs/odd-sdd-promotion/spec.md) |
 | `odd-ui-integration` | Especificación de Requerimientos: Integración de ODD en Dashboard Web y TUI (INC-19) | 3 | 0 | [Ver Spec](specs/odd-ui-integration/spec.md) |
 | `openspec-adoption` | Especificación de Requerimientos: Adopción de OpenSpec como Spec Viva Única (REQ-30.9 a REQ-30.14) | 6 | 26 | [Ver Spec](specs/openspec-adoption/spec.md) |
@@ -65,19 +65,20 @@
 | `rdd-shadow-evaluation` | RDD Shadow Evaluation Specification | 7 | 9 | [Ver Spec](specs/rdd-shadow-evaluation/spec.md) |
 | `rdd-simplification-design` | RDD Simplification Design Specification | 9 | 14 | [Ver Spec](specs/rdd-simplification-design/spec.md) |
 | `rdd-transport-capability` | RDD Transport Capability Specification | 4 | 8 | [Ver Spec](specs/rdd-transport-capability/spec.md) |
+| `requirement-identifiers` | Especificación de requirement-identifiers | 8 | 67 | [Ver Spec](specs/requirement-identifiers/spec.md) |
 | `review-findings-ledger` | Bounded Review Transaction and Findings Ledger | 18 | 24 | [Ver Spec](specs/review-findings-ledger/spec.md) |
-| `sdd-archive-lifecycle` | Especificación de Requerimientos: Ciclo de Vida de Archive, Integración Formal y Sellado Inmutable (INC-21) | 14 | 73 | [Ver Spec](specs/sdd-archive-lifecycle/spec.md) |
+| `sdd-archive-lifecycle` | Especificación de Requerimientos: Ciclo de Vida de Archive, Integración Formal y Sellado Inmutable (INC-21) | 14 | 91 | [Ver Spec](specs/sdd-archive-lifecycle/spec.md) |
 | `sdd-block-review-gates` | Especificación de Requerimientos: Compuertas de Revisión por Bloque (spec, design, tasks, apply) (INC-21) | 25 | 119 | [Ver Spec](specs/sdd-block-review-gates/spec.md) |
 | `sdd-docs-publication` | Especificación de Publicación Ligera de Documentación SDD (carril-proyecto-publicacion-docs) | 10 | 50 | [Ver Spec](specs/sdd-docs-publication/spec.md) |
 | `sdd-independent-review` | Especificación de Requerimientos: Revisión Independiente en SDD (verify técnico por rol, juicio opcional y revisión de cobertura) | 10 | 67 | [Ver Spec](specs/sdd-independent-review/spec.md) |
-| `sdd-iso-evidence` | Especificación: Evidencias ISO Opcionales del SDD (carril-sdd-versatil) | 10 | 97 | [Ver Spec](specs/sdd-iso-evidence/spec.md) |
+| `sdd-iso-evidence` | Especificación: Evidencias ISO Opcionales del SDD (carril-sdd-versatil) | 10 | 108 | [Ver Spec](specs/sdd-iso-evidence/spec.md) |
 | `sdd-lane-kickoff` | Especificación de Requerimientos: Selección Temprana y Bloqueante de Carril ODD/SDD en el Kickoff (INC-21) | 12 | 77 | [Ver Spec](specs/sdd-lane-kickoff/spec.md) |
 | `sdd-orchestrator-assets` | SDD Orchestrator Assets Specification | 25 | 86 | [Ver Spec](specs/sdd-orchestrator-assets/spec.md) |
 | `sdd-preflight-configuration` | Especificación de Requerimientos: Cuestionario Pre-Vuelo de SDD, Modalidad de Avance y Asignación Obligatoria de Roles (INC-21) | 15 | 111 | [Ver Spec](specs/sdd-preflight-configuration/spec.md) |
 | `sdd-research` | sdd-research Specification | 3 | 9 | [Ver Spec](specs/sdd-research/spec.md) |
 | `sdd-role-closure-handoff` | Especificación de Requerimientos: Cierre de Último Rol, Aviso Formal y Relevo de Integración (INC-21) | 3 | 20 | [Ver Spec](specs/sdd-role-closure-handoff/spec.md) |
 | `semantic-code` | Especificación de Requerimientos: Conector Semántico de Código (CodeGraph y motor AST nativo) (INC-06) | 10 | 14 | [Ver Spec](specs/semantic-code/spec.md) |
-| `spec-baseline-integration` | Especificación de Requerimientos: Integración de los Cambios en la Baseline del Proyecto (INC-24) | 1 | 5 | [Ver Spec](specs/spec-baseline-integration/spec.md) |
+| `spec-baseline-integration` | Especificación de Requerimientos: Integración de los Cambios en la Baseline del Proyecto (INC-24) | 1 | 7 | [Ver Spec](specs/spec-baseline-integration/spec.md) |
 | `structured-handoffs` | Especificación Viva: Handoffs Estructurados y Ciclo de Vida de Transición | 7 | 13 | [Ver Spec](specs/structured-handoffs/spec.md) |
 | `tui-spanish-localization` | Especificación Viva: Localización Integral al Castellano y Desacoplamiento de Avisos en la TUI (Axiom) | 4 | 9 | [Ver Spec](specs/tui-spanish-localization/spec.md) |
 | `tui-ui-parity` | Especificación Viva: Paridad Bidireccional entre TUI y Web UI | 10 | 11 | [Ver Spec](specs/tui-ui-parity/spec.md) |
@@ -257,6 +258,11 @@ Contrato de nombre publicado por clase de superficie: instalador y tap, compuert
   - *Escenario BDD:* Un `Cubre:` junto a la marca de bug sin impacto se proyecta como motivo tipado
   - *Escenario BDD:* La precedencia de los motivos existentes se conserva
   - *Escenario BDD:* El contrato del status solo crece
+  - *Escenario BDD:* Con un patrón declarado, el motivo de identificador nombra ese patrón
+  - *Escenario BDD:* Con el patrón por defecto el motivo de identificador no cambia
+  - *Escenario BDD:* El patrón se lee en vivo y la regla ISO de la instantánea
+  - *Escenario BDD:* Con el patrón inaccesible la etapa `specs` lleva `iso_declaration_invalid`
+  - *Escenario BDD:* Un patrón inválido se rechaza en `status` de un cambio no ISO
 
 ### Dominio: `axiom-skills-index-governance` — Especificación Viva: Gobernanza del Índice Unificado de Skills
 
@@ -1298,13 +1304,16 @@ Definir cómo un incremento o un bug tramitado por el carril ODD integra sus req
   - *Escenario BDD:* Un requisito ya presente con otro cuerpo se rechaza
   - *Escenario BDD:* Un REMOVED ya aplicado es un no-op
   - *Escenario BDD:* Tras un rebase el nombre ya no casa
-- **[REQ-30.4]** Comprobación de Colisión de Identificadores `REQ-n.m`
+- **[REQ-30.4]** Comprobación de Colisión de Identificadores de Requisito según el Patrón Declarado
   - *Escenario BDD:* Colisión con la spec viva
   - *Escenario BDD:* Colisión con la delta de un cambio activo
   - *Escenario BDD:* Los cambios archivados no cuentan
   - *Escenario BDD:* Duplicado dentro del documento
   - *Escenario BDD:* ADDED sin identificador
   - *Escenario BDD:* Una integración ya aplicada no colisiona consigo misma
+  - *Escenario BDD:* Colisión con un patrón declarado
+  - *Escenario BDD:* Un ADDED con el formato por defecto se rechaza con un patrón declarado
+  - *Escenario BDD:* El siguiente libre no cruza series
 - **[REQ-30.5]** Marcador `Sin impacto en la spec` y Obligación de los Bugs ODD
   - *Escenario BDD:* Un bug sin delta ni marcador se rechaza
   - *Escenario BDD:* El marcador con motivo pasa sin cambiar la spec
@@ -1327,6 +1336,14 @@ Definir cómo un incremento o un bug tramitado por el carril ODD integra sus req
 - **[REQ-30.8]** En Multirepo la Integración ODD Opera sobre el Repositorio de Especificaciones
   - *Escenario BDD:* Multirepo escribe en el repositorio de especificaciones
   - *Escenario BDD:* Monorepo embebido opera en el repositorio actual
+- **[REQ-44.8]** Paridad del Marcador y del Motivo de «Sin impacto en la Spec» entre el Carril SDD y el Carril ODD
+  - *Escenario BDD:* Marcador y motivo completos
+  - *Escenario BDD:* Marcador sin línea de motivo
+  - *Escenario BDD:* Motivo vacío
+  - *Escenario BDD:* Marcador ausente
+  - *Escenario BDD:* Espacios iniciales y finales
+  - *Escenario BDD:* Solo cuenta la primera línea de motivo
+  - *Escenario BDD:* La etiqueta tiene una única definición
 
 ### Dominio: `odd-sdd-promotion` — Especificación de Requerimientos: Promoción de Documentos ODD a Propuestas SDD (INC-19)
 
@@ -2171,6 +2188,88 @@ Define pre-freeze transport-capability admission: a runtime/adapter declares whe
   - *Escenario BDD:* Pi adapter without capability enters unavailable mode
   - *Escenario BDD:* Capable in-repo adapter executes only opaque transitions
 
+### Dominio: `requirement-identifiers` — Especificación de requirement-identifiers
+
+Puerto único de identificadores de requisito (C-03-a): el proyecto declara en el bloque `sdd:` de `axiom.yaml` el patrón de sus identificadores (`RF-USU-01`, `REQ-30.4`...), y un único punto del producto decide qué es un identificador válido, cuál es su serie y su número, y cuál es el siguiente libre de una serie. Los consumidores de la forma del identificador (compositor de OpenSpec, evidencia ISO, spec viva, documentación viva y mensajes de la CLI) usan ese punto y ninguno conserva una expresión regular propia; la única excepción deliberada y temporal es `adoptcheck` con `archive adopt` (REQ-44.4). Sin declaración rige un valor por defecto que admite exactamente los `REQ-<n>.<m>` vigentes, de modo que un proyecto que no declara nada no observa ningún cambio. Esta capacidad no asigna identificadores provisionales ni definitivos (C-03-b), no conserva los identificadores de un cliente al adoptar (C-03-c), no traza identificadores (C-03-d) ni migra las specs de Axiom (C-03-e).
+
+**Archivo:** [`specs/requirement-identifiers/spec.md`](specs/requirement-identifiers/spec.md)
+
+- **[REQ-44.1]** Declaración del Patrón de Identificador en el Bloque `sdd:` con Decodificador Estricto y Lectura en Vivo
+  - *Escenario BDD:* Un patrón válido se acepta
+  - *Escenario BDD:* El patrón es independiente de la declaración ISO
+  - *Escenario BDD:* Un patrón inválido es un error accionable y no se ignora
+  - *Escenario BDD:* El patrón inválido se reporta también al cargar la configuración
+  - *Escenario BDD:* Un patrón inválido falla cerrado al sellar
+  - *Escenario BDD:* Un valor que no es texto se rechaza
+  - *Escenario BDD:* Una clave desconocida sigue rechazándose
+  - *Escenario BDD:* Sin declaración la validación no cambia
+  - *Escenario BDD:* El patrón se lee en vivo y el sellado no lo copia
+  - *Escenario BDD:* Un cambio en curso se revalida contra el patrón vigente
+- **[REQ-44.2]** Patrón por Defecto que Admite Exactamente los `REQ-<n>.<m>` Vigentes
+  - *Escenario BDD:* El defecto admite `REQ-n.m`
+  - *Escenario BDD:* El defecto rechaza lo que hoy rechaza
+  - *Escenario BDD:* El texto legible del defecto no cambia los mensajes
+  - *Escenario BDD:* Sin workspace rige el defecto
+  - *Escenario BDD:* El defecto coincide con las expresiones vigentes sobre las specs actuales
+- **[REQ-44.3]** Gramática del Patrón, Serie, Número y Formato del Siguiente Identificador
+  - *Escenario BDD:* Serie y número con el patrón por defecto
+  - *Escenario BDD:* Serie y número con un patrón de dominio
+  - *Escenario BDD:* Patrón con serie única
+  - *Escenario BDD:* Patrones válidos
+  - *Escenario BDD:* La anchura es canónica
+  - *Escenario BDD:* Un número que desborda no es válido
+  - *Escenario BDD:* El siguiente libre rellena hasta la anchura
+  - *Escenario BDD:* El siguiente libre del defecto no cambia
+  - *Escenario BDD:* Los huecos no se rellenan
+  - *Escenario BDD:* La serie de otro dominio no cuenta
+  - *Escenario BDD:* `<DOM>` no depende de la capacidad
+  - *Escenario BDD:* Ida y vuelta de serie, número y formato
+  - *Escenario BDD:* Patrones mal construidos
+- **[REQ-44.4]** Un Único Punto de Parseo, Validación, Formato y Serie que Usan los Consumidores
+  - *Escenario BDD:* Ningún consumidor define el formato
+  - *Escenario BDD:* La prueba de arquitectura vigila los literales de texto
+  - *Escenario BDD:* Todos los consumidores coinciden ante la misma entrada
+  - *Escenario BDD:* El puerto y los consumidores de la hoja respetan las importaciones
+  - *Escenario BDD:* Sin patrón pasado, un consumidor usa el defecto
+  - *Escenario BDD:* `adoptcheck` no cambia sus reglas con el defecto
+  - *Escenario BDD:* `adoptcheck` y `archive adopt` siguen en el defecto con un patrón declarado
+- **[REQ-44.5]** Candidato frente a Válido con Errores Tipados y Continuaciones Conservadas
+  - *Escenario BDD:* Un candidato mal formado se distingue de la ausencia
+  - *Escenario BDD:* Un candidato mal formado con un patrón declarado
+  - *Escenario BDD:* Prefijos, extensiones y minúsculas
+  - *Escenario BDD:* Extensiones del defecto
+  - *Escenario BDD:* Con un patrón declarado el defecto deja de ser válido
+  - *Escenario BDD:* Un nombre sin identificador
+  - *Escenario BDD:* Dos identificadores distintos son ambiguos
+  - *Escenario BDD:* El mismo identificador repetido en un título cuenta una vez
+  - *Escenario BDD:* La puntuación final no forma parte del candidato
+  - *Escenario BDD:* Con el defecto los textos no cambian
+- **[REQ-44.6]** El Identificador Sintético de la Documentación Viva Nunca se Confunde con un Identificador Válido
+  - *Escenario BDD:* Un encabezado con identificador válido lo conserva
+  - *Escenario BDD:* Un encabezado con identificador del patrón declarado lo conserva
+  - *Escenario BDD:* Un encabezado sin identificador recibe uno sintético no válido
+  - *Escenario BDD:* El sintético no es válido con un patrón declarado
+  - *Escenario BDD:* Una capacidad sin minúsculas recibe un sintético con prefijo en minúsculas
+  - *Escenario BDD:* El sintético es estable entre ejecuciones
+  - *Escenario BDD:* Un identificador de otro patrón en el encabezado recibe un sintético
+  - *Escenario BDD:* El sintético no se confunde en la comprobación de identificadores
+  - *Escenario BDD:* Un patrón inaccesible solo avisa en `livingdoc`
+- **[REQ-44.7]** Un Proyecto con Patrón `RF-<DOM>-<NN>` Integra una Delta ODD y Archiva un Cambio SDD sin Errores
+  - *Escenario BDD:* Integración ODD con el patrón declarado
+  - *Escenario BDD:* La colisión propone el siguiente libre de la serie
+  - *Escenario BDD:* Un identificador con el formato por defecto se rechaza en ese proyecto
+  - *Escenario BDD:* Archivado SDD con el patrón declarado
+  - *Escenario BDD:* Archivado SDD interrumpido y reanudado con el patrón declarado
+  - *Escenario BDD:* Cambio ISO con el patrón declarado
+  - *Escenario BDD:* La consulta del bug usa el patrón declarado
+  - *Escenario BDD:* Estado transitorio con specs vivas en `REQ-<n>.<m>`
+- **[REQ-44.9]** Un Patrón Inaccesible Falla Cerrado en los Consumidores que lo Necesitan
+  - *Escenario BDD:* `archive integrate` se niega con un bloque `sdd:` inválido
+  - *Escenario BDD:* `archive-compose` se niega con un patrón inválido
+  - *Escenario BDD:* `archive-compose` sin workspace usa el defecto
+  - *Escenario BDD:* `sdd trace` y `archive-check` terminan con error
+  - *Escenario BDD:* Un cambio ISO con el patrón inaccesible
+
 ### Dominio: `review-findings-ledger` — Bounded Review Transaction and Findings Ledger
 
 Define one explicit, content-addressed implementation-review transaction shared by ordinary 4R and explicit Judgment Day. The contract bounds reviewer/refuter/correction work, preserves independent final verification, and emits a reusable lifecycle receipt.
@@ -2301,6 +2400,24 @@ Define one explicit, content-addressed implementation-review transaction shared 
   - *Escenario BDD:* Rechazo nativo sin escribir
   - *Escenario BDD:* `--supersede` conserva su comportamiento
   - *Escenario BDD:* Los modos de documento se rechazan
+  - *Escenario BDD:* Un MODIFIED con el título cambiado conserva el identificador
+  - *Escenario BDD:* Sin identificador en el título se empareja por el texto exacto
+  - *Escenario BDD:* Un MODIFIED sin identificador cuyo nombre no coincide se rechaza
+  - *Escenario BDD:* Con un patrón declarado se empareja por el identificador de ese patrón
+  - *Escenario BDD:* RENAMED sigue exigiendo ambos nombres
+  - *Escenario BDD:* Un MODIFIED sobre el nombre nuevo de un RENAMED de la misma delta se aplica
+  - *Escenario BDD:* Un identificador repetido en la canónica no se resuelve en silencio
+  - *Escenario BDD:* Con un identificador repetido, la coincidencia exacta de nombre sigue valiendo
+  - *Escenario BDD:* Una composición hoy aceptada produce la misma salida
+  - *Escenario BDD:* Un REMOVED con el título obsoleto se resuelve por identificador
+  - *Escenario BDD:* Un RENAMED resuelve su nombre antiguo por identificador
+  - *Escenario BDD:* Un MODIFIED que cambia el identificador no se resuelve
+  - *Escenario BDD:* Los requisitos superados quedan fuera de la resolución por identificador
+  - *Escenario BDD:* ADDED y el nombre nuevo de un RENAMED se emparejan por título
+  - *Escenario BDD:* Con un patrón declarado, un requisito con identificador de otro patrón se empareja por título
+  - *Escenario BDD:* `archive-check` con un REMOVED por identificador y título obsoleto
+  - *Escenario BDD:* Una segunda integración ODD de un MODIFIED por identificador es idempotente
+  - *Escenario BDD:* Con un bloque `sdd:` inválido la composición se niega
 - **[REQ-30.23]** Fidelidad de Bytes al Componer
   - *Escenario BDD:* Round-trip en LF, CRLF y CRLF con BOM
   - *Escenario BDD:* Los bloques editados usan el final de línea del documento
@@ -2640,6 +2757,8 @@ Definir el **modo ISO**, una opción declarada por el proyecto en `axiom.yaml` y
   - *Escenario BDD:* `workflow:` no cambia
   - *Escenario BDD:* Un binario anterior ignora el bloque `sdd:`
   - *Escenario BDD:* Sin el bloque `sdd:` la validación no cambia
+  - *Escenario BDD:* La clave del patrón de identificador es admitida en `sdd:`
+  - *Escenario BDD:* Un patrón de identificador inválido es un error del bloque `sdd:`
 - **[REQ-29.2]** Proyección Aditiva de `sdd.iso` en el Status v2
   - *Escenario BDD:* El status proyecta el cambio ISO
   - *Escenario BDD:* Sin cambio seleccionado se proyecta el valor del proyecto
@@ -2649,7 +2768,7 @@ Definir el **modo ISO**, una opción declarada por el proyecto en `axiom.yaml` y
   - *Escenario BDD:* Una declaración contradictoria con `workflow.lane` se proyecta como inválida
   - *Escenario BDD:* Sin el bloque un consumidor anterior no ve diferencia
   - *Escenario BDD:* El contrato publicado documenta la proyección
-- **[REQ-29.3]** Identificador `REQ-<n>.<m>` en el Nombre de los Requisitos de la Delta
+- **[REQ-29.3]** Identificador Válido según el Patrón Declarado en el Nombre de los Requisitos de la Delta
   - *Escenario BDD:* Un ADDED sin identificador bloquea antes de design
   - *Escenario BDD:* Un nombre con identificador válido no bloquea
   - *Escenario BDD:* Un identificador mal formado no cuenta
@@ -2664,6 +2783,12 @@ Definir el **modo ISO**, una opción declarada por el proyecto en `axiom.yaml` y
   - *Escenario BDD:* Un MODIFIED de un requisito existente sin identificador bloquea con la continuación del RENAMED
   - *Escenario BDD:* Los requisitos que la delta no toca no se comprueban
   - *Escenario BDD:* En un cambio no ISO el identificador no se exige
+  - *Escenario BDD:* Con un patrón declarado, un nombre con un identificador válido no bloquea
+  - *Escenario BDD:* Con un patrón declarado, el formato por defecto no es un identificador
+  - *Escenario BDD:* Con un patrón declarado, un identificador mal formado bloquea
+  - *Escenario BDD:* Con un patrón declarado, dos identificadores distintos bloquean
+  - *Escenario BDD:* Con un patrón declarado, un ADDED con un identificador existente bloquea
+  - *Escenario BDD:* Con el patrón inaccesible no se evalúa con un patrón no declarado
 - **[REQ-29.4]** Cobertura `Cubre:` de los Requisitos de la Delta
   - *Escenario BDD:* Un requisito de la delta sin tarea que lo cubra bloquea
   - *Escenario BDD:* La cobertura se calcula sobre la unión de los ficheros por rol
@@ -2672,6 +2797,8 @@ Definir el **modo ISO**, una opción declarada por el proyecto en `axiom.yaml` y
   - *Escenario BDD:* Un requisito existente de la baseline se admite y no cubre la delta
   - *Escenario BDD:* Sin ficheros de tareas no hay motivo de cobertura
   - *Escenario BDD:* En un cambio no ISO la cobertura no bloquea
+  - *Escenario BDD:* Con un patrón declarado, `Cubre:` cita el identificador del patrón
+  - *Escenario BDD:* Con un patrón declarado, un `Cubre:` con el formato por defecto bloquea
 - **[REQ-29.5]** Bug con Requisito Existente en un Cambio ISO: el Requisito Citado Existe y Tiene Escenarios
   - *Escenario BDD:* Un bug sin delta con `Cubre:` a un requisito inexistente bloquea en ISO
   - *Escenario BDD:* Un bug sin delta con `Cubre:` a un requisito existente avanza
@@ -2722,6 +2849,7 @@ Definir el **modo ISO**, una opción declarada por el proyecto en `axiom.yaml` y
   - *Escenario BDD:* Los trailers intermedios no se validan
   - *Escenario BDD:* Ruta archivada ausente de la rama principal
   - *Escenario BDD:* La derivación no añade estado
+  - *Escenario BDD:* Con un patrón declarado, la cadena de trazabilidad parte del identificador del patrón
 - **[REQ-29.19]** Bug sin Impacto en la Spec en un Cambio ISO: el Motivo es la Evidencia
   - *Escenario BDD:* El motivo es la única evidencia que exige ISO
   - *Escenario BDD:* Una matriz presente y vacía es válida
@@ -3169,6 +3297,8 @@ Definir cómo integra archive un cambio en la baseline declarada del proyecto: l
   - *Escenario BDD:* Un requisito sin identificador en su nombre no puede citarse
   - *Escenario BDD:* Un requisito existente sin escenarios se informa como tal
   - *Escenario BDD:* La consulta no escribe
+  - *Escenario BDD:* Con un patrón declarado, un identificador existente se resuelve con sus escenarios
+  - *Escenario BDD:* Con un patrón declarado, un identificador con el formato por defecto no es válido
 
 ### Dominio: `structured-handoffs` — Especificación Viva: Handoffs Estructurados y Ciclo de Vida de Transición
 
