@@ -49,6 +49,9 @@ type gitReader interface {
 	FileAt(ctx context.Context, dir, rev, relPath string) (content []byte, exists bool, err error)
 	IsAncestor(ctx context.Context, dir, ancestor, descendant string) (bool, error)
 	MergeTreeEquivalent(ctx context.Context, dir, target, branch string) (equivalent, supported bool, err error)
+	RevList(ctx context.Context, dir string, firstParent bool, revisions ...string) ([]branch.RevEntry, error)
+	CommitFiles(ctx context.Context, dir string, revisions ...string) ([]branch.CommitPaths, error)
+	BranchCreation(ctx context.Context, dir, name string) (sha, from string, ok bool, err error)
 }
 
 var _ gitReader = (*gitcli.Git)(nil)

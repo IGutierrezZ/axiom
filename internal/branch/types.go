@@ -151,6 +151,10 @@ const (
 	CodeRoleNotApplicable Code = "role_not_applicable"
 	CodeKickoffNotSealed  Code = "kickoff_not_sealed"
 	CodeRoleNotInRoster   Code = "role_not_in_roster"
+
+	// CodeScopeNotApplicable es el rechazo de `axiom branch scope` ante un cambio del carril `odd` o
+	// con un kickoff sin instantánea de repositorios (REQ-25.51).
+	CodeScopeNotApplicable Code = "scope_not_applicable"
 )
 
 // Exceptions son las excepciones por cambio de `ensure` (`--prefix`, `--branch`,
@@ -211,4 +215,20 @@ type RecordBranch struct {
 	RoleID   string     `json:"role,omitempty"`
 	Worktree string     `json:"worktree,omitempty"`
 	InPlace  bool       `json:"inPlace,omitempty"`
+}
+
+// RevEntry es un commit de `git rev-list --parents`: su SHA y los de sus padres (ninguno en el
+// commit raíz, más de uno en una fusión).
+type RevEntry struct {
+	SHA     string
+	Parents []string
+}
+
+// CommitPaths es un commit con las rutas que toca (`git log --name-only --no-renames`): relativas a
+// la raíz del repositorio, con «/». Un commit de fusión lleva sus padres y ninguna ruta, porque
+// git no lista los ficheros de una fusión.
+type CommitPaths struct {
+	SHA     string
+	Parents []string
+	Paths   []string
 }

@@ -14,12 +14,13 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
-// allCodes son los dieciséis códigos tipados de la spec (design §2.2).
+// allCodes son los dieciséis códigos tipados de la spec (design §2.2) y `scope_not_applicable`
+// (REQ-25.51).
 var allCodes = []Code{
 	CodeDecisionRequired, CodeDirtyWorktree, CodeWrongBranch, CodeSpecsRepoNotOnIntegration,
 	CodeBaseNotFound, CodeFetchFailed, CodePathTooLong, CodeInvalidName, CodeConfigInvalid,
 	CodeGitFailed, CodePlanConflict, CodeBranchCheckedOutElsewhere, CodeNotAGitRepository,
-	CodeMergeNotConfirmed, CodeChangeNotIntegrated, CodeArchiveBranchNotApplicable,
+	CodeMergeNotConfirmed, CodeChangeNotIntegrated, CodeArchiveBranchNotApplicable, CodeScopeNotApplicable,
 }
 
 func resultJSON(t *testing.T, result Result) (raw string, decoded map[string]any) {

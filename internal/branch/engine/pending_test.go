@@ -640,3 +640,13 @@ func TestPendingArchiveNeverFailsWhenGitDoes(t *testing.T) {
 		}
 	})
 }
+
+func (f *fakeGit) RevList(context.Context, string, bool, ...string) ([]branch.RevEntry, error) {
+	return nil, errors.New("no se usa")
+}
+func (f *fakeGit) CommitFiles(context.Context, string, ...string) ([]branch.CommitPaths, error) {
+	return nil, errors.New("no se usa")
+}
+func (f *fakeGit) BranchCreation(context.Context, string, string) (string, string, bool, error) {
+	return "", "", false, errors.New("no se usa")
+}

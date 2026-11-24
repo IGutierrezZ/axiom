@@ -8,11 +8,11 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/cli"
 )
 
-// REQ-25.1: la ayuda global lista los cuatro verbos, `axiom branch ensure`, `status`, `done` y
+// REQ-25.1: la ayuda global lista los cinco verbos, `axiom branch ensure`, `status`, `scope`, `done` y
 // `guard`, y ninguno más; ni `push`, ni `pr`, ni el retirado `check`.
 func TestBranchVerbsAreListedInTheGlobalHelp(t *testing.T) {
 	help := axiomHelpText()
-	implemented := map[string]bool{"ensure": true, "status": true, "done": true, "guard": true}
+	implemented := map[string]bool{"ensure": true, "status": true, "scope": true, "done": true, "guard": true}
 
 	for verb := range implemented {
 		if !strings.Contains(help, "\n  branch "+verb+" ") {
