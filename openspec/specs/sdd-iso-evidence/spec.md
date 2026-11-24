@@ -61,7 +61,8 @@ El bloqueo del archivado por la matriz es el REQ-29.11 de `sdd-archive-lifecycle
 
 ### Requirement: Declaración ISO Opcional por Proyecto y Comportamiento sin Ella (REQ-29.1)
 
-`axiom.yaml` PUEDE declarar el modo ISO del proyecto en un bloque nuevo de primer nivel `sdd:` con una única clave, `iso` (booleano: `true` o `false`), distinto de `workflow:`, cuyo bloque, claves y valores (`workflow.lane` admite `odd`, `sdd` y `ask`, y toma `sdd` por defecto) NO se modifican. El bloque `sdd:` se decodifica de forma estricta por lista cerrada de claves, con el mismo patrón que `workflow:` (REQ-27.1 de `workspace-topology`): una clave desconocida dentro de `sdd:`, un valor no admitido de `iso` y un `sdd:` que no sea un mapa (incluido el nulo) DEBEN reportarse como error accionable que nombre la clave o el valor y los admitidos, tanto al cargar la configuración como en `axiom workspace validate`, con mensajes en español y código de salida `1`. La opción es admisible en toda topología. **Validación cruzada con `workflow:`:** un `axiom.yaml` que declara a la vez `sdd.iso: true` y `workflow.lane: odd` es una declaración contradictoria, porque un proyecto ISO tramita todo el trabajo por el carril SDD (REQ-29.18 de `organic-agent-trigger-rules`), y DEBE reportarse como error accionable, tanto al cargar la configuración como en `axiom workspace validate`, con mensaje en español y código de salida `1`. El mensaje DEBE nombrar las dos claves (`sdd.iso` y `workflow.lane`) y la corrección: retirar `workflow.lane: odd` (o fijarlo en `sdd`) o retirar `iso` (o ponerlo en `false`). Es una regla nueva entre dos bloques ya válidos por separado: NO cambia la decodificación de `workflow:` ni sus valores admitidos (REQ-27.1 de `workspace-topology` queda como está, sin MODIFIED), y solo rechaza la combinación `iso: true` con `lane: odd`. Son combinaciones válidas: `iso: true` con `workflow.lane: sdd`, `iso: true` con `workflow.lane: ask` (la doctrina de REQ-29.18 no formula entonces la pregunta de carril), `iso: true` sin `workflow.lane` o sin bloque `workflow:` (el carril por defecto es `sdd`), e `iso: false` o sin `sdd:` con cualquier `workflow.lane`, incluido `odd`. La declaración es por proyecto, nunca por cambio: nadie elige ISO para un cambio concreto, para no mezclar dos reglas de evidencia en un mismo proyecto auditado. `axiom sdd kickoff seal` copia el valor del proyecto en el `kickoff.yaml` del cambio (REQ-29.13) y, desde entonces, el cambio es ISO o no ISO según esa instantánea, no según `axiom.yaml` en vivo. Con el cambio sellado como ISO se activan, a la vez, las reglas de REQ-29.3 a REQ-29.9 y de REQ-29.19, la regla de escenarios de REQ-29.10 y el bloqueo del archivado de REQ-29.11. En un cambio no ISO (sellado sin `iso`, o sin instantánea), ninguna de esas reglas DEBE bloquear: un cambio no ISO DEBE recorrer `continuous` y `checkpointed` con las mismas compuertas y paradas que antes de este cambio, y DEBE archivar con un `verify-report.md` libre o ausente. Ser un cambio ISO NO DEBE modificar el ritmo sellado, las compuertas `spec`, `design`, `tasks`, `role-apply:<rol>` e `integration`, las paradas de tres salidas ni el modo de archivado. Una declaración inválida, incluida la contradictoria de la validación cruzada, DEBE fallar cerrada, también al sellar: nunca se degrada a «cambio no ISO». Un binario anterior a este cambio ignora el bloque `sdd:` como cualquier clave de primer nivel desconocida y trata el cambio como no ISO: la declaración solo tiene efecto con el binario que la implementa. Un `axiom.yaml` sin el bloque `sdd:` se valida exactamente como antes de este cambio.
+`axiom.yaml` PUEDE declarar el modo ISO del proyecto en un bloque nuevo de primer nivel `sdd:` con dos claves: `iso` (booleano: `true` o `false`) y la del patrón de identificador de requisito (REQ-44.1 de `requirement-identifiers`; recomendada: `id_pattern`), distinto de `workflow:`, cuyo bloque, claves y valores (`workflow.lane` admite `odd`, `sdd` y `ask`, y toma `sdd` por defecto) NO se modifican. El bloque `sdd:` se decodifica de forma estricta por lista cerrada de claves, con el mismo patrón que `workflow:` (REQ-27.1 de `workspace-topology`): una clave desconocida dentro de `sdd:`, un valor no admitido de `iso`, un patrón de identificador inválido (REQ-44.1 de `requirement-identifiers`) y un `sdd:` que no sea un mapa (incluido el nulo) DEBEN reportarse como error accionable que nombre la clave o el valor y los admitidos, tanto al cargar la configuración como en `axiom workspace validate`, con mensajes en español y código de salida `1`. La opción es admisible en toda topología. **Validación cruzada con `workflow:`:** un `axiom.yaml` que declara a la vez `sdd.iso: true` y `workflow.lane: odd` es una declaración contradictoria, porque un proyecto ISO tramita todo el trabajo por el carril SDD (REQ-29.18 de `organic-agent-trigger-rules`), y DEBE reportarse como error accionable, tanto al cargar la configuración como en `axiom workspace validate`, con mensaje en español y código de salida `1`. El mensaje DEBE nombrar las dos claves (`sdd.iso` y `workflow.lane`) y la corrección: retirar `workflow.lane: odd` (o fijarlo en `sdd`) o retirar `iso` (o ponerlo en `false`). Es una regla nueva entre dos bloques ya válidos por separado: NO cambia la decodificación de `workflow:` ni sus valores admitidos (REQ-27.1 de `workspace-topology` queda como está, sin MODIFIED), y solo rechaza la combinación `iso: true` con `lane: odd`. Son combinaciones válidas: `iso: true` con `workflow.lane: sdd`, `iso: true` con `workflow.lane: ask` (la doctrina de REQ-29.18 no formula entonces la pregunta de carril), `iso: true` sin `workflow.lane` o sin bloque `workflow:` (el carril por defecto es `sdd`), e `iso: false` o sin `sdd:` con cualquier `workflow.lane`, incluido `odd`. La declaración es por proyecto, nunca por cambio: nadie elige ISO para un cambio concreto, para no mezclar dos reglas de evidencia en un mismo proyecto auditado. `axiom sdd kickoff seal` copia el valor del proyecto en el `kickoff.yaml` del cambio (REQ-29.13) y, desde entonces, el cambio es ISO o no ISO según esa instantánea, no según `axiom.yaml` en vivo; el patrón de identificador NO se copia a la instantánea: se lee siempre en vivo de `axiom.yaml` (REQ-44.1 de `requirement-identifiers`). Con el cambio sellado como ISO se activan, a la vez, las reglas de REQ-29.3 a REQ-29.9 y de REQ-29.19, la regla de escenarios de REQ-29.10 y el bloqueo del archivado de REQ-29.11. En un cambio no ISO (sellado sin `iso`, o sin instantánea), ninguna de esas reglas DEBE bloquear: un cambio no ISO DEBE recorrer `continuous` y `checkpointed` con las mismas compuertas y paradas que antes de este cambio, y DEBE archivar con un `verify-report.md` libre o ausente. Ser un cambio ISO NO DEBE modificar el ritmo sellado, las compuertas `spec`, `design`, `tasks`, `role-apply:<rol>` e `integration`, las paradas de tres salidas ni el modo de archivado. Una declaración inválida, incluida la contradictoria de la validación cruzada, DEBE fallar cerrada, también al sellar: nunca se degrada a «cambio no ISO». Un binario anterior a este cambio ignora el bloque `sdd:` como cualquier clave de primer nivel desconocida y trata el cambio como no ISO: la declaración solo tiene efecto con el binario que la implementa. Un `axiom.yaml` sin el bloque `sdd:` se valida exactamente como antes de este cambio.
+(Previously: el bloque `sdd:` tenía una única clave, `iso`; ahora admite también la clave del patrón de identificador, con el mismo decodificador estricto.)
 
 #### Scenario: Bloque `sdd:` válido con `iso`
 
@@ -181,6 +182,19 @@ El bloqueo del archivado por la matriz es el REQ-29.11 de `sdd-archive-lifecycle
 - **CUANDO** se ejecuta `axiom workspace validate`
 - **ENTONCES** el resultado es idéntico al anterior a este cambio
 
+#### Scenario: La clave del patrón de identificador es admitida en `sdd:`
+
+- **DADO** un `axiom.yaml` con `sdd: {iso: true, id_pattern: "RF-<DOM>-<NN>"}`
+- **CUANDO** se ejecuta `axiom workspace validate`
+- **ENTONCES** no se reporta ningún error por el bloque `sdd:`
+
+#### Scenario: Un patrón de identificador inválido es un error del bloque `sdd:`
+
+- **DADO** un `axiom.yaml` con `sdd: {iso: true, id_pattern: "RF-"}`
+- **CUANDO** se ejecuta `axiom workspace validate`
+- **ENTONCES** se reporta en español la clave `sdd.id_pattern`, el valor y la regla incumplida (REQ-44.1 de `requirement-identifiers`)
+- **Y** el código de salida es `1`
+
 ---
 
 ### Requirement: Proyección Aditiva de `sdd.iso` en el Status v2 (REQ-29.2)
@@ -241,19 +255,20 @@ El bloqueo del archivado por la matriz es el REQ-29.11 de `sdd-archive-lifecycle
 
 ---
 
-### Requirement: Identificador `REQ-<n>.<m>` en el Nombre de los Requisitos de la Delta (REQ-29.3)
+### Requirement: Identificador Válido según el Patrón Declarado en el Nombre de los Requisitos de la Delta (REQ-29.3)
 
-En un cambio ISO, el nombre de todo requisito de la delta (ADDED, MODIFIED, REMOVED o RENAMED) DEBE contener un identificador con la forma `REQ-<n>.<m>`, con `<n>` y `<m>` enteros decimales sin signo. Es el identificador que citan `Cubre:` (REQ-29.4), la consulta de un requisito existente (REQ-29.14 de `spec-baseline-integration`) y la matriz de verify (REQ-29.6). La baseline es `openspec/specs/`, el único formato de spec viva: no existe ninguna otra identidad que declarar, y el identificador es solo el que figura en el nombre del requisito. La comprobación DEBE hacerse en el estado del cambio, una vez escrita la delta y antes de habilitar la fase `design`, y DEBE aplicar estas reglas:
+En un cambio ISO, el nombre de todo requisito de la delta (ADDED, MODIFIED, REMOVED o RENAMED) DEBE contener un identificador válido según el patrón declarado del proyecto (REQ-44.1 de `requirement-identifiers`; sin declaración, el valor por defecto de REQ-44.2, que admite exactamente `REQ-<n>.<m>` con `<n>` y `<m>` enteros decimales sin signo). Es el identificador que citan `Cubre:` (REQ-29.4), la consulta de un requisito existente (REQ-29.14 de `spec-baseline-integration`) y la matriz de verify (REQ-29.6). La baseline es `openspec/specs/`, el único formato de spec viva: no existe ninguna otra identidad que declarar, y el identificador es solo el que figura en el nombre del requisito. El análisis del nombre (qué es un identificador, un candidato mal formado o una ausencia) lo hace el puerto único (REQ-44.4 y REQ-44.5 de `requirement-identifiers`). La comprobación DEBE hacerse en el estado del cambio, una vez escrita la delta y antes de habilitar la fase `design`, y DEBE aplicar estas reglas:
+(Previously: el nombre debía contener un identificador con la forma literal `REQ-<n>.<m>`; ahora basta un identificador válido según el patrón declarado del proyecto, y el motivo nombra ese patrón.)
 
 | Caso | Regla |
 |---|---|
-| Nombre sin identificador, o con una forma que no es `REQ-<n>.<m>` | Bloquea. |
+| Nombre sin identificador, o con una forma que no es un identificador válido según el patrón | Bloquea. |
 | Nombre con más de un identificador distinto | Bloquea: es ambiguo. |
 | ADDED cuyo identificador ya existe en la baseline, o que repite el de otro ADDED de la delta | Bloquea (supuesto visible: sin identificadores únicos, `Cubre:` y la consulta del bug no resuelven sin ambigüedad). **Excepción (archivado interrumpido):** NO bloquea un ADDED cuyo identificador figura en la baseline del mismo dominio en un requisito con el mismo nombre y el mismo bloque, byte a byte (encabezado `### Requirement:` y cuerpo), que el bloque ADDED de la delta. La comparación se hace tras la única normalización que aplica el compositor (`axiom sdd archive-compose` solo asegura que el bloque termine en un salto de línea); no se normaliza nada más (espacios, finales de línea ni orden). Es el propio requisito, ya compuesto por un archivado que se interrumpió antes de mover la carpeta del cambio. Cualquier diferencia de nombre, de bloque o de dominio sigue bloqueando. |
 | MODIFIED o REMOVED | Su nombre es el del requisito existente, de modo que el identificador es el que ya contiene. Si el existente no lo contiene, bloquea. |
 | RENAMED | El nombre nuevo contiene identificador. Si el nombre antiguo también lo contiene, ambos son el mismo (supuesto visible: renombrar no cambia la identidad). Un RENAMED puede añadir el identificador a un requisito que no lo tenía. |
 
-Un bloqueo DEBE ser un motivo tipado accionable que nombre el dominio, la sección, el requisito y la continuación (añadir o corregir el identificador en el nombre; si el requisito ya existe sin él, añadírselo con un RENAMED de la delta). Solo se comprueban los requisitos de la delta, nunca el resto de la baseline. Sin la declaración ISO, esta regla NO DEBE bloquear.
+Un bloqueo DEBE ser un motivo tipado accionable que nombre el dominio, la sección, el requisito, el patrón efectivo en su texto legible y la continuación (añadir o corregir el identificador en el nombre según el patrón; si el requisito ya existe sin él, añadírselo con un RENAMED de la delta). Con el patrón por defecto, el patrón se nombra como `REQ-<n>.<m>` y el texto del motivo y de la continuación es idéntico al de antes de este cambio. Solo se comprueban los requisitos de la delta, nunca el resto de la baseline. Sin la declaración ISO, esta regla NO DEBE bloquear. Si el patrón es inaccesible (bloque `sdd:` inválido o configuración ilegible), un cambio ISO NO DEBE evaluarse con un patrón no declarado: la etapa `specs` lleva el hallazgo `iso_declaration_invalid` en lugar de estas reglas, sin código de motivo nuevo (REQ-29.16 de `axiom-sdd-cli-integration` y REQ-44.9 de `requirement-identifiers`).
 
 #### Scenario: Un ADDED sin identificador bloquea antes de design
 
@@ -344,11 +359,50 @@ Un bloqueo DEBE ser un motivo tipado accionable que nombre el dominio, la secci�
 - **CUANDO** se ejecuta `axiom sdd status <cambio> --json`
 - **ENTONCES** no se proyecta ningún motivo de identificador
 
+#### Scenario: Con un patrón declarado, un nombre con un identificador válido no bloquea
+
+- **DADO** un cambio ISO de un proyecto con `sdd: {iso: true, id_pattern: "RF-<DOM>-<NN>"}` y una delta con un ADDED `Alta de usuario (RF-USU-01)`
+- **CUANDO** se ejecuta `axiom sdd status <cambio> --json`
+- **ENTONCES** no se proyecta el motivo tipado de identificador
+
+#### Scenario: Con un patrón declarado, el formato por defecto no es un identificador
+
+- **DADO** el mismo proyecto y un ADDED llamado `Alta de usuario (REQ-30.1)`
+- **CUANDO** se ejecuta `axiom sdd status <cambio> --json`
+- **ENTONCES** el cambio queda bloqueado con el motivo tipado de identificador
+- **Y** el motivo nombra el patrón `RF-<DOM>-<NN>`
+
+#### Scenario: Con un patrón declarado, un identificador mal formado bloquea
+
+- **DADO** el mismo proyecto y un ADDED llamado `Alta de usuario (RF-USU-1)`
+- **CUANDO** se ejecuta `axiom sdd status <cambio> --json`
+- **ENTONCES** el cambio queda bloqueado con el motivo tipado de identificador, que nombra `RF-USU-1` como candidato mal formado
+
+#### Scenario: Con un patrón declarado, dos identificadores distintos bloquean
+
+- **DADO** el mismo proyecto y un ADDED llamado `Alta y baja (RF-USU-01, RF-USU-02)`
+- **CUANDO** se ejecuta `axiom sdd status <cambio> --json`
+- **ENTONCES** el cambio queda bloqueado con el motivo tipado de identificador, que indica que el nombre es ambiguo
+
+#### Scenario: Con un patrón declarado, un ADDED con un identificador existente bloquea
+
+- **DADO** el mismo proyecto, una baseline con `RF-USU-01` y un ADDED `Otra alta (RF-USU-01)`
+- **CUANDO** se ejecuta `axiom sdd status <cambio> --json`
+- **ENTONCES** el cambio queda bloqueado con el motivo tipado de identificador, que nombra `RF-USU-01`
+
+#### Scenario: Con el patrón inaccesible no se evalúa con un patrón no declarado
+
+- **DADO** un cambio ISO sellado con un ADDED `Alta de usuario (RF-USU-01)` y un `axiom.yaml` cuyo `sdd.id_pattern` es inválido
+- **CUANDO** se ejecuta `axiom sdd status <cambio> --json`
+- **ENTONCES** la etapa `specs` proyecta el hallazgo `iso_declaration_invalid` en lugar de las reglas de identificador
+- **Y** la etapa `tasks` no se evalúa
+
 ---
 
 ### Requirement: Cobertura `Cubre:` de los Requisitos de la Delta (REQ-29.4)
 
-En un cambio ISO, cada tarea de `tasks.md` o de `tasks.<rol>.md` DEBE poder declarar los requisitos que cubre con una línea `Cubre: REQ-x[, REQ-y ...]`. El identificador citado es el `REQ-<n>.<m>` del nombre del requisito (REQ-29.3). El motor DEBE analizar esas líneas en todos los ficheros de tareas del cambio y validar la cobertura conjunta, en cuanto existan los ficheros de tareas: cada requisito de la delta (identificado por el `REQ-<n>.<m>` de su nombre; en un RENAMED, el de su nombre nuevo) DEBE aparecer en al menos un `Cubre:` del conjunto de ficheros. Un requisito de la delta sin cobertura DEBE bloquear con un motivo tipado que lo nombre. Un identificador de `Cubre:` que no existe ni en la delta ni en la baseline DEBE bloquear con un motivo tipado que lo nombre; uno que existe en la baseline pero no en la delta se admite y no cuenta para la cobertura. Fuera de ISO, `Cubre:` es informativo y opcional y NUNCA DEBE bloquear.
+En un cambio ISO, cada tarea de `tasks.md` o de `tasks.<rol>.md` DEBE poder declarar los requisitos que cubre con una línea `Cubre: REQ-x[, REQ-y ...]`. El identificador citado es el identificador válido, según el patrón declarado del proyecto (REQ-44.1 de `requirement-identifiers`), del nombre del requisito (REQ-29.3). El motor DEBE analizar esas líneas en todos los ficheros de tareas del cambio y validar la cobertura conjunta, en cuanto existan los ficheros de tareas: cada requisito de la delta (identificado por el identificador válido de su nombre; en un RENAMED, el de su nombre nuevo) DEBE aparecer en al menos un `Cubre:` del conjunto de ficheros. Un requisito de la delta sin cobertura DEBE bloquear con un motivo tipado que lo nombre. Un identificador de `Cubre:` que no existe ni en la delta ni en la baseline DEBE bloquear con un motivo tipado que lo nombre; uno que existe en la baseline pero no en la delta se admite y no cuenta para la cobertura. Fuera de ISO, `Cubre:` es informativo y opcional y NUNCA DEBE bloquear.
+(Previously: el identificador citado era la forma literal `REQ-<n>.<m>`; ahora es el identificador válido según el patrón declarado del proyecto, que con el patrón por defecto coincide con `REQ-<n>.<m>`.)
 
 #### Scenario: Un requisito de la delta sin tarea que lo cubra bloquea
 
@@ -392,6 +446,19 @@ En un cambio ISO, cada tarea de `tasks.md` o de `tasks.<rol>.md` DEBE poder decl
 - **DADO** un cambio no ISO y una delta cuyos requisitos no aparecen en ningún `Cubre:`
 - **CUANDO** se ejecuta `axiom sdd status <cambio> --json`
 - **ENTONCES** no se proyecta ningún motivo de bloqueo de cobertura
+
+
+#### Scenario: Con un patrón declarado, `Cubre:` cita el identificador del patrón
+
+- **DADO** un cambio ISO de un proyecto con `sdd: {iso: true, id_pattern: "RF-<DOM>-<NN>"}`, una delta con `RF-USU-01` y `RF-USU-02` y tareas con `Cubre: RF-USU-01, RF-USU-02`
+- **CUANDO** se ejecuta `axiom sdd status <cambio> --json`
+- **ENTONCES** no se proyecta ningún motivo de cobertura
+
+#### Scenario: Con un patrón declarado, un `Cubre:` con el formato por defecto bloquea
+
+- **DADO** el mismo proyecto y una tarea con `Cubre: REQ-30.1`
+- **CUANDO** se ejecuta `axiom sdd status <cambio> --json`
+- **ENTONCES** el cambio queda bloqueado con un motivo tipado que nombra `REQ-30.1` y el patrón `RF-<DOM>-<NN>`
 
 ---
 
@@ -643,7 +710,8 @@ En un cambio ISO, toda fila manual (tipo `manual`) DEBE justificar la evidencia 
 
 ### Requirement: Trazabilidad por `git log --first-parent` Independiente de la Estrategia de Fusión y Compatible con la Rama `-archive` (REQ-29.9)
 
-Para un cambio ISO archivado por la rama `<prefijo>/<cambio>-archive` (`monorepo-embedded`), Axiom DEBE poder derivar, con `git log --first-parent <rama de integración>` y sin ningún estado persistido nuevo, dos commits de la línea principal: (a) el **commit de integración del código**, el primero que incorpora la carpeta `openspec/changes/<cambio>/` con sus `tasks.md` y `verify-report.md`; y (b) el **commit de archivado**, el primero que incorpora `openspec/changes/archive/<fecha>-<cambio>/`. La derivación DEBE dar el mismo resultado con fusión por squash, por commit de merge y por rebase, tanto para el PR del cambio como para el PR documental del archivado. Cuando la compuerta `integration` registra evidencia `pr_merged` con un commit (`internal/kickoff`), el commit de código derivado DEBE contrastarse con ella: DEBE ser ese commit o un ancestro suyo en la línea principal, y una discrepancia se informa sin error de ejecución. NO DEBE introducir estado persistido nuevo ni depender de ninguna traza de integración de IDs: el identificador de un requisito es el `REQ-<n>.<m>` de su nombre, elegido por quien redacta la delta, y no hay ID provisional ni definitivo (supuesto visible). La cadena requisito (`REQ-<n>.<m>`) → `Cubre:` de las tareas archivadas → fila de la matriz del informe archivado → commit de integración del código → commit de archivado DEBE poder reconstruirse a partir de los artefactos archivados y del historial de la rama principal. Los trailers de los commits intermedios son informativos y NUNCA se validan. Si la carpeta archivada, o la carpeta del cambio, no existe todavía en la rama principal, la derivación DEBE informar de la ausencia del commit correspondiente sin error de ejecución. En `multirepo` la derivación no se especifica en este cambio (supuesto visible).
+Para un cambio ISO archivado por la rama `<prefijo>/<cambio>-archive` (`monorepo-embedded`), Axiom DEBE poder derivar, con `git log --first-parent <rama de integración>` y sin ningún estado persistido nuevo, dos commits de la línea principal: (a) el **commit de integración del código**, el primero que incorpora la carpeta `openspec/changes/<cambio>/` con sus `tasks.md` y `verify-report.md`; y (b) el **commit de archivado**, el primero que incorpora `openspec/changes/archive/<fecha>-<cambio>/`. La derivación DEBE dar el mismo resultado con fusión por squash, por commit de merge y por rebase, tanto para el PR del cambio como para el PR documental del archivado. Cuando la compuerta `integration` registra evidencia `pr_merged` con un commit (`internal/kickoff`), el commit de código derivado DEBE contrastarse con ella: DEBE ser ese commit o un ancestro suyo en la línea principal, y una discrepancia se informa sin error de ejecución. NO DEBE introducir estado persistido nuevo ni depender de ninguna traza de integración de IDs: el identificador de un requisito es el identificador válido, según el patrón declarado del proyecto, de su nombre, elegido por quien redacta la delta, y no hay ID provisional ni definitivo (supuesto visible). La cadena requisito (su identificador) → `Cubre:` de las tareas archivadas → fila de la matriz del informe archivado → commit de integración del código → commit de archivado DEBE poder reconstruirse a partir de los artefactos archivados y del historial de la rama principal. Los trailers de los commits intermedios son informativos y NUNCA se validan. Si la carpeta archivada, o la carpeta del cambio, no existe todavía en la rama principal, la derivación DEBE informar de la ausencia del commit correspondiente sin error de ejecución. En `multirepo` la derivación no se especifica en este cambio (supuesto visible).
+(Previously: el identificador de la cadena era la forma literal `REQ-<n>.<m>`; ahora es el identificador válido según el patrón declarado del proyecto.)
 
 #### Scenario: Cambio fusionado por squash
 
@@ -704,7 +772,12 @@ Para un cambio ISO archivado por la rama `<prefijo>/<cambio>-archive` (`monorepo
 - **CUANDO** se derivan los dos commits
 - **ENTONCES** no se escribe ningún fichero nuevo de estado en la carpeta del cambio ni en el repositorio
 
----
+
+#### Scenario: Con un patrón declarado, la cadena de trazabilidad parte del identificador del patrón
+
+- **DADO** un cambio ISO archivado de un proyecto con `sdd: {iso: true, id_pattern: "RF-<DOM>-<NN>"}`, con `Cubre: RF-USU-01` en sus tareas archivadas y una fila de la matriz para ese requisito
+- **CUANDO** se reconstruye la cadena requisito → `Cubre:` → fila → commit de integración del código → commit de archivado
+- **ENTONCES** la cadena se reconstruye partiendo de `RF-USU-01`
 
 ### Requirement: Bug sin Impacto en la Spec en un Cambio ISO: el Motivo es la Evidencia (REQ-29.19)
 
