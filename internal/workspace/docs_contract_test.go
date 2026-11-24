@@ -460,7 +460,7 @@ func TestDocsRemitToAxiomBranchEnsure(t *testing.T) {
 	}
 }
 
-// REQ-25.24 y REQ-25.1: el manual documenta los cuatro verbos de `axiom branch`,
+// REQ-25.24 y REQ-25.1: el manual documenta los cinco verbos de `axiom branch`,
 // el flujo de la rama de archivado (PR del cambio, `ensure --archive`, PR
 // documental), el hook de la capa D y su instalación por `axiom sync`, las
 // preferencias personales del hub y la política local de este repositorio.
@@ -471,6 +471,10 @@ func TestManualDeInicioDocumentsTheBranchVerbsAndTheArchiveFlow(t *testing.T) {
 		"### Ramas y Worktrees (`axiom branch`)",
 		"- `axiom branch ensure --change <cambio>",
 		"- `axiom branch status",
+		"- `axiom branch scope --change <cambio>",
+		"`axiom.branch-scope/v1`",
+		"`offer`",
+		"el verify conjunto",
 		"- `axiom branch done --change <cambio>",
 		"- `axiom branch guard --agent <runtime>`",
 		"`decision_required`",
@@ -517,7 +521,7 @@ func TestDocsEnterpriseVisionRemitsToAxiomBranch(t *testing.T) {
 	for _, want := range []string{
 		"**Ramas y worktrees.**",
 		"`axiom branch`",
-		"`ensure`, `status`, `done` y `guard`",
+		"`ensure`, `status`, `scope`, `done` y `guard`",
 		"rama `-archive`",
 		"PR documental aparte",
 		"`git:` y `repositories:`",

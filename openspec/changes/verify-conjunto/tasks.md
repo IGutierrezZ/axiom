@@ -75,9 +75,9 @@ Tests lentos (señalar para segundo plano): `go test ./internal/branch/engine/` 
 
 ## Phase 5: Documentación, pines y cierre
 
-- [ ] 5.1 (Unidad 10, RED) Actualizar los pines de `internal/workspace/docs_contract_test.go` (manual `:463-497` y visión `:520`, «`ensure`, `status`, `scope`, `done` y `guard`») y comprobar que fallan.
+- [x] 5.1 (Unidad 10, RED) Actualizar los pines de `internal/workspace/docs_contract_test.go` (manual `:463-497` y visión `:520`, «`ensure`, `status`, `scope`, `done` y `guard`») y comprobar que fallan.
   Cubre: REQ-25.1
-- [ ] 5.2 (Unidad 10, GREEN) Documentar `axiom branch scope` en «Ramas y Worktrees» y en la lista de verbos de `docs/manual-de-inicio.md` y `docs/architecture/AXIOM_ENTERPRISE_VISION.md`.
+- [x] 5.2 (Unidad 10, GREEN) Documentar `axiom branch scope` en «Ramas y Worktrees» y en la lista de verbos de `docs/manual-de-inicio.md` y `docs/architecture/AXIOM_ENTERPRISE_VISION.md`.
   Cubre: REQ-25.1
 - [ ] 5.3 (Unidad 11) Regenerar los orquestadores con `go test ./... -update` (en segundo plano) sobre `testdata/golden/**` y revisar el diff; actualizar el SHA-256 de los ajustes de Kilocode en `internal/components/sdd/review_ledger_contract_test.go` (`TestKilocodeReviewSettingsMatchCurrentMainBaseline`) con su comentario de cambio deliberado.
   Cubre: REQ-28.42, REQ-43.32
