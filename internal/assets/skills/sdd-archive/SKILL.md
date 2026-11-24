@@ -149,7 +149,10 @@ ADDED/MODIFIED/REMOVED/RENAMED sections yourself. A model-driven Read/Edit
 merge is exactly how archive previously dropped unrelated requirements or
 left a delta unapplied while still reporting success. Composition MUST run
 through the native `sdd-archive-compose` command, which matches requirements
-by name (e.g., "### Requirement: Session Expiration"), preserves every
+by identifier when the delta name carries a valid one for the project
+(`sdd.id_pattern` of `axiom.yaml`; a MODIFIED, REMOVED or RENAMED old name
+whose title changed but keeps its identifier still finds its requirement) and
+by name otherwise (e.g., "### Requirement: Session Expiration"), preserves every
 unrelated requirement byte-for-byte, and applies RENAMED before MODIFIED
 before REMOVED before ADDED so a rename is visible to a same-change MODIFIED:
 

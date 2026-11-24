@@ -15,6 +15,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/branch/engine"
 	"github.com/IGutierrezZ/axiom/v3/internal/livespec"
 	"github.com/IGutierrezZ/axiom/v3/internal/pathquote"
+	"github.com/IGutierrezZ/axiom/v3/internal/reqid"
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
@@ -55,6 +56,13 @@ func RunArchiveIntegrate(args []string, stdout io.Writer) error {
 	if err := livespec.RefuseISOProject(loc.Declarations.SDD != nil && loc.Declarations.SDD.ISO, loc.ConfigPath, loc.WorkspaceRoot, parsed.feature); err != nil {
 		return err
 	}
+	// REQ-44.9: el patrón de identificadores se lee en vivo de axiom.yaml; inaccesible (bloque
+	// `sdd:` inválido, también por `iso`, o configuración ilegible), la integración se niega sin
+	// escribir y con la continuación de `axiom workspace validate`.
+	pattern, err := projectIDPattern("archive integrate", loc)
+	if err != nil {
+		return fmt.Errorf("%w; no se ha escrito nada", err)
+	}
 	command := oddIntegrateCommandLine(parsed.feature, loc.WorkspaceRoot)
 
 	if err := guardODDWriter(loc.WorkspaceRoot, parsed.feature, "archive integrate --odd"); err != nil {
@@ -76,7 +84,7 @@ func RunArchiveIntegrate(args []string, stdout io.Writer) error {
 		return fmt.Errorf("archive integrate: %w; corrige el documento y vuelve a ejecutar `%s`; no se ha escrito nada", err, command)
 	}
 
-	registry, err := livespec.LoadRegistry(loc.PlanningHome, livespec.RegistryOptions{})
+	registry, err := livespec.LoadRegistry(loc.PlanningHome, livespec.RegistryOptions{Pattern: pattern})
 	if err != nil {
 		return fmt.Errorf("archive integrate: %w; vuelve a ejecutar `axiom archive integrate --odd %s` cuando se pueda leer; no se ha escrito nada", err, pathquote.ShellWord(parsed.feature))
 	}
@@ -103,7 +111,7 @@ func renderArchiveIntegrateHelp(stdout io.Writer) error {
 		"  Integra en la spec viva (openspec/specs/) la sección `## Spec viva` del documento odd/tasks/<feature>.md de la rama actual,",
 		"  con la misma composición que el archivado SDD. Cada capacidad lleva su delta en un bloque ```openspec bajo `### Capacidad: <dominio>`.",
 		"  Todo o nada: valida y compone todas las capacidades en memoria antes de escribir ninguna. Es idempotente: repetirla no cambia nada.",
-		"  Un `### Requirement:` ADDED lleva su `(REQ-n.m)` en el título; si el identificador ya existe en openspec/specs/ o en la delta de un cambio activo, se rechaza con el siguiente número libre.",
+		fmt.Sprintf("  Un `### Requirement:` ADDED lleva su `(%s)` en el título; si el identificador ya existe en openspec/specs/ o en la delta de un cambio activo, se rechaza con el siguiente número libre.", reqid.Default().Compact()),
 		"  Un documento con `Tipo: bug` declara su impacto: una `## Spec viva` con delta, o una sección `## Impacto en la spec` con la línea exacta `Sin impacto en la spec` y una línea `Motivo: <una línea>`.",
 		"  Con `technical_context` en axiom.yaml, rechaza que la rama modifique rutas de referencia (modo reference) o no se pueda determinar su base, e informa de las rutas mantenidas que tocó.",
 		"  Escribe solo openspec/specs/ y, si ya existe, openspec/INDEX.md; no modifica el documento ODD ni crea artefactos SDD. Sale con código distinto de cero ante cualquier rechazo, sin escribir nada.",

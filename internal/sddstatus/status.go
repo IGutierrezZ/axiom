@@ -283,6 +283,19 @@ type ResolveOptions struct {
 	// la que resuelven las referencias de prueba de la matriz ISO (design D11). Solo la
 	// rellena Resolve; vacía, se usa la raíz del workspace.
 	master string
+
+	// declarations son las declaraciones de axiom.yaml de la ubicación resuelta: de ellas sale
+	// el patrón de identificadores de requisito, que las reglas ISO leen en vivo (REQ-44.1).
+	// Solo las rellena Resolve; vacías equivalen a «sin declaraciones» (patrón por defecto).
+	declarations workspace.Declarations
+}
+
+// resolvedMaster es la carpeta maestra de las opciones, o la raíz del workspace si no hay.
+func resolvedMaster(options ResolveOptions, workspaceRoot string) string {
+	if options.master != "" {
+		return options.master
+	}
+	return workspaceRoot
 }
 
 type CommandArgs struct {
@@ -524,6 +537,7 @@ func Resolve(options ResolveOptions) (Status, error) {
 		workspaceRoot = options.WorkspaceRoot
 	}
 	options.master = location.Master
+	options.declarations = location.Declarations
 	status, err := resolveStatus(options, workspaceRoot)
 	if err != nil {
 		return status, err
@@ -699,7 +713,7 @@ func resolveByPreferenceOrder(options ResolveOptions) (Status, error) {
 	// cambio sin instantánea, o con iso falso, no evalúa nada.
 	var iso *isoEvaluation
 	if governance != nil && governance.Kickoff.IsISO() {
-		iso = evaluateISOChange(planningHome, changeRoot, artifactPaths, artifacts)
+		iso = evaluateISOChange(planningHome, changeRoot, artifactPaths, artifacts, options.declarations, resolvedMaster(options, workspaceRoot))
 	}
 
 	// The change-instance identity (#2563, S4b of #2540) binds the runtime

@@ -38,7 +38,7 @@ const (
 	// impactMarkerLine es la misma línea que fija el perfil de bug del carril SDD
 	// (REQ-29.15): un único contrato para los dos carriles.
 	impactMarkerLine   = isoevidence.NoImpactMark
-	impactReasonPrefix = "Motivo:"
+	impactReasonPrefix = isoevidence.NoImpactReasonLabel
 	capabilityPrefix   = "### Capacidad:"
 	openspecFenceLabel = "openspec"
 )

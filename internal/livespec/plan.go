@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/openspecdoc"
+	"github.com/IGutierrezZ/axiom/v3/internal/reqid"
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
@@ -144,9 +144,10 @@ func PlanIntegration(loc workspace.Location, doc FeatureDoc, reg *Registry) (Int
 		plan.Reason = doc.Impact.Reason
 	}
 
+	pattern := reg.Pattern()
 	items := make([]classified, 0, len(doc.Capabilities))
 	for _, c := range doc.Capabilities {
-		item, err := classify(loc, c)
+		item, err := classify(loc, c, pattern)
 		if err != nil {
 			return Integration{}, err
 		}
@@ -158,7 +159,7 @@ func PlanIntegration(loc workspace.Location, doc FeatureDoc, reg *Registry) (Int
 	}
 
 	for _, item := range items {
-		step, err := compose(doc.Feature, item)
+		step, err := compose(doc.Feature, item, pattern)
 		if err != nil {
 			return Integration{}, err
 		}
@@ -190,8 +191,11 @@ func specPath(loc workspace.Location, capability string) string {
 	return filepath.Join(loc.PlanningHome, "specs", capability, "spec.md")
 }
 
-// classify separa lo pendiente de lo ya integrado en la delta de una capacidad.
-func classify(loc workspace.Location, c CapabilityDelta) (classified, error) {
+// classify separa lo pendiente de lo ya integrado en la delta de una capacidad. MODIFIED y
+// REMOVED se emparejan con la canónica como el compositor, por identificador con vuelta al
+// título exacto (REQ-30.22), de modo que la segunda ejecución de una integración es
+// `already`; ADDED y RENAMED siguen por título exacto.
+func classify(loc workspace.Location, c CapabilityDelta, pattern reqid.Pattern) (classified, error) {
 	item := classified{cap: c, path: specPath(loc, c.Name)}
 	data, err := os.ReadFile(item.path)
 	switch {
@@ -216,8 +220,12 @@ func classify(loc workspace.Location, c CapabilityDelta) (classified, error) {
 	}
 
 	canonical := map[string]openspecdoc.Requirement{}
+	var canonicalList []openspecdoc.Requirement
+	var canonicalNames []string
 	for _, r := range openspecdoc.ParseCanonical(item.previous) {
 		canonical[r.Name] = r
+		canonicalList = append(canonicalList, r)
+		canonicalNames = append(canonicalNames, r.Name)
 	}
 	same := func(a, b openspecdoc.Requirement) bool {
 		return openspecdoc.NormalizeBody(a.Body) == openspecdoc.NormalizeBody(b.Body)
@@ -229,16 +237,19 @@ func classify(loc workspace.Location, c CapabilityDelta) (classified, error) {
 		case !ok:
 			item.pending.Added = append(item.pending.Added, r)
 		case !same(present, r):
-			return classified{}, &DivergentRequirementError{Capability: c.Name, Requirement: r.Name, ID: r.ID, Path: item.path}
+			return classified{}, &DivergentRequirementError{Capability: c.Name, Requirement: r.Name, ID: pattern.InTitle(r.Name), Path: item.path}
 		}
 	}
 	for _, r := range c.Delta.Modified {
-		if present, ok := canonical[r.Name]; !ok || !same(present, r) {
+		// Pendiente salvo que el requisito resuelto ya tenga el mismo cuerpo normalizado; un
+		// nombre que no se resuelve (o es ambiguo) queda pendiente y la composición lo rechaza.
+		if i, match := openspecdoc.Resolve(canonicalNames, r.Name, pattern); match != openspecdoc.MatchFound || !same(canonicalList[i], r) {
 			item.pending.Modified = append(item.pending.Modified, r)
 		}
 	}
 	for _, r := range c.Delta.Removed {
-		if _, ok := canonical[r.Name]; ok {
+		// Pendiente si el requisito se resuelve; si no, ya estaba retirado.
+		if _, match := openspecdoc.Resolve(canonicalNames, r.Name, pattern); match != openspecdoc.MatchNone {
 			item.pending.Removed = append(item.pending.Removed, r)
 		}
 	}
@@ -254,61 +265,74 @@ func classify(loc workspace.Location, c CapabilityDelta) (classified, error) {
 	return item, nil
 }
 
-// checkIdentifiers comprueba los ADDED pendientes: cada uno lleva `(REQ-n.m)`, no existe
-// en el registro y no se repite en otra capacidad del documento.
+// checkIdentifiers comprueba los ADDED pendientes: cada uno lleva un identificador válido
+// según el patrón del registro (con el defecto, `(REQ-n.m)`), no existe en el registro y no
+// se repite en otra capacidad del documento.
 func checkIdentifiers(feature string, items []classified, reg *Registry) error {
+	pattern := reg.Pattern()
 	taken := map[string]bool{}
 	for _, item := range items {
 		for _, r := range item.pending.Added {
-			if r.ID != "" {
-				taken[r.ID] = true
+			if id := pattern.InTitle(r.Name); id != "" {
+				taken[id] = true
 			}
 		}
 	}
 	firstSeen := map[string]string{}
 	for _, item := range items {
 		for _, r := range item.pending.Added {
-			if r.ID == "" {
+			id := pattern.InTitle(r.Name)
+			if id == "" {
 				return &DocError{Feature: feature, Problems: []Problem{{
 					Code:    "added_without_id",
 					Line:    item.cap.Line + r.Line,
 					Subject: r.Name,
-					Message: fmt.Sprintf("el requisito ADDED %q de la capacidad %s no lleva un identificador `(REQ-n.m)` en el título; añade el siguiente número libre de la serie, p. ej. `### Requirement: %s (REQ-n.m)`", r.Name, item.cap.Name, r.Name),
+					Message: fmt.Sprintf("el requisito ADDED %q de la capacidad %s no lleva un identificador `(%s)` en el título; añade el siguiente número libre de la serie, p. ej. `### Requirement: %s (%s)`%s", r.Name, item.cap.Name, pattern.Compact(), r.Name, pattern.Compact(), patternHint(pattern)),
 				}}}
 			}
-			if refs := reg.Lookup(r.ID); len(refs) > 0 {
-				return &CollisionError{ID: r.ID, Where: refs[0].Where(), NextFree: nextFree(reg, r.ID, taken)}
+			if refs := reg.Lookup(id); len(refs) > 0 {
+				return &CollisionError{ID: id, Where: refs[0].Where(), NextFree: nextFree(reg, id, taken)}
 			}
-			if other, dup := firstSeen[r.ID]; dup {
+			if other, dup := firstSeen[id]; dup {
 				return &CollisionError{
-					ID:       r.ID,
+					ID:       id,
 					Where:    fmt.Sprintf("el propio documento, en las capacidades %s y %s", other, item.cap.Name),
-					NextFree: nextFree(reg, r.ID, taken),
+					NextFree: nextFree(reg, id, taken),
 				}
 			}
-			firstSeen[r.ID] = item.cap.Name
+			firstSeen[id] = item.cap.Name
 		}
 	}
 	return nil
 }
 
+// patternHint nombra la plantilla del proyecto en los motivos cuando no es la de por
+// defecto; con el defecto no añade nada y el texto es el de siempre.
+func patternHint(pattern reqid.Pattern) string {
+	if pattern == reqid.Default() {
+		return ""
+	}
+	return fmt.Sprintf("; el patrón de identificadores del proyecto es %s (sdd.id_pattern de axiom.yaml)", pattern.Template())
+}
+
 // nextFree es el siguiente número libre de la serie de id: el del registro, saltando los
 // que el propio documento ya usa.
 func nextFree(reg *Registry, id string, taken map[string]bool) string {
-	series, ok := SeriesOf(id)
+	pattern := reg.Pattern()
+	series, ok := pattern.Series(id)
 	if !ok {
 		return id
 	}
 	candidate := reg.NextFree(series)
 	for taken[candidate] {
-		number, _ := strconv.Atoi(candidate[strings.LastIndexByte(candidate, '.')+1:])
-		candidate = fmt.Sprintf("REQ-%d.%d", series, number+1)
+		number, _ := pattern.Number(candidate)
+		candidate = pattern.Format(series, number+1)
 	}
 	return candidate
 }
 
 // compose calcula la especificación resultante de una capacidad.
-func compose(feature string, item classified) (CapabilityPlan, error) {
+func compose(feature string, item classified, pattern reqid.Pattern) (CapabilityPlan, error) {
 	step := CapabilityPlan{Name: item.cap.Name, Path: item.path, Existed: item.existed}
 	pending := item.pending
 	if len(pending.Added)+len(pending.Modified)+len(pending.Removed)+len(pending.Renamed) == 0 {
@@ -320,7 +344,7 @@ func compose(feature string, item classified) (CapabilityPlan, error) {
 		step.Content = openspecdoc.RenderNewSpec(item.cap.Name, feature, pending.Added)
 		return step, nil
 	}
-	composed, err := openspecdoc.Compose(item.previous, reducedDelta(pending), openspecdoc.ComposeOptions{})
+	composed, err := openspecdoc.Compose(item.previous, reducedDelta(pending), openspecdoc.ComposeOptions{IDPattern: pattern})
 	if err != nil {
 		return CapabilityPlan{}, &CapabilityError{Capability: item.cap.Name, Err: err}
 	}

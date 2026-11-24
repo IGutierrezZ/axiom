@@ -162,13 +162,13 @@ func TestPlanIntegrationRejectsAnAddedRequirementAlreadyPresentWithAnotherBody(t
 
 func TestPlanIntegrationFailsClosedWhenAModifiedNameNoLongerMatches(t *testing.T) {
 	loc, reg := planFixture(t, map[string]string{"specs/facturacion/spec.md": facturacionSpec})
-	delta := "## MODIFIED Requirements\n\n" + addedBlock("Emisión de factura", "REQ-31.1", "Texto nuevo.")
+	delta := "## MODIFIED Requirements\n\n" + addedBlock("Emisión de factura", "REQ-31.9", "Texto nuevo.")
 	_, err := PlanIntegration(loc, docWith(t, "", [2]string{"facturacion", delta}), reg)
 	var unapplied *openspecdoc.UnappliedDeltaError
 	if !errors.As(err, &unapplied) {
 		t.Fatalf("error = %v, se esperaba *UnappliedDeltaError", err)
 	}
-	if unapplied.Section != "MODIFIED" || unapplied.Requirement != "Emisión de factura (REQ-31.1)" {
+	if unapplied.Section != "MODIFIED" || unapplied.Requirement != "Emisión de factura (REQ-31.9)" {
 		t.Errorf("unapplied = %+v", unapplied)
 	}
 	if !strings.Contains(err.Error(), "facturacion") {

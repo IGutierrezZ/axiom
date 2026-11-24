@@ -4,6 +4,8 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/IGutierrezZ/axiom/v3/internal/reqid"
 )
 
 func TestParseDeltaReadsTheFourSectionsInOrder(t *testing.T) {
@@ -52,11 +54,13 @@ El sistema DEBE consultar.
 	if names := requirementNames(got.Renamed); !reflect.DeepEqual(names, []string{"Antigua → Nueva"}) {
 		t.Errorf("Renamed = %v", names)
 	}
-	if got.Added[0].ID != "REQ-31.1" || got.Added[1].ID != "REQ-31.2" || got.Modified[0].ID != "REQ-31.3" {
-		t.Errorf("IDs = %q %q %q", got.Added[0].ID, got.Added[1].ID, got.Modified[0].ID)
+	// El ID ya no es un campo de Requirement: se deriva del título con el patrón (REQ-44.4).
+	p := reqid.Default()
+	if p.InTitle(got.Added[0].Name) != "REQ-31.1" || p.InTitle(got.Added[1].Name) != "REQ-31.2" || p.InTitle(got.Modified[0].Name) != "REQ-31.3" {
+		t.Errorf("IDs = %q %q %q", p.InTitle(got.Added[0].Name), p.InTitle(got.Added[1].Name), p.InTitle(got.Modified[0].Name))
 	}
-	if got.Removed[0].ID != "" {
-		t.Errorf("un título sin (REQ-n.m) no lleva ID: %q", got.Removed[0].ID)
+	if p.InTitle(got.Removed[0].Name) != "" {
+		t.Errorf("un título sin (REQ-n.m) no lleva ID: %q", p.InTitle(got.Removed[0].Name))
 	}
 	if got.Added[0].Line != 3 || got.Added[1].Line != 11 {
 		t.Errorf("Line = %d, %d; se esperaba 3 y 11", got.Added[0].Line, got.Added[1].Line)
@@ -99,7 +103,7 @@ func TestParseCanonicalListsEveryRequirementWithItsLine(t *testing.T) {
 func TestParseCanonicalIgnoresHeadingsInsideFences(t *testing.T) {
 	canonical := "# T\n\n## Requirements\n\n### Requirement: Uno (REQ-1.1)\n\n```\n### Requirement: Falso (REQ-1.2)\n```\n"
 	got := ParseCanonical(canonical)
-	if len(got) != 1 || got[0].ID != "REQ-1.1" {
+	if len(got) != 1 || reqid.Default().InTitle(got[0].Name) != "REQ-1.1" {
 		t.Errorf("requisitos = %+v, se esperaba solo REQ-1.1", got)
 	}
 }

@@ -60,6 +60,10 @@ func TestExampleConfigLoads(t *testing.T) {
 	if declarations.SDD == nil || !declarations.SDD.ISO {
 		t.Fatalf("el bloque documentado declara iso: true: %+v", declarations.SDD)
 	}
+	// REQ-44.1: el bloque descomentado declara también la plantilla de ejemplo.
+	if p, err := declarations.IDPattern(); err != nil || p.Template() != "RF-<DOM>-<NN>" {
+		t.Fatalf("el bloque documentado declara id_pattern RF-<DOM>-<NN>: %q, %v", p.Template(), err)
+	}
 }
 
 // `iso: true` no convive con `workflow.lane: odd`, ni siquiera con la plantilla.

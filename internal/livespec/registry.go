@@ -6,11 +6,10 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"regexp"
 	"sort"
-	"strconv"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/openspecdoc"
+	"github.com/IGutierrezZ/axiom/v3/internal/reqid"
 )
 
 // RefKind dice de dónde sale una referencia del registro.
@@ -23,7 +22,7 @@ const (
 	RefChange RefKind = "change"
 )
 
-// IDRef es una aparición de un identificador `REQ-n.m`.
+// IDRef es una aparición de un identificador de requisito.
 type IDRef struct {
 	ID          string
 	Kind        RefKind
@@ -42,27 +41,31 @@ func (r IDRef) Where() string {
 }
 
 // RegistryOptions acota el registro: ExcludeChange deja fuera la delta de un cambio (el
-// propio de `adopt check`) y SpecsOnly indexa solo openspec/specs/.
+// propio de `adopt check`) y SpecsOnly indexa solo openspec/specs/. Pattern es el patrón de
+// identificadores del proyecto (REQ-44.1); el valor cero es el patrón por defecto.
 type RegistryOptions struct {
 	ExcludeChange string
 	SpecsOnly     bool
+	Pattern       reqid.Pattern
 }
 
-// Registry es el índice único de identificadores `REQ-n.m` (D6) de las especificaciones
-// del planning home y de las deltas de sus cambios activos. No indexa
-// `changes/archive/`.
+// Registry es el índice único de identificadores de requisito (D6) de las
+// especificaciones del planning home y de las deltas de sus cambios activos, con el patrón
+// del proyecto. No indexa `changes/archive/`.
 type Registry struct {
-	byID   map[string][]IDRef
-	maxFor map[int]int
+	pattern reqid.Pattern
+	byID    map[string][]IDRef
+	maxFor  map[reqid.Series]int
 }
 
-var reqIDParts = regexp.MustCompile(`^REQ-(\d+)\.(\d+)$`)
+// Pattern devuelve el patrón de identificadores con el que se construyó el registro.
+func (r *Registry) Pattern() reqid.Pattern { return r.pattern }
 
 // LoadRegistry construye el registro de <planningHome>/specs/*/spec.md y, salvo con
 // SpecsOnly, de <planningHome>/changes/*/specs/*/spec.md. Una carpeta que no existe no
 // es un error: el registro queda vacío en esa parte.
 func LoadRegistry(planningHome string, opts RegistryOptions) (*Registry, error) {
-	reg := &Registry{byID: map[string][]IDRef{}, maxFor: map[int]int{}}
+	reg := &Registry{pattern: opts.Pattern, byID: map[string][]IDRef{}, maxFor: map[reqid.Series]int{}}
 
 	specsDir := filepath.Join(planningHome, "specs")
 	capabilities, err := subdirectories(specsDir)
@@ -76,7 +79,7 @@ func LoadRegistry(planningHome string, opts RegistryOptions) (*Registry, error) 
 			return nil, err
 		}
 		for _, r := range openspecdoc.ParseCanonical(string(data)) {
-			reg.add(IDRef{ID: r.ID, Kind: RefSpec, Capability: capability, Path: path, Requirement: r.Name})
+			reg.add(IDRef{ID: reg.pattern.InTitle(r.Name), Kind: RefSpec, Capability: capability, Path: path, Requirement: r.Name})
 		}
 	}
 	if opts.SpecsOnly {
@@ -106,7 +109,7 @@ func LoadRegistry(planningHome string, opts RegistryOptions) (*Registry, error) 
 			delta := openspecdoc.ParseDelta(string(data))
 			for _, group := range [][]openspecdoc.Requirement{delta.Added, delta.Modified, delta.Renamed} {
 				for _, r := range group {
-					reg.add(IDRef{ID: r.ID, Kind: RefChange, Capability: capability, Change: change, Path: path, Requirement: r.Name})
+					reg.add(IDRef{ID: reg.pattern.InTitle(r.Name), Kind: RefChange, Capability: capability, Change: change, Path: path, Requirement: r.Name})
 				}
 			}
 		}
@@ -119,10 +122,8 @@ func (r *Registry) add(ref IDRef) {
 		return
 	}
 	r.byID[ref.ID] = append(r.byID[ref.ID], ref)
-	if m := reqIDParts.FindStringSubmatch(ref.ID); m != nil {
-		series, _ := strconv.Atoi(m[1])
-		number, _ := strconv.Atoi(m[2])
-		if number > r.maxFor[series] {
+	if series, ok := r.pattern.Series(ref.ID); ok {
+		if number, _ := r.pattern.Number(ref.ID); number > r.maxFor[series] {
 			r.maxFor[series] = number
 		}
 	}
@@ -135,18 +136,21 @@ func (r *Registry) Lookup(id string) []IDRef {
 	return refs
 }
 
-// NextFree devuelve el siguiente identificador libre de una serie: el máximo `m` de la
-// serie `n` en todo el registro, más uno.
-func (r *Registry) NextFree(series int) string {
-	return fmt.Sprintf("REQ-%d.%d", series, r.maxFor[series]+1)
+// NextFree devuelve el siguiente identificador libre de una serie del patrón del registro:
+// el número máximo de la serie en todo el registro, más uno, con el relleno que declara la
+// plantilla (`RF-USU-09` da `RF-USU-10`, sin truncar). Los huecos no se rellenan y otra
+// serie no cuenta. Solo parte de una serie existente: la asignación de una serie vacía no
+// es de este paquete (C-03-b).
+func (r *Registry) NextFree(series reqid.Series) string {
+	return r.pattern.Format(series, r.maxFor[series]+1)
 }
 
-// SeriesRefs devuelve todas las apariciones de identificadores de una serie `REQ-n.*`, en
-// un orden estable (por ruta y después por identificador).
-func (r *Registry) SeriesRefs(series int) []IDRef {
+// SeriesRefs devuelve todas las apariciones de identificadores de una serie, en un orden
+// estable (por ruta y después por identificador).
+func (r *Registry) SeriesRefs(series reqid.Series) []IDRef {
 	var refs []IDRef
 	for id, list := range r.byID {
-		if s, ok := SeriesOf(id); ok && s == series {
+		if s, ok := r.pattern.Series(id); ok && s == series {
 			refs = append(refs, list...)
 		}
 	}
@@ -157,16 +161,6 @@ func (r *Registry) SeriesRefs(series int) []IDRef {
 		return refs[i].ID < refs[j].ID
 	})
 	return refs
-}
-
-// SeriesOf devuelve el número de serie `n` de un identificador `REQ-n.m`.
-func SeriesOf(id string) (int, bool) {
-	m := reqIDParts.FindStringSubmatch(id)
-	if m == nil {
-		return 0, false
-	}
-	series, err := strconv.Atoi(m[1])
-	return series, err == nil
 }
 
 // subdirectories lista los directorios de dir, ordenados; un dir que no existe da una

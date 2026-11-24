@@ -4,6 +4,8 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/IGutierrezZ/axiom/v3/internal/reqid"
 )
 
 func TestParseCubre(t *testing.T) {
@@ -50,7 +52,7 @@ func TestCheckCoverage(t *testing.T) {
 		req(SectionAdded, "iso", "Declaración ISO (REQ-29.1)", "A"),
 		req(SectionAdded, "iso", "Proyección (REQ-29.2)", "B"),
 	}
-	index := NewBaselineIndex([]Requirement{req("", "sdd", "Subcomando axiom sdd status (REQ-13.1)", "S1", "S2")})
+	index := NewBaselineIndex([]Requirement{req("", "sdd", "Subcomando axiom sdd status (REQ-13.1)", "S1", "S2")}, reqid.Default())
 
 	cases := []struct {
 		name  string
@@ -130,7 +132,7 @@ func TestCheckCoverage(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got := CheckCoverage(tc.delta, index, tc.cubre)
+			got := CheckCoverage(tc.delta, index, tc.cubre, reqid.Default())
 			if len(got) != len(tc.want) {
 				t.Fatalf("hallazgos = %v, quería %d", reasons(got), len(tc.want))
 			}
@@ -155,7 +157,7 @@ func TestCheckExistingRequirementBug(t *testing.T) {
 		req("", "sdd", "Requisito sin identificador"),
 		req("", "a", "Duplicado uno (REQ-14.1)", "X"),
 		req("", "b", "Duplicado dos (REQ-14.1)", "Y"),
-	})
+	}, reqid.Default())
 	cases := []struct {
 		name  string
 		cubre []CubreLine
@@ -200,7 +202,7 @@ func TestCheckExistingRequirementBug(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			assertFindings(t, CheckExistingRequirementBug(index, tc.cubre), CodeBugRequirement, StageTasks, tc.want)
+			assertFindings(t, CheckExistingRequirementBug(index, tc.cubre, reqid.Default()), CodeBugRequirement, StageTasks, tc.want)
 		})
 	}
 }
@@ -243,7 +245,7 @@ func TestAffectedScenarios(t *testing.T) {
 		{Domain: "iso", Section: SectionRenamed, OldName: "x", Name: "Cuatro (REQ-1.4)"},
 		req(SectionAdded, "iso", "Sin identificador", "E"),
 	}
-	gotDelta := AffectedFromDelta(delta)
+	gotDelta := AffectedFromDelta(delta, reqid.Default())
 	wantDelta := []ScenarioKey{{"REQ-1.1", "A"}, {"REQ-1.1", "B"}, {"REQ-1.2", "C"}}
 	if !reflect.DeepEqual(gotDelta, wantDelta) {
 		t.Errorf("AffectedFromDelta = %v, quería %v", gotDelta, wantDelta)
@@ -252,7 +254,7 @@ func TestAffectedScenarios(t *testing.T) {
 	index := NewBaselineIndex([]Requirement{
 		req("", "sdd", "Status (REQ-13.1)", "S1", "S2"),
 		req("", "sdd", "Vacío (REQ-13.2)"),
-	})
+	}, reqid.Default())
 	gotBase := AffectedFromBaseline(index, []string{"REQ-13.1", "REQ-13.2", "REQ-13.99", "REQ-13.1"})
 	wantBase := []ScenarioKey{{"REQ-13.1", "S1"}, {"REQ-13.1", "S2"}}
 	if !reflect.DeepEqual(gotBase, wantBase) {
@@ -268,7 +270,7 @@ func TestNewBaselineIndex(t *testing.T) {
 		req("", "sdd", "Con identificador (REQ-13.1)", "A"),
 		req("", "sdd", "Sin identificador", "B"),
 		req("", "sdd", "Mal formado (REQ-13)", "C"),
-	})
+	}, reqid.Default())
 	if len(index) != 1 || len(index["REQ-13.1"]) != 1 {
 		t.Fatalf("el índice solo debía contener REQ-13.1: %v", index)
 	}

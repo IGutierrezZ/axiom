@@ -400,15 +400,34 @@ delivery:
 ```yaml
 sdd:
   iso: true        # true | false (por defecto: false)
+  id_pattern: "RF-<DOM>-<NN>"   # opcional; sin ella rige REQ-<n>.<m>
 ```
 
 - `iso: true` declara que el proyecto solo usa SDD: todo el trabajo, también el pequeño y entendido, se tramita por el carril SDD sin preguntar el carril (tampoco con `workflow.lane: ask`) y sin crear `odd/tasks/<tarea>.md`. La combinación con `workflow.lane: odd` es contradictoria: `axiom workspace validate` la rechaza (salida `1`, nombrando `sdd.iso` y `workflow.lane`) y `axiom sdd kickoff seal` se niega a sellar. El valor es un booleano sin comillas y una clave desconocida es un error.
 - `axiom sdd kickoff seal` crea la carpeta del cambio y copia `iso` en su `kickoff.yaml`: no se crea la carpeta a mano antes. Un cambio ISO es el que se selló con esa instantánea; uno sin ella es no ISO aunque el proyecto declare ISO después, y un retrosellado (`--infer`) nunca la lleva.
 - `axiom sdd status --json` proyecta el estado en el campo `iso` (`project`, `change`, `matrix` y `reason` si el bloque es `invalid`). Cada negativa es un motivo tipado `blocked(<token>)` con su continuación; la lista cerrada de trece tokens está en el contrato de status.
-- Reglas de un cambio ISO: cada requisito de la delta lleva un `REQ-<n>.<m>` en su nombre y al menos un `#### Scenario:`; las tareas citan cada requisito con una línea `Cubre: REQ-x[, REQ-y ...]`; `verify` es obligatorio y escribe en `verify-report.md` la sección `## Matriz de verificación` (una fila por escenario afectado, con referencia de prueba `ruta/fichero:símbolo` o `TestX`, comando y código de salida, o responsable, fecha y justificación si es manual; nunca líneas `verdict:`); `archive` se bloquea mientras la matriz falte, sea inválida o tenga una fila `fail`. Los hallazgos de la revisión independiente siguen siendo informativos: solo bloquea la validez de la matriz.
+- Reglas de un cambio ISO: cada requisito de la delta lleva en su nombre un identificador válido según el patrón del proyecto (`sdd.id_pattern`; por defecto `REQ-<n>.<m>`) y al menos un `#### Scenario:`; las tareas citan cada requisito con una línea `Cubre: REQ-x[, REQ-y ...]`; `verify` es obligatorio y escribe en `verify-report.md` la sección `## Matriz de verificación` (una fila por escenario afectado, con referencia de prueba `ruta/fichero:símbolo` o `TestX`, comando y código de salida, o responsable, fecha y justificación si es manual; nunca líneas `verdict:`); `archive` se bloquea mientras la matriz falte, sea inválida o tenga una fila `fail`. Los hallazgos de la revisión independiente siguen siendo informativos: solo bloquea la validez de la matriz.
 - `axiom sdd archive-check --cwd <ruta> --change <cambio> [--json]` comprueba, sin escribir, si un cambio ISO puede archivarse; la skill `sdd-archive` lo ejecuta antes de componer o mover y se detiene si sale distinto de cero. Con `--json` informa por dominio de `alreadyComposed`: para reanudar un archivado interrumpido solo se compone lo que sigue en `false`.
 - `axiom sdd trace --cwd <ruta> --change <cambio> [--integration-branch <rama>] [--json]` deriva, sin escribir, la traza del cambio desde el historial git: commit de código, commit y carpeta de archivado, y la cadena requisito, línea `Cubre:` y filas de la matriz. Una divergencia con la evidencia de la compuerta `integration` se informa como discrepancia, nunca como error.
 - Los binarios anteriores ignoran el bloque, como el de `git:`.
+
+#### Patrón de identificadores de requisito (`sdd.id_pattern`)
+
+Todo requisito de la spec viva lleva un identificador en su título, `### Requirement: <nombre> (<ID>)`. La forma de ese identificador la fija `sdd.id_pattern`, una plantilla de texto entre comillas; sin ella rige `REQ-<n>.<m>` (por ejemplo `REQ-30.4`), que es el comportamiento de siempre. La plantilla se compone de literales y marcadores:
+
+| Marcador | Significado | Ejemplo |
+|---|---|---|
+| `<DOM>` | código de dominio en mayúsculas (como máximo uno) | `USU` |
+| `<n>` | número de serie, sin relleno (como máximo uno) | `30` |
+| `<m>` | número de secuencia, sin relleno | `4` |
+| `<NN>` a `<NNNNNN>` | número de secuencia con relleno a 2-6 cifras | `<NN>` da `01`, `09`, `10`, `100` |
+
+Reglas: empieza por un literal de mayúsculas o cifras con un separador final (`RF-`, `HU-`); lleva exactamente un marcador de número; no junta dos marcadores; sus literales solo usan mayúsculas, cifras, `.`, `_` y `-`; y mide como máximo 64 caracteres. Ejemplos: `RF-<DOM>-<NN>` (`RF-USU-01`), `RF-<m>` (`RF-121`) y `HU-<NNN>` (`HU-007`).
+
+- El patrón se lee en vivo de `axiom.yaml`, nunca del `kickoff.yaml` de un cambio: cambiarlo es una migración de datos y los cambios en curso se revalidan con el patrón nuevo.
+- Una plantilla inválida es un error de `axiom workspace validate` (salida `1`, con el motivo y un ejemplo válido). Con el patrón inaccesible (bloque `sdd:` inválido o configuración ilegible), `axiom archive integrate` y `axiom sdd-archive-compose` se niegan sin escribir y `axiom sdd trace` y `axiom sdd archive-check` terminan con error, todos con la continuación `axiom workspace validate --path <proyecto>`; un cambio ISO lleva el motivo `iso_declaration_invalid` en la etapa `specs`. `axiom archive adopt check` no lee el patrón: sigue aplicando `REQ-<n>.<m>`.
+- El siguiente identificador libre de una serie conserva el relleno de la plantilla (`RF-USU-09` da `RF-USU-10`) y no rellena huecos.
+- Al archivar, un requisito MODIFIED, REMOVED o el nombre antiguo de un RENAMED se empareja con la spec viva por identificador cuando el nombre de la delta lleva uno válido, aunque el título haya cambiado; si varios requisitos llevan el mismo identificador, desempata el título exacto. ADDED y la colisión del nombre nuevo de un RENAMED siguen por título.
 
 **Perfil de bug (todo proyecto, ISO o no).** Un bug se tramita siempre por SDD, por una de tres rutas; `proposal.md` fija cuál:
 
@@ -556,7 +575,7 @@ A medida que el sistema evoluciona, nuevas capacidades reemplazan contratos prev
 
 ### La Spec Viva es OpenSpec
 
-La única spec viva de requisitos de un proyecto es `openspec/specs/` (en un `multirepo`, la del repositorio de especificaciones). Todo trabajo que cambia el comportamiento la actualiza por uno de los dos carriles, con la misma composición y la misma numeración `(REQ-n.m)`:
+La única spec viva de requisitos de un proyecto es `openspec/specs/` (en un `multirepo`, la del repositorio de especificaciones). Todo trabajo que cambia el comportamiento la actualiza por uno de los dos carriles, con la misma composición y la misma numeración, la del patrón de identificadores del proyecto (`sdd.id_pattern`; por defecto `(REQ-n.m)`):
 
 * **SDD:** el archivado del cambio (`sdd-archive`) integra sus deltas.
 * **ODD:** el propio documento `odd/tasks/<feature>.md` lleva la delta y se integra con `axiom archive integrate --odd <feature>` (véase [Carril Cotidiano: ODD](#a-carril-cotidiano-odd-organic-driven-development)).
@@ -634,12 +653,12 @@ Para el 90% del trabajo diario: tareas concretas, correcciones de errores y refa
 * **Documento vivo:** el agente crea `odd/tasks/<nombre>.md` y lo mantiene tarea a tarea; no existe un verbo `axiom` para crearlo, consultarlo ni promoverlo (los retiró INC-20).
 * **Seguimiento:** la pestaña **ODD** en `axiom ui`.
 * **Promoción:** si una tarea ODD crece y requiere arquitectura formal, se pide el carril SDD y se abre un cambio con su propuesta.
-* **Spec viva (`## Spec viva`):** si el trabajo cambia el comportamiento, el documento lleva una sección `## Spec viva` con un subapartado `### Capacidad: <dominio>` por capacidad afectada y, en cada uno, un único bloque de código vallado `openspec` con la delta (`## ADDED Requirements`, `## MODIFIED Requirements`, `## REMOVED Requirements` o `## RENAMED Requirements`, con `### Requirement:` y `#### Scenario:`). Un requisito ADDED lleva su `(REQ-n.m)` en el título.
+* **Spec viva (`## Spec viva`):** si el trabajo cambia el comportamiento, el documento lleva una sección `## Spec viva` con un subapartado `### Capacidad: <dominio>` por capacidad afectada y, en cada uno, un único bloque de código vallado `openspec` con la delta (`## ADDED Requirements`, `## MODIFIED Requirements`, `## REMOVED Requirements` o `## RENAMED Requirements`, con `### Requirement:` y `#### Scenario:`). Un requisito ADDED lleva en el título un identificador del patrón del proyecto (`sdd.id_pattern`; por defecto `(REQ-n.m)`).
 * **Integración:** en la rama de la feature, antes de cerrarla:
   ```bash
   axiom archive integrate --odd <feature>
   ```
-  Valida y compone todas las capacidades antes de escribir ninguna (todo o nada), escribe solo `openspec/specs/` y, si existe, `openspec/INDEX.md`, es idempotente y no modifica el documento ODD ni crea artefactos SDD. Con `--json` emite el informe `axiom.odd-integration/v1`. Un número `(REQ-n.m)` ya usado en la spec viva o en el cambio de otra persona se rechaza con el siguiente libre.
+  Valida y compone todas las capacidades antes de escribir ninguna (todo o nada), escribe solo `openspec/specs/` y, si existe, `openspec/INDEX.md`, es idempotente y no modifica el documento ODD ni crea artefactos SDD. Con `--json` emite el informe `axiom.odd-integration/v1`. Un identificador ya usado en la spec viva o en el cambio de otra persona se rechaza con el siguiente libre de su serie.
 * **Impacto de los bugs (`## Impacto en la spec`):** un documento con la línea `Tipo: bug` debe declarar su impacto: una sección `## Spec viva` con delta o una sección `## Impacto en la spec` con la línea exacta `Sin impacto en la spec` y una línea `Motivo: <una línea>`. Sin ninguna de las dos, `axiom archive integrate --odd` se niega. Sin `Tipo:` o con `Tipo: incremento` (el valor por defecto) la sección no es obligatoria.
 * **Contexto técnico:** con `technical_context:` en `axiom.yaml`, la integración se niega si la rama modifica rutas del modo `reference` y te informa de las rutas `maintained` que tocó, que debes actualizar en la misma unidad de trabajo.
 

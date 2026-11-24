@@ -8,6 +8,8 @@ import (
 	"strings"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/IGutierrezZ/axiom/v3/internal/reqid"
 )
 
 // TechnicalContextConfig es el bloque `technical_context:` de axiom.yaml (REQ-24.26).
@@ -45,6 +47,24 @@ type Declarations struct {
 	IntegrationsErr     error
 	Repositories        []RepositoryPolicy // lo declarado en `repositories:`; nil sin bloque, sin entradas o con bloque inválido (REQ-25.27)
 	RepositoriesErr     error
+}
+
+// IDPattern devuelve la plantilla de identificadores de requisito del proyecto
+// (REQ-44.1). Sin bloque `sdd:` o sin la clave `id_pattern` devuelve el defecto,
+// `REQ-<n>.<m>`; con un `axiom.yaml` ilegible o un bloque `sdd:` inválido devuelve un
+// error que envuelve ParseErr o SDDErr (%w): ningún consumidor cae en silencio al
+// defecto con una declaración que no pudo leer (REQ-44.9).
+func (d Declarations) IDPattern() (reqid.Pattern, error) {
+	if d.ParseErr != nil {
+		return reqid.Pattern{}, fmt.Errorf("no se puede leer axiom.yaml para conocer sdd.id_pattern: %w", d.ParseErr)
+	}
+	if d.SDDErr != nil {
+		return reqid.Pattern{}, fmt.Errorf("el bloque sdd de axiom.yaml no es válido y sdd.id_pattern no se puede conocer: %w", d.SDDErr)
+	}
+	if d.SDD == nil || d.SDD.IDPattern == nil {
+		return reqid.Default(), nil
+	}
+	return *d.SDD.IDPattern, nil
 }
 
 // Claves admitidas por nodo (D-04). yaml.v3 no ofrece KnownFields en

@@ -2,39 +2,17 @@ package isoevidence
 
 import (
 	"fmt"
-	"regexp"
 	"strings"
+
+	"github.com/IGutierrezZ/axiom/v3/internal/reqid"
 )
 
-var (
-	// reqCandidate encuentra un token que empieza por `REQ-` en límite de
-	// palabra. El último carácter es alfanumérico, de modo que la puntuación
-	// final (`REQ-30.1,` o `REQ-30.1.`) no forma parte del token.
-	reqCandidate = regexp.MustCompile(`\bREQ-[0-9A-Za-z.]*[0-9A-Za-z]`)
-	reqValid     = regexp.MustCompile(`^REQ-\d+\.\d+$`)
-)
-
-// RequirementIDs extrae los identificadores del nombre de un requisito. Es
-// válido el que encaja exactamente con `REQ-<n>.<m>`; el resto de candidatos
-// (`REQ-30`, `REQ-x.1`) son mal formados. Cada lista va sin repetidos y en el
-// orden de aparición.
-func RequirementIDs(name string) (valid []string, malformed []string) {
-	seenValid := map[string]bool{}
-	seenMalformed := map[string]bool{}
-	for _, token := range reqCandidate.FindAllString(name, -1) {
-		if reqValid.MatchString(token) {
-			if !seenValid[token] {
-				seenValid[token] = true
-				valid = append(valid, token)
-			}
-			continue
-		}
-		if !seenMalformed[token] {
-			seenMalformed[token] = true
-			malformed = append(malformed, token)
-		}
-	}
-	return valid, malformed
+// RequirementIDs extrae los identificadores del nombre de un requisito. Es válido el
+// que encaja exactamente con el patrón p del proyecto (`REQ-<n>.<m>` por defecto); el
+// resto de candidatos (`REQ-30`, `REQ-x.1`) son mal formados. Cada lista va sin
+// repetidos y en el orden de aparición. El análisis es del puerto reqid (REQ-44.5).
+func RequirementIDs(name string, p reqid.Pattern) (valid []string, malformed []string) {
+	return p.Scan(name)
 }
 
 // ensureTrailingNewline reproduce la única normalización que aplica el
@@ -51,17 +29,29 @@ func describeRequirement(r Requirement) string {
 	return fmt.Sprintf("dominio %q, sección %s, requisito %q", r.Domain, r.Section, r.Name)
 }
 
-const (
-	continuationAddID   = "añade o corrige en el nombre un identificador REQ-<n>.<m>"
-	continuationRenamed = "añade el identificador REQ-<n>.<m> al nombre con un RENAMED de la delta"
-	continuationUnique  = "elige un identificador REQ-<n>.<m> que no exista ya en la baseline ni en otro requisito ADDED"
-	continuationOneID   = "deja un único identificador REQ-<n>.<m> en el nombre"
-	continuationSameID  = "conserva el mismo identificador al renombrar, o retira el del nombre antiguo"
-)
+// continuations son las continuaciones de REQ-29.3; nombran el patrón efectivo con
+// su plantilla, de modo que con el defecto el texto es el de siempre.
+type continuations struct{ addID, renamed, unique, oneID, sameID string }
 
-// CheckRequirementIDs aplica la regla REQ-29.3 a los requisitos de la delta.
-// Solo se comprueban los de la delta, nunca el resto de la baseline.
-func CheckRequirementIDs(delta, baseline []Requirement) []Finding {
+func continuationsFor(p reqid.Pattern) continuations {
+	t := p.Template()
+	return continuations{
+		addID:   "añade o corrige en el nombre un identificador " + t,
+		renamed: "añade el identificador " + t + " al nombre con un RENAMED de la delta",
+		unique:  "elige un identificador " + t + " que no exista ya en la baseline ni en otro requisito ADDED",
+		oneID:   "deja un único identificador " + t + " en el nombre",
+		sameID:  "conserva el mismo identificador al renombrar, o retira el del nombre antiguo",
+	}
+}
+
+// CheckRequirementIDs aplica la regla REQ-29.3 a los requisitos de la delta con el
+// patrón p del proyecto. Solo se comprueban los de la delta, nunca el resto de la
+// baseline. ADDED, la colisión y la tolerancia D17 siguen por título e identificador
+// exactos; un MODIFIED o REMOVED lleva el identificador de su nombre, que es el del
+// requisito existente, así que un título cambiado con el mismo identificador pasa igual
+// (REQ-30.22).
+func CheckRequirementIDs(delta, baseline []Requirement, p reqid.Pattern) []Finding {
+	c := continuationsFor(p)
 	var findings []Finding
 	add := func(r Requirement, detail, continuation string) {
 		findings = append(findings, Finding{
@@ -75,7 +65,7 @@ func CheckRequirementIDs(delta, baseline []Requirement) []Finding {
 
 	baselineByID := map[string][]Requirement{}
 	for _, b := range baseline {
-		valid, _ := RequirementIDs(b.Name)
+		valid, _ := RequirementIDs(b.Name, p)
 		for _, id := range valid {
 			baselineByID[id] = append(baselineByID[id], b)
 		}
@@ -93,22 +83,22 @@ func CheckRequirementIDs(delta, baseline []Requirement) []Finding {
 	}
 
 	for _, r := range delta {
-		valid, malformed := RequirementIDs(r.Name)
+		valid, malformed := RequirementIDs(r.Name, p)
 		subject := describeRequirement(r)
 		switch {
 		case len(valid) == 0:
-			detail := subject + ": el nombre no contiene un identificador REQ-<n>.<m>"
+			detail := subject + ": el nombre no contiene un identificador " + p.Template()
 			if len(malformed) > 0 {
 				detail += fmt.Sprintf(" (forma no válida: %s)", strings.Join(malformed, ", "))
 			}
-			continuation := continuationAddID
+			continuation := c.addID
 			if r.Section == SectionModified || r.Section == SectionRemoved {
-				continuation = continuationRenamed
+				continuation = c.renamed
 			}
 			add(r, detail, continuation)
 			continue
 		case len(valid) > 1:
-			add(r, fmt.Sprintf("%s: el nombre es ambiguo, contiene los identificadores %s", subject, strings.Join(valid, ", ")), continuationOneID)
+			add(r, fmt.Sprintf("%s: el nombre es ambiguo, contiene los identificadores %s", subject, strings.Join(valid, ", ")), c.oneID)
 			continue
 		}
 		id := valid[0]
@@ -120,21 +110,21 @@ func CheckRequirementIDs(delta, baseline []Requirement) []Finding {
 				if tolerated(r, b) {
 					continue
 				}
-				add(r, fmt.Sprintf("%s: el identificador %s ya existe en la baseline (dominio %q, requisito %q)", subject, id, b.Domain, b.Name), continuationUnique)
+				add(r, fmt.Sprintf("%s: el identificador %s ya existe en la baseline (dominio %q, requisito %q)", subject, id, b.Domain, b.Name), c.unique)
 				break
 			}
 		case SectionRenamed:
-			oldValid, _ := RequirementIDs(r.OldName)
+			oldValid, _ := RequirementIDs(r.OldName, p)
 			if len(oldValid) > 0 {
 				if len(oldValid) != 1 || oldValid[0] != id {
-					add(r, fmt.Sprintf("%s: el RENAMED cambia el identificador de %s a %s", subject, strings.Join(oldValid, ", "), id), continuationSameID)
+					add(r, fmt.Sprintf("%s: el RENAMED cambia el identificador de %s a %s", subject, strings.Join(oldValid, ", "), id), c.sameID)
 				}
 				continue
 			}
 			noteAdder(id, r)
 			if existing := baselineByID[id]; len(existing) > 0 {
 				b := existing[0]
-				add(r, fmt.Sprintf("%s: el identificador %s ya existe en la baseline (dominio %q, requisito %q)", subject, id, b.Domain, b.Name), continuationUnique)
+				add(r, fmt.Sprintf("%s: el identificador %s ya existe en la baseline (dominio %q, requisito %q)", subject, id, b.Domain, b.Name), c.unique)
 			}
 		}
 	}
@@ -153,7 +143,7 @@ func CheckRequirementIDs(delta, baseline []Requirement) []Finding {
 			Stage:        StageSpecs,
 			Subject:      id,
 			Detail:       fmt.Sprintf("el identificador %s se repite en %d requisitos de la delta: %s", id, len(group), strings.Join(names, " y ")),
-			Continuation: continuationUnique,
+			Continuation: c.unique,
 		})
 	}
 	return findings

@@ -1,9 +1,12 @@
 package livespec
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/IGutierrezZ/axiom/v3/internal/reqid"
 )
 
 // writeTree escribe los ficheros de un árbol de prueba (rutas con barras) bajo root.
@@ -114,7 +117,7 @@ func TestLoadRegistryToleratesMissingFolders(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LoadRegistry sobre un planning home vacío: %v", err)
 	}
-	if got := reg.NextFree(5); got != "REQ-5.1" {
+	if got := reg.NextFree(defaultSeries(5)); got != "REQ-5.1" {
 		t.Errorf("NextFree(5) = %q, se esperaba REQ-5.1", got)
 	}
 }
@@ -133,7 +136,7 @@ func TestRegistryNextFreeIsTheMaximumOfTheSeriesPlusOne(t *testing.T) {
 		{33, "REQ-33.1"},
 	}
 	for _, tt := range tests {
-		if got := reg.NextFree(tt.series); got != tt.want {
+		if got := reg.NextFree(defaultSeries(tt.series)); got != tt.want {
 			t.Errorf("NextFree(%d) = %q, want %q", tt.series, got, tt.want)
 		}
 	}
@@ -148,8 +151,27 @@ func TestRegistryDoesNotConfuseSeriesWithSharedPrefixes(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := reg.NextFree(3); got != "REQ-3.6" {
+	if got := reg.NextFree(defaultSeries(3)); got != "REQ-3.6" {
 		t.Errorf("NextFree(3) = %q, la serie 30 no es la 3", got)
+	}
+}
+
+// Con el patrón por defecto la serie es su valor entero, como antes de reqid:
+// `REQ-09.4` cuenta en la serie 9 y aparece entre sus referencias.
+func TestRegistryTreatsLeadingZerosInTheSeriesAsTheSameSeries(t *testing.T) {
+	home := t.TempDir()
+	writeTree(t, home, map[string]string{
+		"specs/a/spec.md": "# a\n\n### Requirement: Uno (REQ-09.4)\n\ncuerpo\n\n### Requirement: Dos (REQ-9.2)\n\ncuerpo\n",
+	})
+	reg, err := LoadRegistry(home, RegistryOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := reg.NextFree(defaultSeries(9)); got != "REQ-9.5" {
+		t.Errorf("NextFree(9) = %q, se esperaba REQ-9.5", got)
+	}
+	if got := len(reg.SeriesRefs(defaultSeries(9))); got != 2 {
+		t.Errorf("SeriesRefs(9) tiene %d referencias, se esperaban 2", got)
 	}
 }
 
@@ -170,7 +192,7 @@ func TestRegistrySeriesRefsListsEveryReferenceOfTheSeries(t *testing.T) {
 		t.Fatal(err)
 	}
 	ids := map[string]bool{}
-	for _, ref := range reg.SeriesRefs(31) {
+	for _, ref := range reg.SeriesRefs(defaultSeries(31)) {
 		ids[ref.ID] = true
 	}
 	for _, want := range []string{"REQ-31.1", "REQ-31.2", "REQ-31.5", "REQ-31.6"} {
@@ -181,7 +203,13 @@ func TestRegistrySeriesRefsListsEveryReferenceOfTheSeries(t *testing.T) {
 	if ids["REQ-32.7"] || ids["REQ-31.40"] {
 		t.Errorf("SeriesRefs(31) incluye otra serie o el archivo: %v", ids)
 	}
-	if got := reg.SeriesRefs(3); len(got) != 0 {
+	if got := reg.SeriesRefs(defaultSeries(3)); len(got) != 0 {
 		t.Errorf("la serie 3 no comparte prefijo con la 31: %v", got)
 	}
+}
+
+// defaultSeries es la serie `REQ-n.*` del patrón por defecto.
+func defaultSeries(n int) reqid.Series {
+	series, _ := reqid.Default().Series(fmt.Sprintf("REQ-%d.0", n))
+	return series
 }

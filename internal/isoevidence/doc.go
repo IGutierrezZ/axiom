@@ -13,7 +13,7 @@
 //     motivo `blocked(<token>): <detalle>; <continuación>` (REQ-29.16).
 //   - fence.go: lectura de líneas con la marca de «dentro de una valla», que
 //     comparten todos los analizadores de Markdown.
-//   - reqid.go: identificadores `REQ-<n>.<m>` en el nombre de los requisitos
+//   - reqid.go: identificadores de requisito (patrón del proyecto, por defecto `REQ-<n>.<m>`) en el nombre de los requisitos
 //     (REQ-29.3, con la tolerancia del archivado interrumpido).
 //   - scenarios.go: escenarios por requisito (REQ-29.10 y nombres repetidos de
 //     REQ-29.6).

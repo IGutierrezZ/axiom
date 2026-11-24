@@ -76,20 +76,32 @@ workspace:
 #   split_hint_lines: 600
 
 # ------------------------------------------------------------------------------
-# Modo ISO (opcional)
+# Bloque SDD: modo ISO y patrón de identificadores (opcional)
 # ------------------------------------------------------------------------------
 # Un proyecto sometido a auditoría ISO declara que solo usa SDD:
 #   iso: true   todo el trabajo, también el pequeño, va por el carril SDD sin
 #               preguntar el carril y sin documento 'odd/tasks/'. Cada cambio
 #               sellado copia la declaración en su 'kickoff.yaml' y exige
-#               identificador REQ-<n>.<m> y escenario en cada requisito, línea
-#               'Cubre:' en las tareas y una matriz de verificación válida y con
-#               éxito para archivar. Un bug usa siempre el perfil de bug.
+#               identificador válido según el patrón del proyecto (por defecto
+#               REQ-<n>.<m>) y escenario en cada requisito, línea 'Cubre:' en las
+#               tareas y una matriz de verificación válida y con éxito para
+#               archivar. Un bug usa siempre el perfil de bug.
 #   iso: false  es el valor por defecto; no cambia nada.
 # No puede convivir con 'workflow.lane: odd': la validación lo rechaza. El valor
 # debe ser un booleano sin comillas y una clave desconocida es un error.
+#
+# El patrón de los identificadores de requisito se declara con 'id_pattern', una
+# plantilla de texto entre comillas; sin ella rige REQ-<n>.<m> (p. ej. REQ-30.4).
+# Marcadores: <DOM> código de dominio en mayúsculas (USU), <n> número de serie,
+# <m> número de secuencia sin relleno y <NN> a <NNNNNN> número de secuencia con
+# relleno a 2-6 cifras (<NN> da 01, 09, 10, 100). Debe empezar por un literal en
+# mayúsculas con separador (RF-, HU-), llevar un único marcador de número y no
+# juntar dos marcadores. Ejemplos: RF-<DOM>-<NN> (RF-USU-01), RF-<m> (RF-121),
+# HU-<NNN> (HU-007). Una plantilla inválida es un error de 'axiom workspace
+# validate' y los comandos que la necesitan se niegan con ese motivo.
 # sdd:
 #   iso: true
+#   id_pattern: "RF-<DOM>-<NN>"
 
 # ------------------------------------------------------------------------------
 # Integraciones con Trackers (opcional)
