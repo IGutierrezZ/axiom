@@ -61,7 +61,7 @@ Tamaños: S, M, L, XL. «(blanda)» = dependencia de la que la sección dice «c
 | C-08-a | Retirar los paquetes sin importadores (`recoverytrace`, `absorptionledger`) | [08](08-adelgazamiento.md) | ODD | S | — | `paquetes-huerfanos` |
 | C-08-b | Suite local que termina, sin compilar con el toolchain (cuatro tests a la puerta de la CI y fallos locales de Windows) | [08](08-adelgazamiento.md) | ODD | S-M | — | `suite-local-windows` |
 | C-08-c | Extraer de `reviewtransaction` las primitivas que usan otros paquetes | [08](08-adelgazamiento.md) | ODD | M | — | `primitivas-fichero` |
-| C-08-d | Solo Claude Code, VS Code (Copilot) y OpenCode: retirar los otros 14 agentes | [08](08-adelgazamiento.md) | SDD | XL | C-01-e; P17, P20 | `solo-tres-agentes` |
+| C-08-d | Retirar los agentes que no se usan (Kiro, Windsurf, Kimi, Hermes, OpenClaw y Kilo Code; se quedan otros once) | [08](08-adelgazamiento.md) | ODD (`## Spec viva`; SDD si reescribe requisitos) | L | C-01-e; P20 | `retirar-agentes` |
 | C-08-e | Retirar GGA y las lápidas de telemetría | [08](08-adelgazamiento.md) | ODD (`## Spec viva`) | S-M | C-08-d; P20 | `retirar-gga-telemetria` |
 | C-08-f | Arranque mínimo: retirar persona, presets, temas, agent builder y logo heredados | [08](08-adelgazamiento.md) | ODD (`## Spec viva`; SDD si reescribe requisitos) | L | C-08-d, C-08-e; P18, P19 | `arranque-minimo` |
 | C-08-g | Pruebas en paralelo y repositorios git de plantilla | [08](08-adelgazamiento.md) | ODD | L | C-01-e, C-08-d, C-08-f | `pruebas-paralelas` |
@@ -152,7 +152,7 @@ graph TD
   C08a["C-08-a paquetes huérfanos"]
   C08b["C-08-b suite local"]
   C08c["C-08-c primitivas de fichero"] --> C01e
-  C01e --> C08d["C-08-d solo tres agentes"]
+  C01e --> C08d["C-08-d retirar agentes"]
   C08d --> C08e["C-08-e GGA y telemetría"]
   C08d --> C08f["C-08-f arranque mínimo"]
   C08e --> C08f
@@ -249,7 +249,7 @@ Dos grados. **Duro**: el mismo fichero de lógica o la misma prosa (doctrina, sk
 | `internal/agents/` (`factory.go`, `capability_manifest.go`, `discovery.go`, paquetes por agente), `internal/installcmd/resolver.go` | duro | C-08-d |
 | `internal/cli/run.go`, `sync.go`, `doctor*.go`, `validate.go` | duro | C-01-e, C-08-d, C-08-e, C-08-f |
 | `internal/components/uninstall/` | duro | C-01-e (lápidas), C-08-d, C-08-e, C-08-f |
-| `internal/tui/model.go`, `router.go`, `screens/` | duro | C-01-e (pantallas RDD), C-08-d (selectores de Codex y Kiro, Pi), C-08-e (`preset`, `complete`, `upgrade_sync`), C-08-f (persona, preset, welcome, agent builder) |
+| `internal/tui/model.go`, `router.go`, `screens/` | duro | C-01-e (pantallas RDD), C-08-d (selector de modelo de Kiro), C-08-e (`preset`, `complete`, `upgrade_sync`), C-08-f (persona, preset, welcome, agent builder) |
 | `internal/components/persona`, `theme`, `opencodedefault`, `internal/agentbuilder` | duro | C-08-d (ramas por agente), C-08-f |
 | `internal/testenv`, `TestMain` y helpers `isolate*` | duro | C-08-b (puerta del toolchain), C-08-g |
 | `internal/assets/formatter_ordering_test.go` | duro | C-08-b, C-08-i |
@@ -270,7 +270,7 @@ Reglas: máximo 3 cambios por ola. En paralelo solo si no comparten ficheros con
 | 6 | C-02-b, C-03-a, C-07-b | Verify conjunto (compuerta `integration`, sdd-verify), puerto de IDs (`openspecdoc`, `isoevidence`, `routing.go`) y marco de plugins (`integrations`, `sdd_gate.go`, `ensure.go`) son disjuntos. |
 | A1 | C-08-a, C-08-b, C-08-c | Adelgazamiento (sección 08). Empieza cuando la ola 6 esté fusionada. Paquetes huérfanos, suite local y extracción de primitivas: disjuntos. C-08-b toca tests de `update`, `app`, `assets`, `backup`, `filemerge` y `cli` (doctor y state); C-08-c, `kickoff`, `sddstatus`, `branch/registry`, `statecoord`, `filecoord` y otros tres ficheros de `cli`. |
 | A2 | C-01-e | XL. Va sola: toca CI, `cli`, `components/sdd`, TUI, dashboard, hub, assets, contratos, specs y `bench/`. Requiere C-08-c fusionado, P20 y P21. |
-| A3 | C-08-d | XL. Va sola: toca todos los registros y `switch` por agente, la TUI, los componentes, los goldens y e2e. Requiere P17 y P20. |
+| A3 | C-08-d | L. Va sola: toca todos los registros y `switch` por agente, la TUI, los componentes, los goldens y e2e. Requiere P20. |
 | A4 | C-08-e, C-08-i | GGA y telemetría (`cli/run.go`, `sync.go`, `uninstall`, `model`, e2e) y CI por jobs (`ci.yml`, `windows-full-suite.yml`) son disjuntos. Requiere P20 y P21. |
 | A5 | C-08-f | Comparte `model`, `catalog` y la pantalla de presets con C-08-e. Requiere P18 y P19. |
 | A6 | C-08-g | Paraleliza lo que queda tras los borrados. |
@@ -309,11 +309,10 @@ Ninguna sesión hija las resuelve: si aparece una nueva, se detiene y la eleva a
 
 ### 6.1 Pendientes
 
-Las decisiones P1 a P16 quedaron resueltas por el usuario el 2026-11-17 (apartado 6.2). La sección 08 abre cinco nuevas. Su contexto y la recomendación están en la propia sección.
+Las decisiones P1 a P16 quedaron resueltas por el usuario el 2026-11-17 (apartado 6.2). La sección 08 abre cinco nuevas, de las que P17 ya está resuelta (apartado 6.2). El contexto y la recomendación de cada una están en la propia sección.
 
 | Id | Pregunta | Bloquea |
 |---|---|---|
-| P17 | ¿Se retira también Copilot CLI (`github-copilot-cli`)? | C-08-d (A3) |
 | P18 | ¿Se retira el agent builder? | C-08-f (A5) |
 | P19 | ¿Se conserva solo la persona de Axiom y se retiran `gentleman` y `neutral`? | C-08-f (A5) |
 | P20 | ¿Cuánto viven las lápidas de retirada: RDD, telemetría y limpieza en `uninstall` de lo retirado? | C-01-e (A2), C-08-d (A3), C-08-e (A4) |
@@ -323,6 +322,7 @@ Las decisiones P1 a P16 quedaron resueltas por el usuario el 2026-11-17 (apartad
 
 | Id | Resolución y evidencia |
 |---|---|
+| P17 | **Resuelta por el usuario (2026-11-24): Copilot CLI se queda.** En la misma conversación fija qué agentes se retiran: de los 13 restantes, todos menos Gemini CLI, Codex, Cursor, Antigravity y Pi, y sin quitar «los que prácticamente no ahorramos nada quitándolos». Aplicada la regla con la medición de la sección 08, se retiran Kiro, Windsurf, Kimi, Hermes, OpenClaw y Kilo Code, y se quedan Trae y Qwen (este, oculto). C-08-d pasa de XL a L y de SDD a ODD con `## Spec viva`. |
 | P9 (parte C-05-b) | La pregunta de carril la hace la doctrina al arrancar. Evidencia: `axiom.yaml:18` declara `workflow.lane: ask`. |
 | P11 (solo lectura de `integrations.tracker`) | `integrations.<plugin>` se edita desde la UI y lo hace C-07-h. Evidencia: el usuario dijo «todas las configuraciones que hablamos a nivel de proyecto o lo que sea tienen que estar en la ui» (Engram `analisis-backlog/integraciones-terceros` v2, 2026-11-16). |
 | P11 (ciclo C-06-e ↔ C-07-h) | Con C-06-e sin dependencia de C-07-b (la 06) el ciclo desaparece: es planificación, no del usuario. Queda abierta la contradicción de la arista (apartado 6.3). |
@@ -506,7 +506,8 @@ Para la sesión padre que coordine el plan.
 - **Revisión 06:** C-06-e sin C-05-b ni C-07-b y con C-02-a, C-03-a, C-02-c (si P5); ciclo C-06-e ↔ C-07-h desaparece, queda abierta la arista; solapes `ecosystem.js` y `branches.js`; justificaciones de ola 12 y UI; P11 en parte resuelta; P10 afecta a C-06-b; su P14 pasa a P15; dos viñetas de correcciones a la consolidación; errata de `isLocalRequest`.
 - **Revisión 07:** C-07-b depende de C-07-a de forma blanda; C-07-h con las dependencias de a, d, e y f (blanda) y el requisito previo de seguridad; C-07-a sin solape con guías de agente y con capacidad nueva `change-actor-identity` (la ola de C-07-a pasa a la 4, sin conflicto con C-06-c); verificación del `ArtifactLink`; delegados de la 07; P8 sigue abierta; P11 editable resuelta; P12 con pregunta de producto abierta; su sugerencia sobre la ola 16 (C-07-f antes de C-07-h) se cumple porque C-07-f va en la ola 13 y C-07-h en la 14.
 - **Revisión 08 (2026-11-24, `d580368d`):**
-  - Se añade la sección 08 (adelgazamiento) con C-08-a a C-08-i, las olas A1 a A7 entre la 6 y la 7, y las decisiones pendientes P17 a P21.
+  - Se añade la sección 08 (adelgazamiento) con C-08-a a C-08-i, las olas A1 a A7 entre la 6 y la 7, y las decisiones P17 a P21.
+  - P17 queda resuelta en la misma revisión, junto con la lista de agentes de C-08-d: se retiran seis y se quedan once.
   - C-01-e se adelanta a la A2 y su alcance se corrige en la 01:
     - `handoff` y `recoverytrace` no son RDD, y `consentenvelope` es mixto.
     - Las primitivas pasan a C-08-c, con seis símbolos más.

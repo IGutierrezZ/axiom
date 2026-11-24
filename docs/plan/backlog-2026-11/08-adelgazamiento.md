@@ -10,6 +10,10 @@ En palabras del usuario, resumidas:
 2. «Me gustaría adelgazar, además de lo que ya esté preparado en los cambios pendientes, la aplicación y los tests para agilizar los cambios.»
 3. «Axiom es un fork de gentle-ai, pero en realidad es algo más ligero: no quiero telemetría, ni GGA, ni RDD, y me sobran muchos de inicio; con Claude, VS Code y OpenCode se puede arrancar.»
 4. (2026-11-24) Acepta convertir el análisis en esta sección con C-01-e adelantada.
+5. (2026-11-24) Sobre los agentes:
+   - «Copilot CLI se queda.»
+   - De los otros 13, se van todos menos Gemini CLI, Codex, Cursor, Antigravity y Pi.
+   - «De los que se van, que no se vayan los que prácticamente no ahorramos nada quitándolos.»
 
 ## Diagnóstico
 
@@ -29,7 +33,7 @@ Peso de lo que sobra:
 | Bloque | Producción | Tests | Otros |
 |---|---|---|---|
 | RDD (C-01-e) | ~61.300 | ~100.000 | 11.175 de `contracts/review-*`, 20 specs `rdd-*` más `review-findings-ledger`, ~3.200 de docs y 91 de unos 120 journeys de `bench/` |
-| 14 agentes (C-08-d) | ~33.000-35.000 en total | | incluye ~5.900 de assets y ~7.000 de goldens |
+| 6 agentes (C-08-d) | ~12.300 en total | | incluye ~5.500 de ficheros propios (assets y tests dedicados) y ~3.300 de goldens |
 | Componentes de arranque heredados (C-08-f) | ~13.500-14.500 en total | | |
 | GGA (C-08-e) | ~975 | ~2.140 | ~160 de docs y spec |
 | Telemetría (C-08-e) | ~460 | ~1.100 | 219 de fixtures. No se envía nada: solo quedan lápidas de retirada |
@@ -71,7 +75,7 @@ En conjunto, en torno a un tercio del Go del repositorio.
   - (Análisis) Los fallos locales de `main` se clasifican uno a uno:
     - Si es un defecto real, se arregla.
     - Si depende del entorno (sockets Unix, junctions sin privilegios, estado del `HOME` real que se filtra al test), se aísla o se omite con `t.Skip`, dejando escritos el motivo y la condición.
-  - (Análisis) Los fallos de RDD, Codex y GGA no se tocan aquí: desaparecen con C-01-e, C-08-d y C-08-e. Son `TestCodexReviewAdapterDispatchesSavedRoles`, `TestManagedReviewerAsset*`, `TestNegotiated*`, `TestDeferredSyncIncludesCodexPermissionsArgs` y `TestRunDoctor_*GGA*`.
+  - (Análisis) Los fallos de RDD y GGA no se tocan aquí: desaparecen con C-01-e y C-08-e. Son `TestCodexReviewAdapterDispatchesSavedRoles` (adaptador de revisión de RDD), `TestManagedReviewerAsset*`, `TestNegotiated*` y `TestRunDoctor_*GGA*`. `TestDeferredSyncIncludesCodexPermissionsArgs` sí se trata aquí, porque Codex se queda.
   - (Análisis) Se documenta la orden local recomendada: por paquete, con `-timeout` explícito para `internal/cli` hasta que se fusione C-01-e.
 - **Fuera de alcance.** Paralelizar (C-08-g). Retirar o reescribir los tests de prosa (C-08-h).
 - **Carril propuesto.** ODD.
@@ -82,12 +86,12 @@ En conjunto, en torno a un tercio del Go del repositorio.
   - `internal/backup`: `TestSnapshotterSkipsUnixSockets`.
   - `internal/components/filemerge`: `TestWriteFileAtomicFollowsDirectoryJunction` y `TestWriteFileAtomicFollowsRelativeDirectoryJunction`.
   - `internal/cli`: `TestCheckInstalledAssetVersion_*` y `TestCheckStateJSON_*`.
-  - `internal/app`: `TestTuiInstallOnThenSyncPreservesAndRefreshesOpenCodeActivation`.
+  - `internal/app`: `TestTuiInstallOnThenSyncPreservesAndRefreshesOpenCodeActivation` y `TestDeferredSyncIncludesCodexPermissionsArgs`.
   - `.github/workflows/ci.yml`, solo si cambia la puerta, para que la CI siga ejecutando los cuatro tests.
   - `AGENTS.md`, para la orden local.
 - **Criterio de terminado.**
   - En Windows local, `go test ./... -count=1` sin `internal/cli` ni `internal/reviewtransaction` termina sin fallos.
-  - En `internal/cli` solo fallan los tests atribuidos a RDD, Codex o GGA, y quedan listados en el documento ODD.
+  - En `internal/cli` solo fallan los tests atribuidos a RDD o GGA, y quedan listados en el documento ODD.
   - El log del job `unit-tests` de la CI muestra que los cuatro tests del toolchain se ejecutan.
 - **Riesgos y avisos.** Hay que conservar la protección que dan esos cuatro tests. Salen de la ejecución local, no de la CI.
 
@@ -143,64 +147,73 @@ En conjunto, en torno a un tercio del Go del repositorio.
   - Faltaban `release.yml`, `windows-full-suite.yml`, `bench/`, la TUI, el dashboard, `hub/rddpref`, los 25 agentes `review-*` embebidos, el plugin `opencode-review-transport`, las specs y las docs.
   - Se distinguen las lápidas que se quedan.
 
-### C-08-d · Solo Claude Code, VS Code (Copilot) y OpenCode
+### C-08-d · Retirar los agentes que no se usan
 
-- **Objetivo.** Retirar los 14 agentes restantes: `kilocode`, `gemini-cli`, `cursor`, `codex`, `antigravity`, `windsurf`, `kimi`, `qwen-code`, `kiro-ide`, `openclaw`, `pi`, `trae-ide`, `hermes` y `github-copilot-cli` (este último según P17).
+- **Objetivo.** Retirar seis agentes: `kiro-ide`, `windsurf`, `kimi`, `hermes`, `openclaw` y `kilocode`.
+  - Se quedan once: `claude-code`, `vscode-copilot`, `opencode`, `github-copilot-cli`, `gemini-cli`, `codex`, `cursor`, `antigravity`, `pi`, `trae-ide` y `qwen-code`.
+  - `qwen-code` sigue oculto al instalar, como hoy.
 - **Decisiones.**
-  - (Usuario) «Con Claude, VS Code y OpenCode se puede arrancar.» Se conservan `claude-code`, `vscode-copilot` y `opencode` (`internal/model/types.go:58-79`).
-  - (Análisis) El catálogo MVP (`internal/catalog/agents.go`, hacia `:34`) solo ofrece Claude Code y OpenCode. Hay que comprobar que VS Code (Copilot) quede seleccionable en la instalación.
-  - (Análisis) El código compartido se queda con el agente que lo conserva; se borra solo la rama del agente retirado:
-    - Kilocode comparte con OpenCode (`internal/agents/opencode/adapter.go` e `internal/agents/skills_dir.go`).
-    - Copilot CLI comparte con VS Code (`~/.copilot` e `internal/agents/sharedskills`).
+  - (Usuario, 2026-11-24) «Copilot CLI se queda» (resuelve P17).
+  - (Usuario, 2026-11-24) De los otros 13 agentes se van todos menos Gemini CLI, Codex, Cursor, Antigravity y Pi.
+  - (Usuario, 2026-11-24) «De los que se van, que no se vayan los que prácticamente no ahorramos nada quitándolos.»
+  - (Análisis, aplicando esa regla con la medición de `d580368d`) Se queda quien, al quitarlo, ahorra menos de unas 700 líneas y no tiene assets ni goldens que mantener. Medición:
+
+    | Agente | Adaptador | Ficheros propios | Goldens | Referencias fuera (`model.Agent…`) | Ahorro aprox. | Resultado |
+    |---|---|---|---|---|---|---|
+    | Kiro IDE | 644 | 2.346 | 1.624 | 86 | ~4.700 | se va |
+    | Windsurf | 433 | 405 | 1.671 | 62 | ~2.570 | se va |
+    | Kimi Code (oculto) | 608 | 1.504 | — | 61 | ~2.170 | se va |
+    | Hermes (oculto) | 391 | 641 | — | 63 | ~1.100 | se va |
+    | OpenClaw | 346 | 608 | — | 54 | ~1.000 | se va |
+    | Kilo Code | 659 | — | — | 117 (52 de producción, 10 en `components/sdd/inject.go`) | ~780 | se va |
+    | Qwen Code (oculto) | 435 | 173 | — | 46 (17 de producción) | ~650 | se queda |
+    | Trae IDE | 473 | — | — | 33 (11 de producción) | ~500 | se queda |
+
+    Kilo Code queda justo por encima del corte. Se va porque sus 52 referencias de producción están en el núcleo de la inyección y su retirada simplifica más que lo que dicen sus líneas.
+  - (Análisis) El código compartido se queda con el agente que lo conserva y se borra solo la rama del agente retirado. Kilo Code comparte con OpenCode `internal/agents/opencode/adapter.go` e `internal/agents/skills_dir.go`.
   - (Análisis) La lectura es tolerante: los estados, copias y selecciones guardados con un `AgentID` retirado siguen cargando y lo ignoran con un aviso.
   - (Análisis) `uninstall` sigue limpiando lo que Axiom escribió para los agentes retirados en instalaciones antiguas, según P20.
-  - (Análisis) Los motores Gemini y Codex del agent builder (`internal/agentbuilder/engine.go`, hacia `:28-34`) se retiran aquí. El agent builder entero lo decide P18 en C-08-f.
 - **Fuera de alcance.**
+  - Los once agentes que se quedan, incluidos los motores Gemini y Codex del agent builder.
   - Persona, presets, temas y agent builder: C-08-f.
   - GGA: C-08-e.
-- **Carril propuesto.** SDD.
-  - Retira capacidades publicadas: `openspec/specs/antigravity-support` y los requisitos por agente de otras specs.
-  - Afecta a instalaciones existentes y necesita una política de migración verificable por requisito.
-- **Tamaño.** XL. Unas 33.000-35.000 líneas, casi todo borrado, con un commit por agente.
+- **Carril propuesto.** ODD con `## Spec viva`. Las decisiones están cerradas y casi todo es borrado. Si al implantar hay que reescribir requisitos de specs vivas, y no solo retirar menciones a estos agentes, pasa a SDD (misma regla que C-01-c).
+- **Tamaño.** L. Unas 12.300 líneas, casi todo borrado, con un commit por agente.
 - **Depende de / bloquea a.**
-  - Depende de C-01-e: comparten `components/sdd/inject.go`, los agentes `review-*` por agente, los goldens, `tui/model.go` y los tests de `cli`.
-  - Depende de P17.
+  - Depende de C-01-e: comparten `components/sdd/inject.go`, los agentes `review-*` de Kimi y Kiro, los goldens y los tests de `cli`.
+  - Depende de P20.
   - Bloquea a C-08-e, C-08-f, C-08-g y C-08-h.
 - **Ficheros y paquetes que toca.**
   - **Registro.**
-    - `internal/model/types.go:58-79` y los ficheros `codex_model*.go` y `kiro_model*.go` (~1.600 líneas con tests).
-    - `internal/catalog/agents.go:12-30` y `:73` (`unselectableAgents`).
-    - `internal/agents/factory.go`: imports en `:6-22`, `defaultAgentIDs` en `:24-42`, `NewAdapter` en `:46-84`, `NewDefaultRegistry` en `:87` y `BindWorkspace` en `:140`.
-    - `internal/agents/capability_manifest.go`, `discovery.go` y los 14 paquetes `internal/agents/<id>/` (3.984 líneas de producción y 4.519 de test).
+    - `internal/model/types.go:58-79` y `model/kiro_model*.go`.
+    - `internal/catalog/agents.go:12-30` y `:73-77` (`unselectableAgents`, del que salen Kimi y Hermes).
+    - `internal/agents/factory.go`: imports, `defaultAgentIDs`, `NewAdapter`, `NewDefaultRegistry` y `BindWorkspace`.
+    - `internal/agents/capability_manifest.go`, `discovery.go` y los paquetes `internal/agents/{kiro,windsurf,kimi,hermes,openclaw,kilocode}/`.
   - **Instalación y CLI.**
-    - `internal/installcmd/resolver.go:41-54` y `:126-136`.
-    - `internal/cli/validate.go:191-219`, `run.go` y `sync.go`.
-    - Ficheros de `cli` por agente: `pi_background.go`, `workspace_codex_test.go`, `workspace_gemini_test.go`, los de OpenClaw y Antigravity, y `codex_review*` (~2.400 líneas).
+    - `internal/installcmd/resolver.go:41-54` (`resolveKimiInstall` y la rama de Kilo Code) y `:126-136`.
+    - `internal/cli/validate.go:191-219`, `run.go`, `sync.go` y `workspace_instructions.go`.
+    - `internal/cli/openclaw_orchestration_test.go` (470).
   - **TUI.**
-    - `internal/tui/model.go`: 33 referencias, entre ellas `:1759`, `:4918-4938` y `:5465-5472`.
-    - `internal/tui/router.go:15-16`.
-    - Los selectores de modelo de Codex y Kiro, y `pi_background` (~1.800 líneas).
+    - `internal/tui/router.go:15` (`ScreenKiroModelPicker`).
+    - `screens/kiro_model_picker.go` (362 con tests) y las referencias en `tui/model.go`.
   - **Componentes.**
-    - Ramas por agente en `components/sdd/orchestrator.go` y `inject.go`.
-    - `components/persona/inject.go:568-604`.
-    - `components/engram/setup.go:130-158` e `inject.go:15`.
-    - `components/permissions/inject.go:138-167` y `components/mcp/inject.go`.
-    - `components/communitytool/tool.go:13`, `pi_codegraph*` y `codegraph_contract.go:95-100`.
-    - `components/uninstall/*`.
-  - **Otros paquetes.** `internal/system/config_scan.go`, `internal/update/upgrade/executor.go` e `internal/app/app.go`.
-  - **Assets.** Los de cada agente retirado en `internal/assets` (~5.900 líneas) y 41 goldens (~7.000).
-  - **Docs y ficheros raíz.** `docs/kiro.md`, `docs/pi*.md`, `docs/antigravity-sdd-workaround.md` y `GEMINI.md`.
-  - **Scripts y e2e.** `e2e/e2e_test.sh`, `e2e/lib.sh`, los `Dockerfile.*` y `scripts/crosslane/codex.go`.
+    - Ramas por agente en `components/sdd/orchestrator.go` e `inject.go` (10 de Kilo Code), y `sdd/kiro_hook_drift_test.go`.
+    - `components/persona/inject.go` y `components/permissions/inject.go`.
+    - `components/uninstall/{service,global_agents,workspace}.go`.
+    - `components/openclaw_integration_test.go` (138).
+  - **Assets.** `internal/assets/{kiro,windsurf,kimi,hermes}/`, sus agentes `review-*` (con C-01-e), la skill `hermes-ephemeral-delegation` y `internal/assets/windsurf_workflow_test.go`.
+  - **Goldens.** Los `sdd-kiro-*`, `skills-kiro-*` y los de Windsurf (~3.300 líneas).
+  - **Docs.** `docs/kiro.md`. Marcar como superados `odd/tasks/kiro-workspace-parity.md` y la parte de Windsurf de `codex-sync-sin-temas-y-rollback.md`.
+  - **e2e.** Las menciones a estos agentes en `e2e/e2e_test.sh` y `e2e/lib.sh`.
 - **Criterio de terminado.**
-  - `internal/model` solo define los `AgentID` conservados.
-  - La instalación (TUI y CLI) ofrece exactamente Claude Code, VS Code y OpenCode, más Copilot CLI si P17 lo conserva.
+  - `internal/model` y el catálogo solo conocen los once agentes conservados.
+  - La instalación (TUI y CLI) ofrece los diez seleccionables. Qwen Code sigue oculto.
   - Un proyecto con selecciones antiguas que incluyen agentes retirados carga y sincroniza con un aviso.
-  - Fuera de los históricos, de las lápidas que decida P20 y del lector tolerante, `rg -il` no encuentra los IDs retirados.
+  - `rg -il 'kiro|windsurf|kimi|hermes|openclaw|kilocode|kilo code'` no encuentra nada fuera de los históricos, de las lápidas que decida P20 y del lector tolerante.
   - Goldens regenerados y revisados por diff. Tests de los paquetes tocados en verde.
 - **Riesgos y avisos.**
   - Los tests de paridad y drift iteran sobre todos los agentes, así que hay que recortar sus tablas además de borrar ficheros: `skill_copies_parity_test`, `orchestrator_drift_ratchet_test` y `internal/components/golden_test.go`.
-  - `communitytool` y `engram/inject.go` importan paquetes de agentes (Pi y Codex). Hay que desacoplarlos antes de borrar.
-  - Según `odd/tasks/adaptadores-agentes-upstream.md`, el equipo usa Copilot CLI (P17).
+  - Kilo Code y OpenCode comparten ramas («familia OpenCode») en `components/sdd/inject.go` y `uninstall`. Al quitar Kilo Code no puede cambiar nada de lo que se genera para OpenCode; se comprueba con sus goldens sin diferencias.
 
 ### C-08-e · Retirar GGA y las lápidas de telemetría
 
@@ -374,7 +387,7 @@ Las pregunta la sesión padre, una cada vez, antes de lanzar la ola que bloquean
 
 | Id | Pregunta | Contexto | Recomendación | Bloquea |
 |---|---|---|---|---|
-| P17 | ¿Se retira también Copilot CLI (`github-copilot-cli`)? | No está entre los tres que pide el usuario. `odd/tasks/adaptadores-agentes-upstream.md` lo conservó el 2026-11-04 porque el equipo lo usa, y comparte la carpeta de skills con VS Code | Preguntar. Conservarlo cuesta poco (147 + 210 líneas) | C-08-d (A3) |
+| P17 | ¿Se retira también Copilot CLI (`github-copilot-cli`)? | **Resuelta por el usuario (2026-11-24): se queda.** La lista completa de agentes está en C-08-d | — | — |
 | P18 | ¿Se retira el agent builder? | Herencia de gentle-ai (`PRD-AGENT-BUILDER.md`). 775 + 1.306 líneas más 931 de TUI | Retirarlo | C-08-f (A5) |
 | P19 | ¿Se conserva solo la persona de Axiom y se retiran `gentleman` y `neutral`? | La persona y el output style de Axiom definen la voz del orquestador. Las otras son herencia | Sí, solo Axiom | C-08-f (A5) |
 | P20 | ¿Cuánto viven las lápidas de retirada? Son tres grupos: (a) RDD (`rdd_retire.go` y `axiom review stop-hook` como no-op); (b) telemetría (`telemetryruntime` y `telemetry_retire.go`); (c) limpieza en `uninstall` de agentes, GGA y personas retirados | Sin ellas, las instalaciones antiguas se quedan con hooks, plugins o ficheros gestionados huérfanos | Mantener cada lápida hasta la primera versión estable publicada después de su retirada y borrarla en el cambio siguiente. La sesión comprueba si (b) ya lo cumple | C-01-e (A2), C-08-d (A3), C-08-e (A4) |
