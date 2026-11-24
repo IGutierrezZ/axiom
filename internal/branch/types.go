@@ -151,6 +151,10 @@ const (
 	CodeRoleNotApplicable Code = "role_not_applicable"
 	CodeKickoffNotSealed  Code = "kickoff_not_sealed"
 	CodeRoleNotInRoster   Code = "role_not_in_roster"
+
+	// CodeScopeNotApplicable es el rechazo de `axiom branch scope` ante un cambio del carril `odd` o
+	// con un kickoff sin instantánea de repositorios (REQ-25.51).
+	CodeScopeNotApplicable Code = "scope_not_applicable"
 )
 
 // Exceptions son las excepciones por cambio de `ensure` (`--prefix`, `--branch`,

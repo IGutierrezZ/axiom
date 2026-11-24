@@ -33,9 +33,9 @@ Tests lentos (señalar para segundo plano): `go test ./internal/branch/engine/` 
   Cubre: REQ-25.51, REQ-25.53
 - [x] 1.2 (Unidad 1, GREEN) Añadir `RevEntry` y `CommitPaths` en `internal/branch/types.go`; `RevList`, `CommitFiles`, `BranchCreation` en `internal/branch/ports.go`; implementarlas en `internal/branch/gitcli/scope.go` con `gitcommon.Run`, `plainArgument` y `commandFailed`; actualizar el doc del paquete en `internal/branch/gitcli/ops.go`. Añadir los stubs a `fakeGit` en `internal/branch/engine/pending_test.go` y las tres lecturas a `gitReader` en `internal/branch/engine/engine.go`.
   Cubre: REQ-25.51, REQ-25.53
-- [ ] 1.3 (Unidad 2, RED) Crear `internal/branch/scope_test.go`: tabla de `SummarizeScope` (precedencia `unverifiable` > `pending_merge` > `nothing_to_verify` > `offerable`; `empty` y `exempt` no pendientes; `pending` nunca `null`), JSON estable, etiquetas de los tokens nuevos y `CodeScopeNotApplicable` en `internal/branch/result_test.go`.
+- [x] 1.3 (Unidad 2, RED) Crear `internal/branch/scope_test.go`: tabla de `SummarizeScope` (precedencia `unverifiable` > `pending_merge` > `nothing_to_verify` > `offerable`; `empty` y `exempt` no pendientes; `pending` nunca `null`), JSON estable, etiquetas de los tokens nuevos y `CodeScopeNotApplicable` en `internal/branch/result_test.go`.
   Cubre: REQ-25.53, REQ-25.54
-- [ ] 1.4 (Unidad 2, GREEN) Crear `internal/branch/scope.go` (`ScopeSchema`, `ScopeResult`, `ScopeSummary`, `ScopePending`, `RepositoryScope`, `ScopeRef`, `ScopeStart`, `ScopeCommit`, `SummarizeScope`, `WriteJSON`, `WriteText`, `ExitCode`); `CodeScopeNotApplicable` en `internal/branch/types.go`; etiquetas en `internal/branch/labels.go`.
+- [x] 1.4 (Unidad 2, GREEN) Crear `internal/branch/scope.go` (`ScopeSchema`, `ScopeResult`, `ScopeSummary`, `ScopePending`, `RepositoryScope`, `ScopeRef`, `ScopeStart`, `ScopeCommit`, `SummarizeScope`, `WriteJSON`, `WriteText`, `ExitCode`); `CodeScopeNotApplicable` en `internal/branch/types.go`; etiquetas en `internal/branch/labels.go`.
   Cubre: REQ-25.52, REQ-25.53, REQ-25.54
 
 ## Phase 2: Motor `Engine.Scope`

@@ -57,6 +57,24 @@ var labels = map[string]string{
 	ModeSourceFlag:       "bandera --mode",
 	ModeSourceHub:        "preferencias personales del hub",
 	ModeSourceDefault:    "valor por defecto",
+
+	// `axiom branch scope` (REQ-25.51 a REQ-25.54): código del rechazo, resultado de cada
+	// repositorio, motivos de `unverifiable`, oferta, fuente del punto de partida, de la rama y aviso.
+	string(CodeScopeNotApplicable):     "alcance no aplicable",
+	ScopeOutcomeOK:                     "alcance calculado",
+	ScopeOutcomeEmpty:                  "sin commits propios",
+	ScopeOutcomeUnverifiable:           "no verificable",
+	ScopeOutcomeExempt:                 "exento",
+	ScopeReasonBranchMissing:           "rama ausente",
+	ScopeReasonBaseMissing:             "base o integración ausente",
+	ScopeReasonForkPointUndetermined:   "punto de bifurcación indeterminado",
+	ScopeReasonNotMerged:               "sin fusionar en la integración",
+	ScopeOfferOfferable:                "verificación conjunta ofrecible",
+	ScopeOfferPendingMerge:             "pendiente de fusionar",
+	ScopeOfferNothingToVerify:          "nada que verificar",
+	ScopeStartFirstParent:              "cadena de primeros padres",
+	ScopeStartReflog:                   "reflog de la rama",
+	ScopeWarningForeignCommitsPossible: "posibles commits ajenos",
 }
 
 // Label devuelve la etiqueta en castellano de un token estable. Un token que el
