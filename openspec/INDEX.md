@@ -1,8 +1,8 @@
 # Catálogo Maestro de Especificaciones Vivas — Axiom
 
 > **Proyecto:** Axiom (Spec-Driven Development Platform)
-> **Última Sincronización:** 2026-11-24 15:45:23 UTC
-> **Total Dominios:** 75 | **Total Requerimientos:** 650 | **Total Escenarios BDD:** 2279
+> **Última Sincronización:** 2026-11-24 19:58:22 UTC
+> **Total Dominios:** 75 | **Total Requerimientos:** 657 | **Total Escenarios BDD:** 2322
 
 ---
 
@@ -21,7 +21,7 @@
 | `axiom-user-state-and-env` | Especificación de Requerimientos: Unificación de Estado en ~/.axiom y Variables AXIOM_* (INC-12) | 3 | 5 | [Ver Spec](specs/axiom-user-state-and-env/spec.md) |
 | `azure-devops-adapter` | Especificación de azure-devops-adapter | 16 | 71 | [Ver Spec](specs/azure-devops-adapter/spec.md) |
 | `change-actor-identity` | Especificación Viva: Identidad Git como Actor de los Artefactos Versionados (REQ-42.1 a REQ-42.9) | 9 | 33 | [Ver Spec](specs/change-actor-identity/spec.md) |
-| `change-branch-lifecycle` | Especificación de Requerimientos: Ciclo de Vida de las Ramas y Worktrees de un Cambio por Topología (INC-25) | 34 | 279 | [Ver Spec](specs/change-branch-lifecycle/spec.md) |
+| `change-branch-lifecycle` | Especificación de Requerimientos: Ciclo de Vida de las Ramas y Worktrees de un Cambio por Topología (INC-25) | 38 | 301 | [Ver Spec](specs/change-branch-lifecycle/spec.md) |
 | `dashboard-sdd-orchestration` | Especificación de Requerimientos: Orquestación Interactiva SDD y Creación de Cambios en Dashboard Web y CLI (INC-15) | 5 | 10 | [Ver Spec](specs/dashboard-sdd-orchestration/spec.md) |
 | `engram-protocol-injection` | Engram protocol injection Specification | 5 | 12 | [Ver Spec](specs/engram-protocol-injection/spec.md) |
 | `gga` | GGA Specification | 3 | 8 | [Ver Spec](specs/gga/spec.md) |
@@ -68,9 +68,9 @@
 | `requirement-identifiers` | Especificación de requirement-identifiers | 8 | 67 | [Ver Spec](specs/requirement-identifiers/spec.md) |
 | `review-findings-ledger` | Bounded Review Transaction and Findings Ledger | 18 | 24 | [Ver Spec](specs/review-findings-ledger/spec.md) |
 | `sdd-archive-lifecycle` | Especificación de Requerimientos: Ciclo de Vida de Archive, Integración Formal y Sellado Inmutable (INC-21) | 14 | 91 | [Ver Spec](specs/sdd-archive-lifecycle/spec.md) |
-| `sdd-block-review-gates` | Especificación de Requerimientos: Compuertas de Revisión por Bloque (spec, design, tasks, apply) (INC-21) | 25 | 119 | [Ver Spec](specs/sdd-block-review-gates/spec.md) |
+| `sdd-block-review-gates` | Especificación de Requerimientos: Compuertas de Revisión por Bloque (spec, design, tasks, apply) (INC-21) | 26 | 126 | [Ver Spec](specs/sdd-block-review-gates/spec.md) |
 | `sdd-docs-publication` | Especificación de Publicación Ligera de Documentación SDD (carril-proyecto-publicacion-docs) | 10 | 50 | [Ver Spec](specs/sdd-docs-publication/spec.md) |
-| `sdd-independent-review` | Especificación de Requerimientos: Revisión Independiente en SDD (verify técnico por rol, juicio opcional y revisión de cobertura) | 10 | 67 | [Ver Spec](specs/sdd-independent-review/spec.md) |
+| `sdd-independent-review` | Especificación de Requerimientos: Revisión Independiente en SDD (verify técnico por rol, juicio opcional y revisión de cobertura) | 12 | 81 | [Ver Spec](specs/sdd-independent-review/spec.md) |
 | `sdd-iso-evidence` | Especificación: Evidencias ISO Opcionales del SDD (carril-sdd-versatil) | 10 | 108 | [Ver Spec](specs/sdd-iso-evidence/spec.md) |
 | `sdd-lane-kickoff` | Especificación de Requerimientos: Selección Temprana y Bloqueante de Carril ODD/SDD en el Kickoff (INC-21) | 12 | 77 | [Ver Spec](specs/sdd-lane-kickoff/spec.md) |
 | `sdd-orchestrator-assets` | SDD Orchestrator Assets Specification | 25 | 86 | [Ver Spec](specs/sdd-orchestrator-assets/spec.md) |
@@ -501,9 +501,10 @@ Definir cómo crea, consulta, cierra y protege Axiom las ramas (y, opcionalmente
 **Archivo:** [`specs/change-branch-lifecycle/spec.md`](specs/change-branch-lifecycle/spec.md)
 
 - **[REQ-25.1]** Familia de Comandos `axiom branch`
-  - *Escenario BDD:* La ayuda lista los cuatro verbos
+  - *Escenario BDD:* La ayuda lista los cinco verbos
   - *Escenario BDD:* Un subcomando no listado no existe
   - *Escenario BDD:* Ningún subcomando publica ni abre PR
+  - *Escenario BDD:* `scope` no admite `--fetch`
   - *Escenario BDD:* Una prueba de arquitectura fija el único punto de ejecución de git
   - *Escenario BDD:* El carril ODD no exige un cambio SDD
   - *Escenario BDD:* El verbo de publicación no pertenece a la familia
@@ -514,6 +515,8 @@ Definir cómo crea, consulta, cierra y protege Axiom las ramas (y, opcionalmente
   - *Escenario BDD:* Una configuración ilegible se informa con `config_invalid`
   - *Escenario BDD:* Un fallo de git no cubierto se informa con `git_failed`
   - *Escenario BDD:* `--cwd` fija el directorio de partida
+  - *Escenario BDD:* `scope` admite `--json` y `--cwd` con rutas absolutas
+  - *Escenario BDD:* `scope` con un repositorio `unverifiable` termina con código 0
 - **[REQ-25.3]** Resolución de la Política de Ramas
   - *Escenario BDD:* Sin configuración se aplican los valores por defecto
   - *Escenario BDD:* El bloque `git:` sustituye los valores por defecto
@@ -813,6 +816,29 @@ Definir cómo crea, consulta, cierra y protege Axiom las ramas (y, opcionalmente
   - *Escenario BDD:* Sin `--role` no se emite
   - *Escenario BDD:* Estado distinto de `ready`
   - *Escenario BDD:* El dashboard no emite
+- **[REQ-25.51]** `axiom branch scope`: Alcance del Cambio por Repositorio, de Solo Lectura y con Contrato Versionado
+  - *Escenario BDD:* Camino feliz, un repositorio con commits propios
+  - *Escenario BDD:* La carpeta del cambio no entra en la lista de ficheros
+  - *Escenario BDD:* Multirepo con specs in situ
+  - *Escenario BDD:* La orden no cambia nada
+  - *Escenario BDD:* El carril ODD no admite el comando
+- **[REQ-25.52]** `scope`: Punto de Partida Estable en Modo `release` y Exclusión de Commits Ajenos
+  - *Escenario BDD:* Commit ajeno en develop, modo release, rama sin fusionar
+  - *Escenario BDD:* Modo release, rama ya fusionada, mismo alcance
+  - *Escenario BDD:* Modo release, punto de bifurcación no determinable
+  - *Escenario BDD:* Commits ajenos no distinguibles se avisan
+- **[REQ-25.53]** `scope`: Resultado Tipado por Repositorio y Motivos de `unverifiable`
+  - *Escenario BDD:* Rama borrada o ausente
+  - *Escenario BDD:* Rama solo como referencia remota ya descargada
+  - *Escenario BDD:* Base o integración ausentes
+  - *Escenario BDD:* Rama sin commits propios
+  - *Escenario BDD:* Ningún repositorio se omite
+- **[REQ-25.54]** `scope`: Fusión en la Integración y Resumen con la Oferta
+  - *Escenario BDD:* Oferta posible con todo fusionado
+  - *Escenario BDD:* Pendiente de fusionar
+  - *Escenario BDD:* Nada que verificar
+  - *Escenario BDD:* Modo release con la rama fusionada
+  - *Escenario BDD:* Un repositorio no verificable domina la oferta
 
 ### Dominio: `dashboard-sdd-orchestration` — Especificación de Requerimientos: Orquestación Interactiva SDD y Creación de Cambios en Dashboard Web y CLI (INC-15)
 
@@ -2581,6 +2607,14 @@ Define one explicit, content-addressed implementation-review transaction shared 
   - *Escenario BDD:* Un rechazo posterior no cambia el modo
 - **[REQ-33.7]** La Ayuda de `gate record` Documenta la Bandera
   - *Escenario BDD:* La ayuda menciona la bandera
+- **[REQ-43.32]** La Presentación de `integration` Declara el Estado de la Verificación Conjunta como Información
+  - *Escenario BDD:* Estado hecha con la fecha de la última ronda
+  - *Escenario BDD:* Estado ofrecida
+  - *Escenario BDD:* Estado no verificable con ramas pendientes
+  - *Escenario BDD:* Estado no verificable por rama borrada
+  - *Escenario BDD:* La consulta de alcance falla
+  - *Escenario BDD:* Aprobar integration sin verificación conjunta sigue siendo posible
+  - *Escenario BDD:* En continuous no hay declaración
 
 ### Dominio: `sdd-docs-publication` — Especificación de Publicación Ligera de Documentación SDD (carril-proyecto-publicacion-docs)
 
@@ -2655,13 +2689,15 @@ Definir el comportamiento observable de las revisiones independientes que el orq
 
 **Archivo:** [`specs/sdd-independent-review/spec.md`](specs/sdd-independent-review/spec.md)
 
-- **[REQ-28.1]** El Orquestador Ofrece la Revisión Independiente en Tres Puntos del Flujo
+- **[REQ-28.1]** El Orquestador Ofrece la Revisión Independiente en Cuatro Puntos del Flujo
   - *Escenario BDD:* Un rol que concluye su apply activa el verify según la preferencia
   - *Escenario BDD:* Cada rol activa su propia oferta
   - *Escenario BDD:* Con la preferencia none no se lanza nada por iniciativa propia
   - *Escenario BDD:* Una petición explícita se atiende con la preferencia none
   - *Escenario BDD:* Las ofertas no crean estado de gobierno
   - *Escenario BDD:* Un rol sin diff propio no produce un verify vacío engañoso
+  - *Escenario BDD:* La compuerta integration ofrece la verificación conjunta sin lanzarla
+  - *Escenario BDD:* Con la preferencia none la oferta de integration no se lanza sola
 - **[REQ-28.2]** Aplicación de la Preferencia según el Estilo Sellado, sin Violar `continuous`
   - *Escenario BDD:* En continuous se aplica la preferencia sin detenerse
   - *Escenario BDD:* En checkpointed la preferencia es el valor por defecto y la parada se conserva
@@ -2682,8 +2718,10 @@ Definir el comportamiento observable de las revisiones independientes que el orq
   - *Escenario BDD:* El informe de un rol contiene la sección Cumplimiento técnico
   - *Escenario BDD:* El rol fullstack escribe en verify-report.md
   - *Escenario BDD:* Sin hallazgos la sección existe y lo declara
-  - *Escenario BDD:* El verify global multirrol no cambia
-  - *Escenario BDD:* El verify global se evalúa con REQ-21.15 aunque un rol deferred siga pendiente
+  - *Escenario BDD:* El verify global multirrol no cambia su habilitación
+  - *Escenario BDD:* El verify sin rol en modo conjunto usa el alcance de axiom branch scope
+  - *Escenario BDD:* Si el comando de alcance no es aplicable o falla, el verify lo declara y continúa
+  - *Escenario BDD:* El alcance no acota la suite completa de pruebas
   - *Escenario BDD:* En un cambio ISO el informe consolidado incluye la matriz como sección adicional
   - *Escenario BDD:* Un rol con herramienta de análisis no disponible informa la limitación
 - **[REQ-28.5]** Fuentes de Reglas y Forma de los Hallazgos Técnicos
@@ -2732,6 +2770,18 @@ Definir el comportamiento observable de las revisiones independientes que el orq
   - *Escenario BDD:* Las guardas de ausencia de oferta de RDD siguen pasando
   - *Escenario BDD:* RDD activado no altera las ofertas
   - *Escenario BDD:* El verify limpio no genera un recibo ni lo consume
+- **[REQ-28.41]** La Verificación Conjunta es el Verify Sin Rol sobre la Unión del Alcance por Repositorio
+  - *Escenario BDD:* Camino feliz, la ronda cubre la unión de los repositorios
+  - *Escenario BDD:* Un commit ajeno excluido no entra en la verificación
+  - *Escenario BDD:* Rama borrada se declara como hueco
+  - *Escenario BDD:* Petición explícita con huecos se ejecuta y los declara
+  - *Escenario BDD:* Solo commits, sin árbol de trabajo
+  - *Escenario BDD:* El informe existente con matriz ISO se conserva y se añade una ronda
+  - *Escenario BDD:* Sin commits propios no se escribe ronda
+- **[REQ-28.42]** La Verificación Conjunta Nunca Bloquea
+  - *Escenario BDD:* La verificación conjunta no bloquea integration
+  - *Escenario BDD:* Un hallazgo de la verificación conjunta no bloquea
+  - *Escenario BDD:* En continuous no hay oferta ni parada nuevas
 
 ### Dominio: `sdd-iso-evidence` — Especificación: Evidencias ISO Opcionales del SDD (carril-sdd-versatil)
 
