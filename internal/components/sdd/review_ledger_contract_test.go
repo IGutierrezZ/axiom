@@ -649,7 +649,10 @@ func TestKilocodeReviewSettingsMatchCurrentMainBaseline(t *testing.T) {
 	// `Commit Review` y la frase de enlace de «SDD Change Kickoff and Block Gates». Deliberate, not drift.
 	// aviso-commit JD-1..JD-3: la sección `Commit Review` confirma con `-F`, pliega los fixups del modo 3 y
 	// usa `--autostash` en el autosquash. Deliberate, not drift.
-	const want = "34a8c2c69dbede4bb19b2a2626904e65250e0981613911ff41649008b39c7a00"
+	// verify-conjunto U11 (C-02-b): el orquestador de OpenCode que compone Kilocode gana, en las secciones
+	// compartidas, la frase de `integration` de las puertas, el cuarto punto de «SDD Independent Review»
+	// y el párrafo `Joint verify`. Deliberate, not drift.
+	const want = "daeee9f72d815eca8f2313b6eb1da12638107bf2e9514a9afce5696796ae049d"
 	if got != want {
 		t.Fatalf("Kilocode settings SHA-256 = %s, want current-main baseline %s", got, want)
 	}

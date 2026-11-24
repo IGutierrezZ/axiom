@@ -79,9 +79,9 @@ Tests lentos (señalar para segundo plano): `go test ./internal/branch/engine/` 
   Cubre: REQ-25.1
 - [x] 5.2 (Unidad 10, GREEN) Documentar `axiom branch scope` en «Ramas y Worktrees» y en la lista de verbos de `docs/manual-de-inicio.md` y `docs/architecture/AXIOM_ENTERPRISE_VISION.md`.
   Cubre: REQ-25.1
-- [ ] 5.3 (Unidad 11) Regenerar los orquestadores con `go test ./... -update` (en segundo plano) sobre `testdata/golden/**` y revisar el diff; actualizar el SHA-256 de los ajustes de Kilocode en `internal/components/sdd/review_ledger_contract_test.go` (`TestKilocodeReviewSettingsMatchCurrentMainBaseline`) con su comentario de cambio deliberado.
+- [x] 5.3 (Unidad 11) Regenerar los orquestadores con `go test ./... -update` (en segundo plano) sobre `testdata/golden/**` y revisar el diff; actualizar el SHA-256 de los ajustes de Kilocode en `internal/components/sdd/review_ledger_contract_test.go` (`TestKilocodeReviewSettingsMatchCurrentMainBaseline`) con su comentario de cambio deliberado.
   Cubre: REQ-28.42, REQ-43.32
-- [ ] 5.4 (Unidad 11) Comprobación final: `go vet ./...` y `go test ./...` en el worktree, sin compilar binarios sueltos; registrar los resultados observados antes de pasar a `sdd-verify`.
+- [x] 5.4 (Unidad 11) Comprobación final: `go vet ./...` y `go test ./...` en el worktree, sin compilar binarios sueltos; registrar los resultados observados antes de pasar a `sdd-verify`.
   Cubre: REQ-25.1, REQ-25.2, REQ-25.51, REQ-25.52, REQ-25.53, REQ-25.54, REQ-28.1, REQ-28.4, REQ-28.41, REQ-28.42, REQ-43.32
 
 ## Matriz de amenazas: pruebas RED previstas

@@ -211,3 +211,11 @@ func TestScopeRefLabelsItsSource(t *testing.T) {
 		}
 	}
 }
+
+// Cada token nuevo del contrato lleva su etiqueta legible en castellano en el mapa de etiquetas del
+// código, también el rechazo `scope_not_applicable` (C-02-b, REQ-25.2).
+func TestScopeNotApplicableCodeHasASpanishLabel(t *testing.T) {
+	if got := Label(string(CodeScopeNotApplicable)); got != "alcance no aplicable" {
+		t.Errorf("Label(scope_not_applicable) = %q, se esperaba «alcance no aplicable»", got)
+	}
+}
