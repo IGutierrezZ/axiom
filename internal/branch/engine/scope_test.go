@@ -347,6 +347,7 @@ func commitShas(commits []branch.ScopeCommit) []string {
 }
 
 func sortedShas(shas ...string) []string {
+	shas = slices.Clone(shas)
 	slices.Sort(shas)
 	return shas
 }
@@ -689,5 +690,171 @@ func TestScopeBranchWithoutOwnCommitsIsEmpty(t *testing.T) {
 	entry := scopeEntryOf(t, result, filepath.Base(repo))
 	if entry.Outcome != branch.ScopeOutcomeEmpty || entry.Range != "" || len(entry.Commits) != 0 {
 		t.Errorf("entrada = %+v, se esperaba empty y no ok con un rango vacío", entry)
+	}
+}
+
+// ---- Unidad 5: avance rápido por reflog (E3) y multirepo (E4) ----
+
+// fastForwarded es E3: `feat/x` sale de `main` con dos commits propios y `main` avanza hasta ella
+// por avance rápido. Devuelve el repositorio, el punto de bifurcación y los commits propios.
+func fastForwarded(t *testing.T) (repo, fork string, own []string) {
+	t.Helper()
+	repo = scopeProject(t, "")
+	fork = runGit(t, repo, "rev-parse", "main")
+	runGit(t, repo, "switch", "-q", "-c", "feat/x", "main")
+	commitFile(t, repo, "a.go", "propio uno")
+	own = append(own, runGit(t, repo, "rev-parse", "HEAD"))
+	commitFile(t, repo, "b.go", "propio dos")
+	own = append(own, runGit(t, repo, "rev-parse", "HEAD"))
+	runGit(t, repo, "switch", "-q", "main")
+	runGit(t, repo, "merge", "-q", "--ff-only", "feat/x")
+	return repo, fork, own
+}
+
+// REQ-25.52, escenario «Modo release, rama ya fusionada, mismo alcance» con avance rápido: la rama
+// local fusionada por avance rápido se resuelve con el reflog de su creación, que es el punto de
+// partida estable.
+func TestScopeFastForwardOfALocalBranchStartsAtItsCreationInTheReflog(t *testing.T) {
+	repo, fork, own := fastForwarded(t)
+	seen := observe(t)
+
+	result := scopeOf(t, repo, "x")
+
+	wantComputed(t, result)
+	entry := scopeEntryOf(t, result, filepath.Base(repo))
+	wantOwnScope(t, entry, own, []string{"a.go", "b.go"})
+	if entry.Start.SHA != fork || entry.Start.Source != branch.ScopeStartReflog || entry.Start.SourceLabel == "" {
+		t.Errorf("inicio = %+v, se esperaba la bifurcación %s por reflog", entry.Start, fork)
+	}
+	if entry.Merged == nil || !*entry.Merged || entry.MergedBy != branch.LayerAncestry {
+		t.Errorf("merged = %v por %q, se esperaba true por ascendencia", entry.Merged, entry.MergedBy)
+	}
+	wantNoRemoteOrWrite(t, *seen)
+}
+
+// REQ-25.53: una rama local recién creada, sin commits, es `empty` y no `fork_point_undetermined`: el
+// reflog dice que la rama se creó en su propia punta.
+func TestScopeFastForwardOfANewlyCreatedBranchIsEmpty(t *testing.T) {
+	t.Parallel()
+	repo := scopeProject(t, "")
+	runGit(t, repo, "branch", "feat/x", "main")
+
+	result := scopeOf(t, repo, "x")
+
+	wantComputed(t, result)
+	entry := scopeEntryOf(t, result, filepath.Base(repo))
+	if entry.Outcome != branch.ScopeOutcomeEmpty || entry.Range != "" || len(entry.Commits) != 0 {
+		t.Errorf("entrada = %+v, se esperaba empty", entry)
+	}
+	if result.Summary.Offer != branch.ScopeOfferNothingToVerify {
+		t.Errorf("oferta = %q, se esperaba nothing_to_verify", result.Summary.Offer)
+	}
+}
+
+// REQ-25.52, escenario «Modo release, punto de bifurcación no determinable»: sin reflog de creación
+// válido (rama solo remota, o adoptada de `origin/<rama>`, REQ-27.15) y fusionada por avance rápido,
+// la entrada es `unverifiable` con `fork_point_undetermined` y no presenta un rango vacío.
+func TestScopeFastForwardWithoutAValidCreationIsForkPointUndetermined(t *testing.T) {
+	t.Run("rama solo remota", func(t *testing.T) {
+		t.Parallel()
+		repo, _, _ := fastForwarded(t)
+		runGit(t, repo, "update-ref", "refs/remotes/origin/feat/x", "feat/x")
+		runGit(t, repo, "branch", "-D", "feat/x")
+
+		result := scopeOf(t, repo, "x")
+
+		wantComputed(t, result)
+		entry := scopeEntryOf(t, result, filepath.Base(repo))
+		if entry.Outcome != branch.ScopeOutcomeUnverifiable || entry.Reason != branch.ScopeReasonForkPointUndetermined || entry.Range != "" || len(entry.Commits) != 0 {
+			t.Errorf("entrada = %+v, se esperaba unverifiable con fork_point_undetermined y sin rango", entry)
+		}
+		if entry.Branch == nil || entry.Branch.Source != branch.ScopeSourceRemoteTracking {
+			t.Errorf("rama = %+v, se esperaba la referencia remota declarada", entry.Branch)
+		}
+	})
+	t.Run("rama adoptada de origin", func(t *testing.T) {
+		t.Parallel()
+		repo, _, _ := fastForwarded(t)
+		runGit(t, repo, "remote", "add", "origin", "https://ejemplo.invalid/repo.git")
+		runGit(t, repo, "update-ref", "refs/remotes/origin/feat/x", "feat/x")
+		runGit(t, repo, "branch", "-D", "feat/x")
+		runGit(t, repo, "branch", "--track", "feat/x", "refs/remotes/origin/feat/x")
+
+		result := scopeOf(t, repo, "x")
+
+		wantComputed(t, result)
+		entry := scopeEntryOf(t, result, filepath.Base(repo))
+		if entry.Outcome != branch.ScopeOutcomeUnverifiable || entry.Reason != branch.ScopeReasonForkPointUndetermined {
+			t.Errorf("entrada = %+v, se esperaba unverifiable con fork_point_undetermined: la creación es una adopción", entry)
+		}
+	})
+}
+
+// E4 (REQ-25.51, REQ-25.53, REQ-25.54) en un multirepo con `api`, `web` y el repositorio de specs in
+// situ: `api` fusionada es `ok`; `web` sin rama es `branch_missing` sin ejecutar `fetch`; specs es
+// `exempt`; y la oferta es `unverifiable`.
+func TestScopeMultirepoCombinesMergedMissingAndExemptRepositories(t *testing.T) {
+	master, specs := scopeMultirepo(t, "repo-api", "repo-web")
+	api := filepath.Join(master, "repo-api")
+	runGit(t, api, "switch", "-q", "-c", "feat/x", "main")
+	commitFile(t, api, "a.go", "propio de api")
+	own := runGit(t, api, "rev-parse", "HEAD")
+	runGit(t, api, "switch", "-q", "main")
+	mergeInto(t, api, "feat/x")
+	seen := observe(t)
+
+	result := scopeOf(t, master, "x")
+
+	wantComputed(t, result)
+	if len(result.Repositories) != 3 {
+		t.Fatalf("repositorios = %+v, se esperaban specs, api y web", result.Repositories)
+	}
+	entry := scopeEntryOf(t, result, "repo-api")
+	wantOwnScope(t, entry, []string{own}, []string{"a.go"})
+	if entry.Merged == nil || !*entry.Merged || entry.Role != branch.RepoCode {
+		t.Errorf("repo-api = %+v, se esperaba código fusionada", entry)
+	}
+	web := scopeEntryOf(t, result, "repo-web")
+	if web.Outcome != branch.ScopeOutcomeUnverifiable || web.Reason != branch.ScopeReasonBranchMissing || web.Continuation != "git -C "+pathquote.Quote(web.GitRoot)+" fetch origin" {
+		t.Errorf("repo-web = %+v, se esperaba unverifiable con branch_missing y la continuación fetch", web)
+	}
+	wantSameDirectory(t, "gitRoot de specs", scopeEntryOf(t, result, "repo-specs").GitRoot, specs)
+	if exempt := scopeEntryOf(t, result, "repo-specs"); exempt.Outcome != branch.ScopeOutcomeExempt || exempt.Range != "" || len(exempt.Files) != 0 {
+		t.Errorf("repo-specs = %+v, se esperaba exenta y sin cálculo", exempt)
+	}
+	if result.Summary.Offer != branch.ScopeOfferUnverifiable || len(result.Summary.Pending) != 1 || result.Summary.Pending[0].Repository != "repo-web" {
+		t.Errorf("resumen = %+v, se esperaba unverifiable con repo-web pendiente", result.Summary)
+	}
+	for _, invocation := range *seen {
+		if invocation[1] == "fetch" {
+			t.Errorf("scope nunca ejecuta fetch: %v", invocation)
+		}
+	}
+	wantNoRemoteOrWrite(t, *seen)
+	wantNoScopeReadIn(t, *seen, specs)
+}
+
+// E4, subcaso: con `web` presente y sin fusionar y `api` fusionada, la oferta es `pending_merge` y
+// el resumen nombra `web` y su rama.
+func TestScopeMultirepoWithAnUnmergedRepositoryIsPendingMerge(t *testing.T) {
+	t.Parallel()
+	master, _ := scopeMultirepo(t, "repo-api", "repo-web")
+	api, web := filepath.Join(master, "repo-api"), filepath.Join(master, "repo-web")
+	runGit(t, api, "switch", "-q", "-c", "feat/x", "main")
+	commitFile(t, api, "a.go", "propio de api")
+	runGit(t, api, "switch", "-q", "main")
+	mergeInto(t, api, "feat/x")
+	runGit(t, web, "switch", "-q", "-c", "feat/x", "main")
+	commitFile(t, web, "w.go", "propio de web")
+
+	result := scopeOf(t, master, "x")
+
+	wantComputed(t, result)
+	if result.Summary.Offer != branch.ScopeOfferPendingMerge || len(result.Summary.Pending) != 1 {
+		t.Fatalf("resumen = %+v, se esperaba pending_merge con un pendiente", result.Summary)
+	}
+	pending := result.Summary.Pending[0]
+	if pending.Repository != "repo-web" || pending.Branch != "feat/x" || pending.Reason != branch.ScopeReasonNotMerged {
+		t.Errorf("pendiente = %+v, se esperaba repo-web con feat/x sin fusionar", pending)
 	}
 }

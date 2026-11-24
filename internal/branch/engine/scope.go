@@ -192,10 +192,29 @@ func (e *Engine) scopeCommits(ctx context.Context, operation, cwd string, facts 
 			empty(branch.NewScopeStart(fB, startSource))
 			return nil
 		}
-		// Avance rápido o rama recién creada en una sola etapa: el reflog de la rama (D6), que llega
-		// con la unidad siguiente. Mientras tanto el punto de partida no puede fijarse.
-		undetermined(fmt.Sprintf("la rama %s coincide con el punto de bifurcación: no se puede distinguir una rama sin commits de una fusionada por avance rápido", tip.shown))
-		return nil
+		// Rama recién creada o fusionada por avance rápido en una sola etapa: solo el reflog de la
+		// rama local lo distingue (D6). Sin una creación válida no puede fijarse el punto de partida.
+		created, creation, err := e.branchCreation(ctx, root, tip)
+		if err != nil {
+			return failed("leer el reflog de "+tip.shown, err)
+		}
+		switch {
+		case !creation:
+			undetermined(fmt.Sprintf("la rama %s coincide con el punto de bifurcación y su reflog no permite saber si no tiene commits o se fusionó por avance rápido (rama solo remota, adoptada o con el reflog caducado)", tip.shown))
+			return nil
+		case created == tip.sha:
+			empty(branch.NewScopeStart(created, branch.ScopeStartReflog))
+			return nil
+		}
+		ancestor, err := e.git.IsAncestor(ctx, root, created, tip.sha)
+		if err != nil {
+			return failed("comparar la creación de "+tip.shown+" con su punta", err)
+		}
+		if !ancestor {
+			undetermined(fmt.Sprintf("la creación de la rama %s en el reflog (%s) no es ancestro de su punta: no se puede fijar el punto de partida", tip.shown, created))
+			return nil
+		}
+		fB, start, startSource = created, created, branch.ScopeStartReflog
 	}
 
 	revisions := []string{tip.sha, "^" + start}
@@ -397,4 +416,15 @@ func (e *Engine) scopeIntegration(ctx context.Context, repo branch.RepoPlan) (sc
 		}
 	}
 	return scopeReference{}, false, nil
+}
+
+// branchCreation lee el commit en que se creó la rama local del cambio (D6). Solo una rama local
+// tiene reflog propio: una rama que solo existe como `origin/<rama>` ya descargada no lo tiene, y
+// una creación que no es de `git branch` (adopción de `origin/<rama>`, REQ-27.15) no vale.
+func (e *Engine) branchCreation(ctx context.Context, dir string, tip scopeReference) (sha string, ok bool, err error) {
+	if tip.source != branch.ScopeSourceLocal {
+		return "", false, nil
+	}
+	sha, _, ok, err = e.git.BranchCreation(ctx, dir, tip.shown)
+	return sha, ok, err
 }

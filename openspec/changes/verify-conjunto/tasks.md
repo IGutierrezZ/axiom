@@ -48,9 +48,9 @@ Tests lentos (señalar para segundo plano): `go test ./internal/branch/engine/` 
   Cubre: REQ-25.52, REQ-25.53, REQ-25.54
 - [x] 2.4 (Unidad 4, GREEN) En `internal/branch/engine/scope.go`: `firstParentFork` sobre `RevList`, revisiones propias y excluidos según la tabla de D5, `CommitFiles` con la unión de rutas sin `<WorkspaceRel>/openspec/changes/<cambio>/`, resultado `ok`/`empty`, `mergeLayers` solo para entradas `ok`, `SummarizeScope`.
   Cubre: REQ-25.52, REQ-25.53, REQ-25.54
-- [ ] 2.5 (Unidad 5, RED) Ampliar `internal/branch/engine/scope_test.go` con E3 (rama local fusionada por avance rápido → `ok` con `start.source: reflog`; rama recién creada → `empty`; rama solo remota fusionada por avance rápido → `fork_point_undetermined`) y E4 multirepo (`api` fusionada → `ok`; `web` sin rama → `branch_missing` sin `fetch`; specs → `exempt`; `offer: unverifiable`; subcaso `web` presente sin fusionar → `pending_merge` con `web` en `pending`).
+- [x] 2.5 (Unidad 5, RED) Ampliar `internal/branch/engine/scope_test.go` con E3 (rama local fusionada por avance rápido → `ok` con `start.source: reflog`; rama recién creada → `empty`; rama solo remota fusionada por avance rápido → `fork_point_undetermined`) y E4 multirepo (`api` fusionada → `ok`; `web` sin rama → `branch_missing` sin `fetch`; specs → `exempt`; `offer: unverifiable`; subcaso `web` presente sin fusionar → `pending_merge` con `web` en `pending`).
   Cubre: REQ-25.53, REQ-25.54
-- [ ] 2.6 (Unidad 5, GREEN) En `internal/branch/engine/scope.go`: lectura de `BranchCreation` solo cuando `fB == tip` y la base es la integración, validez por asunto `branch: Created from ` y origen distinto de la copia remota, reglas `C == tip` → `empty` e `IsAncestor(C, tip)` → `start = C`.
+- [x] 2.6 (Unidad 5, GREEN) En `internal/branch/engine/scope.go`: lectura de `BranchCreation` solo cuando `fB == tip` y la base es la integración, validez por asunto `branch: Created from ` y origen distinto de la copia remota, reglas `C == tip` → `empty` e `IsAncestor(C, tip)` → `start = C`.
   Cubre: REQ-25.52, REQ-25.53
 
 ## Phase 3: CLI
