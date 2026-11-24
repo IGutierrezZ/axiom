@@ -87,12 +87,12 @@ Ejemplos: `REQ-<n>.<m>` (defecto, `REQ-30.4`), `RF-<DOM>-<NN>` (`RF-USU-01`, D-0
 
 ### D-05. Compositor por ID (`openspecdoc`)
 
-**Elección.** Una única función de resolución, `openspecdoc.Resolve`, la usan el compositor, la clasificación idempotente de `livespec` y `alreadyComposed` de `archive-check`, para que los tres coincidan siempre. *Ajuste del 2026-11-23:* su núcleo vive en `reqid.Pattern.Resolve` (con `Match`, `SupersededSuffix` e `IsSuperseded`) y `openspecdoc.Resolve` delega en él, para que `isoevidence` resuelva el «existente» de un MODIFIED/REMOVED y la tolerancia D17 igual que el compositor sin importar `openspecdoc` (regla de hoja de D-02):
+**Elección.** Una única función de resolución, `openspecdoc.Resolve`, la usan el compositor, la clasificación idempotente de `livespec` y `alreadyComposed` de `archive-check`, para que los tres coincidan siempre. *Ajuste del 2026-11-23:* su núcleo vive en `reqid.Pattern.Resolve` (con `Match`, `SupersededSuffix` e `IsSuperseded`) y `openspecdoc.Resolve` delega en él. *Corrección del 2026-11-24 (W-1 del verify):* `isoevidence` no llama a `Resolve`, porque ninguna de sus rutas busca el «existente» de un MODIFIED/REMOVED: solo exige un identificador válido en el propio nombre (REQ-29.3), y la tolerancia D17 y ADDED siguen por título; `Resolve` lo usan el compositor, `livespec.classify` (MODIFIED y REMOVED) y `alreadyComposed` (REMOVED). La regla de hoja de D-02 se mantiene: `isoevidence` importa solo `internal/reqid`.
 
 1. `id := p.InTitle(name)`. Si `id == ""`, se busca el **título exacto** (comportamiento actual; primera coincidencia).
 2. Si hay `id`, se buscan los requisitos de la canónica **no superados** (nombre sin el sufijo ` [SUPERSEDED / DEPRECADO]`) cuyo `p.InTitle` es `id`:
    - exactamente uno → ese;
-   - ninguno → no encontrado (mismo motivo de hoy, `no canonical requirement named %q`);
+   - ninguno → solo vale el título exacto (conserva la composición de hoy cuando la delta cita tal cual un requisito superado o un título con dos IDs, REQ-30.23); sin él, no encontrado (mismo motivo de hoy, `no canonical requirement named %q`);
    - dos o más → si exactamente uno tiene el título exacto, ese (es lo que hoy elegiría el título); si no, `MatchAmbiguous` con el motivo `identifier %s is carried by %d canonical requirements and none is named %q`.
 
 Aplicación por operación:
