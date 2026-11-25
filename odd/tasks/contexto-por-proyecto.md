@@ -98,3 +98,77 @@ Que cada sesión de agente cargue solo el contexto del proyecto en el que trabaj
 ## Siguiente paso
 
 T6. Según el resultado de la prueba por id, ajustar T3 y T4: escribir los dos nombres de cada conector, o avisar en la pantalla de que en escritorio los conectores solo se apagan por sesión.
+
+## Spec viva
+
+### Capacidad: multi-project-hub
+
+```openspec
+## ADDED Requirements
+
+### Requirement: Exclusiones Personales de Servidores MCP por Proyecto en el Hub (REQ-30.33)
+
+Además de las preferencias de REQ-25.29, cada proyecto registrado en `~/.axiom/workspaces.json` PUEDE almacenar **exclusiones personales de servidores MCP**: un mapa de agente a lista de nombres de servidor o de conector (campo `mcp_exclusions`, omitido cuando está vacío). Las exclusiones son personales y NO DEBEN escribirse nunca en `axiom.yaml` ni en ningún fichero versionado. Los nombres DEBEN normalizarse (sin espacios sobrantes, sin vacíos ni duplicados) y la consulta DEBE resolverse también desde una subcarpeta o un worktree del proyecto. Guardarlas DEBE devolver las exclusiones previas para que quien las aplica retire solo lo que sobra. Registrar de nuevo un proyecto NO DEBE borrarlas; desregistrarlo SÍ DEBE eliminarlas junto con su entrada. No DEBEN cambiar la versión del esquema (`"1.0"`): un binario anterior las ignora.
+
+#### Scenario: Persistencia sin tocar `axiom.yaml`
+- **DADO** un proyecto registrado
+- **CUANDO** se guardan las exclusiones `work-copilot` y `claude.ai Microsoft 365` para `claude-code`
+- **ENTONCES** `workspaces.json` las contiene en la entrada de ese proyecto
+- **Y** `axiom.yaml` no se modifica
+
+#### Scenario: Se resuelven desde un worktree
+- **DADO** un proyecto registrado con exclusiones guardadas
+- **CUANDO** se consultan desde uno de sus worktrees
+- **ENTONCES** se devuelven las exclusiones del proyecto
+
+### Requirement: Las Exclusiones MCP se Aplican como `deniedMcpServers` en `.claude/settings.local.json` (REQ-30.34)
+
+Axiom DEBE aplicar las exclusiones de `claude-code` fusionando `deniedMcpServers` (`[{"serverName": "<nombre>"}]`) en `.claude/settings.local.json` de la raíz del proyecto, de cada uno de sus worktrees y, en `multirepo`, de los repositorios de rol. La aplicación DEBE lanzarse al guardar la preferencia, en `axiom sync` y en `axiom branch ensure`. DEBE conservar las claves y las entradas ajenas, adoptar las entradas ya presentes cuyo nombre coincida con la preferencia y, al quitar una exclusión, retirar solo las de la preferencia anterior que ya no están en la nueva, y eliminar la clave si queda vacía. Con un JSON ilegible DEBE fallar sin tocar el fichero. Un fallo al aplicar en `sync` o en `ensure` DEBE avisarse y NO DEBE hacer fallar la orden. Los agentes distintos de `claude-code` DEBEN informarse como no soportados. Un conector de claude.ai se identifica en la CLI por `claude.ai <Nombre>`. La aplicación de escritorio de Claude entrega sus conectores en proceso con su id como nombre: esa forma no queda cubierta por `claude.ai <Nombre>` y su bloqueo por id queda pendiente de verificar.
+
+#### Scenario: Alta de una exclusión conservando lo ajeno
+- **DADO** un `.claude/settings.local.json` con otras claves y una entrada ajena en `deniedMcpServers`
+- **CUANDO** se aplica la exclusión `work-copilot`
+- **ENTONCES** `deniedMcpServers` contiene la entrada ajena y `work-copilot`
+- **Y** las demás claves permanecen
+
+#### Scenario: Baja de una exclusión
+- **DADO** una preferencia anterior con `work-copilot` y `claude.ai Microsoft 365`, aplicada
+- **CUANDO** la nueva preferencia solo contiene `work-copilot`
+- **ENTONCES** se retira `claude.ai Microsoft 365` y se conservan `work-copilot` y las entradas ajenas
+
+#### Scenario: Se aplica en los worktrees de `ensure`
+- **DADO** un proyecto con exclusiones guardadas
+- **CUANDO** `axiom branch ensure` prepara un worktree
+- **ENTONCES** el `.claude/settings.local.json` del worktree contiene las exclusiones
+
+#### Scenario: Agente no soportado
+- **DADO** exclusiones guardadas para un agente distinto de `claude-code`
+- **CUANDO** se aplican
+- **ENTONCES** el informe las marca como no soportadas y no se escribe ningún fichero
+```
+
+### Capacidad: local-web-dashboard
+
+```openspec
+## ADDED Requirements
+
+### Requirement: El Dashboard Edita las Exclusiones MCP del Proyecto Activo (REQ-25.55)
+
+El dashboard DEBE ofrecer en la pantalla Ecosistema la tarjeta «Servidores MCP excluidos en este proyecto» y la API `GET` y `POST /api/projects/active/mcp-exclusions`. La API DEBE responder 403 a una petición que no sea local, 400 a datos inválidos, 409 si el proyecto activo no está registrado y 405 a otros métodos. Los candidatos DEBEN ser los servidores de `mcpServers` de `~/.claude.json` (solo sus nombres, nunca sus valores) y los nombres que la persona añada a mano; los servidores cargados sin uso en 30 días DEBEN marcarse como sugerencia. Guardar DEBE aplicar la preferencia según REQ-30.34. Los agentes sin la capacidad DEBEN mostrarse como no soportados.
+
+#### Scenario: Guardar aplica la exclusión
+- **DADO** un proyecto registrado y abierto en el dashboard
+- **CUANDO** se marca `work-copilot` y se guarda
+- **ENTONCES** el hub guarda la exclusión
+- **Y** el `.claude/settings.local.json` del proyecto contiene `work-copilot` en `deniedMcpServers`
+
+#### Scenario: Proyecto no registrado
+- **DADO** un proyecto abierto que no está en `workspaces.json`
+- **CUANDO** se guarda una exclusión
+- **ENTONCES** la API responde 409 y no se escribe nada
+
+#### Scenario: Petición no local
+- **DADO** una petición que no procede del propio equipo
+- **CUANDO** llama a `/api/projects/active/mcp-exclusions`
+- **ENTONCES** la API responde 403
+```

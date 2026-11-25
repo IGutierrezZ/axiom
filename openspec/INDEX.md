@@ -1,8 +1,8 @@
 # Catálogo Maestro de Especificaciones Vivas — Axiom
 
 > **Proyecto:** Axiom (Spec-Driven Development Platform)
-> **Última Sincronización:** 2026-11-24 19:58:22 UTC
-> **Total Dominios:** 75 | **Total Requerimientos:** 657 | **Total Escenarios BDD:** 2322
+> **Última Sincronización:** 2026-11-25 13:56:56 UTC
+> **Total Dominios:** 75 | **Total Requerimientos:** 660 | **Total Escenarios BDD:** 2331
 
 ---
 
@@ -31,8 +31,8 @@
 | `knowledge-query-engine` | Especificación de Requerimientos: Consulta Spec-First con Auto-Enriquecimiento de la Spec Viva (INC-23) | 5 | 5 | [Ver Spec](specs/knowledge-query-engine/spec.md) |
 | `knowledge-sweep-command` | Especificación de Requerimientos: Barrido Autónomo Knowledge y Siembra Inicial (INC-23) | 5 | 5 | [Ver Spec](specs/knowledge-sweep-command/spec.md) |
 | `living-documentation` | Especificación Viva: Motor de Documentación Viva y Adopción Orgánica en Archive (INC-07) | 11 | 15 | [Ver Spec](specs/living-documentation/spec.md) |
-| `local-web-dashboard` | Especificación Viva: Servidor HTTP Local Embebido y Dashboard Web | 11 | 35 | [Ver Spec](specs/local-web-dashboard/spec.md) |
-| `multi-project-hub` | Especificación Viva: Hub Multi-Proyecto, Selector Dinámico en Dashboard Web y CLI axiom init (INC-08) | 12 | 45 | [Ver Spec](specs/multi-project-hub/spec.md) |
+| `local-web-dashboard` | Especificación Viva: Servidor HTTP Local Embebido y Dashboard Web | 12 | 38 | [Ver Spec](specs/local-web-dashboard/spec.md) |
+| `multi-project-hub` | Especificación Viva: Hub Multi-Proyecto, Selector Dinámico en Dashboard Web y CLI axiom init (INC-08) | 14 | 51 | [Ver Spec](specs/multi-project-hub/spec.md) |
 | `multi-role-fan-out` | Especificación Viva: Despliegue Multi-Rol y Barrera de Sincronización en SDD | 8 | 13 | [Ver Spec](specs/multi-role-fan-out/spec.md) |
 | `odd-cli-commands` | Especificación de Requerimientos: Comandos CLI para ODD (INC-19) | 4 | 0 | [Ver Spec](specs/odd-cli-commands/spec.md) |
 | `odd-living-document` | Especificación de Requerimientos: Documento Vivo ODD y Espejo de Recuperación en Engram (INC-19) | 4 | 0 | [Ver Spec](specs/odd-living-document/spec.md) |
@@ -1192,6 +1192,10 @@ Definir de forma rigurosa, ejecutable y verificable los requerimientos funcional
   - *Escenario BDD:* Sin cambios pendientes no hay aviso de pendientes
   - *Escenario BDD:* Una escritura sobre un cambio en worktree se dirige al worktree
   - *Escenario BDD:* La TUI lista el mismo conjunto
+- **[REQ-25.55]** El Dashboard Edita las Exclusiones MCP del Proyecto Activo
+  - *Escenario BDD:* Guardar aplica la exclusión
+  - *Escenario BDD:* Proyecto no registrado
+  - *Escenario BDD:* Petición no local
 
 ### Dominio: `multi-project-hub` — Especificación Viva: Hub Multi-Proyecto, Selector Dinámico en Dashboard Web y CLI axiom init (INC-08)
 
@@ -1256,6 +1260,14 @@ Definir formal y deterministamente los requerimientos funcionales, no funcionale
   - *Escenario BDD:* Con monorepo no hay constructor de roles y el rol es `fullstack`
   - *Escenario BDD:* Con multirepo el constructor de roles está disponible
   - *Escenario BDD:* Cambiar de multirepo a monorepo descarta los roles especializados
+- **[REQ-30.33]** Exclusiones Personales de Servidores MCP por Proyecto en el Hub
+  - *Escenario BDD:* Persistencia sin tocar `axiom.yaml`
+  - *Escenario BDD:* Se resuelven desde un worktree
+- **[REQ-30.34]** Las Exclusiones MCP se Aplican como `deniedMcpServers` en `.claude/settings.local.json`
+  - *Escenario BDD:* Alta de una exclusión conservando lo ajeno
+  - *Escenario BDD:* Baja de una exclusión
+  - *Escenario BDD:* Se aplica en los worktrees de `ensure`
+  - *Escenario BDD:* Agente no soportado
 
 ### Dominio: `multi-role-fan-out` — Especificación Viva: Despliegue Multi-Rol y Barrera de Sincronización en SDD
 

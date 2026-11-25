@@ -282,3 +282,23 @@ Los cambios en curso viven en worktrees. El servidor DEBE agregar, a los cambios
 - **DADO** un proyecto con un cambio activo `x` en un worktree registrado
 - **CUANDO** el usuario abre la pantalla de ciclo de vida de incrementos de la TUI
 - **ENTONCES** la pantalla lista `x`, igual que `GET /api/increments`
+### Requirement: El Dashboard Edita las Exclusiones MCP del Proyecto Activo (REQ-25.55)
+
+El dashboard DEBE ofrecer en la pantalla Ecosistema la tarjeta «Servidores MCP excluidos en este proyecto» y la API `GET` y `POST /api/projects/active/mcp-exclusions`. La API DEBE responder 403 a una petición que no sea local, 400 a datos inválidos, 409 si el proyecto activo no está registrado y 405 a otros métodos. Los candidatos DEBEN ser los servidores de `mcpServers` de `~/.claude.json` (solo sus nombres, nunca sus valores) y los nombres que la persona añada a mano; los servidores cargados sin uso en 30 días DEBEN marcarse como sugerencia. Guardar DEBE aplicar la preferencia según REQ-30.34. Los agentes sin la capacidad DEBEN mostrarse como no soportados.
+
+#### Scenario: Guardar aplica la exclusión
+- **DADO** un proyecto registrado y abierto en el dashboard
+- **CUANDO** se marca `work-copilot` y se guarda
+- **ENTONCES** el hub guarda la exclusión
+- **Y** el `.claude/settings.local.json` del proyecto contiene `work-copilot` en `deniedMcpServers`
+
+#### Scenario: Proyecto no registrado
+- **DADO** un proyecto abierto que no está en `workspaces.json`
+- **CUANDO** se guarda una exclusión
+- **ENTONCES** la API responde 409 y no se escribe nada
+
+#### Scenario: Petición no local
+- **DADO** una petición que no procede del propio equipo
+- **CUANDO** llama a `/api/projects/active/mcp-exclusions`
+- **ENTONCES** la API responde 403
+
