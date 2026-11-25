@@ -35,9 +35,6 @@ pr_merged verificada; no aplica a la rama de archivado, que solo admite las dos 
 resultado indica, por rama, la capa que la confirmó (confirmedBy). Una rama sin fusión confirmada
 se conserva con merge_not_confirmed: ni su worktree ni su rama se tocan.
 
-Si el worktree tiene un linaje de revisión (RDD) abierto, lo avisa, nombra axiom review abandon y
-elimina igualmente.
-
 Rechaza con dirty_worktree la rama cuyo worktree tiene cambios sin confirmar (con stage, sin
 stage o sin seguimiento; los ficheros ignorados cuentan como limpios): no elimina nada. Con
 --force salta la exigencia de fusión confirmada (la confirmación es entonces forced y el
@@ -111,7 +108,7 @@ func runBranchDone(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintf(stderr, "Error: no se pudo resolver --cwd '%s' (%v). Indica una ruta absoluta con `axiom branch done --change <nombre> --cwd <ruta>`.\n", *cwd, err)
 		return branch.ExitUsage
 	}
-	result := engine.DefaultWithLineages(newBranchLineageProbe()).Done(context.Background(), engine.DoneRequest{
+	result := engine.Default().Done(context.Background(), engine.DoneRequest{
 		CWD: dir, Change: *change, Lane: branch.Lane(*lane), Force: *force, Fetch: *fetch,
 	})
 	return writeBranchResult(result, *asJSON, stdout, stderr)

@@ -269,29 +269,6 @@ func TestEffectiveStateStoreWithRootNamesTheProjectOnlyWhenItHasState(t *testing
 	}
 }
 
-func TestManagedAssetProvenanceReadsTheProjectState(t *testing.T) {
-	rootA, _, home := projectStateFixture(t)
-	t.Chdir(rootA)
-	if err := state.Write(home, state.InstallState{ManagedAssetDigest: "sha256:escritor-antiguo"}); err != nil {
-		t.Fatal(err)
-	}
-	if !checkManagedReviewerAssets().stale() {
-		t.Fatal("el digest global obsoleto debe reportarse como obsoleto cuando el proyecto no tiene estado")
-	}
-	expected, err := managedAssetDigest()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if err := state.ProjectStore(home, rootA).Write(state.InstallState{ManagedAssetDigest: expected}); err != nil {
-		t.Fatal(err)
-	}
-
-	if checkManagedReviewerAssets().stale() {
-		t.Error("con estado de proyecto vigente, el digest obsoleto del global no debe contar")
-	}
-}
-
 func TestStateStoreForFollowsTheScope(t *testing.T) {
 	t.Setenv("AXIOM_STATE_DIR", "")
 	home, root := t.TempDir(), t.TempDir()

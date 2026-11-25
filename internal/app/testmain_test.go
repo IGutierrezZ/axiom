@@ -7,7 +7,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/IGutierrezZ/axiom/v3/internal/rddharness"
 	"github.com/IGutierrezZ/axiom/v3/internal/system"
 )
 
@@ -19,9 +18,6 @@ import (
 // to in the process running `go test` — the developer's real home on a machine
 // that has not sandboxed it for this specific test.
 func TestMain(m *testing.M) {
-	// RDD está suspendido sin la etiqueta rdd_harness (C-01-c): los tests en proceso
-	// que ejercitan la revisión activan el punto de inyección del paquete.
-	rddharness.SetForTesting(true)
 	testHome, err := os.MkdirTemp("", "gentle-ai-app-test-home-*")
 	if err != nil {
 		panic(err)

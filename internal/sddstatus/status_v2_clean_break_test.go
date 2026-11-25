@@ -136,7 +136,9 @@ func TestSDDStatusV2CleanBreak(t *testing.T) {
 	})
 
 	t.Run("verified archive excludes review state and status reads preserve history", func(t *testing.T) {
-		reviewEnabledHome(t)
+		home := t.TempDir()
+		t.Setenv("HOME", home)
+		t.Setenv("USERPROFILE", home)
 		repo := initRuntimeLedgerRepo(t)
 		changeRoot := seedReadyChange(t, repo, "thin", "- [x] 1.1 Work\n")
 		write(t, filepath.Join(changeRoot, "verify-report.md"), testVerifyEnvelope("pass", 0, 0, "1/1", "1/1", 0, 0))

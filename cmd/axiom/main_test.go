@@ -160,48 +160,6 @@ func TestRunSDDStatusInvalidFlag(t *testing.T) {
 	}
 }
 
-func TestRunReviewHelp(t *testing.T) {
-	tests := []struct {
-		name string
-		args []string
-	}{
-		{"flag --help", []string{"--help"}},
-		{"flag -h", []string{"-h"}},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			var stdout, stderr bytes.Buffer
-			exitCode := runReview(tc.args, &stdout, &stderr, false)
-			if exitCode != 0 {
-				t.Fatalf("se esperaba código 0 con %v, se obtuvo %d", tc.args, exitCode)
-			}
-			out := stdout.String()
-			if !strings.Contains(out, "Uso: axiom review <subcomando>") {
-				t.Fatalf("la salida no contiene el uso esperado:\n%s", out)
-			}
-			expectedSubcmds := []string{"mode", "start", "resume", "step", "bundle-export", "bundle-import", "validate"}
-			for _, sub := range expectedSubcmds {
-				if !strings.Contains(out, sub) {
-					t.Fatalf("la ayuda de review no documenta el subcomando %q:\n%s", sub, out)
-				}
-			}
-		})
-	}
-}
-
-func TestRunReviewModeStatus(t *testing.T) {
-	var stdout, stderr bytes.Buffer
-	exitCode := runReview([]string{"mode", "status"}, &stdout, &stderr, false)
-	if exitCode != 0 {
-		t.Fatalf("se esperaba código 0 al consultar review mode status, se obtuvo %d:\nstderr: %s", exitCode, stderr.String())
-	}
-	out := stdout.String()
-	if !strings.Contains(out, "receipt-driven development:") && !strings.Contains(out, "disabled") && !strings.Contains(out, "off") {
-		t.Fatalf("salida inesperada al consultar review mode status:\n%s", out)
-	}
-}
-
 func TestCLIIntegrationSubprocessAndFlatAliases(t *testing.T) {
 	repoRoot, err := filepath.Abs("../..")
 	if err != nil {
@@ -261,19 +219,7 @@ func TestCLIIntegrationSubprocessAndFlatAliases(t *testing.T) {
 		}
 	})
 
-	t.Run("axiom review mode status", func(t *testing.T) {
-		cmd := exec.Command(binPath, "review", "mode", "status")
-		cmd.Dir = repoRoot
-		out, err := cmd.CombinedOutput()
-		if err != nil {
-			t.Fatalf("axiom review mode status falló: %v\nSalida: %s", err, string(out))
-		}
-		if !strings.Contains(string(out), "receipt-driven development:") && !strings.Contains(string(out), "off") {
-			t.Fatalf("salida no contiene 'receipt-driven development:': %s", string(out))
-		}
-	})
-
-	t.Run("axiom --help incluye comandos sdd y review", func(t *testing.T) {
+	t.Run("axiom --help incluye comandos sdd", func(t *testing.T) {
 		cmd := exec.Command(binPath, "--help")
 		cmd.Dir = repoRoot
 		out, err := cmd.CombinedOutput()
@@ -281,8 +227,8 @@ func TestCLIIntegrationSubprocessAndFlatAliases(t *testing.T) {
 			t.Fatalf("axiom --help falló: %v\nSalida: %s", err, string(out))
 		}
 		outStr := string(out)
-		if !strings.Contains(outStr, "sdd status") || !strings.Contains(outStr, "sdd continue") || !strings.Contains(outStr, "review") {
-			t.Fatalf("axiom --help no documenta sdd o review:\n%s", outStr)
+		if !strings.Contains(outStr, "sdd status") || !strings.Contains(outStr, "sdd continue") {
+			t.Fatalf("axiom --help no documenta los comandos sdd:\n%s", outStr)
 		}
 		expectedCmds := []string{"tui", "install", "sync", "upgrade", "doctor", "backup", "restore", "uninstall"}
 		for _, cmdName := range expectedCmds {

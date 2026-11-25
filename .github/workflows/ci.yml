@@ -460,7 +460,7 @@ jobs:
           GENTLE_AI_TEST_BINARY: ${{ runner.temp }}\gentle-ai.exe
           GENTLE_AI_REQUIRE_DISTINCT_WINDOWS_TOKEN_OWNER: "1"
         run: |
-          $packages = @('./internal/cli', './internal/fileprim', './internal/reviewtransaction', './internal/sddstatus', './internal/components/engram')
+          $packages = @('./internal/fileprim', './internal/reviewtransaction', './internal/components/engram')
           $expected = @(
             'TestRARSharedOwnerAcceptsOnlyCurrentWindowsPrincipals',
             'TestRARPrivateOwnerRemainsTokenUserOnly',
@@ -478,21 +478,12 @@ jobs:
             'TestCompactStatusLoadContextCancelsUnderExclusiveMaintenance',
             'TestRepairClassifiedAuthorityConcurrentExecutionCommitsAndReplays',
             'TestRepairClassifiedAuthorityResumesEachDurablePhase',
-            'TestNegotiatedStatusUnderUnavailableProcessTempOffersFreshStartOnBothContracts',
-            'TestNegotiatedStatusUnderUnavailableProcessTempResolvesWorkspaceOverlayBaseRef',
-            'TestNegotiatedStatusUnderUnavailableProcessTempContinuesCompactCorrection',
-            'TestNegotiatedStatusLeavesNoTemporaryGitArtifactsAfterFailure',
             'TestFrozenCandidateReviewerDiffUsesRegularAttributesFileAndIgnoresMutableSources',
             'TestStdioHandshake_TerminatesDescendantOnContextEnd',
             'TestStdioHandshake_PreservesEarlierDeadline',
             'TestStdioHandshake_PreservesCallerCancellation',
             'TestProbeStdio_MissingAbsoluteConfiguredCommandFails',
             'TestProbeStdio_MissingRelativeWindowsExecutableIsNotInstalled',
-            'TestLastReviewerCaptureIssuesReplayableAcknowledgementThenBurns',
-            'TestCaptureCorrectionPlanBindsExactRequestAndRefusesBudgetOverrun',
-            'TestTargetedValidatorCaptureIssuesAcknowledgementWithoutFinalize',
-            'TestReviewStartWithZeroLensesIssuesAcknowledgement',
-            'TestReviewRecoverEscalatedRequiresExactSuccessorBoundAuthorization',
             'TestCompactReceiptAndGateAPIsAreAbsentFromProductionPackages'
           )
           $selector = '^(' + [string]::Join('|', $expected) + ')$'

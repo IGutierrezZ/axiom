@@ -51,9 +51,3 @@ type Registry interface {
 type Prefs interface {
 	WorktreePrefs(projectMaster string) (mode Mode, root string, source string, warning string)
 }
-
-// LineageProbe consulta si hay linajes de revisión abiertos en un worktree antes de
-// desmontarlo (`done`, REQ-25.17).
-type LineageProbe interface {
-	OpenLineages(ctx context.Context, worktreeRoot string) ([]string, error)
-}

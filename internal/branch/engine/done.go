@@ -373,15 +373,6 @@ func (d *doneRun) branch(repository doneRepository, planned branch.BranchPlan) (
 		described.TipSha = tip
 	}
 
-	// Un linaje RDD abierto en lo que se va a eliminar solo avisa: no impide la operación (REQ-25.17).
-	if linked || inMain {
-		root := main
-		if linked {
-			root = deployed.Path
-		}
-		d.warnOfOpenLineages(planned.Name, root, main)
-	}
-
 	switch {
 	case linked:
 		if err := d.engine.writer.RemoveWorktree(d.ctx, main, deployed.Path, len(dirty) > 0 || len(locks) > 0); err != nil {
@@ -514,25 +505,6 @@ func (d *doneRun) prMergedEvidence() bool {
 	}
 	d.prMerged = &found
 	return found
-}
-
-// warnOfOpenLineages avisa de cada linaje RDD abierto en el worktree que se va a eliminar y nombra
-// `axiom review abandon`, que libera su autoridad (REQ-25.17, A-4). Es información: ni un fallo de
-// la sonda ni un linaje abierto impiden la operación. El aviso se compone con el checkout principal,
-// porque el worktree dejará de existir. Sin sonda no consulta nada.
-func (d *doneRun) warnOfOpenLineages(name, worktreeRoot, main string) {
-	if d.engine.lineages == nil {
-		return
-	}
-	lineages, err := d.engine.lineages.OpenLineages(d.ctx, worktreeRoot)
-	if err != nil {
-		d.warn(fmt.Sprintf("no se pudo comprobar si hay linajes RDD abiertos en %s (%v): la rama %s se elimina igualmente", worktreeRoot, err, name))
-		return
-	}
-	for _, lineage := range lineages {
-		d.warn(fmt.Sprintf("el worktree %s de la rama %s tiene un linaje RDD abierto (%s) y se elimina igualmente: libera su autoridad con `axiom review abandon --cwd %s --lineage %s` (ejecuta `axiom review abandon` sin banderas para ver la plantilla de la orden)",
-			worktreeRoot, name, lineage, pathquote.Quote(main), lineage))
-	}
 }
 
 // updateRegistry actualiza el registro local con lo que `done` hizo (D-09): borra de él las ramas

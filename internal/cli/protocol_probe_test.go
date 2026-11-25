@@ -59,7 +59,8 @@ import (
 // stubActorIdentity y useRealActorIdentity.
 func TestMain(m *testing.M) {
 	// RDD está suspendido sin la etiqueta rdd_harness (C-01-c): los tests en proceso
-	// que ejercitan la revisión activan el punto de inyección del paquete.
+	// que ejercitan los activos de revisión que aún instala components/sdd activan el
+	// punto de inyección del paquete. Sale con ese código en C9/C11.
 	rddharness.SetForTesting(true)
 	resolveActorIdentity = func(context.Context, string) gitidentity.Identity {
 		return gitidentity.New("Prueba Axiom", "prueba@ejemplo.invalid")

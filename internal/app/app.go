@@ -126,25 +126,6 @@ func RunArgs(args []string, stdout io.Writer) error {
 			return cli.RunSDDPreflightHook(args[1:], stdout)
 		case "codegraph":
 			return cli.RunCodeGraph(args[1:], stdout)
-		case "review":
-			// The kill switch must stay reachable even when review authority
-			// itself is disabled, so it is dispatched ahead of the facade.
-			if len(args) >= 2 && args[1] == "mode" {
-				return cli.RunReviewMode(args[2:], stdout)
-			}
-			return cli.RunReview(args[1:], stdout)
-		case "review-start":
-			return cli.RunReviewStart(args[1:], stdout)
-		case "review-resume":
-			return cli.RunReviewResume(args[1:], stdout)
-		case "review-step":
-			return cli.RunReviewStep(args[1:], stdout)
-		case "review-bundle-export":
-			return cli.RunReviewBundleExport(args[1:], stdout)
-		case "review-bundle-import":
-			return cli.RunReviewBundleImport(args[1:], stdout)
-		case "review-validate":
-			return cli.RunReviewValidateNonDeciding(args[1:], stdout)
 		case "install":
 			if hasHelpFlag(args[1:]) {
 				cli.PrintInstallHelp(stdout)

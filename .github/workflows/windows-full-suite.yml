@@ -17,7 +17,7 @@ name: Windows Full Suite
 #
 # Everything below is otherwise identical to the ci.yml job it replaces.
 #
-# Cuándo se ejecuta. Son 10 shards de ~30 min en runners Windows, que cuestan el
+# Cuándo se ejecuta. Son 8 shards de ~30 min en runners Windows, que cuestan el
 # doble, así que no se lanza en cada push. A diferencia del job windows-runtime
 # de ci.yml, no reacciona a los cambios de ruta: solo corre
 #   - a mano (workflow_dispatch);
@@ -142,23 +142,14 @@ jobs:
   #
   # Split by measured cost: internal/cli and internal/reviewtransaction are
   # ~44% and ~33% of total test time. internal/cli alone exceeded the 30m
-  # go-test timeout, so it takes six shards. `rest` is derived from `go list`
+  # go-test timeout, so it takes four shards. `rest` is derived from `go list`
   # rather than listed, so a new package is covered the day it is added.
   #
-  # The first cut of this split tiled A-Z by first letter, which is cost-blind:
-  # cli-d-q reached 1818s and cli-r-a-m 1692s against a 1800s go-test timeout
-  # while cli-r-n-z finished in 143s. Test names cluster by prefix, and cost
-  # clusters with them, so a first-letter tile cannot be balanced -- 423 of the
-  # 649 TestR* tests are TestReview*, a single indivisible letter. The shards
-  # below are sized from measured per-selector cost instead (Linux seconds,
-  # which Windows tracks at a steady ~20x across every shard in the matrix):
-  #
-  #   cli-a-m         33.5s   cli-review-a-m  41.1s
-  #   cli-n-o         46.1s   cli-review-n-z  34.9s
-  #   cli-p-q-s-z     48.6s   cli-r-other     14.3s
-  #
-  # That puts the worst shard near 1000s on Windows, roughly half the go-test
-  # timeout, instead of 1% over it.
+  # The shards are sized from measured per-selector cost, not a letter tiling,
+  # because test names cluster by prefix and cost clusters with them. With the
+  # review tests retired, the TestR* names form a single small shard (cli-r).
+  # The earlier per-shard costs no longer apply; they are pending a new
+  # measurement once this change is merged.
   #
   # Intra-package t.Parallel() would be the deeper fix, but internal/cli has 89
   # os.Setenv/t.Setenv sites and t.Setenv panics in a parallel test, so that is
@@ -187,20 +178,9 @@ jobs:
           - name: cli-p-q-s-z
             packages: ./internal/cli
             run: ^Test[P-Q]|^Test[S-Z]
-          - name: cli-review-a-m
+          - name: cli-r
             packages: ./internal/cli
-            run: ^TestReview[A-Ma-m]
-          - name: cli-review-n-z
-            packages: ./internal/cli
-            run: ^TestReview[N-Zn-z]
-          # Every TestR* that the two cli-review shards do not claim: the
-          # non-Review TestRe* tests, TestRevision* (TestRevi + s, where
-          # TestReview is TestRevi + e), and TestRo*/TestRu*. The empty
-          # ^TestR[A-Da-d] arm keeps the R space fully tiled for names nobody
-          # has written yet.
-          - name: cli-r-other
-            packages: ./internal/cli
-            run: ^TestR[A-Da-d]|^TestRe[A-Ua-u]|^TestRevi[N-Zn-z]|^TestR[F-Zf-z]
+            run: ^TestR
           - name: reviewtransaction-a-c
             packages: ./internal/reviewtransaction
             run: ^Test[A-C]
