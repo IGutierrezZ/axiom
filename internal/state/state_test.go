@@ -48,7 +48,6 @@ func TestWriteReconciledAcceptsDesiredStateVisibleAfterWriteError(t *testing.T) 
 
 func fullyPopulatedInstallState() InstallState {
 	lastUpdateCheck := time.Date(2026, 8, 12, 9, 30, 0, 0, time.UTC)
-	rddModeRecordedAt := time.Date(2026, 8, 12, 9, 0, 0, 0, time.UTC)
 	return InstallState{
 		InstalledAgents:          []string{"claude-code", "opencode"},
 		InstalledBinaryVersion:   "1.2.3",
@@ -80,13 +79,11 @@ func fullyPopulatedInstallState() InstallState {
 		ModelAssignments: map[string]ModelAssignmentState{
 			"sdd-init": {ProviderID: "anthropic", ModelID: "claude-sonnet-4", Effort: "medium"},
 		},
-		Persona:           "neutral",
-		PersonaPresent:    true,
-		LastUpdateCheck:   &lastUpdateCheck,
-		PendingSync:       true,
-		RDDMode:           "off",
-		RDDModeRecordedAt: &rddModeRecordedAt,
-		BackgroundIntent:  model.OpenCodeBackgroundOn,
+		Persona:          "neutral",
+		PersonaPresent:   true,
+		LastUpdateCheck:  &lastUpdateCheck,
+		PendingSync:      true,
+		BackgroundIntent: model.OpenCodeBackgroundOn,
 		// Non-default on purpose: round-trip and MergeAgents must preserve this
 		// exact value, never fall back to DefaultUpstreamVersion.
 		UpstreamVersion: "3.3.9",
@@ -1149,77 +1146,91 @@ func TestMergeAgents_PreservesPendingSync(t *testing.T) {
 	}
 }
 
-// TestRDDMode_RoundTrip verifies the global receipt-driven-development kill
-// switch survives a write/read cycle in uncommitted user state.
-func TestRDDMode_RoundTrip(t *testing.T) {
-	home := t.TempDir()
-	recorded := time.Now().UTC().Truncate(time.Second)
-	s := InstallState{
-		InstalledAgents:   []string{"claude-code"},
-		RDDMode:           "off",
-		RDDModeRecordedAt: &recorded,
-	}
-	if err := Write(home, s); err != nil {
-		t.Fatalf("Write() error = %v", err)
-	}
-	got, err := Read(home)
-	if err != nil {
-		t.Fatalf("Read() error = %v", err)
-	}
-	if got.RDDMode != "off" {
-		t.Errorf("RDDMode = %q after round-trip, want %q", got.RDDMode, "off")
-	}
-	if got.RDDModeRecordedAt == nil || !got.RDDModeRecordedAt.Equal(recorded) {
-		t.Errorf("RDDModeRecordedAt = %v, want %v", got.RDDModeRecordedAt, recorded)
-	}
-	data, err := os.ReadFile(Path(home))
-	if err != nil {
-		t.Fatalf("ReadFile() error = %v", err)
-	}
-	if !contains(string(data), "rdd_mode") || !contains(string(data), "rdd_mode_recorded_at") {
-		t.Errorf("JSON must contain the rdd mode keys; got:\n%s", data)
-	}
-}
-
-// TestRDDMode_BackwardCompat verifies that state files written before the kill
-// switch existed still read cleanly with an unconfigured mode.
-func TestRDDMode_BackwardCompat(t *testing.T) {
+// writeLegacyState writes a raw state document, as an earlier version left it,
+// and returns the home that holds it.
+func writeLegacyState(t *testing.T, raw string) string {
+	t.Helper()
 	home := t.TempDir()
 	if err := os.MkdirAll(filepath.Join(home, stateDir), 0o755); err != nil {
 		t.Fatalf("MkdirAll() error = %v", err)
 	}
-	legacy := `{"installed_agents":["claude-code"]}` + "\n"
-	if err := os.WriteFile(Path(home), []byte(legacy), 0o644); err != nil {
+	if err := os.WriteFile(Path(home), []byte(raw), 0o644); err != nil {
 		t.Fatalf("WriteFile() error = %v", err)
 	}
-	s, err := Read(home)
+	return home
+}
+
+// TestLegacyRDDSwitchFieldsAreIgnoredAndDroppedOnTheNextWrite verifies that a state
+// written by a version that still recorded the retired RDD switch loads, keeps
+// every other field, and no longer carries the retired keys after a write.
+func TestLegacyRDDSwitchFieldsAreIgnoredAndDroppedOnTheNextWrite(t *testing.T) {
+	for _, tt := range []struct {
+		name string
+		raw  string
+	}{
+		{
+			name: "string and timestamp",
+			raw:  `{"installed_agents":["claude-code"],"persona":"neutral","pending_sync":true,"rdd_mode":"off","rdd_mode_recorded_at":"2026-08-12T09:00:00Z"}`,
+		},
+		{
+			name: "unexpected types",
+			raw:  `{"installed_agents":["claude-code"],"persona":"neutral","pending_sync":true,"rdd_mode":5,"rdd_mode_recorded_at":{"x":1}}`,
+		},
+		{
+			name: "unparseable timestamp",
+			raw:  `{"installed_agents":["claude-code"],"persona":"neutral","pending_sync":true,"rdd_mode":"on","rdd_mode_recorded_at":"no-es-una-fecha"}`,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			home := writeLegacyState(t, tt.raw)
+			got, err := Read(home)
+			if err != nil {
+				t.Fatalf("Read() error = %v", err)
+			}
+			if !reflect.DeepEqual(got.InstalledAgents, []string{"claude-code"}) || got.Persona != "neutral" || !got.PendingSync {
+				t.Fatalf("Read() lost the remaining fields: %+v", got)
+			}
+			if err := Write(home, got); err != nil {
+				t.Fatalf("Write() error = %v", err)
+			}
+			data, err := os.ReadFile(Path(home))
+			if err != nil {
+				t.Fatalf("ReadFile() error = %v", err)
+			}
+			if contains(string(data), "rdd_mode") {
+				t.Errorf("the next write must drop the retired rdd mode keys; got:\n%s", data)
+			}
+			again, err := Read(home)
+			if err != nil {
+				t.Fatalf("Read() after write error = %v", err)
+			}
+			if !reflect.DeepEqual(again.InstalledAgents, []string{"claude-code"}) || !again.PendingSync {
+				t.Errorf("the rewritten state lost fields: %+v", again)
+			}
+		})
+	}
+}
+
+// TestLegacyRDDSwitchOnlyDocumentLoadsAsAnEmptyState verifies a partial document
+// holding nothing but the retired keys loads and rewrites without them.
+func TestLegacyRDDSwitchOnlyDocumentLoadsAsAnEmptyState(t *testing.T) {
+	home := writeLegacyState(t, `{"rdd_mode":"off","rdd_mode_recorded_at":"2026-08-12T09:00:00Z"}`)
+	got, err := Read(home)
 	if err != nil {
 		t.Fatalf("Read() error = %v", err)
 	}
-	if s.RDDMode != "" || s.RDDModeRecordedAt != nil {
-		t.Errorf("legacy state = %q/%v, want an unconfigured global mode", s.RDDMode, s.RDDModeRecordedAt)
+	if len(got.InstalledAgents) != 0 || got.PendingSync {
+		t.Errorf("a document with only the retired keys must load empty: %+v", got)
+	}
+	if err := Write(home, got); err != nil {
+		t.Fatalf("Write() error = %v", err)
 	}
 	data, err := os.ReadFile(Path(home))
 	if err != nil {
 		t.Fatalf("ReadFile() error = %v", err)
 	}
 	if contains(string(data), "rdd_mode") {
-		t.Error("reading legacy state must not rewrite it with rdd mode keys")
-	}
-}
-
-// TestMergeAgents_PreservesRDDMode verifies an incremental agent install never
-// silently drops the user's kill-switch choice.
-func TestMergeAgents_PreservesRDDMode(t *testing.T) {
-	recorded := time.Now().UTC()
-	existing := InstallState{
-		InstalledAgents:   []string{"claude-code"},
-		RDDMode:           "off",
-		RDDModeRecordedAt: &recorded,
-	}
-	merged := MergeAgents(existing, []string{"opencode"})
-	if merged.RDDMode != "off" || merged.RDDModeRecordedAt == nil || !merged.RDDModeRecordedAt.Equal(recorded) {
-		t.Errorf("MergeAgents dropped the global mode: %q/%v", merged.RDDMode, merged.RDDModeRecordedAt)
+		t.Errorf("the rewrite must drop the retired keys; got:\n%s", data)
 	}
 }
 

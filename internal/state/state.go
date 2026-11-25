@@ -180,21 +180,6 @@ type InstallState struct {
 	// false for backward-compatibility with existing state files.
 	PendingSync bool `json:"pending_sync,omitempty"`
 
-	// RDDMode is the global, user-owned receipt-driven-development kill switch
-	// ("on"|"off"). It lives in uncommitted user state precisely so that no
-	// repository can ship, share, or force a review policy onto a clone.
-	// Empty means the user never expressed a preference, which preserves the
-	// historical enabled behavior for state files that predate the switch.
-	// The value is deliberately kept as a plain string: reviewtransaction owns
-	// validation and fails closed on anything it does not recognise.
-	RDDMode string `json:"rdd_mode,omitempty"`
-
-	// RDDModeRecordedAt is the candidate cutoff for the global mode. Re-enabling
-	// must only affect future candidates, so the moment the current value was
-	// recorded is authority, not a cosmetic audit field. Nil for state files
-	// written before the switch existed.
-	RDDModeRecordedAt *time.Time `json:"rdd_mode_recorded_at,omitempty"`
-
 	BackgroundIntent model.OpenCodeBackgroundIntent `json:"opencode_background_subagents,omitempty"`
 
 	// PiBackgroundIntent is the managed Pi background-subagent choice. It is
@@ -338,8 +323,6 @@ func MergeAgents(existing InstallState, newAgents []string) InstallState {
 		PersonaPresent:              existing.PersonaPresent,
 		LastUpdateCheck:             existing.LastUpdateCheck,
 		PendingSync:                 existing.PendingSync,
-		RDDMode:                     existing.RDDMode,
-		RDDModeRecordedAt:           existing.RDDModeRecordedAt,
 
 		BackgroundIntent:   existing.BackgroundIntent,
 		PiBackgroundIntent: existing.PiBackgroundIntent,
