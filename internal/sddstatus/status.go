@@ -22,10 +22,9 @@ import (
 const EnvSDDStatusEngramAxiom = "AXIOM_SDD_STATUS_ENGRAM"
 
 const (
-	SchemaName       = "axiom.sdd-status"
-	LegacySchemaName = "gentle-ai.sdd-status"
-	AxiomSchemaName  = "axiom.sdd-status"
-	SchemaVersion    = 2
+	SchemaName      = "axiom.sdd-status"
+	AxiomSchemaName = "axiom.sdd-status"
+	SchemaVersion   = 2
 )
 
 type ArtifactStore string
@@ -357,7 +356,7 @@ func ParseCommandArgs(args []string) (CommandArgs, error) {
 }
 
 func validateStatusContract(contract string) error {
-	if contract == StatusContractV2 || contract == LegacyStatusContractV2 || contract == AxiomStatusContractV2 || contract == AxiomStatusContractV1 {
+	if contract == StatusContractV2 || contract == AxiomStatusContractV2 || contract == AxiomStatusContractV1 {
 		return nil
 	}
 	return fmt.Errorf("unsupported sdd-status contract %q. Start a fresh implementation state and rerun `axiom sdd status --contract axiom.sdd-status/v2`.", contract)

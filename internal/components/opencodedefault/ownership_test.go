@@ -140,3 +140,22 @@ func TestOwnershipMarkerMigratesLegacyName(t *testing.T) {
 		t.Fatalf("el marcador heredado debía quedar intacto: %q", got)
 	}
 }
+
+func TestReadOwnershipAcceptsLegacySchemaAndRewritesWithAxiomSchema(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, ".axiom-default-agent.json")
+	legacy := `{"schema":"` + legacySchema + `","version":1,"state":"managed","previous_state":"absent"}`
+	check(t, os.WriteFile(path, []byte(legacy), 0o644))
+
+	owned, err := readOwnership(path)
+	if err != nil || owned == nil {
+		t.Fatalf("el esquema heredado debía leerse: %v", err)
+	}
+	if got := newOwnership(fieldValue{}); got.Schema != schema || schema != "axiom.opencode-default-agent" {
+		t.Fatalf("las escrituras nuevas deben llevar el esquema axiom, got %q", got.Schema)
+	}
+	check(t, os.WriteFile(path, []byte(`{"schema":"otro.esquema","version":1,"state":"managed","previous_state":"absent"}`), 0o644))
+	if _, err := readOwnership(path); err == nil {
+		t.Fatal("un esquema desconocido debía rechazarse")
+	}
+}

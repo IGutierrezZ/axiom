@@ -14,11 +14,11 @@ import (
 
 type SchemaVersion string
 
-const SchemaV1 SchemaVersion = "gentle-ai.agent-capability-manifest/v1"
+const SchemaV1 SchemaVersion = "axiom.agent-capability-manifest/v1"
 
 type ContractID string
 
-const ContractWorkRoutingV1 ContractID = "gentle-ai.work-routing/v1"
+const ContractWorkRoutingV1 ContractID = "axiom.work-routing/v1"
 
 type ContractExposure string
 
@@ -207,7 +207,7 @@ func (m AgentCapabilityManifest) Digest() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return digest("gentle-ai.agent-capability-manifest/v1", payload), nil
+	return digest("axiom.agent-capability-manifest/v1", payload), nil
 }
 
 func (m AgentCapabilityManifest) RoutingDigest() (string, error) {
@@ -218,7 +218,7 @@ func (m AgentCapabilityManifest) RoutingDigest() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("marshal implementation routing facts: %w", err)
 	}
-	return digest("gentle-ai.implementation-routing/v1", payload), nil
+	return digest("axiom.implementation-routing/v1", payload), nil
 }
 
 func digest(domain string, payload []byte) string {

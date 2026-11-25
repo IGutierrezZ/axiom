@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://gentle-ai.dev/contracts/sdd-integration/v1/schemas/consent.schema.json",
+  "$id": "urn:axiom:contracts:sdd-integration:v1:consent",
   "title": "Axiom SDD edit-authority consent question",
   "description": "The typed blocking consent question an SDD change raises when its task plan targets edit paths outside the authorized edit roots (#2540). The identity block is the change name plus the missing roots; granting is per-change, audited, and dies with archive; declining persists nothing and the change stays blocked. Native SDD status emits this envelope on blocked(edit_authority_missing) as the optional `consent` block of the v1 status projection (#2563).",
   "type": "object",

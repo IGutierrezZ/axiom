@@ -1395,9 +1395,9 @@ func TestSDDStatusContractPreservesFrozenExternalV2Projection(t *testing.T) {
 
 	for _, want := range []string{
 		"exact frozen external `StatusV2Projection`",
-		"schemaName: gentle-ai.sdd-status",
+		"schemaName: axiom.sdd-status",
 		"schemaVersion: 2",
-		"gentle-ai.sdd-status/v2",
+		"axiom.sdd-status/v2",
 		"changeName: <change-name-or-null>",
 		// #3636: hybrid reaches the public v2 document; kept in lockstep with statusV2ArtifactStore.
 		"artifactStore: openspec | engram | hybrid | none",

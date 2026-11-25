@@ -155,26 +155,26 @@ func TestManifestRejectsWeakenedRoutingFacts(t *testing.T) {
 func TestEveryManifestKeepsWorkRoutingDormantAndHashesCanonically(t *testing.T) {
 	t.Parallel()
 
-	const wantRoutingDigest = "sha256:24fb8cbd6f38e7c4a6917e3abdc523f4ae51eb4fea5da76705b383ade8f13ed3"
+	const wantRoutingDigest = "sha256:3106087a9bc8fefe5369ff8d1ad63f58ad3c47785710640408c2c87a62c2944d"
 	// Digests pin the canonical JSON of every supported agent's manifest.
 	wantManifestDigests := map[model.AgentID]string{
-		model.AgentAntigravity:      "sha256:93147d813f87f038f0b486098c7d39fc01b6200b0b89e2aa55bddfbbecd36842",
-		model.AgentClaudeCode:       "sha256:6386624d7ec694d7ed79928b193ef6bc611564ee5421b32941aa2bb1f496c5b2",
-		model.AgentCodex:            "sha256:d082469ad7eb4fb6426951d4f9b5163558552b0e0448d7b2bfb94cd421ab9f54",
-		model.AgentCursor:           "sha256:da44d33b397550c4483966fb4eb466beba8c65737338cb9b0fe634709de57c67",
-		model.AgentGeminiCLI:        "sha256:619fa29a43d429b9d73aec4b131eeb8c33c325cd1f589c22dc583d7b0205564b",
-		model.AgentGitHubCopilotCLI: "sha256:8cb612203fa1e999505dc915f7ae4cfb87afafa96a09543a25b55ee47b9c4497",
-		model.AgentHermes:           "sha256:31e521642248d9a1946587d6a36346c09f827bdaeb08d56f0ffef3338e60caac",
-		model.AgentKilocode:         "sha256:4bea71ac2fa786e868906b916fbdea1fa2d2c4407fbec8eb9f2adaa33734c855",
-		model.AgentKimi:             "sha256:f5de46e14b67e155af07745190c098b9c4b497137fb7cc15165ae090e15dee05",
-		model.AgentKiroIDE:          "sha256:249818d423d03731195e79627df348858a0772ff3e9d401d9e9876d4026c3a8f",
-		model.AgentOpenClaw:         "sha256:b4f06b78e3e2e12e378ba0d45ecdceba2eff572adbec7c2ee680af292126c66b",
-		model.AgentOpenCode:         "sha256:49f3f6f0755335e58fd2f9acca0cfac75f762b84a15b9af90ee3726f000b93b4",
-		model.AgentPi:               "sha256:24ffc4968f6eab2800edefd09a99eb4249c5308e685ffdbb41df78504b6a348f",
-		model.AgentQwenCode:         "sha256:76982f969755bcc23dccf909d0cd77ed7b84f40f23d437247167fe0c4f87b133",
-		model.AgentTrae:             "sha256:0ee0722c20698dcf4edbf18c2c3c7ab0c4a128cf2513c16f750c1ee3b2080dc8",
-		model.AgentVSCodeCopilot:    "sha256:11162d72d627970fdaac530c70ba4a0acfe49d35a4b60df589290e9885244029",
-		model.AgentWindsurf:         "sha256:bb3083e660c6ac6c43996711c14c97444e98453e01d8319793ad1f214b1061f0",
+		model.AgentAntigravity:      "sha256:eec50d3f26afd75cb742954c2faa608ba2a6a9b20e6f1e3d8bc71761871b25c6",
+		model.AgentClaudeCode:       "sha256:317eaa1be5e6ae9192aa72962f3313a115fe4504cb267a76eff47854b563461f",
+		model.AgentCodex:            "sha256:856e4c93372f56b571eb539f6af6cbd9c0f6b17c82570857fddf91e55278da01",
+		model.AgentCursor:           "sha256:13589ef70b28e58333bf1986ce3cb11107fa05b17533aac19cc26da30841c720",
+		model.AgentGeminiCLI:        "sha256:32e03065615b5ef3b790310637c226833688c30130c9632ebba86145fd35f644",
+		model.AgentGitHubCopilotCLI: "sha256:43d174deebc551fc4436f919de41a093884b6eef15e2d21a40afb09bcc44ea26",
+		model.AgentHermes:           "sha256:a994cb71d6afd71244a5a6c26aa1831863209f780375cb95306efd1bcf31b933",
+		model.AgentKilocode:         "sha256:d9d92d526c407ebde1bf4de4ea20197d3941af37baad776ae612f51d066f5552",
+		model.AgentKimi:             "sha256:7a468b6da268f28d7d925b99801a61e0c0d31052031780d883e76e7fc7529b23",
+		model.AgentKiroIDE:          "sha256:ea10acb87385dd682950639adfda39be9689fa65f4ea62431f51ea5134a19013",
+		model.AgentOpenClaw:         "sha256:455fbe0fb711a7326eb5a6c04a2862c4b0b6c8fb0c4d4e45d0a34f0237fe1607",
+		model.AgentOpenCode:         "sha256:81864464d366d6324745a56c8909ca9241b9822b551a51a811d5136723b2b904",
+		model.AgentPi:               "sha256:17121ab9c73594bfa9c518e617b6314ed80fe81da564c16f1ed709c8292ca6ce",
+		model.AgentQwenCode:         "sha256:a48c55be99e8d4371d0883811edb2e0e2319049bc728a598629f3d3d3bdb65c1",
+		model.AgentTrae:             "sha256:eaecdec856d7c7aeadb9832857692162508212d6f94efead51a9ff92f7d6cb97",
+		model.AgentVSCodeCopilot:    "sha256:39b13327a98a30dbb1076910b84c27068386ef95622282fd21f896f16e266a1c",
+		model.AgentWindsurf:         "sha256:47cf8c37a07d1e32543f689334e6c6d8d2ead2f975dc108724b87b5220a19aa4",
 	}
 
 	for agent, wantDigest := range wantManifestDigests {

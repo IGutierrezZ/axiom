@@ -17,8 +17,11 @@ import (
 const (
 	ManagedAgent       = "axiom-orchestrator"
 	LegacyManagedAgent = "gentle-orchestrator"
-	schema             = "gentle-ai.opencode-default-agent"
-	version            = 1
+	schema             = "axiom.opencode-default-agent"
+	// legacySchema es el nombre de los ficheros de propiedad ya escritos en disco;
+	// se acepta al leer y se reescribe con schema cuando se vuelva a escribir.
+	legacySchema = "gentle-ai.opencode-default-agent"
+	version      = 1
 )
 
 type ownership struct {
@@ -212,7 +215,7 @@ func readOwnership(path string) (*ownership, error) {
 		return nil, fmt.Errorf("decode OpenCode default ownership %q: trailing data", path)
 	}
 	validPrevious := owned.PreviousState == "absent" && owned.PreviousDefault == "" || owned.PreviousState == "value"
-	if owned.Schema != schema || owned.Version != version || owned.State != "managed" || !validPrevious {
+	if (owned.Schema != schema && owned.Schema != legacySchema) || owned.Version != version || owned.State != "managed" || !validPrevious {
 		return nil, fmt.Errorf("invalid OpenCode default ownership %q", path)
 	}
 	return &owned, nil

@@ -9,10 +9,9 @@ import (
 )
 
 const (
-	StatusContractV2       = "axiom.sdd-status/v2"
-	LegacyStatusContractV2 = "gentle-ai.sdd-status/v2"
-	AxiomStatusContractV1  = "axiom.sdd-status/v1"
-	AxiomStatusContractV2  = "axiom.sdd-status/v2"
+	StatusContractV2      = "axiom.sdd-status/v2"
+	AxiomStatusContractV1 = "axiom.sdd-status/v1"
+	AxiomStatusContractV2 = "axiom.sdd-status/v2"
 )
 
 // StatusV2Projection is the complete public SDD status document. It projects
@@ -208,7 +207,7 @@ func projectGovernanceV2(governance *Governance) *governanceV2 {
 // ProjectStatusV2 rejects unsupported internal values rather than exposing
 // internal runtime state or silently broadening the public document.
 func ProjectStatusV2(status Status) (StatusV2Projection, error) {
-	if (status.SchemaName != SchemaName && status.SchemaName != LegacySchemaName && status.SchemaName != AxiomSchemaName) || status.SchemaVersion != SchemaVersion {
+	if (status.SchemaName != SchemaName && status.SchemaName != AxiomSchemaName) || status.SchemaVersion != SchemaVersion {
 		return StatusV2Projection{}, fmt.Errorf("unsupported SDD status identity %q@%d", status.SchemaName, status.SchemaVersion)
 	}
 	if !statusV2ArtifactStore(status.ArtifactStore) {

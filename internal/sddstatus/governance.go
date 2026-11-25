@@ -18,15 +18,13 @@ import (
 // gate approval is a quality decision about a planning artifact or a role's
 // implementation, never edit-authority escalation and never the RDD outcome
 // document reviewed code carries (design.md S1.3, rule 4 — the schema must
-// never be confused with gentle-ai.sdd-integration.consent/v1, or a relay
+// never be confused with axiom.sdd-integration.consent/v1, or a relay
 // would route a quality decision toward sdd-attempt grant).
-const SDDGovernanceGateSchema = "gentle-ai.sdd-governance.gate/v1"
-const AxiomSDDGovernanceGateSchema = "axiom.sdd-governance.gate/v1"
+const SDDGovernanceGateSchema = "axiom.sdd-governance.gate/v1"
 
 // SDDGovernanceContractV1 names the sdd-governance contract the envelope
 // belongs to.
-const SDDGovernanceContractV1 = "gentle-ai.sdd-governance/v1"
-const AxiomSDDGovernanceContractV1 = "axiom.sdd-governance/v1"
+const SDDGovernanceContractV1 = "axiom.sdd-governance/v1"
 
 const (
 	// gateOperation and gateActionRequired are this envelope's identity
@@ -136,8 +134,8 @@ const gatePublishInvocationPrefix = "axiom sdd publish "
 // (internal/consentenvelope), exactly as SDDIntegrationConsentResult does
 // for its own sibling schema.
 func (r SDDGovernanceGateResult) Validate() error {
-	validSchema := r.Schema == SDDGovernanceGateSchema || r.Schema == AxiomSDDGovernanceGateSchema
-	validContract := r.Contract == SDDGovernanceContractV1 || r.Contract == AxiomSDDGovernanceContractV1
+	validSchema := r.Schema == SDDGovernanceGateSchema
+	validContract := r.Contract == SDDGovernanceContractV1
 	if !validSchema || !validContract ||
 		r.Operation != gateOperation || r.Action != gateActionRequired || !r.Blocking {
 		return errors.New("invalid SDD governance gate question identity") // refusal:by-design world-action: this envelope is built and validated by the same package; the exit is a code fix, not a command

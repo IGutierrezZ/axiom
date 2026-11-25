@@ -132,10 +132,21 @@ Ruta común: un escritor delegado por tarea, de uno en uno, para proteger el con
     - Verificado solo en CI: `internal/app` (`app_test.go`, literales de marcadores ajustados), `internal/opencode`, `internal/dashboard` y `e2e/...` (solo `go vet` y `go build`).
     - Restos fuera de T4: comentarios `gentle-ai` en `sync.go`, `run.go`, `persona/inject.go`, `sdd/inject.go:65`, `model/types.go` y los comentarios de `plugins/model-variants.ts` y `plugins/skill-registry.ts` (T7; cambiar esos dos ficheros TS exige añadir antes su hash a `opencode_plugin_digests.go`); esquemas `gentle-ai.*` (T5); fixtures `telemetryruntime/testdata` (históricas).
     - Docs y specs que citan lo cambiado (para T8): `openspec/specs/sdd-preflight-configuration/spec.md`, `PRD-AGENT-BUILDER.md`, `docs/prd-opencode-profiles.md`.
-- [ ] T5. Esquemas y contratos JSON.
+- [x] T5. Esquemas y contratos JSON.
   - `gentle-ai.*` pasa a `axiom.*`: runtime ledger, governance, archive-compose, capability manifest, telemetry ownership, opencode default y review-store-lock.
   - Se aceptan al leer los esquemas viejos de ficheros ya escritos.
   - Se quitan los `Legacy*` de sdd-status y consent y el `$id` `gentle-ai.dev` del contrato de consentimiento.
+  - Evidencia (commit «refactor(sddstatus): esquemas axiom con lectura de los gentle-ai persistidos»; ruta delegada, motivo: protección de contexto del orquestador; escritor único):
+    - `go build ./...`: correcto.
+    - `go vet ./internal/sddstatus ./internal/kickoff ./internal/agents/... ./internal/components/... ./internal/fileprim ./internal/cli ./internal/sddpublish ./internal/assets ./cmd/... ./internal/app ./internal/dashboard ./internal/opencode ./e2e/...`: sin avisos.
+    - `go test -count=1`: ok en `./internal/sddstatus`, `./internal/kickoff`, `./internal/agents/...`, `./internal/components/...` (un fallo intermitente de `communitytool` por timeout de la sonda MCP pasó al repetirlo solo), `./internal/fileprim`, `./internal/sddpublish`, `./internal/assets`; `./internal/cli -run SDD|Gate|Consent|Status|Archive|Attempt|Kickoff|Publish|Capability|Routing|Telemetry`: ok.
+    - `gofmt -l`: vacío.
+    - Se escribe ahora con `axiom.*`: runtime ledger (`sdd-runtime-status`, `-record`, dominios `change-identity` y `grant-request`), `sdd-governance(.gate)`, `sdd-archive-compose`, `agent-capability-manifest`, `work-routing`, `implementation-routing`, `telemetry-runtime-ownership`, `opencode-default-agent`, `review-store-lock`. Los digests de `capabilitymanifest` fijados en `manifest_test.go` se regeneraron con los valores nuevos (17 por agente más el de routing). Digest del `consent.schema.json` fijado en `consent_contract_test.go` actualizado.
+    - Migraciones de lectura (cada una con prueba): ledger con registros `gentle-ai.sdd-runtime-record/v1` se lee y cada registro valida su digest de petición con el dominio con el que se escribió (`TestRuntimeLedgerReadsGrantWrittenWithLegacySchemaAndAppendsAxiomSchema`: autoridad vigente y grant nuevo encadenado con esquema axiom; `TestRuntimeLedgerLegacySchemaRecordRejectsAxiomDomainDigest`); directorio de cambio no-slug con digest de identidad heredado se mueve al nuevo al abrir el almacén, idempotente y sin pisar (`TestOpenRuntimeStoreMigratesLegacyChangeIdentityDirectory`); `opencodedefault.readOwnership` y el manifiesto de `telemetryruntime` aceptan el esquema heredado (`TestReadOwnershipAcceptsLegacySchemaAndRewritesWithAxiomSchema`; el de telemetría lo cubren las pruebas de retirada de `cli` y `uninstall`, que parten de un manifiesto `gentle-ai.*`).
+    - Retirados: `LegacySchemaName`, `LegacyStatusContractV2`, `LegacySDDIntegrationConsentSchema`, `LegacySDDIntegrationContractV1`, prefijos `gentle-ai sdd-attempt grant` y `gentle-ai sdd-status` del consentimiento, y los alias `Axiom*` duplicados de consent y governance. `$id` del contrato de consentimiento: `urn:axiom:contracts:sdd-integration:v1:consent` (una sola constante `SDDIntegrationConsentSchemaID`). `gates.yaml` y el kickoff no persisten el esquema de governance (es un sobre de pregunta emitido), por lo que ningún digest de gate cambia.
+    - Decisión: se actualiza `internal/assets/skills/_shared/sdd-status-contract.md` (`schemaName` y contrato v2 a `axiom.sdd-status`), porque su instrucción de reintento citaba el contrato heredado que ya no se acepta; sus pruebas se ajustaron. Limitación: un reintento idempotente de un grant escrito con el dominio viejo, con el mismo `request-id`, computa el digest nuevo y daría conflicto (caso marginal; no afecta a la lectura ni a la autoridad vigente).
+    - Verificado solo en CI: `internal/app`, `internal/dashboard`, `internal/opencode`, `e2e/...` y `cmd/axiom` (solo `go vet` y `go build`).
+    - Docs y specs que citan lo cambiado (para T8): `docs/assets/diagrams/deterministic.svg`, `openspec/specs/axiom-distribution-identity/spec.md`, `openspec/specs/sdd-research/spec.md`.
 - [ ] T6. Release y CI.
   - `axiom-release-provenance-v1.tar.gz` y esquema `axiom.release-provenance/v1` en `.goreleaser.yaml`, `releasepolicy`, `releaseprovenance` y los scripts de verificación y promoción.
   - Nombres de clave y marcador en los workflows, `axiom.exe` en CI, imágenes e2e y comentario no confiable de la firma.
@@ -150,8 +161,8 @@ Ruta común: un escritor delegado por tarea, de uno en uno, para proteger el con
 
 ## Progreso
 
-T1 hecha (commit «fix(update): autoupdate y registro con el nombre axiom»). T2 hecha (commit «refactor(env): retirar las variables GENTLE_AI_*»). T3 hecha (commit «refactor(state): rutas de estado axiom con migración desde gentle-ai»). T4 hecha (commit «refactor(sync): marcadores, plugins y MCP con el prefijo axiom»). T5-T8 sin empezar.
+T1 hecha (commit «fix(update): autoupdate y registro con el nombre axiom»). T2 hecha (commit «refactor(env): retirar las variables GENTLE_AI_*»). T3 hecha (commit «refactor(state): rutas de estado axiom con migración desde gentle-ai»). T4 hecha (commit «refactor(sync): marcadores, plugins y MCP con el prefijo axiom»). T5 hecha (commit «refactor(sddstatus): esquemas axiom con lectura de los gentle-ai persistidos»). T6-T8 sin empezar.
 
 ## Siguiente paso
 
-T5.
+T6.

@@ -21,18 +21,26 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/pathquote"
 )
 
-// Keep the existing on-disk chain and schema so historical grants remain readable.
+// Los registros nuevos se escriben con el esquema axiom. Los de un ledger ya
+// escrito con el nombre heredado se leen y validan tal cual (la cadena de
+// hashes los referencia por contenido y cada digest se recalcula con el
+// dominio con el que se escribió).
 const (
-	RuntimeStatusSchema             = "gentle-ai.sdd-runtime-status/v1"
-	runtimeRecordSchema             = "gentle-ai.sdd-runtime-record/v1"
-	runtimeOperationGrant           = "authority/grant"
-	maximumRuntimeGrantRoots        = 32
-	maximumRuntimeRecordBytes       = 1 << 20
-	maximumRuntimeChainRecords      = 10_000
-	runtimeLockAcquireAttempts      = 3
-	encodedRuntimeChangeNamespace   = "_encoded"
-	encodedRuntimeChangeDigestWidth = 32
-	runtimeLedgerStatusPointer      = "preserve the historical records and ask a maintainer to inspect edit authority; re-enter with `axiom sdd-status --cwd <repo> --json`"
+	RuntimeStatusSchema               = "axiom.sdd-runtime-status/v1"
+	runtimeRecordSchema               = "axiom.sdd-runtime-record/v1"
+	legacyRuntimeRecordSchema         = "gentle-ai.sdd-runtime-record/v1"
+	runtimeChangeIdentityDomain       = "axiom.sdd-runtime-change-identity/v1"
+	legacyRuntimeChangeIdentityDomain = "gentle-ai.sdd-runtime-change-identity/v1"
+	runtimeGrantRequestDomain         = "axiom.sdd-runtime-grant-request/v1"
+	legacyRuntimeGrantRequestDomain   = "gentle-ai.sdd-runtime-grant-request/v1"
+	runtimeOperationGrant             = "authority/grant"
+	maximumRuntimeGrantRoots          = 32
+	maximumRuntimeRecordBytes         = 1 << 20
+	maximumRuntimeChainRecords        = 10_000
+	runtimeLockAcquireAttempts        = 3
+	encodedRuntimeChangeNamespace     = "_encoded"
+	encodedRuntimeChangeDigestWidth   = 32
+	runtimeLedgerStatusPointer        = "preserve the historical records and ask a maintainer to inspect edit authority; re-enter with `axiom sdd-status --cwd <repo> --json`"
 )
 
 var (
@@ -232,7 +240,11 @@ func OpenRuntimeStore(ctx context.Context, repo, change string) (RuntimeStore, e
 	if err := migrateLegacyRuntimeContainer(commonDir); err != nil {
 		return RuntimeStore{}, err
 	}
-	dir := runtimeChangeLedgerDir(filepath.Join(commonDir, runtimeContainerName, "sdd-runtime"), change)
+	base := filepath.Join(commonDir, runtimeContainerName, "sdd-runtime")
+	if err := migrateLegacyRuntimeChangeLedger(base, change); err != nil {
+		return RuntimeStore{}, err
+	}
+	dir := runtimeChangeLedgerDir(base, change)
 	return RuntimeStore{Dir: dir, Repo: root, Workspace: workspace, Change: change, commonDir: commonDir}, nil
 }
 
@@ -267,11 +279,37 @@ func legacyRuntimeChangeDir(change string) bool {
 }
 
 func runtimeChangeLedgerDir(base, change string) string {
+	return runtimeChangeLedgerDirFor(base, change, runtimeChangeIdentityDomain)
+}
+
+func runtimeChangeLedgerDirFor(base, change, domain string) string {
 	if legacyRuntimeChangeDir(change) {
 		return filepath.Join(base, "v1", change)
 	}
-	digest := strings.TrimPrefix(runtimeValueHash("gentle-ai.sdd-runtime-change-identity/v1", change), "sha256:")
+	digest := strings.TrimPrefix(runtimeValueHash(domain, change), "sha256:")
 	return filepath.Join(base, "v1", encodedRuntimeChangeNamespace, runtimeChangeEncodedLabel(change)+"-"+digest[:encodedRuntimeChangeDigestWidth])
+}
+
+// migrateLegacyRuntimeChangeLedger mueve el directorio de un cambio cuyo nombre
+// no es un slug (su ruta lleva un digest con el dominio heredado) a la ruta con
+// el dominio axiom. Los slugs usan su propio nombre y no cambian de ruta.
+// Idempotente y sin pisar: si la nueva existe, no hace nada.
+func migrateLegacyRuntimeChangeLedger(base, change string) error {
+	if legacyRuntimeChangeDir(change) {
+		return nil
+	}
+	legacy := runtimeChangeLedgerDirFor(base, change, legacyRuntimeChangeIdentityDomain)
+	if _, err := os.Lstat(legacy); err != nil {
+		return nil
+	}
+	current := runtimeChangeLedgerDir(base, change)
+	if _, err := os.Lstat(current); err == nil {
+		return nil
+	}
+	if err := os.Rename(legacy, current); err != nil {
+		return fmt.Errorf("migrate SDD runtime change ledger from %s to %s: %w", legacy, current, err)
+	}
+	return nil
 }
 
 func runtimeChangeEncodedLabel(change string) string {
@@ -305,7 +343,7 @@ func (store RuntimeStore) Grant(ctx context.Context, request GrantRootsRequest) 
 	if err != nil {
 		return RuntimeStatus{}, err
 	}
-	digest := runtimeValueHash("gentle-ai.sdd-runtime-grant-request/v1", request)
+	digest := runtimeValueHash(runtimeGrantRequestDomain, request)
 	grantedAt := runtimeGrantClock()
 	store.grantMutation = true
 	return store.mutate(ctx, request.ExpectedRevision, request.RequestID, digest, func(runtimeReplay) (runtimeRecord, error) {
@@ -838,8 +876,13 @@ func runtimeRecordPayloadCanonical(payload, canonical []byte) bool {
 }
 
 func runtimeRecordSchemaIsNewer(schema string) bool {
-	prefix := runtimeRecordSchema[:strings.LastIndex(runtimeRecordSchema, "/v")+2]
-	supported, err := strconv.Atoi(strings.TrimPrefix(runtimeRecordSchema, prefix))
+	return runtimeRecordSchemaFamilyIsNewer(runtimeRecordSchema, schema) ||
+		runtimeRecordSchemaFamilyIsNewer(legacyRuntimeRecordSchema, schema)
+}
+
+func runtimeRecordSchemaFamilyIsNewer(supportedSchema, schema string) bool {
+	prefix := supportedSchema[:strings.LastIndex(supportedSchema, "/v")+2]
+	supported, err := strconv.Atoi(strings.TrimPrefix(supportedSchema, prefix))
 	if err != nil || !strings.HasPrefix(schema, prefix) {
 		return false
 	}
@@ -883,7 +926,7 @@ func applyRuntimeRecordLocked(store RuntimeStore, replay *runtimeReplay, revisio
 }
 
 func validateRuntimeRecordShape(record runtimeRecord) error {
-	if record.Schema != runtimeRecordSchema || !validRuntimeChange(record.Change) ||
+	if (record.Schema != runtimeRecordSchema && record.Schema != legacyRuntimeRecordSchema) || !validRuntimeChange(record.Change) ||
 		(record.PreviousRevision != "" && !runtimeRevisionPattern.MatchString(record.PreviousRevision)) ||
 		!runtimeRequestIDPattern.MatchString(record.RequestID) || !runtimeRevisionPattern.MatchString(record.RequestDigest) {
 		return rejectRuntimeRecord("invalid_identity")
@@ -922,7 +965,11 @@ func validateRuntimeRecordShape(record runtimeRecord) error {
 			Roots: event.Roots, Reason: event.Reason, Actor: event.Actor,
 			ChangeInstance: event.Instance,
 		}
-		if runtimeValueHash("gentle-ai.sdd-runtime-grant-request/v1", request) != record.RequestDigest {
+		requestDomain := runtimeGrantRequestDomain
+		if record.Schema == legacyRuntimeRecordSchema {
+			requestDomain = legacyRuntimeGrantRequestDomain
+		}
+		if runtimeValueHash(requestDomain, request) != record.RequestDigest {
 			return rejectRuntimeRecord("grant_request_digest_match")
 		}
 	case "attempt/begin", "attempt/finish", "attempt/handoff", "objective/reset", "objective/rescope", "objective/supersede", "objective/repair-consecutive-rescope", "objective/advance":

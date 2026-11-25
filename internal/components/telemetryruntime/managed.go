@@ -15,7 +15,12 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/legacyhome"
 )
 
-const ownershipSchema = "gentle-ai.telemetry-runtime-ownership/v1"
+const (
+	ownershipSchema = "axiom.telemetry-runtime-ownership/v1"
+	// legacyOwnershipSchema es el nombre de los manifiestos ya escritos en disco;
+	// se acepta al leer para poder retirarlos.
+	legacyOwnershipSchema = "gentle-ai.telemetry-runtime-ownership/v1"
+)
 
 // Axiom no longer ships or installs the OpenCode telemetry plugin. This package
 // only retires an installed copy, so ownership is proven against a fixed,
@@ -175,7 +180,7 @@ func inspect(configDir string) ([][]byte, error) {
 		return nil, conflict
 	}
 	file, err := manifestObject(root["file"], "after", "afterHash", "overlay", "mode")
-	if err != nil || !bytes.Equal(bytes.TrimSpace(file["overlay"]), []byte("false")) || json.Unmarshal(current[1], &manifest) != nil || manifest.Schema != ownershipSchema ||
+	if err != nil || !bytes.Equal(bytes.TrimSpace(file["overlay"]), []byte("false")) || json.Unmarshal(current[1], &manifest) != nil || (manifest.Schema != ownershipSchema && manifest.Schema != legacyOwnershipSchema) ||
 		(!managedModeMatches(0600, os.FileMode(manifest.File.Mode)) && !managedModeMatches(0644, os.FileMode(manifest.File.Mode))) || manifest.File.AfterHash != fmt.Sprintf("%x", sha256.Sum256([]byte(manifest.File.After))) {
 		return nil, conflict
 	}
