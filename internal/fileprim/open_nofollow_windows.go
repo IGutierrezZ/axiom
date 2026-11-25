@@ -14,7 +14,11 @@ import (
 
 // ErrReparsePoint indica que el objeto abierto es un punto de reanálisis (o que
 // no se pudo comprobar), así que no se entrega.
-var ErrReparsePoint = errors.New("path is or traverses a reparse point")
+//
+// refusal:by-design world-action: the exit is removing the symlink or reparse point (or restoring a plain directory) on the reported path, which only the operator can do; no axiom command follows or rewrites links it refuses to trust
+var ErrReparsePoint = errors.New(
+	"path is or traverses a symlink or reparse point; remove the symlink/reparse point, then rerun the command",
+)
 
 // OpenNoFollow abre un fichero o directorio sin recorrer puntos de reanálisis.
 // La ruta debe ser absoluta. Si el objeto abierto resulta ser un punto de

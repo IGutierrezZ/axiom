@@ -832,6 +832,7 @@ func refusalRatchetReportFieldCarriedRefusals(t *testing.T, analysis refusalRatc
 // packages are excluded until they earn an entry the same way.
 var refusalRatchetProductionDirs = []struct{ dir, prefix string }{
 	{".", "internal/cli"},
+	{filepath.Join("..", "fileprim"), "internal/fileprim"},
 	{filepath.Join("..", "reviewtransaction"), "internal/reviewtransaction"},
 	{filepath.Join("..", "sddstatus"), "internal/sddstatus"},
 }

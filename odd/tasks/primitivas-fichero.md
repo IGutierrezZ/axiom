@@ -115,3 +115,15 @@ Que ningún paquete ajeno a RDD importe `internal/reviewtransaction` salvo en us
 ## Siguiente paso
 
 Abrir la PR y fusionarla con merge commit.
+
+## Corrección tras la CI
+
+- La CI de la PR falló en dos ratchets de `cli`:
+  - `TestEveryRegisteredGuardPopulationDeclarationMatchesProduction`;
+  - `TestEveryProductionRefusalNamesResolutionOrDeclaresByDesign`.
+- Causa: los dos analizan `reviewtransaction` y `sddstatus`, y el código que pasó a `fileprim` había salido de su cobertura.
+- Corrección:
+  - se añade `internal/fileprim` a los directorios que analizan los dos ratchets;
+  - los baselines solo renombran rutas, y no se congela ninguna frase nueva.
+- `fileprim.ErrReparsePoint` pasa a nombrar su salida y lleva la anotación `refusal:by-design`. Antes, `OpenPhysicalPath` devolvía el texto de RAR (`errUnsafeRARAuthorityPath`), que también nombraba la salida. Dentro de RDD, `openRARPathNoFollow` sigue traduciendo este error a `errUnsafeRARAuthorityPath`.
+- Evidencia: `go test ./internal/cli -run 'GuardPopulation|Refusal|Ratchet'` ok, y `go test ./internal/fileprim` ok.
