@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
-	"time"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/agents"
 	"github.com/IGutierrezZ/axiom/v3/internal/assets"
@@ -16,7 +15,6 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/components/gga"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/sdd"
 	componentuninstall "github.com/IGutierrezZ/axiom/v3/internal/components/uninstall"
-	"github.com/IGutierrezZ/axiom/v3/internal/mcpexclusion"
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
 	"github.com/IGutierrezZ/axiom/v3/internal/state"
 	"github.com/IGutierrezZ/axiom/v3/internal/system"
@@ -38,9 +36,6 @@ const (
 	// footprintDuplicate es contexto de Axiom que un agente carga dos veces porque
 	// existe a la vez en la carpeta de usuario y en el proyecto actual.
 	footprintDuplicate footprintKind = "duplicado"
-	// footprintUnused es un servidor MCP que Claude Code carga en el proyecto actual y
-	// no ha usado en los últimos 30 días: una sugerencia para excluirlo.
-	footprintUnused footprintKind = "sin uso"
 )
 
 // footprintEntry es un elemento que Axiom tiene a nivel de usuario.
@@ -128,7 +123,6 @@ func collectMachineFootprint(homeDir, root string, installed state.InstallState)
 
 	entries = append(entries, managedPathFootprint(homeDir, ggaSelected)...)
 	entries = append(entries, duplicateContextFootprint(homeDir, root)...)
-	entries = append(entries, unusedMCPFootprint(homeDir, root)...)
 
 	if legacyDir := filepath.Join(homeDir, ".gentle-ai"); isDir(legacyDir) {
 		add(footprintGlobalLeftover, "~/.gentle-ai", legacyDir+" (estado heredado de versiones anteriores)")
@@ -156,31 +150,6 @@ func duplicateContextFootprint(homeDir, root string) []footprintEntry {
 			Kind:   footprintDuplicate,
 			Name:   duplicate.Kind + " (" + strings.Join(agentNames, ", ") + ")",
 			Detail: detail,
-		})
-	}
-	return entries
-}
-
-// unusedMCPFootprint señala los servidores MCP de usuario o de `.mcp.json` que el
-// proyecto carga y no ha usado en 30 días según las transcripciones de Claude Code,
-// descontando los ya excluidos en el hub. Con root vacío, sin transcripciones («sin
-// datos») o sin poder leer el hub no dice nada: es una sugerencia, nunca un fallo.
-func unusedMCPFootprint(homeDir, root string) []footprintEntry {
-	if root == "" {
-		return nil
-	}
-	var excluded []string
-	if manager, err := mcpExclusionManager(homeDir); err == nil {
-		if exclusions, _, err := manager.LookupProjectMCPExclusions(root); err == nil {
-			excluded = exclusions[mcpexclusion.ClaudeAgent]
-		}
-	}
-	var entries []footprintEntry
-	for _, server := range mcpexclusion.UnusedCandidates(homeDir, root, excluded, time.Now()) {
-		entries = append(entries, footprintEntry{
-			Kind:   footprintUnused,
-			Name:   "MCP: " + server.Name,
-			Detail: "cargado y sin uso en 30 días: puedes excluirlo en este proyecto (dashboard, Ecosistema)",
 		})
 	}
 	return entries
@@ -285,7 +254,7 @@ func renderMachineFootprint(w io.Writer, entries []footprintEntry) {
 		fmt.Fprintln(w)
 		return
 	}
-	leftovers, duplicates, unused := 0, 0, 0
+	leftovers, duplicates := 0, 0
 	for _, entry := range entries {
 		fmt.Fprintf(w, "  %-14s %-30s %s\n", "["+string(entry.Kind)+"]", entry.Name, entry.Detail)
 		switch entry.Kind {
@@ -293,8 +262,6 @@ func renderMachineFootprint(w io.Writer, entries []footprintEntry) {
 			leftovers++
 		case footprintDuplicate:
 			duplicates++
-		case footprintUnused:
-			unused++
 		}
 	}
 	if leftovers > 0 {
@@ -302,9 +269,6 @@ func renderMachineFootprint(w io.Writer, entries []footprintEntry) {
 	}
 	if duplicates > 0 {
 		fmt.Fprintf(w, "  %d contexto(s) de Axiom duplicado(s) entre tu carpeta de usuario y este proyecto: el agente carga las dos copias. Conserva una (normalmente la del proyecto) y retira la otra.\n", duplicates)
-	}
-	if unused > 0 {
-		fmt.Fprintf(w, "  %d servidor(es) MCP cargado(s) sin uso en 30 días: es solo una sugerencia y no cuenta como aviso. No se detecta el uso de los conectores que la aplicación de escritorio nombra por id.\n", unused)
 	}
 	fmt.Fprintln(w)
 }

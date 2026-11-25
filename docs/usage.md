@@ -334,7 +334,7 @@ Checks performed:
 | Tool binaries | Required tools (`axiom` and Engram, plus the binaries of the selected agents) present on `PATH`; shadow detection (wrong binary resolves first). GGA is only required when you selected it explicitly |
 | Validez de `state.json` | Analiza el estado del proyecto actual (`.axiom/state.json`) si existe y, si no, `~/.axiom/state.json`, e informa de errores de esquema o corrupción; puede migrar `~/.gentle-ai/state.json` si todavía no existe estado de Axiom |
 | Engram MCP reachability | Confirms the Engram MCP server responds |
-| Huella de máquina | Apartado informativo que lista lo que Axiom tiene a nivel de usuario: los binarios de `axiom` y Engram y el registro del hub (declarados) y, si existen, GGA, `~/.agents/skills`, los plugins de OpenCode en HOME, los restos de Kilo (`opencode.json` y plugins), de Kiro (steering `axiom.md`) y de Codex (`context7`, `features.multi_agent` y `agents.max_*` de `config.toml`), cada uno con su agente, CodeGraph global, las entradas de PATH gestionadas y `~/.gentle-ai`. Marca como `resto global` lo que solo deja una instalación global. Con raíz de proyecto añade dos tipos más (véase [Contexto por proyecto](#contexto-por-proyecto-duplicados-y-servidores-mcp)): `duplicado` y `sin uso`. No cuenta como aviso ni como fallo |
+| Huella de máquina | Apartado informativo que lista lo que Axiom tiene a nivel de usuario: los binarios de `axiom` y Engram y el registro del hub (declarados) y, si existen, GGA, `~/.agents/skills`, los plugins de OpenCode en HOME, los restos de Kilo (`opencode.json` y plugins), de Kiro (steering `axiom.md`) y de Codex (`context7`, `features.multi_agent` y `agents.max_*` de `config.toml`), cada uno con su agente, CodeGraph global, las entradas de PATH gestionadas y `~/.gentle-ai`. Marca como `resto global` lo que solo deja una instalación global. Con raíz de proyecto añade el tipo `duplicado` (véase [Contexto duplicado entre usuario y workspace](#contexto-duplicado-entre-usuario-y-workspace)). No cuenta como aviso ni como fallo |
 | Disk space | Warns when available space is critically low |
 | Assets del proyecto (`project:assets`) | Solo si existe `.axiom/state.json` en el proyecto. Compara el digest de los assets gestionados del binario con el que registró la última instalación o sincronización del proyecto. Si difieren, avisa y propone `axiom sync --scope workspace` |
 | Adaptadores del proyecto (`project:adapters`) | Solo si existe `.axiom/state.json`. Comprueba que los agentes registrados en el proyecto siguen presentes en el workspace |
@@ -349,22 +349,15 @@ Las comprobaciones de proyecto se hacen sobre la raíz del proyecto: en la CLI, 
 
 En el dashboard (`axiom ui`), el doctor se ejecuta al abrirlo y cada vez que cambias de proyecto. El informe del proyecto anterior desaparece en cuanto cambias. La pantalla Ecosistema muestra dos secciones, **Global** y **Proyecto**, y el estado general es correcto solo si ninguna comprobación falla.
 
-### Contexto por proyecto: duplicados y servidores MCP
+### Contexto duplicado entre usuario y workspace
 
-Claude Code suma la configuración de usuario y la del proyecto, así que una instalación de workspace no sustituye a la global: el agente carga las dos. La huella de `axiom doctor` señala dos casos más, ambos informativos (no cambian el estado del doctor):
+En Claude Code, la configuración de usuario y la del proyecto se suman: una instalación de workspace no sustituye a la global, y el agente carga las dos. Con raíz de proyecto, la huella de `axiom doctor` marca como `duplicado`, para cada agente, el contexto de Axiom presente a la vez a nivel de usuario y en el workspace: los bloques gestionados del fichero de instrucciones, las skills, los subagentes, los comandos y el output style.
 
-- **`duplicado`.** El contexto de Axiom está a la vez a nivel de usuario y en el workspace, para cada agente instalado. Compara los bloques gestionados del fichero de instrucciones, las skills, los subagentes, los comandos y el output style. Lista las dos rutas y avisa de divergencia cuando las copias no coinciden. Sin duplicados, no añade nada. Conserva una (normalmente la del proyecto) y retira la otra.
-- **`sin uso`.** Servidores MCP cargados que no se han usado en los últimos 30 días. Solo cubre Claude Code: cuenta las llamadas `mcp__<servidor>__*` en las transcripciones locales del proyecto (raíz, worktrees y repositorios de rol) y solo lee nombres de herramienta, nunca contenido. Es una sugerencia de exclusión. Si no hay ninguna transcripción, se muestra `sin datos`. Los conectores que la aplicación de escritorio nombra por id y los servidores de plugins no se pueden casar, así que pueden aparecer como `sin uso` aunque se usen.
+- Lista las dos rutas y avisa de divergencia cuando las copias no coinciden.
+- Es informativo: no cambia el estado del doctor. Sin duplicados, no añade nada.
+- Un fichero sin marcas de Axiom nunca se informa.
 
-**Exclusiones MCP por proyecto.** Los conectores de claude.ai y los MCP de usuario se cargan en todos los proyectos, y las `instructions` de cada servidor ocupan contexto en cada sesión. Puedes excluir servidores solo en un proyecto:
-
-- Es una preferencia personal: vive en el hub (`~/.axiom/workspaces.json`) y nunca en `axiom.yaml` ni en ficheros versionados. El proyecto debe estar registrado.
-- Se edita en el dashboard: Ecosistema → «Servidores MCP excluidos en este proyecto». Ofrece los MCP de usuario de `~/.claude.json` (solo sus nombres) y permite añadir nombres a mano; los servidores sin uso en 30 días llevan la insignia «sin uso en 30 días».
-- Axiom la aplica como `deniedMcpServers` en `.claude/settings.local.json` de la raíz del proyecto, de sus worktrees y, en `multirepo`, de los repositorios de rol. Lo hace al guardar, en `axiom sync` y en `axiom branch ensure`. Conserva las claves y entradas ajenas; al quitar una exclusión retira solo las que puso la preferencia anterior. Un fallo avisa y no hace fallar la orden.
-- Solo Claude Code: los demás agentes no cargan conectores de claude.ai y la pantalla los marca como «no soportado».
-- En la CLI, un conector de claude.ai se escribe `claude.ai <Nombre>` (por ejemplo `claude.ai Microsoft 365`). Con las exclusiones aplicadas, `claude mcp list` deja de listarlos.
-
-**Limitación en la aplicación de escritorio de Claude.** En la aplicación de escritorio, `deniedMcpServers` bloquea tus propios servidores MCP (verificado con `work-copilot`), pero los conectores de claude.ai que la aplicación entrega en proceso no se bloquearon con la forma `claude.ai <Nombre>`: la aplicación los nombra con su id. En la aplicación de escritorio se apagan por sesión, en «+ → Conectores». Pendiente: comprobar en una sesión nueva si la exclusión por id del conector sí los bloquea; este párrafo se actualizará con el resultado.
+Conserva una de las dos copias (normalmente la del proyecto) y retira la otra.
 
 ### init
 

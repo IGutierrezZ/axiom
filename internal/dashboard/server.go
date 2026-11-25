@@ -78,7 +78,6 @@ func (s *Server) registerRoutes() {
 	s.mux.HandleFunc("/api/adapters", s.handleAdapters)
 	s.mux.HandleFunc("/api/project/review-mode", s.handleProjectReviewMode)
 	s.mux.HandleFunc("/api/projects/active/worktree-prefs", s.handleActiveWorktreePrefs)
-	s.mux.HandleFunc("/api/projects/active/mcp-exclusions", s.handleActiveMCPExclusions)
 	s.mux.HandleFunc("/api/fs/directories", s.handleFSDirectories)
 	s.mux.HandleFunc("/api/fs/native-picker", s.handleFSNativePicker)
 	s.mux.HandleFunc("/api/workspace", s.handleWorkspace)
@@ -1106,49 +1105,4 @@ func notesHeader(notes []string) string {
 		}
 	}
 	return header.String()
-}
-
-// handleActiveMCPExclusions sirve `GET|POST /api/projects/active/mcp-exclusions`: las
-// exclusiones personales de servidores MCP del proyecto abierto. GET las devuelve con los
-// nombres que se ofrecen; POST (`{"exclusions": {"claude-code": ["..."]}}`) las guarda en
-// el hub y las aplica a la configuración local del agente, y responde con lo guardado y
-// el informe de la aplicación. Cambia estado, así que solo lo acepta el propio dashboard.
-func (s *Server) handleActiveMCPExclusions(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case http.MethodGet:
-		dto, err := s.service.GetActiveMCPExclusions()
-		s.respondMCPExclusions(w, dto, err)
-	case http.MethodPost:
-		if !s.isLocalRequest(r) {
-			s.respondJSON(w, http.StatusForbidden, map[string]string{"error": "Petición rechazada: solo se admiten peticiones del propio dashboard"})
-			return
-		}
-		var req struct {
-			Exclusions map[string][]string `json:"exclusions"`
-		}
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			s.respondJSON(w, http.StatusBadRequest, map[string]string{"error": "JSON inválido"})
-			return
-		}
-		if _, err := hub.NormalizeMCPExclusions(req.Exclusions); err != nil {
-			s.respondJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
-			return
-		}
-		dto, err := s.service.SetActiveMCPExclusions(req.Exclusions)
-		s.respondMCPExclusions(w, dto, err)
-	default:
-		http.Error(w, "Método no permitido", http.StatusMethodNotAllowed)
-	}
-}
-
-func (s *Server) respondMCPExclusions(w http.ResponseWriter, dto *MCPExclusionsDTO, err error) {
-	var notRegistered *mcpNotRegisteredError
-	switch {
-	case errors.As(err, &notRegistered):
-		s.respondJSON(w, http.StatusConflict, map[string]string{"error": err.Error()})
-	case err != nil:
-		s.respondJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
-	default:
-		s.respondJSON(w, http.StatusOK, dto)
-	}
 }

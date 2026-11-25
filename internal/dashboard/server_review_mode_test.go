@@ -124,7 +124,6 @@ func TestStateChangingProjectRoutesRejectForeignOriginAndHost(t *testing.T) {
 	routes := []struct{ name, target, body string }{
 		{"alta", "/api/projects/init", `{"path":` + quoteJSON(newDir) + `}`},
 		{"modo de revisión", "/api/project/review-mode", `{"mode":"on"}`},
-		{"exclusiones MCP", "/api/projects/active/mcp-exclusions", `{"exclusions":{"claude-code":["work-copilot"]}}`},
 	}
 	cases := []struct {
 		name, host, origin string

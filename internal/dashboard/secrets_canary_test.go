@@ -44,7 +44,6 @@ var excludedRoutes = map[string]string{
 	"/api/adapters":                       "lista los adaptadores de agentes del sistema; no lee el proyecto",
 	"/api/project/review-mode":            "lee y fija el interruptor de revisión del hub, no axiom.yaml",
 	"/api/projects/active/worktree-prefs": "preferencias personales de worktrees del hub",
-	"/api/projects/active/mcp-exclusions": "exclusiones personales de servidores MCP del hub; solo lee los nombres de ~/.claude.json",
 	"/api/fs/directories":                 "exploración de directorios del sistema de ficheros",
 	"/api/fs/native-picker":               "selector nativo de carpetas del sistema",
 	"/api/workspace/specs/sync-status":    "estado de git del repositorio de specs; no lee integraciones",

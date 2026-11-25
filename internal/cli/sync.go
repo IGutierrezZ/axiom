@@ -715,11 +715,6 @@ func (r *syncRuntime) stagePlan() pipeline.StagePlan {
 		})
 	}
 
-	// Preferencia personal del proyecto: va antes de los pasos que cierran el plan.
-	if r.workspaceDir != "" {
-		apply = append(apply, mcpExclusionSyncStep{id: "sync:mcp-exclusions", homeDir: r.homeDir, workspaceDir: r.workspaceDir, notes: &r.state.retirementNotes})
-	}
-
 	if r.selection.HasCommunityTool(model.CommunityToolCodeGraph) {
 		apply = append(apply, &codeGraphGuidanceSyncStep{
 			id:                 "sync:community-tool:codegraph-guidance",
