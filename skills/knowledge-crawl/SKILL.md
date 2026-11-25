@@ -1,6 +1,6 @@
 ---
 name: knowledge-crawl
-description: "Trigger: knowledge crawl, crawling de codigo, analizar unidad de trabajo, catalogacion profunda, descomponer modulo. Analyze a codebase unit from crawl-job.json using CodeGraph and the native AST engine, generating canonical OpenSpec specifications for record-unit."
+description: "Trigger: knowledge crawl, crawling de codigo, analizar unidad de trabajo, descomponer modulo. Turn a crawl-job.json unit into OpenSpec specs for record-unit."
 license: Apache-2.0
 metadata:
   author: gentleman-programming

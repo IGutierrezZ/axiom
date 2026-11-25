@@ -1,6 +1,6 @@
 ---
 name: knowledge-query
-description: "Trigger: knowledge query, consulta de conocimiento, consultar regla de negocio, spec-first query, buscar en codigo con herramientas, enriquecer spec viva. Answer technical and functional questions using Spec-First, CodeGraph, the native AST engine, and Engram, with curated living spec enrichment."
+description: "Trigger: knowledge query, consulta de conocimiento, consultar regla de negocio, enriquecer spec viva. Answer code questions spec-first; enrich the living spec."
 license: Apache-2.0
 metadata:
   author: gentleman-programming
