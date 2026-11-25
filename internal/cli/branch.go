@@ -319,6 +319,7 @@ func runBranchEnsure(args []string, stdout, stderr io.Writer) int {
 		Exceptions: branch.Exceptions{Prefix: *prefix, Branch: *branchName, Base: *base}, Repos: repos, Archive: *archive,
 		Promotions: promotions,
 	})
+	applyMCPExclusionsAfterEnsure(&result, dir)
 	code := writeBranchResult(result, *asJSON, stdout, stderr)
 	if roleGiven {
 		emitEnsureRoleStart(dir, result, *change, *role)
