@@ -11,6 +11,8 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+
+	"github.com/IGutierrezZ/axiom/v3/internal/testenv"
 )
 
 func readRepositoryFile(t *testing.T, path ...string) string {
@@ -642,6 +644,7 @@ cat "$FAKE_GH_RESPONSE"
 }
 
 func TestCanonicalReleasePublicKeysControlRealLinkerBuild(t *testing.T) {
+	testenv.RequireGoToolchain(t)
 	repoRoot := filepath.Clean(filepath.Join("..", ".."))
 	publicKey := strings.TrimSpace(readRepositoryFile(t, "internal", "update", "upgrade", "testdata", "minisign-test.pub"))
 	const linkerTarget = "github.com/IGutierrezZ/axiom/v3/internal/update/upgrade.releaseMinisignPublicKeys"

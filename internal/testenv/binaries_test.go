@@ -29,14 +29,43 @@ func (f *fakeTB) Skip(args ...any) {
 // runRequire ejecuta RequireBinaryBuilds en su propia goroutine y devuelve el
 // fakeTB una vez terminada, haya omitido o no.
 func runRequire() *fakeTB {
+	return runGuard(RequireBinaryBuilds)
+}
+
+// runGuard ejecuta una guarda en su propia goroutine y devuelve el fakeTB una
+// vez terminada, haya omitido o no.
+func runGuard(guard func(testing.TB)) *fakeTB {
 	fake := &fakeTB{}
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
-		RequireBinaryBuilds(fake)
+		guard(fake)
 	}()
 	<-done
 	return fake
+}
+
+func TestRequireGoToolchainSkipsUnlessEnabled(t *testing.T) {
+	for _, raw := range []string{"", "0", "false"} {
+		t.Setenv(BuildBinariesEnv, raw)
+		t.Setenv("CI", "true")
+		fake := runGuard(RequireGoToolchain)
+		if !fake.skipped {
+			t.Fatalf("RequireGoToolchain did not skip with %s=%q", BuildBinariesEnv, raw)
+		}
+		if !strings.Contains(fake.message, BuildBinariesEnv+"=1") || !strings.Contains(fake.message, "Go toolchain") {
+			t.Fatalf("skip message %q does not name the toolchain and %s=1", fake.message, BuildBinariesEnv)
+		}
+	}
+}
+
+func TestRequireGoToolchainRunsWhenEnabled(t *testing.T) {
+	for _, raw := range []string{"1", "true"} {
+		t.Setenv(BuildBinariesEnv, raw)
+		if runGuard(RequireGoToolchain).skipped {
+			t.Fatalf("RequireGoToolchain skipped with %s=%s", BuildBinariesEnv, raw)
+		}
+	}
 }
 
 func TestBinaryBuildsEnabled(t *testing.T) {
