@@ -15,11 +15,16 @@ import { AGENT, addName, buildBody, hasFailures, normalizeNames, reportLines } f
 let current = {};
 let candidates = [];
 let selected = [];
+// Uso en 30 días por nombre de candidato (solo con transcripciones del proyecto).
+let usageByName = {};
 
 function checkboxHtml(name, index) {
   const id = `mcp-excl-${index}`;
   const checked = selected.includes(name) ? ' checked' : '';
-  return `<label class="eco-mcp-item" for="${id}"><input type="checkbox" id="${id}" data-mcp-name="${escapeHtml(name)}"${checked}> <span class="mono">${escapeHtml(name)}</span></label>`;
+  const unused = usageByName[name]?.unused
+    ? ' <span class="badge badge-warn" title="Claude Code lo carga, pero no lo has usado en este proyecto en los últimos 30 días: puedes excluirlo.">sin uso en 30 días</span>'
+    : '';
+  return `<label class="eco-mcp-item" for="${id}"><input type="checkbox" id="${id}" data-mcp-name="${escapeHtml(name)}"${checked}> <span class="mono">${escapeHtml(name)}</span>${unused}</label>`;
 }
 
 function renderList() {
@@ -33,6 +38,7 @@ function render(data) {
   current = data.exclusions || {};
   selected = normalizeNames(current[AGENT]);
   candidates = normalizeNames(data.candidates);
+  usageByName = data.usageData ? Object.fromEntries((data.usage || []).map(entry => [entry.name, entry])) : {};
   renderList();
   const dirs = (data.dirs || []).map(dir => `<code>${escapeHtml(dir)}</code>`).join(' ');
   $('#mcp-excl-dirs').innerHTML = dirs ? `Se aplica en: ${dirs}.` : '';

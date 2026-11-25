@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"slices"
+	"time"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/claude"
 	"github.com/IGutierrezZ/axiom/v3/internal/mcpexclusion"
@@ -31,15 +32,19 @@ type MCPAgentDTO struct {
 
 // MCPExclusionsDTO es la respuesta de `GET|POST /api/projects/active/mcp-exclusions`:
 // el proyecto activo, sus exclusiones guardadas por agente, los nombres que se ofrecen
-// para marcar, los directorios donde se aplican y, solo tras guardar, el informe.
+// para marcar, su uso en los últimos 30 días (Usage; UsageData es falso si Claude Code no
+// guarda transcripciones del proyecto: «sin datos»), los directorios donde se aplican y,
+// solo tras guardar, el informe.
 type MCPExclusionsDTO struct {
-	ID         string               `json:"id"`
-	Path       string               `json:"path"`
-	Exclusions map[string][]string  `json:"exclusions"`
-	Candidates []string             `json:"candidates"`
-	Dirs       []string             `json:"dirs"`
-	Agents     []MCPAgentDTO        `json:"agents"`
-	Report     *mcpexclusion.Report `json:"report,omitempty"`
+	ID         string                     `json:"id"`
+	Path       string                     `json:"path"`
+	Exclusions map[string][]string        `json:"exclusions"`
+	Candidates []string                   `json:"candidates"`
+	Usage      []mcpexclusion.ServerUsage `json:"usage"`
+	UsageData  bool                       `json:"usageData"`
+	Dirs       []string                   `json:"dirs"`
+	Agents     []MCPAgentDTO              `json:"agents"`
+	Report     *mcpexclusion.Report       `json:"report,omitempty"`
 }
 
 // mcpExclusionsDTO arma la respuesta de la pantalla para unas exclusiones: añade los
@@ -49,11 +54,17 @@ func (s *Service) mcpExclusionsDTO(exclusions map[string][]string, id, path stri
 		exclusions = map[string][]string{}
 	}
 	candidates := candidateMCPNames(exclusions[mcpexclusion.ClaudeAgent])
+	usage := mcpexclusion.UsageAnalysis{Servers: []mcpexclusion.ServerUsage{}}
+	if home, err := os.UserHomeDir(); err == nil {
+		usage = mcpexclusion.Analyze(home, path, candidates, exclusions[mcpexclusion.ClaudeAgent], time.Now())
+	}
 	return MCPExclusionsDTO{
 		ID:         id,
 		Path:       path,
 		Exclusions: exclusions,
 		Candidates: candidates,
+		Usage:      usage.Servers,
+		UsageData:  usage.HasData,
 		Dirs:       mcpexclusion.ProjectDirs(path),
 		Agents:     []MCPAgentDTO{{ID: mcpexclusion.ClaudeAgent, Supported: true}},
 	}

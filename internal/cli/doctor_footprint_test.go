@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/components/gga"
+	"github.com/IGutierrezZ/axiom/v3/internal/mcpexclusion"
 	"github.com/IGutierrezZ/axiom/v3/internal/state"
 )
 
@@ -290,5 +291,64 @@ func TestCollectMachineFootprintReportsDuplicateContext(t *testing.T) {
 	}
 	if strings.Contains(out, "propios de una instalación global") {
 		t.Errorf("un duplicado no es un resto global:\n%s", out)
+	}
+}
+
+// Un servidor MCP de usuario cargado en el proyecto y sin llamadas en 30 días sale como
+// «sin uso» (informativo); uno usado, no; y sin transcripciones del proyecto no sale nada.
+func TestCollectMachineFootprintReportsUnusedMCPServers(t *testing.T) {
+	stubDoctorUserPath(t, nil)
+	origLook := lookPathFn
+	t.Cleanup(func() { lookPathFn = origLook })
+	lookPathFn = func(string) (string, error) { return "", errors.New("not found") }
+
+	home, root := t.TempDir(), t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
+	t.Setenv("AXIOM_STATE_DIR", filepath.Join(home, ".axiom"))
+	if err := os.WriteFile(filepath.Join(home, ".claude.json"), []byte(`{"mcpServers":{"engram":{},"ocioso":{}}}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	unusedEntries := func(entries []footprintEntry) []footprintEntry {
+		var found []footprintEntry
+		for _, entry := range entries {
+			if entry.Kind == footprintUnused {
+				found = append(found, entry)
+			}
+		}
+		return found
+	}
+
+	// Sin transcripciones: «sin datos», no «sin uso».
+	if got := unusedEntries(collectMachineFootprint(home, root, state.InstallState{})); len(got) != 0 {
+		t.Fatalf("sin transcripciones no debe haber entradas, got %+v", got)
+	}
+
+	folder := filepath.Join(home, ".claude", "projects", mcpexclusion.EncodeProjectDir(root))
+	if err := os.MkdirAll(folder, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	line := `{"type":"assistant","timestamp":"` + time.Now().UTC().Format(time.RFC3339) + `","message":{"content":[{"type":"tool_use","name":"mcp__engram__mem_save","input":{}}]}}` + "\n"
+	if err := os.WriteFile(filepath.Join(folder, "s.jsonl"), []byte(line), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	// Con raíz vacía no se comprueba nada.
+	if got := unusedEntries(collectMachineFootprint(home, "", state.InstallState{})); len(got) != 0 {
+		t.Fatalf("sin raíz no debe haber entradas, got %+v", got)
+	}
+
+	entries := collectMachineFootprint(home, root, state.InstallState{})
+	got := unusedEntries(entries)
+	if len(got) != 1 || got[0].Name != "MCP: ocioso" {
+		t.Fatalf("quiero solo ocioso sin uso, got %+v", got)
+	}
+
+	var buf bytes.Buffer
+	renderMachineFootprint(&buf, entries)
+	out := buf.String()
+	if !strings.Contains(out, "[sin uso]") || !strings.Contains(out, "1 servidor(es) MCP cargado(s) sin uso") {
+		t.Errorf("falta la línea de sin uso:\n%s", out)
 	}
 }

@@ -8,8 +8,10 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/claude"
+	"github.com/IGutierrezZ/axiom/v3/internal/mcpexclusion"
 )
 
 func decodeMCPExclusions(t *testing.T, body []byte) MCPExclusionsDTO {
@@ -150,5 +152,53 @@ func TestActiveMCPExclusionsWithAnUnregisteredProjectIs409(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(root, ".claude")); !os.IsNotExist(err) {
 		t.Errorf("no debe escribirse nada en un proyecto sin registrar (err=%v)", err)
+	}
+}
+
+// El GET añade el uso de cada candidato en 30 días a partir de las transcripciones de
+// Claude Code del proyecto: sin transcripciones es «sin datos»; con ellas, un candidato
+// sin llamadas sale como sin uso y uno con llamadas, con su cuenta.
+func TestActiveMCPExclusionsEndpointReportsUsage(t *testing.T) {
+	router, root, _ := reviewModeServer(t, true)
+	home, err := os.UserHomeDir()
+	if err != nil {
+		t.Fatal(err)
+	}
+	userConfig := `{"mcpServers":{"work-copilot":{"command":"x"},"engram":{"command":"y"}}}`
+	if err := os.WriteFile(claude.UserConfigPath(home), []byte(userConfig), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	rr := request(router, http.MethodGet, "/api/projects/active/mcp-exclusions", "")
+	if rr.Code != http.StatusOK {
+		t.Fatalf("GET = %d: %s", rr.Code, rr.Body.String())
+	}
+	if dto := decodeMCPExclusions(t, rr.Body.Bytes()); dto.UsageData {
+		t.Fatalf("sin transcripciones debe ser sin datos: %+v", dto)
+	}
+
+	folder := filepath.Join(home, ".claude", "projects", mcpexclusion.EncodeProjectDir(root))
+	if err := os.MkdirAll(folder, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	line := `{"type":"assistant","timestamp":"` + time.Now().UTC().Format(time.RFC3339) + `","message":{"content":[{"type":"tool_use","name":"mcp__engram__mem_save","input":{}}]}}` + "\n"
+	if err := os.WriteFile(filepath.Join(folder, "s.jsonl"), []byte(line), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	rr = request(router, http.MethodGet, "/api/projects/active/mcp-exclusions", "")
+	dto := decodeMCPExclusions(t, rr.Body.Bytes())
+	if !dto.UsageData || len(dto.Usage) != 2 {
+		t.Fatalf("uso = %+v", dto)
+	}
+	byName := map[string]mcpexclusion.ServerUsage{}
+	for _, server := range dto.Usage {
+		byName[server.Name] = server
+	}
+	if s := byName["engram"]; s.Uses != 1 || s.Unused || s.LastUsed == nil {
+		t.Errorf("engram = %+v", s)
+	}
+	if s := byName["work-copilot"]; s.Uses != 0 || !s.Unused {
+		t.Errorf("work-copilot = %+v", s)
 	}
 }
