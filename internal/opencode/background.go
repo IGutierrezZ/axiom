@@ -567,7 +567,7 @@ func PrepareActivation(homeDir string, options ActivationOptions) (*ActivationPl
 		if snapshot.exists && !snapshot.owned {
 			return nil, fmt.Errorf("refusing user-owned OpenCode launcher collision at %q", path)
 		}
-		content := launcherContent(options.OS, target)
+		content := launcherContent(options.OS, windowsLauncherTarget(options.OS, target))
 		plan.desired[path] = []byte(content[filepath.Base(path)])
 	}
 	for _, lp := range LegacyManagedLauncherPaths(homeDir, options.OS) {
