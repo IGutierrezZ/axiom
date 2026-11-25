@@ -199,7 +199,6 @@ func TestCodeGraphNativeOwnedPaths(t *testing.T) {
 	tests := map[model.AgentID][]string{
 		model.AgentClaudeCode:  {filepath.Join(home, ".claude.json")},
 		model.AgentAntigravity: {filepath.Join(home, ".gemini", "config", "mcp_config.json"), filepath.Join(home, ".gemini", "antigravity", "mcp_config.json")},
-		model.AgentKiroIDE:     {filepath.Join(home, ".kiro", "settings", "mcp.json")},
 	}
 	for id, want := range tests {
 		adapter, _ := reg.Get(id)
@@ -216,11 +215,11 @@ func TestCodeGraphCommandsUseExplicitMultipleTargets(t *testing.T) {
 			return "/bin/npm", nil
 		}
 		return "", errors.New("missing")
-	}), []string{"claude", "cursor", "kiro"})
+	}), []string{"claude", "cursor"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := []string{"codegraph", "install", "--target", "claude,cursor,kiro", "--location", "global", "--yes"}
+	want := []string{"codegraph", "install", "--target", "claude,cursor", "--location", "global", "--yes"}
 	if !reflect.DeepEqual(commands[1], want) {
 		t.Fatalf("install command = %v, want %v", commands[1], want)
 	}
@@ -306,7 +305,7 @@ func TestCodeGraphRollbackAfterGuidanceAndPostconditionFailures(t *testing.T) {
 
 func TestCodeGraphSnapshotRoundTripIsIdempotent(t *testing.T) {
 	home := t.TempDir()
-	path := filepath.Join(home, ".kiro", "settings", "mcp.json")
+	path := filepath.Join(home, ".cursor", "mcp.json")
 	mustWrite(t, path, `{"mcpServers":{"sibling":{"command":"x"}}}`)
 	if err := os.Chmod(path, 0o640); err != nil {
 		t.Fatal(err)

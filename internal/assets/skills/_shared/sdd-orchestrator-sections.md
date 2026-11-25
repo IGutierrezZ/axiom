@@ -423,11 +423,3 @@ When executing general (non-SDD) work:
 3. Do NOT rely solely on conversation history — persist important findings to engram for cross-session durability
 <!-- sdd-orchestrator-section:Non-SDD Tasks:end -->
 
-<!-- sdd-orchestrator-section:Skill Resolution Feedback (Kiro and Windsurf):start -->
-After completing each phase, check the `skill_resolution` field in your own result:
-
-- `paths-injected` → all good, exact skill paths were loaded
-- `fallback-registry`, `fallback-path`, or `none` → skill cache was lost (likely compaction). Re-read the registry immediately and load skill paths for all subsequent phases.
-
-This is a self-correction mechanism. Do NOT ignore fallback reports — they indicate you dropped context between phases.
-<!-- sdd-orchestrator-section:Skill Resolution Feedback (Kiro and Windsurf):end -->

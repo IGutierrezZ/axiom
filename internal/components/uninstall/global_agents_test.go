@@ -5,11 +5,9 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-
-	"github.com/IGutierrezZ/axiom/v3/internal/components/filemerge"
 )
 
-// Pruebas de los restos globales de Kiro y Codex (H3) y del criterio de borrado
+// Pruebas de los restos globales de Codex (H3) y del criterio de borrado
 // de los mcp.json que quedan vacíos.
 
 func globalCompleteUninstall(t *testing.T, home string) Result {
@@ -46,58 +44,6 @@ func readGlobalFile(t *testing.T, path string) string {
 func pathExists(path string) bool {
 	_, err := os.Lstat(path)
 	return err == nil
-}
-
-func kiroSteeringPath(home string) string {
-	return filepath.Join(home, ".kiro", "steering", "axiom.md")
-}
-
-// El steering de Kiro es la persona entera con `inclusion: always`: se borra si sigue
-// siendo lo que escribió Axiom.
-func TestCompleteUninstallGlobalRemovesTheManagedKiroSteering(t *testing.T) {
-	personas := embeddedPersonas()
-	if len(personas) == 0 {
-		t.Skip("no hay personas incrustadas")
-	}
-	home := t.TempDir()
-	writeGlobalFile(t, kiroSteeringPath(home), filemerge.SDDSteeringFrontmatter+"\n"+personas[0]+"\n")
-
-	if leftovers := GlobalAgentLeftovers(home); len(leftovers) != 1 || leftovers[0].Label == "" {
-		t.Fatalf("el steering de Kiro debe informarse como resto: %+v", leftovers)
-	}
-
-	globalCompleteUninstall(t, home)
-
-	if pathExists(kiroSteeringPath(home)) {
-		t.Errorf("el steering gestionado debe borrarse:\n%s", readGlobalFile(t, kiroSteeringPath(home)))
-	}
-	if pathExists(filepath.Join(home, ".kiro", "steering")) {
-		t.Error("la carpeta steering que queda vacía debe quitarse")
-	}
-}
-
-// Si el usuario añadió contenido al steering de Kiro, se conserva con aviso y el
-// diagnóstico no lo da por resto de Axiom.
-func TestCompleteUninstallGlobalKeepsAKiroSteeringTheUserEdited(t *testing.T) {
-	personas := embeddedPersonas()
-	if len(personas) == 0 {
-		t.Skip("no hay personas incrustadas")
-	}
-	home := t.TempDir()
-	edited := filemerge.SDDSteeringFrontmatter + "\n" + personas[0] + "\n\n## Mi regla\n\nSiempre en castellano.\n"
-	writeGlobalFile(t, kiroSteeringPath(home), edited)
-
-	result := globalCompleteUninstall(t, home)
-
-	if got := readGlobalFile(t, kiroSteeringPath(home)); got != edited {
-		t.Errorf("el steering editado debe quedar intacto:\n%s", got)
-	}
-	if !strings.Contains(strings.Join(result.ManualActions, "\n"), kiroSteeringPath(home)) {
-		t.Errorf("debe avisar de que conserva el steering: %v", result.ManualActions)
-	}
-	if leftovers := GlobalAgentLeftovers(home); len(leftovers) != 0 {
-		t.Errorf("un steering editado por el usuario no es un resto de Axiom: %+v", leftovers)
-	}
 }
 
 // En config.toml de Codex se retiran solo las claves con los valores que escribe el
@@ -176,7 +122,7 @@ func TestCompleteUninstallGlobalDeletesAnEmptiedMCPFileOnlyWhenItHeldNothingButA
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			home := t.TempDir()
-			mcpPath := filepath.Join(home, ".kiro", "settings", "mcp.json")
+			mcpPath := filepath.Join(home, ".cursor", "mcp.json")
 			writeGlobalFile(t, mcpPath, tc.seed)
 
 			globalCompleteUninstall(t, home)
@@ -196,7 +142,6 @@ func TestCompleteUninstallGlobalDeletesAnEmptiedMCPFileOnlyWhenItHeldNothingButA
 
 func TestGlobalAgentLeftoversIsEmptyWithoutAxiom(t *testing.T) {
 	home := t.TempDir()
-	writeGlobalFile(t, kiroSteeringPath(home), "---\ninclusion: always\n---\n\nReglas propias.\n")
 	writeGlobalFile(t, filepath.Join(home, ".codex", "config.toml"), "model = \"x\"\n[features]\nmulti_agent = false\n")
 
 	if leftovers := GlobalAgentLeftovers(home); len(leftovers) != 0 {

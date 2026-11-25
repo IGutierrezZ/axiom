@@ -643,24 +643,6 @@ func (s *Service) buildPlan(agentIDs []model.AgentID, componentIDs []model.Compo
 			}
 		}
 		backupTargets[state.Path(s.homeDir)] = struct{}{}
-		if removesAllAgentComponents(componentIDs) {
-			// El steering de Kiro lleva la persona entera, sin marcadores: tras retirar
-			// las secciones con marcadores, solo se borra si lo que queda es de Axiom.
-			for _, agentID := range agentIDs {
-				adapter, ok := s.adapter(agentID)
-				if !ok {
-					continue
-				}
-				for _, path := range s.globalSteeringFiles(adapter) {
-					backupTargets[path] = struct{}{}
-					addPlanOperation(operationsByKey, agentID, s.sweepInstructionsFile(path, true))
-					// Las carpetas que se quedan vacías (steering y la de Kiro), sin
-					// aviso si conservan algo del usuario.
-					addPlanOperation(operationsByKey, agentID, quietDirIfEmpty(filepath.Dir(path)))
-					addPlanOperation(operationsByKey, agentID, quietDirIfEmpty(adapter.GlobalConfigDir(s.homeDir)))
-				}
-			}
-		}
 		if s.completeRun {
 			targets, compatOps, err := s.compatibilitySkillsOperations()
 			if err != nil {
@@ -1028,7 +1010,7 @@ func settingsTargets(homeDir string, adapter agents.Adapter) []string {
 }
 
 // systemPromptFiles lists the prompt file the adapter writes and the earlier
-// names a previous release used (Kiro, VS Code and Cursor renamed theirs), so an
+// names a previous release used (VS Code and Cursor renamed theirs), so an
 // uninstall also clears managed sections from a copy that sync has not retired.
 func systemPromptFiles(adapter agents.Adapter, homeDir string) []string {
 	files := []string{adapter.SystemPromptFile(homeDir)}
@@ -1226,11 +1208,6 @@ func (s *Service) componentOperations(adapter agents.Adapter, componentID model.
 			path := filepath.Join(adapter.GlobalConfigDir(homeDir), "hooks.json")
 			targets = append(targets, path)
 			ops = append(ops, rewriteSkillRegistryHook(path, adapter.Agent()))
-		}
-		if path := sdd.SkillRegistryHookPath(adapter, homeDir); path != "" {
-			// Axiom owns the whole file; user hooks beside it are left alone.
-			targets = append(targets, path)
-			ops = append(ops, removeFile(path), removeDirIfEmpty(filepath.Dir(path)))
 		}
 		if adapter.Agent() == model.AgentOpenCode {
 			for _, path := range s.settingsTargets(adapter) {

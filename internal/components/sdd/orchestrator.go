@@ -123,7 +123,7 @@ func composeOrchestratorPrompt(agent model.AgentID, options ...OrchestratorRende
 func usesFallbackSessionPreflight(agent model.AgentID) bool {
 	switch agent {
 	case model.AgentVSCodeCopilot, model.AgentGitHubCopilotCLI, model.AgentCursor, model.AgentGeminiCLI,
-		model.AgentAntigravity, model.AgentQwenCode, model.AgentKiroIDE, model.AgentCodex:
+		model.AgentAntigravity, model.AgentQwenCode, model.AgentCodex:
 		return true
 	default:
 		return false
@@ -162,9 +162,6 @@ func composeFallbackSessionPreflight(content string, agent model.AgentID) string
 	}
 	// Keep runtime-specific execution semantics and phase approval rules.
 	executionEnd := "In **Interactive** mode, between phases:"
-	if agent == model.AgentKiroIDE {
-		executionEnd = "Interactive approval is phase-scoped."
-	}
 	for _, bounds := range [][2]string{
 		{"When the user invokes `/sdd-new`", "- **Automatic**"},
 		{"No mode is assumed by default: `multirepo` always runs **Interactive** and never asks; `monorepo-embedded` asks it in the session preflight.", executionEnd},
@@ -202,9 +199,6 @@ func composeFallbackSessionPreflight(content string, agent model.AgentID) string
 	case model.AgentAntigravity:
 		legacyInitAction = "invoke the `sdd-init` phase subagent FIRST"
 		initAction = "invoke the `sdd-init` phase subagent"
-	case model.AgentKiroIDE:
-		legacyInitAction = "run `sdd-init` FIRST (load the sdd-init skill and execute it)"
-		initAction = "load the `sdd-init` skill and execute it in the native Kiro phase context"
 	default:
 		panic("sdd: unsupported fallback runtime: " + string(agent))
 	}
@@ -314,8 +308,6 @@ func sddOrchestratorAsset(agent model.AgentID) string {
 		return "cursor/sdd-orchestrator.md"
 	case model.AgentQwenCode:
 		return "qwen/sdd-orchestrator.md"
-	case model.AgentKiroIDE:
-		return "kiro/sdd-orchestrator.md"
 	case model.AgentOpenCode:
 		return "opencode/sdd-orchestrator.md"
 	default:

@@ -351,11 +351,6 @@ func TestJudgmentDayAgentsRenderReadOnlyRoleContracts(t *testing.T) {
 			}
 		})
 	}
-	for _, kiro := range []string{"kiro/agents/jd-judge-a.md", "kiro/agents/jd-judge-b.md"} {
-		if frontmatter := markdownFrontmatter(t, kiro); !strings.Contains(frontmatter, `tools: ["read"]`) {
-			t.Errorf("%s is not read-only:\n%s", kiro, frontmatter)
-		}
-	}
 }
 
 // TestOpenCodeOverlaysRenderReadOnlyJudgmentDayRoles keeps the OpenCode judges

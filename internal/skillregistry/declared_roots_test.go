@@ -95,7 +95,6 @@ func TestProjectSkillDirsEmptyCwdUnchanged(t *testing.T) {
 		filepath.Join(".github", "skills"),
 		filepath.Join(".codex", "skills"),
 		filepath.Join(".qwen", "skills"),
-		filepath.Join(".kiro", "skills"),
 		filepath.Join(".pi", "skills"),
 		filepath.Join(".agent", "skills"),
 		filepath.Join(".agents", "skills"),

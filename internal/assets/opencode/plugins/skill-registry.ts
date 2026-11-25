@@ -22,7 +22,7 @@ import { promisify } from "util"
 const execFileAsync = promisify(execFile)
 
 // Mirrors the CLI guard's markers (.git, .atl, and ProjectSkillDirs in internal/skillregistry/registry.go); a Go parity test pins this list.
-const PROJECT_MARKERS = [".git", ".atl", "skills", ".opencode/skills", ".claude/skills", ".gemini/skills", ".cursor/skills", ".github/skills", ".codex/skills", ".qwen/skills", ".kiro/skills", ".pi/skills", ".agent/skills", ".agents/skills", ".atl/skills"]
+const PROJECT_MARKERS = [".git", ".atl", "skills", ".opencode/skills", ".claude/skills", ".gemini/skills", ".cursor/skills", ".github/skills", ".codex/skills", ".qwen/skills", ".pi/skills", ".agent/skills", ".agents/skills", ".atl/skills"]
 
 async function pathExists(path: string): Promise<boolean> {
   try {

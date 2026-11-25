@@ -124,11 +124,6 @@ type InstallState struct {
 	// generated without `model` and inherit the conversation's.
 	CopilotPhaseAssignments map[string]CopilotPhaseAssignmentState `json:"copilot_phase_assignments,omitempty"`
 
-	// KiroModelAssignments maps SDD phase names to a Kiro-native model alias.
-	// Values like "opus", "sonnet", and "haiku" remain valid for state files
-	// written before Kiro had its own picker options.
-	KiroModelAssignments map[string]string `json:"kiro_model_assignments,omitempty"`
-
 	// CodexModelAssignments maps SDD phase names to a Codex reasoning_effort value
 	// (low|medium|high|xhigh). Persisted so that `gentle-ai sync` preserves the
 	// user's per-phase effort preset instead of falling back to Recommended.
@@ -314,7 +309,6 @@ func MergeAgents(existing InstallState, newAgents []string) InstallState {
 		ClaudeModelAssignments:      existing.ClaudeModelAssignments,
 		ClaudePhaseAssignments:      existing.ClaudePhaseAssignments,
 		CopilotPhaseAssignments:     existing.CopilotPhaseAssignments,
-		KiroModelAssignments:        existing.KiroModelAssignments,
 		CodexModelAssignments:       existing.CodexModelAssignments,
 		CodexOrchestratorAssignment: existing.CodexOrchestratorAssignment,
 		CodexCarrilModelAssignments: existing.CodexCarrilModelAssignments,

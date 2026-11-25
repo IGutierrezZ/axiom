@@ -55,7 +55,6 @@ var agentToolBinaries = map[string]string{
 	"codex":              "codex",
 	"pi":                 "pi",
 	"gemini-cli":         "gemini",
-	"kiro-ide":           "kiro",
 	"qwen-code":          "qwen",
 	"vscode-copilot":     "code",
 	"github-copilot-cli": "copilot",
@@ -578,8 +577,6 @@ func agentConfigDir(homeDir, agentID string) string {
 		return filepath.Join(cfgBase, "Code")
 	case "codex":
 		return filepath.Join(homeDir, ".codex")
-	case "kiro":
-		return filepath.Join(homeDir, ".kiro")
 	default:
 		return ""
 	}

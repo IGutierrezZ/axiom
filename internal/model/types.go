@@ -63,7 +63,6 @@ const (
 	AgentCodex         AgentID = "codex"
 	AgentAntigravity   AgentID = "antigravity"
 	AgentQwenCode      AgentID = "qwen-code"
-	AgentKiroIDE       AgentID = "kiro-ide"
 	AgentPi            AgentID = "pi"
 	AgentTrae          AgentID = "trae-ide"
 )
@@ -168,8 +167,6 @@ const (
 	StrategyAppendToFile
 	// StrategyInstructionsFile writes a dedicated instructions file (e.g. .instructions.md).
 	StrategyInstructionsFile
-	// StrategySteeringFile writes a Kiro steering file with inclusion: always frontmatter.
-	StrategySteeringFile
 )
 
 // MCPStrategy defines how MCP server configs are written for an agent.

@@ -493,7 +493,6 @@ const (
 	ScreenPersona
 	ScreenPreset
 	ScreenClaudeModelPicker
-	ScreenKiroModelPicker
 	ScreenCodexModelPicker
 	ScreenSDDMode
 	ScreenStrictTDD
@@ -582,7 +581,6 @@ type Model struct {
 	ModelPicker                    screens.ModelPickerState
 	runtimeCatalogDiscoveryRequest uint64
 	ClaudeModelPicker              screens.ClaudeModelPickerState
-	KiroModelPicker                screens.KiroModelPickerState
 	CodexModelPicker               screens.CodexModelPickerState
 	SkillPicker                    []model.SkillID
 	Err                            error
@@ -866,7 +864,6 @@ func NewModel(detection system.DetectionResult, version string, installState ...
 		Components:             components,
 		ClaudeModelAssignments: installStateClaudeAssignments(s.ClaudeModelAssignments),
 		ClaudePhaseAssignments: installStateClaudePhaseAssignments(s.ClaudePhaseAssignments),
-		KiroModelAssignments:   installStateKiroAssignments(s.KiroModelAssignments),
 		ModelAssignments:       installStateModelAssignments(s.ModelAssignments),
 	}
 
@@ -930,17 +927,6 @@ func claudePhaseAssignmentsToLegacy(assignments map[string]model.ClaudePhaseAssi
 		if assignment.Model.Valid() {
 			out[phase] = assignment.Model
 		}
-	}
-	return out
-}
-
-func installStateKiroAssignments(assignments map[string]string) map[string]model.KiroModelAlias {
-	if len(assignments) == 0 {
-		return nil
-	}
-	out := make(map[string]model.KiroModelAlias, len(assignments))
-	for phase, alias := range assignments {
-		out[phase] = model.KiroModelAlias(alias)
 	}
 	return out
 }
@@ -1430,8 +1416,6 @@ func (m Model) View() string {
 		return screens.RenderPreset(m.Selection.Preset, m.Cursor)
 	case ScreenClaudeModelPicker:
 		return screens.RenderClaudeModelPicker(m.ClaudeModelPicker, m.Cursor, m.Height)
-	case ScreenKiroModelPicker:
-		return screens.RenderKiroModelPicker(m.KiroModelPicker, m.Cursor)
 	case ScreenCodexModelPicker:
 		return screens.RenderCodexModelPicker(m.CodexModelPicker, m.Cursor, m.Height)
 	case ScreenSDDMode:
@@ -1590,31 +1574,6 @@ func (m Model) handleKeyPress(key tea.KeyMsg) (tea.Model, tea.Cmd) {
 						TargetAgents:           []model.AgentID{model.AgentClaudeCode},
 						ClaudeModelAssignments: claudePhaseAssignmentsToLegacy(updated),
 						ClaudePhaseAssignments: updated,
-					}
-					m = m.withResetSyncState()
-					m.setScreen(ScreenSync)
-				} else if next, ok := m.pickerNextScreen(); ok {
-					return m, m.advanceToNextPickerScreen(next)
-				}
-			}
-			return m, nil
-		}
-	}
-
-	if m.Screen == ScreenKiroModelPicker {
-		wasInCustomMode := m.KiroModelPicker.InCustomMode
-		handled, updated := screens.HandleKiroModelPickerNav(keyStr, &m.KiroModelPicker, m.Cursor)
-		if handled {
-			if wasInCustomMode != m.KiroModelPicker.InCustomMode {
-				m.Cursor = 0
-			}
-			if updated != nil {
-				m.Selection.KiroModelAssignments = updated
-				if m.ModelConfigMode {
-					m.ModelConfigMode = false
-					m.PendingSyncOverrides = &model.SyncOverrides{
-						TargetAgents:         []model.AgentID{model.AgentKiroIDE},
-						KiroModelAssignments: updated,
 					}
 					m = m.withResetSyncState()
 					m.setScreen(ScreenSync)
@@ -2341,16 +2300,12 @@ func (m Model) confirmSelection() (tea.Model, tea.Cmd) {
 			}
 			m.setScreen(ScreenModelPicker)
 			return m, discoveryCmd
-		case 2: // Configure Kiro models
-			m.ModelConfigMode = true
-			m.KiroModelPicker = screens.NewKiroModelPickerStateFromAssignments(m.Selection.KiroModelAssignments)
-			m.setScreen(ScreenKiroModelPicker)
-		case 3: // Configure Codex models
+		case 2: // Configure Codex models
 			m.ModelConfigMode = true
 			m.CodexModelPicker = screens.NewCodexModelPickerStateFromAssignments(m.Selection.CodexModelAssignments)
 			m.restoreCodexCustomAssignments()
 			m.setScreen(ScreenCodexModelPicker)
-		case 4: // Back
+		case 3: // Back
 			m.setScreen(ScreenWelcome)
 		}
 		return m, nil
@@ -2395,7 +2350,7 @@ func (m Model) confirmSelection() (tea.Model, tea.Cmd) {
 			m.Selection.Components = componentsForPreset(options[m.Cursor], m.Selection.Persona)
 			// Enter the conditional picker chain through the single source of
 			// truth. pickerNextScreen(ScreenPreset) returns the first chain member
-			// for the current selection (Claude → Kiro → Codex → SDDMode →
+			// for the current selection (Claude → Codex → SDDMode →
 			// ModelPicker → StrictTDD); applyPickerEntry initializes its state.
 			// DependencyTree is the initial component picker for Custom and the
 			// terminal anchor for every other preset.
@@ -2423,18 +2378,6 @@ func (m Model) confirmSelection() (tea.Model, tea.Cmd) {
 		if !m.ClaudeModelPicker.InCustomMode && m.Cursor == screens.ClaudeModelPickerOptionCount(m.ClaudeModelPicker)-1 {
 			// "Back" option: in ModelConfigMode return to the config menu,
 			// otherwise use pickerPreviousScreen for unified reverse navigation.
-			if m.ModelConfigMode {
-				m.ModelConfigMode = false
-				m.setScreen(ScreenModelConfig)
-				return m, nil
-			}
-			if prev, ok := m.pickerPreviousScreen(); ok {
-				m.applyPickerEntry(prev)
-			}
-			return m, nil
-		}
-	case ScreenKiroModelPicker:
-		if !m.KiroModelPicker.InCustomMode && m.Cursor == screens.KiroModelPickerOptionCount(m.KiroModelPicker)-1 {
 			if m.ModelConfigMode {
 				m.ModelConfigMode = false
 				m.setScreen(ScreenModelConfig)
@@ -2639,7 +2582,7 @@ func (m Model) confirmSelection() (tea.Model, tea.Cmd) {
 			case m.Cursor == len(allComps):
 				m.buildDependencyPlan()
 				// Advance to the next screen in the picker slice.
-				// applyPickerEntry handles Claude/Kiro/Codex-first paths correctly,
+				// applyPickerEntry handles Claude/Codex-first paths correctly,
 				// initializing each picker's state regardless of which agent is first.
 				if next, ok := m.pickerNextScreen(); ok {
 					m.applyPickerEntry(next)
@@ -3790,7 +3733,7 @@ func (m Model) goBack(cmd *tea.Cmd) Model {
 	}
 
 	// ModelConfigMode: pickers reached via Model Config shortcut return to ScreenModelConfig.
-	if m.ModelConfigMode && (m.Screen == ScreenClaudeModelPicker || m.Screen == ScreenKiroModelPicker || m.Screen == ScreenCodexModelPicker || m.Screen == ScreenModelPicker) {
+	if m.ModelConfigMode && (m.Screen == ScreenClaudeModelPicker || m.Screen == ScreenCodexModelPicker || m.Screen == ScreenModelPicker) {
 		m.ModelConfigMode = false
 		m.setScreen(ScreenModelConfig)
 		return m
@@ -3808,8 +3751,6 @@ func (m Model) goBack(cmd *tea.Cmd) Model {
 				} else {
 					m.setScreen(ScreenSDDMode)
 				}
-			} else if m.shouldShowKiroModelPickerScreen() {
-				m.setScreen(ScreenKiroModelPicker)
 			} else if m.shouldShowClaudeModelPickerScreen() {
 				m.setScreen(ScreenClaudeModelPicker)
 			} else {
@@ -3848,7 +3789,7 @@ func (m Model) goBack(cmd *tea.Cmd) Model {
 	}
 
 	// goBack for picker flow screens: use pickerPreviousScreen for unified
-	// reverse navigation (StrictTDD, SDDMode, ClaudeModelPicker, KiroModelPicker,
+	// reverse navigation (StrictTDD, SDDMode, ClaudeModelPicker,
 	// CodexModelPicker). The OpenCodePluginsStandalone guard is preserved as an
 	// early-return BEFORE the slice walk.
 	if m.Screen == ScreenStrictTDD {
@@ -3874,13 +3815,6 @@ func (m Model) goBack(cmd *tea.Cmd) Model {
 	}
 
 	if m.Screen == ScreenClaudeModelPicker {
-		if prev, ok := m.pickerPreviousScreen(); ok {
-			m.applyPickerEntry(prev)
-			return m
-		}
-	}
-
-	if m.Screen == ScreenKiroModelPicker {
 		if prev, ok := m.pickerPreviousScreen(); ok {
 			m.applyPickerEntry(prev)
 			return m
@@ -4157,8 +4091,6 @@ func (m Model) optionCount() int {
 		return len(screens.PresetOptions()) + 1
 	case ScreenClaudeModelPicker:
 		return screens.ClaudeModelPickerOptionCount(m.ClaudeModelPicker)
-	case ScreenKiroModelPicker:
-		return screens.KiroModelPickerOptionCount(m.KiroModelPicker)
 	case ScreenCodexModelPicker:
 		return screens.CodexModelPickerOptionCount(m.CodexModelPicker)
 	case ScreenSDDMode:
@@ -4508,10 +4440,6 @@ func (m Model) goBackFromCommunityTools() Model {
 		m.setScreen(ScreenCodexModelPicker)
 		return m
 	}
-	if m.shouldShowKiroModelPickerScreen() {
-		m.setScreen(ScreenKiroModelPicker)
-		return m
-	}
 	if m.shouldShowClaudeModelPickerScreen() {
 		m.setScreen(ScreenClaudeModelPicker)
 		return m
@@ -4787,8 +4715,6 @@ func detectedAgentIDs(detection system.DetectionResult) []model.AgentID {
 			selected = append(selected, model.AgentQwenCode)
 		case string(model.AgentPi):
 			selected = append(selected, model.AgentPi)
-		case string(model.AgentKiroIDE):
-			selected = append(selected, model.AgentKiroIDE)
 		}
 	}
 	return selected
@@ -4950,11 +4876,6 @@ func (m Model) shouldShowClaudeModelPickerScreen() bool {
 		hasSelectedComponent(m.Selection.Components, model.ComponentSDD)
 }
 
-func (m Model) shouldShowKiroModelPickerScreen() bool {
-	return m.Selection.HasAgent(model.AgentKiroIDE) &&
-		hasSelectedComponent(m.Selection.Components, model.ComponentSDD)
-}
-
 func (m Model) shouldShowCodexModelPickerScreen() bool {
 	return m.Selection.HasAgent(model.AgentCodex) &&
 		hasSelectedComponent(m.Selection.Components, model.ComponentSDD)
@@ -4979,9 +4900,6 @@ func (m Model) pickerFlowSlice() []Screen {
 	}
 	if m.shouldShowClaudeModelPickerScreen() {
 		s = append(s, ScreenClaudeModelPicker)
-	}
-	if m.shouldShowKiroModelPickerScreen() {
-		s = append(s, ScreenKiroModelPicker)
 	}
 	if m.shouldShowCodexModelPickerScreen() {
 		s = append(s, ScreenCodexModelPicker)
@@ -5046,7 +4964,7 @@ func (m *Model) advanceToNextPickerScreen(next Screen) tea.Cmd {
 // applyPickerEntry initializes the target picker's state and transitions to it.
 // This is the single place that sets up picker-specific state (model selections,
 // presets) before calling setScreen. It handles every target a caller may
-// navigate to, including Kiro-first and Codex-first custom paths where Claude is
+// navigate to, including Codex-first custom paths where Claude is
 // absent and navigation comes directly from ScreenDependencyTree.
 func (m *Model) applyPickerEntry(next Screen) tea.Cmd {
 	var discoveryCmd tea.Cmd
@@ -5055,8 +4973,6 @@ func (m *Model) applyPickerEntry(next Screen) tea.Cmd {
 		m.ClaudeModelPicker = screens.NewClaudeModelPickerStateFromPhaseAssignments(
 			claudePickerAssignments(m.Selection.ClaudeModelAssignments, m.Selection.ClaudePhaseAssignments),
 		)
-	case ScreenKiroModelPicker:
-		m.KiroModelPicker = screens.NewKiroModelPickerStateFromAssignments(m.Selection.KiroModelAssignments)
 	case ScreenCodexModelPicker:
 		m.CodexModelPicker = screens.NewCodexModelPickerStateFromAssignments(m.Selection.CodexModelAssignments)
 		m.restoreCodexCustomAssignments()
@@ -5444,8 +5360,6 @@ func agentBuilderSkillsDir(agentID model.AgentID) (string, bool) {
 		return filepath.Join(home, ".gemini", "skills"), true
 	case model.AgentCodex:
 		return filepath.Join(home, ".codex", "skills"), true
-	case model.AgentKiroIDE:
-		return filepath.Join(home, ".kiro", "skills"), true
 	default:
 		return "", false
 	}

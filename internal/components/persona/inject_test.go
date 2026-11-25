@@ -1953,7 +1953,6 @@ func TestPersonaContentResidualDispatchAllAgents(t *testing.T) {
 		model.AgentCodex,
 		model.AgentAntigravity,
 		model.AgentQwenCode,
-		model.AgentKiroIDE,
 		model.AgentPi,
 		model.AgentTrae,
 	}
@@ -2022,7 +2021,6 @@ func TestResidualChannelAllAgents(t *testing.T) {
 		model.AgentCodex,
 		model.AgentAntigravity,
 		model.AgentQwenCode,
-		model.AgentKiroIDE,
 		model.AgentPi,
 		model.AgentTrae,
 	}
@@ -2214,21 +2212,6 @@ func TestReconciledStylesCarryAllMovedPersonaRules(t *testing.T) {
 	t.Run("claude-neutral", func(t *testing.T) {
 		assertMovedPersonaRules(t, "claude/output-style-neutral.md", neutralMovedRules)
 	})
-}
-
-func TestWrapSteeringFileAddsKiroFrontmatter(t *testing.T) {
-	got := wrapSteeringFile("## Persona\n\nBody")
-
-	for _, want := range []string{
-		"---\n",
-		"inclusion: always",
-		"---\n\n## Persona",
-		"Body",
-	} {
-		if !strings.Contains(got, want) {
-			t.Fatalf("wrapSteeringFile() missing %q; got:\n%s", want, got)
-		}
-	}
 }
 
 func TestMergeJSONFileToleratingMalformed(t *testing.T) {

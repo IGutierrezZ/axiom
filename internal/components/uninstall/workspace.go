@@ -578,13 +578,12 @@ func marshalLike(raw []byte, root map[string]any) ([]byte, bool, error) {
 }
 
 // stripManagedFrontmatter quita la cabecera que Axiom escribe al crear un fichero
-// de instrucciones con cabecera propia (VS Code y Kiro).
+// de instrucciones con cabecera propia (VS Code).
 func stripManagedFrontmatter(content string) string {
 	normalized := strings.ReplaceAll(content, "\r\n", "\n")
 	for _, header := range []string{
 		filemerge.SDDInstructionsFrontmatter,
 		filemerge.LegacySDDInstructionsFrontmatter,
-		filemerge.SDDSteeringFrontmatter,
 	} {
 		if strings.HasPrefix(normalized, header) {
 			return normalized[len(header):]

@@ -296,8 +296,6 @@ func TestAllEmbeddedAssetsAreReadable(t *testing.T) {
 		"cursor/agents/sdd-verify.md",
 		"cursor/agents/sdd-archive.md",
 
-		// Kiro agent files
-
 		// SDD skills
 		"skills/sdd-init/SKILL.md",
 		"skills/sdd-init/references/init-details.md",
@@ -324,7 +322,6 @@ func TestAllEmbeddedAssetsAreReadable(t *testing.T) {
 		"skills/_shared/sdd-status-contract.md",
 		"skills/_shared/research-lifecycle.md",
 		"skills/_shared/project-baseline-convention.md",
-		"kiro/agents/sdd-research.md",
 
 		// Foundation skills
 		"skills/go-testing/SKILL.md",
@@ -811,10 +808,6 @@ func TestSDDResearchRuntimeAssetsDeclareExactEvidenceGrants(t *testing.T) {
 			forbidden: []string{"Read", "Edit", "Write", "mcp__plugin_engram_engram__"},
 			required:  []string{"Do not read or mutate repository or Engram state", "The orchestrator supplies relevant context and handles any authorized persistence", "never invent access or unsupported claims"},
 		},
-		{
-			path: "kiro/agents/sdd-research.md", declaration: "Use only actually available and authorized external tools",
-			toolLine: "tools:", evidence: []string{"@context7"},
-		},
 		{path: "cursor/agents/sdd-research.md", declaration: "Use only actually available and authorized external tools"},
 	}
 
@@ -924,7 +917,6 @@ func TestPlatformNativeSDDOrchestratorsAvoidOpenCodePersistenceClaims(t *testing
 		path     string
 		required []string
 	}{
-		{path: "kiro/sdd-orchestrator.md", required: []string{"Kiro phase context", "native Kiro subagent context", "approval"}},
 		{path: "antigravity/sdd-orchestrator.md", required: []string{"define_subagent", "invoke_subagent", "dynamic subagent context", "enable_mcp_tools: true"}},
 	}
 
@@ -970,7 +962,6 @@ func TestGentlemanLanguageInstructionsDoNotBiasEnglishSessions(t *testing.T) {
 		// Rules opener instead (JD-019).
 		{path: "claude/persona-gentleman.md", combineWith: "claude/output-style-gentleman.md", languagePhrase: "Always match the user's current language in your reply."},
 		{path: "generic/persona-gentleman.md", languagePhrase: "Match the user's current language in your REPLY ONLY"},
-		{path: "kiro/persona-gentleman.md", languagePhrase: "Match the user's current language in your REPLY ONLY"},
 		{path: "opencode/persona-gentleman.md", languagePhrase: "Match the user's current language in your REPLY ONLY"},
 	}
 
@@ -1191,7 +1182,6 @@ func TestPersonasContainContextualSkillLoadingDirective(t *testing.T) {
 		{path: "opencode/persona-gentleman.md", isClaude: false, invokeMsg: "read the matching SKILL.md"},
 		{path: "generic/persona-gentleman.md", isClaude: false, invokeMsg: "read the matching SKILL.md"},
 		{path: "generic/persona-neutral.md", isClaude: false, invokeMsg: "read the matching SKILL.md"},
-		{path: "kiro/persona-gentleman.md", isClaude: false, invokeMsg: "read the matching SKILL.md"},
 	}
 
 	for _, tc := range tests {
@@ -1818,7 +1808,7 @@ func TestProjectBaselineConventionCoversTheContextDeltaGatesAndModel(t *testing.
 		"## 7. Model for `sdd-archive` with a maintained context",
 		"Claude Code launches `sdd-archive` with the model assigned to `sdd-apply`",
 		`"Archive Directed Integration Model (MANDATORY)"`,
-		"In runtimes where the model is fixed per agent (OpenCode, Kiro, and others)",
+		"In runtimes where the model is fixed per agent (OpenCode and others)",
 		"assign `sdd-archive` an implementation-level model with the existing model selector",
 		"Never block archive on this",
 	} {
@@ -2231,7 +2221,6 @@ func TestOrchestratorsRequireAutomaticGatekeeper(t *testing.T) {
 		"cursor/sdd-orchestrator.md",
 		"gemini/sdd-orchestrator.md",
 		"generic/sdd-orchestrator.md",
-		"kiro/sdd-orchestrator.md",
 		"opencode/sdd-orchestrator.md",
 		"qwen/sdd-orchestrator.md",
 	}
@@ -2422,7 +2411,6 @@ func TestSDDArchiveFinalStateAuthorityContract(t *testing.T) {
 		"cursor/sdd-orchestrator.md",
 		"gemini/sdd-orchestrator.md",
 		"generic/sdd-orchestrator.md",
-		"kiro/sdd-orchestrator.md",
 		"opencode/sdd-orchestrator.md",
 		"qwen/sdd-orchestrator.md",
 	}
@@ -2445,7 +2433,6 @@ func TestSDDArchiveFinalStateAuthorityContract(t *testing.T) {
 	for _, path := range []string{
 		"claude/agents/sdd-archive.md",
 		"cursor/agents/sdd-archive.md",
-		"kiro/agents/sdd-archive.md",
 		"claude/commands/sdd-archive.md",
 		"opencode/commands/sdd-archive.md",
 	} {
@@ -3122,7 +3109,6 @@ func axiomPersonaAssetPaths() []string {
 		"claude/persona-axiom.md",
 		"claude/output-style-axiom.md",
 		"opencode/persona-axiom.md",
-		"kiro/persona-axiom.md",
 	}
 }
 
@@ -3169,7 +3155,7 @@ func TestSDDOptionalVerificationConsumersPreserveDiagnosticSemantics(t *testing.
 			}
 		}
 	})
-	for _, runtime := range []string{"cursor", "kiro"} {
+	for _, runtime := range []string{"cursor"} {
 		t.Run(runtime, func(t *testing.T) {
 			content := mustReadResolved(runtime + "/agents/sdd-verify.md")
 			for _, want := range []string{"Read design artifact (when available)", "Missing inputs limit conclusions", "never invent passing checks or completed tasks", "refreshed native task-progress routing", "independent of diagnostic findings"} {

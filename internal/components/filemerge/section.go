@@ -89,7 +89,7 @@ const (
 
 // Frontmatter the SDD component writes at the top of a prompt file it creates
 // from scratch, for the agents that keep their prompt in a file with its own
-// header (VS Code instructions files and Kiro steering files). The SDD injector
+// header (VS Code instructions files). The SDD injector
 // writes them and the legacy prompt retirement recognizes them, so each literal
 // has one definition.
 const (

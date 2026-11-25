@@ -346,7 +346,6 @@ func runInstall(flags InstallFlags, input InstallInput, detection system.Detecti
 		ClaudeModelAssignments:      claudeLegacyAssignmentsForState(input.Selection.ClaudeModelAssignments, claudePhaseState),
 		ClaudePhaseAssignments:      claudePhaseState,
 		CopilotPhaseAssignments:     state.CopilotAssignmentsToState(input.Selection.CopilotPhaseAssignments),
-		KiroModelAssignments:        kiroAliasesToStrings(input.Selection.KiroModelAssignments),
 		CodexModelAssignments:       codexEffortsToStrings(input.Selection.CodexModelAssignments),
 		CodexOrchestratorAssignment: codexOrchestratorToState(input.Selection.CodexOrchestratorAssignment),
 		CodexCarrilModelAssignments: input.Selection.CodexCarrilModelAssignments,
@@ -406,7 +405,7 @@ func mergeFullInstallState(existing, fresh state.InstallState) state.InstallStat
 	merged.Preset, merged.SDDMode, merged.StrictTDD = fresh.Preset, fresh.SDDMode, fresh.StrictTDD
 	merged.CommunityTools, merged.CommunityToolsConfigured = fresh.CommunityTools, fresh.CommunityToolsConfigured
 	merged.ClaudeModelAssignments, merged.ClaudePhaseAssignments = fresh.ClaudeModelAssignments, fresh.ClaudePhaseAssignments
-	merged.KiroModelAssignments, merged.CodexModelAssignments = fresh.KiroModelAssignments, fresh.CodexModelAssignments
+	merged.CodexModelAssignments = fresh.CodexModelAssignments
 	// Una instalación sin asignaciones de Copilot no las borra: se conservan las que
 	// ya hubiera en el estado del proyecto.
 	if fresh.CopilotPhaseAssignments != nil {
@@ -459,9 +458,6 @@ func mergeExplicitAgentInstallState(store state.Store, newState state.InstallSta
 	}
 	if newState.CopilotPhaseAssignments != nil {
 		merged.CopilotPhaseAssignments = newState.CopilotPhaseAssignments
-	}
-	if newState.KiroModelAssignments != nil {
-		merged.KiroModelAssignments = newState.KiroModelAssignments
 	}
 	if newState.CodexOrchestratorAssignment != nil {
 		merged.CodexOrchestratorAssignment = newState.CodexOrchestratorAssignment
@@ -1905,7 +1901,6 @@ func (s componentApplyStep) Run() error {
 				OpenCodeSettingsPath:        effectiveOpenCodeSettingsPath(s.homeDir, s.workspaceDir, s.scope, adapter),
 				ClaudeModelAssignments:      s.selection.ClaudeModelAssignments,
 				ClaudePhaseAssignments:      s.selection.ClaudePhaseAssignments,
-				KiroModelAssignments:        s.selection.KiroModelAssignments,
 				CopilotPhaseAssignments:     s.selection.CopilotPhaseAssignments,
 				CodexModelAssignments:       s.selection.CodexModelAssignments,
 				CodexCarrilModelAssignments: s.selection.CodexCarrilModelAssignments,
@@ -2757,12 +2752,6 @@ func componentPathsWithWorkspaceScoped(homeDir, workspaceDir string, scope Insta
 				// <project>/.codex/hooks.json for a workspace one.
 				paths = append(paths, filepath.Join(adapter.GlobalConfigDir(targetDir), "hooks.json"))
 			}
-			// SDD also writes the standalone Kiro skill-registry hook outside
-			// the skills directory; it shares the component's backup and
-			// verification contract. targetDir: Kiro supports workspace scope.
-			if p := sdd.SkillRegistryHookPath(adapter, targetDir); p != "" {
-				paths = append(paths, p)
-			}
 		case model.ComponentSkills:
 			for _, skillID := range selectedSkillIDs(selection) {
 				if skills.IsSDDSkill(skillID) {
@@ -3440,19 +3429,6 @@ func claudePhaseAssignmentsToState(m map[string]model.ClaudePhaseAssignment) map
 			continue
 		}
 		out[k] = state.ClaudePhaseAssignmentState{Model: string(v.Model), Effort: string(v.Effort)}
-	}
-	return out
-}
-
-// kiroAliasesToStrings converts a typed KiroModelAlias map to plain strings
-// for JSON serialisation in state.json.
-func kiroAliasesToStrings(m map[string]model.KiroModelAlias) map[string]string {
-	if len(m) == 0 {
-		return nil
-	}
-	out := make(map[string]string, len(m))
-	for k, v := range m {
-		out[k] = string(v)
 	}
 	return out
 }

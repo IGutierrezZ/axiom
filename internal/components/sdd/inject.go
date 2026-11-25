@@ -46,7 +46,6 @@ type InjectOptions struct {
 	// Prefer ClaudePhaseAssignments for new callers that need per-phase effort.
 	ClaudeModelAssignments      map[string]model.ClaudeModelAlias
 	ClaudePhaseAssignments      map[string]model.ClaudePhaseAssignment
-	KiroModelAssignments        map[string]model.KiroModelAlias
 	CodexModelAssignments       map[string]model.CodexEffort
 	CodexCarrilModelAssignments map[string]string // carril→model-id; nil = use defaults
 	CodexPhaseModelAssignments  map[string]string // phase→model-id; non-empty = Custom per-phase mode; nil/empty = preset/carril mode
@@ -109,51 +108,12 @@ func (opts InjectOptions) openCodeRenderOptions(adapter agents.Adapter, homeDir 
 	return options
 }
 
-// hookInjector is an optional adapter capability: if an adapter implements
-// this interface, sdd.Inject writes an Axiom-owned standalone hook file into
-// HooksDir(rootDir) that refreshes the skill registry at session start.
-// This intentionally does NOT extend agents.Adapter to avoid requiring all
-// adapters to implement no-op stubs.
-type hookInjector interface {
-	// HooksDir returns the directory the agent loads standalone hook files
-	// from (e.g. <rootDir>/.kiro/hooks/).
-	HooksDir(rootDir string) string
-}
-
-// skillRegistryHookFileName is the Axiom-owned hook file written into
-// hookInjector.HooksDir. User hooks live in their own files beside it.
-const skillRegistryHookFileName = "axiom-skill-registry.json"
-
-// SkillRegistryHookPath returns the standalone skill-registry hook file for
-// adapters implementing hookInjector, or "" when the adapter has no such
-// capability. Callers outside sdd use it for backup, verification and
-// uninstall without asserting on unexported types or agent IDs.
-func SkillRegistryHookPath(adapter agents.Adapter, rootDir string) string {
-	hooks, ok := adapter.(hookInjector)
-	if !ok {
-		return ""
-	}
-	dir := hooks.HooksDir(rootDir)
-	if dir == "" {
-		return ""
-	}
-	return filepath.Join(dir, skillRegistryHookFileName)
-}
-
-// kiroModelResolver is an optional adapter capability. When implemented,
-// the subagent copy loop resolves KiroModelAlias values to native model IDs
-// and stamps them into the agent frontmatter sentinel {{KIRO_MODEL}}.
-// Adapters that do not implement this interface are unaffected.
-type kiroModelResolver interface {
-	KiroModelID(alias model.KiroModelAlias) string
-}
-
 // claudeModelResolver is an optional adapter capability. When implemented,
 // the subagent copy loop stamps the resolved ClaudeModelAlias into the agent
 // frontmatter sentinel {{CLAUDE_MODEL}}. Claude Code accepts "fable", "opus",
 // "sonnet", and "haiku" directly as model values, so the resolver is effectively an
 // identity function on the alias string — but the interface keeps the opt-in
-// shape consistent with kiroModelResolver.
+// opt-in shape consistent with the other resolvers.
 type claudeModelResolver interface {
 	ClaudeModelID(alias model.ClaudeModelAlias) string
 }
@@ -425,7 +385,7 @@ func Inject(homeDir string, adapter agents.Adapter, sddMode model.SDDModeID, opt
 			changed = changed || result.Changed
 			files = append(files, result.Files...)
 
-		case model.StrategyFileReplace, model.StrategyAppendToFile, model.StrategyInstructionsFile, model.StrategySteeringFile:
+		case model.StrategyFileReplace, model.StrategyAppendToFile, model.StrategyInstructionsFile:
 			// For FileReplace/AppendToFile agents, the SDD orchestrator is included
 			// in the generic persona asset. However, if the user chose neutral or
 			// custom persona, the SDD content must still be injected. We append the
@@ -1427,13 +1387,6 @@ func readMisnamedOpenCodeGentlemanSDDPrompt(settingsPath string) (string, error)
 }
 
 func installSkillRegistryAutomation(homeDir string, adapter agents.Adapter) (InjectionResult, error) {
-	if path := SkillRegistryHookPath(adapter, homeDir); path != "" {
-		changed, err := ensureKiroSkillRegistryHook(path)
-		if err != nil {
-			return InjectionResult{}, fmt.Errorf("install Kiro skill-registry hook: %w", err)
-		}
-		return InjectionResult{Changed: changed, Files: []string{path}}, nil
-	}
 	if adapter.Agent() == model.AgentCodex {
 		hooksPath := filepath.Join(adapter.GlobalConfigDir(homeDir), "hooks.json")
 		changed, err := ensureCodexSkillRegistryHook(hooksPath)
@@ -1537,54 +1490,6 @@ func ensureCodexSkillRegistryHook(hooksPath string) (bool, error) {
 	wr, err := filemerge.WriteFileAtomic(hooksPath, out, 0o644)
 	if err != nil {
 		return false, err
-	}
-	return wr.Changed, nil
-}
-
-// kiroSkillRegistryHookCommand uses a relative --cwd because "." resolves the
-// same way in cmd, PowerShell and sh, while "$PWD" and "|| true" do not. A
-// failing SessionStart hook only warns in Kiro, so no fallback is needed.
-const kiroSkillRegistryHookCommand = "axiom skill-registry refresh --quiet --no-gitignore --cwd ."
-
-type kiroHookFile struct {
-	Version string     `json:"version"`
-	Hooks   []kiroHook `json:"hooks"`
-}
-
-type kiroHook struct {
-	Name    string         `json:"name"`
-	Trigger string         `json:"trigger"`
-	Action  kiroHookAction `json:"action"`
-}
-
-type kiroHookAction struct {
-	Type    string `json:"type"`
-	Command string `json:"command"`
-}
-
-// ensureKiroSkillRegistryHook writes the canonical Axiom-owned Kiro hook file.
-// The whole file belongs to Axiom: manual edits are overwritten (backups cover
-// them) and identical bytes report Changed=false.
-func ensureKiroSkillRegistryHook(path string) (bool, error) {
-	file := kiroHookFile{
-		Version: "v1",
-		Hooks: []kiroHook{{
-			Name:    "axiom-skill-registry",
-			Trigger: "SessionStart",
-			Action:  kiroHookAction{Type: "command", Command: kiroSkillRegistryHookCommand},
-		}},
-	}
-	out, err := json.MarshalIndent(file, "", "  ")
-	if err != nil {
-		return false, fmt.Errorf("marshal Kiro hook %q: %w", path, err)
-	}
-	out = append(out, '\n')
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		return false, fmt.Errorf("create Kiro hooks dir for %q: %w", path, err)
-	}
-	wr, err := filemerge.WriteFileAtomic(path, out, 0o644)
-	if err != nil {
-		return false, fmt.Errorf("write Kiro hook %q: %w", path, err)
 	}
 	return wr.Changed, nil
 }
@@ -2568,10 +2473,6 @@ func injectFileAppend(homeDir string, adapter agents.Adapter, content string) (I
 		existing = filemerge.SDDInstructionsFrontmatter
 	}
 
-	if adapter.SystemPromptStrategy() == model.StrategySteeringFile && strings.TrimSpace(existing) == "" {
-		existing = filemerge.SDDSteeringFrontmatter
-	}
-
 	// If there is a bare (un-marked) legacy orchestrator block, strip it first
 	// so InjectMarkdownSection can re-inject the current canonical content.
 	if hasLegacyBareOrchestrator(existing) {
@@ -3338,28 +3239,6 @@ func writeSubAgents(homeDir string, adapter agents.Adapter, opts InjectOptions) 
 		// Copy all files, not just .md
 		contentStr := renderManagedAsset(adapter.Agent(), embeddedDir+"/"+entry.Name())
 		contentStr = resolveSkillsDirPlaceholders(contentStr, adapter, workspaceRootFor(homeDir, opts))
-
-		// Resolve {{KIRO_MODEL}} placeholder for adapters that support it (e.g. Kiro).
-		// Non-Kiro adapters (Cursor, etc.) don't implement kiroModelResolver and are unaffected.
-		if kmr, ok := adapter.(kiroModelResolver); ok {
-			phase := strings.TrimSuffix(entry.Name(), ".md")
-			alias := model.KiroModelAuto // safe default
-			if opts.KiroModelAssignments != nil {
-				if a, hasAlias := opts.KiroModelAssignments[phase]; hasAlias {
-					alias = a
-				} else if d, hasDefault := opts.KiroModelAssignments["default"]; hasDefault {
-					alias = d
-				}
-			} else if opts.ClaudeModelAssignments != nil {
-				// Backward-compatible fallback when Kiro-specific assignments are not provided.
-				if a, hasAlias := opts.ClaudeModelAssignments[phase]; hasAlias {
-					alias = model.KiroModelAlias(a)
-				} else if d, hasDefault := opts.ClaudeModelAssignments["default"]; hasDefault {
-					alias = model.KiroModelAlias(d)
-				}
-			}
-			contentStr = strings.ReplaceAll(contentStr, "{{KIRO_MODEL}}", kmr.KiroModelID(alias))
-		}
 
 		// Resolve {{CLAUDE_MODEL}} placeholder for adapters that support it (e.g. Claude Code).
 		// Non-Claude adapters don't implement claudeModelResolver and are unaffected.

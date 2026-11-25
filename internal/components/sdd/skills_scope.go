@@ -18,12 +18,8 @@ import (
 //   - skillsDirPlaceholder: directorio de skills con separador `/`.
 //     Global: `~/<dir de skills del adaptador>`. Workspace: la misma ruta
 //     relativa a la raíz del proyecto.
-//   - skillsDirWindowsPlaceholder: la misma ruta con la grafía de Windows que
-//     usa Kiro en sus agentes (`%USERPROFILE%\\.kiro\\skills`, con barra
-//     invertida doble literal por estar en Markdown).
 const (
-	skillsDirPlaceholder        = "{{AXIOM_SKILLS_DIR}}"
-	skillsDirWindowsPlaceholder = "{{AXIOM_SKILLS_DIR_WIN}}"
+	skillsDirPlaceholder = "{{AXIOM_SKILLS_DIR}}"
 )
 
 // installsInWorkspace indica si la inyección de rootDir cae en el workspace.
@@ -73,12 +69,9 @@ func resolveSkillsDirPlaceholders(content string, adapter agents.Adapter, worksp
 		return content
 	}
 	posix := "~/" + rel
-	windows := `%USERPROFILE%\\` + strings.ReplaceAll(rel, "/", `\\`)
 	if workspace {
 		posix = rel
-		windows = strings.ReplaceAll(rel, "/", `\\`)
 	}
-	content = strings.ReplaceAll(content, skillsDirWindowsPlaceholder, windows)
 	return strings.ReplaceAll(content, skillsDirPlaceholder, posix)
 }
 

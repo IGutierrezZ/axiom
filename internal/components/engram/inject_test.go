@@ -2082,12 +2082,11 @@ func TestProtocolForSelectsSlimOrFullPerDecision1Matrix(t *testing.T) {
 		{model.AgentCursor, false},
 		{model.AgentVSCodeCopilot, false},
 		{model.AgentGitHubCopilotCLI, false},
-		{model.AgentKiroIDE, false},
 		{model.AgentTrae, false},
 	}
 
-	if len(tests) != 11 {
-		t.Fatalf("expected 11 non-Pi adapters in the Decision 1 matrix, got %d", len(tests))
+	if len(tests) != 10 {
+		t.Fatalf("expected 10 non-Pi adapters in the Decision 1 matrix, got %d", len(tests))
 	}
 
 	slim := protocolSlim()

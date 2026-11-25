@@ -249,9 +249,6 @@ var featureClaimsByAgent = map[model.AgentID]AgentFeatureClaims{
 	model.AgentGitHubCopilotCLI: {
 		Skills: true, SystemPrompt: true, MCP: true,
 	},
-	model.AgentKiroIDE: {
-		FileSubAgents: true, Skills: true, SystemPrompt: true, MCP: true,
-	},
 	model.AgentOpenCode: {
 		SlashCommands: true, Skills: true, SystemPrompt: true, MCP: true,
 	},

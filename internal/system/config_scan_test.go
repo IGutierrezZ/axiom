@@ -25,9 +25,9 @@ func TestScanConfigs_ReturnsAllKnownAgentsWithExistsFlag(t *testing.T) {
 	configs := ScanConfigs(home)
 
 	// Must return at least as many entries as the registry has adapters with
-	// a non-empty GlobalConfigDir. Currently 12 agents are supported.
-	if len(configs) < 12 {
-		t.Fatalf("ScanConfigs() returned %d entries, want >= 12; got %v", len(configs), configs)
+	// a non-empty GlobalConfigDir. Currently 11 agents are supported.
+	if len(configs) < 11 {
+		t.Fatalf("ScanConfigs() returned %d entries, want >= 11; got %v", len(configs), configs)
 	}
 
 	// Find claude — must be Exists=true.
@@ -77,7 +77,6 @@ func TestScanConfigs_AgentFieldMatchesModelAgentID(t *testing.T) {
 		"codex":              false,
 		"antigravity":        false,
 		"qwen-code":          false,
-		"kiro-ide":           false,
 		"pi":                 false,
 		"trae-ide":           false,
 		"github-copilot-cli": false,

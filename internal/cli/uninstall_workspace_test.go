@@ -381,22 +381,21 @@ func TestUninstallWorkspacePartialKeepsTheOtherAgentsAndTheSharedSkills(t *testi
 	}
 }
 
-// Cursor y Kiro también vuelven a como estaban, conservando lo del equipo.
-func TestUninstallWorkspaceCursorAndKiroKeepTheTeamsContent(t *testing.T) {
+// Cursor también vuelve a como estaba, conservando lo del equipo.
+func TestUninstallWorkspaceCursorKeepsTheTeamsContent(t *testing.T) {
 	t.Setenv("AXIOM_STATE_DIR", t.TempDir())
 	home, workspace, _ := footprintEnv(t)
 	seedFootprintHome(t, home)
 	seed := map[string]string{
-		"AGENTS.md":                                     "# Reglas del equipo\n",
-		filepath.Join(".cursor", "mcp.json"):            `{"mcpServers":{"mi-servidor":{"command":"node","args":["s.js"]}}}`,
-		filepath.Join(".kiro", "steering", "equipo.md"): "Steering del equipo.\n",
-		filepath.Join("docs", "reglas.md"):              "Reglas.\n",
+		"AGENTS.md":                          "# Reglas del equipo\n",
+		filepath.Join(".cursor", "mcp.json"): `{"mcpServers":{"mi-servidor":{"command":"node","args":["s.js"]}}}`,
+		filepath.Join("docs", "reglas.md"):   "Reglas.\n",
 	}
 	for rel, content := range seed {
 		mustWriteFile(t, filepath.Join(workspace, rel), []byte(content))
 	}
 
-	if _, err := RunInstall([]string{"--scope", "workspace", "--agent", "cursor,kiro-ide"}, macOSDetectionResult()); err != nil {
+	if _, err := RunInstall([]string{"--scope", "workspace", "--agent", "cursor"}, macOSDetectionResult()); err != nil {
 		t.Fatalf("RunInstall() error = %v", err)
 	}
 	runWorkspaceUninstall(t, "--all", "--scope", "workspace")

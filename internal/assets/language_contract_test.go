@@ -43,7 +43,7 @@ var directReplyEnglishNoCodeSwitchRequired = []string{
 
 // orchestratorTemplateCount es el número de plantillas de orquestador SDD por agente
 // (más la genérica) que se embeben.
-const orchestratorTemplateCount = 9
+const orchestratorTemplateCount = 8
 
 func TestManagedDirectReplyAssetsEnforceEnglishNoCodeSwitching(t *testing.T) {
 	tests := []struct {
@@ -54,7 +54,6 @@ func TestManagedDirectReplyAssetsEnforceEnglishNoCodeSwitching(t *testing.T) {
 		{name: "claude axiom output style", path: "claude/output-style-axiom.md"},
 		{name: "claude axiom persona", path: "claude/persona-axiom.md", combineWith: "claude/output-style-axiom.md"},
 		{name: "generic axiom persona", path: "generic/persona-axiom.md"},
-		{name: "kiro axiom persona", path: "kiro/persona-axiom.md"},
 		{name: "opencode axiom persona", path: "opencode/persona-axiom.md"},
 		{name: "claude gentleman output style", path: "claude/output-style-gentleman.md"},
 		{name: "claude neutral output style", path: "claude/output-style-neutral.md"},
@@ -64,7 +63,6 @@ func TestManagedDirectReplyAssetsEnforceEnglishNoCodeSwitching(t *testing.T) {
 		{name: "claude gentleman persona", path: "claude/persona-gentleman.md", combineWith: "claude/output-style-gentleman.md"},
 		{name: "generic gentleman persona", path: "generic/persona-gentleman.md"},
 		{name: "generic neutral persona", path: "generic/persona-neutral.md"},
-		{name: "kiro gentleman persona", path: "kiro/persona-gentleman.md"},
 		{name: "opencode gentleman persona", path: "opencode/persona-gentleman.md"},
 	}
 
@@ -144,7 +142,6 @@ func TestSupportedAgentSDDLanguageMatrix(t *testing.T) {
 		{agent: "codex", path: "codex/sdd-orchestrator.md"},
 		{agent: "antigravity", path: "antigravity/sdd-orchestrator.md"},
 		{agent: "qwen-code", path: "qwen/sdd-orchestrator.md"},
-		{agent: "kiro-ide", path: "kiro/sdd-orchestrator.md"},
 		{agent: "pi", path: "generic/sdd-orchestrator.md"},
 		{agent: "trae-ide", path: "generic/sdd-orchestrator.md"},
 	}
@@ -207,8 +204,8 @@ func TestSDDOrchestratorAssetsUseCanonicalResearchGate(t *testing.T) {
 
 func TestSDDProposeAssetsKeepProductDecisionsUserOwned(t *testing.T) {
 	paths := allSDDProposeAssetPaths(t)
-	if len(paths) < 3 {
-		t.Fatalf("SDD propose asset count = %d, want at least 3", len(paths))
+	if len(paths) < 2 {
+		t.Fatalf("SDD propose asset count = %d, want at least 2", len(paths))
 	}
 	for _, path := range paths {
 		t.Run(path, func(t *testing.T) {
@@ -282,7 +279,6 @@ func TestGentlemanPersonaKeepsDirectConversationVoice(t *testing.T) {
 	}{
 		{path: "claude/persona-gentleman.md", combineWith: "claude/output-style-gentleman.md"},
 		{path: "generic/persona-gentleman.md"},
-		{path: "kiro/persona-gentleman.md"},
 		{path: "opencode/persona-gentleman.md"},
 	}
 	for _, tc := range tests {
@@ -449,7 +445,6 @@ func TestPersonaChannelsCarryPreWriteArtifactSelfCheck(t *testing.T) {
 		"claude/output-style-neutral.md",
 		"generic/persona-gentleman.md",
 		"generic/persona-neutral.md",
-		"kiro/persona-gentleman.md",
 		"opencode/persona-gentleman.md",
 	}
 	for _, path := range paths {
@@ -483,7 +478,6 @@ func TestPersonaAxiomAssetsContract(t *testing.T) {
 		"claude/persona-axiom.md",
 		"claude/output-style-axiom.md",
 		"opencode/persona-axiom.md",
-		"kiro/persona-axiom.md",
 	}
 
 	for _, path := range paths {

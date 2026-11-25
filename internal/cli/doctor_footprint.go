@@ -111,7 +111,7 @@ func collectMachineFootprint(homeDir, root string, installed state.InstallState)
 		add(footprintGlobalLeftover, "plugins de OpenCode en HOME", strings.Join(plugins, ", "))
 	}
 
-	// Kiro y Codex: cada resto con su agente. Los detecta el mismo código que
+	// Codex: cada resto con su agente. Los detecta el mismo código que
 	// los retira en `uninstall --scope global`.
 	for _, leftover := range componentuninstall.GlobalAgentLeftovers(homeDir) {
 		add(footprintGlobalLeftover, leftover.Label, strings.Join(leftover.Paths, ", "))

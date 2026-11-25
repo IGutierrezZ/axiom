@@ -18,7 +18,6 @@ var allAgents = []Agent{
 	{ID: model.AgentVSCodeCopilot, Name: "VS Code Copilot", Tier: model.TierFull, ConfigPath: "~/.copilot"},
 	{ID: model.AgentAntigravity, Name: "Google Antigravity", Tier: model.TierFull, ConfigPath: "~/.gemini/antigravity-cli"},
 	{ID: model.AgentQwenCode, Name: "Qwen Code", Tier: model.TierFull, ConfigPath: "~/.qwen"},
-	{ID: model.AgentKiroIDE, Name: "Kiro IDE", Tier: model.TierFull, ConfigPath: "~/.kiro"},
 	{ID: model.AgentPi, Name: "Pi", Tier: model.TierFull, ConfigPath: "~/.pi"},
 	{ID: model.AgentTrae, Name: "Trae IDE", Tier: model.TierFull, ConfigPath: "~/.trae"},
 	{ID: model.AgentGitHubCopilotCLI, Name: "GitHub Copilot CLI", Tier: model.TierFull, ConfigPath: "~/.copilot"},

@@ -9,7 +9,6 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/copilotcli"
 	cursoradapter "github.com/IGutierrezZ/axiom/v3/internal/agents/cursor"
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/gemini"
-	"github.com/IGutierrezZ/axiom/v3/internal/agents/kiro"
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/opencode"
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/pi"
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/qwen"
@@ -27,7 +26,6 @@ var defaultAgentIDs = []model.AgentID{
 	model.AgentCodex,
 	model.AgentAntigravity,
 	model.AgentQwenCode,
-	model.AgentKiroIDE,
 	model.AgentPi,
 	model.AgentTrae,
 	model.AgentGitHubCopilotCLI,
@@ -51,8 +49,6 @@ func NewAdapter(agent model.AgentID) (Adapter, error) {
 		return antigravity.NewAdapter(), nil
 	case model.AgentQwenCode:
 		return qwen.NewAdapter(), nil
-	case model.AgentKiroIDE:
-		return kiro.NewAdapter(), nil
 	case model.AgentPi:
 		return pi.NewAdapter(), nil
 	case model.AgentTrae:
@@ -115,7 +111,7 @@ func NewMVPRegistry() (*Registry, error) {
 // instrucciones y MCP vayan a .github/ y .vscode/. Además, en el proyecto las
 // skills de todos los que leen .agents/skills (Codex, VS Code, OpenCode, Gemini
 // y Cursor) van a esa carpeta compartida (.agents/skills) y no a una
-// propia por agente. El resto de adaptadores (Claude Code, Kiro...) se devuelven sin
+// propia por agente. El resto de adaptadores (Claude Code...) se devuelven sin
 // cambios: su carpeta de configuración ya es una carpeta de punto en la raíz.
 func BindWorkspace(adapter Adapter, root string) Adapter {
 	if root == "" {

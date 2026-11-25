@@ -66,7 +66,6 @@ func UserSkillDirs(home string) []string {
 		filepath.Join(home, ".copilot", "skills"),
 		filepath.Join(home, ".codex", "skills"),
 		filepath.Join(home, ".qwen", "skills"),
-		filepath.Join(home, ".kiro", "skills"),
 	}
 }
 
@@ -102,7 +101,6 @@ func ProjectSkillDirs(cwd string) []string {
 		filepath.Join(cwd, ".github", "skills"),
 		filepath.Join(cwd, ".codex", "skills"),
 		filepath.Join(cwd, ".qwen", "skills"),
-		filepath.Join(cwd, ".kiro", "skills"),
 
 		// Gentle AI/Pi and generic Agent Skills workspace locations.
 		filepath.Join(cwd, ".pi", "skills"),
@@ -588,7 +586,6 @@ var perAgentSkillsPrefixes = []string{
 	".github/skills/",
 	".codex/skills/",
 	".qwen/skills/",
-	".kiro/skills/",
 	".pi/skills/",
 }
 

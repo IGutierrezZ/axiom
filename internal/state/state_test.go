@@ -64,7 +64,6 @@ func fullyPopulatedInstallState() InstallState {
 		ClaudePhaseAssignments: map[string]ClaudePhaseAssignmentState{
 			"sdd-apply": {Model: "opus", Effort: "max"},
 		},
-		KiroModelAssignments: map[string]string{"sdd-design": "opus"},
 		CodexModelAssignments: map[string]string{
 			"sdd-verify": "high",
 		},
@@ -137,7 +136,6 @@ func TestMergeAgents(t *testing.T) {
 		"sdd-init": {ProviderID: "anthropic", ModelID: "claude-sonnet-4"},
 	}
 	existingClaude := map[string]string{"sdd-explore": "sonnet", "sdd-archive": "haiku"}
-	existingKiro := map[string]string{"sdd-design": "opus"}
 	existingCommunityTools := []string{"codegraph"}
 
 	tests := []struct {
@@ -178,7 +176,6 @@ func TestMergeAgents(t *testing.T) {
 				CommunityToolsConfigured: true,
 				ModelAssignments:         existingAssignments,
 				ClaudeModelAssignments:   existingClaude,
-				KiroModelAssignments:     existingKiro,
 				Persona:                  "gentleman",
 			},
 			newAgents: []string{"pi"},
@@ -200,9 +197,6 @@ func TestMergeAgents(t *testing.T) {
 			}
 			if !reflect.DeepEqual(got.ClaudeModelAssignments, tt.existing.ClaudeModelAssignments) {
 				t.Errorf("ClaudeModelAssignments not preserved: got %v, want %v", got.ClaudeModelAssignments, tt.existing.ClaudeModelAssignments)
-			}
-			if !reflect.DeepEqual(got.KiroModelAssignments, tt.existing.KiroModelAssignments) {
-				t.Errorf("KiroModelAssignments not preserved: got %v, want %v", got.KiroModelAssignments, tt.existing.KiroModelAssignments)
 			}
 			if got.Persona != tt.existing.Persona {
 				t.Errorf("Persona not preserved: got %q, want %q", got.Persona, tt.existing.Persona)
@@ -498,11 +492,6 @@ func TestModelAssignmentsRoundTrip(t *testing.T) {
 			"sdd-propose":  "fable",
 			"sdd-archive":  "haiku",
 		},
-		KiroModelAssignments: map[string]string{
-			"sdd-design":  "opus",
-			"sdd-archive": "haiku",
-			"default":     "sonnet",
-		},
 		ModelAssignments: map[string]ModelAssignmentState{
 			"sdd-init": {ProviderID: "anthropic", ModelID: "claude-sonnet-4"},
 		},
@@ -519,9 +508,6 @@ func TestModelAssignmentsRoundTrip(t *testing.T) {
 
 	if !reflect.DeepEqual(got.ClaudeModelAssignments, want.ClaudeModelAssignments) {
 		t.Errorf("ClaudeModelAssignments = %v, want %v", got.ClaudeModelAssignments, want.ClaudeModelAssignments)
-	}
-	if !reflect.DeepEqual(got.KiroModelAssignments, want.KiroModelAssignments) {
-		t.Errorf("KiroModelAssignments = %v, want %v", got.KiroModelAssignments, want.KiroModelAssignments)
 	}
 	if !reflect.DeepEqual(got.ModelAssignments, want.ModelAssignments) {
 		t.Errorf("ModelAssignments = %v, want %v", got.ModelAssignments, want.ModelAssignments)

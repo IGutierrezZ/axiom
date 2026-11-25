@@ -4521,10 +4521,6 @@ func TestRunSyncLoadsPersistedModelAssignments(t *testing.T) {
 			"orchestrator": "opus",
 			"sdd-apply":    "sonnet",
 		},
-		KiroModelAssignments: map[string]string{
-			"sdd-design": "glm",
-			"default":    "auto",
-		},
 		ModelAssignments: map[string]state.ModelAssignmentState{
 			"sdd-init": {ProviderID: "anthropic", ModelID: "claude-sonnet-4"},
 		},
@@ -4547,12 +4543,6 @@ func TestRunSyncLoadsPersistedModelAssignments(t *testing.T) {
 	}
 	if got := result.Selection.ClaudeModelAssignments["sdd-apply"]; got != "sonnet" {
 		t.Errorf("ClaudeModelAssignments[sdd-apply] = %q, want %q", got, "sonnet")
-	}
-	if got := result.Selection.KiroModelAssignments["sdd-design"]; got != model.KiroModelGLM {
-		t.Errorf("KiroModelAssignments[sdd-design] = %q, want %q", got, model.KiroModelGLM)
-	}
-	if got := result.Selection.KiroModelAssignments["default"]; got != model.KiroModelAuto {
-		t.Errorf("KiroModelAssignments[default] = %q, want %q", got, model.KiroModelAuto)
 	}
 
 	// OpenCode assignments must be loaded.
@@ -5924,9 +5914,6 @@ func TestRunSyncDryRunResolvesPersonaFromState(t *testing.T) {
 		ClaudeModelAssignments: map[string]string{
 			"sdd-apply": "sonnet",
 		},
-		KiroModelAssignments: map[string]string{
-			"default": "auto",
-		},
 		ModelAssignments: map[string]state.ModelAssignmentState{
 			"sdd-init": {ProviderID: "anthropic", ModelID: "claude-sonnet-4"},
 		},
@@ -5962,9 +5949,6 @@ func TestRunSyncDryRunFallsBackToNeutralWhenStateLacksPersona(t *testing.T) {
 		// No Persona field — pre-persona-persistence install.
 		ClaudeModelAssignments: map[string]string{
 			"sdd-apply": "sonnet",
-		},
-		KiroModelAssignments: map[string]string{
-			"default": "auto",
 		},
 		ModelAssignments: map[string]state.ModelAssignmentState{
 			"sdd-init": {ProviderID: "anthropic", ModelID: "claude-sonnet-4"},
@@ -6191,7 +6175,6 @@ func TestRunSyncPreservesCompletePersistedState(t *testing.T) {
 		CopilotPhaseAssignments: map[string]state.CopilotPhaseAssignmentState{
 			"sdd-apply": {Model: "Claude Sonnet 4.6 (copilot)", Effort: "high"},
 		},
-		KiroModelAssignments: map[string]string{"sdd-design": "sonnet"},
 		CodexModelAssignments: map[string]string{
 			"sdd-apply": "medium",
 		},
@@ -6690,53 +6673,6 @@ func TestSyncBackupTargetsScopedWorkspace(t *testing.T) {
 	claudePrompt := claudeAdapter.SystemPromptFile(workspace)
 	if !containsPath(targets, claudePrompt) {
 		t.Errorf("targets missing Claude workspace prompt %q: %v", claudePrompt, targets)
-	}
-}
-
-// TestSyncBackupTargetsScopedWorkspaceKiroStaysInWorkspace comprueba que sync en
-// ámbito workspace no declara rutas de Kiro bajo home. APPDATA y XDG_CONFIG_HOME
-// apuntan bajo home para que una fuga de SettingsPath se detecte.
-func TestSyncBackupTargetsScopedWorkspaceKiroStaysInWorkspace(t *testing.T) {
-	home := t.TempDir()
-	workspace := t.TempDir()
-	t.Setenv("APPDATA", filepath.Join(home, "AppData", "Roaming"))
-	t.Setenv("XDG_CONFIG_HOME", filepath.Join(home, ".config"))
-	homePrefix := home + string(filepath.Separator)
-
-	selection := model.Selection{
-		Agents:     []model.AgentID{model.AgentKiroIDE},
-		Components: []model.ComponentID{model.ComponentSDD, model.ComponentEngram, model.ComponentSkills, model.ComponentContext7, model.ComponentPersona},
-		SDDMode:    model.SDDModeSingle,
-		Persona:    model.PersonaNeutral,
-	}
-	adapters := resolveAdapters(selection.Agents)
-
-	for _, comp := range selection.Components {
-		t.Run(string(comp), func(t *testing.T) {
-			for _, p := range syncComponentPathsWithWorkspaceScoped(home, workspace, ScopeWorkspace, selection, adapters, comp) {
-				if strings.HasPrefix(p, homePrefix) {
-					t.Errorf("componente %s: la ruta %q está bajo home, se esperaba bajo el workspace %q", comp, p, workspace)
-				}
-			}
-		})
-	}
-
-	targets, err := syncBackupTargetsScoped(home, workspace, ScopeWorkspace, selection, adapters)
-	if err != nil {
-		t.Fatalf("syncBackupTargetsScoped() error = %v", err)
-	}
-	for _, p := range targets {
-		if strings.HasPrefix(p, homePrefix) {
-			t.Errorf("objetivo de backup %q está bajo home, se esperaba bajo el workspace %q", p, workspace)
-		}
-	}
-	for _, want := range []string{
-		filepath.Join(workspace, ".kiro", "steering", "axiom.md"),
-		filepath.Join(workspace, ".kiro", "settings", "mcp.json"),
-	} {
-		if !containsPath(targets, want) {
-			t.Errorf("faltan objetivos de backup de Kiro en el workspace %q: %v", want, targets)
-		}
 	}
 }
 

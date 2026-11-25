@@ -639,7 +639,7 @@ Un binario anterior ignora el bloque `technical_context:` y no ve el puntero en 
 
 #### Modelo de `sdd-archive` con contexto mantenido
 
-El contexto mantenido lo edita el propio `sdd-archive`, lo que exige un modelo de nivel de implementación. Claude Code lo resuelve solo: el orquestador lanza `sdd-archive` con el modelo asignado a `sdd-apply` cuando el estado proyecta contexto mantenido. En los runtimes con el modelo fijado por agente (OpenCode, Kiro y otros) no existe esa elevación: al declarar contexto mantenido, asigna a `sdd-archive` un modelo de nivel de implementación con el selector de modelos existente. Nunca bloquea el archivado: `axiom archive context verify` protege el resultado con cualquier modelo.
+El contexto mantenido lo edita el propio `sdd-archive`, lo que exige un modelo de nivel de implementación. Claude Code lo resuelve solo: el orquestador lanza `sdd-archive` con el modelo asignado a `sdd-apply` cuando el estado proyecta contexto mantenido. En los runtimes con el modelo fijado por agente (OpenCode y otros) no existe esa elevación: al declarar contexto mantenido, asigna a `sdd-archive` un modelo de nivel de implementación con el selector de modelos existente. Nunca bloquea el archivado: `axiom archive context verify` protege el resultado con cualquier modelo.
 
 ---
 

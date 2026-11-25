@@ -9,7 +9,7 @@ import (
 
 // Contract assertions describe shipped guidance, not live interviews or persistence.
 func TestResearchCollectorsKeepAuthorityOutputOnly(t *testing.T) {
-	for _, path := range []string{"claude/agents/sdd-research.md", "cursor/agents/sdd-research.md", "kiro/agents/sdd-research.md", "skills/sdd-research/SKILL.md"} {
+	for _, path := range []string{"claude/agents/sdd-research.md", "cursor/agents/sdd-research.md", "skills/sdd-research/SKILL.md"} {
 		t.Run(path, func(t *testing.T) {
 			content := assets.MustRead(path)
 			for _, required := range []string{"output-only evidence collector", "Do not read local artifacts or call persistence tools.", "Do not read or mutate repository or Engram state.", "actually available and authorized external tools", "primary sources", "contradictions", "freshness", "do not interview", "infer consent"} {
@@ -28,10 +28,6 @@ func TestResearchCollectorsKeepAuthorityOutputOnly(t *testing.T) {
 		if !strings.Contains(assets.MustRead(path), "readonly: true") {
 			t.Errorf("%s lost read-only execution", path)
 		}
-	}
-	kiro := assets.MustRead("kiro/agents/sdd-research.md")
-	if !strings.Contains(kiro, `tools: ["@context7"]`) || strings.Contains(kiro, "@builtin") || strings.Contains(kiro, "@engram") {
-		t.Fatal("Kiro research tools widened")
 	}
 	claude := assets.MustRead("claude/agents/sdd-research.md")
 	if !strings.Contains(claude, "tools: WebFetch, WebSearch") {

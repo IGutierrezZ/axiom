@@ -41,7 +41,6 @@ var codeGraphCompatibilityTable = map[model.AgentID]codeGraphCompatibility{
 	model.AgentCodex:         nativeCompatibility(model.AgentCodex, "codex"),
 	model.AgentAntigravity:   nativeCompatibility(model.AgentAntigravity, "antigravity"),
 	model.AgentQwenCode:      excludedCompatibility(model.AgentQwenCode),
-	model.AgentKiroIDE:       nativeCompatibility(model.AgentKiroIDE, "kiro"),
 	model.AgentPi:            reconciledCompatibility(model.AgentPi, ""),
 	model.AgentTrae:          excludedCompatibility(model.AgentTrae),
 	// CodeGraph tiene el destino `copilot-cli` (comprobado con `codegraph install
@@ -92,8 +91,6 @@ func codeGraphToolWiringPaths(homeDir string, adapter agents.Adapter) []string {
 			filepath.Join(homeDir, ".gemini", "config", "mcp_config.json"),
 			filepath.Join(homeDir, ".gemini", "antigravity", "mcp_config.json"),
 		}
-	case model.AgentKiroIDE:
-		return []string{filepath.Join(homeDir, ".kiro", "settings", "mcp.json")}
 	default:
 		paths := []string{adapter.MCPConfigPath(homeDir, "codegraph"), adapter.SettingsPath(homeDir)}
 		if _, ok := adapter.(agents.EffectiveCodeGraphWiringDetector); ok && strings.HasSuffix(adapter.SettingsPath(homeDir), ".json") {

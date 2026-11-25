@@ -417,7 +417,6 @@ func TestUserSkillDirsIncludesSupportedAgentSkillLocations(t *testing.T) {
 		filepath.Join(home, ".codex", "skills"),
 		filepath.Join(home, ".config", "agents", "skills"),
 		filepath.Join(home, ".qwen", "skills"),
-		filepath.Join(home, ".kiro", "skills"),
 		filepath.Join(home, ".pi", "agent", "skills"),
 		filepath.Join(home, ".agents", "skills"),
 	} {
@@ -440,7 +439,6 @@ func TestProjectSkillDirsIncludesWorkspaceSkillLocations(t *testing.T) {
 		filepath.Join(cwd, ".github", "skills"),
 		filepath.Join(cwd, ".codex", "skills"),
 		filepath.Join(cwd, ".qwen", "skills"),
-		filepath.Join(cwd, ".kiro", "skills"),
 		filepath.Join(cwd, ".pi", "skills"),
 		filepath.Join(cwd, ".agent", "skills"),
 		filepath.Join(cwd, ".agents", "skills"),

@@ -251,31 +251,6 @@ func injectInternal(homeDir string, adapter agents.Adapter, persona model.Person
 		changed = changed || writeResult.Changed
 		files = append(files, promptPath)
 
-	case model.StrategySteeringFile:
-		promptPath := adapter.SystemPromptFile(homeDir)
-
-		existing, readErr := readFileOrEmpty(promptPath)
-		if readErr != nil {
-			return InjectionResult{}, readErr
-		}
-
-		var steeringContent string
-		if preserved, ok := preserveManagedSections(existing, wrapSteeringFile(content), persona); ok {
-			steeringContent = preserved
-		} else {
-			steeringContent = wrapSteeringFile(content)
-		}
-
-		if err := os.MkdirAll(filepath.Dir(promptPath), 0o755); err != nil {
-			return InjectionResult{}, err
-		}
-		writeResult, err := filemerge.WriteFileAtomic(promptPath, []byte(steeringContent), 0o644)
-		if err != nil {
-			return InjectionResult{}, err
-		}
-		changed = changed || writeResult.Changed
-		files = append(files, promptPath)
-
 	case model.StrategyAppendToFile:
 		promptPath := adapter.SystemPromptFile(homeDir)
 
@@ -475,8 +450,6 @@ func axiomPersonaContent(agent model.AgentID, residualContentAvailable bool) str
 	switch agent {
 	case model.AgentOpenCode:
 		return assets.MustRead("opencode/persona-axiom.md")
-	case model.AgentKiroIDE:
-		return assets.MustRead("kiro/persona-axiom.md")
 	default:
 		return assets.MustRead("generic/persona-axiom.md")
 	}
@@ -500,8 +473,6 @@ func gentlemanPersonaContent(agent model.AgentID) string {
 		return assets.MustRead("claude/persona-gentleman.md")
 	case model.AgentOpenCode:
 		return assets.MustRead("opencode/persona-gentleman.md")
-	case model.AgentKiroIDE:
-		return assets.MustRead("kiro/persona-gentleman.md")
 	default:
 		return assets.MustRead("generic/persona-gentleman.md")
 	}
@@ -626,14 +597,6 @@ func wrapInstructionsFile(content string) string {
 		"name: Axiom Persona\n" +
 		"description: Teaching-oriented persona with SDD orchestration and Engram protocol\n" +
 		"applyTo: \"**\"\n" +
-		"---\n\n"
-
-	return frontmatter + content
-}
-
-func wrapSteeringFile(content string) string {
-	frontmatter := "---\n" +
-		"inclusion: always\n" +
 		"---\n\n"
 
 	return frontmatter + content

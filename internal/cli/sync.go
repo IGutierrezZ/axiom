@@ -1390,7 +1390,6 @@ func (s componentSyncStep) Run() error {
 				OpenCodeSettingsPath:               effectiveOpenCodeSettingsPath(s.homeDir, s.workspaceDir, s.scope, adapter),
 				ClaudeModelAssignments:             s.selection.ClaudeModelAssignments,
 				ClaudePhaseAssignments:             s.selection.ClaudePhaseAssignments,
-				KiroModelAssignments:               s.selection.KiroModelAssignments,
 				CopilotPhaseAssignments:            s.selection.CopilotPhaseAssignments,
 				CodexModelAssignments:              s.selection.CodexModelAssignments,
 				CodexCarrilModelAssignments:        s.selection.CodexCarrilModelAssignments,
@@ -2227,13 +2226,6 @@ func runSyncResolved(flags SyncFlags, scope InstallScope, homeDir, workspaceDir 
 			return SyncResult{Agents: agentIDs, Selection: selection}, fmt.Errorf("copilot_phase_assignments del estado del proyecto: %w; corrígelo en .axiom/state.json o bórralo y vuelve a ejecutar `axiom sync`", err)
 		}
 		selection.CopilotPhaseAssignments = assignments
-	}
-	if len(selection.KiroModelAssignments) == 0 && len(persistedState.KiroModelAssignments) > 0 {
-		m := make(map[string]model.KiroModelAlias, len(persistedState.KiroModelAssignments))
-		for k, v := range persistedState.KiroModelAssignments {
-			m[k] = model.KiroModelAlias(v)
-		}
-		selection.KiroModelAssignments = m
 	}
 	if len(selection.ModelAssignments) == 0 && len(persistedState.ModelAssignments) > 0 {
 		selection.ModelAssignments = restoreOpenCodeModelAssignmentsFromState(homeDir, workspaceDir, scope, persistedState, selection.SDDMode)

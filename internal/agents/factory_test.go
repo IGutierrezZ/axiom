@@ -166,7 +166,6 @@ func TestDefaultRegistrySupportedAgentsMatchesFactoryAgents(t *testing.T) {
 		model.AgentCursor,
 		model.AgentGeminiCLI,
 		model.AgentGitHubCopilotCLI,
-		model.AgentKiroIDE,
 		model.AgentOpenCode,
 		model.AgentPi,
 		model.AgentQwenCode,

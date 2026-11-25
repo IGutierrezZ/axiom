@@ -14,7 +14,6 @@ import (
 
 const (
 	claudeCodeGraphToolGrant = "mcp__codegraph__codegraph_explore"
-	kiroCodeGraphToolGrant   = "@codegraph"
 )
 
 // readSkillContent reads the embedded skill content for the given phase.
@@ -165,8 +164,6 @@ func injectCodeGraphToolGrantIntoPrompt(prompt string, agentID model.AgentID, gu
 	switch agentID {
 	case model.AgentClaudeCode:
 		grant = claudeCodeGraphToolGrant
-	case model.AgentKiroIDE:
-		grant = kiroCodeGraphToolGrant
 	default:
 		return prompt
 	}

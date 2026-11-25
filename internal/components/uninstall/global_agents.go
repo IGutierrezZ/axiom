@@ -12,9 +12,6 @@ import (
 // Restos de una instalación global que quedaban en la carpeta de usuario tras
 // `uninstall --scope global --all`:
 //
-//   - Kiro: ~/.kiro/steering/axiom.md, que lleva la persona con
-//     `inclusion: always`. Sus secciones con marcadores sí se retiraban, pero la
-//     persona entera, sin marcadores, no (también heredado).
 //   - Codex: la tabla [mcp_servers.context7] y las claves de delegación
 //     (features.multi_agent y agents.max_threads/max_depth) de ~/.codex/config.toml.
 //     Solo se retiraba la tabla de Engram y las claves de sus ficheros de instrucciones.
@@ -69,20 +66,10 @@ func mcpEntryIsManaged(raw []byte, parent jsonPath, name string) bool {
 	return declared && isManagedMCPServer(name, entry)
 }
 
-// globalSteeringFiles son los ficheros de steering que Axiom escribe enteros en la
-// carpeta de usuario de un agente (Kiro): llevan la cabecera `inclusion: always` y
-// la persona sin marcadores.
-func (s *Service) globalSteeringFiles(adapter agents.Adapter) []string {
-	if s.workspace || !adapter.SupportsSystemPrompt() || adapter.SystemPromptStrategy() != model.StrategySteeringFile {
-		return nil
-	}
-	return systemPromptFiles(adapter, s.homeDir)
-}
-
-// isManagedSteeringContent dice si un fichero de steering conserva solo lo que Axiom
-// escribió: sus secciones con marcadores, la cabecera o la persona incrustada. Es el
+// isManagedPromptFileContent dice si un fichero de instrucciones conserva solo lo que
+// Axiom escribió: sus secciones con marcadores, la cabecera o la persona incrustada. Es el
 // mismo criterio con el que sweepInstructionsFile decide borrarlo.
-func isManagedSteeringContent(content string) bool {
+func isManagedPromptFileContent(content string) bool {
 	if strings.Contains(content, "<!-- axiom:") || strings.Contains(content, "<!-- gentle-ai:") {
 		return true
 	}
@@ -99,22 +86,13 @@ type GlobalLeftover struct {
 	Paths []string
 }
 
-// GlobalAgentLeftovers lista lo que Axiom dejó en HOME para Kiro y Codex y que
+// GlobalAgentLeftovers lista lo que Axiom dejó en HOME para Codex y que
 // `axiom uninstall --scope global --all` retira. Solo lee. Tras desinstalar no
 // devuelve nada: usa los limpiadores de la propia desinstalación y comprueba la forma
 // de Axiom, de modo que un fichero que el usuario editó, y que la desinstalación
 // conserva, no se informa como resto.
 func GlobalAgentLeftovers(homeDir string) []GlobalLeftover {
 	var found []GlobalLeftover
-
-	if adapter, err := agents.NewAdapter(model.AgentKiroIDE); err == nil && adapter.SupportsSystemPrompt() {
-		for _, path := range systemPromptFiles(adapter, homeDir) {
-			content, err := os.ReadFile(path)
-			if err == nil && isManagedSteeringContent(string(content)) {
-				found = append(found, GlobalLeftover{Agent: model.AgentKiroIDE, Label: "steering de Kiro en HOME (persona con inclusion: always)", Paths: []string{path}})
-			}
-		}
-	}
 
 	if adapter, err := agents.NewAdapter(model.AgentCodex); err == nil {
 		if path := adapter.MCPConfigPath(homeDir, "engram"); path != "" {

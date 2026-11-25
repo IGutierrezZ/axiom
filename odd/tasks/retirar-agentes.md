@@ -40,7 +40,7 @@ Desactivado: `openspec/config.yaml` declara `strict_tdd: false` y no hay elecci�
 - [x] T3 · Retirar Hermes (incluida la skill `hermes-ephemeral-delegation`).
 - [x] T4 · Retirar Kimi (assets y agentes `review-*` que queden).
 - [x] T5 · Retirar Windsurf (assets y goldens).
-- [ ] T6 · Retirar Kiro IDE (modelos de Kiro, selector de la TUI, assets y goldens).
+- [x] T6 · Retirar Kiro IDE (modelos de Kiro, selector de la TUI, assets y goldens).
 - [ ] T7 · Lector tolerante: un estado con agentes retirados carga y sincroniza el resto con un aviso.
 - [ ] T8 · Docs, e2e, documentos ODD superados, `## Spec viva` integrada con `axiom archive integrate --odd retirar-agentes` y criterio `rg`.
 
@@ -89,7 +89,15 @@ Ruta de todas las tareas: inline (borrado guiado por el compilador; sin unidades
 - Borrados `internal/agents/windsurf`, `internal/assets/windsurf` (orquestador y `workflows/`), sus 8 goldens y `assets/windsurf_workflow_test.go`. Windsurf era el único agente con workflows nativos: salen la vía de inyección de workflows de `sdd` (`workflowInjector`, `findProjectRoot` y la entrada de preflight de `sdd-new`), su retirada en `uninstall` y la línea de la pantalla de desinstalación; también la sección compartida «Delegated Verification Gate (Reduced Form)», que solo usaba su orquestador. El esquema del manifiesto de capacidades conserva el campo `workflows`.
 - Pruebas: las de `cli` que usaban Windsurf como agente sin modo workspace pasan a Trae; las de Engram con `StrategyMCPConfigFile`, a Cursor; la de preflight que falla antes de escribir se queda con el caso de Codex. `e2e`: retiradas las pruebas de Windsurf y las limpiezas de `.codeium` y `.kimi` en `lib.sh`. Recuentos: 12 agentes, 9 plantillas de orquestador.
 - Evidencia: `go vet ./...` limpio; `go test` ok en `agents/...`, `catalog`, `model`, `installcmd`, `components/...` (goldens), `skillregistry`, `system`, `assets`, `tui`, `dashboard`, `app`, `update/...` y `cli`; `bash -n e2e/e2e_test.sh` ok.
+- Commit: `f737cec1`.
+
+### T6 · Kiro IDE
+
+- Borrados `internal/agents/kiro`, `internal/assets/kiro`, `model/kiro_model*.go`, el selector de modelos de Kiro de la TUI (`ScreenKiroModelPicker`; el menú de modelos queda en Claude, OpenCode y Codex), sus 18 goldens y `sdd/kiro_hook_drift_test.go`. Kiro era el único usuario de `model.StrategySteeringFile`, del hook de skill-registry por fichero (`SkillRegistryHookPath`), del resolvedor de alias de modelo, del marcador `{{AXIOM_SKILLS_DIR_WIN}}` y de la sección compartida «Skill Resolution Feedback (Kiro and Windsurf)»: salen todos. `KiroModelAssignments` sale de `state`, `model.Selection`, `SyncOverrides`, `cli` y `app` (un `state.json` antiguo con esa clave sigue cargando: la clave se ignora). La desinstalación deja de conocer el steering de Kiro (P20).
+- Assets compartidos: menciones de Kiro en los jueces de Judgment Day, `project-baseline-convention.md` y `PROJECT_MARKERS`; `sdd-init/references/init-details.md` pierde las rutas de los seis agentes. `docs/manual-de-inicio.md` deja de nombrar a Kiro (lo fija `docs_contract_test`).
+- Pruebas: las de prompts heredados pasan a Cursor; las de MCP global y CodeGraph, a `~/.cursor/mcp.json`. Recuentos: 11 agentes, 8 plantillas de orquestador.
+- Evidencia: `go vet ./...` limpio; `go test` ok en `agents/...`, `catalog`, `model`, `installcmd`, `components/...` (goldens), `skillregistry`, `system`, `assets`, `tui/...`, `dashboard`, `app`, `update/...`, `state`, `workspace` y `semantic`. `cli` completo no se repite aquí (decisión del usuario: ir más rápido); lo cubre la CI de la PR.
 
 ## Siguiente paso
 
-T6.
+T7.
