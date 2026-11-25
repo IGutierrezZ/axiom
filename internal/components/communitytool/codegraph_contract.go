@@ -35,7 +35,6 @@ type codeGraphCompatibility struct {
 var codeGraphCompatibilityTable = map[model.AgentID]codeGraphCompatibility{
 	model.AgentClaudeCode:    nativeCompatibility(model.AgentClaudeCode, "claude"),
 	model.AgentOpenCode:      reconciledCompatibility(model.AgentOpenCode, "opencode"),
-	model.AgentKilocode:      excludedCompatibility(model.AgentKilocode),
 	model.AgentGeminiCLI:     nativeCompatibility(model.AgentGeminiCLI, "gemini"),
 	model.AgentCursor:        nativeCompatibility(model.AgentCursor, "cursor"),
 	model.AgentVSCodeCopilot: excludedCompatibility(model.AgentVSCodeCopilot),

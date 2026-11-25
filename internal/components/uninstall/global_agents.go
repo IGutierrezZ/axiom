@@ -2,21 +2,16 @@ package uninstall
 
 import (
 	"os"
-	"path/filepath"
 	"slices"
 	"strings"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/agents"
-	"github.com/IGutierrezZ/axiom/v3/internal/components/sdd"
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
 )
 
 // Restos de una instalación global que quedaban en la carpeta de usuario tras
 // `uninstall --scope global --all`:
 //
-//   - Kilo: ~/.config/kilo/opencode.json (agentes con la marca de Axiom, servidores
-//     MCP, share) y ~/.config/kilo/plugins/*.ts. El adaptador nunca pasó por el
-//     código de OpenCode en el ámbito global (heredado de la versión anterior).
 //   - Kiro: ~/.kiro/steering/axiom.md, que lleva la persona con
 //     `inclusion: always`. Sus secciones con marcadores sí se retiraban, pero la
 //     persona entera, sin marcadores, no (también heredado).
@@ -29,14 +24,6 @@ import (
 // el usuario haya editado se conserva con aviso. El diagnóstico (GlobalAgentLeftovers)
 // usa los mismos limpiadores que la desinstalación, de modo que lo que se informa es
 // exactamente lo que `axiom uninstall --scope global --all` retira.
-
-// usesManagedMCPShape dice si la desinstalación global del agente retira sus servidores
-// MCP comprobando la forma de Axiom en lugar de borrar la clave por nombre. Lo hace
-// con Kilo, que comparte el formato `mcp` de OpenCode pero nunca tuvo código propio
-// de retirada; el resto de agentes conserva su comportamiento de siempre.
-func usesManagedMCPShape(adapter agents.Adapter) bool {
-	return adapter.Agent() == model.AgentKilocode
-}
 
 // rewriteMCPServerEntry retira la entrada parent.name (engram o context7) de un
 // fichero de configuración de MCP global. La clave se retira por nombre, como
@@ -112,30 +99,13 @@ type GlobalLeftover struct {
 	Paths []string
 }
 
-// GlobalAgentLeftovers lista lo que Axiom dejó en HOME para Kilo, Kiro y Codex y que
+// GlobalAgentLeftovers lista lo que Axiom dejó en HOME para Kiro y Codex y que
 // `axiom uninstall --scope global --all` retira. Solo lee. Tras desinstalar no
 // devuelve nada: usa los limpiadores de la propia desinstalación y comprueba la forma
 // de Axiom, de modo que un fichero que el usuario editó, y que la desinstalación
 // conserva, no se informa como resto.
 func GlobalAgentLeftovers(homeDir string) []GlobalLeftover {
 	var found []GlobalLeftover
-
-	if adapter, err := agents.NewAdapter(model.AgentKilocode); err == nil {
-		pluginsDir := filepath.Join(adapter.GlobalConfigDir(homeDir), "plugins")
-		var plugins []string
-		for _, name := range kiloPluginNames() {
-			path := filepath.Join(pluginsDir, name)
-			if info, err := os.Lstat(path); err == nil && !info.IsDir() {
-				plugins = append(plugins, path)
-			}
-		}
-		if len(plugins) > 0 {
-			found = append(found, GlobalLeftover{Agent: model.AgentKilocode, Label: "plugins de Kilo en HOME", Paths: plugins})
-		}
-		if path := adapter.SettingsPath(homeDir); path != "" && kiloConfigHasAxiomEntries(path) {
-			found = append(found, GlobalLeftover{Agent: model.AgentKilocode, Label: "configuración de Kilo en HOME", Paths: []string{path}})
-		}
-	}
 
 	if adapter, err := agents.NewAdapter(model.AgentKiroIDE); err == nil && adapter.SupportsSystemPrompt() {
 		for _, path := range systemPromptFiles(adapter, homeDir) {
@@ -157,28 +127,4 @@ func GlobalAgentLeftovers(homeDir string) []GlobalLeftover {
 		}
 	}
 	return found
-}
-
-// kiloPluginNames son los plugins que la instalación escribe en la carpeta de
-// plugins de Kilo, los mismos que retira la desinstalación.
-func kiloPluginNames() []string {
-	return append([]string{"background-agents.ts"}, sdd.ManagedOpenCodePluginNamesFor(model.AgentKilocode)...)
-}
-
-// kiloConfigHasAxiomEntries dice si el opencode.json de Kilo conserva agentes con la
-// marca de Axiom o servidores MCP con la forma de Axiom.
-func kiloConfigHasAxiomEntries(path string) bool {
-	raw, err := readManagedFile(path)
-	if err != nil {
-		return false
-	}
-	if _, changed, err := removeManagedAgentEntries(raw); err == nil && changed {
-		return true
-	}
-	for _, name := range []string{"engram", "context7"} {
-		if mcpEntryIsManaged(raw, jsonPath{"mcp"}, name) {
-			return true
-		}
-	}
-	return false
 }

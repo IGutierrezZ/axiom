@@ -165,7 +165,6 @@ func TestEveryManifestKeepsWorkRoutingDormantAndHashesCanonically(t *testing.T) 
 		model.AgentGeminiCLI:        "sha256:619fa29a43d429b9d73aec4b131eeb8c33c325cd1f589c22dc583d7b0205564b",
 		model.AgentGitHubCopilotCLI: "sha256:8cb612203fa1e999505dc915f7ae4cfb87afafa96a09543a25b55ee47b9c4497",
 		model.AgentHermes:           "sha256:31e521642248d9a1946587d6a36346c09f827bdaeb08d56f0ffef3338e60caac",
-		model.AgentKilocode:         "sha256:4bea71ac2fa786e868906b916fbdea1fa2d2c4407fbec8eb9f2adaa33734c855",
 		model.AgentKimi:             "sha256:f5de46e14b67e155af07745190c098b9c4b497137fb7cc15165ae090e15dee05",
 		model.AgentKiroIDE:          "sha256:249818d423d03731195e79627df348858a0772ff3e9d401d9e9876d4026c3a8f",
 		model.AgentOpenClaw:         "sha256:b4f06b78e3e2e12e378ba0d45ecdceba2eff572adbec7c2ee680af292126c66b",

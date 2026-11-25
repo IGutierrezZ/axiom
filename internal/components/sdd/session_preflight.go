@@ -56,7 +56,7 @@ func validateRenderedSessionPreflight(content string, agent model.AgentID) error
 		return validateSDDSessionPreflightProjection(content, "### Native SDD Dispatcher Guard", "")
 	case agent == model.AgentClaudeCode:
 		return validateSDDSessionPreflightProjection(content, "### SDD Entry Routing (MANDATORY)", "AskUserQuestion")
-	case agent == model.AgentOpenCode || agent == model.AgentKilocode:
+	case agent == model.AgentOpenCode:
 		return validateSDDSessionPreflightProjection(content, "### SDD Entry Routing (MANDATORY)")
 	}
 	return nil
@@ -81,7 +81,7 @@ func sddSessionPreflightBlockWithTool(tool string) string {
 }
 
 // migratePreservedSDDSessionPreflight is the only migration path for a
-// preserved external OpenCode or Kilo prompt. It replaces owned legacy ranges
+// preserved external OpenCode prompt. It replaces owned legacy ranges
 // in place and otherwise appends the canonical block without interpreting any
 // unmarked user-authored prompt text.
 func validatePreservedSDDSessionPreflight(rendered string) error {

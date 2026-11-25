@@ -111,7 +111,7 @@ func collectMachineFootprint(homeDir, root string, installed state.InstallState)
 		add(footprintGlobalLeftover, "plugins de OpenCode en HOME", strings.Join(plugins, ", "))
 	}
 
-	// Kilo, Kiro y Codex: cada resto con su agente. Los detecta el mismo código que
+	// Kiro y Codex: cada resto con su agente. Los detecta el mismo código que
 	// los retira en `uninstall --scope global`.
 	for _, leftover := range componentuninstall.GlobalAgentLeftovers(homeDir) {
 		add(footprintGlobalLeftover, leftover.Label, strings.Join(leftover.Paths, ", "))
@@ -184,8 +184,7 @@ func managedPathFootprint(homeDir string, ggaSelected bool) []footprintEntry {
 
 // openCodeUserPlugins devuelve los plugins gestionados por Axiom que existen en
 // la carpeta de usuario de OpenCode. Con el ámbito workspace SDD los escribe en el
-// proyecto: los de HOME son de una instalación global. Los de Kilo los informa
-// GlobalAgentLeftovers con su propio rótulo.
+// proyecto: los de HOME son de una instalación global.
 func openCodeUserPlugins(homeDir string) []string {
 	var found []string
 	adapter, err := agents.NewAdapter(model.AgentOpenCode)

@@ -44,8 +44,6 @@ func (profileResolver) ResolveAgentInstall(profile system.PlatformProfile, agent
 		return resolveClaudeCodeInstall(profile), nil
 	case model.AgentOpenCode:
 		return resolveOpenCodeInstall(profile)
-	case model.AgentKilocode:
-		return resolveKilocodeInstall(profile), nil
 	case model.AgentKimi:
 		return resolveKimiInstall(profile)
 	case model.AgentGitHubCopilotCLI:
@@ -69,18 +67,6 @@ func (profileResolver) ResolveAgentInstall(profile system.PlatformProfile, agent
 // drift this shape fixed for Codex's GPT-5.6 update advice).
 func resolveClaudeCodeInstall(profile system.PlatformProfile) CommandSequence {
 	const pkg = "@anthropic-ai/claude-code@latest"
-	if profile.OS == "linux" && !profile.NpmWritable {
-		return CommandSequence{{"sudo", "npm", "install", "-g", "--ignore-scripts", pkg}}
-	}
-	return CommandSequence{{"npm", "install", "-g", "--ignore-scripts", pkg}}
-}
-
-// resolveKilocodeInstall returns the npm install command sequence gentle-ai
-// shows for Kilocode — display text only, never executed by gentle-ai. On
-// Linux with system npm, sudo is required. With nvm/fnm/volta, it is not.
-// On Windows and macOS, sudo is never needed.
-func resolveKilocodeInstall(profile system.PlatformProfile) CommandSequence {
-	const pkg = "@kilocode/cli@latest"
 	if profile.OS == "linux" && !profile.NpmWritable {
 		return CommandSequence{{"sudo", "npm", "install", "-g", "--ignore-scripts", pkg}}
 	}
@@ -127,7 +113,6 @@ func resolveKimiInstall(profile system.PlatformProfile) (CommandSequence, error)
 var npmBasedAgents = map[model.AgentID]struct{}{
 	model.AgentClaudeCode: {},
 	model.AgentOpenCode:   {},
-	model.AgentKilocode:   {},
 	model.AgentGeminiCLI:  {},
 	model.AgentCodex:      {},
 	model.AgentQwenCode:   {},

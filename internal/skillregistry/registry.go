@@ -58,7 +58,6 @@ func UserSkillDirs(home string) []string {
 
 		// Agent-specific global skill locations supported by Gentle AI adapters.
 		filepath.Join(home, ".config", "opencode", "skills"),
-		filepath.Join(home, ".config", "kilo", "skills"),
 		filepath.Join(home, ".claude", "skills"),
 		filepath.Join(home, ".gemini", "skills"),
 		filepath.Join(home, ".gemini", "antigravity", "skills"),

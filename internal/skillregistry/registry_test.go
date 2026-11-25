@@ -407,7 +407,6 @@ func TestUserSkillDirsIncludesSupportedAgentSkillLocations(t *testing.T) {
 
 	for _, want := range []string{
 		filepath.Join(home, ".config", "opencode", "skills"),
-		filepath.Join(home, ".config", "kilo", "skills"),
 		filepath.Join(home, ".claude", "skills"),
 		filepath.Join(home, ".gemini", "skills"),
 		filepath.Join(home, ".gemini", "antigravity", "skills"),

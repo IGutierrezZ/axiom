@@ -2487,7 +2487,6 @@ func TestProtocolForSelectsSlimOrFullPerDecision1Matrix(t *testing.T) {
 		{model.AgentClaudeCode, true},
 		{model.AgentCodex, false},
 		{model.AgentOpenCode, false},
-		{model.AgentKilocode, false},
 		{model.AgentGeminiCLI, false},
 		{model.AgentAntigravity, false},
 		{model.AgentWindsurf, false},
@@ -2502,8 +2501,8 @@ func TestProtocolForSelectsSlimOrFullPerDecision1Matrix(t *testing.T) {
 		{model.AgentOpenClaw, false},
 	}
 
-	if len(tests) != 16 {
-		t.Fatalf("expected 16 non-Pi adapters in the Decision 1 matrix, got %d", len(tests))
+	if len(tests) != 15 {
+		t.Fatalf("expected 15 non-Pi adapters in the Decision 1 matrix, got %d", len(tests))
 	}
 
 	slim := protocolSlim()

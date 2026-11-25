@@ -107,9 +107,9 @@ func TestUninstallGlobalLeavesHomeCleanAndKeepsTheUsersConfig(t *testing.T) {
 	}
 }
 
-// globalLeftoverNames son los rótulos con que el doctor informa de los restos de Kilo,
-// Kiro y Codex en HOME.
-var globalLeftoverNames = []string{"Kilo", "Kiro", "Codex"}
+// globalLeftoverNames son los rótulos con que el doctor informa de los restos de Kiro
+// y Codex en HOME.
+var globalLeftoverNames = []string{"Kiro", "Codex"}
 
 // footprintLeftovers devuelve las entradas «resto global» del doctor para HOME.
 func footprintLeftovers(home string) []footprintEntry {
@@ -122,40 +122,34 @@ func footprintLeftovers(home string) []footprintEntry {
 	return leftovers
 }
 
-// install global de Kilo, Kiro, Codex y OpenCode + uninstall global: no queda ninguno de
-// sus restos en HOME (opencode.json y plugins de Kilo, steering de Kiro, context7,
+// install global de Kiro, Codex y OpenCode + uninstall global: no queda ninguno de
+// sus restos en HOME (steering de Kiro, context7,
 // multi_agent y agents.* de Codex), el contenido que el usuario tenía en esos ficheros
 // sigue intacto y el doctor informa de cada resto con su agente antes y de ninguno
 // después.
-func TestUninstallGlobalRetiresKiloKiroAndCodexLeftoversKeepingTheUsersContent(t *testing.T) {
+func TestUninstallGlobalRetiresKiroAndCodexLeftoversKeepingTheUsersContent(t *testing.T) {
 	t.Setenv("AXIOM_STATE_DIR", filepath.Join(t.TempDir(), "estado"))
 	home, _, _ := footprintEnv(t)
 
-	kiloConfig := filepath.Join(home, ".config", "kilo", "opencode.json")
-	kiloUserPlugin := filepath.Join(home, ".config", "kilo", "plugins", "mi-plugin.ts")
 	kiroSteering := filepath.Join(home, ".kiro", "steering", "axiom.md")
 	kiroUserSteering := filepath.Join(home, ".kiro", "steering", "mi-guia.md")
 	kiroMCP := filepath.Join(home, ".kiro", "settings", "mcp.json")
 	codexConfig := filepath.Join(home, ".codex", "config.toml")
 	openCodeConfig := filepath.Join(home, ".config", "opencode", "opencode.json")
 
-	const userKilo = `{"theme":"mi-tema","agent":{"mi-agente":{"mode":"subagent","description":"del usuario"}},"mcp":{"mio":{"type":"local","command":["node","s.js"]}}}`
 	const userKiroMCP = `{"mcpServers":{"mio":{"command":"node","args":["s.js"]}}}`
 	const userCodex = "model = \"modelo-del-usuario\"\n\n[mcp_servers.mio]\ncommand = \"node\"\nargs = [\"s.js\"]\n"
 	const userOpenCode = `{"theme":"mi-tema-opencode","permission":{"bash":{"npm publish":"deny"}}}`
-	mustWriteFile(t, kiloConfig, []byte(userKilo))
-	mustWriteFile(t, kiloUserPlugin, []byte("// plugin del usuario\n"))
 	mustWriteFile(t, kiroUserSteering, []byte("Guía propia del usuario.\n"))
 	mustWriteFile(t, kiroMCP, []byte(userKiroMCP))
 	mustWriteFile(t, codexConfig, []byte(userCodex))
 	mustWriteFile(t, openCodeConfig, []byte(userOpenCode))
 
-	if _, err := RunInstall([]string{"--scope", "global", "--agent", "kilocode,kiro-ide,codex,opencode"}, macOSDetectionResult()); err != nil {
+	if _, err := RunInstall([]string{"--scope", "global", "--agent", "kiro-ide,codex,opencode"}, macOSDetectionResult()); err != nil {
 		t.Fatalf("RunInstall() error = %v", err)
 	}
 
-	// Antes de desinstalar: cada agente figura con su nombre y los de OpenCode no se
-	// mezclan con los de Kilo.
+	// Antes de desinstalar: cada agente figura con su nombre.
 	before := footprintLeftovers(home)
 	for _, agent := range globalLeftoverNames {
 		found := false
@@ -164,16 +158,6 @@ func TestUninstallGlobalRetiresKiloKiroAndCodexLeftoversKeepingTheUsersContent(t
 		}
 		if !found {
 			t.Errorf("el doctor debe informar de un resto de %s tras instalar: %+v", agent, before)
-		}
-	}
-	for _, entry := range before {
-		kiloPath := strings.Contains(entry.Detail, filepath.Join(".config", "kilo"))
-		openCodePath := strings.Contains(entry.Detail, filepath.Join(".config", "opencode"))
-		if strings.Contains(entry.Name, "OpenCode") && kiloPath {
-			t.Errorf("%q no debe listar rutas de Kilo: %s", entry.Name, entry.Detail)
-		}
-		if strings.Contains(entry.Name, "Kilo") && openCodePath {
-			t.Errorf("%q no debe listar rutas de OpenCode: %s", entry.Name, entry.Detail)
 		}
 	}
 	if !strings.Contains(strings.Join(entryNames(before), "|"), "plugins de OpenCode en HOME") {
@@ -185,8 +169,6 @@ func TestUninstallGlobalRetiresKiloKiroAndCodexLeftoversKeepingTheUsersContent(t
 	// Restos retirados.
 	for _, gone := range []string{
 		kiroSteering,
-		filepath.Join(home, ".config", "kilo", "plugins", "skill-registry.ts"),
-		filepath.Join(home, ".config", "kilo", "plugins", "model-variants.ts"),
 	} {
 		if _, err := os.Stat(gone); !os.IsNotExist(err) {
 			t.Errorf("%s debe retirarse en la desinstalación global (stat = %v)", gone, err)
@@ -195,7 +177,6 @@ func TestUninstallGlobalRetiresKiloKiroAndCodexLeftoversKeepingTheUsersContent(t
 
 	// El contenido del usuario queda como estaba.
 	for path, want := range map[string]string{
-		kiloConfig:     userKilo,
 		kiroMCP:        userKiroMCP,
 		openCodeConfig: userOpenCode,
 	} {
@@ -213,9 +194,6 @@ func TestUninstallGlobalRetiresKiloKiroAndCodexLeftoversKeepingTheUsersContent(t
 	}
 	if got := parsedWorkspaceFile(t, codexConfig); !reflect.DeepEqual(got, any(wantCodex)) {
 		t.Errorf("config.toml de Codex no quedó como el del usuario:\nahora %v\nantes %v", got, wantCodex)
-	}
-	if got, err := os.ReadFile(kiloUserPlugin); err != nil || string(got) != "// plugin del usuario\n" {
-		t.Errorf("el plugin del usuario de Kilo debe seguir intacto: %v %q", err, got)
 	}
 	if got, err := os.ReadFile(kiroUserSteering); err != nil || string(got) != "Guía propia del usuario.\n" {
 		t.Errorf("el steering del usuario de Kiro debe seguir intacto: %v %q", err, got)

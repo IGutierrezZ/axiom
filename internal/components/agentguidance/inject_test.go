@@ -46,7 +46,7 @@ func TestRemoteAuthorizationRetainsExistingPermissionMergeBehavior(t *testing.T)
 		}
 		return string(root["permission"]) + string(agents["gentle-orchestrator"]["permission"])
 	}
-	for _, agent := range []model.AgentID{model.AgentOpenCode, model.AgentKilocode} {
+	for _, agent := range []model.AgentID{model.AgentOpenCode} {
 		t.Run(string(agent), func(t *testing.T) {
 			home := t.TempDir()
 			paths, err := RoutingPaths(home, agent)
@@ -104,8 +104,8 @@ func TestRemoteAuthorizationPrimaryCarriers(t *testing.T) {
 			}
 		})
 	}
-	if covered != 16 {
-		t.Fatalf("covered %d non-Pi clients, want 16", covered)
+	if covered != 15 {
+		t.Fatalf("covered %d non-Pi clients, want 15", covered)
 	}
 }
 
@@ -383,7 +383,7 @@ func TestInjectRoutingSurvivesJinjaTemplateBootstrap(t *testing.T) {
 func TestInjectRoutingUsesAlwaysLoadedOrchestratorScope(t *testing.T) {
 	t.Parallel()
 
-	for _, agent := range []model.AgentID{model.AgentOpenCode, model.AgentKilocode} {
+	for _, agent := range []model.AgentID{model.AgentOpenCode} {
 		t.Run(string(agent), func(t *testing.T) {
 			t.Parallel()
 
@@ -650,7 +650,7 @@ func markdownSectionAgents(t *testing.T) []model.AgentID {
 
 	var selected []model.AgentID
 	for _, agent := range catalog.AllAgents() {
-		if agent.ID == model.AgentOpenCode || agent.ID == model.AgentKilocode {
+		if agent.ID == model.AgentOpenCode {
 			continue
 		}
 		adapter, err := agents.NewAdapter(agent.ID)

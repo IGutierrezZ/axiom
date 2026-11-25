@@ -12,9 +12,6 @@ import (
 )
 
 func openCodePluginAssetDirectory(agent model.AgentID) (string, error) {
-	if agent == model.AgentKilocode {
-		return "opencode/plugins/", nil
-	}
 	major, err := opencode.DetectRuntimeMajor(context.Background())
 	if err != nil {
 		return "", err

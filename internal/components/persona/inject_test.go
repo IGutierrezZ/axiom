@@ -12,7 +12,6 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/antigravity"
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/claude"
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/hermes"
-	"github.com/IGutierrezZ/axiom/v3/internal/agents/kilocode"
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/kimi"
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/openclaw"
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/opencode"
@@ -24,7 +23,6 @@ func antigravityAdapter() agents.Adapter { return antigravity.NewAdapter() }
 func claudeAdapter() agents.Adapter      { return claude.NewAdapter() }
 func hermesAdapter() agents.Adapter      { return hermes.NewAdapter() }
 func kimiAdapter() agents.Adapter        { return kimi.NewAdapter() }
-func kilocodeAdapter() agents.Adapter    { return kilocode.NewAdapter() }
 func openclawAdapter() agents.Adapter    { return openclaw.NewAdapter() }
 func opencodeAdapter() agents.Adapter    { return opencode.NewAdapter() }
 
@@ -1060,7 +1058,6 @@ func TestInjectForSyncNeutralCleansOnlyGentlemanAgent(t *testing.T) {
 		settingsRel string
 	}{
 		{name: "opencode", adapter: opencodeAdapter(), settingsRel: filepath.Join(".config", "opencode", "opencode.json")},
-		{name: "kilocode", adapter: kilocodeAdapter(), settingsRel: filepath.Join(".config", "kilo", "opencode.json")},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			home := t.TempDir()
@@ -1983,37 +1980,6 @@ func TestInjectOpenCode_SwitchGentlemanToNeutral_CleansAgentOverlay(t *testing.T
 	}
 }
 
-func TestInjectKilocode_SwitchGentlemanToNeutral_CleansAgentOverlay(t *testing.T) {
-	home := t.TempDir()
-
-	_, err := Inject(home, kilocodeAdapter(), model.PersonaGentleman)
-	if err != nil {
-		t.Fatalf("Inject(gentleman) error = %v", err)
-	}
-
-	settingsPath := filepath.Join(home, ".config", "kilo", "opencode.json")
-	data, _ := os.ReadFile(settingsPath)
-	if !strings.Contains(string(data), `"gentleman"`) {
-		t.Fatal("precondition: kilo/opencode.json should have gentleman agent after Gentleman install")
-	}
-
-	result, err := Inject(home, kilocodeAdapter(), model.PersonaNeutral)
-	if err != nil {
-		t.Fatalf("Inject(neutral) error = %v", err)
-	}
-	if !result.Changed {
-		t.Fatal("Inject(neutral) should report changed when cleaning up gentleman agent overlay")
-	}
-
-	data, err = os.ReadFile(settingsPath)
-	if err != nil {
-		t.Fatalf("ReadFile kilo/opencode.json error = %v", err)
-	}
-	if strings.Contains(string(data), `"gentleman"`) {
-		t.Fatal("kilo/opencode.json must not have gentleman agent key after switching to Neutral")
-	}
-}
-
 func TestInjectOpenCode_NeutralFresh_IsNoOp(t *testing.T) {
 	home := t.TempDir()
 
@@ -2342,7 +2308,6 @@ func TestPersonaContentResidualDispatchAllAgents(t *testing.T) {
 	allAgents := []model.AgentID{
 		model.AgentClaudeCode,
 		model.AgentOpenCode,
-		model.AgentKilocode,
 		model.AgentGeminiCLI,
 		model.AgentCursor,
 		model.AgentVSCodeCopilot,
@@ -2421,7 +2386,6 @@ func TestResidualChannelAllAgents(t *testing.T) {
 	allAgentIDs := []model.AgentID{
 		model.AgentClaudeCode,
 		model.AgentOpenCode,
-		model.AgentKilocode,
 		model.AgentGeminiCLI,
 		model.AgentCursor,
 		model.AgentVSCodeCopilot,

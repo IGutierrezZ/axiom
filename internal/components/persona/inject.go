@@ -73,10 +73,9 @@ func outputStyleOverlayJSON(name string) []byte {
 // SDD is installed separately by the SDD component as "gentle-orchestrator";
 // persona injection must not create legacy SDD conductor keys.
 var openCodeAgentOverlayJSON = []byte("{\n  \"agent\": {\n    \"gentleman\": {\n      \"mode\": \"primary\",\n      \"description\": \"Senior Architect mentor - helpful first, challenging when it matters\",\n      \"prompt\": \"{file:./AGENTS.md}\"\n    }\n  }\n}\n")
-var kilocodeAgentOverlayJSON = []byte("{\n  \"agent\": {\n    \"gentleman\": {\n      \"mode\": \"primary\",\n      \"description\": \"Senior Architect mentor - helpful first, challenging when it matters\",\n      \"prompt\": \"{file:./AGENTS.md}\",\n      \"tools\": {\n        \"write\": true,\n        \"edit\": true\n      }\n    }\n  }\n}\n")
 
 // Inject performs a full persona injection: the marker-bound markdown block,
-// the OpenCode/Kilocode `gentleman` agent definition in settings JSON, AND
+// the OpenCode `gentleman` agent definition in settings JSON, AND
 // the Claude Code output-style overlay. Used by `gentle-ai install`.
 func Inject(homeDir string, adapter agents.Adapter, persona model.PersonaID) (InjectionResult, error) {
 	return injectInternal(homeDir, adapter, persona, false)
@@ -88,8 +87,8 @@ func Inject(homeDir string, adapter agents.Adapter, persona model.PersonaID) (In
 //   - The Gentleman output-style file + outputStyle settings overlay (Claude
 //     Code only — no conflict with other components).
 //
-// It deliberately skips the OpenCode/Kilocode `gentleman` agent definition in
-// opencode.json/kilocode.json: that JSON merge shares the "agent" key with
+// It deliberately skips the OpenCode `gentleman` agent definition in
+// opencode.json: that JSON merge shares the "agent" key with
 // SDD's gentle-orchestrator overlay, so running both in the same sync clobbers
 // each other's entries and breaks idempotency. That overlay remains an
 // install-only concern.
@@ -98,7 +97,7 @@ func InjectForSync(homeDir string, adapter agents.Adapter, persona model.Persona
 }
 
 // syncManaged is the internal flag previously called `markdownOnly`.
-// When true the OpenCode/Kilocode agent overlay is skipped (see InjectForSync).
+// When true the OpenCode agent overlay is skipped (see InjectForSync).
 func injectInternal(homeDir string, adapter agents.Adapter, persona model.PersonaID, syncManaged bool) (InjectionResult, error) {
 	persona = canonicalPersona(persona)
 	if !adapter.SupportsSystemPrompt() {
@@ -357,20 +356,17 @@ func injectInternal(homeDir string, adapter agents.Adapter, persona model.Person
 		files = append(files, outputStylePath)
 	}
 
-	// 2. OpenCode/Kilocode agent definitions — Tab-switchable agents in settings.
+	// 2. OpenCode agent definitions — Tab-switchable agents in settings.
 	// Gentleman overlay creation remains install-only because this overlay shares
 	// the "agent" key in opencode.json with SDD's gentle-orchestrator overlay.
 	// Sync only performs narrow cleanup: OpenCode removes stale gentleman tools,
 	// while non-gentleman personas remove agent.gentleman entirely.
-	if (adapter.Agent() == model.AgentOpenCode || adapter.Agent() == model.AgentKilocode) && persona != model.PersonaCustom {
+	if (adapter.Agent() == model.AgentOpenCode) && persona != model.PersonaCustom {
 		settingsPath := adapter.SettingsPath(homeDir)
 		if settingsPath != "" {
 			if isGentlemanConversationPersona(persona) {
 				if !syncManaged {
 					overlay, managedAgentNames := openCodeAgentOverlayJSON, []string{"gentleman"}
-					if adapter.Agent() == model.AgentKilocode {
-						overlay, managedAgentNames = kilocodeAgentOverlayJSON, nil
-					}
 					agentResult, err := mergeJSONFile(settingsPath, overlay, managedAgentNames...)
 					if err != nil {
 						return InjectionResult{}, err
@@ -565,7 +561,7 @@ func axiomPersonaContent(agent model.AgentID, residualContentAvailable bool) str
 		}
 	}
 	switch agent {
-	case model.AgentOpenCode, model.AgentKilocode:
+	case model.AgentOpenCode:
 		return assets.MustRead("opencode/persona-axiom.md")
 	case model.AgentKiroIDE:
 		return assets.MustRead("kiro/persona-axiom.md")
@@ -595,7 +591,7 @@ func gentlemanPersonaContent(agent model.AgentID) string {
 	switch agent {
 	case model.AgentClaudeCode:
 		return assets.MustRead("claude/persona-gentleman.md")
-	case model.AgentOpenCode, model.AgentKilocode:
+	case model.AgentOpenCode:
 		return assets.MustRead("opencode/persona-gentleman.md")
 	case model.AgentKimi:
 		return assets.MustRead("kimi/persona-gentleman.md")

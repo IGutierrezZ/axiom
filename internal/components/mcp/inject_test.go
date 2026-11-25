@@ -19,7 +19,6 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/claude"
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/codex"
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/hermes"
-	"github.com/IGutierrezZ/axiom/v3/internal/agents/kilocode"
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/kimi"
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/openclaw"
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/opencode"
@@ -39,7 +38,6 @@ func cursorAdapter(t *testing.T) agents.Adapter {
 func antigravityAdapter() agents.Adapter { return antigravity.NewAdapter() }
 func claudeAdapter() agents.Adapter      { return claude.NewAdapter() }
 func hermesAdapter() agents.Adapter      { return hermes.NewAdapter() }
-func kilocodeAdapter() agents.Adapter    { return kilocode.NewAdapter() }
 func kimiAdapter() agents.Adapter        { return kimi.NewAdapter() }
 func openclawAdapter() agents.Adapter    { return openclaw.NewAdapter() }
 func opencodeAdapter() agents.Adapter    { return opencode.NewAdapter() }
@@ -65,7 +63,7 @@ func assertOnlyKeys(t *testing.T, path string, object map[string]any, keys ...st
 	}
 }
 
-// readOpenCodeContext7Entry reads the mcp.context7 object from an OpenCode/KiloCode
+// readOpenCodeContext7Entry reads the mcp.context7 object from an OpenCode
 // opencode.json config file. Navigates parsed["mcp"]["context7"].
 func readOpenCodeContext7Entry(t *testing.T, path string) map[string]any {
 	t.Helper()
@@ -94,7 +92,7 @@ func readOpenCodeContext7Entry(t *testing.T, path string) map[string]any {
 }
 
 // assertOpenCodeRemoteContext7Schema asserts the mcp.context7 entry in an
-// OpenCode/KiloCode opencode.json is a valid remote entry with no legacy local keys.
+// OpenCode opencode.json is a valid remote entry with no legacy local keys.
 func assertOpenCodeRemoteContext7Schema(t *testing.T, path string) {
 	t.Helper()
 
@@ -289,13 +287,12 @@ func TestInjectOpenClawMergesContext7UnderMCPDotServersAndMigratesLegacyMCPServe
 	}
 }
 
-func TestInjectOpenCodeAndKilocodePreserveContext7Headers(t *testing.T) {
+func TestInjectOpenCodePreserveContext7Headers(t *testing.T) {
 	tests := []struct {
 		name    string
 		adapter agents.Adapter
 	}{
 		{name: "OpenCode", adapter: opencodeAdapter()},
-		{name: "KiloCode", adapter: kilocodeAdapter()},
 	}
 
 	for _, tt := range tests {
@@ -371,18 +368,15 @@ func TestInjectOpenCodeAndKilocodePreserveContext7Headers(t *testing.T) {
 	}
 }
 
-func TestInjectOpenCodeAndKilocodeRecoverMalformedSettingsAndDiscardInvalidHeaders(t *testing.T) {
+func TestInjectOpenCodeRecoverMalformedSettingsAndDiscardInvalidHeaders(t *testing.T) {
 	tests := []struct {
 		name     string
 		adapter  agents.Adapter
 		existing string
 	}{
 		{name: "OpenCode malformed settings", adapter: opencodeAdapter(), existing: `{malformed`},
-		{name: "KiloCode malformed settings", adapter: kilocodeAdapter(), existing: `{malformed`},
 		{name: "OpenCode malformed headers", adapter: opencodeAdapter(), existing: `{"mcp":{"context7":{"headers":`},
-		{name: "KiloCode malformed headers", adapter: kilocodeAdapter(), existing: `{"mcp":{"context7":{"headers":`},
 		{name: "OpenCode non-object headers", adapter: opencodeAdapter(), existing: `{"mcp":{"context7":{"headers":["secret"]}}}`},
-		{name: "KiloCode non-object headers", adapter: kilocodeAdapter(), existing: `{"mcp":{"context7":{"headers":"secret"}}}`},
 	}
 
 	for _, tt := range tests {

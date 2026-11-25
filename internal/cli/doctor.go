@@ -55,7 +55,6 @@ var agentToolBinaries = map[string]string{
 	"codex":              "codex",
 	"pi":                 "pi",
 	"gemini-cli":         "gemini",
-	"kilocode":           "kilo",
 	"kiro-ide":           "kiro",
 	"kimi":               "kimi",
 	"qwen-code":          "qwen",

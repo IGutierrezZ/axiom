@@ -10,12 +10,12 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
 )
 
-// BindWorkspace liga OpenCode y Kilo a la raíz del proyecto y deja intactos al
+// BindWorkspace liga OpenCode a la raíz del proyecto y deja intactos al
 // resto de adaptadores, cuya carpeta de configuración ya es una carpeta de punto
 // en la raíz.
 func TestBindWorkspaceOnlyChangesOpenCodeFamily(t *testing.T) {
 	root := t.TempDir()
-	for _, id := range []model.AgentID{model.AgentOpenCode, model.AgentKilocode} {
+	for _, id := range []model.AgentID{model.AgentOpenCode} {
 		adapter, err := NewAdapter(id)
 		if err != nil {
 			t.Fatal(err)
@@ -168,7 +168,6 @@ func TestDefaultRegistrySupportedAgentsMatchesFactoryAgents(t *testing.T) {
 		model.AgentGeminiCLI,
 		model.AgentGitHubCopilotCLI,
 		model.AgentHermes,
-		model.AgentKilocode,
 		model.AgentKimi,
 		model.AgentKiroIDE,
 		model.AgentOpenClaw,

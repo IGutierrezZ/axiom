@@ -41,7 +41,7 @@ func TestRenderedOrchestratorsCarryNoRDDProse(t *testing.T) {
 		agent := entry.ID
 		t.Run(string(agent), func(t *testing.T) {
 			rendered := renderSDDOrchestratorAsset(agent)
-			if agent == model.AgentOpenCode || agent == model.AgentKilocode {
+			if agent == model.AgentOpenCode {
 				var err error
 				if rendered, err = composeOpenCodeOrchestratorPrompt(agent); err != nil {
 					t.Fatalf("composeOpenCodeOrchestratorPrompt(%s) error = %v", agent, err)

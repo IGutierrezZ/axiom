@@ -274,7 +274,7 @@ func (s *Service) root() string {
 }
 
 // adapter devuelve el adaptador del agente ligado al ámbito. En workspace, los que
-// tienen otra distribución de proyecto (OpenCode, Kilo, Gemini, Codex, VS Code y
+// tienen otra distribución de proyecto (OpenCode, Gemini, Codex, VS Code y
 // Cursor) resuelven sus rutas con la raíz del proyecto, igual que la instalación.
 func (s *Service) adapter(agentID model.AgentID) (agents.Adapter, bool) {
 	adapter, ok := s.registry.Get(agentID)
@@ -1088,7 +1088,7 @@ func (s *Service) componentOperations(adapter agents.Adapter, componentID model.
 			ops = append(ops, rewriteJSONFile(path, jsonPaths...))
 		}
 	case model.ComponentContext7:
-		if s.workspace || usesManagedMCPShape(adapter) {
+		if s.workspace {
 			workspaceTargets, workspaceOps := s.managedMCPOperations(adapter, "context7")
 			targets = append(targets, workspaceTargets...)
 			ops = append(ops, workspaceOps...)
@@ -1111,7 +1111,7 @@ func (s *Service) componentOperations(adapter agents.Adapter, componentID model.
 			keptTargets, keptOps := engramOperationsKeepingRegistration(adapter, homeDir)
 			targets = append(targets, keptTargets...)
 			ops = append(ops, keptOps...)
-		case s.workspace || usesManagedMCPShape(adapter):
+		case s.workspace:
 			workspaceTargets, workspaceOps := s.managedMCPOperations(adapter, "engram")
 			targets = append(targets, workspaceTargets...)
 			ops = append(ops, workspaceOps...)
@@ -1135,7 +1135,7 @@ func (s *Service) componentOperations(adapter agents.Adapter, componentID model.
 			// chat.tools.autoApprove) ya no los escribe Axiom: si están, son del
 			// usuario y se quedan.
 			switch adapter.Agent() {
-			case model.AgentClaudeCode, model.AgentOpenCode, model.AgentKilocode:
+			case model.AgentClaudeCode, model.AgentOpenCode:
 				ops = append(ops, rewriteManagedPermissions(path, adapter.Agent()))
 			}
 		}
@@ -1238,11 +1238,7 @@ func (s *Service) componentOperations(adapter agents.Adapter, componentID model.
 			targets = append(targets, path)
 			ops = append(ops, removeFile(path), removeDirIfEmpty(filepath.Dir(path)))
 		}
-		// Kilo usa el mismo formato de configuración que OpenCode (agentes con la marca
-		// de Axiom, plugins y share), así que se retira con el mismo código en el
-		// proyecto y en la carpeta de usuario. Antes la desinstalación global no lo
-		// trataba como tal y dejaba su opencode.json y sus plugins.
-		if adapter.Agent() == model.AgentOpenCode || adapter.Agent() == model.AgentKilocode {
+		if adapter.Agent() == model.AgentOpenCode {
 			for _, path := range s.settingsTargets(adapter) {
 				var defaultPlan *opencodedefault.UninstallPlan
 				if adapter.Agent() == model.AgentOpenCode {
@@ -1300,10 +1296,6 @@ func (s *Service) componentOperations(adapter agents.Adapter, componentID model.
 				ops = append(ops, removeFile(pluginPath))
 			}
 			ops = append(ops, removeDirIfEmpty(pluginDir))
-			if adapter.Agent() == model.AgentKilocode {
-				// La carpeta de Kilo (~/.config/kilo) también se quita si queda vacía.
-				ops = append(ops, quietDirIfEmpty(adapter.GlobalConfigDir(homeDir)))
-			}
 
 			if s.workspace {
 				// Los prompts compartidos de las fases (<proyecto>/.opencode/prompts/sdd).
@@ -1315,7 +1307,6 @@ func (s *Service) componentOperations(adapter agents.Adapter, componentID model.
 				}
 				ops = append(ops, removeDirIfEmpty(promptDir), removeDirIfEmpty(filepath.Dir(promptDir)))
 			} else if adapter.Agent() == model.AgentOpenCode {
-				// La caché y la dependencia son de OpenCode: Kilo no las usa.
 				// La caché activa (AXIOM_STATE_DIR si está definida) y también las que el
 				// plugin de OpenCode o versiones anteriores pudieron dejar en la raíz por
 				// defecto y en la heredada.

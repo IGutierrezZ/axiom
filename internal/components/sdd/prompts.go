@@ -29,8 +29,8 @@ func SharedPromptDir(homeDir string) string {
 }
 
 // SharedPromptDirFor devuelve la carpeta de los prompts compartidos para el
-// adaptador. En el proyecto de OpenCode y Kilo está dentro de su carpeta de
-// recursos (.opencode/prompts/sdd, .kilo/prompts/sdd); en cualquier otro caso es
+// adaptador. En el proyecto de OpenCode está dentro de su carpeta de
+// recursos (.opencode/prompts/sdd); en cualquier otro caso es
 // SharedPromptDir.
 func SharedPromptDirFor(adapter agents.Adapter, dir string) string {
 	if provider, ok := adapter.(agents.WorkspacePromptsDirProvider); ok {

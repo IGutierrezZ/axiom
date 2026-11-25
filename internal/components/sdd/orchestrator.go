@@ -44,7 +44,7 @@ type OrchestratorRenderOptions struct {
 
 	// SharedPromptDir sustituye a SharedPromptDir(homeDir) como carpeta de los
 	// prompts compartidos de las fases (SharedPromptDirFor). Vacío usa la ruta
-	// global. En workspace apunta a .opencode/prompts/sdd (o .kilo/prompts/sdd).
+	// global. En workspace apunta a .opencode/prompts/sdd.
 	SharedPromptDir string
 }
 
@@ -242,7 +242,7 @@ func replacePiClosedSingleSelectRoute(content string, agent model.AgentID) strin
 }
 
 func composeOpenCodeOrchestratorPrompt(agent model.AgentID, options ...OrchestratorRenderOptions) (string, error) {
-	if agent != model.AgentOpenCode && agent != model.AgentKilocode {
+	if agent != model.AgentOpenCode {
 		return composeOrchestratorPrompt(agent, options...), nil
 	}
 	return projectSDDSessionPreflight(composeOrchestratorPrompt(agent, options...), "### SDD Entry Routing (MANDATORY)")
@@ -328,7 +328,7 @@ func sddOrchestratorAsset(agent model.AgentID) string {
 		return "kiro/sdd-orchestrator.md"
 	case model.AgentHermes:
 		return "hermes/sdd-orchestrator.md"
-	case model.AgentOpenCode, model.AgentKilocode:
+	case model.AgentOpenCode:
 		return "opencode/sdd-orchestrator.md"
 	default:
 		return "generic/sdd-orchestrator.md"

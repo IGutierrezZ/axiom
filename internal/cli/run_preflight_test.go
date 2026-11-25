@@ -137,7 +137,6 @@ func TestCheckDependenciesStepPassesWhenNpmPresent(t *testing.T) {
 	for _, agent := range []model.AgentID{
 		model.AgentClaudeCode,
 		model.AgentOpenCode,
-		model.AgentKilocode,
 	} {
 		agent := agent
 		t.Run(string(agent), func(t *testing.T) {

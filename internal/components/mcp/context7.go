@@ -13,7 +13,7 @@ var defaultContext7OverlayJSON = []byte(fmt.Sprintf("{\n  \"mcpServers\": {\n   
 // openCodeContext7OverlayJSON is the opencode.json overlay using the new MCP format.
 // Context7 is a remote MCP server — no npx needed.
 // The context7 entry must replace atomically so legacy local keys do not survive
-// deep merge into OpenCode/KiloCode's strict MCP schema.
+// deep merge into OpenCode's strict MCP schema.
 var openCodeContext7OverlayJSON = []byte("{\n  \"mcp\": {\n    \"context7\": {\n      \"__replace__\": {\n        \"type\": \"remote\",\n        \"url\": \"https://mcp.context7.com/mcp\",\n        \"enabled\": true\n      }\n    }\n  }\n}\n")
 
 // openClawContext7OverlayJSON is the OpenClaw openclaw.json overlay.

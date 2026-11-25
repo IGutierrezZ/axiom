@@ -39,11 +39,11 @@ func TestComponentPathsSDDIncludesSystemPromptForPromptFileAdapters(t *testing.T
 
 // TestComponentPathsSDDExcludesSystemPromptForManagedOpenCodeAgents pins issue
 // #3975: the SDD injector scopes the orchestrator to the gentle-orchestrator
-// agent in the settings file for OpenCode and Kilocode in every mode, so SDD
+// agent in the settings file for OpenCode in every mode, so SDD
 // must not require, back up, or verify the AGENTS.md it never writes.
 func TestComponentPathsSDDExcludesSystemPromptForManagedOpenCodeAgents(t *testing.T) {
 	home := t.TempDir()
-	adapters := resolveAdapters([]model.AgentID{model.AgentOpenCode, model.AgentKilocode})
+	adapters := resolveAdapters([]model.AgentID{model.AgentOpenCode})
 
 	for _, mode := range []model.SDDModeID{"", model.SDDModeSingle, model.SDDModeMulti} {
 		paths := componentPaths(home, model.Selection{SDDMode: mode}, adapters, model.ComponentSDD)
@@ -763,7 +763,6 @@ func TestComponentPathsPermissionsIncludesAgentsWithInjectionTarget(t *testing.T
 	adapters := resolveAdapters([]model.AgentID{
 		model.AgentClaudeCode,
 		model.AgentOpenCode,
-		model.AgentKilocode,
 	})
 
 	paths := componentPaths(home, model.Selection{}, adapters, model.ComponentPermission)
@@ -1212,13 +1211,12 @@ func TestAgentRoutingGuidanceStepRetiresPiManagedBlocks(t *testing.T) {
 func TestRoutingGuidancePathsWorkspaceScopeReportOrchestratorPromptAgentsAtHome(t *testing.T) {
 	home := t.TempDir()
 	workspace := t.TempDir()
-	adapters := resolveAdapters([]model.AgentID{model.AgentOpenCode, model.AgentKilocode, model.AgentClaudeCode})
+	adapters := resolveAdapters([]model.AgentID{model.AgentOpenCode, model.AgentClaudeCode})
 
 	paths := routingGuidancePaths(home, workspace, ScopeWorkspace, adapters)
 
 	for _, want := range []string{
 		filepath.Join(workspace, ".config", "opencode", "opencode.json"),
-		filepath.Join(workspace, ".config", "kilo", "opencode.json"),
 	} {
 		if !containsPath(paths, want) {
 			t.Fatalf("routingGuidancePaths(workspace) missing workspace settings path %q\npaths=%v", want, paths)
@@ -1226,7 +1224,6 @@ func TestRoutingGuidancePathsWorkspaceScopeReportOrchestratorPromptAgentsAtHome(
 	}
 	for _, unwanted := range []string{
 		filepath.Join(home, ".config", "opencode", "opencode.json"),
-		filepath.Join(home, ".config", "kilo", "opencode.json"),
 	} {
 		if containsPath(paths, unwanted) {
 			t.Fatalf("routingGuidancePaths(workspace) reported home path %q under workspace scope\npaths=%v", unwanted, paths)

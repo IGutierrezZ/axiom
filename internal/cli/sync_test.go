@@ -1725,52 +1725,6 @@ func TestRunSyncRefreshesInstalledManagedOpenCodePluginsWithoutSDDComponent(t *t
 	}
 }
 
-// TestRunSyncLeavesResidualReviewPluginInKilocode pins REQ-46.4: a review
-// plugin an earlier release left in the Kilo plugins directory is neither
-// removed nor reported as changed, and sync ends without error.
-func TestRunSyncLeavesResidualReviewPluginInKilocode(t *testing.T) {
-	home := t.TempDir()
-	if err := state.Write(home, state.InstallState{
-		InstalledAgents:     []string{"kilocode"},
-		SelectionConfigured: true,
-		Components:          []model.ComponentID{model.ComponentEngram},
-		Persona:             "neutral",
-	}); err != nil {
-		t.Fatalf("state.Write() error = %v", err)
-	}
-
-	pluginsDir := filepath.Join(home, ".config", "kilo", "plugins")
-	reviewPlugin := filepath.Join(pluginsDir, "review-result-artifacts.ts")
-	mustWriteFile(t, reviewPlugin, []byte("// stale v2.1.7 managed plugin"))
-
-	restoreHome := osUserHomeDir
-	restoreBackupHome := backup.UserHomeDirFn
-	osUserHomeDir = func() (string, error) { return home, nil }
-	backup.UserHomeDirFn = func() (string, error) { return home, nil }
-	t.Cleanup(func() {
-		osUserHomeDir = restoreHome
-		backup.UserHomeDirFn = restoreBackupHome
-	})
-
-	result, err := RunSync(nil)
-	if err != nil {
-		t.Fatalf("RunSync() error = %v", err)
-	}
-
-	if _, statErr := os.Stat(reviewPlugin); statErr != nil {
-		t.Fatalf("sync removed the residual review plugin left for Kilo: %v", statErr)
-	}
-	if containsPath(result.ChangedFiles, reviewPlugin) {
-		t.Errorf("ChangedFiles reports the residual Kilocode plugin path %q\nchanged = %#v", reviewPlugin, result.ChangedFiles)
-	}
-
-	// skill-registry.ts was never installed — sync must not create it.
-	skillRegistry := filepath.Join(pluginsDir, "skill-registry.ts")
-	if _, err := os.Stat(skillRegistry); !os.IsNotExist(err) {
-		t.Errorf("sync must not create never-installed plugin %q; stat err = %v", skillRegistry, err)
-	}
-}
-
 // TestRunSyncDoesNotCreateManagedOpenCodePluginsWhenNeverInstalled guards the
 // refresh behavior for issue #1440: users who never had the SDD/OpenCode
 // plugins installed must not receive them from a plain sync.
@@ -1810,7 +1764,7 @@ func TestRunSyncDoesNotCreateManagedOpenCodePluginsWhenNeverInstalled(t *testing
 func TestSyncBackupTargetsIncludeManagedOpenCodePluginsWithoutSDD(t *testing.T) {
 	home := t.TempDir()
 	sel := model.Selection{
-		Agents:     []model.AgentID{model.AgentOpenCode, model.AgentKilocode},
+		Agents:     []model.AgentID{model.AgentOpenCode},
 		Components: []model.ComponentID{model.ComponentEngram},
 	}
 
@@ -1819,7 +1773,7 @@ func TestSyncBackupTargetsIncludeManagedOpenCodePluginsWithoutSDD(t *testing.T) 
 		t.Fatalf("syncBackupTargets() error = %v", err)
 	}
 
-	for configDir, agent := range map[string]model.AgentID{"opencode": model.AgentOpenCode, "kilo": model.AgentKilocode} {
+	for configDir, agent := range map[string]model.AgentID{"opencode": model.AgentOpenCode} {
 		for _, plugin := range sdd.ManagedOpenCodePluginNamesFor(agent) {
 			want := filepath.Join(home, ".config", configDir, "plugins", plugin)
 			if !containsPath(targets, want) {

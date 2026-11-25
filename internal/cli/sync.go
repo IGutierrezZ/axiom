@@ -697,7 +697,7 @@ func (r *syncRuntime) stagePlan() pipeline.StagePlan {
 	}
 
 	// Managed OpenCode-compatible plugins are versioned runtime artifacts tied
-	// to the installed binary (OpenCode and Kilocode receive them). When the
+	// to the installed binary (OpenCode receive them). When the
 	// persisted selection lacks the SDD component, no SDD step is planned and
 	// already-installed plugins would silently stay stale after upgrades
 	// (issue #1440). Refresh installed copies explicitly; the step never
@@ -805,7 +805,7 @@ func syncBackupTargetsScoped(homeDir, workspaceDir string, scope InstallScope, s
 						paths[adapter.SystemPromptFile(rootDir)] = struct{}{}
 					}
 				}
-				if adapter.Agent() == model.AgentOpenCode || adapter.Agent() == model.AgentKilocode {
+				if adapter.Agent() == model.AgentOpenCode {
 					// Persona sync can remove stale managed agent state from settings.
 					// This target is backup-only: syncPersonaPaths intentionally does
 					// not make best-effort cleanup a post-sync verification target.
@@ -829,7 +829,7 @@ func syncBackupTargetsScoped(homeDir, workspaceDir string, scope InstallScope, s
 	for _, path := range routingGuidancePaths(homeDir, workspaceDir, scope, adapters) {
 		paths[path] = struct{}{}
 	}
-	// El registro de instrucciones de OpenCode y Kilo reescribe su configuración de
+	// El registro de instrucciones de OpenCode reescribe su configuración de
 	// proyecto aunque ningún componente seleccionado la toque.
 	for _, path := range workspaceInstructionsSettingsPaths(workspaceDir, scope, adapters) {
 		paths[path] = struct{}{}
@@ -850,8 +850,8 @@ func syncBackupTargetsScoped(homeDir, workspaceDir string, scope InstallScope, s
 		}
 	}
 	// Managed OpenCode-compatible plugin paths are part of sync's
-	// backup/snapshot contract whenever a plugin-receiving agent (OpenCode,
-	// Kilocode) is synced, independent of the SDD component: the
+	// backup/snapshot contract whenever a plugin-receiving agent (OpenCode)
+	// is synced, independent of the SDD component: the
 	// openCodePluginRefreshSyncStep may rewrite installed copies (issue #1440).
 	if scope != ScopeWorkspace {
 		for _, adapter := range adapters {
@@ -978,7 +978,7 @@ func syncComponentPathsWithWorkspaceScoped(homeDir, workspaceDir string, scope I
 //   - Step 3: managed output-style overlay (only when the agent supports it).
 //   - Pi: the project-local gentle-pi persona state file.
 //
-// Step 2 does not merge OpenCode/Kilocode persona definitions during sync. A
+// Step 2 does not merge OpenCode persona definitions during sync. A
 // narrow stale-state cleanup is tracked separately as a backup-only target.
 func syncPersonaPaths(homeDir string, selection model.Selection, adapters []agents.Adapter) []string {
 	return syncPersonaPathsWithWorkspaceScoped(homeDir, "", ScopeGlobal, selection, adapters)
@@ -1145,7 +1145,7 @@ type piCodeGraphSyncStep struct {
 }
 
 // openCodePluginRefreshSyncStep refreshes already-installed managed
-// OpenCode-compatible plugins (OpenCode, Kilocode) from the embedded assets
+// OpenCode-compatible plugins (OpenCode) from the embedded assets
 // when the SDD component is not part of the sync selection (issue #1440).
 // It never creates plugins that were never installed.
 type openCodePluginRefreshSyncStep struct {
@@ -1500,7 +1500,7 @@ func (s componentSyncStep) Run() error {
 		// Sync regenerates the persona block between
 		// <!-- gentle-ai:persona --> markers and (when supported) refreshes
 		// the Gentleman output-style overlay. We deliberately skip the
-		// OpenCode/Kilocode agent definition in opencode.json — that JSON
+		// OpenCode agent definition in opencode.json — that JSON
 		// merge conflicts with SDD's writes to the same settings file and
 		// remains an install-only concern.
 		for _, adapter := range adapters {

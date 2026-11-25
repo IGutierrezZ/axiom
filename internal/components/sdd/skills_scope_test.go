@@ -23,9 +23,8 @@ func skillsScopeAdapters() map[string]agents.Adapter {
 		"cursor": cursor.NewAdapter(),
 		"kimi":   kimiAdapter(),
 		"kiro":   kiro.NewAdapter(),
-		// OpenCode y Kilo llevan la ruta en los overlays JSON de sus subagentes.
+		// OpenCode lleva la ruta en los overlays JSON de sus subagentes.
 		"opencode": opencodeAdapter(),
-		"kilocode": kilocodeAdapter(),
 	}
 }
 
@@ -273,7 +272,7 @@ func TestResolveSkillsDirPlaceholdersLeavesUnrelatedContentUntouched(t *testing.
 }
 
 // openCodeSubAgentPrompts devuelve los prompts inline de los agentes del
-// opencode.json (o del equivalente de Kilo) que escribe la inyección.
+// opencode.json que escribe la inyección.
 func openCodeSubAgentPrompts(t *testing.T, settingsPath string) map[string]string {
 	t.Helper()
 	data, err := os.ReadFile(settingsPath)
@@ -295,15 +294,13 @@ func openCodeSubAgentPrompts(t *testing.T, settingsPath string) map[string]strin
 	return prompts
 }
 
-// Los overlays de OpenCode y Kilo llevan la ruta de las skills dentro de cadenas
+// Los overlays de OpenCode llevan la ruta de las skills dentro de cadenas
 // JSON. En workspace los subagentes deben leer la skill de fase relativa al
-// proyecto; en global conservan la ruta del home del adaptador. Kilo reutiliza
-// los overlays de OpenCode pero no puede heredar su directorio de skills.
+// proyecto; en global conservan la ruta del home del adaptador.
 func TestOpenCodeOverlaySkillsPathsFollowInstallScope(t *testing.T) {
 	t.Setenv("AXIOM_STATE_DIR", t.TempDir())
 	adapters := map[string]agents.Adapter{
 		"opencode": opencodeAdapter(),
-		"kilocode": kilocodeAdapter(),
 	}
 	for name, adapter := range adapters {
 		rel := skillsRelDir(adapter)

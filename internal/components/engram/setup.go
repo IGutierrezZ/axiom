@@ -127,8 +127,6 @@ func SetupAgentSlug(agent model.AgentID) (string, bool) {
 	switch agent {
 	case model.AgentOpenCode:
 		return "opencode", true
-	case model.AgentKilocode:
-		return "kilocode", true
 	case model.AgentClaudeCode:
 		return "claude-code", true
 	case model.AgentGeminiCLI:

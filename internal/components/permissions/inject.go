@@ -26,7 +26,7 @@ type InjectionResult struct {
 //
 // The overlays only carry protective rules. Axiom never writes an
 // auto-approval mode (Claude bypassPermissions, Gemini/Qwen auto_edit, VS Code
-// chat.tools.autoApprove, an OpenCode/Kilo catch-all allow) and never removes
+// chat.tools.autoApprove, an OpenCode catch-all allow) and never removes
 // one the user already has, so agents whose only overlay was such a mode have
 // no target at all.
 func TargetPath(rootDir string, adapter agents.Adapter) string {
@@ -135,7 +135,7 @@ func agentOverlay(id model.AgentID) []byte {
 	switch id {
 	case model.AgentClaudeCode:
 		return claudeCodeOverlayJSON
-	case model.AgentOpenCode, model.AgentKilocode:
+	case model.AgentOpenCode:
 		return openCodeOverlayJSON
 	case model.AgentGeminiCLI, model.AgentQwenCode, model.AgentVSCodeCopilot:
 		// Their only overlay was an auto-approval mode (auto_edit,
@@ -187,7 +187,7 @@ func Inject(rootDir string, adapter agents.Adapter) (InjectionResult, error) {
 		return InjectionResult{}, nil
 	}
 
-	defaults := adapter.Agent() == model.AgentOpenCode || adapter.Agent() == model.AgentKilocode
+	defaults := adapter.Agent() == model.AgentOpenCode
 	writeResult, err := mergeJSONFile(settingsPath, overlay, defaults, unionPaths[adapter.Agent()])
 	if err != nil {
 		return InjectionResult{}, err
@@ -213,7 +213,7 @@ func mergeJSONFile(path string, overlay []byte, defaults bool, union [][]string)
 
 	merge := filemerge.MergeJSONObjectsForPath
 	if defaults {
-		// Solo OpenCode/Kilo Code: el overlay no relaja el valor por defecto del usuario.
+		// Solo OpenCode: el overlay no relaja el valor por defecto del usuario.
 		overlay = withoutRulesLooserThanUserDefault(baseJSON, overlay)
 		merge = filemerge.MergeJSONDefaultsForPath
 	}

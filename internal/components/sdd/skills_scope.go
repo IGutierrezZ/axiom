@@ -53,8 +53,8 @@ func workspaceRootFor(rootDir string, opts InjectOptions) string {
 //
 // workspaceRoot vacío es el ámbito global: la ruta relativa a la carpeta de
 // usuario con prefijo `~/`. Con una raíz de proyecto es la ruta relativa a esa
-// raíz, tal como la resuelve el adaptador para el proyecto (OpenCode y Kilo la
-// tienen en .opencode/skills y .kilo/skills, no bajo .config).
+// raíz, tal como la resuelve el adaptador para el proyecto (OpenCode la
+// tiene en .opencode/skills y no bajo .config).
 func resolveSkillsDirPlaceholders(content string, adapter agents.Adapter, workspaceRoot string) string {
 	if !strings.Contains(content, "{{AXIOM_SKILLS_DIR") {
 		return content
@@ -83,7 +83,7 @@ func resolveSkillsDirPlaceholders(content string, adapter agents.Adapter, worksp
 }
 
 // resolveOverlaySkillsDir resuelve el marcador de ruta de skills en un overlay
-// JSON de OpenCode o Kilo, donde el marcador vive dentro de cadenas JSON. Reutiliza
+// JSON de OpenCode, donde el marcador vive dentro de cadenas JSON. Reutiliza
 // resolveSkillsDirPlaceholders y comprueba después que el documento sigue siendo
 // JSON válido, de modo que una ruta con caracteres que exigieran escape nunca deje
 // un opencode.json corrupto: es preferible fallar la inyección.

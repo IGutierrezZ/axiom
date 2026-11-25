@@ -252,9 +252,6 @@ var featureClaimsByAgent = map[model.AgentID]AgentFeatureClaims{
 	model.AgentHermes: {
 		Skills: true, SystemPrompt: true, MCP: true,
 	},
-	model.AgentKilocode: {
-		SlashCommands: true, Skills: true, SystemPrompt: true, MCP: true,
-	},
 	model.AgentKimi: {
 		FileSubAgents: true, Skills: true, SystemPrompt: true, MCP: true,
 	},

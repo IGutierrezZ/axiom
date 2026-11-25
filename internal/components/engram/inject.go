@@ -98,7 +98,7 @@ func engramServerJSONWithCmd(cmd string) []byte {
 // and MCPConfigFile strategies), with the resolved engram command.
 func engramOverlayJSON(agentID model.AgentID, cmd string) []byte {
 	var cfg map[string]any
-	if agentID == model.AgentOpenCode || agentID == model.AgentKilocode {
+	if agentID == model.AgentOpenCode {
 		// OpenCode 1.3.3+ requires command as an array for type:local servers.
 		// The separate "args" field is not accepted; all args must be in the
 		// command array itself.

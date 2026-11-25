@@ -70,11 +70,6 @@ func TestSharedPromptFileRef(t *testing.T) {
 			settingsPath: filepath.Join(home, ".config", "opencode", "opencode.json"),
 			want:         "{file:./prompts/sdd/sdd-apply.md}",
 		},
-		{
-			name:         "Kilocode settings",
-			settingsPath: filepath.Join(home, ".config", "kilo", "opencode.json"),
-			want:         "{file:../opencode/prompts/sdd/sdd-apply.md}",
-		},
 	}
 
 	for _, tt := range tests {

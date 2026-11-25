@@ -71,7 +71,6 @@ func TestScanConfigs_AgentFieldMatchesModelAgentID(t *testing.T) {
 	knownAgents := map[string]bool{
 		"claude-code":        false,
 		"opencode":           false,
-		"kilocode":           false,
 		"gemini-cli":         false,
 		"cursor":             false,
 		"vscode-copilot":     false,

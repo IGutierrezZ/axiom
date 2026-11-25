@@ -61,7 +61,7 @@ type RoutingOptions struct {
 	SettingsPath string
 
 	// Adapter, si no es nil, sustituye al adaptador que se crearía por defecto.
-	// Lo usa el ámbito workspace, donde OpenCode y Kilo resuelven sus rutas en la
+	// Lo usa el ámbito workspace, donde OpenCode resuelve sus rutas en la
 	// distribución del proyecto (adaptador ligado a la raíz).
 	Adapter agents.Adapter
 
@@ -230,7 +230,7 @@ func resolveRoutingDelivery(targetDir string, agent model.AgentID, options Routi
 // installers can resolve the delivery root for these agents without keeping a
 // second copy of the agent list that could drift from this dispatch.
 func DeliversThroughOrchestratorPrompt(agent model.AgentID) bool {
-	return agent == model.AgentOpenCode || agent == model.AgentKilocode
+	return agent == model.AgentOpenCode
 }
 
 // injectPromptSection is the default delivery: a managed marker section inside

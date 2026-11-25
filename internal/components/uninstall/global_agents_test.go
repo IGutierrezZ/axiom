@@ -3,14 +3,13 @@ package uninstall
 import (
 	"os"
 	"path/filepath"
-	"slices"
 	"strings"
 	"testing"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/components/filemerge"
 )
 
-// Pruebas de los restos globales de Kilo, Kiro y Codex (H3) y del criterio de borrado
+// Pruebas de los restos globales de Kiro y Codex (H3) y del criterio de borrado
 // de los mcp.json que quedan vacíos.
 
 func globalCompleteUninstall(t *testing.T, home string) Result {
@@ -47,103 +46,6 @@ func readGlobalFile(t *testing.T, path string) string {
 func pathExists(path string) bool {
 	_, err := os.Lstat(path)
 	return err == nil
-}
-
-const kiloAxiomConfig = `{
-  "agent": {
-    "axiom-orchestrator": {"__managed_by": "axiom/sdd", "mode": "primary"},
-    "mi-agente": {"mode": "subagent", "description": "del usuario"}
-  },
-  "mcp": {
-    "engram": {"type": "local", "command": ["engram", "mcp", "--tools=agent"]},
-    "context7": {"type": "remote", "url": "https://mcp.context7.com/mcp"},
-    "mio": {"type": "local", "command": ["node", "s.js"]}
-  },
-  "share": "disabled",
-  "theme": "mi-tema"
-}`
-
-// La desinstalación global retira de Kilo lo que tiene la forma de Axiom (agentes con
-// la marca, servidores MCP, share por defecto y los plugins gestionados) y conserva lo
-// del usuario.
-func TestCompleteUninstallGlobalRetiresKiloLeftoversAndKeepsTheUsersConfig(t *testing.T) {
-	home := t.TempDir()
-	configPath := filepath.Join(home, ".config", "kilo", "opencode.json")
-	writeGlobalFile(t, configPath, kiloAxiomConfig)
-	pluginsDir := filepath.Join(home, ".config", "kilo", "plugins")
-	for _, name := range []string{"skill-registry.ts", "model-variants.ts"} {
-		writeGlobalFile(t, filepath.Join(pluginsDir, name), "// plugin de Axiom\n")
-	}
-	writeGlobalFile(t, filepath.Join(pluginsDir, "mi-plugin.ts"), "// plugin del usuario\n")
-
-	if leftovers := GlobalAgentLeftovers(home); len(leftovers) != 2 {
-		t.Fatalf("antes de desinstalar debe haber dos restos de Kilo (plugins y configuración), got %+v", leftovers)
-	}
-
-	globalCompleteUninstall(t, home)
-
-	got := readJSONFileForTest(t, configPath)
-	agentsObject, _ := got["agent"].(map[string]any)
-	if _, kept := agentsObject["mi-agente"]; !kept || len(agentsObject) != 1 {
-		t.Errorf("solo debe quedar el agente del usuario: %#v", agentsObject)
-	}
-	servers, _ := got["mcp"].(map[string]any)
-	if _, kept := servers["mio"]; !kept || len(servers) != 1 {
-		t.Errorf("solo debe quedar el servidor MCP del usuario: %#v", servers)
-	}
-	if got["theme"] != "mi-tema" {
-		t.Errorf("el tema del usuario debe conservarse: %#v", got)
-	}
-	if _, gone := got["share"]; gone {
-		t.Errorf("share = disabled (el valor por defecto de Axiom) debe retirarse: %#v", got)
-	}
-	for _, name := range []string{"skill-registry.ts", "model-variants.ts"} {
-		if pathExists(filepath.Join(pluginsDir, name)) {
-			t.Errorf("el plugin gestionado %s debe retirarse", name)
-		}
-	}
-	if !pathExists(filepath.Join(pluginsDir, "mi-plugin.ts")) {
-		t.Error("el plugin del usuario debe conservarse")
-	}
-	if leftovers := GlobalAgentLeftovers(home); len(leftovers) != 0 {
-		t.Errorf("tras desinstalar no debe quedar ningún resto de Axiom: %+v", leftovers)
-	}
-}
-
-// Sin nada del usuario, el opencode.json de Kilo que queda vacío se borra (mismo
-// criterio que el de OpenCode) y también su carpeta de plugins.
-func TestCompleteUninstallGlobalDeletesAnEmptiedKiloConfig(t *testing.T) {
-	home := t.TempDir()
-	configPath := filepath.Join(home, ".config", "kilo", "opencode.json")
-	writeGlobalFile(t, configPath, `{"agent":{"axiom-orchestrator":{"__managed_by":"axiom/sdd"}},"mcp":{"engram":{"type":"local","command":["engram","mcp","--tools=agent"]}},"share":"disabled"}`)
-	writeGlobalFile(t, filepath.Join(home, ".config", "kilo", "plugins", "skill-registry.ts"), "// plugin\n")
-
-	globalCompleteUninstall(t, home)
-
-	if pathExists(configPath) {
-		t.Errorf("el opencode.json de Kilo vacío debe borrarse:\n%s", readGlobalFile(t, configPath))
-	}
-	if pathExists(filepath.Join(home, ".config", "kilo")) {
-		t.Error("la carpeta de Kilo que queda vacía debe quitarse")
-	}
-}
-
-// Un servidor MCP de Kilo con el nombre de los de Axiom pero otra definición es del
-// usuario: se conserva y se avisa.
-func TestCompleteUninstallGlobalKeepsAKiloServerTheUserDefined(t *testing.T) {
-	home := t.TempDir()
-	configPath := filepath.Join(home, ".config", "kilo", "opencode.json")
-	writeGlobalFile(t, configPath, `{"mcp":{"context7":{"type":"remote","url":"https://contexto.interno.example/mcp"}}}`)
-
-	result := globalCompleteUninstall(t, home)
-
-	servers, _ := readJSONFileForTest(t, configPath)["mcp"].(map[string]any)
-	if _, kept := servers["context7"]; !kept {
-		t.Errorf("el context7 del usuario debe conservarse: %#v", servers)
-	}
-	if !strings.Contains(strings.Join(result.ManualActions, "\n"), "context7") {
-		t.Errorf("debe avisar de que conserva context7: %v", result.ManualActions)
-	}
 }
 
 func kiroSteeringPath(home string) string {
@@ -294,47 +196,10 @@ func TestCompleteUninstallGlobalDeletesAnEmptiedMCPFileOnlyWhenItHeldNothingButA
 
 func TestGlobalAgentLeftoversIsEmptyWithoutAxiom(t *testing.T) {
 	home := t.TempDir()
-	writeGlobalFile(t, filepath.Join(home, ".config", "kilo", "opencode.json"), `{"theme":"mi-tema"}`)
-	writeGlobalFile(t, filepath.Join(home, ".config", "kilo", "plugins", "mi-plugin.ts"), "// propio\n")
 	writeGlobalFile(t, kiroSteeringPath(home), "---\ninclusion: always\n---\n\nReglas propias.\n")
 	writeGlobalFile(t, filepath.Join(home, ".codex", "config.toml"), "model = \"x\"\n[features]\nmulti_agent = false\n")
 
 	if leftovers := GlobalAgentLeftovers(home); len(leftovers) != 0 {
 		t.Fatalf("no hay nada de Axiom: %+v", leftovers)
-	}
-	if slices.Contains(kiloPluginNames(), "mi-plugin.ts") {
-		t.Fatal("mi-plugin.ts no es un plugin de Axiom")
-	}
-}
-
-// El overlay actual no escribe `__managed_by`: la desinstalación global de Kilo
-// identifica los agentes de Axiom por nombre y forma (también los perfiles) y deja
-// los del usuario, incluso uno con nombre propio y la misma forma.
-func TestCompleteUninstallGlobalRetiresKiloManagedAgentsWithoutMarker(t *testing.T) {
-	home := t.TempDir()
-	configPath := filepath.Join(home, ".config", "kilo", "opencode.json")
-	writeGlobalFile(t, configPath, `{
-  "agent": {
-    "axiom-orchestrator": {"mode": "primary", "prompt": "{file:./AGENTS.md}", "permission": {}},
-    "sdd-apply": {"mode": "subagent", "hidden": true, "prompt": "p", "permission": {}},
-    "sdd-orchestrator-fast": {"mode": "primary", "prompt": "p", "permission": {}},
-    "mi-agente": {"mode": "subagent", "hidden": true, "prompt": "p", "permission": {}}
-  },
-  "theme": "mi-tema"
-}`)
-
-	if leftovers := GlobalAgentLeftovers(home); len(leftovers) == 0 {
-		t.Fatal("los agentes gestionados sin marcador deben contar como restos de Axiom")
-	}
-
-	globalCompleteUninstall(t, home)
-
-	got := readJSONFileForTest(t, configPath)
-	agentsObject, _ := got["agent"].(map[string]any)
-	if _, kept := agentsObject["mi-agente"]; !kept || len(agentsObject) != 1 {
-		t.Errorf("solo debe quedar el agente del usuario: %#v", agentsObject)
-	}
-	if got["theme"] != "mi-tema" {
-		t.Errorf("el tema del usuario debe conservarse: %#v", got)
 	}
 }

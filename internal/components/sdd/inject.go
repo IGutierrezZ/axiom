@@ -102,8 +102,8 @@ func (opts InjectOptions) orchestratorPolicyRenderOptions() OrchestratorRenderOp
 	}
 }
 
-// openCodeRenderOptions son las opciones de render de los overlays de OpenCode y
-// Kilo: las de política del orquestador más la carpeta de prompts compartidos del
+// openCodeRenderOptions son las opciones de render de los overlays de OpenCode:
+// las de política del orquestador más la carpeta de prompts compartidos del
 // adaptador, que en workspace es la del proyecto.
 func (opts InjectOptions) openCodeRenderOptions(adapter agents.Adapter, homeDir string) OrchestratorRenderOptions {
 	options := opts.orchestratorPolicyRenderOptions()
@@ -502,12 +502,6 @@ func Inject(homeDir string, adapter agents.Adapter, sddMode model.SDDModeID, opt
 		if err != nil {
 			return InjectionResult{}, err
 		}
-		if adapter.Agent() == model.AgentKilocode {
-			preparedOverlay, err = stripOpenCodeNativeFallbackAgents(preparedOverlay)
-			if err != nil {
-				return InjectionResult{}, err
-			}
-		}
 		for _, profile := range opts.Profiles {
 			if profile.Name == "" || profile.Name == "default" {
 				continue
@@ -530,10 +524,10 @@ func Inject(homeDir string, adapter agents.Adapter, sddMode model.SDDModeID, opt
 	changed := false
 
 	// 1. Inject SDD orchestrator into the global system prompt for agents that
-	// rely on prompt files. OpenCode and Kilocode are handled differently: their
+	// rely on prompt files. OpenCode are handled differently: their
 	// orchestrator instructions must be scoped to the OpenCode gentle-orchestrator agent only,
 	// otherwise the SDD phase sub-agents inherit coordinator-only delegation rules.
-	if adapter.Agent() != model.AgentOpenCode && adapter.Agent() != model.AgentKilocode {
+	if adapter.Agent() != model.AgentOpenCode {
 		switch adapter.SystemPromptStrategy() {
 		case model.StrategyMarkdownSections:
 			result, err := injectMarkdownSections(homeDir, adapter, opts.ClaudeModelAssignments, opts.ClaudePhaseAssignments, prompt)
@@ -580,7 +574,7 @@ func Inject(homeDir string, adapter agents.Adapter, sddMode model.SDDModeID, opt
 
 	// 1b. If StrictTDD is enabled, inject the strict-tdd-mode marker section
 	// into the system prompt file so agents know Strict TDD is active.
-	if opts.StrictTDD && adapter.Agent() != model.AgentOpenCode && adapter.Agent() != model.AgentKilocode {
+	if opts.StrictTDD && adapter.Agent() != model.AgentOpenCode {
 		if adapter.SystemPromptStrategy() == model.StrategyJinjaModules {
 			// Write the strict-tdd-mode marker as a standalone Jinja include module.
 			// The static KIMI.md template references it via {% include "strict-tdd-mode.md" %}.
@@ -771,21 +765,7 @@ func Inject(homeDir string, adapter agents.Adapter, sddMode model.SDDModeID, opt
 					return InjectionResult{}, fmt.Errorf("clean stale profile JD agents %q: %w", profile.Name, cleanupErr)
 				}
 				changed = changed || cleanupResult.Changed
-				if adapter.Agent() == model.AgentKilocode {
-					cleanupResult, cleanupErr = cleanupKilocodeProfileJDPermissions(settingsPath, profile)
-					if cleanupErr != nil {
-						return InjectionResult{}, fmt.Errorf("clean Kilocode profile JD permissions %q: %w", profile.Name, cleanupErr)
-					}
-					changed = changed || cleanupResult.Changed
-				}
 				profileOverlay := profileOverlays[profile.Name]
-				var profileErr error
-				if adapter.Agent() == model.AgentKilocode {
-					profileOverlay, profileErr = restoreKilocodeManagedAgentToolsInOverlay(profileOverlay)
-					if profileErr != nil {
-						return InjectionResult{}, fmt.Errorf("restore Kilocode profile tools %q: %w", profile.Name, profileErr)
-					}
-				}
 				profileResult, profileErr := mergeSettings(settingsPath, profileOverlay)
 				if profileErr != nil {
 					return InjectionResult{}, fmt.Errorf("merge profile overlay %q: %w", profile.Name, profileErr)
@@ -1125,9 +1105,6 @@ func inlineOpenCodeSDDPrompts(overlayBytes []byte, homeDir, settingsPath string,
 		return overlayBytes, nil
 	}
 	expandOpenCodeJudgmentDayAgents(agentsMap, agent == model.AgentOpenCode)
-	if agent == model.AgentKilocode {
-		restoreKilocodeManagedAgentTools(agentsMap)
-	}
 
 	// Inline the orchestrator prompt (always inlined, not a file reference),
 	// unless an external strategy requested preserving the existing prompt.
@@ -1176,8 +1153,8 @@ func inlineOpenCodeSDDPrompts(overlayBytes []byte, homeDir, settingsPath string,
 	}
 
 	// Carry the organic routing guidance across the wholesale prompt assignment
-	// above. The orchestrator prompt is the only always-loaded scope OpenCode and
-	// Kilocode read, and every branch above replaces it in full, so guidance that
+	// above. The orchestrator prompt is the only always-loaded scope OpenCode
+	// reads, and every branch above replaces it in full, so guidance that
 	// is not re-injected here is destroyed by an SDD install.
 	//
 	// Preserving is deliberately chosen over merely ordering the installers: the
@@ -1280,69 +1257,6 @@ func extractManagedSection(content, sectionID string) string {
 		return strings.Trim(content[start+len(open):end], "\n")
 	}
 	return ""
-}
-
-// restoreKilocodeManagedAgentTools restores the exact Kilocode tools and
-// permission shapes that the shared OpenCode-compatible overlays carried before
-// managed OpenCode tools were removed.
-func restoreKilocodeManagedAgentTools(agentsMap map[string]any) {
-	for name, raw := range agentsMap {
-		agent, ok := raw.(map[string]any)
-		if !ok {
-			continue
-		}
-		switch {
-		case name == "axiom-orchestrator" || name == "gentle-orchestrator" || strings.HasPrefix(name, "sdd-orchestrator-"):
-			agent["tools"] = map[string]any{"__replace__": map[string]any{"read": true, "write": true, "edit": true, "bash": true, "question": true, "task": true}}
-		case isKilocodeProfilePhase(name):
-			agent["tools"] = map[string]any{"read": true, "write": true, "edit": true, "bash": true}
-			if name == "sdd-research" {
-				agent["permission"] = kilocodeResearchPermission()
-			} else {
-				delete(agent, "permission")
-			}
-		case name == "jd-judge-a" || name == "jd-judge-b" || strings.HasPrefix(name, "jd-judge-a-") || strings.HasPrefix(name, "jd-judge-b-"):
-			if name == "jd-judge-a" || name == "jd-judge-b" {
-				agent["tools"] = map[string]any{"*": false, "read": true, "write": false, "edit": false, "bash": false, "task": false}
-			} else {
-				agent["tools"] = map[string]any{"__replace__": map[string]any{"read": true, "bash": true}}
-			}
-			delete(agent, "permission")
-		case name == "jd-fix-agent" || strings.HasPrefix(name, "jd-fix-agent-"):
-			agent["tools"] = map[string]any{"read": true, "write": true, "edit": true, "bash": true}
-			delete(agent, "permission")
-		}
-	}
-}
-
-func kilocodeResearchPermission() map[string]any {
-	return map[string]any{"bash": "deny", "webfetch": "deny", "websearch": "deny", "task": "deny"}
-}
-
-func restoreKilocodeManagedAgentToolsInOverlay(overlayBytes []byte) ([]byte, error) {
-	var overlay map[string]any
-	if err := json.Unmarshal(overlayBytes, &overlay); err != nil {
-		return nil, fmt.Errorf("unmarshal Kilocode profile overlay: %w", err)
-	}
-	agentsMap, ok := overlay["agent"].(map[string]any)
-	if !ok {
-		return overlayBytes, nil
-	}
-	restoreKilocodeManagedAgentTools(agentsMap)
-	result, err := json.MarshalIndent(overlay, "", "  ")
-	if err != nil {
-		return nil, fmt.Errorf("marshal Kilocode profile overlay: %w", err)
-	}
-	return append(result, '\n'), nil
-}
-
-func isKilocodeProfilePhase(name string) bool {
-	for _, phase := range subAgentPhaseOrder {
-		if name == phase || strings.HasPrefix(name, phase+"-") {
-			return true
-		}
-	}
-	return false
 }
 
 // expandOpenCodeJudgmentDayAgents gives the Judgment Day judges the read-only
@@ -2288,7 +2202,7 @@ func ManagedOpenCodePluginNames() []string {
 }
 
 // ManagedOpenCodePluginNamesFor devuelve los plugins gestionados de un agente de
-// la familia OpenCode (OpenCode y Kilo reciben conjuntos distintos).
+// la familia OpenCode (hoy solo OpenCode).
 func ManagedOpenCodePluginNamesFor(agent model.AgentID) []string {
 	return managedOpenCodePluginNames(agent)
 }
@@ -2298,8 +2212,6 @@ func managedOpenCodePluginNames(agent model.AgentID) []string {
 	case model.AgentOpenCode:
 		// axiom-branch-guard.ts es la capa D de la guarda de rama (inc-25, REQ-25.22): solo OpenCode.
 		return []string{"axiom-branch-guard.ts", "model-variants.ts", "sdd-task-result-artifacts.ts", "skill-registry.ts"}
-	case model.AgentKilocode:
-		return []string{"model-variants.ts", "skill-registry.ts"}
 	default:
 		return nil
 	}
@@ -2310,25 +2222,7 @@ func managedOpenCodePluginNames(agent model.AgentID) []string {
 // Inject's settings/plugins gate and sync's plugin refresh both use this
 // predicate so the two gates cannot drift (issue #1440).
 func AgentReceivesManagedOpenCodePlugins(agent model.AgentID) bool {
-	return agent == model.AgentOpenCode || agent == model.AgentKilocode
-}
-
-func stripOpenCodeNativeFallbackAgents(overlayBytes []byte) ([]byte, error) {
-	var overlay map[string]any
-	if err := json.Unmarshal(overlayBytes, &overlay); err != nil {
-		return nil, fmt.Errorf("unmarshal overlay: %w", err)
-	}
-	agents, ok := overlay["agent"].(map[string]any)
-	if !ok {
-		return overlayBytes, nil
-	}
-	delete(agents, "general")
-	delete(agents, "explore")
-	result, err := json.MarshalIndent(overlay, "", "  ")
-	if err != nil {
-		return nil, fmt.Errorf("marshal overlay: %w", err)
-	}
-	return append(result, '\n'), nil
+	return agent == model.AgentOpenCode
 }
 
 // RefreshInstalledOpenCodePlugins rewrites managed OpenCode plugins that are
@@ -2434,7 +2328,7 @@ type mergeJSONResult struct {
 }
 
 // mergeOpenCodeCompatibleJSONFile applies the legacy settings migrations shared
-// by OpenCode and Kilocode while preserving each provider's managed tools.
+// by OpenCode while preserving each provider's managed tools.
 func mergeOpenCodeCompatibleJSONFile(path string, overlay []byte) (mergeJSONResult, error) {
 	baseJSON, err := readAndMigrateOpenCodeCompatibleJSON(path)
 	if err != nil {

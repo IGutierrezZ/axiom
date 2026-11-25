@@ -957,7 +957,7 @@ func (r *installRuntime) stagePlan() pipeline.StagePlan {
 	for _, tool := range r.selection.CommunityTools {
 		apply = append(apply, communityToolInstallStep{id: "community-tool:" + string(tool), tool: tool, workspaceDir: r.workspaceDir, homeDir: r.homeDir, state: r.state})
 	}
-	// En workspace, OpenCode, Kilo y Gemini solo cargan el fichero de instrucciones
+	// En workspace, OpenCode y Gemini solo cargan el fichero de instrucciones
 	// de Axiom si está registrado en su configuración de proyecto (instructions o
 	// context.fileName).
 	if r.scope == ScopeWorkspace && registersWorkspaceInstructions(r.resolved.Agents) {
@@ -1103,7 +1103,7 @@ func (s agentRoutingGuidanceStep) recordChanged(result agentguidance.Result) {
 // frente a `opencode.json` global): la limpieza debe actuar sobre ese mismo.
 func stripLegacyTriggerRules(targetDir string, adapter agents.Adapter, effectiveSettingsPath string) (agentguidance.Result, error) {
 	switch {
-	case adapter.Agent() == model.AgentOpenCode || adapter.Agent() == model.AgentKilocode:
+	case adapter.Agent() == model.AgentOpenCode:
 		settingsPath := adapter.SettingsPath(targetDir)
 		if strings.TrimSpace(effectiveSettingsPath) != "" {
 			settingsPath = effectiveSettingsPath
@@ -2480,7 +2480,7 @@ func backupTargets(homeDir, workspaceDir string, scope InstallScope, selection m
 		if component == model.ComponentPersona {
 			plan := persona.ResourcePlanFor(selection.Persona)
 			for _, adapter := range adapters {
-				if adapter.Agent() == model.AgentOpenCode || adapter.Agent() == model.AgentKilocode {
+				if adapter.Agent() == model.AgentOpenCode {
 					// Persona can merge or clean a managed agent in settings during
 					// install. This is backup-only: ComponentPersona verification
 					// does not promise a settings write for every persona path.
@@ -2514,7 +2514,7 @@ func backupTargets(homeDir, workspaceDir string, scope InstallScope, selection m
 	for _, path := range routingGuidancePaths(homeDir, workspaceDir, scope, adapters) {
 		paths[path] = struct{}{}
 	}
-	// El registro de instrucciones de OpenCode y Kilo reescribe su configuración de
+	// El registro de instrucciones de OpenCode reescribe su configuración de
 	// proyecto aunque ningún componente seleccionado la toque.
 	for _, path := range workspaceInstructionsSettingsPaths(workspaceDir, scope, adapters) {
 		paths[path] = struct{}{}
@@ -2756,9 +2756,7 @@ func componentPathsWithWorkspaceScoped(homeDir, workspaceDir string, scope Insta
 			if adapter.SupportsSlashCommands() {
 				paths = append(paths, sdd.SlashCommandPaths(adapter.Agent(), adapter.CommandsDir(targetDir))...)
 			}
-			// Kilo solo declara sus ficheros SDD en workspace: en global esa lista nunca
-			// los incluyó y ampliarla cambiaría lo que se verifica y respalda hoy.
-			if adapter.Agent() == model.AgentOpenCode || (adapter.Agent() == model.AgentKilocode && scope == ScopeWorkspace) {
+			if adapter.Agent() == model.AgentOpenCode {
 				if p := effectiveOpenCodeSettingsPath(homeDir, workspaceDir, scope, adapter); p != "" {
 					paths = append(paths, p)
 					if adapter.Agent() == model.AgentOpenCode {
@@ -3001,7 +2999,7 @@ func routingGuidanceOptions(homeDir, workspaceDir string, scope InstallScope, ad
 	if scope == ScopeWorkspace && boundToWorkspace(adapter) {
 		options.Adapter = adapter
 	}
-	// OpenCode y Kilo guardan la guía en su configuración, que en el proyecto es
+	// OpenCode guarda la guía en su configuración, que en el proyecto es
 	// del equipo y está versionada: se conservan sus comentarios.
 	if scope == ScopeWorkspace && agentguidance.DeliversThroughOrchestratorPrompt(adapter.Agent()) {
 		options.Adapter = adapter
@@ -3284,8 +3282,8 @@ func isLegacyOpenCodeBackgroundAgentsPlugin(path string) bool {
 	if filepath.Base(path) != "background-agents.ts" || filepath.Base(pluginsDir) != "plugins" {
 		return false
 	}
-	// En un proyecto (ámbito workspace) la carpeta de recursos es .opencode o .kilo.
-	if base := filepath.Base(opencodeDir); base == ".opencode" || base == ".kilo" {
+	// En un proyecto (ámbito workspace) la carpeta de recursos es .opencode.
+	if base := filepath.Base(opencodeDir); base == ".opencode" {
 		return true
 	}
 	if filepath.Base(opencodeDir) != "opencode" {
