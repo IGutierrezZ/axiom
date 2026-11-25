@@ -18,7 +18,6 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/antigravity"
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/claude"
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/codex"
-	"github.com/IGutierrezZ/axiom/v3/internal/agents/kimi"
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/opencode"
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/vscode"
 	"github.com/IGutierrezZ/axiom/v3/internal/versions"
@@ -35,7 +34,6 @@ func cursorAdapter(t *testing.T) agents.Adapter {
 
 func antigravityAdapter() agents.Adapter { return antigravity.NewAdapter() }
 func claudeAdapter() agents.Adapter      { return claude.NewAdapter() }
-func kimiAdapter() agents.Adapter        { return kimi.NewAdapter() }
 func opencodeAdapter() agents.Adapter    { return opencode.NewAdapter() }
 
 func assertOnlyKeys(t *testing.T, path string, object map[string]any, keys ...string) {
@@ -151,23 +149,6 @@ func assertAntigravityContext7Schema(t *testing.T, path string) {
 	}
 
 	assertOnlyKeys(t, path, context7, "serverUrl")
-}
-
-// assertKimiContext7Schema asserts the mcpServers.context7 entry in a Kimi
-// mcp.json is the documented remote HTTP config with no legacy local keys.
-func assertKimiContext7Schema(t *testing.T, path string) {
-	t.Helper()
-
-	context7 := readMCPServersContext7Entry(t, path)
-
-	if got := context7["transport"]; got != "http" {
-		t.Fatalf("%q mcpServers.context7.transport = %#v; want %q", path, got, "http")
-	}
-	if got := context7["url"]; got != "https://mcp.context7.com/mcp" {
-		t.Fatalf("%q mcpServers.context7.url = %#v; want context7 remote URL", path, got)
-	}
-
-	assertOnlyKeys(t, path, context7, "transport", "url")
 }
 
 func TestInjectOpenCodeMergesContext7AndIsIdempotent(t *testing.T) {
@@ -1228,88 +1209,6 @@ func TestInjectAntigravityReplacesLegacyContext7LocalConfig(t *testing.T) {
 	}
 
 	assertAntigravityContext7Schema(t, configPath)
-}
-
-func TestInjectKimiWritesContext7ToMCPConfigFile(t *testing.T) {
-	home := t.TempDir()
-
-	first, err := Inject(home, home, kimiAdapter())
-	if err != nil {
-		t.Fatalf("Inject(kimi) first error = %v", err)
-	}
-	if !first.Changed {
-		t.Fatalf("Inject(kimi) first changed = false")
-	}
-
-	second, err := Inject(home, home, kimiAdapter())
-	if err != nil {
-		t.Fatalf("Inject(kimi) second error = %v", err)
-	}
-	if second.Changed {
-		t.Fatalf("Inject(kimi) second changed = true")
-	}
-
-	path := filepath.Join(home, ".kimi", "mcp.json")
-	content, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatalf("ReadFile(kimi mcp.json) error = %v", err)
-	}
-
-	text := string(content)
-	if !strings.Contains(text, `"mcpServers"`) {
-		t.Fatal("kimi mcp.json missing mcpServers key")
-	}
-	if !strings.Contains(text, `"context7"`) {
-		t.Fatal("kimi mcp.json missing context7 server")
-	}
-	if !strings.Contains(text, `"transport": "http"`) {
-		t.Fatal("kimi mcp.json should set transport=http for documented remote MCP configuration")
-	}
-	if !strings.Contains(text, `"url": "https://mcp.context7.com/mcp"`) {
-		t.Fatal("kimi mcp.json should use the documented remote MCP URL for context7")
-	}
-}
-
-func TestInjectKimiReplacesLegacyContext7LocalConfig(t *testing.T) {
-	home := t.TempDir()
-	adapter := kimiAdapter()
-	configPath := adapter.MCPConfigPath(home, "context7")
-	if err := os.MkdirAll(filepath.Dir(configPath), 0o755); err != nil {
-		t.Fatalf("MkdirAll error = %v", err)
-	}
-
-	legacy := `{
-	  "mcpServers": {
-	    "context7": {
-	      "command": "npx",
-	      "args": ["-y", "@upstash/context7-mcp"],
-	      "env": {"TOKEN": "x"}
-	    }
-	  }
-	}`
-	if err := os.WriteFile(configPath, []byte(legacy), 0o644); err != nil {
-		t.Fatalf("WriteFile(kimi mcp.json) error = %v", err)
-	}
-
-	first, err := Inject(home, home, adapter)
-	if err != nil {
-		t.Fatalf("Inject(kimi) first error = %v", err)
-	}
-	if !first.Changed {
-		t.Fatalf("Inject(kimi) first changed = false; expected migration to rewrite legacy context7")
-	}
-
-	assertKimiContext7Schema(t, configPath)
-
-	second, err := Inject(home, home, adapter)
-	if err != nil {
-		t.Fatalf("Inject(kimi) second error = %v", err)
-	}
-	if second.Changed {
-		t.Fatalf("Inject(kimi) second changed = true; expected idempotent context7 rewrite")
-	}
-
-	assertKimiContext7Schema(t, configPath)
 }
 
 // TestMergeJSONFilePreservesExistingModeOnRewrite is the representative

@@ -10,9 +10,9 @@ import (
 )
 
 // retiredAgents se conservan en el código pero no se pueden elegir al instalar.
-var retiredAgents = []model.AgentID{model.AgentQwenCode, model.AgentKimi}
+var retiredAgents = []model.AgentID{model.AgentQwenCode}
 
-// La pantalla de selección de agentes no lista Qwen Code ni Kimi, y sí el
+// La pantalla de selección de agentes no lista Qwen Code, y sí el
 // resto; la de desinstalación los sigue listando.
 func TestAgentSelectionScreenOmitsRetiredAgents(t *testing.T) {
 	options := screens.AgentOptions()
@@ -55,7 +55,7 @@ func TestPreselectedAgentsExcludesRetiredAgents(t *testing.T) {
 		}
 	}
 
-	persisted := state.InstallState{InstalledAgents: []string{"kimi", "claude-code", "qwen-code"}, SelectionConfigured: true}
+	persisted := state.InstallState{InstalledAgents: []string{"claude-code", "qwen-code"}, SelectionConfigured: true}
 	got := preselectedAgents(makeDetectionWithAgents(), persisted)
 	if want := []model.AgentID{model.AgentClaudeCode}; !slices.Equal(got, want) {
 		t.Errorf("preselectedAgents(estado) = %v, want %v", got, want)

@@ -16,7 +16,6 @@ import (
 
 	"github.com/IGutierrezZ/axiom/v3/internal/agents"
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/claude"
-	"github.com/IGutierrezZ/axiom/v3/internal/agents/kimi"
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/opencode"
 	windsurfagent "github.com/IGutierrezZ/axiom/v3/internal/agents/windsurf"
 	"github.com/IGutierrezZ/axiom/v3/internal/assets"
@@ -28,7 +27,6 @@ import (
 )
 
 func claudeAdapter() agents.Adapter   { return claude.NewAdapter() }
-func kimiAdapter() agents.Adapter     { return kimi.NewAdapter() }
 func opencodeAdapter() agents.Adapter { return opencode.NewAdapter() }
 func windsurfAdapter() agents.Adapter { return windsurfagent.NewAdapter() }
 
@@ -55,7 +53,7 @@ func (a invalidRenderedSessionPreflightAdapter) RenderCodexPhaseEfforts(map[stri
 }
 
 func TestInjectSessionPreflightFailurePrecedesAllSDDWrites(t *testing.T) {
-	for _, agent := range []model.AgentID{model.AgentWindsurf, model.AgentClaudeCode, model.AgentKimi, model.AgentOpenCode, model.AgentCodex} {
+	for _, agent := range []model.AgentID{model.AgentWindsurf, model.AgentClaudeCode, model.AgentOpenCode, model.AgentCodex} {
 		for _, existing := range []bool{false, true} {
 			t.Run(fmt.Sprintf("%s/existing=%t", agent, existing), func(t *testing.T) {
 				home := t.TempDir()
@@ -164,9 +162,6 @@ func TestInjectMaterializesStatusContinuationContract(t *testing.T) {
 				return string(data)
 			}
 			promptPath := adapter.SystemPromptFile(home)
-			if agent == model.AgentKimi {
-				promptPath = filepath.Join(adapter.GlobalConfigDir(home), "sdd-orchestrator.md")
-			}
 			if AgentReceivesManagedOpenCodePlugins(agent) {
 				var settings struct {
 					Agent map[string]struct{ Prompt string } `json:"agent"`
@@ -209,7 +204,7 @@ func TestInjectMaterializesStatusContinuationContract(t *testing.T) {
 }
 
 func TestInjectFallbackSessionPreflight(t *testing.T) {
-	for _, agent := range []model.AgentID{model.AgentVSCodeCopilot, model.AgentGitHubCopilotCLI, model.AgentCursor, model.AgentGeminiCLI, model.AgentAntigravity, model.AgentQwenCode, model.AgentKimi, model.AgentKiroIDE, model.AgentCodex, model.AgentWindsurf} {
+	for _, agent := range []model.AgentID{model.AgentVSCodeCopilot, model.AgentGitHubCopilotCLI, model.AgentCursor, model.AgentGeminiCLI, model.AgentAntigravity, model.AgentQwenCode, model.AgentKiroIDE, model.AgentCodex, model.AgentWindsurf} {
 		t.Run(string(agent), func(t *testing.T) {
 			home := t.TempDir()
 			t.Setenv("XDG_CONFIG_HOME", filepath.Join(home, ".config"))
@@ -219,9 +214,6 @@ func TestInjectFallbackSessionPreflight(t *testing.T) {
 				t.Fatal(err)
 			}
 			path := adapter.SystemPromptFile(home)
-			if agent == model.AgentKimi {
-				path = filepath.Join(home, ".kimi", "sdd-orchestrator.md")
-			}
 			before, err := os.ReadFile(path)
 			if err != nil {
 				t.Fatal(err)
@@ -253,7 +245,6 @@ func TestSDDOrchestratorAssetSelectionCoversSupportedAgents(t *testing.T) {
 		{model.AgentCodex, "codex/sdd-orchestrator.md"},
 		{model.AgentAntigravity, "antigravity/sdd-orchestrator.md"},
 		{model.AgentWindsurf, "windsurf/sdd-orchestrator.md"},
-		{model.AgentKimi, "kimi/sdd-orchestrator.md"},
 		{model.AgentQwenCode, "qwen/sdd-orchestrator.md"},
 		{model.AgentKiroIDE, "kiro/sdd-orchestrator.md"},
 		{model.AgentPi, "generic/sdd-orchestrator.md"},
@@ -288,9 +279,7 @@ func TestRemoteAuthorizationInstalledExecutors(t *testing.T) {
 	for _, tc := range []struct {
 		id    model.AgentID
 		count int
-	}{
-		{"claude-code", 14}, {"cursor", 11}, {model.AgentKiroIDE, 14}, {"kimi", 11},
-	} {
+	}{} {
 		t.Run(string(tc.id), func(t *testing.T) {
 			adapter, err := agents.NewAdapter(tc.id)
 			if err != nil {
@@ -2300,70 +2289,7 @@ func TestInjectGeminiWritesSDDOrchestratorAndSkills(t *testing.T) {
 	}
 }
 
-func TestInjectKimiWritesNativeAgentFilesAndGlobalSkills(t *testing.T) {
-	home := t.TempDir()
-
-	result, err := Inject(home, kimiAdapter(), "")
-	if err != nil {
-		t.Fatalf("Inject(kimi) error = %v", err)
-	}
-	if !result.Changed {
-		t.Fatal("Inject(kimi) changed = false")
-	}
-
-	// SDD orchestrator is written as a standalone Jinja include module.
-	sddModulePath := filepath.Join(home, ".kimi", "sdd-orchestrator.md")
-	sddModule, err := os.ReadFile(sddModulePath)
-	if err != nil {
-		t.Fatalf("ReadFile(%q) error = %v", sddModulePath, err)
-	}
-
-	sddText := string(sddModule)
-	if !strings.Contains(sddText, "/skill:sdd-init") {
-		t.Fatal("sdd-orchestrator.md missing native /skill guidance")
-	}
-	if !strings.Contains(sddText, "multiagent:Task") {
-		t.Fatal("sdd-orchestrator.md should reference Kimi's documented Task tool for custom subagent delegation")
-	}
-
-	rootAgentPath := filepath.Join(home, ".kimi", "agents", "gentleman.yaml")
-	rootAgent, err := os.ReadFile(rootAgentPath)
-	if err != nil {
-		t.Fatalf("ReadFile(%q) error = %v", rootAgentPath, err)
-	}
-
-	rootText := string(rootAgent)
-	if !strings.Contains(rootText, "name: gentleman") {
-		t.Fatal("gentleman.yaml should define a named root custom agent")
-	}
-	if strings.Contains(rootText, "kimi_cli.tools.agent:Agent") {
-		t.Fatal("gentleman.yaml should inherit Kimi's default tool set instead of hardcoding the old Agent tool path")
-	}
-	if !strings.Contains(rootText, "../KIMI.md") {
-		t.Fatal("gentleman.yaml should load the installed KIMI.md system prompt")
-	}
-
-	for _, want := range []string{
-		filepath.Join(home, ".kimi", "agents", "sdd-init.yaml"),
-		filepath.Join(home, ".kimi", "agents", "sdd-init.md"),
-		filepath.Join(home, ".kimi", "agents", "sdd-explore.yaml"),
-		filepath.Join(home, ".kimi", "agents", "sdd-propose.yaml"),
-		filepath.Join(home, ".kimi", "agents", "sdd-spec.yaml"),
-		filepath.Join(home, ".kimi", "agents", "sdd-design.yaml"),
-		filepath.Join(home, ".kimi", "agents", "sdd-tasks.yaml"),
-		filepath.Join(home, ".kimi", "agents", "sdd-apply.yaml"),
-		filepath.Join(home, ".kimi", "agents", "sdd-verify.yaml"),
-		filepath.Join(home, ".kimi", "agents", "sdd-archive.yaml"),
-		filepath.Join(home, ".config", "agents", "skills", "sdd-init", "SKILL.md"),
-		filepath.Join(home, ".config", "agents", "skills", "_shared", "sdd-phase-common.md"),
-	} {
-		if _, err := os.Stat(want); err != nil {
-			t.Fatalf("expected Kimi SDD artifact %q: %v", want, err)
-		}
-	}
-}
-
-func TestInjectKimiKiroWindsurfAntigravityPreserveNativeChainStrategyWording(t *testing.T) {
+func TestInjectKiroWindsurfAntigravityPreserveNativeChainStrategyWording(t *testing.T) {
 	tests := []struct {
 		name       string
 		agentID    model.AgentID
@@ -2371,15 +2297,6 @@ func TestInjectKimiKiroWindsurfAntigravityPreserveNativeChainStrategyWording(t *
 		required   []string
 		forbidden  []string
 	}{
-		{
-			name:    "kimi",
-			agentID: model.AgentKimi,
-			promptPath: func(home string, _ agents.Adapter) string {
-				return filepath.Join(home, ".kimi", "sdd-orchestrator.md")
-			},
-			required:  []string{"### Chain Strategy", "`stacked-to-main`", "`feature-branch-chain`", "delivery_strategy", "chain_strategy", "/skill:sdd-*", "multiagent:Task", "custom-agent prompt", "treat `chained-pr` (registry skill `chained-pr`) as a required skill match"},
-			forbidden: []string{"OpenCode's background-agent plugin", "plugin-backed persisted background delegation"},
-		},
 		{
 			name:    "kiro",
 			agentID: model.AgentKiroIDE,
@@ -9247,7 +9164,7 @@ func TestInjectInstallsTheAdoptionReferenceIdenticallyAcrossRuntimes(t *testing.
 	mockNoPackageManager(t)
 	want := assets.MustRead("skills/sdd-spec/references/openspec-adoption.md")
 
-	adapters := map[string]agents.Adapter{"claude-code": claudeAdapter(), "opencode": opencodeAdapter(), "kimi": kimiAdapter()}
+	adapters := map[string]agents.Adapter{"claude-code": claudeAdapter(), "opencode": opencodeAdapter()}
 	for name, adapter := range adapters {
 		t.Run(name, func(t *testing.T) {
 			home := t.TempDir()

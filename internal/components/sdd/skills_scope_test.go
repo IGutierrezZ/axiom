@@ -21,7 +21,6 @@ func skillsScopeAdapters() map[string]agents.Adapter {
 	return map[string]agents.Adapter{
 		"claude": claudeAdapter(),
 		"cursor": cursor.NewAdapter(),
-		"kimi":   kimiAdapter(),
 		"kiro":   kiro.NewAdapter(),
 		// OpenCode lleva la ruta en los overlays JSON de sus subagentes.
 		"opencode": opencodeAdapter(),
@@ -241,7 +240,7 @@ func TestInstallsInWorkspaceOnlyWhenRootIsWorkspace(t *testing.T) {
 // nombra también la alternativa de workspace.
 func TestSubAgentAndCommandAssetsUseSkillsDirPlaceholder(t *testing.T) {
 	dirs := []string{
-		"claude/agents", "claude/commands", "cursor/agents", "kimi/agents", "kiro/agents",
+		"claude/agents", "claude/commands", "cursor/agents", "kiro/agents",
 	}
 	for _, dir := range dirs {
 		entries, err := fs.ReadDir(assets.FS, dir)

@@ -19,7 +19,6 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/agents"
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/claude"
 	codexagent "github.com/IGutierrezZ/axiom/v3/internal/agents/codex"
-	"github.com/IGutierrezZ/axiom/v3/internal/agents/kimi"
 	opencodeagent "github.com/IGutierrezZ/axiom/v3/internal/agents/opencode"
 	"github.com/IGutierrezZ/axiom/v3/internal/assets"
 	"github.com/IGutierrezZ/axiom/v3/internal/backup"
@@ -894,17 +893,6 @@ func (r *installRuntime) stagePlan() pipeline.StagePlan {
 		apply = append(apply, piBackgroundProjectionStep{id: "pi:background-projection", plan: r.piBackgroundProjection})
 	}
 
-	// Before installing components, ensure modular agents have their system prompt hub.
-	// This ensures that SDD or Engram can inject their modules even if Persona is skipped.
-	for _, agent := range r.resolved.Agents {
-		if agent == model.AgentKimi {
-			// El hub se crea en la misma raíz donde inyectan los componentes: con el
-			// ámbito workspace es el proyecto, no la carpeta de usuario.
-			rootDir := ResolveAgentConfigDir(r.scope, r.homeDir, r.workspaceDir)
-			apply = append(apply, kimiSystemPromptHubStep{id: "agent:kimi-prompt-hub", homeDir: rootDir})
-		}
-	}
-
 	for _, agent := range r.resolved.Agents {
 		apply = append(apply, agentInstallStep{
 			id:       "agent:" + string(agent),
@@ -1109,8 +1097,6 @@ func stripLegacyTriggerRules(targetDir string, adapter agents.Adapter, effective
 			settingsPath = effectiveSettingsPath
 		}
 		return stripLegacyTriggerRulesFromOrchestrator(settingsPath)
-	case adapter.SystemPromptStrategy() == model.StrategyJinjaModules:
-		return removeLegacyTriggerRulesModule(filepath.Join(adapter.GlobalConfigDir(targetDir), legacyTriggerRulesSection+".md"))
 	default:
 		return stripLegacyTriggerRulesFromPrompt(adapter.SystemPromptFile(targetDir))
 	}
@@ -1139,23 +1125,6 @@ func stripLegacyTriggerRulesFromPrompt(promptPath string) (agentguidance.Result,
 		return agentguidance.Result{}, err
 	}
 	return agentguidance.Result{Changed: writeResult.Changed, Files: []string{promptPath}}, nil
-}
-
-// removeLegacyTriggerRulesModule deletes the standalone include module used by
-// Jinja adapters. Their router template includes it with "ignore missing", so
-// deleting the file is exactly the section removal for that strategy.
-func removeLegacyTriggerRulesModule(modulePath string) (agentguidance.Result, error) {
-	if strings.TrimSpace(modulePath) == "" {
-		return agentguidance.Result{}, nil
-	}
-
-	if err := os.Remove(modulePath); err != nil {
-		if os.IsNotExist(err) {
-			return agentguidance.Result{}, nil
-		}
-		return agentguidance.Result{}, fmt.Errorf("remove legacy %q module %q: %w", legacyTriggerRulesSection, modulePath, err)
-	}
-	return agentguidance.Result{Changed: true, Files: []string{modulePath}}, nil
 }
 
 // stripLegacyTriggerRulesFromOrchestrator removes the section from the managed
@@ -1544,19 +1513,6 @@ func (s agentInstallStep) Run() error {
 	}
 
 	return runCommandSequenceWithProgress(commands, s.progress, s.id)
-}
-
-type kimiSystemPromptHubStep struct {
-	id      string
-	homeDir string
-}
-
-func (s kimiSystemPromptHubStep) ID() string {
-	return s.id
-}
-
-func (s kimiSystemPromptHubStep) Run() error {
-	return kimi.NewAdapter().BootstrapTemplate(s.homeDir)
 }
 
 type componentApplyStep struct {
@@ -2734,12 +2690,10 @@ func componentPathsWithWorkspaceScoped(homeDir, workspaceDir string, scope Insta
 				paths = append(paths, adapter.SystemPromptFile(targetDir))
 			}
 		case model.ComponentSDD:
-			// Jinja modular hubs (e.g. Kimi KIMI.md) are appended once below so SDD+Persona
-			// do not duplicate the same system prompt path. OpenCode-compatible adapters
+			// OpenCode-compatible adapters
 			// write the SDD orchestrator to their settings file instead (#3975).
 			if adapter.SupportsSystemPrompt() &&
-				!sdd.AgentReceivesManagedOpenCodePlugins(adapter.Agent()) &&
-				adapter.SystemPromptStrategy() != model.StrategyJinjaModules {
+				!sdd.AgentReceivesManagedOpenCodePlugins(adapter.Agent()) {
 				paths = append(paths, adapter.SystemPromptFile(targetDir))
 			}
 			if adapter.SupportsSlashCommands() {
@@ -2863,7 +2817,7 @@ func componentPathsWithWorkspaceScoped(homeDir, workspaceDir string, scope Insta
 				paths = append(paths, piPersonaConfigPaths(homeDir, workspaceDir, scope)...)
 				break
 			}
-			if adapter.SupportsSystemPrompt() && adapter.SystemPromptStrategy() != model.StrategyJinjaModules {
+			if adapter.SupportsSystemPrompt() {
 				paths = append(paths, adapter.SystemPromptFile(targetDir))
 			}
 			if adapter.SupportsOutputStyles() {
@@ -2899,18 +2853,6 @@ func componentPathsWithWorkspaceScoped(homeDir, workspaceDir string, scope Insta
 					filepath.Join(homeDir, ".config", "opencode", "tui.json"),
 				)
 			}
-		}
-	}
-
-	// Always ensure the main system prompt file is included for verification if the agent
-	// supports modular system prompts (like Kimi), even if no specific component
-	// (like Persona) was selected. This prevents false negatives when the skeleton
-	// is bootstrapped but not explicitly owned by any other component path list.
-	for _, adapter := range adapters {
-		if adapter.SystemPromptStrategy() == model.StrategyJinjaModules {
-			// El hub se crea en la raíz del ámbito (kimiSystemPromptHubStep), no
-			// siempre en HOME.
-			paths = append(paths, adapter.SystemPromptFile(componentInjectionDirScoped(homeDir, workspaceDir, scope, adapter)))
 		}
 	}
 

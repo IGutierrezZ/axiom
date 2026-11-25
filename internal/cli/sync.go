@@ -551,7 +551,7 @@ func DiscoverAgents(store state.Store) []model.AgentID {
 	installed := agents.DiscoverInstalled(reg, homeDir)
 	ids := make([]model.AgentID, 0, len(installed))
 	for _, a := range installed {
-		// Los agentes no seleccionables (Qwen Code y Kimi) no se adoptan
+		// Los agentes no seleccionables (Qwen Code) no se adoptan
 		// por tener carpeta en HOME: solo se sincronizan si ya están en el estado.
 		if !isSelectableAgent(a.ID) {
 			continue
@@ -1004,9 +1004,7 @@ func syncPersonaPathsWithWorkspaceScoped(homeDir, workspaceDir string, scope Ins
 		if !adapter.SupportsSystemPrompt() {
 			continue
 		}
-		if adapter.SystemPromptStrategy() != model.StrategyJinjaModules {
-			paths = append(paths, adapter.SystemPromptFile(targetDir))
-		}
+		paths = append(paths, adapter.SystemPromptFile(targetDir))
 		if adapter.SupportsOutputStyles() {
 			if stylePaths := persona.ResourcePlanFor(selection.Persona).OutputStylePaths(adapter.OutputStyleDir(targetDir)); stylePaths.Write != "" {
 				paths = append(paths, stylePaths.Write)

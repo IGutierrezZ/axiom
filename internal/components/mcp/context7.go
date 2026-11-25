@@ -25,12 +25,6 @@ var vsCodeContext7OverlayJSON = []byte("{\n  \"servers\": {\n    \"context7\": {
 // deep merge into this managed MCP server entry.
 var antigravityContext7OverlayJSON = []byte("{\n  \"mcpServers\": {\n    \"context7\": {\n      \"__replace__\": {\n        \"serverUrl\": \"https://mcp.context7.com/mcp\"\n      }\n    }\n  }\n}\n")
 
-// kimiContext7OverlayJSON follows Kimi's documented mcp.json "well-known MCP
-// config format", using mcpServers + explicit http transport for Context7.
-// The context7 entry must replace atomically so legacy local keys do not survive
-// deep merge into this managed MCP server entry.
-var kimiContext7OverlayJSON = []byte("{\n  \"mcpServers\": {\n    \"context7\": {\n      \"__replace__\": {\n        \"transport\": \"http\",\n        \"url\": \"https://mcp.context7.com/mcp\"\n      }\n    }\n  }\n}\n")
-
 func DefaultContext7ServerJSON() []byte {
 	content := make([]byte, len(defaultContext7ServerJSON))
 	copy(content, defaultContext7ServerJSON)
@@ -58,12 +52,6 @@ func VSCodeContext7OverlayJSON() []byte {
 func AntigravityContext7OverlayJSON() []byte {
 	content := make([]byte, len(antigravityContext7OverlayJSON))
 	copy(content, antigravityContext7OverlayJSON)
-	return content
-}
-
-func KimiContext7OverlayJSON() []byte {
-	content := make([]byte, len(kimiContext7OverlayJSON))
-	copy(content, kimiContext7OverlayJSON)
 	return content
 }
 

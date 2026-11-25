@@ -18,7 +18,6 @@ var allAgents = []Agent{
 	{ID: model.AgentVSCodeCopilot, Name: "VS Code Copilot", Tier: model.TierFull, ConfigPath: "~/.copilot"},
 	{ID: model.AgentAntigravity, Name: "Google Antigravity", Tier: model.TierFull, ConfigPath: "~/.gemini/antigravity-cli"},
 	{ID: model.AgentWindsurf, Name: "Windsurf", Tier: model.TierFull, ConfigPath: "~/.codeium/windsurf"},
-	{ID: model.AgentKimi, Name: "Kimi Code", Tier: model.TierFull, ConfigPath: "~/.kimi"},
 	{ID: model.AgentQwenCode, Name: "Qwen Code", Tier: model.TierFull, ConfigPath: "~/.qwen"},
 	{ID: model.AgentKiroIDE, Name: "Kiro IDE", Tier: model.TierFull, ConfigPath: "~/.kiro"},
 	{ID: model.AgentPi, Name: "Pi", Tier: model.TierFull, ConfigPath: "~/.pi"},
@@ -60,8 +59,7 @@ func IsMVPAgent(agent model.AgentID) bool {
 //
 // Motivo (decisión de producto, 2026-10-30): hoy no son utilizables con Axiom. En el
 // ámbito workspace escriben en rutas que el agente no lee (Qwen Code solo lee
-// QWEN.md en la raíz, Kimi no lee las skills de .config/agents/skills) y su MCP
-// solo es global (Kimi).
+// QWEN.md en la raíz).
 //
 // Para reactivar uno basta con quitarlo de este mapa: el adaptador, sus
 // componentes y sus pruebas siguen ahí. Una instalación global existente que ya
@@ -69,7 +67,6 @@ func IsMVPAgent(agent model.AgentID) bool {
 // cambian.
 var unselectableAgents = map[model.AgentID]struct{}{
 	model.AgentQwenCode: {},
-	model.AgentKimi:     {},
 }
 
 // IsSelectableAgent indica si el agente se puede elegir al instalar. Es el único

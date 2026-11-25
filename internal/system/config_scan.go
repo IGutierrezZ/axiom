@@ -40,7 +40,6 @@ func knownAgentConfigDirs(homeDir string) []ConfigState {
 		{Agent: "codex", Path: filepath.Join(homeDir, ".codex")},
 		{Agent: "antigravity", Path: filepath.Join(homeDir, ".gemini", "antigravity-cli")},
 		{Agent: "windsurf", Path: filepath.Join(homeDir, ".codeium", "windsurf")},
-		{Agent: "kimi", Path: filepath.Join(homeDir, ".kimi")},
 		{Agent: "qwen-code", Path: filepath.Join(homeDir, ".qwen")},
 		{Agent: "kiro-ide", Path: filepath.Join(homeDir, ".kiro")},
 		{Agent: "pi", Path: filepath.Join(homeDir, ".pi")},

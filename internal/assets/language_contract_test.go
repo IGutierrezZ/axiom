@@ -43,7 +43,7 @@ var directReplyEnglishNoCodeSwitchRequired = []string{
 
 // orchestratorTemplateCount es el número de plantillas de orquestador SDD por agente
 // (más la genérica) que se embeben.
-const orchestratorTemplateCount = 11
+const orchestratorTemplateCount = 10
 
 func TestManagedDirectReplyAssetsEnforceEnglishNoCodeSwitching(t *testing.T) {
 	tests := []struct {
@@ -55,20 +55,16 @@ func TestManagedDirectReplyAssetsEnforceEnglishNoCodeSwitching(t *testing.T) {
 		{name: "claude axiom persona", path: "claude/persona-axiom.md", combineWith: "claude/output-style-axiom.md"},
 		{name: "generic axiom persona", path: "generic/persona-axiom.md"},
 		{name: "kiro axiom persona", path: "kiro/persona-axiom.md"},
-		{name: "kimi axiom output style", path: "kimi/output-style-axiom.md"},
 		{name: "opencode axiom persona", path: "opencode/persona-axiom.md"},
 		{name: "claude gentleman output style", path: "claude/output-style-gentleman.md"},
 		{name: "claude neutral output style", path: "claude/output-style-neutral.md"},
-		// Claude and Kimi personas are residuals (Decision 1) — evaluate the
+		// Claude personas are residuals (Decision 1) — evaluate the
 		// combined persona-residual + output-style channel, not the persona
 		// file alone.
 		{name: "claude gentleman persona", path: "claude/persona-gentleman.md", combineWith: "claude/output-style-gentleman.md"},
 		{name: "generic gentleman persona", path: "generic/persona-gentleman.md"},
 		{name: "generic neutral persona", path: "generic/persona-neutral.md"},
 		{name: "kiro gentleman persona", path: "kiro/persona-gentleman.md"},
-		{name: "kimi gentleman output style", path: "kimi/output-style-gentleman.md"},
-		{name: "kimi neutral output style", path: "kimi/output-style-neutral.md"},
-		{name: "kimi gentleman persona", path: "kimi/persona-gentleman.md", combineWith: "kimi/output-style-gentleman.md"},
 		{name: "opencode gentleman persona", path: "opencode/persona-gentleman.md"},
 	}
 
@@ -89,8 +85,8 @@ func TestManagedDirectReplyAssetsEnforceEnglishNoCodeSwitching(t *testing.T) {
 
 func TestSDDOrchestratorAssetsEnforceLanguageContract(t *testing.T) {
 	assetPaths := allSDDOrchestratorAssetPaths(t)
-	if len(assetPaths) < 11 {
-		t.Fatalf("SDD orchestrator asset count = %d, want at least 11", len(assetPaths))
+	if len(assetPaths) < orchestratorTemplateCount {
+		t.Fatalf("SDD orchestrator asset count = %d, want at least %d", len(assetPaths), orchestratorTemplateCount)
 	}
 
 	for _, path := range assetPaths {
@@ -148,7 +144,6 @@ func TestSupportedAgentSDDLanguageMatrix(t *testing.T) {
 		{agent: "codex", path: "codex/sdd-orchestrator.md"},
 		{agent: "antigravity", path: "antigravity/sdd-orchestrator.md"},
 		{agent: "windsurf", path: "windsurf/sdd-orchestrator.md"},
-		{agent: "kimi", path: "kimi/sdd-orchestrator.md"},
 		{agent: "qwen-code", path: "qwen/sdd-orchestrator.md"},
 		{agent: "kiro-ide", path: "kiro/sdd-orchestrator.md"},
 		{agent: "pi", path: "generic/sdd-orchestrator.md"},
@@ -213,8 +208,8 @@ func TestSDDOrchestratorAssetsUseCanonicalResearchGate(t *testing.T) {
 
 func TestSDDProposeAssetsKeepProductDecisionsUserOwned(t *testing.T) {
 	paths := allSDDProposeAssetPaths(t)
-	if len(paths) < 4 {
-		t.Fatalf("SDD propose asset count = %d, want at least 4", len(paths))
+	if len(paths) < 3 {
+		t.Fatalf("SDD propose asset count = %d, want at least 3", len(paths))
 	}
 	for _, path := range paths {
 		t.Run(path, func(t *testing.T) {
@@ -279,7 +274,7 @@ func TestCommentWriterLanguageContractSources(t *testing.T) {
 }
 
 func TestGentlemanPersonaKeepsDirectConversationVoice(t *testing.T) {
-	// Claude and Kimi personas are residuals (Decision 1) — the direct-
+	// Claude personas are residuals (Decision 1) — the direct-
 	// conversation voice now lives exclusively in the output style; evaluate
 	// the combined persona-residual + output-style channel for those two.
 	tests := []struct {
@@ -289,7 +284,6 @@ func TestGentlemanPersonaKeepsDirectConversationVoice(t *testing.T) {
 		{path: "claude/persona-gentleman.md", combineWith: "claude/output-style-gentleman.md"},
 		{path: "generic/persona-gentleman.md"},
 		{path: "kiro/persona-gentleman.md"},
-		{path: "kimi/persona-gentleman.md", combineWith: "kimi/output-style-gentleman.md"},
 		{path: "opencode/persona-gentleman.md"},
 	}
 	for _, tc := range tests {
@@ -345,7 +339,6 @@ func TestNeutralPersonaAssetsProvideMentorParityWithoutRegionalVoice(t *testing.
 func TestNeutralOutputStyleAssetsProvideMeaningfulContract(t *testing.T) {
 	for _, path := range []string{
 		"claude/output-style-neutral.md",
-		"kimi/output-style-neutral.md",
 	} {
 		t.Run(path, func(t *testing.T) {
 			content := resolveSharedOrchestratorSections(MustRead(path))
@@ -455,8 +448,6 @@ func TestPersonaChannelsCarryPreWriteArtifactSelfCheck(t *testing.T) {
 	paths := []string{
 		"claude/output-style-gentleman.md",
 		"claude/output-style-neutral.md",
-		"kimi/output-style-gentleman.md",
-		"kimi/output-style-neutral.md",
 		"generic/persona-gentleman.md",
 		"generic/persona-neutral.md",
 		"kiro/persona-gentleman.md",
@@ -475,7 +466,6 @@ func TestPersonaChannelsCarryPreWriteArtifactSelfCheck(t *testing.T) {
 func TestNeutralChannelsExtendAntiDriftToToneAndDialect(t *testing.T) {
 	paths := []string{
 		"claude/output-style-neutral.md",
-		"kimi/output-style-neutral.md",
 		"generic/persona-neutral.md",
 	}
 	for _, path := range paths {
@@ -495,7 +485,6 @@ func TestPersonaAxiomAssetsContract(t *testing.T) {
 		"claude/output-style-axiom.md",
 		"opencode/persona-axiom.md",
 		"kiro/persona-axiom.md",
-		"kimi/output-style-axiom.md",
 	}
 
 	for _, path := range paths {

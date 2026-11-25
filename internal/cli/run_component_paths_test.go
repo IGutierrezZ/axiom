@@ -485,41 +485,6 @@ func TestInstallWorkspaceScopeVerificationWithNoGlobalSkills(t *testing.T) {
 	}
 }
 
-func TestComponentPathsSDDKimiIncludesAgentFilesAndGlobalSkills(t *testing.T) {
-	home := t.TempDir()
-	adapters := resolveAdapters([]model.AgentID{model.AgentKimi})
-
-	paths := componentPaths(home, model.Selection{}, adapters, model.ComponentSDD)
-
-	for _, want := range []string{
-		filepath.Join(home, ".kimi", "KIMI.md"),
-		filepath.Join(home, ".kimi", "agents", "gentleman.yaml"),
-		filepath.Join(home, ".kimi", "agents", "sdd-init.yaml"),
-		filepath.Join(home, ".kimi", "agents", "sdd-propose.md"),
-		filepath.Join(home, ".kimi", "agents", "sdd-apply.yaml"),
-		filepath.Join(home, ".kimi", "agents", "sdd-verify.md"),
-		filepath.Join(home, ".kimi", "agents", "sdd-archive.yaml"),
-		filepath.Join(home, ".config", "agents", "skills", "sdd-init", "SKILL.md"),
-		filepath.Join(home, ".config", "agents", "skills", "_shared", "engram-convention.md"),
-	} {
-		if !containsPath(paths, want) {
-			t.Fatalf("componentPaths(sdd,kimi) missing %q\npaths=%v", want, paths)
-		}
-	}
-}
-
-func TestComponentPathsContext7KimiIncludesMCPConfig(t *testing.T) {
-	home := t.TempDir()
-	adapters := resolveAdapters([]model.AgentID{model.AgentKimi})
-
-	paths := componentPaths(home, model.Selection{}, adapters, model.ComponentContext7)
-
-	want := filepath.Join(home, ".kimi", "mcp.json")
-	if !containsPath(paths, want) {
-		t.Fatalf("componentPaths(context7,kimi) missing %q\npaths=%v", want, paths)
-	}
-}
-
 // TestComponentPathsContext7ClaudeUsesUserRegistry pins Claude Context7 to
 // the file injection actually writes: ~/.claude.json (issue #1868).
 // settings.json is only mutated best-effort and may not exist, and the legacy
@@ -1352,7 +1317,7 @@ func TestComponentPathsOpenCodeGentleLogoMatchesSelectedAdapter(t *testing.T) {
 
 func TestBackupTargetsContainNoDuplicatePaths(t *testing.T) {
 	home := t.TempDir()
-	agentIDs := []model.AgentID{model.AgentClaudeCode, model.AgentOpenCode, model.AgentKimi}
+	agentIDs := []model.AgentID{model.AgentClaudeCode, model.AgentOpenCode}
 	selection := model.Selection{
 		Agents:     agentIDs,
 		Components: []model.ComponentID{model.ComponentSDD, model.ComponentEngram, model.ComponentPersona},

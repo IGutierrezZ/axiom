@@ -6603,7 +6603,7 @@ func TestSyncBackupTargetsIncludeRoutingGuidancePathsWithoutAnyComponent(t *test
 func TestSyncBackupTargetsContainNoDuplicatePaths(t *testing.T) {
 	home := t.TempDir()
 	selection := model.Selection{
-		Agents:     []model.AgentID{model.AgentClaudeCode, model.AgentOpenCode, model.AgentKimi, model.AgentCodex},
+		Agents:     []model.AgentID{model.AgentClaudeCode, model.AgentOpenCode, model.AgentCodex},
 		Components: []model.ComponentID{model.ComponentSDD, model.ComponentEngram, model.ComponentPersona},
 		SDDMode:    model.SDDModeSingle,
 	}

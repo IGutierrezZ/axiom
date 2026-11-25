@@ -9,7 +9,6 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/copilotcli"
 	cursoradapter "github.com/IGutierrezZ/axiom/v3/internal/agents/cursor"
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/gemini"
-	"github.com/IGutierrezZ/axiom/v3/internal/agents/kimi"
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/kiro"
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/opencode"
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/pi"
@@ -29,7 +28,6 @@ var defaultAgentIDs = []model.AgentID{
 	model.AgentCodex,
 	model.AgentAntigravity,
 	model.AgentWindsurf,
-	model.AgentKimi,
 	model.AgentQwenCode,
 	model.AgentKiroIDE,
 	model.AgentPi,
@@ -55,8 +53,6 @@ func NewAdapter(agent model.AgentID) (Adapter, error) {
 		return antigravity.NewAdapter(), nil
 	case model.AgentWindsurf:
 		return windsurf.NewAdapter(), nil
-	case model.AgentKimi:
-		return kimi.NewAdapter(), nil
 	case model.AgentQwenCode:
 		return qwen.NewAdapter(), nil
 	case model.AgentKiroIDE:

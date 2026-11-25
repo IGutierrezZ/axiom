@@ -38,7 +38,7 @@ Desactivado: `openspec/config.yaml` declara `strict_tdd: false` y no hay elecci�
 - [x] T1 · Retirar Kilo Code (adaptador, registro, ramas de la familia OpenCode, instalación, desinstalación, tests). Goldens de OpenCode sin diferencias.
 - [x] T2 · Retirar OpenClaw.
 - [x] T3 · Retirar Hermes (incluida la skill `hermes-ephemeral-delegation`).
-- [ ] T4 · Retirar Kimi (assets y agentes `review-*` que queden).
+- [x] T4 · Retirar Kimi (assets y agentes `review-*` que queden).
 - [ ] T5 · Retirar Windsurf (assets y goldens).
 - [ ] T6 · Retirar Kiro IDE (modelos de Kiro, selector de la TUI, assets y goldens).
 - [ ] T7 · Lector tolerante: un estado con agentes retirados carga y sincroniza el resto con un aviso.
@@ -75,7 +75,14 @@ Ruta de todas las tareas: inline (borrado guiado por el compilador; sin unidades
 - Borrados `internal/agents/hermes`, `internal/assets/hermes`, la skill `hermes-ephemeral-delegation` (y su fila en `AGENTS.md`) y `components/filemerge/yaml.go`, cuyo único usuario era Hermes; con él sale `model.StrategyMergeIntoYAML` y sus ramas en `mcp` y `engram`. `.hermes/skills` sale de `PROJECT_MARKERS` de los plugins `skill-registry.ts`.
 - Las pruebas de lotes de desinstalación que usaban Hermes como agente que falla pasan a Gemini CLI (`settings.json` corrupto en el mismo lote que Claude Code). El recuento de plantillas de orquestador pasa a la constante `orchestratorTemplateCount` (11).
 - Evidencia: `go vet ./...` limpio; `go test` ok en `agents/...`, `catalog`, `model`, `installcmd`, `components/...`, `skillregistry`, `system`, `assets`, `tui`, `dashboard`, `app`, `update/...` y `cli`.
+- Commit: `be083a09`.
+
+### T4 · Kimi
+
+- Borrados `internal/agents/kimi` y `internal/assets/kimi` (hub `KIMI.md`, agentes YAML, estilos y personas). Kimi era el único usuario de `model.StrategyJinjaModules`: sale la estrategia y sus ramas en `persona`, `sdd`, `engram`, `agentguidance` (entrega por módulo Jinja y `ErrUnloadableGuidance`), `cli/{run,sync}` (paso del hub y limpieza heredada del módulo de reglas) y `update/upgrade`; también el instalador `uv` de `installcmd` y el overlay de Context7 de Kimi.
+- Pruebas: borradas las propias de Kimi y del canal Jinja, con las instantáneas históricas de sus estilos; recuentos: 13 agentes, 10 plantillas de orquestador.
+- Evidencia: `go vet ./...` limpio; `go test` ok en `agents/...`, `catalog`, `model`, `installcmd`, `components/...`, `skillregistry`, `system`, `assets`, `tui`, `dashboard`, `app`, `update/...` y `cli` (con `-timeout 25m`: tarda unos 11 minutos). `TestPiCodeGraphPendingProbePreservesConfiguredFiles` falló una vez por tiempo de espera del sondeo MCP y pasa al repetirlo (intermitente, ajeno al cambio).
 
 ## Siguiente paso
 
-T4.
+T5.

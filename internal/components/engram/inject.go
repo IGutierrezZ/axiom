@@ -23,13 +23,6 @@ type InjectionResult struct {
 	Files   []string
 }
 
-// bootstrapper is an optional adapter capability: if an adapter implements
-// this interface, any injector that writes Jinja modules will first ensure
-// the base template (entry point) exists.
-type bootstrapper interface {
-	BootstrapTemplate(homeDir string) error
-}
-
 type piEngramProvisioner interface {
 	ProvisionEngramMCP(homeDir string) (changed bool, files []string, err error)
 }
@@ -533,26 +526,6 @@ func injectWithOptions(configHomeDir, promptDir string, adapter agents.Adapter, 
 			}
 			changed = changed || mdWrite.Changed
 			files = append(files, promptPath)
-
-		case model.StrategyJinjaModules:
-			// Ensure the base template exists for Jinja-based agents.
-			if bs, ok := adapter.(bootstrapper); ok {
-				if err := bs.BootstrapTemplate(promptDir); err != nil {
-					return InjectionResult{}, fmt.Errorf("bootstrap template: %w", err)
-				}
-			}
-
-			// Write the Engram protocol as a standalone Jinja include module.
-			// The static KIMI.md template references it via {% include "engram-protocol.md" %}.
-			configDir := adapter.GlobalConfigDir(promptDir)
-			protocolContent := protocolFor(adapter.Agent(), opts)
-			modulePath := filepath.Join(configDir, "engram-protocol.md")
-			mdWrite, err := filemerge.WriteFileAtomic(modulePath, []byte(protocolContent), 0o644)
-			if err != nil {
-				return InjectionResult{}, err
-			}
-			changed = changed || mdWrite.Changed
-			files = append(files, modulePath)
 
 		default:
 			promptPath := adapter.SystemPromptFile(promptDir)

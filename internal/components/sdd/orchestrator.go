@@ -123,7 +123,7 @@ func composeOrchestratorPrompt(agent model.AgentID, options ...OrchestratorRende
 func usesFallbackSessionPreflight(agent model.AgentID) bool {
 	switch agent {
 	case model.AgentVSCodeCopilot, model.AgentGitHubCopilotCLI, model.AgentCursor, model.AgentGeminiCLI,
-		model.AgentAntigravity, model.AgentQwenCode, model.AgentKimi, model.AgentKiroIDE, model.AgentCodex, model.AgentWindsurf:
+		model.AgentAntigravity, model.AgentQwenCode, model.AgentKiroIDE, model.AgentCodex, model.AgentWindsurf:
 		return true
 	default:
 		return false
@@ -162,7 +162,7 @@ func composeFallbackSessionPreflight(content string, agent model.AgentID) string
 	}
 	// Keep runtime-specific execution semantics and phase approval rules.
 	executionEnd := "In **Interactive** mode, between phases:"
-	if agent == model.AgentKimi || agent == model.AgentKiroIDE {
+	if agent == model.AgentKiroIDE {
 		executionEnd = "Interactive approval is phase-scoped."
 	}
 	for _, bounds := range [][2]string{
@@ -205,9 +205,6 @@ func composeFallbackSessionPreflight(content string, agent model.AgentID) string
 	case model.AgentAntigravity:
 		legacyInitAction = "invoke the `sdd-init` phase subagent FIRST"
 		initAction = "invoke the `sdd-init` phase subagent"
-	case model.AgentKimi:
-		legacyInitAction = "run `sdd-init` FIRST by launching the `sdd-init` custom agent"
-		initAction = "launch the `sdd-init` custom agent"
 	case model.AgentKiroIDE:
 		legacyInitAction = "run `sdd-init` FIRST (load the sdd-init skill and execute it)"
 		initAction = "load the `sdd-init` skill and execute it in the native Kiro phase context"
@@ -320,8 +317,6 @@ func sddOrchestratorAsset(agent model.AgentID) string {
 		return "windsurf/sdd-orchestrator.md"
 	case model.AgentCursor:
 		return "cursor/sdd-orchestrator.md"
-	case model.AgentKimi:
-		return "kimi/sdd-orchestrator.md"
 	case model.AgentQwenCode:
 		return "qwen/sdd-orchestrator.md"
 	case model.AgentKiroIDE:

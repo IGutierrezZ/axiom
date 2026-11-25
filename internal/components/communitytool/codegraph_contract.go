@@ -41,7 +41,6 @@ var codeGraphCompatibilityTable = map[model.AgentID]codeGraphCompatibility{
 	model.AgentCodex:         nativeCompatibility(model.AgentCodex, "codex"),
 	model.AgentAntigravity:   nativeCompatibility(model.AgentAntigravity, "antigravity"),
 	model.AgentWindsurf:      excludedCompatibility(model.AgentWindsurf),
-	model.AgentKimi:          excludedCompatibility(model.AgentKimi),
 	model.AgentQwenCode:      excludedCompatibility(model.AgentQwenCode),
 	model.AgentKiroIDE:       nativeCompatibility(model.AgentKiroIDE, "kiro"),
 	model.AgentPi:            reconciledCompatibility(model.AgentPi, ""),

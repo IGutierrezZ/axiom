@@ -45,8 +45,7 @@ import (
 // refusal itself) override the relevant package's LookPathOverride back to
 // missing locally, the same save/restore pattern as everywhere else — see
 // e.g. TestRunInstallRefusesMissingOpenCodeInsteadOfInstalling,
-// TestAgentInstallStepRefusesMissingCodexInsteadOfInstalling, and
-// TestRunInstallRefusesMissingKimiRegardlessOfUVPresence for that opposite,
+// and TestAgentInstallStepRefusesMissingCodexInsteadOfInstalling for that opposite,
 // deliberately-kept case.
 //
 // resolveActorIdentity (capacidad change-actor-identity) se fija a una identidad
