@@ -227,7 +227,7 @@ const (
 )
 
 var independentReviewRuntimes = []string{
-	"antigravity", "claude", "codex", "cursor", "gemini", "generic", "kiro", "opencode", "qwen", "windsurf",
+	"antigravity", "claude", "codex", "cursor", "gemini", "generic", "kiro", "opencode", "qwen",
 }
 
 func TestIndependentReviewBoundaryOrchestratorPassages(t *testing.T) {

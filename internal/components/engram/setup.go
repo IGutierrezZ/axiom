@@ -138,8 +138,6 @@ func SetupAgentSlug(agent model.AgentID) (string, bool) {
 		// Antigravity relies on Gemini's engram setup surface; the engram binary
 		// does not currently expose a native "antigravity" slug.
 		return "gemini-cli", true
-	case model.AgentWindsurf:
-		return "windsurf", true
 	case model.AgentCursor, model.AgentVSCodeCopilot:
 		// Cursor and VS Code Copilot do not use `engram setup` — their MCP
 		// config is injected directly by the engram component. Returning false

@@ -1775,36 +1775,6 @@ test_cursor_sdd_subagents() {
     fi
 }
 
-# --- Category 11: Windsurf native skills ---
-
-test_windsurf_sdd_skills() {
-    log_test "Windsurf: SDD install writes skill files to ~/.codeium/windsurf/skills/"
-    cleanup_test_env
-
-    # Windsurf is a desktop app — create the config dir to signal it's "installed"
-    mkdir -p "$HOME/.codeium/windsurf"
-
-    if $BINARY install --agent windsurf --component sdd --persona neutral 2>&1; then
-        local skill_dir="$HOME/.codeium/windsurf/skills"
-
-        # Skills directory must exist
-        assert_dir_exists "$skill_dir" "~/.codeium/windsurf/skills/ directory"
-
-        # Core SDD skill files must exist
-        assert_file_exists "$skill_dir/sdd-init/SKILL.md" "sdd-init SKILL.md"
-        assert_file_exists "$skill_dir/sdd-explore/SKILL.md" "sdd-explore SKILL.md"
-        assert_file_exists "$skill_dir/sdd-apply/SKILL.md" "sdd-apply SKILL.md"
-        assert_file_exists "$skill_dir/sdd-verify/SKILL.md" "sdd-verify SKILL.md"
-        assert_file_exists "$skill_dir/sdd-archive/SKILL.md" "sdd-archive SKILL.md"
-
-        # Each skill must have substantial content
-        assert_file_size_min "$skill_dir/sdd-init/SKILL.md" 100 "sdd-init skill has real content"
-        assert_file_size_min "$skill_dir/sdd-apply/SKILL.md" 100 "sdd-apply skill has real content"
-    else
-        log_fail "Windsurf SDD install command failed"
-    fi
-}
-
 test_antigravity_sdd_skills_path() {
     log_test "Antigravity: SDD skills install to ~/.gemini/antigravity-cli/skills/"
     cleanup_test_env
@@ -1830,27 +1800,6 @@ test_antigravity_sdd_skills_path() {
         fi
     else
         log_fail "Antigravity SDD install command failed"
-    fi
-}
-
-test_windsurf_persona_and_sdd_content() {
-    log_test "Windsurf: persona + SDD inject into global_rules.md"
-    cleanup_test_env
-
-    # Windsurf is a desktop app — create the config dir to signal it's "installed"
-    mkdir -p "$HOME/.codeium/windsurf"
-
-    if $BINARY install --agent windsurf --component persona --component sdd --persona gentleman 2>&1; then
-        local rules="$HOME/.codeium/windsurf/memories/global_rules.md"
-        assert_file_exists "$rules" "global_rules.md exists"
-        assert_file_contains "$rules" "Senior Architect" "Persona injected"
-        assert_file_contains_marker "$rules" "sdd-orchestrator" "SDD orchestrator marker present"
-        assert_file_contains "$rules" "skill_resolution" "SDD has skill_resolution field"
-        assert_file_contains "$rules" "Engram Topic Key" "SDD has Engram Topic Key section"
-        assert_file_contains_marker "$rules" "engram-protocol" "Engram protocol marker present"
-        assert_file_size_min "$rules" 2000 "global_rules.md has substantial content"
-    else
-        log_fail "Windsurf persona+SDD install command failed"
     fi
 }
 
@@ -2385,10 +2334,6 @@ if [ "${RUN_FULL_E2E:-0}" = "1" ]; then
 
     # Category 10: Cursor native agent files
     test_cursor_sdd_subagents
-
-    # Category 11: Windsurf native skills
-    test_windsurf_sdd_skills
-    test_windsurf_persona_and_sdd_content
 
     # Antigravity skills path
     test_antigravity_sdd_skills_path

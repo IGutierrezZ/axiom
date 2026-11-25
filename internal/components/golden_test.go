@@ -18,7 +18,6 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/kiro"
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/opencode"
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/vscode"
-	"github.com/IGutierrezZ/axiom/v3/internal/agents/windsurf"
 	"github.com/IGutierrezZ/axiom/v3/internal/assets"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/engram"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/mcp"
@@ -38,7 +37,6 @@ func geminiAdapter() agents.Adapter      { return gemini.NewAdapter() }
 func vscodeAdapter() agents.Adapter      { return vscode.NewAdapter() }
 func codexAdapter() agents.Adapter       { return codexagent.NewAdapter() }
 func antigravityAdapter() agents.Adapter { return antigravity.NewAdapter() }
-func windsurfAdapter() agents.Adapter    { return windsurf.NewAdapter() }
 func kiroAdapter() agents.Adapter        { return kiro.NewAdapter() }
 
 // ---------------------------------------------------------------------------
@@ -383,46 +381,6 @@ func TestGoldenSDD_Codex_Powerful(t *testing.T) {
 	assertGolden(t, "sdd-codex-agentsmd-powerful.golden", agentsMD)
 }
 
-func TestGoldenSDD_Windsurf(t *testing.T) {
-	home := t.TempDir()
-	workspace := t.TempDir()
-	if err := os.WriteFile(filepath.Join(workspace, "go.mod"), []byte("module test\n"), 0o644); err != nil {
-		t.Fatalf("write go.mod marker: %v", err)
-	}
-
-	result, err := sdd.Inject(home, windsurfAdapter(), "", sdd.InjectOptions{WorkspaceDir: workspace})
-	if err != nil {
-		t.Fatalf("sdd.Inject(windsurf) error = %v", err)
-	}
-	if !result.Changed {
-		t.Fatalf("sdd.Inject(windsurf) changed = false")
-	}
-
-	rulesMD := readTestFile(t, filepath.Join(home, ".codeium", "windsurf", "memories", "global_rules.md"))
-	assertGolden(t, "sdd-windsurf-global-rules.golden", rulesMD)
-
-	skillInit := readTestFile(t, filepath.Join(home, ".codeium", "windsurf", "skills", "sdd-init", "SKILL.md"))
-	assertGolden(t, "sdd-windsurf-skill-sdd-init.golden", skillInit)
-
-	expectedSkills := []string{
-		"sdd-init", "sdd-apply", "sdd-archive", "sdd-explore",
-		"sdd-propose", "sdd-research", "sdd-spec", "sdd-design", "sdd-tasks", "sdd-verify",
-		"sdd-onboard",
-	}
-	skillsDir := filepath.Join(home, ".codeium", "windsurf", "skills")
-	for _, name := range expectedSkills {
-		path := filepath.Join(skillsDir, name, "SKILL.md")
-		if _, err := os.Stat(path); err != nil {
-			t.Errorf("expected SDD skill file %q not found: %v", name, err)
-		}
-	}
-
-	// Verify native Cascade workflow was copied to .windsurf/workflows/.
-	workflowPath := filepath.Join(workspace, ".windsurf", "workflows", "sdd-new.md")
-	workflowContent := readTestFile(t, workflowPath)
-	assertGolden(t, "sdd-windsurf-workflow-sdd-new.golden", workflowContent)
-}
-
 func TestGoldenSDD_Kiro(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("XDG_CONFIG_HOME", filepath.Join(home, ".config"))
@@ -598,21 +556,6 @@ func TestGoldenPersona_OpenCode_Custom(t *testing.T) {
 	}
 }
 
-func TestGoldenPersona_Windsurf_Gentleman(t *testing.T) {
-	home := t.TempDir()
-
-	result, err := persona.Inject(home, windsurfAdapter(), model.PersonaGentleman)
-	if err != nil {
-		t.Fatalf("persona.Inject(windsurf, gentleman) error = %v", err)
-	}
-	if !result.Changed {
-		t.Fatalf("persona.Inject(windsurf, gentleman) changed = false")
-	}
-
-	globalRules := readTestFile(t, filepath.Join(home, ".codeium", "windsurf", "memories", "global_rules.md"))
-	assertGolden(t, "persona-windsurf-gentleman.golden", globalRules)
-}
-
 func TestGoldenPersona_Kiro_Gentleman(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("XDG_CONFIG_HOME", filepath.Join(home, ".config"))
@@ -680,23 +623,6 @@ func TestGoldenEngram_OpenCode(t *testing.T) {
 
 	configJSON := readTestFile(t, filepath.Join(home, ".config", "opencode", "opencode.json"))
 	assertGolden(t, "engram-opencode-settings.golden", configJSON)
-}
-
-func TestGoldenEngram_Windsurf(t *testing.T) {
-	home := t.TempDir()
-
-	engram.SetLookPathForTest(t, "/opt/homebrew/bin/engram", "")
-
-	result, err := engram.Inject(home, windsurfAdapter())
-	if err != nil {
-		t.Fatalf("engram.Inject(windsurf) error = %v", err)
-	}
-	if !result.Changed {
-		t.Fatalf("engram.Inject(windsurf) changed = false")
-	}
-
-	mcpJSON := readTestFile(t, filepath.Join(home, ".codeium", "windsurf", "mcp_config.json"))
-	assertGolden(t, "engram-windsurf-mcp.golden", mcpJSON)
 }
 
 func TestGoldenEngram_Kiro(t *testing.T) {
@@ -791,26 +717,6 @@ func TestGoldenSkills_OpenCode(t *testing.T) {
 	assertGolden(t, "skills-opencode-skill-creator.golden", skillCreator)
 }
 
-func TestGoldenSkills_Windsurf(t *testing.T) {
-	home := t.TempDir()
-
-	skillIDs := []model.SkillID{model.SkillGoTesting, model.SkillCreator}
-	result, err := skills.Inject(home, windsurfAdapter(), skillIDs)
-	if err != nil {
-		t.Fatalf("skills.Inject(windsurf) error = %v", err)
-	}
-	if !result.Changed {
-		t.Fatalf("skills.Inject(windsurf) changed = false")
-	}
-
-	skillsDir := filepath.Join(home, ".codeium", "windsurf", "skills")
-	goTestingSkill := readTestFile(t, filepath.Join(skillsDir, "go-testing", "SKILL.md"))
-	assertGolden(t, "skills-windsurf-go-testing.golden", goTestingSkill)
-
-	skillCreator := readTestFile(t, filepath.Join(skillsDir, "skill-creator", "SKILL.md"))
-	assertGolden(t, "skills-windsurf-skill-creator.golden", skillCreator)
-}
-
 func TestGoldenSkills_Kiro(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("XDG_CONFIG_HOME", filepath.Join(home, ".config"))
@@ -859,36 +765,6 @@ func TestGoldenCombined_Claude(t *testing.T) {
 
 	claudeMD := readTestFile(t, filepath.Join(home, ".claude", "CLAUDE.md"))
 	assertGolden(t, "combined-claude-claudemd.golden", claudeMD)
-}
-
-func TestGoldenCombined_Windsurf(t *testing.T) {
-	home := t.TempDir()
-	workspace := t.TempDir()
-
-	engram.SetLookPathForTest(t, "/opt/homebrew/bin/engram", "")
-	if err := os.WriteFile(filepath.Join(workspace, "go.mod"), []byte("module test\n"), 0o644); err != nil {
-		t.Fatalf("write go.mod marker: %v", err)
-	}
-
-	// Windsurf: persona appends to global_rules.md; SDD appends SDD orchestrator
-	// to the same file and copies skills + workflow to workspace.
-	if _, err := persona.Inject(home, windsurfAdapter(), model.PersonaGentleman); err != nil {
-		t.Fatalf("persona.Inject(windsurf) error = %v", err)
-	}
-	if _, err := sdd.Inject(home, windsurfAdapter(), "", sdd.InjectOptions{WorkspaceDir: workspace}); err != nil {
-		t.Fatalf("sdd.Inject(windsurf) error = %v", err)
-	}
-	if _, err := engram.Inject(home, windsurfAdapter()); err != nil {
-		t.Fatalf("engram.Inject(windsurf) error = %v", err)
-	}
-
-	// global_rules.md must contain persona + SDD orchestrator (both appended).
-	globalRules := readTestFile(t, filepath.Join(home, ".codeium", "windsurf", "memories", "global_rules.md"))
-	assertGolden(t, "combined-windsurf-global-rules.golden", globalRules)
-
-	// Workflow must be present in the workspace.
-	workflowMD := readTestFile(t, filepath.Join(workspace, ".windsurf", "workflows", "sdd-new.md"))
-	assertGolden(t, "sdd-windsurf-workflow-sdd-new.golden", workflowMD)
 }
 
 // ---------------------------------------------------------------------------

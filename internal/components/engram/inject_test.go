@@ -1794,27 +1794,27 @@ func assertNestedMissing(t *testing.T, root map[string]any, path ...string) {
 
 // TestEngramInjectUsesAbsolutePathWhenAvailable verifies that when engram is
 // resolvable on PATH, its absolute path is written into the MCP config file
-// for agents that use StrategyMCPConfigFile (e.g. Windsurf).
+// for agents that use StrategyMCPConfigFile (e.g. Cursor).
 func TestEngramInjectUsesAbsolutePathWhenAvailable(t *testing.T) {
 	home := t.TempDir()
 
 	absPath := "/usr/local/bin/engram"
 	mockEngramLookPath(t, absPath, "")
 
-	windsurfAdapter, err := agents.NewAdapter("windsurf")
+	mcpFileAdapter, err := agents.NewAdapter("cursor")
 	if err != nil {
-		t.Fatalf("NewAdapter(windsurf) error = %v", err)
+		t.Fatalf("NewAdapter(cursor) error = %v", err)
 	}
 
-	result, injectErr := Inject(home, windsurfAdapter)
+	result, injectErr := Inject(home, mcpFileAdapter)
 	if injectErr != nil {
-		t.Fatalf("Inject(windsurf) error = %v", injectErr)
+		t.Fatalf("Inject(cursor) error = %v", injectErr)
 	}
 	if !result.Changed {
-		t.Fatalf("Inject(windsurf) changed = false")
+		t.Fatalf("Inject(cursor) changed = false")
 	}
 
-	mcpPath := windsurfAdapter.MCPConfigPath(home, "engram")
+	mcpPath := mcpFileAdapter.MCPConfigPath(home, "engram")
 	content, readErr := os.ReadFile(mcpPath)
 	if readErr != nil {
 		t.Fatalf("ReadFile(%q) error = %v", mcpPath, readErr)
@@ -1857,20 +1857,20 @@ func TestEngramInjectFallsBackToRelativeWhenNotFound(t *testing.T) {
 
 	mockEngramLookPath(t, "", "not found")
 
-	windsurfAdapter, err := agents.NewAdapter("windsurf")
+	mcpFileAdapter, err := agents.NewAdapter("cursor")
 	if err != nil {
-		t.Fatalf("NewAdapter(windsurf) error = %v", err)
+		t.Fatalf("NewAdapter(cursor) error = %v", err)
 	}
 
-	result, injectErr := Inject(home, windsurfAdapter)
+	result, injectErr := Inject(home, mcpFileAdapter)
 	if injectErr != nil {
-		t.Fatalf("Inject(windsurf) error = %v", injectErr)
+		t.Fatalf("Inject(cursor) error = %v", injectErr)
 	}
 	if !result.Changed {
-		t.Fatalf("Inject(windsurf) changed = false")
+		t.Fatalf("Inject(cursor) changed = false")
 	}
 
-	mcpPath := windsurfAdapter.MCPConfigPath(home, "engram")
+	mcpPath := mcpFileAdapter.MCPConfigPath(home, "engram")
 	content, readErr := os.ReadFile(mcpPath)
 	if readErr != nil {
 		t.Fatalf("ReadFile(%q) error = %v", mcpPath, readErr)
@@ -2078,7 +2078,6 @@ func TestProtocolForSelectsSlimOrFullPerDecision1Matrix(t *testing.T) {
 		{model.AgentOpenCode, false},
 		{model.AgentGeminiCLI, false},
 		{model.AgentAntigravity, false},
-		{model.AgentWindsurf, false},
 		{model.AgentQwenCode, false},
 		{model.AgentCursor, false},
 		{model.AgentVSCodeCopilot, false},
@@ -2087,8 +2086,8 @@ func TestProtocolForSelectsSlimOrFullPerDecision1Matrix(t *testing.T) {
 		{model.AgentTrae, false},
 	}
 
-	if len(tests) != 12 {
-		t.Fatalf("expected 12 non-Pi adapters in the Decision 1 matrix, got %d", len(tests))
+	if len(tests) != 11 {
+		t.Fatalf("expected 11 non-Pi adapters in the Decision 1 matrix, got %d", len(tests))
 	}
 
 	slim := protocolSlim()

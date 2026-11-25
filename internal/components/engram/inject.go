@@ -57,7 +57,7 @@ func SetLookPathForTest(t interface {
 // If not found (e.g. binary not yet installed), it returns "engram" and false.
 // This is used to write the most stable command possible into MCP configs:
 // an absolute path survives across environments where PATH is not fully
-// inherited (e.g. Windsurf, IDEs that launch without a login shell).
+// inherited (e.g. IDEs that launch without a login shell).
 func resolveEngramCommand() (string, bool) {
 	p, err := EngramLookPath("engram")
 	if err != nil || p == "" {

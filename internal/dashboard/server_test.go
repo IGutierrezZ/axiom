@@ -752,7 +752,7 @@ func TestAdaptersCatalogListsSelectableAgentsWithWorkspaceSupport(t *testing.T) 
 	if a := byID["claude-code"]; a.Name != "Claude Code" || !a.Workspace || a.Reason != "" {
 		t.Errorf("claude-code = %+v", a)
 	}
-	for _, id := range []string{"pi", "windsurf", "antigravity", "trae-ide"} {
+	for _, id := range []string{"pi", "antigravity", "trae-ide"} {
 		if a, ok := byID[id]; !ok || a.Workspace || a.Reason == "" {
 			t.Errorf("%s debe aparecer sin modo workspace y con motivo: %+v (ok=%v)", id, a, ok)
 		}

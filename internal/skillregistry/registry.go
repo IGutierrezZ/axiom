@@ -65,7 +65,6 @@ func UserSkillDirs(home string) []string {
 		filepath.Join(home, ".cursor", "skills"),
 		filepath.Join(home, ".copilot", "skills"),
 		filepath.Join(home, ".codex", "skills"),
-		filepath.Join(home, ".codeium", "windsurf", "skills"),
 		filepath.Join(home, ".qwen", "skills"),
 		filepath.Join(home, ".kiro", "skills"),
 	}

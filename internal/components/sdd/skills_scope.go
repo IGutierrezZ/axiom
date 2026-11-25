@@ -27,7 +27,7 @@ const (
 )
 
 // installsInWorkspace indica si la inyección de rootDir cae en el workspace.
-// Un adaptador sin modo workspace (VS Code, Trae, Windsurf, Antigravity)
+// Un adaptador sin modo workspace (VS Code, Trae, Antigravity)
 // recibe el home aunque la instalación pida workspace, y entonces sus assets
 // deben apuntar al home.
 func installsInWorkspace(rootDir string, opts InjectOptions) bool {

@@ -23,7 +23,6 @@ var blockingPromptRoutes = map[string]blockingPromptRoute{
 	"kiro/sdd-orchestrator.md":        {},
 	"opencode/sdd-orchestrator.md":    {nativeTool: "`question`"},
 	"qwen/sdd-orchestrator.md":        {},
-	"windsurf/sdd-orchestrator.md":    {},
 }
 
 func TestCoordinatorOrchestratorsCarryLosslessBlockingPromptRule(t *testing.T) {
@@ -127,23 +126,6 @@ func TestCoordinatorOrchestratorsCarryClosedSingleSelectDomainContract(t *testin
 				}
 			}
 		})
-	}
-}
-
-func TestBlockingPromptFallbackCoversWindsurfToolResults(t *testing.T) {
-	content := mustReadResolved("windsurf/sdd-orchestrator.md")
-	if !strings.Contains(content, "There are no sub-agents") {
-		t.Fatal("Windsurf must still identify its solo-agent execution model")
-	}
-	contract := blockingPromptContractSection(t, "windsurf/sdd-orchestrator.md")
-	for _, required := range []string{
-		"sub-agent or tool",
-		"always use the plain chat or terminal fallback",
-		"Then STOP",
-	} {
-		if !strings.Contains(contract, required) {
-			t.Errorf("Windsurf tool-result fallback missing %q", required)
-		}
 	}
 }
 

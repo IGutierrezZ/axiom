@@ -1357,7 +1357,7 @@ func TestComponentInjectionDirScopedWorkspaceSafeguard(t *testing.T) {
 	// Los agentes sin modo workspace ya no vuelven a HOME: install y sync los omiten
 	// antes de planificar (TestSplitAgentsForScope) y, si uno se colara, la ruta
 	// queda confinada al proyecto (TestComponentInjectionDirScopedNeverResolvesHomeInWorkspace).
-	for _, id := range []model.AgentID{model.AgentVSCodeCopilot, model.AgentTrae, model.AgentWindsurf, model.AgentAntigravity, model.AgentCodex} {
+	for _, id := range []model.AgentID{model.AgentVSCodeCopilot, model.AgentTrae, model.AgentAntigravity, model.AgentCodex} {
 		adapter, ok := reg.Get(id)
 		if !ok {
 			continue

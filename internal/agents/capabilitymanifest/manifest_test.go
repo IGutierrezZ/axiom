@@ -170,7 +170,6 @@ func TestEveryManifestKeepsWorkRoutingDormantAndHashesCanonically(t *testing.T) 
 		model.AgentQwenCode:         "sha256:76982f969755bcc23dccf909d0cd77ed7b84f40f23d437247167fe0c4f87b133",
 		model.AgentTrae:             "sha256:0ee0722c20698dcf4edbf18c2c3c7ab0c4a128cf2513c16f750c1ee3b2080dc8",
 		model.AgentVSCodeCopilot:    "sha256:11162d72d627970fdaac530c70ba4a0acfe49d35a4b60df589290e9885244029",
-		model.AgentWindsurf:         "sha256:bb3083e660c6ac6c43996711c14c97444e98453e01d8319793ad1f214b1061f0",
 	}
 
 	for agent, wantDigest := range wantManifestDigests {

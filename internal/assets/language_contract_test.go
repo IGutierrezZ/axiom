@@ -43,7 +43,7 @@ var directReplyEnglishNoCodeSwitchRequired = []string{
 
 // orchestratorTemplateCount es el número de plantillas de orquestador SDD por agente
 // (más la genérica) que se embeben.
-const orchestratorTemplateCount = 10
+const orchestratorTemplateCount = 9
 
 func TestManagedDirectReplyAssetsEnforceEnglishNoCodeSwitching(t *testing.T) {
 	tests := []struct {
@@ -143,7 +143,6 @@ func TestSupportedAgentSDDLanguageMatrix(t *testing.T) {
 		{agent: "vscode-copilot", path: "generic/sdd-orchestrator.md"},
 		{agent: "codex", path: "codex/sdd-orchestrator.md"},
 		{agent: "antigravity", path: "antigravity/sdd-orchestrator.md"},
-		{agent: "windsurf", path: "windsurf/sdd-orchestrator.md"},
 		{agent: "qwen-code", path: "qwen/sdd-orchestrator.md"},
 		{agent: "kiro-ide", path: "kiro/sdd-orchestrator.md"},
 		{agent: "pi", path: "generic/sdd-orchestrator.md"},

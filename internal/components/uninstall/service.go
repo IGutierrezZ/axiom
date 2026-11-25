@@ -134,12 +134,6 @@ type Service struct {
 	keepEngramRegistration bool
 }
 
-type workflowCapability interface {
-	SupportsWorkflows() bool
-	WorkflowsDir(workspaceDir string) string
-	EmbeddedWorkflowsDir() string
-}
-
 type opType int
 
 const (
@@ -1337,22 +1331,6 @@ func (s *Service) componentOperations(adapter agents.Adapter, componentID model.
 				ops = append(ops, removeTree(dirPath))
 			}
 			ops = append(ops, removeDirIfEmpty(skillDir))
-		}
-		if cap, ok := adapter.(workflowCapability); ok && cap.SupportsWorkflows() && s.workspaceDir != "" {
-			workflowsDir := cap.WorkflowsDir(s.workspaceDir)
-			entries, err := fs.ReadDir(assets.FS, cap.EmbeddedWorkflowsDir())
-			if err != nil {
-				return nil, nil, fmt.Errorf("read embedded workflows: %w", err)
-			}
-			for _, entry := range entries {
-				if entry.IsDir() {
-					continue
-				}
-				path := filepath.Join(workflowsDir, entry.Name())
-				targets = append(targets, path)
-				ops = append(ops, removeFile(path))
-			}
-			ops = append(ops, removeDirIfEmpty(workflowsDir), removeDirIfEmpty(filepath.Dir(workflowsDir)))
 		}
 		// Copilot CLI no tiene modo workspace, pero si consta en el estado del proyecto los
 		// agentes de .github/agents son también suyos: los retira si VS Code no los necesita.

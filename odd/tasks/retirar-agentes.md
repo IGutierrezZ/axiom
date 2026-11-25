@@ -39,7 +39,7 @@ Desactivado: `openspec/config.yaml` declara `strict_tdd: false` y no hay elecci�
 - [x] T2 · Retirar OpenClaw.
 - [x] T3 · Retirar Hermes (incluida la skill `hermes-ephemeral-delegation`).
 - [x] T4 · Retirar Kimi (assets y agentes `review-*` que queden).
-- [ ] T5 · Retirar Windsurf (assets y goldens).
+- [x] T5 · Retirar Windsurf (assets y goldens).
 - [ ] T6 · Retirar Kiro IDE (modelos de Kiro, selector de la TUI, assets y goldens).
 - [ ] T7 · Lector tolerante: un estado con agentes retirados carga y sincroniza el resto con un aviso.
 - [ ] T8 · Docs, e2e, documentos ODD superados, `## Spec viva` integrada con `axiom archive integrate --odd retirar-agentes` y criterio `rg`.
@@ -82,7 +82,14 @@ Ruta de todas las tareas: inline (borrado guiado por el compilador; sin unidades
 - Borrados `internal/agents/kimi` y `internal/assets/kimi` (hub `KIMI.md`, agentes YAML, estilos y personas). Kimi era el único usuario de `model.StrategyJinjaModules`: sale la estrategia y sus ramas en `persona`, `sdd`, `engram`, `agentguidance` (entrega por módulo Jinja y `ErrUnloadableGuidance`), `cli/{run,sync}` (paso del hub y limpieza heredada del módulo de reglas) y `update/upgrade`; también el instalador `uv` de `installcmd` y el overlay de Context7 de Kimi.
 - Pruebas: borradas las propias de Kimi y del canal Jinja, con las instantáneas históricas de sus estilos; recuentos: 13 agentes, 10 plantillas de orquestador.
 - Evidencia: `go vet ./...` limpio; `go test` ok en `agents/...`, `catalog`, `model`, `installcmd`, `components/...`, `skillregistry`, `system`, `assets`, `tui`, `dashboard`, `app`, `update/...` y `cli` (con `-timeout 25m`: tarda unos 11 minutos). `TestPiCodeGraphPendingProbePreservesConfiguredFiles` falló una vez por tiempo de espera del sondeo MCP y pasa al repetirlo (intermitente, ajeno al cambio).
+- Commit: `d3f0d413`.
+
+### T5 · Windsurf
+
+- Borrados `internal/agents/windsurf`, `internal/assets/windsurf` (orquestador y `workflows/`), sus 8 goldens y `assets/windsurf_workflow_test.go`. Windsurf era el único agente con workflows nativos: salen la vía de inyección de workflows de `sdd` (`workflowInjector`, `findProjectRoot` y la entrada de preflight de `sdd-new`), su retirada en `uninstall` y la línea de la pantalla de desinstalación; también la sección compartida «Delegated Verification Gate (Reduced Form)», que solo usaba su orquestador. El esquema del manifiesto de capacidades conserva el campo `workflows`.
+- Pruebas: las de `cli` que usaban Windsurf como agente sin modo workspace pasan a Trae; las de Engram con `StrategyMCPConfigFile`, a Cursor; la de preflight que falla antes de escribir se queda con el caso de Codex. `e2e`: retiradas las pruebas de Windsurf y las limpiezas de `.codeium` y `.kimi` en `lib.sh`. Recuentos: 12 agentes, 9 plantillas de orquestador.
+- Evidencia: `go vet ./...` limpio; `go test` ok en `agents/...`, `catalog`, `model`, `installcmd`, `components/...` (goldens), `skillregistry`, `system`, `assets`, `tui`, `dashboard`, `app`, `update/...` y `cli`; `bash -n e2e/e2e_test.sh` ok.
 
 ## Siguiente paso
 
-T5.
+T6.

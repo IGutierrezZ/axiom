@@ -15,7 +15,6 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/qwen"
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/trae"
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/vscode"
-	"github.com/IGutierrezZ/axiom/v3/internal/agents/windsurf"
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
 )
 
@@ -27,7 +26,6 @@ var defaultAgentIDs = []model.AgentID{
 	model.AgentVSCodeCopilot,
 	model.AgentCodex,
 	model.AgentAntigravity,
-	model.AgentWindsurf,
 	model.AgentQwenCode,
 	model.AgentKiroIDE,
 	model.AgentPi,
@@ -51,8 +49,6 @@ func NewAdapter(agent model.AgentID) (Adapter, error) {
 		return codex.NewAdapter(), nil
 	case model.AgentAntigravity:
 		return antigravity.NewAdapter(), nil
-	case model.AgentWindsurf:
-		return windsurf.NewAdapter(), nil
 	case model.AgentQwenCode:
 		return qwen.NewAdapter(), nil
 	case model.AgentKiroIDE:

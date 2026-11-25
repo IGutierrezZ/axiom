@@ -2965,7 +2965,7 @@ func routingGuidanceDir(homeDir, workspaceDir string, scope InstallScope, adapte
 // taking the install scope into account. When scope is ScopeWorkspace, agent-scoped
 // components write to workspaceDir instead of the selected agent's global config root.
 //
-// Los agentes que no admiten el ámbito workspace (VS Code Copilot, Trae, Windsurf,
+// Los agentes que no admiten el ámbito workspace (VS Code Copilot, Trae,
 // Antigravity) no llegan aquí: install, sync y la TUI los omiten enteros al
 // construir el plan (splitAgentsForScope). Si uno se colara, el resultado queda
 // confinado al proyecto; nunca vuelve a ser la carpeta de usuario.

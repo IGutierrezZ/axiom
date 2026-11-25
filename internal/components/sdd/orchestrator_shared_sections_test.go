@@ -67,7 +67,7 @@ func TestRegisteredAgentsRenderStatusContinuationContract(t *testing.T) {
 		t.Fatal(err)
 	}
 	ids := registry.SupportedAgents()
-	if len(ids) != 13 {
+	if len(ids) != 12 {
 		t.Fatalf("registered cohort changed: %v", ids)
 	}
 	templates := map[string]bool{}
@@ -105,17 +105,10 @@ var sharedOrchestratorSectionNames = []string{
 	"Language Domain Contract",
 	"Dependency Graph",
 	"Recovery Rule",
-	// #4296: the RDD-aware, risk-gated delegated-verification rule. Every
-	// runtime that names a concrete delegation mechanism in its own
-	// Delegation Rules body (claude, codex, opencode, cursor, gemini,
-	// antigravity, generic, kiro, qwen) carries the full form
-	// under "Delegated Verification Gate (MANDATORY)". Windsurf ("Windsurf
-	// has no subagents" in its own Delegation Rules body) is the only
-	// runtime with no delegation mechanism, so it carries the reduced form
-	// under its own distinct heading, "Delegated Verification Gate (Reduced
-	// Form)".
+	// #4296: the risk-gated delegated-verification rule. Every runtime names a
+	// concrete delegation mechanism in its own Delegation Rules body and carries
+	// it under "Delegated Verification Gate (MANDATORY)".
 	"Delegated Verification Gate (MANDATORY)",
-	"Delegated Verification Gate (Reduced Form)",
 	// INC-21 (design.md S4.7, H-2): the per-change kickoff questionnaire and
 	// the four block-review gates, plus their normative boundary against
 	// RDD (design.md S1.3). Registered here, in Phase 22, ahead of Phase
@@ -198,7 +191,7 @@ func TestSharedOrchestratorSectionsHaveOneSource(t *testing.T) {
 func TestEveryRuntimeRendersTheSharedSections(t *testing.T) {
 	for _, agent := range []model.AgentID{
 		model.AgentOpenCode, model.AgentCursor, model.AgentGeminiCLI, model.AgentQwenCode,
-		model.AgentWindsurf, model.AgentCodex,
+		model.AgentCodex,
 		model.AgentClaudeCode, model.AgentKiroIDE, model.AgentAntigravity, model.AgentVSCodeCopilot, model.AgentGitHubCopilotCLI,
 	} {
 		rendered := renderSDDOrchestratorAsset(agent)
@@ -224,7 +217,7 @@ func TestEveryRuntimeRendersTheSharedSections(t *testing.T) {
 }
 
 // TestDelegatedVerificationGateCarriesNoRDDProse pins the RDD suspension
-// (C-01-c): the canonical bodies (full and reduced forms) and every rendered
+// (C-01-c): the canonical body and every rendered
 // orchestrator state the diff-inferred verification tier without mentioning RDD,
 // the review switch, or the native risk assessment.
 func TestDelegatedVerificationGateCarriesNoRDDProse(t *testing.T) {
@@ -233,7 +226,6 @@ func TestDelegatedVerificationGateCarriesNoRDDProse(t *testing.T) {
 
 	for _, name := range []string{
 		"Delegated Verification Gate (MANDATORY)",
-		"Delegated Verification Gate (Reduced Form)",
 	} {
 		body := sharedOrchestratorSection(name)
 		if !strings.Contains(body, sddBoundary) || !strings.Contains(body, "The parent spot check") {
@@ -263,7 +255,7 @@ func TestDelegatedVerificationGateCarriesNoRDDProse(t *testing.T) {
 func TestNoRawSharedSectionPlaceholderSurvivesRendering(t *testing.T) {
 	for _, agent := range []model.AgentID{
 		model.AgentOpenCode, model.AgentCursor, model.AgentGeminiCLI, model.AgentQwenCode,
-		model.AgentWindsurf, model.AgentCodex,
+		model.AgentCodex,
 		model.AgentKiroIDE, model.AgentAntigravity, model.AgentClaudeCode, model.AgentVSCodeCopilot, model.AgentGitHubCopilotCLI,
 	} {
 		if rendered := renderSDDOrchestratorAsset(agent); strings.Contains(rendered, "{{GENTLE_AI_SDD_SECTION:") {

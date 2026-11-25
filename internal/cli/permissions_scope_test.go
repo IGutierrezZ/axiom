@@ -123,7 +123,6 @@ func TestPermissionsRoot(t *testing.T) {
 		// VS Code Copilot ya tiene modo workspace; sigue sin destino de permisos.
 		{"workspace vscode", ScopeWorkspace, workspace, model.AgentVSCodeCopilot, workspace, true},
 		{"workspace trae skipped", ScopeWorkspace, workspace, model.AgentTrae, "", false},
-		{"workspace windsurf skipped", ScopeWorkspace, workspace, model.AgentWindsurf, "", false},
 		{"workspace antigravity skipped", ScopeWorkspace, workspace, model.AgentAntigravity, "", false},
 		// Codex ya tiene modo workspace; sigue sin destino de permisos (TargetPath
 		// vacío), así que el componente no escribe nada para él en ningún ámbito.
@@ -176,7 +175,7 @@ func TestComponentPathsPermissionsFollowScope(t *testing.T) {
 func TestComponentPathsPermissionsWorkspaceSkipsAgentsWithoutWorkspaceMode(t *testing.T) {
 	home := t.TempDir()
 	workspace := t.TempDir()
-	adapters := resolveAdapters([]model.AgentID{model.AgentVSCodeCopilot, model.AgentCodex, model.AgentTrae, model.AgentWindsurf, model.AgentAntigravity})
+	adapters := resolveAdapters([]model.AgentID{model.AgentVSCodeCopilot, model.AgentCodex, model.AgentTrae, model.AgentAntigravity})
 
 	paths := componentPathsWithWorkspaceScoped(home, workspace, ScopeWorkspace, model.Selection{}, adapters, model.ComponentPermission)
 
@@ -330,7 +329,7 @@ func TestPermissionStepsWorkspaceNeverWriteHome(t *testing.T) {
 	permissionsNoticeWriter = &out
 	t.Cleanup(func() { permissionsNoticeWriter = restore })
 
-	allAgents := append([]model.AgentID{model.AgentTrae, model.AgentWindsurf, model.AgentAntigravity}, permissionScopeAgents...)
+	allAgents := append([]model.AgentID{model.AgentTrae, model.AgentAntigravity}, permissionScopeAgents...)
 	apply := componentApplyStep{component: model.ComponentPermission, homeDir: home, workspaceDir: workspace, scope: ScopeWorkspace, agents: allAgents}
 	if err := apply.Run(); err != nil {
 		t.Fatalf("apply: %v", err)

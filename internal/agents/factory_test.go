@@ -172,7 +172,6 @@ func TestDefaultRegistrySupportedAgentsMatchesFactoryAgents(t *testing.T) {
 		model.AgentQwenCode,
 		model.AgentTrae,
 		model.AgentVSCodeCopilot,
-		model.AgentWindsurf,
 	}
 
 	if got := registry.SupportedAgents(); !reflect.DeepEqual(got, want) {

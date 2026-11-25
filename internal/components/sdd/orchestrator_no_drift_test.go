@@ -25,7 +25,7 @@ var anyOrchestratorSectionPlaceholder = regexp.MustCompile(`\{\{GENTLE_AI_[A-Z_]
 // that text now lives once in the shared asset.
 // orchestratorTemplateCount es el número de plantillas de orquestador SDD por agente
 // (más la genérica) que se embeben.
-const orchestratorTemplateCount = 10
+const orchestratorTemplateCount = 9
 
 func resolvedOrchestratorSource(assetPath string) string {
 	return substituteSharedOrchestratorSections(assets.MustRead(assetPath))

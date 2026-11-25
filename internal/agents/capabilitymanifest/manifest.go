@@ -267,7 +267,4 @@ var featureClaimsByAgent = map[model.AgentID]AgentFeatureClaims{
 	model.AgentVSCodeCopilot: {
 		FileSubAgents: true, Skills: true, SystemPrompt: true, MCP: true,
 	},
-	model.AgentWindsurf: {
-		Skills: true, SystemPrompt: true, MCP: true, Workflows: true,
-	},
 }

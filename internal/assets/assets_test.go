@@ -925,7 +925,6 @@ func TestPlatformNativeSDDOrchestratorsAvoidOpenCodePersistenceClaims(t *testing
 		required []string
 	}{
 		{path: "kiro/sdd-orchestrator.md", required: []string{"Kiro phase context", "native Kiro subagent context", "approval"}},
-		{path: "windsurf/sdd-orchestrator.md", required: []string{"solo-agent", "inline phase context", "There are no sub-agents"}},
 		{path: "antigravity/sdd-orchestrator.md", required: []string{"define_subagent", "invoke_subagent", "dynamic subagent context", "enable_mcp_tools: true"}},
 	}
 
@@ -2235,7 +2234,6 @@ func TestOrchestratorsRequireAutomaticGatekeeper(t *testing.T) {
 		"kiro/sdd-orchestrator.md",
 		"opencode/sdd-orchestrator.md",
 		"qwen/sdd-orchestrator.md",
-		"windsurf/sdd-orchestrator.md",
 	}
 	anchors := []string{
 		"Automatic Mode Gatekeeper",
@@ -2427,7 +2425,6 @@ func TestSDDArchiveFinalStateAuthorityContract(t *testing.T) {
 		"kiro/sdd-orchestrator.md",
 		"opencode/sdd-orchestrator.md",
 		"qwen/sdd-orchestrator.md",
-		"windsurf/sdd-orchestrator.md",
 	}
 	for _, path := range orchestratorSurfaces {
 		content := mustReadResolved(path)

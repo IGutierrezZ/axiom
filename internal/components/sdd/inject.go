@@ -57,8 +57,6 @@ type InjectOptions struct {
 	CopilotPhaseAssignments map[string]model.CopilotPhaseAssignment
 
 	// WorkspaceDir is the root of the current workspace (e.g. os.Getwd()).
-	// When non-empty and the adapter implements workflowInjector, native
-	// workflow files are copied to <workspaceDir>/.windsurf/workflows/.
 	WorkspaceDir string
 
 	// StrictTDD enables Strict TDD mode. When true, a
@@ -109,23 +107,6 @@ func (opts InjectOptions) openCodeRenderOptions(adapter agents.Adapter, homeDir 
 	options := opts.orchestratorPolicyRenderOptions()
 	options.SharedPromptDir = SharedPromptDirFor(adapter, homeDir)
 	return options
-}
-
-// workflowInjector is an optional adapter capability: if an adapter
-// implements this interface, sdd.Inject will copy the embedded workflow
-// assets into the workspace directory provided via InjectOptions.WorkspaceDir.
-// This intentionally does NOT extend agents.Adapter to avoid requiring all
-// adapters to implement no-op stubs.
-type workflowInjector interface {
-	SupportsWorkflows() bool
-	// WorkflowsDir returns the target filesystem directory where workflow files
-	// should be written (e.g. <workspaceDir>/.windsurf/workflows/).
-	WorkflowsDir(workspaceDir string) string
-	// EmbeddedWorkflowsDir returns the path inside the embedded assets FS where
-	// this adapter's workflow sources live (e.g. "windsurf/workflows").
-	// This removes the hardcoded agent name from the injection step, making
-	// the workflowInjector pattern reusable for future agents.
-	EmbeddedWorkflowsDir() string
 }
 
 // hookInjector is an optional adapter capability: if an adapter implements
@@ -186,89 +167,6 @@ type claudeModelResolver interface {
 // the substitution only fires when the adapter satisfies this interface.
 type codexModelResolver interface {
 	RenderCodexPhaseEfforts(assignments map[string]model.CodexEffort, carrilModels map[string]string) string
-}
-
-// monorepoRootMarkers identify files/dirs that ONLY exist at the true root
-// of a multi-package workspace. If any of these is found while walking up,
-// we stop immediately — this is the authoritative project root.
-var monorepoRootMarkers = []string{
-	"pnpm-workspace.yaml",
-	"pnpm-workspace.yml",
-	"nx.json",
-	"turbo.json",
-	"lerna.json",
-	"rush.json",
-}
-
-// strongProjectMarkers are definitive project roots that are not
-// package.json (which can appear at every level in a monorepo).
-var strongProjectMarkers = []string{
-	".git",
-	"go.mod",
-	"Cargo.toml",
-	"pyproject.toml",
-	"pom.xml",
-	"build.gradle",
-}
-
-// maxAncestorDepth is the maximum number of parent directories findProjectRoot
-// will traverse before giving up. This prevents infinite loops on deeply-nested
-// trees and ensures we stop well before reaching the filesystem root.
-const maxAncestorDepth = 20
-
-// findProjectRoot walks upward from dir, looking for the best project root.
-//
-// Priority order:
-//  1. Monorepo root markers (pnpm-workspace.yaml, nx.json, turbo.json, etc.) —
-//     return immediately when found; these are authoritative workspace roots.
-//  2. Strong markers (.git, go.mod, Cargo.toml, etc.) — return immediately;
-//     these are unambiguous project roots.
-//  3. Weak marker (package.json only) — record as candidate but keep walking
-//     upward, since a monorepo marker may exist higher up.
-//
-// Walking upward means users can run gentle-ai from any subdirectory of their
-// project (e.g. repo/packages/app) and still detect the correct workspace root.
-// In a JS/TS monorepo, every package has package.json, so we must not stop at
-// the first one — we keep walking to find the highest ancestor with package.json
-// (or a monorepo root marker above it).
-func findProjectRoot(dir string) (string, bool) {
-	if dir == "" {
-		return "", false
-	}
-	current := filepath.Clean(dir)
-	var bestCandidate string // best weak (package.json-only) match found so far
-
-	for i := 0; i < maxAncestorDepth; i++ {
-		// Check monorepo root markers first — highest priority; return immediately.
-		for _, marker := range monorepoRootMarkers {
-			if _, err := os.Stat(filepath.Join(current, marker)); err == nil {
-				return current, true
-			}
-		}
-		// Check strong project markers — definitive roots; return immediately.
-		for _, marker := range strongProjectMarkers {
-			if _, err := os.Stat(filepath.Join(current, marker)); err == nil {
-				return current, true
-			}
-		}
-		// Weak marker: package.json — record but keep walking. Always update
-		// to the highest ancestor with a package.json, since in a JS project
-		// the root package.json is the authoritative project boundary.
-		if _, err := os.Stat(filepath.Join(current, "package.json")); err == nil {
-			bestCandidate = current
-		}
-		parent := filepath.Dir(current)
-		if parent == current {
-			// Reached filesystem root ("/" on Unix, "C:\" on Windows).
-			break
-		}
-		current = parent
-	}
-
-	if bestCandidate != "" {
-		return bestCandidate, true
-	}
-	return "", false
 }
 
 // overlayAssetPath returns the embedded asset path for the SDD agent overlay
@@ -473,7 +371,7 @@ func Inject(homeDir string, adapter agents.Adapter, sddMode model.SDDModeID, opt
 
 	// Validate every selected session-contract carrier before the first SDD
 	// mutation, including bootstrap directories, commands, plugins and skills.
-	prompt, lazyWorkflow, workflows, err := prepareSessionPreflight(homeDir, adapter, opts)
+	prompt, lazyWorkflow, err := prepareSessionPreflight(homeDir, adapter, opts)
 	if err != nil {
 		return InjectionResult{}, err
 	}
@@ -776,37 +674,6 @@ func Inject(homeDir string, adapter agents.Adapter, sddMode model.SDDModeID, opt
 		files = append(files, workflowResult.Files...)
 	}
 
-	// 3b. Write native workflow files (Windsurf Hybrid-First, and any future
-	// agent that implements the workflowInjector optional interface).
-	// findProjectRoot walks upward from WorkspaceDir so gentle-ai can be
-	// invoked from any subdirectory (e.g. repo/internal/foo) and still inject
-	// workflows at the real project root. Skips silently if no root is found
-	// (e.g. running from home dir without a project).
-	if wi, ok := adapter.(workflowInjector); ok && wi.SupportsWorkflows() {
-		if projectRoot, found := findProjectRoot(opts.WorkspaceDir); found {
-			workflowsDir := wi.WorkflowsDir(projectRoot)
-			embedDir := wi.EmbeddedWorkflowsDir()
-			entries, readErr := fs.ReadDir(assets.FS, embedDir)
-			if readErr != nil {
-				return InjectionResult{}, fmt.Errorf("read embedded %s: %w", embedDir, readErr)
-			}
-
-			for _, entry := range entries {
-				if entry.IsDir() {
-					continue
-				}
-				content := workflows[entry.Name()]
-				path := filepath.Join(workflowsDir, entry.Name())
-				writeResult, err := filemerge.WriteFileAtomic(path, []byte(content), 0o644)
-				if err != nil {
-					return InjectionResult{}, fmt.Errorf("write workflow %q: %w", path, err)
-				}
-				changed = changed || writeResult.Changed
-				files = append(files, path)
-			}
-		}
-	}
-
 	// 3c. Write native sub-agent files for adapters that support them. Sub-agent files are
 	// written to the user's home directory (e.g. ~/.cursor/agents/) or, for the adapters that
 	// have a project layout bound to the workspace, to that project (.github/agents/).
@@ -928,7 +795,7 @@ func renderClaudeSessionPreflight() (string, error) {
 
 // Preparation is read-only. A template composer panic must not escape after a
 // partial install; surface it as an injection error before any SDD-owned writes.
-func prepareSessionPreflight(homeDir string, adapter agents.Adapter, opts InjectOptions) (prompt, lazy string, workflows map[string]string, err error) {
+func prepareSessionPreflight(homeDir string, adapter agents.Adapter, opts InjectOptions) (prompt, lazy string, err error) {
 	defer func() {
 		if recovered := recover(); recovered != nil {
 			err = fmt.Errorf("render SDD session preflight: %v", recovered)
@@ -951,36 +818,6 @@ func prepareSessionPreflight(homeDir string, adapter agents.Adapter, opts Inject
 		lazy = resolveSkillsDirPlaceholders(lazy, adapter, workspace)
 		if err = validateRenderedSessionPreflight(lazy, adapter.Agent()); err != nil {
 			return
-		}
-	}
-	if wi, ok := adapter.(workflowInjector); ok && wi.SupportsWorkflows() {
-		if _, found := findProjectRoot(opts.WorkspaceDir); found {
-			var entries []fs.DirEntry
-			entries, err = fs.ReadDir(assets.FS, wi.EmbeddedWorkflowsDir())
-			if err != nil {
-				return
-			}
-			workflows = make(map[string]string)
-			for _, entry := range entries {
-				if entry.IsDir() {
-					continue
-				}
-				var content string
-				content, err = assets.Read(wi.EmbeddedWorkflowsDir() + "/" + entry.Name())
-				if err != nil {
-					return
-				}
-				if adapter.Agent() == model.AgentWindsurf && entry.Name() == "sdd-new.md" {
-					content, err = renderWindsurfSessionPreflightEntry(content)
-					if err != nil {
-						return
-					}
-				}
-				workflows[entry.Name()] = content
-			}
-			if adapter.Agent() == model.AgentWindsurf && workflows["sdd-new.md"] == "" {
-				err = fmt.Errorf("Windsurf sdd-new authority consumer is missing")
-			}
 		}
 	}
 	return

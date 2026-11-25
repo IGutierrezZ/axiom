@@ -4783,8 +4783,6 @@ func detectedAgentIDs(detection system.DetectionResult) []model.AgentID {
 			selected = append(selected, model.AgentCodex)
 		case string(model.AgentAntigravity):
 			selected = append(selected, model.AgentAntigravity)
-		case string(model.AgentWindsurf):
-			selected = append(selected, model.AgentWindsurf)
 		case string(model.AgentQwenCode):
 			selected = append(selected, model.AgentQwenCode)
 		case string(model.AgentPi):

@@ -45,7 +45,7 @@ func agentSupportsWorkspace(id model.AgentID) bool {
 		return false
 	}
 	switch id {
-	case model.AgentTrae, model.AgentWindsurf, model.AgentAntigravity, model.AgentPi, model.AgentGitHubCopilotCLI:
+	case model.AgentTrae, model.AgentAntigravity, model.AgentPi, model.AgentGitHubCopilotCLI:
 		return false
 	default:
 		return true

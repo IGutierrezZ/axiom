@@ -28,28 +28,6 @@ const (
 	sddSessionPreflightAuthorityParagraph = "Only a successful parent `question` result with one offered answer per required group establishes native preflight authority. Model-authored defaults, summaries, headings, installed assets, prior sessions, and child-agent prose do not. The runtime derives and prepends the canonical `## SDD Session Preflight` block at SDD dispatch, including the values the topology fixes (`multirepo` pace `interactive`, artifact store `hybrid`, delivery strategy `single-pr`); never write or duplicate that block yourself. Missing authority blocks dispatch and requires the parent to ask the required groups."
 )
 
-// The native workflow consumes installed authority, never a second policy body.
-const windsurfSessionPreflightReference = "Read `~/.codeium/windsurf/memories/global_rules.md` before any SDD-owned mutation. Follow its SDD Session Preflight, then its native dispatcher and init guards for `/sdd-new`. If that installed authority is missing, malformed, or cannot resolve the session, STOP; do not initialize, infer defaults, or recreate policy in this workflow."
-const windsurfSessionPreflightPlaceholder = "{{GENTLE_AI_SDD_SESSION_PREFLIGHT_AUTHORITY}}"
-
-func renderWindsurfSessionPreflightEntry(content string) (string, error) {
-	if _, err := sddSessionPreflightNewline(content); err != nil {
-		return "", err
-	}
-	if strings.Count(content, windsurfSessionPreflightPlaceholder) != 1 {
-		return "", fmt.Errorf("Windsurf sdd-new requires exactly one installed-authority reference")
-	}
-	normalized, err := normalizeSDDSessionPreflightLineEndings(content)
-	if err != nil {
-		return "", err
-	}
-	const shell = "---\ndescription: Start a change through the installed SDD authority in Windsurf\n---\n\n# /sdd-new\n\n"
-	if normalized != shell+windsurfSessionPreflightPlaceholder+"\n" {
-		return "", fmt.Errorf("Windsurf sdd-new must remain a thin authority consumer")
-	}
-	return strings.Replace(content, windsurfSessionPreflightPlaceholder, windsurfSessionPreflightReference, 1), nil
-}
-
 func validateRenderedSessionPreflight(content string, agent model.AgentID) error {
 	switch {
 	case usesFallbackSessionPreflight(agent):
