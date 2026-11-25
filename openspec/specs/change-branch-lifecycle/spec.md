@@ -1043,6 +1043,7 @@ En modo `in_place` no hay worktree que eliminar: `done` DEBE devolver el checkou
 - **DADO** un cambio en `in_place`, modo `branch`, con `feat/x` fusionada en `master` y el árbol limpio
 - **CUANDO** se ejecuta `axiom branch done --change x`
 - **ENTONCES** el repositorio queda desplegado en la rama de integración y se elimina la rama local `feat/x`
+
 ### Requirement: Veredicto Único de Rama, por Papel del Repositorio (REQ-25.18)
 
 Las guardas A (REQ-25.19), B (`blocked(wrong_branch)` de `axiom-sdd-cli-integration`) y D (`guard`, REQ-25.21) DEBEN consultar un único veredicto: «¿esta rama es la que corresponde a este cambio en este repositorio según su papel?». El veredicto DEBE ser uno de los tokens `correct`, `wrong_branch` o `not_applicable` (REQ-25.2). La consulta se hace en uno de dos contextos: el **ordinario** y el de **archivado** (la fase archive de `axiom sdd status` y el escritor de `axiom sdd archive-compose`). Las reglas son:
@@ -1234,11 +1235,12 @@ Los cambios pendientes de archivar de un repositorio con rama de cambio, es deci
 
 `axiom branch guard` DEBE ser el hook de la capa D que usan los runtimes con hooks. Recibe del runtime la herramienta y la ruta que va a escribir el agente, y su efecto depende de la ruta:
 
-1. **Documentos de Axiom** (la carpeta de un cambio u `odd/tasks/`): DEBE **bloquear** (con el mecanismo de bloqueo del runtime) cuando el veredicto de REQ-25.18 sea `wrong_branch`, con un mensaje que incluya la continuación de `ensure`. Rige en cualquier proyecto Axiom, con independencia de que haya un cambio registrado (supuesto S-18).
-2. **Cualquier otro fichero** de un repositorio con un cambio activo registrado por `ensure` en el registro local (REQ-25.14) y no cerrado por `done`: DEBE **avisar sin bloquear** cuando la rama del checkout que contiene el fichero no es la que corresponde al cambio. El aviso DEBE incluir la ruta del worktree correcto o, en `in_place`, la rama esperada; con varios cambios activos registrados en el repositorio, nombra los de todos. El repositorio de specs de un `multirepo` queda exento de este aviso.
+1. **Documentos de Axiom** (la carpeta de un cambio u `odd/tasks/`): DEBE **bloquear** (con el mecanismo de bloqueo del runtime) cuando el veredicto de REQ-25.18 sea `wrong_branch`, con un mensaje que incluya la continuación de `ensure`. Rige en cualquier proyecto Axiom, con independencia de que haya un cambio registrado (supuesto S-18), y aunque git ignore el documento.
+2. **Cualquier otro fichero** de un repositorio con un cambio activo registrado por `ensure` en el registro local (REQ-25.14) y no cerrado por `done`: DEBE **avisar sin bloquear** cuando la rama del checkout que contiene el fichero no es la que corresponde al cambio. El aviso DEBE incluir la ruta del worktree correcto o, en `in_place`, la rama esperada; con varios cambios activos registrados en el repositorio, nombra los de todos. El repositorio de specs de un `multirepo` queda exento de este aviso. Un fichero que git ignora en su checkout tampoco se avisa: es configuración o resultado local que no viaja con la rama. Un fichero versionado no cuenta como ignorado aunque coincida con un patrón de exclusión.
 3. En cualquier otro caso DEBE no hacer nada: sin cambio activo registrado en el repositorio, o fuera de un proyecto Axiom, termina sin bloquear, sin avisar y sin escribir.
 
-DEBE leer la rama actual leyendo `HEAD` del repositorio, sin lanzar git ni ningún otro proceso, y DEBE ser fail-open: ante cualquier error interno, configuración o registro ilegibles o expiración de tiempo, NO DEBE bloquear ni avisar. Solo afecta a las escrituras del agente a través del runtime: NUNCA al editor humano ni a las órdenes de la CLI. Es la única capa, junto con la doctrina, que cubre el documento ODD. NO DEBE escribir ningún fichero. El canal no bloqueante por el que cada runtime entrega el aviso se decide en `sdd-design`.
+DEBE leer la rama actual leyendo `HEAD` del repositorio, sin lanzar git. Mientras las lecturas de ficheros no pidan un aviso (bloqueo, documento de Axiom, sin cambio activo registrado, checkout en la rama de un cambio activo, fuera de un proyecto Axiom), NO DEBE lanzar ningún proceso. Solo cuando las lecturas piden un aviso, y antes de emitirlo, el hook PUEDE lanzar una única consulta local `git check-ignore`, sin red y dentro de su presupuesto de tiempo, para descartar un fichero ignorado; si esa consulta falla, git no está disponible o se agota su límite, el aviso se emite como si el fichero no estuviera ignorado. DEBE ser fail-open: ante cualquier error interno, configuración o registro ilegibles o expiración del presupuesto, NO DEBE bloquear ni avisar. Solo afecta a las escrituras del agente a través del runtime: NUNCA al editor humano ni a las órdenes de la CLI. Es la única capa, junto con la doctrina, que cubre el documento ODD. NO DEBE escribir ningún fichero. El canal no bloqueante por el que cada runtime entrega el aviso se decide en `sdd-design`.
+(Previously: no lanzaba ningún proceso en ningún camino y avisaba también de los ficheros ignorados por git)
 (Previously: bloqueaba solo las escrituras en la carpeta de un cambio u `odd/tasks/`, no avisaba en otros ficheros y consultaba git para las rutas protegidas)
 
 #### Scenario: Bloquea un documento de Axiom en rama equivocada
@@ -1273,6 +1275,26 @@ DEBE leer la rama actual leyendo `HEAD` del repositorio, sin lanzar git ni ning�
 - **CUANDO** el runtime invoca el hook para escribirlo
 - **ENTONCES** el hook no bloquea ni avisa
 
+#### Scenario: Sin aviso en un fichero ignorado por git
+- **DADO** el cambio `x` activo y registrado, el checkout principal en `main` y un `.gitignore` que excluye `.claude/settings.local.json`
+- **CUANDO** el runtime invoca el hook para escribir `.claude/settings.local.json` en el checkout principal
+- **ENTONCES** el hook no bloquea ni avisa
+
+#### Scenario: Un fichero versionado avisa aunque coincida con un patrón de exclusión
+- **DADO** el cambio `x` activo y registrado, el checkout principal en `main` y un fichero versionado que coincide con un patrón de `.gitignore`
+- **CUANDO** el runtime invoca el hook para escribirlo en el checkout principal
+- **ENTONCES** el hook no bloquea y emite el aviso
+
+#### Scenario: Si la consulta a git falla, el aviso se emite
+- **DADO** el cambio `x` activo y registrado, el checkout principal en `main` y una consulta `git check-ignore` que falla o un git que no está disponible
+- **CUANDO** el runtime invoca el hook para escribir un fichero de código en el checkout principal
+- **ENTONCES** el hook no bloquea y emite el aviso como si el fichero no estuviera ignorado
+
+#### Scenario: Un documento de Axiom ignorado por git se sigue bloqueando
+- **DADO** un proyecto Axiom con el checkout en la rama de integración y un `.gitignore` que excluye la carpeta del cambio `x`
+- **CUANDO** el runtime invoca el hook para escribir `openspec/changes/x/proposal.md`
+- **ENTONCES** el hook bloquea la escritura sin lanzar ningún proceso
+
 #### Scenario: Sin cambio activo registrado en el repositorio no hace nada con el código
 - **DADO** un proyecto Axiom sin ningún cambio activo registrado por `ensure` y el checkout en `main`
 - **CUANDO** el runtime invoca el hook para escribir `internal/foo/foo.go`
@@ -1294,11 +1316,17 @@ DEBE leer la rama actual leyendo `HEAD` del repositorio, sin lanzar git ni ning�
 - **CUANDO** el runtime invoca el hook para escribir en una carpeta de cambio o en un fichero de código
 - **ENTONCES** el hook no bloquea ni avisa
 
-#### Scenario: El hook no lanza git ni ningún otro proceso
+#### Scenario: Sin motivo de aviso no se lanza ningún proceso
 - **DADO** un proyecto Axiom y un observador de procesos
-- **CUANDO** el runtime invoca el hook para cualquier escritura, protegida o no
+- **CUANDO** el runtime invoca el hook para una escritura que se resuelve sin aviso con las lecturas de ficheros: un bloqueo o un documento de Axiom, sin cambio activo registrado, con el checkout en la rama de un cambio activo o fuera de un proyecto Axiom
 - **ENTONCES** el observador no registra ninguna invocación de git ni de ningún otro proceso
 - **Y** la rama actual se obtiene leyendo `HEAD`
+
+#### Scenario: Antes de avisar, como mucho una consulta `git check-ignore`
+- **DADO** el cambio `x` activo y registrado, el checkout principal en `main` y un observador de procesos
+- **CUANDO** el runtime invoca el hook para escribir en el checkout principal un fichero de código o un fichero ignorado por git
+- **ENTONCES** el hook avisa del fichero de código y no avisa del ignorado
+- **Y** en cada escritura el observador registra como mucho una invocación de git, `check-ignore`, local y sin red
 
 #### Scenario: El documento ODD está cubierto
 - **DADO** un monorepo con el checkout en la rama de integración y la política por defecto
@@ -1309,8 +1337,6 @@ DEBE leer la rama actual leyendo `HEAD` del repositorio, sin lanzar git ni ning�
 - **DADO** un proyecto con el hook instalado
 - **CUANDO** una persona guarda un fichero desde su editor o ejecuta una orden de la CLI
 - **ENTONCES** el hook no se ejecuta, porque solo lo invoca el runtime en las escrituras del agente y no se instala ningún hook de git ni observador de ficheros
-
----
 
 ### Requirement: Instalación del Hook por `axiom sync` y Prohibición de Hooks de Git (REQ-25.22)
 

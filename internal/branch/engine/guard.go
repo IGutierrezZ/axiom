@@ -17,10 +17,12 @@ import (
 // tiempo y el protocolo de salida están en guard_hook.go y la clasificación léxica de las rutas,
 // en guard_classify.go.
 //
-// Decide solo con lecturas de ficheros: no lanza ni un proceso (`VerdictFor` lee `HEAD` con
-// gitcommon.ReadHead), no escribe nada y falla en abierto, de modo que cualquier error interno, un
-// pánico o un proyecto que no es de Axiom terminan en «no hacer nada». Solo afecta a las
-// escrituras del agente a través del runtime, nunca al editor humano ni a las órdenes de la CLI.
+// Decide con lecturas de ficheros (`VerdictFor` lee `HEAD` con gitcommon.ReadHead), no escribe nada
+// y falla en abierto, de modo que cualquier error interno, un pánico o un proyecto que no es de
+// Axiom terminan en «no hacer nada». El bloqueo y el camino sin aviso no lanzan ni un proceso; el
+// único que la guarda puede lanzar es la consulta `git check-ignore` que precede a un aviso
+// (ignoredByGit, en guard_warn.go). Solo afecta a las escrituras del agente a través del runtime,
+// nunca al editor humano ni a las órdenes de la CLI.
 
 // Acciones de una decisión de la guarda y eventos de la carga.
 const (
@@ -55,8 +57,9 @@ type GuardDecision struct {
 
 var guardNone = GuardDecision{Action: GuardActionNone}
 
-// Guard decide qué hace el hook con la carga (design D-18, §4.2). Nunca falla ni lanza procesos:
-// con cualquier error o pánico recuperado devuelve `none`.
+// Guard decide qué hace el hook con la carga (design D-18, §4.2). Nunca falla, y solo lanza un
+// proceso (`git check-ignore`) cuando va a avisar: con cualquier error o pánico recuperado devuelve
+// `none`.
 //
 // Bloqueo (solo evento `pre` y documento de Axiom): `IsAxiomProject` —un `axiom.yaml` propio o el
 // alcanzado por el puntero `.axiom-workspace`; un `openspec/` suelto no basta, lo usan repositorios

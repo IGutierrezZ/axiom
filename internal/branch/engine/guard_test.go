@@ -14,8 +14,9 @@ import (
 
 // Pruebas de la guarda D con git real, entorno aislado y sin red (REQ-25.21, G-11, S-18,
 // design D-18): bloquea las escrituras del agente en los documentos de Axiom cuando el veredicto
-// es `wrong_branch` en los dos contextos y no hace nada en cualquier otro caso. Decide solo con
-// lecturas de ficheros: ninguna de estas pruebas observa un proceso de git durante la guarda.
+// es `wrong_branch` en los dos contextos y no hace nada en cualquier otro caso. El bloqueo decide
+// solo con lecturas de ficheros: ninguna de estas pruebas observa un proceso de git durante la
+// guarda.
 
 func guardOf(t *testing.T, payload GuardPayload) GuardDecision {
 	t.Helper()
@@ -165,6 +166,25 @@ func TestGuardCoversTheODDDocument(t *testing.T) {
 	// `odd/tasks/README.sh` no es un documento de Axiom: el bloqueo no lo cubre.
 	runGit(t, repo, "switch", "-q", "main")
 	wantNothing(t, guardOf(t, preWrite(filepath.Join(repo, "odd", "tasks", "README.sh"))))
+}
+
+// REQ-25.21, escenario «Un documento de Axiom ignorado por git se sigue bloqueando»: el bloqueo no
+// consulta git, así que un `.gitignore` que excluye la carpeta del cambio u `odd/tasks/` no lo
+// desactiva, y no se lanza ningún proceso. Con `post` el documento tampoco avisa: su
+// responsabilidad es la del bloqueo y nunca llega a la consulta `git check-ignore` del aviso.
+// No es paralela: el observador de procesos es global.
+func TestGuardBlocksAnAxiomDocumentEvenIfGitIgnoresIt(t *testing.T) {
+	repo := inPlaceChange(t)
+	writeFile(t, filepath.Join(repo, ".gitignore"), "openspec/changes/\nodd/tasks/\n")
+	seen := observe(t)
+
+	wantBlocked(t, guardOf(t, preWrite(documentOf(repo))))
+	wantBlocked(t, guardOf(t, preWrite(filepath.Join(repo, "odd", "tasks", "x.md"))))
+	wantNothing(t, guardOf(t, postWrite(documentOf(repo))))
+
+	if len(*seen) != 0 {
+		t.Errorf("la guarda lanzó procesos de git: %v", *seen)
+	}
 }
 
 // REQ-25.21, escenario «Inerte fuera de un proyecto Axiom»: con `OriginStart` no hace nada y no
