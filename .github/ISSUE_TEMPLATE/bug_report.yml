@@ -95,7 +95,6 @@ body:
         - OpenCode
         - Gemini CLI
         - Cursor
-        - Windsurf
         - Other
     validations:
       required: true
