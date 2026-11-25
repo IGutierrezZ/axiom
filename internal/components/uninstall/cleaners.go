@@ -181,8 +181,22 @@ func jsonIsEmptyObject(raw []byte) bool {
 // escribe el instalador, features.multi_agent y agents.max_threads/max_depth (los
 // valores distintos son del usuario).
 func cleanCodexTOML(content string) (string, bool) {
+	return cleanCodexEngramTOML(content, false)
+}
+
+// cleanCodexTOMLKeepingEngramServer es cleanCodexTOML sin tocar la tabla
+// [mcp_servers.engram]: la desinstalación parcial global conserva el registro MCP
+// de Engram (keepEngramRegistration).
+func cleanCodexTOMLKeepingEngramServer(content string) (string, bool) {
+	return cleanCodexEngramTOML(content, true)
+}
+
+func cleanCodexEngramTOML(content string, keepEngramServer bool) (string, bool) {
 	normalized := strings.ReplaceAll(content, "\r\n", "\n")
-	updated := filemerge.RemoveTOMLTable(normalized, "mcp_servers.engram")
+	updated := normalized
+	if !keepEngramServer {
+		updated = filemerge.RemoveTOMLTable(updated, "mcp_servers.engram")
+	}
 	updated = removeTopLevelTOMLKeys(updated, "model_instructions_file", "experimental_compact_prompt_file")
 	updated = removeCodexMultiAgentKeys(updated)
 	updated = strings.TrimSpace(updated)

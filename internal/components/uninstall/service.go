@@ -126,6 +126,12 @@ type Service struct {
 	// engramUninstallScope controls whether Engram cleanup removes global
 	// integration files/config (global) or project-local .engram data only.
 	engramUninstallScope model.EngramUninstallScope
+
+	// keepEngramRegistration conserva la entrada MCP `engram` de cada agente en
+	// una desinstalación parcial global en la que no se nombra Engram: es huella
+	// de máquina (separa la memoria por proyecto) y la usan los demás proyectos.
+	// Se retira con `--components engram` o con `--all`.
+	keepEngramRegistration bool
 }
 
 type workflowCapability interface {
@@ -381,6 +387,9 @@ func (s *Service) partialUninstall(agentIDs []model.AgentID, componentIDs []mode
 		return Result{}, err
 	}
 
+	s.keepEngramRegistration = !s.workspace && !slices.Contains(componentIDs, model.ComponentEngram)
+	defer func() { s.keepEngramRegistration = false }()
+
 	plan, err := s.buildPlan(agentIDs, components)
 	if err != nil {
 		return Result{}, err
@@ -394,7 +403,33 @@ func (s *Service) partialUninstall(agentIDs []model.AgentID, componentIDs []mode
 	if sharedNote != "" {
 		result.ManualActions = append(result.ManualActions, sharedNote)
 	}
+	if s.keepEngramRegistration && slices.Contains(components, model.ComponentEngram) {
+		if note := keptEngramRegistrationNote(s.homeDir, agentIDs); note != "" {
+			result.ManualActions = append(result.ManualActions, note)
+		}
+	}
 	return result, nil
+}
+
+// keptEngramRegistrationNote explica qué registros MCP de Engram ha conservado
+// una desinstalación parcial global y cómo retirarlos. Lee lo que queda en disco
+// tras la desinstalación; un agente sin registro, o con uno ilegible, no se nombra.
+func keptEngramRegistrationNote(homeDir string, agentIDs []model.AgentID) string {
+	kept := make([]string, 0, len(agentIDs))
+	for _, agentID := range agentIDs {
+		commands, err := engram.ReadPersistedStdioCommands(homeDir, []string{string(agentID)})
+		if err != nil || len(commands) == 0 {
+			continue
+		}
+		kept = append(kept, fmt.Sprintf("%s (%s)", agentID, commands[0].Source))
+	}
+	if len(kept) == 0 {
+		return ""
+	}
+	return fmt.Sprintf(
+		"No action needed: kept the Engram MCP registration of %s, because Engram is machine-level and keeps its memory per project. Remove it with `axiom uninstall --agent <agent> --components engram`, or everything with `axiom uninstall --all`.",
+		strings.Join(kept, ", "),
+	)
 }
 
 // reconcileSharedComponents downgrades components that are shared across all
@@ -1071,11 +1106,16 @@ func (s *Service) componentOperations(adapter agents.Adapter, componentID model.
 			break
 		}
 
-		if s.workspace || usesManagedMCPShape(adapter) {
+		switch {
+		case s.keepEngramRegistration:
+			keptTargets, keptOps := engramOperationsKeepingRegistration(adapter, homeDir)
+			targets = append(targets, keptTargets...)
+			ops = append(ops, keptOps...)
+		case s.workspace || usesManagedMCPShape(adapter):
 			workspaceTargets, workspaceOps := s.managedMCPOperations(adapter, "engram")
 			targets = append(targets, workspaceTargets...)
 			ops = append(ops, workspaceOps...)
-		} else {
+		default:
 			targets = append(targets, engramTargets(adapter, homeDir)...)
 			ops = append(ops, engramOperations(adapter, homeDir)...)
 		}
@@ -1487,6 +1527,34 @@ func engramOperations(adapter agents.Adapter, homeDir string) []operation {
 		}
 	default:
 		return nil
+	}
+}
+
+// engramOperationsKeepingRegistration es engramOperations sin la entrada MCP
+// `engram` del agente: lo que sigue retirando una desinstalación parcial global
+// que conserva el registro (keepEngramRegistration). En Claude Code, el fichero
+// heredado ~/.claude/mcp/engram.json, que Claude Code no lee; en Codex, las claves
+// de instrucciones y multiagente de config.toml y sus ficheros. En el resto de
+// agentes la única huella global del componente es el propio registro.
+func engramOperationsKeepingRegistration(adapter agents.Adapter, homeDir string) ([]string, []operation) {
+	switch adapter.MCPStrategy() {
+	case model.StrategySeparateMCPFiles:
+		if adapter.Agent() != model.AgentClaudeCode {
+			return nil, nil
+		}
+		legacyPath := adapter.MCPConfigPath(homeDir, "engram")
+		return []string{legacyPath}, []operation{removeManagedEngramFile(legacyPath)}
+	case model.StrategyTOMLFile:
+		configPath := adapter.MCPConfigPath(homeDir, "engram")
+		instructionsPath := filepath.Join(homeDir, ".codex", "engram-instructions.md")
+		compactPath := filepath.Join(homeDir, ".codex", "engram-compact-prompt.md")
+		return []string{configPath, instructionsPath, compactPath}, []operation{
+			rewriteTOMLFile(configPath, cleanCodexTOMLKeepingEngramServer),
+			removeFile(instructionsPath),
+			removeFile(compactPath),
+		}
+	default:
+		return nil, nil
 	}
 }
 

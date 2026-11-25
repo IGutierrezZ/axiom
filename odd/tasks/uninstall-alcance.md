@@ -57,7 +57,10 @@ Modo: desactivado (sin configuración en `axiom.yaml` ni petición). Aun así, c
   - Arreglo: la lista por defecto de `partialUninstall` es `fullAgentRemovalComponents`.
   - **Aislamiento de pruebas (hallazgo).** En Windows `gga.ConfigPath` resuelve `%APPDATA%\gga\config` y no cuelga de `homeDir`: las pruebas de GGA del paquete que no fijan `APPDATA` escribían y borraban la configuración real de GGA de quien las ejecuta. La primera ejecución en rojo de esta prueba lo hizo (creó y borró `%APPDATA%\gga\config`); la copia de la desinstalación real de hoy (`~/.axiom/backups/20261125100156…`) registra ese fichero como `"existed": false`, así que no había nada que perder. Nuevo `TestMain` del paquete que fija un `APPDATA` temporal, y la prueba nueva fija el suyo con `t.Setenv`.
   - Evidencia: `go test ./internal/components/uninstall/ -count=1` → `ok` (14,8 s); `%APPDATA%\gga` sigue sin existir tras la ejecución.
-- [ ] T2. Conservar el registro MCP de usuario de Engram en la desinstalación parcial global. Ruta: inline.
+- [x] T2. Conservar el registro MCP de usuario de Engram en la desinstalación parcial global. Ruta: inline.
+  - Pruebas (`engram_registration_test.go`): `TestPartialUninstallGlobalKeepsTheUserEngramRegistrationUnlessNamed` (Claude Code: sin `--components` conserva `mcpServers.engram` y avisa; con `--components engram` lo retira; en ambos casos retira la sección `engram-protocol` de `CLAUDE.md` y respeta otros servidores) y `TestPartialUninstallGlobalCodexKeepsTheEngramServerAndRetiresItsInstructions` (Codex: conserva `[mcp_servers.engram]`, retira las claves y ficheros de instrucciones). RED observado en el caso por defecto de ambas.
+  - Arreglo: campo `keepEngramRegistration` (parcial, global, sin `engram` nombrado); `engramOperationsKeepingRegistration` sustituye a `engramOperations` / `managedMCPOperations` en ese caso; `cleanCodexTOMLKeepingEngramServer`; nota `keptEngramRegistrationNote` en `ManualActions`, que lee lo que queda en disco y nombra el fichero. `--all` (y por tanto `--purge-state`) no cambia.
+  - Evidencia: `go test ./internal/components/uninstall/ -count=1` → `ok`; `go test ./internal/cli -count=1 -run 'Uninstall'` → `ok`; `gofmt -l` y `go vet` limpios.
 - [ ] T3. Aviso de `engram:reachable` por `.mcp.json` sin aprobar. Ruta: inline.
 
 ## Criterios de aceptación
