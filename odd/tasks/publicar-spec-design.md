@@ -33,7 +33,7 @@ Desactivado: `openspec/config.yaml` declara `strict_tdd: false` y no hay elecci�
 ## Tareas
 
 - [x] T1 · Prueba: `PublicationTarget` resuelve la rama del cambio antes de `tasks` (cambio de un rol con solo `proposal.md` y spec). Evidencia: `go test ./internal/branch/engine -run TestPublicationTarget` ok.
-- [ ] T2 · Doctrina: la opción del pre-vuelo y «When to publish» publican tras `spec`, `design` y `tasks` y al archivar; contrato de status, comentario de `DocsPublicationAuto`, manual, prueba de assets y goldens.
+- [x] T2 · Doctrina: la opción del pre-vuelo y «When to publish» publican tras `spec`, `design` y `tasks` y al archivar; contrato de status, comentario de `DocsPublicationAuto`, manual, prueba de assets y goldens. Evidencia: `go test ./internal/assets/... ./internal/kickoff/... ./internal/components/...` ok; goldens regenerados con `-update` (2 líneas por fichero).
 - [ ] T3 · `## Spec viva` (REQ-27.13 y REQ-27.4) integrada con `axiom archive integrate --odd publicar-spec-design`.
 
 Ruta de todas las tareas: inline (unidades de menos de ~100 líneas; sin unidades independientes que justifiquen escritores en paralelo).
