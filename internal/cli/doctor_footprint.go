@@ -33,6 +33,9 @@ const (
 	// footprintGlobalLeftover es lo que solo deja una instalación global y, si el
 	// usuario trabaja únicamente con workspaces, es un resto que puede retirar.
 	footprintGlobalLeftover footprintKind = "resto global"
+	// footprintDuplicate es contexto de Axiom que un agente carga dos veces porque
+	// existe a la vez en la carpeta de usuario y en el proyecto actual.
+	footprintDuplicate footprintKind = "duplicado"
 )
 
 // footprintEntry es un elemento que Axiom tiene a nivel de usuario.
@@ -57,8 +60,11 @@ var doctorUserPathEntriesFn = func() []string {
 // si existen, GGA, la copia de skills de compatibilidad, los plugins de OpenCode
 // en HOME, CodeGraph global, las entradas de PATH gestionadas y los directorios
 // de estado. Marca cuáles son restos de una instalación global: sirve para
-// detectarlos antes de pasar a trabajar solo con workspaces. Solo lee.
-func collectMachineFootprint(homeDir string, installed state.InstallState) []footprintEntry {
+// detectarlos antes de pasar a trabajar solo con workspaces. Con la raíz del
+// proyecto actual añade, para todos los agentes, el contexto de Axiom que existe
+// a la vez en usuario y en el proyecto (duplicados); con root vacío no lo
+// comprueba. Solo lee.
+func collectMachineFootprint(homeDir, root string, installed state.InstallState) []footprintEntry {
 	var entries []footprintEntry
 	add := func(kind footprintKind, name, detail string) {
 		entries = append(entries, footprintEntry{Kind: kind, Name: name, Detail: detail})
@@ -116,9 +122,35 @@ func collectMachineFootprint(homeDir string, installed state.InstallState) []foo
 	}
 
 	entries = append(entries, managedPathFootprint(homeDir, ggaSelected)...)
+	entries = append(entries, duplicateContextFootprint(homeDir, root)...)
 
 	if legacyDir := filepath.Join(homeDir, ".gentle-ai"); isDir(legacyDir) {
 		add(footprintGlobalLeftover, "~/.gentle-ai", legacyDir+" (estado heredado de versiones anteriores)")
+	}
+	return entries
+}
+
+// duplicateContextFootprint convierte los duplicados de contexto entre usuario y
+// proyecto en entradas de la huella, con las dos rutas de cada uno.
+func duplicateContextFootprint(homeDir, root string) []footprintEntry {
+	var entries []footprintEntry
+	for _, duplicate := range componentuninstall.ContextDuplicates(homeDir, root) {
+		agentNames := make([]string, len(duplicate.Agents))
+		for i, agent := range duplicate.Agents {
+			agentNames[i] = string(agent)
+		}
+		detail := "usuario: " + duplicate.UserPath + " | proyecto: " + duplicate.WorkspacePath
+		if len(duplicate.Items) > 0 {
+			detail += " [" + strings.Join(duplicate.Items, ", ") + "]"
+		}
+		if duplicate.Diverges {
+			detail += " (divergen: la copia de usuario y la del proyecto no coinciden)"
+		}
+		entries = append(entries, footprintEntry{
+			Kind:   footprintDuplicate,
+			Name:   duplicate.Kind + " (" + strings.Join(agentNames, ", ") + ")",
+			Detail: detail,
+		})
 	}
 	return entries
 }
@@ -222,15 +254,21 @@ func renderMachineFootprint(w io.Writer, entries []footprintEntry) {
 		fmt.Fprintln(w)
 		return
 	}
-	leftovers := 0
+	leftovers, duplicates := 0, 0
 	for _, entry := range entries {
 		fmt.Fprintf(w, "  %-14s %-30s %s\n", "["+string(entry.Kind)+"]", entry.Name, entry.Detail)
-		if entry.Kind == footprintGlobalLeftover {
+		switch entry.Kind {
+		case footprintGlobalLeftover:
 			leftovers++
+		case footprintDuplicate:
+			duplicates++
 		}
 	}
 	if leftovers > 0 {
 		fmt.Fprintf(w, "  %d elemento(s) propios de una instalación global: si trabajas solo con workspaces, son restos que puedes retirar (`axiom uninstall` o a mano).\n", leftovers)
+	}
+	if duplicates > 0 {
+		fmt.Fprintf(w, "  %d contexto(s) de Axiom duplicado(s) entre tu carpeta de usuario y este proyecto: el agente carga las dos copias. Conserva una (normalmente la del proyecto) y retira la otra.\n", duplicates)
 	}
 	fmt.Fprintln(w)
 }

@@ -228,7 +228,7 @@ func TestCollectMachineFootprintEmptyHomeIsEmpty(t *testing.T) {
 	t.Cleanup(func() { lookPathFn = origLook })
 	lookPathFn = func(string) (string, error) { return "", errors.New("not found") }
 
-	if got := collectMachineFootprint(t.TempDir(), state.InstallState{}); len(got) != 0 {
+	if got := collectMachineFootprint(t.TempDir(), "", state.InstallState{}); len(got) != 0 {
 		t.Fatalf("un HOME vacío sin binarios no debe tener huella, got %+v", got)
 	}
 
@@ -236,5 +236,59 @@ func TestCollectMachineFootprintEmptyHomeIsEmpty(t *testing.T) {
 	renderMachineFootprint(&buf, nil)
 	if !strings.Contains(buf.String(), "Axiom no tiene nada a nivel de usuario") {
 		t.Errorf("salida inesperada: %q", buf.String())
+	}
+}
+
+// El contexto de Axiom que existe a la vez en HOME y en el proyecto sale como
+// duplicado, con las dos rutas y el aviso de divergencia, y es informativo.
+func TestCollectMachineFootprintReportsDuplicateContext(t *testing.T) {
+	stubDoctorUserPath(t, nil)
+	origLook := lookPathFn
+	t.Cleanup(func() { lookPathFn = origLook })
+	lookPathFn = func(string) (string, error) { return "", errors.New("not found") }
+
+	home, root := t.TempDir(), t.TempDir()
+	userFile := filepath.Join(home, ".claude", "CLAUDE.md")
+	projectFile := filepath.Join(root, ".claude", "CLAUDE.md")
+	for path, version := range map[string]string{userFile: "v1", projectFile: "v2"} {
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		block := "<!-- axiom:sdd-orchestrator -->\nreglas " + version + "\n<!-- /axiom:sdd-orchestrator -->\n"
+		if err := os.WriteFile(path, []byte(block), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// Sin raíz de proyecto no se comprueba nada.
+	if got := collectMachineFootprint(home, "", state.InstallState{}); len(got) != 0 {
+		t.Fatalf("sin raíz no debe haber duplicados, got %+v", got)
+	}
+
+	entries := collectMachineFootprint(home, root, state.InstallState{})
+	var duplicates []footprintEntry
+	for _, entry := range entries {
+		if entry.Kind == footprintDuplicate {
+			duplicates = append(duplicates, entry)
+		}
+	}
+	if len(duplicates) != 1 {
+		t.Fatalf("quiero 1 duplicado, got %+v", entries)
+	}
+	detail := duplicates[0].Detail
+	for _, want := range []string{userFile, projectFile, "divergen"} {
+		if !strings.Contains(detail, want) {
+			t.Errorf("el detalle %q no contiene %q", detail, want)
+		}
+	}
+
+	var buf bytes.Buffer
+	renderMachineFootprint(&buf, entries)
+	out := buf.String()
+	if !strings.Contains(out, "[duplicado]") || !strings.Contains(out, "1 contexto(s) de Axiom duplicado(s)") {
+		t.Errorf("falta la línea de duplicados:\n%s", out)
+	}
+	if strings.Contains(out, "propios de una instalación global") {
+		t.Errorf("un duplicado no es un resto global:\n%s", out)
 	}
 }
