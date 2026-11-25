@@ -40,7 +40,7 @@ Que cada sesión de agente cargue solo el contexto del proyecto en el que trabaj
 - [x] T1 · Huella de contexto multiagente. Un detector genérico recorre los adaptadores y compara usuario frente a workspace: bloques gestionados del fichero de instrucciones, skills, subagentes, comandos y output style. La huella de `axiom doctor` gana el tipo `duplicado`, con aviso de divergencia cuando las dos copias no coinciden. Ruta: delegada (protección de contexto del padre, sesión larga).
 - [x] T2 · Preferencia en el hub. `WorkspaceRecord.MCPExclusions` (agente → nombres, `omitempty`), con setter y lectura según el patrón de `hub/rddpref.go`. Ruta: inline (<100 líneas).
 - [x] T3 · Aplicación en Claude Code. Fusión de `deniedMcpServers` en `.claude/settings.local.json` de la raíz y de los worktrees del proyecto: alta, baja y conservación de lo ajeno. Se lanza al guardar la preferencia, en `axiom sync` y en `axiom branch ensure`. Ruta: delegada.
-- [ ] T4 · Dashboard. API `GET/POST /api/projects/active/mcp-exclusions` (solo petición local, 409 sin proyecto registrado) y pantalla para marcar servidores y conectores. Candidatos: los MCP de usuario de `~/.claude.json` (solo nombres) y los nombres que se añadan a mano. Ruta: delegada.
+- [ ] T4 · Dashboard (implementada en `8eb0c56d`; pendiente de CI y de verla en el navegador). API `GET/POST /api/projects/active/mcp-exclusions` (solo petición local, 409 sin proyecto registrado) y pantalla para marcar servidores y conectores. Candidatos: los MCP de usuario de `~/.claude.json` (solo nombres) y los nombres que se añadan a mano. Ruta: delegada.
 - [ ] T5 · Cargado sin uso. Recuento de uso por servidor en las transcripciones de Claude Code del proyecto; la huella y la pantalla lo muestran como sugerencia de exclusión. Ruta: delegada.
 - [ ] T6 · Documentación de uso, revisión de la spec viva (`## Spec viva` si `openspec/specs` cubre el doctor o el dashboard) y cierre: `go test` de los paquetes tocados y `axiom doctor`. Ruta: inline.
 
@@ -75,6 +75,18 @@ Que cada sesión de agente cargue solo el contexto del proyecto en el que trabaj
   - Evidencia: `gofmt -l` limpio; `go vet` sin avisos; `go test ./internal/mcpexclusion ./internal/agents/claude` ok (repetido por el padre); `go test ./internal/cli -run "Sync|Ensure|MCPExclusion"` ok.
 - Incidencia 2026-11-25 · Al retirar el global, Engram quedó fuera de las sesiones de Axiom. Su servidor de usuario se había ido, y el de `.mcp.json` está pendiente de aprobación. Se restauró como MCP de usuario por decisión del usuario (`claude mcp add --scope user engram -- engram mcp --tools=agent`); `claude mcp list` lo da conectado.
 
+- T4 · commit `8eb0c56d`.
+  - API `GET|POST /api/projects/active/mcp-exclusions` (`service_mcp_exclusions.go`). Responde 403 a una petición no local, 400 a datos inválidos, 409 si el proyecto no está registrado y 405 a otros métodos.
+  - Candidatos: `claude.UserMCPServerNames`, que lee solo las claves de `mcpServers`.
+  - Tarjeta «Servidores MCP excluidos en este proyecto» en la pantalla Ecosistema, tras «Preferencias de worktree». Módulo puro `assets/js/core/mcpexclusions.js`.
+  - Evidencia: `gofmt -l` limpio; `go vet ./internal/dashboard/ ./internal/mcpexclusion/ ./internal/agents/claude/` sin avisos (repetido por el padre); `go test ./internal/mcpexclusion/ ./internal/agents/claude/` ok; el módulo JS se probó con `node` directamente.
+  - **Pendiente:** `go test ./internal/dashboard/...` en CI (Cortex) y la verificación visual.
+- Prueba de escritorio 2026-11-25 (sesión nueva y captura del usuario):
+  - `work-copilot` sí queda bloqueado.
+  - Microsoft 365 y la knowledge base siguen cargándose. La app entrega los conectores con su id como nombre de servidor (herramientas `mcp__b67fe70e-7904-498b-917a-36af6bb9c0f2__…`), y `claude.ai <Nombre>` no casa.
+  - Se añadieron a mano las entradas por id (`b67fe70e-…`, `9d5c639e-…`) en el checkout principal. Falta comprobarlo en otra sesión nueva.
+  - Los interruptores de «+ → Conectores» solo valen para la sesión en curso.
+
 ## Siguiente paso
 
-T4, y comprobar en una sesión nueva de escritorio si los conectores excluidos desaparecen.
+T5. Según el resultado de la prueba por id, ajustar T3 y T4: escribir los dos nombres de cada conector, o avisar en la pantalla de que en escritorio los conectores solo se apagan por sesión.
