@@ -1,6 +1,6 @@
 # Informe de verificación: retirar-rdd
 
-Rol: `fullstack` (verify del rol = verify del cambio). Alcance: diff `3c520778..HEAD` (rama `inc/retirar-rdd`, HEAD `c3c1a123`; 1093 ficheros, +5269/-237898). Estilo `continuous`, almacén openspec.
+Rol: `fullstack` (verify del rol = verify del cambio). Alcance: diff `3c520778..HEAD` (rama `inc/retirar-rdd`, HEAD `543b7562`; 1093 ficheros, +5269/-237898). Estilo `continuous`, almacén openspec.
 
 ## Resumen
 
@@ -17,7 +17,7 @@ La retirada de RDD está completa y coherente con proposal, specs, diseño y tar
 | `go mod tidy` + `git diff --exit-code go.mod go.sum` | sin diff residual (exit 0) |
 | `go list ./... \| grep -E 'reviewtransaction\|reviewerprovider\|rddharness'` | vacío |
 | `git grep` de `reviewtransaction\|reviewerprovider\|rddharness\|bench-model-picker\|bench_fixture\|rdd_harness` fuera de `openspec/changes`, `openspec/specs`, `docs/plan`, `docs/archive`, `odd` | solo `docs/audits/2026-07-23-*` y `2026-07-27-*`, `docs/releases/v2.2.0-closure-ledger.md`, `docs/upstream-absorption-ledger.md` (históricos conservados por D14) y `docs/releases/notas-retirada-rdd.md` (nota de migración, que debe nombrarlos) |
-| Pruebas de seguridad de release (`internal/update/{release_security,windows_distribution_policy}_test.go`) | 13 + 6 = 19 funciones `Test` presentes (fixup `d79331b3`) y en `ok` |
+| Pruebas de seguridad de release (`internal/update/{release_security,windows_distribution_policy}_test.go`) | 13 + 6 = 19 funciones `Test` presentes (fixup `4d4d910d (fixup integrado por autosquash)`) y en `ok` |
 
 ## Conservaciones
 
